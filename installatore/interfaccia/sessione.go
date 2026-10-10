@@ -1,12 +1,12 @@
-// Package interfaccia: quel che la TUI mostra (T9, fasi/17 §6.6.1, DECISIONI §10.14, §10.31).
+// Package interfaccia: what the TUI shows (T9, fasi/17 §6.6.1, DECISIONI §10.14, §10.31).
 //
-//   - la SESSIONE: il lato del motore, da root. Esamina la macchina, fa il piano (con la porta
-//     scelta), lo applica. È il motore e basta: le stesse funzioni della riga di comando (Preflight,
-//     Valuta, DomandeDaFare, PianoInstallazione, Applica). La TUI, che gira da root nel terminale, la usa
-//     direttamente (la GUI, che la raggiungeva con pkexec, è stata tolta il 10 ott: §10.31);
-//   - la VISTA: gli oggetti del motore detti in parole comuni (vista.go).
+//   - the SESSION: the engine's side, as root. It examines the machine, makes the plan (with the chosen
+//     port), applies it. It is the engine and nothing else: the same functions as the command line (Preflight,
+//     Valuta, DomandeDaFare, PianoInstallazione, Applica). The TUI, which runs as root in the terminal, uses it
+//     directly (the GUI, which reached it through pkexec, was removed on 10 Oct: §10.31);
+//   - the VIEW: the engine's objects told in plain words (vista.go).
 //
-// ⛔ Nessuna logica d'installazione qui: che cosa chiedere e che cosa fare lo decide il motore.
+// ⛔ No installation logic here: what to ask and what to do is decided by the engine.
 package interfaccia
 
 import (
@@ -28,16 +28,16 @@ import (
 	"remotix/installatore/motore"
 )
 
-// Controllo: quel che il motore sa della macchina (fasi 0-2), per la prima schermata.
+// Controllo: what the engine knows about the machine (phases 0-2), for the first screen.
 type Controllo struct {
 	Fiducia  *motore.Fiducia   `json:"trust"`
 	Profilo  *motore.Profilo   `json:"profile"`
 	Rapporto *motore.Rapporto  `json:"compatibility"`
 	Domande  *motore.Domande   `json:"questions"`
-	Errore   *motore.Messaggio `json:"error,omitempty"` // la fase 0 non passa: niente da mostrare oltre
+	Errore   *motore.Messaggio `json:"error,omitempty"` // phase 0 does not pass: nothing more to show
 }
 
-// Esito: com'è finita l'operazione.
+// Esito: how the operation ended.
 type Esito struct {
 	Operazione  string              `json:"operation"`
 	Stato       motore.Stato        `json:"state"`
@@ -49,8 +49,8 @@ type Esito struct {
 	Errore      *motore.Messaggio   `json:"error,omitempty"`
 }
 
-// Motore: quel che l'interfaccia può chiedere. La realizza la Sessione (in questo processo, da root);
-// le prove della TUI ne mettono una finta.
+// Motore: what the interface can ask. The Sessione implements it (in this process, as root);
+// the TUI tests put in a fake one.
 type Motore interface {
 	Controlla(porta int) (*Controllo, error)
 	Piano(voci map[string]string) (*motore.Piano, error)
@@ -59,18 +59,18 @@ type Motore interface {
 	Chiudi()
 }
 
-// Config: da dove viene il catalogo e dove si installa (le stesse opzioni della riga di comando).
+// Config: where the catalogue comes from and where to install (the same options as the command line).
 type Config struct {
 	Operazioni string
-	// Fonti: la fase 0 TRUST (la riga di comando sa costruirla: il catalogo del motore)
+	// Fonti: phase 0 TRUST (the command line knows how to build it: the engine's catalogue)
 	Fonti func() *motore.FontiFiducia
-	// Base: le opzioni d'installazione che non si chiedono (la cartella dei pacchetti del .run)
+	// Base: the installation options that are not asked (the .run's packages folder)
 	Base motore.OpzioniInstallazione
-	// Chi: la persona che approva (per il registro); Modo: da quale interfaccia
+	// Chi: the person approving (for the log); Modo: from which interface
 	Chi, Modo string
 }
 
-// Sessione: il motore, da root.
+// Sessione: the engine, as root.
 type Sessione struct {
 	C      Config
 	cat    *motore.Catalogo
@@ -85,7 +85,7 @@ type Sessione struct {
 	blocco sync.Mutex
 }
 
-// NuovaSessione: il motore per un'interfaccia.
+// NuovaSessione: the engine for an interface.
 func NuovaSessione(c Config) *Sessione { return &Sessione{C: c} }
 
 func messaggioDi(err error) *motore.Messaggio {
@@ -98,7 +98,7 @@ func messaggioDi(err error) *motore.Messaggio {
 	return &m
 }
 
-// Controlla: fasi 0-2 in sola lettura (come «verifica»), e le domande da fare.
+// Controlla: phases 0-2 read-only (like «verifica»), and the questions to ask.
 func (s *Sessione) Controlla(porta int) (*Controllo, error) {
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
@@ -122,8 +122,8 @@ func (s *Sessione) esamina(porta int) {
 	s.rap = motore.Valuta(s.cat, s.prof)
 }
 
-// Piano: il piano con la porta scelta (PianoInstallazione, come `install`), scritto in
-// /var/lib/remotix/plans/. Una porta diversa da quella esaminata rifà l'esame (la porta è nel profilo).
+// Piano: the plan with the chosen port (PianoInstallazione, like `install`), written in
+// /var/lib/remotix/plans/. A port different from the one examined redoes the examination (the port is in the profile).
 func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
@@ -156,8 +156,8 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	return p, nil
 }
 
-// Applica: il consenso (un solo «conferma», sul piano col digest che la persona ha visto) e le
-// fasi 4-8 del motore; gli eventi arrivano mentre lavora.
+// Applica: the consent (a single «confirm», on the plan with the digest the person saw) and the
+// engine's phases 4-8; the events arrive while it works.
 func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*Esito, error) {
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
@@ -191,13 +191,13 @@ func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*
 	return es, nil
 }
 
-// Ferma: fra un passo e l'altro l'operazione si ferma e si annulla (RX-AZIONE-006).
+// Ferma: between one step and the next the operation stops and is undone (RX-AZIONE-006).
 func (s *Sessione) Ferma() { s.fermo.Store(true) }
 
-// Chiudi: niente da chiudere in questo processo.
+// Chiudi: nothing to close in this process.
 func (s *Sessione) Chiudi() {}
 
-// righeEventi: gli eventi JSON del motore (una riga ciascuno) diventano chiamate.
+// righeEventi: the engine's JSON events (one line each) become calls.
 type righeEventi struct {
 	f   func(motore.EventoPubblico)
 	buf []byte
@@ -218,7 +218,7 @@ func (r *righeEventi) Write(b []byte) (int, error) {
 	}
 }
 
-// Indirizzi: gli indirizzi da scrivere nel benvenuto (prima gli IPv4 non di loopback), poi il nome.
+// Indirizzi: the addresses to write in the welcome (first the non-loopback IPv4 ones), then the name.
 func Indirizzi() []string {
 	var r []string
 	if ifs, err := net.Interfaces(); err == nil {
@@ -240,7 +240,7 @@ func Indirizzi() []string {
 	return r
 }
 
-// ImprontaTLS: lo SHA-256 del certificato della pagina (quello che il browser mostra), se c'è.
+// ImprontaTLS: the SHA-256 of the page's certificate (the one the browser shows), if there is one.
 func ImprontaTLS(percorso string) string {
 	b, err := os.ReadFile(percorso)
 	if err != nil {

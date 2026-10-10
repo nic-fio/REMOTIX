@@ -1,64 +1,64 @@
 /*
- * sentinella.h — chi guarda le sessioni grafiche LOCALI, e per conto di chi.
+ * sentinella.h — who watches the LOCAL graphical sessions, and on whose behalf.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL MESTIERE, in una riga
+ * ⛔ THE JOB, in one line
  *
- * `SPECIFICHE.md` §5.1 promette quattro comportamenti, e due di essi non hanno
- * mai avuto nessuno che li facesse:
+ * `SPECIFICHE.md` §5.1 promises four behaviours, and two of them never
+ * had anyone doing them:
  *
- *   · l'utente ha una sessione grafica LOCALE e ne apre una remota
- *       ⇒ la remota e' RIFIUTATA, motivo `0x05 GIA_ATTIVA_LOCALE`;
- *   · l'utente ha una remota viva e apre una LOCALE
- *       ⇒ ⛔ la LOCALE VINCE: la remota viene chiusa, `0x04 SESSIONE_LOCALE_PREVALSA`.
+ *   · the user has a LOCAL graphical session and opens a remote one
+ *       ⇒ the remote one is REFUSED, reason `0x05 GIA_ATTIVA_LOCALE`;
+ *   · the user has a live remote one and opens a LOCAL one
+ *       ⇒ ⛔ the LOCAL one WINS: the remote one is closed, `0x04 SESSIONE_LOCALE_PREVALSA`.
  *
- * ⛔ I due codici stanno in `rcp.h` dal 9 agosto 2026 e **nessuna riga di
- *    nessun `.c` li spediva**: e' la stessa forma di guasto del rilievo B-7
- *    (`RCP_SERVER_IN_CHIUSURA` definito e senza emittente), dove chi era
- *    collegato aspettava i trenta secondi del silenzio e leggeva «errore di
- *    rete».  Questo file e' l'emittente che mancava.
- *
- * ---------------------------------------------------------------------------
- * ⛔⛔ CHE COS'E' UNA «SESSIONE GRAFICA LOCALE» — e la stesura ovvia e' SBAGLIATA
- *
- * Il criterio che viene in mente e' *«`Type` grafico e `Remote = false`»*.
- * ⛔ Con quello ci rifiuteremmo da soli, e il primo giorno.
- *
- * `[R]` **Noi non chiamiamo `pam_set_item(PAM_RHOST, …)` da nessuna parte** —
- * `autenticazione.c` fa `pam_start` e basta — quindi `pam_systemd` crea le
- * NOSTRE sessioni senza host remoto, e logind le segna `Remote=no`.  Una
- * sessione nostra passerebbe per locale, e il secondo utente che si collega
- * verrebbe respinto con `0x05` da se' stesso.
- *
- * ⭐ **Il discrimine e' il SEAT, non `Remote`.**  Una sessione locale sta su un
- *    seat (`seat0`): ci sono uno schermo, una tastiera e un mouse veri attaccati
- *    a quella macchina.  La nostra headless un seat non ce l'ha — ed e' la
- *    STESSA proprieta' su cui Mutter decide `is_headless()` (`DECISIONI.md`
- *    §4.3-bis).  ⇒ Le due cose stanno in piedi insieme: il giorno in cui la
- *    nostra sessione avesse un seat, perderemmo l'headless **e** ci
- *    rifiuteremmo da soli, e il registro direbbe tutt'e due le cose.
- *
- * ⚠ `Remote` si guarda lo stesso, come seconda cintura: quando `PAM_RHOST`
- *   sara' impostato (fase 5, `FASI.md` §05-la-sessione §1.4) diventera' vero per
- *   le nostre, e allora due criteri indipendenti diranno la stessa cosa.
+ * ⛔ The two codes have been in `rcp.h` since 9 August 2026 and **no line of
+ *    any `.c` sent them**: it is the same fault shape as finding B-7
+ *    (`RCP_SERVER_IN_CHIUSURA` defined and with no sender), where whoever was
+ *    connected waited the thirty seconds of silence and read «network
+ *    error».  This file is the missing sender.
  *
  * ---------------------------------------------------------------------------
- * ⚠ PERCHE' SINCRONO, e non un thread come in v1
+ * ⛔⛔ WHAT A «LOCAL GRAPHICAL SESSION» IS — and the obvious draft is WRONG
  *
- * v1 (`fondamenta/remotix-c/src/sentinella.c`, 307 righe) teneva un `GMainLoop` in un
- * thread suo, con `SessionNew`/`SessionRemoved`.  ⛔ Li' il server girava DENTRO
- * la sessione di UNA persona e la domanda era «c'e' una locale?»; qui il server
- * e' di sistema e la domanda e' «c'e' una locale **di quest'utente**?», che si
- * pone in due momenti soli:
+ * The criterion that comes to mind is *«graphical `Type` and `Remote = false`»*.
+ * ⛔ With that we would refuse ourselves, on the first day.
  *
- *   · quando qualcuno ATTACCA        — una volta per sessione, il costo non si vede;
- *   · mentre qualcuno E' attaccato   — un ripasso ogni paio di secondi.
+ * `[R]` **We do not call `pam_set_item(PAM_RHOST, …)` anywhere** —
+ * `autenticazione.c` does `pam_start` and nothing more — so `pam_systemd` creates
+ * OUR sessions without a remote host, and logind marks them `Remote=no`.  One
+ * of our sessions would pass for local, and the second user who connects
+ * would be turned away with `0x05` by itself.
  *
- * ⇒ Una chiamata sincrona con un'attesa CORTA costa meno di un thread e di un
- *   mutex, e non aggiunge un secondo filo a un programma che ne ha uno solo per
- *   scelta.  ⛔ Ma l'attesa corta e' obbligatoria: questo ciclo `poll` e' lo
- *   stesso che consegna i fotogrammi, e `LEZIONI.md` §6.2-bis dice che
- *   *un'attesa che protegge un anello e' un ritardo per tutti gli altri*.
+ * ⭐ **The discriminant is the SEAT, not `Remote`.**  A local session sits on a
+ *    seat (`seat0`): a real screen, keyboard and mouse are attached
+ *    to that machine.  Our headless one has no seat — and it is the
+ *    SAME property on which Mutter decides `is_headless()` (`DECISIONI.md`
+ *    §4.3-bis).  ⇒ The two things stand together: the day our
+ *    session had a seat, we would lose headless **and** refuse
+ *    ourselves, and the log would say both things.
+ *
+ * ⚠ `Remote` is checked anyway, as a second belt: when `PAM_RHOST`
+ *   is set (phase 5, `FASI.md` §05-la-sessione §1.4) it will become true for
+ *   ours, and then two independent criteria will say the same thing.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ WHY SYNCHRONOUS, and not a thread as in v1
+ *
+ * v1 (`fondamenta/remotix-c/src/sentinella.c`, 307 lines) kept a `GMainLoop` in a
+ * thread of its own, with `SessionNew`/`SessionRemoved`.  ⛔ There the server ran INSIDE
+ * the session of ONE person and the question was «is there a local one?»; here the server
+ * is a system one and the question is «is there a local one **of this user**?», which
+ * is asked at two moments only:
+ *
+ *   · when someone ATTACHES        — once per session, the cost does not show;
+ *   · while someone IS attached    — a re-check every couple of seconds.
+ *
+ * ⇒ A synchronous call with a SHORT wait costs less than a thread and a
+ *   mutex, and does not add a second thread to a program that has only one by
+ *   choice.  ⛔ But the short wait is mandatory: this `poll` loop is the
+ *   same one that delivers the frames, and `LEZIONI.md` §6.2-bis says that
+ *   *a wait that protects one link is a delay for all the others*.
  */
 #ifndef REMOTIX_SENTINELLA_H
 #define REMOTIX_SENTINELLA_H
@@ -69,129 +69,129 @@
 
 typedef struct sentinella sentinella;
 
-/* Apre il collegamento al bus di SISTEMA (logind non sta su quello di
- * sessione).  ⛔ Restituisce NULL se il bus non c'e': e allora la regola di §5.1
- * NON e' in vigore, e chi chiama lo scrive nel registro invece di proseguire
- * come se niente fosse. */
+/* Opens the connection to the SYSTEM bus (logind is not on the session
+ * one).  ⛔ Returns NULL if the bus is missing: then the rule of §5.1
+ * is NOT in force, and the caller writes it in the log instead of carrying on
+ * as if nothing happened. */
 sentinella *sentinella_apri(void);
 
 void sentinella_chiudi(sentinella *s);
 
 /*
- * «Quest'utente ha una sessione grafica LOCALE, adesso?»
+ * «Does this user have a LOCAL graphical session, right now?»
  *
- * `descrizione` — se non NULL — riceve di che sessione si tratta, per il
- * registro del server: id, tipo e seat.  ⛔ Non finisce mai nel corpo di un
- * congedo (§8.2).
+ * `descrizione` — if not NULL — receives which session it is, for the
+ * server log: id, type and seat.  ⛔ It never ends up in the body of a
+ * farewell (§8.2).
  *
- * ⚠ Un errore di logind risponde `false`, e scrive una riga: «non lo so» e «non
- *   c'e'» sono due fatti diversi, e chiudere fuori tutti perche' logind non
- *   risponde punirebbe chi non ha sbagliato niente (invariante I1).
+ * ⚠ A logind error answers `false`, and writes a line: «I don't know» and «there
+ *   isn't one» are two different facts, and locking everyone out because logind does not
+ *   answer would punish those who did nothing wrong (invariant I1).
  */
 bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
                        size_t quanto);
 
 /*
- * ⭐⭐⭐ «QUALI DI QUESTI UTENTI HANNO UNA SESSIONE GRAFICA LOCALE?» — UNA
- *       DOMANDA SOLA PER TUTTI, e nasce da un difetto MISURATO.
+ * ⭐⭐⭐ «WHICH OF THESE USERS HAVE A LOCAL GRAPHICAL SESSION?» — ONE
+ *       QUESTION FOR ALL, and it comes from a MEASURED defect.
  *
- * ⛔⛔ IL DIFETTO CHE QUESTA FUNZIONE ESISTE PER TOGLIERE — rilievo P4 di
- *      `fasi/10-multi-tenant-e-il-budget.md` §8.2, misurato in §6.13.
+ * ⛔⛔ THE DEFECT THIS FUNCTION EXISTS TO REMOVE — finding P4 of
+ *      `fasi/10-multi-tenant-e-il-budget.md` §8.2, measured in §6.13.
  *
- *      Il ripasso di §5.1 (`wt_sorveglia_locali()`) chiamava `sentinella_locale()`
- *      **una volta per inquilino attaccato**, e ogni chiamata e' un giro
- *      SINCRONO su D-Bus dentro lo stesso `poll` che consegna i fotogrammi.
- *      `[M]` 25 agosto 2026: le chiamate per ripasso sono **1 · 3 · 5 · 7** a
- *      N = 1/3/5/7 — lineari negli inquilini — e a governare il danno e' il
- *      PRODOTTO `P = N × D`, dove D e' quanto ci mette logind.
- *      ⛔ La frontiera si restringe come **1/N** e taglia i **300 ms** che
- *         `ATTESA_MS` qui sotto si concede gia' a ~4 inquilini: a **N=7 con
- *         D=286 ms** ogni desktop crolla a **1,3 fotogrammi/s con un p95 di due
- *         secondi**, ⛔⛔ *e non viene scritta una riga*, perche' non si stacca
- *         nessuno.  Il degrado SILENZIOSO, che per `CODER.md` §1-bis pesa piu'
- *         dei fotogrammi.
+ *      The re-check of §5.1 (`wt_sorveglia_locali()`) called `sentinella_locale()`
+ *      **once per attached tenant**, and each call is a SYNCHRONOUS
+ *      round trip on D-Bus inside the same `poll` that delivers the frames.
+ *      `[M]` 25 August 2026: the calls per re-check are **1 · 3 · 5 · 7** at
+ *      N = 1/3/5/7 — linear in the tenants — and what governs the damage is the
+ *      PRODUCT `P = N × D`, where D is how long logind takes.
+ *      ⛔ The frontier shrinks as **1/N** and crosses the **300 ms** that
+ *         `ATTESA_MS` below already allows itself at ~4 tenants: at **N=7 with
+ *         D=286 ms** every desktop collapses to **1.3 frames/s with a p95 of two
+ *         seconds**, ⛔⛔ *and not a line is written*, because nobody
+ *         disconnects.  The SILENT degradation, which for `CODER.md` §1-bis weighs more
+ *         than the frames.
  *
- * ⭐⭐ E LA CURA STA NEI NUMERI, non nell'eleganza — `[M]` §6.13:
+ * ⭐⭐ AND THE CURE LIES IN THE NUMBERS, not in elegance — `[M]` §6.13:
  *
- *      · `ListSessions` costa **2,4-2,6 ms** e ⛔ **NON cresce col numero di
- *        sessioni di logind** (da 63 a 72 la mediana SCENDE, pendenza −34,6 µs
- *        a sessione).  ⇒ Il costo non e' nella chiamata: e' nel FARLA N VOLTE.
- *      · `ListSessions` restituisce **TUTTE** le sessioni della macchina.
- *        ⇒ Una sola risposta contiene gia' quella di ogni inquilino.
+ *      · `ListSessions` costs **2.4-2.6 ms** and ⛔ **does NOT grow with the number of
+ *        logind sessions** (from 63 to 72 the median GOES DOWN, slope −34.6 µs
+ *        per session).  ⇒ The cost is not in the call: it is in MAKING IT N TIMES.
+ *      · `ListSessions` returns **ALL** the sessions of the machine.
+ *        ⇒ A single answer already contains every tenant's.
  *
- *      ⇒ Il costo passa da `N × D` a **`D`**, ed e' un cambiamento di forma, non
- *        una mitigazione: non c'e' nessuna cache da far scadere e nessun giro a
- *        turno da tarare — cose che avrebbero aggiunto una seconda verita' sul
- *        «adesso» (`LEZIONI.md` §1.9) per un difetto che si chiude alla radice.
+ *      ⇒ The cost goes from `N × D` to **`D`**, and it is a change of shape, not
+ *        a mitigation: there is no cache to expire and no round-robin
+ *        to tune — things that would have added a second truth about
+ *        «now» (`LEZIONI.md` §1.9) for a defect that is closed at the root.
  *
- * ⚠ IL COSTO CHE RESTA, dichiarato: le sessioni con un SEAT vanno aperte una per
- *   una (`GetAll` sulle proprieta') per sapere se sono grafiche.  ⛔ Ma quelle
- *   sono le sessioni **locali della macchina** — su una macchina headless sono
- *   zero, e sono comunque indipendenti dal numero dei nostri inquilini.  ⇒ Il
- *   termine che cresceva con N e' sparito; questo non c'era mai.
+ * ⚠ THE COST THAT REMAINS, declared: the sessions with a SEAT must be opened one
+ *   by one (`GetAll` on the properties) to know whether they are graphical.  ⛔ But those
+ *   are the **machine's local** sessions — on a headless machine they are
+ *   zero, and they are independent of the number of our tenants anyway.  ⇒ The
+ *   term that grew with N is gone; this one was never there.
  *
- * `utenti`   — i nomi da cercare, `quanti` in tutto.  ⚠ Possono ripetersi: la
- *              risposta e' per POSIZIONE, cosi' chi chiama non deve deduplicare.
- * `locale`   — un vettore di `quanti` booleani, riempito da questa funzione.
- * `quali`    — se non NULL, `quanti` fette da `larghezza` byte l'una, ciascuna
- *              con la descrizione della sessione trovata (per il REGISTRO:
- *              §8.2 vieta di dire al client i fatti delle sessioni altrui).
+ * `utenti`   — the names to look for, `quanti` in all.  ⚠ They may repeat: the
+ *              answer is by POSITION, so the caller does not have to deduplicate.
+ * `locale`   — a vector of `quanti` booleans, filled by this function.
+ * `quali`    — if not NULL, `quanti` slices of `larghezza` bytes each, each
+ *              with the description of the session found (for the LOG:
+ *              §8.2 forbids telling the client facts about other people's sessions).
  *
- * ⛔ Ritorna quanti ne ha trovati con una locale.  ⚠ Se logind non risponde,
- *    ritorna 0 e mette tutto a `false` — «non lo so» si tratta come «non c'e'»,
- *    che e' l'unica scelta che non punisce chi non ha sbagliato niente
- *    (invariante I1), ed e' la stessa che fa `sentinella_locale()`.
+ * ⛔ Returns how many it found with a local one.  ⚠ If logind does not answer,
+ *    it returns 0 and sets everything to `false` — «I don't know» is treated as «there isn't one»,
+ *    which is the only choice that does not punish those who did nothing wrong
+ *    (invariant I1), and it is the same one `sentinella_locale()` makes.
  */
 size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti,
                          bool *locale, char *quali, size_t larghezza);
 
 /*
- * ⭐ «LO SPEGNIMENTO E' DAVVERO VIETATO?» — `DECISIONI.md` §4.7, la verifica che
- * l'invariante I7 pretende: le tre cinture sono righe di configurazione, e una
- * protezione che vive in un file va **verificata**, non creduta.
+ * ⭐ «IS POWER-OFF REALLY FORBIDDEN?» — `DECISIONI.md` §4.7, the check that
+ * invariant I7 demands: the three belts are configuration lines, and a
+ * protection that lives in a file must be **verified**, not believed.
  *
- * Chiede a logind `CanPowerOff`/`CanReboot`/`CanSuspend`/`CanHibernate` e
- * pretende **`no`** da tutte e quattro.  ⛔ «challenge» NON basta: mostra la
- * voce nel menu invece di toglierla.
+ * Asks logind `CanPowerOff`/`CanReboot`/`CanSuspend`/`CanHibernate` and
+ * demands **`no`** from all four.  ⛔ «challenge» is NOT enough: it shows the
+ * menu entry instead of removing it.
  *
- * ⛔⛔ LA CHIAMA IL FIGLIO, MAI IL SERVER: `[M]` root si sente rispondere «yes»
- *     perche' logind guarda `CAP_SYS_BOOT` prima di polkit.
+ * ⛔⛔ THE CHILD CALLS IT, NEVER THE SERVER: `[M]` root is answered «yes»
+ *     because logind looks at `CAP_SYS_BOOT` before polkit.
  */
 bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quanto);
 
 /*
- * ⭐ «LA MIA SESSIONE E' SENZA SEAT?» — `DECISIONI.md` §4.3-bis, misura M2.
+ * ⭐ «IS MY SESSION SEATLESS?» — `DECISIONI.md` §4.3-bis, measurement M2.
  *
- * Senza seat Mutter e' **headless**, ed e' l'unica forma in cui il blocca-schermo
- * di GNOME non ci revoca cattura e input.  ⚠ Dal 15 agosto 2026 la sessione
- * nasce senza seat **per costruzione** (`figlio.c`, passo 2-bis) — ⛔ ma
- * «scritto» non e' «in vigore» (`REVIEWER.md` E1), e questa e' la riga che lo
- * verifica DOPO l'avvio.
+ * Without a seat Mutter is **headless**, and it is the only form in which the GNOME
+ * screen locker does not revoke our capture and input.  ⚠ Since 15 August 2026 the session
+ * is born seatless **by construction** (`figlio.c`, step 2-bis) — ⛔ but
+ * «written» is not «in force» (`REVIEWER.md` E1), and this is the line that
+ * verifies it AFTER startup.
  *
- * `false` anche quando non c'e' nessuna sessione: e' un caso PEGGIORE, non
- * migliore, e `quale` lo dice.
+ * `false` also when there is no session at all: it is a WORSE case, not
+ * a better one, and `quale` says so.
  */
 bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
 
-/* Quante chiamate sono state fatte, e la piu' lenta in millisecondi — il numero
- * che dice se la scelta «sincrona» regge.  ⛔ Sta qui e non in un commento:
- * `CODER.md` §6 vuole che un ripiego si possa MISURARE, non credere.
+/* How many calls were made, and the slowest in milliseconds — the number
+ * that says whether the «synchronous» choice holds.  ⛔ It is here and not in a comment:
+ * `CODER.md` §6 wants a fallback to be MEASURABLE, not believed.
  *
- * ⛔⛔ E FINO AL 25 AGOSTO 2026 NON LA CHIAMAVA NESSUNO — rilievo di contorno di
- *      §6.13.  Il contatore c'era, l'intestazione dichiarava perche' c'era, e
- *      **nel registro non finiva niente**: la scelta «sincrona» si poteva
- *      credere, non rimisurare.  E' la forma E1 del `REVIEWER.md` — uno
- *      strumento che esiste e non parla e' peggio di uno strumento che manca,
- *      perche' chi legge il codice crede che la misura ci sia.
- *  ⇒ Da oggi la chiama `main.c`, che scrive **una riga al minuto** con questi
- *    due numeri accanto al numero degli inquilini serviti: e' il conto con cui
- *    la cura di §8.2 P4 si potra' **rifiutare** invece che ricordare.
+ * ⛔⛔ AND UNTIL 25 AUGUST 2026 NOBODY CALLED IT — side finding of
+ *      §6.13.  The counter was there, the header declared why it was there, and
+ *      **nothing ended up in the log**: the «synchronous» choice could be
+ *      believed, not re-measured.  It is form E1 of `REVIEWER.md` — an
+ *      instrument that exists and does not speak is worse than a missing instrument,
+ *      because whoever reads the code believes the measurement is there.
+ *  ⇒ From today `main.c` calls it, writing **one line a minute** with these
+ *    two numbers next to the number of tenants served: it is the count with which
+ *    the cure of §8.2 P4 can be **refuted** instead of remembered.
  *
- * ⛔ E IL 25 AGOSTO 2026 QUESTA FRASE ERA ANCORA META' FALSA (rilievo R7 di
- *    §5.5): la riga c'era, ⛔ **ma il numero degli inquilini no** — cioe'
- *    mancava proprio il denominatore che rende la cura rifiutabile.  ⭐ Adesso
- *    la riga porta `inquilini=` (da `wt_inquilini_serviti()`), e i tre numeri
- *    si leggono insieme: `chiamate=` deve seguire i RIPASSI, non `inquilini=`. */
+ * ⛔ AND ON 25 AUGUST 2026 THIS SENTENCE WAS STILL HALF FALSE (finding R7 of
+ *    §5.5): the line was there, ⛔ **but the number of tenants was not** — that is,
+ *    exactly the denominator that makes the cure refutable was missing.  ⭐ Now
+ *    the line carries `inquilini=` (from `wt_inquilini_serviti()`), and the three numbers
+ *    are read together: `chiamate=` must follow the RE-CHECKS, not `inquilini=`. */
 void sentinella_conti(const sentinella *s, uint64_t *chiamate,
                       uint64_t *peggior_ms);
 

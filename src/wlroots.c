@@ -1,163 +1,164 @@
 /*
- * wlroots.c — la cattura del verso a tiro.  Il perché sta in `wlroots.h`.
+ * wlroots.c — capture on demand.  The reason is in `wlroots.h`.
  *
- * ⛔⛔ LA PRIMA STESURA PRENDEVA I PIXEL DALLA MEMORIA (`wl_shm`), NON DALLA
- *     SCHEDA — ed era una scelta dichiarata: prima si dimostra che i pixel
- *     arrivano e sono quelli giusti, poi si toglie la copia.  ⭐ Dal 21
- *     settembre 2026 la scheda c'è (il secondo riquadro qui sotto), e la
- *     memoria resta come strada di difetto e come RIPIEGO SEMPRE DICHIARATO.
- *
- * ---------------------------------------------------------------------------
- * ⛔⛔ RISCRITTA IL 21 SETTEMBRE 2026, dopo il REVISORE AVVERSARIO.
- *
- * La prima stesura aveva sette difetti, e nessuno lo diceva una prova: C1 era
- * verde e 530 fotogrammi passavano.  Li ha trovati una lettura mandata apposta
- * a smentire.  Quelli che hanno cambiato la forma del file, e perché:
- *
- *   1. ⛔ IL FORMATO.  L'evento `buffer` arriva UNA SOLA VOLTA per fotogramma,
- *      e porta la numerazione di `wl_shm` (ARGB8888 = 0, XRGB8888 = 1, il
- *      resto è il fourcc).  La prima stesura credeva di poter SCEGLIERE fra
- *      più formati offerti, e confrontava con i fourcc DRM: il ramo non poteva
- *      mai scattare, e labwc dà solo `XBGR8888` — cioè `R G B x`.  ⇒ Qui si
- *      TRADUCE (wl_shm → DRM) e si consegna; l'ordine lo legge `figlio.c` e lo
- *      dice al codificatore (`CODIFICATORE_PIXEL_RGBX`).
- *   2. ⛔ LA COPIA BUTTATA A OGNI SCADENZA.  Il ciclo del figlio aspetta 8 ms
- *      (`MOVIMENTO_ATTESA_S`) e il giro intero ne costa 9-15: quasi ogni
- *      chiamata scadeva DOPO `copy`, buttava il fotogramma già in corso e
- *      riallocava 8 MB.  ⇒ Adesso il fotogramma è PENDENTE: se l'attesa
- *      finisce, la richiesta resta viva e la chiamata dopo la riprende.
- *   3. ⛔ TRE `wl_display_roundtrip` SENZA TETTO: un compositore bloccato
- *      fermava il figlio per sempre.  ⇒ `giro()`, con scadenza.
- *   4. ⛔ `failed` E `cancelled` NELLO STESSO RAMO — l'errore esatto che
- *      `DECISIONI.md` §5.0-sexies rimprovera a wayvnc.  ⇒ Tre esiti separati.
- *   5. la testa dell'uscita si trovava solo se i nomi arrivavano in un ordine
- *      preciso ⇒ si tengono tutte, e si sceglie al momento della richiesta;
- *   6. la configurazione abilitava una testa sola: con due uscite il protocollo
- *      muore (`unconfigured_head`) ⇒ le altre si riconfermano come sono;
- *   7. le fughe di oggetti in `wlr_chiudi`.
- *
- * ===========================================================================
- * ⭐⭐ LA STRADA DELLA SCHEDA — 21 settembre 2026, dietro `CATTURA_STRADA_SCHEDA`
- * ===========================================================================
- *
- * ⚠ Scritta prima sulla stesura vecchia (commit `d5d7129`) e PORTATA a mano
- *   su questa: nessuno dei sette difetti qui sopra torna dentro con lei.  La
- *   scheda parla la SUA numerazione (difetto 1), vive dentro il fotogramma
- *   pendente (difetto 2) e non aspetta mai senza tetto (difetto 3).
- *
- * ⛔ La memoria resta: è il RIPIEGO, e un ripiego DICHIARATO.  Se si chiede la
- *    scheda e arriva la memoria, il registro lo dice con il perché, e ogni
- *    fotogramma porta `sulla_scheda` — non si deduce mai dalla strada chiesta.
+ * ⛔⛔ THE FIRST DRAFT TOOK THE PIXELS FROM MEMORY (`wl_shm`), NOT FROM THE
+ *     CARD — and it was a declared choice: first prove that the pixels
+ *     arrive and are the right ones, then remove the copy.  ⭐ Since 21
+ *     Sep 2026 the card is there (the second box below), and memory stays
+ *     as the default route and as an ALWAYS DECLARED FALLBACK.
  *
  * ---------------------------------------------------------------------------
- * LE DUE STRADE CHE C'ERANO, E PERCHÉ SI PRENDE LA PRIMA
+ * ⛔⛔ REWRITTEN ON 21 SEP 2026, after the ADVERSARIAL REVIEWER.
  *
- *   `[M]` labwc annuncia sia `zwlr_screencopy_manager_v1` v3 (con l'evento
- *   `linux_dmabuf`) sia `zwlr_export_dmabuf_manager_v1` v1.
+ * The first draft had seven defects, and no test said so: C1 was green and
+ * 530 frames went through.  A reading sent on purpose to refute it found
+ * them.  The ones that changed the shape of the file, and why:
  *
- *   A · `copy` in un DMA-BUF NOSTRO
- *     chi possiede il buffer   ⭐ NOI: lo allochiamo, lo teniamo finché il
- *                              codificatore non ha finito, lo nominiamo in un
- *                              `copy` solo quando è libero
- *     che cosa costa           un blit sulla GPU (`wlr_screencopy_v1.c`
- *                              0.18.2, `frame_dma_copy`): una copia, ma sulla
- *                              scheda — niente `glReadPixels`, che BLOCCA il
- *                              ciclo del compositore (`STUDI.md` §xfce §4.4)
- *     dipendenze nuove         ⚠ `gbm` per allocare, e l'XML di `linux-dmabuf`
+ *   1. ⛔ THE FORMAT.  The `buffer` event arrives ONLY ONCE per frame, and
+ *      carries the `wl_shm` numbering (ARGB8888 = 0, XRGB8888 = 1, the rest
+ *      is the fourcc).  The first draft believed it could CHOOSE among
+ *      several offered formats, and compared against the DRM fourccs: the
+ *      branch could never fire, and labwc gives only `XBGR8888` — that is
+ *      `R G B x`.  ⇒ Here we TRANSLATE (wl_shm → DRM) and deliver; `figlio.c`
+ *      reads the order and tells the encoder (`CODIFICATORE_PIXEL_RGBX`).
+ *   2. ⛔ THE COPY THROWN AWAY AT EVERY TIMEOUT.  The child's loop waits 8 ms
+ *      (`MOVIMENTO_ATTESA_S`) and the whole round costs 9-15: almost every
+ *      call timed out AFTER `copy`, threw away the frame already in progress
+ *      and reallocated 8 MB.  ⇒ Now the frame is PENDING: if the wait ends,
+ *      the request stays alive and the next call resumes it.
+ *   3. ⛔ THREE `wl_display_roundtrip` WITHOUT A CEILING: a stuck compositor
+ *      stopped the child forever.  ⇒ `giro()`, with a deadline.
+ *   4. ⛔ `failed` AND `cancelled` IN THE SAME BRANCH — the exact mistake that
+ *      `DECISIONI.md` §5.0-sexies blames on wayvnc.  ⇒ Three separate outcomes.
+ *   5. the output's head was found only if the names arrived in a precise
+ *      order ⇒ all are kept, and the choice is made at request time;
+ *   6. the configuration enabled a single head: with two outputs the
+ *      protocol dies (`unconfigured_head`) ⇒ the others are reconfirmed as
+ *      they are;
+ *   7. the object leaks in `wlr_chiudi`.
+ *
+ * ===========================================================================
+ * ⭐⭐ THE CARD ROUTE — 21 Sep 2026, behind `CATTURA_STRADA_SCHEDA`
+ * ===========================================================================
+ *
+ * ⚠ Written first on the old draft (commit `d5d7129`) and CARRIED by hand
+ *   onto this one: none of the seven defects above comes back in with it.
+ *   The card speaks ITS OWN numbering (defect 1), lives inside the pending
+ *   frame (defect 2) and never waits without a ceiling (defect 3).
+ *
+ * ⛔ Memory stays: it is the FALLBACK, and a DECLARED fallback.  If the card
+ *    is asked for and memory arrives, the log says so with the reason, and
+ *    every frame carries `sulla_scheda` — it is never deduced from the route
+ *    asked for.
+ *
+ * ---------------------------------------------------------------------------
+ * THE TWO ROUTES THERE WERE, AND WHY THE FIRST IS TAKEN
+ *
+ *   `[M]` labwc announces both `zwlr_screencopy_manager_v1` v3 (with the
+ *   `linux_dmabuf` event) and `zwlr_export_dmabuf_manager_v1` v1.
+ *
+ *   A · `copy` into a DMA-BUF OF OURS
+ *     who owns the buffer      ⭐ WE DO: we allocate it, keep it until the
+ *                              encoder has finished, name it in a `copy`
+ *                              only when it is free
+ *     what it costs            a blit on the GPU (`wlr_screencopy_v1.c`
+ *                              0.18.2, `frame_dma_copy`): one copy, but on
+ *                              the card — no `glReadPixels`, which BLOCKS
+ *                              the compositor's loop (`STUDI.md` §xfce §4.4)
+ *     new dependencies         ⚠ `gbm` to allocate, and the `linux-dmabuf` XML
  *
  *   B · `zwlr_export_dmabuf_manager_v1`
- *     chi possiede il buffer   ⛔ IL COMPOSITORE: i buffer della sua catena,
- *                              riusati a ogni giro, e `TRANSIENT` SEMPRE
- *                              (`wlr_export_dmabuf_v1.c:75`): la trappola di
- *                              GNOME R29 in forma pura, senza nessuna leva
+ *     who owns the buffer      ⛔ THE COMPOSITOR: the buffers of its chain,
+ *                              reused every round, and `TRANSIENT` ALWAYS
+ *                              (`wlr_export_dmabuf_v1.c:75`): the GNOME R29
+ *                              trap in pure form, with no lever at all
  *
- *   ⇒ ⭐ A.  Il costo di una dipendenza (`gbm`, che dove gira labwc c'è già a
- *     tempo di esecuzione) compra un buffer che è NOSTRO.
- *
- * ---------------------------------------------------------------------------
- * LE LASTRE — il buffer della scheda, e le tre regole
- *
- *   Una «lastra» è un buffer `gbm` sul nodo `renderD*` del compositore, il suo
- *   `fd` DMA-BUF, e il `wl_buffer` che lo nomina.  Tre stati: LIBERA, IN VOLO
- *   (nominata nel `copy` del fotogramma in corso), IN MANO (consegnata a
- *   valle, finché non torna con `wlr_rendi()`).
- *
- *   1. ⛔ SOLO UNA LASTRA LIBERA SI NOMINA IN UN `copy`.  Una lastra in mano
- *      torna libera solo con `wlr_rendi()` — nel prodotto da
- *      `cattura_fermo_libera()`, che il ciclo chiama DOPO
- *      `codificatore_comprimi_scheda()`, dove `vaSyncSurface` dice che la GPU
- *      ha FINITO di leggere.  ⇒ «labwc ci ricopia dentro mentre il
- *      codificatore la legge» non è evitato con un tempo: è impossibile per
- *      costruzione.  Se sono tutte in mano il fotogramma si ferma DICENDOLO;
- *      non se ne ricicla una (`LEZIONI.md` §8).
- *   2. ⛔ UNA LASTRA ABBANDONATA DOPO `copy` SENZA CONSEGNA (filo caduto,
- *      `failed`) È SPORCA: si butta e se ne fa un'altra.
- *   3. ⛔ OGNI LASTRA CHE NASCE O MUORE CAMBIA LA GENERAZIONE.  Il
- *      codificatore mette in cache l'importazione per `fd`, e i numeri di
- *      descrittore si riciclano: una lastra nuova col numero di una morta
- *      darebbe a VA-API la superficie vecchia — un'immagine di prima, senza
- *      errore.
- *
- *   ⚠ Tre e non una: il ciclo ne tiene una in mano e una in volo; la terza è
- *     assicurazione a buon mercato (8 MB a 1080p).
+ *   ⇒ ⭐ A.  The cost of one dependency (`gbm`, which is already present at
+ *     run time wherever labwc runs) buys a buffer that is OURS.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ LA LASTRA E IL FOTOGRAMMA PENDENTE — le domande del revisore
+ * THE SLABS — the card's buffer, and the three rules
  *
- *   · «Scade l'attesa mentre la copia sulla lastra è in volo, e il giro dopo
- *     ne riprende un altro?»  ⇒ No: il giro dopo riprende LO STESSO
- *     fotogramma (`palco->frame` è vivo) con LA STESSA lastra
- *     (`lastra_del_giro` si conserva).  Un `capture_output` nuovo parte solo
- *     quando `frame` è NULL, e `frame` torna NULL solo quando la sua lastra è
- *     consegnata o buttata.  ⛔ E sulla scadenza la lastra NON si sporca: la
- *     stesura vecchia la buttava, ed era il difetto 2 in forma di scheda.
- *   · «Una lastra resa due volte?»  ⇒ `wlr_rendi()` agisce solo su una lastra
- *     IN MANO e la porta a LIBERA: una seconda chiamata la trova LIBERA (o IN
- *     VOLO, se nel frattempo è ripartita) e non fa niente; e
- *     `cattura_fermo_libera()` azzera il fermo dopo averla resa.  ⚠ `[R]` Il
- *     solo caso scoperto è una COPIA del fermo tenuta da qualcuno dopo il
- *     rilascio: in `figlio.c` il fermo è una variabile locale passata per
- *     indirizzo, e nessuno lo copia.
- *   · «Il codificatore legge una lastra mentre labwc ci ricopia dentro?»  ⇒
- *     Regola 1: una lastra in mano non è mai nominata in un `copy`.
- *   · E la fence che non scatta in tempo dopo `ready`: il fotogramma resta
- *     PENDENTE con `pronto` già vero, la lastra resta IN VOLO, e la chiamata
- *     dopo riaspetta la stessa fence — nessuna consegna di un blit a metà,
- *     nessuna lastra persa.
+ *   A «slab» is a `gbm` buffer on the compositor's `renderD*` node, its
+ *   DMA-BUF `fd`, and the `wl_buffer` that names it.  Three states: FREE, IN
+ *   FLIGHT (named in the `copy` of the frame in progress), IN HAND (delivered
+ *   downstream, until it comes back with `wlr_rendi()`).
  *
- * ---------------------------------------------------------------------------
- * IL MODIFICATORE: LINEARE, e si dichiara
+ *   1. ⛔ ONLY A FREE SLAB IS NAMED IN A `copy`.  A slab in hand becomes free
+ *      again only with `wlr_rendi()` — in the product from
+ *      `cattura_fermo_libera()`, which the loop calls AFTER
+ *      `codificatore_comprimi_scheda()`, where `vaSyncSurface` says the GPU
+ *      has FINISHED reading.  ⇒ «labwc copies into it again while the
+ *      encoder reads it» is not avoided with a timing: it is impossible by
+ *      construction.  If they are all in hand the frame stops, SAYING SO;
+ *      none is recycled (`LEZIONI.md` §8).
+ *   2. ⛔ A SLAB ABANDONED AFTER `copy` WITHOUT DELIVERY (dropped wire,
+ *      `failed`) IS DIRTY: it is thrown away and another one is made.
+ *   3. ⛔ EVERY SLAB THAT IS BORN OR DIES CHANGES THE GENERATION.  The
+ *      encoder caches the import by `fd`, and descriptor numbers get
+ *      recycled: a new slab with the number of a dead one would give VA-API
+ *      the old surface — an earlier image, with no error.
  *
- *   ⛔ L'evento `linux_dmabuf` porta formato e misura, NON i modificatori.
- *      ⇒ LINEARE: tutti lo sanno scrivere e leggere, anche fra due schede.
- *   ⚠ `[?]` Il prezzo: blit e lettura lineari sono un po' più lenti che in
- *     tiling.  Si misura prima di comprare altro.
+ *   ⚠ Three and not one: the loop keeps one in hand and one in flight; the
+ *     third is cheap insurance (8 MB at 1080p).
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ LA SINCRONIZZAZIONE, SENZA FENCE ESPLICITE — quando si può leggere?
+ * ⛔⛔ THE SLAB AND THE PENDING FRAME — the reviewer's questions
  *
- *   `[R]` wlroots 0.18.2, `render/gles2/pass.c`: il blit finisce con
- *   `glFlush()`, non `glFinish()`, e subito dopo parte `ready`.  ⇒ Quando
- *   `ready` arriva il blit è CONSEGNATO alla GPU, non FINITO.  `[M]`
- *   `wp_linux_drm_syncobj_manager_v1` non c'è: nessuna fence ci viene data.
- *   ⇒ ⭐ Dopo `ready` la si ESTRAE dal DMA-BUF (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`
- *     con `DMA_BUF_SYNC_READ`) e si aspetta con `poll()` che scatti.
- *   ⚠ Costa: è `us_attesa_gpu`, e sta DENTRO il tempo del fotogramma.
- *   ⛔ Se l'ioctl non c'è (nucleo < 5.20) lo si dice una volta: da lì si conta
- *      sulla sola sincronizzazione implicita, e la riga lo nomina.
+ *   · «Does the wait time out while the copy onto the slab is in flight, and
+ *     the next round resume another one?»  ⇒ No: the next round resumes THE
+ *     SAME frame (`palco->frame` is alive) with THE SAME slab
+ *     (`lastra_del_giro` is kept).  A new `capture_output` starts only
+ *     when `frame` is NULL, and `frame` goes back to NULL only when its slab
+ *     is delivered or thrown away.  ⛔ And on timeout the slab does NOT get
+ *     dirty: the old draft threw it away, and that was defect 2 in card form.
+ *   · «A slab returned twice?»  ⇒ `wlr_rendi()` acts only on a slab IN HAND
+ *     and brings it to FREE: a second call finds it FREE (or IN FLIGHT, if
+ *     it has left again in the meantime) and does nothing; and
+ *     `cattura_fermo_libera()` zeroes the hold after returning it.  ⚠ `[R]`
+ *     The only uncovered case is a COPY of the hold kept by someone after
+ *     the release: in `figlio.c` the hold is a local variable passed by
+ *     address, and nobody copies it.
+ *   · «Does the encoder read a slab while labwc copies into it again?»  ⇒
+ *     Rule 1: a slab in hand is never named in a `copy`.
+ *   · And the fence that does not fire in time after `ready`: the frame stays
+ *     PENDING with `pronto` already true, the slab stays IN FLIGHT, and the
+ *     next call waits again on the same fence — no delivery of a half blit,
+ *     no slab lost.
  *
  * ---------------------------------------------------------------------------
- * ⚠ LE DUE NUMERAZIONI DEL FORMATO — non si mescolano (difetto 1)
+ * THE MODIFIER: LINEAR, and it is declared
  *
- *   L'evento `buffer` parla `wl_shm.format` (0 e 1 speciali) → `f_shm`, e si
- *   traduce con `shm_a_drm()` SOLO per chi sta a valle.  L'evento
- *   `linux_dmabuf` parla il fourcc DRM vero → `o_scheda_formato`, e NON passa
- *   da `shm_a_drm()`.  La lastra si alloca ESATTAMENTE nel formato e nella
- *   misura di quell'evento: `[R]` wlroots, un formato o una misura diversi
- *   sono `invalid buffer` — un ERRORE DI PROTOCOLLO, e la connessione muore.
- *   ⭐ `[M]` labwc sulla scheda dà `XRGB8888` (B G R x in memoria): l'ordine
- *     che il codificatore legge già.  Se ne arrivasse un altro, la scheda si
- *     salta per quel fotogramma, dicendolo.
+ *   ⛔ The `linux_dmabuf` event carries format and size, NOT the modifiers.
+ *      ⇒ LINEAR: everyone can write and read it, even across two cards.
+ *   ⚠ `[?]` The price: linear blit and reads are a little slower than in
+ *     tiling.  Measure before buying anything else.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔ SYNCHRONISATION, WITHOUT EXPLICIT FENCES — when can we read?
+ *
+ *   `[R]` wlroots 0.18.2, `render/gles2/pass.c`: the blit ends with
+ *   `glFlush()`, not `glFinish()`, and right after `ready` goes out.  ⇒ When
+ *   `ready` arrives the blit is SUBMITTED to the GPU, not FINISHED.  `[M]`
+ *   `wp_linux_drm_syncobj_manager_v1` is not there: no fence is given to us.
+ *   ⇒ ⭐ After `ready` we EXTRACT it from the DMA-BUF (`DMA_BUF_IOCTL_EXPORT_SYNC_FILE`
+ *     with `DMA_BUF_SYNC_READ`) and wait with `poll()` for it to fire.
+ *   ⚠ It costs: it is `us_attesa_gpu`, and it sits INSIDE the frame time.
+ *   ⛔ If the ioctl is missing (kernel < 5.20) it is said once: from then on
+ *      we rely on implicit synchronisation alone, and the line names it.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ THE TWO FORMAT NUMBERINGS — they do not mix (defect 1)
+ *
+ *   The `buffer` event speaks `wl_shm.format` (0 and 1 special) → `f_shm`, and
+ *   is translated with `shm_a_drm()` ONLY for whoever is downstream.  The
+ *   `linux_dmabuf` event speaks the true DRM fourcc → `o_scheda_formato`, and
+ *   does NOT go through `shm_a_drm()`.  The slab is allocated EXACTLY in the
+ *   format and size of that event: `[R]` wlroots, a different format or size
+ *   is `invalid buffer` — a PROTOCOL ERROR, and the connection dies.
+ *   ⭐ `[M]` labwc on the card gives `XRGB8888` (B G R x in memory): the order
+ *     the encoder already reads.  If another one arrived, the card is
+ *     skipped for that frame, saying so.
  */
 #include "wlroots.h"
 #include "vulkanvideo.h"
@@ -184,8 +185,8 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
-/* ⚠ La stessa area di `cattura.c` e di `kwin.c`: chi legge il registro cerca i
- *   pixel sotto una parola sola, non sotto il nome del modulo che li ha presi. */
+/* ⚠ The same area as `cattura.c` and `kwin.c`: whoever reads the log looks for
+ *   the pixels under a single word, not under the name of the module that took them. */
 #define AREA "cattura"
 
 #define FOURCC(a, b, c, d) ((uint32_t)(a) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | \
@@ -193,9 +194,9 @@
 #define DRM_XRGB8888 FOURCC('X', 'R', '2', '4')
 #define DRM_ARGB8888 FOURCC('A', 'R', '2', '4')
 
-/* ⛔ I due formati che `wl_shm` numera 0 e 1 invece che col fourcc.  È l'unica
- *    differenza fra le due numerazioni — ed è bastata a rendere cieco un ramo
- *    intero (difetto 1 del riquadro in cima). */
+/* ⛔ The two formats that `wl_shm` numbers 0 and 1 instead of with the fourcc.
+ *    It is the only difference between the two numberings — and it was enough
+ *    to blind a whole branch (defect 1 of the box at the top). */
 static uint32_t shm_a_drm(uint32_t shm)
 {
 	if (shm == WL_SHM_FORMAT_ARGB8888)
@@ -213,54 +214,54 @@ typedef struct {
 
 static void allarga_24(WlrPalco *p, WlrFotogramma *fuori);
 
-/* ⭐ Quante lastre — vedi il riquadro in cima, «le tre regole». */
+/* ⭐ How many slabs — see the box at the top, «the three rules». */
 #define WLR_LASTRE 3
 
-/* ⛔ Quanti `failed` DI FILA sulla scheda prima di spegnerla: uno può essere
- *    l'uscita che cambia sotto il giro; tre sono una strada che non va. */
+/* ⛔ How many `failed` IN A ROW on the card before turning it off: one can be
+ *    the output changing under the round; three are a route that does not work. */
 #define WLR_SCHEDA_FALLITI_MAX 3
 
-/* ⚠ Il tetto della nascita di una lastra (la risposta a `create`).  ⛔ Non
- *   l'attesa del fotogramma: il figlio chiama con 8 ms, e una lastra che non
- *   nasce in 8 ms la prima volta spegnerebbe la scheda per sempre per un
- *   ritardo.  Succede tre volte per sessione (e a ogni cambio di misura). */
+/* ⚠ The ceiling for the birth of a slab (the answer to `create`).  ⛔ Not
+ *   the frame wait: the child calls with 8 ms, and a slab that is not born
+ *   within 8 ms the first time would turn the card off forever over a
+ *   delay.  It happens three times per session (and at every size change). */
 #define WLR_LASTRA_NASCITA_S 1.0
 
 /*
- * ⛔⛔ FASE 19 — LA LASTRA NASCE ALLA TELA MASSIMA E NON MUORE AL CAMBIO DI
- *      MISURA (1 ott 2026, il GPU hang della Radeon sulla strada Vulkan).
+ * ⛔⛔ PHASE 19 — THE SLAB IS BORN AT THE MAXIMUM CANVAS AND DOES NOT DIE ON A
+ *      SIZE CHANGE (1 Oct 2026, the Radeon GPU hang on the Vulkan route).
  *
- *   Il ridimensionamento si fa cambiando il `wl_buffer` (la misura dichiarata
- *   al compositore), NON il BO: la lastra GBM nasce `WLR_LASTRA_L x
- *   WLR_LASTRA_A` (= `RCP_TELA_L/A_MASSIMA` di `rcp.h`, la tela piu' grande
- *   che il prodotto accetta) e serve ogni misura che ci sta dentro, col suo
- *   passo.  Muore solo con il palco, con lo spegnimento della scheda, o se
- *   una misura non ci sta (non succede: la tela si riduce prima, §4.5).
+ *   Resizing is done by changing the `wl_buffer` (the size declared to the
+ *   compositor), NOT the BO: the GBM slab is born `WLR_LASTRA_L x
+ *   WLR_LASTRA_A` (= `RCP_TELA_L/A_MASSIMA` of `rcp.h`, the largest canvas
+ *   the product accepts) and serves every size that fits inside it, with its
+ *   own stride.  It dies only with the stage, with the card being turned off,
+ *   or if a size does not fit (it does not happen: the canvas shrinks first, §4.5).
  *
- *   ⛔ Perche': GBM (radeonsi) e Vulkan (RADV) nello STESSO processo, sulla
- *     STESSA scheda, condividono un solo `amdgpu_device` di libdrm — un solo
- *     file DRM, una sola VM della scheda, un solo spazio di indirizzi (`[M]`:
- *     le tre lastre stanno nel `drm-client-id` dei BO di RADV, 87 MB «shared»).
- *     Buttare un BO di GBM e subito dopo far nascere il codificatore Vulkan
- *     alla misura nuova ⇒ la scheda trova NON MAPPATA un'immagine che RADV
- *     ha appena legato (`VK_EXT_device_address_binding_report`: BIND e nessun
- *     UNBIND; il page fault cade dentro l'immagine d'ingresso nuova) ⇒ page
- *     fault, `VK_ERROR_DEVICE_LOST`, MODE1 reset che azzera la scheda per
- *     tutti.  E' il driver (kernel amdgpu / winsys di Mesa 25.0.7), non
- *     l'uso dell'API, ma lo si evita qui: `[M]` 1 ott 2026, F-018 su lxqt
- *     Radeon/Vulkan, 10 fault su 14 corse con le lastre buttate al cambio,
- *     0 su 5 con le lastre tenute (e 0 su 5 sulla strada della memoria).
- *   ⚠ Il prezzo: 3 x 4096x2304x4 = 113 MB di lastre per sessione, anche a
- *     1080p (erano 3 x la tela).  ⇒ SOLO quando la codifica del figlio e'
- *     Vulkan (`wlr_lastre_alla_tela_massima()`, deciso in `figlio.c` prima
- *     del palco): con VA-API restano le lastre della misura giusta.
+ *   ⛔ Why: GBM (radeonsi) and Vulkan (RADV) in the SAME process, on the SAME
+ *     card, share a single libdrm `amdgpu_device` — one DRM file, one card
+ *     VM, one address space (`[M]`: the three slabs sit in the
+ *     `drm-client-id` of RADV's BOs, 87 MB «shared»).
+ *     Throwing away a GBM BO and right after creating the Vulkan encoder at
+ *     the new size ⇒ the card finds UNMAPPED an image that RADV has just
+ *     bound (`VK_EXT_device_address_binding_report`: BIND and no UNBIND; the
+ *     page fault falls inside the new input image) ⇒ page fault,
+ *     `VK_ERROR_DEVICE_LOST`, MODE1 reset that wipes the card for everyone.
+ *     It is the driver (amdgpu kernel / Mesa 25.0.7 winsys), not the use of
+ *     the API, but it is avoided here: `[M]` 1 Oct 2026, F-018 on lxqt
+ *     Radeon/Vulkan, 10 faults in 14 runs with the slabs thrown away on the
+ *     change, 0 in 5 with the slabs kept (and 0 in 5 on the memory route).
+ *   ⚠ The price: 3 x 4096x2304x4 = 113 MB of slabs per session, even at
+ *     1080p (they were 3 x the canvas).  ⇒ ONLY when the child's encoding is
+ *     Vulkan (`wlr_lastre_alla_tela_massima()`, decided in `figlio.c` before
+ *     the stage): with VA-API the slabs of the right size stay.
  */
 #define WLR_LASTRA_L 4096u
 #define WLR_LASTRA_A 2304u
 
-/* Il predefinito e' FALSO: con VA-API (la Intel, dove radeonsi/iHD stanno da
- * soli nel processo) il difetto non c'e', e 113 MB per sessione su una
- * grafica integrata sono RAM di sistema spesa per niente. */
+/* The default is FALSE: with VA-API (the Intel, where radeonsi/iHD are alone
+ * in the process) the defect is not there, and 113 MB per session on an
+ * integrated GPU are system RAM spent for nothing. */
 static bool lastre_massime = false;
 
 void wlr_lastre_alla_tela_massima(bool si)
@@ -270,16 +271,16 @@ void wlr_lastre_alla_tela_massima(bool si)
 
 typedef enum {
 	LASTRA_LIBERA = 0,
-	LASTRA_IN_VOLO, /* nominata nel `copy` del fotogramma in corso      */
-	LASTRA_IN_MANO  /* consegnata: finché non torna con `wlr_rendi()`   */
+	LASTRA_IN_VOLO, /* named in the `copy` of the frame in progress    */
+	LASTRA_IN_MANO  /* delivered: until it comes back with `wlr_rendi()` */
 } LastraStato;
 
 typedef struct {
 	struct gbm_bo *bo;
 	struct wl_buffer *buffer;
 	int fd;
-	uint32_t larghezza, altezza, stride, offset, formato; /* formato: fourcc DRM */
-	uint32_t bo_larghezza, bo_altezza; /* il BO: la misura di nascita (WLR_LASTRA_*) */
+	uint32_t larghezza, altezza, stride, offset, formato; /* formato: DRM fourcc */
+	uint32_t bo_larghezza, bo_altezza; /* the BO: the birth size (WLR_LASTRA_*) */
 	uint64_t modificatore;
 	LastraStato stato;
 	bool sporca;
@@ -288,8 +289,8 @@ typedef struct {
 typedef enum {
 	CONF_IN_CORSO = 0,
 	CONF_RIUSCITA,
-	CONF_FALLITA,  /* `failed`: il compositore ha detto NO            */
-	CONF_ANNULLATA /* `cancelled`: il serial era vecchio, si riprova  */
+	CONF_FALLITA,  /* `failed`: the compositor said NO               */
+	CONF_ANNULLATA /* `cancelled`: the serial was old, try again     */
 } ConfEsito;
 
 struct WlrPalco {
@@ -300,138 +301,138 @@ struct WlrPalco {
 	struct wl_output *uscita;
 	char *uscita_nome;
 
-	/* la geometria che l'uscita dichiara — ⛔ quella che HA, non quella voluta */
+	/* the geometry the output declares — ⛔ the one it HAS, not the one wanted */
 	uint32_t larghezza, altezza;
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ LA MISURA DELL'USCITA — `zwlr_output_manager_v1`.
+	 * ⭐⭐ THE OUTPUT SIZE — `zwlr_output_manager_v1`.
 	 *
-	 * ⛔ Su questa famiglia la tela NON si negozia col flusso: un flusso non
-	 *    c'è.  Si cambia la misura dell'USCITA, e poi i fotogrammi arrivano
-	 *    così.  ⇒ È la cosa che su KDE non si poteva fare.
+	 * ⛔ On this family the canvas is NOT negotiated with the stream: there is
+	 *    no stream.  The size of the OUTPUT is changed, and then the frames
+	 *    arrive that way.  ⇒ It is the thing that could not be done on KDE.
 	 * ------------------------------------------------------------------ */
 	struct zwlr_output_manager_v1 *gestore;
-	GPtrArray *teste; /* di `Testa *` — TUTTE, non solo la nostra (difetto 5) */
+	GPtrArray *teste; /* of `Testa *` — ALL of them, not just ours (defect 5) */
 	uint32_t serial;
 	bool serial_noto;
 	ConfEsito conf;
 
-	/* il buffer condiviso, riusato fra un fotogramma e l'altro */
+	/* the shared buffer, reused from one frame to the next */
 	struct wl_buffer *buffer;
 	void *pixel;
 	gsize byte;
 	int fd;
 	uint32_t b_larghezza, b_altezza, b_stride, b_formato;
 	/*
-	 * ⛔⛔ IL BUFFER SPORCO.  Se si abbandona un fotogramma DOPO aver mandato
-	 *     `copy` e senza aspettarne l'esito (filo caduto), il compositore può
-	 *     scriverci dentro più tardi: riusarlo darebbe un fotogramma vecchio in
-	 *     mezzo ai nuovi — non un errore, uno sfarfallio (`LEZIONI.md` §8).
-	 *  ⚠ Con il fotogramma PENDENTE (difetto 2) la scadenza non lo sporca più:
-	 *    la copia resta nostra e si aspetta.  Resta solo per il filo caduto.
+	 * ⛔⛔ THE DIRTY BUFFER.  If a frame is abandoned AFTER sending `copy`
+	 *     and without waiting for its outcome (dropped wire), the compositor
+	 *     may write into it later: reusing it would give an old frame among
+	 *     the new ones — not an error, a flicker (`LEZIONI.md` §8).
+	 *  ⚠ With the PENDING frame (defect 2) the timeout no longer dirties it:
+	 *    the copy stays ours and we wait.  It remains only for the dropped wire.
 	 */
 	bool buffer_sporco;
 
 	/* ------------------------------------------------------------------ *
-	 * IL FOTOGRAMMA IN CORSO — ⭐ e può sopravvivere a una chiamata.
+	 * THE FRAME IN PROGRESS — ⭐ and it can survive a call.
 	 * ------------------------------------------------------------------ */
 	struct zwlr_screencopy_frame_v1 *frame;
 	bool visto_buffer, visto_buffer_done, pronto, fallito, copia_partita, y_invertita;
-	uint32_t f_shm; /* il formato come lo dice wl_shm: serve al buffer */
+	uint32_t f_shm; /* the format as wl_shm says it: needed by the buffer */
 	uint32_t f_larghezza, f_altezza, f_stride;
 	uint64_t f_secondi;
 	uint32_t f_nanosecondi;
 
 	bool detto_il_formato;
 	/*
-	 * ⭐ I PIXEL A 24 BIT — 5 ottobre 2026, NVIDIA (RTX 4090, driver 595).
-	 *   `[M]` labwc sulla NVIDIA offre in memoria SOLO `BG24` (3 byte per
-	 *   pixel, stride 3·larghezza), e a valle tutti leggono 4 byte per pixel:
-	 *   ogni fotogramma era SCARTATO («servono passo >= 4·larghezza») e la
-	 *   sessione restava nera.  ⇒ Qui si allargano a 32 bit, una riga alla
-	 *   volta, in una copia nostra: `BG24` (R G B in memoria) → `XB24`
-	 *   (R G B x), `RG24` (B G R) → `XR24` (B G R x), due formati che a valle
-	 *   esistono già.  ⚠ Il prezzo, dichiarato: un passaggio in più sui pixel,
-	 *   solo su questa strada di ripiego.
+	 * ⭐ 24-BIT PIXELS — 5 Oct 2026, NVIDIA (RTX 4090, driver 595).
+	 *   `[M]` labwc on the NVIDIA offers in memory ONLY `BG24` (3 bytes per
+	 *   pixel, stride 3·width), and downstream everyone reads 4 bytes per
+	 *   pixel: every frame was DISCARDED («stride >= 4·width needed») and the
+	 *   session stayed black.  ⇒ Here they are widened to 32 bits, one row
+	 *   at a time, in a copy of ours: `BG24` (R G B in memory) → `XB24`
+	 *   (R G B x), `RG24` (B G R) → `XR24` (B G R x), two formats that
+	 *   already exist downstream.  ⚠ The price, declared: one more pass over
+	 *   the pixels, only on this fallback route.
 	 */
 	uint8_t *largo;
 	gsize largo_byte;
-	/* ⭐ I modificatori che il codificatore sa importare (vedi `lastra_prepara`):
-	 *    per il formato `mod_formato`, chiesti una volta. */
+	/* ⭐ The modifiers the encoder can import (see `lastra_prepara`):
+	 *    for the format `mod_formato`, asked once. */
 	uint32_t mod_formato;
 	uint64_t mod_ammessi[16];
 	int mod_quanti;
 	/*
-	 * ⭐⭐ IL DANNO — 21 settembre 2026, e l'ha trovato la rete.
+	 * ⭐⭐ THE DAMAGE — 21 Sep 2026, and the safety net found it.
 	 *
-	 * `[M]` La prima stesura chiedeva `copy`: il compositore copia l'uscita
-	 * SUBITO, cambiata o no.  ⇒ Col desktop fermo il figlio produceva **~60
-	 * fotogrammi identici al secondo** (247 nei primi 5 s, prima che la scena
-	 * partisse), li codificava e li spediva.  Su GNOME e KDE il prodotto
-	 * consegna solo quando qualcosa cambia; qui bruciava banda e scheda per
-	 * niente — e la maglia C3 non vedeva più il suo guasto «codificatore
-	 * fermo», perché prima del fermo erano già passati mille fotogrammi di
-	 * desktop immobile.
-	 * ⇒ `copy_with_damage` (screencopy v2+): il compositore risponde solo
-	 *   quando l'uscita è CAMBIATA.  È lo stesso contratto della spinta.
-	 * ⚠ Ma una CHIAVE a volte serve subito anche su un desktop fermo (un
-	 *   cliente che si attacca, una richiesta §5.2): `forza_intero` fa sì che
-	 *   il PROSSIMO giro usi `copy`, e lo mette `wlr_forza_intero()`.  Il primo
-	 *   giro in assoluto è intero anche lui: chi si attacca deve vedere subito.
+	 * `[M]` The first draft asked for `copy`: the compositor copies the output
+	 * AT ONCE, changed or not.  ⇒ With the desktop still the child produced **~60
+	 * identical frames per second** (247 in the first 5 s, before the scene
+	 * started), encoded them and sent them.  On GNOME and KDE the product
+	 * delivers only when something changes; here it burned bandwidth and card
+	 * for nothing — and mesh C3 no longer saw its «encoder stopped» fault,
+	 * because before the stop a thousand frames of motionless desktop had
+	 * already gone through.
+	 * ⇒ `copy_with_damage` (screencopy v2+): the compositor answers only
+	 *   when the output has CHANGED.  It is the same contract as the push.
+	 * ⚠ But a KEYFRAME is sometimes needed at once even on a still desktop (a
+	 *   client attaching, a §5.2 request): `forza_intero` makes the NEXT round
+	 *   use `copy`, and `wlr_forza_intero()` sets it.  The very first round is
+	 *   full too: whoever attaches must see at once.
 	 */
 	bool forza_intero, detto_il_danno;
-	bool copia_col_danno; /* la copia in volo è `copy_with_damage` */
-	/* ⭐ Il danno DICHIARATO dal compositore, per fotogramma (solo testimone,
-	 *    con `--parlantina`): `[M]` 5 ott 2026, NVIDIA + copia zero, il
-	 *    compositore risponde a 60/s su un desktop fermo — e la domanda è
-	 *    se lo dichiara cambiato tutto o in un angolo. */
+	bool copia_col_danno; /* the copy in flight is `copy_with_damage` */
+	/* ⭐ The damage DECLARED by the compositor, per frame (witness only,
+	 *    with `--parlantina`): `[M]` 5 Oct 2026, NVIDIA + zero copy, the
+	 *    compositor answers at 60/s on a still desktop — and the question is
+	 *    whether it declares it changed everywhere or in a corner. */
 	uint64_t danno_area_fotogramma, danno_area_somma;
 	uint32_t danno_rett_fotogramma, danno_rett_somma, danno_fotogrammi, danno_interi;
-	uint32_t danno_x, danno_y, danno_l, danno_a; /* l'ultimo rettangolo */
+	uint32_t danno_x, danno_y, danno_l, danno_a; /* the last rectangle */
 	WlrConteggi conteggi;
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ LA STRADA DELLA SCHEDA — il riquadro in cima.
+	 * ⭐⭐ THE CARD ROUTE — the box at the top.
 	 *
-	 * ⛔ Tutto qui sotto vale SOLO se `scheda_nata`: prima di
-	 *    `wlr_chiedi_la_scheda()` i campi sono gli zeri di `g_new0`, e zero
-	 *    per un descrittore vuol dire lo standard input — da cui la bandiera.
+	 * ⛔ Everything below is valid ONLY if `scheda_nata`: before
+	 *    `wlr_chiedi_la_scheda()` the fields are the zeros of `g_new0`, and
+	 *    zero for a descriptor means standard input — hence the flag.
 	 * ------------------------------------------------------------------ */
 	struct zwp_linux_dmabuf_v1 *dmabuf;
 	uint32_t dmabuf_versione;
-	bool scheda_nata; /* nodo aperto, `gbm` creato, lastre inizializzate */
-	bool scheda;      /* ⭐ in vigore ADESSO                              */
+	bool scheda_nata; /* node open, `gbm` created, slabs initialised */
+	bool scheda;      /* ⭐ in force NOW                               */
 	int drm_fd;
 	struct gbm_device *gbm;
 	char *nodo;
-	/* il `main_device` del feedback: il nodo su cui il compositore disegna */
+	/* the feedback's `main_device`: the node the compositor draws on */
 	dev_t principale;
 	bool principale_noto, feedback_finito;
-	/* l'offerta della scheda in QUESTO fotogramma — ⛔ fourcc DRM, NON wl_shm */
+	/* the card offer in THIS frame — ⛔ DRM fourcc, NOT wl_shm */
 	bool offerto_scheda;
 	uint32_t o_scheda_formato, o_scheda_l, o_scheda_a;
 	WlrLastra lastre[WLR_LASTRE];
 	unsigned prossima;
-	/* ⭐ -1: il fotogramma in corso va (o andrà) in memoria.  ⛔ Sopravvive
-	 *    alla scadenza insieme a `frame`: è la lastra IN VOLO di QUEL
-	 *    fotogramma, e la chiamata dopo la ritrova. */
+	/* ⭐ -1: the frame in progress goes (or will go) to memory.  ⛔ It survives
+	 *    the timeout together with `frame`: it is the slab IN FLIGHT of THAT
+	 *    frame, and the next call finds it again. */
 	int lastra_del_giro;
 	uint64_t generazione;
 	unsigned falliti_di_fila;
-	/* la creazione del `wl_buffer` (`zwp_linux_buffer_params_v1`) */
+	/* the creation of the `wl_buffer` (`zwp_linux_buffer_params_v1`) */
 	struct wl_buffer *creato;
 	bool params_finito, params_fallito;
-	/* ⚠ le righe che si dicono una volta sola */
+	/* ⚠ the lines said only once */
 	bool detto_senza_offerta, detto_formato_scheda, detta_sync_implicita;
 	bool detto_il_formato_scheda;
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ LA SONDA DEL PUNTATORE — il riquadro sopra `wlr_sonda_puntatore`.
+	 * ⭐⭐ THE POINTER PROBE — the box above `wlr_sonda_puntatore`.
 	 *
-	 * ⛔ Tutto suo: un fotogramma, un buffer, un descrittore che NON sono
-	 *    quelli del flusso.  Il flusso principale non sa che la sonda esiste.
+	 * ⛔ All its own: a frame, a buffer, a descriptor that are NOT those of
+	 *    the stream.  The main stream does not know the probe exists.
 	 * ------------------------------------------------------------------ */
-	struct zwlr_screencopy_frame_v1 *s_frame; /* UNA sola in volo        */
+	struct zwlr_screencopy_frame_v1 *s_frame; /* ONLY ONE in flight      */
 	bool s_visto_buffer, s_copia_partita;
 	uint32_t s_f_shm, s_f_l, s_f_a, s_f_stride;
 	struct wl_buffer *s_buffer;
@@ -439,31 +440,31 @@ struct WlrPalco {
 	int s_fd;
 	gsize s_byte;
 	uint32_t s_b_l, s_b_a, s_b_stride, s_b_shm;
-	/* la posizione della richiesta IN VOLO, e quella da rilanciare */
+	/* the position of the request IN FLIGHT, and the one to relaunch */
 	int32_t s_x, s_y;
-	bool s_in_attesa; /* ⭐ coalescente: si ricorda solo l'ULTIMA posizione */
+	bool s_in_attesa; /* ⭐ coalescing: only the LAST position is remembered */
 	int32_t s_attesa_x, s_attesa_y;
-	/* ⭐ la sonda «di coda»: una in piu', a mano ferma — vedi il riquadro */
+	/* ⭐ the «tail» probe: one more, with the hand still — see the box */
 	gint64 s_coda_a;
 	bool s_coda_fatta;
-	gint64 s_ultima_partita; /* per il diradamento */
-	int s_forma;             /* l'ultima forma riconosciuta, -1 = nessuna  */
-	int s_nuova;             /* da consegnare a `wlr_sonda_forma`, o -1    */
-	bool s_spenta;           /* il formato non si legge: detto, e basta   */
+	gint64 s_ultima_partita; /* for the thinning */
+	int s_forma;             /* the last recognised shape, -1 = none     */
+	int s_nuova;             /* to deliver to `wlr_sonda_forma`, or -1     */
+	bool s_spenta;           /* the format cannot be read: said, and that's it */
 	bool s_detto_formato, s_detta_ignota, s_detto_fallito;
 	WlrSondaConteggi s_conto;
 };
 
 /* ------------------------------------------------------------------------- */
-/* La pompa, con scadenza. */
+/* The pump, with a deadline. */
 
 /*
- * Un giro della pompa, con scadenza.
+ * One round of the pump, with a deadline.
  *
- * ⛔ `wl_display_dispatch()` BLOCCA senza tetto: un compositore muto
- *    fermerebbe il figlio per sempre — e il sintomo non sarebbe un errore,
- *    sarebbe «è lento», che è la forma d'errore che questo progetto ha già
- *    pagato tre volte.  ⇒ Si aspetta sul descrittore con un tetto vero.
+ * ⛔ `wl_display_dispatch()` BLOCKS without a ceiling: a mute compositor
+ *    would stop the child forever — and the symptom would not be an error,
+ *    it would be «it is slow», which is the form of error this project has
+ *    already paid for three times.  ⇒ We wait on the descriptor with a real ceiling.
  */
 static bool pompa(WlrPalco *p, gint64 scadenza, GError **sbaglio)
 {
@@ -474,14 +475,14 @@ static bool pompa(WlrPalco *p, gint64 scadenza, GError **sbaglio)
 	while (wl_display_prepare_read(p->display) != 0) {
 		if (wl_display_dispatch_pending(p->display) < 0) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-			            "il filo con il compositore è caduto (dispatch_pending)");
+			            "the wire to the compositor dropped (dispatch_pending)");
 			return false;
 		}
 	}
 	if (wl_display_flush(p->display) < 0 && errno != EAGAIN) {
 		wl_display_cancel_read(p->display);
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-		            "il filo con il compositore è caduto (flush): %s", g_strerror(errno));
+		            "the wire to the compositor dropped (flush): %s", g_strerror(errno));
 		return false;
 	}
 
@@ -494,19 +495,19 @@ static bool pompa(WlrPalco *p, gint64 scadenza, GError **sbaglio)
 	if (r <= 0) {
 		wl_display_cancel_read(p->display);
 		if (r == 0)
-			return true; /* scaduto: chi chiama guarda l'orologio */
+			return true; /* timed out: the caller looks at the clock */
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno), "poll: %s",
 		            g_strerror(errno));
 		return false;
 	}
 	if (wl_display_read_events(p->display) < 0) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-		            "il filo con il compositore è caduto (read_events)");
+		            "the wire to the compositor dropped (read_events)");
 		return false;
 	}
 	if (wl_display_dispatch_pending(p->display) < 0) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-		            "il filo con il compositore è caduto (dispatch)");
+		            "the wire to the compositor dropped (dispatch)");
 		return false;
 	}
 	return true;
@@ -520,12 +521,12 @@ static void giro_fatto(void *dati, struct wl_callback *cb, uint32_t t)
 static const struct wl_callback_listener ASCOLTO_GIRO = { .done = giro_fatto };
 
 /*
- * ⭐ Un andata-e-ritorno CON TETTO — il posto di `wl_display_roundtrip()`.
+ * ⭐ A round trip WITH A CEILING — in place of `wl_display_roundtrip()`.
  *
- * ⛔ Difetto 3 del riquadro in cima: `wl_display_roundtrip()` non ha tetto, e
- *    girava tre volte dentro il figlio.  Questo fa la stessa cosa (un `sync` e
- *    si aspetta il suo `done`: tutto quel che il compositore ha mandato prima
- *    è arrivato) e smette alla scadenza.
+ * ⛔ Defect 3 of the box at the top: `wl_display_roundtrip()` has no ceiling,
+ *    and it ran three times inside the child.  This does the same thing (a
+ *    `sync` and we wait for its `done`: everything the compositor sent before
+ *    has arrived) and stops at the deadline.
  */
 static bool giro(WlrPalco *p, double attesa_s, GError **sbaglio)
 {
@@ -542,8 +543,8 @@ static bool giro(WlrPalco *p, double attesa_s, GError **sbaglio)
 		if (!fatto && g_get_monotonic_time() >= scadenza) {
 			wl_callback_destroy(cb);
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-			            "in %.1f s il compositore non ha risposto a un giro di "
-			            "andata e ritorno",
+			            "the compositor did not answer a round trip "
+			            "within %.1f s",
 			            attesa_s);
 			return false;
 		}
@@ -553,7 +554,7 @@ static bool giro(WlrPalco *p, double attesa_s, GError **sbaglio)
 }
 
 /* ------------------------------------------------------------------------- */
-/* L'uscita (wl_output). */
+/* The output (wl_output). */
 
 static void uscita_geometria(void *dati, struct wl_output *o, int32_t x, int32_t y, int32_t lf,
                              int32_t af, int32_t sub, const char *make, const char *model,
@@ -566,7 +567,7 @@ static void uscita_modo(void *dati, struct wl_output *o, uint32_t flag, int32_t 
 {
 	WlrPalco *p = dati;
 
-	/* ⛔ SOLO il modo CORRENTE: un'uscita può annunciarne molti. */
+	/* ⛔ ONLY the CURRENT mode: an output may announce many. */
 	if (flag & WL_OUTPUT_MODE_CURRENT) {
 		p->larghezza = (uint32_t)l;
 		p->altezza = (uint32_t)a;
@@ -596,12 +597,12 @@ static const struct wl_output_listener ASCOLTO_USCITA = {
 };
 
 /* ------------------------------------------------------------------------- */
-/* Il gestore delle uscite e le sue teste. */
+/* The output manager and its heads. */
 
 /*
- * ⛔⛔ IL SERIAL, E PERCHÉ SI TIENE SEMPRE L'ULTIMO.  Una configurazione creata
- *     con un serial vecchio viene ANNULLATA — e `cancelled` non è `failed`:
- *     vuol dire «la realtà è cambiata sotto», non «no».
+ * ⛔⛔ THE SERIAL, AND WHY THE LATEST IS ALWAYS KEPT.  A configuration created
+ *     with an old serial is CANCELLED — and `cancelled` is not `failed`:
+ *     it means «reality changed underneath», not «no».
  */
 static void gestore_testa(void *dati, struct zwlr_output_manager_v1 *m,
                           struct zwlr_output_head_v1 *testa);
@@ -643,9 +644,9 @@ static void testa_nome(void *dati, struct zwlr_output_head_v1 *proxy, const char
 {
 	Testa *t = testa_di(dati, proxy);
 
-	/* ⭐ Difetto 5: il nome si TIENE, e la testa giusta si sceglie quando
-	 *    serve.  Prima si confrontava qui con il nome della `wl_output`, e se
-	 *    quello non era ancora arrivato la testa non si trovava più. */
+	/* ⭐ Defect 5: the name is KEPT, and the right head is chosen when it is
+	 *    needed.  Before, it was compared here with the name of the `wl_output`,
+	 *    and if that had not arrived yet the head was never found. */
 	if (t) {
 		g_free(t->nome);
 		t->nome = g_strdup(nome);
@@ -666,7 +667,7 @@ static void testa_finita(void *dati, struct zwlr_output_head_v1 *proxy)
 	Testa *t = testa_di(p, proxy);
 
 	if (t)
-		g_ptr_array_remove(p->teste, t); /* la libera `libera_testa` */
+		g_ptr_array_remove(p->teste, t); /* `libera_testa` frees it */
 }
 
 static void testa_descrizione(void *d, struct zwlr_output_head_v1 *t, const char *x) {}
@@ -742,11 +743,11 @@ static const struct zwlr_output_configuration_v1_listener ASCOLTO_CONF = {
 };
 
 /* ------------------------------------------------------------------------- */
-/* Il registro dei global. */
+/* The registry of globals. */
 
-/* ⚠ Sotto la v4 il global manda `format` e `modifier` appena legato: si
- *   ascoltano e si lasciano cadere — il modificatore lo decidiamo noi
- *   (LINEARE, il riquadro in cima), non l'elenco. */
+/* ⚠ Below v4 the global sends `format` and `modifier` as soon as it is bound:
+ *   they are listened to and dropped — the modifier is decided by us
+ *   (LINEAR, the box at the top), not by the list. */
 static void dmabuf_formato(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f) {}
 static void dmabuf_modificatore(void *d, struct zwp_linux_dmabuf_v1 *m, uint32_t f,
                                 uint32_t alto, uint32_t basso) {}
@@ -769,10 +770,10 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 		p->manager = wl_registry_bind(reg, nome, &zwlr_screencopy_manager_v1_interface, v);
 	} else if (g_strcmp0(interfaccia, zwp_linux_dmabuf_v1_interface.name) == 0 &&
 	           !p->dmabuf) {
-		/* ⭐ La strada della scheda.  ⚠ Al massimo la v4 (`[M]` labwc la dà):
-		 *   è quella del `main_device`, cioè del nodo su cui il compositore
-		 *   disegna.  ⛔ Si lega sempre, anche se la scheda non si chiede:
-		 *   legare non costa niente e non cambia niente. */
+		/* ⭐ The card route.  ⚠ At most v4 (`[M]` labwc gives it): it is the
+		 *   one with `main_device`, that is the node the compositor draws on.
+		 *   ⛔ It is always bound, even if the card is not asked for: binding
+		 *   costs nothing and changes nothing. */
 		p->dmabuf_versione = versione < 4 ? versione : 4;
 		p->dmabuf = wl_registry_bind(reg, nome, &zwp_linux_dmabuf_v1_interface,
 		                             p->dmabuf_versione);
@@ -790,9 +791,9 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 			wl_output_add_listener(p->uscita, &ASCOLTO_USCITA, p);
 		} else {
 			registro_dice(AREA,
-			              "⚠ wlroots: il compositore annuncia più di un'uscita — "
-			              "guardo la prima, e questa riga esiste perché quel "
-			              "giorno non sia una scelta muta");
+			              "⚠ wlroots: the compositor announces more than one output — "
+			              "I look at the first, and this line exists so that on that "
+			              "day it is not a silent choice");
 		}
 	}
 }
@@ -805,16 +806,16 @@ static const struct wl_registry_listener ASCOLTO_REGISTRO = {
 };
 
 /* ------------------------------------------------------------------------- */
-/* Il fotogramma. */
+/* The frame. */
 
 static void frame_buffer(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
                          uint32_t larghezza, uint32_t altezza, uint32_t stride)
 {
 	WlrPalco *p = dati;
 
-	/* ⛔ UNA volta per fotogramma (difetto 1): non c'è niente da scegliere.
-	 *    Il formato è nella numerazione di wl_shm, e si tiene COSÌ per creare
-	 *    il buffer; la traduzione in DRM si fa solo per chi sta a valle. */
+	/* ⛔ ONCE per frame (defect 1): there is nothing to choose.
+	 *    The format is in the wl_shm numbering, and is kept THAT WAY to create
+	 *    the buffer; the translation to DRM is done only for whoever is downstream. */
 	p->visto_buffer = true;
 	p->f_shm = formato;
 	p->f_larghezza = larghezza;
@@ -829,16 +830,16 @@ static void frame_buffer(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 		memcpy(nome, &drm, 4);
 		nome[4] = 0;
 		registro_dice(AREA,
-		              "wlroots: il compositore dà i pixel in «%s» (%ux%u stride %u) — %s",
+		              "wlroots: the compositor gives the pixels in «%s» (%ux%u stride %u) — %s",
 		              nome, larghezza, altezza, stride,
 		              (drm == FOURCC('B', 'G', '2', '4') || drm == FOURCC('R', 'G', '2', '4'))
-		                  ? "⚠ 3 BYTE PER PIXEL: li allargo io a 4 (x in fondo) prima di "
-		                    "consegnarli — un passaggio in più, solo su questa strada"
+		                  ? "⚠ 3 BYTES PER PIXEL: I widen them to 4 myself (x at the end) before "
+		                    "delivering them — one more pass, only on this route"
 		              : (drm == FOURCC('X', 'B', '2', '4') || drm == FOURCC('A', 'B', '2', '4'))
-		                  ? "cioè R G B x in memoria: l'ordine lo dice al codificatore "
-		                    "chi consuma il fotogramma"
-		                  : "cioè B G R x in memoria, l'ordine che il codificatore "
-		                    "leggeva già");
+		                  ? "that is R G B x in memory: whoever consumes the frame tells the "
+		                    "encoder the order"
+		                  : "that is B G R x in memory, the order the encoder "
+		                    "already read");
 	}
 }
 
@@ -865,9 +866,9 @@ static void frame_pronto(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 			p->danno_interi++;
 		if (p->danno_fotogrammi == 120) {
 			registro_dettaglio(AREA,
-			                   "wlroots: il danno dichiarato, ultimi 120 fotogrammi col danno: "
-			                   "area media %.1f%% dell'uscita %ux%u, %u interi, %.1f "
-			                   "rettangoli per fotogramma (l'ultimo: %ux%u a %u,%u)",
+			                   "wlroots: the declared damage, last 120 frames with damage: "
+			                   "mean area %.1f%% of the output %ux%u, %u full, %.1f "
+			                   "rectangles per frame (the last: %ux%u at %u,%u)",
 			                   uscita ? 100.0 * (double)p->danno_area_somma / 120.0 / (double)uscita : 0.0,
 			                   p->larghezza, p->altezza, p->danno_interi,
 			                   p->danno_rett_somma / 120.0, p->danno_l, p->danno_a,
@@ -890,7 +891,7 @@ static void frame_danno(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_t
 {
 	WlrPalco *p = dati;
 
-	/* ⚠ Arriva solo con `copy_with_damage`, prima di `ready`. */
+	/* ⚠ It arrives only with `copy_with_damage`, before `ready`. */
 	p->danno_area_fotogramma += (uint64_t)l * a;
 	p->danno_rett_fotogramma++;
 	p->danno_x = x;
@@ -904,10 +905,11 @@ static void frame_dmabuf(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 {
 	WlrPalco *p = dati;
 
-	/* ⭐ La strada della scheda: si ANNOTA l'offerta, e la scelta la fa
-	 *    `scheda_destinazione()` a elenco chiuso.  ⛔ E qui il formato è un
-	 *    fourcc DRM VERO — un'altra numerazione da quella di `buffer`, in un
-	 *    campo suo, e NON passa da `shm_a_drm()` (difetto 1). */
+	/* ⭐ The card route: the offer is NOTED, and the choice is made by
+	 *    `scheda_destinazione()` once the list is closed.  ⛔ And here the
+	 *    format is a TRUE DRM fourcc — a different numbering from that of
+	 *    `buffer`, in a field of its own, and it does NOT go through
+	 *    `shm_a_drm()` (defect 1). */
 	p->offerto_scheda = true;
 	p->o_scheda_formato = formato;
 	p->o_scheda_l = larghezza;
@@ -919,9 +921,9 @@ static void frame_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
 	((WlrPalco *)dati)->visto_buffer_done = true;
 }
 
-/* ⭐ «L'elenco delle offerte è chiuso?» — sulla v3 lo dice `buffer_done`, e
- *    solo allora si sa se la scheda è stata offerta.  ⚠ Sotto la v3
- *    `buffer_done` non esiste: lì basta `buffer`, che è anche l'unica offerta. */
+/* ⭐ «Is the list of offers closed?» — on v3 `buffer_done` says so, and only
+ *    then do we know whether the card was offered.  ⚠ Below v3
+ *    `buffer_done` does not exist: there `buffer` is enough, and it is also the only offer. */
 static bool elenco_chiuso(const WlrPalco *p)
 {
 	if (p->visto_buffer_done)
@@ -947,7 +949,7 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 	if (!p->buffer_sporco && p->buffer && p->b_larghezza == p->f_larghezza &&
 	    p->b_altezza == p->f_altezza && p->b_stride == p->f_stride &&
 	    p->b_formato == p->f_shm)
-		return true; /* quello di prima va bene */
+		return true; /* the previous one is fine */
 	p->buffer_sporco = false;
 
 	if (p->buffer) {
@@ -964,7 +966,7 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 	}
 	if (!byte) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-		            "il compositore ha dichiarato un buffer di 0 byte (%ux%u stride %u)",
+		            "the compositor declared a buffer of 0 bytes (%ux%u stride %u)",
 		            p->f_larghezza, p->f_altezza, p->f_stride);
 		return false;
 	}
@@ -990,8 +992,8 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 	p->byte = byte;
 
 	pool = wl_shm_create_pool(p->shm, p->fd, (int32_t)byte);
-	/* ⛔ Il formato di wl_shm, NON quello tradotto: il buffer lo legge il
-	 *    compositore, che parla la numerazione di wl_shm. */
+	/* ⛔ The wl_shm format, NOT the translated one: the buffer is read by the
+	 *    compositor, which speaks the wl_shm numbering. */
 	p->buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)p->f_larghezza,
 	                                      (int32_t)p->f_altezza, (int32_t)p->f_stride,
 	                                      p->f_shm);
@@ -1004,14 +1006,14 @@ static bool prepara_buffer(WlrPalco *p, GError **sbaglio)
 }
 
 /* ========================================================================= */
-/* ⭐⭐ LA STRADA DELLA SCHEDA — il riquadro in cima al file.                  */
+/* ⭐⭐ THE CARD ROUTE — the box at the top of the file.                      */
 /*                                                                           */
-/* ⛔ Tutto quel che segue sta in funzioni SUE: `wlr_fotogramma()` le chiama  */
-/*    in tre punti (la destinazione del `copy`, la consegna, la chiusura del  */
-/*    fotogramma), e il giro della memoria resta com'era.                     */
+/* ⛔ Everything that follows lives in functions OF ITS OWN: `wlr_fotogramma()`*/
+/*    calls them in three places (the target of the `copy`, the delivery, the */
+/*    closing of the frame), and the memory round stays as it was.           */
 /* ========================================================================= */
 
-/* --- il feedback: il nodo su cui il compositore disegna ------------------ */
+/* --- the feedback: the node the compositor draws on ---------------------- */
 
 static void feedback_fine(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f)
 {
@@ -1021,9 +1023,9 @@ static void feedback_fine(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f)
 static void feedback_tabella(void *dati, struct zwp_linux_dmabuf_feedback_v1 *f, int32_t fd,
                              uint32_t quanti)
 {
-	/* ⛔ Il descrittore è NOSTRO appena arriva, e si chiude: la tabella dei
-	 *    formati non serve (il modificatore è LINEARE, deciso), e un `fd`
-	 *    tenuto per niente è un `fd` perso a ogni sessione. */
+	/* ⛔ The descriptor is OURS as soon as it arrives, and it is closed: the
+	 *    format table is not needed (the modifier is LINEAR, decided), and an
+	 *    `fd` kept for nothing is an `fd` lost at every session. */
 	close(fd);
 }
 
@@ -1032,8 +1034,8 @@ static void feedback_principale(void *dati, struct zwp_linux_dmabuf_feedback_v1 
 {
 	WlrPalco *p = dati;
 
-	/* ⚠ Il protocollo lo dà come un `dev_t` in un array: se la misura non
-	 *   torna non si indovina, si lascia «non noto» e si ripiega dicendolo. */
+	/* ⚠ The protocol gives it as a `dev_t` in an array: if the size does not
+	 *   match we do not guess, we leave it «not known» and fall back, saying so. */
 	if (dispositivo->size == sizeof(dev_t)) {
 		memcpy(&p->principale, dispositivo->data, sizeof(dev_t));
 		p->principale_noto = true;
@@ -1059,13 +1061,12 @@ static const struct zwp_linux_dmabuf_feedback_v1_listener ASCOLTO_FEEDBACK = {
 };
 
 /*
- * Dal `dev_t` al nodo `renderD*` della stessa scheda.
+ * From the `dev_t` to the `renderD*` node of the same card.
  *
- * ⚠ Il `main_device` può essere il nodo primario (`card0`) o quello di
- *   rendering: la cartella di sysfs `/sys/dev/char/M:m/device/drm/` li elenca
- *   TUTTI E DUE in entrambi i casi, e da lì si prende il `renderD*`.  ⛔ Niente
- *   `libdrm` da collegare per questo: una libreria in più per una riga di
- *   sysfs.
+ * ⚠ The `main_device` can be the primary node (`card0`) or the render one:
+ *   the sysfs folder `/sys/dev/char/M:m/device/drm/` lists BOTH of them in
+ *   either case, and the `renderD*` is taken from there.  ⛔ No `libdrm` to
+ *   link for this: one more library for one line of sysfs.
  */
 static char *nodo_da_dispositivo(dev_t d)
 {
@@ -1083,11 +1084,10 @@ static char *nodo_da_dispositivo(dev_t d)
 }
 
 /*
- * ⚠ IL RIPIEGO, quando il compositore non dice il suo nodo (v < 4): la STESSA
- *   regola con cui `sessione.c` sceglie `WLR_RENDER_DRM_DEVICE` — il primo
- *   `renderD*` apribile, in ordine di nome.  ⛔ Una regola diversa qui
- *   vorrebbe dire allocare sull'altra scheda proprio il giorno in cui i nodi
- *   si scambiano.
+ * ⚠ THE FALLBACK, when the compositor does not say its node (v < 4): the SAME
+ *   rule with which `sessione.c` chooses `WLR_RENDER_DRM_DEVICE` — the first
+ *   openable `renderD*`, in name order.  ⛔ A different rule here would mean
+ *   allocating on the other card exactly on the day the nodes swap.
  */
 static char *nodo_come_sessione(void)
 {
@@ -1116,18 +1116,18 @@ static char *nodo_come_sessione(void)
 	return primo ? g_build_filename("/dev/dri", primo, NULL) : NULL;
 }
 
-/* --- le lastre ------------------------------------------------------------ */
+/* --- the slabs ------------------------------------------------------------ */
 
 /*
- * ⛔⛔ LA GENERAZIONE E' DEL PROCESSO, NON DEL PALCO — 22 set 2026: su KDE il
- *      contatore ripartiva da 0 con ogni cattura nuova, e dopo «Esci» e un
- *      nuovo accesso il codificatore (che resta) ritrovava in cache le
- *      superfici della sessione morta: lo schermo lampeggiava.  Vedi
- *      `generazione_nuova()` in `cattura.c`.  ⇒ Qui lo stesso, perche' un
- *      palco nuovo nasce a ogni rinascita della sessione XFCE.
- * ⚠ Parte da 2^62, e non da 0: `cattura.c` ha il suo contatore (questo file
- *   si lega anche al banco 13-w1, senza `cattura.o`), e i due intervalli non
- *   si toccano.
+ * ⛔⛔ THE GENERATION BELONGS TO THE PROCESS, NOT TO THE STAGE — 22 Sep 2026: on
+ *      KDE the counter restarted from 0 with every new capture, and after
+ *      «Log out» and a new login the encoder (which stays) found the surfaces
+ *      of the dead session again in its cache: the screen flashed.  See
+ *      `generazione_nuova()` in `cattura.c`.  ⇒ The same here, because a new
+ *      stage is born at every rebirth of the XFCE session.
+ * ⚠ It starts from 2^62, and not from 0: `cattura.c` has its own counter (this
+ *   file is also linked into bench 13-w1, without `cattura.o`), and the two
+ *   ranges never touch.
  */
 static uint64_t generazione_nuova(void)
 {
@@ -1136,9 +1136,9 @@ static uint64_t generazione_nuova(void)
 	return __atomic_add_fetch(&ultima, 1, __ATOMIC_RELAXED);
 }
 
-/* ⛔ «Il fotogramma in corso è sulla scheda?» — e la bandiera prima
- *    dell'indice: prima di `wlr_chiedi_la_scheda()` l'indice è lo zero di
- *    `g_new0`, cioè una lastra che non esiste. */
+/* ⛔ «Is the frame in progress on the card?» — and the flag before the
+ *    index: before `wlr_chiedi_la_scheda()` the index is the zero of
+ *    `g_new0`, that is a slab that does not exist. */
 static bool scheda_nel_giro(const WlrPalco *p)
 {
 	return p->scheda_nata && p->lastra_del_giro >= 0;
@@ -1156,16 +1156,16 @@ static void lastra_butta(WlrPalco *p, WlrLastra *l)
 		close(l->fd);
 	memset(l, 0, sizeof *l);
 	l->fd = -1;
-	/* ⛔ Regola 3: una lastra che muore cambia la generazione. */
+	/* ⛔ Rule 3: a slab that dies changes the generation. */
 	if (cera)
 		p->generazione = generazione_nuova();
 }
 
 /*
- * ⭐ Una lastra torna LIBERA — l'unico posto che lo fa, oltre a `wlr_rendi()`.
+ * ⭐ A slab becomes FREE again — the only place that does it, besides `wlr_rendi()`.
  *
- * ⚠ Se nel frattempo la scheda si è spenta, la lastra non serve più: si butta
- *   adesso, che è il primo momento in cui si può.
+ * ⚠ If the card has been turned off in the meantime, the slab is no longer
+ *   needed: it is thrown away now, which is the first moment it can be.
  */
 static void lastra_torna_libera(WlrPalco *p, WlrLastra *l, bool sporca)
 {
@@ -1199,14 +1199,13 @@ static const struct zwp_linux_buffer_params_v1_listener ASCOLTO_PARAMS = {
 };
 
 /*
- * Fa nascere (o tiene) la lastra per il formato e la misura di QUESTO
- * fotogramma.
+ * Creates (or keeps) the slab for the format and size of THIS frame.
  *
- * ⛔ `create` e non `create_immed`: col secondo un rifiuto del compositore
- *    può essere un errore di PROTOCOLLO, cioè la connessione che muore.  Col
- *    primo è un evento `failed`, e si ripiega dicendolo.
- * ⛔ E si aspetta con un tetto SUO (`WLR_LASTRA_NASCITA_S`), non con quello del
- *    fotogramma: vedi la definizione.
+ * ⛔ `create` and not `create_immed`: with the latter a refusal by the
+ *    compositor can be a PROTOCOL error, that is the connection dying.  With
+ *    the former it is a `failed` event, and we fall back, saying so.
+ * ⛔ And we wait with a ceiling OF ITS OWN (`WLR_LASTRA_NASCITA_S`), not with
+ *    the frame's: see the definition.
  */
 static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t larghezza,
                            uint32_t altezza, GError **sbaglio)
@@ -1217,13 +1216,13 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 
 	if (l->buffer && !l->sporca && l->larghezza == larghezza && l->altezza == altezza &&
 	    l->formato == formato)
-		return true; /* quella di prima va bene */
+		return true; /* the previous one is fine */
 	if (lastre_massime && l->bo && l->formato == formato && larghezza <= l->bo_larghezza &&
 	    altezza <= l->bo_altezza) {
-		/* ⛔ FASE 19: il BO resta (vedi WLR_LASTRA_L), cambia solo il
-		 *    `wl_buffer`.  ⛔ Regola 3: la misura e' cambiata, quindi la
-		 *    generazione cambia — il codificatore non deve ritrovare in cache
-		 *    l'importazione con la misura vecchia. */
+		/* ⛔ PHASE 19: the BO stays (see WLR_LASTRA_L), only the `wl_buffer`
+		 *    changes.  ⛔ Rule 3: the size has changed, so the generation
+		 *    changes — the encoder must not find in its cache the import
+		 *    with the old size. */
 		if (l->buffer)
 			wl_buffer_destroy(l->buffer);
 		l->buffer = NULL;
@@ -1235,14 +1234,14 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	lastra_butta(p, l);
 	if (lastre_massime && (larghezza > WLR_LASTRA_L || altezza > WLR_LASTRA_A))
 		registro_dice(AREA,
-		              "⚠ wlroots: una tela %ux%u oltre la lastra massima %ux%u — la "
-		              "lastra nasce alla misura chiesta, e cambiando misura MORIRA' (FASE "
-		              "19: sulla Radeon in Vulkan e' il caso del GPU hang)",
+		              "⚠ wlroots: a %ux%u canvas beyond the maximum slab %ux%u — the "
+		              "slab is born at the requested size, and on a size change it WILL DIE "
+		              "(PHASE 19: on the Radeon with Vulkan this is the GPU hang case)",
 		              larghezza, altezza, WLR_LASTRA_L, WLR_LASTRA_A);
 
-	/* ⭐ LINEARE, chiesto per nome.  ⚠ Se il driver non accetta la lista dei
-	 *   modificatori si riprova con la bandiera LINEAR, che dice la stessa
-	 *   cosa nel dialetto vecchio. */
+	/* ⭐ LINEAR, asked for by name.  ⚠ If the driver does not accept the
+	 *   modifier list we retry with the LINEAR flag, which says the same
+	 *   thing in the old dialect. */
 	l->bo_larghezza = (lastre_massime && larghezza < WLR_LASTRA_L) ? WLR_LASTRA_L : larghezza;
 	l->bo_altezza = (lastre_massime && altezza < WLR_LASTRA_A) ? WLR_LASTRA_A : altezza;
 	l->bo = gbm_bo_create_with_modifiers2(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
@@ -1251,21 +1250,21 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 		l->bo = gbm_bo_create(p->gbm, l->bo_larghezza, l->bo_altezza, formato,
 		                      GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR);
 	/*
-	 * ⭐ 5 ottobre 2026, NVIDIA (RTX 4090, driver 595): `[M]` il GBM della
-	 *   NVIDIA rifiuta LINEARE + RENDERING (`Invalid argument`, con tutti e due
-	 *   i dialetti) e accetta RENDERING col modificatore SUO
-	 *   (`0x300000000e08014`).  ⇒ Solo se il lineare è stato rifiutato, la
-	 *   lastra la sceglie il driver, e il modificatore viaggia col fotogramma:
-	 *   Vulkan lo importa per nome (`VK_EXT_image_drm_format_modifier`), e se
-	 *   non sapesse, lo direbbe all'importazione.  ⛔ Intel e Radeon non
-	 *   passano di qui: a loro il lineare riesce.
+	 * ⭐ 5 Oct 2026, NVIDIA (RTX 4090, driver 595): `[M]` the NVIDIA GBM
+	 *   refuses LINEAR + RENDERING (`Invalid argument`, with both dialects)
+	 *   and accepts RENDERING with ITS OWN modifier
+	 *   (`0x300000000e08014`).  ⇒ Only if linear was refused, the driver
+	 *   chooses the slab, and the modifier travels with the frame: Vulkan
+	 *   imports it by name (`VK_EXT_image_drm_format_modifier`), and if it
+	 *   could not, it would say so at import.  ⛔ Intel and Radeon do not
+	 *   pass through here: linear works for them.
 	 */
 	bool scelta_del_driver = false;
 	if (!l->bo) {
-		/* ⛔ Non «quello che vuole il driver»: `[M]` sulla 4090 sceglie un
-		 *    modificatore che Vulkan non importa.  Solo quelli che il
-		 *    codificatore dichiara (`vulkanvideo_modificatori`), chiesti una
-		 *    volta per palco e formato. */
+		/* ⛔ Not «whatever the driver wants»: `[M]` on the 4090 it picks a
+		 *    modifier Vulkan does not import.  Only those the encoder
+		 *    declares (`vulkanvideo_modificatori`), asked once per stage and
+		 *    format. */
 		int lineare_errno = errno;
 		if (p->mod_formato != formato) {
 			p->mod_formato = formato;
@@ -1283,47 +1282,47 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	}
 	if (!l->bo) {
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
-		            "gbm non alloca %ux%u fourcc 0x%08x su %s, né lineare né con uno dei "
-		            "%d modificatori che il codificatore importa: %s",
+		            "gbm does not allocate %ux%u fourcc 0x%08x on %s, neither linear nor with one of "
+		            "the %d modifiers the encoder imports: %s",
 		            l->bo_larghezza, l->bo_altezza, formato, p->nodo, p->mod_quanti,
 		            g_strerror(errno));
 		return false;
 	}
 	if (gbm_bo_get_plane_count(l->bo) != 1) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "gbm ha dato una lastra a %d piani: il codificatore ne sa leggere uno",
+		            "gbm gave a slab with %d planes: the encoder can read one",
 		            gbm_bo_get_plane_count(l->bo));
 		lastra_butta(p, l);
 		return false;
 	}
 	l->modificatore = gbm_bo_get_modifier(l->bo);
-	/* ⚠ Col dialetto vecchio il modificatore può tornare INVALID: la bandiera
-	 *   LINEAR però l'ha fissato, e lo si scrive per quel che è. */
+	/* ⚠ With the old dialect the modifier can come back INVALID: the LINEAR
+	 *   flag however fixed it, and it is written down for what it is. */
 	if (l->modificatore == DRM_FORMAT_MOD_INVALID && !scelta_del_driver)
 		l->modificatore = DRM_FORMAT_MOD_LINEAR;
 	if (scelta_del_driver) {
 		static bool detto = false;
 		if (l->modificatore == DRM_FORMAT_MOD_INVALID) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-			            "gbm ha rifiutato il lineare, e la lastra del driver non dice "
-			            "il suo modificatore: nessuno la saprebbe importare");
+			            "gbm refused linear, and the driver's slab does not say "
+			            "its modifier: nobody could import it");
 			lastra_butta(p, l);
 			return false;
 		}
 		if (!detto) {
 			detto = true;
 			registro_dice(AREA,
-			              "⭐ wlroots: il driver rifiuta la lastra LINEARE (NVIDIA): la "
-			              "lastra nasce col modificatore 0x%" G_GINT64_MODIFIER "x, scelto "
-			              "fra i %d che il codificatore Vulkan dichiara di saper importare",
+			              "⭐ wlroots: the driver refuses the LINEAR slab (NVIDIA): the "
+			              "slab is born with modifier 0x%" G_GINT64_MODIFIER "x, chosen "
+			              "among the %d the Vulkan encoder declares it can import",
 			              (guint64)l->modificatore, p->mod_quanti);
 		}
 	} else if (l->modificatore != DRM_FORMAT_MOD_LINEAR) {
-		/* ⛔ Si era chiesto LINEARE: un tiling che nessuno ha scelto è
-		 *    un'importazione che nessuno ha provato. */
+		/* ⛔ LINEAR was asked for: a tiling nobody chose is an import
+		 *    nobody has tried. */
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "gbm ha dato il modificatore 0x%" G_GINT64_MODIFIER "x invece del "
-		            "LINEARE chiesto",
+		            "gbm gave modifier 0x%" G_GINT64_MODIFIER "x instead of the "
+		            "LINEAR asked for",
 		            (guint64)l->modificatore);
 		lastra_butta(p, l);
 		return false;
@@ -1336,12 +1335,12 @@ static bool lastra_prepara(WlrPalco *p, WlrLastra *l, uint32_t formato, uint32_t
 	l->formato = formato;
 	if (l->fd < 0) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "gbm_bo_get_fd: la lastra non ha un descrittore DMA-BUF");
+		            "gbm_bo_get_fd: the slab has no DMA-BUF descriptor");
 		lastra_butta(p, l);
 		return false;
 	}
-	/* ⛔ La lastra è già nata qui, anche se il `wl_buffer` non c'è ancora: la
-	 *    generazione cambia ADESSO (regola 3). */
+	/* ⛔ The slab is already born here, even if the `wl_buffer` is not there
+	 *    yet: the generation changes NOW (rule 3). */
 	p->generazione = generazione_nuova();
 
 il_buffer:
@@ -1366,12 +1365,12 @@ il_buffer:
 	zwp_linux_buffer_params_v1_destroy(params);
 	if (!p->params_finito || p->params_fallito || !p->creato) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "il compositore %s il DMA-BUF %ux%u (modificatore 0x%" G_GINT64_MODIFIER
-		            "x, passo %u)",
-		            p->params_finito ? "ha RIFIUTATO" : "non ha risposto in tempo per",
+		            "the compositor %s the %ux%u DMA-BUF (modifier 0x%" G_GINT64_MODIFIER
+		            "x, stride %u)",
+		            p->params_finito ? "REFUSED" : "did not answer in time for",
 		            larghezza, altezza, (guint64)l->modificatore, l->stride);
-		/* ⚠ Se `created` arrivasse dopo il tetto il `wl_buffer` resterebbe
-		 *   orfano: un oggetto perso, una volta, contro una connessione viva. */
+		/* ⚠ If `created` arrived after the ceiling the `wl_buffer` would be left
+		 *   orphaned: one lost object, once, against a live connection. */
 		lastra_butta(p, l);
 		return false;
 	}
@@ -1381,7 +1380,7 @@ il_buffer:
 	return true;
 }
 
-/* ⛔ Regola 1: si sceglie SOLO una lastra LIBERA, a rotazione. */
+/* ⛔ Rule 1: ONLY a FREE slab is chosen, in rotation. */
 static int lastra_scegli(WlrPalco *p)
 {
 	for (unsigned i = 0; i < WLR_LASTRE; i++) {
@@ -1396,12 +1395,12 @@ static int lastra_scegli(WlrPalco *p)
 }
 
 /*
- * ⛔ La scheda si SPEGNE, e si dice perché.  Da qui ogni fotogramma va in
- *    memoria, e i conteggi lo mostrano.
- * ⚠ Si buttano solo le LIBERE: una IN MANO la butta `wlr_rendi()` quando
- *   torna, una IN VOLO la chiusura del suo fotogramma (`lastra_torna_libera`).
- *   ⛔ Buttare una lastra in volo vorrebbe dire distruggere un `wl_buffer`
- *   nominato in un `copy` ancora aperto.
+ * ⛔ The card is TURNED OFF, and the reason is said.  From here every frame
+ *    goes to memory, and the counters show it.
+ * ⚠ Only the FREE ones are thrown away: one IN HAND is thrown away by
+ *   `wlr_rendi()` when it comes back, one IN FLIGHT by the closing of its
+ *   frame (`lastra_torna_libera`).  ⛔ Throwing away a slab in flight would
+ *   mean destroying a `wl_buffer` named in a `copy` still open.
  */
 static void scheda_spegni(WlrPalco *p, const char *perche)
 {
@@ -1412,21 +1411,21 @@ static void scheda_spegni(WlrPalco *p, const char *perche)
 		if (p->lastre[i].stato == LASTRA_LIBERA)
 			lastra_butta(p, &p->lastre[i]);
 	registro_dice(AREA,
-	              "⛔⛔ wlroots: la strada della SCHEDA si SPEGNE — %s.  ⇒ RIPIEGO "
-	              "DICHIARATO: da qui i pixel passano per la MEMORIA (`glReadPixels` "
-	              "nel compositore + la nostra copia), e i numeri del tratto sono "
-	              "quelli dell'altra strada",
+	              "⛔⛔ wlroots: the CARD route is TURNED OFF — %s.  ⇒ DECLARED "
+	              "FALLBACK: from here the pixels go through MEMORY (`glReadPixels` "
+	              "in the compositor + our copy), and the numbers of this link are "
+	              "those of the other route",
 	              perche);
 }
 
 /*
- * ⭐ LA DESTINAZIONE DEL `copy` DI QUESTO FOTOGRAMMA — la scheda, o NULL per la
- *    memoria.  Si chiama a elenco chiuso (`elenco_chiuso()`), UNA volta per
- *    fotogramma: dopo, la risposta sta in `lastra_del_giro`.
+ * ⭐ THE TARGET OF THIS FRAME'S `copy` — the card, or NULL for memory.  It is
+ *    called once the list is closed (`elenco_chiuso()`), ONCE per frame:
+ *    after that, the answer is in `lastra_del_giro`.
  *
- * ⛔ Torna NULL anche con `*rotto` vero: tutte le lastre sono in mano a valle.
- *    Lì il fotogramma si FERMA, non si ricicla una lastra in mano e non si
- *    ripiega in silenzio sulla memoria (regola 1).
+ * ⛔ It returns NULL also with `*rotto` true: all the slabs are in hand
+ *    downstream.  There the frame STOPS; a slab in hand is not recycled and
+ *    there is no silent fallback to memory (rule 1).
  */
 static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **sbaglio)
 {
@@ -1439,16 +1438,16 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 	if (!p->scheda)
 		return NULL;
 	if (!p->offerto_scheda) {
-		/* ⚠ `[R]` wlroots manda `linux_dmabuf` solo se l'allocatore
-		 *   dell'uscita sa fare DMA-BUF: senza, il compositore è in SOFTWARE
-		 *   (pixman, `STUDI.md` §xfce §5.2).  È una diagnosi, e si scrive. */
+		/* ⚠ `[R]` wlroots sends `linux_dmabuf` only if the output's allocator
+		 *   can do DMA-BUF: without it, the compositor is in SOFTWARE
+		 *   (pixman, `STUDI.md` §xfce §5.2).  It is a diagnosis, and it is written. */
 		if (!p->detto_senza_offerta) {
 			p->detto_senza_offerta = true;
 			registro_dice(AREA,
-			              "⛔ wlroots: il compositore NON offre DMA-BUF per questo "
-			              "fotogramma — di solito vuol dire che disegna in SOFTWARE "
-			              "(pixman, `STUDI.md` §xfce §5.2).  RIPIEGO DICHIARATO: il "
-			              "fotogramma va in MEMORIA; la riga non si ripete");
+			              "⛔ wlroots: the compositor does NOT offer DMA-BUF for this "
+			              "frame — it usually means it draws in SOFTWARE "
+			              "(pixman, `STUDI.md` §xfce §5.2).  DECLARED FALLBACK: the "
+			              "frame goes to MEMORY; the line is not repeated");
 		}
 		return NULL;
 	}
@@ -1461,10 +1460,10 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 			memcpy(nome, &p->o_scheda_formato, 4);
 			nome[4] = 0;
 			registro_dice(AREA,
-			              "⛔ wlroots: la scheda offre «%s», e il codificatore importa "
-			              "solo XRGB8888 e ARGB8888 — ⚠ NON si indovina un fourcc (un "
-			              "canale scambiato non dà errore, dà un desktop blu).  "
-			              "RIPIEGO DICHIARATO: il fotogramma va in MEMORIA",
+			              "⛔ wlroots: the card offers «%s», and the encoder imports "
+			              "only XRGB8888 and ARGB8888 — ⚠ a fourcc is NOT guessed (a "
+			              "swapped channel gives no error, it gives a blue desktop).  "
+			              "DECLARED FALLBACK: the frame goes to MEMORY",
 			              nome);
 		}
 		return NULL;
@@ -1474,17 +1473,17 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 	if (k < 0) {
 		*rotto = true;
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BUSY,
-		            "tutte e %d le lastre della scheda sono IN MANO a valle: qualcuno "
-		            "non ha chiamato `wlr_rendi()` (cioè `cattura_fermo_libera()`).  ⛔ "
-		            "Non se ne ricicla una: sarebbe riscrivere un'immagine mentre il "
-		            "codificatore la legge",
+		            "all %d of the card's slabs are IN HAND downstream: someone "
+		            "did not call `wlr_rendi()` (that is `cattura_fermo_libera()`).  ⛔ "
+		            "None is recycled: it would mean rewriting an image while the "
+		            "encoder reads it",
 		            WLR_LASTRE);
 		return NULL;
 	}
 	l = &p->lastre[k];
 	if (!lastra_prepara(p, l, p->o_scheda_formato, p->o_scheda_l, p->o_scheda_a, &perche)) {
 		g_autofree char *motivo =
-		    g_strdup_printf("la lastra non è nata (%s)", perche ? perche->message : "?");
+		    g_strdup_printf("the slab was not born (%s)", perche ? perche->message : "?");
 
 		scheda_spegni(p, motivo);
 		return NULL;
@@ -1495,11 +1494,11 @@ static struct wl_buffer *scheda_destinazione(WlrPalco *p, bool *rotto, GError **
 }
 
 /*
- * ⛔⛔ L'ATTESA DELLA GPU DOPO `ready` — il riquadro della sincronizzazione.
+ * ⛔⛔ THE GPU WAIT AFTER `ready` — the synchronisation box.
  *
- * Torna falso solo se la fence c'era e NON è scattata entro la scadenza: lì
- * la lastra non si consegna (chi la leggesse vedrebbe un blit a metà), e il
- * fotogramma resta PENDENTE — la chiamata dopo riaspetta.
+ * It returns false only if the fence was there and did NOT fire before the
+ * deadline: then the slab is not delivered (whoever read it would see a half
+ * blit), and the frame stays PENDING — the next call waits again.
  */
 static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
                                   WlrFotogramma *fuori, GError **sbaglio)
@@ -1513,16 +1512,16 @@ static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
 	fuori->us_attesa_gpu = 0;
 	fuori->attesa_esplicita = false;
 	if (ioctl(l->fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &sf) != 0) {
-		/* ⚠ Nucleo senza l'ioctl (< 5.20), o un driver che non lo regge: si
-		 *   conta sulla sincronizzazione IMPLICITA, e lo si dice una volta. */
+		/* ⚠ Kernel without the ioctl (< 5.20), or a driver that does not support
+		 *   it: we rely on IMPLICIT synchronisation, and say so once. */
 		if (!p->detta_sync_implicita) {
 			p->detta_sync_implicita = true;
 			registro_dice(AREA,
-			              "⚠ wlroots: la fence dentro il DMA-BUF non si estrae "
-			              "(DMA_BUF_IOCTL_EXPORT_SYNC_FILE: %s) — da qui si conta "
-			              "sulla sola sincronizzazione IMPLICITA fra compositore e "
-			              "codificatore.  `[?]` Se il desktop mostra righe a metà, "
-			              "è QUESTA riga",
+			              "⚠ wlroots: the fence inside the DMA-BUF cannot be extracted "
+			              "(DMA_BUF_IOCTL_EXPORT_SYNC_FILE: %s) — from here we rely "
+			              "on IMPLICIT synchronisation alone between compositor and "
+			              "encoder.  `[?]` If the desktop shows half-drawn rows, "
+			              "it is THIS line",
 			              g_strerror(errno));
 		}
 		return true;
@@ -1538,16 +1537,16 @@ static bool scheda_aspetta_la_gpu(WlrPalco *p, WlrLastra *l, gint64 scadenza,
 	fuori->us_attesa_gpu = (uint64_t)(g_get_monotonic_time() - prima);
 	if (r <= 0) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-		            "il compositore ha detto «ready» ma il blit sulla GPU non è finito "
-		            "entro la scadenza (%.1f ms di attesa della fence) — il fotogramma "
-		            "resta in corso",
+		            "the compositor said «ready» but the blit on the GPU did not finish "
+		            "before the deadline (%.1f ms waiting for the fence) — the frame "
+		            "stays in progress",
 		            fuori->us_attesa_gpu / 1000.0);
 		return false;
 	}
 	return true;
 }
 
-/* ⭐ La consegna di un fotogramma della scheda: la lastra passa IN MANO. */
+/* ⭐ The delivery of a card frame: the slab goes IN HAND. */
 static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
 {
 	WlrLastra *l = &p->lastre[p->lastra_del_giro];
@@ -1561,8 +1560,8 @@ static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
 	fuori->larghezza = l->larghezza;
 	fuori->altezza = l->altezza;
 	fuori->stride = l->stride;
-	/* ⛔ Il fourcc DRM dell'evento `linux_dmabuf`, così com'è: NON passa da
-	 *    `shm_a_drm()` (difetto 1). */
+	/* ⛔ The DRM fourcc of the `linux_dmabuf` event, as it is: it does NOT go
+	 *    through `shm_a_drm()` (defect 1). */
 	fuori->formato = l->formato;
 	fuori->byte = (gsize)l->stride * l->altezza;
 	fuori->fd = l->fd;
@@ -1572,8 +1571,8 @@ static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
 	fuori->lastra = l;
 	fuori->secondi = p->f_secondi;
 	fuori->nanosecondi = p->f_nanosecondi;
-	/* ⚠ `[R]` Sulla scheda il compositore manda `flags 0`: il blit scrive già
-	 *   dritto.  Si consegna comunque quel che ha detto. */
+	/* ⚠ `[R]` On the card the compositor sends `flags 0`: the blit already
+	 *   writes upright.  What it said is delivered anyway. */
 	fuori->y_invertita = p->y_invertita;
 
 	if (!p->detto_il_formato_scheda) {
@@ -1583,12 +1582,12 @@ static void scheda_consegna(WlrPalco *p, WlrFotogramma *fuori)
 		memcpy(nome, &l->formato, 4);
 		nome[4] = 0;
 		registro_dice(AREA,
-		              "⭐ wlroots: il PRIMO fotogramma della SCHEDA — «%s» %ux%u passo "
-		              "%u, lastra lineare, %s",
+		              "⭐ wlroots: the FIRST frame from the CARD — «%s» %ux%u stride "
+		              "%u, linear slab, %s",
 		              nome, l->larghezza, l->altezza, l->stride,
 		              fuori->attesa_esplicita
-		                  ? "fence estratta dal DMA-BUF e aspettata"
-		                  : "⚠ senza fence: sincronizzazione implicita");
+		                  ? "fence extracted from the DMA-BUF and waited on"
+		                  : "⚠ without a fence: implicit synchronisation");
 	}
 }
 
@@ -1608,12 +1607,12 @@ static void scheda_chiudi(WlrPalco *p)
 }
 
 /*
- * Chiude il fotogramma in corso.  `copia_viva` = la copia era partita e NON è
- * arrivato né `ready` né `failed`: il buffer non si riusa.
+ * Closes the frame in progress.  `copia_viva` = the copy had started and
+ * neither `ready` nor `failed` has arrived: the buffer is not reused.
  *
- * ⭐ E la lastra del fotogramma, se c'era e NON è stata consegnata (filo
- *    caduto, `failed`): regola 2, è sporca.  ⚠ Una lastra consegnata ha già
- *    `lastra_del_giro = -1`, e qui non si tocca.
+ * ⭐ And the frame's slab, if there was one and it was NOT delivered (dropped
+ *    wire, `failed`): rule 2, it is dirty.  ⚠ A delivered slab already has
+ *    `lastra_del_giro = -1`, and is not touched here.
  */
 static void chiudi_frame(WlrPalco *p, bool copia_viva)
 {
@@ -1631,65 +1630,65 @@ static void chiudi_frame(WlrPalco *p, bool copia_viva)
 }
 
 /* ========================================================================= */
-/* ⭐⭐ LA SONDA DEL PUNTATORE — la forma vera su labwc (XFCE e LXQt).         */
+/* ⭐⭐ THE POINTER PROBE — the true shape on labwc (XFCE and LXQt).          */
 /* ========================================================================= */
 
 /*
- * ⛔ IL FATTO `[M]`: labwc headless non ha un piano del cursore — il puntatore
- *    lo disegna via software DENTRO il buffer dell'uscita, e screencopy non ha
- *    un canale per la sua forma.  ⭐ Ma il tema codificato (`forma.h`) fa si'
- *    che sotto il punto attivo ci sia UN pixel opaco di un colore che e' solo
- *    di quella forma.  ⇒ Basta guardarlo.
+ * ⛔ THE FACT `[M]`: headless labwc has no cursor plane — it draws the pointer
+ *    in software INSIDE the output buffer, and screencopy has no channel for
+ *    its shape.  ⭐ But the encoded theme (`forma.h`) makes sure that under
+ *    the hotspot there is ONE opaque pixel of a colour that belongs only to
+ *    that shape.  ⇒ Looking at it is enough.
  *
- * ⭐ COME SI GUARDA: `capture_output_region` di 3x3 attorno al punto, in un
- *    `wl_shm` di 36 byte, dopo ogni gesto del puntatore.  Il 3x3 e non l'1x1
- *    perche' il punto in coordinate dell'uscita e' frazionario (il puntatore
- *    virtuale e' normalizzato) e `[?]` come wlroots lo porta al pixel non l'ho
- *    letto: con tre pixel per lato non importa.  Si guarda il CENTRO, poi i
- *    vicini.
+ * ⭐ HOW IT IS LOOKED AT: `capture_output_region` of 3x3 around the point, in
+ *    a 36-byte `wl_shm`, after every pointer gesture.  3x3 and not 1x1
+ *    because the point in output coordinates is fractional (the virtual
+ *    pointer is normalised) and `[?]` how wlroots brings it to the pixel I
+ *    have not read: with three pixels per side it does not matter.  The
+ *    CENTRE is looked at, then the neighbours.
  *
- * ⛔ LE TRE REGOLE:
- *   1. UNA sola in volo.  Se il puntatore si muove mentre una e' in volo, si
- *      ricorda solo l'ULTIMA posizione, e si rilancia quando la prima torna
- *      (coalescente): a 60 Hz di mano non si accodano 60 sonde.
- *   2. La copia e' `copy`, mai `copy_with_damage`: wlroots la serve al
- *      prossimo commit dell'uscita, e il movimento del puntatore ne provoca
- *      comunque uno (il cursore software e' danno).
- *   3. ⭐ LA SONDA DI CODA.  `[R]` il client cambia forma DOPO aver ricevuto
- *      l'`enter` — cioe' DOPO il movimento che l'ha provocata — e la sonda
- *      di quel movimento puo' tornare prima che il client abbia risposto.
- *      ⇒ A mano ferma, SONDA_CODA_US dopo l'ultima, se ne manda una in piu',
- *      una volta sola.  Senza, chi si ferma su un bordo col primo gesto
- *      terrebbe la freccia.
+ * ⛔ THE THREE RULES:
+ *   1. ONLY ONE in flight.  If the pointer moves while one is in flight, only
+ *      the LAST position is remembered, and it is relaunched when the first
+ *      comes back (coalescing): at a 60 Hz hand, 60 probes do not queue up.
+ *   2. The copy is `copy`, never `copy_with_damage`: wlroots serves it at the
+ *      next commit of the output, and the pointer movement causes one anyway
+ *      (the software cursor is damage).
+ *   3. ⭐ THE TAIL PROBE.  `[R]` the client changes shape AFTER receiving the
+ *      `enter` — that is AFTER the movement that caused it — and the probe of
+ *      that movement can come back before the client has answered.
+ *      ⇒ With the hand still, SONDA_CODA_US after the last one, one more is
+ *      sent, only once.  Without it, whoever stops on an edge with the first
+ *      gesture would keep the arrow.
  *
- * ⛔ IL FILO: tutto gira sul thread del ciclo del figlio — la domanda parte da
- *    `wlr_sonda_puntatore` (dopo l'iniezione del gesto), gli eventi li pompa
- *    `wlr_fotogramma` (la stessa pompa del flusso), e la forma la raccoglie
- *    `wlr_sonda_forma` (da `cattura_prendi`).  ⇒ Nessun lucchetto, e nessuna
- *    consegna da dentro una richiamata di `libwayland`.
+ * ⛔ THE THREAD: everything runs on the thread of the child's loop — the
+ *    request starts from `wlr_sonda_puntatore` (after the gesture injection),
+ *    the events are pumped by `wlr_fotogramma` (the same pump as the stream),
+ *    and the shape is collected by `wlr_sonda_forma` (from `cattura_prendi`).
+ *    ⇒ No lock, and no delivery from inside a `libwayland` callback.
  *
- * ⚠ LO SPAZIO: la regione e' in coordinate dell'USCITA; il figlio passa le
- *   coordinate della sua tela, e si scala come fa wlroots col puntatore
- *   virtuale (`motion_absolute` e' normalizzato).  `[?]` scala 1: `wl_output`
- *   dice la scala, qui non si legge, e sulle scatole e' 1.
- * ⚠ I PIXEL: il formato lo dice l'evento `buffer` (numerazione wl_shm).
- *   `[M]` labwc da' `XBGR8888`, cioe' R G B x in memoria; ARGB/XRGB sono
- *   B G R A.  L'alfa del buffer dell'uscita non vuol dire niente (l'uscita e'
- *   opaca): si passa 0xFF, e il controllo lo fanno verde e blu esatti.
- * ⚠ IL COSTO: ogni sonda e' una lettura 3x3 dal renderer del compositore.
- *   `[M]` 24 set 2026, rete14-lxqt (Intel UHD 730, tela 1344x870), puntatore
- *   mosso a ~55 Hz per 30 s sopra qterminal, due giri per caso:
- *       senza sonda      labwc 4,9-5,1%   figlio 11,2%   dipinti 55,1-55,3/s
- *       sonda a 60 Hz    labwc 6,3-6,4%   figlio 11,6-11,8%   55,0-55,2/s
- *       sonda a 30 Hz    labwc 5,7%       figlio 11,6-11,7%   55,1-55,3/s
- *   ⇒ +1,4 punti di CPU di labwc (+0,5 del figlio), fotogrammi invariati:
- *     sotto la soglia dei 2 punti, e il diradamento resta SPENTO.  Se un
- *     giorno servisse: SONDA_MINIMO_US 33333 e' il 30 Hz misurato qui sopra.
+ * ⚠ THE SPACE: the region is in OUTPUT coordinates; the child passes the
+ *   coordinates of its canvas, and they are scaled as wlroots does with the
+ *   virtual pointer (`motion_absolute` is normalised).  `[?]` scale 1:
+ *   `wl_output` says the scale, it is not read here, and in the boxes it is 1.
+ * ⚠ THE PIXELS: the format is given by the `buffer` event (wl_shm numbering).
+ *   `[M]` labwc gives `XBGR8888`, that is R G B x in memory; ARGB/XRGB are
+ *   B G R A.  The alpha of the output buffer means nothing (the output is
+ *   opaque): 0xFF is passed, and the check is done by exact green and blue.
+ * ⚠ THE COST: every probe is a 3x3 read from the compositor's renderer.
+ *   `[M]` 24 Sep 2026, rete14-lxqt (Intel UHD 730, canvas 1344x870), pointer
+ *   moved at ~55 Hz for 30 s over qterminal, two rounds per case:
+ *       no probe         labwc 4,9-5,1%   figlio 11,2%   painted 55,1-55,3/s
+ *       probe at 60 Hz   labwc 6,3-6,4%   figlio 11,6-11,8%   55,0-55,2/s
+ *       probe at 30 Hz   labwc 5,7%       figlio 11,6-11,7%   55,1-55,3/s
+ *   ⇒ +1,4 points of labwc CPU (+0,5 for the child), frames unchanged:
+ *     below the 2-point threshold, and the thinning stays OFF.  If one day
+ *     it were needed: SONDA_MINIMO_US 33333 is the 30 Hz measured above.
  */
 
-/* ⭐ Quanto dopo l'ultima sonda si manda quella di coda. */
+/* ⭐ How long after the last probe the tail probe is sent. */
 #define SONDA_CODA_US (120 * 1000)
-/* ⚠ Il diradamento: 0 = una per gesto (coalescente).  Vedi il costo, sopra. */
+/* ⚠ The thinning: 0 = one per gesture (coalescing).  See the cost, above. */
 #define SONDA_MINIMO_US 0
 
 static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y);
@@ -1703,11 +1702,11 @@ static void sonda_chiudi_frame(WlrPalco *p)
 }
 
 /*
- * I byte di un pixel della sonda, secondo il formato; 0 = non si legge.
- * ⛔ `[M]` 6 ott 2026, NVIDIA (labwc 0.9.3, Ubuntu 26.04): per la regione 3x3
- *    labwc offre un formato a **3 byte** (stride 9) — il tetto «stride ≥ l×4»
- *    lo rifiutava, la sonda restava senza buffer e la forma del puntatore non
- *    cambiava mai (F-005 rosso su LXQt).  Sulle Intel e Radeon offre XRGB8888.
+ * The bytes of a probe pixel, according to the format; 0 = it cannot be read.
+ * ⛔ `[M]` 6 Oct 2026, NVIDIA (labwc 0.9.3, Ubuntu 26.04): for the 3x3 region
+ *    labwc offers a **3-byte** format (stride 9) — the «stride ≥ w×4» ceiling
+ *    refused it, the probe stayed without a buffer and the pointer shape never
+ *    changed (F-005 red on LXQt).  On Intel and Radeon it offers XRGB8888.
  */
 static unsigned sonda_bpp(uint32_t shm)
 {
@@ -1725,7 +1724,7 @@ static unsigned sonda_bpp(uint32_t shm)
 	}
 }
 
-/* Il buffer della sonda: si rifa' solo se il compositore ne chiede un altro. */
+/* The probe's buffer: it is remade only if the compositor asks for another one. */
 static bool sonda_buffer(WlrPalco *p)
 {
 	struct wl_shm_pool *pool;
@@ -1743,8 +1742,8 @@ static bool sonda_buffer(WlrPalco *p)
 	if (p->s_fd >= 0)
 		close(p->s_fd);
 	p->s_fd = -1;
-	/* ⛔ Un tetto: la regione e' 3x3, e un compositore che chiede di piu' non
-	 *    sta rispondendo a questa domanda. */
+	/* ⛔ A ceiling: the region is 3x3, and a compositor that asks for more is
+	 *    not answering this question. */
 	if (byte == 0 || byte > 4096 || sonda_bpp(p->s_f_shm) == 0 ||
 	    p->s_f_stride < p->s_f_l * sonda_bpp(p->s_f_shm))
 		return false;
@@ -1768,7 +1767,7 @@ static bool sonda_buffer(WlrPalco *p)
 	return true;
 }
 
-/* La fine di una sonda (tornata o fallita): se ce n'e' una in attesa, parte. */
+/* The end of a probe (returned or failed): if one is waiting, it starts. */
 static void sonda_prossima(WlrPalco *p)
 {
 	sonda_chiudi_frame(p);
@@ -1785,11 +1784,11 @@ static void sonda_parti(WlrPalco *p)
 	if (!sonda_buffer(p)) {
 		if (!p->s_detto_fallito) {
 			p->s_detto_fallito = true;
-			registro_dice(AREA, "⚠ wlroots: la sonda del puntatore non ha un buffer "
-			                    "(%ux%u stride %u): la forma non si guarda, e il client "
-			                    "tiene la sua freccia",
+			registro_dice(AREA, "⚠ wlroots: the pointer probe has no buffer "
+			                    "(%ux%u stride %u): the shape is not looked at, and the client "
+			                    "keeps its arrow",
 			              p->s_f_l, p->s_f_a, p->s_f_stride);
-			registro_dice(AREA, "   (formato wl_shm della sonda: 0x%08x)", p->s_f_shm);
+			registro_dice(AREA, "   (wl_shm format of the probe: 0x%08x)", p->s_f_shm);
 		}
 		p->s_conto.fallite++;
 		sonda_prossima(p);
@@ -1809,7 +1808,7 @@ static void sonda_buffer_ev(void *dati, struct zwlr_screencopy_frame_v1 *f, uint
 	p->s_f_l = l;
 	p->s_f_a = a;
 	p->s_f_stride = stride;
-	/* ⚠ Sotto la v3 `buffer_done` non c'e': l'unica offerta e' questa. */
+	/* ⚠ Below v3 `buffer_done` does not exist: this is the only offer. */
 	if (zwlr_screencopy_frame_v1_get_version(f) < 3)
 		sonda_parti(p);
 }
@@ -1823,8 +1822,8 @@ static void sonda_buffer_done(void *dati, struct zwlr_screencopy_frame_v1 *f)
 }
 
 /*
- * Un pixel della sonda ⇒ B G R, secondo il formato dichiarato.  FALSE = un
- * formato che qui non si legge (detto una volta, e la sonda si spegne).
+ * A probe pixel ⇒ B G R, according to the declared format.  FALSE = a
+ * format that is not read here (said once, and the probe turns off).
  */
 static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, uint8_t *r)
 {
@@ -1837,7 +1836,7 @@ static bool sonda_bgr(uint32_t shm, const uint8_t *q, uint8_t *b, uint8_t *g, ui
 	case WL_SHM_FORMAT_XBGR8888:
 		*r = q[0], *g = q[1], *b = q[2];
 		return true;
-	/* DRM: RGB888 = [23:0] R:G:B little endian ⇒ in memoria B, G, R */
+	/* DRM: RGB888 = [23:0] R:G:B little endian ⇒ in memory B, G, R */
 	case WL_SHM_FORMAT_RGB888:
 		*b = q[0], *g = q[1], *r = q[2];
 		return true;
@@ -1854,8 +1853,8 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 {
 	WlrPalco *p = dati;
 	const uint8_t *px = p->s_pixel;
-	/* ⭐ Il centro della regione, in pixel del buffer: al bordo dell'uscita la
-	 *    regione e' tagliata, e il centro si sposta con lei. */
+	/* ⭐ The centre of the region, in buffer pixels: at the edge of the output
+	 *    the region is cut, and the centre moves with it. */
 	int32_t cx = p->s_x - MAX(p->s_x - 1, 0), cy = p->s_y - MAX(p->s_y - 1, 0);
 	int trovata = -1;
 	uint8_t b = 0, g = 0, r = 0;
@@ -1869,17 +1868,17 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 		if (!p->s_detto_formato) {
 			p->s_detto_formato = true;
 			registro_dice(AREA,
-			              "⛔ wlroots: la sonda del puntatore riceve il formato wl_shm "
-			              "0x%08x, che qui non si legge: la sonda SI SPEGNE, e il "
-			              "client tiene la sua freccia",
+			              "⛔ wlroots: the pointer probe receives wl_shm format "
+			              "0x%08x, which is not read here: the probe TURNS OFF, and the "
+			              "client keeps its arrow",
 			              p->s_f_shm);
 		}
 		p->s_spenta = true;
 		sonda_chiudi_frame(p);
 		return;
 	}
-	/* ⭐ Prima il centro, poi i vicini — `forma_da_pixel` e' esatto al byte,
-	 *    e un vicino di un altro colore non e' mai una forma nostra. */
+	/* ⭐ First the centre, then the neighbours — `forma_da_pixel` is exact to
+	 *    the byte, and a neighbour of another colour is never one of our shapes. */
 	for (int giro = 0; giro < 2 && trovata < 0; giro++)
 		for (uint32_t y = 0; y < p->s_f_a && trovata < 0; y++)
 			for (uint32_t x = 0; x < p->s_f_l && trovata < 0; x++) {
@@ -1895,15 +1894,15 @@ static void sonda_pronta(void *dati, struct zwlr_screencopy_frame_v1 *f, uint32_
 					p->s_conto.dai_vicini++;
 			}
 	if (trovata < 0) {
-		/* ⚠ Nessun colore nostro: un'applicazione che nasconde il puntatore, o
-		 *   che disegna una superficie sua.  Si tiene la forma di prima. */
+		/* ⚠ None of our colours: an application that hides the pointer, or
+		 *   that draws a surface of its own.  The previous shape is kept. */
 		p->s_conto.ignote++;
 		if (!p->s_detta_ignota) {
 			p->s_detta_ignota = true;
 			registro_dice(AREA,
-			              "⚠ wlroots: sotto il puntatore (%d,%d) nessun colore del tema "
-			              "codificato: si tiene la forma di prima.  La riga non si "
-			              "ripete; il conto e' nella chiusura",
+			              "⚠ wlroots: under the pointer (%d,%d) no colour of the encoded "
+			              "theme: the previous shape is kept.  The line is not "
+			              "repeated; the count is in the closing line",
 			              p->s_x, p->s_y);
 		}
 	} else if (trovata != p->s_forma) {
@@ -1928,8 +1927,8 @@ static void sonda_danno(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t x,
 static void sonda_dmabuf(void *d, struct zwlr_screencopy_frame_v1 *f, uint32_t formato,
                          uint32_t l, uint32_t a) {}
 
-/* ⛔ TUTTI gli eventi hanno una funzione: `libwayland` chiama senza guardare,
- *    e un buco qui e' un salto a NULL alla prima versione che lo manda. */
+/* ⛔ ALL the events have a function: `libwayland` calls without looking,
+ *    and a hole here is a jump to NULL at the first version that sends it. */
 static const struct zwlr_screencopy_frame_v1_listener ASCOLTO_SONDA = {
 	.buffer = sonda_buffer_ev,
 	.flags = sonda_flags,
@@ -1961,9 +1960,9 @@ static void sonda_lancia(WlrPalco *p, int32_t x, int32_t y)
 	p->s_conto.lanciate++;
 	p->s_ultima_partita = g_get_monotonic_time();
 	p->s_coda_a = p->s_ultima_partita + SONDA_CODA_US;
-	/* ⭐ Subito sul filo: la pompa del flusso gira fra 8 ms, e la forma arriva
-	 *    prima se la domanda parte adesso.  ⚠ EAGAIN non e' un guasto: parte
-	 *    col prossimo `flush` della pompa. */
+	/* ⭐ Straight onto the wire: the stream's pump runs within 8 ms, and the
+	 *    shape arrives sooner if the request leaves now.  ⚠ EAGAIN is not a
+	 *    fault: it leaves with the pump's next `flush`. */
 	wl_display_flush(p->display);
 }
 
@@ -1974,7 +1973,7 @@ void wlr_sonda_puntatore(WlrPalco *p, uint32_t x, uint32_t y, uint32_t l, uint32
 	if (!p || p->s_spenta || !p->manager || !p->uscita || !p->shm || l == 0 || a == 0 ||
 	    p->larghezza == 0 || p->altezza == 0)
 		return;
-	/* ⭐ Dalla tela all'uscita, come wlroots fa col puntatore virtuale. */
+	/* ⭐ From the canvas to the output, as wlroots does with the virtual pointer. */
 	if (x >= l)
 		x = l - 1;
 	if (y >= a)
@@ -1985,7 +1984,7 @@ void wlr_sonda_puntatore(WlrPalco *p, uint32_t x, uint32_t y, uint32_t l, uint32
 	p->s_coda_fatta = false;
 	if (p->s_frame || (SONDA_MINIMO_US > 0 &&
 	                   g_get_monotonic_time() - p->s_ultima_partita < SONDA_MINIMO_US)) {
-		/* ⭐ coalescente: si ricorda solo l'ULTIMA posizione */
+		/* ⭐ coalescing: only the LAST position is remembered */
 		p->s_in_attesa = true;
 		p->s_attesa_x = ux;
 		p->s_attesa_y = uy;
@@ -2000,8 +1999,8 @@ int wlr_sonda_forma(WlrPalco *p)
 
 	if (!p || p->s_spenta)
 		return -1;
-	/* ⭐ la sonda di coda (regola 3), e quella rimasta indietro dal
-	 *    diradamento: partono da qui, che il ciclo del figlio chiama sempre */
+	/* ⭐ the tail probe (rule 3), and the one left behind by the thinning:
+	 *    they start from here, which the child's loop always calls */
 	if (!p->s_frame) {
 		gint64 ora = g_get_monotonic_time();
 
@@ -2036,9 +2035,9 @@ WlrPalco *wlr_apri(GError **sbaglio)
 	p->fd = -1;
 	p->s_fd = -1;
 	p->s_forma = p->s_nuova = -1;
-	p->forza_intero = true; /* il primo giro: chi si attacca deve vedere subito */
-	/* ⛔ I descrittori della scheda a -1 SUBITO: lo zero di `g_new0` è lo
-	 *    standard input, e una chiusura per sbaglio lo chiuderebbe. */
+	p->forza_intero = true; /* the first round: whoever attaches must see at once */
+	/* ⛔ The card's descriptors at -1 AT ONCE: the zero of `g_new0` is
+	 *    standard input, and a mistaken close would close it. */
 	p->drm_fd = -1;
 	p->lastra_del_giro = -1;
 	for (unsigned i = 0; i < WLR_LASTRE; i++)
@@ -2052,22 +2051,23 @@ WlrPalco *wlr_apri(GError **sbaglio)
 			p->display = wl_display_connect(tenta);
 			if (p->display)
 				registro_dice(AREA,
-				              "wlroots: WAYLAND_DISPLAY non c'era, trovato «%s» "
+				              "wlroots: WAYLAND_DISPLAY was not set, found «%s» "
 				              "in XDG_RUNTIME_DIR", tenta);
 		}
 	}
 	if (!p->display) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "nessun compositore Wayland raggiungibile in XDG_RUNTIME_DIR=%s",
-		            g_getenv("XDG_RUNTIME_DIR") ?: "(non impostata)");
+		            "no Wayland compositor reachable in XDG_RUNTIME_DIR=%s",
+		            g_getenv("XDG_RUNTIME_DIR") ?: "(not set)");
 		wlr_chiudi(p);
 		return NULL;
 	}
 
 	p->registry = wl_display_get_registry(p->display);
 	wl_registry_add_listener(p->registry, &ASCOLTO_REGISTRO, p);
-	/* ⚠ DUE giri, non uno: il primo porta i global, il secondo gli eventi che i
-	 *   global mandano appena legati.  ⛔ E con tetto (difetto 3). */
+	/* ⚠ TWO rounds, not one: the first brings the globals, the second the
+	 *   events the globals send as soon as they are bound.  ⛔ And with a
+	 *   ceiling (defect 3). */
 	if (!giro(p, 2.0, sbaglio) || !giro(p, 2.0, sbaglio)) {
 		wlr_chiudi(p);
 		return NULL;
@@ -2075,30 +2075,30 @@ WlrPalco *wlr_apri(GError **sbaglio)
 
 	if (!p->manager) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "il compositore non annuncia zwlr_screencopy_manager_v1: su questo "
-		            "desktop la cattura non passa di qui");
+		            "the compositor does not announce zwlr_screencopy_manager_v1: on this "
+		            "desktop capture does not go through here");
 		wlr_chiudi(p);
 		return NULL;
 	}
 	if (!p->shm) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "il compositore non annuncia wl_shm: non ho dove farmi scrivere i "
-		            "pixel");
+		            "the compositor does not announce wl_shm: I have nowhere to have the "
+		            "pixels written");
 		wlr_chiudi(p);
 		return NULL;
 	}
 	if (!p->uscita) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "il compositore non annuncia nessuna wl_output: non c'è niente da "
-		            "catturare (la sessione è viva ma senza schermo?)");
+		            "the compositor announces no wl_output: there is nothing to "
+		            "capture (the session is alive but without a screen?)");
 		wlr_chiudi(p);
 		return NULL;
 	}
 
 	registro_dice(AREA,
-	              "⭐ wlroots: cattura pronta sull'uscita «%s», %ux%u — ⚠ e la misura è "
-	              "quella che l'uscita HA, non quella chiesta",
-	              p->uscita_nome ?: "senza nome", p->larghezza, p->altezza);
+	              "⭐ wlroots: capture ready on output «%s», %ux%u — ⚠ and the size is "
+	              "the one the output HAS, not the one asked for",
+	              p->uscita_nome ?: "unnamed", p->larghezza, p->altezza);
 	return p;
 }
 
@@ -2145,12 +2145,12 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	}
 	if (!palco->gestore || !nostra || !palco->serial_noto) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED, "%s",
-		            !palco->gestore ? "il compositore non annuncia "
-		                              "zwlr_output_manager_v1: la misura non si può "
-		                              "cambiare"
-		            : !nostra ? "nessuna testa del gestore delle uscite ha il nome "
-		                        "dell'uscita che si cattura"
-		                      : "il gestore delle uscite non ha ancora mandato il suo "
+		            !palco->gestore ? "the compositor does not announce "
+		                              "zwlr_output_manager_v1: the size cannot be "
+		                              "changed"
+		            : !nostra ? "no head of the output manager has the name "
+		                        "of the output being captured"
+		                      : "the output manager has not yet sent its "
 		                        "serial");
 		return WLR_MISURA_IMPOSSIBILE;
 	}
@@ -2162,19 +2162,19 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 	zwlr_output_configuration_v1_add_listener(conf, &ASCOLTO_CONF, palco);
 
 	/*
-	 * ⛔ Difetto 6: OGNI testa va configurata, o il compositore chiude il filo
-	 *    con `unconfigured_head`.  ⇒ La nostra prende la misura nuova; le
-	 *    altre si riconfermano esattamente come sono — accese restano accese,
-	 *    spente restano spente.  ⚠ Mai spegnerne una per semplificare: su una
-	 *    macchina vera sarebbe lo schermo di qualcuno.
+	 * ⛔ Defect 6: EVERY head must be configured, or the compositor closes the
+	 *    wire with `unconfigured_head`.  ⇒ Ours takes the new size; the others
+	 *    are reconfirmed exactly as they are — enabled ones stay enabled,
+	 *    disabled ones stay disabled.  ⚠ Never disable one to simplify: on a
+	 *    real machine it would be someone's screen.
 	 */
 	for (guint i = 0; i < palco->teste->len; i++) {
 		Testa *t = g_ptr_array_index(palco->teste, i);
 
 		if (t == nostra) {
 			ct = zwlr_output_configuration_v1_enable_head(conf, t->proxy);
-			/* ⚠ `refresh = 0`: su un'uscita senza schermo la cadenza è una
-			 *   finzione, e zero vuol dire «scegli tu». */
+			/* ⚠ `refresh = 0`: on an output without a screen the refresh rate is
+			 *   a fiction, and zero means «you choose». */
 			zwlr_output_configuration_head_v1_set_custom_mode(ct, (int32_t)larghezza,
 			                                                  (int32_t)altezza, 0);
 		} else if (t->accesa) {
@@ -2194,32 +2194,32 @@ WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t a
 		if (palco->conf == CONF_IN_CORSO && g_get_monotonic_time() >= scadenza) {
 			zwlr_output_configuration_v1_destroy(conf);
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-			            "in %.1f s il compositore non ha risposto alla richiesta di "
-			            "misura — e NON è un «no»: non so",
+			            "the compositor did not answer the size request within %.1f s "
+			            "— and it is NOT a «no»: I do not know",
 			            attesa_s);
 			return WLR_MISURA_RIFIUTATA;
 		}
 	}
 	zwlr_output_configuration_v1_destroy(conf);
 
-	/* ⛔ Difetto 4: tre esiti, tre rami. */
+	/* ⛔ Defect 4: three outcomes, three branches. */
 	if (palco->conf == CONF_FALLITA)
 		return WLR_MISURA_RIFIUTATA;
 	if (palco->conf == CONF_ANNULLATA)
 		return WLR_MISURA_ANNULLATA;
 
 	/*
-	 * ⛔⛔ E QUI NON SI SCRIVE `palco->larghezza = larghezza`: il compositore ha
-	 *     detto sì alla RICHIESTA, e che l'uscita sia cambiata lo dirà l'evento
-	 *     `mode` della `wl_output` (`DECISIONI.md` §5.0-sexies).  Un giro, con
-	 *     tetto, per lasciarlo arrivare.
+	 * ⛔⛔ AND HERE `palco->larghezza = larghezza` IS NOT WRITTEN: the compositor
+	 *     said yes to the REQUEST, and that the output has changed will be said
+	 *     by the `mode` event of the `wl_output` (`DECISIONI.md` §5.0-sexies).
+	 *     One round, with a ceiling, to let it arrive.
 	 */
 	(void)giro(palco, attesa_s, NULL);
 	return WLR_MISURA_CHIESTA;
 }
 
 /* ------------------------------------------------------------------------- */
-/* ⭐⭐ La scheda: le funzioni pubbliche. */
+/* ⭐⭐ The card: the public functions. */
 
 bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 {
@@ -2230,30 +2230,30 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	if (p->scheda)
 		return true;
 	if (p->scheda_nata) {
-		/* ⛔ Era nata e si è spenta: non si riaccende a ogni richiesta, o un
-		 *    compositore che rifiuta i DMA-BUF la farebbe spegnere e
-		 *    riaccendere a ogni giro. */
+		/* ⛔ It was born and turned off: it is not turned back on at every
+		 *    request, or a compositor that refuses DMA-BUFs would make it
+		 *    turn off and on again at every round. */
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "la strada della scheda si era già spenta in questa sessione");
+		            "the card route had already turned off in this session");
 		return false;
 	}
 	if (!p->dmabuf) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "il compositore non annuncia zwp_linux_dmabuf_v1: non ho come "
-		            "dargli un buffer della scheda");
+		            "the compositor does not announce zwp_linux_dmabuf_v1: I have no way "
+		            "to give it a card buffer");
 		return false;
 	}
 	if (zwlr_screencopy_manager_v1_get_version(p->manager) < 3) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "zwlr_screencopy_manager_v1 v%u: l'evento `linux_dmabuf` arriva "
-		            "dalla v3",
+		            "zwlr_screencopy_manager_v1 v%u: the `linux_dmabuf` event arrives "
+		            "from v3",
 		            zwlr_screencopy_manager_v1_get_version(p->manager));
 		return false;
 	}
 
-	/* 1 · il nodo su cui il compositore disegna — chiesto a lui (v4).
-	 *     ⛔ Con tetto (difetto 3): un feedback che non chiude non ferma il
-	 *     figlio, fa solo prendere il ripiego del nodo, dicendolo. */
+	/* 1 · the node the compositor draws on — asked of it (v4).
+	 *     ⛔ With a ceiling (defect 3): a feedback that does not close does not
+	 *     stop the child, it only makes it take the node fallback, saying so. */
 	if (p->dmabuf_versione >= 4) {
 		struct zwp_linux_dmabuf_feedback_v1 *fb =
 		    zwp_linux_dmabuf_v1_get_default_feedback(p->dmabuf);
@@ -2272,20 +2272,20 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	}
 	if (p->principale_noto) {
 		p->nodo = nodo_da_dispositivo(p->principale);
-		come = "detto dal compositore (`main_device`)";
+		come = "stated by the compositor (`main_device`)";
 	}
 	if (!p->nodo) {
 		p->nodo = nodo_come_sessione();
-		come = "⚠ NON detto dal compositore: preso con la regola di `sessione.c` "
-		       "(il primo renderD* apribile), la stessa di WLR_RENDER_DRM_DEVICE";
+		come = "⚠ NOT stated by the compositor: taken with the rule of `sessione.c` "
+		       "(the first openable renderD*), the same as WLR_RENDER_DRM_DEVICE";
 	}
 	if (!p->nodo) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "nessun nodo /dev/dri/renderD* su cui allocare il buffer della scheda");
+		            "no /dev/dri/renderD* node on which to allocate the card buffer");
 		return false;
 	}
 
-	/* 2 · il nodo si apre e `gbm` nasce */
+	/* 2 · the node opens and `gbm` is born */
 	p->drm_fd = open(p->nodo, O_RDWR | O_CLOEXEC);
 	if (p->drm_fd < 0) {
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno), "%s: %s", p->nodo,
@@ -2296,7 +2296,7 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 	p->gbm = gbm_create_device(p->drm_fd);
 	if (!p->gbm) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "gbm_create_device su %s non è riuscita", p->nodo);
+		            "gbm_create_device on %s did not succeed", p->nodo);
 		close(p->drm_fd);
 		p->drm_fd = -1;
 		g_clear_pointer(&p->nodo, g_free);
@@ -2306,16 +2306,16 @@ bool wlr_chiedi_la_scheda(WlrPalco *p, GError **sbaglio)
 		memset(&p->lastre[i], 0, sizeof p->lastre[i]);
 		p->lastre[i].fd = -1;
 	}
-	/* ⚠ Se c'è già un fotogramma pendente, il suo `copy` (se partito) va in
-	 *   memoria: `lastra_del_giro` resta -1 e la scheda comincia dal prossimo. */
+	/* ⚠ If there is already a pending frame, its `copy` (if started) goes to
+	 *   memory: `lastra_del_giro` stays -1 and the card starts from the next one. */
 	p->lastra_del_giro = -1;
 	p->scheda_nata = true;
 	p->scheda = true;
 	registro_dice(AREA,
-	              "⭐ wlroots: strada della SCHEDA accesa — le lastre (%d, DMA-BUF "
-	              "LINEARI) si allocano su %s, %s; backend gbm «%s».  ⚠ Ogni "
-	              "fotogramma dice da sé dove è finito: la strada chiesta non è la "
-	              "strada presa",
+	              "⭐ wlroots: CARD route on — the slabs (%d, LINEAR "
+	              "DMA-BUFs) are allocated on %s, %s; gbm backend «%s».  ⚠ Every "
+	              "frame says by itself where it ended up: the route asked for is not the "
+	              "route taken",
 	              WLR_LASTRE, p->nodo, come, gbm_device_get_backend_name(p->gbm));
 	return true;
 }
@@ -2331,13 +2331,13 @@ void wlr_rendi(WlrPalco *p, void *lastra)
 
 	if (!p || !l)
 		return;
-	/* ⛔ Il puntatore si CONTROLLA: deve essere una delle nostre lastre.  Un
-	 *    fermo di un altro palco qui non tocca niente. */
+	/* ⛔ The pointer is CHECKED: it must be one of our slabs.  A hold from
+	 *    another stage touches nothing here. */
 	if (l < &p->lastre[0] || l >= &p->lastre[WLR_LASTRE])
 		return;
-	/* ⛔ Solo una lastra IN MANO torna libera: una resa due volte trova LIBERA
-	 *    (o IN VOLO, se è già ripartita) e non succede niente.  ⚠ Mai una IN
-	 *    VOLO: quella la chiude il suo fotogramma. */
+	/* ⛔ Only a slab IN HAND becomes free again: one returned twice is found
+	 *    FREE (or IN FLIGHT, if it has already left again) and nothing happens.
+	 *    ⚠ Never one IN FLIGHT: that one is closed by its frame. */
 	if (l->stato != LASTRA_IN_MANO)
 		return;
 	lastra_torna_libera(p, l, false);
@@ -2351,9 +2351,9 @@ void wlr_lettura_cpu(int fd, bool inizio)
 
 	if (fd < 0)
 		return;
-	/* ⚠ Se fallisce non c'è niente da fare di meglio che leggere lo stesso:
-	 *   la lettura della CPU qui è diagnostica (il primo fotogramma), non
-	 *   prodotto.  ⛔ E il giro ha un tetto: solo EINTR/EAGAIN, mai altro. */
+	/* ⚠ If it fails there is nothing better to do than read anyway: the CPU
+	 *   read here is diagnostic (the first frame), not product.  ⛔ And the
+	 *   loop has a ceiling: only EINTR/EAGAIN, never anything else. */
 	for (int i = 0; i < 100 && ioctl(fd, DMA_BUF_IOCTL_SYNC, &s) != 0 &&
 	                (errno == EINTR || errno == EAGAIN);
 	     i++)
@@ -2370,23 +2370,23 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	scadenza = g_get_monotonic_time() + (gint64)(attesa_s * 1e6);
 
 	/*
-	 * ⭐⭐ IL FOTOGRAMMA PENDENTE — difetto 2 del riquadro in cima.
+	 * ⭐⭐ THE PENDING FRAME — defect 2 of the box at the top.
 	 *
-	 * Se la chiamata di prima è scaduta, la sua richiesta è ANCORA VIVA: il
-	 * compositore la sta servendo.  ⇒ Non se ne apre un'altra — si riprende
-	 * quella.  Buttarla voleva dire gettare un fotogramma quasi pronto e
-	 * riallocare 8 MB, a ogni scadenza, cioè quasi sempre.
+	 * If the previous call timed out, its request is STILL ALIVE: the
+	 * compositor is serving it.  ⇒ Another one is not opened — that one is
+	 * resumed.  Throwing it away meant discarding an almost ready frame and
+	 * reallocating 8 MB, at every timeout, that is almost always.
 	 */
 	/*
-	 * ⛔⛔ UNA COPIA COL DANNO IN ATTESA NON FA PASSARE UNA RICHIESTA INTERA —
-	 *     21 settembre 2026, `[M]` C4(xfce) «non ho potuto guardare».
+	 * ⛔⛔ A DAMAGE COPY WAITING DOES NOT LET A FULL REQUEST THROUGH —
+	 *     21 Sep 2026, `[M]` C4(xfce) «I could not look».
 	 *
-	 * `wlr_forza_intero()` alza la bandiera per la copia che PARTE; ma se una
-	 * copia col danno è già in volo, su uno schermo fermo non torna mai, e
-	 * la copia intera non parte mai: il cliente che si attacca aspetta un
-	 * fotogramma che non arriva (C4: *«il dopo non si è fatto guardare:
-	 * nessun fotogramma in 8 s»*).  ⇒ Si abbandona quella in attesa — col buffer
-	 * marcato, perché la copia era partita — e se ne apre una intera.
+	 * `wlr_forza_intero()` raises the flag for the copy that STARTS; but if a
+	 * damage copy is already in flight, on a still screen it never comes
+	 * back, and the full copy never starts: the client attaching waits for a
+	 * frame that does not arrive (C4: *«the after did not let itself be
+	 * looked at: no frame in 8 s»*).  ⇒ The waiting one is abandoned — with
+	 * the buffer marked, because the copy had started — and a full one is opened.
 	 */
 	if (palco->frame && palco->forza_intero && palco->copia_col_danno)
 		chiudi_frame(palco, true);
@@ -2395,17 +2395,17 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 		palco->visto_buffer = palco->visto_buffer_done = false;
 		palco->pronto = palco->fallito = false;
 		palco->copia_partita = palco->y_invertita = false;
-		/* ⭐ la scheda: l'offerta è di QUESTO fotogramma, e la lastra pure */
+		/* ⭐ the card: the offer belongs to THIS frame, and so does the slab */
 		palco->offerto_scheda = false;
 		palco->lastra_del_giro = -1;
 		palco->conteggi.chiesti++;
-		/* ⭐ `overlay_cursor = 1`: su questa famiglia il puntatore sta DENTRO
-		 *    l'immagine, e non c'è un canale per la sua forma. */
+		/* ⭐ `overlay_cursor = 1`: on this family the pointer is INSIDE the
+		 *    image, and there is no channel for its shape. */
 		palco->frame = zwlr_screencopy_manager_v1_capture_output(palco->manager, 1,
 		                                                         palco->uscita);
 		if (!palco->frame) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-			            "capture_output non ha prodotto un fotogramma");
+			            "capture_output did not produce a frame");
 			return WLR_FOTOGRAMMA_ROTTO;
 		}
 		zwlr_screencopy_frame_v1_add_listener(palco->frame, &ASCOLTO_FRAME, palco);
@@ -2415,44 +2415,44 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 		if (palco->fallito) {
 			bool sulla_scheda = scheda_nel_giro(palco);
 
-			/* ⚠ Prima si chiude (la lastra torna libera, sporca), POI si
-			 *   conta: se il conto spegne la scheda, la lastra è già libera e
-			 *   `scheda_spegni` la butta con le altre. */
+			/* ⚠ First it is closed (the slab becomes free, dirty), THEN it is
+			 *   counted: if the count turns the card off, the slab is already
+			 *   free and `scheda_spegni` throws it away with the others. */
 			chiudi_frame(palco, false);
 			palco->conteggi.falliti++;
 			if (sulla_scheda && ++palco->falliti_di_fila >= WLR_SCHEDA_FALLITI_MAX)
-				scheda_spegni(palco, "tre `failed` di fila del compositore sui DMA-BUF");
+				scheda_spegni(palco, "three `failed` in a row from the compositor on DMA-BUFs");
 			return WLR_FOTOGRAMMA_FALLITO;
 		}
 		if (palco->pronto)
 			break;
 		/*
-		 * L'elenco delle offerte è chiuso e la copia non è ancora partita: si
-		 * sceglie la destinazione e si parte.  ⭐ Una volta sola per
-		 * fotogramma — `copia_partita` sopravvive alla scadenza insieme a
-		 * `frame` e a `lastra_del_giro`, quindi la chiamata che riprende un
-		 * fotogramma pendente NON sceglie un'altra lastra.
+		 * The list of offers is closed and the copy has not started yet: the
+		 * target is chosen and it starts.  ⭐ Only once per frame —
+		 * `copia_partita` survives the timeout together with `frame` and
+		 * `lastra_del_giro`, so the call that resumes a pending frame does
+		 * NOT choose another slab.
 		 */
 		if (elenco_chiuso(palco) && !palco->copia_partita) {
 			bool rotto = false;
 			struct wl_buffer *dove = scheda_destinazione(palco, &rotto, sbaglio);
 
 			if (rotto) {
-				/* ⛔ Nessun `copy` è partito: chiudere il fotogramma qui non
-				 *    lascia niente di sporco. */
+				/* ⛔ No `copy` has started: closing the frame here leaves
+				 *    nothing dirty. */
 				chiudi_frame(palco, false);
 				return WLR_FOTOGRAMMA_ROTTO;
 			}
 			if (!dove) {
-				/* la MEMORIA: di difetto, o ripiego già dichiarato */
+				/* MEMORY: by default, or a fallback already declared */
 				if (!prepara_buffer(palco, sbaglio)) {
 					chiudi_frame(palco, false);
 					return WLR_FOTOGRAMMA_ROTTO;
 				}
 				dove = palco->buffer;
 			}
-			/* ⭐ Col danno, se il compositore lo sa fare e nessuno ha chiesto un
-			 *    fotogramma intero: vedi `forza_intero` nella struttura. */
+			/* ⭐ With damage, if the compositor can do it and nobody has asked
+			 *    for a full frame: see `forza_intero` in the structure. */
 			if (!palco->forza_intero &&
 			    zwlr_screencopy_frame_v1_get_version(palco->frame) >= 2) {
 				zwlr_screencopy_frame_v1_copy_with_damage(palco->frame, dove);
@@ -2460,9 +2460,9 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 				if (!palco->detto_il_danno) {
 					palco->detto_il_danno = true;
 					registro_dice(AREA,
-					              "⭐ wlroots: da qui i fotogrammi si chiedono COL "
-					              "DANNO — il compositore risponde solo quando lo "
-					              "schermo è cambiato, come sulla spinta di GNOME e KDE");
+					              "⭐ wlroots: from here frames are asked WITH "
+					              "DAMAGE — the compositor answers only when the "
+					              "screen has changed, as with the GNOME and KDE push");
 				}
 			} else {
 				zwlr_screencopy_frame_v1_copy(palco->frame, dove);
@@ -2471,31 +2471,31 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 			palco->copia_partita = true;
 		}
 		if (g_get_monotonic_time() >= scadenza) {
-			/* ⭐ Scaduto, ma il fotogramma RESTA pendente: la chiamata dopo lo
-			 *    riprende.  Non è un guasto e non è un fallimento.
-			 * ⛔ E la lastra in volo RESTA in volo: non si sporca, non si
-			 *    libera, non se ne sceglie un'altra (il riquadro in cima). */
+			/* ⭐ Timed out, but the frame STAYS pending: the next call resumes
+			 *    it.  It is not a fault and not a failure.
+			 * ⛔ And the slab in flight STAYS in flight: it does not get dirty,
+			 *    is not freed, another one is not chosen (the box at the top). */
 			palco->conteggi.scaduti++;
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-			            "il fotogramma non è ancora pronto dopo %.3f s — resta in corso",
+			            "the frame is not ready yet after %.3f s — it stays in progress",
 			            attesa_s);
 			return WLR_FOTOGRAMMA_SCADUTO;
 		}
 		if (!pompa(palco, scadenza, sbaglio)) {
-			/* ⛔ Il filo è caduto: se la copia era partita, il buffer (o la
-			 *    lastra) non si riusa. */
+			/* ⛔ The wire dropped: if the copy had started, the buffer (or the
+			 *    slab) is not reused. */
 			chiudi_frame(palco, palco->copia_partita);
 			return WLR_FOTOGRAMMA_ROTTO;
 		}
 	}
 
 	/*
-	 * ⭐ LA CONSEGNA DELLA SCHEDA: la fence, poi la lastra passa IN MANO.
+	 * ⭐ THE CARD DELIVERY: the fence, then the slab goes IN HAND.
 	 *
-	 * ⛔ Se la fence non scatta in tempo il fotogramma NON si chiude: resta
-	 *    pendente con `pronto` vero e la lastra IN VOLO, e la chiamata dopo
-	 *    rientra nel ciclo qui sopra, trova `pronto`, e riaspetta la stessa
-	 *    fence.  Nessun blit a metà consegnato, nessuna lastra persa.
+	 * ⛔ If the fence does not fire in time the frame is NOT closed: it stays
+	 *    pending with `pronto` true and the slab IN FLIGHT, and the next call
+	 *    re-enters the loop above, finds `pronto`, and waits again on the
+	 *    same fence.  No half blit delivered, no slab lost.
 	 */
 	if (scheda_nel_giro(palco)) {
 		if (!scheda_aspetta_la_gpu(palco, &palco->lastre[palco->lastra_del_giro], scadenza,
@@ -2503,7 +2503,7 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 			palco->conteggi.scaduti++;
 			return WLR_FOTOGRAMMA_SCADUTO;
 		}
-		scheda_consegna(palco, fuori); /* ⚠ azzera `lastra_del_giro` */
+		scheda_consegna(palco, fuori); /* ⚠ resets `lastra_del_giro` */
 		chiudi_frame(palco, false);
 		palco->conteggi.presi++;
 		palco->conteggi.sulla_scheda++;
@@ -2513,9 +2513,9 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	chiudi_frame(palco, false);
 	palco->conteggi.presi++;
 	palco->conteggi.in_memoria++;
-	/* ⛔ I campi della scheda si scrivono anche qui, a vuoto: `fuori` può
-	 *    venire da un giro sulla scheda, e un `fd` rimasto lì sarebbe una
-	 *    lastra che non è di questo fotogramma. */
+	/* ⛔ The card fields are written here too, empty: `fuori` may come from
+	 *    a round on the card, and an `fd` left there would be a slab that does
+	 *    not belong to this frame. */
 	fuori->sulla_scheda = false;
 	fuori->fd = -1;
 	fuori->offset = 0;
@@ -2527,7 +2527,7 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	fuori->larghezza = palco->f_larghezza;
 	fuori->altezza = palco->f_altezza;
 	fuori->stride = palco->f_stride;
-	/* ⭐ Tradotto in DRM per chi sta a valle (difetto 1). */
+	/* ⭐ Translated to DRM for whoever is downstream (defect 1). */
 	fuori->formato = shm_a_drm(palco->f_shm);
 	fuori->pixel = palco->pixel;
 	fuori->byte = palco->byte;
@@ -2539,16 +2539,16 @@ WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori, 
 	return WLR_FOTOGRAMMA_PRESO;
 }
 
-/* ⭐ I pixel a 24 bit allargati a 32 (vedi `largo` nel palco).  Il byte in
- *    più vale 0xff; l'ordine dei tre resta, e cambia solo il nome: `BG24` →
- *    `XB24`, `RG24` → `XR24`. */
+/* ⭐ 24-bit pixels widened to 32 (see `largo` in the stage).  The extra
+ *    byte is 0xff; the order of the three stays, and only the name changes:
+ *    `BG24` → `XB24`, `RG24` → `XR24`. */
 static void allarga_24(WlrPalco *p, WlrFotogramma *fuori)
 {
 	const uint32_t l = fuori->larghezza, a = fuori->altezza;
 	const gsize passo = (gsize)l * 4u, serve = passo * a;
 
 	if (fuori->stride < l * 3u || (gsize)fuori->stride * a > fuori->byte)
-		return; /* ⚠ forma che non torna: lo scarto lo dice chi sta a valle */
+		return; /* ⚠ a shape that does not add up: whoever is downstream reports the discard */
 	if (p->largo_byte < serve) {
 		g_free(p->largo);
 		p->largo = g_malloc(serve);
@@ -2575,10 +2575,10 @@ void wlr_chiudi(WlrPalco *palco)
 {
 	if (!palco)
 		return;
-	/* ⛔ Difetto 7: tutto quel che si è creato si distrugge. */
+	/* ⛔ Defect 7: everything that was created is destroyed. */
 	if (palco->frame)
 		zwlr_screencopy_frame_v1_destroy(palco->frame);
-	/* ⭐ la sonda: il suo fotogramma prima del suo buffer, come il flusso */
+	/* ⭐ the probe: its frame before its buffer, like the stream */
 	sonda_chiudi_frame(palco);
 	if (palco->s_buffer)
 		wl_buffer_destroy(palco->s_buffer);
@@ -2593,8 +2593,8 @@ void wlr_chiudi(WlrPalco *palco)
 	g_free(palco->largo);
 	if (palco->fd >= 0)
 		close(palco->fd);
-	/* ⭐ le lastre, `gbm`, il nodo — DOPO il fotogramma, che poteva nominarne
-	 *    una in un `copy` */
+	/* ⭐ the slabs, `gbm`, the node — AFTER the frame, which could name one
+	 *    in a `copy` */
 	scheda_chiudi(palco);
 	if (palco->dmabuf)
 		zwp_linux_dmabuf_v1_destroy(palco->dmabuf);

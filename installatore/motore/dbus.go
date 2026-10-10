@@ -13,10 +13,10 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// Bus: il D-Bus di sistema, aperto alla prima richiesta. Con systemd, logind e firewalld il motore
-// parla da qui, mai lanciando systemctl, loginctl, busctl o firewall-cmd (DECISIONI §10.14).
-// Senza bus (un contenitore, una macchina non partita con systemd) ogni richiesta dà un errore, e
-// chi chiede lo tratta come SCONOSCIUTO — mai come «a posto».
+// Bus: the system D-Bus, opened at the first request. The engine talks to systemd, logind and firewalld
+// from here, never by launching systemctl, loginctl, busctl or firewall-cmd (DECISIONI §10.14).
+// Without a bus (a container, a machine not booted with systemd) every request gives an error, and
+// the caller treats it as SCONOSCIUTO — never as «all right».
 type Bus struct {
 	una  sync.Once
 	conn *dbus.Conn
@@ -39,7 +39,7 @@ const (
 	fwPercorso = "/org/fedoraproject/FirewallD1"
 )
 
-// HaPadrone: qualcuno risponde a quel nome sul bus?
+// HaPadrone: does someone answer to that name on the bus?
 func (b *Bus) HaPadrone(nome string) (bool, error) {
 	c, err := b.c()
 	if err != nil {
@@ -50,7 +50,7 @@ func (b *Bus) HaPadrone(nome string) (bool, error) {
 	return ok, err
 }
 
-// Proprieta legge una proprietà.
+// Proprieta reads a property.
 func (b *Bus) Proprieta(nome, percorso, proprieta string) (any, error) {
 	c, err := b.c()
 	if err != nil {
@@ -63,7 +63,7 @@ func (b *Bus) Proprieta(nome, percorso, proprieta string) (any, error) {
 	return v.Value(), nil
 }
 
-// Chiama un metodo e ne mette i risultati in «in».
+// Chiama a method and put its results into «in».
 func (b *Bus) Chiama(nome, percorso, metodo string, in []any, args ...any) error {
 	c, err := b.c()
 	if err != nil {
@@ -79,7 +79,7 @@ func (b *Bus) Chiama(nome, percorso, metodo string, in []any, args ...any) error
 	return nil
 }
 
-// StatoAttivo: ActiveState di un'unità («inactive» se systemd non la ha caricata).
+// StatoAttivo: ActiveState of a unit («inactive» if systemd has not loaded it).
 func (b *Bus) StatoAttivo(unita string) (string, error) {
 	var p dbus.ObjectPath
 	if err := b.Chiama(sdNome, sdPercorso, sdManager+".GetUnit", []any{&p}, unita); err != nil {
@@ -109,7 +109,7 @@ func isNome(err error, nome string) bool {
 }
 
 // unitaDBus: systemd1.Manager — GetUnitFileState, EnableUnitFiles, DisableUnitFiles, Reload
-// (quel che fa systemctl enable/disable, senza lanciarlo).
+// (what systemctl enable/disable does, without launching it).
 type unitaDBus struct{ b *Bus }
 
 func (u *unitaDBus) Stato(unita string) (string, error) {
@@ -144,13 +144,13 @@ func (u *unitaDBus) Disabilita(unita string) error {
 	return u.b.Chiama(sdNome, sdPercorso, sdManager+".Reload", nil)
 }
 
-// firewalldDBus: le regole vive su org.fedoraproject.FirewallD1.zone, quelle permanenti sulla
-// zona di config (getZoneByName). Quel che fa firewall-cmd [--permanent] --add-port.
+// firewalldDBus: the live rules on org.fedoraproject.FirewallD1.zone, the permanent ones on the
+// config zone (getZoneByName). What firewall-cmd [--permanent] --add-port does.
 type firewalldDBus struct{ b *Bus }
 
 func (f *firewalldDBus) Nome() string { return "firewalld" }
 
-// Acceso: firewalld è sul bus e dice RUNNING.
+// Acceso: firewalld is on the bus and says RUNNING.
 func (f *firewalldDBus) Acceso() bool {
 	if ok, err := f.b.HaPadrone(fwNome); err != nil || !ok {
 		return false
@@ -177,7 +177,7 @@ func dividiPorta(porta string) (string, string) {
 	return p, proto
 }
 
-// servizioDi: «servizio:remotix» ⇒ «remotix»; una porta ⇒ "".
+// servizioDi: «servizio:remotix» ⇒ «remotix»; a port ⇒ "".
 func servizioDi(regola string) string {
 	s, _ := strings.CutPrefix(regola, "service:")
 	if s == regola {
@@ -186,7 +186,7 @@ func servizioDi(regola string) string {
 	return s
 }
 
-// HaPorta: la regola (una porta «7447/tcp», o un servizio «servizio:remotix») c'è, viva o permanente?
+// HaPorta: is the rule (a port «7447/tcp», or a service «servizio:remotix») there, live or permanent?
 func (f *firewalldDBus) HaPorta(zona, porta string, permanente bool) (bool, error) {
 	var ok bool
 	s := servizioDi(porta)
@@ -237,8 +237,8 @@ func (f *firewalldDBus) Togli(zona, porta string, permanente bool) error {
 	return f.AggiornaPermanente(zona, nil, []string{porta})
 }
 
-// Conosce: firewalld conosce il servizio sia nelle regole vive sia in quelle permanenti. `[M]` T6:
-// un file nuovo in /usr/lib/firewalld/services non lo vede nessuna delle due fino al reload.
+// Conosce: firewalld knows the service both in the live rules and in the permanent ones. `[M]` T6:
+// a new file in /usr/lib/firewalld/services is seen by neither of the two until the reload.
 func (f *firewalldDBus) Conosce(servizio string) (bool, error) {
 	var vive, perm []string
 	if err := f.b.Chiama(fwNome, fwPercorso, fwNome+".listServices", []any{&vive}); err != nil {
@@ -252,8 +252,8 @@ func (f *firewalldDBus) Conosce(servizio string) (bool, error) {
 
 type portaFw struct{ Porta, Proto string }
 
-// impostazioni: le porte e i servizi permanenti della zona (getSettings2), e il resto come testo
-// in ordine, per l'impronta.
+// impostazioni: the zone's permanent ports and services (getSettings2), and the rest as text
+// in order, for the fingerprint.
 func (f *firewalldDBus) impostazioni(zp string) (map[string]dbus.Variant, error) {
 	var m map[string]dbus.Variant
 	err := f.b.Chiama(fwNome, zp, fwNome+".config.zone.getSettings2", []any{&m})
@@ -285,7 +285,7 @@ func serviziPermanenti(m map[string]dbus.Variant) []string {
 	return nil
 }
 
-// togliRegole: le porte e i servizi senza le regole date.
+// togliRegole: the ports and services without the given rules.
 func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []string) {
 	fuori := map[string]bool{}
 	for _, r := range via {
@@ -306,9 +306,9 @@ func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []
 	return p2, s2
 }
 
-// StatoPermanente: l'impronta delle impostazioni permanenti della zona (tolte «senza»), in un
-// ordine che non dipende da firewalld; e se la zona è quella di serie (la proprietà «default»:
-// `[M]` falsa per public.xml in /etc/firewalld/zones, vera per work.xml in /usr/lib).
+// StatoPermanente: the fingerprint of the zone's permanent settings (minus «senza»), in an
+// order that does not depend on firewalld; and whether the zone is the stock one (the property «default»:
+// `[M]` false for public.xml in /etc/firewalld/zones, true for work.xml in /usr/lib).
 func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bool, error) {
 	zp, err := f.zonaConfig(zona)
 	if err != nil {
@@ -341,9 +341,9 @@ func (f *firewalldDBus) StatoPermanente(zona string, senza []string) (string, bo
 	return hex.EncodeToString(h[:]), diSerie, nil
 }
 
-// AggiornaPermanente: le regole permanenti aggiunte e tolte in UNA scrittura (update2 con le sole
-// chiavi «ports» e «services»: firewalld tiene le altre com'erano). ⚠ Una scrittura per regola fa
-// nascere <zona>.xml.old (firewalld copia il file che c'era prima di riscriverlo).
+// AggiornaPermanente: the permanent rules added and removed in ONE write (update2 with only the
+// keys «ports» and «services»: firewalld keeps the others as they were). ⚠ One write per rule makes
+// <zona>.xml.old appear (firewalld copies the file that was there before rewriting it).
 func (f *firewalldDBus) AggiornaPermanente(zona string, aggiungi, togli []string) error {
 	zp, err := f.zonaConfig(zona)
 	if err != nil {
@@ -376,8 +376,8 @@ func (f *firewalldDBus) AggiornaPermanente(zona string, aggiungi, togli []string
 	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.update2", nil, nuove)
 }
 
-// RimettiDiSerie: la zona torna quella di /usr/lib/firewalld/zones (loadDefaults: il file in /etc se
-// ne va).
+// RimettiDiSerie: the zone goes back to the one in /usr/lib/firewalld/zones (loadDefaults: the file in /etc
+// goes away).
 func (f *firewalldDBus) RimettiDiSerie(zona string) error {
 	zp, err := f.zonaConfig(zona)
 	if err != nil {
@@ -386,16 +386,16 @@ func (f *firewalldDBus) RimettiDiSerie(zona string) error {
 	return f.b.Chiama(fwNome, zp, fwNome+".config.zone.loadDefaults", nil)
 }
 
-// PorteVive: le porte (anche intervalli) aperte nella zona, per vedere l'intervallo 1025-65535 di
-// Fedora Workstation, che queryPort non vede.
+// PorteVive: the ports (ranges too) open in the zone, to see Fedora Workstation's range 1025-65535,
+// which queryPort does not see.
 func (f *firewalldDBus) PorteVive(zona string) ([][]string, error) {
 	var r [][]string
 	err := f.b.Chiama(fwNome, fwPercorso, fwNome+".zone.getPorts", []any{&r}, zona)
 	return r, err
 }
 
-// RiavviaSeAttiva: TryRestartUnit (quel che fa systemctl try-restart): riaccende l'unità solo se
-// era accesa. I desktop sopravvivono al riavvio del servizio (§5.2, T2).
+// RiavviaSeAttiva: TryRestartUnit (what systemctl try-restart does): restarts the unit only if
+// it was running. The desktops survive the service restart (§5.2, T2).
 func (b *Bus) RiavviaSeAttiva(unita string) error {
 	var job dbus.ObjectPath
 	return b.Chiama(sdNome, sdPercorso, sdManager+".TryRestartUnit", []any{&job}, unita, "replace")
@@ -408,7 +408,7 @@ func (u *unitaDBus) job(metodo, unita string) error {
 	return u.b.Chiama(sdNome, sdPercorso, sdManager+"."+metodo, []any{&job}, unita, "replace")
 }
 
-// Avvia: StartUnit, e si aspetta che l'unità diventi attiva (o fallisca), fino a 60 s.
+// Avvia: StartUnit, and waits for the unit to become active (or fail), up to 60 s.
 func (u *unitaDBus) Avvia(unita string) error {
 	if err := u.job("StartUnit", unita); err != nil {
 		return err
@@ -453,7 +453,7 @@ func (u *unitaDBus) ImpostaPredefinito(b string) error {
 	return u.b.Chiama(sdNome, sdPercorso, sdManager+".SetDefaultTarget", []any{&cambi}, b, true)
 }
 
-// sessioniDBus: logind. Elenco = ListSessions + la proprietà Service di ognuna.
+// sessioniDBus: logind. List = ListSessions + the Service property of each one.
 type sessioniDBus struct {
 	b *Bus
 	a *Ambiente

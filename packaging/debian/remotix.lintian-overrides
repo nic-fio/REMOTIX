@@ -1,2 +1,2 @@
-# La pagina che il server manda al browser: e' il programma, non documentazione.
+# The page the server sends to the browser: it is the program, not documentation.
 remotix: package-contains-documentation-outside-usr-share-doc [usr/share/remotix/pagina.html]

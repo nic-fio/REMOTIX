@@ -1,12 +1,12 @@
-## <summary>REMOTIX: il desktop di questa macchina nel browser.</summary>
+## <summary>REMOTIX: this machine's desktop in the browser.</summary>
 
 ########################################
 ## <summary>
-##	Passare al dominio del servizio REMOTIX.
+##	Transition to the REMOTIX service domain.
 ## </summary>
 ## <param name="domain">
 ##	<summary>
-##	Il dominio a cui si permette.
+##	The domain being allowed.
 ##	</summary>
 ## </param>
 #

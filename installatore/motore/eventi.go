@@ -6,18 +6,18 @@ import (
 	"io"
 )
 
-// Eventi: quel che il motore dice mentre lavora. Due forme, stesso contenuto:
-//   - JSON, una riga per evento (--eventi): è il canale delle future TUI e GUI (§6.6.1, R36);
-//   - testo in italiano semplice, per chi guarda il terminale.
+// Eventi: what the engine says while it works. Two forms, same content:
+//   - JSON, one line per event (--eventi): it is the channel of the future TUIs and GUIs (§6.6.1, R36);
+//   - plain text, for whoever watches the terminal.
 //
-// ⛔ Le interfacce non ricevono niente che non stia anche negli oggetti su disco: gli eventi
-// dicono «è successo», gli oggetti dicono «com'è».
+// ⛔ The interfaces receive nothing that is not also in the objects on disk: the events
+// say «it happened», the objects say «how it is».
 type Eventi struct {
 	W    io.Writer
 	JSON bool
 }
 
-// Evento pubblico (JSON a riga).
+// Public event (one JSON line).
 type EventoPubblico struct {
 	Formato    string     `json:"format"`
 	Ora        string     `json:"time"`

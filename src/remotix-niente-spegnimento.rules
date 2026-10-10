@@ -1,55 +1,55 @@
 /*
- * remotix-niente-spegnimento.rules — la prima delle tre cinture di
- * `DECISIONI.md` §4.7: «nessuno spegne il server».
+ * remotix-niente-spegnimento.rules — the first of the three belts of
+ * `DECISIONI.md` §4.7: "nobody switches the server off".
  *
- * Si installa in /etc/polkit-1/rules.d/.  Il numero 50 e non 49: deve vincere
- * su quella di v1 (`49-remotix-niente-spegnimento.rules`), che copriva tre
- * azioni su dodici — vedi sotto.
- *
- * ---------------------------------------------------------------------------
- * ⛔⛔ PERCHE' NON BASTANO `power-off`, `reboot` E `halt` — [M] 15 agosto 2026
- *
- * La regola di v1 elencava quelle tre.  ⛔ Ma logind, quando sulla macchina ci
- * sono sessioni di PIU' UTENTI, non chiede `power-off`: chiede
- * `power-off-multiple-sessions`.  ⇒ La regola di v1 falliva **esattamente nel
- * caso per cui era stata scritta** — la macchina con altri collegati — e nessuno
- * l'avrebbe visto, perche' con un utente solo funziona.
- *
- * ⚠ E `*-ignore-inhibit` e' la terza forma: e' quel che viene chiesto a chi
- *   spegne SCAVALCANDO un'inibizione — cioe' scavalcando la nostra, quella che
- *   tiene su la sessione (`SessionManager.Inhibit`, §2.2 della fase 5).
- *
- * `[M]` Le dodici azioni sono state lette da
- * `/usr/share/polkit-1/actions/org.freedesktop.login1.policy` sulla macchina di
- * prova.  ⛔ `org.freedesktop.login1.halt` NON esiste su questo systemd: la
- * regola di v1 aveva una riga morta.
+ * Installed in /etc/polkit-1/rules.d/.  Number 50 and not 49: it must win
+ * over v1's (`49-remotix-niente-spegnimento.rules`), which covered three
+ * actions out of twelve — see below.
  *
  * ---------------------------------------------------------------------------
- * ⭐ ROOT NON HA BISOGNO DI UN'ECCEZIONE, ed e' stato MISURATO
+ * ⛔⛔ WHY `power-off`, `reboot` AND `halt` ARE NOT ENOUGH — [M] 15 August 2026
  *
- * `[M]` 15 agosto 2026, dalla macchina di prova con questa regola in vigore:
+ * v1's rule listed those three.  ⛔ But logind, when the machine has
+ * sessions of SEVERAL USERS, does not ask for `power-off`: it asks for
+ * `power-off-multiple-sessions`.  ⇒ v1's rule failed **exactly in the
+ * case it had been written for** — the machine with others connected — and nobody
+ * would have seen it, because with a single user it works.
  *
- *     da nicfio (ssh)   CanPowerOff = "no"
- *     da root           CanPowerOff = "yes"
+ * ⚠ And `*-ignore-inhibit` is the third form: it is what is asked of whoever
+ *   switches off OVERRIDING an inhibition — that is overriding ours, the one that
+ *   keeps the session up (`SessionManager.Inhibit`, §2.2 of phase 5).
  *
- * ⛔ Perche' logind, prima di interrogare polkit, guarda le **capacita'** di chi
- *    chiede: chi ha `CAP_SYS_BOOT` — cioe' root — e' autorizzato e polkit non
- *    viene consultato affatto.  ⇒ `sudo systemctl poweroff` continua a
- *    funzionare **senza che questa regola preveda niente**, e la manutenzione
- *    della macchina resta quella di sempre.
- *
- * ⚠ E la conseguenza che morde davvero sta altrove: **la verifica di questa
- *   regola NON si puo' fare dal server**, che gira da root e si sentirebbe
- *   rispondere «yes» sempre.  Va fatta dal FIGLIO, dopo che e' diventato
- *   l'utente.  Un controllo fatto dal posto sbagliato e' un controllo che dice
- *   sempre di si'.
+ * `[M]` The twelve actions were read from
+ * `/usr/share/polkit-1/actions/org.freedesktop.login1.policy` on the test
+ * machine.  ⛔ `org.freedesktop.login1.halt` does NOT exist on this systemd: v1's
+ * rule had a dead line.
  *
  * ---------------------------------------------------------------------------
- * ⚠ `polkit.Result.NO`, MAI `AUTH_ADMIN`
+ * ⭐ ROOT NEEDS NO EXCEPTION, and it was MEASURED
  *
- * `"challenge"` **mostra** la voce nel menu invece di toglierla — vale su GNOME
- * (`gnome.md` §5.1) e su KDE (`kde.md` §1579).  Una voce che compare e chiede
- * una password e' peggio di una voce che non c'e': promette qualcosa.
+ * `[M]` 15 August 2026, from the test machine with this rule in force:
+ *
+ *     from nicfio (ssh)   CanPowerOff = "no"
+ *     from root           CanPowerOff = "yes"
+ *
+ * ⛔ Because logind, before asking polkit, looks at the **capabilities** of whoever
+ *    asks: whoever has `CAP_SYS_BOOT` — that is root — is authorised and polkit is
+ *    not consulted at all.  ⇒ `sudo systemctl poweroff` keeps
+ *    working **without this rule providing for anything**, and the maintenance
+ *    of the machine stays as it always was.
+ *
+ * ⚠ And the consequence that really bites lies elsewhere: **checking this
+ *   rule CANNOT be done from the server**, which runs as root and would always be
+ *   answered "yes".  It must be done from the CHILD, after it has become
+ *   the user.  A check made from the wrong place is a check that always
+ *   says yes.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ `polkit.Result.NO`, NEVER `AUTH_ADMIN`
+ *
+ * `"challenge"` **shows** the entry in the menu instead of removing it — it holds on GNOME
+ * (`gnome.md` §5.1) and on KDE (`kde.md` §1579).  An entry that appears and asks for
+ * a password is worse than an entry that is not there: it promises something.
  */
 polkit.addRule(function (action, subject) {
     var vietate = [

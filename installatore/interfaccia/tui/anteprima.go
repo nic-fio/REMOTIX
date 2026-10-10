@@ -11,17 +11,17 @@ import (
 	"remotix/installatore/motore"
 )
 
-// Le anteprime: ogni schermata disegnata con dati d'esempio (gli stessi del mockup approvato,
-// grafica/tui-mockup/index.html), per confrontarla col mockup e per le prove della cornice.
-// `remotix-install tui --preview` le stampa; senza colori se colori == false.
+// The previews: every screen drawn with sample data (the same as the approved mockup,
+// grafica/tui-mockup/index.html), to compare it with the mockup and for the frame tests.
+// `remotix-install tui --preview` prints them; without colours if colori == false.
 
-// Schermata: un'anteprima.
+// Schermata: a preview.
 type Schermata struct {
 	Nome, Testo string
 }
 
-// Anteprime: le schermate a una larghezza e un'altezza date (alt 0 = alta quanto serve, senza
-// scorrere).
+// Anteprime: the screens at a given width and height (alt 0 = as tall as needed, without
+// scrolling).
 func Anteprime(larg, alt int, colori bool) []Schermata {
 	r := lipgloss.NewRenderer(io.Discard)
 	if colori {
@@ -151,7 +151,7 @@ func esempi() []esempio {
 	}
 }
 
-// Testo: le anteprime una dopo l'altra, col nome sopra.
+// Testo: the previews one after the other, with the name on top.
 func Testo(s []Schermata) string {
 	var b strings.Builder
 	for _, x := range s {

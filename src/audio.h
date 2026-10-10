@@ -1,49 +1,49 @@
 /*
- * audio — il codificatore del suono: Opus, con PCM come base.
+ * audio — the sound encoder: Opus, with PCM as the baseline.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL FORMATO NON SI NEGOZIA, E NON E' UN'OPINIONE DI QUESTO FILE
+ * ⛔ THE FORMAT IS NOT NEGOTIATED, AND IT IS NOT AN OPINION OF THIS FILE
  *
- * `RCP.md` §5.3 lo fissa, e la ragione e' scritta li': «"Opus, con PCM come
- * base" dice il codec e non dice il formato, e due implementazioni che
- * scelgono due frequenze diverse producono un rumore che sembra un difetto di
- * rete».
+ * `RCP.md` §5.3 fixes it, and the reason is written there: "'Opus, with PCM
+ * as the baseline' names the codec and not the format, and two
+ * implementations that choose two different rates produce a noise that looks
+ * like a network defect".
  *
- *   frequenza   48 000 Hz, sempre, per entrambi i codec
- *   canali      2, interlacciati
- *   Opus        un pacchetto per datagram, blocchi da 20 ms   (960 fotogrammi)
- *   PCM         s16 LITTLE-endian, 5 ms per datagram          (240 fotogrammi)
+ *   rate        48 000 Hz, always, for both codecs
+ *   channels    2, interleaved
+ *   Opus        one packet per datagram, 20 ms blocks         (960 frames)
+ *   PCM         s16 LITTLE-endian, 5 ms per datagram          (240 frames)
  *
- * ⛔ I 5 ms del PCM non sono una scelta di comodo: sono `RCP.md` §5.3 dopo il
- *    rilievo R1.1, «il piu' grave della revisione del 9 agosto».  A 20 ms il
- *    PCM farebbe 3852 byte, e un datagram QUIC non e' frammentabile.
- *    ⭐ `[M]` 17 agosto 2026 (`banchi/07-b40`): il datagram vero e' **1024
- *    byte su Chrome 151**, quindi i 972 del PCM ci stanno per 52 byte — e a
- *    20 ms non ci starebbero per un fattore quattro.
+ * ⛔ The 5 ms of PCM are not a choice of convenience: they are `RCP.md` §5.3
+ *    after finding R1.1, "the most serious of the 9 August review".  At 20 ms
+ *    PCM would make 3852 bytes, and a QUIC datagram cannot be fragmented.
+ *    ⭐ `[M]` 17 August 2026 (`banchi/07-b40`): the real datagram is **1024
+ *    bytes on Chrome 151**, so the 972 of PCM fit by 52 bytes — and at
+ *    20 ms they would not fit by a factor of four.
  *
- * ⛔ E il little-endian del PCM e' l'unica eccezione all'ordine di rete di §6,
- *    dichiarata: sono un carico utile, come i byte di HEVC, non un campo di
- *    protocollo.  ⚠ Un banco che lo legga big-endian non vede un errore: vede
- *    RUMORE A FONDO SCALA, che e' il difetto di v1 (`LEZIONI.md` §2.2), e
- *    `banchi/07-b40` lo innesta apposta come controllo positivo.
+ * ⛔ And PCM's little-endian is the only exception to the network order of §6,
+ *    declared: it is a payload, like the HEVC bytes, not a protocol field.
+ *    ⚠ A bench that read it big-endian sees no error: it sees FULL-SCALE
+ *    NOISE, which is the defect of v1 (`LEZIONI.md` §2.2), and
+ *    `banchi/07-b40` grafts it on purpose as a positive control.
  *
  * ---------------------------------------------------------------------------
- * ⭐ OPUS PASSA DA `libopus` DIRETTA — dal 30 settembre 2026 (fase 18,
- *    `DECISIONI.md` §10.22 e §10.25: ffmpeg esce dal prodotto per la licenza).
+ * ⭐ OPUS GOES THROUGH `libopus` DIRECTLY — since 30 September 2026 (phase 18,
+ *    `DECISIONI.md` §10.22 and §10.25: ffmpeg leaves the product for licensing).
  *
- * ⛔ Fino al 29 settembre passava da `libavcodec`, e la ragione era scritta
- *    qui: `[M]` 17 agosto 2026, `libavcodec` 61.19.101 era gia' collegata a
- *    `libopus.so.0`, e cosi' non si aggiungeva un pacchetto a due ambienti di
- *    costruzione.  ⇒ Tolta libavcodec, quella ragione si rovescia: `libopus`
- *    e' la dipendenza, e `opus.pc` c'e' in tutt'e due (`[M]` 30 set 2026:
- *    `remotix-costruzione` e il `devroot` del server, libopus 1.5.2).
+ * ⛔ Until 29 September it went through `libavcodec`, and the reason was written
+ *    here: `[M]` 17 August 2026, `libavcodec` 61.19.101 was already linked to
+ *    `libopus.so.0`, and so no package was added to two build
+ *    environments.  ⇒ With libavcodec gone, that reason turns around: `libopus`
+ *    is the dependency, and `opus.pc` is in both (`[M]` 30 Sep 2026:
+ *    `remotix-costruzione` and the server's `devroot`, libopus 1.5.2).
  *
- * ⭐ Il codificatore e' LO STESSO (`libopus.so.0` c'era anche prima, sotto
- *    l'involucro), e i parametri sono quelli che l'involucro dettava, tutti
- *    scritti in `audio.c` — ⚠ due non coincidono col predefinito di libopus
- *    (complessita' 10, VBR non vincolato).  `[M]` 30 set 2026,
- *    `banchi/18-a1-opus-senza-ffmpeg.c`: pacchetti **identici byte per byte**
- *    a quelli di libavcodec.  E l'`AVPacket` per blocco non c'e' piu'.
+ * ⭐ The encoder is THE SAME (`libopus.so.0` was there before too, under the
+ *    wrapper), and the parameters are those the wrapper dictated, all
+ *    written in `audio.c` — ⚠ two do not match libopus's default
+ *    (complexity 10, unconstrained VBR).  `[M]` 30 Sep 2026,
+ *    `banchi/18-a1-opus-senza-ffmpeg.c`: packets **identical byte for byte**
+ *    to those of libavcodec.  And the per-block `AVPacket` is gone.
  */
 #pragma once
 
@@ -51,114 +51,114 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* §5.3, e valgono per tutt'e due i codec. */
+/* §5.3, and they hold for both codecs. */
 #define AUDIO_FREQUENZA 48000
 #define AUDIO_CANALI 2
 
-/* Quanti fotogrammi (campioni per canale) sta in un blocco, per codec. */
+/* How many frames (samples per channel) fit in a block, per codec. */
 #define AUDIO_BLOCCO_OPUS 960 /* 20 ms */
 #define AUDIO_BLOCCO_PCM 240  /*  5 ms */
 
 typedef struct audio_cod audio_cod;
 
 /*
- * Apre il codificatore per il codec NEGOZIATO.
+ * Opens the encoder for the NEGOTIATED codec.
  *
- * `codec` 1 = Opus, 2 = PCM — i numeri di `RCP.md` §6.3, non quelli del video.
+ * `codec` 1 = Opus, 2 = PCM — the numbers of `RCP.md` §6.3, not the video ones.
  *
- * ⛔ Torna NULL e scrive nel registro se il codec non c'e': `CODER.md` §4.2 —
- *    un ripiego si dichiara.  ⚠ E NON si ripiega su PCM da soli: la scelta del
- *    codec e' della negoziazione (§4.3), e un server che spedisse PCM dove il
- *    client aspetta Opus produrrebbe rumore invece di un errore.
+ * ⛔ Returns NULL and writes to the log if the codec is missing: `CODER.md` §4.2 —
+ *    a fallback is declared.  ⚠ And it does NOT fall back to PCM on its own: the
+ *    codec choice belongs to the negotiation (§4.3), and a server that sent PCM
+ *    where the client expects Opus would produce noise instead of an error.
  */
 audio_cod *audio_cod_apri(uint8_t codec);
 void audio_cod_chiudi(audio_cod *c);
 
-/* Quanti fotogrammi vuole un blocco di questo codificatore. */
+/* How many frames a block of this encoder wants. */
 uint32_t audio_cod_blocco(const audio_cod *c);
 
 /*
- * Un blocco di campioni entra, un blocco pronto per il datagram esce.
+ * One block of samples goes in, one block ready for the datagram comes out.
  *
- * `campioni`  esattamente `audio_cod_blocco()` fotogrammi, interlacciati, s16
- *             nell'ordine della macchina.
- * `fuori`     almeno `AUDIO_FUORI_MAX` byte.
+ * `campioni`  exactly `audio_cod_blocco()` frames, interleaved, s16
+ *             in machine order.
+ * `fuori`     at least `AUDIO_FUORI_MAX` bytes.
  *
- * ⛔⛔ QUESTO PARAGRAFO E' STATO RISCRITTO SU UNA MISURA — 17 agosto 2026,
- *      rilievo 7 della revisione avversariale, chiuso da `banchi/07-b44`.
+ * ⛔⛔ THIS PARAGRAPH WAS REWRITTEN ON A MEASUREMENT — 17 August 2026,
+ *      finding 7 of the adversarial review, closed by `banchi/07-b44`.
  *
- *      Diceva: *«Torna `false` quando non c'e' niente da spedire, e NON e' un
- *      errore: Opus puo' non produrre un pacchetto per ogni blocco offerto»*.
- *      ⛔ **E' FALSO per la nostra configurazione**, e la falsita' non era
- *      innocua: `RCP.md` §6.3 vuole nell'`istante` il tempo del **primo
- *      campione del blocco**, e se il codificatore accumulasse davvero, il
- *      pacchetto che esce porterebbe l'istante di un blocco DIVERSO da quello
- *      che contiene — sbagliato di 20 ms, per sempre.
+ *      It said: *"Returns `false` when there is nothing to send, and it is NOT
+ *      an error: Opus may not produce a packet for every block offered"*.
+ *      ⛔ **IT IS FALSE for our configuration**, and the falsehood was not
+ *      harmless: `RCP.md` §6.3 wants in `istante` the time of the **first
+ *      sample of the block**, and if the encoder really accumulated, the
+ *      packet coming out would carry the instant of a block DIFFERENT from the
+ *      one it contains — wrong by 20 ms, forever.
  *
- *      `[M]` 1000 blocchi entrati, **1000 pacchetti usciti**, **zero EAGAIN**:
- *      `libopus` a 20 ms fissi e' UNO PER UNO.  ⇒ L'`istante` appartiene al
- *      blocco che parte, e il ramo `EAGAIN` **non si percorreva**.
- *      ⭐ Dal 30 settembre 2026 non c'e' piu' nemmeno il ramo: `opus_encode()`
- *      e' sincrona, un blocco dentro e un pacchetto fuori per costruzione.
+ *      `[M]` 1000 blocks in, **1000 packets out**, **zero EAGAIN**:
+ *      `libopus` at a fixed 20 ms is ONE FOR ONE.  ⇒ The `istante` belongs to
+ *      the block that leaves, and the `EAGAIN` branch **was never taken**.
+ *      ⭐ Since 30 September 2026 the branch is not even there: `opus_encode()`
+ *      is synchronous, one block in and one packet out by construction.
  *
- * ⚠⚠ E LA MISURA HA TROVATO UN'ALTRA COSA, che nessuno aveva dichiarato: il
- *     `pre-skip` di Opus.  `[M]` `initial_padding = 312 campioni`, e il `pts`
- *     dei pacchetti esce **sfasato di -312 campioni = -6,50 ms**, COSTANTE su
- *     tutti e mille.  ⚠ Senza libavcodec il `pts` non c'e' piu', ma la
- *     grandezza resta: `OPUS_GET_LOOKAHEAD`, `[M]` 30 set 2026 ancora **312**,
- *     e `audio.c` la scrive nel registro all'apertura.
- *     ⭐ Non e' un difetto e non deriva: e' l'anticipo che l'algoritmo si
- *     prende, e il **decodificatore lo toglie da se'** — end-to-end si
- *     cancella.  E non tocca l'ordinamento di §6.3, che confronta istanti fra
- *     loro e non con un orologio esterno.
- *     ⛔ Ma va scritto: un'implementazione che un giorno usasse questi istanti
- *     per sincronizzare l'audio col video troverebbe 6,5 ms che nessun
- *     documento spiega — ed e' la forma d'errore che questo progetto paga di
- *     piu' (`LEZIONI.md` §2.2).
+ * ⚠⚠ AND THE MEASUREMENT FOUND ANOTHER THING, which nobody had declared: Opus's
+ *     `pre-skip`.  `[M]` `initial_padding = 312 samples`, and the packets'
+ *     `pts` comes out **shifted by -312 samples = -6.50 ms**, CONSTANT across
+ *     all thousand.  ⚠ Without libavcodec there is no `pts` any more, but the
+ *     quantity remains: `OPUS_GET_LOOKAHEAD`, `[M]` 30 Sep 2026 still **312**,
+ *     and `audio.c` writes it to the log on opening.
+ *     ⭐ It is not a defect and it does not drift: it is the lead the algorithm
+ *     takes, and the **decoder removes it by itself** — end to end it
+ *     cancels out.  And it does not touch the ordering of §6.3, which compares
+ *     instants with each other and not with an external clock.
+ *     ⛔ But it must be written down: an implementation that one day used these
+ *     instants to synchronise audio with video would find 6.5 ms that no
+ *     document explains — and that is the form of error this project pays for
+ *     most (`LEZIONI.md` §2.2).
  *
- * ⛔ Torna `false` quando non c'e' niente da spedire.  Il chiamante non manda
- *    niente e va avanti — un blocco vuoto spedito e' un blocco che il client
- *    conta e non sente.
+ * ⛔ Returns `false` when there is nothing to send.  The caller sends
+ *    nothing and goes on — an empty block sent is a block the client
+ *    counts and does not hear.
  */
 #define AUDIO_FUORI_MAX 1200
 bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
                      size_t *quanti);
 
-/* I due numeri del codificatore, per il registro: blocchi entrati e usciti. */
+/* The encoder's two numbers, for the log: blocks in and out. */
 void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
 
 /*
- * ⛔⭐ LA CURA DEL SILENZIO DIGITALE — fase 9, e dal 24 agosto 2026 NASCE
- *     **ACCESA** (decisione dell'utente; fino al 23 nasceva spenta per I6).
+ * ⛔⭐ THE DIGITAL SILENCE CURE — phase 9, and since 24 August 2026 it is BORN
+ *     **ON** (the user's decision; until the 23rd it was born off for I6).
  *
- * Accesa, un blocco in cui **tutti** i campioni sono esattamente zero non
- * diventa un datagram: `audio_cod_passa()` torna `false`, il chiamante non
- * manda niente, e chi riceve — che mette i blocchi al loro `istante` assoluto
- * (§6.3) — trova un buco.  ⭐ Un buco e' silenzio, cioe' quel che il blocco
- * conteneva: non e' un'approssimazione, e' il non spedire lo zero.
+ * On, a block in which **all** samples are exactly zero does not
+ * become a datagram: `audio_cod_passa()` returns `false`, the caller sends
+ * nothing, and the receiver — which places blocks at their absolute `istante`
+ * (§6.3) — finds a gap.  ⭐ A gap is silence, that is what the block
+ * contained: it is not an approximation, it is not sending the zero.
  *
- * `[M]` 24 agosto 2026, `banchi/09-b84`: a desktop fermo e Opus negoziato sono
- * **50 datagram al secondo da 3 byte** che si portano via **589 kbit/s** di
- * pacchetti riempiti, cioe' il 99,8 % di riempimento — e la stessa finestra di
- * congestione del video.
+ * `[M]` 24 August 2026, `banchi/09-b84`: with the desktop still and Opus
+ * negotiated there are **50 datagrams per second of 3 bytes** that take
+ * **589 kbit/s** of padded packets, that is 99.8 % padding — and the same
+ * congestion window as the video.
  *
- * ⚠ Il prezzo, e la ragione dell'interruttore, stanno nel riquadro in cima ad
- *   `audio.c`.  ⛔⭐ E l'interruttore NON e' piu' di compilazione: il `-D`
- *   `AUDIO_SILENZIO_PREDEFINITO` **e' stato tolto** il 24 agosto 2026, e l'unica
- *   strada e' `--niente-audio-silenzio` sulla riga di comando del server, che
- *   `figlio.c` ricopia in coda all'`argv` del figlio (dove vive il
- *   codificatore) come fa gia' con `--parlantina`.  ⚠ Due strade per la stessa
- *   cura sono due numeri che divergono.
+ * ⚠ The price, and the reason for the switch, are in the box at the top of
+ *   `audio.c`.  ⛔⭐ And the switch is NO longer a build one: the `-D`
+ *   `AUDIO_SILENZIO_PREDEFINITO` **was removed** on 24 August 2026, and the only
+ *   way is `--niente-audio-silenzio` on the server's command line, which
+ *   `figlio.c` copies to the end of the child's `argv` (where the
+ *   encoder lives) as it already does with `--parlantina`.  ⚠ Two ways to the
+ *   same cure are two numbers that diverge.
  *
- * ⛔ E VALE PER DUE PROCESSI: il codificatore vero sta nel figlio, ma il tono di
- *    prova di `--audio-prova` apre un `audio_cod` nel SERVER (`webtransport.c`).
- *    ⇒ `main.c` chiama questa funzione per se' **e** passa l'opzione ai figli:
- *    se ne chiamasse una sola, il banco del tono e il banco della sessione vera
- *    misurerebbero due prodotti diversi.
+ * ⛔ AND IT HOLDS FOR TWO PROCESSES: the real encoder is in the child, but the
+ *    test tone of `--audio-prova` opens an `audio_cod` in the SERVER (`webtransport.c`).
+ *    ⇒ `main.c` calls this function for itself **and** passes the option to the
+ *    children: if it called only one, the tone bench and the real-session bench
+ *    would measure two different products.
  */
 void audio_silenzio_taci(bool si);
 bool audio_silenzio_acceso(void);
 
-/* Quanti blocchi la cura ha taciuto.  ⛔ Sta a parte da `audio_cod_conti()`:
- *    quella ha gia' un chiamante e la sua firma non e' di questo modulo. */
+/* How many blocks the cure has silenced.  ⛔ It is kept apart from `audio_cod_conti()`:
+ *    that one already has a caller and its signature is not this module's. */
 uint64_t audio_cod_taciuti(const audio_cod *c);

@@ -1,39 +1,39 @@
 #!/bin/bash
 #
-# costruisci.sh — costruisce il server DENTRO il contenitore della macchina di
-#                 prova.  Gira gia' dentro `enter.sh`, non lo chiama lui.
+# costruisci.sh — builds the server INSIDE the test machine's
+#                 container.  It already runs inside `enter.sh`, it does not call it.
 #
-#   bash <dove-sta-questo-file>/costruisci.sh
+#   bash <where-this-file-is>/costruisci.sh
 #
-# ⚠ Il percorso NON e' fisso, ed e' cambiato il 10 agosto 2026 notte (rilievo
-#   R12.8): la riga qui sopra diceva `/srv/src/remotix/costruisci.sh`, e
-#   `/srv/src` e' la cartella DEI BANCHI — nessuno script del repo copia niente
-#   in `/srv/src/remotix`.  Tutto quel che serve lo ricava da `$QUI`, cioe' da
-#   dove sta questo file: si mette la cartella `src/` dove si vuole e si lancia.
+# ⚠ The path is NOT fixed, and it changed on the night of 10 August 2026 (finding
+#   R12.8): the line above said `/srv/src/remotix/costruisci.sh`, and
+#   `/srv/src` is the BENCHES' folder — no script in the repo copies anything
+#   into `/srv/src/remotix`.  Everything it needs it derives from `$QUI`, that is from
+#   where this file is: put the `src/` folder wherever you like and launch it.
 #
-# ⛔ E LE VARIABILI D'AMBIENTE CHE ACCETTA, perche' un percorso indovinato e'
-#    un percorso che un giorno cambia:
+# ⛔ AND THE ENVIRONMENT VARIABLES IT ACCEPTS, because a guessed path is
+#    a path that one day changes:
 #
-#      PREFISSO   dove stanno installate ngtcp2/nghttp3   (def. /srv/src/b2/prefisso)
-#      NGTCP2     l'albero dei sorgenti di ngtcp2         (def. /srv/src/b2/ngtcp2)
-#      NGHTTP3    l'albero dei sorgenti di nghttp3        (def. /srv/src/b2/nghttp3)
-#      GEMELLO    la copia gemella di rcp.c/rcp.h/autenticazione.c da confrontare
-#                 (def. <QUI>/../banchi/rcp, e `nessuno` per DICHIARARE di non
-#                  confrontare — vedi il Makefile, rilievo R12.3)
+#      PREFISSO   where ngtcp2/nghttp3 are installed       (def. /srv/src/b2/prefisso)
+#      NGTCP2     the ngtcp2 source tree                   (def. /srv/src/b2/ngtcp2)
+#      NGHTTP3    the nghttp3 source tree                  (def. /srv/src/b2/nghttp3)
+#      GEMELLO    the twin copy of rcp.c/rcp.h/autenticazione.c to compare
+#                 (def. <QUI>/../banchi/rcp, and `nessuno` to DECLARE not
+#                  comparing — see the Makefile, finding R12.3)
 #
 # -----------------------------------------------------------------------------
-# ⛔ DOPO AVER COSTRUITO SI GUARDA L'ESITO DEL COSTRUTTORE, NON LA PRESENZA DEL
+# ⛔ AFTER BUILDING WE LOOK AT THE BUILDER'S OUTCOME, NOT AT THE PRESENCE OF THE
 #    FILE.
 #
-# `LEZIONI.md` §1.9 punto 8: «un file di ieri risponde "si'" a *esiste?*
-# esattamente come uno di adesso».  Il banco di B11 ha acceso il server SANO
-# dichiarando di aver acceso quello guasto, perche' controllava `test -x`.
+# `LEZIONI.md` §1.9 point 8: "a file from yesterday answers 'yes' to *does it exist?*
+# exactly like one from now".  The B11 bench started the HEALTHY server
+# declaring it had started the broken one, because it checked `test -x`.
 #
-# ⭐ Da cui le due cose che questo script fa e che un `make` nudo non fa:
-#    1. cancella il binario PRIMA di ricostruire, cosi' «c'e'» significa «e'
-#       di adesso»;
-#    2. controlla la MARCA dentro il binario prodotto — che risponde alla
-#       domanda giusta: *e' dentro quel che ci doveva essere?*
+# ⭐ Hence the two things this script does that a bare `make` does not:
+#    1. it deletes the binary BEFORE rebuilding, so "it is there" means "it is
+#       from now";
+#    2. it checks the MARK inside the produced binary — which answers the
+#       right question: *is what should be in it inside?*
 # -----------------------------------------------------------------------------
 set -uo pipefail
 
@@ -47,9 +47,9 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 # -----------------------------------------------------------------------------
-# 1. Dove stanno ngtcp2 e nghttp3.  ⛔ Si DICHIARA dove si e' guardato: un
-#    «non trovato» senza il denominatore non e' una misura (`LEZIONI.md` §1.9).
-log "Le dipendenze costruite dai sorgenti"
+# 1. Where ngtcp2 and nghttp3 are.  ⛔ We DECLARE where we looked: a
+#    "not found" without the denominator is not a measurement (`LEZIONI.md` §1.9).
+log "The dependencies built from source"
 
 INC=""
 LIB=""
@@ -62,7 +62,7 @@ cerca_ngtcp2()
 		[ -f "$i/ngtcp2/ngtcp2.h" ] || [ -f "$i/ngtcp2/version.h" ] && \
 			INC="$INC -I$i"
 	done
-	# le intestazioni della crittografia stanno in un albero a parte
+	# the crypto headers live in a separate tree
 	h="$NGTCP2/crypto/includes"
 	[ -f "$h/ngtcp2/ngtcp2_crypto_ossl.h" ] && INC="$INC -I$h"
 
@@ -87,63 +87,63 @@ cerca_nghttp3()
 cerca_ngtcp2
 cerca_nghttp3
 
-printf '    --  ho guardato in:\n'
+printf '    --  I looked in:\n'
 printf '        %s\n' "$NGTCP2" "$NGHTTP3" "$PREFISSO"
-printf '    --  intestazioni: %s\n' "${INC:-(nessuna)}"
-printf '    --  librerie:     %s\n' "${LIB:-(nessuna)}"
+printf '    --  headers:      %s\n' "${INC:-(none)}"
+printf '    --  libraries:    %s\n' "${LIB:-(none)}"
 
-[ -n "$INC" ] || { ko "nessuna intestazione trovata"; exit 2; }
-[ -n "$LIB" ] || { ko "nessuna libreria trovata"; exit 2; }
-ok "percorsi composti"
+[ -n "$INC" ] || { ko "no header found"; exit 2; }
+[ -n "$LIB" ] || { ko "no library found"; exit 2; }
+ok "paths composed"
 
 # -----------------------------------------------------------------------------
 log "OpenSSL"
 V=$(openssl version 2>&1)
 printf '    --  %s\n' "$V"
 case "$V" in
-	OpenSSL\ 3.[5-9]*|OpenSSL\ [4-9]*) ok "3.5 o piu': c'e' l'API QUIC nativa" ;;
-	*) ko "serve OpenSSL >= 3.5 per ngtcp2_crypto_ossl"; exit 2 ;;
+	OpenSSL\ 3.[5-9]*|OpenSSL\ [4-9]*) ok "3.5 or later: the native QUIC API is there" ;;
+	*) ko "OpenSSL >= 3.5 is needed for ngtcp2_crypto_ossl"; exit 2 ;;
 esac
 
 # -----------------------------------------------------------------------------
-log "Si butta il binario vecchio PRIMA di costruire"
+log "The old binary is thrown away BEFORE building"
 rm -f "$QUI/remotix" "$QUI"/*.o
 if [ -e "$QUI/remotix" ]; then
-	ko "il binario vecchio non si cancella: non si distinguerebbe dal nuovo"
+	ko "the old binary cannot be deleted: it could not be told apart from the new one"
 	exit 2
 fi
-ok "via il vecchio"
+ok "old one gone"
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# ⛔⭐ LE DUE COPIE DELLO STESSO MODULO — rilievo R12.3.
+# ⛔⭐ THE TWO COPIES OF THE SAME MODULE — finding R12.3.
 #
-# `rcp.c`, `rcp.h` e `autenticazione.c` stanno in due cartelle di questo repo,
-# perche' sono lo stesso modulo montato su due ospiti.  Il confronto lo fa il
-# bersaglio `impronte` del Makefile, e il Makefile FERMA la costruzione se
-# divergono.  ⚠ Qui si sceglie soltanto DOVE guardare, e si DICHIARA se non si
-# e' potuto guardare: «non ho trovato differenze» e «non ho guardato» sono due
-# fatti diversi.
-log "La copia gemella di rcp.c"
+# `rcp.c`, `rcp.h` and `autenticazione.c` live in two folders of this repo,
+# because they are the same module mounted on two hosts.  The comparison is done by the
+# `impronte` target of the Makefile, and the Makefile STOPS the build if they
+# diverge.  ⚠ Here we only choose WHERE to look, and DECLARE if we could
+# not look: "I found no differences" and "I did not look" are two
+# different facts.
+log "The twin copy of rcp.c"
 if [ -z "${GEMELLO:-}" ]; then
 	for c in "$QUI/../banchi/rcp" "$QUI/rcp-gemello" /srv/src/rcp; do
 		if [ -f "$c/rcp.c" ]; then GEMELLO=$c; break; fi
 	done
 fi
 if [ -z "${GEMELLO:-}" ]; then
-	ko "⛔ nessuna copia gemella trovata: ho guardato in"
+	ko "⛔ no twin copy found: I looked in"
 	printf '        %s\n' "$QUI/../banchi/rcp" "$QUI/rcp-gemello" /srv/src/rcp
-	ko "   NON e' «le copie combaciano»: e' «non ho potuto guardare».  Si"
-	ko "   costruisce lo stesso, e questa riga e' la dichiarazione (R12.3)."
+	ko "   It is NOT «the copies match»: it is «I could not look».  We"
+	ko "   build anyway, and this line is the declaration (R12.3)."
 	GEMELLO=nessuno
 else
-	ok "confronto contro «$GEMELLO»"
+	ok "comparing against «$GEMELLO»"
 fi
 
 # -----------------------------------------------------------------------------
 log "make"
-# ⚠ L'uscita di make va a terminale come esce: niente tubi, o lo stato che si
-#   legge sarebbe quello dell'ultimo comando del tubo (`LEZIONI.md` §1.9).
+# ⚠ make's output goes to the terminal as it comes: no pipes, or the status that is
+#   read would be that of the last command of the pipe (`LEZIONI.md` §1.9).
 make -C "$QUI" \
 	GEMELLO="$GEMELLO" \
 	CFLAGS="-O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter $INC" \
@@ -152,109 +152,109 @@ make -C "$QUI" \
 ESITO=$?
 
 if [ "$ESITO" -ne 0 ]; then
-	ko "⛔ la compilazione e' FALLITA (uscita $ESITO).  Il binario NON e' stato"
-	ko "   costruito, e quel che eventualmente c'e' sul disco non e' di adesso."
+	ko "⛔ the build has FAILED (exit $ESITO).  The binary was NOT"
+	ko "   built, and whatever may be on disk is not from now."
 	exit "$ESITO"
 fi
-ok "make e' uscito 0"
+ok "make exited 0"
 
 # -----------------------------------------------------------------------------
-# ⛔ E adesso la domanda giusta: e' dentro quel che ci doveva essere?
-log "La marca dentro il binario"
+# ⛔ And now the right question: is what should be in it inside?
+log "The mark inside the binary"
 if [ ! -x "$QUI/remotix" ]; then
-	ko "make e' uscito 0 e il binario non c'e': qualcosa non torna"
+	ko "make exited 0 and the binary is not there: something does not add up"
 	exit 3
 fi
 
-# ⚠ `grep -a` sul binario, e NON `strings`: `binutils` puo' non esserci — e la
-#   prima stesura di questo script ci e' inciampata, dichiarando assenti tutte e
-#   cinque le marche perche' lo STRUMENTO non c'era.  E' `LEZIONI.md` §1.9
-#   seconda regola: e' stato il controllo positivo a dirlo, non le cinque righe
-#   rosse.
-cerca() # $1 = file, $2 = testo
+# ⚠ `grep -a` on the binary, and NOT `strings`: `binutils` may be missing — and the
+#   first draft of this script tripped on it, declaring all five
+#   marks absent because the TOOL was not there.  It is `LEZIONI.md` §1.9
+#   second rule: it was the positive control that said so, not the five red
+#   lines.
+cerca() # $1 = file, $2 = text
 {
 	grep -a -F -q -e "$2" -- "$1"
 }
 
 MANCA=0
-# ⚠ Le ultime tre marche sono del 10 agosto 2026 notte, e ciascuna risponde a
-#   una domanda che un `make` riuscito NON risponde:
-#     NON-BANNATO         il comando di sblocco su socket c'e' davvero (R12.1)
-#     PING del trasporto  la cura di §4.6 e' dentro questo binario (B-2)
-#     pam.d/remotix       il servizio PAM e' quello di SPECIFICHE.md §4.2 (B-11)
+# ⚠ The last three marks are from the night of 10 August 2026, and each answers
+#   a question a successful `make` does NOT answer:
+#     NON-BANNATO         the unblock command on the socket really is there (R12.1)
+#     PING del trasporto  the cure of §4.6 is inside this binary (B-2)
+#     pam.d/remotix       the PAM service is that of SPECIFICHE.md §4.2 (B-11)
 for marca in "REMOTIX — fase 1" "Cross-Origin-Embedder-Policy" \
              "Cross-Origin-Opener-Policy" "/rcp/1" "/impronta" \
              "NON-BANNATO" "PING del trasporto" "/etc/pam.d/remotix"; do
 	if cerca "$QUI/remotix" "$marca"; then
-		ok "«$marca» c'e' nel binario"
+		ok "«$marca» is in the binary"
 	else
-		ko "«$marca» NON c'e' nel binario"
+		ko "«$marca» is NOT in the binary"
 		MANCA=1
 	fi
 done
 
-# ⛔ E i segni che il server sostituisce nella pagina stanno nella PAGINA, non
-#    nel binario: e' il controllo che `pagina_apri()` rifa' all'avvio, e senza
-#    il quale il server servirebbe per sempre una pagina senza impronta — o una
-#    pagina che non dice se l'indirizzo e' bannato (R12.2).
+# ⛔ And the markers the server replaces in the page are in the PAGE, not
+#    in the binary: it is the check `pagina_apri()` redoes at startup, and without
+#    which the server would forever serve a page without fingerprint — or a
+#    page that does not say whether the address is banned (R12.2).
 for segno in "__IMPRONTA__" "__AVVISO__" "__BANNATO__" "__RESTANO_MS__"; do
 	if cerca "$QUI/pagina.html" "$segno"; then
-		ok "«$segno» c'e' in pagina.html"
+		ok "«$segno» is in pagina.html"
 	else
-		ko "«$segno» NON c'e' in pagina.html: il server rifiutera' di partire"
+		ko "«$segno» is NOT in pagina.html: the server will refuse to start"
 		MANCA=1
 	fi
 done
 
-# Il controllo positivo dello strumento: sa trovare qualcosa che c'e' di sicuro?
-# Senza, «non l'ho trovato» e «non so cercare» hanno la stessa faccia.
+# The positive control of the tool: can it find something that is certainly there?
+# Without it, "I did not find it" and "I cannot search" have the same face.
 if cerca "$QUI/remotix" "GCC:" || cerca "$QUI/remotix" "main.c"; then
-	ok "controllo positivo: lo strumento sa trovare quel che c'e' di sicuro"
+	ok "positive control: the tool can find what is certainly there"
 else
-	ko "⛔ lo strumento NON trova nemmeno la marca del compilatore: i NO qui"
-	ko "   sopra non valgono niente"
+	ko "⛔ the tool does NOT even find the compiler's mark: the NOs"
+	ko "   above are worth nothing"
 	exit 3
 fi
 
 [ "$MANCA" -eq 0 ] || exit 3
 
 # -----------------------------------------------------------------------------
-# ⛔⭐ IL SERVIZIO PAM — `SPECIFICHE.md` §4.2, rilievo B-11.
+# ⛔⭐ THE PAM SERVICE — `SPECIFICHE.md` §4.2, finding B-11.
 #
-# Senza `/etc/pam.d/remotix`, Linux-PAM ripiega sul servizio `other`, che su
-# Debian e' `pam_deny`: OGNI parola d'ordine giusta viene rifiutata, e quel che
-# si legge e' «utente o parola d'ordine non corretti».  ⛔ Il difetto e' un file
-# mancante e la diagnosi punta sulla parola d'ordine — la forma esatta che
-# `LEZIONI.md` §1.9 chiama la piu' cara.
+# Without `/etc/pam.d/remotix`, Linux-PAM falls back to the `other` service, which on
+# Debian is `pam_deny`: EVERY right password is refused, and what
+# one reads is "wrong user or password".  ⛔ The defect is a missing
+# file and the diagnosis points at the password — the exact form that
+# `LEZIONI.md` §1.9 calls the most expensive.
 #
-# ⚠ Non si sovrascrive un file gia' presente: chi amministra la macchina puo'
-#   averlo modificato, e riscriverglielo a ogni costruzione sarebbe una
-#   configurazione che si perde da sola.
-log "Il servizio PAM"
-# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, con
-#    onerr=fail ⇒ senza il file non entra nessuno.  Prima il file, e non si
-#    riscrive se c'e'.
+# ⚠ An already present file is not overwritten: whoever administers the machine may
+#   have modified it, and rewriting it at every build would be a
+#   configuration that loses itself.
+log "The PAM service"
+# ⭐ PHASE 17: the PAM file excludes whoever is in /etc/remotix/utenti-negati, with
+#    onerr=fail ⇒ without the file nobody gets in.  The file first, and it is not
+#    rewritten if it is there.
 if [ -f /etc/remotix/utenti-negati ]; then
-	ok "/etc/remotix/utenti-negati c'e' gia' (non lo tocco)"
+	ok "/etc/remotix/utenti-negati is already there (not touching it)"
 elif install -D -m 644 /dev/null /etc/remotix/utenti-negati 2>/dev/null \
      && echo root > /etc/remotix/utenti-negati; then
-	ok "scritto /etc/remotix/utenti-negati: root"
+	ok "written /etc/remotix/utenti-negati: root"
 else
-	ko "⛔ /etc/remotix/utenti-negati NON c'e' e non l'ho potuto scrivere (serve root):"
-	ko "   con il PAM nuovo non entrera' NESSUNO.  A mano:  echo root > /etc/remotix/utenti-negati"
+	ko "⛔ /etc/remotix/utenti-negati is NOT there and I could not write it (root needed):"
+	ko "   with the new PAM NOBODY will get in.  By hand:  echo root > /etc/remotix/utenti-negati"
 fi
 if [ -f /etc/pam.d/remotix ]; then
-	ok "/etc/pam.d/remotix c'e' gia' (non lo tocco)"
+	ok "/etc/pam.d/remotix is already there (not touching it)"
 elif cp "$QUI/remotix.pam" /etc/pam.d/remotix 2>/dev/null; then
-	ok "installato /etc/pam.d/remotix da $QUI/remotix.pam"
+	ok "installed /etc/pam.d/remotix from $QUI/remotix.pam"
 else
-	ko "⛔ /etc/pam.d/remotix NON c'e' e non l'ho potuto installare (serve root)."
-	ko "   Il server partira' e RIFIUTERA' ogni parola d'ordine, dicendo che e'"
-	ko "   sbagliata.  Si copia a mano:  cp $QUI/remotix.pam /etc/pam.d/remotix"
+	ko "⛔ /etc/pam.d/remotix is NOT there and I could not install it (root needed)."
+	ko "   The server will start and will REFUSE every password, saying it is"
+	ko "   wrong.  Copy it by hand:  cp $QUI/remotix.pam /etc/pam.d/remotix"
 fi
 
-log "Le librerie da cui dipende davvero"
+log "The libraries it really depends on"
 ldd "$QUI/remotix" | grep -E 'ngtcp2|nghttp3|ssl|crypto|pam' || true
 
 printf '\n'
-ok "⭐ costruito: $QUI/remotix"
+ok "⭐ built: $QUI/remotix"

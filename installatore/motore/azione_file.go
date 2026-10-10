@@ -9,15 +9,15 @@ import (
 	"syscall"
 )
 
-// scrivi-file: un file di configurazione, scritto sempre su un nome temporaneo e poi rinominato
-// (mai a metà, §6.6.3). Reversibilità ESATTA: il contenuto di prima si salva nella cartella
-// dell'operazione e si rimette byte per byte, coi permessi e il proprietario.
+// scrivi-file: a configuration file, always written to a temporary name and then renamed
+// (never half-written, §6.6.3). EXACT reversibility: the previous content is saved in the operation's
+// folder and put back byte by byte, with permissions and owner.
 //
-// parametri: percorso (assoluto), contenuto, modo (ottale, "0644"), uid e gid (predefiniti 0).
+// parameters: percorso (absolute), contenuto, modo (octal, "0644"), uid and gid (default 0).
 
 func init() { registraTipo("write-file", nuovaScriviFile) }
 
-// PianoScriviFile prepara il passo del piano.
+// PianoScriviFile prepares the plan's step.
 func PianoScriviFile(id, percorso, contenuto, modo string) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "write-file",
@@ -44,7 +44,7 @@ type primaFile struct {
 	Modo           string   `json:"mode,omitempty"`
 	Uid            int      `json:"uid"`
 	Gid            int      `json:"gid"`
-	Salvataggio    string   `json:"backup,omitempty"` // relativo alla cartella dell'operazione
+	Salvataggio    string   `json:"backup,omitempty"` // relative to the operation's folder
 	CartelleCreate []string `json:"created_dirs,omitempty"`
 }
 
@@ -68,7 +68,7 @@ func (s *scriviFile) tmp(c *Contesto) string {
 	return filepath.Join(filepath.Dir(s.dest(c)), "."+filepath.Base(s.percorso)+".remotix-nuovo")
 }
 
-// stato del file adesso: esiste, sha, modo.
+// state of the file now: exists, sha, mode.
 func statoFile(percorso string) (bool, string, os.FileMode, int, int, error) {
 	st, err := os.Lstat(percorso)
 	if os.IsNotExist(err) {
@@ -127,7 +127,7 @@ func (s *scriviFile) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 			return nil, "", err
 		}
 	}
-	// le cartelle che mancano, dalla più alta
+	// the missing folders, from the highest
 	for d := filepath.Dir(s.percorso); d != "/" && d != "."; d = filepath.Dir(d) {
 		if _, err := os.Stat(c.Amb.P(d)); err == nil {
 			break
@@ -137,8 +137,8 @@ func (s *scriviFile) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	return jsonDi(p), p.Origine, nil
 }
 
-// scriviDentro: temporaneo col nome fisso (così «controlla» lo riconosce: a metà), fsync,
-// permessi, proprietario, rinomina, fsync della cartella.
+// scriviDentro: temporary with the fixed name (so «controlla» recognises it: half-done), fsync,
+// permissions, owner, rename, fsync of the folder.
 func scriviDentro(c *Contesto, dest, tmp string, dati []byte, modo os.FileMode, uid, gid int, idAzione string) error {
 	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
@@ -191,7 +191,7 @@ func (s *scriviFile) Fai(c *Contesto, prima json.RawMessage) error {
 	return scriviDentro(c, s.dest(c), s.tmp(c), s.contenuto, s.modo, s.uid, s.gid, c.P.ID)
 }
 
-// comePrima: il file è com'era prima dell'azione?
+// comePrima: is the file as it was before the action?
 func (s *scriviFile) comePrima(c *Contesto, p primaFile) (bool, error) {
 	esiste, sha, modo, _, _, err := statoFile(s.dest(c))
 	if err != nil {

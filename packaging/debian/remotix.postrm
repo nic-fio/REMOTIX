@@ -1,14 +1,14 @@
 #!/bin/sh
-# remotix.postrm — dopo che i file sono stati tolti (fasi/17 §6.4).
+# remotix.postrm — after the files have been removed (fasi/17 §6.4).
 #
-# ⛔ DECISIONI §10.12: gruppi, cinture, firewall e accensione li monta il MOTORE
-#    e li annota nel SUO registro; li disfa lui.  Il pacchetto non li tocca,
-#    ne' all'installazione ne' qui.
-#   remove   restano la configurazione (/etc/remotix, /etc/pam.d/remotix) e
-#            /var/lib/remotix;
-#   purge    via cio' che il PROGRAMMA ha creato da se' (certificati, ban) e
-#            /run/remotix; /var/lib/remotix solo se resta vuota — quel che ci
-#            lascia il motore (il suo registro) non e' del pacchetto.
+# ⛔ DECISIONI §10.12: groups, belts, firewall and switch-on are set up by the ENGINE,
+#    which records them in ITS log; it undoes them.  The package does not touch them,
+#    neither at installation nor here.
+#   remove   the configuration (/etc/remotix, /etc/pam.d/remotix) and
+#            /var/lib/remotix stay;
+#   purge    removes what the PROGRAM created by itself (certificates, ban) and
+#            /run/remotix; /var/lib/remotix only if it is left empty — what the
+#            engine leaves there (its log) does not belong to the package.
 set -e
 
 case "$1" in
@@ -19,7 +19,7 @@ purge)
 remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 	;;
 *)
-	echo "postrm chiamato con un argomento sconosciuto: $1" >&2
+	echo "postrm called with an unknown argument: $1" >&2
 	exit 1
 	;;
 esac

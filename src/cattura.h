@@ -1,102 +1,102 @@
 /*
- * cattura — i pixel, letti dal nodo PipeWire che Mutter ha aperto.
+ * cattura — the pixels, read from the PipeWire node Mutter opened.
  *
- * ⛔ IL MANDATO DI QUESTO FILE, IN UNA RIGA: **un fotogramma consegnato in
- *    memoria con il tipo di buffer DICHIARATO, non dedotto.**
+ * ⛔ THE MANDATE OF THIS FILE, IN ONE LINE: **a frame delivered in
+ *    memory with the buffer type DECLARED, not deduced.**
  *
- * ⛔ RIPORTATO da `fondamenta/remotix-c/src/cattura.c` (1060 righe) e NON ricopiato.
- *    Quel file portava dentro l'apparato RDP che in V2 non esiste — la strada
- *    che si gira a cattura viva perche' AVC420 vuole la GPU e RemoteFX la CPU,
- *    la misura negoziabile per KWin 6.8, il ridimensionamento della fase 6 — e
- *    qui non c'e' niente di tutto questo.  Sopravvivono le tre regole che erano
- *    il vero valore di quel file, e sono nei tre riquadri qui sotto.
- *
- * ===========================================================================
- * ⛔ 1. LO STRIDE SI LEGGE DAL CHUNK DEL BUFFER, MAI CALCOLATO
- *
- * Il produttore allinea le righe come gli conviene, e dedurre `larghezza × 4`
- * produce immagini oblique.  ⚠ `[M]` 12 agosto 2026: a 1920×1080 lo stride
- * misurato e' **7680**, cioe' esattamente `larghezza × 4` — ⛔ **e proprio per
- * questo la regola va scritta**: oggi coincide, e chi si abitua a calcolarlo non
- * se ne accorgera' il giorno in cui non coincide piu'.  Chi sta a valle legge
- * `stride` da qui, non lo rifa'.
- *
- * ⇒ Se il produttore consegnasse `stride == 0` questo modulo **scarta il
- *   fotogramma e lo conta**, invece di calcolarne uno: un fotogramma obliquo non
- *   da' nessun errore, e viene bene abbastanza da non farsi notare.
+ * ⛔ CARRIED OVER from `fondamenta/remotix-c/src/cattura.c` (1060 lines) and NOT copied.
+ *    That file carried the RDP apparatus that does not exist in V2 — the road
+ *    switched with capture live because AVC420 wants the GPU and RemoteFX the CPU,
+ *    the negotiable size for KWin 6.8, the phase 6 resizing — and
+ *    none of that is here.  What survives are the three rules that were
+ *    the real value of that file, and they are in the three boxes below.
  *
  * ===========================================================================
- * ⛔ 2. IL TIPO DI BUFFER SI CHIEDE IN DUE POSTI, E SI DICHIARA
+ * ⛔ 1. THE STRIDE IS READ FROM THE BUFFER'S CHUNK, NEVER COMPUTED
  *
- * Il DMA-BUF si chiede nel campo `modifier` del FORMATO (con
- * `MANDATORY | DONT_FIXATE`) **e** con il bit `SPA_DATA_DmaBuf` in
- * `SPA_PARAM_Buffers`.  Dichiarandone uno solo la negoziazione riesce lo stesso
- * e i buffer continuano ad arrivare in memoria: nessun errore, nessuna riga di
- * registro, e la copia zero semplicemente non c'e' (`[M]` 6 agosto 2026).
+ * The producer aligns rows as it sees fit, and deducing `width × 4`
+ * produces skewed images.  ⚠ `[M]` 12 August 2026: at 1920×1080 the measured stride
+ * is **7680**, that is exactly `width × 4` — ⛔ **and that is precisely why
+ * the rule must be written**: today it coincides, and whoever gets used to computing it will not
+ * notice the day it no longer coincides.  Whoever is downstream reads
+ * `stride` from here, and does not redo it.
  *
- * ⛔ E QUEL CHE IL TIPO **NON** DICE — forma E1 di `REVIEWER.md` §2, gia' pagata
- *    DUE volte (`LEZIONI.md` §1.11):
- *
- *      «consegna MemFd  ⇒ Mutter rende in software»   ⛔ FALSO
- *      «ha aperto un render node ⇒ rende in GPU»      ⛔ FALSO
- *
- *    Il tipo che arriva e' la risposta a quel che **abbiamo chiesto noi**, non
- *    una scoperta sul compositore.  Per questo `CatturaConsegna` porta il tipo
- *    **chiesto** e il tipo **dichiarato** in due campi diversi, e accanto chi lo
- *    dice: sono tre fatti, non uno.
+ * ⇒ If the producer delivered `stride == 0` this module **discards the
+ *   frame and counts it**, instead of computing one: a skewed frame
+ *   gives no error, and comes out well enough not to be noticed.
  *
  * ===========================================================================
- * ⛔ 3. LA CADENZA SI DICHIARA A ZERO, con un massimo a intervallo
+ * ⛔ 2. THE BUFFER TYPE IS REQUESTED IN TWO PLACES, AND IT IS DECLARED
  *
- * `framerate = 0/1` piu' `maxFramerate` significa «mandami un fotogramma quando
- * cambia qualcosa, non a ritmo fisso» — che e' il comportamento che serve a un
- * desktop remoto.  ⛔ Ne discende che **su un desktop fermo non arriva nulla**:
- * e' un comportamento voluto, non un guasto (`LEZIONI.md` §4 trappola 8), ed e'
- * la ragione per cui `cattura_prendi` distingue **lo zero dal fallimento** con
- * due valori d'uscita diversi (`CODER.md` §3.10).
+ * DMA-BUF is requested in the `modifier` field of the FORMAT (with
+ * `MANDATORY | DONT_FIXATE`) **and** with the `SPA_DATA_DmaBuf` bit in
+ * `SPA_PARAM_Buffers`.  Declaring only one, negotiation succeeds anyway
+ * and buffers keep arriving in memory: no error, no log
+ * line, and zero copy is simply not there (`[M]` 6 August 2026).
  *
- * ===========================================================================
- * ⛔ IL DANNO E' UN'INFORMAZIONE SU QUANTO E' CAMBIATO — NON LA CONDIZIONE PER
- *    CUI IL BUFFER SI PUO' LEGGERE
+ * ⛔ AND WHAT THE TYPE DOES **NOT** SAY — form E1 of `REVIEWER.md` §2, already paid
+ *    for TWICE (`LEZIONI.md` §1.11):
  *
- * ⚠ In `fondamenta/remotix-c/src/cattura.h` c'era scritto il contrario, e la misura lo ha
- *   smentito.  Diceva: *«in zero-copy Mutter ricicla i propri buffer e vi
- *   ridipinge dentro SOLO la parte cambiata; fuori da quelle regioni ci sono i
- *   pixel del fotogramma che aveva usato quel buffer prima»* (7 agosto 2026).
+ *      "delivers MemFd  ⇒ Mutter renders in software"   ⛔ FALSE
+ *      "it opened a render node ⇒ renders on the GPU"   ⛔ FALSE
  *
- * `[M]` 12 agosto 2026, F2.2 — NIC-OS, Mutter 48.7 headless, strada MEMORIA,
- * monitor virtuale 1920×1080, scena «bandiera»: il danno e' **parziale su tutti
- * e 410 i fotogrammi**, il primo compreso, e le sette barre SMPTE si leggono
- * **intere** nel fotogramma di regime.  ⇒ **il buffer e' intero anche quando il
- * danno e' parziale.**
- *
- * `[R]` `STUDI.md` §gnome §8.1, Mutter riletto riga per riga, lo diceva gia': blit
- * dell'INTERO framebuffer, stack di clip svuotato deliberatamente, vista
- * virtuale come `CoglOffscreen` persistente.  Le due strade concordano.
- *
- * ⛔ E LA CONSEGUENZA CHE E' ANCORA VIVA NEL CODICE EREDITATO: in
- *    `fondamenta/remotix-c/src/palco.c:598-628` la copia zero nasce **spenta su GNOME**
- *    con questa ragione, e questa ragione **e' morta**.  ⚠ Il che NON dice che
- *    la copia zero su GNOME funzioni: dice che il motivo per cui era spenta non
- *    c'e' piu', e che la decisione va ripresa **su una misura** invece che su
- *    quel commento.  Qui la strada la sceglie chi chiama (`CatturaStrada`), e la
- *    fase 2 chiede la memoria per una ragione sua e dichiarata: **vuole i pixel
- *    leggibili**.
- *
- * ⚠ A che cosa serve allora il danno: a sapere QUANTA parte e' stata ridipinta —
- *   cioe' quanto conviene ricodificare — e a distinguere «il produttore non
- *   dichiara il danno» da «il danno copriva tutto».  Si continua a chiederlo,
- *   perche' non chiederlo significa non riceverlo.
+ *    The type that arrives is the answer to what **we asked for**, not
+ *    a discovery about the compositor.  That is why `CatturaConsegna` carries the
+ *    **requested** type and the **declared** type in two different fields, and next to them who
+ *    says so: they are three facts, not one.
  *
  * ===========================================================================
- * ⚠ IL CICLO DI PIPEWIRE VIVE SU UN THREAD SUO (`pw_thread_loop`).  Le
- *   richiamate qui sotto vengono chiamate DA QUEL THREAD, che e' di tempo reale:
- *   chi le scrive non deve aspettare nulla al loro interno, e in particolare non
- *   deve chiamare `cattura_ferma` da dentro `CatturaFine`.
+ * ⛔ 3. THE CADENCE IS DECLARED AT ZERO, with a maximum as interval
  *
- *   ⛔ E i pixel vivono SOLO per la durata della chiamata: appena si torna, il
- *      buffer torna a PipeWire.  Chi li vuole se li copia — o usa
- *      `cattura_prendi`, che la copia la fa lui.
+ * `framerate = 0/1` plus `maxFramerate` means "send me a frame when
+ * something changes, not at a fixed rate" — which is the behaviour a
+ * remote desktop needs.  ⛔ It follows that **on a still desktop nothing arrives**:
+ * it is wanted behaviour, not a fault (`LEZIONI.md` §4 trap 8), and it is
+ * the reason why `cattura_prendi` tells **zero from failure** apart with
+ * two different return values (`CODER.md` §3.10).
+ *
+ * ===========================================================================
+ * ⛔ DAMAGE IS INFORMATION ABOUT HOW MUCH HAS CHANGED — NOT THE CONDITION FOR
+ *    WHICH THE BUFFER CAN BE READ
+ *
+ * ⚠ `fondamenta/remotix-c/src/cattura.h` said the opposite, and measurement
+ *   refuted it.  It said: *"in zero-copy Mutter recycles its own buffers and
+ *   repaints inside them ONLY the changed part; outside those regions are the
+ *   pixels of the frame that had used that buffer before"* (7 August 2026).
+ *
+ * `[M]` 12 August 2026, F2.2 — NIC-OS, Mutter 48.7 headless, MEMORY road,
+ * 1920×1080 virtual monitor, "flag" scene: damage is **partial on all
+ * 410 frames**, the first included, and the seven SMPTE bars read
+ * **whole** in the steady-state frame.  ⇒ **the buffer is whole even when
+ * damage is partial.**
+ *
+ * `[R]` `STUDI.md` §gnome §8.1, Mutter reread line by line, already said so: blit
+ * of the WHOLE framebuffer, clip stack deliberately emptied, virtual
+ * view as a persistent `CoglOffscreen`.  The two roads agree.
+ *
+ * ⛔ AND THE CONSEQUENCE STILL ALIVE IN THE INHERITED CODE: in
+ *    `fondamenta/remotix-c/src/palco.c:598-628` zero copy is born **off on GNOME**
+ *    for this reason, and this reason **is dead**.  ⚠ Which does NOT say that
+ *    zero copy on GNOME works: it says that the reason it was off is
+ *    gone, and that the decision must be taken up again **on a measurement** instead of on
+ *    that comment.  Here the road is chosen by the caller (`CatturaStrada`), and
+ *    phase 2 asks for memory for a reason of its own, declared: **it wants readable
+ *    pixels**.
+ *
+ * ⚠ What damage is for, then: to know HOW MUCH was repainted —
+ *   that is, how much is worth re-encoding — and to tell "the producer does not
+ *   declare damage" from "the damage covered everything".  We keep asking for it,
+ *   because not asking for it means not receiving it.
+ *
+ * ===========================================================================
+ * ⚠ THE PIPEWIRE LOOP LIVES ON A THREAD OF ITS OWN (`pw_thread_loop`).  The
+ *   callbacks below are called FROM THAT THREAD, which is real-time:
+ *   whoever writes them must not wait for anything inside them, and in particular must not
+ *   call `cattura_ferma` from inside `CatturaFine`.
+ *
+ *   ⛔ And the pixels live ONLY for the duration of the call: as soon as it returns, the
+ *      buffer goes back to PipeWire.  Whoever wants them copies them — or uses
+ *      `cattura_prendi`, which makes the copy itself.
  */
 #ifndef REMOTIX_CATTURA_H
 #define REMOTIX_CATTURA_H
@@ -109,7 +109,7 @@
 typedef struct Cattura Cattura;
 
 /* ------------------------------------------------------------------ *
- *  Il tipo di buffer — si chiede e si dichiara
+ *  The buffer type — requested and declared
  * ------------------------------------------------------------------ */
 
 typedef enum
@@ -121,28 +121,28 @@ typedef enum
 	CATTURA_BUFFER_DMABUF
 } CatturaBuffer;
 
-/* La strada che si CHIEDE.  ⛔ Non e' la stessa cosa del tipo che arriva, e le
- * due stanno in due campi diversi apposta: se si chiede la scheda e arriva la
- * memoria, `cattura_avvia` FALLISCE dichiarandolo invece di ripiegare in
- * silenzio (`LEZIONI.md` §1.8, corollario). */
+/* The road that is REQUESTED.  ⛔ It is not the same thing as the type that arrives, and the
+ * two are in two different fields on purpose: if the card is requested and memory
+ * arrives, `cattura_avvia` FAILS declaring it instead of falling back
+ * silently (`LEZIONI.md` §1.8, corollary). */
 typedef enum
 {
-	CATTURA_STRADA_MEMORIA = 0, /* MemFd/MemPtr: i pixel si leggono            */
-	CATTURA_STRADA_SCHEDA       /* DMA-BUF: i pixel NON sono qui, c'e' un fd   */
+	CATTURA_STRADA_MEMORIA = 0, /* MemFd/MemPtr: the pixels can be read        */
+	CATTURA_STRADA_SCHEDA       /* DMA-BUF: the pixels are NOT here, an fd is  */
 } CatturaStrada;
 
 /*
- * Il colore che si CHIEDE.
+ * The colour that is REQUESTED.
  *
- * ⛔ E `CATTURA_COLORE_10BIT` non e' una speranza: e' **la domanda**, fatta al
- *    produttore invece che dedotta.  `STUDI.md` §gnome §8.3 `[R]`, Mutter 48.7 riletto
- *    riga per riga (`meta-screen-cast-stream-src.c`, `supported_formats[]`):
- *    **due sole voci, BGRx e BGRA**, tutt'e due a 8 bit per canale.  ⇒ Da questa
- *    sorgente dieci bit veri non escono.
+ * ⛔ And `CATTURA_COLORE_10BIT` is not a hope: it is **the question**, put to the
+ *    producer instead of deduced.  `STUDI.md` §gnome §8.3 `[R]`, Mutter 48.7 reread
+ *    line by line (`meta-screen-cast-stream-src.c`, `supported_formats[]`):
+ *    **only two entries, BGRx and BGRA**, both at 8 bits per channel.  ⇒ From this
+ *    source real ten bits do not come out.
  *
- *    Chiedere il formato a 10 bit e ricevere un rifiuto trasforma quella lettura
- *    in una **misura**, e il rifiuto va scritto invece che dedotto: e' l'unico
- *    modo di chiudere la `[?]` senza deduzione (`LEZIONI.md` §1.11).
+ *    Asking for the 10-bit format and receiving a refusal turns that reading
+ *    into a **measurement**, and the refusal must be written instead of deduced: it is the only
+ *    way to close the `[?]` without deduction (`LEZIONI.md` §1.11).
  */
 typedef enum
 {
@@ -151,99 +151,99 @@ typedef enum
 	CATTURA_COLORE_10BIT
 } CatturaColore;
 
-/* Da dove viene un valore.  ⛔ «Non dichiarato» E' UNA RISPOSTA, e non un campo
- * da riempire con quel che ci aspettiamo: il silenzio scambiato per un valore e'
- * la forma E8. */
+/* Where a value comes from.  ⛔ "Not declared" IS AN ANSWER, and not a field
+ * to fill with what we expect: silence mistaken for a value is
+ * form E8. */
 typedef enum
 {
-	CATTURA_FONTE_NON_DICHIARATA = 0, /* il produttore tace (SPA UNKNOWN)      */
-	CATTURA_FONTE_PRODUTTORE,         /* SPA_PARAM_Format, chiesto a lui       */
-	CATTURA_FONTE_FORMATO,            /* discende dal formato negoziato        */
-	CATTURA_FONTE_MISURATA            /* [M] contata da noi sui pixel          */
+	CATTURA_FONTE_NON_DICHIARATA = 0, /* the producer is silent (SPA UNKNOWN)  */
+	CATTURA_FONTE_PRODUTTORE,         /* SPA_PARAM_Format, asked of it         */
+	CATTURA_FONTE_FORMATO,            /* follows from the negotiated format    */
+	CATTURA_FONTE_MISURATA            /* [M] counted by us on the pixels       */
 } CatturaFonte;
 
-/* L'esito della misura del range fatta sui pixel consegnati.  ⛔ Non c'e' un
- * valore «LIMITATO»: una scena che non arriva a 255 non prova un range
- * limitato — prova solo che quella scena non ci arriva.  Le due risposte oneste
- * sono «compatibile col pieno» e «non conclusivo». */
+/* The outcome of the range measurement made on the delivered pixels.  ⛔ There is no
+ * "LIMITED" value: a scene that does not reach 255 does not prove a limited
+ * range — it only proves that that scene does not reach it.  The two honest answers
+ * are "compatible with full" and "inconclusive". */
 typedef enum
 {
 	CATTURA_RANGE_NON_MISURATO = 0,
-	CATTURA_RANGE_COMPATIBILE_PIENO, /* i pixel toccano 0 e 255               */
-	CATTURA_RANGE_NON_CONCLUSIVO     /* non li toccano: dipende dalla SCENA   */
+	CATTURA_RANGE_COMPATIBILE_PIENO, /* the pixels touch 0 and 255            */
+	CATTURA_RANGE_NON_CONCLUSIVO     /* they do not: it depends on the SCENE  */
 } CatturaRangeMisurato;
 
 /* ------------------------------------------------------------------ *
- *  ⛔ I QUATTRO FATTI CHE SI DICHIARANO A VALLE
+ *  ⛔ THE FOUR FACTS DECLARED DOWNSTREAM
  * ------------------------------------------------------------------ *
  *
- *   1. il TIPO DI BUFFER   chiesto e dichiarato, con chi lo dice
- *   2. i BIT PER CANALE    dal formato negoziato, mai inventati
- *   3. la GEOMETRIA        misura, stride LETTO, byte per fotogramma
- *   4. il COLORE           range · matrice · trasferimento · primari, come li
- *                          dichiara il produttore — «non dichiarato» compreso
+ *   1. the BUFFER TYPE     requested and declared, with who says so
+ *   2. the BITS PER CHANNEL from the negotiated format, never invented
+ *   3. the GEOMETRY        size, stride READ, bytes per frame
+ *   4. the COLOUR          range · matrix · transfer · primaries, as the
+ *                          producer declares them — "not declared" included
  *
- * ⛔ Chi sta a valle legge questi campi.  Non li deduce, non li ricalcola, e in
- *    particolare non ricalcola lo stride.
+ * ⛔ Whoever is downstream reads these fields.  They do not deduce them, do not recompute them, and in
+ *    particular do not recompute the stride.
  */
 typedef struct
 {
-	gboolean noto; /* FALSE finche' il formato non e' stato negoziato */
+	gboolean noto; /* FALSE until the format has been negotiated */
 
-	/* --- 1. il tipo di buffer ------------------------------------------- */
+	/* --- 1. the buffer type --------------------------------------------- */
 	CatturaStrada strada_chiesta;
 	CatturaBuffer buffer_chiesto;
-	CatturaBuffer buffer_dichiarato; /* CATTURA_BUFFER_IGNOTO fino al 1° fotogramma */
+	CatturaBuffer buffer_dichiarato; /* CATTURA_BUFFER_IGNOTO until the 1st frame */
 	uint32_t buffer_dichiarato_grezzo;
-	guint buffer_distinti; /* quanti buffer diversi ricicla il produttore */
+	guint buffer_distinti; /* how many different buffers the producer recycles */
 
-	/* --- 2. il formato e i bit ------------------------------------------ */
+	/* --- 2. the format and the bits ------------------------------------- */
 	uint32_t formato_grezzo;
-	const char *formato; /* "BGRx", "BGRA", … — mai una parola inventata */
-	int bit_per_canale;  /* 8; ⛔ 0 = formato ignoto, e 0 si scrive        */
+	const char *formato; /* "BGRx", "BGRA", … — never an invented word */
+	int bit_per_canale;  /* 8; ⛔ 0 = unknown format, and 0 is written    */
 	CatturaFonte fonte_bit;
 
-	/* --- 3. la geometria ------------------------------------------------ */
+	/* --- 3. the geometry ------------------------------------------------ */
 	uint32_t larghezza, altezza;
-	uint32_t stride;         /* ⛔ LETTO dal chunk. 0 = nessun fotogramma ancora */
-	gboolean stride_letto;   /* FALSE ⇒ `stride` non e' un fatto, e' un vuoto   */
-	guint64 byte;            /* stride × altezza                                */
+	uint32_t stride;         /* ⛔ READ from the chunk. 0 = no frame yet         */
+	gboolean stride_letto;   /* FALSE ⇒ `stride` is not a fact, it is a blank   */
+	guint64 byte;            /* stride × height                                 */
 	uint64_t modificatore;
 
-	/* --- 4. il colore, come lo dichiara il produttore -------------------- */
+	/* --- 4. the colour, as the producer declares it --------------------- */
 	uint32_t range_grezzo, matrice_grezza, trasferimento_grezzo, primari_grezzi;
 	CatturaFonte fonte_range, fonte_matrice;
 
-	/* --- e la misura che facciamo NOI, perche' il produttore tace -------- */
+	/* --- and the measurement WE make, because the producer is silent ---- */
 	uint8_t minimo[3], massimo[3]; /* R, G, B */
 	CatturaRangeMisurato range_misurato;
-	gboolean nero;    /* ⛔ tutti i pixel a zero: il guasto peggiore di F2.2 */
-	gboolean uniforme; /* tutti i pixel uguali fra loro (nero compreso)      */
-	/* ⛔⛔ E QUESTO CAMPO E' LA RAGIONE PER CUI I TRE QUI SOPRA SI POSSONO
-	 *     ANCORA LEGGERE — `LEZIONI.md` §1.9, «vuoto» e «proibito» hanno lo
-	 *     stesso aspetto.
+	gboolean nero;    /* ⛔ all pixels at zero: the worst fault of F2.2      */
+	gboolean uniforme; /* all pixels equal to each other (black included)    */
+	/* ⛔⛔ AND THIS FIELD IS THE REASON WHY THE THREE ABOVE CAN
+	 *     STILL BE READ — `LEZIONI.md` §1.9, "empty" and "forbidden" look
+	 *     the same.
 	 *
-	 * Dal 22 agosto 2026 il giro sui pixel **non si fa su ogni fotogramma**: `[M]`
-	 * costava **5,34 ms** dentro un tratto di **21,6**, cioe' il **25 %**, per
-	 * riempire una riga di registro che si scrive **una volta sola**
-	 * (`figlio.c`, il montaggio del palco).  ⇒ Adesso si fa sul PRIMO fotogramma
-	 * e poi al piu' una volta ogni `MISURA_PIXEL_OGNI_MS`.
+	 * Since 22 August 2026 the pass over the pixels **is not done on every frame**: `[M]`
+	 * it cost **5.34 ms** within a span of **21.6**, that is **25 %**, to
+	 * fill a log line that is written **only once**
+	 * (`figlio.c`, the mounting of the stage).  ⇒ Now it is done on the FIRST frame
+	 * and then at most once every `MISURA_PIXEL_OGNI_MS`.
 	 *
-	 * ⛔ Su un fotogramma non misurato `nero` e `uniforme` valgono `FALSE` — e
-	 *    `FALSE` qui vorrebbe dire **«non e' nero»**, che e' una BUGIA: vuol dire
-	 *    «non ho guardato».  Chi legge quei tre campi **deve** guardare prima
-	 *    questo, esattamente come `stride_letto` sta accanto a `stride`.
-	 * ⚠ `range_misurato` sa gia' dirlo da se' (`CATTURA_RANGE_NON_MISURATO`);
-	 *   `nero` e `uniforme` no, ed e' per loro che questo campo esiste. */
+	 * ⛔ On an unmeasured frame `nero` and `uniforme` are `FALSE` — and
+	 *    `FALSE` here would mean **"it is not black"**, which is a LIE: it means
+	 *    "I did not look".  Whoever reads those three fields **must** look at this one
+	 *    first, exactly as `stride_letto` sits next to `stride`.
+	 * ⚠ `range_misurato` can already say so by itself (`CATTURA_RANGE_NON_MISURATO`);
+	 *   `nero` and `uniforme` cannot, and this field exists for them. */
 	gboolean pixel_misurati;
 } CatturaConsegna;
 
 /* ------------------------------------------------------------------ *
- *  Il fotogramma
+ *  The frame
  * ------------------------------------------------------------------ */
 
-/* Una regione cambiata (`SPA_META_VideoDamage`).  ⛔ Informazione, non
- * condizione: vedi il riquadro in testa. */
+/* A changed region (`SPA_META_VideoDamage`).  ⛔ Information, not
+ * condition: see the box at the top. */
 typedef struct
 {
 	uint32_t x, y, larghezza, altezza;
@@ -251,15 +251,15 @@ typedef struct
 
 typedef struct
 {
-	/* ⛔ `pixel` e' NULL sulla strada della scheda: li' non c'e' un puntatore,
-	 *    c'e' un descrittore che vive sulla GPU.  Chi controlla «niente puntatore
-	 *    ⇒ niente fotogramma» senza guardare prima il tipo scarta ogni DMA-BUF in
-	 *    silenzio — misurato il 6 agosto 2026, ed e' costato un giro di prove. */
+	/* ⛔ `pixel` is NULL on the card road: there is no pointer there,
+	 *    there is a descriptor living on the GPU.  Whoever checks "no pointer
+	 *    ⇒ no frame" without first looking at the type discards every DMA-BUF
+	 *    silently — measured on 6 August 2026, and it cost a round of tests. */
 	const uint8_t *pixel;
 	guint64 byte;
-	int fd; /* -1 se non c'e' */
+	int fd; /* -1 if absent */
 	uint32_t offset;
-	uint32_t stride; /* ⛔ letto dal chunk */
+	uint32_t stride; /* ⛔ read from the chunk */
 
 	uint64_t seq;
 	int64_t pts;
@@ -270,26 +270,26 @@ typedef struct
 	gboolean danno_dichiarato;
 	gboolean danno_copre_tutto;
 
-	guint64 indice; /* quale fotogramma era, contato dal primo arrivato */
+	guint64 indice; /* which frame it was, counted from the first that arrived */
 	const CatturaConsegna *consegna;
 } CatturaFotogrammaInfo;
 
 typedef void (*CatturaFotogramma)(const CatturaFotogrammaInfo *fotogramma, gpointer dati);
 
-/* Il flusso si e' staccato: o la sessione grafica e' finita, o Mutter l'ha
- * fermato per conto suo. */
+/* The stream has come off: either the graphical session is over, or Mutter
+ * stopped it on its own. */
 typedef void (*CatturaFine)(gpointer dati);
 
 /* ------------------------------------------------------------------ *
- *  Il fotogramma FERMO — la consegna della fase 2
+ *  The STILL frame — the deliverable of phase 2
  * ------------------------------------------------------------------ */
 
 /*
- * Una copia nostra del fotogramma, che vive finche' non la si libera.
+ * A copy of our own of the frame, which lives until it is freed.
  *
- * ⭐ E' il prodotto di F2.2: *un'immagine ferma*, presa dalla sessione e messa
- *    in memoria, con accanto tutto quel che serve a giudicarla senza dedurre
- *    niente.
+ * ⭐ It is the product of F2.2: *a still image*, taken from the session and put
+ *    in memory, with next to it everything needed to judge it without deducing
+ *    anything.
  */
 typedef struct
 {
@@ -301,84 +301,84 @@ typedef struct
 	gboolean seq_nota;
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ LA COPIA ZERO — il fotogramma che NON e' stato copiato
+	 * ⭐⭐ ZERO COPY — the frame that was NOT copied
 	 * ------------------------------------------------------------------ *
 	 *
-	 * ⛔ Sulla strada della SCHEDA `pixel` resta **NULL** e questi campi sono
-	 *    l'unico modo di arrivare all'immagine: non e' un puntatore, e' un
-	 *    descrittore che vive sulla GPU.  Chi legge deve guardare
-	 *    `sulla_scheda` PRIMA di `pixel`, o scartera' ogni fotogramma della
-	 *    scheda in silenzio (`[M]` 6 agosto 2026, ed e' costato un giro di
-	 *    prove).
+	 * ⛔ On the CARD road `pixel` stays **NULL** and these fields are
+	 *    the only way to reach the image: it is not a pointer, it is a
+	 *    descriptor living on the GPU.  Whoever reads must look at
+	 *    `sulla_scheda` BEFORE `pixel`, or will discard every card
+	 *    frame silently (`[M]` 6 August 2026, and it cost a round of
+	 *    tests).
 	 *
-	 * ⛔⛔ E IL BUFFER E' **TRATTENUTO** FINCHE' NON SI CHIAMA
-	 *      `cattura_fermo_libera()` — vedi il riquadro della RITENUTA in
-	 *      `cattura.c`.  Chi tiene questo `CatturaFermo` piu' a lungo del
-	 *      necessario toglie un buffer al produttore; chi lo libera prima di
-	 *      aver finito di leggere si fa riscrivere l'immagine sotto gli occhi
-	 *      (`LEZIONI.md` §8: le due schermate che si alternavano non erano un
-	 *      problema di *acquire*, erano di *release*).
+	 * ⛔⛔ AND THE BUFFER IS **HELD** UNTIL
+	 *      `cattura_fermo_libera()` IS CALLED — see the HOLD box in
+	 *      `cattura.c`.  Whoever keeps this `CatturaFermo` longer than
+	 *      necessary takes a buffer away from the producer; whoever frees it before
+	 *      finishing reading gets the image rewritten under their eyes
+	 *      (`LEZIONI.md` §8: the two alternating screens were not an
+	 *      *acquire* problem, they were a *release* one).
 	 */
 	gboolean sulla_scheda;
-	int fd;              /* ⛔ NON e' nostro: lo possiede PipeWire, non si chiude */
+	int fd;              /* ⛔ NOT ours: PipeWire owns it, do not close        */
 	uint32_t offset;
-	uint32_t formato_drm; /* `DRM_FORMAT_XRGB8888` … — quel che VA-API vuole  */
+	uint32_t formato_drm; /* `DRM_FORMAT_XRGB8888` … — what VA-API wants      */
 	uint64_t modificatore;
-	/* ⛔ La GENERAZIONE dei buffer del produttore: cambia ogni volta che
-	 *    PipeWire li rialloca (una rinegoziazione, un risveglio).  ⚠ Serve a
-	 *    chi mette in cache l'importazione di un `fd`: **i numeri di
-	 *    descrittore si riciclano**, e una cache che guardasse il solo `fd`
-	 *    darebbe a VA-API una superficie che punta a un buffer liberato — cioe'
-	 *    un'immagine di prima, o peggio.  Due misure sotto la stessa etichetta,
-	 *    nella forma che non da' nessun errore. */
+	/* ⛔ The GENERATION of the producer's buffers: it changes every time
+	 *    PipeWire reallocates them (a renegotiation, a wake-up).  ⚠ It serves
+	 *    whoever caches the import of an `fd`: **descriptor numbers
+	 *    are recycled**, and a cache that looked at the `fd` alone
+	 *    would give VA-API a surface pointing to a freed buffer — that is
+	 *    an earlier image, or worse.  Two measurements under the same label,
+	 *    in the form that gives no error. */
 	uint64_t generazione;
-	/* ⛔ Opachi: il `pw_buffer` trattenuto e chi lo restituira'.  Non si
-	 *    leggono da fuori — esistono perche' `cattura_fermo_libera()` sappia a
-	 *    chi rendere il buffer senza che il chiamante debba tenersi la
-	 *    `Cattura` accanto al fotogramma. */
+	/* ⛔ Opaque: the held `pw_buffer` and whoever will give it back.  They are not
+	 *    read from outside — they exist so that `cattura_fermo_libera()` knows to
+	 *    whom to give the buffer back without the caller having to keep the
+	 *    `Cattura` next to the frame. */
 	void *ritenuta;
 	void *padrone;
 	gboolean danno_dichiarato, danno_copre_tutto;
-	guint64 indice;          /* quale fotogramma era fra gli arrivati */
-	CatturaConsegna consegna; /* i quattro fatti, congelati con lui   */
+	guint64 indice;          /* which frame it was among those arrived */
+	CatturaConsegna consegna; /* the four facts, frozen with it        */
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ I TRATTI DELLA PRESA — la strumentazione della fase 8
+	 * ⭐⭐ THE SPANS OF THE GRAB — the phase 8 instrumentation
 	 * ------------------------------------------------------------------ *
 	 *
-	 * ⛔ IL FATTO CHE LI FA NASCERE: `[M]` fase 4, il tratto `cattura → primo
-	 *    byte` vale **30,37 ms** e i tre tempi che il codificatore gia'
-	 *    dichiarava — conversione 5,6 · caricamento 2,9 · codifica 5,3 — ne
-	 *    spiegano **13,8**.  ⇒ **~16 ms non avevano un proprietario**, e un
-	 *    margine senza nome non si cura: si strumenta prima.
+	 * ⛔ THE FACT THAT GIVES BIRTH TO THEM: `[M]` phase 4, the span `capture → first
+	 *    byte` is **30.37 ms** and the three times the encoder already
+	 *    declared — conversion 5.6 · upload 2.9 · encoding 5.3 — explain
+	 *    **13.8** of it.  ⇒ **~16 ms had no owner**, and a
+	 *    nameless margin is not cured: it is instrumented first.
 	 *
-	 * ⛔ E QUESTI QUATTRO SONO IL PEZZO DI TRATTO CHE STA **PRIMA** DEL
-	 *    CODIFICATORE, cioe' l'unico che nessuno guardava.  Sono microsecondi, e
-	 *    sono quattro perche' rispondono a quattro domande diverse:
+	 * ⛔ AND THESE FOUR ARE THE PIECE OF SPAN THAT LIES **BEFORE** THE
+	 *    ENCODER, that is the only one nobody looked at.  They are microseconds, and
+	 *    they are four because they answer four different questions:
 	 *
-	 *      `us_arrivo`      l'istante (CLOCK_MONOTONIC) in cui il fotogramma e'
-	 *                       stato messo nel posto.  ⛔ Non e' un costo: e' il
-	 *                       riferimento da cui gli altri si sottraggono, e
-	 *                       accanto al `pts` di Mutter dice quanto ci mette il
-	 *                       produttore ad arrivare fino a noi;
-	 *      `us_copia`       la `memcpy` dentro la richiamata di tempo reale;
-	 *      `us_allocazione` la `g_malloc` del posto — ⛔ **0 quando il buffer si
-	 *                       e' riusato**, ed e' precisamente il numero che dice
-	 *                       se il riuso di `posto_capienza` sta funzionando o se
-	 *                       si rialloca a ogni giro;
-	 *      `us_nel_posto`   ⭐ **quanto il fotogramma e' rimasto FERMO nel posto**
-	 *                       prima che qualcuno lo prendesse.  ⛔ E' tempo in cui
-	 *                       nessuno lavora e il fotogramma invecchia: non e'
-	 *                       lavoro da ottimizzare, e' **attesa**, ed e' l'unica
-	 *                       voce del tratto che cala se il ciclo si accorcia;
-	 *      `us_misura`      il giro di `misura_i_pixel()` — ⛔ lavoro
-	 *                       DIAGNOSTICO, non di prodotto: legge ogni pixel del
-	 *                       fotogramma sul thread di chi chiama.
+	 *      `us_arrivo`      the instant (CLOCK_MONOTONIC) at which the frame was
+	 *                       put in the slot.  ⛔ It is not a cost: it is the
+	 *                       reference the others are subtracted from, and
+	 *                       next to Mutter's `pts` it says how long the
+	 *                       producer takes to get to us;
+	 *      `us_copia`       the `memcpy` inside the real-time callback;
+	 *      `us_allocazione` the `g_malloc` of the slot — ⛔ **0 when the buffer
+	 *                       was reused**, and it is precisely the number that says
+	 *                       whether the reuse of `posto_capienza` is working or whether
+	 *                       it reallocates at every turn;
+	 *      `us_nel_posto`   ⭐ **how long the frame stayed STILL in the slot**
+	 *                       before someone took it.  ⛔ It is time in which
+	 *                       nobody works and the frame ages: it is not
+	 *                       work to optimise, it is **waiting**, and it is the only
+	 *                       item of the span that drops if the loop gets shorter;
+	 *      `us_misura`      the pass of `misura_i_pixel()` — ⛔ DIAGNOSTIC
+	 *                       work, not product work: it reads every pixel of the
+	 *                       frame on the caller's thread.
 	 *
-	 * ⚠ `us_nel_posto` e `us_misura` si riempiono in `cattura_prendi()`; gli
-	 *   altri due nella richiamata di tempo reale.  ⛔ Un fotogramma consegnato
-	 *   a `su_fotogramma` (la strada senza copia) NON li porta: li' non c'e'
-	 *   nessun posto e nessuna copia. */
+	 * ⚠ `us_nel_posto` and `us_misura` are filled in `cattura_prendi()`; the
+	 *   other two in the real-time callback.  ⛔ A frame delivered
+	 *   to `su_fotogramma` (the copy-less road) does NOT carry them: there is
+	 *   no slot and no copy there. */
 	uint64_t us_arrivo;
 	uint64_t us_copia;
 	uint64_t us_allocazione;
@@ -387,60 +387,60 @@ typedef struct
 } CatturaFermo;
 
 /*
- * ⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE, e qui sono quattro.
- *    (`CODER.md` §3.10, `REVIEWER.md` §1 punto 4.)
+ * ⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS, and here they are four.
+ *    (`CODER.md` §3.10, `REVIEWER.md` §1 point 4.)
  */
 typedef enum
 {
 	CATTURA_PRESA_FATTA = 0,
-	/* ⭐ Zero LEGITTIMO: il flusso e' stato attivo per tutta l'attesa e non e'
-	 *    arrivato niente.  Su Mutter e' il desktop fermo, ed e' un risultato. */
+	/* ⭐ LEGITIMATE zero: the stream was active for the whole wait and nothing
+	 *    arrived.  On Mutter it is the still desktop, and it is a result. */
 	CATTURA_PRESA_ZERO,
-	/* ⛔ Il flusso non e' mai stato attivo, o e' caduto: non c'e' nessun numero
-	 *    da leggere, e nessuno zero da scrivere in una tabella. */
+	/* ⛔ The stream was never active, or it dropped: there is no number
+	 *    to read, and no zero to write in a table. */
 	CATTURA_PRESA_GUASTO,
-	/* ⛔ Strada della scheda: il tipo di buffer e' DICHIARATO, ma i pixel non
-	 *    sono qui.  Non e' un guasto e non e' uno zero.
+	/* ⛔ Card road: the buffer type is DECLARED, but the pixels are not
+	 *    here.  It is not a fault and it is not a zero.
 	 *
-	 * ⭐⭐ E DAL 22 AGOSTO 2026 QUESTO E' **UN FOTOGRAMMA CONSEGNATO**, non un
-	 *     nulla di fatto: dentro `CatturaFermo` ci sono `fd`, `offset`,
-	 *     `stride`, `modificatore` e `formato_drm`, e il `pw_buffer` e'
-	 *     TRATTENUTO fino a `cattura_fermo_libera()`.  ⇒ Chi chiama lo tratta
-	 *     come `FATTA` **cambiando strada di lettura**, non lo butta.
-	 * ⚠ Ed e' rimasto un esito a parte invece di diventare `FATTA` proprio
-	 *   perche' la strada di lettura E' diversa: un chiamante che non sa della
-	 *   scheda deve inciampare qui, non leggere un `pixel` NULL. */
+	 * ⭐⭐ AND SINCE 22 AUGUST 2026 THIS IS **A DELIVERED FRAME**, not a
+	 *     nothing-done: inside `CatturaFermo` are `fd`, `offset`,
+	 *     `stride`, `modificatore` and `formato_drm`, and the `pw_buffer` is
+	 *     HELD until `cattura_fermo_libera()`.  ⇒ The caller treats it
+	 *     like `FATTA` **switching read road**, and does not throw it away.
+	 * ⚠ And it remained a separate outcome instead of becoming `FATTA` precisely
+	 *   because the read road IS different: a caller that does not know about the
+	 *   card must trip here, not read a NULL `pixel`. */
 	CATTURA_PRESA_PIXEL_ALTROVE
 } CatturaPresa;
 
 /* ------------------------------------------------------------------ *
- *  Le chiamate
+ *  The calls
  * ------------------------------------------------------------------ */
 
 /*
- * Avvia la lettura dal nodo indicato, chiedendo misura, colore e strada.
+ * Starts reading from the given node, requesting size, colour and road.
  *
- * La misura si dichiara perche' si sta riprendendo un MONITOR VIRTUALE: non
- * esiste uno schermo da cui dedurla, ed e' il consumatore a dire quanto grande
- * lo vuole.  ⛔ E si dichiara come rettangolo FISSO, non come intervallo: un
- * intervallo aperto lascerebbe scegliere a Mutter, che sceglie 1280×720.
+ * The size is declared because a VIRTUAL MONITOR is being captured: there
+ * is no screen to deduce it from, and it is the consumer who says how big
+ * it wants it.  ⛔ And it is declared as a FIXED rectangle, not as a range: an
+ * open range would let Mutter choose, and it chooses 1280×720.
  *
- * `su_fotogramma` puo' essere NULL: allora i fotogrammi si contano soltanto, e
- * si prendono con `cattura_prendi`.
+ * `su_fotogramma` can be NULL: then frames are only counted, and
+ * are taken with `cattura_prendi`.
  *
- * ⛔ Fallisce — dichiarandolo — se il compositore rifiuta il formato chiesto.
- *    E' l'unico punto in cui un rifiuto si vede subito invece di diventare uno
- *    schermo nero molto piu' tardi.
+ * ⛔ It fails — declaring it — if the compositor refuses the requested format.
+ *    It is the only point where a refusal is seen at once instead of becoming a
+ *    black screen much later.
  */
 /*
- * ⭐ 6 ott 2026 — i modificatori IN PIÙ della strada della scheda (Mutter e KWin).
- * `[M]` NVIDIA + GNOME 50: la proposta offriva LINEARE e «decidi tu» (INVALID);
- * Mutter concordava INVALID, non riusciva ad allocarlo, lo toglieva — e
- * l'intersezione restava vuota («no more input formats»): sessione NERA.
- * ⇒ Chi sa che la scheda rifiuta il lineare (figlio.c) dà qui i modificatori
- *   che il codificatore importa, e la proposta li mette fra LINEARE e INVALID.
- * ⛔ Solo lì: dove il lineare riesce (Intel, Radeon) la proposta resta quella
- *    di sempre — con più modificatori Mutter sceglierebbe un tiling suo.
+ * ⭐ 6 Oct 2026 — the EXTRA modifiers of the card road (Mutter and KWin).
+ * `[M]` NVIDIA + GNOME 50: the offer proposed LINEAR and "you decide" (INVALID);
+ * Mutter agreed on INVALID, could not allocate it, dropped it — and
+ * the intersection stayed empty ("no more input formats"): BLACK session.
+ * ⇒ Whoever knows the card refuses linear (figlio.c) gives here the modifiers
+ *   the encoder imports, and the offer puts them between LINEAR and INVALID.
+ * ⛔ Only there: where linear succeeds (Intel, Radeon) the offer stays the one
+ *    of always — with more modifiers Mutter would pick a tiling of its own.
  */
 void cattura_modificatori_scheda(const uint64_t *modificatori, int quanti);
 
@@ -450,357 +450,357 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
                        GError **sbaglio);
 
 /*
- * ⭐⭐ FASE 13 — LA SECONDA SORGENTE: wlroots, cioè XFCE e LXQt.
+ * ⭐⭐ PHASE 13 — THE SECOND SOURCE: wlroots, that is XFCE and LXQt.
  *
- * ⛔⛔ E NON È UN SECONDO `cattura_avvia` CON UN PARAMETRO IN PIÙ: è l'altro
- *     VERSO.  Da PipeWire i fotogrammi **arrivano**; da `zwlr_screencopy` si
- *     **chiedono**, uno per uno.  Tutto quel che sta a valle di questa porta —
- *     `cattura_prendi`, `cattura_consegna`, i conteggi — non vede la
- *     differenza, ed è esattamente il punto: `figlio.c` usa questa interfaccia
- *     in **trentacinque punti**, e rifarli a due vie vorrebbe dire mettere a
- *     rischio GNOME e KDE per servire il desktop nuovo.
+ * ⛔⛔ AND IT IS NOT A SECOND `cattura_avvia` WITH ONE MORE PARAMETER: it is the other
+ *     DIRECTION.  From PipeWire frames **arrive**; from `zwlr_screencopy` they are
+ *     **asked for**, one by one.  Everything downstream of this door —
+ *     `cattura_prendi`, `cattura_consegna`, the counts — does not see the
+ *     difference, and that is exactly the point: `figlio.c` uses this interface
+ *     in **thirty-five places**, and redoing them two-way would mean putting
+ *     GNOME and KDE at risk to serve the new desktop.
  *
- * ⭐ La forma ha un precedente in casa, e si copia da lì: gli **appunti** hanno
- *   due costruttori (`appunti_apri()` e `appunti_apri_kde()`) e le funzioni
- *   pubbliche passano la mano in cima.  Qui uguale.
+ * ⭐ The form has a precedent in the house, and it is copied from there: the **clipboard** has
+ *   two constructors (`appunti_apri()` and `appunti_apri_kde()`) and the public
+ *   functions hand over at the top.  Same here.
  *
- * ⚠ Due cose NON mappano sull'altro verso, e non si fingono:
- *   · **il cursore**: screencopy non ha un canale per la forma del puntatore.
- *     Il puntatore sta DENTRO l'immagine, e chi si registra riceve una riga che
- *     lo dice invece di un silenzio;
- *   · **il ridimensionamento**: qui non si rinegozia un flusso, si cambia la
- *     misura dell'**uscita** — un altro protocollo, e un altro incremento.
+ * ⚠ Two things do NOT map onto the other direction, and they are not faked:
+ *   · **the cursor**: screencopy has no channel for the pointer shape.
+ *     The pointer is INSIDE the image, and whoever registers receives a line that
+ *     says so instead of a silence;
+ *   · **resizing**: here one does not renegotiate a stream, one changes the
+ *     size of the **output** — another protocol, and another increment.
  *
- * ⛔ `nodo` non c'è perché non esiste: su questa famiglia non c'è nessun nodo
- *    PipeWire da nessuna parte.
+ * ⛔ `nodo` is absent because it does not exist: on this family there is no PipeWire
+ *    node anywhere.
  */
 Cattura *cattura_avvia_wlr(uint32_t larghezza, uint32_t altezza,
                            uint32_t fotogrammi_al_secondo, CatturaStrada strada,
                            CatturaColore colore, GError **sbaglio);
 
-/* Il nome dell'uscita che si sta guardando, o NULL se questa sorgente non ne
- * ha uno da dire (su PipeWire il nome lo sa il produttore, non noi). */
+/* The name of the output being watched, or NULL if this source has none
+ * to tell (on PipeWire the name is known by the producer, not by us). */
 const char *cattura_uscita_nome(Cattura *cattura);
 
 /* ------------------------------------------------------------------ *
- *  ⭐⭐ IL CAMBIO DI MISURA A CALDO — `DECISIONI.md` §5.0-sexies
+ *  ⭐⭐ THE HOT SIZE CHANGE — `DECISIONI.md` §5.0-sexies
  * ------------------------------------------------------------------ */
 
 /*
- * L'esito della RICHIESTA, che ⛔ non e' l'esito del cambio.
+ * The outcome of the REQUEST, which ⛔ is not the outcome of the change.
  *
- * ⛔⭐ «LA VERITA' LA DICE IL FOTOGRAMMA, NON L'ESITO DELLA RICHIESTA» — la
- *     regola di forma rubata a neatvnc, `DECISIONI.md` §5.0-sexies.  `[M]` 14
- *     agosto 2026: chiedere a labwc la misura che l'output HA GIA' risponde
- *     «riuscito» e non manda nessun evento; un serial vecchio risponde
- *     «annullato» e non fa niente.  ⛔ `wayvnc` tratta *riuscito*, *fallito* e
- *     *annullato* nello stesso ramo — da non copiare.
+ * ⛔⭐ "THE TRUTH IS TOLD BY THE FRAME, NOT BY THE OUTCOME OF THE REQUEST" — the
+ *     form rule stolen from neatvnc, `DECISIONI.md` §5.0-sexies.  `[M]` 14
+ *     August 2026: asking labwc for the size the output ALREADY HAS answers
+ *     "succeeded" and sends no event; an old serial answers
+ *     "cancelled" and does nothing.  ⛔ `wayvnc` treats *succeeded*, *failed* and
+ *     *cancelled* in the same branch — not to be copied.
  *
- * ⇒ Qui si dice soltanto se la RICHIESTA e' partita.  Che il compositore abbia
- *   obbedito lo dira' il formato negoziato (`cattura_consegna`) e, prima
- *   ancora, il primo fotogramma alla misura nuova.
+ * ⇒ Here we only say whether the REQUEST left.  That the compositor
+ *   obeyed will be told by the negotiated format (`cattura_consegna`) and, even
+ *   before, by the first frame at the new size.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ E «PARTITA» INCLUDE «E PUO' AVER UCCISO IL FLUSSO» — `[M]` 22 agosto
- *      2026, banco `banchi/06-b5-esiti-cattura.c` caso 2, PipeWire 1.4.2
+ * ⛔⛔ AND "LEFT" INCLUDES "AND MAY HAVE KILLED THE STREAM" — `[M]` 22 August
+ *      2026, bench `banchi/06-b5-esiti-cattura.c` case 2, PipeWire 1.4.2
  *
- * Chiedendo una misura che il produttore non regge, `cattura_ridimensiona()`
- * torna `CHIESTA` e **due millisecondi dopo** il flusso va in
- * `paused → error — no more input formats`: la trattativa fallita non lascia il
- * flusso «fermo alla misura vecchia», lo **uccide**.
+ * Asking for a size the producer cannot handle, `cattura_ridimensiona()`
+ * returns `CHIESTA` and **two milliseconds later** the stream goes to
+ * `paused → error — no more input formats`: the failed negotiation does not leave the
+ * stream "stuck at the old size", it **kills** it.
  *
- * ⭐ E NON SERVE UN ESITO NUOVO PER SAPERLO, perche' la strada c'e' gia' ed e'
- *    quella che il chiamante percorre comunque: `cattura_prendi()` guarda lo
- *    stato **prima** di aspettare, quindi torna `CATTURA_PRESA_GUASTO` **senza
- *    spendere l'attesa**, e il `GError` nomina lo stato e il guasto del
- *    produttore.  `[M]` col ciclo del figlio (`MOVIMENTO_ATTESA_S 0.008`) il
- *    guasto arriva a **8,1 ms**, in **un** giro solo e con **zero** ZERO in
- *    mezzo — cioe' un giro del ciclo, non un timeout.
+ * ⭐ AND NO NEW OUTCOME IS NEEDED TO KNOW IT, because the road is already there and it is
+ *    the one the caller walks anyway: `cattura_prendi()` looks at the
+ *    state **before** waiting, so it returns `CATTURA_PRESA_GUASTO` **without
+ *    spending the wait**, and the `GError` names the state and the producer's
+ *    fault.  `[M]` with the child's loop (`MOVIMENTO_ATTESA_S 0.008`) the
+ *    fault arrives at **8.1 ms**, in **one** single turn and with **zero** ZEROs in
+ *    between — that is one turn of the loop, not a timeout.
  *
- * ⛔ Un esito «MORTO» restituito da qui sarebbe invece **verde per
- *    costruzione**: la morte arriva 2 ms DOPO il ritorno, quindi leggerla
- *    subito vorrebbe dire leggerla prima che accada, e la meta' delle volte
- *    direbbe «viva».
+ * ⛔ A "DEAD" outcome returned from here would instead be **green by
+ *    construction**: death arrives 2 ms AFTER the return, so reading it
+ *    at once would mean reading it before it happens, and half the time it
+ *    would say "alive".
  *
- * ⚠ `[?]` E questa scena, sul prodotto vero, non e' misurata: `[M]`
- *   (§5.0-sexies) Mutter ha concesso 30 richieste su 30 da 1x1 a 7680x4320, e
- *   `rcp_misura_ammessa()` tagliava proprio a 7680x4320 (dal 1 ottobre 2026
- *   taglia a 4096x2304).  ⇒ Qui si dichiara che
- *   cosa succede SE capita, non quanto spesso capiti.
+ * ⚠ `[?]` And this scene, on the real product, is not measured: `[M]`
+ *   (§5.0-sexies) Mutter granted 30 requests out of 30 from 1x1 to 7680x4320, and
+ *   `rcp_misura_ammessa()` cut exactly at 7680x4320 (since 1 October 2026 it
+ *   cuts at 4096x2304).  ⇒ Here we declare what
+ *   happens IF it happens, not how often it happens.
  */
 typedef enum
 {
-	CATTURA_RITELA_CHIESTA = 0, /* la richiesta e' partita: aspetta il fotogramma */
-	/* ⭐ La misura chiesta e' gia' quella in vigore: NON si rinegozia.
-	 * ⛔ La guardia e' obbligatoria — `STUDI.md` §kde §8.2-bis: senza,
-	 *    «la rinegoziazione si morde la coda». */
+	CATTURA_RITELA_CHIESTA = 0, /* the request left: wait for the frame */
+	/* ⭐ The requested size is already the one in force: NO renegotiation.
+	 * ⛔ The guard is mandatory — `STUDI.md` §kde §8.2-bis: without it,
+	 *    "the renegotiation bites its own tail". */
 	CATTURA_RITELA_GIA_COSI,
-	CATTURA_RITELA_GUASTO /* niente flusso, flusso morto, o misura vuota */
+	CATTURA_RITELA_GUASTO /* no stream, dead stream, or empty size */
 } CatturaRitela;
 
 /*
- * Chiede al produttore una misura NUOVA sul flusso GIA' APERTO.
+ * Asks the producer for a NEW size on the ALREADY OPEN stream.
  *
- * ⛔ NON rifa' la sessione e non tocca il monitor virtuale: rifa' la proposta di
- *    formato e chiama `pw_stream_update_params()`, che e' il modo in cui
- *    gnome-remote-desktop ridimensiona (`F4-IN-2`) ed e' quel che il banco
- *    `banchi/04-in8-misura.c` ha misurato il 14 agosto 2026:
+ * ⛔ It does NOT redo the session and does not touch the virtual monitor: it redoes the format
+ *    offer and calls `pw_stream_update_params()`, which is the way
+ *    gnome-remote-desktop resizes (`F4-IN-2`) and is what the bench
+ *    `banchi/04-in8-misura.c` measured on 14 August 2026:
  *
- *      Mutter  `[M]` primo fotogramma nuovo a **41,6 ms**, nessun nero, sessione
- *              ed EIS intatti; **20 ridimensionamenti in 2 s, 20 esatti**
- *      labwc   `[M]` **5,1 ms**, **0 fotogrammi persi su 25**
- *      KWin    ⛔ solo su `master` — vale il ripiego di `DECISIONI.md` §5.0-bis
+ *      Mutter  `[M]` first new frame at **41.6 ms**, no black, session
+ *              and EIS intact; **20 resizes in 2 s, 20 exact**
+ *      labwc   `[M]` **5.1 ms**, **0 frames lost out of 25**
+ *      KWin    ⛔ only on `master` — the fallback of `DECISIONI.md` §5.0-bis applies
  *
- * ⭐⭐ E C'E' UN SECONDO EFFETTO, MISURATO, CHE NON SI VEDE DAL NOME: **riavviare
- *     il flusso fa arrivare un fotogramma**.  `[M]` 14 agosto 2026, registro
- *     delle 21:32:55: fra il login e il primo fotogramma passavano **4,4
- *     secondi** di richieste di chiave ogni 200 ms e **659 «attese a vuoto»**,
- *     perche' su Wayland il compositore consegna solo quando la scena cambia e
- *     un desktop appena acceso e' fermo.  ⛔ Xpra lo risolve con
- *     `buffer_refresh` («ridipingi adesso») e a noi non serve: qui la leva e'
- *     questa, e la cura del ritardo e' un effetto collaterale della cura delle
- *     bande.
+ * ⭐⭐ AND THERE IS A SECOND EFFECT, MEASURED, NOT VISIBLE FROM THE NAME: **restarting
+ *     the stream makes a frame arrive**.  `[M]` 14 August 2026, log
+ *     of 21:32:55: between login and the first frame **4.4
+ *     seconds** of keyframe requests every 200 ms and **659 "empty waits"** went by,
+ *     because on Wayland the compositor delivers only when the scene changes and
+ *     a freshly started desktop is still.  ⛔ Xpra solves it with
+ *     `buffer_refresh` ("repaint now") and we do not need it: here the lever is
+ *     this one, and the cure of the delay is a side effect of the cure of the
+ *     bands.
  *
- * ⚠ NON aspetta: torna subito.  Aspettare qui fermerebbe il ciclo del figlio,
- *   che e' l'unico che ha (`CODER.md` §4.4).
+ * ⚠ It does NOT wait: it returns at once.  Waiting here would stop the child's loop,
+ *   which is the only one it has (`CODER.md` §4.4).
  *
- * ⛔ E LA MISURA AMMESSA NON SI CONTROLLA QUI: la regola («200..8192, ed
- *    entrambe PARI») vive in `rcp_misura_ammessa()` e la applica chi legge
- *    `ADATTA_TELA` dal filo — vedi il riquadro in fondo a questo file.  Qui si
- *    rifiuta solo lo ZERO, che e' un fatto diverso: una misura vuota non e'
- *    «fuori dai limiti», e' una richiesta senza contenuto.
+ * ⛔ AND THE ALLOWED SIZE IS NOT CHECKED HERE: the rule ("200..8192, and
+ *    both EVEN") lives in `rcp_misura_ammessa()` and is applied by whoever reads
+ *    `ADATTA_TELA` from the wire — see the box at the bottom of this file.  Here only
+ *    ZERO is refused, which is a different fact: an empty size is not
+ *    "out of bounds", it is a request with no content.
  */
 CatturaRitela cattura_ridimensiona(Cattura *cattura, uint32_t larghezza, uint32_t altezza);
 
 /*
- * ⭐⭐ «CONSEGNAMI UN FOTOGRAMMA ADESSO» — e su Wayland non si puo' chiedere.
+ * ⭐⭐ "DELIVER ME A FRAME NOW" — and on Wayland it cannot be asked.
  *
- * ⛔ IL FATTO, misurato: un compositore Wayland consegna un fotogramma **solo
- *    quando qualcosa cambia** (`cattura.h`, regola 3), e un desktop appena
- *    acceso e' fermo.  `[M]` 14 agosto 2026, registro del server: fra il login e
- *    il primo fotogramma sono passati **4,4 secondi**, con una richiesta di
- *    chiave ogni 200 ms e **659 «attese a vuoto»** — e in quei 4,4 secondi
- *    l'utente guarda una pagina bianca.
+ * ⛔ THE FACT, measured: a Wayland compositor delivers a frame **only
+ *    when something changes** (`cattura.h`, rule 3), and a freshly started
+ *    desktop is still.  `[M]` 14 August 2026, server log: between login and
+ *    the first frame **4.4 seconds** went by, with a keyframe
+ *    request every 200 ms and **659 "empty waits"** — and in those 4.4 seconds
+ *    the user looks at a white page.
  *
- * ⛔ Xpra lo risolve con `buffer_refresh` («ridipingi adesso») e a noi non
- *    serve: su Wayland non si puo' ordinare a un compositore di ridipingere.
- * ⭐ Ma la leva c'e' ed e' la stessa del ridimensionamento: **riavviare il flusso
- *    fa arrivare un buffer**, ed e' precisamente quel che
- *    `pw_stream_update_params()` E'.  Qui si rifanno gli stessi parametri, con
- *    la stessa misura: non cambia niente, e il fotogramma arriva.
+ * ⛔ Xpra solves it with `buffer_refresh` ("repaint now") and we do not
+ *    need it: on Wayland a compositor cannot be ordered to repaint.
+ * ⭐ But the lever exists and it is the same as resizing: **restarting the stream
+ *    makes a buffer arrive**, and that is precisely what
+ *    `pw_stream_update_params()` IS.  Here the same parameters are redone, with
+ *    the same size: nothing changes, and the frame arrives.
  *
- * ⚠ `[?]` E la marca e' questa, non `[M]`: che la rinegoziazione consegni un
- *   buffer **su una scena ferma** e' dedotto dal meccanismo (il flusso riparte,
- *   e ripartire vuol dire riallocare i buffer e ridipingere il primo), non
- *   misurato.  La prova e' una sessione in cui il tempo fra il login e il primo
- *   fotogramma scende sotto il secondo, e va fatta sulla macchina di prova.
+ * ⚠ `[?]` And the mark is this, not `[M]`: that the renegotiation delivers a
+ *   buffer **on a still scene** is deduced from the mechanism (the stream restarts,
+ *   and restarting means reallocating the buffers and repainting the first), not
+ *   measured.  The proof is a session in which the time between login and the first
+ *   frame drops below one second, and it must be done on the test machine.
  *
- * ⛔ Chi chiama deve METTERCI UN FONDO: a chiamarla a ogni giro si
- *    rinegozierebbe sessanta volte al secondo — e ogni rinegoziazione costa il
- *    fotogramma che si sta cercando di ottenere.
+ * ⛔ The caller must PUT A FLOOR UNDER IT: calling it at every turn would
+ *    renegotiate sixty times a second — and every renegotiation costs the
+ *    frame one is trying to get.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔⛔ E IL PREZZO NASCOSTO, che il nome non lascia sospettare — `[M]` 21
- *       agosto 2026, banco `banchi/06-b33-risveglio.*`
+ * ⛔⛔⛔ AND THE HIDDEN PRICE, which the name does not let one suspect — `[M]` 21
+ *       August 2026, bench `banchi/06-b33-risveglio.*`
  *
- * **QUESTA CHIAMATA DISTRUGGE E RICREA I DISPOSITIVI DI INPUT.**  Non e' un
- * effetto collaterale piccolo: e' la **seconda porta** del *clic che muore*
- * (`fasi/06-la-tela-e-la-vista.md` §4.6 e §7.1).
+ * **THIS CALL DESTROYS AND RECREATES THE INPUT DEVICES.**  It is not a
+ * small side effect: it is the **second door** of the *dying click*
+ * (`fasi/06-la-tela-e-la-vista.md` §4.6 and §7.1).
  *
- * `[M]` Tre risvegli su scena ferma, **zero** `ADATTA_TELA`: tre ricambi del
- * puntatore (delta 1, 1, 1, letto da `input_conto()`).
+ * `[M]` Three wake-ups on a still scene, **zero** `ADATTA_TELA`: three pointer
+ * replacements (delta 1, 1, 1, read from `input_conto()`).
  *
- * `[R]` La catena, tutta dentro Mutter 48.7:
- *   `pw_stream_update_params()` → il produttore rinegozia →
+ * `[R]` The chain, all inside Mutter 48.7:
+ *   `pw_stream_update_params()` → the producer renegotiates →
  *   `meta_screen_cast_virtual_stream_src_enable()`
- *   (`meta-screen-cast-virtual-stream-src.c:283`) chiama
+ *   (`meta-screen-cast-virtual-stream-src.c:283`) calls
  *   `meta_eis_viewport_notify_changed()` → `viewports-changed` →
- *   `update_viewports()` → `remove_viewport_devices()`, che ⛔ **non passa da
- *   `drop_device()`** e quindi non rilascia niente.
+ *   `update_viewports()` → `remove_viewport_devices()`, which ⛔ **does not go through
+ *   `drop_device()`** and therefore releases nothing.
  *
- * ⇒ ⛔⛔ **Se un pulsante e' premuto quando questa funzione parte, il desktop
- *   non prende piu' un clic per tutta la sessione** — `[M]`, e si guarisce solo
- *   facendo cadere il canale EIS.  ⚠ Il momento in cui `figlio.c:6365` la
- *   chiama e' *«la scena e' ferma e una chiave e' dovuta»*, cioe' **esattamente
- *   il momento in cui l'utente puo' tenere giu' il mouse su un desktop fermo**.
+ * ⇒ ⛔⛔ **If a button is pressed when this function starts, the desktop
+ *   no longer takes a click for the whole session** — `[M]`, and it heals only
+ *   by dropping the EIS channel.  ⚠ The moment at which `figlio.c:6365`
+ *   calls it is *"the scene is still and a keyframe is owed"*, that is **exactly
+ *   the moment when the user may be holding the mouse down on a still desktop**.
  *
- * ⇒ Chi chiama deve **guardare se c'e' qualcosa di premuto** prima di
- *   risvegliare.  ⛔ La cura di `figlio.c:3964` — rilasciare prima di
- *   `cattura_ridimensiona()` — **non copre questa strada**.
+ * ⇒ The caller must **check whether anything is pressed** before
+ *   waking up.  ⛔ The cure of `figlio.c:3964` — releasing before
+ *   `cattura_ridimensiona()` — **does not cover this road**.
  *
- * `FALSE` = non si e' potuto chiedere (niente flusso, o flusso non attivo).
+ * `FALSE` = it could not be asked (no stream, or stream not active).
  */
 gboolean cattura_risveglia(Cattura *cattura);
 
-/* La misura CHIESTA al produttore adesso — ⛔ non quella concessa: quella sta in
- * `CatturaConsegna.larghezza/altezza` e vale solo dopo la negoziazione.  ⚠ Le due
- * si confrontano, e chi le confonde riscrive il difetto che la guardia «chiesto
- * contro concesso» esiste per vedere.
+/* The size REQUESTED from the producer now — ⛔ not the granted one: that is in
+ * `CatturaConsegna.larghezza/altezza` and holds only after negotiation.  ⚠ The two
+ * are compared, and whoever confuses them rewrites the defect that the "requested
+ * versus granted" guard exists to see.
  *
- * ⛔⛔ E QUESTI DUE SONO **TUTTO** QUEL CHE SI ESPORTA SULLA DIVERGENZA: non
- *     c'e' — e non si aggiunge — un `cattura_divergente()`.  La ragione e'
- *     misurata e sta accanto al campo `misura_divergente` in `cattura.c`: `[M]`
- *     (banco `06-b5` caso 4) la sola scena che lo accende sono **due
- *     ridimensionamenti incatenati**, dove il valore e' un **falso allarme** che
- *     si spegne da se'; e `[M]` (caso 6) la divergenza vera si ricostruisce da
- *     questi due accessori, che distinguono anche il «non ancora negoziato» —
- *     cosa che un `gboolean` non saprebbe fare (`CODER.md` §3.10). */
+ * ⛔⛔ AND THESE TWO ARE **ALL** THAT IS EXPORTED ABOUT DIVERGENCE: there
+ *     is no — and none is to be added — `cattura_divergente()`.  The reason is
+ *     measured and sits next to the `misura_divergente` field in `cattura.c`: `[M]`
+ *     (bench `06-b5` case 4) the only scene that turns it on is **two
+ *     chained resizes**, where the value is a **false alarm** that
+ *     turns itself off; and `[M]` (case 6) the real divergence is rebuilt from
+ *     these two accessors, which also tell "not yet negotiated" apart —
+ *     something a `gboolean` could not do (`CODER.md` §3.10). */
 void cattura_misura_chiesta(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
 
-/* La misura NEGOZIATA, cioe' quella che i pixel hanno davvero.  ⛔ `FALSE` = il
- * formato non e' stato ancora negoziato, che NON e' «e' 0x0» (`CODER.md` §3.10).
+/* The NEGOTIATED size, that is the one the pixels really have.  ⛔ `FALSE` = the
+ * format has not been negotiated yet, which is NOT "it is 0x0" (`CODER.md` §3.10).
  *
- * ⚠ Serve a rispondere «la tela che chiedi ce l'ho gia'» senza aspettare un
- *   fotogramma che non arriverebbe: e' l'unico caso in cui la richiesta si puo'
- *   chiudere senza vedere i pixel, perche' i pixel di quella misura chi guarda
- *   li ha gia' davanti. */
+ * ⚠ It serves to answer "I already have the canvas you ask for" without waiting for a
+ *   frame that would not arrive: it is the only case in which the request can be
+ *   closed without seeing the pixels, because the viewer already has the pixels of that size
+ *   in front of them. */
 gboolean cattura_misura_negoziata(Cattura *cattura, uint32_t *larghezza, uint32_t *altezza);
 
 /*
- * Aspetta il PROSSIMO fotogramma e ne consegna una copia.
+ * Waits for the NEXT frame and delivers a copy of it.
  *
- * ⛔ La copia si fa dentro la richiamata di tempo reale — non c'e' altro modo,
- *    i pixel vivono solo li' — e la MISURA sui pixel (range, nero, uniforme) si
- *    fa qui, sul thread di chi chiama: rallentare il ciclo di PipeWire
- *    falserebbe la cosa che si sta guardando.
+ * ⛔ The copy is made inside the real-time callback — there is no other way,
+ *    the pixels live only there — and the MEASUREMENT on the pixels (range, black, uniform) is
+ *    made here, on the caller's thread: slowing down the PipeWire loop
+ *    would falsify the thing being watched.
  *
- * ⚠ I fotogrammi che arrivano quando nessuno sta aspettando si contano e basta:
- *   non si accumulano copie da 8 MB che nessuno ha chiesto.
+ * ⚠ Frames that arrive when nobody is waiting are only counted:
+ *   no 8 MB copies that nobody asked for are piled up.
  */
 CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuori,
                             GError **sbaglio);
 
 /*
- * Rende il fotogramma.
+ * Gives the frame back.
  *
- * ⛔⛔ E SULLA STRADA DELLA SCHEDA QUESTA CHIAMATA E' **IL RILASCIO**, cioe' la
- *      cura di `LEZIONI.md` §8: finche' non si chiama, il `pw_buffer` e'
- *      nostro e il produttore non ci puo' ridipingere dentro.  ⇒ Si chiama
- *      **dopo** che l'ultimo lettore ha finito — dopo la conversione sulla GPU,
- *      non dopo averla ordinata — e **non prima**.
- * ⚠ Chiamarla due volte e' innocuo (il fermo si azzera); non chiamarla affatto
- *   toglie un buffer al produttore per sempre.
+ * ⛔⛔ AND ON THE CARD ROAD THIS CALL IS **THE RELEASE**, that is the
+ *      cure of `LEZIONI.md` §8: until it is called, the `pw_buffer` is
+ *      ours and the producer cannot repaint into it.  ⇒ It is called
+ *      **after** the last reader has finished — after the conversion on the GPU,
+ *      not after ordering it — and **not before**.
+ * ⚠ Calling it twice is harmless (the still frame is zeroed); not calling it at all
+ *   takes a buffer away from the producer forever.
  */
 void cattura_fermo_libera(CatturaFermo *fermo);
 
-/* I quattro fatti, quando sono noti.  FALSE ⇒ il formato non e' stato ancora
- * negoziato, e non c'e' niente da dichiarare (non «e' tutto a zero»). */
+/* The four facts, when they are known.  FALSE ⇒ the format has not been
+ * negotiated yet, and there is nothing to declare (not "it is all zero"). */
 gboolean cattura_consegna(Cattura *cattura, CatturaConsegna *fuori);
 
-/* I conteggi del giro.  Servono a chi scrive un manifesto o una riga di
- * registro, e sono separati dai fatti apposta: un conteggio non e' una
- * dichiarazione sul formato. */
+/* The counts of the run.  They serve whoever writes a manifest or a log
+ * line, and they are separate from the facts on purpose: a count is not a
+ * declaration about the format. */
 typedef struct
 {
 	guint64 arrivati;
 	guint64 danno_pieno, danno_parziale, danno_assente;
 	guint64 senza_intestazione;
-	guint64 solo_cursore;   /* buffer marcati CORRUPTED: pixel stantii */
-	guint64 stride_zero;    /* ⛔ scartati invece che calcolati        */
-	guint64 senza_pixel;    /* mappatura assente o chunk vuoto         */
-	/* ⛔⭐ La geometria dichiarata dal FORMATO non sta dentro i byte del CHUNK:
-	 *     scartati, perche' chi li consuma leggerebbe oltre la copia.  ⚠ E' la
-	 *     finestra fra una rinegoziazione e i buffer nuovi, e prima di
-	 *     `cattura_ridimensiona()` non poteva esistere. */
+	guint64 solo_cursore;   /* buffers marked CORRUPTED: stale pixels  */
+	guint64 stride_zero;    /* ⛔ discarded instead of computed        */
+	guint64 senza_pixel;    /* mapping absent or empty chunk           */
+	/* ⛔⭐ The geometry declared by the FORMAT does not fit in the bytes of the CHUNK:
+	 *     discarded, because whoever consumes them would read past the copy.  ⚠ It is the
+	 *     window between a renegotiation and the new buffers, and before
+	 *     `cattura_ridimensiona()` it could not exist. */
 	guint64 geometria_incoerente;
-	/* ⭐ Il canale del cursore.  ⛔ I due primi sono DUE e non uno, ed e' la
-	 *    stessa regola dello zero e del fallimento: «il metadato non c'era» e
-	 *    «il metadato c'era» sono i due fatti che distinguono un puntatore
-	 *    assente da un canale senza sorgente (`STUDI.md` §gnome §1.1 punto 6). */
+	/* ⭐ The cursor channel.  ⛔ The first two are TWO and not one, and it is the
+	 *    same rule as zero and failure: "the metadata was not there" and
+	 *    "the metadata was there" are the two facts that tell an absent
+	 *    pointer from a channel without a source (`STUDI.md` §gnome §1.1 point 6). */
 	guint64 cursore_assente;
 	guint64 cursore_metadati;
 	guint64 cursore_malformati;
 	guint buffer_distinti;
-	CatturaBuffer tipi_visti[4]; /* ⛔ TUTTI i tipi visti, non solo l'ultimo */
+	CatturaBuffer tipi_visti[4]; /* ⛔ ALL the types seen, not only the last */
 	guint quanti_tipi;
 } CatturaConteggi;
 
 void cattura_conteggi(Cattura *cattura, CatturaConteggi *fuori);
 
 /*
- * ⭐⭐ LA CUCITURA DEL CURSORE — chi vuole la FORMA del puntatore si registra qui.
+ * ⭐⭐ THE CURSOR SEAM — whoever wants the pointer SHAPE registers here.
  *
- * ⛔ Questa e' l'UNICA riga che il canale del cursore aggiunge all'interfaccia
- *    della cattura, e ci sta per una ragione precisa: `cattura.c` legge il
- *    metadato grezzo di PipeWire ma **non conosce il filo**, e `cursore.h` vuole
- *    il destinatario al momento dell'apertura — che avviene dentro
- *    `cattura_avvia`, cioe' prima che chiunque possa registrarsi.
+ * ⛔ This is the ONLY line the cursor channel adds to the capture
+ *    interface, and it is here for a precise reason: `cattura.c` reads
+ *    PipeWire's raw metadata but **does not know the wire**, and `cursore.h` wants
+ *    the recipient at opening time — which happens inside
+ *    `cattura_avvia`, that is before anyone can register.
  *
- * ⚠ `quando_cambia` viene chiamata DAL THREAD DI TEMPO REALE di PipeWire, e vale
- *   il riquadro in cima a questo file: non si aspetta niente li' dentro, e
- *   l'immagine vive solo per la durata della chiamata (`cursore.h`).
+ * ⚠ `quando_cambia` is called FROM PipeWire's REAL-TIME THREAD, and the
+ *   box at the top of this file applies: nothing is waited on in there, and
+ *   the image lives only for the duration of the call (`cursore.h`).
  *
- * ⚠ Si puo' chiamare in qualsiasi momento, anche a cattura viva: le forme che
- *   arrivano prima della registrazione si contano e non si mandano — ⛔ che NON
- *   e' «non sono arrivate».  Chi si registra dopo il primo movimento del
- *   puntatore riceve comunque la forma successiva.
+ * ⚠ It can be called at any moment, even with capture live: the shapes that
+ *   arrive before registration are counted and not sent — ⛔ which is NOT
+ *   "they did not arrive".  Whoever registers after the first pointer
+ *   movement receives the next shape anyway.
  *
- * ⛔ E il taglio a 256, il «nascosto» e il «non e' cambiato» NON sono qui: sono
- *    in `cursore.c`, che e' il posto che `cursore.h` gli assegna.
+ * ⛔ And the cut at 256, the "hidden" and the "has not changed" are NOT here: they are
+ *    in `cursore.c`, which is the place `cursore.h` assigns them.
  */
 void cattura_cursore(Cattura *cattura, CursoreArrivata quando_cambia, void *chi);
 
 /*
- * ⭐ LA SONDA DEL PUNTATORE — solo sulla famiglia wlroots (labwc), e altrove
- *    non fa niente.  Il figlio la chiama DOPO ogni gesto del puntatore
- *    iniettato, con le coordinate della sua tela (quelle date a
- *    `input_puntatore`; per un pulsante, le ultime); la forma, se e' cambiata,
- *    torna per `quando_cambia` di `cattura_cursore` dentro un
- *    `cattura_prendi` successivo, sul thread di chi lo chiama.  Il perche' in
+ * ⭐ THE POINTER PROBE — only on the wlroots family (labwc), and elsewhere
+ *    it does nothing.  The child calls it AFTER every injected pointer
+ *    gesture, with the coordinates of its canvas (those given to
+ *    `input_puntatore`; for a button, the last ones); the shape, if it has changed,
+ *    comes back through `quando_cambia` of `cattura_cursore` inside a
+ *    later `cattura_prendi`, on the thread of whoever calls it.  The why in
  *    `wlroots.h`.
  */
 void cattura_sonda_puntatore(Cattura *cattura, uint32_t x, uint32_t y);
 
-/* Il flusso e' attivo ADESSO?  ⛔ «E' STATO attivo» non e' «lo e' ancora»: la
- * morte a meta' misura ha gia' prodotto una riga di tabella con dentro cinque
- * secondi sotto l'etichetta di venti. */
+/* Is the stream active NOW?  ⛔ "It WAS active" is not "it still is": a
+ * death halfway through a measurement has already produced a table row with five
+ * seconds inside under the label of twenty. */
 gboolean cattura_attiva(Cattura *cattura);
 
-/* Il guasto dichiarato dal produttore, o NULL. */
+/* The fault declared by the producer, or NULL. */
 const char *cattura_guasto(Cattura *cattura);
 
 /*
- * ⭐ FASE 17 — la negoziazione e' FALLITA: il flusso e' in errore e nessun
- *    formato e' mai stato concordato.  E' il caso di «no more input formats»
- *    (`[M]` 29 set 2026, 7 VM su 7): si e' chiesta la strada della SCHEDA a un
- *    compositore che non ha buffer DMA-BUF da offrire (nessuna accelerazione
- *    3D: `virtio-vga` senza virgl, un server senza scheda), e l'intersezione
- *    delle proposte e' vuota.
+ * ⭐ PHASE 17 — negotiation FAILED: the stream is in error and no
+ *    format was ever agreed.  It is the case of "no more input formats"
+ *    (`[M]` 29 Sep 2026, 7 VMs out of 7): the CARD road was requested from a
+ *    compositor that has no DMA-BUF buffers to offer (no 3D
+ *    acceleration: `virtio-vga` without virgl, a server without a card), and the intersection
+ *    of the offers is empty.
  *
- * ⛔ Non guarda il TESTO del guasto: guarda i due fatti che lo producono.  E
- *    `cattura_avvia()`, se il rifiuto arriva prima che lei torni, lo dice col
- *    codice `G_IO_ERROR_NOT_SUPPORTED` invece di `G_IO_ERROR_FAILED`.
+ * ⛔ It does not look at the TEXT of the fault: it looks at the two facts that produce it.  And
+ *    `cattura_avvia()`, if the refusal arrives before it returns, says so with the
+ *    code `G_IO_ERROR_NOT_SUPPORTED` instead of `G_IO_ERROR_FAILED`.
  *
- * ⚠ Che cosa farne lo decide chi chiama (`figlio.c`, `ripiega_se_rifiutata`):
- *   qui si risponde solo alla domanda.
+ * ⚠ What to do with it is decided by the caller (`figlio.c`, `ripiega_se_rifiutata`):
+ *   here we only answer the question.
  */
 gboolean cattura_formato_rifiutato(Cattura *cattura);
 
-/* ⭐ Gira l'interruttore di `cursore_mai_nascondere()` sul cursore di questa
- *    cattura: lo chiede il figlio su Plasma, dove il tema e' invisibile. */
+/* ⭐ Flips the `cursore_mai_nascondere()` switch on this capture's
+ *    cursor: the child asks for it on Plasma, where the theme is invisible. */
 void cattura_cursore_mai_nascondere(Cattura *cattura, const char *perche);
 
 void cattura_ferma(Cattura *cattura);
 
-/* --- la misura ammessa: NON sta qui, e la ragione va detta ------------ *
+/* --- the allowed size: it is NOT here, and the reason must be told ---- *
  *
- * ⛔ La regola («200..8192, e larghezza e altezza PARI») vive in `rcp.h`, come
- *    `rcp_misura_ammessa()`, e NON qui — anche se il motivo per cui il tetto
- *    esiste e' tutto di questo livello: `[M]` 14 agosto 2026, oltre **16384**
- *    per lato `gnome-shell` muore, e su labwc `32768x32768` uccide il
- *    compositore **con zero righe di registro**.
+ * ⛔ The rule ("200..8192, and width and height EVEN") lives in `rcp.h`, as
+ *    `rcp_misura_ammessa()`, and NOT here — even though the reason the ceiling
+ *    exists belongs wholly to this level: `[M]` 14 August 2026, beyond **16384**
+ *    per side `gnome-shell` dies, and on labwc `32768x32768` kills the
+ *    compositor **with zero log lines**.
  *
- * ⚠ Sta di la' perche' a doverla applicare e' chi legge `ADATTA_TELA` dal filo,
- *   e `rcp.h` e' **volutamente autosufficiente** — include solo `stdbool`,
- *   `stddef` e `stdint` — perche' la sua copia gemella compili dentro
- *   `bsslserver` senza il resto dell'albero.  ⇒ Mettere la regola qui
- *   costringerebbe `rcp.c` a includere questo file, cioe' a rompere quella
- *   proprieta'.
- * ⛔ E averla in DUE posti sarebbe peggio di tutt'e due: il giorno in cui una
- *   cambia, il server accetta una misura che il compositore non regge, e la
- *   sessione di chi ci ospita muore in silenzio. */
+ * ⚠ It is over there because whoever must apply it is whoever reads `ADATTA_TELA` from the wire,
+ *   and `rcp.h` is **deliberately self-sufficient** — it includes only `stdbool`,
+ *   `stddef` and `stdint` — so that its twin copy compiles inside
+ *   `bsslserver` without the rest of the tree.  ⇒ Putting the rule here
+ *   would force `rcp.c` to include this file, that is to break that
+ *   property.
+ * ⛔ And having it in TWO places would be worse than both: the day one
+ *   changes, the server accepts a size the compositor cannot handle, and the
+ *   session of whoever hosts us dies silently. */
 
-/* --- i nomi, perche' chi scrive un manifesto non li reinventi --------- */
+/* --- the names, so that whoever writes a manifest does not reinvent them --- */
 const char *cattura_buffer_nome(CatturaBuffer buffer);
 const char *cattura_colore_nome(uint32_t formato_grezzo);
 const char *cattura_fonte_nome(CatturaFonte fonte);

@@ -19,33 +19,33 @@ Build-Depends: debhelper-compat (= 13),
                libwayland-dev,
                libvulkan-dev (>= 1.3.274)
 
-# ⭐ Fase 19 (`fasi/19-nvidia.md`): Vulkan Video (src/vulkanvideo.c) — solo il
-#   loader e le intestazioni (libvulkan-dev; `[M]` 1 ott 2026: 1.4.309 su Debian
-#   13, 1.4.341 su Ubuntu 26.04).  I driver (ICD) sono fra i Recommends.
-# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  La codifica sulla scheda
-#   con libva diretta (libva-dev porta anche libva-drm), l'audio con libopus.
-#   `[M]` 30 set, nelle immagini podman: libopus0 1.5.2, libva2 2.22, in main.
-#   ⛔ Fase 19 (1 ott 2026, DECISIONI §10.27): OpenH264 e SVT-AV1, il ripiego
-#   in software, sono USCITI — si codifica solo sulla scheda.
-#   ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`,
-#   fasi/18 §1) — tolta il 30 set (T10: dpkg-checkbuilddeps la chiedeva e il
-#   contenitore della fase 18 non la porta).
-# ⚠ ngtcp2 1.25.0 e nghttp3 1.18.0 NON sono nelle Build-Depends: le porta il
-#   contenitore di costruzione (src/costruzione/quic-statiche.sh), statiche e a
-#   versione fissata (fasi/17 §6.3; D2 chiusa, DECISIONI §10.6).  Il campo
-#   Static-Built-Using qui sotto le nomina nel pacchetto finito (per lo SBOM, R24).
+# ⭐ Phase 19 (`fasi/19-nvidia.md`): Vulkan Video (src/vulkanvideo.c) — only the
+#   loader and the headers (libvulkan-dev; `[M]` 1 Oct 2026: 1.4.309 on Debian
+#   13, 1.4.341 on Ubuntu 26.04).  The drivers (ICD) are among the Recommends.
+# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg.  Encoding on the GPU
+#   with libva directly (libva-dev also brings libva-drm), audio with libopus.
+#   `[M]` 30 Sep, in the podman images: libopus0 1.5.2, libva2 2.22, in main.
+#   ⛔ Phase 19 (1 Oct 2026, DECISIONI §10.27): OpenH264 and SVT-AV1, the software
+#   fallback, are OUT — encoding happens only on the GPU.
+#   ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`,
+#   fasi/18 §1) — removed on 30 Sep (T10: dpkg-checkbuilddeps asked for it and the
+#   phase 18 container does not carry it).
+# ⚠ ngtcp2 1.25.0 and nghttp3 1.18.0 are NOT in the Build-Depends: the build
+#   container brings them (src/costruzione/quic-statiche.sh), static and at a
+#   pinned version (fasi/17 §6.3; D2 closed, DECISIONI §10.6).  The
+#   Static-Built-Using field below names them in the finished package (for the SBOM, R24).
 
 Package: remotix
 Architecture: any
-# Depends: le librerie le calcola dpkg-shlibdeps dal binario (${shlibs:Depends}).
-#   Le altre sono quelle che il binario usa a tempo di esecuzione e che dpkg NON
-#   vede: pam_systemd e pam_listfile (moduli caricati dalla pila PAM), usermod (la prima
-#   connessione, figlio.c:1525), loginctl e systemctl
-#   --user (figlio.c), il bus d'utente di systemd (dbus-user-session), e il DEMONE
-#   PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire (mutter/kwin
-#   screencast) e l'audio di OGNI desktop pure (suono.c); dpkg vede la LIBRERIA
-#   (libpipewire-0.3-0) ma non il demone. I desktop di serie lo portano, ma non le
-#   installazioni minime (T10, 30 set: su openSUSE GNOME senza pipewire il desktop non arriva).
+# Depends: dpkg-shlibdeps computes the libraries from the binary (${shlibs:Depends}).
+#   The others are the ones the binary uses at run time and that dpkg does NOT
+#   see: pam_systemd and pam_listfile (modules loaded by the PAM stack), usermod (the first
+#   connection, figlio.c:1525), loginctl and systemctl
+#   --user (figlio.c), the systemd user bus (dbus-user-session), and the PipeWire
+#   DAEMON + wireplumber: GNOME/KDE video capture goes through PipeWire (mutter/kwin
+#   screencast) and so does the audio of EVERY desktop (suono.c); dpkg sees the LIBRARY
+#   (libpipewire-0.3-0) but not the daemon. Stock desktops bring it, but minimal
+#   installations do not (T10, 30 Sep: on openSUSE GNOME without pipewire the desktop does not arrive).
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libpam-systemd,
@@ -55,39 +55,39 @@ Depends: ${shlibs:Depends},
          dbus-user-session,
          pipewire,
          wireplumber
-# Recommends (apt li installa di serie; chi usa --no-install-recommends li perde
-#   e `remotix verifica`, T4, lo dira'):
-#   · il driver VA della scheda: senza, NON si codifica (fase 19: niente
-#     ripiego in software; il server lo dichiara all'avvio, e il controllo
-#     preliminare dell'installatore rifiuta prima).
-#     `[M]` 30 set: su Ubuntu 26.04 la Mesa VA sta in mesa-libgallium (che
-#     «fornisce» mesa-va-drivers e va-driver), e va-driver-all tira solo Intel;
-#   · labwc, wlr-randr, xwayland: solo per XFCE e LXQt (il compositore che REMOTIX
-#     avvia; wlr-randr per la cura della misura di LXQt e XFCE; XFCE 4.20 sotto
-#     labwc vuole Xwayland);
-#     ⚠ su una macchina solo GNOME o KDE si installano lo stesso: nei metadati di
-#     un .deb non c'e' «solo se c'e' XFCE».  Un pacchetto per desktop e' da T4;
-#   ⛔ NON gnome-session (la sessione «vanilla» di universe): D8 (DECISIONI
-#     §10.20) — su Ubuntu REMOTIX avvia la sessione DI SERIE, `ubuntu`, che
-#     c'e' gia' (ubuntu-session); il criterio sta in sessione.c, sessione_gnome().
-#   · ⭐ fase 19 (`fasi/19-nvidia.md`): il driver VULKAN della scheda —
-#     `mesa-vulkan-drivers` porta gli ICD di Mesa (RADV per AMD: la strada
-#     Vulkan Video, provata PRIMA di VA-API; ANV per Intel, che in Vulkan non
-#     codifica e resta a VA-API).  NVIDIA: l'ICD arriva col driver proprietario.
-#     Il loader (`libvulkan1`) lo calcola dpkg-shlibdeps: il binario lo collega.
+# Recommends (apt installs them by default; whoever uses --no-install-recommends loses them
+#   and `remotix verifica`, T4, will say so):
+#   · the GPU's VA driver: without it, NOTHING is encoded (phase 19: no
+#     software fallback; the server declares it at startup, and the installer's
+#     preliminary check refuses earlier).
+#     `[M]` 30 Sep: on Ubuntu 26.04 the Mesa VA lives in mesa-libgallium (which
+#     «provides» mesa-va-drivers and va-driver), and va-driver-all only pulls Intel;
+#   · labwc, wlr-randr, xwayland: only for XFCE and LXQt (the compositor that REMOTIX
+#     starts; wlr-randr for the LXQt and XFCE size cure; XFCE 4.20 under
+#     labwc wants Xwayland);
+#     ⚠ on a GNOME-only or KDE-only machine they are installed anyway: the metadata of
+#     a .deb has no «only if XFCE is there».  One package per desktop is for T4;
+#   ⛔ NOT gnome-session (the «vanilla» session from universe): D8 (DECISIONI
+#     §10.20) — on Ubuntu REMOTIX starts the STOCK session, `ubuntu`, which
+#     is already there (ubuntu-session); the criterion lives in sessione.c, sessione_gnome().
+#   · ⭐ phase 19 (`fasi/19-nvidia.md`): the GPU's VULKAN driver —
+#     `mesa-vulkan-drivers` brings the Mesa ICDs (RADV for AMD: the Vulkan
+#     Video road, tried BEFORE VA-API; ANV for Intel, which does not encode in
+#     Vulkan and stays on VA-API).  NVIDIA: the ICD comes with the proprietary driver.
+#     dpkg-shlibdeps computes the loader (`libvulkan1`): the binary links it.
 Recommends: va-driver-all | va-driver,
             mesa-vulkan-drivers,
             labwc,
             wlr-randr,
             xwayland
 Static-Built-Using: ngtcp2 (= 1.25.0), nghttp3 (= 1.18.0)
-Description: il desktop Linux nel browser, per piu' utenti
- REMOTIX mostra il desktop di un utente (GNOME, KDE Plasma, Xfce, LXQt) in un
- browser, con video e audio su HTTP/3 e WebTransport.  Chi si collega entra
- con nome e parola d'ordine della macchina (PAM, servizio «remotix»; root
- escluso da /etc/remotix/utenti-negati) e trova la sua sessione.
+Description: the Linux desktop in the browser, for several users
+ REMOTIX shows a user's desktop (GNOME, KDE Plasma, Xfce, LXQt) in a
+ browser, with video and audio over HTTP/3 and WebTransport.  Whoever connects
+ logs in with the machine's user name and password (PAM, service «remotix»; root
+ excluded by /etc/remotix/utenti-negati) and finds their own session.
  .
- Il servizio remotix.service ascolta sulla porta 7447 (TCP per la pagina, UDP
- per QUIC).  Il pacchetto porta solo i pezzi, spenti: il servizio lo accende
- l'installatore di REMOTIX, l'unica via di installazione.  Il pacchetto contiene
- ngtcp2 e nghttp3 collegate staticamente.
+ The remotix.service service listens on port 7447 (TCP for the page, UDP
+ for QUIC).  The package only carries the pieces, switched off: the service is
+ switched on by the REMOTIX installer, the only installation route.  The package
+ contains ngtcp2 and nghttp3, statically linked.

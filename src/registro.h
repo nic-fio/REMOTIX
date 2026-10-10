@@ -1,18 +1,18 @@
 /*
- * registro.h — le righe che il server scrive, e l'unico posto che le scrive.
+ * registro.h — the lines the server writes, and the only place that writes them.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' UN MODULO E NON UNA `printf`
+ * ⛔ WHY A MODULE AND NOT A `printf`
  *
- * `CODER.md` §6: «dichiarare i ripieghi e le degradazioni nel registro, perche'
- * il revisore possa distinguere un comportamento voluto da uno accidentale».
- * Un registro sparso in venti `fprintf(stderr, ...)` non ha ne' un istante ne'
- * un'area, e le due cose sono quel che rende una riga leggibile a chi cerca un
- * difetto sei ore dopo.
+ * `CODER.md` §6: «declare fallbacks and degradations in the log, so that the
+ * reviewer can tell an intended behaviour from an accidental one».  A log
+ * scattered over twenty `fprintf(stderr, ...)` has neither a timestamp nor an
+ * area, and those two things are what make a line readable to whoever hunts a
+ * defect six hours later.
  *
- * ⛔ E B13.2 GUARDA DENTRO QUESTO FILE: «che la parola d'ordine non sia in
- *    nessun registro».  Passare da un solo imbuto e' quel che rende la verifica
- *    possibile — con venti punti di stampa, «non c'e'» sarebbe una speranza.
+ * ⛔ AND B13.2 LOOKS INSIDE THIS FILE: «that the password is in no log».
+ *    Going through a single funnel is what makes the check possible — with
+ *    twenty print points, «it is not there» would be a hope.
  */
 #ifndef REMOTIX_REGISTRO_H
 #define REMOTIX_REGISTRO_H
@@ -20,38 +20,38 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* L'area che scrive la riga.  Serve a leggere il registro per colonna quando
- * il trasporto e il protocollo parlano insieme. */
+/* The area that writes the line.  It serves to read the log by column when
+ * the transport and the protocol speak together. */
 #define REG_AVVIO "avvio"
 #define REG_QUIC "quic"
 #define REG_WT "wt"
 #define REG_RCP "rcp"
 #define REG_PAGINA "pagina"
 #define REG_CERT "cert"
-/* ⭐ Le due aree della fase 2, innestate il 12 agosto 2026 dal montaggio.
- * ⚠ `REG_SESSIONE` stava in testa a `src/sessione.h` con accanto la nota che lo
- *   dichiarava provvisorio, perche' quel file e' nato prima di entrare nel
- *   `Makefile` (`P2-1-sessione.md` §6.2 chiede questa riga). */
+/* ⭐ The two areas of phase 2, grafted on 12 Aug 2026 by the assembly.
+ * ⚠ `REG_SESSIONE` stood at the top of `src/sessione.h` with a note next to it
+ *   declaring it provisional, because that file was born before entering the
+ *   `Makefile` (`P2-1-sessione.md` §6.2 asks for this line). */
 #define REG_SESSIONE "sessione"
 #define REG_VIDEO "video"
-/* ⭐ L'area della fase 10 (25 agosto 2026): il budget di composizione.  ⚠ Ha
- *   un'area sua e non `avvio` perche' scrive in tre momenti diversi — la riga
- *   del valore in vigore, il verdetto su chi bussa, e il rifiuto — e chi cerca
- *   *«perche' quell'utente e' stato respinto»* deve poter leggere una colonna
- *   sola invece di setacciare `wt` e `figlio`. */
+/* ⭐ The area of phase 10 (25 Aug 2026): the composition budget.  ⚠ It has
+ *   an area of its own and not `avvio` because it writes at three different
+ *   moments — the line of the value in force, the verdict on whoever knocks,
+ *   and the refusal — and whoever looks for *«why that user was turned away»*
+ *   must be able to read a single column instead of sifting `wt` and `figlio`. */
 #define REG_BUDGET "budget"
 
-/* ⭐ Le quattro funzioni che scrivono sono MACRO sopra quattro `_in`: la
- *    macro ci mette `__FILE__` e `__LINE__`, che vanno nel journal come
- *    `CODE_FILE`/`CODE_LINE` (fase 16 §12).  ⚠ Sulla riga di `stderr` non
- *    compaiono: quella resta byte per byte com'era. */
+/* ⭐ The four functions that write are MACROS over four `_in`: the macro adds
+ *    `__FILE__` and `__LINE__`, which go to the journal as
+ *    `CODE_FILE`/`CODE_LINE` (phase 16 §12).  ⚠ They do not appear on the
+ *    `stderr` line: that stays byte for byte as it was. */
 void registro_dice_in(const char *file, int linea, const char *area,
                       const char *fmt, ...)
 	__attribute__((format(printf, 4, 5)));
 #define registro_dice(...) registro_dice_in(__FILE__, __LINE__, __VA_ARGS__)
 
-/* Le righe di dettaglio del trasporto: molte, e utili solo quando si sta
- * cercando qualcosa.  Spente di serie. */
+/* The transport's detail lines: many, and useful only when one is looking for
+ * something.  Off by default. */
 void registro_parlantina(bool acceso);
 bool registro_parla_molto(void);
 void registro_dettaglio_in(const char *file, int linea, const char *area,
@@ -62,97 +62,96 @@ void registro_dettaglio_in(const char *file, int linea, const char *area,
 
 /*
  * ---------------------------------------------------------------------------
- * ⭐⭐ IL JOURNAL DI SISTEMA — fase 16 §12, 25 settembre 2026.
+ * ⭐⭐ THE SYSTEM JOURNAL — phase 16 §12, 25 Sep 2026.
  *
- * Con `--journal` ogni riga va ANCHE al journal di systemd, col protocollo
- * nativo (un datagramma `CHIAVE=valore` su `/run/systemd/journal/socket`,
- * senza libsystemd), con i campi che servono a filtrare:
+ * With `--journal` every line ALSO goes to the systemd journal, with the native
+ * protocol (one `KEY=value` datagram on `/run/systemd/journal/socket`, without
+ * libsystemd), with the fields needed for filtering:
  *
- *      MESSAGE            la riga senza l'ora (l'ora la mette il journal)
- *      PRIORITY           3 se il corpo comincia con ⛔, 4 con ⚠, 7 per la
- *                         parlantina, 6 tutto il resto
+ *      MESSAGE            the line without the time (the journal adds the time)
+ *      PRIORITY           3 if the body starts with ⛔, 4 with ⚠, 7 for the
+ *                         chatter, 6 everything else
  *      SYSLOG_IDENTIFIER  remotix        (⇒ `journalctl -t remotix`)
- *      REMOTIX_AREA       l'area         (⇒ `REMOTIX_AREA=rcp`)
- *      REMOTIX_INQUILINO  l'identita', solo se la riga ne ha una
- *      CODE_FILE/LINE     chi l'ha scritta
+ *      REMOTIX_AREA       the area       (⇒ `REMOTIX_AREA=rcp`)
+ *      REMOTIX_INQUILINO  the identity, only if the line has one
+ *      CODE_FILE/LINE     who wrote it
  *
- * ⛔ La riga su `stderr` NON cambia e NON si spegne: il journal si AGGIUNGE.
- *    I banchi leggono il file, e un journal che non risponde (pieno, fermo,
- *    assente in un contenitore) non deve costare nemmeno una riga.  ⇒ Un
- *    `sendmsg` non bloccante per riga, e se fallisce si tace.
- * ⚠ Non attraversa l'`exec`: il figlio la riceve come `--journal` nella sua
- *   riga di comando, come `--parlantina` (`figlio.c`, `diventa_ed_esegui()`).
- * ⚠ E il figlio, dopo `pam_systemd`, sta nello scope della SESSIONE e non
- *   nell'unita' del server: ⇒ `journalctl -t remotix`, non solo `-u`.
+ * ⛔ The line on `stderr` does NOT change and is NOT turned off: the journal is
+ *    ADDED.  The benches read the file, and a journal that does not answer
+ *    (full, stuck, absent in a container) must not cost even one line.  ⇒ One
+ *    non-blocking `sendmsg` per line, and if it fails it stays silent.
+ * ⚠ It does not cross the `exec`: the child receives it as `--journal` on its
+ *   command line, like `--parlantina` (`figlio.c`, `diventa_ed_esegui()`).
+ * ⚠ And the child, after `pam_systemd`, sits in the SESSION scope and not in
+ *   the server's unit: ⇒ `journalctl -t remotix`, not only `-u`.
  *
- * Torna false se il socket non si apre (e allora il journal resta spento).
+ * Returns false if the socket does not open (and then the journal stays off).
  */
 bool registro_journal(bool acceso);
 bool registro_nel_journal(void);
 
 /*
- * ⛔⛔ I TASTI NEL REGISTRO — fase 16 §12: «le battute si registrano come
- *      "tasto", mai come carattere».  Un codice evdev E' un carattere, a meno
- *      della disposizione: una fila di `codice evdev 30, 48, 46` e' una parola.
+ * ⛔⛔ KEYS IN THE LOG — phase 16 §12: «keystrokes are logged as "key", never
+ *      as a character».  An evdev code IS a character, up to the layout: a
+ *      row of `evdev code 30, 48, 46` is a word.
  *
- * ⭐ Tranne i modificatori (Ctrl, Maiusc, Alt, Meta, BlocMaiusc): non dicono
- *    niente di quel che si scrive, e sono proprio quelli che restano giu' e
- *    rendono il desktop inservibile (`RCP.md` §11) — chi indaga ha bisogno
- *    di sapere QUALE.  ⇒ Questa e' la sola domanda che un chiamante deve fare
- *    prima di scrivere un codice di tasto; la risposta sta in un posto solo.
+ * ⭐ Except the modifiers (Ctrl, Shift, Alt, Meta, CapsLock): they say nothing
+ *    about what is being typed, and they are precisely the ones that stay down
+ *    and make the desktop unusable (`RCP.md` §11) — whoever investigates needs
+ *    to know WHICH.  ⇒ This is the only question a caller must ask before
+ *    writing a key code; the answer lives in one place only.
  */
 bool registro_tasto_dicibile(unsigned codice_evdev);
 
 /*
  * ---------------------------------------------------------------------------
- * ⛔⛔ DI CHI E' LA RIGA — 25 agosto 2026, rilievo R10-A4, `fasi/10-…md` §6.7.
+ * ⛔⛔ WHOSE LINE IS IT — 25 Aug 2026, finding R10-A4, `fasi/10-…md` §6.7.
  *
- * ⛔ IL DIFETTO, MISURATO e non dedotto: con **quattro** sessioni GNOME vere
- *    (57 121 righe, 90 s a regime) solo il **4,2 %** delle righe di DIAGNOSI
- *    diceva di chi parlava; `fotogramma-spedito`, `ciclo-cattura` e
- *    `audio-blocchi` — le tre famiglie piu' grosse — **0,0 %**.  Spenta una
- *    scena su quattro, si *vedeva* che una serie si era fermata 2 volte su 4,
- *    ⛔ ma il registro diceva un NOME **0 volte su 4** — e chi provava a
- *    indovinarlo sbagliava **96 volte su 100**, cioe' mandava a guardare **il
- *    desktop di un altro**.
+ * ⛔ THE DEFECT, MEASURED and not deduced: with **four** real GNOME sessions
+ *    (57 121 lines, 90 s at steady state) only **4.2 %** of the DIAGNOSTIC
+ *    lines said whom they were about; `fotogramma-spedito`, `ciclo-cattura`
+ *    and `audio-blocchi` — the three biggest families — **0.0 %**.  With one
+ *    scene out of four turned off, one *saw* that a series had stopped 2 times
+ *    out of 4, ⛔ but the log said a NAME **0 times out of 4** — and whoever
+ *    tried to guess it was wrong **96 times out of 100**, that is sent people
+ *    to look at **someone else's desktop**.
  *
- * ⭐ L'identita' arriva da due strade, e sono due perche' i processi sono di
- *    due specie — e' l'intera ragione del disegno:
+ * ⭐ The identity arrives by two roads, and they are two because the processes
+ *    are of two kinds — it is the whole reason for the design:
  *
- *      · `registro_identita()` — ⭐ la mette il processo che serve **UNA**
- *        sessione sola: il figlio, che conosce il proprio utente fin
- *        dall'`exec` (`figlio.c`, `argv[2]`).  ⇒ Da li' in poi **ogni** riga di
- *        quel processo la porta, comprese quelle di `codificatore.c` e di
- *        `audio.c`, che di sessioni non sanno niente.
- *      · `registro_dice_di()` — ⭐ la porta la SINGOLA riga, nel processo che
- *        serve **tutte** le sessioni insieme: il padre.  Li' un'identita' di
- *        processo direbbe sempre la stessa cosa, cioe' niente.
+ *      · `registro_identita()` — ⭐ set by the process that serves **ONE**
+ *        session only: the child, which knows its own user from the `exec`
+ *        on (`figlio.c`, `argv[2]`).  ⇒ From there on **every** line of that
+ *        process carries it, including those of `codificatore.c` and of
+ *        `audio.c`, which know nothing about sessions.
+ *      · `registro_dice_di()` — ⭐ carried by the SINGLE line, in the process
+ *        that serves **all** the sessions together: the parent.  There a
+ *        process identity would always say the same thing, that is nothing.
  *
- * ⭐ E l'identita' si compone in UN POSTO SOLO (`registro.c`, `riga()`), non
- *    dal chiamante: due punti che scrivono la parentesi la scrivono diversa, e
- *    un lettore che ne trovasse due in testa alla stessa riga non saprebbe piu'
- *    dove comincia il corpo.
+ * ⭐ And the identity is composed in ONE PLACE ONLY (`registro.c`, `riga()`),
+ *    not by the caller: two places that write the bracket write it
+ *    differently, and a reader who found two at the head of the same line
+ *    would no longer know where the body begins.
  *
- * ⚠ E CHI NON SA TACE: una riga senza identita' esce **senza parentesi**, non
- *   con una parentesi vuota o col nome del vicino.  `[M]` §6.7: il
- *   classificatore che indovina sbaglia il 96,4 % delle volte, quello prudente
- *   che si astiene sbaglia lo **0 %**.  ⇒ «non lo so» e' un esito, e si scrive
- *   non scrivendo.
+ * ⚠ AND WHOEVER DOES NOT KNOW STAYS SILENT: a line without identity goes out
+ *   **without brackets**, not with empty brackets or with the neighbour's name.
+ *   `[M]` §6.7: the classifier that guesses is wrong 96.4 % of the time, the
+ *   prudent one that abstains is wrong **0 %**.  ⇒ «I do not know» is an
+ *   outcome, and it is written by not writing.
  *
- * ⛔ 48 e' il tetto: la parentesi sta in testa al CORPO della riga, e un
- *    identificatore lungo mangerebbe il messaggio.  Chi e' piu' lungo viene
- *    tagliato.
+ * ⛔ 48 is the ceiling: the bracket sits at the head of the line's BODY, and a
+ *    long identifier would eat the message.  Whatever is longer is cut.
  */
 #define REG_IDENTITA_MAX 48
 
-/* L'identita' di QUESTO processo, da qui alla fine.  `NULL` o "" la toglie.
- * ⚠ Non attraversa l'`exec`: e' una statica del processo, e il figlio la rimette
- *   appena letto il proprio `argv`. */
+/* The identity of THIS process, from here to the end.  `NULL` or "" removes it.
+ * ⚠ It does not cross the `exec`: it is a static of the process, and the child
+ *   sets it again as soon as it has read its own `argv`. */
 void registro_identita(const char *chi);
 
-/* La riga di UNA sessione, scritta da un processo che ne serve molte.
- * ⚠ `chi` NULL o "" ⇒ vale l'identita' di processo; se non c'e' nemmeno quella,
- *   la riga esce muta, che e' la verita'. */
+/* The line of ONE session, written by a process that serves many.
+ * ⚠ `chi` NULL or "" ⇒ the process identity applies; if there is not even that,
+ *   the line goes out mute, which is the truth. */
 void registro_dice_di_in(const char *file, int linea, const char *area,
                          const char *chi, const char *fmt, ...)
 	__attribute__((format(printf, 5, 6)));
@@ -164,7 +163,7 @@ void registro_dettaglio_di_in(const char *file, int linea, const char *area,
 #define registro_dettaglio_di(...) \
 	registro_dettaglio_di_in(__FILE__, __LINE__, __VA_ARGS__)
 
-/* Millisecondi da un orologio monotono — l'ora che RCP vuole. */
+/* Milliseconds from a monotonic clock — the time RCP wants. */
 uint64_t registro_ora_ms(void);
 
 #endif

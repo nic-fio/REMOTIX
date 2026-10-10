@@ -1,8 +1,8 @@
-/* budget.c — ⭐⭐⭐ IL BUDGET DI COMPOSIZIONE (fase 10, 25 agosto 2026).
+/* budget.c — ⭐⭐⭐ THE COMPOSITION BUDGET (phase 10, 25 Aug 2026).
  *
- * ⛔ La ragione di ogni numero sta in `budget.h`, in testa: qui c'e' solo il
- *    meccanismo.  Chi cambia un numero legge prima quel riquadro, o cambiera'
- *    una taratura credendo di correggere un'implementazione.
+ * ⛔ The reason for every number is in `budget.h`, at the top: here there is
+ *    only the mechanism.  Whoever changes a number reads that box first, or
+ *    will change a calibration believing they are fixing an implementation.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,59 +13,60 @@
 #include "registro.h"
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * ⭐ LA FINESTRA DEL CONSEGNATO — otto secchi da 250 ms, cioe' due secondi.
+ * ⭐ THE DELIVERED WINDOW — eight buckets of 250 ms, that is two seconds.
  *
- * ⛔ E i secchi servono a una cosa sola che una media incrementale non sa fare:
- *    **far DECADERE il consegnato quando i fotogrammi smettono di arrivare**.
- *    Una sessione che si ferma deve scendere verso zero da se', o resterebbe
- *    contata al ritmo che aveva quando lavorava — e allora il conto direbbe
- *    «pieno» su una macchina vuota (falso NO su tutti quelli che arrivano).
+ * ⛔ And the buckets serve one thing only that an incremental average cannot do:
+ *    **make the delivered DECAY when frames stop arriving**.  A session that
+ *    stops must go down towards zero on its own, or it would stay counted at
+ *    the rate it had when it was working — and then the count would say
+ *    «full» on an empty machine (false NO on everyone who arrives).
  *
- * ⚠ Due secondi e non venti: `[M]` §6.16 — al risveglio di otto sessioni ferme
- *   il **ritmo** crolla dentro il primo intervallo del metro (**meno di 2 s**),
- *   mentre il ritardo sale in 8-10 s.  Una finestra piu' lunga vedrebbe il
- *   risveglio troppo tardi; una piu' corta conterebbe il singhiozzo di un
- *   fotogramma perso come un crollo.
+ * ⚠ Two seconds and not twenty: `[M]` §6.16 — when eight idle sessions wake up
+ *   the **rate** collapses within the first interval of the yardstick (**less
+ *   than 2 s**), while the delay rises in 8-10 s.  A longer window would see
+ *   the wake-up too late; a shorter one would count the hiccup of one lost
+ *   frame as a collapse.
  * ─────────────────────────────────────────────────────────────────────────── */
 #define SECCHI 8
 #define SECCHIO_US 250000ull
 #define FINESTRA_US ((uint64_t)SECCHI * SECCHIO_US)
 
-/* ⛔⭐ QUANTI RITARDI SI TENGONO, E PERCHE' LA MEDIANA E NON IL MASSIMO.
+/* ⛔⭐ HOW MANY DELAYS ARE KEPT, AND WHY THE MEDIAN AND NOT THE MAXIMUM.
  *
- *     Il massimo rifiuterebbe un utente per **un singolo singhiozzo** — un
- *     falso NO su un dato che non descrive lo stato della macchina.  La mediana
- *     di 32 campioni descrive *dove sta* la sessione, ed e' la stessa grandezza
- *     che `[M]` §6.5/§6.9 hanno misurato («ritardo mediano» a ogni gradino):
- *     tarare su una grandezza e giudicare su un'altra e' il modo piu' rapido di
- *     avere un metro non tarato.
- * ⚠ A ~40 fot/s, 32 campioni sono **0,8 s** — la stessa scala della finestra. */
+ *     The maximum would refuse a user for **a single hiccup** — a false NO on
+ *     a datum that does not describe the state of the machine.  The median of
+ *     32 samples describes *where the session sits*, and it is the same
+ *     quantity that `[M]` §6.5/§6.9 measured («median delay» at every step):
+ *     calibrating on one quantity and judging on another is the fastest way
+ *     to have an uncalibrated yardstick.
+ * ⚠ At ~40 fps, 32 samples are **0.8 s** — the same scale as the window. */
 #define RITARDI 32
 
-/* ⛔⭐ I CAMPIONI DEL RITARDO **NON SCADONO**, ed e' una scelta, non una
- *     dimenticanza.
+/* ⛔⭐ THE DELAY SAMPLES **DO NOT EXPIRE**, and it is a choice, not an
+ *     oversight.
  *
- *     Una sessione **ferma** consegna `[M]` un fotogramma ogni ~40 s (0,05
- *     Mpixel/s, §6.9): se i suoi campioni scadessero, resterebbe **senza
- *     ritardo**, e il ripiego dichiarato (§1.33, verso scomodo) la conterebbe
- *     al caso peggiore.  ⇒ ⛔ **Dieci inquilini fermi verrebbero respinti pur
- *     non costando niente** — che e' l'errore gemello, e altrettanto grave, di
- *     ammettere l'ottavo che fa crollare tutto.
- * ⭐ E nel verso opposto la scelta e' prudente: una sessione **strozzata** che
- *    tace si porta dietro il suo ritardo grosso finche' non consegna di nuovo.
+ *     An **idle** session delivers `[M]` one frame every ~40 s (0.05
+ *     Mpixel/s, §6.9): if its samples expired, it would be left **without a
+ *     delay**, and the declared fallback (§1.33, uncomfortable direction)
+ *     would count it at the worst case.  ⇒ ⛔ **Ten idle tenants would be
+ *     rejected while costing nothing** — which is the twin error, and just as
+ *     serious, of admitting the eighth that makes everything collapse.
+ * ⭐ And in the opposite direction the choice is prudent: a **throttled**
+ *    session that goes silent carries its big delay along until it delivers
+ *    again.
  */
 
 struct inquilino {
 	bool usato;
 	char utente[257];
-	/* i pixel composti consegnati, per secchio */
+	/* the composed pixels delivered, per bucket */
 	uint64_t pixel[SECCHI];
-	int secchio;              /* indice del secchio corrente */
-	uint64_t secchio_da_us;   /* l'istante in cui il secchio corrente e' nato */
-	uint64_t primo_us;        /* il primo fotogramma mai visto */
-	uint64_t ultimo_us;       /* l'ultimo, per il riuso della casella */
+	int secchio;              /* index of the current bucket */
+	uint64_t secchio_da_us;   /* the instant the current bucket was born */
+	uint64_t primo_us;        /* the first frame ever seen */
+	uint64_t ultimo_us;       /* the last one, for slot reuse */
 	bool mai_consegnato;
-	uint32_t tela_l, tela_a;  /* l'ultima tela consegnata */
+	uint32_t tela_l, tela_a;  /* the last canvas delivered */
 	uint32_t ritardo_ms[RITARDI];
 	int quanti_ritardi, prossimo_ritardo;
 };
@@ -73,7 +74,7 @@ struct inquilino {
 static struct inquilino *tabella;
 static int quante_caselle;
 
-/* ⛔ `0` = SPENTO, ed e' il predefinito: I6.  Vedi `budget.h` punto 5. */
+/* ⛔ `0` = OFF, and it is the default: I6.  See `budget.h` point 5. */
 static double capacita_mpixel_s;
 static double riserva = BUDGET_RISERVA_PREDEFINITA;
 static uint32_t tela_palco_l, tela_palco_a;
@@ -85,8 +86,8 @@ static uint64_t ora_us(bool *letta)
 	struct timespec t;
 
 	if (clock_gettime(CLOCK_MONOTONIC, &t) != 0) {
-		/* ⛔ «Non ho potuto leggere l'ora» non e' «sono le zero»: chi riceve
-		 *    questo lo dichiara e non giudica. */
+		/* ⛔ «I could not read the time» is not «it is midnight»: whoever
+		 *    receives this declares it and does not judge. */
 		if (letta)
 			*letta = false;
 		return 0;
@@ -96,9 +97,9 @@ static uint64_t ora_us(bool *letta)
 	return (uint64_t)t.tv_sec * 1000000ull + (uint64_t)(t.tv_nsec / 1000);
 }
 
-/* ⛔ La tabella si dimensiona sul tetto in vigore, e si alloca alla prima
- *    accensione.  ⚠ Se `calloc` fallisce, il budget **non si accende**: un
- *    budget che non puo' contare non deve poter dire di no. */
+/* ⛔ The table is sized on the cap in force, and allocated at the first
+ *    switch-on.  ⚠ If `calloc` fails, the budget **does not turn on**: a
+ *    budget that cannot count must not be able to say no. */
 static bool tabella_pronta(int quante)
 {
 	if (tabella)
@@ -108,9 +109,9 @@ static bool tabella_pronta(int quante)
 	tabella = (struct inquilino *)calloc((size_t)quante, sizeof *tabella);
 	if (!tabella) {
 		registro_dice(REG_BUDGET,
-		              "⛔ non c'e' memoria per la tabella del budget (%d "
-		              "caselle): il budget resta SPENTO.  ⚠ Non e' «regge»: e' "
-		              "«non conto», e chi non conta non dice di no",
+		              "⛔ there is no memory for the budget table (%d "
+		              "slots): the budget stays OFF.  ⚠ It is not «it holds»: it is "
+		              "«I do not count», and whoever does not count does not say no",
 		              quante);
 		return false;
 	}
@@ -118,14 +119,14 @@ static bool tabella_pronta(int quante)
 	return true;
 }
 
-/* ⭐ La casella dell'utente, o la piu' vecchia se non c'e' e non c'e' posto.
+/* ⭐ The user's slot, or the oldest one if it is not there and there is no room.
  *
- * ⛔ Il riuso a piu' vecchia guarda `ultimo_us`, e serve perche' NESSUNO
- *    avvisa questo modulo che un palco e' morto: un inquilino sparito smette
- *    semplicemente di consegnare, e la sua casella diventa la piu' vecchia.
- * ⚠ E non e' un difetto travestito: una casella stantia non entra mai nel
- *   conto, perche' il conto lo riempie la tabella dei **palchi vivi** e non
- *   questa (vedi `budget_conto_dentro()`). */
+ * ⛔ Oldest-first reuse looks at `ultimo_us`, and it is needed because NOBODY
+ *    tells this module that a stage has died: a tenant that vanished simply
+ *    stops delivering, and its slot becomes the oldest.
+ * ⚠ And it is not a disguised defect: a stale slot never enters the count,
+ *   because the count is filled by the table of **live stages** and not by
+ *   this one (see `budget_conto_dentro()`). */
 static struct inquilino *casella(const char *utente, bool crea)
 {
 	struct inquilino *libera = NULL, *vecchia = NULL;
@@ -158,22 +159,22 @@ static struct inquilino *casella(const char *utente, bool crea)
 	return libera;
 }
 
-/* ⛔ Porta la finestra fino a `adesso`, svuotando i secchi che sono usciti.
- *    ⚠ E' quel che fa DECADERE il consegnato di chi si e' fermato: senza
- *      questa chiamata anche al momento del verdetto (non solo al deposito),
- *      una sessione ferma resterebbe contata al ritmo che aveva. */
+/* ⛔ Brings the window up to `adesso`, emptying the buckets that went out.
+ *    ⚠ It is what makes the delivered of whoever stopped DECAY: without
+ *      this call at verdict time too (not only at deposit), an idle session
+ *      would stay counted at the rate it had. */
 static void avanza(struct inquilino *in, uint64_t adesso)
 {
 	if (in->mai_consegnato)
 		return;
 	if (adesso < in->secchio_da_us)
-		return;  /* ⚠ l'orologio e' monotono: non dovrebbe succedere */
+		return;  /* ⚠ the clock is monotonic: it should not happen */
 	while (adesso - in->secchio_da_us >= SECCHIO_US) {
 		in->secchio_da_us += SECCHIO_US;
 		in->secchio = (in->secchio + 1) % SECCHI;
 		in->pixel[in->secchio] = 0;
-		/* ⭐ Se il buco e' piu' lungo della finestra intera non si gira mille
-		 *    volte: si azzera tutto e si riparte da adesso. */
+		/* ⭐ If the gap is longer than the whole window we do not loop a
+		 *    thousand times: everything is zeroed and restarted from now. */
 		if (adesso - in->secchio_da_us >= FINESTRA_US) {
 			memset(in->pixel, 0, sizeof in->pixel);
 			in->secchio_da_us = adesso;
@@ -183,10 +184,10 @@ static void avanza(struct inquilino *in, uint64_t adesso)
 	}
 }
 
-/* ⭐ Il consegnato, in Mpixel/s.  ⛔ Torna `false` quando **non si e'
- *    misurato**, e chi lo riceve conta il caso peggiore: «non ho misurato» non
- *    e' «zero» — una sessione appena nata non ha ancora consegnato niente, e
- *    contarla zero e' esattamente l'errore che affama tutti. */
+/* ⭐ The delivered, in Mpixel/s.  ⛔ Returns `false` when **nothing has been
+ *    measured**, and whoever receives it counts the worst case: «I have not
+ *    measured» is not «zero» — a session just born has not delivered anything
+ *    yet, and counting it zero is exactly the error that starves everyone. */
 static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 {
 	uint64_t somma = 0;
@@ -194,18 +195,18 @@ static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 
 	if (!in || in->mai_consegnato)
 		return false;
-	/* ⛔ Finche' non c'e' una finestra INTERA di storia il numero non descrive
-	 *    un ritmo: descrive «da quanto poco e' nata».  ⇒ Non si e' misurato. */
+	/* ⛔ Until there is a WHOLE window of history the number does not describe
+	 *    a rate: it describes «how recently it was born».  ⇒ Not measured. */
 	if (adesso < in->primo_us + FINESTRA_US)
 		return false;
 	avanza(in, adesso);
 	for (int i = 0; i < SECCHI; i++)
 		somma += in->pixel[i];
-	/* ⚠ Si divide per il tempo COPERTO — i secchi pieni piu' la frazione di
-	 *   quello corrente — e non per la finestra nominale: il secchio corrente
-	 *   e' mediamente mezzo pieno, e dividerlo per il suo secchio intero
-	 *   sottostimerebbe la domanda del ~6 %.  ⛔ Sottostimare la domanda e' il
-	 *   verso che affama tutti (§1.33). */
+	/* ⚠ We divide by the time COVERED — the full buckets plus the fraction of
+	 *   the current one — and not by the nominal window: the current bucket is
+	 *   on average half full, and dividing it by its whole bucket would
+	 *   underestimate the demand by ~6 %.  ⛔ Underestimating the demand is the
+	 *   direction that starves everyone (§1.33). */
 	secondi = (double)(SECCHI - 1) * (double)SECCHIO_US / 1e6;
 	secondi += (double)(adesso - in->secchio_da_us) / 1e6;
 	if (secondi <= 0.0)
@@ -214,8 +215,8 @@ static bool consegnato(struct inquilino *in, uint64_t adesso, double *mpixel_s)
 	return true;
 }
 
-/* ⭐ La mediana dei ritardi tenuti.  `false` = mai consegnato niente, quindi
- *    non c'e' niente da mediare — e non e' «ritardo zero». */
+/* ⭐ The median of the kept delays.  `false` = never delivered anything, so
+ *    there is nothing to take the median of — and it is not «zero delay». */
 static bool ritardo_mediano(const struct inquilino *in, double *ms)
 {
 	uint32_t v[RITARDI];
@@ -225,8 +226,8 @@ static bool ritardo_mediano(const struct inquilino *in, double *ms)
 		return false;
 	n = in->quanti_ritardi;
 	memcpy(v, in->ritardo_ms, (size_t)n * sizeof v[0]);
-	/* ⚠ Ordinamento a bolle su al massimo 32 elementi, una volta per verdetto:
-	 *   `qsort` qui costerebbe piu' righe di quante ne risparmi. */
+	/* ⚠ Insertion sort on at most 32 elements, once per verdict: `qsort`
+	 *   here would cost more lines than it saves. */
 	for (int i = 1; i < n; i++)
 		for (int j = i; j > 0 && v[j] < v[j - 1]; j--) {
 			uint32_t t = v[j];
@@ -237,8 +238,8 @@ static bool ritardo_mediano(const struct inquilino *in, double *ms)
 	return true;
 }
 
-/* ⭐ Il caso peggiore di una tela: la sua tela per il ritmo massimo che questo
- *    ferro ha mostrato di saper consegnare (§6.9, e vedi `budget.h`). */
+/* ⭐ The worst case of a canvas: its canvas times the maximum rate this
+ *    hardware has shown it can deliver (§6.9, and see `budget.h`). */
 static double peggiore(uint32_t l, uint32_t a)
 {
 	return (double)l * (double)a / 1e6 * BUDGET_RITMO_MAX_FOT_S;
@@ -260,9 +261,9 @@ void budget_accendi(double capacita, double f, uint32_t tela_l, uint32_t tela_a)
 		capacita_mpixel_s = 0.0;
 }
 
-/* ⛔ La tabella si dimensiona **prima** di accendere: la chiama `main.c` col
- *    tetto in vigore, cosi' le caselle sono tante quanti i palchi possibili e
- *    il riuso a piu' vecchia non morde mai in esercizio normale. */
+/* ⛔ The table is sized **before** switching on: `main.c` calls it with the
+ *    cap in force, so the slots are as many as the possible stages and
+ *    oldest-first reuse never bites in normal operation. */
 void budget_caselle(int quante)
 {
 	if (!tabella)
@@ -274,9 +275,9 @@ bool budget_acceso(void)
 	return capacita_mpixel_s > 0.0 && tabella != NULL;
 }
 
-/* ⛔ I due conti dei no, e vivono qui perche' e' qui che si scrivono.  ⚠ Non
- *    si azzerano mai: sono «da che questo server e' acceso», che e' l'unica
- *    finestra che chi legge il registro sa ricostruire. */
+/* ⛔ The two counts of the noes, and they live here because this is where
+ *    they are written.  ⚠ They are never reset: they are «since this server
+ *    started», which is the only window a log reader can reconstruct. */
 static uint64_t domande_viste, negati_tutti, negati_budget;
 
 void budget_riga_verdetto(const char *utente, bool ammesso, uint8_t motivo,
@@ -288,71 +289,72 @@ void budget_riga_verdetto(const char *utente, bool ammesso, uint8_t motivo,
 		if (motivo == 0x06)
 			negati_budget++;
 	}
-	/* ⛔ UNA riga per verdetto, e non una per fotogramma: qui si passa a ogni
-	 *    login, non a ogni pixel.  ⭐ E si scrive anche col budget SPENTO,
-	 *    perche' `negati 0` e' il fatto che prova I6 — leggerlo richiede che
-	 *    qualcuno lo scriva. */
+	/* ⛔ ONE line per verdict, and not one per frame: we pass here at every
+	 *    login, not at every pixel.  ⭐ And it is written with the budget OFF
+	 *    too, because `negati 0` is the fact that proves I6 — reading it
+	 *    requires someone to write it. */
 	registro_dice(REG_BUDGET,
-	              "verdetto per «%s»: %s · negati %llu (di cui budget %llu) su "
-	              "%llu domande · in vigore --budget-mpixel-s %.1f (%s) "
+	              "verdict for «%s»: %s · denied %llu (of which budget %llu) out of "
+	              "%llu requests · in force --budget-mpixel-s %.1f (%s) "
 	              "--tetto-sessioni %d --riserva %.2f%s%s",
 	              utente ? utente : "?",
-	              ammesso ? "⭐ AMMESSO" : "⛔ NEGATO",
+	              ammesso ? "⭐ ADMITTED" : "⛔ DENIED",
 	              (unsigned long long)negati_tutti,
 	              (unsigned long long)negati_budget,
 	              (unsigned long long)domande_viste,
-	              capacita_mpixel_s, budget_acceso() ? "ACCESO" : "SPENTO",
+	              capacita_mpixel_s, budget_acceso() ? "ON" : "OFF",
 	              tetto_sessioni, riserva,
-	              (!ammesso && perche && perche[0]) ? " · motivo: " : "",
+	              (!ammesso && perche && perche[0]) ? " · reason: " : "",
 	              (!ammesso && perche && perche[0]) ? perche : "");
 }
 
 void budget_riga_avvio(int tetto_sessioni)
 {
-	/* ⛔⭐ LA RIGA CHE UN BANCO CERCA, e porta i TRE valori col **nome
-	 *     dell'opzione accanto al numero**.  ⚠ Si scrive per prima e sempre —
-	 *     acceso E spento — perche' e' quella su cui si tara chi giudica: un
-	 *     oracolo tarato su un numero diverso da quello in vigore produrrebbe
-	 *     falsi si' e falsi no **suoi**, non del prodotto. */
+	/* ⛔⭐ THE LINE A BENCH LOOKS FOR, and it carries the THREE values with the
+	 *     **option name next to the number**.  ⚠ It is written first and
+	 *     always — on AND off — because it is the one whoever judges calibrates
+	 *     on: an oracle calibrated on a number different from the one in force
+	 *     would produce false yeses and false noes **of its own**, not of the
+	 *     product. */
 	registro_dice(REG_BUDGET,
-	              "%s fase 10 — I TRE VALORI IN VIGORE: "
+	              "%s phase 10 — THE THREE VALUES IN FORCE: "
 	              "budget --budget-mpixel-s %.1f (%s) · "
-	              "tetto --tetto-sessioni %d · "
-	              "riserva --riserva %.2f",
+	              "cap --tetto-sessioni %d · "
+	              "reserve --riserva %.2f",
 	              budget_acceso() ? "⭐⭐" : "⛔",
-	              capacita_mpixel_s, budget_acceso() ? "ACCESO" : "SPENTO",
+	              capacita_mpixel_s, budget_acceso() ? "ON" : "OFF",
 	              tetto_sessioni, riserva);
 	if (budget_acceso())
 		registro_dice(REG_BUDGET,
-		              "⭐⭐ fase 10 — IL BUDGET DI COMPOSIZIONE: ACCESO a %.1f "
-		              "Mpixel/s, riserva %.2f, soglia del ritardo %.1f ms, "
-		              "caso peggiore %.2f fot/s (⇒ %.1f Mpixel/s per una "
-		              "%ux%u), tolleranza %.0f%%, %d caselle.  ⛔ La grandezza "
-		              "e' la COMPOSIZIONE, non la codifica: `[M]` §6.11 il "
-		              "soffitto e' 0,97 Gpixel/s contro 1,86 del codificatore, "
-		              "e a saturare `rcs0` e' il compositore.  ⛔ Chi non ci sta "
-		              "riceve CONGEDO 0x06 BUDGET_PIENO **prima** che nasca il "
-		              "suo palco.  ⚠ Il numero NON si auto-tara (§6.9): prima "
-		              "che la macchina abbia ceduto una volta e' un limite "
-		              "inferiore, non un soffitto — questo l'ha dichiarato chi "
-		              "ha battuto `--budget-mpixel-s`",
+		              "⭐⭐ phase 10 — THE COMPOSITION BUDGET: ON at %.1f "
+		              "Mpixel/s, reserve %.2f, delay threshold %.1f ms, "
+		              "worst case %.2f fps (⇒ %.1f Mpixel/s for a "
+		              "%ux%u), tolerance %.0f%%, %d slots.  ⛔ The quantity "
+		              "is COMPOSITION, not encoding: `[M]` §6.11 the "
+		              "ceiling is 0.97 Gpixel/s against 1.86 for the encoder, "
+		              "and what saturates `rcs0` is the compositor.  ⛔ Whoever does not fit "
+		              "receives CONGEDO 0x06 BUDGET_PIENO **before** their "
+		              "stage is born.  ⚠ The number does NOT self-tune (§6.9): before "
+		              "the machine has given way once it is a lower "
+		              "bound, not a ceiling — this was declared by whoever "
+		              "typed `--budget-mpixel-s`",
 		              capacita_mpixel_s, riserva, BUDGET_RITARDO_AFFANNO_MS,
 		              (double)BUDGET_RITMO_MAX_FOT_S,
 		              peggiore(tela_palco_l, tela_palco_a), tela_palco_l,
 		              tela_palco_a, BUDGET_TOLLERANZA * 100.0, quante_caselle);
 	else
 		registro_dice(REG_BUDGET,
-		              "⛔ fase 10 — IL BUDGET DI COMPOSIZIONE: SPENTO "
-		              "(`--budget-mpixel-s 0`, ed e' il PREDEFINITO — "
-		              "`CODER.md` I6: quel che cambia cio' che l'utente vede "
-		              "nasce spento finche' non l'ha guardato).  ⛔⛔ Con il "
-		              "budget spento questa macchina AMMETTE TUTTI: `[M]` §S.2 "
-		              "sulla scena satura l'undicesimo entra con `negati 0` e "
-		              "la prima sessione passa da 39,60 a 0,96 fot/s (−97,6 %%) "
-		              "— e' la violazione di I1 che il budget esiste per "
-		              "impedire.  ⭐ Si accende con `--budget-mpixel-s N`, dove "
-		              "N sono i Mpixel/s di COMPOSIZIONE che questa macchina "
-		              "regge, MISURATI a saturazione (riserva in vigore %.2f)",
+		              "⛔ phase 10 — THE COMPOSITION BUDGET: OFF "
+		              "(`--budget-mpixel-s 0`, and it is the DEFAULT — "
+		              "`CODER.md` I6: what changes what the user sees "
+		              "is born off until they have looked at it).  ⛔⛔ With the "
+		              "budget off this machine ADMITS EVERYONE: `[M]` §S.2 "
+		              "on the saturated scene the eleventh gets in with `negati 0` and "
+		              "the first session goes from 39.60 to 0.96 fps (−97.6 %%) "
+		              "— it is the violation of I1 the budget exists to "
+		              "prevent.  ⭐ It is turned on with `--budget-mpixel-s N`, where "
+		              "N is the Mpixel/s of COMPOSITION this machine "
+		              "holds, MEASURED at saturation (reserve in force %.2f)",
 		              riserva);
 }
 
@@ -382,11 +384,12 @@ void budget_deposita(const char *utente, uint32_t larghezza, uint32_t altezza,
 	in->ultimo_us = adesso;
 	in->tela_l = larghezza;
 	in->tela_a = altezza;
-	/* ⛔ Il ritardo e' *cattura → padre*, e l'istante lo timbra il FIGLIO: e'
-	 *    il verso scomodo (un maggiorante), che e' quello giusto.
-	 * ⚠ Un istante piu' avanti dell'ora nostra vorrebbe dire due orologi
-	 *   diversi: si conta zero invece di sottrarre alla rovescia, e non si
-	 *   inventa un numero negativo. */
+	/* ⛔ The delay is *capture → parent*, and the instant is stamped by the
+	 *    CHILD: it is the uncomfortable direction (an upper bound), which is
+	 *    the right one.
+	 * ⚠ An instant ahead of our time would mean two different clocks: zero is
+	 *   counted instead of subtracting backwards, and no negative number is
+	 *   invented. */
 	{
 		uint64_t d = adesso > istante_us ? adesso - istante_us : 0;
 		uint32_t ms = (uint32_t)(d / 1000ull);
@@ -416,9 +419,9 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente)
 	c->quanti++;
 	in = casella(utente, false);
 
-	/* ⚠ La tela: quella dell'ultimo fotogramma consegnato; se non ha mai
-	 *   consegnato, quella del PALCO — che e' il maggiorante di quel che potra'
-	 *   ottenere.  ⛔ Verso scomodo. */
+	/* ⚠ The canvas: that of the last frame delivered; if it has never
+	 *   delivered, that of the STAGE — which is the upper bound of what it can
+	 *   obtain.  ⛔ Uncomfortable direction. */
 	l = (in && in->tela_l) ? in->tela_l : tela_palco_l;
 	a = (in && in->tela_a) ? in->tela_a : tela_palco_a;
 	pg = peggiore(l, a);
@@ -426,34 +429,34 @@ void budget_conto_dentro(struct budget_conto *c, const char *utente)
 	ho_consegna = consegnato(in, c->ora_us, &consegna);
 	ho_ritardo = ritardo_mediano(in, &rit);
 
-	/* ── ⛔⛔ LA PORTA DEL RITARDO — e sta PRIMA della somma ──────────────
+	/* ── ⛔⛔ THE DELAY GATE — and it stands BEFORE the sum ────────────────
 	 *
-	 * `[M]` §6.9: a otto sessioni il consegnato totale e' 26,6 Mpixel/s contro
-	 * 480, cioe' il conto sui pixel direbbe *«c'e' posto per altre cinque»*
-	 * mentre tutti stanno a 1,5 fot/s.  ⇒ Chi consegna poco **con un ritardo
-	 * sopra la soglia** e' strozzato, non fermo, e ammettere adesso viola I1 su
-	 * chi sta gia' lavorando. */
+	 * `[M]` §6.9: at eight sessions the total delivered is 26.6 Mpixel/s against
+	 * 480, that is the count on pixels would say *«there is room for five more»*
+	 * while everyone sits at 1.5 fps.  ⇒ Whoever delivers little **with a delay
+	 * above the threshold** is throttled, not idle, and admitting now violates
+	 * I1 on whoever is already working. */
 	if (ho_ritardo && rit > BUDGET_RITARDO_AFFANNO_MS &&
 	    (!c->strozzato[0] || rit > c->strozzato_ms)) {
 		snprintf(c->strozzato, sizeof c->strozzato, "%s", utente);
 		c->strozzato_ms = rit;
 	}
 
-	/* ── LA DOMANDA DI QUESTO INQUILINO ────────────────────────────────── */
+	/* ── THE DEMAND OF THIS TENANT ────────────────────────────────────── */
 	if (!ho_consegna || !ho_ritardo) {
-		/* ⛔ Ripiego DICHIARATO, e nel verso scomodo: senza il consegnato — o
-		 *    senza il ritardo, che e' quel che distingue «ferma» da
-		 *    «strozzata» — si conta il caso peggiore. */
+		/* ⛔ DECLARED fallback, and in the uncomfortable direction: without
+		 *    the delivered — or without the delay, which is what tells «idle»
+		 *    from «throttled» — the worst case is counted. */
 		d = pg;
 		c->al_peggiore++;
 	} else {
-		/* ⭐⭐ LA RISERVA: il piu' grande fra quel che consegna e la frazione
-		 *     `F` del suo caso peggiore.  E' la difesa contro il RISVEGLIO —
-		 *     `[M]` §6.16: otto ferme da 0,01 % l'una si accendono in 19 ms e
-		 *     chiedono il 130 % di un motore che ne ha 100, e ⛔ il regolatore
-		 *     della fase 9 non lo puo' rimediare (ferma fotogrammi gia'
-		 *     composti e gia' codificati).  A F = 0,5 lo sforamento passa da
-		 *     1 640× a 2×. */
+		/* ⭐⭐ THE RESERVE: the larger of what it delivers and the fraction
+		 *     `F` of its worst case.  It is the defence against the WAKE-UP —
+		 *     `[M]` §6.16: eight idle ones at 0.01 % each wake up in 19 ms and
+		 *     ask for 130 % of an engine that has 100, and ⛔ the rate
+		 *     regulator of phase 9 cannot remedy it (it holds back frames
+		 *     already composed and already encoded).  At F = 0.5 the
+		 *     overshoot goes from 1 640× to 2×. */
 		d = pg * riserva;
 		if (consegna > d)
 			d = consegna;
@@ -475,17 +478,17 @@ enum budget_esito budget_conto_verdetto(struct budget_conto *c,
 	if (!c || !c->orologio) {
 		if (perche && perche_cap)
 			snprintf(perche, perche_cap,
-			         "l'orologio monotono non si e' fatto leggere: il budget "
-			         "NON HA MISURATO, e non giudica");
+			         "the monotonic clock could not be read: the budget "
+			         "HAS NOT MEASURED, and does not judge");
 		return BUDGET_NON_SO;
 	}
 	if (c->strozzato[0]) {
 		if (perche && perche_cap)
 			snprintf(perche, perche_cap,
-			         "questa macchina e' gia' in affanno: la sessione di «%s» "
-			         "consegna con %.0f ms di ritardo (soglia misurata %.1f "
-			         "ms), e far entrare qualcuno adesso toglierebbe ritmo a "
-			         "chi sta lavorando.  ⭐ Riprova fra poco",
+			         "this machine is already struggling: the session of «%s» "
+			         "delivers with %.0f ms of delay (measured threshold %.1f "
+			         "ms), and letting someone in now would take frame rate away "
+			         "from whoever is working.  ⭐ Try again shortly",
 			         c->strozzato, c->strozzato_ms, BUDGET_RITARDO_AFFANNO_MS);
 		return BUDGET_NON_REGGE;
 	}
@@ -501,41 +504,41 @@ enum budget_esito budget_conto_verdetto(struct budget_conto *c,
 	if (domanda <= tetto) {
 		if (perche && perche_cap)
 			snprintf(perche, perche_cap,
-			         "domanda %.1f ≤ %.1f Mpixel/s (%d dentro%s, il nuovo ne "
-			         "chiede %.1f al peggio con %ux%u)",
+			         "demand %.1f ≤ %.1f Mpixel/s (%d inside%s, the newcomer "
+			         "asks for %.1f at worst with %ux%u)",
 			         domanda, tetto, c->quanti,
-			         c->al_peggiore ? ", di cui alcuni contati al caso "
-			                          "peggiore" : "",
+			         c->al_peggiore ? ", some of them counted at the worst "
+			                          "case" : "",
 			         d_nuovo, tela_l, tela_a);
 		return BUDGET_REGGE;
 	}
-	/* ⛔⭐ IL CORPO PORTA LE CIFRE, e non e' decorazione: **domanda** e
-	 *     **capacita'** sono i due numeri su cui il no e' stato deciso, e senza
-	 *     di loro la riga di domani non si sa rileggere — «il server e' pieno»
-	 *     non dice ne' quanto, ne' di che cosa.
+	/* ⛔⭐ THE BODY CARRIES THE FIGURES, and it is not decoration: **demand**
+	 *     and **capacity** are the two numbers on which the no was decided, and
+	 *     without them tomorrow's line cannot be reread — «the server is full»
+	 *     says neither how much, nor of what.
 	 *
-	 * ⛔⛔ E IL GESTO CHE SI PROMETTE E' SOLO QUELLO CHE E' VERO QUI.
+	 * ⛔⛔ AND THE GESTURE PROMISED IS ONLY THE ONE THAT IS TRUE HERE.
 	 *
-	 *      A questo punto la tela della sessione **non e' ancora decisa** (si
-	 *      decide a `SESSIONE`), e il solo numero di tela che si ha in mano e'
-	 *      `video.misura_massima` — che e' il tetto del **DECODIFICATORE**, non
-	 *      la misura della finestra: `src/pagina.html` lo scrive a lettere,
-	 *      *«non cambia la tela: e' un tetto … perche' il decodificatore di un
-	 *      telefono ha limiti che il suo schermo non dichiara»*, e la pagina lo
-	 *      misura con una scala di `VideoDecoder.isConfigSupported`.
-	 *      ⇒ ⛔ **Rimpicciolire la finestra NON abbassa il costo contato qui**:
-	 *        chi lo facesse e riprovasse riceverebbe lo stesso identico no, e
-	 *        una frase che glielo promettesse sarebbe **falsa**.
-	 *      ⭐ Quel che invece e' vero: la capacita' torna appena qualcuno esce,
-	 *        e un dispositivo che dichiara un tetto piu' piccolo costa meno
-	 *        davvero.  ⚠ Si promette quello, e basta quello. */
+	 *      At this point the session's canvas **is not decided yet** (it is
+	 *      decided at `SESSIONE`), and the only canvas number at hand is
+	 *      `video.misura_massima` — which is the **DECODER**'s ceiling, not the
+	 *      size of the window: `src/pagina.html` spells it out, *«it does not
+	 *      change the canvas: it is a ceiling … because a phone's decoder has
+	 *      limits its screen does not declare»*, and the page measures it with
+	 *      a ladder of `VideoDecoder.isConfigSupported`.
+	 *      ⇒ ⛔ **Shrinking the window does NOT lower the cost counted here**:
+	 *        whoever did so and tried again would receive the very same no,
+	 *        and a sentence promising it would be **false**.
+	 *      ⭐ What is true instead: capacity comes back as soon as someone
+	 *        leaves, and a device that declares a smaller ceiling really costs
+	 *        less.  ⚠ That is what is promised, and only that. */
 	if (perche && perche_cap)
 		snprintf(perche, perche_cap,
-		         "questa macchina non ha piu' capacita' di composizione: le %d "
-		         "sessioni gia' aperte ne chiedono %.0f dei %.0f Mpixel/s "
-		         "dichiarati, e la tua ne chiederebbe altri %.0f (%ux%u a %.1f "
-		         "fot/s).  ⭐ Riprova fra poco: la capacita' torna appena "
-		         "qualcuno esce",
+		         "this machine has no composition capacity left: the %d "
+		         "sessions already open ask for %.0f of the %.0f Mpixel/s "
+		         "declared, and yours would ask for %.0f more (%ux%u at %.1f "
+		         "fps).  ⭐ Try again shortly: capacity comes back as soon as "
+		         "someone leaves",
 		         c->quanti, c->domanda, capacita_mpixel_s, d_nuovo, tela_l,
 		         tela_a, (double)BUDGET_RITMO_MAX_FOT_S);
 	return BUDGET_NON_REGGE;

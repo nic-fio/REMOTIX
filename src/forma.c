@@ -1,16 +1,16 @@
 /*
- * forma.c — il tema codificato e il dizionario.  Il perche' sta in `forma.h`,
- *           che si legge per primo.
+ * forma.c — the encoded theme and the dictionary.  The why is in `forma.h`,
+ *           which is read first.
  *
- * ⛔ DUE META' CHE DEVONO DIRE LA STESSA COSA: il tema lo scrive il SERVER
- *    (`sessione.c`, prima di accendere il desktop), il colore lo legge il FIGLIO
- *    (`cursore.c`, nel metadato).  ⇒ La tabella dei nomi e la formula dei
- *    colori stanno QUI e in nessun altro posto: e' lo stesso binario da tutte e
- *    due le parti, e un solo elenco non puo' divergere da se stesso.
+ * ⛔ TWO HALVES THAT MUST SAY THE SAME THING: the theme is written by the SERVER
+ *    (`sessione.c`, before starting the desktop), the colour is read by the CHILD
+ *    (`cursore.c`, in the metadata).  ⇒ The table of names and the colour
+ *    formula live HERE and nowhere else: it is the same binary on both
+ *    sides, and a single list cannot diverge from itself.
  *
- * ⭐ Il parser Xcursor e' scritto qui e non preso da `libXcursor`: quella
- *    libreria porta dietro X11 intera, e il formato sono quattro tabelle di
- *    interi little-endian (`man 3 Xcursor`, «FILE FORMAT»).
+ * ⭐ The Xcursor parser is written here and not taken from `libXcursor`: that
+ *    library drags in all of X11, and the format is four tables of
+ *    little-endian integers (`man 3 Xcursor`, "FILE FORMAT").
  */
 #include "forma.h"
 
@@ -22,36 +22,36 @@
 
 #define AREA "forma"
 
-/* I numeri del formato Xcursor 1.0. */
-#define XCUR_MAGIA     0x72756358u /* «Xcur» */
+/* The numbers of the Xcursor 1.0 format. */
+#define XCUR_MAGIA     0x72756358u /* "Xcur" */
 #define XCUR_IMMAGINE  0xfffd0002u
 #define XCUR_TESTA     16u
 #define XCUR_BLOCCO    36u
-#define XCUR_LATO_MAX  0x7fffu     /* il massimo che il formato ammette */
+#define XCUR_LATO_MAX  0x7fffu     /* the largest the format allows */
 
-/* ⚠ Un tetto sul file PRIMA di leggerlo: un cursore vero di Adwaita pesa 78 KB
- *   (tutte le misure, fino a 96).  Oltre, non e' un cursore. */
+/* ⚠ A ceiling on the file BEFORE reading it: a real Adwaita cursor weighs 78 KB
+ *   (all sizes, up to 96).  Beyond that, it is not a cursor. */
 #define FILE_MAX (8u * 1024u * 1024u)
 
 /* ------------------------------------------------------------------ *
- *  I nomi, e gli alias con cui si cercano nel tema reale
+ *  The names, and the aliases they are looked up by in the real theme
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ L'ORDINE E' IL CODICE: l'indice qui e' il colore nel tema.  Si AGGIUNGE in
- *    coda (e si alza FORMA_QUANTE), non si inserisce in mezzo — anche se
- *    server e figlio sono lo stesso binario, un banco o una copia vecchia del
- *    tema in `XDG_RUNTIME_DIR` leggerebbero colori spostati.
+ * ⛔ THE ORDER IS THE CODE: the index here is the colour in the theme.  One APPENDS
+ *    at the end (and raises FORMA_QUANTE), never inserts in the middle — even though
+ *    server and child are the same binary, a bench or an old copy of the
+ *    theme in `XDG_RUNTIME_DIR` would read shifted colours.
  *
- * I primi 68 sono i nomi che il tema invisibile aveva gia' (fase 12): quelli
- * che i programmi chiedono davvero, nomi CSS e nomi X11 insieme; gli altri
- * sono venuti dopo, in coda, ciascuno col suo perche'.
+ * The first 68 are the names the invisible theme already had (phase 12): those
+ * that programs really ask for, CSS names and X11 names together; the others
+ * came later, at the end, each with its why.
  *
- * ⭐ Gli alias: il nome che il programma chiede non e' sempre un file del tema
- *    reale (`[M]` Adwaita di Trixie ne ha 62, e mancano `ibeam`, `size_hor`,
- *    `pointing_hand`…).  Si prova il nome, poi gli alias in ordine, poi la
- *    freccia.  ⚠ `size_fdiag` e' la diagonale «\» (Qt `SizeFDiagCursor`),
- *    cioe' `nwse-resize`; `size_bdiag` la «/».
+ * ⭐ The aliases: the name a program asks for is not always a file of the real
+ *    theme (`[M]` Trixie's Adwaita has 62, and lacks `ibeam`, `size_hor`,
+ *    `pointing_hand`…).  The name is tried, then the aliases in order, then the
+ *    arrow.  ⚠ `size_fdiag` is the "\" diagonal (Qt `SizeFDiagCursor`),
+ *    that is `nwse-resize`; `size_bdiag` the "/".
  */
 typedef struct {
 	const char *nome;
@@ -128,23 +128,23 @@ static const Voce VOCI[FORMA_QUANTE] = {
 	{ "center_ptr", { "default", "left_ptr" } },
 	{ "X_cursor", { "not-allowed", "crossed_circle" } },
 	/*
-	 * ⭐ 24 set 2026, per labwc (XFCE e LXQt) — AGGIUNTE IN CODA, e il perche'.
+	 * ⭐ 24 Sep 2026, for labwc (XFCE and LXQt) — APPENDED AT THE END, and the why.
 	 *
-	 * ⛔ `[M]` labwc 0.8.3 porta nel binario DUE serie di nomi per i suoi
-	 *    bordi: quella CSS (`n-resize`, `ne-resize`… `w-resize`, piu' `grab`)
-	 *    e quella X11 (`top_side`, `top_right_corner`… `left_side`, piu'
-	 *    `grabbing`).  Sceglie la CSS se il tema ha le sue forme — e il
-	 *    nostro ha `grab` e `default`: `[M]` 24 set 2026 su rete14-lxqt, il
-	 *    bordo destro di qterminal arriva come «e-resize» (indice 68), non
-	 *    come `right_side`.  ⇒ Senza queste otto il bordo chiedeva
-	 *    un nome che il tema non aveva: nessun pixel colorato sotto il
-	 *    puntatore, e la sonda (`wlroots.c`) non poteva riconoscere niente.
-	 * ⭐ Le stesse otto sono anche i nomi che wlroots da' alle forme di
-	 *   `cursor-shape-v1` (`wlr_cursor_shape_v1_name`), cioe' quel che chiede
-	 *   ogni client che usa quel protocollo invece del suo tema.
-	 * ⚠ `dnd-ask` e `all-resize` sono le due forme della v2 di
-	 *   `cursor-shape-v1`: wlroots 0.18 non le annuncia, ma un nome in piu' nel
-	 *   tema costa 68 byte, e un nome che manca costa la forma.
+	 * ⛔ `[M]` labwc 0.8.3 carries in its binary TWO series of names for its
+	 *    borders: the CSS one (`n-resize`, `ne-resize`… `w-resize`, plus `grab`)
+	 *    and the X11 one (`top_side`, `top_right_corner`… `left_side`, plus
+	 *    `grabbing`).  It picks the CSS one if the theme has its shapes — and
+	 *    ours has `grab` and `default`: `[M]` 24 Sep 2026 on rete14-lxqt, the
+	 *    right border of qterminal arrives as "e-resize" (index 68), not
+	 *    as `right_side`.  ⇒ Without these eight the border asked for
+	 *    a name the theme did not have: no coloured pixel under the
+	 *    pointer, and the probe (`wlroots.c`) could recognise nothing.
+	 * ⭐ The same eight are also the names wlroots gives to the shapes of
+	 *   `cursor-shape-v1` (`wlr_cursor_shape_v1_name`), that is what every
+	 *   client asks for when it uses that protocol instead of its own theme.
+	 * ⚠ `dnd-ask` and `all-resize` are the two shapes of v2 of
+	 *   `cursor-shape-v1`: wlroots 0.18 does not announce them, but one more name in
+	 *   the theme costs 68 bytes, and a missing name costs the shape.
 	 */
 	{ "e-resize", { "right_side", "ew-resize", "size_hor" } },
 	{ "w-resize", { "left_side", "ew-resize", "size_hor" } },
@@ -158,27 +158,27 @@ static const Voce VOCI[FORMA_QUANTE] = {
 	{ "all-resize", { "fleur", "all-scroll", "move" } },
 };
 
-/* Se nemmeno un alias c'e': la freccia, che e' meglio di niente — il cliente
- * vedrebbe comunque una freccia, la sua. */
+/* If not even an alias is there: the arrow, which is better than nothing — the client
+ * would see an arrow anyway, its own. */
 static const char *ULTIMI[] = { "default", "left_ptr" };
 
-/* ⭐ I temi reali, in ordine.  ⚠ `[M]` 24 set 2026: Adwaita (62 cursori) c'e'
- *   in TUTTE e quattro le scatole `rete11-*`; `breeze_cursors` solo in KDE. */
+/* ⭐ The real themes, in order.  ⚠ `[M]` 24 Sep 2026: Adwaita (62 cursors) is
+ *   in ALL four `rete11-*` boxes; `breeze_cursors` only in KDE. */
 static const char *TEMI_REALI[] = { "Adwaita", "breeze_cursors" };
 
 /* ------------------------------------------------------------------ *
- *  I colori
+ *  The colours
  * ------------------------------------------------------------------ */
 
 /*
- * ⭐ Indice ⇒ colore.  ⛔ Il rosso da solo basta a distinguerli (0x40 + i e'
- *    diverso per ogni i < FORMA_QUANTE), e sta fra 0x40 e 0x8D: lontano dal nero e dal
- *    bianco, che sono i colori di cui sono fatti i cursori veri — nessun
- *    cursore vero di un solo colore puo' essere scambiato per uno dei nostri.
- *    Verde e blu sono il controllo: un pixel col rosso giusto e il resto a caso
- *    NON e' nostro.  Il banco (`banchi/14-f1-forma.sh`) li verifica tutti.
- *    ⚠ Il tetto: fino a 128 forme il rosso resta <= 0xBF, lontano dal
- *      bianco; oltre, la regola va ripensata prima di aggiungere.
+ * ⭐ Index ⇒ colour.  ⛔ Red alone is enough to tell them apart (0x40 + i is
+ *    different for every i < FORMA_QUANTE), and it lies between 0x40 and 0x8D: far from black and
+ *    white, which are the colours real cursors are made of — no
+ *    single-colour real cursor can be mistaken for one of ours.
+ *    Green and blue are the check: a pixel with the right red and the rest random
+ *    is NOT ours.  The bench (`banchi/14-f1-forma.sh`) checks them all.
+ *    ⚠ The ceiling: up to 128 shapes red stays <= 0xBF, far from
+ *      white; beyond that, the rule must be rethought before adding.
  */
 static void colore(int i, uint8_t *r, uint8_t *g, uint8_t *b)
 {
@@ -192,9 +192,9 @@ int forma_da_pixel(uint8_t b, uint8_t g, uint8_t r, uint8_t a)
 	uint8_t er, eg, eb;
 	int i;
 
-	/* ⛔ Opaco o niente: il tema e' opaco, e il metadato e' premoltiplicato —
-	 *    un'alfa minore vorrebbe dire colori gia' schiacciati, cioe' un
-	 *    indice sbagliato con l'aria di uno giusto. */
+	/* ⛔ Opaque or nothing: the theme is opaque, and the metadata is premultiplied —
+	 *    a lower alpha would mean colours already squashed, that is a
+	 *    wrong index that looks like a right one. */
 	if (a != 0xFF || r < 0x40 || r >= 0x40 + FORMA_QUANTE)
 		return -1;
 	i = r - 0x40;
@@ -208,11 +208,11 @@ const char *forma_nome(int indice)
 }
 
 /* ------------------------------------------------------------------ *
- *  Il tema codificato (lo scrive il server)
+ *  The encoded theme (written by the server)
  * ------------------------------------------------------------------ */
 
-/* Un cursore Xcursor 1.0 con UNA immagine 1x1: l'intestazione di
- * `scrivi_cursore_vuoto` della fase 12, con il pixel che ora ha un colore. */
+/* An Xcursor 1.0 cursor with ONE 1x1 image: the header of phase 12's
+ * `scrivi_cursore_vuoto`, with the pixel that now has a colour. */
 static gboolean scrivi_cursore_colorato(const char *percorso, int i)
 {
 	uint8_t r, g, b;
@@ -223,21 +223,21 @@ static gboolean scrivi_cursore_colorato(const char *percorso, int i)
 	{
 		guint32 dati[] = {
 			GUINT32_TO_LE(XCUR_MAGIA),
-			GUINT32_TO_LE(XCUR_TESTA),  /* quanto e' lunga l'intestazione */
-			GUINT32_TO_LE(0x00010000u), /* versione 1.0 */
-			GUINT32_TO_LE(1u),          /* un solo elemento nell'indice */
+			GUINT32_TO_LE(XCUR_TESTA),  /* how long the header is */
+			GUINT32_TO_LE(0x00010000u), /* version 1.0 */
+			GUINT32_TO_LE(1u),          /* a single entry in the index */
 			GUINT32_TO_LE(XCUR_IMMAGINE), GUINT32_TO_LE((guint32) FORMA_MISURA),
-			GUINT32_TO_LE(28u),         /* dove comincia il blocco */
-			GUINT32_TO_LE(XCUR_BLOCCO), /* lunghezza dell'intestazione del blocco */
+			GUINT32_TO_LE(28u),         /* where the chunk starts */
+			GUINT32_TO_LE(XCUR_BLOCCO), /* length of the chunk header */
 			GUINT32_TO_LE(XCUR_IMMAGINE),
-			GUINT32_TO_LE((guint32) FORMA_MISURA), /* misura nominale */
-			GUINT32_TO_LE(1u),          /* versione del blocco */
-			GUINT32_TO_LE(1u),          /* larghezza */
-			GUINT32_TO_LE(1u),          /* altezza */
-			GUINT32_TO_LE(0u),          /* punto caldo x */
-			GUINT32_TO_LE(0u),          /* punto caldo y */
-			GUINT32_TO_LE(0u),          /* ritardo, per le animazioni */
-			GUINT32_TO_LE(argb),        /* l'unico pixel: OPACO, e del suo colore */
+			GUINT32_TO_LE((guint32) FORMA_MISURA), /* nominal size */
+			GUINT32_TO_LE(1u),          /* chunk version */
+			GUINT32_TO_LE(1u),          /* width */
+			GUINT32_TO_LE(1u),          /* height */
+			GUINT32_TO_LE(0u),          /* hotspot x */
+			GUINT32_TO_LE(0u),          /* hotspot y */
+			GUINT32_TO_LE(0u),          /* delay, for animations */
+			GUINT32_TO_LE(argb),        /* the only pixel: OPAQUE, and of its own colour */
 		};
 
 		return g_file_set_contents(percorso, (const char *) dati, sizeof dati, NULL);
@@ -252,16 +252,16 @@ gboolean forma_tema_scrivi(const char *runtime)
 	unsigned scritte = 0;
 
 	g_mkdir_with_parents(cursori, 0700);
-	/* ⚠ Niente `Inherits=`: ereditare da un tema vero rimetterebbe nell'immagine
-	 *   il cursore VERO per ogni forma che qui non c'e' — e ⛔ quello non
-	 *   porterebbe un colore nostro, il dizionario non lo riconoscerebbe. */
+	/* ⚠ No `Inherits=`: inheriting from a real theme would put back into the image
+	 *   the REAL cursor for every shape missing here — and ⛔ that one would not
+	 *   carry a colour of ours, the dictionary would not recognise it. */
 	if (!g_file_set_contents(indice,
 	                         "[Icon Theme]\n"
-	                         "Name=REMOTIX (codificato)\n"
-	                         "Comment=Ogni forma e' un pixel opaco di un colore suo: "
-	                         "il server lo legge e manda al client la forma vera\n",
+	                         "Name=REMOTIX (encoded)\n"
+	                         "Comment=Each shape is an opaque pixel of its own colour: "
+	                         "the server reads it and sends the client the real shape\n",
 	                         -1, NULL)) {
-		registro_dice(AREA, "⚠ tema del cursore NON scritto in %s", tema);
+		registro_dice(AREA, "⚠ cursor theme NOT written in %s", tema);
 		return FALSE;
 	}
 	for (int i = 0; i < FORMA_QUANTE; i++) {
@@ -271,25 +271,25 @@ gboolean forma_tema_scrivi(const char *runtime)
 			scritte++;
 	}
 	if (scritte == 0) {
-		registro_dice(AREA, "⚠ nessuna forma del cursore scritta in %s", tema);
+		registro_dice(AREA, "⚠ no cursor shape written in %s", tema);
 		return FALSE;
 	}
-	registro_dice(AREA, "⭐ tema «%s»: %u forme su %d, ciascuna un pixel opaco di un colore "
-	              "suo, in %s",
+	registro_dice(AREA, "⭐ theme «%s»: %u shapes of %d, each an opaque pixel of its own "
+	              "colour, in %s",
 	              FORMA_TEMA, scritte, FORMA_QUANTE, tema);
 	return TRUE;
 }
 
 /* ------------------------------------------------------------------ *
- *  Il dizionario: le immagini vere, dal tema reale (le legge il figlio)
+ *  The dictionary: the real images, from the real theme (read by the child)
  * ------------------------------------------------------------------ */
 
 typedef struct {
 	gboolean pronta;
 	uint16_t larghezza, altezza;
 	int16_t attivo_x, attivo_y;
-	uint8_t *pixel; /* BGRA premoltiplicato, vive per tutto il processo */
-	const char *da; /* il nome del file da cui e' venuta (per il registro) */
+	uint8_t *pixel; /* premultiplied BGRA, lives for the whole process */
+	const char *da; /* the name of the file it came from (for the log) */
 } Immagine;
 
 static GMutex chiave;
@@ -305,11 +305,11 @@ static guint32 le32(const guint8 *p)
 }
 
 /*
- * Un file Xcursor ⇒ la prima immagine della misura nominale piu' vicina a
- * FORMA_MISURA.  ⛔ Ogni lunghezza si controlla PRIMA di usarla: il file e'
- * di un altro pacchetto, e un file troncato non deve diventare memoria letta
- * fuori dal secchio.  ⚠ Delle animazioni (`wait`, `progress`) si prende il
- * primo fotogramma: il filo porta un'immagine sola.
+ * An Xcursor file ⇒ the first image of the nominal size closest to
+ * FORMA_MISURA.  ⛔ Every length is checked BEFORE it is used: the file belongs
+ * to another package, and a truncated file must not turn into memory read
+ * outside the bucket.  ⚠ Of animations (`wait`, `progress`) the first
+ * frame is taken: the wire carries a single image.
  */
 static gboolean leggi_xcursor(const char *percorso, Immagine *out)
 {
@@ -335,7 +335,7 @@ static gboolean leggi_xcursor(const char *percorso, Immagine *out)
 
 		if (tipo != XCUR_IMMAGINE)
 			continue;
-		if (dist < scelta_dist) { /* ⚠ «<»: a pari misura vince il PRIMO fotogramma */
+		if (dist < scelta_dist) { /* ⚠ "<": at equal size the FIRST frame wins */
 			scelta_dist = dist;
 			scelta_pos = pos;
 		}
@@ -353,19 +353,19 @@ static gboolean leggi_xcursor(const char *percorso, Immagine *out)
 	    (n - scelta_pos - XCUR_BLOCCO) / 4u / l < a)
 		return FALSE;
 
-	/* ⛔ RCP §7.2: oltre 256 il ricevente chiude.  Si taglia l'angolo in alto a
-	 *    sinistra, come fa `cursore.c` — e con FORMA_MISURA 24 non scatta. */
+	/* ⛔ RCP §7.2: beyond 256 the receiver closes.  The top-left corner is
+	 *    cut out, as `cursore.c` does — and with FORMA_MISURA 24 it never triggers. */
 	lt = MIN(l, (guint32) CURSORE_MAX_LATO);
 	at = MIN(a, (guint32) CURSORE_MAX_LATO);
 	out->pixel = g_malloc((gsize) lt * at * 4u);
-	/* ⭐ I pixel Xcursor sono ARGB premoltiplicato in interi little-endian:
-	 *    in memoria sono GIA' i byte B, G, R, A che il filo vuole. */
+	/* ⭐ Xcursor pixels are premultiplied ARGB in little-endian integers:
+	 *    in memory they are ALREADY the bytes B, G, R, A the wire wants. */
 	for (guint32 y = 0; y < at; y++)
 		memcpy(out->pixel + (gsize) y * lt * 4u, d + XCUR_BLOCCO + (gsize) y * l * 4u,
 		       (gsize) lt * 4u);
 	out->larghezza = (uint16_t) lt;
 	out->altezza = (uint16_t) at;
-	/* ⛔ Il punto attivo DENTRO l'immagine (RCP §5.5), o il ricevente chiude. */
+	/* ⛔ The hotspot INSIDE the image (RCP §5.5), or the receiver closes. */
 	out->attivo_x = (int16_t) MIN(hx, lt - 1u);
 	out->attivo_y = (int16_t) MIN(hy, at - 1u);
 	out->pronta = TRUE;
@@ -373,10 +373,10 @@ static gboolean leggi_xcursor(const char *percorso, Immagine *out)
 }
 
 /*
- * Un tema reale e' buono se il suo `index.theme` e' davvero un indice di tema
- * e la cartella `cursors` c'e'.  ⛔ «Il file c'e'» non basta: un indice
- * corrotto e' un tema installato a meta', e i suoi cursori non si prendono
- * (il banco lo innesta).
+ * A real theme is good if its `index.theme` really is a theme index
+ * and the `cursors` folder is there.  ⛔ "The file is there" is not enough: a corrupt
+ * index is a half-installed theme, and its cursors are not taken
+ * (the bench injects it).
  */
 static char *tema_buono(const char *radice, const char *tema)
 {
@@ -404,12 +404,12 @@ static gboolean prova_nome(const char *cartella, const char *nome, Immagine *out
 }
 
 /*
- * ⛔ PRIMA GLI ALIAS NELLO STESSO TEMA, POI L'ALTRO TEMA.  `[M]` 24 set 2026,
- *    sulla scatola KDE: konsole chiede `size_hor`, che Adwaita non ha e
- *    `breeze_cursors` si'.  Col giro «un nome in tutti i temi, poi l'alias»
- *    arrivava la freccia di Breeze (32x32) in mezzo alle forme di Adwaita —
- *    due disegni diversi nello stesso desktop.  ⇒ Il tema e' il giro di
- *    fuori, e un tema ripiega sull'altro solo se nessun alias c'e'.
+ * ⛔ FIRST THE ALIASES IN THE SAME THEME, THEN THE OTHER THEME.  `[M]` 24 Sep 2026,
+ *    on the KDE box: konsole asks for `size_hor`, which Adwaita lacks and
+ *    `breeze_cursors` has.  With the loop "one name in every theme, then the alias"
+ *    Breeze's arrow (32x32) arrived among Adwaita's shapes —
+ *    two different drawings on the same desktop.  ⇒ The theme is the outer
+ *    loop, and one theme falls back on the other only if no alias is there.
  */
 static gboolean prova_voce(char **cartelle, const Voce *v, Immagine *out)
 {
@@ -427,7 +427,7 @@ static gboolean prova_voce(char **cartelle, const Voce *v, Immagine *out)
 	return FALSE;
 }
 
-/* Carica le FORMA_QUANTE immagini UNA volta.  Chiamata con la chiave presa. */
+/* Loads the FORMA_QUANTE images ONCE.  Called with the lock held. */
 static void carica(void)
 {
 	const char *radice = cartella_temi ? cartella_temi : "/usr/share/icons";
@@ -445,9 +445,9 @@ static void carica(void)
 		if (!detto_assente) {
 			detto_assente = TRUE;
 			registro_dice(AREA,
-			              "⛔ nessun tema reale del cursore leggibile in %s (Adwaita, "
-			              "breeze_cursors; indice assente o corrotto): le forme NON si "
-			              "mandano, e il client tiene la sua freccia",
+			              "⛔ no readable real cursor theme in %s (Adwaita, "
+			              "breeze_cursors; index missing or corrupt): shapes are NOT "
+			              "sent, and the client keeps its own arrow",
 			              radice);
 		}
 		return;
@@ -456,8 +456,8 @@ static void carica(void)
 		if (prova_voce(cartelle, &VOCI[i], &immagini[i]))
 			pronte++;
 	}
-	registro_dice(AREA, "⭐ dizionario del cursore: %d forme su %d dal tema reale in %s "
-	              "(primo: %s, misura nominale %d)",
+	registro_dice(AREA, "⭐ cursor dictionary: %d shapes of %d from the real theme in %s "
+	              "(first: %s, nominal size %d)",
 	              pronte, FORMA_QUANTE, radice, cartelle[0], FORMA_MISURA);
 	for (int t = 0; t < quanti_temi; t++)
 		g_free(cartelle[t]);

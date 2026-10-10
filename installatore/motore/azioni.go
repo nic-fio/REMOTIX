@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// Reversibilita: quanto un'azione si annulla (§6.6.4).
+// Reversibilita: how far an action can be undone (§6.6.4).
 type Reversibilita string
 
 const (
@@ -15,7 +15,7 @@ const (
 	IRREVERSIBILE  Reversibilita = "IRREVERSIBLE"
 )
 
-// Origine di una modifica: decide fin dove il ritorno indietro è autorizzato (§6.6.4).
+// Origine of a change: decides how far rolling back is authorised (§6.6.4).
 type Origine string
 
 const (
@@ -25,19 +25,19 @@ const (
 	CONCORRENTE  Origine = "CONCURRENT"
 )
 
-// Esito di «controlla»: completo, assente, a metà (§6.6.3) — e un quarto caso, che il
-// controllo deve saper riconoscere per non fare danni: l'effetto è di qualcun altro.
+// Esito of «controlla»: complete, absent, half-done (§6.6.3) — and a fourth case, which the
+// check must be able to recognise so as not to cause damage: the effect belongs to someone else.
 type Esito string
 
 const (
 	COMPLETO Esito = "COMPLETE"
 	ASSENTE  Esito = "ABSENT"
 	A_META   Esito = "HALF_DONE"
-	ESTRANEO Esito = "FOREIGN" // né il nostro effetto né lo stato di prima: modifica CONCORRENTE
+	ESTRANEO Esito = "FOREIGN" // neither our effect nor the before-state: a CONCURRENT change
 )
 
-// AzionePiano: un'azione come sta nel piano — che cosa, come si fa, come si verifica, come si
-// annulla. L'annullamento nasce col passo (§6.0 punto 3).
+// AzionePiano: an action as it stands in the plan — what, how it is done, how it is verified, how it is
+// undone. The undo is born with the step (§6.0 point 3).
 type AzionePiano struct {
 	ID             string            `json:"id"`
 	Tipo           string            `json:"type"`
@@ -47,45 +47,45 @@ type AzionePiano struct {
 	ComeSiVerifica string            `json:"how_verified"`
 	ComeSiAnnulla  string            `json:"how_rolled_back"`
 	Reversibilita  Reversibilita     `json:"reversibility"`
-	Consenso       string            `json:"consent,omitempty"` // la domanda, se l'azione ne ha una sua (D5, D6, IRREVERSIBILE)
+	Consenso       string            `json:"consent,omitempty"` // the question, if the action has one of its own (D5, D6, IRREVERSIBLE)
 }
 
-// Contesto di un'azione che gira: la macchina e la cartella dell'operazione (per i salvataggi).
+// Contesto of a running action: the machine and the operation's folder (for the backups).
 type Contesto struct {
 	Amb      *Ambiente
 	Cartella string
 	P        AzionePiano
-	// Purge: nell'annullare i pacchetti si toglie anche la configurazione. Il ritorno indietro di
-	// un'installazione fallita è sempre purge (la macchina com'era); la disinstallazione lo è solo
-	// se lo si chiede (§6.5 punto 3: remove tiene la configurazione).
+	// Purge: when undoing the packages the configuration is removed too. Rolling back
+	// a failed installation is always purge (the machine as it was); uninstalling is purge only
+	// if asked for (§6.5 point 3: remove keeps the configuration).
 	Purge bool
 }
 
-// Riparabile: un'azione che, trovata a metà, si ripara col rimedio del suo strumento invece di
-// annullare e rifare (la transazione del gestore di pacchetti, §6.6.3).
+// Riparabile: an action that, found half-done, is repaired with its tool's remedy instead of
+// undoing and redoing (the package manager's transaction, §6.6.3).
 type Riparabile interface {
 	Ripara(c *Contesto, prima json.RawMessage) error
 }
 
-// Dichiarante: un'azione che lascia modifiche INDIRETTE (§6.6.4) e le dichiara.
+// Dichiarante: an action that leaves INDIRECT changes (§6.6.4) and declares them.
 type Dichiarante interface {
 	Indirette(prima json.RawMessage) []string
 }
 
-// Azione è l'interfaccia di §6.6.3-§6.6.4. Ogni metodo è idempotente: rifarlo non raddoppia
-// l'effetto. «prima» è lo stato di prima, preso UNA volta da Fotografa e scritto nel registro
-// con l'INTENZIONE.
+// Azione is the interface of §6.6.3-§6.6.4. Every method is idempotent: redoing it does not double
+// the effect. «prima» is the before-state, taken ONCE by Fotografa and written in the log
+// with the INTENTION.
 type Azione interface {
-	// Fotografa lo stato di prima e dice l'origine (DIRETTA, o PREESISTENTE se l'effetto c'era già).
+	// Fotografa the before-state and says the origin (DIRETTA, or PREESISTENTE if the effect was already there).
 	Fotografa(c *Contesto) (prima json.RawMessage, origine Origine, err error)
 	Fai(c *Contesto, prima json.RawMessage) error
-	// Controlla non cambia niente: completo, assente, a metà, o estraneo.
+	// Controlla changes nothing: complete, absent, half-done, or foreign.
 	Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error)
-	// Annulla riporta allo stato di prima quel che è nostro, e solo quello.
+	// Annulla brings back to the before-state what is ours, and only that.
 	Annulla(c *Contesto, prima json.RawMessage) error
-	// Annullata: la macchina è tornata allo stato di prima (per quel che riguarda l'azione)?
+	// Annullata: has the machine returned to the before-state (as far as the action is concerned)?
 	Annullata(c *Contesto, prima json.RawMessage) (bool, string, error)
-	// Vincoli: gli elementi dell'impronta vincolante che l'azione tocca o da cui dipende (§6.6.5).
+	// Vincoli: the elements of the binding fingerprint that the action touches or depends on (§6.6.5).
 	Vincoli(c *Contesto) ([]string, error)
 }
 
@@ -95,7 +95,7 @@ var tipiAzione = map[string]costruttore{}
 
 func registraTipo(tipo string, c costruttore) { tipiAzione[tipo] = c }
 
-// NuovaAzione costruisce l'azione di un passo del piano.
+// NuovaAzione builds the action of a plan step.
 func NuovaAzione(p AzionePiano) (Azione, error) {
 	c, ok := tipiAzione[p.Tipo]
 	if !ok {
@@ -104,7 +104,7 @@ func NuovaAzione(p AzionePiano) (Azione, error) {
 	return c(p)
 }
 
-// TipiAzione: i tipi che questo motore conosce.
+// TipiAzione: the types this engine knows.
 func TipiAzione() []string {
 	var r []string
 	for t := range tipiAzione {
@@ -114,9 +114,9 @@ func TipiAzione() []string {
 	return r
 }
 
-// PuntoDiProva è il gancio delle prove di interruzione (R30 in piccolo): le prove ci mettono una
-// funzione che uccide il processo in un punto preciso. ⛔ Nel binario è sempre nil: non esiste
-// nessun modo di accenderlo da fuori (niente variabili d'ambiente, niente opzioni) — R13.
+// PuntoDiProva is the hook of the interruption tests (R30 in small): the tests put in a
+// function that kills the process at a precise point. ⛔ In the binary it is always nil: there is
+// no way to switch it on from outside (no environment variables, no options) — R13.
 var PuntoDiProva func(punto, azione string)
 
 func punto(p, azione string) {

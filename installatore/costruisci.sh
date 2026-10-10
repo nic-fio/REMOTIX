@@ -1,17 +1,17 @@
 #!/bin/sh
-# Costruisce remotix-install (binario statico, niente cgo) e fa girare le prove, dentro il
-# contenitore ufficiale di Go: sul portatile Go non c'è, e non serve installarlo.
+# Builds remotix-install (static binary, no cgo) and runs the tests, inside the
+# official Go container: Go is not on the laptop, and there is no need to install it.
 #
-#   ./costruisci.sh            costruisce uscita/remotix-install
-#   ./costruisci.sh prove      go vet + go test (macchina a stati, registro, ripresa: R30 in piccolo)
-#   ./costruisci.sh go ...     un comando go qualunque
+#   ./costruisci.sh            builds uscita/remotix-install
+#   ./costruisci.sh prove      go vet + go test (state machine, log, resume: R30 in small)
+#   ./costruisci.sh go ...     any go command
 #
-# La costruzione con la finestra (gui, anteprime) non c'è più: GUI tolta il 10 ott 2026 (DECISIONI §10.31).
+# The build with the window (gui, previews) is gone: GUI removed on 10 Oct 2026 (DECISIONI §10.31).
 #
-# RX_VERSIONE (dal comando di rilascio, packaging/rilascio.sh): la versione del motore, la stessa dei
-# pacchetti del rilascio (-ldflags -X motore.VersioneMotore); senza, quella scritta in formato.go.
+# RX_VERSIONE (from the release command, packaging/rilascio.sh): the engine's version, the same as the
+# release's packages (-ldflags -X motore.VersioneMotore); without it, the one written in formato.go.
 #
-# ⚠ /tmp del portatile è quasi pieno: la cache di Go sta in .cache/ qui accanto (ignorata da git).
+# ⚠ The laptop's /tmp is almost full: the Go cache lives in .cache/ next to this file (ignored by git).
 set -eu
 qui=$(cd "$(dirname "$0")" && pwd)
 immagine=docker.io/library/golang:1.25

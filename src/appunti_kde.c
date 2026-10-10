@@ -1,6 +1,6 @@
 /*
- * appunti_kde — vedi `appunti_kde.h`.  I commenti che citano `kde.md` e i file
- * di KWin rimandano allo studio di v1, oggi in `STUDI.md` §kde.
+ * appunti_kde — see `appunti_kde.h`.  The comments citing `kde.md` and KWin's
+ * files refer to v1's study, now in `STUDI.md` §kde.
  */
 #include "appunti_kde.h"
 
@@ -18,21 +18,21 @@
 #include "ext-data-control-v1-client-protocol.h"
 #include "wlr-data-control-unstable-v1-client-protocol.h"
 
-/* Quanto si aspetta chi legge o scrive gli appunti: dall'altra parte della
- * pipe c'e' un'applicazione qualunque, e puo' essersi piantata. */
+/* How long whoever reads or writes the clipboard waits: on the other side of the
+ * pipe there is any application at all, and it may have hung. */
 #define ATTESA_TRASFERIMENTO_MS 5000
 
-/* ⛔ IL PASSO MINIMO FRA DUE `set_selection`: klipper, oltre dieci cambi al
- *    secondo, considera la clipboard impazzita e smette di seguirla
- *    (`klipper/systemclipboard.cpp:50`) — senza un errore. */
+/* ⛔ THE MINIMUM STEP BETWEEN TWO `set_selection`s: klipper, beyond ten changes a
+ *    second, considers the clipboard gone mad and stops following it
+ *    (`klipper/systemclipboard.cpp:50`) — without an error. */
 #define PASSO_MINIMO_US 100000
 
-/* La stessa fila di `appunti.c`, e nello stesso ordine: il primo dichiara la
- * codifica.  ⛔ Mai `application/x-kde-onlyReplaceEmpty`: KWin annullerebbe in
- * silenzio la selezione (`seat.cpp:200-226`).
- * ⭐ FASE 13 — su labwc quel tipo non esiste affatto (`STUDI.md` §xfce §8.3):
- *    e noi non lo offriamo e non lo leggiamo mai (questa fila e' l'unica), ⇒
- *    nessun danno possibile, `[R]`. */
+/* The same row as `appunti.c`, and in the same order: the first declares the
+ * encoding.  ⛔ Never `application/x-kde-onlyReplaceEmpty`: KWin would silently
+ * cancel the selection (`seat.cpp:200-226`).
+ * ⭐ PHASE 13 — on labwc that type does not exist at all (`STUDI.md` §xfce §8.3):
+ *    and we never offer it nor read it (this row is the only one), ⇒
+ *    no possible damage, `[R]`. */
 static const char *const TIPI_TESTO[] = {
 	"text/plain;charset=utf-8",
 	"UTF8_STRING",
@@ -46,9 +46,9 @@ typedef struct {
 } Offerta;
 
 struct AppuntiKde {
-	/* ⭐ FASE 13 — chi c'e' dall'altra parte, SOLO per le righe di registro:
-	 *    «KWin» su KDE (le righe restano quelle di prima, lettera per lettera),
-	 *    «labwc» su XFCE.  ⛔ Nessun ramo del protocollo lo guarda. */
+	/* ⭐ PHASE 13 — who is on the other side, ONLY for the log lines:
+	 *    «KWin» on KDE (the lines stay those of before, letter for letter),
+	 *    «labwc» on XFCE.  ⛔ No branch of the protocol looks at it. */
 	const char *compositore;
 	struct wl_display *display;
 	char socket[64];
@@ -56,24 +56,24 @@ struct AppuntiKde {
 	struct zwlr_data_control_manager_v1 *gestore;
 	struct wl_seat *seat;
 	uint32_t versione_gestore;
-	const char *protocollo; /* il nome del gestore legato, per il registro */
-	uint32_t nome_ext, versione_ext; /* ext_data_control_manager_v1, se c'e' */
+	const char *protocollo; /* the name of the bound manager, for the log */
+	uint32_t nome_ext, versione_ext; /* ext_data_control_manager_v1, if present */
 	struct zwlr_data_control_device_v1 *dispositivo;
 
 	GThread *pompa;
 	int sveglia[2];
 
-	/* Protegge lo stato qui sotto (i proxy Wayland si sincronizzano da se',
-	 * i nostri puntatori no). */
+	/* Protects the state below (Wayland proxies synchronise themselves,
+	 * our pointers do not). */
 	GMutex stato;
-	Offerta *corrente;  /* la selezione della sessione, o NULL */
-	Offerta *in_arrivo; /* annunciata, non ancora letta */
+	Offerta *corrente;  /* the session's selection, or NULL */
+	Offerta *in_arrivo; /* announced, not yet read */
 	struct zwlr_data_control_source_v1 *nostra;
 	gint64 ultimo_set;
 	GHashTable *richieste; /* serial → fd */
 	guint32 prossimo_serial;
 
-	/* Come in `appunti.c`: il lucchetto e' preso mentre una richiamata gira. */
+	/* As in `appunti.c`: the lock is held while a callback runs. */
 	GMutex lucchetto;
 	char *ultimo;
 	size_t ultimo_byte;
@@ -83,7 +83,7 @@ struct AppuntiKde {
 };
 
 /* ------------------------------------------------------------------ *
- * Le offerte della sessione
+ * The session's offers
  * ------------------------------------------------------------------ */
 static void offerta_libera(Offerta *offerta)
 {
@@ -103,21 +103,21 @@ static bool offerta_ha(const Offerta *offerta, const char *mime)
 	return false;
 }
 
-/* L'annuncio e' il nostro?  Stessi tipi, tutti e soli.
+/* Is the announcement ours?  Same types, all and only those.
  *
- * ⭐ FASE 13 — la riserva di `STUDI.md` §xfce §8.2 («wlroots scarta i MIME
- *    duplicati e la guardia salta ⇒ ciclo») qui NON puo' scattare, `[R]`:
- *    · wlroots scarta un `offer` solo se e' `strcmp`-uguale a uno gia' dato
- *      (`wlr_data_control_v1.c:38-45`, 0.18.2), e ripete i tipi all'offerta
- *      senza filtro (`:346-351`);
- *    · i tipi che offriamo sono SEMPRE e SOLO `TIPI_TESTO`, tre stringhe
- *      diverse anche senza badare alle maiuscole: nessun duplicato da
- *      scartare ⇒ l'eco torna con tre tipi, e il conto `len == 3` regge.
- *    La riserva era di v1, che rigirava l'elenco dei tipi del CLIENT.
- *    ⚠ E anche se la guardia saltasse non ci sarebbe un ciclo: leggere la
- *      nostra sorgente dalla pompa che la serve non consegna niente (5 s di
- *      attesa, poi «non ha scritto niente»), quindi al client non risale
- *      nessun testo da ri-offrire. */
+ * ⭐ PHASE 13 — the caveat of `STUDI.md` §xfce §8.2 ("wlroots drops duplicate
+ *    MIME types and the guard fails ⇒ loop") CANNOT trigger here, `[R]`:
+ *    · wlroots drops an `offer` only if it is `strcmp`-equal to one already given
+ *      (`wlr_data_control_v1.c:38-45`, 0.18.2), and repeats the types at the offer
+ *      without filtering (`:346-351`);
+ *    · the types we offer are ALWAYS and ONLY `TIPI_TESTO`, three strings
+ *      that differ even ignoring case: no duplicate to
+ *      drop ⇒ the echo comes back with three types, and the `len == 3` count holds.
+ *    The caveat was v1's, which passed on the CLIENT's list of types.
+ *    ⚠ And even if the guard failed there would be no loop: reading
+ *      our own source from the pump that serves it delivers nothing (5 s of
+ *      waiting, then "wrote nothing"), so no text goes back up to the client
+ *      to be re-offered. */
 static bool tipi_nostri(const Offerta *offerta)
 {
 	guint quanti = 0;
@@ -146,8 +146,8 @@ static void su_offerta_nuova(void *dati, struct zwlr_data_control_device_v1 *dis
 
 	offerta->proxy = proxy;
 	offerta->mime = g_ptr_array_new_with_free_func(g_free);
-	/* L'offerta si aggancia a SE STESSA: gli `offer` arrivano prima di sapere
-	 * se e' la selezione o la primaria, che arrivano sullo stesso dispositivo. */
+	/* The offer hooks onto ITSELF: the `offer`s arrive before knowing
+	 * whether it is the selection or the primary, which arrive on the same device. */
 	zwlr_data_control_offer_v1_add_listener(proxy, &ascolto_offerta, offerta);
 }
 
@@ -164,42 +164,42 @@ static void su_selezione(void *dati, struct zwlr_data_control_device_v1 *disposi
 
 	g_mutex_lock(&appunti->stato);
 	/*
-	 * ⛔ L'ECO, che qui e' certa: `setSelection` di KWin avvisa TUTTI i data
-	 *    control device, compreso il nostro (`seat.cpp:1257-1259`).  Il criterio
-	 *    di v1 e' di STATO: finche' la sorgente e' ancora nostra (nessun
-	 *    `cancelled`), un annuncio coi nostri tipi e' il nostro.  Quando
-	 *    qualcun altro copia, il `cancelled` arriva PRIMA dell'annuncio.
-	 * ⭐ FASE 13 — su labwc (wlroots 0.18.2) lo stesso, `[R]` sul sorgente:
-	 *    ogni device e' iscritto a `seat->events.set_selection` senza filtro
-	 *    sull'originatore (`wlr_data_control_v1.c:459-468`) ⇒ l'eco e' certa;
-	 *    e `wlr_seat_set_selection` DISTRUGGE la sorgente vecchia (⇒
-	 *    `cancelled`, `wlr_data_control_v1.c:145`) prima di emettere il
-	 *    segnale, nella stessa funzione (`wlr_data_device.c`).  Le due
-	 *    notizie viaggiano sulla stessa connessione ⇒ arrivano in quell'ordine.
-	 * ⚠ Quando chi aveva copiato MUORE, arriva `selection(NULL)`: qui sotto
-	 *   `corrente` diventa NULL e `in_arrivo` resta NULL ⇒ al client non si
-	 *   manda niente, e `ultimo` resta il testo di prima (e' quello che si
-	 *   rende alla sessione se il client non ha niente).  In XFCE su Wayland
-	 *   non c'e' gestore degli appunti: la clipboard del desktop muore con
-	 *   chi ha copiato, e NON e' compito nostro tenerla viva.  La NOSTRA
-	 *   sorgente invece vive quanto il figlio.
+	 * ⛔ THE ECHO, which here is certain: KWin's `setSelection` notifies ALL data
+	 *    control devices, ours included (`seat.cpp:1257-1259`).  v1's criterion
+	 *    is one of STATE: as long as the source is still ours (no
+	 *    `cancelled`), an announcement with our types is ours.  When
+	 *    someone else copies, the `cancelled` arrives BEFORE the announcement.
+	 * ⭐ PHASE 13 — on labwc (wlroots 0.18.2) the same, `[R]` on the source:
+	 *    every device is subscribed to `seat->events.set_selection` without a filter
+	 *    on the originator (`wlr_data_control_v1.c:459-468`) ⇒ the echo is certain;
+	 *    and `wlr_seat_set_selection` DESTROYS the old source (⇒
+	 *    `cancelled`, `wlr_data_control_v1.c:145`) before emitting the
+	 *    signal, in the same function (`wlr_data_device.c`).  The two
+	 *    pieces of news travel on the same connection ⇒ they arrive in that order.
+	 * ⚠ When whoever had copied DIES, `selection(NULL)` arrives: below
+	 *   `corrente` becomes NULL and `in_arrivo` stays NULL ⇒ nothing is sent to
+	 *   the client, and `ultimo` stays the earlier text (it is what is
+	 *   given back to the session if the client has nothing).  In XFCE on Wayland
+	 *   there is no clipboard manager: the desktop clipboard dies with
+	 *   whoever copied, and it is NOT our job to keep it alive.  OUR
+	 *   source instead lives as long as the child.
 	 */
 	if (appunti->nostra && tipi_nostri(offerta)) {
 		g_mutex_unlock(&appunti->stato);
-		registro_dettaglio(REG_APPUNTI, "annuncio di ritorno dopo la nostra copia: ignorato");
+		registro_dettaglio(REG_APPUNTI, "return announcement after our own copy: ignored");
 		offerta_libera(offerta);
 		return;
 	}
 	g_clear_pointer(&appunti->corrente, offerta_libera);
 	appunti->corrente = offerta;
-	/* Non si legge da qui: un `offer(mime)` puo' arrivare DOPO `selection`
-	 * (`kde.md` §9).  Lo legge la pompa, dopo un giro completo. */
+	/* We do not read from here: an `offer(mime)` may arrive AFTER `selection`
+	 * (`kde.md` §9).  The pump reads it, after a full roundtrip. */
 	appunti->in_arrivo = offerta;
 	g_mutex_unlock(&appunti->stato);
 }
 
-/* La selezione primaria (il tasto centrale di X11) non ha un corrispondente
- * nel protocollo: si accetta e si butta. */
+/* The primary selection (X11's middle button) has no counterpart
+ * in the protocol: it is accepted and dropped. */
 static void su_selezione_primaria(void *dati, struct zwlr_data_control_device_v1 *dispositivo,
                                   struct zwlr_data_control_offer_v1 *proxy)
 {
@@ -210,8 +210,8 @@ static void su_finito(void *dati, struct zwlr_data_control_device_v1 *dispositiv
 {
 	const AppuntiKde *appunti = dati;
 
-	registro_dice(REG_APPUNTI, "⛔ %s ha chiuso il canale degli appunti: niente piu' "
-	                           "copia-incolla in questa sessione",
+	registro_dice(REG_APPUNTI, "⛔ %s closed the clipboard channel: no more "
+	                           "copy-paste in this session",
 	              appunti->compositore);
 }
 
@@ -223,7 +223,7 @@ static const struct zwlr_data_control_device_v1_listener ascolto_dispositivo = {
 };
 
 /* ------------------------------------------------------------------ *
- * La nostra sorgente: il testo del CLIENT
+ * Our source: the CLIENT's text
  * ------------------------------------------------------------------ */
 static void su_richiesta_dati(void *dati, struct zwlr_data_control_source_v1 *sorgente,
                               const char *mime, int32_t fd)
@@ -232,8 +232,8 @@ static void su_richiesta_dati(void *dati, struct zwlr_data_control_source_v1 *so
 	guint32 serial;
 	bool qualcuno;
 
-	/* ⛔ Qui non si scrive: il testo sta sul client e va chiesto.  Si mette da
-	 *    parte il descrittore e si torna subito — e' il thread degli eventi. */
+	/* ⛔ We do not write here: the text is on the client and must be asked for.  We put
+	 *    the descriptor aside and return at once — it is the event thread. */
 	g_mutex_lock(&appunti->stato);
 	serial = ++appunti->prossimo_serial;
 	g_hash_table_insert(appunti->richieste, GUINT_TO_POINTER(serial), GINT_TO_POINTER(fd));
@@ -246,7 +246,7 @@ static void su_richiesta_dati(void *dati, struct zwlr_data_control_source_v1 *so
 	g_mutex_unlock(&appunti->lucchetto);
 
 	if (!qualcuno)
-		/* Nessuno ascolta: si risponde con quel che c'e' (o si chiude). */
+		/* Nobody is listening: we answer with what there is (or close). */
 		appunti_kde_rispondi(appunti, serial, NULL, 0);
 }
 
@@ -256,7 +256,7 @@ static void su_annullata(void *dati, struct zwlr_data_control_source_v1 *sorgent
 
 	g_mutex_lock(&appunti->stato);
 	if (appunti->nostra == sorgente)
-		appunti->nostra = NULL; /* da adesso gli annunci sono veri */
+		appunti->nostra = NULL; /* from now on the announcements are real */
 	g_mutex_unlock(&appunti->stato);
 	zwlr_data_control_source_v1_destroy(sorgente);
 }
@@ -266,7 +266,7 @@ static const struct zwlr_data_control_source_v1_listener ascolto_sorgente = {
 };
 
 /* ------------------------------------------------------------------ *
- * Il registro Wayland
+ * The Wayland registry
  * ------------------------------------------------------------------ */
 static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
                        const char *interfaccia, uint32_t versione)
@@ -274,14 +274,14 @@ static void su_globale(void *dati, struct wl_registry *registro, uint32_t nome,
 	AppuntiKde *appunti = dati;
 
 	if (!g_strcmp0(interfaccia, zwlr_data_control_manager_v1_interface.name)) {
-		/* La 2 aggiunge la primaria, che non ci serve: si lega quel che c'e'. */
+		/* Version 2 adds the primary, which we do not need: we bind what there is. */
 		appunti->versione_gestore = MIN(versione, 2u);
 		appunti->protocollo = zwlr_data_control_manager_v1_interface.name;
 		appunti->gestore = wl_registry_bind(registro, nome,
 		                                    &zwlr_data_control_manager_v1_interface,
 		                                    appunti->versione_gestore);
 	} else if (!g_strcmp0(interfaccia, ext_data_control_manager_v1_interface.name)) {
-		/* Si lega DOPO il giro del registro, e solo se zwlr manca: vedi
+		/* Bound AFTER the registry roundtrip, and only if zwlr is missing: see
 		 * `lega_ext_se_serve`. */
 		appunti->nome_ext = nome;
 		appunti->versione_ext = versione;
@@ -296,18 +296,18 @@ static void su_globale_via(void *dati, struct wl_registry *registro, uint32_t no
 
 static const struct wl_registry_listener ascolto_registro = { su_globale, su_globale_via };
 
-/* ⛔ [M] 6 ott 2026, Ubuntu 26.04 / KWin 6.6.6: KWin non espone PIU'
- *    `zwlr_data_control_manager_v1`, solo lo standard `ext_data_control_manager_v1`
- *    (wayland-protocols, staging) ⇒ «gli appunti NON si aprono» e F-014/F-014C/
- *    F-015C rossi.  Su KWin 6.3 (Debian 13) c'era ancora il vecchio.
- *    ⭐ I due protocolli sono UGUALI NEL FILO: stesse richieste, stessi eventi,
- *    stessi argomenti, nello stesso ordine (ext v1 = zwlr v2, primaria compresa;
- *    confrontati gli XML in `protocolli/`).  ⇒ Si lega il gestore col SUO nome
- *    (`ext_...`, quello che il compositore controlla) e lo si guida con le
- *    funzioni zwlr: gli opcode e le firme sono gli stessi, e i figli (dispositivo,
- *    sorgente, offerta) nascono da new_id, dove il nome dell'interfaccia non
- *    viaggia.  Uno stesso codice per i due, invece di 800 righe doppie.
- *    Si preferisce zwlr quando ci sono tutti e due: e' la strada gia' provata. */
+/* ⛔ [M] 6 Oct 2026, Ubuntu 26.04 / KWin 6.6.6: KWin NO LONGER exposes
+ *    `zwlr_data_control_manager_v1`, only the standard `ext_data_control_manager_v1`
+ *    (wayland-protocols, staging) ⇒ "the clipboard does NOT open" and F-014/F-014C/
+ *    F-015C red.  On KWin 6.3 (Debian 13) the old one was still there.
+ *    ⭐ The two protocols are IDENTICAL ON THE WIRE: same requests, same events,
+ *    same arguments, in the same order (ext v1 = zwlr v2, primary included;
+ *    the XMLs in `protocolli/` compared).  ⇒ We bind the manager with ITS name
+ *    (`ext_...`, the one the compositor checks) and drive it with the
+ *    zwlr functions: the opcodes and signatures are the same, and the children (device,
+ *    source, offer) are born from new_id, where the interface name does not
+ *    travel.  One code for both, instead of 800 doubled lines.
+ *    zwlr is preferred when both are present: it is the path already tested. */
 static void lega_ext_se_serve(AppuntiKde *appunti)
 {
 	if (appunti->gestore || !appunti->nome_ext)
@@ -319,11 +319,11 @@ static void lega_ext_se_serve(AppuntiKde *appunti)
 }
 
 /* ------------------------------------------------------------------ *
- * Leggere il testo della sessione
+ * Reading the session's text
  * ------------------------------------------------------------------ */
-/* ⛔ `POLLHUP` in lettura vale come «pronto»: chi scrive e chiude (il caso
- *    normale) puo' far tornare la `poll` col solo `POLLHUP`, e i dati sono
- *    nel tubo (`[M]` v1, 8 agosto 2026). */
+/* ⛔ `POLLHUP` on read counts as "ready": whoever writes and closes (the normal
+ *    case) can make `poll` return with only `POLLHUP`, and the data is
+ *    in the pipe (`[M]` v1, 8 August 2026). */
 static bool pronto(int fd, short cosa)
 {
 	struct pollfd sonda = { .fd = fd, .events = cosa, .revents = 0 };
@@ -339,8 +339,8 @@ static bool pronto(int fd, short cosa)
 	return (cosa & POLLIN) && (sonda.revents & POLLHUP);
 }
 
-/* Un tipo, letto fino alla fine col tetto di `appunti.c` (tetto PIU' UNO: il
- * testo grande quanto il tetto e' lecito).  NULL con `perche` scritto. */
+/* One type, read to the end with the ceiling of `appunti.c` (ceiling PLUS ONE: a
+ * text as large as the ceiling is lawful).  NULL with `perche` written. */
 static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer_v1 *proxy,
                              const char *mime, const char **perche)
 {
@@ -348,13 +348,13 @@ static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer
 	GByteArray *raccolta;
 
 	if (pipe2(tubo, O_CLOEXEC) != 0) {
-		*perche = "pipe non creata";
+		*perche = "pipe not created";
 		return NULL;
 	}
 	zwlr_data_control_offer_v1_receive(proxy, mime, tubo[1]);
 	wl_display_flush(appunti->display);
-	/* ⛔ La nostra copia del lato di scrittura si chiude SUBITO, o la lettura
-	 *    non finisce mai. */
+	/* ⛔ Our copy of the write end is closed AT ONCE, or the read
+	 *    never ends. */
 	close(tubo[1]);
 
 	raccolta = g_byte_array_new();
@@ -365,7 +365,7 @@ static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer
 		if (!pronto(tubo[0], POLLIN)) {
 			close(tubo[0]);
 			g_byte_array_unref(raccolta);
-			*perche = "chi possiede gli appunti non ha scritto niente per 5 s";
+			*perche = "whoever owns the clipboard wrote nothing for 5 s";
 			return NULL;
 		}
 		quanti = read(tubo[0], pezzo, sizeof pezzo);
@@ -376,7 +376,7 @@ static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer
 		if (raccolta->len + (guint)quanti > APPUNTI_TETTO) {
 			close(tubo[0]);
 			g_byte_array_unref(raccolta);
-			*perche = "appunti oltre il tetto (§5.4): lasciati dove sono, NON troncati";
+			*perche = "clipboard over the ceiling (§5.4): left where it is, NOT truncated";
 			return NULL;
 		}
 		g_byte_array_append(raccolta, pezzo, (guint)quanti);
@@ -385,8 +385,8 @@ static GBytes *leggi_un_tipo(AppuntiKde *appunti, struct zwlr_data_control_offer
 	return g_byte_array_free_to_bytes(raccolta);
 }
 
-/* Il testo della selezione corrente, per la fila dei tipi: il primo che
- * consegna un UTF-8 valido.  NULL se non c'e' testo (e lo dice). */
+/* The text of the current selection, along the row of types: the first that
+ * delivers valid UTF-8.  NULL if there is no text (and it says so). */
 static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 {
 	struct zwlr_data_control_offer_v1 *proxy = NULL;
@@ -404,7 +404,7 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 	if (!proxy || !tipi || tipi->len == 0) {
 		if (tipi)
 			g_ptr_array_unref(tipi);
-		registro_dettaglio(REG_APPUNTI, "la sessione non ha niente negli appunti");
+		registro_dettaglio(REG_APPUNTI, "the session has nothing in the clipboard");
 		return NULL;
 	}
 
@@ -421,13 +421,13 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 			continue;
 		dati = leggi_un_tipo(appunti, proxy, TIPI_TESTO[i], &perche);
 		if (!dati) {
-			registro_dice(REG_APPUNTI, "⛔ «%s» non si legge: %s", TIPI_TESTO[i], perche);
+			registro_dice(REG_APPUNTI, "⛔ «%s» cannot be read: %s", TIPI_TESTO[i], perche);
 			continue;
 		}
 		inizio = g_bytes_get_data(dati, &quanti);
 		if (!g_utf8_validate_len(inizio, (gssize)quanti, NULL)) {
-			registro_dice(REG_APPUNTI, "⛔ «%s» non e' UTF-8 valido (%zu byte): lo "
-			                           "salto", TIPI_TESTO[i], (size_t)quanti);
+			registro_dice(REG_APPUNTI, "⛔ «%s» is not valid UTF-8 (%zu bytes): "
+			                           "skipping it", TIPI_TESTO[i], (size_t)quanti);
 			g_bytes_unref(dati);
 			continue;
 		}
@@ -437,7 +437,7 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 
 			g_bytes_unref(dati);
 			g_ptr_array_unref(tipi);
-			registro_dettaglio(REG_APPUNTI, "letti %zu byte di «%s» dalla sessione",
+			registro_dettaglio(REG_APPUNTI, "read %zu bytes of «%s» from the session",
 			                   (size_t)quanti, TIPI_TESTO[i]);
 			return testo;
 		}
@@ -450,8 +450,8 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 			g_string_append_printf(elenco, "%s%s", k ? ", " : "",
 			                       (const char *)g_ptr_array_index(tipi, k));
 		registro_dice(REG_APPUNTI,
-		              "la sessione ha copiato qualcosa che non e' testo (%s): non si "
-		              "annuncia.  ⚠ `DECISIONI.md` §5-ter.1 — solo testo",
+		              "the session copied something that is not text (%s): not "
+		              "announced.  ⚠ `DECISIONI.md` §5-ter.1 — text only",
 		              elenco->str);
 		g_string_free(elenco, TRUE);
 	}
@@ -459,7 +459,7 @@ static char *leggi_il_testo(AppuntiKde *appunti, size_t *byte)
 	return NULL;
 }
 
-/* Consegna a chi ascolta il testo dell'ultimo annuncio. */
+/* Hands the listener the text of the last announcement. */
 static void consegna_annuncio(AppuntiKde *appunti)
 {
 	char *testo;
@@ -483,12 +483,12 @@ static void consegna_annuncio(AppuntiKde *appunti)
 	if (appunti->su_testo)
 		appunti->su_testo(testo, byte, appunti->dati);
 	g_mutex_unlock(&appunti->lucchetto);
-	registro_dice(REG_APPUNTI, "⭐ la sessione ha copiato %zu byte di testo", byte);
+	registro_dice(REG_APPUNTI, "⭐ the session copied %zu bytes of text", byte);
 	g_free(testo);
 }
 
 /* ------------------------------------------------------------------ *
- * Il ciclo
+ * The loop
  * ------------------------------------------------------------------ */
 static bool gira(AppuntiKde *appunti, int attesa_ms)
 {
@@ -527,8 +527,8 @@ static bool gira(AppuntiKde *appunti, int attesa_ms)
 		return false;
 	if (wl_display_dispatch_pending(appunti->display) < 0)
 		return false;
-	/* ⛔ Il giro completo PRIMA di leggere: gli `offer(mime)` possono arrivare
-	 *    dopo il `selection` che li riguarda. */
+	/* ⛔ The full roundtrip BEFORE reading: the `offer(mime)`s may arrive
+	 *    after the `selection` they belong to. */
 	if (appunti->in_arrivo) {
 		wl_display_roundtrip(appunti->display);
 		consegna_annuncio(appunti);
@@ -542,19 +542,19 @@ static gpointer thread_pompa(gpointer dati)
 
 	while (gira(appunti, -1))
 		;
-	registro_dettaglio(REG_APPUNTI, "la connessione Wayland degli appunti si e' chiusa");
+	registro_dettaglio(REG_APPUNTI, "the clipboard's Wayland connection closed");
 	return NULL;
 }
 
 /* ------------------------------------------------------------------ *
- * La porta
+ * The door
  * ------------------------------------------------------------------ */
-/* ⭐ FASE 13 — la stessa apertura per le due famiglie: cambia solo il nome
- *    nelle righe.  ⚠ `kwin_display_apri()` resta, e su labwc va bene cosi'
- *    com'e': prende `WAYLAND_DISPLAY` o il primo `wayland-0..9` che risponde,
- *    SENZA guardare chi c'e' dietro (`kwin.c`, `[R]`).  Spostarla in un file
- *    neutro vorrebbe dire toccare `kwin.c`, che porta il video di KDE, per
- *    guadagnare solo un nome. */
+/* ⭐ PHASE 13 — the same opening for the two families: only the name in the
+ *    lines changes.  ⚠ `kwin_display_apri()` stays, and on labwc it is fine as
+ *    it is: it takes `WAYLAND_DISPLAY` or the first `wayland-0..9` that answers,
+ *    WITHOUT looking at who is behind it (`kwin.c`, `[R]`).  Moving it to a
+ *    neutral file would mean touching `kwin.c`, which carries KDE's video, to
+ *    gain only a name. */
 static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 {
 	AppuntiKde *appunti = g_new0(AppuntiKde, 1);
@@ -568,7 +568,7 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 	appunti->display = kwin_display_apri(appunti->socket, sizeof appunti->socket);
 	if (!appunti->display) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "nessun compositore Wayland raggiungibile per gli appunti");
+		            "no Wayland compositor reachable for the clipboard");
 		goto guasto;
 	}
 	appunti->registro = wl_display_get_registry(appunti->display);
@@ -578,23 +578,23 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 	lega_ext_se_serve(appunti);
 	if (!appunti->gestore) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "%s non espone ne' zwlr_data_control_manager_v1 ne' "
+		            "%s exposes neither zwlr_data_control_manager_v1 nor "
 		            "ext_data_control_manager_v1", compositore);
 		goto guasto;
 	}
 	if (!appunti->seat) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "nessun wl_seat: senza, non c'e' clipboard da chiedere");
+		            "no wl_seat: without it, there is no clipboard to ask for");
 		goto guasto;
 	}
 	appunti->dispositivo =
 	    zwlr_data_control_manager_v1_get_data_device(appunti->gestore, appunti->seat);
 	zwlr_data_control_device_v1_add_listener(appunti->dispositivo, &ascolto_dispositivo,
 	                                         appunti);
-	/* ⭐ KWin manda SUBITO la selezione corrente (`seat.cpp:228-229`), anche
-	 *    vuota: e' l'asimmetria che su Mutter va chiesta (`appunti_leggi_adesso`).
-	 *    Qui la si prende e basta: la lettura la fa `appunti_leggi_adesso`, come
-	 *    su GNOME, quando `figlio.c` e' pronto a riceverla. */
+	/* ⭐ KWin sends the current selection AT ONCE (`seat.cpp:228-229`), even
+	 *    empty: it is the asymmetry that on Mutter must be asked for (`appunti_leggi_adesso`).
+	 *    Here we just take it: the read is done by `appunti_leggi_adesso`, as
+	 *    on GNOME, when `figlio.c` is ready to receive it. */
 	wl_display_roundtrip(appunti->display);
 	wl_display_roundtrip(appunti->display);
 	g_mutex_lock(&appunti->stato);
@@ -605,7 +605,7 @@ static AppuntiKde *apri_su(const char *compositore, GError **sbaglio)
 		appunti->sveglia[0] = appunti->sveglia[1] = -1;
 	appunti->pompa = g_thread_new("remotix-appunti", thread_pompa, appunti);
 
-	registro_dice(REG_APPUNTI, "⭐ appunti agganciati a %s sul socket «%s» con "
+	registro_dice(REG_APPUNTI, "⭐ clipboard hooked to %s on socket «%s» with "
 	                           "%s v%u",
 	              compositore, appunti->socket, appunti->protocollo,
 	              appunti->versione_gestore);
@@ -643,7 +643,7 @@ void appunti_kde_chiudi(AppuntiKde *appunti)
 	if (appunti->pompa)
 		g_thread_join(appunti->pompa);
 
-	/* I trasferimenti rimasti a meta' si chiudono: chi aspetta vede una fine. */
+	/* Transfers left half way are closed: whoever waits sees an end. */
 	g_hash_table_iter_init(&giro, appunti->richieste);
 	while (g_hash_table_iter_next(&giro, &chiave, &valore))
 		close(GPOINTER_TO_INT(valore));
@@ -706,12 +706,12 @@ void appunti_kde_leggi_adesso(AppuntiKde *appunti)
 		return;
 	testo = leggi_il_testo(appunti, &byte);
 	if (!testo) {
-		registro_dettaglio(REG_APPUNTI, "la sessione non aveva appunti da darci al "
-		                                "momento dell'accensione: non e' un guasto");
+		registro_dettaglio(REG_APPUNTI, "the session had no clipboard to give us at the "
+		                                "time of switching on: it is not a fault");
 		return;
 	}
-	registro_dice(REG_APPUNTI, "⭐ la sessione aveva gia' %zu byte negli appunti: li "
-	                           "annuncio al client", byte);
+	registro_dice(REG_APPUNTI, "⭐ the session already had %zu bytes in the clipboard: "
+	                           "announcing them to the client", byte);
 	g_mutex_lock(&appunti->lucchetto);
 	g_free(appunti->ultimo);
 	appunti->ultimo = g_strdup(testo);
@@ -728,10 +728,10 @@ gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio)
 	gint64 adesso;
 
 	if (!appunti || !appunti->gestore) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "appunti non aperti");
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_INITIALIZED, "clipboard not open");
 		return FALSE;
 	}
-	/* Il passo minimo verso klipper: si aspetta, non si salta. */
+	/* The minimum step towards klipper: we wait, we do not skip. */
 	g_mutex_lock(&appunti->stato);
 	adesso = g_get_monotonic_time();
 	if (appunti->ultimo_set && adesso - appunti->ultimo_set < PASSO_MINIMO_US) {
@@ -749,15 +749,15 @@ gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio)
 	for (int i = 0; TIPI_TESTO[i]; i++)
 		zwlr_data_control_source_v1_offer(sorgente, TIPI_TESTO[i]);
 
-	/* ⚠ La sorgente vecchia NON si distrugge qui: KWin le manda `cancelled`, e
-	 *   la distrugge quella richiamata. */
+	/* ⚠ The old source is NOT destroyed here: KWin sends it `cancelled`, and
+	 *   that callback destroys it. */
 	g_mutex_lock(&appunti->stato);
 	appunti->nostra = sorgente;
 	g_mutex_unlock(&appunti->stato);
 
 	zwlr_data_control_device_v1_set_selection(appunti->dispositivo, sorgente);
 	wl_display_flush(appunti->display);
-	registro_dettaglio(REG_APPUNTI, "offerto alla sessione il testo del client (%d tipi)",
+	registro_dettaglio(REG_APPUNTI, "offered the client's text to the session (%d types)",
 	                   (int)(sizeof TIPI_TESTO / sizeof *TIPI_TESTO) - 1);
 	return TRUE;
 }
@@ -776,22 +776,22 @@ void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *test
 	if (!g_hash_table_steal_extended(appunti->richieste, GUINT_TO_POINTER(serial), NULL,
 	                                 &valore)) {
 		g_mutex_unlock(&appunti->stato);
-		registro_dice(REG_APPUNTI, "⚠ risposta a una richiesta di appunti che non esiste "
+		registro_dice(REG_APPUNTI, "⚠ answer to a clipboard request that does not exist "
 		                           "(serial %u)", serial);
 		return;
 	}
 	g_mutex_unlock(&appunti->stato);
 	fd = GPOINTER_TO_INT(valore);
 
-	/* ⭐ Come su GNOME: se il client non ha niente, si rende alla sessione il
-	 *    testo che aveva LEI — collegarsi non cancella la clipboard del desktop. */
+	/* ⭐ As on GNOME: if the client has nothing, the session gets back the
+	 *    text IT had — connecting does not erase the desktop clipboard. */
 	if (!testo || byte == 0) {
 		size_t quanti = 0;
 
 		ripiego = appunti_kde_ultimo_testo(appunti, &quanti);
 		if (ripiego && quanti > 0) {
-			registro_dice(REG_APPUNTI, "⭐ il client non ha appunti per la richiesta %u: "
-			                           "rendo alla sessione i %zu byte che aveva LEI",
+			registro_dice(REG_APPUNTI, "⭐ the client has no clipboard for request %u: "
+			                           "giving back to the session the %zu bytes IT had",
 			              serial, quanti);
 			testo = ripiego;
 			byte = quanti;
@@ -804,27 +804,27 @@ void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *test
 		g_mutex_unlock(&appunti->lucchetto);
 	}
 
-	/* ⛔ Si chiude SEMPRE, anche senza dati: la fine del flusso e' la `close`. */
+	/* ⛔ It is ALWAYS closed, even without data: the end of the stream is the `close`. */
 	while (testo && scritti < byte) {
 		ssize_t fatti;
 
 		if (!pronto(fd, POLLOUT)) {
-			registro_dice(REG_APPUNTI, "⛔ chi sta incollando non legge: %zu byte su %zu, "
-			                           "poi rinuncio", scritti, byte);
+			registro_dice(REG_APPUNTI, "⛔ whoever is pasting does not read: %zu bytes of %zu, "
+			                           "then I give up", scritti, byte);
 			break;
 		}
 		fatti = write(fd, testo + scritti, byte - scritti);
 		if (fatti < 0 && (errno == EINTR || errno == EAGAIN))
 			continue;
 		if (fatti <= 0)
-			break; /* EPIPE: chi incollava se n'e' andato */
+			break; /* EPIPE: whoever was pasting has gone */
 		scritti += (size_t)fatti;
 	}
 	close(fd);
 	if (testo)
-		registro_dettaglio(REG_APPUNTI, "consegnati %zu byte alla sessione (richiesta %u)",
+		registro_dettaglio(REG_APPUNTI, "delivered %zu bytes to the session (request %u)",
 		                   scritti, serial);
 	else
-		registro_dettaglio(REG_APPUNTI, "richiesta %u chiusa con «non ce l'ho»", serial);
+		registro_dettaglio(REG_APPUNTI, "request %u closed with «I do not have it»", serial);
 	g_free(ripiego);
 }

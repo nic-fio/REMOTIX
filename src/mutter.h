@@ -1,79 +1,79 @@
 /*
- * mutter — la sequenza obbligata che apre un monitor virtuale e il suo flusso.
+ * mutter — the mandatory sequence that opens a virtual monitor and its stream.
  *
- * ⛔ RIPORTATO DA `fondamenta/remotix-c/src/mutter.c` (353 righe), e non ricopiato:
- *    quel file portava dentro `sessione.h` e il registro di v1, e chiamava
- *    `ConnectToEIS` per l'input — che in fase 2 non esiste ancora.  Qui resta
- *    ⭐ **la sequenza D-Bus**, che e' il pezzo prezioso, e le due punizioni
- *    scritte accanto a ogni passo.
+ * ⛔ CARRIED OVER FROM `fondamenta/remotix-c/src/mutter.c` (353 lines), not copied:
+ *    that file pulled in `sessione.h` and v1's log, and called
+ *    `ConnectToEIS` for input — which does not exist yet in phase 2.  What stays here is
+ *    ⭐ **the D-Bus sequence**, which is the precious piece, and the two punishments
+ *    written next to each step.
  *
- * Si parla alle interfacce DIRETTE del compositore, non a `xdg-desktop-portal`:
- * il portale chiede il permesso a un utente seduto davanti allo schermo, e in
- * una sessione senza monitor quell'interazione non puo' avvenire (`CODER.md`
- * §4.3).  E' anche la via del riferimento (`STUDI.md` §gnome-remote-desktop §5).
+ * We talk to the compositor's DIRECT interfaces, not to `xdg-desktop-portal`:
+ * the portal asks permission from a user sitting in front of the screen, and in
+ * a session without a monitor that interaction cannot happen (`CODER.md`
+ * §4.3).  It is also the reference's way (`STUDI.md` §gnome-remote-desktop §5).
  *
  * ---------------------------------------------------------------------------
- * ⛔ L'ORDINE NON AMMETTE PERMUTE, e ogni permuta la punisce con un errore
- *    DIVERSO che non dice «hai sbagliato l'ordine» (`LEZIONI.md` §4 trappola 1;
- *    la sequenza e' stata ricopiata e riprovata sul ferro dal banco di F2.2):
+ * ⛔ THE ORDER ADMITS NO PERMUTATIONS, and each permutation is punished with a
+ *    DIFFERENT error that does not say "you got the order wrong" (`LEZIONI.md` §4 trap 1;
+ *    the sequence was copied and retried on the hardware by the F2.2 bench):
  *
- *      1. RemoteDesktop.CreateSession      → percorso, e se ne legge SessionId
- *                                            SENZA avviarla
- *      2. ScreenCast.CreateSession         dichiarando `remote-desktop-session-id`
- *      3. RemoteDesktop.Session.Start      ← ADESSO, non prima
- *      4. ScreenCast.Session.RecordVirtual → percorso del flusso
- *      5. Stream.Start                     ← il FLUSSO, non la sessione
+ *      1. RemoteDesktop.CreateSession      → path, and its SessionId is read
+ *                                            WITHOUT starting it
+ *      2. ScreenCast.CreateSession         declaring `remote-desktop-session-id`
+ *      3. RemoteDesktop.Session.Start      ← NOW, not before
+ *      4. ScreenCast.Session.RecordVirtual → path of the stream
+ *      5. Stream.Start                     ← the STREAM, not the session
  *
- *    - avviare il controllo prima del punto 2 →
+ *    - starting the control before step 2 →
  *      «Remote desktop session already started»;
- *    - avviare la cattura con `Session.Start` →
+ *    - starting the capture with `Session.Start` →
  *      «Must be started from remote desktop session».
  *
- *    E in chiusura vale all'inverso: `ScreenCast.Session.Stop` su una cattura
- *    associata risponde «Must be stopped from remote desktop session».  ⇒ Si
- *    chiude fermando il CONTROLLO, e la cattura lo segue.
+ *    And at closing it holds in reverse: `ScreenCast.Session.Stop` on an associated
+ *    capture answers «Must be stopped from remote desktop session».  ⇒ One
+ *    closes by stopping the CONTROL, and the capture follows it.
  *
- * ⛔ IL NODO PIPEWIRE ARRIVA CON UN SEGNALE EMESSO **DURANTE** `Stream.Start`:
- *    ci si iscrive PRIMA di chiamarlo, o si aspetta per sempre un annuncio gia'
- *    passato (`LEZIONI.md` §4 trappola 2).
- *
- * ---------------------------------------------------------------------------
- * ⛔ IL MONITOR VIRTUALE LO MONTA IL PROGRAMMA, ED E' L'INVARIANTE I7
- *
- * `fondamenta/remotix-c/src/sessione.c:671` e' `if (tipo == COMPOSITORE_KWIN && …)`: sul
- * ramo GNOME larghezza e altezza **entravano nella funzione e si perdevano**, e
- * il monitor virtuale finiva in una riga di `provision-server.sh` — cioe' in una
- * configurazione che si puo' perdere.  ⛔ E si e' persa: `[M]` 12 agosto 2026,
- * la sessione di NIC-OS ha girato **due giorni viva, completa e NERA**.
- *
- * ⇒ Qui `RecordVirtual` monta il monitor **dentro il programma**, a ogni
- *   apertura.  Non e' una comodita': e' la protezione di un difetto noto messa
- *   dove per toglierla bisogna volerlo.
+ * ⛔ THE PIPEWIRE NODE ARRIVES WITH A SIGNAL EMITTED **DURING** `Stream.Start`:
+ *    subscribe BEFORE calling it, or wait forever for an announcement already
+ *    gone by (`LEZIONI.md` §4 trap 2).
  *
  * ---------------------------------------------------------------------------
- * ⛔ E IL MONITOR SI SA PER NOME, MAI PER INDICE E MAI PER MISURA — forma E2
+ * ⛔ THE VIRTUAL MONITOR IS MOUNTED BY THE PROGRAM, AND THAT IS INVARIANT I7
  *
- * `[M]` 12 agosto 2026: sul server ci sono DUE monitor virtuali — `Meta-0` /
- * «MetaVirtualMonitor» (quello della sessione) e `Meta-1` / «Virtual remote
- * monitor» (quello di `RecordVirtual`, cioe' il nostro) — ed ⛔ **entrambi sono
- * 1920×1080@60**.  A distinguerli c'e' solo il nome del prodotto.
+ * `fondamenta/remotix-c/src/sessione.c:671` is `if (tipo == COMPOSITORE_KWIN && …)`: on the
+ * GNOME branch width and height **entered the function and were lost**, and
+ * the virtual monitor ended up in a line of `provision-server.sh` — that is, in a
+ * configuration that can be lost.  ⛔ And it was lost: `[M]` 12 August 2026,
+ * the NIC-OS session ran **two days alive, complete and BLACK**.
  *
- * Il banco di F2.2 ha pagato questo difetto in faccia: `mpv --fs` andava a
- * schermo intero sul PRIMO monitor, la scena era viva, e la cattura riceveva
- * **zero fotogrammi** — con il banco VERDE.  ⇒ `mutter_monitor_nostro` esiste
- * perche' chi apre una finestra su questo schermo possa dichiararlo per nome
- * (`CODER.md` §3.9: digli cosa fare, e verifica che abbia obbedito).
+ * ⇒ Here `RecordVirtual` mounts the monitor **inside the program**, at every
+ *   opening.  It is not a convenience: it is the protection against a known defect placed
+ *   where removing it takes a deliberate act.
  *
- * ⛔ E se dopo il montaggio non compare **esattamente un** monitor nuovo, non si
- *    tira a indovinare: si risponde NULL e chi ha chiamato lo dichiara.
+ * ---------------------------------------------------------------------------
+ * ⛔ AND THE MONITOR IS KNOWN BY NAME, NEVER BY INDEX AND NEVER BY SIZE — form E2
+ *
+ * `[M]` 12 August 2026: on the server there are TWO virtual monitors — `Meta-0` /
+ * «MetaVirtualMonitor» (the session's) and `Meta-1` / «Virtual remote
+ * monitor» (the one from `RecordVirtual`, that is ours) — and ⛔ **both are
+ * 1920×1080@60**.  Only the product name tells them apart.
+ *
+ * The F2.2 bench paid for this defect head-on: `mpv --fs` went
+ * full screen on the FIRST monitor, the scene was live, and the capture received
+ * **zero frames** — with the bench GREEN.  ⇒ `mutter_monitor_nostro` exists
+ * so that whoever opens a window on this screen can name it
+ * (`CODER.md` §3.9: tell it what to do, and verify that it obeyed).
+ *
+ * ⛔ And if after mounting **exactly one** new monitor does not appear, we do not
+ *    guess: we answer NULL and the caller declares it.
  */
 #ifndef REMOTIX_MUTTER_H
 #define REMOTIX_MUTTER_H
 
-/* ⚠ `gio` e non solo `glib`: dalla fase 7 questo file dichiara `mutter_bus()`,
- *   che restituisce una `GDBusConnection`.  ⛔ Senza, il tipo e' sconosciuto e
- *   il compilatore lo prende per `int *` — e l'errore compare in `mutter.c`,
- *   non qui, cioe' lontano dalla riga che l'ha prodotto. */
+/* ⚠ `gio` and not just `glib`: since phase 7 this file declares `mutter_bus()`,
+ *   which returns a `GDBusConnection`.  ⛔ Without it, the type is unknown and
+ *   the compiler takes it for `int *` — and the error shows up in `mutter.c`,
+ *   not here, that is far from the line that caused it. */
 #include <gio/gio.h>
 #include <glib.h>
 #include <stdint.h>
@@ -81,172 +81,172 @@
 typedef struct MutterSessione MutterSessione;
 
 /*
- * Esegue la sequenza per intero e restituisce la sessione pronta, con il nodo
- * PipeWire gia' annunciato.
+ * Runs the whole sequence and returns the session ready, with the PipeWire
+ * node already announced.
  *
- * ⚠ LA MISURA NON SI DICHIARA QUI: `RecordVirtual` non la prende.  Il monitor si
- *   chiede, e la risoluzione si concorda nella negoziazione PipeWire — vedi
- *   `cattura.h`.  Chi cercasse qui una larghezza sta cercando nel posto
- *   sbagliato, ed e' il motivo per cui questa riga esiste.
+ * ⚠ THE SIZE IS NOT DECLARED HERE: `RecordVirtual` does not take it.  The monitor is
+ *   requested, and the resolution is agreed in the PipeWire negotiation — see
+ *   `cattura.h`.  Whoever looks here for a width is looking in the wrong
+ *   place, and that is why this line exists.
  */
 MutterSessione *mutter_apri(GError **sbaglio);
 
-/* Il nodo PipeWire da cui leggere i fotogrammi. */
+/* The PipeWire node to read frames from. */
 uint32_t mutter_nodo(const MutterSessione *sessione);
 
-/* Il percorso D-Bus del flusso e quello del controllo: sono gli indirizzi a cui
- * la fase 4 parlera' per muovere il puntatore. */
+/* The D-Bus path of the stream and that of the control: they are the addresses
+ * phase 4 will talk to in order to move the pointer. */
 const char *mutter_percorso_flusso(const MutterSessione *sessione);
 const char *mutter_percorso_controllo(const MutterSessione *sessione);
 
 /*
- * ⭐ FASE 7 — il bus di sessione su cui questa sessione e' stata aperta.
+ * ⭐ PHASE 7 — the session bus on which this session was opened.
  *
- * ⛔ Si CHIEDE a chi ce l'ha invece di aprirne un secondo, e la ragione non e'
- *    l'economia: gli appunti vivono sulla **stessa** sessione `RemoteDesktop`
- *    del palco (`EnableClipboard` su `mutter_percorso_controllo()`), e una
- *    seconda connessione al bus vorrebbe dire un secondo nome sul bus — cioe'
- *    un mittente che Mutter non riconosce come il proprietario della sessione.
+ * ⛔ It is ASKED of whoever has it instead of opening a second one, and the reason is not
+ *    economy: the clipboard lives on the **same** `RemoteDesktop` session
+ *    as the stage (`EnableClipboard` on `mutter_percorso_controllo()`), and a
+ *    second connection to the bus would mean a second name on the bus — that is
+ *    a sender that Mutter does not recognise as the owner of the session.
  *
- * ⚠ Resta di proprieta' della `MutterSessione`, che lo chiude in
- *   `mutter_chiudi()`: chi lo usa lo usa **finche' la sessione vive**.
+ * ⚠ It stays owned by the `MutterSessione`, which closes it in
+ *   `mutter_chiudi()`: whoever uses it uses it **while the session lives**.
  */
 GDBusConnection *mutter_bus(const MutterSessione *sessione);
 
 /*
- * L'identificativo dichiarato a `RecordVirtual`.
+ * The identifier declared to `RecordVirtual`.
  *
- * ⛔⛔ E NON SERVE A NIENTE — `[M]` 14 agosto 2026, e la riga qui sotto diceva
- *      il contrario: *«e' la chiave con cui si riconosce, fra le regioni che
- *      libei annuncia, quella del nostro monitor»*.
+ * ⛔⛔ AND IT IS GOOD FOR NOTHING — `[M]` 14 August 2026, and the line below said
+ *      the opposite: *"it is the key by which, among the regions that
+ *      libei announces, our monitor's one is recognised"*.
  *
- *      `handle_record_virtual` legge **`cursor-mode` e `is-platform` e basta**:
- *      la nostra proprieta' `mapping-id` e' ignorata **in silenzio**.  La
- *      chiave vera la genera Mutter (UUID) e la pubblica nei `Parameters` del
- *      flusso: si legge con `mutter_mapping_id_pubblicato`, e il verso e'
- *      **Mutter → noi**.  (`STUDI.md` §gnome §9, `reference-gnome/rapporti/06-mutter-input.md`
+ *      `handle_record_virtual` reads **`cursor-mode` and `is-platform` and nothing else**:
+ *      our `mapping-id` property is ignored **silently**.  The
+ *      real key is generated by Mutter (UUID) and published in the stream's
+ *      `Parameters`: it is read with `mutter_mapping_id_pubblicato`, and the direction is
+ *      **Mutter → us**.  (`STUDI.md` §gnome §9, `reference-gnome/rapporti/06-mutter-input.md`
  *      §7.2.)
  *
- * ⚠ Resta esposto perche' il banco confronta i due valori: e' il modo di
- *   MOSTRARE che sono diversi, invece di scriverlo soltanto.
+ * ⚠ It stays exposed because the bench compares the two values: it is the way to
+ *   SHOW that they differ, instead of only writing it.
  */
 const char *mutter_mapping_id(const MutterSessione *sessione);
 
 /*
- * ⭐ La chiave VERA della regione del puntatore: l'UUID che Mutter genera e
- *    pubblica nei `Parameters` del flusso.
+ * ⭐ The REAL key of the pointer region: the UUID that Mutter generates and
+ *    publishes in the stream's `Parameters`.
  *
- * ⛔ NULL vuol dire «non lo so», e sono DUE casi che il registro separa: la
- *    lettura della proprieta' e' fallita, oppure i `Parameters` non portano la
- *    chiave.  Chi lo riceve riconosce la regione per geometria e lo DICHIARA.
+ * ⛔ NULL means "I don't know", and those are TWO cases the log separates: the
+ *    reading of the property failed, or the `Parameters` do not carry the
+ *    key.  Whoever receives it recognises the region by geometry and DECLARES it.
  *
- * Si puo' chiamare solo dopo `mutter_apri` (serve il percorso del flusso).
+ * It can be called only after `mutter_apri` (the stream path is needed).
  */
 const char *mutter_mapping_id_pubblicato(MutterSessione *sessione);
 
 /*
- * ⭐ Il descrittore del canale EIS, aperto da `ConnectToEIS` dentro
- *    `mutter_apri` — nel punto della sequenza che il riferimento impone.
+ * ⭐ The descriptor of the EIS channel, opened by `ConnectToEIS` inside
+ *    `mutter_apri` — at the point of the sequence the reference imposes.
  *
- * ⛔ -1 vuol dire che il canale NON si e' aperto, e il registro dice perche'.
- *    La sessione e' viva lo stesso (si guarda, non si comanda): e' la
- *    degradazione dichiarata di `CODER.md` §4.2, non un guasto.
+ * ⛔ -1 means that the channel did NOT open, and the log says why.
+ *    The session is alive anyway (one watches, one does not command): it is the
+ *    declared degradation of `CODER.md` §4.2, not a fault.
  *
- * ⚠ Il descrittore resta di questa sessione, che lo chiude in `mutter_chiudi`.
- *   Chi lo da' a `libei` — che se ne appropria — ne passa un `dup`.
+ * ⚠ The descriptor stays with this session, which closes it in `mutter_chiudi`.
+ *   Whoever gives it to `libei` — which takes ownership of it — passes a `dup`.
  */
 int mutter_eis_fd(const MutterSessione *sessione);
 
 /*
- * ⛔⛔ RIFA' IL CANALE EIS, LASCIANDO IN PIEDI LA SESSIONE — la cura «C» di
- *      `fasi/06-la-tela-e-la-vista.md` §7.1.  🔸 Derivata, 21 agosto 2026.
+ * ⛔⛔ REDOES THE EIS CHANNEL, LEAVING THE SESSION STANDING — cure "C" of
+ *      `fasi/06-la-tela-e-la-vista.md` §7.1.  🔸 Derived, 21 August 2026.
  *
- * ⭐ E' l'UNICA cosa che guarisce il *clic che muore*: quando Mutter ricrea i
- *    dispositivi assoluti mentre un pulsante e' premuto, quel pulsante resta
- *    giu' nel posto e il desktop non prende piu' un clic (`[M]` banco
- *    `06-b33-risveglio`).  `[R]` L'unico codice che lo rilascia e'
- *    `drop_device()`, e gira solo alla **caduta del canale EIS**.
+ * ⭐ It is the ONLY thing that heals the *dying click*: when Mutter recreates the
+ *    absolute devices while a button is pressed, that button stays
+ *    down in the seat and the desktop no longer takes a click (`[M]` bench
+ *    `06-b33-risveglio`).  `[R]` The only code that releases it is
+ *    `drop_device()`, and it runs only on the **fall of the EIS channel**.
  *
- * ⛔ Il distacco vero lo manda `ei_disconnect()` in `input.c`, come messaggio
- *    di protocollo — `[M]` 21 ago 2026, guasti `RG3` e `RG4`.  ⚠ **La prima
- *    versione di questo commento diceva un'altra cosa** («finche' il
- *    descrittore di `mutter.c` resta aperto Mutter non vede il distacco») ed
- *    era falsa: si e' scoperto innestando il guasto.
+ * ⛔ The real detach is sent by `ei_disconnect()` in `input.c`, as a protocol
+ *    message — `[M]` 21 Aug 2026, faults `RG3` and `RG4`.  ⚠ **The first
+ *    version of this comment said something else** ("as long as the
+ *    `mutter.c` descriptor stays open Mutter does not see the detach") and
+ *    it was false: it was discovered by injecting the fault.
  *
- * ⭐ Quel che serve DAVVERO da qui: dopo il distacco il descrittore messo da
- *   parte e' morto, e uno nuovo lo chiede solo chi ha il bus e il percorso
- *   della sessione.  ⚠ E il `close()` che c'e' dentro non e' la cura: evita di
- *   perdere un descrittore a ogni guarigione.
+ * ⭐ What is REALLY needed from here: after the detach the descriptor set
+ *   aside is dead, and only whoever has the bus and the session path can
+ *   ask for a new one.  ⚠ And the `close()` inside is not the cure: it avoids
+ *   leaking a descriptor at every healing.
  *
- * ⇒ Se la seconda `ConnectToEIS` fallisce, il canale non c'e' piu' e si ritorna
- *   -1 dicendolo — `CODER.md` §4.2: si degrada dichiarando, non in silenzio.
+ * ⇒ If the second `ConnectToEIS` fails, the channel is gone and we return
+ *   -1 saying so — `CODER.md` §4.2: degrade by declaring, not silently.
  *
- * Ritorna il descrittore nuovo (che resta di questa sessione, come l'altro), o
- * -1 con `sbaglio` riempito.
+ * Returns the new descriptor (which stays with this session, like the other), or
+ * -1 with `sbaglio` filled in.
  */
 int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio);
 
 /*
- * ⭐ Cerca il monitor che abbiamo montato noi, e dice se l'ha trovato.
+ * ⭐ Looks for the monitor we mounted ourselves, and says whether it found it.
  *
- * ⛔ VA CHIAMATA QUANDO LA CATTURA E' GIA' ATTIVA, e la ragione e' misurata —
- *    `[M]` 12 agosto 2026, e me l'ha trovata il banco al primo giro contro
- *    questo codice, non una rilettura:
+ * ⛔ IT MUST BE CALLED WHEN THE CAPTURE IS ALREADY ACTIVE, and the reason is measured —
+ *    `[M]` 12 August 2026, and the bench found it for me on its first run against
+ *    this code, not a rereading:
  *
- *      dopo `RecordVirtual`     ⛔ il monitor NON c'e' ancora
- *      dopo `Stream.Start`      ⛔ non c'e' NEMMENO ADESSO, nemmeno aspettando
- *                                  tre secondi
- *      quando il CONSUMATORE si e' agganciato e il flusso e' attivo  ⭐ c'e'
+ *      after `RecordVirtual`     ⛔ the monitor is NOT there yet
+ *      after `Stream.Start`      ⛔ it is NOT there EVEN NOW, not even waiting
+ *                                  three seconds
+ *      when the CONSUMER has hooked on and the stream is active  ⭐ it is there
  *
- *    ⇒ Mutter crea il monitor virtuale quando qualcuno comincia davvero a
- *      leggere, non quando glielo si chiede.  Chi cercasse il nome subito dopo
- *      la sequenza D-Bus leggerebbe «non e' comparso nessun monitor» su una
- *      sessione perfettamente sana — che e' un rosso su un banco sano.
+ *    ⇒ Mutter creates the virtual monitor when someone really starts
+ *      reading, not when it is asked.  Whoever looked for the name right after
+ *      the D-Bus sequence would read "no monitor appeared" on a
+ *      perfectly healthy session — which is a red on a healthy bench.
  *
- * ⚠ E il momento in cui il nome SERVE e' esattamente questo: la scena (o
- *   l'applicazione dell'utente) si apre dopo che la cattura e' viva, e va
- *   mandata su QUESTO schermo per nome.
+ * ⚠ And the moment the name IS NEEDED is exactly this one: the scene (or
+ *   the user's application) opens after the capture is live, and must be
+ *   sent to THIS screen by name.
  *
- * Ritorna TRUE se il nome e' noto (anche se lo era gia'), FALSE se non lo sa.
+ * Returns TRUE if the name is known (even if it already was), FALSE if it does not know it.
  */
 gboolean mutter_monitor_cerca(MutterSessione *sessione);
 
 /*
- * Il connettore del monitor che ABBIAMO montato noi (`Meta-1`, …) e il nome del
- * prodotto che Mutter gli da' («Virtual remote monitor»).
+ * The connector of the monitor WE mounted (`Meta-1`, …) and the product
+ * name Mutter gives it («Virtual remote monitor»).
  *
- * Vale NULL se le due strade non concordano — il diff prima/dopo e il nome del
- * prodotto — o se i monitor nuovi non sono esattamente uno.  ⛔ NULL vuol dire
- * «non lo so», e non «non c'e'»: chi lo riceve lo dichiara invece di scegliere
- * il piu' comodo.
+ * It is NULL if the two roads do not agree — the before/after diff and the product
+ * name — or if the new monitors are not exactly one.  ⛔ NULL means
+ * "I don't know", not "it is not there": whoever receives it declares it instead of picking
+ * the most convenient one.
  */
 const char *mutter_monitor_nostro(const MutterSessione *sessione);
 const char *mutter_monitor_prodotto(const MutterSessione *sessione);
 
 /*
- * Quanti monitor c'erano PRIMA del montaggio e quanti DOPO.  Sono due numeri e
- * non uno: `dopo - prima != 1` e' precisamente il caso in cui il nome del nostro
- * schermo non si puo' sapere, e va scritto invece che dedotto.
+ * How many monitors there were BEFORE mounting and how many AFTER.  They are two numbers and
+ * not one: `dopo - prima != 1` is precisely the case in which the name of our
+ * screen cannot be known, and must be written instead of deduced.
  */
 void mutter_monitor_conteggi(const MutterSessione *sessione, guint *prima, guint *dopo);
 
-/* ⛔⭐⭐ LA SCALA DEL NOSTRO MONITOR LOGICO — guardia 2 di `DECISIONI.md`
- *     §5.0-sexies, e non e' un dato di diagnosi: e' una condizione di servizio.
+/* ⛔⭐⭐ THE SCALE OF OUR LOGICAL MONITOR — guard 2 of `DECISIONI.md`
+ *     §5.0-sexies, and it is not a diagnostic datum: it is a condition of service.
  *
- * `[M]` 14 agosto 2026: con `org.gnome.desktop.interface scaling-factor = 2` i
- * pixel del flusso restano quelli chiesti ma il monitor LOGICO prende scala 2,0,
- * e il layout diventa `roundf(2133/2) x 2 = 2134 != 2133`.  ⛔ Quel layout **e'
- * lo spazio delle coordinate dell'input**: il puntatore finisce altrove, e
- * nessuna riga lo dice.  E' il sintomo che l'utente ha descritto per due giorni.
+ * `[M]` 14 August 2026: with `org.gnome.desktop.interface scaling-factor = 2` the
+ * stream's pixels stay those requested but the LOGICAL monitor takes scale 2.0,
+ * and the layout becomes `roundf(2133/2) x 2 = 2134 != 2133`.  ⛔ That layout **is
+ * the coordinate space of input**: the pointer ends up elsewhere, and
+ * no line says so.  It is the symptom the user described for two days.
  *
- * ⚠ Si guarda il NOSTRO monitor e non il peggiore della macchina: un portatile
- *   con lo schermo interno hi-dpi non ha nessun difetto, e la peggiore direbbe
- *   2,0.
- * ⛔ `-1` = non si e' potuta leggere, e NON vuol dire 1,0. */
+ * ⚠ We look at OUR monitor and not at the machine's worst: a laptop
+ *   with a hi-dpi internal screen has no defect, and the worst would say
+ *   2.0.
+ * ⛔ `-1` = it could not be read, and it does NOT mean 1.0. */
 double mutter_scala_nostra(const MutterSessione *sessione);
 
-/* Ferma il CONTROLLO — e con lui la cattura — e libera tutto.  ⛔ Ogni monitor
- * virtuale non smontato resta attaccato a Mutter. */
+/* Stops the CONTROL — and with it the capture — and frees everything.  ⛔ Every virtual
+ * monitor not unmounted stays attached to Mutter. */
 void mutter_chiudi(MutterSessione *sessione);
 
 #endif

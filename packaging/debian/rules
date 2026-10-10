@@ -1,28 +1,28 @@
 #!/usr/bin/make -f
-# debian/rules — il pacchetto .deb di REMOTIX (fasi/17-l-installatore.md §6.1-§6.4).
+# debian/rules — the REMOTIX .deb package (fasi/17-l-installatore.md §6.1-§6.4).
 #
-# ⚠ Si costruisce DENTRO il contenitore del bersaglio (src/costruzione/
-#   Contenitore.debian13 / .ubuntu2604) con `src/costruzione/costruisci-deb.sh`:
-#   ngtcp2 1.25.0 e nghttp3 1.18.0 statiche stanno li' (LIBRARY_PATH,
-#   PKG_CONFIG_PATH), non nelle Build-Depends (D2 chiusa: DECISIONI §10.6).
-# ⚠ packaging/debian/ diventa debian/ nella copia dell'albero: nel deposito
-#   la cartella e' packaging/debian perche' accanto verranno rpm/ e arch/.
+# ⚠ It is built INSIDE the target's container (src/costruzione/
+#   Contenitore.debian13 / .ubuntu2604) with `src/costruzione/costruisci-deb.sh`:
+#   static ngtcp2 1.25.0 and nghttp3 1.18.0 live there (LIBRARY_PATH,
+#   PKG_CONFIG_PATH), not in the Build-Depends (D2 closed: DECISIONI §10.6).
+# ⚠ packaging/debian/ becomes debian/ in the copy of the tree: in the repository
+#   the directory is packaging/debian because rpm/ and arch/ will sit next to it.
 
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/buildflags.mk
 
-# ⛔ Il Makefile ha `CFLAGS ?= -O2 -g -std=gnu11 <avvertimenti>`: con i CFLAGS di
-#    dpkg-buildflags nell'ambiente quella riga non vale piu' e si perderebbe
-#    -std=gnu11 (gcc 15 va a gnu23).  ⇒ Si passano qui, INSIEME a quelli di
-#    dpkg (tempra, -ffile-prefix-map per la costruzione riproducibile, R23).
-#    CPPFLAGS (-D_FORTIFY_SOURCE) in coda: la regola %.o del Makefile non li usa.
+# ⛔ The Makefile has `CFLAGS ?= -O2 -g -std=gnu11 <warnings>`: with dpkg-buildflags'
+#    CFLAGS in the environment that line no longer applies and
+#    -std=gnu11 would be lost (gcc 15 defaults to gnu23).  ⇒ They are passed here, TOGETHER with
+#    dpkg's (hardening, -ffile-prefix-map for the reproducible build, R23).
+#    CPPFLAGS (-D_FORTIFY_SOURCE) at the end: the Makefile's %.o rule does not use them.
 R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 
-# ⭐ D8 (DECISIONI §10.20): su Ubuntu REMOTIX avvia la sessione di serie
-#    (`ubuntu`), non la `gnome` di universe ⇒ la raccomandazione solo-Ubuntu di
-#    gnome-session (${remotix:Recommends}) e' TOLTA: il pacchetto e' lo stesso
-#    per le due distribuzioni.
+# ⭐ D8 (DECISIONI §10.20): on Ubuntu REMOTIX starts the stock session
+#    (`ubuntu`), not universe's `gnome` ⇒ the Ubuntu-only recommendation of
+#    gnome-session (${remotix:Recommends}) is REMOVED: the package is the same
+#    for both distributions.
 
 B := debian/remotix
 
@@ -33,18 +33,18 @@ override_dh_auto_clean:
 	$(MAKE) -C src pulisci
 
 override_dh_auto_configure:
-	# niente da configurare: `make dipendenze` controlla le versioni minime
+	# nothing to configure: `make dipendenze` checks the minimum versions
 	$(MAKE) -C src dipendenze
 
 override_dh_auto_build:
-	# ⛔ R24: le statiche collegate sono della versione dichiarata in
-	#    Static-Built-Using (control), come fa lo spec rpm: uno SBOM che nomina
-	#    una versione diversa da quella nel binario mentirebbe.
+	# ⛔ R24: the linked static libraries are the version declared in
+	#    Static-Built-Using (control), as the rpm spec does: an SBOM naming
+	#    a version other than the one in the binary would lie.
 	test "$$(pkg-config --modversion libngtcp2)" = 1.25.0
 	test "$$(pkg-config --modversion libnghttp3)" = 1.18.0
-	# ⛔ R13: il binario del pacchetto NON ha la funzione di banco accesa.
+	# ⛔ R13: the package's binary does NOT have the bench feature switched on.
 	grep -qx '#define BANCO_ACCESO 0' src/rcp.c || \
-	  { echo "⛔ src/rcp.c: BANCO_ACCESO non e' 0 — non si impacchetta (R13)"; exit 1; }
+	  { echo "⛔ src/rcp.c: BANCO_ACCESO is not 0 — not packaging (R13)"; exit 1; }
 	$(MAKE) -C src tutto CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 override_dh_auto_test:
@@ -53,30 +53,30 @@ override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
 	install -D -m 0644 src/pagina.html         $(B)/usr/share/remotix/pagina.html
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
-	# R24 (T8): le versioni delle statiche COLLEGATE, lette da pkg-config nel
-	#    contenitore che ha costruito il binario: le legge lo SBOM dell'archivio.
-	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+	# R24 (T8): the versions of the LINKED static libraries, read by pkg-config in the
+	#    container that built the binary: the archive's SBOM reads them.
+	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
 	  "$$(pkg-config --modversion libngtcp2)" "$$(pkg-config --modversion libnghttp3)" \
 	  >$(B)/usr/share/remotix/incorporate.json
 	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
-	# PAM di Debian/Ubuntu (common-*; fasi/17 §4.3) e chi non entra (root).
-	# Tutti e due conffile: dpkg li tiene al remove e li toglie al purge.
+	# Debian/Ubuntu PAM (common-*; fasi/17 §4.3) and who may not log in (root).
+	# Both are conffiles: dpkg keeps them on remove and deletes them on purge.
 	install -D -m 0644 src/remotix.pam         $(B)/etc/pam.d/remotix
 	install -D -m 0644 debian/utenti-negati    $(B)/etc/remotix/utenti-negati
-	# ufw: il profilo dell'applicazione «REMOTIX» (7447 TCP e UDP), DEFINITO e non
-	#    aperto (§10.12, come il servizio di firewalld nel .rpm): `ufw allow REMOTIX`
-	#    lo fa il motore, col consenso (D6), se ufw e' acceso (fasi/17 T6).
+	# ufw: the «REMOTIX» application profile (7447 TCP and UDP), DEFINED and not
+	#    opened (§10.12, like the firewalld service in the .rpm): `ufw allow REMOTIX`
+	#    is done by the engine, with consent (D6), if ufw is on (fasi/17 T6).
 	install -D -m 0644 debian/remotix.ufw      $(B)/etc/ufw/applications.d/remotix
-	# Il permesso di cattura di KWin.  ⛔ BYTE PER BYTE come lo scrive
-	# kwin_scrivi_permesso() (kwin.c:606) col binario in /usr/libexec/remotix:
-	# cosi' il programma lo trova uguale e non lo riscrive.  Il codice va
-	# cambiato per non scriverlo piu' (solo verificarlo): annotato, fasi/17 §13.1.
+	# KWin's capture permission.  ⛔ BYTE FOR BYTE as
+	# kwin_scrivi_permesso() (kwin.c:606) writes it with the binary in /usr/libexec/remotix:
+	# so the program finds it identical and does not rewrite it.  The code must be
+	# changed to stop writing it (only check it): noted, fasi/17 §13.1.
 	install -D -m 0644 debian/org.kde.remotix.desktop \
 	  $(B)/usr/share/applications/org.kde.remotix.desktop
-	# ⛔ DECISIONI §10.12 — il pacchetto porta solo PEZZI INERTI: le tre cinture
-	#    di §4.7 stanno SPENTE in /usr/share/remotix/cinture/ (nessuno le legge
-	#    li'); le mette in vigore il MOTORE, col consenso (D4), e le annota nel
-	#    suo registro.
+	# ⛔ DECISIONI §10.12 — the package carries only INERT PIECES: the three belts
+	#    of §4.7 sit SWITCHED OFF in /usr/share/remotix/cinture/ (nobody reads them
+	#    there); the ENGINE puts them into force, with consent (D4), and records them in
+	#    its log.
 	install -D -m 0644 src/remotix-niente-spegnimento.rules \
 	  $(B)/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules
 	install -D -m 0644 src/remotix-tasti.conf \
@@ -85,8 +85,8 @@ override_dh_auto_install:
 	  $(B)/usr/share/remotix/cinture/remotix-niente-sospensione.conf
 
 override_dh_installsystemd:
-	# ⛔ DECISIONI §10.12: il pacchetto NON abilita e NON avvia il servizio: lo
-	#    accende il motore a installazione confermata.  In aggiornamento lo
-	#    riavvia (deb-systemd-invoke restart) SOLO se era gia' attivo o abilitato;
-	#    non lo ferma prima: i desktop sopravvivono all'arresto (§5.2).
+	# ⛔ DECISIONI §10.12: the package does NOT enable and does NOT start the service: the
+	#    engine switches it on once the installation is confirmed.  On upgrade it
+	#    restarts it (deb-systemd-invoke restart) ONLY if it was already active or enabled;
+	#    it does not stop it first: the desktops survive the stop (§5.2).
 	dh_installsystemd --no-enable --no-start --restart-after-upgrade

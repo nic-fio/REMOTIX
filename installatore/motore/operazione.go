@@ -13,24 +13,24 @@ import (
 	"time"
 )
 
-// Motore: un'istanza del motore sulla macchina (o su una macchina finta, nelle prove).
+// Motore: an instance of the engine on the machine (or on a fake machine, in the tests).
 type Motore struct {
 	Amb      *Ambiente
-	Cartella string        // /var/lib/remotix/operazioni (in prova, una radice qualunque)
-	Catalogo *Catalogo     // quello scelto e verificato dalla fase 0 TRUST (Fonti)
-	Fonti    *FontiFiducia // da dove viene il catalogo, e con che cosa si verifica (fiducia.go)
+	Cartella string        // /var/lib/remotix/operazioni (in tests, any root)
+	Catalogo *Catalogo     // the one chosen and verified by phase 0 TRUST (Fonti)
+	Fonti    *FontiFiducia // where the catalogue comes from, and what it is verified with (fiducia.go)
 	Porta    int
 	Esamina  func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
 	Ev       *Eventi
 	Adesso   func() time.Time
-	// Fermata: chi installa ha chiesto di fermarsi (il pulsante «Annulla e rimetti com'era» di TUI e
-	// GUI). Si guarda fra un passo e l'altro, mai in mezzo a un passo: il passo cominciato finisce,
-	// poi l'operazione va a IN_ANNULLAMENTO (RX-AZIONE-006) e si annulla tutto dal registro.
+	// Fermata: whoever installs has asked to stop (the «Cancel and put back as it was» button of TUI and
+	// GUI). It is checked between one step and the next, never in the middle of a step: the step begun finishes,
+	// then the operation goes to IN_ANNULLAMENTO (RX-AZIONE-006) and everything is undone from the log.
 	Fermata   func() bool
 	serratura *os.File
 }
 
-// Operazione: una cartella in Cartella/<id>/ con lo stato, il registro e gli oggetti.
+// Operazione: a folder in Cartella/<id>/ with the state, the log and the objects.
 type Operazione struct {
 	ID       string
 	Cartella string
@@ -40,7 +40,7 @@ type Operazione struct {
 	m        *Motore
 }
 
-// errori interni del giro delle azioni
+// internal errors of the actions' loop
 var (
 	errFallita     = errors.New("an action failed")
 	errConcorrente = errors.New("the machine changed during the operation")
@@ -54,7 +54,7 @@ func (m *Motore) adesso() time.Time {
 	return time.Now()
 }
 
-// Profilo esamina la macchina (fase 1).
+// Profilo examines the machine (phase 1).
 func (m *Motore) Profilo() *Profilo {
 	if m.Esamina != nil {
 		return m.Esamina()
@@ -62,7 +62,7 @@ func (m *Motore) Profilo() *Profilo {
 	return Preflight(m.Amb, OpzioniPreflight{Porta: m.Porta, Pacchetti: m.Catalogo.Componenti()})
 }
 
-// Componenti: i pacchetti in più di cui il catalogo vuole sapere se ci sono.
+// Componenti: the extra packages the catalogue wants to know whether they are there.
 func (c *Catalogo) Componenti() []string {
 	visti := map[string]bool{}
 	var r []string
@@ -80,8 +80,8 @@ func (c *Catalogo) Componenti() []string {
 	return r
 }
 
-// Blocca prende la serratura del motore: uno solo alla volta. Il nucleo la rilascia da solo se il
-// processo muore (flock), così la ripresa non trova mai una serratura orfana.
+// Blocca takes the engine's lock: only one at a time. The kernel releases it by itself if the
+// process dies (flock), so resume never finds an orphan lock.
 func (m *Motore) Blocca() error {
 	if err := os.MkdirAll(m.Cartella, 0o700); err != nil {
 		return err
@@ -98,7 +98,7 @@ func (m *Motore) Blocca() error {
 	return nil
 }
 
-// Sblocca rilascia la serratura.
+// Sblocca releases the lock.
 func (m *Motore) Sblocca() {
 	if m.serratura != nil {
 		m.serratura.Close()
@@ -106,7 +106,7 @@ func (m *Motore) Sblocca() {
 	}
 }
 
-// Elenco: le operazioni che ci sono, dalla più vecchia.
+// Elenco: the operations that exist, from the oldest.
 func (m *Motore) Elenco() ([]*Operazione, error) {
 	voci, err := os.ReadDir(m.Cartella)
 	if os.IsNotExist(err) {
@@ -143,7 +143,7 @@ func (m *Motore) apri(id string) (*Operazione, error) {
 	return op, nil
 }
 
-// Finita: in uno stato da cui non si esce.
+// Finita: in a state one never leaves.
 func (op *Operazione) Finita() (bool, error) { return Finale(op.Stato), nil }
 
 func (op *Operazione) apriRegistro() error {
@@ -155,7 +155,7 @@ func (op *Operazione) apriRegistro() error {
 		return err
 	}
 	op.Reg = r
-	// ogni programma lanciato dal motore mentre l'operazione è aperta va nel registro (R41)
+	// every program launched by the engine while the operation is open goes into the log (R41)
 	if op.m.Amb != nil {
 		op.m.Amb.Annota = func(riga string) { r.Scrivi(Evento{Tipo: EvComando, Dettaglio: riga}) }
 	}
@@ -168,7 +168,7 @@ func (op *Operazione) apriRegistro() error {
 	return nil
 }
 
-// Aperta: l'operazione non finita (al più una, per la regola di §6.6.2).
+// Aperta: the unfinished operation (at most one, by the rule of §6.6.2).
 func (m *Motore) Aperta() (*Operazione, error) {
 	ops, err := m.Elenco()
 	if err != nil {
@@ -187,8 +187,8 @@ func (m *Motore) Aperta() (*Operazione, error) {
 	return aperta, nil
 }
 
-// vai: una transizione, solo se è nel disegno. Prima il file dello stato (atomico), poi la riga
-// del registro, poi l'evento.
+// vai: a transition, only if it is in the design. First the state file (atomic), then the log
+// line, then the event.
 func (op *Operazione) vai(a Stato, codice, dettaglio string) error {
 	da := op.Stato
 	if !Valida(da, a) {
@@ -210,7 +210,7 @@ func (op *Operazione) vai(a Stato, codice, dettaglio string) error {
 	return nil
 }
 
-// blocca porta l'operazione a BLOCCATA col codice dell'errore.
+// blocca brings the operation to BLOCCATA with the error's code.
 func (op *Operazione) blocca(err error) error {
 	codice := CodiceDi(err)
 	det := err.Error()
@@ -234,8 +234,8 @@ func (op *Operazione) scriviOggetto(nome string, v any) error {
 	return nil
 }
 
-// Applica: fasi 0-8 del piano (§6.0), sulle sole azioni del piano. approvaAMano = il consenso
-// dato adesso da chi lancia il comando (--approva), che si registra come tale.
+// Applica: phases 0-8 of the plan (§6.0), on the plan's actions only. approvaAMano = the consent
+// given now by whoever launches the command (--approva), which is recorded as such.
 func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*Operazione, error) {
 	if err := m.Blocca(); err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return nil, Errore("RX-PIANO-002", err.Error())
 	}
 
-	// NUOVA
+	// NEW
 	op := &Operazione{ID: nuovoID(), m: m, Piano: &piano}
 	op.Cartella = filepath.Join(m.Cartella, op.ID)
 	if err := os.Mkdir(op.Cartella, 0o700); err != nil {
@@ -315,7 +315,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return op, err
 	}
 
-	// 3 PLANNING: il piano vale su questa macchina? (impronta, R31)
+	// 3 PLANNING: does the plan hold on this machine? (fingerprint, R31)
 	for _, ap := range piano.Azioni {
 		if _, err := NuovaAzione(ap); err != nil {
 			return op, op.blocca(err)
@@ -338,7 +338,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	}
 
 	// 4 CONSENT & SAFETY
-	// quel che manca (DECISIONI §10.36): il piano lo dice BLOCCANTE, e ci si ferma prima di toccare
+	// what is missing (DECISIONI §10.36): the plan says it BLOCKING, and we stop before touching
 	for _, x := range piano.NonFatto {
 		if x.Gravita == BLOCCANTE {
 			m.Ev.Messaggio(op.ID, x)
@@ -363,12 +363,12 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return op, err
 	}
 
-	// i passi che il motore conosce ma non sa ancora eseguire: ci si ferma PRIMA di toccare
+	// the steps the engine knows but cannot execute yet: we stop BEFORE touching
 	if nf := PassiNonFatti(&piano); len(nf) > 0 {
 		return op, op.blocca(Errore("RX-AZIONE-004", strings.Join(nf, "; ")))
 	}
 
-	// 5 ACQUISITION: le azioni di prova non chiedono pacchetti; l'insieme risolto è vuoto ma c'è.
+	// 5 ACQUISITION: the trial actions ask for no packages; the resolved set is empty but there.
 	if err := op.scriviOggetto("resolved-set.json", map[string]any{"format": Formato, "object": "resolved-set", "artifacts": []any{}}); err != nil {
 		return op, err
 	}
@@ -383,7 +383,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	return op, op.continua()
 }
 
-// Riprendi: un'operazione interrotta si completa (§6.0 punto 6, tabella di §6.6.3).
+// Riprendi: an interrupted operation is completed (§6.0 point 6, table of §6.6.3).
 func (m *Motore) Riprendi() (*Operazione, error) {
 	if err := m.Blocca(); err != nil {
 		return nil, err
@@ -403,7 +403,7 @@ func (m *Motore) Riprendi() (*Operazione, error) {
 	switch op.Stato {
 	case NUOVA, FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA:
 		m.Ev.Messaggio(op.ID, Msg("RX-RIPRESA-002", string(op.Stato)))
-		return op, op.vai(BLOCCATA, "RX-RIPRESA-002", "era "+string(op.Stato))
+		return op, op.vai(BLOCCATA, "RX-RIPRESA-002", "was "+string(op.Stato))
 	case IN_ESECUZIONE:
 		if err := op.vai(INTERROTTA, "", ""); err != nil {
 			return op, err
@@ -417,7 +417,7 @@ func (m *Motore) Riprendi() (*Operazione, error) {
 	return op, op.continua()
 }
 
-// Annulla: l'operazione aperta si annulla ripercorrendo il registro all'indietro.
+// Annulla: the open operation is undone by walking the log backwards.
 func (m *Motore) Annulla() (*Operazione, error) {
 	if err := m.Blocca(); err != nil {
 		return nil, err
@@ -450,7 +450,7 @@ func (m *Motore) Annulla() (*Operazione, error) {
 	return op, op.continua()
 }
 
-// continua porta l'operazione dallo stato in cui è fino a uno stato finale (o INTERROTTA).
+// continua brings the operation from its current state to a final state (or INTERROTTA).
 func (op *Operazione) continua() error {
 	for {
 		switch op.Stato {
@@ -501,8 +501,8 @@ func (op *Operazione) continua() error {
 			if len(cond) > 0 {
 				fin = CONFERMATA_A_CONDIZIONI
 			}
-			// il certificato PRIMA dello stato finale: se il processo muore in mezzo, la ripresa
-			// trova VERIFICATA e lo riscrive; al contrario resterebbe uno stato finale senza certificato
+			// the certificate BEFORE the final state: if the process dies in between, resume
+			// finds VERIFICATA and rewrites it; the other way round there would be a final state without a certificate
 			if err := op.certificato(fin, nil); err != nil {
 				return err
 			}
@@ -551,8 +551,8 @@ func (op *Operazione) ultimoDettaglio() string {
 	return ""
 }
 
-// contesto: il ritorno indietro di un'installazione è sempre purge — la
-// macchina com'era; la disinstallazione porta il suo «purge» nei parametri dei passi disfa.
+// contesto: rolling back an installation is always purge — the
+// machine as it was; the uninstallation carries its «purge» in the parameters of the undo steps.
 func (op *Operazione) contesto(ap AzionePiano) *Contesto {
 	return &Contesto{Amb: op.m.Amb, Cartella: op.Cartella, P: ap, Purge: true}
 }
@@ -577,7 +577,7 @@ func (op *Operazione) concorrente(ap AzionePiano, det string) error {
 	return errConcorrente
 }
 
-// fatta: controlla e annota FATTA.
+// fatta: checks and records FATTA.
 func (op *Operazione) fatta(az Azione, ap AzionePiano, prima json.RawMessage, nota string) error {
 	esito, det, err := az.Controlla(op.contesto(ap), prima)
 	if err != nil {
@@ -594,8 +594,8 @@ func (op *Operazione) fatta(az Azione, ap AzionePiano, prima json.RawMessage, no
 	return nil
 }
 
-// eseguiTutte: la fase 6 col registro a scrittura anticipata, e la ripresa della tabella di
-// §6.6.3 (la stessa strada: un'operazione nuova è una ripresa con il registro vuoto).
+// eseguiTutte: phase 6 with the write-ahead log, and the resume of the table of
+// §6.6.3 (the same road: a new operation is a resume with an empty log).
 func (op *Operazione) eseguiTutte() error {
 	for _, ap := range op.Piano.Azioni {
 		az, err := NuovaAzione(ap)
@@ -608,7 +608,7 @@ func (op *Operazione) eseguiTutte() error {
 			return errFermata
 		}
 		switch {
-		case ult == nil: // niente nel registro: non cominciata ⇒ la si fa
+		case ult == nil: // nothing in the log: not begun ⇒ do it
 			punto("prima-intenzione", ap.ID)
 			prima, orig, err := az.Fotografa(c)
 			if err != nil {
@@ -627,7 +627,7 @@ func (op *Operazione) eseguiTutte() error {
 				return err
 			}
 
-		case ult.Tipo == EvIntenzione: // cominciata: forse finita, forse no, forse a metà
+		case ult.Tipo == EvIntenzione: // begun: maybe finished, maybe not, maybe half-done
 			prima := op.Reg.Intenzione(ap.ID).Prima
 			esito, det, err := az.Controlla(c, prima)
 			if err != nil {
@@ -641,8 +641,8 @@ func (op *Operazione) eseguiTutte() error {
 				}
 				continue
 			case A_META:
-				// la transazione del gestore di pacchetti: prima il SUO rimedio (§6.6.3), poi si rifà;
-				// le altre azioni: si annulla quel che c'è e si rifà
+				// the package manager's transaction: first ITS remedy (§6.6.3), then redo;
+				// the other actions: undo what is there and redo
 				if r, ok := az.(Riparabile); ok {
 					if err := r.Ripara(c, prima); err != nil {
 						return op.fallita(ap, err)
@@ -660,7 +660,7 @@ func (op *Operazione) eseguiTutte() error {
 				return err
 			}
 
-		case ult.Tipo == EvFatta: // finita e annotata: passa oltre, ma l'effetto deve esserci ancora
+		case ult.Tipo == EvFatta: // finished and recorded: move on, but the effect must still be there
 			prima := op.Reg.Intenzione(ap.ID).Prima
 			esito, det, err := az.Controlla(c, prima)
 			if err != nil {
@@ -677,7 +677,7 @@ func (op *Operazione) eseguiTutte() error {
 	return nil
 }
 
-// annullaTutte ripercorre le azioni all'indietro. Restituisce quel che non si è potuto annullare.
+// annullaTutte walks the actions backwards. Returns what could not be undone.
 func (op *Operazione) annullaTutte() ([]string, error) {
 	var resti []string
 	az := op.Piano.Azioni
@@ -685,7 +685,7 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 		ap := az[i]
 		intz := op.Reg.Intenzione(ap.ID)
 		if intz == nil {
-			continue // mai cominciata: niente da annullare
+			continue // never begun: nothing to undo
 		}
 		if u := op.Reg.Ultimo(ap.ID, EvIntenzioneAnnulla, EvAnnullata, EvAnnullamentoFallito); u != nil && u.Tipo == EvAnnullata {
 			continue
@@ -745,7 +745,7 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 	return resti, nil
 }
 
-// Controllo: una riga del rapporto di verifica (§6.6.7).
+// Controllo: a line of the verification report (§6.6.7).
 type Controllo struct {
 	ID        string `json:"id"`
 	Cosa      string `json:"what"`
@@ -754,18 +754,18 @@ type Controllo struct {
 	Dettaglio string `json:"detail,omitempty"`
 }
 
-// RapportoVerifica: il sesto oggetto.
+// RapportoVerifica: the sixth object.
 type RapportoVerifica struct {
 	Formato    string       `json:"format"`
 	Oggetto    string       `json:"object"`
 	Creato     string       `json:"created"`
 	Controlli  []Controllo  `json:"checks"`
-	Condizioni []Condizione `json:"conditions,omitempty"` // quelle nate dalla verifica (un UNKNOWN dichiarato)
+	Condizioni []Condizione `json:"conditions,omitempty"` // those born from verification (a declared UNKNOWN)
 }
 
-// verifica (fase 7, qui ridotta alle azioni di prova): ogni azione ricontrollata. ⛔ UNKNOWN non
-// è PASS: un controllo richiesto che non sa rispondere manda all'annullamento (le azioni di
-// prova non hanno un ripiego dichiarato).
+// verifica (phase 7, here reduced to the trial actions): every action rechecked. ⛔ UNKNOWN is not
+// PASS: a required check that cannot answer leads to cancellation (the trial actions
+// have no declared fallback).
 func (op *Operazione) verifica() (bool, error) {
 	rv := RapportoVerifica{Formato: Formato, Oggetto: "check", Creato: ora()}
 	tutto := true
@@ -790,10 +790,10 @@ func (op *Operazione) verifica() (bool, error) {
 		}
 		rv.Controlli = append(rv.Controlli, k)
 	}
-	// 7a: la codifica H.264 la prova REMOTIX stesso (§6.5-bis). Richiesta: FAIL (nessuna scheda che
-	// codifica: fase 19, niente ripiego) ⇒ annullamento; UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS
+	// 7a: H.264 encoding is tested by REMOTIX itself (§6.5-bis). Required: FAIL (no card that
+	// encodes: phase 19, no fallback) ⇒ cancellation; UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, never PASS
 	// (§6.6.7).
-	// e la pila PAM che si risolve, e la porta che il firewall lascia passare (certifica.go, R29)
+	// and the PAM stack that resolves, and the port the firewall lets through (certifica.go, R29)
 	if op.Piano.Mestiere == "installation" {
 		porta := op.m.Porta
 		for _, ap := range op.Piano.Azioni {
@@ -816,13 +816,13 @@ func (op *Operazione) verifica() (bool, error) {
 	return tutto, op.scriviOggetto("check.json", rv)
 }
 
-// provaCodifica: `remotix --prova-codifica` (§6.5-bis; fase 19, niente ripiego sul processore): una
-// riga JSON {"esito":"hardware"|"nessuno","codificatore":…,"strada":"vulkan"|"vaapi"|"","nodo":…,
-// "motivo":…,"codec":…,"offerti":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; uscita 0 se la scheda ha codificato il fotogramma, 3 se NESSUNA
-// scheda sa codificare (il codificatore non si apre: niente nodo, niente driver, driver senza
-// codifica — il rifiuto dichiarato), 1 se la scheda si apre ma il fotogramma non esce, 2 errore
-// d'uso. Il motore lo lancia da root (elenco chiuso). hardware ⇒ PASS; 3 o 1 ⇒ FAIL; un binario che
-// non la conosce o una risposta illeggibile ⇒ UNKNOWN (§6.6.7).
+// provaCodifica: `remotix --prova-codifica` (§6.5-bis; phase 19, no fallback to the processor): one
+// JSON line {"esito":"hardware"|"nessuno","codificatore":…,"strada":"vulkan"|"vaapi"|"","nodo":…,
+// "motivo":…,"codec":…,"offerti":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; exit 0 if the card encoded the frame, 3 if NO
+// card can encode (the encoder does not open: no node, no driver, driver without
+// encoding — the declared refusal), 1 if the card opens but the frame does not come out, 2 usage
+// error. The engine launches it as root (closed list). hardware ⇒ PASS; 3 or 1 ⇒ FAIL; a binary that
+// does not know it or an unreadable answer ⇒ UNKNOWN (§6.6.7).
 func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 	k := Controllo{ID: "h264-encoding", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
 	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
@@ -835,8 +835,8 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 			letto = true
 		}
 	}
-	// ⭐ fase 19: `strada` dice QUALE strada della scheda ha codificato (vulkan/vaapi); un binario
-	// che non la scrive (fase 18) passa lo stesso: conta l'esito
+	// ⭐ phase 19: `strada` says WHICH route of the card did the encoding (vulkan/vaapi); a binary
+	// that does not write it (phase 18) passes all the same: the outcome is what counts
 	det := strings.Join(strings.Fields(r.Esito+" "+r.Codec+" "+r.Codificatore+" "+r.Strada+" "+r.Nodo+" "+r.Motivo), " ")
 	switch {
 	case err != nil:
@@ -877,7 +877,7 @@ func (op *Operazione) condizioni() []Condizione {
 	return c
 }
 
-// Certificato: il settimo oggetto (§6.6.11).
+// Certificato: the seventh object (§6.6.11).
 type Certificato struct {
 	Formato       string       `json:"format"`
 	Oggetto       string       `json:"object"`
@@ -894,8 +894,8 @@ type Certificato struct {
 	Impronta      string       `json:"fingerprint"`
 	Controlli     []Controllo  `json:"checks"`
 	Condizioni    []Condizione `json:"conditions"`
-	Resti         []string     `json:"leftovers,omitempty"` // ANNULLATA_IN_PARTE: quel che resta, e perché
-	Indirette     []string     `json:"indirect"`            // modifiche INDIRETTE dichiarate (nessuna, senza pacchetti)
+	Resti         []string     `json:"leftovers,omitempty"` // ANNULLATA_IN_PARTE: what remains, and why
+	Indirette     []string     `json:"indirect"`            // INDIRECT changes declared (none, without packages)
 }
 
 func (op *Operazione) certificato(fin Stato, resti []string) error {
@@ -906,7 +906,7 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 	ins, _ := Sha256File(filepath.Join(op.Cartella, "resolved-set.json"))
 	fiducia := T("cert.fiducia_no")
 	if fid.Catalogo.Digest != "" && len(fid.Messaggi) == 0 {
-		fiducia = fmt.Sprintf("%s (sequenza %d)", fid.Fonte, fid.Sequenza)
+		fiducia = fmt.Sprintf("%s (sequence %d)", fid.Fonte, fid.Sequenza)
 	}
 	c := Certificato{Formato: Formato, Oggetto: "certificate", Creato: ora(), Operazione: op.ID, Stato: fin,
 		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
@@ -943,9 +943,9 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 	return ScriviAtomico(filepath.Join(op.Cartella, "certificate.txt"), []byte(t.String()), 0o600)
 }
 
-// Installazione: lo stato che REMOTIX controlla all'avvio (DECISIONI §10.12: l'installatore è
-// l'unica via; il servizio non parte senza un'operazione CONFERMATA, RX-INST-001). Sta accanto
-// alla cartella delle operazioni: /var/lib/remotix/installazione.json.
+// Installazione: the state REMOTIX checks at start-up (DECISIONI §10.12: the installer is the
+// only way; the service does not start without a CONFERMATA operation, RX-INST-001). It sits next to
+// the operations folder: /var/lib/remotix/installazione.json.
 type Installazione struct {
 	Formato     string `json:"format"`
 	Oggetto     string `json:"object"` // "installation"
@@ -956,13 +956,13 @@ type Installazione struct {
 	Scritto     string `json:"written"`
 }
 
-// PercorsoInstallazione: accanto alla cartella delle operazioni.
+// PercorsoInstallazione: next to the operations folder.
 func (m *Motore) PercorsoInstallazione() string {
 	return filepath.Join(filepath.Dir(m.Cartella), "installation.json")
 }
 
-// scriviInstallazione: solo per i mestieri che installano davvero il prodotto. Il piano di prova
-// di T4 non lo scrive: non ha installato REMOTIX.
+// scriviInstallazione: only for the kinds that really install the product. The trial plan
+// of T4 does not write it: it did not install REMOTIX.
 func (op *Operazione) scriviInstallazione(fin Stato) error {
 	if op.Piano.Mestiere != "installation" {
 		return nil
@@ -972,8 +972,8 @@ func (op *Operazione) scriviInstallazione(fin Stato) error {
 		Certificato: filepath.Join(op.Cartella, "certificate.json"), Scritto: ora()})
 }
 
-// ControllaInstallazione: quel che REMOTIX (e remotix-install aggiornato) chiede all'avvio.
-// Vale solo se il file c'è, l'operazione che nomina esiste ed è CONFERMATA (anche a condizioni).
+// ControllaInstallazione: what REMOTIX (and remotix-install aggiornato) asks at start-up.
+// It holds only if the file is there, the operation it names exists and is CONFERMATA (even conditionally).
 func (m *Motore) ControllaInstallazione() (*Installazione, error) {
 	var in Installazione
 	if err := LeggiJSON(m.PercorsoInstallazione(), &in); err != nil {
@@ -989,8 +989,8 @@ func (m *Motore) ControllaInstallazione() (*Installazione, error) {
 	return &in, nil
 }
 
-// indirette: quel che è successo indirettamente e resta (§6.6.4): le dichiarano le azioni; e i
-// pacchetti trattenuti da un passo che disfa (RX-PACCHETTI-006), che lo dice nel suo FATTA.
+// indirette: what happened indirectly and remains (§6.6.4): the actions declare it; and the
+// packages held back by an undo step (RX-PACCHETTI-006), which says so in its FATTA.
 func (op *Operazione) indirette() []string {
 	r := []string{}
 	for _, e := range op.Reg.Eventi {

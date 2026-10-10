@@ -1,5 +1,5 @@
 /*
- * comando.c — vedi comando.h.
+ * comando.c — see comando.h.
  */
 #include "comando.h"
 
@@ -21,16 +21,16 @@ struct comando {
 	char percorso[108];
 };
 
-/* ⛔ 200 ms, e il prezzo si dichiara invece di nasconderlo.  La riga si legge e
- *    si risponde DENTRO il ciclo `poll` del server, con una lettura e una
- *    scrittura bloccanti a tempo: chi apre il socket e tace ferma il server per
- *    due decimi di secondo.
+/* ⛔ 200 ms, and the price is declared instead of hidden.  The line is read and
+ *    answered INSIDE the server's `poll` loop, with a blocking read and write
+ *    under a timeout: whoever opens the socket and stays silent stops the
+ *    server for two tenths of a second.
  *
- * ⚠ E' accettabile perche' la chiave di quel socket e' `0600` sul filesystem
- *   della macchina — chi lo puo' aprire puo' gia' fermare il server in dieci
- *   modi piu' semplici — e perche' la riga e' corta: un client che si comporta
- *   arriva intera in un pacchetto.  ⛔ Va scritto qui e non altrove: un ripiego
- *   silenzioso produce due comportamenti sotto la stessa etichetta
+ * ⚠ It is acceptable because the key of that socket is `0600` on the
+ *   machine's filesystem — whoever can open it can already stop the server in
+ *   ten simpler ways — and because the line is short: a well-behaved client
+ *   arrives whole in one packet.  ⛔ It must be written here and not
+ *   elsewhere: a silent fallback produces two behaviours under the same label
  *   (`CODER.md` §4.2). */
 static const struct timeval TETTO = {0, 200000};
 
@@ -46,18 +46,18 @@ static void scrivi_tutto(int fd, const char *testo)
 	}
 }
 
-/* ⛔ Una riga bianca NON e' un indirizzo, e la differenza si paga in una
- *    risposta che rassicura: `rcp_chiave_indirizzo("   ")` produce la chiave
- *    `[   ]`, che nel file dei ban non c'e' mai — quindi `SBLOCCA` seguito da
- *    soli spazi si sentirebbe rispondere **NON-BANNATO**, cioe' «non c'era
- *    niente da togliere», che e' la faccia buona di `LEZIONI.md` §1.9 messa su
- *    un comando che non ha nemmeno detto su chi agire.  Qui e' `NON-CAPITO`.
+/* ⛔ A blank line is NOT an address, and the difference is paid for in a
+ *    reassuring answer: `rcp_chiave_indirizzo("   ")` produces the key
+ *    `[   ]`, which is never in the ban file — so `SBLOCCA` followed by
+ *    spaces only would get the answer **NON-BANNATO**, that is «there was
+ *    nothing to remove», which is the good face of `LEZIONI.md` §1.9 put on
+ *    a command that has not even said whom to act on.  Here it is `NON-CAPITO`.
  *
- * ⚠ E qui i due server DIVERGONO, ed e' un rilievo dell'11 agosto 2026:
- *   l'innesto (`01-b3-rcp-innesta.py`, `remotix_comando_servi`) prova solo
- *   `riga.starts_with("SBLOCCA ")` e a una riga bianca risponde
- *   `NON-BANNATO []`.  La cura sta li' e non qui; questo file fa la cosa
- *   giusta e lo dichiara. */
+ * ⚠ And here the two servers DIVERGE, and it is a finding of 11 Aug 2026:
+ *   the graft (`01-b3-rcp-innesta.py`, `remotix_comando_servi`) only checks
+ *   `riga.starts_with("SBLOCCA ")` and answers a blank line with
+ *   `NON-BANNATO []`.  The cure belongs there and not here; this file does
+ *   the right thing and declares it. */
 static bool solo_spazi(const char *t)
 {
 	for (; *t; t++)
@@ -76,23 +76,23 @@ static void servi(int fd)
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &TETTO, sizeof TETTO);
 	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &TETTO, sizeof TETTO);
 
-	/* ⚠ UNA `recv` SOLA, ED E' UNA SCELTA DICHIARATA.  Un client che spezzasse
-	 *   la riga in due scritture si sentirebbe rispondere `NON-CAPITO` sul
-	 *   primo pezzo.  ⭐ Leggere in ciclo fino al fine riga costerebbe il tetto
-	 *   di 200 ms **per ogni** giro, cioe' moltiplicherebbe per N il tempo in
-	 *   cui un client che tace ferma tutte le connessioni QUIC — che e' il
-	 *   prezzo dichiarato qui sopra, e comprarlo N volte per un caso che
-	 *   nessuno dei due client conosciuti produce (tutt'e due scrivono la riga
-	 *   in una `send` sola: `01-b8-sblocca.py` con `sendall`, `nc -U` una riga
-	 *   per volta) sarebbe ottimizzare nella direzione sbagliata.
-	 * ⛔ E il modo in cui questo caso fallisce e' SICURO: `NON-CAPITO` e' una
-	 *   risposta distinta, forte e scritta nel registro — non si confonde ne'
-	 *   con «tolto» ne' con «non era bannato». */
+	/* ⚠ ONE SINGLE `recv`, AND IT IS A DECLARED CHOICE.  A client that split
+	 *   the line into two writes would get `NON-CAPITO` on the first piece.
+	 *   ⭐ Reading in a loop up to the end of line would cost the 200 ms
+	 *   ceiling **for every** round, that is it would multiply by N the time
+	 *   in which a silent client stops all the QUIC connections — which is
+	 *   the price declared above, and buying it N times for a case that
+	 *   neither of the two known clients produces (both write the line in a
+	 *   single `send`: `01-b8-sblocca.py` with `sendall`, `nc -U` one line at
+	 *   a time) would be optimising in the wrong direction.
+	 * ⛔ And the way this case fails is SAFE: `NON-CAPITO` is a distinct
+	 *   answer, loud and written in the log — it is confused neither with
+	 *   «removed» nor with «was not banned». */
 	letti = recv(fd, buf, sizeof buf - 1, 0);
 	if (letti <= 0) {
 		registro_dice(REG_RCP,
-		              "⚠ comando vuoto sul socket di sblocco (letti %zd byte): "
-		              "non ho tolto niente",
+		              "⚠ empty command on the unblock socket (read %zd bytes): "
+		              "I removed nothing",
 		              letti);
 		scrivi_tutto(fd, "NON-CAPITO riga vuota\n");
 		return;
@@ -103,10 +103,10 @@ static void servi(int fd)
 		buf[--n] = 0;
 
 	if (strcmp(buf, "PING") == 0) {
-		/* ⭐ E si scrive anche il PING: e' il denominatore di B0.3, e un
-		 *    denominatore che non lascia traccia non serve a nessuno. */
-		registro_dice(REG_RCP, "comando PING — il socket di sblocco e' vivo, e "
-		                       "non ho toccato nessun ban");
+		/* ⭐ And the PING is written too: it is the denominator of B0.3, and a
+		 *    denominator that leaves no trace is of no use to anyone. */
+		registro_dice(REG_RCP, "command PING — the unblock socket is alive, and "
+		                       "I touched no ban");
 		scrivi_tutto(fd, "PONG\n");
 		return;
 	}
@@ -115,8 +115,8 @@ static void servi(int fd)
 	    solo_spazi(buf + 8)) {
 		char fuori[320];
 		registro_dice(REG_RCP,
-		              "⚠ comando sconosciuto «%s» sul socket di sblocco: non ho "
-		              "tolto niente (le forme sono «SBLOCCA <indirizzo>» e "
+		              "⚠ unknown command «%s» on the unblock socket: I "
+		              "removed nothing (the forms are «SBLOCCA <address>» and "
 		              "«PING»)",
 		              buf);
 		snprintf(fuori, sizeof fuori, "NON-CAPITO %s\n", buf);
@@ -124,48 +124,48 @@ static void servi(int fd)
 		return;
 	}
 
-	/* ⛔ La chiave la costruisce `rcp.c`, non questo file: chi comanda digita
-	 *    `192.168.0.2`, e nel file dei ban c'e' scritto `[192.168.0.2]`.  Se
-	 *    se la costruisse questo file, il giorno in cui le due forme
-	 *    divergessero il comando risponderebbe «non era bannato» a ogni
-	 *    indirizzo, in silenzio e per sempre — §4.4-bis lo vieta con un ⛔. */
+	/* ⛔ The key is built by `rcp.c`, not by this file: whoever gives the
+	 *    command types `192.168.0.2`, and the ban file has `[192.168.0.2]`
+	 *    written in it.  If this file built it on its own, the day the two
+	 *    forms diverged the command would answer «was not banned» to every
+	 *    address, silently and forever — §4.4-bis forbids it with a ⛔. */
 	rcp_chiave_indirizzo(buf + 8, chiave, sizeof chiave);
 	{
 		bool era = rcp_sblocca(chiave, registro_ora_ms());
 		char fuori[160];
-		/* ⛔ «Ogni sblocco si scrive nel registro, o un ban tolto e un ban mai
-		 *    scattato hanno lo stesso aspetto» (§4.4-bis).  Le due righe sono
-		 *    diverse, e lo e' anche la risposta a chi comanda. */
+		/* ⛔ «Every unblock is written in the log, or a ban removed and a ban
+		 *    never triggered look the same» (§4.4-bis).  The two lines are
+		 *    different, and so is the answer to whoever gives the command. */
 		if (era)
-			/* ⛔ E QUI C'ERA UNA COSA DETTA E NON SAPUTA — corretta l'11
-			 *    agosto 2026.  Questa riga diceva «e il file dei ban e' stato
-			 *    riscritto», e questo file non lo sa: `rcp_sblocca()` chiama
-			 *    `salva_ban(NULL, ora)`, e con la sessione a `NULL` quella
-			 *    funzione tace su TUTTO — `fopen` fallito, `rename` fallito.
-			 *    Se il file non si potesse scrivere, il ban sparirebbe dalla
-			 *    memoria, resterebbe sul disco, tornerebbe al riavvio, e il
-			 *    registro avrebbe appena dichiarato il contrario.  ⚠ E' la
-			 *    forma esatta di R12.1 — «esce 0 dicendo che ha funzionato» —
-			 *    rimpicciolita e spostata dentro la sua stessa cura.
-			 * ⭐ La cura vera non e' qui: `rcp_sblocca()` deve poter dire se il
-			 *    file l'ha scritto (oggi restituisce un `bool` solo, e
-			 *    `percorso_ban` e' `static` dentro `rcp.c`).  Finche' non lo
-			 *    dice, questa riga dichiara quel che sa e non di piu', e chi
-			 *    misura guarda il file da fuori — `01-b8-sblocca.py
-			 *    --ban-file`, che lo legge prima e dopo. */
+			/* ⛔ AND HERE THERE WAS A THING SAID AND NOT KNOWN — corrected on
+			 *    11 Aug 2026.  This line said «and the ban file has been
+			 *    rewritten», and this file does not know that: `rcp_sblocca()`
+			 *    calls `salva_ban(NULL, ora)`, and with the session at `NULL`
+			 *    that function stays silent on EVERYTHING — failed `fopen`,
+			 *    failed `rename`.  If the file could not be written, the ban
+			 *    would vanish from memory, stay on disk, come back at restart,
+			 *    and the log would have just declared the opposite.  ⚠ It is
+			 *    the exact form of R12.1 — «exits 0 saying it worked» — shrunk
+			 *    and moved inside its own cure.
+			 * ⭐ The real cure is not here: `rcp_sblocca()` must be able to say
+			 *    whether it wrote the file (today it returns a single `bool`,
+			 *    and `percorso_ban` is `static` inside `rcp.c`).  Until it says
+			 *    so, this line declares what it knows and no more, and whoever
+			 *    measures looks at the file from outside — `01-b8-sblocca.py
+			 *    --ban-file`, which reads it before and after. */
 			registro_dice(REG_RCP,
-			              "⛔ SBLOCCATO su comando l'indirizzo %s (chiesto "
-			              "«%s»): il ban c'era ed e' stato tolto dalla memoria "
-			              "di questo processo, e il file dei ban e' stato "
-			              "chiesto in scrittura — ⚠ se quella scrittura sia "
-			              "riuscita questo modulo NON lo sa (§4.4-bis)",
+			              "⛔ UNBLOCKED on command the address %s (asked "
+			              "«%s»): the ban was there and has been removed from the "
+			              "memory of this process, and the ban file has been "
+			              "requested for writing — ⚠ whether that write "
+			              "succeeded this module does NOT know (§4.4-bis)",
 			              chiave, buf + 8);
 		else
 			registro_dice(REG_RCP,
-			              "sblocco chiesto per %s (chiesto «%s»): NON era "
-			              "bannato, non ho tolto niente (§4.4-bis) — ⚠ e il "
-			              "conto dei tentativi di quell'indirizzo riparte "
-			              "comunque da zero",
+			              "unblock asked for %s (asked «%s»): it was NOT "
+			              "banned, I removed nothing (§4.4-bis) — ⚠ and the "
+			              "attempt count of that address restarts "
+			              "from zero anyway",
 			              chiave, buf + 8);
 		snprintf(fuori, sizeof fuori, "%s %s\n", era ? "TOLTO" : "NON-BANNATO",
 		         chiave);
@@ -182,14 +182,15 @@ comando *comando_apri(const char *percorso)
 	int fd;
 
 	if (!percorso || !*percorso) {
-		/* ⛔ E l'assenza si DICE: §4.4-bis vuole due strade d'uscita dal ban,
-		 *    e senza questo socket ne resta una sola — le dodici ore.  Chi
-		 *    accende il server deve poterlo leggere, o «il ban non si toglie»
-		 *    sembrera' un difetto del comando invece che una sua assenza. */
+		/* ⛔ And the absence is SAID: §4.4-bis wants two ways out of the ban,
+		 *    and without this socket only one is left — the twelve hours.
+		 *    Whoever starts the server must be able to read it, or «the ban
+		 *    cannot be removed» will look like a defect of the command instead
+		 *    of its absence. */
 		registro_dice(REG_RCP,
-		              "⛔ nessun --comando-socket: il ban si toglie SOLO col "
-		              "passare delle 12 ore.  §4.4-bis ne vuole due, di "
-		              "strade, e questa meta' non c'e'.");
+		              "⛔ no --comando-socket: the ban is removed ONLY by "
+		              "the passing of the 12 hours.  §4.4-bis wants two "
+		              "ways, and this half is missing.");
 		return NULL;
 	}
 
@@ -197,40 +198,40 @@ comando *comando_apri(const char *percorso)
 	dove.sun_family = AF_UNIX;
 	if (strlen(percorso) >= sizeof dove.sun_path) {
 		registro_dice(REG_RCP,
-		              "⛔ il percorso del socket di comando e' troppo lungo "
-		              "(%zu byte, il massimo e' %zu): il comando di sblocco non "
-		              "ci sara'",
+		              "⛔ the path of the command socket is too long "
+		              "(%zu bytes, the maximum is %zu): there will be no "
+		              "unblock command",
 		              strlen(percorso), sizeof dove.sun_path - 1);
 		return NULL;
 	}
 	memcpy(dove.sun_path, percorso, strlen(percorso));
 
-	/* ⚠ Si toglie il file vecchio: un socket lasciato li' da un'esecuzione
-	 *   precedente fa fallire `bind` con EADDRINUSE, e il sintomo — «il comando
-	 *   non risponde» — somiglia in tutto a un server morto. */
+	/* ⚠ The old file is removed: a socket left there by a previous run makes
+	 *   `bind` fail with EADDRINUSE, and the symptom — «the command does not
+	 *   answer» — looks in every way like a dead server. */
 	unlink(percorso);
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (fd >= 0) {
-		/* ⛔ 0600 SI OTTIENE PRIMA DI ESISTERE, non dopo — corretto l'11 agosto
-		 *    2026.  `bind()` crea il nodo con `0777 & ~umask`, cioe' con quel
-		 *    che si e' trovato in casa; la `chmod()` che veniva dopo lasciava
-		 *    una finestra — corta ma vera — in cui il socket del comando di
-		 *    sblocco stava sul filesystem **aperto a chiunque**.  ⚠ In quella
-		 *    finestra la chiave che §4.4-bis chiede («l'accesso alla macchina»)
-		 *    e' «l'accesso a un utente qualunque della macchina», che e' la
-		 *    chiave piu' facile che quella regola esiste per non concedere.
-		 * ⭐ La `umask` si rimette com'era subito: e' un dato del processo, e
-		 *    lasciarla stretta cambierebbe i permessi di tutto quel che il
-		 *    server crea dopo — compreso il file dei ban. */
+		/* ⛔ 0600 IS OBTAINED BEFORE EXISTING, not after — corrected on 11 Aug
+		 *    2026.  `bind()` creates the node with `0777 & ~umask`, that is
+		 *    with whatever was found at home; the `chmod()` that came after
+		 *    left a window — short but real — in which the socket of the
+		 *    unblock command sat on the filesystem **open to anyone**.  ⚠ In
+		 *    that window the key §4.4-bis asks for («access to the machine»)
+		 *    is «access to any user of the machine», which is the easiest key
+		 *    that rule exists not to grant.
+		 * ⭐ The `umask` is put back as it was right away: it is a datum of the
+		 *    process, and leaving it tight would change the permissions of
+		 *    everything the server creates afterwards — the ban file included. */
 		mode_t vecchia = umask(0177);
 		if (bind(fd, (struct sockaddr *)&dove, sizeof dove) != 0 ||
 		    listen(fd, 4) != 0) {
 			umask(vecchia);
 			registro_dice(REG_RCP,
-			              "⛔ il socket del comando di sblocco non parte su "
-			              "«%s»: %s.  Il ban si potra' togliere solo "
-			              "aspettando 12 ore (§4.4-bis).",
+			              "⛔ the unblock command socket does not start on "
+			              "«%s»: %s.  The ban can be removed only by "
+			              "waiting 12 hours (§4.4-bis).",
 			              percorso, strerror(errno));
 			close(fd);
 			return NULL;
@@ -238,19 +239,19 @@ comando *comando_apri(const char *percorso)
 		umask(vecchia);
 	} else {
 		registro_dice(REG_RCP,
-		              "⛔ il socket del comando di sblocco non parte su «%s»: "
-		              "%s.  Il ban si potra' togliere solo aspettando 12 ore "
+		              "⛔ the unblock command socket does not start on «%s»: "
+		              "%s.  The ban can be removed only by waiting 12 hours "
 		              "(§4.4-bis).",
 		              percorso, strerror(errno));
 		return NULL;
 	}
 
-	/* ⚠ E la `chmod` resta, come cintura oltre alle bretelle: una `umask` non
-	 *   protegge un filesystem che rifiuta i permessi (certi montaggi), e su
-	 *   quelli si vuole almeno provare. */
+	/* ⚠ And the `chmod` stays, as a belt on top of the braces: a `umask` does
+	 *   not protect a filesystem that refuses permissions (certain mounts),
+	 *   and on those we want at least to try. */
 	if (chmod(percorso, 0600) != 0)
 		registro_dice(REG_RCP,
-		              "⚠ non ho potuto mettere 0600 su «%s»: %s",
+		              "⚠ could not set 0600 on «%s»: %s",
 		              percorso, strerror(errno));
 
 	k = calloc(1, sizeof *k);
@@ -262,31 +263,31 @@ comando *comando_apri(const char *percorso)
 	k->fd = fd;
 	snprintf(k->percorso, sizeof k->percorso, "%s", percorso);
 
-	/* ⛔ E I PERMESSI SI RILEGGONO INVECE DI DICHIARARLI.  La riga di prima
-	 *    diceva «(0600)» sempre, anche quando la `chmod` era appena fallita e
-	 *    la riga di avviso stava due righe sopra: due frasi contraddittorie
-	 *    nello stesso registro, e quella che si legge per ultima e' quella
-	 *    falsa.  Qui si stampa il modo che il filesystem dice davvero — e se
-	 *    non si e' potuto nemmeno chiedere, si dice anche quello
-	 *    (`LEZIONI.md` §1.9: vuoto e proibito non hanno la stessa faccia). */
+	/* ⛔ AND THE PERMISSIONS ARE READ BACK INSTEAD OF DECLARED.  The previous
+	 *    line always said «(0600)», even when the `chmod` had just failed and
+	 *    the warning line stood two lines above: two contradictory sentences
+	 *    in the same log, and the one read last is the false one.  Here the
+	 *    mode the filesystem really reports is printed — and if it could not
+	 *    even be asked, that is said too (`LEZIONI.md` §1.9: empty and
+	 *    forbidden do not have the same face). */
 	{
 		struct stat st;
 		if (stat(percorso, &st) != 0)
 			registro_dice(REG_RCP,
-			              "il comando di sblocco ascolta su «%s» — ⚠ e i suoi "
-			              "permessi non li ho potuti rileggere (%s): «SBLOCCA "
-			              "<indirizzo>» oppure «PING» (RCP.md §4.4-bis)",
+			              "the unblock command listens on «%s» — ⚠ and its "
+			              "permissions could not be read back (%s): «SBLOCCA "
+			              "<address>» or «PING» (RCP.md §4.4-bis)",
 			              percorso, strerror(errno));
 		else
 			registro_dice(REG_RCP,
-			              "il comando di sblocco ascolta su «%s» (%04o%s) — "
-			              "«SBLOCCA <indirizzo>» oppure «PING» "
+			              "the unblock command listens on «%s» (%04o%s) — "
+			              "«SBLOCCA <address>» or «PING» "
 			              "(RCP.md §4.4-bis)",
 			              percorso, (unsigned)(st.st_mode & 07777),
 			              (st.st_mode & 07777) == 0600
 			                  ? ""
-			                  : " ⛔ e NON e' 0600: la chiave di §4.4-bis e' "
-			                    "piu' larga di «l'accesso alla macchina»");
+			                  : " ⛔ and it is NOT 0600: the key of §4.4-bis is "
+			                    "wider than «access to the machine»");
 	}
 	return k;
 }
@@ -325,7 +326,7 @@ void comando_muovi(comando *k, struct pollfd *dove, size_t quanti)
 				if (errno != EAGAIN && errno != EWOULDBLOCK &&
 				    errno != EINTR)
 					registro_dice(REG_RCP,
-					              "accept sul socket di sblocco: %s",
+					              "accept on the unblock socket: %s",
 					              strerror(errno));
 				break;
 			}

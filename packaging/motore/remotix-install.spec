@@ -1,22 +1,22 @@
-# remotix-install.spec — il motore d'installazione di REMOTIX, per la famiglia .rpm.
+# remotix-install.spec — the REMOTIX installation engine, for the .rpm family.
 #
-# Il motore è un binario Go STATICO (CGO_ENABLED=0): lo stesso file per Fedora, Alma e openSUSE,
-# costruito da installatore/costruisci.sh; qui lo si impacchetta soltanto (nessuna dipendenza
-# dinamica da calcolare). Lo costruisce packaging/motore/pacchetti-motore.sh, chiamato dal
-# comando di rilascio (packaging/rilascio.sh). Il catalogo sta DENTRO il binario (DECISIONI §10.21).
+# The engine is a STATIC Go binary (CGO_ENABLED=0): the same file for Fedora, Alma and openSUSE,
+# built by installatore/costruisci.sh; here it is only packaged (no dynamic dependency
+# to compute). Built by packaging/motore/pacchetti-motore.sh, called by the
+# release command (packaging/rilascio.sh). The catalogue lives INSIDE the binary (DECISIONI §10.21).
 #
-# ⛔ DECISIONI §10.12: il pacchetto non accende niente. D14 (§10.23): niente timer — REMOTIX si
-#    aggiorna col sistema.
+# ⛔ DECISIONI §10.12: the package enables nothing. D14 (§10.23): no timer — REMOTIX
+#    updates with the system.
 
 %global debug_package %{nil}
-# ⛔ niente brp-strip: il binario del pacchetto resta BYTE PER BYTE quello del .run (lo stesso
-#    motore che ha installato): `[M]` 30 set, fedora44, lo strip di rpm lo cambiava.
+# ⛔ no brp-strip: the package binary stays BYTE FOR BYTE the one in the .run (the same
+#    engine that installed it): `[M]` 30 Sep, fedora44, rpm's strip changed it.
 %global __os_install_post %{nil}
 
 Name:           remotix-install
 Version:        %{rx_versione}
 Release:        %{rx_rilascio}
-Summary:        Il motore d'installazione di REMOTIX
+Summary:        The REMOTIX installation engine
 License:        LicenseRef-Proprietary
 URL:            https://github.com/nic-fio/REMOTIX
 Source0:        remotix-install
@@ -24,9 +24,9 @@ Source1:        README
 ExclusiveArch:  x86_64
 
 %description
-Il motore d'installazione di REMOTIX (un solo programma): installa, verifica, certifica e
-disinstalla. Porta dentro di sé il catalogo delle combinazioni supportate, che si aggiorna con
-questo pacchetto.
+The REMOTIX installation engine (a single program): installs, checks, certifies and
+uninstalls. It carries inside it the catalogue of supported combinations, which is updated with
+this package.
 
 %prep
 
@@ -37,8 +37,8 @@ install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/remotix-install
 install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/README
 
 %posttrans
-# dopo un aggiornamento: annota le versioni, dice se l'installazione è ancora certificata
-# (DECISIONI §10.12 punto 4, §10.23). ⛔ Non fa mai fallire la transazione.
+# after an upgrade: records the versions, says whether the installation is still certified
+# (DECISIONI §10.12 point 4, §10.23). ⛔ It never makes the transaction fail.
 %{_bindir}/remotix-install post-upgrade || :
 
 %files

@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""sbom.py — lo SBOM di ogni pacchetto del prodotto nell'archivio di REMOTIX (R24, fasi/17 §6.5 p.11).
+"""sbom.py — the SBOM of every product package in the REMOTIX archive (R24, fasi/17 §6.5 p.11).
 
     sbom.py <cartella-dati> <cartella-uscita>
 
-Per ogni pacchetto, pubblica.sh ha lasciato in <cartella-dati>:
-  <nome>.nv          nome e versione del pacchetto
-  <nome>.file        il file nell'archivio
-  <nome>.incorporate usr/share/remotix/incorporate.json del pacchetto: le versioni di ngtcp2 e
-                     nghttp3 COLLEGATE nel binario (pkg-config nel contenitore di costruzione)
-  <nome>.bundled     quel che il pacchetto DICHIARA (Static-Built-Using del .deb, bundled() del .rpm;
-                     Arch non ha un campo: vuoto)
-  <nome>.richieste   le dipendenze dichiarate (le librerie della distribuzione, collegate dinamiche)
+For every package, pubblica.sh has left in <cartella-dati>:
+  <nome>.nv          package name and version
+  <nome>.file        the file in the archive
+  <nome>.incorporate the package's usr/share/remotix/incorporate.json: the versions of ngtcp2 and
+                     nghttp3 LINKED into the binary (pkg-config in the build container)
+  <nome>.bundled     what the package DECLARES (Static-Built-Using of the .deb, bundled() of the .rpm;
+                     Arch has no field: empty)
+  <nome>.richieste   the declared dependencies (the distribution libraries, linked dynamically)
 
-⛔ R24 rosso se la versione collegata manca o è diversa da quella dichiarata: lo SBOM non si scrive
-e l'uscita è 1. ⚠ «La versione nel binario»: ngtcp2 e nghttp3 statiche non lasciano una stringa di
-versione nel binario (ngtcp2_version() non è chiamata, il linker la toglie). La fonte è il pkg-config
-delle .a collegate, letto nello stesso contenitore che collega il binario; leggerla DAL binario
-chiederebbe una riga nel prodotto (ngtcp2_version() nel registro d'avvio: una richiesta a REMOTIX,
-§6.5-bis, non fatta).
+⛔ R24 red if the linked version is missing or differs from the declared one: the SBOM is not written
+and the exit code is 1. ⚠ «The version in the binary»: static ngtcp2 and nghttp3 leave no version
+string in the binary (ngtcp2_version() is not called, the linker drops it). The source is the pkg-config
+of the linked .a files, read in the same container that links the binary; reading it FROM the binary
+would need a line in the product (ngtcp2_version() in the startup log: a request to REMOTIX,
+§6.5-bis, not made).
 """
 import hashlib, json, os, re, sys, uuid
 
@@ -36,7 +36,7 @@ for b in nomi:
     f = leggi("file").strip()
     inc_t = leggi("incorporate").strip()
     if not inc_t:
-        print(f"   SBOM {b}: SALTATO — il pacchetto non ha incorporate.json (costruito prima di T8)")
+        print(f"   SBOM {b}: SKIPPED — the package has no incorporate.json (built before T8)")
         continue
     inc = json.loads(inc_t)
     dich = {}
@@ -46,9 +46,9 @@ for b in nomi:
     for lib in ("ngtcp2", "nghttp3"):
         v = inc.get(lib)
         if not v:
-            esito.append(f"{lib}: versione collegata ASSENTE"); rosso = 1
+            esito.append(f"{lib}: linked version MISSING"); rosso = 1
         elif lib in dich and dich[lib] != v:
-            esito.append(f"{lib}: collegata {v}, dichiarata {dich[lib]}"); rosso = 1
+            esito.append(f"{lib}: linked {v}, declared {dich[lib]}"); rosso = 1
     if esito:
         print(f"   ⛔ R24 {b}: " + "; ".join(esito))
         continue
@@ -67,8 +67,8 @@ for b in nomi:
             "downloadLocation": FONTI[lib].format(v=v), "filesAnalyzed": False, "licenseDeclared": "MIT",
             "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
                               "referenceLocator": f"pkg:github/ngtcp2/{lib}@v{v}"}],
-            "comment": "collegata STATICA nel binario (" + inc.get("fonte", "") + ")" +
-                       (f"; dichiarata dal pacchetto: {dich[lib]}" if lib in dich else ""),
+            "comment": "linked STATICALLY into the binary (" + inc.get("fonte", "") + ")" +
+                       (f"; declared by the package: {dich[lib]}" if lib in dich else ""),
         })
         rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "STATIC_LINK", "relatedSpdxElement": f"SPDXRef-{lib}"})
     for i, d in enumerate(x.strip() for x in re.split(r"[,\n]", leggi("richieste")) if x.strip()):
@@ -76,7 +76,7 @@ for b in nomi:
             continue
         pacchetti.append({"SPDXID": f"SPDXRef-dip-{i}", "name": d, "versionInfo": "NOASSERTION",
                           "downloadLocation": "NOASSERTION", "filesAnalyzed": False,
-                          "comment": "dipendenza della distribuzione, collegata dinamica o usata a tempo di esecuzione"})
+                          "comment": "distribution dependency, linked dynamically or used at run time"})
         rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": f"SPDXRef-dip-{i}"})
     doc = {
         "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0", "SPDXID": "SPDXRef-DOCUMENT",
@@ -87,5 +87,5 @@ for b in nomi:
     }
     with open(os.path.join(uscita, b + ".spdx.json"), "w") as o:
         json.dump(doc, o, indent=2, ensure_ascii=False)
-    print(f"   SBOM {b}: ngtcp2 {inc['ngtcp2']}, nghttp3 {inc['nghttp3']} (dichiarate: {dich or 'nessun campo'})")
+    print(f"   SBOM {b}: ngtcp2 {inc['ngtcp2']}, nghttp3 {inc['nghttp3']} (declared: {dich or 'no field'})")
 sys.exit(rosso)

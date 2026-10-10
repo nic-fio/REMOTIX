@@ -10,7 +10,7 @@ import (
 	"remotix/installatore/motore"
 )
 
-// Ogni chiave usata dalle schermate (vista e TUI) c'è, nelle due lingue (DECISIONI §10.15, R42).
+// Every key used by the screens (view and TUI) is there, in both languages (DECISIONI §10.15, R42).
 func TestTestiInterfaccia(t *testing.T) {
 	re := regexp.MustCompile(`\bT\("([a-z0-9_.]+)"`)
 	var file []string
@@ -29,27 +29,27 @@ func TestTestiInterfaccia(t *testing.T) {
 		}
 		for _, m := range re.FindAllStringSubmatch(string(b), -1) {
 			k := m[1]
-			if strings.HasPrefix(k, "comp.") || strings.HasPrefix(k, "cli.") || strings.HasSuffix(k, ".") { // del motore, o composta
+			if strings.HasPrefix(k, "comp.") || strings.HasPrefix(k, "cli.") || strings.HasSuffix(k, ".") { // the engine's, or composed
 				continue
 			}
 			usate++
 			x, ok := testi[k]
 			if !ok {
-				t.Errorf("%s: la chiave %q manca", f, k)
+				t.Errorf("%s: the key %q is missing", f, k)
 				continue
 			}
 			if x == "" {
-				t.Errorf("%q: testo vuoto", k)
+				t.Errorf("%q: empty text", k)
 			}
 		}
 	}
 	if usate < 50 {
-		t.Errorf("trovate solo %d chiavi: l'espressione non le vede?", usate)
+		t.Errorf("only %d keys found: does the expression not see them?", usate)
 	}
 }
 
-// Il controllo in parole comuni: niente nomi di driver o bus fuori dai dettagli tecnici; i
-// cartellini in inglese (DECISIONI §10.35).
+// The check in plain words: no names of drivers or buses outside the technical details; the
+// labels in English (DECISIONI §10.35).
 func TestVistaControlloParoleComuni(t *testing.T) {
 	prof := motore.NuovoProfilo(7447)
 	for k, v := range map[string]string{"distro.id": "fedora", "distro.version": "44", "distro.name": "Fedora Linux 44 (Workstation Edition)",
@@ -63,28 +63,28 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 	for _, l := range []string{"en"} {
 		v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 		if v.Esito != CONDIZIONI {
-			t.Errorf("%s: esito %v, atteso a condizioni", l, v.Esito)
+			t.Errorf("%s: outcome %v, expected conditional", l, v.Esito)
 		}
 		for _, r := range v.Righe {
 			if strings.Contains(r.Testo, "virtio") || strings.Contains(r.Testo, "renderD") || strings.Contains(r.Testo, "RX-") {
-				t.Errorf("%s: parola tecnica fuori dai dettagli: %q", l, r.Testo)
+				t.Errorf("%s: technical word outside the details: %q", l, r.Testo)
 			}
 		}
 		if !strings.Contains(v.Dettagli, "virtio-pci") {
-			t.Errorf("%s: il driver non è nei dettagli: %q", l, v.Dettagli)
+			t.Errorf("%s: the driver is not in the details: %q", l, v.Dettagli)
 		}
 		if v.Intestazione != "Fedora Linux 44 · Workstation · GNOME 50" {
-			t.Errorf("%s: intestazione %q", l, v.Intestazione)
+			t.Errorf("%s: header %q", l, v.Intestazione)
 		}
 	}
 	s := VistaDelleScelte(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 	if s.Titolo != T("sc.titolo.1") || s.PortaVerde {
-		t.Errorf("scelte: %q, porta verde %v (col firewall acceso aprirla è dell'amministratore)", s.Titolo, s.PortaVerde)
+		t.Errorf("choices: %q, green port %v (with the firewall on, opening it is the administrator's job)", s.Titolo, s.PortaVerde)
 	}
-	// quel che manca ferma tutto, e si dice senza suggerire come metterlo (§10.36)
+	// what is missing stops everything, and is stated without suggesting how to provide it (§10.36)
 	rap.Mancano = []motore.Messaggio{motore.Msg("RX-MANCA-003", "XFCE: labwc")}
 	v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 	if v.Esito != BLOCCATA || v.Bloccata == nil || !strings.Contains(v.Bloccata.Perche, "labwc") {
-		t.Errorf("mancano: esito %v, %+v", v.Esito, v.Bloccata)
+		t.Errorf("missing: outcome %v, %+v", v.Esito, v.Bloccata)
 	}
 }

@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# costruisci-rpm.sh — il pacchetto .rpm di REMOTIX, dentro il contenitore di ogni bersaglio.
+# costruisci-rpm.sh — the REMOTIX .rpm package, inside the container of each target.
 #
 #     packaging/rpm/costruisci-rpm.sh                  # fedora44 alma10 tumbleweed leap16
-#     packaging/rpm/costruisci-rpm.sh fedora44         # uno solo
+#     packaging/rpm/costruisci-rpm.sh fedora44         # just one
 #
-# Per ogni bersaglio (`fasi/17-l-installatore.md` §6.1-§6.2, T3):
-#   1. l'immagine `localhost/remotix-costruzione-<bersaglio>` di src/costruzione/
-#      (la fa `src/costruzione/costruisci-tutti.sh`; qui si usa se c'e', si
-#      costruisce se manca): dentro ci sono gia' ngtcp2/nghttp3 statiche;
-#   2. l'archivio dei sorgenti dall'albero di lavoro (src/, banchi/rcp/,
-#      packaging/rpm/) — anche con modifiche non ancora nel deposito;
-#   3. nel contenitore: rpm-build e rpmlint dal gestore della distribuzione,
-#      `rpmbuild -ba`, poi rpmlint sui pacchetti e sullo spec;
-#   4. in $USCITA/rpm/<bersaglio>/: i .rpm, rpmbuild.log, rpmlint.txt,
-#      richieste.txt (Requires, automatiche e scritte), file.txt, esito.txt;
-#      e i due controlli piccoli di R13/R14 (lista nera dei file del banco,
-#      opzioni di banco nell'unita').
+# For each target (`fasi/17-l-installatore.md` §6.1-§6.2, T3):
+#   1. the image `localhost/remotix-costruzione-<target>` from src/costruzione/
+#      (made by `src/costruzione/costruisci-tutti.sh`; here it is used if present,
+#      built if missing): it already contains static ngtcp2/nghttp3;
+#   2. the source archive from the working tree (src/, banchi/rcp/,
+#      packaging/rpm/) — including changes not yet in the repository;
+#   3. in the container: rpm-build and rpmlint from the distribution's package manager,
+#      `rpmbuild -ba`, then rpmlint on the packages and on the spec;
+#   4. in $USCITA/rpm/<target>/: the .rpm files, rpmbuild.log, rpmlint.txt,
+#      richieste.txt (Requires, automatic and written), file.txt, esito.txt;
+#      and the two small checks of R13/R14 (blacklist of bench files,
+#      bench options in the unit).
 #
-# ⚠ Niente /tmp: sul portatile e' quasi pieno (come costruisci-tutti.sh).
+# ⚠ No /tmp: on the laptop it is almost full (like costruisci-tutti.sh).
 set -uo pipefail
 
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -25,17 +25,17 @@ ALBERO=$(cd "$QUI/../.." && pwd)
 USCITA=${USCITA:-$ALBERO/costruzione-uscita}
 CACHE=${CACHE:-$USCITA/.lavoro}
 TUTTI=(fedora44 alma10 tumbleweed leap16)
-# la versione: quella del rilascio (RX_VERSIONE, packaging/rilascio.sh) o la predefinita dello spec
+# the version: the release one (RX_VERSIONE, packaging/rilascio.sh) or the spec default
 VER=${RX_VERSIONE:-$(sed -n 's/^Version:.*!?rx_versione:\([^}]*\)}.*/\1/p' "$QUI/remotix.spec")}
 
-command -v podman >/dev/null 2>&1 || { echo "⛔ podman non c'e'"; exit 2; }
+command -v podman >/dev/null 2>&1 || { echo "⛔ podman is missing"; exit 2; }
 mkdir -p "$CACHE/tmp" "$USCITA/rpm"
 export TMPDIR="$CACHE/tmp"
 if [ $# -eq 0 ] || [ "$1" = tutti ]; then set -- "${TUTTI[@]}"; fi
 
-# ⛔ R14 in piccolo: niente del banco nel pacchetto (§6.4)
+# ⛔ R14 in small: nothing from the bench in the package (§6.4)
 LISTA_NERA='provisiona|sudoers|gpu-udev|riavvia-|ld\.so\.conf|/prova|banchi|\.py$|Contenitore|costruisci'
-# ⛔ R13 in piccolo: l'unita' non passa opzioni di banco (§4.5)
+# ⛔ R13 in small: the unit passes no bench options (§4.5)
 OPZIONI_BANCO='--rilievo|--comando-socket|--audio-prova|--parlantina|--sblocca'
 
 costruisci_uno()
@@ -45,16 +45,16 @@ costruisci_uno()
 	rm -rf "$u" "$lav"; mkdir -p "$u" "$lav"/{SOURCES,SPECS}
 
 	if ! podman image exists "$imm"; then
-		echo "== $b: l'immagine non c'e', la costruisco"
+		echo "== $b: the image is missing, building it"
 		podman build -t "$imm" -f "$ALBERO/src/costruzione/Contenitore.$b" "$ALBERO/src/costruzione" \
 			>"$u/immagine.log" 2>&1 || { echo "$b pacchetto=NO immagine=NO" | tee "$u/esito.txt"; return 1; }
 	fi
 
-	echo "== $b: sorgenti"
-	# ⛔ firewalld scarta un servizio che non e' XML ben fatto, in silenzio per
-	#    chi installa (`[M]` 29 set: `--` dentro un commento).
+	echo "== $b: sources"
+	# ⛔ firewalld discards a service that is not well-formed XML, silently for
+	#    whoever installs (`[M]` 29 Sep: `--` inside a comment).
 	python3 -c 'import sys, xml.dom.minidom; xml.dom.minidom.parse(sys.argv[1])' "$QUI/remotix-firewalld.xml" \
-		|| { echo "$b pacchetto=NO remotix-firewalld.xml non e' XML valido" | tee "$u/esito.txt"; return 1; }
+		|| { echo "$b pacchetto=NO remotix-firewalld.xml is not valid XML" | tee "$u/esito.txt"; return 1; }
 	tar -C "$ALBERO" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
 		-czf "$lav/SOURCES/remotix-$VER.tar.gz" src banchi/rcp packaging/rpm
@@ -67,14 +67,14 @@ costruisci_uno()
 		else
 			zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
 		fi
-		rpm -q rpm-build rpmlint | sed "s/^/strumenti: /"
+		rpm -q rpm-build rpmlint | sed "s/^/tools: /"
 		rpm --eval "dist=%{?dist} fedora=%{?fedora} rhel=%{?rhel} suse_version=%{?suse_version} pamvendor=%{?_pam_vendordir}"
 		rpmbuild -ba --define "_topdir /lavoro" --define "rx_versione '"$VER"'" --define "rx_rilascio '"${RX_REVISIONE:-1}"'" '"${RX_SELINUX_PERMISSIVO:+--define \"rx_selinux_permissivo 1\"}"' /lavoro/SPECS/remotix.spec 2>&1
 		echo "rpmbuild-esito=$?"
 		ls /lavoro/RPMS/*/*.rpm >/dev/null 2>&1 || exit 1
 		rpmlint /lavoro/SPECS/remotix.spec /lavoro/RPMS/*/*.rpm /lavoro/SRPMS/*.rpm >/lavoro/rpmlint.txt 2>&1
 		p=$(ls /lavoro/RPMS/x86_64/remotix-[0-9]*.rpm)
-		{ echo "## Requires (automatiche + scritte)"; rpm -qpR "$p"
+		{ echo "## Requires (automatic + written)"; rpm -qpR "$p"
 		  echo "## Recommends"; rpm -qp --recommends "$p"
 		  echo "## Provides"; rpm -qp --provides "$p"; } >/lavoro/richieste.txt
 		rpm -qplv "$p" >/lavoro/file.txt
@@ -82,9 +82,9 @@ costruisci_uno()
 		rm -rf /lavoro/estratto; mkdir /lavoro/estratto; cd /lavoro/estratto
 		rpm2cpio "$p" | cpio -idm --quiet
 		ldd usr/libexec/remotix/remotix >/lavoro/ldd.txt 2>&1
-		# R13: la frase della funzione di banco NON nel binario del pacchetto, e SI
-		# in un rcp.o con BANCO_ACCESO 1 (il controllo positivo: senza, «non
-		# trovata» potrebbe voler dire «non so cercare») — come la linea .deb.
+		# R13: the bench-function sentence NOT in the package binary, and YES
+		# in an rcp.o with BANCO_ACCESO 1 (the positive check: without it, «not
+		# found» could mean «I cannot search») — like the .deb line.
 		frase="FUNZIONE DI BANCO e'"'"' ACCESA"
 		n=$(strings usr/libexec/remotix/remotix | grep -c "$frase")
 		rm -rf /lavoro/positivo; mkdir /lavoro/positivo; cd /lavoro/positivo
@@ -100,7 +100,7 @@ costruisci_uno()
 		[ -f "$lav/$f" ] && cp "$lav/$f" "$u/"
 	done
 	if ! ls "$u"/remotix-[0-9]*.x86_64.rpm >/dev/null 2>&1; then
-		echo "$b pacchetto=NO (vedi rpmbuild.log)" | tee "$u/esito.txt"
+		echo "$b pacchetto=NO (see rpmbuild.log)" | tee "$u/esito.txt"
 		return 1
 	fi
 
@@ -120,6 +120,6 @@ costruisci_uno()
 
 stato=0
 for b in "$@"; do costruisci_uno "$b" || stato=1; done
-printf '\n== riassunto (%s/rpm)\n' "$USCITA"
-for b in "$@"; do cat "$USCITA/rpm/$b/esito.txt" 2>/dev/null || echo "$b (nessun esito)"; done
+printf '\n== summary (%s/rpm)\n' "$USCITA"
+for b in "$@"; do cat "$USCITA/rpm/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
 exit $stato

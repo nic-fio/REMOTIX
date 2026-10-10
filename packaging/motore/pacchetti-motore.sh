@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
-# pacchetti-motore.sh — i pacchetti del MOTORE, per il pacchetto unico di REMOTIX (il .run).
+# pacchetti-motore.sh — the ENGINE packages, for the single REMOTIX package (the .run).
 #
-#     RX_VERSIONE=X.Y.Z RX_REVISIONE=R packaging/motore/pacchetti-motore.sh [uscita]
-#                                                  (predefinito costruzione-uscita/motore)
+#     RX_VERSIONE=X.Y.Z RX_REVISIONE=R packaging/motore/pacchetti-motore.sh [output]
+#                                                  (default costruzione-uscita/motore)
 #
-# Lo chiama il comando di rilascio (packaging/rilascio.sh), DOPO aver costruito il motore statico
-# con la versione del rilascio (installatore/costruisci.sh con RX_VERSIONE). Il motore si
-# impacchetta così com'è, per le tre famiglie:
-#   · remotix-install_<V>-<R>_amd64.deb           (dpkg-deb: nessuna libreria da calcolare)
-#   · remotix-install-<V>-<R>.x86_64.rpm          (rpmbuild nel contenitore fedora:44)
-#   · remotix-install-<V>-<R>-x86_64.pkg.tar.zst  (makepkg nel contenitore di Arch)
-# Il catalogo sta dentro il motore (DECISIONI §10.21). Il pacchetto resta sulla macchina dopo
-# l'installazione (status, uninstall); a ogni cambio di versione gli script chiamano
-# `remotix-install post-upgrade`. Niente chiave d'archivio: l'archivio non c'è più (§10.36).
+# Called by the release command (packaging/rilascio.sh), AFTER building the static engine
+# with the release version (installatore/costruisci.sh with RX_VERSIONE). The engine is
+# packaged as it is, for the three families:
+#   · remotix-install_<V>-<R>_amd64.deb           (dpkg-deb: no library to compute)
+#   · remotix-install-<V>-<R>.x86_64.rpm          (rpmbuild in the fedora:44 container)
+#   · remotix-install-<V>-<R>-x86_64.pkg.tar.zst  (makepkg in the Arch container)
+# The catalogue lives inside the engine (DECISIONI §10.21). The package stays on the machine after
+# installation (status, uninstall); at every version change the scripts call
+# `remotix-install post-upgrade`. No repository key: the repository no longer exists (§10.36).
 #
-# Ambiente: RX_VERSIONE (obbligatoria: quella del motore deve essere lei), RX_REVISIONE (1), MOTORE
+# Environment: RX_VERSIONE (mandatory: the engine's version must match it), RX_REVISIONE (1), MOTORE
 # (installatore/uscita/remotix-install).
-# ⚠ Niente /tmp: sul portatile è quasi pieno.
+# ⚠ No /tmp: on the laptop it is almost full.
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)
 U=${1:-$ALBERO/costruzione-uscita/motore}
-V=${RX_VERSIONE:?RX_VERSIONE: la versione del rilascio}
+V=${RX_VERSIONE:?RX_VERSIONE: the release version}
 R=${RX_REVISIONE:-1}
 MOTORE=${MOTORE:-$ALBERO/installatore/uscita/remotix-install}
 M=$ALBERO/packaging/motore
@@ -30,12 +30,12 @@ L=$U/.lavoro; rm -rf "$L"; mkdir -p "$L"
 export TMPDIR=$L
 
 vm=$("$MOTORE" version | awk '{print $1}')
-[ "$vm" = "$V" ] || { echo "⛔ il motore $MOTORE dice $vm, il rilascio è $V"; exit 1; }
+[ "$vm" = "$V" ] || { echo "⛔ the engine $MOTORE says $vm, the release is $V"; exit 1; }
 cp "$MOTORE" "$L/remotix-install"
 cp "$M/README" "$L/"
-echo "== il motore $V-$R ($(sha256sum "$L/remotix-install" | cut -c1-16)…)"
+echo "== the engine $V-$R ($(sha256sum "$L/remotix-install" | cut -c1-16)…)"
 
-echo "== .deb del motore"
+echo "== engine .deb"
 D=$L/deb; mkdir -p "$D/DEBIAN" "$D/usr/bin" "$D/usr/share/remotix-install"
 install -m 755 "$L/remotix-install" "$D/usr/bin/"
 install -m 644 "$L/README" "$D/usr/share/remotix-install/"
@@ -47,15 +47,15 @@ Maintainer: nicfio <nicfio@gmail.com>
 Section: admin
 Priority: optional
 Depends: systemd
-Description: il motore d'installazione di REMOTIX
- Installa, verifica, certifica e disinstalla REMOTIX. Porta dentro di sé il
- catalogo delle combinazioni supportate, che si aggiorna con questo pacchetto.
- REMOTIX si aggiorna col sistema (apt upgrade): niente timer.
+Description: the REMOTIX installation engine
+ Installs, checks, certifies and uninstalls REMOTIX. It carries inside it the
+ catalogue of supported combinations, which is updated with this package.
+ REMOTIX updates with the system (apt upgrade): no timer.
 EOF
 cat >"$D/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
-# dopo un aggiornamento: il motore annota le versioni e dice se l'installazione è ancora certificata
-# (DECISIONI §10.12 punto 4, §10.23). Non fa mai fallire apt.
+# after an upgrade: the engine records the versions and says whether the installation is still certified
+# (DECISIONI §10.12 point 4, §10.23). It never makes apt fail.
 set -e
 if [ "$1" = configure ] && [ -n "${2:-}" ]; then
 	/usr/bin/remotix-install post-upgrade || true
@@ -66,7 +66,7 @@ chmod 755 "$D/DEBIAN/postinst"
 SOURCE_DATE_EPOCH=$(git -C "$ALBERO" log -1 --format=%ct) \
 	dpkg-deb --root-owner-group -Zxz --build "$D" "$U/remotix-install_${V}-${R}_amd64.deb" >/dev/null
 
-echo "== .rpm del motore (fedora:44)"
+echo "== engine .rpm (fedora:44)"
 P=$L/rpm; mkdir -p "$P/SOURCES" "$P/SPECS"
 cp "$L/remotix-install" "$L/README" "$P/SOURCES/"
 cp "$M/remotix-install.spec" "$P/SPECS/"
@@ -76,7 +76,7 @@ podman run --rm -v "$P:/lavoro:Z" registry.fedoraproject.org/fedora:44 sh -c "
 	|| { tail -20 "$U/rpmbuild.log"; exit 1; }
 cp "$P"/RPMS/x86_64/remotix-install-*.rpm "$U/"
 
-echo "== pacchetto Arch del motore"
+echo "== engine Arch package"
 A=$L/arch; mkdir -p "$A"
 cp "$L/remotix-install" "$L/README" "$M/PKGBUILD" "$M/remotix-install.install" "$A/"
 podman run --rm --userns=keep-id -v "$A:/pkg" -w /pkg -e HOME=/pkg -e RX_VERSIONE="$V" -e RX_RILASCIO="$R" \

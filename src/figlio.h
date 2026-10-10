@@ -1,92 +1,97 @@
 /*
- * figlio.h — ⭐ UN PROCESSO PER UTENTE, CHE GIRA COME LUI E TIENE IL PALCO.
+ * figlio.h — ⭐ ONE PROCESS PER USER, RUNNING AS THAT USER AND HOLDING THE STAGE.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' ESISTE, CON LA MISURA ACCANTO
+ * ⛔ WHY IT EXISTS, WITH THE MEASURE NEXT TO IT
  *
- * `DECISIONI.md` §1.10-bis, 12 agosto 2026, dall'utente, davanti alla misura
- * del montaggio della fase 2 (`fasi/rapporti/P2-6-montaggio.md` §5.4):
+ * `DECISIONI.md` §1.10-bis, 12 Aug 2026, from the user, in front of the
+ * measure of phase 2's assembly (`fasi/rapporti/P2-6-montaggio.md` §5.4):
  *
- *   `[M]` ⛔ **root non si collega al bus di sessione dell'utente**
+ *   `[M]` ⛔ **root does not connect to the user's session bus**
  *         sudo env XDG_RUNTIME_DIR=/run/user/1000 \
  *              DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
  *              gdbus call --session --dest org.gnome.Mutter.ScreenCast …
- *         → «Error connecting: The connection is closed», uscita 1
+ *         → "Error connecting: The connection is closed", exit 1
  *
- *   `[M]` ⛔ **solo root puo' verificare con PAM la parola d'ordine di un
- *         altro**: `pam_unix` fuori da root passa da `unix_chkpwd`, che
- *         verifica solo la parola di CHI LO INVOCA.
+ *   `[M]` ⛔ **only root can verify someone else's password with PAM**:
+ *         `pam_unix` outside root goes through `unix_chkpwd`, which verifies
+ *         only the password of WHOEVER INVOKES IT.
  *
- * ⇒ Le due cose **non stanno nello stesso processo**, e non e' un dettaglio di
- *   implementazione: senza bus non c'e' cattura, senza root non c'e'
- *   autenticazione.  Il server resta **privilegiato**, e per ogni utente
- *   ammesso genera un **figlio che gira come lui**, che tiene il suo bus di
- *   sessione, la sua cattura e i suoi dispositivi.
- *
- * ---------------------------------------------------------------------------
- * ⭐ E' L'AIUTANTE DI §1.10 AL CONTRARIO — la stessa regola, un mestiere per
- *    processo.  ⛔ MA TRE COSE SONO DIVERSE, E VANNO DETTE PRIMA
- *
- * L'aiutante (`aiutante.h`) e' un figlio **meno** privilegiato del padre che fa
- * la cosa che blocca; questo e' un figlio **diversamente** privilegiato che fa
- * la cosa che il padre non puo' fare.  Da cui:
- *
- *   1. ⛔ **NON si puo' accendere presto.**  L'aiutante nasce prima di
- *      `trasporto_apri()` apposta, perche' un `fork()` regala al figlio tutti i
- *      descrittori e un aiutante acceso dopo si porterebbe dietro la porta.  Il
- *      figlio nasce **quando un utente e' stato ammesso**, cioe' per forza dopo
- *      gli ascoltatori.  ⇒ Quel che l'aiutante compra con il MOMENTO, questo lo
- *      compra con `close_range()`: appena nato chiude **tutto** tranne i tre
- *      standard e il proprio socket, e il banco lo legge da `/proc/<pid>/fd` —
- *      non lo deduce.
- *
- *   2. ⛔ **L'identita' non e' una promessa del codice: e' un fatto del
- *      nucleo.**  Un aiutante che risponde «si'» per un messaggio smarrito e'
- *      I3 violata e si vede; un figlio che gira **come l'utente sbagliato** e'
- *      I3 violata **in modo invisibile** — i pixel arrivano, sono bellissimi, e
- *      sono di un altro.  ⇒ Il socket del padre ha `SO_PASSCRED`, e il nucleo
- *      timbra **ogni messaggio** con pid/uid/gid **veri** del mittente
- *      (`SCM_CREDENTIALS`).  Il padre li confronta con l'uid che ha risolto dal
- *      nome dell'utente della sessione RCP **a ogni messaggio**, non
- *      all'apertura.  ⭐ E' il numero di pratica dell'aiutante, con un notaio:
- *      la pratica la scriviamo noi, le credenziali le scrive il nucleo, e un
- *      processo non privilegiato **non puo' dichiararne di false**.
- *
- *   3. ⛔ **Sopravvive al distacco** (invariante I4).  L'aiutante e' senza
- *      memoria — una transazione e muore.  Questo e' il PALCO: cattura,
- *      monitor virtuale, dispositivi.  ⚠ Chi muore quando cade la rete non e'
- *      lui: il figlio muore quando muore il server (`PR_SET_PDEATHSIG` **e**
- *      l'EOF sul socket, due strade indipendenti perche' la prima si perde
- *      quando cambiano le credenziali).
+ * ⇒ The two things **do not live in the same process**, and it is not an
+ *   implementation detail: without the bus there is no capture, without root
+ *   there is no authentication.  The server stays **privileged**, and for
+ *   every admitted user it spawns a **child running as that user**, which
+ *   holds their session bus, their capture and their devices.
  *
  * ---------------------------------------------------------------------------
- * ⛔ GLI INVARIANTI, E DOVE SI LEGGE CHE SONO RISPETTATI
+ * ⭐ IT IS THE HELPER OF §1.10 THE OTHER WAY ROUND — the same rule, one job per
+ *    process.  ⛔ BUT THREE THINGS ARE DIFFERENT, AND THEY MUST BE SAID FIRST
  *
- * | I3 | la guardia parte da negato | ogni strada che non porti a un messaggio
- * |    |                            | firmato dal nucleo con l'uid ATTESO e'
- * |    |                            | un no: `credenziali_combaciano()`, e non
- * |    |                            | c'e' un secondo posto che dica di si'   |
- * | I4 | il palco e' della sessione | nessuna riga di questo file lega la vita
- * |    |                            | di un figlio a una connessione: si
- * |    |                            | muore per `figli_spegni()` e basta      |
- * | I2 | una sessione per utente    | `figli_assicura()` cerca PRIMA di
- * |    |                            | generare: due connessioni dello stesso
- * |    |                            | utente trovano lo stesso figlio         |
- * | I7 | la protezione sta nel      | il calo di privilegio si VERIFICA con
- * |    | programma                  | `getresuid()` — chiesto al nucleo — e un
- * |    |                            | figlio che non e' sceso davvero esce    |
+ * The helper (`aiutante.h`) is a child **less** privileged than the parent
+ * that does the thing that blocks; this is a child **differently** privileged
+ * that does the thing the parent cannot do.  Hence:
+ *
+ *   1. ⛔ **It CANNOT be started early.**  The helper is born before
+ *      `trasporto_apri()` on purpose, because a `fork()` hands the child all
+ *      the descriptors and a helper started later would carry the port along.
+ *      The child is born **when a user has been admitted**, that is
+ *      necessarily after the listeners.  ⇒ What the helper buys with the
+ *      MOMENT, this one buys with `close_range()`: as soon as it is born it
+ *      closes **everything** except the three standard ones and its own
+ *      socket, and the bench reads it from `/proc/<pid>/fd` — it does not
+ *      infer it.
+ *
+ *   2. ⛔ **Identity is not a promise of the code: it is a fact of the
+ *      kernel.**  A helper answering "yes" for a lost message is I3 violated
+ *      and it shows; a child running **as the wrong user** is I3 violated
+ *      **invisibly** — the pixels arrive, they are beautiful, and they are
+ *      someone else's.  ⇒ The parent's socket has `SO_PASSCRED`, and the
+ *      kernel stamps **every message** with the sender's **real**
+ *      pid/uid/gid (`SCM_CREDENTIALS`).  The parent compares them with the
+ *      uid it resolved from the name of the RCP session's user **on every
+ *      message**, not at opening.  ⭐ It is the helper's case number, with a
+ *      notary: we write the case, the kernel writes the credentials, and an
+ *      unprivileged process **cannot declare false ones**.
+ *
+ *   3. ⛔ **It outlives the detach** (invariant I4).  The helper has no
+ *      memory — one transaction and it dies.  This is the STAGE: capture,
+ *      virtual monitor, devices.  ⚠ What dies when the network falls is not
+ *      it: the child dies when the server dies (`PR_SET_PDEATHSIG` **and** the
+ *      EOF on the socket, two independent roads because the first is lost
+ *      when the credentials change).
  *
  * ---------------------------------------------------------------------------
- * ⛔ E QUEL CHE QUESTO FILE NON FA, DICHIARATO INVECE CHE SCOPERTO
+ * ⛔ THE INVARIANTS, AND WHERE IT CAN BE READ THAT THEY ARE RESPECTED
  *
- *   · **non fa nascere una sessione grafica**.  Se l'utente ammesso non ha un
- *     `/run/user/<uid>` — cioe' non e' mai entrato su quella macchina — il
- *     figlio lo DICE e resta senza palco.  Farla nascere vuole
- *     `pam_open_session` (cioe' `pam_systemd`, che crea la sessione logind e
- *     la cartella di runtime), ed e' la decisione del login vero: non di qui;
- *   · **non spedisce niente sul filo**.  Consegna i byte al padre, che e'
- *     l'unico che ha le connessioni;
- *   · **non guarda dentro i byte del codec**: quello e' del codificatore.
+ * | I3 | the guard starts from denied | every road that does not lead to a
+ * |    |                              | message signed by the kernel with the
+ * |    |                              | EXPECTED uid is a no:
+ * |    |                              | `credenziali_combaciano()`, and there
+ * |    |                              | is no second place saying yes         |
+ * | I4 | the stage belongs to the     | no line of this file ties a child's
+ * |    | session                      | life to a connection: it dies through
+ * |    |                              | `figli_spegni()` and nothing else     |
+ * | I2 | one session per user         | `figli_assicura()` searches BEFORE
+ * |    |                              | spawning: two connections of the same
+ * |    |                              | user find the same child              |
+ * | I7 | the protection lives in the  | the privilege drop is VERIFIED with
+ * |    | program                      | `getresuid()` — asked of the kernel —
+ * |    |                              | and a child that did not really drop
+ * |    |                              | exits                                 |
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ AND WHAT THIS FILE DOES NOT DO, DECLARED INSTEAD OF DISCOVERED
+ *
+ *   · **it does not make a graphical session be born**.  If the admitted user
+ *     has no `/run/user/<uid>` — that is they never logged in on that machine
+ *     — the child SAYS so and stays without a stage.  Making it be born needs
+ *     `pam_open_session` (that is `pam_systemd`, which creates the logind
+ *     session and the runtime folder), and it is the real login's decision:
+ *     not this one's;
+ *   · **it sends nothing on the wire**.  It delivers the bytes to the parent,
+ *     which is the only one holding the connections;
+ *   · **it does not look inside the codec's bytes**: that belongs to the
+ *     encoder.
  */
 #ifndef REMOTIX_FIGLIO_H
 #define REMOTIX_FIGLIO_H
@@ -97,68 +102,69 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/* ⛔ L'area del registro sta QUI e non in `registro.h`: quel file non e' di
- *    questo mandato, e `registro_dice()` prende una stringa qualunque.  ⚠ Il
- *    giorno in cui `registro.h` si potra' toccare, questa riga va li' accanto
- *    alle altre — com'e' successo a `REG_SESSIONE`, che ha vissuto in
- *    `sessione.h` fino al 12 agosto 2026. */
+/* ⛔ The log area lives HERE and not in `registro.h`: that file does not belong
+ *    to this mandate, and `registro_dice()` takes any string.  ⚠ The day
+ *    `registro.h` can be touched, this line goes there next to the others —
+ *    as happened to `REG_SESSIONE`, which lived in `sessione.h` until 12 Aug
+ *    2026. */
 #define REG_FIGLIO "figlio"
 
 typedef struct figli figli;
 
-/* ⛔ Come il padre riceve un fotogramma dal figlio.  ⚠ `utente` e `uid` ci
- * sono TUTT'E DUE apposta: il nome e' quello con cui la sessione RCP ha chiesto
- * di entrare, l'uid e' quello che il **nucleo** ha timbrato sul messaggio, e
- * chi consegna deve poter rifiutare se i due si sono scollati. */
-/* ⛔⭐ `chiave` E' ARRIVATO CON LA FASE 3, E NON E' UN CAMPO IN PIU'.
+/* ⛔ How the parent receives a frame from the child.  ⚠ `utente` and `uid` are
+ * BOTH there on purpose: the name is the one with which the RCP session asked
+ * to enter, the uid is the one the **kernel** stamped on the message, and
+ * whoever delivers must be able to refuse if the two have come apart. */
+/* ⛔⭐ `chiave` ARRIVED WITH PHASE 3, AND IT IS NOT AN EXTRA FIELD.
  *
- *     Fino alla fase 2 chi riceveva marcava `chiave = true` **per
- *     costruzione**, perche' il fotogramma era uno solo e per forza una
- *     chiave.  ⛔ Con la predizione fra fotogrammi quella riga diventa **una
- *     bugia sul filo**: §6.2 scrive quel valore nel campo `tipo`, e un delta
- *     marcato `0x0301` fa riconfigurare al client un decodificatore su
- *     un'immagine che non si decodifica da sola.  ⇒ Qui viaggia quel che il
- *     codificatore ha LETTO dal flusso, non quel che si spera. */
-/* ⭐⭐ E `input` E' ARRIVATO CON LA FASE 4, per la stessa ragione per cui
- *     `chiave` era arrivato con la 3: senza, il campo `input` di §6.2 sarebbe
- *     **0 per costruzione** — ed e' esattamente quel che era, `input = 0` in
- *     953 fotogrammi su 953 (`README.md`, 13 agosto 2026).
+ *     Until phase 2 the receiver marked `chiave = true` **by construction**,
+ *     because the frame was a single one and necessarily a keyframe.  ⛔ With
+ *     prediction between frames that line becomes **a lie on the wire**: §6.2
+ *     writes that value in the `tipo` field, and a delta marked `0x0301` makes
+ *     the client reconfigure a decoder on an image that does not decode on its
+ *     own.  ⇒ What travels here is what the encoder READ from the stream, not
+ *     what one hopes. */
+/* ⭐⭐ AND `input` ARRIVED WITH PHASE 4, for the same reason `chiave` arrived
+ *     with phase 3: without it, the `input` field of §6.2 would be **0 by
+ *     construction** — and it is exactly what it was, `input = 0` in 953
+ *     frames out of 953 (`README.md`, 13 Aug 2026).
  *
- * ⛔ E lo riempie il FIGLIO, non il padre: solo lui sa che cosa il compositore
- *    ha davvero preso, e in che istante ha catturato.  Riempirlo qui direbbe
- *    «l'ultimo input spedito al palco», che e' un numero piu' alto e farebbe
- *    misurare all'anello del ritardo un ritardo piu' corto del vero — in nostro
- *    favore, che e' la direzione in cui non si sbaglia mai per caso. */
+ * ⛔ And the CHILD fills it, not the parent: only the child knows what the
+ *    compositor really took, and at what instant it captured.  Filling it here
+ *    would say "the last input sent to the stage", which is a higher number
+ *    and would make the latency link measure a latency shorter than the real
+ *    one — in our favour, which is the direction in which one never errs by
+ *    accident. */
 typedef void (*FiglioDeposito)(void *ctx, const char *utente, uid_t uid,
                                uint8_t codec, bool chiave, const uint8_t *dati,
                                size_t byte, uint32_t larghezza,
                                uint32_t altezza, uint64_t istante_us,
                                uint32_t input);
 
-/* ⛔ Un figlio se n'e' andato.  Serve al padre per lasciare quel che era suo —
- * per esempio il deposito del video, che oggi e' di PROCESSO (vedi il riquadro
- * di `video_forse()` in `webtransport.c`): un deposito che sopravvive al figlio
- * che lo ha riempito e' l'immagine di un utente che resta in casa. */
+/* ⛔ A child has gone.  It serves the parent to release what was its own — for
+ * example the video deposit, which today belongs to the PROCESS (see the box
+ * of `video_forse()` in `webtransport.c`): a deposit that outlives the child
+ * that filled it is the image of a user who stays in the house. */
 typedef void (*FiglioCongedo)(void *ctx, const char *utente, uid_t uid);
 
-/* ⭐⭐ FASE 7 — UN BLOCCO D'AUDIO GIA' CODIFICATO, dalla sessione al filo.
+/* ⭐⭐ PHASE 7 — AN ALREADY ENCODED AUDIO BLOCK, from the session to the wire.
  *
- * ⛔ Arriva **codificato**, non crudo, e la ragione e' un numero: 20 ms di PCM
- *    stereo sono 3840 byte, lo stesso blocco in Opus ne misura `[M]` 241-439.
- *    Spedire crudo costerebbe dieci volte il socket, cinquanta volte al
- *    secondo — su un percorso che `CODER.md` §1-bis dice di misurare in
- *    ritardo, non in comodita' di chi scrive.
+ * ⛔ It arrives **encoded**, not raw, and the reason is a number: 20 ms of
+ *    stereo PCM are 3840 bytes, the same block in Opus measures `[M]` 241-439.
+ *    Shipping raw would cost ten times the socket, fifty times a second — on
+ *    a path that `CODER.md` §1-bis says to measure in latency, not in the
+ *    writer's convenience.
  *
- * `codec`      1 = Opus, 2 = PCM.  ⚠ Sono i numeri di `RCP.md` **§6.3**, e NON
- *              quelli di §6.2: li' 1 e' HEVC.  La coincidenza dei valori e'
- *              una trappola, e chi scambiasse le due tabelle otterrebbe un
- *              datagram formalmente valido con dentro il codec sbagliato.
- * `istante_us` l'orologio monotono del figlio, del PRIMO campione del blocco.
- *              ⛔ Lo mette il figlio per la stessa ragione per cui mette
- *              `input` nei fotogrammi: e' l'unico che sappia **quando** i
- *              campioni sono stati presi.  Il padre saprebbe solo quando sono
- *              arrivati, che e' un numero piu' alto e sempre in nostro favore.
- * `dati`       vive SOLO dentro la chiamata: chi lo vuole tenere lo copia.
+ * `codec`      1 = Opus, 2 = PCM.  ⚠ They are the numbers of `RCP.md` **§6.3**,
+ *              and NOT those of §6.2: there 1 is HEVC.  The coincidence of the
+ *              values is a trap, and whoever swapped the two tables would get a
+ *              formally valid datagram with the wrong codec inside.
+ * `istante_us` the child's monotonic clock, of the FIRST sample of the block.
+ *              ⛔ The child sets it for the same reason it sets `input` in
+ *              frames: it is the only one that knows **when** the samples were
+ *              taken.  The parent would only know when they arrived, which is
+ *              a higher number and always in our favour.
+ * `dati`       lives ONLY inside the call: whoever wants to keep it copies it.
  */
 typedef void (*FiglioBlocco)(void *ctx, const char *utente, uid_t uid,
                              uint8_t codec, uint64_t istante_us,
@@ -166,162 +172,166 @@ typedef void (*FiglioBlocco)(void *ctx, const char *utente, uid_t uid,
 void figli_gancio_blocco(figli *f, FiglioBlocco fn, void *ctx);
 
 /*
- * «Cattura l'audio di quest'utente, e codificalo cosi'» — oppure «smetti».
+ * "Capture this user's audio, and encode it like this" — or "stop".
  *
- * `codec` 1 = Opus, 2 = PCM, **0 = spegni**.  ⛔ Lo zero non e' un sentinella
- *         implicito: e' il valore che §4.3/§6.3 riservano a «nessun codec
- *         negoziato», e qui vuol dire la stessa cosa — non ascolta nessuno.
+ * `codec` 1 = Opus, 2 = PCM, **0 = off**.  ⛔ Zero is not an implicit sentinel:
+ *         it is the value §4.3/§6.3 reserve for "no codec negotiated", and
+ *         here it means the same thing — nobody is listening.
  *
- * ⚠ Spegnere ferma la CATTURA, non il sink: il dispositivo su cui le
- *   applicazioni suonano appartiene alla sessione (invariante I4, come il
- *   palco), e farlo sparire a ogni distacco interromperebbe il suono a chi
- *   sta ascoltando dentro la sessione e lascerebbe le applicazioni gia'
- *   aperte su un dispositivo morto.
+ * ⚠ Turning off stops the CAPTURE, not the sink: the device applications play
+ *   on belongs to the session (invariant I4, like the stage), and making it
+ *   vanish at every detach would cut the sound for whoever is listening inside
+ *   the session and leave the applications already open on a dead device.
  */
 bool figli_audio(figli *f, const char *utente, uint8_t codec);
 
 /* ------------------------------------------------------------------------- */
-/* ⭐⭐ FASE 7 — GLI APPUNTI, e attraversano il confine per la QUARTA volta con
- *     la stessa ragione del video, dell'input e dell'audio:
+/* ⭐⭐ PHASE 7 — THE CLIPBOARD, and it crosses the boundary for the FOURTH time
+ *     for the same reason as video, input and audio:
  *
- *       **la clipboard e' del compositore, e il compositore parla con la
- *       sessione dell'utente, che e' nel FIGLIO**; i messaggi di `RCP.md` §7.4
- *       li scrive il padre, che tiene QUIC.
+ *       **the clipboard belongs to the compositor, and the compositor talks to
+ *       the user's session, which is in the CHILD**; the messages of `RCP.md`
+ *       §7.4 are written by the parent, which holds QUIC.
  *
- * ⛔ SOLO TESTO — `DECISIONI.md` §5-ter.1, decisa dall'utente il 9 agosto 2026
- *    e riconfermata il 17.  I tipi MIME non attraversano il socket: vivono in
- *    `appunti.c` e non escono di li' (`src/appunti.h`).
+ * ⛔ TEXT ONLY — `DECISIONI.md` §5-ter.1, decided by the user on 9 Aug 2026
+ *    and confirmed again on the 17th.  MIME types do not cross the socket: they
+ *    live in `appunti.c` and do not leave it (`src/appunti.h`).
  *
- * ⛔ E IL TESTO VA A PEZZI, come il fotogramma e il cursore: il tetto di §5.4 e'
- *    **1 000 000 byte**, trenta volte `PEZZO_MAX`.
+ * ⛔ AND THE TEXT GOES IN PIECES, like the frame and the cursor: the cap of §5.4
+ *    is **1 000 000 bytes**, thirty times `PEZZO_MAX`.
  */
 
 /*
- * ⭐ «LA SESSIONE HA COPIATO QUESTO TESTO» — il verso desktop → dispositivo.
+ * ⭐ "THE SESSION HAS COPIED THIS TEXT" — the desktop → device direction.
  *
- * ⛔ Arriva GIA' LETTO, gia' convalidato UTF-8 e gia' entro il tetto di §5.4:
- *    quei tre controlli stanno in `appunti.c`, dove il testo esiste ancora
- *    intero e dove si sa **quale** dei motivi ha fatto fallire.  ⚠ Un testo
- *    oltre il tetto non arriva qui affatto — §5.4 dice «non si annuncia», e la
- *    riga sta nel registro del figlio.
+ * ⛔ It arrives ALREADY READ, already validated as UTF-8 and already within the
+ *    cap of §5.4: those three checks are in `appunti.c`, where the text still
+ *    exists whole and where it is known **which** of the reasons made it fail.
+ *    ⚠ A text over the cap does not arrive here at all — §5.4 says "it is not
+ *    announced", and the line is in the child's log.
  *
- * `testo` e' terminato da zero e vive SOLO dentro la chiamata.
+ * `testo` is zero-terminated and lives ONLY inside the call.
  */
 typedef void (*FiglioAppuntiTesto)(void *ctx, const char *utente, uid_t uid,
                                    const char *testo, size_t byte);
 
 /*
- * ⭐ «QUALCUNO NELLA SESSIONE STA INCOLLANDO» — il verso dispositivo → desktop,
- *    ed e' la meta' che si usa di piu' (`DECISIONI.md` §5-ter.1).
+ * ⭐ "SOMEONE IN THE SESSION IS PASTING" — the device → desktop direction, and
+ *    it is the half used most (`DECISIONI.md` §5-ter.1).
  *
- * ⛔⛔ VA RISPOSTO SEMPRE, con `figli_appunti_risposta()`, anche a mani vuote e
- *      anche se il client non risponde mai.  Un `SelectionTransfer` senza
- *      risposta lascia appesa **a tempo indeterminato** l'applicazione che sta
- *      incollando, e quel che l'utente vede e' un desktop piantato — un difetto
- *      che nessuno collega agli appunti.  ⇒ Chi riceve questa richiamata tiene
- *      un fondo di tempo.
+ * ⛔⛔ IT MUST ALWAYS BE ANSWERED, with `figli_appunti_risposta()`, even
+ *      empty-handed and even if the client never answers.  A
+ *      `SelectionTransfer` without an answer leaves the pasting application
+ *      hanging **indefinitely**, and what the user sees is a frozen desktop —
+ *      a defect nobody connects to the clipboard.  ⇒ Whoever receives this
+ *      callback keeps a timeout.
  *
- * `serial` e' il numero di Mutter, e va restituito tale e quale.
+ * `serial` is Mutter's number, and must be returned as is.
  */
 typedef void (*FiglioAppuntiRichiesta)(void *ctx, const char *utente, uid_t uid,
                                        uint32_t serial);
 
-/* ⚠ I due ganci si collegano insieme o per niente: un padre che sapesse
- *   ricevere il testo della sessione e non sapesse servire chi incolla
- *   lascerebbe il desktop **peggio di come l'ha trovato** — vedi sopra. */
+/* ⚠ The two hooks are attached together or not at all: a parent that could
+ *   receive the session's text and could not serve whoever pastes would leave
+ *   the desktop **worse than it found it** — see above. */
 void figli_gancio_appunti(figli *f, FiglioAppuntiTesto testo,
                           FiglioAppuntiRichiesta richiesta, void *ctx);
 
 /*
- * «IL CLIENT HA DEL TESTO NEGLI APPUNTI»: il figlio lo offre alla sessione, e
- * da li' in poi qualcuno potra' incollarlo.
+ * "THE CLIENT HAS TEXT IN ITS CLIPBOARD": the child offers it to the session,
+ * and from there on someone will be able to paste it.
  *
- * ⛔ NON porta il testo, e non e' una dimenticanza: e' il «si annuncia e poi si
- *    tira» di §7.4 applicato di qua.  Il testo lo si chiede quando qualcuno
- *    incolla davvero — cioe' con `FiglioAppuntiRichiesta` — e chi copia un
- *    documento intero sul telefono non lo spedisce a nessuno finche' quel
- *    momento non arriva.
+ * ⛔ It does NOT carry the text, and it is not an oversight: it is §7.4's
+ *    "announce first, then pull" applied on this side.  The text is requested
+ *    when someone really pastes — that is with `FiglioAppuntiRichiesta` — and
+ *    whoever copies a whole document on the phone sends it to nobody until
+ *    that moment comes.
  */
 bool figli_appunti_offri(figli *f, const char *utente);
 
 /*
- * La risposta a una `FiglioAppuntiRichiesta`.  Con `testo` NULL dichiara di non
- * avercelo — ⛔ **che e' comunque una risposta**, ed e' quella che sblocca chi
- * sta incollando.
+ * The answer to a `FiglioAppuntiRichiesta`.  With `testo` NULL it declares not
+ * having it — ⛔ **which is still an answer**, and it is the one that unblocks
+ * whoever is pasting.
  */
 bool figli_appunti_risposta(figli *f, const char *utente, uint32_t serial,
                             const char *testo, size_t byte);
 
-/* ⭐⭐ FASE 4 — LA FORMA DEL CURSORE, e attraversa il confine nel verso opposto
- *     all'input: il metadato arriva da PipeWire (cioe' nel figlio) e il canale
- *     `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.
+/* ⭐⭐ PHASE 4 — THE CURSOR SHAPE, and it crosses the boundary in the opposite
+ *     direction to input: the metadata comes from PipeWire (that is in the
+ *     child) and the `CURSORE_FORMA` channel (`RCP.md` §7.2) lives in the
+ *     parent.
  *
- * ⛔ `immagine` e' BGRA premoltiplicato, `larghezza x altezza x 4` byte, e vive
- *    SOLO dentro la chiamata: chi la vuole tenere la copia.
- * ⛔ `0x0` con `immagine` NULL = **cursore nascosto** (§5.5), e va consegnato
- *    come messaggio: e' l'unico modo che il client ha di sapere che il
- *    puntatore e' sparito, invece di disegnare l'ultima forma per sempre.
- * ⚠ La POSIZIONE non passa di qui e non passa da nessuna parte in questo verso:
- *   e' del client, che disegna il puntatore da se' (`SPECIFICHE.md` §7.1). */
+ * ⛔ `immagine` is premultiplied BGRA, `larghezza x altezza x 4` bytes, and
+ *    lives ONLY inside the call: whoever wants to keep it copies it.
+ * ⛔ `0x0` with `immagine` NULL = **hidden cursor** (§5.5), and it must be
+ *    delivered as a message: it is the only way the client has of knowing the
+ *    pointer has vanished, instead of drawing the last shape forever.
+ * ⚠ The POSITION does not pass through here and does not pass anywhere in
+ *   this direction: it belongs to the client, which draws the pointer itself
+ *   (`SPECIFICHE.md` §7.1). */
 typedef void (*FiglioCursore)(void *ctx, const char *utente, uid_t uid,
                               uint16_t larghezza, uint16_t altezza,
                               int16_t attivo_x, int16_t attivo_y,
                               const uint8_t *immagine, size_t byte);
 
-/* ⭐⭐ §7.1 — LA RISPOSTA ALLA TELA, e attraversa il confine nel verso del
- *     cursore: la domanda esce con `figli_ritela()`, la risposta rientra di qui.
+/* ⭐⭐ §7.1 — THE ANSWER TO THE CANVAS, and it crosses the boundary in the
+ *     cursor's direction: the question goes out with `figli_ritela()`, the
+ *     answer comes back through here.
  *
- * ⛔ PERCHE' NON BASTAVA GUARDARE I FOTOGRAMMI, che e' quel che faceva la prima
- *    stesura di questa catena: dal fotogramma si vede che la misura e' cambiata,
- *    ⚠ ma non si vede **a quale richiesta risponde** — e i tre casi che non si
- *    distinguono guardando i pixel sono tutti frequenti:
+ * ⛔ WHY LOOKING AT THE FRAMES WAS NOT ENOUGH, which is what the first draft
+ *    of this chain did: from the frame one sees that the size changed,
+ *    ⚠ but not **which request it answers** — and the three cases that cannot
+ *    be told apart by looking at the pixels are all frequent:
  *
- *      · il palco ha GIA' quella misura ⇒ non arrivera' nessun fotogramma nuovo,
- *        e chi aspetta aspetterebbe il fondo dei tre secondi per niente;
- *      · il palco non c'e' o non ce l'ha fatta ⇒ il fatto e' noto SUBITO, di la';
- *      · due richieste incatenate — l'utente che trascina il bordo — ⇒ il
- *        fotogramma della PRIMA verrebbe preso per la risposta della SECONDA, e
- *        il desktop si assesterebbe sulla misura sbagliata **senza che nessun
- *        conto se ne accorgesse**.
+ *      · the stage ALREADY has that size ⇒ no new frame will arrive, and
+ *        whoever waits would wait for the three-second deadline for nothing;
+ *      · the stage is not there or did not make it ⇒ the fact is known AT
+ *        ONCE, over there;
+ *      · two chained requests — the user dragging the edge — ⇒ the frame of
+ *        the FIRST would be taken as the answer to the SECOND, and the desktop
+ *        would settle on the wrong size **without any count noticing**.
  *
- * `voluta_*`  la misura che era stata chiesta al palco: serve a riconoscere la
- *             richiesta, non a dichiarare un esito.
- * `avuta_*`   quel che il palco ha davvero.  ⛔ `0x0` = **non ce l'ha fatta**, ed
- *             e' un fatto diverso da «ci sta provando» (`CODER.md` §3.10).
+ * `voluta_*`  the size that had been asked of the stage: it serves to
+ *             recognise the request, not to declare an outcome.
+ * `avuta_*`   what the stage really has.  ⛔ `0x0` = **it did not make it**, and
+ *             it is a different fact from "it is trying" (`CODER.md` §3.10).
  *
- * ⚠ E arriva anche quando nessuno aveva chiesto niente: il palco puo' cambiare
- *   misura da se' (un rimontaggio dopo una caduta della sessione grafica).  Chi
- *   riceve decide che farne — qui si riferisce un fatto. */
+ * ⚠ And it arrives even when nobody had asked for anything: the stage can
+ *   change size by itself (a remount after a fall of the graphical session).
+ *   The receiver decides what to do with it — here a fact is reported. */
 typedef void (*FiglioTela)(void *ctx, const char *utente, uid_t uid,
                            uint32_t voluta_l, uint32_t voluta_a, uint32_t avuta_l,
                            uint32_t avuta_a);
 
-/* Accende la tabella dei figli.  ⛔ Non genera niente: qui non si sa ancora
- * chi entrera'.
+/* Switches on the children table.  ⛔ It spawns nothing: here it is not yet
+ * known who will enter.
  *
- * `tela_l`/`tela_a`  la misura con cui il figlio aprira' cattura e codifica —
- *                    la stessa costante di `main.c`, passata invece che
- *                    ricopiata (`P2-1-sessione.md` §6.3: «o fra due settimane
- *                    saranno tre posti»).
- * `dir_rilievo`      dove il figlio scrive il crudo e i flussi, o NULL.
- *                    ⚠ Ci scrive **il figlio**, cioe' l'utente: se la cartella
- *                    non e' sua, il rilievo non esce e la riga lo dice. */
-/* ⭐⭐ §7.6 — «LA SESSIONE GRAFICA DI QUEST'UTENTE E' FINITA», e non gliel'ha
- *     chiesto nessun client: l'utente ha scelto «Esci…» dal menu del desktop.
+ * `tela_l`/`tela_a`  the size with which the child will open capture and
+ *                    encoding — the same constant as `main.c`, passed instead
+ *                    of copied (`P2-1-sessione.md` §6.3: "or in two weeks they
+ *                    will be three places").
+ * `dir_rilievo`      where the child writes the raw data and the streams, or
+ *                    NULL.  ⚠ **The child** writes there, that is the user: if
+ *                    the folder is not theirs, the survey does not come out
+ *                    and the line says so. */
+/* ⭐⭐ §7.6 — "THIS USER'S GRAPHICAL SESSION IS OVER", and no client asked for
+ *     it: the user chose "Log out…" from the desktop menu.
  *
- * ⛔ E' il gemello di `TERMINA_SESSIONE` visto dall'altro verso: la' l'ordine
- *    arriva dal filo, qui il fatto arriva dal desktop.  ⚠ In tutt'e due i casi
- *    chi guarda deve ricevere `0x10 SESSIONE_TERMINATA` — e non i trenta
- *    secondi del silenzio seguiti da «errore di rete», che e' quel che
- *    succederebbe tacendo (rilievo B-7).
+ * ⛔ It is the twin of `TERMINA_SESSIONE` seen from the other direction: there
+ *    the order comes from the wire, here the fact comes from the desktop.
+ *    ⚠ In both cases whoever is watching must receive `0x10
+ *    SESSIONE_TERMINATA` — and not the thirty seconds of silence followed by
+ *    "network error", which is what would happen by keeping quiet (finding
+ *    B-7).
  *
- * ⚠ Si registra a parte invece di allungare `figli_accendi()`: quella firma ha
- *   gia' quattro richiami, e un quinto parametro in una riga di sei non lo
- *   legge piu' nessuno. */
+ * ⚠ It is registered separately instead of lengthening `figli_accendi()`: that
+ *   signature already has four callbacks, and a fifth parameter on a line of
+ *   six would no longer be read by anyone. */
 typedef void (*FiglioSessioneFinita)(void *ctx, const char *utente, uid_t uid);
 
-/* ⭐ §7.1 — «il palco non c'e' ANCORA»: il figlio lo DICE, e il padre rimanda il
- * fondo invece di dedurre un fallimento dal silenzio. */
+/* ⭐ §7.1 — "the stage is not there YET": the child SAYS so, and the parent
+ * postpones the deadline instead of inferring a failure from silence. */
 typedef void (*FiglioTelaAttendi)(void *ctx, const char *utente, uid_t uid,
                                   uint32_t voluta_l, uint32_t voluta_a);
 void figli_gancio_tela_attendi(figli *f, FiglioTelaAttendi fn, void *ctx);
@@ -332,234 +342,241 @@ figli *figli_accendi(uint32_t tela_l, uint32_t tela_a, const char *dir_rilievo,
                      FiglioCursore cursore, FiglioTela tela, void *ctx);
 
 /*
- * ⭐⭐⭐ LE **TRE** CURE DELLA FASE 9 CHE VIVONO DALL'ALTRA PARTE — 23 agosto
- *      2026, e la terza (il silenzio dell'audio) e' arrivata il 24.
+ * ⭐⭐⭐ THE **THREE** CURES OF PHASE 9 THAT LIVE ON THE OTHER SIDE — 23 Aug
+ *      2026, and the third (audio silence) arrived on the 24th.
  *
- * ⛔ IL PROBLEMA CHE RISOLVE, ed e' l'unico motivo per cui questa funzione
- *    esiste: `codificatore_qualita_risale()`, `codificatore_tetto_banda()` e
- *    `audio_silenzio_taci()` sono decisioni del **server**, ma ne' il
- *    codificatore video ne' quello audio girano nel server — girano nel FIGLIO,
- *    che non e' un `fork` ma un `execve` con l'ambiente
- *    composto da zero (`figlio.c`, punto 5 di `diventa_ed_esegui()`).  ⇒ Una
- *    variabile d'ambiente **non arriva**, e chiamare qui i setter
- *    accenderebbe la cura nel processo sbagliato: quello che un codificatore
- *    non lo apre mai.
+ * ⛔ THE PROBLEM IT SOLVES, and it is the only reason this function exists:
+ *    `codificatore_qualita_risale()`, `codificatore_tetto_banda()` and
+ *    `audio_silenzio_taci()` are decisions of the **server**, but neither the
+ *    video encoder nor the audio one runs in the server — they run in the
+ *    CHILD, which is not a `fork` but an `execve` with the environment
+ *    composed from scratch (`figlio.c`, point 5 of `diventa_ed_esegui()`).
+ *    ⇒ An environment variable **does not arrive**, and calling the setters
+ *    here would turn the cure on in the wrong process: the one that never
+ *    opens an encoder.
  *
- * ⭐ LA STRADA E' QUELLA DI `--parlantina`, gia' pagata a caro prezzo il 16
- *    agosto 2026: il valore si mette nella **riga di comando del figlio**, e
- *    il figlio se lo ripete a se stesso appena nato.  Nient'altro attraversa.
+ * ⭐ THE ROAD IS THAT OF `--parlantina`, already paid for dearly on 16 Aug
+ *    2026: the value is put on the **child's command line**, and the child
+ *    repeats it to itself as soon as it is born.  Nothing else crosses.
  *
- * `qualita_risale`     la qualita' risale invece di restare giu' (I6).
- * `tetto_banda_mbit`   il **pavimento** in Mbit/s da cui il codificatore
- *                      deriva filo, punto di lavoro e serbatoio; `0` = spento.
- * `audio_silenzio`     ⭐ un blocco d'audio tutto a zero non diventa un
- *                      datagram.  **`true` e' il predefinito** dal 24 agosto
- *                      2026 (decisione dell'utente), e si spegne con
- *                      `--niente-audio-silenzio`.  ⚠ `main.c` la chiama con lo
- *                      STESSO valore che passa ad `audio_silenzio_taci()` per
- *                      se': il tono di prova apre un codificatore nel server, e
- *                      due valori diversi sarebbero due prodotti diversi.
+ * `qualita_risale`     quality climbs back instead of staying low (I6).
+ * `tetto_banda_mbit`   the **floor** in Mbit/s from which the encoder derives
+ *                      wire, working point and reservoir; `0` = off.
+ * `audio_silenzio`     ⭐ an all-zero audio block does not become a datagram.
+ *                      **`true` is the default** since 24 Aug 2026 (the user's
+ *                      decision), and it is turned off with
+ *                      `--niente-audio-silenzio`.  ⚠ `main.c` calls it with the
+ *                      SAME value it passes to `audio_silenzio_taci()` for
+ *                      itself: the test tone opens an encoder in the server,
+ *                      and two different values would be two different
+ *                      products.
  *
- * ⚠ Si registra a parte invece di allungare `figli_accendi()`, per la ragione
- *   gia' scritta sopra `FiglioSessioneFinita`: quella firma ha gia' quattro
- *   richiami.
- * ⛔ Vale per i figli che nascono DOPO: si chiama all'avvio, prima che PAM
- *    possa dire si' a qualcuno.  ⚠ E chi dichiara il valore in vigore non e'
- *    questo file ne' `main.c`, ma `codificatore.c` all'apertura di ogni
- *    codificatore — cioe' chi lo usa davvero.  Un'opzione caduta nel passaggio
- *    padre → figlio ha esattamente la stessa faccia di una cura che non
- *    funziona, e quelle righe sono l'unico posto in cui le due si separano.
+ * ⚠ It is registered separately instead of lengthening `figli_accendi()`, for
+ *   the reason already written above `FiglioSessioneFinita`: that signature
+ *   already has four callbacks.
+ * ⛔ It holds for the children born AFTER: it is called at startup, before PAM
+ *    can say yes to anyone.  ⚠ And the one declaring the value in force is
+ *    neither this file nor `main.c`, but `codificatore.c` when each encoder
+ *    opens — that is whoever really uses it.  An option lost in the parent →
+ *    child hand-over has exactly the same face as a cure that does not work,
+ *    and those lines are the only place where the two separate.
  */
 void figli_fase9(figli *f, bool qualita_risale, uint32_t tetto_banda_mbit,
                  bool audio_silenzio);
 
-/* ⛔ Spegne tutti i figli e aspetta che siano morti.  ⚠ ASPETTA, e va detto:
- * sta **dopo** l'ultimo giro del ciclo `poll`, come `aiutante_spegni()` —
- * `CODER.md` §4.4 vieta l'attesa DENTRO il ciclo, non dopo. */
+/* ⛔ Shuts down all the children and waits until they are dead.  ⚠ It WAITS,
+ * and it must be said: it sits **after** the last round of the `poll` loop,
+ * like `aiutante_spegni()` — `CODER.md` §4.4 forbids waiting INSIDE the loop,
+ * not after. */
 void figli_spegni(figli *f);
 
-/* ⛔⭐ SI CHIAMA QUANDO PAM HA DETTO SI', E NON UN ISTANTE PRIMA (invariante
- *     I3).  Un figlio che nascesse su `CREDENZIALI` girerebbe come un utente
- *     che non ha ancora dimostrato di essere lui.
+/* ⛔⭐ IT IS CALLED WHEN PAM HAS SAID YES, AND NOT AN INSTANT BEFORE (invariant
+ *     I3).  A child born on `CREDENZIALI` would run as a user who has not yet
+ *     proven to be who they are.
  *
- * ⛔ I2 — «una sola sessione grafica per utente»: se il figlio di
- *    quell'utente c'e' gia' e risponde ancora, questa funzione **non ne genera
- *    un secondo** e restituisce `true` lo stesso.  Due connessioni dello stesso
- *    utente vedono lo stesso palco, che e' precisamente quel che I4 dice.
+ * ⛔ I2 — "only one graphical session per user": if that user's child already
+ *    exists and still answers, this function **does not spawn a second one**
+ *    and returns `true` anyway.  Two connections of the same user see the same
+ *    stage, which is precisely what I4 says.
  *
- * ⛔ `false` vuol dire «non c'e' nessun figlio per quell'utente», e chi chiama
- *    non deve trattarlo come «forse»: nessun palco, nessun pixel.  Le strade
- *    che portano qui sono elencate in `figlio.c`, funzione `figli_assicura`. */
+ * ⛔ `false` means "there is no child for that user", and the caller must not
+ *    treat it as "maybe": no stage, no pixels.  The roads leading here are
+ *    listed in `figlio.c`, function `figli_assicura`. */
 bool figli_assicura(figli *f, const char *utente);
-/* ⭐ FASE 17 T6: la stessa, con l'indirizzo del client (nudo) che la
- *    sessione PAM del figlio riceve come `PAM_RHOST`, come quella di sshd
- *    (logind: `RemoteHost`).  NULL o "" ⇒ «remotix», com'era. */
+/* ⭐ PHASE 17 T6: the same, with the client's (bare) address that the child's
+ *    PAM session receives as `PAM_RHOST`, like sshd's (logind: `RemoteHost`).
+ *    NULL or "" ⇒ "remotix", as before. */
 bool figli_assicura_da(figli *f, const char *utente, const char *rhost);
 
-/* I descrittori da mettere nel `poll`.  Restituisce quanti ne ha scritti. */
+/* The descriptors to put in the `poll`.  Returns how many it wrote. */
 size_t figli_descrittori(figli *f, struct pollfd *fds, size_t max);
 
-/* ⛔ Legge quel che i figli hanno da dire, verificando le credenziali del
- * nucleo **su ogni messaggio**.  ⚠ Si chiama anche quando nessun descrittore e'
- * leggibile: qui dentro scadono le attese e si raccolgono i morti, e una
- * scadenza che aspetta un byte e' una scadenza che non scatta mai — la lezione
- * di `regola_battito`, pagata l'11 agosto con B6 e ripagata dall'aiutante. */
+/* ⛔ Reads what the children have to say, verifying the kernel's credentials
+ * **on every message**.  ⚠ It is called even when no descriptor is readable:
+ * in here the waits expire and the dead are reaped, and a deadline that waits
+ * for a byte is a deadline that never fires — the lesson of `regola_battito`,
+ * paid on 11 August with B6 and paid again by the helper. */
 void figli_muovi(figli *f, struct pollfd *fds, size_t n, uint64_t ora_ms);
 
-/* Quanti figli sono vivi adesso.  Per il registro e per il banco. */
+/* How many children are alive now.  For the log and for the bench. */
 int figli_quanti(const figli *f);
 
-/* ⭐⭐ Il nome dell'utente del `quale`-esimo palco vivo (0 … `figli_quanti()−1`),
- *     o `NULL`.  ⛔ Serve al BUDGET (fase 10) per sapere **chi e' dentro**, e
- *     l'insieme giusto e' questo e non i posti del registro RCP: una sessione
- *     che ha lasciato il posto per silenzio **codifica ancora** finche' il suo
- *     palco e' vivo (§3.2, il *fantasma*), e costa quanto le altre.
- * ⚠ L'indice non e' stabile fra due chiamate: si scorre una volta sola. */
+/* ⭐⭐ The user name of the `quale`-th live stage (0 … `figli_quanti()−1`), or
+ *     `NULL`.  ⛔ It serves the BUDGET (phase 10) to know **who is inside**,
+ *     and the right set is this one and not the slots of the RCP registry: a
+ *     session that left its slot through silence **still encodes** as long as
+ *     its stage is alive (§3.2, the *ghost*), and costs as much as the others.
+ * ⚠ The index is not stable between two calls: it is scanned once only. */
 const char *figli_utente_ennesimo(const figli *f, int quale);
 
-/* ⛔ Per il banco: il pid del figlio di quell'utente, o -1.  ⚠ Serve a
- * `banchi/02-figlio-*` per chiedere al NUCLEO chi e' quel processo
- * (`/proc/<pid>/status`) invece di dedurlo da `pgrep`, che troverebbe anche i
- * figli dei server degli altri banchi. */
+/* ⛔ For the bench: the pid of that user's child, or -1.  ⚠ It serves
+ * `banchi/02-figlio-*` to ask the KERNEL who that process is
+ * (`/proc/<pid>/status`) instead of inferring it from `pgrep`, which would
+ * also find the children of the other benches' servers. */
 pid_t figli_pid_di(const figli *f, const char *utente);
 
-/* ⛔⭐ CHIEDE AL FIGLIO DI QUELL'UTENTE DI RIMANDARE IL SUO FOTOGRAMMA.
+/* ⛔⭐ ASKS THAT USER'S CHILD TO SEND ITS FRAME AGAIN.
  *
- *     ⚠ Serve perche' il deposito del video, in `webtransport.c`, e' **uno per
- *     PROCESSO**: quando entra un altro utente il padre lo svuota (o
- *     consegnerebbe a lui i pixel del primo), e il primo — che il suo figlio ce
- *     l'ha ancora vivo — deve poterselo far rimandare.
+ *     ⚠ It is needed because the video deposit, in `webtransport.c`, is **one
+ *     per PROCESS**: when another user enters the parent empties it (or it
+ *     would deliver the first one's pixels to them), and the first — who still
+ *     has their child alive — must be able to have it sent again.
  *
- * ⛔ Il figlio rimanda **lo stesso** fotogramma, non uno nuovo: la fase 2 e'
- *    un'immagine ferma, e ricatturare qui consegnerebbe due immagini diverse
- *    sotto la stessa etichetta.
+ * ⛔ The child sends **the same** frame again, not a new one: phase 2 is a
+ *    still image, and recapturing here would deliver two different images
+ *    under the same label.
  *
- * `false` = non c'e' nessun figlio per quell'utente, o la domanda non e'
- * partita — e allora quella sessione non vedra' niente, dichiarato. */
+ * `false` = there is no child for that user, or the request did not go out —
+ * and then that session will see nothing, declared. */
 bool figli_chiedi_palco(figli *f, const char *utente);
 
-/* ⛔⭐ FASE 3 — «CATTURA DI CONTINUO», E «QUESTA DEV'ESSERE UNA CHIAVE».
+/* ⛔⭐ PHASE 3 — "CAPTURE CONTINUOUSLY", AND "THIS ONE MUST BE A KEYFRAME".
  *
- *     E' la meta' padre della cucitura che alla fase 2 non esisteva:
- *     `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel
- *     prodotto**, quindi un `RICHIEDI_CHIAVE` del client accendeva un `bool` in
- *     `rcp.c` e non produceva nessuna chiave — e con `chiavi_ogni = 0` (GOP
- *     infinito) dopo la prima chiave non ne arrivava mai piu' una.
+ *     It is the parent half of the seam that did not exist at phase 2:
+ *     `codificatore_chiedi_chiave()` had **no caller in the product**, so a
+ *     client's `RICHIEDI_CHIAVE` turned on a `bool` in `rcp.c` and produced no
+ *     keyframe — and with `chiavi_ogni = 0` (infinite GOP) after the first
+ *     keyframe not a single one ever arrived again.
  *
- * `codec`  1 = HEVC, 2 = AV1, e ⛔ **0 = smetti di catturare**.  Non e' un
- *          sentinella implicito: e' il valore che §4.3/§6.2 danno a «nessun
- *          codec negoziato», e qui vuol dire la stessa cosa — nessuno guarda.
- * `chiave` §5.2: il prossimo fotogramma di quel codec DEVE essere una chiave.
+ * `codec`  1 = HEVC, 2 = AV1, and ⛔ **0 = stop capturing**.  It is not an
+ *          implicit sentinel: it is the value §4.3/§6.2 give to "no codec
+ *          negotiated", and here it means the same thing — nobody is watching.
+ * `chiave` §5.2: the next frame of that codec MUST be a keyframe.
  *
- * ⚠ Chi decide non e' questo file e non e' `main.c`: e' `webtransport.c`, che
- *   sa quando `SESSIONE` e' partita e quando §5.2 apre il debito.  `main.c` fa
- *   da ponte perche' e' l'unico che conosce tutt'e due i lati. */
-/* ⛔⭐ `profondita` (8 o 10, `0` = non negoziata) e' arrivata il 17 agosto 2026:
- *     senza, il figlio se la scriveva da se' e il flusso usciva a una
- *     profondita' DIVERSA da quella dichiarata in `ECCOMI` (§4.3).  Il riquadro
- *     per esteso sta su `struct corpo_video` in `figlio.c`. */
-/* ⛔⭐ `livello_x10` (in decimi: `5.1` ⇒ 51, `0` = non dichiarato) e' arrivato
- *     il 23 agosto 2026 per la ragione gemella: `[M]` a 3840x2160 il client
- *     dichiarava 5.1 e il server produceva **5.2** — §4.3 riga 701 e' un DEVE.
- *     ⚠ `0` vuol dire «nessun tetto», non «basso». */
+ * ⚠ The one who decides is neither this file nor `main.c`: it is
+ *   `webtransport.c`, which knows when `SESSIONE` went out and when §5.2 opens
+ *   the debt.  `main.c` acts as the bridge because it is the only one that
+ *   knows both sides. */
+/* ⛔⭐ `profondita` (8 or 10, `0` = not negotiated) arrived on 17 Aug 2026:
+ *     without it, the child wrote it by itself and the stream came out at a
+ *     depth DIFFERENT from the one declared in `ECCOMI` (§4.3).  The full box
+ *     is on `struct corpo_video` in `figlio.c`. */
+/* ⛔⭐ `livello_x10` (in tenths: `5.1` ⇒ 51, `0` = not declared) arrived on
+ *     23 Aug 2026 for the twin reason: `[M]` at 3840x2160 the client declared
+ *     5.1 and the server produced **5.2** — §4.3 line 701 is a MUST.
+ *     ⚠ `0` means "no ceiling", not "low". */
 bool figli_video(figli *f, const char *utente, uint8_t codec,
                  uint8_t profondita, uint8_t livello_x10, bool chiave);
 
-/* ⭐⭐ FASE 4 — L'INPUT ATTRAVERSA IL CONFINE DI PROCESSO.
+/* ⭐⭐ PHASE 4 — INPUT CROSSES THE PROCESS BOUNDARY.
  *
- * ⛔ La ragione e' un fatto dell'architettura, non una scelta: `libei` parla
- *    con la sessione grafica dell'utente, e quella sessione ce l'ha **il
- *    figlio**; QUIC, RCP e i byte del client stanno nel **padre**.  ⇒ Fra il
- *    tasto premuto nel browser e il tasto premuto sul desktop c'e' un confine
- *    di processo, e questa e' la funzione che lo attraversa.
+ * ⛔ The reason is a fact of the architecture, not a choice: `libei` talks to
+ *    the user's graphical session, and **the child** has that session; QUIC,
+ *    RCP and the client's bytes are in the **parent**.  ⇒ Between the key
+ *    pressed in the browser and the key pressed on the desktop there is a
+ *    process boundary, and this is the function that crosses it.
  *
- * ⚠ Chi decide non e' questo file: e' `rcp.c`, che ha gia' convalidato il
- *   messaggio secondo `RCP.md` §7.3 — intervalli, surrogati, coordinate sulla
- *   tela, `id` crescente.  ⛔ Qui NON si riconvalida e NON si trasforma niente:
- *   due controlli sullo stesso valore in due posti diventano due regole diverse
- *   il giorno in cui una delle due cambia.
+ * ⚠ The one who decides is not this file: it is `rcp.c`, which has already
+ *   validated the message according to `RCP.md` §7.3 — ranges, surrogates,
+ *   coordinates on the canvas, increasing `id`.  ⛔ Here nothing is
+ *   revalidated and nothing is transformed: two checks on the same value in
+ *   two places become two different rules the day one of the two changes.
  *
- * ⛔ E IL SEGNO DELLA ROTELLA NON SI TOCCA NEMMENO QUI: si inverte una volta
- *    sola, dentro `input_rotella()` (`src/input.h`, `RCP.md` §7.3).
+ * ⛔ AND THE WHEEL'S SIGN IS NOT TOUCHED HERE EITHER: it is inverted only once,
+ *    inside `input_rotella()` (`src/input.h`, `RCP.md` §7.3).
  *
- * `id`      §7.3, l'identificatore del messaggio.  ⭐ E' quel che torna nel
- *           campo `input` dei fotogrammi (§6.2) — ma **solo se il compositore
- *           lo prende**: il figlio avanza il suo contatore quando l'iniezione
- *           e' riuscita, non quando la richiesta e' partita.
- * `codice`  evdev (`BTN_LEFT` = 0x110, `KEY_A` = 30), per pulsante e posizione.
- * `a`/`b`   puntatore: `x`/`y` sulla tela · rotella: gli assi in unita' da 120
- *           · lettera: il valore scalare Unicode in `a` · ritela: la tela nuova.
+ * `id`      §7.3, the message identifier.  ⭐ It is what comes back in the
+ *           `input` field of frames (§6.2) — but **only if the compositor takes
+ *           it**: the child advances its counter when the injection succeeded,
+ *           not when the request went out.
+ * `codice`  evdev (`BTN_LEFT` = 0x110, `KEY_A` = 30), for button and position.
+ * `a`/`b`   pointer: `x`/`y` on the canvas · wheel: the axes in units of 120
+ *           · letter: the Unicode scalar value in `a` · ritela: the new canvas.
  *
- * `false` = non c'e' nessun figlio per quell'utente, o la richiesta non e'
- * partita — ⛔ e allora quell'input non e' arrivato al desktop, il che si
- * DICHIARA nel registro invece di essere taciuto (`CODER.md` §4.2). */
+ * `false` = there is no child for that user, or the request did not go out —
+ * ⛔ and then that input did not reach the desktop, which is DECLARED in the
+ * log instead of being hushed up (`CODER.md` §4.2). */
 enum {
 	FIGLI_INPUT_PUNTATORE = 1,
 	FIGLI_INPUT_PULSANTE = 2,
 	FIGLI_INPUT_ROTELLA = 3,
 	FIGLI_INPUT_LETTERA = 4,
 	FIGLI_INPUT_POSIZIONE = 5,
-	/* ⛔⭐ «La regola col rapporto danno/costo piu' alto del documento»
-	 *     (`RCP.md` §11): al distacco si rilascia TUTTO.  Un Ctrl rimasto giu'
-	 *     in una sessione che sopravvive al client rende il desktop
-	 *     inservibile al riattacco, e nessuno collega le due cose. */
+	/* ⛔⭐ "The rule with the highest damage/cost ratio of the document"
+	 *     (`RCP.md` §11): at detach EVERYTHING is released.  A Ctrl left down
+	 *     in a session that outlives the client makes the desktop unusable at
+	 *     reattach, and nobody connects the two things. */
 	FIGLI_INPUT_RILASCIA_TUTTO = 6,
-	/* ⛔ §7.1: la tela in vigore e' cambiata, rimappa la regione del puntatore
-	 *    assoluto.  Senza, `rcp.c` satura sulla tela nuova e il palco resta
-	 *    sulla vecchia — due lati con due verita' e nessun errore. */
+	/* ⛔ §7.1: the canvas in force has changed, remap the absolute pointer
+	 *    region.  Without it, `rcp.c` saturates on the new canvas and the stage
+	 *    stays on the old one — two sides with two truths and no error. */
 	FIGLI_INPUT_RITELA = 7,
-	/* ⭐ §7.6 di `RCP.md` — «l'utente ha chiesto di USCIRE».  ⛔ Non e' un
-	 *    gesto e non si inietta: viaggia in questa busta per la stessa ragione
-	 *    di `RITELA` — una sola busta fra padre e figlio, un solo ramo da
-	 *    leggere — e come quella passa PRIMA della guardia dei gesti. */
+	/* ⭐ §7.6 of `RCP.md` — "the user asked to LOG OUT".  ⛔ It is not a gesture
+	 *    and it is not injected: it travels in this envelope for the same
+	 *    reason as `RITELA` — a single envelope between parent and child, a
+	 *    single branch to read — and like that one it goes BEFORE the gestures
+	 *    guard. */
 	FIGLI_INPUT_TERMINA = 8
 };
 
-/* ⭐⭐ §5-bis.7 — la disposizione dichiarata dal client entra nella
- *     sessione.  ⛔ `true` = la richiesta e' PARTITA, non «e' in vigore»:
- *     chi lo constata e' la riga «KEYMAP CAMBIATA» del figlio, dopo che
- *     Mutter ha distrutto e ricreato il dispositivo tastiera. */
+/* ⭐⭐ §5-bis.7 — the layout declared by the client enters the session.
+ *     ⛔ `true` = the request WENT OUT, not "it is in force": the one
+ *     ascertaining it is the child's «KEYMAP CHANGED» line, after Mutter has
+ *     destroyed and recreated the keyboard device. */
 bool figli_disposizione(figli *f, const char *utente, const char *nome);
 
 bool figli_input(figli *f, const char *utente, uint32_t id, uint8_t azione,
                  uint16_t codice, int premuto, int32_t a, int32_t b);
 
-/* ⭐⭐ «LA TELA DEL SERVER PRENDE LA MISURA DELLA TELA DEL CLIENT» — la catena
- *     che il 14 agosto 2026 mancava, e con lei quattro sintomi (`DECISIONI.md`
- *     §5.0-sexies, `fasi/rapporti/F4-IN-12`):
+/* ⭐⭐ "THE SERVER'S CANVAS TAKES THE SIZE OF THE CLIENT'S CANVAS" — the chain
+ *     that was missing on 14 Aug 2026, and with it four symptoms
+ *     (`DECISIONI.md` §5.0-sexies, `fasi/rapporti/F4-IN-12`):
  *
- *   · le bande nere laterali      le due tele combaciano ⇒ niente da impaginare
- *   · il testo interpolato        scala 1 ⇒ nessuno ricampiona l'immagine
- *   · il ri-attacco a misura       `[M]` Mutter cambia a caldo in 41,6 ms,
- *     diversa                      labwc in 5,1 ms
- *   · ⭐⭐ i 4 secondi fra login    `pw_stream_update_params()` E' un riavvio del
- *     e desktop                    flusso, e un riavvio CONSEGNA un buffer: su
- *                                  Wayland il compositore manda solo quando la
- *                                  scena cambia, e un desktop appena acceso e'
- *                                  fermo (`[M]` 4,4 s, 659 «attese a vuoto»)
+ *   · the black side bands         the two canvases match ⇒ nothing to lay out
+ *   · the interpolated text        scale 1 ⇒ nobody resamples the image
+ *   · reattaching at a different   `[M]` Mutter changes live in 41.6 ms,
+ *     size                         labwc in 5.1 ms
+ *   · ⭐⭐ the 4 seconds between    `pw_stream_update_params()` IS a restart of
+ *     login and desktop            the stream, and a restart DELIVERS a buffer:
+ *                                  on Wayland the compositor sends only when
+ *                                  the scene changes, and a freshly switched-on
+ *                                  desktop is still (`[M]` 4.4 s, 659 "empty
+ *                                  waits")
  *
- * ⛔ Torna `true` quando la DOMANDA e' partita, ⚠ non quando la tela e'
- *    cambiata: fra le due c'e' un compositore che puo' concedere altro (§4.5),
- *    dire «riuscito» senza fare niente (`[M]` labwc) o non farcela.  ⇒ Chi
- *    aspetta l'esito lo legge nel FOTOGRAMMA: e' il primo che arriva alla misura
- *    nuova, e il campo `larghezza`/`altezza` di `FiglioDeposito` lo porta. */
-/* ⭐ «TERMINA LA SESSIONE GRAFICA DI QUEST'UTENTE» — `RCP.md` §7.6, la seconda
- * delle due uscite di `DECISIONI.md` §4.1-ter.  ⛔ Non e' il distacco: qui i
- * programmi dell'utente si chiudono, e al prossimo attacco nasce una sessione
- * NUOVA.  `false` = non c'e' nessun figlio per quell'utente, o la domanda non e'
- * partita — e allora la sessione NON finira'. */
-/* ⛔⭐ E IL PERCHE' VIAGGIA COL MESSAGGIO — 16 agosto 2026, e prima no.
+ * ⛔ Returns `true` when the QUESTION went out, ⚠ not when the canvas changed:
+ *    between the two there is a compositor that can grant something else
+ *    (§4.5), say "succeeded" without doing anything (`[M]` labwc) or not make
+ *    it.  ⇒ Whoever waits for the outcome reads it in the FRAME: it is the
+ *    first one that arrives at the new size, and the `larghezza`/`altezza`
+ *    field of `FiglioDeposito` carries it. */
+/* ⭐ "END THIS USER'S GRAPHICAL SESSION" — `RCP.md` §7.6, the second of the
+ * two exits of `DECISIONI.md` §4.1-ter.  ⛔ It is not the detach: here the
+ * user's programs are closed, and at the next attach a NEW session is born.
+ * `false` = there is no child for that user, or the request did not go out —
+ * and then the session will NOT end. */
+/* ⛔⭐ AND THE REASON TRAVELS WITH THE MESSAGE — 16 Aug 2026, and before it did
+ *     not.
  *
- *     Il figlio scriveva «⭐ §7.6: l'utente ha chiesto di USCIRE» **per ogni**
- *     chiusura, perche' l'unico che gliela chiedeva era §7.6.  ⛔ Dal momento in
- *     cui gliela chiede anche l'orologio dell'abbandono (§5.3), quella riga
- *     afferma una causa che non conosce — e `[M]` l'ha affermata al primo giro
- *     della prova, con nessun utente che avesse chiesto niente.
+ *     The child wrote "⭐ §7.6: the user asked to LOG OUT" **for every**
+ *     closing, because the only one asking it was §7.6.  ⛔ From the moment
+ *     the abandonment clock (§5.3) also asks it, that line asserts a cause it
+ *     does not know — and `[M]` it asserted it at the first round of the test,
+ *     with no user having asked for anything.
  *
- * ⚠ Non serve un messaggio nuovo: il campo `a` della busta era libero. */
+ * ⚠ No new message is needed: field `a` of the envelope was free. */
 enum {
-	FIGLI_USCITA_UTENTE = 0,   /* §7.6: l'ha chiesto una persona */
-	FIGLI_USCITA_ABBANDONO = 1 /* §5.3: e' scaduto il tetto, non l'ha chiesto nessuno */
+	FIGLI_USCITA_UTENTE = 0,   /* §7.6: a person asked for it */
+	FIGLI_USCITA_ABBANDONO = 1 /* §5.3: the ceiling expired, nobody asked for it */
 };
 
 bool figli_termina_sessione(figli *f, const char *utente, int perche);
@@ -567,61 +584,61 @@ bool figli_termina_sessione(figli *f, const char *utente, int perche);
 bool figli_ritela(figli *f, const char *utente, uint32_t larghezza,
                   uint32_t altezza);
 
-/* ⛔⭐ RICHIEDE A OGNI FIGLIO «CHI SEI», al massimo una volta ogni minuto.
+/* ⛔⭐ ASKS EVERY CHILD "WHO ARE YOU", at most once a minute.
  *
- *     ⚠ Serve perche' «verificato a ogni messaggio» sia una protezione anche
- *     quando i messaggi non ci sono: un figlio che ha consegnato il suo
- *     fotogramma e poi tace resterebbe verificato **una volta sola, all'inizio**
- *     — cioe' esattamente quel che §1.10-bis vieta.  ⭐ La risposta ripassa da
- *     `credenziali_combaciano()` come tutte le altre, e un figlio che nel
- *     frattempo non fosse piu' quell'uid verrebbe abbattuto li'.
+ *     ⚠ It is needed so that "verified on every message" is a protection even
+ *     when there are no messages: a child that delivered its frame and then
+ *     falls silent would stay verified **only once, at the start** — that is
+ *     exactly what §1.10-bis forbids.  ⭐ The answer goes through
+ *     `credenziali_combaciano()` like all the others, and a child that in the
+ *     meantime were no longer that uid would be killed there.
  *
- * ⚠ La riga dell'esito OK sta nella parlantina (`registro_dettaglio`): una al
- *   minuto per figlio riempirebbe il registro di verde.  Il disaccordo, no:
- *   quello si scrive sempre. */
+ * ⚠ The OK outcome line is in the chatter (`registro_dettaglio`): one per
+ *   minute per child would fill the log with green.  The disagreement does
+ *   not: that one is always written. */
 void figli_ricontrolla(figli *f, uint64_t ora_ms);
 
-/* ⛔⭐ L'INGRESSO DEL FIGLIO — `main.c` ci arriva come PRIMA cosa, quando
- *     `argv[1]` e' `--figlio-interno`, e non torna mai.
+/* ⛔⭐ THE CHILD'S ENTRY POINT — `main.c` gets here as the FIRST thing, when
+ *     `argv[1]` is `--figlio-interno`, and it never returns.
  *
- *     ⚠ E' una riga di comando INTERNA: la scrive `figli_assicura()` e la legge
- *     `figlio_vive()`.  Chi la battesse a mano otterrebbe un processo che parla
- *     su un descrittore 3 che non esiste, e morirebbe li' — non c'e' niente da
- *     guadagnarci, perche' il figlio non ha nessun privilegio da regalare: e'
- *     l'utente stesso. */
+ *     ⚠ It is an INTERNAL command line: `figli_assicura()` writes it and
+ *     `figlio_vive()` reads it.  Whoever typed it by hand would get a process
+ *     talking on a descriptor 3 that does not exist, and it would die there —
+ *     there is nothing to gain, because the child has no privilege to give
+ *     away: it is the user themselves. */
 void figlio_vive(int argc, char **argv);
 
-/* ⭐ FASE 17 — `remotix --prova-codifica` (la certificazione, §6.0 fase 7a):
- *    un fotogramma sintetico 256x256 in H.264 con la stessa scelta di una
- *    sessione vera (VA-API sul nodo della sessione; ⛔ dalla fase 19 nessun
- *    ripiego in software).  Scrive UNA riga JSON su stdout —
+/* ⭐ PHASE 17 — `remotix --prova-codifica` (the certification, §6.0 phase 7a):
+ *    a synthetic 256x256 frame in H.264 with the same choice as a real session
+ *    (VA-API on the session's node; ⛔ since phase 19 no software fallback).
+ *    It writes ONE JSON line on stdout —
  *    {"esito":"hardware"|"nessuno","codificatore":…,"nodo":…,"motivo":…,
  *     "codec":…,"offerti":…,"hevc":…,"h264":…}
- *    — e torna il codice d'uscita: 0 la scheda codifica · 1 la scheda si apre
- *    ma il fotogramma non esce · 2 errore d'uso · 3 NESSUNA SCHEDA sa
- *    codificare (rifiuto dichiarato).  Niente rete, niente sessioni; root non
- *    serve (ma i gruppi del nodo sì).
- * ⭐ FASE 18: gli argomenti che seguono `--prova-codifica` (tutti facoltativi):
- *    `h264`|`hevc`, `--nodo /dev/dri/renderDN`, e ⭐ fase 19
- *    `--codifica scheda|vulkan|vaapi`.  Il JSON porta anche `strada`,
- *    `hevc_strada` e `h264_strada` («vulkan»/«vaapi»): QUALE strada della
- *    scheda ha codificato. */
+ *    — and returns the exit code: 0 the card encodes · 1 the card opens but
+ *    the frame does not come out · 2 usage error · 3 NO CARD can encode
+ *    (declared refusal).  No network, no sessions; root is not needed (but the
+ *    node's groups are).
+ * ⭐ PHASE 18: the arguments following `--prova-codifica` (all optional):
+ *    `h264`|`hevc`, `--nodo /dev/dri/renderDN`, and ⭐ phase 19
+ *    `--codifica scheda|vulkan|vaapi`.  The JSON also carries `strada`,
+ *    `hevc_strada` and `h264_strada` ("vulkan"/"vaapi"): WHICH route of the
+ *    card encoded. */
 int figlio_prova_codifica(int argc, char **argv);
 
-/* ⭐ FASE 19 (`DECISIONI.md` §10.27) — la strada della scheda: «scheda» (per
- *    capacita': Vulkan Video se c'e' per quel codec, se no VA-API — il
- *    predefinito e quel che il prodotto fa), «vulkan» o «vaapi» (forzata, per
- *    le prove e la diagnosi).  Torna false su un nome che non e' uno dei tre, e
- *    allora non cambia niente.  Il padre la passa al figlio nella riga di
- *    comando (`--codifica`), come le cure della fase 9. */
+/* ⭐ PHASE 19 (`DECISIONI.md` §10.27) — the card's route: "scheda" (by
+ *    capability: Vulkan Video if available for that codec, otherwise VA-API —
+ *    the default and what the product does), "vulkan" or "vaapi" (forced, for
+ *    tests and diagnosis).  Returns false on a name that is not one of the
+ *    three, and then nothing changes.  The parent passes it to the child on
+ *    the command line (`--codifica`), like the phase 9 cures. */
 bool figlio_codifica_strada(const char *strada);
 const char *figlio_codifica_strada_chiesta(void);
 
-/* ⭐ FASE 18 — la prova ALL'AVVIO del padre: che cosa questa macchina sa
- *    codificare, in un processo a parte (un driver che cade non porta giu' il
- *    server).  `offerti` e' l'elenco per `video.codec` dell'ECCOMI («hevc,h264»
- *    · «hevc» · «h264» · «» = niente), `spiegazione` la riga per il registro
- *    con la ragione di ogni «no».  Torna false se non si offre niente. */
+/* ⭐ PHASE 18 — the test AT THE PARENT'S STARTUP: what this machine can
+ *    encode, in a separate process (a crashing driver does not bring down the
+ *    server).  `offerti` is the list for ECCOMI's `video.codec` ("hevc,h264"
+ *    · "hevc" · "h264" · "" = nothing), `spiegazione` the line for the log
+ *    with the reason for each "no".  Returns false if nothing is offered. */
 bool figlio_capacita_video(char *offerti, size_t offerti_byte, char *spiegazione,
                            size_t spiegazione_byte);
 

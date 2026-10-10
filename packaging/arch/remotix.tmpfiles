@@ -1,4 +1,4 @@
-# remotix — la cartella di stato (fasi/17 §6.4): certificati, ban, e il
-# registro dei gruppi del pacchetto.  Solo root.
-# ⚠ /run/remotix del §6.4 non c'e': oggi il prodotto non la usa.
+# remotix — the state folder (fasi/17 §6.4): certificates, ban, and the
+# package's group log.  Root only.
+# ⚠ The /run/remotix of §6.4 is not there: today the product does not use it.
 d /var/lib/remotix 0700 root root -

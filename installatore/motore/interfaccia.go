@@ -1,22 +1,22 @@
 package motore
 
-// Quel che le interfacce (CLI e TUI) chiedono al motore oltre ai sette oggetti: che cosa dire a chi
-// installa su QUESTA macchina. Dal 10 ott 2026 (DECISIONI §10.36) l'unica domanda è la porta, più il
-// «sì» al piano: niente archivi di terzi, firewall o desktop da scegliere — quel che manca si dice.
+// What the interfaces (CLI and TUI) ask the engine beyond the seven objects: what to tell whoever
+// installs on THIS machine. Since 10 Oct 2026 (DECISIONI §10.36) the only question is the port, plus the
+// «yes» to the plan: no third-party repositories, firewalls or desktops to choose — what is missing is stated.
 
-// Domande: quel che si mostra e si chiede su questa macchina.
+// Domande: what is shown and asked on this machine.
 type Domande struct {
-	// Porta: la predefinita (7447); si chiede sempre, una sola, vale per TCP e UDP
+	// Porta: the default (7447); always asked, just one, valid for TCP and UDP
 	Porta int `json:"port"`
-	// Firewall: il nome del firewall acceso ("none" se nessuno): aprire la porta è dell'amministratore
+	// Firewall: the name of the running firewall ("none" if none): opening the port is the administrator's job
 	Firewall string `json:"firewall"`
-	// SenzaScheda: le persone a cui manca il permesso di usare la scheda (il motore le iscrive)
+	// SenzaScheda: the people lacking permission to use the card (the engine enrolls them)
 	SenzaScheda []string `json:"no_gpu"`
-	// Persone: chi potrà entrare (le persone della macchina; root è escluso)
+	// Persone: who will be able to log in (the machine's people; root is excluded)
 	Persone []string `json:"people"`
 }
 
-// DomandeDaFare: quel che si mostra su questa macchina.
+// DomandeDaFare: what is shown on this machine.
 func DomandeDaFare(amb *Ambiente, porta int) *Domande {
 	if porta == 0 {
 		porta = 7447

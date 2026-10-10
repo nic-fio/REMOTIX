@@ -1,53 +1,53 @@
 #%PAM-1.0
-# remotix — il servizio PAM del server REMOTIX.  ⭐ FEDORA, RHEL, ROCKY, ALMA.
+# remotix — the PAM service of the REMOTIX server.  ⭐ FEDORA, RHEL, ROCKY, ALMA.
 #
-#   si installa in /etc/pam.d/remotix
+#   installed in /etc/pam.d/remotix
 #
-# ⭐ `DECISIONI.md` §10.18 (D3 chiusa, 30 set 2026): REMOTIX RISPECCHIA
-#    l'autenticazione del sistema.  Questo file e' /etc/pam.d/sshd della
-#    distribuzione, riga per riga, con UNA riga in piu' in testa: root escluso
-#    (come ssh di serie, che a root non accetta la parola d'ordine).
-#    `[M]` 30 set, confronto con /etc/pam.d/sshd su fedora44-gnome-iso e
-#    alma10-gnome-iso (identici fra loro): 14 righe su 14 uguali
+# ⭐ `DECISIONI.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
+#    the system's authentication.  This file is the distribution's /etc/pam.d/sshd,
+#    line by line, with ONE extra line at the top: root excluded
+#    (like stock ssh, which does not accept a password for root).
+#    `[M]` 30 Sep, comparison with /etc/pam.d/sshd on fedora44-gnome-iso and
+#    alma10-gnome-iso (identical to each other): 14 lines of 14 equal
 #    (`banchi/17-t6/t6-leggi-pam.sh`).
-#    ⇒ Quel che l'amministratore configura per ssh con `authselect` (per
-#      esempio `with-faillock`: tre errori e il conto si chiude) vale anche qui,
-#      senza toccare questo file.
+#    ⇒ What the administrator configures for ssh with `authselect` (for
+#      example `with-faillock`: three errors and the account closes) holds here too,
+#      without touching this file.
 #
-# ⛔ Niente `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga
-#    sarebbe «illegal module type» — e l'autenticazione fallirebbe per tutti.
-# ⛔ Se questo file manca, PAM ripiega su `other`, che qui e' `pam_deny`:
-#    ogni parola d'ordine giusta rifiutata.  `main.c` lo guarda all'avvio.
+# ⛔ No `@include`: it is a Debian modification to Linux-PAM, and here the line
+#    would be "illegal module type" — and authentication would fail for everyone.
+# ⛔ If this file is missing, PAM falls back to `other`, which here is `pam_deny`:
+#    every right password refused.  `main.c` checks it at startup.
 #
-# ⭐ `pam_selinux close/open` c'e', come in sshd: la sessione dell'utente nasce
-#    nel SUO contesto (`unconfined_t` per un utente normale), non in quello del
-#    servizio.  Il passaggio lo permette il modulo SELinux di REMOTIX
-#    (`remotix-selinux`, `packaging/rpm/selinux/remotix.te`), come fa
-#    `cockpit-ws-selinux` per Cockpit.  `[M]` T1c, 29 set: senza il modulo il
-#    figlio esce con 37 (`{ transition } unconfined_service_t → unconfined_t`).
+# ⭐ `pam_selinux close/open` is there, as in sshd: the user's session is born
+#    in THEIR context (`unconfined_t` for a normal user), not in that of the
+#    service.  The transition is allowed by REMOTIX's SELinux module
+#    (`remotix-selinux`, `packaging/rpm/selinux/remotix.te`), as
+#    `cockpit-ws-selinux` does for Cockpit.  `[M]` T1c, 29 Sep: without the module the
+#    child exits with 37 (`{ transition } unconfined_service_t → unconfined_t`).
 
 # ── auth
-# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
-#    auth e non in account, onerr=fail) sono scritte in `remotix.pam`.  Il
-#    file elenca un nome per riga e si installa con dentro `root`.
+# ⭐ ROOT EXCLUDED, and BEFORE the password: the reasons (requisite, in
+#    auth and not in account, onerr=fail) are written in `remotix.pam`.  The
+#    file lists one name per line and is installed with `root` in it.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 auth       substack     password-auth
 auth       include      postlogin
 
-# ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)
+# ── account (`autenticazione.c` calls `pam_acct_mgmt` on purpose)
 account    required     pam_sepermit.so
 account    required     pam_nologin.so
 account    include      password-auth
 
 password   include      password-auth
 
-# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
-#    fa nascere la sessione logind dell'utente.  `pam_systemd` arriva da
-#    `password-auth` (`-session optional pam_systemd.so`), come per sshd.
-# ⚠ `pam_loginuid` `required` come sshd: il servizio parte da systemd, senza
-#   loginuid, e lo puo' scrivere.  Un server lanciato a mano da una sessione
-#   gia' aperta (che ha il suo loginuid, immutabile) NON apre sessioni: e' il
-#   comportamento di sshd lanciato allo stesso modo.
+# ── session: `figlio.c` calls `pam_open_session`, and it is that call that
+#    makes the user's logind session be born.  `pam_systemd` comes from
+#    `password-auth` (`-session optional pam_systemd.so`), as for sshd.
+# ⚠ `pam_loginuid` `required` like sshd: the service starts from systemd, without
+#   loginuid, and can write it.  A server launched by hand from an already
+#   open session (which has its own loginuid, immutable) does NOT open sessions: it is the
+#   behaviour of sshd launched the same way.
 session    required     pam_selinux.so close
 session    required     pam_loginuid.so
 session    required     pam_selinux.so open env_params

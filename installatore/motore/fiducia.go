@@ -6,42 +6,42 @@ import (
 	"time"
 )
 
-// La fase 0 TRUST (fasi/17-l-installatore.md §6.0 punto 1, §6.6.10), dopo D11 semplificata
-// (DECISIONI §10.21, §10.36): niente chiavi né archivio; il pacchetto unico (il .run) si verifica con
-// lo sha256 pubblicato sul sito. Il motore non verifica firme sue.
+// Phase 0 TRUST (fasi/17-l-installatore.md §6.0 point 1, §6.6.10), after simplified D11
+// (DECISIONI §10.21, §10.36): no keys and no repository; the single package (the .run) is verified with
+// the sha256 published on the site. The engine verifies no signatures of its own.
 //
-// Il catalogo è quello che il motore porta dentro (catalogo/catalogo.json, incorporato alla
-// costruzione): lo stesso file viaggia nel pacchetto remotix-install e si aggiorna con lui. Chi
-// garantisce che è autentico è chi ha consegnato il motore:
-//   - il motore del pacchetto (/usr/bin/remotix-install): installato dal .run;
-//   - il motore dentro il .run: lo sha256 del .run, pubblicato sul sito, e quello del suo carico.
-// Un catalogo dato a mano (--catalogo FILE) è dell'amministratore: si usa al posto di quello
-// incorporato, e il certificato lo dice.
+// The catalogue is the one the engine carries inside (catalogo/catalogo.json, embedded at
+// build time): the same file travels in the remotix-install package and is updated with it. Who
+// guarantees it is authentic is whoever delivered the engine:
+//   - the package's engine (/usr/bin/remotix-install): installed by the .run;
+//   - the engine inside the .run: the sha256 of the .run, published on the site, and that of its payload.
+// A catalogue given by hand (--catalogo FILE) is the administrator's: it is used in place of the
+// embedded one, and the certificate says so.
 //
-// Resta un solo controllo: il catalogo si legge (RX-TRUST-004) e questo motore lo capisce
+// One check remains: the catalogue can be read (RX-TRUST-004) and this engine understands it
 // (RX-TRUST-003).
 
-// FontiFiducia: da dove viene il catalogo.
+// FontiFiducia: where the catalogue comes from.
 type FontiFiducia struct {
-	Incorporato []byte // il catalogo dentro il motore
-	Esplicito   string // --catalogo FILE: dato a mano dall'amministratore
-	Motore      string // il binario che gira ("" ⇒ /proc/self/exe): dice chi l'ha consegnato
+	Incorporato []byte // the catalogue inside the engine
+	Esplicito   string // --catalogo FILE: given by hand by the administrator
+	Motore      string // the running binary ("" ⇒ /proc/self/exe): it says who delivered it
 }
 
-// Fiducia è l'esito della fase 0 TRUST (oggetto fiducia.json dell'operazione).
+// Fiducia is the outcome of phase 0 TRUST (object fiducia.json of the operation).
 type Fiducia struct {
 	Catalogo RifCatalogo `json:"catalog"`
 	Sequenza int         `json:"sequence"`
-	// Fonte: da dove viene il catalogo, e chi ne garantisce l'autenticità.
+	// Fonte: where the catalogue comes from, and who guarantees its authenticity.
 	Fonte    string      `json:"source"`
 	Motore   RifMotore   `json:"engine"`
 	Messaggi []Messaggio `json:"messages"`
 }
 
-// MotoreDelPacchetto: dove il pacchetto remotix-install mette il motore.
+// MotoreDelPacchetto: where the remotix-install package puts the engine.
 const MotoreDelPacchetto = "/usr/bin/remotix-install"
 
-// chiHaConsegnato: la frase che dice chi garantisce il motore che gira (e il catalogo che porta).
+// chiHaConsegnato: the sentence saying who guarantees the running engine (and the catalogue it carries).
 func (f *FontiFiducia) chiHaConsegnato() string {
 	exe := f.Motore
 	if exe == "" {
@@ -53,8 +53,8 @@ func (f *FontiFiducia) chiHaConsegnato() string {
 	return T("fid.scaricato", exe)
 }
 
-// Fidati: la fase 0 TRUST. Restituisce il catalogo e l'esito (anche in caso d'errore, perché
-// fiducia.json dice che cosa si è guardato).
+// Fidati: phase 0 TRUST. Returns the catalogue and the outcome (even on error, because
+// fiducia.json says what was looked at).
 func (f *FontiFiducia) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
 	fid := &Fiducia{Motore: RifMotore{VersioneMotore, DigestMotore()}, Messaggi: []Messaggio{}}
 	blocca := func(err error) (*Catalogo, *Fiducia, error) {
@@ -85,7 +85,7 @@ func (f *FontiFiducia) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
 	return cat, fid, nil
 }
 
-// ControllaMotoreMinimo: questo motore capisce il catalogo.
+// ControllaMotoreMinimo: this engine understands the catalogue.
 func ControllaMotoreMinimo(c *Catalogo) error {
 	if ConfrontaVersioni(VersioneMotore, c.MotoreMinimo) < 0 {
 		return Errore("RX-TRUST-003", "needs "+c.MotoreMinimo+", this is "+VersioneMotore)

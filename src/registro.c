@@ -1,5 +1,5 @@
 /*
- * registro.c — vedi registro.h.
+ * registro.c — see registro.h.
  */
 #include "registro.h"
 
@@ -14,15 +14,14 @@
 
 static bool parlantina;
 
-/* ⭐ Il journal (riquadro in `registro.h`): -1 = spento.  ⚠ Si apre UNA volta,
- *    all'accensione e non alla prima riga: `riga()` gira in piu' fili, e due
- *    fili che aprono insieme lascerebbero un descrittore orfano. */
+/* ⭐ The journal (box in `registro.h`): -1 = off.  ⚠ It is opened ONCE, at
+ *    switch-on and not at the first line: `riga()` runs in several threads,
+ *    and two threads opening together would leave an orphan descriptor. */
 static int journal_fd = -1;
 
-/* ⭐ L'identita' di questo processo — il riquadro sta in `registro.h`.  ⚠ Una
- *    COPIA e non un puntatore: chi la posa passa spesso un `argv`, e un
- *    puntatore a memoria altrui e' un registro che mente il giorno in cui
- *    quella memoria cambia. */
+/* ⭐ The identity of this process — the box is in `registro.h`.  ⚠ A COPY and
+ *    not a pointer: whoever sets it often passes an `argv`, and a pointer to
+ *    someone else's memory is a log that lies the day that memory changes. */
 static char identita[REG_IDENTITA_MAX + 1];
 
 void registro_parlantina(bool acceso) { parlantina = acceso; }
@@ -47,9 +46,9 @@ bool registro_journal(bool acceso)
 	}
 	if (journal_fd >= 0)
 		return true;
-	/* ⛔ NON BLOCCANTE: un journal intasato non deve fermare il ciclo che
-	 *    serve lo schermo — la riga su `stderr` c'e' comunque.  ⚠ E CLOEXEC:
-	 *    il figlio nasce con `execve` e apre il suo (`--journal`). */
+	/* ⛔ NON-BLOCKING: a clogged journal must not stop the loop that serves
+	 *    the screen — the line on `stderr` is there anyway.  ⚠ And CLOEXEC:
+	 *    the child is born with `execve` and opens its own (`--journal`). */
 	journal_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
 	return journal_fd >= 0;
 }
@@ -60,8 +59,8 @@ bool registro_tasto_dicibile(unsigned c)
 {
 	/* `linux/input-event-codes.h`: LEFTCTRL 29, LEFTSHIFT 42, RIGHTSHIFT 54,
 	 * LEFTALT 56, CAPSLOCK 58, RIGHTCTRL 97, RIGHTALT 100, LEFTMETA 125,
-	 * RIGHTMETA 126.  ⚠ A mano e non con l'intestazione: il numero e' del
-	 * protocollo (`RCP.md` §7.3, «codice evdev»), non della macchina. */
+	 * RIGHTMETA 126.  ⚠ By hand and not with the header: the number belongs to
+	 * the protocol (`RCP.md` §7.3, «evdev code»), not to the machine. */
 	switch (c) {
 	case 29: case 42: case 54: case 56: case 58:
 	case 97: case 100: case 125: case 126:
@@ -72,17 +71,17 @@ bool registro_tasto_dicibile(unsigned c)
 }
 
 /*
- * ⭐ Una riga al journal, col protocollo nativo — `systemd.journal-fields(7)`
- *    e la pagina «Native Journal Protocol» di systemd.
+ * ⭐ One line to the journal, with the native protocol — `systemd.journal-fields(7)`
+ *    and systemd's «Native Journal Protocol» page.
  *
- * ⚠ Il MESSAGE va nella forma BINARIA (nome, a-capo, lunghezza in 64 bit
- *   little-endian, byte): e' l'unica che regge un a-capo dentro il valore, e
- *   un corpo scritto da `%s` altrui puo' averne.  Gli altri campi sono nostri
- *   (area costante, identita' gia' ripulita, `__FILE__`) e vanno nella forma
- *   semplice.
- * ⛔ `sendmsg` con l'indirizzo a ogni riga e NON `connect` una volta: un
- *    socket connesso resta morto per sempre se journald riparte, uno senza
- *    connessione ritrova il nuovo al datagramma dopo.
+ * ⚠ The MESSAGE goes in the BINARY form (name, newline, length in 64-bit
+ *   little-endian, bytes): it is the only one that holds a newline inside the
+ *   value, and a body written by someone else's `%s` may have one.  The other
+ *   fields are ours (constant area, identity already cleaned, `__FILE__`) and
+ *   go in the simple form.
+ * ⛔ `sendmsg` with the address at every line and NOT `connect` once: a
+ *    connected socket stays dead forever if journald restarts, one without a
+ *    connection finds the new one at the next datagram.
  */
 static void al_journal(const char *file, int linea, const char *area,
                        const char *chi, int priorita, const char *msg,
@@ -117,7 +116,7 @@ static void al_journal(const char *file, int linea, const char *area,
 		.msg_iovlen = 4,
 	};
 	ssize_t r = sendmsg(journal_fd, &mh, MSG_NOSIGNAL | MSG_DONTWAIT);
-	(void)r; /* ⚠ si tace: il canale che resta e' `stderr`, e la riga c'e' */
+	(void)r; /* ⚠ silent: the channel that remains is `stderr`, and the line is there */
 }
 
 uint64_t registro_ora_ms(void)
@@ -133,68 +132,69 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	struct timespec ts;
 	struct tm tm;
 	char quando[32];
-	/* ⛔ 4096 e' `PIPE_BUF`, il confine sotto il quale una `write` in append
-	 *    non si intreccia con quelle degli altri processi. */
+	/* ⛔ 4096 is `PIPE_BUF`, the boundary below which an append `write` does
+	 *    not interleave with those of other processes. */
 	char buf[4096];
 
 	clock_gettime(CLOCK_REALTIME, &ts);
 	localtime_r(&ts.tv_sec, &tm);
 	strftime(quando, sizeof quando, "%H:%M:%S", &tm);
 
-	/* ⛔⛔ UNA SOLA `write()` PER RIGA, E NON E' ELEGANZA — 21 agosto 2026.
+	/* ⛔⛔ ONE SINGLE `write()` PER LINE, AND IT IS NOT ELEGANCE — 21 Aug 2026.
 	 *
-	 *      Prima qui c'erano TRE chiamate su uno `stderr` non bufferizzato
-	 *      (intestazione, corpo, a-capo), cioe' almeno tre `write()`.  ⚠ Il
-	 *      padre e il figlio appendono allo STESSO file: quando le scritture
-	 *      si accavallano, un corpo finisce dopo l'a-capo altrui e nasce una
-	 *      riga SENZA MARCA TEMPORALE.
+	 *      Before, there were THREE calls here on an unbuffered `stderr`
+	 *      (header, body, newline), that is at least three `write()`.  ⚠ The
+	 *      parent and the child append to the SAME file: when the writes
+	 *      overlap, a body ends up after someone else's newline and a line
+	 *      WITHOUT A TIMESTAMP is born.
 	 *
-	 * `[M]` misurato su un registro vero di 3,0 MB (28 035 righe): **23 righe
-	 *      orfane**, e fra queste **3 su 80** delle «tela CHIESTA al
-	 *      produttore» — cioe' il 3,8 % di una famiglia di righe su cui un
-	 *      attrezzo contava.  ⇒ Il sintomo non era «il registro e' brutto»:
-	 *      era un attrezzo che moriva con `ValueError`, e per arrivarci ci e'
-	 *      voluto un giro di banco.
+	 * `[M]` measured on a real log of 3.0 MB (28 035 lines): **23 orphan
+	 *      lines**, and among them **3 out of 80** of the «tela CHIESTA al
+	 *      produttore» — that is 3.8 % of a family of lines a tool counted on.
+	 *      ⇒ The symptom was not «the log is ugly»: it was a tool dying with
+	 *      `ValueError`, and getting there took one bench round.
 	 *
-	 * ⛔ E il difetto peggiore e' quello che NON fa morire niente: un conto
-	 *    che perde il 3,8 % delle sue righe resta plausibile.  Il registro e'
-	 *    lo strumento di diagnosi principale di questo progetto (`LEZIONI.md`
-	 *    §2.7): se mente sotto carico, mente proprio quando serve.
+	 * ⛔ And the worst defect is the one that makes NOTHING die: a count that
+	 *    loses 3.8 % of its lines stays plausible.  The log is the main
+	 *    diagnostic tool of this project (`LEZIONI.md` §2.7): if it lies under
+	 *    load, it lies precisely when it is needed.
 	 *
-	 * ⭐ `write(2)` diretta invece di `stdio`: una riga sotto `PIPE_BUF` (4096
-	 *    su Linux) scritta con una sola `write` su un file aperto in append e'
-	 *    atomica rispetto alle altre.  ⚠ Chi supera il buffer viene TRONCATO
-	 *    con un segno, invece di uscire intrecciato: una riga tagliata si
-	 *    vede, una riga intrecciata no.
-	 * ⭐ E in piu' e' async-signal-safe, che `fprintf` non e'. */
-	/* ⭐⭐ E QUI DENTRO SI DICE DI CHI E' LA RIGA — 25 agosto 2026, R10-A4.
+	 * ⭐ Direct `write(2)` instead of `stdio`: a line below `PIPE_BUF` (4096
+	 *    on Linux) written with a single `write` on a file opened in append is
+	 *    atomic with respect to the others.  ⚠ Whatever exceeds the buffer is
+	 *    TRUNCATED with a mark, instead of going out interleaved: a cut line
+	 *    can be seen, an interleaved line cannot.
+	 * ⭐ And on top of that it is async-signal-safe, which `fprintf` is not. */
+	/* ⭐⭐ AND IN HERE IT IS SAID WHOSE LINE IT IS — 25 Aug 2026, R10-A4.
 	 *
-	 *     L'identita' della singola riga batte quella del processo: nel padre
-	 *     un processo solo serve tutte le sessioni, e la seconda non c'e'.
-	 *     ⛔ Ma la parentesi si compone SOLO qui: il riquadro di `registro.h`
-	 *        dice perche', ed e' la ragione per cui i chiamanti passano il nome
-	 *        nudo invece della stringa gia' fatta.
+	 *     The identity of the single line beats that of the process: in the
+	 *     parent a single process serves all the sessions, and the second
+	 *     does not exist.
+	 *     ⛔ But the bracket is composed ONLY here: the box in `registro.h`
+	 *        says why, and it is the reason the callers pass the bare name
+	 *        instead of the ready-made string.
 	 *
-	 * ⛔ In TESTA AL CORPO, non fra l'ora e l'area, e non e' estetica: chi
-	 *    legge il registro lo spezza in «ora · area · corpo» e un campo nuovo
-	 *    in mezzo gli sposta l'area sotto gli occhi.  In testa al corpo, un
-	 *    lettore vecchio continua a leggere, e uno nuovo la stacca.
-	 * ⚠ E i byte in piu' li pagano SOLO le righe che hanno qualcosa da dire:
-	 *   chi non sa tace, e non paga. */
+	 * ⛔ At the HEAD OF THE BODY, not between the time and the area, and it is
+	 *    not aesthetics: whoever reads the log splits it into «time · area ·
+	 *    body» and a new field in the middle moves the area under their eyes.
+	 *    At the head of the body, an old reader keeps reading, and a new one
+	 *    detaches it.
+	 * ⚠ And the extra bytes are paid ONLY by the lines that have something to
+	 *   say: whoever does not know stays silent, and does not pay. */
 	const char *id = (chi && *chi) ? chi : identita;
 	char idsano[REG_IDENTITA_MAX + 1];
 	int n;
-	/* ⭐ Per il journal: dove comincia la riga senza l'ora (il MESSAGE) e dove
-	 *    comincia il corpo (da cui si legge la gravita'). */
+	/* ⭐ For the journal: where the line without the time begins (the MESSAGE)
+	 *    and where the body begins (from which the severity is read). */
 	int senza_ora, corpo;
 	bool con_id = false;
 	if (id && *id) {
 		con_id = true;
-		/* ⛔ SI RIPULISCE, e non e' diffidenza verso PAM: un `]` o un a-capo
-		 *    dentro l'identificatore spezzerebbe la riga in due, e una riga
-		 *    spezzata e' **plausibile e falsa** — il difetto che la cura del
-		 *    21 agosto (una sola `write` per riga) ha appena finito di
-		 *    togliere.  ⚠ Si tiene solo quel che sta in un nome utente. */
+		/* ⛔ IT IS CLEANED, and it is not distrust of PAM: a `]` or a newline
+		 *    inside the identifier would split the line in two, and a split
+		 *    line is **plausible and false** — the defect that the cure of
+		 *    21 Aug (one single `write` per line) has just finished
+		 *    removing.  ⚠ Only what fits in a user name is kept. */
 		size_t k = 0;
 		for (const char *p = id; *p && k < REG_IDENTITA_MAX; p++, k++) {
 			unsigned char c = (unsigned char)*p;
@@ -221,7 +221,7 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	if (m < 0)
 		m = 0;
 	if ((size_t)(n + m) > sizeof buf - 2) {
-		/* ⚠ Troncata: si DICHIARA, o una riga tagliata sembra una riga corta. */
+		/* ⚠ Truncated: it is DECLARED, or a cut line looks like a short line. */
 		n = (int)(sizeof buf - 4);
 		buf[n++] = '.'; buf[n++] = '.'; buf[n++] = '.';
 	} else {
@@ -229,26 +229,26 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	}
 	buf[n++] = '\n';
 
-	/* ⛔ Senza questa scrittura immediata il registro e' una speranza sul
-	 *    momento in cui qualcuno lo vedra': `LEZIONI.md` §1.9, settima veste
-	 *    — lo stdout bufferizzato su file ha gia' fatto accusare il codice
-	 *    giusto.  ⭐ Con `write(2)` il problema non si pone: non c'e' buffer
-	 *    da svuotare, e il `fflush` di prima non serve piu'. */
+	/* ⛔ Without this immediate write the log is a hope about the moment
+	 *    someone will see it: `LEZIONI.md` §1.9, seventh guise — stdout
+	 *    buffered to a file has already made the right code be accused.
+	 *    ⭐ With `write(2)` the problem does not arise: there is no buffer to
+	 *    flush, and the earlier `fflush` is no longer needed. */
 	ssize_t scritti = write(STDERR_FILENO, buf, (size_t)n);
-	(void)scritti; /* ⚠ non c'e' nessun posto dove riferire che il registro
-	                *    non si scrive: l'unico canale sarebbe quello rotto. */
+	(void)scritti; /* ⚠ there is nowhere to report that the log cannot be
+	                *    written: the only channel would be the broken one. */
 
-	/* ⭐ E il journal, DOPO `stderr` e solo se acceso: senza `--journal` qui
-	 *    non si arriva, e la riga di sopra e' tutto quel che succede.
-	 * ⭐ La gravita' la dice il segno in TESTA al corpo, che e' la convenzione
-	 *    di tutto il codice: ⛔ e' un guasto, ⚠ un ripiego o un avviso.  ⚠ In
-	 *    testa e non «dovunque»: tante righe normali citano un ⛔ a meta'
-	 *    («ban: … ⛔ …»), e sarebbero tutte errori.
-	 * ⛔ Le righe di PARLANTINA non ci vanno (fase 16, coordinatore): con 16
-	 *    sessioni sono decine di migliaia al minuto, il journal della scatola
-	 *    le strozzerebbe col suo limite di frequenza — perdendo proprio gli
-	 *    eventi — e il suo lavoro finirebbe dentro le misure di carico.  Il
-	 *    journal tiene gli EVENTI (§12); il dettaglio resta nel file. */
+	/* ⭐ And the journal, AFTER `stderr` and only if on: without `--journal`
+	 *    we never get here, and the line above is all that happens.
+	 * ⭐ The severity is given by the mark at the HEAD of the body, which is
+	 *    the convention of the whole code: ⛔ is a fault, ⚠ a fallback or a
+	 *    warning.  ⚠ At the head and not «anywhere»: many normal lines quote
+	 *    a ⛔ halfway through («ban: … ⛔ …»), and they would all be errors.
+	 * ⛔ The CHATTER lines do not go there (phase 16, coordinator): with 16
+	 *    sessions they are tens of thousands per minute, the box's journal
+	 *    would throttle them with its rate limit — losing precisely the
+	 *    events — and its work would end up inside the load measurements.
+	 *    The journal keeps the EVENTS (§12); the detail stays in the file. */
 	if (journal_fd >= 0 && !dettaglio) {
 		const char *c = buf + corpo;
 		while (*c == ' ')

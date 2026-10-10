@@ -1,91 +1,91 @@
 /*
- * tastiera.c — DALLA LETTERA AL MARTELLETTO.  Anello A5 della fase 4.
+ * tastiera.c — FROM THE LETTER TO THE HAMMER.  Link A5 of phase 4.
  *
- * ⛔ Il contratto sta in `tastiera.h`, che e' del coordinatore: qui si ATTUA,
- *    non si cambia la cucitura.
- *
- * ---------------------------------------------------------------------------
- * IL PROBLEMA, in una riga
- *
- * Sul filo le lettere viaggiano come lettere (`SPECIFICHE.md` §7.3,
- * `DECISIONI.md` §5-bis.6), ma `libei` — l'unico modo di iniettare input in un
- * compositore Wayland — non accetta lettere: accetta POSIZIONI, e a decidere
- * che lettera sia e' il compositore, guardando la disposizione.  Questo file fa
- * il giro all'incontrario.
+ * ⛔ The contract is in `tastiera.h`, which belongs to the coordinator: here it is
+ *    IMPLEMENTED, the seam is not changed.
  *
  * ---------------------------------------------------------------------------
- * ⭐ CHE COSA SI E' RIUSATO DA v1, E CHE COSA NO
+ * THE PROBLEM, in one line
  *
- * `fondamenta/remotix-c/src/tastiera.c` faceva gia' questo giro (372 righe, xkbcommon),
- * e la sua struttura e' quella di qui: si scandisce la disposizione tasto per
- * tasto e livello per livello, e si cerca chi produce il simbolo voluto.  Tre
- * cose sono cambiate, e ciascuna per una ragione MISURATA il 14 agosto 2026:
+ * On the wire letters travel as letters (`SPECIFICHE.md` §7.3,
+ * `DECISIONI.md` §5-bis.6), but `libei` — the only way to inject input into a
+ * Wayland compositor — does not accept letters: it accepts KEY POSITIONS, and it is
+ * the compositor that decides which letter it is, looking at the layout.  This file
+ * makes the trip backwards.
  *
- *  1. ⛔ **i modificatori non si indovinano piu'.**  v1 aveva la regoletta
- *     «livello 1 = Maiusc, livello 2 = AltGr, livello 3 = tutt'e due»
- *     (`fondamenta/.../tastiera.c:251`).  E' vera per le disposizioni ordinarie e falsa
- *     per le altre.  ⭐ `[M]` 14 agosto 2026, misurato su `de(neo)`:
+ * ---------------------------------------------------------------------------
+ * ⭐ WHAT WAS REUSED FROM v1, AND WHAT WAS NOT
  *
- *       U+00E4 «ä» ⇒ 46                 (nessun modificatore)
+ * `fondamenta/remotix-c/src/tastiera.c` already made this trip (372 lines, xkbcommon),
+ * and its structure is the one here: the layout is scanned key by
+ * key and level by level, looking for whoever produces the wanted symbol.  Three
+ * things changed, and each for a reason MEASURED on 14 August 2026:
+ *
+ *  1. ⛔ **the modifiers are no longer guessed.**  v1 had the little rule
+ *     "level 1 = Shift, level 2 = AltGr, level 3 = both"
+ *     (`fondamenta/.../tastiera.c:251`).  It is true for ordinary layouts and false
+ *     for the others.  ⭐ `[M]` 14 August 2026, measured on `de(neo)`:
+ *
+ *       U+00E4 «ä» ⇒ 46                 (no modifier)
  *       U+2192 «→» ⇒ 43 + 77
  *       U+03B1 «α» ⇒ 42 + 43 + 32
- *       U+221A «√» ⇒ 100 + 43 + 17      ⛔ DUE modificatori di livello
+ *       U+221A «√» ⇒ 100 + 43 + 17      ⛔ TWO level modifiers
  *
- *     ⛔ Due cose che la regoletta di v1 avrebbe sbagliato: su `de(neo)` il
- *        tasto del terzo livello e' il **43** (`<BKSL>`), non il 100 che v1
- *        aveva scritto in testa al file; e il quinto livello non lo nomina
- *        affatto.  Qui la risposta la da' `xkb_keymap_key_get_mods_for_level()`,
- *        cioe' la disposizione stessa.
+ *     ⛔ Two things v1's little rule would have got wrong: on `de(neo)` the
+ *        third-level key is **43** (`<BKSL>`), not the 100 v1
+ *        had written at the top of the file; and the fifth level it does not name
+ *        at all.  Here the answer is given by `xkb_keymap_key_get_mods_for_level()`,
+ *        that is by the layout itself.
  *
- *     ⭐ E la stessa misura risponde alla domanda che il contratto pone senza
- *        dirlo — **quattro posizioni bastano?**  Il caso peggiore che si e'
- *        trovato ne usa **tre** (due modificatori piu' il tasto): `de(neo)` e'
- *        la disposizione con piu' livelli che il sistema porti, e ne avanza una;
+ *     ⭐ And the same measurement answers the question the contract asks without
+ *        saying it — **are four key positions enough?**  The worst case
+ *        found uses **three** (two modifiers plus the key): `de(neo)` is
+ *        the layout with the most levels the system carries, and one is left over;
  *
- *  2. ⛔ **quale TASTO sia un modificatore non si scrive a mano.**  v1 aveva
- *     `#define KEY_LEFTSHIFT 42` e `KEY_RIGHTALT 100` in testa al file.  Qui si
- *     CHIEDE alla disposizione: si preme ogni tasto su una `xkb_state` e si
- *     guarda quale modificatore si accende.  Una tabella scritta a mano e' una
- *     tabella che sbaglia in silenzio quando la disposizione e' insolita;
+ *  2. ⛔ **which KEY is a modifier is not written by hand.**  v1 had
+ *     `#define KEY_LEFTSHIFT 42` and `KEY_RIGHTALT 100` at the top of the file.  Here we
+ *     ASK the layout: every key is pressed on an `xkb_state` and we
+ *     look at which modifier lights up.  A hand-written table is a
+ *     table that goes wrong silently when the layout is unusual;
  *
- *  3. ⛔ **il confronto e' sul CARATTERE, non sul keysym.**  v1 traduceva il
- *     carattere in keysym con `xkb_utf32_to_keysym()` e cercava QUEL keysym.
- *     Ma lo stesso carattere ha due forme di keysym — quella storica
- *     (`XKB_KEY_eacute` = 0x00E9) e quella Unicode (0x010000E9) — e una
- *     disposizione puo' usare l'una o l'altra: cercando una forma sola si
- *     dichiara «non producibile» un carattere che sta li'.  Qui si confronta
- *     `xkb_keysym_to_utf32(simbolo) == carattere`, che copre tutt'e due.
+ *  3. ⛔ **the comparison is on the CHARACTER, not on the keysym.**  v1 translated the
+ *     character into a keysym with `xkb_utf32_to_keysym()` and looked for THAT keysym.
+ *     But the same character has two keysym forms — the legacy one
+ *     (`XKB_KEY_eacute` = 0x00E9) and the Unicode one (0x010000E9) — and a
+ *     layout may use either: looking for a single form one
+ *     declares "not producible" a character that is right there.  Here we compare
+ *     `xkb_keysym_to_utf32(simbolo) == carattere`, which covers both.
  *
- * ⚠ E una cosa di v1 NON e' stata riportata, perche' non e' di questo file: il
- *   conto di che cosa e' premuto e il rilascio al distacco.  In V2 quello sta
- *   in `input.c` (`input_rilascia_tutto()`, `input.h:98`), e tenerne due copie
- *   sarebbe la forma d'errore «due misure sotto la stessa etichetta».
+ * ⚠ And one thing from v1 was NOT carried over, because it does not belong to this file: the
+ *   count of what is pressed and the release at detach.  In V2 that lives
+ *   in `input.c` (`input_rilascia_tutto()`, `input.h:98`), and keeping two copies
+ *   would be the error form "two measures under the same label".
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ LA TRAPPOLA CHE QUESTO FILE ESISTE PER NON AVERE
+ * ⛔⛔ THE TRAP THIS FILE EXISTS NOT TO HAVE
  *
- * Se la disposizione chiesta non si carica e si ripiega su `us` senza dirlo, il
- * sintomo che l'utente descrive e' **«scrive le lettere sbagliate»**, e nessuno
- * lo collega alla disposizione: si va a cercare il difetto nel protocollo, nel
- * browser, nella tastiera del telefono.  `CODER.md` §4.2 — degradare, non
- * fallire, MA IL RIPIEGO SI DICHIARA.  Qui il ripiego non c'e' affatto:
+ * If the requested layout does not load and we fall back to `us` without saying so, the
+ * symptom the user describes is **"it types the wrong letters"**, and nobody
+ * connects it to the layout: one goes looking for the defect in the protocol, in the
+ * browser, in the phone's keyboard.  `CODER.md` §4.2 — degrade, do not
+ * fail, BUT THE FALLBACK IS DECLARED.  Here there is no fallback at all:
  *
- *   · `[M]` 14 agosto 2026 — `xkbcommon` 1.7.0 **non ripiega da se'**: chiesta
- *     una disposizione che non esiste, `xkb_keymap_new_from_names()` ritorna
- *     NULL e scrive `[XKB-338] Couldn't find file "symbols/..."`.  Il ripiego
- *     poteva metterlo solo il nostro codice, e non c'e';
- *   · ⚠ ma quelle righe **finiscono su stderr e basta**, e chi chiama vede solo
- *     un NULL senza motivo.  ⇒ Qui il registro di `xkbcommon` viene DIROTTATO
- *     (`xkb_context_set_log_fn`) e il primo errore diventa il testo di
- *     `*errore`.  Chi legge il registro trova il motivo, non un NULL;
- *   · ⛔ e `tastiera_disposizione()` porta dentro il nome che la disposizione
- *     COMPILATA da' di se' — «it [Italian]», «us [English (US)]».  Se un giorno
- *     un ripiego entrasse da qualche altra parte, si vedrebbe **nel registro**
- *     come «it [English (US)]», che e' una riga che si legge da sola.
+ *   · `[M]` 14 August 2026 — `xkbcommon` 1.7.0 **does not fall back by itself**: asked
+ *     for a layout that does not exist, `xkb_keymap_new_from_names()` returns
+ *     NULL and writes `[XKB-338] Couldn't find file "symbols/..."`.  The fallback
+ *     could only be put in by our code, and it is not there;
+ *   · ⚠ but those lines **end up on stderr and that is all**, and the caller sees only
+ *     a NULL with no reason.  ⇒ Here `xkbcommon`'s log is HIJACKED
+ *     (`xkb_context_set_log_fn`) and the first error becomes the text of
+ *     `*errore`.  Whoever reads the log finds the reason, not a NULL;
+ *   · ⛔ and `tastiera_disposizione()` carries inside the name the COMPILED
+ *     layout gives itself — «it [Italian]», «us [English (US)]».  If one day
+ *     a fallback came in from somewhere else, it would show **in the log**
+ *     as «it [English (US)]», which is a line that reads by itself.
  *
- * `banchi/04-b25-tastiera.c` guarda tutt'e tre, e `banchi/04-b25-lancia.sh` gli
- * mette davanti un'implementazione che ripiega apposta, per certificare che il
- * banco lo vedrebbe.
+ * `banchi/04-b25-tastiera.c` checks all three, and `banchi/04-b25-lancia.sh`
+ * puts in front of it an implementation that falls back on purpose, to certify that the
+ * bench would see it.
  */
 #include "tastiera.h"
 
@@ -100,17 +100,17 @@
 #include "registro.h"
 
 /*
- * ⚠ L'area del registro sta qui e non in `registro.h`: quel file lo condividono
- *   dieci anelli che scrivono nello stesso momento, e una riga aggiunta li'
- *   dentro sarebbe una collisione garantita.  Da unire a `registro.h` quando la
- *   fase chiude — e' una cucitura, e le cuciture le tiene il coordinatore.
+ * ⚠ The log area lives here and not in `registro.h`: that file is shared by
+ *   ten links writing at the same moment, and a line added in
+ *   there would be a guaranteed collision.  To be merged into `registro.h` when the
+ *   phase closes — it is a seam, and seams are kept by the coordinator.
  */
 #define REG_TASTIERA "tastiera"
 
-/* XKB numera i tasti a partire da 8, evdev da 0 (`RCP.md` §7.3). */
+/* XKB numbers keys starting from 8, evdev from 0 (`RCP.md` §7.3). */
 #define EVDEV_DA_XKB(k) ((uint16_t)((k) - 8))
 
-/* Quanti modificatori puo' avere una disposizione.  xkbcommon ne ammette 32. */
+/* How many modifiers a layout can have.  xkbcommon allows 32. */
 #define MAX_MOD 32
 
 struct tastiera
@@ -119,53 +119,53 @@ struct tastiera
 	struct xkb_keymap *keymap;
 	xkb_layout_index_t gruppo;
 
-	/* «it [Italian]»: il chiesto e il compilato nella stessa riga. */
+	/* «it [Italian]»: the requested and the compiled in the same line. */
 	char nome[192];
 
 	/*
-	 * ⛔ modificatore → tasto che lo accende, CHIESTO alla disposizione e non
-	 *    scritto a mano.  0 = nessun tasto lo accende da solo.
+	 * ⛔ modifier → key that lights it up, ASKED of the layout and not
+	 *    written by hand.  0 = no key lights it up on its own.
 	 */
 	uint16_t tasto_del_mod[MAX_MOD];
 	xkb_mod_index_t n_mod;
 
-	/* I due lucchetti, che NON si usano mai per fare una lettera: vedi sotto. */
+	/* The two locks, which are NEVER used to make a letter: see below. */
 	xkb_mod_index_t mod_maiuscole, mod_numeri;
 
-	/* Il dirottamento del registro di xkbcommon, durante la compilazione. */
+	/* The hijacking of xkbcommon's log, during compilation. */
 	char primo_errore[256];
 	int errori;
 
 	/*
-	 * ⭐⭐ DI CHI E' LA RIGA — 27 agosto 2026, il rosso di C9.
+	 * ⭐⭐ WHOSE LINE IT IS — 27 August 2026, the red of C9.
 	 *
-	 * ⛔ Questo modulo scrive righe d'area `tastiera` da DUE processi di specie
-	 *    diversa (`registro.h`), e finora le trattava allo stesso modo:
+	 * ⛔ This module writes `tastiera` area lines from TWO processes of different
+	 *    kinds (`registro.h`), and until now treated them the same way:
 	 *
-	 *      · nel FIGLIO va gia' bene: `registro_identita()` e' posata
-	 *        all'`exec` e ogni riga del processo la porta;
-	 *      · nel PADRE no: `tastiera_apri()` lo chiama `webtransport.c` per
-	 *        rispondere a «questa disposizione esiste?» durante l'ATTACCA, e
-	 *        li' un processo solo serve TUTTE le sessioni.
+	 *      · in the CHILD it is already fine: `registro_identita()` is set
+	 *        at `exec` and every line of the process carries it;
+	 *      · in the PARENT it is not: `tastiera_apri()` is called by `webtransport.c` to
+	 *        answer "does this layout exist?" during ATTACCA, and
+	 *        there a single process serves ALL sessions.
 	 *
-	 * `[M]` 26 agosto 2026, maglia C9, due inquilini vivi insieme: le righe
-	 *      «modificatore N: si preferisce…» e «disposizione in vigore: …»
-	 *      uscivano DUE VOLTE, identiche parola per parola, ⛔ e non c'era modo
-	 *      di dire quale fosse di chi.
+	 * `[M]` 26 August 2026, mesh C9, two tenants alive together: the lines
+	 *      «modificatore N: si preferisce…» and «disposizione in vigore: …»
+	 *      came out TWICE, identical word for word, ⛔ and there was no way
+	 *      to tell which was whose.
 	 *
-	 * ⇒ Il nome lo porta la TASTIERA, per tutta la durata dell'apertura: cosi'
-	 *   lo vedono anche le righe che escono da `xkb_parla()`, che non ha altro
-	 *   in mano che questa struttura.
-	 * ⚠ Vuoto e' la verita' quando non si sa: `registro.c` allora ripiega
-	 *   sull'identita' di PROCESSO, che nel figlio e' quella giusta.  ⇒ La
-	 *   `calloc()` lascia questo campo com'e', e la strada del figlio non
-	 *   cambia di una virgola.
+	 * ⇒ The name is carried by the KEYBOARD, for the whole life of the opening: so
+	 *   the lines coming out of `xkb_parla()` see it too, which has nothing else
+	 *   in hand but this structure.
+	 * ⚠ Empty is the truth when it is not known: `registro.c` then falls back
+	 *   on the PROCESS identity, which in the child is the right one.  ⇒ The
+	 *   `calloc()` leaves this field as it is, and the child's path does not
+	 *   change one bit.
 	 */
 	char chi[REG_IDENTITA_MAX + 1];
 };
 
 /* ------------------------------------------------------------------ *
- * Il registro di xkbcommon, dirottato
+ * xkbcommon's log, hijacked
  * ------------------------------------------------------------------ */
 static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const char *fmt,
                       va_list ap)
@@ -177,7 +177,7 @@ static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const
 	if (!t)
 		return;
 	vsnprintf(riga, sizeof riga, fmt, ap);
-	/* xkbcommon manda la riga con l'a capo in fondo: qui darebbe fastidio. */
+	/* xkbcommon sends the line with a newline at the end: here it would be a nuisance. */
 	n = strlen(riga);
 	while (n && (riga[n - 1] == '\n' || riga[n - 1] == '\r'))
 		riga[--n] = 0;
@@ -190,23 +190,23 @@ static void xkb_parla(struct xkb_context *ctx, enum xkb_log_level livello, const
 		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon: %s", riga);
 	}
 	else
-		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon (avviso): %s", riga);
+		registro_dettaglio_di(REG_TASTIERA, t->chi, "xkbcommon (warning): %s", riga);
 }
 
 /* ------------------------------------------------------------------ *
- * La forma della stringa — `RCP.md` §4.5
+ * The shape of the string — `RCP.md` §4.5
  *
- * ⛔ Non e' pignoleria, ed e' l'unico controllo di questo file che protegge
- *    qualcosa di piu' di una lettera storta: la stringa finisce dentro la
- *    macchina degli `include` di XKB, che apre file per nome.  Un
- *    «../../qualcosa» arriverebbe li' dentro.
+ * ⛔ It is not pedantry, and it is the only check in this file that protects
+ *    something more than a crooked letter: the string ends up inside XKB's
+ *    `include` machinery, which opens files by name.  A
+ *    "../../something" would arrive in there.
  *
- * ⚠ E `RCP.md` §4.5 vuole i due guasti DISTINTI — forma sbagliata e'
- *   `ERRORE_PROTOCOLLO`, disposizione ben formata ma sconosciuta e'
- *   `SESSIONE_NON_SERVIBILE`.  Il contratto di `tastiera.h` da' un solo canale
- *   d'uscita (NULL + testo), quindi i due si distinguono dal PREFISSO del
- *   testo: «forma:» oppure «sconosciuta:».  ⇒ E' una delle cuciture che il
- *   rapporto chiede al coordinatore.
+ * ⚠ And `RCP.md` §4.5 wants the two faults DISTINCT — wrong shape is
+ *   `ERRORE_PROTOCOLLO`, a well-formed but unknown layout is
+ *   `SESSIONE_NON_SERVIBILE`.  The contract of `tastiera.h` gives a single
+ *   output channel (NULL + text), so the two are told apart by the PREFIX of the
+ *   text: "form:" or "unknown:".  ⇒ It is one of the seams the
+ *   report asks of the coordinator.
  * ------------------------------------------------------------------ */
 static int carattere_ammesso(char c)
 {
@@ -254,39 +254,39 @@ static int forma_valida(const char *s, char *layout, size_t nl, char *variante, 
 }
 
 /* ------------------------------------------------------------------ *
- * ⛔ QUALE TASTO ACCENDE QUALE MODIFICATORE — chiesto, non scritto a mano
+ * ⛔ WHICH KEY LIGHTS UP WHICH MODIFIER — asked, not written by hand
  *
- * Si preme ogni tasto della disposizione su una macchina a stati e si guarda
- * quale modificatore si accende.  Se se ne accende esattamente uno, quel tasto
- * e' il modo di ottenerlo.  E' `CODER.md` §3.9 applicata a una tabella: quando
- * un componente puo' rispondere, non si indovina.
+ * Every key of the layout is pressed on a state machine and we look at
+ * which modifier lights up.  If exactly one lights up, that key
+ * is the way to get it.  It is `CODER.md` §3.9 applied to a table: when
+ * a component can answer, we do not guess.
  *
- * ⚠ Si tiene il PRIMO tasto che lo accende, e i tasti si scandiscono in ordine
- *   crescente: viene il sinistro prima del destro, che e' l'abitudine di tutti.
+ * ⚠ The FIRST key that lights it up is kept, and keys are scanned in increasing
+ *   order: the left comes before the right, which is everybody's habit.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ E POI C'E' LA PREFERENZA, CHE E' NATA DA UNA MISURA — `[M]` 14 ago 2026
+ * ⛔⛔ AND THEN THERE IS THE PREFERENCE, WHICH CAME FROM A MEASUREMENT — `[M]` 14 Aug 2026
  *
- * La scansione qui sopra, da sola, sceglieva per l'AltGr italiano il codice
- * evdev **84**.  E' una scelta LEGALE — nel file `keycodes/evdev` di XKB il
- * tasto `<LVL3>` sta al codice 92, cioe' evdev 84, e porta `ISO_Level3_Shift`
- * — e il banco la dichiarava verde, perche' battendola esce davvero la «@».
+ * The scan above, on its own, chose evdev code **84** for the Italian
+ * AltGr.  It is a LAWFUL choice — in XKB's `keycodes/evdev` file the
+ * `<LVL3>` key is at code 92, that is evdev 84, and carries `ISO_Level3_Shift`
+ * — and the bench declared it green, because typing it really produces «@».
  *
- * ⛔ Ma **evdev 84 e' un buco**: in `linux/input-event-codes.h` fra `KEY_KPDOT`
- *    (83) e `KEY_ZENKAKUHANKAKU` (85) NON C'E' NIENTE — nessuna tastiera al
- *    mondo puo' emettere quel codice.  Funziona perche' il compositore lo
- *    risolve sulla SUA copia della disposizione, ed e' esattamente la forma di
- *    difetto che questo progetto teme: regge finche' i due lati hanno la stessa
- *    tabella, e il giorno che non ce l'hanno smette **senza un errore**.
+ * ⛔ But **evdev 84 is a hole**: in `linux/input-event-codes.h` between `KEY_KPDOT`
+ *    (83) and `KEY_ZENKAKUHANKAKU` (85) THERE IS NOTHING — no keyboard in the
+ *    world can emit that code.  It works because the compositor
+ *    resolves it on ITS copy of the layout, and it is exactly the form of
+ *    defect this project fears: it holds as long as the two sides have the same
+ *    table, and the day they do not it stops **without an error**.
  *
- * ⇒ Da cui la preferenza: fra i tasti che accendono LO STESSO modificatore, si
- *   sceglie quello che una tastiera vera ha davvero (`<RALT>` = evdev 100).
+ * ⇒ Hence the preference: among the keys that light up THE SAME modifier, we
+ *   choose the one a real keyboard really has (`<RALT>` = evdev 100).
  *
- * ⚠ E si noti che cosa NON e': non e' la tabella scritta a mano di v1 —
- *   «AltGr e' il tasto 100» — che sbaglia in silenzio sulle disposizioni
- *   insolite.  E' una PREFERENZA fra risposte tutte ottenute chiedendo alla
- *   disposizione: se `ISO_Level3_Shift` stesse altrove, la scansione lo
- *   troverebbe lo stesso e la preferenza non troverebbe niente da preferire.
+ * ⚠ And note what it is NOT: it is not v1's hand-written table —
+ *   "AltGr is key 100" — which goes wrong silently on unusual
+ *   layouts.  It is a PREFERENCE among answers all obtained by asking the
+ *   layout: if `ISO_Level3_Shift` were elsewhere, the scan would
+ *   find it anyway and the preference would find nothing to prefer.
  * ------------------------------------------------------------------ */
 static const uint16_t TASTI_DI_UNA_TASTIERA_VERA[] = {
 	42,  /* KEY_LEFTSHIFT */
@@ -294,12 +294,12 @@ static const uint16_t TASTI_DI_UNA_TASTIERA_VERA[] = {
 	29,  /* KEY_LEFTCTRL */
 	97,  /* KEY_RIGHTCTRL */
 	56,  /* KEY_LEFTALT */
-	100, /* KEY_RIGHTALT — l'AltGr */
+	100, /* KEY_RIGHTALT — AltGr */
 	125, /* KEY_LEFTMETA */
 	126, /* KEY_RIGHTMETA */
 };
 
-/* Quale modificatore accende questo tasto, se ne accende esattamente uno? */
+/* Which modifier does this key light up, if it lights up exactly one? */
 static int un_solo_modificatore(struct xkb_keymap *km, xkb_keycode_t k, int *quale)
 {
 	struct xkb_state *st = xkb_state_new(km);
@@ -328,7 +328,7 @@ static void impara_i_modificatori(Tastiera *t)
 	if (t->n_mod > MAX_MOD)
 		t->n_mod = MAX_MOD;
 
-	/* 1. si chiede alla disposizione, tasto per tasto. */
+	/* 1. we ask the layout, key by key. */
 	for (xkb_keycode_t k = min; k <= max; k++)
 	{
 		int quale;
@@ -339,14 +339,14 @@ static void impara_i_modificatori(Tastiera *t)
 	}
 
 	/*
-	 * 2. e poi la preferenza, sopra le risposte gia' ottenute.
+	 * 2. and then the preference, on top of the answers already obtained.
 	 *
-	 * ⚠ `gia_preferito` non e' una precauzione teorica: senza, la lista veniva
-	 *   percorsa fino in fondo e per il Maiusc vinceva **il destro** (evdev 54),
-	 *   perche' era l'ultimo dei due a passare di qui.  Funzionava — il banco
-	 *   diceva verde — ma un registro che dice «Maiusc destro» dove ogni mano
-	 *   usa il sinistro e' una riga che fa perdere mezz'ora a chi la legge.
-	 *   ⇒ Vince il PRIMO della lista, che e' l'ordine in cui si scrive a mano.
+	 * ⚠ `gia_preferito` is not a theoretical precaution: without it, the list was
+	 *   walked to the end and for Shift **the right one** won (evdev 54),
+	 *   because it was the last of the two to pass through here.  It worked — the bench
+	 *   said green — but a log saying "right Shift" where every hand
+	 *   uses the left is a line that makes whoever reads it lose half an hour.
+	 *   ⇒ The FIRST of the list wins, which is the order in which one types by hand.
 	 */
 	for (i = 0; i < sizeof TASTI_DI_UNA_TASTIERA_VERA / sizeof *TASTI_DI_UNA_TASTIERA_VERA; i++)
 	{
@@ -366,8 +366,8 @@ static void impara_i_modificatori(Tastiera *t)
 			continue;
 		}
 		registro_dettaglio_di(REG_TASTIERA, t->chi,
-		                      "modificatore %d: si preferisce il tasto %u a %u (una tastiera "
-		                      "vera ha il primo)",
+		                      "modifier %d: key %u is preferred to %u (a real "
+		                      "keyboard has the first)",
 		                      quale, evdev, t->tasto_del_mod[quale]);
 		t->tasto_del_mod[quale] = evdev;
 		gia_preferito[quale] = 1;
@@ -375,13 +375,13 @@ static void impara_i_modificatori(Tastiera *t)
 }
 
 /* ------------------------------------------------------------------ *
- * L'apertura
+ * The opening
  * ------------------------------------------------------------------ */
 Tastiera *tastiera_apri(const char *disposizione, char **errore)
 {
-	/* ⚠ `NULL` e' la verita' per chi non serve una sessione sola: le righe
-	 *   usciranno con l'identita' di PROCESSO, se c'e' (il figlio), e mute se
-	 *   non c'e'.  ⛔ Chi non sa tace (`registro.h`). */
+	/* ⚠ `NULL` is the truth for whoever does not serve a single session: the lines
+	 *   will come out with the PROCESS identity, if there is one (the child), and bare if
+	 *   there is not.  ⛔ Whoever does not know keeps quiet (`registro.h`). */
 	return tastiera_apri_per(disposizione, NULL, errore);
 }
 
@@ -390,7 +390,7 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	Tastiera *t;
 	char layout[72], variante[72];
 	struct xkb_rule_names nomi;
-	const char *chiesta = disposizione ? disposizione : "(quella della sessione)";
+	const char *chiesta = disposizione ? disposizione : "(the session's own)";
 
 	if (errore)
 		*errore = NULL;
@@ -400,20 +400,20 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 		return NULL;
 	t->mod_maiuscole = XKB_MOD_INVALID;
 	t->mod_numeri = XKB_MOD_INVALID;
-	/* ⭐ Il nome si posa PRIMA di qualunque riga: la prima che puo' uscire e'
-	 *   quella della forma mal formata, tre righe piu' sotto. */
+	/* ⭐ The name is set BEFORE any line: the first that can come out is
+	 *   the malformed-shape one, three lines below. */
 	if (chi && *chi)
 		snprintf(t->chi, sizeof t->chi, "%s", chi);
 
 	if (disposizione &&
 	    !forma_valida(disposizione, layout, sizeof layout, variante, sizeof variante))
 	{
-		/* ⛔ `RCP.md` §4.5: questo e' ERRORE_PROTOCOLLO, non SESSIONE_NON_SERVIBILE. */
+		/* ⛔ `RCP.md` §4.5: this is ERRORE_PROTOCOLLO, not SESSIONE_NON_SERVIBILE. */
 		registro_dice_di(REG_TASTIERA, t->chi,
-		                 "disposizione mal formata, rifiutata senza nemmeno provarci: %.64s",
+		                 "malformed layout, refused without even trying: %.64s",
 		                 disposizione);
 		if (errore)
-			*errore = strdup("forma: non e' un nome di disposizione XKB (RCP.md §4.5)");
+			*errore = strdup("form: not an XKB layout name (RCP.md §4.5)");
 		free(t);
 		return NULL;
 	}
@@ -421,9 +421,9 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	t->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!t->ctx)
 	{
-		registro_dice_di(REG_TASTIERA, t->chi, "contesto xkbcommon non creato");
+		registro_dice_di(REG_TASTIERA, t->chi, "xkbcommon context not created");
 		if (errore)
-			*errore = strdup("xkbcommon: contesto non creato");
+			*errore = strdup("xkbcommon: context not created");
 		free(t);
 		return NULL;
 	}
@@ -432,19 +432,19 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	xkb_context_set_log_level(t->ctx, XKB_LOG_LEVEL_WARNING);
 
 	/*
-	 * ⚠ Tutti e cinque i campi si dichiarano, e NULL non va bene: per ogni
-	 *   campo NULL `xkbcommon` sostituisce la variabile d'ambiente
-	 *   `XKB_DEFAULT_*` e poi un valore di compilazione.  Un
-	 *   `XKB_DEFAULT_VARIANT` ereditato dall'ambiente di chi ha avviato il
-	 *   servizio cambierebbe la disposizione della sessione senza che nessuno
-	 *   l'abbia chiesto — ed e' `CODER.md` §4.5, l'ambiente che si compone e
-	 *   non si eredita.
+	 * ⚠ All five fields are declared, and NULL will not do: for every
+	 *   NULL field `xkbcommon` substitutes the environment variable
+	 *   `XKB_DEFAULT_*` and then a build-time value.  An
+	 *   `XKB_DEFAULT_VARIANT` inherited from the environment of whoever started the
+	 *   service would change the session's layout without anyone
+	 *   having asked — and it is `CODER.md` §4.5, the environment is composed and
+	 *   not inherited.
 	 *
-	 * ⛔ L'eccezione voluta: `disposizione == NULL` vuol dire «quella in vigore
-	 *    nella sessione», e li' l'ambiente E' la risposta.  Allora si lascia
-	 *    decidere a `xkbcommon` — e lo si SCRIVE nel registro, perche' e' un
-	 *    caso in cui non sappiamo che cosa abbiamo caricato finche' non ce lo
-	 *    facciamo dire.
+	 * ⛔ The intended exception: `disposizione == NULL` means "the one in force
+	 *    in the session", and there the environment IS the answer.  Then we let
+	 *    `xkbcommon` decide — and we WRITE it to the log, because it is a
+	 *    case in which we do not know what we loaded until we have it
+	 *    told to us.
 	 */
 	if (disposizione)
 	{
@@ -467,32 +467,32 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	if (!t->keymap)
 	{
 		/*
-		 * ⛔ QUI STAVA IL RIPIEGO, E NON C'E'.  La tentazione e' una riga: «se
-		 *    non si compila, riprova con us».  Il servizio andrebbe avanti —
-		 *    `CODER.md` §4.2 lo chiede — ma scrivendo le lettere sbagliate per
-		 *    sempre, senza che nessuno sappia perche'.  ⇒ La degradazione
-		 *    morbida di `DECISIONI.md` §5-bis.7 e' un'altra cosa: la sessione
-		 *    tiene la disposizione che ha gia', e questo lo decide CHI CHIAMA,
-		 *    che sa se una sessione c'e' o no.  Qui si fallisce e si dice.
+		 * ⛔ HERE STOOD THE FALLBACK, AND IT IS NOT THERE.  The temptation is one line: "if
+		 *    it does not compile, retry with us".  The service would go on —
+		 *    `CODER.md` §4.2 asks for it — but typing the wrong letters
+		 *    forever, without anyone knowing why.  ⇒ The soft degradation
+		 *    of `DECISIONI.md` §5-bis.7 is something else: the session
+		 *    keeps the layout it already has, and that is decided by THE CALLER,
+		 *    who knows whether a session exists or not.  Here we fail and say so.
 		 */
 		const char *perche =
-			t->primo_errore[0] ? t->primo_errore : "xkbcommon non ha detto perche'";
+			t->primo_errore[0] ? t->primo_errore : "xkbcommon did not say why";
 
 		registro_dice_di(REG_TASTIERA, t->chi,
-		                 "disposizione «%s» NON caricata, e non si ripiega su nessun'altra: %s",
+		                 "layout «%s» NOT loaded, and no fallback to any other: %s",
 		                 chiesta, perche);
 		if (errore)
 		{
 			/*
-			 * ⛔ La misura sta LARGA APPOSTA.  Questo testo E' il modo in cui il
-			 *    ripiego si dichiara, e un messaggio troncato e' un ripiego
-			 *    dichiarato a meta': il nome della disposizione (fino a 64 byte,
-			 *    `RCP.md` §4.5) piu' la riga di `xkbcommon` (fino a 255) non
-			 *    stanno in 320.  ⚠ Rilievo del costruttore del coordinatore, 14
-			 *    agosto 2026: gcc lo diceva, e diceva bene.
+			 * ⛔ The size is WIDE ON PURPOSE.  This text IS the way the
+			 *    fallback is declared, and a truncated message is a fallback
+			 *    half declared: the layout name (up to 64 bytes,
+			 *    `RCP.md` §4.5) plus `xkbcommon`'s line (up to 255) do not
+			 *    fit in 320.  ⚠ Finding of the coordinator's builder, 14
+			 *    August 2026: gcc said so, and said it well.
 			 */
 			char msg[448];
-			snprintf(msg, sizeof msg, "sconosciuta: la disposizione «%s» non si compila (%s)",
+			snprintf(msg, sizeof msg, "unknown: layout «%s» does not compile (%s)",
 			         chiesta, perche);
 			*errore = strdup(msg);
 		}
@@ -502,100 +502,100 @@ Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **er
 	}
 
 	t->gruppo = 0;
-	snprintf(t->nome, sizeof t->nome, "%s [%s]", disposizione ? disposizione : "predefinita",
+	snprintf(t->nome, sizeof t->nome, "%s [%s]", disposizione ? disposizione : "default",
 	         xkb_keymap_layout_get_name(t->keymap, t->gruppo)
 	             ? xkb_keymap_layout_get_name(t->keymap, t->gruppo)
-	             : "senza nome");
+	             : "unnamed");
 
 	impara_i_modificatori(t);
 	t->mod_maiuscole = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
 	t->mod_numeri = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_NUM);
 
 	/*
-	 * ⚠ Se `xkb_keymap_num_layouts()` ne desse piu' d'uno la stringa avrebbe
-	 *   nominato piu' disposizioni: `RCP.md` §4.5 non lo permette, ma se un
-	 *   giorno lo permettesse (`DECISIONI.md` §5-bis.7 lo tiene aperto) qui si
-	 *   userebbe solo la prima, in silenzio.  ⇒ Si dichiara subito.
+	 * ⚠ If `xkb_keymap_num_layouts()` gave more than one, the string would have
+	 *   named more layouts: `RCP.md` §4.5 does not allow it, but if one
+	 *   day it did (`DECISIONI.md` §5-bis.7 keeps it open) here only
+	 *   the first would be used, silently.  ⇒ It is declared at once.
 	 */
 	if (xkb_keymap_num_layouts(t->keymap) > 1)
 		registro_dice_di(REG_TASTIERA, t->chi,
-		                 "disposizione «%s»: la sessione ne porta %u, si usa SOLO la prima",
+		                 "layout «%s»: the session carries %u, ONLY the first is used",
 		                 chiesta, xkb_keymap_num_layouts(t->keymap));
 
-	registro_dice_di(REG_TASTIERA, t->chi, "disposizione in vigore: %s", t->nome);
+	registro_dice_di(REG_TASTIERA, t->chi, "layout in force: %s", t->nome);
 	return t;
 }
 
 /* ------------------------------------------------------------------ *
- * ⛔⛔ LA DISPOSIZIONE COME LA CONSEGNA LA SESSIONE
+ * ⛔⛔ THE LAYOUT AS THE SESSION HANDS IT OVER
  *
- * ⭐ Questa funzione e' nata da un rifiuto del mandato, accolto il 14 agosto
- *    2026.  Il contratto diceva `tastiera_apri("it")` — compila una
- *    disposizione dal nome che il client ha negoziato — e poggiava su un
- *    presupposto che nessuno aveva misurato: **che la disposizione che
- *    compiliamo noi sia la stessa con cui il compositore interpretera' i codici
- *    che gli mandiamo.**
+ * ⭐ This function was born from a refusal of the mandate, accepted on 14 August
+ *    2026.  The contract said `tastiera_apri("it")` — compile a
+ *    layout from the name the client negotiated — and rested on an
+ *    assumption nobody had measured: **that the layout we
+ *    compile is the same with which the compositor will interpret the codes
+ *    we send it.**
  *
- * ⛔ Non lo e', e non lo decidiamo noi: la disposizione della sessione la
- *    sceglie GNOME, e `libei` ce la CONSEGNA col dispositivo tastiera.  Il
- *    danno, in concreto — sessione `it`, client che ha negoziato `us`, l'utente
- *    scrive `[`:
+ * ⛔ It is not, and we do not decide it: the session's layout is
+ *    chosen by GNOME, and `libei` HANDS it to us with the keyboard device.  The
+ *    damage, concretely — `it` session, client that negotiated `us`, the user
+ *    types `[`:
  *
- *      · su `us` la `[` sta sul tasto 26, da sola;
- *      · su `it` sul tasto 26 c'e' la «e` », e la `[` vuole l'AltGr.
+ *      · on `us` the `[` is on key 26, alone;
+ *      · on `it` key 26 holds «e` », and `[` wants AltGr.
  *
- *    ⇒ Mandiamo «26» e sullo schermo compare **«è»**.  Non un carattere
- *      mancante: UN CARATTERE DIVERSO, che `RCP.md` §7.3 vieta.
+ *    ⇒ We send «26» and **«è»** appears on screen.  Not a missing
+ *      character: A DIFFERENT CHARACTER, which `RCP.md` §7.3 forbids.
  *
- * ⚠ E rende falsa la frase di `DECISIONI.md` §5-bis.7 — «una disposizione
- *   vecchia non produce mai caratteri sbagliati, al massimo rende
- *   irraggiungibili un paio di accenti».  Quella frase e' vera **solo** se si
- *   usa la keymap della sessione.  Con la nostra, i caratteri sbagliati escono.
+ * ⚠ And it makes false the sentence of `DECISIONI.md` §5-bis.7 — "an old
+ *   layout never produces wrong characters, at most it makes a couple of
+ *   accents unreachable".  That sentence is true **only** if one
+ *   uses the session's keymap.  With ours, wrong characters come out.
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ IL CONFRONTO E' SU QUEL CHE LE DUE DISPOSIZIONI **FANNO**, NON SU COME SI
- *    CHIAMANO — ed e' una scelta, non un dettaglio.
+ * ⛔ THE COMPARISON IS ON WHAT THE TWO LAYOUTS **DO**, NOT ON WHAT THEY ARE
+ *    CALLED — and it is a choice, not a detail.
  *
- * La strada corta era confrontare i nomi dei gruppi: «Italian» contro «English
- * (US)».  ⭐ `[M]` 14 agosto 2026 il nome **sopravvive** alla serializzazione e
- * al ritorno (`it` → serializzata → ricompilata → ancora «Italian»), quindi
- * avrebbe funzionato.  ⚠ Ma A4 ha misurato che la keymap che Mutter consegna
- * porta `xkb_symbols "(unnamed)"`: il nome della SEZIONE non c'e'.  Il nome del
- * GRUPPO e' un'altra cosa e c'e' — ma sono due campi diversi in un file che non
- * scriviamo noi, e appendere a un'etichetta la riga che dichiara il ripiego
- * significa che il giorno che l'etichetta manca **si grida al ripiego a ogni
- * connessione**.  Un falso allarme su questa riga vale quanto un silenzio.
+ * The short way was to compare the group names: «Italian» against «English
+ * (US)».  ⭐ `[M]` 14 August 2026 the name **survives** serialisation and
+ * the way back (`it` → serialised → recompiled → still «Italian»), so it
+ * would have worked.  ⚠ But A4 measured that the keymap Mutter hands over
+ * carries `xkb_symbols "(unnamed)"`: the SECTION name is not there.  The
+ * GROUP name is another thing and it is there — but they are two different fields in a file we do not
+ * write, and hanging on a label the line that declares the fallback
+ * means that the day the label is missing **the fallback is cried at every
+ * connection**.  A false alarm on this line is worth as much as a silence.
  *
- * ⇒ Due disposizioni sono la stessa se **producono gli stessi caratteri sugli
- *   stessi tasti**.  E' indipendente dai nomi, e misura la cosa che conta.
+ * ⇒ Two layouts are the same if **they produce the same characters on the
+ *   same keys**.  It is independent of names, and measures the thing that matters.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ E SI CONFRONTANO SOLO I TASTI CHE FANNO UN CARATTERE — misurato, non scelto
+ * ⛔⛔ AND ONLY THE KEYS THAT MAKE A CHARACTER ARE COMPARED — measured, not chosen
  *
- * La prima stesura confrontava **tutto**, e ⛔ **gridava al ripiego anche quando
- * le due disposizioni erano la stessa**.  `[M]` 14 agosto 2026: una keymap `it`
- * serializzata e ricompilata — cioe' il giro esatto che fa la nostra, da Mutter
- * a noi — torna indietro con **due keysym in meno**, su due tasti soli:
+ * The first draft compared **everything**, and ⛔ **cried fallback even when
+ * the two layouts were the same**.  `[M]` 14 August 2026: an `it` keymap
+ * serialised and recompiled — that is the exact trip ours makes, from Mutter
+ * to us — comes back with **two keysyms fewer**, on two keys only:
  *
- *     tasto evdev 610  XF86KbdInputAssistPrevgroup  ⇒ sparito
- *     tasto evdev 611  XF86KbdInputAssistNextgroup  ⇒ sparito
+ *     evdev key 610  XF86KbdInputAssistPrevgroup  ⇒ gone
+ *     evdev key 611  XF86KbdInputAssistNextgroup  ⇒ gone
  *
- * Sono due tasti che **non fanno nessun carattere** e che nessuna tastiera in
- * commercio ha.  ⇒ Con il confronto totale, la riga «RIPIEGO DICHIARATO»
- * sarebbe uscita **a ogni connessione**, compresa quella in cui va tutto bene.
- * Un falso allarme su questa riga vale quanto un silenzio: chi legge il registro
- * impara a saltarla, ed e' finita la sua utilita'.
+ * They are two keys that **make no character** and that no keyboard on the
+ * market has.  ⇒ With the total comparison, the line «RIPIEGO DICHIARATO»
+ * would have come out **at every connection**, including the one where everything is fine.
+ * A false alarm on this line is worth as much as a silence: whoever reads the log
+ * learns to skip it, and its usefulness is over.
  *
- * ⚠ E non l'ha trovato il banco — il banco era verde, perche' guardava la
- *   lettera che usciva e la lettera usciva giusta.  L'ho trovato **leggendo il
- *   registro**.  ⇒ Adesso il banco guarda anche la riga (`04-b25-tastiera.c`,
- *   `prova_dichiarazione`), che e' l'unica parte di questo lavoro che l'utente
- *   vedra' quando qualcosa non torna.
+ * ⚠ And it was not found by the bench — the bench was green, because it looked at the
+ *   letter coming out and the letter came out right.  I found it **reading the
+ *   log**.  ⇒ Now the bench also looks at the line (`04-b25-tastiera.c`,
+ *   `prova_dichiarazione`), which is the only part of this work the user
+ *   will see when something does not add up.
  *
- * ⇒ Si confrontano i tasti che producono un carattere.  Due disposizioni che
- *   differiscono solo sui tasti multimediali sono la stessa disposizione **per
- *   quel che questo file fa**, e dirlo sarebbe rumore.
+ * ⇒ The keys that produce a character are compared.  Two layouts that
+ *   differ only on the multimedia keys are the same layout **for
+ *   what this file does**, and saying so would be noise.
  */
 static int fanno_la_stessa_cosa(struct xkb_keymap *a, xkb_layout_index_t ga,
                                 struct xkb_keymap *b, xkb_layout_index_t gb)
@@ -619,7 +619,7 @@ static int fanno_la_stessa_cosa(struct xkb_keymap *a, xkb_layout_index_t ga,
 			const xkb_keysym_t *sa = NULL, *sb = NULL;
 			int qa = l < na ? xkb_keymap_key_get_syms_by_level(a, k, ga, l, &sa) : 0;
 			int qb = l < nb ? xkb_keymap_key_get_syms_by_level(b, k, gb, l, &sb) : 0;
-			/* il carattere che quel tasto, a quel livello, fa uscire — 0 = nessuno */
+			/* the character that key, at that level, produces — 0 = none */
 			uint32_t ca = qa > 0 ? xkb_keysym_to_utf32(sa[0]) : 0;
 			uint32_t cb = qb > 0 ? xkb_keysym_to_utf32(sb[0]) : 0;
 
@@ -640,11 +640,11 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 		*errore = NULL;
 
 	/*
-	 * ⚠ `ei_keymap_get_size()` conta il NUL finale, e chi legge il descrittore
-	 *   ne mette uno suo: la lunghezza puo' arrivare con dei NUL in coda.  Si
-	 *   tolgono qui, una volta, invece di sperare che il compilatore di
-	 *   `xkbcommon` li digerisca — e' l'unica riga che sta fra un descrittore
-	 *   altrui e il nostro compilatore.
+	 * ⚠ `ei_keymap_get_size()` counts the final NUL, and whoever reads the descriptor
+	 *   adds one of their own: the length may arrive with NULs at the end.  They
+	 *   are removed here, once, instead of hoping that `xkbcommon`'s compiler
+	 *   digests them — it is the only line standing between someone else's
+	 *   descriptor and our compiler.
 	 */
 	while (lunghezza > 0 && testo && testo[lunghezza - 1] == '\0')
 		lunghezza--;
@@ -652,10 +652,10 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	if (!testo || lunghezza == 0)
 	{
 		registro_dice(REG_TASTIERA,
-		              "la sessione non ha consegnato nessuna disposizione: le LETTERE non si "
-		              "possono scrivere");
+		              "the session handed over no layout: LETTERS cannot "
+		              "be typed");
 		if (errore)
-			*errore = strdup("sessione: nessuna keymap consegnata da libei");
+			*errore = strdup("session: no keymap handed over by libei");
 		return NULL;
 	}
 
@@ -668,9 +668,9 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	t->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!t->ctx)
 	{
-		registro_dice(REG_TASTIERA, "contesto xkbcommon non creato");
+		registro_dice(REG_TASTIERA, "xkbcommon context not created");
 		if (errore)
-			*errore = strdup("xkbcommon: contesto non creato");
+			*errore = strdup("xkbcommon: context not created");
 		free(t);
 		return NULL;
 	}
@@ -683,15 +683,15 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 	if (!t->keymap)
 	{
 		const char *perche =
-			t->primo_errore[0] ? t->primo_errore : "xkbcommon non ha detto perche'";
+			t->primo_errore[0] ? t->primo_errore : "xkbcommon did not say why";
 
 		registro_dice(REG_TASTIERA,
-		              "la disposizione consegnata dalla sessione (%zu byte) non si compila: %s",
+		              "the layout handed over by the session (%zu bytes) does not compile: %s",
 		              lunghezza, perche);
 		if (errore)
 		{
 			char msg[448];
-			snprintf(msg, sizeof msg, "sessione: la keymap di libei non si compila (%s)", perche);
+			snprintf(msg, sizeof msg, "session: libei's keymap does not compile (%s)", perche);
 			*errore = strdup(msg);
 		}
 		xkb_context_unref(t->ctx);
@@ -701,8 +701,8 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 
 	t->gruppo = 0;
 	suo = xkb_keymap_layout_get_name(t->keymap, t->gruppo);
-	snprintf(t->nome, sizeof t->nome, "%s [%s]", negoziata ? negoziata : "della sessione",
-	         suo && *suo ? suo : "senza nome");
+	snprintf(t->nome, sizeof t->nome, "%s [%s]", negoziata ? negoziata : "the session's",
+	         suo && *suo ? suo : "unnamed");
 
 	impara_i_modificatori(t);
 	t->mod_maiuscole = xkb_keymap_mod_get_index(t->keymap, XKB_MOD_NAME_CAPS);
@@ -710,15 +710,15 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 
 	if (xkb_keymap_num_layouts(t->keymap) > 1)
 		registro_dice(REG_TASTIERA,
-		              "la sessione porta %u disposizioni: si usa SOLO la prima (%s)",
-		              xkb_keymap_num_layouts(t->keymap), suo && *suo ? suo : "senza nome");
+		              "the session carries %u layouts: ONLY the first is used (%s)",
+		              xkb_keymap_num_layouts(t->keymap), suo && *suo ? suo : "unnamed");
 
 	/*
-	 * ⛔ IL CONFRONTO, E LA DICHIARAZIONE.  Non si cambia niente — quella della
-	 *    sessione VINCE sempre, perche' e' quella che il compositore applica —
-	 *    ma se non e' quella che il client ha chiesto **si scrive**, altrimenti
-	 *    l'utente vedra' un paio di accenti irraggiungibili senza sapere
-	 *    perche' (`CODER.md` §4.2).
+	 * ⛔ THE COMPARISON, AND THE DECLARATION.  Nothing is changed — the session's
+	 *    one ALWAYS WINS, because it is the one the compositor applies —
+	 *    but if it is not the one the client asked for **it is written**, otherwise
+	 *    the user will see a couple of unreachable accents without knowing
+	 *    why (`CODER.md` §4.2).
 	 */
 	if (negoziata)
 	{
@@ -726,23 +726,23 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 
 		if (!chiesta)
 			registro_dice(REG_TASTIERA,
-			              "⚠ il client ha negoziato «%s», che questo sistema non conosce: si usa "
-			              "quella della sessione (%s)",
-			              negoziata, suo && *suo ? suo : "senza nome");
+			              "⚠ the client negotiated «%s», which this system does not know: "
+			              "the session's is used (%s)",
+			              negoziata, suo && *suo ? suo : "unnamed");
 		else if (!fanno_la_stessa_cosa(t->keymap, t->gruppo, chiesta->keymap, chiesta->gruppo))
 			registro_dice(REG_TASTIERA,
-			              "⛔ RIPIEGO DICHIARATO: il client ha negoziato «%s», la sessione ha "
-			              "un'ALTRA disposizione (%s) e si usa QUELLA — con l'altra uscirebbero "
-			              "lettere sbagliate. Qualche carattere restera' irraggiungibile "
+			              "⛔ FALLBACK DECLARED: the client negotiated «%s», the session has "
+			              "ANOTHER layout (%s) and THAT one is used — with the other, wrong "
+			              "letters would come out. Some characters will stay unreachable "
 			              "(DECISIONI.md §5-bis.7)",
-			              negoziata, suo && *suo ? suo : "senza nome");
+			              negoziata, suo && *suo ? suo : "unnamed");
 		else
-			registro_dettaglio(REG_TASTIERA, "la sessione ha proprio «%s»: niente da dichiarare",
+			registro_dettaglio(REG_TASTIERA, "the session really has «%s»: nothing to declare",
 			                   negoziata);
 		tastiera_chiudi(chiesta);
 	}
 
-	registro_dice(REG_TASTIERA, "disposizione in vigore (consegnata dalla sessione): %s", t->nome);
+	registro_dice(REG_TASTIERA, "layout in force (handed over by the session): %s", t->nome);
 	return t;
 }
 
@@ -752,17 +752,17 @@ const char *tastiera_disposizione(Tastiera *t)
 }
 
 /*
- * ⛔⭐ La domanda che evita di chiedere due volte la stessa disposizione — e
- *     che, soprattutto, evita di NON chiederla quando serve.
+ * ⛔⭐ The question that avoids asking twice for the same layout — and
+ *     that, above all, avoids NOT asking for it when needed.
  *
- * ⚠ Il contratto in `tastiera.h` racconta il difetto che l'ha fatta nascere:
- *   una memoria di «quel che ho chiesto» al posto di «quel che c'e'».  Qui la
- *   risposta viene dalla keymap VERA, quella che `libei` ha consegnato, e si
- *   confronta con quel che la disposizione nominata FAREBBE — non col suo nome.
+ * ⚠ The contract in `tastiera.h` tells the defect that gave birth to it:
+ *   a memory of "what I asked for" instead of "what there is".  Here the
+ *   answer comes from the REAL keymap, the one `libei` handed over, and it is
+ *   compared with what the named layout WOULD DO — not with its name.
  *
- * ⛔ E si riusa `fanno_la_stessa_cosa()`, che e' gia' l'unico posto in cui
- *    questo confronto e' scritto: due confronti in due punti diventano due
- *    regole diverse il giorno in cui una cambia (forma E2).
+ * ⛔ And `fanno_la_stessa_cosa()` is reused, which is already the only place where
+ *    this comparison is written: two comparisons in two places become two
+ *    different rules the day one changes (form E2).
  */
 int tastiera_e_questa(Tastiera *t, const char *nome)
 {
@@ -772,8 +772,8 @@ int tastiera_e_questa(Tastiera *t, const char *nome)
 	if (!t || !t->keymap || !nome || !*nome)
 		return -1;
 
-	/* ⚠ `NULL` come canale d'errore: qui non interessa PERCHE' non si compila —
-	 *   se non si compila, la domanda non ha risposta, e -1 lo dice. */
+	/* ⚠ `NULL` as error channel: here it does not matter WHY it does not compile —
+	 *   if it does not compile, the question has no answer, and -1 says so. */
 	altra = tastiera_apri(nome, NULL);
 	if (!altra)
 		return -1;
@@ -795,21 +795,21 @@ void tastiera_chiudi(Tastiera *t)
 }
 
 /* ------------------------------------------------------------------ *
- * La scelta della strada
+ * The choice of the path
  * ------------------------------------------------------------------ */
 
 /*
- * Da una maschera di modificatori ai tasti da premere.  Ritorna 0 se questa
- * maschera NON e' percorribile, e sono due i casi:
+ * From a modifier mask to the keys to press.  Returns 0 if this
+ * mask is NOT walkable, and there are two cases:
  *
- *  1. ⛔ **chiede un lucchetto**.  `xkb_keymap_key_get_mods_for_level()` per una
- *     lettera risponde «Maiusc, OPPURE BlocMaiusc»: sono tutt'e due modi di
- *     arrivare alla maiuscola.  Ma premere il BlocMaiusc CAMBIA LA SESSIONE —
- *     resta acceso dopo, e la lettera dopo esce maiuscola per conto suo.  Un
- *     modificatore si tiene premuto e si rilascia; un lucchetto no.  ⇒ Le
- *     maschere che nominano BlocMaiusc o BlocNum si scartano: c'e' sempre
- *     l'altra strada;
- *  2. chiede un modificatore che in questa disposizione nessun tasto accende.
+ *  1. ⛔ **it asks for a lock**.  `xkb_keymap_key_get_mods_for_level()` for a
+ *     letter answers "Shift, OR CapsLock": both are ways of
+ *     reaching the capital.  But pressing CapsLock CHANGES THE SESSION —
+ *     it stays on afterwards, and the next letter comes out capital on its own.  A
+ *     modifier is held down and released; a lock is not.  ⇒ The
+ *     masks that name CapsLock or NumLock are discarded: there is always
+ *     the other way;
+ *  2. it asks for a modifier that no key lights up in this layout.
  */
 static int tasti_della_maschera(Tastiera *t, xkb_mod_mask_t maschera,
                                 uint16_t fuori[TASTIERA_MAX_POSIZIONI], size_t *quanti)
@@ -823,7 +823,7 @@ static int tasti_della_maschera(Tastiera *t, xkb_mod_mask_t maschera,
 			return 0;
 		if (!t->tasto_del_mod[i])
 			return 0;
-		if (*quanti + 1 >= TASTIERA_MAX_POSIZIONI) /* +1: il tasto vero */
+		if (*quanti + 1 >= TASTIERA_MAX_POSIZIONI) /* +1: the real key */
 			return 0;
 		fuori[(*quanti)++] = t->tasto_del_mod[i];
 	}
@@ -843,15 +843,15 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 	*n = 0;
 
 	/*
-	 * ⛔ Fuori intervallo e surrogati NON sono «non producibili»: sono un
-	 *    errore di protocollo (`RCP.md` §7.3), e vanno distinti — se tornassero
-	 *    0 il chiamante scriverebbe nel registro «l'utente ha chiesto un
-	 *    carattere che la disposizione non ha», che e' falso.
+	 * ⛔ Out of range and surrogates are NOT "not producible": they are a
+	 *    protocol error (`RCP.md` §7.3), and must be told apart — if they returned
+	 *    0 the caller would write to the log "the user asked for a
+	 *    character the layout does not have", which is false.
 	 */
 	if (carattere > 0x10FFFF || (carattere >= 0xD800 && carattere <= 0xDFFF))
 	{
-		/* ⛔ Fase 16 §12: nemmeno qui il valore — e' quel che e' stato battuto. */
-		registro_dice(REG_TASTIERA, "carattere fuori dai valori scalari Unicode: rifiutato");
+		/* ⛔ Phase 16 §12: not even here the value — it is what was typed. */
+		registro_dice(REG_TASTIERA, "character outside the Unicode scalar values: refused");
 		return -1;
 	}
 
@@ -863,7 +863,7 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 		xkb_level_index_t livelli = xkb_keymap_num_levels_for_key(t->keymap, k, t->gruppo);
 
 		if (k < 8)
-			continue; /* non avrebbe un codice evdev */
+			continue; /* it would have no evdev code */
 
 		for (xkb_level_index_t l = 0; l < livelli; l++)
 		{
@@ -878,9 +878,9 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 			for (int i = 0; i < quanti_simboli; i++)
 			{
 				/*
-				 * ⛔ Il confronto e' sul CARATTERE, non sul keysym: lo stesso
-				 *    carattere ha la forma storica e quella Unicode, e una
-				 *    disposizione puo' portare l'una o l'altra.
+				 * ⛔ The comparison is on the CHARACTER, not on the keysym: the same
+				 *    character has the legacy form and the Unicode one, and a
+				 *    layout may carry either.
 				 */
 				uint32_t prodotto = xkb_keysym_to_utf32(simboli[i]);
 				if (prodotto && prodotto == carattere)
@@ -910,10 +910,10 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 					continue;
 
 				/*
-				 * Si tiene la strada piu' corta: meno modificatori si premono,
-				 * meno cose possono andare storte, ed e' anche quel che farebbe
-				 * una mano.  A parita', vince il tasto piu' basso — che e' il
-				 * criterio che tiene fuori il tastierino numerico dai numeri.
+				 * The shortest path is kept: the fewer modifiers are pressed,
+				 * the fewer things can go wrong, and it is also what a hand
+				 * would do.  On a tie, the lowest key wins — which is the
+				 * criterion that keeps the numeric keypad out of the digits.
 				 */
 				if (trovato && quanti_mod + 1 >= migliori_n)
 					continue;
@@ -929,24 +929,24 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere,
 	if (!trovato)
 	{
 		/*
-		 * ⛔⛔ IL CASO CHE `RCP.md` §7.3 OBBLIGA A DICHIARARE: «se una LETTERA
-		 *     non e' producibile nella disposizione della sessione, il server
-		 *     DEVE scriverlo nel registro e NON DEVE mandare un carattere
-		 *     diverso ne' tacere».  La riga sta qui e non nel chiamante perche'
-		 *     qui si sa QUALE disposizione e' — che e' l'unica cosa che serve a
-		 *     chi legge il registro sei ore dopo.
+		 * ⛔⛔ THE CASE `RCP.md` §7.3 REQUIRES TO BE DECLARED: "if a LETTER
+		 *     is not producible in the session's layout, the server
+		 *     MUST write it to the log and MUST NOT send a different character
+		 *     nor keep quiet".  The line is here and not in the caller because
+		 *     here we know WHICH layout it is — which is the only thing that
+		 *     whoever reads the log six hours later needs.
 		 */
 		registro_dice(REG_TASTIERA,
-		              "un carattere non e' producibile con la disposizione %s: NON mandato "
-		              "niente (RCP.md §7.3; quale, non si scrive — fase 16 §12)",
+		              "a character is not producible with layout %s: NOTHING "
+		              "sent (RCP.md §7.3; which one, is not written — phase 16 §12)",
 		              t->nome);
 		return 0;
 	}
 
 	memcpy(codici, migliori, migliori_n * sizeof *migliori);
 	*n = migliori_n;
-	/* ⛔ Fase 16 §12: ne' il carattere ne' il tasto che lo fa — i due insieme
-	 *    sono la battuta, una riga per lettera. */
-	registro_dettaglio(REG_TASTIERA, "un carattere ⇒ %zu posizioni", migliori_n);
+	/* ⛔ Phase 16 §12: neither the character nor the key that makes it — the two together
+	 *    are the keystroke, one line per letter. */
+	registro_dettaglio(REG_TASTIERA, "a character ⇒ %zu key positions", migliori_n);
 	return 1;
 }

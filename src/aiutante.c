@@ -1,8 +1,8 @@
 /*
- * aiutante.c — il processo che interroga PAM al posto del filo unico.
+ * aiutante.c — the process that queries PAM in place of the single thread.
  *
- * La ragione, i tre piani e l'invariante I3 stanno per esteso in `aiutante.h`.
- * Qui ci sono le scelte che si vedono solo nel codice.
+ * The reason, the three storeys and invariant I3 are written out in full in
+ * `aiutante.h`.  Here are the choices that can only be seen in the code.
  */
 #include "aiutante.h"
 
@@ -20,83 +20,84 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* ⛔ Dichiarata qui e non inclusa: `autenticazione.c` non ha un'intestazione, e
- *    la stessa riga sta gia' in `webtransport.c`.  ⚠ E' l'UNICA funzione che
- *    tocca `libpam` in tutto il prodotto, e da oggi la chiama **solo il
- *    nipote**: nel processo che serve non viene piu' eseguita mai. */
+/* ⛔ Declared here and not included: `autenticazione.c` has no header, and the
+ *    same line is already in `webtransport.c`.  ⚠ It is the ONLY function that
+ *    touches `libpam` in the whole product, and from today it is called **only
+ *    by the grandchild**: in the serving process it is never executed again. */
 bool rcp_autentica_da(const char *utente, const char *parola,
                       const char *rhost);
 bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
 
-/* ⛔⛔ QUESTO NUMERO NON E' IL TETTO DELLE SESSIONI, E NON DEVE SEGUIRLO — 25
- *      agosto 2026, e la riga qui sopra diceva il contrario.
+/* ⛔⛔ THIS NUMBER IS NOT THE SESSION CAP, AND MUST NOT FOLLOW IT — 25 Aug
+ *      2026, and the line above said the opposite.
  *
- *      Diceva: *«non e' un numero arbitrario: e' lo stesso `MAX_ATTACCATE` di
- *      `rcp.c`»*.  ⛔ **Non lo era** — erano due letterali indipendenti — e
- *      soprattutto **non doveva esserlo**: sono due grandezze diverse.
+ *      It said: *«it is not an arbitrary number: it is the same `MAX_ATTACCATE`
+ *      of `rcp.c`»*.  ⛔ **It was not** — they were two independent literals —
+ *      and above all **it must not be**: they are two different quantities.
  *
- *        · `RCP_TETTO_SESSIONI` conta gli utenti **serviti**, e una sessione
- *          dura ore;
- *        · questo conta le autenticazioni **in volo nello stesso istante**, e
- *          una pratica dura da 1,0 a 2,2 s (`[M]` B8).
+ *        · `RCP_TETTO_SESSIONI` counts the users **served**, and a session
+ *          lasts hours;
+ *        · this one counts the authentications **in flight at the same
+ *          instant**, and a request lasts from 1.0 to 2.2 s (`[M]` B8).
  *
- *      ⇒ Con ZERO sessioni attive si possono avere diciassette pratiche in
- *        volo — bastano diciassette persone che premono «entra» insieme — e il
- *        diciassettesimo riceverebbe `CREDENZIALI_ERRATE`, ⛔ **indistinguibile
- *        da una parola sbagliata** (rilievo **R10-A7**).  E per il verso
- *        opposto: un tetto di sessioni alto non ha nessun motivo di allargare
- *        una coda che si svuota in due secondi.
+ *      ⇒ With ZERO active sessions there can be seventeen requests in flight
+ *        — seventeen people pressing «enter» together are enough — and the
+ *        seventeenth would receive `CREDENZIALI_ERRATE`, ⛔ **indistinguishable
+ *        from a wrong password** (finding **R10-A7**).  And the other way
+ *        round: a high session cap has no reason to widen a queue that empties
+ *        in two seconds.
  *
- * ⛔ Percio' resta un numero SUO, scritto qui, e questo riquadro esiste perche'
- *    il giorno in cui `RCP_TETTO_SESSIONI` diventera' configurabile qualcuno
- *    aprira' questo file per «allinearlo».  Non si allinea: si dimensiona sul
- *    picco di ARRIVI, che e' un'altra misura e oggi non c'e'.
+ * ⛔ So it stays a number of ITS OWN, written here, and this box exists because
+ *    the day `RCP_TETTO_SESSIONI` becomes configurable someone will open this
+ *    file to «align it».  It is not aligned: it is sized on the peak of
+ *    ARRIVALS, which is another measurement and does not exist today.
  *
- * ⚠ Oltre il tetto `aiutante_chiedi` dice di no — un no e' una risposta
- *   conforme a I3, mentre una coda senza fondo sarebbe un modo di far nascere
- *   processi finche' la macchina regge. */
+ * ⚠ Beyond the ceiling `aiutante_chiedi` says no — a no is an answer
+ *   compliant with I3, while a bottomless queue would be a way of spawning
+ *   processes as long as the machine holds. */
 #define MAX_IN_VOLO 16
 
-/* ⛔ Quanto si aspetta una risposta prima di chiamarla «no».  PAM, misurata,
- * sta fra 1,0 e 2,2 s: otto secondi sono quattro volte il caso peggiore
- * conosciuto.  ⚠ E c'e' una SECONDA rete, in `rcp.c` (`TETTO_VERDETTO`): due
- * reti indipendenti perche' questa vive nel processo che potrebbe essere
- * proprio quello guasto. */
+/* ⛔ How long an answer is awaited before calling it «no».  PAM, measured,
+ * sits between 1.0 and 2.2 s: eight seconds are four times the worst known
+ * case.  ⚠ And there is a SECOND net, in `rcp.c` (`TETTO_VERDETTO`): two
+ * independent nets because this one lives in the process that could be
+ * precisely the faulty one. */
 #define SCADENZA_MS 8000
 
-/* ⛔ Il nipote non puo' vivere per sempre: un modulo PAM che si impianta su una
- * rete che non risponde terrebbe in piedi un processo a ogni tentativo.  Venti
- * secondi, cioe' piu' della scadenza del padre: cosi' il «no» arriva sempre
- * dalla scadenza (che e' un fatto scritto nel registro) e non da un segnale. */
+/* ⛔ The grandchild cannot live forever: a PAM module stuck on a network that
+ * does not answer would keep a process alive at every attempt.  Twenty
+ * seconds, that is more than the parent's expiry: this way the «no» always
+ * comes from the expiry (which is a fact written in the log) and not from a
+ * signal. */
 #define NIPOTE_ALLARME_S 20
 
 struct richiesta {
 	uint64_t pratica;
 	char utente[257];
 	char parola[1025];
-	/* ⭐ FASE 17 T6: l'indirizzo del client, nudo, per `PAM_RHOST` (come
-	 *    sshd).  Vuoto se non si sa: allora PAM non lo riceve. */
+	/* ⭐ PHASE 17 T6: the client's address, bare, for `PAM_RHOST` (like
+	 *    sshd).  Empty if unknown: then PAM does not receive it. */
 	char rhost[64];
 };
 
 struct risposta {
 	uint64_t pratica;
-	uint8_t esito; /* ⛔ 1 e SOLO 1 vuol dire ammesso */
+	uint8_t esito; /* ⛔ 1 and ONLY 1 means admitted */
 };
 
 struct volo {
 	uint64_t pratica;
 	uint64_t scade;
-	/* ⛔ Il NOME dell'utente, e non la sua parola: quello serve al padre per
-	 *    generare il figlio quando la risposta e' «si'» (`figlio.h`), questa e'
-	 *    gia' azzerata da §4.4 prima che questa riga esista. */
+	/* ⛔ The user's NAME, and not their password: the former serves the
+	 *    parent to spawn the child when the answer is «yes» (`figlio.h`), the
+	 *    latter is already zeroed by §4.4 before this line exists. */
 	char utente[257];
-	/* ⭐ E l'indirizzo, che al «si'» va alla sessione PAM del figlio. */
+	/* ⭐ And the address, which on «yes» goes to the child's PAM session. */
 	char rhost[64];
 };
 
 struct aiutante {
-	int fd;         /* -1 quando lo smistatore e' morto o non e' mai nato */
+	int fd;         /* -1 when the dispatcher is dead or was never born */
 	pid_t figlio;
 	uint64_t prossima_pratica;
 	struct volo volo[MAX_IN_VOLO];
@@ -104,108 +105,109 @@ struct aiutante {
 };
 
 /* ------------------------------------------------------------------------ */
-/* IL NIPOTE — una transazione PAM sola, poi muore.                          */
+/* THE GRANDCHILD — one single PAM transaction, then it dies.               */
 
 static void nipote(int fd, const struct richiesta *r)
 {
 	struct risposta out;
 	bool ok;
 
-	/* ⛔ L'allarme si arma PRIMA di chiamare PAM: armarlo dopo sarebbe armarlo
-	 *    quando il caso per cui esiste e' gia' successo. */
+	/* ⛔ The alarm is armed BEFORE calling PAM: arming it after would be
+	 *    arming it when the case it exists for has already happened. */
 	alarm(NIPOTE_ALLARME_S);
 
 	ok = rcp_autentica_da(r->utente, r->parola, r->rhost);
 
 	out.pratica = r->pratica;
-	/* ⛔ Il solo posto del programma in cui nasce un «si'», ed e' scritto in
-	 *    modo che un valore diverso da `PAM_SUCCESS` non ci possa arrivare:
-	 *    `rcp_autentica()` parte da `ammesso = false`. */
+	/* ⛔ The only place in the program where a «yes» is born, and it is
+	 *    written so that a value other than `PAM_SUCCESS` cannot get there:
+	 *    `rcp_autentica()` starts from `ammesso = false`. */
 	out.esito = ok ? 1u : 0u;
-	/* ⚠ L'esito si scrive e basta: se la `send` fallisce, il padre non
-	 *   ricevera' niente e la pratica scadra' — cioe' un «no».  Non si
-	 *   riprova, e non si scrive un esito «forse». */
+	/* ⚠ The outcome is written and that is all: if the `send` fails, the
+	 *   parent will receive nothing and the request will expire — that is, a
+	 *   «no».  No retry, and no «maybe» outcome is written. */
 	(void)send(fd, &out, sizeof out, MSG_NOSIGNAL);
 	_exit(0);
 }
 
 /* ------------------------------------------------------------------------ */
-/* LO SMISTATORE — non chiama mai PAM: legge e forca.                        */
+/* THE DISPATCHER — never calls PAM: reads and forks.                       */
 
 static void smistatore(int fd)
 {
 	struct richiesta r;
 
-	/* ⛔ Se il padre muore, questo processo muore con lui.  Senza, uno
-	 *    spegnimento brusco del server lascerebbe un orfano attaccato a un
-	 *    socket che non legge piu' nessuno — e nessun file direbbe chi e'. */
+	/* ⛔ If the parent dies, this process dies with it.  Without this, an
+	 *    abrupt shutdown of the server would leave an orphan attached to a
+	 *    socket nobody reads any more — and no file would say who it is. */
 	prctl(PR_SET_PDEATHSIG, SIGTERM);
 
-	/* ⛔ I gestori del padre non valgono qui: il padre esce dal suo ciclo
-	 *    quando `si_ferma` diventa 1, e questo processo quella variabile non
-	 *    la guarda mai.  Con il gestore ereditato un `SIGTERM` non lo
-	 *    fermerebbe, e chi spegne il server aspetterebbe un figlio immortale. */
+	/* ⛔ The parent's handlers do not apply here: the parent leaves its loop
+	 *    when `si_ferma` becomes 1, and this process never looks at that
+	 *    variable.  With the inherited handler a `SIGTERM` would not stop it,
+	 *    and whoever shuts the server down would wait for an immortal child. */
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
-	/* ⭐ E i nipoti si raccolgono da soli: con `SIGCHLD` a `SIG_IGN` il nucleo
-	 *    non lascia zombi (POSIX 2001), e questo processo non ha nessun ciclo
-	 *    di `waitpid` da dimenticare. */
+	/* ⭐ And the grandchildren are reaped on their own: with `SIGCHLD` at
+	 *    `SIG_IGN` the kernel leaves no zombies (POSIX 2001), and this process
+	 *    has no `waitpid` loop to forget. */
 	signal(SIGCHLD, SIG_IGN);
 
 	for (;;) {
 		ssize_t letti = recv(fd, &r, sizeof r, 0);
 		if (letti == 0)
-			_exit(0); /* il padre ha chiuso: qui non c'e' piu' niente da fare */
+			_exit(0); /* the parent has closed: nothing more to do here */
 		if (letti < 0) {
 			if (errno == EINTR)
 				continue;
 			_exit(1);
 		}
-		/* ⛔ Una richiesta di lunghezza sbagliata non si «aggiusta»: si butta,
-		 *    e la pratica scadra' dal lato del padre come un no.  Indovinare
-		 *    che cosa mancasse e' precisamente l'indulgenza che nasconde. */
+		/* ⛔ A request of the wrong length is not «fixed»: it is thrown away,
+		 *    and the request will expire on the parent's side as a no.
+		 *    Guessing what was missing is precisely the leniency that hides. */
 		if (letti != (ssize_t)sizeof r) {
 			memset(&r, 0, sizeof r);
 			continue;
 		}
-		/* ⚠ E la stringa si chiude a forza: quel che e' arrivato deve essere
-		 *   quel che si giudica, e un buffer senza zero finale farebbe leggere
-		 *   a PAM byte che non erano nel messaggio. */
+		/* ⚠ And the string is forcibly terminated: what arrived must be what
+		 *   is judged, and a buffer without a final zero would make PAM read
+		 *   bytes that were not in the message. */
 		r.utente[sizeof r.utente - 1] = 0;
 		r.parola[sizeof r.parola - 1] = 0;
 		r.rhost[sizeof r.rhost - 1] = 0;
 
 		pid_t p = fork();
 		if (p == 0)
-			nipote(fd, &r); /* non torna */
+			nipote(fd, &r); /* does not return */
 		if (p < 0) {
-			/* ⛔ Non si ripiega chiamando PAM QUI: bloccherebbe lo smistatore,
-			 *    e con lui tutte le altre pratiche.  Si tace, e il padre
-			 *    trasformera' il silenzio in un no alla scadenza. */
+			/* ⛔ No fallback of calling PAM HERE: it would block the
+			 *    dispatcher, and with it all the other requests.  Stay
+			 *    silent, and the parent will turn the silence into a no at
+			 *    expiry. */
 		}
-		/* ⛔ §4.4: la parola si azzera appena servita.  Questa e' la copia
-		 *    dello smistatore, e vive il tempo di una `fork`. */
+		/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is
+		 *    the dispatcher's copy, and it lives the time of a `fork`. */
 		memset(&r, 0, sizeof r);
 	}
 }
 
 /* ------------------------------------------------------------------------ */
-/* IL PADRE                                                                  */
+/* THE PARENT                                                                */
 
 aiutante *aiutante_accendi(void)
 {
 	int sv[2];
 	aiutante *a;
 
-	/* ⛔ `SOCK_SEQPACKET`: i confini dei messaggi li tiene il nucleo.  Vedi il
-	 *    riquadro di `aiutante.h` — con uno stream l'inquadramento sarebbe
-	 *    nostro, e un difetto li' dentro vorrebbe dire «la risposta di un
-	 *    altro», cioe' I3 rotta da un errore di lettura. */
+	/* ⛔ `SOCK_SEQPACKET`: message boundaries are kept by the kernel.  See the
+	 *    box in `aiutante.h` — with a stream the framing would be ours, and a
+	 *    defect in there would mean «someone else's answer», that is I3 broken
+	 *    by a read error. */
 	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv) != 0) {
 		registro_dice(REG_AVVIO,
-		              "⛔ l'aiutante di PAM NON si accende: socketpair: %s.  "
-		              "Ogni autenticazione sara' un NO (invariante I3), e il "
-		              "server lo dira' a ogni tentativo.",
+		              "⛔ the PAM helper does NOT start: socketpair: %s.  "
+		              "Every authentication will be a NO (invariant I3), and the "
+		              "server will say so at every attempt.",
 		              strerror(errno));
 		return NULL;
 	}
@@ -220,8 +222,8 @@ aiutante *aiutante_accendi(void)
 	a->figlio = fork();
 	if (a->figlio < 0) {
 		registro_dice(REG_AVVIO,
-		              "⛔ l'aiutante di PAM NON si accende: fork: %s.  Ogni "
-		              "autenticazione sara' un NO (invariante I3).",
+		              "⛔ the PAM helper does NOT start: fork: %s.  Every "
+		              "authentication will be a NO (invariant I3).",
 		              strerror(errno));
 		close(sv[0]);
 		close(sv[1]);
@@ -230,21 +232,21 @@ aiutante *aiutante_accendi(void)
 	}
 	if (a->figlio == 0) {
 		close(sv[0]);
-		smistatore(sv[1]); /* non torna */
+		smistatore(sv[1]); /* does not return */
 		_exit(1);
 	}
 
 	close(sv[1]);
 	a->fd = sv[0];
 	a->prossima_pratica = 1;
-	/* ⛔ Non bloccante: e' tutto il punto di questo file.  Una `send` che
-	 *    aspetta e' un'attesa dentro il ciclo asincrono — `CODER.md` §4.4 —
-	 *    cioe' il difetto spostato invece che curato. */
+	/* ⛔ Non-blocking: it is the whole point of this file.  A `send` that
+	 *    waits is a wait inside the asynchronous loop — `CODER.md` §4.4 —
+	 *    that is, the defect moved instead of cured. */
 	fcntl(a->fd, F_SETFL, O_NONBLOCK);
 
 	registro_dice(REG_AVVIO,
-	              "⭐ aiutante di PAM acceso: pid %ld, socketpair anonimo "
-	              "SEQPACKET.  Da qui in poi il ciclo poll NON chiama piu' PAM "
+	              "⭐ PAM helper started: pid %ld, anonymous SEQPACKET "
+	              "socketpair.  From here on the poll loop NO LONGER calls PAM "
 	              "(DECISIONI.md §1.10)",
 	              (long)a->figlio);
 	return a;
@@ -257,9 +259,9 @@ void aiutante_spegni(aiutante *a)
 	if (a->fd >= 0)
 		close(a->fd);
 	if (a->figlio > 0) {
-		/* ⚠ Chiudere il socket basterebbe (lo smistatore legge 0 ed esce), ma
-		 *   «basterebbe» non e' «l'ho fatto»: il segnale e la raccolta
-		 *   rendono lo spegnimento un fatto osservabile invece di una corsa. */
+		/* ⚠ Closing the socket would be enough (the dispatcher reads 0 and
+		 *   exits), but «would be enough» is not «I did it»: the signal and
+		 *   the reaping make the shutdown an observable fact instead of a race. */
 		kill(a->figlio, SIGTERM);
 		waitpid(a->figlio, NULL, 0);
 	}
@@ -295,9 +297,9 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 		return false;
 	if (a->nvolo >= MAX_IN_VOLO) {
 		registro_dice(REG_RCP,
-		              "⛔ %d verifiche PAM gia' in volo: questa NON parte, e "
-		              "chi ha chiesto ricevera' un NO (I3: il fallimento e' un "
-		              "no, non un forse)",
+		              "⛔ %d PAM checks already in flight: this one does NOT leave, and "
+		              "whoever asked will receive a NO (I3: failure is a "
+		              "no, not a maybe)",
 		              a->nvolo);
 		return false;
 	}
@@ -305,26 +307,26 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	mia = a->prossima_pratica;
 	memset(&r, 0, sizeof r);
 	r.pratica = mia;
-	/* ⛔ `snprintf` e non `strcpy`: gli intervalli li ha gia' fatti rispettare
-	 *    `rcp.c` (§4.4: utente 1..256, parola 1..1024), e questo e' il secondo
-	 *    muro — quello che regge anche se il primo cambia. */
+	/* ⛔ `snprintf` and not `strcpy`: the ranges have already been enforced by
+	 *    `rcp.c` (§4.4: user 1..256, password 1..1024), and this is the second
+	 *    wall — the one that holds even if the first changes. */
 	snprintf(r.utente, sizeof r.utente, "%s", utente);
 	snprintf(r.parola, sizeof r.parola, "%s", parola);
 	(void)rcp_rhost_da_provenienza(provenienza, r.rhost, sizeof r.rhost);
 
 	scritti = send(a->fd, &r, sizeof r, MSG_NOSIGNAL);
-	/* ⛔ §4.4: la parola si azzera appena servita.  Questa e' la copia del
-	 *    mittente, e vive il tempo di una `send`.  ⚠ E il numero della pratica
-	 *    e' gia' al sicuro in `mia`: rileggerlo da `r` dopo il `memset` sarebbe
-	 *    leggere lo zero che ci abbiamo appena messo — e la risposta non
-	 *    troverebbe piu' la sua pratica in volo. */
+	/* ⛔ §4.4: the password is zeroed as soon as it has served.  This is the
+	 *    sender's copy, and it lives the time of a `send`.  ⚠ And the request
+	 *    number is already safe in `mia`: reading it again from `r` after the
+	 *    `memset` would be reading the zero we have just put there — and the
+	 *    answer would no longer find its request in flight. */
 	memset(&r, 0, sizeof r);
 
 	if (scritti != (ssize_t)sizeof r) {
 		registro_dice(REG_RCP,
-		              "⛔ la domanda a PAM non e' partita (%zd byte su %zu: "
-		              "%s): NON si aspetta e non si indovina — chi ha chiesto "
-		              "riceve un NO",
+		              "⛔ the question to PAM did not leave (%zd bytes of %zu: "
+		              "%s): NO waiting and no guessing — whoever asked "
+		              "receives a NO",
 		              scritti, sizeof r, strerror(errno));
 		return false;
 	}
@@ -341,19 +343,19 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
 	return true;
 }
 
-/* ⛔ La risposta si accetta SOLO se e' di una pratica che sta davvero in volo.
- * Una risposta per una pratica sconosciuta — o la seconda risposta per la
- * stessa — si scarta e si scrive: e' l'unico modo per cui «ho ricevuto due
- * verdetti» non diventi «vince l'ultimo». */
+/* ⛔ The answer is accepted ONLY if it belongs to a request really in flight.
+ * An answer for an unknown request — or the second answer for the same one —
+ * is discarded and written: it is the only way for «I received two verdicts»
+ * not to become «the last one wins». */
 static bool volo_consuma(aiutante *a, uint64_t pratica, char *utente,
                          size_t cap, char *rhost, size_t rcap)
 {
 	for (int i = 0; i < a->nvolo; i++) {
 		if (a->volo[i].pratica == pratica) {
-			/* ⛔ Il nome si copia PRIMA di togliere la pratica: `volo_togli()`
-			 *    ci scrive sopra l'ultima della tabella, e leggerlo dopo
-			 *    vorrebbe dire consegnare il nome di un altro utente — che qui
-			 *    e' il difetto peggiore possibile. */
+			/* ⛔ The name is copied BEFORE removing the request: `volo_togli()`
+			 *    writes the last one of the table over it, and reading it
+			 *    afterwards would mean delivering another user's name — which
+			 *    here is the worst possible defect. */
 			if (utente && cap)
 				snprintf(utente, cap, "%s", a->volo[i].utente);
 			if (rhost && rcap)
@@ -373,35 +375,35 @@ static void muore(aiutante *a, const char *perche, AiutanteVerdetto consegna,
                   void *ctx)
 {
 	registro_dice(REG_RCP,
-	              "⛔ l'aiutante di PAM non c'e' piu' (%s): le %d verifiche in "
-	              "volo diventano NO, e ogni tentativo successivo sara' un NO "
-	              "(invariante I3).  ⚠ Non e' «parola sbagliata»: e' «PAM non "
-	              "ha potuto giudicare», e il server non se lo tiene per se'.",
+	              "⛔ the PAM helper is gone (%s): the %d checks in "
+	              "flight become NO, and every following attempt will be a NO "
+	              "(invariant I3).  ⚠ It is not «wrong password»: it is «PAM "
+	              "could not judge», and the server does not keep it to itself.",
 	              perche, a->nvolo);
 	if (a->fd >= 0) {
 		close(a->fd);
 		a->fd = -1;
 	}
-	/* ⛔⭐ E LO SI RACCOGLIE, SUBITO — trovato il 12 agosto 2026 dal banco
-	 *     `02-pam-i3.py`, che ha ammazzato l'aiutante e poi si e' sentito
-	 *     rispondere «il pid e' ancora vivo dopo SIGKILL».
+	/* ⛔⭐ AND IT IS REAPED, AT ONCE — found on 12 Aug 2026 by the bench
+	 *     `02-pam-i3.py`, which killed the helper and then got the answer
+	 *     «the pid is still alive after SIGKILL».
 	 *
-	 *     Non era vivo: era uno **zombie**.  Il padre non lo raccoglieva fino
-	 *     a `aiutante_spegni()`, cioe' fino allo spegnimento del server, e in
-	 *     `/proc` uno zombie e un processo vivo hanno **la stessa faccia**.
+	 *     It was not alive: it was a **zombie**.  The parent did not reap it
+	 *     until `aiutante_spegni()`, that is until the server's shutdown, and
+	 *     in `/proc` a zombie and a live process have **the same face**.
 	 *
-	 * ⚠ Il danno non era la voce di troppo nella tabella dei processi: era che
-	 *   chi diagnostica — o un banco — non poteva distinguere «l'aiutante e'
-	 *   morto» da «l'aiutante non muore».  E' `LEZIONI.md` §1.9 applicata ai
-	 *   processi: due fatti diversi con lo stesso aspetto.
+	 * ⚠ The damage was not the extra entry in the process table: it was that
+	 *   whoever diagnoses — or a bench — could not tell «the helper is dead»
+	 *   from «the helper does not die».  It is `LEZIONI.md` §1.9 applied to
+	 *   processes: two different facts with the same look.
 	 *
-	 * ⛔ `WNOHANG`: qui si sta dentro il ciclo asincrono, e `CODER.md` §4.4
-	 *    vieta di aspettare.  Se non fosse ancora finito si riprova al giro
-	 *    dopo, e comunque `aiutante_spegni()` chiude il conto. */
+	 * ⛔ `WNOHANG`: here we are inside the asynchronous loop, and `CODER.md`
+	 *    §4.4 forbids waiting.  If it had not finished yet we retry at the
+	 *    next round, and in any case `aiutante_spegni()` settles the account. */
 	if (a->figlio > 0 && waitpid(a->figlio, NULL, WNOHANG) == a->figlio) {
 		registro_dice(REG_RCP,
-		              "⭐ e l'aiutante %ld e' stato raccolto: da adesso «morto» "
-		              "e «vivo» non hanno piu' la stessa faccia in /proc",
+		              "⭐ and helper %ld has been reaped: from now on «dead» "
+		              "and «alive» no longer have the same face in /proc",
 		              (long)a->figlio);
 		a->figlio = 0;
 	}
@@ -425,37 +427,37 @@ void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx)
 		char da[64];
 		ssize_t letti = recv(a->fd, &ri, sizeof ri, 0);
 		if (letti == 0) {
-			muore(a, "il socket si e' chiuso dal suo lato", consegna, ctx);
+			muore(a, "the socket was closed from its side", consegna, ctx);
 			return;
 		}
 		if (letti < 0) {
 			if (errno == EINTR)
 				continue;
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
-				return; /* niente altro da leggere adesso */
+				return; /* nothing else to read now */
 			muore(a, strerror(errno), consegna, ctx);
 			return;
 		}
 		if (letti != (ssize_t)sizeof ri) {
-			/* ⛔ Un messaggio della lunghezza sbagliata non si interpreta.  La
-			 *    pratica restera' in volo e scadra': cioe' un no. */
+			/* ⛔ A message of the wrong length is not interpreted.  The
+			 *    request will stay in flight and expire: that is, a no. */
 			registro_dice(REG_RCP,
-			              "⛔ risposta dell'aiutante lunga %zd byte invece di "
-			              "%zu: SCARTATA.  La pratica scadra', e la scadenza e' "
-			              "un NO",
+			              "⛔ helper answer %zd bytes long instead of "
+			              "%zu: DISCARDED.  The request will expire, and the expiry is "
+			              "a NO",
 			              letti, sizeof ri);
 			continue;
 		}
 		if (!volo_consuma(a, ri.pratica, chi, sizeof chi, da, sizeof da)) {
 			registro_dice(REG_RCP,
-			              "⛔ risposta per la pratica %llu, che non e' in volo "
-			              "(gia' scaduta, o gia' risposta): SCARTATA",
+			              "⛔ answer for request %llu, which is not in flight "
+			              "(already expired, or already answered): DISCARDED",
 			              (unsigned long long)ri.pratica);
 			continue;
 		}
-		/* ⛔⭐ QUI, E SOLO QUI, UN «SI'» PUO' ENTRARE NEL SERVER — e passa per
-		 *     un confronto con `1`, non per un `!= 0`: un byte sporco, un
-		 *     residuo di memoria o un 255 sono un NO. */
+		/* ⛔⭐ HERE, AND ONLY HERE, A «YES» CAN ENTER THE SERVER — and it goes
+		 *     through a comparison with `1`, not through a `!= 0`: a dirty
+		 *     byte, a memory leftover or a 255 are a NO. */
 		if (consegna)
 			consegna(ctx, ri.pratica, ri.esito == 1u, chi, da);
 	}
@@ -473,11 +475,11 @@ void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
 			snprintf(chi, sizeof chi, "%s", a->volo[i].utente);
 			volo_togli(a, i);
 			registro_dice(REG_RCP,
-			              "⛔ la pratica %llu non ha ricevuto risposta in %d ms: "
-			              "il nipote e' morto o PAM si e' impiantata.  ⭐ La "
-			              "scadenza vale NO (invariante I3), e NON conta come "
-			              "tentativo fallito di §4.4-bis: un difetto nostro non "
-			              "banna nessuno",
+			              "⛔ request %llu received no answer in %d ms: "
+			              "the grandchild died or PAM got stuck.  ⭐ The "
+			              "expiry counts as NO (invariant I3), and does NOT count as a "
+			              "failed attempt of §4.4-bis: a defect of ours "
+			              "bans nobody",
 			              (unsigned long long)p, SCADENZA_MS);
 			if (consegna)
 				consegna(ctx, p, false, chi, "");

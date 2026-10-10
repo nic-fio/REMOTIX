@@ -1,44 +1,44 @@
 /*
- * wlr_input — il TRASPORTO dell'input sulla terza famiglia: labwc, e quindi XFCE.
+ * wlr_input — the input TRANSPORT on the third family: labwc, and so XFCE.
  *
- * ⛔⛔ E NON È UN SECONDO `input.c`: è il pezzo che su GNOME e KDE fa `libei`,
- *     e basta quello.
+ * ⛔⛔ AND IT IS NOT A SECOND `input.c`: it is the piece that on GNOME and KDE `libei`
+ *     does, and nothing more.
  *
- *     `[✗]` libei su wlroots **non esiste** (`STUDI.md` §xfce §7, cercato in
- *     wlroots, labwc, sway, wayfire, weston, xdpw e wayvnc: zero).  ⇒ La strada
- *     sono due protocolli Wayland, entrambi `[M]` annunciati da labwc:
+ *     `[✗]` libei on wlroots **does not exist** (`STUDI.md` §xfce §7, searched in
+ *     wlroots, labwc, sway, wayfire, weston, xdpw and wayvnc: zero).  ⇒ The way
+ *     is two Wayland protocols, both `[M]` announced by labwc:
  *
- *        `zwp_virtual_keyboard_manager_v1`  v1   — la tastiera
- *        `zwlr_virtual_pointer_manager_v1`  v2   — il puntatore
+ *        `zwp_virtual_keyboard_manager_v1`  v1   — the keyboard
+ *        `zwlr_virtual_pointer_manager_v1`  v2   — the pointer
  *
- *     e nessun permesso: wlroots non filtra, labwc filtra solo i client chiusi
- *     in una sandbox (§7).  L'unico cancello è l'uid, come per la cattura.
+ *     and no permission: wlroots does not filter, labwc filters only clients locked
+ *     in a sandbox (§7).  The only gate is the uid, as for capture.
  *
- * ⭐ LA DIVISIONE DEL LAVORO, e perché sta così.
+ * ⭐ THE DIVISION OF LABOUR, and why it is this way.
  *
- *   `input.c` tiene **la contabilità** — che cosa è premuto, gli orfani, il
- *   rilascio al distacco, la disposizione negoziata, le lettere — ed è la
- *   parte che GNOME e KDE hanno già pagato e misurato.  ⛔ Riscriverla qui
- *   vorrebbe dire due contabilità che un giorno divergono.
+ *   `input.c` keeps **the accounts** — what is pressed, the orphans, the
+ *   release at detach, the negotiated layout, the letters — and it is the
+ *   part GNOME and KDE have already paid for and measured.  ⛔ Rewriting it here
+ *   would mean two sets of accounts that one day diverge.
  *
- *   Qui c'è **quel che su wlroots non ha un equivalente in libei**:
- *     · la connessione Wayland, i global, i due dispositivi;
- *     · ⛔ la KEYMAP, che qui la presentiamo NOI (`no_keymap` altrimenti);
- *     · ⛔⛔ i MODIFICATORI, che con libei non esistevano (§7.2 trappola 4);
- *     · la rotella in scatti interi e il `frame` dopo ogni gesto (§7.2 1-3);
- *     · il doppione di pressione, che qui nessuno filtra per noi.
+ *   Here is **what on wlroots has no equivalent in libei**:
+ *     · the Wayland connection, the globals, the two devices;
+ *     · ⛔ the KEYMAP, which here WE present (`no_keymap` otherwise);
+ *     · ⛔⛔ the MODIFIERS, which with libei did not exist (§7.2 trap 4);
+ *     · the wheel in whole notches and the `frame` after every gesture (§7.2 1-3);
+ *     · the duplicate press, which here nobody filters for us.
  *
- * ⛔ UN THREAD SOLO, come `input.h`: tutte le funzioni dal thread che chiama
- *    `wlr_input_gira()`.  `libwayland-client` reggerebbe più thread, ma solo
- *    con un protocollo di code che qui non c'è — e non serve.
+ * ⛔ A SINGLE THREAD, like `input.h`: all functions from the thread that calls
+ *    `wlr_input_gira()`.  `libwayland-client` would bear several threads, but only
+ *    with a queue protocol that is not here — and is not needed.
  *
- * ⚠ UNA CONNESSIONE SUA, e non quella della cattura (`wlroots.c`).  §7.1
- *   suggeriva di condividerla; ⛔ qui si sceglie di no, dichiarandolo: la
- *   cattura pompa il filo **dentro** `wlr_fotogramma()` con le sue scadenze, e
- *   un errore di protocollo su una connessione la ammazza **intera** (è
- *   `wl_display` a morire, non l'oggetto).  ⇒ Separate, un nostro errore
- *   sull'input lascia vivo il video, e viceversa.  Il prezzo è un socket in
- *   più verso labwc.
+ * ⚠ A CONNECTION OF ITS OWN, and not the capture's (`wlroots.c`).  §7.1
+ *   suggested sharing it; ⛔ here we choose not to, declaring it: the
+ *   capture pumps the wire **inside** `wlr_fotogramma()` with its deadlines, and
+ *   a protocol error on a connection kills it **whole** (it is
+ *   `wl_display` that dies, not the object).  ⇒ Separate, an error of ours
+ *   on input leaves the video alive, and vice versa.  The price is one more socket
+ *   towards labwc.
  */
 #pragma once
 
@@ -50,96 +50,96 @@
 typedef struct WlrInput WlrInput;
 
 /*
- * Si collega al compositore dell'utente, lega il seat e i due manager, crea la
- * tastiera e il puntatore virtuali, e ⛔ **manda subito una keymap** — senza,
- * il primo tasto è un errore di protocollo `no_keymap` che chiude l'intera
- * connessione (`wlr_virtual_keyboard_v1.c:83-88`, `STUDI.md` §xfce §7.4).
+ * Connects to the user's compositor, binds the seat and the two managers, creates the
+ * virtual keyboard and pointer, and ⛔ **sends a keymap at once** — without it,
+ * the first key is a `no_keymap` protocol error that closes the whole
+ * connection (`wlr_virtual_keyboard_v1.c:83-88`, `STUDI.md` §xfce §7.4).
  *
- * La keymap iniziale: quella della SESSIONE, copiata dal filo
- * (`wl_seat.get_keyboard`, §7.4) se il compositore la consegna; altrimenti
- * quella che `xkbcommon` compone dall'ambiente — ⚠ e la riga di registro dice
- * quale delle due, perché sono due verità diverse.
- * ⛔ `[M]` 21 set 2026, portatile, labwc 0.8.3 headless: la sessione **non** la
- *    consegna — senza una tastiera vera il seat dichiara capacità 0, e la spia
- *    non nasce.  ⇒ Su una sessione remota la strada vera è l'AMBIENTE, e la
- *    disposizione giusta arriva un attimo dopo, con quella negoziata
- *    (`figlio.c` la applica all'apertura del canale).
+ * The initial keymap: the SESSION's, copied from the wire
+ * (`wl_seat.get_keyboard`, §7.4) if the compositor hands it over; otherwise
+ * the one `xkbcommon` composes from the environment — ⚠ and the log line says
+ * which of the two, because they are two different truths.
+ * ⛔ `[M]` 21 Sep 2026, laptop, labwc 0.8.3 headless: the session does **not**
+ *    hand it over — without a real keyboard the seat declares capability 0, and the spy
+ *    is not born.  ⇒ On a remote session the real way is the ENVIRONMENT, and the
+ *    right layout arrives a moment later, with the negotiated one
+ *    (`figlio.c` applies it when the channel opens).
  *
- * NULL con `sbaglio` scritto.
+ * NULL with `sbaglio` written.
  */
 WlrInput *wlr_input_apri(GError **sbaglio);
 
-/* Il descrittore da mettere nel `poll()`; -1 se il filo è caduto. */
+/* The descriptor to put in the `poll()`; -1 if the wire has dropped. */
 int wlr_input_descrittore(WlrInput *w);
 
-/* Serve il filo SENZA aspettare: legge quel che c'è, spedisce quel che resta.
- * Ritorna gli eventi serviti, o -1 se il filo è caduto (e lo dice una volta). */
+/* Serves the wire WITHOUT waiting: reads what there is, sends what is left.
+ * Returns the events served, or -1 if the wire has dropped (and says so once). */
 int wlr_input_gira(WlrInput *w);
 
 bool wlr_input_caduto(const WlrInput *w);
 
 /*
- * ⛔ LA KEYMAP IN VIGORE sulla nostra tastiera, come testo XKB (senza lo zero
- *    finale in `*lunghezza`).  È **quella** che `input.c` deve dare a
- *    `tastiera_apri_da_keymap()`: le lettere si traducono in posizioni con la
- *    stessa identica keymap con cui il compositore le rileggerà.  Due keymap
- *    «uguali» compilate due volte sono una promessa; lo stesso testo è un fatto.
+ * ⛔ THE KEYMAP IN FORCE on our keyboard, as XKB text (without the final
+ *    zero in `*lunghezza`).  It is **the one** `input.c` must give to
+ *    `tastiera_apri_da_keymap()`: letters are translated into key positions with the
+ *    very same keymap with which the compositor will read them back.  Two "equal"
+ *    keymaps compiled twice are a promise; the same text is a fact.
  */
 const char *wlr_input_keymap(const WlrInput *w, size_t *lunghezza);
 
-/* Da dove viene la keymap in vigore: «sessione», «ambiente», o il nome chiesto. */
+/* Where the keymap in force comes from: «session», «environment», or the requested name. */
 const char *wlr_input_keymap_origine(const WlrInput *w);
 
 /*
- * ⭐ La disposizione negoziata (`RCP.md` §4.5: `it`, `us`, `de(neo)`) diventa la
- *    keymap della NOSTRA tastiera.  Su questa famiglia è la forma giusta di
- *    `DECISIONI.md` §5-bis.7 e non un ripiego: labwc, a ogni tasto, fa
- *    `wlr_seat_set_keyboard()` con la tastiera che l'ha battuto e manda **la
- *    sua keymap** a tutte le applicazioni (§7.4).  ⇒ Le applicazioni leggono i
- *    nostri tasti con la nostra keymap, e le scorciatoie combaciano.
+ * ⭐ The negotiated layout (`RCP.md` §4.5: `it`, `us`, `de(neo)`) becomes the
+ *    keymap of OUR keyboard.  On this family it is the right form of
+ *    `DECISIONI.md` §5-bis.7 and not a fallback: labwc, at every key, does
+ *    `wlr_seat_set_keyboard()` with the keyboard that typed it and sends **its
+ *    keymap** to all applications (§7.4).  ⇒ The applications read our
+ *    keys with our keymap, and the shortcuts match.
  *
- * ⚠ Chi chiama rilascia PRIMA quel che è premuto: i modificatori dipendono
- *   dalla keymap, e un Maiusc premuto con la vecchia e rilasciato con la nuova
- *   è il guasto che non dà errore.
+ * ⚠ The caller releases what is pressed FIRST: the modifiers depend
+ *   on the keymap, and a Shift pressed with the old one and released with the new one
+ *   is the fault that gives no error.
  *
- * 0 mandata, -1 no (con `sbaglio`).
+ * 0 sent, -1 not (with `sbaglio`).
  */
 int wlr_input_keymap_da_nome(WlrInput *w, const char *nome, GError **sbaglio);
 
-/* Rimanda un testo XKB già noto — serve al riattacco, per rimettere la stessa. */
+/* Sends again an already known XKB text — used at reattach, to put back the same one. */
 int wlr_input_keymap_da_testo(WlrInput *w, const char *testo, size_t lunghezza,
                               const char *origine, GError **sbaglio);
 
 /*
- * Un tasto, in evdev (`KEY_A` = 30).  ⛔ Il doppione (premuto due volte senza
- * rilascio, o rilasciato senza essere premuto) NON si manda e torna 0: su
- * wlroots nessuno lo filtra per noi, e un BlocMaiusc tenuto giù che si ripete
- * lo commuterebbe a ogni ripetizione.
- * 0 consegnato (o doppione ignorato), -1 no.
+ * A key, in evdev (`KEY_A` = 30).  ⛔ The duplicate (pressed twice without
+ * release, or released without being pressed) is NOT sent and returns 0: on
+ * wlroots nobody filters it for us, and a CapsLock held down that repeats
+ * would toggle it at every repetition.
+ * 0 delivered (or duplicate ignored), -1 not.
  */
 int wlr_input_tasto(WlrInput *w, uint16_t codice, bool premuto);
 
-/* Il puntatore assoluto: `x` in [0, l), `y` in [0, a) — l'estensione è la tela. */
+/* The absolute pointer: `x` in [0, l), `y` in [0, a) — the extent is the canvas. */
 int wlr_input_assoluto(WlrInput *w, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
 
-/* Un pulsante, in evdev (`BTN_LEFT` = 0x110).  ⛔ Anche qui il doppione non si
- * manda: il seat di wlroots CONTA le pressioni, e una pressione doppia vuole
- * due rilasci — col secondo che non arriverà mai. */
+/* A button, in evdev (`BTN_LEFT` = 0x110).  ⛔ Here too the duplicate is not
+ * sent: the wlroots seat COUNTS presses, and a double press wants
+ * two releases — with the second one that will never arrive. */
 int wlr_input_pulsante(WlrInput *w, uint16_t codice, bool premuto);
 
 /*
- * ⛔ Il rilascio che si manda ANCHE SE questo dispositivo non l'ha premuto:
- *    serve solo al riattacco, per chiudere un pulsante rimasto giù sul
- *    dispositivo di una connessione morta (§7.2 trappola 5).  ⚠ `[M]` sul
- *    portatile il seat headless non ne ha avuto bisogno (vedi `riattacca_wlr`
- *    in `input.c`); resta per il caso, `[?]`, di un altro puntatore nel seat.
+ * ⛔ The release that is sent EVEN IF this device did not press it:
+ *    used only at reattach, to close a button left down on the
+ *    device of a dead connection (§7.2 trap 5).  ⚠ `[M]` on the
+ *    laptop the headless seat did not need it (see `riattacca_wlr`
+ *    in `input.c`); it stays for the case, `[?]`, of another pointer in the seat.
  */
 int wlr_input_rilascia_forzato(WlrInput *w, uint16_t codice);
 
 /*
- * La rotella, in unità da 120 per scatto e ⛔ nella convenzione di WAYLAND
- * (positivo = in giù / a destra): il verso di `RCP.md` lo gira `input.c`, una
- * volta sola.  I mezzi scatti si accumulano (soglia 60, come su GNOME).
+ * The wheel, in units of 120 per notch and ⛔ in WAYLAND's convention
+ * (positive = down / right): the direction of `RCP.md` is flipped by `input.c`, once
+ * only.  Half notches accumulate (threshold 60, as on GNOME).
  */
 int wlr_input_rotella(WlrInput *w, int32_t orizzontale, int32_t verticale);
 

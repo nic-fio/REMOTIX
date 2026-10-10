@@ -1,64 +1,64 @@
 /*
- * cursore.c — da `struct spa_meta_cursor` (PipeWire) a `CursoreForma` (RCP §7.2).
+ * cursore.c — from `struct spa_meta_cursor` (PipeWire) to `CursoreForma` (RCP §7.2).
  *
- * ⛔ Il contratto sta in `cursore.h`, che e' del coordinatore: qui si ATTUA, non si
- *    cambia la cucitura.  Chi trova il contratto sbagliato lo DICE e si ferma —
- *    non lo aggira.
- *
- * ===========================================================================
- * ⛔ IL LAVORO CHE STA QUI E NON STA NE' IN `cattura.c` NE' IN `rcp.c`
- *
- * 1. **distinguere tre stati che il metadato confonde in uno**:
- *
- *      NON PERVENUTO   il metadato non c'e' affatto ⇒ questa funzione non
- *                      viene nemmeno chiamata, e `cattura.c` lo CONTA.  Sul
- *                      filo non parte niente: il client tiene il suo puntatore.
- *      NASCOSTO        il puntatore c'e' e non si deve vedere ⇒ `CURSORE_FORMA`
- *                      con 0x0 e punto attivo 0,0 (RCP §5.5).
- *      INVARIATO       il metadato arriva a OGNI buffer, e quasi sempre e' lo
- *                      stesso di prima ⇒ non si manda niente.
- *
- * 2. far rispettare i limiti di RCP §7.2 **da questa parte**: oltre 256 non si
- *    manda, o il ricevente chiude la sessione per `ERRORE_PROTOCOLLO` — cioe'
- *    un nostro errore qui fa cadere la sessione del client;
- *
- * 3. voltare i byte: Mutter consegna **RGBA premoltiplicato**, il filo vuole
- *    **BGRA premoltiplicato**.
+ * ⛔ The contract is in `cursore.h`, which belongs to the coordinator: here it is
+ *    IMPLEMENTED, the seam is not changed.  Whoever finds the contract wrong SAYS so
+ *    and stops — does not work around it.
  *
  * ===========================================================================
- * ⛔ COME MUTTER RIEMPIE IL METADATO — `[R]` 14 agosto 2026, letto riga per riga
- *    in `reference-gnome/mutter/src/backends/meta-screen-cast-stream-src.c` e
- *    `meta-screen-cast-virtual-stream-src.c` (e' il nostro caso: `RecordVirtual`).
+ * ⛔ THE WORK THAT LIVES HERE AND NEITHER IN `cattura.c` NOR IN `rcp.c`
  *
- *   | quando                                        | che cosa arriva                |
+ * 1. **telling apart three states that the metadata merges into one**:
+ *
+ *      NOT RECEIVED    the metadata is not there at all ⇒ this function is not
+ *                      even called, and `cattura.c` COUNTS it.  Nothing leaves
+ *                      on the wire: the client keeps its own pointer.
+ *      HIDDEN          the pointer is there and must not be seen ⇒ `CURSORE_FORMA`
+ *                      with 0x0 and hotspot 0,0 (RCP §5.5).
+ *      UNCHANGED       the metadata arrives with EVERY buffer, and is almost always
+ *                      the same as before ⇒ nothing is sent.
+ *
+ * 2. enforcing the limits of RCP §7.2 **on this side**: beyond 256 nothing is
+ *    sent, or the receiver closes the session with `ERRORE_PROTOCOLLO` — that is,
+ *    an error of ours here drops the client's session;
+ *
+ * 3. turning the bytes around: Mutter delivers **premultiplied RGBA**, the wire wants
+ *    **premultiplied BGRA**.
+ *
+ * ===========================================================================
+ * ⛔ HOW MUTTER FILLS THE METADATA — `[R]` 14 August 2026, read line by line
+ *    in `reference-gnome/mutter/src/backends/meta-screen-cast-stream-src.c` and
+ *    `meta-screen-cast-virtual-stream-src.c` (our case: `RecordVirtual`).
+ *
+ *   | when                                          | what arrives                   |
  *   |-----------------------------------------------|--------------------------------|
- *   | puntatore non visibile, o fuori dal flusso     | `id = 0`  (`unset_cursor_…`)   |
- *   | la bitmap NON e' cambiata                      | `id = 1`, `bitmap_offset = 0`  |
- *   | la bitmap e' cambiata, e c'e' una texture      | bitmap `RGBA` con i pixel      |
- *   | la bitmap e' cambiata, e la texture NON c'e'   | bitmap AZZERATA (`set_empty…`) |
+ *   | pointer not visible, or outside the stream     | `id = 0`  (`unset_cursor_…`)   |
+ *   | the bitmap has NOT changed                     | `id = 1`, `bitmap_offset = 0`  |
+ *   | the bitmap has changed, and there is a texture | `RGBA` bitmap with the pixels  |
+ *   | the bitmap has changed, and there is NO texture| ZEROED bitmap (`set_empty…`)   |
  *
- *   ⛔ `set_empty_cursor_sprite_metadata()` scrive `format = RGBA`, poi
- *      `*spa_meta_bitmap = (struct spa_meta_bitmap) { 0 };` — cioe' azzera tutto
- *      quel che aveva appena scritto.  ⇒ arriva una bitmap con `format = 0`,
- *      `0x0`, `stride = 0`, `offset = 0`.  L'INTENZIONE di Mutter e' «cursore
- *      senza immagine», cioe' NASCOSTO; la lettera di `spa/buffer/meta.h` dice
- *      invece che `format = 0` va trattato come «nessuna informazione nuova».
- *      ⇒ Qui si segue **l'intenzione**, perche' e' l'unico modo in cui su Mutter
- *      un cursore invisibile puo' arrivare, e perche' `offset = 0` la conferma:
- *      la stessa intestazione dice *«an offset of 0 means no image data
- *      (invisible)»*.  ⚠ La scelta e' DICHIARATA qui perche' su un altro
- *      compositore potrebbe voler dire l'altra cosa: e' `[R]` su Mutter, `[?]`
- *      altrove.
+ *   ⛔ `set_empty_cursor_sprite_metadata()` writes `format = RGBA`, then
+ *      `*spa_meta_bitmap = (struct spa_meta_bitmap) { 0 };` — that is, it zeroes
+ *      everything it had just written.  ⇒ a bitmap arrives with `format = 0`,
+ *      `0x0`, `stride = 0`, `offset = 0`.  Mutter's INTENTION is "cursor
+ *      without an image", that is HIDDEN; the letter of `spa/buffer/meta.h` says
+ *      instead that `format = 0` must be treated as "no new information".
+ *      ⇒ Here **the intention** is followed, because it is the only way an
+ *      invisible cursor can arrive on Mutter, and because `offset = 0` confirms it:
+ *      the same header says *"an offset of 0 means no image data
+ *      (invisible)"*.  ⚠ The choice is DECLARED here because on another
+ *      compositor it could mean the other thing: it is `[R]` on Mutter, `[?]`
+ *      elsewhere.
  *
- *   ⛔ E LA TRAPPOLA DEL RIACCENDERSI: `bitmap_offset = 0` significa «la forma
- *      non e' cambiata», ma dopo un `id = 0` il client non ha piu' niente da
- *      disegnare.  Se al ritorno del puntatore arrivasse solo la posizione, il
- *      cursore resterebbe sparito **senza nessun errore**.  ⇒ l'ultima forma
- *      VISIBILE si conserva, e si RIMANDA quando il puntatore torna.
+ *   ⛔ AND THE TRAP OF COMING BACK ON: `bitmap_offset = 0` means "the shape
+ *      has not changed", but after an `id = 0` the client has nothing left to
+ *      draw.  If only the position arrived when the pointer returns, the
+ *      cursor would stay gone **without any error**.  ⇒ the last VISIBLE
+ *      shape is kept, and SENT AGAIN when the pointer returns.
  *
- * ⚠ E LA MISURA CHE MUTTER PUO' MANDARE E' PIU' GRANDE DEL FILO: il metadato e'
- *   allocato per **384x384** (`CURSOR_META_SIZE(384, 384)`), RCP §7.2 si ferma a
- *   **256**.  Il taglio e' un ripiego, e come tale si DICHIARA nel registro.
+ * ⚠ AND THE SIZE MUTTER CAN SEND IS LARGER THAN THE WIRE: the metadata is
+ *   allocated for **384x384** (`CURSOR_META_SIZE(384, 384)`), RCP §7.2 stops at
+ *   **256**.  Cutting is a fallback, and as such it is DECLARED in the log.
  */
 #include "cursore.h"
 
@@ -74,13 +74,13 @@
 
 #define AREA "cursore"
 
-/* Quanti byte al massimo puo' occupare un'immagine consegnata sul filo. */
+/* The most bytes an image delivered on the wire can take. */
 #define BYTE_MAX ((size_t) CURSORE_MAX_LATO * (size_t) CURSORE_MAX_LATO * 4u)
 
-/* ⚠ Un tetto di ragionevolezza PRIMA di moltiplicare: una misura assurda letta
- *   da memoria altrui non deve diventare una moltiplicazione che trabocca.  Non
- *   e' il limite del filo (che e' 256): e' il limite oltre il quale si dichiara
- *   «malformato» invece di «tagliato». */
+/* ⚠ A sanity ceiling BEFORE multiplying: an absurd size read from someone
+ *   else's memory must not turn into a multiplication that overflows.  It is
+ *   not the wire's limit (which is 256): it is the limit beyond which one declares
+ *   "malformed" instead of "cut". */
 #define LATO_ASSURDO 8192u
 
 struct cursore
@@ -90,44 +90,44 @@ struct cursore
 
 	uint32_t serie;
 
-	int consegnata; /* si e' gia' consegnato qualcosa?              */
-	int nascosto;   /* l'ultima consegnata era 0x0                  */
-	int mai_nascondere; /* §kde: il tema e' invisibile, vedi cursore.h  */
-	int detto_mai;      /* la riga del registro si scrive una volta sola */
+	int consegnata; /* has anything been delivered yet?            */
+	int nascosto;   /* the last one delivered was 0x0               */
+	int mai_nascondere; /* §kde: the theme is invisible, see cursore.h  */
+	int detto_mai;      /* the log line is written only once           */
 
 	/*
-	 * L'ultima forma VISIBILE conosciuta.  ⛔ Sopravvive al nascondimento
-	 * apposta: Mutter riaccende il puntatore senza rimandare la bitmap.
+	 * The last known VISIBLE shape.  ⛔ It survives hiding on
+	 * purpose: Mutter turns the pointer back on without resending the bitmap.
 	 */
 	int ha_forma;
 	uint16_t larghezza, altezza;
 	int16_t attivo_x, attivo_y;
-	uint8_t *immagine; /* quella CONSEGNATA: vive fino al richiamo dopo */
-	uint8_t *scratch;  /* dove si volta la nuova, per poterla CONFRONTARE */
+	uint8_t *immagine; /* the DELIVERED one: lives until the next call */
+	uint8_t *scratch;  /* where the new one is turned around, so it can be COMPARED */
 	size_t byte;
 
-	/* I conti: servono a distinguere «non e' cambiato» da «non e' arrivato»
-	 * sei ore dopo, e sono il numero che il banco confronta col proprio. */
+	/* The counts: they tell "has not changed" from "has not arrived"
+	 * six hours later, and they are the number the bench compares with its own. */
 	struct
 	{
-		uint64_t visti;        /* chiamate a cursore_metadato            */
-		uint64_t id_zero;      /* il produttore dice «nessun cursore»    */
-		uint64_t senza_bitmap; /* id != 0 ma bitmap_offset == 0          */
-		uint64_t con_bitmap;   /* una bitmap c'era                       */
-		uint64_t vuote;        /* bitmap che vuol dire «nascosto»        */
-		uint64_t uguali;       /* bitmap identica alla precedente        */
-		uint64_t cambi;        /* CursoreForma consegnate                */
-		uint64_t tagliate;     /* piu' grandi di 256: ⛔ ripiego         */
-		uint64_t punto_fuori;  /* punto attivo fuori dall'immagine       */
+		uint64_t visti;        /* calls to cursore_metadato              */
+		uint64_t id_zero;      /* the producer says "no cursor"          */
+		uint64_t senza_bitmap; /* id != 0 but bitmap_offset == 0         */
+		uint64_t con_bitmap;   /* a bitmap was there                     */
+		uint64_t vuote;        /* bitmap that means "hidden"             */
+		uint64_t uguali;       /* bitmap identical to the previous one   */
+		uint64_t cambi;        /* CursoreForma delivered                 */
+		uint64_t tagliate;     /* larger than 256: ⛔ fallback          */
+		uint64_t punto_fuori;  /* hotspot outside the image             */
 		uint64_t malformate;
-		uint64_t forma_ignota; /* visibile, ma la forma non l'abbiamo mai vista */
-		uint64_t rifiutate;    /* chi riceve ha detto no                 */
-		uint64_t codificate;   /* un colore del tema codificato (forma.h) */
+		uint64_t forma_ignota; /* visible, but we have never seen the shape */
+		uint64_t rifiutate;    /* the receiver said no                   */
+		uint64_t codificate;   /* a colour of the encoded theme (forma.h) */
 	} conto;
 
-	int ultimo_indice;     /* l'ultima forma codificata vista, per il registro */
+	int ultimo_indice;     /* the last encoded shape seen, for the log */
 
-	/* I guai che si dicono UNA volta e non a ogni fotogramma. */
+	/* The troubles said ONCE and not on every frame. */
 	int detto_formato;
 	uint32_t formato_visto;
 	int detto_taglio;
@@ -136,7 +136,7 @@ struct cursore
 };
 
 /* ------------------------------------------------------------------ *
- *  La consegna
+ *  Delivery
  * ------------------------------------------------------------------ */
 
 static int consegna(Cursore *c, const CursoreForma *forma)
@@ -151,7 +151,7 @@ static int consegna(Cursore *c, const CursoreForma *forma)
 	if (esito < 0)
 	{
 		c->conto.rifiutate++;
-		registro_dice(AREA, "⛔ chi riceve ha RIFIUTATO la forma %ux%u (serie %u): non e' partita",
+		registro_dice(AREA, "⛔ the receiver REFUSED shape %ux%u (series %u): it was not sent",
 		              (unsigned) forma->larghezza, (unsigned) forma->altezza,
 		              (unsigned) forma->serie);
 		return -1;
@@ -160,9 +160,9 @@ static int consegna(Cursore *c, const CursoreForma *forma)
 }
 
 /*
- * ⛔ NASCOSTO E' UNO STATO, NON UN'ASSENZA: si manda 0x0 con punto attivo 0,0
- *    (RCP §5.5), e si manda UNA volta sola — non a ogni buffer in cui il
- *    puntatore continua a non esserci.
+ * ⛔ HIDDEN IS A STATE, NOT AN ABSENCE: 0x0 with hotspot 0,0 is sent
+ *    (RCP §5.5), and sent ONCE only — not on every buffer in which the
+ *    pointer is still not there.
  */
 static int consegna_nascosto(Cursore *c, const char *motivo)
 {
@@ -172,9 +172,9 @@ static int consegna_nascosto(Cursore *c, const char *motivo)
 		if (!c->detto_mai) {
 			c->detto_mai = 1;
 			registro_dice(AREA,
-			              "il puntatore sarebbe NASCOSTO (%s) e NON lo consegno: su "
-			              "questo desktop il tema del cursore e' invisibile apposta, e "
-			              "chi guarda deve tenere il puntatore suo (cursore.h)",
+			              "the pointer would be HIDDEN (%s) and I do NOT deliver it: on "
+			              "this desktop the cursor theme is invisible on purpose, and "
+			              "the viewer must keep their own pointer (cursore.h)",
 			              motivo);
 		}
 		return 0;
@@ -189,12 +189,12 @@ static int consegna_nascosto(Cursore *c, const char *motivo)
 	forma.serie = c->serie;
 	forma.immagine = NULL;
 
-	registro_dice(AREA, "il puntatore si NASCONDE (%s) — CURSORE_FORMA 0x0, serie %u", motivo,
+	registro_dice(AREA, "the pointer HIDES (%s) — CURSORE_FORMA 0x0, series %u", motivo,
 	              (unsigned) c->serie);
 	return consegna(c, &forma);
 }
 
-/* Il puntatore torna e Mutter non rimanda la bitmap: si rimanda l'ultima nota. */
+/* The pointer returns and Mutter does not resend the bitmap: the last known one is resent. */
 static int consegna_forma_conservata(Cursore *c)
 {
 	CursoreForma forma;
@@ -211,27 +211,27 @@ static int consegna_forma_conservata(Cursore *c)
 	forma.immagine = c->immagine;
 
 	registro_dice(AREA,
-	              "il puntatore RITORNA e Mutter non rimanda la forma: si rimanda l'ultima nota "
-	              "(%ux%u, serie %u)",
+	              "the pointer RETURNS and Mutter does not resend the shape: the last known one "
+	              "is resent (%ux%u, series %u)",
 	              (unsigned) c->larghezza, (unsigned) c->altezza, (unsigned) c->serie);
 	return consegna(c, &forma);
 }
 
 /* ------------------------------------------------------------------ *
- *  I byte: da RGBA/BGRA premoltiplicato a BGRA premoltiplicato
+ *  The bytes: from premultiplied RGBA/BGRA to premultiplied BGRA
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ Il formato si guarda, non si da' per scontato.  Mutter manda
- *    `SPA_VIDEO_FORMAT_RGBA` — cioe' `COGL_PIXEL_FORMAT_RGBA_8888_PRE`, che e'
- *    **premoltiplicato** `[R]` — e il filo vuole BGRA premoltiplicato: cambia
- *    solo l'ordine, non l'alfa.
+ * ⛔ The format is checked, not taken for granted.  Mutter sends
+ *    `SPA_VIDEO_FORMAT_RGBA` — that is `COGL_PIXEL_FORMAT_RGBA_8888_PRE`, which is
+ *    **premultiplied** `[R]` — and the wire wants premultiplied BGRA: only the
+ *    order changes, not the alpha.
  *
- * ⚠ Le varianti senza alfa (`RGBx`, `BGRx`) si accettano con alfa piena: sono
- *   opache per definizione, e una forma opaca e' meglio di nessuna forma.
+ * ⚠ The variants without alpha (`RGBx`, `BGRx`) are accepted with full alpha: they are
+ *   opaque by definition, and an opaque shape is better than no shape.
  *
- * Ritorna 1 se va invertito rosso con blu, 0 se si copia dritto, -1 se il
- * formato non si sa leggere.
+ * Returns 1 if red and blue must be swapped, 0 if copied straight, -1 if the
+ * format cannot be read.
  */
 static int verso_dei_byte(uint32_t formato, int *alfa_piena)
 {
@@ -254,7 +254,7 @@ static int verso_dei_byte(uint32_t formato, int *alfa_piena)
 }
 
 /* ------------------------------------------------------------------ *
- *  Le chiamate
+ *  The calls
  * ------------------------------------------------------------------ */
 
 Cursore *cursore_apri(CursoreArrivata quando_cambia, void *chi)
@@ -297,26 +297,26 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	c->conto.visti++;
 
 	/*
-	 * ⛔ «Troppo corto» NON e' «nascosto»: e' un metadato che non si sa
-	 *    leggere, e si dichiara invece di produrre un cursore fatto di memoria
-	 *    altrui — che e' esattamente il difetto che RCP §7.2 nomina.
+	 * ⛔ "Too short" is NOT "hidden": it is metadata that cannot be
+	 *    read, and it is declared instead of producing a cursor made of someone
+	 *    else's memory — which is exactly the defect RCP §7.2 names.
 	 */
 	if (!m || dimensione < sizeof *m)
 	{
 		c->conto.malformate++;
-		registro_dice(AREA, "⛔ metadato del cursore troppo corto: %zu byte, ne servono %zu",
+		registro_dice(AREA, "⛔ cursor metadata too short: %zu bytes, %zu needed",
 		              dimensione, sizeof *m);
 		return -1;
 	}
 
-	/* --- 1. il produttore dice «nessun cursore» ------------------------- */
+	/* --- 1. the producer says "no cursor" ------------------------------ */
 	if (!spa_meta_cursor_is_valid(m))
 	{
 		c->conto.id_zero++;
 		return consegna_nascosto(c, "id = 0");
 	}
 
-	/* --- 2. la forma non e' cambiata ------------------------------------ */
+	/* --- 2. the shape has not changed ----------------------------------- */
 	if (m->bitmap_offset == 0)
 	{
 		c->conto.senza_bitmap++;
@@ -325,27 +325,27 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		if (c->ha_forma)
 			return consegna_forma_conservata(c);
 		/*
-		 * ⛔ Il puntatore c'e' e la sua forma non l'abbiamo MAI vista: non e'
-		 *    «nascosto» e non e' «invariato».  Non si inventa niente — si
-		 *    dichiara e si aspetta la prima bitmap.
+		 * ⛔ The pointer is there and we have NEVER seen its shape: it is not
+		 *    "hidden" and not "unchanged".  Nothing is invented — it is
+		 *    declared and the first bitmap is awaited.
 		 */
 		c->conto.forma_ignota++;
 		if (!c->detto_ignota)
 		{
 			c->detto_ignota = 1;
 			registro_dice(AREA,
-			              "⚠ il puntatore e' visibile ma la sua forma non e' ancora arrivata "
-			              "(solo posizione): niente da mandare, si aspetta");
+			              "⚠ the pointer is visible but its shape has not arrived yet "
+			              "(position only): nothing to send, waiting");
 		}
 		return 0;
 	}
 
-	/* --- 3. c'e' una bitmap: prima si controlla che ci stia ------------- */
+	/* --- 3. there is a bitmap: first check that it fits ---------------- */
 	if (m->bitmap_offset < sizeof *m || m->bitmap_offset > dimensione ||
 	    dimensione - m->bitmap_offset < sizeof *b)
 	{
 		c->conto.malformate++;
-		registro_dice(AREA, "⛔ bitmap_offset %u fuori dal metadato (%zu byte): scartata",
+		registro_dice(AREA, "⛔ bitmap_offset %u outside the metadata (%zu bytes): discarded",
 		              (unsigned) m->bitmap_offset, dimensione);
 		return -1;
 	}
@@ -353,15 +353,15 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	c->conto.con_bitmap++;
 
 	/*
-	 * --- 4. la bitmap che vuol dire «nascosto» ---------------------------
-	 * Vedi il riquadro in cima: su Mutter e' `set_empty_cursor_sprite_metadata`,
-	 * che azzera tutto.  `offset == 0` e' la stessa cosa detta da
-	 * `spa/buffer/meta.h`: «no image data (invisible)».
+	 * --- 4. the bitmap that means "hidden" ------------------------------
+	 * See the box at the top: on Mutter it is `set_empty_cursor_sprite_metadata`,
+	 * which zeroes everything.  `offset == 0` is the same thing said by
+	 * `spa/buffer/meta.h`: "no image data (invisible)".
 	 */
 	if (b->format == 0 || b->offset == 0 || b->size.width == 0 || b->size.height == 0)
 	{
 		c->conto.vuote++;
-		return consegna_nascosto(c, "bitmap vuota (il puntatore non ha immagine)");
+		return consegna_nascosto(c, "empty bitmap (the pointer has no image)");
 	}
 
 	sorgente_l = b->size.width;
@@ -370,7 +370,7 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	    (uint32_t) b->stride < sorgente_l * 4u || b->offset < sizeof *b)
 	{
 		c->conto.malformate++;
-		registro_dice(AREA, "⛔ bitmap non interpretabile: %ux%u, stride %d, offset %u",
+		registro_dice(AREA, "⛔ bitmap cannot be interpreted: %ux%u, stride %d, offset %u",
 		              (unsigned) sorgente_l, (unsigned) sorgente_a, (int) b->stride,
 		              (unsigned) b->offset);
 		return -1;
@@ -382,8 +382,8 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	{
 		c->conto.malformate++;
 		registro_dice(AREA,
-		              "⛔ i pixel del cursore non ci stanno: servono %zu byte da %zu, il metadato "
-		              "ne ha %zu",
+		              "⛔ the cursor pixels do not fit: %zu bytes needed from %zu, the metadata "
+		              "has %zu",
 		              servono, inizio_pixel, dimensione);
 		return -1;
 	}
@@ -397,25 +397,25 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 			c->detto_formato = 1;
 			c->formato_visto = b->format;
 			registro_dice(AREA,
-			              "⛔ formato del cursore non gestito (SPA %u): non si manda niente "
-			              "invece di mandare i colori scambiati",
+			              "⛔ cursor format not handled (SPA %u): nothing is sent "
+			              "rather than sending swapped colours",
 			              (unsigned) b->format);
 		}
 		return -1;
 	}
 
 	/*
-	 * --- 5. ⛔ IL LIMITE DI RCP §7.2 SI FA RISPETTARE QUI -----------------
+	 * --- 5. ⛔ THE LIMIT OF RCP §7.2 IS ENFORCED HERE --------------------
 	 *
-	 * Oltre 256 il ricevente chiude la sessione per `ERRORE_PROTOCOLLO`: e' il
-	 * nostro difetto che fa cadere il client.  ⇒ Si TAGLIA (il verbo e' di
-	 * `cursore.h`), e ⛔ il ripiego si DICHIARA — `CODER.md` §4.2.
+	 * Beyond 256 the receiver closes the session with `ERRORE_PROTOCOLLO`: it is
+	 * our defect that drops the client.  ⇒ It is CUT (the verb is
+	 * `cursore.h`'s), and ⛔ the fallback is DECLARED — `CODER.md` §4.2.
 	 *
-	 * ⚠ Il taglio e' l'angolo in alto a sinistra, che e' dove sta il disegno di
-	 *   ogni cursore e dove sta il punto attivo.  Che sia la scelta giusta e'
-	 *   `[?]`: non e' mai stato visto scattare (Mutter alloca il metadato per
-	 *   384x384, ma i temi di GNOME arrivano a 64-96).  Se un giorno scattasse
-	 *   davvero, la cosa da misurare e' se convenga invece **sottocampionare**.
+	 * ⚠ The cut keeps the top-left corner, which is where every cursor's drawing
+	 *   is and where the hotspot is.  Whether it is the right choice is
+	 *   `[?]`: it has never been seen to trigger (Mutter allocates the metadata for
+	 *   384x384, but GNOME themes go up to 64-96).  If one day it really
+	 *   triggered, the thing to measure is whether **downsampling** is better instead.
 	 */
 	larghezza = sorgente_l > CURSORE_MAX_LATO ? (uint16_t) CURSORE_MAX_LATO : (uint16_t) sorgente_l;
 	altezza = sorgente_a > CURSORE_MAX_LATO ? (uint16_t) CURSORE_MAX_LATO : (uint16_t) sorgente_a;
@@ -426,16 +426,16 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		{
 			c->detto_taglio = 1;
 			registro_dice(AREA,
-			              "⛔ RIPIEGO: il cursore e' %ux%u, il filo si ferma a %u (RCP §7.2) — si "
-			              "manda l'angolo %ux%u",
+			              "⛔ FALLBACK: the cursor is %ux%u, the wire stops at %u (RCP §7.2) — "
+			              "sending the %ux%u corner",
 			              (unsigned) sorgente_l, (unsigned) sorgente_a,
 			              (unsigned) CURSORE_MAX_LATO, (unsigned) larghezza, (unsigned) altezza);
 		}
 	}
 
 	/*
-	 * ⛔ E IL PUNTO ATTIVO DEVE STARE DENTRO L'IMMAGINE (RCP §5.5), o il
-	 *    ricevente chiude.  Fuori si riporta dentro, e si dichiara.
+	 * ⛔ AND THE HOTSPOT MUST LIE INSIDE THE IMAGE (RCP §5.5), or the
+	 *    receiver closes.  If outside it is brought back inside, and declared.
 	 */
 	if (m->hotspot.x < 0 || m->hotspot.x >= (int32_t) larghezza || m->hotspot.y < 0 ||
 	    m->hotspot.y >= (int32_t) altezza)
@@ -445,7 +445,7 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		{
 			c->detto_punto = 1;
 			registro_dice(AREA,
-			              "⛔ RIPIEGO: punto attivo %d,%d fuori da %ux%u — riportato dentro "
+			              "⛔ FALLBACK: hotspot %d,%d outside %ux%u — brought back inside "
 			              "(RCP §5.5)",
 			              (int) m->hotspot.x, (int) m->hotspot.y, (unsigned) larghezza,
 			              (unsigned) altezza);
@@ -465,7 +465,7 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 		attivo_y = (int16_t) m->hotspot.y;
 	}
 
-	/* --- 6. i byte, voltati riga per riga nel banco di lavoro ------------ */
+	/* --- 6. the bytes, turned around row by row in the work buffer ------ */
 	byte = (size_t) larghezza * (size_t) altezza * 4u;
 	for (y = 0; y < altezza; y++)
 	{
@@ -491,40 +491,40 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 	}
 
 	/*
-	 * --- 6-bis. ⛔⭐ TUTTA TRASPARENTE VUOL DIRE «NASCOSTO» — 20 set 2026.
+	 * --- 6-bis. ⛔⭐ ALL TRANSPARENT MEANS "HIDDEN" — 20 Sep 2026.
 	 *
-	 * ⛔ `[M]` La prova dell'utente su KDE: per togliere il cursore che KWin
-	 *    disegna DENTRO l'immagine (backend `--virtual`) la sessione parte con
-	 *    un tema di forme 1x1 ad alfa zero (`sessione.c`,
-	 *    `scrivi_tema_cursore_kde`).  ⇒ Quel tema arriva anche QUI, nel
-	 *    metadato, e il client si vestiva di una forma invisibile: **nessun
-	 *    puntatore**, che e' peggio di due.
-	 * ⭐ Un'immagine in cui nessun pixel si vede NON e' una forma: e' lo stesso
-	 *    fatto che §5.5 chiama «nascosto», detto con piu' byte.  ⇒ Si consegna
-	 *    `0x0`, e il client mette il SUO puntatore (`pagina.html`,
+	 * ⛔ `[M]` The user's test on KDE: to remove the cursor KWin draws
+	 *    INSIDE the image (`--virtual` backend) the session starts with
+	 *    a theme of 1x1 shapes with zero alpha (`sessione.c`,
+	 *    `scrivi_tema_cursore_kde`).  ⇒ That theme also arrives HERE, in the
+	 *    metadata, and the client dressed itself in an invisible shape: **no
+	 *    pointer**, which is worse than two.
+	 * ⭐ An image in which no pixel is visible is NOT a shape: it is the same
+	 *    fact §5.5 calls "hidden", said with more bytes.  ⇒ `0x0` is
+	 *    delivered, and the client puts up ITS OWN pointer (`pagina.html`,
 	 *    `forma_vuota`).
-	 * ⚠ E si guarda il banco di lavoro, DOPO la conversione: `alfa_piena`
-	 *   riempie l'alfa, e una bitmap senza canale alfa non e' trasparente.
+	 * ⚠ And the work buffer is checked AFTER the conversion: `alfa_piena`
+	 *   fills the alpha, and a bitmap without an alpha channel is not transparent.
 	 *
-	 * ⭐⭐ FASE 14, 24 set 2026 — PRIMA DI TUTTO, IL TEMA CODIFICATO (`forma.h`).
-	 *      Il tema della sessione non e' piu' trasparente: ogni forma e' un
-	 *      pixel OPACO di un colore suo.  ⇒ Se TUTTA la bitmap e' di un solo
-	 *      colore e il dizionario lo riconosce (1x1, o scalata dal compositore:
-	 *      un colore solo resta un colore solo), quella non e' la forma da
-	 *      mandare — e' il NOME della forma.  Si mette nel banco di lavoro
-	 *      l'immagine VERA presa dal tema reale, e si prosegue al confronto
-	 *      del passo 7 come per una bitmap qualsiasi.
-	 * ⛔ Se il tema reale manca (`forma_immagine` FALSE, gia' detto nel
-	 *    registro) si scende al controllo di sotto, che su un pixel opaco NON
-	 *    scatta: il client riceverebbe il pixel colorato.  ⇒ In quel caso si
-	 *    tratta come il tema invisibile di prima — «nascosto», cioe' con
-	 *    `mai_nascondere` il client tiene la SUA freccia, come fino a ieri.
-	 * ⭐ `[R]` GNOME NON PASSA DI QUI: nel ramo di GNOME `sessione.c` non mette
-	 *    nessun `XCURSOR_*`, e Mutter manda la bitmap del suo tema (Adwaita),
-	 *    fatta di nero, bianco e sfumature — mai tutta di un colore solo, e il
-	 *    rosso dei nostri (0x40-0x83) con verde e blu esatti non e' un colore
-	 *    di Adwaita.  Solo KDE (KWin, metadato zkde, modo 4) legge il nostro tema
-	 *    e poi arriva qui; labwc ha la sua strada (`wlroots.c`).
+	 * ⭐⭐ PHASE 14, 24 Sep 2026 — FIRST OF ALL, THE ENCODED THEME (`forma.h`).
+	 *      The session theme is no longer transparent: every shape is an
+	 *      OPAQUE pixel of its own colour.  ⇒ If the WHOLE bitmap is of a single
+	 *      colour and the dictionary recognises it (1x1, or scaled by the compositor:
+	 *      a single colour stays a single colour), that is not the shape to
+	 *      send — it is the NAME of the shape.  The REAL image taken from the real
+	 *      theme is put into the work buffer, and we go on to the comparison
+	 *      of step 7 as for any bitmap.
+	 * ⛔ If the real theme is missing (`forma_immagine` FALSE, already said in the
+	 *    log) we fall through to the check below, which on an opaque pixel does NOT
+	 *    trigger: the client would receive the coloured pixel.  ⇒ In that case it
+	 *    is treated like the invisible theme of before — "hidden", that is, with
+	 *    `mai_nascondere` the client keeps ITS OWN arrow, as until yesterday.
+	 * ⭐ `[R]` GNOME DOES NOT COME THIS WAY: in the GNOME branch `sessione.c` sets
+	 *    no `XCURSOR_*`, and Mutter sends the bitmap of its theme (Adwaita),
+	 *    made of black, white and shades — never all of one colour, and the
+	 *    red of ours (0x40-0x83) with exact green and blue is not an Adwaita
+	 *    colour.  Only KDE (KWin, zkde metadata, mode 4) reads our theme
+	 *    and then arrives here; labwc has its own road (`wlroots.c`).
 	 */
 	{
 		size_t i;
@@ -541,7 +541,7 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 			memset(&vera, 0, sizeof vera);
 			if (!forma_immagine(indice, &vera)) {
 				c->conto.vuote++;
-				return consegna_nascosto(c, "forma codificata ma tema reale assente");
+				return consegna_nascosto(c, "encoded shape but real theme missing");
 			}
 			larghezza = vera.larghezza;
 			altezza = vera.altezza;
@@ -551,10 +551,10 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 			memcpy(c->scratch, vera.immagine, byte);
 			if (indice != c->ultimo_indice) {
 				c->ultimo_indice = indice;
-				/* ⚠ Una riga a CAMBIO di forma, non a buffer: e' il ritmo della
-				 *   mano di chi usa il desktop, e la prova che il dizionario
-				 *   lavora si legge solo qui. */
-				registro_dice(AREA, "forma codificata %d «%s» ⇒ %ux%u, punto %d,%d",
+				/* ⚠ One line per shape CHANGE, not per buffer: it is the pace of
+				 *   the hand of whoever uses the desktop, and the proof that the
+				 *   dictionary works can only be read here. */
+				registro_dice(AREA, "encoded shape %d «%s» ⇒ %ux%u, hotspot %d,%d",
 				              indice, forma_nome(indice), (unsigned) larghezza,
 				              (unsigned) altezza, (int) attivo_x, (int) attivo_y);
 			}
@@ -572,25 +572,25 @@ int cursore_metadato(Cursore *c, const void *spa_meta_cursor, size_t dimensione)
 			}
 		if (!si_vede) {
 			c->conto.vuote++;
-			return consegna_nascosto(c, "tutti i pixel trasparenti (il tema del "
-			                            "cursore e' invisibile: lo disegna il client)");
+			return consegna_nascosto(c, "all pixels transparent (the cursor "
+			                            "theme is invisible: the client draws it)");
 		}
 	}
 
 confronto:
 	/*
-	 * --- 7. ⛔ E' CAMBIATA DAVVERO? --------------------------------------
+	 * --- 7. ⛔ HAS IT REALLY CHANGED? -----------------------------------
 	 *
-	 * Il metadato arriva a OGNI buffer.  Senza questo confronto si rimanderebbe
-	 * la stessa immagine mille volte — che e' la ragione per cui questo modulo
-	 * esiste (`cursore.h`).  ⇒ i byte nuovi si voltano nel banco di lavoro, si
-	 * CONFRONTANO con quelli consegnati, e solo se differiscono si scambiano i
-	 * due secchi (cosi' l'immagine consegnata resta valida fino al richiamo
-	 * successivo, come promette `cursore.h`).
+	 * The metadata arrives with EVERY buffer.  Without this comparison the same
+	 * image would be resent a thousand times — which is the reason this module
+	 * exists (`cursore.h`).  ⇒ the new bytes are turned around in the work buffer,
+	 * COMPARED with the delivered ones, and only if they differ are the two
+	 * buckets swapped (so the delivered image stays valid until the next
+	 * call, as `cursore.h` promises).
 	 *
-	 * ⚠ E si confronta con l'ultima **consegnata**: dopo un nascondimento il
-	 *   client non ha piu' niente da disegnare, quindi la stessa forma va
-	 *   rimandata anche se e' identica.
+	 * ⚠ And the comparison is with the last **delivered** one: after a hide the
+	 *   client has nothing left to draw, so the same shape must be
+	 *   resent even if identical.
 	 */
 	if (!c->nascosto && c->consegnata && c->ha_forma && c->larghezza == larghezza &&
 	    c->altezza == altezza && c->attivo_x == attivo_x && c->attivo_y == attivo_y &&
@@ -629,13 +629,13 @@ void cursore_mai_nascondere(Cursore *c, const char *perche)
 	if (!c || c->mai_nascondere)
 		return;
 	c->mai_nascondere = 1;
-	registro_dice(AREA, "il nascondimento del puntatore NON si consegnera' piu': %s",
-	              perche ? perche : "senza motivo");
-	/* ⭐ FASE 14 — e il dizionario si carica ADESSO, fuori dal thread di
-	 *    PipeWire: sono 68 file del tema reale letti da disco, e farlo alla
-	 *    prima forma codificata vorrebbe dire farlo sul thread di tempo reale
-	 *    della cattura.  ⚠ Si chiama solo su KDE (chi usa il tema codificato
-	 *    col metadato), quindi GNOME non paga questa lettura. */
+	registro_dice(AREA, "pointer hiding will NOT be delivered any more: %s",
+	              perche ? perche : "no reason given");
+	/* ⭐ PHASE 14 — and the dictionary is loaded NOW, outside the PipeWire
+	 *    thread: it is 68 files of the real theme read from disk, and doing it at
+	 *    the first encoded shape would mean doing it on the real-time thread
+	 *    of the capture.  ⚠ It is called only on KDE (the one using the encoded theme
+	 *    with the metadata), so GNOME does not pay for this read. */
 	{
 		CursoreForma prima;
 
@@ -649,11 +649,11 @@ void cursore_chiudi(Cursore *c)
 	if (!c)
 		return;
 	registro_dice(AREA,
-	              "metadati %" PRIu64 ": id=0 %" PRIu64 ", solo posizione %" PRIu64
-	              ", con bitmap %" PRIu64 " (uguali %" PRIu64 ", vuote %" PRIu64
-	              ") ⇒ CURSORE_FORMA consegnate %" PRIu64 "; tagliate %" PRIu64
-	              ", punto fuori %" PRIu64 ", malformate %" PRIu64 ", rifiutate %" PRIu64
-	              ", forma ignota %" PRIu64 ", codificate %" PRIu64,
+	              "metadata %" PRIu64 ": id=0 %" PRIu64 ", position only %" PRIu64
+	              ", with bitmap %" PRIu64 " (identical %" PRIu64 ", empty %" PRIu64
+	              ") ⇒ CURSORE_FORMA delivered %" PRIu64 "; cut %" PRIu64
+	              ", hotspot outside %" PRIu64 ", malformed %" PRIu64 ", refused %" PRIu64
+	              ", unknown shape %" PRIu64 ", encoded %" PRIu64,
 	              c->conto.visti, c->conto.id_zero, c->conto.senza_bitmap, c->conto.con_bitmap,
 	              c->conto.uguali, c->conto.vuote, c->conto.cambi, c->conto.tagliate,
 	              c->conto.punto_fuori, c->conto.malformate, c->conto.rifiutate,

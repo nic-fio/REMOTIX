@@ -11,9 +11,9 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// La cornice: ogni riga di ogni schermata è larga esattamente quanto il terminale, a 80 e a 120
-// colonne, con e senza colori, alta quanto serve e alta 24 righe (lì il corpo scorre); e le righe
-// sono tante quante l'altezza.
+// The frame: every line of every screen is exactly as wide as the terminal, at 80 and at 120
+// columns, with and without colours, as tall as needed and 24 lines tall (there the body scrolls); and the lines
+// are as many as the height.
 func TestCorniceLarghezzaCostante(t *testing.T) {
 	for _, larg := range []int{80, 120} {
 		for _, alt := range []int{0, 24, altezzaMinima} {
@@ -21,15 +21,15 @@ func TestCorniceLarghezzaCostante(t *testing.T) {
 				for _, s := range Anteprime(larg, alt, colori) {
 					righe := strings.Split(s.Testo, "\n")
 					if alt > 0 && len(righe) != alt {
-						t.Errorf("%s %dx%d: %d righe", s.Nome, larg, alt, len(righe))
+						t.Errorf("%s %dx%d: %d lines", s.Nome, larg, alt, len(righe))
 					}
 					for i, r := range righe {
 						if w := ansi.StringWidth(r); w != larg {
-							t.Errorf("%s %dx%d colori=%v, riga %d: larga %d: %q", s.Nome, larg, alt, colori, i, w, ansi.Strip(r))
+							t.Errorf("%s %dx%d colori=%v, line %d: width %d: %q", s.Nome, larg, alt, colori, i, w, ansi.Strip(r))
 						}
 					}
 					if strings.Contains(s.Testo, "⟨") {
-						t.Errorf("%s: una chiave dei testi manca: %s", s.Nome, s.Testo)
+						t.Errorf("%s: a text key is missing: %s", s.Nome, s.Testo)
 					}
 				}
 			}
@@ -37,16 +37,16 @@ func TestCorniceLarghezzaCostante(t *testing.T) {
 	}
 }
 
-// Senza colori (NO_COLOR, o un terminale che non li ha) non resta nessun colore; il grassetto sì.
+// Without colours (NO_COLOR, or a terminal that does not have them) no colour remains; bold does.
 func TestSenzaColori(t *testing.T) {
 	for _, s := range Anteprime(80, 0, false) {
 		if strings.Contains(s.Testo, "38;2;") || strings.Contains(s.Testo, "38;5;") {
-			t.Errorf("%s: colori con il profilo Ascii", s.Nome)
+			t.Errorf("%s: colours with the Ascii profile", s.Nome)
 		}
 	}
 }
 
-// Il mockup: le frasi che l'utente ha approvato ci sono, ognuna nella sua schermata.
+// The mockup: the sentences the user approved are there, each in its screen.
 func TestComeIlMockup(t *testing.T) {
 	attese := map[string][]string{
 		"check":         {"REMOTIX 0", "Installation", "● Check", "○ Plan", "System", "✓ OK", "! WARNING", "Nothing is missing.", "enter continue", "q quit"},
@@ -60,54 +60,54 @@ func TestComeIlMockup(t *testing.T) {
 		piatto := ansi.Strip(s.Testo)
 		for _, a := range attese[s.Nome] {
 			if !strings.Contains(piatto, a) {
-				t.Errorf("%s: manca %q in\n%s", s.Nome, a, piatto)
+				t.Errorf("%s: %q missing in\n%s", s.Nome, a, piatto)
 			}
 		}
 	}
 }
 
-// Sotto 80 colonne una riga sola che lo dice, mai a capo rotti.
+// Below 80 columns a single line that says so, never broken wrapping.
 func TestTroppoStretto(t *testing.T) {
 	m := nuovoModello(nil, lipgloss.NewRenderer(io.Discard))
 	m.Update(tea.WindowSizeMsg{Width: 60, Height: 30})
 	v := m.View()
 	if strings.Contains(v, "\n") || !strings.Contains(v, "80 columns needed") || ansi.StringWidth(v) != 60 {
-		t.Errorf("60 colonne: %q", v)
+		t.Errorf("60 columns: %q", v)
 	}
 }
 
-// Il corpo più lungo dello schermo scorre dentro la cornice, e la riga dei tasti dice dove si è.
+// The body longer than the screen scrolls inside the frame, and the keys line says where we are.
 func TestScorre(t *testing.T) {
 	r := lipgloss.NewRenderer(io.Discard)
 	r.SetColorProfile(termenv.Ascii)
 	m := nuovoModello(nil, r)
-	esempi()[2].prepara(m) // il piano
+	esempi()[2].prepara(m) // the plan
 	m.larg, m.alt = 80, altezzaMinima
 	prima := m.View()
 	if !strings.Contains(prima, "↑↓ 1–") {
-		t.Fatalf("niente indicatore:\n%s", prima)
+		t.Fatalf("no indicator:\n%s", prima)
 	}
 	m.tasto(tea.KeyMsg{Type: tea.KeyPgDown})
 	dopo := m.View()
 	if prima == dopo || m.scorri == 0 {
-		t.Errorf("pagina giù non scorre (scorri %d)", m.scorri)
+		t.Errorf("page down does not scroll (scorri %d)", m.scorri)
 	}
-	m.tasto(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")}) // un tasto qualunque non rompe
+	m.tasto(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")}) // any key does not break it
 	m.scorri = 1 << 20
 	m.View()
 	if corpo, _ := m.contenuto(); m.scorri != len(corpo)-m.altCorpo() {
-		t.Errorf("in fondo: scorri %d, corpo %d, alto %d", m.scorri, len(corpo), m.altCorpo())
+		t.Errorf("at the bottom: scorri %d, body %d, height %d", m.scorri, len(corpo), m.altCorpo())
 	}
 }
 
-// La porta si scrive con tab nel piano; un numero sbagliato non passa.
+// The port is typed with tab in the plan; a wrong number does not pass.
 func TestPortaNelPiano(t *testing.T) {
 	r := lipgloss.NewRenderer(io.Discard)
 	m := nuovoModello(nil, r)
 	esempi()[2].prepara(m)
 	m.tasto(tea.KeyMsg{Type: tea.KeyTab})
 	if !m.modPorta {
-		t.Fatal("tab non apre la porta")
+		t.Fatal("tab does not open the port")
 	}
 	for i := 0; i < 4; i++ {
 		m.tasto(tea.KeyMsg{Type: tea.KeyBackspace})
@@ -115,10 +115,10 @@ func TestPortaNelPiano(t *testing.T) {
 	m.tasto(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("0")})
 	m.tasto(tea.KeyMsg{Type: tea.KeyEnter})
 	if !m.modPorta || !strings.Contains(ansi.Strip(m.View()), "Enter a number between 1 and 65535.") {
-		t.Errorf("porta 0 accettata")
+		t.Errorf("port 0 accepted")
 	}
 	m.tasto(tea.KeyMsg{Type: tea.KeyEsc})
 	if m.modPorta || m.porta != "7447" {
-		t.Errorf("esc: porta %q, modifica %v", m.porta, m.modPorta)
+		t.Errorf("esc: port %q, editing %v", m.porta, m.modPorta)
 	}
 }

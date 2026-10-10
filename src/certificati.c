@@ -1,5 +1,5 @@
 /*
- * certificati.c — vedi certificati.h.
+ * certificati.c — see certificati.h.
  */
 #include "certificati.h"
 #include "registro.h"
@@ -25,7 +25,7 @@ static const char *errore_ssl(void)
 	static char buf[256];
 	unsigned long e = ERR_get_error();
 	if (!e)
-		return "(nessun errore in coda)";
+		return "(no error queued)";
 	ERR_error_string_n(e, buf, sizeof buf);
 	return buf;
 }
@@ -38,12 +38,12 @@ static void percorso(char *fuori, size_t cap, const char *dir, const char *nome)
 static bool esiste(const char *p) { return access(p, F_OK) == 0; }
 
 /* ------------------------------------------------------------------------ */
-/* La generazione.                                                           */
+/* Generation.                                                               */
 
-/* ⛔ P-256, e nient'altro (§4.1): «non Ed25519 e mai RSA».  P-256 e' l'unica
- *    che tiene aperta la strada di `serverCertificateHashes`, e una chiave
- *    scelta oggi per comodita' chiuderebbe quella porta senza che nessuno se ne
- *    accorga. */
+/* ⛔ P-256, and nothing else (§4.1): «not Ed25519 and never RSA».  P-256 is the
+ *    only one that keeps the road of `serverCertificateHashes` open, and a key
+ *    chosen today for convenience would close that door without anyone
+ *    noticing. */
 static EVP_PKEY *chiave_p256(void)
 {
 	EVP_PKEY *k = EVP_EC_gen("P-256");
@@ -52,9 +52,9 @@ static EVP_PKEY *chiave_p256(void)
 	return k;
 }
 
-/* Il `subjectAltName` si sceglie per FORMA, non per gusto: un indirizzo IP non
- * si mette come DNS.  ⚠ Un browser che trova un SAN che non combacia mostra un
- * avviso DIVERSO, e alcuni non offrono nemmeno il clic per proseguire (§4.1). */
+/* The `subjectAltName` is chosen by FORM, not by taste: an IP address is not
+ * put as DNS.  ⚠ A browser that finds a SAN that does not match shows a
+ * DIFFERENT warning, and some do not even offer the click to proceed (§4.1). */
 static void san_di(const char *indirizzo, char *fuori, size_t cap)
 {
 	struct in_addr a4;
@@ -71,13 +71,13 @@ static bool scrivi_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
 	FILE *f;
 	int fd;
 
-	/* ⛔ La chiave privata nasce a 0600, non ci arriva con una `chmod`
-	 *    dopo: fra la creazione e la chmod c'e' una finestra in cui e'
-	 *    leggibile da chiunque, e su una chiave e' tutto il tempo che
-	 *    serve (§4.1). */
+	/* ⛔ The private key is born at 0600, it does not get there with a
+	 *    `chmod` afterwards: between creation and chmod there is a window in
+	 *    which it is readable by anyone, and on a key that is all the time
+	 *    it takes (§4.1). */
 	fd = open(key, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd < 0) {
-		registro_dice(REG_CERT, "⛔ non apro %s: %s", key, strerror(errno));
+		registro_dice(REG_CERT, "⛔ cannot open %s: %s", key, strerror(errno));
 		return false;
 	}
 	f = fdopen(fd, "w");
@@ -94,7 +94,7 @@ static bool scrivi_pem(const char *pem, const char *key, X509 *crt, EVP_PKEY *k)
 
 	f = fopen(pem, "w");
 	if (!f) {
-		registro_dice(REG_CERT, "⛔ non apro %s: %s", pem, strerror(errno));
+		registro_dice(REG_CERT, "⛔ cannot open %s: %s", pem, strerror(errno));
 		return false;
 	}
 	if (PEM_write_X509(f, crt) != 1) {
@@ -130,9 +130,9 @@ static bool genera(const char *pem, const char *key, const char *marca,
 
 	X509_set_version(crt, 2); /* v3 */
 
-	/* Un seriale casuale: due certificati generati nello stesso secondo con
-	 * lo stesso seriale sono due certificati che un magazzino tiene per uno
-	 * solo. */
+	/* A random serial: two certificates generated in the same second with
+	 * the same serial are two certificates that a store keeps as a single
+	 * one. */
 	if (RAND_bytes(seriale, sizeof seriale) != 1)
 		goto fine;
 	seriale[0] &= 0x7f;
@@ -140,24 +140,24 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	if (!bn || !BN_to_ASN1_INTEGER(bn, X509_get_serialNumber(crt)))
 		goto fine;
 
-	X509_gmtime_adj(X509_getm_notBefore(crt), -3600); /* un'ora di margine */
+	X509_gmtime_adj(X509_getm_notBefore(crt), -3600); /* one hour of margin */
 	X509_gmtime_adj(X509_getm_notAfter(crt), (long)giorni * 86400);
 
 	if (X509_set_pubkey(crt, k) != 1)
 		goto fine;
 
-	/* ⭐ FASE 17 — il nome si costruisce a parte e si CONSEGNA, non si
-	 *    modifica quello dentro il certificato: in OpenSSL 4.0
-	 *    `X509_get_subject_name` restituisce `const X509_NAME *` (Ubuntu
-	 *    26.10, Fedora rawhide), e scriverci dentro non compila piu'.  Cosi'
-	 *    va uguale con la 3.x (`fasi/17-l-installatore.md` §4.4). */
+	/* ⭐ PHASE 17 — the name is built separately and HANDED OVER, the one
+	 *    inside the certificate is not modified: in OpenSSL 4.0
+	 *    `X509_get_subject_name` returns `const X509_NAME *` (Ubuntu
+	 *    26.10, Fedora rawhide), and writing into it no longer compiles.  This
+	 *    way it works the same with 3.x (`fasi/17-l-installatore.md` §4.4). */
 	nome = X509_NAME_new();
 	if (!nome ||
 	    X509_NAME_add_entry_by_txt(nome, "CN", MBSTRING_ASC,
 	                               (const unsigned char *)indirizzo, -1, -1, 0) != 1 ||
 	    X509_set_subject_name(crt, nome) != 1)
 		goto fine;
-	/* autofirmato: emittente = soggetto */
+	/* self-signed: issuer = subject */
 	if (X509_set_issuer_name(crt, nome) != 1)
 		goto fine;
 
@@ -188,14 +188,14 @@ static bool genera(const char *pem, const char *key, const char *marca,
 	if (!scrivi_pem(pem, key, crt, k))
 		goto fine;
 
-	/* La marca: «questo l'abbiamo scritto noi».  Vedi certificati.h. */
+	/* The marker: «we wrote this one».  See certificati.h. */
 	f = fopen(marca, "w");
 	if (f) {
-		fprintf(f, "generato da REMOTIX\n");
+		fprintf(f, "generated by REMOTIX\n");
 		fclose(f);
 	}
 
-	registro_dice(REG_CERT, "generato %s — P-256, %s, %d giorni", pem, san,
+	registro_dice(REG_CERT, "generated %s — P-256, %s, %d days", pem, san,
 	              giorni);
 	bene = true;
 
@@ -214,7 +214,7 @@ fine:
 }
 
 /* ------------------------------------------------------------------------ */
-/* La lettura di quel che c'e' gia'.                                         */
+/* Reading what is already there.                                           */
 
 static X509 *leggi(const char *pem)
 {
@@ -227,9 +227,9 @@ static X509 *leggi(const char *pem)
 	return crt;
 }
 
-/* Quanti secondi mancano alla scadenza.  Negativo se e' gia' scaduto.
- * ⛔ E `giorni_restanti` non e' «esiste il file»: `LEZIONI.md` §1.9 punto 8 —
- *    un file di ieri risponde «si'» a *esiste?* esattamente come uno di adesso. */
+/* How many seconds are left before expiry.  Negative if already expired.
+ * ⛔ And `giorni_restanti` is not «the file exists»: `LEZIONI.md` §1.9 point 8 —
+ *    a file from yesterday answers «yes» to *does it exist?* exactly like one from now. */
 static long secondi_alla_scadenza(X509 *crt, time_t *scade)
 {
 	const ASN1_TIME *fine = X509_get0_notAfter(crt);
@@ -243,7 +243,7 @@ static long secondi_alla_scadenza(X509 *crt, time_t *scade)
 	return (long)giorni * 86400 + sec;
 }
 
-/* L'impronta: SHA-256 del DER, in base64 e in esadecimale. */
+/* The fingerprint: SHA-256 of the DER, in base64 and in hexadecimal. */
 static bool impronta_di(X509 *crt, char *b64, size_t b64cap, char *esa,
                         size_t esacap)
 {
@@ -264,7 +264,7 @@ static bool impronta_di(X509 *crt, char *b64, size_t b64cap, char *esa,
 		b64[o++] = alfa[((dig[i + 1] & 0x0f) << 2) | (dig[i + 2] >> 6)];
 		b64[o++] = alfa[dig[i + 2] & 0x3f];
 	}
-	/* 32 byte = 10 gruppi da 3 piu' 2 che avanzano */
+	/* 32 bytes = 10 groups of 3 plus 2 left over */
 	b64[o++] = alfa[dig[i] >> 2];
 	b64[o++] = alfa[((dig[i] & 0x03) << 4) | (dig[i + 1] >> 4)];
 	b64[o++] = alfa[(dig[i + 1] & 0x0f) << 2];
@@ -283,7 +283,7 @@ static bool aggiorna_impronta(certificati *c)
 	X509 *crt = leggi(c->sessione_pem);
 	bool bene;
 	if (!crt) {
-		registro_dice(REG_CERT, "⛔ non leggo %s", c->sessione_pem);
+		registro_dice(REG_CERT, "⛔ cannot read %s", c->sessione_pem);
 		return false;
 	}
 	bene = impronta_di(crt, c->impronta, sizeof c->impronta, c->impronta_esa,
@@ -291,7 +291,7 @@ static bool aggiorna_impronta(certificati *c)
 	secondi_alla_scadenza(crt, &c->sessione_scade);
 	X509_free(crt);
 	if (!bene) {
-		registro_dice(REG_CERT, "⛔ impronta non calcolata");
+		registro_dice(REG_CERT, "⛔ fingerprint not computed");
 		return false;
 	}
 	return true;
@@ -308,7 +308,7 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 	snprintf(c->indirizzo, sizeof c->indirizzo, "%s", indirizzo);
 
 	if (mkdir(dir, 0700) != 0 && errno != EEXIST) {
-		registro_dice(REG_CERT, "⛔ non creo %s: %s", dir, strerror(errno));
+		registro_dice(REG_CERT, "⛔ cannot create %s: %s", dir, strerror(errno));
 		return false;
 	}
 
@@ -319,18 +319,18 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 	percorso(c->sessione_key, sizeof c->sessione_key, dir, "sessione.key");
 	percorso(c->sessione_marca, sizeof c->sessione_marca, dir, "sessione.nostro");
 
-	/* ── il LONGEVO ─────────────────────────────────────────────────── */
+	/* ── the LONG-LIVED one ─────────────────────────────────────────── */
 	if (esiste(c->pagina_pem) && esiste(c->pagina_key)) {
 		c->pagina_e_nostro = esiste(c->pagina_marca);
 		if (!c->pagina_e_nostro) {
-			/* ⛔ §4.1: e' dell'amministratore.  Si usa e NON si
-			 *    rigenera — nemmeno se e' scaduto: rigenerarlo
-			 *    sarebbe sostituire di nascosto la sua decisione,
-			 *    e il sintomo (un avviso che ricompare) non
-			 *    nominerebbe mai questa riga. */
+			/* ⛔ §4.1: it is the administrator's.  It is used and
+			 *    NOT regenerated — not even if expired: regenerating
+			 *    it would secretly replace their decision, and the
+			 *    symptom (a warning that reappears) would never
+			 *    name this line. */
 			registro_dice(REG_CERT,
-			              "⭐ la pagina usa un certificato che non e' "
-			              "nostro (%s): si usa e non si rigenera (§4.1)",
+			              "⭐ the page uses a certificate that is not "
+			              "ours (%s): it is used and not regenerated (§4.1)",
 			              c->pagina_pem);
 		} else {
 			crt = leggi(c->pagina_pem);
@@ -339,8 +339,8 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 				X509_free(crt);
 				if (s < 0) {
 					registro_dice(REG_CERT,
-					              "il certificato della pagina e' "
-					              "scaduto: se ne fa uno nuovo");
+					              "the page certificate has "
+					              "expired: making a new one");
 					if (!genera(c->pagina_pem, c->pagina_key,
 					            c->pagina_marca, indirizzo,
 					            CERT_GIORNI_PAGINA))
@@ -355,7 +355,7 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 		c->pagina_e_nostro = true;
 	}
 
-	/* ── il BREVE ───────────────────────────────────────────────────── */
+	/* ── the SHORT one ──────────────────────────────────────────────── */
 	if (!esiste(c->sessione_pem) || !esiste(c->sessione_key)) {
 		if (!genera(c->sessione_pem, c->sessione_key, c->sessione_marca,
 		            indirizzo, CERT_GIORNI_SESSIONE))
@@ -365,14 +365,14 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 	if (!aggiorna_impronta(c))
 		return false;
 
-	/* ⛔ E se quel che c'era e' gia' oltre il margine, si ruota adesso —
-	 *    all'avvio, non alla prima occasione utile.  Un server riacceso dopo
-	 *    tre settimane servirebbe altrimenti una pagina con dentro
-	 *    l'impronta di un certificato che il browser rifiuta. */
+	/* ⛔ And if what was there is already past the margin, rotate now —
+	 *    at startup, not at the first useful occasion.  A server restarted
+	 *    after three weeks would otherwise serve a page carrying the
+	 *    fingerprint of a certificate the browser refuses. */
 	certificati_ruota_se_serve(c);
 
-	/* ⛔ E i due DEVONO essere DUE.  E' il controllo di B13.1, e si fa alla
-	 *    nascita invece che quattordici giorni dopo. */
+	/* ⛔ And the two MUST be TWO.  It is the check of B13.1, and it is done at
+	 *    birth instead of fourteen days later. */
 	{
 		X509 *p = leggi(c->pagina_pem), *s = leggi(c->sessione_pem);
 		char ip[64], ipe[80], is[64], ise[80];
@@ -386,19 +386,19 @@ bool certificati_prepara(certificati *c, const char *dir, const char *indirizzo)
 			X509_free(s);
 		if (!due) {
 			registro_dice(REG_CERT,
-			              "⛔ i due certificati sono LO STESSO: e' il "
-			              "difetto di B13.1, l'avviso ricomparirebbe "
-			              "ogni due settimane.  Non si parte.");
+			              "⛔ the two certificates are THE SAME: it is the "
+			              "defect of B13.1, the warning would reappear "
+			              "every two weeks.  Not starting.");
 			return false;
 		}
 		registro_dice(REG_CERT,
-		              "⭐ due certificati, due impronte: pagina %.12s… "
-		              "sessione %.12s…",
+		              "⭐ two certificates, two fingerprints: page %.12s… "
+		              "session %.12s…",
 		              ip, is);
 	}
 
 	registro_dice(REG_CERT,
-	              "impronta della sessione (SHA-256 del DER, base64): %s",
+	              "session fingerprint (SHA-256 of the DER, base64): %s",
 	              c->impronta);
 	return true;
 }
@@ -410,8 +410,8 @@ bool certificati_ruota_se_serve(certificati *c)
 
 	if (!crt) {
 		registro_dice(REG_CERT,
-		              "⛔ il certificato di sessione non si legge: se ne "
-		              "fa uno nuovo");
+		              "⛔ the session certificate cannot be read: making "
+		              "a new one");
 		restano = -1;
 	} else {
 		restano = secondi_alla_scadenza(crt, &c->sessione_scade);
@@ -421,27 +421,27 @@ bool certificati_ruota_se_serve(certificati *c)
 	if (restano > (long)CERT_MARGINE_GIORNI * 86400)
 		return false;
 
-	/* ⛔ «prima che scada», non «quando e' scaduto»: con l'impronta gia'
-	 *    pubblicata in una pagina aperta, un certificato scaduto e' una
-	 *    sessione che non si apre piu' e non dice perche' (§4.1-bis). */
+	/* ⛔ «before it expires», not «when it has expired»: with the fingerprint
+	 *    already published in an open page, an expired certificate is a
+	 *    session that no longer opens and does not say why (§4.1-bis). */
 	registro_dice(REG_CERT,
-	              "⭐ rotazione del certificato di SESSIONE: ne restavano %ld "
-	              "secondi, il margine e' %d giorni",
+	              "⭐ rotation of the SESSION certificate: %ld "
+	              "seconds were left, the margin is %d days",
 	              restano, CERT_MARGINE_GIORNI);
 	if (!genera(c->sessione_pem, c->sessione_key, c->sessione_marca,
 	            c->indirizzo, CERT_GIORNI_SESSIONE)) {
-		registro_dice(REG_CERT, "⛔ rotazione FALLITA: resta il vecchio");
+		registro_dice(REG_CERT, "⛔ rotation FAILED: the old one stays");
 		return false;
 	}
 	if (!aggiorna_impronta(c))
 		return false;
 	c->rotazioni++;
 	registro_dice(REG_CERT,
-	              "⭐ ruotato (rotazioni da quando il server e' acceso: %u).  "
-	              "Nuova impronta: %s",
+	              "⭐ rotated (rotations since the server started: %u).  "
+	              "New fingerprint: %s",
 	              c->rotazioni, c->impronta);
-	/* ⛔ E la pagina va ritirata di nuovo: chi ha una scheda aperta ha in
-	 *    mano l'impronta vecchia, e la strada per aggiornarla e' l'endpoint
-	 *    `/impronta` (§4.1-bis).  Qui si dice soltanto che e' successo. */
+	/* ⛔ And the page must be fetched again: whoever has a tab open holds
+	 *    the old fingerprint, and the way to update it is the `/impronta`
+	 *    endpoint (§4.1-bis).  Here we only say that it happened. */
 	return true;
 }

@@ -1,11 +1,11 @@
-# Contenitore.fedora44 — costruzione di REMOTIX per Fedora 44.
+# Contenitore.fedora44 — REMOTIX build for Fedora 44.
 #
-# Fase 18, senza ffmpeg: `opus-devel` da Fedora (OpenH264 e SVT-AV1, il ripiego
-# in software, sono usciti con la fase 19).  I driver VA con H.264 al cliente
-# arrivano da RPM Fusion (§4.2).
-# ngtcp2 e nghttp3 dentro, statiche (quelle di Fedora sono 1.21).
-# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-loader-devel` (porta
-#    `vulkan-headers`), `[M]` 1 ott 2026 nell'immagine: 1.4.341.
+# Phase 18, without ffmpeg: `opus-devel` from Fedora (OpenH264 and SVT-AV1, the software
+# fallback, left with phase 19).  The VA drivers with H.264 for the client
+# come from RPM Fusion (§4.2).
+# ngtcp2 and nghttp3 inside, static (Fedora's are 1.21).
+# ⭐ Phase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-loader-devel` (brings
+#    `vulkan-headers`), `[M]` 1 Oct 2026 in the image: 1.4.341.
 FROM registry.fedoraproject.org/fedora:44
 RUN dnf -y install --setopt=install_weak_deps=False \
         gcc make pkgconf-pkg-config git cmake ninja-build diffutils \
@@ -14,7 +14,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         libei-devel libxkbcommon-devel mesa-libgbm-devel wayland-devel vulkan-loader-devel \
     && dnf clean all
 
-# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+# --- the same for all targets: nghttp3 1.18.0 and ngtcp2 1.25.0, static
 COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
 RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \

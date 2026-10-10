@@ -1,16 +1,16 @@
 /*
- * La prova del decodificatore wasm contro libopus NATIVO (D-006).
+ * The test of the wasm decoder against NATIVE libopus (D-006).
  *
  *   cc -O2 riferimento.c -lopus -lm -o riferimento
  *   ./riferimento pacchetti.bin attesi.f32
  *
- * Codifica 12 s di segnale stereo a 48 kHz, 20 ms per pacchetto, con i tre
- * modi di Opus (CELT a 96 kbit/s come `src/audio.c`, ibrido a 32, SILK a 12)
- * e segnali diversi (toni, spazzata, rumore, silenzio, voce finta), poi lo
- * decodifica col libopus nativo in float.  Scrive:
- *   pacchetti.bin  [u16 LE lunghezza][byte del pacchetto] ...
- *   attesi.f32     i campioni float interlacciati che il nativo ha dato
- * `confronta.mjs` decodifica gli stessi pacchetti col wasm e li confronta.
+ * Encodes 12 s of stereo signal at 48 kHz, 20 ms per packet, with Opus's three
+ * modes (CELT at 96 kbit/s like `src/audio.c`, hybrid at 32, SILK at 12)
+ * and different signals (tones, sweep, noise, silence, fake voice), then
+ * decodes it with native libopus in float.  Writes:
+ *   pacchetti.bin  [u16 LE length][packet bytes] ...
+ *   attesi.f32     the interleaved float samples the native one gave
+ * `confronta.mjs` decodes the same packets with the wasm and compares them.
  */
 #include <math.h>
 #include <opus.h>
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	double t = 0;
 	int blocchi = SECONDI * FREQ / N;
 	for (int b = 0; b < blocchi; b++) {
-		int seg = b / 100;                   /* un segmento ogni 2 s */
+		int seg = b / 100;                   /* one segment every 2 s */
 		int br = (seg % 3 == 0) ? 96000 : (seg % 3 == 1) ? 32000 : 12000;
 		opus_encoder_ctl(enc, OPUS_SET_BITRATE(br));
 		opus_encoder_ctl(enc, OPUS_SET_SIGNAL(seg == 2 ? OPUS_SIGNAL_VOICE : OPUS_AUTO));
@@ -76,6 +76,6 @@ int main(int argc, char **argv)
 	}
 	fclose(fp);
 	fclose(fa);
-	fprintf(stderr, "%d pacchetti, libopus %s\n", blocchi, opus_get_version_string());
+	fprintf(stderr, "%d packets, libopus %s\n", blocchi, opus_get_version_string());
 	return 0;
 }

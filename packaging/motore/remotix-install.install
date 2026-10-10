@@ -1,7 +1,7 @@
-# remotix-install.install — gli script del pacchetto Arch del motore.
-# Dopo un aggiornamento (pacman -Syu: REMOTIX si aggiorna col sistema, DECISIONI §10.23) il motore
-# annota le versioni e dice se l'installazione è ancora certificata (§10.12 punto 4). Non fa mai
-# fallire pacman.
+# remotix-install.install — the scripts of the engine's Arch package.
+# After an upgrade (pacman -Syu: REMOTIX updates with the system, DECISIONI §10.23) the engine
+# records the versions and says whether the installation is still certified (§10.12 point 4). It never
+# makes pacman fail.
 
 post_upgrade() {
 	/usr/bin/remotix-install post-upgrade

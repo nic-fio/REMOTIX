@@ -1,41 +1,41 @@
-# remotix.spec — il pacchetto nativo di REMOTIX per la famiglia .rpm.
+# remotix.spec — the native REMOTIX package for the .rpm family.
 #
 #   Fedora 44 · Alma 10 (Rocky/RHEL 10 compatibili) · openSUSE Tumbleweed · Leap 16
 #
-# ⭐ UN solo spec coi rami %%if, come fa Cockpit (`tools/cockpit.spec`):
+# ⭐ ONE spec with %%if branches, as Cockpit does (`tools/cockpit.spec`):
 #    0%%{?fedora} · 0%%{?rhel} · 0%%{?suse_version}.  `fasi/17-l-installatore.md`
-#    §6.1-§6.4.  Si costruisce DENTRO il contenitore di ogni bersaglio
-#    (`src/costruzione/Contenitore.<bersaglio>`) con `packaging/rpm/costruisci-rpm.sh`.
+#    §6.1-§6.4.  It is built INSIDE the container of each target
+#    (`src/costruzione/Contenitore.<target>`) with `packaging/rpm/costruisci-rpm.sh`.
 #
-# ⭐ Le librerie le calcola rpmbuild leggendo il binario (le «Requires» automatiche
-#    per soname: libva, libopus, libssl, libpam, libpipewire,
-#    libei, …): e' la
-#    cura di `LEZIONI.md` §2.5-bis.  Qui sotto si scrive A MANO solo quel che rpm
-#    NON puo' vedere, perche' si carica o si esegue a tempo di esecuzione: il
-#    compositore per XFCE/LXQt, wlr-randr, Xwayland, lo sfondo di Plasma, i
-#    driver VA-API.  (OpenSSL >= 3.5 lo vede da se': `libssl.so.3(OPENSSL_3.5.0)`.)
+# ⭐ The libraries are computed by rpmbuild reading the binary (the automatic «Requires»
+#    by soname: libva, libopus, libssl, libpam, libpipewire,
+#    libei, …): this is the
+#    cure of `LEZIONI.md` §2.5-bis.  Below, only what rpm CANNOT see is written
+#    BY HAND, because it is loaded or executed at run time: the
+#    compositor for XFCE/LXQt, wlr-randr, Xwayland, the Plasma wallpaper, the
+#    VA-API drivers.  (OpenSSL >= 3.5 it sees on its own: `libssl.so.3(OPENSSL_3.5.0)`.)
 #
-# ⭐ `DECISIONI.md` §10.12 — il pacchetto porta solo pezzi INERTI (programma,
-#    pagina, unita' disabilitata, PAM, /etc/remotix, le cinture SPENTE in
-#    /usr/share/remotix/cinture/, la definizione firewalld).  Non abilita ne' avvia il servizio, non tocca gruppi, cinture ne'
-#    firewall: li monta il motore, col consenso e nel suo registro (R40).
-#    ⛔ Nessuna guardia che impedisca al servizio di partire (niente
-#    ExecCondition, niente ConditionPathExists su una marca): le vie sono DUE,
-#    l'installatore o il sorgente a mano; `remotix stato` dira' solo, per
-#    informazione, se l'installazione e' certificata.
+# ⭐ `DECISIONI.md` §10.12 — the package ships only INERT pieces (program,
+#    page, disabled unit, PAM, /etc/remotix, the belts OFF in
+#    /usr/share/remotix/cinture/, the firewalld definition).  It neither enables nor starts the service, and touches no groups, belts or
+#    firewall: the engine mounts them, with consent and in its log (R40).
+#    ⛔ No guard that prevents the service from starting (no
+#    ExecCondition, no ConditionPathExists on a mark): there are TWO ways,
+#    the installer or the source by hand; `remotix stato` will only say, for
+#    information, whether the installation is certified.
 #
-# ⛔ Mai nel pacchetto (§6.4, R14): utenti di prova, `sudoers.d` dei banchi,
+# ⛔ Never in the package (§6.4, R14): test users, the benches' `sudoers.d`,
 #    `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d`, `provisiona.sh`.
-# ⛔ Il pacchetto non tira MAI dentro un desktop (`DECISIONI.md` §10.7: senza
-#    desktop lo installa il motore): le dipendenze legate a un desktop sono
-#    CONDIZIONATE, `(X if <sessione del desktop>)`.
-# ⛔ Il pacchetto non aggiunge MAI depositi (RPM Fusion, Packman, EPEL): §4.2
-#    regola 2 e D5.  Lo fara' il motore d'installazione, col consenso.
+# ⛔ The package NEVER pulls in a desktop (`DECISIONI.md` §10.7: without a
+#    desktop the engine installs it): dependencies tied to a desktop are
+#    CONDITIONAL, `(X if <desktop session>)`.
+# ⛔ The package NEVER adds repositories (RPM Fusion, Packman, EPEL): §4.2
+#    rule 2 and D5.  The installation engine will do it, with consent.
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
 
-# openSUSE tiene i file PAM dei pacchetti in /usr/lib/pam.d (§4.3)
+# openSUSE keeps the packages' PAM files in /usr/lib/pam.d (§4.3)
 %if 0%{?suse_version}
 %{!?_pam_vendordir: %global _pam_vendordir %{_prefix}/lib/pam.d}
 %global pamdir      %{_pam_vendordir}
@@ -46,17 +46,17 @@
 %endif
 
 Name:           remotix
-# La versione e il rilascio li dà il comando di rilascio (packaging/rilascio.sh) attraverso
-# costruisci-rpm.sh: RX_VERSIONE (--define "rx_versione X.Y.Z") e RX_REVISIONE
-# (--define "rx_rilascio N"); predefiniti 0.17.0 e 1.
+# Version and release are given by the release command (packaging/rilascio.sh) through
+# costruisci-rpm.sh: RX_VERSIONE (--define "rx_versione X.Y.Z") and RX_REVISIONE
+# (--define "rx_rilascio N"); defaults 0.17.0 and 1.
 Version:        %{?rx_versione}%{!?rx_versione:0.17.0}
 Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
-Summary:        Il desktop di questa macchina nel browser
-# ⚠ La licenza del prodotto non e' ancora scelta (deposito privato).
+Summary:        This machine's desktop in the browser
+# ⚠ The product license is not chosen yet (private repository).
 License:        LicenseRef-Proprietary
 URL:            https://github.com/nic-fio/REMOTIX
-# Un archivio di src/, banchi/rcp/ (la copia gemella che `make` confronta) e
-# packaging/rpm/, fatto da `costruisci-rpm.sh`.
+# An archive of src/, banchi/rcp/ (the twin copy that `make` compares) and
+# packaging/rpm/, made by `costruisci-rpm.sh`.
 Source0:        %{name}-%{version}.tar.gz
 
 ExclusiveArch:  x86_64
@@ -72,94 +72,94 @@ BuildRequires:  pkgconfig(libpipewire-0.3) >= 0.3.48
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
-# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg; libopus (l'audio).
-# ⛔ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): OpenH264 e SVT-AV1, il ripiego
-#   in software, sono USCITI — e con loro il deposito Cisco di OpenH264.
+# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg; libopus (the audio).
+# ⛔ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): OpenH264 and SVT-AV1, the software
+#   fallback, are OUT — and with them the Cisco OpenH264 repository.
 BuildRequires:  pkgconfig(opus)
-# ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1);
-#   tolta il 30 set (T10).
+# ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`, fasi/18 §1);
+#   removed on 30 Sep (T10).
 BuildRequires:  pkgconfig(libei-1.0) >= 1.1.0
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-scanner)
 BuildRequires:  pkgconfig(gbm)
-# ⭐ Fase 19: Vulkan Video (src/vulkanvideo.c) — solo il loader e le intestazioni
-#   (vulkan-loader-devel; `[M]` 1 ott 2026: 1.4.328 su Alma 10 AppStream, 1.4.341
-#   su Fedora 44).  Il minimo 1.3.274 e' quello del Makefile.
+# ⭐ Phase 19: Vulkan Video (src/vulkanvideo.c) — only the loader and the headers
+#   (vulkan-loader-devel; `[M]` 1 Oct 2026: 1.4.328 on Alma 10 AppStream, 1.4.341
+#   on Fedora 44).  The minimum 1.3.274 is the Makefile's.
 BuildRequires:  pkgconfig(vulkan) >= 1.3.274
-# ⚠ ngtcp2 >= 1.25.0 e nghttp3: NON sono un BuildRequires, perche' quasi nessuna
-#   distribuzione le ha (§6.3).  Le costruisce il contenitore, SOLO statiche, in
-#   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build controlla che ci
-#   siano e che la versione sia quella dichiarata qui sotto.
-# ⭐ D2 CHIUSA (`DECISIONI.md` §10.6): ngtcp2 e nghttp3 DENTRO il binario, con gli
-#   aggiornamenti di sicurezza a carico nostro — quel che manca o e' troppo
-#   vecchio lo porta REMOTIX, salvo i codec brevettati e i desktop.
+# ⚠ ngtcp2 >= 1.25.0 and nghttp3: they are NOT a BuildRequires, because almost no
+#   distribution has them (§6.3).  The container builds them, STATIC ONLY, in
+#   /usr/local/lib (`src/costruzione/quic-statiche.sh`); %%build checks that they are
+#   there and that the version is the one declared below.
+# ⭐ D2 CLOSED (`DECISIONI.md` §10.6): ngtcp2 and nghttp3 INSIDE the binary, with the
+#   security updates on us — whatever is missing or too
+#   old REMOTIX brings, except patented codecs and desktops.
 Provides:       bundled(ngtcp2) = %{ngtcp2_ver}
 Provides:       bundled(nghttp3) = %{nghttp3_ver}
 
-# ⭐ SELinux (T6, `DECISIONI.md` §10.18): il PAM di REMOTIX e' quello di sshd, con
-#    `pam_selinux`; il passaggio al contesto dell'utente lo permette il modulo di
-#    REMOTIX, nel sottopacchetto remotix-selinux (come cockpit-ws-selinux).  Lo tira
-#    dentro il gestore di pacchetti SOLO dove c'e' la politica «targeted»: Fedora,
-#    Alma, openSUSE (Tumbleweed e Leap 16 sono in enforcing di serie).
+# ⭐ SELinux (T6, `DECISIONI.md` §10.18): the REMOTIX PAM is sshd's, with
+#    `pam_selinux`; the transition to the user's context is allowed by the REMOTIX
+#    module, in the remotix-selinux subpackage (like cockpit-ws-selinux).  The package
+#    manager pulls it in ONLY where the «targeted» policy exists: Fedora,
+#    Alma, openSUSE (Tumbleweed and Leap 16 are enforcing by default).
 %global selinuxtype targeted
 BuildRequires:  selinux-policy-devel
 BuildRequires:  bzip2
 Requires:       (%{name}-selinux = %{version}-%{release} if selinux-policy-%{selinuxtype})
 
-# Il DEMONE PipeWire + wireplumber: la cattura video di GNOME/KDE passa da PipeWire
-# (mutter/kwin screencast) e l'audio di OGNI desktop pure (suono.c); rpm vede la LIBRERIA
-# (libpipewire) ma non il demone.  I gruppi dei desktop lo portano, ma non le installazioni
-# minime (T10, 30 set: openSUSE GNOME dell'immagine Minimal-VM SENZA pipewire ⇒ mutter non
-# raggiunge lo screencast, «Error connecting to the screencast service», e il desktop non arriva).
+# The PipeWire DAEMON + wireplumber: GNOME/KDE video capture goes through PipeWire
+# (mutter/kwin screencast) and so does the audio of EVERY desktop (suono.c); rpm sees the LIBRARY
+# (libpipewire) but not the daemon.  The desktop groups bring it, but minimal installations
+# do not (T10, 30 Sep: openSUSE GNOME from the Minimal-VM image WITHOUT pipewire ⇒ mutter does not
+# reach the screencast, «Error connecting to the screencast service», and the desktop never arrives).
 Requires:       pipewire
 Requires:       wireplumber
 
 %if 0%{?fedora} || 0%{?rhel}
-# Il servizio firewalld e' DEFINITO nella cartella di firewalld-filesystem (niente
-# demone, niente regole): aprirlo e' del motore, col consenso (D6).
+# The firewalld service is DEFINED in the firewalld-filesystem directory (no
+# daemon, no rules): opening it belongs to the engine, with consent (D6).
 Requires:       firewalld-filesystem
 %endif
 
 %if 0%{?fedora}
-# XFCE e LXQt girano sotto labwc (REMOTIX lo avvia; nessun gruppo di serie lo porta,
-# §4.6).  xfce4-session 4.20 e' X11: sotto labwc vuole Xwayland.  XFCE e LXQt: la
-# misura del monitor passa da wlr-randr (`primario_misurato()`, dal 5 ott anche XFCE).  Dipendenze CONDIZIONATE:
-# solo se quel desktop c'e'.
+# XFCE and LXQt run under labwc (REMOTIX starts it; no default group brings it,
+# §4.6).  xfce4-session 4.20 is X11: under labwc it needs Xwayland.  XFCE and LXQt: the
+# monitor measurement goes through wlr-randr (`primario_misurato()`, XFCE too since 5 Oct).  CONDITIONAL dependencies:
+# only if that desktop is present.
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
-# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
-# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
-# leap16-lxqt).  Legato a labwc, non a un desktop: vale per XFCE e LXQt.
+# Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
+# without it, labwc «cannot create xwayland server» and the X11 panel does not start (T10, 30 Sep:
+# leap16-lxqt).  Tied to labwc, not to a desktop: it holds for XFCE and LXQt.
 Requires:       (xorg-x11-server-Xwayland if labwc)
-# labwc MUORE senza un carattere scalabile (labwc #2525: con i soli caratteri
-# bitmap la barra del titolo esce alta 1,4 milioni di pixel e `buffer.c:90`
-# abortisce).  Su Fedora i gruppi dei desktop lo portano, ma una macchina con
-# labwc e senza desktop di serie no: il sans di serie della distribuzione.
+# labwc DIES without a scalable font (labwc #2525: with bitmap fonts only
+# the title bar comes out 1.4 million pixels tall and `buffer.c:90`
+# aborts).  On Fedora the desktop groups bring one, but a machine with
+# labwc and no default desktop does not: the distribution's default sans.
 Requires:       (default-fonts-core-sans if labwc)
-# I driver VA-API: si caricano con dlopen, rpm non li vede.  Su Fedora il driver
-# Mesa (AMD, virtio) sta in mesa-dri-drivers, quello Intel libero in
-# libva-intel-media-driver.  ⚠ NESSUNO dei due codifica H.264 di serie (§4.2;
-# `[M]` 30 set dai binari, fase 18): serve RPM Fusion (mesa-va-drivers-freeworld,
-# free / intel-media-driver, NONFREE), che il pacchetto NON aggiunge (D5).
-# Recommends: sulla macchina senza scheda Intel il driver Intel non serve, e chi
-# li toglie non deve rompere il pacchetto.
+# The VA-API drivers: loaded with dlopen, rpm does not see them.  On Fedora the
+# Mesa driver (AMD, virtio) is in mesa-dri-drivers, the free Intel one in
+# libva-intel-media-driver.  ⚠ NEITHER encodes H.264 by default (§4.2;
+# `[M]` 30 Sep from the binaries, phase 18): RPM Fusion is needed (mesa-va-drivers-freeworld,
+# free / intel-media-driver, NONFREE), which the package does NOT add (D5).
+# Recommends: on a machine without an Intel GPU the Intel driver is not needed, and whoever
+# removes them must not break the package.
 Recommends:     mesa-dri-drivers
 Recommends:     (libva-intel-media-driver or intel-media-driver)
-# ⭐ Fase 19: i driver VULKAN di Mesa (RADV per AMD: la strada Vulkan Video, che
-#   il prodotto prova PRIMA di VA-API).  Il loader (vulkan-loader, libvulkan.so.1)
-#   lo calcola rpm dal binario.  NVIDIA: l'ICD arriva col driver proprietario.
+# ⭐ Phase 19: the Mesa VULKAN drivers (RADV for AMD: the Vulkan Video path, which
+#   the product tries BEFORE VA-API).  The loader (vulkan-loader, libvulkan.so.1)
+#   rpm computes from the binary.  NVIDIA: the ICD comes with the proprietary driver.
 Recommends:     mesa-vulkan-drivers
 %endif
 
 %if 0%{?rhel}
-# ⛔ Fase 19: qui c'erano svt-av1-libs (EPEL 10) e openh264 (deposito Cisco per
-#   EPEL 10), il ripiego in software — usciti.
-# ⛔ Niente labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): nessuna dipendenza da scrivere.
-# ⛔ Mesa di RHEL 10 e' senza VA-API e EPEL non ha il driver Intel (§4.2): la
-#   codifica sulla scheda c'e' solo con depositi di terzi.
+# ⛔ Phase 19: here were svt-av1-libs (EPEL 10) and openh264 (Cisco repository for
+#   EPEL 10), the software fallback — out.
+# ⛔ No labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): no dependency to write.
+# ⛔ RHEL 10 Mesa has no VA-API and EPEL lacks the Intel driver (§4.2): GPU
+#   encoding exists only with third-party repositories.
 %endif
 
 %if 0%{?suse_version}
@@ -167,38 +167,38 @@ Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
 Requires:       (wlr-randr if lxqt-session)
 Requires:       (wlr-randr if xfce4-session)
-# Xwayland sotto labwc per gli applicativi X11 (XFCE 4.20 E la barra/config di LXQt):
-# senza, labwc «cannot create xwayland server» e il pannello X11 non parte (T10, 30 set:
-# leap16-lxqt dell'immagine Minimal-VM).  Legato a labwc, non a un desktop.
+# Xwayland under labwc for X11 applications (XFCE 4.20 AND the LXQt panel/config):
+# without it, labwc «cannot create xwayland server» and the X11 panel does not start (T10, 30 Sep:
+# leap16-lxqt from the Minimal-VM image).  Tied to labwc, not to a desktop.
 Requires:       (xwayland if labwc)
-# ⛔ labwc MUORE senza un carattere scalabile (labwc #2525, `buffer.c:90`): il
-# gruppo LXQt di openSUSE porta `google-droid-fonts` solo come RACCOMANDATO, e
-# sulle installazioni senza raccomandati non c'e'.  Uno qualunque dei sans scalabili.
+# ⛔ labwc DIES without a scalable font (labwc #2525, `buffer.c:90`): the
+# openSUSE LXQt group brings `google-droid-fonts` only as RECOMMENDED, and
+# on installations without recommends it is missing.  Any one of the scalable sans.
 Requires:       ((google-droid-fonts or dejavu-fonts or google-noto-sans-fonts or liberation-fonts) if labwc)
-# `[M]` T1 (§11.1 D): senza breeze6-wallpapers plasmashell non trova lo sfondo e
-# non mostra ne' desktop ne' pannello (tela nera).  Sulle installazioni senza
-# «raccomandati» (l'immagine Minimal, `solver.onlyRequires`) il gruppo KDE non lo porta.
+# `[M]` T1 (§11.1 D): without breeze6-wallpapers plasmashell does not find the wallpaper and
+# shows neither desktop nor panel (black canvas).  On installations without
+# «recommends» (the Minimal image, `solver.onlyRequires`) the KDE group does not bring it.
 Requires:       (breeze6-wallpapers if plasma6-workspace)
-# driver VA-API (dlopen).  Fase 18 (`[M]` 30 set, dai binari): il driver Intel
-# ufficiale codifica H.264; la Mesa ufficiale e' senza h264/h265 ⇒ con una scheda
-# AMD serve quella di Packman (Mesa-dri, Mesa-libva).  Il pacchetto NON aggiunge
+# VA-API drivers (dlopen).  Phase 18 (`[M]` 30 Sep, from the binaries): the official
+# Intel driver encodes H.264; the official Mesa lacks h264/h265 ⇒ with an AMD
+# GPU the Packman one is needed (Mesa-dri, Mesa-libva).  The package does NOT add
 # Packman (D5).
 Recommends:     Mesa-libva
 Recommends:     intel-media-driver
 %endif
 
 %description
-REMOTIX porta il desktop di questa macchina (GNOME, KDE Plasma, XFCE, LXQt) in
-un browser, con WebTransport e video H.264 codificato sulla scheda grafica.
-Ogni utente della macchina entra con la sua parola d'ordine; root no.
+REMOTIX brings this machine's desktop (GNOME, KDE Plasma, XFCE, LXQt) into
+a browser, with WebTransport and H.264 video encoded on the graphics card.
+Every user of the machine logs in with their own password; root does not.
 
-⚠ La codifica H.264 sulla scheda usa i driver della distribuzione: su Fedora e
-Alma serve RPM Fusion, su openSUSE con una scheda AMD Packman, che questo
-pacchetto non aggiunge.  Senza una scheda capace di codificare REMOTIX non
-codifica: non c'e' un ripiego in software.
+⚠ H.264 encoding on the graphics card uses the distribution's drivers: on Fedora
+and Alma RPM Fusion is needed, on openSUSE with an AMD card Packman, which this
+package does not add.  Without a card able to encode, REMOTIX does not
+encode: there is no software fallback.
 
 %package selinux
-Summary:        Il modulo SELinux di REMOTIX
+Summary:        The REMOTIX SELinux module
 BuildArch:      noarch
 Requires(post): selinux-policy-%{selinuxtype}
 Requires(post): selinux-policy-base
@@ -206,40 +206,40 @@ Requires(post): libselinux-utils
 Requires(post): policycoreutils
 
 %description selinux
-Il modulo SELinux del servizio REMOTIX: il dominio remotix_t, la porta 7447
-(remotix_port_t) e il passaggio al contesto dell'utente all'apertura della
-sessione, come per sshd.
+The SELinux module of the REMOTIX service: the remotix_t domain, port 7447
+(remotix_port_t) and the transition to the user's context when the session
+opens, as for sshd.
 
 %prep
 %autosetup -n %{name}-%{version}
 
 %build
-# ⛔ Le statiche di ngtcp2/nghttp3 devono esserci, e della versione dichiarata:
-#    un binario con una ngtcp2 diversa da quella di `Provides: bundled(...)`
-#    sarebbe uno SBOM che mente (R24).
+# ⛔ The static ngtcp2/nghttp3 must be present, and of the declared version:
+#    a binary with an ngtcp2 different from the one in `Provides: bundled(...)`
+#    would be an SBOM that lies (R24).
 for l in libngtcp2 libngtcp2_crypto_ossl libnghttp3; do
-    pkg-config --exists $l || { echo "⛔ $l: manca (si costruisce nei contenitori di src/costruzione/)"; exit 1; }
+    pkg-config --exists $l || { echo "⛔ $l: missing (it is built in the containers of src/costruzione/)"; exit 1; }
 done
-test "$(pkg-config --modversion libngtcp2)"  = %{ngtcp2_ver}  || { echo "⛔ ngtcp2 $(pkg-config --modversion libngtcp2), dichiarata %{ngtcp2_ver}"; exit 1; }
-test "$(pkg-config --modversion libnghttp3)" = %{nghttp3_ver} || { echo "⛔ nghttp3 $(pkg-config --modversion libnghttp3), dichiarata %{nghttp3_ver}"; exit 1; }
-# I flag della distribuzione (FORTIFY, PIE, protezione dello stack, …) NELL'AMBIENTE:
-# il Makefile ha `CFLAGS ?=` e poi `CFLAGS +=`.  Passati sulla riga di comando di
-# make scavalcherebbero anche i `+=` (e sparirebbero le intestazioni delle librerie).
+test "$(pkg-config --modversion libngtcp2)"  = %{ngtcp2_ver}  || { echo "⛔ ngtcp2 $(pkg-config --modversion libngtcp2), declared %{ngtcp2_ver}"; exit 1; }
+test "$(pkg-config --modversion libnghttp3)" = %{nghttp3_ver} || { echo "⛔ nghttp3 $(pkg-config --modversion libnghttp3), declared %{nghttp3_ver}"; exit 1; }
+# The distribution's flags (FORTIFY, PIE, stack protection, …) IN THE ENVIRONMENT:
+# the Makefile has `CFLAGS ?=` and then `CFLAGS +=`.  Passed on the make command
+# line they would override the `+=` too (and the library headers would vanish).
 cd src
 export CFLAGS="%{optflags} -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
 export LDFLAGS="%{?build_ldflags}"
 %if 0%{?suse_version}
-# openSUSE: %%{optflags} non chiede PIE (rpmlint: position-independent-executable-suggested)
+# openSUSE: %%{optflags} does not ask for PIE (rpmlint: position-independent-executable-suggested)
 CFLAGS="$CFLAGS -fPIE"; LDFLAGS="$LDFLAGS -pie"
 %endif
 make pulisci >/dev/null
 make %{?_smp_mflags} tutto
 cd ..
 
-# Il modulo SELinux, con le interfacce della politica di QUESTA distribuzione.
+# The SELinux module, with the policy interfaces of THIS distribution.
 # ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
-#   costruisce il modulo col dominio in «permissive»: per MISURARE i rifiuti di una
-#   sessione intera in un giro solo.  ⛔ Mai in un pacchetto pubblicato.
+#   builds the module with the domain in «permissive»: to MEASURE the denials of a
+#   whole session in a single run.  ⛔ Never in a published package.
 cd packaging/rpm/selinux
 %{?rx_selinux_permissivo:echo 'permissive remotix_t;' >> remotix.te}
 make -f %{_datadir}/selinux/devel/Makefile remotix.pp
@@ -249,78 +249,78 @@ cd ../../..
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
 install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
-# I PREDEFINITI (porta, opzioni): del pacchetto, un aggiornamento li riscrive.
-# Le scelte dell'amministratore in /etc/remotix/remotix.conf.d/*.conf (vincono).
+# The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
+# The administrator's choices in /etc/remotix/remotix.conf.d/*.conf (they win).
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
-# R24 (T8): le versioni delle statiche COLLEGATE (pkg-config nel contenitore di
-# costruzione), per lo SBOM dell'archivio.
-printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+# R24 (T8): the versions of the LINKED static libraries (pkg-config in the build
+# container), for the archive SBOM.
+printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
     "$(pkg-config --modversion libngtcp2)" "$(pkg-config --modversion libnghttp3)" \
     > %{buildroot}%{_datadir}/remotix/incorporate.json
 install -D -m 0644 packaging/rpm/remotix.service %{buildroot}%{_unitdir}/remotix.service
 install -D -m 0644 packaging/rpm/remotix.tmpfiles %{buildroot}%{_tmpfilesdir}/remotix.conf
 install -D -m 0644 src/%{pamsorgente} %{buildroot}%{pamdir}/remotix
 
-# /etc/remotix: chi e' escluso (il PAM ha onerr=fail: senza il file non entra
-# nessuno, quindi il file arriva col pacchetto e non si tocca se cambiato), e la
-# cartella delle scelte dell'amministratore (vuota: il formato e' del motore, T4).
+# /etc/remotix: who is excluded (the PAM has onerr=fail: without the file nobody
+# gets in, so the file comes with the package and is left alone if changed), and the
+# directory of the administrator's choices (empty: the format belongs to the engine, T4).
 install -d -m 0755 %{buildroot}%{_sysconfdir}/remotix/remotix.conf.d
 printf 'root\n' > %{buildroot}%{_sysconfdir}/remotix/utenti-negati
 chmod 0644 %{buildroot}%{_sysconfdir}/remotix/utenti-negati
 
-# Il permesso di cattura di KWin (`zkde_screencast_unstable_v1`): KWin lo cerca in
-# XDG_DATA_DIRS.  ⚠ Oggi lo scrive ANCHE il programma, da root, mentre gira
-# (`src/kwin.c:48`, `kwin_scrivi_permesso()`): il contenuto qui e' identico byte
-# per byte a quello che scriverebbe, quindi non lo riscrive.  ⇒ Da cambiare nel C
-# (§4.4): a esecuzione solo la verifica (`kwin.c:342`).  Non cambiato in T3.
+# The KWin capture permission (`zkde_screencast_unstable_v1`): KWin looks for it in
+# XDG_DATA_DIRS.  ⚠ Today the program ALSO writes it, as root, while running
+# (`src/kwin.c:48`, `kwin_scrivi_permesso()`): the content here is byte-for-byte
+# identical to what it would write, so it does not rewrite it.  ⇒ To be changed in the C
+# (§4.4): at run time only the check (`kwin.c:342`).  Not changed in T3.
 install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}/applications/org.kde.remotix.desktop
 
-# ⭐ `DECISIONI.md` §10.12 — l'installatore e' l'unica via: le tre cinture di
-#   §4.7 (niente spegnimento, niente sospensione, i tasti non spengono) arrivano
-#   SPENTE, fuori dai percorsi che polkit e systemd leggono.  Le monta il motore,
-#   col consenso (D4 aperta: sempre, o scelta dell'amministratore?) e nel suo
-#   registro; i percorsi dove andranno sono quelli del FORNITORE
+# ⭐ `DECISIONI.md` §10.12 — the installer is the only way: the three belts of
+#   §4.7 (no power-off, no suspend, the keys do not power off) arrive
+#   OFF, outside the paths polkit and systemd read.  The engine mounts them,
+#   with consent (D4 open: always, or the administrator's choice?) and in its
+#   log; the paths they will go to are the VENDOR ones
 #   (/usr/share/polkit-1/rules.d/50-…, /usr/lib/systemd/{logind,sleep}.conf.d/),
-#   mai /etc: un file dell'amministratore con lo stesso nome in /etc vince (R34).
+#   never /etc: an administrator's file with the same name in /etc wins (R34).
 install -D -m 0644 src/remotix-niente-spegnimento.rules %{buildroot}%{_datadir}/remotix/cinture/50-remotix-niente-spegnimento.rules
 install -D -m 0644 src/remotix-tasti.conf %{buildroot}%{_datadir}/remotix/cinture/remotix-tasti.conf
 install -D -m 0644 packaging/rpm/remotix-niente-sospensione.conf %{buildroot}%{_datadir}/remotix/cinture/remotix-niente-sospensione.conf
 
-# firewalld: il servizio «remotix» DEFINITO, non aperto (D6, §10.12): il file
-# rende noto un nome a firewalld e non cambia nessuna zona.  L'apertura
-# (`firewall-cmd --permanent --add-service=remotix`) e' del motore, col consenso.
+# firewalld: the «remotix» service DEFINED, not opened (D6, §10.12): the file
+# makes a name known to firewalld and changes no zone.  Opening it
+# (`firewall-cmd --permanent --add-service=remotix`) belongs to the engine, with consent.
 install -D -m 0644 packaging/rpm/remotix-firewalld.xml %{buildroot}%{_prefix}/lib/firewalld/services/remotix.xml
 
-# remotix-selinux: il modulo (il dominio) e la porta (portcon, in CIL)
+# remotix-selinux: the module (the domain) and the port (portcon, in CIL)
 install -D -m 0644 packaging/rpm/selinux/remotix.pp.bz2 %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix.pp.bz2
 install -D -m 0644 packaging/rpm/selinux/remotix_porta.cil %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/remotix_porta.cil
 
-# I file che il servizio genera da se': dichiarati %%ghost, cosi' li conosce rpm
-# e la disinstallazione li toglie (origine DIRETTA, §6.6.4).  `[M]` T3 su
-# Tumbleweed: senza i due `.nostro` (le marche di `certificati.c:317,320`)
-# /var/lib/remotix restava dopo `zypper remove`.
+# The files the service generates by itself: declared %%ghost, so rpm knows them
+# and uninstallation removes them (DIRECT origin, §6.6.4).  `[M]` T3 on
+# Tumbleweed: without the two `.nostro` (the marks of `certificati.c:317,320`)
+# /var/lib/remotix remained after `zypper remove`.
 install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificati
 for f in pagina.pem pagina.key pagina.nostro sessione.pem sessione.key sessione.nostro; do
     touch %{buildroot}%{_sharedstatedir}/remotix/certificati/$f
 done
 touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.nuovo
 
-# ⭐ `DECISIONI.md` §10.12 — gli scriptlet NON accendono niente (R40):
-#   · niente %%systemd_post / %%service_add_post: applicherebbero il «preset»
-#     della macchina, e con un preset «enable *» il servizio si abiliterebbe da
-#     solo.  L'accensione (`systemctl enable --now`) e' del motore;
-#   · niente gruppi della scheda: li mette il motore (`aggiungi-utente-a-gruppo`),
-#     col suo registro;
-#   · niente cinture, niente firewall, niente `systemctl reload systemd-logind`.
-#   systemd rilegge da se' le unita' nuove (i trigger di file di systemd).
+# ⭐ `DECISIONI.md` §10.12 — the scriptlets switch NOTHING on (R40):
+#   · no %%systemd_post / %%service_add_post: they would apply the machine's
+#     «preset», and with an «enable *» preset the service would enable itself.
+#     Switching on (`systemctl enable --now`) belongs to the engine;
+#   · no GPU groups: the engine adds them (`aggiungi-utente-a-gruppo`),
+#     with its log;
+#   · no belts, no firewall, no `systemctl reload systemd-logind`.
+#   systemd rereads new units by itself (systemd's file triggers).
 
 %post
-# Solo la cartella /var/lib/remotix (0700), che rpm crea gia' col %%dir: inerte.
+# Only the /var/lib/remotix directory (0700), which rpm already creates with %%dir: inert.
 %tmpfiles_create remotix.conf
 
 %preun
-# Alla disinstallazione: se il motore l'aveva acceso, si ferma e si disabilita
-# (niente resta abilitato a puntare a un file che non c'e' piu').
+# On uninstallation: if the engine had switched it on, it is stopped and disabled
+# (nothing stays enabled pointing to a file that no longer exists).
 %if 0%{?suse_version}
 %service_del_preun remotix.service
 %else
@@ -328,9 +328,9 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %endif
 
 %postun
-# All'aggiornamento: `try-restart`, cioe' SOLO se era gia' acceso (T2, §5.2, T7:
-# i desktop sopravvivono, il servizio nuovo li ritrova, chi e' collegato
-# riattacca).  REMOTIX si aggiorna col sistema (DECISIONI §10.23): dnf upgrade,
+# On upgrade: `try-restart`, that is ONLY if it was already running (T2, §5.2, T7:
+# the desktops survive, the new service finds them again, whoever is connected
+# reattaches).  REMOTIX upgrades with the system (DECISIONI §10.23): dnf upgrade,
 # zypper up.
 %if 0%{?suse_version}
 %service_del_postun remotix.service
@@ -339,9 +339,9 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 %endif
 
 %posttrans
-# Dopo la transazione (anche remotix-install e' gia' al suo posto): il motore
-# annota le versioni e dice se l'installazione e' ancora certificata
-# (DECISIONI §10.12 punto 4, §10.23).  ⛔ Non fa mai fallire la transazione.
+# After the transaction (remotix-install is in place too): the engine
+# records the versions and says whether the installation is still certified
+# (DECISIONI §10.12 point 4, §10.23).  ⛔ It never makes the transaction fail.
 if [ -x /usr/bin/remotix-install ]; then
 	/usr/bin/remotix-install post-upgrade || :
 fi
@@ -360,8 +360,8 @@ fi
 %{_unitdir}/remotix.service
 %{_tmpfilesdir}/remotix.conf
 %if 0%{?suse_version}
-# /usr/lib/pam.d e' del fornitore: l'amministratore la cambia con un suo
-# /etc/pam.d/remotix, che vince.  Nessun %%config.
+# /usr/lib/pam.d belongs to the vendor: the administrator changes it with their own
+# /etc/pam.d/remotix, which wins.  No %%config.
 %{pamdir}/remotix
 %else
 %config(noreplace) %{pamdir}/remotix
@@ -387,10 +387,10 @@ fi
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.nuovo
 
-# ⭐ remotix-selinux: gli scriptlet sono quelli della politica (come cockpit-ws-selinux).
-#   Il modulo si carica e basta: non accende niente (R40).  Il ricalcolo delle etichette
-#   si fa in %%posttrans, quando anche i file di remotix sono al loro posto (nella stessa
-#   transazione rpm li scrive con le etichette di PRIMA del modulo).
+# ⭐ remotix-selinux: the scriptlets are the policy's (like cockpit-ws-selinux).
+#   The module is just loaded: it switches nothing on (R40).  The relabelling
+#   happens in %%posttrans, when the remotix files are in place too (in the same
+#   transaction rpm writes them with the labels from BEFORE the module).
 %pre selinux
 %selinux_relabel_pre -s %{selinuxtype}
 
@@ -411,6 +411,6 @@ fi
 
 %changelog
 * Wed Sep 30 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
-- Fase 17, T6: il PAM di sshd (D3), il sottopacchetto remotix-selinux.
+- Phase 17, T6: the sshd PAM (D3), the remotix-selinux subpackage.
 * Tue Sep 29 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
-- Fase 17, T3: il primo pacchetto nativo per Fedora, Alma, Tumbleweed e Leap.
+- Phase 17, T3: the first native package for Fedora, Alma, Tumbleweed and Leap.

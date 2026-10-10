@@ -1,14 +1,14 @@
 #!/bin/sh
-# remotix.postinst — dopo che i file sono al loro posto (fasi/17 §6.4).
+# remotix.postinst — after the files are in place (fasi/17 §6.4).
 #
-# ⛔ DECISIONI §10.12: il pacchetto non accende niente; il servizio, i gruppi,
-#    le cinture e il firewall li monta il MOTORE, col consenso.
-# ⭐ All'aggiornamento (apt upgrade: REMOTIX si aggiorna col sistema, DECISIONI
-#    §10.23) la parte di debhelper qui sotto fa `try-restart`: il servizio
-#    riparte SOLO se girava, e i desktop restano vivi (T2, §5.2) — il servizio
-#    nuovo li ritrova (T7).  Poi il motore, se c'e', annota le versioni e dice
-#    se l'installazione e' ancora certificata (§10.12 punto 4).  ⛔ Il motore
-#    non fa mai fallire apt.
+# ⛔ DECISIONI §10.12: the package switches nothing on; the service, the groups,
+#    the belts and the firewall are set up by the ENGINE, with consent.
+# ⭐ On upgrade (apt upgrade: REMOTIX upgrades with the system, DECISIONI
+#    §10.23) the debhelper part below does `try-restart`: the service
+#    restarts ONLY if it was running, and the desktops stay alive (T2, §5.2) — the new
+#    service finds them again (T7).  Then the engine, if present, records the versions and says
+#    whether the installation is still certified (§10.12 point 4).  ⛔ The engine
+#    never makes apt fail.
 set -e
 
 #DEBHELPER#

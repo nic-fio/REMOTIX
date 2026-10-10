@@ -1,11 +1,11 @@
-// impronta: l'impronta di una cartella per la prova R1 (il controllo preliminare non tocca
-// niente). Una riga per voce: percorso, tipo, permessi, proprietario, dimensione, ora di modifica
-// in nanosecondi, destinazione dei collegamenti, sha256 dei file. Indipendente dal motore (non
-// importa niente di suo): chi misura non deve essere chi è misurato.
+// impronta: the fingerprint of a folder for test R1 (the preliminary check touches
+// nothing). One line per entry: path, type, permissions, owner, size, modification time
+// in nanoseconds, link target, sha256 of the files. Independent of the engine (it does not
+// import anything of its own): whoever measures must not be whoever is measured.
 //
 //	impronta /etc > prima.txt
-//	impronta -contenuti /etc > prima.txt   (senza l'ora di modifica delle CARTELLE: aggiungere e
-//	                                        togliere un file la cambia, anche se poi tutto torna com'era)
+//	impronta -contenuti /etc > prima.txt   (without the modification time of FOLDERS: adding and
+//	                                        removing a file changes it, even if then everything goes back as it was)
 //	impronta -confronta prima.txt dopo.txt
 package main
 
@@ -36,12 +36,12 @@ func main() {
 	}
 	err := filepath.WalkDir(radice, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf("%s ERRORE %v\n", p, err)
+			fmt.Printf("%s ERROR %v\n", p, err)
 			return nil
 		}
 		info, err := os.Lstat(p)
 		if err != nil {
-			fmt.Printf("%s ERRORE %v\n", p, err)
+			fmt.Printf("%s ERROR %v\n", p, err)
 			return nil
 		}
 		st := info.Sys().(*syscall.Stat_t)
@@ -61,7 +61,7 @@ func main() {
 				f.Close()
 				riga += " " + hex.EncodeToString(h.Sum(nil))
 			} else {
-				riga += " illeggibile"
+				riga += " unreadable"
 			}
 		}
 		fmt.Println(riga)
@@ -73,8 +73,8 @@ func main() {
 	}
 }
 
-// confronta due impronte: stampa le righe diverse, esce 1 se ce ne sono (nei contenitori minimi
-// non c'è diff).
+// confronta two fingerprints: prints the differing lines, exits 1 if there are any (the minimal containers
+// have no diff).
 func confronta(a, b string) int {
 	ra, _ := os.ReadFile(a)
 	rb, _ := os.ReadFile(b)

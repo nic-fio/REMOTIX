@@ -1,14 +1,14 @@
 /*
- * vadiretta.c — H.264 e HEVC sulla scheda con libva diretta.  Il perche' sta in
- * `vadiretta.h`; qui c'e' il come, e accanto a ogni campo il valore che ffmpeg
- * 7.1 scriveva per noi (`[M]` 30 set 2026, tracce dei flussi di oggi).
+ * vadiretta.c — H.264 and HEVC on the card with libva directly.  The why is in
+ * `vadiretta.h`; here is the how, and next to every field the value that ffmpeg
+ * 7.1 used to write for us (`[M]` 30 Sep 2026, traces of today's streams).
  *
- * L'ordine del file segue l'ordine di un fotogramma:
- *   1. il dispositivo e la configurazione (una volta);
- *   2. il livello, calcolato come `ff_h264_guess_level`/`ff_h265_guess_level`;
- *   3. le intestazioni scritte bit per bit — H.264, poi HEVC;
- *   4. il giro di codifica di un fotogramma;
- *   5. la strada dalla memoria (i pixel che salgono sulla scheda).
+ * The order of the file follows the order of a frame:
+ *   1. the device and the configuration (once);
+ *   2. the level, computed like `ff_h264_guess_level`/`ff_h265_guess_level`;
+ *   3. the headers written bit by bit — H.264, then HEVC;
+ *   4. the encoding round of one frame;
+ *   5. the route from memory (the pixels that go up to the card).
  */
 #include "vadiretta.h"
 #include "registro.h"
@@ -29,15 +29,15 @@
 
 #define REG_CODIFICA "video"
 
-/* ⛔ Quante superfici RICOSTRUITE tiene il driver per noi: la corrente e il
- *    riferimento (un solo riferimento, niente B — `codificatore.h`, «il
- *    ritardo pesa piu' dei fotogrammi»).  Tre e non due, per il margine sui
- *    driver che tengono un giro in piu' in canna. */
+/* ⛔ How many RECONSTRUCTED surfaces the driver keeps for us: the current one and
+ *    the reference (a single reference, no B — `codificatore.h`, «latency
+ *    weighs more than frames»).  Three and not two, for headroom on the
+ *    drivers that keep one extra round in the pipe. */
 #define RICOSTRUITE 3
 
-/* Quanto grande il buffer dei byte codificati: la stessa regola di ffmpeg
- * (`vaapi_encode_alloc_output_buffer`): 3 x larghezza x altezza + 64 KiB —
- * un fotogramma non compresso e' un tetto per uno compresso. */
+/* How large the buffer of encoded bytes is: the same rule as ffmpeg
+ * (`vaapi_encode_alloc_output_buffer`): 3 x width x height + 64 KiB —
+ * an uncompressed frame is a ceiling for a compressed one. */
 #define CODED_MARGINE (1u << 16)
 
 static void di(char *dove, size_t quanto, const char *fmt, ...)
@@ -52,7 +52,7 @@ static void di(char *dove, size_t quanto, const char *fmt, ...)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 1. IL DISPOSITIVO
+ * 1. THE DEVICE
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 bool vadiretta_apri_dispositivo(const char *nodo, VaDispositivo *d, char *errore,
@@ -64,24 +64,24 @@ bool vadiretta_apri_dispositivo(const char *nodo, VaDispositivo *d, char *errore
 	memset(d, 0, sizeof *d);
 	d->fd = -1;
 	if (!nodo || !nodo[0]) {
-		di(errore, errore_byte, "nessun nodo di rendering dichiarato");
+		di(errore, errore_byte, "no render node declared");
 		return false;
 	}
 	d->fd = open(nodo, O_RDWR | O_CLOEXEC);
 	if (d->fd < 0) {
-		di(errore, errore_byte, "«%s» non si apre: %s", nodo, strerror(errno));
+		di(errore, errore_byte, "«%s» does not open: %s", nodo, strerror(errno));
 		return false;
 	}
 	d->display = vaGetDisplayDRM(d->fd);
 	if (!d->display) {
-		di(errore, errore_byte, "vaGetDisplayDRM su «%s» non ha reso un display", nodo);
+		di(errore, errore_byte, "vaGetDisplayDRM on «%s» returned no display", nodo);
 		close(d->fd);
 		d->fd = -1;
 		return false;
 	}
 	st = vaInitialize(d->display, &d->maggiore, &d->minore);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "VA-API non si e' aperta su «%s»: %s", nodo, vaErrorStr(st));
+		di(errore, errore_byte, "VA-API did not open on «%s»: %s", nodo, vaErrorStr(st));
 		close(d->fd);
 		d->fd = -1;
 		d->display = NULL;
@@ -106,13 +106,13 @@ void vadiretta_chiudi_dispositivo(VaDispositivo *d)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 2. IL LIVELLO — come lo indovinava ffmpeg quando nessuno lo imponeva
+ * 2. THE LEVEL — how ffmpeg guessed it when nobody imposed one
  *
- * ⛔ Serve perche' `ffprobe -show_streams` deve dire lo STESSO livello di
- *    ieri anche quando il client non ne dichiara uno (i banchi, e `RCP.md`
- *    §4.3 non obbliga il client).  Le tabelle sono A-1 di H.264 e A.4 di
- *    H.265, riprese da `h264_levels.c` e `h265_profile_level.c` di ffmpeg;
- *    per HEVC bastano Main e Main 10, gli unici profili che apriamo.
+ * ⛔ Needed because `ffprobe -show_streams` must report the SAME level as
+ *    yesterday even when the client declares none (the benches, and `RCP.md`
+ *    §4.3 does not oblige the client).  The tables are A-1 of H.264 and A.4 of
+ *    H.265, taken from ffmpeg's `h264_levels.c` and `h265_profile_level.c`;
+ *    for HEVC Main and Main 10 are enough, the only profiles we open.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 typedef struct {
@@ -135,8 +135,8 @@ static const LivelloH264 LIVELLI_H264[] = {
 };
 
 /* `ff_h264_guess_level(100, bitrate, fps, mbw*16, mbh*16, dpb=1)`.
- * ⚠ 1500 e' il fattore NAL di High (tabella A-2); i profili Baseline/Main
- *   avrebbero 1200, ma High e' l'unico che apriamo. */
+ * ⚠ 1500 is the NAL factor of High (table A-2); the Baseline/Main profiles
+ *   would have 1200, but High is the only one we open. */
 static int livello_h264(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, int dpb)
 {
 	for (size_t i = 0; i < sizeof LIVELLI_H264 / sizeof LIVELLI_H264[0]; i++) {
@@ -144,7 +144,7 @@ static int livello_h264(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, 
 		uint64_t mb = (uint64_t) mb_l * mb_a;
 
 		if (L->cs3f)
-			continue; /* High non porta constraint_set3 */
+			continue; /* High does not carry constraint_set3 */
 		if (bitrate > (int64_t) L->max_br * 1500)
 			continue;
 		if (mb > (uint64_t) L->max_fs)
@@ -181,12 +181,12 @@ static const LivelloHEVC LIVELLI_HEVC[] = {
 	{ 186, 35651584, 240000 },
 };
 
-/* `ff_h265_guess_level` per Main/Main10, tier Main, 1 slice, niente tile,
+/* `ff_h265_guess_level` for Main/Main10, Main tier, 1 slice, no tiles,
  * `max_dec_pic_buffering` = 1: CpbNalFactor 1100, hbr_factor 1,
- * maxDpbPicBuf 6.  ⚠ Il bitrate qui e' il PUNTO di lavoro (`avctx->bit_rate`),
- *   non il filo: e' cosi' in `hw_base_encode_h265.c`, e H.264 fa il contrario
- *   (`ctx->va_bit_rate`, cioe' il filo).  Due asimmetrie che si copiano, non
- *   si correggono. */
+ * maxDpbPicBuf 6.  ⚠ The bitrate here is the working POINT (`avctx->bit_rate`),
+ *   not the wire: that is how `hw_base_encode_h265.c` does it, and H.264 does the
+ *   opposite (`ctx->va_bit_rate`, i.e. the wire).  Two asymmetries to be copied,
+ *   not corrected. */
 static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
 {
 	uint64_t pic = (uint64_t) l * a;
@@ -215,53 +215,53 @@ static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
 			continue;
 		return L->level_idc;
 	}
-	return 255; /* «using level 8.5» — e ffmpeg alza il tier: vedi `hevc_ptl()` */
+	return 255; /* «using level 8.5» — and ffmpeg raises the tier: see `hevc_ptl()` */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * LO STATO
+ * THE STATE
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 struct VaDiretta {
 	VADisplay display;
-	char fornitore[128];           /* per il SEI: chi ha codificato */
+	char fornitore[128];           /* for the SEI: who encoded */
 	VaDirettaRichiesta r;
 	VaDirettaDichiarazione d;
 
 	VAConfigID config;
 	VAContextID contesto;
-	VASurfaceID *ingresso;         /* il magazzino d'ingresso */
+	VASurfaceID *ingresso;         /* the input pool */
 	unsigned quante_ingresso, prossima_ingresso;
 	VASurfaceID ricostruite[RICOSTRUITE];
 	VABufferID coded;
 	size_t coded_byte;
 
-	/* i byte dell'ultimo fotogramma, in Annex-B, nostri */
+	/* the bytes of the last frame, in Annex-B, ours */
 	uint8_t *uscita;
 	size_t uscita_capacita, uscita_byte;
 
-	/* lo stato della sequenza — quel che ffmpeg teneva in `FFHWBaseEncodePicture` */
-	uint64_t ordine;               /* quanti fotogrammi codificati da quest'apertura */
-	uint64_t ultimo_idr;           /* l'ordine dell'ultimo IDR */
-	uint32_t nel_gop;              /* fotogrammi dall'ultimo IDR compreso */
-	bool riferimento_valido;       /* c'e' un fotogramma precedente da cui predire */
-	unsigned ricostruita_corrente; /* quale delle RICOSTRUITE riceve questo fotogramma */
+	/* the sequence state — what ffmpeg kept in `FFHWBaseEncodePicture` */
+	uint64_t ordine;               /* how many frames encoded since this open */
+	uint64_t ultimo_idr;           /* the order of the last IDR */
+	uint32_t nel_gop;              /* frames since the last IDR, inclusive */
+	bool riferimento_valido;       /* there is a previous frame to predict from */
+	unsigned ricostruita_corrente; /* which of the RICOSTRUITE receives this frame */
 	unsigned ricostruita_riferimento;
 	/* H.264 */
 	uint32_t frame_num, frame_num_riferimento;
 	uint32_t idr_pic_id;
-	int32_t poc, poc_riferimento;  /* HEVC: display − ultimo IDR · H.264: il doppio (poc type 2) */
+	int32_t poc, poc_riferimento;  /* HEVC: display − last IDR · H.264: twice that (poc type 2) */
 	bool sei_identificatore_scritto;
 
-	/* i parametri di sequenza/immagine fissi, riempiti all'apertura */
+	/* the fixed sequence/picture parameters, filled at open */
 	union {
 		VAEncSequenceParameterBufferH264 h264;
 		VAEncSequenceParameterBufferHEVC hevc;
 	} seq;
-	int qp_fisso;                  /* CQP: il QP chiesto · QVBR: 26 (H.264) / 30 (HEVC), come ffmpeg */
-	uint32_t mb_l, mb_a;           /* H.264: i macroblocchi */
-	uint32_t ctb_l, ctb_a;         /* HEVC: i CTB */
-	/* HEVC: quel che finisce nell'SPS/PPS, deciso dagli attributi del driver */
+	int qp_fisso;                  /* CQP: the requested QP · QVBR: 26 (H.264) / 30 (HEVC), like ffmpeg */
+	uint32_t mb_l, mb_a;           /* H.264: the macroblocks */
+	uint32_t ctb_l, ctb_a;         /* HEVC: the CTBs */
+	/* HEVC: what ends up in the SPS/PPS, decided by the driver's attributes */
 	struct {
 		unsigned log2_min_cb_m3, log2_diff_cb, log2_min_tb_m2, log2_diff_tb;
 		unsigned depth_inter, depth_intra;
@@ -272,19 +272,19 @@ struct VaDiretta {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 3. LE INTESTAZIONI — H.264
+ * 3. THE HEADERS — H.264
  *
- * Ogni funzione scrive l'RBSP con `ScrittoreBit` e poi il NAL in Annex-B con
- * `nal_annexb()`.  ⚠ Le capacita' sono larghe apposta: un SPS sono ~30 byte,
- *   uno slice header ~10, il SEI ~120.
+ * Each function writes the RBSP with `ScrittoreBit` and then the NAL in Annex-B with
+ * `nal_annexb()`.  ⚠ The capacities are generous on purpose: an SPS is ~30 bytes,
+ *   a slice header ~10, the SEI ~120.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 #define INTESTAZIONE_MAX 512
 
-/* I tre numeri del colore, dichiarati e non ereditati (`codificatore.c`,
- * «IL COLORE SI DICHIARA»): BT.709 su tutte e tre le voci, intervallo
- * limitato.  Sono i valori di `AVCOL_PRI_BT709`/`AVCOL_TRC_BT709`/
- * `AVCOL_SPC_BT709` = 1, e il flag di intervallo pieno a 0. */
+/* The three colour numbers, declared and not inherited (`codificatore.c`,
+ * «COLOUR IS DECLARED»): BT.709 on all three entries, limited
+ * range.  They are the values of `AVCOL_PRI_BT709`/`AVCOL_TRC_BT709`/
+ * `AVCOL_SPC_BT709` = 1, and the full-range flag at 0. */
 #define COLORE_PRIMARI 1
 #define COLORE_TRASFERIMENTO 1
 #define COLORE_MATRICE 1
@@ -294,7 +294,7 @@ static bool h264_cqp(const VaDiretta *v)
 	return v->d.modo_va == VA_RC_CQP;
 }
 
-/* av_log2: il bit piu' alto acceso. */
+/* av_log2: the highest bit set. */
 static int log2_intero(uint64_t x)
 {
 	int n = -1;
@@ -326,7 +326,7 @@ static void h264_hrd_parametri(ScrittoreBit *s, const VaDiretta *v)
 	sb_u(s, 4, cpb_size_scale);
 	sb_ue(s, (uint32_t) ((bitrate >> (bit_rate_scale + 6)) - 1)); /* bit_rate_value_minus1[0] */
 	sb_ue(s, (uint32_t) ((cpb >> (cpb_size_scale + 4)) - 1));     /* cpb_size_value_minus1[0] */
-	sb_flag(s, false);                                  /* cbr_flag[0]: mai, anche in CBR */
+	sb_flag(s, false);                                  /* cbr_flag[0]: never, even in CBR */
 	sb_u(s, 5, 23);                                     /* initial_cpb_removal_delay_length_minus1 */
 	sb_u(s, 5, 23);                                     /* cpb_removal_delay_length_minus1 */
 	sb_u(s, 5, 7);                                      /* dpb_output_delay_length_minus1 */
@@ -342,13 +342,13 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	uint32_t taglio_giu = (16 * v->mb_a - v->r.altezza) / 2;
 
 	sb_apri(&s, rbsp, sizeof rbsp);
-	sb_u(&s, 8, 100);                 /* profile_idc: High, ed e' quel che dice `avc1.64..` */
+	sb_u(&s, 8, 100);                 /* profile_idc: High, which is what `avc1.64..` says */
 	sb_flag(&s, false);               /* constraint_set0_flag */
 	sb_flag(&s, false);               /* constraint_set1_flag */
 	sb_flag(&s, false);               /* constraint_set2_flag */
-	sb_flag(&s, false);               /* constraint_set3_flag: solo con gop_size == 1 */
+	sb_flag(&s, false);               /* constraint_set3_flag: only with gop_size == 1 */
 	sb_flag(&s, true);                /* constraint_set4_flag: High ⇒ 1 */
-	sb_flag(&s, true);                /* constraint_set5_flag: niente B ⇒ 1 */
+	sb_flag(&s, true);                /* constraint_set5_flag: no B ⇒ 1 */
 	sb_u(&s, 2, 0);                   /* reserved_zero_2bits */
 	sb_u(&s, 8, (uint32_t) v->d.livello_idc);
 	sb_ue(&s, 0);                     /* seq_parameter_set_id */
@@ -357,15 +357,15 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_chroma_minus8 */
 	sb_flag(&s, false);               /* qpprime_y_zero_transform_bypass_flag */
 	sb_flag(&s, false);               /* seq_scaling_matrix_present_flag */
-	sb_ue(&s, 4);                     /* log2_max_frame_num_minus4: frame_num su 8 bit */
-	sb_ue(&s, 2);                     /* pic_order_cnt_type: 2, perche' niente B */
-	sb_ue(&s, 1);                     /* max_num_ref_frames: uno, il precedente */
+	sb_ue(&s, 4);                     /* log2_max_frame_num_minus4: frame_num on 8 bits */
+	sb_ue(&s, 2);                     /* pic_order_cnt_type: 2, because no B */
+	sb_ue(&s, 1);                     /* max_num_ref_frames: one, the previous */
 	sb_flag(&s, false);               /* gaps_in_frame_num_value_allowed_flag */
 	sb_ue(&s, v->mb_l - 1);           /* pic_width_in_mbs_minus1 */
 	sb_ue(&s, v->mb_a - 1);           /* pic_height_in_map_units_minus1 */
 	sb_flag(&s, true);                /* frame_mbs_only_flag */
 	sb_flag(&s, true);                /* direct_8x8_inference_flag */
-	if (taglio_dx || taglio_giu) {    /* frame_cropping_flag: la tela non e' multipla di 16 */
+	if (taglio_dx || taglio_giu) {    /* frame_cropping_flag: the canvas is not a multiple of 16 */
 		sb_flag(&s, true);
 		sb_ue(&s, 0);
 		sb_ue(&s, taglio_dx);
@@ -376,11 +376,11 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	}
 	sb_flag(&s, true);                /* vui_parameters_present_flag */
 	/* VUI (E.1.1) */
-	sb_flag(&s, false);               /* aspect_ratio_info_present_flag: la cattura non ha SAR */
+	sb_flag(&s, false);               /* aspect_ratio_info_present_flag: the capture has no SAR */
 	sb_flag(&s, false);               /* overscan_info_present_flag */
 	sb_flag(&s, true);                /* video_signal_type_present_flag */
-	sb_u(&s, 3, 5);                   /* video_format: non specificato (tabella E-2) */
-	sb_flag(&s, false);               /* video_full_range_flag: limitato — Firefox ignora il pieno [M] */
+	sb_u(&s, 3, 5);                   /* video_format: unspecified (table E-2) */
+	sb_flag(&s, false);               /* video_full_range_flag: limited — Firefox ignores full [M] */
 	sb_flag(&s, true);                /* colour_description_present_flag */
 	sb_u(&s, 8, COLORE_PRIMARI);
 	sb_u(&s, 8, COLORE_TRASFERIMENTO);
@@ -393,9 +393,9 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	if (h264_cqp(v)) {
 		sb_flag(&s, false);           /* nal_hrd_parameters_present_flag */
 		sb_flag(&s, false);           /* vcl_hrd_parameters_present_flag */
-		/* low_delay_hrd_flag: non presente senza HRD (inferito 1 − fixed_frame_rate) */
+		/* low_delay_hrd_flag: absent without HRD (inferred 1 − fixed_frame_rate) */
 	} else {
-		sb_flag(&s, true);            /* nal_hrd_parameters_present_flag: col tetto acceso ffmpeg li scrive */
+		sb_flag(&s, true);            /* nal_hrd_parameters_present_flag: with the cap on, ffmpeg writes them */
 		h264_hrd_parametri(&s, v);
 		sb_flag(&s, false);           /* vcl_hrd_parameters_present_flag */
 		sb_flag(&s, false);           /* low_delay_hrd_flag */
@@ -407,8 +407,8 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 0);                     /* max_bits_per_mb_denom */
 	sb_ue(&s, 15);                    /* log2_max_mv_length_horizontal */
 	sb_ue(&s, 15);                    /* log2_max_mv_length_vertical */
-	sb_ue(&s, 0);                     /* max_num_reorder_frames: niente B */
-	sb_ue(&s, 1);                     /* max_dec_frame_buffering: il solo riferimento */
+	sb_ue(&s, 0);                     /* max_num_reorder_frames: no B */
+	sb_ue(&s, 1);                     /* max_dec_frame_buffering: the single reference */
 	sb_chiudi_rbsp(&s);
 	if (s.traboccato)
 		return 0;
@@ -437,7 +437,7 @@ static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, false);               /* deblocking_filter_control_present_flag */
 	sb_flag(&s, false);               /* constrained_intra_pred_flag */
 	sb_flag(&s, false);               /* redundant_pic_cnt_present_flag */
-	/* more_rbsp_data(): su High ffmpeg scrive anche questi tre */
+	/* more_rbsp_data(): on High ffmpeg also writes these three */
 	sb_flag(&s, true);                /* transform_8x8_mode_flag */
 	sb_flag(&s, false);               /* pic_scaling_matrix_present_flag */
 	sb_se(&s, 0);                     /* second_chroma_qp_index_offset */
@@ -448,32 +448,32 @@ static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 }
 
 /*
- * Lo slice header (7.3.3) per il nostro unico slice: IDR o P.
- * ⚠ `mmco 1` con `difference_of_pic_nums_minus1 = 0` su OGNI P: e' ffmpeg che
- *   scarta il riferimento precedente appena ne ha uno nuovo («Discard
+ * The slice header (7.3.3) for our single slice: IDR or P.
+ * ⚠ `mmco 1` with `difference_of_pic_nums_minus1 = 0` on EVERY P: it is ffmpeg
+ *   discarding the previous reference as soon as it has a new one («Discard
  *   everything which is in the DPB of the previous frame but not in the DPB
- *   of this one»), e con un solo riferimento la differenza e' sempre 0 —
- *   `[M]` e' in ogni P della traccia di oggi.
+ *   of this one»), and with a single reference the difference is always 0 —
+ *   `[M]` it is in every P of today's trace.
  */
 static size_t h264_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa = idr ? 0x65 : 0x41; /* IDR: ref_idc 3, tipo 5 · P: ref_idc 1, tipo 1 */
+	const uint8_t testa = idr ? 0x65 : 0x41; /* IDR: ref_idc 3, type 5 · P: ref_idc 1, type 1 */
 	ScrittoreBit s;
 
 	sb_apri(&s, rbsp, sizeof rbsp);
 	sb_ue(&s, 0);                     /* first_mb_in_slice */
-	sb_ue(&s, idr ? 7 : 5);           /* slice_type: I (7) / P (5), «tutti gli slice cosi'» */
+	sb_ue(&s, idr ? 7 : 5);           /* slice_type: I (7) / P (5), «all slices like this» */
 	sb_ue(&s, 0);                     /* pic_parameter_set_id */
-	sb_u(&s, 8, v->frame_num & 0xFFu); /* frame_num, su log2_max_frame_num = 8 bit */
+	sb_u(&s, 8, v->frame_num & 0xFFu); /* frame_num, on log2_max_frame_num = 8 bits */
 	if (idr)
 		sb_ue(&s, v->idr_pic_id);     /* idr_pic_id */
-	/* pic_order_cnt_type 2: niente pic_order_cnt_lsb */
+	/* pic_order_cnt_type 2: no pic_order_cnt_lsb */
 	if (!idr) {
 		sb_flag(&s, false);           /* num_ref_idx_active_override_flag */
 		sb_flag(&s, false);           /* ref_pic_list_modification_flag_l0 */
 	}
-	/* dec_ref_pic_marking(): nal_ref_idc != 0 in tutt'e due i casi */
+	/* dec_ref_pic_marking(): nal_ref_idc != 0 in both cases */
 	if (idr) {
 		sb_flag(&s, false);           /* no_output_of_prior_pics_flag */
 		sb_flag(&s, false);           /* long_term_reference_flag */
@@ -481,24 +481,24 @@ static size_t h264_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 		sb_flag(&s, true);            /* adaptive_ref_pic_marking_mode_flag */
 		sb_ue(&s, 1);                 /* memory_management_control_operation 1 */
 		sb_ue(&s, v->frame_num - v->frame_num_riferimento - 1); /* difference_of_pic_nums_minus1 */
-		sb_ue(&s, 0);                 /* memory_management_control_operation 0: fine */
-		sb_ue(&s, 0);                 /* cabac_init_idc (CABAC, slice non I) */
+		sb_ue(&s, 0);                 /* memory_management_control_operation 0: end */
+		sb_ue(&s, 0);                 /* cabac_init_idc (CABAC, non-I slice) */
 	}
-	sb_se(&s, 0);                     /* slice_qp_delta: il QP e' gia' in pic_init_qp */
+	sb_se(&s, 0);                     /* slice_qp_delta: the QP is already in pic_init_qp */
 	sb_allinea_con_uni(&s);           /* cabac_alignment_one_bit */
 	if (s.traboccato)
 		return 0;
 	return nal_annexb(fuori, capacita, &testa, 1, rbsp, sb_byte(&s));
 }
 
-/* ⭐ L'UUID di REMOTIX per il SEI user_data_unregistered (D.1.7): 16 byte
- *    tirati una volta e fermi.  Diverso da quello di ffmpeg apposta: un
- *    lettore che cerchi «chi ha codificato» trova la verita'. */
+/* ⭐ REMOTIX's UUID for the user_data_unregistered SEI (D.1.7): 16 bytes
+ *    drawn once and fixed.  Different from ffmpeg's on purpose: a
+ *    reader looking for «who encoded» finds the truth. */
 static const uint8_t UUID_REMOTIX[16] = { 0x52, 0x45, 0x4d, 0x4f, 0x54, 0x49, 0x58, 0x2d,
 	                                      0x76, 0x61, 0x64, 0x69, 0x72, 0x65, 0x74, 0x74 };
 
-/* Il SEI del primo fotogramma: chi siamo, e col tetto acceso anche il
- * buffering_period (D.1.1) — gli stessi due che ffmpeg mette in un solo NAL. */
+/* The SEI of the first frame: who we are, and with the cap on also the
+ * buffering_period (D.1.1) — the same two that ffmpeg puts in a single NAL. */
 static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
@@ -515,7 +515,7 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 	if (identificatore) {
 		snprintf(testo, sizeof testo, "REMOTIX vadiretta / VAAPI %d.%d / %s",
 		         VA_MAJOR_VERSION, VA_MINOR_VERSION, v->fornitore);
-		lunghezza = strlen(testo) + 1; /* col NUL, come ffmpeg */
+		lunghezza = strlen(testo) + 1; /* with the NUL, like ffmpeg */
 		sb_u(&s, 8, 5);                                 /* last_payload_type_byte: user_data_unregistered */
 		sb_u(&s, 8, (uint32_t) (16 + lunghezza));       /* last_payload_size_byte */
 		for (int i = 0; i < 16; i++)
@@ -524,8 +524,8 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 			sb_u(&s, 8, (uint8_t) testo[i]);
 	}
 	if (tempi) {
-		/* buffering_period sull'IDR (7 byte: ue sps_id + 2 x u(24)) e
-		 * pic_timing su ogni fotogramma (u(24) + u(8) = 4 byte), con i conti di
+		/* buffering_period on the IDR (7 bytes: ue sps_id + 2 x u(24)) and
+		 * pic_timing on every frame (u(24) + u(8) = 4 bytes), with the arithmetic of
 		 * `vaapi_encode_h264_init_picture_params`. */
 		uint64_t serbatoio = (uint64_t) v->r.serbatoio_bit;
 		uint64_t pieno = serbatoio * 3 / 4; /* initial_buffer_fullness */
@@ -534,7 +534,7 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 
 		if (idr) {
 			sb_u(&s, 8, 0);                             /* payloadType 0: buffering_period */
-			sb_u(&s, 8, 7);                             /* payloadSize: ue(0)=1 bit + 48 bit + coda = 7 byte */
+			sb_u(&s, 8, 7);                             /* payloadSize: ue(0)=1 bit + 48 bits + tail = 7 bytes */
 			sb_ue(&s, 0);                               /* seq_parameter_set_id */
 			sb_u(&s, 24, rimozione_iniziale);           /* initial_cpb_removal_delay[0] */
 			sb_u(&s, 24, 0);                            /* initial_cpb_removal_delay_offset[0] */
@@ -545,7 +545,7 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 		sb_u(&s, 8, 1);                                 /* payloadType 1: pic_timing */
 		sb_u(&s, 8, 4);                                 /* payloadSize: 24 + 8 bit */
 		sb_u(&s, 24, 2u * cpb_delay);                   /* cpb_removal_delay */
-		sb_u(&s, 8, 0);                                 /* dpb_output_delay: 2·dpb_delay, con max_b_depth 0 */
+		sb_u(&s, 8, 0);                                 /* dpb_output_delay: 2·dpb_delay, with max_b_depth 0 */
 	}
 	sb_chiudi_rbsp(&s);
 	if (s.traboccato)
@@ -554,13 +554,13 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 3-bis. LE INTESTAZIONI — HEVC
+ * 3-bis. THE HEADERS — HEVC
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* profile_tier_level(1, 0) di 7.3.3: 96 bit.  Main: compat[1] e [2]; Main 10:
- * compat[2].  ⚠ Con compat[2] acceso il ramo dei vincoli e' quello «profilo
- *   2»: 7 bit riservati, one_picture_only, 35 riservati — e' l'ordine che
- *   `cbs_h265` segue e che la traccia di oggi mostra. */
+/* profile_tier_level(1, 0) of 7.3.3: 96 bits.  Main: compat[1] and [2]; Main 10:
+ * compat[2].  ⚠ With compat[2] set the constraint branch is the «profile
+ *   2» one: 7 reserved bits, one_picture_only, 35 reserved — the order that
+ *   `cbs_h265` follows and that today's trace shows. */
 static void hevc_ptl(ScrittoreBit *s, const VaDiretta *v)
 {
 	unsigned profilo = v->r.profondita == 10 ? 2 : 1;
@@ -586,7 +586,7 @@ static void hevc_ptl(ScrittoreBit *s, const VaDiretta *v)
 static size_t hevc_vps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x40, 0x01 }; /* tipo 32, layer 0, temporal_id_plus1 1 */
+	const uint8_t testa[2] = { 0x40, 0x01 }; /* type 32, layer 0, temporal_id_plus1 1 */
 	ScrittoreBit s;
 
 	sb_apri(&s, rbsp, sizeof rbsp);
@@ -606,7 +606,7 @@ static size_t hevc_vps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 0);                     /* vps_num_layer_sets_minus1 */
 	sb_flag(&s, true);                /* vps_timing_info_present_flag */
 	sb_u(&s, 32, 1);                  /* vps_num_units_in_tick */
-	sb_u(&s, 32, v->r.fotogrammi_al_secondo); /* vps_time_scale: qui NON raddoppiato */
+	sb_u(&s, 32, v->r.fotogrammi_al_secondo); /* vps_time_scale: NOT doubled here */
 	sb_flag(&s, true);                /* vps_poc_proportional_to_timing_flag */
 	sb_ue(&s, 0);                     /* vps_num_ticks_poc_diff_one_minus1 */
 	sb_ue(&s, 0);                     /* vps_num_hrd_parameters */
@@ -620,7 +620,7 @@ static size_t hevc_vps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x42, 0x01 }; /* tipo 33 */
+	const uint8_t testa[2] = { 0x42, 0x01 }; /* type 33 */
 	ScrittoreBit s;
 	uint32_t taglio_dx = (v->d.larghezza_superficie - v->r.larghezza) >> 1;
 	uint32_t taglio_giu = (v->d.altezza_superficie - v->r.altezza) >> 1;
@@ -632,12 +632,12 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	hevc_ptl(&s, v);
 	sb_ue(&s, 0);                     /* sps_seq_parameter_set_id */
 	sb_ue(&s, 1);                     /* chroma_format_idc: 4:2:0 */
-	sb_ue(&s, v->d.larghezza_superficie); /* pic_width_in_luma_samples: la superficie, allineata */
+	sb_ue(&s, v->d.larghezza_superficie); /* pic_width_in_luma_samples: the surface, aligned */
 	sb_ue(&s, v->d.altezza_superficie);
-	if (taglio_dx || taglio_giu) {    /* conformance_window_flag: la tela ritagliata dalla superficie */
+	if (taglio_dx || taglio_giu) {    /* conformance_window_flag: the canvas cropped from the surface */
 		sb_flag(&s, true);
 		sb_ue(&s, 0);
-		sb_ue(&s, taglio_dx);         /* in unita' di croma: >> log2_chroma_w */
+		sb_ue(&s, taglio_dx);         /* in chroma units: >> log2_chroma_w */
 		sb_ue(&s, 0);
 		sb_ue(&s, taglio_giu);
 	} else {
@@ -645,7 +645,7 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	}
 	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_luma_minus8 */
 	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_chroma_minus8 */
-	sb_ue(&s, 8);                     /* log2_max_pic_order_cnt_lsb_minus4: POC lsb su 12 bit */
+	sb_ue(&s, 8);                     /* log2_max_pic_order_cnt_lsb_minus4: POC lsb on 12 bits */
 	sb_flag(&s, false);               /* sps_sub_layer_ordering_info_present_flag */
 	sb_ue(&s, 1);                     /* sps_max_dec_pic_buffering_minus1[0] */
 	sb_ue(&s, 0);                     /* sps_max_num_reorder_pics[0] */
@@ -659,8 +659,8 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, false);               /* scaling_list_enabled_flag */
 	sb_flag(&s, v->hevc.amp);         /* amp_enabled_flag */
 	sb_flag(&s, v->hevc.sao);         /* sample_adaptive_offset_enabled_flag */
-	sb_flag(&s, false);               /* pcm_enabled_flag: ffmpeg lo tiene spento anche se il driver lo sa */
-	sb_ue(&s, 0);                     /* num_short_term_ref_pic_sets: i set stanno negli slice */
+	sb_flag(&s, false);               /* pcm_enabled_flag: ffmpeg keeps it off even if the driver supports it */
+	sb_ue(&s, 0);                     /* num_short_term_ref_pic_sets: the sets live in the slices */
 	sb_flag(&s, false);               /* long_term_ref_pics_present_flag */
 	sb_flag(&s, v->hevc.tmvp);        /* sps_temporal_mvp_enabled_flag */
 	sb_flag(&s, false);               /* strong_intra_smoothing_enabled_flag */
@@ -685,7 +685,7 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_u(&s, 32, v->r.fotogrammi_al_secondo); /* vui_time_scale */
 	sb_flag(&s, true);                /* vui_poc_proportional_to_timing_flag */
 	sb_ue(&s, 0);                     /* vui_num_ticks_poc_diff_one_minus1 */
-	sb_flag(&s, false);               /* vui_hrd_parameters_present_flag: mai, nemmeno col tetto */
+	sb_flag(&s, false);               /* vui_hrd_parameters_present_flag: never, not even with the cap */
 	sb_flag(&s, true);                /* bitstream_restriction_flag */
 	sb_flag(&s, false);               /* tiles_fixed_structure_flag */
 	sb_flag(&s, true);                /* motion_vectors_over_pic_boundaries_flag */
@@ -705,7 +705,7 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x44, 0x01 }; /* tipo 34 */
+	const uint8_t testa[2] = { 0x44, 0x01 }; /* type 34 */
 	ScrittoreBit s;
 
 	sb_apri(&s, rbsp, sizeof rbsp);
@@ -721,7 +721,7 @@ static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_se(&s, v->qp_fisso - 26);      /* init_qp_minus26 */
 	sb_flag(&s, false);               /* constrained_intra_pred_flag */
 	sb_flag(&s, v->hevc.transform_skip); /* transform_skip_enabled_flag */
-	sb_flag(&s, v->hevc.cu_qp_delta); /* cu_qp_delta_enabled_flag: solo col tetto (non CQP) */
+	sb_flag(&s, v->hevc.cu_qp_delta); /* cu_qp_delta_enabled_flag: only with the cap (not CQP) */
 	if (v->hevc.cu_qp_delta)
 		sb_ue(&s, v->hevc.log2_diff_cb); /* diff_cu_qp_delta_depth: «its max value» */
 	sb_se(&s, 0);                     /* pps_cb_qp_offset */
@@ -746,28 +746,28 @@ static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 }
 
 /*
- * slice_segment_header() (7.3.6.1): IDR_W_RADL con slice I, oppure TRAIL_R
- * con slice P — o B «GPB» quando il driver non sa i P (`p_come_b`, Intel iHD:
- * `[M]` la traccia di oggi ha `slice_type 0` con `mvd_l1_zero_flag` e
- * `collocated_from_l0_flag`, e L1 = L0).
+ * slice_segment_header() (7.3.6.1): IDR_W_RADL with an I slice, or TRAIL_R
+ * with a P slice — or a «GPB» B when the driver cannot do P (`p_come_b`, Intel iHD:
+ * `[M]` today's trace has `slice_type 0` with `mvd_l1_zero_flag` and
+ * `collocated_from_l0_flag`, and L1 = L0).
  */
 static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
 {
 	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { idr ? 0x26 : 0x02, 0x01 }; /* 19 (IDR_W_RADL) o 1 (TRAIL_R) */
+	const uint8_t testa[2] = { idr ? 0x26 : 0x02, 0x01 }; /* 19 (IDR_W_RADL) or 1 (TRAIL_R) */
 	ScrittoreBit s;
 	unsigned tipo = idr ? 2 : (v->d.p_come_b ? 0 : 1); /* I / B / P */
 
 	sb_apri(&s, rbsp, sizeof rbsp);
 	sb_flag(&s, true);                /* first_slice_segment_in_pic_flag */
 	if (idr)
-		sb_flag(&s, false);           /* no_output_of_prior_pics_flag (solo IRAP) */
+		sb_flag(&s, false);           /* no_output_of_prior_pics_flag (IRAP only) */
 	sb_ue(&s, 0);                     /* slice_pic_parameter_set_id */
 	sb_ue(&s, tipo);                  /* slice_type */
 	if (!idr) {
 		sb_u(&s, 12, (uint32_t) v->poc & 0xFFFu); /* slice_pic_order_cnt_lsb */
-		sb_flag(&s, false);           /* short_term_ref_pic_set_sps_flag: il set e' qui */
-		/* st_ref_pic_set(0): un solo negativo, il precedente, usato */
+		sb_flag(&s, false);           /* short_term_ref_pic_set_sps_flag: the set is here */
+		/* st_ref_pic_set(0): a single negative, the previous one, used */
 		sb_ue(&s, 1);                 /* num_negative_pics */
 		sb_ue(&s, 0);                 /* num_positive_pics */
 		sb_ue(&s, (uint32_t) (v->poc - v->poc_riferimento - 1)); /* delta_poc_s0_minus1[0] */
@@ -783,16 +783,16 @@ static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 		sb_flag(&s, false);           /* num_ref_idx_active_override_flag */
 		if (tipo == 0)
 			sb_flag(&s, false);       /* mvd_l1_zero_flag */
-		/* cabac_init_present_flag e' 0: niente cabac_init_flag */
+		/* cabac_init_present_flag is 0: no cabac_init_flag */
 		if (v->hevc.tmvp) {
 			if (tipo == 0)
 				sb_flag(&s, true);    /* collocated_from_l0_flag */
-			/* collocated_ref_idx: non presente, num_ref_idx_l0_active_minus1 = 0 */
+			/* collocated_ref_idx: absent, num_ref_idx_l0_active_minus1 = 0 */
 		}
 		sb_ue(&s, 0);                 /* five_minus_max_num_merge_cand */
 	}
 	sb_se(&s, 0);                     /* slice_qp_delta */
-	/* pps_loop_filter_across_slices_enabled_flag && (sao || deblocking acceso) ⇒ presente */
+	/* pps_loop_filter_across_slices_enabled_flag && (sao || deblocking on) ⇒ present */
 	sb_flag(&s, false);               /* slice_loop_filter_across_slices_enabled_flag */
 	sb_chiudi_rbsp(&s);               /* byte_alignment() */
 	if (s.traboccato)
@@ -801,7 +801,7 @@ static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 1-bis. L'APERTURA: configurazione, contesto, superfici, buffer
+ * 1-bis. THE OPENING: configuration, context, surfaces, buffers
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 static bool attributo(VADisplay d, VAProfile p, VAEntrypoint e, VAConfigAttribType tipo,
@@ -822,9 +822,9 @@ static uint32_t allinea(uint32_t x, uint32_t a)
 	return (x + a - 1) / a * a;
 }
 
-/* Che cosa il driver sa fare in HEVC, e le misure che ne discendono: e' il
- * `vaapi_encode_h265_get_encoder_caps` + il blocco «update sps setting
- * according to queried result» di ffmpeg. */
+/* What the driver can do in HEVC, and the sizes that follow from it: it is
+ * ffmpeg's `vaapi_encode_h265_get_encoder_caps` + the «update sps setting
+ * according to queried result» block. */
 static void hevc_capacita(VaDiretta *v)
 {
 	uint32_t features = 0, blocchi = 0;
@@ -833,7 +833,7 @@ static void hevc_capacita(VaDiretta *v)
 	bool b_ok = attributo(v->display, v->r.profilo, v->r.entrypoint,
 	                      VAConfigAttribEncHEVCBlockSizes, &blocchi);
 
-	/* I difetti di ffmpeg («These values come from the capabilities of the
+	/* ffmpeg's defaults («These values come from the capabilities of the
 	 * first encoder implementation in the i965 driver on Intel Skylake»). */
 	v->hevc.log2_min_cb_m3 = 0;
 	v->hevc.log2_diff_cb = 2;
@@ -877,10 +877,10 @@ static void hevc_capacita(VaDiretta *v)
 	v->d.hevc_features = features;
 	v->d.hevc_blocchi = blocchi;
 	registro_dice(REG_CODIFICA,
-	              "vadiretta HEVC: il driver %s gli attributi — CTB %u, CB minimo %u, "
+	              "vadiretta HEVC: the driver %s the attributes — CTB %u, minimum CB %u, "
 	              "amp %d, sao %d, tmvp %d, transform_skip %d, cu_qp_delta %d "
-	              "(features 0x%x, blocchi 0x%x)",
-	              v->d.hevc_attributi_letti ? "DICHIARA" : "NON dichiara (difetti di ffmpeg)",
+	              "(features 0x%x, blocks 0x%x)",
+	              v->d.hevc_attributi_letti ? "DECLARES" : "does NOT declare (ffmpeg defaults)",
 	              v->hevc.ctu, v->hevc.min_cb, v->hevc.amp, v->hevc.sao, v->hevc.tmvp,
 	              v->hevc.transform_skip, v->hevc.cu_qp_delta, features, blocchi);
 }
@@ -964,20 +964,20 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 	bool p10 = r->profondita == 10;
 
 	if (!d || !d->display || !r || !r->larghezza || !r->altezza) {
-		di(errore, errore_byte, "vadiretta: richiesta incompleta");
+		di(errore, errore_byte, "vadiretta: incomplete request");
 		return NULL;
 	}
 	if (!hevc && p10) {
-		di(errore, errore_byte, "vadiretta: H.264 a 10 bit non si apre (solo High a 8 bit)");
+		di(errore, errore_byte, "vadiretta: 10-bit H.264 does not open (only 8-bit High)");
 		return NULL;
 	}
 	if (r->qp < 1 || r->qp > 51) {
-		di(errore, errore_byte, "vadiretta: QP %d fuori da 1..51", r->qp);
+		di(errore, errore_byte, "vadiretta: QP %d outside 1..51", r->qp);
 		return NULL;
 	}
 	v = calloc(1, sizeof *v);
 	if (!v) {
-		di(errore, errore_byte, "niente memoria");
+		di(errore, errore_byte, "out of memory");
 		return NULL;
 	}
 	v->display = d->display;
@@ -993,24 +993,24 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 	if (!v->r.superfici_ingresso)
 		v->r.superfici_ingresso = 4;
 
-	/* ── il controllo del bitrate: CQP, o QVBR col tetto ───────────────── */
+	/* ── bitrate control: CQP, or QVBR with the cap ──────────────────────── */
 	if (r->banda_filo > 0) {
 		v->d.modo_va = VA_RC_QVBR;
-		/* ffmpeg: sotto un modo regolato pic_init_qp e slice_qp_delta valgono
-		 * 26 (H.264) e 30 (HEVC), e il QP chiesto e' il quality_factor. */
+		/* ffmpeg: under a regulated mode pic_init_qp and slice_qp_delta are
+		 * 26 (H.264) and 30 (HEVC), and the requested QP is the quality_factor. */
 		v->qp_fisso = hevc ? 30 : 26;
 	} else {
 		v->d.modo_va = VA_RC_CQP;
 		v->qp_fisso = r->qp;
 	}
 
-	/* ── il formato di superficie, e la sua dichiarazione dal driver ────── */
+	/* ── the surface format, and the driver's declaration of it ──────────── */
 	v->d.formato_rt = p10 ? VA_RT_FORMAT_YUV420_10BPP : VA_RT_FORMAT_YUV420;
 	v->d.fourcc_ingresso = p10 ? VA_FOURCC_P010 : VA_FOURCC_NV12;
 	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribRTFormat, &valore)) {
 		if (!(valore & v->d.formato_rt)) {
 			di(errore, errore_byte,
-			   "il driver non dichiara il formato %s per questo profilo/entrypoint (0x%x)",
+			   "the driver does not declare format %s for this profile/entrypoint (0x%x)",
 			   p10 ? "YUV420_10" : "YUV420", valore);
 			free(v);
 			return NULL;
@@ -1020,7 +1020,7 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 	}
 	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribRateControl, &valore)) {
 		if (!(valore & v->d.modo_va)) {
-			di(errore, errore_byte, "il driver non dichiara il modo di bitrate 0x%x (ha 0x%x)",
+			di(errore, errore_byte, "the driver does not declare bitrate mode 0x%x (it has 0x%x)",
 			   v->d.modo_va, valore);
 			free(v);
 			return NULL;
@@ -1028,8 +1028,8 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		attributi[quanti++] = (VAConfigAttrib){ .type = VAConfigAttribRateControl,
 			                                    .value = v->d.modo_va };
 	}
-	/* Le intestazioni impacchettate che chiediamo di poter scrivere noi: le
-	 * stesse tre di ffmpeg (SEQUENCE = SPS/PPS/VPS, SLICE, MISC = SEI). */
+	/* The packed headers we ask to write ourselves: the
+	 * same three as ffmpeg (SEQUENCE = SPS/PPS/VPS, SLICE, MISC = SEI). */
 	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribEncPackedHeaders,
 	              &valore)) {
 		v->d.packed_headers_driver = valore;
@@ -1041,7 +1041,7 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 				                                    .value = v->d.packed_headers };
 	}
 
-	/* ── P come B?  Si chiede al driver, come ffmpeg (VAConfigAttribPredictionDirection) */
+	/* ── P as B?  Ask the driver, like ffmpeg (VAConfigAttribPredictionDirection) */
 	v->d.p_come_b = false;
 	{
 		uint32_t riferimenti = 0, direzione = 0;
@@ -1052,7 +1052,7 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 			l1 = (riferimenti >> 16) & 0xFFFF;
 		}
 		if (l0 < 1) {
-			di(errore, errore_byte, "il driver non dichiara nessun fotogramma di riferimento");
+			di(errore, errore_byte, "the driver declares no reference frame");
 			free(v);
 			return NULL;
 		}
@@ -1062,12 +1062,12 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 				v->d.p_come_b = true;
 		}
 		registro_dice(REG_CODIFICA,
-		              "vadiretta: riferimenti dichiarati l0=%u l1=%u, direzioni 0x%x ⇒ i P "
-		              "sono %s", l0, l1, direzione,
-		              v->d.p_come_b ? "slice B «GPB» (il driver non sa i P)" : "slice P");
+		              "vadiretta: declared references l0=%u l1=%u, directions 0x%x ⇒ the Ps "
+		              "are %s", l0, l1, direzione,
+		              v->d.p_come_b ? "B slices «GPB» (the driver cannot do P)" : "slice P");
 	}
 
-	/* ── le misure allineate e il livello ───────────────────────────────── */
+	/* ── the aligned sizes and the level ─────────────────────────────────── */
 	if (hevc) {
 		hevc_capacita(v);
 		v->d.blocco = v->hevc.ctu;
@@ -1093,18 +1093,18 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		                                      v->mb_l, v->mb_a, 1);
 	}
 
-	/* ── configurazione e contesto ──────────────────────────────────────── */
+	/* ── configuration and context ───────────────────────────────────────── */
 	st = vaCreateConfig(d->display, r->profilo, r->entrypoint, attributi, quanti, &v->config);
 	if (st != VA_STATUS_SUCCESS) {
 		di(errore, errore_byte, "vaCreateConfig: %s", vaErrorStr(st));
 		vadiretta_chiudi(v);
 		return NULL;
 	}
-	/* le superfici RICOSTRUITE, alla misura allineata */
+	/* the RECONSTRUCTED surfaces, at the aligned size */
 	st = vaCreateSurfaces(d->display, v->d.formato_rt, v->d.larghezza_superficie,
 	                      v->d.altezza_superficie, v->ricostruite, RICOSTRUITE, NULL, 0);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "le superfici ricostruite %ux%u non si sono create: %s",
+		di(errore, errore_byte, "the %ux%u reconstructed surfaces were not created: %s",
 		   v->d.larghezza_superficie, v->d.altezza_superficie, vaErrorStr(st));
 		for (unsigned i = 0; i < RICOSTRUITE; i++)
 			v->ricostruite[i] = VA_INVALID_ID;
@@ -1121,10 +1121,10 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		vadiretta_chiudi(v);
 		return NULL;
 	}
-	/* il magazzino d'ingresso, alla misura della TELA: il driver riempie da se' */
+	/* the input pool, at the size of the CANVAS: the driver pads by itself */
 	v->ingresso = calloc(v->r.superfici_ingresso, sizeof *v->ingresso);
 	if (!v->ingresso) {
-		di(errore, errore_byte, "niente memoria per il magazzino");
+		di(errore, errore_byte, "out of memory for the pool");
 		vadiretta_chiudi(v);
 		return NULL;
 	}
@@ -1139,7 +1139,7 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		                      v->ingresso, v->r.superfici_ingresso, &formato, 1);
 	}
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "il magazzino d'ingresso (%u x %s %ux%u) non si e' creato: %s",
+		di(errore, errore_byte, "the input pool (%u x %s %ux%u) was not created: %s",
 		   v->r.superfici_ingresso, p10 ? "P010" : "NV12", r->larghezza, r->altezza,
 		   vaErrorStr(st));
 		free(v->ingresso);
@@ -1148,12 +1148,12 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		return NULL;
 	}
 	v->quante_ingresso = v->r.superfici_ingresso;
-	/* il buffer dei byte codificati */
+	/* the buffer of encoded bytes */
 	v->coded_byte = (size_t) 3 * v->d.larghezza_superficie * v->d.altezza_superficie + CODED_MARGINE;
 	st = vaCreateBuffer(d->display, v->contesto, VAEncCodedBufferType, (unsigned) v->coded_byte,
 	                    1, NULL, &v->coded);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "il buffer codificato da %zu byte non si e' creato: %s",
+		di(errore, errore_byte, "the %zu-byte coded buffer was not created: %s",
 		   v->coded_byte, vaErrorStr(st));
 		v->coded = VA_INVALID_ID;
 		vadiretta_chiudi(v);
@@ -1162,11 +1162,11 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 	v->uscita_capacita = v->coded_byte;
 	v->uscita = malloc(v->uscita_capacita);
 	if (!v->uscita) {
-		di(errore, errore_byte, "niente memoria per l'uscita");
+		di(errore, errore_byte, "out of memory for the output");
 		vadiretta_chiudi(v);
 		return NULL;
 	}
-	/* `vaSyncBuffer` c'e'?  Lo si chiede col buffer nullo, come ffmpeg. */
+	/* Is `vaSyncBuffer` there?  Ask with the null buffer, like ffmpeg. */
 	v->d.sync_buffer = vaSyncBuffer(d->display, VA_INVALID_ID, 0) != VA_STATUS_ERROR_UNIMPLEMENTED;
 
 	if (hevc)
@@ -1175,14 +1175,14 @@ VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
 		riempi_sequenza_h264(v);
 
 	registro_dice(REG_CODIFICA,
-	              "vadiretta aperta: %s %d bit %ux%u (superficie %ux%u, blocco %u) · "
-	              "profilo %d entrypoint %d · %s (qp %d) · livello %d%s · packed header "
-	              "0x%x (driver 0x%x) · %s · %u superfici d'ingresso",
+	              "vadiretta open: %s %d bit %ux%u (surface %ux%u, block %u) · "
+	              "profile %d entrypoint %d · %s (qp %d) · level %d%s · packed header "
+	              "0x%x (driver 0x%x) · %s · %u input surfaces",
 	              hevc ? "HEVC" : "H.264", r->profondita, r->larghezza, r->altezza,
 	              v->d.larghezza_superficie, v->d.altezza_superficie, v->d.blocco,
 	              (int) r->profilo, (int) r->entrypoint,
 	              v->d.modo_va == VA_RC_CQP ? "CQP" : "QVBR", r->qp, v->d.livello_idc,
-	              r->livello_idc > 0 ? " (imposto)" : " (calcolato come ffmpeg)",
+	              r->livello_idc > 0 ? " (imposed)" : " (computed like ffmpeg)",
 	              v->d.packed_headers, v->d.packed_headers_driver,
 	              v->d.sync_buffer ? "vaSyncBuffer" : "vaSyncSurface", v->quante_ingresso);
 	return v;
@@ -1225,12 +1225,12 @@ VASurfaceID vadiretta_superficie_ingresso(VaDiretta *v)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 4. IL GIRO DI UN FOTOGRAMMA — `vaapi_encode_issue()` + `vaapi_encode_output()`
+ * 4. THE ROUND OF ONE FRAME — `vaapi_encode_issue()` + `vaapi_encode_output()`
  *
- * L'ordine dei buffer e' quello di ffmpeg: sequenza (sull'IDR), i parametri
- * «globali» (sull'IDR: bitrate, HRD, cadenza), immagine, le intestazioni
- * impacchettate di sequenza (sull'IDR), il SEI, poi lo slice header
- * impacchettato e i parametri dello slice.
+ * The order of the buffers is ffmpeg's: sequence (on the IDR), the «global»
+ * parameters (on the IDR: bitrate, HRD, frame rate), picture, the packed
+ * sequence headers (on the IDR), the SEI, then the packed slice
+ * header and the slice parameters.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 typedef struct {
@@ -1253,7 +1253,7 @@ static void buffer_param(VaDiretta *v, Buffer *b, VABufferType tipo, const void 
 	                    &b->id[b->quanti]);
 	if (st != VA_STATUS_SUCCESS) {
 		b->guasto = true;
-		snprintf(b->errore, sizeof b->errore, "vaCreateBuffer(tipo %d, %zu byte): %s",
+		snprintf(b->errore, sizeof b->errore, "vaCreateBuffer(type %d, %zu bytes): %s",
 		         (int) tipo, byte, vaErrorStr(st));
 		return;
 	}
@@ -1277,9 +1277,9 @@ static void buffer_misc(VaDiretta *v, Buffer *b, VAEncMiscParameterType tipo, co
 	             sizeof(VAEncMiscParameterBuffer) + byte);
 }
 
-/* Un packed header: il parametro (tipo, lunghezza in bit, «ha gia' i byte di
- * emulazione») e i dati.  ⚠ `has_emulation_bytes = 1`: i `03` li abbiamo
- *   messi noi in `nal_annexb()`, il driver non deve rimetterli. */
+/* A packed header: the parameter (type, length in bits, «already has the
+ * emulation bytes») and the data.  ⚠ `has_emulation_bytes = 1`: we put the
+ *   `03`s in ourselves in `nal_annexb()`, the driver must not add them again. */
 static void buffer_packed(VaDiretta *v, Buffer *b, unsigned tipo, const uint8_t *dati,
                           size_t byte)
 {
@@ -1291,7 +1291,7 @@ static void buffer_packed(VaDiretta *v, Buffer *b, unsigned tipo, const uint8_t 
 
 	if (!byte) {
 		b->guasto = true;
-		snprintf(b->errore, sizeof b->errore, "un'intestazione impacchettata e' vuota (tipo %u)",
+		snprintf(b->errore, sizeof b->errore, "a packed header is empty (type %u)",
 		         tipo);
 		return;
 	}
@@ -1302,8 +1302,8 @@ static void buffer_packed(VaDiretta *v, Buffer *b, unsigned tipo, const uint8_t 
 static void parametri_globali(VaDiretta *v, Buffer *b)
 {
 	if (v->d.modo_va != VA_RC_CQP) {
-		/* `vaapi_encode_init_rate_control`: filo, quota del punto, finestra in
-		 * ms del serbatoio, e il QP come fattore di qualita' del QVBR. */
+		/* `vaapi_encode_init_rate_control`: wire, share of the point, buffer
+		 * window in ms, and the QP as the QVBR quality factor. */
 		VAEncMiscParameterRateControl rc = {
 			.bits_per_second = (uint32_t) v->r.banda_filo,
 			.target_percentage = (uint32_t) (v->r.banda_punto * 100 / v->r.banda_filo),
@@ -1319,7 +1319,7 @@ static void parametri_globali(VaDiretta *v, Buffer *b)
 			.initial_buffer_fullness = (uint32_t) ((int64_t) v->r.serbatoio_bit * 3 / 4),
 			.buffer_size = (uint32_t) v->r.serbatoio_bit,
 		};
-		rc.rc_flags.bits.mb_rate_control = 2; /* «blbrc ? 1 : 2», e blbrc e' spento */
+		rc.rc_flags.bits.mb_rate_control = 2; /* «blbrc ? 1 : 2», and blbrc is off */
 		buffer_misc(v, b, VAEncMiscParameterTypeRateControl, &rc, sizeof rc);
 		buffer_misc(v, b, VAEncMiscParameterTypeHRD, &hrd, sizeof hrd);
 	}
@@ -1339,7 +1339,7 @@ static bool leggi_uscita(VaDiretta *v, char *errore, size_t errore_byte)
 
 	st = vaMapBuffer(v->display, v->coded, (void **) &segmento);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "vaMapBuffer sui byte codificati: %s", vaErrorStr(st));
+		di(errore, errore_byte, "vaMapBuffer on the encoded bytes: %s", vaErrorStr(st));
 		return false;
 	}
 	for (s = segmento; s; s = s->next)
@@ -1348,7 +1348,7 @@ static bool leggi_uscita(VaDiretta *v, char *errore, size_t errore_byte)
 		uint8_t *nuovo = realloc(v->uscita, totale);
 		if (!nuovo) {
 			vaUnmapBuffer(v->display, v->coded);
-			di(errore, errore_byte, "niente memoria per %zu byte d'uscita", totale);
+			di(errore, errore_byte, "out of memory for %zu output bytes", totale);
 			return false;
 		}
 		v->uscita = nuovo;
@@ -1362,7 +1362,7 @@ static bool leggi_uscita(VaDiretta *v, char *errore, size_t errore_byte)
 	v->uscita_byte = totale;
 	vaUnmapBuffer(v->display, v->coded);
 	if (!totale) {
-		di(errore, errore_byte, "il driver ha reso zero byte");
+		di(errore, errore_byte, "the driver returned zero bytes");
 		return false;
 	}
 	return true;
@@ -1380,12 +1380,12 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	unsigned rif;
 
 	if (!v || ingresso == VA_INVALID_ID) {
-		di(errore, errore_byte, "vadiretta: niente da codificare");
+		di(errore, errore_byte, "vadiretta: nothing to encode");
 		return false;
 	}
 	memset(&b, 0, sizeof b);
 
-	/* ── chi e' questo fotogramma ──────────────────────────────────────── */
+	/* ── who this frame is ─────────────────────────────────────────────── */
 	idr = chiave || !v->riferimento_valido || v->ordine == 0
 	      || (v->r.chiavi_ogni && v->nel_gop >= v->r.chiavi_ogni);
 	if (idr) {
@@ -1396,7 +1396,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		if (v->ordine)
 			v->idr_pic_id = (v->idr_pic_id + 1) & 0xFFFFu;
 	} else {
-		/* `hpic->frame_num = hprev->frame_num + prev->is_reference`: +1, sempre */
+		/* `hpic->frame_num = hprev->frame_num + prev->is_reference`: +1, always */
 		v->frame_num = v->frame_num_riferimento + 1;
 		v->poc = (int32_t) (v->ordine - v->ultimo_idr);
 	}
@@ -1404,7 +1404,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	rif = v->ricostruita_riferimento;
 	v->ricostruita_corrente = (rif + 1) % RICOSTRUITE;
 
-	/* ── 1. sequenza e parametri globali, sull'IDR ────────────────────── */
+	/* ── 1. sequence and global parameters, on the IDR ────────────────── */
 	if (idr) {
 		if (hevc)
 			buffer_param(v, &b, VAEncSequenceParameterBufferType, &v->seq.hevc, sizeof v->seq.hevc);
@@ -1413,7 +1413,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		parametri_globali(v, &b);
 	}
 
-	/* ── 2. l'immagine ────────────────────────────────────────────────── */
+	/* ── 2. the picture ───────────────────────────────────────────────── */
 	if (hevc) {
 		VAEncPictureParameterBufferHEVC p;
 		memset(&p, 0, sizeof p);
@@ -1441,7 +1441,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		p.slice_pic_parameter_set_id = 0;
 		p.nal_unit_type = idr ? 19 : 1;
 		p.pic_fields.bits.idr_pic_flag = idr;
-		p.pic_fields.bits.coding_type = idr ? 1 : 2; /* I / P: anche il GPB e' «P» qui */
+		p.pic_fields.bits.coding_type = idr ? 1 : 2; /* I / P: the GPB is also «P» here */
 		p.pic_fields.bits.reference_pic_flag = 1;
 		p.pic_fields.bits.transform_skip_enabled_flag = v->hevc.transform_skip;
 		p.pic_fields.bits.cu_qp_delta_enabled_flag = v->hevc.cu_qp_delta;
@@ -1453,7 +1453,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		p.CurrPic.picture_id = v->ricostruite[v->ricostruita_corrente];
 		p.CurrPic.frame_idx = v->frame_num;
 		p.CurrPic.flags = 0;
-		p.CurrPic.TopFieldOrderCnt = 2 * v->poc; /* poc type 2: il doppio */
+		p.CurrPic.TopFieldOrderCnt = 2 * v->poc; /* poc type 2: twice */
 		p.CurrPic.BottomFieldOrderCnt = 2 * v->poc;
 		for (unsigned i = 0; i < 16; i++) {
 			p.ReferenceFrames[i].picture_id = VA_INVALID_ID;
@@ -1483,7 +1483,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		buffer_param(v, &b, VAEncPictureParameterBufferType, &p, sizeof p);
 	}
 
-	/* ── 3. le intestazioni impacchettate ─────────────────────────────── */
+	/* ── 3. the packed headers ────────────────────────────────────────── */
 	if (idr && (v->d.packed_headers & VA_ENC_PACKED_HEADER_SEQUENCE)) {
 		tot = 0;
 		if (hevc) {
@@ -1507,7 +1507,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			buffer_packed(v, &b, VAEncPackedHeaderRawData, intestazione, n);
 	}
 
-	/* ── 4. lo slice: intestazione impacchettata e parametri ───────────── */
+	/* ── 4. the slice: packed header and parameters ───────────────────── */
 	if (v->d.packed_headers & VA_ENC_PACKED_HEADER_SLICE) {
 		n = hevc ? hevc_slice(v, idr, intestazione, sizeof intestazione)
 		         : h264_slice(v, idr, intestazione, sizeof intestazione);
@@ -1531,7 +1531,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			s.ref_pic_list0[0].pic_order_cnt = v->poc_riferimento;
 			s.ref_pic_list0[0].flags = VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE;
 			if (v->d.p_come_b) {
-				/* GPB: L1 = L0, e' il «Reference for GPB B-frame» di ffmpeg */
+				/* GPB: L1 = L0, it is ffmpeg's «Reference for GPB B-frame» */
 				for (unsigned i = 0; i < 15; i++) {
 					s.ref_pic_list1[i].picture_id = s.ref_pic_list0[i].picture_id;
 					s.ref_pic_list1[i].pic_order_cnt = s.ref_pic_list0[i].pic_order_cnt;
@@ -1578,8 +1578,8 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	if (b.guasto) {
 		for (int i = 0; i < b.quanti; i++)
 			vaDestroyBuffer(v->display, b.id[i]);
-		di(errore, errore_byte, "i buffer del fotogramma non si sono creati: %s",
-		   b.errore[0] ? b.errore : "troppi, o un'intestazione vuota");
+		di(errore, errore_byte, "the frame buffers were not created: %s",
+		   b.errore[0] ? b.errore : "too many, or an empty header");
 		return false;
 	}
 
@@ -1601,19 +1601,19 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 		return false;
 	}
 
-	/* ── 6. si ASPETTA, e si leggono i byte ───────────────────────────── */
+	/* ── 6. WAIT, and read the bytes ──────────────────────────────────── */
 	if (v->d.sync_buffer)
 		st = vaSyncBuffer(v->display, v->coded, VA_TIMEOUT_INFINITE);
 	else
 		st = vaSyncSurface(v->display, ingresso);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "l'attesa della codifica e' fallita: %s", vaErrorStr(st));
+		di(errore, errore_byte, "waiting for the encode failed: %s", vaErrorStr(st));
 		return false;
 	}
 	if (!leggi_uscita(v, errore, errore_byte))
 		return false;
 
-	/* ── 7. questo fotogramma e' il riferimento del prossimo ──────────── */
+	/* ── 7. this frame is the reference for the next ──────────────────── */
 	v->riferimento_valido = true;
 	v->ricostruita_riferimento = v->ricostruita_corrente;
 	v->frame_num_riferimento = v->frame_num;
@@ -1626,16 +1626,16 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 5. LA STRADA DALLA MEMORIA
+ * 5. THE ROUTE FROM MEMORY
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Scrive `righe` righe di `byte_per_riga` in un'immagine derivata o creata
- * sulla superficie: prima `vaDeriveImage` (nessuna copia in piu'), e se il
- * driver non la da', `vaCreateImage` + `vaPutImage`. */
+/* Writes `righe` rows of `byte_per_riga` into an image derived from or created
+ * on the surface: first `vaDeriveImage` (no extra copy), and if the
+ * driver does not give it, `vaCreateImage` + `vaPutImage`. */
 typedef struct {
 	const uint8_t *piano[3];
 	uint32_t passo[3];
-	uint32_t righe[3];         /* righe per piano */
+	uint32_t righe[3];         /* rows per plane */
 	uint32_t byte_per_riga[3];
 	unsigned piani;
 } Piani;
@@ -1660,7 +1660,7 @@ static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uin
 		f.bits_per_pixel = (fourcc == VA_FOURCC_NV12) ? 12 : (fourcc == VA_FOURCC_P010 ? 24 : 32);
 		st = vaCreateImage(v->display, &f, (int) l, (int) a, &img);
 		if (st != VA_STATUS_SUCCESS) {
-			di(errore, errore_byte, "ne' vaDeriveImage ne' vaCreateImage (%c%c%c%c): %s",
+			di(errore, errore_byte, "neither vaDeriveImage nor vaCreateImage (%c%c%c%c): %s",
 			   fourcc & 0xff, (fourcc >> 8) & 0xff, (fourcc >> 16) & 0xff, (fourcc >> 24) & 0xff,
 			   vaErrorStr(st));
 			return false;
@@ -1669,7 +1669,7 @@ static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uin
 	st = vaMapBuffer(v->display, img.buf, (void **) &mappa);
 	if (st != VA_STATUS_SUCCESS) {
 		vaDestroyImage(v->display, img.image_id);
-		di(errore, errore_byte, "vaMapBuffer sull'immagine: %s", vaErrorStr(st));
+		di(errore, errore_byte, "vaMapBuffer on the image: %s", vaErrorStr(st));
 		return false;
 	}
 	for (unsigned k = 0; k < p->piani && k < img.num_planes; k++) {
@@ -1693,14 +1693,14 @@ static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uin
 }
 
 /*
- * ⭐ NV12 / P010 gia' convertiti in CPU (`colori709.c`), dritti nella superficie
- *    d'ingresso: e' la strada che c'era prima della fase 18 (conversione in
- *    memoria di sistema, poi il caricamento), rifatta senza libswscale.
- * ⛔ NON si carica RGB per farlo convertire alla VPP: `[M]` 30 set 2026,
- *    `banchi/18-scheda/18-confronto.sh`, la VPP dalla memoria perde qualita'
- *    e byte rispetto alla conversione in CPU (Intel 1080p H.264 −1 dB e +82 %
- *    di byte, HEVC −4 dB e +255 %; Radeon −1…−6 dB).  La VPP resta SOLO sulla
- *    copia zero, dove il fotogramma e' gia' sulla scheda.
+ * ⭐ NV12 / P010 already converted on the CPU (`colori709.c`), straight into the input
+ *    surface: it is the route that existed before phase 18 (conversion in
+ *    system memory, then the upload), redone without libswscale.
+ * ⛔ RGB is NOT uploaded for the VPP to convert: `[M]` 30 Sep 2026,
+ *    `banchi/18-scheda/18-confronto.sh`, the VPP from memory loses quality
+ *    and bytes compared with the CPU conversion (Intel 1080p H.264 −1 dB and +82 %
+ *    bytes, HEVC −4 dB and +255 %; Radeon −1…−6 dB).  The VPP stays ONLY on
+ *    zero copy, where the frame is already on the card.
  */
 bool vadiretta_carica_nv12(VaDiretta *v, VASurfaceID dest, const uint8_t *y, uint32_t passo_y,
                            const uint8_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte)
@@ -1735,10 +1735,10 @@ bool vadiretta_carica_p010(VaDiretta *v, VASurfaceID dest, const uint16_t *y, ui
 bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *pixel,
                                 uint32_t passo_y, char *errore, size_t errore_byte)
 {
-	/* yuv420p10le (tre piani, 10 bit nei bit BASSI di 16) → P010 (Y, poi UV
-	 * intercalati, 10 bit nei bit ALTI di 16).  ⛔ Sono due formati diversi
-	 *    con lo stesso numero di bit: copiarli tali e quali darebbe
-	 *    un'immagine buia (`codificatore.c`, la nota su P010). */
+	/* yuv420p10le (three planes, 10 bits in the LOW bits of 16) → P010 (Y, then
+	 * interleaved UV, 10 bits in the HIGH bits of 16).  ⛔ They are two different
+	 *    formats with the same number of bits: copying them as they are would give
+	 *    a dark image (`codificatore.c`, the note on P010). */
 	uint32_t l = v->r.larghezza, a = v->r.altezza;
 	uint32_t py = passo_y ? passo_y : l * 2;
 	const uint8_t *y = pixel;
@@ -1750,7 +1750,7 @@ bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *p
 	bool esito;
 
 	if (!tmp) {
-		di(errore, errore_byte, "niente memoria per il P010 d'appoggio");
+		di(errore, errore_byte, "out of memory for the staging P010");
 		return false;
 	}
 	uv = tmp + (size_t) l * a;

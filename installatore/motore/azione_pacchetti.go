@@ -8,26 +8,26 @@ import (
 	"strings"
 )
 
-// installa-pacchetti: la transazione del gestore di pacchetti (§6.0 regola 1, §6.6.6; dal 10 ott
-// 2026 senza cache né sha256 nostri: «non reinventare la ruota», DECISIONI §10.36).
+// installa-pacchetti: the package manager's transaction (§6.0 rule 1, §6.6.6; since 10 Oct
+// 2026 without caches or sha256 of our own: «don't reinvent the wheel», DECISIONI §10.36).
 //
-//   - Fotografa (prima dell'intenzione): il gestore SIMULA la transazione; l'insieme (nome, versione,
-//     origine, nuovo/aggiornato) va nell'intenzione del registro e in resolved-set-<passo>.json.
-//   - Fai: il gestore installa — i file del pacchetto unico, con le dipendenze dagli archivi della
-//     macchina, scaricate e verificate da lui.
-//   - Controlla: ogni pacchetto alla versione simulata (o più nuova) ⇒ completo; nessuno dei nuovi ⇒
-//     assente; altrimenti (o il gestore a metà di una transazione) ⇒ a metà.
-//   - Ripara: il rimedio del gestore (dpkg --configure -a…), che serve prima di annullare.
-//   - Annulla: si tolgono i pacchetti NUOVI, e solo quelli (il gestore simula prima: se ne
-//     toglierebbe altri, li trattiene); quelli AGGIORNATI restano aggiornati e si dichiarano
-//     (INDIRETTA, §6.6.4). Reversibilità AL_MEGLIO.
+//   - Fotografa (before the intention): the manager SIMULATES the transaction; the set (name, version,
+//     origin, new/upgraded) goes into the log's intention and into resolved-set-<passo>.json.
+//   - Fai: the manager installs — the files of the single package, with the dependencies from the
+//     machine's repositories, downloaded and verified by it.
+//   - Controlla: every package at the simulated version (or newer) ⇒ complete; none of the new ones ⇒
+//     absent; otherwise (or the manager halfway through a transaction) ⇒ half-done.
+//   - Ripara: the manager's remedy (dpkg --configure -a…), needed before undoing.
+//   - Annulla: the NEW packages are removed, and only those (the manager simulates first: if it
+//     would remove others, it holds them back); the UPGRADED ones stay upgraded and are declared
+//     (INDIRETTA, §6.6.4). Reversibility AL_MEGLIO.
 //
-// parametri: file (percorsi dei pacchetti del .run, separati da virgola: una transazione sola),
-// names (separati da virgola, dagli archivi della macchina).
+// parameters: file (paths of the .run's packages, comma-separated: a single transaction),
+// names (comma-separated, from the machine's repositories).
 
 func init() { registraTipo("install-packages", nuovaPacchetti) }
 
-// PianoPacchetti prepara il passo del piano.
+// PianoPacchetti prepares the plan's step.
 func PianoPacchetti(id, file, nomi string) AzionePiano {
 	var basi []string
 	for _, f := range dividiVirgole(file) {
@@ -68,8 +68,8 @@ func (a *pacchetti) gestore(c *Contesto) (Gestore, error) {
 	return c.Amb.Pacchetti, nil
 }
 
-// Vincoli: le versioni installate adesso dei pacchetti nominati, e i file del pacchetto unico (per
-// nome: il .run è uno, e il suo sha256 lo garantisce intero).
+// Vincoli: the versions installed now of the named packages, and the files of the single package (by
+// name: the .run is one, and its sha256 guarantees it whole).
 func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	g, err := a.gestore(c)
 	if err != nil {
@@ -89,7 +89,7 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	return v, nil
 }
 
-// veri: i percorsi dei file sulla macchina (nelle prove, sotto la radice finta).
+// veri: the paths of the files on the machine (in the tests, under the fake root).
 func veri(c *Contesto, file []string) []string {
 	var r []string
 	for _, f := range file {
@@ -98,7 +98,7 @@ func veri(c *Contesto, file []string) []string {
 	return r
 }
 
-// dividiVirgole: «a,b» ⇒ [a b]; vuoto ⇒ nessuno.
+// dividiVirgole: «a,b» ⇒ [a b]; empty ⇒ none.
 func dividiVirgole(s string) []string {
 	var r []string
 	for _, x := range strings.Split(s, ",") {
@@ -159,7 +159,7 @@ func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
 	return g.Installa(veri(c, p.File), p.Nomi)
 }
 
-// stato dei pacchetti dell'insieme, adesso.
+// state of the set's packages, now.
 func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresenti int, err error) {
 	g, err := a.gestore(c)
 	if err != nil {
@@ -169,10 +169,10 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	if err != nil {
 		return 0, 0, err
 	}
-	// D14 (DECISIONI §10.23): REMOTIX e le sue dipendenze si aggiornano col sistema. Un pacchetto
-	// dell'insieme è «completo» alla versione risolta, a una PIÙ NUOVA (l'ha portata un aggiornamento
-	// del sistema), o a quella annotata dall'ultimo `remotix-install aggiornato` (un ritorno indietro
-	// fatto coi comandi del gestore)
+	// D14 (DECISIONI §10.23): REMOTIX and its dependencies are upgraded with the system. A package
+	// of the set is «complete» at the resolved version, at a NEWER one (a system upgrade
+	// brought it), or at the one recorded by the last `remotix-install aggiornato` (a rollback
+	// done with the manager's commands)
 	agg := versioniAggiornate(c.Cartella)
 	for _, x := range p.Insieme {
 		v := ver[x.Nome]
@@ -187,7 +187,7 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	return completi, nuoviPresenti, nil
 }
 
-// versioneUguale: dpkg dice «1:2.3-1», rpm «2.3-1»; l'epoca «0:» non conta.
+// versioneUguale: dpkg says «1:2.3-1», rpm «2.3-1»; the epoch «0:» does not count.
 func versioneUguale(a, b string) bool {
 	return strings.TrimPrefix(a, "0:") == strings.TrimPrefix(b, "0:")
 }
@@ -304,14 +304,14 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	return true, "the new packages are gone", nil
 }
 
-// trattenuti: dei pacchetti NUOVI da togliere, quelli che si possono togliere e quelli che restano
-// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo, o un programma
-// installato dopo.
-// Toglierli si porterebbe via anche lui (`[M]` 30 set, leap16-kde: `zypper rm` di libx264 & c.
-// trascinava 53 pacchetti, Plasma compreso). ⇒ Non si tolgono, e si dichiarano (§6.6.4: quel che
-// resta di indiretto si dice). Un pacchetto è trattenuto se toglierlo DA SOLO toglierebbe qualcosa
-// fuori da «nostri» (i nuovi dello stesso passo): chi dipende da lui di rimbalzo lo trattiene anche
-// lui, perché la simulazione del gestore segue tutta la catena.
+// trattenuti: of the NEW packages to remove, those that can be removed and those that stay
+// because something that stays requires them — a package UPGRADED by the same step, or a program
+// installed later.
+// Removing them would take that away too (`[M]` 30 Sep, leap16-kde: `zypper rm` of libx264 & co.
+// dragged 53 packages, Plasma included). ⇒ They are not removed, and they are declared (§6.6.4: what
+// remains indirectly is stated). A package is held back if removing it ALONE would remove something
+// outside «ours» (the new ones of the same step): whoever depends on it in turn holds it back
+// too, because the manager's simulation follows the whole chain.
 func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta []string, err error) {
 	if len(candidati) == 0 {
 		return nil, nil, nil
@@ -337,7 +337,7 @@ func trattenuti(g Gestore, candidati, nostri []string, purge bool) (via, resta [
 	return via, resta, nil
 }
 
-// Indirette: i pacchetti AGGIORNATI per noi restano aggiornati (§6.6.4): si dichiarano.
+// Indirette: the packages UPGRADED for us stay upgraded (§6.6.4): they are declared.
 func (a *pacchetti) Indirette(prima json.RawMessage) []string {
 	p, err := leggiPrimaPacchetti(prima)
 	if err != nil {

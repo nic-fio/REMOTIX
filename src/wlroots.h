@@ -1,66 +1,66 @@
 /*
- * wlroots — il palco della terza famiglia: labwc, e quindi XFCE e LXQt.
+ * wlroots — the stage of the third family: labwc, and so XFCE and LXQt.
  *
- * ⛔⛔ E NON È «kwin.h con un altro protocollo»: è l'altro VERSO.
+ * ⛔⛔ AND IT IS NOT "kwin.h with another protocol": it is the other DIRECTION.
  *
- *    `mutter.h` e `kwin.h` fanno la stessa cosa — chiedono al compositore un
- *    flusso e ne ricevono **il numero di un nodo PipeWire**. Da lì in poi i
- *    fotogrammi **arrivano da soli**, spinti, e `cattura.c` li raccoglie.
+ *    `mutter.h` and `kwin.h` do the same thing — they ask the compositor for a
+ *    stream and receive **the number of a PipeWire node**. From there on the
+ *    frames **arrive on their own**, pushed, and `cattura.c` collects them.
  *
- *    Su wlroots un nodo PipeWire non esiste. C'è un protocollo Wayland,
- *    `zwlr_screencopy_manager_v1`, e per ogni fotogramma si fa il giro intero:
+ *    On wlroots a PipeWire node does not exist. There is a Wayland protocol,
+ *    `zwlr_screencopy_manager_v1`, and for every frame the whole round is made:
  *
  *        capture_output → buffer → copy → ready
  *
- *    ⇒ Un fotogramma **si chiede**. Il ritmo non è una proprietà del
- *      compositore: è il nostro ciclo. ⭐ Ed è precisamente quel che la
- *      decisione dell'utente del 20 settembre 2026 ha comprato — «li chiediamo
- *      noi» — insieme al governo del cursore e della misura.
+ *    ⇒ A frame **is asked for**. The rate is not a property of the
+ *      compositor: it is our loop. ⭐ And that is precisely what the
+ *      user's decision of 20 September 2026 bought — "we ask for them
+ *      ourselves" — together with control over the cursor and the size.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL CANCELLO NON C'È, e va detto perché è una notizia.
+ * ⛔ THERE IS NO GATE, and it must be said because it is news.
  *
- * Su GNOME la cattura passa da un portale; su KDE serve un `.desktop` che
- * dichiari `X-KDE-Wayland-Interfaces`, e senza quello il global non compare.
- * `[M]` 20 settembre 2026, dentro `rete11-xfce`: un client nudo vede **47
- * global** e fra questi `zwlr_screencopy_manager_v1` **v3**. Nessun file,
- * nessun dialogo, nessun portale. L'unico cancello è l'uid: `/run/user/<uid>`
- * è `drwx------`.
- *
- * ---------------------------------------------------------------------------
- * ⚠ IL PROTOCOLLO È DEPRECATO A MONTE, e lo si sa dal primo giorno.
- *
- * L'XML porta in testa *«This protocol is deprecated … the
- * ext-image-copy-capture-v1 protocol should be used instead»*. ⛔ Ma `[M]` 20
- * settembre 2026 labwc su Debian Trixie **non espone**
- * `ext_image_copy_capture_manager_v1`: non c'è niente da usare al suo posto.
- * ⇒ Si scrive contro screencopy, e si scrive in modo che il successore possa
- *   entrare **accanto** — non al suo posto: la porta di questo file nomina
- *   fotogrammi e misure, non messaggi del protocollo.
+ * On GNOME capture goes through a portal; on KDE a `.desktop` is needed that
+ * declares `X-KDE-Wayland-Interfaces`, and without it the global does not appear.
+ * `[M]` 20 September 2026, inside `rete11-xfce`: a bare client sees **47
+ * globals** and among them `zwlr_screencopy_manager_v1` **v3**. No file,
+ * no dialog, no portal. The only gate is the uid: `/run/user/<uid>`
+ * is `drwx------`.
  *
  * ---------------------------------------------------------------------------
- * ⭐ PERCHÉ QUESTO FILE ESISTE, invece di un ramo dentro `cattura.c`
+ * ⚠ THE PROTOCOL IS DEPRECATED UPSTREAM, and this has been known from day one.
  *
- * `cattura.c` sono 2 348 righe costruite sul verso della spinta, e `figlio.c`
- * la usa in **35 punti**. ⛔ Rifarle a due vie vorrebbe dire toccare in
- * trentacinque posti il codice da cui GNOME e KDE dipendono — cioè mettere a
- * rischio il baseline protetto per servire il desktop nuovo, che è proprio quel
- * che la regola della fase 13 vieta.
+ * The XML carries at its top *«This protocol is deprecated … the
+ * ext-image-copy-capture-v1 protocol should be used instead»*. ⛔ But `[M]` 20
+ * September 2026 labwc on Debian Trixie **does not expose**
+ * `ext_image_copy_capture_manager_v1`: there is nothing to use in its place.
+ * ⇒ We write against screencopy, and we write so that the successor can
+ *   come in **beside** it — not in its place: the interface of this file names
+ *   frames and sizes, not protocol messages.
  *
- * ⇒ La forma scelta ha un precedente in casa, e si copia da lì: gli **appunti**
- *   (`src/appunti.c:594-603`) hanno **due costruttori** — `appunti_apri()` e
- *   `appunti_apri_kde()` — e le funzioni pubbliche passano la mano in cima.
- *   Qui uguale: `cattura_avvia()` resta intatta per GNOME e KDE, e questo file
- *   dà la sorgente dell'altro verso.
+ * ---------------------------------------------------------------------------
+ * ⭐ WHY THIS FILE EXISTS, instead of a branch inside `cattura.c`
  *
- * ⚠ E le due funzioni che NON mappano sull'altro verso sono due, contate:
- *   · **il cursore**: screencopy non ha un canale per la forma del puntatore —
- *     c'è solo `overlay_cursor`, un sì/no che lo disegna DENTRO l'immagine.
- *     ⇒ Chi si registra viene accettato e non richiamato mai, e la riga lo
- *       dice: «su questo desktop il puntatore è nei pixel».
- *   · **il ridimensionamento**: qui non si rinegozia un flusso, si cambia la
- *     misura dell'**uscita** (`zwlr_output_manager_v1`, `[M]` v4 su labwc).
- *     ⇒ Non sta in questo file: è l'incremento che porta la misura.
+ * `cattura.c` is 2,348 lines built on the push direction, and `figlio.c`
+ * uses it in **35 places**. ⛔ Redoing them two-way would mean touching in
+ * thirty-five places the code GNOME and KDE depend on — that is, putting at
+ * risk the protected baseline to serve the new desktop, which is exactly what
+ * the phase 13 rule forbids.
+ *
+ * ⇒ The chosen form has a precedent in the house, and it is copied from there: the **clipboard**
+ *   (`src/appunti.c:594-603`) has **two constructors** — `appunti_apri()` and
+ *   `appunti_apri_kde()` — and the public functions hand over at the top.
+ *   Same here: `cattura_avvia()` stays intact for GNOME and KDE, and this file
+ *   gives the source of the other direction.
+ *
+ * ⚠ And the functions that do NOT map onto the other direction are two, counted:
+ *   · **the cursor**: screencopy has no channel for the pointer shape —
+ *     there is only `overlay_cursor`, a yes/no that draws it INSIDE the image.
+ *     ⇒ Whoever registers is accepted and never called back, and the line
+ *       says so: "on this desktop the pointer is in the pixels".
+ *   · **resizing**: here one does not renegotiate a stream, one changes the
+ *     size of the **output** (`zwlr_output_manager_v1`, `[M]` v4 on labwc).
+ *     ⇒ It is not in this file: it is the increment that brings the size.
  */
 #pragma once
 
@@ -71,221 +71,221 @@
 typedef struct WlrPalco WlrPalco;
 
 /*
- * Si collega al compositore dell'utente e prepara la cattura dell'uscita.
+ * Connects to the user's compositor and prepares the capture of the output.
  *
- * ⚠ `WAYLAND_DISPLAY` se c'è; altrimenti si prova `wayland-0`…`wayland-9` in
- *   `XDG_RUNTIME_DIR` — la stessa ricerca che `kwin_display_apri()` fa già, e
- *   per la stessa ragione: il figlio non eredita la variabile dal compositore
- *   che ha appena avviato.
+ * ⚠ `WAYLAND_DISPLAY` if present; otherwise `wayland-0`…`wayland-9` are tried in
+ *   `XDG_RUNTIME_DIR` — the same search `kwin_display_apri()` already does, and
+ *   for the same reason: the child does not inherit the variable from the compositor
+ *   it has just started.
  *
- * ⛔ NON cattura ancora niente: qui si stabilisce solo che il compositore c'è,
- *    che annuncia il manager, e QUALE uscita si guarderà. Un `apri` che
- *    catturasse renderebbe indistinguibili «il compositore non c'è» e «il primo
- *    fotogramma non arriva», che sono due diagnosi diverse.
+ * ⛔ It does NOT capture anything yet: here it is only established that the compositor is there,
+ *    that it announces the manager, and WHICH output will be watched. An `apri` that
+ *    captured would make "the compositor is not there" and "the first
+ *    frame does not arrive" indistinguishable, and they are two different diagnoses.
  *
- * NULL con `sbaglio` scritto.
+ * NULL with `sbaglio` set.
  */
 WlrPalco *wlr_apri(GError **sbaglio);
 
 /*
- * ⛔ FASE 19 — LE LASTRE ALLA TELA MASSIMA, solo se la codifica e' Vulkan.
- *    Vero ⇒ ogni lastra GBM nasce 4096x2304 e al cambio di misura si rifa'
- *    solo il `wl_buffer` (il BO non muore finche' vive il palco).  Falso (il
- *    predefinito) ⇒ lastre della misura giusta, rifatte al cambio.  Il perche'
- *    e' nel riquadro di `WLR_LASTRA_L` in `wlroots.c`.  ⚠ Del PROCESSO, non
- *    del palco: la strada di codifica e' una per figlio, e si dice prima del
- *    primo palco.
+ * ⛔ PHASE 19 — SLABS AT THE MAXIMUM CANVAS, only if encoding is Vulkan.
+ *    True ⇒ every GBM slab is born 4096x2304 and on a size change only the
+ *    `wl_buffer` is redone (the BO does not die while the stage lives).  False (the
+ *    default) ⇒ slabs of the right size, redone on change.  The why
+ *    is in the box of `WLR_LASTRA_L` in `wlroots.c`.  ⚠ Per PROCESS, not
+ *    per stage: the encoding route is one per child, and it is stated before the
+ *    first stage.
  */
 void wlr_lastre_alla_tela_massima(bool si);
 
-/* La misura che l'uscita ha ADESSO — ⛔ non quella che si vorrebbe.
+/* The size the output has NOW — ⛔ not the one we would like.
  *
- * `[M]` 20 settembre 2026: un'uscita headless di labwc nasce **1280×720**
- * cablata, e nessun protocollo ne crea una della misura voluta. ⇒ Chi chiede
- * 1920×1080 deve saperlo, e questa funzione è il posto in cui lo scopre. */
+ * `[M]` 20 September 2026: a labwc headless output is born **1280×720**
+ * hard-wired, and no protocol creates one of the wanted size. ⇒ Whoever asks for
+ * 1920×1080 must know it, and this function is the place where they find out. */
 void wlr_misura(const WlrPalco *palco, uint32_t *larghezza, uint32_t *altezza);
 
-/* Il nome dell'uscita, per le righe di registro (`HEADLESS-1` e simili). */
+/* The name of the output, for log lines (`HEADLESS-1` and the like). */
 const char *wlr_uscita_nome(const WlrPalco *palco);
 
 /*
- * ⭐ UN FOTOGRAMMA, CHIESTO E ASPETTATO — il giro intero del verso a tiro.
+ * ⭐ ONE FRAME, ASKED FOR AND WAITED ON — the whole round of the pull direction.
  *
- * ⛔ E le tre uscite sono TRE, non due, per la stessa ragione di tutto il
- *    progetto: «il compositore ha detto di no» e «non ho potuto chiedere» non
- *    sono la stessa cosa, e metterle insieme fa accusare il compositore per un
- *    guasto nostro.
+ * ⛔ And the outcomes are THREE, not two, for the same reason as the whole
+ *    project: "the compositor said no" and "I could not ask" are not
+ *    the same thing, and lumping them together makes us blame the compositor for a
+ *    fault of ours.
  */
 typedef enum {
-	WLR_FOTOGRAMMA_PRESO = 0,  /* i pixel ci sono                              */
-	WLR_FOTOGRAMMA_FALLITO,    /* il compositore ha mandato `failed`           */
-	WLR_FOTOGRAMMA_SCADUTO,    /* l'attesa è finita: non ho potuto guardare    */
-	WLR_FOTOGRAMMA_ROTTO       /* il filo con il compositore è caduto          */
+	WLR_FOTOGRAMMA_PRESO = 0,  /* the pixels are there                         */
+	WLR_FOTOGRAMMA_FALLITO,    /* the compositor sent `failed`                 */
+	WLR_FOTOGRAMMA_SCADUTO,    /* the wait is over: I could not look           */
+	WLR_FOTOGRAMMA_ROTTO       /* the line to the compositor has dropped       */
 } WlrEsito;
 
 typedef struct {
 	uint32_t larghezza, altezza, stride;
-	/* ⚠ Sempre un fourcc DRM, ma da due numerazioni diverse: in memoria è il
-	 *   formato di `wl_shm` TRADOTTO (`[M]` labwc: XB24, cioè R G B x); sulla
-	 *   scheda è quello dell'evento `linux_dmabuf`, già DRM (`[M]` XR24, cioè
-	 *   B G R x).  ⛔ Chi legge l'ordine dei canali lo legge da qui, per
-	 *   fotogramma: le due strade non danno lo stesso. */
+	/* ⚠ Always a DRM fourcc, but from two different numberings: in memory it is the
+	 *   `wl_shm` format TRANSLATED (`[M]` labwc: XB24, that is R G B x); on the
+	 *   card it is the one from the `linux_dmabuf` event, already DRM (`[M]` XR24, that is
+	 *   B G R x).  ⛔ Whoever reads the channel order reads it from here, per
+	 *   frame: the two roads do not give the same. */
 	uint32_t formato;
-	const uint8_t *pixel; /* ⛔ vivi finché non si chiede il fotogramma dopo */
+	const uint8_t *pixel; /* ⛔ alive until the next frame is asked for     */
 	gsize byte;
-	/* ⭐ I due che il verso a tiro regala, e che sulla spinta si stimano:
-	 *    l'istante in cui il compositore dice che la presentazione è avvenuta. */
+	/* ⭐ The two the pull direction gives for free, and that on push are estimated:
+	 *    the instant at which the compositor says presentation happened. */
 	uint64_t secondi;
 	uint32_t nanosecondi;
-	/* ⚠ `y_invertita`: l'evento `flags` può dire che le righe vanno lette dal
-	 *   basso. ⛔ Ignorarlo dà un'immagine capovolta, che è un guasto che
-	 *   somiglia a un guasto del codificatore. */
+	/* ⚠ `y_invertita`: the `flags` event may say that the rows are to be read from the
+	 *   bottom. ⛔ Ignoring it gives an upside-down image, which is a fault that
+	 *   looks like an encoder fault. */
 	bool y_invertita;
 
 	/* ------------------------------------------------------------------ *
-	 * ⭐⭐ LA STRADA DELLA SCHEDA — vedi il riquadro in cima a `wlroots.c`.
+	 * ⭐⭐ THE CARD ROAD — see the box at the top of `wlroots.c`.
 	 *
-	 * ⛔ Quando `sulla_scheda` è vero `pixel` è **NULL**: l'immagine sta in un
-	 *    DMA-BUF nostro (una «lastra»), e si arriva ai pixel da `fd`.  È la
-	 *    stessa regola di `CatturaFermo`: chi legge guarda `sulla_scheda`
-	 *    PRIMA di `pixel`.
-	 * ⛔⛔ E LA LASTRA È IN MANO A CHI HA RICEVUTO IL FOTOGRAMMA finché non la
-	 *      rende con `wlr_rendi()`.  Fino ad allora il compositore NON ci
-	 *      riscrive dentro — nessun `copy` la nomina.  ⚠ Chi non la rende
-	 *      finisce le lastre, e il fotogramma dopo si ferma DICENDOLO: non
-	 *      si ricicla mai una lastra in mano (`LEZIONI.md` §8).
+	 * ⛔ When `sulla_scheda` is true `pixel` is **NULL**: the image is in a
+	 *    DMA-BUF of ours (a "slab"), and the pixels are reached through `fd`.  It is the
+	 *    same rule as `CatturaFermo`: whoever reads looks at `sulla_scheda`
+	 *    BEFORE `pixel`.
+	 * ⛔⛔ AND THE SLAB IS HELD BY WHOEVER RECEIVED THE FRAME until they
+	 *      give it back with `wlr_rendi()`.  Until then the compositor does NOT
+	 *      write into it again — no `copy` names it.  ⚠ Whoever does not give it back
+	 *      runs out of slabs, and the next frame stops SAYING SO: a slab
+	 *      in hand is never recycled (`LEZIONI.md` §8).
 	 * ------------------------------------------------------------------ */
 	bool sulla_scheda;
-	int fd;                /* ⛔ di `wlroots.c`: non si chiude              */
+	int fd;                /* ⛔ owned by `wlroots.c`: do not close         */
 	uint32_t offset;
-	uint64_t modificatore; /* `[R]` sempre LINEARE: vedi `wlroots.c`         */
-	/* ⛔ Cambia ogni volta che una lastra nasce o muore: i numeri di
-	 *    descrittore si riciclano, e chi mette in cache l'importazione di un
-	 *    `fd` (il codificatore) deve buttarla — `cattura.h`, `generazione`. */
+	uint64_t modificatore; /* `[R]` always LINEAR: see `wlroots.c`           */
+	/* ⛔ It changes every time a slab is born or dies: descriptor numbers
+	 *    are recycled, and whoever caches the import of an
+	 *    `fd` (the encoder) must throw it away — `cattura.h`, `generazione`. */
 	uint64_t generazione;
-	void *lastra;          /* ⛔ opaco: si passa a `wlr_rendi()` e basta     */
-	/* ⭐ Quanto si è aspettata la GPU del compositore dopo `ready`, e se
-	 *    l'attesa era VERA (la fence estratta dal DMA-BUF) o se non si è
-	 *    potuto e ci si affida alla sincronizzazione implicita. */
+	void *lastra;          /* ⛔ opaque: passed to `wlr_rendi()` and nothing else */
+	/* ⭐ How long the compositor's GPU was waited on after `ready`, and whether
+	 *    the wait was REAL (the fence extracted from the DMA-BUF) or it could
+	 *    not be done and implicit synchronisation is relied upon. */
 	uint64_t us_attesa_gpu;
 	bool attesa_esplicita;
 } WlrFotogramma;
 
 /*
- * Chiede un fotogramma e aspetta al massimo `attesa_s`.
+ * Asks for a frame and waits at most `attesa_s`.
  *
- * ⚠ I pixel consegnati vivono fino alla chiamata successiva: chi li vuole
- *   tenere se li copia. ⛔ È la stessa regola di `cattura.h`, e sta qui perché
- *   è la regola che viene dimenticata per prima.
+ * ⚠ The delivered pixels live until the next call: whoever wants to
+ *   keep them copies them. ⛔ It is the same rule as `cattura.h`, and it is here because
+ *   it is the rule that gets forgotten first.
  */
 WlrEsito wlr_fotogramma(WlrPalco *palco, double attesa_s, WlrFotogramma *fuori,
                         GError **sbaglio);
 
 /*
- * ⭐⭐ ACCENDE LA STRADA DELLA SCHEDA — e dice di no, per scritto, se non si può.
+ * ⭐⭐ TURNS ON THE CARD ROAD — and says no, in writing, if it cannot.
  *
- * ⛔ Non è un'opzione di `wlr_apri()` apposta: «il compositore c'è» e «la
- *    scheda c'è» sono due diagnosi, e un `apri` che fallisse per la seconda
- *    toglierebbe anche la prima strada, che funziona.
+ * ⛔ It is deliberately not an option of `wlr_apri()`: "the compositor is there" and "the
+ *    card is there" are two diagnoses, and an `apri` that failed on the second
+ *    would also take away the first road, which works.
  *
- * Vero: da qui ogni fotogramma si prova a prenderlo sulla scheda, e ciascuno
- * dice in `sulla_scheda` dove è finito DAVVERO.  Falso con `sbaglio` scritto:
- * la strada resta la memoria, e chi chiama DEVE scriverlo nel registro.
+ * True: from here every frame is tried on the card, and each one
+ * says in `sulla_scheda` where it REALLY ended up.  False with `sbaglio` set:
+ * the road stays memory, and the caller MUST write it in the log.
  */
 bool wlr_chiedi_la_scheda(WlrPalco *palco, GError **sbaglio);
 
-/* La strada in vigore ADESSO.  ⚠ Può diventare falsa da sola: tre `failed`
- * di fila sulla scheda la spengono, e `wlroots.c` lo scrive. */
+/* The road in force NOW.  ⚠ It can become false on its own: three `failed`
+ * in a row on the card turn it off, and `wlroots.c` writes so. */
 bool wlr_sulla_scheda(const WlrPalco *palco);
 
-/* ⛔ Rende la lastra di un fotogramma della scheda: da qui il compositore ci
- *    può riscrivere.  Si chiama SOLO quando chi leggeva ha FINITO (per il
- *    codificatore: quando `codificatore_comprimi_scheda()` è tornata).
- * ⚠ `lastra` NULL non fa niente: è il fotogramma della memoria. */
+/* ⛔ Gives back the slab of a card frame: from here the compositor can
+ *    write into it again.  Call it ONLY when whoever was reading has FINISHED (for the
+ *    encoder: when `codificatore_comprimi_scheda()` has returned).
+ * ⚠ `lastra` NULL does nothing: it is the memory frame. */
 void wlr_rendi(WlrPalco *palco, void *lastra);
 
-/* ⚠ Da mettere attorno a una lettura della CPU dentro la lastra (`mmap`):
- *   `DMA_BUF_IOCTL_SYNC`, perché i byte visti dalla CPU siano quelli scritti
- *   dalla GPU.  Un solo posto lo usa — il primo fotogramma guardato. */
+/* ⚠ To be put around a CPU read inside the slab (`mmap`):
+ *   `DMA_BUF_IOCTL_SYNC`, so that the bytes seen by the CPU are those written
+ *   by the GPU.  Only one place uses it — the first frame looked at. */
 void wlr_lettura_cpu(int fd, bool inizio);
 
 /*
- * ⭐⭐ LA MISURA DELL'USCITA — e su questa famiglia si può, a differenza di KDE.
+ * ⭐⭐ THE OUTPUT SIZE — and on this family it can be done, unlike KDE.
  *
- * ⛔⛔ E «LA VERITÀ LA DICE IL FOTOGRAMMA, NON L'ESITO DELLA RICHIESTA»
- *     (`DECISIONI.md` §5.0-sexies, la regola rubata a neatvnc).
+ * ⛔⛔ AND "THE TRUTH IS TOLD BY THE FRAME, NOT BY THE OUTCOME OF THE REQUEST"
+ *     (`DECISIONI.md` §5.0-sexies, the rule stolen from neatvnc).
  *
- *     `[M]` 14 agosto 2026: chiedere a labwc la misura che l'uscita **ha già**
- *     risponde «riuscito» e non manda nessun evento; un serial vecchio
- *     risponde «annullato» e non fa niente. ⛔ `wayvnc` tratta *riuscito*,
- *     *fallito* e *annullato* nello stesso ramo — da non copiare.
+ *     `[M]` 14 August 2026: asking labwc for the size the output **already has**
+ *     answers "succeeded" and sends no event; an old serial
+ *     answers "cancelled" and does nothing. ⛔ `wayvnc` treats *succeeded*,
+ *     *failed* and *cancelled* in the same branch — not to be copied.
  *
- * ⇒ Questa funzione dice soltanto **se la richiesta è stata accettata**. Che
- *   l'uscita sia cambiata lo dirà `wlr_misura()` dopo il fotogramma seguente,
- *   ed è l'unico testimone che conta.
+ * ⇒ This function only says **whether the request was accepted**. That
+ *   the output changed will be told by `wlr_misura()` after the following frame,
+ *   and it is the only witness that counts.
  */
 typedef enum {
-	WLR_MISURA_CHIESTA = 0, /* la richiesta è partita e il compositore ha detto sì */
-	WLR_MISURA_GIA_COSI,    /* l'uscita è già di quella misura: niente da chiedere */
-	WLR_MISURA_RIFIUTATA,   /* `failed`: il compositore ha detto no                */
-	WLR_MISURA_ANNULLATA,   /* `cancelled`: il serial era vecchio — si può riprovare */
-	WLR_MISURA_IMPOSSIBILE  /* il compositore non annuncia il gestore delle uscite */
+	WLR_MISURA_CHIESTA = 0, /* the request left and the compositor said yes          */
+	WLR_MISURA_GIA_COSI,    /* the output already has that size: nothing to ask     */
+	WLR_MISURA_RIFIUTATA,   /* `failed`: the compositor said no                     */
+	WLR_MISURA_ANNULLATA,   /* `cancelled`: the serial was old — can be retried     */
+	WLR_MISURA_IMPOSSIBILE  /* the compositor does not announce the output manager  */
 } WlrMisuraEsito;
 
 WlrMisuraEsito wlr_misura_chiedi(WlrPalco *palco, uint32_t larghezza, uint32_t altezza,
                                  double attesa_s, GError **sbaglio);
 
-/* Quanti fotogrammi sono stati chiesti, presi, falliti. Per le righe di
- * registro e per il manifesto: ⛔ un conteggio non è una dichiarazione. */
+/* How many frames were asked for, taken, failed. For log lines
+ * and for the manifest: ⛔ a count is not a declaration. */
 typedef struct {
 	guint64 chiesti, presi, falliti, scaduti;
-	/* ⛔ Le DUE strade contate a parte: un numero senza la sua strada è un
-	 *    numero che mentirà.  `presi == sulla_scheda + in_memoria`. */
+	/* ⛔ The TWO roads counted separately: a number without its road is a
+	 *    number that will lie.  `presi == sulla_scheda + in_memoria`. */
 	guint64 sulla_scheda, in_memoria;
 } WlrConteggi;
 
 void wlr_conteggi(const WlrPalco *palco, WlrConteggi *fuori);
 
 /*
- * ⭐ Il PROSSIMO fotogramma sarà intero, anche se lo schermo non è cambiato.
+ * ⭐ The NEXT frame will be whole, even if the screen has not changed.
  *
- * Di solito i fotogrammi si chiedono col danno (il compositore risponde solo
- * quando qualcosa cambia).  ⚠ Ma una chiave a volte serve subito su un desktop
- * fermo: è il risveglio di `cattura.h`, e su questa famiglia è questa riga.
+ * Usually frames are asked for with damage (the compositor answers only
+ * when something changes).  ⚠ But a keyframe is sometimes needed at once on a still
+ * desktop: it is the wake-up of `cattura.h`, and on this family it is this line.
  */
 void wlr_forza_intero(WlrPalco *palco);
 
 /*
- * ⭐⭐ LA SONDA DEL PUNTATORE — 24 settembre 2026, la forma vera su labwc.
+ * ⭐⭐ THE POINTER PROBE — 24 September 2026, the true shape on labwc.
  *
- * Il perche' e le tre regole stanno in `wlroots.c`, sopra `wlr_sonda_puntatore`.
- * In breve: col tema codificato (`forma.h`) il compositore disegna sotto il
- * punto attivo un pixel del colore della forma; la sonda lo legge con una
- * `capture_output_region` 3x3, e il dizionario ne fa il nome.
+ * The why and the three rules are in `wlroots.c`, above `wlr_sonda_puntatore`.
+ * In short: with the encoded theme (`forma.h`) the compositor draws under the
+ * hotspot a pixel of the shape's colour; the probe reads it with a 3x3
+ * `capture_output_region`, and the dictionary turns it into the name.
  *
- *   wlr_sonda_puntatore()  dopo OGNI gesto del puntatore iniettato: `x`,`y`
- *                          nella tela `l`x`a` (le stesse di
- *                          `wlr_input_assoluto`).  Coalescente, UNA in volo.
- *   wlr_sonda_forma()      l'indice della forma (`forma.h`) se e' CAMBIATA
- *                          dall'ultima volta, altrimenti -1.  ⛔ Da chiamare a
- *                          ogni giro del ciclo (la chiama `cattura_prendi`):
- *                          e' anche il posto da cui parte la sonda «di coda».
+ *   wlr_sonda_puntatore()  after EVERY injected pointer gesture: `x`,`y`
+ *                          in the `l`x`a` canvas (the same as
+ *                          `wlr_input_assoluto`).  Coalescing, ONE in flight.
+ *   wlr_sonda_forma()      the shape index (`forma.h`) if it has CHANGED
+ *                          since last time, otherwise -1.  ⛔ To be called at
+ *                          every turn of the loop (`cattura_prendi` calls it):
+ *                          it is also the place the "trailing" probe starts from.
  *
- * ⛔ Stesso thread di `wlr_fotogramma`: e' la sua pompa che porta gli eventi.
- * ⛔ Il flusso principale NON cambia: la sonda ha il suo fotogramma e il suo
- *    buffer, e non tocca `forza_intero` ne' il danno.
+ * ⛔ Same thread as `wlr_fotogramma`: it is its pump that carries the events.
+ * ⛔ The main stream does NOT change: the probe has its own frame and its own
+ *    buffer, and touches neither `forza_intero` nor the damage.
  */
 void wlr_sonda_puntatore(WlrPalco *palco, uint32_t x, uint32_t y, uint32_t l, uint32_t a);
 int wlr_sonda_forma(WlrPalco *palco);
 
 typedef struct {
-	guint64 chieste;   /* gesti del puntatore arrivati                        */
-	guint64 lanciate;  /* sonde partite davvero (⚠ < chieste: coalescenza)    */
+	guint64 chieste;   /* pointer gestures arrived                            */
+	guint64 lanciate;  /* probes really launched (⚠ < chieste: coalescing)    */
 	guint64 tornate, fallite;
-	guint64 di_coda;   /* le sonde «a mano ferma» (regola 3)                  */
-	guint64 cambi;     /* forme nuove riconosciute                            */
-	guint64 ignote;    /* tornate senza un colore nostro sotto il puntatore   */
-	guint64 dai_vicini; /* riconosciute su un vicino e non sul centro         */
+	guint64 di_coda;   /* the "still hand" probes (rule 3)                    */
+	guint64 cambi;     /* new shapes recognised                               */
+	guint64 ignote;    /* returned without a colour of ours under the pointer */
+	guint64 dai_vicini; /* recognised on a neighbour and not on the centre    */
 } WlrSondaConteggi;
 
 void wlr_sonda_conteggi(const WlrPalco *palco, WlrSondaConteggi *fuori);

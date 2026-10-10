@@ -6,16 +6,16 @@ import (
 	"time"
 )
 
-// accendi-servizio: l'ACCENSIONE fra 7a e 7b (§6.0 punto 5): il servizio si abilita e si accende sul
-// D-Bus di systemd (EnableUnitFiles, StartUnit) e si considera fatto solo se è attivo E la porta
-// è in ascolto in TCP (la pagina) e UDP (QUIC). Reversibilità ESATTA: si spegne e si disabilita
-// solo quel che ha fatto REMOTIX; un servizio già abilitato e acceso è PREESISTENTE.
+// accendi-servizio: the SWITCH-ON between 7a and 7b (§6.0 point 5): the service is enabled and started over
+// systemd's D-Bus (EnableUnitFiles, StartUnit) and counts as done only if it is active AND the port
+// is listening on TCP (the page) and UDP (QUIC). EXACT reversibility: only what REMOTIX did is
+// stopped and disabled; a service already enabled and running is PRE-EXISTING.
 //
-// parametri: unita, porta.
+// parameters: unita, porta.
 
 func init() { registraTipo("start-service", nuovaServizio) }
 
-// PianoAccendiServizio prepara il passo del piano.
+// PianoAccendiServizio prepares the plan's step.
 func PianoAccendiServizio(id, unita string, porta int) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "start-service",
@@ -98,8 +98,8 @@ func (s *servizio) Fai(c *Contesto, prima json.RawMessage) error {
 			return err
 		}
 	}
-	// 7b: la porta si apre dopo l'avvio (il certificato si genera al primo avvio): si aspetta fino
-	// a 60 s, poi «controlla» dirà com'è
+	// 7b: the port opens after start-up (the certificate is generated at first start): we wait up
+	// to 60 s, then «controlla» will say how it is
 	for i := 0; i < 120; i++ {
 		if ok, _ := s.inAscolto(c); ok {
 			break
@@ -109,7 +109,7 @@ func (s *servizio) Fai(c *Contesto, prima json.RawMessage) error {
 	return nil
 }
 
-// inAscolto: la porta in TCP e UDP (7b). Senza porta nei parametri (le prove) non si guarda.
+// inAscolto: the port on TCP and UDP (7b). Without a port in the parameters (the tests) it is not checked.
 func (s *servizio) inAscolto(c *Contesto) (bool, string) {
 	if s.porta == 0 {
 		return true, ""
@@ -119,7 +119,7 @@ func (s *servizio) inAscolto(c *Contesto) (bool, string) {
 			return false, strconv.Itoa(s.porta) + "/" + proto + " not listening"
 		}
 	}
-	return true, strconv.Itoa(s.porta) + " tcp e udp in ascolto"
+	return true, strconv.Itoa(s.porta) + " tcp and udp listening"
 }
 
 func (s *servizio) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
@@ -135,7 +135,7 @@ func (s *servizio) Controlla(c *Contesto, prima json.RawMessage) (Esito, string,
 		if ok, det := s.inAscolto(c); ok {
 			return COMPLETO, "enabled, active, " + det, nil
 		} else if p.Origine != PREESISTENTE {
-			return A_META, "attivo ma " + det, nil
+			return A_META, "active but " + det, nil
 		}
 	}
 	if p.Origine == PREESISTENTE {
@@ -179,8 +179,8 @@ func (s *servizio) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 	if err != nil {
 		return false, "", err
 	}
-	// «annullata» = il nostro effetto non c'è più: né abilitato né acceso da noi. Un passo dopo
-	// (la disinstallazione che toglie il pacchetto) può portare l'unità a not-found: va bene lo stesso.
+	// «cancelled» = our effect is gone: neither enabled nor started by us. A later step
+	// (the uninstallation that removes the package) can bring the unit to not-found: that is fine too.
 	ok := (p.File == "enabled" || f != "enabled") && (p.Attiva == "active" || a != "active")
 	return ok, f + " " + a, nil
 }

@@ -1,46 +1,46 @@
 policy_module(remotix, 1.0.0)
 
-# remotix.te — il modulo SELinux di REMOTIX (fase 17, T6; `fasi/17-l-installatore.md` §11.1 B, R19).
+# remotix.te — the REMOTIX SELinux module (phase 17, T6; `fasi/17-l-installatore.md` §11.1 B, R19).
 #
-# ⭐ Perche' esiste.  `DECISIONI.md` §10.18 (D3): il file PAM di REMOTIX e' la pila di sshd, con
-#    `pam_selinux close/open`.  `pam_selinux open` chiede che il prossimo `execve` passi al contesto
-#    dell'utente (`unconfined_t` per un utente normale) — ed e' il figlio di REMOTIX a farlo, quando si
-#    rilancia come l'utente (`figlio.c`, `execve` di se stesso).  Nel contesto di un servizio
-#    qualunque (`unconfined_service_t`) quel passaggio e' vietato: `[M]` T1c, 29 set, Fedora e Alma:
-#    `{ transition } unconfined_service_t → unconfined_t`, il figlio esce con 37 e il desktop non nasce.
-#    ⇒ Come Cockpit (`selinux/cockpit.te`: `cockpit_session_t`), REMOTIX ha un dominio SUO, che e'
-#    un «programma d'accesso» come sshd e login (`auth_login_pgm_domain`) e che puo' passare al
-#    contesto dell'utente (`userdom_spec_domtrans_all_users`, `unconfined_domtrans`).
+# ⭐ Why it exists.  `DECISIONI.md` §10.18 (D3): the REMOTIX PAM file is the sshd stack, with
+#    `pam_selinux close/open`.  `pam_selinux open` requires the next `execve` to transition to the
+#    user's context (`unconfined_t` for a normal user) — and it is the REMOTIX child that does it, when it
+#    relaunches itself as the user (`figlio.c`, `execve` of itself).  In the context of an arbitrary
+#    service (`unconfined_service_t`) that transition is forbidden: `[M]` T1c, 29 Sep, Fedora and Alma:
+#    `{ transition } unconfined_service_t → unconfined_t`, the child exits with 37 and the desktop is not born.
+#    ⇒ Like Cockpit (`selinux/cockpit.te`: `cockpit_session_t`), REMOTIX has a domain of ITS OWN, which is
+#    a «login program» like sshd and login (`auth_login_pgm_domain`) and which can transition to the
+#    user's context (`userdom_spec_domtrans_all_users`, `unconfined_domtrans`).
 #
-# ⭐ I tipi:
-#    remotix_t            il servizio (il padre, l'aiutante PAM, il figlio fino al suo `execve`)
+# ⭐ The types:
+#    remotix_t            the service (the parent, the PAM helper, the child up to its `execve`)
 #    remotix_exec_t       /usr/libexec/remotix/remotix
-#    remotix_port_t       la porta 7447, TCP (la pagina) e UDP (QUIC): `remotix_porta.cil`
-#    remotix_var_lib_t    /var/lib/remotix (certificati, ban, registro del motore)
+#    remotix_port_t       port 7447, TCP (the page) and UDP (QUIC): `remotix_porta.cil`
+#    remotix_var_lib_t    /var/lib/remotix (certificates, bans, engine log)
 #    remotix_var_run_t    /run/remotix
 #
-# ⚠ Le regole sono quelle MISURATE (`[M]` sulle VM, il dominio prima in «permissive» e ogni rifiuto
-#   letto con `ausearch -m avc`): una regola che non ha una misura dietro non c'e'.  Dove una misura
-#   non c'e' ancora (un ramo raro del codice), il rifiuto si vede nel giornale di audit e la
-#   cura e' `semanage permissive -a remotix_t` finche' la regola non entra qui.
+# ⚠ The rules are the MEASURED ones (`[M]` on the VMs, the domain first in «permissive» and every denial
+#   read with `ausearch -m avc`): a rule with no measurement behind it is not here.  Where a measurement
+#   does not exist yet (a rare code path), the denial shows in the audit log and the
+#   cure is `semanage permissive -a remotix_t` until the rule makes it in here.
 #
-# Si costruisce con `make -f /usr/share/selinux/devel/Makefile remotix.pp` (lo fa lo spec, nel
-# contenitore di ogni bersaglio: le interfacce sono quelle della politica di QUELLA distribuzione).
+# Built with `make -f /usr/share/selinux/devel/Makefile remotix.pp` (the spec does it, in the
+# container of each target: the interfaces are those of THAT distribution's policy).
 
 ########################################
 #
-# Le dichiarazioni
+# The declarations
 #
 
 type remotix_t;
 type remotix_exec_t;
-# ⭐ come sshd (`init_ranged_daemon_domain(sshd_t, sshd_exec_t, s0 - mcs_systemhigh)`): il servizio
-#    ha tutte le categorie, e `pam_selinux` da' all'utente il suo livello intero
-#    (unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023, come a chi entra con ssh).  `[M]` con
-#    `init_daemon_domain` il palco nasceva «s0» soltanto.
-# ⚠ Tutte e due le righe: in Fedora `init_ranged_daemon_domain` NON chiama piu' init_daemon_domain
-#   (e' commentata nell'interfaccia), e da sola lascia systemd senza il permesso di eseguire il
-#   programma (`[M]` `{ getattr } init_t → remotix_exec_t`, 203/EXEC).
+# ⭐ like sshd (`init_ranged_daemon_domain(sshd_t, sshd_exec_t, s0 - mcs_systemhigh)`): the service
+#    has all the categories, and `pam_selinux` gives the user their full level
+#    (unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023, as for whoever logs in with ssh).  `[M]` with
+#    `init_daemon_domain` the stage was born «s0» only.
+# ⚠ Both lines: in Fedora `init_ranged_daemon_domain` NO LONGER calls init_daemon_domain
+#   (it is commented out in the interface), and on its own it leaves systemd without permission to run the
+#   program (`[M]` `{ getattr } init_t → remotix_exec_t`, 203/EXEC).
 init_daemon_domain(remotix_t, remotix_exec_t)
 init_ranged_daemon_domain(remotix_t, remotix_exec_t, s0 - mcs_systemhigh)
 
@@ -55,11 +55,11 @@ files_pid_file(remotix_var_run_t)
 
 ########################################
 #
-# Il servizio
+# The service
 #
 
-# ── i privilegi di root che il servizio usa: scendere all'uid dell'utente (setuid, setgid, i
-#    gruppi), leggere e cambiare i file degli utenti che il figlio prepara, i limiti del palco
+# ── the root privileges the service uses: dropping to the user's uid (setuid, setgid, the
+#    groups), reading and changing the user files the child prepares, the stage limits
 allow remotix_t self:capability { chown dac_override dac_read_search fowner fsetid kill setgid setuid sys_nice sys_resource };
 allow remotix_t self:process { setexec setrlimit setsched signal_perms getsched };
 allow remotix_t self:fifo_file rw_fifo_file_perms;
@@ -67,7 +67,7 @@ allow remotix_t self:unix_stream_socket { create_stream_socket_perms connectto }
 allow remotix_t self:unix_dgram_socket create_socket_perms;
 allow remotix_t self:netlink_kobject_uevent_socket create_socket_perms;
 
-# ── la rete: la pagina (TCP) e QUIC/WebTransport (UDP) sulla porta di REMOTIX
+# ── the network: the page (TCP) and QUIC/WebTransport (UDP) on the REMOTIX port
 allow remotix_t self:tcp_socket create_stream_socket_perms;
 allow remotix_t self:udp_socket create_socket_perms;
 allow remotix_t remotix_port_t:tcp_socket name_bind;
@@ -77,7 +77,7 @@ corenet_udp_bind_generic_node(remotix_t)
 corenet_tcp_sendrecv_generic_if(remotix_t)
 corenet_udp_sendrecv_generic_if(remotix_t)
 
-# ── i suoi file
+# ── its files
 manage_dirs_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
 manage_files_pattern(remotix_t, remotix_var_lib_t, remotix_var_lib_t)
 files_var_lib_filetrans(remotix_t, remotix_var_lib_t, dir)
@@ -87,16 +87,16 @@ manage_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
 manage_sock_files_pattern(remotix_t, remotix_var_run_t, remotix_var_run_t)
 files_pid_filetrans(remotix_t, remotix_var_run_t, dir)
 
-# il figlio si rilancia: `execve` dello stesso programma (poi il passaggio all'utente, qui sotto)
+# the child relaunches itself: `execve` of the same program (then the transition to the user, below)
 can_exec(remotix_t, remotix_exec_t)
 
-# ── la scheda: /dev/dri (i gruppi dei nodi, la prova del buffer prima di labwc)
+# ── the GPU: /dev/dri (the node groups, the buffer test before labwc)
 dev_rw_dri(remotix_t)
 dev_read_sysfs(remotix_t)
 dev_read_urand(remotix_t)
 dev_read_rand(remotix_t)
 
-# ── il sistema: /proc, /etc, le librerie, i certificati, il giornale
+# ── the system: /proc, /etc, the libraries, the certificates, the journal
 kernel_read_system_state(remotix_t)
 kernel_read_network_state(remotix_t)
 kernel_read_kernel_sysctls(remotix_t)
@@ -113,47 +113,47 @@ init_read_state(remotix_t)
 
 ########################################
 #
-# L'accesso: PAM, logind, il passaggio all'utente — come sshd
+# The login: PAM, logind, the transition to the user — like sshd
 #
 
-# la pila PAM intera, pam_selinux compreso (la stessa interfaccia di sshd, login e cockpit-session)
+# the whole PAM stack, pam_selinux included (the same interface as sshd, login and cockpit-session)
 auth_login_pgm_domain(remotix_t)
 auth_use_nsswitch(remotix_t)
 auth_read_shadow(remotix_t)
 auth_domtrans_chk_passwd(remotix_t)
 auth_write_login_records(remotix_t)
 
-# `pam_systemd` apre la sessione logind (D-Bus di sistema)
+# `pam_systemd` opens the logind session (system D-Bus)
 dbus_system_bus_client(remotix_t)
 optional_policy(`
 	systemd_dbus_chat_logind(remotix_t)
 ')
 
-# ⭐ il passaggio al contesto dell'utente all'`execve` del figlio, senza AT_SECURE (l'ambiente il
-#    figlio lo compone da se', `figlio.c` punto 5): come `cockpit_session_t`
+# ⭐ the transition to the user's context at the child's `execve`, without AT_SECURE (the child
+#    builds the environment itself, `figlio.c` point 5): like `cockpit_session_t`
 userdom_spec_domtrans_all_users(remotix_t)
 userdom_noatsecure_login_userdomain(remotix_t)
-# ⭐ il figlio si rilancia COME L'UTENTE eseguendo se stesso: il programma e' il punto d'ingresso del
-#    dominio dell'utente.  `[M]` 30 set, fedora44-gnome-iso: `{ entrypoint } unconfined_t →
-#    remotix_exec_t`, il figlio esce con 37.  (sshd e cockpit non ne hanno bisogno: eseguono una
-#    shell o `cockpit-bridge`, file che i domini degli utenti possono gia' eseguire.)
+# ⭐ the child relaunches itself AS THE USER by executing itself: the program is the entry point of
+#    the user's domain.  `[M]` 30 Sep, fedora44-gnome-iso: `{ entrypoint } unconfined_t →
+#    remotix_exec_t`, the child exits with 37.  (sshd and cockpit do not need it: they run a
+#    shell or `cockpit-bridge`, files the user domains can already execute.)
 gen_require(`
 	attribute userdomain;
 ')
 allow userdomain remotix_exec_t:file { entrypoint execute getattr map open read };
 
-# ⭐ il padre chiude il palco che ha fatto nascere (l'abbandono, il riavvio a desktop vivo): segnali
-#    al dominio dell'utente.  `[M]` fedora44-gnome-iso, dominio in permissive e dontaudit spento:
-#    `{ signal } remotix_t → unconfined_t`.  Come cockpit (`userdom_signal_all_users`).
+# ⭐ the parent closes the stage it gave birth to (abandonment, restart with a live desktop): signals
+#    to the user's domain.  `[M]` fedora44-gnome-iso, domain in permissive and dontaudit off:
+#    `{ signal } remotix_t → unconfined_t`.  Like cockpit (`userdom_signal_all_users`).
 userdom_signal_all_users(remotix_t)
 userdom_kill_all_users(remotix_t)
 
-# ⚠ Due rifiuti che non tolgono niente, e che si TACCIONO (`[M]` alma10-gnome-iso e fedora44-gnome-iso,
-#   permissive e dontaudit spento, una sessione intera con riavvio del servizio a desktop vivo):
-#   · `net_admin`: sd-journal e sd-bus provano SO_SNDBUFFORCE sui loro socket e, senza, tengono il
-#     buffer di serie — lo stesso rifiuto che la politica tace per i servizi di systemd;
-#   · `cap_userns sys_ptrace`: il ritrovo dei palchi (`ritrovo.c`) scorre /proc di TUTTI i processi, e
-#     quelli dentro uno spazio utente (bwrap, flatpak, glycin) non sono nostri: saltarli e' giusto.
+# ⚠ Two denials that take nothing away, and that are SILENCED (`[M]` alma10-gnome-iso and fedora44-gnome-iso,
+#   permissive and dontaudit off, a whole session with a service restart with a live desktop):
+#   · `net_admin`: sd-journal and sd-bus try SO_SNDBUFFORCE on their sockets and, without it, keep the
+#     default buffer — the same denial the policy silences for systemd services;
+#   · `cap_userns sys_ptrace`: finding the stages again (`ritrovo.c`) walks /proc of ALL processes, and
+#     those inside a user namespace (bwrap, flatpak, glycin) are not ours: skipping them is right.
 dontaudit remotix_t self:capability net_admin;
 dontaudit remotix_t self:cap_userns sys_ptrace;
 optional_policy(`

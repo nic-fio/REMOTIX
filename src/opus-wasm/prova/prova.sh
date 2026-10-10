@@ -1,7 +1,7 @@
 #!/bin/sh
-# La prova pura del decodificatore della pagina (D-006): il wasm INCASTONATO in
-# src/pagina.html contro libopus nativo, sugli stessi pacchetti.
-# Serve: cc, libopus (-dev) e node.   sh src/opus-wasm/prova/prova.sh
+# The pure test of the page's decoder (D-006): the wasm EMBEDDED in
+# src/pagina.html against native libopus, on the same packets.
+# Needs: cc, libopus (-dev) and node.   sh src/opus-wasm/prova/prova.sh
 set -eu
 QUI=$(cd "$(dirname "$0")" && pwd)
 T=$(mktemp -d)

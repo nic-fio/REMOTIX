@@ -1,9 +1,9 @@
-# Contenitore.ubuntu2604 — costruzione di REMOTIX per Ubuntu 26.04 LTS.
+# Contenitore.ubuntu2604 — REMOTIX build for Ubuntu 26.04 LTS.
 #
-# Le dipendenze di sviluppo dalla distribuzione (apt); ngtcp2 e nghttp3 dentro,
-# statiche (quic-statiche.sh, §6.3; quella di Ubuntu e' 1.16).
-# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — il loader e le
-#    intestazioni, `[M]` 1 ott 2026 nell'immagine: 1.4.341 (Ubuntu 26.04).
+# The development dependencies from the distribution (apt); ngtcp2 and nghttp3 inside,
+# static (quic-statiche.sh, §6.3; Ubuntu's is 1.16).
+# ⭐ Phase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — the loader and the
+#    headers, `[M]` 1 Oct 2026 in the image: 1.4.341 (Ubuntu 26.04).
 FROM docker.io/library/ubuntu:26.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,16 +14,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+# --- the same for all targets: nghttp3 1.18.0 and ngtcp2 1.25.0, static
 COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
 RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
 
-# --- fase 17, T3: gli attrezzi del pacchetto .deb (packaging/debian/).
-#     Uno strato IN CODA, perche' gli strati di sopra (e le statiche) restino
-#     quelli in cache: `costruisci-deb.sh` lo usa, `costruisci-tutti.sh` no.
+# --- phase 17, T3: the tools for the .deb package (packaging/debian/).
+#     A layer AT THE END, so that the layers above (and the static libraries) stay
+#     cached: `costruisci-deb.sh` uses it, `costruisci-tutti.sh` does not.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         debhelper dpkg-dev fakeroot lintian binutils \
     && rm -rf /var/lib/apt/lists/*

@@ -1,18 +1,18 @@
 /*
- * scrittore_bit.h — scrivere bit, un campo alla volta, come li vuole un
- * parameter set di H.264/H.265: `u(n)`, `ue(v)`, `se(v)`, i bit di coda, e il
- * NAL in Annex-B coi byte di emulazione al loro posto.
+ * scrittore_bit.h — writing bits, one field at a time, the way an H.264/H.265
+ * parameter set wants them: `u(n)`, `ue(v)`, `se(v)`, the trailing bits, and
+ * the NAL in Annex-B with the emulation prevention bytes in place.
  *
- * ⭐ FASE 18 (30 set 2026, `DECISIONI.md` §10.25): nasce perche' le
- *    intestazioni del flusso (SPS/PPS/VPS/slice header) non le scrive piu'
- *    `libavcodec` (`cbs_h264`/`cbs_h265`): le scrive REMOTIX, e le passa al
- *    driver come «packed header».  E' lo specchio del LETTORE che
- *    `codificatore.c` ha dal 12 agosto 2026 (`LettoreBit`): quello rilegge i
- *    byte prodotti per la confessione, questo li produce.
+ * ⭐ PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25): born because the stream
+ *    headers (SPS/PPS/VPS/slice header) are no longer written by
+ *    `libavcodec` (`cbs_h264`/`cbs_h265`): REMOTIX writes them, and hands them
+ *    to the driver as "packed headers".  It is the mirror of the READER that
+ *    `codificatore.c` has had since 12 August 2026 (`LettoreBit`): that one
+ *    reads back the bytes produced for the confession, this one produces them.
  *
- * ⛔ Che cosa NON e': non conosce nessun codec.  Sa i bit, l'Exp-Golomb e la
- *    regola dei `00 00 03`.  Chi decide QUALI campi scrivere, e in che ordine,
- *    e' `vadiretta.c`, con lo standard accanto a ogni riga.
+ * ⛔ What it is NOT: it knows no codec.  It knows bits, Exp-Golomb and the
+ *    `00 00 03` rule.  Who decides WHICH fields to write, and in what order,
+ *    is `vadiretta.c`, with the standard next to every line.
  */
 #ifndef REMOTIX_SCRITTORE_BIT_H
 #define REMOTIX_SCRITTORE_BIT_H
@@ -23,47 +23,47 @@
 
 typedef struct {
 	uint8_t *dati;
-	size_t capacita;   /* in byte */
-	size_t bit;        /* posizione di scrittura, in bit */
-	/* ⛔ Tre esiti, non due: un campo che non ci sta si RICORDA, e chi chiude
-	 *    il NAL lo vede — un'intestazione tronca somiglia a un'intestazione. */
+	size_t capacita;   /* in bytes */
+	size_t bit;        /* write position, in bits */
+	/* ⛔ Three outcomes, not two: a field that does not fit is REMEMBERED, and
+	 *    whoever closes the NAL sees it — a truncated header looks like a header. */
 	bool traboccato;
 } ScrittoreBit;
 
 void sb_apri(ScrittoreBit *s, uint8_t *dati, size_t capacita);
 
-/* `u(n)`: gli `n` bit bassi di `v`, dal piu' alto.  ⚠ `n` fino a 32. */
+/* `u(n)`: the low `n` bits of `v`, highest first.  ⚠ `n` up to 32. */
 void sb_u(ScrittoreBit *s, int n, uint32_t v);
 void sb_flag(ScrittoreBit *s, bool v);
-/* Exp-Golomb senza segno (H.264 9.1 / H.265 9.2). */
+/* Unsigned Exp-Golomb (H.264 9.1 / H.265 9.2). */
 void sb_ue(ScrittoreBit *s, uint32_t v);
-/* Exp-Golomb con segno: k → (-1)^(k+1) · ceil(k/2), cioe' il rovescio di
+/* Signed Exp-Golomb: k → (-1)^(k+1) · ceil(k/2), that is the inverse of
  * `lb_se()` in `codificatore.c`. */
 void sb_se(ScrittoreBit *s, int32_t v);
 
-/* `rbsp_trailing_bits()`: un 1 e poi zeri fino al byte.  ⚠ E' anche il
- * `byte_alignment()` di H.265 (7.3.2.12): stessa forma, altro nome. */
+/* `rbsp_trailing_bits()`: a 1 and then zeros up to the byte.  ⚠ It is also
+ * H.265's `byte_alignment()` (7.3.2.12): same form, another name. */
 void sb_chiudi_rbsp(ScrittoreBit *s);
-/* `cabac_alignment_one_bit`: UNI fino al byte — la coda dello slice header di
- * H.264 quando l'entropia e' CABAC (7.3.4).  ⛔ Non zeri: sono uni. */
+/* `cabac_alignment_one_bit`: ONES up to the byte — the tail of the H.264 slice
+ * header when the entropy coding is CABAC (7.3.4).  ⛔ Not zeros: ones. */
 void sb_allinea_con_uni(ScrittoreBit *s);
 
-/* Copia `quanti` bit da `sorgente` a partire dal bit `da`: serve alla cornice
- * di D-023, che riscrive la testa di un SPS e ricopia la coda tale e quale. */
+/* Copies `quanti` bits from `sorgente` starting at bit `da`: used by the D-023
+ * frame, which rewrites the head of an SPS and copies the tail back as it is. */
 void sb_copia_bit(ScrittoreBit *s, const uint8_t *sorgente, size_t da, size_t quanti);
 
-/* Quanti byte occupano i bit scritti (arrotondati in su). */
+/* How many bytes the written bits take (rounded up). */
 size_t sb_byte(const ScrittoreBit *s);
 bool sb_allineato(const ScrittoreBit *s);
 
 /*
- * Un NAL in Annex-B: `00 00 00 01`, l'intestazione del NAL cosi' com'e', poi
- * l'RBSP coi byte di emulazione (`00 00 0x` con x <= 3 → `00 00 03 0x`).
+ * A NAL in Annex-B: `00 00 00 01`, the NAL header as it is, then the RBSP with
+ * the emulation prevention bytes (`00 00 0x` with x <= 3 → `00 00 03 0x`).
  *
- * ⛔ L'intestazione del NAL (1 byte in H.264, 2 in H.265) si passa A PARTE e
- *    NON riceve emulazione: e' quel che fa anche `cbs_h2645`, e un lettore
- *    che trovasse un `03` dentro l'intestazione non saprebbe che farne.
- * Restituisce i byte scritti, o 0 se `fuori` non basta.
+ * ⛔ The NAL header (1 byte in H.264, 2 in H.265) is passed SEPARATELY and gets
+ *    NO emulation prevention: that is what `cbs_h2645` does too, and a reader
+ *    that found a `03` inside the header would not know what to do with it.
+ * Returns the bytes written, or 0 if `fuori` is too small.
  */
 size_t nal_annexb(uint8_t *fuori, size_t capacita, const uint8_t *intestazione,
                   size_t intestazione_byte, const uint8_t *rbsp, size_t rbsp_byte);

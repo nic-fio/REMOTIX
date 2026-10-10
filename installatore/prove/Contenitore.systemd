@@ -1,9 +1,9 @@
-# Una Fedora 44 con systemd acceso, per provare dal vero le azioni del motore che parlano sul
-# D-Bus (abilita-unita) e gpasswd. Non è la macchina del cliente (niente kernel suo, niente
-# SELinux, niente scheda): quelle sono le VM di §7.
-# ⚠ firewalld c'è ma NON parte in un contenitore senza root («python-nftables failed … All hope is
-# lost»: il nucleo del portatile non gli dà le regole nat/fib dentro lo spazio dei nomi): la
-# regola del firewall via D-Bus si prova nelle VM (Alma e Tumbleweed hanno la 7447 chiusa, §7.2).
+# A Fedora 44 with systemd running, to try for real the engine actions that talk over
+# D-Bus (abilita-unita) and gpasswd. It is not the customer's machine (no kernel of its own, no
+# SELinux, no card): those are the VMs of §7.
+# ⚠ firewalld is there but does NOT start in a rootless container («python-nftables failed … All hope is
+# lost»: the laptop's kernel does not give it the nat/fib rules inside the namespace): the
+# firewall rule via D-Bus is tested in the VMs (Alma and Tumbleweed have 7447 closed, §7.2).
 #   podman build -t remotix-motore-systemd -f prove/Contenitore.systemd prove
 FROM registry.fedoraproject.org/fedora:44
 RUN dnf -y install --setopt=install_weak_deps=False systemd firewalld dbus-broker polkit && dnf clean all \

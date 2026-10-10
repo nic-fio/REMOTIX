@@ -1,6 +1,6 @@
 /*
- * scrittore_bit.c — vedi `scrittore_bit.h`.  Nessun codec qui dentro: solo
- * bit, Exp-Golomb e la regola dei byte di emulazione.
+ * scrittore_bit.c — see `scrittore_bit.h`.  No codec in here: only bits,
+ * Exp-Golomb and the emulation prevention byte rule.
  */
 #include "scrittore_bit.h"
 
@@ -42,9 +42,9 @@ void sb_flag(ScrittoreBit *s, bool v)
 
 void sb_ue(ScrittoreBit *s, uint32_t v)
 {
-	/* codeNum v → (v+1) scritto con 2·len+1 bit, dove len = floor(log2(v+1)):
-	 * `len` zeri, poi i len+1 bit di (v+1).  ⚠ `v+1` puo' traboccare i 32 bit
-	 * solo per v = 2^32-1, che nessun campo nostro raggiunge. */
+	/* codeNum v → (v+1) written with 2·len+1 bits, where len = floor(log2(v+1)):
+	 * `len` zeros, then the len+1 bits of (v+1).  ⚠ `v+1` can overflow 32 bits
+	 * only for v = 2^32-1, which none of our fields reaches. */
 	uint64_t x = (uint64_t) v + 1u;
 	int lunghezza = 0;
 
@@ -58,7 +58,7 @@ void sb_ue(ScrittoreBit *s, uint32_t v)
 
 void sb_se(ScrittoreBit *s, int32_t v)
 {
-	/* H.264 9.1.1, tabella 9-3: v > 0 → k = 2v-1 · v <= 0 → k = -2v. */
+	/* H.264 9.1.1, table 9-3: v > 0 → k = 2v-1 · v <= 0 → k = -2v. */
 	if (v > 0)
 		sb_ue(s, 2u * (uint32_t) v - 1u);
 	else
@@ -110,11 +110,11 @@ size_t nal_annexb(uint8_t *fuori, size_t capacita, const uint8_t *intestazione,
 	memcpy(fuori + n, intestazione, intestazione_byte);
 	n += intestazione_byte;
 	/*
-	 * H.264 7.4.1 / H.265 7.4.2: dentro il payload la sequenza `00 00 0x` con
-	 * x in {0,1,2,3} non puo' comparire — si infila un `03`.  ⛔ E il conto
-	 * degli zeri riparte DOPO il byte di emulazione, non dopo il byte che l'ha
-	 * chiesto: `00 00 00 00` diventa `00 00 03 00 00`, e il terzo zero comincia
-	 * un conto nuovo.
+	 * H.264 7.4.1 / H.265 7.4.2: inside the payload the sequence `00 00 0x` with
+	 * x in {0,1,2,3} must not appear — a `03` is slipped in.  ⛔ And the zero
+	 * count restarts AFTER the emulation prevention byte, not after the byte
+	 * that asked for it: `00 00 00 00` becomes `00 00 03 00 00`, and the third
+	 * zero starts a new count.
 	 */
 	for (size_t i = 0; i < rbsp_byte; i++) {
 		if (zeri >= 2 && rbsp[i] <= 3) {

@@ -1,5 +1,5 @@
 /*
- * pagina.c — vedi pagina.h.
+ * pagina.c — see pagina.h.
  */
 #include "pagina.h"
 
@@ -21,14 +21,14 @@
 #define MAX_CLIENTI 32
 #define MAX_RICHIESTA 8192
 
-/* ⛔ LE DUE INTESTAZIONI DI ISOLAMENTO FRA ORIGINI, PIU' LA TERZA CHE IMPLICANO.
+/* ⛔ THE TWO CROSS-ORIGIN ISOLATION HEADERS, PLUS THE THIRD THEY IMPLY.
  *
- *    `SPECIFICHE.md` §11.5 le rende un vincolo di PRODOTTO: senza, su Firefox e
- *    Safari i cronometri della pagina cadono su una griglia da 1 ms — su un
- *    tetto di 50 (`STUDI.md` §web §6.3, P6) — e la memoria condivisa non esiste.
+ *    `SPECIFICHE.md` §11.5 makes them a PRODUCT constraint: without them, on
+ *    Firefox and Safari the page's timers fall on a 1 ms grid — against a
+ *    ceiling of 50 (`STUDI.md` §web §6.3, P6) — and shared memory does not exist.
  *
- * ⚠ E si mettono su OGNI risposta, non solo sulla pagina: e' quel che «cambia
- *   come il server serve ogni risorsa» significa in byte. */
+ * ⚠ And they go on EVERY response, not only on the page: this is what «changes
+ *   how the server serves every resource» means in bytes. */
 #define ISOLAMENTO                                                             \
 	"Cross-Origin-Opener-Policy: same-origin\r\n"                              \
 	"Cross-Origin-Embedder-Policy: require-corp\r\n"                           \
@@ -45,9 +45,9 @@ typedef struct {
 	char *risposta;
 	size_t nrisposta, orisposta;
 	char provenienza[80];
-	/* ⚠ Quale evento OpenSSL sta aspettando: senza questo si sorveglia
-	 *   l'evento sbagliato e la connessione resta ferma finche' non scade
-	 *   qualcos'altro. */
+	/* ⚠ Which event OpenSSL is waiting for: without this the wrong event is
+	 *   watched and the connection stays stuck until something else
+	 *   expires. */
 	bool vuole_scrivere;
 } cliente;
 
@@ -68,7 +68,7 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	char *d;
 	long n;
 	if (!f) {
-		registro_dice(REG_PAGINA, "⛔ non apro %s: %s", percorso,
+		registro_dice(REG_PAGINA, "⛔ cannot open %s: %s", percorso,
 		              strerror(errno));
 		return NULL;
 	}
@@ -77,7 +77,7 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	fseek(f, 0, SEEK_SET);
 	if (n <= 0) {
 		fclose(f);
-		registro_dice(REG_PAGINA, "⛔ %s e' vuoto", percorso);
+		registro_dice(REG_PAGINA, "⛔ %s is empty", percorso);
 		return NULL;
 	}
 	d = malloc((size_t)n + 1);
@@ -88,7 +88,7 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	if (fread(d, 1, (size_t)n, f) != (size_t)n) {
 		free(d);
 		fclose(f);
-		registro_dice(REG_PAGINA, "⛔ %s non si legge per intero", percorso);
+		registro_dice(REG_PAGINA, "⛔ %s cannot be read in full", percorso);
 		return NULL;
 	}
 	d[n] = 0;
@@ -97,8 +97,8 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	return d;
 }
 
-/* Sostituisce ogni occorrenza di `segno` con `valore`.  Restituisce una stringa
- * nuova, da liberare. */
+/* Replaces every occurrence of `segno` with `valore`.  Returns a new string,
+ * to be freed. */
 static char *sostituisci(const char *testo, const char *segno, const char *valore)
 {
 	size_t ls = strlen(segno), lv = strlen(valore), cap, o = 0;
@@ -175,17 +175,17 @@ static void componi(cliente *c, const char *stato, const char *tipo,
 
 static void servi(pagina *p, cliente *c)
 {
-	/* ⛔⭐ MILLE E NON DUECENTOCINQUANTASEI — 17 agosto 2026, e la ragione e'
-	 *     una misura che MENTIVA.  Il diario della pagina (`/diario?…`) viaggia
-	 *     nella stringa di ricerca, percento-codificato: 250 byte di bersaglio
-	 *     sono meno di 150 caratteri veri, e appena la riga ha portato anche i
-	 *     conti del video arrivava al registro TAGLIATA A META' — «… buchi%» —
-	 *     senza che niente lo dicesse.  ⚠ Il numero che manca ha lo stesso
-	 *     aspetto del numero che vale zero.
-	 * ⛔ E CRESCONO TUTT'E DUE, o non cresce niente: il bersaglio e' una COPIA
-	 *    di `percorso` presa prima del taglio al `?` (riga sotto), quindi il
-	 *    tetto vero lo pone `percorso`.  ⚠ Allargare il solo `bersaglio`
-	 *    sarebbe stata una cura che non cura, con l'aria di averlo fatto. */
+	/* ⛔⭐ ONE THOUSAND AND NOT TWO HUNDRED FIFTY-SIX — 17 Aug 2026, and the reason
+	 *     is a measurement that LIED.  The page's diary (`/diario?…`) travels
+	 *     in the query string, percent-encoded: 250 bytes of target are fewer
+	 *     than 150 real characters, and as soon as the line also carried the
+	 *     video counts it reached the log CUT IN HALF — «… buchi%» — without
+	 *     anything saying so.  ⚠ The missing number looks the same as the
+	 *     number that is zero.
+	 * ⛔ And BOTH GROW, or nothing grows: the target is a COPY of `percorso`
+	 *    taken before the cut at `?` (line below), so the real ceiling is set
+	 *    by `percorso`.  ⚠ Widening `bersaglio` alone would have been a cure
+	 *    that does not cure, with the air of having done it. */
 	char metodo[16] = {0}, percorso[1024] = {0}, bersaglio[1024] = {0};
 	const char *sp1, *sp2;
 	char indirizzo[64];
@@ -195,7 +195,7 @@ static void servi(pagina *p, cliente *c)
 	sp1 = memchr(c->richiesta, ' ', c->nrichiesta);
 	if (!sp1) {
 		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
-		        "richiesta illeggibile\n", 22, NULL);
+		        "request is unreadable\n", 22, NULL);
 		return;
 	}
 	{
@@ -207,7 +207,7 @@ static void servi(pagina *p, cliente *c)
 	sp2 = memchr(sp1 + 1, ' ', c->nrichiesta - (size_t)(sp1 + 1 - c->richiesta));
 	if (!sp2) {
 		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
-		        "richiesta illeggibile\n", 22, NULL);
+		        "request is unreadable\n", 22, NULL);
 		return;
 	}
 	{
@@ -217,67 +217,66 @@ static void servi(pagina *p, cliente *c)
 		memcpy(percorso, sp1 + 1, n);
 	}
 
-	/* ⛔⭐ IL BERSAGLIO DELLA RICHIESTA NON E' IL PERCORSO — difetto B-20,
-	 *     misurato il 13 agosto 2026.
+	/* ⛔⭐ THE REQUEST TARGET IS NOT THE PATH — defect B-20,
+	 *     measured on 13 Aug 2026.
 	 *
-	 * `[M]` Prima di questa riga il confronto qui sotto era
-	 * `strcmp(percorso, "/")` sul bersaglio INTERO, stringa di ricerca
-	 * compresa: `GET /` dava **200 su 166107 byte** e `GET /?video=worker`
-	 * dava **404 su 9 byte**.  RFC 9110 §4.1 dice l'opposto — la stringa di
-	 * ricerca e' un componente a se' della URI, non un pezzo del percorso, e
-	 * chi decide che cosa servire guarda il percorso.
+	 * `[M]` Before this line the comparison below was
+	 * `strcmp(percorso, "/")` on the WHOLE target, query string included:
+	 * `GET /` gave **200 on 166107 bytes** and `GET /?video=worker` gave
+	 * **404 on 9 bytes**.  RFC 9110 §4.1 says the opposite — the query string
+	 * is a component of the URI in its own right, not a piece of the path, and
+	 * whoever decides what to serve looks at the path.
 	 *
-	 * ⛔ E LA CONSEGUENZA VERA NON E' IL WORKER, e' che `pagina.html`
-	 *    documenta da sempre DUE interruttori che si accendono dalla stringa
-	 *    di ricerca — `?tela=desincronizzata` (§6.1 di `STUDI.md` §web) e
-	 *    `?video=worker` — e **nessuno dei due e' mai stato raggiungibile
-	 *    attraverso il prodotto**: il commento indicava una strada che il
-	 *    server chiudeva con un 404.  ⚠ Nessuno se n'era accorto perche' i
-	 *    banchi la pagina la servono da un `http.server` di Python, che il `?`
-	 *    lo ignora — cioe' il difetto viveva ESATTAMENTE nella fessura fra il
-	 *    banco e il prodotto.
+	 * ⛔ AND THE REAL CONSEQUENCE IS NOT THE WORKER, it is that `pagina.html`
+	 *    has always documented TWO switches turned on from the query string —
+	 *    `?tela=desincronizzata` (§6.1 of `STUDI.md` §web) and
+	 *    `?video=worker` — and **neither of them was ever reachable through
+	 *    the product**: the comment pointed to a road the server closed with
+	 *    a 404.  ⚠ Nobody had noticed because the benches serve the page from
+	 *    a Python `http.server`, which ignores the `?` — that is, the defect
+	 *    lived EXACTLY in the gap between the bench and the product.
 	 *
-	 * ⭐ La cura taglia, e taglia SOLO il `?` (e il `#`, se mai arrivasse: un
-	 *    browser il frammento non lo manda, ma un client qualunque puo'
-	 *    mandarlo, e allora il percorso resta il percorso).  ⛔ Il controllo
-	 *    NON si allenta: `/inesistente?x=1` continua a dare 404 come
-	 *    `/inesistente`, perche' quel che cambia e' quale stringa si confronta,
-	 *    non il confronto.  ⚠ E se il bersaglio fosse cosi' lungo da non
-	 *    entrare in `percorso`, il troncamento di qui sopra si porta via anche
-	 *    il `?`: il risultato e' un percorso che non combacia con niente,
-	 *    cioe' 404 — l'esito prudente, non un buco.
+	 * ⭐ The cure cuts, and cuts ONLY at the `?` (and the `#`, should it ever
+	 *    arrive: a browser does not send the fragment, but any client can send
+	 *    it, and then the path stays the path).  ⛔ The check is NOT loosened:
+	 *    `/inesistente?x=1` keeps giving 404 like `/inesistente`, because what
+	 *    changes is which string is compared, not the comparison.  ⚠ And if
+	 *    the target were so long that it did not fit in `percorso`, the
+	 *    truncation above takes the `?` away too: the result is a path that
+	 *    matches nothing, that is 404 — the prudent outcome, not a hole.
 	 *
-	 * ⚠ E NEL REGISTRO CI VA IL BERSAGLIO INTERO, non il percorso tagliato:
-	 *   dopo questa cura gli interruttori si accendono davvero, e un registro
-	 *   che scrivesse `/` per `/?tela=desincronizzata` renderebbe invisibile
-	 *   proprio l'unica cosa che questa riga ha appena reso possibile. */
-	/* ⚠ La misura la detta la SORGENTE: cosi' la riga regge anche il giorno in
-	 *   cui i due vettori non fossero piu' lunghi uguali. */
+	 * ⚠ AND THE WHOLE TARGET GOES INTO THE LOG, not the cut path: after this
+	 *   cure the switches really turn on, and a log that wrote `/` for
+	 *   `/?tela=desincronizzata` would make invisible precisely the only thing
+	 *   this line has just made possible. */
+	/* ⚠ The size is dictated by the SOURCE: this way the line holds even on
+	 *   the day the two arrays were no longer the same length. */
 	memcpy(bersaglio, percorso, sizeof percorso - 1);
 	percorso[strcspn(percorso, "?#")] = 0;
 
-	/* ⛔ La chiave del ban la fa `rcp.c`, non questo file: `rcp.h` lo dice con
-	 *    un ⛔, e la ragione e' che il formato della chiave lo sa un modulo
-	 *    solo.  ⚠ Chi se la costruisse da se' cercherebbe `192.168.0.2` dove
-	 *    sta scritto `[192.168.0.2]`, e la pagina direbbe «non sei bannato» a
-	 *    chi lo e' — cioe' proprio a chi §4.2 vuole che veda la frase. */
+	/* ⛔ The ban key is made by `rcp.c`, not by this file: `rcp.h` says so with
+	 *    a ⛔, and the reason is that the key format is known by one module
+	 *    only.  ⚠ Whoever built it on their own would look for `192.168.0.2`
+	 *    where `[192.168.0.2]` is written, and the page would say «you are not
+	 *    banned» to someone who is — that is, precisely to whom §4.2 wants to
+	 *    see the sentence. */
 	rcp_chiave_indirizzo(c->provenienza, indirizzo, sizeof indirizzo);
 	bannato = rcp_bannato(indirizzo, registro_ora_ms(), &restano);
 
-	registro_dice(REG_PAGINA, "%s %s da %s%s", metodo, bersaglio, c->provenienza,
-	              bannato ? " (indirizzo BANNATO)" : "");
+	registro_dice(REG_PAGINA, "%s %s from %s%s", metodo, bersaglio, c->provenienza,
+	              bannato ? " (address BANNED)" : "");
 
-	/* ⛔ L'ENDPOINT DA CUI LA PAGINA RITIRA L'IMPRONTA AGGIORNATA (§4.1-bis).
+	/* ⛔ THE ENDPOINT FROM WHICH THE PAGE FETCHES THE UPDATED FINGERPRINT (§4.1-bis).
 	 *
-	 *    «Una scheda lasciata aperta due settimane tiene l'impronta di un
-	 *    certificato che nel frattempo e' stato ruotato: alla riconnessione
-	 *    il browser rifiuta, e il sintomo e' *non si collega piu' e non dice
-	 *    perche'*.»  Delle due cure, questa e' quella scelta: ricaricare la
-	 *    pagina funziona e butta via lo stato.
+	 *    «A tab left open for two weeks holds the fingerprint of a
+	 *    certificate that has been rotated in the meantime: on reconnection
+	 *    the browser refuses, and the symptom is *it no longer connects and
+	 *    does not say why*.»  Of the two cures, this is the one chosen:
+	 *    reloading the page works and throws the state away.
 	 *
-	 * ⛔ E non passa da RCP: la sessione non e' ancora aperta, quindi non
-	 *    c'e' un canale su cui chiedere.  La si ritira dal server che l'ha
-	 *    servita, con una richiesta ordinaria. */
+	 * ⛔ And it does not go through RCP: the session is not open yet, so
+	 *    there is no channel on which to ask.  It is fetched from the server
+	 *    that served it, with an ordinary request. */
 	if (strcmp(percorso, "/impronta") == 0) {
 		char corpo[512];
 		int n = snprintf(corpo, sizeof corpo,
@@ -290,128 +289,125 @@ static void servi(pagina *p, cliente *c)
 		return;
 	}
 
-	/* ⛔⭐ IL DIARIO DELLA PAGINA — dove i numeri del CLIENT diventano leggibili.
+	/* ⛔⭐ THE PAGE'S DIARY — where the CLIENT's numbers become readable.
 	 *
-	 *      `[M]` 17 agosto 2026, e nasce da un difetto di metodo mio: per
-	 *      quattro cure di fila ho inseguito il jitter dell'audio avendo i
-	 *      numeri di **tre anelli su quattro** — il figlio dice quanti blocchi
-	 *      produce, il server quanti ne spedisce, e **della pagina non si
-	 *      sapeva niente**: quanti ne arrivano, quanti se ne suonano, quanti
-	 *      buchi fa la riproduzione.
+	 *      `[M]` 17 Aug 2026, and it comes from a defect of my own method: for
+	 *      four cures in a row I chased the audio jitter having the numbers of
+	 *      **three links out of four** — the child says how many blocks it
+	 *      produces, the server how many it sends, and **nothing was known
+	 *      about the page**: how many arrive, how many get played, how many
+	 *      holes the playback makes.
 	 *
-	 * ⛔ E il riquadro di diagnostica della pagina non bastava: quando il
-	 *    desktop e' acceso la pagina e' a tutto schermo e quel riquadro **non
-	 *    e' raggiungibile**.  ⇒ Chiedere all'utente di leggerlo era chiedergli
-	 *    una cosa che non si puo' fare.
+	 * ⛔ And the page's diagnostics panel was not enough: when the desktop is
+	 *    on the page is full screen and that panel **is not reachable**.
+	 *    ⇒ Asking the user to read it was asking them something that cannot
+	 *    be done.
 	 *
-	 * ⚠ E' un endpoint di DIAGNOSI, non di protocollo: non apre una sessione,
-	 *   non tocca lo stato, e quel che scrive finisce nel registro come una
-	 *   riga qualunque.  ⛔ Il corpo si tronca e si ripulisce prima di
-	 *   scriverlo: arriva da fuori, quindi e' un ingresso, non un dato. */
+	 * ⚠ It is a DIAGNOSTIC endpoint, not a protocol one: it does not open a
+	 *   session, does not touch state, and what it writes ends up in the log
+	 *   like any other line.  ⛔ The body is truncated and cleaned before
+	 *   writing it: it comes from outside, so it is an input, not a datum. */
 	if (strcmp(percorso, "/diario") == 0) {
-		/* ⚠ Piu' CORTO di `bersaglio` apposta: cosi' il tetto che si tocca per
-		 *   primo e' questo, che sa dirlo — e non quello di la', che tronca
-		 *   zitto. */
+		/* ⚠ SHORTER than `bersaglio` on purpose: this way the ceiling hit
+		 *   first is this one, which can say so — and not the one over there,
+		 *   which truncates silently. */
 		char pulito[900];
 		size_t j = 0;
-		/* ⚠ Il testo arriva nella STRINGA DI RICERCA, non in un corpo: questo
-		 *   server le richieste non le legge oltre la riga iniziale, e una
-		 *   `GET` con la query e' quel che la pagina puo' mandare senza che
-		 *   nessuno aggiunga un lettore di corpi.  ⛔ `bersaglio` e' la riga
-		 *   intera com'e' arrivata: il `?` lo si salta a mano. */
+		/* ⚠ The text arrives in the QUERY STRING, not in a body: this server
+		 *   does not read requests beyond the first line, and a `GET` with
+		 *   the query is what the page can send without anyone adding a body
+		 *   reader.  ⛔ `bersaglio` is the whole line as it arrived: the `?`
+		 *   is skipped by hand. */
 		const char *b = strchr(bersaglio, '?');
 		b = b ? b + 1 : "";
 		for (size_t i = 0; b[i] && j + 1 < sizeof pulito; i++) {
 			unsigned char x = (unsigned char)b[i];
-			/* Solo stampabili ASCII: una riga di registro non deve poter
-			 * portare un a-capo (spezzerebbe il registro in due) ne' byte di
-			 * controllo. */
+			/* Printable ASCII only: a log line must not be able to carry a
+			 * newline (it would split the log in two) nor control bytes. */
 			pulito[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
 		}
 		pulito[j] = '\0';
-		/* ⛔ E UN TAGLIO SI DICHIARA.  Una riga tagliata in silenzio ha la
-		 *    faccia di una riga corta, e chi la legge conta i numeri che ci
-		 *    sono invece di accorgersi di quelli che mancano. */
-		registro_dice(REG_PAGINA, "📄 la pagina di %s dice: %s%s",
+		/* ⛔ AND A CUT IS DECLARED.  A line cut silently looks like a short
+		 *    line, and whoever reads it counts the numbers that are there
+		 *    instead of noticing the ones that are missing. */
+		registro_dice(REG_PAGINA, "📄 the page of %s says: %s%s",
 		              c->provenienza, pulito,
-		              j + 1 >= sizeof pulito ? "  ⛔TAGLIATA QUI" : "");
+		              j + 1 >= sizeof pulito ? "  ⛔CUT HERE" : "");
 		componi(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
 		return;
 	}
 
 	if (strcmp(percorso, "/") != 0 && strcmp(percorso, "/index.html") != 0) {
 		componi(c, "404 Not Found", "text/plain; charset=utf-8",
-		        "non c'e'\n", 9, NULL);
+		        "not here\n", 9, NULL);
 		return;
 	}
 
-	/* ⛔⭐ L'AVVISO DEL BAN — §4.4-bis, e i due rilievi che questa parte ha
-	 *     pagato la notte del 10 agosto 2026.
+	/* ⛔⭐ THE BAN NOTICE — §4.4-bis, and the two findings this part paid
+	 *     for on the night of 10 Aug 2026.
 	 *
-	 * ⛔ **B-9**: la frase conteneva `l'indirizzo`, cioe' un escape
-	 *    **JavaScript** per l'apostrofo, e veniva sostituita in DUE punti della
-	 *    pagina con due sintassi diverse — dentro una stringa JS e dentro un
-	 *    `<div>`.  Nella stringa JS l'escape diventava un apostrofo; nel `<div>`
-	 *    no, perche' l'HTML gli escape `\uXXXX` non li conosce.  Il
-	 *    proprietario bannato — quello per cui §4.4-bis ha scritto tre punti
-	 *    normativi — leggeva sullo schermo, alla lettera,
+	 * ⛔ **B-9**: the sentence contained `l'indirizzo`, that is a
+	 *    **JavaScript** escape for the apostrophe, and it was substituted in TWO
+	 *    places of the page with two different syntaxes — inside a JS string
+	 *    and inside a `<div>`.  In the JS string the escape became an
+	 *    apostrophe; in the `<div>` it did not, because HTML does not know
+	 *    `\uXXXX` escapes.  The banned owner — the one for whom §4.4-bis
+	 *    wrote three normative points — read on the screen, literally,
 	 *    «sblocca l'indirizzo dal server».
-	 *    ⚠ E non esisteva un testo giusto per tutt'e due: la cura era separare
-	 *      i due segni, non aggiustare la frase.  ⛔ E c'era il male peggiore:
-	 *      il testo finiva **dentro una stringa JS** senza nessuna
-	 *      neutralizzazione — oggi e' fisso e non contiene virgolette, il
-	 *      giorno in cui ci finisse un dato che non decidiamo noi quella riga
-	 *      e' un'iniezione.
+	 *    ⚠ And there was no text right for both: the cure was to separate the
+	 *      two markers, not to fix the sentence.  ⛔ And there was the worse
+	 *      harm: the text ended up **inside a JS string** without any
+	 *      neutralisation — today it is fixed and contains no quotes, the day
+	 *      a datum we do not decide ended up there that line is an injection.
 	 *
-	 * ⭐ La cura: la frase sta SOLO nell'HTML, e il JavaScript non riceve piu'
-	 *    nessun testo — legge `data-bannato` dal `<body>`.  Un dato che non
-	 *    entra in un programma non lo puo' rompere.
+	 * ⭐ The cure: the sentence lives ONLY in the HTML, and the JavaScript no
+	 *    longer receives any text — it reads `data-bannato` from the `<body>`.
+	 *    A datum that does not enter a program cannot break it.
 	 *
-	 * ⛔ **R12.2**: il misuratore di §4.4-bis (`banchi/01-b8-cronometro.py`)
-	 *    cerca nel documento `data-bannato`, `data-restano-ms`, la sottostringa
-	 *    «tentativi esauriti» e gli `id="ore"`/`id="minuti"`.  Questa pagina non
-	 *    ne aveva NESSUNO: puntato a questo server, il banco avrebbe dato tre
-	 *    rossi **su un server che il ban lo fa**, e il rosso sarebbe finito
-	 *    sull'imputato sbagliato.  ⚠ I nomi non sono del banco: sono la forma in
-	 *    cui l'altra meta' del progetto ha gia' scritto la stessa cosa, e averne
-	 *    due sarebbe la forma E2 di `REVIEWER.md`.
+	 * ⛔ **R12.2**: the meter of §4.4-bis (`banchi/01-b8-cronometro.py`)
+	 *    searches the document for `data-bannato`, `data-restano-ms`, the
+	 *    substring «tentativi esauriti» and the `id="ore"`/`id="minuti"`.  This
+	 *    page had NONE of them: pointed at this server, the bench would have
+	 *    given three reds **on a server that does ban**, and the red would
+	 *    have landed on the wrong defendant.  ⚠ The names are not the bench's:
+	 *    they are the form in which the other half of the project already
+	 *    wrote the same thing, and having two would be form E2 of `REVIEWER.md`.
 	 *
-	 * ⚠ E i minuti si arrotondano PER ECCESSO, come nell'innesto: dire «restano
-	 *   0 ore» a chi ha ancora 59 minuti da aspettare e' peggio che non dire
-	 *   niente. */
+	 * ⚠ And the minutes are rounded UP, as in the graft: saying «0 hours
+	 *   left» to someone who still has 59 minutes to wait is worse than saying
+	 *   nothing. */
 	{
 		char *a, *b, *cc, *d;
-		/* ⚠ 640 e non 320: la frase intera piu' i due numeri ci deve stare
-		 *   TUTTA.  `[M]` 10 agosto 2026 notte — con 320 il compilatore
-		 *   diceva «directive output truncated writing 227 bytes into a
-		 *   region of size between 131 and 144», e quel che l'utente bannato
-		 *   avrebbe letto sarebbe finito a meta' frase.  Un avviso troncato
-		 *   e' peggio di nessun avviso: §4.4-bis vuole che si CAPISCA. */
+		/* ⚠ 640 and not 320: the whole sentence plus the two numbers must fit
+		 *   in ENTIRELY.  `[M]` night of 10 Aug 2026 — with 320 the compiler
+		 *   said «directive output truncated writing 227 bytes into a
+		 *   region of size between 131 and 144», and what the banned user
+		 *   would have read would have ended mid-sentence.  A truncated notice
+		 *   is worse than no notice: §4.4-bis wants it to be UNDERSTOOD. */
 		char avviso[640] = "";
 		char restano_txt[32];
 		unsigned long long minuti = (restano + 59999u) / 60000u;
 
 		if (bannato) {
-			/* ⛔ §4.4-bis: «la pagina si carica lo stesso e mostra il
-			 *    rifiuto — tentativi esauriti.  Non un errore di rete, non
-			 *    un silenzio: chi e' bannato per errore e' quasi sempre il
-			 *    proprietario, e deve poter capire che cosa gli e'
-			 *    successo.» */
+			/* ⛔ §4.4-bis: «the page loads anyway and shows the refusal —
+			 *    attempts exhausted.  Not a network error, not a silence:
+			 *    whoever is banned by mistake is almost always the owner,
+			 *    and must be able to understand what happened to them.» */
 			snprintf(avviso, sizeof avviso,
-			         /* ⚠ Niente `id` su questo `<b>`: la pagina ha gia' un
-			          * `id="esito"` e due elementi con lo stesso `id`
-			          * farebbero prendere a `getElementById` quello
-			          * sbagliato — cioe' l'esito del collegamento
-			          * comparirebbe dentro l'avviso del ban. */
-			         "<b>tentativi esauriti</b>: da questo "
-			         "indirizzo sono arrivati tre tentativi di accesso "
-			         "falliti, e per questo resta fuori. Mancano ancora "
-			         "<b id=\"ore\">%llu</b> ore e "
-			         "<b id=\"minuti\">%llu</b> minuti. Si rientra in due "
-			         "modi: aspettando la scadenza, oppure col comando di "
-			         "sblocco sulla macchina che serve — che chiede l'accesso "
-			         "a quella macchina, ed &egrave; la via di chi si &egrave; "
-			         "bannato dal proprio telefono.",
+			         /* ⚠ No `id` on this `<b>`: the page already has an
+			          * `id="esito"` and two elements with the same `id`
+			          * would make `getElementById` take the wrong one —
+			          * that is, the connection outcome would appear
+			          * inside the ban notice. */
+			         "<b>attempts exhausted</b>: three failed login "
+			         "attempts came from this address, and for this "
+			         "reason it stays out. There are still "
+			         "<b id=\"ore\">%llu</b> hours and "
+			         "<b id=\"minuti\">%llu</b> minutes to go. There are two "
+			         "ways back in: waiting for the expiry, or with the "
+			         "unblock command on the serving machine — which requires "
+			         "access to that machine, and is the way for whoever "
+			         "banned themselves from their own phone.",
 			         minuti / 60, minuti % 60);
 		}
 		snprintf(restano_txt, sizeof restano_txt, "%llu",
@@ -420,28 +416,28 @@ static void servi(pagina *p, cliente *c)
 		a = sostituisci(p->html, "__IMPRONTA__", p->cert->impronta);
 		if (!a) {
 			componi(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "memoria\n", 8, NULL);
+			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
 		b = sostituisci(a, "__AVVISO__", avviso);
 		free(a);
 		if (!b) {
 			componi(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "memoria\n", 8, NULL);
+			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
 		cc = sostituisci(b, "__BANNATO__", bannato ? "si" : "no");
 		free(b);
 		if (!cc) {
 			componi(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "memoria\n", 8, NULL);
+			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
 		d = sostituisci(cc, "__RESTANO_MS__", restano_txt);
 		free(cc);
 		if (!d) {
 			componi(c, "500 Internal Server Error",
-			        "text/plain; charset=utf-8", "memoria\n", 8, NULL);
+			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
 		componi(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), NULL);
@@ -470,15 +466,15 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 			}
 			if (e == SSL_ERROR_WANT_READ)
 				return;
-			/* ⚠ Una stretta TLS fallita e' la cosa piu' comune che
-			 *   succeda a questo ascoltatore: e' l'utente che NON ha
-			 *   ancora concesso l'eccezione sul certificato longevo
-			 *   (`RCP.md` §4.1).  Si dice a voce bassa, o il registro
-			 *   diventa illeggibile ad ogni caricamento. */
+			/* ⚠ A failed TLS handshake is the most common thing that
+			 *   happens to this listener: it is the user who has NOT yet
+			 *   granted the exception on the long-lived certificate
+			 *   (`RCP.md` §4.1).  It is said in a low voice, or the log
+			 *   becomes unreadable at every load. */
 			registro_dettaglio(REG_PAGINA,
-			                   "stretta TLS non riuscita con %s (errore %d) "
-			                   "— di solito e' l'avviso sul certificato "
-			                   "non ancora accettato",
+			                   "TLS handshake failed with %s (error %d) "
+			                   "— usually it is the warning about the certificate "
+			                   "not yet accepted",
 			                   c->provenienza, e);
 			ERR_clear_error();
 			cliente_chiudi(c);
@@ -508,11 +504,11 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 				break;
 			}
 			if (c->nrichiesta + 1 >= sizeof c->richiesta) {
-				/* ⛔ La lunghezza si controlla prima di allocare, ed e'
-				 *    la stessa regola di `RCP.md` §6.1 applicata a HTTP. */
+				/* ⛔ The length is checked before allocating, and it is
+				 *    the same rule of `RCP.md` §6.1 applied to HTTP. */
 				componi(c, "431 Request Header Fields Too Large",
-				        "text/plain; charset=utf-8", "intestazioni troppo "
-				                                     "lunghe\n",
+				        "text/plain; charset=utf-8", "request headers too "
+				                                     "long.\n",
 				        26, NULL);
 				break;
 			}
@@ -585,11 +581,11 @@ static void accetta(pagina *p)
 				break;
 			}
 		if (!c) {
-			/* ⛔ Si dice.  Un rifiuto silenzioso sarebbe indistinguibile
-			 *    da un server morto — e chi e' fuori vede la stessa
-			 *    faccia in tutt'e due i casi (`LEZIONI.md` §1.9). */
+			/* ⛔ It is said.  A silent refusal would be indistinguishable
+			 *    from a dead server — and whoever is outside sees the same
+			 *    face in both cases (`LEZIONI.md` §1.9). */
 			registro_dice(REG_PAGINA,
-			              "⛔ gia' %d connessioni TCP: la nuova si rifiuta",
+			              "⛔ already %d TCP connections: the new one is refused",
 			              MAX_CLIENTI);
 			close(fd);
 			return;
@@ -653,7 +649,7 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	sugg.ai_flags = AI_PASSIVE;
 
 	if (getaddrinfo(indirizzo, porta, &sugg, &ris) != 0) {
-		registro_dice(REG_PAGINA, "⛔ %s:%s non si risolve", indirizzo, porta);
+		registro_dice(REG_PAGINA, "⛔ %s:%s does not resolve", indirizzo, porta);
 		return NULL;
 	}
 	for (r = ris; r; r = r->ai_next) {
@@ -668,7 +664,7 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	}
 	freeaddrinfo(ris);
 	if (fd < 0) {
-		registro_dice(REG_PAGINA, "⛔ non mi lego a %s:%s in TCP: %s", indirizzo,
+		registro_dice(REG_PAGINA, "⛔ cannot bind to %s:%s over TCP: %s", indirizzo,
 		              porta, strerror(errno));
 		return NULL;
 	}
@@ -691,19 +687,19 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 		pagina_chiudi(p);
 		return NULL;
 	}
-	/* ⛔ Il controllo positivo del segno: se la pagina NON contiene
-	 *    `__IMPRONTA__`, la sostituzione riuscirebbe «senza fare niente» e il
-	 *    server servirebbe per sempre una pagina senza impronta — con il
-	 *    sintomo «WebTransport non si connette» e nessun errore che nomini
-	 *    l'impronta (`LEZIONI.md` §1.9: uno strumento che non trova niente
-	 *    non e' pulito, e' non certificato). */
-	/* ⛔ E I SEGNI SONO QUATTRO, non uno — 10 agosto 2026 notte, rilievo
-	 *    R12.2.  `__BANNATO__` e `__RESTANO_MS__` sono quel che il misuratore
-	 *    di §4.4-bis legge per dire se il ban c'e' e per quanto: una pagina
-	 *    senza quei segni verrebbe servita benissimo, e il banco direbbe «il
-	 *    ban non e' scattato» su un server che il ban lo fa.  ⚠ Una
-	 *    sostituzione che «riesce senza fare niente» e' la settima veste di
-	 *    `LEZIONI.md` §1.9, e vale per tutti e quattro. */
+	/* ⛔ The positive check of the marker: if the page does NOT contain
+	 *    `__IMPRONTA__`, the substitution would succeed «doing nothing» and
+	 *    the server would serve forever a page without a fingerprint — with
+	 *    the symptom «WebTransport does not connect» and no error naming the
+	 *    fingerprint (`LEZIONI.md` §1.9: a tool that finds nothing is not
+	 *    clean, it is uncertified). */
+	/* ⛔ AND THE MARKERS ARE FOUR, not one — night of 10 Aug 2026, finding
+	 *    R12.2.  `__BANNATO__` and `__RESTANO_MS__` are what the meter of
+	 *    §4.4-bis reads to say whether the ban is there and for how long: a
+	 *    page without those markers would be served perfectly well, and the
+	 *    bench would say «the ban did not trigger» on a server that does ban.
+	 *    ⚠ A substitution that «succeeds doing nothing» is the seventh guise
+	 *    of `LEZIONI.md` §1.9, and it holds for all four. */
 	{
 		static const char *const SEGNI[] = {"__IMPRONTA__", "__AVVISO__",
 		                                    "__BANNATO__", "__RESTANO_MS__",
@@ -711,31 +707,31 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 		for (int i = 0; SEGNI[i]; i++)
 			if (!strstr(p->html, SEGNI[i])) {
 				registro_dice(REG_PAGINA,
-				              "⛔ %s non contiene il segno %s: la pagina "
-				              "servirebbe una risposta che non c'e' — e una "
-				              "sostituzione che riesce senza fare niente non "
-				              "lo direbbe a nessuno.  Non si parte.",
+				              "⛔ %s does not contain the marker %s: the page "
+				              "would serve an answer that is not there — and a "
+				              "substitution that succeeds doing nothing would "
+				              "not tell anyone.  Not starting.",
 				              file_html, SEGNI[i]);
 				pagina_chiudi(p);
 				return NULL;
 			}
 	}
 
-	/* ⛔⭐ E CIASCUNO DEI DUE ATTRIBUTI DEVE COMPARIRE UNA VOLTA SOLA.
+	/* ⛔⭐ AND EACH OF THE TWO ATTRIBUTES MUST APPEAR ONLY ONCE.
 	 *
-	 *     `[M]` 10 agosto 2026 notte, e l'ho fatto io mentre curavo R12.2: il
-	 *     foglio di stile diceva `#avviso { display:none }` sotto un selettore
-	 *     d'attributo su `data-bannato`, e quel selettore mette la stringa
-	 *     `data-bannato=«si»` DENTRO il `<style>`, cioe' PRIMA del `<body>`.
-	 *     ⛔ Chi legge il documento con una ricerca — ed e' quel che fa il
-	 *     misuratore di §4.4-bis — prende la PRIMA occorrenza: leggeva
-	 *     «bannato» su un indirizzo libero.  ⚠ La pagina era giusta, la misura
-	 *     no, e il rosso sarebbe finito sull'imputato sbagliato.
+	 *     `[M]` night of 10 Aug 2026, and I did it myself while curing R12.2:
+	 *     the style sheet said `#avviso { display:none }` under an attribute
+	 *     selector on `data-bannato`, and that selector puts the string
+	 *     `data-bannato=«si»` INSIDE the `<style>`, that is BEFORE the `<body>`.
+	 *     ⛔ Whoever reads the document with a search — and that is what the
+	 *     meter of §4.4-bis does — takes the FIRST occurrence: it read
+	 *     «banned» on a free address.  ⚠ The page was right, the measurement
+	 *     was not, and the red would have landed on the wrong defendant.
 	 *
-	 * ⭐ La cura sta nel PROGRAMMA e non in un commento (invariante I7): la
-	 *    seconda occorrenza non si puo' introdurre senza che il server rifiuti
-	 *    di partire — nemmeno dentro un commento, che e' byte serviti al
-	 *    browser quanto il resto. */
+	 * ⭐ The cure lives in the PROGRAM and not in a comment (invariant I7): the
+	 *    second occurrence cannot be introduced without the server refusing to
+	 *    start — not even inside a comment, which is bytes served to the
+	 *    browser as much as the rest. */
 	{
 		static const char *const UNICI[] = {"data-bannato=\"",
 		                                    "data-restano-ms=\"", NULL};
@@ -746,11 +742,11 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 				quante++;
 			if (quante != 1) {
 				registro_dice(REG_PAGINA,
-				              "⛔ %s contiene «%s» %d volte invece di una "
-				              "sola: chi legge il documento cercando quella "
-				              "stringa prenderebbe l'occorrenza sbagliata e "
-				              "misurerebbe il ban di nessuno (§4.4-bis).  "
-				              "Non si parte.",
+				              "⛔ %s contains «%s» %d times instead of only "
+				              "once: whoever reads the document searching for that "
+				              "string would take the wrong occurrence and "
+				              "would measure nobody's ban (§4.4-bis).  "
+				              "Not starting.",
 				              file_html, UNICI[i], quante);
 				pagina_chiudi(p);
 				return NULL;
@@ -759,8 +755,8 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	}
 
 	registro_dice(REG_PAGINA,
-	              "ascolto TCP su %s:%s — pagina %s (%zu byte), isolata fra "
-	              "origini (COOP+COEP+CORP, SPECIFICHE.md §11.5)",
+	              "listening over TCP on %s:%s — page %s (%zu bytes), cross-origin "
+	              "isolated (COOP+COEP+CORP, SPECIFICHE.md §11.5)",
 	              indirizzo, porta, file_html, p->nhtml);
 	return p;
 }

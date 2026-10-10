@@ -5,15 +5,15 @@ Upstream-Contact: nicfio <nicfio@gmail.com>
 Files: *
 Copyright: 2026 nicfio
 License: proprietary
- Codice privato: tutti i diritti riservati.  La licenza di distribuzione non e'
- ancora decisa.
+ Private code: all rights reserved.  The distribution licence is not
+ decided yet.
 
 Files: src/remotix
 Copyright: 2016-2026 ngtcp2 contributors
            2019-2026 nghttp3 contributors
 License: Expat
-Comment: ngtcp2 1.25.0 e nghttp3 1.18.0 sono collegate STATICAMENTE nel binario
- /usr/libexec/remotix/remotix (fasi/17-l-installatore.md §6.3, decisione D2).
+Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
+ /usr/libexec/remotix/remotix (fasi/17-l-installatore.md §6.3, decision D2).
  .
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal

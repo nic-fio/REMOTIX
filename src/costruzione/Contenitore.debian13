@@ -1,12 +1,12 @@
-# Contenitore.debian13 — costruzione di REMOTIX per Debian 13 (il riferimento).
+# Contenitore.debian13 — REMOTIX build for Debian 13 (the reference).
 #
-# Le dipendenze di sviluppo dalla distribuzione (apt); ngtcp2 e nghttp3 dentro,
-# statiche (quic-statiche.sh, §6.3).  Si usa con `costruisci-tutti.sh debian13`.
-# ⓘ src/Contenitore resta quello di sempre (le .so in /usr/local, per il lavoro
-#   di tutti i giorni e per costruisci-in-contenitore.sh): questo e' il bersaglio
-#   «da pacchetto», uguale agli altri sette.
-# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — il loader e le
-#    intestazioni, `[M]` 1 ott 2026 nell'immagine: 1.4.309 (Debian 13).
+# The development dependencies from the distribution (apt); ngtcp2 and nghttp3 inside,
+# static (quic-statiche.sh, §6.3).  Used with `costruisci-tutti.sh debian13`.
+# ⓘ src/Contenitore stays the usual one (the .so files in /usr/local, for everyday
+#   work and for costruisci-in-contenitore.sh): this is the
+#   "packaging" target, the same as the other seven.
+# ⭐ Phase 19 (Vulkan Video, `src/vulkanvideo.c`): `libvulkan-dev` — the loader and the
+#    headers, `[M]` 1 Oct 2026 in the image: 1.4.309 (Debian 13).
 FROM docker.io/library/debian:13
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,16 +17,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+# --- the same for all targets: nghttp3 1.18.0 and ngtcp2 1.25.0, static
 COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
 RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
 
-# --- fase 17, T3: gli attrezzi del pacchetto .deb (packaging/debian/).
-#     Uno strato IN CODA, perche' gli strati di sopra (e le statiche) restino
-#     quelli in cache: `costruisci-deb.sh` lo usa, `costruisci-tutti.sh` no.
+# --- phase 17, T3: the tools for the .deb package (packaging/debian/).
+#     A layer AT THE END, so that the layers above (and the static libraries) stay
+#     cached: `costruisci-deb.sh` uses it, `costruisci-tutti.sh` does not.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         debhelper dpkg-dev fakeroot lintian binutils \
     && rm -rf /var/lib/apt/lists/*

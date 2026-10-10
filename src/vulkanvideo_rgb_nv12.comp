@@ -1,24 +1,24 @@
 #version 450
 /*
- * vulkanvideo_rgb_nv12.comp — RGB → NV12 / P010, BT.709 limitato, sulla
- * scheda.  E' `colori709.c` riscritto per lo shader di calcolo: gli STESSI
- * coefficienti in virgola fissa a 15 bit, lo stesso filtro di croma (somma
- * delle coppie orizzontali, tenda 1-3-3-1 su quattro righe), gli stessi
- * arrotondamenti ⇒ gli stessi byte, bit per bit (`[M]` nel banco 19).
+ * vulkanvideo_rgb_nv12.comp — RGB → NV12 / P010, BT.709 limited range, on the
+ * card.  It is `colori709.c` rewritten as a compute shader: the SAME 15-bit
+ * fixed-point coefficients, the same chroma filter (sum of the horizontal
+ * pairs, 1-3-3-1 tent over four rows), the same roundings ⇒ the same bytes,
+ * bit for bit (`[M]` in bench 19).
  *
- * Ogni invocazione fa un blocco 2x2 di pixel: quattro campioni di luma e un
- * campione di croma.  La sorgente e' un'immagine campionata (`texelFetch`,
- * mai interpolata): il formato Vulkan dell'immagine (B8G8R8A8 per XRGB8888,
- * R8G8B8A8 per XBGR8888) mette gia' i canali nell'ordine R, G, B — lo shader
- * non sa in che ordine stavano in memoria.
+ * Each invocation does one 2x2 block of pixels: four luma samples and one
+ * chroma sample.  The source is a sampled image (`texelFetch`, never
+ * interpolated): the Vulkan format of the image (B8G8R8A8 for XRGB8888,
+ * R8G8B8A8 for XBGR8888) already puts the channels in R, G, B order — the
+ * shader does not know in which order they were in memory.
  *
- * I piani d'uscita non hanno il qualificatore di formato (serve la
- * caratteristica `shaderStorageImageWriteWithoutFormat`): lo stesso SPIR-V
- * scrive R8/R8G8 (NV12) e R16/R16G16 (P010, dieci bit in ALTO).
+ * The output planes have no format qualifier (it needs the
+ * `shaderStorageImageWriteWithoutFormat` feature): the same SPIR-V writes
+ * R8/R8G8 (NV12) and R16/R16G16 (P010, ten bits at the TOP).
  *
- * Si compila con `glslc -O -mfmt=c` in `vulkanvideo_rgb_nv12_spv.h`
- * (`banchi/19-vulkan/19-shader.sh`); l'intestazione generata si conserva nel
- * deposito, cosi' il prodotto non ha bisogno del compilatore di shader.
+ * Compiled with `glslc -O -mfmt=c` into `vulkanvideo_rgb_nv12_spv.h`
+ * (`banchi/19-vulkan/19-shader.sh`); the generated header is kept in the
+ * repository, so the product does not need the shader compiler.
  */
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -27,21 +27,21 @@ layout(binding = 1) uniform writeonly image2D piano_y;
 layout(binding = 2) uniform writeonly image2D piano_uv;
 
 layout(push_constant) uniform Parametri {
-	uint larghezza;   /* la tela (i pixel veri della sorgente) */
+	uint larghezza;   /* the canvas (the real pixels of the source) */
 	uint altezza;
-	uint larghezza_codificata; /* l'immagine d'ingresso, allineata al blocco */
+	uint larghezza_codificata; /* the input image, aligned to the block */
 	uint altezza_codificata;
 	uint prof10;      /* 0 = NV12, 1 = P010 */
 } p;
 
-/* I coefficienti di `colori709.c`, SCALA 15: la luma somma 28142 = 219/255 ·
- * 32768 (bianco → 235), le due terne di croma sommano 0 (grigio → 128). */
+/* The coefficients of `colori709.c`, SCALE 15: luma sums to 28142 = 219/255 ·
+ * 32768 (white → 235), the two chroma triples sum to 0 (grey → 128). */
 const ivec3 CY = ivec3(5983, 20127, 2032);
 const ivec3 CU = ivec3(-3298, -11094, 14392);
 const ivec3 CV = ivec3(14392, -13072, -1320);
 
-/* Un pixel in interi 0..255, con i bordi replicati: oltre la tela si rilegge
- * l'ultimo pixel (la fascia fino al blocco non e' spazzatura). */
+/* One pixel as integers 0..255, with replicated edges: past the canvas the
+ * last pixel is read again (the band up to the block is not garbage). */
 ivec3 pixel(int x, int y)
 {
 	x = clamp(x, 0, int(p.larghezza) - 1);
@@ -54,7 +54,7 @@ ivec3 pixel(int x, int y)
 void luma(int x, int y, int k)
 {
 	ivec3 c = pixel(x, y);
-	int s = CY.r * c.r + CY.g * c.g + CY.b * c.b; /* in INTERI: il prodotto supera i 24 bit del float */
+	int s = CY.r * c.r + CY.g * c.g + CY.b * c.b; /* in INTEGERS: the product exceeds the 24 bits of a float */
 	int Y = (k * s + ((16 * k) << 15) + (1 << 14)) >> 15;
 	float v = (p.prof10 != 0u) ? float(Y * 64) / 65535.0 : float(Y) / 255.0;
 	imageStore(piano_y, ivec2(x, y), vec4(v, 0.0, 0.0, 0.0));
@@ -74,9 +74,9 @@ void main()
 	luma(x, y + 1, k);
 	luma(x + 1, y + 1, k);
 
-	/* `croma()`: le righe 2cy-1 … 2cy+2 (ferme ai bordi), pesi 1 3 3 1, e in
-	 * ogni riga la somma della coppia di pixel; poi la matrice.  Lo
-	 * spostamento e' SCALA + 4 = 19: 2 pixel · (1+3+3+1) = 16. */
+	/* `croma()`: rows 2cy-1 … 2cy+2 (clamped at the edges), weights 1 3 3 1,
+	 * and in each row the sum of the pixel pair; then the matrix.  The
+	 * shift is SCALE + 4 = 19: 2 pixels · (1+3+3+1) = 16. */
 	ivec3 w = ivec3(0);
 	for (int j = 0; j < 4; j++) {
 		int r = y - 1 + j;

@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// installaFinta: un'installazione (mestiere «installazione») sulla macchina finta, poi due sessioni
-// aperte della stessa persona: una REMOTIX e una ssh.
+// installaFinta: an installation (kind «installation») on the fake machine, then two open
+// sessions of the same person: a REMOTIX one and an ssh one.
 func installaFinta(t *testing.T) *banco {
 	b := nuovoBanco(t)
 	var p Piano
@@ -17,17 +17,17 @@ func installaFinta(t *testing.T) *banco {
 	ScriviJSON(b.piano, &p)
 	op, err := b.motore(t).Applica(b.piano, true, "prova")
 	if err != nil || op.Stato != CONFERMATA_A_CONDIZIONI {
-		t.Fatalf("installazione: %v %v", op.Stato, err)
+		t.Fatalf("installation: %v %v", op.Stato, err)
 	}
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-sessioni.json"),
 		[]byte(`[{"ID":"c4","Utente":"prova","Servizio":"remotix","Stato":"closing","Tipo":"unspecified"},{"ID":"7","Utente":"prova","Servizio":"sshd","Stato":"active","Tipo":"tty"}]`), 0o644)
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-grafica.json"), []byte(`{"prova":18}`), 0o644)
-	// REMOTIX alla prima connessione ha iscritto «altro» a «render» (e l'ha scritto due volte)
+	// REMOTIX at the first connection enrolled «altro» in «render» (and wrote it twice)
 	(&gruppiFinti{b.radice}).Aggiungi("altro", "render")
 	riga := `{"formato":"remotix-gruppi/1","data":"2026-09-30","utente":"altro","uid":1001,"gruppo":"render","gid":991,"origine":"DIRETTA","da":"REMOTIX alla prima connessione"}` + "\n"
 	os.WriteFile(filepath.Join(filepath.Dir(b.operazioni), FileIscrizioni), []byte(riga+riga), 0o644)
-	// i registri di sessione che REMOTIX ha scritto nelle case (sessione.c): «prova» ha solo quello,
-	// «altro» ha anche un file suo nella stessa cartella (che deve restare), root niente
+	// the session logs REMOTIX wrote in the homes (sessione.c): «prova» has only that,
+	// «altro» also has a file of its own in the same folder (which must stay), root nothing
 	for _, u := range []string{"prova", "altro"} {
 		d := filepath.Join(b.radice, "home", u, cartellaStatoUtente)
 		os.MkdirAll(d, 0o700)
@@ -37,17 +37,17 @@ func installaFinta(t *testing.T) *banco {
 	return b
 }
 
-// registriDopo: la casa di «prova» senza cartella, quella di «altro» col solo file suo.
+// registriDopo: «prova»'s home without the folder, «altro»'s with only its own file.
 func registriDopo(t *testing.T, radice string) {
 	t.Helper()
 	if _, err := os.Stat(filepath.Join(radice, "home/prova", cartellaStatoUtente)); !os.IsNotExist(err) {
-		t.Fatalf("la cartella di stato di prova è rimasta (%v)", err)
+		t.Fatalf("prova's state folder is still there (%v)", err)
 	}
 	if _, err := os.Stat(filepath.Join(radice, "home/altro", cartellaStatoUtente, fileSessione)); !os.IsNotExist(err) {
-		t.Fatalf("il sessione.log di altro è rimasto (%v)", err)
+		t.Fatalf("altro's sessione.log is still there (%v)", err)
 	}
 	if _, err := os.Stat(filepath.Join(radice, "home/altro", cartellaStatoUtente, "appunti.txt")); err != nil {
-		t.Fatalf("il file di altro NON doveva sparire: %v", err)
+		t.Fatalf("altro's file was NOT supposed to disappear: %v", err)
 	}
 }
 
@@ -57,10 +57,10 @@ func pianoDisinstallazione(t *testing.T, b *banco) string {
 		t.Fatal(err)
 	}
 	if n := len(pn.Dichiarate); n != 1 || !strings.Contains(pn.Dichiarate[0], "/home/prova/.local/state/remotix/sessione.log, /home/altro/.local/state/remotix/sessione.log") {
-		t.Fatalf("il piano deve dichiarare i registri di sessione coi percorsi: %q", pn.Dichiarate)
+		t.Fatalf("the plan must declare the session logs with the paths: %q", pn.Dichiarate)
 	}
 	if u := pn.Azioni[len(pn.Azioni)-1]; u.Tipo != "remove-user-logs" || !strings.Contains(u.Descrizione, "/home/altro/") {
-		t.Fatalf("l'ultimo passo deve togliere i registri, coi percorsi: %+v", u)
+		t.Fatalf("the last step must remove the logs, with the paths: %+v", u)
 	}
 	pn.Approvazione = &Approvazione{Da: "prova", Modo: "da file", DigestPiano: pn.Digest()}
 	p := filepath.Join(t.TempDir(), "uninstall.json")
@@ -68,14 +68,14 @@ func pianoDisinstallazione(t *testing.T, b *banco) string {
 	return p
 }
 
-// ⭐ R6 e R43 in piccolo: la disinstallazione ripercorre il registro — la macchina torna com'era
-// (salvo l'INDIRETTA dichiarata), la sessione REMOTIX è chiusa, quella ssh resta,
-// installazione.json non c'è più. E uccisa a metà si riprende fino in fondo.
+// ⭐ R6 and R43 in small: the uninstallation walks the log back — the machine goes back to how it was
+// (except the declared INDIRETTA), the REMOTIX session is closed, the ssh one stays,
+// installazione.json is gone. And killed halfway it is resumed to the end.
 func TestDisinstallazione(t *testing.T) {
 	punti := []string{"", "dopo-intenzione@undo-service", "dopo-effetto@close-sessions",
 		"dopo-intenzione@undo-packages", "file-a-meta@overwritten-file", "stato:APPLIED@"}
 	for _, punto := range punti {
-		t.Run(nonVuoto(punto, "senza interruzioni"), func(t *testing.T) {
+		t.Run(nonVuoto(punto, "no interruption"), func(t *testing.T) {
 			b := installaFinta(t)
 			pd := pianoDisinstallazione(t, b)
 			var op *Operazione
@@ -87,37 +87,37 @@ func TestDisinstallazione(t *testing.T) {
 				op, err = b.motore(t).Riprendi()
 			}
 			if err != nil || op.Stato != CONFERMATA {
-				t.Fatalf("disinstallazione: %v %v %s", op.Stato, err, op.ultimoDettaglio())
+				t.Fatalf("uninstallation: %v %v %s", op.Stato, err, op.ultimoDettaglio())
 			}
 			if n, _ := (&sessioniFinte{b.radice}).Grafici("prova"); n != 0 {
-				t.Fatalf("%d processi del desktop ancora vivi", n)
+				t.Fatalf("%d desktop processes still alive", n)
 			}
 			registriDopo(t, b.radice)
 			dopo := foto(t, b.radice)
 			delete(dopo, "var/lib/finto-sessioni.json")
 			delete(dopo, "var/lib/finto-grafica.json")
 			for _, k := range []string{"home/", "home/altro/", "home/altro/.local/", "home/altro/.local/state/", "home/altro/.local/state/remotix/", "home/altro/.local/state/remotix/appunti.txt", "home/prova/", "home/prova/.local/", "home/prova/.local/state/"} {
-				delete(dopo, k) // le case: quel che non è di REMOTIX resta
+				delete(dopo, k) // the homes: what is not REMOTIX's stays
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, dopo); len(d) > 0 {
-				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
+				t.Fatalf("the machine did not go back to how it was:\n%s", strings.Join(d, "\n"))
 			}
 			l, _ := (&sessioniFinte{b.radice}).Elenco()
 			if len(l) != 1 || l[0].Servizio != "sshd" {
-				t.Fatalf("sessioni dopo: %+v (attesa solo quella ssh)", l)
+				t.Fatalf("sessions after: %+v (expected only the ssh one)", l)
 			}
 			if _, err := b.motore(t).ControllaInstallazione(); CodiceDi(err) != "RX-INST-001" {
-				t.Fatalf("installazione.json è rimasto: %v", err)
+				t.Fatalf("installazione.json is still there: %v", err)
 			}
 			if _, err := os.Stat(b.operazioni); !os.IsNotExist(err) {
-				t.Fatalf("--purge: la storia del motore è rimasta (%v)", err)
+				t.Fatalf("--purge: the engine's history is still there (%v)", err)
 			}
 		})
 	}
 }
 
-// Una disinstallazione uccisa a metà e poi ANNULLATA torna all'installazione (i passi «disfa» si
-// annullano rifacendo), tranne le sessioni chiuse: IRREVERSIBILE ⇒ ANNULLATA_IN_PARTE.
+// An uninstallation killed halfway and then CANCELLED goes back to the installation (the «undo» steps
+// are undone by redoing), except the closed sessions: IRREVERSIBLE ⇒ ANNULLATA_IN_PARTE.
 func TestDisinstallazioneAnnullata(t *testing.T) {
 	b := installaFinta(t)
 	installata := foto(t, b.radice)
@@ -133,14 +133,14 @@ func TestDisinstallazioneAnnullata(t *testing.T) {
 	delete(dopo, "var/lib/finto-grafica.json")
 	delete(installata, "var/lib/finto-grafica.json")
 	if d := differenze(installata, dopo); len(d) > 0 {
-		t.Fatalf("non è tornata l'installazione:\n%s", strings.Join(d, "\n"))
+		t.Fatalf("the installation did not come back:\n%s", strings.Join(d, "\n"))
 	}
 	if _, err := b.motore(t).ControllaInstallazione(); err != nil {
-		t.Fatalf("l'installazione deve risultare ancora: %v", err)
+		t.Fatalf("the installation must still be on record: %v", err)
 	}
 }
 
-// Senza --purge la storia resta (per l'assistenza), ma senza i pacchetti in cache.
+// Without --purge the history stays (for support), but without the cached packages.
 func TestDisinstallazioneSenzaPurge(t *testing.T) {
 	b := installaFinta(t)
 	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), false)
@@ -157,19 +157,19 @@ func TestDisinstallazioneSenzaPurge(t *testing.T) {
 	ops, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "log.jsonl"))
 	cache, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "cache"))
 	if len(ops) != 2 || len(cache) != 0 {
-		t.Fatalf("storia: %d registri (attesi 2), %d cache (attese 0)", len(ops), len(cache))
+		t.Fatalf("history: %d logs (expected 2), %d caches (expected 0)", len(ops), len(cache))
 	}
 }
 
-// Un pacchetto NUOVO che un pacchetto AGGIORNATO (che resta) chiede non si toglie: si trattiene e si
-// dichiara (`[M]` 30 set, leap16-kde: la libavcodec di Packman aggiornata vuole la libx264 nuova, e
-// `zypper rm` si sarebbe portato via Plasma). La disinstallazione si conferma lo stesso.
+// A NEW package that an UPGRADED package (which stays) requires is not removed: it is held back and
+// declared (`[M]` 30 Sep, leap16-kde: Packman's upgraded libavcodec wants the new libx264, and
+// `zypper rm` would have taken Plasma away). The uninstallation is confirmed all the same.
 func TestDisinstallazioneTrattiene(t *testing.T) {
 	b := installaFinta(t)
-	// libcomune è stata AGGIORNATA dall'installazione (1.0 → 2.0) e la 2.0 chiede libnuova, NUOVA
+	// libcomune was UPGRADED by the installation (1.0 → 2.0) and 2.0 requires libnuova, NEW
 	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-deposito.json"),
 		[]byte(`{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0","dipende":["libnuova"]},"labwc":{"versione":"0.9","dipende":["libnuova"]}}`), 0o644)
-	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), false) // senza purge: il certificato resta
+	pn, err := b.motore(t).PianoDisinstallazione(profiloFinto(), false) // without purge: the certificate stays
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,15 +178,15 @@ func TestDisinstallazioneTrattiene(t *testing.T) {
 	ScriviJSON(pd, pn)
 	op, err := b.motore(t).Applica(pd, false, "prova")
 	if err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("disinstallazione: %v %v %s", op.Stato, err, op.ultimoDettaglio())
+		t.Fatalf("uninstallation: %v %v %s", op.Stato, err, op.ultimoDettaglio())
 	}
 	in := (&gestoreFinto{b.radice}).installati()
 	if in["libnuova"] == "" || in["labwc"] != "" || in["remotix"] != "" || in["libcomune"] != "2.0" {
-		t.Fatalf("pacchetti dopo: %v (atteso: libnuova trattenuta, labwc e remotix tolti)", in)
+		t.Fatalf("packages after: %v (expected: libnuova held back, labwc and remotix removed)", in)
 	}
 	var c Certificato
 	LeggiJSON(filepath.Join(op.Cartella, "certificate.json"), &c)
 	if s := strings.Join(c.Indirette, "\n"); !strings.Contains(s, "RX-PACCHETTI-006") || !strings.Contains(s, "libnuova") || !strings.Contains(s, "libcomune") {
-		t.Fatalf("la libnuova trattenuta non è dichiarata nel certificato: %q", s)
+		t.Fatalf("the held-back libnuova is not declared in the certificate: %q", s)
 	}
 }

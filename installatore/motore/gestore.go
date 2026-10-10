@@ -10,54 +10,54 @@ import (
 	"time"
 )
 
-// Il gestore di pacchetti della distribuzione (§6.0, regola 1): è LUI che mette e toglie i file
-// dei pacchetti; il motore decide, chiede, controlla e annulla. Il motore lo lancia dall'elenco
-// chiuso (ambiente.go), mai una shell.
+// The distribution's package manager (§6.0, rule 1): it is IT that puts and removes the files
+// of the packages; the engine decides, asks, checks and undoes. The engine launches it from the closed
+// list (ambiente.go), never a shell.
 //
-// L'insieme (§6.6.6, semplificato il 10 ott 2026, DECISIONI §10.36: «non reinventare la ruota»):
-// Simula chiede al gestore che cosa farebbe — l'elenco esatto (nome, versione, architettura,
-// origine, e che cosa succede: nuovo, aggiornato da…, già presente), che il piano mostra PRIMA della
-// domanda. Installa lascia fare al gestore come sempre: risolve, scarica dagli archivi che la
-// macchina ha, verifica le firme. Il motore non ha cache né sha256 suoi dei pacchetti. Togli simula
-// prima e rifiuta se toglierebbe qualcosa che non è nell'elenco (un pacchetto di altri che nel
-// frattempo ne dipende): l'autoremove dei gestori toglierebbe anche gli orfani di prima, di altri.
+// The set (§6.6.6, simplified on 10 Oct 2026, DECISIONI §10.36: «don't reinvent the wheel»):
+// Simula asks the manager what it would do — the exact list (name, version, architecture,
+// origin, and what happens: new, upgraded from…, already present), which the plan shows BEFORE the
+// question. Installa lets the manager work as always: it resolves, downloads from the repositories the
+// machine has, verifies the signatures. The engine has no cache and no sha256 of its own for the packages. Togli simulates
+// first and refuses if it would remove something not in the list (someone else's package that in the
+// meantime depends on it): the managers' autoremove would also remove earlier orphans, belonging to others.
 //
-// Provati sulle VM: apt (Debian 13) e dnf (Alma 10). zypper e pacman sono scritti con la stessa
-// forma ma NON ancora provati su una macchina vera.
+// Tried on the VMs: apt (Debian 13) and dnf (Alma 10). zypper and pacman are written in the same
+// shape but NOT yet tried on a real machine.
 
-// Artefatto: una riga dell'insieme risolto.
+// Artefatto: a line of the resolved set.
 type Artefatto struct {
 	Nome     string `json:"name"`
 	Versione string `json:"version"`
 	Arch     string `json:"arch,omitempty"`
-	Origine  string `json:"origin"`           // "file" (dal pacchetto unico) o l'archivio della macchina
+	Origine  string `json:"origin"`           // "file" (from the single package) or the machine's repository
 	Esito    string `json:"result"`           // "new" · "upgraded" · "present"
-	Prima    string `json:"before,omitempty"` // la versione di prima, se aggiornato
+	Prima    string `json:"before,omitempty"` // the previous version, if upgraded
 }
 
-// Gestore: il gestore di pacchetti della famiglia.
+// Gestore: the family's package manager.
 type Gestore interface {
 	Nome() string
-	// Versioni: la versione installata per ogni nome ("" = non installato).
+	// Versioni: the installed version for every name ("" = not installed).
 	Versioni(nomi []string) (map[string]string, error)
-	// Simula: che cosa installerebbe il gestore, senza toccare niente. file = pacchetti locali (dal
-	// pacchetto unico), nomi = pacchetti dagli archivi della macchina.
+	// Simula: what the manager would install, without touching anything. file = local packages (from the
+	// single package), nomi = packages from the machine's repositories.
 	Simula(file, nomi []string) ([]Artefatto, error)
-	// Installa: il gestore installa, con le dipendenze dagli archivi della macchina.
+	// Installa: the manager installs, with the dependencies from the machine's repositories.
 	Installa(file, nomi []string) error
-	// SimulaTogli: che cosa toglierebbe il gestore OLTRE ai nomi dati (chi ne dipende), senza
-	// toccare niente.
+	// SimulaTogli: what the manager would remove BEYOND the given names (whoever depends on them), without
+	// touching anything.
 	SimulaTogli(nomi []string, purge bool) ([]string, error)
-	// Togli i nomi dati, e solo quelli (purge: anche la configurazione): se ne toglierebbe altri,
-	// RX-PACCHETTI-002 e niente tolto.
+	// Togli the given names, and only those (purge: the configuration too): if it would remove others,
+	// RX-PACCHETTI-002 and nothing removed.
 	Togli(nomi []string, purge bool) error
-	// Integro: il gestore non è a metà di una transazione.
+	// Integro: the manager is not halfway through a transaction.
 	Integro() (bool, string, error)
-	// Ripara: il rimedio del gestore stesso dopo un'interruzione (§6.6.3).
+	// Ripara: the manager's own remedy after an interruption (§6.6.3).
 	Ripara() error
 }
 
-// ScegliGestore: quello della famiglia.
+// ScegliGestore: the family's one.
 func ScegliGestore(a *Ambiente, fam string) Gestore {
 	switch fam {
 	case "debian":
@@ -113,7 +113,7 @@ func (g *gestoreApt) Versioni(nomi []string) (map[string]string, error) {
 	return r, nil
 }
 
-// «Inst nome [vecchia] (nuova deposito [arch])»
+// «Inst name [old] (new repository [arch])»
 var aptInst = regexp.MustCompile(`^Inst (\S+)(?: \[(\S+)\])? \((\S+) (.*?) \[(\S+)\]\)`)
 
 func (g *gestoreApt) argomenti(file, nomi []string) []string {
@@ -125,7 +125,7 @@ func (g *gestoreApt) Simula(file, nomi []string) ([]Artefatto, error) {
 		return esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", "install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
 	}
 	out, err := sim()
-	if err != nil { // elenchi vecchi: si aggiornano (i metadati firmati degli archivi) e si riprova
+	if err != nil { // stale lists: they are refreshed (the repositories' signed metadata) and it is retried
 		if _, e2 := esegui(g.a, tempoGestore, "apt-get", "update"); e2 != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (g *gestoreApt) Simula(file, nomi []string) ([]Artefatto, error) {
 	return r, nil
 }
 
-// intestazione di un .deb locale (nome, versione), letta con dpkg-deb.
+// header of a local .deb (name, version), read with dpkg-deb.
 func (g *gestoreApt) intestazione(f string) (string, string, error) {
 	out, err := esegui(g.a, time.Minute, "dpkg-deb", "-W", "--showformat=${Package} ${Version}", f)
 	if err != nil {
@@ -174,7 +174,7 @@ func (g *gestoreApt) intestazione(f string) (string, string, error) {
 	return c[0], c[1], nil
 }
 
-// Installa: apt installa i file locali e scarica le dipendenze dagli archivi della macchina.
+// Installa: apt installs the local files and downloads the dependencies from the machine's repositories.
 func (g *gestoreApt) Installa(file, nomi []string) error {
 	_, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
 	return err
@@ -211,8 +211,8 @@ func (g *gestoreApt) Togli(nomi []string, purge bool) error {
 	return err
 }
 
-// fuoriDa: i nomi di «tutti» che non sono in «nomi» (senza ripetizioni). Una chiave rpm si toglie
-// per versione (gpg-pubkey-…), e dnf la mostra per nome.
+// fuoriDa: the names of «tutti» that are not in «nomi» (without repetitions). An rpm key is removed
+// by version (gpg-pubkey-…), and dnf shows it by name.
 func fuoriDa(tutti, nomi []string) []string {
 	nostri := map[string]bool{}
 	for _, n := range nomi {
@@ -231,7 +231,7 @@ func fuoriDa(tutti, nomi []string) []string {
 	return r
 }
 
-// soloLoro: la guardia di Togli — il gestore toglierebbe soltanto i nomi dati.
+// soloLoro: the guard of Togli — the manager would remove only the given names.
 func soloLoro(g Gestore, nomi []string, purge bool) error {
 	altri, err := g.SimulaTogli(nomi, purge)
 	if err != nil {
@@ -290,10 +290,10 @@ func (g *gestoreDnf) Versioni(nomi []string) (map[string]string, error) {
 	return rpmVersioni(g.a, nomi)
 }
 
-// Simula: la transazione di dnf con --assumeno (dnf 4 e dnf 5 scrivono la tabella nello stesso
-// ordine: nome, architettura, versione, archivio). Si prende quel che si installa, aggiorna o
-// RETROCEDE (una retrocessione è una modifica INDIRETTA come un aggiornamento); «@commandline» è un
-// file del pacchetto unico.
+// Simula: dnf's transaction with --assumeno (dnf 4 and dnf 5 write the table in the same
+// order: name, architecture, version, repository). What gets installed, upgraded or
+// DOWNGRADED is taken (a downgrade is an INDIRECT change like an upgrade); «@commandline» is a
+// file of the single package.
 func (g *gestoreDnf) Simula(file, nomi []string) ([]Artefatto, error) {
 	out, c, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"install", "--assumeno", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
 	if err != nil {
@@ -341,7 +341,7 @@ func (g *gestoreDnf) Simula(file, nomi []string) ([]Artefatto, error) {
 
 var archi = map[string]bool{"x86_64": true, "noarch": true, "i686": true, "aarch64": true}
 
-// presenti: niente da fare — i pacchetti dei file, già installati alla stessa versione.
+// presenti: nothing to do — the files' packages, already installed at the same version.
 func (g *gestoreDnf) presenti(file, nomi []string) ([]Artefatto, error) {
 	var r []Artefatto
 	for _, f := range file {
@@ -369,25 +369,25 @@ func nomiDi(r []Artefatto) []string {
 	return n
 }
 
-// Installa: dnf installa i file del pacchetto unico (senza firma rpm: li garantisce lo sha256 del
-// .run) e prende le dipendenze dagli archivi della macchina, con le loro firme.
+// Installa: dnf installs the files of the single package (without an rpm signature: the .run's sha256
+// guarantees them) and takes the dependencies from the machine's repositories, with their signatures.
 func (g *gestoreDnf) Installa(file, nomi []string) error {
 	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
 	return err
 }
 
 func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
-	// dnf remove toglie anche chi dipende da questi: si guarda con --assumeno
+	// dnf remove also removes whoever depends on these: it is checked with --assumeno
 	out, _, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
 	if err != nil {
 		return nil, err
 	}
-	// ⚠ --assumeno esce 1 ANCHE quando la simulazione riesce («Operation aborted»): il codice non
-	// dice niente, il testo sì. Se il solver non risolve — togliere questi romperebbe un pacchetto
-	// PROTETTO, o uno installato che ne ha bisogno — non c'è la sezione «Removing»: i nomi stanno
-	// nei «Problem», e sono loro i dipendenti (i nomi dati si trattengono). `[M]` T10, 30 set,
-	// fedora44-gnome-iso (fase 18, col deposito Cisco): openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protetto);
-	// prima si leggeva «nessun dipendente» e `dnf remove -y` falliva.
+	// ⚠ --assumeno exits 1 EVEN when the simulation succeeds («Operation aborted»): the code says
+	// nothing, the text does. If the solver does not resolve — removing these would break a
+	// PROTECTED package, or an installed one that needs them — there is no «Removing» section: the names are
+	// in the «Problem» lines, and they are the dependents (the given names are held back). `[M]` T10, 30 Sep,
+	// fedora44-gnome-iso (phase 18, with the Cisco repository): openh264 ← libheif ← glycin-loaders ← gdk-pixbuf2 ← gnome-shell (protected);
+	// before, «no dependents» was read and `dnf remove -y` failed.
 	if strings.Contains(out, "Failed to resolve the transaction") || strings.Contains(out, "Impossibile risolvere la transazione") {
 		altri := fuoriDa(problemiDnf(out), nomi)
 		if len(altri) == 0 {
@@ -413,9 +413,9 @@ func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	return fuoriDa(tutti, nomi), nil
 }
 
-// problemiDnf: i pacchetti nominati nei «Problem» di un solver dnf che non risolve — i protetti
-// («protected packages: a, b») e gli installati che hanno bisogno di quel che si toglie («installed
-// package NEVRA requires …»); il NEVRA torna nome.
+// problemiDnf: the packages named in the «Problem» lines of a dnf solver that does not resolve — the protected ones
+// («protected packages: a, b») and the installed ones that need what is being removed («installed
+// package NEVRA requires …»); the NEVRA goes back to a name.
 func problemiDnf(out string) []string {
 	var r []string
 	for _, riga := range strings.Split(out, "\n") {
@@ -439,7 +439,7 @@ func problemiDnf(out string) []string {
 	return fuoriDa(r, nil)
 }
 
-// nomeDaNevra: «libheif-1.23.5-3.fc44.x86_64» → «libheif» (via l'architettura, poi versione e rilascio).
+// nomeDaNevra: «libheif-1.23.5-3.fc44.x86_64» → «libheif» (strip the architecture, then version and release).
 func nomeDaNevra(nevra string) string {
 	s := nevra
 	if i := strings.LastIndex(s, "."); i > 0 {
@@ -462,7 +462,7 @@ func (g *gestoreDnf) Togli(nomi []string, purge bool) error {
 }
 
 func (g *gestoreDnf) Integro() (bool, string, error) {
-	// una transazione rpm a metà lascia i pacchetti doppi (due versioni dello stesso)
+	// a half-done rpm transaction leaves duplicate packages (two versions of the same one)
 	out, c, err := g.a.Esegui(time.Minute, "rpm", "-qa", "--qf", `%{NAME}.%{ARCH}\n`)
 	if err != nil {
 		return false, "", err
@@ -473,28 +473,28 @@ func (g *gestoreDnf) Integro() (bool, string, error) {
 	visti := map[string]bool{}
 	for _, n := range strings.Fields(out) {
 		if visti[n] && !strings.HasPrefix(n, "gpg-pubkey") && !strings.HasPrefix(n, "kernel") {
-			return false, "doppio: " + n, nil
+			return false, "duplicate: " + n, nil
 		}
 		visti[n] = true
 	}
 	return true, "", nil
 }
 
-// Ripara: dnf ripete la transazione; qui si torna a uno stato coerente togliendo i doppi.
+// Ripara: dnf repeats the transaction; here we go back to a coherent state by removing the duplicates.
 func (g *gestoreDnf) Ripara() error {
 	_, err := esegui(g.a, tempoGestore, "dnf", "remove", "-y", "--duplicates")
 	return err
 }
 
-// ---------------------------------------------------------------- zypper (openSUSE) — non provato
+// ---------------------------------------------------------------- zypper (openSUSE) — not tried
 
 type gestoreZypper struct {
 	a *Ambiente
 }
 
-// fileArg: i file del pacchetto unico non hanno una firma rpm (li garantisce lo sha256 del .run):
-// zypper li rifiuterebbe ([M] 30 set, tumbleweed-kde: «Signature verification failed [6-File is
-// unsigned]»). ⚠ Vale SOLO per quei file; i pacchetti degli archivi restano verificati da zypper.
+// fileArg: the files of the single package have no rpm signature (the .run's sha256 guarantees them):
+// zypper would refuse them ([M] 30 Sep, tumbleweed-kde: «Signature verification failed [6-File is
+// unsigned]»). ⚠ It applies ONLY to those files; the repositories' packages stay verified by zypper.
 func (g *gestoreZypper) fileArg(file []string) []string {
 	if len(file) == 0 {
 		return nil
@@ -570,7 +570,7 @@ func (g *gestoreZypper) Ripara() error {
 	return err
 }
 
-// ---------------------------------------------------------------- pacman (Arch) — non provato
+// ---------------------------------------------------------------- pacman (Arch) — not tried
 
 type gestorePacman struct{ a *Ambiente }
 
@@ -589,8 +589,8 @@ func (g *gestorePacman) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestorePacman) Simula(file, nomi []string) ([]Artefatto, error) {
-	// la transazione intera (i file del pacchetto unico e i pacchetti degli archivi, con le
-	// dipendenze): pacman -U/-S --print dice che cosa installerebbe, senza toccare niente
+	// the whole transaction (the files of the single package and the repositories' packages, with the
+	// dependencies): pacman -U/-S --print says what it would install, without touching anything
 	var righe []string
 	if len(file) > 0 {
 		out, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-U", "--needed", "--print", "--print-format", "%n %v %a %r %l"}, file...)...)
@@ -642,14 +642,14 @@ func (g *gestorePacman) Installa(file, nomi []string) error {
 	if len(file) == 0 {
 		return nil
 	}
-	// -U prende le dipendenze dei file dagli archivi della macchina
+	// -U takes the files' dependencies from the machine's repositories
 	_, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-U", "--needed", "--noconfirm"}, file...)...)
 	return err
 }
 
 func (g *gestorePacman) SimulaTogli(nomi []string, purge bool) ([]string, error) {
-	// ⚠ pacman -R non toglie chi dipende: se qualcuno dipende, la simulazione FALLISCE e lo dice
-	// («removing X breaks dependency 'X' required by Y»): chi dipende è Y
+	// ⚠ pacman -R does not remove whoever depends: if someone depends, the simulation FAILS and says so
+	// («removing X breaks dependency 'X' required by Y»): whoever depends is Y
 	out, c, err := g.a.Esegui(tempoGestore, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
 	if err != nil {
 		return nil, err
@@ -688,8 +688,8 @@ func (g *gestorePacman) Integro() (bool, string, error) {
 	return true, "", nil
 }
 
-// Ripara: il file di blocco lasciato da un pacman ucciso si toglie (nessun pacman gira: lo
-// garantisce la serratura del motore), poi pacman -Dk controlla l'archivio.
+// Ripara: the lock file left by a killed pacman is removed (no pacman is running: the
+// engine's lock guarantees it), then pacman -Dk checks the database.
 func (g *gestorePacman) Ripara() error {
 	os.Remove(g.a.P("/var/lib/pacman/db.lck"))
 	_, err := esegui(g.a, tempoGestore, "pacman", "-Dk")

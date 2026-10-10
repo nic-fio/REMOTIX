@@ -1,11 +1,11 @@
-# Contenitore.tumbleweed — costruzione di REMOTIX per openSUSE Tumbleweed.
+# Contenitore.tumbleweed — REMOTIX build for openSUSE Tumbleweed.
 #
-# Fase 18, senza ffmpeg: `libopus-devel`.  (OpenH264 e SVT-AV1, il ripiego in
-# software, sono usciti con la fase 19.)
-# ⓘ Tumbleweed ha gia' ngtcp2 1.25 con crypto_ossl: si potrebbe usare quella.
-#   Si costruisce comunque la nostra, statica, per uniformita' (§6.3).
-# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-devel` (loader e
-#    intestazioni), `[M]` 1 ott 2026 nell'immagine: 1.4.357.
+# Phase 18, without ffmpeg: `libopus-devel`.  (OpenH264 and SVT-AV1, the software
+# fallback, left with phase 19.)
+# ⓘ Tumbleweed already has ngtcp2 1.25 with crypto_ossl: it could be used.
+#   Ours is built anyway, static, for uniformity (§6.3).
+# ⭐ Phase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-devel` (loader and
+#    headers), `[M]` 1 Oct 2026 in the image: 1.4.357.
 FROM registry.opensuse.org/opensuse/tumbleweed:latest
 RUN zypper -n refresh && zypper -n install --no-recommends \
         gcc make pkg-config git cmake ninja diffutils \
@@ -14,7 +14,7 @@ RUN zypper -n refresh && zypper -n install --no-recommends \
         libei-devel libxkbcommon-devel 'pkgconfig(gbm)' wayland-devel vulkan-devel \
     && zypper -n clean -a
 
-# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+# --- the same for all targets: nghttp3 1.18.0 and ngtcp2 1.25.0, static
 COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
 RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \

@@ -11,26 +11,26 @@ import (
 	"syscall"
 )
 
-// OpzioniInstallazione: le poche cose che chi installa sceglie (§10: la porta, chi entra nei gruppi
-// della scheda) e da dove vengono i pacchetti (il pacchetto unico, DECISIONI §10.36).
+// OpzioniInstallazione: the few things whoever installs chooses (§10: the port, who enters the card's
+// groups) and where the packages come from (the single package, DECISIONI §10.36).
 type OpzioniInstallazione struct {
-	// Pacchetti: la cartella packages/ del .run (o, nelle prove, una cartella qualunque con
-	// <bersaglio>/*.deb|*.rpm|*.pkg.tar.zst); "" ⇒ nessun pacchetto (RX-MANCA-004)
+	// Pacchetti: the packages/ folder of the .run (or, in the tests, any folder with
+	// <bersaglio>/*.deb|*.rpm|*.pkg.tar.zst); "" ⇒ no package (RX-MANCA-004)
 	Pacchetti string
-	Utenti    []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
+	Utenti    []string // whom to put in the card's groups; empty ⇒ the machine's people
 	Porta     int
-	// Aggiornamento: REMOTIX è già installato (un'installazione CONFERMATA): il piano mette solo i
-	// pacchetti nuovi del .run; gruppi, porta e servizio ci sono già
+	// Aggiornamento: REMOTIX is already installed (a CONFIRMED installation): the plan puts only the
+	// new packages of the .run; groups, port and service are already there
 	Aggiornamento bool
 }
 
-// PianoInstallazione: il piano dell'installazione (o dell'aggiornamento) di REMOTIX (§6.0, rifatto il
-// 10 ott 2026 per DECISIONI §10.36). REMOTIX NON modifica il sistema: niente archivi di terzi, driver,
-// desktop, firewall né cinture di sistema. Quel che manca (Rapporto.Mancano) va nel piano come
-// BLOCCANTE e l'operazione si ferma prima di toccare niente; provvede l'amministratore. Il piano fa:
-// i pacchetti di REMOTIX dal .run (le dipendenze le prende il gestore dagli archivi della macchina) →
-// i gruppi della scheda (l'eccezione voluta dall'utente) → la porta, se non è quella di serie →
-// l'accensione. Il gestore simula subito: il piano mostra i pacchetti esatti prima della domanda.
+// PianoInstallazione: the plan of the installation (or upgrade) of REMOTIX (§6.0, redone on
+// 10 Oct 2026 for DECISIONI §10.36). REMOTIX does NOT modify the system: no third-party repositories, drivers,
+// desktops, firewalls or system belts. What is missing (Rapporto.Mancano) goes into the plan as
+// BLOCKING and the operation stops before touching anything; the administrator provides it. The plan does:
+// REMOTIX's packages from the .run (the manager takes the dependencies from the machine's repositories) →
+// the card's groups (the exception the user wanted) → the port, if it is not the stock one →
+// the switch-on. The manager simulates at once: the plan shows the exact packages before the question.
 func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniInstallazione) (*Piano, error) {
 	if o.Porta == 0 {
 		o.Porta = 7447
@@ -45,7 +45,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 
-	// quel che manca, e i motivi per cui su questa macchina REMOTIX non va: si dicono, e si ferma
+	// what is missing, and the reasons why REMOTIX does not work on this machine: they are stated, and it stops
 	pn.NonFatto = append(pn.NonFatto, rap.Mancano...)
 	for _, m := range rap.Messaggi {
 		if m.Gravita == BLOCCANTE && !haCodice(pn.NonFatto, m.Codice) {
@@ -66,7 +66,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if err != nil {
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-MANCA-004", err.Error()))
 	} else {
-		// le dipendenze che il desktop chiede (labwc, wlr-randr, un carattere): col gestore, insieme
+		// the dependencies the desktop requires (labwc, wlr-randr, a font): with the manager, together
 		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), strings.Join(rap.NomiDipendenze(), ",")))
 		pn.Dipendenze = rap.Dipendenze
 	}
@@ -86,13 +86,13 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		} else {
 			pn.Dichiarate = append(pn.Dichiarate, T("np.gruppi", strings.Join(gruppi, ", ")))
 		}
-		// la porta scelta (§6.4: i predefiniti in /usr, le scelte in /etc): remotix.service la legge
-		// da /etc/remotix/remotix.conf.d/*.conf. Solo se non è quella di serie
+		// the chosen port (§6.4: the defaults in /usr, the choices in /etc): remotix.service reads it
+		// from /etc/remotix/remotix.conf.d/*.conf. Only if it is not the stock one
 		if o.Porta != 7447 {
 			pn.Azioni = append(pn.Azioni, PianoScriviFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
 		}
 		pn.Azioni = append(pn.Azioni, PianoAccendiServizio("service", "remotix.service", o.Porta))
-		// il firewall è dell'amministratore (§10.36): lo si dice, non lo si apre
+		// the firewall is the administrator's (§10.36): it is stated, not opened
 		switch g := amb.Firewall.Nome(); g {
 		case "none", "":
 		default:
@@ -105,8 +105,8 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
 	}
-	// la simulazione del gestore: i pacchetti esatti, PRIMA della domanda. Se il gestore non sa
-	// installare (una dipendenza che nessun archivio della macchina dà), lo dice qui
+	// the manager's simulation: the exact packages, BEFORE the question. If the manager cannot
+	// install (a dependency no repository of the machine provides), it says so here
 	if !Bloccato(pn) && amb.Pacchetti != nil && len(file) > 0 {
 		var veri []string
 		for _, f := range file {
@@ -126,7 +126,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	return pn, nil
 }
 
-// haDesktopBuono: almeno un desktop installato che REMOTIX sostiene.
+// haDesktopBuono: at least one installed desktop that REMOTIX supports.
 func haDesktopBuono(rap *Rapporto) bool {
 	for _, e := range rap.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
@@ -136,7 +136,7 @@ func haDesktopBuono(rap *Rapporto) bool {
 	return false
 }
 
-// Bloccato: il piano ha un messaggio BLOCCANTE (quel che manca): non si applica.
+// Bloccato: the plan has a BLOCKING message (what is missing): it is not applied.
 func Bloccato(p *Piano) bool {
 	for _, m := range p.NonFatto {
 		if m.Gravita == BLOCCANTE {
@@ -146,8 +146,8 @@ func Bloccato(p *Piano) bool {
 	return false
 }
 
-// NienteDaFare: la simulazione dice che i pacchetti del .run sono già tutti installati, a quella
-// versione (un aggiornamento con lo stesso .run).
+// NienteDaFare: the simulation says the .run's packages are all already installed, at that
+// version (an upgrade with the same .run).
 func NienteDaFare(p *Piano) bool {
 	if len(p.Pacchetti) == 0 {
 		return false
@@ -160,9 +160,9 @@ func NienteDaFare(p *Piano) bool {
 	return true
 }
 
-// PacchettiDelRun: i file dei pacchetti di REMOTIX per QUESTA distribuzione, nella cartella
-// packages/<bersaglio>/ del .run. remotix-selinux solo dove c'è la politica targeted (il pacchetto
-// remotix lo chiede lì, e altrove porterebbe con sé la politica intera).
+// PacchettiDelRun: the files of REMOTIX's packages for THIS distribution, in the folder
+// packages/<bersaglio>/ of the .run. remotix-selinux only where there is the targeted policy (the remotix
+// package requires it there, and elsewhere it would bring the whole policy along).
 func PacchettiDelRun(a *Ambiente, dir string) ([]string, error) {
 	if dir == "" {
 		return nil, fmt.Errorf("no packages: run the REMOTIX .run file")
@@ -195,7 +195,7 @@ func PacchettiDelRun(a *Ambiente, dir string) ([]string, error) {
 	return r, nil
 }
 
-// Persone: gli utenti umani della macchina (uid fra UID_MIN e 60000, con una shell vera).
+// Persone: the machine's human users (uid between UID_MIN and 60000, with a real shell).
 func Persone(a *Ambiente) []string {
 	min := 1000
 	for _, f := range []string{"/etc/login.defs", "/usr/etc/login.defs"} {
@@ -233,8 +233,8 @@ func Persone(a *Ambiente) []string {
 	return r
 }
 
-// GruppiScheda: i gruppi dei nodi della scheda (/dev/dri/card* e renderD*), root escluso
-// (DECISIONI §7.21: i numeri cambiano da una macchina all'altra, si leggono dai nodi).
+// GruppiScheda: the groups of the card's nodes (/dev/dri/card* and renderD*), root excluded
+// (DECISIONI §7.21: the numbers change from one machine to another, they are read from the nodes).
 func GruppiScheda(a *Ambiente) []string {
 	gr, _ := LeggiGruppi(a.P("/etc/group"))
 	nome := map[string]string{}

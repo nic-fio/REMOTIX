@@ -1,3 +1,3 @@
-# cache di Go e binari costruiti: si rifanno con costruisci.sh
+# Go cache and built binaries: rebuilt with costruisci.sh
 .cache/
 uscita/

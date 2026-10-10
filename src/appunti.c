@@ -1,23 +1,23 @@
 /*
- * appunti.c — gli appunti della SESSIONE, cioe' quelli di Mutter.
+ * appunti.c — the SESSION's clipboard, that is Mutter's.
  *
- * ⛔ Le quattro trappole, il contratto del thread e la ragione del «solo testo»
- *    stanno in `appunti.h`, e non si ripetono qui: questo file le ATTUA, e ogni
- *    punto in cui una di esse morde e' segnato sul posto.
+ * ⛔ The four traps, the thread contract and the reason for "text only"
+ *    are in `appunti.h`, and are not repeated here: this file IMPLEMENTS them, and
+ *    every point where one of them bites is marked on the spot.
  *
- * ⭐ Discende da `fondamenta/remotix-c/src/appunti_mutter.c` (450 righe, misurato il 5
- *    agosto 2026 contro GNOME 48.7).  ⛔ Le differenze, tutte volute:
+ * ⭐ Descends from `fondamenta/remotix-c/src/appunti_mutter.c` (450 lines, measured on 5
+ *    August 2026 against GNOME 48.7).  ⛔ The differences, all intended:
  *
- *      · **solo testo**: v1 scambiava elenchi di tipi MIME con chi cuce e
- *        portava anche immagini e `text/html` (`fondamenta/…/scambio.c`).  Qui i tipi
- *        vivono in `TIPI_TESTO` e non escono da questo file;
- *      · **si legge qui**, sul thread degli appunti, invece di consegnare i
- *        tipi e farsi richiamare: l'annuncio di §7.4 porta la lunghezza, e la
- *        lunghezza non si sa senza leggere;
- *      · **il tetto e la validita' UTF-8 si controllano qui**, dove il testo
- *        esiste ancora intero — non dopo aver attraversato un socket;
- *      · **si ricorda l'ultimo testo**, non l'ultimo elenco di tipi: e' quel
- *        che serve a chi si ricollega, ed e' gia' pronto da spedire.
+ *      · **text only**: v1 exchanged lists of MIME types with the stitcher and
+ *        also carried images and `text/html` (`fondamenta/…/scambio.c`).  Here the types
+ *        live in `TIPI_TESTO` and do not leave this file;
+ *      · **it is read here**, on the clipboard thread, instead of handing over the
+ *        types and being called back: the §7.4 announcement carries the length, and the
+ *        length is not known without reading;
+ *      · **the ceiling and UTF-8 validity are checked here**, where the text
+ *        still exists whole — not after crossing a socket;
+ *      · **the last text is remembered**, not the last list of types: it is what
+ *        whoever reconnects needs, and it is already ready to send.
  */
 #include "appunti.h"
 #include "appunti_kde.h"
@@ -34,23 +34,23 @@
 
 #define ATTESA_CHIAMATA_MS 5000
 
-/* Quanto si aspetta un blocco dal descrittore prima di dichiararlo perso: chi
- * scrive dall'altro capo puo' essere lento, ma non muto. */
+/* How long we wait for a chunk from the descriptor before declaring it lost: the
+ * writer at the other end may be slow, but not mute. */
 #define ATTESA_LETTURA_MS 5000
 
 /*
- * ⛔ LA FILA DEI TIPI, E SI PROVA TUTTA — trappola 3 di `appunti.h`.
+ * ⛔ THE ROW OF TYPES, AND IT IS TRIED WHOLE — trap 3 of `appunti.h`.
  *
- * Il gestore interno degli appunti di Mutter tiene **un solo tipo MIME**:
- * quando l'applicazione che ha copiato muore, di tutto quel che aveva
- * annunciato ne resta uno, e non e' detto che sia il primo della nostra fila.
- * ⇒ Si chiede nell'ordine, e si prende il primo che consegna.
+ * Mutter's internal clipboard manager keeps **a single MIME type**:
+ * when the application that copied dies, of all it had announced only one
+ * is left, and it is not necessarily the first of our row.
+ * ⇒ We ask in order, and take the first that delivers.
  *
- * ⚠ L'ordine non e' indifferente: il primo e' quello che dichiara la codifica,
- *   e gli altri due la sottintendono.  `text/plain` senza charset e' UTF-8 su
- *   Wayland per convenzione, ⛔ ma **si convalida lo stesso**: una convenzione
- *   non e' una garanzia, e un testo non-UTF-8 spedito come UTF-8 e' una
- *   violazione di §5.4 dalla nostra parte del filo.
+ * ⚠ The order is not indifferent: the first is the one that declares the encoding,
+ *   and the other two imply it.  `text/plain` without charset is UTF-8 on
+ *   Wayland by convention, ⛔ but **it is validated anyway**: a convention
+ *   is not a guarantee, and non-UTF-8 text sent as UTF-8 is a
+ *   violation of §5.4 on our side of the wire.
  */
 static const char *const TIPI_TESTO[] = {
 	"text/plain;charset=utf-8",
@@ -61,9 +61,9 @@ static const char *const TIPI_TESTO[] = {
 
 struct Appunti
 {
-	/* ⭐ FASE 12 — su KDE tutto il lavoro lo fa `appunti_kde.c`, e questo
-	 *    guscio passa la mano in cima a ogni funzione pubblica: il ramo GNOME
-	 *    qui sotto resta com'era, riga per riga. */
+	/* ⭐ PHASE 12 — on KDE all the work is done by `appunti_kde.c`, and this
+	 *    shell hands over at the top of every public function: the GNOME branch
+	 *    below stays as it was, line by line. */
 	AppuntiKde *kde;
 
 	GDBusConnection *bus;
@@ -73,18 +73,18 @@ struct Appunti
 	GMainLoop *ciclo;
 	GThread *thread;
 
-	/* ⛔ L'ultimo testo che la sessione ha copiato, tenuto QUI perche' deve
-	 *    sopravvivere alla connessione: chi si ricollega non riceve nessun
-	 *    segnale nuovo (`appunti.h`, `appunti_ultimo_testo`). */
+	/* ⛔ The last text the session copied, kept HERE because it must
+	 *    survive the connection: whoever reconnects receives no new
+	 *    signal (`appunti.h`, `appunti_ultimo_testo`). */
 	char *ultimo;
 	size_t ultimo_byte;
 
 	guint sottoscrizione_offerta;
 	guint sottoscrizione_richiesta;
 
-	/* Le richiamate e il loro proprietario.  Il lucchetto e' preso mentre una
-	 * richiamata gira, cosi' `appunti_ascolta(NULL, NULL, NULL)` aspetta chi e'
-	 * a meta' strada invece di liberargli il contesto sotto i piedi. */
+	/* The callbacks and their owner.  The lock is held while a callback
+	 * runs, so `appunti_ascolta(NULL, NULL, NULL)` waits for whoever is
+	 * half way instead of freeing the context under their feet. */
 	GMutex lucchetto;
 	AppuntiSuTesto su_testo;
 	AppuntiSuRichiesta su_richiesta;
@@ -101,7 +101,7 @@ static GVariant *chiama(Appunti *appunti, const char *metodo, GVariant *argoment
 	                                   ATTESA_CHIAMATA_MS, NULL, sbaglio);
 }
 
-/* Come sopra, ma la risposta porta un descrittore. */
+/* As above, but the answer carries a descriptor. */
 static int chiama_per_descrittore(Appunti *appunti, const char *metodo,
                                   GVariant *argomenti, GError **sbaglio)
 {
@@ -121,16 +121,16 @@ static int chiama_per_descrittore(Appunti *appunti, const char *metodo,
 }
 
 /* ------------------------------------------------------------------ *
- * Leggere il testo dalla sessione
+ * Reading the text from the session
  * ------------------------------------------------------------------ */
 
-/* Legge un descrittore fino alla fine, con un tetto e senza restare appesa.
+/* Reads a descriptor to the end, with a ceiling and without hanging.
  *
- * ⛔ Il tetto e' quello di §5.4 **piu' uno**: leggendo esattamente
- *    `APPUNTI_TETTO` non si distingue «un testo grande quanto il tetto», che e'
- *    LECITO, da «un testo piu' grande», che va rifiutato.  Un byte in piu' e i
- *    due casi si separano.  ⚠ E' la stessa forma dell'1 000 000 contro 1 MiB di
- *    §5.4: un tetto che rende illegale il caso al limite non e' quel tetto. */
+ * ⛔ The ceiling is that of §5.4 **plus one**: reading exactly
+ *    `APPUNTI_TETTO` one cannot tell "a text as large as the ceiling", which is
+ *    LAWFUL, from "a larger text", which must be refused.  One more byte and the
+ *    two cases separate.  ⚠ It is the same form as §5.4's 1 000 000 versus 1 MiB:
+ *    a ceiling that makes the borderline case illegal is not that ceiling. */
 static GBytes *bevi_tutto(int fd, GError **sbaglio)
 {
 	GByteArray *raccolto = g_byte_array_new();
@@ -144,8 +144,8 @@ static GBytes *bevi_tutto(int fd, GError **sbaglio)
 		if (g_poll(&sonda, 1, ATTESA_LETTURA_MS) <= 0)
 		{
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-			            "chi doveva consegnare gli appunti non ha scritto "
-			            "niente per %d ms",
+			            "whoever had to deliver the clipboard wrote "
+			            "nothing for %d ms",
 			            ATTESA_LETTURA_MS);
 			g_byte_array_free(raccolto, TRUE);
 			return NULL;
@@ -153,13 +153,13 @@ static GBytes *bevi_tutto(int fd, GError **sbaglio)
 
 		letti = read(fd, pezzo, sizeof pezzo);
 		if (letti == 0)
-			break; /* fine */
+			break; /* end */
 		if (letti < 0)
 		{
 			if (errno == EINTR)
 				continue;
 			g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
-			            "lettura degli appunti fallita: %s", g_strerror(errno));
+			            "clipboard read failed: %s", g_strerror(errno));
 			g_byte_array_free(raccolto, TRUE);
 			return NULL;
 		}
@@ -167,8 +167,8 @@ static GBytes *bevi_tutto(int fd, GError **sbaglio)
 		if (raccolto->len + (guint)letti > APPUNTI_TETTO)
 		{
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
-			            "appunti oltre il tetto di %u byte (§5.4): lasciati "
-			            "dove sono, e NON troncati",
+			            "clipboard over the ceiling of %u bytes (§5.4): left "
+			            "where it is, and NOT truncated",
 			            APPUNTI_TETTO);
 			g_byte_array_free(raccolto, TRUE);
 			return NULL;
@@ -180,13 +180,13 @@ static GBytes *bevi_tutto(int fd, GError **sbaglio)
 }
 
 /*
- * Prova la fila di `TIPI_TESTO` e restituisce il primo testo che regge, gia'
- * convalidato.  NULL se non ce n'e' nessuno — e la ragione sta nel registro.
+ * Tries the row of `TIPI_TESTO` and returns the first text that holds, already
+ * validated.  NULL if there is none — and the reason is in the log.
  *
- * ⛔ E le ragioni sono TRE e restano distinte: non c'era nessun tipo di testo ·
- *    c'era e la lettura e' fallita · c'era, si e' letto, e non era UTF-8 valido.
- *    Un `NULL` solo per tutt'e tre sarebbe `LEZIONI.md` §1.9 — «vuoto e
- *    proibito con la stessa faccia».
+ * ⛔ And the reasons are THREE and stay distinct: there was no text type ·
+ *    there was one and the read failed · there was one, it was read, and it was not valid UTF-8.
+ *    A single `NULL` for all three would be `LEZIONI.md` §1.9 — "empty and
+ *    forbidden with the same face".
  */
 static char *leggi_il_testo(Appunti *appunti, size_t *quanti)
 {
@@ -203,14 +203,14 @@ static char *leggi_il_testo(Appunti *appunti, size_t *quanti)
 		                            &sbaglio);
 		if (fd < 0)
 		{
-			/* ⚠ In dettaglio e non in chiaro: la fila si prova apposta, e un
-			 *   tipo che la sessione non ha e' l'esito NORMALE dei primi giri —
-			 *   una riga per ciascuno coprirebbe il registro di rumore. */
+			/* ⚠ In detail and not in plain: the row is tried on purpose, and a
+			 *   type the session does not have is the NORMAL outcome of the first rounds —
+			 *   one line for each would cover the log with noise. */
 			registro_dettaglio(REG_APPUNTI,
-			                   "«%s» non si legge dalla sessione (%s): provo il "
-			                   "prossimo tipo",
+			                   "«%s» cannot be read from the session (%s): trying the "
+			                   "next type",
 			                   TIPI_TESTO[i],
-			                   sbaglio ? sbaglio->message : "senza dettaglio");
+			                   sbaglio ? sbaglio->message : "no detail");
 			continue;
 		}
 
@@ -219,58 +219,58 @@ static char *leggi_il_testo(Appunti *appunti, size_t *quanti)
 		if (!dati)
 		{
 			registro_dice(REG_APPUNTI,
-			              "⛔ «%s»: la lettura non e' riuscita — %s",
+			              "⛔ «%s»: the read did not succeed — %s",
 			              TIPI_TESTO[i],
-			              sbaglio ? sbaglio->message : "senza dettaglio");
+			              sbaglio ? sbaglio->message : "no detail");
 			continue;
 		}
 
 		inizio = (const char *)g_bytes_get_data(dati, &byte);
 		if (byte == 0)
 		{
-			/* ⚠ Zero byte NON e' un guasto: e' una clipboard svuotata, ed e'
-			 *   esattamente quel che il banco fa all'inizio di ogni giro
-			 *   (`LEZIONI.md` §2.3-quinquies).  Si dichiara e si va avanti. */
+			/* ⚠ Zero bytes is NOT a fault: it is an emptied clipboard, and it is
+			 *   exactly what the bench does at the start of every round
+			 *   (`LEZIONI.md` §2.3-quinquies).  It is declared and we go on. */
 			registro_dettaglio(REG_APPUNTI,
-			                   "«%s» ha consegnato zero byte: la clipboard e' "
-			                   "vuota, non guasta",
+			                   "«%s» delivered zero bytes: the clipboard is "
+			                   "empty, not broken",
 			                   TIPI_TESTO[i]);
 			continue;
 		}
 
-		/* ⛔ UTF-8 VALIDO, e si controlla QUI.  `RCP.md` §5.4: «il testo DEVE
-		 *    essere UTF-8».  Spedirlo senza guardare vorrebbe dire mettere sul
-		 *    filo una violazione **nostra**, e farla scoprire al client — che
-		 *    per §3 dovrebbe chiudere la sessione.  ⇒ Il sintomo sarebbe «la
-		 *    sessione cade quando copio da quel programma». */
+		/* ⛔ VALID UTF-8, and it is checked HERE.  `RCP.md` §5.4: "the text MUST
+		 *    be UTF-8".  Sending it without looking would mean putting on the
+		 *    wire a violation **of ours**, and letting the client discover it — which
+		 *    per §3 would have to close the session.  ⇒ The symptom would be "the
+		 *    session drops when I copy from that program". */
 		if (!g_utf8_validate_len(inizio, byte, NULL))
 		{
 			registro_dice(REG_APPUNTI,
-			              "⛔ «%s» ha consegnato %zu byte che NON sono UTF-8 "
-			              "valido: non si annuncia (§5.4).  ⚠ Non e' un difetto "
-			              "nostro ne' del client — e' un programma che tiene "
-			              "negli appunti byte che RCP/1 non sa portare",
+			              "⛔ «%s» delivered %zu bytes that are NOT valid "
+			              "UTF-8: not announced (§5.4).  ⚠ It is not a defect "
+			              "of ours nor of the client — it is a program that keeps "
+			              "bytes in the clipboard that RCP/1 cannot carry",
 			              TIPI_TESTO[i], (size_t)byte);
 			continue;
 		}
 
-		/* ⛔ E NIENTE ZERI IN MEZZO.  Da qui in poi il testo viaggia come
-		 *    stringa terminata da zero — nel socket verso il padre e in
-		 *    `rcp.c` — e uno zero in mezzo lo taglierebbe **in silenzio**: quel
-		 *    che si incolla sarebbe piu' corto di quel che si e' copiato, e
-		 *    l'annuncio direbbe la lunghezza intera.  ⇒ Due verita' sulla
-		 *    stessa cosa, che e' il difetto che §2.2 vieta con quelle parole. */
+		/* ⛔ AND NO ZEROS IN THE MIDDLE.  From here on the text travels as a
+		 *    zero-terminated string — in the socket to the parent and in
+		 *    `rcp.c` — and a zero in the middle would cut it **silently**: what
+		 *    gets pasted would be shorter than what was copied, and the
+		 *    announcement would state the whole length.  ⇒ Two truths about the
+		 *    same thing, which is the defect §2.2 forbids in those words. */
 		if (memchr(inizio, 0, byte))
 		{
 			registro_dice(REG_APPUNTI,
-			              "⛔ «%s»: %zu byte con uno zero in mezzo — non si "
-			              "annuncia.  Troncare qui darebbe un testo piu' corto "
-			              "dell'annuncio, cioe' un annuncio che mente",
+			              "⛔ «%s»: %zu bytes with a zero in the middle — not "
+			              "announced.  Truncating here would give a text shorter "
+			              "than the announcement, that is an announcement that lies",
 			              TIPI_TESTO[i], (size_t)byte);
 			continue;
 		}
 
-		registro_dettaglio(REG_APPUNTI, "letti %zu byte di «%s» dalla sessione",
+		registro_dettaglio(REG_APPUNTI, "read %zu bytes of «%s» from the session",
 		                   (size_t)byte, TIPI_TESTO[i]);
 		if (quanti)
 			*quanti = byte;
@@ -281,7 +281,7 @@ static char *leggi_il_testo(Appunti *appunti, size_t *quanti)
 }
 
 /* ------------------------------------------------------------------ *
- * I due segnali
+ * The two signals
  * ------------------------------------------------------------------ */
 static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
                                 const char *percorso, const char *interfaccia,
@@ -306,34 +306,34 @@ static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
 	g_variant_get(parametri, "(@a{sv})", &opzioni);
 
 	/*
-	 * ⛔ IL RITORNO SI RICONOSCE QUI, ed e' la prima cosa da guardare —
-	 *    trappola 4 di `appunti.h`.  Senza queste tre righe si annuncerebbe al
-	 *    client quel che il client ci ha appena dato, e i due lati si
-	 *    rincorrerebbero senza fine.
-	 * ⭐ E su GNOME e' **etichettato**, non da indovinare: `STUDI.md` §gnome §10
-	 *    corregge la nostra vecchia riga che parlava di «un'euristica».
+	 * ⛔ THE RETURN IS RECOGNISED HERE, and it is the first thing to look at —
+	 *    trap 4 of `appunti.h`.  Without these three lines we would announce to the
+	 *    client what the client just gave us, and the two sides would
+	 *    chase each other endlessly.
+	 * ⭐ And on GNOME it is **labelled**, not to be guessed: `STUDI.md` §gnome §10
+	 *    corrects our old line that spoke of "a heuristic".
 	 */
 	if (g_variant_lookup(opzioni, "session-is-owner", "b", &nostro) && nostro)
 	{
 		registro_dettaglio(REG_APPUNTI,
-		                   "e' il ritorno della nostra offerta, non una copia "
-		                   "nuova: non si annuncia");
+		                   "it is the return of our own offer, not a new "
+		                   "copy: not announced");
 		return;
 	}
 
 	/*
-	 * ⛔ NEL SEGNALE I TIPI STANNO DENTRO UNA TUPLA, E NEI METODI NO — trappola
-	 *    2 di `appunti.h`, misurata il 5 agosto 2026 e costata una prova.
+	 * ⛔ IN THE SIGNAL THE TYPES ARE INSIDE A TUPLE, AND IN THE METHODS NOT — trap
+	 *    2 of `appunti.h`, measured on 5 August 2026 and it cost one test.
 	 *
-	 *    `SetSelection` vuole `mime-types` come `as`; `SelectionOwnerChanged` lo
-	 *    consegna come `(as)`.  Chi legge `as` non trova niente e **torna in
-	 *    silenzio**: gli appunti funzionano in un verso solo, e nel registro non
-	 *    compare nulla che lo spieghi.
+	 *    `SetSelection` wants `mime-types` as `as`; `SelectionOwnerChanged`
+	 *    delivers it as `(as)`.  Whoever reads `as` finds nothing and **returns
+	 *    silently**: the clipboard works in one direction only, and nothing in
+	 *    the log explains it.
 	 *
-	 *    ⚠ Si accettano ENTRAMBE le forme, perche' quale delle due arrivi
-	 *      dipende dalla versione di Mutter — e sbagliare costa un verso degli
-	 *      appunti.  Lo aggira anche il riferimento (`grd-session.c`), il che
-	 *      dice che non e' una nostra fantasia.
+	 *    ⚠ BOTH forms are accepted, because which of the two arrives
+	 *      depends on the Mutter version — and getting it wrong costs one direction
+	 *      of the clipboard.  The reference works around it too (`grd-session.c`), which
+	 *      says it is not a fantasy of ours.
 	 */
 	tipi = g_variant_lookup_value(opzioni, "mime-types",
 	                              G_VARIANT_TYPE_STRING_ARRAY);
@@ -348,20 +348,20 @@ static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
 	if (!tipi)
 	{
 		registro_dice(REG_APPUNTI,
-		              "⛔ la sessione ha annunciato una copia senza tipi "
-		              "leggibili: ne' `as` ne' `(as)`.  ⚠ Se e' una forma "
-		              "terza, gli appunti da qui in poi vanno in un verso solo "
-		              "e questa riga e' l'unico posto in cui si vede");
+		              "⛔ the session announced a copy without readable "
+		              "types: neither `as` nor `(as)`.  ⚠ If it is a third "
+		              "form, the clipboard from here on goes one way only "
+		              "and this line is the only place where it shows");
 		return;
 	}
 	mime = g_variant_get_strv(tipi, NULL);
 
-	/* ⛔ C'E' DEL TESTO FRA I TIPI?  E se non c'e', si dice CHE COSA c'era.
+	/* ⛔ IS THERE TEXT AMONG THE TYPES?  And if not, we say WHAT there was.
 	 *
-	 * ⚠ E' il caso normale di «ho copiato un'immagine»: non e' un guasto, ed e'
-	 *   la riga che spiega all'utente perche' quella copia non e' arrivata sul
-	 *   telefono.  Senza, il sintomo sarebbe «gli appunti a volte non
-	 *   funzionano» — cioe' il difetto piu' caro da diagnosticare che ci sia. */
+	 * ⚠ It is the normal case of "I copied an image": it is not a fault, and it is
+	 *   the line that explains to the user why that copy did not reach the
+	 *   phone.  Without it, the symptom would be "the clipboard sometimes does not
+	 *   work" — that is the most expensive defect to diagnose there is. */
 	for (int i = 0; mime && mime[i] && !c_e_testo; i++)
 		for (int k = 0; TIPI_TESTO[k]; k++)
 			if (g_ascii_strcasecmp(mime[i], TIPI_TESTO[k]) == 0)
@@ -374,22 +374,22 @@ static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
 		g_autofree char *elenco = mime ? g_strjoinv(", ", (GStrv)mime) : NULL;
 
 		registro_dice(REG_APPUNTI,
-		              "la sessione ha copiato qualcosa che non e' testo (%s): "
-		              "non si annuncia.  ⚠ `DECISIONI.md` §5-ter.1 — solo "
-		              "testo, ed e' una decisione, non un limite tecnico",
-		              elenco && *elenco ? elenco : "nessun tipo");
+		              "the session copied something that is not text (%s): "
+		              "not announced.  ⚠ `DECISIONI.md` §5-ter.1 — text "
+		              "only, and it is a decision, not a technical limit",
+		              elenco && *elenco ? elenco : "no type");
 		return;
 	}
 
 	testo = leggi_il_testo(appunti, &byte);
 	if (!testo)
 	{
-		/* ⚠ `leggi_il_testo` ha gia' scritto QUALE dei tre motivi era: qui si
-		 *   dice soltanto che l'annuncio non parte, o «ho letto e ho taciuto»
-		 *   avrebbe la faccia di «non e' successo niente». */
+		/* ⚠ `leggi_il_testo` has already written WHICH of the three reasons it was: here
+		 *   we only say that the announcement does not leave, or "I read and kept quiet"
+		 *   would have the face of "nothing happened". */
 		registro_dice(REG_APPUNTI,
-		              "⛔ la sessione ha copiato del testo ma non se n'e' potuto "
-		              "leggere nessun tipo: niente annuncio al client");
+		              "⛔ the session copied some text but no type of it could be "
+		              "read: no announcement to the client");
 		return;
 	}
 
@@ -403,28 +403,28 @@ static void su_padrone_cambiato(GDBusConnection *bus, const char *mittente,
 }
 
 /*
- * ⛔⛔⭐ LA CLIPBOARD CHE C'ERA GIA', E CHE VA **CHIESTA** — 21 agosto 2026.
+ * ⛔⛔⭐ THE CLIPBOARD THAT WAS ALREADY THERE, AND MUST BE **ASKED FOR** — 21 August 2026.
  *
- * ⚠ Qui accanto c'era scritto che `EnableClipboard` con opzioni vuote fa
- *   arrivare un `SelectionOwnerChanged` **subito**, «ed e' proprio l'annuncio
- *   che fa ritrovare gli appunti a chi si ricollega».  ⛔ **Non e' vero**, e la
- *   misura e' del 21 agosto: `wl-copy` vivo e proprietario nella sessione,
- *   `wl-paste` che legge il suo testo prima e dopo — e nel registro del figlio
- *   **nessuna** riga di lettura.  Mutter non racconta a una sessione nuova chi
- *   possiede la selezione: racconta solo i CAMBI da li' in poi.
+ * ⚠ Next to here it was written that `EnableClipboard` with empty options makes
+ *   a `SelectionOwnerChanged` arrive **at once**, "and it is precisely the announcement
+ *   that lets whoever reconnects find the clipboard again".  ⛔ **It is not true**, and the
+ *   measurement is from 21 August: `wl-copy` alive and owner in the session,
+ *   `wl-paste` reading its text before and after — and in the child's log
+ *   **no** read line.  Mutter does not tell a new session who
+ *   owns the selection: it only tells the CHANGES from then on.
  *
- * ⇒ E la conseguenza era grossa: il client, per farsi trovare quando qualcuno
- *   di la' incolla col mouse, annuncia i suoi appunti appena si collega — e
- *   non sapendo che cosa c'era nella sessione ci prendeva sopra la selezione.
- *   `[M]` `wl-paste` diceva «TESTO-CHE-ERA-GIA-NEL-DESKTOP» prima del
- *   collegamento e «» dopo: **collegandosi si perdeva la clipboard del
- *   desktop**.  ⛔ In una sessione locale la clipboard non sparisce perche' e'
- *   entrato qualcuno, e qui non deve sparire nemmeno.
+ * ⇒ And the consequence was big: the client, to be found when someone
+ *   over there pastes with the mouse, announces its clipboard as soon as it connects — and
+ *   not knowing what was in the session it took the selection over it.
+ *   `[M]` `wl-paste` said «TESTO-CHE-ERA-GIA-NEL-DESKTOP» before the
+ *   connection and «» after: **by connecting the desktop clipboard
+ *   was lost**.  ⛔ In a local session the clipboard does not vanish because
+ *   someone came in, and here it must not vanish either.
  *
- * ⭐ Allora la si chiede, una volta, appena la clipboard e' accesa: se c'e' un
- *    proprietario si legge il suo testo e lo si annuncia al client come
- *    qualunque altra copia; se non c'e' nessuno, `leggi_il_testo` lo dice nel
- *    registro e non succede niente.
+ * ⭐ So it is asked for, once, as soon as the clipboard is on: if there is an
+ *    owner its text is read and announced to the client like
+ *    any other copy; if there is nobody, `leggi_il_testo` says so in the
+ *    log and nothing happens.
  */
 void appunti_leggi_adesso(Appunti *appunti)
 {
@@ -442,15 +442,15 @@ void appunti_leggi_adesso(Appunti *appunti)
 	if (!testo)
 	{
 		registro_dettaglio(REG_APPUNTI,
-		                   "la sessione non aveva appunti da darci al momento "
-		                   "dell'accensione: non e' un guasto");
+		                   "the session had no clipboard to give us at the time "
+		                   "of switching on: it is not a fault");
 		return;
 	}
 
 	registro_dice(REG_APPUNTI,
-	              "⭐ la clipboard che c'era GIA' nella sessione: %zu byte, "
-	              "letti all'accensione.  ⚠ Chi si collega non deve perdere "
-	              "quel che aveva copiato",
+	              "⭐ the clipboard that was ALREADY in the session: %zu bytes, "
+	              "read at switch-on.  ⚠ Whoever connects must not lose "
+	              "what they had copied",
 	              byte);
 
 	g_mutex_lock(&appunti->lucchetto);
@@ -479,7 +479,7 @@ static void su_trasferimento(GDBusConnection *bus, const char *mittente,
 
 	g_variant_get(parametri, "(&su)", &mime, &serial);
 	registro_dettaglio(REG_APPUNTI,
-	                   "la sessione vuole incollare «%s» (richiesta %u)", mime,
+	                   "the session wants to paste «%s» (request %u)", mime,
 	                   serial);
 
 	g_mutex_lock(&appunti->lucchetto);
@@ -491,15 +491,15 @@ static void su_trasferimento(GDBusConnection *bus, const char *mittente,
 	}
 	g_mutex_unlock(&appunti->lucchetto);
 
-	/* ⛔ Nessuno ascolta: si risponde comunque di NO.  Una richiesta senza
-	 *    risposta lascia l'applicazione che incolla in attesa a tempo
-	 *    indeterminato, e quel che l'utente vede e' un desktop piantato
+	/* ⛔ Nobody is listening: we answer NO anyway.  A request without an
+	 *    answer leaves the pasting application waiting
+	 *    indefinitely, and what the user sees is a hung desktop
 	 *    (`appunti.h`, `AppuntiSuRichiesta`). */
 	appunti_rispondi(appunti, (uint32_t)serial, NULL, 0);
 }
 
 /* ------------------------------------------------------------------ *
- * Il thread che fa girare il contesto
+ * The thread that runs the context
  * ------------------------------------------------------------------ */
 static gpointer thread_appunti(gpointer dati)
 {
@@ -519,7 +519,7 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 	if (!bus || !percorso_controllo)
 	{
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-		            "gli appunti vogliono un bus e la sessione di controllo");
+		            "the clipboard wants a bus and the control session");
 		return NULL;
 	}
 
@@ -529,12 +529,12 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 	g_mutex_init(&appunti->lucchetto);
 
 	/*
-	 * ⛔ Il contesto si crea e si SOTTOSCRIVE qui, sul thread chiamante, con il
-	 *    contesto messo come predefinito: GDBus lega la consegna al contesto
-	 *    predefinito del thread che **sottoscrive**, non a quello che poi lo fa
-	 *    girare.  Sottoscrivere dentro il thread nuovo sarebbe la strada
-	 *    apparentemente ovvia, e lascerebbe una finestra in cui i segnali
-	 *    arriverebbero prima che il thread sia pronto.
+	 * ⛔ The context is created and SUBSCRIBED here, on the calling thread, with the
+	 *    context set as default: GDBus binds delivery to the default
+	 *    context of the thread that **subscribes**, not to the one that then
+	 *    runs it.  Subscribing inside the new thread would be the seemingly
+	 *    obvious way, and would leave a window in which signals
+	 *    would arrive before the thread is ready.
 	 */
 	appunti->contesto = g_main_context_new();
 	g_main_context_push_thread_default(appunti->contesto);
@@ -549,18 +549,18 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 	g_main_context_pop_thread_default(appunti->contesto);
 
 	/*
-	 * ⛔ Il ciclo e il thread partono PRIMA di `EnableClipboard`, e l'ordine non
-	 *    e' indifferente: quella chiamata puo' far arrivare un
-	 *    `SelectionOwnerChanged` **subito**.
-	 * ⚠ Qui c'era scritto che quel segnale «e' proprio l'annuncio che fa
-	 *   ritrovare gli appunti a chi si ricollega»: **e' falso**, misurato il 21
-	 *   agosto 2026 — Mutter racconta i CAMBI, non il proprietario che c'era.
-	 *   Gli appunti che c'erano gia' si chiedono, e lo fa
-	 *   `appunti_leggi_adesso()`.  Accendendo prima la
-	 *    clipboard e poi il thread, quel segnale cadrebbe nella finestra in cui
-	 *    nessuno fa girare il contesto — ⚠ e il sintomo sarebbe «gli appunti
-	 *    funzionano solo dalla seconda copia in poi», che nessuno collega
-	 *    all'ordine di due righe.
+	 * ⛔ The loop and the thread start BEFORE `EnableClipboard`, and the order is
+	 *    not indifferent: that call can make a
+	 *    `SelectionOwnerChanged` arrive **at once**.
+	 * ⚠ It was written here that that signal "is precisely the announcement that lets
+	 *   whoever reconnects find the clipboard again": **it is false**, measured on 21
+	 *   August 2026 — Mutter tells the CHANGES, not the owner that was there.
+	 *   The clipboard that was already there is asked for, and
+	 *   `appunti_leggi_adesso()` does it.  Switching on the
+	 *    clipboard first and then the thread, that signal would fall in the window in which
+	 *    nobody runs the context — ⚠ and the symptom would be "the clipboard
+	 *    works only from the second copy on", which nobody connects
+	 *    to the order of two lines.
 	 */
 	appunti->ciclo = g_main_loop_new(appunti->contesto, FALSE);
 	appunti->thread = g_thread_new("remotix-appunti", thread_appunti, appunti);
@@ -570,23 +570,23 @@ Appunti *appunti_apri(GDBusConnection *bus, const char *percorso_controllo,
 		g_autoptr(GVariant) risposta = NULL;
 
 		/*
-		 * ⭐ Senza `mime-types`: cosi' Mutter non ci fa proprietari di niente e
-		 *    ci racconta invece chi lo e' adesso.  Vedi `appunti.h`.
+		 * ⭐ Without `mime-types`: so Mutter makes us owners of nothing and
+		 *    tells us instead who is the owner now.  See `appunti.h`.
 		 */
 		g_variant_builder_init(&vuote, G_VARIANT_TYPE("a{sv}"));
 		risposta = chiama(appunti, "EnableClipboard",
 		                  g_variant_new("(a{sv})", &vuote), NULL, sbaglio);
 		if (!risposta)
 		{
-			g_prefix_error(sbaglio, "Mutter non concede la clipboard: ");
+			g_prefix_error(sbaglio, "Mutter does not grant the clipboard: ");
 			appunti_chiudi(appunti);
 			return NULL;
 		}
 	}
 
 	registro_dice(REG_APPUNTI,
-	              "⭐ appunti della sessione accesi (solo testo, nei due versi) "
-	              "su %s",
+	              "⭐ session clipboard switched on (text only, in both directions) "
+	              "on %s",
 	              percorso_controllo);
 	return appunti;
 }
@@ -603,8 +603,8 @@ Appunti *appunti_apri_kde(GError **sbaglio)
 	return appunti;
 }
 
-/* ⭐ FASE 13 — lo stesso involucro di `appunti_apri_kde()`: da qui in poi ogni
- *    funzione passa la mano a `appunti_kde_*` come su KDE. */
+/* ⭐ PHASE 13 — the same wrapper as `appunti_apri_kde()`: from here on every
+ *    function hands over to `appunti_kde_*` as on KDE. */
 Appunti *appunti_apri_wlroots(GError **sbaglio)
 {
 	AppuntiKde *wlr = appunti_kde_apri_wlroots(sbaglio);
@@ -659,17 +659,17 @@ void appunti_chiudi(Appunti *appunti)
 		return;
 	}
 
-	/* Prima si smette di ascoltare — e la chiamata aspetta chi e' a meta'
-	 * strada — poi si spegne il ciclo, poi si tolgono le sottoscrizioni. */
+	/* First we stop listening — and the call waits for whoever is half
+	 * way — then the loop is stopped, then the subscriptions are removed. */
 	appunti_ascolta(appunti, NULL, NULL, NULL);
 
 	/*
-	 * ⛔ NIENTE `DisableClipboard`, MAI — nemmeno qui, ed e' la trappola 1 di
-	 *    `appunti.h`.  In Mutter 48.7 quella chiamata lascia la clipboard
-	 *    accesa a meta', e da li' in poi nessuno la puo' piu' riaccendere: chi
-	 *    la spegnesse al distacco si ritroverebbe, alla connessione dopo,
-	 *    appunti morti **per il resto della sessione grafica**.
-	 *    ⇒ Chiudendo la sessione di controllo se ne va tutto insieme.
+	 * ⛔ NO `DisableClipboard`, EVER — not even here, and it is trap 1 of
+	 *    `appunti.h`.  In Mutter 48.7 that call leaves the clipboard
+	 *    half on, and from then on nobody can switch it on again: whoever
+	 *    switched it off at detach would find, at the next connection,
+	 *    a dead clipboard **for the rest of the graphical session**.
+	 *    ⇒ Closing the control session everything goes away together.
 	 */
 
 	if (appunti->ciclo)
@@ -697,7 +697,7 @@ void appunti_chiudi(Appunti *appunti)
 }
 
 /* ------------------------------------------------------------------ *
- * I due versi
+ * The two directions
  * ------------------------------------------------------------------ */
 gboolean appunti_offri(Appunti *appunti, GError **sbaglio)
 {
@@ -709,9 +709,9 @@ gboolean appunti_offri(Appunti *appunti, GError **sbaglio)
 	if (appunti->kde)
 		return appunti_kde_offri(appunti->kde, sbaglio);
 
-	/* ⛔ `as` e non `(as)`: nei METODI i tipi non stanno in una tupla — l'altra
-	 *    meta' della trappola 2, e questa e' la meta' che sbaglia in silenzio
-	 *    dall'altra parte. */
+	/* ⛔ `as` and not `(as)`: in METHODS the types are not in a tuple — the other
+	 *    half of trap 2, and this is the half that goes wrong silently
+	 *    on the other side. */
 	g_variant_builder_init(&opzioni, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&opzioni, "{sv}", "mime-types",
 	                      g_variant_new_strv(TIPI_TESTO, -1));
@@ -722,7 +722,7 @@ gboolean appunti_offri(Appunti *appunti, GError **sbaglio)
 		return FALSE;
 
 	registro_dettaglio(REG_APPUNTI,
-	                   "offerto alla sessione il testo del client (%d tipi)",
+	                   "offered the client's text to the session (%d types)",
 	                   (int)(sizeof TIPI_TESTO / sizeof *TIPI_TESTO) - 1);
 	return TRUE;
 }
@@ -742,25 +742,25 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 		return;
 	}
 
-	/* ⛔⛔⭐ SE IL CLIENT NON HA NIENTE, SI RENDE AL DESKTOP QUEL CHE AVEVA —
-	 *      21 agosto 2026, e nasce dalla direttiva dell'utente: «l'esperienza
-	 *      dev'essere quanto piu' vicina possibile a una sessione grafica
-	 *      locale».
+	/* ⛔⛔⭐ IF THE CLIENT HAS NOTHING, THE DESKTOP GETS BACK WHAT IT HAD —
+	 *      21 August 2026, and it comes from the user's directive: "the experience
+	 *      must be as close as possible to a local graphical
+	 *      session".
 	 *
-	 * ⚠ Per farsi trovare quando qualcuno di qua incolla col mouse, il client
-	 *   si annuncia appena si collega — e annunciarsi vuol dire prendersi la
-	 *   selezione, che e' UNA.  ⛔ Da quel momento chi incolla nel desktop
-	 *   chiede a NOI, e se il client non ha niente da dare l'incollata usciva
-	 *   vuota: `[M]` `wl-paste` diceva «TESTO-CHE-ERA-GIA-NEL-DESKTOP» prima
-	 *   del collegamento e «» dopo.  Cioe' collegarsi CANCELLAVA la clipboard
-	 *   del desktop.
+	 * ⚠ To be found when someone on this side pastes with the mouse, the client
+	 *   announces itself as soon as it connects — and announcing means taking the
+	 *   selection, which is ONE.  ⛔ From that moment whoever pastes in the desktop
+	 *   asks US, and if the client has nothing to give the paste came out
+	 *   empty: `[M]` `wl-paste` said «TESTO-CHE-ERA-GIA-NEL-DESKTOP» before
+	 *   the connection and «» after.  That is, connecting ERASED the desktop's
+	 *   clipboard.
 	 *
-	 * ⭐ La cura sta qui e non tocca il protocollo: la selezione cambia di
-	 *    mano, il CONTENUTO no.  Se il client non consegna niente, si consegna
-	 *    l'ultimo testo che la sessione ci aveva dato — che e' esattamente quel
-	 *    che l'utente aveva copiato di qua.
-	 * ⚠ E si dichiara nel registro: un ripiego silenzioso avrebbe la faccia di
-	 *   una consegna riuscita. */
+	 * ⭐ The cure is here and does not touch the protocol: the selection changes
+	 *    hands, the CONTENT does not.  If the client delivers nothing, we deliver
+	 *    the last text the session had given us — which is exactly what
+	 *    the user had copied on this side.
+	 * ⚠ And it is declared in the log: a silent fallback would have the face of
+	 *   a successful delivery. */
 	if (!testo || byte == 0)
 	{
 		size_t quanti = 0;
@@ -769,10 +769,10 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 		if (ripiego && quanti > 0)
 		{
 			registro_dice(REG_APPUNTI,
-			              "⭐ il client non ha appunti da dare per la richiesta "
-			              "%u: rendo alla sessione i %zu byte che aveva LEI.  "
-			              "⚠ Collegarsi non deve cancellare la clipboard del "
-			              "desktop",
+			              "⭐ the client has no clipboard to give for request "
+			              "%u: giving back to the session the %zu bytes IT had.  "
+			              "⚠ Connecting must not erase the desktop "
+			              "clipboard",
 			              serial, quanti);
 			testo = ripiego;
 			byte = quanti;
@@ -781,19 +781,19 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 
 	if (!testo || byte == 0)
 	{
-		/* Niente da consegnare, e lo si dice: e' comunque una risposta, ed e'
-		 * quel che sblocca chi sta incollando. */
+		/* Nothing to deliver, and we say so: it is an answer anyway, and it is
+		 * what unblocks whoever is pasting. */
 		g_autoptr(GVariant) risposta =
 		    chiama(appunti, "SelectionWriteDone",
 		           g_variant_new("(ub)", (guint32)serial, FALSE), NULL, &sbaglio);
 		if (!risposta)
 			registro_dice(REG_APPUNTI,
-			              "⛔ SelectionWriteDone(no) per la richiesta %u non e' "
-			              "riuscita (%s): chi incolla puo' restare appeso",
+			              "⛔ SelectionWriteDone(no) for request %u did not "
+			              "succeed (%s): whoever pastes may stay hung",
 			              serial, sbaglio->message);
 		else
 			registro_dettaglio(REG_APPUNTI,
-			                   "richiesta %u chiusa con «non ce l'ho»", serial);
+			                   "request %u closed with «I do not have it»", serial);
 		return;
 	}
 
@@ -802,14 +802,14 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 	if (fd < 0)
 	{
 		registro_dice(REG_APPUNTI,
-		              "⛔ SelectionWrite per la richiesta %u e' stata rifiutata "
+		              "⛔ SelectionWrite for request %u was refused "
 		              "(%s)",
 		              serial, sbaglio->message);
 		return;
 	}
 
-	/* ⭐ E la cache diventa quel che la sessione ha DAVVERO in mano: da qui in
-	 *    poi il ripiego qui sopra rende questo, non un testo di prima. */
+	/* ⭐ And the cache becomes what the session REALLY holds: from here on
+	 *    the fallback above gives back this, not an earlier text. */
 	g_mutex_lock(&appunti->lucchetto);
 	if (!ripiego)
 	{
@@ -832,8 +832,8 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 				if (errno == EINTR)
 					continue;
 				registro_dice(REG_APPUNTI,
-				              "⛔ scrittura verso la sessione fallita a %zu di "
-				              "%zu byte: %s",
+				              "⛔ write to the session failed at %zu of "
+				              "%zu bytes: %s",
 				              scritti, byte, g_strerror(errno));
 				riuscito = FALSE;
 				break;
@@ -842,13 +842,13 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 		}
 		if (riuscito)
 			registro_dettaglio(REG_APPUNTI,
-			                   "consegnati %zu byte alla sessione (richiesta %u)",
+			                   "delivered %zu bytes to the session (request %u)",
 			                   byte, serial);
 	}
 
-	/* ⛔ Si chiude PRIMA di dichiarare fatto: chi legge dall'altro capo aspetta
-	 *    la fine del flusso, e un descrittore ancora aperto la fine non la fa
-	 *    mai. */
+	/* ⛔ We close BEFORE declaring done: the reader at the other end waits for
+	 *    the end of the stream, and a descriptor still open never makes the
+	 *    end. */
 	close(fd);
 
 	{
@@ -858,8 +858,8 @@ void appunti_rispondi(Appunti *appunti, uint32_t serial, const char *testo,
 		           &sbaglio);
 		if (!risposta)
 			registro_dice(REG_APPUNTI,
-			              "⛔ SelectionWriteDone per la richiesta %u non e' "
-			              "riuscita: %s",
+			              "⛔ SelectionWriteDone for request %u did not "
+			              "succeed: %s",
 			              serial, sbaglio->message);
 	}
 }

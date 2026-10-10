@@ -1,31 +1,31 @@
-# remotix.service — il server REMOTIX, famiglia .rpm (`fasi/17-l-installatore.md` §6.4).
-# Uguale nella sostanza a `packaging/debian/remotix.service` (linea B).
+# remotix.service — the REMOTIX server, .rpm family (`fasi/17-l-installatore.md` §6.4).
+# Same in substance as `packaging/debian/remotix.service` (line B).
 #
-# ⭐ Da ROOT, e fuori da ogni sessione utente: PAM deve poter verificare la
-#    parola di CHIUNQUE, e il server fa scendere ogni figlio all'uid del suo
-#    utente (`figlio.c`).  Niente `User=`, niente `ProtectSystem`: apre
-#    sessioni logind, scrive nelle case degli utenti, tocca /dev/dri.
-# ⭐ Certificato: se manca in /var/lib/remotix/certificati lo genera all'avvio
-#    (`certificati.c:302`); uno dell'amministratore (senza la marca «.nostro»)
-#    si usa com'e'.
-# ⭐ Il nome nel certificato e' il nome della macchina (%H).  Chi entra con un
-#    indirizzo IP lo dichiara in /etc/remotix/remotix.conf.d/<qualcosa>.conf:
+# ⭐ As ROOT, and outside any user session: PAM must be able to verify the
+#    password of ANYONE, and the server drops each child to the uid of its
+#    user (`figlio.c`).  No `User=`, no `ProtectSystem`: it opens
+#    logind sessions, writes in the users' homes, touches /dev/dri.
+# ⭐ Certificate: if missing in /var/lib/remotix/certificati it is generated at start
+#    (`certificati.c:302`); one from the administrator (without the «.nostro» mark)
+#    is used as is.
+# ⭐ The name in the certificate is the machine name (%H).  Whoever connects with an
+#    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
 #        REMOTIX_OPZIONI=--nome 192.168.1.10
-#    (l'ultimo --nome vince).  ⚠ Formato PROVVISORIO, variabili d'ambiente: la
-#    configurazione vera e' del motore (T4).
-# ⭐ `KillMode=mixed`, `LimitRTPRIO`, `LimitNICE`: gli stessi dei banchi
-#    (`src/riavvia-7700.sh`).  `[M]` T2 (§5.2): con `mixed` fermare il servizio
-#    uccide padre, aiutante PAM e figlio, NON i desktop (il palco nasce con
-#    `setsid --fork` fuori dall'unita').
-# ⭐ `--journal`: le righe vanno al journal anche coi campi (priorita',
-#    `REMOTIX_AREA`, `REMOTIX_INQUILINO`) e dal figlio, che sta nello scope della
-#    sessione (`registro.h`: ⇒ `journalctl -t remotix`).
-# ⛔ Nessuna opzione di banco (`--rilievo`, `--comando-socket`, `--audio-prova`,
+#    (the last --nome wins).  ⚠ PROVISIONAL format, environment variables: the
+#    real configuration belongs to the engine (T4).
+# ⭐ `KillMode=mixed`, `LimitRTPRIO`, `LimitNICE`: the same as the benches
+#    (`src/riavvia-7700.sh`).  `[M]` T2 (§5.2): with `mixed`, stopping the service
+#    kills parent, PAM helper and child, NOT the desktops (the stage is born with
+#    `setsid --fork` outside the unit).
+# ⭐ `--journal`: the lines go to the journal with their fields too (priority,
+#    `REMOTIX_AREA`, `REMOTIX_INQUILINO`) and from the child, which sits in the
+#    session scope (`registro.h`: ⇒ `journalctl -t remotix`).
+# ⛔ No bench options (`--rilievo`, `--comando-socket`, `--audio-prova`,
 #    `--parlantina`, `--sblocca`): R13.
-# ⛔ `DECISIONI.md` §10.12: il pacchetto NON abilita e NON avvia questa unita'
-#    (lo fa il motore), e nessuna guardia le impedisce di partire.
+# ⛔ `DECISIONI.md` §10.12: the package does NOT enable and does NOT start this unit
+#    (the engine does), and no guard prevents it from starting.
 [Unit]
-Description=REMOTIX, il desktop nel browser
+Description=REMOTIX, the desktop in the browser
 After=network.target systemd-logind.service
 Wants=network.target
 
@@ -34,11 +34,11 @@ Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
-# ⭐ T6 (SELinux): il programma si lancia DIRETTAMENTE, senza `/bin/sh -c`.  systemd
-#    passa a `remotix_t` solo se esegue lui `remotix_exec_t` (init_t → remotix_t); una
-#    shell in mezzo girerebbe in `unconfined_service_t` e il suo `exec` restava li'.
-#    `${REMOTIX_PORTA}` e' una parola sola; `$REMOTIX_OPZIONI` senza graffe si divide
-#    in parole, e vuota non ne da' nessuna (systemd.service, «Command lines»).
+# ⭐ T6 (SELinux): the program is launched DIRECTLY, without `/bin/sh -c`.  systemd
+#    transitions to `remotix_t` only if it executes `remotix_exec_t` itself (init_t → remotix_t); a
+#    shell in between would run in `unconfined_service_t` and its `exec` would stay there.
+#    `${REMOTIX_PORTA}` is a single word; `$REMOTIX_OPZIONI` without braces is split
+#    into words, and when empty yields none (systemd.service, «Command lines»).
 ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPZIONI
 KillMode=mixed
 LimitRTPRIO=20

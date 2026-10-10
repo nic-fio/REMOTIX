@@ -1,55 +1,55 @@
 /*
- * pagina.h — L'ASCOLTATORE TCP: il secondo mestiere del server.
+ * pagina.h — THE TCP LISTENER: the server's second job.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL SECONDO DEI DUE ASCOLTATORI, CON LO STESSO NUMERO DI PORTA
+ * ⛔ THE SECOND OF THE TWO LISTENERS, WITH THE SAME PORT NUMBER
  *
- * `RCP.md` §2.4: «7447, e sono DUE ascoltatori con lo stesso numero: UDP per
- * HTTP/3 e WebTransport, TCP per il primo caricamento della pagina».  ⚠ «Il TCP
- * serve solo a consegnare la pagina, e le basta HTTP/1.1.  Da li' in poi il
- * browser apre la sessione WebTransport per conto suo, sull'UDP.»
+ * `RCP.md` §2.4: «7447, and they are TWO listeners with the same number: UDP for
+ * HTTP/3 and WebTransport, TCP for the first load of the page».  ⚠ «TCP only
+ * serves to deliver the page, and HTTP/1.1 is enough for it.  From there on the
+ * browser opens the WebTransport session on its own, over UDP.»
  *
  * ---------------------------------------------------------------------------
- * ⛔ E COME LA PAGINA VIENE SERVITA E' UN VINCOLO DI PRODOTTO
+ * ⛔ AND HOW THE PAGE IS SERVED IS A PRODUCT CONSTRAINT
  *
- * `SPECIFICHE.md` §11.5: va consegnata **isolata fra origini** — le due
- * intestazioni che il browser pretende per dare alla pagina i cronometri a
- * piena risoluzione e la memoria condivisa.  ⚠ «Non e' una taratura del banco:
- * cambia come il server serve OGNI risorsa della pagina, e deciderlo dopo
- * significa riscrivere il modo in cui la pagina e' confezionata.»
+ * `SPECIFICHE.md` §11.5: it must be delivered **cross-origin isolated** — the two
+ * headers the browser demands to give the page full-resolution timers and
+ * shared memory.  ⚠ «It is not a bench tuning: it changes how the server serves
+ * EVERY resource of the page, and deciding it later means rewriting the way the
+ * page is packaged.»
  *
- * Le intestazioni, e la terza che le due implicano:
+ * The headers, and the third that the two imply:
  *
  *   Cross-Origin-Opener-Policy: same-origin
  *   Cross-Origin-Embedder-Policy: require-corp
- *   Cross-Origin-Resource-Policy: same-origin   ← su OGNI risorsa
+ *   Cross-Origin-Resource-Policy: same-origin   ← on EVERY resource
  *
- * ⛔ La terza non e' un di piu': con `require-corp` il browser rifiuta ogni
- *    sotto-risorsa che non la dichiari, e il sintomo non nomina l'isolamento —
- *    la risorsa semplicemente non si carica.  E' precisamente il «cambia come
- *    il server serve ogni risorsa» che §11.5 dichiara.
- *
- * ---------------------------------------------------------------------------
- * ⛔ E DUE COSE CHE LA PAGINA PORTA, E NESSUN'ALTRA STRADA PUO' PORTARE
- *
- *   1. **l'impronta del certificato di SESSIONE**, scritta dentro la pagina
- *      (`RCP.md` §4.1-bis, `serverCertificateHashes`): e' il nostro modello di
- *      fiducia, ed e' il server stesso a servire la pagina proprio per poterci
- *      scrivere l'impronta corrente;
- *
- *   2. **l'endpoint da cui la pagina ritira l'impronta aggiornata** (`/impronta`).
- *      ⛔ «Una scheda lasciata aperta due settimane tiene l'impronta di un
- *      certificato che nel frattempo e' stato ruotato: alla riconnessione il
- *      browser rifiuta, e il sintomo e' *non si collega piu' e non dice
- *      perche'*.»  ⛔ E NON passa da RCP: la sessione non e' ancora aperta,
- *      quindi non c'e' un canale su cui chiedere.
+ * ⛔ The third is not an extra: with `require-corp` the browser refuses every
+ *    sub-resource that does not declare it, and the symptom does not name the
+ *    isolation — the resource simply does not load.  It is precisely the
+ *    «changes how the server serves every resource» that §11.5 declares.
  *
  * ---------------------------------------------------------------------------
- * ⛔ E CHI E' BANNATO VEDE LA PAGINA LO STESSO
+ * ⛔ AND TWO THINGS THE PAGE CARRIES, AND NO OTHER ROAD CAN CARRY
  *
- * `SPECIFICHE.md` §4.2: «la pagina si carica lo stesso e dice che i tentativi
- * sono esauriti.  ⛔ Mai un silenzio: chi e' bannato per errore e' quasi sempre
- * il proprietario».
+ *   1. **the fingerprint of the SESSION certificate**, written inside the page
+ *      (`RCP.md` §4.1-bis, `serverCertificateHashes`): it is our trust model,
+ *      and the server itself serves the page precisely so that it can write
+ *      the current fingerprint into it;
+ *
+ *   2. **the endpoint from which the page fetches the updated fingerprint** (`/impronta`).
+ *      ⛔ «A tab left open for two weeks holds the fingerprint of a certificate
+ *      that has been rotated in the meantime: on reconnection the browser
+ *      refuses, and the symptom is *it no longer connects and does not say
+ *      why*.»  ⛔ And it does NOT go through RCP: the session is not open yet,
+ *      so there is no channel on which to ask.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ AND WHOEVER IS BANNED SEES THE PAGE ANYWAY
+ *
+ * `SPECIFICHE.md` §4.2: «the page loads anyway and says that the attempts are
+ * exhausted.  ⛔ Never a silence: whoever is banned by mistake is almost always
+ * the owner».
  */
 #ifndef REMOTIX_PAGINA_H
 #define REMOTIX_PAGINA_H
@@ -69,9 +69,9 @@ void pagina_chiudi(pagina *p);
 
 void pagina_contesto(pagina *p, SSL_CTX *ctx);
 
-/* I descrittori da sorvegliare.  Ne restituisce quanti ne ha messi. */
+/* The descriptors to watch.  Returns how many it put in. */
 size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap);
-/* Da chiamare dopo la `poll`, con lo stesso vettore. */
+/* To be called after the `poll`, with the same array. */
 void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti);
 
 #endif

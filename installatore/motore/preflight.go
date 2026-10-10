@@ -15,20 +15,20 @@ import (
 	"time"
 )
 
-// PREFLIGHT (fase 1, §6.0): conoscere il sistema, in SOLA LETTURA (R1). Qui dentro nessuna
-// funzione scrive, crea, rinomina o cambia permessi. Si leggono file (/etc, /sys, /proc, gli
-// archivi di dpkg e pacman, le librerie); si chiede sul D-Bus a logind, systemd e firewalld
-// (solo letture: proprietà, query); l'unico programma lanciato è «rpm -q» sulle famiglie RPM
-// (DECISIONI §10.14: elenco chiuso, ambiente.go), annotato nel profilo. La prova R1 lo controlla
-// con le impronte di /etc prima e dopo, in un contenitore per famiglia (prove/r1-contenitori.sh).
+// PREFLIGHT (phase 1, §6.0): knowing the system, READ-ONLY (R1). In here no
+// function writes, creates, renames or changes permissions. Files are read (/etc, /sys, /proc, the
+// dpkg and pacman databases, the libraries); logind, systemd and firewalld are asked over D-Bus
+// (reads only: properties, queries); the only program launched is «rpm -q» on the RPM families
+// (DECISIONI §10.14: closed list, ambiente.go), recorded in the profile. Test R1 checks it
+// with the fingerprints of /etc before and after, in one container per family (prove/r1-contenitori.sh).
 
-// OpzioniPreflight: la porta da guardare e i pacchetti in più che il catalogo vuole sapere.
+// OpzioniPreflight: the port to look at and the extra packages the catalogue wants to know about.
 type OpzioniPreflight struct {
 	Porta     int
-	Pacchetti []string // componenti (labwc, gnome-session, i caratteri…) chiesti dal catalogo
+	Pacchetti []string // components (labwc, gnome-session, the fonts…) requested by the catalogue
 }
 
-// Preflight costruisce il profilo della macchina.
+// Preflight builds the machine's profile.
 func Preflight(a *Ambiente, o OpzioniPreflight) *Profilo {
 	if o.Porta == 0 {
 		o.Porta = 7447
@@ -60,7 +60,7 @@ func Preflight(a *Ambiente, o OpzioniPreflight) *Profilo {
 	return p
 }
 
-// leggi un file della macchina; "" se non c'è.
+// leggi a file of the machine; "" if it is not there.
 func leggi(a *Ambiente, percorso string) (string, bool) {
 	b, err := os.ReadFile(a.P(percorso))
 	if err != nil {
@@ -69,7 +69,7 @@ func leggi(a *Ambiente, percorso string) (string, bool) {
 	return string(b), true
 }
 
-// OsRelease legge /etc/os-release (o /usr/lib/os-release).
+// OsRelease reads /etc/os-release (or /usr/lib/os-release).
 func OsRelease(a *Ambiente) (map[string]string, string) {
 	for _, f := range []string{"/etc/os-release", "/usr/lib/os-release"} {
 		if t, ok := leggi(a, f); ok {
@@ -87,7 +87,7 @@ func OsRelease(a *Ambiente) (map[string]string, string) {
 	return nil, ""
 }
 
-// Famiglia: debian, fedora (anche RHEL e derivate), arch, suse, o "".
+// Famiglia: debian, fedora (RHEL and derivatives too), arch, suse, or "".
 func Famiglia(id, idLike string) string {
 	tutti := append([]string{id}, strings.Fields(idLike)...)
 	for _, x := range tutti {
@@ -118,8 +118,8 @@ func distribuzione(a *Ambiente, p *Profilo) string {
 	p.Rilevato("distro.name", m["PRETTY_NAME"], fonte)
 	p.Rilevato("distro.variant", m["VARIANT_ID"], fonte)
 	fam := Famiglia(m["ID"], m["ID_LIKE"])
-	p.Rilevato("distro.family", fam, "ID e ID_LIKE")
-	// Le immutabili (§3, D9): /usr in sola lettura, installazione con riavvio.
+	p.Rilevato("distro.family", fam, "ID and ID_LIKE")
+	// The immutable ones (§3, D9): read-only /usr, installation with a reboot.
 	immutabile := false
 	fonteImm := ""
 	if _, err := os.Stat(a.P("/run/ostree-booted")); err == nil {
@@ -149,7 +149,7 @@ func sistema(a *Ambiente, p *Profilo) {
 	if k, ok := leggi(a, "/proc/sys/kernel/osrelease"); ok {
 		p.Rilevato("system.kernel", strings.TrimSpace(k), "/proc/sys/kernel/osrelease")
 	}
-	// Partita con systemd: la cartella che systemd crea all'avvio (sd_booted()).
+	// Booted with systemd: the folder systemd creates at boot (sd_booted()).
 	if st, err := os.Stat(a.P("/run/systemd/system")); err == nil && st.IsDir() {
 		p.Rilevato("system.systemd", "yes", "/run/systemd/system")
 	} else {
@@ -161,21 +161,21 @@ func sistema(a *Ambiente, p *Profilo) {
 	}
 }
 
-// pacchettiFissi: quelli che il PREFLIGHT guarda sempre, oltre ai desktop e al catalogo.
+// pacchettiFissi: those the PREFLIGHT always looks at, beyond the desktops and the catalogue.
 var pacchettiFissi = []string{"labwc", "firewalld", "ufw", "nftables",
 	"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl",
-	// la famiglia del driver VA (§4.2, fase 18): Intel completo o ridotto, Mesa coi codec o senza
+	// the VA driver's family (§4.2, phase 18): full or reduced Intel, Mesa with or without codecs
 	"intel-media-driver", "intel-media-driver-free", "libva-intel-media-driver", "intel-media-va-driver",
 	"intel-media-va-driver-non-free", "mesa-va-drivers", "mesa-va-drivers-freeworld", "mesa-dri-drivers", "Mesa-dri"}
 
-// famigliaDriver: dal pacchetto installato, se il driver VA codifica H.264 (§4.2, fase 18). Fedora:
-// libva-intel-media-driver (già intel-media-driver-free) e la Mesa ufficiale sono costruiti SENZA
-// H.264 — `[M]` 30 set, dai binari: 38 nomi di classe della codifica AVC contro i 114 del driver di
-// RPM Fusion; openSUSE: il driver Intel ufficiale è quello completo (104-115, come RPM Fusion), la Mesa
-// ufficiale è senza h264/h265 («re-disable video codecs», changelog di Mesa-dri), quella di Packman
-// (versione «.pm.») coi codec. Torna, per Intel e AMD, "with", "without" o "" (non riconosciuto), e
-// la descrizione (f) per il fatto h264.famiglia_driver. Non scrive niente nel profilo: la usa anche
-// il verdetto sulla scheda (strade.go), dentro Valuta.
+// famigliaDriver: from the installed package, whether the VA driver encodes H.264 (§4.2, phase 18). Fedora:
+// libva-intel-media-driver (formerly intel-media-driver-free) and the official Mesa are built WITHOUT
+// H.264 — `[M]` 30 Sep, from the binaries: 38 class names of AVC encoding against the 114 of the
+// RPM Fusion driver; openSUSE: the official Intel driver is the full one (104-115, like RPM Fusion), the official
+// Mesa is without h264/h265 («re-disable video codecs», Mesa-dri's changelog), Packman's
+// (version «.pm.») with the codecs. Returns, for Intel and AMD, "with", "without" or "" (not recognised), and
+// the description (f) for the fact h264.famiglia_driver. It writes nothing in the profile: the card
+// verdict (strade.go) uses it too, inside Valuta.
 func famigliaDriver(p *Profilo) (intel, amd string, f []string) {
 	c := func(n string) bool { v := p.V("package." + n); return v != "" && v != "absent" }
 	fam := p.V("distro.family")
@@ -215,16 +215,16 @@ func nomiDesktop(fam string) []string {
 	return r
 }
 
-// Pacchetti: l'archivio del gestore di pacchetti, letto una volta. dpkg e pacman dai loro file
-// (formati stabili da decenni); rpm con UNA chiamata «rpm -q» per tutti i nomi (il suo archivio
-// non si legge senza di lui).
+// Pacchetti: the package manager's database, read once. dpkg and pacman from their files
+// (formats stable for decades); rpm with ONE call «rpm -q» for all the names (its database
+// cannot be read without it).
 type Pacchetti struct {
 	fonte    string
-	versioni map[string]string // nome → versione; assente = non installato
+	versioni map[string]string // name → version; absent = not installed
 	letto    bool
 }
 
-// ArchivioPacchetti legge l'archivio della famiglia per i nomi dati.
+// ArchivioPacchetti reads the family's database for the given names.
 func ArchivioPacchetti(a *Ambiente, fam string, nomi []string) *Pacchetti {
 	pk := &Pacchetti{versioni: map[string]string{}}
 	switch fam {
@@ -303,7 +303,7 @@ func ArchivioPacchetti(a *Ambiente, fam string, nomi []string) *Pacchetti {
 	return pk
 }
 
-// Versione: la versione, "absent", o SCONOSCIUTO se l'archivio non si è letto.
+// Versione: the version, "absent", or SCONOSCIUTO if the database could not be read.
 func (pk *Pacchetti) Versione(nome string) (string, StatoFatto, string) {
 	if !pk.letto {
 		return "", SCONOSCIUTO, pk.fonte
@@ -314,7 +314,7 @@ func (pk *Pacchetti) Versione(nome string) (string, StatoFatto, string) {
 	return "absent", RILEVATO, pk.fonte
 }
 
-// PacchettoDesktop: il pacchetto che dice se un desktop c'è, e con che versione.
+// PacchettoDesktop: the package that says whether a desktop is there, and with what version.
 func PacchettoDesktop(fam, d string) string {
 	switch d {
 	case "gnome":
@@ -332,7 +332,7 @@ func PacchettoDesktop(fam, d string) string {
 	return ""
 }
 
-// binari di ripiego per sapere se un desktop c'è quando il gestore di pacchetti non risponde.
+// fallback binaries to know whether a desktop is there when the package manager does not answer.
 var binarioDesktop = map[string]string{"gnome": "/usr/bin/gnome-shell", "kde": "/usr/bin/plasmashell", "xfce": "/usr/bin/xfce4-session", "lxqt": "/usr/bin/lxqt-session"}
 
 func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string) {
@@ -364,12 +364,12 @@ func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string)
 	}
 }
 
-// depositi di terzi che contano per H.264 e per KDE su Alma (§4.2, §11.1).
+// third-party repositories that matter for H.264 and for KDE on Alma (§4.2, §11.1).
 //
-// Un deposito c'è se una SEZIONE di un .repo col suo nome è ACCESA («enabled» che manca = acceso,
-// come per dnf e zypper). `[M]` 30 set, fedora44-gnome: prima bastava la parola in un file qualunque,
-// e fedora-workstation-repositories porta rpmfusion-nonfree-steam SPENTO ⇒ RPM Fusion «presente»,
-// nessuna condizione C-DEPOSITO, nessun consenso chiesto, e REMOTIX senza codifica (T9, R22).
+// A repository is there if a SECTION of a .repo with its name is ENABLED (missing «enabled» = enabled,
+// as for dnf and zypper). `[M]` 30 Sep, fedora44-gnome: before, the word in any file was enough,
+// and fedora-workstation-repositories brings rpmfusion-nonfree-steam DISABLED ⇒ RPM Fusion «present»,
+// no condition C-DEPOSITO, no consent asked, and REMOTIX without encoding (T9, R22).
 var (
 	intestazioneRepo = regexp.MustCompile(`(?m)^\[([^\]]+)\]\s*$`)
 	repoSpento       = regexp.MustCompile(`(?mi)^enabled\s*=\s*(0|false|no)\s*$`)
@@ -398,7 +398,7 @@ func depositi(a *Ambiente, p *Profilo) {
 						fine = idx[i+1][0]
 					}
 					if repoSpento.MatchString(t[m[1]:fine]) {
-						spenti = rel + " [" + id + "] spento"
+						spenti = rel + " [" + id + "] disabled"
 					} else {
 						acceso = rel + " [" + id + "]"
 					}
@@ -417,21 +417,21 @@ func depositi(a *Ambiente, p *Profilo) {
 	parola := func(x string) func(string) bool {
 		return func(id string) bool { return strings.Contains(id, x) }
 	}
-	// RPM Fusion: «free» (mesa-va-drivers-freeworld, AMD) e, a parte, il ramo «nonfree» vero e proprio
-	// (intel-media-driver, Intel: fase 18); i «nonfree» che Fedora Workstation porta spenti (steam,
-	// nvidia-driver) non c'entrano
+	// RPM Fusion: «free» (mesa-va-drivers-freeworld, AMD) and, separately, the real «nonfree» branch
+	// (intel-media-driver, Intel: phase 18); the «nonfree» ones Fedora Workstation brings disabled (steam,
+	// nvidia-driver) do not matter
 	cerca("repo.rpmfusion", []string{"/etc/yum.repos.d"}, parola("rpmfusion-free"))
 	cerca("repo.rpmfusion-nonfree", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return id == "rpmfusion-nonfree" || id == "rpmfusion-nonfree-updates"
 	})
-	// EPEL: non il deposito Cisco di OpenH264 per EPEL, che una macchina può ancora avere (fase 18)
+	// EPEL: not Cisco's OpenH264 repository for EPEL, which a machine may still have (phase 18)
 	cerca("repo.epel", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return strings.Contains(id, "epel") && !strings.Contains(id, "openh264")
 	})
 	cerca("repo.packman", []string{"/etc/zypp/repos.d"}, parola("packman"))
 }
 
-// Scheda è un nodo di disegno col suo driver.
+// Scheda is a rendering node with its driver.
 type Scheda struct {
 	Nodo, Driver, Fornitore, Gruppo, Modo string
 }
@@ -480,13 +480,13 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 	for _, s := range r {
 		nomi = append(nomi, filepath.Base(s.Nodo))
 	}
-	// senza nodi il rifiuto lo dà il verdetto sulla scheda (strade.go, RX-GPU-003)
+	// without nodes the refusal is given by the card verdict (strade.go, RX-GPU-003)
 	if len(nomi) == 0 {
 		p.Rilevato("gpu.nodes", "none", "/sys/class/drm")
 	} else {
 		p.Rilevato("gpu.nodes", strings.Join(nomi, ","), "/sys/class/drm")
 	}
-	// NVIDIA col driver proprietario: il modulo «nvidia» o il suo file in /proc (§4.2).
+	// NVIDIA with the proprietary driver: the module «nvidia» or its file in /proc (§4.2).
 	nv := false
 	fonte := ""
 	if _, err := os.Stat(a.P("/proc/driver/nvidia/version")); err == nil {
@@ -507,13 +507,13 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 	return r
 }
 
-// h264: «H.264 davvero disponibile» è VERIFICATO solo se un fotogramma è stato codificato
-// davvero (§6.5 punto 1, §6.6.7): la prova vera si fa in 7a col binario di REMOTIX. Qui si legge
-// quel che si può leggere senza lanciare niente. ⭐ Fase 18 (senza ffmpeg): la scheda codifica con
-// libva e il driver VA della distribuzione — si guardano i driver (le cartelle dri, anche
-// dri-nonfree e dri-freeworld di RPM Fusion) e la loro famiglia (famigliaDriver). Fase 19: è la
-// Rileva della strada «vaapi» (strade.go), e non c'è più un ripiego da guardare. La scheda resta
-// SCONOSCIUTA salvo i casi certi: nessun driver, o solo driver costruiti senza H.264.
+// h264: «H.264 really available» is VERIFICATO only if a frame was really
+// encoded (§6.5 point 1, §6.6.7): the real test is done in 7a with REMOTIX's binary. Here we read
+// what can be read without launching anything. ⭐ Phase 18 (without ffmpeg): the card encodes with
+// libva and the distribution's VA driver — we look at the drivers (the dri folders, also
+// RPM Fusion's dri-nonfree and dri-freeworld) and their family (famigliaDriver). Phase 19: it is the
+// Rileva of the «vaapi» route (strade.go), and there is no fallback to look at any more. The card stays
+// SCONOSCIUTA except in the certain cases: no driver, or only drivers built without H.264.
 func h264(a *Ambiente, p *Profilo, fam string) {
 	var driver []string
 	visti := map[string]bool{}
@@ -530,9 +530,9 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	}
 	sort.Strings(driver)
 	if len(driver) > 0 {
-		p.Rilevato("h264.driver_va", strings.Join(driver, ","), "cartelle dri")
+		p.Rilevato("h264.driver_va", strings.Join(driver, ","), "dri folders")
 	} else {
-		p.Rilevato("h264.driver_va", "none", "cartelle dri")
+		p.Rilevato("h264.driver_va", "none", "dri folders")
 	}
 	intel, amd, fd := famigliaDriver(p)
 	if len(fd) == 0 {
@@ -542,14 +542,14 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	}
 	nota7a := "the test with a frame is done in 7a, with the REMOTIX binary"
 	forn, noti := fornitoriScheda(p)
-	// il caso certo: ogni scheda Intel/AMD della macchina ha solo un driver senza H.264
+	// the certain case: every Intel/AMD card of the machine has only a driver without H.264
 	senza := (forn["Intel"] || forn["AMD"]) && (!forn["Intel"] || intel == "without") && (!forn["AMD"] || amd == "without")
-	// i codici del driver (dove prenderlo) solo se c'è una scheda della strada: senza Intel né AMD
-	// il motivo è un altro, e lo dice il verdetto (RX-GPU-*)
+	// the driver codes (where to get it) only if there is a card of the route: without Intel or AMD
+	// the reason is another one, and the verdict says it (RX-GPU-*)
 	conScheda := !noti || forn["Intel"] || forn["AMD"]
 	switch {
 	case len(driver) == 0:
-		p.Metti(Fatto{Chiave: "h264.gpu", Valore: "no", Stato: RILEVATO, Fonte: "cartelle dri", Nota: "no VA-API driver"})
+		p.Metti(Fatto{Chiave: "h264.gpu", Valore: "no", Stato: RILEVATO, Fonte: "dri folders", Nota: "no VA-API driver"})
 		if conScheda {
 			p.Con(codiceH264(fam), "no VA-API driver")
 		}
@@ -592,7 +592,7 @@ func sicurezza(a *Ambiente, p *Profilo) {
 	}
 }
 
-// portaInAscolto legge /proc/net: qualcuno ascolta già sulla porta?
+// portaInAscolto reads /proc/net: is someone already listening on the port?
 func portaInAscolto(a *Ambiente, porta int, proto string) (bool, bool) {
 	esa := fmt.Sprintf(":%04X", porta)
 	letto := false
@@ -632,7 +632,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 	p.Metti(Fatto{Chiave: "port." + ps + ".reachable", Stato: SCONOSCIUTO, Nota: "another machine is needed to find out"})
 	p.Con("RX-FW-005", "")
 
-	// firewalld, sul bus
+	// firewalld, over the bus
 	fw := &firewalldDBus{a.Bus}
 	if fw.Acceso() {
 		p.Rilevato("firewall.type", "firewalld", "D-Bus "+fwNome)
@@ -665,7 +665,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 		}
 		return
 	}
-	// ufw: acceso nel suo file; le regole nei suoi file (leggibili da root)
+	// ufw: enabled in its file; the rules in its files (readable by root)
 	if t, ok := leggi(a, "/etc/ufw/ufw.conf"); ok && strings.Contains(t, "ENABLED=yes") {
 		p.Rilevato("firewall.type", "ufw", "/etc/ufw/ufw.conf")
 		regole, ok4 := leggi(a, "/etc/ufw/user.rules")
@@ -689,7 +689,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 		return
 	}
 	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
-		p.Rilevato("firewall.type", "nftables", "D-Bus systemd: nftables.service attiva")
+		p.Rilevato("firewall.type", "nftables", "D-Bus systemd: nftables.service active")
 		for _, proto := range []string{"tcp", "udp"} {
 			p.Sconosciuto("firewall.port_"+ps+"_"+proto, "nftables rules are not evaluated yet")
 		}
@@ -703,8 +703,8 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 	p.Rilevato("firewall.type", "none", "neither firewalld nor ufw nor nftables running")
 }
 
-// ufwApre: una regola ACCEPT per la porta nei file di ufw («### tuple ### allow tcp 7447 …» e le
-// righe -A ufw-user-input … --dport 7447 -j ACCEPT; senza protocollo vale per tutti e due).
+// ufwApre: an ACCEPT rule for the port in ufw's files («### tuple ### allow tcp 7447 …» and the
+// lines -A ufw-user-input … --dport 7447 -j ACCEPT; without a protocol it holds for both).
 func ufwApre(regole, ps, proto string) bool {
 	for _, r := range strings.Split(regole, "\n") {
 		if !strings.Contains(r, "--dport "+ps+" ") || !strings.Contains(r, "-j ACCEPT") {
@@ -717,8 +717,8 @@ func ufwApre(regole, ps, proto string) bool {
 	return false
 }
 
-// portaInIntervalli: Fedora Workstation apre 1025-65535 con un intervallo (§11.1), e queryPort non
-// lo vede. porte: le coppie [porta, protocollo] di getPorts.
+// portaInIntervalli: Fedora Workstation opens 1025-65535 with a range (§11.1), and queryPort does not
+// see it. porte: the [port, protocol] pairs of getPorts.
 func portaInIntervalli(porte [][]string, porta int, proto string) bool {
 	for _, v := range porte {
 		if len(v) != 2 || v[1] != proto {
@@ -742,7 +742,7 @@ func portaInIntervalli(porte [][]string, porta int, proto string) bool {
 	return false
 }
 
-// PamBase: i file della pila della famiglia su cui il file di REMOTIX si appoggia (§4.3).
+// PamBase: the files of the family's stack that REMOTIX's file relies on (§4.3).
 func PamBase(fam string) []string {
 	switch fam {
 	case "debian":
@@ -790,9 +790,9 @@ func pam(a *Ambiente, p *Profilo, fam string) {
 			}
 		}
 	}
-	p.Rilevato("pam.base", strings.Join(trovati, " "), "famiglia "+fam)
+	p.Rilevato("pam.base", strings.Join(trovati, " "), "family "+fam)
 	if len(mancanti) > 0 {
-		p.Rilevato("pam.base_missing", strings.Join(mancanti, " "), "famiglia "+fam)
+		p.Rilevato("pam.base_missing", strings.Join(mancanti, " "), "family "+fam)
 		p.Con("RX-PAM-001", strings.Join(mancanti, " "))
 	}
 	p.Rilevato("pam.faillock", siNo(faillock), strings.Join(trovati, " "))
@@ -829,7 +829,7 @@ func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
 			break
 		}
 	}
-	if v == "" { // dalla libreria stessa: la stringa «OpenSSL 3.x.y»
+	if v == "" { // from the library itself: the string «OpenSSL 3.x.y»
 		for _, g := range []string{"/usr/lib/*/libssl.so.3", "/usr/lib64/libssl.so.3", "/usr/lib/libssl.so.3"} {
 			l, _ := filepath.Glob(a.P(g))
 			for _, x := range l {
@@ -855,9 +855,9 @@ func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
 	}
 }
 
-// logind: KillUserProcesses (§5.2). Il valore vivo si chiede a logind (VERIFICATO); se non
-// risponde, si leggono i file di configurazione nell'ordine di systemd (RILEVATO); se nessuno lo
-// imposta, vale il predefinito della compilazione, che da qui non si vede (SCONOSCIUTO).
+// logind: KillUserProcesses (§5.2). The live value is asked of logind (VERIFICATO); if it does not
+// answer, the configuration files are read in systemd's order (RILEVATO); if none
+// sets it, the build default holds, which cannot be seen from here (SCONOSCIUTO).
 func logind(a *Ambiente, p *Profilo) {
 	if x, err := a.Bus.Proprieta("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillUserProcesses"); err == nil {
 		if b, ok := x.(bool); ok {
@@ -884,7 +884,7 @@ func logind(a *Ambiente, p *Profilo) {
 	}
 	leggiConf("/usr/lib/systemd/logind.conf")
 	leggiConf("/etc/systemd/logind.conf")
-	// i drop-in: per nome, e a parità di nome vince /etc su /run su /usr/local/lib su /usr/lib
+	// the drop-ins: by name, and for equal names /etc wins over /run over /usr/local/lib over /usr/lib
 	scelti := map[string]string{}
 	for _, c := range []string{"/usr/lib/systemd/logind.conf.d", "/usr/local/lib/systemd/logind.conf.d", "/run/systemd/logind.conf.d", "/etc/systemd/logind.conf.d"} {
 		v, _ := filepath.Glob(a.P(c) + "/*.conf")
@@ -934,8 +934,8 @@ func gruppi(a *Ambiente, p *Profilo) {
 	}
 }
 
-// caratteri: labwc muore senza un carattere scalabile (labwc #2525, §11.1). Non si lancia
-// fc-list (elenco chiuso): si contano i file di caratteri vettoriali nelle cartelle di sistema.
+// fonts: labwc dies without a scalable font (labwc #2525, §11.1). fc-list is not
+// launched (closed list): the vector font files in the system folders are counted.
 func caratteri(a *Ambiente, p *Profilo) {
 	n := 0
 	for _, c := range []string{"/usr/share/fonts", "/usr/local/share/fonts"} {

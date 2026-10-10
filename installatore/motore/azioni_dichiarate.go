@@ -2,12 +2,12 @@ package motore
 
 import "encoding/json"
 
-// I passi che il motore CONOSCE ma non sa ancora eseguire: stanno nel piano (si vedono, si
-// approvano, sono nell'impronta), ma un'operazione che ne contiene uno si ferma PRIMA di toccare
-// la macchina, con RX-AZIONE-004. Dalla seconda parte di T4 i passi di §10.12 sono tutti veri
-// (pacchetti, depositi, cinture, servizio, desktop): l'elenco è vuoto, il meccanismo resta.
+// The steps the engine KNOWS but cannot execute yet: they are in the plan (they are seen,
+// approved, part of the fingerprint), but an operation containing one stops BEFORE touching
+// the machine, with RX-AZIONE-004. Since the second part of T4 the steps of §10.12 are all real
+// (packages, repositories, belts, service, desktop): the list is empty, the mechanism remains.
 
-// nonAncoraFatti: tipo → che cosa manca per farlo.
+// nonAncoraFatti: type → what is missing to do it.
 var nonAncoraFatti = map[string]string{}
 
 func init() {
@@ -35,7 +35,7 @@ func (n nonAncoraFatta) Annullata(*Contesto, json.RawMessage) (bool, string, err
 	return false, "", n.err()
 }
 
-// PassiNonFatti: i passi del piano che il motore non sa ancora eseguire.
+// PassiNonFatti: the plan's steps the engine cannot execute yet.
 func PassiNonFatti(p *Piano) []string {
 	var r []string
 	for _, a := range p.Azioni {

@@ -1,38 +1,38 @@
 /*
- * ritrovo.h — ⭐ FASE 17, T7: I DESKTOP REMOTIX VIVI CHE NESSUN FIGLIO TIENE.
+ * ritrovo.h — ⭐ PHASE 17, T7: LIVE REMOTIX DESKTOPS THAT NO CHILD HOLDS.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' ESISTE, CON LA MISURA ACCANTO
+ * ⛔ WHY IT EXISTS, WITH THE MEASUREMENT NEXT TO IT
  *
- * `[M]` T2, 29 set 2026 (`fasi/17-l-installatore.md` §5.2): fermare il servizio
- * **non uccide i desktop**.  Muoiono padre, aiutante PAM e figlio; il palco,
- * nato con `setsid --fork` (`sessione.c`, `avvia()`), sta fuori dall'unita' e
- * sopravvive coi suoi programmi.  ⛔ Ma il padre nuovo ripartiva con
- * «inquilini=0»: quei desktop non li contava nessuno — ne' il tetto delle
- * sessioni, ne' il budget, ne' l'orologio dell'abbandono — e al primo utente
- * nuovo senza i gruppi della scheda `loginctl terminate-user` li avrebbe
- * potuti buttare giu'.  E' il caso di xrdp: sessioni vive che nessuno ritrova.
+ * `[M]` T2, 29 Sep 2026 (`fasi/17-l-installatore.md` §5.2): stopping the service
+ * **does not kill the desktops**.  Parent, PAM helper and child die; the stage,
+ * born with `setsid --fork` (`sessione.c`, `avvia()`), lives outside the unit and
+ * survives with its programs.  ⛔ But the new parent restarted with
+ * «inquilini=0»: nobody counted those desktops — neither the session cap,
+ * nor the budget, nor the abandonment clock — and the first new user
+ * without the card groups could have had them knocked down by
+ * `loginctl terminate-user`.  It is the xrdp case: live sessions nobody finds again.
  *
  * ---------------------------------------------------------------------------
- * ⭐ IL CRITERIO — uno per tutti i desktop, niente eccezioni per compositore
+ * ⭐ THE CRITERION — one for all desktops, no per-compositor exceptions
  *
- *   1. una sessione **logind** col servizio PAM `remotix` (`Service=remotix`:
- *      la apre il figlio con `pam_start("remotix", …)`), in QUALUNQUE stato —
- *      `[M]` T2: e' «closing» 24 ms dopo la nascita, perche' il figlio fa
- *      `pam_end` senza `pam_close_session`, e resta cosi' finche' ha processi;
- *   2. nella sua scope, un processo dell'utente che e' **capo della propria
- *      sessione di processi** (pid = sid) e il cui padre **non** sta nella
- *      stessa scope.  E' la firma di `setsid --fork`, cioe' di come il prodotto
- *      avvia il palco su TUTTI i desktop.  `[M]` T2, dopo lo stop:
+ *   1. a **logind** session with the PAM service `remotix` (`Service=remotix`:
+ *      the child opens it with `pam_start("remotix", …)`), in ANY state —
+ *      `[M]` T2: it is «closing» 24 ms after birth, because the child calls
+ *      `pam_end` without `pam_close_session`, and it stays so while it has processes;
+ *   2. in its scope, a process of the user that is **leader of its own
+ *      process session** (pid = sid) and whose parent is **not** in the
+ *      same scope.  It is the signature of `setsid --fork`, that is of how the product
+ *      starts the stage on ALL desktops.  `[M]` T2, after the stop:
  *      `gnome-session-binary` (GNOME), `startplasma-wayland` (KDE), `labwc`
- *      (XFCE, LXQt), tutti con pid = sid e padre 1.  ⚠ Un terminale aperto nel
- *      desktop fa capo di sessione la sua shell, ma suo padre (il terminale)
- *      sta nella scope: non si confonde.
+ *      (XFCE, LXQt), all with pid = sid and parent 1.  ⚠ A terminal opened in the
+ *      desktop makes its shell a session leader, but its parent (the terminal)
+ *      is in the scope: no confusion.
  *
- * ⚠ Non si usa il bus di sessione dell'utente: il padre e' root e root non ci
- *   si collega (`figlio.h`, §1.10-bis).  E non si usano file scritti dal
- *   figlio: i desktop nati col binario di PRIMA (l'aggiornamento) non li
- *   avrebbero.  logind e `/proc` li ha ogni versione.
+ * ⚠ The user's session bus is not used: the parent is root and root cannot
+ *   join it (`figlio.h`, §1.10-bis).  Nor are files written by the
+ *   child used: desktops born with the PREVIOUS binary (the upgrade) would not
+ *   have them.  Every version has logind and `/proc`.
  */
 #ifndef REMOTIX_RITROVO_H
 #define REMOTIX_RITROVO_H
@@ -41,30 +41,30 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-/* Il servizio PAM che il figlio apre: `pam_start("remotix", …)`. */
+/* The PAM service the child opens: `pam_start("remotix", …)`. */
 #define RITROVO_SERVIZIO_PAM "remotix"
 
 typedef struct {
 	char utente[257];
 	uid_t uid;
-	char sessione[32]; /* l'id logind della sessione che contiene il palco */
-	pid_t palco;       /* il capo del palco (pid = sid) */
-	char comm[20];     /* il suo nome, per il registro */
-	unsigned sessioni; /* quante sessioni logind `remotix` ha l'utente */
+	char sessione[32]; /* the logind id of the session that contains the stage */
+	pid_t palco;       /* the leader of the stage (pid = sid) */
+	char comm[20];     /* its name, for the log */
+	unsigned sessioni; /* how many `remotix` logind sessions the user has */
 } RitrovoDesktop;
 
 /*
- * Cerca i desktop REMOTIX vivi: al piu' `cap`, UNO per utente.  Torna quanti
- * ne ha scritti, o -1 se logind non ha risposto (il perche' in `perche`).
- * ⚠ Chiamate sincrone a logind (300 ms di tetto ciascuna) e una lettura di
- *   `/proc`: si chiama all'avvio e ogni tanto, non a ogni giro del ciclo.
+ * Looks for live REMOTIX desktops: at most `cap`, ONE per user.  Returns how many
+ * it wrote, or -1 if logind did not answer (the reason in `perche`).
+ * ⚠ Synchronous calls to logind (300 ms ceiling each) and a read of
+ *   `/proc`: it is called at startup and now and then, not at every loop turn.
  */
 int ritrovo_cerca(RitrovoDesktop *v, int cap, char *perche, size_t quanto);
 
 /*
- * L'utente `uid` ha un desktop REMOTIX vivo?  1 si' (e `d`, se non NULL, lo
- * descrive) · 0 no · -1 non lo so (logind muto).  ⛔ Chi deve decidere se
- * buttare giu' qualcosa tratta -1 come «si'».
+ * Does user `uid` have a live REMOTIX desktop?  1 yes (and `d`, if not NULL,
+ * describes it) · 0 no · -1 unknown (logind silent).  ⛔ Whoever must decide whether
+ * to knock something down treats -1 as «yes».
  */
 int ritrovo_vivo(uid_t uid, RitrovoDesktop *d);
 

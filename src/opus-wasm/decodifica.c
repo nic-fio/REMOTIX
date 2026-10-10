@@ -1,31 +1,31 @@
 /*
- * Il decodificatore Opus della pagina (D-006, 25 set 2026): libopus 1.5.2
- * compilato in WebAssembly, SOLO decodifica.  Lo usa `src/pagina.html`
- * (sezione AUDIO) al posto di `AudioDecoder` di WebCodecs, su tutti i browser.
+ * The page's Opus decoder (D-006, 25 Sep 2026): libopus 1.5.2
+ * compiled to WebAssembly, decoding ONLY.  Used by `src/pagina.html`
+ * (AUDIO section) in place of WebCodecs' `AudioDecoder`, on all browsers.
  *
- * ⭐ Niente malloc, niente libc da importare: lo stato del decodificatore e i
- *   due buffer (pacchetto in ingresso, campioni in uscita) sono STATICI, e la
- *   pagina li raggiunge con gli indirizzi che queste funzioni le danno.  Il
- *   modulo non importa niente ⇒ si istanzia con `{}`.
+ * ⭐ No malloc, no libc to import: the decoder state and the
+ *   two buffers (incoming packet, outgoing samples) are STATIC, and the
+ *   page reaches them through the addresses these functions give it.  The
+ *   module imports nothing ⇒ it is instantiated with `{}`.
  *
- * Il formato e' quello di `src/audio.c` e di RCP §5.3: 48 000 Hz, 2 canali,
- * un pacchetto ogni 20 ms (960 fotogrammi).  Il buffer d'uscita tiene il
- * massimo che Opus puo' dare (120 ms = 5760 fotogrammi), cosi' un server che
- * cambiasse durata non scriverebbe fuori.
+ * The format is that of `src/audio.c` and RCP §5.3: 48 000 Hz, 2 channels,
+ * one packet every 20 ms (960 frames).  The output buffer holds the
+ * maximum Opus can give (120 ms = 5760 frames), so a server that
+ * changed duration would not write outside.
  */
 #include <opus.h>
 
 #define FREQ 48000
 #define CANALI 2
-#define MAX_FOTOGRAMMI 5760           /* 120 ms a 48 kHz: il massimo di Opus */
-#define MAX_PACCHETTO 4000            /* un datagram sta ben sotto */
+#define MAX_FOTOGRAMMI 5760           /* 120 ms at 48 kHz: Opus's maximum */
+#define MAX_PACCHETTO 4000            /* a datagram is well below */
 
 static unsigned char stato[64 * 1024] __attribute__((aligned(16)));
 static unsigned char pacchetto[MAX_PACCHETTO];
 static float uscita[MAX_FOTOGRAMMI * CANALI];
 static int pronto;
 
-/* 0 = pronto; <0 = errore di libopus; -1000 = lo stato non ci sta. */
+/* 0 = ready; <0 = libopus error; -1000 = the state does not fit. */
 __attribute__((export_name("rx_apri")))
 int rx_apri(void)
 {
@@ -46,8 +46,8 @@ int rx_pacchetto_max(void) { return MAX_PACCHETTO; }
 __attribute__((export_name("rx_uscita")))
 float *rx_uscita(void) { return uscita; }
 
-/* Decodifica gli `n` byte gia' copiati in `pacchetto`.  Torna i fotogrammi
- * (per canale) scritti in `uscita`, interlacciati, o un errore < 0. */
+/* Decodes the `n` bytes already copied into `pacchetto`.  Returns the frames
+ * (per channel) written into `uscita`, interleaved, or an error < 0. */
 __attribute__((export_name("rx_decodifica")))
 int rx_decodifica(int n)
 {

@@ -1,26 +1,26 @@
-# remotix.service — il server REMOTIX (fasi/17-l-installatore.md §6.4).
+# remotix.service — the REMOTIX server (fasi/17-l-installatore.md §6.4).
 #
-# ⛔ Gira da ROOT, e non e' una comodita': da root PAM verifica la parola di
-#    chiunque e il server scende all'uid di ogni utente per il suo figlio
-#    (provisiona.sh, «i tre requisiti del multi-tenant», 27 ago 2026).
-# ⭐ Il certificato: se in /var/lib/remotix/certificati non c'e', il programma lo
-#    genera da se' all'avvio (certificati_prepara(), certificati.c:302); se
-#    l'amministratore ci mette il suo (senza la marca «.nostro») si usa quello.
-# ⭐ Il nome nel certificato e' il nome della macchina (%H).  Chi entra con un
-#    indirizzo IP lo dichiara in /etc/remotix/remotix.conf.d/<qualcosa>.conf:
+# ⛔ It runs as ROOT, and not for convenience: as root PAM verifies anyone's
+#    password and the server drops to each user's uid for their child
+#    (provisiona.sh, «the three multi-tenant requirements», 27 Aug 2026).
+# ⭐ The certificate: if it is not in /var/lib/remotix/certificati, the program
+#    generates it by itself at startup (certificati_prepara(), certificati.c:302); if
+#    the administrator puts their own there (without the «.nostro» mark) that one is used.
+# ⭐ The name in the certificate is the machine's name (%H).  Whoever connects with an
+#    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
 #        REMOTIX_OPZIONI=--nome 192.168.1.10
-#    (l'ultimo --nome vince).  ⚠ Formato PROVVISORIO, variabili d'ambiente: la
-#    configurazione vera («predefiniti in /usr, scelte in /etc», §6.5 punto 7)
-#    e' del motore (T4).
-# ⛔ Nessuna opzione di banco (--rilievo, --comando-socket, --audio-prova,
+#    (the last --nome wins).  ⚠ PROVISIONAL format, environment variables: the
+#    real configuration («defaults in /usr, choices in /etc», §6.5 point 7)
+#    belongs to the engine (T4).
+# ⛔ No bench options (--rilievo, --comando-socket, --audio-prova,
 #    --parlantina, --sblocca): R13.
-# ⭐ DECISIONI §10.12, punto 3 (versione definitiva del 30 set): due vie sole,
-#    l'installatore o il sorgente a mano; NESSUNA guardia che impedisca di
-#    partire senza installatore.  `remotix stato` dira' solo se l'installazione
-#    e' certificata (la marca la scrive il motore a operazione CONFERMATA).
-# ⛔ Il pacchetto NON abilita e NON avvia questa unita': lo fa il motore.
+# ⭐ DECISIONI §10.12, point 3 (final version of 30 Sep): only two routes,
+#    the installer or the source by hand; NO guard preventing a start
+#    without the installer.  `remotix stato` will only say whether the installation
+#    is certified (the engine writes the mark once an operation is CONFIRMED).
+# ⛔ The package does NOT enable and does NOT start this unit: the engine does.
 [Unit]
-Description=REMOTIX, il desktop nel browser
+Description=REMOTIX, the desktop in the browser
 After=network.target systemd-logind.service
 Wants=network.target
 
@@ -29,14 +29,14 @@ Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
-# ⚠ `sh` solo per espandere le variabili di EnvironmentFile, poi `exec`: il
-#   server resta il processo principale.  `$$` = un `$` per la shell.
+# ⚠ `sh` only to expand the EnvironmentFile variables, then `exec`: the
+#   server stays the main process.  `$$` = one `$` for the shell.
 ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta "$${REMOTIX_PORTA}" --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $${REMOTIX_OPZIONI}'
-# ⭐ `mixed`: SIGTERM al solo padre, poi SIGKILL a quel che resta dell'unita'.
-#    I desktop stanno FUORI dall'unita' (setsid --fork) e sopravvivono
-#    all'arresto: misurato in T2 (fasi/17 §5.2), 10 prove su 10.
+# ⭐ `mixed`: SIGTERM to the parent only, then SIGKILL to whatever is left of the unit.
+#    The desktops live OUTSIDE the unit (setsid --fork) and survive
+#    the stop: measured in T2 (fasi/17 §5.2), 10 runs out of 10.
 KillMode=mixed
-# La priorita' del suono e del video (come le unita' dei banchi dalla fase 9).
+# The priority of audio and video (like the bench units since phase 9).
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure

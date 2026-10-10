@@ -1,16 +1,16 @@
 /*
- * tastiera.h — LA CUCITURA fra una LETTERA e le POSIZIONI che la producono.
+ * tastiera.h — THE SEAM between a LETTER and the KEY POSITIONS that produce it.
  *
- * ⛔ QUESTO FILE E' DEL COORDINATORE (vedi `input.h`, stessa ragione).
+ * ⛔ THIS FILE BELONGS TO THE COORDINATOR (see `input.h`, same reason).
  *
- * Il problema, in una riga (`SPECIFICHE.md` §7.3): sul filo le lettere
- * viaggiano come lettere, ma un compositore Wayland non accetta lettere —
- * accetta POSIZIONI, e decide lui che lettera sia guardando la disposizione.
- * ⇒ Qualcuno deve fare il giro all'incontrario: «per far uscire la e' con
- *   questa disposizione, quale tasto premo, e con quali modificatori?».
+ * The problem, in one line (`SPECIFICHE.md` §7.3): on the wire letters
+ * travel as letters, but a Wayland compositor does not accept letters —
+ * it accepts KEY POSITIONS, and decides itself which letter it is by looking at the layout.
+ * ⇒ Someone must make the trip backwards: "to make è come out with
+ *   this layout, which key do I press, and with which modifiers?".
  *
- * ⚠ La macchina da scrivere: il filo porta la LETTERA stampata, `libei` vuole
- *   il MARTELLETTO da battere.  Questo file trova il martelletto.
+ * ⚠ The typewriter: the wire carries the printed LETTER, `libei` wants
+ *   the HAMMER to strike.  This file finds the hammer.
  */
 #ifndef REMOTIX_TASTIERA_H
 #define REMOTIX_TASTIERA_H
@@ -21,141 +21,141 @@
 typedef struct tastiera Tastiera;
 
 /*
- * Apre la disposizione della sessione con `xkbcommon`.  `disposizione` e' la
- * stringa negoziata all'attacco (`RCP.md` §4.5, `DECISIONI.md` §5-bis.7): per
- * esempio "it" o "us".  NULL = quella in vigore nella sessione.
+ * Opens the session's layout with `xkbcommon`.  `disposizione` is the
+ * string negotiated at attach (`RCP.md` §4.5, `DECISIONI.md` §5-bis.7): for
+ * example "it" or "us".  NULL = the one in force in the session.
  *
- * ⛔ Ritorna NULL e riempie `*errore` se la disposizione non si carica.  ⛔ NON
- *    si ripiega su "us" in silenzio: sarebbe il ripiego silenzioso che
- *    `CODER.md` §4.2 vieta, e il sintomo sarebbe «scrive le lettere sbagliate».
+ * ⛔ Returns NULL and fills `*errore` if the layout does not load.  ⛔ It does NOT
+ *    fall back to "us" silently: it would be the silent fallback
+ *    `CODER.md` §4.2 forbids, and the symptom would be "it types the wrong letters".
  */
 Tastiera *tastiera_apri(const char *disposizione, char **errore);
 
 /*
- * ⭐⭐ LA STESSA APERTURA, MA DICENDO DI CHI E' — 27 agosto 2026, il rosso di
+ * ⭐⭐ THE SAME OPENING, BUT SAYING WHOSE IT IS — 27 August 2026, the red of
  *     C9 (`banchi/11-scatole/11-c9-il-registro-dice-di-chi.py`).
  *
- * ⛔ IL DIFETTO, `[M]` con DUE inquilini vivi insieme: `webtransport.c` chiama
- *    `tastiera_apri()` nel PADRE, per rispondere a «questa disposizione
- *    esiste?» durante l'ATTACCA.  Le righe che ne uscivano — «modificatore N:
- *    si preferisce…» e «disposizione in vigore: it [Italian]» — erano
- *    **identiche parola per parola, una per inquilino**, e non c'era modo di
- *    dire quale fosse di chi.  ⇒ Con un inquilino solo si attribuivano per
- *    esclusione; col secondo la diagnosi diventava indovinare.
+ * ⛔ THE DEFECT, `[M]` with TWO tenants alive together: `webtransport.c` calls
+ *    `tastiera_apri()` in the PARENT, to answer "does this layout
+ *    exist?" during ATTACCA.  The lines coming out of it — «modificatore N:
+ *    si preferisce…» and «disposizione in vigore: it [Italian]» — were
+ *    **identical word for word, one per tenant**, and there was no way to
+ *    tell which was whose.  ⇒ With a single tenant they were attributed by
+ *    exclusion; with the second the diagnosis became guessing.
  *
- * ⭐ `chi` e' il nome che PAM ha ammesso su QUESTA sessione — nel padre lo
- *    porta `rcp_utente()`, ed e' lo stesso che finisce nella riga `rcp` due
- *    millisecondi dopo.  ⚠ NULL o "" ⇒ vale l'identita' di PROCESSO
- *    (`registro.h`), che e' la risposta giusta nel figlio; e se non c'e'
- *    nemmeno quella la riga esce muta, ⛔ che e' la verita'.
+ * ⭐ `chi` is the name PAM admitted on THIS session — in the parent it is
+ *    carried by `rcp_utente()`, and it is the same that ends up in the `rcp` line two
+ *    milliseconds later.  ⚠ NULL or "" ⇒ the PROCESS identity applies
+ *    (`registro.h`), which is the right answer in the child; and if there is not
+ *    even that the line comes out bare, ⛔ which is the truth.
  *
- * ⚠ E la firma vecchia RESTA, invece di crescere di un parametro: la usa
- *   `banchi/04-b25-tastiera.c`, e in questo modulo la usano le due aperture
- *   interne di confronto (`tastiera_apri_da_keymap`, `tastiera_e_questa`) che
- *   girano solo nel figlio.  ⇒ Chi non ha un inquilino da nominare non deve
- *   scrivere `NULL` per dirlo.
+ * ⚠ And the old signature STAYS, instead of growing a parameter: it is used by
+ *   `banchi/04-b25-tastiera.c`, and in this module by the two internal
+ *   comparison openings (`tastiera_apri_da_keymap`, `tastiera_e_questa`) that
+ *   run only in the child.  ⇒ Whoever has no tenant to name should not have to
+ *   write `NULL` to say so.
  */
 Tastiera *tastiera_apri_per(const char *disposizione, const char *chi, char **errore);
 
 /*
- * ⛔⛔ E QUESTA E' LA STRADA BUONA — aggiunta il 14 agosto 2026, e non e' un
- *      di piu': e' la correzione di un difetto del contratto, sollevata
- *      dall'anello che lo attuava e accolta.
+ * ⛔⛔ AND THIS IS THE GOOD WAY — added on 14 August 2026, and it is not an
+ *      extra: it is the correction of a defect of the contract, raised
+ *      by the link that implemented it and accepted.
  *
- * La firma qui sopra poggia su un presupposto che nessuno aveva misurato: che
- * la disposizione che compiliamo NOI sia la stessa con cui il compositore
- * interpretera' i codici che gli mandiamo.  ⛔ E' fragile dalla parte peggiore,
- * perche' **la disposizione della sessione non la scegliamo noi: la sceglie
- * GNOME, e `libei` ce la CONSEGNA** col dispositivo tastiera.
+ * The signature above rests on an assumption nobody had measured: that
+ * the layout WE compile is the same with which the compositor
+ * will interpret the codes we send it.  ⛔ It is fragile on the worst side,
+ * because **we do not choose the session's layout: GNOME
+ * chooses it, and `libei` HANDS it to us** with the keyboard device.
  *
- * Il danno, in concreto — sessione `it`, client che ha negoziato `us`, l'utente
- * scrive `[`:
+ * The damage, concretely — `it` session, client that negotiated `us`, the user
+ * types `[`:
  *
- *     su `us`   `[` sta sul tasto 26, da solo
- *     su `it`   sul tasto 26 c'e' la `è`, e `[` vuole l'AltGr
+ *     on `us`   `[` is on key 26, alone
+ *     on `it`   key 26 holds `è`, and `[` wants AltGr
  *
- * ⇒ Mandiamo 26 e sullo schermo compare **`è`**.  ⛔ Non un carattere mancante:
- *   **un carattere DIVERSO** — esattamente cio' che `RCP.md` §7.3 vieta.  E
- *   nessuno collegherebbe mai il sintomo alla disposizione.
+ * ⇒ We send 26 and **`è`** appears on screen.  ⛔ Not a missing character:
+ *   **a DIFFERENT character** — exactly what `RCP.md` §7.3 forbids.  And
+ *   nobody would ever connect the symptom to the layout.
  *
- * ⚠ E rende falsa una riga che credevamo vera: `DECISIONI.md` §5-bis.7 dice che
- *   la degradazione e' morbida — «una disposizione vecchia non produce mai
- *   caratteri sbagliati».  ⛔ E' vero SOLO usando la keymap della sessione.
+ * ⚠ And it makes false a line we believed true: `DECISIONI.md` §5-bis.7 says
+ *   the degradation is soft — "an old layout never produces
+ *   wrong characters".  ⛔ It is true ONLY using the session's keymap.
  *
- * ⭐ E v1 lo faceva gia' cosi' (`fondamenta/remotix-c/src/tastiera.c:69`): e' l'unico
- *    pezzo di v1 che il primo contratto di V2 non aveva ripreso.
+ * ⭐ And v1 already did it this way (`fondamenta/remotix-c/src/tastiera.c:69`): it is the only
+ *    piece of v1 the first V2 contract had not taken over.
  *
- * `testo`/`lunghezza` sono la keymap che `libei` porta col dispositivo tastiera
+ * `testo`/`lunghezza` are the keymap `libei` carries with the keyboard device
  * (`ei_device_keyboard_get_keymap`, `XKB_KEYMAP_FORMAT_TEXT_V1`).
- * `negoziata` e' il nome dichiarato dal client in `ATTACCA` (`RCP.md` §4.5), o
- * NULL.  ⛔ Se non combacia con quella della sessione si usa **quella della
- * sessione** — e' la verita', e con l'altra uscirebbero lettere sbagliate — e
- * il ripiego si DICHIARA nel registro (`CODER.md` §4.2).
+ * `negoziata` is the name declared by the client in `ATTACCA` (`RCP.md` §4.5), or
+ * NULL.  ⛔ If it does not match the session's, **the session's** is used
+ * — it is the truth, and with the other wrong letters would come out — and
+ * the fallback is DECLARED in the log (`CODER.md` §4.2).
  *
- * ⛔ Da chiamare a OGNI `DEVICE_ADDED`, non una volta all'avvio: `STUDI.md` §gnome §9
- *    misura che un cambio di keymap distrugge e ricrea il dispositivo tastiera,
- *    e il vecchio smette di funzionare **senza errore**.
+ * ⛔ To be called at EVERY `DEVICE_ADDED`, not once at startup: `STUDI.md` §gnome §9
+ *    measures that a keymap change destroys and recreates the keyboard device,
+ *    and the old one stops working **without an error**.
  */
 Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza,
                                   const char *negoziata, char **errore);
 
-/* Quante posizioni al massimo servono per una lettera (con i modificatori). */
+/* How many key positions at most a letter needs (with the modifiers). */
 #define TASTIERA_MAX_POSIZIONI 4
 
 /*
- * ⛔ La domanda a cui questo modulo esiste per rispondere.
+ * ⛔ The question this module exists to answer.
  *
- * Cerca, in tutta la disposizione, un tasto che con qualche combinazione di
- * modificatori produca `carattere`.
+ * Searches, across the whole layout, for a key that with some combination of
+ * modifiers produces `carattere`.
  *
- *   ritorna  1  producibile: `codici[0..n)` sono i codici EVDEV da premere in
- *               ordine (i modificatori prima, il tasto per ultimo) e si
- *               rilasciano all'incontrario; `*n` e' quanti sono;
- *   ritorna  0  ⛔ NON producibile con questa disposizione — e' il caso che
- *               `RCP.md` §7.3 obbliga a scrivere nel registro senza mandare
- *               niente.  Il banco della fase lo esercita di proposito, con una
- *               sessione dalla disposizione sbagliata;
- *   ritorna -1  errore.
+ *   returns  1  producible: `codici[0..n)` are the EVDEV codes to press in
+ *               order (the modifiers first, the key last) and they are
+ *               released in reverse; `*n` is how many they are;
+ *   returns  0  ⛔ NOT producible with this layout — it is the case that
+ *               `RCP.md` §7.3 requires to be written to the log without sending
+ *               anything.  The phase bench exercises it on purpose, with a
+ *               session with the wrong layout;
+ *   returns -1  error.
  *
- * ⚠ Maiusc e AltGr NON sono comandi: servono a FARE la lettera, e stanno qui
- *   dentro (`SPECIFICHE.md` §7.3).  Ctrl, Alt e Super non passano mai da qui:
- *   quelli viaggiano gia' come posizione sul filo.
+ * ⚠ Shift and AltGr are NOT commands: they serve to MAKE the letter, and live in
+ *   here (`SPECIFICHE.md` §7.3).  Ctrl, Alt and Super never pass through here:
+ *   those already travel as key positions on the wire.
  */
 int tastiera_posizioni_per(Tastiera *, uint32_t carattere,
                            uint16_t codici[TASTIERA_MAX_POSIZIONI], size_t *n);
 
 /*
- * Il nome della disposizione effettivamente in vigore, per il registro e per
- * la risposta al client.  Mai NULL dopo un'apertura riuscita.
+ * The name of the layout actually in force, for the log and for
+ * the answer to the client.  Never NULL after a successful opening.
  */
 const char *tastiera_disposizione(Tastiera *);
 
 /*
- * ⛔⭐ «QUESTA KEYMAP FA QUEL CHE FAREBBE `nome`?» — e serve a non chiedere due
- *     volte la stessa disposizione.
+ * ⛔⭐ "DOES THIS KEYMAP DO WHAT `nome` WOULD DO?" — and it serves not to ask twice
+ *     for the same layout.
  *
- * ⚠ Nasce da un difetto MISURATO il 16 agosto 2026, e il difetto era **la
- *   memoria sbagliata**: `input_disposizione()` si ricordava *quel che aveva
- *   chiesto* e saltava la richiesta se coincideva.  ⛔ Ma fra una richiesta e
- *   l'altra la disposizione della sessione puo' cambiare **per mano di
- *   qualcun altro** — l'utente dalle impostazioni di GNOME, o `gsd-keyboard`.
- *   ⇒ Il banco l'ha colto in flagrante: sessione riportata a `it` da fuori,
- *     client che riattacca dichiarando `de`, e il registro diceva
- *     *«disposizione «de»: gia' chiesta, non la richiedo»* — con la sessione
- *     italiana.  `Ctrl+Z` e' arrivato come `Ctrl+Y`.
+ * ⚠ It comes from a defect MEASURED on 16 August 2026, and the defect was **the
+ *   wrong memory**: `input_disposizione()` remembered *what it had
+ *   asked for* and skipped the request if it matched.  ⛔ But between one request and
+ *   the next the session's layout can change **at the hand of
+ *   someone else** — the user from GNOME's settings, or `gsd-keyboard`.
+ *   ⇒ The bench caught it red-handed: session brought back to `it` from outside,
+ *     client reattaching declaring `de`, and the log said
+ *     *«disposizione «de»: gia' chiesta, non la richiedo»* — with the session
+ *     Italian.  `Ctrl+Z` arrived as `Ctrl+Y`.
  *
- * ⛔ E' la forma **E1** — *scritto non e' in vigore* — dentro la cura scritta
- *    per §5-bis.7.  ⇒ La domanda giusta non e' «che cosa ho chiesto?» ma
- *    **«che cosa c'e' adesso?»**, e la risposta la sa questa keymap.
+ * ⛔ It is form **E1** — *written is not in force* — inside the cure written
+ *    for §5-bis.7.  ⇒ The right question is not "what did I ask for?" but
+ *    **"what is there now?"**, and this keymap knows the answer.
  *
- * ⚠ E il confronto e' quello di sempre: due disposizioni sono la stessa se
- *   **producono gli stessi caratteri sugli stessi tasti**, non se si chiamano
- *   allo stesso modo (vedi il riquadro di `fanno_la_stessa_cosa` in `.c`).
+ * ⚠ And the comparison is the usual one: two layouts are the same if
+ *   **they produce the same characters on the same keys**, not if they are called
+ *   the same way (see the box of `fanno_la_stessa_cosa` in the `.c`).
  *
- *   ritorna  1  si', questa keymap fa quel che farebbe `nome`
- *   ritorna  0  no
- *   ritorna -1  ⛔ non si e' potuto dire (nome che non si compila, o NULL) —
- *               e NON e' «no»: chi chiama deve poter distinguere.
+ *   returns  1  yes, this keymap does what `nome` would do
+ *   returns  0  no
+ *   returns -1  ⛔ it could not be said (a name that does not compile, or NULL) —
+ *               and it is NOT "no": the caller must be able to tell them apart.
  */
 int tastiera_e_questa(Tastiera *, const char *nome);
 

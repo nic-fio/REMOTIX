@@ -2,17 +2,17 @@ package motore
 
 import "strings"
 
-// Il PACCHETTO UNICO di REMOTIX (DECISIONI §10.36): un file `.run` con dentro il motore e i
-// pacchetti di REMOTIX per ogni distribuzione della matrice, in packages/<bersaglio>/. Niente
-// archivio da aggiungere al sistema: il gestore installa i file così come sono, e le dipendenze le
-// prende dagli archivi che la macchina ha già (packaging/rilascio.sh lo costruisce).
+// REMOTIX's SINGLE PACKAGE (DECISIONI §10.36): a `.run` file containing the engine and the
+// REMOTIX packages for every distribution of the matrix, in packages/<bersaglio>/. No
+// repository to add to the system: the manager installs the files as they are, and takes the
+// dependencies from the repositories the machine already has (packaging/rilascio.sh builds it).
 
-// PacchettiRemotix: i pacchetti di REMOTIX (il prodotto, il motore e, sugli rpm con la politica
-// targeted, il modulo SELinux): quelli di cui `post-upgrade` annota le versioni.
+// PacchettiRemotix: REMOTIX's packages (the product, the engine and, on rpm with the targeted
+// policy, the SELinux module): those whose versions `post-upgrade` records.
 var PacchettiRemotix = []string{"remotix", "remotix-install", "remotix-selinux"}
 
-// Bersaglio: il nome della distribuzione nel pacchetto unico (debian13, ubuntu2604, fedora44,
-// alma10, tumbleweed, leap16, arch): la cartella packages/<bersaglio>/ del .run.
+// Bersaglio: the name of the distribution in the single package (debian13, ubuntu2604, fedora44,
+// alma10, tumbleweed, leap16, arch): the folder packages/<bersaglio>/ of the .run.
 func Bersaglio(a *Ambiente) string {
 	m, _ := OsRelease(a)
 	id, v := m["ID"], strings.ReplaceAll(m["VERSION_ID"], ".", "")

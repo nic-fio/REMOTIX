@@ -1,38 +1,38 @@
 /*
- * colori709.c — la conversione BGRx → YUV 4:2:0 BT.709 limitato, senza
- *               libswscale.  Il perche' e le regole stanno in `colori709.h`.
+ * colori709.c — the BGRx → YUV 4:2:0 BT.709 limited conversion, without
+ *               libswscale.  The why and the rules are in `colori709.h`.
  *
  * ---------------------------------------------------------------------------
- * ⭐ I COEFFICIENTI, e da dove vengono
+ * ⭐ THE COEFFICIENTS, and where they come from
  *
- * BT.709: Kr = 0,2126 · Kg = 0,7152 · Kb = 0,0722.  Dall'RGB pieno (0-255):
+ * BT.709: Kr = 0.2126 · Kg = 0.7152 · Kb = 0.0722.  From full-range RGB (0-255):
  *
  *   Y  = 16  + 219/255 · (Kr R + Kg G + Kb B)
  *   Cb = 128 + 224/255 · (B − Y') / (2 (1 − Kb))
  *   Cr = 128 + 224/255 · (R − Y') / (2 (1 − Kr))
  *
- * in virgola fissa su 15 bit (`SCALA`: 15 e non 16 perche' ogni coefficiente
- * deve stare in un `int16` — l'istruzione e' `pmaddwd`), arrotondati al piu'
- * vicino.  ⛔ E due righe NON sono il semplice arrotondamento, apposta:
- *   - `VG` e' 13072 e non 13073: con l'arrotondamento puro i tre del Cr
- *     sommano a +1, e un grigio uscirebbe con una dominante che nessuno ha
- *     chiesto.  Cosi' ogni terna di croma somma a 0 e il grigio e' 128 esatto,
- *     `[M]` per tutti i 256 grigi;
- *   - la luma somma a 28142 = 219/255 · 32768: il bianco da' 235 e il nero 16,
- *     `[M]` identici a swscale insieme ai tre primari.
+ * in 15-bit fixed point (`SCALA`: 15 and not 16 because each coefficient
+ * must fit in an `int16` — the instruction is `pmaddwd`), rounded to
+ * nearest.  ⛔ And two lines are NOT plain rounding, on purpose:
+ *   - `VG` is 13072 and not 13073: with pure rounding the three of Cr
+ *     sum to +1, and a grey would come out with a tint nobody asked
+ *     for.  This way each chroma triple sums to 0 and grey is exactly 128,
+ *     `[M]` for all 256 greys;
+ *   - luma sums to 28142 = 219/255 · 32768: white gives 235 and black 16,
+ *     `[M]` identical to swscale together with the three primaries.
  *
  * ---------------------------------------------------------------------------
- * ⭐ LA FORMA: una riga alla volta — la luma subito, e le somme orizzontali a
- *    coppie in un anello di quattro righe da cui esce il croma (il filtro e'
- *    quello di swscale: vedi `croma()`).
+ * ⭐ THE SHAPE: one row at a time — luma at once, and the horizontal pair
+ *    sums into a ring of four rows from which chroma comes out (the filter is
+ *    swscale's: see `croma()`).
  *
- * ⭐ LA VELOCITA': SSE2, che su x86-64 c'e' SEMPRE (e' nell'ABI), quindi niente
- *    scelta a tempo d'esecuzione e niente ramo che una macchina non percorre
- *    mai.  Altrove (aarch64, …) lo stesso conto in C semplice, con gli STESSI
- *    coefficienti e gli stessi arrotondamenti: i byte escono uguali.
- *    ⛔ A -O2 GCC 14 NON vettorizzava il C semplice: `[M]` 30 set 2026 a
- *       3840x2160 il C faceva 13,7 ms contro 13,1 di sws_scale — e la
- *       conversione e' lavoro della CPU prima di ogni fotogramma.
+ * ⭐ THE SPEED: SSE2, which on x86-64 is ALWAYS there (it is in the ABI), so no
+ *    run-time choice and no branch that a machine never takes.  Elsewhere
+ *    (aarch64, …) the same computation in plain C, with the SAME coefficients
+ *    and the same roundings: the bytes come out equal.
+ *    ⛔ At -O2 GCC 14 did NOT vectorise the plain C: `[M]` 30 Sep 2026 at
+ *       3840x2160 the C took 13.7 ms against 13.1 for sws_scale — and the
+ *       conversion is CPU work before every frame.
  */
 #include "colori709.h"
 
@@ -40,27 +40,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__SSE2__) && !defined(COLORI709_SENZA_SIMD) /* il secondo: per il banco */
+#if defined(__SSE2__) && !defined(COLORI709_SENZA_SIMD) /* the second: for the bench */
 #include <emmintrin.h>
 #define COLORI709_SSE2 1
 #endif
 
 #define SCALA 15
 
-/* Y — la somma e' 28142: bianco → 235. */
+/* Y — the sum is 28142: white → 235. */
 #define YR 5983
 #define YG 20127
 #define YB 2032
-/* Cb — somma 0. */
+/* Cb — sum 0. */
 #define UR (-3298)
 #define UG (-11094)
 #define UB 14392
-/* Cr — somma 0 (⛔ vedi sopra: VG corretto di uno). */
+/* Cr — sum 0 (⛔ see above: VG corrected by one). */
 #define VR 14392
 #define VG (-13072)
 #define VB (-1320)
 
-/* I tre coefficienti messi al posto dei byte: posizione 0, 1, 2, 3 del pixel. */
+/* The three coefficients placed at the bytes' positions: position 0, 1, 2, 3 of the pixel. */
 typedef struct {
 	int16_t y[4], u[4], v[4];
 } Coeff;
@@ -78,20 +78,20 @@ static Coeff coefficienti(Colori709Ordine ordine)
 }
 
 /*
- * ⭐ LA RIGA: la luma (scritta subito) e, per ogni coppia di pixel, la somma
- *    byte per byte dei due (0-510, quattro `int16` per campione di croma, il
- *    quarto e' il byte x e pesa zero).
+ * ⭐ THE ROW: luma (written at once) and, for each pair of pixels, the
+ *    byte-by-byte sum of the two (0-510, four `int16` per chroma sample, the
+ *    fourth is the x byte and weighs zero).
  *
- *   Y = (k · Σ c·byte + (16k << 15) + ½) >> 15,   k = 1 a 8 bit, 4 a 10 bit
- *   ⚠ a 10 bit la matrice e' calcolata a 10 bit (219·4 = 876 livelli), non 8
- *     bit spostati di due: e' quel che faceva swscale verso `yuv420p10le`.
+ *   Y = (k · Σ c·byte + (16k << 15) + ½) >> 15,   k = 1 at 8 bits, 4 at 10 bits
+ *   ⚠ at 10 bits the matrix is computed at 10 bits (219·4 = 876 levels), not 8
+ *     bits shifted by two: it is what swscale did towards `yuv420p10le`.
  */
 static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int prof10, int semi,
                  void *restrict yv, int16_t *restrict somme)
 {
 	const int32_t k = prof10 ? 4 : 1;
 	const int32_t off = ((16 * k) << SCALA) + (1 << (SCALA - 1));
-	const int sp = prof10 && semi ? 6 : 0; /* P010: i dieci bit in ALTO */
+	const int sp = prof10 && semi ? 6 : 0; /* P010: the ten bits at the TOP */
 	uint32_t x = 0;
 #ifdef COLORI709_SSE2
 	const __m128i zero = _mm_setzero_si128();
@@ -102,7 +102,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 		__m128i y32[4];
 		for (int j = 0; j < 4; j++) {
 			__m128i p = _mm_loadu_si128((const __m128i *) (px + 4 * (x + 4 * j)));
-			__m128i lo = _mm_unpacklo_epi8(p, zero); /* pixel 0,1 in 16 bit */
+			__m128i lo = _mm_unpacklo_epi8(p, zero); /* pixels 0,1 in 16 bits */
 			__m128i hi = _mm_unpackhi_epi8(p, zero); /* pixel 2,3 */
 			__m128i ml = _mm_madd_epi16(lo, cy);     /* [0bg, 0rx, 1bg, 1rx] */
 			__m128i mh = _mm_madd_epi16(hi, cy);
@@ -113,7 +113,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 			if (prof10)
 				s = _mm_slli_epi32(s, 2);
 			y32[j] = _mm_srai_epi32(_mm_add_epi32(s, voff), SCALA);
-			/* le somme a coppie: meta' bassa + meta' alta di ogni `lo`/`hi` */
+			/* the pair sums: low half + high half of each `lo`/`hi` */
 			__m128i sl = _mm_add_epi16(lo, _mm_srli_si128(lo, 8));
 			__m128i sh = _mm_add_epi16(hi, _mm_srli_si128(hi, 8));
 			_mm_storeu_si128((__m128i *) (somme + 4 * ((x + 4 * j) / 2)),
@@ -149,18 +149,18 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 }
 
 /*
- * ⭐ IL CROMA: la stessa forma di swscale, misurata con un impulso (`[M]` 30 set
- *    2026, ffmpeg 7.1.5, `SWS_BILINEAR`, stessa misura):
- *      - in orizzontale la media di DUE pixel (una colonna sola → 1/2);
- *      - in verticale una tenda su QUATTRO righe, pesi 1-3-3-1 / 8, con le
- *        righe fuori dall'immagine prese uguali alla prima/ultima (un impulso
- *        sulla riga 0 da' 4/8 al croma 0, sulla 1 da' 3/8 e 1/8).
- *    Qui: somme a coppie (x2) per 1-3-3-1 (x8) ⇒ il quadro pesa 16, cioe'
- *    quattro bit in piu' di scala.
- * ⛔ Con la media 2x2 al posto della tenda lo scarto contro swscale era `[M]`
- *    fino a 10 livelli di croma sul 5 % dei campioni (i bordi del testo): la
- *    matrice era giusta e il filtro no, e «i colori coincidono» vuol dire tutti
- *    e due.  Con la tenda: al piu' 1 livello (arrotondamenti), `[M]` nel banco.
+ * ⭐ THE CHROMA: the same shape as swscale, measured with an impulse (`[M]` 30 Sep
+ *    2026, ffmpeg 7.1.5, `SWS_BILINEAR`, same size):
+ *      - horizontally the average of TWO pixels (a single column → 1/2);
+ *      - vertically a tent over FOUR rows, weights 1-3-3-1 / 8, with the
+ *        rows outside the image taken equal to the first/last (an impulse
+ *        on row 0 gives 4/8 to chroma 0, on row 1 gives 3/8 and 1/8).
+ *    Here: pair sums (x2) times 1-3-3-1 (x8) ⇒ the whole weighs 16, that is
+ *    four more bits of scale.
+ * ⛔ With the 2x2 average instead of the tent the gap against swscale was `[M]`
+ *    up to 10 chroma levels on 5 % of the samples (the edges of text): the
+ *    matrix was right and the filter was not, and «the colours match» means
+ *    both.  With the tent: at most 1 level (roundings), `[M]` in the bench.
  */
 static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int prof10, int semi,
                   void *restrict uv, void *restrict vv)
@@ -204,7 +204,7 @@ static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int pr
 			u32[h] = _mm_srai_epi32(_mm_add_epi32(us, voff), sh);
 			v32[h] = _mm_srai_epi32(_mm_add_epi32(vs, voff), sh);
 		}
-		__m128i u16 = _mm_packs_epi32(u32[0], u32[1]); /* 8 campioni */
+		__m128i u16 = _mm_packs_epi32(u32[0], u32[1]); /* 8 samples */
 		__m128i v16 = _mm_packs_epi32(v32[0], v32[1]);
 		if (prof10 && semi) {
 			uint16_t *o = (uint16_t *) uv + 2 * i;
@@ -257,8 +257,8 @@ static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t 
 		passo = l * 4;
 	const Coeff c = coefficienti(ordine);
 	const uint32_t lc = l / 2;
-	/* L'anello delle somme: quattro righe, quattro `int16` per campione di
-	 * croma (61 KB a 3840). */
+	/* The ring of sums: four rows, four `int16` per chroma sample
+	 * (61 KB at 3840). */
 	int16_t *anello = malloc(sizeof(int16_t) * 16u * lc);
 	if (!anello)
 		return false;
@@ -267,9 +267,10 @@ static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t 
 	for (uint32_t r = 0; r < a; r++) {
 		riga(pixel + (size_t) r * passo, l, &c, prof10, semi, y + (size_t) r * py,
 		     anello + (size_t) (r & 3u) * 4u * lc);
-		/* Il croma k vuole le righe 2k-1 … 2k+2: si emette quando arriva la
-		 * 2k+2, e l'ultimo a fine immagine (la riga 2k+2 fuori ⇒ l'ultima).
-		 * ⚠ Con a = 2 il croma 0 si emette due volte, identico: innocuo. */
+		/* Chroma k wants rows 2k-1 … 2k+2: it is emitted when row 2k+2
+		 * arrives, and the last one at the end of the image (row 2k+2 outside
+		 * ⇒ the last row).  ⚠ With a = 2 chroma 0 is emitted twice, identical:
+		 * harmless. */
 		bool ultima = (r == a - 1);
 		if ((r >= 2 && !(r & 1u)) || ultima) {
 			uint32_t kc = ultima ? a / 2u - 1u : (r - 2u) / 2u;

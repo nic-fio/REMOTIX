@@ -6,47 +6,47 @@ import (
 	"strings"
 )
 
-// Le strade della codifica sulla scheda (fase 19, DECISIONI §10.27). REMOTIX codifica SOLO sulla
-// scheda («niente cpu senza scheda», parola dell'utente): senza una scheda capace non si installa,
-// e il controllo preliminare lo dice prima di toccare niente, con la ragione. La strada si sceglie
-// per CAPACITÀ, non per marca; il verdetto è «almeno una strada attiva ha una scheda capace».
+// The encoding routes on the card (phase 19, DECISIONI §10.27). REMOTIX encodes ONLY on the
+// card («no cpu without a card», the user's words): without a capable card it is not installed,
+// and the preliminary check says so before touching anything, with the reason. The route is chosen
+// by CAPABILITY, not by brand; the verdict is «at least one active route has a capable card».
 //
-//   - «vulkan» (Vulkan Video): la prima per §10.27 — AMD con RADV (`[M]` 1 ott 2026: Radeon RX
-//     6800, Mesa 25.0.7, H.264 e HEVC sul server), NVIDIA col driver proprietario (`[?]` non provata:
-//     nel laboratorio non c'è), Intel quando Mesa la rende stabile (oggi ANV codifica solo dietro
-//     ANV_DEBUG=video-encode: resta a VA-API). ⭐ ATTIVA dal 1 ott 2026: il prodotto la prova PRIMA
-//     di VA-API (`src/codificatore.c`, `h264_scheda`/`hevc_scheda`) e `remotix --prova-codifica`
-//     dice quale strada ha codificato (`strada`).
-//   - «vaapi» (VA-API, libva): Intel e AMD, col driver della distribuzione o con quello del
-//     deposito di terzi che il catalogo nomina (H264Piattaforma, D5).
+//   - «vulkan» (Vulkan Video): the first per §10.27 — AMD with RADV (`[M]` 1 Oct 2026: Radeon RX
+//     6800, Mesa 25.0.7, H.264 and HEVC on the server), NVIDIA with the proprietary driver (`[?]` not tried:
+//     the lab does not have one), Intel when Mesa makes it stable (today ANV encodes only behind
+//     ANV_DEBUG=video-encode: it stays on VA-API). ⭐ ACTIVE since 1 Oct 2026: the product tries it BEFORE
+//     VA-API (`src/codificatore.c`, `h264_scheda`/`hevc_scheda`) and `remotix --prova-codifica`
+//     says which route did the encoding (`strada`).
+//   - «vaapi» (VA-API, libva): Intel and AMD, with the distribution's driver or with the one from the
+//     third-party repository the catalogue names (H264Piattaforma, D5).
 //
-// ⛔ Il controllo preliminare NON lancia programmi e NON apre la scheda (R1, RX-H264-001): qui si
-// legge quel che c'è sul disco (i driver VA, i driver Vulkan). La prova VERA — un fotogramma
-// codificato — la fa il binario di REMOTIX in 7a, dopo l'installazione, ed è lei che vale.
+// ⛔ The preliminary check does NOT launch programs and does NOT open the card (R1, RX-H264-001): here
+// what is on disk is read (the VA drivers, the Vulkan drivers). The REAL test — an encoded
+// frame — is done by REMOTIX's binary in 7a, after installation, and it is the one that counts.
 
-// StradaCodifica: un modo di far codificare H.264 alla scheda.
+// StradaCodifica: a way of having the card encode H.264.
 type StradaCodifica struct {
 	Nome string
-	// Attiva: REMOTIX la usa già. Una strada dichiarata e non attiva rileva, ma non salva nessuna
-	// macchina dal rifiuto
+	// Attiva: REMOTIX already uses it. A route that is declared and not active detects, but saves no
+	// machine from refusal
 	Attiva bool
-	// Rileva: in PREFLIGHT, in sola lettura (R1): scrive i fatti della strada nel profilo
+	// Rileva: in PREFLIGHT, read-only (R1): writes the route's facts into the profile
 	Rileva func(a *Ambiente, p *Profilo, fam string)
-	// Schede: i fornitori delle schede di QUESTA macchina che la strada sa far codificare su questa
-	// piattaforma (pl nil: il catalogo non c'è ancora, si giudica dal solo profilo). Una scheda il cui
-	// driver arriva da un deposito di terzi conta: il «no» al deposito lo ferma D5 (RX-H264-006).
-	// Una scheda che c'è ma non si sa di che fornitore conta come «?»: la prova vera è in 7a
+	// Schede: the vendors of THIS machine's cards that the route can make encode on this
+	// platform (pl nil: there is no catalogue yet, judged from the profile alone). A card whose
+	// driver comes from a third-party repository counts: the «no» to the repository is stopped by D5 (RX-H264-006).
+	// A card that is there but of unknown vendor counts as «?»: the real test is in 7a
 	Schede func(pl *Piattaforma, p *Profilo) []string
 }
 
-// StradeCodifica: nell'ordine di preferenza di §10.27.
+// StradeCodifica: in the order of preference of §10.27.
 var StradeCodifica = []StradaCodifica{
 	{Nome: "vulkan", Attiva: true, Rileva: rilevaVulkan, Schede: schedeVulkan},
 	{Nome: "vaapi", Attiva: true, Rileva: h264, Schede: schedeVaapi},
 }
 
-// codifica: le strade in PREFLIGHT, poi il verdetto col solo profilo (il catalogo lo rifà in Valuta,
-// dove sa anche quali driver la distribuzione può dare).
+// codifica: the routes in PREFLIGHT, then the verdict from the profile alone (the catalogue redoes it in Valuta,
+// where it also knows which drivers the distribution can provide).
 func codifica(a *Ambiente, p *Profilo, fam string) {
 	var attive []string
 	for _, s := range StradeCodifica {
@@ -55,18 +55,18 @@ func codifica(a *Ambiente, p *Profilo, fam string) {
 			attive = append(attive, s.Nome)
 		}
 	}
-	p.Rilevato("encoding.routes", strings.Join(attive, ","), "strade.go (fase 19)")
+	p.Rilevato("encoding.routes", strings.Join(attive, ","), "strade.go (phase 19)")
 	if cod, det := VerdettoScheda(nil, p); cod != "" {
 		p.Con(cod, det)
 	}
 }
 
-// rilevaVulkan: la sonda della strada Vulkan Video, in sola lettura: i driver Vulkan installati sono i
-// file ICD del loader (/usr/share/vulkan/icd.d, /etc/vulkan/icd.d), e il nome del file dice il driver
-// — `radeon_icd.x86_64.json` (RADV, AMD), `nvidia_icd.json` (il driver proprietario),
-// `intel_icd.x86_64.json` (ANV), `lvp_icd` (llvmpipe: niente video), `virtio_icd`… Si scrive l'elenco
-// normalizzato (senza `_icd` e senza l'architettura) in codifica.vulkan.icd; «nessuno» se non c'è
-// nessun file: il loader non vedrebbe nessuna scheda, e la strada qui non c'è.
+// rilevaVulkan: the probe of the Vulkan Video route, read-only: the installed Vulkan drivers are the
+// loader's ICD files (/usr/share/vulkan/icd.d, /etc/vulkan/icd.d), and the file name tells the driver
+// — `radeon_icd.x86_64.json` (RADV, AMD), `nvidia_icd.json` (the proprietary driver),
+// `intel_icd.x86_64.json` (ANV), `lvp_icd` (llvmpipe: no video), `virtio_icd`… The normalised list
+// (without `_icd` and without the architecture) is written in codifica.vulkan.icd; «nessuno» if there is
+// no file: the loader would see no card, and the route is not here.
 func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
 	visti := map[string]bool{}
 	var icd []string
@@ -86,11 +86,11 @@ func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
 		valore = "none"
 	}
 	p.Rilevato("encoding.vulkan.icd", valore, "/usr/share/vulkan/icd.d")
-	p.Metti(Fatto{Chiave: "encoding.vulkan", Valore: "active", Stato: RILEVATO, Fonte: "strade.go (fase 19)",
+	p.Metti(Fatto{Chiave: "encoding.vulkan", Valore: "active", Stato: RILEVATO, Fonte: "strade.go (phase 19)",
 		Nota: "Vulkan Video, tried BEFORE VA-API by the product; the real test is in 7a (remotix --prova-codifica, field «strada»)"})
 }
 
-// nomeICD: «radeon_icd.x86_64.json» → «radeon», «nvidia_icd.json» → «nvidia»; "" se non è un ICD.
+// nomeICD: «radeon_icd.x86_64.json» → «radeon», «nvidia_icd.json» → «nvidia»; "" if it is not an ICD.
 func nomeICD(file string) string {
 	n := strings.TrimSuffix(file, ".json")
 	i := strings.Index(n, "_icd")
@@ -100,16 +100,16 @@ func nomeICD(file string) string {
 	return n[:i]
 }
 
-// schedeVulkan: i fornitori delle schede di questa macchina che Vulkan Video sa far codificare: AMD con
-// l'ICD di RADV (`radeon`), NVIDIA col driver proprietario e il suo ICD (`nvidia`). ⛔ Intel NO: ANV
-// codifica solo dietro ANV_DEBUG=video-encode (sperimentale, §10.27) ⇒ resta a VA-API. Una scheda
-// senza il suo ICD non conta: il loader non la vedrebbe, e la prova di 7a direbbe «nessuno».
-// ⚠ Che l'ICD ci sia non vuol dire che codifichi: `[?]` la versione minima di Mesa con la codifica RADV
-// di serie non è misurata (`[M]` 25.0.7 sì); chi lo dice è 7a.
-// ⭐ Col catalogo (pl), per AMD serve anche la piattaforma: l'ICD `radeon` conta solo dove la RADV
-// ufficiale codifica (VulkanCodifica); dove Mesa è costruita senza codec (Fedora, RHEL, openSUSE:
-// `all_free`) non basta, e la scheda AMD la giudica la strada VA-API. Senza l'ICD la scheda AMD non
-// conta: il motore non installa il driver (DECISIONI §10.36), lo dice VerdettoScheda.
+// schedeVulkan: the vendors of this machine's cards that Vulkan Video can make encode: AMD with
+// RADV's ICD (`radeon`), NVIDIA with the proprietary driver and its ICD (`nvidia`). ⛔ Intel NO: ANV
+// encodes only behind ANV_DEBUG=video-encode (experimental, §10.27) ⇒ it stays on VA-API. A card
+// without its ICD does not count: the loader would not see it, and the 7a test would say «nessuno».
+// ⚠ That the ICD is there does not mean it encodes: `[?]` the minimum Mesa version with RADV encoding
+// by default is not measured (`[M]` 25.0.7 yes); 7a is what tells.
+// ⭐ With the catalogue (pl), for AMD the platform is needed too: the `radeon` ICD counts only where the official
+// RADV encodes (VulkanCodifica); where Mesa is built without codecs (Fedora, RHEL, openSUSE:
+// `all_free`) it is not enough, and the AMD card is judged by the VA-API route. Without the ICD the AMD card does not
+// count: the engine does not install the driver (DECISIONI §10.36), VerdettoScheda says so.
 func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	if p.V("gpu.nodes") == "none" {
 		return nil
@@ -136,9 +136,9 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	return r
 }
 
-// SchedaSullaStrada: la strada `nome` (attiva) sa far codificare una scheda del fornitore `f` su
-// questa macchina. Serve a chi deve dire se una scheda resta FUORI (la condizione C-HARDWARE della
-// NVIDIA): con Vulkan la NVIDIA proprietaria col suo ICD non è più fuori.
+// SchedaSullaStrada: the route `nome` (active) can make a card of vendor `f` encode on
+// this machine. It serves whoever must say whether a card stays OUT (the NVIDIA's condition
+// C-HARDWARE): with Vulkan the proprietary NVIDIA with its ICD is no longer out.
 func SchedaSullaStrada(nome, f string, pl *Piattaforma, p *Profilo) bool {
 	for _, s := range StradeCodifica {
 		if s.Nome != nome || !s.Attiva {
@@ -153,7 +153,7 @@ func SchedaSullaStrada(nome, f string, pl *Piattaforma, p *Profilo) bool {
 	return false
 }
 
-// schedeVaapi: le schede Intel e AMD che codificano H.264 via VA-API su questa piattaforma.
+// schedeVaapi: the Intel and AMD cards that encode H.264 via VA-API on this platform.
 func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 	if p.V("gpu.nodes") == "none" {
 		return nil
@@ -177,9 +177,9 @@ func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 	return r
 }
 
-// VerdettoScheda: il controllo della scheda (fase 19). "" se almeno una strada ATTIVA ha una scheda
-// capace (o se non si sa: i nodi non letti non sono un rifiuto); altrimenti il codice BLOCCANTE e il
-// dettaglio, dal caso più preciso al più generale.
+// VerdettoScheda: the card check (phase 19). "" if at least one ACTIVE route has a capable
+// card (or if it is not known: unread nodes are not a refusal); otherwise the BLOCKING code and the
+// detail, from the most precise case to the most general.
 func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 	nodi := p.V("gpu.nodes")
 	if nodi == "" {
@@ -200,13 +200,13 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 	case nodi == "none":
 		return "RX-GPU-003", ""
 	case p.V("gpu.nvidia_proprietary") == "yes":
-		// la NVIDIA proprietaria codifica SOLO in Vulkan: se si è qui, il suo ICD non c'è
+		// the proprietary NVIDIA encodes ONLY in Vulkan: if we are here, its ICD is not there
 		return "RX-GPU-004", strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("encoding.vulkan.icd"), "none")
 	case forn["Intel"] || forn["AMD"]:
-		// c'è una scheda della strada VA-API, ma su questa piattaforma non codifica e nessun driver
-		// del catalogo la completa (AMD su RHEL e derivate; un driver senza H.264 e niente da aggiungere)
-		// — e in Vulkan non c'è (AMD senza l'ICD di RADV, o con la RADV senza codec della
-		// distribuzione; Intel non c'è di serie)
+		// there is a card of the VA-API route, but on this platform it does not encode and no driver
+		// of the catalogue completes it (AMD on RHEL and derivatives; a driver without H.264 and nothing to add)
+		// — and it is not in Vulkan (AMD without RADV's ICD, or with the distribution's codec-less
+		// RADV; Intel is not there by default)
 		var d []string
 		if pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
 			d = append(d, "AMD on "+pl.Nome+": Mesa built without VA-API")

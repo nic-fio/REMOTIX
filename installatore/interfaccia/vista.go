@@ -9,10 +9,10 @@ import (
 	"remotix/installatore/motore"
 )
 
-// La VISTA: gli oggetti del motore in parole comuni, per le cinque schermate e le varianti
-// (fasi/17 §10). La TUI disegna questi valori e nient'altro.
+// The VIEW: the engine's objects in plain words, for the five screens and the variants
+// (fasi/17 §10). The TUI draws these values and nothing else.
 
-// Stato di una riga: il colore del cartellino.
+// Stato of a line: the colour of the label.
 type Stato int
 
 const (
@@ -22,23 +22,23 @@ const (
 	DOPO
 	MALE
 	IGNOTO
-	AVVISO // non ferma: lo si dice (il firewall acceso, la porta occupata)
-	MANCA  // ferma: REMOTIX non lo mette, lo dice (§10.36)
+	AVVISO // does not stop: it is stated (the running firewall, the port in use)
+	MANCA  // stops: REMOTIX does not provide it, it says so (§10.36)
 )
 
-// Cartellino: il testo del cartellino di uno stato, nella colonna di destra del controllo.
+// Cartellino: the label text of a state, in the right-hand column of the check.
 func (s Stato) Cartellino() string {
 	return [...]string{T("s.ok"), T("s.consenso"), T("s.sistemo"), T("s.dopo"), T("s.male"), T("s.nonsi"),
 		T("s.avviso"), T("s.manca")}[s]
 }
 
-// Riga: una riga del controllo o delle prove.
+// Riga: a line of the check or of the tests.
 type Riga struct {
 	Etichetta, Testo string
 	Stato            Stato
 }
 
-// Esito del controllo.
+// Esito of the check.
 type EsitoControllo int
 
 const (
@@ -47,46 +47,46 @@ const (
 	BLOCCATA
 )
 
-// VistaControllo: la schermata 1. Con Esito == BLOCCATA e Righe piene è «manca qualcosa»: le righe
-// col cartellino MANCA, e i codici; con Righe vuote è una fine (Bloccata: distribuzione fuori…).
+// VistaControllo: screen 1. With Esito == BLOCCATA and Righe filled it is «something is missing»: the lines
+// with the MANCA label, and the codes; with Righe empty it is an ending (Bloccata: distribution out…).
 type VistaControllo struct {
 	Intestazione  string // «Fedora Linux 44 · Workstation · GNOME 50»
 	Esito         EsitoControllo
 	Banner, Sotto string
 	Righe         []Riga
-	Codici        []string // i codici RX di quel che manca
+	Codici        []string // the RX codes of what is missing
 	Dettagli      string
-	Bloccata      *VistaBloccata // se Esito == BLOCCATA
+	Bloccata      *VistaBloccata // if Esito == BLOCCATA
 }
 
-// VistaBloccata: una schermata che finisce (non supportata, fermata, annullata).
+// VistaBloccata: a screen that ends (not supported, stopped, cancelled).
 type VistaBloccata struct {
 	Titolo, Sotto   string
 	Perche, CheFare string
-	Serve           string // «Serve almeno Debian 13.»
+	Serve           string // «At least Debian 13 is needed.»
 	Codice          string
 	Dettagli        string
-	Toccata         bool // la macchina è stata toccata (annullata): il cerchio non è rosso ma ambra
+	Toccata         bool // the machine was touched (cancelled): the circle is not red but amber
 }
 
-// VistaScelte: la schermata 2 — la porta.
+// VistaScelte: screen 2 — the port.
 type VistaScelte struct {
 	Titolo, Sotto string
-	PortaRiga     string // la riga sotto la porta (verde se non c'è un firewall acceso)
+	PortaRiga     string // the line under the port (green if there is no running firewall)
 	PortaVerde    bool
 }
 
-// Passo: una riga del piano, con le azioni del motore che raccoglie.
+// Passo: a line of the plan, with the engine actions it gathers.
 type Passo struct {
 	Tipo                string // "packages" · "groups" · "service" · "other"
 	Titolo, Nota, Sotto string
-	Fatto               string // come lo dice il benvenuto
-	Rev                 Stato  // OK = si annulla del tutto · CONSENSO = in parte · MALE = non si annulla
+	Fatto               string // how the welcome says it
+	Rev                 Stato  // OK = fully undone · CONSENSO = partly · MALE = not undone
 	Azioni              []string
-	Breve               string // come lo dice l'avanzamento
+	Breve               string // how the progress says it
 }
 
-// Cartellino della reversibilità.
+// Cartellino of the reversibility.
 func (p Passo) Cartellino() string {
 	switch p.Rev {
 	case OK:
@@ -97,21 +97,21 @@ func (p Passo) Cartellino() string {
 	return T("rev.parte")
 }
 
-// VistaPiano: la schermata 3.
+// VistaPiano: screen 3.
 type VistaPiano struct {
 	Passi    []Passo
 	Dettagli string
-	// Pacchetti: che cosa farà il gestore (la sua simulazione), da mostrare prima del «sì»
+	// Pacchetti: what the manager will do (its simulation), to show before the «yes»
 	Pacchetti []motore.Artefatto
-	// Utenti e Gruppi: chi il motore iscrive ai gruppi della scheda, e a quali
+	// Utenti and Gruppi: whom the engine enrolls in the card's groups, and in which
 	Utenti, Gruppi []string
-	// Porta: quella del servizio, come la dice il piano
+	// Porta: the service's, as the plan says it
 	Porta string
-	// Dipendenze: per i pacchetti che il desktop chiede a REMOTIX, per quale desktop
+	// Dipendenze: for the packages the desktop requires of REMOTIX, for which desktop
 	Dipendenze map[string]string
 }
 
-// ---- 1 · il controllo ------------------------------------------------------------------------
+// ---- 1 · the check ---------------------------------------------------------------------------
 
 func nomeDistro(prof *motore.Profilo) string {
 	id := prof.V("distro.id")
@@ -141,7 +141,7 @@ func nomeDistro(prof *motore.Profilo) string {
 
 var nomiDesktop = map[string]string{"gnome": "GNOME", "kde": "KDE Plasma", "xfce": "XFCE", "lxqt": "LXQt"}
 
-// NomeDesktop: il nome da mostrare.
+// NomeDesktop: the name to display.
 func NomeDesktop(d string) string {
 	if n, ok := nomiDesktop[d]; ok {
 		return n
@@ -153,7 +153,7 @@ func installato(e motore.EsitoDesktop) bool {
 	return e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown"
 }
 
-// Intestazione: la riga in alto a destra.
+// Intestazione: the line at the top right.
 func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
 	if prof == nil {
 		return ""
@@ -171,7 +171,7 @@ func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
 		for _, e := range rap.Desktop {
 			if installato(e) {
 				v := e.Installato
-				if i := strings.Index(v, ":"); i > 0 { // l'epoca di Debian: «4:6.3.6-1»
+				if i := strings.Index(v, ":"); i > 0 { // Debian's epoch: «4:6.3.6-1»
 					v = v[i+1:]
 				}
 				if i := strings.Index(v, "."); i > 0 {
@@ -210,7 +210,7 @@ func haMessaggio(ms []motore.Messaggio, codice string) *motore.Messaggio {
 	return nil
 }
 
-// nomeScheda: la scheda in parole comuni (driver e bus stanno nei dettagli tecnici).
+// nomeScheda: the card in plain words (driver and bus are in the technical details).
 func nomeScheda(prof *motore.Profilo) string {
 	nodi := strings.Fields(prof.V("gpu.nodes"))
 	if len(nodi) == 0 {
@@ -230,7 +230,7 @@ func nomeScheda(prof *motore.Profilo) string {
 	return T("t.scheda.generica")
 }
 
-// Controllo: la schermata 1 dagli oggetti del motore.
+// Controllo: screen 1 from the engine's objects.
 func VistaDelControllo(c *Controllo) *VistaControllo {
 	v := &VistaControllo{}
 	if c.Errore != nil || c.Profilo == nil || c.Rapporto == nil {
@@ -248,15 +248,15 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	v.Intestazione = Intestazione(prof, rap)
 	distro := nomeDistro(prof)
 
-	// bloccata: nessun desktop possibile (la distribuzione fuori, troppo vecchia, esclusa)
+	// blocked: no possible desktop (the distribution out, too old, excluded)
 	possibili := 0
 	for _, e := range rap.Desktop {
 		if e.Livello != motore.NON_SUPPORTATA {
 			possibili++
 		}
 	}
-	// quel che manca (DECISIONI §10.36): REMOTIX non lo installa, lo dice; provvede l'amministratore.
-	// La scheda che non codifica (RX-GPU-*) lascia senza desktop possibili, ma è anche lei «manca».
+	// what is missing (DECISIONI §10.36): REMOTIX does not install it, it says so; the administrator provides it.
+	// The card that does not encode (RX-GPU-*) leaves no possible desktops, but it too is «missing».
 	mancano := append([]motore.Messaggio{}, rap.Mancano...)
 	if possibili == 0 {
 		g := motivoScheda(rap)
@@ -269,7 +269,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	}
 
 	var righe []Riga
-	// sistema
+	// system
 	piatt := strings.TrimSpace(distro + " " + prof.V("distro.version"))
 	if strings.HasPrefix(rap.Riconosciuta, strings.SplitN(motore.T("comp.nella_matrice", ""), " (", 2)[0]) {
 		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.ok", piatt), OK})
@@ -287,7 +287,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	if len(ds) > 0 {
 		righe = append(righe, Riga{T("r.desktop"), T("t.desktop.ok", strings.Join(ds, ", ")), OK})
 	}
-	// scheda
+	// card
 	switch {
 	case prof.V("gpu.nvidia_proprietary") == "yes":
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.nvidia"), DOPO})
@@ -296,9 +296,9 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	default:
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.ok", nomeScheda(prof)), OK})
 	}
-	// video: la prova vera è dopo l'installazione (7a)
+	// video: the real test is after installation (7a)
 	righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
-	// accesso
+	// sign-in
 	if m := haMessaggio(prof.Messaggi, "RX-PAM-001"); m != nil {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.male"), MALE})
 	} else {
@@ -307,7 +307,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	if n := len(dom.Persone); n > 0 {
 		righe = append(righe, Riga{T("r.persone"), T("t.persone", n), OK})
 	}
-	// protezione
+	// protection
 	switch {
 	case prof.V("selinux") == "enforcing" || prof.V("selinux") == "permissive":
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.selinux"), OK})
@@ -316,14 +316,14 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	default:
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.no"), OK})
 	}
-	// firewall: aprirlo è dell'amministratore (§10.36)
+	// firewall: opening it is the administrator's job (§10.36)
 	if dom.Firewall == "none" {
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.nessuno"), OK})
 	} else {
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.admin", dom.Firewall, dom.Porta), AVVISO})
 		condizioni = append(condizioni, T("c.cond.firewall", dom.Porta))
 	}
-	// porta
+	// port
 	p := dom.Porta
 	if prof.V(fmt.Sprintf("port.%d.tcp_free", p)) == "no" || prof.V(fmt.Sprintf("port.%d.udp_free", p)) == "no" {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.occupata", p), AVVISO})
@@ -331,7 +331,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	} else {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.libera", p), OK})
 	}
-	// permessi
+	// permissions
 	switch n := len(dom.SenzaScheda); {
 	case n == 0:
 		righe = append(righe, Riga{T("r.permessi"), T("t.permessi.ok"), OK})
@@ -366,8 +366,8 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	return v
 }
 
-// motivoScheda: il motivo RX-GPU-* che lascia senza desktop possibili (la distribuzione va, manca la
-// scheda o il driver che codifica).
+// motivoScheda: the RX-GPU-* reason that leaves no possible desktops (the distribution works, the
+// card or the driver that encodes is missing).
 func motivoScheda(rap *motore.Rapporto) *motore.Messaggio {
 	for _, e := range rap.Desktop {
 		for i := range e.Motivi {
@@ -384,7 +384,7 @@ func motivoScheda(rap *motore.Rapporto) *motore.Messaggio {
 	return nil
 }
 
-// etichettaMancanza: in quale riga del controllo va quel che manca.
+// etichettaMancanza: in which line of the check what is missing goes.
 func etichettaMancanza(codice string) string {
 	switch {
 	case strings.HasPrefix(codice, "RX-GPU-"):
@@ -399,8 +399,8 @@ func etichettaMancanza(codice string) string {
 	return T("r.pacchetto")
 }
 
-// conMancanza: la riga di quel che manca prende il posto della riga con la stessa etichetta (la
-// scheda «OK» diventa «manca»), o si aggiunge dopo il desktop.
+// conMancanza: the line of what is missing takes the place of the line with the same label (the
+// «OK» card becomes «missing»), or is added after the desktop.
 func conMancanza(righe []Riga, m motore.Messaggio) []Riga {
 	et := etichettaMancanza(m.Codice)
 	t := T("m." + m.Codice)
@@ -413,7 +413,7 @@ func conMancanza(righe []Riga, m motore.Messaggio) []Riga {
 	r := Riga{et, t, MANCA}
 	for i := range righe {
 		if righe[i].Etichetta == et {
-			if righe[i].Stato == MANCA { // due mancanze nella stessa riga: una dopo l'altra
+			if righe[i].Stato == MANCA { // two missing items in the same line: one after the other
 				return append(righe[:i+1], append([]Riga{{"", t, MANCA}}, righe[i+1:]...)...)
 			}
 			righe[i] = r
@@ -491,7 +491,7 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 		}
 	}
 	if rap.Minima != "" {
-		// una versione esclusa di una distribuzione che REMOTIX sostiene in una versione più nuova
+		// an excluded version of a distribution that REMOTIX supports in a newer version
 		b.Titolo = T("b.titolo.versione", distro)
 		b.Perche = T("b.vecchia", strings.TrimSpace(distro+" "+prof.V("distro.version")))
 		b.Serve = T("b.serve", rap.Minima)
@@ -500,7 +500,7 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 		if motivo != nil {
 			b.Perche = motivo.Testo
 			if strings.HasPrefix(motivo.Codice, "RX-GPU-") {
-				// fase 19: la distribuzione va, manca la scheda che codifica il video
+				// phase 19: the distribution works, the card that encodes the video is missing
 				b.Titolo = T("b.titolo.scheda")
 			}
 		}
@@ -522,7 +522,7 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 	return b
 }
 
-// VistaMancano: la schermata «manca qualcosa» — che cosa, senza dire come metterlo (§10.36).
+// VistaMancano: the «something is missing» screen — what, without saying how to provide it (§10.36).
 func VistaMancano(m []motore.Messaggio) *VistaBloccata {
 	b := &VistaBloccata{Titolo: T("b.titolo.manca"), Sotto: T("b.sotto.intatta"), CheFare: T("b.manca.chefare")}
 	var r, cod []string
@@ -535,10 +535,10 @@ func VistaMancano(m []motore.Messaggio) *VistaBloccata {
 	return b
 }
 
-// ---- 2 · le scelte ---------------------------------------------------------------------------
+// ---- 2 · the choices -------------------------------------------------------------------------
 
-// VistaDelleScelte: la schermata 2 — una domanda sola, la porta (§10.36: niente archivi, firewall o
-// desktop da scegliere).
+// VistaDelleScelte: screen 2 — a single question, the port (§10.36: no repositories, firewalls or
+// desktops to choose).
 func VistaDelleScelte(c *Controllo) *VistaScelte {
 	dom := c.Domande
 	v := &VistaScelte{Titolo: T("sc.titolo.1"), Sotto: T("sc.sotto")}
@@ -558,13 +558,13 @@ func numero(n int) string {
 	return en[n]
 }
 
-// PortaValida: il numero scritto nella casella.
+// PortaValida: the number written in the box.
 func PortaValida(s string) (int, bool) {
 	p, err := strconv.Atoi(strings.TrimSpace(s))
 	return p, err == nil && p >= 1 && p <= 65535
 }
 
-// ---- 3 · il piano ----------------------------------------------------------------------------
+// ---- 3 · the plan ----------------------------------------------------------------------------
 
 func peggiore(a Stato, r motore.Reversibilita) Stato {
 	var b Stato
@@ -592,8 +592,8 @@ func elenco(nomi []string) string {
 	return strings.Join(nomi[:len(nomi)-1], ", ") + T("a.e") + nomi[len(nomi)-1]
 }
 
-// VistaDelPiano: le azioni del piano raccolte in passi detti in parole comuni. L'ordine è quello
-// del piano (il primo passo di ogni gruppo decide dove sta il gruppo).
+// VistaDelPiano: the plan's actions gathered in steps told in plain words. The order is the
+// plan's (the first step of each group decides where the group goes).
 func VistaDelPiano(p *motore.Piano) *VistaPiano {
 	v := &VistaPiano{}
 	gruppo := map[string]int{}
@@ -652,7 +652,7 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 		v.Passi[i].Breve = T("a.gruppi.b", chi, strings.Join(v.Gruppi, ", "))
 	}
 	v.Utenti, v.Porta = utentiGruppi, porta
-	// i dettagli: ogni azione del motore col suo tipo, il suo annullamento e l'impronta
+	// the details: every engine action with its type, its undo and the fingerprint
 	var d []string
 	for _, a := range p.Azioni {
 		d = append(d, a.ID+" ("+a.Tipo+", "+string(a.Reversibilita)+")")
@@ -677,9 +677,9 @@ func short(s string) string {
 	return s
 }
 
-// ---- 4 · l'avanzamento -----------------------------------------------------------------------
+// ---- 4 · the progress ------------------------------------------------------------------------
 
-// StatoRiga dell'avanzamento.
+// StatoRiga of the progress.
 type StatoRiga int
 
 const (
@@ -690,24 +690,24 @@ const (
 	ANNULLATA
 )
 
-// RigaAv: una riga dell'avanzamento.
+// RigaAv: a line of the progress.
 type RigaAv struct {
 	Testo string
 	Stato StatoRiga
 }
 
-// Avanzamento: lo stato della schermata 4, aggiornato dagli eventi del motore (§6.6.1).
+// Avanzamento: the state of screen 4, updated by the engine's events (§6.6.1).
 type Avanzamento struct {
 	Righe    []RigaAv
 	passi    []Passo
-	azione   map[string]int // id azione → indice del passo
+	azione   map[string]int // action id → step index
 	fatte    map[string]bool
 	Stato    motore.Stato
 	Registro []string
-	Annulla  bool // si sta annullando
+	Annulla  bool // undoing in progress
 }
 
-// NuovoAvanzamento: le righe dai passi del piano, più la fiducia, il piano e la verifica.
+// NuovoAvanzamento: the lines from the plan's steps, plus the trust, the plan and the verification.
 func NuovoAvanzamento(vp *VistaPiano) *Avanzamento {
 	a := &Avanzamento{passi: vp.Passi, azione: map[string]int{}, fatte: map[string]bool{}}
 	a.Righe = append(a.Righe, RigaAv{Testo: T("av.fiducia")}, RigaAv{Testo: T("av.piano")})
@@ -721,7 +721,7 @@ func NuovoAvanzamento(vp *VistaPiano) *Avanzamento {
 	return a
 }
 
-// Evento: un evento del motore.
+// Evento: an engine event.
 func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 	riga := ev.Evento
 	switch ev.Evento {
@@ -784,14 +784,14 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 			}
 			if tutte {
 				r.Stato = FATTA
-				// il passo dopo comincia adesso (la sua INTENZIONE arriva a scaricamento finito)
+				// the next step starts now (its INTENTION arrives when downloading is over)
 				if n := i + 3; n < len(a.Righe)-1 && a.Righe[n].Stato == ATTESA && !a.Annulla {
 					a.Righe[n].Stato = INCORSO
 				}
 			}
 		case "FAILED":
 			r.Stato = FALLITA
-		default: // ANNULLATA, e le fasi del ritorno indietro
+		default: // ANNULLATA, and the rollback phases
 			if a.Annulla {
 				r.Stato = ANNULLATA
 			}
@@ -814,7 +814,7 @@ func tronca(s string, n int) string {
 	return string(r[:n-1]) + "…"
 }
 
-// Punto: il passo in corso («Passo 4 di 7 · installo REMOTIX») e la percentuale.
+// Punto: the step in progress («Step 4 of 7 · installing REMOTIX») and the percentage.
 func (a *Avanzamento) Punto() (string, int) {
 	tot := len(a.Righe)
 	fatte := 0
@@ -844,23 +844,23 @@ func (a *Avanzamento) Punto() (string, int) {
 	return T("av.passo", cur-1, n, t), pc
 }
 
-// ---- 5 · pronto, e gli altri finali ----------------------------------------------------------
+// ---- 5 · ready, and the other endings --------------------------------------------------------
 
-// VistaPronto: la schermata 5.
+// VistaPronto: screen 5.
 type VistaPronto struct {
 	Sotto      string
-	Router     string // D6: la porta da inoltrare sul router, TCP e UDP
+	Router     string // D6: the port to forward on the router, TCP and UDP
 	Indirizzo  string
 	Impronta   string
 	Cambiato   []string
 	Prove      []Riga
 	Dettagli   string
 	Condizioni []string
-	// DaFare: quel che resta all'amministratore (la porta che il firewall chiude, o che non si sa)
+	// DaFare: what is left to the administrator (the port the firewall closes, or that is unknown)
 	DaFare []string
 }
 
-// VistaDelPronto: dal certificato, dal piano (i passi fatti) e dall'esito.
+// VistaDelPronto: from the certificate, from the plan (the steps done) and from the outcome.
 func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 	v := &VistaPronto{Sotto: T("pr.sotto")}
 	ind := "[indirizzo]"
@@ -934,7 +934,7 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 			v.Prove = append(v.Prove, Riga{T("pr.k.passi", passiOK, passi), t, s})
 		}
 		for _, k := range c.Condizioni {
-			if k.Codice == "C-AMMINISTRATORE" { // la porta: sta in DaFare, detta per intero
+			if k.Codice == "C-AMMINISTRATORE" { // the port: it goes in DaFare, stated in full
 				continue
 			}
 			v.Condizioni = append(v.Condizioni, CondizioneComune(k.Codice))
@@ -952,8 +952,8 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 	return v
 }
 
-// CondizioneComune: una condizione del certificato in parole comuni (il testo del motore, tecnico,
-// sta nei dettagli).
+// CondizioneComune: a condition of the certificate in plain words (the engine's text, technical,
+// is in the details).
 func CondizioneComune(codice string) string {
 	if _, ok := testi["cond."+codice]; ok {
 		return T("cond." + codice)
@@ -961,14 +961,14 @@ func CondizioneComune(codice string) string {
 	return T("cond.altra")
 }
 
-// VistaDellaFine: i finali che non sono «pronto» (BLOCCATA, RIFIUTATA, ANNULLATA…).
+// VistaDellaFine: the endings that are not «ready» (BLOCCATA, RIFIUTATA, ANNULLATA…).
 func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 	b := &VistaBloccata{}
 	var m *motore.Messaggio
 	if es.Errore != nil {
 		m = es.Errore
 	}
-	// il messaggio più grave fra quelli visti nel registro, se l'esito non ne ha
+	// the most serious message among those seen in the log, if the outcome has none
 	switch es.Stato {
 	case motore.ANNULLATA:
 		b.Titolo, b.Sotto, b.Toccata = T("b.titolo.annullata"), T("b.sotto.annullata"), true
@@ -997,8 +997,8 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 	return b
 }
 
-// BloccoNelPiano: quel che manca, già nel piano (la simulazione del gestore che non risolve, per
-// esempio), da dire subito invece di chiedere la conferma di un piano che il motore rifiuterà.
+// BloccoNelPiano: what is missing, already in the plan (the manager's simulation that does not resolve, for
+// example), to state at once instead of asking to confirm a plan the engine will refuse.
 func BloccoNelPiano(p *motore.Piano) *motore.Messaggio {
 	for i := range p.NonFatto {
 		if p.NonFatto[i].Gravita == motore.BLOCCANTE {
@@ -1008,7 +1008,7 @@ func BloccoNelPiano(p *motore.Piano) *motore.Messaggio {
 	return nil
 }
 
-// UltimoMessaggio: il messaggio BLOCCANTE più recente fra gli eventi (per dire il perché).
+// UltimoMessaggio: the most recent BLOCKING message among the events (to say why).
 func UltimoMessaggio(evs []motore.EventoPubblico) *motore.Messaggio {
 	for i := len(evs) - 1; i >= 0; i-- {
 		if m := evs[i].Messaggio; m != nil && m.Gravita == motore.BLOCCANTE {
@@ -1018,7 +1018,7 @@ func UltimoMessaggio(evs []motore.EventoPubblico) *motore.Messaggio {
 	return nil
 }
 
-// Ordinate: le chiavi di una mappa, in ordine (per scrivere le voci sempre uguali).
+// Ordinate: the keys of a map, in order (to always write the entries the same way).
 func Ordinate(m map[string]string) []string {
 	var k []string
 	for x := range m {

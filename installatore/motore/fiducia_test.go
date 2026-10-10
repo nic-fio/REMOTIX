@@ -11,16 +11,16 @@ import (
 	"remotix/installatore/catalogo"
 )
 
-// La fase 0 TRUST dopo D11 semplificata (DECISIONI §10.21): il catalogo è quello del motore, e il
-// motore l'ha consegnato il .run (lo sha256) o il pacchetto remotix-install che il .run ha installato. Il motore non verifica firme sue: le prove guardano che il catalogo si legga, che questo
-// motore lo capisca, e che fiducia.json dica da dove viene.
+// Phase 0 TRUST after simplified D11 (DECISIONI §10.21): the catalogue is the engine's, and the
+// engine was delivered by the .run (the sha256) or by the remotix-install package the .run installed. The engine verifies no signatures of its own: the tests check that the catalogue can be read, that this
+// engine understands it, and that fiducia.json says where it comes from.
 
-// fontiProva: il catalogo incorporato, un motore «scaricato».
+// fontiProva: the embedded catalogue, a «downloaded» engine.
 func fontiProva(t testing.TB) *FontiFiducia {
 	return &FontiFiducia{Incorporato: catalogo.Incorporato, Motore: "/non/esiste/motore"}
 }
 
-// un catalogo con sequenza e motore minimo cambiati (il testo resta un catalogo valido)
+// a catalogue with sequence and minimum engine changed (the text stays a valid catalogue)
 func catalogoCon(t testing.TB, seq, minimo string) []byte {
 	s := string(catalogo.Incorporato)
 	c, err := LeggiCatalogo(catalogo.Incorporato)
@@ -38,29 +38,29 @@ var oggi = time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
 
 func codice(err error) string { return CodiceDi(err) }
 
-// Il catalogo del motore si legge e questo motore lo capisce; la chiave dell'archivio (l'unica,
-// quella che il gestore di pacchetti usa) è dentro il motore.
+// The engine's catalogue can be read and this engine understands it; the repository key (the only one,
+// the one the package manager uses) is inside the engine.
 func TestCatalogoIncorporato(t *testing.T) {
 	cat, fid, err := fontiProva(t).Fidati(oggi)
 	if err != nil {
-		t.Fatalf("il catalogo incorporato non si legge: %v", err)
+		t.Fatalf("the embedded catalogue cannot be read: %v", err)
 	}
 	if cat.Digest == "" || fid.Catalogo.Digest != cat.Digest || fid.Sequenza != cat.Sequenza {
 		t.Errorf("fiducia: %+v", fid)
 	}
 	if !strings.Contains(fid.Fonte, "/non/esiste/motore") || !strings.Contains(fid.Fonte, "sha256") {
-		t.Errorf("il motore scaricato deve dire che lo garantisce lo sha256: %q", fid.Fonte)
+		t.Errorf("the downloaded engine must say that the sha256 guarantees it: %q", fid.Fonte)
 	}
-	// il motore del pacchetto remotix-install installato
+	// the engine of the installed remotix-install package
 	f := fontiProva(t)
 	f.Motore = MotoreDelPacchetto
 	if _, fid, err := f.Fidati(oggi); err != nil || !strings.Contains(fid.Fonte, "remotix-install") {
-		t.Errorf("motore del pacchetto: %v %q", err, fid.Fonte)
+		t.Errorf("package's engine: %v %q", err, fid.Fonte)
 	}
 }
 
-// Il catalogo dato a mano sostituisce quello del motore, e il certificato lo dice; uno illeggibile,
-// o che chiede un motore più nuovo, BLOCCA col suo codice.
+// The catalogue given by hand replaces the engine's, and the certificate says so; an unreadable one,
+// or one asking for a newer engine, is BLOCKED with its code.
 func TestFiducia(t *testing.T) {
 	d := t.TempDir()
 	scrivi := func(nome string, b []byte) string {
@@ -74,7 +74,7 @@ func TestFiducia(t *testing.T) {
 	f.Esplicito = scrivi("a-mano.json", catalogoCon(t, "99", ""))
 	cat, fid, err := f.Fidati(oggi)
 	if err != nil || cat.Sequenza != 99 || !strings.Contains(fid.Fonte, "a-mano.json") {
-		t.Fatalf("a mano: %v %+v", err, fid)
+		t.Fatalf("by hand: %v %+v", err, fid)
 	}
 	prova := func(nome, atteso string, cambia func(f *FontiFiducia)) {
 		t.Helper()
@@ -82,28 +82,28 @@ func TestFiducia(t *testing.T) {
 		cambia(f)
 		_, fid, err := f.Fidati(oggi)
 		if codice(err) != atteso || len(fid.Messaggi) == 0 || fid.Messaggi[len(fid.Messaggi)-1].Codice != atteso {
-			t.Errorf("%s: %v (atteso %s)", nome, err, atteso)
+			t.Errorf("%s: %v (expected %s)", nome, err, atteso)
 		}
 	}
-	prova("a mano, manca", "RX-TRUST-004", func(f *FontiFiducia) { f.Esplicito = filepath.Join(d, "non-c-e.json") })
-	prova("a mano, illeggibile", "RX-TRUST-004", func(f *FontiFiducia) { f.Esplicito = scrivi("rotto.json", []byte("{")) })
-	prova("formato sconosciuto", "RX-TRUST-004", func(f *FontiFiducia) {
+	prova("by hand, missing", "RX-TRUST-004", func(f *FontiFiducia) { f.Esplicito = filepath.Join(d, "non-c-e.json") })
+	prova("by hand, unreadable", "RX-TRUST-004", func(f *FontiFiducia) { f.Esplicito = scrivi("rotto.json", []byte("{")) })
+	prova("unknown format", "RX-TRUST-004", func(f *FontiFiducia) {
 		f.Incorporato = []byte(strings.Replace(string(catalogo.Incorporato), "remotix-catalogo/1", "remotix-catalogo/9", 1))
 	})
-	prova("motore troppo vecchio", "RX-TRUST-003", func(f *FontiFiducia) { f.Incorporato = catalogoCon(t, "7", "99.0.0") })
+	prova("engine too old", "RX-TRUST-003", func(f *FontiFiducia) { f.Incorporato = catalogoCon(t, "7", "99.0.0") })
 }
 
-// L'operazione: una fiducia che non si verifica è BLOCCATA prima di toccare niente.
+// The operation: a trust that does not verify is BLOCKED before touching anything.
 func TestFiduciaBloccata(t *testing.T) {
 	b := nuovoBanco(t)
 	m := b.motore(t)
 	m.Fonti.Incorporato = catalogoCon(t, "7", "99.0.0")
 	if op, err := m.Applica(b.piano, false, "prova"); CodiceDi(err) != "RX-TRUST-003" || op.Stato != BLOCCATA {
-		t.Fatalf("motore troppo vecchio: %v %v", op.Stato, err)
+		t.Fatalf("engine too old: %v %v", op.Stato, err)
 	}
 }
 
-// Le versioni dei pacchetti, con gli algoritmi dei gestori.
+// Package versions, with the managers' algorithms.
 func TestVersioniPacchetti(t *testing.T) {
 	casi := []struct {
 		fam, a, b string
@@ -122,7 +122,7 @@ func TestVersioniPacchetti(t *testing.T) {
 	}
 	for _, c := range casi {
 		if r := ConfrontaPacchetti(c.fam, c.a, c.b); r != c.r {
-			t.Errorf("%s %s ⋚ %s = %d, atteso %d", c.fam, c.a, c.b, r, c.r)
+			t.Errorf("%s %s ⋚ %s = %d, expected %d", c.fam, c.a, c.b, r, c.r)
 		}
 	}
 }

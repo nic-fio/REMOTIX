@@ -1,91 +1,92 @@
 /*
- * aiutante.h — ⭐ IL PROCESSO CHE INTERROGA PAM AL POSTO DEL FILO UNICO.
+ * aiutante.h — ⭐ THE PROCESS THAT QUERIES PAM IN PLACE OF THE SINGLE THREAD.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' ESISTE, CON IL NUMERO ACCANTO
+ * ⛔ WHY IT EXISTS, WITH THE NUMBER NEXT TO IT
  *
- * `DECISIONI.md` §1.10, 11 agosto 2026, dall'utente.  Il server gira in un
- * ciclo `poll` solo (`main.c`) e la verifica PAM **blocca quel filo**: `[M]`
- * B8, sera dell'11 agosto, **da 1,0 a 2,2 secondi per tentativo** (mediane
- * 2123 · 2198 · 1086 ms) — e ⭐ **il ritardo lo mette PAM, non noi**: +1034 ms
- * oltre il secondo fisso sui respinti contro +84 ms sugli ammessi, che e' la
- * firma di `pam_faildelay`.
+ * `DECISIONI.md` §1.10, 11 Aug 2026, from the user.  The server runs in a single
+ * `poll` loop (`main.c`) and the PAM check **blocks that thread**: `[M]` B8,
+ * evening of 11 August, **from 1.0 to 2.2 seconds per attempt** (medians
+ * 2123 · 2198 · 1086 ms) — and ⭐ **the delay is added by PAM, not by us**:
+ * +1034 ms beyond the fixed second on the rejected against +84 ms on the
+ * admitted, which is the signature of `pam_faildelay`.
  *
- * ⛔ Fino alla fase 1 il sintomo era «l'ultimo dei dieci aspetta dieci
- *    secondi»: sgradevole e circoscritto.  ⛔ Dalla fase 2 in poi diventa
- *    **lo schermo di tutti quelli collegati che si pianta per uno o due
- *    secondi ogni volta che qualcun altro entra** — e chi lo vedra' dara' la
- *    colpa al video, perche' e' li' che si vede.  E' la forma «il sintomo non
- *    nomina la causa» di `LEZIONI.md` §1.6, e curarla adesso significa non
- *    farla nascere.
- *
- * ---------------------------------------------------------------------------
- * ⛔⭐ UN PROCESSO, NON UN FILO — ed e' la decisione dell'utente, non una
- *     preferenza di stile
- *
- * §1.10: *«con un processo aiutante, non con un filo: PAM non e' affidabilmente
- * rientrante, e un thread porterebbe guai suoi dentro la cura di un problema di
- * concorrenza»*.
- *
- * ⭐ E qui si va un passo oltre, perche' costa dieci righe: **ogni transazione
- *    PAM vive in un processo che ne fa UNA SOLA e poi muore**.  Da cui la
- *    forma a tre piani:
- *
- *      il server        non chiama mai PAM.  Scrive una richiesta su un socket
- *                       e torna al `poll` — che e' tutto il punto;
- *      lo smistatore    un figlio, acceso una volta all'avvio.  Non chiama mai
- *                       PAM nemmeno lui: legge una richiesta e forca;
- *      il nipote        chiama PAM UNA volta, scrive l'esito, esce.
- *
- * ⛔ La rientranza di PAM cosi' non e' «gestita»: **non e' in gioco**.  Nessun
- *    processo che tocca `libpam` la tocca due volte, e i moduli di PAM — che
- *    sono codice altrui, caricato a runtime, con dentro `getpwnam`, socket
- *    verso `nscd`, `dlopen` — non condividono niente con nessuno.
- *
- * ⭐ E il secondo guadagno, che il filo unico non aveva: **dieci che entrano
- *    insieme non fanno la fila**, perche' i nipoti sono dieci processi.
+ * ⛔ Up to phase 1 the symptom was «the last of ten waits ten seconds»:
+ *    unpleasant and contained.  ⛔ From phase 2 onwards it becomes **the
+ *    screen of everyone connected freezing for one or two seconds every time
+ *    someone else logs in** — and whoever sees it will blame the video,
+ *    because that is where it shows.  It is the «the symptom does not name the
+ *    cause» form of `LEZIONI.md` §1.6, and curing it now means not letting it
+ *    be born.
  *
  * ---------------------------------------------------------------------------
- * ⛔⭐ L'INVARIANTE I3, E COME SI FA IN MODO CHE IL FALLIMENTO SIA UN «NO»
+ * ⛔⭐ A PROCESS, NOT A THREAD — and it is the user's decision, not a
+ *     preference of style
  *
- * I3 (`CODER.md` §2): *la guardia parte da negato.  Chi non passa dal
- * validatore non riceve un pixel e non comanda nulla.*  ⛔ Un aiutante che
- * rispondesse «si'» per un messaggio smarrito, un tempo scaduto o un processo
- * morto sarebbe I3 violata, ed e' il difetto peggiore che questo lavoro possa
- * produrre.  Le sette strade per cui qualcosa puo' andare storto, e dove
- * ciascuna sbuca:
+ * §1.10: *«with a helper process, not with a thread: PAM is not reliably
+ * reentrant, and a thread would bring troubles of its own into the cure of a
+ * concurrency problem»*.
  *
- *   1. l'aiutante non si e' acceso        `aiutante_chiedi` -> false -> NO
- *   2. il socket e' pieno / EAGAIN         `aiutante_chiedi` -> false -> NO
- *   3. troppe pratiche in volo (> 16)      `aiutante_chiedi` -> false -> NO
- *   4. lo smistatore e' morto (EOF)        tutte le pratiche in volo -> NO
- *   5. il nipote e' morto senza rispondere la pratica scade         -> NO
- *   6. la risposta e' corta o storpiata    si scarta                -> poi (5)
- *   7. la risposta porta un byte che non e' esattamente 1 -> NO
+ * ⭐ And here we go one step further, because it costs ten lines: **every PAM
+ *    transaction lives in a process that does ONE ONLY and then dies**.  Hence
+ *    the three-storey shape:
  *
- * ⛔ **Non c'e' nessuna strada che porti a `true` senza un `PAM_SUCCESS` su
- *    tutt'e due i passi di `rcp_autentica()`**: il `true` nasce in un solo
- *    punto del programma, ed e' il byte `1` scritto dal nipote dopo aver
- *    ricevuto quel `PAM_SUCCESS`.  Ogni altra combinazione di byte, ogni
- *    lunghezza diversa e ogni silenzio sono un «no».
+ *      the server       never calls PAM.  It writes a request on a socket
+ *                       and goes back to the `poll` — which is the whole point;
+ *      the dispatcher   a child, started once at boot.  It never calls PAM
+ *                       either: it reads a request and forks;
+ *      the grandchild   calls PAM ONCE, writes the outcome, exits.
  *
- * ⚠ E il SOCKET E' `SOCK_SEQPACKET`, non `SOCK_STREAM`: con i messaggi
- *   delimitati dal nucleo una richiesta non puo' arrivare a meta', e una
- *   risposta non puo' fondersi con quella di un altro nipote.  ⛔ Con uno
- *   stream sarebbe stato necessario un inquadramento nostro — cioe' un pezzo
- *   di codice in cui un difetto produce «la risposta di un altro», che e' I3
- *   violata da un errore di parsing.
+ * ⛔ PAM's reentrancy is thus not «handled»: **it is not in play**.  No
+ *    process that touches `libpam` touches it twice, and the PAM modules —
+ *    which are someone else's code, loaded at runtime, with `getpwnam`,
+ *    sockets to `nscd`, `dlopen` inside — share nothing with anyone.
+ *
+ * ⭐ And the second gain, which the single thread did not have: **ten logging
+ *    in together do not queue**, because the grandchildren are ten processes.
  *
  * ---------------------------------------------------------------------------
- * ⚠ E LA PAROLA D'ORDINE PASSA DI QUI
+ * ⛔⭐ INVARIANT I3, AND HOW TO MAKE SURE THAT FAILURE IS A «NO»
  *
- * `RCP.md` §4.4: «la parola d'ordine sta in chiaro nella memoria di chi la
- * riceve, va azzerata appena PAM ha risposto, e non deve comparire in nessun
- * registro».  ⛔ Questo modulo aggiunge **due copie** a quelle che R9.8 ha gia'
- * censito — il messaggio nel buffer del mittente e quello nel buffer del
- * destinatario — e le azzera tutt'e due appena servite.  Il socket e' una
- * coppia anonima creata da `socketpair()`: non ha un nome nel filesystem, non
- * ci si puo' collegare da fuori, e muore con i due processi.
+ * I3 (`CODER.md` §2): *the guard starts from denied.  Whoever does not pass the
+ * validator receives not one pixel and commands nothing.*  ⛔ A helper that
+ * answered «yes» for a lost message, an expired timeout or a dead process
+ * would be I3 violated, and it is the worst defect this work could produce.
+ * The seven roads by which something can go wrong, and where each one comes
+ * out:
+ *
+ *   1. the helper did not start            `aiutante_chiedi` -> false -> NO
+ *   2. the socket is full / EAGAIN         `aiutante_chiedi` -> false -> NO
+ *   3. too many requests in flight (> 16)  `aiutante_chiedi` -> false -> NO
+ *   4. the dispatcher is dead (EOF)        all requests in flight -> NO
+ *   5. the grandchild died without answering the request expires   -> NO
+ *   6. the answer is short or mangled      it is discarded         -> then (5)
+ *   7. the answer carries a byte that is not exactly 1 -> NO
+ *
+ * ⛔ **There is no road leading to `true` without a `PAM_SUCCESS` on both
+ *    steps of `rcp_autentica()`**: the `true` is born at a single point of the
+ *    program, and it is the byte `1` written by the grandchild after receiving
+ *    that `PAM_SUCCESS`.  Every other combination of bytes, every different
+ *    length and every silence is a «no».
+ *
+ * ⚠ And the SOCKET IS `SOCK_SEQPACKET`, not `SOCK_STREAM`: with the messages
+ *   delimited by the kernel a request cannot arrive halfway, and an answer
+ *   cannot merge with that of another grandchild.  ⛔ With a stream a framing
+ *   of our own would have been needed — that is, a piece of code in which a
+ *   defect produces «someone else's answer», which is I3 violated by a parsing
+ *   error.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ AND THE PASSWORD GOES THROUGH HERE
+ *
+ * `RCP.md` §4.4: «the password sits in clear in the memory of whoever receives
+ * it, must be zeroed as soon as PAM has answered, and must not appear in any
+ * log».  ⛔ This module adds **two copies** to those R9.8 has already
+ * catalogued — the message in the sender's buffer and the one in the
+ * receiver's buffer — and zeroes both as soon as they have served.  The socket
+ * is an anonymous pair created by `socketpair()`: it has no name in the
+ * filesystem, cannot be connected to from outside, and dies with the two
+ * processes.
  */
 #ifndef REMOTIX_AIUTANTE_H
 #define REMOTIX_AIUTANTE_H
@@ -95,58 +96,59 @@
 
 typedef struct aiutante aiutante;
 
-/* ⛔ Si accende PRESTO, e la ragione e' che il figlio eredita i descrittori:
- *    acceso dopo `trasporto_apri()` si porterebbe dietro il socket UDP e
- *    l'ascoltatore TCP, e la porta resterebbe occupata da lui anche dopo la
- *    morte del server.  ⚠ Restituisce NULL se non si e' potuto accendere, e
- *    chi chiama DEVE poter distinguere «acceso» da «non acceso»: senza
- *    aiutante ogni autenticazione e' un NO. */
+/* ⛔ It is started EARLY, and the reason is that the child inherits the
+ *    descriptors: started after `trasporto_apri()` it would carry along the
+ *    UDP socket and the TCP listener, and the port would stay held by it even
+ *    after the server's death.  ⚠ Returns NULL if it could not be started, and
+ *    the caller MUST be able to tell «started» from «not started»: without a
+ *    helper every authentication is a NO. */
 aiutante *aiutante_accendi(void);
 
-/* Chiude il socket e manda `SIGTERM` allo smistatore. */
+/* Closes the socket and sends `SIGTERM` to the dispatcher. */
 void aiutante_spegni(aiutante *a);
 
-/* Il descrittore da mettere nel `poll`, o -1 se l'aiutante e' spento/morto. */
+/* The descriptor to put in the `poll`, or -1 if the helper is off/dead. */
 int aiutante_descrittore(const aiutante *a);
 
-/* ⛔ Chiede la verifica e TORNA SUBITO.  `true` = la domanda e' partita e una
- * risposta arrivera' (o scadra'); `false` = **non e' partita**, e chi chiama
- * deve trattarlo come un «no» immediato.
- * `pratica` esce con il numero con cui la risposta si riconoscera'. */
+/* ⛔ Asks for the check and RETURNS AT ONCE.  `true` = the question has left
+ * and an answer will arrive (or expire); `false` = **it has not left**, and the
+ * caller must treat it as an immediate «no».
+ * `pratica` comes out with the number by which the answer will be recognised. */
 bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
                      const char *provenienza, uint64_t ora_ms,
                      uint64_t *pratica);
 
-/* ⛔⭐ E LA CONSEGNA PORTA ANCHE IL NOME DELL'UTENTE — 12 agosto 2026,
+/* ⛔⭐ AND THE DELIVERY ALSO CARRIES THE USER'S NAME — 12 Aug 2026,
  *     `DECISIONI.md` §1.10-bis.
  *
- *     Fino a oggi bastava la pratica: chi sapeva a quale sessione appartenesse
- *     era `rcp.c`, e il nome non serviva a nessuno.  ⛔ Adesso serve: quando la
- *     risposta e' «si'», il padre deve generare **il figlio di quell'utente**
- *     (`figlio.h`), e l'unico posto del programma che ha insieme la pratica e
- *     il nome e' questo — il nome e' arrivato in `aiutante_chiedi()`.
+ *     Until today the request number was enough: whoever knew which session
+ *     it belonged to was `rcp.c`, and the name was of no use to anyone.  ⛔ Now
+ *     it is needed: when the answer is «yes», the parent must spawn **that
+ *     user's child** (`figlio.h`), and the only place of the program that has
+ *     both the request number and the name is this one — the name arrived in
+ *     `aiutante_chiedi()`.
  *
- * ⚠ Il nome vive nella tabella delle pratiche in volo accanto alla scadenza:
- *   ⛔ **la parola d'ordine no**, e non e' un dettaglio — §4.4 vuole che sia
- *   azzerata appena PAM ha risposto, e qui non ne resta nemmeno una copia. */
-/* ⭐ FASE 17 T6: e l'INDIRIZZO del client (nudo, come `PAM_RHOST` di sshd;
- *    "" se non si sa), che al «si'» va alla sessione PAM del figlio. */
+ * ⚠ The name lives in the table of requests in flight next to the expiry:
+ *   ⛔ **the password does not**, and it is not a detail — §4.4 wants it
+ *   zeroed as soon as PAM has answered, and here not even one copy remains. */
+/* ⭐ PHASE 17 T6: and the client's ADDRESS (bare, like sshd's `PAM_RHOST`;
+ *    "" if unknown), which on «yes» goes to the child's PAM session. */
 typedef void (*AiutanteVerdetto)(void *ctx, uint64_t pratica, bool ammesso,
                                  const char *utente, const char *rhost);
 
-/* Legge le risposte pronte e le consegna una per una.  Da chiamare quando il
- * descrittore e' leggibile.
- * ⛔ Se lo smistatore e' morto, consegna un «no» per ogni pratica in volo:
- *    una pratica senza risposta e' un'attesa che nessuno chiude. */
+/* Reads the ready answers and delivers them one by one.  To be called when the
+ * descriptor is readable.
+ * ⛔ If the dispatcher is dead, it delivers a «no» for every request in flight:
+ *    a request without an answer is a wait nobody closes. */
 void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx);
 
-/* ⛔ Fa scadere le pratiche troppo vecchie, consegnando un «no».  E' la rete di
- * sicurezza del caso 5: un nipote ucciso a meta' non scrive niente, e senza
- * questa chiamata la sessione resterebbe in `attesa-verdetto` per sempre. */
+/* ⛔ Expires the requests that are too old, delivering a «no».  It is the
+ * safety net of case 5: a grandchild killed halfway writes nothing, and
+ * without this call the session would stay in `attesa-verdetto` forever. */
 void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
                       void *ctx);
 
-/* Quante pratiche sono in volo.  Per il registro. */
+/* How many requests are in flight.  For the log. */
 int aiutante_in_volo(const aiutante *a);
 
 #endif

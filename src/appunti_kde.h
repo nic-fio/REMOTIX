@@ -1,17 +1,17 @@
 /*
- * appunti_kde — gli appunti su KDE Plasma, dietro la stessa porta di
- * `appunti.h`.  Chi usa gli appunti non lo chiama: chiama `appunti_*()`, e
- * `appunti.c` passa qui quando il palco e' di KWin (`appunti_apri_kde()`).
+ * appunti_kde — the clipboard on KDE Plasma, behind the same door as
+ * `appunti.h`.  Clipboard users do not call it: they call `appunti_*()`, and
+ * `appunti.c` passes here when the stage is KWin's (`appunti_apri_kde()`).
  *
- * ⛔ RIPORTATO DA `fondamenta/remotix-c/src/appunti_wlr.c` di v1 (796 righe),
- *    verde l'8 agosto 2026 nei due versi con «àèìòù» (`STUDI.md` §kde): il
- *    protocollo Wayland `zwlr_data_control_manager_v1` (KWin 6.3.6 non ha
- *    `ext_data_control_v1`), che KWin **non** mette dietro il cancello del
- *    `.desktop` (`wayland_server.cpp:386`).
- * ⭐ La forma e' quella di `appunti.c` e NON quella di v1: SOLO TESTO
- *    (`DECISIONI.md` §5-ter.1), letto qui e consegnato gia' letto, lo stesso
- *    tetto (`APPUNTI_TETTO`), la stessa fila dei tipi, la stessa memoria
- *    dell'ultimo testo.
+ * ⛔ CARRIED OVER FROM v1's `fondamenta/remotix-c/src/appunti_wlr.c` (796 lines),
+ *    green on 8 August 2026 in both directions with «àèìòù» (`STUDI.md` §kde): the
+ *    Wayland protocol `zwlr_data_control_manager_v1` (KWin 6.3.6 does not have
+ *    `ext_data_control_v1`), which KWin does **not** put behind the
+ *    `.desktop` gate (`wayland_server.cpp:386`).
+ * ⭐ The shape is that of `appunti.c` and NOT that of v1: TEXT ONLY
+ *    (`DECISIONI.md` §5-ter.1), read here and handed over already read, the same
+ *    ceiling (`APPUNTI_TETTO`), the same row of types, the same memory
+ *    of the last text.
  */
 #ifndef REMOTIX_APPUNTI_KDE_H
 #define REMOTIX_APPUNTI_KDE_H
@@ -21,9 +21,9 @@
 typedef struct AppuntiKde AppuntiKde;
 
 AppuntiKde *appunti_kde_apri(GError **sbaglio);
-/* ⭐ FASE 13 — lo stesso protocollo su labwc (XFCE): `zwlr_data_control_manager_v1`
- *    e' di wlroots, e li' siamo in casa sua (`STUDI.md` §xfce §8).  Cambia solo
- *    il nome del compositore nelle righe di registro. */
+/* ⭐ PHASE 13 — the same protocol on labwc (XFCE): `zwlr_data_control_manager_v1`
+ *    belongs to wlroots, and there we are in its home (`STUDI.md` §xfce §8).  Only
+ *    the compositor's name in the log lines changes. */
 AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio);
 void appunti_kde_chiudi(AppuntiKde *appunti);
 void appunti_kde_ascolta(AppuntiKde *appunti, AppuntiSuTesto su_testo,

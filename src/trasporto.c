@@ -1,5 +1,5 @@
 /*
- * trasporto.c — vedi trasporto.h.
+ * trasporto.c — see trasporto.h.
  */
 #include "trasporto.h"
 
@@ -25,51 +25,53 @@
 #define SCIDLEN 18
 #define MAX_PACCHETTI_PER_GIRO 64
 
-/* ⛔ 30 s, imposto dal server (`RCP.md` §2.2): «e' l'orologio del silenzio:
- *    scaduto, il client e' staccato».  ⚠ E' l'orologio del TRASPORTO — quello
- *    di `SPECIFICHE.md` §5.3 — non un battito applicativo, che §2.2 vieta.
+/* ⛔ 30 s, imposed by the server (`RCP.md` §2.2): «it is the silence clock:
+ *    when it expires, the client is disconnected».  ⚠ It is the TRANSPORT
+ *    clock — the one of `SPECIFICHE.md` §5.3 — not an application heartbeat,
+ *    which §2.2 forbids.
  *
- * ⛔⛔⭐ E NON SCENDE A 10 s — 23 agosto 2026, e la domanda era dell'utente:
- *      *«se in 10 secondi non arrivano piu' pacchetti la connessione e'
- *      morta»*.  ⇒ La regola si fa, ma NON QUI.  Quattro ragioni, in ordine di
- *      gravita', e la prima da sola basterebbe:
+ * ⛔⛔⭐ AND IT DOES NOT GO DOWN TO 10 s — 23 Aug 2026, and the question was the
+ *      user's: *«if no more packets arrive in 10 seconds the connection is
+ *      dead»*.  ⇒ The rule is implemented, but NOT HERE.  Four reasons, in
+ *      order of severity, and the first alone would be enough:
  *
- *      1. ⛔ QUESTO NUMERO NON E' NOSTRO: E' NEGOZIATO.  `max_idle_timeout` e'
- *         un parametro di trasporto e RFC 9000 §10.1 dice che vale il MINIMO
- *         fra i due annunciati `[S]`.  ⇒ Mettendo 10 qui, il tempo di
- *         inattivita' scende a 10 s ANCHE PER IL CLIENT: sarebbe il browser a
- *         mollare NOI dopo 10 s di nostro silenzio.  ⚠ E il nostro silenzio
- *         esiste ed e' misurato — `[M]` 23 agosto, l'immagine ferma fino a
- *         **14,26 s** sotto `raffica-forte`: il prodotto si ucciderebbe da
- *         solo, in un caso in cui la linea magari regge ancora.
- *      2. ⛔ E' NORMATIVO: §2.2 e §5.3 dicono 30 s, e su quel numero poggia una
- *         decisione dell'utente — «chi tace e' staccato, chi arriva entra»
- *         (`DECISIONI.md` §4.4), col prezzo dichiarato «dal telefono si entra
- *         dopo trenta secondi».  A 10 s cambierebbe il PRODOTTO, non un tempo.
- *      3. ⚠ NON SAREBBE NEMMENO 10 s: ngtcp2 fa scadere a `max(idle, 3·PTO)`
- *         `[S]`, quindi il numero scritto e quello in vigore divergerebbero —
- *         la forma E1.
- *      4. ⚠ E i PING del trasporto di §4.6 escono ogni 10 s
- *         (`webtransport.c`): un tetto di 10 s e la sveglia che lo rinnova
- *         cadrebbero nello stesso istante, e chi vince e' il caso.
+ *      1. ⛔ THIS NUMBER IS NOT OURS: IT IS NEGOTIATED.  `max_idle_timeout` is
+ *         a transport parameter and RFC 9000 §10.1 says the MINIMUM of the two
+ *         announced applies `[S]`.  ⇒ Putting 10 here, the idle time goes down
+ *         to 10 s FOR THE CLIENT TOO: it would be the browser dropping US
+ *         after 10 s of our silence.  ⚠ And our silence exists and is measured
+ *         — `[M]` 23 August, the picture frozen up to **14.26 s** under
+ *         `raffica-forte`: the product would kill itself, in a case where the
+ *         line may well still hold.
+ *      2. ⛔ IT IS NORMATIVE: §2.2 and §5.3 say 30 s, and a decision of the
+ *         user rests on that number — «whoever is silent is disconnected,
+ *         whoever arrives gets in» (`DECISIONI.md` §4.4), with the declared
+ *         price «from the phone you get in after thirty seconds».  At 10 s the
+ *         PRODUCT would change, not a timeout.
+ *      3. ⚠ IT WOULD NOT EVEN BE 10 s: ngtcp2 expires at `max(idle, 3·PTO)`
+ *         `[S]`, so the written number and the one in force would diverge —
+ *         form E1.
+ *      4. ⚠ And the transport PINGs of §4.6 go out every 10 s
+ *         (`webtransport.c`): a 10 s ceiling and the alarm that renews it
+ *         would fall at the same instant, and chance would decide who wins.
  *
- * ⇒ DOVE VANNO I 10 s DELL'UTENTE: in `webtransport.c`, dentro
- *   `linea_morta_giudica()`, dove la grandezza e' *«quanti pacchetti NOSTRI
- *   sono usciti senza che ne tornasse uno»* e il tempo e' solo la finestra in
- *   cui si guarda.  ⭐ Li' e' UNILATERALE — stacca noi, non insegna al client a
- *   mollare — ⭐ dal 24 agosto 2026 e' ACCESA di suo (decisione dell'utente;
- *   si spegne con `--niente-linea-morta`), e scrive nel
- *   registro i numeri su cui ha deciso.
- *   ⚠ E l'ALTRA causa di quella cura non e' piu' la perdita di pacchetti: dal
- *     23 agosto 2026 e' lo STALLO DELL'USCITA — «da quanto tempo non esce un
- *     fotogramma pur avendone da mandare».  La frazione `pkt_lost/pkt_sent` e'
- *     stata refutata dal suo banco (su una linea che riordina misura il
- *     riordino) e resta solo come testimone nel registro; la refuta per intero
- *     e' nel riquadro sopra `WT_LM_STALLO_MS` in `webtransport.c`.
- *   Il caso A5 del piano (la scheda in
- *   secondo piano) resta servito: il browser risponde ai nostri PING dal
- *   processo di rete anche quando la pagina e' rallentata, e `[M]` l'11 agosto
- *   2026 sono stati misurati undici minuti in secondo piano con zero stacchi.
+ * ⇒ WHERE THE USER'S 10 s GO: in `webtransport.c`, inside
+ *   `linea_morta_giudica()`, where the quantity is *«how many of OUR packets
+ *   went out without one coming back»* and time is only the window in which
+ *   one looks.  ⭐ There it is UNILATERAL — it disconnects us, it does not
+ *   teach the client to drop — ⭐ since 24 Aug 2026 it is ON by default (the
+ *   user's decision; it is turned off with `--niente-linea-morta`), and it
+ *   writes in the log the numbers on which it decided.
+ *   ⚠ And the OTHER cause of that cure is no longer packet loss: since 23 Aug
+ *     2026 it is the OUTPUT STALL — «how long since a frame went out while
+ *     having some to send».  The fraction `pkt_lost/pkt_sent` was refuted by
+ *     its bench (on a line that reorders it measures the reordering) and stays
+ *     only as a witness in the log; the full refutation is in the box above
+ *     `WT_LM_STALLO_MS` in `webtransport.c`.
+ *   Case A5 of the plan (the tab in the background) stays served: the browser
+ *   answers our PINGs from the network process even when the page is
+ *   throttled, and `[M]` on 11 Aug 2026 eleven minutes in the background were
+ *   measured with zero disconnections.
  */
 #define IDLE_MS 30000
 
@@ -92,16 +94,15 @@ typedef struct connessione {
 
 	char provenienza[80];
 	bool morta;
-	/* ⛔ I datagram che arrivano e che alla fase 1 si scartano: si CONTANO,
-	 *    o «l'audio non arriva» e «l'audio arriva e lo butto» hanno la stessa
-	 *    faccia (§6.3, rilievo B-10). */
+	/* ⛔ The datagrams that arrive and that in phase 1 are discarded: they are
+	 *    COUNTED, or «the audio does not arrive» and «the audio arrives and I
+	 *    throw it away» look the same (§6.3, finding B-10). */
 	uint64_t datagram_visti, datagram_byte;
 } connessione;
 
-/* La mappa dei connection id.  ⚠ Una connessione ne ha piu' d'uno (il client
- * ne chiede fino a `active_connection_id_limit`), e ognuno deve portare alla
- * stessa connessione: e' la ragione per cui questa mappa non e' un campo della
- * connessione. */
+/* The map of connection ids.  ⚠ A connection has more than one (the client
+ * asks for up to `active_connection_id_limit`), and each must lead to the same
+ * connection: this is the reason this map is not a field of the connection. */
 typedef struct {
 	ngtcp2_cid cid;
 	connessione *c;
@@ -120,8 +121,9 @@ struct trasporto {
 
 	uint8_t segreto[32];
 
-	/* ⭐ L'aiutante di PAM (`DECISIONI.md` §1.10): non e' suo, glielo passa
-	 *    `main.c`.  Serve solo per consegnarlo a ogni `wt` che nasce. */
+	/* ⭐ The PAM helper (`DECISIONI.md` §1.10): it is not this module's, it is
+	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
+	 *    is born. */
 	aiutante *aiuto;
 };
 
@@ -143,29 +145,29 @@ static void indirizzo_testo(const struct sockaddr *sa, socklen_t len, char *fuor
 		snprintf(fuori, cap, "?");
 		return;
 	}
-	/* ⛔⭐ LE QUADRE CI VANNO ANCHE PER IPv4, E NON E' ESTETICA.
+	/* ⛔⭐ THE BRACKETS GO ON FOR IPv4 TOO, AND IT IS NOT AESTHETICS.
 	 *
-	 *     Questa stringa diventa la PROVENIENZA di `rcp_apri()`, e da li' la
-	 *     CHIAVE del ban di §4.4-bis: `rcp.c` la ricava togliendo la porta, e
-	 *     `rcp_chiave_indirizzo()` — che il comando di sblocco DEVE usare —
-	 *     normalizza tutto a `[indirizzo]`.  ⚠ Se qui si scrivesse
-	 *     `192.168.0.2:5218`, la chiave scritta nel file dei ban sarebbe
-	 *     `192.168.0.2` e quella cercata dallo sblocco `[192.168.0.2]`: il
-	 *     comando risponderebbe «non era bannato» a ogni indirizzo, in
-	 *     silenzio e per sempre — un comando che dice sempre la stessa cosa
-	 *     non ha nessun sintomo.
+	 *     This string becomes the PROVENANCE of `rcp_apri()`, and from there
+	 *     the KEY of the ban of §4.4-bis: `rcp.c` derives it by removing the
+	 *     port, and `rcp_chiave_indirizzo()` — which the unblock command MUST
+	 *     use — normalises everything to `[address]`.  ⚠ If `192.168.0.2:5218`
+	 *     were written here, the key written in the ban file would be
+	 *     `192.168.0.2` and the one looked up by the unblock `[192.168.0.2]`:
+	 *     the command would answer «was not banned» to every address,
+	 *     silently and forever — a command that always says the same thing has
+	 *     no symptom.
 	 *
-	 * ⭐ E' anche la forma che `util::straddr()` dell'esempio di ngtcp2 usa
-	 *    `[M]`, cioe' quella con cui i banchi della fase 1 hanno gia' scritto
-	 *    file di ban.
+	 * ⭐ It is also the form that `util::straddr()` of the ngtcp2 example uses
+	 *    `[M]`, that is the one with which the phase 1 benches already wrote
+	 *    ban files.
 	 *
-	 * ⚠ Le precisioni non sono ornamento: `NI_MAXHOST` vale 1025, e senza di
-	 *   esse il compilatore ha ragione a dire che il testo puo' non entrare. */
+	 * ⚠ The precisions are not ornament: `NI_MAXHOST` is 1025, and without
+	 *   them the compiler is right to say the text may not fit. */
 	snprintf(fuori, cap, "[%.60s]:%.7s", host, serv);
 }
 
 /* ------------------------------------------------------------------------ */
-/* La mappa dei CID.                                                         */
+/* The CID map.                                                              */
 
 static bool cid_uguali(const ngtcp2_cid *a, const ngtcp2_cid *b)
 {
@@ -197,7 +199,7 @@ static void cid_lega(trasporto *t, const ngtcp2_cid *cid, connessione *c)
 		size_t nc = t->capcids ? t->capcids * 2 : 32;
 		voce_cid *n = realloc(t->cids, nc * sizeof *n);
 		if (!n) {
-			registro_dice(REG_QUIC, "⛔ memoria esaurita nella mappa dei CID");
+			registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
 			return;
 		}
 		t->cids = n;
@@ -224,7 +226,7 @@ static void cid_slega_tutti(trasporto *t, connessione *c)
 }
 
 /* ------------------------------------------------------------------------ */
-/* I richiami di ngtcp2.                                                     */
+/* The ngtcp2 callbacks.                                                     */
 
 static ngtcp2_conn *dammi_conn(ngtcp2_crypto_conn_ref *ref)
 {
@@ -236,7 +238,7 @@ static void casuale(uint8_t *dest, size_t destlen, const ngtcp2_rand_ctx *ctx)
 {
 	(void)ctx;
 	if (RAND_bytes(dest, (int)destlen) != 1) {
-		registro_dice(REG_QUIC, "⛔ RAND_bytes ha fallito");
+		registro_dice(REG_QUIC, "⛔ RAND_bytes failed");
 		abort();
 	}
 }
@@ -299,19 +301,19 @@ static int cb_stream_close(ngtcp2_conn *conn, uint32_t flags, int64_t stream_id,
 		(flags & NGTCP2_STREAM_CLOSE2_FLAG_RX_APP_ERROR_CODE_SET) ? rx_code
 	                                                                  : tx_code;
 	(void)sud;
-	/* ⛔⛔ IL CREDITO DEGLI STREAM SI RENDE QUANDO UNO STREAM DEL CLIENTE SI
-	 *      CHIUDE — 2 ottobre 2026, e chiude il `[?]` di `initial_max_streams_uni`.
+	/* ⛔⛔ STREAM CREDIT IS GIVEN BACK WHEN A CLIENT STREAM CLOSES — 2 Oct
+	 *      2026, and it closes the `[?]` of `initial_max_streams_uni`.
 	 *
-	 * `[M]` giro `cure-intel-1`, banco `15-f014c`: gli stream unidirezionali del
-	 *   client vanno da 2 a 74, cioe' ESATTAMENTE 19, e poi non se ne apre piu'
-	 *   nessuno — Chrome scrive «Failed to create send stream», su Firefox
-	 *   l'annuncio resta appeso.  ⇒ `ngtcp2` il credito NON lo rinnova da se':
-	 *   l'eccezione che il riquadro sotto sperava non si applica.  Per l'utente:
-	 *   dopo una quindicina di copie gli appunti smettono di funzionare, che e'
-	 *   il «non sempre» della sua prova a mano.
-	 * ⇒ Uno stream del cliente chiuso, uno nuovo concesso: §2.3 vuole «16
-	 *   disponibili in ogni momento», non 16 in tutta la sessione.  E' quel che
-	 *   fa il server d'esempio di `ngtcp2`. */
+	 * `[M]` round `cure-intel-1`, bench `15-f014c`: the client's unidirectional
+	 *   streams go from 2 to 74, that is EXACTLY 19, and then no more open —
+	 *   Chrome writes «Failed to create send stream», on Firefox the
+	 *   announcement stays hanging.  ⇒ `ngtcp2` does NOT renew the credit on
+	 *   its own: the exception the box below hoped for does not apply.  For
+	 *   the user: after fifteen or so copies the clipboard stops working,
+	 *   which is the «not always» of their manual test.
+	 * ⇒ One client stream closed, one new granted: §2.3 wants «16 available
+	 *   at all times», not 16 over the whole session.  It is what the `ngtcp2`
+	 *   example server does. */
 	if (!ngtcp2_conn_is_local_stream(conn, stream_id)) {
 		if (ngtcp2_is_bidi_stream(stream_id))
 			ngtcp2_conn_extend_max_streams_bidi(conn, 1);
@@ -375,35 +377,36 @@ static int cb_handshake_completed(ngtcp2_conn *conn, void *user_data)
 {
 	connessione *c = user_data;
 	(void)conn;
-	registro_dettaglio(REG_QUIC, "stretta di mano TLS completata con %s",
+	registro_dettaglio(REG_QUIC, "TLS handshake completed with %s",
 	                   c->provenienza);
 	return 0;
 }
 
-/* ⛔⭐ I DATAGRAM ARRIVANO, E FINO A STANOTTE SPARIVANO SENZA UNA RIGA —
- *     rilievo B-10, 10 agosto 2026 notte.
+/* ⛔⭐ DATAGRAMS ARRIVE, AND UNTIL TONIGHT THEY VANISHED WITHOUT A LINE —
+ *     finding B-10, night of 10 Aug 2026.
  *
- *     Questo server ANNUNCIA i datagram, e li annuncia due volte come §2.2
- *     impone: `max_datagram_frame_size` nei parametri di trasporto e
- *     `settings.h3_datagram = 1` in HTTP/3.  ⛔ Quindi il browser puo'
- *     mandarne **oggi** — tre byte dalla pagina bastano — e fra i
- *     `ngtcp2_callbacks` `recv_datagram` NON C'ERA: il pacchetto finiva in un
- *     richiamo non registrato e spariva, e nel registro non compariva niente.
+ *     This server ANNOUNCES datagrams, and announces them twice as §2.2
+ *     requires: `max_datagram_frame_size` in the transport parameters and
+ *     `settings.h3_datagram = 1` in HTTP/3.  ⛔ So the browser can send some
+ *     **today** — three bytes from the page are enough — and among the
+ *     `ngtcp2_callbacks` `recv_datagram` WAS NOT THERE: the packet ended up in
+ *     an unregistered callback and vanished, and nothing appeared in the log.
  *
- * ⛔ §6.3 dice «un datagram piu' corto di 12 byte, o con un `tipo` diverso da
- *    `0x0401`, si scarta **scrivendolo nel registro**», e §3 chiude l'elenco
- *    delle cinque eccezioni con «e ogni tolleranza va scritta nel registro:
- *    una tolleranza silenziosa e' indistinguibile da un difetto».  La seconda
- *    eccezione dichiarata di §3 e' «si scarta», non «si scarta in silenzio»,
- *    e la differenza e' tutto il punto di quella sezione.
+ * ⛔ §6.3 says «a datagram shorter than 12 bytes, or with a `tipo` other than
+ *    `0x0401`, is discarded **writing it in the log**», and §3 closes the list
+ *    of the five exceptions with «and every tolerance must be written in the
+ *    log: a silent tolerance is indistinguishable from a defect».  The second
+ *    declared exception of §3 is «it is discarded», not «it is discarded
+ *    silently», and the difference is the whole point of that section.
  *
- * ⚠ Alla fase 1 NON c'e' audio, quindi qui si scarta tutto — ma la differenza
- *   fra «l'audio non arriva» e «l'audio arriva e lo butto» il giorno in cui
- *   l'audio ci sara' si vede solo se questa riga esiste da prima.
+ * ⚠ In phase 1 there is NO audio, so everything is discarded here — but the
+ *   difference between «the audio does not arrive» and «the audio arrives and
+ *   I throw it away» on the day audio exists can be seen only if this line
+ *   exists from before.
  *
- * ⛔ E le righe sono CONTATE, non una per pacchetto: un client che manda mille
- *   datagram al secondo riempirebbe il registro, che e' un altro modo di
- *   perdere l'informazione.  Il conto totale c'e' sempre. */
+ * ⛔ And the lines are RATIONED, not one per packet: a client that sends a
+ *   thousand datagrams per second would fill the log, which is another way of
+ *   losing the information.  The total count is always there. */
 static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
                             const uint8_t *dati, size_t len, void *user_data)
 {
@@ -414,10 +417,10 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 	c->datagram_byte += len;
 	if (c->datagram_visti <= 3 || (c->datagram_visti % 256) == 0)
 		registro_dice(REG_QUIC,
-		              "⚠ TOLLERANZA (§3 eccezione 2, §6.3): datagram di %zu "
-		              "byte da %s SCARTATO — alla fase 1 non c'e' audio e "
-		              "nessun tipo di §6.3 e' servibile.  In tutto: %llu "
-		              "datagram, %llu byte",
+		              "⚠ TOLERANCE (§3 exception 2, §6.3): datagram of %zu "
+		              "bytes from %s DISCARDED — in phase 1 there is no audio and "
+		              "no type of §6.3 can be served.  In all: %llu "
+		              "datagrams, %llu bytes",
 		              len, c->provenienza,
 		              (unsigned long long)c->datagram_visti,
 		              (unsigned long long)c->datagram_byte);
@@ -425,7 +428,7 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 }
 
 /* ------------------------------------------------------------------------ */
-/* La spedizione.                                                            */
+/* Sending.                                                                  */
 
 static void manda(trasporto *t, const struct sockaddr *sa, socklen_t salen,
                   const uint8_t *dati, size_t len)
@@ -435,23 +438,23 @@ static void manda(trasporto *t, const struct sockaddr *sa, socklen_t salen,
 		n = sendto(t->fd, dati, len, 0, sa, salen);
 	} while (n < 0 && errno == EINTR);
 	if (n < 0) {
-		/* ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): se il socket e' pieno
-		 *   il pacchetto si perde, e QUIC lo ritrasmette da se' — la
-		 *   perdita e' la condizione che il suo recupero esiste per
-		 *   trattare.  ⛔ Non e' silenzioso: la riga qui sotto e' quel
-		 *   che distingue «la rete perde» da «il server butta». */
-		registro_dice(REG_QUIC, "pacchetto di %zu byte NON spedito: %s", len,
+		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
+		 *   packet is lost, and QUIC retransmits it on its own — loss is the
+		 *   condition its recovery exists to handle.  ⛔ It is not silent:
+		 *   the line below is what tells «the network loses» from «the
+		 *   server throws away». */
+		registro_dice(REG_QUIC, "packet of %zu bytes NOT sent: %s", len,
 		              strerror(errno));
 	}
 }
 
-/* ⛔ Il richiamo che ngtcp2 invoca per ogni pacchetto, e il `user_data` che gli
- *    passa e' quello della CONNESSIONE — non quello dello strato WebTransport.
- *    ⚠ Questo giro di due righe esiste apposta: passare `wt_scrivi` direttamente
- *    a ngtcp2 compilerebbe (sono due `void *`) e farebbe leggere allo strato
- *    WebTransport i campi di `connessione`.  `[M]` 10 agosto 2026: il server
- *    apriva HTTP/3 e moriva alla prima scrittura con `ERR_CALLBACK_FAILURE`,
- *    senza che nessuna delle sue righe di registro nominasse la causa. */
+/* ⛔ The callback ngtcp2 invokes for every packet, and the `user_data` it
+ *    passes is the CONNECTION's — not the WebTransport layer's.
+ *    ⚠ This two-line detour exists on purpose: passing `wt_scrivi` directly to
+ *    ngtcp2 would compile (they are two `void *`) and would make the
+ *    WebTransport layer read the fields of `connessione`.  `[M]` 10 Aug 2026:
+ *    the server opened HTTP/3 and died at the first write with
+ *    `ERR_CALLBACK_FAILURE`, without any of its log lines naming the cause. */
 static ngtcp2_ssize scrivi_pkt(ngtcp2_conn *conn, ngtcp2_path *path,
                                ngtcp2_pkt_info *pi, uint8_t *dest, size_t destlen,
                                ngtcp2_tstamp ts, void *user_data)
@@ -461,7 +464,7 @@ static ngtcp2_ssize scrivi_pkt(ngtcp2_conn *conn, ngtcp2_path *path,
 	return wt_scrivi(c->w, path, pi, dest, destlen, ts);
 }
 
-/* Scrive tutto quel che questa connessione ha da spedire. */
+/* Writes everything this connection has to send. */
 static void scrivi_connessione(connessione *c)
 {
 	uint8_t buf[64 * 1024];
@@ -483,7 +486,7 @@ static void scrivi_connessione(connessione *c)
 	n = ngtcp2_conn_write_aggregate_pkt2(c->conn, &ps.path, &pi, buf, sizeof buf,
 	                                     &gso, scrivi_pkt, 0, ts);
 	if (n < 0) {
-		registro_dice(REG_QUIC, "⛔ scrittura fallita per %s: %s",
+		registro_dice(REG_QUIC, "⛔ write failed for %s: %s",
 		              c->provenienza, ngtcp2_strerror((int)n));
 		c->morta = true;
 		return;
@@ -492,10 +495,10 @@ static void scrivi_connessione(connessione *c)
 	if (n == 0)
 		return;
 
-	/* ⚠ Niente GSO: si spedisce un pacchetto per `sendto`.  E' un ripiego
-	 *   dichiarato — costa syscall, non correttezza — e la fase 1 non manda
-	 *   video.  ⛔ Va rifatto prima della fase 2, dove i fotogrammi sono uno
-	 *   stream ciascuno e le syscall si contano. */
+	/* ⚠ No GSO: one packet per `sendto`.  It is a declared fallback — it
+	 *   costs syscalls, not correctness — and phase 1 sends no video.  ⛔ It
+	 *   must be redone before phase 2, where frames are one stream each and
+	 *   syscalls add up. */
 	if (gso == 0)
 		gso = (size_t)n;
 	{
@@ -534,7 +537,7 @@ static void raccogli_morte(trasporto *t)
 		connessione *c = *p;
 		if (c->morta) {
 			*p = c->prossima;
-			registro_dice(REG_QUIC, "connessione con %s chiusa (ne restano %zu)",
+			registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
 			              c->provenienza, t->quante - 1);
 			connessione_libera(t, c);
 			t->quante--;
@@ -546,23 +549,24 @@ static void raccogli_morte(trasporto *t)
 
 /* ------------------------------------------------------------------------ */
 
-/* ⭐⭐⭐ L'ESITO DEI DATAGRAM CHE MANDIAMO NOI — 23 agosto 2026.
+/* ⭐⭐⭐ THE OUTCOME OF THE DATAGRAMS WE SEND — 23 Aug 2026.
  *
- *    ⛔ Fino a oggi `ngtcp2_callbacks` registrava `recv_datagram` e basta: i
- *       datagram in ARRIVO si contavano (rilievo B-10), quelli in PARTENZA —
- *       cioe' l'audio — sparivano nel filo senza lasciare traccia.  «L'audio
- *       non e' arrivato» e «e' arrivato e il cliente l'ha buttato» avevano la
- *       stessa faccia, ed e' lo stesso difetto di allora dall'altro verso.
+ *    ⛔ Until today `ngtcp2_callbacks` registered `recv_datagram` and nothing
+ *       else: INCOMING datagrams were counted (finding B-10), OUTGOING ones —
+ *       that is, the audio — vanished on the wire without leaving a trace.
+ *       «The audio did not arrive» and «it arrived and the client threw it
+ *       away» looked the same, and it is the same defect as back then in the
+ *       other direction.
  *
- * ⭐ E NON BASTA `lost_datagram`: `ngtcp2.h:3442` avverte che la perdita puo'
- *   essere **spuria** — dichiarata e poi riscontrata.  Registrando solo le
- *   perdite conteremmo i pacchetti FUORI SEQUENZA come persi, cioe' daremmo
- *   un numero piu' alto del vero senza dirlo.  ⇒ Si registra anche
- *   `ack_datagram`, e `webtransport.c` riconosce le perdite false: e' la
- *   MISURA DEL RIORDINO, e sul riordino ngtcp2 non da' nient'altro.
+ * ⭐ AND `lost_datagram` IS NOT ENOUGH: `ngtcp2.h:3442` warns that the loss can
+ *   be **spurious** — declared and then acknowledged.  Recording only the
+ *   losses we would count OUT-OF-ORDER packets as lost, that is we would give
+ *   a number higher than the truth without saying so.  ⇒ `ack_datagram` is
+ *   registered too, and `webtransport.c` recognises the false losses: it is
+ *   the MEASURE OF REORDERING, and on reordering ngtcp2 gives nothing else.
  *
- * ⚠ Non decidono niente: contano.  Il `dgram_id` e' quello che
- *   `dgram_scrivi_uno()` incrementa in `webtransport.c`.
+ * ⚠ They decide nothing: they count.  The `dgram_id` is the one
+ *   `dgram_scrivi_uno()` increments in `webtransport.c`.
  */
 static int cb_lost_datagram(ngtcp2_conn *conn, uint64_t dgram_id,
                             void *user_data)
@@ -615,13 +619,12 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 		.recv_tx_key = cb_recv_tx_key,
 		.get_path_challenge_data2 = ngtcp2_crypto_get_path_challenge_data2_cb,
 		.stream_close2 = cb_stream_close,
-		/* ⛔ §6.3: i datagram si annunciano, quindi arrivano — e quel che
-		 *    arriva o si serve o si scarta SCRIVENDOLO.  Rilievo B-10. */
+		/* ⛔ §6.3: datagrams are announced, so they arrive — and what arrives
+		 *    is either served or discarded WRITING IT DOWN.  Finding B-10. */
 		.recv_datagram = cb_recv_datagram,
-		/* ⭐⭐ E l'esito di quelli che mandiamo NOI — in coppia, e la
-		 *    ragione per cui la coppia e' obbligatoria sta sopra le due
-		 *    funzioni: da sola, `lost_datagram` conterebbe il riordino
-		 *    come perdita. */
+		/* ⭐⭐ And the outcome of those WE send — as a pair, and the reason
+		 *    the pair is mandatory is above the two functions: alone,
+		 *    `lost_datagram` would count reordering as loss. */
 		.lost_datagram = cb_lost_datagram,
 		.ack_datagram = cb_ack_datagram,
 	};
@@ -654,60 +657,61 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	params.initial_max_stream_data_uni = 256 * 1024;
 	params.initial_max_data = 1024 * 1024;
 	params.initial_max_streams_bidi = 100;
-	/* ⛔ `RCP.md` §2.3: «il server DEVE concedere credito al client per i
-	 *    suoi stream unidirezionali: almeno 16 disponibili in ogni momento».
-	 *    ⚠ Il client apre uno stream di input e uno per ogni trasferimento di
-	 *    appunti: se il credito finisse, l'input non partirebbe affatto e il
-	 *    sintomo sarebbe «il desktop non risponde», non «credito esaurito» —
-	 *    cioe' una diagnosi che punta sulla fase 4 mentre il difetto e' qui.
-	 *    ⭐ E i 3 dell'esempio di ngtcp2 bastano ad aprire la sessione: la
-	 *       sessione si apre benissimo con 3, ed e' per questo che nessun
-	 *       banco funzionale della fase 1 lo vedrebbe.
+	/* ⛔ `RCP.md` §2.3: «the server MUST grant the client credit for its
+	 *    unidirectional streams: at least 16 available at all times».
+	 *    ⚠ The client opens one input stream and one for every clipboard
+	 *    transfer: if the credit ran out, input would not start at all and the
+	 *    symptom would be «the desktop does not respond», not «credit
+	 *    exhausted» — that is, a diagnosis pointing at phase 4 while the
+	 *    defect is here.
+	 *    ⭐ And the 3 of the ngtcp2 example are enough to open the session:
+	 *       the session opens perfectly well with 3, and that is why no
+	 *       functional bench of phase 1 would see it.
 	 *
-	 * ⛔⭐ E 16 NON BASTAVANO — rilievo B-12, 10 agosto 2026 notte.  §2.3 chiede
-	 *     «almeno 16 **disponibili in ogni momento**», e questo numero e' un
-	 *     TOTALE.  Appena HTTP/3 si apre, il browser apre TRE stream
-	 *     unidirezionali suoi — il canale di controllo di HTTP/3 e i due di
-	 *     QPACK — e restano aperti per tutta la connessione: al client ne
-	 *     restavano **13 dal primo secondo**.  ⚠ Lo da' per scontato il nostro
-	 *     stesso codice, che in `webtransport.c` controlla il credito speculare
-	 *     con `< 3` prima di aprire i tre nostri.
+	 * ⛔⭐ AND 16 WERE NOT ENOUGH — finding B-12, night of 10 Aug 2026.  §2.3
+	 *     asks for «at least 16 **available at all times**», and this number is
+	 *     a TOTAL.  As soon as HTTP/3 opens, the browser opens THREE
+	 *     unidirectional streams of its own — the HTTP/3 control channel and
+	 *     the two of QPACK — and they stay open for the whole connection: the
+	 *     client was left with **13 from the first second**.  ⚠ Our own code
+	 *     takes it for granted, as in `webtransport.c` it checks the mirror
+	 *     credit with `< 3` before opening our three.
 	 *
-	 *     ⭐ Da cui 19 = 16 + 3: il numero di §2.3 resta 16, e i tre di HTTP/3
-	 *        si dichiarano invece di essere sottratti in silenzio.
+	 *     ⭐ Hence 19 = 16 + 3: the number of §2.3 stays 16, and the three of
+	 *        HTTP/3 are declared instead of being subtracted silently.
 	 *
-	 * ✅ CHIUSA il 2 ottobre 2026: il rinnovo NON e' automatico (`[M]` 19 stream
-	 *    e poi piu' niente) — ora lo fa `cb_stream_close`.  Il testo sotto resta
-	 *    come cronaca.
-	 * `[?]` ⚠ E RESTA UNA DOMANDA APERTA, che si chiude con una misura e non
-	 *   con una riga: `ngtcp2` non alza da se' il tetto degli stream, «tranne
-	 *   quando uno stream si chiude senza che `stream_open` sia stato
-	 *   chiamato».  Questo codice `stream_open` non lo registra, quindi cade
-	 *   probabilmente in quell'eccezione e il rinnovo e' automatico — ma
-	 *   nessuna riga del prodotto lo dichiara e nessuno l'ha misurato.  Se
-	 *   l'eccezione non si applicasse, il ventesimo stream unidirezionale del
-	 *   client non si aprirebbe piu' e il sintomo sarebbe «il desktop non
-	 *   risponde».  ⛔ Si misura alla fase 4, quando gli appunti apriranno uno
-	 *   stream per trasferimento: prima di allora nessun client ne apre piu'
-	 *   di quattro, e una misura senza il carico che la provoca non e' una
-	 *   misura. */
+	 * ✅ CLOSED on 2 Oct 2026: the renewal is NOT automatic (`[M]` 19 streams
+	 *    and then nothing more) — now `cb_stream_close` does it.  The text
+	 *    below stays as a chronicle.
+	 * `[?]` ⚠ AND AN OPEN QUESTION REMAINS, which is closed by a measurement
+	 *   and not by a line: `ngtcp2` does not raise the stream ceiling on its
+	 *   own, «except when a stream closes without `stream_open` having been
+	 *   called».  This code does not register `stream_open`, so it probably
+	 *   falls into that exception and the renewal is automatic — but no line
+	 *   of the product declares it and nobody has measured it.  If the
+	 *   exception did not apply, the client's twentieth unidirectional stream
+	 *   would no longer open and the symptom would be «the desktop does not
+	 *   respond».  ⛔ It is measured in phase 4, when the clipboard will open
+	 *   one stream per transfer: before then no client opens more than four,
+	 *   and a measurement without the load that provokes it is not a
+	 *   measurement. */
 	params.initial_max_streams_uni = 19;
-	/* ⛔ §2.2: 30 s, imposto dal server. */
+	/* ⛔ §2.2: 30 s, imposed by the server. */
 	params.max_idle_timeout = IDLE_MS * NGTCP2_MILLISECONDS;
-	/* ⛔ §2.2: i datagram DEVONO essere abilitati sulla connessione HTTP/3
-	 *    (e' l'audio).  ⚠ E senza QUESTO parametro di trasporto, annunciare
-	 *    SETTINGS_H3_DATAGRAM=1 e' un errore di protocollo. */
+	/* ⛔ §2.2: datagrams MUST be enabled on the HTTP/3 connection (they are
+	 *    the audio).  ⚠ And without THIS transport parameter, announcing
+	 *    SETTINGS_H3_DATAGRAM=1 is a protocol error. */
 	params.max_datagram_frame_size = 65536;
 	params.stateless_reset_token_present = 1;
 	params.active_connection_id_limit = 7;
 	params.grease_quic_bit = 1;
 	params.original_dcid = hd->dcid;
 	params.original_dcid_present = 1;
-	/* ⛔ §2.3: il server NON DEVE disabilitare la migrazione — e' la ragione
-	 *    per cui QUIC e' stato scelto (`SPECIFICHE.md` §8.4): il telefono che
-	 *    passa da WiFi a rete mobile.  Non si tocca
-	 *    `disable_active_migration`, e questa riga esiste perche' un
-	 *    revisore possa leggere che non e' una dimenticanza. */
+	/* ⛔ §2.3: the server MUST NOT disable migration — it is the reason QUIC
+	 *    was chosen (`SPECIFICHE.md` §8.4): the phone that moves from WiFi to
+	 *    the mobile network.  `disable_active_migration` is not touched, and
+	 *    this line exists so that a reviewer can read that it is not an
+	 *    oversight. */
 
 	if (ngtcp2_crypto_generate_stateless_reset_token(
 		    params.stateless_reset_token, t->segreto, sizeof t->segreto,
@@ -742,12 +746,12 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	}
 	SSL_set_app_data(c->ssl, &c->ref);
 	SSL_set_accept_state(c->ssl);
-	/* ⛔ E QUI NON SI ACCENDE 0-RTT (§2.3).  L'esempio di ngtcp2 chiama
-	 *    `SSL_set_quic_tls_early_data_enabled(ssl, 1)` proprio in questo
-	 *    punto: l'assenza di quella riga E' la decisione, e senza questo
-	 *    commento somiglierebbe a una dimenticanza.  Lo spegnimento vero sta
-	 *    in `tls.c`, a livello di contesto, dove nessuna sessione lo puo'
-	 *    riaccendere per distrazione. */
+	/* ⛔ AND 0-RTT IS NOT TURNED ON HERE (§2.3).  The ngtcp2 example calls
+	 *    `SSL_set_quic_tls_early_data_enabled(ssl, 1)` precisely at this
+	 *    point: the absence of that line IS the decision, and without this
+	 *    comment it would look like an oversight.  The real switch-off is in
+	 *    `tls.c`, at context level, where no session can turn it back on by
+	 *    oversight. */
 	ngtcp2_conn_set_tls_native_handle(c->conn, c->ossl);
 
 	c->w = wt_nuovo(c->conn, &c->ultimo_errore, c->provenienza, t->aiuto);
@@ -759,7 +763,7 @@ static connessione *accetta(trasporto *t, const ngtcp2_pkt_hd *hd,
 	t->quante++;
 	cid_lega(t, &c->scid, c);
 
-	registro_dice(REG_QUIC, "connessione nuova da %s (in tutto %zu)",
+	registro_dice(REG_QUIC, "new connection from %s (%zu in all)",
 	              c->provenienza, t->quante);
 	return c;
 
@@ -785,8 +789,8 @@ static void nego_versione(trasporto *t, const ngtcp2_version_cid *vc,
 		vc->dcidlen, versioni, 1);
 	if (n < 0)
 		return;
-	registro_dice(REG_QUIC, "versione QUIC non nostra: negoziazione verso %s",
-	              "il client");
+	registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
+	              "the client");
 	manda(t, remoto, remotolen, buf, (size_t)n);
 }
 
@@ -806,7 +810,7 @@ static void leggi_pacchetto(trasporto *t, const struct sockaddr *locale,
 		return;
 	}
 	if (rv != 0) {
-		registro_dettaglio(REG_QUIC, "intestazione illeggibile: %s",
+		registro_dettaglio(REG_QUIC, "unreadable header: %s",
 		                   ngtcp2_strerror(rv));
 		return;
 	}
@@ -815,23 +819,22 @@ static void leggi_pacchetto(trasporto *t, const struct sockaddr *locale,
 	if (!c) {
 		ngtcp2_pkt_hd hd;
 		if (ngtcp2_accept(&hd, dati, len) != 0) {
-			/* ⚠ Nessuna connessione e non e' un Initial.  ⛔ RIPIEGO
-			 *   DICHIARATO: qui il prodotto dovrebbe mandare uno
-			 *   Stateless Reset, che e' il modo di dire a un client con
-			 *   uno stato vecchio «quella connessione non c'e' piu'»
-			 *   invece di farlo aspettare i 30 s dell'inattivita'.
-			 *   Non c'e': si ignora, e la riga qui sotto e' quel che
-			 *   distingue «ignorato» da «non e' mai arrivato». */
+			/* ⚠ No connection and it is not an Initial.  ⛔ DECLARED
+			 *   FALLBACK: here the product should send a Stateless Reset,
+			 *   which is the way to tell a client with old state «that
+			 *   connection no longer exists» instead of making it wait the
+			 *   30 s of inactivity.  It is not there: it is ignored, and the
+			 *   line below is what tells «ignored» from «never arrived». */
 			registro_dettaglio(REG_QUIC,
-			                   "pacchetto di %zu byte per una connessione "
-			                   "che non c'e': ignorato",
+			                   "packet of %zu bytes for a connection "
+			                   "that does not exist: ignored",
 			                   len);
 			return;
 		}
-		/* ⚠ Nessuna validazione dell'indirizzo con Retry: il prodotto si
-		 *   usa su rete propria o VPN (`SPECIFICHE.md` §4.1).  ⛔ Va
-		 *   rimessa prima di esporlo, ed e' dichiarata qui perche' non
-		 *   sembri una dimenticanza. */
+		/* ⚠ No address validation with Retry: the product is used on one's
+		 *   own network or VPN (`SPECIFICHE.md` §4.1).  ⛔ It must be put
+		 *   back before exposing it, and it is declared here so that it does
+		 *   not look like an oversight. */
 		c = accetta(t, &hd, locale, localelen, remoto, remotolen);
 		if (!c)
 			return;
@@ -849,17 +852,16 @@ static void leggi_pacchetto(trasporto *t, const struct sockaddr *locale,
 	{
 		ngtcp2_tstamp ora = adesso_ns();
 		rv = ngtcp2_conn_read_pkt(c->conn, &path, pi, dati, len, ora);
-		/* ⛔⭐ §5.3 — E QUI, E SOLO SE `rv == 0`: il pacchetto e' stato
-		 *     DECIFRATO E AUTENTICATO.  ⚠ Un datagram che arriva non basta —
-		 *     chiunque ne puo' spedire uno con l'indirizzo di un altro, e
-		 *     terrebbe occupato il posto di quell'altro.
+		/* ⛔⭐ §5.3 — AND HERE, AND ONLY IF `rv == 0`: the packet has been
+		 *     DECRYPTED AND AUTHENTICATED.  ⚠ A datagram arriving is not
+		 *     enough — anyone can send one with someone else's address, and
+		 *     would keep that someone's slot occupied.
 		 *
-		 * ⭐ E' il segno di vita che mancava: fino al 16 agosto 2026 §5.3
-		 *    guardava l'ultimo byte di RCP, cioe' l'ultima volta che l'UTENTE
-		 *    aveva toccato qualcosa, e trenta secondi passati a leggere una
-		 *    pagina bastavano a far dichiarare sparito un client vivo.  ⛔ Il
-		 *    prezzo, misurato: un secondo dispositivo entrava e prendeva il
-		 *    desktop del primo. */
+		 * ⭐ It is the sign of life that was missing: until 16 Aug 2026 §5.3
+		 *    looked at the last RCP byte, that is the last time the USER had
+		 *    touched something, and thirty seconds spent reading a page were
+		 *    enough to declare a live client gone.  ⛔ The price, measured: a
+		 *    second device came in and took the first one's desktop. */
 		if (rv == 0 && c->w)
 			wt_segno_di_vita(c->w, ora);
 	}
@@ -869,13 +871,13 @@ static void leggi_pacchetto(trasporto *t, const struct sockaddr *locale,
 			c->morta = true;
 			return;
 		}
-		registro_dice(REG_QUIC, "lettura fallita da %s: %s", c->provenienza,
+		registro_dice(REG_QUIC, "read failed from %s: %s", c->provenienza,
 		              ngtcp2_strerror(rv));
-		/* ⚠ RIPIEGO DICHIARATO: qui il prodotto dovrebbe entrare nel
-		 *   periodo di chiusura e ritrasmettere il CONNECTION_CLOSE per
-		 *   tre RTT.  Si manda una volta sola e si chiude.  ⛔ Non tocca
-		 *   RCP: §3.1 chiude la SESSIONE WebTransport, non la connessione
-		 *   QUIC, e quella strada e' intera. */
+		/* ⚠ DECLARED FALLBACK: here the product should enter the closing
+		 *   period and retransmit the CONNECTION_CLOSE for three RTTs.  It
+		 *   is sent once only and closed.  ⛔ It does not touch RCP: §3.1
+		 *   closes the WebTransport SESSION, not the QUIC connection, and
+		 *   that road is intact. */
 		{
 			uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
 			ngtcp2_pkt_info opi;
@@ -932,14 +934,14 @@ void trasporto_leggi(trasporto *t)
 				registro_dice(REG_QUIC, "recvmsg: %s", strerror(errno));
 			break;
 		}
-		/* Un pacchetto QUIC valido non e' mai piu' corto di 21 byte. */
+		/* A valid QUIC packet is never shorter than 21 bytes. */
 		if (n < 21)
 			continue;
 
-		/* L'indirizzo LOCALE si legge dal messaggio ausiliario: senza,
-		 * un server legato a `0.0.0.0` darebbe a ngtcp2 un percorso con
-		 * un capo sbagliato, e la validazione del percorso fallirebbe
-		 * appena il client cambia rete. */
+		/* The LOCAL address is read from the ancillary message: without it,
+		 * a server bound to `0.0.0.0` would give ngtcp2 a path with a wrong
+		 * end, and path validation would fail as soon as the client changes
+		 * network. */
 		memset(&locale, 0, sizeof locale);
 		for (struct cmsghdr *cm = CMSG_FIRSTHDR(&msg); cm;
 		     cm = CMSG_NXTHDR(&msg, cm)) {
@@ -962,25 +964,25 @@ void trasporto_leggi(trasporto *t)
 			}
 		}
 		if (localelen == 0) {
-			/* ⛔ «Vuoto» e «proibito» hanno lo stesso aspetto
-			 *    (`LEZIONI.md` §1.9): se il nucleo non ha messo il
-			 *    messaggio ausiliario, lo si DICE invece di far finta
-			 *    che l'indirizzo locale sia zero. */
+			/* ⛔ «Empty» and «forbidden» look the same (`LEZIONI.md`
+			 *    §1.9): if the kernel did not put the ancillary message,
+			 *    it is SAID instead of pretending the local address is
+			 *    zero. */
 			socklen_t l = sizeof locale;
 			if (getsockname(t->fd, (struct sockaddr *)&locale, &l) == 0) {
 				localelen = l;
 				registro_dettaglio(REG_QUIC,
-				                   "niente IP_PKTINFO: uso l'indirizzo "
-				                   "del socket");
+				                   "no IP_PKTINFO: using the socket's "
+				                   "address");
 			} else {
 				registro_dice(REG_QUIC,
-				              "⛔ nessun indirizzo locale per un "
-				              "pacchetto di %zd byte: scartato",
+				              "⛔ no local address for a "
+				              "packet of %zd bytes: discarded",
 				              n);
 				continue;
 			}
 		}
-		/* La porta non viaggia nel `pktinfo`: e' quella del socket. */
+		/* The port does not travel in the `pktinfo`: it is the socket's. */
 		{
 			struct sockaddr_storage mia;
 			socklen_t l = sizeof mia;
@@ -1038,19 +1040,18 @@ int trasporto_attesa_ms(const trasporto *t)
 	}
 }
 
-/* ⭐ IL VERDETTO DI PAM CHE RIENTRA — `DECISIONI.md` §1.10.
+/* ⭐ THE PAM VERDICT COMING BACK — `DECISIONI.md` §1.10.
  *
- * ⛔ Si passa a tutte le connessioni vive e UNA sola lo prende: la pratica e'
- *    un numero del processo, e chi sa a chi appartiene e' `rcp.c`.  ⚠ Un giro
- *    su al massimo sedici connessioni costa meno di una tabella da tenere
- *    allineata — e una tabella di puntatori a connessioni che possono morire
- *    mentre PAM risponde e' precisamente il posto in cui nasce un puntatore
- *    penzolante.
+ * ⛔ It is passed to all live connections and ONE only takes it: the request
+ *    number is a number of the process, and whoever knows whom it belongs to
+ *    is `rcp.c`.  ⚠ A loop over at most sixteen connections costs less than a
+ *    table to keep aligned — and a table of pointers to connections that can
+ *    die while PAM answers is precisely the place where a dangling pointer is
+ *    born.
  *
- * ⭐ E se non lo prende nessuno si SCRIVE: «la connessione e' morta mentre PAM
- *    rispondeva» e «il verdetto e' andato a finire da nessuna parte per un
- *    difetto nostro» hanno lo stesso aspetto, e senza questa riga sarebbero
- *    indistinguibili. */
+ * ⭐ And if nobody takes it, it is WRITTEN: «the connection died while PAM was
+ *    answering» and «the verdict ended up nowhere because of a defect of ours»
+ *    look the same, and without this line they would be indistinguishable. */
 void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
                         bool ripresa)
 {
@@ -1058,10 +1059,10 @@ void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
 		if (c->morta || !c->w)
 			continue;
 		if (wt_verdetto(c->w, pratica, ammesso, ripresa)) {
-			/* ⛔ E si riscrive SUBITO: il verdetto puo' aver reso maturo
-			 *    l'`AMMESSO`/`RESPINTO`, e aspettare il prossimo battito
-			 *    aggiungerebbe fino a 100 ms a chi si autentica — cioe'
-			 *    peggiorerebbe il numero che questa cura non deve toccare. */
+			/* ⛔ And it is written again AT ONCE: the verdict may have made
+			 *    the `AMMESSO`/`RESPINTO` ripe, and waiting for the next beat
+			 *    would add up to 100 ms for whoever authenticates — that is,
+			 *    it would worsen the number this cure must not touch. */
 			if (wt_battito_ns(c->w) != UINT64_MAX)
 				wt_batti(c->w, adesso_ns());
 			trasporto_scrivi(t);
@@ -1069,9 +1070,9 @@ void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
 		}
 	}
 	registro_dice(REG_RCP,
-	              "⚠ il verdetto della pratica %llu (%s) non l'ha preso "
-	              "nessuno: la connessione che l'aspettava non c'e' piu'",
-	              (unsigned long long)pratica, ammesso ? "ammesso" : "respinto");
+	              "⚠ the verdict of request %llu (%s) was taken by "
+	              "nobody: the connection waiting for it is gone",
+	              (unsigned long long)pratica, ammesso ? "admitted" : "rejected");
 }
 
 void trasporto_scaduti(trasporto *t)
@@ -1081,28 +1082,30 @@ void trasporto_scaduti(trasporto *t)
 	for (connessione *c = t->prime; c; c = c->prossima) {
 		if (c->morta)
 			continue;
-		/* ⭐ Il NOSTRO orologio, prima di quello di QUIC: e' quello che fa
-		 *    scadere i tetti di `RCP.md` §4.6 e maturare la capsula di
-		 *    chiusura.  Nell'innesto lo faceva il keep-alive, cioe' byte
-		 *    sul filo; qui non esce niente. */
+		/* ⭐ OUR clock, before QUIC's: it is the one that makes the ceilings
+		 *    of `RCP.md` §4.6 expire and the closing capsule ripen.  In the
+		 *    graft the keep-alive did it, that is bytes on the wire; here
+		 *    nothing goes out. */
 		if (wt_battito_ns(c->w) <= ora)
 			wt_batti(c->w, ora);
 
-		/* ⛔⭐⭐ FASE 9 — LA LINEA MORTA, e la fa cadere QUI perche' la
-		 *      connessione QUIC e' di questo file: `webtransport.c` ha i
-		 *      contatori e prende la decisione (con la sua riga di registro),
-		 *      questo pezzo la esegue.
+		/* ⛔⭐⭐ PHASE 9 — THE DEAD LINE, and it is dropped HERE because the
+		 *      QUIC connection belongs to this file: `webtransport.c` has the
+		 *      counters and takes the decision (with its log line), this piece
+		 *      carries it out.
 		 *
-		 * ⛔ Si manda UN `CONNECTION_CLOSE` e si chiude — lo stesso ripiego
-		 *    dichiarato della lettura fallita, cento righe piu' su: il prodotto
-		 *    dovrebbe entrare nel periodo di chiusura e ritrasmetterlo per tre
-		 *    RTT.  ⚠ Qui costa meno che altrove: per ipotesi la linea non
-		 *    porta, e quel pacchetto e' un tentativo, non una promessa.  Se non
-		 *    arriva, il client se ne accorge col SUO tempo di inattivita'.
+		 * ⛔ ONE `CONNECTION_CLOSE` is sent and the connection closed — the
+		 *    same declared fallback as the failed read, a hundred lines
+		 *    above: the product should enter the closing period and
+		 *    retransmit it for three RTTs.  ⚠ Here it costs less than
+		 *    elsewhere: by hypothesis the line does not carry, and that packet
+		 *    is an attempt, not a promise.  If it does not arrive, the client
+		 *    notices with ITS OWN idle timeout.
 		 *
-		 * ⚠ E il motivo NON e' un codice RCP: `webtransport.c` ha gia' scritto
-		 *   `H3_NO_ERROR` con la ragione in chiaro dentro `c->ultimo_errore`,
-		 *   e §9 vieta di inventare un motivo nuovo di §8.2 dentro RCP/1. */
+		 * ⚠ And the reason is NOT an RCP code: `webtransport.c` has already
+		 *   written `H3_NO_ERROR` with the reason in clear inside
+		 *   `c->ultimo_errore`, and §9 forbids inventing a new reason of §8.2
+		 *   inside RCP/1. */
 		if (c->w && wt_linea_morta_scattata(c->w)) {
 			uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
 			ngtcp2_pkt_info opi;
@@ -1117,11 +1120,11 @@ void trasporto_scaduti(trasporto *t)
 				manda(t, (const struct sockaddr *)&c->remoto, c->remotolen, buf,
 				      (size_t)n);
 			registro_dice(REG_QUIC,
-			              "⛔ %s: LINEA MORTA — la connessione QUIC si chiude "
-			              "(un solo CONNECTION_CLOSE, %s).  Il perche', coi "
-			              "numeri, e' nella riga `linea-morta` qui sopra",
+			              "⛔ %s: DEAD LINE — the QUIC connection is closing "
+			              "(one single CONNECTION_CLOSE, %s).  The why, with the "
+			              "numbers, is in the `linea-morta` line above",
 			              c->provenienza,
-			              n > 0 ? "spedito" : "⚠ nemmeno spedito");
+			              n > 0 ? "sent" : "⚠ not even sent");
 			c->morta = true;
 			continue;
 		}
@@ -1131,11 +1134,11 @@ void trasporto_scaduti(trasporto *t)
 			if (rv != 0) {
 				if (rv == NGTCP2_ERR_IDLE_CLOSE)
 					registro_dice(REG_QUIC,
-					              "%s: trenta secondi di silenzio, "
-					              "staccato (§2.2)",
+					              "%s: thirty seconds of silence, "
+					              "disconnected (§2.2)",
 					              c->provenienza);
 				else
-					registro_dice(REG_QUIC, "%s: timer scaduto: %s",
+					registro_dice(REG_QUIC, "%s: timer expired: %s",
 					              c->provenienza, ngtcp2_strerror(rv));
 				c->morta = true;
 			}
@@ -1144,22 +1147,22 @@ void trasporto_scaduti(trasporto *t)
 	trasporto_scrivi(t);
 }
 
-/* ⛔⭐ §8.1 — «MAI CON UN SILENZIO»: IL SERVER CHE SI SPEGNE LO DICE.
- *     Rilievo B-7, 10 agosto 2026 notte.
+/* ⛔⭐ §8.1 — «NEVER WITH A SILENCE»: THE SERVER THAT SHUTS DOWN SAYS SO.
+ *     Finding B-7, night of 10 Aug 2026.
  *
- *     Prima di stanotte `systemctl stop` (o Ctrl-C) con una sessione attiva
- *     faceva questo: il ciclo usciva, si scriveva «chiusura richiesta: 1
- *     connessioni QUIC vive», e `trasporto_chiudi()` liberava tutto.  ⛔ Nessun
- *     `CONGEDO(0x0C)`, nessuna capsula di chiusura con `0x0C`, e nemmeno un
- *     `CONNECTION_CLOSE` di QUIC: il client restava ad aspettare i 30 secondi
- *     dell'inattivita' e mostrava «errore di rete».
+ *     Before tonight `systemctl stop` (or Ctrl-C) with an active session did
+ *     this: the loop exited, «chiusura richiesta: 1 connessioni QUIC vive» was
+ *     written, and `trasporto_chiudi()` freed everything.  ⛔ No
+ *     `CONGEDO(0x0C)`, no closing capsule with `0x0C`, and not even a QUIC
+ *     `CONNECTION_CLOSE`: the client was left waiting the 30 seconds of
+ *     inactivity and showed «network error».
  *
- *     ⚠ Il motivo `0x0C SERVER_IN_CHIUSURA` esiste in §8.2 apposta, ed era
- *       definito in `rcp.h` senza che nessuna riga del prodotto lo emettesse.
+ *     ⚠ The reason `0x0C SERVER_IN_CHIUSURA` exists in §8.2 on purpose, and it
+ *       was defined in `rcp.h` without any line of the product emitting it.
  *
- * ⭐ Restituisce quante connessioni hanno ancora qualcosa da far uscire: chi
- *    spegne fa girare il ciclo finche' non e' zero, invece di contare i giri —
- *    «consegnato a ngtcp2» non e' «uscito sul filo». */
+ * ⭐ Returns how many connections still have something to get out: whoever
+ *    shuts down runs the loop until it is zero, instead of counting rounds —
+ *    «handed to ngtcp2» is not «out on the wire». */
 size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche)
 {
 	size_t restano = 0;
@@ -1175,15 +1178,15 @@ size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche)
 	return restano;
 }
 
-/* ⛔ Che cosa trattiene chi non ha ancora finito — per il registro dello
- *    spegnimento.  Torna la prima ragione trovata, che basta a mandare la
- *    diagnosi dalla parte giusta. */
+/* ⛔ What holds back whoever has not finished yet — for the shutdown log.
+ *    Returns the first reason found, which is enough to send the diagnosis
+ *    the right way. */
 const char *trasporto_perche_restano(const trasporto *t)
 {
 	for (connessione *c = t->prime; c; c = c->prossima)
 		if (!c->morta && c->w && wt_ha_da_dire(c->w))
 			return wt_perche_ha_da_dire(c->w);
-	return "niente";
+	return "nothing";
 }
 
 size_t trasporto_quante(const trasporto *t) { return t->quante; }
@@ -1205,30 +1208,29 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 	suggerimenti.ai_flags = AI_PASSIVE;
 
 	if (getaddrinfo(indirizzo, porta, &suggerimenti, &ris) != 0) {
-		registro_dice(REG_QUIC, "⛔ %s:%s non si risolve", indirizzo, porta);
+		registro_dice(REG_QUIC, "⛔ %s:%s does not resolve", indirizzo, porta);
 		return NULL;
 	}
 	for (r = ris; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
 		if (fd < 0)
 			continue;
-		/* ⛔⭐ QUI NON SI METTE `SO_REUSEADDR`, E NON E' UNA DIMENTICANZA.
+		/* ⛔⭐ `SO_REUSEADDR` IS NOT SET HERE, AND IT IS NOT AN OVERSIGHT.
 		 *
-		 *     `[M]` 10 agosto 2026, prima accensione: con `SO_REUSEADDR`
-		 *     il socket UDP si e' legato alla 7447 **mentre un altro
-		 *     server la teneva gia'** — su Linux due socket UDP unicast
-		 *     con quell'opzione condividono la porta, e i pacchetti li
-		 *     prende uno solo dei due.  ⛔ Il sintomo sarebbe «il server
-		 *     e' acceso e la pagina non si collega», con due processi
-		 *     entrambi convinti di ascoltare: nessuno dei due errori che
-		 *     ne uscirebbero nominerebbe la porta.
+		 *     `[M]` 10 Aug 2026, first switch-on: with `SO_REUSEADDR` the UDP
+		 *     socket bound to 7447 **while another server already held it**
+		 *     — on Linux two unicast UDP sockets with that option share the
+		 *     port, and the packets are taken by only one of the two.  ⛔ The
+		 *     symptom would be «the server is on and the page does not
+		 *     connect», with two processes both convinced they are listening:
+		 *     none of the errors that would come out would name the port.
 		 *
-		 * ⚠ Sul TCP invece resta, e li' serve davvero: senza, un riavvio
-		 *   trova la porta occupata dal socket in TIME_WAIT.  ⭐ E la
-		 *   differenza fra i due casi e' che sul TCP il nucleo RIFIUTA
-		 *   comunque un secondo ascoltatore, mentre sull'UDP lo accetta —
-		 *   cioe' e' l'unico dei due in cui l'opzione compra un guasto
-		 *   silenzioso invece di una comodita'. */
+		 * ⚠ On TCP instead it stays, and there it is really needed: without
+		 *   it, a restart finds the port held by the socket in TIME_WAIT.
+		 *   ⭐ And the difference between the two cases is that on TCP the
+		 *   kernel REFUSES a second listener anyway, while on UDP it accepts
+		 *   it — that is, it is the only one of the two where the option buys
+		 *   a silent fault instead of a convenience. */
 		if (r->ai_family == AF_INET6) {
 			setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &uno, sizeof uno);
 		} else {
@@ -1240,7 +1242,7 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 		fd = -1;
 	}
 	if (fd < 0) {
-		registro_dice(REG_QUIC, "⛔ non mi lego a %s:%s in UDP: %s", indirizzo,
+		registro_dice(REG_QUIC, "⛔ cannot bind to %s:%s over UDP: %s", indirizzo,
 		              porta, strerror(errno));
 		freeaddrinfo(ris);
 		return NULL;
@@ -1259,7 +1261,7 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 	freeaddrinfo(ris);
 
 	if (RAND_bytes(t->segreto, sizeof t->segreto) != 1) {
-		registro_dice(REG_QUIC, "⛔ non genero il segreto statico");
+		registro_dice(REG_QUIC, "⛔ cannot generate the static secret");
 		trasporto_chiudi(t);
 		return NULL;
 	}
@@ -1271,9 +1273,9 @@ trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx
 	}
 
 	registro_dice(REG_QUIC,
-	              "ascolto UDP su %s:%s — max_idle_timeout=%d ms, datagram "
-	              "abilitati e scartati con una riga (§6.3), %d stream "
-	              "unidirezionali concessi = 16 di §2.3 + i 3 di HTTP/3",
+	              "listening over UDP on %s:%s — max_idle_timeout=%d ms, datagrams "
+	              "enabled and discarded with a line (§6.3), %d unidirectional "
+	              "streams granted = 16 of §2.3 + the 3 of HTTP/3",
 	              indirizzo, porta, IDLE_MS, 19);
 	return t;
 }

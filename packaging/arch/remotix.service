@@ -1,23 +1,23 @@
-# remotix.service — il server REMOTIX, unita' di sistema del PACCHETTO.
+# remotix.service — the REMOTIX server, the PACKAGE's system unit.
 #
-# ⭐ fasi/17-l-installatore.md §6.4.  Gira da ROOT: PAM deve poter verificare la
-#    parola di chiunque, e il figlio scende all'uid dell'utente da se'.
-# ⛔ Il pacchetto la INSTALLA e basta: su Arch il preset e' «disable *» e il
-#    servizio non si accende da solo.  L'accensione (`systemctl enable --now`)
-#    e' un gesto del motore d'installazione (T4-T5), col consenso.
-# ⛔ Nessun arnese di banco sulla riga di comando (§4.5, R13): niente
+# ⭐ fasi/17-l-installatore.md §6.4.  Runs as ROOT: PAM must be able to check
+#    anyone's password, and the child drops to the user's uid by itself.
+# ⛔ The package just INSTALLS it: on Arch the preset is «disable *» and the
+#    service does not start by itself.  Enabling it (`systemctl enable --now`)
+#    is an action of the installation engine (T4-T5), with consent.
+# ⛔ No bench tool on the command line (§4.5, R13): no
 #    --comando-socket, --rilievo, --parlantina, --audio-prova, --sblocca.
 #
-# ⚠ La porta e il nome del certificato si cambiano con un drop-in
-#   (`systemctl edit remotix`), senza toccare questo file:
+# ⚠ The port and the certificate name are changed with a drop-in
+#   (`systemctl edit remotix`), without touching this file:
 #       [Service]
 #       Environment=REMOTIX_PORTA=7447
 #       Environment=REMOTIX_NOME=192.168.1.10
-#   REMOTIX_NOME va nel subjectAltName del certificato (RCP.md §4.1): il
-#   predefinito e' il nome della macchina (%H).  Il certificato nasce all'avvio
-#   se manca (R16 e' della T4).
+#   REMOTIX_NOME goes into the certificate's subjectAltName (RCP.md §4.1): the
+#   default is the machine name (%H).  The certificate is created at start-up
+#   if missing (R16 belongs to T4).
 [Unit]
-Description=REMOTIX, il desktop nel browser
+Description=REMOTIX, the desktop in the browser
 After=network.target systemd-logind.service
 
 [Service]
@@ -26,9 +26,9 @@ Environment=REMOTIX_PORTA=7447
 Environment=REMOTIX_NOME=%H
 ExecStart=/usr/lib/remotix/remotix --indirizzo 0.0.0.0 --nome ${REMOTIX_NOME} --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban
 WorkingDirectory=/var/lib/remotix
-# ⭐ Le tre proprieta' con cui il prodotto e' sempre stato misurato
-#    (src/riavvia-7900.sh): KillMode=mixed (T2, §5.2: i desktop sopravvivono
-#    allo stop), la priorita' in tempo reale e il nice dei figli.
+# ⭐ The three properties the product has always been measured with
+#    (src/riavvia-7900.sh): KillMode=mixed (T2, §5.2: the desktops survive
+#    the stop), the real-time priority and the children's nice.
 KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11

@@ -1,15 +1,15 @@
 /*
- * suono.c — vedi `suono.h` per il mandato, la divisione sessione/connessione e
- * la scelta di NON accumulare i blocchi qui dentro.
+ * suono.c — see `suono.h` for the mandate, the session/connection split and
+ * the choice NOT to accumulate blocks in here.
  *
- * ⚠ Portato da v1 (`fondamenta/remotix-c/src/suono.c`) il 17 agosto 2026.  Le sole
- *   differenze volute rispetto a quel file:
- *     · niente GLib — `bool` di `<stdbool.h>`, il registro di `registro.h`, e
- *       chi fallisce torna `false`/NULL dopo aver scritto il perche';
- *     · il formato non si negozia piu' (§5.3): viene da `audio.h`;
- *     · il thread di tempo reale non stampa piu' niente (vedi `suono.h`);
- *     · l'attesa promessa da `suono_ascolto_ferma()` e' fatta davvero — v1
- *       la prometteva e non la faceva (il riquadro sta accanto alla funzione).
+ * ⚠ Ported from v1 (`fondamenta/remotix-c/src/suono.c`) on 17 August 2026.  The only
+ *   intended differences from that file:
+ *     · no GLib — `bool` from `<stdbool.h>`, the log from `registro.h`, and
+ *       whoever fails returns `false`/NULL after writing the reason;
+ *     · the format is no longer negotiated (§5.3): it comes from `audio.h`;
+ *     · the realtime thread no longer prints anything (see `suono.h`);
+ *     · the wait promised by `suono_ascolto_ferma()` is really done — v1
+ *       promised it and did not do it (the box is next to the function).
  */
 #include "suono.h"
 
@@ -29,52 +29,52 @@
 #include "audio.h"
 #include "registro.h"
 
-/* ⚠ L'area sta qui e non in `registro.h` per la stessa ragione per cui
- *   `REG_AUDIO` sta in `audio.c`: questo file non e' ancora nel `Makefile`, e
- *   una costante messa nell'intestazione comune prima della cucitura e' una
- *   riga che nomina un modulo che il prodotto non compila.  ⇒ Al montaggio si
- *   sposta, come si e' fatto con `REG_SESSIONE`. */
+/* ⚠ The area lives here and not in `registro.h` for the same reason
+ *   `REG_AUDIO` lives in `audio.c`: this file is not yet in the `Makefile`, and
+ *   a constant put in the shared header before the seam is a line that names
+ *   a module the product does not compile.  ⇒ At assembly it moves, as was
+ *   done with `REG_SESSIONE`. */
 #define REG_SUONO "suono"
 
-/* Quanto si aspetta che il server registri il nodo del sink.  E' una risposta
- * locale su un socket: se non arriva in cinque secondi non arrivera'. */
+/* How long we wait for the server to register the sink's node.  It is a local
+ * answer on a socket: if it does not arrive in five seconds it will not arrive. */
 #define ATTESA_SINK_MS 5000
 
-/* Quanto si aspetta che la cattura arrivi a `paused`, cioe' che il formato sia
- * stato negoziato.  ⛔ E' l'unico punto in cui un rifiuto si vede SUBITO invece
- * di diventare silenzio piu' tardi — la stessa ragione dell'attesa di
- * `cattura.c`, e li' costa dieci secondi perche' li' c'e' un compositore che si
- * sta alzando; qui dall'altra parte c'e' solo PipeWire. */
+/* How long we wait for the capture to reach `paused`, that is for the format to
+ * be negotiated.  ⛔ It is the only point where a refusal shows AT ONCE instead
+ * of becoming silence later — the same reason as the wait in `cattura.c`, and
+ * there it costs ten seconds because there a compositor is getting up; here on
+ * the other side there is only PipeWire. */
 #define ATTESA_ASCOLTO_MS 5000
 
-/* Quanto si aspetta, al massimo, che un richiamo di tempo reale gia' partito
- * esca (vedi `suono_ascolto_ferma`).  ⚠ In salute costa zero o un quanto —
- * `[?]` 5-6 ms: il tetto e' largo apposta, perche' superarlo significa che
- * PipeWire e' fermo e la riga che lo dice vale piu' del tempo che costa. */
+/* How long we wait, at most, for a realtime callback already started to
+ * exit (see `suono_ascolto_ferma`).  ⚠ In health it costs zero or one quantum —
+ * `[?]` 5-6 ms: the ceiling is wide on purpose, because exceeding it means
+ * PipeWire is stuck and the line saying so is worth more than the time it costs. */
 #define ATTESA_BARRIERA_MS 2000
 
 /*
- * Il nome del sink, che e' anche il modo in cui la cattura lo ritrova.
+ * The sink's name, which is also how the capture finds it again.
  *
- * `pw_stream_connect()` vuole `PW_ID_ANY` come destinazione e si aggancia a
- * quel che dice `target.object` — dove sta bene un `node.name`.  Cosi' non
- * serve conoscere l'identificativo assegnato dal server, e soprattutto non si
- * finisce a catturare il sink SBAGLIATO il giorno in cui la macchina ne avra'
- * due (una scheda vera, o una seconda sessione servita).
+ * `pw_stream_connect()` wants `PW_ID_ANY` as target and attaches to what
+ * `target.object` says — where a `node.name` fits.  So there is no need to know
+ * the id assigned by the server, and above all we do not end up capturing the
+ * WRONG sink the day the machine has two (a real card, or a second served
+ * session).
  */
 #define NOME_SINK "remotix"
 
 /*
- * ⚠ Il quanto forzato, e il numero e' quello di v1 e del riferimento
- *   (`gnome-remote-desktop`): 256 fotogrammi, cioe' 5,33 ms a 48 kHz.  Un quanto
- *   corto tiene basso il ritardo — `CODER.md` §1-bis, il ritardo pesa piu' dei
- *   fotogrammi — e fa arrivare blocchi piccoli e regolari.
+ * ⚠ The forced quantum, and the number is that of v1 and of the reference
+ *   (`gnome-remote-desktop`): 256 frames, that is 5.33 ms at 48 kHz.  A short
+ *   quantum keeps latency low — `CODER.md` §1-bis, latency weighs more than
+ *   frames — and makes small, regular blocks arrive.
  *
- * `[?]` 240 sarebbe piu' comodo (5 ms tondi: un blocco PCM esatto, un quarto di
- *   blocco Opus esatto), ⛔ ma cambiare un valore che v1 ha misurato sul campo
- *   per una comodita' non misurata e' un debito, non una cura (`CODER.md`,
- *   §1-bis del riquadro dei dieci secondi in `cattura.c`).  Si cambia il giorno
- *   in cui qualcuno misura che conviene.
+ * `[?]` 240 would be handier (5 ms round: an exact PCM block, an exact quarter of
+ *   an Opus block), ⛔ but changing a value v1 measured in the field for an
+ *   unmeasured convenience is a debt, not a cure (`CODER.md`, §1-bis of the
+ *   ten-seconds box in `cattura.c`).  It changes the day someone measures
+ *   that it pays off.
  */
 #define QUANTO_FORZATO "256"
 
@@ -93,31 +93,31 @@ struct suono
 	enum pw_stream_state stato;
 	char *guasto;
 
-	/* --- quel che il thread di tempo reale tocca ------------------------ *
+	/* --- what the realtime thread touches -------------------------------- *
 	 *
-	 * ⛔ `consegna` e `in_richiamo` sono ATOMICI e non `bool` semplici: sono le
-	 *    due meta' della barriera di `suono_ascolto_ferma()`, e una barriera
-	 *    costruita su letture che il compilatore puo' spostare non e' una
-	 *    barriera.  Il perche' del disegno sta accanto a quella funzione. */
+	 * ⛔ `consegna` and `in_richiamo` are ATOMIC and not plain `bool`s: they are
+	 *    the two halves of the barrier of `suono_ascolto_ferma()`, and a barrier
+	 *    built on reads the compiler can move is not a barrier.  The reason for
+	 *    the design is next to that function. */
 	atomic_bool consegna;
 	atomic_bool in_richiamo;
 	suono_campioni su_campioni;
 	void *chi;
 
-	/* I conteggi.  ⚠ Li incrementa il thread di tempo reale e li legge chi
-	 *   vuole: atomici per lo stesso motivo di sopra, e `relaxed` basterebbe —
-	 *   sono numeri per il registro, non una sincronizzazione. */
+	/* The counts.  ⚠ The realtime thread increments them and whoever wants reads
+	 *   them: atomic for the same reason as above, and `relaxed` would do —
+	 *   they are numbers for the log, not a synchronisation. */
 	atomic_ullong blocchi;
 	atomic_ullong fotogrammi;
 	atomic_ullong scartati;
-	/* ⭐ Il campione piu' forte visto, in valore assoluto.  Vedi il riquadro in
-	 *    `su_processo`: e' quel che distingue «non suonava nessuno» da
-	 *    «PipeWire ci consegna buffer vuoti». */
+	/* ⭐ The loudest sample seen, in absolute value.  See the box in
+	 *    `su_processo`: it is what tells "nobody was playing" from
+	 *    "PipeWire hands us empty buffers". */
 	atomic_ullong picco;
 };
 
 /* ------------------------------------------------------------------ *
- * Il sink virtuale
+ * The virtual sink
  * ------------------------------------------------------------------ */
 static void su_sink_legato(void *dati, uint32_t id_globale)
 {
@@ -131,11 +131,11 @@ static void su_sink_tolto(void *dati)
 {
 	suono *s = dati;
 
-	/* Il server ha tolto il nodo da sotto i piedi.  Non c'e' niente da rifare
-	 * qui: lo si dice, e chi cattura vedra' il flusso staccarsi.  ⚠ Gira sul
-	 * thread del CICLO, non su quello di tempo reale: qui si puo' scrivere. */
-	registro_dice(REG_SUONO, "⛔ il sink audio della sessione e' stato RIMOSSO: niente piu' suono "
-	                         "(nodo %u)", s->nodo);
+	/* The server pulled the node from under our feet.  There is nothing to redo
+	 * here: we say so, and the capturer will see the stream detach.  ⚠ It runs on
+	 * the LOOP thread, not the realtime one: here we may write. */
+	registro_dice(REG_SUONO, "⛔ the session's audio sink was REMOVED: no more sound "
+	                         "(node %u)", s->nodo);
 	s->nodo = 0;
 	pw_thread_loop_signal(s->ciclo, false);
 }
@@ -144,8 +144,8 @@ static void su_sink_sbagliato(void *dati, int seq, int res, const char *messaggi
 {
 	suono *s = dati;
 
-	registro_dice(REG_SUONO, "⛔ il sink audio non e' stato creato: %s (%d, %s)",
-	              messaggio ? messaggio : "senza spiegazione", res, spa_strerror(res));
+	registro_dice(REG_SUONO, "⛔ the audio sink was not created: %s (%d, %s)",
+	              messaggio ? messaggio : "no explanation", res, spa_strerror(res));
 	pw_thread_loop_signal(s->ciclo, false);
 }
 
@@ -157,14 +157,14 @@ static const struct pw_proxy_events eventi_sink = {
 };
 
 /* ------------------------------------------------------------------ *
- * La cattura del monitor
+ * The monitor capture
  * ------------------------------------------------------------------ */
 static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *sbaglio)
 {
 	suono *s = dati;
 
-	registro_dettaglio(REG_SUONO, "stato della cattura audio: %s → %s%s%s",
+	registro_dettaglio(REG_SUONO, "audio capture state: %s → %s%s%s",
 	                   pw_stream_state_as_string(vecchio), pw_stream_state_as_string(nuovo),
 	                   sbaglio ? " — " : "", sbaglio ? sbaglio : "");
 	s->stato = nuovo;
@@ -174,13 +174,13 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 		s->guasto = strdup(sbaglio);
 	}
 
-	/* ⛔ Il distacco si DICE, e non si lascia dedurre dal silenzio: da qui in poi
-	 *    non arriva piu' un campione, e senza questa riga chi cerca «perche' non
-	 *    si sente niente» non ha modo di distinguerlo da «nessuno sta suonando».
-	 *    ⚠ Chi vuole accorgersene nel codice chiama `suono_ascolto_vivo()`. */
+	/* ⛔ The detachment is SAID, and not left to be deduced from silence: from here
+	 *    on not a sample arrives, and without this line whoever looks for "why can
+	 *    nothing be heard" has no way to tell it from "nobody is playing".
+	 *    ⚠ Whoever wants to notice it in code calls `suono_ascolto_vivo()`. */
 	if ((vecchio == PW_STREAM_STATE_PAUSED || vecchio == PW_STREAM_STATE_STREAMING) &&
 	    (nuovo == PW_STREAM_STATE_UNCONNECTED || nuovo == PW_STREAM_STATE_ERROR))
-		registro_dice(REG_SUONO, "⛔ la cattura audio si e' staccata (%s)%s%s",
+		registro_dice(REG_SUONO, "⛔ the audio capture detached (%s)%s%s",
 		              pw_stream_state_as_string(nuovo), sbaglio ? " — " : "",
 		              sbaglio ? sbaglio : "");
 
@@ -199,63 +199,62 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		return;
 
 	/*
-	 * ⛔ SI GUARDA IL FORMATO NEGOZIATO DAVVERO, e non e' pignoleria.
+	 * ⛔ WE LOOK AT THE FORMAT REALLY NEGOTIATED, and it is not pedantry.
 	 *
-	 * E' la stessa trappola che `cattura.c` documenta per il video, e qui morde
-	 * piu' forte: leggere campioni a virgola mobile come interi a 16 bit non
-	 * produce nessun errore, produce un'onda quadra a fondo scala che segue la
-	 * frequenza giusta — cioe' qualcosa che al banco sembra «audio che arriva» e
-	 * all'orecchio e' un ronzio.  `[M]` 5 agosto 2026, v1.
+	 * It is the same trap `cattura.c` documents for video, and here it bites
+	 * harder: reading floating-point samples as 16-bit integers produces no
+	 * error, it produces a full-scale square wave that follows the right
+	 * frequency — that is, something that to the bench looks like "audio arriving"
+	 * and to the ear is a buzz.  `[M]` 5 August 2026, v1.
 	 *
-	 * ⛔⭐ E IN V2 SI GUARDA ANCHE LA FREQUENZA, che in v1 non si guardava: li'
-	 *     la si era chiesta uguale a quella negoziata con il client RDP, qui e'
-	 *     fissa a 48 000 (§5.3) e tutta la catena a valle ci conta — Opus riceve
-	 *     un `sample_rate` scritto in `audio.c`, non uno letto da qui.  Se
-	 *     PipeWire ne concedesse un'altra, il suono uscirebbe intonato male e
-	 *     lungo il tempo sbagliato, **senza un errore da nessuna parte**.
+	 * ⛔⭐ AND IN V2 THE RATE IS CHECKED TOO, which v1 did not check: there
+	 *     it had been asked equal to the one negotiated with the RDP client, here it
+	 *     is fixed at 48 000 (§5.3) and the whole chain downstream relies on it —
+	 *     Opus gets a `sample_rate` written in `audio.c`, not one read from here.  If
+	 *     PipeWire granted another one, the sound would come out out of tune and
+	 *     over the wrong time, **without an error anywhere**.
 	 */
 	if (spa_format_audio_raw_parse(param, &negoziato) >= 0)
 	{
 		bool giusto = negoziato.format == SPA_AUDIO_FORMAT_S16 &&
 		              negoziato.rate == AUDIO_FREQUENZA && negoziato.channels == AUDIO_CANALI;
-		/* ⚠ Il nome puo' non esserci — `spa_debug_type_find_short_name()` torna
-		 *   NULL per un identificativo che la sua tabella non conosce — e allora
-		 *   si stampa il NUMERO nudo: e' la stessa regola di `cattura.c`
-		 *   (`primo_tipo_grezzo`), perche' «(null)» in un registro non si puo'
-		 *   cercare da nessuna parte. */
+		/* ⚠ The name may be missing — `spa_debug_type_find_short_name()` returns
+		 *   NULL for an id its table does not know — and then the bare NUMBER is
+		 *   printed: it is the same rule as `cattura.c` (`primo_tipo_grezzo`),
+		 *   because "(null)" in a log cannot be searched for anywhere. */
 		const char *nome = negoziato.format == SPA_AUDIO_FORMAT_S16
 		                       ? "S16"
 		                       : spa_debug_type_find_short_name(spa_type_audio_format,
 		                                                        negoziato.format);
 
 		registro_dice(REG_SUONO,
-		              "formato audio negoziato con PipeWire: %s (SPA %u), %u Hz, %u canali%s",
-		              nome ? nome : "SENZA NOME", negoziato.format, negoziato.rate,
-		              negoziato.channels, giusto ? "" : "  ⛔ NON E' QUEL CHE SI E' CHIESTO");
+		              "audio format negotiated with PipeWire: %s (SPA %u), %u Hz, %u channels%s",
+		              nome ? nome : "NO NAME", negoziato.format, negoziato.rate,
+		              negoziato.channels, giusto ? "" : "  ⛔ IT IS NOT WHAT WAS ASKED");
 
 		if (!giusto)
 		{
 			registro_dice(REG_SUONO,
-			              "⛔ §5.3 vuole S16 a %d Hz su %d canali: i campioni verrebbero letti "
-			              "male e l'audio sarebbe RUMORE, non un errore.  Spengo la consegna",
+			              "⛔ §5.3 wants S16 at %d Hz on %d channels: the samples would be read "
+			              "wrong and the audio would be NOISE, not an error.  Switching off delivery",
 			              (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
 			atomic_store(&s->consegna, false);
 		}
 	}
 	else
 	{
-		/* ⛔ Non si va avanti alla cieca — v1 lo faceva («la cattura continua
-		 *    alla cieca») ed e' il ripiego silenzioso che `CODER.md` §4.2 vieta:
-		 *    un formato che non si sa leggere e' esattamente il caso in cui i
-		 *    campioni possono essere qualunque cosa. */
-		registro_dice(REG_SUONO, "⛔ formato audio non interpretabile: spengo la consegna invece "
-		                         "di leggere campioni di cui non so niente");
+		/* ⛔ We do not go on blindly — v1 did ("the capture continues
+		 *    blindly") and it is the silent fallback `CODER.md` §4.2 forbids:
+		 *    a format we cannot read is exactly the case in which the
+		 *    samples can be anything. */
+		registro_dice(REG_SUONO, "⛔ audio format not interpretable: switching off delivery instead "
+		                         "of reading samples I know nothing about");
 		atomic_store(&s->consegna, false);
 	}
 
-	/* I campioni si vogliono in memoria ordinaria, mappata: il percorso a copia
-	 * zero non c'entra nulla con l'audio, e chiederlo qui significa soltanto
-	 * trattare buffer che non si possono leggere direttamente. */
+	/* The samples are wanted in ordinary, mapped memory: the zero-copy path has
+	 * nothing to do with audio, and asking for it here only means handling
+	 * buffers that cannot be read directly. */
 	parametri[0] = spa_pod_builder_add_object(&costruttore, SPA_TYPE_OBJECT_ParamBuffers,
 	                                          SPA_PARAM_Buffers, SPA_PARAM_BUFFERS_dataType,
 	                                          SPA_POD_Int(1 << SPA_DATA_MemPtr));
@@ -263,13 +262,12 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 }
 
 /*
- * ⛔⛔ QUESTA FUNZIONE GIRA SUL THREAD DI TEMPO REALE.  Vedi `suono.h`.
+ * ⛔⛔ THIS FUNCTION RUNS ON THE REALTIME THREAD.  See `suono.h`.
  *
- * Dentro ci sono soltanto: una `dequeue`, dei confronti, il richiamo di chi
- * ascolta e una `queue`.  ⛔ Nessuna riga di registro, nessuna allocazione,
- * nessun lucchetto — v1 stampava il primo blocco da qui, e una `write` in
- * questo punto fa saltare il quanto a tutto il grafo, cattura del desktop
- * compresa.
+ * Inside there are only: a `dequeue`, some comparisons, the listener's
+ * callback and a `queue`.  ⛔ No log line, no allocation, no lock — v1 printed
+ * the first block from here, and a `write` at this point makes the whole graph
+ * miss its quantum, desktop capture included.
  */
 static void su_processo(void *dati)
 {
@@ -278,11 +276,11 @@ static void su_processo(void *dati)
 	struct pw_buffer *pacco;
 
 	/*
-	 * ⛔ LA PRIMA META' DELLA BARRIERA, e l'ordine e' tutto: si dichiara di
-	 *    essere dentro PRIMA di leggere `consegna`.  Chi ferma fa il contrario —
-	 *    spegne `consegna` e poi legge `in_richiamo` — e con due scritture
-	 *    sequenzialmente coerenti almeno uno dei due vede l'altro.  E' Dekker, ed
-	 *    e' quel che rende vera la promessa di `suono_ascolto_ferma()`.
+	 * ⛔ THE FIRST HALF OF THE BARRIER, and the order is everything: we declare
+	 *    we are inside BEFORE reading `consegna`.  Whoever stops does the opposite —
+	 *    switches off `consegna` and then reads `in_richiamo` — and with two
+	 *    sequentially consistent writes at least one of the two sees the other.  It
+	 *    is Dekker, and it is what makes the promise of `suono_ascolto_ferma()` true.
 	 */
 	atomic_store(&s->in_richiamo, true);
 
@@ -293,15 +291,15 @@ static void su_processo(void *dati)
 	}
 
 	/*
-	 * SI SVUOTA TUTTA LA CODA, in ordine.
+	 * THE WHOLE QUEUE IS DRAINED, in order.
 	 *
-	 * Il riferimento tiene solo l'ultimo pacco e butta i precedenti
-	 * (`grd-rdp-audio-output-stream.c`).  ⛔ Qui no, ed e' la differenza fra
-	 * l'audio e il video: nel video vince il piu' nuovo, perche' di un
-	 * fotogramma vecchio non se ne fa niente nessuno (`cattura.c`, il posto
-	 * dell'ultimo fotogramma).  Nel suono un pacco buttato e' un BUCO, e i buchi
-	 * si sentono tutti.  Se la coda cresce il rimedio sta a valle — chi accoda i
-	 * campioni sa quanti puo' tenerne — non in una perdita silenziosa qui.
+	 * The reference keeps only the last packet and drops the earlier ones
+	 * (`grd-rdp-audio-output-stream.c`).  ⛔ Not here, and it is the difference between
+	 * audio and video: in video the newest wins, because nobody has any use for
+	 * an old frame (`cattura.c`, the slot of the last frame).  In sound a dropped
+	 * packet is a GAP, and every gap is heard.  If the queue grows the remedy lies
+	 * downstream — whoever queues the samples knows how many it can keep — not
+	 * in a silent loss here.
 	 */
 	while ((pacco = pw_stream_dequeue_buffer(flusso)))
 	{
@@ -316,30 +314,30 @@ static void su_processo(void *dati)
 
 			if (fotogrammi > 0)
 			{
-				/* ⛔ `consegna` si legge una volta sola e si tiene: leggerla due
-				 *    volte vorrebbe dire poterla trovare accesa nel controllo e
-				 *    spenta nel richiamo. */
+				/* ⛔ `consegna` is read only once and kept: reading it twice
+				 *    would mean possibly finding it on in the check and
+				 *    off in the callback. */
 				if (atomic_load(&s->consegna) && s->su_campioni)
 				{
 					/*
-					 * ⭐ IL PICCO, ED E' L'UNICO NUMERO CHE DISTINGUE LE DUE
-					 *    FACCE DEL SILENZIO.  `[M]` 17 agosto 2026, e mi e'
-					 *    costato mezza giornata non averlo.
+					 * ⭐ THE PEAK, AND IT IS THE ONLY NUMBER THAT TELLS THE TWO
+					 *    FACES OF SILENCE APART.  `[M]` 17 August 2026, and not
+					 *    having it cost me half a day.
 					 *
-					 *    Senza, «non si sente niente» ha due cause con la
-					 *    stessa identica faccia — 48 000 fotogrammi al secondo
-					 *    consegnati, zero scartati, il flusso in `streaming` —
-					 *    e sono: **nella sessione non suonava nessuno**, oppure
-					 *    **PipeWire ci consegna buffer vuoti**.  E' `CODER.md`
-					 *    §3.10 applicata al campione invece che al conteggio:
-					 *    un modulo che sa dire «zero» deve saper distinguere lo
-					 *    zero dal guasto.
+					 *    Without it, "nothing can be heard" has two causes with the
+					 *    very same face — 48 000 frames per second
+					 *    delivered, zero discarded, the stream in `streaming` —
+					 *    and they are: **nobody was playing in the session**, or
+					 *    **PipeWire hands us empty buffers**.  It is `CODER.md`
+					 *    §3.10 applied to the sample instead of the count:
+					 *    a module that can say "zero" must be able to tell the
+					 *    zero from the fault.
 					 *
-					 * ⚠ E il prezzo sul thread di tempo reale e' un giro di
-					 *   confronti su 512 interi — nessuna allocazione, nessun
-					 *   lucchetto, nessuna scrittura: meno lavoro della copia
-					 *   che fa chi ascolta, e il contratto di `suono.h` resta
-					 *   («dentro si copia e si torna»).
+					 * ⚠ And the price on the realtime thread is a loop of
+					 *   comparisons over 512 integers — no allocation, no
+					 *   lock, no write: less work than the copy
+					 *   the listener does, and the contract of `suono.h` holds
+					 *   ("inside one copies and returns").
 					 */
 					uint32_t i;
 					unsigned long long pk = 0;
@@ -359,9 +357,9 @@ static void su_processo(void *dati)
 				}
 				else
 				{
-					/* ⛔ «Arrivati e buttati» NON e' «non arrivati»: `CODER.md`
-					 *    §3.10.  Senza questo conto, un formato rifiutato e un
-					 *    desktop muto hanno la stessa faccia. */
+					/* ⛔ "Arrived and dropped" is NOT "not arrived": `CODER.md`
+					 *    §3.10.  Without this count, a refused format and a
+					 *    mute desktop have the same face. */
 					atomic_fetch_add(&s->scartati, fotogrammi);
 				}
 			}
@@ -380,29 +378,29 @@ static const struct pw_stream_events eventi_flusso = {
 };
 
 /* ------------------------------------------------------------------ *
- * Il volume — invariante I5
+ * The volume — invariant I5
  * ------------------------------------------------------------------ */
 /*
- * Il sink nasce al massimo e non zittito.
+ * The sink is born at maximum and not muted.
  *
- * ⛔ PERCHE' UN LIVELLO BASSO SUL SERVER E' INVISIBILE.
- *    [decisione dell'utente, 8 agosto 2026, dopo la caccia di quella mattina]
+ * ⛔ WHY A LOW LEVEL ON THE SERVER IS INVISIBLE.
+ *    [the user's decision, 8 August 2026, after that morning's hunt]
  *
- *    Il livello lo decide il server e il client se lo trova nei campioni: e' la
- *    strada che regge su tutti i client e su tutti i desktop, perche' non chiede
- *    niente a nessuno (`STUDI.md` §kde §10.5).  Il prezzo di quella scelta e' che
- *    il cursore del server diventa uno stato NASCOSTO: chi si collega da un
- *    altro apparecchio tre giorni dopo sente piano e non ha modo di sapere
- *    perche'.  E' successo davvero, a noi, con il sink a zero e in mute.
+ *    The level is decided by the server and the client finds it in the samples:
+ *    it is the way that holds on every client and every desktop, because it asks
+ *    nothing of anyone (`STUDI.md` §kde §10.5).  The price of that choice is that
+ *    the server's slider becomes a HIDDEN state: whoever connects from another
+ *    device three days later hears it quietly and has no way of knowing
+ *    why.  It really happened, to us, with the sink at zero and muted.
  *
- *    ⇒ Una via audio appena montata parte UDIBILE, sempre (invariante I5).  Se
- *    poi l'utente abbassa, la sua scelta resta finche' resta collegato.
+ *    ⇒ A freshly mounted audio path starts AUDIBLE, always (invariant I5).  If
+ *    the user then lowers it, their choice stays while they stay connected.
  *
- * ⚠ Non si controlla l'esito: se PipeWire rifiutasse, il rimedio sarebbe
- *   comunque il cursore dentro la sessione, e un errore qui non deve impedire
- *   l'audio.
+ * ⚠ The outcome is not checked: if PipeWire refused, the remedy would be
+ *   the slider inside the session anyway, and an error here must not prevent
+ *   audio.
  */
-/* Il comando vero.  ⚠ Lo chiama chi TIENE GIA' il lucchetto del ciclo. */
+/* The real command.  ⚠ Called by whoever ALREADY HOLDS the loop lock. */
 static void alza(suono *s)
 {
 	uint8_t memoria[512];
@@ -423,30 +421,30 @@ static void alza(suono *s)
 	seq = pw_node_set_param((struct pw_node *) s->sink, SPA_PARAM_Props, 0, props);
 
 	/*
-	 * ⚠ QUEL NUMERO E' UNA SEQUENZA ASINCRONA, NON UN ESITO: dice che la
-	 *   richiesta e' partita, non che il valore e' cambiato.  Lo si stampa
-	 *   proprio per questo — una riga che dicesse «portato al massimo» sarebbe
-	 *   una riga che mente, e `CODER.md` §3.8 vuole che il livello si verifichi
-	 *   dal lato che lo consuma (un `wpctl get-volume`, non questa riga).
+	 * ⚠ THAT NUMBER IS AN ASYNCHRONOUS SEQUENCE, NOT AN OUTCOME: it says the
+	 *   request left, not that the value changed.  It is printed precisely
+	 *   for this — a line saying "brought to maximum" would be a line that lies,
+	 *   and `CODER.md` §3.8 wants the level checked from the side that
+	 *   consumes it (a `wpctl get-volume`, not this line).
 	 */
-	registro_dettaglio(REG_SUONO, "volume del sink: massimo CHIESTO al nodo %u (seq %d) — chiesto, "
-	                              "non verificato", s->nodo, seq);
+	registro_dettaglio(REG_SUONO, "sink volume: maximum ASKED of node %u (seq %d) — asked, "
+	                              "not verified", s->nodo, seq);
 }
 
 /*
- * ⛔ E IL LUCCHETTO DEL CICLO SI PRENDE, SEMPRE.
- *    `[M]` 8 agosto 2026, trovato dal banco `prove/fase11-volume.sh` di v1.
+ * ⛔ AND THE LOOP LOCK IS TAKEN, ALWAYS.
+ *    `[M]` 8 August 2026, found by v1's bench `prove/fase11-volume.sh`.
  *
- *    libpipewire non e' sincronizzata da se': ogni chiamata va fatta o dal
- *    thread del ciclo, o tenendo `pw_thread_loop_lock`.  Questa funzione la
- *    chiamano DUE thread estranei — quello della connessione, a ogni client che
- *    si collega, e quello che avvia la cattura — e senza lucchetto la richiesta
- *    finiva nella connessione mentre il ciclo la stava usando: **a volte
- *    passava, a volte no**, e il registro diceva comunque «portato al massimo».
+ *    libpipewire is not synchronised by itself: every call must be made either
+ *    from the loop thread, or holding `pw_thread_loop_lock`.  This function is
+ *    called by TWO foreign threads — the connection's, at every client that
+ *    connects, and the one that starts the capture — and without the lock the
+ *    request ended up in the connection while the loop was using it: **sometimes
+ *    it went through, sometimes not**, and the log said "brought to maximum" anyway.
  *
- *    ⚠ Il difetto si vedeva solo nel caso che conta: utente che zittisce, si
- *    scollega, si ricollega — e ritrova il silenzio.  Il banco lo mancava perche'
- *    zittiva a client collegato, cioe' NON RIPRODUCEVA (`CODER.md` §3.4).
+ *    ⚠ The defect showed only in the case that matters: a user who mutes,
+ *    disconnects, reconnects — and finds the silence again.  The bench missed it
+ *    because it muted with the client connected, that is it DID NOT REPRODUCE (`CODER.md` §3.4).
  */
 void suono_volume_massimo(suono *s)
 {
@@ -458,7 +456,7 @@ void suono_volume_massimo(suono *s)
 }
 
 /* ------------------------------------------------------------------ *
- * Ciclo di vita
+ * Life cycle
  * ------------------------------------------------------------------ */
 static bool crea_sink(suono *s)
 {
@@ -470,61 +468,61 @@ static bool crea_sink(suono *s)
 	    PW_KEY_NODE_DESCRIPTION, "REMOTIX", PW_KEY_MEDIA_CLASS, "Audio/Sink", "audio.position",
 	    "[FL,FR]",
 	    /*
-	     * ⛔⛔ SENZA QUESTA RIGA IL CURSORE DEL VOLUME NON GOVERNA NIENTE.
-	     *     `[M]` 8 agosto 2026, `STUDI.md` §kde §10.5 — e l'ha aperto l'utente:
-	     *     «se abbasso il volume l'audio resta sempre alto; in pratica audio
-	     *     del server e del client sono scollegati».
+	     * ⛔⛔ WITHOUT THIS LINE THE VOLUME SLIDER GOVERNS NOTHING.
+	     *     `[M]` 8 August 2026, `STUDI.md` §kde §10.5 — and the user opened it:
+	     *     "if I lower the volume the audio always stays loud; in practice the
+	     *     server's and the client's audio are disconnected".
 	     *
-	     *     In PipeWire il volume di un nodo si applica DOPO la presa del
-	     *     monitor, e `monitor.channel-volumes` — che sposta la presa a valle —
-	     *     vale `false` se non la si chiede.  Noi il sink lo creiamo a mano con
-	     *     `pw_core_create_object` e quindi ce la scordavamo;
-	     *     `module-null-sink` di pipewire-pulse la mette da se', perche' in
-	     *     PulseAudio il monitor e' sempre stato a valle del volume.
+	     *     In PipeWire a node's volume is applied AFTER the monitor
+	     *     tap, and `monitor.channel-volumes` — which moves the tap downstream —
+	     *     is `false` unless asked for.  We create the sink by hand with
+	     *     `pw_core_create_object` and so we forgot it;
+	     *     pipewire-pulse's `module-null-sink` sets it by itself, because in
+	     *     PulseAudio the monitor has always been downstream of the volume.
 	     *
-	     *     La misura, tono a 440 Hz di ampiezza nota (25,9 % del fondo scala)
-	     *     letto sul monitor:
+	     *     The measurement, a 440 Hz tone of known amplitude (25.9 % of full scale)
+	     *     read on the monitor:
 	     *
-	     *       volume del sink | senza la riga (com'era) | con la riga (`pactl`)
-	     *              100 %    |        25,39 %          |       25,39 %
-	     *               25 %    |     ⛔ 25,39 %          |        0,40 %
-	     *                0 %    |     ⛔ 25,39 %          |        0,00 %
+	     *       sink volume     | without the line (as was) | with the line (`pactl`)
+	     *              100 %    |        25.39 %            |       25.39 %
+	     *               25 %    |     ⛔ 25.39 %            |        0.40 %
+	     *                0 %    |     ⛔ 25.39 %            |        0.00 %
 	     *
-	     *     ⚠ La colonna di destra non e' «quasi giusta»: e' ESATTAMENTE la
-	     *     curva cubica di PulseAudio (0,25³ = 1,56 %, e 25,9 × 0,0156 = 0,40).
-	     *     La colonna di sinistra e' piatta: il volume non arriva, MUTE
-	     *     COMPRESO — nella sessione viva il nodo era a `channelVolumes 0.0` e
-	     *     `mute true` mentre il client riceveva il segnale intero.
+	     *     ⚠ The right column is not "almost right": it is EXACTLY
+	     *     PulseAudio's cubic curve (0.25³ = 1.56 %, and 25.9 × 0.0156 = 0.40).
+	     *     The left column is flat: the volume does not arrive, MUTE
+	     *     INCLUDED — in the live session the node was at `channelVolumes 0.0` and
+	     *     `mute true` while the client received the whole signal.
 	     *
-	     * ⚠ E il verso conta, ed e' il motivo per cui questo e' l'unico cursore
-	     *   che puo' funzionare: in RCP il volume NON viaggia (`RCP.md` §5.3,
-	     *   invariante I5), quindi l'unico livello che governa davvero e' quello
-	     *   che si vede dentro la sessione.
+	     * ⚠ And the direction matters, and it is why this is the only slider
+	     *   that can work: in RCP the volume does NOT travel (`RCP.md` §5.3,
+	     *   invariant I5), so the only level that really governs is the one
+	     *   seen inside the session.
 	     */
 	    "monitor.channel-volumes", "true",
 	    /*
-	     * ⛔ E CHE NESSUNO CI RIMETTA I LIVELLI DI IERI.
-	     *    WirePlumber salva volume e mute per NOME del nodo e li rimette quando
-	     *    il nodo ricompare — `[M]` 8 agosto 2026: il sink NUOVO nasceva a
-	     *    `0.008` e `mute true`, cioe' col valore che l'utente aveva messo in
-	     *    una sessione finita.  E' esattamente lo stato invisibile che I5 vuole
-	     *    rendere impossibile.
+	     * ⛔ AND LET NOBODY PUT YESTERDAY'S LEVELS BACK.
+	     *    WirePlumber saves volume and mute by node NAME and restores them when
+	     *    the node reappears — `[M]` 8 August 2026: the NEW sink was born at
+	     *    `0.008` and `mute true`, that is with the value the user had set in
+	     *    a finished session.  It is exactly the invisible state I5 wants
+	     *    to make impossible.
 	     *
-	     * ⚠ La chiave e' un SUGGERIMENTO: se la versione di WirePlumber non la
-	     *   conosce non fa niente e non da' errore.  ⇒ Non ci si conta sopra — il
-	     *   volume si rialza comunque a ogni collegamento e a ogni avvio della
-	     *   cattura (`CODER.md` §I7: la protezione sta nel programma).
+	     * ⚠ The key is a HINT: if the WirePlumber version does not know it
+	     *   it does nothing and gives no error.  ⇒ We do not rely on it — the
+	     *   volume is raised again anyway at every connection and every capture
+	     *   start (`CODER.md` §I7: the protection lives in the program).
 	     */
 	    "state.restore-props", "false",
-	    /* Il nodo muore con la nostra connessione a PipeWire, e va bene cosi':
-	     * appartiene alla sessione servita, non alla macchina.  Lasciarlo dietro
-	     * significherebbe che un REMOTIX riavviato ne trova due — e allora
-	     * `target.object` diventerebbe ambiguo. */
+	    /* The node dies with our connection to PipeWire, and that is fine:
+	     * it belongs to the served session, not to the machine.  Leaving it behind
+	     * would mean that a restarted REMOTIX finds two — and then
+	     * `target.object` would become ambiguous. */
 	    PW_KEY_OBJECT_LINGER, "false", NULL);
 
 	if (!proprieta)
 	{
-		registro_dice(REG_SUONO, "⛔ proprieta' del sink non allocate");
+		registro_dice(REG_SUONO, "⛔ sink properties not allocated");
 		return false;
 	}
 
@@ -534,22 +532,22 @@ static bool crea_sink(suono *s)
 
 	if (!s->sink)
 	{
-		registro_dice(REG_SUONO, "⛔ PipeWire non ha creato il sink virtuale «%s»", NOME_SINK);
+		registro_dice(REG_SUONO, "⛔ PipeWire did not create the virtual sink «%s»", NOME_SINK);
 		return false;
 	}
 	pw_proxy_add_listener(s->sink, &s->gancio_sink, &eventi_sink, s);
 
-	/* ⚠ Si aspetta l'identificativo del nodo, non la creazione: `bound` e' il
-	 *   momento in cui il server ha DAVVERO registrato l'oggetto.  Chi tornasse
-	 *   prima avrebbe in mano un proxy che potrebbe ancora fallire, e il rifiuto
-	 *   comparirebbe piu' tardi come silenzio. */
+	/* ⚠ We wait for the node's id, not the creation: `bound` is the moment the
+	 *   server REALLY registered the object.  Whoever returned earlier would hold
+	 *   a proxy that could still fail, and the refusal would show up later as
+	 *   silence. */
 	scadenza = registro_ora_ms() + ATTESA_SINK_MS;
 	while (s->nodo == 0 && registro_ora_ms() < scadenza)
 		pw_thread_loop_timed_wait(s->ciclo, 1);
 
 	if (s->nodo == 0)
 	{
-		registro_dice(REG_SUONO, "⛔ il sink virtuale non e' stato registrato entro %d ms",
+		registro_dice(REG_SUONO, "⛔ the virtual sink was not registered within %d ms",
 		              ATTESA_SINK_MS);
 		return false;
 	}
@@ -557,10 +555,10 @@ static bool crea_sink(suono *s)
 	return true;
 }
 
-/* ⛔ `pw_init()` una volta sola per processo, e la chiama anche `cattura.c`:
- *    non e' sincronizzata da se', e il figlio apre il palco e il suono da due
- *    momenti diversi.  ⚠ `pthread_once` e non un `bool`, perche' «di solito
- *    succede prima» non e' una sincronizzazione. */
+/* ⛔ `pw_init()` only once per process, and `cattura.c` calls it too:
+ *    it is not synchronised by itself, and the child opens the stage and the sound
+ *    at two different moments.  ⚠ `pthread_once` and not a `bool`, because "it
+ *    usually happens first" is not a synchronisation. */
 static pthread_once_t una_volta = PTHREAD_ONCE_INIT;
 
 static void inizializza_pipewire(void)
@@ -586,13 +584,13 @@ suono *suono_apri(void)
 	s->ciclo = pw_thread_loop_new("remotix-suono", NULL);
 	if (!s->ciclo)
 	{
-		registro_dice(REG_SUONO, "⛔ ciclo PipeWire non creato");
+		registro_dice(REG_SUONO, "⛔ PipeWire loop not created");
 		goto guasto;
 	}
 	s->contesto = pw_context_new(pw_thread_loop_get_loop(s->ciclo), NULL, 0);
 	if (!s->contesto)
 	{
-		registro_dice(REG_SUONO, "⛔ contesto PipeWire non creato");
+		registro_dice(REG_SUONO, "⛔ PipeWire context not created");
 		goto guasto;
 	}
 
@@ -600,7 +598,7 @@ suono *suono_apri(void)
 	if (pw_thread_loop_start(s->ciclo) < 0)
 	{
 		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ thread di PipeWire non avviato");
+		registro_dice(REG_SUONO, "⛔ PipeWire thread not started");
 		goto guasto;
 	}
 
@@ -608,11 +606,11 @@ suono *suono_apri(void)
 	if (!s->nucleo)
 	{
 		pw_thread_loop_unlock(s->ciclo);
-		/* ⚠ Il caso normale in cui questa fallisce: `PIPEWIRE_RUNTIME_DIR` /
-		 *   `XDG_RUNTIME_DIR` che non punta alla sessione servita.  Lo si dice
-		 *   per nome, o la diagnosi ricomincia da zero (`CODER.md` §3.7). */
-		registro_dice(REG_SUONO, "⛔ connessione a PipeWire fallita: si guarda XDG_RUNTIME_DIR "
-		                         "e se il servizio gira nella sessione");
+		/* ⚠ The normal case in which this fails: `PIPEWIRE_RUNTIME_DIR` /
+		 *   `XDG_RUNTIME_DIR` not pointing to the served session.  It is said
+		 *   by name, or the diagnosis starts over from zero (`CODER.md` §3.7). */
+		registro_dice(REG_SUONO, "⛔ connection to PipeWire failed: check XDG_RUNTIME_DIR "
+		                         "and whether the service runs in the session");
 		goto guasto;
 	}
 
@@ -623,8 +621,8 @@ suono *suono_apri(void)
 	}
 	pw_thread_loop_unlock(s->ciclo);
 
-	registro_dice(REG_SUONO, "⭐ sink audio «%s» montato nella sessione: nodo %u, %d Hz, %d canali "
-	                         "— e' della SESSIONE, sopravvive al distacco (I4)",
+	registro_dice(REG_SUONO, "⭐ audio sink «%s» mounted in the session: node %u, %d Hz, %d channels "
+	                         "— it belongs to the SESSION, it survives detach (I4)",
 	              NOME_SINK, s->nodo, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI);
 	return s;
 
@@ -646,11 +644,11 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 		return false;
 
 	/*
-	 * ⛔ QUI, E NON SOLO ALLA CREAZIONE.  Chi ripristina i livelli salvati lo fa
-	 *    quando il nodo COMPARE, cioe' subito dopo che l'abbiamo alzato noi: alla
-	 *    creazione si perde la corsa, e il primo collegamento dopo un riavvio
-	 *    arriva muto.  L'avvio della cattura e' il momento piu' tardi di cui
-	 *    disponiamo, e a quel punto la corsa e' finita.  `[M]` 8 agosto 2026.
+	 * ⛔ HERE, AND NOT ONLY AT CREATION.  Whoever restores saved levels does so
+	 *    when the node APPEARS, that is right after we raised it: at
+	 *    creation the race is lost, and the first connection after a restart
+	 *    arrives mute.  The capture start is the latest moment we have
+	 *    available, and by then the race is over.  `[M]` 8 August 2026.
 	 */
 	suono_volume_massimo(s);
 
@@ -659,7 +657,7 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	if (s->flusso)
 	{
 		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ la cattura audio e' gia' accesa: la seconda non si apre");
+		registro_dice(REG_SUONO, "⛔ the audio capture is already on: the second one does not open");
 		return false;
 	}
 
@@ -670,15 +668,15 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	atomic_store(&s->fotogrammi, 0);
 	atomic_store(&s->scartati, 0);
 	atomic_store(&s->picco, 0);
-	/* ⚠ Accesa PRIMA di collegare il flusso, e spenta da `su_parametri` se il
-	 *   formato negoziato non e' quello di §5.3: il primo richiamo puo' arrivare
-	 *   prima che questa funzione torni. */
+	/* ⚠ On BEFORE connecting the stream, and switched off by `su_parametri` if the
+	 *   negotiated format is not that of §5.3: the first callback may arrive
+	 *   before this function returns. */
 	atomic_store(&s->consegna, true);
 
 	proprieta = pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Capture",
-	                              /* Le due righe che decidono DA DOVE si cattura: il
-	                               * MONITOR (l'uscita) del nostro sink, e non
-	                               * l'ingresso di un microfono che qui non esiste. */
+	                              /* The two lines that decide WHERE we capture from: the
+	                               * MONITOR (the output) of our sink, and not
+	                               * the input of a microphone that does not exist here. */
 	                              PW_KEY_STREAM_CAPTURE_SINK, "true", PW_KEY_TARGET_OBJECT,
 	                              NOME_SINK, PW_KEY_NODE_FORCE_QUANTUM, QUANTO_FORZATO, NULL);
 	s->flusso = proprieta ? pw_stream_new(s->nucleo, "remotix-suono", proprieta) : NULL;
@@ -686,20 +684,20 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	{
 		atomic_store(&s->consegna, false);
 		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ flusso PipeWire non creato");
+		registro_dice(REG_SUONO, "⛔ PipeWire stream not created");
 		return false;
 	}
 	pw_stream_add_listener(s->flusso, &s->gancio_flusso, &eventi_flusso, s);
 
 	/*
-	 * ⛔ IL FORMATO SI CHIEDE FISSO, e non e' una preferenza: `RCP.md` §5.3.
-	 *    PipeWire ricampiona per conto suo fra il sink e questo flusso, cosi' fra
-	 *    il monitor e il filo non resta nessuna conversione da fare — il
-	 *    codificatore riceve gia' i campioni giusti, e non serve un
-	 *    ricampionatore nostro.  ⚠ Fino al 29 set 2026 la frase diceva «non si
-	 *    dipende da quali ricampionatori sia stata compilata `libavcodec`»:
-	 *    dalla fase 18 libavcodec non c'e' piu', e `libopus` (`audio.c`)
-	 *    ricampionatori non ne ha — ⇒ la ragione conta ancora di piu'.
+	 * ⛔ THE FORMAT IS ASKED FIXED, and it is not a preference: `RCP.md` §5.3.
+	 *    PipeWire resamples on its own between the sink and this stream, so between
+	 *    the monitor and the wire no conversion is left to do — the
+	 *    encoder already gets the right samples, and we need no resampler
+	 *    of our own.  ⚠ Until 29 Sep 2026 the sentence said "we do not
+	 *    depend on which resamplers `libavcodec` was built with":
+	 *    since phase 18 libavcodec is gone, and `libopus` (`audio.c`)
+	 *    has no resamplers — ⇒ the reason counts even more.
 	 */
 	formato.format = SPA_AUDIO_FORMAT_S16;
 	formato.rate = AUDIO_FREQUENZA;
@@ -708,10 +706,10 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 	formato.position[1] = SPA_AUDIO_CHANNEL_FR;
 	parametri[0] = spa_format_audio_raw_build(&costruttore, SPA_PARAM_EnumFormat, &formato);
 
-	/* ⛔ `PW_STREAM_FLAG_RT_PROCESS`: la richiamata gira sul thread di tempo
-	 *    reale.  E' voluto — un salto in mezzo al ciclo principale sarebbe un
-	 *    quanto di ritardo in piu' su un anello che ne ha 50 in tutto — e il
-	 *    prezzo e' il contratto scritto in `suono.h`: dentro si copia e si torna. */
+	/* ⛔ `PW_STREAM_FLAG_RT_PROCESS`: the callback runs on the realtime
+	 *    thread.  It is wanted — a hop through the main loop would be one more
+	 *    quantum of latency on a link that has 50 in all — and the
+	 *    price is the contract written in `suono.h`: inside one copies and returns. */
 	if (pw_stream_connect(s->flusso, PW_DIRECTION_INPUT, PW_ID_ANY,
 	                      PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
 	                          PW_STREAM_FLAG_RT_PROCESS,
@@ -721,12 +719,12 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 		s->flusso = NULL;
 		atomic_store(&s->consegna, false);
 		pw_thread_loop_unlock(s->ciclo);
-		registro_dice(REG_SUONO, "⛔ aggancio al monitor del sink «%s» fallito", NOME_SINK);
+		registro_dice(REG_SUONO, "⛔ attaching to the monitor of sink «%s» failed", NOME_SINK);
 		return false;
 	}
 
-	/* ⛔ Si aspetta `paused`: e' il momento in cui il formato e' stato negoziato,
-	 *    cioe' l'unico in cui un rifiuto si vede subito. */
+	/* ⛔ We wait for `paused`: it is the moment the format was negotiated,
+	 *    that is the only one in which a refusal shows at once. */
 	scadenza = registro_ora_ms() + ATTESA_ASCOLTO_MS;
 	while (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING &&
 	       s->stato != PW_STREAM_STATE_ERROR && registro_ora_ms() < scadenza)
@@ -735,59 +733,59 @@ bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi)
 
 	if (s->stato == PW_STREAM_STATE_ERROR)
 	{
-		registro_dice(REG_SUONO, "⛔ cattura audio rifiutata: %s",
-		              s->guasto ? s->guasto : "senza spiegazione");
+		registro_dice(REG_SUONO, "⛔ audio capture refused: %s",
+		              s->guasto ? s->guasto : "no explanation");
 		suono_ascolto_ferma(s);
 		return false;
 	}
 	if (s->stato != PW_STREAM_STATE_PAUSED && s->stato != PW_STREAM_STATE_STREAMING)
 	{
-		registro_dice(REG_SUONO, "⛔ la cattura audio non ha dato segno di vita entro %d ms",
+		registro_dice(REG_SUONO, "⛔ the audio capture gave no sign of life within %d ms",
 		              ATTESA_ASCOLTO_MS);
 		suono_ascolto_ferma(s);
 		return false;
 	}
 
 	registro_dice(REG_SUONO,
-	              "⭐ cattura audio avviata dal monitor di «%s»: %d Hz, %d canali, s16, quanto %s "
-	              "— ⚠ i blocchi hanno misura VARIABILE, chi ascolta accumula (suono.h)",
+	              "⭐ audio capture started from the monitor of «%s»: %d Hz, %d channels, s16, quantum %s "
+	              "— ⚠ blocks have VARIABLE size, the listener accumulates (suono.h)",
 	              NOME_SINK, (int) AUDIO_FREQUENZA, (int) AUDIO_CANALI, QUANTO_FORZATO);
 	return true;
 }
 
 /*
- * ⛔⛔ L'ATTESA PROMESSA, E FATTA — v1 la prometteva e NON la faceva.
+ * ⛔⛔ THE PROMISED WAIT, AND DONE — v1 promised it and did NOT do it.
  *
- * Il commento di v1 diceva: «Il lucchetto del ciclo E' l'attesa promessa
- * nell'intestazione: PipeWire lo tiene mentre chiama `su_processo`».  ⛔ E' FALSO
- * quando il flusso e' collegato con `PW_STREAM_FLAG_RT_PROCESS`, che e'
- * precisamente il nostro caso: `[R]` `pipewire/stream.h:150` e `:466` — la
- * richiamata arriva dal **thread dei dati**, che e' un altro thread, e il
- * lucchetto del ciclo non lo ferma affatto.
+ * v1's comment said: "The loop lock IS the wait promised in the header:
+ * PipeWire holds it while it calls `su_processo`".  ⛔ It is FALSE
+ * when the stream is connected with `PW_STREAM_FLAG_RT_PROCESS`, which is
+ * precisely our case: `[R]` `pipewire/stream.h:150` and `:466` — the
+ * callback comes from the **data thread**, which is another thread, and the
+ * loop lock does not stop it at all.
  *
- * ⚠ Il difetto non si sarebbe quasi mai visto: la finestra e' di microsecondi, a
- *   ogni distacco.  ⛔ E quando si vede e' un segfault dentro un thread che non
- *   ha il nostro nome, con in mano il contesto della connessione appena
- *   liberata — cioe' la forma d'errore piu' cara che ci sia, perche' nessuno la
- *   collega alla riconnessione che l'ha prodotta.
+ * ⚠ The defect would almost never have shown: the window is microseconds, at
+ *   every detach.  ⛔ And when it shows it is a segfault inside a thread that
+ *   does not bear our name, holding the context of the connection just
+ *   freed — that is the most expensive form of error there is, because nobody
+ *   connects it to the reconnection that produced it.
  *
- * ⇒ L'attesa e' in due tempi, e il primo NON dipende da come sia fatta
- *   `pw_stream_destroy()` dentro:
+ * ⇒ The wait is in two steps, and the first does NOT depend on how
+ *   `pw_stream_destroy()` is made inside:
  *
- *   1. si spegne `consegna` e si aspetta che `in_richiamo` torni falso.  Da qui
- *      in poi nessun richiamo di chi ascolta e' in volo, e nessuno ne partira'
- *      piu' (le due scritture sequenzialmente coerenti si vedono a vicenda: vedi
- *      `su_processo`).  ⭐ Questo, e solo questo, e' cio' che autorizza il
- *      chiamante a liberare il suo contesto;
- *   2. si distrugge il flusso tenendo il lucchetto del ciclo.  ⚠ Che nessuna
- *      `dequeue` sia a meta' strada quando il flusso muore e' responsabilita' di
- *      `pw_stream_destroy()`, che toglie il nodo dal ciclo dei dati **fra un
- *      quanto e l'altro** — e' la stessa garanzia su cui poggia ogni programma
- *      che usa PipeWire, e non e' una cosa che possiamo rifare noi da fuori.
+ *   1. `consegna` is switched off and we wait for `in_richiamo` to go back false.
+ *      From here on no listener callback is in flight, and none will start
+ *      again (the two sequentially consistent writes see each other: see
+ *      `su_processo`).  ⭐ This, and only this, is what entitles the
+ *      caller to free its context;
+ *   2. the stream is destroyed holding the loop lock.  ⚠ That no
+ *      `dequeue` is half way when the stream dies is the responsibility of
+ *      `pw_stream_destroy()`, which removes the node from the data loop **between
+ *      one quantum and the next** — it is the same guarantee every program
+ *      using PipeWire rests on, and not something we can redo from outside.
  *
- * ⚠ L'attesa del punto 1 sta FUORI dal lucchetto: prenderlo mentre si aspetta il
- *   thread dei dati sarebbe il modo di trovarsi in mezzo a un abbraccio mortale
- *   il giorno in cui PipeWire cambiasse idea su chi tiene che cosa.
+ * ⚠ The wait of step 1 is OUTSIDE the lock: taking it while waiting for the
+ *   data thread would be the way to end up in the middle of a deadlock
+ *   the day PipeWire changed its mind about who holds what.
  */
 static void aspetta_richiamo(suono *s)
 {
@@ -795,20 +793,20 @@ static void aspetta_richiamo(suono *s)
 
 	while (atomic_load(&s->in_richiamo))
 	{
-		struct timespec pausa = { 0, 200 * 1000 }; /* 200 µs: un quanto e' 5 ms */
+		struct timespec pausa = { 0, 200 * 1000 }; /* 200 µs: a quantum is 5 ms */
 
 		nanosleep(&pausa, NULL);
 		if (registro_ora_ms() - inizio > ATTESA_BARRIERA_MS)
 		{
-			/* ⛔ Si esce lo stesso, e SI DICHIARA.  Restare qui per sempre
-			 *    vorrebbe dire una sessione congelata, e «una sessione brutta
-			 *    vale piu' di una sessione chiusa» (`CODER.md` §1) non arriva
-			 *    fino a «una sessione appesa».  ⚠ Ma chi legge questa riga sa che
-			 *    il contesto della connessione NON si puo' liberare: PipeWire e'
-			 *    fermo dentro un richiamo da due secondi. */
+			/* ⛔ We exit anyway, and it IS DECLARED.  Staying here forever
+			 *    would mean a frozen session, and "an ugly session
+			 *    is worth more than a closed session" (`CODER.md` §1) does not stretch
+			 *    to "a hung session".  ⚠ But whoever reads this line knows that
+			 *    the connection's context must NOT be freed: PipeWire has been
+			 *    stuck inside a callback for two seconds. */
 			registro_dice(REG_SUONO,
-			              "⛔⛔ il thread di tempo reale non e' uscito dal richiamo entro %d ms: "
-			              "NON liberare il contesto dell'ascolto — PipeWire e' bloccato",
+			              "⛔⛔ the realtime thread did not leave the callback within %d ms: "
+			              "do NOT free the listening context — PipeWire is blocked",
 			              ATTESA_BARRIERA_MS);
 			return;
 		}
@@ -820,11 +818,11 @@ void suono_ascolto_ferma(suono *s)
 	if (!s || !s->ciclo)
 		return;
 
-	/* 1. la barriera verso chi ascolta (vedi il riquadro). */
+	/* 1. the barrier towards the listener (see the box). */
 	atomic_store(&s->consegna, false);
 	aspetta_richiamo(s);
 
-	/* 2. il flusso, sotto il lucchetto del ciclo. */
+	/* 2. the stream, under the loop lock. */
 	pw_thread_loop_lock(s->ciclo);
 	if (s->flusso)
 	{
@@ -835,25 +833,25 @@ void suono_ascolto_ferma(suono *s)
 
 		s->flusso = NULL;
 		pw_stream_destroy(flusso);
-		/* ⭐ Il riassunto si stampa QUI, dal thread di chi ferma, e non dal
-		 *    thread di tempo reale che l'ha contato.  ⚠ «zero blocchi» e' un
-		 *    fatto, non un vuoto: dice che il monitor non ha consegnato niente,
-		 *    e va distinto dai fotogrammi SCARTATI (formato rifiutato).
+		/* ⭐ The summary is printed HERE, from the stopper's thread, and not from
+		 *    the realtime thread that counted it.  ⚠ "zero blocks" is a
+		 *    fact, not a void: it says the monitor delivered nothing,
+		 *    and must be told apart from DISCARDED frames (refused format).
 		 *
-		 * ⛔⭐ E IL PICCO SI LEGGE PRIMA DI OGNI ALTRA COSA quando qualcuno dice
-		 *     «non si sente niente»:
-		 *       · picco 0  con blocchi > 0  ⇒ i campioni arrivano VUOTI —
-		 *         nella sessione non suonava nessuno, oppure il monitor non e'
-		 *         collegato.  Si guarda il grafo (`pw-link -l`), e lo si
-		 *         guarda MENTRE la sessione e' viva;
-		 *       · picco > 0                 ⇒ il suono e' entrato in REMOTIX, e
-		 *         chi lo perde sta piu' avanti (l'anello, il codificatore, i
-		 *         datagram).  `[M]` 17 agosto 2026: 16383 su 32767 con un tono
-		 *         a 440 Hz — cioe' esattamente quel che `pw-record` legge dallo
-		 *         stesso monitor nello stesso istante. */
+		 * ⛔⭐ AND THE PEAK IS READ BEFORE ANYTHING ELSE when someone says
+		 *     "nothing can be heard":
+		 *       · peak 0  with blocks > 0  ⇒ the samples arrive EMPTY —
+		 *         nobody was playing in the session, or the monitor is not
+		 *         connected.  Look at the graph (`pw-link -l`), and look at it
+		 *         WHILE the session is alive;
+		 *       · peak > 0                 ⇒ the sound entered REMOTIX, and
+		 *         whoever loses it is further on (the ring, the encoder, the
+		 *         datagrams).  `[M]` 17 August 2026: 16383 of 32767 with a 440 Hz
+		 *         tone — that is exactly what `pw-record` reads from the
+		 *         same monitor at the same instant. */
 		registro_dice(REG_SUONO,
-		              "cattura audio fermata: %llu blocchi, %llu fotogrammi consegnati "
-		              "(%llu s di suono), %llu fotogrammi scartati, PICCO %llu su 32767",
+		              "audio capture stopped: %llu blocks, %llu frames delivered "
+		              "(%llu s of sound), %llu frames discarded, PEAK %llu of 32767",
 		              (unsigned long long) blocchi, (unsigned long long) fotogrammi,
 		              (unsigned long long) (fotogrammi / AUDIO_FREQUENZA),
 		              (unsigned long long) scartati,
@@ -875,9 +873,9 @@ bool suono_ascolto_vivo(const suono *s)
 
 	if (!s || !s->ciclo || !s->flusso)
 		return false;
-	/* ⚠ Sotto il lucchetto perche' `stato` lo scrive il thread del ciclo.  Il
-	 *   `const` e' del puntatore a `suono`, non del ciclo di PipeWire: qui non si
-	 *   cambia niente di nostro. */
+	/* ⚠ Under the lock because `stato` is written by the loop thread.  The
+	 *   `const` is on the pointer to `suono`, not on the PipeWire loop: nothing
+	 *   of ours changes here. */
 	pw_thread_loop_lock(s->ciclo);
 	vivo = s->flusso && (s->stato == PW_STREAM_STATE_PAUSED ||
 	                     s->stato == PW_STREAM_STATE_STREAMING);
@@ -900,11 +898,11 @@ void suono_chiudi(suono *s)
 	if (!s)
 		return;
 
-	/* ⛔ Prima la barriera e il flusso, poi il thread, poi il resto — e l'ordine
-	 *    e' quello di `cattura.c`, per lo stesso motivo: cosi' non si tocca
-	 *    niente che una richiamata stia usando.  ⚠ `suono_ascolto_ferma()` regge
-	 *    l'oggetto mezzo costruito (il caso `goto guasto` di `suono_apri`) perche'
-	 *    guarda `ciclo` e `flusso` prima di ogni cosa. */
+	/* ⛔ First the barrier and the stream, then the thread, then the rest — and the
+	 *    order is that of `cattura.c`, for the same reason: so nothing a
+	 *    callback is using is touched.  ⚠ `suono_ascolto_ferma()` copes with the
+	 *    half-built object (the `goto guasto` case of `suono_apri`) because it
+	 *    looks at `ciclo` and `flusso` before anything else. */
 	suono_ascolto_ferma(s);
 
 	if (s->ciclo)

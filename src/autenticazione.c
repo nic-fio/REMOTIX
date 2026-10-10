@@ -1,45 +1,45 @@
 /*
- * autenticazione.c — PAM, e la guardia che parte da negato.
+ * autenticazione.c — PAM, and the guard that starts from denied.
  *
  * ---------------------------------------------------------------------------
- * ⭐ DERIVATO DA `fondamenta/remotix-c/src/autenticazione.c` (144 righe), CON DUE
- *    CAMBIAMENTI, E IL PRIMO E' QUELLO CHE `PIANO.md` FASE 1 CHIAMA
- *    «NON UN DETTAGLIO»:
+ * ⭐ DERIVED FROM `fondamenta/remotix-c/src/autenticazione.c` (144 lines), WITH TWO
+ *    CHANGES, AND THE FIRST IS THE ONE THAT `PIANO.md` PHASE 1 CALLS
+ *    «NOT A DETAIL»:
  *
- * 1. ⛔ **E' CADUTO IL CONFRONTO CON L'UTENTE DEL PROCESSO.**  La versione di
- *    v1 chiamava `autenticazione_utente_atteso()` — il nome ricavato dall'uid
- *    EFFETTIVO — e rifiutava chiunque altro *prima* di interpellare PAM.  Era
- *    giusto in v1, dove il server girava dentro la sessione di una persona;
- *    ⛔ **contraddice il multi-tenant** di `SPECIFICHE.md` §5.5, dove il
- *    servizio e' di sistema e serve dieci utenti diversi.
+ * 1. ⛔ **THE COMPARISON WITH THE PROCESS USER HAS BEEN DROPPED.**  The v1
+ *    version called `autenticazione_utente_atteso()` — the name derived from
+ *    the EFFECTIVE uid — and refused anyone else *before* consulting PAM.  It
+ *    was right in v1, where the server ran inside one person's session;
+ *    ⛔ **it contradicts the multi-tenancy** of `SPECIFICHE.md` §5.5, where the
+ *    service is a system one and serves ten different users.
  *
- *    ⚠ E il sintomo, per chi lo riusasse senza toglierlo, sarebbe un server
- *      che funziona **solo per chi lo ha avviato**, e per tutti gli altri dice
- *      «credenziali errate» — cioe' la diagnosi punta sulla password.  E'
- *      il rilievo B10 del banco.
+ *    ⚠ And the symptom, for whoever reused it without removing it, would be a
+ *      server that works **only for whoever started it**, and says «wrong
+ *      credentials» to everyone else — that is, the diagnosis points at the
+ *      password.  It is finding B10 of the bench.
  *
- * 2. Via glib: `gboolean` diventa `bool`.  Il modulo RCP non dipende da glib,
- *    e questa e' una dipendenza in meno da portarsi nel prodotto.
- *
- * ---------------------------------------------------------------------------
- * ⛔ LA GUARDIA PARTE DA NEGATO
- *
- * La regola di v1 che resta, e vale ancora: un server che valida «se ci sono
- * credenziali» non valida niente.  Qui l'esito parte da falso e solo un
- * `PAM_SUCCESS` su **tutt'e due** i passi lo apre.
- *
- * ⚠ E `pam_acct_mgmt` non e' un di piu': `pam_authenticate` dice «questa
- *   parola e' giusta», non «questo conto e' utilizzabile».  Un conto scaduto o
- *   bloccato passa il primo e non il secondo.
+ * 2. glib removed: `gboolean` becomes `bool`.  The RCP module does not depend
+ *    on glib, and this is one dependency fewer to carry into the product.
  *
  * ---------------------------------------------------------------------------
- * ⭐ E UN TERZO CAMBIAMENTO, DEL 10 AGOSTO 2026 NOTTE (rilievo B-11)
+ * ⛔ THE GUARD STARTS FROM DENIED
  *
- * 3. ⛔ **Il servizio PAM e' `remotix`, non `login`** — `SPECIFICHE.md` §4.2.
- *    Vedi il riquadro sopra `SERVIZIO_PAM`, il file `src/remotix.pam` che va
- *    installato in `/etc/pam.d/`, e il controllo che `main.c` fa all'avvio.
- *    ⚠ Insieme e' arrivata la distinzione fra «PAM ha rifiutato» e «PAM non ha
- *      potuto giudicare», che prima non c'era: erano lo stesso `false`.
+ * The v1 rule that remains, and still holds: a server that validates «if there
+ * are credentials» validates nothing.  Here the outcome starts from false and
+ * only a `PAM_SUCCESS` on **both** steps opens it.
+ *
+ * ⚠ And `pam_acct_mgmt` is not an extra: `pam_authenticate` says «this
+ *   password is right», not «this account is usable».  An expired or locked
+ *   account passes the first and not the second.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐ AND A THIRD CHANGE, FROM THE NIGHT OF 10 AUG 2026 (finding B-11)
+ *
+ * 3. ⛔ **The PAM service is `remotix`, not `login`** — `SPECIFICHE.md` §4.2.
+ *    See the box above `SERVIZIO_PAM`, the file `src/remotix.pam` that must be
+ *    installed in `/etc/pam.d/`, and the check `main.c` does at startup.
+ *    ⚠ Together with it came the distinction between «PAM refused» and «PAM
+ *      could not judge», which did not exist before: they were the same `false`.
  */
 #include <security/pam_appl.h>
 #include <stdbool.h>
@@ -48,25 +48,26 @@
 #include <string.h>
 #include <strings.h>
 
-/* ⛔ IL SERVIZIO PAM E' `remotix` — `SPECIFICHE.md` §4.2, prima riga:
- *    «PAM locale, servizio `remotix`, con il ban dell'indirizzo dopo tre
- *    tentativi falliti».
+/* ⛔ THE PAM SERVICE IS `remotix` — `SPECIFICHE.md` §4.2, first line:
+ *    «local PAM, service `remotix`, with the address ban after three failed
+ *    attempts».
  *
- * ⛔ Qui c'era `login`, e la contraddizione con §4.2 stava in una riga —
- *    rilievo B-11, 10 agosto 2026 notte.  Il prezzo non era di forma: su Debian
- *    `/etc/pam.d/login` e' la pila della CONSOLE LOCALE, con `pam_securetty`,
- *    `pam_lastlog`, `pam_motd` e `pam_limits`, e un accesso di rete che passa
- *    di li' eredita politiche pensate per un'altra cosa.
+ * ⛔ There used to be `login` here, and the contradiction with §4.2 lived in
+ *    one line — finding B-11, night of 10 Aug 2026.  The price was not one of
+ *    form: on Debian `/etc/pam.d/login` is the LOCAL CONSOLE stack, with
+ *    `pam_securetty`, `pam_lastlog`, `pam_motd` and `pam_limits`, and a
+ *    network login that goes through there inherits policies meant for
+ *    something else.
  *
- * ⚠ E il file del servizio va INSTALLATO: `src/remotix.pam` (o quello della
- *   famiglia: `.fedora`, `.suse`, `.arch`) in `/etc/pam.d/remotix` — su
- *   openSUSE in `/usr/lib/pam.d/remotix`.  Senza, Linux-PAM ripiega sul
- *   servizio `other`, che su Fedora e Arch e' `pam_deny` — cioe' **ogni**
- *   parola d'ordine giusta viene rifiutata, con il sintomo «utente o parola
- *   non corretti» — e su Debian e' una pila che non e' la nostra.  ⛔ E' per questo
- *   che il ripiego qui sotto NON e' silenzioso: `perche_no()` distingue «PAM
- *   dice che la parola e' sbagliata» da «PAM non ha potuto giudicare», e chi
- *   accende il server controlla il file all'avvio (`main.c`). */
+ * ⚠ And the service file must be INSTALLED: `src/remotix.pam` (or the one of
+ *   the family: `.fedora`, `.suse`, `.arch`) in `/etc/pam.d/remotix` — on
+ *   openSUSE in `/usr/lib/pam.d/remotix`.  Without it, Linux-PAM falls back to
+ *   the `other` service, which on Fedora and Arch is `pam_deny` — that is,
+ *   **every** right password is refused, with the symptom «user or password
+ *   not correct» — and on Debian is a stack that is not ours.  ⛔ This is why
+ *   the fallback below is NOT silent: `perche_no()` tells «PAM says the
+ *   password is wrong» from «PAM could not judge», and whoever starts the
+ *   server checks the file at startup (`main.c`). */
 #define SERVIZIO_PAM "remotix"
 
 bool rcp_autentica_da(const char *utente, const char *parola,
@@ -88,29 +89,28 @@ static int conversazione(int n, const struct pam_message **domande,
 	for (int i = 0; i < n; i++) {
 		switch (domande[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
-			/* la sola domanda a cui rispondiamo: la parola d'ordine */
-			/* ⚠ ⛔ LA QUARTA COPIA DELLA PAROLA D'ORDINE, E DICHIARARLA E'
-			 *   TUTTO QUEL CHE SI PUO' FARE — rilievo B-13, 10 agosto 2026
-			 *   notte.
+			/* the only question we answer: the password */
+			/* ⚠ ⛔ THE FOURTH COPY OF THE PASSWORD, AND DECLARING IT IS ALL
+			 *   THAT CAN BE DONE — finding B-13, night of 10 Aug 2026.
 			 *
-			 *   §4.4 dice «va azzerata appena PAM ha risposto», e `rcp.c` lo
-			 *   fa su tutte e tre le copie che sono SUE (R9.8: la copia locale
-			 *   su ogni strada d'uscita, la coda dell'accumulo dopo il
-			 *   `memmove`, `s->acc` prima di liberarlo).  ⛔ Questa quarta
-			 *   copia nasce qui e la libera **libpam**, non noi: dal momento
-			 *   in cui questa funzione ritorna, il puntatore appartiene al
-			 *   modulo, e scriverci sopra dopo che l'ha liberato sarebbe un
-			 *   accesso a memoria liberata — un difetto vero comprato per
-			 *   coprirne uno probabile.
+			 *   §4.4 says «it must be zeroed as soon as PAM has answered», and
+			 *   `rcp.c` does it on all three copies that are ITS OWN (R9.8: the
+			 *   local copy on every exit road, the tail of the accumulator
+			 *   after the `memmove`, `s->acc` before freeing it).  ⛔ This
+			 *   fourth copy is born here and is freed by **libpam**, not by
+			 *   us: from the moment this function returns, the pointer belongs
+			 *   to the module, and writing over it after it has freed it would
+			 *   be a use-after-free — a real defect bought to cover a probable
+			 *   one.
 			 *
-			 *   ⭐ Chi azzera, e dove: Linux-PAM lo fa in `_pam_drop_reply()`
-			 *      (`libpam/pam_misc.c`), che chiama `_pam_overwrite()` su
-			 *      ogni `resp` prima di `free()`.  ⛔ E' vero OGGI e IN
-			 *      QUELL'IMPLEMENTAZIONE: chi porta questo file su un'altra
-			 *      libreria PAM ha QUESTA riga da rileggere, ed e' la ragione
-			 *      per cui e' scritta.  `[M]` misurato il 10 agosto 2026 notte
-			 *      (vedi il rapporto del coder): dopo `pam_authenticate()` i
-			 *      byte non ci sono piu'. */
+			 *   ⭐ Who zeroes, and where: Linux-PAM does it in `_pam_drop_reply()`
+			 *      (`libpam/pam_misc.c`), which calls `_pam_overwrite()` on
+			 *      every `resp` before `free()`.  ⛔ It is true TODAY and IN
+			 *      THAT IMPLEMENTATION: whoever ports this file to another PAM
+			 *      library has THIS line to reread, and that is the reason it
+			 *      is written.  `[M]` measured on the night of 10 Aug 2026
+			 *      (see the coder's report): after `pam_authenticate()` the
+			 *      bytes are no longer there. */
 			out[i].resp = strdup(r->parola ? r->parola : "");
 			if (!out[i].resp) {
 				free(out);
@@ -130,22 +130,22 @@ static int conversazione(int n, const struct pam_message **domande,
 	return PAM_SUCCESS;
 }
 
-/* ⛔⭐ «PAM DICE CHE LA PAROLA E' SBAGLIATA» E «PAM NON HA POTUTO GIUDICARE»
- *     SONO DUE FATTI DIVERSI — `LEZIONI.md` §1.9 regola 1, e la faccia comune
- *     di «vuoto» e «proibito».
+/* ⛔⭐ «PAM SAYS THE PASSWORD IS WRONG» AND «PAM COULD NOT JUDGE» ARE TWO
+ *     DIFFERENT FACTS — `LEZIONI.md` §1.9 rule 1, and the common face of
+ *     «empty» and «forbidden».
  *
- *     Per il protocollo l'esito e' uno solo — la guardia parte da negato, e
- *     `RESPINTO(0x07)` e' quel che il client riceve in tutt'e due i casi, come
- *     dev'essere: dire all'esterno «il tuo conto e' bloccato» invece di
- *     «credenziali errate» e' un oracolo.  ⛔ Ma nel REGISTRO DEL SERVER i due
- *     fatti si scrivono diversi, o un `/etc/pam.d/remotix` mancante somiglia
- *     in tutto a mille parole d'ordine sbagliate — e chi diagnostica cerca
- *     nella parola d'ordine per ore.
+ *     For the protocol the outcome is one only — the guard starts from denied,
+ *     and `RESPINTO(0x07)` is what the client receives in both cases, as it
+ *     must be: telling the outside «your account is locked» instead of «wrong
+ *     credentials» is an oracle.  ⛔ But in the SERVER LOG the two facts are
+ *     written differently, or a missing `/etc/pam.d/remotix` looks in every
+ *     way like a thousand wrong passwords — and whoever diagnoses searches the
+ *     password for hours.
  *
- * ⚠ Si scrive su `stderr` e non con `registro.h`: questo file e' montato su
- *   DUE ospiti (il prodotto e l'innesto di `banchi/01-b3-rcp-innesta.py`), e
- *   solo uno dei due ha il nostro registro.  `stderr` ce l'hanno tutti e due,
- *   ed e' dove tutt'e due scrivono. */
+ * ⚠ It is written on `stderr` and not with `registro.h`: this file is mounted
+ *   on TWO hosts (the product and the graft of `banchi/01-b3-rcp-innesta.py`),
+ *   and only one of the two has our log.  Both have `stderr`, and it is where
+ *   both write. */
 static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
                       int rv)
 {
@@ -154,35 +154,35 @@ static void perche_no(const char *utente, const char *passo, pam_handle_t *pam,
 	    rv == PAM_ACCT_EXPIRED || rv == PAM_NEW_AUTHTOK_REQD ||
 	    rv == PAM_MAXTRIES) {
 		fprintf(stderr,
-		        "RCP: PAM ha RIFIUTATO l'utente «%s» in %s: %s (servizio "
+		        "RCP: PAM REFUSED user «%s» in %s: %s (service "
 		        "«%s»)\n",
 		        utente, passo, pam_strerror(pam, rv), SERVIZIO_PAM);
 	} else {
 		fprintf(stderr,
-		        "RCP: ⛔ PAM NON HA POTUTO GIUDICARE l'utente «%s» in %s: %s "
-		        "(servizio «%s») — NON e' «parola sbagliata».  Guarda che "
-		        "ci sia /etc/pam.d/%s (o /usr/lib/pam.d/%s su openSUSE) e "
-		        "/etc/remotix/utenti-negati: senza il primo Linux-PAM "
-		        "ripiega su «other» (pam_deny su Fedora e Arch), senza il "
-		        "secondo pam_listfile rifiuta tutti.\n",
+		        "RCP: ⛔ PAM COULD NOT JUDGE user «%s» in %s: %s "
+		        "(service «%s») — it is NOT «wrong password».  Check that "
+		        "/etc/pam.d/%s (or /usr/lib/pam.d/%s on openSUSE) and "
+		        "/etc/remotix/utenti-negati exist: without the first Linux-PAM "
+		        "falls back to «other» (pam_deny on Fedora and Arch), without the "
+		        "second pam_listfile refuses everyone.\n",
 		        utente, passo, pam_strerror(pam, rv), SERVIZIO_PAM,
 		        SERVIZIO_PAM, SERVIZIO_PAM);
 	}
 	fflush(stderr);
 }
 
-/* ⭐ FASE 17 T6 — L'INDIRIZZO DEL CLIENT, COME LO DA' sshd (DECISIONI §10.18).
+/* ⭐ PHASE 17 T6 — THE CLIENT'S ADDRESS, AS sshd GIVES IT (DECISIONI §10.18).
  *
- * `provenienza` e' la forma di `trasporto.c`, `[indirizzo]:porta` (le quadre
- * anche per IPv4).  A PAM va l'indirizzo NUDO, come `PAM_RHOST` di sshd con
- * `UseDNS no` (il suo predefinito): niente quadre, niente porta, e un IPv4
- * mappato in IPv6 (`::ffff:1.2.3.4`, il socket a due pile) torna `1.2.3.4`,
- * come fa `ipv64_normalise_mapped()` di sshd.
- * ⇒ `pam_faillock` segna l'indirizzo invece di «SVC remotix», `pam_unix`
- *   scrive `rhost=…` nel giornale, `pam_access` ha l'host, e logind segna la
- *   sessione con `RemoteHost`.
- * Restituisce false (e `fuori` vuoto) se la forma non e' quella attesa: si
- * preferisce nessun `PAM_RHOST` a uno inventato. */
+ * `provenienza` is the form of `trasporto.c`, `[address]:port` (brackets
+ * for IPv4 too).  PAM gets the BARE address, like sshd's `PAM_RHOST` with
+ * `UseDNS no` (its default): no brackets, no port, and an IPv4 mapped into
+ * IPv6 (`::ffff:1.2.3.4`, the dual-stack socket) goes back to `1.2.3.4`,
+ * as sshd's `ipv64_normalise_mapped()` does.
+ * ⇒ `pam_faillock` records the address instead of «SVC remotix», `pam_unix`
+ *   writes `rhost=…` in the journal, `pam_access` has the host, and logind
+ *   marks the session with `RemoteHost`.
+ * Returns false (and `fuori` empty) if the form is not the expected one: no
+ * `PAM_RHOST` is preferred to an invented one. */
 bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap)
 {
 	const char *a, *c;
@@ -228,17 +228,17 @@ bool rcp_autentica_da(const char *utente, const char *parola,
 	rv = pam_start(SERVIZIO_PAM, utente, &conv, &pam);
 	if (rv != PAM_SUCCESS) {
 		fprintf(stderr,
-		        "RCP: ⛔ pam_start(«%s») e' fallito (%d): nessuna "
-		        "autenticazione e' stata nemmeno tentata\n",
+		        "RCP: ⛔ pam_start(«%s») failed (%d): no "
+		        "authentication was even attempted\n",
 		        SERVIZIO_PAM, rv);
 		fflush(stderr);
 		return false;
 	}
 
-	/* ⭐ Come sshd (`auth-pam.c`, `sshpam_init`): `PAM_RHOST` = l'indirizzo
-	 *    del client e `PAM_TTY` = il nome del servizio («ssh» per lui) — i
-	 *    moduli come `pam_time` vogliono un tty, e prima della sessione non
-	 *    ce n'e' uno vero.  `PAM_RUSER` sshd non lo imposta, e nemmeno noi. */
+	/* ⭐ Like sshd (`auth-pam.c`, `sshpam_init`): `PAM_RHOST` = the client's
+	 *    address and `PAM_TTY` = the service name («ssh» for it) — modules
+	 *    like `pam_time` want a tty, and before the session there is no real
+	 *    one.  sshd does not set `PAM_RUSER`, and neither do we. */
 	if (rhost && rhost[0])
 		pam_set_item(pam, PAM_RHOST, rhost);
 	pam_set_item(pam, PAM_TTY, SERVIZIO_PAM);
@@ -248,8 +248,8 @@ bool rcp_autentica_da(const char *utente, const char *parola,
 	if (rv != PAM_SUCCESS) {
 		perche_no(utente, "pam_authenticate", pam, rv);
 	} else {
-		/* ⚠ `pam_acct_mgmt` non e' un di piu': `pam_authenticate` dice
-		 *   «questa parola e' giusta», non «questo conto e' utilizzabile». */
+		/* ⚠ `pam_acct_mgmt` is not an extra: `pam_authenticate` says
+		 *   «this password is right», not «this account is usable». */
 		rv = pam_acct_mgmt(pam, 0);
 		if (rv != PAM_SUCCESS)
 			perche_no(utente, "pam_acct_mgmt", pam, rv);

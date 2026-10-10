@@ -1,87 +1,87 @@
 #!/bin/sh
-# riavvia-7900.sh — IL SERVER DELLA FASE 9, sulla porta 7900.
+# riavvia-7900.sh — THE PHASE 9 SERVER, on port 7900.
 #
-# ⭐ E' `riavvia-7700.sh` con quattro nomi cambiati, e i quattro nomi sono il
-#    punto: porta, cartella di lavoro, albero e unita' sono TUTTI suoi.
+# ⭐ It is `riavvia-7700.sh` with four names changed, and the four names are the
+#    point: port, work folder, tree and unit are ALL its own.
 #
-#      porta       7900          (7700 = banco vecchio, 7730 = l'utente, 7790 = fase 8)
-#      lavoro      /media/REMOTIX/tmp/09
-#      albero      /media/REMOTIX/src/09-src/src
-#      unita'      remotix-7900.service
+#      port        7900          (7700 = old bench, 7730 = the user, 7790 = phase 8)
+#      work        /media/REMOTIX/tmp/09
+#      tree        /media/REMOTIX/src/09-src/src
+#      unit        remotix-7900.service
 #
-# ⛔ PERCHE' NON SI RIUSA LA 7700: due banchi sulla stessa macchina si falsano
-#    in silenzio (`LEZIONI.md` §1.26) — e non danno un rosso, danno **un numero
-#    plausibile**.  La fase 9 misura il ritmo e la banda: e' la fase che quel
-#    difetto rovinerebbe di piu'.  ⇒ porta, ban-file e socket propri.
+# ⛔ WHY 7700 IS NOT REUSED: two benches on the same machine falsify each other
+#    silently (`LEZIONI.md` §1.26) — and they do not give a red, they give **a
+#    plausible number**.  Phase 9 measures the rate and the bandwidth: it is the phase that
+#    defect would ruin the most.  ⇒ port, ban-file and socket of its own.
 #
-# ⚠ Tutto il resto — le quattro trappole, le verifiche — e' quello di
-#   `riavvia-7700.sh`, riga per riga, e li' sta il commento per esteso.
+# ⚠ Everything else — the four traps, the checks — is that of
+#   `riavvia-7700.sh`, line by line, and the full comment is there.
 #
-# Riavvia il server di prova sulla porta 7900 con la pagina che c'e' adesso su
-# disco.  ⛔ La pagina si legge UNA VOLTA all'avvio (pagina.c:627): senza questo
-# riavvio, una pagina nuova sul disco non arriva a nessuno.
+# Restarts the test server on port 7900 with the page that is now on
+# disk.  ⛔ The page is read ONCE at startup (pagina.c:627): without this
+# restart, a new page on disk reaches nobody.
 #
-#   bash riavvia-7900.sh [opzioni in piu' per il server]
+#   bash riavvia-7900.sh [extra options for the server]
 #
-# ⭐ Le opzioni in piu' finiscono in coda a quelle fisse, ed e' quel che rende
-#    provabili i tetti lunghi di §5.3 SENZA aspettarli:
+# ⭐ The extra options go at the end of the fixed ones, and that is what makes
+#    the long ceilings of §5.3 testable WITHOUT waiting for them:
 #
 #      bash riavvia-7900.sh --inattivita-s 10
 #
-#    esercita l'orologio dei trenta minuti in dieci secondi.  ⛔ E il valore IN
-#    VIGORE il server lo scrive all'avvio, cosi' non si prova un tetto credendo
-#    di provarne un altro — ed e' anche l'unico modo di verificare il numero
-#    predefinito senza tenere occupata una macchina per mezz'ora.
+#    exercises the thirty-minute clock in ten seconds.  ⛔ And the value IN
+#    FORCE is written by the server at startup, so one does not test a ceiling believing
+#    one is testing another — and it is also the only way to check the default
+#    number without keeping a machine busy for half an hour.
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔ QUESTO FILE VIVEVA SOLO SULLA MACCHINA DI PROVA, e non e' un dettaglio.
+# ⛔⛔ THIS FILE LIVED ONLY ON THE TEST MACHINE, and it is not a detail.
 #
-# `[M]` 16 agosto 2026: lo script che AVVIA il prodotto non era nel deposito.
-# ⇒ Le sue trappole erano scritte solo dentro se stesso, nessuna revisione le
-# ha mai viste, e la quarta — quella qui sotto — e' costata un'ora buona di
-# diagnosi su un difetto che `SESSIONE.md` aveva gia' scritto al punto **A6**.
-# ⚠ Un attrezzo fuori dal deposito e' un attrezzo che nessuno rilegge.
+# `[M]` 16 August 2026: the script that STARTS the product was not in the repository.
+# ⇒ Its traps were written only inside itself, no review had
+# ever seen them, and the fourth — the one below — cost a good hour of
+# diagnosis on a defect that `SESSIONE.md` had already written at point **A6**.
+# ⚠ A tool outside the repository is a tool nobody rereads.
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔ QUATTRO TRAPPOLE, tutte misurate, tutte con lo stesso sintomo per chi
-#      prova — «non mi collego» / «il desktop non parte» — e la causa minuti
-#      prima.
+# ⛔⛔ FOUR TRAPS, all measured, all with the same symptom for whoever
+#      tests — "I cannot connect" / "the desktop does not start" — and the cause minutes
+#      earlier.
 #
-#   1. L'AMBIENTE.  Il binario NON ha RPATH: senza `LD_LIBRARY_PATH` prende la
-#      `ngtcp2` di sistema, parte benissimo, serve la pagina benissimo, e poi
-#      ABORTA al primo che si collega con «ngtcp2_settingslen_version:
-#      Unreachable».  ⇒ Si mette l'ambiente e SI VERIFICA PRIMA di fermare
-#      quello che c'e': meglio niente riavvio che nessun server.
+#   1. THE ENVIRONMENT.  The binary has NO RPATH: without `LD_LIBRARY_PATH` it takes the
+#      system `ngtcp2`, starts very well, serves the page very well, and then
+#      ABORTS at the first one who connects with «ngtcp2_settingslen_version:
+#      Unreachable».  ⇒ The environment is set and CHECKED BEFORE stopping
+#      the one that is there: better no restart than no server.
 #
-#   2. IL TERMINALE.  `sudo` con `use_pty` stronca tutto cio' che resta nel suo
-#      pseudo-terminale quando il comando finisce, e `nohup` NON basta perche'
-#      para il SIGHUP e non questo.
+#   2. THE TERMINAL.  `sudo` with `use_pty` kills everything left in its
+#      pseudo-terminal when the command ends, and `nohup` is NOT enough because
+#      it blocks SIGHUP and not this.
 #
-#   3. LA VERIFICA CHE NON VERIFICA.  `ldd.txt` nella cartella di lavoro NON
-#      viene riscritto a ogni avvio: leggerlo dopo il riavvio da' la risposta
-#      della volta scorsa.  ⇒ Le librerie si leggono da `/proc/PID/maps`, cioe'
-#      da quel che il processo VIVO ha davvero aperto.
+#   3. THE CHECK THAT DOES NOT CHECK.  `ldd.txt` in the work folder is NOT
+#      rewritten at every start: reading it after the restart gives the answer
+#      of last time.  ⇒ The libraries are read from `/proc/PID/maps`, that is
+#      from what the LIVE process has really opened.
 #
-#   4. ⛔⭐⭐ LA SESSIONE DI CHI LO LANCIA — «A6» di `SESSIONE.md`, e la cura
-#      della trappola 2 la NASCONDEVA.
+#   4. ⛔⭐⭐ THE SESSION OF WHOEVER LAUNCHES IT — «A6» of `SESSIONE.md`, and the cure
+#      of trap 2 HID it.
 #
-#      `setsid` stacca dal **terminale**; ⛔ NON stacca dalla **sessione di
-#      logind**.  Il processo resta nel cgroup della sessione di chi ha dato il
-#      comando — tipicamente una sessione ssh — e da li' `pam_systemd`, quando
-#      il figlio apre la sua sessione PAM, **vede che chi chiama sta gia' in
-#      una sessione, non ne crea una seconda e non lo dice**.
+#      `setsid` detaches from the **terminal**; ⛔ it does NOT detach from the **logind
+#      session**.  The process stays in the cgroup of the session of whoever gave the
+#      command — typically an ssh session — and from there `pam_systemd`, when
+#      the child opens its PAM session, **sees that the caller is already in
+#      a session, does not create a second one and does not say so**.
 #
-#      `[M]` 16 agosto 2026, dopo un riavvio dato via ssh: `loginctl` non
-#      mostrava NESSUNA sessione per `prova`, `/run/user/1001` non esisteva, e
-#      il registro ripeteva *«NON ho il bus di sessione: Could not connect: No
-#      such file or directory»* — cioe' otto giri di banco falliti su otto, e
-#      la faccia del difetto era «il desktop non parte».
+#      `[M]` 16 August 2026, after a restart given via ssh: `loginctl` showed
+#      NO session for `prova`, `/run/user/1001` did not exist, and
+#      the log repeated *«NON ho il bus di sessione: Could not connect: No
+#      such file or directory»* — that is eight bench rounds failed out of eight, and
+#      the face of the defect was "the desktop does not start".
 #
-#      ⭐ La cura e' far partire il server DOVE STAREBBE IN PRODUZIONE: un'unita'
-#         di sistema.  `systemd-run` ne fa una transitoria, in `system.slice`,
-#         fuori da ogni sessione utente.  ⚠ E si VERIFICA dopo (E1: «scritto non
-#         e' in vigore»): il cgroup del processo vivo non deve contenere
-#         `user@` ne' `session-`.
+#      ⭐ The cure is to start the server WHERE IT WOULD BE IN PRODUCTION: a system
+#         unit.  `systemd-run` makes a transient one, in `system.slice`,
+#         outside any user session.  ⚠ And it is CHECKED afterwards (E1: "written is
+#         not in force"): the cgroup of the live process must not contain
+#         `user@` nor `session-`.
 set -e
 LAV=/media/REMOTIX/tmp/09
 SRC=/media/REMOTIX/src/09-src/src
@@ -95,33 +95,33 @@ export LD_LIBRARY_PATH
 
 MANCA=$(ldd "$SRC/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
 if [ "$MANCA" != "0" ]; then
-  echo "⛔ NON parto: ngtcp2/nghttp3 non verrebbero da $B2 —"
+  echo "⛔ NOT starting: ngtcp2/nghttp3 would not come from $B2 —"
   ldd "$SRC/remotix" | grep -E 'ngtcp2|nghttp3'
   exit 1
 fi
 
-# ── si ferma quel che c'e', in tutt'e due i modi in cui puo' essere partito ──
+# ── what is there is stopped, in both the ways it may have been started ──
 systemctl stop "$UNITA.service" 2>/dev/null || true
 systemctl reset-failed "$UNITA.service" 2>/dev/null || true
 if [ -f "$LAV/pid" ]; then
   VECCHIO=$(cat "$LAV/pid")
   if kill -0 "$VECCHIO" 2>/dev/null; then
-    echo "fermo il server $VECCHIO (avvio vecchio stile)"
+    echo "stopping server $VECCHIO (old-style start)"
     kill "$VECCHIO"
     i=0
     while kill -0 "$VECCHIO" 2>/dev/null && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.1; done
-    kill -0 "$VECCHIO" 2>/dev/null && { echo "non si ferma: lo forzo"; kill -9 "$VECCHIO"; sleep 1; }
+    kill -0 "$VECCHIO" 2>/dev/null && { echo "it does not stop: forcing it"; kill -9 "$VECCHIO"; sleep 1; }
   fi
 fi
-# ⚠ E si aspetta che la porta si liberi davvero: `[M]` 16 agosto, un avvio
-#   subito dopo si e' preso «⛔ non mi lego a 0.0.0.0:7900 in UDP: Address
-#   already in use» e il server nuovo e' morto senza che nessuno guardasse.
+# ⚠ And we wait for the port to really free up: `[M]` 16 August, a start
+#   right after got «⛔ non mi lego a 0.0.0.0:7900 in UDP: Address
+#   already in use» and the new server died without anyone looking.
 i=0
 while ss -uln 2>/dev/null | grep -q ':7900 ' && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
 
-# ── ⭐ si parte come UNITA' DI SISTEMA, fuori da ogni sessione utente ────────
+# ── ⭐ started as a SYSTEM UNIT, outside any user session ────────────────────
 systemd-run \
-  --unit="$UNITA" --collect --description="REMOTIX, banco della porta 7900 — fase 9" \
+  --unit="$UNITA" --collect --description="REMOTIX, port 7900 bench — phase 9" \
   --working-directory="$SRC" \
   --setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   --property=StandardOutput=append:"$LAV/registro.log" \
@@ -146,31 +146,31 @@ while [ $i -lt 50 ]; do
   i=$((i+1)); sleep 0.1
 done
 if [ -z "$NUOVO" ] || [ "$NUOVO" = "0" ]; then
-  echo "⛔ il server non e' partito — le ultime righe del registro:"
+  echo "⛔ the server did not start — the last lines of the log:"
   tail -15 "$LAV/registro.log"
   exit 1
 fi
 echo "$NUOVO" > "$LAV/pid"
-echo "server $NUOVO, unita' $UNITA.service"
+echo "server $NUOVO, unit $UNITA.service"
 
-# ── ⭐ LE VERIFICHE, e sono due fatti diversi ────────────────────────────────
+# ── ⭐ THE CHECKS, and they are two different facts ──────────────────────────
 #
-# ⛔⭐ E SI ASPETTA CHE LA LISTA CI SIA, invece di leggerla e basta.
+# ⛔⭐ AND WE WAIT FOR THE LIST TO BE THERE, instead of just reading it.
 #
-# `[M]` 16 agosto 2026: questo controllo ha stampato una lista **vuota** e
-# subito sotto «⭐ sono quelle di /media/REMOTIX/src/b2» — cioe' ha dato l'OK
-# senza aver guardato niente.  ⇒ Fra `systemd-run` che torna il `MainPID` e il
-# caricatore dinamico che ha finito di mappare passano dei millisecondi, e in
-# quella finestra `/proc/PID/maps` non ha ancora le librerie.
-# ⚠ E' la forma piu' cattiva del difetto: non una prova rossa a torto, ma una
-#   prova VERDE che non ha esaminato niente — «vuoto» e «giusto» con la stessa
-#   faccia, `LEZIONI.md` §1.9.
-echo "librerie che il processo VIVO ha davvero aperto:"
+# `[M]` 16 August 2026: this check printed an **empty** list and
+# right below «⭐ sono quelle di /media/REMOTIX/src/b2» — that is it gave the OK
+# without having looked at anything.  ⇒ Between `systemd-run` returning the `MainPID` and the
+# dynamic loader having finished mapping some milliseconds pass, and in
+# that window `/proc/PID/maps` does not yet have the libraries.
+# ⚠ It is the nastiest form of the defect: not a test red by mistake, but a
+#   GREEN test that examined nothing — "empty" and "right" with the same
+#   face, `LEZIONI.md` §1.9.
+echo "libraries the LIVE process has really opened:"
 i=0
 LIBS=""
 while [ $i -lt 50 ]; do
   LIBS=$(grep -oE '/[^ ]*(libngtcp2|libnghttp3)[^ ]*' "/proc/$NUOVO/maps" 2>/dev/null | sort -u)
-  # ⛔ Tutt'e DUE: una sola vorrebbe dire che il caricatore e' a meta'.
+  # ⛔ BOTH: only one would mean the loader is half way.
   if echo "$LIBS" | grep -q libngtcp2 && echo "$LIBS" | grep -q libnghttp3; then
     break
   fi
@@ -178,26 +178,26 @@ while [ $i -lt 50 ]; do
 done
 echo "$LIBS" | sed 's/^/    /'
 if ! echo "$LIBS" | grep -q libngtcp2 || ! echo "$LIBS" | grep -q libnghttp3; then
-  echo "⛔ NON le vedo mappate dopo 5 s: il processo non e' quello che credo"
+  echo "⛔ I do NOT see them mapped after 5 s: the process is not the one I think"
   exit 1
 fi
 if echo "$LIBS" | grep -qv "$B2"; then
-  echo "⛔ NON sono quelle di $B2"
+  echo "⛔ they are NOT those of $B2"
   exit 1
 fi
-echo "⭐ sono quelle di $B2: si puo' provare"
+echo "⭐ they are those of $B2: testing can start"
 
-# ⛔ A6: il server non dev'essere dentro NESSUNA sessione utente, o i suoi figli
-#    nasceranno senza runtime, senza bus e senza desktop.
+# ⛔ A6: the server must not be inside ANY user session, or its children
+#    will be born without runtime, without bus and without desktop.
 CG=$(cat "/proc/$NUOVO/cgroup" 2>/dev/null || echo "")
 case "$CG" in
   *user@*|*session-*)
-    echo "⛔⛔ IL SERVER STA DENTRO UNA SESSIONE UTENTE (A6 di SESSIONE.md):"
+    echo "⛔⛔ THE SERVER IS INSIDE A USER SESSION (A6 of SESSIONE.md):"
     echo "    $CG"
-    echo "    ⇒ pam_systemd non creera' la sessione dei figli, e il desktop non partira'."
+    echo "    ⇒ pam_systemd will not create the children's session, and the desktop will not start."
     exit 1
     ;;
   *)
-    echo "⭐ VERIFICATO: il server e' fuori da ogni sessione utente ($CG)"
+    echo "⭐ VERIFIED: the server is outside any user session ($CG)"
     ;;
 esac

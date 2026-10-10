@@ -1,37 +1,37 @@
 #%PAM-1.0
-# remotix — il servizio PAM del server REMOTIX.  ⭐ openSUSE (Leap, Tumbleweed).
+# remotix — the PAM service of the REMOTIX server.  ⭐ openSUSE (Leap, Tumbleweed).
 #
-#   ⛔ si installa in /usr/lib/pam.d/remotix, NON in /etc/pam.d: openSUSE
-#      tiene i file dei pacchetti in /usr/lib/pam.d, e /etc/pam.d resta
-#      all'amministratore (un suo /etc/pam.d/remotix vince sul nostro).
+#   ⛔ installed in /usr/lib/pam.d/remotix, NOT in /etc/pam.d: openSUSE
+#      keeps the packages' files in /usr/lib/pam.d, and /etc/pam.d is left
+#      to the administrator (their /etc/pam.d/remotix wins over ours).
 #
-# ⭐ `DECISIONI.md` §10.18 (D3 chiusa, 30 set 2026): REMOTIX RISPECCHIA
-#    l'autenticazione del sistema.  Questo file e' /usr/lib/pam.d/sshd della
-#    distribuzione, riga per riga, con UNA riga in piu' in testa: root escluso.
-#    `[M]` 30 set, confronto con tumbleweed-kde-iso e leap16-kde (identici fra
-#    loro): 13 righe su 13 uguali (`banchi/17-t6/t6-leggi-pam.sh`).
-#    ⇒ Quel che l'amministratore mette in `common-*` con `pam-config` (per
-#      esempio `pam_faillock`) vale anche qui.
+# ⭐ `DECISIONI.md` §10.18 (D3 closed, 30 Sep 2026): REMOTIX MIRRORS
+#    the system's authentication.  This file is the distribution's /usr/lib/pam.d/sshd,
+#    line by line, with ONE extra line at the top: root excluded.
+#    `[M]` 30 Sep, comparison with tumbleweed-kde-iso and leap16-kde (identical to each
+#    other): 13 lines of 13 equal (`banchi/17-t6/t6-leggi-pam.sh`).
+#    ⇒ What the administrator puts in `common-*` with `pam-config` (for
+#      example `pam_faillock`) holds here too.
 #
-# ⚠ `common-session` (non piu' `common-session-nonlogin`): e' quella di sshd.
-#   Con SELinux acceso `pam-config` ci mette `pam_selinux close/open` (`[M]`
-#   Tumbleweed e Leap 16 in enforcing): la sessione dell'utente nasce nel SUO
-#   contesto, e il passaggio lo permette il modulo `remotix-selinux`.
-#   `pam_systemd` arriva da li' (senza, il desktop non nasce): non si ripete.
+# ⚠ `common-session` (no longer `common-session-nonlogin`): it is sshd's.
+#   With SELinux on, `pam-config` puts `pam_selinux close/open` in it (`[M]`
+#   Tumbleweed and Leap 16 in enforcing): the user's session is born in THEIR
+#   context, and the transition is allowed by the `remotix-selinux` module.
+#   `pam_systemd` comes from there (without it, the desktop is not born): not repeated.
 #
-# ⛔ Niente `@include`: e' una modifica di Debian a Linux-PAM, e qui la riga
-#    sarebbe «illegal module type».
+# ⛔ No `@include`: it is a Debian modification to Linux-PAM, and here the line
+#    would be "illegal module type".
 
 # ── auth
-# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine: le ragioni (requisite, in
-#    auth e non in account, onerr=fail) sono scritte in `remotix.pam`.  Il
-#    file elenca un nome per riga e si installa con dentro `root`.
+# ⭐ ROOT EXCLUDED, and BEFORE the password: the reasons (requisite, in
+#    auth and not in account, onerr=fail) are written in `remotix.pam`.  The
+#    file lists one name per line and is installed with `root` in it.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 auth       requisite    pam_nologin.so
 auth       substack     common-auth
 auth       include      postlogin-auth
 
-# ── account (`autenticazione.c` chiama `pam_acct_mgmt` apposta)
+# ── account (`autenticazione.c` calls `pam_acct_mgmt` on purpose)
 account    requisite    pam_nologin.so
 account    substack     common-account
 account    include      postlogin-account
@@ -39,9 +39,9 @@ account    include      postlogin-account
 password   substack     common-password
 password   include      postlogin-password
 
-# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che
-#    fa nascere la sessione logind dell'utente.
-# ⚠ `pam_loginuid` `required` come sshd: le ragioni in `remotix.pam.fedora`.
+# ── session: `figlio.c` calls `pam_open_session`, and it is that call that
+#    makes the user's logind session be born.
+# ⚠ `pam_loginuid` `required` like sshd: the reasons in `remotix.pam.fedora`.
 session    required     pam_loginuid.so
 session    optional     pam_keyinit.so force revoke
 session    substack     common-session

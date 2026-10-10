@@ -1,17 +1,17 @@
 /*
- * webtransport.c — vedi webtransport.h.
+ * webtransport.c — see webtransport.h.
  *
- * ⭐ Portato da `banchi/01-b2-ngtcp2-wt-innesta.py`, che lo teneva come `git
- *    diff` sull'albero di ngtcp2.  Le decisioni e le cure che i commenti
- *    dell'innesto documentavano sono qui dentro **con la loro ragione**: sono
- *    difetti gia' pagati, e riscriverli senza la ragione significa ripagarli.
+ * ⭐ Ported from `banchi/01-b2-ngtcp2-wt-innesta.py`, which kept it as a `git
+ *    diff` on the ngtcp2 tree.  The decisions and cures the graft's comments
+ *    documented are in here **with their reason**: they are defects already
+ *    paid for, and rewriting them without the reason means paying for them again.
  */
 #include "webtransport.h"
-/* ⭐ §5-bis.7: la domanda «questa disposizione esiste?» la sa `tastiera.c`. */
+/* ⭐ §5-bis.7: the question «does this layout exist?» is answered by `tastiera.c`. */
 #include "tastiera.h"
 
-/* ⛔ Solo per i `FIGLI_INPUT_*`: i numeri delle azioni stanno in un posto solo
- *    (`figlio.h`), o fra due settimane saranno tre posti con tre valori. */
+/* ⛔ Only for the `FIGLI_INPUT_*`: the action numbers live in one place only
+ *    (`figlio.h`), or in two weeks they will be three places with three values. */
 #include "figlio.h"
 
 #include "aiutante.h"
@@ -30,7 +30,7 @@ bool rcp_autentica_da(const char *utente, const char *parola,
 bool rcp_rhost_da_provenienza(const char *provenienza, char *fuori, size_t cap);
 
 /* ------------------------------------------------------------------------ */
-/* Le due cose che il C non porta in dote: un vettore di byte e un elenco.    */
+/* The two things C does not bring as dowry: a byte vector and a list.       */
 
 typedef struct {
 	uint8_t *d;
@@ -76,25 +76,25 @@ static void bytes_libera(bytes *b)
 
 /* ------------------------------------------------------------------------ */
 
-/* Come si classifica uno stream del client. */
+/* How a client stream is classified. */
 enum genere {
-	G_INCERTO, /* non si sa ancora che cosa sia: mancano i primi byte */
-	G_WT,      /* e' uno stream WebTransport bidirezionale */
-	G_NONWT,   /* non lo e': e' di nghttp3 */
-	G_UNI_OK,  /* unidirezionale WebTransport, canale lecito ma non servito */
-	G_UNI_KO,  /* unidirezionale WebTransport, violazione gia' giudicata */
-	G_UNI_INPUT, /* ⭐ il canale di INPUT (0x01), servito dalla fase 4: i suoi
-	              *    byte vanno a `rcp_ricevi_input()`.  ⛔ Sta separato da
-	              *    `G_UNI_OK` apposta — dentro quel giudizio i byte si
-	              *    contano nel credito e SI SCARTANO, ed e' esattamente
-	              *    quel che l'input faceva fino al 14 agosto 2026. */
-	G_UNI_APPUNTI, /* ⭐ il canale APPUNTI (0x02), servito dalla fase 7: i suoi
-	                *    byte vanno a `rcp_ricevi_appunti()`.  ⛔ Sta separato da
-	                *    `G_UNI_INPUT` per una ragione che non e' di ordine: qui
-	                *    gli stream sono **uno per trasferimento** (§2.5), quindi
-	                *    ce n'e' piu' d'uno vivo insieme e la FINE di ciascuno
-	                *    e' un fatto — mentre lo stream di input e' uno solo e
-	                *    resta aperto. */
+	G_INCERTO, /* not yet known what it is: the first bytes are missing */
+	G_WT,      /* it is a bidirectional WebTransport stream */
+	G_NONWT,   /* it is not: it belongs to nghttp3 */
+	G_UNI_OK,  /* unidirectional WebTransport, lawful channel but not served */
+	G_UNI_KO,  /* unidirectional WebTransport, violation already judged */
+	G_UNI_INPUT, /* ⭐ the INPUT channel (0x01), served since phase 4: its
+	              *    bytes go to `rcp_ricevi_input()`.  ⛔ It is kept apart from
+	              *    `G_UNI_OK` on purpose — inside that verdict the bytes are
+	              *    counted against the credit and DISCARDED, and that is exactly
+	              *    what input did until 14 Aug 2026. */
+	G_UNI_APPUNTI, /* ⭐ the CLIPBOARD channel (0x02), served since phase 7: its
+	                *    bytes go to `rcp_ricevi_appunti()`.  ⛔ It is kept apart from
+	                *    `G_UNI_INPUT` for a reason that is not tidiness: here
+	                *    streams are **one per transfer** (§2.5), so more than one
+	                *    is alive at once and the END of each one is a fact —
+	                *    while the input stream is a single one and stays
+	                *    open. */
 };
 
 typedef struct {
@@ -108,24 +108,24 @@ typedef struct {
 	bytes dati;
 	size_t off;
 	bool fin;
-	/* ⛔⭐ FASE 3 — «MORTO» INVECE DI «TOLTO DALLA TESTA».
+	/* ⛔⭐ PHASE 3 — «DEAD» INSTEAD OF «REMOVED FROM THE HEAD».
 	 *
-	 *     Fino alla fase 2 da questa coda si toglieva **solo la testa**, e
-	 *     bastava: si spediva un fotogramma solo per sessione.  ⛔ Con uno
-	 *     stream per fotogramma la testa non e' piu' l'unico elemento che puo'
-	 *     finire — si sceglie un elemento **in mezzo** quando quelli davanti
-	 *     appartengono a uno stream bloccato — e togliere dal mezzo un array
-	 *     vorrebbe dire spostare tutto il resto a ogni fotogramma.
+	 *     Until phase 2 **only the head** was removed from this queue, and it
+	 *     was enough: a single frame was sent per session.  ⛔ With one
+	 *     stream per frame the head is no longer the only element that can
+	 *     finish — an element **in the middle** is chosen when the ones ahead
+	 *     belong to a blocked stream — and removing from the middle of an array
+	 *     would mean moving all the rest at every frame.
 	 *
-	 *     ⇒ Chi finisce si marca morto; `testa` scorre sui morti in testa. */
+	 *     ⇒ Whoever finishes is marked dead; `testa` slides over the dead at the head. */
 	bool morto;
-	/* ⛔⛔⭐ FASE 9 — «CONSEGNATO» NON E' «CONFERMATO», e la differenza fra le
-	 *      due parole e' il crollo del 23 agosto 2026 (`fasi/09-la-qualita-e-la-degradazione.md` §4).
+	/* ⛔⛔⭐ PHASE 9 — «HANDED OVER» IS NOT «CONFIRMED», and the difference between
+	 *      the two words is the crash of 23 Aug 2026 (`fasi/09-la-qualita-e-la-degradazione.md` §4).
 	 *
-	 *      `ngtcp2_conn_writev_stream()` **non copia i byte**: si tiene il
-	 *      NOSTRO puntatore nell'elenco dei pacchetti in volo, e quando un
-	 *      pacchetto viene dichiarato perduto lo **rilegge** per
-	 *      ritrasmettere.  Il contratto lo dice in una riga
+	 *      `ngtcp2_conn_writev_stream()` **does not copy the bytes**: it keeps
+	 *      OUR pointer in the list of packets in flight, and when a packet is
+	 *      declared lost it **rereads** it to retransmit.  The contract says
+	 *      so in one line
 	 *      (`ngtcp2.h`, `ngtcp2_conn_writev_stream`):
 	 *
 	 *        «The caller must keep the portion of data covered by |*pdatalen|
@@ -133,239 +133,239 @@ typedef struct {
 	 *         they are acknowledged by a remote endpoint **or the stream is
 	 *         closed**.»
 	 *
-	 * ⛔ Qui si liberava alla SERIALIZZAZIONE — `off >= dati.n` ⇒ `free()` — che
-	 *    e' esattamente l'istante che il contratto vieta.  `[M]` 23 agosto 2026,
-	 *    08:28:09: `SEGV`, `error 4`, dentro `__memmove_avx_unaligned_erms`,
-	 *    sorgente `0x7f148e056fc2` — un fotogramma da 525 298 byte, il primo
-	 *    blocco del giro abbastanza grosso da essere servito con `mmap`, quindi
-	 *    il primo il cui `free()` abbia davvero **smappato** la regione.
+	 * ⛔ Here memory was freed at SERIALISATION — `off >= dati.n` ⇒ `free()` —
+	 *    which is exactly the instant the contract forbids.  `[M]` 23 Aug 2026,
+	 *    08:28:09: `SEGV`, `error 4`, inside `__memmove_avx_unaligned_erms`,
+	 *    source `0x7f148e056fc2` — a frame of 525 298 bytes, the first block of
+	 *    the run big enough to be served with `mmap`, hence the first whose
+	 *    `free()` really **unmapped** the region.
 	 *
-	 * ⚠ E gli altri 45 004 fotogrammi dello stesso giro avevano lo STESSO
-	 *   difetto senza far rumore: sotto i 128 KiB glibc serve dal mucchio, la
-	 *   rilettura riesce e ngtcp2 ritrasmette **byte di spazzatura al posto dei
-	 *   pixel**, in silenzio e senza un errore.  ⛔ Il crollo era il sintomo
-	 *   raro; la corruzione muta era il difetto vero.
+	 * ⚠ And the other 45 004 frames of the same run had the SAME defect
+	 *   without making noise: below 128 KiB glibc serves from the heap, the
+	 *   reread succeeds and ngtcp2 retransmits **garbage bytes instead of
+	 *   pixels**, silently and without an error.  ⛔ The crash was the rare
+	 *   symptom; the mute corruption was the real defect.
 	 *
-	 * ⭐ Da cui i due stati, che prima erano uno solo:
+	 * ⭐ Hence the two states, which used to be one:
 	 *
-	 *      `consegnato` — tutti i byte sono dentro a ngtcp2.  Non si sceglie
-	 *                     piu' per la scrittura (`coda_scegli()`), non conta
-	 *                     piu' come «da spedire» (`coda_vuota()`,
-	 *                     `byte_in_coda`), ⛔ **ma i byte restano nostri e
-	 *                     restano allocati**;
-	 *      `morto`      — i byte sono liberati.  Ci si arriva SOLO da un
-	 *                     riscontro che li copre (`coda_conferma()`), dalla
-	 *                     chiusura dello stream (`wt_stream_chiuso()`) o dal suo
-	 *                     azzeramento (`coda_butta_stream()`, sempre accanto a
-	 *                     un `RESET_STREAM`).  Sono le due condizioni del
-	 *                     contratto, e non ce n'e' una terza.
+	 *      `consegnato` — all the bytes are inside ngtcp2.  It is no longer
+	 *                     chosen for writing (`coda_scegli()`), it no longer
+	 *                     counts as «to send» (`coda_vuota()`,
+	 *                     `byte_in_coda`), ⛔ **but the bytes remain ours and
+	 *                     remain allocated**;
+	 *      `morto`      — the bytes are freed.  One gets there ONLY from an
+	 *                     acknowledgement covering them (`coda_conferma()`), from
+	 *                     the stream's closure (`wt_stream_chiuso()`) or from its
+	 *                     reset (`coda_butta_stream()`, always next to a
+	 *                     `RESET_STREAM`).  They are the two conditions of the
+	 *                     contract, and there is no third one.
 	 *
-	 * ⚠ `confermati` conta i byte di QUESTO elemento gia' riscontrati: gli ack
-	 *   arrivano a pezzi — un fotogramma da mezzo megabyte sono ~370 pacchetti
-	 *   — e un elemento si libera solo quando il conto copre `dati.n`. */
+	 * ⚠ `confermati` counts the bytes of THIS element already acknowledged: acks
+	 *   arrive in pieces — a half-megabyte frame is ~370 packets — and an
+	 *   element is freed only when the count covers `dati.n`. */
 	bool consegnato;
 	size_t confermati;
 } uscita;
 
-/* ⛔⭐ FASE 3 — GLI STREAM BLOCCATI DI **QUESTA PASSATA**, E PERCHE' NON E' PIU'
- *     UN `bool`.
+/* ⛔⭐ PHASE 3 — THE BLOCKED STREAMS OF **THIS PASS**, AND WHY IT IS NO LONGER
+ *     A `bool`.
  *
- * Fino alla fase 2 qui c'era `bool coda_bloccata`: al primo
- * `NGTCP2_ERR_STREAM_DATA_BLOCKED` si fermava **tutta la coda** per la passata.
- * ⛔ Con uno stream per fotogramma quel `bool` annulla esattamente il beneficio
- *    che `RCP.md` §5.1 compra: «gli stream sono indipendenti, quindi un
- *    fotogramma in ritardo non tocca i successivi» e' vero al livello di QUIC e
- *    diventava **falso un piano sopra**, dentro casa nostra — un fotogramma
- *    lento bloccava in testa tutti quelli dopo, cioe' il blocco di testa che
- *    §5.1 esiste per togliere, rifatto a mano.
+ * Until phase 2 here there was `bool coda_bloccata`: at the first
+ * `NGTCP2_ERR_STREAM_DATA_BLOCKED` **the whole queue** stopped for the pass.
+ * ⛔ With one stream per frame that `bool` cancels exactly the benefit
+ *    `RCP.md` §5.1 buys: «streams are independent, so a late frame does not
+ *    touch the following ones» is true at the QUIC level and became **false
+ *    one floor up**, inside our own house — a slow frame at the head blocked
+ *    all the ones after it, that is the head-of-line blocking §5.1 exists to
+ *    remove, redone by hand.
  *
- * ⇒ Si blocca **lo stream**, non la coda.  L'ordine DENTRO uno stream resta
- *   quello: si sceglie sempre il primo elemento eleggibile in ordine di
- *   inserimento, quindi il primo di uno stream non bloccato e' il suo piu'
- *   vecchio.
+ * ⇒ **The stream** is blocked, not the queue.  The order WITHIN a stream
+ *   stays as it is: the first eligible element in insertion order is always
+ *   chosen, so the first of an unblocked stream is its
+ *   oldest.
  *
- * ⚠ E il tetto e' dichiarato: oltre `WT_BLOCCATI_MAX` stream bloccati nella
- *   stessa passata ci si ferma come prima e **si scrive**.  Un tetto che si
- *   supera in silenzio e' un tetto che non c'e'. */
+ * ⚠ And the cap is declared: beyond `WT_BLOCCATI_MAX` blocked streams in the
+ *   same pass we stop as before and **it is written**.  A cap that is
+ *   exceeded silently is a cap that is not there. */
 #define WT_BLOCCATI_MAX 64
 
-/* ⛔ Quanti fotogrammi possono essere in volo insieme su una sessione.  ⚠ Il
- *    numero non e' arbitrario: `RCP.md` §2.3 dichiara normativi **16** stream
- *    unidirezionali disponibili a RCP, e uno lo prende l'input.  Oltre quel
- *    numero il credito e' finito comunque, e questa tabella non e' il tetto che
- *    morde. */
+/* ⛔ How many frames can be in flight together on a session.  ⚠ The
+ *    number is not arbitrary: `RCP.md` §2.3 declares **16** unidirectional
+ *    streams available to RCP as normative, and input takes one.  Beyond that
+ *    number the credit is exhausted anyway, and this table is not the cap that
+ *    bites. */
 #define WT_INVOLO_MAX 32
 
-/* ⛔⭐ IL DATAGRAM DELL'AUDIO — fase 7, e i due numeri hanno una misura dietro.
+/* ⛔⭐ THE AUDIO DATAGRAM — phase 7, and the two numbers have a measurement behind them.
  *
- * `WT_DGRAM_BYTE` — quanto puo' essere lungo il carico di un datagram nostro.
- *    Il piu' grosso che RCP/1 preveda e' il **PCM**: `RCP.md` §5.3 lo fissa a
- *    5 ms = 480 campioni = 960 byte, piu' i 12 dell'intestazione di §6.3 =
- *    **972**, piu' il prefisso di RFC 9297 (al massimo 8) = **980**.
- *    ⚠ `[M]` 17 agosto 2026, sonda `banchi/07-b40`: il datagram che i browser
- *    accettano davvero contro il nostro server e' **1024 byte su Chrome 151**
- *    (fisso) e **1024 → 1214 su Firefox 140esr**.  ⇒ Il PCM ci sta per **52
- *    byte** sul motore piu' stretto, e questo tetto non e' un numero tondo
- *    scelto a caso: e' quel 1024 misurato.
+ * `WT_DGRAM_BYTE` — how long the payload of one of our datagrams can be.
+ *    The biggest RCP/1 provides for is **PCM**: `RCP.md` §5.3 fixes it at
+ *    5 ms = 480 samples = 960 bytes, plus the 12 of the §6.3 header =
+ *    **972**, plus the RFC 9297 prefix (at most 8) = **980**.
+ *    ⚠ `[M]` 17 Aug 2026, probe `banchi/07-b40`: the datagram browsers
+ *    really accept against our server is **1024 bytes on Chrome 151**
+ *    (fixed) and **1024 → 1214 on Firefox 140esr**.  ⇒ PCM fits by **52
+ *    bytes** on the tightest engine, and this cap is not a round
+ *    number picked at random: it is that measured 1024.
  *
- * `WT_DGRAM_MAX` — quanti blocchi possono aspettare.  ⛔ Non e' una memoria per
- *    la fluidita': e' **lo spazio fra due passate di scrittura**.  Otto blocchi
- *    sono 40 ms di PCM e 160 di Opus; oltre, il piu' vecchio non serve piu' a
- *    nessuno e §6.3 dice che si butta.
+ * `WT_DGRAM_MAX` — how many blocks can wait.  ⛔ It is not a memory for
+ *    smoothness: it is **the space between two write passes**.  Eight blocks
+ *    are 40 ms of PCM and 160 of Opus; beyond that, the oldest is no use to
+ *    anyone and §6.3 says it is thrown away.
  *
- * ⛔⭐ E QUESTO NUMERO E' STATO CAMBIATO A 32 E RIMESSO A 8 NELLO STESSO GIRO,
- *     perche' la diagnosi che lo aveva alzato era SBAGLIATA — 17 agosto 2026.
+ * ⛔⭐ AND THIS NUMBER WAS CHANGED TO 32 AND PUT BACK TO 8 IN THE SAME RUN,
+ *     because the diagnosis that had raised it was WRONG — 17 Aug 2026.
  *
- *     Il primo giro dava **402 blocchi su 600** in 3 s (resa 67 %), con zero
- *     blocchi persi.  Ho letto «la coda e' il tetto del ritmo» e l'ho alzata:
- *     a 32 la resa e' passata a **80 %** — cioe' e' migliorata, il che sembrava
- *     confermare.  ⛔ Non confermava niente: 2,01 s su 3 e 4,01 su 5 sono
- *     **(T − 1)**, non una frazione.  Il terzo giro l'ha deciso: **9,01 s su
- *     10**.  ⇒ Non era una resa: era **un secondo fisso all'inizio**, e la coda
- *     non c'entrava.
+ *     The first run gave **402 blocks out of 600** in 3 s (yield 67 %), with
+ *     zero blocks lost.  I read «the queue is the rate cap» and raised it:
+ *     at 32 the yield went to **80 %** — that is it improved, which seemed
+ *     to confirm.  ⛔ It confirmed nothing: 2.01 s out of 3 and 4.01 out of 5
+ *     are **(T − 1)**, not a fraction.  The third run decided it: **9.01 s out
+ *     of 10**.  ⇒ It was not a yield: it was **one fixed second at the start**,
+ *     and the queue had nothing to do with it.
  *
- * ⚠ La lezione e' di metodo: due punti stavano su una retta per il caso, e
- *   «il numero e' migliorato» ha quasi comprato una modifica sbagliata.  Il
- *   terzo punto costava trenta secondi.  ⭐ Il numero e' tornato a 8 perche'
- *   `[M]` a 8 i blocchi persi erano gia' **zero**: era sufficiente, e un
- *   valore piu' alto sarebbe rimasto qui senza una ragione. */
+ * ⚠ The lesson is about method: two points lay on a straight line by chance,
+ *   and «the number improved» almost bought a wrong change.  The third
+ *   point cost thirty seconds.  ⭐ The number went back to 8 because
+ *   `[M]` at 8 the lost blocks were already **zero**: it was enough, and a
+ *   higher value would have stayed here without a reason. */
 #define WT_DGRAM_BYTE 1024
 #define WT_DGRAM_MAX 8
 
-/* ⛔⛔⛔ IL TETTO DI UN BLOCCO E' LA SUA ETA', E FINO AL 24 AGOSTO 2026 NON LO ERA.
+/* ⛔⛔⛔ A BLOCK'S CAP IS ITS AGE, AND UNTIL 24 AUG 2026 IT WAS NOT.
  *
- *      Qui c'era `WT_DGRAM_RIMANDI_MAX 4096`, e accanto un commento che diceva
- *      *«quante PASSATE di fila **il blocco in testa** e' stato rimandato»*.
- *      ⛔ Non era vero, e non per una parola imprecisa: il contatore
- *      (`dgram_rimandi`) stava su **`struct wt`**, cioe' sulla CONNESSIONE.
- *      Saliva a ogni passata rifiutata e tornava a zero solo su un successo —
- *      e nel frattempo la testa era stata sostituita, perche' `dgram_accoda()`
- *      scavalca la piu' vecchia quando l'anello e' pieno **senza toccare quel
- *      contatore**.  ⇒ Non misurava l'eta' del blocco: misurava **da quanto la
- *      connessione non spedisce nulla**.
+ *      Here there was `WT_DGRAM_RIMANDI_MAX 4096`, and next to it a comment saying
+ *      *«how many PASSES in a row **the block at the head** has been deferred»*.
+ *      ⛔ It was not true, and not because of an imprecise word: the counter
+ *      (`dgram_rimandi`) lived on **`struct wt`**, that is on the CONNECTION.
+ *      It went up at every refused pass and went back to zero only on a success —
+ *      and meanwhile the head had been replaced, because `dgram_accoda()`
+ *      overtakes the oldest when the ring is full **without touching that
+ *      counter**.  ⇒ It did not measure the block's age: it measured **how long
+ *      the connection has sent nothing**.
  *
- * ⛔⛔ E LA DIFFERENZA NON ERA ACCADEMICA: quel numero non aveva un'unita' STABILE.
+ * ⛔⛔ AND THE DIFFERENCE WAS NOT ACADEMIC: that number had no STABLE unit.
  *
- *      `[M]` 24 agosto 2026, banco NR12, porta 7981, 25 s per giro:
+ *      `[M]` 24 Aug 2026, bench NR12, port 7981, 25 s per run:
  *
- *        linea sana (`lo` liscio, PCM):  0 rimandi          in 26 s
- *        `casa-cattiva` (40±20 ms, 2 %): **2 201 582 rimandi** in 26,2 s
+ *        healthy line (smooth `lo`, PCM):  0 deferrals          in 26 s
+ *        `casa-cattiva` (40±20 ms, 2 %): **2 201 582 deferrals** in 26.2 s
  *
- *      ⇒ **84 700 passate di scrittura al secondo.**  Una «passata» e' una
- *      chiamata di `scrivi_connessione()` (`trasporto.c:445`), e il ciclo degli
- *      eventi la ripete finche' c'e' da scrivere: sotto pressione gira
- *      quattrocento volte piu' spesso che a riposo.  ⇒ Lo stesso `4096` valeva
- *      **~48 ms** sulla rete cattiva e **decine di secondi** sulla linea sana.
- *      ⚠ Un tetto che cambia significato con il carico non e' un tetto: e' un
- *      numero che qualcuno leggera' come una politica senza sapere quale.
+ *      ⇒ **84 700 write passes per second.**  A «pass» is a call of
+ *      `scrivi_connessione()` (`trasporto.c:445`), and the event loop
+ *      repeats it as long as there is something to write: under pressure it
+ *      runs four hundred times more often than at rest.  ⇒ The same `4096` was
+ *      worth **~48 ms** on the bad network and **tens of seconds** on the healthy line.
+ *      ⚠ A cap that changes meaning with the load is not a cap: it is a
+ *      number someone will read as a policy without knowing which one.
  *
- * ⛔⛔ E ERA DAVVERO LA POLITICA, contro quel che il commento dichiarava
- *      (*«resta alto solo per non lasciare un ciclo senza fondo»*).  `[M]`
- *      stesso giro su `casa-cattiva`: **2 258 blocchi buttati da questo tetto**
- *      contro **9 buttati dalla coda piena** — il 99,6 % degli scarti usciva di
- *      qui.  ⚠ Ed e' per questo che il primo rifiuto osservato e' avvenuto **a
- *      finestra aperta** (`cwnd_left` = 7 424, e la riga stessa diceva «NON e'
- *      la congestione»): non era la rete a decidere, era il contagiri.
+ * ⛔⛔ AND IT REALLY WAS THE POLICY, against what the comment declared
+ *      (*«stays high only so as not to leave a bottomless loop»*).  `[M]`
+ *      same run on `casa-cattiva`: **2 258 blocks dropped by this cap**
+ *      against **9 dropped by the full queue** — 99.6 % of the discards came
+ *      from here.  ⚠ And that is why the first refusal observed happened **with
+ *      the window open** (`cwnd_left` = 7 424, and the line itself said «it is
+ *      NOT congestion»): it was not the network deciding, it was the rev counter.
  *
- * ⛔⛔⛔ E LA PRIMA CURA CHE HO SCRITTO ERA QUELLA SBAGLIATA — si scrive perche'
- *       e' la parte che insegna qualcosa, e perche' senza la misura l'avrei
- *       spedita.
+ * ⛔⛔⛔ AND THE FIRST CURE I WROTE WAS THE WRONG ONE — it is written down
+ *       because it is the part that teaches something, and because without
+ *       the measurement I would have shipped it.
  *
- *       La strada ovvia era portare il conto **sull'elemento**: timbrare ogni
- *       blocco quando entra in coda e buttarlo quando la sua ETA' passa un
- *       tetto.  E' quel che il commento vecchio prometteva.  ⛔ Provata, e la
- *       misura l'ha rifiutata due volte — `[M]` 24 agosto 2026, `casa-cattiva`
- *       (40±20 ms, 2 %), PCM, quattro giri appaiati sullo stesso `netem`:
+ *       The obvious road was to carry the count **on the element**: stamp each
+ *       block when it enters the queue and drop it when its AGE passes a
+ *       cap.  It is what the old comment promised.  ⛔ Tried, and the
+ *       measurement refused it twice — `[M]` 24 Aug 2026, `casa-cattiva`
+ *       (40±20 ms, 2 %), PCM, four paired runs on the same `netem`:
  *
- *         tetto sull'eta'   spediti  buttati(coda)  rifiutati  kbit/s  utili/filo
+ *         cap on age        sent     dropped(queue) refused    kbit/s  useful/wire
  *         ---------------   -------  -------------  ---------  ------  ----------
  *         250 ms              4 169        845           0     1 847     35 %
  *          50 ms              4 194        819           3     1 838     35 %
- *         (il prodotto)       3 203         14       1 781     1 415     42 %
+ *         (the product)       3 203         14       1 781     1 415     42 %
  *
- *       ⇒ **A 50 ms non scatta piu' di quanto scatti a 250**, ed e' la CODA a
- *       fare tutto il lavoro (14 → 830 scarti).  ⭐ La ragione e' un conto che
- *       il file diceva gia' e che io non avevo creduto: la coda tiene OTTO
- *       blocchi, e otto blocchi di PCM sono **40 ms**.  ⇒ La testa non puo'
- *       quasi mai essere piu' vecchia di 40 ms, quindi un tetto sull'ETA' sopra
- *       i 40 ms e' un tetto che non tocca niente.
- *       ⚠ E il prezzo di quel «non tocca niente» si vede: 30 % di byte in piu'
- *         sul filo (1 415 → 1 840 kbit/s), rubati alla stessa finestra del
- *         video (⇒ «I DATAGRAM PRIMA DEGLI STREAM» in `wt_scrivi()`), per
- *         portare l'11 % di blocchi utili in piu' (1 290 → 1 430) — perche' il
- *         resto arriva **gia' vecchio** e lo butta il cliente (`scartati
+ *       ⇒ **At 50 ms it fires no more than at 250**, and it is the QUEUE that
+ *       does all the work (14 → 830 discards).  ⭐ The reason is a sum the
+ *       file already stated and that I had not believed: the queue holds EIGHT
+ *       blocks, and eight PCM blocks are **40 ms**.  ⇒ The head can almost
+ *       never be older than 40 ms, so a cap on AGE above 40 ms is a cap
+ *       that touches nothing.
+ *       ⚠ And the price of that «touches nothing» shows: 30 % more bytes
+ *         on the wire (1 415 → 1 840 kbit/s), stolen from the same window as
+ *         the video (⇒ «DATAGRAMS BEFORE STREAMS» in `wt_scrivi()`), to
+ *         carry 11 % more useful blocks (1 290 → 1 430) — because the
+ *         rest arrives **already old** and the client drops it (`scartati
  *         vecchi` 1 800 → 2 650).
  *
- * ⭐⭐ LA CURA GIUSTA E' L'ALTRA: **si tiene la grandezza, se ne cambia l'UNITA'**.
+ * ⭐⭐ THE RIGHT CURE IS THE OTHER ONE: **keep the quantity, change its UNIT**.
  *
- *      Quel che il codice governa qui non e' l'eta' di un blocco: e' **da quanto
- *      la connessione non riesce a mettere un datagram in un pacchetto**.  E'
- *      una grandezza sensata — se in N ms non e' uscito NIENTE, il piu' vecchio
- *      della coda non uscira' in tempo (§6.3) — ed e' esattamente quel che il
- *      codice faceva.  ⇒ Il difetto non era la politica: era che la politica
- *      aveva un nome falso e un'unita' che si muoveva.
- *      ⇒ Il nome dice la cosa (`dgram_zitto_da`, «da quando sono muto») e il
- *        tetto e' in MILLISECONDI.
+ *      What the code governs here is not the age of a block: it is **how long
+ *      the connection has been unable to put a datagram in a packet**.  It is
+ *      a sensible quantity — if NOTHING has left in N ms, the oldest in the
+ *      queue will not leave in time (§6.3) — and it is exactly what the
+ *      code did.  ⇒ The defect was not the policy: it was that the policy
+ *      had a false name and a unit that moved.
+ *      ⇒ The name says the thing (`dgram_zitto_da`, «since when I am mute») and
+ *        the cap is in MILLISECONDS.
  *
- * ⛔⛔⭐ E `4096` NON SI CONVERTE IN MILLISECONDI CON UNA DIVISIONE — ci ho
- *       provato e la misura mi ha smentito una seconda volta.  La ragione e'
- *       che il numero era **auto-referenziale**: quante passate si fanno al
- *       secondo dipende da quanto spesso si BUTTA, e quanto spesso si butta
- *       dipende dal tetto.  `[M]` stessi giri: col prodotto 2,1 milioni di
- *       rimandi in 25 s, con il tetto a 50 ms **20 milioni** — dieci volte
- *       tanto, perche' non buttando piu' il ciclo gira a vuoto.  ⇒ 4096 non
- *       valeva «46 ms»: non valeva nessun tempo fisso.
+ * ⛔⛔⭐ AND `4096` DOES NOT CONVERT TO MILLISECONDS WITH A DIVISION — I
+ *       tried and the measurement proved me wrong a second time.  The reason is
+ *       that the number was **self-referential**: how many passes are made per
+ *       second depends on how often we DROP, and how often we drop
+ *       depends on the cap.  `[M]` same runs: with the product 2.1 million
+ *       deferrals in 25 s, with the cap at 50 ms **20 million** — ten times
+ *       as many, because no longer dropping the loop spins idle.  ⇒ 4096 was
+ *       not worth «46 ms»: it was worth no fixed time at all.
  *
- * ⭐⭐⭐ IL VALORE SI E' TARATO SULLA MISURA, e il verde e' «indistinguibile dal
- *      prodotto».  `[M]` 24 agosto 2026, `casa-cattiva`, PCM, giri appaiati
- *      sullo stesso `netem`, due giri per il prodotto per avere la DISPERSIONE:
+ * ⭐⭐⭐ THE VALUE WAS TUNED ON THE MEASUREMENT, and green is «indistinguishable
+ *      from the product».  `[M]` 24 Aug 2026, `casa-cattiva`, PCM, paired runs
+ *      on the same `netem`, two runs for the product to get the SPREAD:
  *
- *        tetto        spediti  butt.(coda)  rifiut.  kbit/s  utili  utili/filo
+ *        cap          sent     drop.(queue) refus.   kbit/s  useful useful/wire
  *        -----------  -------  -----------  -------  ------  -----  ----------
- *        prodotto      3 242        14       1 753   1 433   1 273    0,401
- *        prodotto      2 912        16       2 084   1 312   1 223    0,432
- *        10 ms         2 947        16       2 039   1 286   1 246    0,435
- *         5 ms         2 999        15       1 995   1 327   1 246    0,424
- *        50 ms         3 955       797         263   1 743   1 390    0,360
+ *        product       3 242        14       1 753   1 433   1 273    0.401
+ *        product       2 912        16       2 084   1 312   1 223    0.432
+ *        10 ms         2 947        16       2 039   1 286   1 246    0.435
+ *         5 ms         2 999        15       1 995   1 327   1 246    0.424
+ *        50 ms         3 955       797         263   1 743   1 390    0.360
  *
- *      ⇒ **10 ms sta dentro la dispersione del prodotto su ogni colonna**, 5 ms
- *      pure, e a 50 ms il tetto ha gia' smesso di mordere.  ⇒ La cura cambia
- *      quel che il numero VUOL DIRE, non quel che il prodotto FA — ed e'
- *      esattamente quel che si voleva.
+ *      ⇒ **10 ms is within the product's spread on every column**, 5 ms
+ *      too, and at 50 ms the cap has already stopped biting.  ⇒ The cure changes
+ *      what the number MEANS, not what the product DOES — and it is
+ *      exactly what was wanted.
  *
- * ⭐ E 10 ms ha anche una ragione che non e' il fitting: sono **due blocchi di
- *    PCM** (5 ms l'uno).  Se nel tempo di due blocchi non e' uscito niente, il
- *    piu' vecchio non ce la fa.
+ * ⭐ And 10 ms also has a reason that is not fitting: it is **two PCM
+ *    blocks** (5 ms each).  If nothing has left in the time of two blocks, the
+ *    oldest will not make it.
  *
- * ⚠ E LA TARATURA NON E' MIA.  Questo numero riproduce il prodotto misurato, non
- *   lo migliora.  `[M]` la tabella dice che allentarlo compra l'8-11 % di
- *   blocchi utili al prezzo del 20-30 % di banda tolta al video: e' una scelta
- *   con due numeri accanto, e la fa chi decide il prodotto — non io qui.
+ * ⚠ AND THE TUNING IS NOT MINE.  This number reproduces the measured product,
+ *   it does not improve it.  `[M]` the table says loosening it buys 8-11 % more
+ *   useful blocks at the price of 20-30 % of bandwidth taken from video: it is a
+ *   choice with two numbers next to it, and whoever decides the product makes it — not me here.
  *
- * ⭐ E L'ETA' DEL BLOCCO NON SI BUTTA VIA: `dgram[].nato` resta, e finisce nella
- *    riga di registro dello scarto.  ⛔ Non decide niente — la decide `zitto` —
- *    ma e' la grandezza che il commento vecchio PROMETTEVA e nessuno aveva mai
- *    letto: adesso chi legge il registro vede tutt'e due, «sono muto da N ms» e
- *    «il blocco che butto ne ha M», e puo' accorgersi se un giorno divergono.
+ * ⭐ AND THE BLOCK'S AGE IS NOT THROWN AWAY: `dgram[].nato` stays, and ends up in
+ *    the discard's log line.  ⛔ It decides nothing — `zitto` decides —
+ *    but it is the quantity the old comment PROMISED and nobody had ever
+ *    read: now whoever reads the log sees both, «I have been mute for N ms» and
+ *    «the block I drop is M old», and can notice if one day they diverge.
  *
- * ⚠ E la guardia sulla congestione resta FUORI di qui: `cwnd_left` alto o basso
- *   non cambia che cosa conviene fare con un blocco che non e' ancora partito.
- *   Era una condizione che buttava il blocco **proprio quando la finestra era
- *   stretta**, cioe' quando serviva di piu' aspettare. */
+ * ⚠ And the congestion guard stays OUT of here: `cwnd_left` high or low
+ *   does not change what is best to do with a block that has not left yet.
+ *   It was a condition that dropped the block **precisely when the window was
+ *   narrow**, that is when waiting was most needed. */
 #define WT_DGRAM_ZITTO_MAX_MS 10
 
-/* ⛔ Il tono di prova (`--audio-prova`), `0` = spento.  Sta in cima e non
- *    accanto alla sua funzione perche' lo legge anche `wt_battito_ns()`, che
- *    viene molto prima — vedi il riquadro dell'orologio li'. */
+/* ⛔ The test tone (`--audio-prova`), `0` = off.  It sits at the top and not
+ *    next to its function because `wt_battito_ns()` reads it too, and that
+ *    comes much earlier — see the clock box there. */
 static uint32_t audio_prova_hz;
 
-/* ⭐ Il gancio verso il figlio, per la stessa ragione: lo chiama `audio_regola()`,
- *    che sta molto prima di `wt_audio_gancio()`. */
+/* ⭐ The hook towards the child, for the same reason: `audio_regola()` calls it,
+ *    and it comes much earlier than `wt_audio_gancio()`. */
 static wt_audio_richiesta gancio_audio;
 static void *gancio_audio_ctx;
 
-/* Le richieste HTTP/3: qui ne serve una sola cosa — distinguere la CONNECT
- * estesa di WebTransport da tutto il resto. */
+/* HTTP/3 requests: only one thing is needed from them here — telling the
+ * WebTransport extended CONNECT from everything else. */
 typedef struct {
 	int64_t id;
 	char metodo[16];
@@ -374,41 +374,41 @@ typedef struct {
 	bool usato;
 } richiesta;
 
-/* ⭐ Quante perdite di datagram si tengono a mente per riconoscere quelle
- *    FALSE — cioe' il riordino.  Vedi il campo `dgram_anello` piu' sotto: e'
- *    corto apposta, e la ragione sta li'. */
+/* ⭐ How many datagram losses are remembered in order to recognise the
+ *    FALSE ones — that is reordering.  See the field `dgram_anello` further below: it
+ *    is short on purpose, and the reason is there. */
 #define WT_DGRAM_ANELLO 512
 
 struct wt {
 	ngtcp2_conn *conn;
-	/* ⭐ D-001: il palco di quest'utente c'era gia' al verdetto di PAM ⇒
-	 *    `SESSIONE` dice `2 = RIPRESA`.  Lo scrive `wt_verdetto()`. */
+	/* ⭐ D-001: this user's stage already existed at PAM's verdict ⇒
+	 *    `SESSIONE` says `2 = RIPRESA`.  `wt_verdetto()` writes it. */
 	bool ripresa;
 	ngtcp2_ccerr *ultimo_errore;
 	nghttp3_conn *h3;
 	char provenienza[80];
-	/* ⭐ L'AIUTANTE DI PAM — `DECISIONI.md` §1.10.  ⛔ Non lo possiede questo
-	 *    strato: e' uno solo per tutto il server, acceso da `main.c` prima
-	 *    che esista una connessione, e arriva di qui perche' il gancio
-	 *    `chiedi_verifica` di RCP e' l'unico posto che lo usa.
-	 * ⚠ NULL e' lecito e vuol dire «verifica sincrona»: e' il ripiego
-	 *   dichiarato, ed e' il guasto che `banchi/02-pam-*` innesta. */
+	/* ⭐ THE PAM HELPER — `DECISIONI.md` §1.10.  ⛔ This layer does not own
+	 *    it: there is a single one for the whole server, started by `main.c` before
+	 *    any connection exists, and it comes through here because RCP's
+	 *    `chiedi_verifica` hook is the only place that uses it.
+	 * ⚠ NULL is allowed and means «synchronous check»: it is the declared
+	 *   fallback, and it is the fault that `banchi/02-pam-*` injects. */
 	aiutante *aiuto;
 
-	/* lo stream di controllo di HTTP/3: serve a riconoscerlo in scrittura,
-	 * che e' l'unico istante in cui si possa dire al browser che parliamo
+	/* HTTP/3's control stream: it is needed to recognise it when writing,
+	 * which is the only instant in which one can tell the browser we speak
 	 * WebTransport */
 	int64_t ctrl_id;
 	bool impostazioni_scritte;
 	bool guasto;
 	uint8_t impbuf[256];
 	size_t impbuf_len;
-	/* ⛔ Quanti byte del SETTINGS riscritto sono GIA' USCITI, e quanti byte
-	 *    di nghttp3 quel buffer sostituisce.  Servono perche' una scrittura
-	 *    PARZIALE e' un esito normale di `ngtcp2_conn_writev_stream` — non
-	 *    un guasto — e nell'innesto, prima della cura, uccideva la
-	 *    connessione: adesso si riprende dal punto in cui si era arrivati,
-	 *    come si fa da sempre per la coda d'uscita. */
+	/* ⛔ How many bytes of the rewritten SETTINGS have ALREADY GONE OUT, and how
+	 *    many bytes of nghttp3 that buffer replaces.  They are needed because a
+	 *    PARTIAL write is a normal outcome of `ngtcp2_conn_writev_stream` — not
+	 *    a fault — and in the graft, before the cure, it killed the
+	 *    connection: now one resumes from the point reached,
+	 *    as has always been done for the output queue. */
 	size_t impbuf_off, impbuf_orig;
 
 	stream_giudizio *giudizi;
@@ -416,166 +416,166 @@ struct wt {
 
 	uscita *coda;
 	size_t ncoda, capcoda, testa;
-	/* ⛔ Gli stream bloccati per QUESTA passata di scrittura: ngtcp2 ha detto
-	 *    STREAM_DATA_BLOCKED, e riprovare dentro la stessa passata sarebbe un
-	 *    ciclo che non avanza.  ⚠ Erano un `bool` fino alla fase 2 — vedi il
-	 *    riquadro di `WT_BLOCCATI_MAX`: quel `bool` rifaceva a mano il blocco
-	 *    di testa che `RCP.md` §5.1 esiste per togliere. */
+	/* ⛔ The streams blocked for THIS write pass: ngtcp2 said
+	 *    STREAM_DATA_BLOCKED, and retrying within the same pass would be a
+	 *    loop that does not advance.  ⚠ They were a `bool` until phase 2 — see the
+	 *    box of `WT_BLOCCATI_MAX`: that `bool` redid by hand the head-of-line
+	 *    blocking that `RCP.md` §5.1 exists to remove. */
 	int64_t bloccati[WT_BLOCCATI_MAX];
 	size_t nbloccati;
-	/* ⛔ Il tetto e' stato toccato e la coda si ferma davvero: si tiene per
-	 *    scriverlo UNA volta invece che a ogni passata. */
+	/* ⛔ The cap has been touched and the queue really stops: it is kept in order
+	 *    to write it ONCE instead of at every pass. */
 	bool troppi_bloccati;
 
-	int64_t sessione; /* lo stream della CONNECT estesa: E' la sessione */
+	int64_t sessione; /* the stream of the extended CONNECT: it IS the session */
 
-	/* i byte della CONNECT che non compongono ancora una capsula intera */
+	/* the CONNECT bytes that do not yet make up a whole capsule */
 	bytes capsbuf;
-	/* ⛔ Quanti byte di una capsula gia' giudicata TROPPO GRANDE restano da
-	 *    buttare mentre passano. */
+	/* ⛔ How many bytes of a capsule already judged TOO BIG remain to be
+	 *    thrown away as they pass. */
 	uint64_t capsalta;
 
 	richiesta *richieste;
 	size_t nrichieste, caprichieste;
 
-	/* ═══ RCP sopra WebTransport ════════════════════════════════════════ */
+	/* ═══ RCP over WebTransport ═════════════════════════════════════════ */
 	struct rcp_sessione *rcp;
 	int64_t rcp_stream;
 
-	/* ═══ IL VIDEO DI QUESTA SESSIONE — fase 3 ═════════════════════════ */
+	/* ═══ THIS SESSION'S VIDEO — phase 3 ═══════════════════════════════ */
 	/*
-	 * ⛔⭐ QUI C'ERA `bool video_fatto`, ED E' IL FRENO DELLA FASE 2.
+	 * ⛔⭐ HERE THERE WAS `bool video_fatto`, AND IT IS THE BRAKE OF PHASE 2.
 	 *
-	 *     Il commento diceva: «e' un `bool` e non un contatore perche' la fase
-	 *     2 consegna UN'IMMAGINE FERMA: il ciclo dei fotogrammi e' della fase
-	 *     3».  ⇒ Adesso e' la fase 3, e il freno si toglie: al suo posto ci
-	 *     sta lo stato del **canale**, che si accende una volta e resta acceso,
-	 *     e i contatori dei fotogrammi, che crescono.
+	 *     The comment said: «it is a `bool` and not a counter because phase
+	 *     2 delivers ONE STILL IMAGE: the frame loop belongs to phase
+	 *     3».  ⇒ Now it is phase 3, and the brake comes off: in its place
+	 *     there is the state of the **channel**, which is switched on once and stays on,
+	 *     and the frame counters, which grow.
 	 *
-	 * ⚠ La ragione per cui il `bool` esisteva resta valida e va onorata lo
-	 *   stesso: senza un fondo, `video_regola()` riscriverebbe la stessa riga
-	 *   di registro a ogni battito di ogni sessione, e un registro che ripete
-	 *   non si legge piu'.  ⇒ `video_detto` e' quel fondo, ed e' solo per il
-	 *   registro: non ferma piu' i fotogrammi.
+	 * ⚠ The reason the `bool` existed remains valid and must be honoured all
+	 *   the same: without a backstop, `video_regola()` would rewrite the same log
+	 *   line at every heartbeat of every session, and a log that repeats itself
+	 *   is no longer read.  ⇒ `video_detto` is that backstop, and it is only for the
+	 *   log: it no longer stops frames.
 	 */
-	/* Il canale video di questa sessione e' acceso: `SESSIONE` e' partita, il
-	 * codec e' negoziato, e al figlio e' stato chiesto di catturare. */
+	/* This session's video channel is on: `SESSIONE` has left, the
+	 * codec is negotiated, and the child has been asked to capture. */
 	bool video_acceso;
 	uint8_t video_codec;
-	/* ⛔⭐⭐ AL PALCO E' GIA' STATO DETTO DI SMETTERE — e NON e' il contrario
-	 *      di `video_acceso`: sono due fatti diversi, e un campo solo per due
-	 *      fatti ne spegne uno (e' la lezione scritta su `tela_detta_*` venti
-	 *      righe piu' sotto, e qui vale identica).
+	/* ⛔⭐⭐ THE STAGE HAS ALREADY BEEN TOLD TO STOP — and it is NOT the opposite
+	 *      of `video_acceso`: they are two different facts, and one field for two
+	 *      facts switches one of them off (it is the lesson written on `tela_detta_*`
+	 *      twenty lines below, and here it holds identically).
 	 *
-	 *      `video_acceso`  = «questa sessione HA un canale video».  Resta vero
-	 *                        fino alla fine, perche' e' lui a far uscire il
-	 *                        CONTO FINALE in `wt_libera()`: spegnerlo al
-	 *                        congedo vorrebbe dire perdere quella riga.
-	 *      `video_fermo`   = «al figlio ho gia' chiesto di NON catturare piu'».
+	 *      `video_acceso`  = «this session HAS a video channel».  It stays true
+	 *                        until the end, because it is what lets the
+	 *                        FINAL COUNT out in `wt_libera()`: switching it off at the
+	 *                        farewell would mean losing that line.
+	 *      `video_fermo`   = «I have already asked the child to capture NO MORE».
 	 *
-	 * ⛔ E torna a `false` in `video_regola()` quando una sessione nuova fa
-	 *    ripartire il ciclo: senza quel ritorno la cura dello spreco
-	 *    romperebbe il RIAGGANCIO — una sessione nuova sulla stessa
-	 *    connessione (stato previsto due volte in questo file) troverebbe
-	 *    `video_acceso` gia' vero, non chiederebbe niente al palco, e
-	 *    l'utente resterebbe davanti a uno schermo fermo per sempre.  ⚠ E'
-	 *    molto peggio dello spreco che si sta curando. */
+	 * ⛔ And it goes back to `false` in `video_regola()` when a new session
+	 *    restarts the loop: without that return the cure for waste
+	 *    would break the REATTACH — a new session on the same
+	 *    connection (a state foreseen twice in this file) would find
+	 *    `video_acceso` already true, would ask the stage nothing, and
+	 *    the user would be left in front of a frozen screen forever.  ⚠ It is
+	 *    much worse than the waste being cured. */
 	bool video_fermo;
-	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha video»: una volta
-	 *    sola, e il perche' e' nella riga scritta allora. */
+	/* ⛔ «I have already explained why this session has no video»: once
+	 *    only, and the why is in the line written then. */
 	bool video_detto;
-	/* ⛔ L'ultima misura di fotogramma per cui si e' gia' scritto «non e' la tela
-	 *    in vigore».  ⚠ E' una MISURA e non un `bool` apposta: cosi' il fondo si
-	 *    riarma quando il fatto cambia, invece di tacere per sempre dopo la prima
-	 *    volta — ed e' un campo suo, perche' `video_detto` racconta un altro
-	 *    fatto e un flag per due fatti ne spegne uno. */
+	/* ⛔ The last frame size for which «it is not the canvas in force» has already
+	 *    been written.  ⚠ It is a SIZE and not a `bool` on purpose: so the backstop
+	 *    rearms when the fact changes, instead of keeping quiet forever after the first
+	 *    time — and it is a field of its own, because `video_detto` tells another
+	 *    fact and one flag for two facts switches one of them off. */
 	uint32_t tela_detta_l, tela_detta_a;
-	/* ⛔⭐ QUANTI ANNUNCI DI DISACCORDO SONO STATI SCRITTI — e non e' lo stesso
-	 *     numero dei fotogrammi non spediti, che e' precisamente il punto.
+	/* ⛔⭐ HOW MANY MISMATCH ANNOUNCEMENTS HAVE BEEN WRITTEN — and it is not the same
+	 *     number as the frames not sent, which is precisely the point.
 	 *
-	 *     `[M]` B2, 22 agosto 2026: sotto un guasto che rende inammissibili
-	 *     TUTTI i fotogrammi, **799 scartati** e nel registro **un annuncio
-	 *     solo** — perche' il fondo qui sopra si riarma soltanto quando cambia
-	 *     la coppia (tela in vigore, misura del fotogramma), e sotto quel
-	 *     guasto non cambia mai.  ⇒ Chi contava le righe leggeva **1** e lo
-	 *     chiamava «non spediti»: il nome prometteva 799.  E' la forma **E2**,
-	 *     e non l'aveva vista nessuno **perche' 1 e' un numero che sembra sano**.
+	 *     `[M]` B2, 22 Aug 2026: under a fault that makes ALL frames
+	 *     inadmissible, **799 discarded** and in the log **a single
+	 *     announcement** — because the backstop above rearms only when the
+	 *     pair (canvas in force, frame size) changes, and under that
+	 *     fault it never changes.  ⇒ Whoever counted the lines read **1** and
+	 *     called it «not sent»: the name promised 799.  It is shape **E2**,
+	 *     and nobody had seen it **because 1 is a number that looks healthy**.
 	 *
-	 * ⛔ Il fondo NON si tocca — 799 righe identiche renderebbero il registro
-	 *    inutilizzabile.  Quel che mancava e' il CONTO accanto, e sono due
-	 *    numeri distinti perche' contano due cose distinte. */
+	 * ⛔ The backstop is NOT touched — 799 identical lines would make the log
+	 *    unusable.  What was missing is the COUNT next to it, and they are two
+	 *    distinct numbers because they count two distinct things. */
 	uint32_t video_annunci_tela;
-	/* Quando si e' chiesta l'ultima chiave al figlio, per non chiederne una a
-	 * ogni battito mentre la prima e' ancora in viaggio.  ⛔ Non e' la grazia
-	 * di §5.2 (quella e' di `rcp.c` e conta dall'ultima chiave SPEDITA): e' il
-	 * fondo di una richiesta ripetuta verso il palco. */
+	/* When the last keyframe was requested from the child, so as not to request one at
+	 * every heartbeat while the first is still on its way.  ⛔ It is not the grace
+	 * of §5.2 (that one belongs to `rcp.c` and counts from the last keyframe SENT): it is the
+	 * backstop of a repeated request towards the stage. */
 	uint64_t chiave_chiesta_ms;
-	/* ⛔⭐ LA SECONDA CINTURA del 23 set 2026 (vedi `batti_fra()` e
-	 *     `video_rifiutato_per_chiave()`): il debito di §5.2 acceso da troppo
-	 *     tempo si dice UNA volta per episodio, non 45 278.  Si spegne quando
-	 *     una chiave riparte. */
+	/* ⛔⭐ THE SECOND BELT of 23 Sep 2026 (see `batti_fra()` and
+	 *     `video_rifiutato_per_chiave()`): the §5.2 debt that has been on for too
+	 *     long is said ONCE per episode, not 45 278 times.  It is switched off when
+	 *     a keyframe leaves again. */
 	bool debito_detto;
-	/* ⭐ Quanto misurava l'ultima CHIAVE spedita, in byte, e l'ultimo intervallo
-	 *    che le e' stato applicato — servono a `chiave_intervallo_ms()`, e il
-	 *    secondo esiste solo per non ripetere la stessa riga di registro
-	 *    cinquanta volte al secondo. */
+	/* ⭐ How big the last keyframe SENT was, in bytes, and the last interval
+	 *    applied to it — they serve `chiave_intervallo_ms()`, and the
+	 *    second exists only so as not to repeat the same log line
+	 *    fifty times a second. */
 	uint64_t chiave_byte, chiave_attesa_detta_ms;
 	uint32_t video_diffusi, video_saltati;
 
-	/* ⭐⭐ FASE 9 — LA SOGLIA SULLA CODA, e i tre conti che la rendono
-	 *     LEGGIBILE dal registro invece che dedotta.
+	/* ⭐⭐ PHASE 9 — THE QUEUE THRESHOLD, and the three counts that make it
+	 *     READABLE from the log instead of deduced.
 	 *
-	 * `sgombra_tenuti` — quante volte un delta e' rimasto in coda perche' la
-	 *    coda si svuota entro la soglia.  Si conta **per delta**, non per
-	 *    passata, perche' `sgombra_abbandoni` conta per delta: due numeri che
-	 *    si devono poter sottrarre.
-	 * `sgombra_abbandoni` — quante volte la soglia e' stata superata lo stesso
-	 *    e il delta se n'e' andato.
-	 * ⛔ `sgombra_credito` — i delta che non sono nemmeno ENTRATI in coda
-	 *    perche' §2.3 non aveva credito (`rcp.c:3441`, la causa 4 del debito di
-	 *    §5.2).  ⚠ E' LA FORMA INVISIBILE AL RICEVENTE, e sta qui per una
-	 *    ragione precisa: la cura di questa fase tocca **la causa 3**, non la
-	 *    4.  Se sotto congestione a tenere acceso il debito fosse la 4, la cura
-	 *    girerebbe a vuoto e i fotogrammi resterebbero tutti chiavi — con
-	 *    questo numero accanto agli altri due il banco sa **a chi** attribuire,
-	 *    senza di lui vedrebbe «la cura non ha funzionato» e sarebbe falso.
+	 * `sgombra_tenuti` — how many times a delta stayed in the queue because the
+	 *    queue empties within the threshold.  It is counted **per delta**, not per
+	 *    pass, because `sgombra_abbandoni` counts per delta: two numbers that
+	 *    must be subtractable.
+	 * `sgombra_abbandoni` — how many times the threshold was exceeded all the same
+	 *    and the delta went away.
+	 * ⛔ `sgombra_credito` — the deltas that did not even ENTER the queue
+	 *    because §2.3 had no credit (`rcp.c:3441`, cause 4 of the debt of
+	 *    §5.2).  ⚠ IT IS THE SHAPE INVISIBLE TO THE RECEIVER, and it is here for a
+	 *    precise reason: this phase's cure touches **cause 3**, not
+	 *    4.  If under congestion it were 4 keeping the debt on, the cure
+	 *    would spin idle and the frames would all stay keyframes — with
+	 *    this number next to the other two the bench knows **to whom** to attribute it;
+	 *    without it it would see «the cure did not work» and that would be false.
 	 *
-	 * ⚠ `sgombra_sopra` e' il fondo delle righe di registro: si scrive quando
-	 *   lo STATO cambia (sotto→sopra e sopra→sotto), non a trenta volte al
-	 *   secondo.  ⛔ E la riga d'avvio col valore in vigore la scrive
-	 *   `wt_sgombra_soglia()`, che `main.c` chiama sempre: «spento» e «non e'
-	 *   mai scattato» non devono avere la stessa faccia. */
+	 * ⚠ `sgombra_sopra` is the backstop of the log lines: it is written when
+	 *   the STATE changes (below→above and above→below), not thirty times a
+	 *   second.  ⛔ And the startup line with the value in force is written by
+	 *   `wt_sgombra_soglia()`, which `main.c` always calls: «off» and «never
+	 *   fired» must not look the same. */
 	uint32_t sgombra_tenuti, sgombra_abbandoni, sgombra_credito;
 	bool sgombra_sopra;
-	/* ⛔ 22 set 2026 — delta TENUTI perche' davanti c'e' una CHIAVE ancora in
-	 *    coda (vedi `video_sgombra()`, «LA SPIRALE DELLA CHIAVE»), e il fondo
-	 *    della riga che lo dice una volta per chiave. */
+	/* ⛔ 22 Sep 2026 — deltas KEPT because ahead there is a KEYFRAME still in
+	 *    the queue (see `video_sgombra()`, «THE KEYFRAME SPIRAL»), and the backstop
+	 *    of the line that says so once per keyframe. */
 	uint32_t sgombra_dietro_chiave;
 	uint32_t sgombra_chiave_detta;
 
-	/* ⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e i suoi numeri.
+	/* ⭐⭐ PHASE 9 — THE RATE REGULATOR, and its numbers.
 	 *
-	 * `video_ritmo_scesi` — quanti fotogrammi NON sono partiti perche' la coda
-	 *    non si svuotava.  ⛔ Non entra in `video_saltati`: quello conta i
-	 *    fotogrammi INAMMISSIBILI (tela sbagliata, credito finito, rifiuto di
-	 *    rcp), questo conta una DISCESA DI RITMO decisa da noi.  E' la lezione
-	 *    di `video_annunci_tela` (:331-343): due numeri per due fatti, o uno
-	 *    dei due mente con un valore che sembra sano.
+	 * `video_ritmo_scesi` — how many frames did NOT leave because the queue
+	 *    was not emptying.  ⛔ It does not go into `video_saltati`: that one counts
+	 *    INADMISSIBLE frames (wrong canvas, credit exhausted, refusal by
+	 *    rcp), this one counts a RATE DROP decided by us.  It is the lesson
+	 *    of `video_annunci_tela` (:331-343): two numbers for two facts, or one
+	 *    of the two lies with a value that looks healthy.
 	 *
-	 * `ritmo_giu` / `ritmo_da_ms` / `ritmo_da_n` — se un episodio di discesa e'
-	 *    in corso, da quando e da che conto: servono a scrivere DUE righe per
-	 *    episodio invece di una per fotogramma saltato.  ⛔ A trenta al secondo
-	 *    la seconda forma e' il difetto dei 30,8 GB di registro.
+	 * `ritmo_giu` / `ritmo_da_ms` / `ritmo_da_n` — whether a drop episode is
+	 *    in progress, since when and from what count: they serve to write TWO lines per
+	 *    episode instead of one per skipped frame.  ⛔ At thirty a second
+	 *    the second shape is the defect of the 30.8 GB of log.
 	 *
-	 * ⛔⭐ E I QUATTRO SEGUENTI NON DECIDONO NIENTE: sono lo STRUMENTO con cui
-	 *     si dimostra che il ritmo non cala a scena ferma.  `LEZIONI.md` §1.9:
-	 *     un contatore a zero su un ramo mai raggiunto non dimostra niente —
-	 *     «vuoto» e «proibito» hanno la stessa faccia.  ⇒ Si conta quante volte
-	 *     `arretrato` e' stato LETTO in ogni secondo, oltre a quanto valeva:
-	 *     zero letture vuol dire che il palco non ha consegnato niente (scena
-	 *     ferma), e NON «arretrato zero».  La riga la scrive `ritmo_ciclo()`,
-	 *     che gira col battito e quindi esce anche quando di fotogrammi non ne
-	 *     arriva nessuno. */
+	 * ⛔⭐ AND THE FOLLOWING FOUR DECIDE NOTHING: they are the INSTRUMENT with which
+	 *     one proves that the rate does not drop on a still scene.  `LEZIONI.md` §1.9:
+	 *     a counter at zero on a branch never reached proves nothing —
+	 *     «empty» and «forbidden» look the same.  ⇒ We count how many times
+	 *     `arretrato` was READ in each second, besides what it was worth:
+	 *     zero reads means the stage delivered nothing (still
+	 *     scene), and NOT «arretrato zero».  The line is written by `ritmo_ciclo()`,
+	 *     which runs with the heartbeat and so comes out even when no
+	 *     frames arrive at all. */
 	uint32_t video_ritmo_scesi;
 	bool     ritmo_giu;
 	uint64_t ritmo_da_ms;
@@ -585,378 +585,378 @@ struct wt {
 	uint32_t ritmo_detti_n;
 	uint64_t ritmo_detto_ms;
 
-	/* ⛔⭐⭐ FASE 9 — LA FOTOGRAFIA DELLA RETE DEL SECONDO PRIMA, e serve a
-	 *      rispondere all'unica domanda che sotto perdita conta: **e' la linea
-	 *      o siamo noi?**
+	/* ⛔⭐⭐ PHASE 9 — THE SNAPSHOT OF THE NETWORK OF THE PREVIOUS SECOND, and it serves to
+	 *      answer the only question that counts under loss: **is it the line
+	 *      or is it us?**
 	 *
-	 *      Fino a qui il registro sapeva contare solo la meta' NOSTRA del
-	 *      ritardo — `sgombra_tenuti` (l'abbiamo tenuto in coda),
-	 *      `sgombra_abbandoni` (l'abbiamo buttato), `video_ritmo_scesi` (non
-	 *      l'abbiamo nemmeno spedito).  ⛔ La meta' della RETE — un pacchetto
-	 *      perduto e rimandato da QUIC, la finestra di congestione che si e'
-	 *      chiusa — non la sapeva contare nessuno, e ogni misura sotto perdita
-	 *      finiva in una discussione invece che in un'attribuzione.
+	 *      Until now the log could count only OUR half of the
+	 *      delay — `sgombra_tenuti` (we kept it in the queue),
+	 *      `sgombra_abbandoni` (we threw it away), `video_ritmo_scesi` (we did not
+	 *      even send it).  ⛔ The NETWORK's half — a packet
+	 *      lost and resent by QUIC, the congestion window that has
+	 *      closed — nobody could count, and every measurement under loss
+	 *      ended in a discussion instead of an attribution.
 	 *
-	 * ⚠ Questi campi NON DECIDONO NIENTE: sono la fotografia dell'ultima riga
-	 *   scritta, e servono solo a fare la differenza («quanti nell'intervallo»)
-	 *   e a tacere quando non e' cambiato niente.  Nessuna soglia, nessun
-	 *   ritmo, nessun interruttore: `rete_ciclo()` e' pura osservazione.
+	 * ⚠ These fields DECIDE NOTHING: they are the snapshot of the last line
+	 *   written, and serve only to make the difference («how many in the interval»)
+	 *   and to keep quiet when nothing has changed.  No threshold, no
+	 *   rate, no switch: `rete_ciclo()` is pure observation.
 	 *
-	 * ⛔ `rete_detto_ms` a 0 vuol dire «mai detta», e la prima riga esce
-	 *    comunque: «la sessione non ha ancora parlato» e «non e' cambiato
-	 *    niente» non devono avere la stessa faccia (`LEZIONI.md` §1.9). */
+	 * ⛔ `rete_detto_ms` at 0 means «never said», and the first line comes out
+	 *    anyway: «the session has not spoken yet» and «nothing has
+	 *    changed» must not look the same (`LEZIONI.md` §1.9). */
 	uint64_t rete_detto_ms;
 	uint64_t rete_pkt_lost, rete_bytes_lost;
 	uint64_t rete_pkt_sent, rete_pkt_recv, rete_pkt_discarded;
-	/* Il giudizio dell'ultima riga: se cambia, la riga esce anche a contatori
-	 * fermi — passare da «la finestra e' chiusa» a «niente da segnalare» e'
-	 * precisamente il fatto che si vuole vedere. */
+	/* The verdict of the last line: if it changes, the line comes out even with counters
+	 * still — going from «the window is closed» to «nothing to report» is
+	 * precisely the fact one wants to see. */
 	int rete_giudizio;
 
-	/* ⭐⭐⭐ I DATAGRAM PERSI — E LA MISURA DEL RIORDINO CHE NGTCP2 NON DA'.
+	/* ⭐⭐⭐ LOST DATAGRAMS — AND THE MEASURE OF REORDERING THAT NGTCP2 DOES NOT GIVE.
 	 *
-	 *     `ngtcp2.h:3442` dice una cosa che vale piu' del contatore che
-	 *     annuncia: *«Note that the loss might be spurious, and DATAGRAM frame
-	 *     might be acknowledged later»*.  ⇒ Se per lo stesso `dgram_id` arriva
-	 *     prima `lost_datagram` e POI `ack_datagram`, quella perdita **non era
-	 *     una perdita**: era un pacchetto arrivato FUORI SEQUENZA, dichiarato
-	 *     perduto dalla soglia dei tre pacchetti e riscontrato dopo.
+	 *     `ngtcp2.h:3442` says something worth more than the counter it
+	 *     announces: *«Note that the loss might be spurious, and DATAGRAM frame
+	 *     might be acknowledged later»*.  ⇒ If for the same `dgram_id` there arrives
+	 *     first `lost_datagram` and THEN `ack_datagram`, that loss **was not
+	 *     a loss**: it was a packet that arrived OUT OF ORDER, declared
+	 *     lost by the three-packet threshold and acknowledged afterwards.
 	 *
-	 * ⭐ E' la firma del riordino, presa dal lato del server, senza patch a
-	 *   ngtcp2 e senza dedurla dai numeri di sequenza dell'applicazione — che
-	 *   era l'unica strada che si vedeva prima di leggere quella riga.
-	 *   ⚠ E' parziale per costruzione: vale sui **datagram**, cioe' sull'audio;
-	 *   sugli stream QUIC non c'e' un identificativo per pezzo e questa strada
-	 *   non c'e'.  Il prezzo si dichiara invece di lasciar credere che il
-	 *   numero copra tutto il traffico.
+	 * ⭐ It is the signature of reordering, taken from the server's side, without patches to
+	 *   ngtcp2 and without deducing it from the application's sequence numbers — which
+	 *   was the only road visible before reading that line.
+	 *   ⚠ It is partial by construction: it holds for **datagrams**, that is for audio;
+	 *   on QUIC streams there is no identifier per piece and this road
+	 *   does not exist.  The price is declared instead of letting one believe the
+	 *   number covers all the traffic.
 	 *
-	 * ⛔ L'anello e' corto APPOSTA: un riscontro che arriva dopo 512 perdite
-	 *    dichiarate non e' piu' un riordino, e contarlo tale gonfierebbe il
-	 *    numero proprio nel caso — la linea che perde davvero — in cui deve
-	 *    restare onesto.  ⇒ Quel che esce dall'anello resta perduto. */
-	uint64_t dgram_persi;        /* `lost_datagram` ha detto: perduto */
-	uint64_t dgram_riscontrati;  /* `ack_datagram` ha detto: arrivato */
-	uint64_t dgram_falsi;        /* perduto E POI riscontrato = RIORDINO */
+	 * ⛔ The ring is short ON PURPOSE: an acknowledgement arriving after 512 declared
+	 *    losses is no longer a reordering, and counting it as such would inflate the
+	 *    number precisely in the case — the line that really loses — in which it must
+	 *    stay honest.  ⇒ Whatever falls out of the ring stays lost. */
+	uint64_t dgram_persi;        /* `lost_datagram` said: lost */
+	uint64_t dgram_riscontrati;  /* `ack_datagram` said: arrived */
+	uint64_t dgram_falsi;        /* lost AND THEN acknowledged = REORDERING */
 	uint64_t dgram_anello[WT_DGRAM_ANELLO];
 	unsigned dgram_anello_i;
 	uint64_t rete_dgram_persi, rete_dgram_falsi;
 
-	/* ⛔⭐⭐ FASE 9 — LA LINEA MORTA: i campi su cui si prende la DECISIONE
-	 *      piu' visibile di tutto il prodotto — buttare fuori una sessione.
+	/* ⛔⭐⭐ PHASE 9 — THE DEAD LINE: the fields on which the most visible
+	 *      DECISION of the whole product is taken — throwing a session out.
 	 *
-	 *      ⚠ Sono SEPARATI dai `rete_*` qui sopra apposta, e non per pigrizia:
-	 *        quelli sono la fotografia dell'ultima RIGA SCRITTA e si muovono
-	 *        solo quando la riga esce (cioe' quando qualcosa e' cambiato).
-	 *        Questi si muovono quando si CHIUDE UNA FINESTRA DI GIUDIZIO, che
-	 *        e' un altro ritmo.  ⛔ Riusare i primi legherebbe la decisione al
-	 *        filtro anti-rumore del registro: una sessione che perde in modo
-	 *        costante fa uscire poche righe, e la finestra si allungherebbe da
-	 *        se' — cioe' la soglia cambierebbe senza che nessuno l'abbia
-	 *        scritto.
+	 *      ⚠ They are SEPARATE from the `rete_*` above on purpose, and not out of laziness:
+	 *        those are the snapshot of the last LINE WRITTEN and move
+	 *        only when the line comes out (that is when something has changed).
+	 *        These move when A VERDICT WINDOW CLOSES, which
+	 *        is another rhythm.  ⛔ Reusing the former would tie the decision to the
+	 *        log's anti-noise filter: a session that loses
+	 *        steadily lets few lines out, and the window would lengthen by
+	 *        itself — that is the threshold would change without anybody having
+	 *        written it.
 	 *
-	 * ⛔ `lm_finestra_ms == 0` vuol dire «mai aperta»: il primo giro fotografa
-	 *    e non giudica.  Un giudizio preso sulla differenza coi totali di tutta
-	 *    la connessione sarebbe una frazione su una finestra lunga quanto la
-	 *    sessione, cioe' un'altra grandezza. */
-	uint64_t lm_finestra_ms;    /* quando si e' aperta la finestra in corso   */
-	uint64_t lm_pkt_sent;       /* `pkt_sent` all'apertura della finestra     */
-	uint64_t lm_pkt_lost;       /* `pkt_lost` all'apertura della finestra     */
-	/* ⛔⛔⭐ LA FRAZIONE DI PERDITA E' UN TESTIMONE, NON PIU' UN GIUDICE — 23
-	 *      agosto 2026, e la ragione sta per intero nel riquadro sopra
-	 *      `WT_LM_STALLO_MS`.  Questi tre campi tengono la fotografia
-	 *      dell'ultima finestra CHIUSA, cosi' la riga dello scatto porta il
-	 *      numero anche quando a decidere e' stata un'altra causa. */
-	unsigned lm_permille;       /* la frazione dell'ultima finestra chiusa    */
-	uint64_t lm_persi_v, lm_spediti_v; /* i due conti di quella finestra      */
-	uint64_t lm_durata_v;       /* e quanto e' durata davvero, in ms          */
-	/* ⛔⭐⭐ LO STALLO DELL'USCITA — la grandezza su cui si DECIDE da oggi.
+	 * ⛔ `lm_finestra_ms == 0` means «never opened»: the first round takes a snapshot
+	 *    and does not judge.  A verdict taken on the difference with the totals of the whole
+	 *    connection would be a fraction over a window as long as the
+	 *    session, that is another quantity. */
+	uint64_t lm_finestra_ms;    /* when the current window opened            */
+	uint64_t lm_pkt_sent;       /* `pkt_sent` when the window opened          */
+	uint64_t lm_pkt_lost;       /* `pkt_lost` when the window opened          */
+	/* ⛔⛔⭐ THE LOSS FRACTION IS A WITNESS, NO LONGER A JUDGE — 23
+	 *      Aug 2026, and the reason is in full in the box above
+	 *      `WT_LM_STALLO_MS`.  These three fields keep the snapshot
+	 *      of the last CLOSED window, so the firing line carries the
+	 *      number even when another cause decided. */
+	unsigned lm_permille;       /* the fraction of the last closed window     */
+	uint64_t lm_persi_v, lm_spediti_v; /* the two counts of that window       */
+	uint64_t lm_durata_v;       /* and how long it really lasted, in ms       */
+	/* ⛔⭐⭐ THE OUTPUT STALL — the quantity on which we DECIDE from today.
 	 *
-	 *      Sono due contatori monotoni piu' un istante, e ognuno dei tre porta
-	 *      una meta' della frase «da quanto tempo non esce un fotogramma pur
-	 *      avendone da mandare»:
+	 *      They are two monotonic counters plus an instant, and each of the three carries
+	 *      one half of the sentence «how long has no frame left while
+	 *      having some to send»:
 	 *
-	 *        · `lm_usciti`  — byte di VIDEO consegnati a ngtcp2 (`coda_consegna`):
-	 *                         se sale, il filo porta, e il conto riparte;
-	 *        · `lm_offerti` — fotogrammi che il palco ci ha dato per questa
-	 *                         sessione, contati PRIMA di ogni freno, sgombero o
-	 *                         rifiuto: se non sale e la coda e' vuota, non
-	 *                         c'era niente da mandare e il conto NON PARTE;
-	 *        · `lm_uscita_ms` — l'istante in cui il conto e' ripartito l'ultima
-	 *                         volta, per una delle due ragioni qui sopra.
+	 *        · `lm_usciti`  — VIDEO bytes handed to ngtcp2 (`coda_consegna`):
+	 *                         if it rises, the wire carries, and the count restarts;
+	 *        · `lm_offerti` — frames the stage gave us for this
+	 *                         session, counted BEFORE any brake, clear-out or
+	 *                         refusal: if it does not rise and the queue is empty, there
+	 *                         was nothing to send and the count DOES NOT START;
+	 *        · `lm_uscita_ms` — the instant the count last restarted,
+	 *                         for one of the two reasons above.
 	 *
-	 * ⛔ I due `_visti` sono i valori all'ultimo giro di giudizio: la grandezza
-	 *    e' una DIFFERENZA fra due campionamenti, non un totale.  Un totale
-	 *    direbbe «da inizio sessione», che e' un'altra cosa. */
+	 * ⛔ The two `_visti` are the values at the last verdict round: the quantity
+	 *    is a DIFFERENCE between two samples, not a total.  A total
+	 *    would say «since the session began», which is another thing. */
 	uint64_t lm_usciti, lm_usciti_visti;
 	uint64_t lm_offerti, lm_offerti_visti;
 	uint64_t lm_uscita_ms;
-	/* ⛔ Il silenzio non e' un orologio libero: e' «da quando il client non fa
-	 *    piu' vedere un pacchetto», e accanto ci sta il numero delle volte che
-	 *    NOI gliene abbiamo mandato uno da allora.  Senza il secondo, una
-	 *    sessione in cui non parla nessuno dei due si dichiarerebbe morta da
-	 *    sola — ed e' invece un desktop fermo. */
-	uint64_t lm_vivo_ms;        /* l'ultima volta che `pkt_recv` e' salito    */
-	uint64_t lm_pkt_recv;       /* `pkt_recv` di quella volta                 */
-	uint64_t lm_pkt_sent_vivo;  /* `pkt_sent` di quella volta = le PROVE      */
-	bool lm_scattata;           /* ⛔ una volta sola: dopo, il filo cade      */
-	/* ⛔⭐⭐ QUANTO CIECHI SIAMO STATI, e quanto ne ha gia' tenuto conto QUESTA
-	 *      sessione.  Le due grandezze su cui la linea morta decide — i byte
-	 *      usciti e i pacchetti ricevuti — si muovono SOLO mentre il ciclo del
-	 *      padre gira: se il ciclo si e' fermato, non si e' fermato il client,
-	 *      **ci siamo fermati noi**, e contare quel buco come silenzio suo
-	 *      significa accusare la sua rete di una cecita' nostra.
-	 * ⭐ Si tiene la fotografia del contatore GLOBALE invece di un flag: fra due
-	 *    giudizi possono esserci stati piu' buchi, e un flag ne perderebbe. */
-	uint64_t lm_fermo_visto;    /* `giro_fermo_ms` all'ultimo giudizio        */
-	/* ⛔⛔ IL PUNTO ZERO DI QUESTA SESSIONE — 25 agosto 2026, rilievo R5.
+	/* ⛔ Silence is not a free clock: it is «since when the client has not shown
+	 *    a packet any more», and next to it there is the number of times
+	 *    WE have sent it one since then.  Without the second, a
+	 *    session in which neither of the two speaks would declare itself dead
+	 *    on its own — and it is instead a still desktop. */
+	uint64_t lm_vivo_ms;        /* the last time `pkt_recv` rose              */
+	uint64_t lm_pkt_recv;       /* `pkt_recv` at that time                    */
+	uint64_t lm_pkt_sent_vivo;  /* `pkt_sent` at that time = the PROBES       */
+	bool lm_scattata;           /* ⛔ once only: afterwards, the wire drops   */
+	/* ⛔⭐⭐ HOW BLIND WE HAVE BEEN, and how much of it THIS session has already
+	 *      taken into account.  The two quantities the dead line decides on — the bytes
+	 *      sent and the packets received — move ONLY while the parent's loop
+	 *      runs: if the loop stopped, it was not the client that stopped,
+	 *      **we stopped**, and counting that gap as its silence
+	 *      means blaming its network for a blindness of ours.
+	 * ⭐ The snapshot of the GLOBAL counter is kept instead of a flag: between two
+	 *    verdicts there may have been several gaps, and a flag would lose some. */
+	uint64_t lm_fermo_visto;    /* `giro_fermo_ms` at the last verdict        */
+	/* ⛔⛔ THIS SESSION'S ZERO POINT — 25 Aug 2026, finding R5.
 	 *
-	 *     `giro_fermo_ms` e' un contatore GLOBALE che cresce da quando il
-	 *     server e' acceso, e la riga dello sfratto lo stampava come
-	 *     `fermo_ms=` con accanto un commento che diceva *«da quando questa
-	 *     sessione e' nata»*.  ⛔ `[M]` §5.5 R5: una riga ha attribuito **54,5
-	 *     secondi** di cecita' nostra a una sessione **che allora non era
-	 *     ancora nata**.  ⇒ Chi legge ASSOLVE la rete quando la rete c'entrava,
-	 *     cioe' l'errore ESATTAMENTE INVERSO di quello che la cura esiste per
-	 *     togliere.  Un testimone che accusa chi non c'era e' peggio di nessun
-	 *     testimone: manda la diagnosi dalla parte sbagliata (`LEZIONI.md`
+	 *     `giro_fermo_ms` is a GLOBAL counter that grows from when the
+	 *     server is switched on, and the eviction line printed it as
+	 *     `fermo_ms=` with a comment next to it saying *«since this
+	 *     session was born»*.  ⛔ `[M]` §5.5 R5: a line attributed **54.5
+	 *     seconds** of our blindness to a session **that at the time had not
+	 *     been born yet**.  ⇒ Whoever reads ACQUITS the network when the network was involved,
+	 *     that is the EXACTLY OPPOSITE error of the one the cure exists to
+	 *     remove.  A witness accusing someone who was not there is worse than no
+	 *     witness: it sends the diagnosis the wrong way (`LEZIONI.md`
 	 *     §1.37).
 	 *
-	 * ⭐ Si segna quanto valeva il contatore globale al PRIMO giro in cui
-	 *    questa sessione e' stata guardata, e la riga stampa la differenza. */
-	uint64_t lm_fermo_nato;     /* `giro_fermo_ms` al primo giro di QUESTA     */
-	uint64_t lm_fermo_saltati;  /* quanti giudizi ha saltato per un buco      */
+	 * ⭐ We note what the global counter was worth at the FIRST round in which
+	 *    this session was looked at, and the line prints the difference. */
+	uint64_t lm_fermo_nato;     /* `giro_fermo_ms` at the first round of THIS  */
+	uint64_t lm_fermo_saltati;  /* how many verdicts it skipped for a gap     */
 
-	/* ⛔⭐ I FOTOGRAMMI IN VOLO — §5.1, «uno piu' recente e' gia' partito».
+	/* ⛔⭐ FRAMES IN FLIGHT — §5.1, «a more recent one has already left».
 	 *
-	 *     Un fotogramma che RCP ha gia' chiuso con FIN puo' avere ancora tutti
-	 *     i suoi byte fermi in questa coda: per RCP e' partito, sul filo non
-	 *     e'.  §5.1 dice che quello si PUO' azzerare — «i byte non ancora
-	 *     spediti non partono affatto» — ed e' l'unica strada per cui un
-	 *     abbandono si veda davvero dal lato che riceve.
+	 *     A frame RCP has already closed with FIN can still have all
+	 *     its bytes stuck in this queue: for RCP it has left, on the wire it has
+	 *     not.  §5.1 says that one MAY be reset — «the bytes not yet
+	 *     sent do not leave at all» — and it is the only road by which an
+	 *     abandonment really shows on the receiving side.
 	 *
-	 * ⚠ Si tiene qui e non in `rcp.c` perche' e' un fatto della CODA; e le tre
-	 *   conseguenze (la riga di registro, il conto, il debito della chiave)
-	 *   stanno in `rcp.c`, che e' l'unico a possederle. */
+	 * ⚠ It is kept here and not in `rcp.c` because it is a fact of the QUEUE; and the three
+	 *   consequences (the log line, the count, the keyframe debt)
+	 *   are in `rcp.c`, which is the only one owning them. */
 	struct {
 		int64_t stream;
 		uint32_t numero;
 		bool chiave;
 		bool vivo;
-		bool detto; /* la chiave che trattiene la coda si dice una volta */
+		bool detto; /* the keyframe holding back the queue is said once */
 	} involo[WT_INVOLO_MAX];
 	size_t ninvolo;
-	/* ⛔ Lo stream che `gancio_video_apri()` ha appena aperto: `rcp.c` non lo
-	 *    restituisce, e dedurlo da «l'ultimo aperto sulla connessione» sarebbe
-	 *    indovinare. */
+	/* ⛔ The stream `gancio_video_apri()` has just opened: `rcp.c` does not
+	 *    return it, and deducing it from «the last opened on the connection» would be
+	 *    guessing. */
 	int64_t video_stream_ultimo;
 
-	/* ═══ L'AUDIO DI QUESTA SESSIONE — fase 7 ══════════════════════════ */
+	/* ═══ THIS SESSION'S AUDIO — phase 7 ═══════════════════════════════ */
 	/*
-	 * ⛔⭐ L'AUDIO NON E' IL VIDEO, E LA DIFFERENZA E' TUTTA QUI SOTTO.
+	 * ⛔⭐ AUDIO IS NOT VIDEO, AND THE DIFFERENCE IS ALL BELOW.
 	 *
-	 *     Il video vive su stream (affidabili): i byte che non entrano in un
-	 *     pacchetto RESTANO in coda e partono dopo, ed e' obbligatorio —
-	 *     saldare un messaggio a byte monchi fabbricherebbe una violazione
-	 *     del client (vedi `NGTCP2_ERR_STREAM_DATA_BLOCKED` in `wt_scrivi`).
+	 *     Video lives on (reliable) streams: bytes that do not fit in a
+	 *     packet STAY in the queue and leave later, and it is mandatory —
+	 *     sealing a message with truncated bytes would fabricate a violation
+	 *     by the client (see `NGTCP2_ERR_STREAM_DATA_BLOCKED` in `wt_scrivi`).
 	 *
-	 *     L'audio vive su datagram, e `RCP.md` §6.3 dice l'opposto con parole
-	 *     sue: «nessuna ritrasmissione, nessun riordino».  ⇒ Un blocco che non
-	 *     parte NON si conserva: si BUTTA, e si conta.
+	 *     Audio lives on datagrams, and `RCP.md` §6.3 says the opposite in its own
+	 *     words: «no retransmission, no reordering».  ⇒ A block that does not
+	 *     leave is NOT kept: it is THROWN AWAY, and counted.
 	 *
-	 * ⭐ E si buttano i PIU' VECCHI, non i piu' nuovi — e' la regola che v1
-	 *    aveva gia' trovato (`fondamenta/remotix-c/src/altoparlante.h`): «il suono in
-	 *    ritardo non serve a nessuno, e una coda che cresce all'infinito
-	 *    finirebbe per mangiare la memoria del server per riprodurre un rumore
-	 *    di mezzo minuto fa».
+	 * ⭐ And the OLDEST are thrown away, not the newest — it is the rule v1
+	 *    had already found (`fondamenta/remotix-c/src/altoparlante.h`): «late
+	 *    sound is of no use to anyone, and a queue that grows forever
+	 *    would end up eating the server's memory to play a noise
+	 *    from half a minute ago».
 	 */
 	struct {
 		uint8_t d[WT_DGRAM_BYTE];
 		size_t n;
-		/* ⛔⭐ QUANDO E' ENTRATO IN CODA — e sta sull'ELEMENTO apposta.
+		/* ⛔⭐ WHEN IT ENTERED THE QUEUE — and it sits on the ELEMENT on purpose.
 		 *
-		 *     L'eta' di un blocco e' un fatto SUO, e il contatore che stava
-		 *     sulla connessione non poteva dirla: la testa cambia sotto di lui
-		 *     senza che lui se ne accorga (⇒ il riquadro di
+		 *     A block's age is a fact OF ITS OWN, and the counter that lived
+		 *     on the connection could not tell it: the head changes under it
+		 *     without it noticing (⇒ the box of
 		 *     `WT_DGRAM_ZITTO_MAX_MS`).
-		 * ⛔ E QUESTO CAMPO NON DECIDE NIENTE: finisce solo nella riga di
-		 *    registro dello scarto.  ⚠ E' li' apposta per farsi smentire — se
-		 *    un giorno l'eta' del blocco buttato divergesse dal silenzio della
-		 *    connessione, la coda avrebbe smesso di rinfrescarsi e lo si
-		 *    leggerebbe invece di dedurlo.
-		 * ⚠ La `ngtcp2_tstamp` e' la stessa che poi lo giudica
-		 *   (`dgram_scrivi_uno`): due orologi diversi darebbero una
-		 *   differenza che non e' un tempo. */
+		 * ⛔ AND THIS FIELD DECIDES NOTHING: it only ends up in the log
+		 *    line of the discard.  ⚠ It is there on purpose to be proved wrong — if
+		 *    one day the age of the dropped block diverged from the connection's
+		 *    silence, the queue would have stopped refreshing and one would
+		 *    read it instead of deducing it.
+		 * ⚠ The `ngtcp2_tstamp` is the same one that then judges it
+		 *   (`dgram_scrivi_uno`): two different clocks would give a
+		 *   difference that is not a time. */
 		ngtcp2_tstamp nato;
 	} dgram[WT_DGRAM_MAX];
 	size_t ndgram, dgram_testa;
-	uint64_t dgram_id; /* l'identificativo che ngtcp2 riporta negli esiti */
+	uint64_t dgram_id; /* the identifier ngtcp2 reports in the outcomes */
 
 	bool audio_acceso;
 	uint8_t audio_codec;
-	/* ⛔ Il gemello di `video_fermo`, e il riquadro sta li': «al figlio ho gia'
-	 *    chiesto di non catturare piu'».  ⚠ Si cura QUI insieme al video e non
-	 *    un altro giorno perche' il difetto e' lo stesso e la forma e' la
-	 *    stessa — e' la lezione §1.20 scritta in questo file sui conti
-	 *    dell'audio e del video: *«una cura si cerca dovunque vale, non dove
-	 *    e' stata trovata»*, e quella volta il gemello resto' indietro cinque
-	 *    giorni. */
+	/* ⛔ The twin of `video_fermo`, and the box is there: «I have already asked
+	 *    the child to capture no more».  ⚠ It is cured HERE together with video and not
+	 *    another day because the defect is the same and the shape is the
+	 *    same — it is lesson §1.20 written in this file on the counts
+	 *    of audio and video: *«a cure is looked for wherever it applies, not where
+	 *    it was found»*, and that time the twin stayed behind for five
+	 *    days. */
 	bool audio_fermo;
-	/* ⛔ «Ho gia' spiegato perche' questa sessione non ha audio»: una volta
-	 *    sola, come `video_detto`, e per la stessa ragione. */
+	/* ⛔ «I have already explained why this session has no audio»: once
+	 *    only, like `video_detto`, and for the same reason. */
 	bool audio_detto;
-	/* ⛔ «Il pari non accetta datagram»: detto una volta.  ⚠ `RCP.md` §2.2 li
-	 *    PRETENDE, ma §6.3 vieta di chiudere la connessione per un fatto dei
-	 *    datagram — quindi si dichiara e si tace, non si uccide. */
+	/* ⛔ «The peer does not accept datagrams»: said once.  ⚠ `RCP.md` §2.2
+	 *    DEMANDS them, but §6.3 forbids closing the connection over a datagram
+	 *    fact — so it is declared and then kept quiet, not killed. */
 	bool dgram_negati_detto;
 	uint64_t audio_spediti, audio_buttati, audio_rifiutati;
-	/* ⛔ RIMANDATI e RIFIUTATI sono due fatti diversi e non si sommano: il
-	 *    primo e' «il pacer ha detto non adesso» e il blocco parte lo stesso un
-	 *    attimo dopo; il secondo e' «buttato».  Un contatore solo per due esiti
-	 *    opposti direbbe che l'audio si perde anche quando arriva tutto. */
+	/* ⛔ DEFERRED and REFUSED are two different facts and are not added: the
+	 *    first is «the pacer said not now» and the block leaves all the same a
+	 *    moment later; the second is «thrown away».  A single counter for two opposite
+	 *    outcomes would say audio is lost even when everything arrives. */
 	uint64_t audio_rimandati;
-	/* L'istante dell'ultimo rimando: dentro la stessa passata non si richiede. */
+	/* The instant of the last deferral: within the same pass it is not retried. */
 	ngtcp2_tstamp dgram_rimando_ts;
-	/* ⛔⭐ DA QUANDO QUESTA CONNESSIONE NON METTE PIU' UN DATAGRAM IN UN PACCHETTO
-	 *     — `0` vuol dire «adesso non sono muto» (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
+	/* ⛔⭐ SINCE WHEN THIS CONNECTION HAS NOT PUT A DATAGRAM IN A PACKET
+	 *     — `0` means «right now I am not mute» (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
 	 *
-	 * ⚠ E' il campo che sostituisce `dgram_rimandi`, e la differenza sta tutta
-	 *   nell'unita': quello contava PASSATE (85 000 al secondo sotto carico,
-	 *   200 a riposo), questo conta millisecondi.  ⛔ Zero e «un istante fa»
-	 *   non devono avere la stessa faccia: si azzera a ogni successo e riparte
-	 *   al primo rifiuto, cosi' un orologio non partito non e' un orologio
-	 *   scaduto. */
+	 * ⚠ It is the field that replaces `dgram_rimandi`, and the difference is all
+	 *   in the unit: that one counted PASSES (85 000 a second under load,
+	 *   200 at rest), this one counts milliseconds.  ⛔ Zero and «an instant ago»
+	 *   must not look the same: it is reset at every success and restarts
+	 *   at the first refusal, so a clock that has not started is not a clock
+	 *   that has expired. */
 	ngtcp2_tstamp dgram_zitto_da;
-	/* ⛔⭐ L'OROLOGIO DELLA SESSIONE, e serve a una cosa sola: timbrare i
-	 *    blocchi d'audio quando entrano in coda (`dgram_accoda()`, che non
-	 *    riceve nessun `ts` dal suo chiamante).
+	/* ⛔⭐ THE SESSION CLOCK, and it serves a single thing: stamping the
+	 *    audio blocks when they enter the queue (`dgram_accoda()`, which
+	 *    receives no `ts` from its caller).
 	 *
-	 * ⚠ Lo scrivono `wt_batti()` e `wt_scrivi()`, che sono i due soli posti in
-	 *   cui la `ngtcp2_tstamp` autorevole entra in questo file — e
-	 *   `audio_regola()`, che accoda, gira DENTRO `wt_batti()`, tre righe dopo
-	 *   che questo campo e' stato messo a giorno.
-	 * ⛔ Un `clock_gettime()` chiamato qui dentro sarebbe un SECONDO orologio, e
-	 *   la differenza fra due orologi non e' un tempo. */
+	 * ⚠ It is written by `wt_batti()` and `wt_scrivi()`, which are the only two places
+	 *   where the authoritative `ngtcp2_tstamp` enters this file — and
+	 *   `audio_regola()`, which enqueues, runs INSIDE `wt_batti()`, three lines after
+	 *   this field has been brought up to date.
+	 * ⛔ A `clock_gettime()` called in here would be a SECOND clock, and
+	 *   the difference between two clocks is not a time. */
 	ngtcp2_tstamp ts_ora;
 
-	/* Il tono di prova (`--audio-prova`), che di norma non esiste. */
+	/* The test tone (`--audio-prova`), which normally does not exist. */
 	audio_cod *tono_cod;
-	uint64_t tono_prossimo_us; /* l'istante del prossimo blocco */
-	uint64_t tono_i;           /* l'indice del campione: la fase e' continua */
+	uint64_t tono_prossimo_us; /* the instant of the next block */
+	uint64_t tono_i;           /* the sample index: the phase is continuous */
 
-	/* La lista delle sessioni vive, per la diffusione dei fotogrammi. */
+	/* The list of live sessions, for broadcasting frames. */
 	wt *viva_dopo;
 
-	/* ⛔ La chiusura della sessione ASPETTA che la coda d'uscita si sia
-	 *    svuotata, e poi ancora un po': vedi `chiudi_sessione()`. */
+	/* ⛔ The session's closure WAITS for the output queue to have
+	 *    emptied, and then a little more: see `chiudi_sessione()`. */
 	int chiusura;
 	ngtcp2_tstamp chiusura_da;
-	/* ⛔⭐ E L'ATTESA HA UN FONDO — rilievo B-3, 10 agosto 2026 notte.
+	/* ⛔⭐ AND THE WAIT HAS A BACKSTOP — finding B-3, night of 10 Aug 2026.
 	 *
-	 *     «Aspetta che la coda si svuoti» e' una condizione che qualcuno deve
-	 *     far avvenire.  Finche' la coda non si svuota, `wt_batti()` riazzera
-	 *     `chiusura_da` a ogni battito e la capsula di §3.1 punto 3 NON PARTE
-	 *     MAI: il motivo, che e' «quel che salva le diagnosi», resta dentro il
-	 *     server.  ⚠ Un lavoro rimandato a una condizione che nessuno fa piu'
-	 *     avvenire non e' rimandato: e' perduto.
+	 *     «Wait for the queue to empty» is a condition someone must
+	 *     make happen.  Until the queue empties, `wt_batti()` resets
+	 *     `chiusura_da` at every heartbeat and the capsule of §3.1 point 3 NEVER
+	 *     LEAVES: the reason, which is «what saves the diagnoses», stays inside the
+	 *     server.  ⚠ A job deferred to a condition nobody makes happen any more
+	 *     is not deferred: it is lost.
 	 *
-	 * ⭐ Da qui la scadenza: passata quella, la capsula parte lo stesso e la
-	 *    rinuncia si SCRIVE. */
+	 * ⭐ Hence the deadline: once past it, the capsule leaves all the same and the
+	 *    giving-up is WRITTEN. */
 	ngtcp2_tstamp chiusura_scadenza;
 
-	/* ⛔⭐ §4.6 — IL TETTO DELLA SESSIONE CHE NON APRE MAI IL CANALE.
+	/* ⛔⭐ §4.6 — THE CAP OF THE SESSION THAT NEVER OPENS THE CHANNEL.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, deciso dall'utente l'11 agosto 2026: **5 s**
-	 *    dall'apertura della sessione WebTransport all'apertura del canale di
-	 *    controllo, poi `TEMPO_SCADUTO`.
+	 * ✅ `DECISIONI.md` §7.17, decided by the user on 11 Aug 2026: **5 s**
+	 *    from the opening of the WebTransport session to the opening of the control
+	 *    channel, then `TEMPO_SCADUTO`.
 	 *
-	 * ⛔ Perche' serviva un orologio in piu': quelli di §4.6 partono
-	 *    dall'apertura del CANALE, quindi chi apriva la sessione e il canale
-	 *    non lo apriva mai **non aveva addosso nessun tetto**.  `[M]` 11 agosto
-	 *    2026, banco B6: la sessione senza canale e' rimasta viva 20 014 ms
-	 *    senza che succedesse niente.
+	 * ⛔ Why one more clock was needed: those of §4.6 start
+	 *    from the opening of the CHANNEL, so whoever opened the session and never
+	 *    opened the channel **had no cap on them at all**.  `[M]` 11 Aug
+	 *    2026, bench B6: the session without a channel stayed alive 20 014 ms
+	 *    without anything happening.
 	 *
-	 * ⚠ E il tempo d'inattivita' di QUIC non lo copriva: quello conta il
-	 *   SILENZIO, e una sessione che scrive su un altro stream non e'
-	 *   silenziosa — teneva il posto a tempo indeterminato.
+	 * ⚠ And QUIC's idle timeout did not cover it: that one counts
+	 *   SILENCE, and a session writing on another stream is not
+	 *   silent — it held the slot indefinitely.
 	 *
-	 * ⛔ Zero quando il canale c'e' gia' (o non c'e' ancora la sessione): un
-	 *    orologio che non e' partito e uno che e' scaduto non devono avere la
-	 *    stessa faccia. */
+	 * ⛔ Zero when the channel is already there (or the session is not there yet): a
+	 *    clock that has not started and one that has expired must not look
+	 *    the same. */
 	ngtcp2_tstamp canale_entro;
 
-	/* ⛔ Quanti byte ci sono in coda, per il tetto di `coda_metti()`.
-	 * ⚠ FASE 9: conta i byte che devono ANCORA PARTIRE.  Un elemento
-	 *   consegnato a ngtcp2 esce da questo conto anche se la sua memoria e'
-	 *   ancora nostra — il tetto di `coda_metti()` regola l'ARRETRATO, e
-	 *   metterci dentro i byte in volo farebbe rifiutare fotogrammi buoni per
-	 *   colpa di roba che e' gia' sul filo. */
+	/* ⛔ How many bytes are in the queue, for the cap of `coda_metti()`.
+	 * ⚠ PHASE 9: it counts the bytes that must STILL LEAVE.  An element
+	 *   handed to ngtcp2 leaves this count even if its memory is
+	 *   still ours — the cap of `coda_metti()` regulates the BACKLOG, and
+	 *   putting the bytes in flight inside it would make good frames be refused
+	 *   because of stuff that is already on the wire. */
 	size_t byte_in_coda;
-	/* ⛔⭐ FASE 9 — IL PREZZO IN MEMORIA DELLA CURA, MISURATO E NON STIMATO.
+	/* ⛔⭐ PHASE 9 — THE MEMORY PRICE OF THE CURE, MEASURED AND NOT ESTIMATED.
 	 *
-	 *     I byte CONSEGNATI a ngtcp2 e non ancora confermati: fuori dal conto
-	 *     della coda (non devono piu' partire) ma ancora allocati, perche' il
-	 *     contratto di `writev_stream` pretende che lo siano finche' non
-	 *     arriva l'ack o non si chiude lo stream.
+	 *     The bytes HANDED to ngtcp2 and not yet confirmed: out of the queue's
+	 *     count (they no longer have to leave) but still allocated, because the
+	 *     contract of `writev_stream` demands they stay so until
+	 *     the ack arrives or the stream closes.
 	 *
-	 * ⭐ QUANTO E' — e il numero non lo decide questo file: sono i byte in volo
-	 *    su QUIC, cioe' al piu' la finestra di congestione piu' quel che e'
-	 *    perduto e non ancora ridichiarato.  Su una linea che porta e' l'ordine
-	 *    di decine-centinaia di KB per sessione; il tetto duro non e' nostro ma
-	 *    del pari — non puo' concederci piu' credito di `initial_max_data`.
-	 * ⛔ `byte_in_volo_max` e' la PUNTA, e si scrive alla chiusura: e' la
-	 *    grandezza che dice se la cura tiene o se sta trattenendo memoria. */
+	 * ⭐ HOW MUCH IT IS — and this file does not decide the number: it is the bytes in flight
+	 *    on QUIC, that is at most the congestion window plus what is
+	 *    lost and not yet redeclared.  On a line that carries it is in the order
+	 *    of tens to hundreds of KB per session; the hard cap is not ours but
+	 *    the peer's — it cannot grant us more credit than `initial_max_data`.
+	 * ⛔ `byte_in_volo_max` is the PEAK, and it is written at closure: it is the
+	 *    quantity that says whether the cure holds or is hoarding memory. */
 	size_t byte_in_volo, byte_in_volo_max;
-	/* Quanti stream di troppo (§2.5) hanno gia' scritto: per non riempire il
-	 * registro con una riga per pacchetto. */
+	/* How many surplus streams (§2.5) have already been written: so as not to fill the
+	 * log with one line per packet. */
 	uint64_t scartati_stream, scartati_byte;
 
-	/* ⭐ Il NOSTRO orologio, al posto del keep-alive dell'innesto. */
+	/* ⭐ OUR clock, in place of the graft's keep-alive. */
 	ngtcp2_tstamp battito;
 	uint64_t battito_ms;
-	/* ⛔ §4.6: i PING del TRASPORTO mentre si aspettano le credenziali.  Si
-	 *    tiene qui se sono accesi, per non richiamare ngtcp2 a ogni battito e
-	 *    per poterlo SCRIVERE nel registro quando cambia. */
+	/* ⛔ §4.6: the TRANSPORT PINGs while the credentials are awaited.  Whether
+	 *    they are on is kept here, so as not to call ngtcp2 back at every heartbeat and
+	 *    to be able to WRITE it in the log when it changes. */
 	bool tienila_viva;
 };
 
-/* ⛔⛔⭐ DI CHI E' LA RIGA, NEL PADRE — 25 agosto 2026, rilievo R4 di §5.5.
+/* ⛔⛔⭐ WHOSE LINE IT IS, IN THE PARENT — 25 Aug 2026, finding R4 of §5.5.
  *
- *     La cura del 25 agosto (R10-A4) ha dato un nome a **163 righe su 163** di
- *     `rcp.c`, che passano da un imbuto solo (`gancio_registra`).  ⛔ Ma le
- *     righe che `webtransport.c` scrive DI SUO non passano di li': erano
- *     **93 chiamate mute contro una sola che nominava**, e fra le mute c'era
- *     la piu' importante della fase 9 — **la riga dello sfratto**, quella che
- *     dice chi e' stato buttato fuori e perche'.
+ *     The cure of 25 August (R10-A4) gave a name to **163 lines out of 163** of
+ *     `rcp.c`, which go through a single funnel (`gancio_registra`).  ⛔ But the
+ *     lines `webtransport.c` writes ON ITS OWN do not go through there: they were
+ *     **93 mute calls against a single one that named**, and among the mute ones was
+ *     the most important of phase 9 — **the eviction line**, the one that
+ *     says who was thrown out and why.
  *
- * ⇒ ⭐ *La riga piu' importante della fase non si sapeva di chi parlasse.*
+ * ⇒ ⭐ *Nobody knew whom the most important line of the phase was talking about.*
  *
- * ⭐ L'identita' era gia' in mano, come in `gancio_registra`: il `wt` porta la
- *    sessione RCP, e `rcp_utente()` esiste da sempre.  Qui c'e' l'unica strada
- *    per prenderla, cosi' i punti di stampa non la compongono ciascuno a modo
- *    suo — la stessa ragione per cui la parentesi si scrive in `registro.c`.
+ * ⭐ The identity was already in hand, as in `gancio_registra`: the `wt` carries the
+ *    RCP session, and `rcp_utente()` has always existed.  Here is the only road
+ *    to take it, so the print points do not each compose it in their own
+ *    way — the same reason the parenthesis is written in `registro.c`.
  *
- * ⚠ E CHI NON SA TACE (`registro.h`): prima dell'autenticazione `w->rcp` non
- *   ha ancora un utente, `rcp_utente()` torna `""`, e `registro_dice_di()`
- *   scrive la riga **senza parentesi**.  ⛔ Non ci si mette la provenienza al
- *   posto suo: il corpo di quelle righe la porta gia' (`w->provenienza`), e un
- *   secondo campo che dice la stessa cosa e' volume, non diagnosi.
- * ⚠ `NULL` regge apposta: `wt_libera()` scrive righe con la sessione RCP gia'
- *   sganciata, e li' il nome non c'e' piu' — meglio muto che sbagliato.
+ * ⚠ AND WHOEVER DOES NOT KNOW KEEPS QUIET (`registro.h`): before authentication `w->rcp`
+ *   does not yet have a user, `rcp_utente()` returns `""`, and `registro_dice_di()`
+ *   writes the line **without parenthesis**.  ⛔ The origin is not put in its
+ *   place: the body of those lines already carries it (`w->provenienza`), and a
+ *   second field saying the same thing is volume, not diagnosis.
+ * ⚠ `NULL` holds on purpose: `wt_libera()` writes lines with the RCP session already
+ *   unhooked, and there the name is no longer there — better mute than wrong.
  *
- * ⛔ E UNDICI RIGHE DI QUESTO FILE RESTANO MUTE APPOSTA, e vanno lasciate cosi':
- *    le dieci di `REG_AVVIO` (le tre cure della fase 9 che dichiarano il valore
- *    in vigore, accese E spente) e quella del tono di prova.  ⭐ Parlano del
- *    SERVER, non di un inquilino: attaccarci un nome vorrebbe dire promettere a
- *    chi legge che quella riga riguarda una sessione sola, e sarebbe la stessa
- *    bugia di `fermo_ms=` — un testimone che indica la persona sbagliata. */
+ * ⛔ AND ELEVEN LINES OF THIS FILE STAY MUTE ON PURPOSE, and must be left so:
+ *    the ten of `REG_AVVIO` (the three phase-9 cures that declare the value
+ *    in force, on AND off) and the one of the test tone.  ⭐ They speak of the
+ *    SERVER, not of a tenant: attaching a name to them would mean promising
+ *    the reader that the line concerns a single session, and it would be the same
+ *    lie as `fermo_ms=` — a witness pointing at the wrong person. */
 static const char *wt_chi(const wt *w)
 {
 	return (w && w->rcp) ? rcp_utente(w->rcp) : NULL;
 }
 
 /* ------------------------------------------------------------------------ */
-/* Gli interi variabili di QUIC (RFC 9000 §16).  Servono tre volte e non ci   */
-/* sono in nessuna delle due librerie: nghttp3 il suo se lo tiene per se'.    */
+/* QUIC variable-length integers (RFC 9000 §16).  They are needed three times   */
+/* and are in neither library: nghttp3 keeps its own to itself.               */
 
 static size_t varint_scrivi(uint8_t *dest, uint64_t v)
 {
@@ -982,8 +982,8 @@ static size_t varint_scrivi(uint8_t *dest, uint64_t v)
 	return 8;
 }
 
-/* ⛔ Restituisce 0 se i byte non bastano: «non lo so ancora» e «zero» sono due
- *    cose diverse, e confonderle e' `LEZIONI.md` §1.9. */
+/* ⛔ Returns 0 if the bytes are not enough: «I don't know yet» and «zero» are two
+ *    different things, and confusing them is `LEZIONI.md` §1.9. */
 static size_t varint_leggi(uint64_t *v, const uint8_t *src, size_t len)
 {
 	size_t n;
@@ -998,49 +998,49 @@ static size_t varint_leggi(uint64_t *v, const uint8_t *src, size_t len)
 	return n;
 }
 
-/* ⛔ I due numeri con cui un server dichiara WebTransport, e sono DUE perche'
- *    le bozze in circolazione sono due:
+/* ⛔ The two numbers with which a server declares WebTransport, and they are TWO because
+ *    the drafts in circulation are two:
  *
- *      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   bozza 02
- *      0xc671706a  SETTINGS_WT_MAX_SESSIONS       bozza 07 e oltre
+ *      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   draft 02
+ *      0xc671706a  SETTINGS_WT_MAX_SESSIONS       draft 07 and later
  *
- * ⚠ E la differenza non e' accademica: `aioquic` 1.2 — il cliente di prova —
- *   implementa la 02 `[R]`, mentre i browser di oggi cercano la 07.  Un server
- *   che ne mandasse una sola funzionerebbe con meta' dei nostri strumenti e non
- *   con l'altra meta', e la meta' che funziona sarebbe quella sbagliata da cui
- *   trarre conclusioni.  Si mandano tutt'e due: un'impostazione sconosciuta si
- *   ignora. */
+ * ⚠ And the difference is not academic: `aioquic` 1.2 — the test client —
+ *   implements 02 `[R]`, while today's browsers look for 07.  A server
+ *   that sent only one would work with half of our tools and not
+ *   with the other half, and the half that works would be the wrong one from which
+ *   to draw conclusions.  Both are sent: an unknown setting is
+ *   ignored. */
 #define WT_ENABLE_WEBTRANSPORT 0x2b603742ULL
 #define WT_MAX_SESSIONS 0xc671706aULL
 
-/* ⛔⭐ IL TETTO DI UNA CAPSULA, E SI CONTROLLA PRIMA DI TENERE I BYTE.
+/* ⛔⭐ THE CAP OF A CAPSULE, AND IT IS CHECKED BEFORE KEEPING THE BYTES.
  *
- * `RCP.md` §6.1: «un ricevente che alloca `lunghezza` byte e poi verifica ha
- * gia' regalato un megabyte a chiunque sappia scrivere sei byte».  ⚠ Aspettare
- * i byte invece di allocarli e' lo stesso regalo, fatto piu' lentamente.
+ * `RCP.md` §6.1: «a receiver that allocates `lunghezza` bytes and then checks has
+ * already given away a megabyte to anyone who can write six bytes».  ⚠ Waiting for
+ * the bytes instead of allocating them is the same gift, made more slowly.
  *
- * ⭐ Il numero e' quel che serve alla sola capsula che ci riguarda:
- * `CLOSE_WEBTRANSPORT_SESSION` porta un codice a 32 bit e una ragione che
- * WebTransport limita a 1024 byte. */
+ * ⭐ The number is what the only capsule that concerns us needs:
+ * `CLOSE_WEBTRANSPORT_SESSION` carries a 32-bit code and a reason that
+ * WebTransport limits to 1024 bytes. */
 #define WT_CAPSULA_MAX (1024 + 4)
 
-/* Quanto si aspetta, dopo che la coda si e' svuotata, prima di mandare la
- * capsula che chiude la sessione.  ⭐ Nell'innesto erano «cinque passate di
- * scrittura» col keep-alive a 100 ms, cioe' mezzo secondo: qui il tempo si
- * misura invece di contarlo, e sul filo non va niente. */
+/* How long we wait, after the queue has emptied, before sending the
+ * capsule that closes the session.  ⭐ In the graft it was «five write
+ * passes» with keep-alive at 100 ms, that is half a second: here time is
+ * measured instead of counted, and nothing goes on the wire. */
 #define WT_ATTESA_CHIUSURA_NS (500ULL * NGTCP2_MILLISECONDS)
 
-/* ⛔ §4.6, la riga che mancava: dall'apertura della sessione WebTransport
- *    all'apertura del canale di controllo, **5 s**.
- * ✅ `DECISIONI.md` §7.17, deciso dall'utente l'11 agosto 2026.
- * ⭐ Lo stesso numero del primo tetto di §4.6, e non per simmetria: aprire il
- *    canale e' il primo atto obbligatorio della sessione (§2.5), non dipende
- *    da quanto e' veloce a digitare una persona e non dipende dalla rete piu'
- *    di quanto ne dipenda il `CIAO`. */
+/* ⛔ §4.6, the missing line: from the opening of the WebTransport session
+ *    to the opening of the control channel, **5 s**.
+ * ✅ `DECISIONI.md` §7.17, decided by the user on 11 Aug 2026.
+ * ⭐ The same number as the first cap of §4.6, and not for symmetry: opening the
+ *    channel is the first mandatory act of the session (§2.5), it does not depend
+ *    on how fast a person types and does not depend on the network any more
+ *    than `CIAO` does. */
 #define WT_TETTO_CANALE_NS (5000ULL * NGTCP2_MILLISECONDS)
 
 /* ------------------------------------------------------------------------ */
-/* Gli elenchi.                                                              */
+/* The lists.                                                                 */
 
 static stream_giudizio *giudizio_trova(wt *w, int64_t id)
 {
@@ -1101,24 +1101,24 @@ static richiesta *richiesta_trova(wt *w, int64_t id, bool crea)
 	}
 }
 
-/* ⛔⭐ FASE 9 — QUESTO STREAM PORTA UN FOTOGRAMMA?  Serve a UNA cosa sola: a
- *     contare i byte di VIDEO che escono verso il filo, che e' la meta'
- *     «e' uscito» della grandezza della linea morta (il riquadro sopra
+/* ⛔⭐ PHASE 9 — DOES THIS STREAM CARRY A FRAME?  It serves ONE thing only: to
+ *     count the VIDEO bytes going out towards the wire, which is the
+ *     «has gone out» half of the dead line's quantity (the box above
  *     `WT_LM_STALLO_MS`).
  *
- * ⛔ L'elenco `involo[]` e' l'unico posto in cui il fatto e' scritto: gli
- *    stream del video li apriamo NOI e nessuno ce li dichiara altrove.
- *    Distinguerli per esclusione — «tutto quel che non e' il canale di
- *    controllo» — ci metterebbe dentro anche gli appunti, e un trasferimento di
- *    appunti riuscito mentre il video e' fermo azzererebbe il conto dello
- *    stallo proprio nel giro in cui deve correre.
+ * ⛔ The list `involo[]` is the only place where the fact is written: the
+ *    video streams are opened by US and nobody declares them to us elsewhere.
+ *    Telling them apart by exclusion — «everything that is not the control
+ *    channel» — would put the clipboard in too, and a clipboard transfer
+ *    succeeding while video is stopped would reset the stall
+ *    count precisely in the round in which it must run.
  *
- * ⚠ IL PREZZO, DICHIARATO: un fotogramma che non e' entrato nell'elenco perche'
- *   `WT_INVOLO_MAX` era pieno non viene contato, quindi i suoi byte non
- *   azzerano lo stallo.  ⛔ Sbaglia dalla parte SEVERA — ma un elenco pieno
- *   vuol dire trentadue fotogrammi in volo insieme, cioe' una coda che non si
- *   svuota: e' gia' lo stallo, non un caso sano scambiato per rotto.  E la
- *   riga di `involo_aggiungi()` lo dichiara quando succede. */
+ * ⚠ THE PRICE, DECLARED: a frame that did not enter the list because
+ *   `WT_INVOLO_MAX` was full is not counted, so its bytes do not
+ *   reset the stall.  ⛔ It errs on the STRICT side — but a full list
+ *   means thirty-two frames in flight together, that is a queue that does not
+ *   empty: it is already the stall, not a healthy case mistaken for broken.  And the
+ *   line of `involo_aggiungi()` declares it when it happens. */
 static bool stream_di_un_fotogramma(const wt *w, int64_t id)
 {
 	for (size_t i = 0; i < w->ninvolo; i++)
@@ -1127,23 +1127,23 @@ static bool stream_di_un_fotogramma(const wt *w, int64_t id)
 	return false;
 }
 
-/* ⛔ Un elemento muore qui e in nessun altro posto: e' l'unico punto in cui
- *    `byte_in_coda` (e adesso `byte_in_volo`) cala, e due punti che lo
- *    calassero divergerebbero.
+/* ⛔ An element dies here and nowhere else: it is the only point where
+ *    `byte_in_coda` (and now `byte_in_volo`) goes down, and two points that
+ *    lowered it would diverge.
  *
- * ⛔⭐ FASE 9 — E «MORIRE» VUOL DIRE `free()`, cioe' «da adesso ngtcp2 NON DEVE
- *     piu' poter rileggere questi byte».  I tre soli chiamanti leciti sono le
- *     due condizioni del contratto piu' la fine della connessione:
+ * ⛔⭐ PHASE 9 — AND «DYING» MEANS `free()`, that is «from now on ngtcp2 MUST NO
+ *     longer be able to reread these bytes».  The only three lawful callers are the
+ *     two conditions of the contract plus the end of the connection:
  *
- *       1. `coda_conferma()`     — l'ack copre i byte;
- *       2. `wt_stream_chiuso()`  — lo stream e' chiuso (ngtcp2 dice testualmente
- *          che «after stream_close ... application can free all unacknowledged
+ *       1. `coda_conferma()`     — the ack covers the bytes;
+ *       2. `wt_stream_chiuso()`  — the stream is closed (ngtcp2 says literally
+ *          that «after stream_close ... application can free all unacknowledged
  *          stream data»);
- *       3. `coda_butta_stream()` — lo stream e' stato AZZERATO un attimo prima
- *          (`ngtcp2_conn_shutdown_stream_write()`), e dopo un `RESET_STREAM`
- *          ngtcp2 non rimette in coda i frame di quello stream.
+ *       3. `coda_butta_stream()` — the stream was RESET a moment before
+ *          (`ngtcp2_conn_shutdown_stream_write()`), and after a `RESET_STREAM`
+ *          ngtcp2 does not requeue the frames of that stream.
  *
- * ⛔ «Serializzato» NON e' fra questi, ed era il difetto del 23 agosto. */
+ * ⛔ «Serialised» is NOT among these, and it was the defect of 23 August. */
 static void coda_uccidi(wt *w, size_t i)
 {
 	uscita *u;
@@ -1152,9 +1152,9 @@ static void coda_uccidi(wt *w, size_t i)
 	u = &w->coda[i];
 	if (u->morto)
 		return;
-	/* ⚠ I due conti sono ESCLUSIVI: chi e' consegnato e' gia' uscito da
-	 *   `byte_in_coda` ed e' entrato in `byte_in_volo`.  Calarli tutt'e due
-	 *   toglierebbe due volte gli stessi byte da grandezze diverse. */
+	/* ⚠ The two counts are EXCLUSIVE: whoever is handed over has already left
+	 *   `byte_in_coda` and entered `byte_in_volo`.  Lowering both
+	 *   would remove the same bytes twice from different quantities. */
 	if (u->consegnato) {
 		if (w->byte_in_volo >= u->dati.n)
 			w->byte_in_volo -= u->dati.n;
@@ -1167,20 +1167,20 @@ static void coda_uccidi(wt *w, size_t i)
 	}
 	bytes_libera(&u->dati);
 	u->morto = true;
-	/* I morti in testa non servono a nessuno: la testa scorre. */
+	/* The dead at the head are of no use to anyone: the head slides. */
 	while (w->testa < w->ncoda && w->coda[w->testa].morto)
 		w->testa++;
 	if (w->testa == w->ncoda)
 		w->testa = w->ncoda = 0;
 }
 
-/* ⛔⭐ FASE 9 — «CONSEGNATO»: tutti i byte sono dentro a ngtcp2, e NON SI
- *     LIBERANO.  E' quel che prima faceva `coda_uccidi()` a questo punto.
+/* ⛔⭐ PHASE 9 — «HANDED OVER»: all the bytes are inside ngtcp2, and they are NOT
+ *     FREED.  It is what `coda_uccidi()` used to do at this point.
  *
- *     L'elemento esce dalla scelta (`coda_scegli()`) e dal conto dell'arretrato
- *     (`byte_in_coda`, `coda_vuota()`) — non ha piu' niente da offrire — ma
- *     resta in coda con i suoi byte, perche' sono quelli che ngtcp2 rileggera'
- *     se un pacchetto va perduto. */
+ *     The element leaves the choice (`coda_scegli()`) and the backlog count
+ *     (`byte_in_coda`, `coda_vuota()`) — it has nothing more to offer — but
+ *     stays in the queue with its bytes, because they are the ones ngtcp2 will reread
+ *     if a packet is lost. */
 static void coda_consegna(wt *w, size_t i)
 {
 	uscita *u;
@@ -1189,11 +1189,11 @@ static void coda_consegna(wt *w, size_t i)
 	u = &w->coda[i];
 	if (u->morto || u->consegnato)
 		return;
-	/* ⭐ Un elemento SENZA byte — il FIN di §6.2, che e' un elemento della coda
-	 *    come gli altri — non da' nessun puntatore a ngtcp2: non c'e' niente da
-	 *    tenere in vita.  ⛔ E tenerlo lo lascerebbe in coda PER SEMPRE: non
-	 *    occupa nessun offset dello stream, quindi nessun ack potrebbe mai
-	 *    coprirlo, e `coda_vuota()` non tornerebbe piu' vera. */
+	/* ⭐ An element WITHOUT bytes — the FIN of §6.2, which is a queue element
+	 *    like the others — gives no pointer to ngtcp2: there is nothing to
+	 *    keep alive.  ⛔ And keeping it would leave it in the queue FOREVER: it
+	 *    occupies no offset of the stream, so no ack could ever
+	 *    cover it, and `coda_vuota()` would never become true again. */
 	if (u->dati.n == 0) {
 		coda_uccidi(w, i);
 		return;
@@ -1206,49 +1206,49 @@ static void coda_consegna(wt *w, size_t i)
 	w->byte_in_volo += u->dati.n;
 	if (w->byte_in_volo > w->byte_in_volo_max)
 		w->byte_in_volo_max = w->byte_in_volo;
-	/* ⛔⭐⭐ FASE 9 — ED E' QUI CHE «UN FOTOGRAMMA ESCE», nell'unico punto del
-	 *      file in cui il fatto avviene: `ndatalen` ha coperto tutto
-	 *      l'elemento, cioe' quei byte sono finiti DENTRO UN PACCHETTO.
+	/* ⛔⭐⭐ PHASE 9 — AND IT IS HERE THAT «A FRAME GOES OUT», at the only point of the
+	 *      file where the fact happens: `ndatalen` has covered the whole
+	 *      element, that is those bytes have ended up INSIDE A PACKET.
 	 *
-	 *      ⚠ Non e' «il client li ha visti»: e' «sono partiti».  Ed e' voluto —
-	 *        la grandezza della linea morta dev'essere LOCALE e monotona (la
-	 *        forma P20 di `RCP.md:398`), o la decisione di buttare fuori una
-	 *        sessione dipenderebbe da quel che dice il pari.
+	 *      ⚠ It is not «the client has seen them»: it is «they have left».  And it is intended —
+	 *        the dead line's quantity must be LOCAL and monotonic (the
+	 *        P20 shape of `RCP.md:398`), or the decision to throw a session out
+	 *        would depend on what the peer says.
 	 *
-	 * ⛔ Si contano i BYTE e non i fotogrammi interi, e la ragione e' la
-	 *    direzione dell'errore: una chiave da 60 000 byte su una linea stretta
-	 *    puo' metterci secondi a uscire tutta, e contando i fotogrammi quei
-	 *    secondi sarebbero uno «stallo» mentre il filo sta lavorando.  Un byte
-	 *    che parte e' un filo che porta. */
+	 * ⛔ BYTES are counted and not whole frames, and the reason is the
+	 *    direction of the error: a 60 000-byte keyframe on a narrow line
+	 *    can take seconds to go out entirely, and counting frames those
+	 *    seconds would be a «stall» while the wire is working.  A byte
+	 *    that leaves is a wire that carries. */
 	if (stream_di_un_fotogramma(w, u->id))
 		w->lm_usciti += u->dati.n;
 }
 
-/* ⛔⭐ FASE 9 — L'ACK LIBERA, e prima non lo faceva nessuno.
+/* ⛔⭐ PHASE 9 — THE ACK FREES, and before nobody did.
  *
- *     `acked_stream_data_offset` arriva, dice `ngtcp2.h`, «sequentially in
- *     increasing order of offset without any overlap»: e' l'AVANZAMENTO
- *     CONTIGUO del riscontro su quello stream, ed e' la stessa grandezza che
- *     `nghttp3_conn_add_ack_offset()` si aspetta.  ⇒ Sommare i `datalen` da'
- *     quanti byte del flusso sono confermati, e si consumano contro gli
- *     elementi di quello stream in ORDINE D'INSERIMENTO — che e' l'ordine in
- *     cui sono usciti, perche' `coda_scegli()` scorre in quell'ordine.
+ *     `acked_stream_data_offset` arrives, says `ngtcp2.h`, «sequentially in
+ *     increasing order of offset without any overlap»: it is the CONTIGUOUS
+ *     ADVANCE of the acknowledgement on that stream, and it is the same quantity
+ *     `nghttp3_conn_add_ack_offset()` expects.  ⇒ Adding up the `datalen` gives
+ *     how many bytes of the stream are confirmed, and they are consumed against the
+ *     elements of that stream in INSERTION ORDER — which is the order in
+ *     which they went out, because `coda_scegli()` scans in that order.
  *
- * ⛔ E LO STREAM DELLA CONNECT (`w->sessione`) E' ESCLUSO — la ragione si vede
- *    solo scrivendola: li' **non siamo gli unici a scrivere**.  nghttp3 ci mette
- *    le intestazioni della risposta, agli offset piu' bassi, e i loro ack
- *    entrerebbero in questo conto: la nostra capsula di chiusura verrebbe
- *    liberata PRIMA di essere confermata, cioe' rifarebbe in piccolo il difetto
- *    del 23 agosto.  ⇒ Su quello stream si aspetta l'ALTRA meta' del contratto,
- *    la chiusura (`wt_stream_chiuso()`).  Sono nove byte, e quando entrano in
- *    coda la sessione sta gia' finendo.
+ * ⛔ AND THE CONNECT STREAM (`w->sessione`) IS EXCLUDED — the reason shows
+ *    only when writing it down: there **we are not the only ones writing**.  nghttp3 puts
+ *    the response headers there, at the lowest offsets, and their acks
+ *    would enter this count: our closing capsule would be
+ *    freed BEFORE being confirmed, that is it would redo in small the defect
+ *    of 23 August.  ⇒ On that stream we wait for the OTHER half of the contract,
+ *    the closure (`wt_stream_chiuso()`).  It is nine bytes, and when they enter
+ *    the queue the session is already ending.
  *
- * ⭐ Su tutti gli altri l'esclusiva e' vera e si dimostra: gli stream del video
- *    e degli appunti li APRIAMO NOI (`ngtcp2_conn_open_uni_stream()`, e nessun
- *    altro ci scrive), e il canale di controllo (`rcp_stream`) e' giudicato
- *    `G_WT` — i suoi byte tornano `E_MIO` da `smista()` e a nghttp3 non
- *    arrivano mai.  ⇒ Su quegli stream il nostro primo byte sta all'offset 0 e
- *    la somma dei `datalen` e' il nostro conto, esatto. */
+ * ⭐ On all the others exclusivity is true and can be proved: the video streams
+ *    and the clipboard streams are OPENED BY US (`ngtcp2_conn_open_uni_stream()`, and nobody
+ *    else writes on them), and the control channel (`rcp_stream`) is judged
+ *    `G_WT` — its bytes come back `E_MIO` from `smista()` and never reach
+ *    nghttp3.  ⇒ On those streams our first byte is at offset 0 and
+ *    the sum of the `datalen` is our count, exactly. */
 static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 {
 	size_t i = w->testa;
@@ -1263,10 +1263,10 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 			i++;
 			continue;
 		}
-		/* ⛔ Non si conferma piu' di quel che si e' consegnato: il riscontro
-		 *    non puo' correre davanti alla scrittura.  ⚠ Zero qui vuol dire
-		 *    che siamo arrivati alla frontiera di quello stream, e piu' avanti
-		 *    non c'e' niente di piu' vecchio: si smette. */
+		/* ⛔ No more is confirmed than was handed over: the acknowledgement
+		 *    cannot run ahead of the writing.  ⚠ Zero here means
+		 *    we have reached the frontier of that stream, and further on
+		 *    there is nothing older: we stop. */
 		apertura = u->off - u->confermati;
 		if (apertura == 0)
 			break;
@@ -1278,8 +1278,8 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 		quanti -= apertura;
 		if (u->consegnato && u->confermati >= u->dati.n) {
 			coda_uccidi(w, i);
-			/* ⚠ `coda_uccidi()` fa scorrere la testa e puo' azzerare la coda
-			 *   intera: il fondo del ciclo va riletto, non ricordato. */
+			/* ⚠ `coda_uccidi()` slides the head and can reset the whole
+			 *   queue: the loop's end must be reread, not remembered. */
 			if (w->ncoda == 0)
 				return;
 		}
@@ -1287,14 +1287,14 @@ static void coda_conferma(wt *w, int64_t id, uint64_t quanti)
 	}
 }
 
-/* ⛔⭐ FASE 9 — «VUOTA» VUOL DIRE «NIENTE DA SPEDIRE», non «niente in memoria».
+/* ⛔⭐ PHASE 9 — «EMPTY» MEANS «NOTHING TO SEND», not «nothing in memory».
  *
- *     Un elemento consegnato e non ancora confermato non ha piu' un byte da
- *     mandare: contarlo qui terrebbe acceso `wt_ha_da_dire()` per sempre — il
- *     server girerebbe a vuoto — e soprattutto il ramo `!coda_vuota` di
- *     `wt_batti()` riazzererebbe `chiusura_da` a ogni battito, cioe' la capsula
- *     di §3.1 punto 3 non partirebbe MAI.  ⛔ E' il difetto B-3, rifatto da
- *     un'altra parte. */
+ *     An element handed over and not yet confirmed no longer has a byte to
+ *     send: counting it here would keep `wt_ha_da_dire()` on forever — the
+ *     server would spin idle — and above all the `!coda_vuota` branch of
+ *     `wt_batti()` would reset `chiusura_da` at every heartbeat, that is the capsule
+ *     of §3.1 point 3 would NEVER leave.  ⛔ It is defect B-3, redone from
+ *     another side. */
 static bool coda_vuota(const wt *w)
 {
 	for (size_t i = w->testa; i < w->ncoda; i++)
@@ -1303,11 +1303,11 @@ static bool coda_vuota(const wt *w)
 	return true;
 }
 
-/* ⛔ Quanti elementi hanno ANCORA DA PARTIRE — e serve alle due righe di
- *    registro che raccontano una chiusura che non matura.  ⚠ `ncoda - testa`,
- *    che e' quel che scrivevano prima, da oggi conterebbe anche i consegnati:
- *    manderebbe a cercare un arretrato che non c'e' proprio nel punto in cui
- *    qualcuno sta cercando perche' la capsula non parte. */
+/* ⛔ How many elements STILL HAVE TO LEAVE — and it serves the two log
+ *    lines that tell of a closure that does not mature.  ⚠ `ncoda - testa`,
+ *    which is what they used to write, would from today also count the handed-over ones:
+ *    it would send people looking for a backlog that is not there precisely at the point where
+ *    someone is looking for why the capsule does not leave. */
 static size_t coda_da_spedire(const wt *w)
 {
 	size_t n = 0;
@@ -1317,11 +1317,11 @@ static size_t coda_da_spedire(const wt *w)
 	return n;
 }
 
-/* ⛔ Quanti byte di QUESTO stream non sono ancora usciti.  ⚠ Zero non vuol dire
- *    «e' arrivato»: vuol dire «non e' piu' roba nostra» — l'abbiamo consegnato
- *    a ngtcp2.  La differenza si dichiara qui perche' §5.1 la usa: un
- *    fotogramma che non ha piu' byte in coda non si abbandona, perche'
- *    l'abbandono non risparmierebbe piu' niente. */
+/* ⛔ How many bytes of THIS stream have not gone out yet.  ⚠ Zero does not mean
+ *    «it has arrived»: it means «it is no longer our stuff» — we handed it
+ *    to ngtcp2.  The difference is declared here because §5.1 uses it: a
+ *    frame that no longer has bytes in the queue is not abandoned, because
+ *    abandoning it would no longer save anything. */
 static size_t coda_byte_stream(const wt *w, int64_t id)
 {
 	size_t n = 0;
@@ -1331,18 +1331,18 @@ static size_t coda_byte_stream(const wt *w, int64_t id)
 	return n;
 }
 
-/* ⛔⭐ FASE 9 — I BYTE DI VIDEO CHE DEVONO ANCORA PARTIRE, e sono la meta'
- *     «avevo da mandare» della grandezza della linea morta.
+/* ⛔⭐ PHASE 9 — THE VIDEO BYTES THAT STILL HAVE TO LEAVE, and they are the
+ *     «I had something to send» half of the dead line's quantity.
  *
- *     E' la stessa somma che fanno `video_sgombra()` e `ritmo_frena()`, con due
- *     differenze dichiarate: qui entrano anche le CHIAVI (una chiave ferma in
- *     coda e' roba da mandare quanto un delta — §5.2 vieta di abbandonarla, non
- *     di contarla), e non si conta nessun `arretrato`, perche' qui la domanda
- *     non e' «quanti fotogrammi» ma «c'e' qualcosa».
+ *     It is the same sum `video_sgombra()` and `ritmo_frena()` make, with two
+ *     declared differences: here KEYFRAMES count too (a keyframe stuck in the
+ *     queue is stuff to send as much as a delta — §5.2 forbids abandoning it, not
+ *     counting it), and no `arretrato` is counted, because here the question
+ *     is not «how many frames» but «is there something».
  *
- * ⚠ Zero NON vuol dire «e' arrivato»: vuol dire «non e' piu' roba nostra».
- *   E' esattamente il significato che serve — se non abbiamo piu' niente in
- *   casa, non c'e' niente che il filo ci stia trattenendo. */
+ * ⚠ Zero does NOT mean «it has arrived»: it means «it is no longer our stuff».
+ *   It is exactly the meaning needed — if we have nothing left at
+ *   home, there is nothing the wire is holding back from us. */
 static size_t coda_byte_video(const wt *w)
 {
 	size_t n = 0;
@@ -1352,20 +1352,20 @@ static size_t coda_byte_video(const wt *w)
 	return n;
 }
 
-/* ⛔ §5.1: i byte non ancora spediti **non partono affatto**.  Si chiama solo
- *    accanto a un `RESET_STREAM`: buttare i byte senza azzerare lo stream
- *    lascerebbe il client ad aspettare una fine che non arriva.
+/* ⛔ §5.1: the bytes not yet sent **do not leave at all**.  It is called only
+ *    next to a `RESET_STREAM`: throwing the bytes away without resetting the stream
+ *    would leave the client waiting for an end that does not come.
  *
- * ⛔⭐ FASE 9 — ED E' ANCHE IL POSTO IN CUI SI LIBERANO I CONSEGNATI, il che
- *     rende quella regola piu' stretta di prima, non meno: azzerare lo stream
- *     e' quel che **toglie a ngtcp2 il diritto di rileggerli** — dopo un
- *     `RESET_STREAM` i frame di quello stream non tornano in coda di
- *     ritrasmissione — ed e' l'altra meta' del contratto di `writev_stream`.
- *     ⚠ `video_sgombra()` questa disciplina ce l'aveva gia' («PRIMA si azzera
- *       lo stream, POI si buttano i byte»), ed e' la riga che dimostra che la
- *       regola era conosciuta: mancava dove i byte se ne andavano per fine
- *       spedizione.  ⛔ Chiamare questa funzione senza un `shutdown_stream_write`
- *       (o una chiusura gia' avvenuta) accanto rifa' il difetto del 23 agosto. */
+ * ⛔⭐ PHASE 9 — AND IT IS ALSO THE PLACE WHERE THE HANDED-OVER ONES ARE FREED, which
+ *     makes that rule stricter than before, not looser: resetting the stream
+ *     is what **takes from ngtcp2 the right to reread them** — after a
+ *     `RESET_STREAM` the frames of that stream do not go back in the
+ *     retransmission queue — and it is the other half of the contract of `writev_stream`.
+ *     ⚠ `video_sgombra()` already had this discipline («FIRST the
+ *       stream is reset, THEN the bytes are thrown away»), and it is the line that proves the
+ *       rule was known: it was missing where the bytes went away at the end of
+ *       sending.  ⛔ Calling this function without a `shutdown_stream_write`
+ *       (or a closure already happened) next to it redoes the defect of 23 August. */
 static size_t coda_butta_stream(wt *w, int64_t id)
 {
 	size_t buttati = 0;
@@ -1386,18 +1386,18 @@ static bool stream_bloccato(const wt *w, int64_t id)
 	return false;
 }
 
-/* ⛔ Il primo elemento eleggibile in ORDINE DI INSERIMENTO, saltando gli stream
- *    gia' bloccati in questa passata.  ⚠ Scorrere in ordine e' quel che tiene
- *    l'ordine DENTRO ogni stream: il primo elemento di uno stream non bloccato
- *    e' per costruzione il suo piu' vecchio. */
+/* ⛔ The first eligible element in INSERTION ORDER, skipping the streams
+ *    already blocked in this pass.  ⚠ Scanning in order is what keeps
+ *    the order WITHIN each stream: the first element of an unblocked stream
+ *    is by construction its oldest. */
 static uscita *coda_scegli(wt *w, size_t *fuori)
 {
 	for (size_t i = w->testa; i < w->ncoda; i++) {
-		/* ⛔ FASE 9: si saltano anche i CONSEGNATI.  Sono ancora in coda
-		 *    perche' i loro byte servono a ngtcp2 per ritrasmettere, ma non
-		 *    hanno piu' niente da offrire: sceglierli vorrebbe dire proporre un
-		 *    vettore di lunghezza zero a ogni passata, e con `MORE` acceso
-		 *    quella e' una passata che non finisce. */
+		/* ⛔ PHASE 9: the HANDED-OVER ones are skipped too.  They are still in the queue
+		 *    because their bytes are needed by ngtcp2 to retransmit, but they
+		 *    have nothing more to offer: choosing them would mean proposing a
+		 *    zero-length vector at every pass, and with `MORE` on
+		 *    that is a pass that never ends. */
 		if (w->coda[i].morto || w->coda[i].consegnato)
 			continue;
 		if (stream_bloccato(w, w->coda[i].id))
@@ -1409,42 +1409,42 @@ static uscita *coda_scegli(wt *w, size_t *fuori)
 	return NULL;
 }
 
-/* ⛔ IL TETTO DELLA CODA D'USCITA — rilievo B-3 punto 4, 10 agosto 2026 notte.
+/* ⛔ THE OUTPUT QUEUE CAP — finding B-3 point 4, night of 10 Aug 2026.
  *
- * `coda_metti()` e `bytes_aggiungi()` raddoppiavano senza limite: la memoria
- * del processo cresceva quanto il client voleva, e cresceva **su una sessione
- * gia' dichiarata morta**.  ⚠ Un tetto che non c'e' non e' un tetto alto: e'
- * un limitatore assente, e non lo vede nessuno finche' la macchina non finisce
- * la memoria.
+ * `coda_metti()` and `bytes_aggiungi()` doubled without limit: the memory
+ * of the process grew as much as the client wanted, and grew **on a session
+ * already declared dead**.  ⚠ A cap that is not there is not a high cap: it is
+ * an absent limiter, and nobody sees it until the machine runs out
+ * of memory.
  *
- * ⭐ Il numero: due messaggi RCP al massimo (§6.1, 1 MiB l'uno) piu' un po' di
- *    margine.  Il canale di controllo di questa fase manda `ECCOMI`,
- *    `AMMESSO`/`RESPINTO`, `SESSIONE` e `CONGEDO`, che stanno tutti in
- *    qualche centinaio di byte: se questo tetto viene toccato, e' successo
- *    qualcosa che va guardato — e infatti si scrive.  ⛔ E chi lo tocca NON
- *    prosegue in silenzio: vedi `accoda()` e il rilievo B-15.
+ * ⭐ The number: two RCP messages at most (§6.1, 1 MiB each) plus a little
+ *    margin.  This phase's control channel sends `ECCOMI`,
+ *    `AMMESSO`/`RESPINTO`, `SESSIONE` and `CONGEDO`, which all fit in
+ *    a few hundred bytes: if this cap is touched, something has
+ *    happened that must be looked at — and indeed it is written.  ⛔ And whoever touches it does NOT
+ *    go on silently: see `accoda()` and finding B-15.
  *
- * ⛔⭐ E IL 12 AGOSTO 2026 IL NUMERO E' CAMBIATO, con la fase 2 — da 2 MiB a
- *     17.  La ragione non e' «serviva piu' spazio»:
+ * ⛔⭐ AND ON 12 AUG 2026 THE NUMBER CHANGED, with phase 2 — from 2 MiB to
+ *     17.  The reason is not «more space was needed»:
  *
- *     `RCP.md` §6.2 dichiara **legale** un fotogramma fino a **16 MiB**, e
- *     `rcp_video_apri()` rifiuta esattamente sopra quel numero.  ⛔ Con la coda
- *     a 2 MiB un fotogramma perfettamente legale da 3 MiB sarebbe stato
- *     rifiutato **dal nostro limitatore** invece che dal tetto del protocollo:
- *     due tetti diversi per la stessa grandezza, e quello che morde per primo
- *     non e' quello scritto nell'arbitro.
+ *     `RCP.md` §6.2 declares a frame up to **16 MiB** **legal**, and
+ *     `rcp_video_apri()` refuses exactly above that number.  ⛔ With the queue
+ *     at 2 MiB a perfectly legal 3 MiB frame would have been
+ *     refused **by our limiter** instead of by the protocol's cap:
+ *     two different caps for the same quantity, and the one that bites first
+ *     is not the one written in the referee.
  *
- *     ⚠ E il sintomo sarebbe stato una **degradazione silenziosa** — il
- *       fotogramma non parte, il client vede un buco e chiede una chiave, la
- *       chiave e' ancora piu' grossa: la spirale di §5.2, provocata da una
- *       costante di questo file.  E' l'invariante **I1** letta da
+ *     ⚠ And the symptom would have been a **silent degradation** — the
+ *       frame does not leave, the client sees a hole and asks for a keyframe, the
+ *       keyframe is even bigger: the spiral of §5.2, caused by a
+ *       constant of this file.  It is invariant **I1** as read by
  *       `REVIEWER.md` §3.
  *
- *     ⭐ 16 MiB (il fotogramma piu' grande che §6.2 ammette) + 1 MiB per i
- *        messaggi del canale di controllo, che stanno in qualche centinaio di
- *        byte l'uno.  ⚠ Il prezzo si dichiara: su 16 sessioni il peggio
- *        teorico e' 272 MiB, ed e' il prezzo che §6.2 ha gia' scelto — non uno
- *        nuovo. */
+ *     ⭐ 16 MiB (the biggest frame §6.2 admits) + 1 MiB for the
+ *        control channel messages, which take a few hundred
+ *        bytes each.  ⚠ The price is declared: over 16 sessions the theoretical
+ *        worst is 272 MiB, and it is the price §6.2 has already chosen — not a
+ *        new one. */
 #define WT_CODA_MAX (17u * 1024u * 1024u)
 
 static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
@@ -1452,8 +1452,8 @@ static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
 	uscita *u;
 	if (w->byte_in_coda + n > WT_CODA_MAX) {
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ la coda d'uscita ha toccato il tetto (%zu byte in "
-		                 "coda + %zu, tetto %u): non accodo",
+		                 "⛔ the output queue has touched the cap (%zu bytes in "
+		                 "queue + %zu, cap %u): not enqueuing",
 		                 w->byte_in_coda, n, WT_CODA_MAX);
 		return false;
 	}
@@ -1485,37 +1485,37 @@ static bool coda_metti(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
 	return true;
 }
 
-/* ⛔⭐ E I BYTE NON SI BUTTANO: QUESTO E' UN CANALE AFFIDABILE — rilievo B-15,
- *     10 agosto 2026 notte.
+/* ⛔⭐ AND THE BYTES ARE NOT THROWN AWAY: THIS IS A RELIABLE CHANNEL — finding B-15,
+ *     night of 10 Aug 2026.
  *
- *     Questa funzione scriveva una riga nel registro e **proseguiva**.  Il
- *     chiamante — `manda_controllo()`, cioe' la strada di TUTTI i messaggi RCP
- *     — non riceveva nessun esito: RCP credeva di aver mandato `ECCOMI`,
- *     passava a `attesa-credenziali`, e il messaggio successivo si sarebbe
- *     saldato al nulla lasciato dal primo.  ⛔ Il client avrebbe letto
- *     un'inquadratura che il server non ha mai voluto scrivere: sarebbe stato
- *     il SERVER a fabbricare la violazione del client.
+ *     This function wrote a line in the log and **went on**.  The
+ *     caller — `manda_controllo()`, that is the road of ALL RCP messages
+ *     — received no outcome: RCP believed it had sent `ECCOMI`,
+ *     moved on to `attesa-credenziali`, and the next message would have
+ *     been welded to the void left by the first.  ⛔ The client would have read
+ *     a framing the server never meant to write: it would have been
+ *     the SERVER fabricating the client's violation.
  *
- *     ⚠ E' la stessa lezione del riquadro di `STREAM_DATA_BLOCKED` piu' sotto,
- *       applicata all'altra delle due strade per cui i byte si possono
- *       perdere.  La cura di allora era stata messa su una sola.
+ *     ⚠ It is the same lesson as the box of `STREAM_DATA_BLOCKED` further below,
+ *       applied to the other of the two roads by which bytes can be
+ *       lost.  The cure back then had been put on only one.
  *
- * ⭐ La cura: chi non riesce ad accodare NON prosegue.  Si dichiara guasto lo
- *    strato, e `wt_scrivi()` fa morire la connessione QUIC alla prima passata.
- *    ⛔ Una connessione che muore e' inequivocabile; un messaggio saldato a
- *    meta' manda a cercare il difetto nel client.  ⚠ Il motivo di §3.1 non
- *    puo' viaggiare: se la coda non prende sei byte non prende nemmeno la
- *    capsula, e questa riga di registro e' l'unico posto in cui il fatto
- *    compare.  Si scrive perche' e' l'unico. */
+ * ⭐ The cure: whoever cannot enqueue does NOT go on.  The layer is declared
+ *    faulty, and `wt_scrivi()` makes the QUIC connection die at the first pass.
+ *    ⛔ A connection that dies is unequivocal; a message welded halfway
+ *    sends people looking for the defect in the client.  ⚠ The reason of §3.1 cannot
+ *    travel: if the queue does not take six bytes it does not take the
+ *    capsule either, and this log line is the only place where the fact
+ *    appears.  It is written because it is the only one. */
 static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
 {
 	if (coda_metti(w, id, d, n, false))
 		return true;
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "⛔⛔ %zu byte per lo stream %ld NON entrano in coda: la "
-	                 "sessione NON prosegue.  Un canale affidabile non butta i "
-	                 "byte, e mezzo messaggio sul filo sarebbe una violazione "
-	                 "fabbricata dal server (§6.1)",
+	                 "⛔⛔ %zu bytes for stream %ld do NOT enter the queue: the "
+	                 "session does NOT go on.  A reliable channel does not throw away "
+	                 "bytes, and half a message on the wire would be a violation "
+	                 "fabricated by the server (§6.1)",
 	                 n, (long)id);
 	w->guasto = true;
 	return false;
@@ -1524,105 +1524,105 @@ static bool accoda(wt *w, int64_t id, const uint8_t *d, size_t n)
 /* ------------------------------------------------------------------------ */
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⛔⛔⭐⭐ IL BATTITO E' UNA SCADENZA, NON UN RINVIO — 23 set 2026, e questa
- *         riga sola vale **698 secondi di schermo fermo su 1199**.
+ * ⛔⛔⭐⭐ THE HEARTBEAT IS A DEADLINE, NOT A POSTPONEMENT — 23 Sep 2026, and this
+ *         single line is worth **698 seconds of frozen screen out of 1199**.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * `[M]` Sessione VERA di 20 minuti, Firefox visibile su `rete11-kde`, scena in
- *       movimento, binario `cd8a3aec`:
+ * `[M]` A REAL 20-minute session, visible Firefox on `rete11-kde`, moving
+ *       scene, binary `cd8a3aec`:
  *
- *         · 698 s su 1199 (il **58 %**) senza un solo fotogramma nuovo;
- *         · sette blocchi sopra i 20 s: 74 · 56 · 62 · 25 · **370** · 53 · 56;
- *         · dentro i blocchi **45 278** fotogrammi catturati, composti,
- *           codificati e buttati prima del filo (~13 GB di codifica per
- *           nessuno, su una Intel UHD 730 integrata);
- *         · l'immagine non si rompe MAI (1146 fotografie, zero celle guaste):
- *           ⇒ non era corruzione, era un **blocco**.
+ *         · 698 s out of 1199 (**58 %**) without a single new frame;
+ *         · seven blocks above 20 s: 74 · 56 · 62 · 25 · **370** · 53 · 56;
+ *         · inside the blocks **45 278** frames captured, composed,
+ *           encoded and thrown away before the wire (~13 GB of encoding for
+ *           nobody, on an integrated Intel UHD 730);
+ *         · the image NEVER breaks (1146 snapshots, zero faulty cells):
+ *           ⇒ it was not corruption, it was a **block**.
  *
- * ⛔ E LA CAUSA NON E' DOVE LA SI CERCAVA.  L'ipotesi in campo era una corsa
- *    fra due richieste di chiave («la chiave che esce paga il debito sbagliato»).
- *    **Falsa**: nel registro ogni richiesta ha la sua chiave, il figlio
- *    risponde sempre entro ~17 ms, e §5.2 si comporta come dichiarato.
+ * ⛔ AND THE CAUSE IS NOT WHERE IT WAS LOOKED FOR.  The hypothesis in the field was a race
+ *    between two keyframe requests («the keyframe that goes out pays the wrong debt»).
+ *    **False**: in the log every request has its keyframe, the child
+ *    always answers within ~17 ms, and §5.2 behaves as declared.
  *
- * ⭐⭐ LA CAUSA E' QUI.  `batti_fra()` **spostava in avanti** la scadenza a
- *     ogni chiamata, e `regola_battito()` — che la chiama — sta in fondo a
- *     `rcp_passa_input()`, cioe' gira **a ogni messaggio di input del client**.
- *     Un browser vero che segue il mouse ne manda ~40 al secondo.
+ * ⭐⭐ THE CAUSE IS HERE.  `batti_fra()` **moved the deadline forward** at
+ *     every call, and `regola_battito()` — which calls it — sits at the end of
+ *     `rcp_passa_input()`, that is it runs **at every client input message**.
+ *     A real browser following the mouse sends ~40 a second.
  *
- *       ⇒ scadenza a 1000 ms, rimandata 40 volte al secondo ⇒ **non matura MAI**
+ *       ⇒ deadline at 1000 ms, postponed 40 times a second ⇒ **it NEVER matures**
  *
- *     E con lei non gira `wt_batti()`, cioe' NON girano:
- *       · `video_regola()`  — l'unico che RIchiede la chiave al palco (§5.2);
- *       · `rcp_tempo()`     — l'orologio del silenzio §5.3 e i tetti di §4.6;
+ *     And with it `wt_batti()` does not run, that is these do NOT run:
+ *       · `video_regola()`  — the only one that REquests the keyframe from the stage (§5.2);
+ *       · `rcp_tempo()`     — the §5.3 silence clock and the caps of §4.6;
  *       · `audio_regola()`, `ritmo_ciclo()`, `rete_ciclo()`.
  *
- * `[M]` LA PROVA, dal registro della sessione vera, e non lascia scampo:
+ * `[M]` THE PROOF, from the real session's log, and it leaves no way out:
  *
- *         13:26:29.990  un delta frenato riaccende il debito di §5.2
- *                       (`rcp_video_scartato_prima_del_filo()`), e la richiesta
- *                       in linea cade nel fondo dei 150 ms — 35 ms troppo presto
- *         13:26:30 → 13:32:39   **nessuna** riga `rete-quic`, **nessuna** riga
- *                       `ritmo di`, **nessuna** richiesta di chiave: il battito
- *                       non e' mai maturato.  L'input, intanto, scorre a ~40/s
- *         13:32:38.615  **ultimo** messaggio di input del client
- *         13:32:39.615  battito, **esattamente 1000 ms dopo** — e con lui
- *                       `rete-quic … da_ms=370927`, la richiesta di chiave, e
- *                       13:32:39.640 il fotogramma 7975 SPEDITO: CHIAVE
+ *         13:26:29.990  a braked delta switches the §5.2 debt back on
+ *                       (`rcp_video_scartato_prima_del_filo()`), and the request
+ *                       in line falls into the 150 ms backstop — 35 ms too early
+ *         13:26:30 → 13:32:39   **no** `rete-quic` line, **no**
+ *                       `rate of` line, **no** keyframe request: the heartbeat
+ *                       never matured.  Input, meanwhile, flows at ~40/s
+ *         13:32:38.615  **last** input message from the client
+ *         13:32:39.615  heartbeat, **exactly 1000 ms later** — and with it
+ *                       `rete-quic … da_ms=370927`, the keyframe request, and
+ *                       13:32:39.640 frame 7975 SENT: KEYFRAME
  *
- *       ⇒ Il blocco non e' finito «da se'»: e' finito quando l'utente ha
- *         smesso di muovere il mouse per un secondo.  ⭐ `da_ms=370927` e'
- *         il battito che confessa per iscritto quanto e' stato fermo.
+ *       ⇒ The block did not end «by itself»: it ended when the user
+ *         stopped moving the mouse for one second.  ⭐ `da_ms=370927` is
+ *         the heartbeat confessing in writing how long it was stopped.
  *
- * ⛔ E LA RETE NON L'AVEVA VISTO — passata verde sullo stesso binario: il
- *    cliente Python non manda 40 input al secondo, e i giri sono corti.
- *    ⇒ Un verde non e' una prova quando il banco non fa la cosa che rompe.
+ * ⛔ AND THE NET HAD NOT SEEN IT — a green pass on the same binary: the
+ *    Python client does not send 40 inputs a second, and the runs are short.
+ *    ⇒ A green is not a proof when the bench does not do the thing that breaks.
  *
- * ⭐ LA CURA: chi chiede «battimi fra X» fissa un TETTO, non un appuntamento.
- *    Una scadenza gia' fissata e piu' VICINA resta dov'e'; solo una piu'
- *    vicina la puo' spostare.  Cosi' nessuna sequenza di eventi, per fitta che
- *    sia, puo' allontanare il battito all'infinito.
+ * ⭐ THE CURE: whoever asks «beat me in X» sets a CAP, not an appointment.
+ *    A deadline already set and NEARER stays where it is; only a nearer
+ *    one can move it.  So no sequence of events, however dense it
+ *    may be, can push the heartbeat away forever.
  *
- * ⚠ E il caso «e' appena scattato» non si perde: quando `wt_batti()` chiama
- *   `regola_battito()`, la scadenza vecchia e' <= adesso — quindi NON e' nel
- *   futuro, non vince, e il battito si riarma regolarmente.  Senza quella
- *   condizione la scadenza resterebbe nel passato e il ciclo girerebbe a
- *   vuoto al 100 % di CPU (e' lo stesso difetto scritto in `wt_battito_ns()`).
+ * ⚠ And the «it has just fired» case is not lost: when `wt_batti()` calls
+ *   `regola_battito()`, the old deadline is <= now — so it is NOT in the
+ *   future, it does not win, and the heartbeat rearms regularly.  Without that
+ *   condition the deadline would stay in the past and the loop would spin
+ *   idle at 100 % CPU (it is the same defect written in `wt_battito_ns()`).
  *
- * ⛔ Chi tocca questa funzione si chieda una cosa sola: *«un evento che il
- *    client puo' ripetere a volonta' puo' impedire a questa scadenza di
- *    maturare?»*  Se si', il difetto e' tornato.
+ * ⛔ Whoever touches this function should ask one thing only: *«can an event the
+ *    client can repeat at will prevent this deadline from
+ *    maturing?»*  If yes, the defect is back.
  *
  * ───────────────────────────────────────────────────────────────────────────
- * ⭐⭐ IL PRIMA/DOPO, MISURATO — 23 set 2026, banco `prova-battito.py`
+ * ⭐⭐ THE BEFORE/AFTER, MEASURED — 23 Sep 2026, bench `prova-battito.py`
  * ───────────────────────────────────────────────────────────────────────────
  *
- * ⛔ Il banco fa LA COSA CHE ROMPE, ed e' la ragione per cui la rete era verde:
- *    muove il mouse di continuo (20 `pointerMove` al secondo, Firefox VERO e
- *    visibile).  Senza quello la misura e' verde e non dice niente.
+ * ⛔ The bench does THE THING THAT BREAKS, and it is the reason the net was green:
+ *    moves the mouse continuously (20 `pointerMove` a second, REAL and visible
+ *    Firefox).  Without that the measurement is green and says nothing.
  *
- * | binario              | input | battiti | `da_ms` PIU' LUNGO |
+ * | binary               | input | heartbeats | LONGEST `da_ms` |
  * |---|---|---|---|
- * | `cd8a3aec` (prima), gnome, 3 min | 14 639 | **22** | **46 192 ms** |
- * | `3fa352a2` (dopo),  kde,  8 min | 27 797 | **508** | **1 102 ms** |
+ * | `cd8a3aec` (before), gnome, 3 min | 14 639 | **22** | **46 192 ms** |
+ * | `3fa352a2` (after),  kde,  8 min | 27 797 | **508** | **1 102 ms** |
  *
- * ⚠ I due `da_ms=2000` del giro curato non sono un battito saltato: e' la riga
- *   al secondo che cade a 999 ms e si rimanda di uno (`ritmo_ciclo()` vuole
- *   `>= 1000`).  Il battito c'era.
+ * ⚠ The two `da_ms=2000` of the cured run are not a skipped heartbeat: it is the
+ *   once-a-second line falling at 999 ms and being postponed by one (`ritmo_ciclo()` wants
+ *   `>= 1000`).  The heartbeat was there.
  *
- * ⭐ E il numero che guarda l'utente: **0 secondi su 340** senza un fotogramma
- *    nuovo (28 844 consegnati, 3,5 % mancati), contro **698 su 1199 (58 %)**
- *    della sessione che ha aperto la caccia.  Blocco piu' lungo: **0 s**.
+ * ⭐ And the number the user looks at: **0 seconds out of 340** without a new
+ *    frame (28 844 delivered, 3.5 % missed), against **698 out of 1199 (58 %)**
+ *    of the session that opened the hunt.  Longest block: **0 s**.
  *
- * ⭐ La seconda cintura non e' decorativa: in 8 minuti e' entrata **2 volte**
- *    («il debito … e' acceso da 1004 ms»), e la chiave e' uscita **19 ms dopo**
- *    invece di aspettare il battito.
+ * ⭐ The second belt is not decorative: in 8 minutes it came in **2 times**
+ *    («the debt … has been on for 1004 ms»), and the keyframe went out **19 ms later**
+ *    instead of waiting for the heartbeat.
  *
- * ⚠ E il giro di controllo NON ha bloccato lo schermo: il debito di §5.2 non
- *   si e' acceso in quei 3 minuti.  ⛔ E' il punto del difetto — servono DUE
- *   cose insieme, e per questo un verde non basta mai a escluderlo.  Quel che
- *   il controllo prova e' il MECCANISMO: 46 secondi senza battito, cioe' 46
- *   secondi in cui nessuno poteva richiedere una chiave (ne' far scadere §5.3
- *   o §4.6). */
+ * ⚠ And the control run did NOT freeze the screen: the §5.2 debt did not
+ *   come on in those 3 minutes.  ⛔ It is the point of the defect — TWO
+ *   things are needed together, and that is why a green is never enough to exclude it.  What
+ *   the control proves is the MECHANISM: 46 seconds without a heartbeat, that is 46
+ *   seconds in which nobody could request a keyframe (nor make §5.3
+ *   or §4.6 expire). */
 static void batti_fra(wt *w, uint64_t ms)
 {
 	ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
@@ -1639,61 +1639,61 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 {
 	ngtcp2_tstamp b = w->battito_ms ? w->battito : UINT64_MAX;
 
-	/* ⛔⭐ E IL TONO DI PROVA HA UN OROLOGIO SUO — `[M]` 17 agosto 2026.
+	/* ⛔⭐ AND THE TEST TONE HAS A CLOCK OF ITS OWN — `[M]` 17 Aug 2026.
 	 *
-	 *     Primo giro contro il cliente di prova: **9 blocchi in 3 secondi**,
-	 *     dove il PCM a 5 ms ne vuole 600.  ⚠ Il contenuto era giusto (960 byte,
-	 *     codec 2, zero scarti): sbagliato era il RITMO, perche' i blocchi li
-	 *     genera `wt_batti()` e `wt_batti()` si sveglia col battito di QUIC —
-	 *     che e' lungo centinaia di millisecondi.
+	 *     First run against the test client: **9 blocks in 3 seconds**,
+	 *     where PCM at 5 ms wants 600.  ⚠ The content was right (960 bytes,
+	 *     codec 2, zero discards): what was wrong was the RATE, because the blocks are
+	 *     generated by `wt_batti()` and `wt_batti()` wakes up with QUIC's heartbeat —
+	 *     which is hundreds of milliseconds long.
 	 *
-	 * ⭐ La cura NON e' alzare il tetto per passata: quello produrrebbe una
-	 *    raffica seguita da un silenzio, cioe' lo stesso numero di blocchi con
-	 *    un difetto in piu'.  E' dire al ciclo QUANDO il prossimo blocco e'
-	 *    dovuto.
+	 * ⭐ The cure is NOT raising the per-pass cap: that would produce a
+	 *    burst followed by a silence, that is the same number of blocks with
+	 *    one more defect.  It is telling the loop WHEN the next block is
+	 *    due.
 	 *
-	 * ⚠ E muore con la sorgente di prova: l'audio vero lo ritma **PipeWire**,
-	 *   che nel `poll` ci sta con un descrittore suo e sveglia il ciclo da se'.
+	 * ⚠ And it dies with the test source: real audio is paced by **PipeWire**,
+	 *   which sits in the `poll` with a descriptor of its own and wakes the loop by itself.
 	 */
-	/* ⛔⛔ LE CONDIZIONI SONO LE STESSE DI `tono_passo()`, ED E' UNA CURA —
-	 *      rilievo 4 della revisione avversariale del 17 agosto 2026.
+	/* ⛔⛔ THE CONDITIONS ARE THE SAME AS `tono_passo()`, AND IT IS A CURE —
+	 *      finding 4 of the adversarial review of 17 Aug 2026.
 	 *
-	 *      Qui c'era `audio_prova_hz && w->audio_acceso`, e li' ci sono anche
-	 *      `w->chiusura < 0` e `w->rcp`.  ⛔ **In ogni caso coperto da una
-	 *      guardia e non dall'altra questa funzione tornava un istante NEL
-	 *      PASSATO e nessuno lo spostava piu'** — perche' a spostarlo e' solo
-	 *      `tono_passo`, che invece usciva subito.
+	 *      Here there was `audio_prova_hz && w->audio_acceso`, and there there are also
+	 *      `w->chiusura < 0` and `w->rcp`.  ⛔ **In every case covered by one
+	 *      guard and not by the other this function returned an instant IN THE
+	 *      PAST and nobody moved it any more** — because the only one moving it is
+	 *      `tono_passo`, which instead returned at once.
 	 *
-	 *      ⇒ `trasporto_attesa_ms()` leggeva «gia' scaduto», `poll()` tornava
-	 *      con **timeout 0**, `wt_batti()` non cambiava niente, e si
-	 *      ricominciava: **ciclo stretto al 100 % di CPU**.
+	 *      ⇒ `trasporto_attesa_ms()` read «already expired», `poll()` returned
+	 *      with **timeout 0**, `wt_batti()` changed nothing, and it all
+	 *      started again: **tight loop at 100 % CPU**.
 	 *
-	 * ⚠ E il caso non e' di laboratorio: un BROWSER chiude la sessione
-	 *   WebTransport e **tiene viva la connessione QUIC** — e' scritto in
-	 *   questo stesso file — e li' `w->rcp` diventa NULL mentre `audio_acceso`
-	 *   resta acceso, perche' nessuna riga lo spegne.  ⛔ Il server avrebbe
-	 *   girato a vuoto fino al tetto d'inattivita' di QUIC, e piu' a lungo se
-	 *   il browser lo teneva vivo con dei PING.
+	 * ⚠ And the case is not a lab one: a BROWSER closes the WebTransport
+	 *   session and **keeps the QUIC connection alive** — it is written in
+	 *   this very file — and there `w->rcp` becomes NULL while `audio_acceso`
+	 *   stays on, because no line switches it off.  ⛔ The server would have
+	 *   spun idle until QUIC's idle cap, and longer if
+	 *   the browser kept it alive with PINGs.
 	 *
-	 * ⭐ E la lezione e' che due guardie per lo stesso fatto divergono: chi
-	 *    tocchera' `tono_passo` deve toccare anche questa. */
-	/* ⛔⛔ E UN DATAGRAM IN CODA VUOLE ESSERE RIPROVATO SUBITO — `[M]` 17 agosto
-	 *      2026, dalla sessione VERA dell'utente: *«fa schifo come prima»*.
+	 * ⭐ And the lesson is that two guards for the same fact diverge: whoever
+	 *    touches `tono_passo` must touch this one too. */
+	/* ⛔⛔ AND A DATAGRAM IN THE QUEUE WANTS TO BE RETRIED AT ONCE — `[M]` 17 Aug
+	 *      2026, from the user's REAL session: *«it's as awful as before»*.
 	 *
-	 *      Con la congestione a posto (`cwnd_left` 40 KB) il **22 %** dei
-	 *      blocchi non partiva lo stesso.  ⛔ La ragione non era il rifiuto: era
-	 *      che **nessuno programmava un secondo tentativo**.  Un blocco
-	 *      rifiutato restava in coda finche' qualcos'altro non faceva scrivere
-	 *      la connessione — cioe' l'arrivo del blocco DOPO, 20 ms piu' tardi.
-	 *      ⇒ Il ritentativo c'era, il suo orologio no.
+	 *      With congestion in order (`cwnd_left` 40 KB) **22 %** of the
+	 *      blocks did not leave all the same.  ⛔ The reason was not the refusal: it was
+	 *      that **nobody scheduled a second attempt**.  A refused
+	 *      block stayed in the queue until something else made the
+	 *      connection write — that is the arrival of the NEXT block, 20 ms later.
+	 *      ⇒ The retry was there, its clock was not.
 	 *
-	 * ⚠ Un millisecondo, non di piu': e' l'ordine di grandezza in cui il pacer
-	 *   cambia idea, ed e' 1/20 di un blocco di Opus.  ⛔ E il tetto ai
-	 *   risvegli lo pone la coda: quando e' vuota questa riga non scatta.
+	 * ⚠ One millisecond, no more: it is the order of magnitude in which the pacer
+	 *   changes its mind, and it is 1/20 of an Opus block.  ⛔ And the cap on
+	 *   wake-ups is set by the queue: when it is empty this line does not fire.
 	 *
-	 * ⭐ Ed e' la stessa cura che il tono di prova aveva gia' — scritta li' e
-	 *    non qui, perche' allora l'audio vero non esisteva.  Il difetto era
-	 *    dentro quella asimmetria. */
+	 * ⭐ And it is the same cure the test tone already had — written there and
+	 *    not here, because back then real audio did not exist.  The defect was
+	 *    inside that asymmetry. */
 	if (w->ndgram > 0 && w->chiusura < 0) {
 		ngtcp2_tstamp t = ngtcp2_conn_get_timestamp(w->conn) + NGTCP2_MILLISECONDS;
 		if (t < b)
@@ -1701,13 +1701,13 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 	}
 
 	if (audio_prova_hz && w->audio_acceso && w->chiusura < 0 && w->rcp) {
-		/* ⛔ Il primo blocco e' DOVUTO SUBITO.  `[M]` 17 agosto 2026: senza
-		 *    questa riga il tono aspettava il battito normale prima di
-		 *    partire, e mancava **esattamente un secondo** in testa a ogni
-		 *    presa — 2,01 s su 3, 4,01 su 5, 9,01 su 10.  ⚠ Il sintomo
-		 *    sembrava una resa (67 %, 80 %, 90 %), e una resa fa cercare il
-		 *    difetto nel RITMO; era invece un ritardo d'avvio, che sta in un
-		 *    posto completamente diverso. */
+		/* ⛔ The first block is DUE AT ONCE.  `[M]` 17 Aug 2026: without
+		 *    this line the tone waited for the normal heartbeat before
+		 *    starting, and **exactly one second** was missing at the head of every
+		 *    take — 2.01 s out of 3, 4.01 out of 5, 9.01 out of 10.  ⚠ The symptom
+		 *    looked like a yield (67 %, 80 %, 90 %), and a yield makes one look for the
+		 *    defect in the RATE; it was instead a start-up delay, which sits in a
+		 *    completely different place. */
 		if (!w->tono_prossimo_us)
 			return 0;
 		ngtcp2_tstamp t = w->tono_prossimo_us * NGTCP2_MICROSECONDS;
@@ -1719,35 +1719,35 @@ ngtcp2_tstamp wt_battito_ns(const wt *w)
 
 const char *wt_stato_rcp(const wt *w)
 {
-	return w->rcp ? rcp_stato_nome(w->rcp) : "(nessuna)";
+	return w->rcp ? rcp_stato_nome(w->rcp) : "(none)";
 }
 
-/* ⛔ PERCHE' ha ancora da dire — e non e' un lusso: senza questa riga
- *    «la capsula di chiusura non e' ancora matura» e «i byte non escono» hanno
- *    la stessa faccia, e chi spegne il servizio legge «1 sessioni hanno ancora
- *    byte in coda» senza sapere quale delle due sia.
- * ⚠ `[M]` 11 agosto 2026: il caso `server-in-chiusura` di B7 e' rosso proprio
- *   qui — §3.1 punto 3 assente allo spegnimento — e la diagnosi si e' fermata
- *   davanti a questa ambiguita'. */
+/* ⛔ WHY it still has something to say — and it is not a luxury: without this line
+ *    «the closing capsule is not mature yet» and «the bytes do not go out» look
+ *    the same, and whoever stops the service reads «1 sessions still have
+ *    bytes in the queue» without knowing which of the two it is.
+ * ⚠ `[M]` 11 Aug 2026: the `server-in-chiusura` case of B7 is red precisely
+ *   here — §3.1 point 3 absent at shutdown — and the diagnosis stopped
+ *   in front of this ambiguity. */
 const char *wt_perche_ha_da_dire(const wt *w)
 {
 	if (!w)
-		return "(nessuna sessione)";
+		return "(no session)";
 	if (w->chiusura >= 0 && !coda_vuota(w))
-		return "capsula di chiusura in attesa E coda non vuota";
+		return "closing capsule pending AND queue not empty";
 	if (w->chiusura >= 0) {
-		/* ⛔ E QUANTO MANCA, o la diagnosi si ferma qui — 11 agosto 2026.
-		 *    «Non ancora matura» dopo 2 s, quando ne bastano 0,5, ha due
-		 *    spiegazioni opposte: l'orologio non gira, oppure gira e viene
-		 *    RIAZZERATO.  Il numero le separa; l'aggettivo no. */
+		/* ⛔ AND HOW MUCH IS LEFT, or the diagnosis stops here — 11 Aug 2026.
+		 *    «Not mature yet» after 2 s, when 0.5 are enough, has two
+		 *    opposite explanations: the clock does not run, or it runs and gets
+		 *    RESET.  The number separates them; the adjective does not. */
 		static char detto[220];
 		ngtcp2_tstamp ora = ngtcp2_conn_get_timestamp(w->conn);
 		snprintf(detto, sizeof detto,
-		         "capsula di chiusura non ancora matura (coda vuota) — "
-		         "chiusura=%#04x · chiusura_da=%s · mancano %lld ms · "
-		         "battito fra %lld ms",
+		         "closing capsule not mature yet (queue empty) — "
+		         "chiusura=%#04x · chiusura_da=%s · %lld ms left · "
+		         "heartbeat in %lld ms",
 		         (unsigned)w->chiusura,
-		         w->chiusura_da ? "armato" : "⛔ MAI ARMATO",
+		         w->chiusura_da ? "armed" : "⛔ NEVER ARMED",
 		         w->chiusura_da
 		             ? (long long)(((long long)w->chiusura_da - (long long)ora)
 		                           / (long long)NGTCP2_MILLISECONDS) : 0LL,
@@ -1757,31 +1757,31 @@ const char *wt_perche_ha_da_dire(const wt *w)
 		return detto;
 	}
 	if (!coda_vuota(w))
-		return "coda d'uscita non vuota";
-	return "niente";
+		return "output queue not empty";
+	return "nothing";
 }
 
 bool wt_ha_da_dire(const wt *w)
 {
-	/* ⛔ E i datagram contano: senza questa riga i blocchi dell'audio
-	 *    resterebbero in coda fino alla prossima cosa da spedire, cioe' il
-	 *    suono uscirebbe **a scatti dettati dal video**.  ⚠ E' la stessa forma
-	 *    del difetto di `MOVIMENTO_ATTESA_S` (`CODER.md` §1-bis): il ritmo di
-	 *    un anello che diventa il ritardo di un altro anello. */
+	/* ⛔ And datagrams count: without this line the audio blocks
+	 *    would stay in the queue until the next thing to send, that is the
+	 *    sound would come out **in jerks dictated by the video**.  ⚠ It is the same shape
+	 *    as the defect of `MOVIMENTO_ATTESA_S` (`CODER.md` §1-bis): the rhythm of
+	 *    one link becoming the delay of another link. */
 	return w->chiusura >= 0 || !coda_vuota(w) || w->ndgram > 0;
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ I DATAGRAM — l'audio di §6.3.                                          */
+/* ⭐ DATAGRAMS — the audio of §6.3.                                          */
 
-/* ⭐ L'intero a lunghezza variabile per il prefisso di RFC 9297 e' quello che
- *    c'e' gia' — `varint_scrivi()`, in cima a questo file.  ⛔ Ne era stata
- *    scritta una seconda copia qui, ed e' stato il compilatore ad accorgersene:
- *    due implementazioni della stessa regola divergono, ed e' la forma del
- *    difetto che il controllo delle tre copie (R12.3) esiste per impedire fra
- *    file — non c'e' ragione di ammetterla dentro lo stesso file. */
+/* ⭐ The variable-length integer for the RFC 9297 prefix is the one that
+ *    already exists — `varint_scrivi()`, at the top of this file.  ⛔ A second
+ *    copy had been written here, and it was the compiler that noticed:
+ *    two implementations of the same rule diverge, and it is the shape of the
+ *    defect the three-copy check (R12.3) exists to prevent between
+ *    files — there is no reason to admit it within the same file. */
 
-/* Quanti byte accetta il pari in un DATAGRAM, `0` = non ne accetta affatto. */
+/* How many bytes the peer accepts in a DATAGRAM, `0` = it accepts none at all. */
 static uint64_t dgram_tetto_del_pari(const wt *w)
 {
 	const ngtcp2_transport_params *p;
@@ -1792,30 +1792,30 @@ static uint64_t dgram_tetto_del_pari(const wt *w)
 }
 
 /*
- * Accoda un carico gia' composto (prefisso RFC 9297 compreso).
+ * Enqueues an already composed payload (RFC 9297 prefix included).
  *
- * ⛔ Quando la coda e' piena si butta IL PIU' VECCHIO — §6.3 e la lezione di
- *    v1.  ⚠ E si conta: «l'audio non arriva» e «l'audio arriva e lo butto»
- *    devono avere due righe diverse, che e' esattamente la ragione per cui
- *    `trasporto.c` scriveva lo scarto in ingresso fin dalla fase 1.
+ * ⛔ When the queue is full THE OLDEST is thrown away — §6.3 and the lesson of
+ *    v1.  ⚠ And it is counted: «audio does not arrive» and «audio arrives and I drop it»
+ *    must have two different lines, which is exactly the reason why
+ *    `trasporto.c` wrote the incoming discard since phase 1.
  */
 static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
 {
 	size_t coda;
 
 	if (n > WT_DGRAM_BYTE) {
-		/* ⛔ E SI CONTA E SI SCRIVE, invece di tornare `false` e sperare che
-		 *    il chiamante guardi — rilievo 13 della revisione del 17 agosto
-		 *    2026.  Oggi questa strada e' irraggiungibile perche' `audio_a_una`
-		 *    controlla lo stesso tetto tre righe prima: ⚠ **due controlli per
-		 *    una regola sola, e solo uno dei due sapeva dire di essere
-		 *    scattato**.  Il giorno in cui arriva il secondo chiamante — e con
-		 *    `figlio.c` sta arrivando — un blocco sparirebbe senza traccia. */
+		/* ⛔ AND IT IS COUNTED AND WRITTEN, instead of returning `false` and hoping
+		 *    the caller looks — finding 13 of the review of 17 Aug
+		 *    2026.  Today this road is unreachable because `audio_a_una`
+		 *    checks the same cap three lines earlier: ⚠ **two checks for
+		 *    a single rule, and only one of the two could say it had
+		 *    fired**.  The day the second caller arrives — and with
+		 *    `figlio.c` it is arriving — a block would vanish without a trace. */
 		w->audio_buttati++;
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ %s: blocco d'audio di %zu byte oltre il tetto di %u — "
-		                 "BUTTATO.  ⚠ Se questa riga compare, il tetto e' stato "
-		                 "controllato in due posti e uno dei due sbaglia",
+		                 "⛔ %s: audio block of %zu bytes beyond the cap of %u — "
+		                 "DROPPED.  ⚠ If this line appears, the cap has been "
+		                 "checked in two places and one of the two is wrong",
 		                 w->provenienza, n, (unsigned)WT_DGRAM_BYTE);
 		return false;
 	}
@@ -1828,9 +1828,9 @@ static bool dgram_accoda(wt *w, const uint8_t *d, size_t n)
 	coda = (w->dgram_testa + w->ndgram) % WT_DGRAM_MAX;
 	memcpy(w->dgram[coda].d, d, n);
 	w->dgram[coda].n = n;
-	/* ⭐ IL TIMBRO — vedi `WT_DGRAM_ZITTO_MAX_MS`.  ⛔ E' qui e non altrove
-	 *    perche' «quando e' entrato in coda» e' un fatto che esiste solo in
-	 *    questo punto: dopo, la casella si riusa e la memoria non ricorda. */
+	/* ⭐ THE STAMP — see `WT_DGRAM_ZITTO_MAX_MS`.  ⛔ It is here and not elsewhere
+	 *    because «when it entered the queue» is a fact that exists only at
+	 *    this point: afterwards, the slot is reused and memory does not remember. */
 	w->dgram[coda].nato = w->ts_ora;
 	w->ndgram++;
 	return true;
@@ -1845,16 +1845,16 @@ static void dgram_togli_testa(wt *w)
 }
 
 /*
- * Scrive UN datagram in un pacchetto suo.
+ * Writes ONE datagram in a packet of its own.
  *
- * ⛔ Uno per pacchetto, e non e' pigrizia: `RCP.md` §6.3 dice «un datagram, un
- *    blocco di Opus», quindi il pacchetto non ha niente da coalizzare che
- *    valga il rischio.  ⚠ Mescolare `writev_datagram` e `writev_stream` nello
- *    stesso pacchetto pretende la disciplina del flag `MORE` su tutt'e due, e
- *    un errore li' non produce un guasto: produce byte validi nell'ordine
- *    sbagliato.
+ * ⛔ One per packet, and it is not laziness: `RCP.md` §6.3 says «one datagram, one
+ *    Opus block», so the packet has nothing to coalesce that is
+ *    worth the risk.  ⚠ Mixing `writev_datagram` and `writev_stream` in the
+ *    same packet demands the discipline of the `MORE` flag on both, and
+ *    a mistake there does not produce a fault: it produces valid bytes in the wrong
+ *    order.
  *
- * Torna `true` quando il pacchetto e' stato composto e va spedito.
+ * Returns `true` when the packet has been composed and must be sent.
  */
 static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
                              uint8_t *dest, size_t destlen, ngtcp2_tstamp ts,
@@ -1868,19 +1868,19 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	if (w->ndgram == 0)
 		return false;
 
-	/* ⛔⭐ LE DUE GRANDEZZE, E SOLO UNA DELLE DUE DECIDE — ⇒ il riquadro di
-	 *     `WT_DGRAM_ZITTO_MAX_MS`, che dice perche' non e' quella che sembra.
+	/* ⛔⭐ THE TWO QUANTITIES, AND ONLY ONE OF THE TWO DECIDES — ⇒ the box of
+	 *     `WT_DGRAM_ZITTO_MAX_MS`, which says why it is not the one it seems.
 	 *
-	 *   · `zitto_ms` — da quanto la CONNESSIONE non mette un datagram in un
-	 *     pacchetto.  E' quella su cui si butta.
-	 *   · `eta_ms`   — quanti ms ha il BLOCCO IN TESTA.  Non decide niente: va
-	 *     nella riga di registro, ed e' la grandezza che il commento vecchio
-	 *     prometteva e nessuno aveva mai letto.
+	 *   · `zitto_ms` — how long the CONNECTION has not put a datagram in a
+	 *     packet.  It is the one on which we drop.
+	 *   · `eta_ms`   — how many ms old the BLOCK AT THE HEAD is.  It decides nothing: it goes
+	 *     in the log line, and it is the quantity the old comment
+	 *     promised and nobody had ever read.
 	 *
-	 * ⚠ Tutt'e due valgono ZERO quando il loro orologio non e' partito (`nato`
-	 *   o `dgram_zitto_da` a zero).  ⛔ Un orologio non partito e uno scaduto
-	 *   non devono avere la stessa faccia: la faccia sbagliata butterebbe il
-	 *   primo blocco d'audio di ogni sessione. */
+	 * ⚠ Both are worth ZERO when their clock has not started (`nato`
+	 *   or `dgram_zitto_da` at zero).  ⛔ A clock that has not started and one that has expired
+	 *   must not look the same: the wrong look would drop the
+	 *   first audio block of every session. */
 	eta_ms = (w->dgram[w->dgram_testa].nato && ts > w->dgram[w->dgram_testa].nato)
 	             ? (ts - w->dgram[w->dgram_testa].nato) / NGTCP2_MILLISECONDS
 	             : 0;
@@ -1888,160 +1888,160 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 	               ? (ts - w->dgram_zitto_da) / NGTCP2_MILLISECONDS
 	               : 0;
 
-	/* ⛔⭐ E NON SI RIPROVA DENTRO LA STESSA PASSATA — `[M]` 17 agosto 2026.
+	/* ⛔⭐ AND IT IS NOT RETRIED WITHIN THE SAME PASS — `[M]` 17 Aug 2026.
 	 *
-	 *     `ngtcp2_conn_write_aggregate_pkt2` richiama questa funzione piu'
-	 *     volte per comporre un lotto di pacchetti, **con lo stesso `ts`**.  Il
-	 *     primo tetto sui rimandi si consumava tutto li' dentro, in un
-	 *     microsecondo: otto rimandi e poi il blocco buttato, senza che fosse
-	 *     passato **un istante** in cui il pacer potesse cambiare idea.
-	 *     ⇒ 1064 datagram buttati lo stesso, con 8008 rimandi «riusciti» in un
-	 *     conto che sembrava dire il contrario.
+	 *     `ngtcp2_conn_write_aggregate_pkt2` calls this function back several
+	 *     times to compose a batch of packets, **with the same `ts`**.  The
+	 *     first cap on deferrals was all used up in there, in one
+	 *     microsecond: eight deferrals and then the block dropped, without
+	 *     **an instant** having passed in which the pacer could change its mind.
+	 *     ⇒ 1064 datagrams dropped all the same, with 8008 «successful» deferrals in a
+	 *     count that seemed to say the opposite.
 	 *
-	 * ⭐ Il pacer decide sul TEMPO: se ha rifiutato a questo `ts`, rifiutera'
-	 *    anche adesso.  Si torna subito, senza chiedere — e il rimando vale
-	 *    per una passata intera, che e' l'unita' in cui il pacer si muove. */
+	 * ⭐ The pacer decides on TIME: if it refused at this `ts`, it will refuse
+	 *    now too.  We return at once, without asking — and the deferral holds
+	 *    for a whole pass, which is the unit in which the pacer moves. */
 	if (w->dgram_rimando_ts == ts)
 		return false;
 
-	/* ⭐ FASE 9 — E QUI IL DIFETTO DEL 23 AGOSTO NON C'E', per due ragioni che
-	 *    vanno scritte perche' non si perdano:
+	/* ⭐ PHASE 9 — AND HERE THE DEFECT OF 23 AUGUST IS NOT PRESENT, for two reasons that
+	 *    must be written down so they are not lost:
 	 *
-	 *      1. `w->dgram[]` e' un anello di array FISSI dentro `wt`: non c'e'
-	 *         nessun `free()` che possa arrivare prima di ngtcp2 — la memoria
-	 *         muore con la sessione;
-	 *      2. §6.3: un datagram NON SI RITRASMETTE.  ngtcp2 lo serializza
-	 *         dentro il pacchetto durante QUESTA chiamata (`WRITE_MORE` vuol
-	 *         dire «e' gia' dentro») e non rilegge piu' la sorgente.
+	 *      1. `w->dgram[]` is a ring of FIXED arrays inside `wt`: there is
+	 *         no `free()` that could come before ngtcp2 — the memory
+	 *         dies with the session;
+	 *      2. §6.3: a datagram is NOT RETRANSMITTED.  ngtcp2 serialises it
+	 *         into the packet during THIS call (`WRITE_MORE` means
+	 *         «it is already inside») and does not reread the source any more.
 	 *
-	 * ⚠ La casella si riusa (`dgram_accoda()` scavalca la piu' vecchia quando
-	 *   l'anello e' pieno), e regge solo per il punto 2: il giorno in cui i
-	 *   datagram diventassero ritrasmissibili, questo sarebbe lo stesso difetto
-	 *   di `coda_uccidi()` con un'altra faccia. */
+	 * ⚠ The slot is reused (`dgram_accoda()` overtakes the oldest when
+	 *   the ring is full), and it holds only because of point 2: the day
+	 *   datagrams became retransmittable, this would be the same defect
+	 *   as `coda_uccidi()` with another face. */
 	v.base = w->dgram[w->dgram_testa].d;
 	v.len = w->dgram[w->dgram_testa].n;
 
-	/* ⛔⛔ `MORE` E NON `NONE`, ED E' LA CURA DEL DIFETTO CHE L'UTENTE HA SENTITO.
+	/* ⛔⛔ `MORE` AND NOT `NONE`, AND IT IS THE CURE FOR THE DEFECT THE USER HEARD.
 	 *
-	 *      `[M]` 17 agosto 2026, sessione VERA dell'utente da un'altra macchina:
-	 *      **1578 blocchi spediti e 1606 RIFIUTATI** — piu' della meta'
-	 *      dell'audio non partiva — e la riga di diagnosi diceva la causa senza
-	 *      lasciare margini: **`cwnd_left = 0`**.
+	 *      `[M]` 17 Aug 2026, the user's REAL session from another machine:
+	 *      **1578 blocks sent and 1606 REFUSED** — more than half
+	 *      of the audio did not leave — and the diagnostic line stated the cause without
+	 *      leaving margins: **`cwnd_left = 0`**.
 	 *
-	 *      ⇒ Non era la rete e non era il pacer: era **il video che si mangia
-	 *      tutta la finestra di congestione**.  Un datagram da 230 byte non
-	 *      trovava posto perche' chiedeva **un pacchetto suo**, e un pacchetto
-	 *      suo la finestra non lo concedeva mai.
+	 *      ⇒ It was not the network and it was not the pacer: it was **the video eating
+	 *      the whole congestion window**.  A 230-byte datagram did not
+	 *      find room because it asked for **a packet of its own**, and a packet
+	 *      of its own the window never granted.
 	 *
-	 * ⭐ Con `MORE` il datagram non chiede un pacchetto: **entra in quello che il
-	 *    video sta gia' scrivendo**.  Un pacchetto da 1452 byte che porta pixel
-	 *    ha spazio da vendere per 230 byte di suono, e quel pacchetto la
-	 *    finestra lo sta gia' concedendo.  ⇒ L'audio viaggia dove passa il video
-	 *    invece di contendergli il posto.
+	 * ⭐ With `MORE` the datagram does not ask for a packet: **it enters the one the
+	 *    video is already writing**.  A 1452-byte packet carrying pixels
+	 *    has room to spare for 230 bytes of sound, and that packet the
+	 *    window is already granting.  ⇒ Audio travels where video passes
+	 *    instead of contending the place with it.
 	 *
-	 * ⛔⛔⛔ E `PADDING` NON E' UN DETTAGLIO: E' LA CURA — l'intuizione e' dell'utente
-	 *       («forse il datagram e' troppo piccolo?»), e il manuale di ngtcp2 le
-	 *       da' ragione in una riga:
+	 * ⛔⛔⛔ AND `PADDING` IS NOT A DETAIL: IT IS THE CURE — the insight is the user's
+	 *       («maybe the datagram is too small?»), and ngtcp2's manual
+	 *       proves it right in one line:
 	 *
 	 *         «This function only writes multiple packets if **the first packet
 	 *          is path_max_tx_udp_payload_size bytes long**.»
 	 *         «Because GSO requires that the aggregated packets have the same
 	 *          length, NGTCP2_WRITE_DATAGRAM_FLAG_PADDING is recommended.»
 	 *
-	 *       Il nostro datagram e' il **primo** pacchetto di ogni passata, ed e'
-	 *       da ~250 byte invece che pieno.  ⇒ **Fa collassare l'intero lotto GSO
-	 *       a un pacchetto solo**: non e' l'audio che non entra, e' l'audio che
-	 *       — piccolo e primo — **strozza tutta la scrittura, sua e del video**.
+	 *       Our datagram is the **first** packet of every pass, and it is
+	 *       ~250 bytes instead of full.  ⇒ **It collapses the whole GSO batch
+	 *       to a single packet**: it is not audio that does not fit, it is audio that
+	 *       — small and first — **chokes the whole writing, its own and the video's**.
 	 *
-	 * ⚠ `[M]` 17 agosto 2026, sessione vera dell'utente: `cwnd_left` 33-56 KB
-	 *   liberi, `quanto del pacer` 14440 costante, e **839 blocchi rifiutati su
-	 *   2278**.  Ne' congestione ne' buffer: era la geometria del lotto.
+	 * ⚠ `[M]` 17 Aug 2026, the user's real session: `cwnd_left` 33-56 KB
+	 *   free, `pacer quantum` 14440 constant, and **839 blocks refused out of
+	 *   2278**.  Neither congestion nor buffer: it was the geometry of the batch.
 	 *
-	 * ⭐ Con `MORE` il pacchetto lo riempie il video; con `PADDING` viene
-	 *    riempito comunque quando il video non ha niente da metterci.  Le due
-	 *    insieme: l'audio non paga il riempimento quando c'e' traffico, e non
-	 *    strozza il lotto quando non ce n'e'.
+	 * ⭐ With `MORE` the video fills the packet; with `PADDING` it gets
+	 *    filled anyway when the video has nothing to put in it.  The two
+	 *    together: audio does not pay for the filling when there is traffic, and does not
+	 *    choke the batch when there is none.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * ⛔⛔⛔ CONDIZIONARE QUESTO `PADDING` E' STATO PROVATO IL 24 AGOSTO 2026, E
-	 *       **NON SI FA**.  Qui c'e' il perche', coi numeri, per il prossimo che
-	 *       ci ripensa — che sara' qualcuno con la stessa buona idea.
+	 * ⛔⛔⛔ MAKING THIS `PADDING` CONDITIONAL WAS TRIED ON 24 AUG 2026, AND
+	 *       **IT IS NOT DONE**.  Here is why, with the numbers, for the next one who
+	 *       thinks it over — who will be someone with the same good idea.
 	 * ═══════════════════════════════════════════════════════════════════════
 	 *
-	 * L'idea: quando in coda c'e' UN datagram solo e nessun byte di stream, il
-	 * lotto GSO e' di un pacchetto per costruzione, e riempirlo non protegge
-	 * niente — paga e basta.  ⚠ Il conto sembrava grosso: un blocco di Opus e'
-	 * ~290 byte dentro un pacchetto da 1 441, cioe' 1 150 byte buttati 50 volte
-	 * al secondo.  ⇒ Scritto (`w->ndgram > 1 || !coda_vuota(w)`), costruito,
-	 * misurato appaiato.  `[M]` 24 agosto 2026, banco NR12, porta 7981, `lo`
-	 * liscio, desktop FERMO col tono a 440 Hz — cioe' audio VERO e video
-	 * immobile, il solo caso in cui la condizione puo' mordere — 25 s per giro,
-	 * due giri per braccio, stesso binario a meno di questa riga:
+	 * The idea: when the queue holds ONE datagram only and no stream byte, the
+	 * GSO batch is one packet by construction, and filling it protects
+	 * nothing — it just costs.  ⚠ The sum looked big: an Opus block is
+	 * ~290 bytes inside a 1 441-byte packet, that is 1 150 bytes thrown away 50 times
+	 * a second.  ⇒ Written (`w->ndgram > 1 || !coda_vuota(w)`), built,
+	 * measured paired.  `[M]` 24 Aug 2026, bench NR12, port 7981, smooth
+	 * `lo`, STILL desktop with the tone at 440 Hz — that is REAL audio and motionless
+	 * video, the only case in which the condition can bite — 25 s per run,
+	 * two runs per arm, same binary except for this line:
 	 *
-	 *   codec  riempimento   kbit/s sul filo   byte/pacchetto   blocchi persi
+	 *   codec  filling       kbit/s on wire    bytes/packet     blocks lost
 	 *   -----  ------------  ---------------   --------------   -------------
-	 *   Opus   sempre          557,7 / 556,5        1 441              0
-	 *   Opus   condizionato    556,9 / 555,8        1 441 / 1 442      0
-	 *   Opus   **MAI**         556,4                1 441              0
-	 *   PCM    sempre        2 221,7 / 2 222,0      1 443 / 1 442      0
-	 *   PCM    condizionato  1 988,0 / 1 987,4      1 292 / 1 290      0
+	 *   Opus   always          557.7 / 556.5        1 441              0
+	 *   Opus   conditional     556.9 / 555.8        1 441 / 1 442      0
+	 *   Opus   **NEVER**       556.4                1 441              0
+	 *   PCM    always        2 221.7 / 2 222.0      1 443 / 1 442      0
+	 *   PCM    conditional   1 988.0 / 1 987.4      1 292 / 1 290      0
 	 *
-	 * ⛔⛔ **SU OPUS IL GUADAGNO E' ZERO — e non «piccolo»: ZERO.**  La riga che
-	 *      lo dimostra e' la terza: con `PADDING` **mai** chiesto il pacchetto
-	 *      resta di 1 441 byte.  ⇒ Non e' questa riga a riempirlo.
+	 * ⛔⛔ **ON OPUS THE GAIN IS ZERO — and not «small»: ZERO.**  The line that
+	 *      proves it is the third: with `PADDING` **never** requested the packet
+	 *      stays at 1 441 bytes.  ⇒ It is not this line that fills it.
 	 *
-	 * ⭐⭐⭐ E SI SA CHI LO RIEMPIE — `[R]`, ed e' la scoperta che questa prova ha
-	 *      comprato: `wt_scrivi()` chiede
-	 *      **`NGTCP2_WRITE_STREAM_FLAG_PADDING` a OGNI scrittura di stream**.
-	 *      Quando il datagram torna `NGTCP2_ERR_WRITE_MORE` il pacchetto resta
-	 *      APERTO, questa funzione torna `false`, e il ciclo degli stream
-	 *      subito dopo lo chiude — riempiendolo.  ⇒ Il riempimento di una
-	 *      sessione ferma **non e' del datagram: e' dello stream**, e chi
-	 *      volesse toglierlo deve andare li', non qui.
-	 *      ⚠ `09-b84-audio-silenzio.py` lo attribuiva a questa riga: era una
-	 *        deduzione, ed e' stata smentita.
+	 * ⭐⭐⭐ AND WE KNOW WHO FILLS IT — `[R]`, and it is the discovery this test
+	 *      bought: `wt_scrivi()` requests
+	 *      **`NGTCP2_WRITE_STREAM_FLAG_PADDING` at EVERY stream write**.
+	 *      When the datagram returns `NGTCP2_ERR_WRITE_MORE` the packet stays
+	 *      OPEN, this function returns `false`, and the stream loop
+	 *      right after closes it — filling it.  ⇒ The filling of a
+	 *      still session **is not the datagram's: it is the stream's**, and whoever
+	 *      wanted to remove it must go there, not here.
+	 *      ⚠ `09-b84-audio-silenzio.py` attributed it to this line: it was a
+	 *        deduction, and it has been disproved.
 	 *
-	 * ⭐ Su PCM invece la condizione morde (−10,5 %), e si capisce perche': a 200
-	 *    blocchi al secondo il datagram CHIUDE il pacchetto da solo (`nw > 0`),
-	 *    questa funzione torna `true` e il ciclo degli stream non gira mai.
-	 *    ⚠ Ma il PCM non e' quel che il prodotto negozia (`[M]` la sessione vera
-	 *      dell'utente dice `audio.codec=opus` quattro volte su quattro), e il
-	 *      predefinito nuovo — il silenzio dell'audio ACCESO — toglie i datagram
-	 *      del tutto a desktop fermo: **0,0 datagram al secondo**, `[M]` 09-b84.
-	 *    ⇒ Una condizione in piu' da mantenere, dentro il riquadro piu' delicato
-	 *      del file, per un guadagno che sul codec vero e' zero e sull'altro vale
-	 *      un decimo di una banda che a desktop fermo non c'e'.  **Non si fa.**
+	 * ⭐ On PCM instead the condition bites (−10.5 %), and one sees why: at 200
+	 *    blocks a second the datagram CLOSES the packet by itself (`nw > 0`),
+	 *    this function returns `true` and the stream loop never runs.
+	 *    ⚠ But PCM is not what the product negotiates (`[M]` the user's real session
+	 *      says `audio.codec=opus` four times out of four), and the
+	 *      new default — audio silence ON — removes datagrams
+	 *      altogether on a still desktop: **0.0 datagrams a second**, `[M]` 09-b84.
+	 *    ⇒ One more condition to maintain, inside the most delicate box
+	 *      of the file, for a gain that on the real codec is zero and on the other is worth
+	 *      a tenth of a bandwidth that on a still desktop is not there.  **It is not done.**
 	 *
-	 * ⛔ `NGTCP2_ERR_WRITE_MORE` qui non e' un errore: vuol dire «il datagram e'
-	 *    dentro, continua a riempire il pacchetto».  Chi lo leggesse come un
-	 *    guasto butterebbe un blocco gia' spedito. */
+	 * ⛔ `NGTCP2_ERR_WRITE_MORE` here is not an error: it means «the datagram is
+	 *    inside, keep filling the packet».  Whoever read it as a
+	 *    fault would drop a block already sent. */
 	nw = ngtcp2_conn_writev_datagram(w->conn, path, pi, dest, destlen, &accettato,
 	                                 NGTCP2_WRITE_DATAGRAM_FLAG_MORE |
 	                                     NGTCP2_WRITE_DATAGRAM_FLAG_PADDING,
 	                                 ++w->dgram_id, &v, 1, ts);
 	if (nw == NGTCP2_ERR_WRITE_MORE) {
-		/* ⭐ Il blocco e' nel pacchetto in composizione: si toglie dalla coda. */
+		/* ⭐ The block is in the packet being composed: it is removed from the queue. */
 		w->audio_spediti++;
-		w->dgram_zitto_da = 0; /* ⭐ non sono piu' muto */
+		w->dgram_zitto_da = 0; /* ⭐ I am no longer mute */
 		dgram_togli_testa(w);
 
-		/* ⛔⛔⛔ E SI CONTINUA A INFILARNE, finche' ce ne stanno — `[M]` 17
-		 *       agosto 2026, dalla sessione dell'utente con un video vero:
-		 *       il figlio produce **50 blocchi al secondo** e il server ne
-		 *       rifiuta **25 al secondo**.  ⚠ Esattamente la meta', e la
-		 *       precisione di quel numero e' l'indizio: non e' congestione,
-		 *       e' **aritmetica**.
+		/* ⛔⛔⛔ AND WE KEEP SLIPPING THEM IN, as long as they fit — `[M]` 17
+		 *       Aug 2026, from the user's session with real video:
+		 *       the child produces **50 blocks a second** and the server
+		 *       refuses **25 a second**.  ⚠ Exactly half, and the
+		 *       precision of that number is the clue: it is not congestion,
+		 *       it is **arithmetic**.
 		 *
-		 *       Spedivo **un solo datagram per passata di scrittura**, e le
-		 *       passate sono ~25 al secondo.  ⇒ Uno passava e uno restava in
-		 *       coda, per sempre, finche' non lo buttavo dopo 64 rinvii.
-		 *       ⛔ Il tetto non era ne' la rete ne' il pacer: era **il mio
-		 *       ciclo**, che ne offriva uno per volta.
+		 *       I was sending **a single datagram per write pass**, and the
+		 *       passes are ~25 a second.  ⇒ One went through and one stayed in the
+		 *       queue, forever, until I dropped it after 64 deferrals.
+		 *       ⛔ The cap was neither the network nor the pacer: it was **my
+		 *       loop**, which offered them one at a time.
 		 *
-		 * ⚠ E lo spazio c'era da vendere: un pacchetto e' **1452 byte** e un
-		 *   blocco di Opus ne misura **230**.  Ce ne stanno sei, e i fotogrammi
-		 *   video di questa scena sono da 70-1300 byte — cioe' il pacchetto
-		 *   restava mezzo vuoto mentre l'audio veniva buttato. */
+		 * ⚠ And there was room to spare: a packet is **1452 bytes** and an
+		 *   Opus block measures **230**.  Six fit in it, and the video frames
+		 *   of this scene are 70-1300 bytes — that is the packet
+		 *   stayed half empty while audio was being dropped. */
 		while (w->ndgram > 0) {
 			ngtcp2_vec v2;
 			int acc2 = 0;
@@ -2058,12 +2058,12 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				w->audio_spediti++;
 				w->dgram_zitto_da = 0;
 				dgram_togli_testa(w);
-				continue; /* ce n'e' ancora posto: si prosegue */
+				continue; /* there is still room: go on */
 			}
 			if (nw2 > 0) {
-				/* Il pacchetto si e' chiuso.  ⛔ Se ha preso anche questo
-				 *    blocco lo si toglie; in ogni caso il pacchetto VA
-				 *    SPEDITO — buttarlo porterebbe via i riscontri. */
+				/* The packet has closed.  ⛔ If it also took this
+				 *    block it is removed; in any case the packet MUST BE
+				 *    SENT — dropping it would take the acknowledgements away. */
 				if (acc2) {
 					w->audio_spediti++;
 					w->dgram_zitto_da = 0;
@@ -2072,20 +2072,20 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				*nfuori = nw2;
 				return true;
 			}
-			break; /* `0` o un errore: si riprova alla passata dopo */
+			break; /* `0` or an error: retry at the next pass */
 		}
 		return false;
 	}
 	if (nw < 0) {
-		/* ⛔ E QUI NON SI UCCIDE LA CONNESSIONE.  §6.3 e' esplicito nel verso
-		 *    opposto — «chiudere la connessione per un pacchetto corrotto
-		 *    sarebbe una punizione della rete, non del mittente» — e la stessa
-		 *    ragione vale in uscita: un blocco d'audio che non parte non e' un
-		 *    motivo per togliere il desktop a chi lo sta usando. */
+		/* ⛔ AND HERE THE CONNECTION IS NOT KILLED.  §6.3 is explicit in the
+		 *    opposite direction — «closing the connection for a corrupt packet
+		 *    would be a punishment of the network, not of the sender» — and the same
+		 *    reason holds outgoing: an audio block that does not leave is not a
+		 *    reason to take the desktop away from whoever is using it. */
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ %s: datagram di %zu byte NON scritto (%s) — il blocco "
-		                 "si BUTTA (§6.3: nessuna ritrasmissione).  Spediti %llu, "
-		                 "buttati %llu",
+		                 "⛔ %s: datagram of %zu bytes NOT written (%s) — the block "
+		                 "is DROPPED (§6.3: no retransmission).  Sent %llu, "
+		                 "dropped %llu",
 		                 w->provenienza, v.len, ngtcp2_strerror((int)nw),
 		                 (unsigned long long)w->audio_spediti,
 		                 (unsigned long long)(w->audio_buttati + 1));
@@ -2099,101 +2099,101 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		w->dgram_zitto_da = 0;
 		dgram_togli_testa(w);
 	} else if (zitto_ms < WT_DGRAM_ZITTO_MAX_MS) {
-		/* ⛔⛔ NON SI BUTTA: SI RIMANDA — e la differenza vale il 38 % dell'audio.
+		/* ⛔⛔ IT IS NOT DROPPED: IT IS DEFERRED — and the difference is worth 38 % of the audio.
 		 *
-		 *      `[M]` 17 agosto 2026, audio VERO in PCM con il video acceso:
-		 *      **1163 datagram rifiutati su 3001**, e il giudice leggeva
-		 *      **464 Hz invece di 440** con purezza 0,29 — perche' concatenare
-		 *      quel che resta fa saltare la fase ogni due blocchi.  ⚠ Il suono
-		 *      non era «con qualche buco»: era **un altro suono**.
+		 *      `[M]` 17 Aug 2026, REAL audio in PCM with video on:
+		 *      **1163 datagrams refused out of 3001**, and the judge read
+		 *      **464 Hz instead of 440** with purity 0.29 — because concatenating
+		 *      what is left makes the phase jump every two blocks.  ⚠ The sound
+		 *      was not «with a few holes»: it was **another sound**.
 		 *
-		 * ⛔⭐ E LA CAUSA NON ERA QUELLA SCRITTA QUI.  Il commento diceva «nel
-		 *     pacchetto non ci stava, quindi non ci starebbe mai».  La misura
-		 *     dice il contrario: `cwnd_left` = **12 198 byte** contro 973
-		 *     chiesti, destlen 1452.  ⇒ Non e' ne' il buffer ne' la
-		 *     congestione: e' il **pacer** di QUIC, che dice «non adesso».
-		 *     E «non adesso» diventa «mai» solo se lo buttiamo noi.
+		 * ⛔⭐ AND THE CAUSE WAS NOT THE ONE WRITTEN HERE.  The comment said «it did not
+		 *     fit in the packet, so it would never fit».  The measurement
+		 *     says the opposite: `cwnd_left` = **12 198 bytes** against 973
+		 *     requested, destlen 1452.  ⇒ It is neither the buffer nor
+		 *     congestion: it is QUIC's **pacer**, which says «not now».
+		 *     And «not now» becomes «never» only if we drop it ourselves.
 		 *
-		 * ⚠ E il tetto resta: la coda tiene otto blocchi, e chi non ci sta si
-		 *   butta comunque (§6.3).  Rimandare non e' accumulare — sposta il
-		 *   blocco di qualche centinaio di microsecondi, non di mezzo secondo.
+		 * ⚠ And the cap stays: the queue holds eight blocks, and whoever does not fit is
+		 *   dropped anyway (§6.3).  Deferring is not accumulating — it moves the
+		 *   block by a few hundred microseconds, not by half a second.
 		 *
-		 * ⭐ E DAL 24 AGOSTO 2026 LA CONDIZIONE QUI SOPRA E' UN TEMPO, non un
-		 *    contagiri delle passate (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
-		 *    `audio_rimandati` resta quel che e' sempre stato — quante volte il
-		 *    pacer ha detto «non adesso» — e ⚠ NON e' una grandezza per
-		 *    giudicare: `[M]` 24 agosto, `casa-cattiva`, **2,2 milioni in 26 s**,
-		 *    perche' conta le passate del ciclo degli eventi, non i blocchi. */
+		 * ⭐ AND SINCE 24 AUG 2026 THE CONDITION ABOVE IS A TIME, not a
+		 *    rev counter of passes (⇒ `WT_DGRAM_ZITTO_MAX_MS`).
+		 *    `audio_rimandati` stays what it always was — how many times the
+		 *    pacer said «not now» — and ⚠ it is NOT a quantity to
+		 *    judge by: `[M]` 24 August, `casa-cattiva`, **2.2 million in 26 s**,
+		 *    because it counts the passes of the event loop, not the blocks. */
 		w->audio_rimandati++;
 		w->dgram_rimando_ts = ts;
-		/* ⛔ L'orologio del silenzio parte al PRIMO rifiuto, non a ogni
-		 *    rifiuto: qui si misura una durata, non un istante. */
+		/* ⛔ The silence clock starts at the FIRST refusal, not at every
+		 *    refusal: here a duration is measured, not an instant. */
 		if (!w->dgram_zitto_da)
 			w->dgram_zitto_da = ts;
-		/* ⛔⛔⛔ E NON SI TORNA SUBITO: SE UN PACCHETTO C'E', VA SPEDITO.
+		/* ⛔⛔⛔ AND WE DO NOT RETURN AT ONCE: IF THERE IS A PACKET, IT MUST BE SENT.
 		 *
-		 *       `[M]` 17 agosto 2026, e questo era il difetto che teneva in
-		 *       piedi tutti gli altri.  Il manuale di ngtcp2 lo dice e io
-		 *       l'avevo letto male:
+		 *       `[M]` 17 Aug 2026, and this was the defect that held
+		 *       up all the others.  ngtcp2's manual says it and I
+		 *       had read it wrong:
 		 *
 		 *         «The function returns the written length of packet … because
 		 *          packet is nearly full and the library decided to make a
 		 *          complete packet.  **|*paccepted| might be zero or nonzero**.»
 		 *
-		 *       ⇒ `nw > 0` con `accettato == 0` vuol dire: **il datagram non e'
-		 *       entrato, MA UN PACCHETTO COMPLETO E' STATO SCRITTO** — con
-		 *       dentro i riscontri e i byte del video.  ⛔ Tornando `false` qui
-		 *       quel pacchetto veniva **buttato**: la passata proseguiva e
-		 *       riscriveva `dest` da capo.
+		 *       ⇒ `nw > 0` with `accettato == 0` means: **the datagram did not
+		 *       get in, BUT A COMPLETE PACKET HAS BEEN WRITTEN** — with
+		 *       the acknowledgements and the video bytes inside.  ⛔ Returning `false` here
+		 *       that packet was **thrown away**: the pass went on and
+		 *       rewrote `dest` from scratch.
 		 *
-		 * ⛔⛔ Il prezzo non era l'audio: erano **i RISCONTRI**.  Buttare un
-		 *      pacchetto su cinque che porta ACK fa sbagliare a QUIC la misura
-		 *      del percorso — e da li' vengono il pacer che non apre, la
-		 *      finestra che non cresce e il ritmo a singhiozzo.  ⚠ Cioe' il
-		 *      difetto **fabbricava** i sintomi che stavo inseguendo. */
+		 * ⛔⛔ The price was not the audio: it was **the ACKNOWLEDGEMENTS**.  Throwing away one
+		 *      packet in five that carries ACKs makes QUIC get the measurement
+		 *      of the path wrong — and from there come the pacer that does not open, the
+		 *      window that does not grow and the hiccuping rate.  ⚠ That is the
+		 *      defect **fabricated** the symptoms I was chasing. */
 	} else {
-		/* ⛔⭐ QUI IL RIMANDO NON SI PUO' PIU' FARE, E ADESSO SI SA PERCHE'.
+		/* ⛔⭐ HERE THE DEFERRAL CAN NO LONGER BE DONE, AND NOW WE KNOW WHY.
 		 *
-		 *     Fino al 23 agosto 2026 questo ramo si raggiungeva quando un
-		 *     contagiri DELLA CONNESSIONE aveva superato 4096, e il commento
-		 *     diceva «il blocco e' vecchio» senza che nessuno avesse guardato
-		 *     l'eta' di quel blocco (⇒ il riquadro di `WT_DGRAM_ZITTO_MAX_MS`).
-		 * ⭐ Adesso ci si arriva per un fatto MISURATO IN MILLISECONDI: da
-		 *    `WT_DGRAM_ZITTO_MAX_MS` questa connessione non e' riuscita a mettere
-		 *    un solo datagram in un solo pacchetto.  ⇒ Il piu' vecchio della coda
-		 *    non uscira' in tempo, e si butta — ed e' quel che §6.3 vuole: il
-		 *    suono in ritardo non serve a nessuno.
-		 * ⚠ E la riga qui sotto porta ANCHE l'eta' vera del blocco, che non
-		 *   decide: e' li' per farsi smentire (⇒ il riquadro del tetto). */
+		 *     Until 23 Aug 2026 this branch was reached when a
+		 *     rev counter OF THE CONNECTION had gone past 4096, and the comment
+		 *     said «the block is old» without anyone having looked at
+		 *     the age of that block (⇒ the box of `WT_DGRAM_ZITTO_MAX_MS`).
+		 * ⭐ Now one gets here for a fact MEASURED IN MILLISECONDS: for
+		 *    `WT_DGRAM_ZITTO_MAX_MS` this connection has not managed to put
+		 *    a single datagram in a single packet.  ⇒ The oldest in the queue
+		 *    will not leave in time, and it is dropped — and that is what §6.3 wants:
+		 *    late sound is of no use to anyone.
+		 * ⚠ And the line below ALSO carries the block's true age, which does not
+		 *   decide: it is there to be proved wrong (⇒ the box of the cap). */
 		w->audio_rifiutati++;
-		/* ⛔ `registro_dice` e non `registro_dettaglio`: il secondo e'
-		 *    SOPPRESSO quando la parlantina e' spenta, cioe' in ogni
-		 *    installazione normale — e allora «l'audio buttato» e «l'audio mai
-		 *    arrivato» tornano ad avere la stessa faccia, che e' esattamente
-		 *    quel che i due contatori esistono per impedire (rilievo 6).
-		 * ⚠ Con un fondo: una riga ogni 100 scarti, o un guasto continuo
-		 *   riempirebbe il registro invece di raccontarlo. */
+		/* ⛔ `registro_dice` and not `registro_dettaglio`: the second is
+		 *    SUPPRESSED when chatter is off, that is in every
+		 *    normal installation — and then «audio dropped» and «audio never
+		 *    arrived» look the same again, which is exactly
+		 *    what the two counters exist to prevent (finding 6).
+		 * ⚠ With a backstop: one line every 100 discards, or a continuous fault
+		 *   would fill the log instead of telling it. */
 		if (w->audio_rifiutati == 1 || w->audio_rifiutati % 100 == 0)
-			/* ⛔⭐ E LA CAUSA SI CHIEDE, invece di elencarne tre.
+			/* ⛔⭐ AND THE CAUSE IS ASKED, instead of listing three.
 			 *
-			 *     ngtcp2 da' `0` per tre motivi diversi — controllo di
-			 *     congestione, spazio nel buffer, limite di amplificazione — e
-			 *     la prima stesura di questa riga li elencava tutti e tre,
-			 *     cioe' non ne nominava nessuno (rilievo 10 della revisione).
-			 *     ⚠ `LEZIONI.md` §1.9: una deduzione scritta accanto a un
-			 *     numero che nessuno ha misurato.
+			 *     ngtcp2 gives `0` for three different reasons — congestion
+			 *     control, buffer space, amplification limit — and
+			 *     the first draft of this line listed all three,
+			 *     that is it named none of them (finding 10 of the review).
+			 *     ⚠ `LEZIONI.md` §1.9: a deduction written next to a
+			 *     number nobody measured.
 			 *
-			 * ⭐ `cwnd_left` la separa: se e' **zero** e' la congestione, e
-			 *    allora buttare e' la cosa sbagliata da fare — quel blocco
-			 *    entrerebbe fra qualche centinaio di microsecondi.  Se e'
-			 *    **grande**, la causa e' un'altra e va cercata altrove. */
+			 * ⭐ `cwnd_left` separates them: if it is **zero** it is congestion, and
+			 *    then dropping is the wrong thing to do — that block
+			 *    would get in within a few hundred microseconds.  If it is
+			 *    **large**, the cause is another and must be looked for elsewhere. */
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⚠ %s: datagram di %zu byte NON messo nel pacchetto "
-			                 "(destlen %zu) — buttato perche' non esce un datagram da "
-			                 "%llu ms, e il tetto e' %u (§6.3).  ⚠ e il blocco che "
-			                 "butto ne ha %llu, di ms: se i due numeri divergono, la "
-			                 "coda non si sta rinfrescando.  Rifiutati %llu.  "
-			                 "⛔ cwnd_left = %llu byte, quanto del pacer = %zu%s",
+			                 "⚠ %s: datagram of %zu bytes NOT put in the packet "
+			                 "(destlen %zu) — dropped because no datagram has gone out for "
+			                 "%llu ms, and the cap is %u (§6.3).  ⚠ and the block I "
+			                 "drop is %llu ms old: if the two numbers diverge, the "
+			                 "queue is not refreshing.  Refused %llu.  "
+			                 "⛔ cwnd_left = %llu bytes, pacer quantum = %zu%s",
 			                 w->provenienza, v.len, destlen,
 			                 (unsigned long long)zitto_ms,
 			                 (unsigned)WT_DGRAM_ZITTO_MAX_MS,
@@ -2202,8 +2202,8 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 			                 ngtcp2_conn_get_send_quantum(w->conn),
 			                 ngtcp2_conn_get_cwnd_left(w->conn) < v.len
-			                     ? " ⇒ E' LA CONGESTIONE: il blocco non ci sta ADESSO"
-			                     : " ⇒ NON e' la congestione: guarda il quanto");
+			                     ? " ⇒ IT IS CONGESTION: the block does not fit NOW"
+			                     : " ⇒ it is NOT congestion: look at the quantum");
 		dgram_togli_testa(w);
 	}
 
@@ -2215,7 +2215,7 @@ static bool dgram_scrivi_uno(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 }
 
 /* ------------------------------------------------------------------------ */
-/* 1. La riscrittura del SETTINGS.                                           */
+/* 1. Rewriting the SETTINGS.                                                */
 
 static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt)
 {
@@ -2229,8 +2229,8 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	for (size_t i = 0; i < veccnt; i++) {
 		if (origlen + vec[i].len > sizeof orig) {
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⛔ il SETTINGS di nghttp3 e' piu' lungo di "
-			                 "%zu byte: non lo riscrivo",
+			                 "⛔ nghttp3's SETTINGS is longer than "
+			                 "%zu bytes: not rewriting it",
 			                 sizeof orig);
 			return 0;
 		}
@@ -2240,16 +2240,16 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	if (origlen < 3)
 		return 0;
 
-	/* ⛔ Ogni passo ha un appiglio, e se l'appiglio non c'e' NON si riscrive
-	 *    alla cieca: si dice e si lascia stare.  Il server restera' senza
-	 *    WebTransport, e la misura lo vedra' subito — che e' quel che
-	 *    `DECISIONI.md` §6.4 chiede di riprovare a ogni aggiornamento di
+	/* ⛔ Every step has a foothold, and if the foothold is not there we do NOT rewrite
+	 *    blindly: we say so and leave it alone.  The server will stay without
+	 *    WebTransport, and the measurement will see it at once — which is what
+	 *    `DECISIONI.md` §6.4 asks to re-test at every update of
 	 *    nghttp3. */
 	n = varint_leggi(&tipo_stream, orig, origlen);
 	if (n == 0 || tipo_stream != 0x00) {
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ lo stream di controllo non comincia per 0x00 (e' "
-		                 "%llu): non tocco niente",
+		                 "⛔ the control stream does not start with 0x00 (it is "
+		                 "%llu): touching nothing",
 		                 (unsigned long long)tipo_stream);
 		return 0;
 	}
@@ -2257,7 +2257,7 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 
 	n = varint_leggi(&tipo_frame, orig + p, origlen - p);
 	if (n == 0 || tipo_frame != 0x04) {
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ il primo frame non e' SETTINGS (e' %llu)",
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ the first frame is not SETTINGS (it is %llu)",
 		                 (unsigned long long)tipo_frame);
 		return 0;
 	}
@@ -2269,8 +2269,8 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	p += n;
 
 	if (p + lung != origlen) {
-		/* C'e' altro dopo SETTINGS, oppure SETTINGS e' arrivato a pezzi. */
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS non e' tutto qui (%zu + %llu != %zu)",
+		/* There is something else after SETTINGS, or SETTINGS arrived in pieces. */
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS is not all here (%zu + %llu != %zu)",
 		                 p, (unsigned long long)lung, origlen);
 		return 0;
 	}
@@ -2280,12 +2280,12 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	a += varint_scrivi(aggiunta + a, WT_MAX_SESSIONS);
 	a += varint_scrivi(aggiunta + a, 1);
 
-	t += varint_scrivi(testa + t, 0x00); /* il tipo dello stream */
+	t += varint_scrivi(testa + t, 0x00); /* the stream type */
 	t += varint_scrivi(testa + t, 0x04); /* SETTINGS */
 	t += varint_scrivi(testa + t, lung + a);
 
 	if (t + lung + a > sizeof w->impbuf) {
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS troppo grande per il buffer");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ SETTINGS too big for the buffer");
 		return 0;
 	}
 
@@ -2299,20 +2299,20 @@ static size_t riscrivi_impostazioni(wt *w, const nghttp3_vec *vec, size_t veccnt
 	w->impbuf_len = o;
 
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "⭐ SETTINGS riscritto — %zu byte di nghttp3 + %zu nostri "
-	                 "(ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)",
+	                 "⭐ SETTINGS rewritten — %zu bytes of nghttp3 + %zu of ours "
+	                 "(ENABLE_WEBTRANSPORT and WT_MAX_SESSIONS)",
 	                 origlen, a);
 	return origlen;
 }
 
 /* ------------------------------------------------------------------------ */
-/* RCP: i quattro ganci, che sono l'unica cosa che il protocollo sa del mondo */
-/* di sotto.                                                                  */
+/* RCP: the four hooks, which are the only thing the protocol knows of the     */
+/* world below.                                                               */
 
 static void manda_controllo(wt *w, const uint8_t *dati, size_t len);
 static void chiudi_sessione(wt *w, uint8_t motivo);
-/* ⛔ Dichiarata qui perche' `regola_battito()` la chiama e il corpo sta dopo il
- *    censimento di chi guarda (`video_guarda_qualcuno()`), che le serve. */
+/* ⛔ Declared here because `regola_battito()` calls it and the body comes after the
+ *    census of who is watching (`video_guarda_qualcuno()`), which it needs. */
 static void cattura_spegni_se_sola(wt *w, const char *perche);
 
 static void gancio_manda(void *ctx, const uint8_t *dati, size_t len)
@@ -2325,24 +2325,24 @@ static void gancio_chiudi(void *ctx, uint8_t motivo)
 	chiudi_sessione((wt *)ctx, motivo);
 }
 
-/* ⛔⭐ QUI SI SMETTE DI BUTTARE IL CONTESTO — 25 agosto 2026, R10-A4 / P6.
+/* ⛔⭐ HERE WE STOP THROWING THE CONTEXT AWAY — 25 Aug 2026, R10-A4 / P6.
  *
- *     Fino a ieri questa funzione faceva `(void)ctx;`: `rcp.c` le consegnava la
- *     sessione e lei la gettava.  ⛔ E **163 righe su 163** di `rcp.c` passano
- *     di qui (`reg(rcp_sessione *s, …)` e' l'unico imbuto), fra cui la piu'
- *     voluminosa del prodotto — `fotogramma N SPEDITO`, ~38/s **per sessione**.
- *     `[M]` §6.7: con quattro desktop veri erano attribuibili allo **0,0 %**,
- *     e la prova cieca — spegni una scena, chiedi al registro chi si e' fermato
- *     — dava il nome giusto **0 volte su 4**.
+ *     Until yesterday this function did `(void)ctx;`: `rcp.c` handed it the
+ *     session and it threw it away.  ⛔ And **163 lines out of 163** of `rcp.c` go
+ *     through here (`reg(rcp_sessione *s, …)` is the only funnel), among them the most
+ *     voluminous of the product — `fotogramma N SPEDITO`, ~38/s **per session**.
+ *     `[M]` §6.7: with four real desktops they were attributable at **0.0 %**,
+ *     and the blind test — switch off a scene, ask the log who stopped
+ *     — gave the right name **0 times out of 4**.
  *
- * ⇒ L'identita' c'era gia' in mano: `ctx` **e'** il `wt`, il `wt` porta la
- *   sessione RCP, e `rcp_utente()` esisteva da sempre.  Si buttava in un punto
- *   solo, e si rimette in un punto solo.
+ * ⇒ The identity was already in hand: `ctx` **is** the `wt`, the `wt` carries the
+ *   RCP session, and `rcp_utente()` had always existed.  It was thrown away at a single
+ *   point, and it is put back at a single point.
  *
- * ⚠ E prima dell'autenticazione il nome NON c'e': li' la riga esce **muta**.
- *   Non ci si mette la provenienza al posto suo — non perche' non si sappia, ma
- *   perche' il corpo di quelle righe la porta gia', e un secondo campo che dice
- *   la stessa cosa e' volume, non diagnosi. */
+ * ⚠ And before authentication the name is NOT there: there the line comes out **mute**.
+ *   The origin is not put in its place — not because it is not known, but
+ *   because the body of those lines already carries it, and a second field saying
+ *   the same thing is volume, not diagnosis. */
 static void gancio_registra(void *ctx, const char *riga)
 {
 	wt *w = (wt *)ctx;
@@ -2350,19 +2350,19 @@ static void gancio_registra(void *ctx, const char *riga)
 	registro_dice_di(REG_RCP, chi, "%s", riga);
 }
 
-/* ⛔⭐ QUESTO GANCIO E' IL RIPIEGO, DAL 12 AGOSTO 2026 — `DECISIONI.md` §1.10.
+/* ⛔⭐ THIS HOOK IS THE FALLBACK, SINCE 12 AUG 2026 — `DECISIONI.md` §1.10.
  *
- *     ⚠ PAM BLOCCA, e qui bloccava il ciclo intero: la stretta di mano di un
- *       utente fermava quella di tutti gli altri e ritardava i pacchetti di
- *       chiunque fosse gia' collegato.  `[M]` B8, 11 agosto 2026: **da 1,0 a
- *       2,2 secondi**, e a metterceli era PAM (+1034 ms sui respinti contro
- *       +84 ms sugli ammessi — la firma di `pam_faildelay`).
+ *     ⚠ PAM BLOCKS, and here it blocked the whole loop: one user's
+ *       handshake stopped everybody else's and delayed the packets of
+ *       whoever was already connected.  `[M]` B8, 11 Aug 2026: **from 1.0 to
+ *       2.2 seconds**, and PAM was the one adding them (+1034 ms on the refused against
+ *       +84 ms on the admitted — the signature of `pam_faildelay`).
  *
- * ⛔ Adesso la strada buona e' `gancio_chiedi`, qui sotto.  Questa resta
- *    collegata perche' `rcp.c` la usa quando l'aiutante non c'e' — e allora e'
- *    giusto che il server funzioni lo stesso, con meno (`CODER.md` §4.2).
- * ⚠ Ma il ripiego SI DICHIARA: chi lo percorre lo trova scritto nel registro
- *   da `rcp.c`, «per via SINCRONA — il filo e' rimasto fermo». */
+ * ⛔ Now the good road is `gancio_chiedi`, below.  This one stays
+ *    connected because `rcp.c` uses it when the helper is not there — and then it is
+ *    right that the server works all the same, with less (`CODER.md` §4.2).
+ * ⚠ But the fallback IS DECLARED: whoever takes it finds it written in the log
+ *   by `rcp.c`, «SYNCHRONOUSLY — the wire stood still». */
 static bool gancio_verifica(void *ctx, const char *utente, const char *parola)
 {
 	wt *w = (wt *)ctx;
@@ -2372,11 +2372,11 @@ static bool gancio_verifica(void *ctx, const char *utente, const char *parola)
 	return rcp_autentica_da(utente, parola, rhost);
 }
 
-/* ⭐⭐ LA STRADA BUONA: si chiede, non si aspetta — `DECISIONI.md` §1.10.
+/* ⭐⭐ THE GOOD ROAD: one asks, one does not wait — `DECISIONI.md` §1.10.
  *
- * ⛔ Restituisce `false` quando la domanda non e' partita, e `rcp.c` lo tratta
- *    come un NO immediato: invariante I3, il fallimento e' un no e non un
- *    forse. */
+ * ⛔ Returns `false` when the request has not left, and `rcp.c` treats it
+ *    as an immediate NO: invariant I3, failure is a no and not a
+ *    maybe. */
 static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
                           uint64_t *pratica)
 {
@@ -2390,56 +2390,56 @@ static bool gancio_chiedi(void *ctx, const char *utente, const char *parola,
 }
 
 /* ========================================================================== */
-/* ⭐⭐ I QUATTRO GANCI DEL CANALE VIDEO — `RCP.md` §2.5, §5.1, §6.2.          */
+/* ⭐⭐ THE FOUR VIDEO CHANNEL HOOKS — `RCP.md` §2.5, §5.1, §6.2.             */
 /*                                                                            */
-/* Innestati il 12 agosto 2026 dal montaggio della fase 2.  Le righe le aveva */
-/* scritte `fasi/rapporti/P2-4-filo.md` §5, e ⛔ **non stanno in `main.c`**:   */
-/* `main.c` non conosce `rcp_ganci`, la struttura la riempie `rcp_avvia()` qui */
-/* dentro — la correzione al mandato che P2.4 ha messo a verbale.             */
+/* Grafted on 12 Aug 2026 by the phase 2 assembly.  The lines had been        */
+/* written by `fasi/rapporti/P2-4-filo.md` §5, and ⛔ **they are not in `main.c`**: */
+/* `main.c` does not know `rcp_ganci`, the structure is filled by `rcp_avvia()` in */
+/* here — the correction to the brief that P2.4 put on record.               */
 /*                                                                            */
-/* ⛔ SONO QUATTRO E NON UNO perche' §6.2 dice che **come lo stream finisce e' */
-/*    parte del messaggio**: FIN ⇒ fotogramma completo, `RESET_STREAM` ⇒       */
-/*    incompleto, si butta.  Un gancio solo che «manda un fotogramma» non      */
-/*    saprebbe dire la differenza (forma E8, rilievo R1.7).                    */
+/* ⛔ THEY ARE FOUR AND NOT ONE because §6.2 says that **how the stream ends is */
+/*    part of the message**: FIN ⇒ complete frame, `RESET_STREAM` ⇒           */
+/*    incomplete, it is thrown away.  A single hook that «sends a frame» could  */
+/*    not tell the difference (shape E8, finding R1.7).                       */
 /*                                                                            */
-/* ⛔⭐ E IL PREAMBOLO DI WEBTRANSPORT NON E' UN DETTAGLIO — proposta P18.     */
+/* ⛔⭐ AND THE WEBTRANSPORT PREAMBLE IS NOT A DETAIL — proposal P18.          */
 /*                                                                            */
-/*     Uno stream unidirezionale di WebTransport comincia con il **tipo dello  */
-/*     stream** (`0x54`) seguito dal **numero della sessione**, tutt'e due     */
-/*     interi variabili di QUIC (RFC 9000 §16): sul filo `0x54` sono i due     */
-/*     byte `40 54`.  I 28 byte di §6.2 cominciano DOPO.                       */
+/*     A WebTransport unidirectional stream starts with the **stream type**   */
+/*     (`0x54`) followed by the **session number**, both QUIC                 */
+/*     variable-length integers (RFC 9000 §16): on the wire `0x54` is the two  */
+/*     bytes `40 54`.  The 28 bytes of §6.2 start AFTER.                       */
 /*                                                                            */
-/*     ⚠ §2.5 dice «si leggono i primi due byte dello stream, che sono in ogni */
-/*       caso un campo `tipo`» — e su WebTransport non e' vero.  Un lettore che */
-/*       lo applicasse alla lettera ricaverebbe il canale `0x40` da OGNI       */
-/*       fotogramma e chiuderebbe con `ERRORE_PROTOCOLLO`.  ⛔ Il primo giro   */
-/*       dal vivo di `02-filo-cliente.py` e' finito rosso esattamente li'.     */
+/*     ⚠ §2.5 says «the first two bytes of the stream are read, which are in any */
+/*       case a `tipo` field» — and on WebTransport it is not true.  A reader who */
+/*       applied it to the letter would derive channel `0x40` from EVERY        */
+/*       frame and would close with `ERRORE_PROTOCOLLO`.  ⛔ The first live    */
+/*       run of `02-filo-cliente.py` ended red exactly there.                 */
 /*                                                                            */
-/*     ⭐ Questo file lo sapeva gia' per gli stream IN ARRIVO (`smista_uni`,   */
-/*        riga ~1164): qui c'e' l'altra meta', ed e' lo stesso `varint_scrivi` */
-/*        — non una copia dei due byte a mano, che il giorno in cui il numero  */
-/*        di sessione supera 63 diventerebbe muta e sbagliata.                 */
+/*     ⭐ This file already knew it for INCOMING streams (`smista_uni`,       */
+/*        line ~1164): here is the other half, and it is the same `varint_scrivi` */
+/*        — not a copy of the two bytes by hand, which the day the session      */
+/*        number goes past 63 would become mute and wrong.                    */
 
-/* ⭐⭐ I SEI GANCI DELL'INPUT — FASE 4, 14 agosto 2026.
+/* ⭐⭐ THE SIX INPUT HOOKS — PHASE 4, 14 Aug 2026.
  *
- * ⛔ PERCHE' SONO GANCI E NON CHIAMATE DIRETTE, e non e' stile: `rcp.c` vive in
- *    DUE cartelle che il `Makefile` (`GEMELLATI`) pretende identiche byte per
- *    byte, e la seconda copia `banchi/01-b3-rcp-innesta.py` la infila dentro
- *    `examples/` di ngtcp2, dove `input.h` **non esiste**.  Un `#include` la'
- *    dentro spegnerebbe B3, B5, B6, B8 e B11 in un colpo solo.
+ * ⛔ WHY THEY ARE HOOKS AND NOT DIRECT CALLS, and it is not style: `rcp.c` lives in
+ *    TWO folders that the `Makefile` (`GEMELLATI`) demands identical byte for
+ *    byte, and the second copy `banchi/01-b3-rcp-innesta.py` slips it inside
+ *    ngtcp2's `examples/`, where `input.h` **does not exist**.  An `#include` in
+ *    there would switch off B3, B5, B6, B8 and B11 in one go.
  *
- * ⛔ E PERCHE' PASSANO DI QUI E NON VANNO DRITTI AL PALCO: il palco e' in un
- *    ALTRO PROCESSO (`figlio.c`), che gira come l'utente ed e' l'unico ad avere
- *    la sessione grafica.  Questi sei portano il messaggio fino al ponte di
- *    `main.c`, che e' l'unico che conosce tutt'e due i lati.
+ * ⛔ AND WHY THEY GO THROUGH HERE AND NOT STRAIGHT TO THE STAGE: the stage is in
+ *    ANOTHER PROCESS (`figlio.c`), which runs as the user and is the only one holding
+ *    the graphical session.  These six carry the message up to the bridge of
+ *    `main.c`, which is the only one that knows both sides.
  *
- * ⚠ E il valore di ritorno e' quello di `input.h`, TRE stati: 0 consegnato,
- *   -1 no, 1 «non producibile» (solo la lettera).  ⛔ Qui pero' il terzo non
- *   si puo' distinguere — l'iniezione avviene oltre il confine di processo, e
- *   la risposta non torna indietro.  ⇒ **Si risponde 0 = «consegnato al
- *   palco»**, e chi conta davvero quel che il compositore ha PRESO e' il
- *   figlio, che lo timbra sul fotogramma (§6.2).  Questa asimmetria e'
- *   dichiarata e non nascosta: e' il prezzo del confine di processo. */
+ * ⚠ And the return value is the one of `input.h`, THREE states: 0 delivered,
+ *   -1 no, 1 «not producible» (the letter only).  ⛔ Here however the third cannot
+ *   be told apart — the injection happens beyond the process boundary, and
+ *   the answer does not come back.  ⇒ **We answer 0 = «delivered to the
+ *   stage»**, and whoever really counts what the compositor TOOK is the
+ *   child, which stamps it on the frame (§6.2).  This asymmetry is
+ *   declared and not hidden: it is the price of the process boundary. */
 static wt_input_richiesta gancio_palco_input;
 static void *gancio_palco_input_ctx;
 
@@ -2481,9 +2481,9 @@ static int gancio_input_pulsante(void *ctx, uint16_t codice, int premuto)
 static int gancio_input_rotella(void *ctx, int32_t asse_x, int32_t asse_y)
 {
 	wt *w = (wt *)ctx;
-	/* ⛔ Il segno NON si tocca qui, e i mezzi scatti passano interi: `RCP.md`
-	 *    §7.3 mette l'inversione dentro `input_rotella()`, una volta sola.
-	 *    Invertirlo anche qui lo annullerebbe. */
+	/* ⛔ The sign is NOT touched here, and half notches pass whole: `RCP.md`
+	 *    §7.3 puts the inversion inside `input_rotella()`, once only.
+	 *    Inverting it here too would cancel it. */
 	return input_al_palco(w, rcp_input_ultimo_id(w->rcp), FIGLI_INPUT_ROTELLA, 0,
 	                      0, asse_x, asse_y);
 }
@@ -2505,30 +2505,30 @@ static int gancio_input_posizione(void *ctx, uint16_t codice, int premuto)
 static int gancio_input_rilascia_tutto(void *ctx)
 {
 	wt *w = (wt *)ctx;
-	/* ⛔⭐ «La regola col rapporto danno/costo piu' alto del documento»
-	 *     (`RCP.md` §11).  ⚠ E il conto di quanti ne ha rilasciati resta al
-	 *     FIGLIO: qui non torna indietro.
+	/* ⛔⭐ «The rule with the highest damage/cost ratio of the document»
+	 *     (`RCP.md` §11).  ⚠ And the count of how many it released stays with the
+	 *     CHILD: it does not come back here.
 	 *
-	 * ⛔⛔ E fino al 16 agosto 2026 qui si rispondeva `0` intendendo «la
-	 *      richiesta e' partita» — ma il chiamante lo scriveva nel registro
-	 *      come «0 erano premuti», che e' la faccia del verde su un rilascio
-	 *      mai avvenuto.  ⇒ Adesso si risponde `SENZA_CONTO`, che e' la
-	 *      verita': «fatto, e il numero chiedilo a chi lo sa». */
+	 * ⛔⛔ And until 16 Aug 2026 here we answered `0` meaning «the
+	 *      request has left» — but the caller wrote it in the log
+	 *      as «0 were pressed», which is the face of green on a release
+	 *      that never happened.  ⇒ Now we answer `SENZA_CONTO`, which is the
+	 *      truth: «done, and ask for the number whoever knows it». */
 	return input_al_palco(w, 0, FIGLI_INPUT_RILASCIA_TUTTO, 0, 0, 0, 0) == 0
 	           ? RCP_RILASCIO_SENZA_CONTO
 	           : RCP_RILASCIO_IMPOSSIBILE;
 }
 
-/* ⭐⭐ IL GANCIO DELLA TELA — §7.1, e la catena intera in una riga:
+/* ⭐⭐ THE CANVAS HOOK — §7.1, and the whole chain in one line:
  *
- *     `rcp.c` (T_ADATTA_TELA) → questo → `main.c` → `figli_ritela()` →
+ *     `rcp.c` (T_ADATTA_TELA) → this → `main.c` → `figli_ritela()` →
  *     `MSG_INPUT/RITELA` → `cattura_ridimensiona()` → `pw_stream_update_params()`
  *
- * ⛔ E la risposta NON torna da qui: torna con un fotogramma alla misura nuova,
- *    che `video_a_una()` riporta a `rcp_tela_concessa()`.  ⚠ Chi leggesse questo
- *    `true` come «la tela e' cambiata» rifarebbe l'errore che `wayvnc` fa con
- *    l'esito della richiesta (`DECISIONI.md` §5.0-sexies, «la regola di forma
- *    rubata a neatvnc»). */
+ * ⛔ And the answer does NOT come back from here: it comes back with a frame at the new size,
+ *    which `video_a_una()` reports to `rcp_tela_concessa()`.  ⚠ Whoever read this
+ *    `true` as «the canvas has changed» would repeat the mistake `wayvnc` makes with
+ *    the outcome of the request (`DECISIONI.md` §5.0-sexies, «the shape rule
+ *    stolen from neatvnc»). */
 static wt_ritela_richiesta gancio_palco_ritela;
 static void *gancio_palco_ritela_ctx;
 
@@ -2547,12 +2547,12 @@ void wt_disposizione_gancio(wt_disposizione_richiesta f, void *ctx)
 	gancio_palco_disposizione_ctx = ctx;
 }
 
-/* ⭐⭐ §5-bis.7 — «metti questa disposizione», e va al palco di CHI HA
- *     CHIESTO.  ⛔ Invariante I3, identica alla ritela: il nome dell'utente
- *     e' quello che PAM ha ammesso su QUESTA sessione, mai un parametro che
- *     viene dal filo.  Un utente che potesse cambiare la tastiera di un
- *     altro sarebbe un difetto piccolo con una faccia grossa — il desktop
- *     dell'altro che smette di rispondere alle scorciatoie. */
+/* ⭐⭐ §5-bis.7 — «set this layout», and it goes to the stage of WHOEVER
+ *     ASKED.  ⛔ Invariant I3, identical to the re-canvas: the user's name
+ *     is the one PAM admitted on THIS session, never a parameter that
+ *     comes from the wire.  A user who could change another's keyboard
+ *     would be a small defect with a big face — the other's
+ *     desktop that stops answering shortcuts. */
 static bool gancio_disposizione(void *ctx, const char *nome)
 {
 	wt *w = (wt *)ctx;
@@ -2566,20 +2566,20 @@ static bool gancio_disposizione(void *ctx, const char *nome)
 	return gancio_palco_disposizione(gancio_palco_disposizione_ctx, mio, nome);
 }
 
-/* ⭐⭐ «QUESTA MACCHINA CONOSCE QUESTA DISPOSIZIONE?» — e la risposta la da'
- *     **XKB**, non un elenco scritto a mano.
+/* ⭐⭐ «DOES THIS MACHINE KNOW THIS LAYOUT?» — and the answer is given by
+ *     **XKB**, not by a list written by hand.
  *
- * ⛔ Il difetto che chiude, `[M]` banco `06-b34` caso 5, 16 agosto 2026:
- *    `hu`, `tr`, `gr` e `ua` esistono in `/usr/share/X11/xkb/symbols/` su
- *    questa macchina e venivano rifiutate con `SESSIONE_NON_SERVIBILE`,
- *    con la riga «disposizione sconosciuta a questa macchina» — una frase
- *    FALSA.  ⇒ Un utente ungherese non entrava.
+ * ⛔ The defect it closes, `[M]` bench `06-b34` case 5, 16 Aug 2026:
+ *    `hu`, `tr`, `gr` and `ua` exist in `/usr/share/X11/xkb/symbols/` on
+ *    this machine and were refused with `SESSIONE_NON_SERVIBILE`,
+ *    with the line «layout unknown to this machine» — a
+ *    FALSE sentence.  ⇒ A Hungarian user could not get in.
  *
- * ⭐ E la domanda si gira a `tastiera.c`, che e' gia' l'unico posto del
- *    prodotto che sa compilare una disposizione: chiedere due volte la
- *    stessa cosa in due modi diversi produce due risposte sotto la stessa
- *    etichetta (forma E2).  ⚠ Copre anche la VARIANTE — `it(nonesiste)`
- *    non compila — che l'elenco fisso non guardava affatto. */
+ * ⭐ And the question is forwarded to `tastiera.c`, which is already the only place of the
+ *    product that can compile a layout: asking the same thing twice
+ *    in two different ways produces two answers under the same
+ *    label (shape E2).  ⚠ It also covers the VARIANT — `it(nonesiste)`
+ *    does not compile — which the fixed list did not look at at all. */
 static int gancio_disposizione_esiste(void *ctx, const char *nome)
 {
 	wt *w = (wt *)ctx;
@@ -2588,12 +2588,12 @@ static int gancio_disposizione_esiste(void *ctx, const char *nome)
 
 	if (!nome || !*nome)
 		return 0;
-	/* ⭐ DI CHI E' LA RIGA — 27 agosto 2026, il rosso di C9.  Compilare una
-	 *   disposizione fa scrivere a `tastiera.c` due righe d'area `tastiera`, e
-	 *   qui siamo nel PADRE: senza un nome quelle due righe sono identiche per
-	 *   ogni inquilino che attacca, ⛔ e con due sessioni vive non si possono
-	 *   attribuire.  ⚠ Il nome e' quello di sempre — `wt_chi()`, cioe' quello
-	 *   che PAM ha ammesso su questa sessione, mai uno che venga dal filo. */
+	/* ⭐ WHOSE LINE IT IS — 27 Aug 2026, the red of C9.  Compiling a
+	 *   layout makes `tastiera.c` write two lines of area `tastiera`, and
+	 *   here we are in the PARENT: without a name those two lines are identical for
+	 *   every tenant attaching, ⛔ and with two live sessions they cannot be
+	 *   attributed.  ⚠ The name is the usual one — `wt_chi()`, that is the one
+	 *   PAM admitted on this session, never one coming from the wire. */
 	t = tastiera_apri_per(nome, wt_chi(w), &sbaglio);
 	if (!t) {
 		free(sbaglio);
@@ -2610,23 +2610,23 @@ static bool gancio_ritela(void *ctx, uint32_t larghezza, uint32_t altezza)
 
 	if (!gancio_palco_ritela || !w->rcp)
 		return false;
-	/* ⛔ Invariante I3: la tela si cambia al palco di CHI HA CHIESTO, e il nome
-	 *    e' quello che PAM ha ammesso su questa sessione — non un parametro che
-	 *    viene dal filo.  Un utente che potesse ridimensionare il monitor di un
-	 *    altro sarebbe un difetto piccolo con una faccia grossa: il desktop
-	 *    dell'altro che cambia misura da solo. */
+	/* ⛔ Invariant I3: the canvas is changed on the stage of WHOEVER ASKED, and the name
+	 *    is the one PAM admitted on this session — not a parameter that
+	 *    comes from the wire.  A user who could resize another's monitor
+	 *    would be a small defect with a big face: the other's
+	 *    desktop changing size by itself. */
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
 	return gancio_palco_ritela(gancio_palco_ritela_ctx, mio, larghezza, altezza);
 }
 
-/* ⭐⭐ §5.1 — «QUEST'UTENTE HA GIA' UNA SESSIONE GRAFICA LOCALE?»
+/* ⭐⭐ §5.1 — «DOES THIS USER ALREADY HAVE A LOCAL GRAPHICAL SESSION?»
  *
- * ⛔ Il gancio verso `sentinella.c`, e vive qui per la stessa ragione degli
- *    altri: `rcp.c` esiste in due copie e quella innestata in ngtcp2 non ha un
- *    bus di sistema.  Chi non lo collega non applica la regola, e `rcp.c` lo
- *    scrive nel registro invece di tacere. */
+ * ⛔ The hook towards `sentinella.c`, and it lives here for the same reason as the
+ *    others: `rcp.c` exists in two copies and the one grafted into ngtcp2 has no
+ *    system bus.  Whoever does not connect it does not apply the rule, and `rcp.c`
+ *    writes so in the log instead of keeping quiet. */
 static wt_locale_richiesta gancio_locale;
 static void *gancio_locale_ctx;
 
@@ -2636,8 +2636,8 @@ void wt_locale_gancio(wt_locale_richiesta f, void *ctx)
 	gancio_locale_ctx = ctx;
 }
 
-/* ⭐⭐ E IL RIPASSO HA IL SUO, che chiede per TUTTI in una volta: il perche' —
- *     coi numeri — sta in `webtransport.h` sopra `wt_locali_ripasso`. */
+/* ⭐⭐ AND THE SWEEP HAS ITS OWN, which asks for EVERYONE at once: the why —
+ *     with the numbers — is in `webtransport.h` above `wt_locali_ripasso`. */
 static wt_locali_ripasso gancio_locali;
 static void *gancio_locali_ctx;
 
@@ -2656,9 +2656,9 @@ static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
 	return gancio_locale(gancio_locale_ctx, utente, quale, quanto);
 }
 
-/* ⭐ D-001 — il nome del desktop di questa macchina per `SESSIONE` (§4.5).
- *    Uno per PROCESSO, come la scelta del desktop (`sessione.h`): lo mette
- *    `main.c` all'avvio, perche' qui `sessione.h` (glib) non entra. */
+/* ⭐ D-001 — the desktop name of this machine for `SESSIONE` (§4.5).
+ *    One per PROCESS, like the desktop choice (`sessione.h`): `main.c`
+ *    sets it at startup, because `sessione.h` (glib) does not get in here. */
 static const char *desktop_nome = "sconosciuto";
 
 void wt_desktop(const char *nome)
@@ -2677,7 +2677,7 @@ static const char *gancio_desktop(void *ctx)
 	return desktop_nome;
 }
 
-/* ⭐⭐ §7.6 — «l'utente ha chiesto di uscire». */
+/* ⭐⭐ §7.6 — «the user asked to log out». */
 static wt_termina_richiesta gancio_termina;
 static void *gancio_termina_ctx;
 
@@ -2694,10 +2694,10 @@ static void gancio_termina_sessione(void *ctx)
 
 	if (!gancio_termina || !w->rcp)
 		return;
-	/* ⛔ Invariante I3: si termina la sessione di CHI HA CHIESTO, e il nome e'
-	 *    quello che PAM ha ammesso su questa sessione — non un parametro che
-	 *    viene dal filo.  Un utente che potesse chiudere la sessione di un
-	 *    altro sarebbe il difetto piu' caro del documento. */
+	/* ⛔ Invariant I3: the session of WHOEVER ASKED is terminated, and the name is
+	 *    the one PAM admitted on this session — not a parameter that
+	 *    comes from the wire.  A user who could close another's
+	 *    session would be the dearest defect of the document. */
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return;
@@ -2718,31 +2718,31 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	if (restano)
 		*restano = ngtcp2_conn_get_streams_uni_left2(w->conn);
 
-	/* ⚠ `false` qui vuol dire «non adesso», e `rcp.c` lo traduce in «non e'
-	 *   partito un byte» — che e' meglio di mezzo fotogramma.  ⛔ La ragione
-	 *   piu' probabile e' che il client non conceda altri stream
-	 *   unidirezionali, e allora si dice quanti gliene restano invece di
-	 *   scrivere «non si e' potuto». */
+	/* ⚠ `false` here means «not now», and `rcp.c` translates it into «not a
+	 *   byte has left» — which is better than half a frame.  ⛔ The most
+	 *   likely reason is that the client does not grant more unidirectional
+	 *   streams, and then we say how many it has left instead of
+	 *   writing «it could not be done». */
 	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
 		registro_dettaglio_di(REG_WT, wt_chi(w),
-		                      "nessuno stream unidirezionale per il fotogramma: il "
-		                      "client ne concede ancora %llu (§2.5 ne vuole uno PER "
-		                      "fotogramma).  ⚠ La riga che decide — delta si butta, "
-		                      "chiave si aspetta — la scrive `rcp.c` (§2.3)",
+		                      "no unidirectional stream for the frame: the "
+		                      "client still grants %llu (§2.5 wants one PER "
+		                      "frame).  ⚠ The line that decides — delta is dropped, "
+		                      "keyframe waits — is written by `rcp.c` (§2.3)",
 		                      (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
 			                      w->conn));
 		return false;
 	}
 
-	/* ⛔ Quanto credito ngtcp2 CREDE di avere, chiesto a lui e non dedotto
-	 *    (`LEZIONI.md` §1.6).  ⚠ Serve a distinguere «il pari non ci ha dato
-	 *    credito» da «ce l'ha dato e uno dei due conta male»: il 13 agosto 2026
-	 *    un cliente che dichiarava `initial_max_streams_uni = 6` ha chiuso con
-	 *    `STREAM_LIMIT_ERROR` dopo che avevamo aperto 11 stream, e senza questa
-	 *    riga di chi fosse il conto sbagliato si poteva solo indovinare. */
+	/* ⛔ How much credit ngtcp2 BELIEVES it has, asked of it and not deduced
+	 *    (`LEZIONI.md` §1.6).  ⚠ It serves to tell «the peer gave us no
+	 *    credit» from «it gave it and one of the two counts wrong»: on 13 Aug 2026
+	 *    a client declaring `initial_max_streams_uni = 6` closed with
+	 *    `STREAM_LIMIT_ERROR` after we had opened 11 streams, and without this
+	 *    line whose count was wrong could only be guessed. */
 	registro_dettaglio_di(REG_WT, wt_chi(w),
-	                           "stream uni %ld aperto per un fotogramma; ngtcp2 dice che "
-	                           "ne restano %llu",
+	                           "uni stream %ld opened for a frame; ngtcp2 says "
+	                           "%llu are left",
 	                           (long)id,
 	                           (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
 		                           w->conn));
@@ -2751,23 +2751,23 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
 
 	if (!coda_metti(w, id, pre, n, false)) {
-		/* ⛔ Lo stream e' stato aperto e il preambolo non c'e': si AZZERA
-		 *    invece di lasciarlo aperto e muto.  Uno stream unidirezionale
-		 *    aperto e mai scritto tiene un posto nel conto del client e non
-		 *    diventa mai un fotogramma: e' la forma «vuoto e proibito hanno la
-		 *    stessa faccia», dal lato di chi aspetta. */
+		/* ⛔ The stream has been opened and the preamble is not there: it is RESET
+		 *    instead of left open and mute.  A unidirectional stream
+		 *    opened and never written holds a place in the client's count and never
+		 *    becomes a frame: it is the shape «empty and forbidden look
+		 *    the same», from the side of whoever waits. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, id, 0);
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ il preambolo di WebTransport (%zu byte) non entra in "
-		                 "coda: stream %ld azzerato, nessun fotogramma",
+		                 "⛔ the WebTransport preamble (%zu bytes) does not fit in the "
+		                 "queue: stream %ld reset, no frame",
 		                 n, (long)id);
 		return false;
 	}
 	*stream = id;
-	/* ⛔ Qui e in nessun altro posto: `rcp.c` non restituisce l'identificatore
-	 *    dello stream che ha aperto, e ricavarlo da «l'ultimo aperto sulla
-	 *    connessione» sarebbe indovinare.  ⭐ Senza questo, §5.1 non ha nessun
-	 *    modo di dire QUALE stream azzerare quando ne parte uno piu' recente. */
+	/* ⛔ Here and nowhere else: `rcp.c` does not return the identifier
+	 *    of the stream it opened, and deriving it from «the last opened on the
+	 *    connection» would be guessing.  ⭐ Without this, §5.1 has no
+	 *    way of saying WHICH stream to reset when a more recent one leaves. */
 	w->video_stream_ultimo = id;
 	return true;
 }
@@ -2775,24 +2775,24 @@ static bool gancio_video_apri(void *ctx, int64_t *stream, uint64_t *restano)
 static bool gancio_video_scrivi(void *ctx, int64_t stream, const uint8_t *dati,
                                 size_t len)
 {
-	/* ⛔ `false` = «non sono entrati», e chi chiama AZZERA: `rcp.c` non chiude
-	 *    mai con FIN uno stream a cui manca un pezzo, perche' FIN e'
-	 *    un'affermazione (§6.2). */
+	/* ⛔ `false` = «they did not get in», and the caller RESETS: `rcp.c` never
+	 *    closes with FIN a stream missing a piece, because FIN is
+	 *    an assertion (§6.2). */
 	return coda_metti((wt *)ctx, stream, dati, len, false);
 }
 
 static void gancio_video_fin(void *ctx, int64_t stream)
 {
 	wt *w = (wt *)ctx;
-	/* ⛔ Il FIN e' un elemento della coda come gli altri, e NON si scrive
-	 *    subito: deve uscire DOPO i byte che lo precedono, e la coda e' quel
-	 *    che tiene l'ordine.  ⚠ Un `shutdown_stream_write` qui chiuderebbe lo
-	 *    stream mentre i suoi byte sono ancora in coda — cioe' consegnerebbe
-	 *    un fotogramma troncato marcato «completo». */
+	/* ⛔ The FIN is a queue element like the others, and it is NOT written
+	 *    at once: it must go out AFTER the bytes preceding it, and the queue is what
+	 *    keeps the order.  ⚠ A `shutdown_stream_write` here would close the
+	 *    stream while its bytes are still in the queue — that is it would deliver
+	 *    a truncated frame marked «complete». */
 	if (!coda_metti(w, stream, NULL, 0, true))
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ il FIN dello stream %ld non entra in coda: il "
-		                 "fotogramma e' uscito ma non e' dichiarato completo",
+		                 "⛔ the FIN of stream %ld does not fit in the queue: the "
+		                 "frame has gone out but is not declared complete",
 		                 (long)stream);
 }
 
@@ -2801,33 +2801,33 @@ static void gancio_video_azzera(void *ctx, int64_t stream)
 	wt *w = (wt *)ctx;
 	if (!w->conn)
 		return;
-	/* ⛔ §5.1/§6.2: `RESET_STREAM` ⇒ il client BUTTA quel che e' arrivato e lo
-	 *    tratta come un buco. */
+	/* ⛔ §5.1/§6.2: `RESET_STREAM` ⇒ the client THROWS AWAY what has arrived and
+	 *    treats it as a hole. */
 	ngtcp2_conn_shutdown_stream_write(w->conn, 0, stream, 0);
-	/* ⛔⭐ E I BYTE ANCORA IN CODA SI BUTTANO QUI, NON «alla prossima passata».
+	/* ⛔⭐ AND THE BYTES STILL IN THE QUEUE ARE THROWN AWAY HERE, NOT «at the next pass».
 	 *
-	 *     Il commento di prima diceva che li avrebbe scartati `wt_scrivi()` sul
-	 *     ramo `NGTCP2_ERR_STREAM_SHUT_WR`, e con un fotogramma solo per
-	 *     sessione era vero e bastava.  ⛔ A sessanta al secondo no: quei byte
-	 *     restano contati in `byte_in_coda` fino alla passata dopo, cioe' il
-	 *     tetto della coda morde su roba che si e' gia' deciso di non spedire —
-	 *     e §5.1 dice **«i byte non ancora spediti non partono affatto»**, non
-	 *     «partono dopo».  ⚠ Il conto non si sfasa: `coda_butta_stream()` passa
-	 *     da `coda_uccidi()`, che e' l'unico punto in cui `byte_in_coda` cala. */
+	 *     The previous comment said `wt_scrivi()` would discard them on the
+	 *     `NGTCP2_ERR_STREAM_SHUT_WR` branch, and with a single frame per
+	 *     session that was true and enough.  ⛔ At sixty a second it is not: those bytes
+	 *     stay counted in `byte_in_coda` until the next pass, that is the
+	 *     queue cap bites on stuff it has already been decided not to send —
+	 *     and §5.1 says **«the bytes not yet sent do not leave at all»**, not
+	 *     «they leave later».  ⚠ The count does not go out of step: `coda_butta_stream()` goes
+	 *     through `coda_uccidi()`, which is the only point where `byte_in_coda` goes down. */
 	coda_butta_stream(w, stream);
 }
 
 /* ------------------------------------------------------------------------- */
-/* ⭐⭐ FASE 7 — I TRE GANCI DEL CANALE APPUNTI VERSO IL CLIENT (§2.5, §7.4).  */
+/* ⭐⭐ PHASE 7 — THE THREE CLIPBOARD CHANNEL HOOKS TOWARDS THE CLIENT (§2.5, §7.4). */
 /*                                                                            */
-/* ⛔⭐ E NON SONO I `video_*` RIUSATI, benche' aprano lo stesso genere di      */
-/*     stream: `gancio_video_apri()` RICORDA quale stream ha aperto            */
-/*     (`video_stream_ultimo`), perche' §5.1 gli fa azzerare **il precedente** */
-/*     quando ne parte uno piu' recente.  Un trasferimento di appunti che      */
-/*     passasse di li' diventerebbe «il fotogramma precedente» del prossimo    */
-/*     fotogramma — ⛔ cioe' verrebbe azzerato a meta' da una regola che non lo */
-/*     riguarda, e il sintomo sarebbe «gli appunti arrivano tagliati quando il */
-/*     desktop si muove».                                                      */
+/* ⛔⭐ AND THEY ARE NOT THE `video_*` ONES REUSED, although they open the same kind of */
+/*     stream: `gancio_video_apri()` REMEMBERS which stream it opened          */
+/*     (`video_stream_ultimo`), because §5.1 makes it reset **the previous one** */
+/*     when a more recent one leaves.  A clipboard transfer that              */
+/*     went through there would become «the previous frame» of the next       */
+/*     frame — ⛔ that is it would be reset halfway by a rule that does not    */
+/*     concern it, and the symptom would be «the clipboard arrives cut when the */
+/*     desktop moves».                                                         */
 
 static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 {
@@ -2845,9 +2845,9 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 
 	if (ngtcp2_conn_open_uni_stream(w->conn, &id, NULL) != 0) {
 		registro_dettaglio_di(REG_WT, wt_chi(w),
-		                           "nessuno stream unidirezionale per gli appunti: il "
-		                           "client ne concede ancora %llu (§2.5 ne vuole uno per "
-		                           "trasferimento)",
+		                           "no unidirectional stream for the clipboard: the "
+		                           "client still grants %llu (§2.5 wants one per "
+		                           "transfer)",
 		                           (unsigned long long)ngtcp2_conn_get_streams_uni_left2(
 			                           w->conn));
 		return false;
@@ -2857,12 +2857,12 @@ static bool gancio_appunti_apri(void *ctx, int64_t *stream, uint64_t *restano)
 	n += varint_scrivi(pre + n, (uint64_t)w->sessione);
 
 	if (!coda_metti(w, id, pre, n, false)) {
-		/* ⛔ Stesso trattamento del video: uno stream aperto e muto tiene un
-		 *    posto nel conto del client e non diventa mai un messaggio. */
+		/* ⛔ Same treatment as video: an opened and mute stream holds a
+		 *    place in the client's count and never becomes a message. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, id, 0);
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ il preambolo di WebTransport (%zu byte) non entra in "
-		                 "coda: stream %ld azzerato, nessun trasferimento di appunti",
+		                 "⛔ the WebTransport preamble (%zu bytes) does not fit in the "
+		                 "queue: stream %ld reset, no clipboard transfer",
 		                 n, (long)id);
 		return false;
 	}
@@ -2879,21 +2879,21 @@ static bool gancio_appunti_scrivi(void *ctx, int64_t stream, const uint8_t *dati
 static void gancio_appunti_fin(void *ctx, int64_t stream)
 {
 	wt *w = (wt *)ctx;
-	/* ⛔ Il FIN e' un elemento della coda come gli altri, e NON si scrive
-	 *    subito: deve uscire DOPO i byte che lo precedono. */
+	/* ⛔ The FIN is a queue element like the others, and it is NOT written
+	 *    at once: it must go out AFTER the bytes preceding it. */
 	if (!coda_metti(w, stream, NULL, 0, true))
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ il FIN dello stream %ld degli appunti non entra in "
-		                 "coda: il messaggio e' uscito e lo stream resta aperto",
+		                 "⛔ the FIN of clipboard stream %ld does not fit in the "
+		                 "queue: the message has gone out and the stream stays open",
 		                 (long)stream);
 }
 
 /* ------------------------------------------------------------------------- */
-/* ⭐⭐ E I DUE GANCI VERSO LA SESSIONE — «offri» e «rispondi».                */
+/* ⭐⭐ AND THE TWO HOOKS TOWARDS THE SESSION — «offer» and «answer».          */
 /*                                                                            */
-/* ⛔ Passano da `main.c` come quelli dell'input, e per la stessa ragione:     */
-/*    `webtransport.c` conosce il filo e non conosce i figli, e chi cuce i due */
-/*    mondi e' l'unico che conosce tutt'e due i lati.                         */
+/* ⛔ They go through `main.c` like the input ones, and for the same reason:   */
+/*    `webtransport.c` knows the wire and does not know the children, and whoever sews the two */
+/*    worlds together is the only one who knows both sides.                   */
 
 static wt_appunti_offerta gancio_palco_appunti_offri;
 static wt_appunti_consegna gancio_palco_appunti_risposta;
@@ -2914,11 +2914,11 @@ static bool gancio_appunti_offri(void *ctx)
 
 	if (!gancio_palco_appunti_offri || !w->rcp)
 		return false;
-	/* ⛔ Invariante I3: si offre alla sessione DI CHI HA CHIESTO, e il nome e'
-	 *    quello che PAM ha ammesso su questa connessione — non un parametro che
-	 *    viene dal filo.  Un utente che potesse mettere del testo negli appunti
-	 *    di un altro sarebbe una via di comunicazione fra sessioni che nessuno
-	 *    ha chiesto. */
+	/* ⛔ Invariant I3: it is offered to the session OF WHOEVER ASKED, and the name is
+	 *    the one PAM admitted on this connection — not a parameter that
+	 *    comes from the wire.  A user who could put text in another's clipboard
+	 *    would be a communication channel between sessions that nobody
+	 *    asked for. */
 	mio = rcp_utente(w->rcp);
 	if (!mio || !mio[0])
 		return false;
@@ -2941,306 +2941,306 @@ static bool gancio_appunti_risposta(void *ctx, uint32_t serial,
 }
 
 
-/* ⛔⭐ I PING DEL TRASPORTO MENTRE SI ASPETTANO LE CREDENZIALI — `RCP.md` §4.6,
- *     riquadro R1.8, che e' normativo e comincia con un ⛔.  Rilievo B-2, curato
- *     il 10 agosto 2026 notte.
+/* ⛔⭐ TRANSPORT PINGS WHILE THE CREDENTIALS ARE AWAITED — `RCP.md` §4.6,
+ *     box R1.8, which is normative and starts with a ⛔.  Finding B-2, cured
+ *     on the night of 10 Aug 2026.
  *
- * ⛔ IL DIFETTO, per esteso, perche' e' il documento a descriverlo parola per
- *    parola.  §4.6 da' 60 secondi fra `ECCOMI` spedito e `CREDENZIALI`
- *    ricevute — «e' il tempo in cui una persona digita la parola d'ordine».  In
- *    quei 60 secondi sul filo NON PASSA NIENTE: §2.2 vieta il battito
- *    applicativo, e prima dell'attacco non c'e' nessun altro canale attivo.  Al
- *    trentesimo secondo matura l'inattivita' di QUIC (`IDLE_MS`), la
- *    connessione muore IN SILENZIO — nessun `CONGEDO`, nessun codice, nessun
- *    motivo di §8.2 — e `TETTO_CREDENZIALI` non scade mai, perche' la sessione
- *    RCP e' gia' stata liberata trenta secondi prima.
+ * ⛔ THE DEFECT, in full, because the document describes it word for
+ *    word.  §4.6 gives 60 seconds between `ECCOMI` sent and `CREDENZIALI`
+ *    received — «it is the time in which a person types the password».  In
+ *    those 60 seconds NOTHING GOES on the wire: §2.2 forbids the application
+ *    heartbeat, and before attach there is no other active channel.  At the
+ *    thirtieth second QUIC idleness (`IDLE_MS`) matures, the
+ *    connection dies IN SILENCE — no `CONGEDO`, no code, no
+ *    reason of §8.2 — and `TETTO_CREDENZIALI` never expires, because the RCP
+ *    session was already freed thirty seconds earlier.
  *
- *    ⚠ Chi ci cade: chi digita piano, cioe' chi digita su un telefono.  Difetto
- *      intermittente, il peggiore da diagnosticare — e il banco misurerebbe 30
- *      dove il documento dice 60, dando la colpa al banco.
+ *    ⚠ Who falls into it: whoever types slowly, that is whoever types on a phone.  An
+ *      intermittent defect, the worst to diagnose — and the bench would measure 30
+ *      where the document says 60, blaming the bench.
  *
- * ⛔ E `wt_battito_ns()` NON E' LA CURA, ed e' il punto: fa scorrere l'orologio
- *    NOSTRO ogni 100 ms e per i tetti di §4.6 va benissimo, ⛔ ma non mette un
- *    byte sul filo — e l'orologio che uccide la connessione e' quello di QUIC,
- *    che guarda i byte.  Il riquadro di `webtransport.h` presentava l'assenza
- *    del keep-alive come un miglioramento sull'innesto citando §2.2: §4.6
- *    distingue esplicitamente le due cose — i PING del trasporto «non portano
- *    informazione, non hanno una risposta da interpretare, e non creano una
- *    seconda verita' sul silenzio» — e il divieto di §2.2 NON li copre.
+ * ⛔ And `wt_battito_ns()` IS NOT THE CURE, and that is the point: it moves OUR
+ *    clock forward every 100 ms and for the caps of §4.6 it is perfectly fine, ⛔ but it does not put a
+ *    byte on the wire — and the clock that kills the connection is QUIC's,
+ *    which looks at bytes.  The box of `webtransport.h` presented the absence
+ *    of keep-alive as an improvement over the graft citing §2.2: §4.6
+ *    explicitly tells the two apart — transport PINGs «carry no
+ *    information, have no answer to interpret, and do not create a
+ *    second truth about silence» — and the ban of §2.2 does NOT cover them.
  *
- * ⭐ 10 secondi, e non 25: il PING deve avere il tempo di essere ritrasmesso
- *    almeno una volta prima che i 30 maturino.  Un keep-alive tarato al pelo
- *    del tetto e' un keep-alive che il primo pacchetto perso rende inutile.
+ * ⭐ 10 seconds, and not 25: the PING must have time to be retransmitted
+ *    at least once before the 30 mature.  A keep-alive tuned to a hair
+ *    of the cap is a keep-alive the first lost packet makes useless.
  *
- * ⚠ E un client MORTO muore lo stesso: RFC 9000 §10.1 rimette in moto il
- *   cronometro dell'inattivita' quando si RICEVE un pacchetto, non quando lo si
- *   manda.  I nostri PING tengono viva una connessione con qualcuno che
- *   risponde, non una con nessuno.
+ * ⚠ And a DEAD client dies all the same: RFC 9000 §10.1 restarts the
+ *   idle stopwatch when a packet is RECEIVED, not when one is
+ *   sent.  Our PINGs keep alive a connection with someone who
+ *   answers, not one with nobody.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔⭐ E DAL 16 AGOSTO 2026 RESTANO ACCESI PER TUTTA LA SESSIONE.  Qui sotto
- *      c'era scritto il contrario, e la ragione era questa:
+ * ⛔⛔⭐ AND SINCE 16 AUG 2026 THEY STAY ON FOR THE WHOLE SESSION.  Below
+ *      the opposite was written, and the reason was this:
  *
- *        ~~«Tenere viva la connessione SEMPRE cambierebbe il significato dei 30
- *        secondi di §2.2 — l'orologio del silenzio: scaduto, il client e'
- *        staccato»~~
+ *        ~~«Keeping the connection alive ALWAYS would change the meaning of the 30
+ *        seconds of §2.2 — the silence clock: once expired, the client is
+ *        detached»~~
  *
- *      ⇒ E' caduta in due passi, tutt'e due misurati.
+ *      ⇒ It fell in two steps, both measured.
  *
- *   1. ⛔ **La semantica era gia' cambiata**, e non da questi PING: da stamattina
- *      §5.3 conta i PACCHETTI e non i byte di RCP (`rcp.c`, `ultima_vita`),
- *      perche' contando i byte un utente che LEGGEVA perdeva il posto dopo
- *      trenta secondi e un secondo dispositivo glielo portava via.  ⇒ «Il client
- *      c'e'» vuol dire gia' «risponde sul filo».  Questi PING non aggiungono
- *      quella semantica: la rendono **affidabile**.
+ *   1. ⛔ **The semantics had already changed**, and not because of these PINGs: since this morning
+ *      §5.3 counts PACKETS and not RCP bytes (`rcp.c`, `ultima_vita`),
+ *      because counting bytes a user who was READING lost the slot after
+ *      thirty seconds and a second device took it away.  ⇒ «The client
+ *      is there» already means «it answers on the wire».  These PINGs do not add
+ *      that semantics: they make it **reliable**.
  *
- *   2. ⛔⛔ **Senza, il margine e' del BROWSER e non nostro.**  `[M]` Con una
- *      sessione ferma, i pacchetti arrivano ogni **15002 · 15005 · 15002 ms** —
- *      quindici secondi esatti, meta' netta del tetto.  Un numero cosi' regolare
- *      non e' traffico: e' il keep-alive di Chrome.  ⚠ Un browser diverso, o
- *      Chrome che cambia quel numero, e i posti ricominciano a cadere sotto il
- *      naso di chi legge.
+ *   2. ⛔⛔ **Without them, the margin is the BROWSER's and not ours.**  `[M]` With a
+ *      still session, packets arrive every **15002 · 15005 · 15002 ms** —
+ *      exactly fifteen seconds, a clean half of the cap.  A number that regular
+ *      is not traffic: it is Chrome's keep-alive.  ⚠ A different browser, or
+ *      Chrome changing that number, and the slots start falling again under the
+ *      nose of whoever is reading.
  *
- * ⚠ E LA PREVISIONE DI `SPECIFICHE.md` §5.3 SULLA SCHEDA CONGELATA NON SI
- *   AVVERA — «una scheda in secondo piano viene congelata dopo circa cinque
- *   minuti, quindi tace, quindi si stacca».  `[M]` 16 agosto, browser vero
- *   dell'utente senza automazione attaccata, scheda in secondo piano per
- *   **undici minuti**: zero stacchi, pacchetti puntuali a 15 s fino all'ultimo.
- *   ⛔ Quella riga e' `[S]`, una previsione sul comportamento dei browser, e la
- *   misura la smentisce.
+ * ⚠ AND THE PREDICTION OF `SPECIFICHE.md` §5.3 ABOUT THE FROZEN TAB DOES NOT
+ *   COME TRUE — «a background tab is frozen after about five
+ *   minutes, so it goes quiet, so it is detached».  `[M]` 16 August, the user's real
+ *   browser without automation attached, tab in the background for
+ *   **eleven minutes**: zero detaches, packets on time at 15 s until the last.
+ *   ⛔ That line is `[S]`, a prediction about browser behaviour, and the
+ *   measurement disproves it.
  *
- * ⚠ IL PREZZO, DICHIARATO: un client la cui PAGINA e' morta ma la cui RETE
- *   risponde tiene il posto.  ⛔ Ma lo teneva gia' — vedi il punto 1 — e chi
- *   torna su quella scheda ritrova la sua sessione, che e' l'invariante I4.  Il
- *   caso che resta scoperto e' il client che smette di rispondere ANCHE sul
- *   filo, e quello si stacca ai trenta secondi come sempre. */
+ * ⚠ THE PRICE, DECLARED: a client whose PAGE is dead but whose NETWORK
+ *   answers keeps the slot.  ⛔ But it already kept it — see point 1 — and whoever
+ *   returns to that tab finds their session again, which is invariant I4.  The
+ *   case left uncovered is the client that stops answering ALSO on the
+ *   wire, and that one is detached at thirty seconds as always. */
 #define WT_TIENILA_VIVA_NS (10ULL * NGTCP2_SECONDS)
 
 /* ========================================================================== */
-/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, e dal 24 ago 2026 nasce ACCESA (decisione */
-/*          dell'utente; fino al 23 nasceva spenta per l'invariante I6).      */
+/* ⛔⭐⭐⭐ PHASE 9 — THE DEAD LINE, and since 24 Aug 2026 it is born ON (the  */
+/*          user's decision; until the 23rd it was born off because of I6).    */
 /*                                                                            */
-/* LA DECISIONE E' DELL'UTENTE, 23 agosto 2026: *«se in 10 secondi non         */
-/* arrivano piu' pacchetti e' chiaro che la connessione e' morta [...] se      */
-/* all'interno di un intervallo di 1-2 secondi c'e' una perdita di pacchetti   */
-/* piuttosto copiosa direi di trattarla come il caso in cui la connessione e'  */
-/* caduta»*.  E alla domanda su che cosa veda l'utente quando scatta ha        */
-/* scelto: **il filo cade e l'utente rientra a mano**.                        */
+/* THE DECISION IS THE USER'S, 23 Aug 2026: *«if no more packets arrive in 10 */
+/* seconds it is clear the connection is dead [...] if within an interval    */
+/* of 1-2 seconds there is a rather copious packet loss I would say to treat  */
+/* it as the case in which the connection has dropped»*.  And asked what the  */
+/* user sees when it fires, the user                                          */
+/* chose: **the wire drops and the user comes back in by hand**.              */
 /*                                                                            */
-/* ⛔ DA DOVE NASCE, e sono due comportamenti brutti tutt'e due — `[M]` 23     */
-/*    agosto, stessa macchina, profilo `raffica-forte` (11,10 % INIETTATO in   */
-/*    197 raffiche): SENZA le cure della fase l'immagine si congela fino a     */
-/*    **14,26 s** (7 secondi su 25 hanno visto un fotogramma); CON le cure si  */
-/*    muove ma con **4,5 s di ritardo**.  ⇒ L'utente ha deciso che nessuno dei */
-/*    due va servito: una linea cosi' si DICHIARA morta.                      */
+/* ⛔ WHERE IT COMES FROM, and they are two ugly behaviours both — `[M]` 23    */
+/*    Aug, same machine, profile `raffica-forte` (11.10 % INJECTED in          */
+/*    197 bursts): WITHOUT the phase's cures the image freezes for up to       */
+/*    **14.26 s** (7 seconds out of 25 saw a frame); WITH the cures it         */
+/*    moves but with **4.5 s of delay**.  ⇒ The user decided neither of the    */
+/*    two is to be served: such a line is DECLARED dead.                       */
 /*                                                                            */
-/* ⛔⛔⭐⭐ LA GRANDEZZA E' CAMBIATA IL 23 AGOSTO 2026, E LA VECCHIA E' STATA     */
-/*       REFUTATA DAL SUO STESSO BANCO.  Si scrive qui per intero, perche'    */
-/*       chi legge dopo deve trovare la RAGIONE e non l'assenza.              */
+/* ⛔⛔⭐⭐ THE QUANTITY CHANGED ON 23 AUG 2026, AND THE OLD ONE WAS            */
+/*       REFUTED BY ITS OWN BENCH.  It is written here in full, because        */
+/*       whoever reads later must find the REASON and not the absence.         */
 /*                                                                            */
-/* ⛔ QUEL CHE C'ERA: `pkt_lost / pkt_sent` dentro una finestra, con soglia a  */
-/*    50‰.  ⛔⛔ E ORDINA I DUE CASI AL CONTRARIO — `[M]` 23 agosto 2026,       */
+/* ⛔ WHAT THERE WAS: `pkt_lost / pkt_sent` within a window, with threshold at */
+/*    50‰.  ⛔⛔ AND IT ORDERS THE TWO CASES THE WRONG WAY ROUND — `[M]` 23 Aug 2026, */
 /*    `banchi/09-b81-linea-morta.py`:                                         */
 /*                                                                            */
-/*      · `casa-cattiva`  — perdita INIETTATA 1,86-2,15 %, perdita DICHIARATA */
-/*        da ngtcp2 **512‰** (51,2 %).  E la linea REGGE: dieci minuti, 9,60  */
-/*        fotogrammi/s, copertura 1,00, buco massimo 0,50 s, e il cliente e'  */
-/*        ancora attaccato a 599,99 s.                                        */
-/*      · `raffica-forte` — perdita INIETTATA 12,28-14,00 %, DICHIARATA       */
-/*        **123‰** (12,3 %).  E la linea NON regge: copertura 0,20, buco      */
-/*        massimo 30,06 s.                                                    */
+/*      · `casa-cattiva`  — loss INJECTED 1.86-2.15 %, loss DECLARED           */
+/*        by ngtcp2 **512‰** (51.2 %).  And the line HOLDS: ten minutes, 9.60  */
+/*        frames/s, coverage 1.00, largest gap 0.50 s, and the client is       */
+/*        still attached at 599.99 s.                                          */
+/*      · `raffica-forte` — loss INJECTED 12.28-14.00 %, DECLARED              */
+/*        **123‰** (12.3 %).  And the line does NOT hold: coverage 0.20, largest */
+/*        gap 30.06 s.                                                         */
 /*                                                                            */
-/*    ⇒ Quella che FUNZIONA dichiara QUATTRO VOLTE piu' perdita di quella     */
-/*      che non funziona.  ⛔ Nessun valore le separa: una soglia che lasci    */
-/*      passare `casa-cattiva` (≥512‰) lascia passare anche `raffica-forte`;  */
-/*      una che fermi `raffica-forte` (≤123‰) ferma prima `casa-cattiva`.     */
-/*      Non e' una taratura da rifare: e' la grandezza sbagliata.             */
+/*    ⇒ The one that WORKS declares FOUR TIMES more loss than the one          */
+/*      that does not work.  ⛔ No value separates them: a threshold that lets */
+/*      `casa-cattiva` through (≥512‰) lets `raffica-forte` through too;       */
+/*      one that stops `raffica-forte` (≤123‰) stops `casa-cattiva` first.     */
+/*      It is not a tuning to redo: it is the wrong quantity.                  */
 /*                                                                            */
-/* ⭐ LA CAUSA, MISURATA: `casa-cattiva` porta `delay 40ms 20ms distribution   */
-/*    normal`, e la sonda ci misura il **93,5 % di pacchetti fuori ordine**   */
-/*    con l'1,9 % di perdita vera.  **ngtcp2 conta un pacchetto sorpassato    */
-/*    come perso.**  ⇒ Su una linea che RIORDINA, `pkt_lost/pkt_sent` misura  */
-/*    il RIORDINO e non la perdita — che e' il fatto centrale di questa       */
-/*    fase, e ci e' tornato addosso.  ⚠ E non e' la partenza della            */
-/*    connessione: tolte le prime dieci finestre, 399 su 399 restano sopra    */
-/*    soglia, mediana 524‰, ininterrotto per dieci minuti.                    */
+/* ⭐ THE CAUSE, MEASURED: `casa-cattiva` carries `delay 40ms 20ms distribution */
+/*    normal`, and the probe measures **93.5 % of packets out of order** there */
+/*    with 1.9 % of true loss.  **ngtcp2 counts an overtaken packet           */
+/*    as lost.**  ⇒ On a line that REORDERS, `pkt_lost/pkt_sent` measures      */
+/*    REORDERING and not loss — which is the central fact of this              */
+/*    phase, and it came back at us.  ⚠ And it is not the start of the        */
+/*    connection: leaving out the first ten windows, 399 out of 399 stay above */
+/*    threshold, median 524‰, uninterrupted for ten minutes.                   */
 /*                                                                            */
-/* ⭐⭐ E IL NUMERO NON SI BUTTA, CAMBIA MESTIERE: da GIUDICE a TESTIMONE.      */
-/*     Resta nella riga dello scatto come `permille=`, ed e' la miglior       */
-/*     misura di RIORDINO che il server abbia SUGLI STREAM — dove             */
-/*     `dgram_falsi` (§17.3) non arriva, perche' quello vale sui datagram,    */
-/*     cioe' sul solo audio.  ⇒ Un `permille=512` accanto a uno `stallo_ms=0` */
-/*     non e' un guasto: e' jitter, e adesso la riga lo fa VEDERE invece di   */
-/*     deciderlo.                                                             */
+/* ⭐⭐ AND THE NUMBER IS NOT THROWN AWAY, IT CHANGES JOB: from JUDGE to WITNESS. */
+/*     It stays in the firing line as `permille=`, and it is the best          */
+/*     measure of REORDERING the server has ON STREAMS — where                 */
+/*     `dgram_falsi` (§17.3) does not reach, because that one holds on datagrams, */
+/*     that is on audio only.  ⇒ A `permille=512` next to a `stallo_ms=0`      */
+/*     is not a fault: it is jitter, and now the line SHOWS it instead of      */
+/*     deciding it.                                                            */
 /*                                                                            */
-/* ⛔⭐⭐⭐ LA GRANDEZZA NUOVA, E I DATI LA INDICANO DA SOLI: **DA QUANTO         */
-/*        TEMPO NON ESCE UN FOTOGRAMMA PUR AVENDONE DA MANDARE.**  Quel che   */
-/*        separa i due casi non e' quanto si perde, e' se i fotogrammi        */
-/*        ESCONO — `casa-cattiva` buco massimo 0,50 s, `raffica-forte`        */
-/*        30,06 s: sessanta volte, e nella direzione giusta.                  */
+/* ⛔⭐⭐⭐ THE NEW QUANTITY, AND THE DATA POINT TO IT BY THEMSELVES: **HOW LONG */
+/*        NO FRAME HAS LEFT WHILE HAVING SOME TO SEND.**  What                 */
+/*        separates the two cases is not how much is lost, it is whether frames */
+/*        LEAVE — `casa-cattiva` largest gap 0.50 s, `raffica-forte`           */
+/*        30.06 s: sixty times, and in the right direction.                    */
 /*                                                                            */
-/*   ⛔ E LE DUE META' CONTANO TUTT'E DUE.  «Non esce niente» da solo e'       */
-/*      anche la SCENA FERMA, che `[M]` in questa fase e' normale e non       */
-/*      costa niente: `RecordVirtual` di Mutter consegna solo sul             */
-/*      cambiamento, e il risveglio vale 13 ms.  ⇒ Se non abbiamo niente da   */
-/*      mandare non c'e' niente di rotto, e il conto non deve nemmeno         */
-/*      PARTIRE.                                                              */
+/*   ⛔ AND BOTH HALVES COUNT.  «Nothing leaves» alone is                      */
+/*      also the STILL SCENE, which `[M]` in this phase is normal and          */
+/*      costs nothing: Mutter's `RecordVirtual` delivers only on               */
+/*      change, and the wake-up is worth 13 ms.  ⇒ If we have nothing to       */
+/*      send nothing is broken, and the count must not even                    */
+/*      START.                                                                 */
 /*                                                                            */
-/*   ⭐ COME SI CALCOLA — due contatori LOCALI e MONOTONI, la forma P8→P20     */
-/*      di `RCP.md:398` (la stessa di `arretrato`), e non un orologio         */
-/*      libero: il tempo entra solo come distanza fra due campionamenti.      */
+/*   ⭐ HOW IT IS COMPUTED — two LOCAL and MONOTONIC counters, the P8→P20 shape */
+/*      of `RCP.md:398` (the same as `arretrato`), and not a free              */
+/*      clock: time enters only as the distance between two samples.           */
 /*                                                                            */
-/*        «e' uscito»   `lm_usciti` — i byte di VIDEO consegnati a ngtcp2     */
-/*                      (`coda_consegna()`).  Se sale, il conto RIPARTE.      */
-/*        «avevo da     `coda_byte_video() > 0` — byte di fotogrammi ancora   */
-/*         mandare»     in casa nostra — OPPURE `lm_offerti` salito, cioe'    */
-/*                      il palco ci ha dato un fotogramma.  Se nessuno dei    */
-/*                      due, il conto riparte lo stesso: non c'era niente     */
-/*                      da mandare, e non c'e' niente di rotto.               */
+/*        «it went out»  `lm_usciti` — the VIDEO bytes handed to ngtcp2        */
+/*                      (`coda_consegna()`).  If it rises, the count RESTARTS. */
+/*        «I had some   `coda_byte_video() > 0` — frame bytes still            */
+/*         to send»     in our house — OR `lm_offerti` risen, that is          */
+/*                      the stage gave us a frame.  If neither of the          */
+/*                      two, the count restarts all the same: there was nothing */
+/*                      to send, and nothing is broken.                        */
 /*                                                                            */
-/*      ⛔ IL SECONDO TERMINE NON E' UN DI PIU': senza `lm_offerti` il         */
-/*         REGOLATORE DEL RITMO nasconderebbe lo stallo.  Quello smette di    */
-/*         PRODURRE quando la coda non si svuota, `video_sgombra()`           */
-/*         abbandona i delta vecchi, e «non ho niente da mandare»             */
-/*         diventerebbe vero proprio mentre lo schermo e' fermo.  ⇒ Si        */
-/*         conta il fotogramma che il palco ci da', PRIMA di ogni freno,      */
-/*         sgombero o rifiuto.                                                */
-/*      ⛔ E SI CONTANO I BYTE, non i fotogrammi interi: una chiave da         */
-/*         ~60 000 byte su una linea stretta puo' metterci secondi a uscire   */
-/*         tutta, e a fotogrammi quei secondi sarebbero uno «stallo» mentre   */
-/*         il filo sta lavorando.  Un byte che parte e' un filo che porta.    */
+/*      ⛔ THE SECOND TERM IS NOT AN EXTRA: without `lm_offerti` the            */
+/*         RATE REGULATOR would hide the stall.  That one stops                */
+/*         PRODUCING when the queue does not empty, `video_sgombra()`          */
+/*         abandons old deltas, and «I have nothing to send»                   */
+/*         would become true precisely while the screen is frozen.  ⇒ We       */
+/*         count the frame the stage gives us, BEFORE any brake,               */
+/*         clear-out or refusal.                                               */
+/*      ⛔ AND BYTES ARE COUNTED, not whole frames: a keyframe of              */
+/*         ~60 000 bytes on a narrow line can take seconds to go out           */
+/*         entirely, and in frames those seconds would be a «stall» while      */
+/*         the wire is working.  A byte that leaves is a wire that carries.    */
 /*                                                                            */
-/* ⛔⛔ IL NUMERO, COI DUE MARGINI — `[M]` 23 agosto 2026, stesso banco.        */
-/*      ⛔ E i casi INTERMEDI contano quanto gli estremi:                      */
+/* ⛔⛔ THE NUMBER, WITH THE TWO MARGINS — `[M]` 23 Aug 2026, same bench.       */
+/*      ⛔ And the INTERMEDIATE cases count as much as the extremes:           */
 /*                                                                            */
-/*        tredici profili sani    buco 0,04-0,35 s     reggono                */
-/*        `casa-cattiva`          buco **0,50 s**      REGGE, e non va        */
-/*                                                     dichiarata morta       */
-/*        `raffica-1` (1,07 %     ⚠ **1,00 s** pieno   regge, e consegna      */
-/*         a grappoli)              senza un fotogr.   23,94 fotogrammi/s     */
-/*        `raffica-forte`         **30,06 s**, e       NON regge              */
-/*                                 14,26 s in un                              */
-/*                                 altro giro                                 */
+/*        thirteen healthy profiles gap 0.04-0.35 s     hold                   */
+/*        `casa-cattiva`          gap **0.50 s**       HOLDS, and must not     */
+/*                                                     be declared dead        */
+/*        `raffica-1` (1.07 %     ⚠ **1.00 s** whole   holds, and delivers     */
+/*         in clusters)             without a frame    23.94 frames/s          */
+/*        `raffica-forte`         **30.06 s**, and     does NOT hold           */
+/*                                 14.26 s in another                          */
+/*                                 run                                         */
 /*                                                                            */
-/*     ⚠ `raffica-1` E' IL CASO CHE TIENE ONESTA LA SOGLIA: una linea che     */
-/*       consegna 24 fotogrammi al secondo ha comunque avuto **un secondo     */
-/*       intero vuoto**.  Una soglia sotto quello butterebbe fuori una        */
-/*       sessione perfettamente usabile.                                      */
+/*     ⚠ `raffica-1` IS THE CASE THAT KEEPS THE THRESHOLD HONEST: a line that  */
+/*       delivers 24 frames a second still had **one whole                    */
+/*       empty second**.  A threshold below that would throw out a             */
+/*       perfectly usable session.                                             */
 /*                                                                            */
-/*     ⇒ La soglia sta **fra 1,00 s e 14,26 s** — e il lato stretto e' il     */
-/*       piu' CORTO dei due stalli di `raffica-forte`, non il piu' lungo, o   */
-/*       il margine sarebbe scritto su un numero fortunato.  Il centro        */
-/*       geometrico e' 3,78 s (√(1,00·14,26)); ⭐ si sceglie **5,0 s**, e si   */
-/*       sceglie SOPRA il centro apposta:                                     */
+/*     ⇒ The threshold lies **between 1.00 s and 14.26 s** — and the tight side is the */
+/*       SHORTER of the two stalls of `raffica-forte`, not the longer, or      */
+/*       the margin would be written on a lucky number.  The geometric         */
+/*       centre is 3.78 s (√(1.00·14.26)); ⭐ **5.0 s** is chosen, and it is   */
+/*       chosen ABOVE the centre on purpose:                                   */
 /*                                                                            */
-/*         margine sopra il peggiore che REGGE:   5,00 / 1,00 = **5,0×**      */
-/*         margine sotto quello che NON SERVE:   14,26 / 5,00 = **2,9×**      */
-/*         (e sopra `casa-cattiva`, che regge con 0,50 s, sono **10×**)       */
+/*         margin above the worst that HOLDS:     5.00 / 1.00 = **5.0×**       */
+/*         margin below the one that is NO USE:  14.26 / 5.00 = **2.9×**       */
+/*         (and above `casa-cattiva`, which holds with 0.50 s, it is **10×**)  */
 /*                                                                            */
-/*     ⚠ L'ASIMMETRIA E' VOLUTA e si dichiara — ed e' l'unica cosa che la     */
-/*       cura vecchia aveva giusta: i due errori NON costano uguale.          */
-/*       Sbagliare in alto vuol dire qualche secondo di schermo fermo in      */
-/*       piu' e poi si rientra a mano; sbagliare in basso vuol dire           */
-/*       **buttare fuori uno che stava lavorando**, e quello non e'           */
-/*       rimediabile.                                                         */
+/*     ⚠ THE ASYMMETRY IS INTENDED and declared — and it is the only thing the */
+/*       old cure had right: the two errors do NOT cost the same.             */
+/*       Erring high means a few more seconds of frozen screen                 */
+/*       and then one comes back in by hand; erring low means                  */
+/*       **throwing out someone who was working**, and that cannot be          */
+/*       undone.                                                               */
 /*                                                                            */
-/* ⚠ E IL CAMPIONAMENTO SBAGLIA DALLA PARTE BUONA, che va detto perche' e'    */
-/*   un errore vero: il conto riparte dall'ISTANTE DEL GIRO in cui il         */
-/*   progresso si e' VISTO, non da quello in cui i byte sono usciti           */
-/*   davvero.  Il giro e' al piu' uno al secondo (`rete_ciclo()`), quindi     */
-/*   lo `stallo_ms` misurato puo' essere fino a ~1 s PIU' CORTO del vero.     */
-/*   ⇒ Si scatta piu' tardi, mai piu' presto — che e' il lato su cui          */
-/*   l'asimmetria qui sopra vuole sbagliare.                                  */
+/* ⚠ AND THE SAMPLING ERRS ON THE GOOD SIDE, which must be said because it is */
+/*   a real error: the count restarts from the INSTANT OF THE ROUND in which   */
+/*   progress was SEEN, not from the one in which the bytes really             */
+/*   went out.  The round is at most one a second (`rete_ciclo()`), so         */
+/*   the measured `stallo_ms` can be up to ~1 s SHORTER than the truth.        */
+/*   ⇒ It fires later, never earlier — which is the side on which              */
+/*   the asymmetry above wants to err.                                         */
 /* ========================================================================== */
 
-/* ⛔ I DUE PREDEFINITI — `WT_LM_STALLO_MS` (5 000 ms) e `WT_LM_SILENZIO_S`
- *    (10 s) — stanno in `webtransport.h`, e ce n'e' UNA COPIA SOLA: `main.c` ci
- *    inizializza le sue variabili, cosi' «il predefinito del server» e «il
- *    predefinito del trasporto» non possono diventare due numeri diversi.
- *    ⚠ Lo stallo in MILLISECONDI, come `--sgombra-soglia-ms`: e' un ritardo che
- *      si VEDE, e chi lo tara sceglie quanti secondi di schermo fermo sopporta
- *      prima che il filo cada. */
-/* ⚠ `[?]` I tre numeri qui sotto li tara il banco, come `WT_RITMO_POSTI`: la
- *   taratura e' falsificabile — a 20 Mbit/s con `casa-cattiva` acceso per
- *   dieci minuti gli scatti devono essere ZERO, e con `raffica-1` pure. */
-#define WT_LM_MIN_PACCHETTI 200u  /* sotto, la finestra del TESTIMONE si allunga*/
-#define WT_LM_FINESTRA_MS 1000u   /* la finestra minima: il ritmo di rete_ciclo*/
-/* ⛔ Le PROVE del silenzio: quanti pacchetti NOSTRI sono usciti da quando il
- *    client si e' fatto vedere l'ultima volta.  Due, non duecento: a desktop
- *    fermo il traffico e' fatto dai PING del trasporto e basta, e chiedere
- *    duecento pacchetti vorrebbe dire non giudicare mai proprio il caso in cui
- *    il client non risponde piu'. */
+/* ⛔ THE TWO DEFAULTS — `WT_LM_STALLO_MS` (5 000 ms) and `WT_LM_SILENZIO_S`
+ *    (10 s) — are in `webtransport.h`, and there is A SINGLE COPY of them: `main.c`
+ *    initialises its variables with them, so «the server's default» and «the
+ *    transport's default» cannot become two different numbers.
+ *    ⚠ The stall in MILLISECONDS, like `--sgombra-soglia-ms`: it is a delay one
+ *      SEES, and whoever tunes it chooses how many seconds of frozen screen they bear
+ *      before the wire drops. */
+/* ⚠ `[?]` The three numbers below are tuned by the bench, like `WT_RITMO_POSTI`: the
+ *   tuning is falsifiable — at 20 Mbit/s with `casa-cattiva` on for
+ *   ten minutes the firings must be ZERO, and with `raffica-1` too. */
+#define WT_LM_MIN_PACCHETTI 200u  /* below, the WITNESS window lengthens        */
+#define WT_LM_FINESTRA_MS 1000u   /* the minimum window: the rhythm of rete_ciclo*/
+/* ⛔ The PROBES of silence: how many of OUR packets have gone out since the
+ *    client last showed itself.  Two, not two hundred: on a still
+ *    desktop the traffic is made of transport PINGs and nothing else, and asking for
+ *    two hundred packets would mean never judging precisely the case in which
+ *    the client no longer answers. */
 #define WT_LM_MIN_PROVE 2u
 
-/* ⛔⭐ L'interruttore e' STATICO e non per sessione: e' una decisione del
- *     server, come `ritmo_adattivo`.  ⭐ Dal 24 agosto 2026 nasce ACCESO
- *     (decisione dell'utente), e il valore lo porta `main.c`, che e' l'unico
- *     posto in cui il predefinito e' scritto; i due numeri nascono coi
- *     predefiniti qui sopra — `main.c` chiama `wt_linea_morta()` SEMPRE, cosi'
- *     la riga d'avvio esce in tutt'e due i casi per costruzione. */
+/* ⛔⭐ The switch is STATIC and not per session: it is a decision of the
+ *     server, like `ritmo_adattivo`.  ⭐ Since 24 Aug 2026 it is born ON
+ *     (the user's decision), and the value is brought by `main.c`, which is the only
+ *     place where the default is written; the two numbers are born with the
+ *     defaults above — `main.c` ALWAYS calls `wt_linea_morta()`, so
+ *     the startup line comes out in both cases by construction. */
 static bool linea_morta_accesa;
 static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_ms = WT_LM_SILENZIO_S * 1000ULL;
 
 /* ========================================================================== */
-/* ⛔⭐⭐⭐ IL BUCO DEL CICLO DEL PADRE — «il nostro silenzio non e' il loro».  */
-/*         Fase 10, 25 agosto 2026, rilievi P2/P4/P5 di §8.2.                 */
+/* ⛔⭐⭐⭐ THE GAP IN THE PARENT'S LOOP — «our silence is not theirs».        */
+/*         Phase 10, 25 Aug 2026, findings P2/P4/P5 of §8.2.                  */
 /*                                                                            */
-/* ⛔ IL FATTO, e sta in una riga: le DUE grandezze su cui la linea morta      */
-/*    decide non sono grandezze del filo, sono grandezze del NOSTRO CICLO.    */
+/* ⛔ THE FACT, and it fits in one line: the TWO quantities the dead line      */
+/*    decides on are not quantities of the wire, they are quantities of OUR LOOP. */
 /*                                                                            */
-/*      `lm_usciti`  sale in `coda_consegna()`, cioe' quando SCRIVIAMO;       */
-/*      `pkt_recv`   sale quando `trasporto_leggi()` LEGGE il socket.         */
+/*      `lm_usciti`  rises in `coda_consegna()`, that is when we WRITE;       */
+/*      `pkt_recv`   rises when `trasporto_leggi()` READS the socket.         */
 /*                                                                            */
-/*    ⇒ Un ciclo fermo le congela tutt'e due, e i pacchetti del client, che    */
-/*      stanno arrivando benissimo, restano nel buffer del kernel senza che   */
-/*      nessuno li conti.  ⛔⛔ La linea morta leggeva quel congelamento come   */
-/*      *«il client non fa vedere un pacchetto da troppo tempo»* e chiudeva   */
-/*      la sessione con `persi=0` accanto — cioe' **con la prova, nella riga  */
-/*      stessa, che la rete non c'entrava**.                                  */
+/*    ⇒ A stopped loop freezes both, and the client's packets, which           */
+/*      are arriving perfectly well, stay in the kernel buffer without         */
+/*      anybody counting them.  ⛔⛔ The dead line read that freeze as         */
+/*      *«the client has not shown a packet for too long»* and closed          */
+/*      the session with `persi=0` next to it — that is **with the proof, in the */
+/*      line itself, that the network had nothing to do with it**.             */
 /*                                                                            */
-/* ⛔ E LE TRE STRADE MISURATE PORTANO TUTTE QUI:                              */
+/* ⛔ AND THE THREE MEASURED ROADS ALL LEAD HERE:                             */
 /*                                                                            */
-/*    · `[M]` §6.7 — un `SIGSTOP` di **5 s a UN figlio** ha ucciso **tutte e  */
-/*      quattro** le sessioni: `causa=stallo usciti_byte=0 coda_video=8862    */
-/*      persi=0`.  Un figlio fermo lascia byte fermi nella coda del PADRE.    */
-/*    · `[M]` §6.13 — il guardiano di logind sincrono nel ciclo: a N=7 con    */
-/*      D=286 ms il ciclo sta fermo **piu' di quanto duri il ripasso**.       */
-/*    · `[M]` §6.15 — **cinque client sfrattati in 1,3 s** a cinque sessioni: */
-/*      cinque sessioni indipendenti non tacciono nello stesso secondo per    */
-/*      cinque ragioni diverse.  ⚠ Che sia questo il meccanismo lo dira'      */
-/*      `fermo_ms=` nella riga, non questo commento: se uscisse ZERO, la      */
-/*      causa e' un'altra e questa cura non la copre.                         */
+/*    · `[M]` §6.7 — a `SIGSTOP` of **5 s to ONE child** killed **all          */
+/*      four** sessions: `causa=stallo usciti_byte=0 coda_video=8862           */
+/*      persi=0`.  A stopped child leaves bytes stuck in the PARENT's queue.   */
+/*    · `[M]` §6.13 — the synchronous logind guard in the loop: at N=7 with    */
+/*      D=286 ms the loop stands still **longer than the sweep lasts**.        */
+/*    · `[M]` §6.15 — **five clients evicted in 1.3 s** with five sessions:    */
+/*      five independent sessions do not go quiet in the same second for       */
+/*      five different reasons.  ⚠ Whether this is the mechanism will be said by */
+/*      `fermo_ms=` in the line, not by this comment: if it came out ZERO, the */
+/*      cause is another and this cure does not cover it.                      */
 /*                                                                            */
-/* ⭐⭐ LA FORMA DELLA CURA: un buco vale come un PROGRESSO — i conti           */
-/*     RIPARTONO.  ⛔ E NON «si sottrae il tempo perso», che sembra piu'       */
-/*     preciso e non lo e': un ciclo stabilmente lento terrebbe l'orologio    */
-/*     del servizio indietro **per sempre**, e allora un client davvero morto */
-/*     non verrebbe riconosciuto **mai**.  Ripartire costa al massimo UNA     */
-/*     soglia di ritardo sul morto, ed e' un prezzo limitato e dichiarato.    */
+/* ⭐⭐ THE SHAPE OF THE CURE: a gap counts as PROGRESS — the counts           */
+/*     RESTART.  ⛔ And NOT «the lost time is subtracted», which looks more    */
+/*     precise and is not: a steadily slow loop would keep the service         */
+/*     clock behind **forever**, and then a really dead client                 */
+/*     would **never** be recognised.  Restarting costs at most ONE            */
+/*     threshold of delay on the dead one, and it is a bounded and declared price. */
 /*                                                                            */
-/* ⛔ IL BUDGET, e perche' 1100 e non 1000: il `poll` di `main.c` dorme al     */
-/*    piu' **1000 ms** (`attesa`), quindi due passate distano normalmente     */
-/*    fino a un secondo.  ⭐ I 100 ms di margine servono a non contare come   */
-/*    «buco» il lavoro ORDINARIO di una passata piena — se fosse 1000 netti,  */
-/*    questo contatore direbbe «buco» su una macchina sana e la cura          */
-/*    scatterebbe sempre, cioe' spegnerebbe la linea morta di nascosto.       */
-/*    ⚠ E' un numero TARATO SUL CICLO, non sulla rete: se un giorno `attesa`  */
-/*      cambiasse, va cambiato con lei.                                       */
+/* ⛔ THE BUDGET, and why 1100 and not 1000: the `poll` of `main.c` sleeps at   */
+/*    most **1000 ms** (`attesa`), so two passes are normally up to            */
+/*    one second apart.  ⭐ The 100 ms of margin serve to not count as         */
+/*    «gap» the ORDINARY work of a full pass — if it were exactly 1000,        */
+/*    this counter would say «gap» on a healthy machine and the cure           */
+/*    would always fire, that is it would secretly switch off the dead line.   */
+/*    ⚠ It is a number TUNED ON THE LOOP, not on the network: if one day `attesa` */
+/*      changed, it must be changed with it.                                   */
 /* ========================================================================== */
 #define WT_GIRO_ATTESO_MS 1100
 
-static uint64_t giro_ultimo_ms;    /* quando il ciclo del padre e' passato    */
-static uint64_t giro_fermo_ms;     /* ⛔ i millisecondi di buco, in tutto     */
-static uint64_t giro_fermi;        /* quanti buchi                            */
+static uint64_t giro_ultimo_ms;    /* when the parent's loop passed           */
+static uint64_t giro_fermo_ms;     /* ⛔ the milliseconds of gap, in total     */
+static uint64_t giro_fermi;        /* how many gaps                           */
 static uint64_t giro_fermo_peggiore_ms;
 
 void wt_giro_del_padre(uint64_t ora_ms)
 {
 	uint64_t distanza;
 
-	/* ⛔ La prima passata non e' un buco: prima non c'era niente da confrontare,
-	 *    e «mai passato» non e' «passato tanto tempo fa» (`LEZIONI.md` §1.9). */
+	/* ⛔ The first pass is not a gap: before there was nothing to compare,
+	 *    and «never passed» is not «passed a long time ago» (`LEZIONI.md` §1.9). */
 	if (!giro_ultimo_ms || ora_ms <= giro_ultimo_ms) {
 		giro_ultimo_ms = ora_ms;
 		return;
@@ -3253,10 +3253,10 @@ void wt_giro_del_padre(uint64_t ora_ms)
 	giro_fermi++;
 	if (distanza > giro_fermo_peggiore_ms)
 		giro_fermo_peggiore_ms = distanza;
-	/* ⚠ Nessuna riga qui: la scrive chi ne subisce l'effetto, con accanto la
-	 *   sessione e i suoi numeri.  Una riga per buco, senza contesto, sarebbe
-	 *   rumore su una macchina carica — e il numero c'e' lo stesso, lo porta
-	 *   `wt_giri_fermi()` una volta al minuto. */
+	/* ⚠ No line here: it is written by whoever suffers the effect, with the
+	 *   session and its numbers next to it.  One line per gap, without context, would be
+	 *   noise on a loaded machine — and the number is there all the same, it is carried by
+	 *   `wt_giri_fermi()` once a minute. */
 }
 
 void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms)
@@ -3267,76 +3267,76 @@ void wt_giri_fermi(uint64_t *quanti, uint64_t *peggiore_ms)
 		*peggiore_ms = giro_fermo_peggiore_ms;
 }
 
-/* ⛔⛔⭐⭐ QUANTO SPESSO SI CHIEDE AL CLIENT DI FARSI VEDERE — e con la linea
- *       morta accesa NON sono piu' 10 s.  E' la riga che rende ONESTA la regola
- *       dei 10 secondi di silenzio: senza, quella regola e' pericolosa.
+/* ⛔⛔⭐⭐ HOW OFTEN THE CLIENT IS ASKED TO SHOW ITSELF — and with the dead line
+ *       on it is NO longer 10 s.  It is the line that makes the rule of the
+ *       10 seconds of silence HONEST: without it, that rule is dangerous.
  *
- * ⭐ PRIMA DI TUTTO, CHE COSA FA GIA' OGGI, perche' e' la domanda che si fa
- *    chiunque legga «serve un PING a sessione attiva»: ce l'ha gia', dal 16
- *    agosto 2026 (il riquadro qui sopra).  `regola_tienila_viva()` accende il
- *    keep-alive di ngtcp2 in TUTTI gli stati tranne `finita` — non solo mentre
- *    si aspettano le credenziali.  ⇒ `FASI.md` §05 §6-bis e' fatto, e la misura
- *    `[M]` dei **15 004 / 15 005 / 15 002 ms** fra due pacchetti di un browser
- *    fermo e' quel che si vedeva PRIMA: era il keep-alive di Chrome, ed e'
- *    proprio la misura che ha fatto accendere i nostri.  ⚠ Oggi quel numero non
- *    e' piu' 15 s: e' **10**, e sono i nostri.
+ * ⭐ FIRST OF ALL, WHAT IT ALREADY DOES TODAY, because it is the question
+ *    anyone reading «an active-session PING is needed» asks: it already has one, since 16
+ *    Aug 2026 (the box above).  `regola_tienila_viva()` switches on
+ *    ngtcp2's keep-alive in ALL states except `finita` — not only while
+ *    credentials are awaited.  ⇒ `FASI.md` §05 §6-bis is done, and the measurement
+ *    `[M]` of **15 004 / 15 005 / 15 002 ms** between two packets of a still
+ *    browser is what was seen BEFORE: it was Chrome's keep-alive, and it is
+ *    precisely the measurement that got ours switched on.  ⚠ Today that number is no
+ *    longer 15 s: it is **10**, and they are ours.
  *
- * ⛔ MA 10 NON BASTANO PER UNA SOGLIA DI SILENZIO DI 10 s, e il difetto e' lo
- *    stesso di prima con un numero piu' piccolo: un client SANO ma fermo si fa
- *    vedere ogni ~10 s + RTT, perche' prima di allora nessuno gli ha chiesto
- *    niente.  Una soglia a 10 s misurerebbe QUELLO — e butterebbe fuori chi sta
- *    leggendo una pagina, che e' la regressione gia' pagata il 16 agosto («una
- *    seconda scheda e' entrata e ha preso il desktop del primo»).
+ * ⛔ BUT 10 ARE NOT ENOUGH FOR A SILENCE THRESHOLD OF 10 s, and the defect is the
+ *    same as before with a smaller number: a HEALTHY but still client shows
+ *    itself every ~10 s + RTT, because before then nobody asked it
+ *    anything.  A threshold at 10 s would measure THAT — and would throw out whoever is
+ *    reading a page, which is the regression already paid on 16 August («a
+ *    second tab came in and took the first one's desktop»).
  *
- * ⇒ Con l'interruttore acceso l'intervallo diventa **META'** della soglia del
- *   silenzio: a soglia 10 s si chiede ogni 5 s, e quando i 10 s scadono ci sono
- *   **due domande senza risposta**, non una che forse era ancora per strada.
- *   ⭐ E' il numero minimo che rende vera la regola: con l'intervallo uguale
- *      alla soglia il giudizio dipenderebbe dall'RTT, cioe' dalla rete che si
- *      sta giudicando.
+ * ⇒ With the switch on the interval becomes **HALF** the silence
+ *   threshold: at a 10 s threshold we ask every 5 s, and when the 10 s expire there are
+ *   **two unanswered questions**, not one that maybe was still on its way.
+ *   ⭐ It is the minimum number that makes the rule true: with the interval equal
+ *      to the threshold the verdict would depend on the RTT, that is on the network being
+ *      judged.
  *
- * ⚠ E NON E' UN BATTITO APPLICATIVO, che §2.2 vieta: sono PING del TRASPORTO, e
- *   §4.6 distingue le due cose parola per parola — «non portano informazione,
- *   non hanno una risposta da interpretare, e non creano una seconda verita'
- *   sul silenzio».  ⛔ Il confine non e' il periodo, e' la natura: sotto il
- *   secondo diventerebbe un'altra cosa, e li' non si va.
+ * ⚠ AND IT IS NOT AN APPLICATION HEARTBEAT, which §2.2 forbids: they are TRANSPORT PINGs, and
+ *   §4.6 tells the two apart word for word — «they carry no information,
+ *   have no answer to interpret, and do not create a second truth
+ *   about silence».  ⛔ The boundary is not the period, it is the nature: below one
+ *   second it would become something else, and we do not go there.
  *
- * ⛔⛔ IL PREZZO CHE QUI ERA SCRITTO — «~26 byte/s, 0,21 kbit/s per sessione» —
- *      DESCRIVEVA UN CASO IN CUI IL PRODOTTO NON ENTRA, e si corregge invece di
- *      lasciarlo: un prezzo dichiarato per un caso che non esiste e' peggio di
- *      nessun prezzo.  `[M]` 23 agosto 2026, banco `09-b81`:
+ * ⛔⛔ THE PRICE THAT WAS WRITTEN HERE — «~26 bytes/s, 0.21 kbit/s per session» —
+ *      DESCRIBED A CASE THE PRODUCT NEVER ENTERS, and it is corrected instead of
+ *      left: a price declared for a case that does not exist is worse than
+ *      no price.  `[M]` 23 Aug 2026, bench `09-b81`:
  *
- *      1. ⛔ **Il keep-alive di ngtcp2 manda un PING solo dopo il suo intervallo
- *         SENZA ALTRO TRAFFICO.**  E su una sessione viva il traffico non si
- *         ferma mai: il contatore non sta fermo nemmeno **0,6 s**.  ⇒ Su una
- *         sessione che sta lavorando questi PING **non hanno mai occasione di
- *         scattare**, e il loro costo li' e' **zero**.  I ~26 byte/s sono un
- *         TETTO che si tocca solo a traffico completamente fermo — cioe' dopo
- *         che il client ha smesso di parlare, che e' il caso per cui esistono.
- *      2. ⛔ **E il banco NON HA POTUTO ISOLARLO, e si e' rifiutato di dare un
- *         verde vuoto.**  Una sessione «ferma» costa lo stesso **2 463 kbit/s**
- *         di audio PCM (§4.3, che non si spegne): sono **11 727 volte** i 0,21
- *         kbit/s che questa riga dichiarava.  La differenza misurata fra cura
- *         accesa e cura spenta e' **+0,539 kbit/s** — dentro il rumore, cioe'
- *         un numero che non dimostra niente in nessuna delle due direzioni.
+ *      1. ⛔ **ngtcp2's keep-alive sends a PING only after its interval
+ *         WITHOUT OTHER TRAFFIC.**  And on a live session traffic never
+ *         stops: the counter does not stand still even for **0.6 s**.  ⇒ On a
+ *         session that is working these PINGs **never get a chance to
+ *         fire**, and their cost there is **zero**.  The ~26 bytes/s are a
+ *         CAP touched only with traffic completely stopped — that is after
+ *         the client has stopped speaking, which is the case they exist for.
+ *      2. ⛔ **And the bench COULD NOT ISOLATE IT, and refused to give an
+ *         empty green.**  A «still» session costs **2 463 kbit/s** all the same
+ *         of PCM audio (§4.3, which does not switch off): that is **11 727 times** the 0.21
+ *         kbit/s this line declared.  The measured difference between cure
+ *         on and cure off is **+0.539 kbit/s** — within the noise, that is
+ *         a number that proves nothing in either direction.
  *
- *   ⇒ Quel che resta vero, e basta a decidere: un PING e' un pacchetto corto
- *     (intestazione corta + un frame PING + i 16 byte del sigillo, `[?]` ~40
- *     byte di carico piu' 28 di IP/UDP) e la risposta e' un riscontro
- *     altrettanto corto.  A traffico fermo e un giro ogni 5 s e' un TETTO di
- *     ~26 byte/s per sessione, contro il pavimento dichiarato di 20 Mbit/s
- *     (`DECISIONI.md` §3.1-bis).  Il costo non e' un argomento; il periodo lo
- *     sceglie la regola, non la banda.
+ *   ⇒ What stays true, and is enough to decide: a PING is a short packet
+ *     (short header + a PING frame + the 16 bytes of the seal, `[?]` ~40
+ *     bytes of payload plus 28 of IP/UDP) and the answer is an
+ *     equally short acknowledgement.  With traffic stopped and one round every 5 s it is a CAP of
+ *     ~26 bytes/s per session, against the declared floor of 20 Mbit/s
+ *     (`DECISIONI.md` §3.1-bis).  The cost is not an argument; the period is
+ *     chosen by the rule, not by the bandwidth.
  *
- * ⭐ E VALE ANCHE PER LO SFRATTO DEL FANTASMA (`rcp.c`, `--sfratto-ms`): quello
- *    e' tarato a 15 s perche' sotto i 15 s non si distingueva un client morto da
- *    uno fermo — e i 15 s erano il keep-alive di Chrome.  Con i PING a 5 s
- *    `ultima_vita` di un client vivo non e' mai piu' vecchia di ~5 s + RTT, e lo
- *    sfratto puo' scendere a **~10 s** senza rischiare niente.  ⛔ Ma NON a 3:
- *    per i 3 servirebbe un PING ogni ~1 s, cioe' sedici volte il traffico qui
- *    sopra e un periodo che comincia a somigliare a un battito.  ⚠ E la scelta
- *    non e' di questo file: qui si dichiara il numero che questo file rende
- *    possibile.
+ * ⭐ AND IT ALSO HOLDS FOR GHOST EVICTION (`rcp.c`, `--sfratto-ms`): that one
+ *    is tuned at 15 s because below 15 s a dead client could not be told from
+ *    a still one — and the 15 s were Chrome's keep-alive.  With PINGs at 5 s
+ *    the `ultima_vita` of a live client is never older than ~5 s + RTT, and
+ *    eviction can go down to **~10 s** without risking anything.  ⛔ But NOT to 3:
+ *    for 3 a PING every ~1 s would be needed, that is sixteen times the traffic
+ *    above and a period that starts to look like a heartbeat.  ⚠ And the choice
+ *    is not this file's: here we declare the number this file makes
+ *    possible.
  */
 static uint64_t tienila_viva_ns(void)
 {
@@ -3347,11 +3347,11 @@ static uint64_t tienila_viva_ns(void)
 
 static void regola_tienila_viva(wt *w, const char *stato)
 {
-	/* ⚠ Il nome dello stato e' il contratto: `rcp.h` li elenca tutti e sette
-	 *   per iscritto, e dice che chi li confronta deve saperlo.  ⛔ Qui si
-	 *   nomina il solo stato in cui NON servono: dopo la fine non c'e' piu'
-	 *   niente da tenere vivo, e insistere sarebbe rumore su una connessione
-	 *   che sta chiudendo. */
+	/* ⚠ The state name is the contract: `rcp.h` lists all seven of them
+	 *   in writing, and says whoever compares them must know it.  ⛔ Here
+	 *   only the state in which they are NOT needed is named: after the end there is
+	 *   nothing left to keep alive, and insisting would be noise on a connection
+	 *   that is closing. */
 	bool serve = stato && strcmp(stato, "finita") != 0;
 
 	if (serve == w->tienila_viva)
@@ -3359,25 +3359,25 @@ static void regola_tienila_viva(wt *w, const char *stato)
 	w->tienila_viva = serve;
 	ngtcp2_conn_set_keep_alive_timeout(w->conn,
 	                                   serve ? tienila_viva_ns() : UINT64_MAX);
-	/* ⛔ Due chiamate e non una col `?:` dentro il formato: i due formati hanno
-	 *    un numero DIVERSO di argomenti da quando l'intervallo si stampa, e un
-	 *    `%llu` che non c'e' e' un difetto che si vede solo al primo stacco. */
+	/* ⛔ Two calls and not one with `?:` inside the format: the two formats have
+	 *    a DIFFERENT number of arguments since the interval is printed, and a
+	 *    `%llu` that is not there is a defect that shows only at the first detach. */
 	if (serve)
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⭐ PING del trasporto ACCESI ogni %llu s con %s: il segno "
-		                 "di vita di §5.3 lo produciamo NOI, non il keep-alive del "
-		                 "browser (che dava 15 s su 30 di tetto)%s",
+		                 "⭐ transport PINGs ON every %llu s with %s: the sign "
+		                 "of life of §5.3 is produced by US, not by the browser's "
+		                 "keep-alive (which gave 15 s out of a 30 cap)%s",
 		                 (unsigned long long)(tienila_viva_ns() / NGTCP2_SECONDS),
 		                 w->provenienza,
 		                 linea_morta_accesa && linea_morta_silenzio_ms
-		                     ? ".  ⚠ Sono la META' della soglia del silenzio della "
-		                       "linea morta: quando scade, le domande senza risposta "
-		                       "sono due"
+		                     ? ".  ⚠ They are HALF the silence threshold of the "
+		                       "dead line: when it expires, the unanswered questions "
+		                       "are two"
 		                     : "");
 	else
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "PING del trasporto spenti con %s: la sessione e' finita, "
-		                 "non c'e' piu' niente da tenere vivo",
+		                 "transport PINGs off with %s: the session is over, "
+		                 "there is nothing left to keep alive",
 		                 w->provenienza);
 }
 
@@ -3387,72 +3387,72 @@ static void regola_battito(wt *w)
 
 	regola_tienila_viva(w, stato);
 
-	/* ⛔⛔⭐⭐ E SULLO STESSO STATO SI SPEGNE ANCHE IL CICLO DEI FOTOGRAMMI.
+	/* ⛔⛔⭐⭐ AND ON THE SAME STATE THE FRAME LOOP IS SWITCHED OFF TOO.
 	 *
-	 *        `fasi/13-xfce.md`, 23 set 2026: *«il palco smette di catturare
-	 *        quando muore il TRASPORTO, non quando il client si CONGEDA»*.  Al
-	 *        congedo il POSTO si lasciava subito (§4.2, `chiusa_dal_client()`)
-	 *        ma la cattura andava avanti: ogni fotogramma veniva catturato,
-	 *        composto, codificato, offerto e **rifiutato** da
-	 *        `rcp_video_apri()` (`RCP_VIDEO_PRIMA_DI_SESSIONE`), con a verbale
-	 *        `⛔ NIENTE VIDEO: «SESSIONE» non e' stata spedita (stato finita)`.
-	 *        ⇒ Lavoro della scheda video per NESSUNO, e una riga rossa che
-	 *        somiglia a un guasto.
+	 *        `fasi/13-xfce.md`, 23 Sep 2026: *«the stage stops capturing
+	 *        when the TRANSPORT dies, not when the client says FAREWELL»*.  At
+	 *        farewell the SLOT was given up at once (§4.2, `chiusa_dal_client()`)
+	 *        but capture went on: every frame was captured,
+	 *        composed, encoded, offered and **refused** by
+	 *        `rcp_video_apri()` (`RCP_VIDEO_PRIMA_DI_SESSIONE`), with on record
+	 *        «⛔ NO VIDEO: `SESSIONE` has not been sent (state finita)».
+	 *        ⇒ Graphics card work for NOBODY, and a red line that
+	 *        looks like a fault.
 	 *
-	 * `[M]` La finestra durava **~30 s** — il `max_idle_timeout`, cioe' quanto
-	 *       ci mette il trasporto a morire da solo dopo che i PING sono spenti.
-	 *       Su un desktop fermo sono 11 fotogrammi; a 58 fot/s sono **venti
-	 *       secondi di codifica sprecata per ogni client che se ne va**, su una
-	 *       macchina che intanto serve altri inquilini.
+	 * `[M]` The window lasted **~30 s** — the `max_idle_timeout`, that is how long
+	 *       the transport takes to die by itself after the PINGs are off.
+	 *       On a still desktop that is 11 frames; at 58 frames/s it is **twenty
+	 *       seconds of wasted encoding for every client that leaves**, on a
+	 *       machine that meanwhile serves other tenants.
 	 *
-	 * ⭐ PERCHE' PROPRIO QUI, accanto ai PING, e non dentro `fin_dal_client()`,
-	 *    `chiusa_dal_client()` e `wt_stream_chiuso()`: le strade per arrivare a
-	 *    `"finita"` sono SETTE in `rcp.c` (la capsula di chiusura, il FIN sul
-	 *    canale di controllo, il congedo del server, il ban, i tre tetti di
-	 *    §4.6...).  Cucire la cura su tre di quelle sette vorrebbe dire quattro
-	 *    strade scoperte e una politica scritta in tre punti — *«un conto
-	 *    scritto in tre punti diversi e' un conto che un giorno ne
-	 *    dimentichera' uno»*.  ⇒ Ci si aggancia allo STATO, che e' il punto in
-	 *    cui tutte e sette confluiscono, e che questa funzione gia' guarda a
-	 *    ogni battito.  `regola_tienila_viva()` e' la prova che l'evento esiste
-	 *    ed e' gia' riconosciuto: spegne i PING sullo stesso `"finita"`, e
-	 *    `[M]` lo fa **100 ms** dopo il congedo (22 set, 10:30:11.698 →
-	 *    10:30:11.798).  ⇒ La finestra dello spreco passa da ~30 s a ~0,1 s.
+	 * ⭐ WHY RIGHT HERE, next to the PINGs, and not inside `fin_dal_client()`,
+	 *    `chiusa_dal_client()` and `wt_stream_chiuso()`: the roads leading to
+	 *    `"finita"` are SEVEN in `rcp.c` (the closing capsule, the FIN on the
+	 *    control channel, the server's farewell, the ban, the three caps of
+	 *    §4.6...).  Sewing the cure onto three of those seven would mean four
+	 *    uncovered roads and a policy written in three places — *«a count
+	 *    written in three different places is a count that one day will
+	 *    forget one»*.  ⇒ We hook onto the STATE, which is the point where
+	 *    all seven converge, and which this function already looks at at
+	 *    every heartbeat.  `regola_tienila_viva()` is the proof that the event exists
+	 *    and is already recognised: it switches off the PINGs on the same `"finita"`, and
+	 *    `[M]` does so **100 ms** after the farewell (22 Sep, 10:30:11.698 →
+	 *    10:30:11.798).  ⇒ The waste window goes from ~30 s to ~0.1 s.
 	 *
-	 * ⛔ E NON SMONTA IL PALCO — invariante **I4**.  Quel che si spegne e' la
-	 *    richiesta di fotogrammi al figlio (`figli_video()` con codec 0, che
-	 *    `figlio.h` dichiara come «smetti di catturare»); il figlio, la
-	 *    sessione grafica e le finestre aperte restano esattamente dove sono,
-	 *    e chi si ricollega ritrova il suo desktop.  E' la stessa distinzione
-	 *    gia' scritta per l'audio: *«a spegnersi e' il consumo del monitor, non
-	 *    il dispositivo su cui le applicazioni suonano»*.
+	 * ⛔ AND IT DOES NOT DISMANTLE THE STAGE — invariant **I4**.  What is switched off is the
+	 *    request for frames to the child (`figli_video()` with codec 0, which
+	 *    `figlio.h` declares as «stop capturing»); the child, the
+	 *    graphical session and the open windows stay exactly where they are,
+	 *    and whoever reconnects finds their desktop again.  It is the same distinction
+	 *    already written for audio: *«what switches off is the monitor's consumption, not
+	 *    the device on which applications play»*.
 	 *
-	 * ⚠ E `"staccata-per-silenzio"` NON entra qui, ed e' una scelta: anche
-	 *   quello stato lascia il posto, ma da li' `torna_a_parlare()` puo'
-	 *   resuscitare la stessa sessione, e nello sfratto del fantasma il client
-	 *   che ARRIVA non ha ancora spedito `SESSIONE` — spegnere li' vorrebbe
-	 *   dire fermare e riaccendere la cattura in mezzo a un passaggio di
-	 *   consegne.  Il costo dei 30 s lo paga solo chi si CONGEDA, ed e' quello
-	 *   il caso misurato. */
+	 * ⚠ And `"staccata-per-silenzio"` does NOT get in here, and it is a choice: that
+	 *   state too gives up the slot, but from there `torna_a_parlare()` can
+	 *   resurrect the same session, and in ghost eviction the client
+	 *   that ARRIVES has not yet sent `SESSIONE` — switching off there would
+	 *   mean stopping and restarting capture in the middle of a hand-over.
+	 *   The cost of the 30 s is paid only by whoever says FAREWELL, and that is
+	 *   the measured case. */
 	if (stato && strcmp(stato, "finita") == 0)
-		cattura_spegni_se_sola(w, "il client si e' congedato");
+		cattura_spegni_se_sola(w, "the client said farewell");
 
 	if (!stato) {
-		/* Nessuna sessione RCP: si batte se c'e' una chiusura da far
-		 * maturare — ⛔ **oppure se il tetto di §7.17 e' armato**.
+		/* No RCP session: we beat if there is a closure to let
+		 * mature — ⛔ **or if the cap of §7.17 is armed**.
 		 *
-		 * ⛔ E' qui che la prima stesura del tetto moriva, `[M]` 11 agosto
-		 *    2026 col banco B6: `cb_end_headers` armava `canale_entro` e
-		 *    chiamava `batti_fra`, e poi la prima passata di questa funzione
-		 *    rimetteva `battito_ms = 0`.  Il tetto scattava solo se il client
-		 *    faceva qualcos'altro che risvegliasse il battito — cioe'
-		 *    **proprio nel caso che non serve**: `ciao-sessione-tardiva`
-		 *    scadeva a 5,10 s, `ciao-senza-controllo` restava appeso 20 s.
+		 * ⛔ It is here that the first draft of the cap died, `[M]` 11 Aug
+		 *    2026 with bench B6: `cb_end_headers` armed `canale_entro` and
+		 *    called `batti_fra`, and then the first pass of this function
+		 *    set `battito_ms = 0` back.  The cap fired only if the client
+		 *    did something else that woke the heartbeat up — that is
+		 *    **precisely in the case where it is not needed**: `ciao-sessione-tardiva`
+		 *    expired at 5.10 s, `ciao-senza-controllo` stayed hanging for 20 s.
 		 *
-		 * ⚠ E' la lezione scritta trenta righe piu' sotto, presa in flagrante
-		 *   nel giro stesso in cui la si applicava: **chi mette un tetto deve
-		 *   accendere anche cio' che lo fara' scadere** — e non basta
-		 *   accenderlo, bisogna che nessun altro lo spenga. */
+		 * ⚠ It is the lesson written thirty lines further below, caught red-handed
+		 *   in the very run in which it was being applied: **whoever sets a cap must
+		 *   also switch on what will make it expire** — and switching it on is not
+		 *   enough, nobody else must switch it off. */
 		if (w->chiusura >= 0 || w->canale_entro)
 			batti_fra(w, 100);
 		else
@@ -3460,67 +3460,67 @@ static void regola_battito(wt *w)
 		return;
 	}
 	if (strcmp(stato, "attiva") == 0) {
-		/* ⭐ L'orologio del silenzio di `SPECIFICHE.md` §5.3 va valutato
-		 *    MENTRE il client tace, e mentre tace nessuno percorrerebbe
-		 *    il percorso di scrittura.  Un secondo di granularita' su
-		 *    trenta e' abbondante. */
+		/* ⭐ The silence clock of `SPECIFICHE.md` §5.3 must be evaluated
+		 *    WHILE the client is quiet, and while it is quiet nobody would walk
+		 *    the write path.  One second of granularity out of
+		 *    thirty is plenty. */
 		batti_fra(w, 1000);
 		return;
 	}
-	/* ⛔ `attesa-verdetto` vuole il battito perche' il ritardo fisso di
-	 *    §4.4-bis dura un secondo e in quel secondo non c'e' niente da
-	 *    spedire; gli altri stati della stretta di mano perche' i tre tetti
-	 *    di §4.6 devono poter scadere anche se il client tace.
+	/* ⛔ `attesa-verdetto` wants the heartbeat because the fixed delay of
+	 *    §4.4-bis lasts one second and in that second there is nothing to
+	 *    send; the other handshake states because the three caps
+	 *    of §4.6 must be able to expire even if the client is quiet.
 	 *
-	 * ⛔⭐ E QUESTA E' LA LEZIONE PIU' CARA DELL'INNESTO, in due vesti:
-	 *      `[M]` 10 agosto 2026, B6 e B5.  Chi mette un tetto deve accendere
-	 *      anche cio' che lo fara' scadere, NELL'ISTANTE in cui il tetto
-	 *      comincia — non alla prima occasione utile che capita dopo.  Un
-	 *      lavoro rimandato a una condizione che nessuno fa piu' avvenire
-	 *      non e' rimandato: e' perduto, e nel registro somiglia a un lavoro
-	 *      non chiesto. */
+	 * ⛔⭐ AND THIS IS THE DEAREST LESSON OF THE GRAFT, in two guises:
+	 *      `[M]` 10 Aug 2026, B6 and B5.  Whoever sets a cap must also switch on
+	 *      what will make it expire, AT THE INSTANT the cap
+	 *      starts — not at the first useful occasion that comes along afterwards.  A
+	 *      job deferred to a condition nobody makes happen any more
+	 *      is not deferred: it is lost, and in the log it looks like a job
+	 *      never asked for. */
 	batti_fra(w, 100);
 }
 
 /* ========================================================================== */
-/* ⭐⭐ IL CICLO DEI FOTOGRAMMI — FASE 3, «il desktop che si muove»            */
+/* ⭐⭐ THE FRAME LOOP — PHASE 3, «the desktop that moves»                    */
 /*                                                                            */
-/* ⛔⭐ CHE COSA C'ERA QUI PRIMA, E PERCHE' E' STATO TOLTO                     */
+/* ⛔⭐ WHAT WAS HERE BEFORE, AND WHY IT WAS REMOVED                           */
 /*                                                                            */
-/*    Fino alla fase 2 questo posto conteneva un DEPOSITO DI PROCESSO:        */
-/*    `struct video_deposito video_dep[3]`, riempito una volta all'accensione */
-/*    e letto da ogni sessione che arrivasse a `SESSIONE`.  Aveva tre difetti */
-/*    dichiarati, e tutt'e tre sono di questa fase:                            */
+/*    Until phase 2 this place contained a PER-PROCESS DEPOSIT:               */
+/*    `struct video_deposito video_dep[3]`, filled once at power-on           */
+/*    and read by every session that reached `SESSIONE`.  It had three        */
+/*    declared defects, and all three belong to this phase:                   */
 /*                                                                            */
-/*      1. era di PROCESSO e non di sessione — `main.c` §«il deposito e la    */
-/*         fuga» lo dichiara: «la cura vera e' un deposito per sessione».  Il */
-/*         ripiego era un PADRONE del deposito, e il prezzo dichiarato era    */
-/*         che due utenti collegati insieme non potevano vedere tutt'e due il */
-/*         proprio desktop;                                                    */
-/*      2. marcava `chiave = true` **per costruzione**, e con chiave/delta    */
-/*         veri quella riga diventa **una bugia sul filo** (§6.2, campo       */
+/*      1. it was per PROCESS and not per session — `main.c` §«the deposit and the */
+/*         leak» declares it: «the real cure is a per-session deposit».  The  */
+/*         fallback was an OWNER of the deposit, and the declared price was   */
+/*         that two users connected together could not both see their         */
+/*         own desktop;                                                        */
+/*      2. it marked `chiave = true` **by construction**, and with real       */
+/*         keyframes/deltas that line becomes **a lie on the wire** (§6.2, field */
 /*         `tipo`);                                                            */
-/*      3. serviva UN fotogramma per sessione, e il freno era `bool           */
+/*      3. it served ONE frame per session, and the brake was `bool           */
 /*         video_fatto`.                                                       */
 /*                                                                            */
-/* ⇒ Al suo posto c'e' una DIFFUSIONE: il figlio dell'utente cattura e        */
-/*   codifica di continuo, `main.c` gira ogni fotogramma qui dentro, e questa */
-/*   funzione lo consegna **alle sessioni di quell'utente e a nessun'altra**. */
-/*   ⛔ Il confronto sul nome dell'utente e' l'invariante I3 sul filo, ed e'  */
-/*   la stessa guardia di prima messa dove serviva: non piu' «di chi e' il    */
-/*   deposito», ma «di chi e' questa sessione».  Due utenti collegati insieme */
-/*   adesso vedono ciascuno il proprio.                                        */
+/* ⇒ In its place there is a BROADCAST: the user's child captures and        */
+/*   encodes continuously, `main.c` forwards every frame in here, and this    */
+/*   function delivers it **to that user's sessions and to no other**.        */
+/*   ⛔ The comparison on the user's name is invariant I3 on the wire, and it is */
+/*   the same guard as before put where it was needed: no longer «whose is the */
+/*   deposit», but «whose is this session».  Two users connected together    */
+/*   now each see their own.                                                   */
 /*                                                                            */
-/* ⚠ E QUEL CHE NON SI FA, DICHIARATO: i byte NON si copiano.  Il fotogramma  */
-/*   arriva da `main.c`, viene messo in coda a ciascuna sessione (che lo copia */
-/*   lei, in `coda_metti`) e poi il chiamante puo' liberarlo.  Un deposito     */
-/*   intermedio qui sarebbe una copia in piu' per fotogramma, cioe' fino a 60  */
-/*   copie al secondo di qualche centinaio di KiB.                             */
+/* ⚠ AND WHAT IS NOT DONE, DECLARED: the bytes are NOT copied.  The frame     */
+/*   arrives from `main.c`, is put in each session's queue (which copies it   */
+/*   itself, in `coda_metti`) and then the caller can free it.  An intermediate */
+/*   deposit here would be one more copy per frame, that is up to 60           */
+/*   copies a second of a few hundred KiB.                                     */
 
-/* ⛔ L'elenco delle sessioni vive.  Serve perche' i fotogrammi arrivano da
- *    FUORI (dal figlio, per la mano di `main.c`) e non da un evento di questa
- *    connessione: senza un elenco, chi diffonde dovrebbe tenersi lui i
- *    puntatori, e due elenchi dello stesso insieme divergono. */
+/* ⛔ The list of live sessions.  It is needed because frames arrive from
+ *    OUTSIDE (from the child, by the hand of `main.c`) and not from an event of this
+ *    connection: without a list, whoever broadcasts would have to keep the
+ *    pointers itself, and two lists of the same set diverge. */
 static wt *vive_prima;
 
 static wt_video_richiesta gancio_palco;
@@ -3532,280 +3532,280 @@ void wt_video_gancio(wt_video_richiesta f, void *ctx)
 	gancio_palco_ctx = ctx;
 }
 
-/* ⛔ Ogni quanto si puo' RIchiedere una chiave al palco mentre il debito e'
- *    ancora acceso.  ⚠ Non e' la grazia di §5.2 — quella e' di `rcp.c` e conta
- *    dall'ultima chiave SPEDITA: questo e' il fondo di una richiesta che deve
- *    ancora attraversare un socket, un processo e un codificatore.  Senza,
- *    ogni battito ne manderebbe una e il figlio codificherebbe solo chiavi. */
+/* ⛔ How often a keyframe can be REquested from the stage while the debt is
+ *    still on.  ⚠ It is not the grace of §5.2 — that one belongs to `rcp.c` and counts
+ *    from the last keyframe SENT: this is the backstop of a request that still has
+ *    to cross a socket, a process and an encoder.  Without it,
+ *    every heartbeat would send one and the child would encode only keyframes. */
 #define WT_CHIAVE_RICHIESTA_MS 150
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⛔⛔⛔ E 150 ms NON BASTANO QUANDO LA LINEA E' STRETTA — 21 agosto 2026,
- *       banco `07-b65`, e il difetto e' un ciclo che si autoalimenta.
+ * ⛔⛔⛔ AND 150 ms ARE NOT ENOUGH WHEN THE LINE IS NARROW — 21 Aug 2026,
+ *       bench `07-b65`, and the defect is a self-feeding loop.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * `[M]` La misura, e la scena e' dichiarata: sessione vera, tono nel sink,
- * desktop che si muove, `netem` a **3 Mbit/s** sulla sola porta del banco,
- * trenta secondi.
+ * `[M]` The measurement, and the scene is declared: real session, tone in the sink,
+ * desktop that moves, `netem` at **3 Mbit/s** on the bench port only,
+ * thirty seconds.
  *
- *   | scena (stessa banda, stesso audio) | audio spedito | purezza |
+ *   | scene (same bandwidth, same audio) | audio sent    | purity  |
  *   |---|---|---|
- *   | desktop **fermo**                  | **6 009** / 6 000 | **1,000** |
- *   | desktop **che si muove**           | **397**           | **0,18**  |
+ *   | **still** desktop                  | **6 009** / 6 000 | **1.000** |
+ *   | desktop **that moves**             | **397**           | **0.18**  |
  *
- * ⛔ Non e' la banda e non e' quanto costa l'audio: con **Opus**, cioe' **1/32**
- *    della banda del PCM, allo stesso gradino se ne perde ancora il **58 %**.
+ * ⛔ It is not the bandwidth and it is not what audio costs: with **Opus**, that is **1/32**
+ *    of PCM's bandwidth, at the same step **58 %** of it is still lost.
  *
- * ⭐⭐ E' QUESTA COSTANTE.  Nei giri stretti il video consegna **solo chiavi**
- *     (144 su 144, 148 su 148, 149 su 149; a 15 Mbit erano 2 su 1 019), il
- *     registro conta **806 richieste di chiave** e **173 righe** «la CHIAVE N
- *     tiene ancora ~60 000 byte in coda e §5.2 vieta di abbandonarla».
+ * ⭐⭐ IT IS THIS CONSTANT.  In the narrow runs video delivers **only keyframes**
+ *     (144 out of 144, 148 out of 148, 149 out of 149; at 15 Mbit it was 2 out of 1 019), the
+ *     log counts **806 keyframe requests** and **173 lines** «KEYFRAME N
+ *     still holds ~60 000 bytes in the queue and §5.2 forbids abandoning it».
  *
- *       una chiave da 60 KB su 3 Mbit occupa la finestra per  **160 ms**
- *       questa costante ne concede una ogni                   **150 ms**
+ *       a 60 KB keyframe on 3 Mbit occupies the window for  **160 ms**
+ *       this constant grants one every                       **150 ms**
  *
- *     ⇒ **Chiediamo la chiave nuova prima che la precedente sia uscita.**  In
- *     quei 160 ms nascono 32 blocchi di PCM (8 di Opus) e ognuno trova
- *     `cwnd_left = 0`: il datagram non si spezza, non si ritrasmette e non puo'
- *     aspettare, quindi e' l'unico che puo' pagare.
+ *     ⇒ **We ask for the new keyframe before the previous one has gone out.**  In
+ *     those 160 ms 32 PCM blocks are born (8 Opus ones) and each finds
+ *     `cwnd_left = 0`: the datagram does not split, is not retransmitted and cannot
+ *     wait, so it is the only one that can pay.
  *
- * ⛔ E la cura NON e' spostare l'audio davanti al video: `07-b65` ha provato
- *    QUATTRO varianti del trasporto (niente ritorno anticipato per passata ·
- *    niente `PADDING` · niente `MORE` · la riserva, cioe' il video che cede la
- *    passata quando ci sono datagram in coda) e i blocchi spediti restano
- *    278-514 contro i 397 di partenza, cioe' dentro la varianza.
- *    ⭐ **La finestra non e' contesa: e' gia' piena** di byte di video in volo,
- *    e rinunciare a scriverne altri non libera quel che e' gia' partito e non e'
- *    ancora stato riscontrato.  Il posto lo libera solo un riscontro.
+ * ⛔ And the cure is NOT moving audio ahead of video: `07-b65` tried
+ *    FOUR transport variants (no early return per pass ·
+ *    no `PADDING` · no `MORE` · the reserve, that is video yielding the
+ *    pass when there are datagrams in the queue) and the blocks sent stay at
+ *    278-514 against the starting 397, that is within the variance.
+ *    ⭐ **The window is not contended: it is already full** of video bytes in flight,
+ *    and giving up writing more does not free what has already left and has not
+ *    yet been acknowledged.  Only an acknowledgement frees the place.
  *
- * ⇒ **L'intervallo diventa una funzione della banda misurata**: non si chiede
- *   una chiave nuova prima che una chiave della misura dell'ultima abbia avuto
- *   il tempo di uscire.
- *
- * ───────────────────────────────────────────────────────────────────────────
- * 🔸 DERIVATA, E IL PREZZO E' VISIBILE ALL'UTENTE — si dichiara, non si
- *    sottintende (`LEZIONI.md` §2.3-quater, `CODER.md` I6)
- * ───────────────────────────────────────────────────────────────────────────
- *
- * ⛔ **Su linea stretta l'immagine resta rotta piu' a lungo dopo una perdita.**
- *    E' esattamente quel che si compra: prima il desktop chiedeva una chiave
- *    ogni 150 ms e la linea non gliela lasciava uscire (quindi restava rotto
- *    LO STESSO, e in piu' distruggeva l'audio); adesso aspetta il tempo che la
- *    chiave impiega davvero, e in cambio il suono passa.
- *
- * ⚠ Il giudizio e' dell'utente: questi due numeri — il tetto e il margine — non
- *   sono dimostrati, sono derivati.  Vanno in `DECISIONI.md` il giorno in cui
- *   lui li ascolta e li guarda insieme.
- *
- * ⛔ IL TETTO ESISTE PERCHE' UNA CHIAVE CHE NON SI CHIEDE PIU' E' UNO SCHERMO
- *    FERMO PER SEMPRE.  `SPECIFICHE.md` I1: «una sessione brutta vale piu' di
- *    una sessione chiusa» — ma **ferma** non e' **brutta**, e' chiusa a meta'.
- *    Due secondi e' il piu' lungo che si accetti di restare rotti.
+ * ⇒ **The interval becomes a function of the measured bandwidth**: a new keyframe
+ *   is not requested before a keyframe the size of the last one has had
+ *   time to go out.
  *
  * ───────────────────────────────────────────────────────────────────────────
- * ⭐ IL PRIMA/DOPO, MISURATO — `07-b65`, 21 agosto 2026, sera
+ * 🔸 DERIVED, AND THE PRICE IS VISIBLE TO THE USER — it is declared, not
+ *    implied (`LEZIONI.md` §2.3-quater, `CODER.md` I6)
  * ───────────────────────────────────────────────────────────────────────────
  *
- * ⛔ I due binari differiscono per UNA riga (`chiave_intervallo_ms()` che torna
- *    sempre la costante), e i giri sono ALTERNATI: con la varianza vista qui
- *    — 397 contro 1372 blocchi fra due giri identici — due giri di fila della
- *    stessa parte non dimostrerebbero niente.
+ * ⛔ **On a narrow line the image stays broken longer after a loss.**
+ *    It is exactly what is bought: before, the desktop asked for a keyframe
+ *    every 150 ms and the line did not let it out (so it stayed broken
+ *    ALL THE SAME, and on top of that it destroyed the audio); now it waits for the time the
+ *    keyframe really takes, and in exchange the sound gets through.
  *
- * | scena (30 s, PCM)          | attesa | audio PRIMA | audio DOPO | video PRIMA | video DOPO |
+ * ⚠ The judgement is the user's: these two numbers — the cap and the margin — are not
+ *   proved, they are derived.  They go into `DECISIONI.md` the day
+ *   he listens to them and looks at them together.
+ *
+ * ⛔ THE CAP EXISTS BECAUSE A KEYFRAME NO LONGER REQUESTED IS A SCREEN
+ *    FROZEN FOREVER.  `SPECIFICHE.md` I1: «an ugly session is worth more than
+ *    a closed session» — but **frozen** is not **ugly**, it is half closed.
+ *    Two seconds is the longest we accept to stay broken.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * ⭐ THE BEFORE/AFTER, MEASURED — `07-b65`, 21 Aug 2026, evening
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⛔ The two binaries differ by ONE line (`chiave_intervallo_ms()` always returning
+ *    the constant), and the runs are ALTERNATED: with the variance seen here
+ *    — 397 against 1372 blocks between two identical runs — two runs in a row of the
+ *    same side would prove nothing.
+ *
+ * | scene (30 s, PCM)          | wait   | audio BEFORE | audio AFTER | video BEFORE | video AFTER |
  * |---|---|---|---|---|---|
- * | 3 Mbit, desktop **fermo**  | 150 (inerte) | 6 009 | **6 002** | 1 | 1 |
- * | 15 Mbit, desktop mosso     | 150 (inerte) | 4 076 · 3 944 | 3 984 · 3 830 | 743 · 742 | 683 · 677 |
- * | 3 Mbit, desktop mosso      | ~171   | 371 · 462 | **1 552 · 1 595 · 1 725** | 115 · 99 | 89 · 128 |
- * | 1 Mbit, desktop mosso      | 600-1000 | **15** | **577** | 57 | **47** |
+ * | 3 Mbit, **still** desktop  | 150 (inert) | 6 009 | **6 002** | 1 | 1 |
+ * | 15 Mbit, moving desktop    | 150 (inert) | 4 076 · 3 944 | 3 984 · 3 830 | 743 · 742 | 683 · 677 |
+ * | 3 Mbit, moving desktop     | ~171   | 371 · 462 | **1 552 · 1 595 · 1 725** | 115 · 99 | 89 · 128 |
+ * | 1 Mbit, moving desktop     | 600-1000 | **15** | **577** | 57 | **47** |
  *
- * ⭐ **Dove c'e' banda la cura si dichiara INERTE**: a 15 Mbit ha scritto «la
- *    banda misurata basta: resta il fondo di 150 ms» **100 volte su 101**, e i
- *    due binari si comportano uguale — la differenza dell'8 % sui fotogrammi
- *    li' e' varianza della scena, non un prezzo.
+ * ⭐ **Where there is bandwidth the cure declares itself INERT**: at 15 Mbit it wrote «the
+ *    measured bandwidth is enough: the 150 ms backstop remains» **100 times out of 101**, and the
+ *    two binaries behave the same — the 8 % difference on frames
+ *    there is scene variance, not a price.
  *
- * ⛔⛔ **IL PREZZO, MISURATO E NON DEDOTTO**: a 1 Mbit le richieste di chiave
- *      scendono da **178 a 68** (−62 %) e il video consegna **57 → 47**
- *      fotogrammi, **−18 %** — e sono tutti chiavi, quindi l'immagine si
- *      aggiorna meno spesso.  ⇒ E' esattamente «su linea stretta l'immagine
- *      resta rotta piu' a lungo dopo una perdita», in numeri.  In cambio
- *      l'audio passa da **15 a 577** blocchi.
+ * ⛔⛔ **THE PRICE, MEASURED AND NOT DEDUCED**: at 1 Mbit keyframe requests
+ *      go down from **178 to 68** (−62 %) and video delivers **57 → 47**
+ *      frames, **−18 %** — and they are all keyframes, so the image
+ *      updates less often.  ⇒ It is exactly «on a narrow line the image
+ *      stays broken longer after a loss», in numbers.  In exchange
+ *      audio goes from **15 to 577** blocks.
  *
- * ⚠ E QUEL CHE LA CURA **NON** FA, dichiarato perche' non se ne prenda di piu'
- *   di quel che da': a 3 Mbit l'audio resta al **27 %** e i fotogrammi
- *   consegnati sono ancora **tutti chiavi**.  ⇒ La spirale non e' spenta, e' solo
- *   piu' lenta.  Il motore vero sta a monte, ed e' scritto accanto a
+ * ⚠ AND WHAT THE CURE DOES **NOT** DO, declared so that no more is taken from it
+ *   than it gives: at 3 Mbit audio stays at **27 %** and the frames
+ *   delivered are still **all keyframes**.  ⇒ The spiral is not switched off, it is only
+ *   slower.  The real engine is upstream, and it is written next to
  *   `video_sgombra()`. */
 #define WT_CHIAVE_TETTO_MS 2000
 
-/* ⛔ Il margine: la chiave dev'essere USCITA, non «quasi uscita».  Un quinto
- *    in piu' del tempo calcolato copre il fatto che la stima della banda e' una
- *    stima e che nel frattempo passa anche l'audio. */
+/* ⛔ The margin: the keyframe must have GONE OUT, not «almost gone out».  A fifth
+ *    more than the computed time covers the fact that the bandwidth estimate is an
+ *    estimate and that audio passes meanwhile too. */
 #define WT_CHIAVE_MARGINE_PC 120
 
-/* ⛔⭐⭐ LA SECONDA CINTURA — «il debito e' acceso da troppo, e nessuno chiede
- *       piu' niente» — 23 set 2026.
+/* ⛔⭐⭐ THE SECOND BELT — «the debt has been on for too long, and nobody asks for
+ *       anything any more» — 23 Sep 2026.
  *
- *       La cura vera del blocco da 370 s sta in `batti_fra()`: il battito non
- *       si puo' piu' rimandare all'infinito, quindi `video_regola()` torna a
- *       girare **almeno una volta al secondo** e la chiave si richiede da se'.
+ *       The real cure for the 370 s block is in `batti_fra()`: the heartbeat can
+ *       no longer be postponed forever, so `video_regola()` runs again
+ *       **at least once a second** and the keyframe is requested by itself.
  *
- * ⛔ Ma quella cura dipende da UN solo anello — il battito.  E la lezione di
- *    oggi e' esattamente questa: *un sistema che dipende dal fatto che due
- *    eventi non si accavallino mai e' un sistema che si blocca.*  ⇒ Serve una
- *    strada che NON passi dal battito.
+ * ⛔ But that cure depends on ONE single link — the heartbeat.  And today's
+ *    lesson is exactly this: *a system that depends on two
+ *    events never overlapping is a system that hangs.*  ⇒ A
+ *    road that does NOT go through the heartbeat is needed.
  *
- * ⭐ E ce n'e' una perfetta: i fotogrammi rifiutati.  Mentre il debito e'
- *    acceso il figlio continua a consegnare (`[M]` ~123 Mbit/s di codifica
- *    buttata), e ogni rifiuto e' un'occasione per accorgersene.  ⇒ Se dal
- *    l'ultima richiesta al palco e' passato piu' di questo tempo e il debito
- *    e' ancora acceso, si richiede la chiave DA LI'.
+ * ⭐ And there is a perfect one: refused frames.  While the debt is
+ *    on the child keeps delivering (`[M]` ~123 Mbit/s of encoding
+ *    thrown away), and every refusal is an occasion to notice.  ⇒ If since
+ *    the last request to the stage more than this time has passed and the debt
+ *    is still on, the keyframe is requested FROM THERE.
  *
- * ⚠ Un secondo, non 150 ms: e' il passo del battito nello stato `attiva`, cioe'
- *   il ritmo che la richiesta di chiave ha GIA' oggi quando tutto funziona.
- *   Metterlo piu' stretto farebbe chiedere chiavi 6-7 volte al secondo sotto
- *   congestione, che e' la spirale di §5.2 misurata sul banco `07-b65`.
- *   ⇒ Questa cintura non cambia il ritmo: cambia solo il «per sempre». */
+ * ⚠ One second, not 150 ms: it is the heartbeat's step in the `attiva` state, that is
+ *   the rhythm the keyframe request ALREADY has today when everything works.
+ *   Making it tighter would make keyframes be requested 6-7 times a second under
+ *   congestion, which is the spiral of §5.2 measured on bench `07-b65`.
+ *   ⇒ This belt does not change the rhythm: it only changes the «forever». */
 #define WT_CHIAVE_DEBITO_TETTO_MS 1000
 
-/* ⛔ Quanti stream uni servono al video PRIMA di dire «senza credito»: `RCP.md`
- *    §2.3 vuole che l'input ne trovi sempre uno, e il video non deve mangiarsi
- *    l'ultimo posto.  ⚠ Il numero e' il minimo che §2.3 riserva a RCP diviso a
- *    meta': si dichiara qui perche' e' una scelta nostra, non una riga
- *    dell'arbitro. */
+/* ⛔ How many uni streams video needs BEFORE saying «without credit»: `RCP.md`
+ *    §2.3 wants input always to find one, and video must not eat up
+ *    the last slot.  ⚠ The number is the minimum §2.3 reserves for RCP divided
+ *    in half: it is declared here because it is our choice, not a line
+ *    of the referee. */
 #define WT_UNI_RISERVA 2
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⭐⭐ FASE 9 — QUANDO UN DELTA E' «DAVVERO SENZA SPERANZA»: LA SOGLIA.
+ * ⭐⭐ PHASE 9 — WHEN A DELTA IS «REALLY HOPELESS»: THE THRESHOLD.
  *
- * ⛔ §5.1 dice **PUO'**, non DEVE (`RCP.md:1156`): abbandonare a ogni
- *    fotogramma piu' recente e' una scelta NOSTRA, e la misura sul campo dice
- *    che e' quella che fabbrica le chiavi.
+ * ⛔ §5.1 says **MAY**, not MUST (`RCP.md:1156`): abandoning at every
+ *    more recent frame is OUR choice, and the field measurement says
+ *    it is the one that fabricates keyframes.
  *
- * `[M]` 23 agosto 2026, gradino sulla macchina di prova (linea larga → 3 s a
- *       10 Mbit/s → larga), scena `barra`, tela 1920x1080:
+ * `[M]` 23 Aug 2026, step on the test machine (wide line → 3 s at
+ *       10 Mbit/s → wide), scene `barra`, canvas 1920x1080:
  *
- *       | secondo      | 7  | 8  | 9  | 10 | 11 | 12 |
- *       | fotogrammi/s | 40 | 14 | 14 | 13 | 32 | 42 |
- *       | di cui CHIAVE|  0 |  6 |  7 |  7 |  2 |  0 |
- *       | abbandoni    |  0 |  7 |  6 |  7 |  2 |  0 |
+ *       | second       | 7  | 8  | 9  | 10 | 11 | 12 |
+ *       | frames/s     | 40 | 14 | 14 | 13 | 32 | 42 |
+ *       | of which KEY |  0 |  6 |  7 |  7 |  2 |  0 |
+ *       | abandonments |  0 |  7 |  6 |  7 |  2 |  0 |
  *
- *       ⛔ Abbandoni e chiavi stanno **uno a uno**, anche sulla linea larga
- *       (3↔3, 1↔1).  ⇒ Non e' la linea povera a fabbricare le chiavi: e'
- *       questa funzione.  La linea povera aggiunge solo occasioni.
- *       ⚠ Controllo: lo stesso gradino con una scena che costa 3,7 Mbit/s —
- *       sotto il buco — da' 0 chiavi, 0 abbandoni, 40/s in tutte le fasi: lo
- *       strumento sa distinguere.
+ *       ⛔ Abandonments and keyframes go **one to one**, even on the wide line
+ *       (3↔3, 1↔1).  ⇒ It is not the poor line that fabricates keyframes: it is
+ *       this function.  The poor line only adds occasions.
+ *       ⚠ Control: the same step with a scene costing 3.7 Mbit/s —
+ *       below the hole — gives 0 keyframes, 0 abandonments, 40/s in all phases: the
+ *       instrument can tell the difference.
  *
- * ⭐ LA REGOLA NUOVA: un delta si abbandona **solo se la coda del video non si
- *    svuota entro la soglia**, cioe' solo se non arriverebbe comunque in tempo
- *    per servire a qualcosa.  Sotto la soglia si TIENE: gli stream sono
- *    indipendenti (`RCP.md:1155`), quindi tenerlo non blocca quelli dopo.
+ * ⭐ THE NEW RULE: a delta is abandoned **only if the video queue does not
+ *    empty within the threshold**, that is only if it would not arrive in time anyway
+ *    to be of any use.  Below the threshold it is KEPT: streams are
+ *    independent (`RCP.md:1155`), so keeping it does not block the later ones.
  *
- * ⛔ IL NUMERO, E LA SUA RAGIONE — quattro vincoli, non un gusto:
+ * ⛔ THE NUMBER, AND ITS REASON — four constraints, not a taste:
  *
- *    1. dev'essere **piu' di un periodo di fotogramma**, o e' la regola di oggi
- *       con un nome nuovo: `[M]` fase 8, il contenuto vero dell'utente va a
- *       20,9 fotogrammi/s = **47,8 ms** di periodo (33,3 ms a 30/s);
- *    2. dev'essere **meno del fondo con cui gia' si richiede una chiave** —
- *       `WT_CHIAVE_RICHIESTA_MS` = 150 ms: oltre quel numero la coda
- *       ritarderebbe piu' del ritmo che il prodotto ha gia' accettato;
- *    3. deve **lasciar passare una CHIAVE piu' qualche delta** dove il difetto
- *       morde: `[M]` fase 8 una chiave misura ~20 800 byte (mediana, QP 26); a
- *       3 Mbit/s (375 byte/ms) esce in 56 ms, e nei 44 ms che restano ci
- *       stanno tre delta;
- *    4. il prezzo si somma all'anello: `[M]` fase 8 l'anello intero misura
- *       **55,20 ms**, e 100 + 55 sta sotto il quinto di secondo.
+ *    1. it must be **more than one frame period**, or it is today's rule
+ *       with a new name: `[M]` phase 8, the user's real content runs at
+ *       20.9 frames/s = **47.8 ms** period (33.3 ms at 30/s);
+ *    2. it must be **less than the backstop with which a keyframe is already requested** —
+ *       `WT_CHIAVE_RICHIESTA_MS` = 150 ms: beyond that number the queue
+ *       would delay more than the rhythm the product has already accepted;
+ *    3. it must **let a KEYFRAME plus a few deltas through** where the defect
+ *       bites: `[M]` phase 8 a keyframe measures ~20 800 bytes (median, QP 26); at
+ *       3 Mbit/s (375 bytes/ms) it goes out in 56 ms, and in the remaining 44 ms
+ *       three deltas fit;
+ *    4. the price adds up along the chain: `[M]` phase 8 the whole chain measures
+ *       **55.20 ms**, and 100 + 55 stays below a fifth of a second.
  *
- * ⇒ **100 ms**, ed e' il PREDEFINITO dal 24 agosto 2026 (decisione dell'utente:
- *    le cure della fase 9 si accendono nel prodotto).  ⚠ `[?]` Il numero non e'
- *    dimostrato: e' derivato dai quattro vincoli qui sopra e poi MISURATO —
- *    `[M]` 23-24 ago 2026, banco `09-b79`, tre bracci sulla linea sana: 39,85 /
- *    40,19 / 39,63 fotogrammi/s, **zero chiavi** in tutt'e tre, deriva finale
- *    0,1 / 0,2 / 0,9 ms.  ⇒ Sulla linea sana la cura NON COSTA NIENTE; su rete
- *    cattiva il prezzo e' fino a **+160 ms** di deriva, ed e' quello che
- *    l'utente ha guardato e accettato.
+ * ⇒ **100 ms**, and it is the DEFAULT since 24 Aug 2026 (the user's decision:
+ *    the phase 9 cures are switched on in the product).  ⚠ `[?]` The number is not
+ *    proved: it is derived from the four constraints above and then MEASURED —
+ *    `[M]` 23-24 Aug 2026, bench `09-b79`, three arms on the healthy line: 39.85 /
+ *    40.19 / 39.63 frames/s, **zero keyframes** in all three, final drift
+ *    0.1 / 0.2 / 0.9 ms.  ⇒ On the healthy line the cure COSTS NOTHING; on a bad
+ *    network the price is up to **+160 ms** of drift, and it is what
+ *    the user looked at and accepted.
  *
- * ⛔ Il numero sta in `webtransport.h` (`WT_SGOMBRA_SOGLIA_MS`), non qui: `main.c`
- *    ci inizializza la sua variabile, e una seconda copia sarebbe «il
- *    predefinito del server» diverso da «il predefinito del trasporto» il
- *    giorno che uno dei due si tara. */
+ * ⛔ The number is in `webtransport.h` (`WT_SGOMBRA_SOGLIA_MS`), not here: `main.c`
+ *    initialises its variable with it, and a second copy would be «the
+ *    server's default» different from «the transport's default» the
+ *    day one of the two is tuned. */
 
-/* ⛔ Il ripiego quando ngtcp2 non ha ancora ne' `smoothed_rtt` ne' `cwnd`: si
- *    assume **il pavimento dichiarato**, 20 Mbit/s = 2 500 byte/ms
- *    (`DECISIONI.md` §3.1-bis).  ⚠ Si DICHIARA invece di indovinare: un numero
- *    inventato che passa per misurato e' la forma E1.  ⚠ E se la linea vera e'
- *    piu' stretta il ripiego SOTTOSTIMA l'attesa e si tiene un delta di
- *    troppo: dura finche' ngtcp2 non ha una misura, cioe' un giro di rete. */
+/* ⛔ The fallback when ngtcp2 has neither `smoothed_rtt` nor `cwnd` yet: we
+ *    assume **the declared floor**, 20 Mbit/s = 2 500 bytes/ms
+ *    (`DECISIONI.md` §3.1-bis).  ⚠ It is DECLARED instead of guessed: an invented
+ *    number passing for measured is shape E1.  ⚠ And if the real line is
+ *    narrower the fallback UNDERESTIMATES the wait and keeps one delta too
+ *    many: it lasts until ngtcp2 has a measurement, that is one network round trip. */
 #define WT_PAVIMENTO_BYTE_MS 2500u
 
-/* ⛔⭐⭐ NASCE ACCESA A `WT_SGOMBRA_SOGLIA_MS` DAL 24 AGOSTO 2026 — decisione
- *      dell'utente.  ⚠ Fino al 23 nasceva SPENTA per l'invariante I6, che vuole
- *      cio' che cambia quel che si VEDE dietro un interruttore spento **finche'
- *      l'utente non l'ha guardato**: l'ha guardato (§19.6, §20.3) e ha deciso.
- *      ⇒ Il presupposto di I6 e' soddisfatto, non aggirato.
+/* ⛔⭐⭐ IT IS BORN ON AT `WT_SGOMBRA_SOGLIA_MS` SINCE 24 AUG 2026 — the
+ *      user's decision.  ⚠ Until the 23rd it was born OFF because of invariant I6, which wants
+ *      whatever changes what one SEES behind a switch that is off **until
+ *      the user has looked at it**: they looked at it (§19.6, §20.3) and decided.
+ *      ⇒ The premise of I6 is satisfied, not circumvented.
  *
- * ⛔ `0` resta la strada per spegnerla (`--sgombra-soglia-ms 0`): si abbandona a
- *    ogni fotogramma piu' recente, cioe' il prodotto di ieri **byte per byte**.
+ * ⛔ `0` remains the way to switch it off (`--sgombra-soglia-ms 0`): it abandons at
+ *    every more recent frame, that is yesterday's product **byte for byte**.
  *
- * ⚠ NON serve un secondo booleano «qualcuno l'ha toccata»: `main.c` chiama
- *   `wt_sgombra_soglia()` **sempre**, all'avvio, col valore in vigore ⇒ la riga
- *   d'avvio esce in tutt'e due i casi per costruzione, non per una guardia da
- *   ricordarsi.  ⛔ E qui non si ripete il numero: la copia sola sta nel .h, e
- *   il valore arriva da `main.c`. */
+ * ⚠ A second boolean «somebody touched it» is NOT needed: `main.c` calls
+ *   `wt_sgombra_soglia()` **always**, at startup, with the value in force ⇒ the startup
+ *   line comes out in both cases by construction, not because of a guard to
+ *   remember.  ⛔ And the number is not repeated here: the single copy is in the .h, and
+ *   the value arrives from `main.c`. */
 static uint64_t sgombra_soglia_ms;
 
-/* ⛔⭐ LA RIGA CHE DICHIARA IL VALORE IN VIGORE, E SI SCRIVE ACCESA E SPENTA.
+/* ⛔⭐ THE LINE THAT DECLARES THE VALUE IN FORCE, AND IT IS WRITTEN ON AND OFF.
  *
- *     «Spenta» e «non e' mai scattata» non devono avere la stessa faccia: e'
- *     esattamente la forma E1 («scritto non e' in vigore»), la stessa ragione
- *     per cui i tre orologi di §5.3 si scrivono all'avvio.
+ *     «Off» and «never fired» must not look the same: it is
+ *     exactly shape E1 («written is not in force»), the same reason
+ *     the three clocks of §5.3 are written at startup.
  *
- * ⛔⛔ E DAL 24 AGOSTO 2026 DEVE DIRE **LO STATO VERO E LA RAGIONE**, non piu'
- *      «SPENTA (I6)».  Una riga che dicesse ancora «spenta (I6)» su una cura
- *      accesa e' peggio di nessuna riga: chi rilegge un banco crederebbe di aver
- *      misurato il prodotto di ieri.  ⇒ Tre cose in ogni riga: se e' accesa, il
- *      NUMERO in vigore, e COME si spegne. */
+ * ⛔⛔ AND SINCE 24 AUG 2026 IT MUST SAY **THE TRUE STATE AND THE REASON**, no longer
+ *      «OFF (I6)».  A line still saying «off (I6)» about a cure
+ *      that is on is worse than no line: whoever rereads a bench would believe they had
+ *      measured yesterday's product.  ⇒ Three things in every line: whether it is on, the
+ *      NUMBER in force, and HOW it is switched off. */
 static void sgombra_dichiara(const char *da_dove)
 {
-	/* ⚠ E il pezzo di testa — «soglia della coda video (§5.1): N ms» — NON si
-	 *   tocca: e' quel che i banchi della fase 9 leggono per verificare il
-	 *   braccio (`09-b79-cure.py:582`).  Cambia la CODA della riga, cioe' quel
-	 *   che la riga dice; il gancio resta dov'era. */
+	/* ⚠ And the head piece — «video queue threshold (§5.1): N ms» — is NOT
+	 *   to be touched: it is what the phase 9 benches read to verify the
+	 *   arm (`09-b79-cure.py:582`).  The TAIL of the line changes, that is what
+	 *   the line says; the hook stays where it was. */
 	if (sgombra_soglia_ms)
 		registro_dice(REG_AVVIO,
-		              "⭐ FASE 9, soglia della coda video (§5.1): %llu ms — "
-		              "ACCESA: sopra la soglia un delta fermo si abbandona, sotto "
-		              "si TIENE.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
-		              "(decisione dell'utente: le cure della fase 9 si accendono "
-		              "nel prodotto; l'ha guardate sul desktop vero, §19.6 e "
-		              "§20.3).  ⚠ Il prezzo, `[M]` 09-b79: fino a +160 ms di "
-		              "deriva su rete cattiva, ZERO sulla linea sana (39,85 / "
-		              "40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre i "
-		              "bracci).  ⛔ Si SPEGNE con `--sgombra-soglia-ms 0`, ed e' "
-		              "l'unica strada.  Impostata da: %s",
+		              "⭐ PHASE 9, video queue threshold (§5.1): %llu ms — "
+		              "ON: above the threshold a stuck delta is abandoned, below "
+		              "it is KEPT.  ⭐ It is the DEFAULT since 24 Aug 2026 "
+		              "(the user's decision: the phase 9 cures are switched on "
+		              "in the product; the user looked at them on the real desktop, §19.6 and "
+		              "§20.3).  ⚠ The price, `[M]` 09-b79: up to +160 ms of "
+		              "drift on a bad network, ZERO on the healthy line (39.85 / "
+		              "40.19 / 39.63 frames/s, zero keyframes in all three "
+		              "arms).  ⛔ It is SWITCHED OFF with `--sgombra-soglia-ms 0`, and that is "
+		              "the only way.  Set by: %s",
 		              (unsigned long long)sgombra_soglia_ms, da_dove);
 	else
 		registro_dice(REG_AVVIO,
-		              "⛔ FASE 9, soglia della coda video (§5.1): 0 ms — SPENTA: "
-		              "si abbandona a ogni fotogramma piu' recente, cioe' il "
-		              "prodotto fino al 23 agosto 2026 byte per byte.  ⚠ E NON E' "
-		              "il predefinito: dal 24 agosto nasce ACCESA a %u ms, quindi "
-		              "qualcuno ha battuto `--sgombra-soglia-ms 0` apposta.  "
-		              "Impostata da: %s",
+		              "⛔ PHASE 9, video queue threshold (§5.1): 0 ms — OFF: "
+		              "it abandons at every more recent frame, that is the "
+		              "product up to 23 Aug 2026 byte for byte.  ⚠ And it is NOT "
+		              "the default: since 24 August it is born ON at %u ms, so "
+		              "someone typed `--sgombra-soglia-ms 0` on purpose.  "
+		              "Set by: %s",
 		              (unsigned)WT_SGOMBRA_SOGLIA_MS, da_dove);
 }
 
-/* ⛔ La chiama `main.c` all'avvio, SEMPRE — anche con 0, che e' il caso in cui
- *    qualcuno l'ha spenta apposta.  ⚠ Il ponte provvisorio che leggeva
- *    `REMOTIX_SGOMBRA_SOGLIA_MS` dall'ambiente era dichiarato temporaneo ed e'
- *    stato TOLTO il 23 agosto 2026, quando `--sgombra-soglia-ms` e' arrivata
- *    davvero: due strade per accendere la stessa cura sono due numeri che
- *    possono divergere. */
+/* ⛔ `main.c` calls it at startup, ALWAYS — even with 0, which is the case in which
+ *    someone switched it off on purpose.  ⚠ The provisional bridge that read
+ *    `REMOTIX_SGOMBRA_SOGLIA_MS` from the environment was declared temporary and was
+ *    REMOVED on 23 Aug 2026, when `--sgombra-soglia-ms` really
+ *    arrived: two ways of switching on the same cure are two numbers that
+ *    can diverge. */
 void wt_sgombra_soglia(uint64_t ms)
 {
 	sgombra_soglia_ms = ms;
-	sgombra_dichiara("main.c, dalla riga di comando (--sgombra-soglia-ms; "
-	                 "il predefinito e' 100, e 0 la spegne)");
+	sgombra_dichiara("main.c, from the command line (--sgombra-soglia-ms; "
+	                 "the default is 100, and 0 switches it off)");
 }
 
 uint64_t wt_sgombra_soglia_letta(void)
@@ -3813,142 +3813,142 @@ uint64_t wt_sgombra_soglia_letta(void)
 	return sgombra_soglia_ms;
 }
 
-/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO: l'interruttore, e dal 24 agosto 2026
- *      nasce **ACCESO** (decisione dell'utente; fino al 23 nasceva spento per
- *      l'invariante I6, e I6 e' servita: l'utente ha guardato §19.6 e §20.3
- *      prima di decidere).  Si spegne con `--niente-ritmo-adattivo`.
- *    Statico e non per sessione: e' una decisione del server, non del client.
- * ⚠ Il valore lo porta `main.c`, che e' l'unico posto in cui il predefinito e'
- *   scritto: qui non se ne tiene una seconda copia. */
+/* ⛔⭐⭐ PHASE 9 — THE RATE REGULATOR: the switch, and since 24 Aug 2026
+ *      it is born **ON** (the user's decision; until the 23rd it was born off because of
+ *      invariant I6, and I6 did its job: the user looked at §19.6 and §20.3
+ *      before deciding).  It is switched off with `--niente-ritmo-adattivo`.
+ *    Static and not per session: it is a decision of the server, not of the client.
+ * ⚠ The value is brought by `main.c`, which is the only place where the default is
+ *   written: no second copy is kept here. */
 static bool ritmo_adattivo;
 
-/* ⛔ Quanti fotogrammi delta si concede di avere indietro prima di saltarne uno.
+/* ⛔ How many delta frames it allows itself to have behind before skipping one.
  *
- * ⭐ E IL NUMERO NON E' UN OROLOGIO TRAVESTITO: e' la profondita' del tubo.
- *    Con `POSTI = 1` si salterebbe ogni volta che il fotogramma di prima non e'
- *    uscito INTERAMENTE entro l'arrivo del successivo — a 60/s sono 16 ms, e un
- *    delta da 10 KB su una linea sana ne impiega di piu': sarebbe euristica
- *    prudente, cioe' I1 rotta.  Con `POSTI = 2` si concede esattamente UN
- *    fotogramma di sovrapposizione, e si salta solo quando ne sono rimasti
- *    indietro due.
- * ⚠ `[?]` Il valore va tarato sul banco, e la taratura e' falsificabile: a
- *   20 Mbit/s con scena mossa `POSTI = 2` deve dare ZERO discese. */
+ * ⭐ AND THE NUMBER IS NOT A DISGUISED CLOCK: it is the depth of the pipe.
+ *    With `POSTI = 1` one would skip every time the previous frame had not
+ *    gone out ENTIRELY by the arrival of the next — at 60/s that is 16 ms, and a
+ *    10 KB delta on a healthy line takes longer: it would be a cautious
+ *    heuristic, that is I1 broken.  With `POSTI = 2` exactly ONE
+ *    frame of overlap is allowed, and one skips only when two have been left
+ *    behind.
+ * ⚠ `[?]` The value must be tuned on the bench, and the tuning is falsifiable: at
+ *   20 Mbit/s with a moving scene `POSTI = 2` must give ZERO drops. */
 #define WT_RITMO_POSTI 2
 
-/* ⛔⛔⭐ LA CHIAMA `main.c` ALL'AVVIO, SEMPRE — acceso e spento — e la riga che
- *      esce di qui e' meta' del valore di questa cura.
+/* ⛔⛔⭐ `main.c` CALLS IT AT STARTUP, ALWAYS — on and off — and the line that
+ *      comes out of here is half the value of this cure.
  *
- *      Un regolatore SPENTO e un regolatore che non ha mai dovuto scattare
- *      producono LO STESSO REGISTRO, cioe' nessuna riga.  Chi rilegge un banco
- *      senza questa riga non sa quale dei due ha misurato: e' la forma E1
- *      («scritto non e' in vigore»), ed e' la stessa ragione per cui
- *      `chiave_intervallo_ms()` porta `*come` e per cui `sgombra_dichiara()`
- *      parla anche a zero.
+ *      A regulator that is OFF and a regulator that never had to fire
+ *      produce THE SAME LOG, that is no line.  Whoever rereads a bench
+ *      without this line does not know which of the two they measured: it is shape E1
+ *      («written is not in force»), and it is the same reason why
+ *      `chiave_intervallo_ms()` carries `*come` and why `sgombra_dichiara()`
+ *      speaks even at zero.
  *
- * ⛔⛔ E QUI SI DICHIARA ANCHE LA DIPENDENZA FRA I DUE INTERRUTTORI, che e' il
- *      fatto piu' facile da misurare male di tutta la fase.
+ * ⛔⛔ AND HERE THE DEPENDENCY BETWEEN THE TWO SWITCHES IS ALSO DECLARED, which is the
+ *      fact easiest to measure wrong in the whole phase.
  *
- *      `video_sgombra()` con la soglia SPENTA abbandona ogni delta che ha
- *      ancora byte in coda, a ogni fotogramma piu' recente.  ⇒ Quando il
- *      fotogramma N+1 arriva, l'unico delta che puo' avere ancora byte nostri
- *      e' N: `arretrato` vale **0 o 1, mai 2**, per costruzione — e con
- *      `WT_RITMO_POSTI = 2` questo regolatore **non scatta mai**.
+ *      `video_sgombra()` with the threshold OFF abandons every delta that
+ *      still has bytes in the queue, at every more recent frame.  ⇒ When
+ *      frame N+1 arrives, the only delta that can still have bytes of ours
+ *      is N: `arretrato` is **0 or 1, never 2**, by construction — and with
+ *      `WT_RITMO_POSTI = 2` this regulator **never fires**.
  *
- *      ⛔ Un banco che lasciasse acceso il solo regolatore (cioe' che battesse
- *      `--sgombra-soglia-ms 0` senza `--niente-ritmo-adattivo`) misurerebbe zero
- *      discese e leggerebbe «la linea porta».  Sono due fatti con la stessa
- *      faccia, e la riga qui sotto e' quel che li separa PRIMA della misura
- *      invece che dopo.
+ *      ⛔ A bench that left only the regulator on (that is that typed
+ *      `--sgombra-soglia-ms 0` without `--niente-ritmo-adattivo`) would measure zero
+ *      drops and would read «the line carries».  They are two facts with the same
+ *      face, and the line below is what separates them BEFORE the measurement
+ *      instead of after.
  *
- * ⭐ Dal 24 agosto 2026 il caso normale e' che siano accesi TUTT'E DUE di suo:
- *      remotix                       (i predefiniti: soglia 100 ms + regolatore)
- *   e la coppia che non misura niente va CHIESTA apposta.
+ * ⭐ Since 24 Aug 2026 the normal case is that BOTH are on by themselves:
+ *      remotix                       (the defaults: threshold 100 ms + regulator)
+ *   and the pair that measures nothing must be ASKED for on purpose.
  *
- * ⚠ E l'ordine in `main.c` non e' un caso: `wt_sgombra_soglia()` viene PRIMA,
- *   cosi' questa riga legge il valore in vigore invece di prometterne uno.
+ * ⚠ And the order in `main.c` is not by chance: `wt_sgombra_soglia()` comes FIRST,
+ *   so this line reads the value in force instead of promising one.
  *
- * ⚠⚠ E l'ALGORITMO DI CONGESTIONE non e' mai stato scelto — `trasporto.c`
- *     chiama `ngtcp2_settings_default()` e non tocca `cc_algo`, quindi si
- *     prende il predefinito di ngtcp2 (CUBIC).  ⛔ NON si cambia in questo
- *     giro, perche' sarebbe una seconda variabile nello stesso banco; ma va
- *     nominato, perche' morde proprio qui: su WiFi un algoritmo A PERDITA
- *     legge una perdita da radio come una congestione e dimezza la finestra —
- *     cioe' fabbrica l'arretrato che questo regolatore poi misura.  `[?]` Da
- *     provare come esperimento separato, dietro un interruttore suo. */
+ * ⚠⚠ And the CONGESTION ALGORITHM has never been chosen — `trasporto.c`
+ *     calls `ngtcp2_settings_default()` and does not touch `cc_algo`, so
+ *     ngtcp2's default (CUBIC) is taken.  ⛔ It is NOT changed in this
+ *     round, because it would be a second variable in the same bench; but it must be
+ *     named, because it bites precisely here: on WiFi a LOSS-BASED algorithm
+ *     reads a radio loss as congestion and halves the window —
+ *     that is it fabricates the backlog this regulator then measures.  `[?]` To be
+ *     tried as a separate experiment, behind a switch of its own. */
 void wt_ritmo_adattivo(bool acceso)
 {
 	ritmo_adattivo = acceso;
 	if (!acceso) {
 		registro_dice(REG_AVVIO,
-		              "⛔ il regolatore del ritmo e' SPENTO da chi ha lanciato il "
-		              "server (`--niente-ritmo-adattivo`): nessun fotogramma "
-		              "verra' mai saltato per la linea, cioe' il prodotto fino al "
-		              "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: "
-		              "dal 24 agosto nasce ACCESO (decisione dell'utente), quindi "
-		              "qualcuno l'ha spento apposta.  ⚠ E questa riga E' il "
-		              "perche' — non e' che non ha dovuto scattare");
+		              "⛔ the rate regulator is OFF by whoever launched the "
+		              "server (`--niente-ritmo-adattivo`): no frame "
+		              "will ever be skipped because of the line, that is the product up to "
+		              "23 Aug 2026 byte for byte.  ⚠ And it is NOT the default: "
+		              "since 24 August it is born ON (the user's decision), so "
+		              "someone switched it off on purpose.  ⚠ And this line IS the "
+		              "reason — it is not that it never had to fire");
 		return;
 	}
 	registro_dice(REG_AVVIO,
-	              "⭐ FASE 9: il regolatore del ritmo e' ACCESO — un fotogramma "
-	              "NON parte quando %u delta in volo hanno ancora byte nella mia "
-	              "coda d'uscita.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
-	              "(decisione dell'utente: le cure della fase 9 si accendono nel "
-	              "prodotto; l'ha guardate sul desktop vero, §19.6 e §20.3).  ⚠ Il "
-	              "prezzo, `[M]` 09-b79: soglia piu' regolatore costano fino a "
-	              "+160 ms di deriva su rete cattiva, ZERO sulla linea sana "
-	              "(39,85 / 40,19 / 39,63 fotogrammi/s, zero chiavi in tutt'e tre "
-	              "i bracci).  ⛔ Si SPEGNE con `--niente-ritmo-adattivo`, ed e' "
-	              "l'unica strada — il nome vecchio `--ritmo-adattivo` non esiste "
-	              "piu'.  ⚠ Ogni discesa finisce nel registro (I1), e non c'e' "
-	              "nessuna risalita da ricordare: `arretrato` si rilegge a ogni "
-	              "fotogramma",
+	              "⭐ PHASE 9: the rate regulator is ON — a frame "
+	              "does NOT leave when %u deltas in flight still have bytes in my "
+	              "output queue.  ⭐ It is the DEFAULT since 24 Aug 2026 "
+	              "(the user's decision: the phase 9 cures are switched on in the "
+	              "product; the user looked at them on the real desktop, §19.6 and §20.3).  ⚠ The "
+	              "price, `[M]` 09-b79: threshold plus regulator cost up to "
+	              "+160 ms of drift on a bad network, ZERO on the healthy line "
+	              "(39.85 / 40.19 / 39.63 frames/s, zero keyframes in all three "
+	              "arms).  ⛔ It is SWITCHED OFF with `--niente-ritmo-adattivo`, and that is "
+	              "the only way — the old name `--ritmo-adattivo` no longer "
+	              "exists.  ⚠ Every drop ends up in the log (I1), and there is "
+	              "no rise to remember: `arretrato` is reread at every "
+	              "frame",
 	              (unsigned)WT_RITMO_POSTI);
 	if (!sgombra_soglia_ms)
 		registro_dice(REG_AVVIO,
-		              "⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA "
-		              "(`--sgombra-soglia-ms 0`), e allora questo regolatore NON "
-		              "SCATTERA' MAI: `video_sgombra()` svuota la coda dei delta a "
-		              "ogni fotogramma, quindi `arretrato` non puo' superare 1 e i "
-		              "posti sono %u.  ⚠ Un banco fatto cosi' misura ZERO discese e "
-		              "sembra dire «la linea porta»: sono due fatti con la stessa "
-		              "faccia.  ⇒ Coi predefiniti del 24 agosto 2026 nascono accesi "
-		              "TUTT'E DUE: chi vede questa riga ha spento la soglia a mano "
-		              "e ha lasciato acceso il regolatore, che e' la combinazione "
-		              "che non misura niente",
+		              "⛔⛔ BUT THE VIDEO QUEUE THRESHOLD IS OFF "
+		              "(`--sgombra-soglia-ms 0`), and then this regulator WILL NEVER "
+		              "FIRE: `video_sgombra()` empties the delta queue at "
+		              "every frame, so `arretrato` cannot exceed 1 and the "
+		              "slots are %u.  ⚠ A bench made like this measures ZERO drops and "
+		              "seems to say «the line carries»: they are two facts with the same "
+		              "face.  ⇒ With the defaults of 24 Aug 2026 BOTH are born "
+		              "on: whoever sees this line switched the threshold off by hand "
+		              "and left the regulator on, which is the combination "
+		              "that measures nothing",
 		              (unsigned)WT_RITMO_POSTI);
 	else
 		registro_dice(REG_AVVIO,
-		              "⭐ e la soglia della coda video e' accesa a %llu ms: e' il "
-		              "suo prerequisito — e' lei che lascia salire `arretrato` a "
-		              "2-3, cioe' nell'intervallo in cui i %u posti discriminano",
+		              "⭐ and the video queue threshold is on at %llu ms: it is its "
+		              "prerequisite — it is what lets `arretrato` rise to "
+		              "2-3, that is into the range in which the %u slots discriminate",
 		              (unsigned long long)sgombra_soglia_ms,
 		              (unsigned)WT_RITMO_POSTI);
 }
 
-/* ⛔⛔⭐ LA CHIAMA `main.c` ALL'AVVIO, SEMPRE — accesa e spenta — e la riga che
- *      esce di qui e' la meta' del valore di questa cura, per la stessa ragione
- *      di `wt_ritmo_adattivo()`: una cura spenta e una cura che non ha mai
- *      dovuto scattare producono LO STESSO REGISTRO, cioe' nessuna riga.
+/* ⛔⛔⭐ `main.c` CALLS IT AT STARTUP, ALWAYS — on and off — and the line that
+ *      comes out of here is half the value of this cure, for the same reason
+ *      as `wt_ritmo_adattivo()`: a cure that is off and a cure that never
+ *      had to fire produce THE SAME LOG, that is no line.
  *
- * ⛔⛔ E QUESTA E' LA PIU' VISIBILE DI TUTTE — butta fuori una sessione.  I6 non
- *      e' stata una formalita' qui: e' il passo che in v1 e' costato
- *      l'azzeramento di una fase intera.  ⇒ E' nata spenta, l'utente l'ha
- *      guardata sul desktop vero (§19.6, §20.3), e il **24 agosto 2026** ha
- *      deciso che diventa il comportamento normale.  ⭐ Il presupposto di I6 e'
- *      soddisfatto — non aggirato: l'interruttore c'e' ancora, e' solo girato
- *      dall'altra parte (`--niente-linea-morta`).
+ * ⛔⛔ AND THIS IS THE MOST VISIBLE OF ALL — it throws a session out.  I6 was not
+ *      a formality here: it is the step that in v1 cost
+ *      the reset of a whole phase.  ⇒ It was born off, the user watched it
+ *      on the real desktop (§19.6, §20.3), and on **24 Aug 2026**
+ *      decided it becomes the normal behaviour.  ⭐ The premise of I6 is
+ *      satisfied — not circumvented: the switch is still there, it is only turned
+ *      the other way (`--niente-linea-morta`).
  *
- * `stallo_ms`  i millisecondi senza che esca un byte di video PUR AVENDONE da
- *              mandare.  `0` = spento, e allora nessuno stallo, per lungo che
- *              sia, dichiara morta la linea (resta il solo silenzio).
- * `silenzio_s` i secondi senza un pacchetto dal client.  `0` = spento.
+ * `stallo_ms`  the milliseconds without a video byte leaving WHILE HAVING some to
+ *              send.  `0` = off, and then no stall, however long it
+ *              may be, declares the line dead (silence alone remains).
+ * `silenzio_s` the seconds without a packet from the client.  `0` = off.
  *
- * ⚠ E NON C'E' NESSUNA VARIABILE D'AMBIENTE, apposta: il ponte
- *   `REMOTIX_SGOMBRA_SOGLIA_MS` e' stato tolto il 23 agosto 2026 con la
- *   ragione scritta accanto a `wt_sgombra_soglia()` — due strade per accendere
- *   la stessa cura sono due numeri che possono divergere.  Il banco usa le
- *   opzioni, che sono l'unica strada.
+ * ⚠ AND THERE IS NO ENVIRONMENT VARIABLE, on purpose: the bridge
+ *   `REMOTIX_SGOMBRA_SOGLIA_MS` was removed on 23 Aug 2026 with the
+ *   reason written next to `wt_sgombra_soglia()` — two ways of switching on
+ *   the same cure are two numbers that can diverge.  The bench uses the
+ *   options, which are the only way.
  */
 void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 {
@@ -3957,90 +3957,90 @@ void wt_linea_morta(bool accesa, uint64_t stallo_ms, uint64_t silenzio_s)
 	linea_morta_silenzio_ms = silenzio_s * 1000;
 	if (!accesa) {
 		registro_dice(REG_AVVIO,
-		              "⛔ la LINEA MORTA e' SPENTA da chi ha lanciato il server "
-		              "(`--niente-linea-morta`): nessuna sessione verra' mai "
-		              "chiusa per stallo dell'uscita ne' per silenzio del client "
-		              "prima dei 30 s di QUIC (§5.3) — cioe' il prodotto fino al "
-		              "23 agosto 2026 byte per byte.  ⚠ E NON E' il predefinito: "
-		              "dal 24 agosto nasce ACCESA (decisione dell'utente), quindi "
-		              "qualcuno l'ha spenta apposta.  ⚠ E questa riga E' il "
-		              "perche' — non e' che non ha dovuto scattare");
+		              "⛔ the DEAD LINE is OFF by whoever launched the server "
+		              "(`--niente-linea-morta`): no session will ever be "
+		              "closed for output stall or for client silence "
+		              "before QUIC's 30 s (§5.3) — that is the product up to "
+		              "23 Aug 2026 byte for byte.  ⚠ And it is NOT the default: "
+		              "since 24 August it is born ON (the user's decision), so "
+		              "someone switched it off on purpose.  ⚠ And this line IS the "
+		              "reason — it is not that it never had to fire");
 		return;
 	}
 	registro_dice(REG_AVVIO,
-	              "⛔⭐ FASE 9: la LINEA MORTA e' ACCESA — il "
-	              "filo cade e l'utente rientra A MANO (decisione dell'utente, 23 "
-	              "agosto 2026).  ⭐ E' il PREDEFINITO dal 24 agosto 2026, e si "
-	              "SPEGNE con `--niente-linea-morta` (unica strada; il nome "
-	              "vecchio `--linea-morta` non esiste piu').  ⛔⛔ E' LA CURA CHE "
-	              "CHIUDE UNA SESSIONE: se la soglia fosse tarata male butterebbe "
-	              "fuori chi sta lavorando — `[M]` 23-24 ago il margine e' >10x "
-	              "sopra `casa-cattiva`, la linea PEGGIORE che regge (stallo "
-	              "massimo < 500 ms su dieci minuti, zero scatti), e 2,9x sotto i "
-	              "14,26 s di `raffica-forte`, che non serve nessuno.  DUE cause, "
-	              "e ognuna scrive la sua riga "
-	              "`linea-morta` col conto su cui ha deciso (I1):  (1) STALLO: "
-	              "%llu ms senza che esca un byte di video mentre ne avevamo da "
-	              "mandare — e «avevo da mandare» vuol dire byte di fotogrammi "
-	              "ancora in coda OPPURE un fotogramma nuovo dal palco: a scena "
-	              "ferma il conto non parte nemmeno;  (2) SILENZIO: %llu s senza "
-	              "un pacchetto dal client con almeno %u pacchetti nostri usciti "
-	              "nel frattempo.  ⚠ Margini della soglia dello stallo, `[M]` 23 "
-	              "ago: 5,0× sopra il secondo intero vuoto di `raffica-1` (che "
-	              "REGGE, 23,94 fotogrammi/s) e 2,9× sotto i 14,26 s di "
-	              "`raffica-forte` (che non serve nessuno).  ⛔⛔ E LA FRAZIONE DI "
-	              "PERDITA NON GIUDICA PIU': `permille=` resta nella riga come "
-	              "TESTIMONE del riordino — `casa-cattiva` ne dichiarava 512‰ e "
-	              "REGGEVA dieci minuti, `raffica-forte` 123‰ e non reggeva",
+	              "⛔⭐ PHASE 9: the DEAD LINE is ON — the "
+	              "wire drops and the user comes back in BY HAND (the user's decision, 23 "
+	              "Aug 2026).  ⭐ It is the DEFAULT since 24 Aug 2026, and it is "
+	              "SWITCHED OFF with `--niente-linea-morta` (only way; the old "
+	              "name `--linea-morta` no longer exists).  ⛔⛔ IT IS THE CURE THAT "
+	              "CLOSES A SESSION: if the threshold were badly tuned it would throw "
+	              "out someone who is working — `[M]` 23-24 Aug the margin is >10x "
+	              "above `casa-cattiva`, the WORST line that holds (largest "
+	              "stall < 500 ms over ten minutes, zero firings), and 2.9x below the "
+	              "14.26 s of `raffica-forte`, which serves nobody.  TWO causes, "
+	              "and each writes its own "
+	              "`linea-morta` line with the count it decided on (I1):  (1) STALL: "
+	              "%llu ms without a video byte leaving while we had some to "
+	              "send — and «I had some to send» means frame bytes "
+	              "still in the queue OR a new frame from the stage: on a still "
+	              "scene the count does not even start;  (2) SILENCE: %llu s without "
+	              "a packet from the client with at least %u of our packets sent "
+	              "in the meantime.  ⚠ Margins of the stall threshold, `[M]` 23 "
+	              "Aug: 5.0× above the empty whole second of `raffica-1` (which "
+	              "HOLDS, 23.94 frames/s) and 2.9× below the 14.26 s of "
+	              "`raffica-forte` (which serves nobody).  ⛔⛔ AND THE LOSS "
+	              "FRACTION NO LONGER JUDGES: `permille=` stays in the line as a "
+	              "WITNESS of reordering — `casa-cattiva` declared 512‰ and "
+	              "HELD for ten minutes, `raffica-forte` 123‰ and did not hold",
 	              (unsigned long long)linea_morta_stallo_ms,
 	              (unsigned long long)(linea_morta_silenzio_ms / 1000),
 	              (unsigned)WT_LM_MIN_PROVE);
 	if (!linea_morta_stallo_ms)
 		registro_dice(REG_AVVIO,
-		              "⚠ ma la soglia dello STALLO e' a 0 ms: resta il solo "
-		              "silenzio.  Un'immagine ferma non chiudera' niente");
+		              "⚠ but the STALL threshold is at 0 ms: silence alone "
+		              "remains.  A frozen image will close nothing");
 	if (!linea_morta_silenzio_ms)
 		registro_dice(REG_AVVIO,
-		              "⚠ ma la soglia del SILENZIO e' a 0 s: resta la sola "
-		              "perdita, e un client che tace aspetta i 30 s di QUIC "
-		              "(§5.3) come sempre");
+		              "⚠ but the SILENCE threshold is at 0 s: loss alone "
+		              "remains, and a client that goes quiet waits for QUIC's 30 s "
+		              "(§5.3) as always");
 }
 
-/* ⛔ Quanti ms ci mette la banda MISURATA a portare via `byte` — gli stessi due
- *    numeri di `chiave_intervallo_ms()`, che sono quelli con cui ngtcp2 decide
- *    quanto spedire.  ⚠ Non e' la banda «della linea»: e' quella che il
- *    controllo di congestione sta concedendo adesso.
+/* ⛔ How many ms the MEASURED bandwidth takes to carry away `byte` — the same two
+ *    numbers as `chiave_intervallo_ms()`, which are the ones with which ngtcp2 decides
+ *    how much to send.  ⚠ It is not the bandwidth «of the line»: it is the one the
+ *    congestion control is granting now.
  *
- * ⛔⛔ E QUESTA STIMA E' UN MINIMO, non una promessa — tre ragioni, dichiarate
- *     perche' e' il falsificatore piu' importante del §5.3 della proposta:
- *     (a) non conta i byte gia' consegnati a ngtcp2 e non ancora riscontrati,
- *         che la coda non vede piu';
- *     (b) la finestra la divide anche l'audio, che passa su datagram;
- *     (c) una ritrasmissione ripaga la stessa banda due volte.
- *     ⇒ Se il ritardo misurato dell'anello supera 55 + soglia ms, e' QUI che
- *     ha ceduto: sarebbe un numero che *sembra* misurato. */
+ * ⛔⛔ AND THIS ESTIMATE IS A MINIMUM, not a promise — three reasons, declared
+ *     because it is the most important falsifier of §5.3 of the proposal:
+ *     (a) it does not count the bytes already handed to ngtcp2 and not yet acknowledged,
+ *         which the queue no longer sees;
+ *     (b) the window is shared with audio too, which travels on datagrams;
+ *     (c) a retransmission pays the same bandwidth twice.
+ *     ⇒ If the measured delay of the chain exceeds 55 + threshold ms, it is HERE that
+ *     it gave way: it would be a number that *looks* measured. */
 static uint64_t coda_svuotamento_ms(const wt *w, size_t byte, const char **come)
 {
 	ngtcp2_conn_info info;
 
 	if (byte == 0) {
-		*come = "la coda del video e' vuota";
+		*come = "the video queue is empty";
 		return 0;
 	}
 	memset(&info, 0, sizeof info);
 	if (w->conn)
 		ngtcp2_conn_get_conn_info(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
-		*come = "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra, si assume "
-		        "il pavimento dichiarato di 20 Mbit/s (DECISIONI.md §3.1-bis)";
+		*come = "fallback: ngtcp2 has neither rtt nor window yet, the "
+		        "declared floor of 20 Mbit/s is assumed (DECISIONI.md §3.1-bis)";
 		return (uint64_t)byte / WT_PAVIMENTO_BYTE_MS;
 	}
-	*come = "dalla banda misurata (cwnd/rtt)";
+	*come = "from the measured bandwidth (cwnd/rtt)";
 	return (uint64_t)byte * info.smoothed_rtt / info.cwnd / NGTCP2_MILLISECONDS;
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ §5.1 — L'ABBANDONO, ED E' QUELLO CHE SI VEDE DAL LATO CHE RICEVE.       */
+/* ⭐ §5.1 — ABANDONMENT, AND IT IS WHAT SHOWS ON THE RECEIVING SIDE.        */
 
 static void involo_pulisci(wt *w)
 {
@@ -4051,122 +4051,122 @@ static void involo_pulisci(wt *w)
 	w->ninvolo = j;
 }
 
-/* ⛔ §5.1: «il server PUO' chiamare `RESET_STREAM` su un fotogramma che non
- *    serve piu' — perche' ne e' gia' partito uno piu' recente — e i byte non
- *    ancora spediti non partono affatto».
+/* ⛔ §5.1: «the server MAY call `RESET_STREAM` on a frame that is no longer
+ *    needed — because a more recent one has already left — and the bytes not
+ *    yet sent do not leave at all».
  *
- * ⚠ «Non ancora spediti» vuol dire «ancora nella NOSTRA coda»: quel che e' gia'
- *   passato a ngtcp2 non lo riprendiamo, e azzerare li' non risparmierebbe piu'
- *   niente.  ⇒ Un fotogramma senza byte in coda esce dall'elenco senza che si
- *   scriva niente: non e' stato abbandonato, e' stato spedito. */
+ * ⚠ «Not yet sent» means «still in OUR queue»: what has already
+ *   passed to ngtcp2 we do not take back, and resetting there would no longer save
+ *   anything.  ⇒ A frame without bytes in the queue leaves the list without anything
+ *   being written: it was not abandoned, it was sent. */
 /*
- * ⛔⛔⛔ E QUI STA IL MOTORE DELLA SPIRALE — trovato il 21 agosto 2026 misurando
- *       la cura di `WT_CHIAVE_TETTO_MS`, e NON e' quel che credevo.
+ * ⛔⛔⛔ AND HERE IS THE ENGINE OF THE SPIRAL — found on 21 Aug 2026 measuring
+ *       the cure of `WT_CHIAVE_TETTO_MS`, and it is NOT what I believed.
  *
- *       Questa funzione si chiama a OGNI fotogramma che arriva dal palco, e
- *       abbandona i delta ancora fermi in coda perche' «ne e' partito uno piu'
- *       recente» (§5.1).  Su una linea larga non abbandona quasi mai.  ⛔ Su
- *       una linea stretta un delta non fa in tempo a uscire in 33 ms, quindi
- *       viene abbandonato **sempre**, e ogni abbandono accende il debito di
- *       §5.2 dentro `rcp.c`.
+ *       This function is called at EVERY frame that arrives from the stage, and
+ *       abandons the deltas still stuck in the queue because «a more
+ *       recent one has left» (§5.1).  On a wide line it almost never abandons.  ⛔ On
+ *       a narrow line a delta does not have time to go out in 33 ms, so
+ *       it is abandoned **always**, and every abandonment switches on the debt of
+ *       §5.2 inside `rcp.c`.
  *
- *       `[M]` Il registro di un giro a 3 Mbit lo dice **28 volte al secondo**:
- *       «⛔ FOTOGRAMMA NON SPEDITO: e' un delta e §5.2 vuole una CHIAVE (un
- *       delta e' stato abbandonato nella coda (§5.1))».  ⇒ Il debito non si
- *       spegne mai, ogni fotogramma consegnato e' una CHIAVE (115 su 115, 99 su
- *       99, 128 su 128), ogni chiave riempie la finestra e i datagram
- *       dell'audio trovano `cwnd_left = 0`.
+ *       `[M]` The log of a run at 3 Mbit says it **28 times a second**:
+ *       «⛔ FRAME NOT SENT: it is a delta and §5.2 wants a KEYFRAME (a
+ *       delta was abandoned in the queue (§5.1))».  ⇒ The debt never
+ *       switches off, every delivered frame is a KEYFRAME (115 out of 115, 99 out of
+ *       99, 128 out of 128), every keyframe fills the window and the audio
+ *       datagrams find `cwnd_left = 0`.
  *
- * ⚠⚠ E LA MIA PRIMA DIAGNOSI CONTAVA LA RIGA SBAGLIATA: avevo cercato «vuole
- *     una CHIAVE», che compare in DUE messaggi diversi — la RICHIESTA che parte
- *     da `video_regola()` e il RIFIUTO che scrive `rcp.c`.  Le «806 richieste di
- *     chiave» del primo rapporto erano in gran parte rifiuti.  ⇒ Contate
- *     separatamente: **105 richieste contro 346 rifiuti** nello stesso giro.
- *     La riga che si somiglia si conta a parte, o la diagnosi punta a monte di
- *     dove sta il difetto.
+ * ⚠⚠ AND MY FIRST DIAGNOSIS COUNTED THE WRONG LINE: I had searched for «wants
+ *     a KEYFRAME», which appears in TWO different messages — the REQUEST leaving
+ *     from `video_regola()` and the REFUSAL `rcp.c` writes.  The «806 keyframe
+ *     requests» of the first report were mostly refusals.  ⇒ Counted
+ *     separately: **105 requests against 346 refusals** in the same run.
+ *     The line that looks alike is counted apart, or the diagnosis points upstream of
+ *     where the defect is.
  *
- * ⇒ ⭐ **LA CURA E' QUI SOTTO, dal 23 agosto 2026** (fase 9): abbandonare un
- *   delta solo quando e' davvero senza speranza — una **soglia sulla coda** —
- *   invece che a ogni fotogramma piu' recente.  §5.1 lo **permette**, non lo
- *   **impone**.  Cosi' sotto congestione il video cala di RITMO restando fatto
- *   di delta, invece di diventare un flusso di sole chiavi.
- *   ⭐ E dal 24 agosto 2026 nasce ACCESA a 100 ms (decisione dell'utente; fino
- *   al 23 nasceva spenta per l'invariante I6).  ⛔ Con `--sgombra-soglia-ms 0`
- *   questa funzione torna a fare quel che ha sempre fatto, byte per byte.
+ * ⇒ ⭐ **THE CURE IS BELOW, since 23 Aug 2026** (phase 9): abandon a
+ *   delta only when it is really hopeless — a **threshold on the queue** —
+ *   instead of at every more recent frame.  §5.1 **allows** it, it does not
+ *   **impose** it.  So under congestion video drops RATE while remaining made
+ *   of deltas, instead of becoming a stream of keyframes only.
+ *   ⭐ And since 24 Aug 2026 it is born ON at 100 ms (the user's decision; until
+ *   the 23rd it was born off because of invariant I6).  ⛔ With `--sgombra-soglia-ms 0`
+ *   this function goes back to doing what it always did, byte for byte.
  */
 /*
- * ⛔⭐⭐ LA PREVISIONE FALSIFICABILE — scritta PRIMA di misurare, 23 ago 2026.
+ * ⛔⭐⭐ THE FALSIFIABLE PREDICTION — written BEFORE measuring, 23 Aug 2026.
  *
- *       Stesso gradino della tabella qui sopra (linea larga → 3 s a 10 Mbit/s →
- *       larga), scena `barra`, 1920x1080, con `--sgombra-soglia-ms 100`:
+ *       Same step as the table above (wide line → 3 s at 10 Mbit/s →
+ *       wide), scene `barra`, 1920x1080, with `--sgombra-soglia-ms 100`:
  *
- *       | grandezza                    | oggi (spenta) | previsione a 100 ms |
- *       | fotogrammi/s nei secondi 8-10| 13-14         | **>= 25**           |
- *       | di cui CHIAVE, al secondo    | 6-7           | **<= 2**            |
- *       | abbandoni §5.1 al secondo    | 6-7           | **<= 2**            |
- *       | secondi 7 e 12 (linea larga) | 40-42/s, 0 ch | **identici** (inerte)|
- *       | ritorno, secondo 11          | 32/s          | **>= 32/s**         |
- *       | conto finale                 | —             | TENUTI >> 0         |
+ *       | quantity                     | today (off)   | prediction at 100 ms|
+ *       | frames/s in seconds 8-10     | 13-14         | **>= 25**           |
+ *       | of which KEYFRAME, per second| 6-7           | **<= 2**            |
+ *       | §5.1 abandonments per second | 6-7           | **<= 2**            |
+ *       | seconds 7 and 12 (wide line) | 40-42/s, 0 kf | **identical** (inert)|
+ *       | return, second 11            | 32/s          | **>= 32/s**         |
+ *       | final count                  | —             | KEPT >> 0           |
  *
- *       ⭐ E fuori dal gradino la cura dev'essere INERTE: a 20 Mbit/s — il
- *       pavimento di `DECISIONI.md` §3.1-bis — la coda non arriva mai a 100 ms,
- *       quindi `abbandonati per soglia` = 0 e il ritardo dell'anello resta
- *       quello di fase 8 (55,20 ms `[M]`).
+ *       ⭐ And outside the step the cure must be INERT: at 20 Mbit/s — the
+ *       floor of `DECISIONI.md` §3.1-bis — the queue never reaches 100 ms,
+ *       so `abbandonati per soglia` = 0 and the chain's delay stays
+ *       the one of phase 8 (55.20 ms `[M]`).
  *
- * ⛔ I QUATTRO ROSSI CHE MI SMENTIREBBERO — e ognuno dice dove guardare:
+ * ⛔ THE FOUR REDS THAT WOULD PROVE ME WRONG — and each says where to look:
  *
- *    1. **le chiavi restano 6-7/s mentre gli abbandoni §5.1 scendono a <= 2.**
- *       ⇒ Il debito di §5.2 lo accende un'ALTRA delle sette cause, quasi
- *       certamente la 4 (`rcp.c:3441`, il credito mancato — la forma invisibile
- *       al ricevente), e la cura gira a vuoto.  ⚠ Il conto finale distingue le
- *       due apposta: `abbandonati per soglia` contro `non accettati per credito
- *       mancato`.  E' la lezione gia' pagata («105 richieste contro 346
- *       rifiuti nello stesso giro»);
- *    2. **i fotogrammi/s nei secondi 8-10 non salgono, o scendono sotto 13.**
- *       ⇒ I delta tenuti arrivano troppo tardi per servire: la soglia e' troppo
- *       alta e la coda sta comprando fluidita' vendendo risposta
- *       (`SPECIFICHE.md:128-130`).  Si scende a 50 ms e si rimisura;
- *    3. ⛔ **il ritardo misurato dell'anello supera 55 + soglia ms** (155 ms a
- *       100).  ⇒ `coda_svuotamento_ms()` SOTTOSTIMA lo svuotamento per una
- *       delle tre ragioni dichiarate accanto a lei, e la soglia non limita quel
- *       che promette.  ⭐ E' il rosso piu' importante, perche' sarebbe **un
- *       numero che sembra misurato**;
- *    4. **il ritorno smette di essere sotto il secondo** (secondo 11 sotto
- *       32/s).  ⇒ La coda tenuta ritarda la RIPRESA, cioe' la cura paga il
- *       transitorio col ritorno: e' il contrario del suo scopo, e a quel punto
- *       la soglia va spenta invece che tarata.
+ *    1. **keyframes stay at 6-7/s while §5.1 abandonments go down to <= 2.**
+ *       ⇒ The §5.2 debt is switched on by ANOTHER of the seven causes, almost
+ *       certainly 4 (`rcp.c:3441`, the missing credit — the shape invisible
+ *       to the receiver), and the cure spins idle.  ⚠ The final count tells the
+ *       two apart on purpose: `abbandonati per soglia` against `non accettati per credito
+ *       mancato`.  It is the lesson already paid for («105 requests against 346
+ *       refusals in the same run»);
+ *    2. **frames/s in seconds 8-10 do not rise, or drop below 13.**
+ *       ⇒ The kept deltas arrive too late to be of use: the threshold is too
+ *       high and the queue is buying smoothness by selling responsiveness
+ *       (`SPECIFICHE.md:128-130`).  We go down to 50 ms and measure again;
+ *    3. ⛔ **the measured delay of the chain exceeds 55 + threshold ms** (155 ms at
+ *       100).  ⇒ `coda_svuotamento_ms()` UNDERESTIMATES the emptying for one
+ *       of the three reasons declared next to it, and the threshold does not limit what
+ *       it promises.  ⭐ It is the most important red, because it would be **a
+ *       number that looks measured**;
+ *    4. **the return stops being under one second** (second 11 below
+ *       32/s).  ⇒ The kept queue delays the RECOVERY, that is the cure pays for the
+ *       transient with the return: it is the opposite of its purpose, and at that point
+ *       the threshold must be switched off instead of tuned.
  *
- * ⚠⚠ IL PREZZO, IN MILLISECONDI — e' la cosa che l'utente deve giudicare, non
- *     una misura: per una frazione di secondo, sotto congestione, l'immagine e'
- *     **leggermente vecchia** invece che sfasciata.
+ * ⚠⚠ THE PRICE, IN MILLISECONDS — it is the thing the user must judge, not
+ *     a measurement: for a fraction of a second, under congestion, the image is
+ *     **slightly old** instead of smashed.
  *
- *     | quando la linea porta (>= 20 Mbit/s)      | **0 ms** — mai a soglia  |
- *     | al peggio, per costruzione                | **100 ms** (la soglia)   |
- *     | + la grana del controllo (a ogni fotogr.) | **+33 … +48 ms**         |
- *     | ⇒ peggio dichiarato, solo durante il calo | **~150 ms**              |
- *     | + l'anello di fase 8 (55,20 ms `[M]`)     | **~205 ms** gesto→pixel  |
- *     | **oggi**, nello stesso istante            | 0 ms aggiunti, ma il     |
- *     |                                           | 100 % chiavi e i delta   |
- *     |                                           | non arrivano affatto     |
+ *     | when the line carries (>= 20 Mbit/s)      | **0 ms** — never at threshold |
+ *     | at worst, by construction                 | **100 ms** (the threshold) |
+ *     | + the control's grain (at every frame)    | **+33 … +48 ms**         |
+ *     | ⇒ declared worst, only during the drop    | **~150 ms**              |
+ *     | + the phase 8 chain (55.20 ms `[M]`)      | **~205 ms** gesture→pixel |
+ *     | **today**, at the same instant            | 0 ms added, but          |
+ *     |                                           | 100 % keyframes and the deltas |
+ *     |                                           | do not arrive at all     |
  *
- *     ⚠ Concretamente: trascinando una finestra mentre la linea cala, la
- *     finestra segue il puntatore con fino a un quinto di secondo di ritardo
- *     per un attimo — invece di scattare da un'immagine all'altra a ritmo di
- *     chiave.  ⛔ Quale delle due sia peggio non lo decide una misura: lo
- *     decide lui.
+ *     ⚠ Concretely: dragging a window while the line drops, the
+ *     window follows the pointer with up to a fifth of a second of delay
+ *     for a moment — instead of jumping from one image to the next at keyframe
+ *     rhythm.  ⛔ Which of the two is worse is not decided by a measurement: it is
+ *     decided by him.
  *
- * ⭐⭐ E QUESTA CURA E' IL PREREQUISITO DEL REGOLATORE DEL RITMO
- *     (`fasi/09-la-qualita-e-la-degradazione.md` §6).  Quel disegno si aggancia ad
- *     `arretrato` = quanti DELTA vivi hanno ancora byte nella nostra coda, e
- *     ⛔ oggi quella grandezza e' **zero per costruzione**, perche' questa
- *     funzione svuota tutto a ogni giro: un regolatore installato adesso non
- *     scatterebbe mai e il banco lo leggerebbe come «la linea porta».
- *     ⇒ Qui `arretrato` si conta con la definizione di §3.1 — vivo, NON chiave,
- *     byte in coda > 0 — e si SCRIVE in ogni riga accanto alla soglia, cosi'
- *     la grandezza del regolatore diventa leggibile invece di diventare
- *     un'altra cosa ancora.  ⚠ A 100 ms e 20,9-30 fotogrammi/s `arretrato` puo'
- *     salire a **2-3**, che e' esattamente l'intervallo in cui il `POSTI = 2`
- *     di quel disegno discrimina.
+ * ⭐⭐ AND THIS CURE IS THE PREREQUISITE OF THE RATE REGULATOR
+ *     (`fasi/09-la-qualita-e-la-degradazione.md` §6).  That design hooks onto
+ *     `arretrato` = how many live DELTAS still have bytes in our queue, and
+ *     ⛔ today that quantity is **zero by construction**, because this
+ *     function empties everything at every round: a regulator installed now would never
+ *     fire and the bench would read it as «the line carries».
+ *     ⇒ Here `arretrato` is counted with the definition of §3.1 — alive, NOT keyframe,
+ *     bytes in the queue > 0 — and it is WRITTEN in every line next to the threshold, so
+ *     the regulator's quantity becomes readable instead of becoming
+ *     yet another thing.  ⚠ At 100 ms and 20.9-30 frames/s `arretrato` can
+ *     rise to **2-3**, which is exactly the range in which the `POSTI = 2`
+ *     of that design discriminates.
  */
 static void video_sgombra(wt *w, const char *perche)
 {
@@ -4174,19 +4174,19 @@ static void video_sgombra(wt *w, const char *perche)
 	size_t in_coda = 0;
 	unsigned arretrato = 0;
 	uint64_t attesa = 0;
-	const char *come = "la soglia e' a 0 (spenta a mano: dal 24 ago 2026 il predefinito e' 100 ms)";
+	const char *come = "the threshold is at 0 (switched off by hand: since 24 Aug 2026 the default is 100 ms)";
 	char motivo[400];
 
 	if (!w->rcp || !w->conn)
 		return;
 
-	/* ⛔ PRIMA PASSATA — e non e' un giro in piu': chi non ha piu' byte esce
-	 * dall'elenco (non e' stato abbandonato, e' stato SPEDITO), e quel che
-	 * resta si somma.  La somma e' la coda del VIDEO — non `w->byte_in_coda`,
-	 * che conterrebbe anche il canale di controllo e l'audio.
-	 * ⚠ I byte si tengono in `resto[]` invece di rileggerli: fra le due
-	 *   passate non cambia niente, e `coda_byte_stream()` scorre tutta la coda
-	 *   ogni volta. */
+	/* ⛔ FIRST PASS — and it is not one round too many: whoever has no more bytes leaves
+	 * the list (it was not abandoned, it was SENT), and what
+	 * remains is added up.  The sum is the VIDEO queue — not `w->byte_in_coda`,
+	 * which would also contain the control channel and audio.
+	 * ⚠ The bytes are kept in `resto[]` instead of being reread: between the two
+	 *   passes nothing changes, and `coda_byte_stream()` scans the whole queue
+	 *   every time. */
 	bool chiave_in_coda = false;
 	uint32_t chiave_numero = 0;
 
@@ -4204,39 +4204,39 @@ static void video_sgombra(wt *w, const char *perche)
 			chiave_in_coda = true;
 			chiave_numero = w->involo[i].numero;
 		}
-		/* ⭐ `arretrato` esclude le CHIAVI, ed e' la definizione di §3.1 del
-		 *    disegno del regolatore: una chiave lenta in coda non deve fermare
-		 *    la produzione di delta, ha gia' il suo regolatore in
-		 *    `chiave_intervallo_ms()`.  ⚠ Ma i suoi BYTE contano nella somma:
-		 *    occupano il tubo davvero, e il prezzo in ms deve dirlo. */
+		/* ⭐ `arretrato` excludes KEYFRAMES, and it is the definition of §3.1 of the
+		 *    regulator's design: a slow keyframe in the queue must not stop
+		 *    delta production, it already has its own regulator in
+		 *    `chiave_intervallo_ms()`.  ⚠ But its BYTES count in the sum:
+		 *    they really occupy the pipe, and the price in ms must say so. */
 		if (!w->involo[i].chiave)
 			arretrato++;
 	}
 
 	if (sgombra_soglia_ms) {
 		attesa = coda_svuotamento_ms(w, in_coda, &come);
-		/* ⛔⛔ LA SPIRALE DELLA CHIAVE — 22 set 2026, prova dell'utente con un
-		 *     video 4K su KDE, Chrome e Firefox.  Una chiave da ~300 KB in coda
-		 *     porta l'attesa sopra la soglia DA SOLA; abbandonare i delta che
-		 *     le vengono dietro non la accorcia (la chiave non si abbandona,
-		 *     §5.2), ma apre un buco ⇒ RICHIEDI_CHIAVE ⇒ un'altra chiave
-		 *     grossa ⇒ un altro delta abbandonato.  `[M]` «abbandonati» saliva
-		 *     di uno a ogni chiave, 7→13 in 6 s, e poi linea morta: la spirale
-		 *     che `RCP.md` §5.2 nomina.  ⇒ Finche' una chiave e' in coda i
-		 *     delta si TENGONO: a frenare la produzione ci pensa il regolatore
-		 *     del ritmo, non l'abbandono. */
+		/* ⛔⛔ THE KEYFRAME SPIRAL — 22 Sep 2026, the user's test with a
+		 *     4K video on KDE, Chrome and Firefox.  A ~300 KB keyframe in the queue
+		 *     takes the wait above the threshold BY ITSELF; abandoning the deltas that
+		 *     come behind it does not shorten it (the keyframe is not abandoned,
+		 *     §5.2), but opens a hole ⇒ RICHIEDI_CHIAVE ⇒ another big
+		 *     keyframe ⇒ another abandoned delta.  `[M]` «abbandonati» rose
+		 *     by one at every keyframe, 7→13 in 6 s, and then dead line: the spiral
+		 *     `RCP.md` §5.2 names.  ⇒ As long as a keyframe is in the queue the
+		 *     deltas are KEPT: braking production is the job of the rate
+		 *     regulator, not of abandonment. */
 		if (attesa > sgombra_soglia_ms && chiave_in_coda) {
 			w->sgombra_tenuti += arretrato;
 			w->sgombra_dietro_chiave += arretrato;
 			if (w->sgombra_chiave_detta != chiave_numero + 1) {
 				w->sgombra_chiave_detta = chiave_numero + 1;
 				registro_dice_di(REG_RCP, wt_chi(w),
-				                 "⭐ %s: la coda del video e' sopra la soglia "
-				                 "(%zu byte = %llu ms, soglia %llu ms) ma c'e' "
-				                 "la CHIAVE %u davanti: i %u delta dietro di "
-				                 "lei si TENGONO — abbandonarli aprirebbe un "
-				                 "buco e chiederebbe un'altra chiave (la "
-				                 "spirale di RCP.md §5.2)",
+				                 "⭐ %s: the video queue is above the threshold "
+				                 "(%zu bytes = %llu ms, threshold %llu ms) but there is "
+				                 "KEYFRAME %u ahead: the %u deltas behind "
+				                 "it are KEPT — abandoning them would open a "
+				                 "hole and ask for another keyframe (the "
+				                 "spiral of RCP.md §5.2)",
 				                 w->provenienza, in_coda,
 				                 (unsigned long long)attesa,
 				                 (unsigned long long)sgombra_soglia_ms,
@@ -4246,18 +4246,18 @@ static void video_sgombra(wt *w, const char *perche)
 			return;
 		}
 		if (attesa <= sgombra_soglia_ms) {
-			/* ⭐ SI TIENE — e non si scrive una riga per fotogramma: si conta,
-			 * e la riga esce solo quando lo STATO cambia.  ⚠ Trenta righe al
-			 * secondo renderebbero illeggibile il registro proprio dove serve:
-			 * e' la stessa ragione del fondo di `chiave_intervallo_ms()`. */
+			/* ⭐ IT IS KEPT — and no line is written per frame: it is counted,
+			 * and the line comes out only when the STATE changes.  ⚠ Thirty lines a
+			 * second would make the log unreadable precisely where it is needed:
+			 * it is the same reason as the backstop of `chiave_intervallo_ms()`. */
 			w->sgombra_tenuti += arretrato;
 			if (w->sgombra_sopra) {
 				w->sgombra_sopra = false;
 				registro_dice_di(REG_RCP, wt_chi(w),
-				                 "⭐ %s: la coda del video torna SOTTO la soglia "
-				                 "(%zu byte = %llu ms, soglia %llu ms, %s): i %u "
-				                 "delta arretrati si TENGONO — §5.1 dice PUO', non "
-				                 "DEVE",
+				                 "⭐ %s: the video queue goes back BELOW the threshold "
+				                 "(%zu bytes = %llu ms, threshold %llu ms, %s): the %u "
+				                 "backlogged deltas are KEPT — §5.1 says MAY, not "
+				                 "MUST",
 				                 w->provenienza, in_coda,
 				                 (unsigned long long)attesa,
 				                 (unsigned long long)sgombra_soglia_ms, come,
@@ -4269,10 +4269,10 @@ static void video_sgombra(wt *w, const char *perche)
 		if (!w->sgombra_sopra) {
 			w->sgombra_sopra = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "⛔ %s: la coda del video passa SOPRA la soglia (%zu "
-			                 "byte = %llu ms, soglia %llu ms, %s), arretrato %u "
-			                 "delta: da qui i piu' vecchi si abbandonano (§5.1), "
-			                 "il minimo per rientrare",
+			                 "⛔ %s: the video queue goes ABOVE the threshold (%zu "
+			                 "bytes = %llu ms, threshold %llu ms, %s), backlog %u "
+			                 "deltas: from here the oldest are abandoned (§5.1), "
+			                 "the minimum needed to get back",
 			                 w->provenienza, in_coda, (unsigned long long)attesa,
 			                 (unsigned long long)sgombra_soglia_ms, come,
 			                 arretrato);
@@ -4284,64 +4284,64 @@ static void video_sgombra(wt *w, const char *perche)
 		if (!w->involo[i].vivo || rimasti == 0)
 			continue;
 		if (w->involo[i].chiave) {
-			/* ⛔ §5.2: «il server NON DEVE abbandonare un fotogramma chiave.
-			 * Abbandonare la cura non e' una cura».  ⚠ E si dice UNA volta,
-			 * perche' e' una cosa che dura finche' la linea non la porta via:
-			 * ripeterla a ogni fotogramma renderebbe illeggibile il registro
-			 * proprio quando serve. */
+			/* ⛔ §5.2: «the server MUST NOT abandon a keyframe.
+			 * Abandoning the cure is not a cure».  ⚠ And it is said ONCE,
+			 * because it is something that lasts until the line carries it away:
+			 * repeating it at every frame would make the log unreadable
+			 * precisely when it is needed. */
 			if (!w->involo[i].detto) {
 				w->involo[i].detto = true;
 				registro_dice_di(REG_RCP, wt_chi(w),
-				                 "⚠ %s: la CHIAVE %u tiene ancora %zu byte in coda "
-				                 "e §5.2 vieta di abbandonarla: si ASPETTA.  ⭐ E i "
-				                 "delta che vengono dopo non sono bloccati da lei — "
-				                 "gli stream sono indipendenti (§5.1)",
+				                 "⚠ %s: KEYFRAME %u still holds %zu bytes in the queue "
+				                 "and §5.2 forbids abandoning it: WAITING.  ⭐ And the "
+				                 "deltas coming after are not blocked by it — "
+				                 "streams are independent (§5.1)",
 				                 w->provenienza, w->involo[i].numero, rimasti);
 			}
 			continue;
 		}
-		/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro» — un
-		 * fotogramma perso in silenzio e uno abbandonato di proposito hanno lo
-		 * stesso aspetto dal lato che riceve.  ⭐ E il MOTIVO porta LA MISURA
-		 * ACCANTO ALLA SOGLIA: se la misura e' sotto la soglia, quella discesa
-		 * e' stata per prudenza, e la riga stessa lo dimostra.  Senza, il
-		 * registro direbbe «ne e' partito uno piu' recente» anche quando la
-		 * ragione vera e' un'altra, e racconterebbe la regola vecchia.
-		 * ⚠ La riga, il conto e il debito restano di `rcp.c`: due copie dello
-		 * stesso stato divergono. */
+		/* ⛔ §5.1: «every abandonment MUST be written in the log» — a
+		 * frame lost silently and one abandoned on purpose look the
+		 * same from the receiving side.  ⭐ And the REASON carries THE MEASUREMENT
+		 * NEXT TO THE THRESHOLD: if the measurement is below the threshold, that drop
+		 * was out of caution, and the line itself proves it.  Without it, the
+		 * log would say «a more recent one has left» even when the
+		 * real reason is another, and it would tell the old rule.
+		 * ⚠ The line, the count and the debt stay with `rcp.c`: two copies of the
+		 * same state diverge. */
 		snprintf(motivo, sizeof motivo,
-		         "%s — e la coda del video non si svuota in tempo: %zu byte = "
-		         "%llu ms (%s), soglia %llu ms, arretrato %u delta",
+		         "%s — and the video queue does not empty in time: %zu bytes = "
+		         "%llu ms (%s), threshold %llu ms, backlog %u deltas",
 		         perche, in_coda, (unsigned long long)attesa, come,
 		         (unsigned long long)sgombra_soglia_ms, arretrato);
 		if (!rcp_video_abbandonato_a_valle(w->rcp, w->involo[i].numero, false,
 		                                   rimasti,
 		                                   sgombra_soglia_ms ? motivo : perche))
 			continue;
-		/* ⛔ PRIMA si azzera lo stream, POI si buttano i byte.  Al contrario
-		 * resterebbe una finestra — corta ma vera — in cui lo stream e' vivo e
-		 * i suoi byte non ci sono piu': `wt_scrivi()` lo troverebbe muto invece
-		 * che azzerato, e il client aspetterebbe una fine che non arriva. */
+		/* ⛔ FIRST the stream is reset, THEN the bytes are thrown away.  The other way round
+		 * there would be a window — short but real — in which the stream is alive and
+		 * its bytes are no longer there: `wt_scrivi()` would find it mute instead
+		 * of reset, and the client would wait for an end that does not come. */
 		ngtcp2_conn_shutdown_stream_write(w->conn, 0, w->involo[i].stream, 0);
 		coda_butta_stream(w, w->involo[i].stream);
 		w->involo[i].vivo = false;
 		w->sgombra_abbandoni++;
-		/* ⭐ SI ABBANDONA IL MINIMO, e si scorre dal PIU' VECCHIO: l'elenco e'
-		 * in ordine d'inserimento (`involo_aggiungi()`), quindi il primo vivo
-		 * e' il piu' vecchio ed e' quello che serve meno.  ⛔ Appena la coda
-		 * rientra sotto la soglia si SMETTE: abbandonare anche gli altri
-		 * costerebbe una chiave per niente, ed e' precisamente la spirale che
-		 * `RCP.md:1284` nomina — «un fotogramma chiave per ogni delta
-		 * abbandonato e' la spirale».
+		/* ⭐ THE MINIMUM IS ABANDONED, scanning from the OLDEST: the list is
+		 * in insertion order (`involo_aggiungi()`), so the first live one
+		 * is the oldest and it is the one that serves least.  ⛔ As soon as the queue
+		 * gets back below the threshold we STOP: abandoning the others too
+		 * would cost a keyframe for nothing, and it is precisely the spiral
+		 * `RCP.md:1284` names — «one keyframe for every abandoned
+		 * delta is the spiral».
 		 *
-		 * ⚠ E SI ESCE IN SILENZIO, senza una riga «bastava»: lo stato NON e'
-		 *   cambiato — la soglia sta ancora mordendo, e il rientro e' opera di
-		 *   questo abbandono, non della linea.  Scriverla qui vorrebbe dire
-		 *   due righe per fotogramma, cioe' sessanta al secondo mentre il
-		 *   gradino dura: e' il difetto che il fondo di `chiave_intervallo_ms()`
-		 *   esiste per non fare.  ⭐ `sgombra_sopra` torna falso solo quando una
-		 *   passata INTERA trova la coda sotto la soglia senza abbandonare
-		 *   niente: quello si' e' un cambio di stato. */
+		 * ⚠ AND WE EXIT SILENTLY, without an «it was enough» line: the state has NOT
+		 *   changed — the threshold is still biting, and the return is the work of
+		 *   this abandonment, not of the line.  Writing it here would mean
+		 *   two lines per frame, that is sixty a second while the
+		 *   step lasts: it is the defect the backstop of `chiave_intervallo_ms()`
+		 *   exists not to commit.  ⭐ `sgombra_sopra` goes back to false only when a
+		 *   WHOLE pass finds the queue below the threshold without abandoning
+		 *   anything: that is indeed a change of state. */
 		if (sgombra_soglia_ms) {
 			arretrato--;
 			in_coda -= rimasti;
@@ -4359,13 +4359,13 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
 		return;
 	involo_pulisci(w);
 	if (w->ninvolo >= WT_INVOLO_MAX) {
-		/* ⚠ Si dice invece di scivolare: da qui in poi quel fotogramma non
-		 *   sara' abbandonabile, e chi legge il registro deve saperlo — un
-		 *   abbandono che non avviene perche' una tabella e' piena somiglia in
-		 *   tutto a un abbandono che nessuno ha chiesto. */
+		/* ⚠ It is said instead of slipping by: from here on that frame will not
+		 *   be abandonable, and whoever reads the log must know it — an
+		 *   abandonment that does not happen because a table is full looks in
+		 *   every way like an abandonment nobody asked for. */
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⚠ %s: %u fotogrammi gia' in volo: il %u non entra "
-		                 "nell'elenco e NON potra' essere abbandonato (§5.1)",
+		                 "⚠ %s: %u frames already in flight: frame %u does not enter "
+		                 "the list and can NOT be abandoned (§5.1)",
 		                 w->provenienza, WT_INVOLO_MAX, numero);
 		return;
 	}
@@ -4378,55 +4378,55 @@ static void involo_aggiungi(wt *w, int64_t stream, uint32_t numero, bool chiave)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ LA CUCITURA FRA LA CHIAVE CHIESTA E IL CODIFICATORE — punto 4.          */
+/* ⭐ THE SEAM BETWEEN THE REQUESTED KEYFRAME AND THE ENCODER — point 4.      */
 
-/* ⛔ `rcp_video_serve_chiave()` era LETTA e non serviva a niente:
- *    `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel prodotto**.
- *    ⇒ Un `RICHIEDI_CHIAVE` del client accendeva un `bool` in `rcp.c`, il
- *    fotogramma dopo era un delta, `rcp_video_apri()` lo rifiutava con
- *    `RCP_VIDEO_SERVE_UNA_CHIAVE`, e **lo schermo restava fermo per sempre** —
- *    perche' `chiavi_ogni = 0` da' GOP infinito e dopo la prima chiave non ne
- *    arriva mai piu' una da sola.
+/* ⛔ `rcp_video_serve_chiave()` was READ and served no purpose:
+ *    `codificatore_chiedi_chiave()` had **no caller in the product**.
+ *    ⇒ A client `RICHIEDI_CHIAVE` switched on a `bool` in `rcp.c`, the
+ *    next frame was a delta, `rcp_video_apri()` refused it with
+ *    `RCP_VIDEO_SERVE_UNA_CHIAVE`, and **the screen stayed frozen forever** —
+ *    because `chiavi_ogni = 0` gives an infinite GOP and after the first keyframe not one
+ *    ever arrives again by itself.
  *
- * ⇒ Il gancio: il palco sta in un ALTRO PROCESSO (il figlio dell'utente), e
- *   questa e' la riga che attraversa il confine.  ⚠ Sta qui e non in `rcp.c`
- *   perche' `rcp.c` non conosce i figli, e non in `main.c` perche' `main.c` non
- *   conosce lo stato della sessione. */
+ * ⇒ The hook: the stage is in ANOTHER PROCESS (the user's child), and
+ *   this is the line that crosses the boundary.  ⚠ It is here and not in `rcp.c`
+ *   because `rcp.c` does not know the children, and not in `main.c` because `main.c` does not
+ *   know the session state. */
 /*
- * ⭐ IL CANALE AUDIO SI ACCENDE, e NON passa dal codec del video.
+ * ⭐ THE AUDIO CHANNEL SWITCHES ON, and it does NOT go through the video codec.
  *
- * ⛔ Sta in una funzione sua e non dentro `video_regola()` per un motivo che
- *    si vede solo scrivendolo: quella torna subito quando `video.codec` non e'
- *    negoziato — che e' il caso legittimo di un client della fase 1 — e
- *    l'audio ci finirebbe dentro per caso.  Le due negoziazioni sono
- *    indipendenti in `RCP.md` §4.3, e vanno lette indipendenti anche qui.
+ * ⛔ It is in a function of its own and not inside `video_regola()` for a reason that
+ *    shows only when writing it: that one returns at once when `video.codec` is not
+ *    negotiated — which is the legitimate case of a phase 1 client — and
+ *    audio would end up in there by chance.  The two negotiations are
+ *    independent in `RCP.md` §4.3, and must be read as independent here too.
  */
 /*
- * ⭐⭐ OGNI QUANTO SI PUO' RICHIEDERE UNA CHIAVE — e la banda si MISURA.
+ * ⭐⭐ HOW OFTEN A KEYFRAME CAN BE REQUESTED — and the bandwidth is MEASURED.
  *
- * ⛔ La regola: non si chiede una chiave nuova prima che una chiave della
- *    misura dell'ultima abbia avuto il tempo di **uscire davvero**.  Il perche'
- *    e i numeri stanno accanto a `WT_CHIAVE_TETTO_MS`.
+ * ⛔ The rule: a new keyframe is not requested before a keyframe the
+ *    size of the last one has had time to **really go out**.  The why
+ *    and the numbers are next to `WT_CHIAVE_TETTO_MS`.
  *
- * ⛔⭐ E LA BANDA NON SI INDOVINA: la danno due numeri che ngtcp2 misura da se',
- *     e sono gli stessi con cui decide quanto spedire —
+ * ⛔⭐ AND THE BANDWIDTH IS NOT GUESSED: it is given by two numbers ngtcp2 measures by itself,
+ *     and they are the same ones with which it decides how much to send —
  *
- *         banda ≈ cwnd / smoothed_rtt        (byte per secondo)
- *         tempo di una chiave = byte × smoothed_rtt / cwnd
+ *         bandwidth ≈ cwnd / smoothed_rtt    (bytes per second)
+ *         time of a keyframe = bytes × smoothed_rtt / cwnd
  *
- *     ⚠ Non e' una banda «della linea»: e' **la banda che il controllo di
- *       congestione sta concedendo adesso**, che e' precisamente la velocita'
- *       con cui la chiave uscira'.  Usare la capacita' del collegamento
- *       darebbe un numero piu' bello e sbagliato.
+ *     ⚠ It is not a bandwidth «of the line»: it is **the bandwidth the congestion
+ *       control is granting now**, which is precisely the speed
+ *       at which the keyframe will go out.  Using the link capacity
+ *       would give a nicer and wrong number.
  *
- * ⛔ E SE LA STIMA NON C'E' ANCORA, IL RIPIEGO SI DICHIARA — `CODER.md` §4.2 e
- *    §3.10: all'inizio della connessione `smoothed_rtt` e `cwnd` non hanno
- *    ancora un valore, e la misura di una chiave non esiste finche' non ne e'
- *    partita una.  ⇒ In quei casi si torna alla costante di prima e si scrive
- *    **quale** dei tre casi e', invece di far passare un numero inventato per
- *    un numero misurato.  ⚠ `*come` non e' un ornamento del registro: e'
- *    l'unica cosa che distingue «la cura sta lavorando» da «la cura non e'
- *    ancora accesa», e senza di lei le due hanno la stessa faccia.
+ * ⛔ AND IF THE ESTIMATE IS NOT THERE YET, THE FALLBACK IS DECLARED — `CODER.md` §4.2 and
+ *    §3.10: at the start of the connection `smoothed_rtt` and `cwnd` do not have
+ *    a value yet, and the size of a keyframe does not exist until one has
+ *    left.  ⇒ In those cases we go back to the previous constant and write
+ *    **which** of the three cases it is, instead of passing an invented number off as
+ *    a measured number.  ⚠ `*come` is not an ornament of the log: it is
+ *    the only thing that tells «the cure is working» from «the cure is not
+ *    on yet», and without it the two look the same.
  */
 static uint64_t chiave_intervallo_ms(wt *w, const char **come)
 {
@@ -4435,84 +4435,84 @@ static uint64_t chiave_intervallo_ms(wt *w, const char **come)
 	size_t in_coda = 0;
 
 	if (!w->conn) {
-		*come = "ripiego: non c'e' connessione";
+		*come = "fallback: there is no connection";
 		return WT_CHIAVE_RICHIESTA_MS;
 	}
 
-	/* ⛔⭐⭐ PRIMA DI OGNI STIMA: SE LA CHIAVE PRECEDENTE E' ANCORA QUI, LA
-	 *       RISPOSTA NON E' UNA STIMA — E' UN FATTO.
+	/* ⛔⭐⭐ BEFORE ANY ESTIMATE: IF THE PREVIOUS KEYFRAME IS STILL HERE, THE
+	 *       ANSWER IS NOT AN ESTIMATE — IT IS A FACT.
 	 *
-	 *       La frase del difetto e' «chiediamo una chiave nuova prima che la
-	 *       precedente sia partita», e questo ciclo sa **se e' partita**: sono
-	 *       gli stessi byte che `video_sgombra()` conta per dire «la CHIAVE N
-	 *       tiene ancora %zu byte in coda e §5.2 vieta di abbandonarla».
+	 *       The sentence of the defect is «we ask for a new keyframe before the
+	 *       previous one has left», and this loop knows **whether it has left**: they are
+	 *       the same bytes `video_sgombra()` counts to say «KEYFRAME N
+	 *       still holds %zu bytes in the queue and §5.2 forbids abandoning it».
 	 *
-	 * ⭐ Guardare qui invece di calcolare e' meglio per una ragione che vale
-	 *    oltre questa riga: una stima puo' sbagliare, un byte in coda no.  La
-	 *    banda misurata resta sotto, come **fondo** per i byte gia' consegnati
-	 *    a ngtcp2 e non ancora riscontrati — quelli la coda non li vede piu'.
+	 * ⭐ Looking here instead of computing is better for a reason that holds
+	 *    beyond this line: an estimate can be wrong, a byte in the queue cannot.  The
+	 *    measured bandwidth stays below, as a **backstop** for the bytes already handed
+	 *    to ngtcp2 and not yet acknowledged — those the queue no longer sees.
 	 *
-	 * ⛔ E il tetto vale ANCHE qui, ed e' la ragione per cui esiste: se la
-	 *    linea non porta via la chiave, dopo due secondi se ne richiede una
-	 *    lo stesso.  Uno schermo fermo per sempre non e' «brutto», e' chiuso a
-	 *    meta' (I1). */
+	 * ⛔ And the cap holds HERE TOO, and it is the reason it exists: if the
+	 *    line does not carry the keyframe away, after two seconds one is requested
+	 *    all the same.  A screen frozen forever is not «ugly», it is half
+	 *    closed (I1). */
 	for (size_t i = 0; i < w->ninvolo; i++)
 		if (w->involo[i].vivo && w->involo[i].chiave)
 			in_coda += coda_byte_stream(w, w->involo[i].stream);
 	if (in_coda > 0) {
-		*come = "🔸 la CHIAVE precedente non e' ancora uscita (byte in coda)";
-		/* ⚠ Il fondo del registro e' lo stesso della strada calcolata: la riga
-		 *   la scrive quel ramo, qui basta il tetto. */
+		*come = "🔸 the previous KEYFRAME has not gone out yet (bytes in the queue)";
+		/* ⚠ The log backstop is the same as the computed road's: the line
+		 *   is written by that branch, here the cap is enough. */
 		return WT_CHIAVE_TETTO_MS;
 	}
 
 	if (!w->chiave_byte) {
-		*come = "ripiego: nessuna CHIAVE ancora spedita, la sua misura non esiste";
+		*come = "fallback: no KEYFRAME sent yet, its size does not exist";
 		return WT_CHIAVE_RICHIESTA_MS;
 	}
 	memset(&info, 0, sizeof info);
 	ngtcp2_conn_get_conn_info(w->conn, &info);
 	if (info.smoothed_rtt == 0 || info.cwnd == 0) {
-		*come = "ripiego: ngtcp2 non ha ancora ne' rtt ne' finestra";
+		*come = "fallback: ngtcp2 has neither rtt nor window yet";
 		return WT_CHIAVE_RICHIESTA_MS;
 	}
 
-	/* tempo (ns) = byte × rtt(ns) / cwnd(byte) → ms, piu' il margine.
-	 * ⚠ L'ordine dei fattori e' quello che non trabocca: 60 000 × 30 000 000 =
-	 *   1,8e12, largamente dentro un `uint64_t`. */
+	/* time (ns) = bytes × rtt(ns) / cwnd(bytes) → ms, plus the margin.
+	 * ⚠ The order of the factors is the one that does not overflow: 60 000 × 30 000 000 =
+	 *   1.8e12, well within a `uint64_t`. */
 	ms = w->chiave_byte * info.smoothed_rtt / info.cwnd / NGTCP2_MILLISECONDS;
 	ms = ms * WT_CHIAVE_MARGINE_PC / 100u;
 
 	if (ms <= WT_CHIAVE_RICHIESTA_MS) {
-		*come = "la banda misurata basta: resta il fondo di 150 ms";
+		*come = "the measured bandwidth is enough: the 150 ms backstop remains";
 		return WT_CHIAVE_RICHIESTA_MS;
 	}
 	if (ms > WT_CHIAVE_TETTO_MS) {
-		*come = "⛔ la banda non basterebbe nemmeno per il tetto: fermo a 2 s, "
-		        "e l'immagine resta rotta piu' a lungo";
+		*come = "⛔ the bandwidth would not be enough even for the cap: held at 2 s, "
+		        "and the image stays broken longer";
 		ms = WT_CHIAVE_TETTO_MS;
 	} else {
-		*come = "🔸 dalla banda misurata (cwnd/rtt)";
+		*come = "🔸 from the measured bandwidth (cwnd/rtt)";
 	}
 
-	/* ⛔ IL PREZZO SI SCRIVE, e una volta sola per ogni volta che cambia: e'
-	 *    visibile all'utente (l'immagine resta rotta piu' a lungo) e i prezzi
-	 *    visibili li giudica lui.  ⚠ Con un fondo, o a cinquanta battiti al
-	 *    secondo questa riga riempirebbe il registro invece di raccontarlo. */
+	/* ⛔ THE PRICE IS WRITTEN, and once only for every time it changes: it is
+	 *    visible to the user (the image stays broken longer) and visible
+	 *    prices are judged by him.  ⚠ With a backstop, or at fifty heartbeats a
+	 *    second this line would fill the log instead of telling it. */
 	if (w->chiave_attesa_detta_ms == 0
 	    || (ms > w->chiave_attesa_detta_ms
 	        ? ms - w->chiave_attesa_detta_ms
 	        : w->chiave_attesa_detta_ms - ms) >= 100) {
 		w->chiave_attesa_detta_ms = ms;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "🔸 %s: la CHIAVE si potra' richiedere ogni %llu ms invece "
-		                 "di %u — l'ultima misurava %llu byte e la banda MISURATA e' "
-		                 "%llu kbit/s (cwnd %llu byte / rtt %llu ms, i due numeri "
-		                 "che ngtcp2 usa per decidere quanto spedire).  ⛔ IL PREZZO: "
-		                 "su linea stretta l'immagine resta rotta piu' a lungo dopo "
-		                 "una perdita.  ⭐ In cambio l'audio passa: chiedere la "
-		                 "chiave nuova prima che la vecchia sia uscita teneva "
-		                 "`cwnd_left` a zero e distruggeva i datagram (banco 07-b65)",
+		                 "🔸 %s: the KEYFRAME can be requested every %llu ms instead "
+		                 "of %u — the last one measured %llu bytes and the MEASURED bandwidth is "
+		                 "%llu kbit/s (cwnd %llu bytes / rtt %llu ms, the two numbers "
+		                 "ngtcp2 uses to decide how much to send).  ⛔ THE PRICE: "
+		                 "on a narrow line the image stays broken longer after "
+		                 "a loss.  ⭐ In exchange audio gets through: asking for the "
+		                 "new keyframe before the old one had gone out kept "
+		                 "`cwnd_left` at zero and destroyed the datagrams (bench 07-b65)",
 		                 w->provenienza, (unsigned long long)ms,
 		                 (unsigned)WT_CHIAVE_RICHIESTA_MS,
 		                 (unsigned long long)w->chiave_byte,
@@ -4530,21 +4530,21 @@ static void audio_regola(wt *w)
 	uint8_t codec;
 	const char *utente;
 
-	/* ⚠ `audio_fermo` fa qui lo stesso mestiere che `video_fermo` fa nel
-	 *   gemello: se la cattura era stata spenta perche' non ascoltava piu'
-	 *   nessuno, una sessione nuova deve poterla far ripartire.  Senza, il
-	 *   riaggancio sarebbe muto. */
+	/* ⚠ `audio_fermo` does here the same job `video_fermo` does in the
+	 *   twin: if capture had been switched off because nobody was listening
+	 *   any more, a new session must be able to restart it.  Without it, the
+	 *   reattach would be mute. */
 	if (!w->rcp || w->chiusura >= 0 || (w->audio_acceso && !w->audio_fermo))
 		return;
-	/* ⛔ La stessa trappola del gemello, e il riquadro sta su `video_regola()`:
-	 *    `rcp_tela_in_vigore()` non guarda lo stato, quindi senza questa riga
-	 *    una sessione finita riaccenderebbe la cattura a ogni battito. */
+	/* ⛔ The same trap as the twin, and the box is on `video_regola()`:
+	 *    `rcp_tela_in_vigore()` does not look at the state, so without this line
+	 *    a finished session would switch capture back on at every heartbeat. */
 	if (rcp_e_finita(w->rcp))
 		return;
 
-	/* ⛔ Invariante I3: niente suono prima che `SESSIONE` sia partita.  E' la
-	 *    stessa guardia del video, per la stessa ragione — chi non e' passato
-	 *    dal validatore non riceve un pixel, e nemmeno un campione. */
+	/* ⛔ Invariant I3: no sound before `SESSIONE` has left.  It is the
+	 *    same guard as video, for the same reason — whoever has not gone
+	 *    through the validator does not receive a pixel, nor a sample. */
 	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
 		return;
 
@@ -4553,8 +4553,8 @@ static void audio_regola(wt *w)
 		if (!w->audio_detto) {
 			w->audio_detto = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "%s: nessun codec audio negoziato (§4.3) — questa "
-			                 "sessione non ha audio",
+			                 "%s: no audio codec negotiated (§4.3) — this "
+			                 "session has no audio",
 			                 w->provenienza);
 		}
 		return;
@@ -4567,28 +4567,28 @@ static void audio_regola(wt *w)
 	w->audio_acceso = true;
 	w->audio_fermo = false;
 	w->audio_codec = codec;
-	/* ⛔ E IL TONO DI PROVA SI NOMINA QUI, a ogni sessione — rilievo 8.
-	 *    `wt_audio_prova()` scrive una riga sola, all'avvio: chi legge il
-	 *    registro un'ora dopo vedeva «canale audio acceso» e **non aveva modo
-	 *    di sapere che quel che l'utente sente e' un segnale di banco**.
-	 *    L'interruttore di I6 c'era; la dichiarazione che deve seguirlo no. */
+	/* ⛔ AND THE TEST TONE IS NAMED HERE, at every session — finding 8.
+	 *    `wt_audio_prova()` writes a single line, at startup: whoever read the
+	 *    log an hour later saw «audio channel on» and **had no way
+	 *    of knowing that what the user hears is a bench signal**.
+	 *    The I6 switch was there; the declaration that must follow it was not. */
 	registro_dice_di(REG_RCP, wt_chi(w),
-	                 "⭐ FASE 7: canale audio ACCESO per «%s» da %s — codec %u (%s), "
-	                 "48 000 Hz, 2 canali (§5.3).  Il pari accetta datagram di %llu "
-	                 "byte%s",
+	                 "⭐ PHASE 7: audio channel ON for «%s» from %s — codec %u (%s), "
+	                 "48 000 Hz, 2 channels (§5.3).  The peer accepts datagrams of %llu "
+	                 "bytes%s",
 	                 utente, w->provenienza, codec,
 	                 codec == 1 ? "Opus" : "PCM",
 	                 (unsigned long long)dgram_tetto_del_pari(w),
 	                 audio_prova_hz
-	                     ? "  ⚠⚠ E QUEL CHE SI SENTIRA' E' IL TONO DI PROVA, non il "
-	                       "desktop: `--audio-prova` e' acceso (funzione di banco, I6)"
+	                     ? "  ⚠⚠ AND WHAT WILL BE HEARD IS THE TEST TONE, not the "
+	                       "desktop: `--audio-prova` is on (bench function, I6)"
 	                     : "");
 
-	/* ⛔ E si chiede al figlio di catturare — ma NON col tono di prova acceso:
-	 *    li' la sorgente e' questo processo, e accendere anche la cattura vera
-	 *    vorrebbe dire due sorgenti sullo stesso canale.  ⚠ Il client sentirebbe
-	 *    le due mescolate e il banco misurerebbe una scena che il prodotto non
-	 *    avra' mai. */
+	/* ⛔ And the child is asked to capture — but NOT with the test tone on:
+	 *    there the source is this process, and switching on real capture too
+	 *    would mean two sources on the same channel.  ⚠ The client would hear
+	 *    the two mixed and the bench would measure a scene the product will never
+	 *    have. */
 	if (gancio_audio && !audio_prova_hz)
 		gancio_audio(gancio_audio_ctx, utente, codec);
 }
@@ -4602,52 +4602,52 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	if (!w->rcp || w->chiusura >= 0)
 		return;
 
-	/* ⛔⛔⭐⭐ E UNA SESSIONE FINITA NON RIACCENDE NIENTE — 23 set 2026, ed e'
-	 *        la riga senza la quale la cura dello spreco DIVENTA UNO SPRECO
-	 *        PEGGIORE.  Trovata leggendo, non misurando, e vale la pena
-	 *        scriverla per esteso perche' la trappola e' fatta apposta per non
-	 *        vedersi:
+	/* ⛔⛔⭐⭐ AND A FINISHED SESSION SWITCHES NOTHING BACK ON — 23 Sep 2026, and it is
+	 *        the line without which the cure for waste BECOMES A WORSE
+	 *        WASTE.  Found by reading, not by measuring, and it is worth
+	 *        writing it out in full because the trap is made on purpose not to be
+	 *        seen:
 	 *
-	 *        `rcp_tela_in_vigore()` qui sotto NON guarda lo stato — guarda
-	 *        `sessione_spedita`, che una volta vero **resta vero anche dopo la
-	 *        fine**.  ⇒ Su una sessione «finita» questa funzione arriva fino in
-	 *        fondo come se niente fosse.  Prima non faceva danno (`video_acceso`
-	 *        era gia' vero e il ramo dell'accensione non si percorreva); da
-	 *        oggi, con `video_fermo` acceso, lo percorrerebbe — e in `wt_batti()`
-	 *        `video_regola()` sta PRIMA di `regola_battito()`.
+	 *        `rcp_tela_in_vigore()` below does NOT look at the state — it looks at
+	 *        `sessione_spedita`, which once true **stays true even after the
+	 *        end**.  ⇒ On a «finished» session this function goes all the way to
+	 *        the bottom as if nothing were wrong.  Before it did no harm (`video_acceso`
+	 *        was already true and the switch-on branch was not taken); from
+	 *        today, with `video_fermo` on, it would take it — and in `wt_batti()`
+	 *        `video_regola()` comes BEFORE `regola_battito()`.
 	 *
-	 *        ⇒ Ogni battito: riaccendi, rispegni.  Due messaggi al figlio e due
-	 *        righe di registro al secondo, per tutti i 30 s del
-	 *        `max_idle_timeout` — cioe' esattamente il difetto che si sta
-	 *        curando, con in piu' un registro illeggibile.
+	 *        ⇒ Every heartbeat: switch on, switch off again.  Two messages to the child and two
+	 *        log lines a second, for all the 30 s of the
+	 *        `max_idle_timeout` — that is exactly the defect being
+	 *        cured, with an unreadable log on top.
 	 *
-	 * ⚠ E non toglie niente al RIAGGANCIO: una sessione nuova sulla stessa
-	 *   connessione ha un `w->rcp` NUOVO (`rcp_avvia()` gira solo con
-	 *   `rcp_stream == -1`, e `wt_stream_chiuso()` azzera tutti e due insieme),
-	 *   quindi `rcp_e_finita()` e' falsa e la cattura riparte come deve.
-	 *   ⛔ `S_FINITA` e' terminale: da li' non si torna indietro — solo
-	 *   `S_STACCATA` puo' resuscitare (`torna_a_parlare()`), e quella non passa
-	 *   di qui. */
+	 * ⚠ And it takes nothing away from REATTACH: a new session on the same
+	 *   connection has a NEW `w->rcp` (`rcp_avvia()` runs only with
+	 *   `rcp_stream == -1`, and `wt_stream_chiuso()` resets both together),
+	 *   so `rcp_e_finita()` is false and capture restarts as it should.
+	 *   ⛔ `S_FINITA` is terminal: there is no going back from there — only
+	 *   `S_STACCATA` can resurrect (`torna_a_parlare()`), and that one does not go
+	 *   through here. */
 	if (rcp_e_finita(w->rcp))
 		return;
 
-	/* ⛔ P1 / §2.5 / invariante I3 — «nessuno stream video prima di aver
-	 *    SPEDITO `SESSIONE`».  `rcp_tela_in_vigore()` risponde `false` finche'
-	 *    `SESSIONE` non e' partita, e non scrive niente nel registro: chiamare
-	 *    `rcp_video_apri()` per saperlo riempirebbe il registro di una riga al
-	 *    secondo per ogni sessione in attesa della parola d'ordine. */
+	/* ⛔ P1 / §2.5 / invariant I3 — «no video stream before having
+	 *    SENT `SESSIONE`».  `rcp_tela_in_vigore()` answers `false` until
+	 *    `SESSIONE` has left, and writes nothing in the log: calling
+	 *    `rcp_video_apri()` to find out would fill the log with one line a
+	 *    second for every session waiting for the password. */
 	if (!rcp_tela_in_vigore(w->rcp, &l, &a))
 		return;
 
 	codec = rcp_codec_negoziato(w->rcp);
 	if (codec == 0) {
 		if (!w->video_detto) {
-			/* ⚠ Non e' un difetto: un client della fase 1 non dichiara nessun
-			 *   codec, e §4.3 gli da' ragione. */
+			/* ⚠ It is not a defect: a phase 1 client declares no
+			 *   codec, and §4.3 proves it right. */
 			w->video_detto = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "%s: nessun codec negoziato (§4.3) — questa sessione "
-			                 "non ha video, ed e' quel che la fase 1 faceva",
+			                 "%s: no codec negotiated (§4.3) — this session "
+			                 "has no video, and it is what phase 1 did",
 			                 w->provenienza);
 		}
 		return;
@@ -4657,21 +4657,21 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	if (!utente || !utente[0])
 		return;
 
-	/* ⛔⭐⭐ E `video_fermo` E' LA META' CHE FA RIPARTIRE LA CATTURA.
+	/* ⛔⭐⭐ AND `video_fermo` IS THE HALF THAT RESTARTS CAPTURE.
 	 *
-	 *      Da quando il ciclo si spegne al congedo (vedi `regola_battito()`),
-	 *      «il canale e' acceso» non implica piu' «il palco sta catturando».
-	 *      ⛔ Senza questa condizione la cura dello spreco romperebbe il
-	 *      RIAGGANCIO: una sessione nuova sulla stessa connessione — stato
-	 *      previsto due volte in questo file, e `wt_stream_chiuso()` rimette
-	 *      `w->sessione` a -1 apposta perche' possa aprirsi — troverebbe
-	 *      `video_acceso` gia' vero, salterebbe questo ramo, e al figlio non
-	 *      chiederebbe MAI di ricominciare.  L'utente resterebbe davanti a uno
-	 *      schermo fermo.
+	 *      Since the loop switches off at farewell (see `regola_battito()`),
+	 *      «the channel is on» no longer implies «the stage is capturing».
+	 *      ⛔ Without this condition the cure for waste would break the
+	 *      REATTACH: a new session on the same connection — a state
+	 *      foreseen twice in this file, and `wt_stream_chiuso()` puts
+	 *      `w->sessione` back to -1 on purpose so that it can open — would find
+	 *      `video_acceso` already true, would skip this branch, and would NEVER ask the child
+	 *      to start again.  The user would be left in front of a
+	 *      frozen screen.
 	 *
-	 * ⚠ Si passa di qui appena `SESSIONE` della sessione nuova e' partita
-	 *   (`rcp_tela_in_vigore()` qui sopra), e si ricomincia con una CHIAVE —
-	 *   che e' quel che §5.2 vuole comunque dal primo fotogramma. */
+	 * ⚠ We go through here as soon as the new session's `SESSIONE` has left
+	 *   (`rcp_tela_in_vigore()` above), and we start again with a KEYFRAME —
+	 *   which is what §5.2 wants anyway from the first frame. */
 	if (!w->video_acceso || w->video_fermo) {
 		bool ripartenza = w->video_fermo;
 		w->video_acceso = true;
@@ -4679,12 +4679,12 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		w->video_codec = codec;
 		w->chiave_chiesta_ms = ora_ms;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ FASE 3: canale video %s per «%s» da %s — codec %u, "
-		                 "tela %ux%u.  Chiedo al palco di catturare di continuo, e "
-		                 "§5.2 vuole che il PRIMO sia una CHIAVE",
-		                 ripartenza ? "RIACCESO (il ciclo era fermo: non lo "
-		                              "guardava piu' nessuno)"
-		                            : "ACCESO",
+		                 "⭐ PHASE 3: video channel %s for «%s» from %s — codec %u, "
+		                 "canvas %ux%u.  Asking the stage to capture continuously, and "
+		                 "§5.2 wants the FIRST to be a KEYFRAME",
+		                 ripartenza ? "SWITCHED BACK ON (the loop was stopped: nobody was "
+		                              "watching it any more)"
+		                            : "ON",
 		                 utente, w->provenienza, codec, l, a);
 		if (gancio_palco)
 			gancio_palco(gancio_palco_ctx, utente, codec,
@@ -4693,7 +4693,7 @@ static void video_regola(wt *w, uint64_t ora_ms)
 		return;
 	}
 
-	/* ⛔ E qui la chiave chiesta arriva davvero al codificatore. */
+	/* ⛔ And here the requested keyframe really reaches the encoder. */
 	{
 		const char *come = NULL;
 		uint64_t attesa = chiave_intervallo_ms(w, &come);
@@ -4706,8 +4706,8 @@ static void video_regola(wt *w, uint64_t ora_ms)
 				             rcp_profondita_negoziata(w->rcp),
 				             rcp_livello_negoziato(w->rcp), true);
 			registro_dettaglio_di(REG_RCP, wt_chi(w),
-			                           "%s: §5.2 vuole una CHIAVE — richiesta girata al "
-			                           "palco di «%s» (codec %u), dopo %llu ms di attesa "
+			                           "%s: §5.2 wants a KEYFRAME — request forwarded to the "
+			                           "stage of «%s» (codec %u), after %llu ms of waiting "
 			                           "(%s)",
 			                           w->provenienza, utente, codec,
 			                           (unsigned long long)attesa, come);
@@ -4715,18 +4715,18 @@ static void video_regola(wt *w, uint64_t ora_ms)
 	}
 }
 
-/* ⛔⭐⭐ LA SECONDA CINTURA, e la chiama chi PAGA il blocco: il fotogramma
- *       rifiutato.  Il perche' e i numeri stanno su `WT_CHIAVE_DEBITO_TETTO_MS`
- *       e su `batti_fra()`.
+/* ⛔⭐⭐ THE SECOND BELT, and it is called by whoever PAYS for the block: the refused
+ *       frame.  The why and the numbers are on `WT_CHIAVE_DEBITO_TETTO_MS`
+ *       and on `batti_fra()`.
  *
- * ⚠ Non richiede niente da se': chiama `video_regola()`, che e' l'unico posto
- *   in cui la richiesta al palco si fa — cosi' il fondo di
- *   `chiave_intervallo_ms()` continua a valere e non nascono due politiche per
- *   la stessa cosa.
+ * ⚠ It does not request anything by itself: it calls `video_regola()`, which is the only place
+ *   where the request to the stage is made — so the backstop of
+ *   `chiave_intervallo_ms()` keeps holding and two policies for
+ *   the same thing are not born.
  *
- * ⛔ E la riga si scrive UNA volta per episodio: il registro della sessione
- *    misurata ne aveva **45 278** dello stesso rifiuto, cioe' 40 MB in cui il
- *    blocco era invisibile proprio perche' urlava sempre. */
+ * ⛔ And the line is written ONCE per episode: the log of the measured
+ *    session had **45 278** of the same refusal, that is 40 MB in which the
+ *    block was invisible precisely because it was always shouting. */
 static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
 {
 	if (ora_ms - w->chiave_chiesta_ms < WT_CHIAVE_DEBITO_TETTO_MS)
@@ -4734,12 +4734,12 @@ static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
 	if (!w->debito_detto) {
 		w->debito_detto = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⛔ %s: il debito della CHIAVE (§5.2) e' acceso da %llu ms "
-		                 "e nessuna chiave e' arrivata — ogni delta viene rifiutato, "
-		                 "cioe' lo SCHERMO E' FERMO.  ⭐ Richiedo la chiave al palco "
-		                 "di qui, senza aspettare il battito: e' la seconda cintura "
-		                 "del 23 set 2026, e la prima (`batti_fra()`) evidentemente "
-		                 "non e' bastata",
+		                 "⛔ %s: the KEYFRAME debt (§5.2) has been on for %llu ms "
+		                 "and no keyframe has arrived — every delta is refused, "
+		                 "that is the SCREEN IS FROZEN.  ⭐ Requesting the keyframe from the stage "
+		                 "from here, without waiting for the heartbeat: it is the second belt "
+		                 "of 23 Sep 2026, and the first (`batti_fra()`) evidently "
+		                 "was not enough",
 		                 w->provenienza,
 		                 (unsigned long long)(ora_ms - w->chiave_chiesta_ms));
 	}
@@ -4747,150 +4747,150 @@ static void video_rifiutato_per_chiave(wt *w, uint64_t ora_ms)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐⭐ IL REGOLATORE DEL RITMO — fase 9, e il ritmo scende QUI.              */
+/* ⭐⭐ THE RATE REGULATOR — phase 9, and the rate drops HERE.               */
 /*
- * ⛔ LA REGOLA, INTERA: `arretrato == 0` ⇒ si spedisce; `arretrato >= POSTI`
- *    ⇒ questo fotogramma NON parte.  Nient'altro.  Non c'e' nessun ritmo
- *    target, nessuna banda calcolata, nessun riscontro del client, e
- *    soprattutto nessun numero che debba risalire.
+ * ⛔ THE RULE, IN FULL: `arretrato == 0` ⇒ send; `arretrato >= POSTI`
+ *    ⇒ this frame does NOT leave.  Nothing else.  There is no target
+ *    rate, no computed bandwidth, no client acknowledgement, and
+ *    above all no number that has to rise back.
  *
- * ⛔ E LA DISCESA NON E' UN NUMERO CHE SI ABBASSA: e' un fotogramma che non
- *    parte.  Il ritmo cala da se', tanto quanto la coda non si svuota, e
- *    risale da se' quando si svuota — perche' la grandezza si RILEGGE, non si
- *    ricorda.  ⭐ Nessun cricchetto: e' l'errore che `qualita_corrente` ha
- *    fatto (scendeva e non risaliva piu') ed e' costato una cura a parte.
+ * ⛔ AND THE DROP IS NOT A NUMBER GOING DOWN: it is a frame that does not
+ *    leave.  The rate drops by itself, as much as the queue does not empty, and
+ *    rises by itself when it empties — because the quantity is REREAD, not
+ *    remembered.  ⭐ No ratchet: it is the mistake `qualita_corrente`
+ *    made (it went down and never came back up) and it cost a cure of its own.
  *
- * ⛔ PERCHE' NON E' UN CRONOMETRO — ed e' la famiglia di errori
- *    P8 → P11 → P13 → P14 → P19 → P20 di `RCP.md`, evitata invece che
- *    ripetuta.  P13 diceva «per un secondo» e fu corretto due ore dopo:
- *    *«il secondo era la grandezza sbagliata: quel che deve svuotarsi e' una
- *    CODA, e quanto ci mette un fotogramma gia' in volo dipende dalla BANDA,
- *    non dall'orologio»*.  P20 diceva «chi riceve un fotogramma prima di
- *    SESSIONE», e la cura fu guardare quel che il pari aveva SPEDITO LUI:
- *    locale, monotono, indipendente dalla consegna.  ⇒ `arretrato` ha
- *    esattamente quella forma dal nostro lato: sono BYTE PRODOTTI DA NOI E
- *    ANCORA IN CASA NOSTRA.  Nessun pacchetto perso, nessun riordino e nessun
- *    silenzio del client possono falsarlo, perche' non si guarda niente che
- *    venga da fuori.  ⭐ E la frase e' gia' nel codice, scritta per la stessa
- *    ragione: *«una stima puo' sbagliare, un byte in coda no»*.
+ * ⛔ WHY IT IS NOT A STOPWATCH — and it is the family of errors
+ *    P8 → P11 → P13 → P14 → P19 → P20 of `RCP.md`, avoided instead of
+ *    repeated.  P13 said «for one second» and was corrected two hours later:
+ *    *«the second was the wrong quantity: what must empty is a
+ *    QUEUE, and how long a frame already in flight takes depends on the BANDWIDTH,
+ *    not on the clock»*.  P20 said «whoever receives a frame before
+ *    SESSIONE», and the cure was to look at what the peer had SENT ITSELF:
+ *    local, monotonic, independent of delivery.  ⇒ `arretrato` has
+ *    exactly that shape on our side: it is BYTES PRODUCED BY US AND
+ *    STILL IN OUR HOUSE.  No lost packet, no reordering and no
+ *    client silence can distort it, because nothing coming
+ *    from outside is looked at.  ⭐ And the sentence is already in the code, written for the same
+ *    reason: *«an estimate can be wrong, a byte in the queue cannot»*.
  *
- * ⛔ RIFIUTATA LA GRANDEZZA DI GNOME (i riscontri di fotogramma del client),
- *    e sono tre ragioni indipendenti: (1) da noi NON ESISTONO — la tabella dei
- *    messaggi di `RCP.md` non ha nessun riscontro di fotogramma, e aggiungerlo
- *    vorrebbe dire un giro di rete DENTRO l'anello di controllo, cioe'
- *    comprare reazione pagandola in ritardo (`SPECIFICHE.md:128-131` chiede di
- *    giustificarlo in ms; `arretrato` costa **0 ms**, e' gia' in memoria
- *    nostra); (2) il pari PUO' CONGELARLI e il regolatore si fermerebbe per
- *    sempre — e un anello che il pari puo' congelare non diventa sicuro
- *    perche' si aggiunge un `if`; (3) la loro soglia
- *    (`rtt * refresh_rate / 1e6`) e' un orologio travestito, cioe' P13 con un
- *    altro vestito.
+ * ⛔ GNOME'S QUANTITY (the client's frame acknowledgements) IS REJECTED,
+ *    and for three independent reasons: (1) here they DO NOT EXIST — the table of
+ *    messages of `RCP.md` has no frame acknowledgement, and adding one
+ *    would mean a network round trip INSIDE the control loop, that is
+ *    buying reaction by paying for it in delay (`SPECIFICHE.md:128-131` asks to
+ *    justify it in ms; `arretrato` costs **0 ms**, it is already in our
+ *    memory); (2) the peer CAN FREEZE THEM and the regulator would stop for
+ *    ever — and a loop the peer can freeze does not become safe
+ *    because an `if` is added; (3) their threshold
+ *    (`rtt * refresh_rate / 1e6`) is a disguised clock, that is P13 in
+ *    another dress.
  *
- * ⛔ E LE CHIAVI NON CONTANO — `RCP.md` §5.2 vieta di abbandonarle, §5.1 dice
- *    che i delta che vengono dopo non sono bloccati da loro (gli stream sono
- *    indipendenti), e il loro ritmo ce l'ha gia' `chiave_intervallo_ms()`.
- *    Contarle qui fermerebbe la produzione di delta per tutta la durata di una
- *    chiave lenta, che e' esattamente il contrario di `SPECIFICHE.md` §8.3.
+ * ⛔ AND KEYFRAMES DO NOT COUNT — `RCP.md` §5.2 forbids abandoning them, §5.1 says
+ *    that the deltas coming after are not blocked by them (streams are
+ *    independent), and their rhythm is already handled by `chiave_intervallo_ms()`.
+ *    Counting them here would stop delta production for the whole duration of a
+ *    slow keyframe, which is exactly the opposite of `SPECIFICHE.md` §8.3.
  *
- * ⚠ IL PREZZO IN MILLISECONDI, dichiarato: **0**.  Questo regolatore non
- *   aggiunge nessuna memoria intermedia, quindi non compra fluidita' e non
- *   vende risposta (`SPECIFICHE.md:128-131`).  Toglie lavoro, non lo rimanda.
+ * ⚠ THE PRICE IN MILLISECONDS, declared: **0**.  This regulator does not
+ *   add any intermediate memory, so it does not buy smoothness and does not
+ *   sell responsiveness (`SPECIFICHE.md:128-131`).  It removes work, it does not postpone it.
  *
- * ⚠ IL PREZZO CHE INVECE C'E': si taglia A VALLE del codificatore, quindi il
- *   fotogramma saltato ha gia' pagato la GPU del figlio.  La leva vera — non
- *   catturarlo affatto — sta nel figlio, e ⛔ NON si fa in fase 9 per una
- *   ragione d'architettura: il palco e' UNO per utente e le sessioni sono N,
- *   quindi un ritmo imposto al palco lo imporrebbe a tutte e la sessione sulla
- *   linea buona pagherebbe per quella sulla linea cattiva.  `[?]` aperta.
+ * ⚠ THE PRICE THAT IS THERE INSTEAD: it cuts DOWNSTREAM of the encoder, so the
+ *   skipped frame has already paid for the child's GPU.  The real lever — not
+ *   capturing it at all — is in the child, and ⛔ it is NOT done in phase 9 for an
+ *   architectural reason: the stage is ONE per user and the sessions are N,
+ *   so a rate imposed on the stage would impose it on all of them and the session on the
+ *   good line would pay for the one on the bad line.  `[?]` open.
  *
- * ⛔ IL FONDO DELLA SCALA E' UN VERDETTO, NON UN FRENO.  `DECISIONI.md` §2.1:
- *    la linea e' 20 Mbit/s, l'immagine 480p·25.  Sotto i 25/s su una linea da
- *    20 Mbit/s e' un DIFETTO, non una degradazione riuscita — e la cura NON e'
- *    forzare un fotogramma dentro una coda che non si svuota, perche' quello
- *    peggiora la coda e basta.  ⇒ Non c'e' nessun pavimento in questo codice:
- *    c'e' il conto `video_ritmo_scesi` accanto ai fotogrammi consegnati, e chi
- *    legge il registro DICHIARA il difetto invece di combatterlo.
+ * ⛔ THE BOTTOM OF THE SCALE IS A VERDICT, NOT A BRAKE.  `DECISIONI.md` §2.1:
+ *    the line is 20 Mbit/s, the image 480p·25.  Below 25/s on a
+ *    20 Mbit/s line it is a DEFECT, not a successful degradation — and the cure is NOT
+ *    forcing a frame into a queue that does not empty, because that
+ *    only makes the queue worse.  ⇒ There is no floor in this code:
+ *    there is the count `video_ritmo_scesi` next to the delivered frames, and whoever
+ *    reads the log DECLARES the defect instead of fighting it.
  *
  * ───────────────────────────────────────────────────────────────────────────
- * ⛔⭐⭐ LA PREVISIONE FALSIFICABILE — scritta PRIMA di qualunque misura.
+ * ⛔⭐⭐ THE FALSIFIABLE PREDICTION — written BEFORE any measurement.
  * ───────────────────────────────────────────────────────────────────────────
  *
- * ⭐ QUESTO E' UN PARAPETTO, E IL SUO COMPORTAMENTO CORRETTO E' NON FARE
- *    NIENTE.  Un banco che dimostrasse solo che non scatta avrebbe dimostrato
- *    meta' del lavoro; l'altra meta' e' dimostrare che l'anello e' stato
- *    PERCORSO mentre non scattava.
+ * ⭐ THIS IS A GUARDRAIL, AND ITS CORRECT BEHAVIOUR IS TO DO
+ *    NOTHING.  A bench that proved only that it does not fire would have proved
+ *    half the work; the other half is proving the loop was
+ *    WALKED while it did not fire.
  *
- * 1. IN REGIME, a 20 Mbit/s sul percorso vero, scena mossa, 1080p, H.264
- *    hardware, coi predefiniti del 24 ago 2026 (soglia 100 ms + regolatore):
+ * 1. IN STEADY STATE, at 20 Mbit/s on the real path, moving scene, 1080p, hardware
+ *    H.264, with the defaults of 24 Aug 2026 (threshold 100 ms + regulator):
  *
- *      | fotogrammi consegnati | **20-37/s** — quelli che la scena produce |
- *      | byte in uscita        | **3-12 Mbit/s**, fra un sesto e la meta'  |
- *      | `arretrato`           | **0, ogni tanto 1.  Mai 2**               |
- *      | `video_ritmo_scesi`   | ⭐ **0** — zero discese                   |
+ *      | frames delivered      | **20-37/s** — those the scene produces    |
+ *      | bytes going out       | **3-12 Mbit/s**, between a sixth and half |
+ *      | `arretrato`           | **0, now and then 1.  Never 2**           |
+ *      | `video_ritmo_scesi`   | ⭐ **0** — zero drops                     |
  *
- * 2. SUL GRADINO — ed e' dove deve scattare.  Stesso gradino gia' misurato:
- *    linea larga → **3 s a 10 Mbit/s** → larga, scena `barra`, 1920x1080.
+ * 2. ON THE STEP — and it is where it must fire.  Same step already measured:
+ *    wide line → **3 s at 10 Mbit/s** → wide, scene `barra`, 1920x1080.
  *
- *      | `arretrato` durante i 3 s   | sale a **2-3**                     |
- *      | discese (`ritmo_scesi`)     | **> 0**, e concentrate nei 3 s     |
- *      | righe di registro           | **2 per episodio** (SCENDE/RISALE),|
- *      |                             | NON una per fotogramma             |
- *      | fotogrammi/s nei 3 s        | **>= 25** e fatti di DELTA         |
- *      | di cui CHIAVE, al secondo   | **<= 2** (senza regolatore: 6-7)   |
- *      | secondi di linea larga      | **identici** a oggi: inerte        |
- *      | il RISALE, dopo il gradino  | entro **1 s** dal ritorno          |
+ *      | `arretrato` during the 3 s  | rises to **2-3**                   |
+ *      | drops (`ritmo_scesi`)       | **> 0**, and concentrated in the 3 s |
+ *      | log lines                   | **2 per episode** (DROPS/RISES),   |
+ *      |                             | NOT one per frame                  |
+ *      | frames/s in the 3 s         | **>= 25** and made of DELTAS       |
+ *      | of which KEYFRAME, per second | **<= 2** (without regulator: 6-7) |
+ *      | seconds of wide line        | **identical** to today: inert      |
+ *      | the RISE, after the step    | within **1 s** of the return       |
  *
- * 3. ⛔ CHE NON CALA A SCENA FERMA — e il controllo NON puo' essere «il
- *    contatore e' zero»: vuoto e proibito hanno la stessa faccia
- *    (`LEZIONI.md` §1.9), e uno zero su un ramo mai raggiunto non dimostra
- *    niente.  ⭐ La dimostrazione strutturale viene prima: `arretrato` si
- *    legge SOLO all'arrivo di un fotogramma dal palco, e a scena ferma un
- *    compositore Wayland non ne consegna nessuno — `video_a_una()` non viene
- *    nemmeno chiamata.  Una grandezza che misurasse byte/s, o ms di CPU, o
- *    «da quanto non spedisco» sarebbe invece perfettamente capace di scendere
- *    su un desktop immobile, ed e' la ferita di v1 (*«su un desktop poco mosso
- *    scendeva a 2-6 Mbit/s, contento di risparmiare»*).
+ * 3. ⛔ THAT IT DOES NOT DROP ON A STILL SCENE — and the control can NOT be «the
+ *    counter is zero»: empty and forbidden look the same
+ *    (`LEZIONI.md` §1.9), and a zero on a branch never reached proves
+ *    nothing.  ⭐ The structural proof comes first: `arretrato` is
+ *    read ONLY when a frame arrives from the stage, and on a still scene a
+ *    Wayland compositor delivers none — `video_a_una()` is not even
+ *    called.  A quantity measuring bytes/s, or CPU ms, or
+ *    «how long I have not sent» would instead be perfectly capable of dropping
+ *    on a motionless desktop, and it is v1's wound (*«on a barely moving desktop
+ *    it went down to 2-6 Mbit/s, happy to save»*).
  *
- *    ⇒ IL CONTROLLO SPERIMENTALE SI FA A COPPIE, NELLO STESSO GIRO: meta'
- *    scena ferma e meta' scena mossa, ALTERNATE, non due giri separati.  E la
- *    riga che lo rende leggibile e' quella di `ritmo_ciclo()`, una al secondo,
- *    che esce anche quando di fotogrammi non ne arriva nessuno.  ⭐ La forma
- *    esatta, ed e' un contratto sul testo:
+ *    ⇒ THE EXPERIMENTAL CONTROL IS DONE IN PAIRS, IN THE SAME RUN: half
+ *    still scene and half moving scene, ALTERNATED, not two separate runs.  And the
+ *    line that makes it readable is the one of `ritmo_ciclo()`, one a second,
+ *    which comes out even when no frames arrive at all.  ⭐ The exact
+ *    shape, and it is a contract on the text:
  *
- *      ritmo di IND:PORTA: arretrato LETTO 0 volte in quest'ultimo secondo,
- *      massimo 0, ultimo 0, posti 2 — 0 fotogrammi non partiti in questo
- *      secondo, 0 in tutto.  ⚠ ZERO LETTURE = il palco non ha consegnato
- *      niente (scena ferma), e NON «arretrato zero»
+ *      rate of IND:PORTA: arretrato READ 0 times in the last second,
+ *      maximum 0, last 0, slots 2 — 0 frames not sent in this
+ *      second, 0 in total.  ⚠ ZERO READS = the stage delivered
+ *      nothing (still scene), and NOT «arretrato zero»
  *
- *    Il verde e': `video_ritmo_scesi` INVARIATO per tutta la meta' ferma —
- *    con le righe che dicono «LETTO 0 volte», cioe' che il ramo non e' stato
- *    percorso — E `arretrato` letto almeno una volta al secondo nella meta'
- *    mossa.  ⛔ Un giro che non soddisfa il secondo punto NON HA MISURATO
- *    NIENTE, e va buttato invece che interpretato.
+ *    Green is: `video_ritmo_scesi` UNCHANGED for the whole still half —
+ *    with the lines saying «READ 0 times», that is that the branch was not
+ *    walked — AND `arretrato` read at least once a second in the moving
+ *    half.  ⛔ A run that does not satisfy the second point HAS MEASURED
+ *    NOTHING, and must be thrown away instead of interpreted.
  *
- * ⛔ I ROSSI CHE MI SMENTIREBBERO, e ognuno dice dove guardare:
+ * ⛔ THE REDS THAT WOULD PROVE ME WRONG, and each says where to look:
  *
- *  a. **discese a 20 Mbit/s con un desktop normale** ⇒ o `POSTI = 2` e'
- *     troppo stretto, o un fotogramma costa molto piu' del misurato.  La riga
- *     porta `cwnd`, `cwnd_left`, byte in volo e byte in coda: dice da se'
- *     quale dei due;
- *  b. ⛔⛔ **discese con la finestra di congestione LARGA** (`cwnd_left` alto)
- *     ⇒ NON E' LA LINEA, e' il BROWSER: e' la sua finestra di flusso
- *     (`initial_max_stream_data_uni` / `initial_max_data`, che decide lui e
- *     noi non tocchiamo) oppure il pacer.  La cura sarebbe altrove e questo
- *     regolatore starebbe frenando per un difetto che non e' suo.  E' il rosso
- *     piu' importante, perche' produce un anello che SEMBRA lavorare bene;
- *  c. **`video_saltati` che cresce mentre `arretrato` resta 0** ⇒ il collo e'
- *     il credito di stream (§2.3, la causa 4 del debito), non la banda, e
- *     questo regolatore non c'entra: si guarda `sgombra_credito`;
- *  d. **zero discese e ZERO LETTURE nella meta' mossa** ⇒ non e' una
- *     previsione confermata, e' un anello mai percorso.  Quasi certamente la
- *     soglia della coda e' spenta (vedi `wt_ritmo_adattivo()`);
- *  e. **il RISALE non arriva mai dopo il ritorno della linea** ⇒ qualcosa
- *     trattiene byte in coda che non se ne vanno, e non e' il ritmo: si guarda
- *     la punta di `byte_in_volo` e gli stream mai chiusi.
+ *  a. **drops at 20 Mbit/s with a normal desktop** ⇒ either `POSTI = 2` is
+ *     too tight, or a frame costs much more than measured.  The line
+ *     carries `cwnd`, `cwnd_left`, bytes in flight and bytes in the queue: it says by itself
+ *     which of the two;
+ *  b. ⛔⛔ **drops with a WIDE congestion window** (`cwnd_left` high)
+ *     ⇒ IT IS NOT THE LINE, it is the BROWSER: it is its flow window
+ *     (`initial_max_stream_data_uni` / `initial_max_data`, which it decides and
+ *     we do not touch) or the pacer.  The cure would be elsewhere and this
+ *     regulator would be braking for a defect that is not its own.  It is the most
+ *     important red, because it produces a loop that SEEMS to work well;
+ *  c. **`video_saltati` growing while `arretrato` stays 0** ⇒ the bottleneck is
+ *     stream credit (§2.3, cause 4 of the debt), not bandwidth, and
+ *     this regulator has nothing to do with it: look at `sgombra_credito`;
+ *  d. **zero drops and ZERO READS in the moving half** ⇒ it is not a
+ *     confirmed prediction, it is a loop never walked.  Almost certainly the
+ *     queue threshold is off (see `wt_ritmo_adattivo()`);
+ *  e. **the RISE never arrives after the line comes back** ⇒ something
+ *     holds bytes in the queue that do not go away, and it is not the rate: look at
+ *     the peak of `byte_in_volo` and the streams never closed.
  *
- * ⇒ Ritorna `true` quando questo fotogramma NON deve partire.
+ * ⇒ Returns `true` when this frame must NOT leave.
  */
 static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 {
@@ -4899,16 +4899,16 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 
 	if (!ritmo_adattivo)
 		return false;
-	/* ⛔ Le chiavi non passano di qui: §5.2 e `chiave_intervallo_ms()`. */
+	/* ⛔ Keyframes do not go through here: §5.2 and `chiave_intervallo_ms()`. */
 	if (chiave)
 		return false;
 
-	/* ⛔ SI LEGGE PRIMA DI `video_sgombra()`, che poche righe piu' sotto quella
-	 *    coda la svuota: dopo, `arretrato` sarebbe sempre zero e questo anello
-	 *    non scatterebbe mai.  ⚠ `coda_byte_stream()` conta i byte che non sono
-	 *    ANCORA usciti da casa nostra — un elemento gia' consegnato a ngtcp2 ha
-	 *    `off == dati.n` e vale zero, anche se dopo la cura del 23 agosto la sua
-	 *    memoria e' ancora nostra.  ⇒ La grandezza e' rimasta quella. */
+	/* ⛔ IT IS READ BEFORE `video_sgombra()`, which a few lines below empties that
+	 *    queue: afterwards, `arretrato` would always be zero and this loop
+	 *    would never fire.  ⚠ `coda_byte_stream()` counts the bytes that have NOT
+	 *    YET left our house — an element already handed to ngtcp2 has
+	 *    `off == dati.n` and is worth zero, even if after the cure of 23 August its
+	 *    memory is still ours.  ⇒ The quantity stayed the same. */
 	for (size_t i = 0; i < w->ninvolo; i++) {
 		size_t resto;
 		if (!w->involo[i].vivo || w->involo[i].chiave)
@@ -4920,9 +4920,9 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 		arretrato++;
 	}
 
-	/* ⭐ LA LETTURA SI CONTA, sempre, anche quando vale zero: e' quel che
-	 *    distingue «l'anello e' stato percorso e l'arretrato era zero» da
-	 *    «l'anello non e' stato percorso affatto» (`LEZIONI.md` §1.9). */
+	/* ⭐ THE READ IS COUNTED, always, even when it is worth zero: it is what
+	 *    tells «the loop was walked and the backlog was zero» from
+	 *    «the loop was not walked at all» (`LEZIONI.md` §1.9). */
 	w->ritmo_letture++;
 	w->ritmo_ultimo = arretrato;
 	if (arretrato > w->ritmo_max)
@@ -4937,51 +4937,51 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 			memset(&in, 0, sizeof in);
 			ngtcp2_conn_get_conn_info(w->conn, &in);
 			rtt_ms = in.smoothed_rtt / NGTCP2_MILLISECONDS;
-			/* ⛔⭐ `smoothed_rtt - min_rtt` E' LA CODA DENTRO LA RETE, IN
-			 *     MILLISECONDI: e' il numero con cui `SPECIFICHE.md:128` —
-			 *     «ogni memoria intermedia compra fluidita' e vende risposta» —
-			 *     si onora invece di citarlo.  ⚠ Ed e' la prima volta che
-			 *     `min_rtt` viene letto: `ngtcp2_conn_get_conn_info()` la
-			 *     riempie da sempre e noi ne guardavamo due campi su sette.
+			/* ⛔⭐ `smoothed_rtt - min_rtt` IS THE QUEUE INSIDE THE NETWORK, IN
+			 *     MILLISECONDS: it is the number with which `SPECIFICHE.md:128` —
+			 *     «every intermediate memory buys smoothness and sells responsiveness» —
+			 *     is honoured instead of quoted.  ⚠ And it is the first time
+			 *     `min_rtt` is read: `ngtcp2_conn_get_conn_info()` has always filled it
+			 *     and we looked at two fields out of seven.
 			 *
-			 * ⛔ MA `min_rtt` VALE `UINT64_MAX` FINCHE' NON E' ARRIVATO UN
-			 *    CAMPIONE, e la sottrazione darebbe un numero enorme che SEMBRA
-			 *    misurato — forma E1, la peggiore.  ⇒ Si dichiara «non ancora
-			 *    noto» invece di stampare spazzatura. */
+			 * ⛔ BUT `min_rtt` IS `UINT64_MAX` UNTIL A SAMPLE HAS ARRIVED, and the
+			 *    subtraction would give a huge number that LOOKS
+			 *    measured — shape E1, the worst.  ⇒ «not yet
+			 *    known» is declared instead of printing garbage. */
 			if (in.min_rtt != UINT64_MAX && in.min_rtt != 0
 			    && in.smoothed_rtt >= in.min_rtt)
 				snprintf(rete, sizeof rete,
-				         "%llu ms di coda dentro la rete (rtt %llu - min %llu)",
+				         "%llu ms of queue inside the network (rtt %llu - min %llu)",
 				         (unsigned long long)((in.smoothed_rtt - in.min_rtt)
 				                              / NGTCP2_MILLISECONDS),
 				         (unsigned long long)rtt_ms,
 				         (unsigned long long)(in.min_rtt / NGTCP2_MILLISECONDS));
 			else
 				snprintf(rete, sizeof rete,
-				         "coda dentro la rete NON ANCORA NOTA (min_rtt manca)");
+				         "queue inside the network NOT YET KNOWN (min_rtt missing)");
 			w->ritmo_giu   = true;
 			w->ritmo_da_ms = ora_ms;
 			w->ritmo_da_n  = w->video_ritmo_scesi;
-			/* ⛔⭐ INVARIANTE I1: «il ritmo non cala mai per prudenza, per
-			 *     risparmio o perche' la scena e' ferma.  Cala solo quando la
-			 *     MISURA dimostra che la linea non porta, e ogni discesa e'
-			 *     dichiarata nel registro».
+			/* ⛔⭐ INVARIANT I1: «the rate never drops out of caution, to
+			 *     save, or because the scene is still.  It drops only when the
+			 *     MEASUREMENT proves the line does not carry, and every drop is
+			 *     declared in the log».
 			 *
-			 * ⭐ E LA RIGA PORTA LA MISURA ACCANTO ALLA SOGLIA: `arretrato` e i
-			 *    posti, uno accanto all'altro.  Se la misura fosse sotto la
-			 *    soglia, quella discesa sarebbe stata per prudenza — e la riga
-			 *    stessa lo dimostrerebbe, invece di lasciarlo dedurre.
+			 * ⭐ AND THE LINE CARRIES THE MEASUREMENT NEXT TO THE THRESHOLD: `arretrato` and the
+			 *    slots, one next to the other.  If the measurement were below the
+			 *    threshold, that drop would have been out of caution — and the line
+			 *    itself would prove it, instead of leaving it to be deduced.
 			 *
-			 * ⚠ UNA RIGA PER EPISODIO, non per fotogramma: a 60/s la seconda
-			 *   forma e' il difetto dei 30,8 GB di registro. */
+			 * ⚠ ONE LINE PER EPISODE, not per frame: at 60/s the second
+			 *   shape is the defect of the 30.8 GB of log. */
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "⛔ %s: il ritmo SCENDE — arretrato %u delta contro %u "
-			                 "posti, %zu byte fermi nella coda del video (%zu in "
-			                 "tutto).  cwnd %llu, cwnd_left %llu, in volo per ngtcp2 "
-			                 "%llu, miei consegnati e non riscontrati %zu, rtt %llu "
-			                 "ms, %s.  ⭐ Non e' prudenza e non e' un orologio: e' la "
-			                 "coda che non si svuota (I1).  ⚠ Se cwnd_left e' ALTO "
-			                 "non e' la linea, e' la finestra del browser",
+			                 "⛔ %s: the rate DROPS — backlog %u deltas against %u "
+			                 "slots, %zu bytes stuck in the video queue (%zu in "
+			                 "total).  cwnd %llu, cwnd_left %llu, in flight for ngtcp2 "
+			                 "%llu, mine handed over and not acknowledged %zu, rtt %llu "
+			                 "ms, %s.  ⭐ It is not caution and it is not a clock: it is the "
+			                 "queue that does not empty (I1).  ⚠ If cwnd_left is HIGH "
+			                 "it is not the line, it is the browser's window",
 			                 w->provenienza, arretrato, (unsigned)WT_RITMO_POSTI,
 			                 in_coda, w->byte_in_coda,
 			                 (unsigned long long)in.cwnd,
@@ -4991,64 +4991,64 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 			                 (unsigned long long)rtt_ms, rete);
 		}
 		w->video_ritmo_scesi++;
-		/* ⛔⛔⭐ E LA DISCESA PAGA LA CHIAVE — 23 settembre 2026, e senza questa
-		 *      riga il regolatore della fase 9 sfasciava l'immagine in silenzio.
+		/* ⛔⛔⭐ AND THE DROP PAYS FOR THE KEYFRAME — 23 Sep 2026, and without this
+		 *      line the phase 9 regulator smashed the image silently.
 		 *
-		 *      Il fotogramma che si butta qui il figlio l'ha **gia' codificato**:
-		 *      arriva da `wt_video_diffondi()` come byte di flusso, e il
-		 *      codificatore ha gia' fatto avanzare i suoi riferimenti.  ⇒ Il
-		 *      delta che viene dopo si appoggia a un fotogramma che il client non
-		 *      ricevera' mai, e il decodificatore non solleva nessun errore: si
-		 *      limita a produrre immagini via via piu' sfasciate (§5.2).
+		 *      The frame thrown away here has **already been encoded** by the child:
+		 *      it arrives from `wt_video_diffondi()` as stream bytes, and the
+		 *      encoder has already moved its references forward.  ⇒ The
+		 *      delta that comes after leans on a frame the client will
+		 *      never receive, and the decoder raises no error: it just
+		 *      produces images more and more smashed (§5.2).
 		 *
-		 * ⛔ E NESSUNO SE NE ACCORGE, da nessuna delle due parti: il `numero`
-		 *    nasce in `rcp_video_apri()`, che di qui non si raggiunge, quindi la
-		 *    numerazione che arriva al client resta CONTINUA e §5.2 gli fa
-		 *    chiedere una chiave solo su un buco.  `[M]` 23 set 2026,
-		 *    `due-inquilini` su `rete11-gnome`: 27 e 38 fotogrammi buttati qui,
-		 *    **0 buchi** nella numerazione, **1 sola chiave** in tutta la
-		 *    sessione, **0** `RICHIEDI_CHIAVE` — e l'utente che vedeva l'immagine
-		 *    a tessere con tutti i contatori verdi.
+		 * ⛔ AND NOBODY NOTICES, on either side: the `numero`
+		 *    is born in `rcp_video_apri()`, which is not reached from here, so the
+		 *    numbering that reaches the client stays CONTINUOUS and §5.2 makes it
+		 *    ask for a keyframe only on a hole.  `[M]` 23 Sep 2026,
+		 *    `due-inquilini` on `rete11-gnome`: 27 and 38 frames thrown away here,
+		 *    **0 holes** in the numbering, **1 single keyframe** in the whole
+		 *    session, **0** `RICHIEDI_CHIAVE` — and the user seeing the image
+		 *    in tiles with all counters green.
 		 *
-		 * ⚠ E il commento in cima a questa funzione PROMETTEVA il contrario —
-		 *   «il regolatore smette di PRODURRE; non butta quel che c'e' gia'» —
-		 *   ma il freno sta a valle, dopo la codifica, e `ritmo_giu` non esce mai
-		 *   da questo file.  ⏳ Portarlo fino al figlio e' la cura del COSTO
-		 *   (meno scarti ⇒ meno chiavi) ed e' un secondo passo: qui si compra la
-		 *   CORRETTEZZA, che non e' negoziabile.
+		 * ⚠ And the comment at the top of this function PROMISED the opposite —
+		 *   «the regulator stops PRODUCING; it does not throw away what is already there» —
+		 *   but the brake is downstream, after encoding, and `ritmo_giu` never leaves
+		 *   this file.  ⏳ Carrying it as far as the child is the cure of the COST
+		 *   (fewer discards ⇒ fewer keyframes) and it is a second step: here we buy
+		 *   CORRECTNESS, which is not negotiable.
 		 *
-		 * ⭐ Il prezzo NON e' una chiave per fotogramma frenato: `serve_chiave` e'
-		 *    un booleano (`rcp.c`), si spegne solo quando la chiave e' uscita
-		 *    intera, quindi un episodio di frenata costa UNA chiave.  E i delta
-		 *    dietro quella chiave non si abbandonano (la cura della spirale,
-		 *    a50b389), che e' proprio il caso della chiave spedita sotto
-		 *    congestione. */
+		 * ⭐ The price is NOT one keyframe per braked frame: `serve_chiave` is
+		 *    a boolean (`rcp.c`), it switches off only when the keyframe has gone out
+		 *    whole, so a braking episode costs ONE keyframe.  And the deltas
+		 *    behind that keyframe are not abandoned (the cure of the spiral,
+		 *    a50b389), which is precisely the case of the keyframe sent under
+		 *    congestion. */
 		rcp_video_scartato_prima_del_filo(
 		    w->rcp, chiave,
-		    "il regolatore del ritmo lo ha frenato (fase 9: l'arretrato ha "
-		    "raggiunto i posti) — ma il figlio lo aveva gia' CODIFICATO, e i "
-		    "riferimenti del codificatore sono andati avanti senza di lui");
-		/* ⛔⛔⭐ E LA CHIAVE SI CHIEDE ADESSO, NON AL PROSSIMO BATTITO — 23 set
-		 *      2026, ed e' il prezzo della cura di stamattina misurato e tolto.
+		    "the rate regulator braked it (phase 9: the backlog has "
+		    "reached the slots) — but the child had already ENCODED it, and the "
+		    "encoder's references moved on without it");
+		/* ⛔⛔⭐ AND THE KEYFRAME IS REQUESTED NOW, NOT AT THE NEXT HEARTBEAT — 23 Sep
+		 *      2026, and it is the price of this morning's cure measured and removed.
 		 *
-		 *      Con il debito acceso `rcp_video_apri()` rifiuta OGNI delta
-		 *      (`rcp.c`, il ramo `RCP_VIDEO_SERVE_UNA_CHIAVE`): finche' la
-		 *      chiave non esce, lo schermo dell'utente e' FERMO.  ⇒ Quanto dura
-		 *      quel buio non e' un dettaglio, e' il ritmo. */
+		 *      With the debt on `rcp_video_apri()` refuses EVERY delta
+		 *      (`rcp.c`, the `RCP_VIDEO_SERVE_UNA_CHIAVE` branch): until the
+		 *      keyframe goes out, the user's screen is FROZEN.  ⇒ How long
+		 *      that darkness lasts is not a detail, it is the rate. */
 		video_regola(w, ora_ms);
-		return true; /* ⛔ questo fotogramma NON parte: E' la discesa */
+		return true; /* ⛔ this frame does NOT leave: it IS the drop */
 	}
 
-	/* ⭐ E LA FINE DELL'EPISODIO NON LA DECIDE NESSUNO: la coda si e' svuotata
-	 *    e l'arretrato e' tornato a zero.  Non c'e' nessun numero da rialzare,
-	 *    nessuna isteresi e nessun ritardo di risalita — e' il pregio della
-	 *    grandezza che si rilegge invece di ricordarsi. */
+	/* ⭐ AND NOBODY DECIDES THE END OF THE EPISODE: the queue has emptied
+	 *    and the backlog is back to zero.  There is no number to raise back,
+	 *    no hysteresis and no rise delay — it is the merit of the
+	 *    quantity that is reread instead of remembered. */
 	if (w->ritmo_giu && arretrato == 0) {
 		w->ritmo_giu = false;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ %s: il ritmo RISALE — l'episodio e' durato %llu ms e sono "
-		                 "restati indietro %u fotogrammi.  ⚠ Non l'ha deciso nessuno: "
-		                 "la coda si e' svuotata e l'arretrato e' zero",
+		                 "⭐ %s: the rate RISES — the episode lasted %llu ms and "
+		                 "%u frames were left behind.  ⚠ Nobody decided it: "
+		                 "the queue emptied and the backlog is zero",
 		                 w->provenienza,
 		                 (unsigned long long)(ora_ms - w->ritmo_da_ms),
 		                 w->video_ritmo_scesi - w->ritmo_da_n);
@@ -5056,18 +5056,18 @@ static bool ritmo_frena(wt *w, bool chiave, uint64_t ora_ms)
 	return false;
 }
 
-/* ⛔⭐ LA RIGA AL SECONDO CHE RENDE FALSIFICABILE «non cala a scena ferma».
+/* ⛔⭐ THE ONCE-A-SECOND LINE THAT MAKES «it does not drop on a still scene» FALSIFIABLE.
  *
- *     Gira col BATTITO e non coi fotogrammi, apposta: se girasse coi
- *     fotogrammi, a scena ferma non uscirebbe niente — e «l'anello non e'
- *     stato percorso» avrebbe di nuovo la stessa faccia di «l'arretrato era
- *     zero», che e' precisamente il difetto che questa riga esiste per togliere
- *     (`LEZIONI.md` §1.9; ed e' la stessa cura della riga `ciclo:` del figlio,
- *     che si scrive PRIMA di guardare l'esito della cattura).
+ *     It runs with the HEARTBEAT and not with the frames, on purpose: if it ran with
+ *     frames, on a still scene nothing would come out — and «the loop was not
+ *     walked» would again look the same as «the backlog was
+ *     zero», which is precisely the defect this line exists to remove
+ *     (`LEZIONI.md` §1.9; and it is the same cure as the child's `ciclo:` line,
+ *     which is written BEFORE looking at the outcome of the capture).
  *
- * ⚠ Esce solo con l'interruttore acceso: e' lo strumento di un banco, non una
- *   riga di prodotto, e a sessione ferma sarebbe una riga al secondo per
- *   sempre. */
+ * ⚠ It comes out only with the switch on: it is the instrument of a bench, not a
+ *   product line, and with a still session it would be one line a second for
+ *   ever. */
 static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 {
 	if (!ritmo_adattivo || !w->rcp || w->chiusura >= 0)
@@ -5076,10 +5076,10 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 		return;
 	w->ritmo_detto_ms = ora_ms;
 	registro_dice_di(REG_RCP, wt_chi(w),
-	                 "ritmo di %s: arretrato LETTO %u volte in quest'ultimo secondo, "
-	                 "massimo %u, ultimo %u, posti %u — %u fotogrammi non partiti in "
-	                 "questo secondo, %u in tutto.  ⚠ ZERO LETTURE = il palco non ha "
-	                 "consegnato niente (scena ferma), e NON «arretrato zero»",
+	                 "rate of %s: arretrato READ %u times in the last second, "
+	                 "maximum %u, last %u, slots %u — %u frames not sent in "
+	                 "this second, %u in total.  ⚠ ZERO READS = the stage delivered "
+	                 "nothing (still scene), and NOT «arretrato zero»",
 	                 w->provenienza, w->ritmo_letture, w->ritmo_max, w->ritmo_ultimo,
 	                 (unsigned)WT_RITMO_POSTI,
 	                 w->video_ritmo_scesi - w->ritmo_detti_n, w->video_ritmo_scesi);
@@ -5089,30 +5089,30 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 }
 
 /* ========================================================================== */
-/* ⛔⭐⭐ FASE 9 — LA RIGA CHE ATTRIBUISCE IL RITARDO A CHI SE L'E' PRESO.     */
+/* ⛔⭐⭐ PHASE 9 — THE LINE THAT ATTRIBUTES THE DELAY TO WHOEVER TOOK IT.      */
 /*                                                                            */
-/*      IL BUCO CHE CHIUDE.  Un fotogramma che arriva tardi ha quattro padri  */
-/*      possibili, e fino a questa riga il registro ne sapeva riconoscere     */
-/*      solo due:                                                             */
+/*      THE HOLE IT CLOSES.  A frame arriving late has four possible          */
+/*      fathers, and until this line the log could recognise                  */
+/*      only two:                                                             */
 /*                                                                            */
-/*        (a) un pacchetto perduto e rimandato da QUIC   ⛔ NON SI VEDEVA     */
-/*        (b) la finestra di congestione che si e' chiusa ⛔ NON SI VEDEVA    */
-/*        (c) noi che l'abbiamo tenuto in coda            ✅ `sgombra_tenuti`  */
-/*        (d) noi che l'abbiamo abbandonato               ✅ `sgombra_abbandoni`*/
+/*        (a) a packet lost and resent by QUIC            ⛔ IT DID NOT SHOW   */
+/*        (b) the congestion window that closed           ⛔ IT DID NOT SHOW   */
+/*        (c) us keeping it in the queue                  ✅ `sgombra_tenuti`  */
+/*        (d) us abandoning it                            ✅ `sgombra_abbandoni`*/
 /*                                                                            */
-/*      ⇒ Senza (a) e (b) ogni misura sotto perdita finisce in una discussione*/
-/*      — «e' la linea o siamo noi?» — invece che in un'attribuzione.  E il   */
-/*      progetto ha una regola: ogni numero va attribuito da se'.             */
+/*      ⇒ Without (a) and (b) every measurement under loss ends in a discussion*/
+/*      — «is it the line or is it us?» — instead of an attribution.  And the  */
+/*      project has a rule: every number must be attributed by itself.        */
 /*                                                                            */
-/* ⛔⛔ E' SOLO OSSERVAZIONE.  Questa funzione LEGGE e SCRIVE, e basta:       */
-/*      nessuna decisione, nessuna soglia, nessun ritmo, nessuno stato di     */
-/*      trasporto toccato.  ⇒ Non c'e' niente da mettere dietro un            */
-/*      interruttore (invariante I6), perche' non cambia niente di quel che   */
-/*      l'utente VEDE.  Se un giorno servisse cambiare qualcosa per poterla   */
-/*      scrivere, quella e' un'altra cura e va dietro un interruttore spento. */
+/* ⛔⛔ IT IS ONLY OBSERVATION.  This function READS and WRITES, and that is all: */
+/*      no decision, no threshold, no rate, no transport state                */
+/*      touched.  ⇒ There is nothing to put behind a                         */
+/*      switch (invariant I6), because it changes nothing of what             */
+/*      the user SEES.  If one day something had to change to be able to      */
+/*      write it, that is another cure and goes behind a switch that is off.  */
 /*                                                                            */
-/* ⭐ LA RIGA D'ESEMPIO — ED E' UN CONTRATTO SUL TESTO, perche' e' quella che */
-/*    un banco cerchera' con un `grep` e spezzera' con uno `split`:           */
+/* ⭐ THE EXAMPLE LINE — AND IT IS A CONTRACT ON THE TEXT, because it is the one */
+/*    a bench will look for with a `grep` and split with a `split`:            */
 /*                                                                            */
 /*      rete-quic 192.168.1.9:52344 da_ms=1002 persi=7 persi_d=3              */
 /*      byte_persi=9856 byte_persi_d=4224 spediti=48210 spediti_d=812         */
@@ -5120,83 +5120,83 @@ static void ritmo_ciclo(wt *w, uint64_t ora_ms)
 /*      scartati_d=0 cwnd=48000 cwnd_left=0 ssthresh=32000 involo=47180       */
 /*      srtt_us=41230 latest_us=52980 rttvar_us=11400 min_rtt_us=22100        */
 /*      coda_rete_us=19130 pto_us=132000 dgram_persi=n/d                      */
-/*      giudizio=⛔ la linea perde                                            */
+/*      giudizio=⛔ the line is losing                                        */
 /*                                                                            */
-/*    (nel registro e' TUTTA SU UNA RIGA: qui va a capo solo per starci nel   */
-/*    riquadro.)  Le regole del formato, e sono tre:                          */
+/*    (in the log it is ALL ON ONE LINE: here it wraps only to fit in the     */
+/*    box.)  The format rules, and they are three:                            */
 /*                                                                            */
-/*      1. il prefisso `rete-quic` e' STABILE ed e' la prima parola del corpo:*/
-/*         `grep 'rete-quic '` prende tutte le righe e nient'altro;           */
-/*      2. ogni campo e' `nome=valore` senza spazi nel valore, separato da UNO*/
-/*         spazio — `split()` e poi `split('=', 1)` bastano.  Il secondo campo*/
-/*         non ha `=` ed e' la provenienza (IND:PORTA), che di spazi non ne ha;*/
-/*      3. ⛔ `giudizio=` E' L'ULTIMO CAMPO, e il suo valore arriva a FINE     */
-/*         RIGA spazi compresi: e' l'unico che ne contiene, apposta, perche'  */
-/*         dev'essere leggibile da un umano senza trattini finti.  Un banco lo*/
-/*         prende con `riga.split('giudizio=', 1)[1]`.                        */
+/*      1. the prefix `rete-quic` is STABLE and it is the first word of the body: */
+/*         `grep 'rete-quic '` takes all the lines and nothing else;          */
+/*      2. every field is `nome=valore` without spaces in the value, separated by ONE */
+/*         space — `split()` and then `split('=', 1)` are enough.  The second field */
+/*         has no `=` and it is the origin (IND:PORTA), which has no spaces;  */
+/*      3. ⛔ `giudizio=` IS THE LAST FIELD, and its value runs to the END OF  */
+/*         THE LINE spaces included: it is the only one containing them, on purpose, because */
+/*         it must be readable by a human without fake dashes.  A bench takes */
+/*         it with `riga.split('giudizio=', 1)[1]`.                           */
 /*                                                                            */
-/* ⚠ LE UNITA' STANNO NEI NOMI, e l'rtt e' in MICROsecondi mentre il resto    */
-/*   del file lo stampa in millisecondi.  Non e' distrazione: il bersaglio    */
-/*   della fase e' il jitter, e `rttvar` su una rete locale sta sotto il      */
-/*   millisecondo — arrotondato a ms varrebbe `0` e nasconderebbe proprio il  */
-/*   fatto che si sta cercando.  ⇒ `_us` sul nome, e chi legge non sbaglia.   */
+/* ⚠ THE UNITS ARE IN THE NAMES, and the rtt is in MICROseconds while the rest */
+/*   of the file prints it in milliseconds.  It is not absent-mindedness: the target */
+/*   of the phase is jitter, and `rttvar` on a local network is below one     */
+/*   millisecond — rounded to ms it would be `0` and would hide precisely the */
+/*   fact being looked for.  ⇒ `_us` on the name, and the reader does not err. */
 /*                                                                            */
-/* ⚠ `da_ms` E' L'INTERVALLO VERO, e i campi `_d` valgono SU QUELLO — non «al */
-/*   secondo».  La riga esce al piu' una volta al secondo, ma tace quando non */
-/*   e' cambiato niente: dopo un silenzio di 12 s il `da_ms` dice 12000 e le  */
-/*   differenze coprono 12 s.  ⛔ Chiamarli `_1s` sarebbe stato un numero che */
-/*   SEMBRA misurato e non lo e' — la forma E1.  Sulla PRIMA riga `da_ms=0` e */
-/*   le differenze valgono i totali, cioe' tutta la connessione.              */
+/* ⚠ `da_ms` IS THE REAL INTERVAL, and the `_d` fields hold OVER IT — not «per */
+/*   second».  The line comes out at most once a second, but keeps quiet when nothing */
+/*   has changed: after a 12 s silence `da_ms` says 12000 and the             */
+/*   differences cover 12 s.  ⛔ Calling them `_1s` would have been a number that */
+/*   LOOKS measured and is not — shape E1.  On the FIRST line `da_ms=0` and   */
+/*   the differences are worth the totals, that is the whole connection.      */
 /*                                                                            */
-/* ⛔ CHE COSA NON C'E', e va detto qui perche' un campo assente si nota e un */
-/*    campo mancante no:                                                      */
+/* ⛔ WHAT IS NOT THERE, and it must be said here because an absent field is noticed and a */
+/*    missing field is not:                                                   */
 /*                                                                            */
-/*    · **i RITRASMESSI non esistono in ngtcp2 1.25** `[S]`.  QUIC non        */
-/*      ritrasmette pacchetti — ritrasmette i FRAME dentro pacchetti nuovi —  */
-/*      e `ngtcp2_conn_info` non ha nessun contatore di rimandi.  `pkt_lost`  */
-/*      (`persi`) e' quanto ci si avvicina: i pacchetti DICHIARATI perduti.   */
-/*    · **il riordino non si conta SUGLI STREAM** `[S]`: nessun campo,        */
-/*      nessun callback, e ngtcp2 usa la soglia dei 3 pacchetti al suo        */
-/*      interno senza esporla.  ⇒ Li' `rttvar_us` resta l'unico indizio di    */
-/*      jitter, e questa riga lo porta senza giudicarlo.                      */
-/*    · ⭐⭐⭐ **MA SUI DATAGRAM IL RIORDINO SI MISURA** — 23 agosto 2026.      */
+/*    · **RETRANSMITTED ones do not exist in ngtcp2 1.25** `[S]`.  QUIC does not */
+/*      retransmit packets — it retransmits the FRAMES inside new packets —   */
+/*      and `ngtcp2_conn_info` has no resend counter.  `pkt_lost`             */
+/*      (`persi`) is as close as one gets: the packets DECLARED lost.         */
+/*    · **reordering is not counted ON STREAMS** `[S]`: no field,             */
+/*      no callback, and ngtcp2 uses the 3-packet threshold internally        */
+/*      without exposing it.  ⇒ There `rttvar_us` remains the only clue of    */
+/*      jitter, and this line carries it without judging it.                  */
+/*    · ⭐⭐⭐ **BUT ON DATAGRAMS REORDERING IS MEASURED** — 23 Aug 2026.      */
 /*      `ngtcp2.h:3442`: *«the loss might be spurious, and DATAGRAM frame     */
-/*      might be acknowledged later»*.  ⇒ Stesso `dgram_id` prima in          */
-/*      `lost_datagram` e poi in `ack_datagram` = perdita FALSA = pacchetto   */
-/*      arrivato fuori sequenza.  E' `dgram_falsi`, ed e' il solo numero che  */
-/*      il server sappia dare sul bersaglio «fuori sequenza» della fase 9.    */
-/*      ⚠ Vale sull'AUDIO soltanto: gli stream non hanno un identificativo    */
-/*      per pezzo, e questa strada li' non c'e'.  Il prezzo si dichiara.      */
-/*    · **`delivery_rate` non esiste** `[S]` in ngtcp2 1.25: la banda si      */
-/*      stima da `cwnd`/`smoothed_rtt` come gia' fa `chiave_intervallo_ms()`. */
+/*      might be acknowledged later»*.  ⇒ Same `dgram_id` first in            */
+/*      `lost_datagram` and then in `ack_datagram` = FALSE loss = packet      */
+/*      arrived out of order.  It is `dgram_falsi`, and it is the only number */
+/*      the server can give on phase 9's «out of order» target.               */
+/*      ⚠ It holds for AUDIO only: streams have no identifier                 */
+/*      per piece, and this road is not there.  The price is declared.        */
+/*    · **`delivery_rate` does not exist** `[S]` in ngtcp2 1.25: bandwidth is */
+/*      estimated from `cwnd`/`smoothed_rtt` as `chiave_intervallo_ms()` already does. */
 /* ========================================================================== */
 
-/* ⭐ I TRE GIUDIZI, e la regola che li sceglie sta tutta in `rete_ciclo()`.
- *    Sono numeri e non stringhe solo per poter dire «il giudizio e' cambiato»
- *    a contatori fermi, che e' un fatto che merita una riga. */
+/* ⭐ THE THREE VERDICTS, and the rule that chooses them is all in `rete_ciclo()`.
+ *    They are numbers and not strings only to be able to say «the verdict has changed»
+ *    with counters still, which is a fact worth a line. */
 #define WT_RETE_NULLA    0
 #define WT_RETE_FINESTRA 1
 #define WT_RETE_PERDE    2
 
-/* ⭐⭐ I DUE ESITI DI UN DATAGRAM, E LI CHIAMA `trasporto.c` DA NGTCP2.
+/* ⭐⭐ THE TWO OUTCOMES OF A DATAGRAM, AND `trasporto.c` CALLS THEM FROM NGTCP2.
  *
- *    ⛔ Fino al 23 agosto 2026 `ngtcp2_callbacks` non registrava ne'
- *       `lost_datagram` ne' `ack_datagram`: l'audio partiva e il suo destino
- *       era **muto**.  «L'audio non arriva» e «l'audio arriva e il cliente lo
- *       butta» avevano la stessa faccia — che e' lo stesso rilievo B-10 che
- *       aveva gia' fatto contare i datagram in ENTRATA.
+ *    ⛔ Until 23 Aug 2026 `ngtcp2_callbacks` registered neither
+ *       `lost_datagram` nor `ack_datagram`: audio left and its fate
+ *       was **mute**.  «Audio does not arrive» and «audio arrives and the client
+ *       throws it away» looked the same — which is the same finding B-10 that
+ *       had already made incoming datagrams be counted.
  *
- * ⚠ NON DECIDONO NIENTE: contano e basta.  Nessuna soglia, nessun ritmo,
- *   nessun interruttore da tenere spento (I6), perche' non cambia niente di
- *   quel che l'utente vede.
+ * ⚠ THEY DECIDE NOTHING: they only count.  No threshold, no rate,
+ *   no switch to keep off (I6), because nothing changes of
+ *   what the user sees.
  */
 void wt_dgram_perso(wt *w, uint64_t id)
 {
 	if (!w)
 		return;
 	w->dgram_persi++;
-	/* ⛔ Si scrive sempre, anche sopra un identificativo non ancora
-	 *    riscontrato: l'anello e' una memoria RECENTE, non un elenco. */
+	/* ⛔ It is always written, even over an identifier not yet
+	 *    acknowledged: the ring is a RECENT memory, not a list. */
 	w->dgram_anello[w->dgram_anello_i] = id;
 	w->dgram_anello_i = (w->dgram_anello_i + 1) % WT_DGRAM_ANELLO;
 }
@@ -5208,103 +5208,103 @@ void wt_dgram_riscontrato(wt *w, uint64_t id)
 	if (!w)
 		return;
 	w->dgram_riscontrati++;
-	/* ⭐ Il fatto che conta: era stato DICHIARATO perduto, ed eccolo.
-	 *    ⇒ Non era perduto: era in ritardo.  E' riordino, misurato. */
+	/* ⭐ The fact that counts: it had been DECLARED lost, and here it is.
+	 *    ⇒ It was not lost: it was late.  It is reordering, measured. */
 	for (i = 0; i < WT_DGRAM_ANELLO; i++) {
 		if (w->dgram_anello[i] != id)
 			continue;
 		w->dgram_falsi++;
-		/* ⛔ Si consuma, o un secondo riscontro dello stesso
-		 *    identificativo lo conterebbe due volte. */
+		/* ⛔ It is consumed, or a second acknowledgement of the same
+		 *    identifier would count it twice. */
 		w->dgram_anello[i] = 0;
 		return;
 	}
 }
 
 /* ========================================================================== */
-/* ⛔⭐⭐ IL GIUDIZIO SULLA LINEA MORTA — la derivazione dei numeri sta sopra   */
-/*      `WT_LM_STALLO_MS`, e qui c'e' solo il meccanismo.                     */
+/* ⛔⭐⭐ THE DEAD LINE VERDICT — the derivation of the numbers is above        */
+/*      `WT_LM_STALLO_MS`, and here there is only the mechanism.              */
 /*                                                                            */
-/* ⛔ LA RIGA DEL REGISTRO E' UN CONTRATTO — invariante I1, «ogni discesa e'   */
-/*    dichiarata», e questa non e' una discesa: e' una sessione CHIUSA.  Una   */
-/*    sessione che sparisce senza una riga che porti i numeri su cui si e'     */
-/*    deciso e' indistinguibile da un difetto NOSTRO.  Le regole del formato   */
-/*    sono le stesse di `rete-quic` (il riquadro sopra):                       */
+/* ⛔ THE LOG LINE IS A CONTRACT — invariant I1, «every drop is               */
+/*    declared», and this is not a drop: it is a CLOSED session.  A            */
+/*    session that disappears without a line carrying the numbers it was       */
+/*    decided on is indistinguishable from a defect OF OURS.  The format rules */
+/*    are the same as `rete-quic` (the box above):                             */
 /*                                                                            */
-/*      1. il prefisso `linea-morta` e' STABILE ed e' la prima parola del      */
-/*         corpo; il secondo campo e' la provenienza (IND:PORTA), senza `=`;   */
-/*      2. ogni campo e' `nome=valore` senza spazi nel valore;                 */
-/*      3. ⛔ `giudizio=` E' L'ULTIMO e arriva a fine riga, spazi compresi.    */
+/*      1. the prefix `linea-morta` is STABLE and it is the first word of the  */
+/*         body; the second field is the origin (IND:PORTA), without `=`;      */
+/*      2. every field is `nome=valore` without spaces in the value;           */
+/*      3. ⛔ `giudizio=` IS THE LAST and runs to the end of the line, spaces included. */
 /*                                                                            */
-/*    ⛔ E I CAMPI CI SONO SEMPRE TUTTI, anche quelli che la causa in corso non */
-/*       usa: un banco che facesse `split('=')` su una riga a geometria        */
-/*       variabile leggerebbe il campo sbagliato senza accorgersene.  Quale    */
-/*       delle due cause ha deciso lo dice `causa=`, che e' il PRIMO campo.    */
+/*    ⛔ AND THE FIELDS ARE ALWAYS ALL THERE, even those the current cause does */
+/*       not use: a bench doing `split('=')` on a line of variable              */
+/*       geometry would read the wrong field without noticing.  Which          */
+/*       of the two causes decided is said by `causa=`, which is the FIRST field. */
 /*                                                                            */
-/* ⛔⛔ IL CONTRATTO E' CAMBIATO IL 23 AGOSTO 2026, e il banco `09-b81` va      */
-/*      rifatto su questo.  Due campi sono SPARITI e non si tace sul perche':  */
+/* ⛔⛔ THE CONTRACT CHANGED ON 23 AUG 2026, and bench `09-b81` must be       */
+/*      redone on it.  Two fields have DISAPPEARED and the why is not kept quiet: */
 /*                                                                            */
-/*      · `soglia_permille=` — non esiste piu' nessuna soglia sulla perdita.   */
-/*        `permille=` invece RESTA, ed e' l'osservazione del riordino.  Un     */
-/*        campo `soglia_` accanto a un numero che non giudica sarebbe una      */
-/*        decisione che nessuno prende, cioe' la forma E1.                     */
-/*      · `finestre=N/M` — non ci sono piu' finestre cattive da contare di     */
-/*        fila: lo stallo e' una durata continua, e la sua evidenza e' la      */
-/*        durata stessa, non la ripetizione.                                   */
+/*      · `soglia_permille=` — there is no longer any threshold on loss.       */
+/*        `permille=` instead STAYS, and it is the observation of reordering.  A */
+/*        `soglia_` field next to a number that does not judge would be a      */
+/*        decision nobody takes, that is shape E1.                             */
+/*      · `finestre=N/M` — there are no longer bad windows to count in         */
+/*        a row: the stall is a continuous duration, and its evidence is the   */
+/*        duration itself, not the repetition.                                 */
 /*                                                                            */
-/*    ⭐ E ne sono entrati quattro: `stallo_ms=` `soglia_stallo_ms=`           */
-/*       `offerti=` `usciti_byte=` `coda_video=` `cwnd_left=`.  I tre di mezzo */
-/*       sono i tre numeri su cui lo stallo si dimostra o si smentisce: quanti */
-/*       fotogrammi il palco ci ha dato, quanti byte di video sono usciti      */
-/*       davvero, e quanti sono rimasti in casa nostra.                        */
+/*    ⭐ And four came in: `stallo_ms=` `soglia_stallo_ms=`                    */
+/*       `offerti=` `usciti_byte=` `coda_video=` `cwnd_left=`.  The three in the middle */
+/*       are the three numbers on which the stall is proved or disproved: how many */
+/*       frames the stage gave us, how many video bytes really went            */
+/*       out, and how many stayed in our house.                                */
 /*                                                                            */
-/* ⭐⭐ E IL 25 AGOSTO 2026 NE SONO ENTRATI ALTRI TRE, tutti sulla stessa       */
-/*     domanda — *«e' stato il filo, o siamo stati noi?»*:                     */
+/* ⭐⭐ AND ON 25 AUG 2026 THREE MORE CAME IN, all on the same                 */
+/*     question — *«was it the wire, or was it us?»*:                          */
 /*                                                                            */
-/*      · `fermo_ms=`      i millisecondi in cui il ciclo del padre NON ha    */
-/*                         girato da quando questa sessione e' nata.  ⛔ Se   */
-/*                         non e' zero, i due numeri su cui si decide erano   */
-/*                         congelati per colpa nostra per quel tanto.         */
-/*        ⛔⛔ E FINO AL 25 AGOSTO 2026 QUESTA RIGA MENTIVA — rilievo R5 di   */
-/*           §5.5.  Il commento diceva «da quando questa sessione e' nata»    */
-/*           e il codice stampava `giro_fermo_ms`, cioe' il contatore         */
-/*           **GLOBALE** da quando il server e' acceso.  `[M]` una riga ha    */
-/*           attribuito **54,5 s** di cecita' nostra a una sessione che       */
-/*           allora **non era ancora nata**.  ⇒ Su un server acceso da un     */
-/*           giorno, uno sfratto dopo dieci secondi avrebbe detto             */
-/*           `fermo_ms=40000` e chi legge avrebbe **assolto la rete quando    */
-/*           la rete c'entrava** — l'errore INVERSO di quello che la cura     */
-/*           esiste per togliere.                                            */
-/*        ⭐ SI E' SCELTO DI CAMBIARE IL CODICE, non il nome, e la ragione e' */
-/*           che questo campo sta nella riga di UNA sessione e risponde a     */
-/*           «e' stato il filo, o siamo stati noi, **con lei viva**?».  Un    */
-/*           `fermo_globale_ms=` avrebbe detto il vero senza rispondere       */
-/*           alla domanda — e il numero globale non si perde: lo porta        */
-/*           `giri_fermi=` qui sotto, e la riga al minuto di `main.c`.        */
-/*      · `giri_fermi=`    quanti buchi, in tutto.  ⚠ E' GLOBALE, apposta —   */
-/*                         il ciclo e' uno solo e la sua salute e' un fatto   */
-/*                         della MACCHINA.  ⇒ I due si leggono in coppia:     */
-/*                         `fermo_ms=` dice quanto e' toccato a lei,          */
-/*                         `giri_fermi=` quanto ne ha visto il server.        */
-/*      · `saltati=`       quanti giudizi questa sessione ha SALTATO perche'  */
-/*                         c'era stato un buco.  ⭐ E' il conto che rende la  */
-/*                         cura falsificabile: `saltati=0` in una sessione    */
-/*                         sfrattata vuol dire che il buco non c'entrava.     */
+/*      · `fermo_ms=`      the milliseconds in which the parent's loop did NOT */
+/*                         run since this session was born.  ⛔ If            */
+/*                         it is not zero, the two numbers decided on were    */
+/*                         frozen through our fault for that long.            */
+/*        ⛔⛔ AND UNTIL 25 AUG 2026 THIS LINE WAS LYING — finding R5 of       */
+/*           §5.5.  The comment said «since this session was born»            */
+/*           and the code printed `giro_fermo_ms`, that is the                */
+/*           **GLOBAL** counter since the server was switched on.  `[M]` a line */
+/*           attributed **54.5 s** of our blindness to a session that         */
+/*           at the time **had not been born yet**.  ⇒ On a server on for a   */
+/*           day, an eviction after ten seconds would have said               */
+/*           `fermo_ms=40000` and the reader would have **acquitted the network when */
+/*           the network was involved** — the OPPOSITE error of the one the cure */
+/*           exists to remove.                                                */
+/*        ⭐ WE CHOSE TO CHANGE THE CODE, not the name, and the reason is     */
+/*           that this field is in the line of ONE session and answers        */
+/*           «was it the wire, or was it us, **while it was alive**?».  A     */
+/*           `fermo_globale_ms=` would have told the truth without answering  */
+/*           the question — and the global number is not lost: it is carried by */
+/*           `giri_fermi=` below, and by the once-a-minute line of `main.c`.  */
+/*      · `giri_fermi=`    how many gaps, in total.  ⚠ It is GLOBAL, on purpose — */
+/*                         the loop is a single one and its health is a fact  */
+/*                         of the MACHINE.  ⇒ The two are read as a pair:     */
+/*                         `fermo_ms=` says how much fell to it,              */
+/*                         `giri_fermi=` how much the server saw.             */
+/*      · `saltati=`       how many verdicts this session SKIPPED because     */
+/*                         there had been a gap.  ⭐ It is the count that makes the */
+/*                         cure falsifiable: `saltati=0` in an evicted        */
+/*                         session means the gap had nothing to do with it.   */
 /*                                                                            */
-/*   ⛔ Sono TESTIMONI, non giudici — la stessa promozione che ha fatto        */
-/*      `permille=` il 23 agosto: la decisione resta delle due cause.         */
+/*   ⛔ They are WITNESSES, not judges — the same promotion `permille=`       */
+/*      got on 23 August: the decision stays with the two causes.             */
 /*                                                                            */
-/* ⭐⭐ E ALTRI QUATTRO, PER L'ANELLO DI §6.15 — `ritmo_giu=`                   */
+/* ⭐⭐ AND FOUR MORE, FOR THE §6.15 LOOP — `ritmo_giu=`                        */
 /*     `ritmo_arretrato=` `ritmo_posti=` `ritmo_scesi=`.                      */
 /*                                                                            */
-/*   ⛔ §6.15 ha dovuto mettere accanto DUE righe scritte da due punti diversi */
-/*      del programma, e appaiarle a occhio sull'ora, per dire *«il regolatore */
-/*      stava trattenendo tutto quando la linea morta ha sfrattato»*.  ⇒ Con   */
-/*      questi campi la riga dello sfratto lo dice DA SOLA: `ritmo_giu=1` con  */
-/*      `usciti_byte=0` vuol dire che a non far uscire niente **eravamo noi**. */
-/*   ⚠ E anche qui sono testimoni: la decisione non cambia di una virgola.     */
-/*     ⭐ Ma la prossima volta che l'anello si riproduce, chi legge non deve   */
-/*        piu' dedurlo — e questo e' quel che serve per curarlo alla radice.   */
+/*   ⛔ §6.15 had to put side by side TWO lines written from two different     */
+/*      points of the program, and pair them by eye on the time, to say *«the regulator */
+/*      was holding everything back when the dead line evicted»*.  ⇒ With      */
+/*      these fields the eviction line says it BY ITSELF: `ritmo_giu=1` with   */
+/*      `usciti_byte=0` means that **we were the ones** letting nothing out.   */
+/*   ⚠ And here too they are witnesses: the decision does not change one bit.  */
+/*     ⭐ But the next time the loop reproduces, the reader no longer has to   */
+/*        deduce it — and that is what is needed to cure it at the root.       */
 /* ========================================================================== */
 
 static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
@@ -5340,9 +5340,9 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	                 (unsigned long long)in->cwnd,
 	                 (unsigned long long)ngtcp2_conn_get_cwnd_left(w->conn),
 	                 (unsigned long long)(in->smoothed_rtt / NGTCP2_MICROSECONDS),
-	                 /* ⛔ R5, 25 agosto 2026: la DIFFERENZA, non il contatore
-	                  *    globale — vedi `lm_fermo_nato` e il campo `fermo_ms=`
-	                  *    nel riquadro qui sopra. */
+	                 /* ⛔ R5, 25 Aug 2026: the DIFFERENCE, not the global
+	                  *    counter — see `lm_fermo_nato` and the field `fermo_ms=`
+	                  *    in the box above. */
 	                 (unsigned long long)(giro_fermo_ms - w->lm_fermo_nato),
 	                 (unsigned long long)giro_fermi,
 	                 (unsigned long long)w->lm_fermo_saltati,
@@ -5350,17 +5350,17 @@ static void linea_morta_scatta(wt *w, const ngtcp2_conn_info *in,
 	                 (unsigned)WT_RITMO_POSTI,
 	                 (unsigned long long)w->video_ritmo_scesi,
 	                 detto);
-	/* ⛔⭐ IL MOTIVO SI SCRIVE NELL'ERRORE DELLA CONNESSIONE, e non si INVENTA
-	 *     un motivo RCP nuovo: `RCP.md` §9 vieta di aggiungere un codice a
-	 *     §8.2 dentro una versione maggiore, e nessuno dei sedici dice «la
-	 *     linea e' morta».  ⇒ Codice `H3_NO_ERROR` (0x0100) — al livello di
-	 *     HTTP/3 non c'e' nessun errore, e' il FILO che non porta piu' — e la
-	 *     ragione viaggia nella stringa, che e' il posto che QUIC le da'.
+	/* ⛔⭐ THE REASON IS WRITTEN IN THE CONNECTION ERROR, and a new RCP reason
+	 *     is not INVENTED: `RCP.md` §9 forbids adding a code to
+	 *     §8.2 within a major version, and none of the sixteen says «the
+	 *     line is dead».  ⇒ Code `H3_NO_ERROR` (0x0100) — at the HTTP/3 level
+	 *     there is no error, it is the WIRE that no longer carries — and the
+	 *     reason travels in the string, which is the place QUIC gives it.
 	 *
-	 * ⚠ E non e' la strada di §3.1 punto 3 (la capsula di chiusura della
-	 *   sessione WebTransport) apposta: quella vuole che la coda si svuoti e
-	 *   aspetta fino a 3 s su una linea che per ipotesi NON PORTA.  Qui il filo
-	 *   cade — e' quel che l'utente ha scelto di far vedere. */
+	 * ⚠ And it is not the road of §3.1 point 3 (the closing capsule of the
+	 *   WebTransport session) on purpose: that one wants the queue to empty and
+	 *   waits up to 3 s on a line that by hypothesis DOES NOT CARRY.  Here the wire
+	 *   drops — it is what the user chose to show. */
 	if (w->ultimo_errore)
 		ngtcp2_ccerr_set_application_error(w->ultimo_errore,
 		                                   NGHTTP3_H3_NO_ERROR, motivo,
@@ -5374,64 +5374,64 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	uint64_t coda_video, offerti, usciti;
 	bool avevo_da_mandare;
 
-	/* ⛔ Spenta = il prodotto di ieri byte per byte (I6).  E una volta scattata
-	 *    non si giudica piu': la connessione sta gia' cadendo, e una seconda
-	 *    riga direbbe la stessa cosa due volte. */
+	/* ⛔ Off = yesterday's product byte for byte (I6).  And once fired
+	 *    it no longer judges: the connection is already dropping, and a second
+	 *    line would say the same thing twice. */
 	if (!linea_morta_accesa || w->lm_scattata)
 		return;
-	/* ⛔ Solo con una sessione RCP viva: prima non c'e' niente da buttare
-	 *    fuori, e in chiusura il motivo l'ha gia' scelto qualcun altro. */
+	/* ⛔ Only with a live RCP session: before there is nothing to throw
+	 *    out, and at closure someone else has already chosen the reason. */
 	if (!w->rcp || w->chiusura >= 0)
 		return;
-	/* ⛔⭐ E «VIVA» NON E' `w->rcp != NULL`: UNA SESSIONE FINITA C'E' ANCORA.
+	/* ⛔⭐ AND «ALIVE» IS NOT `w->rcp != NULL`: A FINISHED SESSION IS STILL THERE.
 	 *
-	 *    `w->rcp` si azzera solo in `wt_stream_chiuso()`, cioe' quando il
-	 *    CLIENT chiude lo stream della CONNECT o il canale di controllo.  Se
-	 *    il client si congeda e poi **sparisce** — la scheda si chiude e il
-	 *    processo del browser esce, che e' il caso normale — quello stream non
-	 *    si chiude mai: `rcp_chiusa_dal_client()` porta la sessione a
-	 *    `"finita"` e libera il posto, ma il puntatore resta.  ⇒ Qui si
-	 *    continuava a giudicare una connessione che NOI stessi avevamo appena
-	 *    dichiarato conclusa, e dieci secondi dopo usciva un ⛔ `LINEA MORTA`
-	 *    su un client che aveva salutato per bene.
+	 *    `w->rcp` is reset only in `wt_stream_chiuso()`, that is when the
+	 *    CLIENT closes the CONNECT stream or the control channel.  If
+	 *    the client says farewell and then **disappears** — the tab closes and the
+	 *    browser process exits, which is the normal case — that stream never
+	 *    closes: `rcp_chiusa_dal_client()` takes the session to
+	 *    `"finita"` and frees the slot, but the pointer stays.  ⇒ Here we
+	 *    kept judging a connection that WE ourselves had just
+	 *    declared concluded, and ten seconds later a ⛔ `LINEA MORTA` came out
+	 *    on a client that had said goodbye properly.
 	 *
-	 * ⛔ E' esattamente lo stato su cui `regola_tienila_viva()` spegne i PING
-	 *    scrivendo «la sessione e' finita, non c'e' piu' niente da tenere
-	 *    vivo»: due giudizi opposti sullo stesso fatto, a dieci secondi di
-	 *    distanza, nello stesso registro.  ⇒ Questa riga li riallinea, e non
-	 *    e' una politica nuova: e' il commento qui sopra che diventa vero.
+	 * ⛔ It is exactly the state on which `regola_tienila_viva()` switches off the PINGs
+	 *    writing «the session is over, there is nothing left to keep
+	 *    alive»: two opposite verdicts on the same fact, ten seconds
+	 *    apart, in the same log.  ⇒ This line realigns them, and it is not
+	 *    a new policy: it is the comment above becoming true.
 	 *
-	 * `[M]` 22 set 2026, 10:30:11.698-10:30:22.330 UTC (`registri-22set/
-	 *       kde-1045.log`): congedo `motivo=0x01` «la scheda e' stata chiusa»
-	 *       → PING spenti a 10:30:11.798 → capsula di chiusura a 10:30:12.199
-	 *       → ⛔ `LINEA MORTA causa=silenzio` a 10:30:22.330, con
-	 *       `offerti=0 usciti_byte=0 coda_video=0 persi=0`.  Il giornale del
-	 *       tablet data l'uscita del processo di Chrome alle 12:30:11 locali,
-	 *       cioe' PRIMA del silenzio.
+	 * `[M]` 22 Sep 2026, 10:30:11.698-10:30:22.330 UTC (`registri-22set/
+	 *       kde-1045.log`): farewell `motivo=0x01` «the tab was closed»
+	 *       → PINGs off at 10:30:11.798 → closing capsule at 10:30:12.199
+	 *       → ⛔ `LINEA MORTA causa=silenzio` at 10:30:22.330, with
+	 *       `offerti=0 usciti_byte=0 coda_video=0 persi=0`.  The tablet's
+	 *       journal dates the exit of the Chrome process at 12:30:11 local time,
+	 *       that is BEFORE the silence.
 	 *
-	 * ⚠ E NON TOGLIE NIENTE ALLA CURA, perche' chi muore non saluta: un client
-	 *   ucciso (`kill -9`, il browser chiuso di forza, la rete che cade) lascia
-	 *   la sessione `"attiva"` e la linea morta scatta come prima — e' la
-	 *   PROVA 3 di `banchi/09-b81-linea-morta.py`, e sono due dei tre episodi
-	 *   del 22 settembre (12:41 e 12:42), che restano scatti GIUSTI.
+	 * ⚠ AND IT TAKES NOTHING AWAY FROM THE CURE, because whoever dies does not say goodbye: a client
+	 *   killed (`kill -9`, the browser closed by force, the network dropping) leaves
+	 *   the session `"attiva"` and the dead line fires as before — it is
+	 *   TEST 3 of `banchi/09-b81-linea-morta.py`, and they are two of the three episodes
+	 *   of 22 September (12:41 and 12:42), which remain RIGHT firings.
 	 *
-	 * ⛔ E la connessione NON si chiude qui: «sessione finita, connessione
-	 *    ancora viva» e' uno stato PREVISTO due volte in questo file —
-	 *    `fin_dal_client()` («la pagina che chiude la parte scrivente del
-	 *    canale e tiene viva la connessione») e `chiusa_dal_client()` («il
-	 *    posto si lascia adesso ... aspettare lo smontaggio del trasporto vuol
-	 *    dire tenerlo occupato addosso a chi si ricollega subito»).  In tutt'e
-	 *    due la scelta fu liberare il POSTO e lasciare il trasporto in piedi,
-	 *    e `wt_stream_chiuso()` rimette `w->sessione` a -1 apposta perche' una
-	 *    sessione nuova possa aprirsi li' sopra.  ⇒ Chiudere la connessione
-	 *    disferebbe quella decisione; e i PING sono gia' spenti, quindi il
-	 *    trasporto se ne va da solo col `max_idle_timeout` di 30 s. */
+	 * ⛔ And the connection is NOT closed here: «session finished, connection
+	 *    still alive» is a state FORESEEN twice in this file —
+	 *    `fin_dal_client()` («the page that closes the writing side of the
+	 *    channel and keeps the connection alive») and `chiusa_dal_client()` («the
+	 *    slot is given up now ... waiting for the transport teardown means
+	 *    keeping it occupied against whoever reconnects at once»).  In both
+	 *    the choice was to free the SLOT and leave the transport standing,
+	 *    and `wt_stream_chiuso()` puts `w->sessione` back to -1 on purpose so that a
+	 *    new session can open on top of it.  ⇒ Closing the connection
+	 *    would undo that decision; and the PINGs are already off, so the
+	 *    transport goes away by itself with the 30 s `max_idle_timeout`. */
 	if (rcp_e_finita(w->rcp))
 		return;
 
-	/* ⛔ Il primo giro FOTOGRAFA e non giudica: senza questa riga la prima
-	 *    finestra sarebbe lunga quanto tutta la connessione, e lo stallo
-	 *    partirebbe da un istante che non e' mai stato guardato. */
+	/* ⛔ The first round TAKES A SNAPSHOT and does not judge: without this line the first
+	 *    window would be as long as the whole connection, and the stall
+	 *    would start from an instant that was never looked at. */
 	if (!w->lm_finestra_ms) {
 		w->lm_finestra_ms = ora_ms;
 		w->lm_pkt_sent = in->pkt_sent;
@@ -5443,30 +5443,30 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		w->lm_usciti_visti = w->lm_usciti;
 		w->lm_offerti_visti = w->lm_offerti;
 		w->lm_fermo_visto = giro_fermo_ms;
-		/* ⛔ R5: il punto zero di `fermo_ms=`, e si segna QUI perche' qui c'e'
-		 *    il primo istante in cui questa sessione e' stata guardata — prima
-		 *    di questo giro non c'era niente da attribuirle. */
+		/* ⛔ R5: the zero point of `fermo_ms=`, and it is noted HERE because here is
+		 *    the first instant in which this session was looked at — before
+		 *    this round there was nothing to attribute to it. */
 		w->lm_fermo_nato = giro_fermo_ms;
 		return;
 	}
 
-	/* ── 0. ⛔⛔⭐ IL BUCO DEL CICLO — «il nostro silenzio non e' il loro» ──
+	/* ── 0. ⛔⛔⭐ THE GAP IN THE LOOP — «our silence is not theirs» ──
 	 *
-	 * Il riquadro sopra `WT_GIRO_ATTESO_MS` porta il fatto e le tre misure che
-	 * ci portano.  Qui c'e' la regola, e sono due righe: se dall'ultimo giudizio
-	 * il ciclo del padre e' rimasto indietro, **i byte non potevano uscire e i
-	 * pacchetti del client non potevano essere letti** — quindi non c'e' niente
-	 * da giudicare, e i conti ripartono da adesso come se fosse arrivato un
-	 * progresso.  Perche' un progresso c'e' stato: il ciclo e' tornato a girare.
+	 * The box above `WT_GIRO_ATTESO_MS` carries the fact and the three measurements that
+	 * lead to it.  Here there is the rule, and it is two lines: if since the last verdict
+	 * the parent's loop fell behind, **the bytes could not go out and the
+	 * client's packets could not be read** — so there is nothing
+	 * to judge, and the counts restart from now as if a
+	 * progress had arrived.  Because there has been a progress: the loop has started running again.
 	 *
-	 * ⛔ E NON si tocca `lm_scattata`, non si spegne niente e non si allarga
-	 *    nessuna soglia: la cura vale **solo** per il tempo in cui non abbiamo
-	 *    guardato.  Al giro dopo, se il client tace davvero, i dieci secondi
-	 *    ricominciano e la linea morta fa il suo mestiere.
-	 * ⚠ IL PREZZO, dichiarato: un client morto durante un buco viene riconosciuto
-	 *   fino a una soglia piu' tardi.  ⭐ E' il lato giusto dell'asimmetria di
-	 *   sempre (sopra `WT_LM_STALLO_MS`): sbagliare in alto costa secondi di
-	 *   schermo fermo, sbagliare in basso butta fuori chi sta lavorando. */
+	 * ⛔ And `lm_scattata` is NOT touched, nothing is switched off and no
+	 *    threshold is widened: the cure holds **only** for the time in which we did not
+	 *    look.  At the next round, if the client is really quiet, the ten seconds
+	 *    start again and the dead line does its job.
+	 * ⚠ THE PRICE, declared: a client dead during a gap is recognised
+	 *   up to one threshold later.  ⭐ It is the right side of the usual
+	 *   asymmetry (above `WT_LM_STALLO_MS`): erring high costs seconds of
+	 *   frozen screen, erring low throws out someone who is working. */
 	if (giro_fermo_ms != w->lm_fermo_visto) {
 		uint64_t buco = giro_fermo_ms - w->lm_fermo_visto;
 
@@ -5478,19 +5478,19 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		w->lm_uscita_ms = ora_ms;
 		w->lm_usciti_visti = w->lm_usciti;
 		w->lm_offerti_visti = w->lm_offerti;
-		/* ⛔ UNA RIGA, e non e' rumore: e' l'unica traccia di un difetto che
-		 *    altrimenti non ne lascia nessuna — il degrado SILENZIOSO di
-		 *    `CODER.md` §1-bis.  ⭐ E porta il buco accanto alla soglia, cosi'
-		 *    chi legge vede subito se il ciclo e' rimasto indietro di un pelo o
-		 *    di dieci secondi. */
+		/* ⛔ ONE LINE, and it is not noise: it is the only trace of a defect that
+		 *    otherwise leaves none — the SILENT degradation of
+		 *    `CODER.md` §1-bis.  ⭐ And it carries the gap next to the threshold, so
+		 *    the reader sees at once whether the loop fell behind by a hair or
+		 *    by ten seconds. */
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⚠ %s: il ciclo del padre e' rimasto indietro di %llu ms "
-		                 "(%llu buchi in tutto, il peggiore %llu ms): la linea morta "
-		                 "NON giudica questo giro e i suoi conti ripartono.  ⛔ In "
-		                 "quel tempo nessun byte poteva uscire e nessun pacchetto del "
-		                 "client poteva essere LETTO: contarlo come silenzio suo "
-		                 "vorrebbe dire accusare la sua rete di una cecita' nostra "
-		                 "(saltati %llu volte da questa sessione)",
+		                 "⚠ %s: the parent's loop fell behind by %llu ms "
+		                 "(%llu gaps in total, the worst %llu ms): the dead line "
+		                 "does NOT judge this round and its counts restart.  ⛔ In "
+		                 "that time no byte could go out and no client packet "
+		                 "could be READ: counting it as its silence "
+		                 "would mean blaming its network for a blindness of ours "
+		                 "(skipped %llu times by this session)",
 		                 w->provenienza, (unsigned long long)buco,
 		                 (unsigned long long)giro_fermi,
 		                 (unsigned long long)giro_fermo_peggiore_ms,
@@ -5498,72 +5498,72 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 		return;
 	}
 
-	/* ── 1. IL TESTIMONE: LA FRAZIONE DI PERDITA ─────────────────────────
-	 * ⛔⛔ E NON GIUDICA PIU' NIENTE — 23 agosto 2026, la refuta e' scritta per
-	 *      intero nel riquadro sopra `WT_LM_STALLO_MS`.  Il numero si CALCOLA
-	 *      ancora, con le stesse guardie di prima, e finisce nella riga dello
-	 *      scatto come `permille=`: su una linea che riordina e' la miglior
-	 *      misura di RIORDINO che il server abbia sugli stream, dove
-	 *      `dgram_falsi` (§17.3) non arriva.
+	/* ── 1. THE WITNESS: THE LOSS FRACTION ────────────────────────────────
+	 * ⛔⛔ AND IT NO LONGER JUDGES ANYTHING — 23 Aug 2026, the refutation is written in
+	 *      full in the box above `WT_LM_STALLO_MS`.  The number is still COMPUTED,
+	 *      with the same guards as before, and ends up in the firing
+	 *      line as `permille=`: on a line that reorders it is the best
+	 *      measure of REORDERING the server has on streams, where
+	 *      `dgram_falsi` (§17.3) does not reach.
 	 *
-	 * ⚠ Le guardie restano perche' un testimone che mente e' peggio di un
-	 *   testimone che tace: sotto `WT_LM_MIN_PACCHETTI` spediti la finestra
-	 *   NON si chiude, si allunga — una frazione su venti pacchetti non e' una
-	 *   frazione, e' rumore.  ⭐ E il minimo e' sui pacchetti che mandiamo NOI,
-	 *   che e' la direzione abbondante di questa sessione (video in giu', quasi
-	 *   niente in su). */
+	 * ⚠ The guards stay because a witness that lies is worse than a
+	 *   witness that keeps quiet: below `WT_LM_MIN_PACCHETTI` sent the window
+	 *   does NOT close, it lengthens — a fraction over twenty packets is not a
+	 *   fraction, it is noise.  ⭐ And the minimum is on the packets WE send,
+	 *   which is the abundant direction of this session (video downwards, almost
+	 *   nothing upwards). */
 	if (ora_ms - w->lm_finestra_ms >= WT_LM_FINESTRA_MS) {
 		spediti = in->pkt_sent - w->lm_pkt_sent;
 		if (spediti >= WT_LM_MIN_PACCHETTI) {
 			persi = in->pkt_lost - w->lm_pkt_lost;
-			/* ⛔ La durata VERA della finestra, presa prima di chiuderla: e' il
-			 *    numero che dice se il minimo dei pacchetti l'ha allungata, e
-			 *    con la costante al suo posto quella riga direbbe sempre 1000 —
-			 *    cioe' un numero che SEMBRA misurato (forma E1). */
+			/* ⛔ The REAL duration of the window, taken before closing it: it is the
+			 *    number that says whether the packet minimum lengthened it, and
+			 *    with the constant in its place that line would always say 1000 —
+			 *    that is a number that LOOKS measured (shape E1). */
 			w->lm_durata_v = ora_ms - w->lm_finestra_ms;
 			w->lm_persi_v = persi;
 			w->lm_spediti_v = spediti;
 			w->lm_permille = (unsigned)(persi * 1000 / spediti);
-			/* La finestra si chiude qui, e la prossima parte da adesso. */
+			/* The window closes here, and the next one starts from now. */
 			w->lm_finestra_ms = ora_ms;
 			w->lm_pkt_sent = in->pkt_sent;
 			w->lm_pkt_lost = in->pkt_lost;
 		}
 	}
 
-	/* ── 2. LE DUE META' DELLO STALLO, LETTE UNA VOLTA SOLA ───────────────
-	 * ⛔ Si leggono PRIMA di qualunque scatto e prima del proprio azzeramento,
-	 *    perche' le porta anche la riga del SILENZIO: una sessione chiusa per
-	 *    silenzio con `offerti=` e `usciti_byte=` presi dopo l'azzeramento
-	 *    direbbe sempre zero, cioe' un numero che sembra misurato e non lo e'.
+	/* ── 2. THE TWO HALVES OF THE STALL, READ ONCE ONLY ──────────────────
+	 * ⛔ They are read BEFORE any firing and before their own reset,
+	 *    because the SILENCE line carries them too: a session closed for
+	 *    silence with `offerti=` and `usciti_byte=` taken after the reset
+	 *    would always say zero, that is a number that looks measured and is not.
 	 *
-	 * ⭐ `offerti` e `usciti_byte` sono DIFFERENZE da quando il conto dello
-	 *    stallo e' ripartito l'ultima volta, non totali di sessione: la
-	 *    grandezza e' «da quanto tempo», e i totali risponderebbero a un'altra
-	 *    domanda. */
+	 * ⭐ `offerti` and `usciti_byte` are DIFFERENCES since the stall count
+	 *    last restarted, not session totals: the
+	 *    quantity is «how long», and the totals would answer another
+	 *    question. */
 	coda_video = coda_byte_video(w);
 	offerti = w->lm_offerti - w->lm_offerti_visti;
 	usciti = w->lm_usciti - w->lm_usciti_visti;
-	/* ⛔⭐ «AVEVO DA MANDARE» — ed e' la meta' che tiene in piedi l'altra.
-	 *     Due termini, e ognuno copre un buco dell'altro:
-	 *       · `coda_video > 0` — dei byte di fotogrammi sono ancora in casa
-	 *         nostra, quindi il filo li sta trattenendo;
-	 *       · `offerti > 0` — il palco ci ha dato un fotogramma da quando il
-	 *         conto e' ripartito.  ⛔ Senza questo, il REGOLATORE DEL RITMO
-	 *         nasconderebbe lo stallo: smette di produrre, `video_sgombra()`
-	 *         abbandona i delta vecchi, la coda si svuota, e «non ho niente da
-	 *         mandare» diventerebbe vero mentre lo schermo e' fermo. */
+	/* ⛔⭐ «I HAD SOMETHING TO SEND» — and it is the half that holds the other one up.
+	 *     Two terms, and each covers a hole of the other:
+	 *       · `coda_video > 0` — frame bytes are still in our
+	 *         house, so the wire is holding them back;
+	 *       · `offerti > 0` — the stage gave us a frame since the
+	 *         count restarted.  ⛔ Without this, the RATE REGULATOR
+	 *         would hide the stall: it stops producing, `video_sgombra()`
+	 *         abandons old deltas, the queue empties, and «I have nothing to
+	 *         send» would become true while the screen is frozen. */
 	avevo_da_mandare = coda_video > 0 || offerti > 0;
 	stallo = ora_ms - w->lm_uscita_ms;
 
-	/* ── 3. IL SILENZIO ──────────────────────────────────────────────────
-	 * ⛔ La grandezza NON e' «quanto tempo e' passato»: e' «quanti pacchetti
-	 *    nostri sono usciti senza che ne tornasse UNO».  Il tempo e' solo la
-	 *    finestra in cui si guarda, e da solo non basterebbe — un desktop fermo
-	 *    in cui non parla nessuno dei due tace legittimamente.
-	 * ⚠ E questa cura NON si tocca: `[M]` 23 agosto 2026 ha passato la sua
-	 *   prova — `kill -9` sul cliente, scatto a `silenzio_ms=10002` con
-	 *   `prove=10`, 10,36 s dopo il colpo; a cura spenta, zero scatti. */
+	/* ── 3. SILENCE ──────────────────────────────────────────────────────
+	 * ⛔ The quantity is NOT «how much time has passed»: it is «how many of our
+	 *    packets went out without ONE coming back».  Time is only the
+	 *    window in which one looks, and alone it would not be enough — a still desktop
+	 *    in which neither of the two speaks is legitimately quiet.
+	 * ⚠ And this cure is NOT to be touched: `[M]` 23 Aug 2026 it passed its
+	 *   test — `kill -9` on the client, firing at `silenzio_ms=10002` with
+	 *   `prove=10`, 10.36 s after the blow; with the cure off, zero firings. */
 	if (in->pkt_recv > w->lm_pkt_recv) {
 		w->lm_vivo_ms = ora_ms;
 		w->lm_pkt_recv = in->pkt_recv;
@@ -5575,26 +5575,26 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 			linea_morta_scatta(
 				w, in, "silenzio", stallo, offerti, usciti, coda_video,
 				fermo_da, prove,
-				"⛔ la linea e' MORTA: il client non fa vedere un pacchetto da "
-				"troppo tempo e le domande che gli abbiamo fatto nel frattempo "
-				"sono rimaste tutte senza risposta.  Il filo cade, e per "
-				"tornare bisogna rientrare a mano (decisione dell'utente, 23 "
-				"agosto 2026)");
+				"⛔ the line is DEAD: the client has not shown a packet for "
+				"too long and the questions we asked it meanwhile "
+				"have all remained unanswered.  The wire drops, and to "
+				"come back one has to reconnect by hand (the user's decision, 23 "
+				"Aug 2026)");
 			return;
 		}
 	}
 
-	/* ── 4. LO STALLO DELL'USCITA ────────────────────────────────────────
-	 * ⛔ Il conto RIPARTE per due ragioni diverse che vanno trattate uguale:
-	 *      1. e' uscito qualcosa (`usciti > 0`) — il filo porta;
-	 *      2. non c'era niente da mandare — e allora non c'e' niente di rotto.
-	 *    ⭐ La seconda e' il caso della SCENA FERMA, che in questa fase e'
-	 *       normale e non costa niente (`RecordVirtual` consegna solo sul
-	 *       cambiamento, il risveglio vale 13 ms).  Un conto che partisse
-	 *       comunque butterebbe fuori chi sta leggendo una pagina.
-	 * ⚠ E l'istante e' quello del GIRO, non quello in cui i byte sono usciti:
-	 *   lo `stallo_ms` misurato puo' essere fino a ~1 s piu' corto del vero.
-	 *   Si scatta piu' tardi, mai piu' presto — che e' il lato giusto. */
+	/* ── 4. THE OUTPUT STALL ─────────────────────────────────────────────
+	 * ⛔ The count RESTARTS for two different reasons that must be treated the same:
+	 *      1. something went out (`usciti > 0`) — the wire carries;
+	 *      2. there was nothing to send — and then nothing is broken.
+	 *    ⭐ The second is the case of the STILL SCENE, which in this phase is
+	 *       normal and costs nothing (`RecordVirtual` delivers only on
+	 *       change, the wake-up is worth 13 ms).  A count that started
+	 *       anyway would throw out whoever is reading a page.
+	 * ⚠ And the instant is the ROUND's, not the one in which the bytes went out:
+	 *   the measured `stallo_ms` can be up to ~1 s shorter than the truth.
+	 *   It fires later, never earlier — which is the right side. */
 	if (usciti > 0 || !avevo_da_mandare) {
 		w->lm_uscita_ms = ora_ms;
 		w->lm_usciti_visti = w->lm_usciti;
@@ -5606,12 +5606,12 @@ static void linea_morta_giudica(wt *w, const ngtcp2_conn_info *in,
 	linea_morta_scatta(
 		w, in, "stallo", stallo, offerti, usciti, coda_video,
 		ora_ms - w->lm_vivo_ms, in->pkt_sent - w->lm_pkt_sent_vivo,
-		"⛔ la linea e' MORTA: da troppo tempo non esce un fotogramma pur "
-		"avendone da mandare — l'immagine dell'utente e' FERMA, e a questo "
-		"punto il prodotto o la congela o la mostra con secondi di ritardo "
-		"(`[M]` 23 agosto 2026: fino a 30,06 s di buco su `raffica-forte`).  "
-		"Nessuno dei due va servito: il filo cade, e per tornare bisogna "
-		"rientrare a mano (decisione dell'utente)");
+		"⛔ the line is DEAD: for too long no frame has gone out while "
+		"having some to send — the user's image is FROZEN, and at this "
+		"point the product either freezes it or shows it seconds late "
+		"(`[M]` 23 Aug 2026: up to 30.06 s of gap on `raffica-forte`).  "
+		"Neither of the two is to be served: the wire drops, and to come back one has to "
+		"reconnect by hand (the user's decision)");
 }
 
 bool wt_linea_morta_scattata(const wt *w)
@@ -5629,9 +5629,9 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 
 	if (!w->conn || w->chiusura >= 0)
 		return;
-	/* ⚠ Al piu' una al secondo.  ⛔ E la PRIMA esce sempre, senza aspettare:
-	 *   `rete_detto_ms == 0` vuol dire «mai parlato», che non e' «non e'
-	 *   cambiato niente» (`LEZIONI.md` §1.9). */
+	/* ⚠ At most one a second.  ⛔ And the FIRST always comes out, without waiting:
+	 *   `rete_detto_ms == 0` means «never spoken», which is not «nothing has
+	 *   changed» (`LEZIONI.md` §1.9). */
 	if (w->rete_detto_ms && ora_ms - w->rete_detto_ms < 1000)
 		return;
 
@@ -5639,31 +5639,31 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	ngtcp2_conn_get_conn_info(w->conn, &in);
 	cwnd_left = ngtcp2_conn_get_cwnd_left(w->conn);
 
-	/* ⛔⭐ E QUI SI GIUDICA, PRIMA del filtro «solo se e' cambiato qualcosa»:
-	 *     il silenzio del client E' il caso in cui non cambia niente, e messo
-	 *     dopo quel filtro questo giudizio non verrebbe percorso MAI proprio
-	 *     quando serve.  ⚠ Il ritmo e' quello di `rete_ciclo()`, una volta al
-	 *     secondo, ed e' anche la finestra minima. */
+	/* ⛔⭐ AND HERE THE VERDICT IS TAKEN, BEFORE the «only if something changed» filter:
+	 *     client silence IS the case in which nothing changes, and placed
+	 *     after that filter this verdict would NEVER be walked precisely
+	 *     when it is needed.  ⚠ The rhythm is that of `rete_ciclo()`, once a
+	 *     second, and it is also the minimum window. */
 	linea_morta_giudica(w, &in, ora_ms);
 
-	/* ⛔⭐ LA REGOLA DEL GIUDIZIO, e si legge dall'alto: il primo che scatta
-	 *     vince, e l'ordine NON e' arbitrario.
+	/* ⛔⭐ THE VERDICT RULE, and it is read from the top: the first that fires
+	 *     wins, and the order is NOT arbitrary.
 	 *
-	 *  1. `persi_d > 0` — ngtcp2 ha DICHIARATO perduti dei pacchetti in questo
-	 *     intervallo ⇒ «⛔ la linea perde».  Viene prima di tutto perche' la
-	 *     finestra chiusa e' quasi sempre la CONSEGUENZA della perdita: con
-	 *     l'ordine invertito la causa si nasconderebbe dietro il suo effetto.
-	 *  2. `cwnd_left == 0` con una finestra che esiste (`cwnd > 0`) — non c'e'
-	 *     posto per spedire ⇒ «⚠ la finestra e' chiusa».  Senza perdite
-	 *     nell'intervallo e' l'eco di una perdita passata, oppure e' l'avvio
-	 *     lento che non ha ancora aperto: la riga porta `ssthresh` accanto e
-	 *     chi legge distingue i due (sotto soglia = avvio lento).
-	 *  3. altrimenti «-- niente da segnalare».
+	 *  1. `persi_d > 0` — ngtcp2 has DECLARED packets lost in this
+	 *     interval ⇒ «⛔ the line is losing».  It comes before everything because the
+	 *     closed window is almost always the CONSEQUENCE of loss: with
+	 *     the order inverted the cause would hide behind its effect.
+	 *  2. `cwnd_left == 0` with a window that exists (`cwnd > 0`) — there is no
+	 *     room to send ⇒ «⚠ the window is closed».  Without losses
+	 *     in the interval it is the echo of a past loss, or it is slow
+	 *     start that has not opened yet: the line carries `ssthresh` next to it and
+	 *     the reader tells the two apart (below threshold = slow start).
+	 *  3. otherwise «-- nothing to report».
 	 *
-	 * ⚠ E IL GIUDIZIO NON PARLA DI JITTER NE' DI RIORDINO, apposta: quei due
-	 *   numeri ngtcp2 non li da' (vedi il riquadro sopra), e un giudizio
-	 *   dedotto da `rttvar` avrebbe voluto una SOGLIA — cioe' una decisione, e
-	 *   qui non se ne prende nessuna. */
+	 * ⚠ AND THE VERDICT DOES NOT SPEAK OF JITTER OR REORDERING, on purpose: those two
+	 *   numbers ngtcp2 does not give (see the box above), and a verdict
+	 *   deduced from `rttvar` would have wanted a THRESHOLD — that is a decision, and
+	 *   here none is taken. */
 	if (in.pkt_lost > w->rete_pkt_lost)
 		g = WT_RETE_PERDE;
 	else if (in.cwnd > 0 && cwnd_left == 0)
@@ -5671,21 +5671,21 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	else
 		g = WT_RETE_NULLA;
 
-	/* ⛔⭐ SOLO QUANDO QUALCOSA E' CAMBIATO.  Una riga al secondo che ripete
-	 *     gli stessi numeri e' rumore che NASCONDE le righe che contano — ed e'
-	 *     la lezione dei 30,8 GB di registro, in una veste nuova: li' era una
-	 *     riga per fotogramma, qui sarebbe una riga per sessione ferma.
+	/* ⛔⭐ ONLY WHEN SOMETHING HAS CHANGED.  A line a second repeating
+	 *     the same numbers is noise that HIDES the lines that count — and it is
+	 *     the lesson of the 30.8 GB of log, in a new guise: there it was one
+	 *     line per frame, here it would be one line per still session.
 	 *
-	 * ⚠ Il controllo e' sui CONTATORI (spediti, ricevuti, persi, scartati) e
-	 *   sul GIUDIZIO, non su `cwnd`/`rtt`: quelli oscillano sempre di un byte o
-	 *   di un microsecondo, e col loro confronto la riga non tacerebbe mai —
-	 *   cioe' il filtro sarebbe scritto e non funzionerebbe.  Se i quattro
-	 *   contatori sono FERMI, sul filo non e' passato niente: e allora anche
-	 *   `cwnd` e `rtt` sono quelli di prima, per costruzione. */
-	/* ⛔ E i datagram entrano nel confronto: una sessione che perde SOLO
-	 *    audio — i pacchetti con dentro i DATAGRAM sono pacchetti come gli
-	 *    altri, ma un riordino puo' non muovere `pkt_lost` — resterebbe muta
-	 *    proprio nel caso che la fase 9 va a cercare. */
+	 * ⚠ The check is on the COUNTERS (sent, received, lost, discarded) and
+	 *   on the VERDICT, not on `cwnd`/`rtt`: those always oscillate by a byte or
+	 *   a microsecond, and comparing them the line would never keep quiet —
+	 *   that is the filter would be written and would not work.  If the four
+	 *   counters are STILL, nothing went over the wire: and then
+	 *   `cwnd` and `rtt` are the previous ones too, by construction. */
+	/* ⛔ And datagrams enter the comparison: a session losing ONLY
+	 *    audio — packets with DATAGRAMS inside are packets like the
+	 *    others, but a reordering may not move `pkt_lost` — would stay mute
+	 *    precisely in the case phase 9 is looking for. */
 	if (w->rete_detto_ms
 	    && in.pkt_lost == w->rete_pkt_lost
 	    && in.pkt_sent == w->rete_pkt_sent
@@ -5696,17 +5696,17 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 	    && g == w->rete_giudizio)
 		return;
 
-	/* ⛔ `min_rtt` vale `UINT64_MAX` finche' non e' arrivato un campione, e la
-	 *    sottrazione darebbe un numero enorme che SEMBRA misurato — forma E1,
-	 *    la peggiore.  ⇒ Si dichiara `n/d` invece di stampare spazzatura.  E'
-	 *    la stessa guardia di `ritmo_frena()`, e vale per tutt'e due i campi
-	 *    che da `min_rtt` dipendono. */
+	/* ⛔ `min_rtt` is `UINT64_MAX` until a sample has arrived, and the
+	 *    subtraction would give a huge number that LOOKS measured — shape E1,
+	 *    the worst.  ⇒ `n/d` is declared instead of printing garbage.  It is
+	 *    the same guard as `ritmo_frena()`, and it holds for both fields
+	 *    that depend on `min_rtt`. */
 	if (in.min_rtt != UINT64_MAX && in.min_rtt != 0) {
 		snprintf(minimo, sizeof minimo, "%llu",
 		         (unsigned long long)(in.min_rtt / NGTCP2_MICROSECONDS));
-		/* ⭐ `smoothed_rtt - min_rtt` E' LA CODA DENTRO LA RETE: e' il numero
-		 *    con cui `SPECIFICHE.md:128` — «ogni memoria intermedia compra
-		 *    fluidita' e vende risposta» — si onora invece di citarlo. */
+		/* ⭐ `smoothed_rtt - min_rtt` IS THE QUEUE INSIDE THE NETWORK: it is the number
+		 *    with which `SPECIFICHE.md:128` — «every intermediate memory buys
+		 *    smoothness and sells responsiveness» — is honoured instead of quoted. */
 		if (in.smoothed_rtt >= in.min_rtt)
 			snprintf(coda, sizeof coda, "%llu",
 			         (unsigned long long)((in.smoothed_rtt - in.min_rtt)
@@ -5720,13 +5720,13 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 
 	switch (g) {
 	case WT_RETE_PERDE:
-		detto = "⛔ la linea perde";
+		detto = "⛔ the line is losing";
 		break;
 	case WT_RETE_FINESTRA:
-		detto = "⚠ la finestra e' chiusa";
+		detto = "⚠ the window is closed";
 		break;
 	default:
-		detto = "-- niente da segnalare";
+		detto = "-- nothing to report";
 		break;
 	}
 
@@ -5783,7 +5783,7 @@ static void rete_ciclo(wt *w, uint64_t ora_ms)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, CONSEGNATO A UNA SESSIONE.          */
+/* ⭐ THE FRAME ARRIVING FROM THE STAGE, DELIVERED TO ONE SESSION.          */
 
 static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
                         const uint8_t *dati, size_t byte, uint32_t l, uint32_t a,
@@ -5794,26 +5794,26 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	const char *mio;
 	int e;
 
-	/* ⚠ `video_fermo` = al palco ho gia' detto di smettere, e quel che arriva
-	 *   adesso e' la CODA di quel che era gia' in volo quando gliel'ho detto.
-	 *   ⛔ Senza questa condizione quei due o tre fotogrammi percorrerebbero
-	 *   tutto il cammino per farsi rifiutare da `rcp_video_apri()` con
-	 *   `RCP_VIDEO_PRIMA_DI_SESSIONE`, cioe' con la stessa riga ⛔ che la cura
-	 *   del 23 set esiste per togliere — solo tre volte invece di mille. */
+	/* ⚠ `video_fermo` = I have already told the stage to stop, and what arrives
+	 *   now is the TAIL of what was already in flight when I told it.
+	 *   ⛔ Without this condition those two or three frames would walk
+	 *   the whole way to get refused by `rcp_video_apri()` with
+	 *   `RCP_VIDEO_PRIMA_DI_SESSIONE`, that is with the same ⛔ line the cure
+	 *   of 23 Sep exists to remove — only three times instead of a thousand. */
 	if (!w->video_acceso || w->video_fermo || w->video_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
 
-	/* ⛔⭐ INVARIANTE I3 SUL FILO, E NON E' UNA PRUDENZA IN PIU'.
+	/* ⛔⭐ INVARIANT I3 ON THE WIRE, AND IT IS NOT ONE MORE PRECAUTION.
 	 *
-	 *     `[M]` 12 agosto 2026: con un deposito di processo, «prova» (uid 1001,
-	 *     senza sessione grafica) ha ricevuto **un fotogramma conforme**, e quel
-	 *     fotogramma era il desktop di «nicfio».  Non «non ricevi niente»:
-	 *     **ricevi il desktop di un altro**, e nessuno dei due se ne accorge.
-	 *     ⇒ Qui il confronto e' fra l'utente che ha CATTURATO e l'utente che
-	 *     PAM ha ammesso su questa sessione, e sono due fatti diversi tutti e
-	 *     due chiesti a chi li sa. */
+	 *     `[M]` 12 Aug 2026: with a per-process deposit, «prova» (uid 1001,
+	 *     without a graphical session) received **a conforming frame**, and that
+	 *     frame was «nicfio»'s desktop.  Not «you receive nothing»:
+	 *     **you receive somebody else's desktop**, and neither of the two notices.
+	 *     ⇒ Here the comparison is between the user who CAPTURED and the user
+	 *     PAM admitted on this session, and they are two different facts both
+	 *     asked of whoever knows them. */
 	mio = rcp_utente(w->rcp);
 	if (!mio || !utente || strcmp(mio, utente) != 0)
 		return;
@@ -5821,134 +5821,134 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	if (!rcp_tela_in_vigore(w->rcp, &tl, &ta))
 		return;
 
-	/* ⛔⭐ E LA TELA DEV'ESSERE QUELLA, non «piu' o meno quella» — §6.2, P5.
+	/* ⛔⭐ AND THE CANVAS MUST BE THAT ONE, not «more or less that one» — §6.2, P5.
 	 *
-	 *     I 28 byte portano `largh.`/`altezza` = la tela IN VIGORE, e li scrive
-	 *     `rcp.c` dalla sua.  Se il fotogramma catturato ne portasse un'altra,
-	 *     l'intestazione direbbe una misura e i pixel ne porterebbero un'altra:
-	 *     due verita' sulla stessa cosa, e il client non avrebbe modo di
-	 *     accorgersene — il decodificatore prende la misura dal flusso.
-	 *     ⛔ Meglio nessun fotogramma che un fotogramma che mente. */
+	 *     The 28 bytes carry `largh.`/`altezza` = the canvas IN FORCE, and they are written by
+	 *     `rcp.c` from its own.  If the captured frame carried another,
+	 *     the header would say one size and the pixels would carry another:
+	 *     two truths about the same thing, and the client would have no way to
+	 *     notice — the decoder takes the size from the stream.
+	 *     ⛔ Better no frame than a frame that lies. */
 	if (tl != l || ta != a) {
 		w->video_saltati++;
-		/* ⚠ Un fondo SUO, e non piu' `video_detto`: quel campo e' il fondo del
-		 *   messaggio «nessun codec negoziato», e un flag per due fatti diversi
-		 *   ne spegne uno quando l'altro parla.  ⛔ E qui il fondo si RIARMA a
-		 *   ogni cambio di tela, perche' il fatto e' cambiato. */
+		/* ⚠ A backstop OF ITS OWN, and no longer `video_detto`: that field is the backstop of the
+		 *   message «no codec negotiated», and one flag for two different facts
+		 *   switches one off when the other speaks.  ⛔ And here the backstop REARMS at
+		 *   every canvas change, because the fact has changed. */
 		if (w->tela_detta_l != l || w->tela_detta_a != a) {
 			w->tela_detta_l = l;
 			w->tela_detta_a = a;
-			/* ⭐ Si conta l'ANNUNCIO, non il fotogramma: il fotogramma l'ha
-			 *    gia' contato `video_saltati` tre righe sopra.  Due numeri per
-			 *    due fatti, e la riga di chiusura li scrive tutt'e due. */
+			/* ⭐ The ANNOUNCEMENT is counted, not the frame: the frame has
+			 *    already been counted by `video_saltati` three lines above.  Two numbers for
+			 *    two facts, and the closing line writes both. */
 			w->video_annunci_tela++;
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "⛔ %s: tela in vigore %ux%u ma il fotogramma catturato "
-			                 "e' %ux%u — NON lo spedisco (§6.2): l'intestazione "
-			                 "direbbe una misura e i pixel ne porterebbero un'altra.  "
-			                 "⚠ Al palco si sta richiedendo la tela in vigore",
+			                 "⛔ %s: canvas in force %ux%u but the captured frame "
+			                 "is %ux%u — NOT sending it (§6.2): the header "
+			                 "would say one size and the pixels would carry another.  "
+			                 "⚠ The canvas in force is being requested from the stage",
 			                 w->provenienza, tl, ta, l, a);
 		}
-		/* ⛔⛔⭐ E ANCHE QUESTO PAGA LA CHIAVE — 23 settembre 2026, ed e' lo
-		 *      STESSO difetto del regolatore del ritmo, trovato accanto a lui.
+		/* ⛔⛔⭐ AND THIS ALSO PAYS FOR THE KEYFRAME — 23 Sep 2026, and it is the
+		 *      SAME defect as the rate regulator, found next to it.
 		 *
-		 *      Il fotogramma che si butta qui il figlio l'ha **gia' codificato**
-		 *      e i riferimenti del codificatore sono andati avanti; il `numero`
-		 *      pero' non e' stato consumato — `rcp_video_apri()` di qui non si
-		 *      raggiunge — quindi al client arriva una numerazione CONTINUA e
-		 *      §5.2 non gli da' nessun appiglio per chiedere la cura.
+		 *      The frame thrown away here has **already been encoded** by the child
+		 *      and the encoder's references have moved on; the `numero`
+		 *      however was not consumed — `rcp_video_apri()` is not reached
+		 *      from here — so the client gets a CONTINUOUS numbering and
+		 *      §5.2 gives it no foothold to ask for the cure.
 		 *
-		 * ⚠ E NON BASTAVA CHE LA TELA TORNASSE A COMBACIARE: i fotogrammi
-		 *   buttati nel frattempo mancano per sempre, e con il GOP infinito la
-		 *   chiave successiva non arriva mai da sola.  ⇒ Senza questa riga, un
-		 *   ridimensionamento di finestra sotto carico lasciava l'immagine a
-		 *   tessere per tutto il resto della sessione.
+		 * ⚠ AND IT WAS NOT ENOUGH FOR THE CANVAS TO MATCH AGAIN: the frames
+		 *   thrown away meanwhile are missing forever, and with the infinite GOP the
+		 *   next keyframe never arrives by itself.  ⇒ Without this line, a
+		 *   window resize under load left the image in
+		 *   tiles for the whole rest of the session.
 		 *
-		 * ⭐ Sta DENTRO il fondo dell'annuncio apposta: `serve_chiave` e' un
-		 *    fermo che si spegne solo a chiave USCITA, e finche' la tela non
-		 *    combacia non esce nessun fotogramma — quindi nemmeno la chiave, e
-		 *    quindi il debito resta acceso da se'.  ⛔ Chiamarla fuori dal fondo
-		 *    vorrebbe dire percorrerla a 60/s per niente. */
+		 * ⭐ It sits INSIDE the announcement backstop on purpose: `serve_chiave` is a
+		 *    latch that switches off only once the keyframe HAS GONE OUT, and until the canvas
+		 *    matches no frame goes out — so not even the keyframe, and
+		 *    so the debt stays on by itself.  ⛔ Calling it outside the backstop
+		 *    would mean walking it at 60/s for nothing. */
 		rcp_video_scartato_prima_del_filo(
 		    w->rcp, chiave,
-		    "il fotogramma catturato non porta la tela in vigore (§6.2) — ma "
-		    "era gia' CODIFICATO, e i riferimenti del codificatore sono andati "
-		    "avanti senza di lui");
-		/* ⛔ La chiave si chiede ADESSO, per la stessa ragione del gemello in
-		 *    `ritmo_frena()`: col debito acceso ogni delta viene rifiutato, e
-		 *    aspettare il battito vuol dire tenere lo schermo fermo.
-		 * ⚠ E `ora_ms` qui non e' ancora stato letto — lo si legge adesso
-		 *   invece di spostare la riga piu' in su: quella sta DOPO i tre
-		 *   controlli «questo fotogramma e' mio?» apposta (vedi il riquadro di
-		 *   `lm_offerti`), e muoverla cambierebbe un'altra cosa. */
+		    "the captured frame does not carry the canvas in force (§6.2) — but "
+		    "it was already ENCODED, and the encoder's references moved "
+		    "on without it");
+		/* ⛔ The keyframe is requested NOW, for the same reason as the twin in
+		 *    `ritmo_frena()`: with the debt on every delta is refused, and
+		 *    waiting for the heartbeat means keeping the screen frozen.
+		 * ⚠ And `ora_ms` has not been read here yet — it is read now
+		 *   instead of moving the line further up: that one sits AFTER the three
+		 *   «is this frame mine?» checks on purpose (see the box of
+		 *   `lm_offerti`), and moving it would change something else. */
 		video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 		return;
 	}
-	/* ⭐ Tela e fotogramma sono d'accordo: il fondo del messaggio di sopra si
-	 *    disarma, cosi' il prossimo disaccordo si vedra' invece di essere
-	 *    scambiato per la coda di quello di prima. */
+	/* ⭐ Canvas and frame agree: the backstop of the message above is
+	 *    disarmed, so the next mismatch will be seen instead of being
+	 *    mistaken for the tail of the previous one. */
 	w->tela_detta_l = w->tela_detta_a = 0;
 
 	ora_ms = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 
-	/* ⛔⭐⭐ FASE 9 — «AVEVO DA MANDARE», E SI CONTA QUI, PRIMA DI TUTTO.
+	/* ⛔⭐⭐ PHASE 9 — «I HAD SOMETHING TO SEND», AND IT IS COUNTED HERE, BEFORE EVERYTHING.
 	 *
-	 *      Da questa riga in poi il fotogramma puo' essere frenato dal
-	 *      regolatore del ritmo, sgomberato da §5.1, rifiutato per mancanza di
-	 *      credito (§2.3) o non entrare nell'elenco dei fotogrammi in volo: in
-	 *      TUTTI quei casi il palco ce l'aveva dato lo stesso, e per la linea
-	 *      morta il fatto e' quello.
+	 *      From this line on the frame can be braked by the
+	 *      rate regulator, cleared out by §5.1, refused for lack of
+	 *      credit (§2.3) or not enter the list of frames in flight: in
+	 *      ALL those cases the stage had given it to us all the same, and for the dead
+	 *      line that is the fact.
 	 *
-	 * ⛔ Contarlo piu' avanti — dopo il freno, per esempio — vorrebbe dire che
-	 *    il regolatore del ritmo NASCONDE lo stallo: smette di produrre, la
-	 *    coda si svuota di abbandoni, e «non ho niente da mandare» diventerebbe
-	 *    vero proprio mentre lo schermo dell'utente e' fermo.
+	 * ⛔ Counting it further on — after the brake, for example — would mean that
+	 *    the rate regulator HIDES the stall: it stops producing, the
+	 *    queue empties through abandonments, and «I have nothing to send» would become
+	 *    true precisely while the user's screen is frozen.
 	 *
-	 * ⚠ E sta DOPO i tre controlli di sopra — codec, utente (I3), tela — che
-	 *   non sono passi della spedizione: sono la risposta alla domanda «questo
-	 *   fotogramma e' MIO?».  Un fotogramma di un altro utente non e' roba che
-	 *   avevamo da mandare. */
+	 * ⚠ And it sits AFTER the three checks above — codec, user (I3), canvas — which
+	 *   are not steps of sending: they are the answer to the question «is this
+	 *   frame MINE?».  A frame of another user is not stuff we
+	 *   had to send. */
 	w->lm_offerti++;
 
-	/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO, e sta QUI per due ragioni che
-	 *      vanno tutt'e due scritte:
+	/* ⛔⭐⭐ PHASE 9 — THE RATE REGULATOR, and it sits HERE for two reasons that
+	 *      must both be written down:
 	 *
-	 *      1. PRIMA di `video_sgombra()`, che tre righe sotto quella coda la
-	 *         svuota.  Dopo, `arretrato` sarebbe zero per costruzione e questo
-	 *         anello non scatterebbe mai — e un regolatore muto e una linea
-	 *         sana hanno la stessa faccia;
-	 *      2. e il fotogramma frenato NON fa nemmeno lo sgombero.  ⭐ E' voluto:
-	 *         sgomberare vorrebbe dire abbandonare un delta, e ogni abbandono
-	 *         accende il debito di §5.2 dentro `rcp.c`, cioe' fabbrica una
-	 *         CHIAVE — che e' precisamente la spirale che questa fase cura.  Il
-	 *         regolatore smette di PRODURRE; non butta quel che c'e' gia'.
+	 *      1. BEFORE `video_sgombra()`, which three lines below empties that
+	 *         queue.  Afterwards, `arretrato` would be zero by construction and this
+	 *         loop would never fire — and a mute regulator and a healthy line
+	 *         look the same;
+	 *      2. and the braked frame does NOT even do the clear-out.  ⭐ It is intended:
+	 *         clearing out would mean abandoning a delta, and every abandonment
+	 *         switches on the debt of §5.2 inside `rcp.c`, that is it fabricates a
+	 *         KEYFRAME — which is precisely the spiral this phase cures.  The
+	 *         regulator stops PRODUCING; it does not throw away what is already there.
 	 *
-	 * ⚠ E l'`involo[]` non si sporca: gli elementi i cui byte se ne sono andati
-	 *   restano marcati vivi finche' una passata di `video_sgombra()` non li
-	 *   toglie, ma `ritmo_frena()` li conta rileggendo i BYTE — quindi
-	 *   `arretrato` cala lo stesso, e la frenata finisce da se'. */
+	 * ⚠ And `involo[]` does not get dirty: the elements whose bytes have gone away
+	 *   stay marked alive until a pass of `video_sgombra()` removes
+	 *   them, but `ritmo_frena()` counts them by rereading the BYTES — so
+	 *   `arretrato` goes down all the same, and the braking ends by itself. */
 	if (ritmo_frena(w, chiave, ora_ms))
 		return;
 
-	/* ⛔ §5.1 — «ne e' gia' partito uno piu' recente»: i delta ancora fermi
-	 * nella coda si azzerano PRIMA di accodare questo, o la coda crescerebbe
-	 * col passato invece di portare il presente. */
-	video_sgombra(w, "ne e' partito uno piu' recente (§5.1)");
+	/* ⛔ §5.1 — «a more recent one has already left»: the deltas still stuck
+	 * in the queue are reset BEFORE enqueuing this one, or the queue would grow
+	 * with the past instead of carrying the present. */
+	video_sgombra(w, "a more recent one has left (§5.1)");
 
-	/* ⛔ §2.3 — e il credito si guarda PRIMA di chiedere lo stream, per poter
-	 * distinguere «non c'era posto» da «lo stream si e' rotto».  ⚠ La riserva
-	 * e' per l'input: §2.3 esiste perche' senza credito «l'input non partirebbe
-	 * affatto e il sintomo sarebbe il desktop non risponde». */
+	/* ⛔ §2.3 — and the credit is checked BEFORE asking for the stream, to be able to
+	 * tell «there was no room» from «the stream broke».  ⚠ The reserve
+	 * is for input: §2.3 exists because without credit «input would not leave
+	 * at all and the symptom would be the desktop does not respond». */
 	if (!chiave
 	    && ngtcp2_conn_get_streams_uni_left2(w->conn) <= WT_UNI_RISERVA) {
 		w->video_saltati++;
-		/* ⛔⭐ FASE 9 — e questo si conta A PARTE dagli abbandoni di §5.1.
-		 *     E' la CAUSA 4 del debito di §5.2 (`rcp.c:3441`), la forma **C**
-		 *     dell'abbandono: nessuno stream, nessun buco, nessun segnale — il
-		 *     ricevente non la vede affatto.  ⚠ La cura della soglia tocca la
-		 *     causa 3, non questa: se sotto congestione a tenere acceso il
-		 *     debito fosse questa, la cura girerebbe a vuoto e i numeri non si
-		 *     muoverebbero.  ⇒ Due contatori, o il banco non sa attribuire. */
+		/* ⛔⭐ PHASE 9 — and this is counted APART from the §5.1 abandonments.
+		 *     It is CAUSE 4 of the §5.2 debt (`rcp.c:3441`), shape **C**
+		 *     of abandonment: no stream, no hole, no signal — the
+		 *     receiver does not see it at all.  ⚠ The threshold cure touches
+		 *     cause 3, not this one: if under congestion this were what kept the
+		 *     debt on, the cure would spin idle and the numbers would not
+		 *     move.  ⇒ Two counters, or the bench cannot attribute. */
 		w->sgombra_credito++;
 		rcp_video_niente_credito(w->rcp, false,
 		                         ngtcp2_conn_get_streams_uni_left2(w->conn));
@@ -5959,15 +5959,15 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	e = rcp_video_spedisci(w->rcp, chiave, dati, byte, istante_us, input, ora_ms);
 	if (e == RCP_VIDEO_SPEDITO) {
 		w->video_diffusi++;
-		/* ⭐ La misura dell'ultima CHIAVE, e serve a `chiave_intervallo_ms()`:
-		 *    e' il numero da cui si calcola quanto ci mette a uscire.  ⛔ Si
-		 *    prende QUI, dov'e' un fatto, invece di stimarla da una media —
-		 *    `[M]` sul banco 07-b65 una chiave a 1080p misura ~60 000 byte, ma
-		 *    dipende dalla scena e una costante mentirebbe sulla meta' di esse. */
+		/* ⭐ The size of the last KEYFRAME, and it serves `chiave_intervallo_ms()`:
+		 *    it is the number from which how long it takes to go out is computed.  ⛔ It is
+		 *    taken HERE, where it is a fact, instead of estimating it from an average —
+		 *    `[M]` on bench 07-b65 a keyframe at 1080p measures ~60 000 bytes, but
+		 *    it depends on the scene and a constant would lie about half of them. */
 		if (chiave) {
 			w->chiave_byte = (uint64_t)byte;
-			/* ⭐ L'episodio del debito e' chiuso: la prossima volta la riga
-			 *    ⛔ della seconda cintura si potra' riscrivere. */
+			/* ⭐ The debt episode is closed: next time the ⛔ line
+			 *    of the second belt can be written again. */
 			w->debito_detto = false;
 		}
 		involo_aggiungi(w, w->video_stream_ultimo,
@@ -5976,25 +5976,25 @@ static void video_a_una(wt *w, const char *utente, uint8_t codec, bool chiave,
 	}
 
 	w->video_saltati++;
-	/* ⛔⭐⭐ E SE IL RIFIUTO E' «serve una CHIAVE», QUESTA E' LA STRADA CHE NON
-	 *       PASSA DAL BATTITO.  `[M]` 23 set 2026: 370 s di schermo fermo e
-	 *       45 278 fotogrammi buttati mentre il battito non maturava mai —
-	 *       il racconto intero sta su `batti_fra()`. */
+	/* ⛔⭐⭐ AND IF THE REFUSAL IS «a KEYFRAME is needed», THIS IS THE ROAD THAT DOES NOT
+	 *       GO THROUGH THE HEARTBEAT.  `[M]` 23 Sep 2026: 370 s of frozen screen and
+	 *       45 278 frames thrown away while the heartbeat never matured —
+	 *       the whole story is on `batti_fra()`. */
 	if (e == RCP_VIDEO_SERVE_UNA_CHIAVE)
 		video_rifiutato_per_chiave(w, ora_ms);
-	/* ⛔ E il rifiuto NON e' un errore fatale: §2.3 — «il server DEVE reggere
-	 * il rifiuto di aprire uno stream invece di considerarlo un errore
-	 * fatale».  ⚠ Le righe le ha gia' scritte `rcp.c`, che sa quale delle sette
-	 * ragioni e': qui si conta e si tace, o la stessa cosa finirebbe due volte
-	 * nel registro con due parole diverse. */
+	/* ⛔ And the refusal is NOT a fatal error: §2.3 — «the server MUST withstand
+	 * the refusal to open a stream instead of considering it a fatal
+	 * error».  ⚠ The lines have already been written by `rcp.c`, which knows which of the seven
+	 * reasons it is: here we count and keep quiet, or the same thing would end up twice
+	 * in the log with two different words. */
 }
 
-/* ⭐⭐ §7.2 — la forma del cursore a tutte le sessioni di quell'utente.
+/* ⭐⭐ §7.2 — the cursor shape to all the sessions of that user.
  *
- * ⛔ E il confronto del nome NON e' una formalita': il deposito e' di processo e
- *    le sessioni sono di utenti diversi.  Mandare la forma del cursore di un
- *    altro non e' un difetto grafico — e' l'immagine di quel che sta facendo
- *    un'altra persona che finisce sullo schermo sbagliato. */
+ * ⛔ And the name comparison is NOT a formality: the deposit is per process and
+ *    the sessions belong to different users.  Sending the cursor shape of
+ *    another is not a graphical defect — it is the image of what
+ *    another person is doing ending up on the wrong screen. */
 void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
                          uint16_t altezza, int16_t attivo_x, int16_t attivo_y,
                          const uint8_t *immagine, size_t byte)
@@ -6008,59 +6008,59 @@ void wt_cursore_diffondi(const char *utente, uint16_t larghezza,
 		mio = rcp_utente(w->rcp);
 		if (!mio || strcmp(mio, utente) != 0)
 			continue;
-		/* ⚠ Il ritorno non si guarda qui: `rcp.c` ha gia' scritto nel registro
-		 *   quale delle sue ragioni e' — e guardarlo anche noi metterebbe la
-		 *   stessa cosa due volte con due parole diverse. */
+		/* ⚠ The return is not looked at here: `rcp.c` has already written in the log
+		 *   which of its reasons it is — and looking at it ourselves too would put the
+		 *   same thing twice with two different words. */
 		rcp_cursore_forma(w->rcp, larghezza, altezza, attivo_x, attivo_y,
 		                  immagine, byte);
 	}
 }
 
-/* ⛔⭐⭐ LA MISURA CHE IL PALCO HA ADESSO, per utente — e sopravvive alla
- *     connessione, come il palco (invariante I4).
+/* ⛔⭐⭐ THE SIZE THE STAGE HAS NOW, per user — and it outlives the
+ *     connection, like the stage (invariant I4).
  *
- * ⛔ SERVE AL RI-ATTACCO, ed e' l'unico posto del padre in cui quel numero
- *    esiste: `rcp.c` conosce la tela CONCESSA, il figlio conosce quella VERA, e
- *    fra i due passano solo fotogrammi.  ⇒ Si legge dal fotogramma — che e'
- *    anche l'unica fonte che non mente (`DECISIONI.md` §5.0-sexies).
+ * ⛔ IT SERVES THE REATTACH, and it is the only place in the parent where that number
+ *    exists: `rcp.c` knows the GRANTED canvas, the child knows the REAL one, and
+ *    between the two only frames pass.  ⇒ It is read from the frame — which is
+ *    also the only source that does not lie (`DECISIONI.md` §5.0-sexies).
  *
- * ⚠ Non e' una cache da tenere fresca: e' un FATTO datato all'ultimo fotogramma
- *   consegnato.  Se il palco muore e rinasce a un'altra misura, la prima riga di
- *   `rcp_tela_concessa()` se ne accorge e chiede al palco di venire dov'e' la
- *   tela in vigore.
+ * ⚠ It is not a cache to keep fresh: it is a FACT dated at the last frame
+ *   delivered.  If the stage dies and is reborn at another size, the first line of
+ *   `rcp_tela_concessa()` notices and asks the stage to come to where the
+ *   canvas in force is.
  *
- * ⛔⭐ UNA VOCE PER UTENTE, E IL NUMERO VIENE DA `rcp.h` — 25 agosto 2026.
+ * ⛔⭐ ONE ENTRY PER USER, AND THE NUMBER COMES FROM `rcp.h` — 25 Aug 2026.
  *
- *     Erano **otto** con la scusa che *«`MAX_ATTACCATE` e' dello stesso
- *     ordine»*, e ⛔ «dello stesso ordine» vuol dire **che mordeva a nove**,
- *     cioe' prima del dieci che `SPECIFICHE.md` §5.5 promette (rilievo
- *     **R10-A6**).  Il nono e il decimo utente perdevano la cura del
- *     ri-attacco, e ⛔ **in silenzio**, perche' il ripiego qui sotto si
- *     dichiara **una volta sola** e la prima l'aveva gia' spesa l'ottavo.
+ *     They were **eight** with the excuse that *«`MAX_ATTACCATE` is of the same
+ *     order»*, and ⛔ «of the same order» means **that it bit at nine**,
+ *     that is before the ten `SPECIFICHE.md` §5.5 promises (finding
+ *     **R10-A6**).  The ninth and tenth users lost the reattach
+ *     cure, and ⛔ **silently**, because the fallback below is
+ *     declared **once only** and the eighth had already spent it.
  *
- * ⇒ Adesso e' il tetto delle sessioni: e' la stessa grandezza — «uno per utente
- *   servito» — e per costruzione non puo' piu' finire prima dei posti.
+ * ⇒ Now it is the session cap: it is the same quantity — «one per served
+ *   user» — and by construction it can no longer run out before the slots.
  *
- * ⭐⭐ E dalla sera del 25 agosto 2026 si **alloca** su `rcp_tetto()`, che
- *     `--tetto-sessioni` muove all'avvio: il `WT_PALCHI` che stava qui e'
- *     sparito, e non e' stato lasciato accanto come «massimo». */
+ * ⭐⭐ And since the evening of 25 Aug 2026 it is **allocated** on `rcp_tetto()`, which
+ *     `--tetto-sessioni` moves at startup: the `WT_PALCHI` that was here has
+ *     disappeared, and was not left next to it as a «maximum». */
 static struct palco_misura {
-	/* ⛔ 257 e non 64: e' la misura del campo `utente` di `rcp.c`.  ⚠ Con un
-	 *    campo piu' corto `snprintf` troncava in scrittura e `strcmp` confrontava
-	 *    il nome INTERO con quello troncato: la voce non si ritrovava mai, se ne
-	 *    prendeva una nuova a ogni fotogramma, e in otto giri la tabella era piena
-	 *    dello stesso nome — spenta **per tutti gli utenti della macchina**.
-	 *    Difetto trovato refutando, 15 agosto 2026. */
+	/* ⛔ 257 and not 64: it is the size of the `utente` field of `rcp.c`.  ⚠ With a
+	 *    shorter field `snprintf` truncated on writing and `strcmp` compared
+	 *    the WHOLE name with the truncated one: the entry was never found again, a
+	 *    new one was taken at every frame, and in eight rounds the table was full
+	 *    of the same name — switched off **for all the users of the machine**.
+	 *    Defect found by refuting, 15 Aug 2026. */
 	char utente[257];
 	uint32_t l, a;
 } *palchi;
 static int quanti_palchi;
 static bool palchi_pieni_detto;
 
-/* ⛔ Si alloca alla prima misura da segnare, una volta sola.  ⚠ Se la memoria
- *    non c'e', il ripiego e' quello che questa tabella gia' dichiara: al
- *    ri-attacco la tela viene concessa come la chiede il client.  Nessuno muore
- *    per questo, ma si scrive. */
+/* ⛔ It is allocated at the first size to note, once only.  ⚠ If the memory
+ *    is not there, the fallback is the one this table already declares: at
+ *    reattach the canvas is granted as the client asks for it.  Nobody dies
+ *    because of this, but it is written. */
 static bool palchi_pronti(void)
 {
 	if (palchi)
@@ -6096,17 +6096,17 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 		return;
 	}
 	if (libero < 0) {
-		/* ⛔ Il ripiego si DICHIARA (`CODER.md` §4.2), e una volta sola: senza
-		 *    questa riga il nono utente perdeva la cura del ri-attacco in
-		 *    silenzio, e il sintomo sarebbe stato «a me il desktop al riattacco
-		 *    non torna» per quel solo utente. */
+		/* ⛔ The fallback is DECLARED (`CODER.md` §4.2), and once only: without
+		 *    this line the ninth user lost the reattach cure
+		 *    silently, and the symptom would have been «for me the desktop on reattach
+		 *    does not come back» for that one user. */
 		if (!palchi_pieni_detto) {
 			palchi_pieni_detto = true;
 			registro_dice_di(REG_RCP, utente,
-			                 "⚠ RIPIEGO DICHIARATO: la tabella delle tele dei palchi "
-			                 "e' piena (%d): «%s» non ci sta, e al suo ri-attacco la "
-			                 "tela verra' concessa come la chiede il client invece "
-			                 "che come il palco ce l'ha",
+			                 "⚠ DECLARED FALLBACK: the table of stage canvases "
+			                 "is full (%d): «%s» does not fit, and on its reattach the "
+			                 "canvas will be granted as the client asks for it instead "
+			                 "of as the stage has it",
 			                 quanti_palchi, utente);
 		}
 		return;
@@ -6116,14 +6116,14 @@ static void palco_misura_segna(const char *utente, uint32_t l, uint32_t a)
 	palchi[libero].a = a;
 }
 
-/* ⛔⭐ IL PALCO E' MORTO: la sua misura non e' piu' un fatto, e' un ricordo.
+/* ⛔⭐ THE STAGE IS DEAD: its size is no longer a fact, it is a memory.
  *
- * ⚠ Difetto trovato refutando: senza questa riga la voce restava, e al
- *   ri-attacco `SESSIONE` concedeva **la misura di ieri** — quella di un palco
- *   che non esiste piu'.  Il palco nuovo ne consegna un'altra, la sessione nasce
- *   in disaccordo, e la cura del ri-attacco si ritorceva contro se stessa.
- * ⛔ «Non lo so» e «era 1920x1080» sono due fatti diversi, e il secondo, quando
- *    e' falso, e' peggio del primo. */
+ * ⚠ Defect found by refuting: without this line the entry stayed, and on
+ *   reattach `SESSIONE` granted **yesterday's size** — that of a stage
+ *   that no longer exists.  The new stage delivers another one, the session is born
+ *   in disagreement, and the reattach cure turned against itself.
+ * ⛔ «I don't know» and «it was 1920x1080» are two different facts, and the second, when
+ *    it is false, is worse than the first. */
 void wt_palco_dimentica(const char *utente)
 {
 	if (!utente || !utente[0])
@@ -6132,9 +6132,9 @@ void wt_palco_dimentica(const char *utente)
 		if (strcmp(palchi[i].utente, utente) != 0)
 			continue;
 		registro_dice_di(REG_RCP, utente,
-		                 "la tela del palco di «%s» (%ux%u) si dimentica: quel palco "
-		                 "non c'e' piu', e un numero vecchio spacciato per fatto e' "
-		                 "peggio di nessun numero",
+		                 "the canvas of the stage of «%s» (%ux%u) is forgotten: that stage "
+		                 "is gone, and an old number passed off as a fact is "
+		                 "worse than no number",
 		                 utente, palchi[i].l, palchi[i].a);
 		memset(&palchi[i], 0, sizeof palchi[i]);
 		palchi_pieni_detto = false;
@@ -6142,18 +6142,18 @@ void wt_palco_dimentica(const char *utente)
 	}
 }
 
-/* ⭐⭐ LA RISPOSTA DEL PALCO SULLA TELA — §7.1, e arriva dal FIGLIO.
+/* ⭐⭐ THE STAGE'S ANSWER ABOUT THE CANVAS — §7.1, and it arrives from the CHILD.
  *
- * ⛔ Va a TUTTE le sessioni di quell'utente, e non solo a chi ha chiesto: la
- *    tela del palco e' una sola, e una sessione che non lo sapesse continuerebbe
- *    a scartare ogni fotogramma per misura sbagliata.  ⚠ `rcp.c` decide da se'
- *    se quel messaggio risponde a una SUA richiesta — qui non si sceglie. */
+ * ⛔ It goes to ALL the sessions of that user, and not only to whoever asked: the
+ *    stage's canvas is a single one, and a session that did not know it would keep
+ *    discarding every frame for wrong size.  ⚠ `rcp.c` decides by itself
+ *    whether that message answers a request OF ITS OWN — here we do not choose. */
 void wt_tela_dal_palco(const char *utente, uint32_t voluta_l, uint32_t voluta_a,
                        uint32_t avuta_l, uint32_t avuta_a)
 {
-	/* ⛔ E la tabella si aggiorna QUI e non solo dai fotogrammi: questa e' la
-	 *    notizia piu' fresca che il padre abbia sulla misura del palco, e arriva
-	 *    anche quando nessun fotogramma parte. */
+	/* ⛔ And the table is updated HERE and not only from frames: this is the
+	 *    freshest news the parent has about the stage's size, and it arrives
+	 *    even when no frame leaves. */
 	palco_misura_segna(utente, avuta_l, avuta_a);
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
 		const char *mio;
@@ -6187,9 +6187,9 @@ static bool wt_palco_misura(const char *utente, uint32_t *l, uint32_t *a)
 	return false;
 }
 
-/* ⛔ Il gancio che `rcp.c` chiama in `ATTACCA`.  ⚠ L'utente e' quello che PAM ha
- *    ammesso su QUESTA sessione: chiedere il palco di un altro sarebbe dire a
- *    questo client la misura del desktop di qualcun altro. */
+/* ⛔ The hook `rcp.c` calls in `ATTACCA`.  ⚠ The user is the one PAM
+ *    admitted on THIS session: asking for another's stage would mean telling
+ *    this client the size of somebody else's desktop. */
 static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 {
 	wt *w = (wt *)ctx;
@@ -6203,52 +6203,52 @@ static bool gancio_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	return wt_palco_misura(mio, l, a);
 }
 
-/* ⛔⭐⭐ QUANTE SESSIONI ENTRANO IN **UNA** DOMANDA AL GUARDIANO — e ⛔ NON e' il
- *      tetto delle sessioni, per quanto ci somigli.  Rilievo R8 di §5.5,
- *      guardato e **deciso** il 25 agosto 2026.
+/* ⛔⭐⭐ HOW MANY SESSIONS FIT IN **ONE** QUESTION TO THE GUARD — and ⛔ it is NOT the
+ *      session cap, however much it resembles it.  Finding R8 of §5.5,
+ *      looked at and **decided** on 25 Aug 2026.
  *
- * ⛔ IL RILIEVO ERA: *«e' la QUINTA copia a mano del tetto, nata proprio nel
- *    giro che ne ha unificate quattro»*.  ⇒ La domanda giusta non e' «si puo'
- *    unificare», e' **«e' la stessa quantita'?»**.
+ * ⛔ THE FINDING WAS: *«it is the FIFTH hand copy of the cap, born precisely in the
+ *    round that unified four of them»*.  ⇒ The right question is not «can it be
+ *    unified», it is **«is it the same quantity?»**.
  *
- * ⭐⭐ LA RISPOSTA E' NO, e per due ragioni indipendenti — quindi **non si
- *     unifica**, esattamente come `MAX_IN_VOLO` in `aiutante.c` (rilievo
- *     R10-A7), che e' stato lasciato separato per la stessa ragione:
+ * ⭐⭐ THE ANSWER IS NO, and for two independent reasons — so **it is not
+ *     unified**, exactly like `MAX_IN_VOLO` in `aiutante.c` (finding
+ *     R10-A7), which was left separate for the same reason:
  *
- *   1. ⛔ **E' la misura di un LOTTO, non di una capienza.**  `RCP_TETTO_SESSIONI`
- *      dice *«quanti utenti si servono»*: chi non ci sta **viene respinto**
- *      (`0x0E`).  Questo dice *«quanti nomi stanno in una domanda a logind»*:
- *      chi non ci sta **entra nel giro dopo** — il `while (dal)` qui sotto
- *      esiste per questo.  ⇒ Superarlo non toglie niente a nessuno; e la
- *      proprieta' che il codice difende non e' «una chiamata», e' **un numero
- *      FISSO di chiamate invece di `N`**: a 64 inquilini sono due, non 64.
- *   2. ⛔ **Deve essere una costante di compilazione**, e il tetto non lo e'
- *      piu': `--tetto-sessioni N` lo muove all'avvio (`rcp_tetto()`), mentre
- *      qui sotto ci sono quattro array **sullo stack** — fra cui
- *      `quali[][160]`, che a 32 pesa gia' 5 KiB.  Legarli a un numero che
- *      arriva a caldo vorrebbe dire un VLA di dimensione scelta dalla riga di
- *      comando dentro il ciclo che consegna i fotogrammi: un difetto NUOVO,
- *      non una cura.  ⚠ *Unificare per simmetria quando e' un'altra cosa
- *      peggiora il codice e lo fa sembrare migliore.*
+ *   1. ⛔ **It is the size of a BATCH, not of a capacity.**  `RCP_TETTO_SESSIONI`
+ *      says *«how many users are served»*: whoever does not fit **is refused**
+ *      (`0x0E`).  This one says *«how many names fit in one question to logind»*:
+ *      whoever does not fit **enters the next round** — the `while (dal)` below
+ *      exists for this.  ⇒ Exceeding it takes nothing away from anyone; and the
+ *      property the code defends is not «one call», it is **a FIXED number
+ *      of calls instead of `N`**: at 64 tenants it is two, not 64.
+ *   2. ⛔ **It must be a compile-time constant**, and the cap no longer is
+ *      one: `--tetto-sessioni N` moves it at startup (`rcp_tetto()`), while
+ *      below there are four arrays **on the stack** — among them
+ *      `quali[][160]`, which at 32 already weighs 5 KiB.  Tying them to a number that
+ *      arrives at run time would mean a VLA of a size chosen by the command
+ *      line inside the loop that delivers frames: a NEW defect,
+ *      not a cure.  ⚠ *Unifying for symmetry when it is another thing
+ *      makes the code worse and makes it look better.*
  *
- * ⭐ MA IL COMMENTO DI PRIMA MENTIVA, e quella meta' si cura: diceva «32 sta
- *    sopra i **sedici** posti di `rcp.c`» — ⛔ un **letterale**, e per giunta
- *    invecchiato di un giorno (dal 25 agosto il predefinito e' **10**).  ⇒ Il
- *    legame che c'e' davvero e' una **disuguaglianza in un verso solo**, ed e'
- *    scritta qui sotto dove il compilatore la puo' far valere invece che in un
- *    commento che nessuno rilegge. */
+ * ⭐ BUT THE PREVIOUS COMMENT WAS LYING, and that half is cured: it said «32 is
+ *    above the **sixteen** slots of `rcp.c`» — ⛔ a **literal**, and on top of that
+ *    one day out of date (since 25 August the default is **10**).  ⇒ The
+ *    link that really exists is an **inequality in one direction only**, and it is
+ *    written below where the compiler can enforce it instead of in a
+ *    comment nobody rereads. */
 #define WT_RIPASSO_INSIEME 32
 
-/* ⛔ La sola cosa che deve valere: col tetto PREDEFINITO il secondo giro non
- *    succede mai, cioe' un ripasso = una chiamata.  ⚠ Se un giorno
- *    `RCP_TETTO_SESSIONI` superasse questo numero, il codice resterebbe
- *    CORRETTO (due giri, due chiamate) ma il conto di §6.13 andrebbe rifatto:
- *    ⭐ meglio accorgersene qui, alla compilazione, che leggendo `chiamate=` il
- *    doppio del previsto sei mesi dopo. */
+/* ⛔ The only thing that must hold: with the DEFAULT cap the second round never
+ *    happens, that is one sweep = one call.  ⚠ If one day
+ *    `RCP_TETTO_SESSIONI` exceeded this number, the code would stay
+ *    CORRECT (two rounds, two calls) but the count of §6.13 would have to be redone:
+ *    ⭐ better to notice here, at compile time, than by reading `chiamate=` at
+ *    twice the expected value six months later. */
 _Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI,
-               "il lotto del ripasso e' piu' piccolo del tetto predefinito "
-               "delle sessioni: un ripasso costerebbe piu' di UNA chiamata a "
-               "logind gia' nella configurazione di serie (§6.13)");
+               "the sweep batch is smaller than the default session "
+               "cap: a sweep would cost more than ONE call to "
+               "logind already in the stock configuration (§6.13)");
 #define WT_RIPASSO_QUALE 160
 
 size_t wt_sorveglia_locali(void)
@@ -6256,27 +6256,27 @@ size_t wt_sorveglia_locali(void)
 	size_t congedate = 0;
 	wt *dal = vive_prima;
 
-	/* ⛔ Senza il gancio del RIPASSO non si ripiega su quello dell'`ATTACCA`, e
-	 *    non e' pigrizia: ripiegare vorrebbe dire rimettere in piedi in
-	 *    silenzio la domanda-per-inquilino che questo codice esiste per
-	 *    togliere — cioe' il difetto tornerebbe il giorno in cui qualcuno si
-	 *    dimentica di collegare il gancio, **senza una riga rossa**.  ⭐ Chi non
-	 *    lo collega non applica la meta' «sorvegliata» di §5.1, ed e' `main.c`
-	 *    che lo scrive nel registro all'avvio.
-	 * ⛔⛔ E FINO AL 25 AGOSTO 2026 QUESTA FRASE ERA FALSA (rilievo R7 di §5.5):
-	 *      `main.c` **non scriveva niente**, e la rete che questo commento
-	 *      dichiarava non esisteva.  ⭐ Adesso la riga c'e' davvero — cerca
-	 *      «la meta' SORVEGLIATA» nel registro d'avvio — e dice il valore in
-	 *      vigore **acceso E spento**.  ⚠ Un commento che promette una guardia
-	 *      inesistente e' peggio di nessuna guardia: chi legge smette di
-	 *      cercarla. */
+	/* ⛔ Without the SWEEP hook we do not fall back on the `ATTACCA` one, and
+	 *    it is not laziness: falling back would mean silently putting back
+	 *    the per-tenant question this code exists to
+	 *    remove — that is the defect would come back the day someone
+	 *    forgets to connect the hook, **without a red line**.  ⭐ Whoever does not
+	 *    connect it does not apply the «watched» half of §5.1, and it is `main.c`
+	 *    that writes so in the log at startup.
+	 * ⛔⛔ AND UNTIL 25 AUG 2026 THIS SENTENCE WAS FALSE (finding R7 of §5.5):
+	 *      `main.c` **wrote nothing**, and the net this comment
+	 *      declared did not exist.  ⭐ Now the line is really there — look for
+	 *      «the WATCHED half» in the startup log — and it says the value in
+	 *      force **on AND off**.  ⚠ A comment promising a nonexistent
+	 *      guard is worse than no guard: whoever reads stops
+	 *      looking for it. */
 	if (!gancio_locali)
 		return 0;
 
-	/* ⛔ Si guarda la lista a ogni giro invece di tenere un elenco di utenti:
-	 *    una sessione puo' nascere e morire fra due ripassi, e un elenco che si
-	 *    aggiorna da solo e' un secondo stato da tenere d'accordo col primo —
-	 *    cioe' il modo in cui due verita' entrano in un programma. */
+	/* ⛔ The list is looked at every round instead of keeping a list of users:
+	 *    a session can be born and die between two sweeps, and a list that
+	 *    updates itself is a second state to keep in agreement with the first —
+	 *    that is the way two truths get into a program. */
 	while (dal) {
 		const char *nomi[WT_RIPASSO_INSIEME];
 		wt *chi[WT_RIPASSO_INSIEME];
@@ -6285,7 +6285,7 @@ size_t wt_sorveglia_locali(void)
 		size_t quanti = 0;
 		wt *w;
 
-		/* ── 1. CHI C'E', in memoria e senza chiedere niente a nessuno ── */
+		/* ── 1. WHO IS THERE, in memory and without asking anybody anything ── */
 		for (w = dal; w && quanti < WT_RIPASSO_INSIEME; w = w->viva_dopo) {
 			const char *mio;
 
@@ -6302,28 +6302,28 @@ size_t wt_sorveglia_locali(void)
 		if (!quanti)
 			break;
 
-		/* ── 2. ⭐⭐ LA DOMANDA, e ce n'e' UNA per tutti quanti ────────
-		 * ⛔ Era una per inquilino, e il costo era `N × D` dentro il ciclo che
-		 *    consegna i fotogrammi: `[M]` §6.13, la frontiera si restringeva
-		 *    come 1/N e tagliava i 300 ms che `sentinella.c` si concede gia' a
-		 *    ~4 inquilini.  Qui il costo e' `D`, e non dipende piu' da N. */
+		/* ── 2. ⭐⭐ THE QUESTION, and there is ONE for all of them ────────
+		 * ⛔ It used to be one per tenant, and the cost was `N × D` inside the loop that
+		 *    delivers frames: `[M]` §6.13, the frontier narrowed
+		 *    as 1/N and cut the 300 ms `sentinella.c` already allows itself at
+		 *    ~4 tenants.  Here the cost is `D`, and it no longer depends on N. */
 		gancio_locali(gancio_locali_ctx, nomi, quanti, locale,
 		              &quali[0][0], WT_RIPASSO_QUALE);
 
-		/* ── 3. E POI SI CONGEDA, che non costa niente a nessuno ─────── */
+		/* ── 3. AND THEN THE FAREWELL, which costs nobody anything ─────── */
 		for (size_t k = 0; k < quanti; k++) {
 			if (!locale[k])
 				continue;
-			/* ⛔⭐ §5.1: «ha una sessione grafica REMOTA attiva e ne apre una
-			 *     LOCALE ⇒ **la locale vince**: la remota viene chiusa».
+			/* ⛔⭐ §5.1: «it has an active REMOTE graphical session and opens a
+			 *     LOCAL one ⇒ **the local one wins**: the remote one is closed».
 			 *
-			 * ⭐ Ed e' l'unico punto del prodotto in cui il server porta via una
-			 *    sessione SANA — `DECISIONI.md` §4.1-bis lo ammette **solo** con
-			 *    un motivo dicibile, ed e' per questo che `0x04` esiste. */
+			 * ⭐ And it is the only point of the product where the server takes away a
+			 *    HEALTHY session — `DECISIONI.md` §4.1-bis admits it **only** with
+			 *    a reason that can be told, and that is why `0x04` exists. */
 			registro_dice_di(REG_WT, nomi[k],
-			                 "⛔ «%s» ha aperto una sessione grafica LOCALE (%s): la "
-			                 "sessione remota viene chiusa — §5.1, motivo 0x04",
-			                 nomi[k], quali[k][0] ? quali[k] : "senza dettaglio");
+			                 "⛔ «%s» has opened a LOCAL graphical session (%s): the "
+			                 "remote session is being closed — §5.1, reason 0x04",
+			                 nomi[k], quali[k][0] ? quali[k] : "no detail");
 			wt_congeda(chi[k], RCP_SESSIONE_LOCALE_PREVALSA,
 			           "e' stata aperta una sessione grafica locale su questa "
 			           "macchina");
@@ -6333,9 +6333,9 @@ size_t wt_sorveglia_locali(void)
 	return congedate;
 }
 
-/* ⛔ Il riquadro sta in `webtransport.h`: e' il DENOMINATORE che mancava alla
- *    riga del guardiano (rilievo R7).  ⚠ Le stesse tre guardie del ripasso qui
- *    sopra, nello stesso ordine: chi non e' un inquilino servito non si conta. */
+/* ⛔ The box is in `webtransport.h`: it is the DENOMINATOR that was missing from the
+ *    guard's line (finding R7).  ⚠ The same three guards as the sweep
+ *    above, in the same order: whoever is not a served tenant is not counted. */
 size_t wt_inquilini_serviti(void)
 {
 	size_t quanti = 0;
@@ -6389,21 +6389,21 @@ size_t wt_congeda_utente(const char *utente, uint8_t motivo, const char *dettagl
 	return quante;
 }
 
-/* ⛔⭐ IL TETTO DELLA TELA DI CHI STA BUSSANDO — fase 10, e serve al BUDGET.
+/* ⛔⭐ THE CANVAS CAP OF WHOEVER IS KNOCKING — phase 10, and it serves the BUDGET.
  *
- *     A `consegna_verdetto()` la tela della sessione **non e' ancora decisa**
- *     (si decide a `SESSIONE`), ma il suo tetto e' noto fin dal `CIAO`:
- *     `video.misura_massima` di §4.3, che §4.5 impone di rispettare.  ⇒ Il
- *     costo del nuovo si conta su quel tetto — un **maggiorante**, cioe' il
- *     verso scomodo, cioe' quello giusto (`LEZIONI.md` §1.33).
+ *     At `consegna_verdetto()` the session's canvas **is not yet decided**
+ *     (it is decided at `SESSIONE`), but its cap is known from `CIAO` on:
+ *     `video.misura_massima` of §4.3, which §4.5 requires to be respected.  ⇒ The
+ *     cost of the newcomer is counted on that cap — an **upper bound**, that is the
+ *     uncomfortable direction, that is the right one (`LEZIONI.md` §1.33).
  *
- * ⚠ Si passa di qui e non da `rcp.h` direttamente perche' e' `webtransport.c` a
- *   sapere **quali sessioni sono di quell'utente** — la stessa ragione, e la
- *   stessa strada, di `wt_congeda_utente()` qui sopra.
- * ⚠ E se le sessioni di quell'utente sono piu' d'una si prende **la piu'
- *   larga**: contare la piu' stretta sarebbe scegliere il numero comodo.
- * ⛔ `false` = nessuna delle sue sessioni l'ha dichiarata, e non e' «zero»: chi
- *    chiama ripiega sulla tela del palco. */
+ * ⚠ It goes through here and not through `rcp.h` directly because `webtransport.c` is the one
+ *   that knows **which sessions belong to that user** — the same reason, and the
+ *   same road, as `wt_congeda_utente()` above.
+ * ⚠ And if that user's sessions are more than one **the widest** is taken:
+ *   counting the narrowest would be choosing the convenient number.
+ * ⛔ `false` = none of its sessions declared it, and it is not «zero»: the
+ *    caller falls back on the stage's canvas. */
 bool wt_misura_massima_di(const char *utente, uint32_t *l, uint32_t *a)
 {
 	uint32_t ml = 0, ma = 0;
@@ -6439,35 +6439,35 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
                        const uint8_t *dati, size_t byte, uint32_t larghezza,
                        uint32_t altezza, uint64_t istante_us, uint32_t input)
 {
-	/* ⛔⛔ QUESTA RIGA HA BUTTATO IN SILENZIO OGNI FOTOGRAMMA H.264 — 20 agosto
-	 *     2026, e ci e' voluto mezz'ora per trovarla.
+	/* ⛔⛔ THIS LINE SILENTLY THREW AWAY EVERY H.264 FRAME — 20 Aug
+	 *     2026, and it took half an hour to find it.
 	 *
-	 * Il codec 3 e' entrato in `RCP.md` §6.2 e questa guardia ne conosceva due:
-	 * il figlio codificava (5 940 byte, CHIAVE, 1,6 ms in hardware), il padre
-	 * riceveva («fotogramma da «prova»: codec 3»), e qui **il fotogramma
-	 * spariva senza una riga**.  ⇒ Sessione viva, contatori a zero, e nessun
-	 * registro che nominasse la causa.
+	 * Codec 3 entered `RCP.md` §6.2 and this guard knew two of them:
+	 * the child encoded (5 940 bytes, KEYFRAME, 1.6 ms in hardware), the parent
+	 * received («frame from «prova»: codec 3»), and here **the frame
+	 * vanished without a line**.  ⇒ Live session, counters at zero, and no
+	 * log naming the cause.
 	 *
-	 * ⭐ Adesso il numero massimo viene da UN posto — `RCP_CODEC_VIDEO_MAX` —
-	 *    e il rifiuto **si dichiara** (una riga sola, non una per fotogramma:
-	 *    a sessanta al secondo sarebbe il difetto dei 30,8 GB). */
+	 * ⭐ Now the maximum number comes from ONE place — `RCP_CODEC_VIDEO_MAX` —
+	 *    and the refusal **is declared** (a single line, not one per frame:
+	 *    at sixty a second it would be the defect of the 30.8 GB). */
 	if (codec < 1 || codec > RCP_CODEC_VIDEO_MAX) {
 		static uint8_t detto;
 
 		if (detto != codec) {
 			detto = codec;
 			registro_dice_di(REG_WT, utente,
-			                 "⛔ fotogramma con codec %u BUTTATO: §6.2 ne definisce "
-			                 "%u (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ La riga si "
-			                 "scrive una volta per numero, non una per fotogramma",
+			                 "⛔ frame with codec %u DROPPED: §6.2 defines "
+			                 "%u of them (1 = HEVC, 2 = AV1, 3 = H.264).  ⚠ The line is "
+			                 "written once per number, not once per frame",
 			                 codec, (unsigned) RCP_CODEC_VIDEO_MAX);
 		}
 		return;
 	}
-	/* ⛔ Si segna PRIMA di consegnare, e vale anche se non c'e' nessuna sessione
-	 *    a cui consegnare: e' un fatto del palco, non della connessione — ed e'
-	 *    esattamente il caso del ri-attacco, dove la sessione che vedra' quel
-	 *    numero **non esiste ancora**. */
+	/* ⛔ It is noted BEFORE delivering, and it holds even if there is no session
+	 *    to deliver to: it is a fact of the stage, not of the connection — and it is
+	 *    exactly the reattach case, where the session that will see that
+	 *    number **does not exist yet**. */
 	palco_misura_segna(utente, larghezza, altezza);
 	for (wt *w = vive_prima; w; w = w->viva_dopo)
 		video_a_una(w, utente, codec, chiave, dati, byte, larghezza, altezza,
@@ -6475,7 +6475,7 @@ void wt_video_diffondi(const char *utente, uint8_t codec, bool chiave,
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ IL BLOCCO D'AUDIO CHE ARRIVA DALLA SESSIONE, CONSEGNATO A UNA SESSIONE. */
+/* ⭐ THE AUDIO BLOCK ARRIVING FROM THE SESSION, DELIVERED TO ONE SESSION.    */
 
 static void audio_a_una(wt *w, const char *utente, uint8_t codec,
                         uint64_t istante_us, const uint8_t *dati, size_t byte)
@@ -6485,19 +6485,19 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 	uint64_t tetto;
 	const char *mio;
 
-	/* ⚠ Il gemello di `video_fermo` in `video_a_una()`: la coda di quel che era
-	 *   gia' in volo quando al figlio e' stato detto di smettere. */
+	/* ⚠ The twin of `video_fermo` in `video_a_una()`: the tail of what was
+	 *   already in flight when the child was told to stop. */
 	if (!w->audio_acceso || w->audio_fermo || w->audio_codec != codec)
 		return;
 	if (!w->rcp || !w->conn || w->chiusura >= 0)
 		return;
 
-	/* ⛔⭐ INVARIANTE I3, E VALE PER IL SUONO ESATTAMENTE COME PER I PIXEL.
+	/* ⛔⭐ INVARIANT I3, AND IT HOLDS FOR SOUND EXACTLY AS FOR PIXELS.
 	 *
-	 *     `[M]` 12 agosto 2026 il difetto si presento' sul video: «prova» ricevette
-	 *     un fotogramma conforme, e il fotogramma era il desktop di «nicfio».
-	 *     ⛔ Sull'audio lo stesso difetto e' PEGGIO da accorgersene: un desktop
-	 *     sbagliato si riconosce guardandolo, una telefonata sbagliata no. */
+	 *     `[M]` 12 Aug 2026 the defect showed up on video: «prova» received
+	 *     a conforming frame, and the frame was «nicfio»'s desktop.
+	 *     ⛔ On audio the same defect is WORSE to notice: a wrong desktop
+	 *     is recognised by looking at it, a wrong phone call is not. */
 	mio = rcp_utente(w->rcp);
 	if (!mio || !utente || strcmp(mio, utente) != 0)
 		return;
@@ -6507,36 +6507,36 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 		if (!w->dgram_negati_detto) {
 			w->dgram_negati_detto = true;
 			registro_dice_di(REG_RCP, wt_chi(w),
-			                 "⛔ %s: il pari NON accetta datagram "
-			                 "(`max_datagram_frame_size` = 0) — questa sessione non "
-			                 "avra' audio.  ⚠ `RCP.md` §2.2 li PRETENDE, ma §6.3 "
-			                 "vieta di chiudere per un fatto dei datagram: si "
-			                 "dichiara e si tace",
+			                 "⛔ %s: the peer does NOT accept datagrams "
+			                 "(`max_datagram_frame_size` = 0) — this session will not "
+			                 "have audio.  ⚠ `RCP.md` §2.2 DEMANDS them, but §6.3 "
+			                 "forbids closing over a datagram fact: it is "
+			                 "declared and then kept quiet",
 			                 w->provenienza);
 		}
 		return;
 	}
 
-	/* Il prefisso di RFC 9297: il quarto dell'identificativo dello stream su
-	 * cui vive la sessione WebTransport.  ⛔ Senza, il browser scarta il
-	 * datagram **senza un errore**: non e' un nostro campo, e' l'involucro. */
+	/* The RFC 9297 prefix: a quarter of the identifier of the stream on
+	 * which the WebTransport session lives.  ⛔ Without it, the browser discards the
+	 * datagram **without an error**: it is not a field of ours, it is the envelope. */
 	p = varint_scrivi(buf, (uint64_t)w->sessione / 4);
 
-	/* L'inquadratura di `RCP.md` §6.3, in ordine di rete. */
+	/* The framing of `RCP.md` §6.3, in network order. */
 	if (p + 12 + byte > sizeof buf || (uint64_t)(p + 12 + byte) > tetto) {
 		w->audio_buttati++;
 		if (w->audio_buttati == 1 || w->audio_buttati % 100 == 0)
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⛔ %s: blocco d'audio di %zu byte troppo grande "
-			                 "(prefisso %zu + 12 + %zu, tetto del pari %llu) — "
-			                 "buttato.  Buttati %llu",
+			                 "⛔ %s: audio block of %zu bytes too big "
+			                 "(prefix %zu + 12 + %zu, peer's cap %llu) — "
+			                 "dropped.  Dropped %llu",
 			                 w->provenienza, byte, p, byte,
 			                 (unsigned long long)tetto,
 			                 (unsigned long long)w->audio_buttati);
 		return;
 	}
 	buf[p++] = 0x04;
-	buf[p++] = 0x01; /* tipo `0x0401`, l'unico definito in RCP/1 */
+	buf[p++] = 0x01; /* type `0x0401`, the only one defined in RCP/1 */
 	buf[p++] = 0x00;
 	buf[p++] = codec; /* `codec` u16: 1 = Opus, 2 = PCM */
 	for (int i = 7; i >= 0; i--)
@@ -6548,32 +6548,32 @@ static void audio_a_una(wt *w, const char *utente, uint8_t codec,
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ IL TONO DI PROVA — la sorgente che certifica il filo, e NIENT'ALTRO.    */
+/* ⭐ THE TEST TONE — the source that certifies the wire, and NOTHING ELSE.   */
 /*
- * ⛔⭐ PERCHE' ESISTE, E PERCHE' NON E' UNA SCORCIATOIA
+ * ⛔⭐ WHY IT EXISTS, AND WHY IT IS NOT A SHORTCUT
  *
- *     La catena dell'audio ha cinque anelli: il sink nella sessione, la
- *     cattura del monitor, il codificatore, il datagram, il browser che suona.
- *     Accenderli tutti insieme e poi non sentire niente lascia **cinque
- *     imputati** — ed e' esattamente il modo in cui questo progetto ha perso
- *     le sue giornate peggiori (`LEZIONI.md` §10).
+ *     The audio chain has five links: the sink in the session, the
+ *     capture of the monitor, the encoder, the datagram, the browser that plays.
+ *     Switching them all on together and then hearing nothing leaves **five
+ *     suspects** — and it is exactly the way this project lost
+ *     its worst days (`LEZIONI.md` §10).
  *
- *     Questa sorgente ne mette in prova **tre soli** — codificatore, datagram,
- *     browser — con un segnale di cui si conosce **ogni campione in anticipo**.
- *     ⇒ Se il tono esce a 440 Hz dall'altra parte, il filo e' assolto e quel
- *     che resta e' la cattura.  Se non esce, la cattura non c'entra.
+ *     This source puts **only three** of them under test — encoder, datagram,
+ *     browser — with a signal of which **every sample is known in advance**.
+ *     ⇒ If the tone comes out at 440 Hz at the other end, the wire is acquitted and what
+ *     remains is the capture.  If it does not come out, the capture has nothing to do with it.
  *
- * ⛔ E' SPENTO se nessuno lo accende (`--audio-prova`), ed e' l'invariante I6:
- *    quel che cambia cio' che l'utente sente sta dietro un interruttore spento
- *    finche' non l'ha guardato.  ⚠ Quando e' acceso lo SCRIVE, a ogni sessione:
- *    un server che suonasse un tono senza dirlo sarebbe un difetto travestito
- *    da funzione.
+ * ⛔ IT IS OFF if nobody switches it on (`--audio-prova`), and it is invariant I6:
+ *    whatever changes what the user hears stays behind a switch that is off
+ *    until they have looked at it.  ⚠ When it is on it WRITES so, at every session:
+ *    a server playing a tone without saying so would be a defect disguised
+ *    as a feature.
  *
- * ⚠ E quel che questa sorgente NON prova, dichiarato: il ritmo.  I blocchi
- *   escono a raffica quando il battito e' lungo, invece che uno ogni 20 ms —
- *   e' il difetto che v1 pago' su `SendSamples2` (`altoparlante.h`, «il client
- *   BUTTA i blocchi corti»).  Il ritmo lo dara' la cattura, che ha un orologio
- *   suo; qui si guarda il CONTENUTO, non la cadenza.
+ * ⚠ And what this source does NOT test, declared: the rhythm.  The blocks
+ *   come out in bursts when the heartbeat is long, instead of one every 20 ms —
+ *   it is the defect v1 paid for on `SendSamples2` (`altoparlante.h`, «the client
+ *   THROWS AWAY short blocks»).  The rhythm will come from capture, which has a clock
+ *   of its own; here one looks at the CONTENT, not the cadence.
  */
 void wt_audio_gancio(wt_audio_richiesta f, void *ctx)
 {
@@ -6586,17 +6586,17 @@ void wt_audio_prova(uint32_t hz)
 	audio_prova_hz = hz;
 	if (hz)
 		registro_dice(REG_WT,
-		              "⚠ TONO DI PROVA ACCESO a %u Hz — ogni sessione ammessa "
-		              "sentira' un tono invece del desktop.  ⛔ E' una funzione "
-		              "di banco (I6): in un'installazione normale non si accende",
+		              "⚠ TEST TONE ON at %u Hz — every admitted session "
+		              "will hear a tone instead of the desktop.  ⛔ It is a bench "
+		              "function (I6): in a normal installation it is not switched on",
 		              hz);
 }
 
 static void tono_passo(wt *w, ngtcp2_tstamp ts)
 {
-	/* ⛔ Un tetto per passata: senza, un battito lungo genererebbe cento
-	 *    blocchi in un colpo, la coda ne butterebbe novantadue e il registro
-	 *    direbbe «buttati» per un difetto che non e' della rete. */
+	/* ⛔ A cap per pass: without it, a long heartbeat would generate a hundred
+	 *    blocks in one go, the queue would throw away ninety-two of them and the log
+	 *    would say «dropped» for a defect that is not the network's. */
 	int quanti = 0;
 	uint64_t ora_us;
 	const char *utente;
@@ -6611,8 +6611,8 @@ static void tono_passo(wt *w, ngtcp2_tstamp ts)
 	if (!w->tono_cod) {
 		w->tono_cod = audio_cod_apri(w->audio_codec);
 		if (!w->tono_cod) {
-			/* ⛔ Si spegne questa sessione, non il server: il registro l'ha
-			 *    gia' detto dentro `audio_cod_apri`. */
+			/* ⛔ This session is switched off, not the server: the log has
+			 *    already said so inside `audio_cod_apri`. */
 			w->audio_acceso = false;
 			return;
 		}
@@ -6629,10 +6629,10 @@ static void tono_passo(wt *w, ngtcp2_tstamp ts)
 		uint32_t blocco = audio_cod_blocco(w->tono_cod);
 
 		for (uint32_t i = 0; i < blocco; i++) {
-			/* ⭐ La fase e' CONTINUA fra un blocco e l'altro (`tono_i` non si
-			 *    azzera): ripartire da zero a ogni blocco produrrebbe uno
-			 *    scatto ogni 20 ms, cioe' un difetto udibile fabbricato dal
-			 *    banco e attribuito al codificatore. */
+			/* ⭐ The phase is CONTINUOUS between one block and the next (`tono_i` is not
+			 *    reset): restarting from zero at every block would produce a
+			 *    click every 20 ms, that is an audible defect fabricated by the
+			 *    bench and blamed on the encoder. */
 			double t = (double)(w->tono_i + i) / (double)AUDIO_FREQUENZA;
 			double v = 0.5 * sin(2.0 * M_PI * (double)audio_prova_hz * t);
 			int16_t s = (int16_t)(v * 32767.0);
@@ -6659,7 +6659,7 @@ void wt_audio_diffondi(const char *utente, uint8_t codec, uint64_t istante_us,
 }
 
 /* ------------------------------------------------------------------------- */
-/* ⭐⭐ E LE DUE PORTE DAL FIGLIO VERSO IL FILO.                               */
+/* ⭐⭐ AND THE TWO DOORS FROM THE CHILD TOWARDS THE WIRE.                    */
 
 static void appunti_a_una(wt *w, const char *utente, const char *testo,
                           size_t byte)
@@ -6687,12 +6687,12 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
 {
 	if (!utente)
 		return false;
-	/* ⛔ Si ferma al PRIMO che risponde di si', e non e' un'ottimizzazione: per
-	 *    l'invariante I2 un utente ha **una sola** connessione remota viva alla
-	 *    volta (§5.1, `GIA_ATTIVA_REMOTA`), quindi il primo e' l'unico.  ⚠ Se
-	 *    un giorno I2 cambiasse, questa riga sarebbe il posto in cui si decide
-	 *    A CHI si chiede — e allora la scelta andrebbe scritta, non lasciata
-	 *    all'ordine di una lista. */
+	/* ⛔ It stops at the FIRST that answers yes, and it is not an optimisation: by
+	 *    invariant I2 a user has **a single** live remote connection at a
+	 *    time (§5.1, `GIA_ATTIVA_REMOTA`), so the first is the only one.  ⚠ If
+	 *    one day I2 changed, this line would be the place where it is decided
+	 *    WHOM to ask — and then the choice would have to be written, not left
+	 *    to the order of a list. */
 	for (wt *w = vive_prima; w; w = w->viva_dopo) {
 		const char *mio;
 		uint64_t ora;
@@ -6702,9 +6702,9 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
 		mio = rcp_utente(w->rcp);
 		if (!mio || !mio[0] || strcmp(mio, utente) != 0)
 			continue;
-		/* ⛔ L'orologio si chiede a ngtcp2, che e' quello con cui `rcp_tempo()`
-		 *    misurera' il fondo: due orologi diversi sulla stessa grandezza
-		 *    darebbero un fondo che scade prima o dopo di quel che dice. */
+		/* ⛔ The clock is asked of ngtcp2, which is the one with which `rcp_tempo()`
+		 *    will measure the backstop: two different clocks on the same quantity
+		 *    would give a backstop that expires earlier or later than it says. */
 		ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 		if (rcp_appunti_chiedi(w->rcp, serial, ora))
 			return true;
@@ -6712,26 +6712,26 @@ bool wt_appunti_richiesta(const char *utente, uint32_t serial)
 	return false;
 }
 
-/* ⛔⭐⭐ IL CENSIMENTO DI CHI ASCOLTA, e le TRE esclusioni che lo rendono vero.
+/* ⛔⭐⭐ THE CENSUS OF WHO IS LISTENING, and the THREE exclusions that make it true.
  *
- *      1. `tranne` — la sessione per cui si sta decidendo.  Prima bastava
- *         chiamare il censimento DOPO l'uscita dall'elenco delle vive (il
- *         riquadro in `wt_libera()` lo dice: *«o troverebbe se stessa e non
- *         spegnerebbe mai»*), ma da oggi si decide anche al CONGEDO, e li' la
- *         sessione e' ancora nell'elenco a pieno titolo.  ⇒ L'esclusione si
- *         scrive invece di dipendere dall'ordine di due righe lontane.
- *      2. `rcp_e_finita()` — ⛔ una sessione finita NON ascolta.  Il puntatore
- *         `w->rcp` resta in piedi finche' il client non chiude lo stream — e
- *         se il browser saluta e sparisce quello stream non si chiude mai —
- *         quindi senza questa riga un FANTASMA terrebbe acceso il microfono
- *         del desktop per tutti gli altri.  E' la stessa riga, per la stessa
- *         ragione, che `linea_morta_giudica()` ha gia'.
- *      3. `audio_fermo` — a chi ha gia' detto «smetti» non si chiede di nuovo.
+ *      1. `tranne` — the session for which the decision is being made.  Before it was enough
+ *         to call the census AFTER leaving the list of live ones (the
+ *         box in `wt_libera()` says so: *«or it would find itself and would never
+ *         switch off»*), but from today the decision is also made at FAREWELL, and there the
+ *         session is still fully in the list.  ⇒ The exclusion is
+ *         written instead of depending on the order of two distant lines.
+ *      2. `rcp_e_finita()` — ⛔ a finished session does NOT listen.  The pointer
+ *         `w->rcp` stays standing until the client closes the stream — and
+ *         if the browser says goodbye and disappears that stream never closes —
+ *         so without this line a GHOST would keep the desktop's microphone on
+ *         for everybody else.  It is the same line, for the same
+ *         reason, that `linea_morta_giudica()` already has.
+ *      3. `audio_fermo` — whoever has already said «stop» is not asked again.
  *
- * ⚠ Restano dentro le sessioni VIVE dello stesso utente su ALTRE connessioni:
- *   e' il caso che I2 prevede, e se una di quelle guarda la cattura non si
- *   ferma.  E' precisamente il motivo per cui questa non e' «spegni al
- *   congedo» ma «spegni se sei rimasta sola». */
+ * ⚠ The LIVE sessions of the same user on OTHER connections stay inside:
+ *   it is the case I2 provides for, and if one of those is watching, capture does not
+ *   stop.  It is precisely the reason why this is not «switch off at
+ *   farewell» but «switch off if you are left alone». */
 static bool audio_ascolta_qualcuno(const char *utente, const wt *tranne,
                                    uint8_t *codec)
 {
@@ -6771,8 +6771,8 @@ void wt_audio_conti(const wt *w, uint64_t *spediti, uint64_t *buttati,
 		*in_coda = w ? w->ndgram : 0;
 }
 
-/* ⚠ Il gemello del censimento dell'audio, e le tre esclusioni sono le stesse:
- *   il riquadro sta li', e i due si leggono insieme. */
+/* ⚠ The twin of the audio census, and the three exclusions are the same:
+ *   the box is there, and the two are read together. */
 static bool video_guarda_qualcuno(const char *utente, const wt *tranne,
                                   uint8_t *codec)
 {
@@ -6800,35 +6800,35 @@ bool wt_video_qualcuno_guarda(const char *utente, uint8_t *codec)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⛔⭐⭐ SI SMETTE DI CATTURARE QUANDO NON GUARDA E NON ASCOLTA PIU' NESSUNO. */
+/* ⛔⭐⭐ CAPTURE STOPS WHEN NOBODY WATCHES OR LISTENS ANY MORE.            */
 /*
- * ⭐ E' UNA FUNZIONE SOLA PER TRE OCCASIONI, e sono tre perche' una sessione
- *    puo' finire in tre modi che non passano l'uno per l'altro:
+ * ⭐ IT IS A SINGLE FUNCTION FOR THREE OCCASIONS, and they are three because a session
+ *    can end in three ways that do not go through one another:
  *
- *      1. `regola_battito()` — la sessione e' `"finita"`: il client si e'
- *         CONGEDATO.  E' l'occasione nuova, quella che paga i ~30 s, e copre
- *         tutte e sette le strade con cui `rcp.c` arriva a quello stato.
- *      2. `wt_stream_chiuso()` — il client chiude lo stream della CONNECT o il
- *         canale di controllo.  ⛔ Li' `w->rcp` viene LIBERATO e azzerato: da
- *         quel momento il nome dell'utente non si puo' piu' chiedere a
- *         nessuno, e infatti prima di oggi quella strada non spegneva la
- *         cattura MAI — nemmeno alla morte della connessione, perche' il
- *         blocco in `wt_libera()` pretende `w->rcp` non nullo.  ⇒ Si chiama
- *         PRIMA di `rcp_libera()`, finche' il nome c'e' ancora.
- *      3. `wt_libera()` — la connessione se ne va senza che il client abbia
- *         salutato (`kill -9`, la rete che cade, il `max_idle_timeout`).  E'
- *         l'occasione che c'era gia', e resta: chi muore non si congeda.
+ *      1. `regola_battito()` — the session is `"finita"`: the client said
+ *         FAREWELL.  It is the new occasion, the one that pays the ~30 s, and it covers
+ *         all seven roads by which `rcp.c` reaches that state.
+ *      2. `wt_stream_chiuso()` — the client closes the CONNECT stream or the
+ *         control channel.  ⛔ There `w->rcp` is FREED and reset: from
+ *         that moment the user's name can no longer be asked of
+ *         anyone, and indeed before today that road NEVER switched off
+ *         capture — not even at the death of the connection, because the
+ *         block in `wt_libera()` demands a non-null `w->rcp`.  ⇒ It is called
+ *         BEFORE `rcp_libera()`, while the name is still there.
+ *      3. `wt_libera()` — the connection goes away without the client having
+ *         said goodbye (`kill -9`, the network dropping, the `max_idle_timeout`).  It is
+ *         the occasion that already existed, and it stays: whoever dies does not say farewell.
  *
- * ⛔ In tutte e tre il PALCO RESTA IN PIEDI — invariante **I4**.  Si spegne il
- *    consumo, non la sessione grafica: `figli_video()` con codec 0 e
- *    `figli_audio()` con codec 0 vogliono dire «smetti di catturare», non
- *    «smonta».  Il figlio, le finestre e il sink restano dove sono, e chi si
- *    ricollega ritrova il suo desktop — che e' tutto il punto di I4.
+ * ⛔ In all three the STAGE STAYS UP — invariant **I4**.  What is switched off is the
+ *    consumption, not the graphical session: `figli_video()` with codec 0 and
+ *    `figli_audio()` with codec 0 mean «stop capturing», not
+ *    «dismantle».  The child, the windows and the sink stay where they are, and whoever
+ *    reconnects finds their desktop again — which is the whole point of I4.
  *
- * ⚠ Ed e' idempotente per costruzione (`video_fermo` / `audio_fermo`): le tre
- *   occasioni possono benissimo scattare in fila sulla stessa sessione — un
- *   congedo, poi lo stream chiuso, poi la connessione che muore — e al figlio
- *   il «basta» arriva una volta sola.
+ * ⚠ And it is idempotent by construction (`video_fermo` / `audio_fermo`): the three
+ *   occasions may well fire in a row on the same session — a
+ *   farewell, then the stream closed, then the connection dying — and the child
+ *   gets the «enough» only once.
  */
 static void cattura_spegni_se_sola(wt *w, const char *perche)
 {
@@ -6844,8 +6844,8 @@ static void cattura_spegni_se_sola(wt *w, const char *perche)
 	    && !audio_ascolta_qualcuno(mio, w, NULL)) {
 		w->audio_fermo = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "%s e non ascolta piu' nessuno «%s»: la cattura "
-		                 "dell'audio si ferma (il sink resta, e' l'invariante "
+		                 "%s and nobody listens to «%s» any more: audio "
+		                 "capture stops (the sink stays, it is invariant "
 		                 "I4)",
 		                 perche, mio);
 		gancio_audio(gancio_audio_ctx, mio, 0);
@@ -6854,11 +6854,11 @@ static void cattura_spegni_se_sola(wt *w, const char *perche)
 	    && !video_guarda_qualcuno(mio, w, NULL)) {
 		w->video_fermo = true;
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "%s e non guarda piu' nessuno «%s»: il palco smette "
-		                 "di catturare (il figlio resta, e' l'invariante I4)",
+		                 "%s and nobody watches «%s» any more: the stage stops "
+		                 "capturing (the child stays, it is invariant I4)",
 		                 perche, mio);
-		/* ⚠ «Smetti di catturare»: il codec e' 0, e la profondita' con
-		 *   lui non vuol dire niente. */
+		/* ⚠ «Stop capturing»: the codec is 0, and the depth with
+		 *   it means nothing. */
 		gancio_palco(gancio_palco_ctx, mio, 0, 0, 0, false);
 	}
 }
@@ -6871,9 +6871,9 @@ void wt_video_conti(const wt *w, uint32_t *diffusi, uint32_t *saltati,
 		*diffusi = w ? w->video_diffusi : 0;
 	if (saltati)
 		*saltati = w ? w->video_saltati : 0;
-	/* ⭐ FASE 9 — il quinto numero, e sta qui e non in `rcp.c` perche' e' una
-	 *    decisione del TRASPORTO: rcp non sa niente di questo fotogramma, non
-	 *    gli e' mai stato offerto. */
+	/* ⭐ PHASE 9 — the fifth number, and it is here and not in `rcp.c` because it is a
+	 *    decision of the TRANSPORT: rcp knows nothing of this frame, it was
+	 *    never offered to it. */
 	if (ritmo_scesi)
 		*ritmo_scesi = w ? w->video_ritmo_scesi : 0;
 	rcp_video_conti(w ? w->rcp : NULL, spediti, abbandonati);
@@ -6891,35 +6891,35 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 	g.chiudi = gancio_chiudi;
 	g.registra = gancio_registra;
 	g.verifica = gancio_verifica;
-	/* ⛔ E si collega SOLO se l'aiutante c'e': `rcp.c` guarda questo puntatore
-	 *    per decidere quale delle due strade percorrere, e collegarlo a vuoto
-	 *    vorrebbe dire dirgli «chiedi a nessuno». */
+	/* ⛔ And it is connected ONLY if the helper is there: `rcp.c` looks at this pointer
+	 *    to decide which of the two roads to take, and connecting it to nothing
+	 *    would mean telling it «ask nobody». */
 	if (w->aiuto)
 		g.chiedi_verifica = gancio_chiedi;
 
-	/* ⛔ §2.5: il canale video vive su stream unidirezionali del server.
+	/* ⛔ §2.5: the video channel lives on unidirectional server streams.
 	 *
-	 * ⚠ E si collegano TUTTI E QUATTRO: `rcp.c` rifiuta di aprire se ne manca
-	 *   uno, perche' un ospite che sapesse aprire e non azzerare non potrebbe
-	 *   onorare §5.1 — e se ne accorgerebbe a meta' di un fotogramma.
-	 * ⭐ La compatibilita' con l'innesto di `banchi/rcp/` e' gratis: li' il
-	 *   `memset` di sopra li lascia a NULL, e `rcp_video_apri()` restituisce
-	 *   `RCP_VIDEO_NIENTE_CANALE` invece di tacere. */
+	 * ⚠ And ALL FOUR are connected: `rcp.c` refuses to open if one is
+	 *   missing, because a host that could open and not reset could not
+	 *   honour §5.1 — and it would notice halfway through a frame.
+	 * ⭐ Compatibility with the graft of `banchi/rcp/` comes free: there the
+	 *   `memset` above leaves them NULL, and `rcp_video_apri()` returns
+	 *   `RCP_VIDEO_NIENTE_CANALE` instead of keeping quiet. */
 	g.video_apri = gancio_video_apri;
 	g.video_scrivi = gancio_video_scrivi;
 	g.video_fin = gancio_video_fin;
 	g.video_azzera = gancio_video_azzera;
 
-	/* ⭐⭐ §7.4 — IL CANALE APPUNTI, e si collegano TUTTI E CINQUE o nessuno.
+	/* ⭐⭐ §7.4 — THE CLIPBOARD CHANNEL, and ALL FIVE are connected or none.
 	 *
-	 * ⛔ E la condizione e' il ponte verso il palco, come per l'input: senza,
-	 *    `rcp.c` convaliderebbe i messaggi (quello e' protocollo) e poi
-	 *    dichiarerebbe di non aver servito niente.  ⚠ Ma i tre del FILO
-	 *    dipendono solo dal trasporto, non dal palco: agganciarli tutti insieme
-	 *    e' una scelta, e la ragione e' che meta' canale non serve a nessuno —
-	 *    annunciare al client un testo che poi non si puo' spedire, o spedirgli
-	 *    quel che ha copiato la sessione senza poter servire chi incolla, sono
-	 *    due meta' che l'utente vede come «gli appunti non funzionano». */
+	 * ⛔ And the condition is the bridge towards the stage, as for input: without it,
+	 *    `rcp.c` would validate the messages (that is protocol) and then
+	 *    declare it served nothing.  ⚠ But the three of the WIRE
+	 *    depend only on the transport, not on the stage: hooking them all together
+	 *    is a choice, and the reason is that half a channel is of no use to anyone —
+	 *    announcing to the client a text that then cannot be sent, or sending it
+	 *    what the session copied without being able to serve whoever pastes, are
+	 *    two halves the user sees as «the clipboard does not work». */
 	if (gancio_palco_appunti_offri && gancio_palco_appunti_risposta) {
 		g.appunti_apri = gancio_appunti_apri;
 		g.appunti_scrivi = gancio_appunti_scrivi;
@@ -6928,14 +6928,14 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 		g.appunti_risposta = gancio_appunti_risposta;
 	}
 
-	/* ⭐⭐ §7.3 — IL CANALE DI INPUT.  ⛔ E si collegano TUTTI E SEI o nessuno:
-	 *     `rcp.c` guarda il primo e se c'e' pretende gli altri, perche' un
-	 *     canale che sapesse muovere il puntatore e non sapesse rilasciare un
-	 *     pulsante lascerebbe il desktop **peggio di come l'ha trovato**.
-	 * ⚠ E si collegano solo se il ponte verso il palco c'e': senza,
-	 *   `rcp.c` convalida lo stesso il messaggio (quello e' protocollo) e
-	 *   scrive che non l'ha iniettato.  «Non ho un canale di input» e «il
-	 *   client ha sbagliato» sono due fatti diversi. */
+	/* ⭐⭐ §7.3 — THE INPUT CHANNEL.  ⛔ And ALL SIX are connected or none:
+	 *     `rcp.c` looks at the first and if it is there demands the others, because a
+	 *     channel that could move the pointer and could not release a
+	 *     button would leave the desktop **worse than it found it**.
+	 * ⚠ And they are connected only if the bridge towards the stage is there: without it,
+	 *   `rcp.c` validates the message all the same (that is protocol) and
+	 *   writes that it did not inject it.  «I have no input channel» and «the
+	 *   client made a mistake» are two different facts. */
 	if (gancio_palco_input) {
 		g.input_puntatore = gancio_input_puntatore;
 		g.input_pulsante = gancio_input_pulsante;
@@ -6947,56 +6947,56 @@ static void rcp_avvia(wt *w, int64_t stream_id)
 		g.input_rilascia_tutto = gancio_input_rilascia_tutto;
 	}
 
-	/* ⭐⭐ §7.1 — IL GANCIO DELLA TELA, e si collega DA SOLO: non appartiene ai
-	 *     sei dell'input, e la ragione e' che senza di lui `rcp.c` ha una
-	 *     risposta giusta da dare — `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` —
-	 *     mentre senza i sei dell'input non ce l'ha.
-	 * ⚠ E come quelli, si collega solo se il ponte verso il palco c'e': un
-	 *   gancio collegato a vuoto direbbe a `rcp.c` «so ridimensionare» e poi
-	 *   lascerebbe il client ad aspettare un fotogramma che nessuno ha chiesto a
-	 *   nessuno. */
+	/* ⭐⭐ §7.1 — THE CANVAS HOOK, and it is connected ON ITS OWN: it does not belong to the
+	 *     six of input, and the reason is that without it `rcp.c` has a
+	 *     right answer to give — `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` —
+	 *     while without the six of input it has none.
+	 * ⚠ And like those, it is connected only if the bridge towards the stage is there: a
+	 *   hook connected to nothing would tell `rcp.c` «I can resize» and then
+	 *   would leave the client waiting for a frame nobody asked
+	 *   anybody for. */
 	if (gancio_palco_ritela)
 		g.ritela = gancio_ritela;
 
-	/* ⛔⭐ E QUESTO SI COLLEGA SEMPRE, anche senza il ponte verso il palco: non
-	 *     chiede niente a nessuno — legge un numero che questo modulo ha gia',
-	 *     l'ultima misura consegnata dal palco di quell'utente.  ⚠ Se non c'e'
-	 *     ancora (primo attacco, nessun fotogramma) risponde `false`, e `rcp.c`
-	 *     concede quel che il client chiede: il comportamento di prima. */
+	/* ⛔⭐ AND THIS ONE IS ALWAYS CONNECTED, even without the bridge towards the stage: it
+	 *     asks nobody anything — it reads a number this module already has,
+	 *     the last size delivered by that user's stage.  ⚠ If it is not there
+	 *     yet (first attach, no frame) it answers `false`, and `rcp.c`
+	 *     grants what the client asks: the previous behaviour. */
 	g.tela_del_palco = gancio_tela_del_palco;
 
-	/* ⛔⭐ §5.1 — e si collega SOLO se il guardiano c'e', come tutti gli altri:
-	 *     un gancio collegato a vuoto direbbe a `rcp.c` «ho guardato, non c'e'
-	 *     nessuna sessione locale», che e' la bugia peggiore delle due — perche'
-	 *     e' indistinguibile dalla verita'. */
+	/* ⛔⭐ §5.1 — and it is connected ONLY if the guard is there, like all the others:
+	 *     a hook connected to nothing would tell `rcp.c` «I looked, there is
+	 *     no local session», which is the worse lie of the two — because
+	 *     it is indistinguishable from the truth. */
 	if (gancio_locale)
 		g.sessione_locale = gancio_sessione_locale;
 
-	/* ⭐ §7.6 — e si collega solo se c'e' chi puo' davvero terminare la
-	 *    sessione: senza, `rcp.c` congeda con `0x10` e scrive che il desktop
-	 *    non e' stato toccato, invece di far credere che sia finito. */
+	/* ⭐ §7.6 — and it is connected only if there is someone who can really terminate the
+	 *    session: without it, `rcp.c` says farewell with `0x10` and writes that the desktop
+	 *    was not touched, instead of making believe it has ended. */
 	if (gancio_termina)
 		g.termina_sessione = gancio_termina_sessione;
 
-	/* ⭐ D-001 — `SESSIONE` dice se il palco c'era e quale desktop e'. */
+	/* ⭐ D-001 — `SESSIONE` says whether the stage was there and which desktop it is. */
 	g.sessione_ripresa = gancio_sessione_ripresa;
 	g.desktop = gancio_desktop;
 
-	/* ⛔ E il tetto di §7.17 si SPEGNE qui: il canale e' stato aperto, che e'
-	 *    la cosa che quell'orologio aspettava.  ⚠ Zero e non «passato»: un
-	 *    orologio disarmato e uno scaduto non devono avere la stessa faccia. */
+	/* ⛔ And the cap of §7.17 is SWITCHED OFF here: the channel has been opened, which is
+	 *    the thing that clock was waiting for.  ⚠ Zero and not «past»: a
+	 *    disarmed clock and an expired one must not look the same. */
 	w->canale_entro = 0;
 
 	w->rcp = rcp_apri(&g, w->provenienza,
 	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 
-	/* ⛔ E QUI SI ARMA L'OROLOGIO DEL PRIMO TETTO — §4.6 riga 1.  `rcp_apri`
-	 *    mette lo stato a `attesa-ciao` e fa partire il cronometro: il
-	 *    cronometro e l'orologio che lo fara' scadere partono dalla stessa
-	 *    riga.  Nell'innesto questo mancava, e un client che apriva il canale
-	 *    e poi taceva restava appeso per sempre (`[M]` B6). */
+	/* ⛔ AND HERE THE CLOCK OF THE FIRST CAP IS ARMED — §4.6 line 1.  `rcp_apri`
+	 *    sets the state to `attesa-ciao` and starts the stopwatch: the
+	 *    stopwatch and the clock that will make it expire start from the same
+	 *    line.  In the graft this was missing, and a client that opened the channel
+	 *    and then went quiet stayed hanging forever (`[M]` B6). */
 	regola_battito(w);
-	registro_dice_di(REG_RCP, wt_chi(w), "canale di controllo = stream %ld", (long)stream_id);
+	registro_dice_di(REG_RCP, wt_chi(w), "control channel = stream %ld", (long)stream_id);
 }
 
 static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
@@ -7006,37 +7006,37 @@ static void rcp_passa(wt *w, const uint8_t *dati, size_t len)
 		return;
 	ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 	if (!rcp_ricevi(w->rcp, dati, len, ora)) {
-		/* La sessione e' finita.  Il battito che fa maturare la capsula
-		 * di chiusura lo ha gia' armato `chiudi_sessione()`, che e'
-		 * l'unico punto attraversato da TUTTE le strade della chiusura —
-		 * comprese le due che da qui non passano affatto. */
+		/* The session is over.  The heartbeat that matures the closing
+		 * capsule has already been armed by `chiudi_sessione()`, which is
+		 * the only point crossed by ALL the roads of closure —
+		 * including the two that do not come through here at all. */
 		return;
 	}
-	/* ⭐ E QUI, non un giro dopo: `rcp_ricevi()` e' la riga che puo' aver
-	 *    appena spedito `SESSIONE`, e aspettare il battito costerebbe fino a un
-	 *    secondo intero prima che il desktop compaia — cioe' il numero che
-	 *    l'utente guarda. */
+	/* ⭐ AND HERE, not one round later: `rcp_ricevi()` is the line that may have
+	 *    just sent `SESSIONE`, and waiting for the heartbeat would cost up to one
+	 *    whole second before the desktop appears — that is the number
+	 *    the user looks at. */
 	video_regola(w, ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS);
 	audio_regola(w);
 	regola_battito(w);
 }
 
-/* ⭐⭐ IL CANALE DI INPUT — la cucitura della fase 4, 14 agosto 2026.
+/* ⭐⭐ THE INPUT CHANNEL — the seam of phase 4, 14 Aug 2026.
  *
- * ⛔ Prima di oggi i byte dell'input arrivavano davvero e finivano in
- *    `conta_credito()` **e basta**: il canale era lecito, la riga di registro
- *    lo dichiarava («questa fase non lo serve»), e il client poteva muovere il
- *    mouse per un'ora senza che al desktop arrivasse niente.  ⇒ Qui quella
- *    tolleranza dichiarata si CHIUDE.
+ * ⛔ Before today the input bytes really arrived and ended up in
+ *    `conta_credito()` **and that was all**: the channel was lawful, the log line
+ *    declared it («this phase does not serve it»), and the client could move the
+ *    mouse for an hour without anything reaching the desktop.  ⇒ Here that
+ *    declared tolerance is CLOSED.
  *
- * ⚠ `stream` viaggia con i byte e non e' un di piu': `RCP.md` §2.5 ammette
- *   **un solo** stream di input, e senza l'identificatore `rcp.c` non puo'
- *   distinguere il secondo stream dalla continuazione del primo.  ⛔ E chi
- *   ospita non lo puo' giudicare al posto suo: vede gli stream, ma non sa che
- *   cosa sia «di input» finche' non ha letto i primi due byte del carico.
+ * ⚠ `stream` travels with the bytes and it is not an extra: `RCP.md` §2.5 admits
+ *   **a single** input stream, and without the identifier `rcp.c` cannot
+ *   tell the second stream from the continuation of the first.  ⛔ And whoever
+ *   hosts cannot judge it in its place: it sees the streams, but does not know what
+ *   is «input» until it has read the first two bytes of the payload.
  *
- * ⚠ E il ritorno `false` si tratta come in `rcp_passa()`: la sessione e'
- *   finita, e la capsula di chiusura l'ha gia' armata `chiudi_sessione()`. */
+ * ⚠ And the `false` return is treated as in `rcp_passa()`: the session is
+ *   over, and the closing capsule has already been armed by `chiudi_sessione()`. */
 static void rcp_passa_input(wt *w, int64_t stream, const uint8_t *dati,
                             size_t len)
 {
@@ -7046,19 +7046,19 @@ static void rcp_passa_input(wt *w, int64_t stream, const uint8_t *dati,
 	ora = ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS;
 	if (!rcp_ricevi_input(w->rcp, stream, dati, len, ora))
 		return;
-	/* ⛔ E il battito si rimette in riga anche di qui: un input puo' aver
-	 *    fatto scattare un congedo (una violazione di §7.3), e aspettare il
-	 *    giro dopo lascerebbe il motivo fermo in coda. */
+	/* ⛔ And the heartbeat is put back in line from here too: an input may have
+	 *    triggered a farewell (a violation of §7.3), and waiting for the
+	 *    next round would leave the reason stuck in the queue. */
 	regola_battito(w);
 }
 
-/* ⭐⭐ FASE 7 — i byte del canale APPUNTI (0x02), §2.5 e §7.4.
+/* ⭐⭐ PHASE 7 — the bytes of the CLIPBOARD channel (0x02), §2.5 and §7.4.
  *
- * ⛔ E `fin` arriva fin qui, mentre per l'input non arrivava: la' lo stream e'
- *    uno solo e resta aperto, qui e' **uno per trasferimento** e la sua fine
- *    e' l'unico modo che `rcp.c` ha di liberare il posto in tabella.  ⚠ Senza,
- *    il canale funzionerebbe per i primi otto trasferimenti e poi smetterebbe
- *    — cioe' il difetto peggiore da diagnosticare: quello che compare dopo. */
+ * ⛔ And `fin` arrives all the way here, while for input it did not: there the stream is
+ *    a single one and stays open, here it is **one per transfer** and its end
+ *    is the only way `rcp.c` has to free the slot in the table.  ⚠ Without it,
+ *    the channel would work for the first eight transfers and then stop
+ *    — that is the worst defect to diagnose: the one that shows up later. */
 static void rcp_passa_appunti(wt *w, int64_t stream, const uint8_t *dati,
                               size_t len, bool fin)
 {
@@ -7074,108 +7074,108 @@ static void rcp_passa_appunti(wt *w, int64_t stream, const uint8_t *dati,
 }
 
 /* ------------------------------------------------------------------------ */
-/* La chiusura della sessione WebTransport.                                  */
+/* Closing the WebTransport session.                                         */
 
 static void chiudi_adesso(wt *w, uint8_t motivo)
 {
 	uint8_t b[16];
 	size_t n = 0;
 
-	/* ⛔⭐ LA CAPSULA VA DENTRO UN FRAME `DATA`, E NELL'INNESTO USCIVA NUDA.
+	/* ⛔⭐ THE CAPSULE GOES INSIDE A `DATA` FRAME, AND IN THE GRAFT IT WENT OUT NAKED.
 	 *
-	 *    Il corpo di una CONNECT estesa e' un flusso di capsule (RFC 9297),
-	 *    ma in HTTP/3 il corpo di un messaggio viaggia dentro frame `DATA`:
-	 *    la capsula NON sta nuda sullo stream.  ⭐ E che il client le
-	 *    incapsuli lo dimostra il nostro stesso lato di LETTURA: la capsula
-	 *    ci arriva da `recv_data`, che nghttp3 invoca soltanto sul carico
-	 *    utile di un `DATA`.
+	 *    The body of an extended CONNECT is a stream of capsules (RFC 9297),
+	 *    but in HTTP/3 the body of a message travels inside `DATA` frames:
+	 *    the capsule does NOT sit naked on the stream.  ⭐ And that the client
+	 *    encapsulates them is proved by our own READING side: the capsule
+	 *    reaches us from `recv_data`, which nghttp3 invokes only on the payload
+	 *    of a `DATA`.
 	 *
-	 * ⛔ Scritti nudi, i sette byte `68 43 04 00 00 00 mm` il browser li
-	 *    legge col proprio strato HTTP/3: `0x68` ha i due bit alti a `01`,
-	 *    quindi e' un intero variabile di due byte, e il tipo di frame
-	 *    diventa `0x2843` — che non e' un tipo di frame HTTP/3 noto, e RFC
-	 *    9114 §9 impone di IGNORARLO.  La pagina non vedeva nessuna capsula:
-	 *    vedeva solo il FIN che arriva subito dietro, e un FIN sullo stream
-	 *    della CONNECT senza `CLOSE_WEBTRANSPORT_SESSION` chiude la sessione
-	 *    con codice 0 — cioe' il solo valore che `RCP.md` §3.1 vieta. */
+	 * ⛔ Written naked, the seven bytes `68 43 04 00 00 00 mm` are read by the browser
+	 *    with its own HTTP/3 layer: `0x68` has the two high bits at `01`,
+	 *    so it is a two-byte variable-length integer, and the frame type
+	 *    becomes `0x2843` — which is not a known HTTP/3 frame type, and RFC
+	 *    9114 §9 requires it to be IGNORED.  The page saw no capsule:
+	 *    it saw only the FIN arriving right behind, and a FIN on the
+	 *    CONNECT stream without `CLOSE_WEBTRANSPORT_SESSION` closes the session
+	 *    with code 0 — that is the only value `RCP.md` §3.1 forbids. */
 	b[n++] = 0x00; /* frame DATA */
-	b[n++] = 7;    /* 2 byte di tipo + 1 di lunghezza + 4 di codice */
-	b[n++] = 0x68; /* 0x2843, primo byte dell'intero variabile */
+	b[n++] = 7;    /* 2 bytes of type + 1 of length + 4 of code */
+	b[n++] = 0x68; /* 0x2843, first byte of the variable-length integer */
 	b[n++] = 0x43;
-	b[n++] = 4; /* la lunghezza della capsula: solo il codice */
+	b[n++] = 4; /* the capsule's length: only the code */
 	b[n++] = 0;
 	b[n++] = 0;
 	b[n++] = 0;
 	b[n++] = motivo;
 
 	if (!coda_metti(w, w->sessione, b, n, true)) {
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ la capsula di chiusura non entra in coda");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ the closing capsule does not fit in the queue");
 		return;
 	}
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "chiusa la sessione WebTransport, codice 0x%02x (%zu byte: "
-	                 "2 di frame DATA + 7 di capsula)",
+	                 "closed the WebTransport session, code 0x%02x (%zu bytes: "
+	                 "2 of DATA frame + 7 of capsule)",
 	                 motivo, n);
 }
 
 static void chiudi_sessione(wt *w, uint8_t motivo)
 {
-	/* ⛔ `RCP.md` §3.1 punto 3: si chiude la SESSIONE WebTransport con il
-	 *    codice d'errore applicativo pari al codice del motivo — non la
-	 *    connessione QUIC, che puo' reggere altro. */
+	/* ⛔ `RCP.md` §3.1 point 3: the WebTransport SESSION is closed with the
+	 *    application error code equal to the reason code — not the
+	 *    QUIC connection, which can carry other things. */
 	if (w->sessione == -1)
 		return;
 
-	/* ⛔⭐ E LA CAPSULA SI RIMANDA, invece di accodarla adesso — trovato da
-	 *     B11 il 10 agosto 2026, con browser veri.
+	/* ⛔⭐ AND THE CAPSULE IS DEFERRED, instead of being enqueued now — found by
+	 *     B11 on 10 Aug 2026, with real browsers.
 	 *
-	 *     `respingi()` manda `RESPINTO` sul canale di controllo e chiude la
-	 *     sessione nella riga dopo.  I due finivano nella stessa passata di
-	 *     scrittura, cioe' spesso nello stesso volo di pacchetti — e il
-	 *     browser processa la capsula `CLOSE_WEBTRANSPORT_SESSION` PRIMA dei
-	 *     byte dello stream, che a quel punto butta.  ⛔ La pagina non ha
-	 *     mai visto `RESPINTO`: ha visto silenzio.
+	 *     `respingi()` sends `RESPINTO` on the control channel and closes the
+	 *     session on the next line.  The two ended up in the same write
+	 *     pass, that is often in the same flight of packets — and the
+	 *     browser processes the `CLOSE_WEBTRANSPORT_SESSION` capsule BEFORE the
+	 *     stream bytes, which at that point it throws away.  ⛔ The page never
+	 *     saw `RESPINTO`: it saw silence.
 	 *
-	 * ⛔ E ACCODARE LA CAPSULA DIETRO AL `CONGEDO`, NELLA STESSA CODA, NON E'
-	 *    LA CURA: l'ordine sul filo ci sarebbe, ⚠ ma l'ordine sul filo non e'
-	 *    quel che manca.  Quel che serve e' TEMPO fra i due. */
+	 * ⛔ AND ENQUEUING THE CAPSULE BEHIND THE `CONGEDO`, IN THE SAME QUEUE, IS NOT
+	 *    THE CURE: the order on the wire would be there, ⚠ but the order on the wire is not
+	 *    what is missing.  What is needed is TIME between the two. */
 	w->chiusura = motivo;
-	/* ⛔⭐ L'ATTESA PARTE ADESSO, non «quando un battito vedra' la coda vuota»
-	 *     — misurato dal banco B7 l'11 agosto 2026, caso `server-in-chiusura`.
+	/* ⛔⭐ THE WAIT STARTS NOW, not «when a heartbeat sees the queue empty»
+	 *     — measured by bench B7 on 11 Aug 2026, case `server-in-chiusura`.
 	 *
-	 *     Qui c'era `w->chiusura_da = 0`, cioe' «non armato»: ad armarlo era
-	 *     il ramo di `wt_batti` che trova la coda gia' vuota.  ⛔ Allo
-	 *     spegnimento quel ramo non veniva percorso mai — il registro del
-	 *     server lo ha detto con queste parole: «capsula di chiusura non
-	 *     ancora matura (coda vuota) — chiusura_da = MAI ARMATO» dopo 200
-	 *     giri, quando ne bastavano cinquanta.
+	 *     Here there was `w->chiusura_da = 0`, that is «not armed»: arming it was
+	 *     the branch of `wt_batti` that finds the queue already empty.  ⛔ At
+	 *     shutdown that branch was never taken — the server's log
+	 *     said it in these words: «closing capsule not
+	 *     mature yet (queue empty) — chiusura_da = NEVER ARMED» after 200
+	 *     rounds, when fifty were enough.
 	 *
-	 * ⛔ Che cosa vedeva il client: il `CONGEDO 0x0c` arrivava, e la sessione
-	 *    si chiudeva SENZA codice — QUIC terminato con `codice 0, nessun
-	 *    motivo`.  Cioe' mancava la SECONDA strada di §3.1 punto 3, che le
-	 *    decisioni dell'11 agosto (§7.14, §7.15) rendono l'unica che arrivi
-	 *    sempre — su Firefox, che azzera il canale, era l'UNICA.
+	 * ⛔ What the client saw: the `CONGEDO 0x0c` arrived, and the session
+	 *    closed WITHOUT a code — QUIC terminated with `code 0, no
+	 *    reason`.  That is the SECOND road of §3.1 point 3 was missing, which the
+	 *    decisions of 11 August (§7.14, §7.15) make the only one that always
+	 *    arrives — on Firefox, which resets the channel, it was the ONLY one.
 	 *
-	 * ⚠ E il senso non cambia: se la coda NON e' vuota, il ramo `!coda_vuota`
-	 *   di `wt_batti` riazzera questo campo e l'attesa riparte da capo, come
-	 *   prima.  Quel che cambia e' che adesso l'attesa esiste anche quando
-	 *   nessuno ripassa a dire «la coda e' vuota». */
+	 * ⚠ And the meaning does not change: if the queue is NOT empty, the `!coda_vuota`
+	 *   branch of `wt_batti` resets this field and the wait starts over, as
+	 *   before.  What changes is that now the wait exists even when
+	 *   nobody comes back to say «the queue is empty». */
 	w->chiusura_da = ngtcp2_conn_get_timestamp(w->conn)
 	                 + WT_ATTESA_CHIUSURA_NS;
-	/* ⛔ E L'ATTESA HA UN FONDO — rilievo B-3.  «Quando la coda si sara'
-	 *    svuotata» e' una condizione che qualcun altro deve far avvenire; se
-	 *    non avviene, il punto 3 di §3.1 non si esegue mai e il motivo resta
-	 *    dentro il server.  Tre secondi sono sei volte l'attesa normale. */
+	/* ⛔ AND THE WAIT HAS A BACKSTOP — finding B-3.  «When the queue has
+	 *    emptied» is a condition someone else must make happen; if
+	 *    it does not happen, point 3 of §3.1 is never executed and the reason stays
+	 *    inside the server.  Three seconds is six times the normal wait. */
 	w->chiusura_scadenza =
 	    ngtcp2_conn_get_timestamp(w->conn) + 3ULL * NGTCP2_SECONDS;
-	/* ⛔ E chi rimanda un lavoro deve accendere anche cio' che lo fara'
-	 *    maturare: senza questo battito, su una violazione trovata al primo
-	 *    messaggio il client tace, nessuno ripassa di qui e la capsula non
-	 *    parte mai.  ⚠ E' il difetto misurato da B5 — 22 su 36. */
+	/* ⛔ And whoever postpones a job must also switch on what will make it
+	 *    mature: without this heartbeat, on a violation found at the first
+	 *    message the client goes quiet, nobody comes back here and the capsule never
+	 *    leaves.  ⚠ It is the defect measured by B5 — 22 out of 36. */
 	batti_fra(w, 100);
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "chiusura della sessione RIMANDATA, codice 0x%02x (in coda: "
-	                 "%zu elementi ancora da spedire)",
+	                 "session closure DEFERRED, code 0x%02x (in the queue: "
+	                 "%zu elements still to send)",
 	                 motivo, coda_da_spedire(w));
 }
 
@@ -7186,97 +7186,97 @@ static void manda_controllo(wt *w, const uint8_t *dati, size_t len)
 	(void)accoda(w, w->rcp_stream, dati, len);
 }
 
-/* ⛔⭐ I BYTE DI UNO STREAM DI TROPPO SI BUTTANO, E NON SI RIMANDANO INDIETRO
- *     — rilievo B-3, 10 agosto 2026 notte.
+/* ⛔⭐ THE BYTES OF A SURPLUS STREAM ARE THROWN AWAY, AND NOT SENT BACK
+ *     — finding B-3, night of 10 Aug 2026.
  *
- *     Qui c'era `accoda(w, stream_id, dati, len)`, cioe' il server rispediva
- *     al client i suoi stessi byte su uno stream che due righe piu' su aveva
- *     appena giudicato una **violazione di §2.5**.  ⛔ Un'eco che nessuna riga
- *     di `RCP.md` prevede, e tre conseguenze una peggiore dell'altra:
+ *     Here there was `accoda(w, stream_id, dati, len)`, that is the server sent back
+ *     to the client its own bytes on a stream that two lines above it had
+ *     just judged a **violation of §2.5**.  ⛔ An echo no line
+ *     of `RCP.md` provides for, and three consequences each worse than the other:
  *
- *       1. `coda_vuota()` non tornava mai vera, quindi la capsula di chiusura
- *          di §3.1 punto 3 non partiva mai (vedi `chiusura_scadenza`);
- *       2. `conta_credito()` riapriva la finestra a ogni giro, quindi il
- *          client poteva scrivere senza fine — e l'inattivita' di 30 s non
- *          scattava, perche' stava scrivendo;
- *       3. la coda cresceva quanto il client voleva, su una sessione gia'
- *          dichiarata morta (vedi `WT_CODA_MAX`).
+ *       1. `coda_vuota()` never became true, so the closing capsule
+ *          of §3.1 point 3 never left (see `chiusura_scadenza`);
+ *       2. `conta_credito()` reopened the window at every round, so the
+ *          client could write without end — and the 30 s idleness did not
+ *          fire, because it was writing;
+ *       3. the queue grew as much as the client wanted, on a session already
+ *          declared dead (see `WT_CODA_MAX`).
  *
- * ⭐ Quel che si fa invece: si butta, NON si riapre il credito, e §3 lo impone
- *    — «e ogni tolleranza va scritta nel registro».  ⚠ Le righe sono contate e
- *    non una per pacchetto: un client che scrive senza fine riempirebbe il
- *    registro, che e' un altro modo di perdere l'informazione. */
+ * ⭐ What is done instead: they are thrown away, the credit is NOT reopened, and §3 requires it
+ *    — «and every tolerance must be written in the log».  ⚠ The lines are counted and
+ *    not one per packet: a client writing without end would fill the
+ *    log, which is another way of losing the information. */
 static void scarta_stream_di_troppo(wt *w, int64_t stream_id, size_t len)
 {
 	w->scartati_stream++;
 	w->scartati_byte += len;
 	if (w->scartati_stream <= 3 || (w->scartati_stream % 256) == 0)
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ %zu byte BUTTATI dallo stream %ld: non e' il canale "
-		                 "di controllo (§2.5, la violazione e' gia' a verbale) — "
-		                 "%llu blocchi, %llu byte in tutto, e il credito NON si "
-		                 "riapre",
+		                 "⛔ %zu bytes DROPPED from stream %ld: it is not the control "
+		                 "channel (§2.5, the violation is already on record) — "
+		                 "%llu blocks, %llu bytes in total, and the credit is NOT "
+		                 "reopened",
 		                 len, (long)stream_id,
 		                 (unsigned long long)w->scartati_stream,
 		                 (unsigned long long)w->scartati_byte);
 }
 
 /* ------------------------------------------------------------------------ */
-/* Le capsule che arrivano dal client.                                       */
+/* The capsules arriving from the client.                                    */
 
 static void chiusa_dal_client(wt *w, uint32_t codice)
 {
 	bool valido;
 	uint8_t motivo;
 
-	/* ⛔⭐ E PRIMA DI TUTTO SI GUARDA SE QUEL CODICE ESISTE.
+	/* ⛔⭐ AND FIRST OF ALL WE CHECK WHETHER THAT CODE EXISTS.
 	 *
-	 *    `RCP.md` §3.1: il codice 0 significa «chiusura senza motivo» e NON
-	 *    DEVE essere usato — ogni chiusura ha un motivo di §8.2.  E §3 — la
-	 *    regola di rigore — chiede di scrivere NEL REGISTRO che cosa non si
-	 *    e' capito, non di supplire in silenzio.
+	 *    `RCP.md` §3.1: code 0 means «closure without reason» and MUST NOT
+	 *    be used — every closure has a reason of §8.2.  And §3 — the
+	 *    rigor rule — asks to write IN THE LOG what was not
+	 *    understood, not to make up for it silently.
 	 *
-	 * ⛔ E IL CODICE ARRIVA SU 32 BIT, NON SU 8: troncarlo al byte basso
-	 *    faceva entrare a verbale `0x0100` come `0x00`, cioe' come il solo
-	 *    valore che §3.1 vieta, e i due registri della STESSA chiusura si
-	 *    contraddicevano a due righe di distanza. */
+	 * ⛔ AND THE CODE ARRIVES ON 32 BITS, NOT ON 8: truncating it to the low byte
+	 *    put `0x0100` on record as `0x00`, that is as the only
+	 *    value §3.1 forbids, and the two logs of the SAME closure
+	 *    contradicted each other two lines apart. */
 	valido = codice >= (uint32_t)RCP_CHIUSO_DALL_UTENTE &&
 	         codice <= (uint32_t)RCP_GIA_ATTIVA_REMOTA;
 	if (!valido)
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⛔ VIOLAZIONE §3.1 — la pagina ha chiuso la sessione "
-		                 "col codice 0x%x, che non e' un motivo di §8.2 "
-		                 "(0 = «senza motivo», ed e' vietato).  A verbale va "
+		                 "⛔ VIOLATION §3.1 — the page closed the session "
+		                 "with code 0x%x, which is not a reason of §8.2 "
+		                 "(0 = «without reason», and it is forbidden).  On record goes "
 		                 "ERRORE_PROTOCOLLO",
 		                 codice);
 	motivo = (uint8_t)(valido ? codice : (uint32_t)RCP_ERRORE_PROTOCOLLO);
 
 	if (w->rcp && rcp_e_finita(w->rcp))
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ il motivo e' arrivato per la seconda strada di "
-		                 "§3.1 (il codice di chiusura): 0x%02x — i byte sul "
-		                 "canale non erano piu' spedibili",
+		                 "⭐ the reason arrived by the second road of "
+		                 "§3.1 (the close code): 0x%02x — the bytes on the "
+		                 "channel could no longer be sent",
 		                 motivo);
-	/* ⛔ E il POSTO si lascia adesso: §4.2, la sessione e' finita perche' lo
-	 *    dice il client.  Aspettare lo smontaggio del trasporto vuol dire
-	 *    tenerlo occupato addosso a chi si ricollega subito. */
+	/* ⛔ And the SLOT is given up now: §4.2, the session is over because the
+	 *    client says so.  Waiting for the transport teardown means
+	 *    keeping it occupied against whoever reconnects at once. */
 	if (w->rcp)
 		rcp_chiusa_dal_client(w->rcp, motivo);
 }
 
-/* ⛔⭐ Il corpo di una CONNECT estesa e' un flusso di capsule (RFC 9297):
- * varint tipo, varint lunghezza, corpo.  Di tutte, qui se ne guarda UNA:
- * `CLOSE_WEBTRANSPORT_SESSION` (0x2843).  ⚠ Si accumula, perche' una capsula
- * puo' arrivare a pezzi; e si scarta il resto senza rumore, perche' un flusso
- * di capsule sconosciute non e' un errore (RFC 9297 §3.2). */
+/* ⛔⭐ The body of an extended CONNECT is a stream of capsules (RFC 9297):
+ * varint type, varint length, body.  Of all of them, only ONE is looked at here:
+ * `CLOSE_WEBTRANSPORT_SESSION` (0x2843).  ⚠ It is accumulated, because a capsule
+ * can arrive in pieces; and the rest is discarded without noise, because a stream
+ * of unknown capsules is not an error (RFC 9297 §3.2). */
 static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 {
 	if (stream_id != w->sessione || len == 0)
 		return;
 
-	/* ⛔ I byte di una capsula gia' giudicata troppo grande si buttano
-	 *    MENTRE PASSANO, senza tenerli: e' l'unico modo di non farsi
-	 *    riempire la memoria da chi sa scrivere due interi variabili. */
+	/* ⛔ The bytes of a capsule already judged too big are thrown away
+	 *    AS THEY PASS, without keeping them: it is the only way not to get one's
+	 *    memory filled by whoever can write two variable-length integers. */
 	if (w->capsalta > 0) {
 		uint64_t n = w->capsalta < len ? w->capsalta : (uint64_t)len;
 		w->capsalta -= n;
@@ -7293,9 +7293,9 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 		size_t a, b;
 		const uint8_t *corpo;
 
-		/* ⚠ Qui il buffer non puo' crescere senza fine: un intero
-		 *   variabile e' al massimo 8 byte, quindi con 16 byte tipo e
-		 *   lunghezza si leggono sempre. */
+		/* ⚠ Here the buffer cannot grow without end: a variable-length
+		 *   integer is at most 8 bytes, so with 16 bytes type and
+		 *   length are always read. */
 		a = varint_leggi(&tipo, w->capsbuf.d, w->capsbuf.n);
 		if (a == 0)
 			return;
@@ -7303,21 +7303,21 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 		if (b == 0)
 			return;
 
-		/* ⛔⭐ E LA LUNGHEZZA SI CONTROLLA QUI, PRIMA DI ASPETTARE I BYTE.
+		/* ⛔⭐ AND THE LENGTH IS CHECKED HERE, BEFORE WAITING FOR THE BYTES.
 		 *
-		 *    L'ingresso che questo chiude: la pagina manda, sullo stream
-		 *    della CONNECT, un tipo di capsula sconosciuto e una
-		 *    lunghezza di 2^62-1, poi manda dati all'infinito.  Nessuna
-		 *    capsula si completava mai, il buffer cresceva di ogni byte
-		 *    che arrivava — e il credito continuava ad allargarsi, quindi
-		 *    il client poteva spedire senza fine.  ⛔ Su una connessione
-		 *    che non ha ancora superato la stretta di mano di RCP. */
+		 *    The entry point this closes: the page sends, on the
+		 *    CONNECT stream, an unknown capsule type and a
+		 *    length of 2^62-1, then sends data forever.  No
+		 *    capsule ever completed, the buffer grew by every byte
+		 *    that arrived — and the credit kept widening, so
+		 *    the client could send without end.  ⛔ On a connection
+		 *    that has not yet passed the RCP handshake. */
 		if (lung > WT_CAPSULA_MAX) {
 			uint64_t qui = w->capsbuf.n - a - b;
 			uint64_t presi = qui < lung ? qui : lung;
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "capsula 0x%llx lunga %llu byte, oltre il "
-			                 "tetto di %d: si SALTA senza tenerla (RFC "
+			                 "capsule 0x%llx %llu bytes long, beyond the "
+			                 "cap of %d: SKIPPED without keeping it (RFC "
 			                 "9297 §3.2; RCP.md §6.1)",
 			                 (unsigned long long)tipo,
 			                 (unsigned long long)lung, WT_CAPSULA_MAX);
@@ -7328,7 +7328,7 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 			continue;
 		}
 		if (w->capsbuf.n < a + b + lung)
-			return; /* sta sotto il tetto: si puo' aspettare */
+			return; /* it is below the cap: we can wait */
 
 		corpo = w->capsbuf.d + a + b;
 		if (tipo == 0x2843 && lung >= 4) {
@@ -7337,8 +7337,8 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 			                  ((uint32_t)corpo[2] << 8) |
 			                  (uint32_t)corpo[3];
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "la pagina ha CHIUSO la sessione "
-			                 "WebTransport: codice 0x%x",
+			                 "the page CLOSED the "
+			                 "WebTransport session: code 0x%x",
 			                 codice);
 			chiusa_dal_client(w, codice);
 		}
@@ -7347,21 +7347,21 @@ static void capsula(wt *w, int64_t stream_id, const uint8_t *dati, size_t len)
 }
 
 /* ------------------------------------------------------------------------ */
-/* Lo smistamento: che cosa e' WebTransport e che cosa e' di nghttp3.        */
+/* The sorting: what is WebTransport and what belongs to nghttp3.           */
 
-/* ⛔ `RCP.md` §4.2: «un FIN su quello stream, da una qualunque delle due parti,
- *    chiude la sessione.  Chi lo riceve DEVE considerarla finita».  ⚠ Era
- *    l'unica delle due direzioni che nessuno aveva percorso: la pagina che
- *    chiude la parte scrivente del canale e tiene viva la connessione lasciava
- *    il posto del registro occupato finche' non moriva la connessione — e una
- *    connessione un browser la tiene viva. */
+/* ⛔ `RCP.md` §4.2: «a FIN on that stream, from either of the two sides,
+ *    closes the session.  Whoever receives it MUST consider it over».  ⚠ It was
+ *    the only one of the two directions nobody had walked: the page that
+ *    closes the writing side of the channel and keeps the connection alive left
+ *    the registry slot occupied until the connection died — and a
+ *    connection, a browser keeps alive. */
 static void fin_dal_client(wt *w, int64_t stream_id)
 {
 	if (!w->rcp || stream_id != w->rcp_stream)
 		return;
 	registro_dice_di(REG_RCP, wt_chi(w),
-	                 "⛔ FIN del CLIENT sul canale di controllo (stream %ld): "
-	                 "§4.2, la sessione e' finita",
+	                 "⛔ CLIENT FIN on the control channel (stream %ld): "
+	                 "§4.2, the session is over",
 	                 (long)stream_id);
 	rcp_canale_chiuso(w->rcp);
 }
@@ -7376,22 +7376,22 @@ static void conta_credito(wt *w, int64_t stream_id, size_t n)
 
 enum esito { E_MIO, E_ATTENDI, E_HTTP3 };
 
-/* ⛔ `RCP.md` §2.5 — gli stream unidirezionali aperti dal CLIENT.
+/* ⛔ `RCP.md` §2.5 — the unidirectional streams opened by the CLIENT.
  *
- * ⭐ Come si riconosce il canale: «si leggono i primi due byte dello stream,
- *    che sono in ogni caso un campo `tipo`».  Il byte alto dice il canale, e di
- *    cinque valori leciti TRE sono violazioni quando arrivano di qui:
+ * ⭐ How the channel is recognised: «the first two bytes of the stream are read,
+ *    which are in any case a `tipo` field».  The high byte says the channel, and of
+ *    five lawful values THREE are violations when they arrive from here:
  *
- *    0x00  controllo  ⛔ il controllo vive solo sul primo bidirezionale
- *    0x01  input      ✓  legale: e' l'unico unidirezionale che il client apre
- *    0x02  appunti    ✓  legale, uno per trasferimento
- *    0x03  video      ⛔ verso sbagliato: il video va dal server al client
- *    0x04  audio      ⛔ «solo su datagram.  Su uno stream e' ERRORE_PROTOCOLLO»
+ *    0x00  control    ⛔ control lives only on the first bidirectional one
+ *    0x01  input      ✓  lawful: it is the only unidirectional one the client opens
+ *    0x02  clipboard  ✓  lawful, one per transfer
+ *    0x03  video      ⛔ wrong direction: video goes from server to client
+ *    0x04  audio      ⛔ «only on datagrams.  On a stream it is ERRORE_PROTOCOLLO»
  *
- * ⚠ E prima ancora bisogna sapere se lo stream e' NOSTRO: fra gli
- *   unidirezionali del client ci sono il canale di controllo di HTTP/3 e i due
- *   di QPACK, che sono di nghttp3.  Uno stream WebTransport si riconosce dal
- *   suo tipo, 0x54 — che come 0x41 non sta in un byte: sul filo sono 0x40 0x54. */
+ * ⚠ And even before that one must know whether the stream is OURS: among the
+ *   client's unidirectional ones there are HTTP/3's control channel and the two
+ *   of QPACK, which belong to nghttp3.  A WebTransport stream is recognised by its
+ *   type, 0x54 — which like 0x41 does not fit in a byte: on the wire it is 0x40 0x54. */
 static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
                              size_t len, bool fin, bytes *riunito)
 {
@@ -7410,35 +7410,35 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 			return E_HTTP3;
 		case G_UNI_OK:
 		case G_UNI_KO:
-			/* ⚠ I due giudizi NON sono la stessa cosa:
-			 *   G_UNI_KO  violazione, la sessione e' gia' caduta;
-			 *   G_UNI_OK  canale LECITO di §2.5 che questa fase non
-			 *             serve ancora (l'input arriva alla fase 4,
-			 *             gli appunti alla 7).
-			 *   ⛔ Nell'innesto entrambi erano segnati «violazione»,
-			 *      e un client conforme che apriva il canale di input
-			 *      si vedeva scartare OGNI byte per sempre, senza una
-			 *      riga di registro.
-			 *   In tutt'e due i casi i byte si contano nel credito:
-			 *   non contarli lascerebbe il client senza credito su
-			 *   una connessione viva (§2.3). */
+			/* ⚠ The two verdicts are NOT the same thing:
+			 *   G_UNI_KO  violation, the session has already dropped;
+			 *   G_UNI_OK  LAWFUL §2.5 channel that this phase does not
+			 *             serve yet (input arrives in phase 4,
+			 *             the clipboard in 7).
+			 *   ⛔ In the graft both were marked «violation»,
+			 *      and a conforming client opening the input channel
+			 *      saw EVERY byte discarded forever, without a
+			 *      log line.
+			 *   In both cases the bytes are counted against the credit:
+			 *   not counting them would leave the client without credit on
+			 *   a live connection (§2.3). */
 			conta_credito(w, stream_id, len);
 			return E_MIO;
 		case G_UNI_INPUT:
-			/* ⭐ Il canale di input, gia' riconosciuto: i byte si
-			 *    contano nel credito **e si consegnano**.  ⛔ Il
-			 *    credito prima della consegna: se la consegna facesse
-			 *    cadere la sessione, quei byte sono comunque arrivati
-			 *    e il conto di §2.3 non deve restare indietro. */
+			/* ⭐ The input channel, already recognised: the bytes are
+			 *    counted against the credit **and delivered**.  ⛔ The
+			 *    credit before delivery: if delivery made the
+			 *    session drop, those bytes have arrived anyway
+			 *    and the count of §2.3 must not fall behind. */
 			conta_credito(w, stream_id, len);
 			rcp_passa_input(w, stream_id, dati, len);
 			return E_MIO;
 		case G_UNI_APPUNTI:
-			/* ⭐ Il canale appunti, gia' riconosciuto.  ⛔ Il credito PRIMA
-			 *    della consegna, come per l'input, e per la stessa ragione: se
-			 *    la consegna facesse cadere la sessione, quei byte sono
-			 *    comunque arrivati e il conto di §2.3 non deve restare
-			 *    indietro. */
+			/* ⭐ The clipboard channel, already recognised.  ⛔ The credit BEFORE
+			 *    delivery, as for input, and for the same reason: if
+			 *    delivery made the session drop, those bytes have
+			 *    arrived anyway and the count of §2.3 must not fall
+			 *    behind. */
 			conta_credito(w, stream_id, len);
 			rcp_passa_appunti(w, stream_id, dati, len, fin);
 			return E_MIO;
@@ -7457,8 +7457,8 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 		return E_ATTENDI;
 
 	if (!(g->pref.d[0] == 0x40 && g->pref.d[1] == 0x54)) {
-		/* Non e' WebTransport: e' di nghttp3, e i byte vanno consegnati
-		 * interi — compresi quelli che abbiamo trattenuto. */
+		/* It is not WebTransport: it belongs to nghttp3, and the bytes must be delivered
+		 * whole — including those we held back. */
 		bytes_aggiungi(riunito, g->pref.d, g->pref.n);
 		bytes_libera(&g->pref);
 		g->genere = G_NONWT;
@@ -7466,18 +7466,18 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	}
 	n = varint_leggi(&sessione, g->pref.d + 2, g->pref.n - 2);
 	if (n == 0 || g->pref.n < 2 + n + 2)
-		return E_ATTENDI; /* il campo `tipo` non e' ancora tutto arrivato */
+		return E_ATTENDI; /* the `tipo` field has not fully arrived yet */
 
 	consumati = g->pref.n;
 	tipo = (uint16_t)((g->pref.d[2 + n] << 8) | g->pref.d[2 + n + 1]);
 	canale = (uint8_t)(tipo >> 8);
-	/* ⛔ IL CARICO RCP COMINCIA QUI, e comincia **col `tipo`**: i due byte che
-	 *    abbiamo appena sbirciato per sapere di che canale si tratta sono del
-	 *    messaggio, non del preambolo.  ⚠ Sbirciarli e poi non consegnarli
-	 *    darebbe a `rcp.c` un messaggio senza intestazione — e il sintomo
-	 *    sarebbe «il primo input di ogni sessione e' malformato».
-	 * ⚠ E `bytes_libera()` e' stato spostato in fondo apposta: fino a quel
-	 *   momento `carico` punta dentro `g->pref`. */
+	/* ⛔ THE RCP PAYLOAD STARTS HERE, and it starts **with `tipo`**: the two bytes we
+	 *    have just peeked at to know which channel it is belong to the
+	 *    message, not to the preamble.  ⚠ Peeking at them and then not delivering them
+	 *    would give `rcp.c` a message without a header — and the symptom
+	 *    would be «the first input of every session is malformed».
+	 * ⚠ And `bytes_libera()` was moved to the end on purpose: until that
+	 *   moment `carico` points inside `g->pref`. */
 	carico = g->pref.d + 2 + n;
 	carico_n = g->pref.n - (2 + n);
 	conta_credito(w, stream_id, consumati);
@@ -7508,51 +7508,51 @@ static enum esito smista_uni(wt *w, int64_t stream_id, const uint8_t *dati,
 	            : canale == 0x02 ? G_UNI_APPUNTI
 	                             : G_UNI_OK;
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "stream unidirezionale %ld del client, sessione %llu, tipo "
-	                 "0x%04x, canale 0x%02x — %s",
+	                 "client unidirectional stream %ld, session %llu, type "
+	                 "0x%04x, channel 0x%02x — %s",
 	                 (long)stream_id, (unsigned long long)sessione, tipo, canale,
-	                 guasto ? "VIOLAZIONE"
+	                 guasto ? "VIOLATION"
 	                 : canale == 0x01
-	                        ? "⭐ INPUT, e da oggi si SERVE: i byte vanno a "
+	                        ? "⭐ INPUT, and from today it is SERVED: the bytes go to "
 	                          "rcp_ricevi_input() (§7.3)"
 	                 : canale == 0x02
-	                        ? "⭐ APPUNTI, e dalla fase 7 si SERVONO: i byte vanno "
-	                          "a rcp_ricevi_appunti() (§7.4).  ⚠ Uno stream per "
-	                          "trasferimento, quindi di questi ce n'e' piu' d'uno"
-	                        : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i "
-	                          "byte si contano nel credito e si scartano, e "
-	                          "questa riga e' la tolleranza dichiarata (§3)");
+	                        ? "⭐ CLIPBOARD, and since phase 7 it is SERVED: the bytes go "
+	                          "to rcp_ricevi_appunti() (§7.4).  ⚠ One stream per "
+	                          "transfer, so of these there is more than one"
+	                        : "lawful (§2.5).  ⚠ But this phase does not serve it: the "
+	                          "bytes are counted against the credit and discarded, and "
+	                          "this line is the declared tolerance (§3)");
 	if (guasto) {
 		if (w->rcp) {
 			rcp_violazione(w->rcp, guasto);
 		} else {
-			/* ⚠ Nessun canale di controllo ancora aperto: il `CONGEDO`
-			 *   non ha una strada, e resta il punto 3 di §3.1 — il
-			 *   motivo dentro la chiusura della sessione.  ⭐ E' il
-			 *   secondo condizionale di §3.1 all'opera: pretendere
-			 *   tutt'e tre i punti sempre darebbe rosso sul codice
-			 *   giusto. */
+			/* ⚠ No control channel open yet: the `CONGEDO`
+			 *   has no road, and point 3 of §3.1 remains — the
+			 *   reason inside the session closure.  ⭐ It is the
+			 *   second conditional of §3.1 at work: demanding
+			 *   all three points always would give red on the
+			 *   right code. */
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⚠ nessun canale di controllo: il motivo "
-			                 "viaggia solo nella chiusura della sessione");
+			                 "⚠ no control channel: the reason "
+			                 "travels only in the session closure");
 			chiudi_sessione(w, RCP_ERRORE_PROTOCOLLO);
 		}
 	} else if (canale == 0x01) {
-		/* ⭐ Il primo pezzo del canale di input arriva insieme al
-		 *    preambolo che l'ha fatto riconoscere: si consegna SUBITO.
-		 *    ⛔ Aspettare il pacchetto dopo perderebbe il primo
-		 *    messaggio di ogni sessione — e il primo messaggio e'
-		 *    proprio quello che l'utente sente come «il primo clic non
-		 *    ha fatto niente». */
+		/* ⭐ The first piece of the input channel arrives together with the
+		 *    preamble that made it recognisable: it is delivered AT ONCE.
+		 *    ⛔ Waiting for the next packet would lose the first
+		 *    message of every session — and the first message is
+		 *    precisely the one the user feels as «the first click
+		 *    did nothing». */
 		rcp_passa_input(w, stream_id, carico, carico_n);
 	} else if (canale == 0x02) {
-		/* ⭐ Come per l'input: il primo pezzo arriva insieme al preambolo che
-		 *    l'ha fatto riconoscere, e si consegna SUBITO.  ⛔ Aspettare il
-		 *    pacchetto dopo perderebbe il primo messaggio di ogni
-		 *    trasferimento — e su questo canale un trasferimento e' spesso UN
-		 *    messaggio solo, quindi si perderebbe il trasferimento intero.
-		 * ⚠ E il `fin` viaggia con lui: uno stream che porta un messaggio corto
-		 *   puo' arrivare tutto insieme, preambolo e FIN compresi. */
+		/* ⭐ As for input: the first piece arrives together with the preamble that
+		 *    made it recognisable, and it is delivered AT ONCE.  ⛔ Waiting for the
+		 *    next packet would lose the first message of every
+		 *    transfer — and on this channel a transfer is often ONE
+		 *    message only, so the whole transfer would be lost.
+		 * ⚠ And the `fin` travels with it: a stream carrying a short message
+		 *   can arrive all together, preamble and FIN included. */
 		rcp_passa_appunti(w, stream_id, carico, carico_n, fin);
 	}
 	bytes_libera(&g->pref);
@@ -7566,14 +7566,14 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	uint64_t sessione = 0;
 	size_t n, consumati;
 
-	/* ⛔ Gli unidirezionali APERTI DAL CLIENT (§2.5) passano di qui prima di
-	 *    tutto: fra loro c'e' il canale di controllo di HTTP/3 e i due di
-	 *    QPACK, che sono di nghttp3 e non nostri. */
+	/* ⛔ The unidirectional ones OPENED BY THE CLIENT (§2.5) go through here first of
+	 *    all: among them there are HTTP/3's control channel and the two of
+	 *    QPACK, which belong to nghttp3 and not to us. */
 	if ((stream_id & 0x03) == 0x02)
 		return smista_uni(w, stream_id, dati, len, fin, riunito);
 
-	/* Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e
-	 * gli stream WebTransport arrivano tutti di li'. */
+	/* Only the bidirectional streams opened by the client: the extended CONNECT and
+	 * the WebTransport streams all arrive from there. */
 	if ((stream_id & 0x03) != 0x00)
 		return E_HTTP3;
 
@@ -7582,22 +7582,22 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 		return E_HTTP3;
 
 	if (g && g->genere == G_WT) {
-		/* ⭐ Uno stream WebTransport gia' riconosciuto. */
+		/* ⭐ A WebTransport stream already recognised. */
 		if (len > 0) {
 			if (stream_id == w->rcp_stream) {
 				rcp_passa(w, dati, len);
 				conta_credito(w, stream_id, len);
 			} else {
-				/* ⛔ NON si rimandano indietro e NON si riapre il
-				 *    credito: vedi `scarta_stream_di_troppo()`. */
+				/* ⛔ They are NOT sent back and the credit is NOT
+				 *    reopened: see `scarta_stream_di_troppo()`. */
 				scarta_stream_di_troppo(w, stream_id, len);
 			}
 		}
-		/* ⛔ E IL FIN SI GUARDA DOPO I BYTE, non prima: gli ultimi byte
-		 *    sono arrivati INSIEME a lui e vanno consegnati mentre la
-		 *    sessione e' ancora viva, o chi li riceve li leggerebbe come
-		 *    byte spediti dopo la fine — cioe' come una violazione del
-		 *    client che non c'e' stata. */
+		/* ⛔ AND THE FIN IS LOOKED AT AFTER THE BYTES, not before: the last bytes
+		 *    arrived TOGETHER with it and must be delivered while the
+		 *    session is still alive, or whoever receives them would read them as
+		 *    bytes sent after the end — that is as a client violation
+		 *    that never happened. */
 		if (fin)
 			fin_dal_client(w, stream_id);
 		return E_MIO;
@@ -7611,17 +7611,17 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	if (!bytes_aggiungi(&g->pref, dati, len))
 		return E_HTTP3;
 	if (g->pref.n < 2) {
-		/* ⚠ E NON si allarga la finestra: quei byte non li ha ancora
-		 *   presi nessuno, e contarli adesso e poi di nuovo falserebbe il
-		 *   credito. */
+		/* ⚠ AND the window is NOT widened: those bytes have not been
+		 *   taken by anyone yet, and counting them now and then again would distort the
+		 *   credit. */
 		return E_ATTENDI;
 	}
 
-	/* ⛔ Il tipo di frame WEBTRANSPORT_STREAM e' 0x41 — ma un intero
-	 *    variabile non lo scrive in un byte: 0x41 vale 65, e in un byte ce
-	 *    ne stanno 63.  Sul filo sono DUE byte, 0x40 0x41, ed e' per questo
-	 *    che due bastano a decidere.  Un frame HEADERS comincia per 0x01,
-	 *    uno DATA per 0x00. */
+	/* ⛔ The WEBTRANSPORT_STREAM frame type is 0x41 — but a variable-length
+	 *    integer does not write it in one byte: 0x41 is 65, and one byte holds
+	 *    63.  On the wire it is TWO bytes, 0x40 0x41, and that is why
+	 *    two are enough to decide.  A HEADERS frame starts with 0x01,
+	 *    a DATA one with 0x00. */
 	if (!(g->pref.d[0] == 0x40 && g->pref.d[1] == 0x41)) {
 		bytes_aggiungi(riunito, g->pref.d, g->pref.n);
 		bytes_libera(&g->pref);
@@ -7636,47 +7636,47 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 	consumati = g->pref.n;
 	g->genere = G_WT;
 
-	/* ⭐ `RCP.md` §4.2: il PRIMO stream bidirezionale che il client apre
-	 *    nella sessione e' il canale di controllo.
+	/* ⭐ `RCP.md` §4.2: the FIRST bidirectional stream the client opens
+	 *    in the session is the control channel.
 	 *
-	 * ⚠ E «il primo» QUI e' il primo RICONOSCIUTO, non il primo APERTO: i
-	 *   due stream viaggiano in pacchetti diversi, e fra stream diversi la
-	 *   rete non promette nessun ordine. */
+	 * ⚠ And «the first» HERE is the first RECOGNISED, not the first OPENED: the
+	 *   two streams travel in different packets, and between different streams the
+	 *   network promises no order. */
 	if (w->rcp_stream == -1) {
 		rcp_avvia(w, stream_id);
 	} else {
-		/* ⛔ `RCP.md` §2.5: «il client NON DEVE aprire stream
-		 *    bidirezionali oltre lo 0».  Un secondo bidirezionale non e'
-		 *    un canale nuovo: e' una violazione.
+		/* ⛔ `RCP.md` §2.5: «the client MUST NOT open bidirectional
+		 *    streams beyond 0».  A second bidirectional one is not
+		 *    a new channel: it is a violation.
 		 *
-		 * ⛔ E LA DIAGNOSI NON DEVE INCOLPARE L'ORDINE D'ARRIVO.  Se
-		 *    questo stream ha un numero PIU' BASSO di quello eletto, il
-		 *    primo aperto era lui, e a scambiarli e' stata la rete: gli
-		 *    stream restano due — e due e' la violazione, comunque siano
-		 *    arrivati — ma «un secondo stream» detto del numero piu'
-		 *    basso manda a cercare il difetto nel client, che li' non ha
-		 *    sbagliato niente. */
+		 * ⛔ AND THE DIAGNOSIS MUST NOT BLAME THE ORDER OF ARRIVAL.  If
+		 *    this stream has a LOWER number than the elected one, the
+		 *    first opened was this one, and it was the network that swapped them: the
+		 *    streams stay two — and two is the violation, however they
+		 *    arrived — but «a second stream» said of the lower
+		 *    number sends people looking for the defect in the client, which there got
+		 *    nothing wrong. */
 		if (stream_id < w->rcp_stream)
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⛔ due stream bidirezionali dal client dentro "
-			                 "la sessione: %ld e %ld — e il PRIMO APERTO "
-			                 "era il %ld, arrivato per secondo: il canale "
-			                 "di controllo e' stato eletto per ordine "
-			                 "d'arrivo, non per numero",
+			                 "⛔ two bidirectional streams from the client inside "
+			                 "the session: %ld and %ld — and the FIRST OPENED "
+			                 "was %ld, which arrived second: the control "
+			                 "channel was elected by order of "
+			                 "arrival, not by number",
 			                 (long)w->rcp_stream, (long)stream_id,
 			                 (long)stream_id);
 		else
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⛔ due stream bidirezionali dal client dentro "
-			                 "la sessione: il controllo e' il %ld, e il %ld "
-			                 "e' di troppo",
+			                 "⛔ two bidirectional streams from the client inside "
+			                 "the session: control is %ld, and %ld "
+			                 "is one too many",
 			                 (long)w->rcp_stream, (long)stream_id);
 		if (w->rcp)
 			rcp_violazione(w->rcp,
 			               "due stream bidirezionali dal client dentro "
 			               "la sessione (§2.5)");
 	}
-	registro_dice_di(REG_WT, wt_chi(w), "stream %ld e' WebTransport, sessione %llu",
+	registro_dice_di(REG_WT, wt_chi(w), "stream %ld is WebTransport, session %llu",
 	                 (long)stream_id, (unsigned long long)sessione);
 
 	if (consumati > 2 + n) {
@@ -7688,22 +7688,22 @@ static enum esito smista(wt *w, int64_t stream_id, const uint8_t *dati,
 			scarta_stream_di_troppo(w, stream_id, rn);
 	}
 	bytes_libera(&g->pref);
-	/* ⚠ Il credito dei byte del PREFISSO si riapre comunque: quei byte li
-	 *   abbiamo consumati noi per giudicare lo stream, e non contarli
-	 *   bloccherebbe anche il canale di controllo legittimo.  ⛔ Quel che NON
-	 *   si riapre e' il credito dei byte di un canale di troppo — vedi il
-	 *   ramo qui sopra e `scarta_stream_di_troppo()`. */
+	/* ⚠ The credit of the PREFIX bytes is reopened anyway: those bytes
+	 *   we consumed ourselves to judge the stream, and not counting them
+	 *   would block the legitimate control channel too.  ⛔ What is NOT
+	 *   reopened is the credit of the bytes of a surplus channel — see the
+	 *   branch above and `scarta_stream_di_troppo()`. */
 	conta_credito(w, stream_id, consumati);
 
-	/* ⛔ Anche qui: lo stream puo' essere riconosciuto e finito nello stesso
-	 *    pacchetto (§4.2, il FIN da una qualunque delle due parti). */
+	/* ⛔ Here too: the stream can be recognised and finished in the same
+	 *    packet (§4.2, the FIN from either of the two sides). */
 	if (fin)
 		fin_dal_client(w, stream_id);
 	return E_MIO;
 }
 
 /* ------------------------------------------------------------------------ */
-/* I richiami di nghttp3.                                                    */
+/* The nghttp3 callbacks.                                                    */
 
 static int cb_acked(nghttp3_conn *conn, int64_t stream_id, uint64_t datalen,
                     void *cud, void *sud)
@@ -7723,10 +7723,10 @@ static int cb_recv_data(nghttp3_conn *conn, int64_t stream_id,
 	wt *w = cud;
 	(void)sud;
 	(void)conn;
-	/* ⭐ Il corpo della CONNECT e' un flusso di capsule. */
+	/* ⭐ The body of the CONNECT is a stream of capsules. */
 	capsula(w, stream_id, data, datalen);
-	/* I byte del corpo si contano nel credito: senza, il client resta senza
-	 * finestra su una connessione viva (§2.3). */
+	/* The body bytes are counted against the credit: without it, the client is left without
+	 * a window on a live connection (§2.3). */
 	ngtcp2_conn_extend_max_stream_offset(w->conn, stream_id, datalen);
 	ngtcp2_conn_extend_max_offset(w->conn, datalen);
 	return 0;
@@ -7781,8 +7781,8 @@ static int cb_recv_header(nghttp3_conn *conn, int64_t stream_id, int32_t token,
 	case NGHTTP3_QPACK_TOKEN__METHOD:
 		copia(r->metodo, sizeof r->metodo, value);
 		break;
-	/* ⭐ L'intestazione che distingue una CONNECT estesa da una CONNECT
-	 *    normale (RFC 9220). */
+	/* ⭐ The header that tells an extended CONNECT from a normal
+	 *    CONNECT (RFC 9220). */
 	case NGHTTP3_QPACK_TOKEN__PROTOCOL:
 		copia(r->protocollo, sizeof r->protocollo, value);
 		break;
@@ -7792,9 +7792,9 @@ static int cb_recv_header(nghttp3_conn *conn, int64_t stream_id, int32_t token,
 	return 0;
 }
 
-/* Lo stream della CONNECT estesa NON si chiude: E' la sessione.  Un lettore che
- * dicesse «ho finito» ci metterebbe sopra il FIN, e la sessione morirebbe
- * nell'istante in cui si apre. */
+/* The extended CONNECT stream is NOT closed: it IS the session.  A reader that
+ * said «I have finished» would put the FIN on it, and the session would die
+ * the instant it opens. */
 static nghttp3_ssize cb_niente_dati(nghttp3_conn *conn, int64_t stream_id,
                                     nghttp3_vec *vec, size_t veccnt,
                                     uint32_t *pflags, void *cud, void *sud)
@@ -7838,15 +7838,15 @@ static int apri_sessione(wt *w, richiesta *r)
 	nghttp3_data_reader dr;
 	int rv;
 
-	/* ⛔ `RCP.md` §2.2: il server NON DEVE accettare una sessione
-	 *    WebTransport su un percorso diverso, e il rifiuto e' 404 (rilievo
-	 *    R1.24, che ha scelto uno dei tre stati che erano tutti leciti).  E
-	 *    si scrive nel registro: e' §3 applicata al primo byte, prima ancora
-	 *    che RCP cominci. */
+	/* ⛔ `RCP.md` §2.2: the server MUST NOT accept a WebTransport
+	 *    session on a different path, and the refusal is 404 (finding
+	 *    R1.24, which chose one of the three statuses that were all lawful).  And
+	 *    it is written in the log: it is §3 applied to the first byte, before
+	 *    RCP even starts. */
 	if (strcmp(r->uri, "/rcp/1") != 0) {
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ sessione WebTransport RIFIUTATA, percorso «%s» "
-		                 "(atteso /rcp/1 — §2.2): 404",
+		                 "⛔ WebTransport session REFUSED, path «%s» "
+		                 "(expected /rcp/1 — §2.2): 404",
 		                 r->uri);
 		return risposta_secca(w, r->id, "404");
 	}
@@ -7874,21 +7874,21 @@ static int apri_sessione(wt *w, richiesta *r)
 
 	w->sessione = r->id;
 
-	/* ⛔⭐ E QUI PARTE IL TETTO DI §4.6 PER L'APERTURA DEL CANALE — 5 s.
+	/* ⛔⭐ AND HERE STARTS THE §4.6 CAP FOR OPENING THE CHANNEL — 5 s.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, dall'utente l'11 agosto 2026.  Chi apre la
-	 *    sessione e non apre mai il canale di controllo non aveva addosso
-	 *    NESSUN tetto: `[M]` B6, 20 014 ms senza che succedesse niente.
+	 * ✅ `DECISIONI.md` §7.17, from the user on 11 Aug 2026.  Whoever opens the
+	 *    session and never opens the control channel had NO cap
+	 *    on them: `[M]` B6, 20 014 ms without anything happening.
 	 *
-	 * ⛔ E si arma anche cio' che lo fara' scadere, nello stesso istante — e'
-	 *    la lezione piu' cara dell'innesto, scritta trenta righe piu' sotto in
-	 *    `rcp_avvia`: un tetto senza battito e' un tetto che non scade. */
+	 * ⛔ And what will make it expire is armed too, at the same instant — it is
+	 *    the dearest lesson of the graft, written thirty lines further below in
+	 *    `rcp_avvia`: a cap without a heartbeat is a cap that does not expire. */
 	w->canale_entro = ngtcp2_conn_get_timestamp(w->conn)
 	                  + WT_TETTO_CANALE_NS;
 	batti_fra(w, 100);
 
-	registro_dice_di(REG_WT, wt_chi(w), "⭐ sessione WebTransport APERTA su %s (stream %ld) — "
-	                 "il canale di controllo va aperto entro %llu ms (§4.6, "
+	registro_dice_di(REG_WT, wt_chi(w), "⭐ WebTransport session OPENED on %s (stream %ld) — "
+	                 "the control channel must be opened within %llu ms (§4.6, "
 	                 "DECISIONI.md §7.17)",
 	                 r->uri, (long)r->id,
 	                 (unsigned long long)(WT_TETTO_CANALE_NS / NGTCP2_MILLISECONDS));
@@ -7905,17 +7905,17 @@ static int cb_end_headers(nghttp3_conn *conn, int64_t stream_id, int fin,
 	(void)sud;
 	if (!r)
 		return 0;
-	/* ⭐ E' qui che nasce la sessione WebTransport. */
+	/* ⭐ It is here that the WebTransport session is born. */
 	if (strcmp(r->metodo, "CONNECT") == 0 &&
 	    strcmp(r->protocollo, "webtransport") == 0)
 		return apri_sessione(w, r) == 0 ? 0 : NGHTTP3_ERR_CALLBACK_FAILURE;
 
-	/* ⚠ Tutto il resto NON e' servito da questo ascoltatore: la pagina la
-	 *   serve il TCP (`RCP.md` §2.4).  Un 404 e' la risposta esatta, e si
-	 *   dichiara invece di lasciare la richiesta appesa. */
+	/* ⚠ Everything else is NOT served by this listener: the page is
+	 *   served by TCP (`RCP.md` §2.4).  A 404 is the exact answer, and it is
+	 *   declared instead of leaving the request hanging. */
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "richiesta HTTP/3 %s %s sullo stream %ld: 404 (su UDP si "
-	                 "serve solo la sessione WebTransport)",
+	                 "HTTP/3 request %s %s on stream %ld: 404 (over UDP only "
+	                 "the WebTransport session is served)",
 	                 r->metodo, r->uri, (long)stream_id);
 	return risposta_secca(w, stream_id, "404") == 0
 	         ? 0
@@ -7983,16 +7983,16 @@ static int apri_http3(wt *w)
 		return 0;
 	if (ngtcp2_conn_get_streams_uni_left2(w->conn) < 3) {
 		registro_dice_di(REG_WT, wt_chi(w),
-		                 "⛔ il client non concede nemmeno 3 stream "
-		                 "unidirezionali: HTTP/3 non si apre");
+		                 "⛔ the client does not grant even 3 "
+		                 "unidirectional streams: HTTP/3 does not open");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 
 	nghttp3_settings_default(&settings);
 	settings.qpack_max_dtable_capacity = 4096;
 	settings.qpack_blocked_streams = 100;
-	/* ⭐ Le due che nghttp3 sa fare da se', e sono negli RFC. */
-	settings.enable_connect_protocol = 1; /* RFC 9220, l'extended CONNECT */
+	/* ⭐ The two nghttp3 can do by itself, and they are in the RFCs. */
+	settings.enable_connect_protocol = 1; /* RFC 9220, the extended CONNECT */
 	settings.h3_datagram = 1;             /* RFC 9297 (RCP.md §2.2) */
 
 	rv = nghttp3_conn_server_new(&w->h3, &callbacks, &settings,
@@ -8010,21 +8010,21 @@ static int apri_http3(wt *w)
 	if (ngtcp2_conn_open_uni_stream(w->conn, &ctrl, NULL) != 0 ||
 	    ngtcp2_conn_open_uni_stream(w->conn, &enc, NULL) != 0 ||
 	    ngtcp2_conn_open_uni_stream(w->conn, &dec, NULL) != 0) {
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ non apro i tre stream di servizio di HTTP/3");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ cannot open the three HTTP/3 service streams");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 
-	/* ⭐ Si tiene il numero: quando nghttp3 scrivera' il suo SETTINGS su
-	 *    questo stream sara' l'unica occasione di aggiungerci le due
-	 *    dichiarazioni di WebTransport. */
+	/* ⭐ The number is kept: when nghttp3 writes its SETTINGS on
+	 *    this stream it will be the only occasion to add the two
+	 *    WebTransport declarations to it. */
 	w->ctrl_id = ctrl;
 
 	if (nghttp3_conn_bind_control_stream(w->h3, ctrl) != 0 ||
 	    nghttp3_conn_bind_qpack_streams(w->h3, enc, dec) != 0) {
-		registro_dice_di(REG_WT, wt_chi(w), "⛔ non lego gli stream di servizio a nghttp3");
+		registro_dice_di(REG_WT, wt_chi(w), "⛔ cannot bind the service streams to nghttp3");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
-	registro_dettaglio_di(REG_WT, wt_chi(w), "HTTP/3 aperto: controllo=%ld qpack=%ld/%ld",
+	registro_dettaglio_di(REG_WT, wt_chi(w), "HTTP/3 open: control=%ld qpack=%ld/%ld",
 	                           (long)ctrl, (long)enc, (long)dec);
 	return 0;
 }
@@ -8047,9 +8047,9 @@ wt *wt_nuovo(ngtcp2_conn *conn, ngtcp2_ccerr *ultimo_errore,
 	w->video_stream_ultimo = -1;
 	snprintf(w->provenienza, sizeof w->provenienza, "%s",
 	         provenienza ? provenienza : "");
-	/* ⛔ Nell'elenco delle vive PRIMA di restituire: un fotogramma puo'
-	 *    arrivare dal palco fra due giri di `poll`, e una sessione che non e'
-	 *    nell'elenco non lo riceve — senza che nessuno se ne accorga. */
+	/* ⛔ In the list of live ones BEFORE returning: a frame can
+	 *    arrive from the stage between two `poll` rounds, and a session that is not
+	 *    in the list does not receive it — without anybody noticing. */
 	w->viva_dopo = vive_prima;
 	vive_prima = w;
 	return w;
@@ -8059,8 +8059,8 @@ void wt_libera(wt *w)
 {
 	if (!w)
 		return;
-	/* ⛔ Fuori dall'elenco delle vive PRIMA di liberare qualunque cosa: da qui
-	 *    in poi `wt_video_diffondi()` non deve piu' trovarla. */
+	/* ⛔ Out of the list of live ones BEFORE freeing anything: from here
+	 *    on `wt_video_diffondi()` must no longer find it. */
 	if (vive_prima == w) {
 		vive_prima = w->viva_dopo;
 	} else {
@@ -8070,250 +8070,250 @@ void wt_libera(wt *w)
 				break;
 			}
 	}
-	/* ⛔⭐ E SI SPEGNE IL PALCO SE NESSUNO GUARDA PIU'.
+	/* ⛔⭐ AND THE STAGE IS SWITCHED OFF IF NOBODY IS WATCHING ANY MORE.
 	 *
-	 *     Il figlio cattura e codifica solo perche' qualcuno guarda: un palco
-	 *     lasciato acceso su una sessione chiusa spenderebbe una GPU e una CPU
-	 *     per nessuno, per sempre.  ⚠ E non e' l'invariante I1 al contrario —
-	 *     I1 vieta di calare il ritmo **per prudenza mentre qualcuno guarda**;
-	 *     qui non guarda piu' nessuno, e il palco (I4) resta in piedi: si ferma
-	 *     solo il ciclo dei fotogrammi. */
-	/* ⛔⭐ I CONTI DELL'AUDIO SI SCRIVONO, e prima non li leggeva NESSUNO —
-	 *     rilievo 6 della revisione del 17 agosto 2026: `wt_audio_conti()` non
-	 *     aveva un solo chiamante in tutto `src/`, quindi `audio_spediti`,
-	 *     `audio_buttati` e `audio_rifiutati` non raggiungevano mai una riga.
-	 *     ⚠ Su un server normale «l'audio buttato» e «l'audio mai arrivato»
-	 *     avevano esattamente la stessa faccia — che e' il difetto che quei
-	 *     contatori esistono per togliere.
-	 * ⭐ Si scrive alla fine della sessione perche' e' l'istante in cui il
-	 *    conto e' completo, e con dentro gli ZERO: `CODER.md` §3.10. */
+	 *     The child captures and encodes only because someone is watching: a stage
+	 *     left on for a closed session would spend a GPU and a CPU
+	 *     for nobody, forever.  ⚠ And it is not invariant I1 in reverse —
+	 *     I1 forbids lowering the rate **out of caution while someone is watching**;
+	 *     here nobody is watching any more, and the stage (I4) stays up: only
+	 *     the frame loop stops. */
+	/* ⛔⭐ THE AUDIO COUNTS ARE WRITTEN, and before NOBODY read them —
+	 *     finding 6 of the review of 17 Aug 2026: `wt_audio_conti()` did not
+	 *     have a single caller in all of `src/`, so `audio_spediti`,
+	 *     `audio_buttati` and `audio_rifiutati` never reached a line.
+	 *     ⚠ On a normal server «audio dropped» and «audio never arrived»
+	 *     looked exactly the same — which is the defect those
+	 *     counters exist to remove.
+	 * ⭐ It is written at the end of the session because it is the instant at which the
+	 *    count is complete, and with the ZEROS in it: `CODER.md` §3.10. */
 	if (w->audio_acceso) {
 		uint64_t sp, bu, ri;
 		size_t coda;
 		wt_audio_conti(w, &sp, &bu, &ri, &coda);
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "audio di %s, conto finale: %llu blocchi spediti, %llu "
-		                 "buttati (coda piena o troppo grandi), %llu rifiutati da "
-		                 "ngtcp2, %llu RIMANDATI dal pacer e poi partiti, %zu "
-		                 "ancora in coda — codec %u",
+		                 "audio of %s, final count: %llu blocks sent, %llu "
+		                 "dropped (queue full or too big), %llu refused by "
+		                 "ngtcp2, %llu DEFERRED by the pacer and then sent, %zu "
+		                 "still in the queue — codec %u",
 		                 w->provenienza, (unsigned long long)sp,
 		                 (unsigned long long)bu, (unsigned long long)ri,
 		                 (unsigned long long)w->audio_rimandati, coda,
 		                 w->audio_codec);
 	}
-	/* ⛔⛔⭐ E I CONTI DEL VIDEO, CHE NON LI LEGGEVA NESSUNO — 22 agosto 2026,
-	 *       trovato da B2, ed e' **lo stesso difetto del riquadro qui sopra sul
-	 *       gemello**: `wt_video_conti()` era definita, dichiarata in
-	 *       `webtransport.h`, e senza **un solo chiamante in tutto `src/`**.
+	/* ⛔⛔⭐ AND THE VIDEO COUNTS, WHICH NOBODY READ — 22 Aug 2026,
+	 *       found by B2, and it is **the same defect as the box above on the
+	 *       twin**: `wt_video_conti()` was defined, declared in
+	 *       `webtransport.h`, and without **a single caller in all of `src/`**.
 	 *
-	 *       ⚠ La cura dell'audio fu scritta il 17 agosto, cinque giorni prima,
-	 *       per la funzione gemella e con queste stesse parole.  ⇒ E' §1.20: la
-	 *       cura era stata applicata a **uno dei due gemelli**, e nessuno aveva
-	 *       guardato l'altro.  La lezione non e' sui contatori, e' che una cura
-	 *       si cerca **dovunque valga**, non dove e' stata trovata.
+	 *       ⚠ The audio cure was written on 17 August, five days earlier,
+	 *       for the twin function and with these same words.  ⇒ It is §1.20: the
+	 *       cure had been applied to **one of the two twins**, and nobody had
+	 *       looked at the other.  The lesson is not about counters, it is that a cure
+	 *       is looked for **wherever it applies**, not where it was found.
 	 *
-	 * ⛔⛔ E IL PREZZO DI QUEL SILENZIO ERA UN NUMERO CHE MENTIVA.  `[M]` B2:
-	 *      **799 fotogrammi scartati** e **un solo annuncio** nel registro; chi
-	 *      contava le righe leggeva **1** e lo chiamava «non spediti».  Il
-	 *      valore era 1, il nome prometteva 799: forma **E2**, e invisibile
-	 *      perche' **1 e' un numero che sembra sano**.
+	 * ⛔⛔ AND THE PRICE OF THAT SILENCE WAS A NUMBER THAT LIED.  `[M]` B2:
+	 *      **799 frames discarded** and **a single announcement** in the log; whoever
+	 *      counted the lines read **1** and called it «not sent».  The
+	 *      value was 1, the name promised 799: shape **E2**, and invisible
+	 *      because **1 is a number that looks healthy**.
 	 *
-	 * ⇒ Qui escono TUTTI E CINQUE, e con dentro gli ZERO (`CODER.md` §3.10):
-	 *   uno zero scritto e un conto mai scritto devono avere due facce diverse.
+	 * ⇒ Here ALL FIVE come out, and with the ZEROS in them (`CODER.md` §3.10):
+	 *   a zero written and a count never written must have two different faces.
 	 *
-	 * ⚠ `saltati` somma **tre** cause — la tela che non combacia, il credito di
-	 *   stream finito (§2.3) e il rifiuto di `rcp.c`.  ⏳ Spezzarlo in tre e'
-	 *   possibile e NON e' stato fatto: sarebbe una seconda cura, e questa
-	 *   riga esiste per farne uscire una.  Il nome pero' non mente: sono
-	 *   davvero i fotogrammi che non sono partiti.
+	 * ⚠ `saltati` adds up **three** causes — the canvas that does not match, the stream
+	 *   credit exhausted (§2.3) and the refusal by `rcp.c`.  ⏳ Splitting it in three is
+	 *   possible and has NOT been done: it would be a second cure, and this
+	 *   line exists to let one out.  The name however does not lie: they are
+	 *   really the frames that did not leave.
 	 *
-	 * ⛔ E non si tocca niente del comportamento del video: qui si aggiunge
-	 *    un'uscita di diagnosi, non si sposta una politica.
+	 * ⛔ And nothing of video behaviour is touched: here a diagnostic
+	 *    output is added, a policy is not moved.
 	 *
 	 * ───────────────────────────────────────────────────────────────────────
-	 * ⭐ LA PROVA CHE I DUE NUMERI SONO DAVVERO DUE — `[M]` 22 agosto 2026
+	 * ⭐ THE PROOF THAT THE TWO NUMBERS ARE REALLY TWO — `[M]` 22 Aug 2026
 	 * ───────────────────────────────────────────────────────────────────────
 	 *
-	 * Stessa scena in tutt'e due i giri: sessione di `provar8` sulla 7802,
-	 * `04-b30-scena` in movimento sul monitor catturato, 16 s, tre `ADATTA_TELA`
-	 * (1264x800 → 1920x1080 → 1264x800).  ⛔ E il guasto e' INNESTATO apposta
-	 * nel solo albero di costruzione — la tela dichiarata discorde per ogni
-	 * fotogramma — perche' su un prodotto sano questa strada non si percorre:
-	 * il compositore riconfigura in 44-67 ms e nessun fotogramma fa in tempo a
-	 * portare la misura vecchia.
+	 * Same scene in both runs: session of `provar8` on 7802,
+	 * `04-b30-scena` moving on the captured monitor, 16 s, three `ADATTA_TELA`
+	 * (1264x800 → 1920x1080 → 1264x800).  ⛔ And the fault is INJECTED on purpose
+	 * only in the build tree — the declared canvas mismatched for every
+	 * frame — because on a healthy product this road is not walked:
+	 * the compositor reconfigures in 44-67 ms and no frame has time to
+	 * carry the old size.
 	 *
-	 * | binario | consegnati | NON SPEDITI | spediti | ANNUNCI |
+	 * | binary  | delivered | NOT SENT    | sent    | ANNOUNCEMENTS |
 	 * |---|---|---|---|---|
-	 * | sano                | 1016 | **0**    | 1016 | **0** |
-	 * | guasto innestato    | 0    | **1017** | 0    | **4** |
+	 * | healthy             | 1016 | **0**    | 1016 | **0** |
+	 * | fault injected      | 0    | **1017** | 0    | **4** |
 	 *
-	 * ⇒ **1017 contro 4: un fattore 254.**  Prima della chiamata qui sotto il
-	 *   solo numero che un banco poteva leggere era quello degli annunci, e lo
-	 *   chiamava «non spediti».
+	 * ⇒ **1017 against 4: a factor of 254.**  Before the call below the
+	 *   only number a bench could read was that of the announcements, and it
+	 *   called it «not sent».
 	 *
-	 * ⚠ E l'atteso scritto prima diceva «ANNUNCI = 1», come nel giro di B2: ne
-	 *   sono usciti **4**, ed e' giusto cosi' — il fondo si riarma a ogni
-	 *   coppia (tela, misura) nuova, e questa scena la cambia tre volte.  ⇒ Il
-	 *   numero degli annunci segue le MISURE DISTINTE, non i fotogrammi: che e'
-	 *   esattamente la ragione per cui non poteva fare da conto. */
+	 * ⚠ And the expectation written beforehand said «ANNOUNCEMENTS = 1», as in B2's run: there
+	 *   came out **4**, and it is right so — the backstop rearms at every
+	 *   new (canvas, size) pair, and this scene changes it three times.  ⇒ The
+	 *   number of announcements follows the DISTINCT SIZES, not the frames: which is
+	 *   exactly the reason it could not act as a count. */
 	if (w->video_acceso) {
 		uint32_t diffusi = 0, saltati = 0, spediti = 0, abbandonati = 0;
 		uint32_t ritmo_scesi = 0;
 		wt_video_conti(w, &diffusi, &saltati, &spediti, &abbandonati,
 		               &ritmo_scesi);
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "video di %s, conto finale: %u fotogrammi consegnati a "
-		                 "RCP, %u NON SPEDITI (tela che non combacia + credito "
-		                 "finito + rifiuto di rcp), %u spediti sul filo, %u "
-		                 "abbandonati a valle (§5.1) — ⚠ e %u ANNUNCI di tela "
-		                 "discorde, che e' un NUMERO DIVERSO dai non spediti: il "
-		                 "registro ne scrive uno per ogni misura nuova, non uno "
-		                 "per fotogramma (§E2, B2 22 ago 2026) — codec %u",
+		                 "video of %s, final count: %u frames delivered to "
+		                 "RCP, %u NOT SENT (canvas mismatch + credit "
+		                 "exhausted + refusal by rcp), %u sent on the wire, %u "
+		                 "abandoned downstream (§5.1) — ⚠ and %u ANNOUNCEMENTS of mismatched "
+		                 "canvas, which is a DIFFERENT NUMBER from the not sent: the "
+		                 "log writes one for every new size, not one "
+		                 "per frame (§E2, B2 22 Aug 2026) — codec %u",
 		                 w->provenienza, diffusi, saltati, spediti, abbandonati,
 		                 w->video_annunci_tela, w->video_codec);
-		/* ⛔⭐ FASE 9 — e il conto della SOGLIA sta a parte, per la ragione di
-		 *     tutta questa fase: «zero abbandoni» e «la cura e' spenta» non
-		 *     devono avere la stessa faccia.  ⚠ E i tre numeri contano tre
-		 *     fatti diversi: i delta TENUTI dicono che la cura ha lavorato,
-		 *     quelli abbandonati per soglia che non e' bastata, e quelli senza
-		 *     credito che il debito di §5.2 lo teneva acceso un'ALTRA causa —
-		 *     la 4, invisibile al ricevente.  Senza il terzo, una cura che gira
-		 *     a vuoto somiglia in tutto a una cura che non serve. */
+		/* ⛔⭐ PHASE 9 — and the THRESHOLD count is kept apart, for the reason of
+		 *     this whole phase: «zero abandonments» and «the cure is off» must not
+		 *     look the same.  ⚠ And the three numbers count three
+		 *     different facts: the deltas KEPT say the cure worked,
+		 *     those abandoned by threshold that it was not enough, and those without
+		 *     credit that the §5.2 debt was kept on by ANOTHER cause —
+		 *     4, invisible to the receiver.  Without the third, a cure spinning
+		 *     idle looks in every way like a cure that is not needed. */
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ FASE 9, la soglia della coda video: %s (%llu ms) — "
-		                 "delta TENUTI %u, abbandonati per soglia %u, e NON "
-		                 "ACCETTATI per credito mancato %u (§2.3, causa 4: la "
-		                 "forma che il ricevente non vede) — dei tenuti, %u "
-		                 "dietro una CHIAVE ancora in coda",
-		                 sgombra_soglia_ms ? "ACCESA (predefinito dal 24 ago 2026)"
-		                                   : "SPENTA a mano (--sgombra-soglia-ms 0)",
+		                 "⭐ PHASE 9, the video queue threshold: %s (%llu ms) — "
+		                 "deltas KEPT %u, abandoned by threshold %u, and NOT "
+		                 "ACCEPTED for missing credit %u (§2.3, cause 4: the "
+		                 "shape the receiver does not see) — of the kept, %u "
+		                 "behind a KEYFRAME still in the queue",
+		                 sgombra_soglia_ms ? "ON (default since 24 Aug 2026)"
+		                                   : "OFF by hand (--sgombra-soglia-ms 0)",
 		                 (unsigned long long)sgombra_soglia_ms,
 		                 w->sgombra_tenuti, w->sgombra_abbandoni,
 		                 w->sgombra_credito, w->sgombra_dietro_chiave);
-		/* ⛔⭐ FASE 9 — E IL CONTO DEL REGOLATORE DEL RITMO, che sta a parte
-		 *     dagli altri due per la ragione di tutta questa fase: «zero
-		 *     discese» e «il regolatore e' spento» non devono avere la stessa
-		 *     faccia.  ⚠ E il fondo della scala si DICHIARA qui invece di essere
-		 *     dedotto: `DECISIONI.md` §2.1 dice 480p·25, e sotto i 25/s su una
-		 *     linea da 20 Mbit/s e' un DIFETTO — non una degradazione riuscita.
-		 *     ⛔ Il regolatore non ha nessun pavimento da far rispettare, perche'
-		 *     forzare un fotogramma dentro una coda che non si svuota peggiora
-		 *     la coda: qui si scrivono i due numeri accanto e chi legge
-		 *     giudica. */
+		/* ⛔⭐ PHASE 9 — AND THE RATE REGULATOR'S COUNT, which is kept apart
+		 *     from the other two for the reason of this whole phase: «zero
+		 *     drops» and «the regulator is off» must not look
+		 *     the same.  ⚠ And the bottom of the scale is DECLARED here instead of being
+		 *     deduced: `DECISIONI.md` §2.1 says 480p·25, and below 25/s on a
+		 *     20 Mbit/s line it is a DEFECT — not a successful degradation.
+		 *     ⛔ The regulator has no floor to enforce, because
+		 *     forcing a frame into a queue that does not empty makes
+		 *     the queue worse: here the two numbers are written side by side and the reader
+		 *     judges. */
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⭐ FASE 9, il regolatore del ritmo: %s — %u fotogrammi NON "
-		                 "PARTITI perche' l'arretrato aveva raggiunto i %u posti, su "
-		                 "%u consegnati a RCP.  ⚠ E' un numero SUO: non e' fra i «non "
-		                 "spediti» qui sopra.  ⛔ Fondo della scala dichiarato: 480p "
-		                 "25/s su 20 Mbit/s (DECISIONI.md §2.1) — sotto quello e' un "
-		                 "DIFETTO da guardare, non una degradazione riuscita",
-		                 ritmo_adattivo ? "ACCESO (predefinito dal 24 ago 2026)"
-		                                : "SPENTO a mano (--niente-ritmo-adattivo)",
+		                 "⭐ PHASE 9, the rate regulator: %s — %u frames that did NOT "
+		                 "LEAVE because the backlog had reached the %u slots, out of "
+		                 "%u delivered to RCP.  ⚠ It is a number OF ITS OWN: it is not among the «not "
+		                 "sent» above.  ⛔ Declared bottom of the scale: 480p "
+		                 "25/s on 20 Mbit/s (DECISIONI.md §2.1) — below that it is a "
+		                 "DEFECT to look at, not a successful degradation",
+		                 ritmo_adattivo ? "ON (default since 24 Aug 2026)"
+		                                : "OFF by hand (--niente-ritmo-adattivo)",
 		                 ritmo_scesi, (unsigned)WT_RITMO_POSTI, diffusi);
 	}
-	/* ⛔⛔⭐ FASE 9 — IL PREZZO DELLA CURA DELL'USO-DOPO-LA-LIBERAZIONE, E IL
-	 *      CONTROLLO CHE LA FA CADERE.
+	/* ⛔⛔⭐ PHASE 9 — THE PRICE OF THE USE-AFTER-FREE CURE, AND THE
+	 *      CHECK THAT WOULD MAKE IT FALL.
 	 *
-	 *      Si scrive SEMPRE, anche senza video: i byte tenuti per la
-	 *      ritrasmissione sono di tutti gli stream, non solo dei fotogrammi.
+	 *      It is written ALWAYS, even without video: the bytes held for
+	 *      retransmission belong to all the streams, not only to frames.
 	 *
-	 * ⭐ COME SI LEGGE, e sono due numeri con due mestieri diversi:
+	 * ⭐ HOW TO READ IT, and they are two numbers with two different jobs:
 	 *
-	 *    · la PUNTA e' il prezzo in memoria.  Deve stare nell'ordine della
-	 *      finestra di congestione — decine o centinaia di KB, al peggio un
-	 *      fotogramma intero (525 KB misurati il 23 agosto) — e con sedici
-	 *      sessioni si moltiplica per sedici.  ⛔ Se cresce per tutta la
-	 *      sessione invece di oscillare, la cura sta TRATTENENDO memoria: e'
-	 *      esattamente il guasto che la farebbe cadere.
+	 *    · the PEAK is the memory price.  It must be in the order of the
+	 *      congestion window — tens or hundreds of KB, at worst a
+	 *      whole frame (525 KB measured on 23 August) — and with sixteen
+	 *      sessions it is multiplied by sixteen.  ⛔ If it grows for the whole
+	 *      session instead of oscillating, the cure is HOARDING memory: it is
+	 *      exactly the fault that would make it fall.
 	 *
-	 *    · il RESIDUO alla chiusura deve essere **zero o quasi**.  Se non lo
-	 *      e', c'e' uno stream che si e' chiuso senza passare da
-	 *      `wt_stream_chiuso()`, cioe' il fondo della cura non ha tenuto e
-	 *      abbiamo barattato un uso dopo la liberazione con una perdita di
-	 *      memoria.  ⚠ Un residuo non nullo qui NON e' una perdita vera — la
-	 *      memoria la riprende `wt_libera()` venti righe piu' sotto — ma e' il
-	 *      segnale che il fondo non ha lavorato, e va guardato.
+	 *    · the RESIDUE at closure must be **zero or nearly**.  If it is not,
+	 *      there is a stream that closed without going through
+	 *      `wt_stream_chiuso()`, that is the cure's backstop did not hold and
+	 *      we bartered a use-after-free for a memory
+	 *      leak.  ⚠ A non-zero residue here is NOT a real leak — the
+	 *      memory is taken back by `wt_libera()` twenty lines further below — but it is the
+	 *      sign that the backstop did not work, and it must be looked at.
 	 *
-	 * ⭐⭐ E COME SI RIPRODUCE IL DIFETTO CURATO, perche' il banco lo possa fare
-	 *     (`fasi/09-la-qualita-e-la-degradazione.md` §4.5-4.6), su un binario SENZA questa cura:
+	 * ⭐⭐ AND HOW TO REPRODUCE THE CURED DEFECT, so that the bench can do it
+	 *     (`fasi/09-la-qualita-e-la-degradazione.md` §4.5-4.6), on a binary WITHOUT this cure:
 	 *
-	 *       1. `Environment=MALLOC_MMAP_THRESHOLD_=32768` nell'unita'.  ⭐
-	 *          Impostarla dall'ambiente SPEGNE l'adattamento dinamico di glibc
-	 *          (`no_dyn_threshold`): da quel momento ogni blocco sopra i 32 KiB
-	 *          e' `mmap`/`munmap` e il difetto smette di essere silenzioso PER
-	 *          SEMPRE, non solo la prima volta.  ⛔ Senza questa riga il difetto
-	 *          si nasconde da solo: dopo il primo blocco grosso liberato la
-	 *          soglia si alza e la corruzione torna muta.
-	 *       2. un fotogramma grosso (film con la grana, a schermo intero), e
-	 *          perdita di pacchetti: `tc qdisc add dev X root netem loss 5%`,
-	 *          oppure `kill -STOP` al browser per un secondo (nessun ack ⇒ PTO
-	 *          ⇒ ritrasmissione).
-	 *       3. previsione sul binario malato: `SEGV`, `error 4`, `ip` dentro
-	 *          `libc`, in `__memmove_avx_unaligned_erms`.  Con
-	 *          `-fsanitize=address -g -fno-omit-frame-pointer` esce
-	 *          `heap-use-after-free READ` con DUE pile: quella che legge (dentro
-	 *          `ngtcp2_pkt_encode_stream_frame`) e quella che ha liberato.
-	 *       4. con questa cura, lo stesso banco deve reggere e questa riga deve
-	 *          dire residuo zero.  ⛔ Se muore lo stesso, la cura e' sbagliata. */
+	 *       1. `Environment=MALLOC_MMAP_THRESHOLD_=32768` in the unit.  ⭐
+	 *          Setting it from the environment SWITCHES OFF glibc's dynamic adaptation
+	 *          (`no_dyn_threshold`): from that moment every block above 32 KiB
+	 *          is `mmap`/`munmap` and the defect stops being silent
+	 *          FOREVER, not only the first time.  ⛔ Without this line the defect
+	 *          hides by itself: after the first big block freed the
+	 *          threshold rises and the corruption goes mute again.
+	 *       2. a big frame (a film with grain, full screen), and
+	 *          packet loss: `tc qdisc add dev X root netem loss 5%`,
+	 *          or `kill -STOP` to the browser for one second (no ack ⇒ PTO
+	 *          ⇒ retransmission).
+	 *       3. prediction on the sick binary: `SEGV`, `error 4`, `ip` inside
+	 *          `libc`, in `__memmove_avx_unaligned_erms`.  With
+	 *          `-fsanitize=address -g -fno-omit-frame-pointer` there comes out
+	 *          `heap-use-after-free READ` with TWO stacks: the one reading (inside
+	 *          `ngtcp2_pkt_encode_stream_frame`) and the one that freed.
+	 *       4. with this cure, the same bench must hold and this line must
+	 *          say residue zero.  ⛔ If it dies all the same, the cure is wrong. */
 	registro_dice_di(REG_WT, wt_chi(w),
-	                 "⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di "
-	                 "ngtcp2_conn_writev_stream): punta %zu byte, residuo alla "
-	                 "chiusura %zu, e %zu byte ancora da spedire in coda",
+	                 "⭐ PHASE 9, the bytes HELD for retransmission (contract of "
+	                 "ngtcp2_conn_writev_stream): peak %zu bytes, residue at "
+	                 "closure %zu, and %zu bytes still to send in the queue",
 	                 w->byte_in_volo_max, w->byte_in_volo, w->byte_in_coda);
-	/* ⛔⛔ E SI SPEGNE LA CATTURA — DELL'AUDIO E DEI PIXEL — SE NON RESTA
-	 *     NESSUNO.
+	/* ⛔⛔ AND CAPTURE IS SWITCHED OFF — OF AUDIO AND OF PIXELS — IF NOBODY
+	 *     IS LEFT.
 	 *
-	 *     `[M]` 17 agosto 2026, prima accensione dell'audio vero: la sessione si
-	 *     era chiusa alle 07:49:58 — «conto finale: 397 blocchi» — e il figlio
-	 *     alle **07:50:10 stava ancora catturando e codificando**, 50 blocchi al
-	 *     secondo, per nessuno.  ⚠ Non lo diceva nessun errore: lo diceva la
-	 *     riga di riassunto del figlio, che esiste apposta.
+	 *     `[M]` 17 Aug 2026, first power-on of real audio: the session had
+	 *     closed at 07:49:58 — «final count: 397 blocks» — and the child
+	 *     at **07:50:10 was still capturing and encoding**, 50 blocks a
+	 *     second, for nobody.  ⚠ No error said so: the
+	 *     child's summary line said so, which exists on purpose.
 	 *
-	 * ⛔ Cattura e codifica esistono solo perche' qualcuno guarda o ascolta.  ⚠ E
-	 *    il SINK resta in piedi (I4), come il figlio: a spegnersi e' il consumo
-	 *    del monitor, non il dispositivo su cui le applicazioni suonano.
+	 * ⛔ Capture and encoding exist only because someone watches or listens.  ⚠ And
+	 *    the SINK stays up (I4), like the child: what switches off is the
+	 *    monitor's consumption, not the device on which applications play.
 	 *
-	 * ⛔⭐ E DAL 23 SET 2026 QUESTA NON E' PIU' LA PRIMA OCCASIONE, E' L'ULTIMA.
-	 *     Le due politiche stavano qui in due blocchi gemelli; adesso stanno
-	 *     tutte e due in `cattura_spegni_se_sola()`, che `regola_battito()`
-	 *     chiama gia' al CONGEDO — cioe' ~30 s prima di qui.  ⇒ Qui si arriva
-	 *     solo per chi se ne va SENZA salutare (`kill -9`, la rete che cade, il
-	 *     `max_idle_timeout`), e la chiamata e' idempotente: se il congedo
-	 *     l'aveva gia' fatto, questa non dice niente a nessuno.
+	 * ⛔⭐ AND SINCE 23 SEP 2026 THIS IS NO LONGER THE FIRST OCCASION, IT IS THE LAST.
+	 *     The two policies were here in two twin blocks; now they are
+	 *     both in `cattura_spegni_se_sola()`, which `regola_battito()`
+	 *     already calls at FAREWELL — that is ~30 s before here.  ⇒ One gets here
+	 *     only for whoever leaves WITHOUT saying goodbye (`kill -9`, the network dropping, the
+	 *     `max_idle_timeout`), and the call is idempotent: if the farewell
+	 *     had already done it, this one tells nobody anything.
 	 *
-	 * ⭐ E sta DOPO l'uscita dall'elenco delle vive, in cima a questa funzione:
-	 *    non serve piu' — il censimento esclude `w` per nome proprio — ma
-	 *    l'ordine resta quello, e la ragione per cui era necessario e' scritta
-	 *    sul censimento. */
-	cattura_spegni_se_sola(w, "la connessione se ne va senza un congedo");
-	/* Il codificatore del tono di prova, se questa sessione ne aveva uno. */
+	 * ⭐ And it sits AFTER leaving the list of live ones, at the top of this function:
+	 *    it is no longer needed — the census excludes `w` by its own name — but
+	 *    the order stays that one, and the reason why it was necessary is written
+	 *    on the census. */
+	cattura_spegni_se_sola(w, "the connection is going away without a farewell");
+	/* The test tone's encoder, if this session had one. */
 	if (w->tono_cod) {
-		/* ⭐ E i conti del CODIFICATORE, che rispondono a una domanda che i
-		 *    contatori del filo non fanno: `RCP.md` §6.3 dice che l'`istante`
-		 *    e' quello del primo campione del blocco, e `audio.h` dichiara che
-		 *    Opus «puo' non produrre un pacchetto per ogni blocco offerto».
-		 *    ⛔ Se le due cose fossero vere insieme, l'istante scritto sul filo
-		 *    apparterrebbe a un blocco diverso da quello spedito.  Questi due
-		 *    numeri lo dicono. */
+		/* ⭐ And the ENCODER's counts, which answer a question the
+		 *    wire counters do not ask: `RCP.md` §6.3 says the `istante`
+		 *    is that of the first sample of the block, and `audio.h` declares that
+		 *    Opus «may not produce a packet for every block offered».
+		 *    ⛔ If the two things were true together, the instant written on the wire
+		 *    would belong to a block different from the one sent.  These two
+		 *    numbers say so. */
 		uint64_t entrati = 0, usciti = 0;
 		audio_cod_conti(w->tono_cod, &entrati, &usciti);
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "codificatore audio di %s: %llu blocchi entrati, %llu "
-		                 "usciti%s",
+		                 "audio encoder of %s: %llu blocks in, %llu "
+		                 "out%s",
 		                 w->provenienza, (unsigned long long)entrati,
 		                 (unsigned long long)usciti,
 		                 entrati == usciti
-		                     ? " — ⭐ uno per uno: l'`istante` di §6.3 appartiene "
-		                       "al blocco che parte"
-		                     : " — ⛔ NON uno per uno: l'`istante` scritto sul filo "
-		                       "puo' non essere quello del blocco spedito");
+		                     ? " — ⭐ one for one: the `istante` of §6.3 belongs "
+		                       "to the block that leaves"
+		                     : " — ⛔ NOT one for one: the `istante` written on the wire "
+		                       "may not be that of the block sent");
 		audio_cod_chiudi(w->tono_cod);
 		w->tono_cod = NULL;
 	}
-	/* ⛔ Qui c'era il gemello dello spegnimento del palco: adesso lo fa la
-	 *    chiamata sola qui sopra, insieme all'audio.  ⚠ Erano due blocchi che
-	 *    dicevano la stessa cosa in due modi, e uno dei due non passava per il
-	 *    congedo — che e' esattamente il difetto curato oggi. */
+	/* ⛔ Here there was the twin of the stage switch-off: now it is done by the
+	 *    single call above, together with audio.  ⚠ They were two blocks that
+	 *    said the same thing in two ways, and one of the two did not go through the
+	 *    farewell — which is exactly the defect cured today. */
 	if (w->rcp)
 		rcp_libera(w->rcp);
 	if (w->h3)
@@ -8342,13 +8342,13 @@ int wt_ricevi_stream(wt *w, uint32_t flags, int64_t stream_id,
 	if (!w->h3)
 		return 0;
 
-	/* ⛔ Gli stream WebTransport non sono affari di nghttp3: leggerebbe 0x41
-	 *    come un tipo di frame sconosciuto e poi il numero della sessione
-	 *    come una LUNGHEZZA, sballando tutto il resto.
-	 *    ⛔ E il FIN viaggia con loro: §4.2 lo rende la fine della sessione,
-	 *       e per uno stream che gestiamo noi qui e' l'ULTIMO posto in cui si
-	 *       puo' vedere — sotto si torna prima di `nghttp3_conn_read_stream2`,
-	 *       quindi nemmeno nghttp3 lo incontra. */
+	/* ⛔ WebTransport streams are none of nghttp3's business: it would read 0x41
+	 *    as an unknown frame type and then the session number
+	 *    as a LENGTH, throwing off all the rest.
+	 *    ⛔ And the FIN travels with them: §4.2 makes it the end of the session,
+	 *       and for a stream we handle ourselves here is the LAST place where it
+	 *       can be seen — below we return before `nghttp3_conn_read_stream2`,
+	 *       so not even nghttp3 meets it. */
 	switch (smista(w, stream_id, dati, len, fin, &riunito)) {
 	case E_MIO:
 	case E_ATTENDI:
@@ -8383,61 +8383,61 @@ int wt_stream_chiuso(wt *w, int64_t stream_id, uint64_t codice, bool con_codice)
 {
 	richiesta *r;
 
-	/* ⛔⛔⭐ FASE 9 — E QUI SI LIBERANO I BYTE TENUTI PER LA RITRASMISSIONE.
+	/* ⛔⛔⭐ PHASE 9 — AND HERE THE BYTES HELD FOR RETRANSMISSION ARE FREED.
 	 *
-	 *      E' l'ALTRA META' del contratto di `ngtcp2_conn_writev_stream()`
-	 *      («... or the stream is closed»), e `ngtcp2.h` la scrive per esteso
-	 *      sotto `acked_stream_data_offset`: «After stream_close is called for a
+	 *      It is the OTHER HALF of the contract of `ngtcp2_conn_writev_stream()`
+	 *      («... or the stream is closed»), and `ngtcp2.h` writes it in full
+	 *      under `acked_stream_data_offset`: «After stream_close is called for a
 	 *      particular stream, conn does not touch data for the closed stream
 	 *      again, and application can free all unacknowledged stream data».
 	 *
-	 * ⛔⛔ ED E' IL FONDO CHE DECIDE SE LA CURA E' UN PROGRESSO O UN BARATTO.
-	 *      Senza questa riga, gli ultimi byte di ogni stream chiuso di netto —
-	 *      un `STOP_SENDING`, un reset del client, uno stream che finisce prima
-	 *      che l'ack arrivi — non riceverebbero MAI il loro riscontro: la stessa
-	 *      pagina di `ngtcp2.h` dice che «if a stream is closed prematurely, and
+	 * ⛔⛔ AND IT IS THE BACKSTOP THAT DECIDES WHETHER THE CURE IS PROGRESS OR A BARTER.
+	 *      Without this line, the last bytes of every stream closed abruptly —
+	 *      a `STOP_SENDING`, a reset from the client, a stream that ends before
+	 *      the ack arrives — would NEVER receive their acknowledgement: the same
+	 *      page of `ngtcp2.h` says that «if a stream is closed prematurely, and
 	 *      stream data is still in-flight, this callback function is not called
-	 *      for those data».  ⇒ Resterebbero allocati fino alla morte della
-	 *      connessione, e una perdita di memoria al posto di un uso dopo la
-	 *      liberazione **non e' un progresso**.
+	 *      for those data».  ⇒ They would stay allocated until the death of the
+	 *      connection, and a memory leak in place of a use-after-free
+	 *      **is not progress**.
 	 *
-	 * ⚠ Vale anche per i byte NON ancora spediti di quello stream, e va bene
-	 *   cosi': lo stream e' chiuso, non usciranno mai piu'.  Prima li buttava
-	 *   la passata dopo, sul ramo `NGTCP2_ERR_STREAM_SHUT_WR` di `wt_scrivi()`.
+	 * ⚠ It also holds for the NOT yet sent bytes of that stream, and that is fine:
+	 *   the stream is closed, they will never go out again.  Before they were thrown away by
+	 *   the next pass, on the `NGTCP2_ERR_STREAM_SHUT_WR` branch of `wt_scrivi()`.
 	 *
-	 * ⛔ E sta PRIMA di tutto il resto, perche' venti righe piu' sotto
-	 *    `w->sessione` diventa `-1`: dopo, l'identificatore da cercare in coda
-	 *    non ci sarebbe piu' — ed e' proprio lo stream della CONNECT quello che
-	 *    `coda_conferma()` lascia apposta a questa funzione. */
+	 * ⛔ And it sits BEFORE everything else, because twenty lines further below
+	 *    `w->sessione` becomes `-1`: afterwards, the identifier to look for in the queue
+	 *    would no longer be there — and it is precisely the CONNECT stream that
+	 *    `coda_conferma()` leaves on purpose to this function. */
 	coda_butta_stream(w, stream_id);
 
-	/* ⛔⭐ `RCP.md` §4.2: il canale di controllo si chiude, e IL SUO
-	 *     CHIUDERSI E' LA FINE DELLA SESSIONE.  Il posto nel registro (§8.2
-	 *     motivo 0x0F) va liberato QUI — e anche quando a chiudersi e' lo
-	 *     stream della CONNECT estesa, che PORTA la sessione WebTransport.
+	/* ⛔⭐ `RCP.md` §4.2: the control channel closes, and ITS
+	 *     CLOSING IS THE END OF THE SESSION.  The registry slot (§8.2
+	 *     reason 0x0F) must be freed HERE — and also when what closes is the
+	 *     extended CONNECT stream, which CARRIES the WebTransport session.
 	 *
-	 * ⚠ Nell'innesto il posto si liberava solo alla morte della CONNESSIONE.
-	 *   Con un cliente di prova i due istanti coincidono, e B3 e' rimasto
-	 *   verde per cinque giri.  ⛔ Un BROWSER no: chiude la sessione e tiene
-	 *   viva la connessione, e da quel momento il posto resta occupato da una
-	 *   sessione che non esiste piu' — SETTE `posto NEGATO` su nove
-	 *   tentativi, `[M]` B11 con Chrome. */
+	 * ⚠ In the graft the slot was freed only at the death of the CONNECTION.
+	 *   With a test client the two instants coincide, and B3 stayed
+	 *   green for five runs.  ⛔ A BROWSER does not: it closes the session and keeps
+	 *   the connection alive, and from that moment the slot stays occupied by a
+	 *   session that no longer exists — SEVEN `posto NEGATO` out of nine
+	 *   attempts, `[M]` B11 with Chrome. */
 	if (w->rcp && (stream_id == w->rcp_stream || stream_id == w->sessione)) {
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "chiuso lo stream %ld: la sessione e' finita, il posto "
-		                 "si libera",
+		                 "closed stream %ld: the session is over, the slot "
+		                 "is freed",
 		                 (long)stream_id);
-		/* ⛔⭐ E LA CATTURA SI SPEGNE ADESSO, PRIMA DI `rcp_libera()`, perche'
-		 *     dopo il nome dell'utente non lo sa piu' NESSUNO: `w->rcp`
-		 *     diventa nullo due righe sotto, e il blocco di `wt_libera()`
-		 *     pretende `w->rcp` non nullo.  ⇒ Prima di oggi questa strada —
-		 *     il client che chiude per bene lo stream della CONNECT — non
-		 *     fermava il palco MAI, nemmeno alla morte della connessione: il
-		 *     figlio restava a catturare finche' l'utente non usciva.
-		 * ⚠ Non e' il caso dei ~30 s misurati (quello passa da `"finita"` e
-		 *   dal battito): e' un caso PEGGIORE che si chiude con la stessa
-		 *   riga, ed e' venuto fuori scrivendola. */
-		cattura_spegni_se_sola(w, "il client ha chiuso il canale di controllo");
+		/* ⛔⭐ AND CAPTURE IS SWITCHED OFF NOW, BEFORE `rcp_libera()`, because
+		 *     afterwards NOBODY knows the user's name any more: `w->rcp`
+		 *     becomes null two lines below, and the block of `wt_libera()`
+		 *     demands a non-null `w->rcp`.  ⇒ Before today this road —
+		 *     the client properly closing the CONNECT stream — never
+		 *     stopped the stage, not even at the death of the connection: the
+		 *     child kept capturing until the user logged out.
+		 * ⚠ It is not the case of the measured ~30 s (that one goes through `"finita"` and
+		 *   the heartbeat): it is a WORSE case that is closed by the same
+		 *   line, and it came out while writing it. */
+		cattura_spegni_se_sola(w, "the client closed the control channel");
 		rcp_libera(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
@@ -8482,18 +8482,18 @@ int wt_stream_stop_sending(wt *w, int64_t stream_id)
 	return 0;
 }
 
-/* ⛔⛔⭐ FASE 9 — PRIMA I NOSTRI BYTE, POI nghttp3.
+/* ⛔⛔⭐ PHASE 9 — OUR BYTES FIRST, THEN nghttp3.
  *
- *      Questa funzione inoltrava a nghttp3 **e basta**, ed e' li' che si vede
- *      tutto il difetto del 23 agosto 2026 in due righe: il riscontro serviva a
- *      LORO — nghttp3 i suoi buffer li tiene fino all'ack, come il contratto di
- *      `ngtcp2_conn_writev_stream()` pretende — e a NOI no, perche' i nostri li
- *      liberavamo alla serializzazione.  Due politiche opposte per lo stesso
- *      contratto, nello stesso modulo, sulla stessa chiamata.
+ *      This function forwarded to nghttp3 **and that was all**, and it is there that
+ *      the whole defect of 23 Aug 2026 shows in two lines: the acknowledgement served
+ *      THEM — nghttp3 keeps its buffers until the ack, as the contract of
+ *      `ngtcp2_conn_writev_stream()` demands — and not US, because ours we
+ *      freed at serialisation.  Two opposite policies for the same
+ *      contract, in the same module, on the same call.
  *
- * ⚠ E `!w->h3` non torna piu' subito: i NOSTRI elementi vanno confermati anche
- *   quando lo strato HTTP/3 non c'e' (o non c'e' piu'), o gli ultimi byte di
- *   una sessione in chiusura non verrebbero liberati da nessuno. */
+ * ⚠ And `!w->h3` no longer returns at once: OUR elements must be confirmed even
+ *   when the HTTP/3 layer is not there (or is no longer there), or the last bytes of
+ *   a closing session would be freed by nobody. */
 int wt_ack_stream_data(wt *w, int64_t stream_id, uint64_t len)
 {
 	coda_conferma(w, stream_id, len);
@@ -8521,15 +8521,15 @@ int wt_estendi_max_streams_bidi(wt *w, uint64_t max_streams)
 
 /* ------------------------------------------------------------------------ */
 
-/* ⛔⭐ §8.1 — «MAI CON UN SILENZIO».  Rilievo B-7, 10 agosto 2026 notte.
+/* ⛔⭐ §8.1 — «NEVER WITH A SILENCE».  Finding B-7, night of 10 Aug 2026.
  *
- *     La chiama `trasporto_congeda_tutte()` quando il server si spegne.  Le due
- *     strade di §3.1 le percorre `rcp_congeda()`: `CONGEDO(0x0C)` sul canale di
- *     controllo, e lo stesso `0x0C` nel codice della chiusura della sessione.
+ *     `trasporto_congeda_tutte()` calls it when the server shuts down.  The two
+ *     roads of §3.1 are walked by `rcp_congeda()`: `CONGEDO(0x0C)` on the
+ *     control channel, and the same `0x0C` in the session close code.
  *
- * ⚠ E se la sessione RCP non c'e' ancora — una connessione QUIC aperta ma senza
- *   canale di controllo — resta la seconda strada, che e' proprio il caso per
- *   cui §3.1 ne ha volute due. */
+ * ⚠ And if the RCP session does not exist yet — a QUIC connection open but without a
+ *   control channel — the second road remains, which is precisely the case for
+ *   which §3.1 wanted two of them. */
 void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
 {
 	if (!w)
@@ -8540,20 +8540,20 @@ void wt_congeda(wt *w, uint8_t motivo, const char *dettaglio)
 	}
 	if (w->sessione != -1 && w->chiusura < 0) {
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⚠ %s: nessuna sessione RCP viva, il motivo %#04x "
-		                 "viaggia solo nel codice di chiusura della sessione "
-		                 "(§3.1, seconda strada)",
+		                 "⚠ %s: no live RCP session, reason %#04x "
+		                 "travels only in the session close code "
+		                 "(§3.1, second road)",
 		                 w->provenienza, motivo);
 		chiudi_sessione(w, motivo);
 	}
 }
 
-/* ⭐ IL VERDETTO DI PAM CHE RIENTRA — `DECISIONI.md` §1.10.
+/* ⭐ PAM'S VERDICT COMING BACK — `DECISIONI.md` §1.10.
  *
- * ⛔ Il trasporto lo passa a tutte le connessioni vive e una sola lo prende:
- *    la pratica e' un numero del PROCESSO, e chi la riconosce e' `rcp.c`.  ⚠ E
- *    se non la prende nessuno va bene cosi' — vuol dire che la connessione e'
- *    morta mentre PAM rispondeva, e non c'e' piu' nessuno da ammettere. */
+ * ⛔ The transport hands it to all live connections and only one takes it:
+ *    the request is a PROCESS number, and whoever recognises it is `rcp.c`.  ⚠ And
+ *    if nobody takes it that is fine — it means the connection
+ *    died while PAM was answering, and there is nobody left to admit. */
 bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
 {
 	if (!w || !w->rcp)
@@ -8561,19 +8561,19 @@ bool wt_verdetto(wt *w, uint64_t pratica, bool ammesso, bool ripresa)
 	if (!rcp_verdetto(w->rcp, pratica, ammesso,
 	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS))
 		return false;
-	/* ⛔ Solo sulla connessione che ha preso la pratica: le altre non
-	 *    c'entrano, e il fatto e' di quest'ammissione. */
+	/* ⛔ Only on the connection that took the request: the others have
+	 *    nothing to do with it, and the fact belongs to this admission. */
 	w->ripresa = ammesso && ripresa;
 	return true;
 }
 
 
-/* ⛔⭐ §5.3 — il segno di vita che viene dal filo.  Una riga di ponte, e la
- *     ragione per cui esiste sta su `rcp_segno_di_vita()`.
+/* ⛔⭐ §5.3 — the sign of life that comes from the wire.  A bridge line, and the
+ *     reason it exists is on `rcp_segno_di_vita()`.
  *
- * ⚠ Passa PRIMA che la sessione RCP esista (la connessione QUIC c'e', il canale
- *   di controllo no): allora non c'e' niente da segnare e va bene cosi' — chi
- *   non e' ancora attaccato non tiene nessun posto. */
+ * ⚠ It goes through BEFORE the RCP session exists (the QUIC connection is there, the control
+ *   channel is not): then there is nothing to note and that is fine — whoever
+ *   is not attached yet holds no slot. */
 void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts)
 {
 	if (w && w->rcp)
@@ -8582,58 +8582,58 @@ void wt_segno_di_vita(wt *w, ngtcp2_tstamp ts)
 
 void wt_batti(wt *w, ngtcp2_tstamp ts)
 {
-	/* ⛔ PRIMA di tutto: `audio_regola()` qui sotto accoda blocchi d'audio, e
-	 *    `dgram_accoda()` li timbra con questo campo.  Un timbro vecchio di un
-	 *    battito darebbe a ogni blocco un'eta' falsa. */
+	/* ⛔ FIRST of all: `audio_regola()` below enqueues audio blocks, and
+	 *    `dgram_accoda()` stamps them with this field.  A stamp one
+	 *    heartbeat old would give every block a false age. */
 	w->ts_ora = ts;
 
 	if (w->rcp)
 		rcp_tempo(w->rcp, ts / NGTCP2_MILLISECONDS);
 
-	/* ⭐ La seconda delle due strade: `SESSIONE` puo' partire anche da
-	 *    `rcp_tempo()` — il ritardo fisso di §4.4-bis la fa maturare qui, non
-	 *    all'arrivo delle credenziali.  ⛔ Con la sola chiamata in `rcp_passa`
-	 *    il fotogramma sarebbe partito solo per le sessioni che dicono ancora
-	 *    qualcosa dopo, e su un client che tace dopo le credenziali non sarebbe
-	 *    partito mai. */
+	/* ⭐ The second of the two roads: `SESSIONE` can leave also from
+	 *    `rcp_tempo()` — the fixed delay of §4.4-bis makes it mature here, not
+	 *    on arrival of the credentials.  ⛔ With only the call in `rcp_passa`
+	 *    the frame would have left only for the sessions that still say
+	 *    something afterwards, and on a client that goes quiet after the credentials it would
+	 *    never have left. */
 	video_regola(w, ts / NGTCP2_MILLISECONDS);
 	audio_regola(w);
 	tono_passo(w, ts);
 
-	/* ⛔⭐ FASE 9 — la riga al secondo del regolatore, e gira col BATTITO
-	 *     apposta: a scena ferma i fotogrammi non arrivano, e una riga che
-	 *     uscisse solo coi fotogrammi lascerebbe «l'anello non e' stato
-	 *     percorso» con la stessa faccia di «l'arretrato era zero». */
+	/* ⛔⭐ PHASE 9 — the regulator's once-a-second line, and it runs with the HEARTBEAT
+	 *     on purpose: on a still scene frames do not arrive, and a line that
+	 *     came out only with frames would leave «the loop was not
+	 *     walked» looking the same as «the backlog was zero». */
 	ritmo_ciclo(w, ts / NGTCP2_MILLISECONDS);
 
-	/* ⛔⭐ FASE 9 — e accanto a quella del ritmo, quella della RETE: le due
-	 *     meta' della stessa domanda.  `ritmo_ciclo()` dice quel che abbiamo
-	 *     fatto NOI, `rete_ciclo()` quel che ha fatto la LINEA — e girano tutte
-	 *     e due col battito, per la stessa ragione: a scena ferma i fotogrammi
-	 *     non arrivano, ma i pacchetti si possono perdere lo stesso. */
+	/* ⛔⭐ PHASE 9 — and next to the rate one, the NETWORK one: the two
+	 *     halves of the same question.  `ritmo_ciclo()` says what WE
+	 *     did, `rete_ciclo()` what the LINE did — and they both run
+	 *     with the heartbeat, for the same reason: on a still scene frames
+	 *     do not arrive, but packets can be lost all the same. */
 	rete_ciclo(w, ts / NGTCP2_MILLISECONDS);
 
-	/* ⛔⭐ §4.6 — LA SESSIONE CHE NON APRE MAI IL CANALE DI CONTROLLO.
+	/* ⛔⭐ §4.6 — THE SESSION THAT NEVER OPENS THE CONTROL CHANNEL.
 	 *
-	 * ✅ `DECISIONI.md` §7.17, 11 agosto 2026: 5 s, poi `TEMPO_SCADUTO`.
+	 * ✅ `DECISIONI.md` §7.17, 11 Aug 2026: 5 s, then `TEMPO_SCADUTO`.
 	 *
-	 * ⚠ E il `CONGEDO` NON si manda: il canale di controllo non e' mai nato,
-	 *   quindi non c'e' dove spedirlo.  E' la condizione decisa lo stesso
-	 *   giorno in §7.15 — «se il canale e' ancora utilizzabile» — e qui non lo
-	 *   e'.  Il motivo viaggia SOLO nel codice di chiusura della sessione, che
-	 *   e' la seconda strada di §3.1 punto 3.
+	 * ⚠ And the `CONGEDO` is NOT sent: the control channel was never born,
+	 *   so there is nowhere to send it.  It is the condition decided the same
+	 *   day in §7.15 — «if the channel is still usable» — and here it is
+	 *   not.  The reason travels ONLY in the session close code, which
+	 *   is the second road of §3.1 point 3.
 	 *
-	 * ⭐ Le due decisioni si incastrano proprio qui, ed e' il primo posto in
-	 *    cui succede: senza §7.15 questa riga dovrebbe spedire un byte su un
-	 *    canale mai nato. */
+	 * ⭐ The two decisions interlock precisely here, and it is the first place in
+	 *    which it happens: without §7.15 this line would have to send a byte on a
+	 *    channel never born. */
 	if (w->canale_entro && ts >= w->canale_entro && w->chiusura < 0) {
 		registro_dice_di(REG_RCP, wt_chi(w),
-		                 "⛔ %s: sessione WebTransport aperta e canale di "
-		                 "controllo MAI aperto entro %llu ms — congedo "
+		                 "⛔ %s: WebTransport session open and control "
+		                 "channel NEVER opened within %llu ms — farewell "
 		                 "%#04x TEMPO_SCADUTO (§4.6, DECISIONI.md §7.17).  "
-		                 "⚠ nessun CONGEDO sul canale: il canale non esiste, "
-		                 "il motivo viaggia nel codice di chiusura (§3.1 punto "
-		                 "3, e §7.15 lo consente)",
+		                 "⚠ no CONGEDO on the channel: the channel does not exist, "
+		                 "the reason travels in the close code (§3.1 point "
+		                 "3, and §7.15 allows it)",
 		                 w->provenienza,
 		                 (unsigned long long)(WT_TETTO_CANALE_NS
 		                                      / NGTCP2_MILLISECONDS),
@@ -8642,25 +8642,25 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 		chiudi_sessione(w, RCP_TEMPO_SCADUTO);
 	}
 
-	/* ⛔ La capsula di chiusura parte SOLO quando la coda d'uscita e' vuota:
-	 *    il `CONGEDO` deve essere gia' partito, o il browser lo butta insieme
-	 *    alla sessione.  ⚠ E non basta che sia vuota: «consegnato a ngtcp2»
-	 *    non e' «uscito sul filo», quindi si aspetta ancora mezzo secondo. */
+	/* ⛔ The closing capsule leaves ONLY when the output queue is empty:
+	 *    the `CONGEDO` must have already left, or the browser throws it away together
+	 *    with the session.  ⚠ And being empty is not enough: «handed to ngtcp2»
+	 *    is not «gone out on the wire», so we wait another half second. */
 	if (w->chiusura >= 0) {
-		/* ⛔ La scadenza si guarda PRIMA della coda — rilievo B-3.  Se si
-		 *    guardasse dopo, il ramo «coda non vuota» riazzererebbe
-		 *    `chiusura_da` per sempre e non si arriverebbe mai qui: e'
-		 *    esattamente il difetto che questa riga toglie. */
+		/* ⛔ The deadline is looked at BEFORE the queue — finding B-3.  If it
+		 *    were looked at after, the «queue not empty» branch would reset
+		 *    `chiusura_da` forever and one would never get here: it is
+		 *    exactly the defect this line removes. */
 		if (w->chiusura_scadenza && ts >= w->chiusura_scadenza) {
 			uint8_t m = (uint8_t)w->chiusura;
 			registro_dice_di(REG_WT, wt_chi(w),
-			                 "⛔ la coda d'uscita non si e' svuotata in 3 s "
-			                 "(%zu elementi da spedire, %zu byte; e %zu byte "
-			                 "consegnati a ngtcp2 in attesa di riscontro): la "
-			                 "capsula di chiusura parte LO STESSO col codice "
-			                 "0x%02x — §3.1 punto 3 e' il motivo che salva le "
-			                 "diagnosi, e aspettare per sempre vuol dire non "
-			                 "eseguirlo mai",
+			                 "⛔ the output queue did not empty in 3 s "
+			                 "(%zu elements to send, %zu bytes; and %zu bytes "
+			                 "handed to ngtcp2 awaiting acknowledgement): the "
+			                 "closing capsule leaves ALL THE SAME with code "
+			                 "0x%02x — §3.1 point 3 is the reason that saves the "
+			                 "diagnoses, and waiting forever means never "
+			                 "executing it",
 			                 coda_da_spedire(w), w->byte_in_coda,
 			                 w->byte_in_volo, m);
 			w->chiusura = -1;
@@ -8682,84 +8682,84 @@ void wt_batti(wt *w, ngtcp2_tstamp ts)
 
 	regola_battito(w);
 	if (w->battito_ms && w->battito <= ts) {
-		/* Il tempo non e' avanzato quanto serve: si rimanda comunque in
-		 * avanti, o il ciclo girerebbe a vuoto. */
+		/* Time has not advanced as much as needed: it is postponed forward anyway,
+		 * or the loop would spin idle. */
 		w->battito = ts + w->battito_ms * NGTCP2_MILLISECONDS;
 	}
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ La scrittura: e' qui che le due cose che nghttp3 non sa fare si fanno.   */
+/* ⭐ Writing: it is here that the two things nghttp3 cannot do get done.     */
 
 ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
                        uint8_t *dest, size_t destlen, ngtcp2_tstamp ts)
 {
 	nghttp3_vec vec[16];
 
-	/* ⛔ L'orologio della sessione: vedi `wt_batti()`.  ⚠ Qui serve perche' una
-	 *   scrittura puo' arrivare fra un battito e l'altro. */
+	/* ⛔ The session clock: see `wt_batti()`.  ⚠ Here it is needed because a
+	 *   write can arrive between one heartbeat and the next. */
 	w->ts_ora = ts;
 
-	/* ⭐ Una passata di scrittura comincia qui, e gli stream ripartono tutti
-	 *    SBLOCCATI: l'elenco vale per una passata sola.  ⚠ Sta fuori dal ciclo
-	 *    apposta — azzerarlo dentro rimetterebbe in gioco lo stesso elemento a
-	 *    ogni giro, che e' precisamente il ciclo che non avanza. */
+	/* ⭐ A write pass starts here, and the streams all start again
+	 *    UNBLOCKED: the list holds for one pass only.  ⚠ It sits outside the loop
+	 *    on purpose — resetting it inside would put the same element back in play at
+	 *    every round, which is precisely the loop that does not advance. */
 	w->nbloccati = 0;
 	w->troppi_bloccati = false;
 
 	/* ═══════════════════════════════════════════════════════════════════════
-	 * ⛔⛔⭐ I DATAGRAM PRIMA DEGLI STREAM — CIOE' **L'AUDIO VINCE SUL VIDEO**
-	 *       QUANDO LA FINESTRA SI STRINGE.  E' UNA DECISIONE, non un ordine di
-	 *       righe: sta qui perche' non e' scritta in nessun documento.
+	 * ⛔⛔⭐ DATAGRAMS BEFORE STREAMS — THAT IS **AUDIO WINS OVER VIDEO**
+	 *       WHEN THE WINDOW NARROWS.  IT IS A DECISION, not an order of
+	 *       lines: it is here because it is written in no document.
 	 * ═══════════════════════════════════════════════════════════════════════
 	 *
-	 * ⛔ CHE COSA DECIDE.  Una passata di scrittura ha un solo `dest` e una sola
-	 *    finestra di congestione.  Chi scrive per primo se li prende.  Questa
-	 *    riga da' il primo posto ai DATAGRAM: se c'e' anche un solo blocco
-	 *    d'audio in coda, quello entra nel pacchetto prima di qualunque byte di
-	 *    video, e su una finestra da due o tre pacchetti (`[M]` la sessione vera
-	 *    dell'utente: `cwnd` 2 888 - 5 704 byte) «prima» vuol dire «invece».
+	 * ⛔ WHAT IT DECIDES.  A write pass has a single `dest` and a single
+	 *    congestion window.  Whoever writes first takes them.  This
+	 *    line gives first place to DATAGRAMS: if there is even a single audio
+	 *    block in the queue, it enters the packet before any byte of
+	 *    video, and on a window of two or three packets (`[M]` the user's real
+	 *    session: `cwnd` 2 888 - 5 704 bytes) «before» means «instead».
 	 *
-	 * ⭐ PERCHE'.  I due carichi non si degradano allo stesso modo, e la
-	 *    differenza e' in `RCP.md` §6.3 contro §5.1:
-	 *      · un blocco d'audio in ritardo **non serve piu' a nessuno** — non si
-	 *        ritrasmette, non si riordina, e chi ascolta ha un cuscino di
-	 *        250 ms e poi un buco che si SENTE;
-	 *      · un fotogramma in ritardo e' ancora un fotogramma: gli stream sono
-	 *        affidabili, i byte restano in coda e partono la passata dopo, e
-	 *        l'occhio perdona un fotogramma in piu' di ritardo molto piu' di
-	 *        quanto l'orecchio perdoni un buco.
-	 *    ⇒ Dare la precedenza al carico che scade e' l'unica delle due scelte in
-	 *      cui il ritardo si paga con qualcosa che si puo' ancora recuperare.
+	 * ⭐ WHY.  The two payloads do not degrade in the same way, and the
+	 *    difference is in `RCP.md` §6.3 against §5.1:
+	 *      · a late audio block **is of no use to anyone any more** — it is not
+	 *        retransmitted, not reordered, and whoever listens has a cushion of
+	 *        250 ms and then a hole one HEARS;
+	 *      · a late frame is still a frame: streams are
+	 *        reliable, the bytes stay in the queue and leave at the next pass, and
+	 *        the eye forgives a frame one more step late much more than
+	 *        the ear forgives a hole.
+	 *    ⇒ Giving precedence to the payload that expires is the only one of the two choices in
+	 *      which the delay is paid with something that can still be recovered.
 	 *
-	 * ⛔ L'ALTERNATIVA SCARTATA, e non era assurda: **gli stream per primi**,
-	 *    cioe' l'audio che viaggia nello spazio che il video lascia libero.
-	 *    ⚠ E' esattamente quel che fa il flag `MORE` dentro
-	 *    `dgram_scrivi_uno()`, e li' funziona; ma come ORDINE e' stata provata e
-	 *    ha una misura contro: `[M]` 17 agosto 2026, sessione vera dell'utente,
-	 *    **1 578 blocchi spediti e 1 606 rifiutati** con `cwnd_left = 0` — piu'
-	 *    della meta' dell'audio non partiva, perche' il video si prendeva la
-	 *    finestra intera e all'audio non restava un pacchetto suo.
-	 *    ⚠ La terza strada — una quota fissa per ciascuno — e' stata scartata
-	 *      senza misurarla: sarebbe un numero da tarare per scena, e §6.3 non
-	 *      da' nessun criterio per sceglierlo.
+	 * ⛔ THE DISCARDED ALTERNATIVE, and it was not absurd: **streams first**,
+	 *    that is audio travelling in the space video leaves free.
+	 *    ⚠ It is exactly what the `MORE` flag does inside
+	 *    `dgram_scrivi_uno()`, and there it works; but as an ORDER it was tried and
+	 *    has a measurement against it: `[M]` 17 Aug 2026, the user's real session,
+	 *    **1 578 blocks sent and 1 606 refused** with `cwnd_left = 0` — more
+	 *    than half of the audio did not leave, because video took the
+	 *    whole window and audio was left without a packet of its own.
+	 *    ⚠ The third road — a fixed quota for each — was discarded
+	 *      without measuring it: it would be a number to tune per scene, and §6.3
+	 *      gives no criterion for choosing it.
 	 *
-	 * ⚠ IL PREZZO, E NON E' TEORICO: e' banda tolta al video proprio quando ce
-	 *   n'e' poca.  ⭐ Ma e' LIMITATO per costruzione — la coda dei datagram e'
-	 *   lunga otto, quindi al massimo otto pacchetti passano davanti, poi
-	 *   `w->ndgram` e' zero e si prosegue con gli stream.
+	 * ⚠ THE PRICE, AND IT IS NOT THEORETICAL: it is bandwidth taken from video precisely when there
+	 *   is little.  ⭐ But it is BOUNDED by construction — the datagram queue is
+	 *   eight long, so at most eight packets go ahead, then
+	 *   `w->ndgram` is zero and we go on with the streams.
 	 *
-	 * ⭐⭐ E QUANTO PESI QUESTA PRECEDENZA DIPENDE DA COSA SUCCEDE SULLO SCHERMO,
+	 * ⭐⭐ AND HOW MUCH THIS PRECEDENCE WEIGHS DEPENDS ON WHAT HAPPENS ON THE SCREEN,
 	 *     `[M]`:
-	 *       · desktop FERMO — il filo e' **tutto audio**: 48,0 datagram su 48,4
-	 *         pacchetti al secondo (`09-b84`, 24 agosto 2026, cura del silenzio
-	 *         spenta).  ⇒ Non c'e' nessun video a cui togliere niente;
-	 *       · sessione VERA in movimento — l'audio sta fra il **25 e il 33 %**
-	 *         dei pacchetti.  ⇒ Due terzi buoni della finestra restano al video
-	 *         anche nel caso peggiore.
-	 *     ⚠ Il primo numero e' anche il motivo per cui il silenzio dell'audio
-	 *       (`audio.c`) e' diventato un predefinito: la precedenza costa poco
-	 *       finche' l'audio non parla per non dire niente. */
+	 *       · STILL desktop — the wire is **all audio**: 48.0 datagrams out of 48.4
+	 *         packets a second (`09-b84`, 24 Aug 2026, silence cure
+	 *         off).  ⇒ There is no video to take anything from;
+	 *       · REAL session in motion — audio is between **25 and 33 %**
+	 *         of the packets.  ⇒ A good two thirds of the window stay with video
+	 *         even in the worst case.
+	 *     ⚠ The first number is also the reason why audio silence
+	 *       (`audio.c`) became a default: the precedence costs little
+	 *       as long as audio does not speak to say nothing. */
 	{
 		ngtcp2_ssize ndg = 0;
 		if (dgram_scrivi_uno(w, path, pi, dest, destlen, ts, &ndg))
@@ -8779,10 +8779,10 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		size_t vcnt;
 		uint32_t flags;
 
-		/* ⭐ Se la riscrittura delle impostazioni ha perso il conto, ci si
-		 *    ferma: uno stream di controllo sfasato e' peggio di una
-		 *    connessione chiusa.  ⚠ NON e' il caso della scrittura
-		 *    PARZIALE, che e' un esito normale e si riprende dopo. */
+		/* ⭐ If the rewriting of the settings has lost count, we
+		 *    stop: a control stream out of step is worse than a
+		 *    closed connection.  ⚠ It is NOT the case of the PARTIAL
+		 *    write, which is a normal outcome and is resumed later. */
 		if (w->guasto)
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 
@@ -8800,23 +8800,23 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 			}
 		}
 
-		/* ── 1. le impostazioni ─────────────────────────────────────── */
+		/* ── 1. the settings ────────────────────────────────────────── */
 		if (sveccnt > 0 && stream_id == w->ctrl_id && !w->impostazioni_scritte) {
-			/* ⛔ La riscrittura si fa UNA VOLTA SOLA.  Se la passata di
-			 *    prima ne ha spedito solo un pezzo, nghttp3 ci rioffre
-			 *    gli stessi byte — non gli abbiamo ancora detto di
-			 *    averli consumati — e ricomporre il buffer da capo
-			 *    rispedirebbe il pezzo gia' uscito. */
+			/* ⛔ The rewriting is done ONCE ONLY.  If the previous pass
+			 *    sent only a piece of it, nghttp3 offers us
+			 *    the same bytes again — we have not yet told it we
+			 *    consumed them — and recomposing the buffer from scratch
+			 *    would resend the piece already gone out. */
 			if (w->impbuf_off == 0)
 				w->impbuf_orig =
 					riscrivi_impostazioni(w, vec, (size_t)sveccnt);
 			wt_orig = w->impbuf_orig;
 		}
 
-		/* ── 2. la coda nostra ──────────────────────────────────────── */
-		/* ⛔ `coda_scegli()` e non «la testa»: la testa puo' appartenere a uno
-		 *    stream bloccato, e fermarsi li' rifarebbe il blocco di testa che
-		 *    §5.1 esiste per togliere. */
+		/* ── 2. our own queue ───────────────────────────────────────── */
+		/* ⛔ `coda_scegli()` and not «the head»: the head can belong to a
+		 *    blocked stream, and stopping there would redo the head-of-line blocking that
+		 *    §5.1 exists to remove. */
 		if (sveccnt <= 0 && !w->troppi_bloccati) {
 			uscita *u = coda_scegli(w, &mio_i);
 			if (u) {
@@ -8832,12 +8832,12 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		vcnt = (size_t)(sveccnt > 0 ? sveccnt : 0);
 
 		if (wt_orig) {
-			/* ⭐ FASE 9 — e neanche qui c'e' il difetto del 23 agosto:
-			 *    `impbuf` e' un array FISSO dentro `wt` (256 byte), scritto
-			 *    UNA VOLTA SOLA (`impostazioni_scritte`) e vivo quanto la
-			 *    connessione.  ⛔ Se un giorno le impostazioni si
-			 *    riscrivessero, riscriverlo mentre ngtcp2 tiene ancora questo
-			 *    puntatore sarebbe la stessa corruzione silenziosa. */
+			/* ⭐ PHASE 9 — and not even here is the defect of 23 August present:
+			 *    `impbuf` is a FIXED array inside `wt` (256 bytes), written
+			 *    ONCE ONLY (`impostazioni_scritte`) and alive as long as the
+			 *    connection.  ⛔ If one day the settings were
+			 *    rewritten, rewriting it while ngtcp2 still holds this
+			 *    pointer would be the same silent corruption. */
 			wtvec[0].base = w->impbuf + w->impbuf_off;
 			wtvec[0].len = w->impbuf_len - w->impbuf_off;
 			v = wtvec;
@@ -8858,46 +8858,46 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		if (nwrite < 0) {
 			switch (nwrite) {
 			case NGTCP2_ERR_STREAM_DATA_BLOCKED:
-				/* ⛔⭐ E I BYTE NON SI BUTTANO: QUESTO E' UN CANALE
-				 *     AFFIDABILE.  Nell'innesto qui si scartava
-				 *     l'elemento INTERO — compreso il caso in cui una
-				 *     parte era gia' uscita sul filo: il messaggio dopo
-				 *     si saldava a quei byte monchi e il client leggeva
-				 *     un `tipo`/`lunghezza` inventato.  ⛔ Era il
-				 *     SERVER a fabbricare la violazione del client.
+				/* ⛔⭐ AND THE BYTES ARE NOT THROWN AWAY: THIS IS A RELIABLE
+				 *     CHANNEL.  In the graft here the WHOLE element
+				 *     was discarded — including the case in which a
+				 *     part had already gone out on the wire: the next message
+				 *     was welded to those truncated bytes and the client read
+				 *     an invented `tipo`/`lunghezza`.  ⛔ It was the
+				 *     SERVER fabricating the client's violation.
 				 *
-				 * ⚠ E STREAM_DATA_BLOCKED non e' un guasto: e' la
-				 *   condizione normale e transitoria che si scioglie col
-				 *   primo MAX_STREAM_DATA. */
+				 * ⚠ And STREAM_DATA_BLOCKED is not a fault: it is the
+				 *   normal and transient condition that dissolves with the
+				 *   first MAX_STREAM_DATA. */
 				if (wt_mio) {
 					uscita *u = &w->coda[mio_i];
 					registro_dettaglio(
 						REG_WT,
-						"stream %ld bloccato: %zu byte RESTANO in "
-						"coda (%zu gia' usciti) — ⭐ gli ALTRI stream "
-						"continuano (§5.1)",
+						"stream %ld blocked: %zu bytes STAY in the "
+						"queue (%zu already gone out) — ⭐ the OTHER streams "
+						"go on (§5.1)",
 						(long)stream_id, u->dati.n - u->off, u->off);
-					/* ⛔⭐ SI BLOCCA LO STREAM, NON LA CODA — ed e' la
-					 *     cura del punto 5 della fase 3.  Fino alla fase 2
-					 *     qui si alzava `coda_bloccata`, che fermava
-					 *     TUTTA la coda per la passata: un fotogramma
-					 *     lento bloccava in testa i successivi **a
-					 *     livello applicativo**, annullando esattamente il
-					 *     beneficio che §5.1 compra al livello di QUIC. */
+					/* ⛔⭐ THE STREAM IS BLOCKED, NOT THE QUEUE — and it is the
+					 *     cure of point 5 of phase 3.  Until phase 2
+					 *     here `coda_bloccata` was raised, which stopped
+					 *     THE WHOLE queue for the pass: a slow
+					 *     frame at the head blocked the following ones **at
+					 *     application level**, cancelling exactly the
+					 *     benefit §5.1 buys at the QUIC level. */
 					if (w->nbloccati < WT_BLOCCATI_MAX) {
 						w->bloccati[w->nbloccati++] = stream_id;
 					} else {
-						/* ⚠ Il tetto si dichiara invece di scivolare:
-						 *   da qui in poi la passata si ferma davvero, e
-						 *   chi legge sa che non e' §5.1 a non
-						 *   funzionare, e' questa tabella a essere
-						 *   piena. */
+						/* ⚠ The cap is declared instead of slipping by:
+						 *   from here on the pass really stops, and
+						 *   whoever reads knows it is not §5.1 that does not
+						 *   work, it is this table that is
+						 *   full. */
 						w->troppi_bloccati = true;
 						registro_dice_di(REG_WT, wt_chi(w),
-						                 "⚠ %u stream bloccati nella stessa "
-						                 "passata: la coda si ferma qui.  Non "
-						                 "e' §5.1 che non vale, e' il tetto "
-						                 "di WT_BLOCCATI_MAX",
+						                 "⚠ %u streams blocked in the same "
+						                 "pass: the queue stops here.  It is "
+						                 "not §5.1 that does not hold, it is the cap "
+						                 "of WT_BLOCCATI_MAX",
 						                 WT_BLOCCATI_MAX);
 					}
 					continue;
@@ -8906,9 +8906,9 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				continue;
 			case NGTCP2_ERR_STREAM_SHUT_WR:
 				if (wt_mio) {
-					/* Lo stream e' gia' chiuso in scrittura — di norma
-					 * perche' lo abbiamo AZZERATO noi (§5.1): i byte che
-					 * restavano non partono, che e' quel che si voleva. */
+					/* The stream is already closed for writing — normally
+					 * because WE RESET it (§5.1): the bytes that
+					 * remained do not leave, which is what was wanted. */
 					coda_uccidi(w, mio_i);
 					continue;
 				}
@@ -8926,62 +8926,62 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 		}
 
 		if (nwrite == NGTCP2_ERR_WRITE_MORE || ndatalen >= 0) {
-			/* Quanti byte DI NGHTTP3 sono stati consumati.  Se il suo
-			 * buffer e' stato sostituito, il numero che ngtcp2
-			 * restituisce e' il NOSTRO, e dirglielo sfaserebbe i suoi
-			 * conti. */
+			/* How many bytes OF NGHTTP3 have been consumed.  If its
+			 * buffer was replaced, the number ngtcp2
+			 * returns is OURS, and telling it would throw off its
+			 * counts. */
 			if (wt_mio) {
 				uscita *u = &w->coda[mio_i];
 				u->off += (size_t)ndatalen;
 				if (u->off >= u->dati.n) {
-					/* ⛔⭐ `RCP.md` §4.2: il canale di controllo
-					 *     che si chiude e' la fine della sessione,
-					 *     ANCHE dal lato nostro.  Il posto va
-					 *     lasciato QUI, perche' da adesso in poi non
-					 *     arrivera' piu' un byte che lo liberi. */
+					/* ⛔⭐ `RCP.md` §4.2: the control channel
+					 *     closing is the end of the session,
+					 *     ALSO on our side.  The slot must be
+					 *     given up HERE, because from now on no
+					 *     byte will arrive that frees it. */
 					if (u->fin && w->rcp &&
 					    (u->id == w->rcp_stream || u->id == w->sessione))
 						rcp_canale_chiuso(w->rcp);
-					/* ⛔⛔⭐ FASE 9 — QUI C'ERA `coda_uccidi()`, ED E' LA RIGA
-					 *      CHE HA UCCISO IL SERVER IL 23 AGOSTO 2026 alle
+					/* ⛔⛔⭐ PHASE 9 — HERE THERE WAS `coda_uccidi()`, AND IT IS THE LINE
+					 *      THAT KILLED THE SERVER ON 23 AUG 2026 at
 					 *      08:28:09.
 					 *
-					 *      `ndatalen` dice quanti byte sono finiti **in un
-					 *      pacchetto**, non quanti sono stati **confermati**.
-					 *      Liberarli qui e' liberarli mentre ngtcp2 tiene
-					 *      ancora il nostro puntatore per l'eventuale
-					 *      ritrasmissione: `fasi/09-la-qualita-e-la-degradazione.md` §4.2 segue la
-					 *      catena riga per riga fino al `ngtcp2_cpymem()` che
-					 *      rilegge la sorgente liberata.
+					 *      `ndatalen` says how many bytes ended up **in a
+					 *      packet**, not how many were **confirmed**.
+					 *      Freeing them here is freeing them while ngtcp2 still holds
+					 *      our pointer for a possible
+					 *      retransmission: `fasi/09-la-qualita-e-la-degradazione.md` §4.2 follows the
+					 *      chain line by line down to the `ngtcp2_cpymem()` that
+					 *      rereads the freed source.
 					 *
-					 * ⭐ Adesso si CONSEGNA e basta: l'elemento esce dalla
-					 *    scelta e dall'arretrato, i byte restano.  A liberarli
-					 *    e' l'ack (`coda_conferma()`) o la chiusura dello
-					 *    stream (`wt_stream_chiuso()`) — le due sole condizioni
-					 *    che il contratto di ngtcp2 ammette. */
+					 * ⭐ Now it is only HANDED OVER: the element leaves the
+					 *    choice and the backlog, the bytes stay.  Freeing them
+					 *    is the job of the ack (`coda_conferma()`) or of the closure of the
+					 *    stream (`wt_stream_chiuso()`) — the only two conditions
+					 *    ngtcp2's contract admits. */
 					coda_consegna(w, mio_i);
 				}
 			} else if (wt_orig) {
 				uint64_t c = (uint64_t)ndatalen;
-				/* ⛔⭐ E UNA SCRITTURA PARZIALE NON E' UN GUASTO.
+				/* ⛔⭐ AND A PARTIAL WRITE IS NOT A FAULT.
 				 *
-				 *    `ndatalen` minore della lunghezza offerta e' un
-				 *    esito NORMALE: nello stream frame ci va quel che
-				 *    avanza nel pacchetto.  I ~24 byte del SETTINGS
-				 *    riscritto viaggiano nel primo volo dopo la
-				 *    stretta di mano, quello che porta anche
-				 *    HANDSHAKE_DONE e i NEW_CONNECTION_ID: li' dentro
-				 *    24 byte possono non starci.
+				 *    `ndatalen` smaller than the length offered is a
+				 *    NORMAL outcome: what fits in the packet goes into the
+				 *    stream frame.  The ~24 bytes of the rewritten
+				 *    SETTINGS travel in the first flight after the
+				 *    handshake, the one that also carries
+				 *    HANDSHAKE_DONE and the NEW_CONNECTION_IDs: in there
+				 *    24 bytes may not fit.
 				 *
-				 * ⛔ Nell'innesto qui MORIVA LA CONNESSIONE, mentre
-				 *    dieci righe piu' sopra la coda nostra la stessa
-				 *    scrittura parziale la gestiva con `off`.  Due
-				 *    politiche opposte per lo stesso esito, nello
-				 *    stesso modulo. */
+				 * ⛔ In the graft here THE CONNECTION DIED, while
+				 *    ten lines further up our own queue handled the same
+				 *    partial write with `off`.  Two
+				 *    opposite policies for the same outcome, in the
+				 *    same module. */
 				if (c > w->impbuf_len - w->impbuf_off) {
 					registro_dice_di(REG_WT, wt_chi(w),
-					                 "⛔ impostazioni, conto impossibile "
-					                 "(%llu presi su %zu offerti)",
+					                 "⛔ settings, impossible count "
+					                 "(%llu taken out of %zu offered)",
 					                 (unsigned long long)c,
 					                 w->impbuf_len - w->impbuf_off);
 					w->guasto = true;
@@ -8991,8 +8991,8 @@ ngtcp2_ssize wt_scrivi(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
 				if (w->impbuf_off < w->impbuf_len) {
 					registro_dettaglio(
 						REG_WT,
-						"impostazioni, %zu byte su %zu — il resto "
-						"alla passata dopo",
+						"settings, %zu bytes out of %zu — the rest "
+						"at the next pass",
 						w->impbuf_off, w->impbuf_len);
 				} else {
 					w->impostazioni_scritte = true;

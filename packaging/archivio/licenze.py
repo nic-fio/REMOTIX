@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""licenze.py — il file delle licenze dei componenti di REMOTIX (DECISIONI §10.22), per l'archivio.
+"""licenze.py — the licence file for REMOTIX's components (DECISIONI §10.22), for the archive.
 
     licenze.py <archivio> <installatore> [<licenza-di-go>]   > THIRD-PARTY-LICENSES.txt
 
-Lo chiama pubblica.sh rigenera (dal comando di rilascio). Mette insieme, con il TESTO di ogni licenza
-che chiede di accompagnare il programma:
-  1. il prodotto (remotix): ngtcp2 e nghttp3 collegate STATICHE, alla versione che lo SBOM dell'archivio
-     dice collegata (sbom/*.spdx.json); il testo (COPYING) si scarica dal progetto al tag esatto;
-  2. le librerie della distribuzione che il prodotto usa (collegate dinamiche, dallo SBOM): non stanno
-     nei nostri pacchetti, hanno la licenza della distribuzione — si elencano;
-  3. il motore (remotix-install, Go statico): la libreria di Go (<licenza-di-go>, dal contenitore di
-     costruzione) e i moduli di installatore/vendor/ (modules.txt) col LICENSE di ognuno;
-Un componente senza testo di licenza trovato si SEGNA («DA VERIFICARE») e l'uscita è 1: il file non
-dice mai più di quel che sa.
+Called by pubblica.sh rigenera (from the release command). It gathers, with the TEXT of every licence
+that asks to accompany the program:
+  1. the product (remotix): ngtcp2 and nghttp3 linked STATICALLY, at the version the archive's SBOM
+     says is linked (sbom/*.spdx.json); the text (COPYING) is downloaded from the project at the exact tag;
+  2. the distribution libraries the product uses (linked dynamically, from the SBOM): they are not
+     in our packages, they carry the distribution's licence — they are listed;
+  3. the engine (remotix-install, static Go): the Go library (<licenza-di-go>, from the build
+     container) and the modules of installatore/vendor/ (modules.txt) with each one's LICENSE;
+A component with no licence text found is MARKED («DA VERIFICARE») and the exit code is 1: the file
+never says more than it knows.
 """
 import glob, json, os, re, sys, urllib.request
 
@@ -40,10 +40,10 @@ def spdx(testo):
 
 
 def sezione(nome, versione, licenza, dove, testo):
-    parti.append(f"== {nome} {versione}\n   licenza: {licenza}\n   {dove}\n\n{testo.strip()}\n")
+    parti.append(f"== {nome} {versione}\n   licence: {licenza}\n   {dove}\n\n{testo.strip()}\n")
 
 
-# 1. ngtcp2 e nghttp3 collegate nel prodotto (le versioni dallo SBOM: le stesse per ogni pacchetto)
+# 1. ngtcp2 and nghttp3 linked into the product (versions from the SBOM: the same for every package)
 statiche = {}
 dinamiche = set()
 for f in sorted(glob.glob(os.path.join(archivio, "sbom", "*.spdx.json"))):
@@ -54,27 +54,27 @@ for f in sorted(glob.glob(os.path.join(archivio, "sbom", "*.spdx.json"))):
         elif p.get("SPDXID", "").startswith("SPDXRef-dip-"):
             dinamiche.add(re.sub(r"\s*\(.*", "", p["name"]).strip())
 if not statiche:
-    mancano.append("ngtcp2/nghttp3: nessuno SBOM nell'archivio")
+    mancano.append("ngtcp2/nghttp3: no SBOM in the archive")
 for lib in sorted(statiche):
     for v in sorted(statiche[lib]):
         url = f"https://raw.githubusercontent.com/ngtcp2/{lib}/v{v}/COPYING"
         try:
             testo = urllib.request.urlopen(url, timeout=30).read().decode()
-        except Exception as e:  # senza il testo non si pubblica un file che lo ometta in silenzio
+        except Exception as e:  # without the text we do not publish a file that silently omits it
             mancano.append(f"{lib} {v}: {e}")
-            testo = "(testo non scaricato: " + url + ")"
-        sezione(lib, v, spdx(testo), "collegata STATICA nel binario di remotix (" + url + ")", testo)
+            testo = "(text not downloaded: " + url + ")"
+        sezione(lib, v, spdx(testo), "linked STATICALLY into the remotix binary (" + url + ")", testo)
 
-# 3. il motore: la libreria di Go e i moduli
+# 3. the engine: the Go library and the modules
 if licenza_go and os.path.exists(licenza_go):
     t = open(licenza_go).read()
-    sezione("Go (libreria standard e runtime)", "", spdx(t), "dentro il binario statico di remotix-install", t)
+    sezione("Go (standard library and runtime)", "", spdx(t), "inside the static remotix-install binary", t)
 else:
-    mancano.append("la licenza di Go (il file dal contenitore di costruzione)")
+    mancano.append("the Go licence (the file from the build container)")
 vendor = os.path.join(inst, "vendor")
-# i moduli che al tag usato non portano il LICENSE: la licenza detta dal progetto, e il testo di dopo
+# modules that carry no LICENSE at the tag used: the licence stated by the project, and the later text
 ECCEZIONI = {
-    "github.com/mattn/go-localereader": ("MIT", "il README al tag v0.0.1 dice «MIT»; il testo è il LICENSE che il progetto ha aggiunto dopo",
+    "github.com/mattn/go-localereader": ("MIT", "the README at tag v0.0.1 says «MIT»; the text is the LICENSE the project added later",
                                          "https://raw.githubusercontent.com/mattn/go-localereader/master/LICENSE"),
 }
 for riga in open(os.path.join(vendor, "modules.txt")):
@@ -96,34 +96,34 @@ for riga in open(os.path.join(vendor, "modules.txt")):
             testo = urllib.request.urlopen(url, timeout=30).read().decode()
         except Exception as e:
             mancano.append(f"{mod} {ver}: {e}")
-            testo = "(testo non scaricato: " + url + ")"
-        sezione(mod, ver, lic, "modulo Go nel binario di remotix-install (" + perche + ": " + url + ")", testo)
+            testo = "(text not downloaded: " + url + ")"
+        sezione(mod, ver, lic, "Go module in the remotix-install binary (" + perche + ": " + url + ")", testo)
         continue
     if not trovato:
-        mancano.append(f"{mod} {ver}: nessun LICENSE nel vendor")
-        sezione(mod, ver, "DA VERIFICARE", "modulo Go nel binario di remotix-install", "(nessun testo di licenza nel vendor: da verificare sul progetto)")
+        mancano.append(f"{mod} {ver}: no LICENSE in the vendor tree")
+        sezione(mod, ver, "DA VERIFICARE", "Go module in the remotix-install binary", "(no licence text in the vendor tree: to be checked on the project)")
         continue
     testo = "\n\n".join(open(x).read() for x in trovato)
     lic = spdx(testo)
     if lic == "DA VERIFICARE":
-        mancano.append(f"{mod} {ver}: licenza non riconosciuta")
-    sezione(mod, ver, lic, "modulo Go nel binario di remotix-install (" + ", ".join(os.path.relpath(x, vendor) for x in trovato) + ")", testo)
+        mancano.append(f"{mod} {ver}: licence not recognised")
+    sezione(mod, ver, lic, "Go module in the remotix-install binary (" + ", ".join(os.path.relpath(x, vendor) for x in trovato) + ")", testo)
 
-# 2. le librerie della distribuzione
-elenco = "\n".join("   · " + x for x in sorted(dinamiche)) or "   (nessuna: lo SBOM non ne elenca)"
-testa = f"""REMOTIX — le licenze dei componenti (generato da packaging/archivio/licenze.py)
+# 2. the distribution libraries
+elenco = "\n".join("   · " + x for x in sorted(dinamiche)) or "   (none: the SBOM lists none)"
+testa = f"""REMOTIX — component licences (generated by packaging/archivio/licenze.py)
 
-Il codice di REMOTIX: PolyForm Noncommercial 1.0.0 (DECISIONI §10.22; il file LICENSE del progetto).
-Qui sotto: i componenti di altri che i pacchetti di REMOTIX PORTANO DENTRO, ognuno con la sua
-licenza e il suo testo.
+REMOTIX's code: PolyForm Noncommercial 1.0.0 (DECISIONI §10.22; the project's LICENSE file).
+Below: third-party components that the REMOTIX packages CARRY INSIDE, each with its own
+licence and its text.
 
-Le librerie della DISTRIBUZIONE che remotix usa (collegate dinamiche o chiamate a tempo di
-esecuzione) non stanno nei pacchetti di REMOTIX: le installa il gestore di pacchetti, ognuna con la
-licenza e il testo che la distribuzione porta in /usr/share/doc (o /usr/share/licenses). Dallo SBOM:
+The DISTRIBUTION libraries that remotix uses (linked dynamically or called at run
+time) are not in the REMOTIX packages: the package manager installs them, each with the
+licence and text the distribution ships in /usr/share/doc (or /usr/share/licenses). From the SBOM:
 {elenco}
-⭐ Fase 18 (DECISIONI §10.22, §10.25): REMOTIX non collega più ffmpeg (libavcodec GPL). Al suo posto
-libva (MIT) e libopus (BSD-3-Clause). ⛔ Fase 19 (DECISIONI §10.27): niente codifica in software —
-OpenH264 e SVT-AV1 sono usciti. I driver VA (Mesa MIT, intel-media-driver MIT/BSD) si caricano a parte.
+⭐ Phase 18 (DECISIONI §10.22, §10.25): REMOTIX no longer links ffmpeg (libavcodec GPL). In its place
+libva (MIT) and libopus (BSD-3-Clause). ⛔ Phase 19 (DECISIONI §10.27): no software encoding —
+OpenH264 and SVT-AV1 are out. The VA drivers (Mesa MIT, intel-media-driver MIT/BSD) are loaded separately.
 """
 print(testa)
 for p in parti:

@@ -1,14 +1,14 @@
-# PKGBUILD — il motore d'installazione di REMOTIX per Arch.
-# Binario Go STATICO (installatore/costruisci.sh): qui si impacchetta soltanto; il catalogo sta
-# dentro il binario (DECISIONI §10.21). Lo costruisce packaging/motore/pacchetti-motore.sh, chiamato
-# dal comando di rilascio (pkgver/pkgrel dall'ambiente).
-# ⛔ DECISIONI §10.12: non accende niente. D14 (§10.23): niente timer, REMOTIX si aggiorna col sistema.
+# PKGBUILD — the REMOTIX installation engine for Arch.
+# STATIC Go binary (installatore/costruisci.sh): here it is only packaged; the catalogue lives
+# inside the binary (DECISIONI §10.21). Built by packaging/motore/pacchetti-motore.sh, called
+# by the release command (pkgver/pkgrel from the environment).
+# ⛔ DECISIONI §10.12: it enables nothing. D14 (§10.23): no timer, REMOTIX updates with the system.
 
 # Maintainer: nicfio <nicfio@gmail.com>
 pkgname=remotix-install
 pkgver=${RX_VERSIONE:-0.1.0}
 pkgrel=${RX_RILASCIO:-1}
-pkgdesc='Il motore d installazione di REMOTIX (installa, verifica, certifica, disinstalla)'
+pkgdesc='The REMOTIX installation engine (installs, checks, certifies, uninstalls)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
 license=('LicenseRef-REMOTIX')

@@ -6,22 +6,22 @@ import (
 	"sort"
 )
 
-// DOPO UN AGGIORNAMENTO DEL SISTEMA (DECISIONI §10.23, D14): REMOTIX si aggiorna quando
-// l'amministratore aggiorna la macchina (apt upgrade, dnf upgrade, zypper up, pacman -Syu), come ogni
-// altro programma. Il motore non ha un sistema di aggiornamento suo: niente timer, niente comando
-// «aggiorna». Gli script dei pacchetti remotix e remotix-install, a ogni cambio di versione (anche
-// all'indietro, coi comandi del gestore), chiamano `remotix-install aggiornato`, che:
-//   - ANNOTA le versioni dei pacchetti di REMOTIX installate adesso (aggiornamenti.json, accanto alle
-//     operazioni): il «controlla» dei pacchetti dell'installazione le accetta, e `certifica` resta
-//     verde anche dopo un ritorno a una versione precedente;
-//   - dice se l'installazione è ancora certificata e se la macchina ha un motivo BLOCCANTE.
-// Il riavvio che non chiude i desktop lo fa lo script del pacchetto remotix (try-restart), non il
-// motore: un servizio fermato dall'amministratore resta fermo.
+// AFTER A SYSTEM UPGRADE (DECISIONI §10.23, D14): REMOTIX is upgraded when
+// the administrator upgrades the machine (apt upgrade, dnf upgrade, zypper up, pacman -Syu), like every
+// other program. The engine has no update system of its own: no timer, no
+// «aggiorna» command. The scripts of the remotix and remotix-install packages, at every version change (even
+// backwards, with the manager's commands), call `remotix-install aggiornato`, which:
+//   - RECORDS the versions of REMOTIX's packages installed now (aggiornamenti.json, next to the
+//     operations): the «controlla» of the installation's packages accepts them, and `certifica` stays
+//     green even after going back to a previous version;
+//   - says whether the installation is still certified and whether the machine has a BLOCKING reason.
+// The restart that does not close the desktops is done by the remotix package's script (try-restart), not by the
+// engine: a service stopped by the administrator stays stopped.
 
-// FileVersioniAnnotate: le versioni annotate dopo l'ultimo cambio.
+// FileVersioniAnnotate: the versions recorded after the last change.
 const FileVersioniAnnotate = "recorded-versions.json"
 
-// AnnotaVersioni scrive le versioni installate dei pacchetti di REMOTIX (quelli che mancano no).
+// AnnotaVersioni writes the installed versions of REMOTIX's packages (not the missing ones).
 func (m *Motore) AnnotaVersioni() (map[string]string, error) {
 	if m.Amb == nil || m.Amb.Pacchetti == nil {
 		return nil, Errore("RX-PACCHETTI-003", "")
@@ -40,7 +40,7 @@ func (m *Motore) AnnotaVersioni() (map[string]string, error) {
 		map[string]any{"format": Formato, "object": "recorded-versions", "versions": r, "written": ora()})
 }
 
-// versioniAggiornate: quelle annotate dall'ultimo `aggiornato` (vuoto se nessuno).
+// versioniAggiornate: those recorded by the last `aggiornato` (empty if none).
 func versioniAggiornate(cartellaOp string) map[string]string {
 	var x struct {
 		Versioni map[string]string `json:"versions"`
@@ -49,7 +49,7 @@ func versioniAggiornate(cartellaOp string) map[string]string {
 	return x.Versioni
 }
 
-// ---------------------------------------------------------------- piccoli aiuti
+// ---------------------------------------------------------------- small helpers
 
 func chiaviOrdinate(m map[string]string) []string {
 	r := make([]string, 0, len(m))

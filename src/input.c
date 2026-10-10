@@ -1,194 +1,194 @@
 /*
- * input.c — l'input arriva DAVVERO al desktop: `input.h` attuato su `libei`.
+ * input.c — input REALLY reaches the desktop: `input.h` implemented on `libei`.
  *
- * ⛔ Il contratto sta in `input.h`, che e' del coordinatore: qui si ATTUA, non
- *    si cambia la cucitura.  Chi trova il contratto sbagliato lo DICE e si
- *    ferma — non lo aggira.  *(I due punti in cui e' stato detto stanno in
+ * ⛔ The contract is in `input.h`, which belongs to the coordinator: here it is IMPLEMENTED, the
+ *    seam is not changed.  Whoever finds the contract wrong SAYS so and
+ *    stops — does not work around it.  *(The two points where it was said are in
  *    `fasi/rapporti/F4-A4-iniezione.md` §5.)*
  *
- * ⛔ RIPORTATO da `fondamenta/remotix-c/src/input.c` (906 righe), e non ricopiato.  Di
- *    v1 resta ⭐ **la meccanica di libei** — il ciclo `poll`/`ei_dispatch`, la
- *    presa dei dispositivi, `start_emulating`, `ei_device_frame` dopo ogni
- *    evento — che e' il patrimonio vero.  ⛔ Cade tutto il contorno RDP
- *    (`freerdp/input.h`, i `PTR_FLAGS_*`, i `KBD_FLAGS_*`), che qui non
- *    esiste: sul filo c'e' `RCP.md` §7.3, e i codici sono gia' evdev.
+ * ⛔ CARRIED OVER from `fondamenta/remotix-c/src/input.c` (906 lines), and not copied.  Of
+ *    v1 there remains ⭐ **the mechanics of libei** — the `poll`/`ei_dispatch` loop, the
+ *    taking of the devices, `start_emulating`, `ei_device_frame` after every
+ *    event — which is the real heritage.  ⛔ All the RDP surroundings go
+ *    (`freerdp/input.h`, the `PTR_FLAGS_*`, the `KBD_FLAGS_*`), which here do not
+ *    exist: on the wire there is `RCP.md` §7.3, and the codes are already evdev.
  *
- * ⛔⛔ E CADONO DUE COSE DI v1 CHE ERANO **SBAGLIATE**, non solo inutili — e
- *      sono la meta' del lavoro di questo file:
+ * ⛔⛔ AND TWO THINGS OF v1 THAT WERE **WRONG**, not just useless, go — and
+ *      they are half of this file's work:
  *
- *   1. `compositore_mapping_id`: v1 cercava la regione con l'UUID **dichiarato
- *      da noi** a `RecordVirtual`.  Mutter quella proprieta' la ignora, e
- *      l'UUID vero lo genera lui: v1 non trovava **mai** la regione per chiave
- *      e cadeva ogni volta sul ripiego «prendo la prima» — verde con uno
- *      schermo, storto con due (`mutter.h`, `STUDI.md` §gnome §9);
- *   2. `ei_device_scroll_discrete`: Mutter ne fa una **divisione intera per
- *      120** (`meta-eis-client.c:554`), e i mezzi scatti spariscono.  Qui si
- *      va di `scroll_delta`, dove Mutter forza `SOURCE_WHEEL`, salta
- *      l'accumulatore, e la soglia vera di uno scatto e' **60**.
+ *   1. `compositore_mapping_id`: v1 looked for the region with the UUID **declared
+ *      by us** to `RecordVirtual`.  Mutter ignores that property, and
+ *      generates the real UUID itself: v1 **never** found the region by key
+ *      and fell every time on the fallback "I take the first" — green with one
+ *      screen, crooked with two (`mutter.h`, `STUDI.md` §gnome §9);
+ *   2. `ei_device_scroll_discrete`: Mutter does an **integer division by
+ *      120** on it (`meta-eis-client.c:554`), and the half notches vanish.  Here we
+ *      go with `scroll_delta`, where Mutter forces `SOURCE_WHEEL`, skips
+ *      the accumulator, and the real threshold of a notch is **60**.
  *
  * ---------------------------------------------------------------------------
- * ⛔ UN THREAD SOLO, ED E' QUELLO DI CHI CHIAMA
+ * ⛔ A SINGLE THREAD, AND IT IS THE CALLER'S
  *
- * v1 aveva un thread suo e una coda, perche' il ciclo di FreeRDP non era suo.
- * Qui no: `input_gira()` esiste apposta nel contratto perche' il ciclo del
- * figlio chiami questo modulo a ogni giro.  ⇒ **Nessun lucchetto, nessuna
- * coda, nessun thread** — e nessuna attesa dentro il ciclo asincrono
+ * v1 had a thread of its own and a queue, because FreeRDP's loop was not its own.
+ * Not here: `input_gira()` exists in the contract precisely so that the child's
+ * loop calls this module at every round.  ⇒ **No lock, no
+ * queue, no thread** — and no waiting inside the asynchronous loop
  * (`CODER.md` §4.4).
  *
- * ⛔ Il prezzo, e va detto al coordinatore invece che scoperto: **tutte** le
- *    funzioni di `input.h` vanno chiamate dallo STESSO thread che chiama
- *    `input_gira()`.  `libei` non e' rientrante, e due thread su un `struct ei`
- *    sono un difetto che non da' errore.
+ * ⛔ The price, and it must be told to the coordinator instead of discovered: **all** the
+ *    functions of `input.h` must be called from the SAME thread that calls
+ *    `input_gira()`.  `libei` is not reentrant, and two threads on a `struct ei`
+ *    are a defect that gives no error.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ IL CONTO DI QUEL CHE E' PREMUTO — `RCP.md` §11
+ * ⛔⛔ THE COUNT OF WHAT IS PRESSED — `RCP.md` §11
  *
- * *«la regola col rapporto danno/costo piu' alto del documento»*: un Ctrl
- * rimasto giu' in una sessione che sopravvive al client rende il desktop
- * inservibile al riattacco, e nessuno collega le due cose.
+ * *"the rule with the highest damage/cost ratio in the document"*: a Ctrl
+ * left down in a session that survives the client makes the desktop
+ * unusable at reattach, and nobody connects the two things.
  *
- * ⇒ Ogni tasto e ogni pulsante che si preme si SEGNA, e ogni rilascio si
- *   cancella.  Due mappe di bit, e `input_rilascia_tutto()` le svuota
- *   ritornando quanti ne ha rilasciati — perche' il banco possa contarli.
+ * ⇒ Every key and every button pressed is MARKED, and every release
+ *   clears it.  Two bitmaps, and `input_rilascia_tutto()` empties them
+ *   returning how many it released — so that the bench can count them.
  *
- * ⚠ E Mutter fa da rete di sicurezza **solo su libei**: `drop_device`
- *   (`meta-eis-client.c:144-168`) rilascia tutto quando il client EIS cade.
- *   ⛔ Non e' una ragione per non contare: la rete scatta quando il canale si
- *   chiude, e il distacco di un client **non** chiude la sessione (invariante
- *   I4 — il palco sopravvive al distacco).
- *
- * ---------------------------------------------------------------------------
- * ⛔⛔⛔ IL RILASCIO CHE NON ARRIVA A NESSUNO — `[M]` 16 agosto 2026, banco
- *       `06-b33`, e questo file NON lo puo' curare
- *
- * ⚠ *Questo riquadro e' la cosa piu' importante del file, e va letta prima di
- *   toccare `dispositivo_tolto()`: il commento li' dentro diceva* «al ricambio
- *   si rilascia sul dispositivo nuovo, che e' l'unico posto dove il rilascio
- *   arriva» *— ed era **falso**.  Il rilascio sul dispositivo nuovo non arriva
- *   da nessuna parte.*
- *
- * LA SCENA, misurata: si tiene giu' `BTN_LEFT`, il client chiede un
- * `ADATTA_TELA`, Mutter ricrea i dispositivi assoluti, e **poi** si rilascia.
- * ⇒ `[M]` il testimone dentro la sessione (una finestra Wayland vera) vede il
- *   `premuto:1` e **non vede mai** il `premuto:0`.  ⛔ E da quel momento in poi
- *   **nessun clic funziona piu'**, per sempre: il giro successivo, identico a
- *   uno che era stato verde su tutto, consegna puntatore e tasti e **zero**
- *   pulsanti.  E' *«su Android il mouse da' problemi: non prende piu' i click»*
- *   (l'utente, 15 agosto 2026), in una forma che nessun registro dichiarava.
- *
- * LA CATENA, tutta `[R]` nel sorgente di Mutter, e nessun anello e' nostro:
- *
- *   1. `remove_viewport_devices` (`meta-eis-client.c:197-206`) chiama
- *      `eis_device_remove()` e ⛔ **NON passa da `drop_device()`** — che e'
- *      l'unico posto dove Mutter rilascia quel che era premuto.  Il dispositivo
- *      vecchio se ne va **col pulsante ancora giu'**;
- *   2. `handle_button` (`:612-621`) ingoia **in silenzio** un rilascio per un
- *      pulsante che non risulta premuto sul dispositivo che lo riceve
- *      (*«Duplicate press/release, should've been filtered by libeis»*) — e
- *      dopo il ricambio il dispositivo e' un ALTRO, con le mappe pulite;
- *   3. `meta_seat_impl_notify_button_in_impl` (`meta-seat-impl.c:899-908`) tiene
- *      un conto **DEL POSTO**, condiviso fra tutti i dispositivi, e scarta
- *      *«any repeated button press (for example from virtual devices)»*.  Il
- *      press del dispositivo morto lo tiene a **1** per sempre ⇒ ogni press
- *      successivo lo porta a 2 e viene scartato, ogni release lo riporta a 1 e
- *      viene scartato.  ⛔ **Non scende mai a zero.**
- *
- * ⇒ ⛔ **Da qui non si recupera, e non e' una resa**: e' misurato.  Un
- *   `press`+`release` sul dispositivo nuovo fa 1→2→1 e non consegna niente
- *   (`[M]`); un `release` da solo lo ingoia il passo 2.  L'unico codice che
- *   riporta il conto a zero e' `drop_device()`, cioe' **la caduta del canale
- *   EIS** — e infatti `[M]` riaccendere il server sblocca il desktop.
- *
- * ⭐⭐ E LA CURA C'E', E' UNA RIGA, E NON STA IN QUESTO FILE: si rilascia
- *     **PRIMA** di chiedere il ridimensionamento, finche' i dispositivi sono
- *     ancora quelli che hanno ricevuto il press.  La funzione esiste gia' ed e'
- *     `input_rilascia_tutto()`; il posto dove chiamarla e' `figlio.c:3964`,
- *     subito **prima** di `cattura_ridimensiona(cat, tela_voluta_l,
- *     tela_voluta_a)`.  `[M]` Simulata dal filo — rilasciando prima del
- *     ricambio — il testimone vede il rilascio e i clic dopo il ricambio
- *     tornano a funzionare, tutti.
- *
- * ⚠ `figlio.c` non e' di questo anello (sottofase 6.3), quindi qui la cura si
- *   MISURA e si SCRIVE, non si applica.  ⛔ Quel che tocca a questo file e'
- *   l'altra meta', ed e' quella che mancava: **smettere di dire che il rilascio
- *   e' partito**.  Prima `manda_bottone()` tornava 0 e
- *   `input_rilascia_tutto()` contava un rilascio avvenuto, cioe' il registro
- *   diceva «fatto» mentre il desktop restava bloccato — la forma peggiore di
- *   `CODER.md` §4.6, *il verde non e' vero*.
+ * ⚠ And Mutter acts as a safety net **only on libei**: `drop_device`
+ *   (`meta-eis-client.c:144-168`) releases everything when the EIS client drops.
+ *   ⛔ It is not a reason not to count: the net triggers when the channel
+ *   closes, and the detach of a client does **not** close the session (invariant
+ *   I4 — the stage survives the detach).
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔⛔ E LA PORTA E' UNA SECONDA — `[M]` 21 agosto 2026, banco
- *       `banchi/06-b33-risveglio.*`.  ⚠ LA CURA DI SOPRA **NON LA COPRE**.
+ * ⛔⛔⛔ THE RELEASE THAT REACHES NOBODY — `[M]` 16 August 2026, bench
+ *       `06-b33`, and this file CANNOT cure it
  *
- * ⛔ **Il ricambio NON dipende dalla tela.**  `[M]` con `banchi/06-b33-risveglio`,
- *    sessione ferma e nessun `ADATTA_TELA`: **tre `cattura_risveglia()`, tre
- *    ricambi del puntatore** (delta di `ricambi_puntatore` = 1, 1, 1) e **zero**
- *    chiamate a `cattura_ridimensiona()`.
+ * ⚠ *This box is the most important thing in the file, and must be read before
+ *   touching `dispositivo_tolto()`: the comment in there said* "at the replacement
+ *   we release on the new device, which is the only place where the release
+ *   arrives" *— and it was **false**.  The release on the new device arrives
+ *   nowhere.*
  *
- * `[R]` E la riga di Mutter che lo spiega:
- *   `cattura_risveglia()` chiama `pw_stream_update_params()` → il produttore
- *   rinegozia → `meta_screen_cast_virtual_stream_src_enable()`
- *   (`meta-screen-cast-virtual-stream-src.c:283`) chiama
+ * THE SCENE, measured: `BTN_LEFT` is held down, the client asks for an
+ * `ADATTA_TELA`, Mutter recreates the absolute devices, and **then** it is released.
+ * ⇒ `[M]` the witness inside the session (a real Wayland window) sees the
+ *   `premuto:1` and **never sees** the `premuto:0`.  ⛔ And from that moment on
+ *   **no click works any more**, forever: the next round, identical to
+ *   one that had been green on everything, delivers pointer and keys and **zero**
+ *   buttons.  It is *"on Android the mouse gives trouble: it no longer takes clicks"*
+ *   (the user, 15 August 2026), in a form no log declared.
+ *
+ * THE CHAIN, all `[R]` in Mutter's source, and no link is ours:
+ *
+ *   1. `remove_viewport_devices` (`meta-eis-client.c:197-206`) calls
+ *      `eis_device_remove()` and ⛔ **does NOT go through `drop_device()`** — which is
+ *      the only place where Mutter releases what was pressed.  The old device
+ *      goes away **with the button still down**;
+ *   2. `handle_button` (`:612-621`) **silently** swallows a release for a
+ *      button that is not pressed on the device receiving it
+ *      (*"Duplicate press/release, should've been filtered by libeis"*) — and
+ *      after the replacement the device is ANOTHER one, with clean maps;
+ *   3. `meta_seat_impl_notify_button_in_impl` (`meta-seat-impl.c:899-908`) keeps
+ *      a count **OF THE SEAT**, shared among all devices, and discards
+ *      *"any repeated button press (for example from virtual devices)"*.  The
+ *      press of the dead device keeps it at **1** forever ⇒ every following press
+ *      brings it to 2 and is discarded, every release brings it back to 1 and
+ *      is discarded.  ⛔ **It never goes down to zero.**
+ *
+ * ⇒ ⛔ **From here it cannot be recovered, and it is not giving up**: it is measured.  A
+ *   `press`+`release` on the new device goes 1→2→1 and delivers nothing
+ *   (`[M]`); a `release` alone is swallowed by step 2.  The only code that
+ *   brings the count back to zero is `drop_device()`, that is **the drop of the EIS
+ *   channel** — and indeed `[M]` restarting the server unblocks the desktop.
+ *
+ * ⭐⭐ AND THE CURE EXISTS, IT IS ONE LINE, AND IT IS NOT IN THIS FILE: release
+ *     **BEFORE** asking for the resize, while the devices are
+ *     still those that received the press.  The function already exists and is
+ *     `input_rilascia_tutto()`; the place to call it is `figlio.c:3964`,
+ *     right **before** `cattura_ridimensiona(cat, tela_voluta_l,
+ *     tela_voluta_a)`.  `[M]` Simulated from the wire — releasing before the
+ *     replacement — the witness sees the release and the clicks after the replacement
+ *     work again, all of them.
+ *
+ * ⚠ `figlio.c` does not belong to this link (sub-phase 6.3), so here the cure is
+ *   MEASURED and WRITTEN, not applied.  ⛔ What falls to this file is
+ *   the other half, and it is the one that was missing: **stop saying the release
+ *   has left**.  Before, `manda_bottone()` returned 0 and
+ *   `input_rilascia_tutto()` counted a release that happened, that is the log
+ *   said "done" while the desktop stayed blocked — the worst form of
+ *   `CODER.md` §4.6, *the green is not true*.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔⛔ AND THERE IS A SECOND DOOR — `[M]` 21 August 2026, bench
+ *       `banchi/06-b33-risveglio.*`.  ⚠ THE CURE ABOVE **DOES NOT COVER IT**.
+ *
+ * ⛔ **The replacement does NOT depend on the canvas.**  `[M]` with `banchi/06-b33-risveglio`,
+ *    still session and no `ADATTA_TELA`: **three `cattura_risveglia()`, three
+ *    pointer replacements** (delta of `ricambi_puntatore` = 1, 1, 1) and **zero**
+ *    calls to `cattura_ridimensiona()`.
+ *
+ * `[R]` And Mutter's line that explains it:
+ *   `cattura_risveglia()` calls `pw_stream_update_params()` → the producer
+ *   renegotiates → `meta_screen_cast_virtual_stream_src_enable()`
+ *   (`meta-screen-cast-virtual-stream-src.c:283`) calls
  *   `meta_eis_viewport_notify_changed()` → `viewports-changed`
  *   (`meta-eis.c:319-323`) → `update_viewports()` (`meta-eis-client.c:1049-1062`)
- *   → `remove_viewport_devices()`.  ⇒ **La stessa catena del ridimensionamento,
- *   ma senza che nessuno abbia cambiato misura.**
+ *   → `remove_viewport_devices()`.  ⇒ **The same chain as the resize,
+ *   but without anyone having changed size.**
  *
- * ⛔ E `figlio.c:6365` chiama `cattura_risveglia()` **proprio su un desktop
- *    fermo**, quando la presa e' ZERO e una chiave e' dovuta — cioe' nel
- *    momento esatto in cui l'utente puo' star tenendo giu' il mouse su una
- *    scena che non si muove.
+ * ⛔ And `figlio.c:6365` calls `cattura_risveglia()` **precisely on a still
+ *    desktop**, when the take is ZERO and a keyframe is owed — that is at the
+ *    exact moment the user may be holding the mouse down on a
+ *    scene that does not move.
  *
- * `[M]` La misura, scena `06-b33-risveglio.sh tenuto` (21 ago 2026, carico
- * 1,58-10,7, testimone Wayland dentro la sessione):
- *   · `BTN_LEFT` giu' → **1** risveglio → il rilascio **non arriva MAI** al
- *     testimone, e il **clic fresco successivo nemmeno** ⇒ da li' il desktop
- *     non prende piu' un clic;
- *   · ⭐ e la **tastiera continua a funzionare** (Ctrl giu'+su e un Invio
- *     fresco arrivano tutti): la tastiera non e' un dispositivo di viewport;
- *   · ⭐ la scena col `cattura_ridimensiona()` al posto del risveglio da'
- *     **esattamente lo stesso esito**: sono due porte sulla stessa stanza.
+ * `[M]` The measurement, scene `06-b33-risveglio.sh tenuto` (21 Aug 2026, load
+ * 1.58-10.7, Wayland witness inside the session):
+ *   · `BTN_LEFT` down → **1** wake-up → the release **NEVER arrives** at the
+ *     witness, and **neither does the next fresh click** ⇒ from there the desktop
+ *     no longer takes a click;
+ *   · ⭐ and the **keyboard keeps working** (Ctrl down+up and a fresh Enter
+ *     all arrive): the keyboard is not a viewport device;
+ *   · ⭐ the scene with `cattura_ridimensiona()` in place of the wake-up gives
+ *     **exactly the same outcome**: they are two doors to the same room.
  *
- * `[M]` E la voce di Mutter, con `MUTTER_DEBUG=eis,input`, allineata al
- * millisecondo (18:41:16-30 del 21 ago 2026):
- *   `EIS: Updating viewports` — e ⛔ **NESSUN** *«Releasing pressed buttons»*
- *   accanto ⇒ il dispositivo vecchio muore col pulsante giu';
- *   poi `INPUT: Dropping repeated press of button 0x110, count 2` e
- *   `INPUT: Dropping repeated release of button 0x110, count 1` ⇒ il conto del
- *   POSTO non torna piu' a zero.
+ * `[M]` And Mutter's voice, with `MUTTER_DEBUG=eis,input`, aligned to the
+ * millisecond (18:41:16-30 of 21 Aug 2026):
+ *   `EIS: Updating viewports` — and ⛔ **NO** *"Releasing pressed buttons"*
+ *   next to it ⇒ the old device dies with the button down;
+ *   then `INPUT: Dropping repeated press of button 0x110, count 2` and
+ *   `INPUT: Dropping repeated release of button 0x110, count 1` ⇒ the SEAT's
+ *   count never goes back to zero.
  *
- * ⭐⭐ E QUEL CHE INVECE GUARISCE, `[M]` lo stesso giorno: **la caduta del
- *     canale EIS**, e basta quella.  Staccando e riattaccando il cliente EIS —
- *     ⛔ **con lo stesso `gnome-shell`, verificato per pid** — i clic tornano
- *     ad arrivare.  `[R]` Il perche': `meta_eis_client_disconnect()`
- *     (`:1075`) e' l'unico chiamante di `drop_device()`, che rilascia quel che
- *     era premuto; e nel giornale si vedono le sei righe *«Releasing pressed
- *     buttons while destroying virtual input device»* proprio li'.
+ * ⭐⭐ AND WHAT DOES HEAL, `[M]` the same day: **the drop of the
+ *     EIS channel**, and that alone.  Detaching and reattaching the EIS client —
+ *     ⛔ **with the same `gnome-shell`, verified by pid** — the clicks start
+ *     arriving again.  `[R]` The why: `meta_eis_client_disconnect()`
+ *     (`:1075`) is the only caller of `drop_device()`, which releases what
+ *     was pressed; and in the journal the six lines *"Releasing pressed
+ *     buttons while destroying virtual input device"* show right there.
  *
- * ⚠ E per attuare quella guarigione **non basta questo file**: dopo il distacco
- *   il descrittore che `mutter.c` tiene da parte e' morto, e uno NUOVO lo puo'
- *   chiedere solo chi ha il bus e il percorso della sessione.  ⇒ Serve una
- *   `ConnectToEIS` nuova, cioe' `mutter_eis_riattacca()`.  `[R]`
- *   `meta-remote-desktop-session.c:1943-1969`: `session->eis` si riusa, e ogni
- *   chiamata aggiunge un cliente ⇒ la sessione e il palco NON si toccano.
+ * ⚠ And to implement that healing **this file is not enough**: after the detach
+ *   the descriptor `mutter.c` keeps aside is dead, and a NEW one can only be
+ *   asked for by whoever has the bus and the session path.  ⇒ A new
+ *   `ConnectToEIS` is needed, that is `mutter_eis_riattacca()`.  `[R]`
+ *   `meta-remote-desktop-session.c:1943-1969`: `session->eis` is reused, and every
+ *   call adds a client ⇒ the session and the stage are NOT touched.
  *
- * ⛔⛔ E QUI AVEVO SCRITTO UNA RAGIONE SBAGLIATA, smentita da un guasto
- *      innestato il 21 agosto 2026 (`06-b33-risveglio-guasti.py`, `RG3`).
- *      Diceva: *«finche' il descrittore di `mutter.c` resta aperto il socket e'
- *      ancora connesso e Mutter non vede nessun distacco»*.  ⛔ `[M]` Togliendo
- *      quel `close()` la guarigione funziona **identica**.
- *      ⭐ Il distacco lo manda **`ei_disconnect()`**, come messaggio di
- *        protocollo: `[M]` togliendo QUELLA riga (`RG4`) la guarigione smette.
- *      ⚠ Il `close()` resta per non perdere un descrittore a ogni guarigione.
+ * ⛔⛔ AND HERE I HAD WRITTEN A WRONG REASON, refuted by a fault
+ *      grafted on 21 August 2026 (`06-b33-risveglio-guasti.py`, `RG3`).
+ *      It said: *"as long as `mutter.c`'s descriptor stays open the socket is
+ *      still connected and Mutter sees no detach"*.  ⛔ `[M]` Removing
+ *      that `close()` the healing works **identically**.
+ *      ⭐ The detach is sent by **`ei_disconnect()`**, as a protocol
+ *        message: `[M]` removing THAT line (`RG4`) the healing stops.
+ *      ⚠ The `close()` stays so as not to lose a descriptor at every healing.
  */
 #include "input.h"
 
 #include <errno.h>
 #include <gio/gio.h>
 #include <libei.h>
-/* ⛔ Cura D4: serve per UNA domanda sola — «il compositore c'e' ancora?» — da
- *    fare **prima** di `ei_dispatch()` su un canale non ancora maturo.  Vedi il
- *    riquadro sopra `stacca_il_contesto()`. */
+/* ⛔ Cure D4: needed for ONE question only — "is the compositor still there?" — to be
+ *    asked **before** `ei_dispatch()` on a channel not yet mature.  See the
+ *    box above `stacca_il_contesto()`. */
 #include <poll.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,136 +204,136 @@
 #define AREA "input"
 
 /*
- * ⛔ I due tetti di Mutter, letti nel codice (`meta-eis-client.c:30-31` `[R]`):
- *    oltre, l'evento si scarta **in silenzio**.  Le mappe di bit li coprono per
- *    intero: cosi' «l'ho segnato» e «l'ho mandato» non possono divergere.
+ * ⛔ Mutter's two ceilings, read in the code (`meta-eis-client.c:30-31` `[R]`):
+ *    beyond them, the event is discarded **silently**.  The bitmaps cover them
+ *    entirely: so "I marked it" and "I sent it" cannot diverge.
  */
 #define MAX_TASTO 0x300u
 #define MAX_BOTTONE 0x300u
 #define BIT_BYTE(n) (((n) + 7u) / 8u)
 
 /*
- * ⛔ 120 unita' di `RCP.md` §7.3 = uno scatto = **10.0** di `ei_device_scroll_delta`
- *    su Mutter, cioe' un fattore 12.
+ * ⛔ 120 units of `RCP.md` §7.3 = one notch = **10.0** of `ei_device_scroll_delta`
+ *    on Mutter, that is a factor of 12.
  *
- * `[R]` `meta-virtual-input-device-native.c:752-756`: con `SOURCE_WHEEL` Mutter
- * fa `dy * (120.0 / 10.0)` e ottiene il `v120`; `meta-seat-impl.c:1239` emette
- * uno scatto discreto quando l'accumulatore supera **60**, cioe' mezzo scatto.
+ * `[R]` `meta-virtual-input-device-native.c:752-756`: with `SOURCE_WHEEL` Mutter
+ * does `dy * (120.0 / 10.0)` and gets the `v120`; `meta-seat-impl.c:1239` emits
+ * a discrete notch when the accumulator exceeds **60**, that is half a notch.
  *
- * ⇒ 60 unita' (mezzo scatto) diventano `5.0`, che diventano `v120 = 60`, che
- *   **producono uno scatto**.  Con `ei_device_scroll_discrete` sarebbero
- *   diventate `60 / 120 = 0` e non avrebbero prodotto niente.
+ * ⇒ 60 units (half a notch) become `5.0`, which become `v120 = 60`, which
+ *   **produce a notch**.  With `ei_device_scroll_discrete` they would have
+ *   become `60 / 120 = 0` and would have produced nothing.
  *
- * ⚠ E il 12 e' di MUTTER, non del protocollo: su KWin `scroll_delta` non
- *   produce nessuno scatto (`STUDI.md` §kde §7.2) e la strada e' `scroll_discrete`.
- *   Il giorno che si scrive `kwin.c` questa costante NON si porta dietro.
+ * ⚠ And the 12 is MUTTER's, not the protocol's: on KWin `scroll_delta` does not
+ *   produce any notch (`STUDI.md` §kde §7.2) and the way is `scroll_discrete`.
+ *   The day `kwin.c` is written this constant is NOT carried over.
  */
 #define UNITA_PER_DELTA 12.0
 
 struct input
 {
 	MutterSessione *sessione;
-	/* ⭐ FASE 12, INCREMENTO 3 — su KDE il canale lo da' KWin, e `sessione` e'
-	 *    NULL.  Cambiano tre cose sole: da dove viene il descrittore (e la
-	 *    guarigione), la regione (KWin non mette il mapping-id: si sceglie per
-	 *    geometria) e la rotella (`scroll_discrete`, vedi `UNITA_PER_DELTA`). */
+	/* ⭐ PHASE 12, INCREMENT 3 — on KDE the channel is given by KWin, and `sessione` is
+	 *    NULL.  Only three things change: where the descriptor comes from (and the
+	 *    healing), the region (KWin does not set the mapping-id: it is chosen by
+	 *    geometry) and the wheel (`scroll_discrete`, see `UNITA_PER_DELTA`). */
 	KwinSessione *kwin;
 	struct ei *ei;
 
-	/* La TELA di `RCP.md` §4.5, cioe' l'intervallo in cui `rcp.c` ha gia'
-	 * verificato che stiano le coordinate che arrivano. */
+	/* The CANVAS of `RCP.md` §4.5, that is the range in which `rcp.c` has already
+	 * verified that the incoming coordinates lie. */
 	uint32_t tela_l, tela_a;
 
-	/* ⛔ Il dispositivo ASSOLUTO, e non «il primo che sa scorrere»: Mutter ne
-	 *    offre due, e quello relativo NON ha regioni — col relativo il puntatore
-	 *    finisce dove capita (`banchi/01-s7-rotella.c`, `[M]` 10 agosto 2026). */
+	/* ⛔ The ABSOLUTE device, and not "the first that can scroll": Mutter
+	 *    offers two, and the relative one has NO regions — with the relative one the pointer
+	 *    ends up wherever (`banchi/01-s7-rotella.c`, `[M]` 10 August 2026). */
 	struct ei_device *puntatore;
 	struct ei_device *tastiera_dev;
 	gboolean puntatore_attivo;
 	gboolean tastiera_attiva;
 	uint32_t sequenza;
 
-	/* La regione su cui il puntatore si muove, in coordinate globali logiche. */
+	/* The region the pointer moves on, in global logical coordinates. */
 	gboolean regione_nota;
 	gboolean regione_scalata_lamentata;
 	double reg_x, reg_y, reg_l, reg_a;
-	char *reg_per; /* «chiave», «geometria», «unica»: come l'abbiamo scelta */
+	char *reg_per; /* «key», «geometry», «only»: how we chose it */
 
 	Tastiera *disposizione;
-	char *keymap_nome; /* il nome che libei pubblica, per VEDERE un ricambio */
-	/* ⭐ Quel che il CLIENT ha dichiarato in `ATTACCA` (`RCP.md` §4.5), cioe'
-	 *    la disposizione che §5-bis.7 dice di mettere nella sessione.  NULL
-	 *    finche' nessuno l'ha chiesta. */
+	char *keymap_nome; /* the name libei publishes, to SEE a replacement */
+	/* ⭐ What the CLIENT declared in `ATTACCA` (`RCP.md` §4.5), that is
+	 *    the layout §5-bis.7 says to put into the session.  NULL
+	 *    until someone has asked for it. */
 	char *negoziata;
-	/* ⭐ Quante volte si e' RICHIESTA a KWin la negoziata vedendo arrivare
-	 *    un'altra keymap (vedi «KWIN NON HA SENTITO» qui sotto). */
+	/* ⭐ How many times the negotiated layout was REQUESTED from KWin on seeing
+	 *    another keymap arrive (see "KWIN DID NOT HEAR" below). */
 	int richieste_kwin;
 
-	/* ⛔⛔ IL CONTO.  Vedi il riquadro in testa al file. */
+	/* ⛔⛔ THE COUNT.  See the box at the top of the file. */
 	uint8_t tasti[BIT_BYTE(MAX_TASTO)];
 	uint8_t bottoni[BIT_BYTE(MAX_BOTTONE)];
 	unsigned quanti_tasti;
 	unsigned quanti_bottoni;
 
-	/* ⛔⛔ GLI ORFANI — quel che era premuto su un dispositivo CHE NON C'E'
-	 *     PIU'.  Vedi il riquadro «IL RILASCIO CHE NON ARRIVA A NESSUNO». */
+	/* ⛔⛔ THE ORPHANS — what was pressed on a device THAT IS NO LONGER
+	 *     THERE.  See the box "THE RELEASE THAT REACHES NOBODY". */
 	uint8_t tasti_orfani[BIT_BYTE(MAX_TASTO)];
 	uint8_t bottoni_orfani[BIT_BYTE(MAX_BOTTONE)];
 	unsigned quanti_orfani;
 
-	/* I ricambi silenziosi, contati: il banco li legge invece di dedurli. */
+	/* The silent replacements, counted: the bench reads them instead of deducing them. */
 	unsigned ricambi_puntatore;
 	unsigned ricambi_tastiera;
 
-	gboolean caduto; /* il compositore ha chiuso il canale */
+	gboolean caduto; /* the compositor has closed the channel */
 
-	/* ⛔⛔ LA CURA «C» — il riattacco che guarisce il posto.  🔸 Derivata, 21
-	 *     agosto 2026, e il riquadro in testa al file dice perche' non ce n'e'
-	 *     un'altra: dal lato del cliente il conto del posto e' irrecuperabile,
-	 *     e l'unico codice che lo azzera e' `drop_device()` di Mutter, che gira
-	 *     solo alla caduta del canale EIS. */
+	/* ⛔⛔ CURE "C" — the reattach that heals the seat.  🔸 Derived, 21
+	 *     August 2026, and the box at the top of the file says why there is no
+	 *     other: from the client side the seat's count is unrecoverable,
+	 *     and the only code that resets it is Mutter's `drop_device()`, which runs
+	 *     only at the drop of the EIS channel. */
 	gboolean guarigione_dovuta;
 	unsigned guarigioni;
 	gint64 ultima_guarigione_us;
 
-	/* ⛔⛔ LA STRETTA DI MANO DI `libei` — la cura D4, 25 agosto 2026.  Il
-	 *     riquadro sopra `stacca_il_contesto()` dice l'istruzione che cadeva e
-	 *     perche' questi quattro campi sono quel che serve a non passarci.
+	/* ⛔⛔ `libei`'s HANDSHAKE — cure D4, 25 August 2026.  The
+	 *     box above `stacca_il_contesto()` names the instruction that crashed and
+	 *     why these four fields are what is needed not to pass through it.
 	 *
-	 * ⭐ `stretta_fatta` NON e' un'euristica sui puntatori: e' `EI_EVENT_CONNECT`,
-	 *    cioe' il modo che `libei` ha di dire «il server ha approvato».  I
-	 *    dispositivi arrivano DOPO, e guardare loro direbbe «non ancora» anche
-	 *    su un contesto ormai maturo. */
+	 * ⭐ `stretta_fatta` is NOT a heuristic on the pointers: it is `EI_EVENT_CONNECT`,
+	 *    that is the way `libei` has of saying "the server has approved".  The
+	 *    devices arrive LATER, and looking at them would say "not yet" even
+	 *    on a context that is by now mature. */
 	gboolean stretta_fatta;
-	gint64 aperto_us;  /* quando il canale e' stato aperto (monotonico) */
-	gint64 stretta_us; /* quando la stretta e' arrivata; 0 = mai */
-	/* ⛔ Il descrittore che abbiamo dato a `libei`, tenuto da parte per UN solo
-	 *    caso: quello in cui il contesto va **abbandonato** invece che liberato,
-	 *    e allora il socket lo dobbiamo chiudere noi.  ⚠ Nel caso normale non si
-	 *    tocca: e' di `libei`, e chiuderlo in due posti e' un difetto che si
-	 *    manifesta a distanza. */
+	gint64 aperto_us;  /* when the channel was opened (monotonic) */
+	gint64 stretta_us; /* when the handshake arrived; 0 = never */
+	/* ⛔ The descriptor we gave `libei`, kept aside for ONE case only:
+	 *    the one in which the context must be **abandoned** instead of freed,
+	 *    and then we must close the socket ourselves.  ⚠ In the normal case it is not
+	 *    touched: it belongs to `libei`, and closing it in two places is a defect that
+	 *    shows at a distance. */
 	int fd_socket;
 
-	/* ⭐ FASE 13, INCREMENTO 3 — su wlroots il trasporto e' `wlr_input.c`, e
-	 *    `ei`, `sessione`, `kwin`, `puntatore` e `tastiera_dev` restano NULL.
-	 *    ⛔ Non-NULL vuol dire «questo Input e' di wlroots» per TUTTA la sua
-	 *    vita: dopo una caduta si tiene il morto finche' il riattacco non lo
-	 *    sostituisce, cosi' nessuna funzione cade per sbaglio nei rami libei.
-	 *    Il riquadro «WLROOTS» in fondo al file dice il resto. */
+	/* ⭐ PHASE 13, INCREMENT 3 — on wlroots the transport is `wlr_input.c`, and
+	 *    `ei`, `sessione`, `kwin`, `puntatore` and `tastiera_dev` stay NULL.
+	 *    ⛔ Non-NULL means "this Input is wlroots's" for its WHOLE
+	 *    life: after a drop the dead one is kept until the reattach
+	 *    replaces it, so no function falls by mistake into the libei branches.
+	 *    The "WLROOTS" box at the bottom of the file says the rest. */
 	WlrInput *wlr;
 	gint64 wlr_ultimo_riattacco_us;
 	unsigned wlr_riattacchi;
 	gboolean wlr_riattacco_fallito_detto;
-	/* ⭐ FASE 15, D-007 — l'ultima posizione assoluta mandata (sulla tela di
-	 *    allora): `input_riporta_dentro()` la rimette dopo la scorciatoia, che
-	 *    sposta il puntatore di labwc sulle finestre. */
+	/* ⭐ PHASE 15, D-007 — the last absolute position sent (on the canvas of
+	 *    then): `input_riporta_dentro()` puts it back after the shortcut, which
+	 *    moves labwc's pointer onto the windows. */
 	gboolean wlr_puntatore_noto;
 	uint32_t wlr_px, wlr_py, wlr_pl, wlr_pa;
 };
 
-/* ⭐ FASE 13 — i rami di wlroots, scritti in fondo al file (riquadro
- *    «WLROOTS»).  ⛔ Ciascuno sta in CIMA alla funzione pubblica e torna: il
- *    percorso di GNOME e KDE sotto di lui non cambia di una riga. */
+/* ⭐ PHASE 13 — the wlroots branches, written at the bottom of the file (box
+ *    "WLROOTS").  ⛔ Each one sits at the TOP of the public function and returns: the
+ *    GNOME and KDE path below it does not change by one line. */
 static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto);
 static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto);
 static int gira_wlr(Input *in);
@@ -342,15 +342,15 @@ static int lettera_wlr(Input *in, uint32_t carattere);
 static void chiudi_wlr(Input *in);
 static void riattacca_wlr(Input *in);
 
-/* ⛔ Il conto dei contesti ABBANDONATI — il PREZZO della cura D4, e un prezzo
- *    che non si conta e' un prezzo che nessuno scopre.  ⚠ E' del processo, non
- *    del canale: l'`Input` che l'ha pagato e' gia' liberato quando il banco
- *    legge il numero. */
+/* ⛔ The count of ABANDONED contexts — the PRICE of cure D4, and a price
+ *    that is not counted is a price nobody discovers.  ⚠ It belongs to the process, not
+ *    to the channel: the `Input` that paid it is already freed when the bench
+ *    reads the number. */
 static unsigned contesti_abbandonati;
 
-/* ⭐ La finestra del banco `10-d4`.  ⛔ NON sta in `input.h` di proposito, come
- *    `input_conto()` qui sotto: `input.h` e' il contratto del PRODOTTO, e questo
- *    e' un testimone.  Il banco la dichiara `extern` da se'. */
+/* ⭐ The window of bench `10-d4`.  ⛔ It is NOT in `input.h` on purpose, like
+ *    `input_conto()` below: `input.h` is the PRODUCT's contract, and this
+ *    is a witness.  The bench declares it `extern` by itself. */
 unsigned input_abbandoni(void);
 
 unsigned input_abbandoni(void)
@@ -358,14 +358,14 @@ unsigned input_abbandoni(void)
 	return contesti_abbandonati;
 }
 
-/* ⛔ Il fondo fra due guarigioni.  Non e' prudenza: e' che una guarigione che
- *    fallisse in modo ripetibile girerebbe a ogni giro del ciclo del figlio,
- *    cioe' sessanta chiamate D-Bus al secondo su un canale gia' rotto.  ⚠ La
- *    bandiera NON si spegne: si riprova al giro dopo il fondo. */
+/* ⛔ The floor between two healings.  It is not prudence: a healing that
+ *    failed in a repeatable way would run at every round of the child's loop,
+ *    that is sixty D-Bus calls a second on an already broken channel.  ⚠ The
+ *    flag is NOT switched off: it is retried at the round after the floor. */
 #define GUARIGIONE_FONDO_US (1000 * 1000)
 
 /* ------------------------------------------------------------------ *
- *  Le mappe di bit — «segnato» e «mandato» non devono poter divergere
+ *  The bitmaps — "marked" and "sent" must not be able to diverge
  * ------------------------------------------------------------------ */
 static gboolean bit_leggi(const uint8_t *mappa, uint32_t n)
 {
@@ -381,16 +381,16 @@ static void bit_scrivi(uint8_t *mappa, uint32_t n, gboolean acceso)
 }
 
 /* ------------------------------------------------------------------ *
- *  L'invio
+ *  Sending
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ `ei_device_frame` DOPO OGNI evento, e non a gruppi.
+ * ⛔ `ei_device_frame` AFTER EVERY event, and not in groups.
  *
- * Su Mutter non serve a niente — il `FRAME` e' ignorato, con accanto un FIXME
- * che dice «we should be accumulating the above events» (`meta-eis-client.c:1033`
- * `[R]`).  ⛔ Su KWin e su wlroots e' **obbligatorio**: senza, l'evento non
- * esce affatto.  Mandarlo qui e' gratis, ed e' l'unica forma portabile.
+ * On Mutter it is useless — the `FRAME` is ignored, with a FIXME next to it
+ * saying "we should be accumulating the above events" (`meta-eis-client.c:1033`
+ * `[R]`).  ⛔ On KWin and on wlroots it is **mandatory**: without it, the event does not
+ * come out at all.  Sending it here is free, and it is the only portable form.
  */
 static void batti_cornice(Input *in, struct ei_device *dispositivo)
 {
@@ -401,8 +401,8 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 {
 	if (codice >= MAX_TASTO)
 	{
-		registro_dice(AREA, "⚠ codice di tasto 0x%X fuori dal massimo di Mutter (0x%X): Mutter lo "
-		                    "scarterebbe in SILENZIO, quindi lo rifiuto io e lo dico",
+		registro_dice(AREA, "⚠ key code 0x%X beyond Mutter's maximum (0x%X): Mutter would "
+		                    "discard it SILENTLY, so I refuse it myself and say so",
 		              codice, MAX_TASTO - 1);
 		return -1;
 	}
@@ -411,10 +411,10 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 	if (!in->tastiera_dev || !in->tastiera_attiva)
 		return -1;
 
-	/* ⛔ Come per i pulsanti: un tasto premuto su una tastiera che il
-	 *    compositore ha distrutto (cambio di keymap, `:762-781`) non si
-	 *    rilascia piu' — `handle_key` (`:638-645`) ha la stessa guardia di
-	 *    `handle_button`.  Si dice e si torna -1, invece di scrivere «fatto». */
+	/* ⛔ As for buttons: a key pressed on a keyboard the
+	 *    compositor destroyed (keymap change, `:762-781`) can no longer be
+	 *    released — `handle_key` (`:638-645`) has the same guard as
+	 *    `handle_button`.  It is said and -1 is returned, instead of writing "done". */
 	if (!premuto && bit_leggi(in->tasti_orfani, codice))
 	{
 		bit_scrivi(in->tasti_orfani, codice, FALSE);
@@ -426,17 +426,17 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 			if (in->quanti_tasti)
 				in->quanti_tasti--;
 		}
-		/* ⛔ Fase 16 §12: il codice solo se e' un modificatore — gli altri
-		 *    tasti sono caratteri battuti, e nel registro si chiamano «tasto». */
+		/* ⛔ Phase 16 §12: the code only if it is a modifier — the other
+		 *    keys are typed characters, and in the log they are called «key». */
 		char quale[24] = "";
 		if (registro_tasto_dicibile(codice))
 			g_snprintf(quale, sizeof quale, " 0x%X", codice);
 		registro_dice(AREA,
-		              "⛔⛔ il rilascio del tasto%s NON PARTE: era premuto su una tastiera che "
-		              "il compositore ha gia' tolto (ricambio n. %u), e `handle_key` scarta in "
-		              "silenzio un rilascio sul dispositivo nuovo (`meta-eis-client.c:638-645`).  "
-		              "⛔ Un modificatore che resta giu' rende il desktop inservibile (`RCP.md` "
-		              "§11): la cura e' rilasciare PRIMA del ricambio",
+		              "⛔⛔ the release of key%s DOES NOT LEAVE: it was pressed on a keyboard that "
+		              "the compositor has already removed (replacement n. %u), and `handle_key` silently "
+		              "discards a release on the new device (`meta-eis-client.c:638-645`).  "
+		              "⛔ A modifier that stays down makes the desktop unusable (`RCP.md` "
+		              "§11): the cure is to release BEFORE the replacement",
 		              quale, in->ricambi_tastiera);
 		return -1;
 	}
@@ -444,8 +444,8 @@ static int manda_tasto(Input *in, uint16_t codice, int premuto)
 	ei_device_keyboard_key(in->tastiera_dev, codice, premuto != 0);
 	batti_cornice(in, in->tastiera_dev);
 
-	/* ⛔ Il conto si tiene DOPO l'invio: segnare un tasto che non e' partito
-	 *    farebbe rilasciare al distacco qualcosa che nessuno ha premuto. */
+	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
+	 *    would make the detach release something nobody pressed. */
 	if ((premuto != 0) != bit_leggi(in->tasti, codice))
 	{
 		bit_scrivi(in->tasti, codice, premuto != 0);
@@ -461,7 +461,7 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 {
 	if (codice >= MAX_BOTTONE)
 	{
-		registro_dice(AREA, "⚠ codice di pulsante 0x%X fuori dal massimo: rifiutato", codice);
+		registro_dice(AREA, "⚠ button code 0x%X beyond the maximum: refused", codice);
 		return -1;
 	}
 	if (in->wlr)
@@ -470,15 +470,15 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 		return -1;
 
 	/*
-	 * ⛔⛔ IL RILASCIO DI UN ORFANO NON PARTE, E SI DICE — vedi il riquadro in
-	 *     testa al file.  ⚠ Si CANCELLA il conto lo stesso: quel pulsante non e'
-	 *     piu' nostro da rilasciare, e tenerlo segnato farebbe riprovare per
-	 *     sempre una cosa che non puo' riuscire.
+	 * ⛔⛔ THE RELEASE OF AN ORPHAN DOES NOT LEAVE, AND IT IS SAID — see the box at
+	 *     the top of the file.  ⚠ The count is CLEARED anyway: that button is no
+	 *     longer ours to release, and keeping it marked would retry forever
+	 *     something that cannot succeed.
 	 *
-	 * ⭐ E si torna **-1**, non 0: `rcp.c` lo conta fra gli `input_rifiutati`,
-	 *   che e' la verita'.  Tornare 0 vorrebbe dire scrivere «fatto» accanto a
-	 *   un desktop che e' rimasto col pulsante giu' — e sono sei ore di
-	 *   diagnosi a chi legge il registro.
+	 * ⭐ And **-1** is returned, not 0: `rcp.c` counts it among the `input_rifiutati`,
+	 *   which is the truth.  Returning 0 would mean writing "done" next to
+	 *   a desktop left with the button down — and that is six hours of
+	 *   diagnosis for whoever reads the log.
 	 */
 	if (!premuto && bit_leggi(in->bottoni_orfani, codice))
 	{
@@ -492,13 +492,13 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 				in->quanti_bottoni--;
 		}
 		registro_dice(AREA,
-		              "⛔⛔ il rilascio del pulsante 0x%X NON PARTE: era premuto su un "
-		              "dispositivo che il compositore ha gia' tolto (ricambio n. %u), e Mutter "
-		              "scarta in silenzio un rilascio sul dispositivo nuovo "
-		              "(`meta-eis-client.c:612-621`).  ⛔ Il POSTO lo conta ancora giu' "
-		              "(`meta-seat-impl.c:899-908`) e da adesso NESSUN clic arriva piu': la cura "
-		              "e' rilasciare PRIMA di chiedere il ridimensionamento — `figlio.c:3964`, "
-		              "prima di `cattura_ridimensiona()`",
+		              "⛔⛔ the release of button 0x%X DOES NOT LEAVE: it was pressed on a "
+		              "device the compositor has already removed (replacement n. %u), and Mutter "
+		              "silently discards a release on the new device "
+		              "(`meta-eis-client.c:612-621`).  ⛔ The SEAT still counts it down "
+		              "(`meta-seat-impl.c:899-908`) and from now on NO click arrives any more: the cure "
+		              "is to release BEFORE asking for the resize — `figlio.c:3964`, "
+		              "before `cattura_ridimensiona()`",
 		              codice, in->ricambi_puntatore);
 		return -1;
 	}
@@ -518,35 +518,35 @@ static int manda_bottone(Input *in, uint16_t codice, int premuto)
 }
 
 /* ------------------------------------------------------------------ *
- *  La regione: quale schermo e' il nostro
+ *  The region: which screen is ours
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ SI RILEGGE A OGNI `DEVICE_ADDED`, non una volta all'avvio.
+ * ⛔ IT IS REREAD AT EVERY `DEVICE_ADDED`, not once at startup.
  *
- * `[R]` `meta-eis-client.c:1048-1062`: qualunque cambio di geometria fa
- * `remove_viewport_devices` + ricrea.  Dal nostro lato: `DEVICE_REMOVED` →
- * `DEVICE_ADDED` → `DEVICE_RESUMED`, e ⛔ **il puntatore al dispositivo vecchio
- * smette di funzionare SENZA ERRORE**.  Un banco che legge la regione una volta
- * sola resta VERDE mentre il difetto e' vivo (`CODER.md` §3.4).
+ * `[R]` `meta-eis-client.c:1048-1062`: any geometry change does
+ * `remove_viewport_devices` + recreate.  On our side: `DEVICE_REMOVED` →
+ * `DEVICE_ADDED` → `DEVICE_RESUMED`, and ⛔ **the pointer to the old device
+ * stops working WITHOUT AN ERROR**.  A bench that reads the region once
+ * only stays GREEN while the defect is alive (`CODER.md` §3.4).
  *
- * Tre criteri in ordine, e ciascuno si DICHIARA:
+ * Three criteria in order, and each one is DECLARED:
  *
- *   per CHIAVE     il `mapping-id` che **Mutter** pubblica nei `Parameters`
- *                  del flusso.  E' un'identita', e non si sbaglia.
- *   per GEOMETRIA  la regione grande come la tela.  E' l'unico criterio che
- *                  esista quando le regioni sono anonime — i viewport «monitor
- *                  logico» hanno `mapping_id == NULL` (`[R]` §7.1), e su KWin
- *                  `eis_region_set_mapping_id` non e' chiamato mai.
- *   UNICA          se la regione e' una sola, e' quella.  ⛔ «La prima» quando
- *                  sono due non si sceglie: si dichiara di non sapere, perche'
- *                  sbagliare regione manda il puntatore su un altro schermo
- *                  **senza errore** (`meta-eis-client.c:470-472`).
+ *   by KEY         the `mapping-id` that **Mutter** publishes in the stream's
+ *                  `Parameters`.  It is an identity, and it does not go wrong.
+ *   by GEOMETRY    the region as large as the canvas.  It is the only criterion that
+ *                  exists when the regions are anonymous — the "logical monitor"
+ *                  viewports have `mapping_id == NULL` (`[R]` §7.1), and on KWin
+ *                  `eis_region_set_mapping_id` is never called.
+ *   ONLY           if there is a single region, it is that one.  ⛔ "The first" when
+ *                  there are two is not chosen: we declare we do not know, because
+ *                  the wrong region sends the pointer to another screen
+ *                  **without an error** (`meta-eis-client.c:470-472`).
  */
 static void leggi_regione(Input *in, struct ei_device *dispositivo)
 {
-	/* Su KWin la chiave non c'e' (`eis_region_set_mapping_id` non e' mai
-	 * chiamato): restano la geometria e «unica». */
+	/* On KWin there is no key (`eis_region_set_mapping_id` is never
+	 * called): geometry and "only" remain. */
 	const char *chiave = in->kwin ? NULL : mutter_mapping_id_pubblicato(in->sessione);
 	struct ei_region *per_chiave = NULL, *per_geometria = NULL, *unica = NULL;
 	size_t quante = 0;
@@ -567,13 +567,13 @@ static void leggi_regione(Input *in, struct ei_device *dispositivo)
 		unica = regione;
 		id = ei_region_get_mapping_id(regione);
 
-		/* ⛔ I getter tornano `uint32_t`, non `double`: passarli a un `%.0f`
-		 *    stampa spazzatura che si legge come una diagnosi vera («la regione
-		 *    e' 0x0») mentre la regione e' 1920x1080.  `[M]` 10 agosto 2026. */
-		registro_dettaglio(AREA, "regione %zu: %u,%u %ux%u (mapping-id «%s»)", i,
+		/* ⛔ The getters return `uint32_t`, not `double`: passing them to a `%.0f`
+		 *    prints garbage that reads like a real diagnosis ("the region
+		 *    is 0x0") while the region is 1920x1080.  `[M]` 10 August 2026. */
+		registro_dettaglio(AREA, "region %zu: %u,%u %ux%u (mapping-id «%s»)", i,
 		                   ei_region_get_x(regione), ei_region_get_y(regione),
 		                   ei_region_get_width(regione), ei_region_get_height(regione),
-		                   id ?: "assente");
+		                   id ?: "absent");
 
 		if (!per_chiave && chiave && id && g_strcmp0(id, chiave) == 0)
 			per_chiave = regione;
@@ -586,25 +586,25 @@ static void leggi_regione(Input *in, struct ei_device *dispositivo)
 	if (per_chiave)
 	{
 		scelta = per_chiave;
-		per = "chiave";
+		per = "key";
 	}
 	else if (per_geometria)
 	{
 		scelta = per_geometria;
-		per = "geometria";
+		per = "geometry";
 	}
 	else if (quante == 1)
 	{
 		scelta = unica;
-		per = "unica";
+		per = "only";
 	}
 
 	if (!scelta)
 	{
 		registro_dice(AREA,
-		              "⛔ NESSUNA regione riconosciuta fra le %zu annunciate (chiave «%s», tela "
-		              "%ux%u): il puntatore NON si muove, e non tiro a indovinare quale sia",
-		              quante, chiave ?: "ignota", in->tela_l, in->tela_a);
+		              "⛔ NO region recognised among the %zu announced (key «%s», canvas "
+		              "%ux%u): the pointer does NOT move, and I do not guess which one it is",
+		              quante, chiave ?: "unknown", in->tela_l, in->tela_a);
 		return;
 	}
 
@@ -615,30 +615,30 @@ static void leggi_regione(Input *in, struct ei_device *dispositivo)
 	in->regione_nota = in->reg_l > 0 && in->reg_a > 0;
 	in->reg_per = g_strdup(per);
 
-	registro_dice(AREA, "regione del puntatore per %s: %.0f,%.0f %.0fx%.0f (di %zu, mapping-id «%s»)",
+	registro_dice(AREA, "pointer region by %s: %.0f,%.0f %.0fx%.0f (of %zu, mapping-id «%s»)",
 	              per, in->reg_x, in->reg_y, in->reg_l, in->reg_a, quante,
-	              ei_region_get_mapping_id(scelta) ?: "assente");
+	              ei_region_get_mapping_id(scelta) ?: "absent");
 }
 
 /* ------------------------------------------------------------------ *
- *  La disposizione della tastiera
+ *  The keyboard layout
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔⛔ LA DISPOSIZIONE ARRIVA DA `libei`, E SI RIAPRE A OGNI `DEVICE_ADDED`.
+ * ⛔⛔ THE LAYOUT ARRIVES FROM `libei`, AND IT IS REOPENED AT EVERY `DEVICE_ADDED`.
  *
- * ⭐ Il verso e' questo, e non l'altro: **non scegliamo noi** la disposizione
- *    della sessione — la sceglie GNOME, e `libei` ce la consegna col
- *    dispositivo tastiera, come testo XKB su un descrittore.  *(Il contratto
- *    diceva «`tastiera_apri("it")`»; l'anello A5 ha rifiutato quel pezzo e
- *    aveva ragione — `input.h`/`tastiera.h`, 14 agosto 2026.)*
+ * ⭐ The direction is this one, and not the other: **we do not choose** the session's
+ *    layout — GNOME chooses it, and `libei` hands it to us with the
+ *    keyboard device, as XKB text on a descriptor.  *(The contract
+ *    said "`tastiera_apri("it")`"; link A5 refused that piece and
+ *    was right — `input.h`/`tastiera.h`, 14 August 2026.)*
  *
- * ⛔ E A OGNI `DEVICE_ADDED`, non una volta all'avvio: `on_keymap_changed`
- *    (`meta-eis-client.c:761-781` `[R]`) fa `eis_device_remove` +
- *    `add_device` con la keymap nuova, col commento *«Changing the keymap
- *    means we have to remove our device and recreate it»*.  Chi apre la
- *    disposizione una volta sola resta con quella vecchia dopo un cambio, e
- *    ⛔ **le lettere escono diverse senza che niente dia errore**.
+ * ⛔ And AT EVERY `DEVICE_ADDED`, not once at startup: `on_keymap_changed`
+ *    (`meta-eis-client.c:761-781` `[R]`) does `eis_device_remove` +
+ *    `add_device` with the new keymap, with the comment *"Changing the keymap
+ *    means we have to remove our device and recreate it"*.  Whoever opens the
+ *    layout once only stays with the old one after a change, and
+ *    ⛔ **the letters come out different without anything giving an error**.
  */
 static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 {
@@ -652,19 +652,19 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 
 	if (!keymap)
 	{
-		/* ⛔ Il dispositivo esiste, la keymap no: `configure_keyboard` esce
-		 *    DOPO aver dichiarato la capacita' tastiera se
-		 *    `meta_backend_get_keymap` da' NULL (`:242-246` `[R]`).  Va retto,
-		 *    e si dichiara invece di ripiegare in silenzio. */
-		registro_dice(AREA, "⚠ il dispositivo tastiera non porta nessuna keymap: le LETTERE "
-		                    "restano spente (le POSIZIONI no)");
+		/* ⛔ The device exists, the keymap does not: `configure_keyboard` exits
+		 *    AFTER having declared the keyboard capability if
+		 *    `meta_backend_get_keymap` gives NULL (`:242-246` `[R]`).  It must be borne,
+		 *    and it is declared instead of falling back silently. */
+		registro_dice(AREA, "⚠ the keyboard device carries no keymap: LETTERS "
+		                    "stay off (KEY POSITIONS do not)");
 		g_clear_pointer(&in->disposizione, tastiera_chiudi);
 		g_clear_pointer(&in->keymap_nome, g_free);
 		return;
 	}
 	if (ei_keymap_get_type(keymap) != EI_KEYMAP_TYPE_XKB)
 	{
-		registro_dice(AREA, "⚠ keymap di tipo sconosciuto (%d): ignorata",
+		registro_dice(AREA, "⚠ keymap of unknown type (%d): ignored",
 		              (int) ei_keymap_get_type(keymap));
 		return;
 	}
@@ -674,80 +674,80 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 	if (fd < 0 || misura == 0)
 		return;
 
-	/* ⛔ `pread` e non `read`: il descrittore della keymap e' condiviso, e
-	 *    consumarne la posizione lo romperebbe per chi lo rilegge dopo. */
+	/* ⛔ `pread` and not `read`: the keymap descriptor is shared, and
+	 *    consuming its position would break it for whoever rereads it later. */
 	testo = g_malloc0(misura + 1);
 	if (pread(fd, testo, misura, 0) < 0)
 	{
-		registro_dice(AREA, "⚠ la keymap non si legge: %s", g_strerror(errno));
+		registro_dice(AREA, "⚠ the keymap cannot be read: %s", g_strerror(errno));
 		return;
 	}
 
 	/*
-	 * L'IMPRONTA della keymap, e non il suo nome.
+	 * The keymap's FINGERPRINT, and not its name.
 	 *
-	 * ⛔ `[M]` 14 agosto 2026, sulla macchina di prova: la keymap che Mutter
-	 *    serializza porta `xkb_symbols "(unnamed)"` — **il nome non c'e'**.  Un
-	 *    banco che cercasse un cambio di NOME vedrebbe «(unnamed)» prima e
-	 *    dopo, cioe' resterebbe verde mentre la disposizione e' cambiata: e'
-	 *    `CODER.md` §3.4 in atto.  ⇒ Misura in byte piu' una somma di
-	 *    controllo, che cambiano per forza se la disposizione cambia.
+	 * ⛔ `[M]` 14 August 2026, on the test machine: the keymap Mutter
+	 *    serialises carries `xkb_symbols "(unnamed)"` — **the name is not there**.  A
+	 *    bench looking for a change of NAME would see «(unnamed)» before and
+	 *    after, that is it would stay green while the layout has changed: it is
+	 *    `CODER.md` §3.4 in action.  ⇒ Size in bytes plus a
+	 *    checksum, which necessarily change if the layout changes.
 	 */
-	impronta = g_strdup_printf("%zu byte, impronta %08x", misura, (unsigned) g_str_hash(testo));
+	impronta = g_strdup_printf("%zu bytes, fingerprint %08x", misura, (unsigned) g_str_hash(testo));
 
 	/*
-	 * ⛔ La disposizione si RIAPRE, non si aggiorna: `tastiera.h` non ha un
-	 *    modo di cambiare la keymap sotto una `Tastiera` viva, ed e' giusto
-	 *    cosi' — un oggetto che cambia identita' sotto chi lo tiene e' il
-	 *    difetto che stiamo misurando, non la cura.
+	 * ⛔ The layout is REOPENED, not updated: `tastiera.h` has no
+	 *    way to change the keymap under a live `Tastiera`, and that is right
+	 *    — an object that changes identity under whoever holds it is the
+	 *    defect we are measuring, not the cure.
 	 *
-	 * ⚠ E la vecchia si chiude SOLO se la nuova si apre: se la keymap nuova
-	 *   non si compila, restare con quella di prima e' meglio che restare senza
-	 *   — e la riga lo dice, cosi' il ripiego non e' silenzioso.
+	 * ⚠ And the old one is closed ONLY if the new one opens: if the new keymap
+	 *   does not compile, staying with the previous one is better than staying without
+	 *   — and the line says so, so the fallback is not silent.
 	 */
 	/*
-	 * ⚠ `negoziata` e' **NULL, e per adesso e' giusto** — ma va detto, perche'
-	 *   ha una conseguenza che si legge come un difetto:
+	 * ⚠ `negoziata` is **NULL, and for now that is right** — but it must be said, because
+	 *   it has a consequence that reads like a defect:
 	 *
-	 *   `tastiera.c` confronta la disposizione dichiarata dal client in
-	 *   `ATTACCA` (`RCP.md` §4.5) con quella vera della sessione, e se non
-	 *   combaciano usa quella della SESSIONE scrivendo `RIPIEGO DICHIARATO`.
-	 *   ⛔ Con `NULL` quel confronto **non si fa mai**, quindi quella riga non
-	 *   uscira' mai: chi la cercasse nel registro concluderebbe «combaciano
-	 *   sempre», che e' una cosa diversa da «non ho guardato».
+	 *   `tastiera.c` compares the layout declared by the client in
+	 *   `ATTACCA` (`RCP.md` §4.5) with the session's real one, and if they do not
+	 *   match it uses the SESSION's, writing `RIPIEGO DICHIARATO`.
+	 *   ⛔ With `NULL` that comparison **is never made**, so that line will never
+	 *   come out: whoever looked for it in the log would conclude "they always
+	 *   match", which is a different thing from "I did not look".
 	 *
-	 * ⇒ Il giorno che la disposizione negoziata arriva fin qui (oggi `input.h`
-	 *   non la porta: `input_apri` non la prende, ed e' una scelta del
-	 *   coordinatore), si passa **quella** al posto di questo NULL e non serve
-	 *   altro.  *(Riga lasciata da A5, 14 agosto 2026.)*
+	 * ⇒ The day the negotiated layout arrives here (today `input.h`
+	 *   does not carry it: `input_apri` does not take it, and it is a choice of the
+	 *   coordinator), **that one** is passed in place of this NULL and nothing
+	 *   else is needed.  *(Line left by A5, 14 August 2026.)*
 	 */
 	/*
-	 * ⭐ E ADESSO LA NEGOZIATA ARRIVA FIN QUI — 16 agosto 2026, e fino a
-	 *    stasera era `NULL`.
+	 * ⭐ AND NOW THE NEGOTIATED ONE ARRIVES HERE — 16 August 2026, and until
+	 *    tonight it was `NULL`.
 	 *
-	 * ⛔ Il commento che stava qui diceva che il NULL «per adesso e' giusto», e
-	 *    dichiarava la conseguenza: `tastiera.c` confronta la disposizione
-	 *    dichiarata dal client con quella vera della sessione e scrive
-	 *    `RIPIEGO DICHIARATO` se non combaciano — e con `NULL` quel confronto
-	 *    **non si faceva mai**.  `[M]` banco `06-b34`, primo giro: quella riga
-	 *    non compare in NESSUNO dei giri, nemmeno riattaccandosi dichiarando
-	 *    `us` a una sessione `it`.  ⇒ Chi la cercasse nel registro concluderebbe
-	 *    «combaciano sempre», che e' una cosa diversa da «non ho guardato»
-	 *    (`LEZIONI.md` §1.9 regola 1).
+	 * ⛔ The comment that stood here said that the NULL "for now is right", and
+	 *    declared the consequence: `tastiera.c` compares the layout
+	 *    declared by the client with the session's real one and writes
+	 *    `RIPIEGO DICHIARATO` if they do not match — and with `NULL` that comparison
+	 *    **was never made**.  `[M]` bench `06-b34`, first round: that line
+	 *    appears in NONE of the rounds, not even reattaching declaring
+	 *    `us` to an `it` session.  ⇒ Whoever looked for it in the log would conclude
+	 *    "they always match", which is a different thing from "I did not look"
+	 *    (`LEZIONI.md` §1.9 rule 1).
 	 *
-	 * ⚠ E adesso serve il doppio: attuata §5-bis.7 chiediamo NOI alla sessione
-	 *   di mettere quella disposizione, e questa riga e' l'unica che dice se
-	 *   l'abbiamo davvero ottenuta.  ⛔ Se `gsd-keyboard` ce la risovrascrivesse
-	 *   — e' il «contorno» di `CODER.md` §4.1-bis, quello che non si insegue —
-	 *   il ripiego comparirebbe QUI, invece di lasciare l'utente con `Ctrl+Z`
-	 *   sul tasto sbagliato e nessuna riga che lo spieghi.
+	 * ⚠ And now it is needed twice over: with §5-bis.7 implemented WE ask the session
+	 *   to set that layout, and this line is the only one saying whether
+	 *   we really got it.  ⛔ If `gsd-keyboard` overwrote it on us
+	 *   — it is the "surroundings" of `CODER.md` §4.1-bis, the ones not chased —
+	 *   the fallback would appear HERE, instead of leaving the user with `Ctrl+Z`
+	 *   on the wrong key and no line explaining it.
 	 */
 	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
 	if (!nuova)
 	{
-		registro_dice(AREA, "⚠ la keymap consegnata da libei non si apre (%s): %s",
-		              sbaglio ?: "senza motivo dichiarato",
-		              in->disposizione ? "tengo quella di prima" : "le LETTERE restano spente");
+		registro_dice(AREA, "⚠ the keymap handed over by libei does not open (%s): %s",
+		              sbaglio ?: "no reason declared",
+		              in->disposizione ? "keeping the previous one" : "LETTERS stay off");
 	}
 	else
 	{
@@ -757,25 +757,25 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 
 	if (g_strcmp0(impronta, in->keymap_nome) != 0)
 	{
-		registro_dice(AREA, "KEYMAP CAMBIATA: %s (era: %s) → disposizione «%s»", impronta,
-		              in->keymap_nome ?: "nessuna",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna");
+		registro_dice(AREA, "KEYMAP CHANGED: %s (was: %s) → layout «%s»", impronta,
+		              in->keymap_nome ?: "none",
+		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none");
 		g_free(in->keymap_nome);
 		in->keymap_nome = g_steal_pointer(&impronta);
 	}
 	else
-		registro_dettaglio(AREA, "keymap invariata: %s", impronta);
+		registro_dettaglio(AREA, "keymap unchanged: %s", impronta);
 
 	/*
-	 * ⛔ KWIN NON HA SENTITO — `[M]` 6 ott 2026, Ubuntu 26.04 / KWin 6.6.6:
-	 *    la negoziata `it` chiesta 1 s dopo l'avvio della sessione (kxkbrc +
-	 *    `reloadConfig`), e la prima keymap arrivata era `English (US)`, per
-	 *    tutta la sessione ⇒ F-009 rosso su Chrome e Firefox.  Il segnale e'
-	 *    senza risposta: se KWin non ha ancora l'oggetto `/Layouts` in ascolto
-	 *    si perde, e kxkbrc l'aveva gia' letto prima che lo scrivessimo.
-	 *    ⇒ La keymap VERA e' la conferma: se non e' la negoziata, si richiede,
-	 *    al massimo 3 volte (un KWin che non la mette mai resta col RIPIEGO
-	 *    DICHIARATO di `tastiera.c`, non con un giro senza fine).
+	 * ⛔ KWIN DID NOT HEAR — `[M]` 6 Oct 2026, Ubuntu 26.04 / KWin 6.6.6:
+	 *    the negotiated `it` requested 1 s after the session start (kxkbrc +
+	 *    `reloadConfig`), and the first keymap that arrived was `English (US)`, for
+	 *    the whole session ⇒ F-009 red on Chrome and Firefox.  The signal has
+	 *    no reply: if KWin does not yet have the `/Layouts` object listening
+	 *    it is lost, and kxkbrc had already been read before we wrote it.
+	 *    ⇒ The REAL keymap is the confirmation: if it is not the negotiated one, it is requested again,
+	 *    at most 3 times (a KWin that never sets it stays with the FALLBACK
+	 *    DECLARED of `tastiera.c`, not with an endless loop).
 	 */
 	if (in->kwin && in->negoziata && in->disposizione &&
 	    tastiera_e_questa(in->disposizione, in->negoziata) == 0 && in->richieste_kwin < 3)
@@ -783,43 +783,43 @@ static void leggi_keymap(Input *in, struct ei_device *dispositivo)
 		g_autoptr(GError) sbaglio_kwin = NULL;
 
 		in->richieste_kwin++;
-		input_rilascia_tutto(in); /* KWin rifa' il dispositivo tastiera */
+		input_rilascia_tutto(in); /* KWin redoes the keyboard device */
 		if (kwin_disposizione(in->negoziata, &sbaglio_kwin) == 0)
 			registro_dice(AREA,
-			              "⚠ KWin ha messo «%s» e non la negoziata «%s»: la RICHIEDO (%d di 3)",
+			              "⚠ KWin set «%s» and not the negotiated «%s»: REQUESTING it again (%d of 3)",
 			              tastiera_disposizione(in->disposizione), in->negoziata,
 			              in->richieste_kwin);
 		else
-			registro_dice(AREA, "⚠ KWin ha messo «%s» e non «%s», e richiederla non riesce: %s",
+			registro_dice(AREA, "⚠ KWin set «%s» and not «%s», and requesting it does not succeed: %s",
 			              tastiera_disposizione(in->disposizione), in->negoziata,
-			              sbaglio_kwin ? sbaglio_kwin->message : "senza motivo");
+			              sbaglio_kwin ? sbaglio_kwin->message : "no reason");
 	}
 }
 
 /* ------------------------------------------------------------------ *
- *  Gli eventi di libei
+ *  libei's events
  * ------------------------------------------------------------------ */
 static void dispositivo_aggiunto(Input *in, struct ei_device *dispositivo)
 {
 	gboolean assoluto = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE);
 	gboolean tasti = ei_device_has_capability(dispositivo, EI_DEVICE_CAP_KEYBOARD);
 
-	registro_dettaglio(AREA, "dispositivo «%s»: assoluto=%d scorrimento=%d bottoni=%d tastiera=%d",
+	registro_dettaglio(AREA, "device «%s»: absolute=%d scroll=%d buttons=%d keyboard=%d",
 	                   ei_device_get_name(dispositivo) ?: "?", assoluto,
 	                   ei_device_has_capability(dispositivo, EI_DEVICE_CAP_SCROLL),
 	                   ei_device_has_capability(dispositivo, EI_DEVICE_CAP_BUTTON), tasti);
 
 	/*
-	 * ⛔ SI PRENDE SEMPRE L'ULTIMO ARRIVATO, e non «il primo che va bene».
+	 * ⛔ THE LAST ARRIVED IS ALWAYS TAKEN, and not "the first that will do".
 	 *
-	 * E' la differenza fra reggere un ricambio e non reggerlo: dopo un cambio
-	 * di geometria Mutter manda `DEVICE_REMOVED` + `DEVICE_ADDED`, e chi tiene
-	 * il primo resta attaccato a un oggetto morto **che non da' errore**.
+	 * It is the difference between bearing a replacement and not bearing it: after a change
+	 * of geometry Mutter sends `DEVICE_REMOVED` + `DEVICE_ADDED`, and whoever keeps
+	 * the first stays attached to a dead object **that gives no error**.
 	 */
 	if (assoluto)
 	{
-		/* ⚠ Qui NON si conta il ricambio: lo conta `dispositivo_tolto`, che
-		 *   arriva prima.  Contarlo in tutt'e due i posti lo raddoppierebbe. */
+		/* ⚠ The replacement is NOT counted here: `dispositivo_tolto` counts it, which
+		 *   arrives first.  Counting it in both places would double it. */
 		if (in->puntatore)
 			ei_device_unref(in->puntatore);
 		in->puntatore = ei_device_ref(dispositivo);
@@ -837,16 +837,16 @@ static void dispositivo_aggiunto(Input *in, struct ei_device *dispositivo)
 }
 
 /*
- * ⛔⛔ Quel che era premuto su un dispositivo che se ne va diventa un ORFANO.
+ * ⛔⛔ What was pressed on a device that goes away becomes an ORPHAN.
  *
- * Il riquadro in testa al file dice perche': il suo rilascio non arrivera' a
- * nessuno, ne' sul dispositivo vecchio (che non c'e' piu') ne' sul nuovo (dove
- * Mutter lo scarta in silenzio).  ⇒ Si SEGNA, e la riga si scrive **subito**,
- * nell'istante in cui il danno si produce — non al rilascio, che e' mezzo
- * secondo dopo e che chi legge il registro non collega piu' al ricambio.
+ * The box at the top of the file says why: its release will reach
+ * nobody, neither on the old device (which is gone) nor on the new one (where
+ * Mutter discards it silently).  ⇒ It is MARKED, and the line is written **at once**,
+ * at the instant the damage happens — not at the release, which is half a
+ * second later and which whoever reads the log no longer connects to the replacement.
  *
- * ⚠ E si scrive SOLO se c'era qualcosa di premuto: una riga a ogni ricambio
- *   annegherebbe quella che conta (`[M]` 15 ricambi in tre minuti su un banco).
+ * ⚠ And it is written ONLY if something was pressed: a line at every replacement
+ *   would drown the one that matters (`[M]` 15 replacements in three minutes on a bench).
  */
 static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint32_t massimo,
                          unsigned quanti, const char *cosa)
@@ -860,27 +860,27 @@ static void segna_orfani(Input *in, const uint8_t *mappa, uint8_t *orfani, uint3
 			in->quanti_orfani++;
 		}
 	registro_dice(AREA,
-	              "⛔⛔ %u %s erano PREMUTI sul dispositivo che il compositore ha appena tolto: il "
-	              "loro rilascio non arrivera' a NESSUNO, e il posto li conta ancora giu'.  ⇒ Da "
-	              "adesso quel che passa da loro e' rotto finche' non cade il canale EIS.  La cura "
-	              "e' rilasciare PRIMA di chiedere il ridimensionamento (`figlio.c:3964`)",
+	              "⛔⛔ %u %s were PRESSED on the device the compositor has just removed: their "
+	              "release will reach NOBODY, and the seat still counts them down.  ⇒ From "
+	              "now on what passes through them is broken until the EIS channel drops.  The cure "
+	              "is to release BEFORE asking for the resize (`figlio.c:3964`)",
 	              quanti, cosa);
 
 	/*
-	 * ⛔⛔ E QUI SI CHIEDE LA GUARIGIONE — la cura «C».  🔸 Derivata, 21 ago 2026.
+	 * ⛔⛔ AND HERE THE HEALING IS ASKED FOR — cure "C".  🔸 Derived, 21 Aug 2026.
 	 *
-	 * ⭐ Questo e' l'istante esatto in cui il danno si produce, ed e' l'unico
-	 *    posto del programma che lo sa.  ⚠ Non si guarisce ADESSO: siamo dentro
-	 *    `ei_dispatch()`, e distruggere il contesto `libei` mentre lui ci sta
-	 *    consegnando eventi e' un difetto che non da' errore.  ⇒ Si segna, e
-	 *    `input_gira()` guarisce quando la coda e' vuota.
+	 * ⭐ This is the exact instant the damage happens, and it is the only
+	 *    place in the program that knows it.  ⚠ We do not heal NOW: we are inside
+	 *    `ei_dispatch()`, and destroying the `libei` context while it is
+	 *    delivering events to us is a defect that gives no error.  ⇒ It is marked, and
+	 *    `input_gira()` heals when the queue is empty.
 	 *
-	 * ⛔ E si segna per QUALUNQUE porta: il ridimensionamento, il risveglio
-	 *    della cattura (§7.1), un `monitors-changed` di Mutter, un cambio di
-	 *    keymap.  ⚠ E' la ragione per cui la cura «C» esiste accanto alla «A»:
-	 *    «A» chiude la porta che controlliamo noi, «C» ripara quelle che non
-	 *    controlliamo — e `meta_eis_viewport_notify_changed()` e' entrata in
-	 *    GNOME 48.5, cioe' e' NUOVA: ne arriveranno altre.
+	 * ⛔ And it is marked for ANY door: the resize, the wake-up
+	 *    of the capture (§7.1), a Mutter `monitors-changed`, a keymap
+	 *    change.  ⚠ It is the reason cure "C" exists next to "A":
+	 *    "A" closes the door we control, "C" repairs those we do not
+	 *    control — and `meta_eis_viewport_notify_changed()` entered
+	 *    GNOME 48.5, that is it is NEW: others will come.
 	 */
 	in->guarigione_dovuta = TRUE;
 }
@@ -889,43 +889,43 @@ static void dispositivo_tolto(Input *in, struct ei_device *dispositivo)
 {
 	if (in->puntatore == dispositivo)
 	{
-		/* ⛔ E il conto di quel che era premuto NON si azzera: il dispositivo se
-		 *    n'e' andato, i pulsanti dell'utente no.  ⚠ Ma NON si spera piu' di
-		 *    rilasciarli sul dispositivo nuovo — `[M]` 16 agosto 2026, non
-		 *    arriva: diventano ORFANI, e si dice. */
+		/* ⛔ And the count of what was pressed is NOT reset: the device has
+		 *    gone, the user's buttons have not.  ⚠ But we NO LONGER hope to
+		 *    release them on the new device — `[M]` 16 August 2026, it does not
+		 *    arrive: they become ORPHANS, and it is said. */
 		segna_orfani(in, in->bottoni, in->bottoni_orfani, MAX_BOTTONE, in->quanti_bottoni,
-		             "pulsanti");
+		             "buttons");
 		ei_device_unref(in->puntatore);
 		in->puntatore = NULL;
 		in->puntatore_attivo = FALSE;
 		in->regione_nota = FALSE;
-		/* ⛔ IL RICAMBIO SI CONTA QUI, NON SOLO SULL'AGGIUNTA — `[M]` 14 agosto
-		 *    2026, e il banco l'ha pagato: Mutter manda `DEVICE_REMOVED` **e
-		 *    poi** `DEVICE_ADDED`, quindi al momento dell'aggiunta il vecchio
-		 *    e' gia' NULL e un contatore che guarda solo li' resta a **zero**.
-		 *    ⚠ Il banco stampava «il ricambio NON e' stato riprodotto» mentre il
-		 *    testimone vedeva il posto perdere tastiera e puntatore: uno
-		 *    strumento cieco proprio nel caso che deve vedere (`CODER.md` §3.4). */
+		/* ⛔ THE REPLACEMENT IS COUNTED HERE, NOT ONLY ON ADDITION — `[M]` 14 August
+		 *    2026, and the bench paid for it: Mutter sends `DEVICE_REMOVED` **and
+		 *    then** `DEVICE_ADDED`, so at the moment of the addition the old one
+		 *    is already NULL and a counter that looks only there stays at **zero**.
+		 *    ⚠ The bench printed "the replacement was NOT reproduced" while the
+		 *    witness saw the seat lose keyboard and pointer: an
+		 *    instrument blind precisely in the case it must see (`CODER.md` §3.4). */
 		in->ricambi_puntatore++;
-		registro_dice(AREA, "il puntatore e' stato TOLTO dal compositore (ricambio n. %u)",
+		registro_dice(AREA, "the pointer was REMOVED by the compositor (replacement n. %u)",
 		              in->ricambi_puntatore);
 	}
 	if (in->tastiera_dev == dispositivo)
 	{
-		/* ⚠ Al cambio di GEOMETRIA la tastiera non ricambia — `[R]`
-		 *   `remove_viewport_devices` guarda solo TOUCH e POINTER_ABSOLUTE
-		 *   (`meta-eis-client.c:197-206`), e `[M]` 16 agosto 2026: **zero**
-		 *   ricambi di tastiera su quindici del puntatore.  ⛔ Ma al cambio di
-		 *   KEYMAP si', `on_keymap_changed` (`:762-781`) la distrugge e la
-		 *   ricrea — e li' il difetto degli orfani ha la stessa forma.  E'
-		 *   la sottofase 6.2: qui si segna, cosi' quando lei lo misura il conto
-		 *   c'e' gia'. */
-		segna_orfani(in, in->tasti, in->tasti_orfani, MAX_TASTO, in->quanti_tasti, "tasti");
+		/* ⚠ At a GEOMETRY change the keyboard is not replaced — `[R]`
+		 *   `remove_viewport_devices` looks only at TOUCH and POINTER_ABSOLUTE
+		 *   (`meta-eis-client.c:197-206`), and `[M]` 16 August 2026: **zero**
+		 *   keyboard replacements out of fifteen of the pointer.  ⛔ But at a
+		 *   KEYMAP change yes, `on_keymap_changed` (`:762-781`) destroys and
+		 *   recreates it — and there the orphan defect has the same form.  It is
+		 *   sub-phase 6.2: here it is marked, so when it measures it the count
+		 *   is already there. */
+		segna_orfani(in, in->tasti, in->tasti_orfani, MAX_TASTO, in->quanti_tasti, "keys");
 		ei_device_unref(in->tastiera_dev);
 		in->tastiera_dev = NULL;
 		in->tastiera_attiva = FALSE;
 		in->ricambi_tastiera++;
-		registro_dice(AREA, "la tastiera e' stata TOLTA dal compositore (ricambio n. %u)",
+		registro_dice(AREA, "the keyboard was REMOVED by the compositor (replacement n. %u)",
 		              in->ricambi_tastiera);
 	}
 }
@@ -939,41 +939,41 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 	{
 		case EI_EVENT_CONNECT:
 			/*
-			 * ⛔⛔ QUESTA E' LA RIGA CHE RENDE SICURA LA CHIUSURA — cura D4, 25
-			 *     agosto 2026.  Il riquadro sopra `stacca_il_contesto()` dice
-			 *     l'istruzione che cadeva; qui si segna il solo fatto che
-			 *     distingue un canale che si puo' disconnettere da uno che
-			 *     ammazza il figlio.
+			 * ⛔⛔ THIS IS THE LINE THAT MAKES THE CLOSING SAFE — cure D4, 25
+			 *     August 2026.  The box above `stacca_il_contesto()` names the
+			 *     instruction that crashed; here we mark the only fact that
+			 *     tells a channel that can be disconnected from one that
+			 *     kills the child.
 			 *
-			 * ⭐ `EI_EVENT_CONNECT` arriva **una volta sola** dopo la richiesta
-			 *    di connessione (`libei.h`: *«This event is only sent once after
-			 *    the initial connection request»*), e dove il server NON approva
-			 *    arriva `EI_EVENT_DISCONNECT` al suo posto.  ⇒ E' il predicato
-			 *    del PROTOCOLLO, non un sintomo.
+			 * ⭐ `EI_EVENT_CONNECT` arrives **once only** after the connection
+			 *    request (`libei.h`: *"This event is only sent once after
+			 *    the initial connection request"*), and where the server does NOT approve
+			 *    `EI_EVENT_DISCONNECT` arrives in its place.  ⇒ It is the
+			 *    PROTOCOL's predicate, not a symptom.
 			 */
 			in->stretta_fatta = TRUE;
 			in->stretta_us = g_get_monotonic_time();
 			registro_dettaglio(AREA,
-			                   "la stretta di mano di libei e' ARRIVATA dopo %.1f ms: da adesso il "
-			                   "canale si puo' chiudere per la strada normale",
+			                   "libei's handshake has ARRIVED after %.1f ms: from now on the "
+			                   "channel can be closed the normal way",
 			                   (double) (in->stretta_us - in->aperto_us) / 1000.0);
 			break;
 
 		case EI_EVENT_SEAT_ADDED:
 			/*
-			 * ⛔ Si CHIEDONO le capacita', e i dispositivi li crea il
-			 *    compositore.  ⚠ `POINTER` (relativo) si chiede lo stesso pur
-			 *    non usandolo: senza, Mutter non crea nemmeno l'assoluto?  No —
-			 *    `[R]` `meta-eis-client.c:1108-1114` li lega separatamente.  Si
-			 *    chiede perche' `RCP.md` §7.3 tiene aperto il puntatore
-			 *    relativo per il `Pointer Lock` della pagina (fase 4, anello A7),
-			 *    e la `MetaEis` si crea **una volta sola per sessione**: quel
-			 *    che non si chiede adesso non si puo' chiedere piu'.
+			 * ⛔ The capabilities are ASKED for, and the devices are created by the
+			 *    compositor.  ⚠ `POINTER` (relative) is asked for anyway though
+			 *    not used: without it, does Mutter not even create the absolute one?  No —
+			 *    `[R]` `meta-eis-client.c:1108-1114` binds them separately.  It is
+			 *    asked for because `RCP.md` §7.3 keeps the relative pointer open
+			 *    for the page's `Pointer Lock` (phase 4, link A7),
+			 *    and the `MetaEis` is created **once only per session**: what
+			 *    is not asked for now can never be asked for again.
 			 */
 			ei_seat_bind_capabilities(ei_event_get_seat(evento), EI_DEVICE_CAP_POINTER,
 			                          EI_DEVICE_CAP_POINTER_ABSOLUTE, EI_DEVICE_CAP_BUTTON,
 			                          EI_DEVICE_CAP_SCROLL, EI_DEVICE_CAP_KEYBOARD, NULL);
-			registro_dettaglio(AREA, "posto «%s»: capacita' chieste",
+			registro_dettaglio(AREA, "seat «%s»: capabilities requested",
 			                   ei_seat_get_name(ei_event_get_seat(evento)) ?: "?");
 			break;
 
@@ -990,13 +990,13 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 			if (dispositivo == in->puntatore)
 			{
 				in->puntatore_attivo = TRUE;
-				/* ⛔ E si rilegge ANCHE qui: fra `DEVICE_ADDED` e la ripresa il
-				 *    compositore puo' aver rifatto i viewport. */
+				/* ⛔ And it is reread HERE TOO: between `DEVICE_ADDED` and the resume the
+				 *    compositor may have redone the viewports. */
 				leggi_regione(in, dispositivo);
 			}
 			if (dispositivo == in->tastiera_dev)
 				in->tastiera_attiva = TRUE;
-			registro_dettaglio(AREA, "dispositivo «%s» pronto (sequenza %u)",
+			registro_dettaglio(AREA, "device «%s» ready (sequence %u)",
 			                   ei_device_get_name(dispositivo) ?: "?", in->sequenza);
 			break;
 
@@ -1008,7 +1008,7 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 			break;
 
 		case EI_EVENT_DISCONNECT:
-			registro_dice(AREA, "⛔ il compositore ha CHIUSO il canale di input");
+			registro_dice(AREA, "⛔ the compositor CLOSED the input channel");
 			in->caduto = TRUE;
 			break;
 
@@ -1018,7 +1018,7 @@ static void tratta_evento(Input *in, struct ei_event *evento)
 }
 
 /* ------------------------------------------------------------------ *
- *  Il contratto
+ *  The contract
  * ------------------------------------------------------------------ */
 static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l,
                    uint32_t tela_a, char **errore)
@@ -1031,14 +1031,14 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 	if (!sessione && !kwin)
 	{
 		if (errore)
-			*errore = g_strdup("nessuna sessione di Mutter: il canale di input non ha a chi parlare");
+			*errore = g_strdup("no Mutter session: the input channel has nobody to talk to");
 		return NULL;
 	}
 	if (tela_l == 0 || tela_a == 0)
 	{
 		if (errore)
-			*errore = g_strdup_printf("tela degenere %ux%u: le coordinate assolute non avrebbero "
-			                          "un intervallo",
+			*errore = g_strdup_printf("degenerate canvas %ux%u: the absolute coordinates would have "
+			                          "no range",
 			                          tela_l, tela_a);
 		return NULL;
 	}
@@ -1051,9 +1051,9 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 		if (fd < 0)
 		{
 			if (errore)
-				*errore = g_strdup_printf("KWin non ha concesso il canale di input "
+				*errore = g_strdup_printf("KWin did not grant the input channel "
 				                          "(connectToEIS): %s",
-				                          sbaglio ? sbaglio->message : "senza motivo");
+				                          sbaglio ? sbaglio->message : "no reason");
 			g_clear_error(&sbaglio);
 			return NULL;
 		}
@@ -1062,12 +1062,12 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 		fd = mutter_eis_fd(sessione);
 	if (fd < 0)
 	{
-		/* ⛔ E si dice PERCHE', non «non si apre»: la riga di `mutter.c` che
-		 *    dichiara il rifiuto di `ConnectToEIS` e' gia' nel registro, e
-		 *    questa la richiama invece di aggiungere un secondo mistero. */
+		/* ⛔ And we say WHY, not "it does not open": the `mutter.c` line that
+		 *    declares the refusal of `ConnectToEIS` is already in the log, and
+		 *    this one recalls it instead of adding a second mystery. */
 		if (errore)
-			*errore = g_strdup("ConnectToEIS non ha dato un descrittore (il registro dell'area "
-			                   "«cattura» dice perche'): nessun input puo' arrivare al desktop");
+			*errore = g_strdup("ConnectToEIS gave no descriptor (the log of the "
+			                   "«cattura» area says why): no input can reach the desktop");
 		return NULL;
 	}
 
@@ -1076,8 +1076,8 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 	in->kwin = kwin;
 	in->tela_l = tela_l;
 	in->tela_a = tela_a;
-	/* ⛔ Cura D4: l'istante dell'apertura si segna QUI, perche' e' l'unico modo
-	 *    di dire quanto e' durata la finestra pericolosa quando si chiude. */
+	/* ⛔ Cure D4: the instant of the opening is marked HERE, because it is the only way
+	 *    to say how long the dangerous window lasted when it closes. */
 	in->aperto_us = g_get_monotonic_time();
 	in->fd_socket = -1;
 
@@ -1085,59 +1085,59 @@ static Input *apri(MutterSessione *sessione, KwinSessione *kwin, uint32_t tela_l
 	if (!in->ei)
 	{
 		if (errore)
-			*errore = g_strdup("contesto libei non creato");
+			*errore = g_strdup("libei context not created");
 		g_free(in);
 		return NULL;
 	}
-	/* Il nome si vede nei dispositivi che Mutter crea («remotix virtual
-	 * keyboard», …) e nel suo registro: e' il modo di riconoscersi da fuori. */
+	/* The name shows in the devices Mutter creates («remotix virtual
+	 * keyboard», …) and in its log: it is the way to recognise ourselves from outside. */
 	ei_configure_name(in->ei, "remotix");
 
 	/*
-	 * ⛔ Un `dup`, e non il descrittore di `mutter.c`: `ei_setup_backend_fd` se
-	 *    ne APPROPRIA, e chiuderlo in due posti e' un difetto che si manifesta
-	 *    a distanza — un descrittore riciclato da un'altra `open`.
+	 * ⛔ A `dup`, and not `mutter.c`'s descriptor: `ei_setup_backend_fd`
+	 *    TAKES OWNERSHIP of it, and closing it in two places is a defect that shows
+	 *    at a distance — a descriptor recycled by another `open`.
 	 */
 	fd = dup(fd);
 	if (fd < 0 || ei_setup_backend_fd(in->ei, fd) != 0)
 	{
 		if (errore)
-			*errore = g_strdup("il descrittore di ConnectToEIS non e' stato accettato da libei");
+			*errore = g_strdup("ConnectToEIS's descriptor was not accepted by libei");
 		if (fd >= 0)
 			close(fd);
 		ei_unref(in->ei);
 		g_free(in);
 		return NULL;
 	}
-	/* ⛔ Cura D4: da qui in poi il socket e' di `libei` — lo si tiene da parte
-	 *    per il SOLO caso in cui il contesto vada abbandonato.  ⚠ Il `dup` e'
-	 *    gia' fatto: questo e' il numero che `libei` possiede, non quello di
+	/* ⛔ Cure D4: from here on the socket belongs to `libei` — it is kept aside
+	 *    for the ONLY case in which the context must be abandoned.  ⚠ The `dup` is
+	 *    already done: this is the number `libei` owns, not that of
 	 *    `mutter.c`. */
 	in->fd_socket = fd;
 
 	/*
-	 * ⛔ QUI NON SI APRE NESSUNA DISPOSIZIONE, ed e' voluto.
+	 * ⛔ HERE NO LAYOUT IS OPENED, and it is intended.
 	 *
-	 * La keymap non e' una cosa che sappiamo all'apertura: arriva da `libei`
-	 * col dispositivo tastiera, e cambia sotto di noi.  ⇒ La apre
-	 * `leggi_keymap`, al primo `DEVICE_ADDED` e a ogni ricambio.  Fino a
-	 * quel momento `input_lettera` risponde -1, e lo dice.
+	 * The keymap is not something we know at opening: it arrives from `libei`
+	 * with the keyboard device, and changes under us.  ⇒ It is opened by
+	 * `leggi_keymap`, at the first `DEVICE_ADDED` and at every replacement.  Until
+	 * that moment `input_lettera` answers -1, and says so.
 	 */
-	registro_dice(AREA, "canale di input aperto verso il compositore (libei), tela %ux%u", tela_l,
+	registro_dice(AREA, "input channel open to the compositor (libei), canvas %ux%u", tela_l,
 	              tela_a);
 	return in;
 }
 
 /*
- * ⛔⭐ IL DESCRITTORE PER IL `poll()` DEL FIGLIO — vedi `input.h`.
+ * ⛔⭐ THE DESCRIPTOR FOR THE CHILD'S `poll()` — see `input.h`.
  *
- * ⚠ E' un descrittore da SORVEGLIARE, non da leggere: chi lo mette nel `poll()`
- *   non ci fa `read()` sopra.  Quando diventa leggibile chiama `input_gira()`,
- *   che e' l'unico posto dove `ei_dispatch()` puo' stare — `libei` non e'
- *   rientrante, e il byte tolto a mano da sotto i piedi della libreria sarebbe
- *   un difetto che non da' errore.
+ * ⚠ It is a descriptor to WATCH, not to read: whoever puts it in the `poll()`
+ *   does not `read()` on it.  When it becomes readable it calls `input_gira()`,
+ *   which is the only place `ei_dispatch()` can be — `libei` is not
+ *   reentrant, and a byte taken by hand from under the library's feet would be
+ *   a defect that gives no error.
  *
- * ⛔ -1 vuol dire «niente da mettere nel poll», non «errore».
+ * ⛔ -1 means "nothing to put in the poll", not "error".
  */
 Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a, char **errore)
 {
@@ -1149,7 +1149,7 @@ Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, cha
 	if (!kwin)
 	{
 		if (errore)
-			*errore = g_strdup("nessun palco KWin: il canale di input non ha a chi parlare");
+			*errore = g_strdup("no KWin stage: the input channel has nobody to talk to");
 		return NULL;
 	}
 	return apri(NULL, kwin, tela_l, tela_a, errore);
@@ -1157,7 +1157,7 @@ Input *input_apri_kwin(KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a, cha
 
 int input_descrittore(Input *in)
 {
-	/* ⭐ wlroots: il descrittore del filo Wayland, e -1 se e' caduto. */
+	/* ⭐ wlroots: the descriptor of the Wayland wire, and -1 if it has dropped. */
 	if (in && in->wlr)
 		return wlr_input_descrittore(in->wlr);
 	if (!in || !in->ei)
@@ -1166,70 +1166,70 @@ int input_descrittore(Input *in)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⛔⛔⛔ IL CANALE APPENA NATO NON SI STACCA — la cura **D4**, 25 agosto 2026.
+ * ⛔⛔⛔ THE CHANNEL JUST BORN IS NOT DETACHED — cure **D4**, 25 August 2026.
  *
- * ⛔ IL FATTO, `[M]` letto dal core il 25 agosto 2026 (`fasi/10-…md` §5.1):
+ * ⛔ THE FACT, `[M]` read from the core on 25 August 2026 (`fasi/10-…md` §5.1):
  *
- *       #0  ei_disconnect ()          da libei.so.1
+ *       #0  ei_disconnect ()          from libei.so.1
  *       #2  input_chiudi (…)          at input.c
  *       #3  smonta_il_palco (…)       at figlio.c
  *
- *   e dallo stesso core il **quando**: il canale EIS era stato aperto **33 ms
- *   prima** e la stretta di mano non era ancora arrivata.  L'istruzione che
- *   cadeva e' `mov 0x50(%rdi),%rdi` con `%rdi = 0`.
+ *   and from the same core the **when**: the EIS channel had been opened **33 ms
+ *   earlier** and the handshake had not yet arrived.  The instruction that
+ *   crashed is `mov 0x50(%rdi),%rdi` with `%rdi = 0`.
  *
- * ⭐⭐ E IL MECCANISMO E' ESATTO, non dedotto — `libei 1.3.901`, disassemblata:
+ * ⭐⭐ AND THE MECHANISM IS EXACT, not deduced — `libei 1.3.901`, disassembled:
  *
- *     `struct ei` tiene lo **stato** a +0xc8 e la **connessione** a +0x18.
- *       0 = appena creato · 1 = socket messo, stretta CHIESTA e non ancora
- *       arrivata · 2 = il server ha mandato `connection` · 3 = connesso
- *       (⇒ `EI_EVENT_CONNECT`) · 4/5 = in chiusura / chiuso.
+ *     `struct ei` keeps the **state** at +0xc8 and the **connection** at +0x18.
+ *       0 = just created · 1 = socket set, handshake REQUESTED and not yet
+ *       arrived · 2 = the server sent `connection` · 3 = connected
+ *       (⇒ `EI_EVENT_CONNECT`) · 4/5 = closing / closed.
  *
- *     `ei_disconnect()` torna subito se lo stato e' 4 o 5, e salta la
- *     disconnessione se lo stato e' **0**.  Per 1, 2 e 3 chiama
+ *     `ei_disconnect()` returns at once if the state is 4 or 5, and skips the
+ *     disconnection if the state is **0**.  For 1, 2 and 3 it calls
  *
- *         ei_connection_request_disconnect(ei->connection);   ⭐ controlla NULL
- *         ei_connection_remove_pending_callbacks(ei->connection);  ⛔ NON lo fa
+ *         ei_connection_request_disconnect(ei->connection);   ⭐ checks NULL
+ *         ei_connection_remove_pending_callbacks(ei->connection);  ⛔ does NOT
  *
- *     e la seconda comincia proprio con `mov 0x50(%rdi),%rdi`.
- *   ⇒ ⛔⛔ **La buca e' lo stato 1, e uno solo**: connessione ancora NULL, e il
- *     controllo che c'e' sulla riga sopra manca su quella sotto.
+ *     and the second begins precisely with `mov 0x50(%rdi),%rdi`.
+ *   ⇒ ⛔⛔ **The hole is state 1, and only that**: connection still NULL, and the
+ *     check present on the line above is missing on the one below.
  *
- * ⛔⛔ E `ei_unref()` NON E' UNA VIA D'USCITA: il distruttore `ei_destroy()`
- *      chiama `ei_disconnect()` come **prima istruzione**.  ⇒ Su un contesto
- *      allo stato 1, `ei_unref()` da solo ammazza il figlio esattamente come
- *      `ei_disconnect()`.  Non c'e' un modo di LIBERARLO senza passare di li'.
+ * ⛔⛔ AND `ei_unref()` IS NOT A WAY OUT: the destructor `ei_destroy()`
+ *      calls `ei_disconnect()` as its **first instruction**.  ⇒ On a context
+ *      in state 1, `ei_unref()` alone kills the child exactly like
+ *      `ei_disconnect()`.  There is no way to FREE it without going through there.
  *
- * ⇒ ⭐ LA CURA, in due mezze righe e un prezzo:
+ * ⇒ ⭐ THE CURE, in two half lines and a price:
  *
- *   · **il predicato e' `EI_EVENT_CONNECT`** — il modo che `libei` ha di dire
- *     «il server ha approvato» (`libei.h`).  ⛔ NON i puntatori `puntatore` /
- *     `tastiera_dev` / `regione_nota` letti nel core: quelli sono **sintomi**,
- *     arrivano molto dopo, e su un canale maturo senza dispositivi direbbero
- *     «non e' mai comparso niente» su un contesto che invece va disconnesso.
- *     ⚠ E' volutamente **piu' prudente del necessario**: fra lo stato 2 e il 3
- *       c'e' un giro di `sync` in cui `ei_disconnect()` sarebbe gia' sicuro, e
- *       li' si abbandona lo stesso.  In quella finestra non esiste nessun
- *       dispositivo, quindi non si perde niente di visibile;
+ *   · **the predicate is `EI_EVENT_CONNECT`** — the way `libei` has of saying
+ *     "the server has approved" (`libei.h`).  ⛔ NOT the pointers `puntatore` /
+ *     `tastiera_dev` / `regione_nota` read in the core: those are **symptoms**,
+ *     they arrive much later, and on a mature channel without devices they would say
+ *     "nothing ever appeared" on a context that must instead be disconnected.
+ *     ⚠ It is deliberately **more prudent than necessary**: between state 2 and 3
+ *       there is a `sync` round in which `ei_disconnect()` would already be safe, and
+ *       there it is abandoned anyway.  In that window no device
+ *       exists, so nothing visible is lost;
  *
- *   · **contesto maturo ⇒ chiusura VERA, invariata**: `ei_disconnect()` +
- *     `ei_unref()`, che e' il messaggio di protocollo che fa girare
- *     `drop_device()` in Mutter e fa sparire i dispositivi virtuali.  ⛔ Senza
- *     questo ramo si perderebbe l'uscita pulita, che e' meta' del contratto;
+ *   · **mature context ⇒ REAL close, unchanged**: `ei_disconnect()` +
+ *     `ei_unref()`, which is the protocol message that makes
+ *     `drop_device()` run in Mutter and makes the virtual devices disappear.  ⛔ Without
+ *     this branch the clean exit would be lost, which is half of the contract;
  *
- *   · **contesto immaturo ⇒ si ABBANDONA**, e il prezzo si dichiara: il
- *     `struct ei` si perde (poche centinaia di byte, una volta per palco morto
- *     nei primi millisecondi), ⭐ ma i **due descrittori si chiudono a mano** —
- *     il socket, che e' quello che dice al compositore «il cliente se n'e'
- *     andato», e l'`epoll` di `libei`.  ⚠ Si possono chiudere proprio perche'
- *     il contesto e' abbandonato: nessuno li tocchera' piu', quindi non c'e'
- *     nessuna doppia chiusura.
+ *   · **immature context ⇒ it is ABANDONED**, and the price is declared: the
+ *     `struct ei` is lost (a few hundred bytes, once per stage dead
+ *     in its first milliseconds), ⭐ but the **two descriptors are closed by hand** —
+ *     the socket, which is what tells the compositor "the client has
+ *     gone", and `libei`'s `epoll`.  ⚠ They can be closed precisely because
+ *     the context is abandoned: nobody will touch them again, so there is
+ *     no double close.
  *
- * ⛔ QUEL CHE QUESTA CURA **NON** CURA, e va detto: la stessa buca sta anche
- *    DENTRO `libei`.  `connection_dispatch()` chiama `ei_disconnect()` da se'
- *    quando la lettura dal socket fallisce ⇒ se il compositore muore mentre lo
- *    stato e' 1, e' `ei_dispatch()` a cadere, e da fuori non si puo' impedire.
- *    ⚠ Fuori dal mandato: la cura vera e' in `libei`.
+ * ⛔ WHAT THIS CURE DOES **NOT** CURE, and it must be said: the same hole is also
+ *    INSIDE `libei`.  `connection_dispatch()` calls `ei_disconnect()` by itself
+ *    when reading from the socket fails ⇒ if the compositor dies while the
+ *    state is 1, it is `ei_dispatch()` that crashes, and from outside it cannot be prevented.
+ *    ⚠ Outside the mandate: the real cure is in `libei`.
  * ═══════════════════════════════════════════════════════════════════════════ */
 static void stacca_il_contesto(Input *in, const char *chi)
 {
@@ -1243,37 +1243,37 @@ static void stacca_il_contesto(Input *in, const char *chi)
 
 	if (in->stretta_fatta)
 	{
-		/* ⭐ LA CHIUSURA VERA — questa riga e' quella di sempre, e deve
-		 *    restarci: e' `ei_disconnect()` a mandare il distacco di protocollo,
-		 *    ed e' quel messaggio (non la chiusura del socket) a far girare
-		 *    `drop_device()` in Mutter.  `[M]` guasti `RG3`/`RG4`, 21 ago 2026. */
+		/* ⭐ THE REAL CLOSE — this line is the usual one, and must
+		 *    stay: it is `ei_disconnect()` that sends the protocol detach,
+		 *    and it is that message (not the closing of the socket) that makes
+		 *    `drop_device()` run in Mutter.  `[M]` faults `RG3`/`RG4`, 21 Aug 2026. */
 		ei_disconnect(in->ei);
 		ei_unref(in->ei);
 		in->ei = NULL;
-		in->fd_socket = -1; /* l'ha chiuso `libei` insieme al contesto */
+		in->fd_socket = -1; /* `libei` closed it together with the context */
 		registro_dettaglio(AREA,
-		                   "canale di input staccato da «%s»: stretta arrivata dopo %.1f ms, "
-		                   "vissuto %.1f ms, chiusura VERA (ei_disconnect + ei_unref)",
+		                   "input channel detached by «%s»: handshake arrived after %.1f ms, "
+		                   "lived %.1f ms, REAL close (ei_disconnect + ei_unref)",
 		                   chi, (double) (in->stretta_us - in->aperto_us) / 1000.0, vissuto_ms);
 		return;
 	}
 
-	/* ⛔⛔ LA FINESTRA PERICOLOSA — e la si dichiara con `registro_dice`, non con
-	 *     `registro_dettaglio`: e' un evento raro con un prezzo, e chi legge il
-	 *     registro dopo un palco morto giovane deve trovarlo scritto. */
+	/* ⛔⛔ THE DANGEROUS WINDOW — and it is declared with `registro_dice`, not with
+	 *     `registro_dettaglio`: it is a rare event with a price, and whoever reads the
+	 *     log after a stage that died young must find it written. */
 	epoll_di_libei = ei_get_fd(in->ei);
 	contesti_abbandonati++;
 	registro_dice(AREA,
-	              "⛔ canale di input ABBANDONATO da «%s» dopo %.1f ms: la stretta di mano di "
-	              "libei non era mai arrivata, e disconnettere (o liberare) un contesto cosi' "
-	              "fa cadere la libreria.  ⇒ Si chiudono i descrittori e si perde il contesto "
-	              "(abbandoni finora: %u).  ⚠ Nessun dispositivo virtuale resta appeso: a "
-	              "questo punto non ne era ancora nato nessuno",
+	              "⛔ input channel ABANDONED by «%s» after %.1f ms: libei's handshake "
+	              "had never arrived, and disconnecting (or freeing) such a context "
+	              "makes the library crash.  ⇒ The descriptors are closed and the context is lost "
+	              "(abandonments so far: %u).  ⚠ No virtual device is left hanging: at "
+	              "this point none had been born yet",
 	              chi, vissuto_ms, contesti_abbandonati);
 
-	/* ⛔ L'ordine: prima si perde il riferimento, poi si chiudono i descrittori.
-	 *    Al contrario ci sarebbe un istante in cui il contesto e' ancora
-	 *    raggiungibile con i suoi descrittori gia' chiusi. */
+	/* ⛔ The order: first the reference is dropped, then the descriptors are closed.
+	 *    The other way round there would be an instant in which the context is still
+	 *    reachable with its descriptors already closed. */
 	in->ei = NULL;
 	if (epoll_di_libei >= 0)
 		close(epoll_di_libei);
@@ -1283,24 +1283,24 @@ static void stacca_il_contesto(Input *in, const char *chi)
 }
 
 /*
- * ⛔⛔⛔ LA CURA «C», ATTUATA — si rifa' il canale EIS e il posto si sblocca.
- *       🔸 Derivata dal coordinatore il 21 agosto 2026 (non decisa dall'utente).
+ * ⛔⛔⛔ CURE "C", IMPLEMENTED — the EIS channel is redone and the seat unblocks.
+ *       🔸 Derived by the coordinator on 21 August 2026 (not decided by the user).
  *
- * ⚠ SI CHIAMA SOLO DA `input_gira()`, a coda vuota: distruggere il contesto
- *   `libei` dentro `ei_dispatch()` e' un difetto che non da' errore.
+ * ⚠ IT IS CALLED ONLY FROM `input_gira()`, with an empty queue: destroying the `libei`
+ *   context inside `ei_dispatch()` is a defect that gives no error.
  *
- * ⛔ IL PREZZO, DICHIARATO: **il trascinamento in corso viene tagliato** —
- *    `drop_device()` manda un rilascio pulito per tutto quel che era premuto.
- *    ⭐ Ma quel trascinamento **era gia' morto** (`[M]` 21 ago 2026, banco
- *    `06-b33-risveglio.sh tenuto`: dopo il ricambio il rilascio non arriva e
- *    nemmeno il clic successivo).  ⇒ Si taglia una cosa rotta e la si fa
- *    ripartire, che e' un guadagno netto.
- *    ⚠ Costa anche un giro di D-Bus e la ricreazione dei dispositivi, e in
- *      quella finestra non arriva nessun input.
+ * ⛔ THE PRICE, DECLARED: **the drag in progress is cut** —
+ *    `drop_device()` sends a clean release for everything that was pressed.
+ *    ⭐ But that drag **was already dead** (`[M]` 21 Aug 2026, bench
+ *    `06-b33-risveglio.sh tenuto`: after the replacement the release does not arrive and
+ *    neither does the next click).  ⇒ A broken thing is cut and made to
+ *    start again, which is a net gain.
+ *    ⚠ It also costs a D-Bus round and the recreation of the devices, and in
+ *      that window no input arrives.
  *
- * ⛔ Quel che NON si perde: la sessione `RemoteDesktop`, il monitor virtuale e
- *    il flusso PipeWire.  `[R]` `meta-remote-desktop-session.c:1943-1969`: la
- *    seconda `ConnectToEIS` riusa `session->eis` e aggiunge un cliente.
+ * ⛔ What is NOT lost: the `RemoteDesktop` session, the virtual monitor and
+ *    the PipeWire stream.  `[R]` `meta-remote-desktop-session.c:1943-1969`: the
+ *    second `ConnectToEIS` reuses `session->eis` and adds a client.
  */
 static void guarisci(Input *in)
 {
@@ -1309,19 +1309,19 @@ static void guarisci(Input *in)
 	int fd, nuovo;
 
 	if (in->ultima_guarigione_us && adesso - in->ultima_guarigione_us < GUARIGIONE_FONDO_US)
-		return; /* ⚠ e la bandiera RESTA accesa: si riprova dopo il fondo */
+		return; /* ⚠ and the flag STAYS on: retried after the floor */
 	in->ultima_guarigione_us = adesso;
 
 	registro_dice(AREA,
-	              "⭐⭐ GUARIGIONE (n. %u): rifaccio il canale EIS.  Il posto conta ancora giu' "
-	              "%u fra tasti e pulsanti orfani, e dal lato del cliente NON si recupera "
-	              "(`meta-eis-client.c:612-621` ingoia il rilascio sul dispositivo nuovo).  "
-	              "⛔ Il prezzo: il trascinamento in corso viene TAGLIATO — ma era gia' morto",
+	              "⭐⭐ HEALING (n. %u): redoing the EIS channel.  The seat still counts down "
+	              "%u orphan keys and buttons, and from the client side it is NOT recovered "
+	              "(`meta-eis-client.c:612-621` swallows the release on the new device).  "
+	              "⛔ The price: the drag in progress is CUT — but it was already dead",
 	              in->guarigioni + 1, in->quanti_orfani);
 
-	/* ⛔ I dispositivi si mollano PRIMA del contesto: tengono un riferimento a
-	 *    `struct ei`, e un contesto liberato sotto un dispositivo vivo e' un
-	 *    difetto che si manifesta altrove. */
+	/* ⛔ The devices are let go BEFORE the context: they hold a reference to
+	 *    `struct ei`, and a context freed under a live device is a
+	 *    defect that shows elsewhere. */
 	if (in->puntatore)
 		ei_device_unref(in->puntatore);
 	if (in->tastiera_dev)
@@ -1335,36 +1335,36 @@ static void guarisci(Input *in)
 	g_clear_pointer(&in->reg_per, g_free);
 	g_clear_pointer(&in->keymap_nome, g_free);
 
-	/* ⛔ Cura D4: la stessa porta di `input_chiudi()`, e non una copia.  ⚠ Qui
-	 *    la stretta e' quasi sempre arrivata (si guarisce dopo un ricambio di
-	 *    dispositivi, che dopo la stretta viene per forza), ma «quasi sempre»
-	 *    e' esattamente il modo in cui questa buca e' nata. */
-	stacca_il_contesto(in, "guarigione");
+	/* ⛔ Cure D4: the same door as `input_chiudi()`, and not a copy.  ⚠ Here
+	 *    the handshake has almost always arrived (we heal after a device
+	 *    replacement, which necessarily comes after the handshake), but "almost always"
+	 *    is exactly the way this hole was born. */
+	stacca_il_contesto(in, "healing");
 
-	/* ⛔ E IL DISTACCO L'HA GIA' MANDATO `ei_disconnect()` qui sopra — `[M]` 21
-	 *    ago 2026, guasti `RG3`/`RG4`: e' quel messaggio di protocollo a far
-	 *    girare `drop_device()` in Mutter, non la chiusura del socket.
-	 * ⇒ Quel che serve da `mutter.c` e' un descrittore NUOVO: dopo il distacco
-	 *   quello messo da parte e' morto, e una `ConnectToEIS` vuole il bus e il
-	 *   percorso della sessione, che questo file non ha (e non deve avere). */
+	/* ⛔ AND THE DETACH HAS ALREADY BEEN SENT BY `ei_disconnect()` above — `[M]` 21
+	 *    Aug 2026, faults `RG3`/`RG4`: it is that protocol message that makes
+	 *    `drop_device()` run in Mutter, not the closing of the socket.
+	 * ⇒ What is needed from `mutter.c` is a NEW descriptor: after the detach
+	 *   the one put aside is dead, and a `ConnectToEIS` wants the bus and the
+	 *   session path, which this file does not have (and must not have). */
 	nuovo = in->kwin ? kwin_eis_riattacca(in->kwin, &sbaglio)
 	                 : mutter_eis_riattacca(in->sessione, &sbaglio);
 	if (nuovo < 0)
 	{
 		registro_dice(AREA,
-		              "⛔⛔ la guarigione NON e' riuscita (%s): il canale di input non c'e' piu'. "
-		              "⚠ Il posto e' comunque sbloccato — la chiusura l'ha gia' fatto — ma da "
-		              "adesso l'utente GUARDA e non comanda",
-		              sbaglio ? sbaglio->message : "senza motivo dichiarato");
+		              "⛔⛔ the healing did NOT succeed (%s): the input channel is gone. "
+		              "⚠ The seat is unblocked anyway — the closing already did it — but from "
+		              "now on the user WATCHES and does not control",
+		              sbaglio ? sbaglio->message : "no reason declared");
 		in->caduto = TRUE;
 		in->guarigione_dovuta = FALSE;
 		return;
 	}
 
-	/* ⛔ Cura D4: il canale NUOVO riparte da capo — stretta non ancora arrivata,
-	 *    e l'orologio della finestra pericolosa riazzerato.  ⚠ Dimenticarlo
-	 *    farebbe credere matura una connessione appena nata, cioe' rimetterebbe
-	 *    la buca al primo smontaggio dopo una guarigione. */
+	/* ⛔ Cure D4: the NEW channel starts from scratch — handshake not yet arrived,
+	 *    and the clock of the dangerous window reset.  ⚠ Forgetting it
+	 *    would make a connection just born look mature, that is it would put back
+	 *    the hole at the first teardown after a healing. */
 	in->stretta_fatta = FALSE;
 	in->stretta_us = 0;
 	in->aperto_us = g_get_monotonic_time();
@@ -1373,14 +1373,14 @@ static void guarisci(Input *in)
 	in->ei = ei_new_sender(in);
 	if (!in->ei)
 	{
-		registro_dice(AREA, "⛔⛔ contesto libei non ricreato: il canale di input e' finito");
+		registro_dice(AREA, "⛔⛔ libei context not recreated: the input channel is over");
 		in->caduto = TRUE;
 		in->guarigione_dovuta = FALSE;
 		return;
 	}
 	ei_configure_name(in->ei, "remotix");
-	/* ⛔ Un `dup`, come in `input_apri()`: `ei_setup_backend_fd` se ne appropria
-	 *    e chiuderlo in due posti e' un difetto che si manifesta a distanza. */
+	/* ⛔ A `dup`, as in `input_apri()`: `ei_setup_backend_fd` takes ownership of it
+	 *    and closing it in two places is a defect that shows at a distance. */
 	fd = dup(nuovo);
 	if (fd < 0 || ei_setup_backend_fd(in->ei, fd) != 0)
 	{
@@ -1388,20 +1388,20 @@ static void guarisci(Input *in)
 			close(fd);
 		ei_unref(in->ei);
 		in->ei = NULL;
-		registro_dice(AREA, "⛔⛔ il descrittore nuovo non e' stato accettato da libei: il canale "
-		                    "di input e' finito");
+		registro_dice(AREA, "⛔⛔ the new descriptor was not accepted by libei: the input "
+		                    "channel is over");
 		in->caduto = TRUE;
 		in->guarigione_dovuta = FALSE;
 		return;
 	}
-	in->fd_socket = fd; /* ⛔ Cura D4, come in `input_apri()`: serve se va abbandonato */
+	in->fd_socket = fd; /* ⛔ Cure D4, as in `input_apri()`: needed if it must be abandoned */
 
 	/*
-	 * ⛔⛔ E IL CONTO SI AZZERA, ORFANI COMPRESI, perche' adesso e' VERO:
-	 *     `drop_device()` ha appena mandato al posto il rilascio di tutto quel
-	 *     che risultava premuto.  ⚠ Tenerli segnati farebbe rilasciare al
-	 *     distacco cose che nessuno tiene giu', e terrebbe accesa in eterno la
-	 *     riga «NON PARTE» su un canale che invece funziona.
+	 * ⛔⛔ AND THE COUNT IS RESET, ORPHANS INCLUDED, because now it is TRUE:
+	 *     `drop_device()` has just sent the seat the release of everything
+	 *     that was pressed.  ⚠ Keeping them marked would make the detach
+	 *     release things nobody holds down, and would keep on forever the
+	 *     «NON PARTE» line on a channel that instead works.
 	 */
 	memset(in->tasti, 0, sizeof in->tasti);
 	memset(in->bottoni, 0, sizeof in->bottoni);
@@ -1415,10 +1415,10 @@ static void guarisci(Input *in)
 	in->guarigioni++;
 	in->guarigione_dovuta = FALSE;
 	registro_dice(AREA,
-	              "⭐⭐ canale EIS RIFATTO (guarigione n. %u): i dispositivi rinascono e il conto "
-	              "del posto e' tornato a zero.  ⚠ Keymap e regione si rileggono al prossimo "
-	              "`DEVICE_ADDED`, come sempre.  ⛔ La sessione, il monitor e il flusso NON sono "
-	              "stati toccati",
+	              "⭐⭐ EIS channel REDONE (healing n. %u): the devices are reborn and the seat's "
+	              "count is back to zero.  ⚠ Keymap and region are reread at the next "
+	              "`DEVICE_ADDED`, as always.  ⛔ The session, the monitor and the stream were NOT "
+	              "touched",
 	              in->guarigioni);
 }
 
@@ -1435,32 +1435,32 @@ int input_gira(Input *in)
 		return -1;
 
 	/*
-	 * ⛔⛔⛔ LA TERZA STRADA — *«il palco se n'e' andato»*, cura D4, 25 ago 2026.
+	 * ⛔⛔⛔ THE THIRD PATH — *"the stage has gone away"*, cure D4, 25 Aug 2026.
 	 *
-	 * `[M]` **Misurato, non temuto** (banco `10-d4`, scena `caduta-immatura`):
-	 * se il compositore muore mentre la stretta di mano non e' ancora arrivata,
-	 * il figlio muore **dentro `ei_dispatch()`**, e la pila e' la stessa:
+	 * `[M]` **Measured, not feared** (bench `10-d4`, scene `caduta-immatura`):
+	 * if the compositor dies while the handshake has not yet arrived,
+	 * the child dies **inside `ei_dispatch()`**, and the stack is the same:
 	 *
 	 *     ei_disconnect+0xda ← connection_dispatch ← ei_dispatch
 	 *
-	 * ⇒ `libei` chiama `ei_disconnect()` **da se'** quando la lettura dal socket
-	 *   fallisce, e cade nello stesso posto.  ⛔ La cura di `input_chiudi()` non
-	 *   ci arriva: qui non ci si arriva nemmeno, a `input_chiudi()`.
+	 * ⇒ `libei` calls `ei_disconnect()` **by itself** when reading from the socket
+	 *   fails, and falls in the same place.  ⛔ The cure of `input_chiudi()` does not
+	 *   reach here: here one does not even get to `input_chiudi()`.
 	 *
-	 * ⭐ L'unica difesa possibile da fuori e' NON ENTRARE: si chiede al socket —
-	 *    quello vero, non l'`epoll` che `ei_get_fd()` restituisce — se il
-	 *    compositore c'e' ancora, e se se n'e' andato si abbandona il canale
-	 *    invece di dispacciarlo.
+	 * ⭐ The only possible defence from outside is NOT TO ENTER: we ask the socket —
+	 *    the real one, not the `epoll` that `ei_get_fd()` returns — whether the
+	 *    compositor is still there, and if it has gone the channel is abandoned
+	 *    instead of dispatched.
 	 *
-	 * ⚠ `events = 0` e' voluto: `POLLHUP`/`POLLERR`/`POLLNVAL` tornano sempre,
-	 *   qualunque cosa si chieda, e qui NON si vuole svegliarsi per i dati —
-	 *   di quelli si occupa il chiamante come ha sempre fatto.
-	 * ⚠ E il prezzo, dichiarato: se la stretta fosse arrivata **insieme** alla
-	 *   chiusura, la si butterebbe.  ⛔ Ma un canale il cui compositore e' morto
-	 *   e' morto comunque: si perde una connessione gia' perduta.
-	 * ⛔ E la domanda si fa SOLO finche' la stretta non e' arrivata: dopo,
-	 *   `libei` la caduta la tratta bene da se', e intromettersi sarebbe un
-	 *   secondo modo di fare la stessa cosa.
+	 * ⚠ `events = 0` is intended: `POLLHUP`/`POLLERR`/`POLLNVAL` always come back,
+	 *   whatever is asked, and here we do NOT want to wake up for data —
+	 *   the caller takes care of that as it always has.
+	 * ⚠ And the price, declared: if the handshake had arrived **together** with the
+	 *   closing, it would be thrown away.  ⛔ But a channel whose compositor is dead
+	 *   is dead anyway: a connection already lost is lost.
+	 * ⛔ And the question is asked ONLY until the handshake has arrived: afterwards,
+	 *   `libei` handles the drop well by itself, and interfering would be a
+	 *   second way of doing the same thing.
 	 */
 	if (!in->stretta_fatta && in->ei && in->fd_socket >= 0)
 	{
@@ -1472,12 +1472,12 @@ int input_gira(Input *in)
 		if (poll(&sonda, 1, 0) > 0 && (sonda.revents & (POLLHUP | POLLERR | POLLNVAL)))
 		{
 			registro_dice(AREA,
-			              "⛔⛔ il compositore ha chiuso il canale EIS PRIMA della stretta di "
-			              "mano (dopo %.1f ms): NON lo dispaccio, perche' libei cadrebbe "
-			              "dentro il suo stesso ei_disconnect().  ⚠ Da adesso l'utente GUARDA "
-			              "e non comanda, e il palco si smonta per la strada normale",
+			              "⛔⛔ the compositor closed the EIS channel BEFORE the "
+			              "handshake (after %.1f ms): NOT dispatching it, because libei would crash "
+			              "inside its own ei_disconnect().  ⚠ From now on the user WATCHES "
+			              "and does not control, and the stage is torn down the normal way",
 			              (double) (g_get_monotonic_time() - in->aperto_us) / 1000.0);
-			stacca_il_contesto(in, "caduta prima della stretta");
+			stacca_il_contesto(in, "drop before the handshake");
 			in->caduto = TRUE;
 			return -1;
 		}
@@ -1490,8 +1490,8 @@ int input_gira(Input *in)
 		ei_event_unref(evento);
 		quanti++;
 	}
-	/* ⛔ La guarigione sta QUI e non dentro `tratta_evento`: a coda vuota, e
-	 *    dopo che `dispositivo_tolto()` ha gia' segnato gli orfani. */
+	/* ⛔ The healing is HERE and not inside `tratta_evento`: with an empty queue, and
+	 *    after `dispositivo_tolto()` has already marked the orphans. */
 	if (in->guarigione_dovuta && !in->caduto)
 		guarisci(in);
 	return in->caduto ? -1 : quanti;
@@ -1501,10 +1501,10 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 {
 	double fx, fy;
 
-	/* ⭐ wlroots: il protocollo e' NORMALIZZATO sull'estensione che gli si da'
-	 *    (la tela), e l'uscita e' quella a cui il puntatore e' legato — niente
-	 *    regione da cercare.  ⛔ E nessuna trasformazione: le coordinate vanno
-	 *    come arrivano, con la tela come metro. */
+	/* ⭐ wlroots: the protocol is NORMALISED on the extent it is given
+	 *    (the canvas), and the output is the one the pointer is bound to — no
+	 *    region to look for.  ⛔ And no transformation: the coordinates go
+	 *    as they arrive, with the canvas as yardstick. */
 	if (in && in->wlr) {
 		in->wlr_puntatore_noto = TRUE;
 		in->wlr_px = x;
@@ -1519,18 +1519,18 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 		return -1;
 
 	/*
-	 * ⛔ NESSUNA TRASFORMAZIONE quando la regione e' grande come la tela — che
-	 *    e' il caso normale, e allora questa e' una SOMMA e non una scala:
-	 *    l'origine della regione e' dove sta il nostro schermo nello spazio
-	 *    globale del compositore, e senza di lei il puntatore finirebbe
-	 *    sull'altro monitor.  `RCP.md` §7.3 vieta di **trasformare le
-	 *    coordinate ricevute**, non di sapere dove sta lo schermo.
+	 * ⛔ NO TRANSFORMATION when the region is as large as the canvas — which
+	 *    is the normal case, and then this is a SUM and not a scale:
+	 *    the region's origin is where our screen sits in the compositor's global
+	 *    space, and without it the pointer would end up
+	 *    on the other monitor.  `RCP.md` §7.3 forbids **transforming the
+	 *    received coordinates**, not knowing where the screen is.
 	 *
-	 * ⚠ E se la regione NON e' grande come la tela, si scala **e lo si dice**:
-	 *   e' la domanda aperta n.1 della fase 4 — chi decide la misura del
-	 *   monitor ora che non la da' piu' la sessione (`RCP.md` §4.5).  Un
-	 *   ridimensionamento silenzioso qui sarebbe la risposta sbagliata data da
-	 *   chi non ha l'autorita' per darla.
+	 * ⚠ And if the region is NOT as large as the canvas, we scale **and say so**:
+	 *   it is open question n.1 of phase 4 — who decides the size of the
+	 *   monitor now that the session no longer gives it (`RCP.md` §4.5).  A
+	 *   silent resize here would be the wrong answer given by
+	 *   someone without the authority to give it.
 	 */
 	if (in->reg_l == (double) in->tela_l && in->reg_a == (double) in->tela_a)
 	{
@@ -1543,9 +1543,9 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 		{
 			in->regione_scalata_lamentata = TRUE;
 			registro_dice(AREA,
-			              "⚠ la regione (%.0fx%.0f) NON e' grande come la tela (%ux%u): scalo le "
-			              "coordinate, ed e' una decisione che questo modulo non dovrebbe "
-			              "prendere — RCP.md §4.5, la tela concessa",
+			              "⚠ the region (%.0fx%.0f) is NOT as large as the canvas (%ux%u): scaling the "
+			              "coordinates, and it is a decision this module should not "
+			              "take — RCP.md §4.5, the granted canvas",
 			              in->reg_l, in->reg_a, in->tela_l, in->tela_a);
 		}
 		fx = in->reg_x + (double) x * in->reg_l / (double) in->tela_l;
@@ -1558,22 +1558,22 @@ int input_puntatore(Input *in, uint32_t x, uint32_t y)
 }
 
 /*
- * ⛔ LA TELA CAMBIA IN CORSA — `TELA(ADATTATA)` di `RCP.md` §7.1.
+ * ⛔ THE CANVAS CHANGES ON THE FLY — `TELA(ADATTATA)` of `RCP.md` §7.1.
  *
- * Il difetto che questa funzione esiste per non avere: `rcp.c` satura le
- * coordinate sulla tela NUOVA mentre `input.c` resta mappato sulla VECCHIA.
- * Due lati con due verita', e ⛔ **nessun errore da nessuna parte** — la stessa
- * forma che la fase 3 ha gia' pagato con la stringa del codec.
+ * The defect this function exists not to have: `rcp.c` saturates the
+ * coordinates on the NEW canvas while `input.c` stays mapped on the OLD one.
+ * Two sides with two truths, and ⛔ **no error anywhere** — the same
+ * form phase 3 already paid for with the codec string.
  *
- * ⛔ E si RILEGGE la regione subito, invece di aspettare il prossimo
- *    `DEVICE_ADDED`: il momento del `TELA` non e' il momento del `DEVICE_ADDED`,
- *    e fra i due ci sarebbe una finestra in cui il puntatore va altrove.
+ * ⛔ And the region is REREAD at once, instead of waiting for the next
+ *    `DEVICE_ADDED`: the moment of the `TELA` is not the moment of the `DEVICE_ADDED`,
+ *    and between the two there would be a window in which the pointer goes elsewhere.
  *
- * ⚠ Chi cambia la tela, pero', **non e' chi cambia il monitor**: se la regione
- *   di `libei` resta grande com'era, questa funzione la trovera' diversa dalla
- *   tela e lo dira' (vedi `input_puntatore`).  E' la domanda aperta n.1 della
- *   fase 4 — chi decide la misura del monitor (`RCP.md` §4.5) — e questo
- *   modulo la DICHIARA invece di rispondervi da solo.
+ * ⚠ Whoever changes the canvas, though, **is not whoever changes the monitor**: if
+ *   `libei`'s region stays as large as it was, this function will find it different from the
+ *   canvas and will say so (see `input_puntatore`).  It is open question n.1 of
+ *   phase 4 — who decides the size of the monitor (`RCP.md` §4.5) — and this
+ *   module DECLARES it instead of answering it on its own.
  */
 int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 {
@@ -1581,18 +1581,18 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 		return -1;
 	if (tela_l == 0 || tela_a == 0)
 	{
-		registro_dice(AREA, "⛔ tela degenere %ux%u rifiutata: tengo %ux%u", tela_l, tela_a,
+		registro_dice(AREA, "⛔ degenerate canvas %ux%u refused: keeping %ux%u", tela_l, tela_a,
 		              in->tela_l, in->tela_a);
 		return -1;
 	}
 	if (tela_l == in->tela_l && tela_a == in->tela_a)
 		return 0;
 
-	registro_dice(AREA, "la tela cambia: %ux%u → %ux%u", in->tela_l, in->tela_a, tela_l, tela_a);
+	registro_dice(AREA, "the canvas changes: %ux%u → %ux%u", in->tela_l, in->tela_a, tela_l, tela_a);
 	in->tela_l = tela_l;
 	in->tela_a = tela_a;
-	/* ⛔ E il lamento sulla scala si riarma: la regione di prima poteva essere
-	 *    grande come la tela di prima, e non esserlo piu'. */
+	/* ⛔ And the complaint about the scale is re-armed: the previous region may have been
+	 *    as large as the previous canvas, and no longer be. */
 	in->regione_scalata_lamentata = FALSE;
 	if (in->puntatore)
 		leggi_regione(in, in->puntatore);
@@ -1600,14 +1600,14 @@ int input_ritela(Input *in, uint32_t tela_l, uint32_t tela_a)
 }
 
 /*
- * ⭐ FASE 15, D-007 — `input.h`, e il perche' in `sessione.h` (il riquadro di
+ * ⭐ PHASE 15, D-007 — `input.h`, and the why in `sessione.h` (the box of
  *    `SESSIONE_LABWC_TASTIERA`).
  *
- * ⛔ I codici sono evdev (`linux/input-event-codes.h`), e i tasti sono quelli
- *    SINISTRI: in ogni disposizione pc105 sono Super_L, Control_L, Alt_L e
- *    Shift_L, mentre l'Alt DESTRO e' AltGr (ISO_Level3_Shift) in mezza Europa.
- *    F12 resta F12 anche col Maiusc.  ⚠ `SESSIONE_LABWC_TASTO` e questi
- *    cinque numeri dicono la stessa cosa: se cambia l'una, cambiano gli altri.
+ * ⛔ The codes are evdev (`linux/input-event-codes.h`), and the keys are the
+ *    LEFT ones: in every pc105 layout they are Super_L, Control_L, Alt_L and
+ *    Shift_L, while the RIGHT Alt is AltGr (ISO_Level3_Shift) in half of Europe.
+ *    F12 stays F12 even with Shift.  ⚠ `SESSIONE_LABWC_TASTO` and these
+ *    five numbers say the same thing: if one changes, the others change.
  */
 #define RIPORTA_SUPER 125 /* KEY_LEFTMETA */
 #define RIPORTA_CTRL 29   /* KEY_LEFTCTRL */
@@ -1623,24 +1623,24 @@ int input_riporta_dentro(Input *in)
 	size_t giu = 0;
 	int esito = 1;
 
-	/* GNOME e KDE: il compositore riporta dentro le finestre da se'. */
+	/* GNOME and KDE: the compositor brings the windows back inside by itself. */
 	if (!in || !in->wlr)
 		return 0;
 
-	/* ⛔ Si parte da una tastiera VUOTA: un modificatore rimasto giu' farebbe
-	 *    una combinazione che labwc non riconosce (o, peggio, un'altra). */
+	/* ⛔ We start from an EMPTY keyboard: a modifier left down would make
+	 *    a combination labwc does not recognise (or, worse, another one). */
 	input_rilascia_tutto(in);
 	for (giu = 0; giu < quanti; giu++)
 		if (manda_tasto(in, combinazione[giu], 1) < 0) {
 			esito = -1;
 			break;
 		}
-	/* ⛔ E si rilascia all'incontrario TUTTO quel che e' partito, anche se la
-	 *    combinazione e' rimasta a meta'. */
+	/* ⛔ And EVERYTHING that left is released in reverse, even if the
+	 *    combination stayed half way. */
 	while (giu > 0)
 		manda_tasto(in, combinazione[--giu], 0);
 
-	/* Il puntatore torna dove l'utente l'aveva, sulla tela di ADESSO. */
+	/* The pointer goes back where the user had it, on the canvas of NOW. */
 	if (in->wlr_puntatore_noto && in->wlr_pl && in->wlr_pa && in->tela_l && in->tela_a) {
 		uint32_t x = (uint32_t)((uint64_t)in->wlr_px * in->tela_l / in->wlr_pl);
 		uint32_t y = (uint32_t)((uint64_t)in->wlr_py * in->tela_a / in->wlr_pa);
@@ -1654,55 +1654,55 @@ int input_riporta_dentro(Input *in)
 
 	if (esito < 0)
 		registro_dice(AREA,
-		              "⛔ D-007: la scorciatoia «riporta dentro» (%s) NON e' partita: "
-		              "le finestre grandi possono restare in parte fuori dallo schermo "
+		              "⛔ D-007: the «bring back inside» shortcut (%s) did NOT leave: "
+		              "large windows may stay partly outside the screen "
 		              "%ux%u",
 		              SESSIONE_LABWC_TASTO, in->tela_l, in->tela_a);
 	else
 		registro_dice(AREA,
-		              "⭐ D-007: battuta la scorciatoia «riporta dentro» (%s) — labwc "
-		              "riporta le finestre dentro lo schermo %ux%u",
+		              "⭐ D-007: typed the «bring back inside» shortcut (%s) — labwc "
+		              "brings the windows back inside the screen %ux%u",
 		              SESSIONE_LABWC_TASTO, in->tela_l, in->tela_a);
 	return esito;
 }
 
 /*
- * ⛔⭐⭐ LA DISPOSIZIONE NEGOZIATA ENTRA NELLA SESSIONE — §5-bis.7 attuata.
+ * ⛔⭐⭐ THE NEGOTIATED LAYOUT ENTERS THE SESSION — §5-bis.7 implemented.
  *
- * ⛔⛔ E QUESTA E' LA RIGA PIU' DISCUTIBILE DEL FILE: SI PASSA DA `GSettings`,
- *     CIOE' DAL «CONTORNO» CHE `CODER.md` §4.1-bis DICE DI NON INSEGUIRE.
+ * ⛔⛔ AND THIS IS THE MOST DEBATABLE LINE OF THE FILE: IT GOES THROUGH `GSettings`,
+ *     THAT IS THROUGH THE "SURROUNDINGS" THAT `CODER.md` §4.1-bis SAYS NOT TO CHASE.
  *
- * La regola dice: il **compositore** si insegue per forza, il contorno no.  E
- * `org.gnome.desktop.input-sources` e' contorno in pieno — e' la chiave che
- * legge **`gsd-keyboard`**, cioe' un demone di GNOME, non Mutter.
+ * The rule says: the **compositor** must be chased, the surroundings not.  And
+ * `org.gnome.desktop.input-sources` is surroundings through and through — it is the key
+ * read by **`gsd-keyboard`**, that is a GNOME daemon, not Mutter.
  *
- * ⇒ Perche' si fa lo stesso, e la prova di §4.1-bis applicata per intero
- *   *(«quante implementazioni diverse dovrei inseguire, e quanto mi costa farla
- *   da me?»)*:
+ * ⇒ Why it is done anyway, and the test of §4.1-bis applied in full
+ *   *("how many different implementations would I have to chase, and how much does it cost to do it
+ *   myself?")*:
  *
- *   · **farla da noi non si puo'.**  La disposizione della sessione la applica
- *     il compositore, e ⛔ `libei` **non ha nessun verso client→server per la
- *     keymap**: `ei_device_keyboard_get_keymap()` la CONSEGNA e basta.  Non
- *     esiste un `ei_device_keyboard_set_keymap()`.  ⇒ Non e' «costa tanto»: e'
- *     che la leva dal nostro lato **non c'e**';
- *   · **e nemmeno Mutter la offre** sul suo D-Bus `RemoteDesktop`: c'e'
- *     `NotifyKeyboardKeycode` e `NotifyKeyboardKeysym`, cioe' due modi di
- *     BATTERE un tasto, nessuno di cambiare la disposizione;
- *   · ⇒ resta l'unica leva che esista su GNOME, ed e' questa.
+ *   · **doing it ourselves is not possible.**  The session's layout is applied by
+ *     the compositor, and ⛔ `libei` **has no client→server direction for the
+ *     keymap**: `ei_device_keyboard_get_keymap()` HANDS it over and that is all.  There
+ *     is no `ei_device_keyboard_set_keymap()`.  ⇒ It is not "it costs a lot": it is
+ *     that the lever on our side **does not exist**;
+ *   · **and Mutter does not offer it either** on its `RemoteDesktop` D-Bus: there are
+ *     `NotifyKeyboardKeycode` and `NotifyKeyboardKeysym`, that is two ways to
+ *     TYPE a key, none to change the layout;
+ *   · ⇒ what remains is the only lever that exists on GNOME, and it is this one.
  *
- * ⛔ E allora si paga il prezzo di §4.1-bis **dichiarandolo**, che e' la parte
- *    che quella regola non permette di saltare: **questa funzione e' di GNOME,
- *    e su KDE non funzionera'** (li' la chiave e' `kxkbrc`, e la fase 11 dovra'
- *    scriverne un'altra).  ⇒ Il posto giusto in cui vivra' e' `mutter.c`, con
- *    il suo gemello in `kwin.c` — ⚠ ma `mutter.c` non e' mio stasera (la
- *    sottofase 6.3 ci sta lavorando), e il rapporto consegna lo spostamento
- *    come cucitura invece di farlo di nascosto.
+ * ⛔ And so the price of §4.1-bis is paid **by declaring it**, which is the part
+ *    that rule does not allow to skip: **this function is GNOME's,
+ *    and on KDE it will not work** (there the key is `kxkbrc`, and phase 11 will have to
+ *    write another one).  ⇒ The right place for it to live is `mutter.c`, with
+ *    its twin in `kwin.c` — ⚠ but `mutter.c` is not mine tonight (sub-phase
+ *    6.3 is working on it), and the report hands over the move
+ *    as a seam instead of doing it on the sly.
  *
- * ⚠ E c'e' un secondo motivo per cui il ripiego va dichiarato e non dedotto:
- *   `gsd-keyboard` puo' **risovrascriverci**.  Non lo si previene — sarebbe
- *   inseguire il contorno — lo si MISURA: la riga che dice se l'abbiamo
- *   ottenuta e' quella di `leggi_keymap()` al `DEVICE_ADDED` che segue, dove
- *   adesso passa anche la negoziata (vedi il riquadro li').
+ * ⚠ And there is a second reason why the fallback must be declared and not deduced:
+ *   `gsd-keyboard` can **overwrite us again**.  It is not prevented — it would be
+ *   chasing the surroundings — it is MEASURED: the line saying whether we
+ *   got it is that of `leggi_keymap()` at the `DEVICE_ADDED` that follows, where
+ *   the negotiated one now also passes (see the box there).
  */
 int input_disposizione(Input *in, const char *nome)
 {
@@ -1715,59 +1715,59 @@ int input_disposizione(Input *in, const char *nome)
 
 	if (!in || !nome || !*nome)
 		return -1;
-	/* ⭐ wlroots: niente GSettings — la disposizione diventa la keymap della
-	 *    nostra tastiera virtuale.  ⛔ Il ramo sotto e' di GNOME (lo dice il
-	 *    suo riquadro) e su XFCE scriverebbe in uno schema che nessuno legge. */
+	/* ⭐ wlroots: no GSettings — the layout becomes the keymap of our
+	 *    virtual keyboard.  ⛔ The branch below is GNOME's (its box
+	 *    says so) and on XFCE it would write into a schema nobody reads. */
 	if (in->wlr)
 		return disposizione_wlr(in, nome);
 
 	/*
-	 * ⛔⛔ NON SI CHIEDE DUE VOLTE LA STESSA COSA — ⚠ E LA DOMANDA GIUSTA E'
-	 *     «CHE COSA C'E' ADESSO?», NON «CHE COSA HO CHIESTO?».
+	 * ⛔⛔ THE SAME THING IS NOT ASKED TWICE — ⚠ AND THE RIGHT QUESTION IS
+	 *     "WHAT IS THERE NOW?", NOT "WHAT DID I ASK FOR?".
 	 *
-	 * Non chiedere per niente conta: un ricambio di keymap costa a Mutter la
-	 * DISTRUZIONE e la ricreazione del dispositivo tastiera (`STUDI.md` §gnome
-	 * §9), e farlo a vuoto si vede.
+	 * Not asking needlessly matters: a keymap replacement costs Mutter the
+	 * DESTRUCTION and recreation of the keyboard device (`STUDI.md` §gnome
+	 * §9), and doing it for nothing shows.
 	 *
-	 * ⛔ Ma la prima stesura si ricordava **quel che aveva chiesto**
-	 *    (`g_strcmp0(in->negoziata, nome)`), ed era la forma **E1**: fra una
-	 *    richiesta e l'altra la disposizione della sessione puo' cambiare per
-	 *    mano di **qualcun altro** — l'utente dalle impostazioni, `gsd-keyboard`,
-	 *    o un banco.  `[M]` 16 agosto 2026: sessione riportata a `it` da fuori,
-	 *    client che riattacca dichiarando `de`, e il registro diceva
-	 *    *«disposizione «de»: gia' chiesta, non la richiedo»* — con la sessione
-	 *    italiana.  ⇒ **`Ctrl+Z` e' arrivato come `Ctrl+Y`**, cioe' esattamente
-	 *    il guasto che questa funzione esiste per curare.
+	 * ⛔ But the first draft remembered **what it had asked for**
+	 *    (`g_strcmp0(in->negoziata, nome)`), and it was form **E1**: between one
+	 *    request and the next the session's layout can change at the
+	 *    hand of **someone else** — the user from the settings, `gsd-keyboard`,
+	 *    or a bench.  `[M]` 16 August 2026: session brought back to `it` from outside,
+	 *    client reattaching declaring `de`, and the log said
+	 *    *«disposizione «de»: gia' chiesta, non la richiedo»* — with the session
+	 *    Italian.  ⇒ **`Ctrl+Z` arrived as `Ctrl+Y`**, that is exactly
+	 *    the fault this function exists to cure.
 	 *
-	 * ⇒ Si chiede alla keymap VERA, quella che `libei` ci ha consegnato.
-	 * ⚠ E si salta SOLO su un `1` netto: `-1` vuol dire «non ho potuto dire», e
-	 *   su un non-so si CHIEDE — meglio un ricambio di troppo che una sessione
-	 *   con le scorciatoie sfasate e nessuna riga che lo spieghi.
+	 * ⇒ We ask the REAL keymap, the one `libei` handed over to us.
+	 * ⚠ And we skip ONLY on a clean `1`: `-1` means "I could not say", and
+	 *   on a don't-know we ASK — better one replacement too many than a session
+	 *   with misaligned shortcuts and no line explaining it.
 	 */
 	if (in->disposizione && tastiera_e_questa(in->disposizione, nome) == 1)
 	{
 		g_free(in->negoziata);
 		in->negoziata = g_strdup(nome);
 		registro_dettaglio(AREA,
-		                   "disposizione «%s»: la sessione la ha GIA' (verificato sulla keymap, "
-		                   "non sulla memoria), non la richiedo",
+		                   "layout «%s»: the session ALREADY has it (verified on the keymap, "
+		                   "not on memory), not requesting it",
 		                   nome);
 		return 0;
 	}
 
 	/*
-	 * ⭐ FASE 15, D-008 — KWin ha la sua strada (`kwin_disposizione()`, e il
-	 *    riquadro li').  ⛔ E PRIMA dello schema di GNOME: una macchina KDE
-	 *    puo' avere gli schemi installati (li porta un programma GTK qualsiasi),
-	 *    e allora la negoziata finiva in una chiave che su Plasma non legge
-	 *    nessuno, senza nemmeno la riga del ripiego.
+	 * ⭐ PHASE 15, D-008 — KWin has its own way (`kwin_disposizione()`, and the
+	 *    box there).  ⛔ And BEFORE GNOME's schema: a KDE machine
+	 *    may have the schemas installed (any GTK program brings them),
+	 *    and then the negotiated layout ended up in a key nobody reads on Plasma,
+	 *    without even the fallback line.
 	 */
 	if (in->kwin)
 	{
 		g_autoptr(GError) sbaglio_kwin = NULL;
 
-		/* ⛔ Prima si rilascia tutto: KWin rifa' il dispositivo tastiera (vedi
-		 *    il riquadro qui sotto, «E PRIMA DI CHIEDERE IL CAMBIO»). */
+		/* ⛔ First everything is released: KWin redoes the keyboard device (see
+		 *    the box below, "AND BEFORE ASKING FOR THE CHANGE"). */
 		input_rilascia_tutto(in);
 		g_free(in->negoziata);
 		in->negoziata = g_strdup(nome);
@@ -1775,30 +1775,30 @@ int input_disposizione(Input *in, const char *nome)
 		if (kwin_disposizione(nome, &sbaglio_kwin) != 0)
 		{
 			registro_dice(AREA,
-			              "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata chiesta "
-			              "a KWin (%s) — la sessione tiene «%s».  ⛔ Le lettere che quella "
-			              "disposizione non ha NON escono, e le SCORCIATOIE vanno sui tasti "
-			              "di quella (RCP.md §7.3)",
-			              nome, sbaglio_kwin ? sbaglio_kwin->message : "senza motivo",
+			              "⚠ FALLBACK DECLARED: layout «%s» was NOT requested "
+			              "from KWin (%s) — the session keeps «%s».  ⛔ The letters that "
+			              "layout does not have do NOT come out, and the SHORTCUTS go on the keys "
+			              "of that one (RCP.md §7.3)",
+			              nome, sbaglio_kwin ? sbaglio_kwin->message : "no reason",
 			              in->disposizione ? tastiera_disposizione(in->disposizione)
-			                               : "nessuna");
+			                               : "none");
 			return -1;
 		}
 		registro_dice(AREA,
-		              "disposizione «%s» CHIESTA a KWin (kxkbrc della sessione + "
-		              "reloadConfig + kconfig ConfigChanged) — §5-bis.7. ⚠ chiesta, non ancora in "
-		              "vigore: lo dira' «KEYMAP CAMBIATA»",
+		              "layout «%s» REQUESTED from KWin (the session's kxkbrc + "
+		              "reloadConfig + kconfig ConfigChanged) — §5-bis.7. ⚠ requested, not yet in "
+		              "force: «KEYMAP CHANGED» will say so",
 		              nome);
 		return 0;
 	}
 
 	/*
-	 * ⚠ Le due sintassi non sono la stessa, e confonderle e' un guasto muto:
-	 *   `RCP.md` §4.5 scrive la variante fra **parentesi** — `de(neo)` — e
-	 *   `org.gnome.desktop.input-sources` la scrive col **piu'** — `de+neo`.
-	 *   ⛔ Passando `de(neo)` a GNOME non si ottiene un errore: si ottiene una
-	 *   sorgente che non esiste, e la sessione resta con quella di prima —
-	 *   cioe' un ripiego silenzioso.
+	 * ⚠ The two syntaxes are not the same, and confusing them is a mute fault:
+	 *   `RCP.md` §4.5 writes the variant in **parentheses** — `de(neo)` — and
+	 *   `org.gnome.desktop.input-sources` writes it with a **plus** — `de+neo`.
+	 *   ⛔ Passing `de(neo)` to GNOME does not give an error: it gives a
+	 *   source that does not exist, and the session stays with the previous one —
+	 *   that is a silent fallback.
 	 */
 	par = strchr(nome, '(');
 	if (par)
@@ -1813,11 +1813,11 @@ int input_disposizione(Input *in, const char *nome)
 		xkb = g_strdup(nome);
 
 	/*
-	 * ⛔ LO SCHEMA SI CERCA, NON SI DA' PER SCONTATO.  `g_settings_new()` su
-	 *    uno schema che non c'e' **abortisce il processo** — e il processo e'
-	 *    il figlio, cioe' il palco dell'utente.  ⇒ Su una macchina senza gli
-	 *    schemi di GNOME (un contenitore, un desktop diverso) il servizio deve
-	 *    degradare, non morire: `CODER.md` §4.2.
+	 * ⛔ THE SCHEMA IS LOOKED UP, NOT TAKEN FOR GRANTED.  `g_settings_new()` on
+	 *    a schema that is not there **aborts the process** — and the process is
+	 *    the child, that is the user's stage.  ⇒ On a machine without the
+	 *    GNOME schemas (a container, a different desktop) the service must
+	 *    degrade, not die: `CODER.md` §4.2.
 	 */
 	fonte = g_settings_schema_source_get_default();
 	schema = fonte ? g_settings_schema_source_lookup(fonte, "org.gnome.desktop.input-sources",
@@ -1826,67 +1826,67 @@ int input_disposizione(Input *in, const char *nome)
 	if (!schema)
 	{
 		registro_dice(AREA,
-		              "⚠ RIPIEGO DICHIARATO: lo schema «org.gnome.desktop.input-sources» non "
-		              "c'e' su questa macchina — la disposizione «%s» NON si applica, e la "
-		              "sessione tiene la sua. ⛔ Le lettere che quella non ha NON escono "
-		              "(D-008: la frase di prima, «usciranno giuste lo stesso», era falsa), "
-		              "e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)",
+		              "⚠ FALLBACK DECLARED: the schema «org.gnome.desktop.input-sources» is not "
+		              "on this machine — layout «%s» is NOT applied, and the "
+		              "session keeps its own. ⛔ The letters that one does not have do NOT come out "
+		              "(D-008: the earlier sentence, «they will come out right anyway», was false), "
+		              "and the SHORTCUTS go on its keys (RCP.md §7.3)",
 		              nome);
 		return -1;
 	}
 
 	/*
-	 * ⛔⛔ FASE 15, D-015 — LE IMPOSTAZIONI DELL'UTENTE NON SI TOCCANO
-	 *     (decisione dell'utente del 25 set 2026).
+	 * ⛔⛔ PHASE 15, D-015 — THE USER'S SETTINGS ARE NOT TOUCHED
+	 *     (the user's decision of 25 Sep 2026).
 	 *
-	 * Fino a oggi questa scrittura finiva nel dconf DELL'UTENTE
-	 * (`~/.config/dconf/user`) e ci restava: chi entrava poi al monitor si
-	 * trovava la tastiera cambiata.  ⭐ Adesso il figlio legge e scrive
-	 * attraverso il dconf della SESSIONE (`sessione_dconf_prepara()`: un
-	 * database in memoria in cima, quello dell'utente sotto in sola lettura),
-	 * e la Shell pure.
-	 * ⛔ E se quel dconf non c'e', NON si scrive: meglio una disposizione non
-	 *    applicata, detta, che una scritta dove l'utente non vuole.
+	 * Until today this write ended up in the USER's dconf
+	 * (`~/.config/dconf/user`) and stayed there: whoever then logged in at the monitor
+	 * found the keyboard changed.  ⭐ Now the child reads and writes
+	 * through the SESSION's dconf (`sessione_dconf_prepara()`: an
+	 * in-memory database on top, the user's below read-only),
+	 * and so does the Shell.
+	 * ⛔ And if that dconf is not there, we do NOT write: better a layout not
+	 *    applied, and said, than one written where the user does not want it.
 	 */
 	if (!sessione_dconf_di_sessione())
 	{
 		registro_dice(AREA,
-		              "⚠ RIPIEGO DICHIARATO: il dconf della sessione non e' in vigore — "
-		              "la disposizione «%s» NON si scrive (finirebbe nelle impostazioni "
-		              "dell'UTENTE, D-015), e la sessione tiene «%s».  ⛔ Le lettere che "
-		              "quella non ha NON escono, e le SCORCIATOIE vanno sui suoi tasti "
+		              "⚠ FALLBACK DECLARED: the session's dconf is not in force — "
+		              "layout «%s» is NOT written (it would end up in the USER's "
+		              "settings, D-015), and the session keeps «%s».  ⛔ The letters that "
+		              "one does not have do NOT come out, and the SHORTCUTS go on its keys "
 		              "(RCP.md §7.3)",
 		              nome, in->disposizione ? tastiera_disposizione(in->disposizione)
-		                                     : "nessuna");
+		                                     : "none");
 		return -1;
 	}
 
 	/*
-	 * ⛔⛔⭐ E PRIMA DI CHIEDERE IL CAMBIO, SI RILASCIA TUTTO.
+	 * ⛔⛔⭐ AND BEFORE ASKING FOR THE CHANGE, EVERYTHING IS RELEASED.
 	 *
-	 * ⭐ Non e' prudenza: e' la cura che l'anello del PUNTATORE (sottofase 6.1)
-	 *    ha misurato e scritto poche righe piu' su, applicata al posto in cui
-	 *    questa funzione la rende necessaria.
+	 * ⭐ It is not prudence: it is the cure the POINTER link (subphase 6.1)
+	 *    measured and wrote a few lines above, applied to the place where
+	 *    this function makes it necessary.
 	 *
-	 * ⛔ Il fatto, `[R]` `meta-eis-client.c:638-645`: un rilascio mandato sul
-	 *    dispositivo NUOVO per un tasto premuto sul VECCHIO viene **scartato in
-	 *    silenzio**.  ⇒ Un tasto che sta giu' nell'istante del ricambio diventa
-	 *    un ORFANO: il suo rilascio non parte, e non partira' mai.
+	 * ⛔ The fact, `[R]` `meta-eis-client.c:638-645`: a release sent on the
+	 *    NEW device for a key pressed on the OLD one is **discarded
+	 *    silently**.  ⇒ A key that is down at the instant of the replacement becomes
+	 *    an ORPHAN: its release does not leave, and never will.
 	 *
-	 * ⛔ E questa funzione **provoca il ricambio di proposito**: cambiare la
-	 *    disposizione distrugge e ricrea il dispositivo tastiera (`STUDI.md`
-	 *    §gnome §9).  ⇒ Se l'utente sta tenendo premuto un modificatore mentre
-	 *    la disposizione cambia — e succede: si riattacca da un'altra tastiera
-	 *    **mentre scrive** — quel modificatore resta giu' e il desktop diventa
-	 *    inservibile, che e' esattamente il danno di `RCP.md` §11.
+	 * ⛔ And this function **causes the replacement on purpose**: changing the
+	 *    layout destroys and recreates the keyboard device (`STUDI.md`
+	 *    §gnome §9).  ⇒ If the user is holding a modifier while
+	 *    the layout changes — and it happens: one reattaches from another keyboard
+	 *    **while typing** — that modifier stays down and the desktop becomes
+	 *    unusable, which is exactly the damage of `RCP.md` §11.
 	 *
-	 * ⇒ La riga della cura, dall'anello del puntatore: *«la cura e' rilasciare
-	 *   PRIMA del ricambio»*.  Qui e' l'unico posto in cui il «prima» esiste
-	 *   ancora — dopo, il dispositivo e' gia' un altro.
+	 * ⇒ The line of the cure, from the pointer link: *"the cure is to release
+	 *   BEFORE the replacement"*.  Here is the only place where the "before" still
+	 *   exists — afterwards, the device is already another one.
 	 *
-	 * ⚠ E si fa anche quando non c'e' niente di premuto: `input_rilascia_tutto()`
-	 *   scrive **sempre** la sua riga, e uno zero dichiarato vale piu' di un
-	 *   silenzio (e' la ragione per cui quella funzione e' fatta cosi').
+	 * ⚠ And it is done even when nothing is pressed: `input_rilascia_tutto()`
+	 *   **always** writes its line, and a declared zero is worth more than a
+	 *   silence (it is the reason that function is made that way).
 	 */
 	input_rilascia_tutto(in);
 
@@ -1895,11 +1895,11 @@ int input_disposizione(Input *in, const char *nome)
 
 	if (!g_settings_set_value(impostazioni, "sources", g_variant_new_parsed(valore)))
 	{
-		registro_dice(AREA, "⚠ la disposizione «%s» NON e' stata scritta in input-sources", nome);
+		registro_dice(AREA, "⚠ layout «%s» was NOT written into input-sources", nome);
 		return -1;
 	}
-	/* ⛔ E anche `current`, o GNOME resta sull'indice di prima quando la lista
-	 *    si accorcia — e l'indice fuori dalla lista vuol dire «nessuna». */
+	/* ⛔ And `current` too, or GNOME stays on the previous index when the list
+	 *    gets shorter — and an index outside the list means "none". */
 	g_settings_set_uint(impostazioni, "current", 0);
 	g_settings_sync();
 
@@ -1907,18 +1907,18 @@ int input_disposizione(Input *in, const char *nome)
 	in->negoziata = g_strdup(nome);
 
 	/*
-	 * ⛔ E QUI NON SI DICE CHE E' IN VIGORE, perche' non lo sappiamo ancora.
-	 *    Fra questa riga e la disposizione applicata c'e' `gsd-keyboard` che
-	 *    legge la chiave, Mutter che ricompila la keymap, il dispositivo
-	 *    tastiera distrutto e ricreato, e `leggi_keymap()` che rilegge.
-	 *    ⚠ «L'ho chiesta» e «e' in vigore» sono due fatti diversi (forma E1), e
-	 *      la riga che constata il secondo e' «KEYMAP CAMBIATA», qualche
-	 *      millisecondo piu' sotto.
+	 * ⛔ AND HERE WE DO NOT SAY IT IS IN FORCE, because we do not know it yet.
+	 *    Between this line and the applied layout there is `gsd-keyboard`
+	 *    reading the key, Mutter recompiling the keymap, the keyboard
+	 *    device destroyed and recreated, and `leggi_keymap()` rereading.
+	 *    ⚠ "I asked for it" and "it is in force" are two different facts (form E1), and
+	 *      the line that ascertains the second is «KEYMAP CHANGED», a few
+	 *      milliseconds further down.
 	 */
 	registro_dice(AREA,
-	              "disposizione «%s» CHIESTA alla sessione (input-sources = %s, nel dconf della "
-	              "SESSIONE: quello dell'utente non si tocca, D-015) — §5-bis.7. "
-	              "⚠ chiesta, non ancora in vigore: lo dira' «KEYMAP CAMBIATA»",
+	              "layout «%s» REQUESTED from the session (input-sources = %s, in the "
+	              "SESSION's dconf: the user's is not touched, D-015) — §5-bis.7. "
+	              "⚠ requested, not yet in force: «KEYMAP CHANGED» will say so",
 	              nome, valore);
 	return 0;
 }
@@ -1932,32 +1932,32 @@ int input_pulsante(Input *in, uint16_t codice, int premuto)
 
 int input_rotella(Input *in, int32_t asse_x, int32_t asse_y)
 {
-	/* ⭐ wlroots: stesso verso di sotto — il verticale si inverte QUI, una
-	 *    volta sola (vedi il riquadro), e `wlr_input_rotella()` riceve la
-	 *    convenzione di Wayland.  Gli scatti interi li fa lui (§7.2 n.1). */
+	/* ⭐ wlroots: same direction as below — the vertical is inverted HERE, once
+	 *    only (see the box), and `wlr_input_rotella()` receives the
+	 *    Wayland convention.  It makes the whole notches itself (§7.2 n.1). */
 	if (in && in->wlr)
 		return wlr_input_rotella(in->wlr, asse_x, -asse_y);
 	if (!in || !in->puntatore || !in->puntatore_attivo)
 		return -1;
 
 	/*
-	 * ⛔⛔ IL SEGNO DELL'ASSE VERTICALE SI INVERTE QUI, UNA VOLTA SOLA.
+	 * ⛔⛔ THE SIGN OF THE VERTICAL AXIS IS INVERTED HERE, ONCE ONLY.
 	 *
-	 * `[M]` 10 agosto 2026 (`RCP.md` §7.3, riquadro «Il segno della rotella»):
-	 * iniettando `+120` la pagina remota **scende** — `deltaY = +114`, cioe' il
-	 * contenuto va verso la fine del documento.  E `RCP.md` §7.3 fissa l'altra
-	 * meta': il client manda `+120` quando l'utente gira la rotella **in su**.
-	 * ⇒ Le due convenzioni sono OPPOSTE.  Senza questo meno, lo schermo remoto
-	 *   scorrerebbe al contrario per **ogni** utente.
+	 * `[M]` 10 August 2026 (`RCP.md` §7.3, box «Il segno della rotella»):
+	 * injecting `+120` the remote page **goes down** — `deltaY = +114`, that is the
+	 * content moves towards the end of the document.  And `RCP.md` §7.3 fixes the other
+	 * half: the client sends `+120` when the user turns the wheel **up**.
+	 * ⇒ The two conventions are OPPOSITE.  Without this minus, the remote screen
+	 *   would scroll backwards for **every** user.
 	 *
-	 * ⚠ E l'orizzontale NON si tocca: `+120` = «verso destra» da tutt'e due le
-	 *   parti.  Non e' una simmetria dedotta — e' misurato dal banco
-	 *   `04-b24-iniezione` nei due versi, come il verticale.
+	 * ⚠ And the horizontal is NOT touched: `+120` = "to the right" on both
+	 *   sides.  It is not a deduced symmetry — it is measured by the bench
+	 *   `04-b24-iniezione` in both directions, like the vertical.
 	 */
-	/* ⭐ Su KWin lo scatto e' `scroll_discrete` in unita' da 120, cioe' quelle
-	 *    di `RCP.md` §7.3 cosi' come arrivano: `scroll_delta` KWin lo traduce
-	 *    con `deltaV120 = 0` e nessuno scatto (`STUDI.md` §kde §7.2, v1
-	 *    `input.c:227-251`).  Il verso e' la stessa convenzione di sotto. */
+	/* ⭐ On KWin the notch is `scroll_discrete` in units of 120, that is those
+	 *    of `RCP.md` §7.3 just as they arrive: `scroll_delta` KWin translates
+	 *    with `deltaV120 = 0` and no notch (`STUDI.md` §kde §7.2, v1
+	 *    `input.c:227-251`).  The direction is the same convention as below. */
 	if (in->kwin)
 		ei_device_scroll_discrete(in->puntatore, asse_x, -asse_y);
 	else
@@ -1979,13 +1979,13 @@ int input_lettera(Input *in, uint32_t carattere)
 		return lettera_wlr(in, carattere);
 	if (!in->disposizione)
 	{
-		/* ⛔ E NON e' il caso «non producibile»: quello e' 1, e vuol dire che la
-		 *    disposizione c'e' e non fa quella lettera.  Qui la disposizione
-		 *    non c'e' affatto, ed e' un guasto — confonderli toglierebbe a chi
-		 *    legge il registro l'unica differenza che conta. */
-		/* ⛔ Fase 16 §12: il carattere battuto NON si scrive. */
-		registro_dice(AREA, "⚠ LETTERA non mandata: nessuna disposizione (libei non ha "
-		                    "ancora consegnato una keymap)");
+		/* ⛔ And it is NOT the "not producible" case: that one is 1, and means the
+		 *    layout exists and does not make that letter.  Here the layout
+		 *    does not exist at all, and it is a fault — confusing them would take away from whoever
+		 *    reads the log the only difference that matters. */
+		/* ⛔ Phase 16 §12: the typed character is NOT written. */
+		registro_dice(AREA, "⚠ LETTER not sent: no layout (libei has not "
+		                    "yet handed over a keymap)");
 		return -1;
 	}
 	if (!in->tastiera_dev || !in->tastiera_attiva)
@@ -1997,25 +1997,25 @@ int input_lettera(Input *in, uint32_t carattere)
 	if (esito == 0 || quante == 0)
 	{
 		/*
-		 * ⛔ NON producibile: NON si manda una lettera diversa e NON si tace
-		 *    (`RCP.md` §7.3).  Il ritorno e' 1 — ne' 0 ne' -1 — perche' chi
-		 *    chiama deve poterlo distinguere da un guasto.
+		 * ⛔ NOT producible: a different letter is NOT sent and we do NOT keep quiet
+		 *    (`RCP.md` §7.3).  The return is 1 — neither 0 nor -1 — because the
+		 *    caller must be able to tell it from a fault.
 		 *
-		 * ⚠ E LA RIGA NON SI SCRIVE QUI: la scrive gia' `tastiera.c`, e ci
-		 *   mette dentro QUALE disposizione — l'unica cosa utile a chi legge il
-		 *   registro sei ore dopo.  Scriverla anche qui vorrebbe dire contare
-		 *   due volte gli stessi caratteri (`input.h`, 14 agosto 2026).
+		 * ⚠ AND THE LINE IS NOT WRITTEN HERE: `tastiera.c` already writes it, and
+		 *   puts in it WHICH layout — the only thing useful to whoever reads the
+		 *   log six hours later.  Writing it here too would mean counting
+		 *   the same characters twice (`input.h`, 14 August 2026).
 		 */
 		return 1;
 	}
 
-	/* I modificatori prima, il tasto per ultimo; si rilascia all'incontrario. */
+	/* The modifiers first, the key last; released in reverse. */
 	for (size_t i = 0; i < quante; i++)
 		if (manda_tasto(in, codici[i], 1) < 0)
 		{
-			/* ⛔ A meta' strada si rilascia quel che si e' premuto: un Maiusc
-			 *    rimasto giu' per un errore di invio e' lo stesso danno del
-			 *    Ctrl rimasto giu' al distacco. */
+			/* ⛔ Half way, what was pressed is released: a Shift
+			 *    left down because of a send error is the same damage as the
+			 *    Ctrl left down at detach. */
 			for (size_t j = i; j > 0; j--)
 				manda_tasto(in, codici[j - 1], 0);
 			return -1;
@@ -2043,15 +2043,15 @@ int input_rilascia_tutto(Input *in)
 	for (uint32_t c = 0; c < MAX_TASTO; c++)
 		if (bit_leggi(in->tasti, c))
 		{
-			/* ⛔ Il bit si spegne ANCHE se l'invio fallisce: se il dispositivo
-			 *    non c'e' piu', quel tasto non e' piu' nostro da rilasciare, e
-			 *    tenerlo segnato farebbe contare al banco un rilascio che non
-			 *    puo' avvenire.  ⚠ E si conta solo quel che e' PARTITO.
+			/* ⛔ The bit is switched off EVEN IF the send fails: if the device
+			 *    is no longer there, that key is no longer ours to release, and
+			 *    keeping it marked would make the bench count a release that cannot
+			 *    happen.  ⚠ And only what LEFT is counted.
 			 *
-			 * ⛔⛔ E l'ORFANO si conta a parte: `manda_tasto()` ha gia' spento il
-			 *     bit e sceso il conto, quindi qui NON si tocca niente — farlo
-			 *     due volte porterebbe il contatore sotto zero, e un `unsigned`
-			 *     sotto zero e' quattro miliardi. */
+			 * ⛔⛔ And the ORPHAN is counted separately: `manda_tasto()` has already switched off the
+			 *     bit and lowered the count, so here NOTHING is touched — doing it
+			 *     twice would bring the counter below zero, and an `unsigned`
+			 *     below zero is four billion. */
 			if (bit_leggi(in->tasti_orfani, c))
 			{
 				(void) manda_tasto(in, (uint16_t) c, 0);
@@ -2084,34 +2084,34 @@ int input_rilascia_tutto(Input *in)
 			}
 		}
 
-	/* ⛔ Si scrive SEMPRE, anche quando sono zero: «non c'era niente premuto» e
-	 *    «non ho guardato» hanno lo stesso aspetto nel registro, e questa e' la
-	 *    regola con il rapporto danno/costo piu' alto di `RCP.md`.
+	/* ⛔ It is ALWAYS written, even when they are zero: "nothing was pressed" and
+	 *    "I did not look" have the same look in the log, and this is the
+	 *    rule with the highest damage/cost ratio in `RCP.md`.
 	 *
-	 * ⛔⛔ E GLI ORFANI SI DICHIARANO A PARTE, perche' sono un'altra cosa: non
-	 *     sono «rilasciati», sono «non rilasciabili».  Fino al 16 agosto 2026
-	 *     finivano dentro `quanti` e questa riga diceva un numero che
-	 *     assolveva. */
-	registro_dice(AREA, "rilascio al distacco: %d fra tasti e pulsanti (restano segnati %u tasti e "
-	                    "%u pulsanti)%s",
+	 * ⛔⛔ AND THE ORPHANS ARE DECLARED SEPARATELY, because they are another thing: they
+	 *     are not "released", they are "not releasable".  Until 16 August 2026
+	 *     they ended up inside `quanti` and this line stated a number that
+	 *     absolved. */
+	registro_dice(AREA, "release at detach: %d keys and buttons (still marked: %u keys and "
+	                    "%u buttons)%s",
 	              quanti, in->quanti_tasti, in->quanti_bottoni,
-	              orfani ? " — ⛔ e vedi la riga sugli ORFANI qui sopra" : "");
+	              orfani ? " — ⛔ and see the line about the ORPHANS above" : "");
 	if (orfani)
 		registro_dice(AREA,
-		              "⛔⛔ %d fra tasti e pulsanti NON si sono potuti rilasciare: erano premuti "
-		              "su dispositivi che il compositore ha tolto.  Il posto li conta ancora giu' "
-		              "e li' restano finche' non cade il canale EIS",
+		              "⛔⛔ %d keys and buttons could NOT be released: they were pressed "
+		              "on devices the compositor removed.  The seat still counts them down "
+		              "and there they stay until the EIS channel drops",
 		              orfani);
 	return quanti;
 }
 
 unsigned input_premuti(const Input *in)
 {
-	/* ⛔ Gli ORFANI non si contano qui, ed e' voluto: un orfano NON e' «l'utente
-	 *    tiene giu' qualcosa», e' «il danno e' gia' fatto».  Contarlo
-	 *    impedirebbe per sempre il risveglio su una sessione gia' rotta — cioe'
-	 *    proprio quando l'utente guarda una pagina bianca e aspetta un
-	 *    fotogramma.  ⚠ Di quel caso si occupa la cura «C», che lo ripara. */
+	/* ⛔ The ORPHANS are not counted here, and it is intended: an orphan is NOT "the user
+	 *    is holding something down", it is "the damage is already done".  Counting it
+	 *    would forever prevent the wake-up on an already broken session — that is
+	 *    precisely when the user is looking at a white page and waiting for a
+	 *    frame.  ⚠ That case is handled by cure "C", which repairs it. */
 	return in ? in->quanti_tasti + in->quanti_bottoni : 0;
 }
 
@@ -2125,13 +2125,13 @@ void input_chiudi(Input *in)
 		return;
 	}
 
-	/* ⚠ Una rete, non la regola: chi cuce chiama `input_rilascia_tutto()` al
-	 *   distacco (e' nel contratto).  Se non l'ha fatto, qui il conto e' ancora
-	 *   pieno e la riga del registro lo dice — cioe' il difetto si VEDE. */
+	/* ⚠ A net, not the rule: the stitcher calls `input_rilascia_tutto()` at
+	 *   detach (it is in the contract).  If it has not done so, here the count is still
+	 *   full and the log line says so — that is, the defect SHOWS. */
 	if (in->quanti_tasti || in->quanti_bottoni)
 	{
-		registro_dice(AREA, "⛔ chiusura con %u tasti e %u pulsanti ANCORA PREMUTI: chi cuce non ha "
-		                    "chiamato input_rilascia_tutto()",
+		registro_dice(AREA, "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not "
+		                    "call input_rilascia_tutto()",
 		              in->quanti_tasti, in->quanti_bottoni);
 		input_rilascia_tutto(in);
 	}
@@ -2140,15 +2140,15 @@ void input_chiudi(Input *in)
 		ei_device_unref(in->puntatore);
 	if (in->tastiera_dev)
 		ei_device_unref(in->tastiera_dev);
-	/* ⛔⛔ QUI STAVA LA BUCA — fino al 25 agosto 2026 queste righe erano
-	 *     `ei_disconnect(in->ei); ei_unref(in->ei);` senza domande, e su un
-	 *     canale EIS aperto da poche decine di millisecondi ammazzavano il
-	 *     figlio di SIGSEGV **prima del primo fotogramma**.
-	 * ⭐ La cura sta QUI e non nei tre `smonta_il_palco()` di `figlio.c`: la buca
-	 *    e' del canale, e chi la mettesse nei chiamanti la lascerebbe scoperta al
-	 *    quarto chiamante che nascera'.  Il riquadro sopra `stacca_il_contesto()`
-	 *    porta il meccanismo, letto nella libreria. */
-	stacca_il_contesto(in, "chiusura");
+	/* ⛔⛔ HERE WAS THE HOLE — until 25 August 2026 these lines were
+	 *     `ei_disconnect(in->ei); ei_unref(in->ei);` without questions, and on an
+	 *     EIS channel opened a few tens of milliseconds earlier they killed the
+	 *     child with SIGSEGV **before the first frame**.
+	 * ⭐ The cure is HERE and not in the three `smonta_il_palco()` of `figlio.c`: the hole
+	 *    belongs to the channel, and whoever put it in the callers would leave it uncovered for the
+	 *    fourth caller to be born.  The box above `stacca_il_contesto()`
+	 *    carries the mechanism, read in the library. */
+	stacca_il_contesto(in, "closing");
 	g_clear_pointer(&in->disposizione, tastiera_chiudi);
 	g_free(in->keymap_nome);
 	g_free(in->negoziata);
@@ -2157,24 +2157,24 @@ void input_chiudi(Input *in)
 }
 
 /* ------------------------------------------------------------------ *
- *  ⭐ La finestra del banco — NON e' del contratto, ed e' voluto
+ *  ⭐ The bench window — it is NOT part of the contract, and that is intended
  *
- *  `CODER.md` §6: «rendere il codice verificabile: ogni invariante deve avere
- *  un punto in cui il revisore puo' leggere se e' rispettato o violato».  Il
- *  banco `04-b24` legge di qui il conto di quel che e' premuto e il numero dei
- *  ricambi, invece di dedurli dal registro.
+ *  `CODER.md` §6: "make the code verifiable: every invariant must have
+ *  a point where the reviewer can read whether it is respected or violated".  The
+ *  bench `04-b24` reads from here the count of what is pressed and the number of
+ *  replacements, instead of deducing them from the log.
  *
- *  ⛔ NON sta in `input.h` di proposito: `input.h` e' del coordinatore ed e' il
- *     contratto del PRODOTTO.  Il banco la dichiara `extern` da se'.
+ *  ⛔ It is NOT in `input.h` on purpose: `input.h` belongs to the coordinator and is the
+ *     PRODUCT's contract.  The bench declares it `extern` by itself.
  * ------------------------------------------------------------------ */
 void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned *ricambi_puntatore,
                  unsigned *ricambi_tastiera, int *pronto);
 
-/* ⛔ Il conto degli ORFANI, per il banco `06-b33`: quel che e' rimasto premuto
- *    su un dispositivo che il compositore ha tolto.  ⚠ Sta in una funzione a
- *    parte e non nella firma di sopra perche' `04-b24` la dichiara `extern` con
- *    quella firma: cambiargliela sotto romperebbe un banco di un'altra fase,
- *    che e' esattamente il tipo di rottura silenziosa che questo file combatte. */
+/* ⛔ The count of the ORPHANS, for bench `06-b33`: what stayed pressed
+ *    on a device the compositor removed.  ⚠ It is in a separate function
+ *    and not in the signature above because `04-b24` declares it `extern` with
+ *    that signature: changing it under it would break a bench of another phase,
+ *    which is exactly the kind of silent breakage this file fights. */
 unsigned input_orfani(const Input *in);
 
 unsigned input_orfani(const Input *in)
@@ -2203,47 +2203,47 @@ void input_conto(const Input *in, unsigned *tasti, unsigned *pulsanti, unsigned 
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⭐⭐ WLROOTS — FASE 13, INCREMENTO 3: lo stesso contratto, un altro trasporto.
+ * ⭐⭐ WLROOTS — PHASE 13, INCREMENT 3: the same contract, another transport.
  *
- * ⛔ `libei` su wlroots NON esiste (`STUDI.md` §xfce §7, `[✗]`).  Il trasporto
- *    e' `wlr_input.c` — tastiera e puntatore virtuali di Wayland — e qui resta
- *    quel che su GNOME e KDE e' gia' stato pagato e misurato: **il conto** di
- *    `RCP.md` §11, il rilascio al distacco, le lettere, la disposizione.
+ * ⛔ `libei` on wlroots does NOT exist (`STUDI.md` §xfce §7, `[✗]`).  The transport
+ *    is `wlr_input.c` — Wayland's virtual keyboard and pointer — and here stays
+ *    what on GNOME and KDE has already been paid for and measured: **the count** of
+ *    `RCP.md` §11, the release at detach, the letters, the layout.
  *
- * ⭐ LA FORMA: ogni funzione pubblica passa la mano IN CIMA e torna (come gli
- *    appunti con `appunti_apri_kde()`, come la cattura con
- *    `cattura_avvia_wlr()`).  ⛔ Nessun ramo di GNOME o KDE e' stato
- *    trasformato: i rami nuovi stanno sopra e non ci ricadono.
+ * ⭐ THE FORM: every public function hands over AT THE TOP and returns (like the
+ *    clipboard with `appunti_apri_kde()`, like the capture with
+ *    `cattura_avvia_wlr()`).  ⛔ No GNOME or KDE branch has been
+ *    transformed: the new branches sit on top and do not fall into them.
  *
- * ⚠ LE DIFFERENZE, contate, rispetto a libei:
+ * ⚠ THE DIFFERENCES, counted, with respect to libei:
  *
- *   · **niente ricambi, niente orfani**: i dispositivi sono NOSTRI, il
- *     compositore non li distrugge per un cambio di geometria o di keymap.  ⇒
- *     `tasti_orfani`/`bottoni_orfani` restano a zero per costruzione;
- *   · **la disposizione non passa da GSettings**: diventa la keymap della
- *     nostra tastiera, e labwc la consegna alle applicazioni coi nostri tasti
- *     (§7.4).  ⭐ E' §5-bis.7 nella sua forma piu' diretta: le scorciatoie
- *     combaciano perche' la keymap che le interpreta e' quella che le traduce;
- *   · **la caduta del filo si ripara riattaccandosi** (vedi `riattacca_wlr`),
- *     ed e' l'analogo della cura «C»: col filo muore il nostro puntatore, e
- *     ⛔ `wlr_pointer_finish()` NON rilascia i pulsanti (§7.2 n.5) — il
- *     rilascio lo porta il dispositivo nuovo.
+ *   · **no replacements, no orphans**: the devices are OURS, the
+ *     compositor does not destroy them for a geometry or keymap change.  ⇒
+ *     `tasti_orfani`/`bottoni_orfani` stay at zero by construction;
+ *   · **the layout does not go through GSettings**: it becomes the keymap of
+ *     our keyboard, and labwc hands it to the applications with our keys
+ *     (§7.4).  ⭐ It is §5-bis.7 in its most direct form: the shortcuts
+ *     match because the keymap that interprets them is the one that translates them;
+ *   · **a dropped wire is repaired by reattaching** (see `riattacca_wlr`),
+ *     and it is the analogue of cure "C": with the wire our pointer dies, and
+ *     ⛔ `wlr_pointer_finish()` does NOT release the buttons (§7.2 n.5) — the
+ *     release is brought by the new device.
  *
- * ⛔ E cio' che resta scoperto, detto: le scorciatoie di labwc si applicano
- *    anche ai tasti virtuali (§7.5, `match_keybinding(..., is_virtual)`) — un
- *    `Alt+F4` o un `Super` mandati dal browser li prende labwc, non
- *    l'applicazione.  `[M]` 21 set 2026, portatile, labwc headless: `Alt+F4`
- *    dal nostro canale CHIUDE la finestra del testimone, che vede l'Alt e mai
- *    l'F4.  Non e' un difetto di questo file: e' il desktop, e su XFCE e' anche
- *    cio' che l'utente si aspetta.
+ * ⛔ And what stays uncovered, said: labwc's shortcuts apply
+ *    to virtual keys too (§7.5, `match_keybinding(..., is_virtual)`) — an
+ *    `Alt+F4` or a `Super` sent from the browser are taken by labwc, not by
+ *    the application.  `[M]` 21 Sep 2026, laptop, headless labwc: `Alt+F4`
+ *    from our channel CLOSES the witness's window, which sees the Alt and never
+ *    the F4.  It is not a defect of this file: it is the desktop, and on XFCE it is also
+ *    what the user expects.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /*
- * ⛔ La `Tastiera` delle lettere si apre dallo STESSO testo che il compositore
- *    ha ricevuto (`wlr_input_keymap()`): le posizioni si calcolano sulla keymap
- *    con cui verranno rilette.  E' la regola di `leggi_keymap()`, e la riga del
- *    registro e' la stessa, perche' chi cerca «KEYMAP CAMBIATA» la trovi su
- *    tutti e tre i desktop.
+ * ⛔ The letters' `Tastiera` is opened from the SAME text the compositor
+ *    received (`wlr_input_keymap()`): key positions are computed on the keymap
+ *    with which they will be read back.  It is the rule of `leggi_keymap()`, and the log
+ *    line is the same, so that whoever looks for «KEYMAP CHANGED» finds it on
+ *    all three desktops.
  */
 static void riapri_disposizione_wlr(Input *in)
 {
@@ -2255,12 +2255,12 @@ static void riapri_disposizione_wlr(Input *in)
 
 	if (!testo || misura == 0)
 		return;
-	impronta = g_strdup_printf("%zu byte, impronta %08x", misura, (unsigned) g_str_hash(testo));
+	impronta = g_strdup_printf("%zu bytes, fingerprint %08x", misura, (unsigned) g_str_hash(testo));
 	nuova = tastiera_apri_da_keymap(testo, misura, in->negoziata, &sbaglio);
 	if (!nuova)
-		registro_dice(AREA, "⚠ la keymap della tastiera virtuale non si apre per le lettere (%s): %s",
-		              sbaglio ?: "senza motivo dichiarato",
-		              in->disposizione ? "tengo quella di prima" : "le LETTERE restano spente");
+		registro_dice(AREA, "⚠ the virtual keyboard's keymap does not open for letters (%s): %s",
+		              sbaglio ?: "no reason declared",
+		              in->disposizione ? "keeping the previous one" : "LETTERS stay off");
 	else
 	{
 		g_clear_pointer(&in->disposizione, tastiera_chiudi);
@@ -2268,9 +2268,9 @@ static void riapri_disposizione_wlr(Input *in)
 	}
 	if (g_strcmp0(impronta, in->keymap_nome) != 0)
 	{
-		registro_dice(AREA, "KEYMAP CAMBIATA: %s (era: %s) → disposizione «%s», dalla %s (wlroots)",
-		              impronta, in->keymap_nome ?: "nessuna",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna",
+		registro_dice(AREA, "KEYMAP CHANGED: %s (was: %s) → layout «%s», from %s (wlroots)",
+		              impronta, in->keymap_nome ?: "none",
+		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none",
 		              wlr_input_keymap_origine(in->wlr));
 		g_free(in->keymap_nome);
 		in->keymap_nome = g_steal_pointer(&impronta);
@@ -2288,8 +2288,8 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 	if (tela_l == 0 || tela_a == 0)
 	{
 		if (errore)
-			*errore = g_strdup_printf("tela degenere %ux%u: le coordinate assolute non avrebbero "
-			                          "un intervallo",
+			*errore = g_strdup_printf("degenerate canvas %ux%u: the absolute coordinates would have "
+			                          "no range",
 			                          tela_l, tela_a);
 		return NULL;
 	}
@@ -2297,7 +2297,7 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 	if (!w)
 	{
 		if (errore)
-			*errore = g_strdup_printf("wlroots: %s", sbaglio ? sbaglio->message : "senza motivo");
+			*errore = g_strdup_printf("wlroots: %s", sbaglio ? sbaglio->message : "no reason");
 		g_clear_error(&sbaglio);
 		return NULL;
 	}
@@ -2311,22 +2311,22 @@ Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore)
 	riapri_disposizione_wlr(in);
 
 	registro_dice(AREA,
-	              "canale di input aperto verso il compositore (wlroots: tastiera e puntatore "
-	              "virtuali), tela %ux%u",
+	              "input channel open to the compositor (wlroots: virtual keyboard and "
+	              "pointer), canvas %ux%u",
 	              tela_l, tela_a);
 	return in;
 }
 
-/* ⛔ Il conto si tiene come in `manda_tasto()`: DOPO l'invio, e solo se e'
- *    partito — segnare un tasto che non e' partito farebbe rilasciare al
- *    distacco qualcosa che nessuno ha premuto. */
+/* ⛔ The count is kept as in `manda_tasto()`: AFTER sending, and only if it
+ *    left — marking a key that did not leave would make the detach release
+ *    something nobody pressed. */
 static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto)
 {
-	/* ⛔ Filo caduto ⇒ si prova a riattaccarsi PRIMA di dire -1.  Non e'
-	 *    zelo: `input_rilascia_tutto()` su un invio fallito CANCELLA il bit, e
-	 *    un pulsante cancellato dal conto e' un pulsante che il riattacco non
-	 *    rilascera' piu'.  ⚠ Col fondo di un secondo: dentro quel secondo il
-	 *    buco resta, ed e' detto. */
+	/* ⛔ Wire dropped ⇒ we try to reattach BEFORE saying -1.  It is not
+	 *    zeal: `input_rilascia_tutto()` on a failed send CLEARS the bit, and
+	 *    a button cleared from the count is a button the reattach will no longer
+	 *    release.  ⚠ With a floor of one second: within that second the
+	 *    hole stays, and it is said. */
 	if (wlr_input_caduto(in->wlr))
 		riattacca_wlr(in);
 	if (wlr_input_tasto(in->wlr, codice, premuto != 0) != 0)
@@ -2345,7 +2345,7 @@ static int manda_tasto_wlr(Input *in, uint16_t codice, int premuto)
 static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto)
 {
 	if (wlr_input_caduto(in->wlr))
-		riattacca_wlr(in); /* vedi `manda_tasto_wlr()` */
+		riattacca_wlr(in); /* see `manda_tasto_wlr()` */
 	if (wlr_input_pulsante(in->wlr, codice, premuto != 0) != 0)
 		return -1;
 	if ((premuto != 0) != bit_leggi(in->bottoni, codice))
@@ -2359,7 +2359,7 @@ static int manda_bottone_wlr(Input *in, uint16_t codice, int premuto)
 	return 0;
 }
 
-/* La stessa di `input_lettera()`, senza il dispositivo di libei. */
+/* The same as `input_lettera()`, without libei's device. */
 static int lettera_wlr(Input *in, uint32_t carattere)
 {
 	uint16_t codici[TASTIERA_MAX_POSIZIONI];
@@ -2368,9 +2368,9 @@ static int lettera_wlr(Input *in, uint32_t carattere)
 
 	if (!in->disposizione)
 	{
-		/* ⛔ Fase 16 §12: il carattere battuto NON si scrive. */
-		registro_dice(AREA, "⚠ LETTERA non mandata: nessuna disposizione (la keymap della "
-		                    "tastiera virtuale non si e' aperta)");
+		/* ⛔ Phase 16 §12: the typed character is NOT written. */
+		registro_dice(AREA, "⚠ LETTER not sent: no layout (the virtual keyboard's "
+		                    "keymap did not open)");
 		return -1;
 	}
 	if (wlr_input_caduto(in->wlr))
@@ -2380,12 +2380,12 @@ static int lettera_wlr(Input *in, uint32_t carattere)
 	if (esito < 0)
 		return -1;
 	if (esito == 0 || quante == 0)
-		return 1; /* ⛔ non producibile: la riga la scrive `tastiera.c` */
+		return 1; /* ⛔ not producible: the line is written by `tastiera.c` */
 
-	/* I modificatori prima, il tasto per ultimo; si rilascia all'incontrario.
-	 * ⭐ E' qui che i modificatori di `wlr_input.c` fanno il loro lavoro: il
-	 *    Maiusc premuto aggiorna il NOSTRO stato, e il compositore lo riceve
-	 *    come `modifiers` prima della lettera. */
+	/* The modifiers first, the key last; released in reverse.
+	 * ⭐ It is here that the modifiers of `wlr_input.c` do their job: the
+	 *    pressed Shift updates OUR state, and the compositor receives it
+	 *    as `modifiers` before the letter. */
 	for (size_t i = 0; i < quante; i++)
 		if (manda_tasto(in, codici[i], 1) < 0)
 		{
@@ -2402,76 +2402,76 @@ static int disposizione_wlr(Input *in, const char *nome)
 {
 	g_autoptr(GError) sbaglio = NULL;
 
-	/* ⛔ La domanda e' «che cosa c'e' adesso?», come nel ramo di GNOME: la
-	 *    keymap vera e' quella che la tastiera virtuale porta, non la memoria. */
+	/* ⛔ The question is "what is there now?", as in the GNOME branch: the
+	 *    real keymap is the one the virtual keyboard carries, not the memory. */
 	if (in->disposizione && tastiera_e_questa(in->disposizione, nome) == 1)
 	{
 		g_free(in->negoziata);
 		in->negoziata = g_strdup(nome);
 		registro_dettaglio(AREA,
-		                   "disposizione «%s»: la tastiera virtuale la ha GIA' (verificato sulla "
-		                   "keymap), non la rimando",
+		                   "layout «%s»: the virtual keyboard ALREADY has it (verified on the "
+		                   "keymap), not sending it again",
 		                   nome);
 		return 0;
 	}
 
-	/* ⚠ La negoziata si segna PRIMA dell'esito: se il filo e' caduto, e' il
-	 *   riattacco che la rimette — e deve sapere quale. */
+	/* ⚠ The negotiated one is recorded BEFORE the outcome: if the wire has dropped, it is the
+	 *   reattach that puts it back — and it must know which. */
 	g_free(in->negoziata);
 	in->negoziata = g_strdup(nome);
 
-	/* ⛔⛔ PRIMA si rilascia tutto: i modificatori dipendono dalla keymap, e un
-	 *     Maiusc premuto con la vecchia e rilasciato con la nuova resta giu'
-	 *     nello stato del compositore (`RCP.md` §11).  E la riga si scrive
-	 *     anche con zero, come sempre. */
+	/* ⛔⛔ FIRST everything is released: the modifiers depend on the keymap, and a
+	 *     Shift pressed with the old one and released with the new one stays down
+	 *     in the compositor's state (`RCP.md` §11).  And the line is written
+	 *     even with zero, as always. */
 	input_rilascia_tutto(in);
 
 	if (wlr_input_keymap_da_nome(in->wlr, nome, &sbaglio) != 0)
 	{
 		registro_dice(AREA,
-		              "⚠ RIPIEGO DICHIARATO: la disposizione «%s» NON e' stata mandata alla "
-		              "tastiera virtuale (%s) — resta «%s».  ⛔ Le lettere che quella non ha "
-		              "NON escono, e le SCORCIATOIE vanno sui suoi tasti (RCP.md §7.3)",
-		              nome, sbaglio ? sbaglio->message : "senza motivo",
-		              in->disposizione ? tastiera_disposizione(in->disposizione) : "nessuna");
+		              "⚠ FALLBACK DECLARED: layout «%s» was NOT sent to the "
+		              "virtual keyboard (%s) — «%s» stays.  ⛔ The letters that one does not have "
+		              "do NOT come out, and the SHORTCUTS go on its keys (RCP.md §7.3)",
+		              nome, sbaglio ? sbaglio->message : "no reason",
+		              in->disposizione ? tastiera_disposizione(in->disposizione) : "none");
 		return -1;
 	}
 	riapri_disposizione_wlr(in);
-	/* ⚠ «Mandata», non «in vigore»: che labwc l'abbia girata alle applicazioni
-	 *   lo dice solo un testimone dentro la sessione.  `[?]` Non misurato. */
+	/* ⚠ "Sent", not "in force": that labwc passed it on to the applications
+	 *   only a witness inside the session can say.  `[?]` Not measured. */
 	registro_dice(AREA,
-	              "disposizione «%s» MANDATA al compositore come keymap della tastiera "
-	              "virtuale — §5-bis.7 su wlroots, senza toccare le impostazioni della sessione",
+	              "layout «%s» SENT to the compositor as the virtual keyboard's "
+	              "keymap — §5-bis.7 on wlroots, without touching the session's settings",
 	              nome);
 	return 0;
 }
 
 /*
- * ⛔⛔ IL RIATTACCO — quando il filo con labwc cade e il compositore c'e' ancora.
+ * ⛔⛔ THE REATTACH — when the wire with labwc drops and the compositor is still there.
  *
- * Senza, un filo caduto vuol dire un desktop che si VEDE e non si COMANDA fino
- * al prossimo rimontaggio del palco.  Con, torna da se' entro un secondo.
+ * Without it, a dropped wire means a desktop that can be SEEN and not CONTROLLED until
+ * the next remount of the stage.  With it, it comes back by itself within a second.
  *
- * `[M]` 21 settembre 2026, SUL PORTATILE (labwc 0.8.3 headless privato, lo
- * stesso di Trixie; testimone `banchi/06-b33-testimone.c`), tagliando il SOLO
- * nostro socket con `shutdown()` mentre erano giu' `BTN_LEFT` e Maiusc:
- *   · ⭐ il Maiusc lo rilascia labwc da se' alla caduta (il testimone vede
- *     `TASTO 42 premuto 0`): la tastiera e' a posto senza di noi (§7.2 n.5);
- *   · il pulsante NON lo rilascia nessuno — ma col nostro unico puntatore il
- *     seat perde la capacita' «puntatore» (`POSTO_PUNTATORE mollato`), e dopo
- *     il riattacco un clic fresco arriva intero;
- *   · ⛔ e arriva intero **anche togliendo** il rilascio forzato qui sotto
- *     (guasto innestato, stesso esito).  ⇒ In QUESTA configurazione — nessun
- *     altro puntatore nel seat, che e' la sessione remota headless — la
- *     trappola 5 alla caduta non morde.
- * ⚠ Il rilascio forzato resta lo stesso, ed e' `[?]`: serve solo se nel seat
- *   c'e' un ALTRO puntatore che tiene viva la capacita' (un mouse vero), caso
- *   che non e' stato misurato.  Costa un evento; toglierlo costerebbe una
- *   diagnosi il giorno che quel caso esiste.
+ * `[M]` 21 September 2026, ON THE LAPTOP (private headless labwc 0.8.3, the
+ * same as Trixie; witness `banchi/06-b33-testimone.c`), cutting ONLY
+ * our socket with `shutdown()` while `BTN_LEFT` and Shift were down:
+ *   · ⭐ Shift is released by labwc by itself at the drop (the witness sees
+ *     `TASTO 42 premuto 0`): the keyboard is fine without us (§7.2 n.5);
+ *   · the button is released by NOBODY — but with our only pointer the
+ *     seat loses the "pointer" capability (`POSTO_PUNTATORE mollato`), and after
+ *     the reattach a fresh click arrives whole;
+ *   · ⛔ and it arrives whole **even removing** the forced release below
+ *     (grafted fault, same outcome).  ⇒ In THIS configuration — no
+ *     other pointer in the seat, which is the headless remote session — the
+ *     trap 5 at the drop does not bite.
+ * ⚠ The forced release stays anyway, and it is `[?]`: it serves only if in the seat
+ *   there is ANOTHER pointer keeping the capability alive (a real mouse), a case
+ *   that has not been measured.  It costs one event; removing it would cost a
+ *   diagnosis the day that case exists.
  *
- * ⚠ Il fondo e' quello della cura «C» (`GUARIGIONE_FONDO_US`): se il compositore
- *   non c'e' piu' davvero, il tentativo costa un `connect()` fallito al
- *   secondo, e la riga esce una volta sola.
+ * ⚠ The floor is that of cure "C" (`GUARIGIONE_FONDO_US`): if the compositor
+ *   is really gone, the attempt costs one failed `connect()` per
+ *   second, and the line comes out once only.
  */
 static void riattacca_wlr(Input *in)
 {
@@ -2489,23 +2489,23 @@ static void riattacca_wlr(Input *in)
 	{
 		if (!in->wlr_riattacco_fallito_detto)
 			registro_dice(AREA,
-			              "⛔ wlroots: il riattacco dell'input non riesce (%s) — riprovo ogni "
-			              "secondo, e questa riga non si ripete.  ⚠ Intanto il desktop si "
-			              "VEDE e non si COMANDA",
-			              sbaglio ? sbaglio->message : "senza motivo");
+			              "⛔ wlroots: the input reattach does not succeed (%s) — retrying every "
+			              "second, and this line does not repeat.  ⚠ Meanwhile the desktop can be "
+			              "SEEN and not CONTROLLED",
+			              sbaglio ? sbaglio->message : "no reason");
 		in->wlr_riattacco_fallito_detto = TRUE;
 		return;
 	}
 
-	/* La disposizione negoziata torna quella di prima; senza, resta quella che
-	 * la sessione ha ridato al riattacco. */
+	/* The negotiated layout goes back to the previous one; without it, the one
+	 * the session gave back at the reattach stays. */
 	if (in->negoziata)
 	{
 		g_autoptr(GError) sb = NULL;
 
 		if (wlr_input_keymap_da_nome(nuovo, in->negoziata, &sb) != 0)
-			registro_dice(AREA, "⚠ al riattacco la disposizione «%s» non si rimette (%s)",
-			              in->negoziata, sb ? sb->message : "senza motivo");
+			registro_dice(AREA, "⚠ at reattach layout «%s» is not put back (%s)",
+			              in->negoziata, sb ? sb->message : "no reason");
 	}
 
 	for (uint32_t c = 0; c < MAX_BOTTONE; c++)
@@ -2532,9 +2532,9 @@ static void riattacca_wlr(Input *in)
 	in->wlr_riattacco_fallito_detto = FALSE;
 	riapri_disposizione_wlr(in);
 	registro_dice(AREA,
-	              "⭐ wlroots: input RIATTACCATO (n. %u).  %u pulsanti rimasti giu' rilasciati dal "
-	              "dispositivo nuovo (`[?]` non misurato che il seat li accetti), %u tasti gia' "
-	              "rilasciati dal compositore alla caduta",
+	              "⭐ wlroots: input REATTACHED (n. %u).  %u buttons left down released by the "
+	              "new device (`[?]` not measured that the seat accepts them), %u keys already "
+	              "released by the compositor at the drop",
 	              in->wlr_riattacchi, pulsanti, tasti);
 }
 
@@ -2553,12 +2553,12 @@ static int gira_wlr(Input *in)
 
 static void chiudi_wlr(Input *in)
 {
-	/* ⚠ La stessa rete di `input_chiudi()`: chi cuce ha gia' rilasciato; se non
-	 *   l'ha fatto, la riga lo dice e si rilascia qui. */
+	/* ⚠ The same net as `input_chiudi()`: the stitcher has already released; if it has not
+	 *   done it, the line says so and we release here. */
 	if (in->quanti_tasti || in->quanti_bottoni)
 	{
-		registro_dice(AREA, "⛔ chiusura con %u tasti e %u pulsanti ANCORA PREMUTI: chi cuce non ha "
-		                    "chiamato input_rilascia_tutto()",
+		registro_dice(AREA, "⛔ closing with %u keys and %u buttons STILL PRESSED: the stitcher did not "
+		                    "call input_rilascia_tutto()",
 		              in->quanti_tasti, in->quanti_bottoni);
 		input_rilascia_tutto(in);
 	}

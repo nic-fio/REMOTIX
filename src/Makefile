@@ -1,76 +1,76 @@
-# Makefile — REMOTIX, il server.
+# Makefile — REMOTIX, the server.
 #
 # -----------------------------------------------------------------------------
-# ⛔ LE DIPENDENZE, DICHIARATE — non «quelle che c'erano sulla macchina»
+# ⛔ THE DEPENDENCIES, DECLARED — not "the ones that were on the machine"
 #
-# `LEZIONI.md` §2.5-bis: «le dipendenze installate a mano diventano invisibili
-# nel giro di un giorno, e il momento in cui te ne accorgi e' sempre quello in
-# cui hai bisogno che la macchina riparta».  Da cui questo elenco, e il bersaglio
-# `dipendenze` che le CONTROLLA prima di compilare invece di lasciarle fallire
-# venti righe dopo con un errore che non le nomina.
+# `LEZIONI.md` §2.5-bis: "dependencies installed by hand become invisible
+# within a day, and the moment you notice is always the one in
+# which you need the machine to start again".  Hence this list, and the
+# `dipendenze` target that CHECKS them before compiling instead of letting them fail
+# twenty lines later with an error that does not name them.
 #
-#   ngtcp2 >= 1.25            il QUIC                   (DECISIONI.md §6.4)
-#   ngtcp2_crypto_ossl        il ponte verso OpenSSL    (vedi src/tls.h)
-#   nghttp3 >= 1.18           l'HTTP/3
-#   OpenSSL >= 3.5            TLS 1.3 con l'API QUIC nativa, e X509 per i
-#                             due certificati (src/certificati.c)
-#   libpam                    l'autenticazione          (SPECIFICHE.md §4.2)
+#   ngtcp2 >= 1.25            QUIC                      (DECISIONI.md §6.4)
+#   ngtcp2_crypto_ossl        the bridge to OpenSSL     (see src/tls.h)
+#   nghttp3 >= 1.18           HTTP/3
+#   OpenSSL >= 3.5            TLS 1.3 with the native QUIC API, and X509 for the
+#                             two certificates (src/certificati.c)
+#   libpam                    authentication            (SPECIFICHE.md §4.2)
 #
-# ⭐ E LE CINQUE DELLA FASE 2, innestate il 12 agosto 2026 dal montaggio
-#    (`fasi/rapporti/P2-6-montaggio.md`).  Ciascuna nomina l'anello che la
-#    porta, perche' «quale libreria serve a che cosa» e' la domanda che si fa
-#    il giorno in cui una manca:
+# ⭐ AND THE FIVE OF PHASE 2, grafted on 12 August 2026 by the assembly
+#    (`fasi/rapporti/P2-6-montaggio.md`).  Each one names the link that
+#    carries it, because "which library is needed for what" is the question asked
+#    the day one is missing:
 #
-#   gio-2.0 >= 2.80           il bus di sessione: il monitor virtuale
-#                             (`src/sessione.c`) E la sequenza ScreenCast di
-#                             Mutter (`src/mutter.c`).  ⛔ UNA VOLTA SOLA:
-#                             serve a due anelli, e due `pkg-config` che la
-#                             nominano due volte mettono gli stessi -l due
-#                             volte senza che nessuno se ne accorga
-#   libpipewire-0.3           il flusso dei fotogrammi  (`src/cattura.c`)
-#   libdrm                    i `DRM_FORMAT_MOD_*`: SOLO intestazioni, nessuna
-#                             libreria da collegare (`src/cattura.c`)
-#   ⭐ FASE 18 (30 set 2026, `DECISIONI.md` §10.25): ffmpeg e' USCITO dal
-#      prodotto — nessun `-lavcodec`, `-lavutil`, `-lswscale`.  Al suo posto:
-#   libva, libva-drm            la codifica sulla scheda (`src/vadiretta.c`)
-#   (i colori BT.709 sono nostri: `src/colori709.c`, nessuna dipendenza)
-#   ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): OpenH264 e SvtAv1Enc, il
-#      ripiego in software di `src/ripiego.c`, sono USCITI col ripiego —
-#      *«niente cpu senza scheda»*.
+#   gio-2.0 >= 2.80           the session bus: the virtual monitor
+#                             (`src/sessione.c`) AND Mutter's ScreenCast
+#                             sequence (`src/mutter.c`).  ⛔ ONCE ONLY:
+#                             it serves two links, and two `pkg-config` calls that
+#                             name it twice put the same -l twice
+#                             without anyone noticing
+#   libpipewire-0.3           the frame stream          (`src/cattura.c`)
+#   libdrm                    the `DRM_FORMAT_MOD_*`: headers ONLY, no
+#                             library to link (`src/cattura.c`)
+#   ⭐ PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25): ffmpeg has LEFT the
+#      product — no `-lavcodec`, `-lavutil`, `-lswscale`.  In its place:
+#   libva, libva-drm            encoding on the card (`src/vadiretta.c`)
+#   (the BT.709 colours are ours: `src/colori709.c`, no dependency)
+#   ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27): OpenH264 and SvtAv1Enc, the
+#      software fallback of `src/ripiego.c`, LEFT with the fallback —
+#      *"no CPU without a card"*.
 #
-# ⭐ E LA SETTIMA, della FASE 13 (21 settembre 2026):
+# ⭐ AND THE SEVENTH, of PHASE 13 (21 September 2026):
 #
-#   gbm                       `src/wlroots.c`, la strada della SCHEDA su labwc:
-#                             il buffer in cui il compositore copia il
-#                             fotogramma sulla GPU lo allochiamo NOI, su un
-#                             nodo `renderD*`, e `gbm` e' l'unica API generica
-#                             che lo fa.  ⛔ Senza, su XFCE i pixel passano per
-#                             la memoria: `glReadPixels` nel compositore (che
-#                             BLOCCA il suo ciclo, `STUDI.md` §xfce §4.4) piu'
-#                             la nostra `memcpy`.  ⚠ Su Trixie `libgbm-dev`
-#                             per costruire; `libgbm1` per girare, e c'e' gia'
-#                             ovunque giri labwc (wlroots la vuole per se').
+#   gbm                       `src/wlroots.c`, the CARD path on labwc:
+#                             the buffer into which the compositor copies the
+#                             frame on the GPU is allocated by US, on a
+#                             `renderD*` node, and `gbm` is the only generic API
+#                             that does it.  ⛔ Without it, on XFCE the pixels go through
+#                             memory: `glReadPixels` in the compositor (which
+#                             BLOCKS its loop, `STUDI.md` §xfce §4.4) plus
+#                             our `memcpy`.  ⚠ On Trixie `libgbm-dev`
+#                             to build; `libgbm1` to run, and it is already there
+#                             wherever labwc runs (wlroots wants it for itself).
 #
-# Su Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
+# On Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
-# ⚠ `ngtcp2` e `nghttp3` NON
-# bastano nella versione dei pacchetti (1.11 / 1.8): vanno costruiti dai
-# sorgenti, ed e' quel che fa `banchi/01-b2-costruisci-ngtcp2.sh`.
+# ⚠ `ngtcp2` and `nghttp3` are NOT
+# enough in the packaged version (1.11 / 1.8): they must be built from
+# source, and that is what `banchi/01-b2-costruisci-ngtcp2.sh` does.
 #
 # -----------------------------------------------------------------------------
-#   make PREFISSO=/percorso/dove/stanno/ngtcp2/e/nghttp3
+#   make PREFISSO=/path/where/ngtcp2/and/nghttp3/are
 #
-# Se `pkg-config` li trova da se', PREFISSO non serve.
+# If `pkg-config` finds them by itself, PREFISSO is not needed.
 
 CC      ?= cc
 PREFISSO ?=
 
 NOME    := remotix
 
-# ⭐ I QUATTRO FILE DELLA FASE 2 sono in coda, e in ordine di catena: sessione
-#    (il palco) → cattura+mutter (i pixel) → codificatore (i byte).  ⚠ Il
-#    quinto anello, il canale video, NON compare: vive in `rcp.c`, che c'era
-#    gia' — ed e' il motivo per cui nasce gia' confrontato con `banchi/rcp/`.
+# ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: sessione
+#    (the stage) → cattura+mutter (the pixels) → codificatore (the bytes).  ⚠ The
+#    fifth link, the video channel, does NOT appear: it lives in `rcp.c`, which was
+#    already there — and it is why it is born already compared with `banchi/rcp/`.
 SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
@@ -81,204 +81,204 @@ SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
-# ⛔⭐ LE TRE COPIE CHE DEVONO ESSERE UNA — rilievo R12.3, 10 agosto 2026 notte.
+# ⛔⭐ THE THREE COPIES THAT MUST BE ONE — finding R12.3, night of 10 August 2026.
 #
-# `rcp.c`, `rcp.h` e `autenticazione.c` esistono in DUE cartelle di questo
-# repo — qui e in `banchi/rcp/` — perche' sono lo stesso modulo montato su due
-# ospiti: il server di prodotto e l'innesto nell'esempio di ngtcp2.  ⛔ Fino a
-# stanotte erano identiche **per fortuna, non per costruzione**: nessun file del
-# repo confrontava le due copie.
+# `rcp.c`, `rcp.h` and `autenticazione.c` exist in TWO folders of this
+# repo — here and in `banchi/rcp/` — because they are the same module mounted on two
+# hosts: the product server and the graft into ngtcp2's example.  ⛔ Until
+# tonight they were identical **by luck, not by construction**: no file of the
+# repo compared the two copies.
 #
-# Il caso concreto che nessuno avrebbe visto: si cambia `BAN_DURATA` in
-# `src/rcp.c` da dodici ore a una.  Il prodotto banna un'ora; `01-b6-lancia.sh`
-# resta verde perche' confronta `banchi/rcp/` con la copia compilata dentro
-# `examples/`; B8 resta verde perche' accende `bsslserver`.  ⛔ Il difetto non
-# cambia colore a niente.
+# The concrete case nobody would have seen: `BAN_DURATA` is changed in
+# `src/rcp.c` from twelve hours to one.  The product bans for an hour; `01-b6-lancia.sh`
+# stays green because it compares `banchi/rcp/` with the copy compiled inside
+# `examples/`; B8 stays green because it starts `bsslserver`.  ⛔ The defect does not
+# change the colour of anything.
 #
-# ⭐ Da cui questo controllo, che sta PRIMA della compilazione e la ferma.
+# ⭐ Hence this check, which comes BEFORE compilation and stops it.
 #
-# ⛔ E I TRE FATTI SONO TRE, non due — `LEZIONI.md` §1.9 regola 1, la faccia
-#    comune di «vuoto» e «proibito»:
+# ⛔ AND THE FACTS ARE THREE, not two — `LEZIONI.md` §1.9 rule 1, the common
+#    face of "empty" and "forbidden":
 #
-#      le copie combaciano          si compila
-#      le copie DIVERGONO           ⛔ non si compila, e si stampa il `diff`
-#      la copia gemella NON C'E'    ⛔ non si compila, salvo che chi costruisce
-#                                   NON LO DICHIARI con GEMELLO=nessuno
+#      the copies match             it compiles
+#      the copies DIVERGE           ⛔ it does not compile, and the `diff` is printed
+#      the twin copy IS NOT THERE   ⛔ it does not compile, unless whoever builds
+#                                   DECLARES IT with GEMELLO=nessuno
 #
-#    ⚠ Il terzo e' quello che un controllo scritto in fretta confonde col
-#      primo: «non ho trovato differenze» e «non ho potuto guardare» hanno la
-#      stessa faccia, e la seconda con l'aria della prima e' un controllo
-#      spento che sembra acceso.
+#    ⚠ The third is the one a hastily written check confuses with the
+#      first: "I found no differences" and "I could not look" have the
+#      same face, and the second looking like the first is a check
+#      switched off that looks switched on.
 GEMELLO ?= ../banchi/rcp
 GEMELLATI := rcp.c rcp.h autenticazione.c
 
-# ⚠ `-std=gnu11` e non `c11`: servono `accept4`, `SOCK_NONBLOCK` e i messaggi
-#   ausiliari, che POSIX puro non porta.
+# ⚠ `-std=gnu11` and not `c11`: `accept4`, `SOCK_NONBLOCK` and the ancillary
+#   messages are needed, which pure POSIX does not carry.
 AVVERTIMENTI := -Wall -Wextra -Wno-unused-parameter
 CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 
-# ⛔ `override`, e non `+=` semplice: chi passa `CFLAGS=` sulla riga di comando
-#    — come fa `costruisci.sh`, che ci aggiunge i `-I` — cancellerebbe questa
-#    riga insieme al resto, e `struct in6_pktinfo` sparirebbe con un errore che
-#    non nomina nessuna opzione.
+# ⛔ `override`, and not a plain `+=`: whoever passes `CFLAGS=` on the command line
+#    — as `costruisci.sh` does, adding the `-I`s — would erase this
+#    line together with the rest, and `struct in6_pktinfo` would vanish with an error that
+#    names no option.
 override CFLAGS += -D_GNU_SOURCE
 
-# ⛔⭐ LE LIBRERIE DELLA FASE 2, CHIESTE A `pkg-config` UNA VOLTA SOLA.
+# ⛔⭐ THE LIBRARIES OF PHASE 2, ASKED OF `pkg-config` ONCE ONLY.
 #
-# ⚠ `gio-2.0` la vogliono DUE anelli — `sessione.c` (il drop-in dell'unita'
-#   della Shell e il bus) e `mutter.c` (la sequenza ScreenCast).  I due rapporti
-#   la chiedono ciascuno per se': metterla due volte non e' un errore di
-#   compilazione, e' un elenco che non si legge piu'.  ⇒ Qui e' nominata una
-#   volta, e le due righe di sotto sono il posto unico in cui guardare.
+# ⚠ `gio-2.0` is wanted by TWO links — `sessione.c` (the drop-in of the Shell's
+#   unit and the bus) and `mutter.c` (the ScreenCast sequence).  The two reports
+#   each ask for it for themselves: putting it twice is not a compilation
+#   error, it is a list nobody can read any more.  ⇒ Here it is named
+#   once, and the two lines below are the single place to look.
 #
-# ⚠ `libdrm` sta solo nei CFLAGS: `cattura.c` ne prende i `DRM_FORMAT_MOD_*`,
-#   che sono macro in `drm_fourcc.h`.  ⛔ Metterla anche nei LIBS collegherebbe
-#   una libreria di cui non si usa una funzione — e il giorno in cui qualcuno
-#   togliesse l'`#include` nessuno se ne accorgerebbe.
+# ⚠ `libdrm` is only in the CFLAGS: `cattura.c` takes its `DRM_FORMAT_MOD_*`,
+#   which are macros in `drm_fourcc.h`.  ⛔ Putting it in the LIBS too would link
+#   a library of which no function is used — and the day someone
+#   removed the `#include` nobody would notice.
 #
-# ⛔ `override` per la stessa ragione della riga qui sopra: `costruisci.sh`
-#    passa `CFLAGS=` sulla riga di comando per aggiungerci i `-I` di ngtcp2, e
-#    un `+=` semplice sparirebbe insieme al resto.  Il sintomo sarebbe
-#    `gio/gio.h: No such file`, che non nomina nessuna opzione.
+# ⛔ `override` for the same reason as the line above: `costruisci.sh`
+#    passes `CFLAGS=` on the command line to add ngtcp2's `-I`s, and
+#    a plain `+=` would vanish together with the rest.  The symptom would be
+#    `gio/gio.h: No such file`, which names no option.
 F2_CFLAGS := $(shell pkg-config --cflags gio-2.0 libpipewire-0.3 libdrm)
 F2_LIBS   := $(shell pkg-config --libs   gio-2.0 libpipewire-0.3)
 override CFLAGS += $(F2_CFLAGS)
 
-# ⭐⭐ LA SESTA DELLA FASE 3, innestata il 13 agosto 2026: **libva**.
+# ⭐⭐ THE SIXTH OF PHASE 3, grafted on 13 August 2026: **libva**.
 #
-#   libva >= 1.22            `src/codificatore.c` la usa per DUE cose sole, e
-#                            nessuna delle due la fa libavcodec:
-#                              · `vaQueryVendorString()` — CHI ha risposto sul
-#                                nodo che si e' aperto.  ⛔ `[M]` 13 agosto: i
-#                                due nodi della macchina di prova sono Intel
-#                                (renderD128, iHD) e AMD (renderD129,
-#                                radeonsi) — dedurre il fornitore dal numero
-#                                del nodo e' esattamente il modo di sbagliare
-#                                senza accorgersene;
-#                              · `vaQueryConfigEntrypoints()` — se la coppia
-#                                (profilo, entrypoint) esiste davvero, PRIMA di
-#                                aprire.  Fra «ho chiesto low_power=1» e «il
-#                                driver ce l'ha» c'e' la stessa distanza che
-#                                fra un'opzione stampata come errore e
-#                                un'uscita 0.
+#   libva >= 1.22            `src/codificatore.c` uses it for TWO things only, and
+#                            neither of them is done by libavcodec:
+#                              · `vaQueryVendorString()` — WHO answered on
+#                                the node that was opened.  ⛔ `[M]` 13 August: the
+#                                two nodes of the test machine are Intel
+#                                (renderD128, iHD) and AMD (renderD129,
+#                                radeonsi) — deducing the vendor from the node
+#                                number is exactly the way to go wrong
+#                                without noticing;
+#                              · `vaQueryConfigEntrypoints()` — whether the pair
+#                                (profile, entrypoint) really exists, BEFORE
+#                                opening.  Between "I asked for low_power=1" and "the
+#                                driver has it" there is the same distance as
+#                                between an option printed as an error and
+#                                an exit 0.
 #
-# ⚠ Su Debian Trixie: `apt install libva-dev`.  `[M]` 13 ago 2026: sul
-#   contenitore della macchina di prova c'era gia' (1.22.0), tirata dentro da
-#   `libavutil-dev`.  ⛔ La riga sta qui lo stesso: una dipendenza che c'e'
-#   perche' un'altra se l'e' portata dietro sparisce il giorno in cui quell'altra
-#   cambia idea, ed e' il difetto che questo elenco esiste per non avere.
-# ⭐⭐ FASE 18 (30 set 2026): libva e' diventata LA strada della scheda —
-#    `src/vadiretta.c` la usa per tutto (configurazione, parametri, packed
-#    header, buffer codificati), e `libva-drm` apre il nodo (`vaGetDisplayDRM`)
-#    al posto di `av_hwdevice_ctx_create`.
+# ⚠ On Debian Trixie: `apt install libva-dev`.  `[M]` 13 Aug 2026: in the
+#   test machine's container it was already there (1.22.0), pulled in by
+#   `libavutil-dev`.  ⛔ The line stays here anyway: a dependency that is there
+#   because another one brought it along vanishes the day that other one
+#   changes its mind, and it is the defect this list exists not to have.
+# ⭐⭐ PHASE 18 (30 Sep 2026): libva has become THE card path —
+#    `src/vadiretta.c` uses it for everything (configuration, parameters, packed
+#    headers, coded buffers), and `libva-drm` opens the node (`vaGetDisplayDRM`)
+#    in place of `av_hwdevice_ctx_create`.
 F3_CFLAGS := $(shell pkg-config --cflags libva libva-drm)
 F3_LIBS   := $(shell pkg-config --libs   libva libva-drm)
 override CFLAGS += $(F3_CFLAGS)
 
-# ⛔ FASE 19 (1 ott 2026): qui c'erano OpenH264 (solo `--cflags`, aperta con
-#    `dlopen`) e SVT-AV1, il ripiego in software di `src/ripiego.c` — usciti
-#    col ripiego (`DECISIONI.md` §10.27).  ⚠ `-ldl` RESTA: `figlio.c` apre
-#    libselinux con `dlopen` (Fedora, Alma), e con la glibc vecchia serve.
+# ⛔ PHASE 19 (1 Oct 2026): here there were OpenH264 (only `--cflags`, opened with
+#    `dlopen`) and SVT-AV1, the software fallback of `src/ripiego.c` — gone
+#    with the fallback (`DECISIONI.md` §10.27).  ⚠ `-ldl` STAYS: `figlio.c` opens
+#    libselinux with `dlopen` (Fedora, Alma), and with the old glibc it is needed.
 DL_LIBS := -ldl
 
-# ⭐⭐ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27) — **Vulkan**: la strada della
-#     scheda che si prova PRIMA di VA-API (`src/vulkanvideo.c`, Vulkan Video:
-#     `VK_KHR_video_encode_queue` + H.264/H.265).  Si collega SOLO il loader
-#     (`libvulkan`, Apache-2.0); i driver (ICD: RADV, NVIDIA, ANV) stanno nel
-#     sistema e li carica il loader a tempo di esecuzione.  Lo shader e' SPIR-V
-#     gia' nel deposito (`vulkanvideo_rgb_nv12_spv.h`): niente glslang qui.
-#   ⚠ Su Debian Trixie: `apt install libvulkan-dev` (1.4.309).  Il minimo
-#     1.3.274 e' l'intestazione in cui le estensioni di codifica video sono
-#     uscite dal provisional (`[R]` SDK 1.3.274, dic 2023; `[?]` non provato
-#     con un'intestazione piu' vecchia).
+# ⭐⭐ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27) — **Vulkan**: the card
+#     path tried BEFORE VA-API (`src/vulkanvideo.c`, Vulkan Video:
+#     `VK_KHR_video_encode_queue` + H.264/H.265).  ONLY the loader is linked
+#     (`libvulkan`, Apache-2.0); the drivers (ICD: RADV, NVIDIA, ANV) live in the
+#     system and the loader loads them at run time.  The shader is SPIR-V
+#     already in the repository (`vulkanvideo_rgb_nv12_spv.h`): no glslang here.
+#   ⚠ On Debian Trixie: `apt install libvulkan-dev` (1.4.309).  The minimum
+#     1.3.274 is the header in which the video encode extensions
+#     left provisional (`[R]` SDK 1.3.274, Dec 2023; `[?]` not tried
+#     with an older header).
 F19_CFLAGS := $(shell pkg-config --cflags vulkan)
 F19_LIBS   := $(shell pkg-config --libs   vulkan)
 override CFLAGS += $(F19_CFLAGS)
 
-# ⭐ FASE 18, linea A — `libopus` DIRETTA per l'audio (`src/audio.c`), dal 30
-#    settembre 2026: Opus non passa piu' da libavcodec (`DECISIONI.md` §10.25).
-#    `[M]` 30 set 2026: `opus.pc` 1.5.2 c'e' in `remotix-costruzione` e nel
-#    `devroot` del server.  ⚠ Su Debian Trixie: `apt install libopus-dev`.
-#    ⚠ Il minimo 1.3 e' per `OPUS_SET_PHASE_INVERSION_DISABLED`, che `audio.c`
-#      detta come faceva libavcodec: `[?]` comparsa fra la 1.2 e la 1.3, e la
-#      1.3.1 e' la piu' vecchia che abbiamo intorno (Debian 12, Ubuntu 22.04).
+# ⭐ PHASE 18, line A — `libopus` DIRECTLY for audio (`src/audio.c`), since 30
+#    September 2026: Opus no longer goes through libavcodec (`DECISIONI.md` §10.25).
+#    `[M]` 30 Sep 2026: `opus.pc` 1.5.2 is in `remotix-costruzione` and in the
+#    server's `devroot`.  ⚠ On Debian Trixie: `apt install libopus-dev`.
+#    ⚠ The minimum 1.3 is for `OPUS_SET_PHASE_INVERSION_DISABLED`, which `audio.c`
+#      dictates as libavcodec did: `[?]` appeared between 1.2 and 1.3, and
+#      1.3.1 is the oldest we have around (Debian 12, Ubuntu 22.04).
 F18A_CFLAGS := $(shell pkg-config --cflags opus)
 F18A_LIBS   := $(shell pkg-config --libs   opus)
 override CFLAGS += $(F18A_CFLAGS)
 
-# ⭐⭐ LE DUE DELLA FASE 4, innestate il 14 agosto 2026: **libei** e
-#     **xkbcommon**.  Le vuole il canale di input, e nessuna delle due si puo'
-#     sostituire con una nostra riga:
+# ⭐⭐ THE TWO OF PHASE 4, grafted on 14 August 2026: **libei** and
+#     **xkbcommon**.  The input channel wants them, and neither can be
+#     replaced by a line of ours:
 #
-#   libei-1.0    `src/input.c` — e' L'UNICO modo di iniettare input in un
-#                compositore Wayland.  ⛔ Qui `CODER.md` §4.1-bis vale senza
-#                sconti: implementazione una sola, uguale ovunque.
-#                `[M]` 14 ago 2026, nel contenitore della macchina di prova:
+#   libei-1.0    `src/input.c` — it is THE ONLY way to inject input into a
+#                Wayland compositor.  ⛔ Here `CODER.md` §4.1-bis holds without
+#                discounts: a single implementation, the same everywhere.
+#                `[M]` 14 Aug 2026, in the test machine's container:
 #                **1.3.901**.
 #
-#   xkbcommon    `src/tastiera.c` — la sola libreria che sappia rispondere alla
-#                domanda «con questa disposizione, quale tasto produce questa
-#                lettera?».  `[M]` 14 ago 2026: **1.7.0**.
+#   xkbcommon    `src/tastiera.c` — the only library that can answer the
+#                question "with this layout, which key produces this
+#                letter?".  `[M]` 14 Aug 2026: **1.7.0**.
 #
-# ⚠ Su Debian Trixie: `apt install libei-dev libxkbcommon-dev`.
+# ⚠ On Debian Trixie: `apt install libei-dev libxkbcommon-dev`.
 F4_CFLAGS := $(shell pkg-config --cflags libei-1.0 xkbcommon)
 F4_LIBS   := $(shell pkg-config --libs   libei-1.0 xkbcommon)
 override CFLAGS += $(F4_CFLAGS)
 
-# ⭐ FASE 12 — il palco su KDE (`kwin.c`): il protocollo Wayland
-#    `zkde_screencast_unstable_v1`, il cui XML sta in `protocolli/` (preso da
-#    `fondamenta/remotix-c/src/protocolli/` di v1, che lo aveva da
-#    plasma-wayland-protocols).  Il codice del protocollo lo genera
-#    `wayland-scanner` a ogni costruzione: nel deposito c'e' solo l'XML.
-# ⚠ Su Debian Trixie: `apt install libwayland-dev` (porta `wayland-scanner`).
+# ⭐ PHASE 12 — the stage on KDE (`kwin.c`): the Wayland protocol
+#    `zkde_screencast_unstable_v1`, whose XML is in `protocolli/` (taken from
+#    v1's `fondamenta/remotix-c/src/protocolli/`, which had it from
+#    plasma-wayland-protocols).  The protocol code is generated by
+#    `wayland-scanner` at every build: only the XML is in the repository.
+# ⚠ On Debian Trixie: `apt install libwayland-dev` (brings `wayland-scanner`).
 F12_CFLAGS := $(shell pkg-config --cflags wayland-client)
 F12_LIBS   := $(shell pkg-config --libs   wayland-client)
-# ⭐ FASE 13 — `gbm`: vedi il riquadro in cima.  ⛔ Una riga sua, e non dentro
-#    F12: il giorno che mancasse, l'errore deve nominare LEI.
+# ⭐ PHASE 13 — `gbm`: see the box at the top.  ⛔ A line of its own, and not inside
+#    F12: the day it were missing, the error must name IT.
 F13_CFLAGS := $(shell pkg-config --cflags gbm)
 F13_LIBS   := $(shell pkg-config --libs   gbm)
 override CFLAGS += $(F13_CFLAGS)
 override CFLAGS += $(F12_CFLAGS) -I.
 SCANNER    ?= wayland-scanner
-# ⭐ FASE 13: `wlr-screencopy-unstable-v1` — la cattura su wlroots (labwc, e
-#    quindi XFCE e LXQt).  L'XML NON è pacchettizzato in Debian: sta nel
-#    sorgente di wlr-protocols, e qui è in deposito come gli altri due.
-# ⭐⭐ E che sia QUELLO GIUSTO non è stato creduto: rigenerandoci sopra il
-#     codice del protocollo, le tabelle escono **identiche** a quelle che v1
-#     aveva generato nel 2026 (`fondamenta/banchi/banco-compositori/`).  Le
-#     sole differenze sono nei commenti — fra cui, e va saputo:
-#     ⚠ *«This protocol is deprecated … ext-image-copy-capture-v1 should be
-#       used instead»*.  ⛔ Ma `[M]` 20 set 2026 labwc su Trixie **non espone**
-#       `ext_image_copy_capture_manager_v1`: si scrive contro screencopy, e lo
-#       si sa dal primo giorno invece di scoprirlo (`STUDI.md` §xfce §4.6).
-# ⭐ FASE 13 — `wlr-output-management-unstable-v1`: la MISURA dell'uscita.
-#    ⛔ Su wlroots la tela non si negozia col flusso (lì non c'è flusso): si
-#    cambia all'uscita, e questo è il protocollo che lo fa.  `[M]` v4 su labwc.
-# ⭐ FASE 13, INCREMENTO 3 — l'INPUT su wlroots: libei lì non esiste (`[✗]`
-#    `STUDI.md` §xfce §7), e la strada sono due protocolli Wayland, `[M]`
-#    annunciati da labwc: `zwp_virtual_keyboard_manager_v1` v1 (di Purism, e
-#    ⚠ nonostante il prefisso `zwp_` NON sta in wayland-protocols: sta nel
-#    sorgente di wlroots, `protocol/`) e `zwlr_virtual_pointer_manager_v1` v2
-#    (da wlr-protocols).  Stanno in `protocolli/` come gli altri.
-# ⭐ FASE 13 — `linux-dmabuf-unstable-v1`: il `wl_buffer` della SCHEDA.  È in
-#    `wayland-protocols`, che il contenitore NON ha: l'XML sta in deposito come
-#    gli altri, copiato da wayland-protocols 1.44.  ⚠ Si lega al massimo la v4
-#    (`[M]` labwc la annuncia): è quella del `main_device`.
+# ⭐ PHASE 13: `wlr-screencopy-unstable-v1` — capture on wlroots (labwc, and
+#    so XFCE and LXQt).  The XML is NOT packaged in Debian: it is in the
+#    wlr-protocols source, and here it is in the repository like the other two.
+# ⭐⭐ And that it is THE RIGHT ONE was not believed: regenerating the
+#     protocol code from it, the tables come out **identical** to those v1
+#     had generated in 2026 (`fondamenta/banchi/banco-compositori/`).  The
+#     only differences are in the comments — among which, and it must be known:
+#     ⚠ *"This protocol is deprecated … ext-image-copy-capture-v1 should be
+#       used instead"*.  ⛔ But `[M]` 20 Sep 2026 labwc on Trixie **does not expose**
+#       `ext_image_copy_capture_manager_v1`: we write against screencopy, and
+#       we know it from day one instead of discovering it (`STUDI.md` §xfce §4.6).
+# ⭐ PHASE 13 — `wlr-output-management-unstable-v1`: the SIZE of the output.
+#    ⛔ On wlroots the canvas is not negotiated with the stream (there is no stream there): it is
+#    changed at the output, and this is the protocol that does it.  `[M]` v4 on labwc.
+# ⭐ PHASE 13, INCREMENT 3 — INPUT on wlroots: libei does not exist there (`[✗]`
+#    `STUDI.md` §xfce §7), and the way is two Wayland protocols, `[M]`
+#    announced by labwc: `zwp_virtual_keyboard_manager_v1` v1 (from Purism, and
+#    ⚠ despite the `zwp_` prefix it is NOT in wayland-protocols: it is in the
+#    wlroots source, `protocol/`) and `zwlr_virtual_pointer_manager_v1` v2
+#    (from wlr-protocols).  They are in `protocolli/` like the others.
+# ⭐ PHASE 13 — `linux-dmabuf-unstable-v1`: the CARD's `wl_buffer`.  It is in
+#    `wayland-protocols`, which the container does NOT have: the XML is in the repository like
+#    the others, copied from wayland-protocols 1.44.  ⚠ At most v4 is bound
+#    (`[M]` labwc announces it): it is the one with `main_device`.
 PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
               virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
               linux-dmabuf-unstable-v1 ext-data-control-v1
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
-# ⭐ FASE 17 — la cartella delle librerie del PREFISSO non e' sempre `lib`:
-#    cmake la chiama `lib64` su Fedora e openSUSE e `lib/<multiarch>` su Debian
-#    (`fasi/17-l-installatore.md` §4.4).  ⇒ Si chiede a `pkg-config` DENTRO il
-#    prefisso (`PKG_CONFIG_LIBDIR`, che SOSTITUISCE le cartelle di sistema, e
-#    senza `PKG_CONFIG_PATH`, che verrebbe cercato PRIMA: `[M]` nel contenitore
-#    rispondeva la ngtcp2 di `/usr/local` al posto di quella del prefisso); se
-#    non risponde, le cartelle che esistono.
-#    ⛔ Con ngtcp2/nghttp3 statiche (§6.3) il rpath non servira' piu': fino ad
-#    allora, che almeno punti dove stanno.
+# ⭐ PHASE 17 — the PREFISSO's library folder is not always `lib`:
+#    cmake calls it `lib64` on Fedora and openSUSE and `lib/<multiarch>` on Debian
+#    (`fasi/17-l-installatore.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
+#    prefix (`PKG_CONFIG_LIBDIR`, which REPLACES the system folders, and
+#    without `PKG_CONFIG_PATH`, which would be searched FIRST: `[M]` in the container
+#    the ngtcp2 of `/usr/local` answered instead of the prefix's); if
+#    it does not answer, the folders that exist.
+#    ⛔ With static ngtcp2/nghttp3 (§6.3) the rpath will no longer be needed: until
+#    then, let it at least point where they are.
 ifneq ($(PREFISSO),)
 MULTIARCH   := $(shell $(CC) -print-multiarch 2>/dev/null)
 PC_PREFISSO := $(PREFISSO)/lib64/pkgconfig:$(PREFISSO)/lib/pkgconfig$(if $(MULTIARCH),:$(PREFISSO)/lib/$(MULTIARCH)/pkgconfig)
@@ -290,56 +290,56 @@ CFLAGS  += -I$(PREFISSO)/include
 LDFLAGS += $(foreach d,$(LIB_PREFISSO),-L$(d) -Wl,-rpath,$(d))
 endif
 
-# ⛔ `ngtcp2_crypto_ossl` va PRIMA di `ngtcp2`: il linker risolve i simboli da
-#    sinistra a destra, e all'incontrario mancherebbero i simboli del ponte.
+# ⛔ `ngtcp2_crypto_ossl` goes BEFORE `ngtcp2`: the linker resolves symbols from
+#    left to right, and the other way round the bridge's symbols would be missing.
 LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
         -lm $(F2_LIBS) $(F3_LIBS) $(F4_LIBS) \
         $(F12_LIBS) $(F13_LIBS) $(F18A_LIBS) $(F19_LIBS) $(DL_LIBS)
-# ⚠ `-lm` e' della fase 7: il tono di prova di `webtransport.c` chiama `sin()`.
-#   Su glibc 2.35+ sarebbe superfluo (le funzioni matematiche sono in `libc`),
-#   ⛔ ma dipendere da quel dettaglio significa rompersi su una libc diversa
-#   con un errore che non nomina la fase che l'ha introdotto.
+# ⚠ `-lm` is from phase 7: the test tone of `webtransport.c` calls `sin()`.
+#   On glibc 2.35+ it would be superfluous (the math functions are in `libc`),
+#   ⛔ but depending on that detail means breaking on a different libc
+#   with an error that does not name the phase that introduced it.
 
 .PHONY: tutto pulisci dipendenze impronte banco-w1
 
 tutto: impronte $(NOME)
 
-# ⛔ Il confronto delle tre copie: vedi il riquadro in cima.  Stampa sempre le
-#    impronte di quel che ha confrontato, perche' «confrontato» sia un fatto
-#    leggibile e non una riga verde.
+# ⛔ The comparison of the three copies: see the box at the top.  It always prints the
+#    fingerprints of what it compared, so that "compared" is a readable fact
+#    and not a green line.
 impronte:
 	@if [ "$(GEMELLO)" = "nessuno" ]; then \
-	  printf '  ⛔ GEMELLO=nessuno: NON ho confrontato src/ con banchi/rcp/.\n'; \
-	  printf '     Non e «le copie combaciano»: e «non ho guardato», e chi\n'; \
-	  printf '     costruisce lo ha DICHIARATO (rilievo R12.3).\n'; \
+	  printf '  ⛔ GEMELLO=nessuno: I did NOT compare src/ with banchi/rcp/.\n'; \
+	  printf '     It is not «the copies match»: it is «I did not look», and whoever\n'; \
+	  printf '     builds has DECLARED it (finding R12.3).\n'; \
 	  exit 0; \
 	fi; \
 	if [ ! -d "$(GEMELLO)" ]; then \
-	  printf '  ⛔ la copia gemella «%s» NON CE: non posso dimostrare che\n' "$(GEMELLO)"; \
-	  printf '     src/rcp.c e banchi/rcp/rcp.c sono lo stesso modulo — e sono\n'; \
-	  printf '     lo stesso modulo montato su due ospiti (R12.3).\n'; \
-	  printf '     Si passa GEMELLO=<percorso>, oppure GEMELLO=nessuno per\n'; \
-	  printf '     DICHIARARE di costruire senza il confronto.\n'; \
+	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(GEMELLO)"; \
+	  printf '     src/rcp.c and banchi/rcp/rcp.c are the same module — and they are\n'; \
+	  printf '     the same module mounted on two hosts (R12.3).\n'; \
+	  printf '     Pass GEMELLO=<path>, or GEMELLO=nessuno to\n'; \
+	  printf '     DECLARE building without the comparison.\n'; \
 	  exit 2; \
 	fi; \
 	stato=0; \
 	for f in $(GEMELLATI); do \
 	  if [ ! -f "$(GEMELLO)/$$f" ]; then \
-	    printf '  ⛔ %s/%s non esiste\n' "$(GEMELLO)" "$$f"; stato=1; continue; \
+	    printf '  ⛔ %s/%s does not exist\n' "$(GEMELLO)" "$$f"; stato=1; continue; \
 	  fi; \
 	  if cmp -s "$$f" "$(GEMELLO)/$$f"; then \
-	    printf '  OK  %-18s identico a %s  (%s)\n' "$$f" "$(GEMELLO)/$$f" \
+	    printf '  OK  %-18s identical to %s  (%s)\n' "$$f" "$(GEMELLO)/$$f" \
 	      "$$(md5sum < $$f | cut -c1-32)"; \
 	  else \
-	    printf '  ⛔ %s DIVERGE da %s/%s:\n' "$$f" "$(GEMELLO)" "$$f"; \
+	    printf '  ⛔ %s DIVERGES from %s/%s:\n' "$$f" "$(GEMELLO)" "$$f"; \
 	    diff -u "$(GEMELLO)/$$f" "$$f" | head -40; \
 	    stato=1; \
 	  fi; \
 	done; \
 	if [ $$stato -ne 0 ]; then \
-	  printf '  ⛔ le due copie dello STESSO modulo non combaciano: non compilo.\n'; \
-	  printf '     Se il cambiamento e voluto, va portato in tutte e due — o il\n'; \
-	  printf '     prodotto e il banco misureranno due codici diversi (R12.3).\n'; \
+	  printf '  ⛔ the two copies of the SAME module do not match: not compiling.\n'; \
+	  printf '     If the change is intended, it must be carried into both — or the\n'; \
+	  printf '     product and the bench will measure two different codes (R12.3).\n'; \
 	fi; \
 	exit $$stato
 
@@ -352,14 +352,14 @@ $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
-# ⭐ IL BANCO DELLA CATTURA SU WLROOTS — `banchi/13-w1-un-fotogramma.c`.
+# ⭐ THE CAPTURE BENCH ON WLROOTS — `banchi/13-w1-un-fotogramma.c`.
 #
-# ⛔ Lega gli STESSI oggetti del prodotto (`wlroots.o`, `registro.o`), non una
-#    copia: e' la regola R12.3 applicata a un modulo nuovo — un banco che
-#    compilasse un secondo `wlroots.c` misurerebbe un codice diverso da quello
-#    che gira, ed e' il difetto che quella regola esiste per impedire.
-# ⚠ Sta qui e non in `banchi/`: il Makefile del prodotto e' l'unico posto che
-#   sa come si generano le intestazioni dei protocolli.
+# ⛔ It links the SAME objects as the product (`wlroots.o`, `registro.o`), not a
+#    copy: it is rule R12.3 applied to a new module — a bench that
+#    compiled a second `wlroots.c` would measure a code different from the one
+#    that runs, and it is the defect that rule exists to prevent.
+# ⚠ It is here and not in `banchi/`: the product's Makefile is the only place that
+#   knows how the protocol headers are generated.
 # -----------------------------------------------------------------------------
 BANCO_W1 := ../banchi/13-w1-un-fotogramma
 
@@ -382,30 +382,30 @@ banco-w1: $(BANCO_W1)
 pulisci:
 	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o)
 
-# ⛔ Il controllo delle dipendenze DICE che cosa manca, invece di far fallire il
-#    compilatore su un `#include` che nessuno collega alla libreria assente.
+# ⛔ The dependency check SAYS what is missing, instead of making the
+#    compiler fail on an `#include` nobody connects to the missing library.
 #
-# ⭐ FASE 17 — e adesso guarda anche le VERSIONI MINIME, non solo che le
-#    intestazioni ci siano: un'intestazione vecchia c'e', e il compilatore
-#    cade venti righe dopo su una funzione che non esiste.
-#    I minimi, e da dove vengono (`fasi/17-l-installatore.md` §4.4):
-#      (openh264 2.5 e SvtAv1Enc 2.3 sono usciti col ripiego, fase 19)
-#      openssl 3.5.0          l'API QUIC nativa (`ngtcp2_crypto_ossl`)
-#      libngtcp2 1.25.0       i `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c`
-#      libnghttp3 1.18.0      quella con cui si costruisce (`src/Contenitore`);
-#                             `[?]` il minimo vero non e' stato cercato
-#      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` manca
-#                             nell'intestazione della 1.0.0, c'e' nella 1.1.0
-#      libpipewire-0.3 0.3.48 `PW_KEY_NODE_FORCE_QUANTUM`; `[M]` 29 set 2026:
-#                             cattura/cursore/suono compilano con la 0.3.48 di
-#                             Ubuntu 22.04; `[R]` la chiave manca nella 0.3.44
-#      gio-2.0 2.80           com'era dichiarato; a noi servirebbe la 2.72
+# ⭐ PHASE 17 — and now it also looks at the MINIMUM VERSIONS, not only that the
+#    headers are there: an old header is there, and the compiler
+#    falls twenty lines later on a function that does not exist.
+#    The minimums, and where they come from (`fasi/17-l-installatore.md` §4.4):
+#      (openh264 2.5 and SvtAv1Enc 2.3 left with the fallback, phase 19)
+#      openssl 3.5.0          the native QUIC API (`ngtcp2_crypto_ossl`)
+#      libngtcp2 1.25.0       the `NGTCP2_STREAM_CLOSE2_FLAG_*` of `trasporto.c`
+#      libnghttp3 1.18.0      the one it is built with (`src/Contenitore`);
+#                             `[?]` the real minimum was not looked for
+#      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` missing
+#                             in the 1.0.0 header, present in 1.1.0
+#      libpipewire-0.3 0.3.48 `PW_KEY_NODE_FORCE_QUANTUM`; `[M]` 29 Sep 2026:
+#                             cattura/cursore/suono compile with Ubuntu 22.04's
+#                             0.3.48; `[R]` the key is missing in 0.3.44
+#      gio-2.0 2.80           as it was declared; we would need 2.72
 #                             (`g_get_user_state_dir`, `sessione.c`)
-#    ⛔ Tre esiti e non due: «troppo vecchia», «pkg-config non la conosce» (che
-#       col PREFISSO puo' voler dire solo che il `.pc` non e' nel percorso) e
-#       «va».  I primi due fanno uscire con errore, ma si DICONO diversi.
-#      vulkan 1.3.274         le estensioni di codifica video finali (fase 19,
-#                             `src/vulkanvideo.c`); `[?]` non provato sotto
+#    ⛔ Three outcomes and not two: "too old", "pkg-config does not know it" (which
+#       with PREFISSO may only mean that the `.pc` is not in the path) and
+#       "fine".  The first two make it exit with an error, but they are SAID differently.
+#      vulkan 1.3.274         the final video encode extensions (phase 19,
+#                             `src/vulkanvideo.c`); `[?]` not tried below
 MINIMI := openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
@@ -418,13 +418,13 @@ dipendenze:
 	  export PKG_CONFIG_PATH; \
 	fi; \
 	for m in $(MINIMI); do \
-	  p=$${m%%:*}; v=$${m#*:}; d=">= $$v"; [ "$$v" = 0 ] && d="nessun minimo"; \
+	  p=$${m%%:*}; v=$${m#*:}; d=">= $$v"; [ "$$v" = 0 ] && d="no minimum"; \
 	  if ! pkg-config --exists "$$p" 2>/dev/null; then \
-	    printf '  ??  %-24s pkg-config non la conosce (%s)\n' "$$p" "$$d"; stato=1; \
+	    printf '  ??  %-24s pkg-config does not know it (%s)\n' "$$p" "$$d"; stato=1; \
 	  elif pkg-config --atleast-version="$$v" "$$p"; then \
 	    printf '  OK  %-24s %s (%s)\n' "$$p" "$$(pkg-config --modversion $$p)" "$$d"; \
 	  else \
-	    printf '  NO  %-24s %s: TROPPO VECCHIA, serve >= %s\n' "$$p" "$$(pkg-config --modversion $$p)" "$$v"; stato=1; \
+	    printf '  NO  %-24s %s: TOO OLD, >= %s needed\n' "$$p" "$$(pkg-config --modversion $$p)" "$$v"; stato=1; \
 	  fi; \
 	done; \
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
@@ -440,16 +440,16 @@ dipendenze:
 	done; \
 	exit $$stato
 
-# ⛔ Fase 16 (25 set 2026): `registro.h` e' diventato un file di MACRO
-#    (`registro_dice` & co. aggiungono __FILE__/__LINE__): un oggetto vecchio
-#    cerca il simbolo che non c'e' piu' e il collegamento cade a meta'.  Ogni
-#    oggetto passa dal registro, quindi dipende da lui — tutti, senza elenco.
+# ⛔ Phase 16 (25 Sep 2026): `registro.h` has become a file of MACROS
+#    (`registro_dice` & co. add __FILE__/__LINE__): an old object
+#    looks for the symbol that is no longer there and linking falls half way.  Every
+#    object goes through the log, so it depends on it — all of them, without a list.
 $(OGGETTI): registro.h
 
-# ⛔ `main.c` NON dipende piu' da `sessione.h`, `cattura.h`, `mutter.h` e
-#    `codificatore.h`, e la riga che le toglie e' la stessa decisione di
-#    `DECISIONI.md` §1.10-bis: quei quattro anelli li apre il FIGLIO, che gira
-#    come l'utente.  Il padre e' root, e root non ha con chi parlare.
+# ⛔ `main.c` NO LONGER depends on `sessione.h`, `cattura.h`, `mutter.h` and
+#    `codificatore.h`, and the line that removes them is the same decision as
+#    `DECISIONI.md` §1.10-bis: those four links are opened by the CHILD, which runs
+#    as the user.  The parent is root, and root has nobody to talk to.
 main.o:           aiutante.h certificati.h comando.h figlio.h pagina.h rcp.h \
                   registro.h tls.h trasporto.h ritrovo.h
 trasporto.o:      trasporto.h aiutante.h registro.h webtransport.h
@@ -460,82 +460,82 @@ certificati.o:    certificati.h registro.h
 tls.o:            tls.h registro.h
 registro.o:       registro.h
 rcp.o:            rcp.h
-# ⚠ `autenticazione.c` non include nessuna intestazione nostra, quindi questa
-#   riga non ha prerequisiti — ma c'e', perche' era l'unica delle dieci a
-#   mancare e un'omissione uniforme si legge meglio di una sola eccezione.
+# ⚠ `autenticazione.c` includes no header of ours, so this
+#   line has no prerequisites — but it is there, because it was the only one of the ten
+#   missing and a uniform omission reads better than a single exception.
 autenticazione.o:
-# ⭐ `aiutante.c` — il processo che interroga PAM al posto del filo unico
-#    (`DECISIONI.md` §1.10).  ⚠ NON e' fra i `GEMELLATI`: e' del PRODOTTO e
-#    basta, perche' l'innesto di `banchi/rcp/` non ha un ciclo suo da liberare.
+# ⭐ `aiutante.c` — the process that queries PAM in place of the single thread
+#    (`DECISIONI.md` §1.10).  ⚠ It is NOT among the `GEMELLATI`: it belongs to the PRODUCT
+#    only, because the graft of `banchi/rcp/` has no loop of its own to free.
 aiutante.o:       aiutante.h registro.h
-# ⭐ `figlio.c` — un processo per utente, che gira come lui (`DECISIONI.md`
-#    §1.10-bis).  ⚠ E' il SOLO file che sta di qua e di la' del calo di
-#    privilegio: la meta' del padre non include niente della fase 2, la meta'
-#    del figlio le include tutte e quattro.  ⚠ NON e' fra i `GEMELLATI`: e' del
-#    prodotto e basta, come `aiutante.c`.
+# ⭐ `figlio.c` — one process per user, running as them (`DECISIONI.md`
+#    §1.10-bis).  ⚠ It is the ONLY file that sits on both sides of the
+#    privilege drop: the parent's half includes nothing of phase 2, the
+#    child's half includes all four.  ⚠ It is NOT among the `GEMELLATI`: it belongs to the
+#    product only, like `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
                   input.h sentinella.h audio.h suono.h appunti.h ritrovo.h
 
-# ⭐ I QUATTRO DELLA FASE 2.  ⚠ NESSUNO e' fra i `GEMELLATI`: sono del PRODOTTO
-#    e basta — in `banchi/rcp/` non esistono, perche' l'innesto nell'esempio di
-#    ngtcp2 non ha ne' una sessione grafica ne' un codificatore.
+# ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
+#    only — in `banchi/rcp/` they do not exist, because the graft into ngtcp2's
+#    example has neither a graphical session nor an encoder.
 sessione.o:       sessione.h registro.h
 
-# ⭐ IL GUARDIANO DELLA FASE 5 — l'emittente che mancava a `0x04` e `0x05`.
-# ⚠ Non e' fra i `GEMELLATI` e non ci puo' andare: `rcp.c` lo raggiunge per
-#   GANCIO, perche' la copia innestata in ngtcp2 non ha un bus di sistema.
+# ⭐ THE GUARDIAN OF PHASE 5 — the emitter that was missing for `0x04` and `0x05`.
+# ⚠ It is not among the `GEMELLATI` and cannot go there: `rcp.c` reaches it by
+#   HOOK, because the copy grafted into ngtcp2 has no system bus.
 sentinella.o:     sentinella.h registro.h
-# ⭐ FASE 17, T7 — i desktop vivi lasciati da un padre precedente (logind e /proc).
+# ⭐ PHASE 17, T7 — the live desktops left by a previous parent (logind and /proc).
 ritrovo.o:        ritrovo.h
 cattura.o:        cattura.h registro.h cursore.h
 mutter.o:         mutter.h registro.h
 codificatore.o:   codificatore.h registro.h vadiretta.h vulkanvideo.h scrittore_bit.h colori709.h
-# ⭐ FASE 18: la scheda con libva diretta, e lo scrittore di bit delle intestazioni;
-#    i colori BT.709 nostri (la strada «dalla memoria» della scheda).  ⛔ Il
-#    ripiego in software (`ripiego.c`: OpenH264, SVT-AV1) e' uscito, fase 19.
+# ⭐ PHASE 18: the card with direct libva, and the bit writer of the headers;
+#    our BT.709 colours (the card's "from memory" path).  ⛔ The
+#    software fallback (`ripiego.c`: OpenH264, SVT-AV1) is gone, phase 19.
 vadiretta.o:      vadiretta.h registro.h scrittore_bit.h
-# ⭐ FASE 19: la scheda in Vulkan Video, con lo shader SPIR-V incorporato
-#    (`vulkanvideo_rgb_nv12_spv.h`, generato da `banchi/19-vulkan/19-shader.sh`
-#    dal `.comp` accanto: il compilatore di shader NON serve a costruire).
-#    ⚠ `-Wno-missing-field-initializers`: le strutture di Vulkan hanno decine
-#    di campi e si riempiono per nome (`.sType = …`), e l'avviso di `-Wextra`
-#    su ogni `{ .sType }` coprirebbe gli avvisi veri.  Solo su questo oggetto.
+# ⭐ PHASE 19: the card in Vulkan Video, with the embedded SPIR-V shader
+#    (`vulkanvideo_rgb_nv12_spv.h`, generated by `banchi/19-vulkan/19-shader.sh`
+#    from the `.comp` next to it: the shader compiler is NOT needed to build).
+#    ⚠ `-Wno-missing-field-initializers`: Vulkan structures have dozens
+#    of fields and are filled by name (`.sType = …`), and `-Wextra`'s warning
+#    on every `{ .sType }` would cover the real warnings.  Only on this object.
 vulkanvideo.o:    vulkanvideo.h registro.h vulkanvideo_rgb_nv12_spv.h
 vulkanvideo.o:    CFLAGS += -Wno-missing-field-initializers
 scrittore_bit.o:  scrittore_bit.h
 colori709.o:      colori709.h
 
-# ⭐ IL CODIFICATORE DEL SUONO — fase 7.  ⚠ Non e' fra i `GEMELLATI`: e' del
-#   prodotto, e l'innesto in ngtcp2 non ha niente da far suonare.
-#   ⛔ Dal 30 set 2026 (fase 18) chiama `libopus` diretta: la dipendenza e'
-#      `F18A_LIBS` qui sopra.  Fino al 29 passava da `libavcodec`.
+# ⭐ THE SOUND ENCODER — phase 7.  ⚠ It is not among the `GEMELLATI`: it belongs to the
+#   product, and the graft into ngtcp2 has nothing to play.
+#   ⛔ Since 30 Sep 2026 (phase 18) it calls `libopus` directly: the dependency is
+#      `F18A_LIBS` above.  Until the 29th it went through `libavcodec`.
 audio.o:          audio.h registro.h
 
-# ⭐ IL SUONO DELLA SESSIONE — fase 7: il sink virtuale e la cattura del suo
-#   MONITOR.  ⛔ Nella sessione non c'e' niente da catturare e va CREATO: `[M]`
-#   5 agosto 2026, con pipewire/wireplumber tutti attivi `wpctl status` mostra
-#   zero device, zero sink, zero source — e' il caso normale di un server senza
-#   scheda sonora.  ⚠ Il riferimento (`gnome-remote-desktop`) apre la cattura
-#   sui sink che TROVA e un sink non lo crea mai: col suo codice, qui, non
-#   arriverebbe un campione — e senza un errore da nessuna parte.
+# ⭐ THE SESSION'S SOUND — phase 7: the virtual sink and the capture of its
+#   MONITOR.  ⛔ In the session there is nothing to capture and it must be CREATED: `[M]`
+#   5 August 2026, with pipewire/wireplumber all running `wpctl status` shows
+#   zero devices, zero sinks, zero sources — it is the normal case of a server without a
+#   sound card.  ⚠ The reference (`gnome-remote-desktop`) opens the capture
+#   on the sinks it FINDS and never creates a sink: with its code, here, not a
+#   single sample would arrive — and without an error anywhere.
 suono.o:          suono.h registro.h audio.h
 
-# ⭐⭐ I TRE DELLA FASE 4 — e le loro righe non sono una formalita'.
+# ⭐⭐ THE THREE OF PHASE 4 — and their lines are not a formality.
 #
-# ⛔ `input.h`, `tastiera.h` e `cursore.h` sono le CUCITURE, e una cucitura la
-#    cambia il coordinatore mentre gli anelli scrivono l'attuazione: senza
-#    queste righe `make` lascerebbe in piedi un `.o` compilato contro il
-#    contratto di mezz'ora fa.  ⚠ Il sintomo non sarebbe un errore: sarebbe un
-#    programma che si collega e si comporta male — la forma d'errore piu' cara
-#    di tutte, perche' nessuno la collega alla modifica che l'ha prodotta.
-#    `[M]` 14 agosto 2026: il difetto e' stato segnalato dall'anello del
-#    cursore, che si era accorto che `cattura.o` non si rifaceva.
+# ⛔ `input.h`, `tastiera.h` and `cursore.h` are the SEAMS, and a seam is
+#    changed by the coordinator while the links write the implementation: without
+#    these lines `make` would leave standing a `.o` compiled against the
+#    contract of half an hour ago.  ⚠ The symptom would not be an error: it would be a
+#    program that links and misbehaves — the most expensive form of error
+#    of all, because nobody connects it to the change that produced it.
+#    `[M]` 14 August 2026: the defect was reported by the cursor
+#    link, which had noticed that `cattura.o` was not rebuilt.
 input.o:          input.h tastiera.h registro.h mutter.h sessione.h kwin.h
 tastiera.o:       tastiera.h registro.h
 cursore.o:        cursore.h registro.h
 
-# ⭐ GLI APPUNTI DELLA SESSIONE — fase 7.  ⚠ Non e' fra i `GEMELLATI` e non ci
-#    puo' andare: parla D-Bus (`gio-2.0`), che dentro gli `examples/` di ngtcp2
-#    non c'e'.  ⛔ E' la stessa ragione per cui `rcp.c` raggiunge questo modulo
-#    per GANCI e non per `#include`.
+# ⭐ THE SESSION'S CLIPBOARD — phase 7.  ⚠ It is not among the `GEMELLATI` and cannot
+#    go there: it speaks D-Bus (`gio-2.0`), which is not inside ngtcp2's `examples/`.
+#    ⛔ It is the same reason why `rcp.c` reaches this module
+#    by HOOKS and not by `#include`.
 appunti.o:        appunti.h registro.h

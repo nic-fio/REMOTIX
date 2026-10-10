@@ -1,99 +1,99 @@
 /*
- * comando.h — ⛔⭐ IL COMANDO DI SBLOCCO DI `RCP.md` §4.4-bis.
+ * comando.h — ⛔⭐ THE UNBLOCK COMMAND OF `RCP.md` §4.4-bis.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' UN SOCKET DI CONTROLLO, E NON UN'OPZIONE SULLA RIGA DI COMANDO
+ * ⛔ WHY A CONTROL SOCKET, AND NOT A COMMAND-LINE OPTION
  *
- * §4.4-bis vuole «un comando di sblocco sul server», «la via d'uscita di chi si
- * banna dal proprio telefono», che «chiede l'unica chiave che quel caso ammette
- * — l'accesso alla macchina», e che scriva nel registro ogni sblocco
- * distinguendo un ban tolto da un ban mai scattato.  Le forme possibili sono
- * tre e due non reggono:
+ * §4.4-bis wants «an unblock command on the server», «the way out for whoever
+ * bans themselves from their own phone», which «asks for the only key that case
+ * admits — access to the machine», and which writes every unblock in the log,
+ * telling a removed ban from a ban that never triggered.  The possible forms
+ * are three and two do not hold:
  *
- *   ⛔ un SECONDO PROCESSO con un'opzione (`remotix --sblocca X`) — **non
- *      funziona**, e il modo in cui non funziona e' silenzioso: il ban vive
- *      nella memoria del processo che serve (`rcp.c`, `static … tentativi[]`),
- *      e un secondo processo puo' solo riscrivere il file.  Il server
- *      continuerebbe a rispondere `TROPPI_TENTATIVI` fino al riavvio, e ⛔ il
- *      primo `salva_ban()` — cioe' il primo ban di chiunque altro —
- *      riscriverebbe il file rimettendoci dentro il ban appena tolto.  ⚠ E chi
- *      ha dato il comando lo ha visto **uscire con zero**;
- *   ⛔ un SEGNALE — non porta un indirizzo, e soprattutto non ha una risposta:
- *      §4.4-bis vuole che «non era bannato» e «l'ho tolto» si distinguano, e un
- *      segnale consegnato dice solo che e' stato consegnato;
- *   ⭐ un SOCKET DI CONTROLLO — porta l'indirizzo, agisce sul processo VIVO
- *      (memoria e file nella stessa riga, per mano di `rcp_sblocca()`), e
- *      **risponde**, quindi le due risposte esistono davvero.  La chiave che
- *      chiede e' un file con permessi `0600` nel filesystem della macchina,
- *      cioe' esattamente «l'accesso alla macchina» — e non aggiunge nessuna
- *      superficie raggiungibile dalla rete: un socket di dominio Unix non ha un
- *      indirizzo IP.
+ *   ⛔ a SECOND PROCESS with an option (`remotix --sblocca X`) — **it does not
+ *      work**, and the way it does not work is silent: the ban lives in the
+ *      memory of the serving process (`rcp.c`, `static … tentativi[]`), and a
+ *      second process can only rewrite the file.  The server would keep
+ *      answering `TROPPI_TENTATIVI` until restart, and ⛔ the first
+ *      `salva_ban()` — that is, the first ban of anyone else — would rewrite
+ *      the file putting back in it the ban just removed.  ⚠ And whoever gave
+ *      the command saw it **exit with zero**;
+ *   ⛔ a SIGNAL — it carries no address, and above all it has no answer:
+ *      §4.4-bis wants «was not banned» and «I removed it» to be told apart, and
+ *      a delivered signal only says that it was delivered;
+ *   ⭐ a CONTROL SOCKET — it carries the address, acts on the LIVE process
+ *      (memory and file in the same line, by the hand of `rcp_sblocca()`), and
+ *      **answers**, so the two answers really exist.  The key it asks for is a
+ *      file with `0600` permissions on the machine's filesystem, that is
+ *      exactly «access to the machine» — and it adds no surface reachable from
+ *      the network: a Unix domain socket has no IP address.
  *
- * ⛔ Fino al 10 agosto 2026 notte questo file non c'era e `main.c` implementava
- *    la PRIMA forma, quella che non funziona: rilievo R12.1 della revisione
- *    delle cuciture, e l'analisi per esteso e' scritta — dalla mano che ha
- *    innestato l'ospite del banco — in `banchi/01-b3-rcp-innesta.py`.
- *
- * ---------------------------------------------------------------------------
- * ⛔ IL PROTOCOLLO E' UNA RIGA, E SI LEGGE SENZA STRUMENTI
- *
- *     SBLOCCA <indirizzo>  →  TOLTO <chiave>        il ban c'era e non c'e' piu'
- *                          →  NON-BANNATO <chiave>  non c'era niente da togliere
- *     PING                 →  PONG                  «il comando esiste?», e non
- *                                                   tocca niente
- *     (altro)              →  NON-CAPITO <riga>
- *
- * ⭐ `PING` non e' un ornamento: e' il denominatore della regola B0.3 di
- *    `FASI.md` §01-filo-nudo.  Un banco che chiama lo sblocco fra una prova e
- *    l'altra deve poter dire «il comando c'era e ha risposto», o «il ban non e'
- *    scattato» e «lo sblocco non e' mai arrivato a nessuno» hanno lo stesso
- *    aspetto.
- *
- * ⭐ E' lo stesso protocollo, byte per byte, che parla `banchi/01-b8-sblocca.py`
- *    — che e' lo strumento di B0.3 e non un pezzo di B8.  Averne due sarebbe
- *    stata la forma E2 di `REVIEWER.md`: due comportamenti sotto la stessa
- *    etichetta.
+ * ⛔ Until the night of 10 Aug 2026 this file did not exist and `main.c`
+ *    implemented the FIRST form, the one that does not work: finding R12.1 of
+ *    the seam review, and the full analysis is written — by the hand that
+ *    grafted the bench host — in `banchi/01-b3-rcp-innesta.py`.
  *
  * ---------------------------------------------------------------------------
- * ⛔⭐ E `PING` DICE «QUALCUNO RISPONDE», NON «RISPONDE QUELLO GIUSTO»
+ * ⛔ THE PROTOCOL IS ONE LINE, AND IT CAN BE READ WITHOUT TOOLS
  *
- * *Constatato l'11 agosto 2026, la prima volta che qualcuno ha puntato
- * `01-b8-sblocca.py` a un server diverso da quello che aveva il ban.*
+ *     SBLOCCA <address>    →  TOLTO <key>           the ban was there and is gone
+ *                          →  NON-BANNATO <key>     there was nothing to remove
+ *     PING                 →  PONG                  «does the command exist?», and
+ *                                                   touches nothing
+ *     (other)              →  NON-CAPITO <line>
  *
- * Su questa macchina i server sono **due** — l'innesto `bsslserver` sulla 7447
- * e questo prodotto sulla 7448 — e ciascuno ha il suo socket.  ⛔ Chi sbaglia
- * socket riceve `PONG` e poi `NON-BANNATO`, cioe' le due risposte piu'
- * rassicuranti del protocollo, mentre il ban che voleva togliere e' vivo
- * nell'altro processo.  E' la faccia nuova del terzo esito: **ho parlato con un
- * server, ma non con QUELLO** — e a differenza delle altre tre (socket assente,
- * nessuno in ascolto, permesso negato) questa **risponde**, quindi non si vede.
+ * ⭐ `PING` is not an ornament: it is the denominator of rule B0.3 of
+ *    `FASI.md` §01-filo-nudo.  A bench that calls the unblock between one test
+ *    and the next must be able to say «the command was there and answered», or
+ *    «the ban did not trigger» and «the unblock never reached anyone» look the
+ *    same.
  *
- * ⛔ NON SI E' AGGIUNTO NESSUN VERBO, e la ragione va scritta perche' e' la
- *    tentazione ovvia.  Un `CHI` → `SONO remotix <pid>` avrebbe messo l'identita'
- *    **dentro il protocollo**, e li' due cose vanno storte insieme:
+ * ⭐ It is the same protocol, byte for byte, spoken by `banchi/01-b8-sblocca.py`
+ *    — which is the tool of B0.3 and not a piece of B8.  Having two would have
+ *    been form E2 of `REVIEWER.md`: two behaviours under the same label.
  *
- *      1. `RCP.md` §4.4-bis e `FASI.md` §01-filo-nudo B0.3 promettono che i due
- *         server parlino lo stesso protocollo **byte per byte**.  Un verbo che
- *         capisce uno solo dei due lo rompe, ed e' la forma E2 di `REVIEWER.md`
- *         proprio nel punto che questo riquadro esiste per non ripetere;
- *      2. ⛔ e chi risponderebbe a `CHI` sarebbe il server: cioe' si chiederebbe
- *         l'identita' **all'indiziato**.  `CODER.md` §3.7 dice l'opposto — *«non
- *         si deduce il mittente: lo si chiede al nucleo»*.
+ * ---------------------------------------------------------------------------
+ * ⛔⭐ AND `PING` SAYS «SOMEONE ANSWERS», NOT «THE RIGHT ONE ANSWERS»
  *
- * ⭐ La strada giusta e' fuori dal protocollo e non costa una riga a questo
- *    file: un socket di dominio Unix porta con se' le credenziali di chi
- *    ascolta, e `getsockopt(SO_PEERCRED)` le consegna a chi si collega — pid,
- *    uid, gid, dal kernel.  Da li' `/proc/<pid>/comm` dice `remotix` oppure
- *    `bsslserver`.  Lo fa `01-b8-sblocca.py`, che stampa sempre chi ha risposto
- *    e sa pretenderlo (`--pretendi-chi`, `--pretendi-pid`).
+ * *Observed on 11 Aug 2026, the first time someone pointed `01-b8-sblocca.py`
+ * at a server different from the one that had the ban.*
  *
- * ⚠ E l'altra meta' del ban — il **file** che sopravvive al riavvio — questo
- *   modulo non la sa guardare: `rcp_sblocca()` chiama `salva_ban(NULL, …)`, che
- *   con la sessione a `NULL` tace su ogni guasto, e `percorso_ban` e' `static`
- *   dentro `rcp.c`.  ⛔ Quindi qui non si dichiara mai che il file sia stato
- *   scritto: si dice che e' stato **chiesto**.  Chi misura lo guarda da fuori —
- *   `01-b8-sblocca.py --ban-file`, che lo legge prima e dopo.  ⭐ La cura vera
- *   sarebbe in `rcp.c`: `rcp_sblocca()` deve poter dire se il file l'ha scritto.
+ * On this machine there are **two** servers — the `bsslserver` graft on 7447
+ * and this product on 7448 — and each has its own socket.  ⛔ Whoever picks the
+ * wrong socket receives `PONG` and then `NON-BANNATO`, that is the two most
+ * reassuring answers of the protocol, while the ban they wanted to remove is
+ * alive in the other process.  It is the new face of the third outcome: **I
+ * talked to a server, but not to THAT one** — and unlike the other three
+ * (socket missing, nobody listening, permission denied) this one **answers**,
+ * so it cannot be seen.
+ *
+ * ⛔ NO VERB WAS ADDED, and the reason must be written because it is the
+ *    obvious temptation.  A `CHI` → `SONO remotix <pid>` would have put the
+ *    identity **inside the protocol**, and there two things go wrong together:
+ *
+ *      1. `RCP.md` §4.4-bis and `FASI.md` §01-filo-nudo B0.3 promise that the
+ *         two servers speak the same protocol **byte for byte**.  A verb that
+ *         only one of the two understands breaks it, and it is form E2 of
+ *         `REVIEWER.md` precisely at the point this box exists not to repeat;
+ *      2. ⛔ and whoever would answer `CHI` would be the server: that is, the
+ *         identity would be asked **of the suspect**.  `CODER.md` §3.7 says the
+ *         opposite — *«the sender is not deduced: it is asked of the kernel»*.
+ *
+ * ⭐ The right road is outside the protocol and costs this file not one line:
+ *    a Unix domain socket carries the credentials of whoever listens, and
+ *    `getsockopt(SO_PEERCRED)` hands them to whoever connects — pid, uid, gid,
+ *    from the kernel.  From there `/proc/<pid>/comm` says `remotix` or
+ *    `bsslserver`.  `01-b8-sblocca.py` does it: it always prints who answered
+ *    and can demand it (`--pretendi-chi`, `--pretendi-pid`).
+ *
+ * ⚠ And the other half of the ban — the **file** that survives restart — this
+ *   module cannot look at: `rcp_sblocca()` calls `salva_ban(NULL, …)`, which
+ *   with the session at `NULL` stays silent on every fault, and `percorso_ban`
+ *   is `static` inside `rcp.c`.  ⛔ So here it is never declared that the file
+ *   was written: it is said that it was **requested**.  Whoever measures looks
+ *   at it from outside — `01-b8-sblocca.py --ban-file`, which reads it before
+ *   and after.  ⭐ The real cure would be in `rcp.c`: `rcp_sblocca()` must be
+ *   able to say whether it wrote the file.
  */
 #ifndef REMOTIX_COMANDO_H
 #define REMOTIX_COMANDO_H
@@ -103,15 +103,15 @@
 
 typedef struct comando comando;
 
-/* Apre il socket.  ⛔ Restituisce NULL su qualunque guasto, e lo SCRIVE: senza
- * il comando di sblocco la protezione di §4.4-bis c'e' ancora — si esce solo
- * con le dodici ore — quindi chi accende il server va avanti, ma la meta'
- * mancante si deve leggere nel registro. */
+/* Opens the socket.  ⛔ Returns NULL on any fault, and WRITES it: without the
+ * unblock command the protection of §4.4-bis is still there — the only way out
+ * is the twelve hours — so whoever starts the server goes on, but the missing
+ * half must be readable in the log. */
 comando *comando_apri(const char *percorso);
 void comando_chiudi(comando *k);
 
-/* Come `pagina_*`: si mette il descrittore nel `poll` e si muove quel che si e'
- * mosso. */
+/* Like `pagina_*`: the descriptor is put in the `poll` and whatever moved is
+ * moved. */
 size_t comando_descrittori(comando *k, struct pollfd *dove, size_t cap);
 void comando_muovi(comando *k, struct pollfd *dove, size_t quanti);
 

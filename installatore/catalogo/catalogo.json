@@ -4,7 +4,7 @@
   "sequenza": 14,
   "emesso": "2026-10-10",
   "motore_minimo": "0.1.0",
-  "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, libopus; pacchetti e depositi [M] 30 set nelle immagini podman), DECISIONI §10.27 e fasi/19-nvidia.md (niente codifica sul processore: via OpenH264, SVT-AV1 e il deposito di Cisco; senza una scheda capace REMOTIX non si installa; il driver Vulkan della scheda, vulkan_scheda e vulkan_nvidia, [M] 1 ott nelle immagini podman): quel che i documenti sanno il 1 ott 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
+  "fonte": "fasi/17-l-installatore.md §3 and §3.1 (matrix and versions), §4 (survey), §11.1 (outcomes of T1), DECISIONI §10.6-10.8 (D2 and D7 closed, the machine without a desktop), fasi/18-senza-ffmpeg.md (no ffmpeg: libva, libopus; packages and repositories [M] 30 Sep in the podman images), DECISIONI §10.27 and fasi/19-nvidia.md (no encoding on the processor: OpenH264, SVT-AV1 and Cisco's repository gone; without a capable card REMOTIX is not installed; the card's Vulkan driver, vulkan_scheda and vulkan_nvidia, [M] 1 Oct in the podman images): what the documents know on 1 Oct 2026. No combination has a green full run yet (T10): this is why they are all COMPATIBLE and none CERTIFIED.",
   "requisiti": {
     "openssl_minima": "3.5.0",
     "kde_minima": "6.1",

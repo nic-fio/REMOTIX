@@ -9,26 +9,26 @@ import (
 	"strings"
 )
 
-// La DISINSTALLAZIONE (§6.0, terzo mestiere; §6.5 punto 3; R6): un'operazione come le altre, col
-// suo piano, il suo consenso, il suo registro e la sua ripresa, che ripercorre ALL'INDIETRO il
-// registro dell'installazione confermata (installazione.json). Ogni passo di allora con origine
-// DIRETTA diventa un passo «disfa»: fare = il suo annulla, annullare = il suo fai (se la
-// disinstallazione fallisce a metà, si torna all'installazione di prima). PREESISTENTE non si
-// tocca mai; le INDIRETTE si dichiarano. Subito dopo lo spegnimento del servizio si chiudono le
-// sessioni REMOTIX ancora aperte (chiudi-sessioni, §6.5-bis). A disinstallazione CONFERMATA
-// installazione.json si toglie; il registro delle operazioni resta (è la storia della macchina,
-// come quella di dnf).
+// The UNINSTALLATION (§6.0, third kind; §6.5 point 3; R6): an operation like the others, with
+// its plan, its consent, its log and its resume, which walks BACKWARDS through the
+// log of the confirmed installation (installazione.json). Every step of then with origin
+// DIRETTA becomes an «undo» step: doing = its annulla, undoing = its fai (if the
+// uninstallation fails halfway, it goes back to the previous installation). PREESISTENTE is never
+// touched; the INDIRETTE are declared. Right after the service is switched off, the REMOTIX
+// sessions still open are closed (chiudi-sessioni, §6.5-bis). On CONFIRMED uninstallation
+// installazione.json is removed; the operations log stays (it is the machine's history,
+// like dnf's).
 
 func init() {
 	registraTipo("undo", nuovaDisfa)
 	registraTipo("remove-membership", nuovaIscrizione)
 }
 
-// FileIscrizioni: dove REMOTIX annota chi ha iscritto ai gruppi alla prima connessione (figlio.c,
-// §6.5-bis): origine DIRETTA, la disinstallazione le toglie come quelle del motore.
+// FileIscrizioni: where REMOTIX records whom it enrolled in the groups at the first connection (figlio.c,
+// §6.5-bis): origin DIRETTA, the uninstallation removes them like those of the engine.
 const FileIscrizioni = "gruppi-iscritti.jsonl"
 
-// Iscrizioni: le coppie (utente, gruppo) del file, senza doppioni.
+// Iscrizioni: the (user, group) pairs of the file, without duplicates.
 func (m *Motore) Iscrizioni() [][2]string {
 	b, err := os.ReadFile(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni))
 	if err != nil {
@@ -52,7 +52,7 @@ func (m *Motore) Iscrizioni() [][2]string {
 	return r
 }
 
-// togli-iscrizione: l'inverso di aggiungi-utente-a-gruppo, per le iscrizioni fatte da REMOTIX.
+// togli-iscrizione: the inverse of aggiungi-utente-a-gruppo, for the enrolments made by REMOTIX.
 type iscrizione struct{ g *gruppo }
 
 func nuovaIscrizione(p AzionePiano) (Azione, error) {
@@ -68,7 +68,7 @@ func (i *iscrizione) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	esp, _, _, err := i.g.membro(c)
 	if err != nil {
 		if CodiceDi(err) == "RX-GRUPPI-003" || CodiceDi(err) == "RX-GRUPPI-002" {
-			return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil // l'utente o il gruppo non c'è più
+			return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil // the user or the group is gone
 		}
 		return nil, "", err
 	}
@@ -121,19 +121,19 @@ func (i *iscrizione) Annullata(c *Contesto, prima json.RawMessage) (bool, string
 	return esp, "", err
 }
 
-// PulisciStoria, a disinstallazione CONFERMATA (decisione del coordinatore, 30 set): senza purge la
-// storia del motore resta (per l'assistenza) ma senza i pacchetti in cache; con purge si toglie
-// tutta, e anche /var/lib/remotix se resta vuota.
+// PulisciStoria, on CONFIRMED uninstallation (the coordinator's decision, 30 Sep): without purge the
+// engine's history stays (for support) but without the cached packages; with purge it is removed
+// entirely, and /var/lib/remotix too if it remains empty.
 func (m *Motore) PulisciStoria(purge bool) error {
 	if purge {
 		if err := os.RemoveAll(m.Cartella); err != nil {
 			return err
 		}
-		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
-		// le versioni annotate (aggiornato.go). ⚠ 10 ott 2026, nomi in inglese (DECISIONI §10.35): tolte le
-		// pulizie dei file dei motori di prima di D11/D14 — nessuna installazione vera li ha mai scritti
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // already undone by the plan
+		// the recorded versions (aggiornato.go). ⚠ 10 Oct 2026, names in English (DECISIONI §10.35): removed the
+		// cleanups of the files of the engines from before D11/D14 — no real installation ever wrote them
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileVersioniAnnotate))
-		os.Remove(filepath.Dir(m.Cartella)) // solo se vuota
+		os.Remove(filepath.Dir(m.Cartella)) // only if empty
 		return nil
 	}
 	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))
@@ -145,7 +145,7 @@ func (m *Motore) PulisciStoria(purge bool) error {
 	return nil
 }
 
-// LeggiRegistro legge un registro senza aprirlo in scrittura.
+// LeggiRegistro reads a log without opening it for writing.
 func LeggiRegistro(percorso string) ([]Evento, error) {
 	f, err := os.Open(percorso)
 	if err != nil {
@@ -178,8 +178,8 @@ type primaDisfa struct {
 	PrimaOrig json.RawMessage `json:"original_before"`
 }
 
-// originale: l'azione di allora, il suo contesto (la cartella dell'operazione di allora, coi
-// salvataggi e la cache) e lo stato di prima di allora.
+// originale: the action of then, its context (the operation folder of then, with the
+// backups and the cache) and the before-state of then.
 func (d *disfa) originale(c *Contesto) (Azione, *Contesto, *Evento, error) {
 	dir := filepath.Join(filepath.Dir(c.Cartella), d.op)
 	var pn Piano
@@ -260,7 +260,7 @@ func (d *disfa) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 	if ok, det, err := a.Annullata(cc, p.PrimaOrig); err != nil {
 		return "", "", err
 	} else if ok {
-		return COMPLETO, "disfatto: " + det, nil
+		return COMPLETO, "undone: " + det, nil
 	}
 	e, det, err := a.Controlla(cc, p.PrimaOrig)
 	if err != nil {
@@ -286,7 +286,7 @@ func (d *disfa) Ripara(c *Contesto, prima json.RawMessage) error {
 	return nil
 }
 
-// Annulla (una disinstallazione che fallisce a metà): si rifà quel che c'era.
+// Annulla (an uninstallation that fails halfway): what was there is redone.
 func (d *disfa) Annulla(c *Contesto, prima json.RawMessage) error {
 	a, cc, p, err := d.leggi(c, prima)
 	if err != nil || p.Origine == PREESISTENTE {
@@ -312,10 +312,10 @@ func (d *disfa) Indirette(prima json.RawMessage) []string {
 	if json.Unmarshal(prima, &p) != nil || p.Origine == PREESISTENTE {
 		return nil
 	}
-	return nil // le indirette dell'installazione restano dichiarate nel suo certificato, ripreso sotto
+	return nil // the installation's indirect changes stay declared in its certificate, taken up below
 }
 
-// PianoDisinstallazione costruisce il piano dal registro dell'installazione confermata.
+// PianoDisinstallazione builds the plan from the log of the confirmed installation.
 func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error) {
 	in, err := m.ControllaInstallazione()
 	if err != nil {
@@ -374,8 +374,8 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 	if !messa {
 		pn.Azioni = append([]AzionePiano{chiudi}, pn.Azioni...)
 	}
-	// le iscrizioni ai gruppi fatte da REMOTIX alla prima connessione (DIRETTE), tranne quelle
-	// che il motore stesso ha già in un suo passo
+	// the group enrolments made by REMOTIX at the first connection (DIRETTE), except those
+	// the engine itself already has in one of its steps
 	gia := map[[2]string]bool{}
 	for _, a := range orig.Azioni {
 		if a.Tipo == "add-user-to-group" {
@@ -391,8 +391,8 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			ComeSiFa: T("az.iscrizione.fa"), ComeSiVerifica: T("az.iscrizione.verifica"), ComeSiAnnulla: T("az.iscrizione.annulla"),
 			Reversibilita: ESATTA})
 	}
-	// i registri di sessione nelle case (decisione dell'utente, 1 ott 2026): sempre, per ultimo,
-	// a sessioni chiuse; i percorsi di adesso si dichiarano
+	// the session logs in the homes (the user's decision, 1 Oct 2026): always, last,
+	// with sessions closed; the current paths are declared
 	registri := RegistriUtente(m.Amb)
 	pn.Azioni = append(pn.Azioni, PianoTogliRegistri("user-logs", registri))
 	elenco := T("az.registri.nessuno")

@@ -1,35 +1,35 @@
 #!/bin/bash
 #
-# provisiona.sh — la macchina che ospita REMOTIX, messa nello stato che il
-# prodotto si aspetta.  ⛔ E si VERIFICA alla fine, invece di crederci.
+# provisiona.sh — the machine hosting REMOTIX, put into the state the
+# product expects.  ⛔ And it is CHECKED at the end, instead of believed.
 #
-#   sudo bash src/provisiona.sh            tutto
-#   sudo bash src/provisiona.sh verifica   solo i controlli, non tocca niente
-#
-# ---------------------------------------------------------------------------
-# ⛔⛔ PERCHE' NON SI USA PIU' `fondamenta/banco/provision-server.sh`
-#
-# `[M]` La notte del 15 agosto 2026 quello script, rieseguito dopo un riavvio,
-# ha rimesso in piedi lo stato SBAGLIATO e ci e' costato una serata.  In tre
-# punti lavora CONTRO v2:
-#
-#   1. ⛔ scrive `--virtual-monitor 1920x1080` nel drop-in della Shell.  Dal 14
-#      agosto quel monitor e' il DIFETTO — «la sessione si prende un monitor suo,
-#      la cattura ne monta un secondo, e l'utente guarda quello vuoto»
-#      (`sessione.h`).  v2 scrive il proprio drop-in `zz-` per scavalcarlo;
-#   2. ⛔ la regola polkit copre 3 azioni su 12 e **manca proprio quelle
-#      `*-multiple-sessions`**, cioe' fallisce nel caso multi-utente per cui e'
-#      stata scritta (`DECISIONI.md` §4.7);
-#   3. ⛔ non ricrea gli utenti di prova ne' i loro gruppi — e il rootfs vive in
-#      RAM, quindi ogni riavvio se li porta via.
+#   sudo bash src/provisiona.sh            everything
+#   sudo bash src/provisiona.sh verifica   only the checks, touches nothing
 #
 # ---------------------------------------------------------------------------
-# ⭐ QUEL CHE IL PRODOTTO NON PUO' FARE DA SE', ed e' l'unica cosa che sta qui
+# ⛔⛔ WHY `fondamenta/banco/provision-server.sh` IS NO LONGER USED
 #
-# `DECISIONI.md` §1.10-ter, §4.6-quinquies e §4.7: il prodotto mette da se' tutto
-# quel che riguarda la SESSIONE (le impostazioni, il drop-in, l'inibizione) —
-# invariante I7.  ⛔ Qui resta solo quel che vuole root e vale per la MACCHINA:
-# i conti, i gruppi, polkit, logind, udev, PAM.
+# `[M]` On the night of 15 August 2026 that script, rerun after a reboot,
+# put back the WRONG state and cost us an evening.  In three
+# points it works AGAINST v2:
+#
+#   1. ⛔ it writes `--virtual-monitor 1920x1080` into the Shell's drop-in.  Since 14
+#      August that monitor is the DEFECT — "the session takes a monitor of its own,
+#      the capture mounts a second one, and the user looks at the empty one"
+#      (`sessione.h`).  v2 writes its own `zz-` drop-in to override it;
+#   2. ⛔ the polkit rule covers 3 actions of 12 and **misses precisely the
+#      `*-multiple-sessions` ones**, that is it fails in the multi-user case it was
+#      written for (`DECISIONI.md` §4.7);
+#   3. ⛔ it does not recreate the test users nor their groups — and the rootfs lives in
+#      RAM, so every reboot takes them away.
+#
+# ---------------------------------------------------------------------------
+# ⭐ WHAT THE PRODUCT CANNOT DO BY ITSELF, and it is the only thing that is here
+#
+# `DECISIONI.md` §1.10-ter, §4.6-quinquies and §4.7: the product sets by itself everything
+# concerning the SESSION (the settings, the drop-in, the inhibition) —
+# invariant I7.  ⛔ Only what wants root and holds for the MACHINE stays here:
+# the accounts, the groups, polkit, logind, udev, PAM.
 set -uo pipefail
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -41,28 +41,28 @@ ESITO=0
 QUI=$(cd "$(dirname "$0")" && pwd)
 SOLO_VERIFICA=${1:-}
 
-[ "$(id -u)" -eq 0 ] || { echo "⛔ vuole root"; exit 2; }
+[ "$(id -u)" -eq 0 ] || { echo "⛔ root needed"; exit 2; }
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ I GRUPPI DELLA SCHEDA SI LEGGONO DAL NODO — 27 agosto 2026, fase 11.
+# ⭐⭐ THE CARD'S GROUPS ARE READ FROM THE NODE — 27 August 2026, phase 11.
 #
-# ⛔ Qui c'era `usermod -aG video,render`, cioe' DUE NOMI INCHIODATI.  Sono
-#    giusti su questa distribuzione e falsi sulla prossima: il gruppo di
-#    `/dev/dri/renderD128` e' quel che il nucleo e udev hanno deciso su QUESTA
-#    macchina, e l'unico modo di saperlo e' **chiederglielo** — `stat -c %g`.
-# ⛔ E si scorrono i nodi invece di inchiodare `renderD128`: `renderD128` e
-#    `renderD129` si scambiano fra due avvii (vedi il passo 5), e `cardN` e
-#    `renderDN` hanno gruppi DIVERSI (`video` e `render`) che servono tutt'e due.
-# ⚠ Un gid non si passa a `usermod -aG`: si passa il NOME, che si ricava dal
-#   numero con `getent group`.  Il numero resta quel che si VERIFICA, perche' un
-#   nome puo' cambiare di significato e un gid no.
-# ⛔⛔ E SI SALTA IL NODO ESCLUSO — 18 settembre 2026, al primo riprovisioning
-#    dopo la pausa.  `gpu-udev.sh` mette la discreta nel gruppo `remotix-nogpu`
-#    proprio perche' NESSUNO ci stia dentro.  `[M]` Letti tutti i nodi senza
-#    distinzione, al secondo giro questo script avrebbe messo `prova` e `prova2`
-#    in `remotix-nogpu`, cioe' riaperto la Radeon agli utenti di prova — e la
-#    verifica lo pretendeva: «prova NON e' nei gruppi della scheda:
-#    remotix-nogpu».  ⇒ Si misurerebbe sulla scheda sbagliata senza saperlo.
+# ⛔ Here there was `usermod -aG video,render`, that is TWO NAMES NAILED DOWN.  They are
+#    right on this distribution and false on the next: the group of
+#    `/dev/dri/renderD128` is what the kernel and udev decided on THIS
+#    machine, and the only way to know it is **to ask them** — `stat -c %g`.
+# ⛔ And the nodes are walked instead of nailing `renderD128`: `renderD128` and
+#    `renderD129` swap between two boots (see step 5), and `cardN` and
+#    `renderDN` have DIFFERENT groups (`video` and `render`) that are both needed.
+# ⚠ A gid is not passed to `usermod -aG`: the NAME is passed, derived from the
+#   number with `getent group`.  The number stays what is CHECKED, because a
+#   name can change meaning and a gid cannot.
+# ⛔⛔ AND THE EXCLUDED NODE IS SKIPPED — 18 September 2026, at the first reprovisioning
+#    after the break.  `gpu-udev.sh` puts the discrete card in the `remotix-nogpu` group
+#    precisely so that NOBODY is in it.  `[M]` Reading all nodes without
+#    distinction, at the second round this script would have put `prova` and `prova2`
+#    in `remotix-nogpu`, that is reopened the Radeon to the test users — and the
+#    check demanded it: «prova NON e' nei gruppi della scheda:
+#    remotix-nogpu».  ⇒ One would measure on the wrong card without knowing it.
 # ---------------------------------------------------------------------------
 GRUPPO_ESCLUSO=remotix-nogpu
 
@@ -91,36 +91,36 @@ nomi_della_scheda() {
 GRUPPI_SCHEDA=$(nomi_della_scheda)
 
 # ---------------------------------------------------------------------------
-# 1. Gli utenti di prova, e ⛔ I LORO GRUPPI
+# 1. The test users, and ⛔ THEIR GROUPS
 #
-# ⛔⛔ `video` e `render` NON sono una comodita' dell'ambiente di prova: sono un
-#     REQUISITO del prodotto, e la ragione e' l'headless.  Su un desktop normale
-#     l'accesso alla GPU lo da' logind con un'**ACL** (tag udev `uaccess`)
-#     all'utente della sessione attiva **su un seat**; ⇒ la nostra sessione un
-#     seat non ce l'ha di proposito, quindi quell'ACL non arriva mai e senza i
-#     gruppi Mesa ripiega su llvmpipe **senza un errore**.
+# ⛔⛔ `video` and `render` are NOT a convenience of the test environment: they are a
+#     REQUIREMENT of the product, and the reason is headless.  On a normal desktop
+#     GPU access is given by logind with an **ACL** (udev tag `uaccess`)
+#     to the user of the active session **on a seat**; ⇒ our session has no
+#     seat on purpose, so that ACL never arrives and without the
+#     groups Mesa falls back to llvmpipe **without an error**.
 #
-# `[M]` 15 agosto 2026: il sintomo e' «lento», non «rotto» — un comando nel
-# terminale che risponde dopo un secondo, e il compositore che compone a mano un
-# desktop di 2544x926.
+# `[M]` 15 August 2026: the symptom is "slow", not "broken" — a command in the
+# terminal that answers after a second, and the compositor composing by hand a
+# 2544x926 desktop.
 #
-# ⛔⛔⭐ E IL 27 AGOSTO 2026 IL SINTOMO SI E' RIVELATO PEGGIO DI «LENTO»: e'
-#      **CIECO**.  `[M]` Sulla macchina vera, un inquilino senza i due gruppi
-#      non vede MAI — **0 sessioni su 4**, zero fotogrammi, mai in 90 secondi —
-#      mentre gli inquilini coi gruppi vedono **17 su 17** in ~2,0 s.  ⭐ E la
-#      controprova, sullo stesso utente: dati i due gruppi e fatto rinascere il
-#      gestore d'utente ⇒ **2,04 s**.
-# ⛔⛔ E' `fasi/10-multi-tenant-e-il-budget.md` §7.4, «la sessione che nasce
-#      cieca»: `provanic4/5/6` mai riusciti in **98 · 55 · 50** tentativi, e
-#      sono esattamente e soltanto i tre utenti che i due gruppi non li avevano.
-#      ⇒ Ha bloccato cinque prove e rinviato una fase, e non ha mai dato un
-#      errore.  ⭐ Da oggi il PRODOTTO se ne accorge e lo scrive nel registro
-#      alla nascita di ogni sessione (`figlio.c`, `gruppi_della_scheda()`).
+# ⛔⛔⭐ AND ON 27 AUGUST 2026 THE SYMPTOM TURNED OUT WORSE THAN "SLOW": it is
+#      **BLIND**.  `[M]` On the real machine, a tenant without the two groups
+#      NEVER sees — **0 sessions of 4**, zero frames, never in 90 seconds —
+#      while the tenants with the groups see **17 of 17** in ~2.0 s.  ⭐ And the
+#      counter-test, on the same user: given the two groups and the user manager
+#      restarted ⇒ **2.04 s**.
+# ⛔⛔ It is `fasi/10-multi-tenant-e-il-budget.md` §7.4, "the session born
+#      blind": `provanic4/5/6` never succeeded in **98 · 55 · 50** attempts, and
+#      they are exactly and only the three users that did not have the two groups.
+#      ⇒ It blocked five tests and postponed a phase, and never gave an
+#      error.  ⭐ From today the PRODUCT notices it and writes it to the log
+#      at the birth of every session (`figlio.c`, `gruppi_della_scheda()`).
 # ---------------------------------------------------------------------------
 if [ "$SOLO_VERIFICA" != "verifica" ]; then
-	tit "Gli utenti di prova, coi gruppi che l'headless ci fa perdere"
+	tit "The test users, with the groups headless makes us lose"
 	if [ -z "$GRUPPI_SCHEDA" ]; then
-		ko "⛔ nessun gruppo leggibile dai nodi /dev/dri: gli inquilini nasceranno CIECHI"
+		ko "⛔ no group readable from the /dev/dri nodes: the tenants will be born BLIND"
 	fi
 	for u in prova:1001 prova2:1002; do
 		n=${u%%:*}; i=${u##*:}
@@ -128,21 +128,21 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 		[ -n "$GRUPPI_SCHEDA" ] && usermod -aG "$GRUPPI_SCHEDA" "$n"
 	done
 	printf 'prova:prova2026\nprova2:prova2026\n' | chpasswd
-	ok "prova e prova2, nei gruppi LETTI DAI NODI: ${GRUPPI_SCHEDA:-nessuno}"
+	ok "prova and prova2, in the groups READ FROM THE NODES: ${GRUPPI_SCHEDA:-none}"
 
 	# -------------------------------------------------------------------
-	# ⭐⭐ E TUTTE LE PERSONE GIA' SULLA MACCHINA — deciso dall'utente il 20
-	#     settembre 2026: «la procedura di installazione aggiunge gli utenti
-	#     presenti nel sistema ai gruppi video e render».
+	# ⭐⭐ AND ALL THE PEOPLE ALREADY ON THE MACHINE — decided by the user on 20
+	#     September 2026: "the installation procedure adds the users
+	#     present in the system to the video and render groups".
 	#
-	# ⛔ Le PERSONE, non gli account di servizio: `www-data`, `systemd-*` e
-	#    compagnia non aprono sessioni grafiche, e dare loro la scheda sarebbe
-	#    un permesso regalato a chi non lo usera' mai.  ⇒ Il confine e' quello
-	#    che usa la distribuzione: `UID_MIN`..`UID_MAX` di `/etc/login.defs`,
-	#    LETTI da li' e non inchiodati (stessa regola dei gruppi: si chiede
-	#    alla macchina).  ⚠ `nobody` (65534) resta fuori da se'.
-	# ⚠ Chi viene creato DOPO non passa di qui: a quello ci pensa il prodotto
-	#   alla prima connessione (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
+	# ⛔ The PEOPLE, not the service accounts: `www-data`, `systemd-*` and
+	#    company do not open graphical sessions, and giving them the card would be
+	#    a permission given away to whoever will never use it.  ⇒ The boundary is the one
+	#    the distribution uses: `UID_MIN`..`UID_MAX` of `/etc/login.defs`,
+	#    READ from there and not nailed down (same rule as the groups: we ask
+	#    the machine).  ⚠ `nobody` (65534) stays out by itself.
+	# ⚠ Whoever is created LATER does not pass through here: that is handled by the product
+	#   at the first connection (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
 	# -------------------------------------------------------------------
 	if [ -n "$GRUPPI_SCHEDA" ]; then
 		MIN=$(awk '$1 == "UID_MIN"  { print $2 }' /etc/login.defs 2>/dev/null)
@@ -155,44 +155,44 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 			fi
 			usermod -aG "$GRUPPI_SCHEDA" "$n" && QUANTI=$((QUANTI + 1))
 		done
-		ok "persone della macchina nei gruppi della scheda: $QUANTI (uid ${MIN:-1000}..${MAX:-60000}, con shell vera)"
-		inf "⚠ chi verra' creato dopo lo iscrive il prodotto alla PRIMA connessione"
+		ok "people of the machine in the card's groups: $QUANTI (uid ${MIN:-1000}..${MAX:-60000}, with a real shell)"
+		inf "⚠ whoever is created later is enrolled by the product at the FIRST connection"
 	fi
 
 	# -------------------------------------------------------------------
-	# ⛔⛔ `~/.cache` DEV'ESSERE UNA CARTELLA SUA, non un collegamento a /tmp
+	# ⛔⛔ `~/.cache` MUST BE A FOLDER OF ITS OWN, not a link to /tmp
 	#
-	# `[M]` 25 agosto 2026, incarico F2 — ed e' il difetto per cui il regista
-	# ha detto tre volte «Firefox non funziona».
+	# `[M]` 25 August 2026, task F2 — and it is the defect for which the director
+	# said three times "Firefox does not work".
 	#
-	# `/etc/skel/.cache` di questa macchina e' un COLLEGAMENTO a `/tmp`.
-	# ⭐⭐ E NON E' UN GUASTO: e' una SCELTA VOLUTA dell'utente su come deve
-	#    funzionare il suo sistema operativo — *«.cache che punta a /tmp e' una
-	#    mia scelta voluta»*, 25 agosto 2026, `DECISIONI.md` §4.6-undecies.
-	#    ⛔ Quindi qui NON si ripara niente del sistema: la sua scelta resta.
-	# ⛔ Il difetto e' NOSTRO: `useradd -m` copia lo scheletro ⇒ i dieci utenti
-	#    che creiamo noi nascono TUTTI a scrivere nello stesso posto.
-	# Firefox tiene il profilo **locale** sotto `$HOME/.cache/mozilla`, cioe'
-	# sotto `/tmp/mozilla`.  ⛔ Il PRIMO utente che apre il browser crea
-	# `/tmp/mozilla` **a nome suo e a modo 0700**; da quel momento nessun altro
-	# utente ci puo' scrivere, `profiles.ini` non nasce mai, e il browser apre
-	# una finestra che dice *«Your Firefox profile cannot be loaded»* — cioe'
-	# **e' inutilizzabile per tutti tranne il primo**.
+	# `/etc/skel/.cache` of this machine is a LINK to `/tmp`.
+	# ⭐⭐ AND IT IS NOT A FAULT: it is a DELIBERATE CHOICE of the user about how
+	#    his operating system must work — *".cache pointing to /tmp is a
+	#    deliberate choice of mine"*, 25 August 2026, `DECISIONI.md` §4.6-undecies.
+	#    ⛔ So here NOTHING of the system is repaired: his choice stays.
+	# ⛔ The defect is OURS: `useradd -m` copies the skeleton ⇒ the ten users
+	#    we create are ALL born writing to the same place.
+	# Firefox keeps the **local** profile under `$HOME/.cache/mozilla`, that is
+	# under `/tmp/mozilla`.  ⛔ The FIRST user who opens the browser creates
+	# `/tmp/mozilla` **in their name and with mode 0700**; from that moment no other
+	# user can write there, `profiles.ini` is never born, and the browser opens
+	# a window saying *"Your Firefox profile cannot be loaded"* — that is
+	# **it is unusable for everyone except the first**.
 	#
-	# ⭐⭐ ED E' IL MULTI-TENANT A RENDERLO CERTO, non a renderlo raro: e' un
-	#    difetto che su una macchina a un utente solo non si vede mai, e che su
-	#    dieci utenti morde nove.  ⇒ Sta QUI e non nel prodotto: e' la macchina
-	#    che dev'essere in ordine (`SPECIFICHE.md` §5.9, parte A).
+	# ⭐⭐ AND IT IS MULTI-TENANCY THAT MAKES IT CERTAIN, not rare: it is a
+	#    defect that on a single-user machine is never seen, and that on
+	#    ten users bites nine.  ⇒ It is HERE and not in the product: it is the machine
+	#    that must be in order (`SPECIFICHE.md` §5.9, part A).
 	#
-	# `[M]` La prova, senza browser di mezzo: da `provanic3`
+	# `[M]` The proof, without a browser in between: from `provanic3`
 	#     `mkdir -p ~/.cache/mozilla`
-	#     → `Permission denied`, con `/tmp/mozilla` di `prova2`, modo 0700.
-	# `[M]` E col rimedio, headless e senza REMOTIX: `profiles.ini` nasce.
+	#     → `Permission denied`, with `prova2`'s `/tmp/mozilla`, mode 0700.
+	# `[M]` And with the remedy, headless and without REMOTIX: `profiles.ini` is born.
 	#
-	# ⚠ Non si tocca `/tmp/mozilla` di chi ce l'ha gia': non e' nostro e non si
-	#   sa chi lo usa.  ⛔ E non si tocca ne' `/etc/skel` ne' la home
-	#   dell'utente: quella e' casa sua.  Si da' una `~/.cache` vera SOLTANTO
-	#   agli utenti che creiamo noi.
+	# ⚠ The `/tmp/mozilla` of whoever already has it is not touched: it is not ours and it is not
+	#   known who uses it.  ⛔ And neither `/etc/skel` nor the user's
+	#   home is touched: that is their home.  A real `~/.cache` is given ONLY
+	#   to the users we create.
 	# -------------------------------------------------------------------
 	for u in prova prova2; do
 		c="/home/$u/.cache"
@@ -201,51 +201,51 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 			mkdir -p "$c"
 			chown "$u:$u" "$c"
 			chmod 700 "$c"
-			inf "⚠ $u aveva ~/.cache come collegamento: rifatta cartella vera"
+			inf "⚠ $u had ~/.cache as a link: remade as a real folder"
 		elif [ ! -d "$c" ]; then
 			mkdir -p "$c"
 			chown "$u:$u" "$c"
 			chmod 700 "$c"
 		fi
 	done
-	ok "~/.cache e' una cartella di ciascun utente: il browser puo' fare il suo profilo"
+	ok "~/.cache is a folder of each user: the browser can make its profile"
 
 	# -------------------------------------------------------------------
-	# ⛔⭐ IL LINGER, e non e' una comodita': e' 2,6 secondi per ogni login
+	# ⛔⭐ LINGER, and it is not a convenience: it is 2.6 seconds for every login
 	#
-	# `[M]` 16 agosto 2026, misurato sul registro.  Senza linger, il gestore
-	# d'utente (`user@UID.service`, cioe' `systemd --user` piu' il bus) MUORE a
-	# ogni logout e RINASCE al login dopo.  ⇒ Il figlio, che come prima cosa si
-	# collega al bus di sessione, restava dentro quella connessione:
+	# `[M]` 16 August 2026, measured on the log.  Without linger, the user
+	# manager (`user@UID.service`, that is `systemd --user` plus the bus) DIES at
+	# every logout and is REBORN at the next login.  ⇒ The child, which as the first thing
+	# connects to the session bus, got stuck inside that connection:
 	#
-	#     senza linger   2,6 s (e 13,7 s al primo giro dopo un riavvio)
-	#     con linger     ⭐ 18 ms
+	#     without linger   2.6 s (and 13.7 s at the first round after a reboot)
+	#     with linger      ⭐ 18 ms
 	#
-	# ⛔ E c'era di peggio: `loginctl` mostrava l'utente in `State=closing` per
-	#    decine di secondi, e due giri su dieci hanno aspettato 29 e 32 secondi
-	#    un gestore che non finiva di spegnersi.
+	# ⛔ And there was worse: `loginctl` showed the user in `State=closing` for
+	#    tens of seconds, and two rounds out of ten waited 29 and 32 seconds
+	#    for a manager that did not finish shutting down.
 	#
-	# ⚠ E NON contraddice §1.10-ter, che rifiutava il linger COME SOSTITUTO
-	#   della sessione PAM: li' il problema era la classe (`manager` invece di
-	#   `user`), e resta vero.  ⭐ Qui il linger sta SOTTO la sessione PAM, non
-	#   al suo posto: la sessione di classe `user` la apre il prodotto lo
-	#   stesso, e il linger tiene solo il gestore caldo fra un login e l'altro.
+	# ⚠ And it does NOT contradict §1.10-ter, which refused linger AS A SUBSTITUTE
+	#   for the PAM session: there the problem was the class (`manager` instead of
+	#   `user`), and it stays true.  ⭐ Here linger sits UNDER the PAM session, not
+	#   in its place: the session of class `user` is opened by the product
+	#   anyway, and linger only keeps the manager warm between one login and the next.
 	# -------------------------------------------------------------------
 	for u in prova prova2; do
 		loginctl enable-linger "$u" >/dev/null 2>&1
 	done
-	ok "linger acceso: il gestore d'utente resta caldo fra un login e l'altro"
-	inf "⚠ i gruppi arrivano al compositore solo quando RINASCE il gestore"
-	inf "   d'utente: se cambi i gruppi a sessione viva, fermala prima"
+	ok "linger on: the user manager stays warm between one login and the next"
+	inf "⚠ the groups reach the compositor only when the user manager is"
+	inf "   REBORN: if you change the groups with the session alive, stop it first"
 
 	# -------------------------------------------------------------------
-	# 2. ⛔ VIA il drop-in di v1 col monitor di troppo
+	# 2. ⛔ AWAY with v1's drop-in with the extra monitor
 	# -------------------------------------------------------------------
-	tit "Il drop-in di v1 col monitor di troppo"
-	# ⭐ FASE 17 (fasi/17-l-installatore.md §5.1): da GNOME 50 la Shell e'
-	#    org.gnome.Shell@user.service, istanza del modello org.gnome.Shell@.service
-	#    ⇒ si guardano tutte e tre le cartelle.  ⚠ Si toglie SOLO il nostro file,
-	#    e la cartella solo se resta vuota: quella del modello vale anche per GDM.
+	tit "v1's drop-in with the extra monitor"
+	# ⭐ PHASE 17 (fasi/17-l-installatore.md §5.1): since GNOME 50 the Shell is
+	#    org.gnome.Shell@user.service, instance of the template org.gnome.Shell@.service
+	#    ⇒ all three folders are checked.  ⚠ ONLY our file is removed,
+	#    and the folder only if it stays empty: the template's one holds for GDM too.
 	TOLTI=0
 	for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
 	         org.gnome.Shell@.service.d; do
@@ -253,16 +253,16 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 		if [ -e "$f" ]; then
 			rm -f "$f"
 			rmdir "/etc/systemd/user/$d" 2>/dev/null || true
-			ok "tolto $f: v2 scrive il suo, senza --virtual-monitor"
+			ok "removed $f: v2 writes its own, without --virtual-monitor"
 			TOLTI=$((TOLTI + 1))
 		fi
 	done
-	[ "$TOLTI" -eq 0 ] && ok "non c'era"
+	[ "$TOLTI" -eq 0 ] && ok "it was not there"
 
 	# -------------------------------------------------------------------
-	# 3. Le tre cinture di §4.7
+	# 3. The three belts of §4.7
 	# -------------------------------------------------------------------
-	tit "Nessuno spegne il server (DECISIONI.md §4.7)"
+	tit "Nobody switches the server off (DECISIONI.md §4.7)"
 	install -D -m 644 "$QUI/remotix-niente-spegnimento.rules" \
 		/etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules
 	rm -f /etc/polkit-1/rules.d/49-remotix-niente-spegnimento.rules
@@ -270,8 +270,8 @@ if [ "$SOLO_VERIFICA" != "verifica" ]; then
 		/etc/systemd/logind.conf.d/remotix-tasti.conf
 	mkdir -p /etc/systemd/sleep.conf.d
 	cat > /etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf <<'CONF'
-# ⛔ La cintura piu' forte delle tre: qui rifiuta SYSTEMD, non polkit, e vale
-#    anche per root — `[M]` 15 ago 2026, `CanSuspend="no"` anche da root.
+# ⛔ The strongest belt of the three: here SYSTEMD refuses, not polkit, and it holds
+#    for root too — `[M]` 15 Aug 2026, `CanSuspend="no"` even from root.
 [Sleep]
 AllowSuspend=no
 AllowHibernation=no
@@ -280,15 +280,15 @@ AllowHybridSleep=no
 CONF
 	systemctl restart polkit >/dev/null 2>&1
 	systemctl reload systemd-logind >/dev/null 2>&1 || systemctl restart systemd-logind >/dev/null 2>&1
-	ok "polkit (12 azioni), logind (tasti), sleep.conf"
+	ok "polkit (12 actions), logind (keys), sleep.conf"
 
 	# -------------------------------------------------------------------
-	# 4. Il servizio PAM
+	# 4. The PAM service
 	# -------------------------------------------------------------------
-	tit "Il servizio PAM"
-	# ⭐ FASE 17: il file PAM esclude chi e' in /etc/remotix/utenti-negati, e
-	#    con onerr=fail se il file manca non entra NESSUNO ⇒ prima il file.
-	#    Non si riscrive se c'e': e' una scelta di chi amministra.
+	tit "The PAM service"
+	# ⭐ PHASE 17: the PAM file excludes whoever is in /etc/remotix/utenti-negati, and
+	#    with onerr=fail if the file is missing NOBODY gets in ⇒ the file first.
+	#    It is not rewritten if it is there: it is a choice of whoever administers.
 	if [ ! -f /etc/remotix/utenti-negati ]; then
 		install -D -m 644 -o root -g root /dev/null /etc/remotix/utenti-negati
 		echo root > /etc/remotix/utenti-negati
@@ -298,110 +298,110 @@ CONF
 	ok "/etc/pam.d/remotix"
 
 	# -------------------------------------------------------------------
-	# 4-bis. ⛔ I BANCHI GUIDANO IL SERVIZIO SENZA FERMARSI A CHIEDERE
+	# 4-bis. ⛔ THE BENCHES DRIVE THE SERVICE WITHOUT STOPPING TO ASK
 	#
-	# ✅ Deciso dall'utente il 18 settembre 2026: «metti lo script».
-	# `[M]` Quel giorno, primo giro dopo la pausa, `11-gancio.sh remoto` si e'
-	# fermato per SEMPRE al primo comando.  Manda `sudo -S … systemctl
-	# reset-failed … 2>/dev/null`: la richiesta della parola d'ordine va sullo
-	# standard error, lo standard error va nel nulla, `sshpw.py` non vede
-	# niente a cui rispondere, e `sudo` aspetta.
-	# ⇒ Funzionava perche' `provision-server.sh` (§3-bis) scriveva questa
-	#   regola, e passando a questo script la regola si era PERSA.
-	# ⚠ Ristretta ai quattro comandi che i banchi usano davvero, e `tee` a UN
-	#   file: `sudo tee` senza vincoli equivale a `sudo` intero.  Vive nel
-	#   rootfs in RAM: sparisce da se' al riavvio.
+	# ✅ Decided by the user on 18 September 2026: "put in the script".
+	# `[M]` That day, first round after the break, `11-gancio.sh remoto`
+	# stopped FOREVER at the first command.  It sends `sudo -S … systemctl
+	# reset-failed … 2>/dev/null`: the password prompt goes to
+	# standard error, standard error goes to the void, `sshpw.py` sees
+	# nothing to answer, and `sudo` waits.
+	# ⇒ It worked because `provision-server.sh` (§3-bis) wrote this
+	#   rule, and moving to this script the rule had been LOST.
+	# ⚠ Restricted to the four commands the benches really use, and `tee` to ONE
+	#   file: `sudo tee` without constraints is equivalent to full `sudo`.  It lives in the
+	#   rootfs in RAM: it disappears by itself at reboot.
 	# -------------------------------------------------------------------
-	tit "I banchi guidano il servizio senza password"
+	tit "The benches drive the service without a password"
 	UTENTE_BANCHI=${SUDO_USER:-nicfio}
 	printf '%s ALL=(root) NOPASSWD: /usr/bin/systemctl, /usr/bin/loginctl, /usr/sbin/nft, /usr/bin/tee /etc/default/remotix\n' \
 		"$UTENTE_BANCHI" > /etc/sudoers.d/remotix-banchi
 	chmod 440 /etc/sudoers.d/remotix-banchi
 	if visudo -c -q -f /etc/sudoers.d/remotix-banchi; then
-		ok "$UTENTE_BANCHI: quattro comandi senza password"
+		ok "$UTENTE_BANCHI: four commands without a password"
 	else
 		rm -f /etc/sudoers.d/remotix-banchi
-		ko "regola sudoers non valida: tolta"
+		ko "sudoers rule not valid: removed"
 	fi
 
 	# -------------------------------------------------------------------
-	# 5. ⛔ LA SCHEDA: si misura sull'INTEGRATA — §4.6-quinquies
+	# 5. ⛔ THE CARD: measurements are made on the INTEGRATED one — §4.6-quinquies
 	#
-	# «I test vanno fatti sulla GPU integrata, altrimenti trucchiamo il gioco»
-	# — l'utente, 15 agosto 2026.  ⚠ Per indirizzo PCI e non per numero di
-	# nodo: `renderD128` e `renderD129` si scambiano fra due avvii.
+	# "The tests must be done on the integrated GPU, otherwise we are rigging the game"
+	# — the user, 15 August 2026.  ⚠ By PCI address and not by node
+	# number: `renderD128` and `renderD129` swap between two boots.
 	# -------------------------------------------------------------------
-	tit "La scheda: si esclude la discreta"
+	tit "The card: the discrete one is excluded"
 	DISCRETA=""
 	for c in /sys/class/drm/card[0-9]; do
 		[ -e "$c/device/driver" ] || continue
 		drv=$(basename "$(readlink -f "$c/device/driver")")
 		pci=$(basename "$(readlink -f "$c/device")")
 		case "$drv" in
-		amdgpu|nvidia|nouveau) DISCRETA="$pci"; inf "discreta: $drv a $pci" ;;
-		*)                     inf "integrata: $drv a $pci" ;;
+		amdgpu|nvidia|nouveau) DISCRETA="$pci"; inf "discrete: $drv at $pci" ;;
+		*)                     inf "integrated: $drv at $pci" ;;
 		esac
 	done
 	if [ -n "$DISCRETA" ] && [ -x /media/REMOTIX/gpu-udev.sh ]; then
 		bash /media/REMOTIX/gpu-udev.sh "$DISCRETA" >/dev/null 2>&1 \
-			&& ok "esclusa $DISCRETA: si misura sull'integrata" \
-			|| ko "la regola udev non e' entrata"
+			&& ok "excluded $DISCRETA: measurements on the integrated one" \
+			|| ko "the udev rule did not go in"
 	elif [ -z "$DISCRETA" ]; then
-		ok "una scheda sola: niente da escludere"
+		ok "a single card: nothing to exclude"
 	else
-		ko "manca /media/REMOTIX/gpu-udev.sh"
+		ko "/media/REMOTIX/gpu-udev.sh is missing"
 	fi
 
 	# -------------------------------------------------------------------
-	# 6. ⛔⭐⭐ I TRE REQUISITI CHE IL MULTI-TENANT VUOLE E CHE NON ERANO
-	#          SCRITTI DA NESSUNA PARTE — 27 agosto 2026, misurati sulla
-	#          macchina vera FACENDO la cosa, non ispezionandola.
+	# 6. ⛔⭐⭐ THE THREE REQUIREMENTS MULTI-TENANCY WANTS AND THAT WERE NOT
+	#          WRITTEN ANYWHERE — 27 August 2026, measured on the
+	#          real machine BY DOING the thing, not by inspecting it.
 	#
-	#   1. ⛔ IL SERVER DEVE GIRARE DA **ROOT**, o il multi-tenant non esiste.
-	#      `[M]` Con `User=nicfio` il prodotto stesso scrive «questo processo
+	#   1. ⛔ THE SERVER MUST RUN AS **ROOT**, or multi-tenancy does not exist.
+	#      `[M]` With `User=nicfio` the product itself writes «questo processo
 	#      e' uid 1000: NON e' root — PAM potra' verificare solo il suo
-	#      utente», e ogni altro inquilino si prende `0x07
-	#      CREDENZIALI_ERRATE`.  Da root: «uid 0: puo' verificare con PAM la
+	#      utente», and every other tenant gets `0x07
+	#      CREDENZIALI_ERRATE`.  As root: «uid 0: puo' verificare con PAM la
 	#      parola di chiunque».
-	#   2. ⛔ IL BINARIO DEVE STARE DOVE L'INQUILINO PUO' ESEGUIRLO.  `[M]`
-	#      `/home/nicfio` e' `0700`: il figlio, che gira con l'uid
-	#      dell'inquilino, **non attraversa** quella cartella ed esce con 37 —
-	#      «non ha potuto eseguire il binario del server».
-	#   3. ⛔ `LD_LIBRARY_PATH` NON ARRIVA AL FIGLIO.  `figlio.c` compone
-	#      l'ambiente **da zero** e fa `execve` (CODER.md §4.5): una libreria
-	#      fuori dai percorsi di sistema fa uscire il figlio con **127**, e la
-	#      variabile del padre non lo raggiunge.  ⇒ La cura sta QUI, dove
-	#      vuole root: `/etc/ld.so.conf.d/` piu' `ldconfig`.
+	#   2. ⛔ THE BINARY MUST BE WHERE THE TENANT CAN EXECUTE IT.  `[M]`
+	#      `/home/nicfio` is `0700`: the child, which runs with the
+	#      tenant's uid, **does not traverse** that folder and exits with 37 —
+	#      "could not execute the server binary".
+	#   3. ⛔ `LD_LIBRARY_PATH` DOES NOT REACH THE CHILD.  `figlio.c` composes
+	#      the environment **from scratch** and does `execve` (CODER.md §4.5): a library
+	#      outside the system paths makes the child exit with **127**, and the
+	#      parent's variable does not reach it.  ⇒ The cure is HERE, where
+	#      root is needed: `/etc/ld.so.conf.d/` plus `ldconfig`.
 	#
-	# ⚠ Il punto 1 lo SISTEMA questo script (un drop-in), i punti 2 e 3 li
-	#   VERIFICA facendoli — la consegna del binario non e' della provvista.
+	# ⚠ Point 1 is FIXED by this script (a drop-in), points 2 and 3 are
+	#   CHECKED by doing them — delivering the binary is not provisioning's job.
 	# -------------------------------------------------------------------
-	tit "I tre requisiti del multi-tenant (27 ago 2026)"
+	tit "The three requirements of multi-tenancy (27 Aug 2026)"
 	if systemctl cat remotix.service >/dev/null 2>&1; then
 		QUALE=$(systemctl show remotix.service -p User --value 2>/dev/null)
 		if [ -n "$QUALE" ] && [ "$QUALE" != "root" ]; then
 			install -d -m 755 /etc/systemd/system/remotix.service.d
 			cat > /etc/systemd/system/remotix.service.d/zz-remotix-root.conf <<'CONF'
-# ⛔⛔ IL SERVER GIRA DA ROOT, e non e' una comodita': e' la condizione del
-#     multi-tenant.  `[M]` 27 ago 2026: con `User=` non root, PAM puo'
-#     verificare la parola SOLO dell'utente del servizio, e ogni altro
-#     inquilino si prende `0x07 CREDENZIALI_ERRATE`.
+# ⛔⛔ THE SERVER RUNS AS ROOT, and it is not a convenience: it is the condition of
+#     multi-tenancy.  `[M]` 27 Aug 2026: with a non-root `User=`, PAM can
+#     verify the password ONLY of the service's user, and every other
+#     tenant gets `0x07 CREDENZIALI_ERRATE`.
 [Service]
 User=root
 Group=root
 CONF
 			systemctl daemon-reload >/dev/null 2>&1
-			ok "drop-in zz-remotix-root.conf scritto (era User=$QUALE)"
-			inf "⚠ il servizio NON e' stato riavviato: entra in vigore al prossimo riavvio del servizio"
+			ok "drop-in zz-remotix-root.conf written (it was User=$QUALE)"
+			inf "⚠ the service was NOT restarted: it takes effect at the next restart of the service"
 		else
-			ok "remotix.service gira gia' da root"
+			ok "remotix.service already runs as root"
 		fi
 	else
-		inf "remotix.service non e' installato su questa macchina: niente da correggere"
+		inf "remotix.service is not installed on this machine: nothing to correct"
 	fi
 
-	# ⭐ Le librerie fuori dai percorsi di sistema si REGISTRANO, perche' la
-	#   variabile d'ambiente non attraversa l'`execve` del figlio.
+	# ⭐ The libraries outside the system paths are REGISTERED, because the
+	#   environment variable does not cross the child's `execve`.
 	LIBRERIE=""
 	for c in /opt/remotix/lib /opt/remotix/solo "$QUI/lib-remotix"; do
 		[ -d "$c" ] || continue
@@ -409,144 +409,144 @@ CONF
 		break
 	done
 	if [ -n "$LIBRERIE" ]; then
-		printf '# ⛔ `LD_LIBRARY_PATH` non arriva al figlio (execve con ambiente da\n#    zero): le librerie del prodotto si registrano qui.\n%s\n' \
+		printf '# ⛔ `LD_LIBRARY_PATH` does not reach the child (execve with an environment from\n#    scratch): the libraries of the product are registered here.\n%s\n' \
 			"$LIBRERIE" > /etc/ld.so.conf.d/zz-remotix.conf
 		ldconfig
-		ok "librerie del prodotto registrate: $LIBRERIE (ldconfig fatto)"
+		ok "product libraries registered: $LIBRERIE (ldconfig done)"
 	else
-		inf "nessuna cartella di librerie del prodotto da registrare"
+		inf "no product library folder to register"
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-# ⭐ LA VERIFICA — e non e' una formalita': `REVIEWER.md` E1, «scritto non e' in
-#    vigore».  ⚠ Quel che si puo' controllare da root si controlla qui; il resto
-#    — le due Can* viste DALL'UTENTE — lo verifica il figlio a ogni sessione, e
-#    la ragione e' che root si sente rispondere «yes» per via di `CAP_SYS_BOOT`.
+# ⭐ THE CHECK — and it is not a formality: `REVIEWER.md` E1, "written is not in
+#    force".  ⚠ What can be checked from root is checked here; the rest
+#    — the two Can* seen BY THE USER — is checked by the child at every session, and
+#    the reason is that root gets answered "yes" because of `CAP_SYS_BOOT`.
 # ---------------------------------------------------------------------------
-tit "La verifica"
+tit "The check"
 
-# ⭐ Il binario si chiede al SERVIZIO, non si indovina: e' quello che girera'
-#   davvero.  ⚠ Se il servizio non c'e', si guarda quello dell'albero.
+# ⭐ The binary is asked of the SERVICE, not guessed: it is the one that will really
+#   run.  ⚠ If the service is not there, the tree's one is looked at.
 BINARIO=$(systemctl show remotix.service -p ExecStart --value 2>/dev/null \
 	| sed -n 's/.*path=\([^ ;]*\).*/\1/p' | head -1)
 [ -n "$BINARIO" ] || BINARIO="$QUI/remotix"
 
-# ⛔⭐⭐ REQUISITO 1 — il server deve girare da ROOT, o il multi-tenant non c'e'.
+# ⛔⭐⭐ REQUIREMENT 1 — the server must run as ROOT, or there is no multi-tenancy.
 if systemctl cat remotix.service >/dev/null 2>&1; then
 	QUALE=$(systemctl show remotix.service -p User --value 2>/dev/null)
 	if [ -z "$QUALE" ] || [ "$QUALE" = "root" ]; then
-		ok "remotix.service gira da root: PAM puo' verificare la parola di CHIUNQUE"
+		ok "remotix.service runs as root: PAM can verify ANYONE's password"
 	else
-		ko "⛔⛔ remotix.service gira come «$QUALE»: PAM potra' verificare SOLO quell'utente, e ogni altro inquilino prendera' 0x07 CREDENZIALI_ERRATE"
+		ko "⛔⛔ remotix.service runs as «$QUALE»: PAM will be able to verify ONLY that user, and every other tenant will get 0x07 CREDENZIALI_ERRATE"
 	fi
 else
-	inf "remotix.service non e' installato: il requisito «da root» resta a chi lo lancia a mano"
+	inf "remotix.service is not installed: the «as root» requirement is left to whoever launches it by hand"
 fi
 
 for n in prova prova2; do
-	# ⛔⭐ SI VERIFICA IL **GID DEL NODO**, non il nome «render».  Un `grep -qw
-	#     render` su `id -nG` passa anche su una macchina dove il nodo
-	#     appartiene a un altro gruppo — cioe' direbbe OK a un inquilino che
-	#     nascera' cieco.  ⚠ E si guardano TUTTI i gid dei nodi: `cardN` e
-	#     `renderDN` ne hanno due diversi, e servono tutt'e due.
+	# ⛔⭐ THE NODE'S **GID** IS CHECKED, not the name «render».  A `grep -qw
+	#     render` on `id -nG` passes even on a machine where the node
+	#     belongs to another group — that is it would say OK to a tenant who
+	#     will be born blind.  ⚠ And ALL the nodes' gids are looked at: `cardN` and
+	#     `renderDN` have two different ones, and both are needed.
 	SUOI=" $(id -G "$n" 2>/dev/null) "
 	MANCA=""
 	for g in $(gid_della_scheda); do
 		case "$SUOI" in *" $g "*) ;; *) MANCA="${MANCA:+$MANCA }$(getent group "$g" | cut -d: -f1) (gid $g)" ;; esac
 	done
 	if [ -z "$(gid_della_scheda)" ]; then
-		ko "⛔ nessun nodo /dev/dri: non si puo' dire se $n vedra'"
+		ko "⛔ no /dev/dri node: it cannot be said whether $n will see"
 	elif [ -z "$MANCA" ]; then
-		ok "$n e' in TUTTI i gruppi dei nodi della scheda (${GRUPPI_SCHEDA})"
+		ok "$n is in ALL the groups of the card's nodes (${GRUPPI_SCHEDA})"
 	else
-		ko "⛔⛔ $n NON e' nei gruppi della scheda: $MANCA — la sua sessione NASCERA' CIECA (0 su 4 [M], 27 ago 2026, fase 10 §7.4)"
-		inf "   cura: usermod -aG ${GRUPPI_SCHEDA} $n  &&  loginctl terminate-user $n"
+		ko "⛔⛔ $n is NOT in the card's groups: $MANCA — their session WILL BE BORN BLIND (0 of 4 [M], 27 Aug 2026, phase 10 §7.4)"
+		inf "   cure: usermod -aG ${GRUPPI_SCHEDA} $n  &&  loginctl terminate-user $n"
 	fi
 	if [ "$(loginctl show-user "$n" -p Linger --value 2>/dev/null)" = "yes" ]; then
-		ok "$n ha il linger: il gestore d'utente non rinasce a ogni login"
+		ok "$n has linger: the user manager is not reborn at every login"
 	else
-		ko "$n NON ha il linger: ogni login paghera' 2,6 s di gestore d'utente che nasce"
+		ko "$n does NOT have linger: every login will pay 2.6 s of user manager being born"
 	fi
-	# ⛔ E si guarda che `~/.cache` sia SUA: se e' un collegamento a `/tmp`, il
-	#    profilo del browser finisce in una cartella condivisa che il primo
-	#    utente si prende a modo 0700, e da li' in poi il browser non parte
-	#    piu' per nessun altro.  ⚠ Non basta guardare il collegamento: si prova
-	#    a SCRIVERCI, perche' «scritto non e' in vigore» (E1).
+	# ⛔ And we check that `~/.cache` is THEIRS: if it is a link to `/tmp`, the
+	#    browser profile ends up in a shared folder that the first
+	#    user takes with mode 0700, and from then on the browser no longer starts
+	#    for anyone else.  ⚠ Looking at the link is not enough: we try
+	#    to WRITE into it, because "written is not in force" (E1).
 	if [ -L "/home/$n/.cache" ]; then
-		ko "⛔ $n ha ~/.cache come COLLEGAMENTO a $(readlink "/home/$n/.cache"): il browser non fara' il profilo"
+		ko "⛔ $n has ~/.cache as a LINK to $(readlink "/home/$n/.cache"): the browser will not make its profile"
 	elif su -s /bin/sh -c "mkdir -p /home/$n/.cache/.prova-remotix && rmdir /home/$n/.cache/.prova-remotix" "$n" 2>/dev/null; then
-		ok "$n puo' scrivere nella sua ~/.cache (il profilo del browser ci sta)"
+		ok "$n can write in their ~/.cache (the browser profile fits there)"
 	else
-		ko "⛔ $n NON puo' scrivere nella sua ~/.cache: il browser dira' «Profile Missing»"
+		ko "⛔ $n can NOT write in their ~/.cache: the browser will say «Profile Missing»"
 	fi
 
-	# ⛔⭐⭐ REQUISITI 2 E 3 IN UNA PROVA SOLA, e si FANNO invece di guardarli.
+	# ⛔⭐⭐ REQUIREMENTS 2 AND 3 IN A SINGLE TEST, and they are DONE instead of looked at.
 	#
-	#   Si chiede al caricatore di elencare le librerie del binario **con
-	#   l'uid dell'inquilino e con l'ambiente A ZERO** — che e' esattamente la
-	#   condizione del figlio dopo l'`execve` di `figlio.c`.  ⇒ Una sola riga
-	#   risponde a tutt'e due le domande:
-	#     · il binario non si attraversa (home `0700`) ⇒ «Permission denied»,
-	#       ed e' l'uscita 37 del figlio;
-	#     · una libreria non si trova ⇒ «not found», ed e' l'uscita 127.
-	# ⚠ `LD_TRACE_LOADED_OBJECTS` fa elencare e NON eseguire: non parte nessun
-	#   server, e non si tocca niente di quel che sta girando.
+	#   The loader is asked to list the binary's libraries **with
+	#   the tenant's uid and with the environment AT ZERO** — which is exactly the
+	#   condition of the child after `figlio.c`'s `execve`.  ⇒ A single line
+	#   answers both questions:
+	#     · the binary cannot be traversed (home `0700`) ⇒ «Permission denied»,
+	#       and it is the child's exit 37;
+	#     · a library is not found ⇒ «not found», and it is exit 127.
+	# ⚠ `LD_TRACE_LOADED_OBJECTS` makes it list and NOT execute: no server
+	#   starts, and nothing of what is running is touched.
 	if [ ! -e "$BINARIO" ]; then
-		inf "⚠ $BINARIO non c'e': la prova del caricatore per $n non si puo' fare"
+		inf "⚠ $BINARIO is not there: the loader test for $n cannot be done"
 	else
 		ESCE=$(su -s /bin/sh -c "env -i LD_TRACE_LOADED_OBJECTS=1 '$BINARIO'" "$n" 2>&1)
 		if printf '%s' "$ESCE" | grep -q 'not found'; then
-			ko "⛔⛔ a $n MANCANO delle librerie ($(printf '%s' "$ESCE" | grep -c 'not found')): il figlio uscira' con 127.  ⚠ LD_LIBRARY_PATH NON lo raggiunge: la cura e' /etc/ld.so.conf.d + ldconfig"
+			ko "⛔⛔ $n is MISSING some libraries ($(printf '%s' "$ESCE" | grep -c 'not found')): the child will exit with 127.  ⚠ LD_LIBRARY_PATH does NOT reach it: the cure is /etc/ld.so.conf.d + ldconfig"
 			printf '%s' "$ESCE" | grep 'not found' | sed 's/^/        /'
 		elif printf '%s' "$ESCE" | grep -qi 'permission denied\|cannot execute\|No such file'; then
-			ko "⛔⛔ $n NON puo' eseguire $BINARIO: il figlio uscira' con 37.  ⚠ Guarda i modi delle cartelle sul percorso — una home 0700 ferma tutto"
+			ko "⛔⛔ $n can NOT execute $BINARIO: the child will exit with 37.  ⚠ Look at the modes of the folders on the path — a 0700 home stops everything"
 			printf '%s' "$ESCE" | head -2 | sed 's/^/        /'
 		else
-			ok "$n esegue $BINARIO e ne risolve le librerie con l'ambiente A ZERO (come il figlio)"
+			ok "$n executes $BINARIO and resolves its libraries with the environment AT ZERO (like the child)"
 		fi
 	fi
 done
 
-[ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix c'e'" \
-	|| ko "/etc/pam.d/remotix manca"
-grep -qx root /etc/remotix/utenti-negati 2>/dev/null && ok "root e' negato (/etc/remotix/utenti-negati)" \
-	|| ko "⛔ /etc/remotix/utenti-negati manca o non nega root"
-[ -f /etc/sudoers.d/remotix-banchi ] && ok "i banchi guidano il servizio senza password" \
-	|| ko "⛔ manca /etc/sudoers.d/remotix-banchi: il gancio remoto si fermera' al primo sudo"
-# ⭐ D3 (DECISIONI §10.18): il file e' la pila di sshd, e `pam_systemd` arriva da
-#    `common-session` — si guarda la riga VERA (non un commento), nel file o nella pila inclusa.
+[ -f /etc/pam.d/remotix ] && ok "/etc/pam.d/remotix is there" \
+	|| ko "/etc/pam.d/remotix is missing"
+grep -qx root /etc/remotix/utenti-negati 2>/dev/null && ok "root is denied (/etc/remotix/utenti-negati)" \
+	|| ko "⛔ /etc/remotix/utenti-negati is missing or does not deny root"
+[ -f /etc/sudoers.d/remotix-banchi ] && ok "the benches drive the service without a password" \
+	|| ko "⛔ /etc/sudoers.d/remotix-banchi is missing: the remote hook will stop at the first sudo"
+# ⭐ D3 (DECISIONI §10.18): the file is sshd's stack, and `pam_systemd` comes from
+#    `common-session` — the REAL line is looked at (not a comment), in the file or in the included stack.
 if grep -qE '^[[:space:]]*session.*pam_systemd' /etc/pam.d/remotix 2>/dev/null \
 	|| { grep -qE '^@include[[:space:]]+common-session[[:space:]]*$' /etc/pam.d/remotix 2>/dev/null \
 	     && grep -qE '^[[:space:]]*session.*pam_systemd' /etc/pam.d/common-session 2>/dev/null; }; then
-	ok "e arriva a pam_systemd"
+	ok "and it reaches pam_systemd"
 else
-	ko "⛔ NON arriva a pam_systemd: senza, la sessione logind non nasce e il compositore non parte"
+	ko "⛔ it does NOT reach pam_systemd: without it, the logind session is not born and the compositor does not start"
 fi
 
-[ -f /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules ] && ok "la regola polkit c'e'" \
-	|| ko "la regola polkit manca"
+[ -f /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules ] && ok "the polkit rule is there" \
+	|| ko "the polkit rule is missing"
 grep -q 'multiple-sessions' /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules 2>/dev/null \
-	&& ok "e copre le *-multiple-sessions (il caso multi-utente)" \
-	|| ko "⛔ NON copre le *-multiple-sessions: fallisce proprio col multi-utente"
+	&& ok "and it covers the *-multiple-sessions (the multi-user case)" \
+	|| ko "⛔ it does NOT cover the *-multiple-sessions: it fails precisely with multiple users"
 
 VIG=$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -c '^HandlePowerKey=ignore')
-[ "$VIG" -ge 1 ] && ok "il tasto di accensione e' ignorato" \
-	|| ko "il tasto di accensione spegne ancora la macchina"
+[ "$VIG" -ge 1 ] && ok "the power key is ignored" \
+	|| ko "the power key still switches the machine off"
 
-# ⭐ FASE 17: le tre cartelle della Shell (GNOME ≤ 49, GNOME 50, il modello)
+# ⭐ PHASE 17: the three Shell folders (GNOME ≤ 49, GNOME 50, the template)
 V1=""
 for d in org.gnome.Shell@wayland.service.d org.gnome.Shell@user.service.d \
          org.gnome.Shell@.service.d; do
 	[ -e "/etc/systemd/user/$d/remotix-headless.conf" ] && V1="$V1 $d"
 done
-[ -n "$V1" ] && ko "⛔ c'e' ancora il drop-in di v1 col --virtual-monitor:$V1" \
-	|| ok "nessun drop-in di v1"
+[ -n "$V1" ] && ko "⛔ v1's drop-in with --virtual-monitor is still there:$V1" \
+	|| ok "no v1 drop-in"
 
 echo
 if [ "$ESITO" -eq 0 ]; then
-	echo "⭐ la macchina e' nello stato che il prodotto si aspetta."
+	echo "⭐ the machine is in the state the product expects."
 else
-	echo "⛔ qualcosa non e' a posto: leggi i NO qui sopra."
+	echo "⛔ something is not right: read the NOs above."
 fi
 exit "$ESITO"

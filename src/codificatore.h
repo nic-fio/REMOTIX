@@ -1,192 +1,193 @@
 /*
- * codificatore.h — dal fotogramma catturato ai byte che un browser decodifica.
+ * codificatore.h — from the captured frame to the bytes a browser decodes.
  *
  * ---------------------------------------------------------------------------
- * ⛔ CHE COS'E', E CHE COSA NON E'
+ * ⛔ WHAT IT IS, AND WHAT IT IS NOT
  *
- * E' il terzo anello della fase 2 (`FASI.md` §02-primo-fotogramma): prende i
- * pixel che la cattura consegna e produce **un flusso che F2.4 mette sul filo e
- * F2.5 da' a `VideoDecoder`**.
+ * It is the third link of phase 2 (`FASI.md` §02-primo-fotogramma): it takes
+ * the pixels that capture delivers and produces **a stream that F2.4 puts on
+ * the wire and F2.5 gives to `VideoDecoder`**.
  *
- * ⛔ **In software fino al 13 agosto 2026, e la riga qui sotto era questa:**
- *    *«In software, di proposito.  L'accelerazione e' la fase 8, e metterla
- *    prima significherebbe non sapere quale dei due pezzi sbaglia.»*
+ * ⛔ **In software until 13 Aug 2026, and the line below read:**
+ *    *«In software, on purpose.  Acceleration is phase 8, and putting it
+ *    earlier would mean not knowing which of the two pieces is wrong.»*
  *
- * ⭐⭐ **L'ACCELERAZIONE E' STATA ANTICIPATA DENTRO LA FASE 3, per decisione
- *      dell'utente**, e la ragione e' misurata ai due capi:
+ * ⭐⭐ **ACCELERATION WAS BROUGHT FORWARD INTO PHASE 3, by the user's
+ *      decision**, and the reason is measured at both ends:
  *
- *      il costo   `[M]` 13 agosto 2026, 1920×1080 a 10 bit, 120 fotogrammi,
- *                 tutti a 20 Mbit/s e coi fotogrammi in uscita CONTATI:
- *                 `hevc_vaapi` **3,16-3,24 ms** contro decine di millisecondi
- *                 del ripiego in software sulla scena vera: il codificatore
- *                 in software e' il pezzo grosso del tratto di codifica.
- *      il bersaglio ⛔ e **non e' AV1**: `av1_vaapi` **compare** nell'elenco di
- *                 ffmpeg e all'uso esce **218** — *«No usable encoding profile
- *                 found»*, 3 giri su 3.  `vainfo` da' AV1 in sola decodifica su
- *                 tutti e due i nodi.  ⇒ **restare su AV1 vuol dire restare in
- *                 software per sempre** su questa macchina.
+ *      the cost   `[M]` 13 Aug 2026, 1920×1080 at 10 bits, 120 frames,
+ *                 all at 20 Mbit/s and with the output frames COUNTED:
+ *                 `hevc_vaapi` **3.16-3.24 ms** against tens of milliseconds
+ *                 for the software fallback on the real scene: the software
+ *                 encoder is the big piece of the encoding stretch.
+ *      the target ⛔ and **it is not AV1**: `av1_vaapi` **appears** in
+ *                 ffmpeg's list and on use exits **218** — *«No usable encoding
+ *                 profile found»*, 3 runs out of 3.  `vainfo` gives AV1 as
+ *                 decode-only on both nodes.  ⇒ **staying on AV1 means staying
+ *                 in software forever** on this machine.
  *
- * ⇒ Da qui: **HEVC in hardware c'e' e AV1 no**, ed e' il rovescio esatto della
- *   tabella di `DECISIONI.md` §1.13 qui sotto — che parlava del CLIENT, non del
- *   server.  Le due cose non si contraddicono e vanno lette insieme.
+ * ⇒ From here: **HEVC in hardware is there and AV1 is not**, and it is the exact
+ *   reverse of the table of `DECISIONI.md` §1.13 below — which spoke of the
+ *   CLIENT, not of the server.  The two do not contradict each other and must
+ *   be read together.
  *
- * ⛔ **Quel che NON e' stato anticipato**: la **copia zero** (il fotogramma che
- *    va dalla cattura alla GPU senza passare per la memoria di sistema) resta
- *    alla fase 8.  Qui i pixel si convertono in software e si CARICANO sulla
- *    GPU, e il costo del caricamento si misura a parte — vedi
+ * ⛔ **What was NOT brought forward**: **zero copy** (the frame going from
+ *    capture to the GPU without passing through system memory) stays in
+ *    phase 8.  Here the pixels are converted in software and UPLOADED to the
+ *    GPU, and the cost of the upload is measured separately — see
  *    `us_caricamento` in `CodificatoreFotogramma`.
  *
- * ⭐⭐ **FASE 18 (30 set 2026, `DECISIONI.md` §10.25): la scheda NON passa piu'
- *      da libavcodec.**  `h264_vaapi` e `hevc_vaapi` restano i NOMI della
- *      strada della scheda, ma sotto c'e' `src/vadiretta.c` — libva usata
- *      direttamente, con le intestazioni del flusso scritte da REMOTIX
- *      (`src/scrittore_bit.c`).  Il flusso e' dello stesso tipo di prima:
- *      `[M]` sulla copia zero vecchio e nuovo danno gli stessi byte e lo stesso
- *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  La strada «dalla memoria»
- *      converte in CPU con `src/colori709.c` (BT.709 limitato, come ieri) e
- *      carica i piani NV12/P010: niente libswscale, e ⛔ niente VPP dalla
- *      memoria, che e' misurata peggio.  Nessuna riga del prodotto passa piu' da
- *      ffmpeg.  ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): il ripiego in
- *      SOFTWARE (`src/ripiego.c`: OpenH264, SVT-AV1) e' uscito — *«niente cpu
- *      senza scheda»*, parole dell'utente.  Senza una scheda capace il server
- *      lo dichiara all'avvio e non offre codec.
+ * ⭐⭐ **PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25): the card NO LONGER goes
+ *      through libavcodec.**  `h264_vaapi` and `hevc_vaapi` remain the NAMES of
+ *      the card route, but underneath there is `src/vadiretta.c` — libva used
+ *      directly, with the stream headers written by REMOTIX
+ *      (`src/scrittore_bit.c`).  The stream is of the same kind as before:
+ *      `[M]` on zero copy old and new give the same bytes and the same
+ *      PSNR (`fasi/18-senza-ffmpeg.md` §4).  The «from memory» route
+ *      converts on the CPU with `src/colori709.c` (BT.709 limited, as
+ *      yesterday) and uploads the NV12/P010 planes: no libswscale, and ⛔ no
+ *      VPP from memory, which measured worse.  No line of the product goes
+ *      through ffmpeg any more.  ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md`
+ *      §10.27): the SOFTWARE fallback (`src/ripiego.c`: OpenH264, SVT-AV1) has
+ *      left — *«no cpu without a card»*, the user's words.  Without a capable
+ *      card the server declares it at startup and offers no codec.
  *
- * ⛔ **E questo file NON e' `codificatore.c` di v1 riportato.**  Quello e' un
- *    codificatore H.264/AVC420 per RDP: 889 righe, **77** nominano H.264/AVC,
- *    **47** nominano RDP/FreeRDP, e *HEVC*, *265*, *10 bit* compaiono **zero**
- *    volte (`[M]`, `fasi/rapporti/F2-3-codifica.md` §4.1).  Di quel file
- *    sopravvive **la forma** — il componente chiesto per nome, il divieto di
- *    ripiego silenzioso, il conto dei tempi, il divieto di `GLOBAL_HEADER` — e
- *    quasi nessuna riga.  E' la decisione **D5** di `FASI.md` §02-primo-fotogramma.
+ * ⛔ **And this file is NOT v1's `codificatore.c` brought back.**  That one is
+ *    an H.264/AVC420 encoder for RDP: 889 lines, **77** name H.264/AVC,
+ *    **47** name RDP/FreeRDP, and *HEVC*, *265*, *10 bit* appear **zero**
+ *    times (`[M]`, `fasi/rapporti/F2-3-codifica.md` §4.1).  Of that file
+ *    **the shape** survives — the component asked for by name, the ban on
+ *    silent fallback, the timing account, the ban on `GLOBAL_HEADER` — and
+ *    almost no line.  It is decision **D5** of `FASI.md` §02-primo-fotogramma.
  *
  * ---------------------------------------------------------------------------
- * ⛔⭐ I CODEC SONO DUE, E LO SONO PER DECISIONE DELL'UTENTE
+ * ⛔⭐ THERE ARE TWO CODECS, AND THERE ARE TWO BY THE USER'S DECISION
  *
- * `DECISIONI.md` §1.13, 12 agosto 2026, presa davanti alla misura:
+ * `DECISIONI.md` §1.13, 12 Aug 2026, taken in front of the measurement:
  *
- *     | `[M]` F2.5     | Chrome, GPU | Chrome, senza GPU | Firefox |
+ *     | `[M]` F2.5     | Chrome, GPU | Chrome, no GPU    | Firefox |
  *     |----------------|-------------|-------------------|---------|
- *     | **HEVC Main10**| 8 celle / 8 | ⛔ zero            | ⛔ zero  |
- *     | **AV1 8 e 10** | 8 / 8       | ⭐ 8 / 8           | ⭐ 8 / 8 |
+ *     | **HEVC Main10**| 8 cells / 8 | ⛔ zero            | ⛔ zero  |
+ *     | **AV1 8 and 10**| 8 / 8      | ⭐ 8 / 8           | ⭐ 8 / 8 |
  *
- * ⇒ HEVC **non arriva al pixel su Firefox**, e su Chrome esiste **solo via
- *   VA-API** (con `prefer-software` Chrome dice `Unsupported`).  AV1 dipinge su
- *   tutte e quattro le caselle **anche in software**.
+ * ⇒ HEVC **does not reach the pixel on Firefox**, and on Chrome exists **only
+ *   via VA-API** (with `prefer-software` Chrome says `Unsupported`).  AV1 paints
+ *   in all four boxes **even in software**.
  *
- * ⛔ Da cui: **non si dichiara un requisito** *«serve Chrome con VA-API»*.  Il
- *    codec **si negozia** (`RCP.md` §4.3, capacita' `video.codec`) e **il
- *    ripiego si dichiara** (`CODER.md` §4.2).  L'ordine di preferenza resta
- *    **`hevc,av1`**: HEVC e' ancora il primo, perche' e' quello che il telefono
- *    decodifica in hardware.
+ * ⛔ Hence: **no requirement is declared** *«Chrome with VA-API needed»*.  The
+ *    codec **is negotiated** (`RCP.md` §4.3, capability `video.codec`) and **the
+ *    fallback is declared** (`CODER.md` §4.2).  The order of preference stays
+ *    **`hevc,av1`**: HEVC is still first, because it is the one the phone
+ *    decodes in hardware.
  *
- * ⛔ Il numero che finisce nell'intestazione del fotogramma (`RCP.md` §6.2,
- *    campo `codec`) e' **1 = HEVC, 2 = AV1**, ed e' proprio il valore di
- *    `CodecVideo` qui sotto: un'enumerazione che non coincide col protocollo
- *    obbliga a una tabella di conversione, e una tabella di conversione e' un
- *    posto dove sbagliare in silenzio.
+ * ⛔ The number that ends up in the frame header (`RCP.md` §6.2, field
+ *    `codec`) is **1 = HEVC, 2 = AV1**, and it is exactly the value of
+ *    `CodecVideo` below: an enumeration that does not match the protocol
+ *    forces a conversion table, and a conversion table is a place to go
+ *    wrong silently.
  *
  * ---------------------------------------------------------------------------
- * ⛔ LA FORMA DEI BYTE, CHE E' UNA DECISIONE E NON UN DETTAGLIO
+ * ⛔ THE SHAPE OF THE BYTES, WHICH IS A DECISION AND NOT A DETAIL
  *
- * Decisione **D1** (`FASI.md` §02-primo-fotogramma, quattro ragioni lette in
- * `F2-3-codifica.md` §3.2): **Annex-B puro, e NESSUNA `description`**.
+ * Decision **D1** (`FASI.md` §02-primo-fotogramma, four reasons read in
+ * `F2-3-codifica.md` §3.2): **pure Annex-B, and NO `description`**.
  *
  *     [00 00 00 01] VPS (32)
- *     [00 00 00 01] SPS (33)      ← profilo 2 = Main10, bit_depth = 10
+ *     [00 00 00 01] SPS (33)      ← profile 2 = Main10, bit_depth = 10
  *     [00 00 00 01] PPS (34)
  *     [00 00 01]    PREFIX_SEI (39)
- *     [00 00 01]    IDR_N_LP (20) ← il primo fotogramma e' SEMPRE una chiave
+ *     [00 00 01]    IDR_N_LP (20) ← the first frame is ALWAYS a keyframe
  *
- * ⛔ In concreto, e in questo file: **non si accende mai
- *    `AV_CODEC_FLAG_GLOBAL_HEADER`** — e non ci si fida di non averlo acceso:
- *    `codificatore_nuovo()` **verifica** che sia spento dopo l'apertura, e
- *    `codificatore_comprimi()` verifica **sui byte** che i parameter set siano
- *    davanti a ogni chiave.  E' lo stesso divieto che v1 aveva gia' pagato
- *    (`fondamenta/remotix-c/src/codificatore.c:268-272`, *«su RDP i parametri di
- *    sequenza devono viaggiare NEL flusso, davanti all'IDR»*): li' la ragione
- *    era RDP, qui e' `VideoDecoder`, e il **sintomo e' identico** — schermo nero
- *    con i fotogrammi che arrivano.
+ * ⛔ In practice, and in this file: **`AV_CODEC_FLAG_GLOBAL_HEADER` is never
+ *    turned on** — and we do not trust ourselves not to have turned it on:
+ *    `codificatore_nuovo()` **checks** that it is off after opening, and
+ *    `codificatore_comprimi()` checks **on the bytes** that the parameter sets
+ *    are in front of every keyframe.  It is the same ban v1 had already paid
+ *    for (`fondamenta/remotix-c/src/codificatore.c:268-272`, *«on RDP the
+ *    sequence parameters must travel IN the stream, in front of the IDR»*):
+ *    there the reason was RDP, here it is `VideoDecoder`, and the **symptom is
+ *    identical** — black screen with the frames arriving.
  *
- * ⚠ Per **AV1** non si pone: non esiste un `hvcC`, e le unita' temporali di OBU
- *   si spediscono cosi' come sono (`DECISIONI.md` §1.13: *«nessuna
- *   description: una cucitura in meno»*).  Quel che si verifica e' l'analogo:
- *   la **sequence header OBU** davanti a ogni fotogramma chiave.
- *
- * ---------------------------------------------------------------------------
- * ⚠ E LA COSA CHE VA DETTA PRIMA DI TUTTO IL RESTO: OTTO BIT, NON DIECI
- *
- * `[M]` 12 agosto 2026, F2.2: **Mutter consegna solo BGRx/BGRA**, cioe' **8 bit
- * per canale** (255/256/255 livelli distinti, multipli di 4 a 0,259/0,259/0,249
- * — otto bit veri, tutti e otto).
- *
- * ⇒ ⛔ **Main10 da questa strada sono otto bit PROMOSSI a dieci**, e l'etichetta
- *   del flusso continua a dire «10 bit» per tutta la catena — che e' esattamente
- *   il guasto **F2.3-A** che il banco riproduce.  `SPECIFICHE.md` §3.1 mette i
- *   10 bit nel **desiderato**, e da questa sorgente **non e' raggiungibile**.
- *
- * ⛔ Da cui `confessione.promozione_8_a_10`: la promozione **si dichiara**, e
- *    finisce nel registro alla prima codifica.  `DECISIONI.md` §2.7 riga 2 —
- *    *«un ripiego silenzioso resta vietato anche quando la colpa non e'
- *    nostra»*.  Un codificatore che tacesse produrrebbe due misure sotto la
- *    stessa etichetta, che e' la forma **E2** di `REVIEWER.md` §2.
+ * ⚠ For **AV1** the question does not arise: there is no `hvcC`, and the OBU
+ *   temporal units are sent as they are (`DECISIONI.md` §1.13: *«no
+ *   description: one seam less»*).  What is checked is the analogue:
+ *   the **sequence header OBU** in front of every keyframe.
  *
  * ---------------------------------------------------------------------------
- * ⛔ E2 — IL COMPONENTE CHE DECIDE DA SE': SI CHIEDE PER NOME, E SI VERIFICA
+ * ⚠ AND THE THING TO SAY BEFORE ALL THE REST: EIGHT BITS, NOT TEN
  *
- * `CODER.md` §3.9.  E la riga che v1 aveva scritto dopo averlo pagato
+ * `[M]` 12 Aug 2026, F2.2: **Mutter delivers only BGRx/BGRA**, that is **8 bits
+ * per channel** (255/256/255 distinct levels, multiples of 4 at 0.259/0.259/0.249
+ * — eight real bits, all eight).
+ *
+ * ⇒ ⛔ **Main10 from this route is eight bits PROMOTED to ten**, and the stream's
+ *   label keeps saying «10 bit» along the whole chain — which is exactly the
+ *   fault **F2.3-A** that the bench reproduces.  `SPECIFICHE.md` §3.1 puts
+ *   10 bits in the **desired**, and from this source it **cannot be reached**.
+ *
+ * ⛔ Hence `confessione.promozione_8_a_10`: the promotion **is declared**, and
+ *    ends up in the log at the first encode.  `DECISIONI.md` §2.7 line 2 —
+ *    *«a silent fallback remains forbidden even when the fault is not
+ *    ours»*.  An encoder that kept quiet would produce two measurements under
+ *    the same label, which is form **E2** of `REVIEWER.md` §2.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ E2 — THE COMPONENT THAT DECIDES BY ITSELF: ASK FOR IT BY NAME, AND VERIFY
+ *
+ * `CODER.md` §3.9.  And the line v1 had written after paying for it
  * (`fondamenta/remotix-c/src/codificatore.c:550-566`):
  *
- *     ⛔ *«CHIESTO PER NOME, NESSUN RIPIEGO.  Chi indica un codificatore sta
- *        misurando: ripiegare su un altro darebbe due misure diverse con la
- *        stessa etichetta, che e' peggio di non misurare.»*
+ *     ⛔ *«ASKED FOR BY NAME, NO FALLBACK.  Whoever names an encoder is
+ *        measuring: falling back on another would give two different
+ *        measurements with the same label, which is worse than not measuring.»*
  *
- * Qui la regola vale **due volte**, perche' i modi di disobbedire misurati il
- * 12 agosto 2026 sono due e nessuno dei due grida:
+ * Here the rule counts **twice**, because the ways of disobeying measured on
+ * 12 Aug 2026 are two and neither of them shouts:
  *
- *   ⛔ `-c:v hevc` invece di `libx265` lascia scegliere a libavcodec, che ha
- *      cinque codificatori HEVC in canna — e quattro sono in hardware, cioe'
- *      la fase 8 entrata di soppiatto nella fase 2;
- *   ⛔ `[M]` **libsvtav1 ignora un'opzione che non conosce e continua**:
- *      `-svtav1-params pippo=1` stampa *«Error parsing option»* ed **esce 0**.
- *      Un'opzione chiesta e non applicata ha lo stesso aspetto di un'opzione
- *      applicata.
+ *   ⛔ `-c:v hevc` instead of `libx265` lets libavcodec choose, and it has
+ *      five HEVC encoders loaded — and four are in hardware, that is
+ *      phase 8 sneaking into phase 2;
+ *   ⛔ `[M]` **libsvtav1 ignores an option it does not know and carries on**:
+ *      `-svtav1-params pippo=1` prints *«Error parsing option»* and **exits 0**.
+ *      An option asked for and not applied looks the same as an option
+ *      applied.
  *
- * ⇒ Da cui i **due testimoni** di `codificatore_confessione()`, e il secondo non
- *   dipende dal primo:
+ * ⇒ Hence the **two witnesses** of `codificatore_confessione()`, and the second
+ *   does not depend on the first:
  *
- *     il contesto  quel che il codificatore dice di aver aperto (nome del
- *                  componente, formato dei pixel, profilo, fotogrammi B)
- *     ⭐ I BYTE     quel che c'e' scritto **nel flusso**: l'SPS di HEVC e la
- *                  sequence header OBU di AV1 si leggono e si confrontano con
- *                  quel che si era chiesto.  Non e' una deduzione: e' il
- *                  prodotto che si rilegge.
+ *     the context  what the encoder says it opened (component name, pixel
+ *                  format, profile, B frames)
+ *     ⭐ THE BYTES  what is written **in the stream**: the HEVC SPS and the
+ *                  AV1 sequence header OBU are read and compared with what
+ *                  was asked for.  It is not a deduction: it is the product
+ *                  reading itself back.
  *
- * ⭐ E dai byte esce anche **il livello**, che serve e non si indovina:
- *    `RCP.md` §4.3 dice che il server **DEVE** emettere un flusso di livello non
- *    superiore a quello dichiarato dal client, e ⛔ `[M]` F2.5 ha misurato che
- *    **il browser non lo controlla** (Chrome accetta `L30` su un flusso di
- *    livello 3.0 e dipinge lo stesso) ⇒ decisione **D4**: *il controllo del
- *    livello sta dal lato server*.  Qui.
+ * ⭐ And from the bytes also comes **the level**, which is needed and is not
+ *    guessed: `RCP.md` §4.3 says the server **MUST** emit a stream of a level
+ *    no higher than the one declared by the client, and ⛔ `[M]` F2.5 measured
+ *    that **the browser does not check it** (Chrome accepts `L30` on a level
+ *    3.0 stream and paints anyway) ⇒ decision **D4**: *the level check
+ *    belongs on the server side*.  Here.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL RITARDO, E I DUE DEFAULT CHE NESSUNO AVEVA CHIESTO
+ * ⛔ LATENCY, AND THE TWO DEFAULTS NOBODY HAD ASKED FOR
  *
- * `SPECIFICHE.md` §3.2: **50 ms di tetto**, e `CODER.md` §1-bis — *«il ritardo
- * pesa piu' dei fotogrammi»*.  `[M]` 12 agosto 2026, letti nella confessione dei
- * due codificatori:
+ * `SPECIFICHE.md` §3.2: **50 ms ceiling**, and `CODER.md` §1-bis — *«latency
+ * weighs more than frames»*.  `[M]` 12 Aug 2026, read in the confession of the
+ * two encoders:
  *
- *     x265        `bframes=4` e `open-gop`   — nessuno li aveva chiesti
- *     SVT-AV1     `pred struct: random access` — idem
+ *     x265        `bframes=4` and `open-gop`   — nobody had asked for them
+ *     SVT-AV1     `pred struct: random access` — likewise
  *
- * Tutti e due comprano compressione **vendendo risposta**: un fotogramma che
- * aspetta il successivo e' un fotogramma di ritardo in piu'.  ⛔ Vanno
- * **decisi, non ereditati** — e qui si decide `bframes=0`, `open-gop=0`,
- * `pred-struct=1`, con la ragione accanto a ciascuno in `codificatore.c`.
+ * Both buy compression **by selling responsiveness**: a frame that waits for
+ * the next one is one more frame of latency.  ⛔ They must be **decided, not
+ * inherited** — and here `bframes=0`, `open-gop=0`, `pred-struct=1` are
+ * decided, with the reason next to each in `codificatore.c`.
  *
- * ⭐ E la verifica non e' l'opzione: e' **`dts == pts` su ogni pacchetto**.  Un
- *    codificatore che riordina lo dichiara li', qualunque cosa abbia fatto delle
- *    opzioni che gli abbiamo passato — ed e' un testimone che vale identico per
- *    tutt'e due i codec.
+ * ⭐ And the check is not the option: it is **`dts == pts` on every packet**.
+ *    An encoder that reorders declares it there, whatever it did with the
+ *    options we passed it — and it is a witness that holds identically for
+ *    both codecs.
  */
 #ifndef REMOTIX_CODIFICATORE_H
 #define REMOTIX_CODIFICATORE_H
@@ -195,544 +196,547 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* ⛔ I valori sono quelli di `RCP.md` §6.2, campo `codec`: non si convertono. */
+/* ⛔ The values are those of `RCP.md` §6.2, field `codec`: they are not converted. */
 typedef enum {
 	CODIFICATORE_HEVC = 1,
 	CODIFICATORE_AV1 = 2,
-	/* ⭐⭐ H.264 — entrato il 20 agosto 2026, `DECISIONI.md` §1.13-ter.
+	/* ⭐⭐ H.264 — came in on 20 Aug 2026, `DECISIONI.md` §1.13-ter.
 	 *
-	 * ⛔ E il numero 3 SI AGGIUNGE, non si riusa: il 2 resta AV1 per sempre,
-	 *    perche' un client vecchio che dicesse «2» e ricevesse H.264 non se ne
-	 *    accorgerebbe — dipingerebbe spazzatura senza un errore.
+	 * ⛔ And the number 3 IS ADDED, not reused: 2 stays AV1 forever,
+	 *    because an old client that said «2» and received H.264 would not
+	 *    notice — it would paint garbage without an error.
 	 *
-	 * La ragione, ed e' dell'utente: **Firefox per Android non ha ne' HEVC ne'
-	 * AV1**, quindi per quel browser il prodotto non esisteva.  E la misura
-	 * dice il resto: H.264 e' l'unico codec in HARDWARE ai due capi — 3,11 ms
-	 * sul server (il piu' veloce dei quattro) e in hardware sul tablet. */
+	 * The reason, and it is the user's: **Firefox for Android has neither HEVC
+	 * nor AV1**, so for that browser the product did not exist.  And the
+	 * measurement says the rest: H.264 is the only codec in HARDWARE at both
+	 * ends — 3.11 ms on the server (the fastest of the four) and in hardware
+	 * on the tablet. */
 	CODIFICATORE_H264 = 3,
 } CodecVideo;
 
 /*
- * Il formato dei pixel in ingresso.
+ * The input pixel format.
  *
- * ⚠ Sono due perche' i due ingressi VERI del progetto sono due, e non per
- *   generalita': `BGRX` e' quel che consegna la cattura di GNOME (F2.2, `[M]`
- *   BGRx a 8 bit, stride 7680 letto dal manifesto), `YUV420P10LE` e' quel che
- *   consegna il banco — un'immagine nota gia' in YCbCr, che permette di misurare
- *   il codificatore **senza** misurare insieme la conversione di colore.
+ * ⚠ There are two because the project's REAL inputs are two, and not for
+ *   generality: `BGRX` is what GNOME's capture delivers (F2.2, `[M]`
+ *   8-bit BGRx, stride 7680 read from the manifest), `YUV420P10LE` is what
+ *   the bench delivers — a known image already in YCbCr, which allows
+ *   measuring the encoder **without** measuring the colour conversion too.
  */
 typedef enum {
-	CODIFICATORE_PIXEL_BGRX,        /* 4 byte per pixel, B G R x */
-	CODIFICATORE_PIXEL_YUV420P10LE, /* tre piani, 2 byte per campione */
+	CODIFICATORE_PIXEL_BGRX,        /* 4 bytes per pixel, B G R x */
+	CODIFICATORE_PIXEL_YUV420P10LE, /* three planes, 2 bytes per sample */
 	/*
-	 * ⭐ FASE 13 — il terzo ingresso vero: **R G B x**, quel che consegna
-	 *    labwc (`[M]` 21 set 2026: `XBGR8888`, l'unico formato offerto).
+	 * ⭐ PHASE 13 — the third real input: **R G B x**, what labwc delivers
+	 *    (`[M]` 21 Sep 2026: `XBGR8888`, the only format offered).
 	 *
-	 * ⛔⛔ E STA IN CODA APPOSTA, e non è generalità: è la cura di un difetto
-	 *     trovato dal revisore avversario.  La prima stesura credeva di poter
-	 *     SCEGLIERE fra i formati offerti; ma l'evento `buffer` di screencopy
-	 *     arriva **una volta sola** per fotogramma, e labwc offre soltanto
-	 *     `R G B x`.  ⇒ Senza questo valore il codificatore leggeva quei byte
-	 *     come `B G R x` e l'utente vedeva **il rosso e il blu scambiati**, senza
-	 *     un errore da nessuna parte.
-	 * ⭐ E non costa niente: la conversione verso il formato del codificatore
-	 *   c'è comunque, e cambia solo come si legge la sorgente.
+	 * ⛔⛔ AND IT IS AT THE END ON PURPOSE, and it is not generality: it is the
+	 *     cure for a defect found by the adversarial reviewer.  The first draft
+	 *     believed it could CHOOSE among the offered formats; but screencopy's
+	 *     `buffer` event arrives **only once** per frame, and labwc offers only
+	 *     `R G B x`.  ⇒ Without this value the encoder read those bytes as
+	 *     `B G R x` and the user saw **red and blue swapped**, without an
+	 *     error anywhere.
+	 * ⭐ And it costs nothing: the conversion to the encoder's format is
+	 *   there anyway, and only how the source is read changes.
 	 */
-	CODIFICATORE_PIXEL_RGBX         /* 4 byte per pixel, R G B x */
+	CODIFICATORE_PIXEL_RGBX         /* 4 bytes per pixel, R G B x */
 } FormatoPixel;
 
-/* Un ingresso di un piano solo, quattro byte per pixel, a intervallo PIENO:
- * è la domanda che il codificatore faceva a `== BGRX`, e che da quando c'è
- * RGBX ha DUE risposte vere.  ⛔ Chiederla con `== BGRX` in un posto solo
- * vorrebbe dire trattare RGBX come se fosse YUV — cioè un'immagine rotta. */
+/* A single-plane input, four bytes per pixel, in FULL range: it is the
+ * question the encoder used to ask with `== BGRX`, and which since RGBX exists
+ * has TWO true answers.  ⛔ Asking it with `== BGRX` in even one place
+ * would mean treating RGBX as if it were YUV — that is, a broken image. */
 #define FORMATO_PIXEL_IMPACCHETTATO(f) \
 	((f) == CODIFICATORE_PIXEL_BGRX || (f) == CODIFICATORE_PIXEL_RGBX)
 
 /*
- * Come si chiede la qualita'.
+ * How quality is asked for.
  *
- * ⛔ `LOSSLESS` non e' un vezzo: e' l'unico regime in cui i **10 bit veri** si
- *    distinguono dai 10 bit dichiarati.  A un bitrate realistico HEVC distrugge
- *    una rampa a 1 LSB **per costruzione**, e un conteggio basso non
- *    distinguerebbe *«la catena e' a 8 bit»* da *«il bitrate era basso»*: due
- *    diagnosi opposte sotto la stessa etichetta (`F2-3-codifica.md` §2.4).
+ * ⛔ `LOSSLESS` is not a whim: it is the only regime in which **real 10 bits**
+ *    can be told apart from declared 10 bits.  At a realistic bitrate HEVC
+ *    destroys a 1 LSB ramp **by construction**, and a low count would not
+ *    distinguish *«the chain is 8-bit»* from *«the bitrate was low»*: two
+ *    opposite diagnoses under the same label (`F2-3-codifica.md` §2.4).
  */
 typedef enum {
-	CODIFICATORE_QUALITA_LOSSLESS, /* ⚠ HEVC si'; AV1 vedi la nota in .c */
-	CODIFICATORE_QUALITA_CRF,      /* qualita' costante, `valore` = CRF */
+	CODIFICATORE_QUALITA_LOSSLESS, /* ⚠ HEVC yes; AV1 see the note in .c */
+	CODIFICATORE_QUALITA_CRF,      /* constant quality, `valore` = CRF */
 	/*
-	 * ⛔⭐ QP COSTANTE — ed e' un modo A PARTE, non «CRF sull'hardware».
+	 * ⛔⭐ CONSTANT QP — and it is a SEPARATE mode, not «CRF on hardware».
 	 *
-	 * `[M]` 13 agosto 2026: `hevc_vaapi` **non ha** un'opzione `crf`; ha `qp`
-	 * (`rc_mode=CQP`).  CRF e QP non sono la stessa grandezza — CRF e' una
-	 * qualita' costante *percepita*, con il quantizzatore che si muove; QP e'
-	 * il quantizzatore, fermo.  ⛔ Tradurre «CRF 20» in «QP 20» e chiamarla
-	 * ancora CRF sarebbe due misure sotto la stessa etichetta, cioe' la forma
-	 * E2 (`CODER.md` §3.9): si chiede QP, e si scrive QP.
+	 * `[M]` 13 Aug 2026: `hevc_vaapi` **has no** `crf` option; it has `qp`
+	 * (`rc_mode=CQP`).  CRF and QP are not the same quantity — CRF is a
+	 * constant *perceived* quality, with the quantiser moving; QP is the
+	 * quantiser, fixed.  ⛔ Translating «CRF 20» into «QP 20» and still
+	 * calling it CRF would be two measurements under the same label, that is
+	 * form E2 (`CODER.md` §3.9): QP is asked for, and QP is written.
 	 */
 	CODIFICATORE_QUALITA_QP,
 } ModoQualita;
 
 /*
- * ⛔⭐ LA POTENZA DELL'ENTRYPOINT — TRE ESITI, NON DUE.
+ * ⛔⭐ THE ENTRYPOINT POWER — THREE OUTCOMES, NOT TWO.
  *
- * `EncSliceLP` e' la codifica «a bassa potenza»: veloce, ma con limiti suoi di
- * qualita' e di funzioni, e **non e' equivalente** alla piena.  ⛔ Da cui: non
- * si eredita il difetto di `libavcodec` (`low_power=false`) e non si indovina.
- * Chi apre un codificatore in hardware **dichiara quale delle due vuole**, e
- * `NON_DICHIARATA` — che e' lo zero, cioe' quel che si ottiene senza scriverlo
- * — **fallisce dicendolo**.
+ * `EncSliceLP` is «low power» encoding: fast, but with its own limits on
+ * quality and features, and it **is not equivalent** to full power.  ⛔ Hence:
+ * `libavcodec`'s default (`low_power=false`) is not inherited and not guessed.
+ * Whoever opens a hardware encoder **declares which of the two it wants**, and
+ * `NON_DICHIARATA` — which is zero, that is what you get without writing it —
+ * **fails saying so**.
  *
- * ⚠ E la ragione per cui i tre esiti servono e' misurata: sulla macchina di
- *   prova i due nodi di rendering NON hanno lo stesso entrypoint (`[M]` 13
- *   agosto 2026 — vedi `nodo_rendering` qui sotto), quindi «bassa potenza» e
- *   «piena» non sono una preferenza: sono due macchine diverse.
+ * ⚠ And the reason the three outcomes are needed is measured: on the test
+ *   machine the two render nodes do NOT have the same entrypoint (`[M]`
+ *   13 Aug 2026 — see `nodo_rendering` below), so «low power» and «full» are
+ *   not a preference: they are two different machines.
  */
 /*
- * ⭐ `LA_DICHIARATA` (fase 16, campagna Radeon) e' la terza domanda, e non e'
- *    «fai tu»: e' **una regola scritta** — *`EncSliceLP` se il driver lo
- *    DICHIARA per quel profilo, se no `EncSlice` piena se il driver dichiara
- *    quella, se no si fallisce* (e chi chiama scende sul ripiego in software,
- *    dicendolo).  ⛔ La scelta si fa sulla CAPACITA' letta con
- *    `vaQueryConfigEntrypoints`, non sul nome della scheda ne' su una
- *    variabile d'ambiente (`niente eccezioni per scheda`): sull'Intel iHD c'e'
- *    `EncSliceLP` e il risultato e' identico a `BASSA`; sulla RX 6800
- *    (radeonsi) `[M]` 13 agosto 2026 c'e' solo `EncSlice`, e senza questa
- *    regola la sessione codificava in SOFTWARE.
- * ⚠ E il ripiego sull'altro entrypoint qui NON e' silenzioso: quale dei due e'
- *   stato preso, e perche', lo scrive `codificatore.c` nel registro, e
- *   `codificatore_nome()` porta l'entrypoint EFFETTIVO dentro il nome.
- *   `BASSA` e `PIENA` restano rigide, per i banchi che confrontano le due.
+ * ⭐ `LA_DICHIARATA` (phase 16, Radeon campaign) is the third question, and it
+ *    is not «you decide»: it is **a written rule** — *`EncSliceLP` if the
+ *    driver DECLARES it for that profile, otherwise full `EncSlice` if the
+ *    driver declares that, otherwise fail* (and the caller drops to the
+ *    software fallback, saying so).  ⛔ The choice is made on the CAPABILITY
+ *    read with `vaQueryConfigEntrypoints`, not on the card's name nor on an
+ *    environment variable (`no exceptions per card`): on Intel iHD there is
+ *    `EncSliceLP` and the result is identical to `BASSA`; on the RX 6800
+ *    (radeonsi) `[M]` 13 Aug 2026 there is only `EncSlice`, and without this
+ *    rule the session encoded in SOFTWARE.
+ * ⚠ And the fallback to the other entrypoint here is NOT silent: which of the
+ *   two was taken, and why, is written by `codificatore.c` to the log, and
+ *   `codificatore_nome()` carries the ACTUAL entrypoint inside the name.
+ *   `BASSA` and `PIENA` stay rigid, for the benches that compare the two.
  */
 typedef enum {
 	CODIFICATORE_POTENZA_NON_DICHIARATA = 0,
 	CODIFICATORE_POTENZA_PIENA,  /* VAEntrypointEncSlice   */
 	CODIFICATORE_POTENZA_BASSA,  /* VAEntrypointEncSliceLP */
-	CODIFICATORE_POTENZA_LA_DICHIARATA, /* LP se il driver lo dichiara, se no piena */
+	CODIFICATORE_POTENZA_LA_DICHIARATA, /* LP if the driver declares it, otherwise full */
 } PotenzaEntrypoint;
 
 typedef struct {
 	CodecVideo codec;
 	/*
-	 * ⛔ Il componente si chiede PER NOME e non si ripiega.
-	 * ⛔ Fase 19: solo i nomi della scheda; NULL o un altro nome e
-	 *    `codificatore_nuovo()` rifiuta dicendolo — il ripiego in software
-	 *    (OpenH264, SVT-AV1) e' uscito.  ⭐ E i nomi sono SEI, due per strada
-	 *    piu' due «per capacita'» (1 ott 2026, `DECISIONI.md` §10.27):
+	 * ⛔ The component is asked for BY NAME and there is no fallback.
+	 * ⛔ Phase 19: only the card names; NULL or another name and
+	 *    `codificatore_nuovo()` refuses saying so — the software fallback
+	 *    (OpenH264, SVT-AV1) has left.  ⭐ And the names are SIX, two per route
+	 *    plus two «by capability» (1 Oct 2026, `DECISIONI.md` §10.27):
 	 *
-	 *      `h264_scheda`  `hevc_scheda`   LA STRADA SI SCEGLIE PER CAPACITA':
-	 *                                     Vulkan Video se la scheda lo offre
-	 *                                     per quel codec (`vulkanvideo_capacita`),
-	 *                                     se no VA-API — e' quel che il prodotto
-	 *                                     chiede;
-	 *      `h264_vulkan`  `hevc_vulkan`   Vulkan Video, e basta: se non c'e' si
-	 *                                     fallisce dicendolo (banchi, diagnosi,
-	 *                                     `--codifica vulkan`);
-	 *      `h264_vaapi`   `hevc_vaapi`    VA-API (`vadiretta.c`), e basta
-	 *                                     (`--codifica vaapi`, e i banchi 18/19
-	 *                                     che misurano QUELLA strada).
+	 *      `h264_scheda`  `hevc_scheda`   THE ROUTE IS CHOSEN BY CAPABILITY:
+	 *                                     Vulkan Video if the card offers it
+	 *                                     for that codec (`vulkanvideo_capacita`),
+	 *                                     otherwise VA-API — it is what the
+	 *                                     product asks for;
+	 *      `h264_vulkan`  `hevc_vulkan`   Vulkan Video, and nothing else: if it
+	 *                                     is not there, fail saying so (benches,
+	 *                                     diagnosis, `--codifica vulkan`);
+	 *      `h264_vaapi`   `hevc_vaapi`    VA-API (`vadiretta.c`), and nothing else
+	 *                                     (`--codifica vaapi`, and benches 18/19
+	 *                                     that measure THAT route).
 	 *
-	 *    ⛔ La strada scelta finisce nella confessione (`strada`) e nel nome
-	 *       del componente aperto (`componente`), non nel nome chiesto: chi
-	 *       chiede `h264_scheda` rilegge `h264_vulkan` o `h264_vaapi`.
+	 *    ⛔ The chosen route ends up in the confession (`strada`) and in the name
+	 *       of the opened component (`componente`), not in the requested name:
+	 *       whoever asks for `h264_scheda` reads back `h264_vulkan` or `h264_vaapi`.
 	 */
 	const char *componente;
 	/*
-	 * ⛔⭐ IL NODO DI RENDERING — si stabilisce e si DICHIARA, non si indovina.
+	 * ⛔⭐ THE RENDER NODE — it is established and DECLARED, not guessed.
 	 *
-	 * Serve solo quando `componente` e' un codificatore in hardware
-	 * (`h264_vaapi` / `hevc_vaapi`).  ⛔ `NULL` non vuol dire «quello buono»:
-	 * vuol dire **fallisci dicendolo**.
+	 * Needed only when `componente` is a hardware encoder
+	 * (`h264_vaapi` / `hevc_vaapi`).  ⛔ `NULL` does not mean «the good one»:
+	 * it means **fail saying so**.
 	 *
-	 * ⚠ E la ragione per cui non si puo' indovinare e' `[M]` 13 agosto 2026
-	 *   sulla macchina di prova, ed e' piu' grossa di «due nodi uguali»:
+	 * ⚠ And the reason it cannot be guessed is `[M]` 13 Aug 2026 on the test
+	 *   machine, and it is bigger than «two equal nodes»:
 	 *
 	 *     /dev/dri/renderD128   0000:00:02.0  i915   Intel (8086:4680)
-	 *                           driver VA: Intel iHD 25.2.3
+	 *                           VA driver: Intel iHD 25.2.3
 	 *                           VAProfileHEVCMain10 : VAEntrypointEncSliceLP
 	 *     /dev/dri/renderD129   0000:03:00.0  amdgpu AMD Radeon RX 6800 (navi21)
-	 *                           driver VA: Mesa Gallium 25.0.7 (radeonsi)
+	 *                           VA driver: Mesa Gallium 25.0.7 (radeonsi)
 	 *                           VAProfileHEVCMain10 : VAEntrypointEncSlice
 	 *
-	 *   ⇒ Sono **due fornitori diversi** e **due entrypoint diversi**.  Un
-	 *     numero preso sull'uno non vale per l'altro, e un codice che aprisse
-	 *     «il primo che c'e'» misurerebbe una macchina a caso.
+	 *   ⇒ They are **two different vendors** and **two different entrypoints**.
+	 *     A number taken on one does not hold for the other, and code that
+	 *     opened «the first one around» would measure a random machine.
 	 */
 	const char *nodo_rendering;
-	/* ⛔ Vedi `PotenzaEntrypoint`: lo zero fallisce, e lo fa apposta. */
+	/* ⛔ See `PotenzaEntrypoint`: zero fails, and it does so on purpose. */
 	PotenzaEntrypoint potenza;
 	uint32_t larghezza, altezza;
 	uint32_t fotogrammi_al_secondo;
 	ModoQualita modo;
-	int qualita;                 /* CRF (software) o QP (hardware) */
-	int profondita;              /* 8 o 10 — quel che si CHIEDE al codificatore */
+	int qualita;                 /* CRF (software) or QP (hardware) */
+	int profondita;              /* 8 or 10 — what is ASKED of the encoder */
 	/*
-	 * ⛔⭐⭐ IL TETTO DI LIVELLO DI `RCP.md` §4.3 (riga 701), IN DECIMI:
-	 *      `5.1` ⇒ **51**.  `0` = nessun tetto, il componente sceglie.
+	 * ⛔⭐⭐ THE LEVEL CEILING OF `RCP.md` §4.3 (line 701), IN TENTHS:
+	 *      `5.1` ⇒ **51**.  `0` = no ceiling, the component chooses.
 	 *
-	 * ⛔ E si CHIEDE invece di scoprirlo dopo: `[M]` 23 agosto 2026, tela
-	 *    3840x2160, H.264 — il client dichiarava `video.livello=5.1` e questo
-	 *    modulo produceva un flusso di livello **5.2**, perche' nessuno gli
-	 *    aveva mai detto qual era il tetto.  §4.3 e' un DEVE, e il sintomo di
-	 *    un livello sforato non e' un errore: e' il decodificatore del browser
-	 *    che rifiuta la configurazione.
+	 * ⛔ And it is ASKED FOR instead of discovered afterwards: `[M]` 23 Aug 2026,
+	 *    canvas 3840x2160, H.264 — the client declared `video.livello=5.1` and
+	 *    this module produced a level **5.2** stream, because nobody had ever
+	 *    told it what the ceiling was.  §4.3 is a MUST, and the symptom of an
+	 *    exceeded level is not an error: it is the browser's decoder refusing
+	 *    the configuration.
 	 *
-	 * ⚠ La traduzione nell'alfabeto di ciascun codec sta in `livello_imposto()`
-	 *   e in nessun altro posto: H.264 usa i decimi tali e quali (`level_idc`),
-	 *   HEVC li triplica (`general_level_idc`).  ⛔ E l'obbedienza NON si
-	 *   presume: si rilegge in `livello_flusso` dai byte dell'SPS.
+	 * ⚠ The translation into each codec's alphabet lives in `livello_imposto()`
+	 *   and nowhere else: H.264 uses the tenths as they are (`level_idc`),
+	 *   HEVC triples them (`general_level_idc`).  ⛔ And obedience is NOT
+	 *   presumed: it is read back in `livello_flusso` from the SPS bytes.
 	 */
 	int livello_x10;
 	FormatoPixel formato;
 	/*
-	 * Chiavi periodiche ogni N fotogrammi; **0 = solo su richiesta**.
-	 * ⚠ Lo zero e' la scelta della fase 2 e la ragione sta in `RCP.md` §5.2:
-	 *   le chiavi si chiedono (`RICHIEDI_CHIAVE`), e mandarne a orologio su una
-	 *   linea cattiva e' *«la spirale»* che quel paragrafo vieta.  Il punto di
-	 *   lavoro e' della fase 9.
+	 * Periodic keyframes every N frames; **0 = on request only**.
+	 * ⚠ Zero is the choice of phase 2 and the reason is in `RCP.md` §5.2:
+	 *   keyframes are requested (`RICHIEDI_CHIAVE`), and sending them by the
+	 *   clock on a bad line is *«the spiral»* that paragraph forbids.  The
+	 *   operating point belongs to phase 9.
 	 */
 	uint32_t chiavi_ogni;
 } CodificatoreRichiesta;
 
 /*
- * ⭐ LA CONFESSIONE — quel che il codificatore ha fatto DAVVERO.
+ * ⭐ THE CONFESSION — what the encoder REALLY did.
  *
- * ⛔ I campi `*_flusso` sono letti **dai byte prodotti**, non dagli argomenti
- *    che gli abbiamo passato: sono il secondo testimone di E2, e sono l'unico
- *    che sopravvive a un componente che ignora un'opzione senza dirlo.
+ * ⛔ The `*_flusso` fields are read **from the bytes produced**, not from the
+ *    arguments we passed it: they are the second witness of E2, and the only
+ *    one that survives a component that ignores an option without saying so.
  */
 typedef struct {
 	CodecVideo codec;
-	const char *componente;       /* il nome del componente aperto davvero */
-	bool ha_obbedito;             /* ⛔ falso ⇒ non si spedisce niente */
-	char perche_no[256];          /* la ragione, quando non ha obbedito */
+	const char *componente;       /* the name of the component really opened */
+	bool ha_obbedito;             /* ⛔ false ⇒ nothing is sent */
+	char perche_no[256];          /* the reason, when it did not obey */
 
-	/* dal contesto */
+	/* from the context */
 	int profondita_chiesta;
 	int fotogrammi_b;
-	bool global_header;           /* ⛔ deve essere falso, sempre */
+	bool global_header;           /* ⛔ must be false, always */
 
-	/* ⭐ dai BYTE del flusso */
+	/* ⭐ from the stream's BYTES */
 	bool letto_dal_flusso;
-	int profondita_flusso;        /* bit per campione, dall'SPS / seq header */
+	int profondita_flusso;        /* bits per sample, from the SPS / seq header */
 	int profilo_flusso;           /* HEVC: profile_idc · AV1: seq_profile */
 	int livello_flusso;           /* HEVC: general_level_idc · AV1: seq_level_idx */
 	bool tier_alto;               /* HEVC: general_tier_flag · AV1: seq_tier */
 	uint32_t larghezza_flusso, altezza_flusso;
 	/*
-	 * ⭐ Quel che il flusso CODIFICA, che non e' sempre quel che MOSTRA.
-	 * ⛔ `[M]` 13 agosto 2026: `hevc_vaapi` su AMD (radeonsi, navi21) codifica
-	 *    1920×**1088** e ritaglia a 1080 con la finestra di conformita'; su Intel
-	 *    (iHD) codifica 1080 tondi.  Le due grandezze si tengono separate perche'
-	 *    la seconda e' quella che il decodificatore mostra e la prima e' quella
-	 *    che costa banda — e per un giorno intero il lettore di SPS ha confuso
-	 *    l'una con l'altra e rifiutava OGNI fotogramma di quella scheda.
+	 * ⭐ What the stream ENCODES, which is not always what it SHOWS.
+	 * ⛔ `[M]` 13 Aug 2026: `hevc_vaapi` on AMD (radeonsi, navi21) encodes
+	 *    1920×**1088** and crops to 1080 with the conformance window; on Intel
+	 *    (iHD) it encodes a round 1080.  The two sizes are kept separate because
+	 *    the second is the one the decoder shows and the first is the one that
+	 *    costs bandwidth — and for a whole day the SPS reader confused one with
+	 *    the other and refused EVERY frame from that card.
 	 */
 	uint32_t larghezza_codificata, altezza_codificata;
 	int croma_flusso;             /* 1 = 4:2:0 */
 	/*
-	 * La stringa che il browser passa al decodificatore: `hev1.2.4.L93.B0` /
+	 * The string the browser passes to the decoder: `hev1.2.4.L93.B0` /
 	 * `avc1.640033` / `av01.0.04M.10`.
 	 *
-	 * ⛔⭐ E SOTTO H.264 QUESTO CAMPO E' RESTATO VUOTO fino al 23 agosto 2026:
-	 *     `leggi_sps_hevc()` e `leggi_sps_av1()` la componevano, `leggi_sps_
-	 *     h264()` no — leggeva profilo e livello e non li scriveva mai insieme.
-	 *     ⚠ Il registro diceva *«stringa per il decodificatore «»»* e nessuno
-	 *     ci leggeva un difetto, perche' una stringa vuota assomiglia a un
-	 *     campo che non serve.  ⛔ Serve: e' l'unico posto in cui il SERVER
-	 *     dichiara che cosa il client dovrebbe passare a `configure()`, ed e'
-	 *     il testimone che dice se la pagina e il flusso vanno d'accordo.
+	 * ⛔⭐ AND UNDER H.264 THIS FIELD STAYED EMPTY until 23 Aug 2026:
+	 *     `leggi_sps_hevc()` and `leggi_sps_av1()` composed it, `leggi_sps_
+	 *     h264()` did not — it read profile and level and never wrote them together.
+	 *     ⚠ The log said *«string for the decoder «»»* and nobody
+	 *     read a defect in it, because an empty string looks like a field that
+	 *     is not needed.  ⛔ It is needed: it is the only place where the SERVER
+	 *     declares what the client should pass to `configure()`, and it is
+	 *     the witness that says whether the page and the stream agree.
 	 */
 	char stringa_codec[64];       /* `hev1.2.4.L93.B0` / `avc1.640033` */
 
-	/* ⚠ la promozione, dichiarata invece che subita */
+	/* ⚠ the promotion, declared instead of suffered */
 	bool promozione_8_a_10;
 
 	/* ───────────────────────────────────────────────────────────────────────
-	 * ⭐ L'HARDWARE, E SI DICHIARA ACCANTO AL NUMERO — non «in fondo al
-	 *    rapporto».  Un ritmo di 3 ms senza queste cinque righe accanto e' un
-	 *    numero che vale per una macchina che non si sa quale sia.
+	 * ⭐ THE HARDWARE, AND IT IS DECLARED NEXT TO THE NUMBER — not «at the end
+	 *    of the report».  A 3 ms rate without these five lines next to it is a
+	 *    number that holds for a machine nobody knows.
 	 */
-	bool in_hardware;             /* la scheda (vadiretta o vulkanvideo), non il ripiego */
-	char nodo[64];                /* il nodo CHIESTO, es. /dev/dri/renderD128 */
+	bool in_hardware;             /* the card (vadiretta or vulkanvideo), not the fallback */
+	char nodo[64];                /* the REQUESTED node, e.g. /dev/dri/renderD128 */
 	/*
-	 * ⭐ FASE 19 — LA STRADA che ha risposto: `vaapi` (`vadiretta.c`) o
-	 *    `vulkan` (`vulkanvideo.c`).  Si sceglie per CAPACITA' all'apertura
-	 *    (`h264_scheda`/`hevc_scheda`) o per nome, e qui si legge quale delle
-	 *    due si e' aperta davvero.  ⚠ `modi_bitrate` sotto e' nell'alfabeto
-	 *    della strada: `VA_RC_*` per vaapi, `VULKANVIDEO_RC_*` per vulkan.
+	 * ⭐ PHASE 19 — THE ROUTE that answered: `vaapi` (`vadiretta.c`) or
+	 *    `vulkan` (`vulkanvideo.c`).  It is chosen by CAPABILITY at opening
+	 *    (`h264_scheda`/`hevc_scheda`) or by name, and here one reads which of
+	 *    the two really opened.  ⚠ `modi_bitrate` below is in the route's
+	 *    alphabet: `VA_RC_*` for vaapi, `VULKANVIDEO_RC_*` for vulkan.
 	 */
 	char strada[16];
 	/*
-	 * ⭐ Il fornitore che ha RISPOSTO, chiesto a `vaQueryVendorString()` sul
-	 *    display aperto — non dedotto dal nome del nodo.  E' il testimone che
-	 *    dice se «renderD128» e' l'Intel che si credeva o un'altra scheda: sulla
-	 *    macchina di prova i due nodi sono di due fornitori diversi `[M]`.
-	 *    ⭐ Sulla strada Vulkan e' `deviceName` + `driverName`/`driverInfo`
-	 *    della scheda scelta DAL NODO (`VK_EXT_physical_device_drm`).
+	 * ⭐ The vendor that ANSWERED, asked of `vaQueryVendorString()` on the
+	 *    opened display — not deduced from the node name.  It is the witness
+	 *    that says whether «renderD128» is the Intel one believed or another
+	 *    card: on the test machine the two nodes are from two different vendors `[M]`.
+	 *    ⭐ On the Vulkan route it is `deviceName` + `driverName`/`driverInfo`
+	 *    of the card chosen BY THE NODE (`VK_EXT_physical_device_drm`).
 	 */
 	char fornitore_va[256];
 	/*
-	 * ⛔ L'entrypoint: `false` = piena (`VAEntrypointEncSlice`), `true` = bassa
-	 *    potenza (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` dice
-	 *    che la coppia (profilo, entrypoint) e' stata **letta dal driver** con
-	 *    `vaQueryConfigEntrypoints`, non solo chiesta a libavcodec: senza quel
-	 *    controllo «gliel'ho chiesto» e «l'ha fatto» hanno lo stesso aspetto.
-	 *    ⚠ Sulla strada Vulkan l'entrypoint NON ESISTE: tutt'e due restano
-	 *    `false`, e il falso di `bassa_potenza_verificata` li' vuol dire «non
-	 *    c'e' la domanda», non «non ho guardato».
+	 * ⛔ The entrypoint: `false` = full (`VAEntrypointEncSlice`), `true` = low
+	 *    power (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` says
+	 *    that the (profile, entrypoint) pair was **read from the driver** with
+	 *    `vaQueryConfigEntrypoints`, not just asked of libavcodec: without that
+	 *    check «I asked for it» and «it did it» look the same.
+	 *    ⚠ On the Vulkan route the entrypoint DOES NOT EXIST: both stay
+	 *    `false`, and a false `bassa_potenza_verificata` there means «the
+	 *    question does not exist», not «I did not look».
 	 */
 	bool bassa_potenza;
 	bool bassa_potenza_verificata;
 	/*
-	 * ⭐ La misura massima che il DRIVER dichiara per (profilo, entrypoint),
-	 *    letta con `vaGetConfigAttributes` prima di aprire.
+	 * ⭐ The maximum size the DRIVER declares for (profile, entrypoint),
+	 *    read with `vaGetConfigAttributes` before opening.
 	 *
-	 * ⛔ Serve perche' il limite NON e' lo stesso fra i codec: `[M]` 22 agosto
-	 *    2026 `h264_vaapi` su `EncSliceLP` accetta **32-4096 px per lato**
-	 *    (4096x2160 si', 4112x2160 no), mentre `hevc_vaapi` regge 16384x4320 —
-	 *    e la tela legale di `RCP.md` §4.5 arrivava a **7680x4320**.  ⇒ Oltre i
-	 *    4096 px H.264 su quella scheda non c'era.  ⭐ Dal 1 ottobre 2026 la tela
-	 *    si ferma a **4096x2304** (decisione dell'utente) e il caso non nasce
-	 *    piu' dal protocollo; il controllo resta, perche' il tetto e' del
-	 *    DRIVER e un'altra scheda puo' dichiararne uno piu' basso.
+	 * ⛔ It is needed because the limit is NOT the same across codecs: `[M]` 22 Aug
+	 *    2026 `h264_vaapi` on `EncSliceLP` accepts **32-4096 px per side**
+	 *    (4096x2160 yes, 4112x2160 no), while `hevc_vaapi` handles 16384x4320 —
+	 *    and the legal canvas of `RCP.md` §4.5 went up to **7680x4320**.  ⇒ Beyond
+	 *    4096 px H.264 on that card was not there.  ⭐ Since 1 Oct 2026 the canvas
+	 *    stops at **4096x2304** (the user's decision) and the case no longer
+	 *    arises from the protocol; the check stays, because the ceiling is the
+	 *    DRIVER's and another card may declare a lower one.
 	 *
-	 * ⚠ `misura_massima_letta == false` vuol dire **«non l'ho saputa
-	 *   chiedere»**, che NON e' «non c'e' un limite»: i due valori allora non
-	 *   vogliono dire niente e non si leggono (`LEZIONI.md` §1.9).
+	 * ⚠ `misura_massima_letta == false` means **«I could not ask for it»**,
+	 *   which is NOT «there is no limit»: the two values then mean nothing and
+	 *   are not read (`LEZIONI.md` §1.9).
 	 */
 	uint32_t misura_massima_l, misura_massima_a;
 	bool misura_massima_letta;
 	/*
-	 * ⛔ Quanti fotogrammi il codificatore in hardware ha il PERMESSO di tenere
-	 *    in canna: `async_depth`.  ⚠ `[M]` 13 agosto 2026 il difetto di
-	 *    `hevc_vaapi` e' **2**, e nessuno l'aveva chiesto — e' lo stesso difetto
-	 *    non chiesto di `bframes=4` su x265, in un'altra veste.  Si legge
-	 *    RILEGGENDO l'opzione dopo l'apertura.
+	 * ⛔ How many frames the hardware encoder is ALLOWED to hold in the
+	 *    pipeline: `async_depth`.  ⚠ `[M]` 13 Aug 2026 the default of
+	 *    `hevc_vaapi` is **2**, and nobody had asked for it — it is the same
+	 *    unrequested default as `bframes=4` on x265, in another guise.  It is
+	 *    read by READING BACK the option after opening.
 	 */
 	int profondita_asincrona;
 
 	/*
-	 * ⭐⭐ IL CONTROLLO DEL BITRATE — e sono DUE testimoni su tre, perche' il
-	 *     terzo non e' un campo: sono i byte che escono (riga «banda del video»
-	 *     nel registro, ogni 10 s).
+	 * ⭐⭐ BITRATE CONTROL — and these are TWO witnesses out of three, because
+	 *     the third is not a field: it is the bytes that come out (the
+	 *     «video bandwidth» line in the log, every 10 s).
 	 *
-	 * ⛔ Perche' ce ne vogliono tre lo dice **R31**, la lezione piu' cara del
-	 *    progetto: in v1 i primi due sarebbero stati **verdi tutti e due** —
-	 *    `bit_rate` e `rc_max_rate` erano esattamente i numeri chiesti, e nessuno
-	 *    aveva chiesto CBR.  Il CBR era **il nome che il driver dava a quella
-	 *    coppia di numeri**, e a dirlo fu solo la bolletta.
+	 * ⛔ Why three are needed is told by **R31**, the project's most expensive
+	 *    lesson: in v1 the first two would have been **both green** —
+	 *    `bit_rate` and `rc_max_rate` were exactly the numbers asked for, and
+	 *    nobody had asked for CBR.  CBR was **the name the driver gave that
+	 *    pair of numbers**, and only the bill said so.
 	 *
-	 * `modi_bitrate` e' la maschera `VA_RC_*` **dichiarata dal driver** per la
-	 * coppia (profilo, entrypoint), letta con `vaGetConfigAttributes` **prima**
-	 * di aprire.  ⚠ `modi_bitrate_letti == false` vuol dire **«non l'ho saputo
-	 * chiedere»** oppure **«il driver non lo dichiara»**, che NON e' «c'e' solo
-	 * il CQP»: e' esattamente la deduzione che libavcodec fa in silenzio
-	 * (*«assuming CQP only»*) e che non si copia (`LEZIONI.md` §1.9).
+	 * `modi_bitrate` is the `VA_RC_*` mask **declared by the driver** for the
+	 * (profile, entrypoint) pair, read with `vaGetConfigAttributes` **before**
+	 * opening.  ⚠ `modi_bitrate_letti == false` means **«I could not ask for
+	 * it»** or **«the driver does not declare it»**, which is NOT «there is
+	 * only CQP»: it is exactly the deduction libavcodec makes silently
+	 * (*«assuming CQP only»*) and that is not copied (`LEZIONI.md` §1.9).
 	 *
-	 * ⚠ `banda_*` valgono solo col tetto acceso; a tetto spento sono zeri, e lo
-	 *   zero li' vuol dire **«non chiesto»**, non «nessun limite».
+	 * ⚠ `banda_*` hold only with the ceiling on; with the ceiling off they are
+	 *   zeros, and zero there means **«not asked for»**, not «no limit».
 	 */
 	uint32_t modi_bitrate;
 	bool modi_bitrate_letti;
-	int modo_bitrate;             /* `rc_mode` RILETTO: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
-	int64_t banda_punto;          /* `bit_rate`, bit/s — il punto di lavoro */
-	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ MAI uguale al punto */
-	int banda_serbatoio;          /* `rc_buffer_size`, in **bit** */
+	int modo_bitrate;             /* `rc_mode` READ BACK: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
+	int64_t banda_punto;          /* `bit_rate`, bit/s — the operating point */
+	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ NEVER equal to the point */
+	int banda_serbatoio;          /* `rc_buffer_size`, in **bits** */
 	/*
-	 * ⛔ Lo stesso serbatoio in MILLISECONDI, ed e' questo il numero che
-	 *    `CODER.md` §1-bis giudica: in bit non si vede che v1 ne aveva
-	 *    **cinquecento** (`rc_buffer_size = bit_rate/2` non e' «meta'», e' mezzo
-	 *    secondo) contro un tetto di **50** per tutto il pezzo nostro.
+	 * ⛔ The same buffer in MILLISECONDS, and this is the number that
+	 *    `CODER.md` §1-bis judges: in bits one does not see that v1 had
+	 *    **five hundred** (`rc_buffer_size = bit_rate/2` is not «half», it is
+	 *    half a second) against a ceiling of **50** for the whole of our piece.
 	 */
 	uint32_t banda_serbatoio_ms;
 
-	/* ⚠ il ritardo, misurato invece che dedotto */
-	bool riordina;                /* un pacchetto con dts != pts */
-	uint32_t fotogrammi_in_volo;  /* quanti ne ha trattenuti prima del primo */
+	/* ⚠ latency, measured instead of deduced */
+	bool riordina;                /* a packet with dts != pts */
+	uint32_t fotogrammi_in_volo;  /* how many it held back before the first */
 } CodificatoreConfessione;
 
-/* Un fotogramma pronto da spedire.  I byte appartengono al codificatore fino a
+/* A frame ready to send.  The bytes belong to the encoder until
  * `codificatore_rilascia()`. */
 typedef struct {
 	const uint8_t *dati;
 	size_t byte;
-	bool chiave;                  /* `RCP.md` §6.2: 0x0301 chiave, 0x0302 delta */
-	uint64_t us_conversione;      /* ⭐ i tre tempi separati: senza, «il ritmo e' */
-	uint64_t us_codifica;         /*    calato» non si attribuisce a niente */
+	bool chiave;                  /* `RCP.md` §6.2: 0x0301 keyframe, 0x0302 delta */
+	uint64_t us_conversione;      /* ⭐ the three times kept apart: without them, */
+	uint64_t us_codifica;         /*    «the rate dropped» cannot be pinned on anything */
 	/*
-	 * ⭐ IL QUARTO TEMPO, e nasce con l'hardware: quanto costa PORTARE il
-	 *    fotogramma dalla memoria di sistema alla GPU (`vadiretta_carica_*`).  ⛔ Sta separato di proposito: e' esattamente il tratto che la
-	 *    **copia zero** della fase 8 esiste per togliere, e sommarlo alla
-	 *    codifica renderebbe invisibile quanto vale quel lavoro.  ⚠ In software
-	 *    e' sempre 0, e lo zero li' vuol dire «non c'e' questo tratto», non
-	 *    «e' gratis».
+	 * ⭐ THE FOURTH TIME, and it is born with the hardware: how much it costs to
+	 *    BRING the frame from system memory to the GPU (`vadiretta_carica_*`).
+	 *    ⛔ It is kept separate on purpose: it is exactly the stretch that
+	 *    phase 8's **zero copy** exists to remove, and adding it to the
+	 *    encoding would make invisible how much that work is worth.  ⚠ In
+	 *    software it is always 0, and zero there means «this stretch is not
+	 *    there», not «it is free».
 	 */
 	uint64_t us_caricamento;
-	uint32_t ricodifiche;         /* ⛔ >0 ⇒ il tetto dei 16 MiB ha morso */
-	bool trattenuto;              /* ⚠ il codificatore non l'ha consegnato subito */
+	uint32_t ricodifiche;         /* ⛔ >0 ⇒ the 16 MiB ceiling has bitten */
+	bool trattenuto;              /* ⚠ the encoder did not deliver it at once */
 } CodificatoreFotogramma;
 
 typedef struct Codificatore Codificatore;
 
 /*
- * Apre il codificatore, o **fallisce dicendo perche'**.
+ * Opens the encoder, or **fails saying why**.
  *
- * ⛔ Non ripiega mai: ne' su un altro componente, ne' su un altro profilo, ne'
- *    su 8 bit.  Un ripiego silenzioso darebbe due misure sotto la stessa
- *    etichetta (`CODER.md` §3.9, §4.2 seconda meta').
+ * ⛔ It never falls back: not to another component, not to another profile,
+ *    not to 8 bits.  A silent fallback would give two measurements under the
+ *    same label (`CODER.md` §3.9, §4.2 second half).
  */
 Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
                                  char *errore, size_t errore_byte);
 void codificatore_libera(Codificatore *cod);
 
-/* Per il registro: «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, bassa
- * potenza)».  ⛔ Il nodo e la potenza stanno DENTRO il nome, non a fianco: e'
- * la riga che finisce nel registro accanto a ogni numero. */
+/* For the log: «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, low
+ * power)».  ⛔ The node and the power are INSIDE the name, not beside it: it
+ * is the line that ends up in the log next to every number. */
 const char *codificatore_nome(const Codificatore *cod);
 
-/* ⭐ FASE 19: la strada aperta davvero — "vaapi" o "vulkan" (vedi
- *    `CodificatoreConfessione.strada`); "" su NULL. */
+/* ⭐ PHASE 19: the route really opened — "vaapi" or "vulkan" (see
+ *    `CodificatoreConfessione.strada`); "" on NULL. */
 const char *codificatore_strada(const Codificatore *cod);
 
-/* ⭐ FASE 19: la strada «scheda» su questo nodo sara' Vulkan?  Vero se Vulkan
- *    Video codifica H.264 o HEVC sul nodo (`vulkanvideo_capacita`), cioe' se
- *    `h264_scheda`/`hevc_scheda` ci aprirebbero Vulkan.  ⚠ E' la risposta di
- *    PRIMA dell'apertura: una richiesta che Vulkan non sa servire (misura,
- *    bitrate) ripiega lo stesso su VA-API.  Serve a chi deve prepararsi prima
- *    del codificatore (le lastre di `wlroots.c`). */
+/* ⭐ PHASE 19: will the «card» route on this node be Vulkan?  True if Vulkan
+ *    Video encodes H.264 or HEVC on the node (`vulkanvideo_capacita`), that is
+ *    if `h264_scheda`/`hevc_scheda` would open Vulkan there.  ⚠ It is the answer
+ *    from BEFORE opening: a request Vulkan cannot serve (size, bitrate) falls
+ *    back to VA-API anyway.  It serves whoever must get ready before the
+ *    encoder (the slabs of `wlroots.c`). */
 bool codificatore_vulkan_sul_nodo(const char *nodo);
 
-/* ⛔ FASE 19 (1 ott 2026, `DECISIONI.md` §10.27): qui c'erano
- *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` e
- *    `codificatore_software_rimedio()` — il ripiego in software (OpenH264,
- *    SVT-AV1) e la riga del pacchetto da installare.  Sono usciti con lui:
- *    senza una scheda capace REMOTIX non codifica, e lo dichiara. */
+/* ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27): here there were
+ *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` and
+ *    `codificatore_software_rimedio()` — the software fallback (OpenH264,
+ *    SVT-AV1) and the line with the package to install.  They left with it:
+ *    without a capable card REMOTIX does not encode, and declares it. */
 
-/* ⭐ Vale dopo il primo `codificatore_comprimi()` per i campi letti dai byte. */
+/* ⭐ Valid after the first `codificatore_comprimi()` for the fields read from the bytes. */
 const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);
 
 /*
- * Comprime un fotogramma.
+ * Compresses a frame.
  *
- * `pixel` e `passo` sono quel che consegna la cattura: ⛔ il passo si passa, non
- * si calcola come `larghezza × 4` — F2.2 lo legge dal manifesto di PipeWire e
- * dice di fare altrettanto anche quando oggi coincide.
+ * `pixel` and `passo` are what capture delivers: ⛔ the stride is passed, not
+ * computed as `larghezza × 4` — F2.2 reads it from the PipeWire manifest and
+ * says to do the same even when today it coincides.
  *
- * Restituisce `false` e non consegna niente se il codificatore non ha obbedito,
- * se il fotogramma supera i 16 MiB anche dopo le ricodifiche (`RCP.md` §6.2), o
- * se la forma dei byte non e' quella promessa a F2.5.
+ * Returns `false` and delivers nothing if the encoder did not obey, if the
+ * frame exceeds 16 MiB even after the re-encodes (`RCP.md` §6.2), or if the
+ * shape of the bytes is not the one promised to F2.5.
  */
 bool codificatore_comprimi(Codificatore *cod, const uint8_t *pixel, uint32_t passo,
                            CodificatoreFotogramma *fuori);
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⭐⭐⭐ LA COPIA ZERO — il fotogramma che sulla GPU ci stava GIA'
+ * ⭐⭐⭐ ZERO COPY — the frame that was ALREADY on the GPU
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * ⛔ IL FATTO CHE LA FA NASCERE, `[M]` 22 agosto 2026 (agente C), dentro il
- *    prodotto, dieci voci in fila, resto 0,02 ms su 2 450 fotogrammi:
+ * ⛔ THE FACT THAT GAVE BIRTH TO IT, `[M]` 22 Aug 2026 (agent C), inside the
+ *    product, ten items in a row, remainder 0.02 ms over 2 450 frames:
  *
- *      la copia (`memcpy` nel posto)        1,65 ms
- *      la conversione (`sws_scale`)         8,15 ms
- *      il caricamento (memoria → GPU)       1,16 ms
+ *      the copy (`memcpy` into the slot)    1.65 ms
+ *      the conversion (`sws_scale`)         8.15 ms
+ *      the upload (memory → GPU)            1.16 ms
  *      ────────────────────────────────────────────
- *                                          10,96 ms su 18,86 — il 58 % del tratto
+ *                                          10.96 ms of 18.86 — 58 % of the stretch
  *
- *    ⇒ Il fotogramma **usciva dalla GPU, si convertiva in CPU e risaliva sulla
- *      GPU**.  Da questa strada non esce mai.
+ *    ⇒ The frame **left the GPU, was converted on the CPU and went back up to
+ *      the GPU**.  On this route it never leaves.
  *
- * ⛔⛔ E QUEL 10,96 E' UN BUDGET, NON UNA PROMESSA — la lezione la ha pagata C
- *      lo stesso giorno: ha tolto 7,28 ms e ne ha guadagnati 2,33, perche'
- *      `sws_scale` si e' ripreso 3,84 ms che la scansione dei pixel gli
- *      **scaldava in cache**.  ⇒ In questo tratto **le voci non sono
- *      indipendenti**, e i tratti tolti non si sommano.  Chi legge questa
- *      intestazione non sottragga: misuri.
+ * ⛔⛔ AND THAT 10.96 IS A BUDGET, NOT A PROMISE — C paid for the lesson
+ *      the same day: removed 7.28 ms and gained 2.33, because `sws_scale`
+ *      took back 3.84 ms that the pixel scan used to **warm up in cache**
+ *      for it.  ⇒ In this stretch **the items are not independent**, and the
+ *      removed stretches do not add up.  Whoever reads this header must not
+ *      subtract: measure.
  *
- * ⚠ E NON E' «zero lavoro»: e' **zero copie in memoria di sistema**.  La
- *   conversione da RGB a NV12 la fa la GPU (VA-API VPP), e il suo costo finisce
- *   in `us_conversione` come prima — cambia chi la fa, non il fatto che vada
- *   fatta.  ⛔ `us_caricamento` invece resta **0**, e li' lo zero vuol dire
- *   «questo tratto NON C'E' PIU'», non «e' gratis».
+ * ⚠ AND IT IS NOT «zero work»: it is **zero copies in system memory**.  The
+ *   conversion from RGB to NV12 is done by the GPU (VA-API VPP), and its cost
+ *   ends up in `us_conversione` as before — who does it changes, not the fact
+ *   that it must be done.  ⛔ `us_caricamento` instead stays **0**, and there
+ *   zero means «this stretch IS NO LONGER THERE», not «it is free».
  */
 typedef struct {
-	/* ⛔ Il descrittore non e' nostro e non si chiude: lo possiede il
-	 *    produttore, e chi lo chiudesse toglierebbe l'immagine a se stesso. */
+	/* ⛔ The descriptor is not ours and is not closed: the producer owns it,
+	 *    and whoever closed it would take the image away from itself. */
 	int fd;
 	uint32_t offset;
-	uint32_t stride;              /* ⛔ LETTO dal chunk, mai `larghezza × 4` */
+	uint32_t stride;              /* ⛔ READ from the chunk, never `larghezza × 4` */
 	uint32_t larghezza, altezza;
 	uint32_t formato_drm;         /* `DRM_FORMAT_XRGB8888` … */
 	uint64_t modificatore;
 	/*
-	 * ⛔ La GENERAZIONE dei buffer del produttore.  ⚠ Serve **qui** e non
-	 *    altrove: l'importazione di un `fd` in VA-API costa, quindi si mette in
-	 *    cache — e una cache sui soli numeri di descrittore darebbe
-	 *    un'immagine vecchia dopo ogni rinegoziazione, perche' i numeri di
-	 *    descrittore si riciclano.  Quando questo cambia, la cache si butta.
+	 * ⛔ The GENERATION of the producer's buffers.  ⚠ It is needed **here** and
+	 *    not elsewhere: importing an `fd` into VA-API costs, so it is cached —
+	 *    and a cache on descriptor numbers alone would give a stale image
+	 *    after every renegotiation, because descriptor numbers are recycled.
+	 *    When this changes, the cache is thrown away.
 	 */
 	uint64_t generazione;
 } CodificatoreSuperficie;
 
 /*
- * Comprime un fotogramma che sta GIA' sulla scheda.
+ * Compresses a frame that is ALREADY on the card.
  *
- * ⛔ Vale **solo** in hardware: in software non ci sono pixel da leggere, e
- *    questa chiamata fallisce dicendolo invece di produrre un'immagine vuota.
- *    Chi chiama guarda `codificatore_in_hardware()` **prima** di chiedere la
- *    strada della scheda al produttore.
+ * ⛔ It holds **only** in hardware: in software there are no pixels to read,
+ *    and this call fails saying so instead of producing an empty image.
+ *    The caller checks `codificatore_in_hardware()` **before** asking the
+ *    producer for the card route.
  *
- * ⛔⛔ E IL DESCRITTORE DEVE RESTARE VALIDO PER TUTTA LA CHIAMATA, non un
- *      microsecondo di meno: quando questa funzione torna, la GPU ha **finito**
- *      di leggere (c'e' una sincronizzazione esplicita dentro), e solo allora
- *      chi ha catturato puo' rendere il buffer al produttore.  ⚠ Rilasciarlo
- *      prima e' precisamente il difetto di `LEZIONI.md` §8: due schermate che si
- *      alternano, e nessun errore.
+ * ⛔⛔ AND THE DESCRIPTOR MUST STAY VALID FOR THE WHOLE CALL, not a
+ *      microsecond less: when this function returns, the GPU has **finished**
+ *      reading (there is an explicit synchronisation inside), and only then
+ *      can whoever captured return the buffer to the producer.  ⚠ Releasing
+ *      it earlier is precisely the defect of `LEZIONI.md` §8: two screens
+ *      alternating, and no error.
  */
 bool codificatore_comprimi_scheda(Codificatore *cod, const CodificatoreSuperficie *superficie,
                                   CodificatoreFotogramma *fuori);
 
-/* ⛔ «E' in hardware?» — la risposta viene da `componente_e_hardware()`, cioe'
- *    da quel che il COMPONENTE dichiara di accettare (una superficie, non dei
- *    pixel).  ⚠ Non dal nome, e non da «ha aperto un render node»
- *    (`LEZIONI.md` §1.11).  Chi sceglie la strada della cattura la chiede qui. */
+/* ⛔ «Is it in hardware?» — the answer comes from `componente_e_hardware()`,
+ *    that is from what the COMPONENT declares it accepts (a surface, not
+ *    pixels).  ⚠ Not from the name, and not from «it opened a render node»
+ *    (`LEZIONI.md` §1.11).  Whoever chooses the capture route asks here. */
 bool codificatore_in_hardware(const Codificatore *cod);
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * ⛔⛔⛔ IL PASSO DEL DMA-BUF DEVE ESSERE MULTIPLO DI 64 — e senza questa
- *       guardia il difetto NON DA' NESSUN ERRORE: da' un desktop **sfocato e
- *       stirato di sbieco**, e i millisecondi restano bellissimi.
+ * ⛔⛔⛔ THE DMA-BUF STRIDE MUST BE A MULTIPLE OF 64 — and without this
+ *       guard the defect GIVES NO ERROR: it gives a **blurred desktop sheared
+ *       sideways**, and the milliseconds stay beautiful.
  *
- * ⭐⭐ IL FATTO, `[M]` 22 agosto 2026, quattro misure scelte apposta dalle due
- *     parti della soglia, lette col LETTORE CERTIFICATO della marca
- *     (`banchi/03-marca.py`, controllo negativo 0 falsi su 3 000):
+ * ⭐⭐ THE FACT, `[M]` 22 Aug 2026, four sizes chosen on purpose on both
+ *     sides of the threshold, read with the mark's CERTIFIED READER
+ *     (`banchi/03-marca.py`, negative control 0 false out of 3 000):
  *
- *       | tela      | passo | passo % 64 | la marca si legge? | contrasto |
+ *       | canvas    | stride| stride %64| is the mark read?  | contrast  |
  *       |-----------|-------|-----------|--------------------|-----------|
- *       | 1920x1080 |  7680 |     0     | ⭐ SI (disegno 65)  |   1,000   |
- *       | 1552x888  |  6208 |     0     | ⭐ SI (disegno 70)  |   1,000   |
- *       | 1544x888  |  6176 |    32     | ⛔ NO               |   0,617   |
- *       | 1560x888  |  6240 |    32     | ⛔ NO               |   0,510   |
+ *       | 1920x1080 |  7680 |     0     | ⭐ YES (pattern 65) |   1.000   |
+ *       | 1552x888  |  6208 |     0     | ⭐ YES (pattern 70) |   1.000   |
+ *       | 1544x888  |  6176 |    32     | ⛔ NO               |   0.617   |
+ *       | 1560x888  |  6240 |    32     | ⛔ NO               |   0.510   |
  *
- *     ⭐ 1552 e 1544 distano OTTO pixel e danno verdetti opposti: non e' una
- *        soglia scelta dopo aver visto il risultato, e' un confine al pixel.
+ *     ⭐ 1552 and 1544 are EIGHT pixels apart and give opposite verdicts: it is
+ *        not a threshold chosen after seeing the result, it is a boundary to
+ *        the pixel.
  *
- * `[R]` Il driver iHD, importando un DMA-BUF, **non onora un passo che non sia
- *       multiplo di 64 byte**: legge le righe a un passo suo, e l'immagine esce
- *       inclinata di qualche pixel per riga.
+ * `[R]` The iHD driver, importing a DMA-BUF, **does not honour a stride that is
+ *       not a multiple of 64 bytes**: it reads the rows at a stride of its own,
+ *       and the image comes out slanted by a few pixels per row.
  *
- * ⛔ E IL COLORE NON LO VEDE: `[M]` le statistiche per canale dei due flussi
- *    combaciavano entro **0,17 livelli su 255** mentre la marca non si leggeva
- *    su **0 fotogrammi di 869**.  ⇒ Uno strumento che guarda le medie dice
- *    verde su questo difetto.  Il numero da guardare e' la STRUTTURA.
+ * ⛔ AND COLOUR DOES NOT SEE IT: `[M]` the per-channel statistics of the two
+ *    streams matched within **0.17 levels out of 255** while the mark was read
+ *    on **0 frames out of 869**.  ⇒ A tool that looks at averages says
+ *    green on this defect.  The number to look at is the STRUCTURE.
  *
- * ⚠ E la cura NON e' nostra da fare fino in fondo: il passo lo decide il
- *   produttore, e il produttore lo fa uguale a `larghezza × 4` `[M]` (4 misure
- *   su 4, modificatore LINEAR).  ⇒ Una tela multipla di 16 avrebbe sempre il
- *   passo buono, ma la regola della tela vive in `rcp_misura_ammessa()`, che
- *   non e' di questo file.  Qui si **rifiuta la strada e si dichiara**, che e'
- *   quel che `LEZIONI.md` §1.8 pretende: meglio la copia che un'immagine
- *   sbagliata in silenzio.
+ * ⚠ And the cure is NOT ours to carry out fully: the stride is decided by the
+ *   producer, and the producer makes it equal to `larghezza × 4` `[M]` (4 sizes
+ *   out of 4, LINEAR modifier).  ⇒ A canvas multiple of 16 would always have a
+ *   good stride, but the canvas rule lives in `rcp_misura_ammessa()`, which
+ *   does not belong to this file.  Here **the route is refused and declared**,
+ *   which is what `LEZIONI.md` §1.8 demands: better the copy than a silently
+ *   wrong image.
  * ═══════════════════════════════════════════════════════════════════════════ */
 bool codificatore_stride_importabile(uint32_t stride);
 uint32_t codificatore_allineamento_scheda(void);
@@ -740,85 +744,85 @@ uint32_t codificatore_allineamento_scheda(void);
 void codificatore_rilascia(Codificatore *cod);
 
 /*
- * ⛔ La prossima codifica sara' una chiave VERA — coi parameter set davanti.
+ * ⛔ The next encode will be a REAL keyframe — with the parameter sets in front.
  *
- * Serve a `RICHIEDI_CHIAVE` (`RCP.md` §7.1) e a ogni abbandono di un delta
- * (§5.2: *«il server DEVE mandare una chiave appena puo', senza aspettare che il
- * client la chieda»*).
+ * Needed by `RICHIEDI_CHIAVE` (`RCP.md` §7.1) and by every abandoned delta
+ * (§5.2: *«the server MUST send a keyframe as soon as it can, without waiting
+ * for the client to ask for it»*).
  */
 void codificatore_chiedi_chiave(Codificatore *cod);
 
 /*
- * ⛔ Il cambio di tela: si riapre alla misura nuova, e il primo fotogramma dopo
- *    e' una **chiave vera**.
+ * ⛔ The canvas change: it reopens at the new size, and the first frame after
+ *    is a **real keyframe**.
  *
- * `RCP.md` §5.2, riga entrata la sera del 12 agosto 2026 con la misura accanto:
- * su HEVC in Chrome un delta alla misura nuova **non solleva niente** — il
- * decodificatore continua a emettere fotogrammi alla misura **vecchia** e
- * dipinge un'immagine sfasciata, diversa a ogni giro.  ⇒ Il sintomo sarebbe
- * *«il desktop si strappa quando ridimensiono la finestra»*, e non nominerebbe
- * ne' il protocollo ne' la tela.
+ * `RCP.md` §5.2, a line that came in on the evening of 12 Aug 2026 with the
+ * measurement next to it: on HEVC in Chrome a delta at the new size **raises
+ * nothing** — the decoder keeps emitting frames at the **old** size and
+ * paints a wrecked image, different at every round.  ⇒ The symptom would be
+ * *«the desktop tears when I resize the window»*, and it would name neither
+ * the protocol nor the canvas.
  */
 bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t altezza,
                                char *errore, size_t errore_byte);
 
 /*
- * ⭐⭐ LA RISALITA DELLA QUALITA' — e NASCE SPENTA (invariante I6).
+ * ⭐⭐ QUALITY RECOVERY — and it is BORN OFF (invariant I6).
  *
- * ⛔ IL DIFETTO CHE CURA: `qualita_corrente` scende quando il fotogramma sfonda
- *    il tetto dei 16 MiB di `RCP.md` §6.2, e fino al 23 agosto 2026 **non
- *    risaliva mai**.  Un solo fotogramma d'eccezione — `[M]` il ripiego
- *    in software di allora a 7680x4320 su filmato granuloso sfondava il tetto
- *    1 volta su 8 —
- *    lasciava il codificatore in fondo alla scala **per tutta la sessione**, e
- *    il desktop fermo dell'utente usciva sgranato per ore.  ⚠ E' il *«mai
- *    sgranare»* di `DECISIONI.md` §3.3 perso per inerzia.
+ * ⛔ THE DEFECT IT CURES: `qualita_corrente` goes down when the frame breaks
+ *    the 16 MiB ceiling of `RCP.md` §6.2, and until 23 Aug 2026 it **never
+ *    went back up**.  A single exceptional frame — `[M]` the software fallback
+ *    of the time at 7680x4320 on grainy footage broke the ceiling
+ *    1 time out of 8 —
+ *    left the encoder at the bottom of the scale **for the whole session**, and
+ *    the user's still desktop came out grainy for hours.  ⚠ It is the *«never
+ *    grainy»* of `DECISIONI.md` §3.3 lost through inertia.
  *
- * Accesa: dopo un certo numero di fotogrammi **di fila** usciti comodamente
- * sotto il tetto si torna su di **UNO** scalino, e **mai** oltre la qualita'
- * che il chiamante ha chiesto in `CodificatoreRichiesta.qualita`.  Ogni gradino,
- * in giu' e in su', finisce nel registro con la **misura** accanto alla soglia.
+ * On: after a certain number of frames **in a row** that came out comfortably
+ * under the ceiling it goes back up by **ONE** step, and **never** beyond the
+ * quality the caller asked for in `CodificatoreRichiesta.qualita`.  Every step,
+ * down and up, ends up in the log with the **measurement** next to the threshold.
  *
- * ⛔ Cambia quel che si VEDE ⇒ e' l'utente a decidere che diventi il
- *    comportamento normale, dopo averla giudicata sul desktop vero.  Spenta, il
- *    programma si comporta esattamente come prima, byte per byte.
+ * ⛔ It changes what one SEES ⇒ it is the user who decides that it becomes the
+ *    normal behaviour, after judging it on the real desktop.  Off, the
+ *    program behaves exactly as before, byte for byte.
  *
- * ⚠ E' una decisione del **server**, non del singolo codificatore: vale per
- *   tutti quelli aperti dopo la chiamata, e il valore in vigore si scrive nel
- *   registro all'apertura di ciascuno — **acceso e spento**, perche' «spento» e
- *   «non e' mai scattato» non abbiano la stessa faccia.
+ * ⚠ It is a decision of the **server**, not of the single encoder: it holds for
+ *   all those opened after the call, and the value in force is written to the
+ *   log when each one opens — **on and off**, so that «off» and «never
+ *   triggered» do not look the same.
  */
 void codificatore_qualita_risale(bool accesa);
 
 /*
- * ⭐⭐⭐ IL TETTO DI BANDA — fase 9, 23 agosto 2026.  **Nasce SPENTO** (0).
+ * ⭐⭐⭐ THE BANDWIDTH CEILING — phase 9, 23 Aug 2026.  **Born OFF** (0).
  *
- * ⛔ IL NUMERO CHE LO OBBLIGA: `[M]` macchina di prova, tela 2560x1080, QP 26
- *    costante (quel che il prodotto fa oggi), un **film con la grana a schermo
- *    intero** chiede **58,7 Mbit/s**, cioe' il **293 %** del pavimento di 20
- *    dichiarato in `DECISIONI.md` §3.1-bis — e **nessuno gli dice di no**.
+ * ⛔ THE NUMBER THAT FORCES IT: `[M]` test machine, canvas 2560x1080, constant
+ *    QP 26 (what the product does today), a **film with grain at full
+ *    screen** asks for **58.7 Mbit/s**, that is **293 %** of the floor of 20
+ *    declared in `DECISIONI.md` §3.1-bis — and **nobody tells it no**.
  *
- * ⭐ E IL NUMERO CHE NE LIMITA LA PORTATA, nella stessa misura: il **desktop
- *    vero** dell'utente, a schermo intero e in movimento, costa **0,204 Mbit/s
- *    = l'1 %**.  ⇒ Il tetto e' per il **caso duro**.  Un tetto che mordesse sul
- *    contenuto normale sarebbe l'errore per cui la fase 10 di v1 fu azzerata, e
- *    il rosso che lo direbbe e' secco: *«il desktop vero, a tetto acceso, costa
- *    meno di prima»* ⇒ la cura si butta.
+ * ⭐ AND THE NUMBER THAT LIMITS ITS REACH, in the same measurement: the user's
+ *    **real desktop**, full screen and moving, costs **0.204 Mbit/s
+ *    = 1 %**.  ⇒ The ceiling is for the **hard case**.  A ceiling that bit on
+ *    normal content would be the error for which v1's phase 10 was wiped, and
+ *    the red that would say so is blunt: *«the real desktop, with the ceiling
+ *    on, costs less than before»* ⇒ the cure is thrown away.
  *
- * L'argomento e' il **pavimento in Mbit/s** (20, oggi), e da li' si derivano il
- * filo (80 %), il punto di lavoro (75 % del filo — ⛔ **mai uguale al filo**:
- * con i due numeri uguali il driver deduce **CBR**, che e' R31) e il serbatoio
- * del regolatore (**40 ms**, contro i 50 che `CODER.md` §1-bis da' a **tutto**
- * il pezzo nostro; v1 ne prendeva **500** e non se ne accorse nessuno).
+ * The argument is the **floor in Mbit/s** (20, today), and from it are derived
+ * the wire (80 %), the operating point (75 % of the wire — ⛔ **never equal to
+ * the wire**: with the two numbers equal the driver deduces **CBR**, which is
+ * R31) and the regulator's buffer (**40 ms**, against the 50 that `CODER.md`
+ * §1-bis gives to **all** of our piece; v1 took **500** and nobody noticed).
  *
- * ⛔ Cambia quel che si VEDE — sul caso duro l'immagine peggiora, ed e' il suo
- *    mestiere — quindi **I6**: lo accende l'utente dopo averlo giudicato sul
- *    desktop vero.  In v1 questa identica modifica gli fece dire *«siamo tornati
- *    indietro»*.  Spento, il programma si comporta **esattamente** come oggi.
+ * ⛔ It changes what one SEES — on the hard case the image gets worse, and that
+ *    is its job — hence **I6**: the user turns it on after judging it on the
+ *    real desktop.  In v1 this identical change made them say *«we have gone
+ *    backwards»*.  Off, the program behaves **exactly** as today.
  *
- * ⚠ Vale solo per la codifica in **hardware** (`h264_vaapi`): il ripiego in
- *   software resta al suo CRF, e il valore in vigore si scrive nel registro
- *   all'apertura di ogni codificatore — **acceso e spento**.
+ * ⚠ It holds only for **hardware** encoding (`h264_vaapi`): the software
+ *   fallback stays at its CRF, and the value in force is written to the log
+ *   when every encoder opens — **on and off**.
  */
 void codificatore_tetto_banda(uint32_t pavimento_mbit);
 

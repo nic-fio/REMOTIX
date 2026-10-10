@@ -10,19 +10,19 @@ import (
 	"remotix/installatore/motore"
 )
 
-// L'interfaccia (T9, fasi/17 §6.6.1, DECISIONI §10.31, §10.36):
+// The interface (T9, fasi/17 §6.6.1, DECISIONI §10.31, §10.36):
 //
-//	remotix-install tui   [--port N]   da root, nel terminale (ssh, console)
+//	remotix-install tui   [--port N]   as root, in the terminal (ssh, console)
 //
-// La finestra (GUI) è stata tolta il 10 ott 2026 (§10.31). La TUI fa quel che fa `install`: la
-// porta, il piano coi pacchetti esatti, il «sì», l'avanzamento, il benvenuto.
+// The window (GUI) was removed on 10 Oct 2026 (§10.31). The TUI does what `install` does: the
+// port, the plan with the exact packages, the «yes», the progress, the welcome.
 
 func tuiCmd(arg []string) (int, error) {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	// --preview: le schermate con dati d'esempio, per confrontarle col mockup (grafica/tui-mockup/);
-	// non tocca niente e non chiede root
+	// --preview: the screens with sample data, to compare them with the mockup (grafica/tui-mockup/);
+	// it touches nothing and does not ask for root
 	anteprima := fs.Int("preview", 0, "")
 	colori := fs.Bool("preview-color", false, "")
 	if _, err := argomenti(fs, arg); err != nil {
@@ -38,7 +38,7 @@ func tuiCmd(arg []string) (int, error) {
 	if st, err := os.Stdin.Stat(); err != nil || st.Mode()&os.ModeCharDevice == 0 {
 		return 1, motore.Errore("RX-UI-006", "stdin is not a terminal")
 	}
-	// un'operazione non finita si sistema prima (§10.36: mai un sistema a metà), fuori dalla TUI
+	// an unfinished operation is sorted out first (§10.36: never a half-done system), outside the TUI
 	if err := sistemaAperta(c.motore()); err != nil {
 		return 1, err
 	}

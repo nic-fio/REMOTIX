@@ -1,61 +1,61 @@
 /*
- * forma.h — LA FORMA VERA DEL PUNTATORE, dove il compositore non la dice:
- *           un TEMA CODIFICATO e un DIZIONARIO.
+ * forma.h — THE TRUE SHAPE OF THE POINTER, where the compositor does not tell it:
+ *           an ENCODED THEME and a DICTIONARY.
  *
- * ⭐ DECISIONE DELL'UTENTE, 24 settembre 2026: la forma vera del puntatore (la
- *    freccia doppia sul bordo, la I sul testo, la mano sui collegamenti) deve
- *    arrivare al browser su GNOME, KDE, XFCE e LXQt.  Fino a oggi arrivava solo
- *    su GNOME, dove Mutter la manda nel metadato (`cursor-mode=2`, `mutter.c`).
+ * ⭐ USER'S DECISION, 24 September 2026: the true shape of the pointer (the
+ *    double arrow on the border, the I-beam on text, the hand on links) must
+ *    reach the browser on GNOME, KDE, XFCE and LXQt.  Until today it reached it only
+ *    on GNOME, where Mutter sends it in the metadata (`cursor-mode=2`, `mutter.c`).
  *
- * ⛔ IL FATTO DA CUI SI PARTE `[M]`: su KDE e su labwc la sessione gira con un
- *    tema del cursore NOSTRO (`remotix-invisibile`), perche' quei compositori
- *    disegnano il puntatore DENTRO l'immagine catturata e chi guarda ne
- *    vedrebbe due.  Fino a oggi quel tema era fatto di immagini 1x1 ad alfa
- *    zero: il compositore disegnava un nulla, ⛔ e nel metadato arrivava lo
- *    stesso nulla — la forma si perdeva.
+ * ⛔ THE FACT WE START FROM `[M]`: on KDE and on labwc the session runs with a
+ *    cursor theme of OUR OWN (`remotix-invisibile`), because those compositors
+ *    draw the pointer INSIDE the captured image and the viewer would
+ *    see two.  Until today that theme was made of 1x1 images with zero
+ *    alpha: the compositor drew a nothing, ⛔ and the same nothing arrived in the
+ *    metadata — the shape was lost.
  *
- * ⭐ LA CURA (progetto «TEMA CODIFICATO + DIZIONARIO», approvato):
- *    ogni forma del tema e' ancora un'immagine 1x1, ma OPACA e di un colore che
- *    e' solo suo.  ⇒ Il colore che arriva nel metadato (`cursore.c`, KDE) o nel
- *    cursore del compositore (`wlroots.c`, labwc — incremento successivo) dice
- *    QUALE forma l'applicazione ha chiesto.  Il dizionario traduce il colore
- *    nell'indice, e l'indice nell'immagine vera presa da un tema REALE su disco
- *    (Adwaita, o `breeze_cursors` se Adwaita manca).
+ * ⭐ THE CURE ("ENCODED THEME + DICTIONARY" design, approved):
+ *    every shape of the theme is still a 1x1 image, but OPAQUE and of a colour
+ *    that is its alone.  ⇒ The colour arriving in the metadata (`cursore.c`, KDE) or in
+ *    the compositor's cursor (`wlroots.c`, labwc — next increment) tells
+ *    WHICH shape the application asked for.  The dictionary translates the colour
+ *    into the index, and the index into the true image taken from a REAL theme on disk
+ *    (Adwaita, or `breeze_cursors` if Adwaita is missing).
  *
- * ⚠ IL PREZZO, dichiarato: il compositore ora disegna nell'immagine UN pixel
- *   colorato sotto il punto attivo.  Il puntatore del browser gli sta sopra, e
- *   il codificatore lo sbava; che non si veda e' `[?]` finche' non lo guarda
- *   l'utente.
+ * ⚠ THE PRICE, declared: the compositor now draws ONE coloured pixel into the
+ *   image under the hotspot.  The browser's pointer sits on top of it, and
+ *   the encoder smears it; that it is not visible is `[?]` until the user
+ *   looks at it.
  *
  * ===========================================================================
- * ⛔⛔ L'API QUI SOTTO E' STABILE — la usera' `wlroots.c` per labwc, scritta da
- *      un altro dopo di questa.  Chi la cambia cambia DUE cuciture: lo dice
- *      prima, e non la aggira.
+ * ⛔⛔ THE API BELOW IS STABLE — `wlroots.c` will use it for labwc, written by
+ *      someone else after this one.  Whoever changes it changes TWO seams: say
+ *      so first, and do not work around it.
  *
- *   FORMA_TEMA             il nome del tema; ⛔ lo stesso di sempre, cosi'
- *                          l'ambiente delle sessioni (`XCURSOR_THEME`) non
- *                          cambia di una lettera.
- *   FORMA_MISURA           la misura nominale che si chiede al tema reale.
- *   FORMA_QUANTE           quante forme ha il tema (78; puo' solo crescere).
+ *   FORMA_TEMA             the theme name; ⛔ the same as always, so that
+ *                          the sessions' environment (`XCURSOR_THEME`) does not
+ *                          change by a single letter.
+ *   FORMA_MISURA           the nominal size requested from the real theme.
+ *   FORMA_QUANTE           how many shapes the theme has (78; it can only grow).
  *
- *   forma_tema_scrivi()    scrive il tema codificato in
+ *   forma_tema_scrivi()    writes the encoded theme to
  *                          `<runtime>/remotix/icons/remotix-invisibile/`.
- *                          La cartella da mettere in `XCURSOR_PATH` e'
- *                          `<runtime>/remotix/icons`.  FALSE = non scritto
- *                          (gia' detto nel registro).
- *   forma_da_pixel()       un pixel (b, g, r, a — l'ordine dei byte BGRA)
- *                          ⇒ l'indice della forma, o -1 se quel colore non e'
- *                          uno dei nostri.  ⛔ Esatto al byte: niente
- *                          tolleranza, perche' due vicini differiscono di 1.
- *   forma_nome()           l'indice ⇒ il nome della forma (per il registro).
- *   forma_immagine()       l'indice ⇒ l'immagine VERA, BGRA premoltiplicato,
- *                          al massimo 256x256 (RCP §7.2), punto attivo dentro.
- *                          `out->immagine` vive per tutto il processo: chi la
- *                          consegna non la deve copiare, chi la modifica si.
- *                          `out->serie` NON si tocca: e' di chi consegna.
- *                          FALSE = il tema reale non c'e' o non si legge (detto
- *                          nel registro UNA volta): chi chiama tiene quel che
- *                          faceva prima — il cliente tiene la sua freccia.
+ *                          The folder to put in `XCURSOR_PATH` is
+ *                          `<runtime>/remotix/icons`.  FALSE = not written
+ *                          (already said in the log).
+ *   forma_da_pixel()       a pixel (b, g, r, a — the BGRA byte order)
+ *                          ⇒ the shape index, or -1 if that colour is not
+ *                          one of ours.  ⛔ Exact to the byte: no
+ *                          tolerance, because two neighbours differ by 1.
+ *   forma_nome()           the index ⇒ the shape name (for the log).
+ *   forma_immagine()       the index ⇒ the TRUE image, premultiplied BGRA,
+ *                          at most 256x256 (RCP §7.2), hotspot inside.
+ *                          `out->immagine` lives for the whole process: whoever
+ *                          delivers it need not copy it, whoever modifies it must.
+ *                          `out->serie` is NOT touched: it belongs to the deliverer.
+ *                          FALSE = the real theme is missing or unreadable (said
+ *                          in the log ONCE): the caller keeps what it
+ *                          did before — the client keeps its arrow.
  * ===========================================================================
  */
 #ifndef REMOTIX_FORMA_H
@@ -69,15 +69,15 @@
 #define FORMA_TEMA "remotix-invisibile"
 
 /*
- * ⚠ 24 e' la misura che l'ambiente gia' dichiara (`XCURSOR_SIZE=24`,
- *   `sessione.c`) e quella predefinita di GNOME a scala 1 — `[?]` che sia
- *   anche quella che Mutter manda oggi: non misurato qui.  Se i temi reali non
- *   hanno il 24, si prende la misura nominale piu' vicina.
+ * ⚠ 24 is the size the environment already declares (`XCURSOR_SIZE=24`,
+ *   `sessione.c`) and GNOME's default at scale 1 — `[?]` that it is
+ *   also the one Mutter sends today: not measured here.  If the real themes do not
+ *   have 24, the nearest nominal size is taken.
  */
 #define FORMA_MISURA 24
 
-/* ⚠ 68 fino al 24 set 2026; 78 da quando labwc ha chiesto i nomi CSS dei suoi
- *   bordi (`n-resize`… `w-resize`, vedi `forma.c`).  Si cresce in CODA. */
+/* ⚠ 68 until 24 Sep 2026; 78 since labwc asked for the CSS names of its
+ *   borders (`n-resize`… `w-resize`, see `forma.c`).  It grows at the END. */
 #define FORMA_QUANTE 78
 
 gboolean forma_tema_scrivi(const char *runtime);
@@ -89,9 +89,9 @@ const char *forma_nome(int indice);
 gboolean forma_immagine(int indice, CursoreForma *out);
 
 /*
- * ⚠ PER I BANCHI SOLTANTO: da dove prendere i temi reali invece di
- *   `/usr/share/icons`, e dimenticare quel che si era caricato.  Il prodotto
- *   non la chiama mai.
+ * ⚠ FOR THE BENCHES ONLY: where to take the real themes from instead of
+ *   `/usr/share/icons`, and forget what had been loaded.  The product
+ *   never calls it.
  */
 void forma_prova_cartella_temi(const char *cartella);
 

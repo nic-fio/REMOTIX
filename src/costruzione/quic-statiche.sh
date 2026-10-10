@@ -1,20 +1,20 @@
 #!/bin/sh
-# quic-statiche.sh — nghttp3 e ngtcp2 dai sorgenti, SOLO statiche, in /usr/local/lib.
+# quic-statiche.sh — nghttp3 and ngtcp2 from source, ONLY static, in /usr/local/lib.
 #
-# Lo chiamano tutti i Contenitore.<bersaglio> di questa cartella, uguale per
-# ogni distribuzione (fasi/17-l-installatore.md §6.3: «dentro, statiche,
-# versione fissata»).  Perche' da sorgente anche dove la distribuzione le ha:
-#   · serve ngtcp2 >= 1.25.0 (i flag NGTCP2_STREAM_CLOSE2_FLAG_* di trasporto.c)
-#     con il ponte ngtcp2_crypto_ossl, e quasi nessuna distribuzione li ha;
-#   · Arch e Tumbleweed la hanno (1.25), ma una versione fissata e uguale per
-#     tutti vuol dire un solo comportamento del trasporto da provare.
+# Called by all the Contenitore.<target> files of this folder, the same for
+# every distribution (fasi/17-l-installatore.md §6.3: "inside, static,
+# pinned version").  Why from source even where the distribution has them:
+#   · ngtcp2 >= 1.25.0 is needed (the NGTCP2_STREAM_CLOSE2_FLAG_* flags of trasporto.c)
+#     with the ngtcp2_crypto_ossl bridge, and almost no distribution has them;
+#   · Arch and Tumbleweed have it (1.25), but a version pinned and the same for
+#     everyone means a single transport behaviour to test.
 #
-# Perche' statiche: il binario non si porta dietro librerie fuori dai percorsi
-# di sistema, e `ld.so.conf.d` (provisiona.sh) sparisce.  Solo la .a e' installata:
-# `-lngtcp2` nel Makefile non puo' prendere una .so che non c'e'.
+# Why static: the binary carries no libraries outside the system
+# paths, and `ld.so.conf.d` (provisiona.sh) goes away.  Only the .a is installed:
+# `-lngtcp2` in the Makefile cannot pick up a .so that is not there.
 #
-# Il libdir e' fisso a `lib` (non lib64 ne' x86_64-linux-gnu): il Contenitore
-# mette /usr/local/lib in LIBRARY_PATH, e il Makefile non va toccato.
+# The libdir is fixed to `lib` (not lib64 nor x86_64-linux-gnu): the Contenitore
+# puts /usr/local/lib in LIBRARY_PATH, and the Makefile need not be touched.
 set -eu
 
 NGHTTP3_VER=${NGHTTP3_VER:-v1.18.0}
@@ -40,9 +40,9 @@ ninja -C "$LAVORO/ngtcp2/build" install
 
 rm -rf "$LAVORO"
 
-# La prova che sono davvero solo statiche: una .so qui la prenderebbe il linker.
+# The proof that they really are static only: a .so here would be picked up by the linker.
 if ls /usr/local/lib/libngtcp2*.so* /usr/local/lib/libnghttp3*.so* 2>/dev/null; then
-	echo "⛔ ci sono .so di ngtcp2/nghttp3 in /usr/local/lib: il binario le userebbe" >&2
+	echo "⛔ there are ngtcp2/nghttp3 .so files in /usr/local/lib: the binary would use them" >&2
 	exit 1
 fi
 ls -l /usr/local/lib/libngtcp2*.a /usr/local/lib/libnghttp3*.a

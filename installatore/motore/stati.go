@@ -2,7 +2,7 @@ package motore
 
 import "sort"
 
-// Stato di un'operazione (§6.6.2).
+// State of an operation (§6.6.2).
 type Stato string
 
 const (
@@ -27,12 +27,12 @@ const (
 	RIFIUTATA               Stato = "REFUSED"
 )
 
-// transizioni: le SOLE valide, quelle del disegno di §6.6.2. ⛔ nessuno stato si salta.
+// transizioni: the ONLY valid ones, those of the design of §6.6.2. ⛔ no state is skipped.
 //
-// BLOCCATA vuol dire SOLO «niente è stato toccato» (§6.6.2) ed è finale. Quando la macchina è già
-// stata toccata e la ripresa trova un passo FATTO disfatto da altri (§6.6.3, ultima riga), lo stato
-// è INTERROTTA col codice RX-RIPRESA-001: se ne esce con riprendi o annulla (decisione del
-// coordinatore, 30 set). APPLICATA e VERIFICATA possono andare a IN_ANNULLAMENTO («rosso»).
+// BLOCCATA means ONLY «nothing has been touched» (§6.6.2) and is final. When the machine has already
+// been touched and resume finds a DONE step undone by others (§6.6.3, last line), the state
+// is INTERROTTA with the code RX-RIPRESA-001: one leaves it with riprendi or annulla (the
+// coordinator's decision, 30 Sep). APPLICATA and VERIFICATA can go to IN_ANNULLAMENTO («red»).
 var transizioni = map[Stato][]Stato{
 	NUOVA:           {FIDATA, BLOCCATA},
 	FIDATA:          {ESAMINATA, BLOCCATA},
@@ -49,7 +49,7 @@ var transizioni = map[Stato][]Stato{
 	IN_ANNULLAMENTO: {ANNULLATA, ANNULLATA_IN_PARTE},
 }
 
-// Valida dice se da → a è una transizione del disegno.
+// Valida says whether da → a is a transition of the design.
 func Valida(da, a Stato) bool {
 	for _, x := range transizioni[da] {
 		if x == a {
@@ -59,7 +59,7 @@ func Valida(da, a Stato) bool {
 	return false
 }
 
-// Finale: gli stati da cui non si esce.
+// Finale: the states one never leaves.
 func Finale(s Stato) bool {
 	switch s {
 	case CONFERMATA, CONFERMATA_A_CONDIZIONI, ANNULLATA, ANNULLATA_IN_PARTE, RIFIUTATA, BLOCCATA:
@@ -68,7 +68,7 @@ func Finale(s Stato) bool {
 	return false
 }
 
-// TuttiGliStati, in ordine alfabetico (per le prove).
+// TuttiGliStati, in alphabetical order (for the tests).
 func TuttiGliStati() []Stato {
 	visti := map[Stato]bool{}
 	for da, aa := range transizioni {

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- remotix: il servizio firewalld di REMOTIX, la pagina (TCP) e QUIC (UDP)
-     sulla stessa porta.  DEFINITO, non aperto: il pacchetto non tocca le zone.
-     L'apertura e' del motore d'installazione, col consenso (D6).
-     Con una porta diversa dalla 7447 il motore apre quella, non questo servizio.
-     Attenzione: in un commento XML non ci possono stare due trattini di fila
-     (le opzioni di firewall-cmd): firewalld scarterebbe il file intero.
-     [M] 29 set 2026, Fedora 44: "not well-formed (invalid token)". -->
+<!-- remotix: the REMOTIX firewalld service, the page (TCP) and QUIC (UDP)
+     on the same port.  DEFINED, not opened: the package does not touch the zones.
+     Opening it belongs to the installation engine, with consent (D6).
+     With a port other than 7447 the engine opens that port, not this service.
+     Beware: an XML comment cannot contain two hyphens in a row
+     (the firewall-cmd options): firewalld would discard the whole file.
+     [M] 29 Sep 2026, Fedora 44: "not well-formed (invalid token)". -->
 <service>
   <short>REMOTIX</short>
-  <description>REMOTIX: il desktop di questa macchina nel browser (HTTPS e QUIC/WebTransport).</description>
+  <description>REMOTIX: this machine's desktop in the browser (HTTPS and QUIC/WebTransport).</description>
   <port protocol="tcp" port="7447"/>
   <port protocol="udp" port="7447"/>
 </service>

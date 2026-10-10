@@ -1,9 +1,9 @@
 package motore
 
-// testi: il catalogo dei testi del motore e della riga di comando, in inglese (DECISIONI §10.35).
-// Le chiavi sono stabili; i %s e %d seguono fmt.Sprintf.
+// testi: the catalogue of the texts of the engine and of the command line, in English (DECISIONI §10.35).
+// The keys are stable; the %s and %d follow fmt.Sprintf.
 var testi = map[string]string{
-	// stati (§6.6.2), come li dice l'avanzamento
+	// states (§6.6.2), as the progress reports them
 	"state.NEW":                       "new",
 	"state.TRUSTED":                   "trust checked",
 	"state.EXAMINED":                  "machine examined",
@@ -27,7 +27,7 @@ var testi = map[string]string{
 	"ev.si_riprende":                  "resuming",
 	"ev.operazione":                   "operation %s",
 
-	// compatibilità (§6.6.8)
+	// compatibility (§6.6.8)
 	"comp.nella_matrice":   "in the matrix (%s)",
 	"comp.fuori_matrice":   "analysed, outside the matrix (%s)",
 	"comp.derivata":        "derivative of %s (compatible, not certified)",
@@ -43,7 +43,7 @@ var testi = map[string]string{
 	"inc.desktop":          "desktop %s",
 	"inc.h264":             "H.264 on the card (%s)",
 
-	// il piano di prova e i passi (§6.6.4)
+	// the trial plan and the steps (§6.6.4)
 	"np.utente": "no user given (--users): there is no «video» group step",
 
 	"az.file":              "write %s",
@@ -104,7 +104,7 @@ var testi = map[string]string{
 	"cli.certifica":           "Certification of installation %s: %s",
 	"ver.codifica_assente":    "the REMOTIX encoding test gave no readable answer",
 
-	// operazione e certificato
+	// operation and certificate
 	"op.chiesto":          "requested by the administrator",
 	"cert.titolo":         "REMOTIX — certificate of operation %s",
 	"cert.stato":          "final state",
@@ -121,7 +121,7 @@ var testi = map[string]string{
 	"cert.prodotto_prova": "none: engine test plan (T4)",
 	"cert.fiducia_no":     "the catalogue could NOT be used: the operation stopped at phase 0",
 
-	// riga di comando
+	// command line
 	"cli.uso": `remotix-install — the REMOTIX installation engine (version %s, format %s)
 
 REMOTIX comes as one file: sudo sh remotix-VERSION.run   (it runs «install»; «check» and «tui» too)

@@ -10,22 +10,22 @@ import (
 	"time"
 )
 
-// chiudi-sessioni: alla disinstallazione, le sessioni REMOTIX ancora aperte si chiudono (DECISIONI
-// §10.16, fasi/17 §6.5-bis, R43). Le trova logind: le sessioni col servizio PAM «remotix»
-// (proprietà Service); le chiude logind (TerminateSession), che porta via i processi nati dentro.
-// ⛔ SOLO quelle: niente TerminateUser né KillUser — una sessione locale o ssh della stessa persona
-// resta. Gli utenti li ha avvisati l'amministratore; il piano, confermato una volta come ogni
-// piano, porta solo questo passo. IRREVERSIBILE: il lavoro non salvato va perso, e un ritorno
-// indietro non riapre niente.
+// chiudi-sessioni: on uninstallation, the REMOTIX sessions still open are closed (DECISIONI
+// §10.16, fasi/17 §6.5-bis, R43). logind finds them: the sessions with the PAM service «remotix»
+// (property Service); logind closes them (TerminateSession), which takes away the processes born inside.
+// ⛔ ONLY those: no TerminateUser or KillUser — a local or ssh session of the same person
+// stays. The administrator has warned the users; the plan, confirmed once like every
+// plan, carries only this step. IRREVERSIBLE: unsaved work is lost, and a rollback
+// reopens nothing.
 
 func init() {
 	registraTipo("close-sessions", func(AzionePiano) (Azione, error) { return chiudiSessioni{}, nil })
 }
 
-// ServizioPAM: il nome del servizio PAM di REMOTIX (/etc/pam.d/remotix).
+// ServizioPAM: the name of REMOTIX's PAM service (/etc/pam.d/remotix).
 const ServizioPAM = "remotix"
 
-// PianoChiudiSessioni prepara il passo, dicendo quante sessioni ci sono adesso.
+// PianoChiudiSessioni prepares the step, saying how many sessions there are now.
 func PianoChiudiSessioni(id string, n int, utenti []string) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "close-sessions",
@@ -38,7 +38,7 @@ func PianoChiudiSessioni(id string, n int, utenti []string) AzionePiano {
 	}
 }
 
-// SessioniRemotix: le sessioni di logind col servizio PAM remotix.
+// SessioniRemotix: logind's sessions with the PAM service remotix.
 func SessioniRemotix(a *Ambiente) ([]Sessione, error) {
 	if a.Sessioni == nil {
 		return nil, nil
@@ -63,12 +63,12 @@ type primaSessioni struct {
 	Origine  Origine  `json:"origin"`
 	Sessioni []string `json:"sessions"`
 	Utenti   []string `json:"users"`
-	// Grafica: le persone senza un'altra sessione grafica (un desktop locale): a loro si chiude
-	// anche il desktop nel gestore d'utente (grafica_utente.go)
+	// Grafica: the people without another graphical session (a local desktop): for them the
+	// desktop in the user manager is closed too (grafica_utente.go)
 	Grafica []string `json:"graphical"`
 }
 
-func (chiudiSessioni) Vincoli(*Contesto) ([]string, error) { return nil, nil } // cambiano da sole: non vincolano
+func (chiudiSessioni) Vincoli(*Contesto) ([]string, error) { return nil, nil } // they change by themselves: they do not bind
 
 func (chiudiSessioni) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	l, err := SessioniRemotix(c.Amb)
@@ -101,12 +101,12 @@ func (chiudiSessioni) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		}
 	}
 	if len(l) == 0 {
-		p.Origine = PREESISTENTE // niente da chiudere
+		p.Origine = PREESISTENTE // nothing to close
 	}
 	return jsonDi(p), p.Origine, nil
 }
 
-// graficiRimasti: i processi del desktop ancora vivi nel gestore d'utente delle persone di Grafica.
+// graficiRimasti: the desktop processes still alive in the user manager of the people in Grafica.
 func (chiudiSessioni) graficiRimasti(c *Contesto, p primaSessioni) int {
 	n := 0
 	for _, u := range p.Grafica {
@@ -117,11 +117,11 @@ func (chiudiSessioni) graficiRimasti(c *Contesto, p primaSessioni) int {
 	return n
 }
 
-// rimaste: le sessioni di prima ancora aperte. Una sessione «closing» il cui scope non ha più
-// processi è chiusa (logind la toglie dall'elenco quando vuole): si guarda cgroup.procs, in sola
-// lettura. ⚠ [M] 30 set, debian13-gnome: la sessione del figlio di REMOTIX è «closing» fin dalla
-// nascita (§5.2) e il desktop GNOME vive nel gestore d'utente (user@<uid>.service), NON nello scope
-// della sessione: TerminateSession porta via lo scope, non il desktop (annotato in §13.1).
+// rimaste: the earlier sessions still open. A «closing» session whose scope has no more
+// processes is closed (logind removes it from the list when it likes): cgroup.procs is looked at,
+// read-only. ⚠ [M] 30 Sep, debian13-gnome: the session of REMOTIX's child is «closing» from
+// birth (§5.2) and the GNOME desktop lives in the user manager (user@<uid>.service), NOT in the
+// session's scope: TerminateSession takes away the scope, not the desktop (noted in §13.1).
 func (chiudiSessioni) rimaste(c *Contesto, p primaSessioni) (int, error) {
 	l, err := SessioniRemotix(c.Amb)
 	if err != nil {
@@ -144,7 +144,7 @@ func (chiudiSessioni) rimaste(c *Contesto, p primaSessioni) (int, error) {
 	return n, nil
 }
 
-// scopeVuoto: nessun processo in session-<id>.scope.
+// scopeVuoto: no process in session-<id>.scope.
 func scopeVuoto(a *Ambiente, id string) bool {
 	v, _ := filepath.Glob(a.P("/sys/fs/cgroup/user.slice") + "/user-*.slice/session-" + id + ".scope/cgroup.procs")
 	if len(v) == 0 {
@@ -164,10 +164,10 @@ func (a chiudiSessioni) Fai(c *Contesto, prima json.RawMessage) error {
 			return err
 		}
 	}
-	// logind chiude in modo asincrono. ⚠ [M] 30 set, debian13-gnome: la sessione del figlio di
-	// REMOTIX è «closing» dalla nascita (§5.2) e TerminateSession da sola NON svuota lo scope in 60
-	// s. ⇒ dopo 10 s SIGTERM ai processi della sessione (KillSession, sempre dentro la sessione:
-	// mai l'utente intero), dopo 20 s SIGKILL; fino a 60 s.
+	// logind closes asynchronously. ⚠ [M] 30 Sep, debian13-gnome: the session of REMOTIX's
+	// child is «closing» from birth (§5.2) and TerminateSession alone does NOT empty the scope in 60
+	// s. ⇒ after 10 s SIGTERM to the session's processes (KillSession, always inside the session:
+	// never the whole user), after 20 s SIGKILL; up to 60 s.
 	for i := 0; i < 120; i++ {
 		n, err := a.rimaste(c, p)
 		if err != nil {
@@ -187,7 +187,7 @@ func (a chiudiSessioni) Fai(c *Contesto, prima json.RawMessage) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	// il desktop nel gestore d'utente (§10.16: «le sessioni REMOTIX e i loro processi»)
+	// the desktop in the user manager (§10.16: «REMOTIX sessions and their processes»)
 	for _, u := range p.Grafica {
 		if _, err := c.Amb.Sessioni.ChiudiGrafica(u); err != nil {
 			return err
@@ -227,7 +227,7 @@ func (a chiudiSessioni) Annullata(c *Contesto, prima json.RawMessage) (bool, str
 	if len(p.Sessioni) == 0 {
 		return true, "there was nothing to close", nil
 	}
-	// se nessuna è stata chiusa davvero, non c'è niente di irreversibile da dichiarare
+	// if none was really closed, there is nothing irreversible to declare
 	if n, err := a.rimaste(c, p); err == nil && n == len(p.Sessioni) {
 		return true, "no session was closed", nil
 	}

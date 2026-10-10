@@ -1,5 +1,5 @@
 /*
- * mutter.c — vedi mutter.h per la sequenza e per le ragioni.
+ * mutter.c — see mutter.h for the sequence and the reasons.
  */
 #include "mutter.h"
 
@@ -28,15 +28,15 @@
 #define IFACE_DISPLAY "org.gnome.Mutter.DisplayConfig"
 
 /*
- * `MetaScreenCastCursorMode`: 0 nascosto, 1 incorporato nell'immagine, 2 come
- * metadato.  Si sceglie il METADATO, e sono due ragioni:
+ * `MetaScreenCastCursorMode`: 0 hidden, 1 embedded in the image, 2 as
+ * metadata.  METADATA is chosen, for two reasons:
  *
- *  - incorporarlo costa un fotogramma intero per ogni movimento del mouse (in
- *    v1 era la ragione principale per cui lo scorrimento sembrava quello di
- *    xrdp);
- *  - ⛔ e alla fase 2 il cursore nell'immagine sarebbe un difetto misurabile:
- *    il banco della fase 4 guarda un fotogramma e pretende che il puntatore del
- *    desktop NON ci sia (`SPECIFICHE.md` §7.1).  Qui non lo si legge ancora.
+ *  - embedding it costs a whole frame for every mouse movement (in
+ *    v1 it was the main reason scrolling felt like
+ *    xrdp's);
+ *  - ⛔ and in phase 2 the cursor in the image would be a measurable defect:
+ *    the phase 4 bench looks at a frame and demands that the desktop's pointer
+ *    NOT be there (`SPECIFICHE.md` §7.1).  It is not read here yet.
  */
 #define CURSORE_METADATO 2u
 
@@ -48,36 +48,36 @@
 struct MutterSessione
 {
 	GDBusConnection *bus;
-	char *controllo; /* percorso della sessione RemoteDesktop */
-	char *cattura;   /* percorso della sessione ScreenCast    */
-	char *flusso;    /* percorso dello Stream                 */
+	char *controllo; /* path of the RemoteDesktop session    */
+	char *cattura;   /* path of the ScreenCast session       */
+	char *flusso;    /* path of the Stream                   */
 	uint32_t nodo;
-	char *mapping_id;           /* quello che DICHIARIAMO noi a RecordVirtual */
-	char *mapping_id_pubblicato; /* ⛔ quello che Mutter GENERA e ci dice     */
+	char *mapping_id;           /* the one WE DECLARE to RecordVirtual   */
+	char *mapping_id_pubblicato; /* ⛔ the one Mutter GENERATES and tells us */
 
-	/* Il canale di input, aperto da `ConnectToEIS` al punto giusto della
-	 * sequenza.  -1 = non aperto, e chi lo riceve lo DICHIARA. */
+	/* The input channel, opened by `ConnectToEIS` at the right point of the
+	 * sequence.  -1 = not open, and whoever receives it DECLARES it. */
 	int eis;
 
-	/* ⛔ Il nostro schermo: due strade indipendenti, e se non concordano NULL. */
+	/* ⛔ Our screen: two independent roads, and NULL if they disagree. */
 	char *monitor;
 	char *monitor_prodotto;
-	char *prima[MONITOR_MAX]; /* i connettori che c'erano PRIMA di RecordVirtual */
+	char *prima[MONITOR_MAX]; /* the connectors that existed BEFORE RecordVirtual */
 	guint monitor_prima;
 	guint monitor_dopo;
 };
 
 /* ------------------------------------------------------------------ *
- *  Il bus, e perche' non e' quello condiviso di GLib
+ *  The bus, and why it is not GLib's shared one
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ MAI `g_bus_get_sync` SUL BUS DI SESSIONE: GIO vi tiene acceso
- *    `exit-on-close`, e al logout la connessione che cade porta via il PROCESSO
- *    invece di darci un errore.  Un server che sparisce quando l'utente esce
- *    dalla sessione grafica e' `LEZIONI.md` §5, e il sintomo — «il server muore
- *    e nessuno sa chi l'ha ucciso» — e' la forma E6 (il mittente dedotto invece
- *    che chiesto).
+ * ⛔ NEVER `g_bus_get_sync` ON THE SESSION BUS: GIO keeps
+ *    `exit-on-close` on there, and at logout the dropping connection takes the PROCESS
+ *    away instead of giving us an error.  A server that disappears when the user leaves
+ *    the graphical session is `LEZIONI.md` §5, and the symptom — "the server dies
+ *    and nobody knows who killed it" — is form E6 (the sender inferred instead
+ *    of asked).
  */
 static GDBusConnection *bus_di_sessione(GError **sbaglio)
 {
@@ -106,8 +106,8 @@ static GVariant *chiama(GDBusConnection *bus, const char *nome, const char *perc
 	                                   NULL, sbaglio);
 }
 
-/* Legge una proprieta' senza costruire un GDBusProxy: un proxy porterebbe con
- * se' una cache e un ciclo di vita che qui non servono. */
+/* Reads a property without building a GDBusProxy: a proxy would bring along
+ * a cache and a life cycle that are not needed here. */
 static char *proprieta_stringa(GDBusConnection *bus, const char *nome, const char *percorso,
                                const char *interfaccia, const char *proprieta, GError **sbaglio)
 {
@@ -122,30 +122,30 @@ static char *proprieta_stringa(GDBusConnection *bus, const char *nome, const cha
 	g_variant_get(risposta, "(v)", &valore);
 	if (!g_variant_is_of_type(valore, G_VARIANT_TYPE_STRING))
 	{
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "%s non e' una stringa", proprieta);
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "%s is not a string", proprieta);
 		return NULL;
 	}
 	return g_variant_dup_string(valore, NULL);
 }
 
 /* ------------------------------------------------------------------ *
- *  I monitor — chiesti a DisplayConfig, che non fa male a nessuno
+ *  The monitors — asked of DisplayConfig, which harms nobody
  * ------------------------------------------------------------------ */
 
 /*
- * ⛔ NON con `org.gnome.Shell.Screenshot`.  Su una sessione a zero monitor
- *    Mutter tenta una texture 0×0, gnome-shell muore, e con
- *    `OnFailure=gnome-session-shutdown.target` se ne va **tutta la sessione**
- *    `[M]` 12 agosto 2026 — provato involontariamente.  ⇒ Il controllo
- *    distruggerebbe la cosa che controlla, e solo nel caso guasto.
+ * ⛔ NOT with `org.gnome.Shell.Screenshot`.  On a session with zero monitors
+ *    Mutter attempts a 0×0 texture, gnome-shell dies, and with
+ *    `OnFailure=gnome-session-shutdown.target` **the whole session** goes away
+ *    `[M]` 12 August 2026 — tried unintentionally.  ⇒ The check
+ *    would destroy the thing it checks, and only in the faulty case.
  *
- * ⭐ `GetCurrentState` risponde con i monitor uno per uno.  La forma e'
- *    `(ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})`: qui interessa
- *    il primo elemento della terna del monitor, cioe' `(connettore, venditore,
- *    prodotto, seriale)`.
+ * ⭐ `GetCurrentState` answers with the monitors one by one.  The shape is
+ *    `(ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})`: what matters here is
+ *    the first element of the monitor's triple, that is `(connector, vendor,
+ *    product, serial)`.
  *
- * ⛔ E una lettura NEGATA non e' «zero monitor»: se la chiamata fallisce si
- *    ritorna -1 e chi ha chiamato lo dichiara (forma E8).
+ * ⛔ And a DENIED read is not "zero monitors": if the call fails
+ *    -1 is returned and the caller declares it (form E8).
  */
 static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, guint quanti_max)
 {
@@ -161,8 +161,8 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
 	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
 	if (!risposta)
 	{
-		registro_dice(AREA, "⚠ DisplayConfig non risponde (%s): non so quanti monitor ci sono, "
-		                    "e non dico zero",
+		registro_dice(AREA, "⚠ DisplayConfig does not answer (%s): I do not know how many monitors "
+		                    "there are, and I do not say zero",
 		              sbaglio->message);
 		return -1;
 	}
@@ -187,24 +187,24 @@ static int elenca_monitor(GDBusConnection *bus, char **nomi, char **prodotti, gu
 	return (int) quanti;
 }
 
-/* ⛔⛔ LA GUARDIA SULLA SCALA — e previene il difetto che NON si vede.
+/* ⛔⛔ THE GUARD ON THE SCALE — and it prevents the defect that is NOT seen.
  *
- * `[M]` 14 agosto 2026: con `org.gnome.desktop.interface scaling-factor = 2` i
- * pixel del flusso restano quelli chiesti, ma il monitor LOGICO prende scala
- * **2,0** anche quando l'unica scala ammessa per quel modo e' 1,0
- * (`meta-monitor.c:1988` scavalca la propria lista).  Il layout diventa allora
- * `roundf(2133/2) = 1067`, e **1067x2 = 2134 != 2133**.
+ * `[M]` 14 August 2026: with `org.gnome.desktop.interface scaling-factor = 2` the
+ * stream's pixels stay the ones requested, but the LOGICAL monitor takes scale
+ * **2.0** even when the only scale allowed for that mode is 1.0
+ * (`meta-monitor.c:1988` overrides its own list).  The layout then becomes
+ * `roundf(2133/2) = 1067`, and **1067x2 = 2134 != 2133**.
  *
- * ⇒ ⛔ E' lo spazio delle coordinate dell'INPUT: il puntatore finisce altrove, e
- *   NESSUNA riga di registro lo dice.  E' esattamente il sintomo che l'utente ha
- *   descritto per due giorni sul Samsung DeX — «il mouse ha sempre problemi con
- *   le coordinate degli elementi».
+ * ⇒ ⛔ It is the coordinate space of the INPUT: the pointer ends up elsewhere, and
+ *   NO log line says so.  It is exactly the symptom the user
+ *   described for two days on the Samsung DeX — "the mouse always has problems with
+ *   the coordinates of the elements".
  *
- * ⚠ Qui si LEGGE e si DICE; non si spegne niente.  Chi decide che farne e' il
- *   chiamante: con la tela a misura fissa il danno era teorico, con la tela alla
- *   misura del client (`DECISIONI.md` §5.0-sexies) e' concreto.
+ * ⚠ Here it is READ and SAID; nothing is switched off.  The caller decides
+ *   what to do with it: with a fixed-size canvas the damage was theoretical, with the canvas at
+ *   the client's size (`DECISIONI.md` §5.0-sexies) it is concrete.
  *
- * Ritorna la scala peggiore trovata, o -1 se non si e' potuta leggere. */
+ * Returns the worst scale found, or -1 if it could not be read. */
 static double scala_dei_monitor_logici(GDBusConnection *bus)
 {
 	g_autoptr(GError) sbaglio = NULL;
@@ -220,9 +220,9 @@ static double scala_dei_monitor_logici(GDBusConnection *bus)
 	                                       ATTESA_CHIAMATA_MS, NULL, &sbaglio);
 	if (!risposta)
 		return -1.0;
-	/* ⚠ Il figlio 2 e' l'elenco dei monitor LOGICI — `(iiduba(ssss)a{sv})` — e
-	 *   la scala e' il terzo campo.  Il figlio 1, che legge `elenca_monitor`,
-	 *   e' un'altra cosa: i monitor FISICI, che la scala non ce l'hanno. */
+	/* ⚠ Child 2 is the list of LOGICAL monitors — `(iiduba(ssss)a{sv})` — and
+	 *   the scale is the third field.  Child 1, which `elenca_monitor` reads,
+	 *   is something else: the PHYSICAL monitors, which have no scale. */
 	logici = g_variant_get_child_value(risposta, 2);
 	g_variant_iter_init(&iter, logici);
 	while ((voce = g_variant_iter_next_value(&iter)))
@@ -240,21 +240,21 @@ static double scala_dei_monitor_logici(GDBusConnection *bus)
 }
 
 /*
- * ⛔⭐⭐ LA SCALA DEL **NOSTRO** MONITOR, e non la peggiore della macchina.
+ * ⛔⭐⭐ THE SCALE OF **OUR** MONITOR, and not the worst on the machine.
  *
- * ⛔ E LA DIFFERENZA E' LA RAGIONE PER CUI QUESTA FUNZIONE ESISTE.  La guardia
- *    di §5.0-sexies dice di **fallire** se la scala non e' 1,0, e farlo sulla
- *    «peggiore fra tutti i monitor logici» spegnerebbe il servizio su una
- *    macchina sanissima: un portatile con lo schermo interno a 2,0 e il nostro
- *    monitor virtuale a 1,0 non ha nessun difetto, e la peggiore direbbe 2,0.
- *    ⇒ Si guarda il monitor logico che contiene il NOSTRO connettore, e basta.
+ * ⛔ AND THE DIFFERENCE IS THE REASON THIS FUNCTION EXISTS.  The guard
+ *    of §5.0-sexies says to **fail** if the scale is not 1.0, and doing it on the
+ *    "worst among all logical monitors" would switch the service off on a perfectly
+ *    healthy machine: a laptop with its internal screen at 2.0 and our
+ *    virtual monitor at 1.0 has no defect at all, and the worst would say 2.0.
+ *    ⇒ Only the logical monitor that contains OUR connector is looked at.
  *
- * ⚠ Il monitor logico e' `(iiduba(ssss)a{sv})`: la scala e' il terzo campo, e il
- *   sesto e' l'elenco dei monitor fisici che ci stanno sopra — di ciascuno il
- *   primo campo e' il connettore.
+ * ⚠ The logical monitor is `(iiduba(ssss)a{sv})`: the scale is the third field, and the
+ *   sixth is the list of physical monitors on it — of each, the
+ *   first field is the connector.
  *
- * Ritorna -1 se non si e' potuta leggere, o se il nostro connettore non compare
- * in nessun monitor logico.  ⛔ «Non lo so» non e' «1,0».
+ * Returns -1 if it could not be read, or if our connector does not appear
+ * in any logical monitor.  ⛔ "I do not know" is not "1.0".
  */
 static double scala_del_nostro(GDBusConnection *bus, const char *connettore)
 {
@@ -310,17 +310,17 @@ static gboolean fra(char **elenco, guint quanti, const char *nome)
 }
 
 /*
- * ⛔ IL NOSTRO SCHERMO SI RICONOSCE CON DUE STRADE, E DEVONO CONCORDARE.
+ * ⛔ OUR SCREEN IS RECOGNISED BY TWO ROADS, AND THEY MUST AGREE.
  *
- *   1. il diff dei connettori prima/dopo `RecordVirtual`: il nuovo e' nostro;
- *   2. il nome del PRODOTTO, che Mutter mette a «Virtual remote monitor» per i
- *      monitor di `RecordVirtual` e a «MetaVirtualMonitor» per quello della
- *      sessione.
+ *   1. the diff of the connectors before/after `RecordVirtual`: the new one is ours;
+ *   2. the PRODUCT name, which Mutter sets to "Virtual remote monitor" for the
+ *      monitors of `RecordVirtual` and to "MetaVirtualMonitor" for the
+ *      session's one.
  *
- * Se non concordano — o se i nuovi non sono esattamente uno — si lascia NULL.
- * ⛔ Scegliere «il primo» o «quello a 1080p» e' la forma E2: sul server i due
- *    monitor sono ENTRAMBI 1920×1080@60 `[M]`, e sotto quell'etichetta ci sono
- *    due schermi diversi.
+ * If they disagree — or if the new ones are not exactly one — NULL is left.
+ * ⛔ Choosing "the first" or "the 1080p one" is form E2: on the server both
+ *    monitors are 1920×1080@60 `[M]`, and under that label there are
+ *    two different screens.
  */
 gboolean mutter_monitor_cerca(MutterSessione *sessione)
 {
@@ -333,7 +333,7 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 
 	g_return_val_if_fail(sessione != NULL, FALSE);
 	if (sessione->monitor)
-		return TRUE; /* gia' saputo: non si richiede al bus per abitudine */
+		return TRUE; /* already known: the bus is not asked again out of habit */
 	quanti_prima = sessione->monitor_prima;
 
 	quanti_dopo = elenca_monitor(sessione->bus, nomi, prodotti, MONITOR_MAX);
@@ -341,24 +341,24 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 		return FALSE;
 	sessione->monitor_dopo = (guint) quanti_dopo;
 
-	/* ⛔⛔⭐ UN MONITOR C'ERA GIA', E L'UTENTE VEDREBBE SOLO LO SFONDO.
+	/* ⛔⛔⭐ A MONITOR WAS ALREADY THERE, AND THE USER WOULD SEE ONLY THE WALLPAPER.
 	 *
-	 * `[M]` 20 agosto 2026, e sono costati un'ora: sulla sessione di «prova»
-	 * c'erano DUE figli di due server nostri (le porte 7700 e 7730), ognuno col
-	 * suo monitor virtuale — `Meta-1` 2544x926 **primario** e `Meta-0` 2532x840,
-	 * il nostro.
+	 * `[M]` 20 August 2026, and it cost an hour: on the "prova" session
+	 * there were TWO children of two servers of ours (ports 7700 and 7730), each with
+	 * its virtual monitor — `Meta-1` 2544x926 **primary** and `Meta-0` 2532x840,
+	 * ours.
 	 *
-	 * ⛔ E su GNOME **barra e dock stanno solo sul monitor PRIMARIO**: il
-	 *    secondario porta lo sfondo e basta.  ⇒ Il desktop arrivava, i contatori
-	 *    erano tutti verdi (`dipinti == consegnati`, zero buchi, zero errori) e
-	 *    l'utente diceva «mancano gli elementi della shell».  **Nessuna riga di
-	 *    nessun registro lo raccontava.**
+	 * ⛔ And on GNOME **the bar and the dock live only on the PRIMARY monitor**: the
+	 *    secondary carries the wallpaper and nothing else.  ⇒ The desktop arrived, the counters
+	 *    were all green (`dipinti == consegnati`, zero holes, zero errors) and
+	 *    the user said "the shell elements are missing".  **No line in
+	 *    any log told it.**
 	 *
-	 * ⚠ Non si FALLISCE, e la ragione e' che questo non e' sempre un difetto: un
-	 *   monitor che c'era gia' puo' essere legittimo (una sessione con uno
-	 *   schermo vero).  ⛔ Ma si DICE, forte, con la cura accanto — perche' il
-	 *   sintomo che produce non ha nessun altro modo di essere diagnosticato
-	 *   (`CODER.md` §4.2, e `LEZIONI.md` §1.16: gli strumenti erano tutti verdi).
+	 * ⚠ It does not FAIL, and the reason is that this is not always a defect: a
+	 *   monitor that was already there can be legitimate (a session with a
+	 *   real screen).  ⛔ But it is SAID, loudly, with the cure next to it — because the
+	 *   symptom it produces has no other way of being diagnosed
+	 *   (`CODER.md` §4.2, and `LEZIONI.md` §1.16: the instruments were all green).
 	 */
 	if (quanti_prima > 0)
 	{
@@ -369,32 +369,32 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 			g_string_append_printf(elenco, "%s%s", j ? ", " : "",
 			                       sessione->prima[j] ? sessione->prima[j] : "?");
 		registro_dice(AREA,
-		              "⛔ C'ERANO GIA' %u monitor su questa sessione (%s) e il nostro si "
-		              "aggiunge: su GNOME la barra e il dock stanno SOLO sul monitor "
-		              "PRIMARIO, che resta il loro ⇒ l'utente vedra' il nostro, cioe' "
-		              "SOLO LO SFONDO, con tutti i contatori verdi.  ⚠ Quasi sempre e' "
-		              "un ALTRO server nostro attaccato alla stessa sessione: si spegne "
-		              "quello, oppure ogni server usa un utente suo",
+		              "⛔ THERE WERE ALREADY %u monitors on this session (%s) and ours is "
+		              "added: on GNOME the bar and the dock live ONLY on the PRIMARY "
+		              "monitor, which stays theirs ⇒ the user will see ours, that is "
+		              "ONLY THE WALLPAPER, with all counters green.  ⚠ Almost always it is "
+		              "ANOTHER server of ours attached to the same session: switch that one "
+		              "off, or give each server its own user",
 		              quanti_prima, elenco->str);
 		g_string_free(elenco, TRUE);
 	}
 
-	/* ⛔ La scala si guarda QUI, una volta, appena il monitor virtuale esiste: e'
-	 *    il primo istante in cui c'e' qualcosa da guardare, ed e' prima che una
-	 *    sola coordinata sia stata convertita. */
+	/* ⛔ The scale is checked HERE, once, as soon as the virtual monitor exists: it is
+	 *    the first instant there is something to look at, and it is before a
+	 *    single coordinate has been converted. */
 	{
 		double scala = scala_dei_monitor_logici(sessione->bus);
 
 		if (scala < 0)
-			registro_dice(AREA, "⚠ la scala dei monitor logici non si e' potuta leggere: "
-			                    "non dico 1,0 per abitudine");
+			registro_dice(AREA, "⚠ the scale of the logical monitors could not be read: "
+			                    "I do not say 1.0 out of habit");
 		else if (scala != 1.0)
 			registro_dice(AREA,
-			              "⛔ SCALA %.3f invece di 1,0 — lo spazio delle coordinate "
-			              "dell'input NON coincide con i pixel del flusso, e il puntatore "
-			              "andra' altrove senza che nulla lo dica.  Cura: "
+			              "⛔ SCALE %.3f instead of 1.0 — the input coordinate space "
+			              "does NOT match the stream's pixels, and the pointer "
+			              "will go elsewhere with nothing saying so.  Cure: "
 			              "`gsettings set org.gnome.desktop.interface scaling-factor 0` "
-			              "(`DECISIONI.md` §5.0-sexies, guardia 2)",
+			              "(`DECISIONI.md` §5.0-sexies, guard 2)",
 			              scala);
 	}
 
@@ -410,27 +410,27 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 	if (nuovi != 1 || indice_nuovo < 0)
 	{
 		registro_dice(AREA,
-		              "⚠ dopo il montaggio sono comparsi %u monitor nuovi invece di 1 "
-		              "(%u prima, %d dopo): NON dico quale sia il nostro",
+		              "⚠ after mounting %u new monitors appeared instead of 1 "
+		              "(%u before, %d after): I do NOT say which one is ours",
 		              nuovi, quanti_prima, quanti_dopo);
 	}
 	else if (!prodotti[indice_nuovo] || !strstr(prodotti[indice_nuovo], "remote"))
 	{
-		/* ⛔ Le due strade non concordano: ci si ferma invece di scegliere la
-		 *    piu' comoda.  Un nome sbagliato qui manda una finestra a schermo
-		 *    intero sull'altro monitor, e la cattura riceve zero fotogrammi
-		 *    senza un errore da nessuna parte `[M]` 12 agosto 2026. */
+		/* ⛔ The two roads disagree: stop instead of choosing the
+		 *    handier one.  A wrong name here sends a full-screen window
+		 *    to the other monitor, and the capture receives zero frames
+		 *    without an error anywhere `[M]` 12 August 2026. */
 		registro_dice(AREA,
-		              "⚠ il monitor comparso (%s) si chiama «%s», e non e' il nome che Mutter "
-		              "da' a un monitor di RecordVirtual («Virtual remote monitor»): non lo "
-		              "dichiaro nostro",
+		              "⚠ the monitor that appeared (%s) is called «%s», which is not the name Mutter "
+		              "gives a RecordVirtual monitor («Virtual remote monitor»): I do not "
+		              "declare it ours",
 		              nomi[indice_nuovo], prodotti[indice_nuovo] ? prodotti[indice_nuovo] : "?");
 	}
 	else
 	{
 		sessione->monitor = g_strdup(nomi[indice_nuovo]);
 		sessione->monitor_prodotto = g_strdup(prodotti[indice_nuovo]);
-		registro_dice(AREA, "il nostro monitor e' %s («%s»), %u prima e %d dopo",
+		registro_dice(AREA, "our monitor is %s («%s»), %u before and %d after",
 		              sessione->monitor, sessione->monitor_prodotto, quanti_prima, quanti_dopo);
 	}
 
@@ -443,7 +443,7 @@ gboolean mutter_monitor_cerca(MutterSessione *sessione)
 }
 
 /* ------------------------------------------------------------------ *
- *  L'annuncio del nodo
+ *  The node announcement
  * ------------------------------------------------------------------ */
 
 static void su_nodo_annunciato(GDBusConnection *bus, const char *mittente, const char *percorso,
@@ -462,13 +462,13 @@ static gboolean sveglia(gpointer dati)
 }
 
 /*
- * Aspetta l'annuncio del nodo, e lo fa mettendosi in ascolto PRIMA di avviare il
- * flusso.
+ * Waits for the node announcement, and does so by listening BEFORE starting the
+ * stream.
  *
- * Il contesto privato serve perche' GDBus consegna i segnali al contesto
- * predefinito del thread AL MOMENTO DELLA SOTTOSCRIZIONE, e questo codice puo'
- * girare su un thread che non fa girare alcun ciclo GLib: senza un contesto da
- * far girare qui, il segnale arriverebbe e non verrebbe mai consegnato.
+ * The private context is needed because GDBus delivers signals to the thread's
+ * default context AT THE TIME OF SUBSCRIPTION, and this code may
+ * run on a thread that runs no GLib loop: without a context to
+ * run here, the signal would arrive and never be delivered.
  */
 static gboolean attendi_nodo(MutterSessione *sessione, GError **sbaglio)
 {
@@ -480,16 +480,16 @@ static gboolean attendi_nodo(MutterSessione *sessione, GError **sbaglio)
 
 	g_main_context_push_thread_default(contesto);
 
-	/* Il mittente si lascia NULL di proposito: filtrando su un nome noto GDBus
-	 * deve prima risolverne il proprietario, e fra la sottoscrizione e la
-	 * risoluzione c'e' una finestra in cui il segnale verrebbe scartato.  Il
-	 * percorso dell'oggetto e' unico per questo flusso, e filtra abbastanza. */
+	/* The sender is left NULL on purpose: filtering on a well-known name GDBus
+	 * must first resolve its owner, and between the subscription and the
+	 * resolution there is a window in which the signal would be discarded.  The
+	 * object path is unique to this stream, and filters enough. */
 	sottoscrizione = g_dbus_connection_signal_subscribe(
 	    sessione->bus, NULL, IFACE_SC_FLUSSO, "PipeWireStreamAdded", sessione->flusso, NULL,
 	    G_DBUS_SIGNAL_FLAGS_NONE, su_nodo_annunciato, &sessione->nodo, NULL);
 
-	/* Solo ADESSO si avvia il flusso: non la sessione di cattura, che una
-	 * cattura associata rifiuta di avviare da sola. */
+	/* Only NOW is the stream started: not the capture session, which an
+	 * associated capture refuses to start on its own. */
 	{
 		g_autoptr(GVariant) risposta = chiama(sessione->bus, NOME_SCREENCAST, sessione->flusso,
 		                                      IFACE_SC_FLUSSO, "Start", NULL, NULL, sbaglio);
@@ -508,7 +508,7 @@ static gboolean attendi_nodo(MutterSessione *sessione, GError **sbaglio)
 	if (sessione->nodo == 0)
 	{
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-		            "Mutter non ha annunciato il nodo PipeWire entro %d secondi",
+		            "Mutter did not announce the PipeWire node within %d seconds",
 		            ATTESA_NODO_MS / 1000);
 		goto fine;
 	}
@@ -527,7 +527,7 @@ fine:
 }
 
 /* ------------------------------------------------------------------ *
- *  La sequenza
+ *  The sequence
  * ------------------------------------------------------------------ */
 
 MutterSessione *mutter_apri(GError **sbaglio)
@@ -537,30 +537,30 @@ MutterSessione *mutter_apri(GError **sbaglio)
 	int quanti_prima;
 	GVariantBuilder proprieta;
 
-	/* ⛔ PRIMA di qualunque `goto guasto`: con `g_new0` varrebbe **0**, e la
-	 *    chiusura chiuderebbe il descrittore 0 — cioe' lo standard input di chi
-	 *    ci ospita.  «Non aperto» si scrive -1, non si lascia allo zero. */
+	/* ⛔ BEFORE any `goto guasto`: with `g_new0` it would be **0**, and
+	 *    closing would close descriptor 0 — that is the standard input of whoever
+	 *    hosts us.  "Not open" is written -1, not left at zero. */
 	sessione->eis = -1;
 
 	sessione->bus = bus_di_sessione(sbaglio);
 	if (!sessione->bus)
 		goto guasto;
 
-	/* --- 0. i monitor PRIMA: il nostro sara' quello che compare dopo ------- */
+	/* --- 0. the monitors BEFORE: ours will be the one that appears after - */
 	quanti_prima = elenca_monitor(sessione->bus, sessione->prima, NULL, MONITOR_MAX);
 	sessione->monitor_prima = quanti_prima > 0 ? (guint) quanti_prima : 0;
 	if (quanti_prima == 0)
 	{
-		/* ⛔ E ZERO MONITOR E' LA SESSIONE NERA, non un dettaglio: `STUDI.md` §gnome
-		 *    §3.1 — in headless `needs_outputs=false`, e senza monitor la
-		 *    sessione e' viva, completa e nera.  Non si fallisce (il nostro
-		 *    `RecordVirtual` ne monta uno suo), ma si DICHIARA: chi legge zero
-		 *    fotogrammi piu' tardi deve avere questa riga sotto gli occhi. */
-		registro_dice(AREA, "⚠ la sessione grafica non ha NESSUN monitor: e' la sessione "
-		                    "«viva, completa e nera» di STUDI.md §gnome §3.1");
+		/* ⛔ AND ZERO MONITORS IS THE BLACK SESSION, not a detail: `STUDI.md` §gnome
+		 *    §3.1 — in headless `needs_outputs=false`, and without monitors the
+		 *    session is alive, complete and black.  It does not fail (our
+		 *    `RecordVirtual` mounts one of its own), but it is DECLARED: whoever reads zero
+		 *    frames later must have this line in front of them. */
+		registro_dice(AREA, "⚠ the graphical session has NO monitor: it is the "
+		                    "\"alive, complete and black\" session of STUDI.md §gnome §3.1");
 	}
 
-	/* --- 1. il controllo, creato e NON avviato ---------------------------- */
+	/* --- 1. the control, created and NOT started -------------------------- */
 	{
 		g_autoptr(GVariant) risposta =
 		    chiama(sessione->bus, NOME_REMOTE, PERCORSO_REMOTE, IFACE_REMOTE, "CreateSession", NULL,
@@ -568,7 +568,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		if (!risposta)
 		{
 			g_prefix_error(sbaglio,
-			               "Mutter non espone RemoteDesktop (la sessione grafica e' avviata?): ");
+			               "Mutter does not expose RemoteDesktop (is the graphical session started?): ");
 			goto guasto;
 		}
 		g_variant_get(risposta, "(o)", &sessione->controllo);
@@ -580,26 +580,26 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		goto guasto;
 
 	/*
-	 * ⭐ LA FASE 4 E' ARRIVATA, e `ConnectToEIS` sta QUI — nel punto che il
-	 *    commento della fase 2 aveva marcato.  *Innestato il 14 agosto 2026.*
+	 * ⭐ PHASE 4 HAS ARRIVED, and `ConnectToEIS` lives HERE — at the point the
+	 *    phase 2 comment had marked.  *Put in on 14 August 2026.*
 	 *
-	 * Il riferimento lo chiama subito dopo `CreateSession` e PRIMA di `Start`, e
-	 * non e' una preferenza: il compositore ha davanti una sessione non ancora
-	 * avviata, ed e' li' che accetta di aprire il canale.
+	 * The reference calls it right after `CreateSession` and BEFORE `Start`, and
+	 * it is not a preference: the compositor faces a session not yet
+	 * started, and that is where it agrees to open the channel.
 	 *
-	 * ⚠ E poi si e' letto il codice (`reference-gnome/rapporti/06-mutter-input.md`
+	 * ⚠ And then the code was read (`reference-gnome/rapporti/06-mutter-input.md`
 	 *   §1.2, `[R]`): `handle_connect_to_eis` (`meta-remote-desktop-session.c:1929`)
-	 *   ⛔ **non chiama ne' `check_permission` ne' `check_can_notify`**, e
-	 *   `initialize_viewports` e' chiamata da `Start` se l'EIS esiste gia' e da
-	 *   `ConnectToEIS` se la sessione e' gia' avviata: **tutt'e due gli ordini
-	 *   reggono**.  Resta qui perche' e' l'ordine del riferimento, non perche'
-	 *   l'altro rompa.
+	 *   ⛔ **calls neither `check_permission` nor `check_can_notify`**, and
+	 *   `initialize_viewports` is called by `Start` if the EIS already exists and by
+	 *   `ConnectToEIS` if the session is already started: **both orders
+	 *   hold**.  It stays here because it is the reference's order, not because
+	 *   the other breaks.
 	 *
-	 * ⛔ E NON SI FALLISCE SE NON SI APRE: `CODER.md` §4.2.  Senza input la
-	 *    cattura funziona lo stesso — l'utente GUARDA e non comanda — e far
-	 *    cadere l'intera apertura per il canale di input sarebbe togliere la
-	 *    sessione a chi voleva solo vedere.  ⇒ Si dichiara, e `input_apri`
-	 *    fallira' con un errore che dice PERCHE'.
+	 * ⛔ AND IT DOES NOT FAIL IF IT DOES NOT OPEN: `CODER.md` §4.2.  Without input the
+	 *    capture works all the same — the user WATCHES and does not control — and dropping
+	 *    the whole opening for the input channel would take the
+	 *    session away from someone who only wanted to see.  ⇒ It is declared, and `input_apri`
+	 *    will fail with an error that says WHY.
 	 */
 	{
 		g_autoptr(GError) sbaglio_eis = NULL;
@@ -610,12 +610,12 @@ MutterSessione *mutter_apri(GError **sbaglio)
 
 		sessione->eis = -1;
 		/*
-		 * ⛔ Nessuna opzione: `device-types` assente vuol dire «accendi tutto»
-		 *    — tastiera | puntatore | touchscreen (`meta-remote-desktop-session.c:1957-1959`
-		 *    `[R]`).  ⚠ E la `MetaEis` si crea UNA VOLTA SOLA per sessione: una
-		 *    seconda `ConnectToEIS` riuserebbe la stessa e **ignorerebbe** le
-		 *    opzioni nuove.  Chiedere tutto adesso e' l'unico modo di non
-		 *    scoprirlo alla fase 6.
+		 * ⛔ No options: `device-types` absent means "turn everything on"
+		 *    — keyboard | pointer | touchscreen (`meta-remote-desktop-session.c:1957-1959`
+		 *    `[R]`).  ⚠ And the `MetaEis` is created ONCE ONLY per session: a
+		 *    second `ConnectToEIS` would reuse the same one and **ignore** the
+		 *    new options.  Asking for everything now is the only way not to
+		 *    find out in phase 6.
 		 */
 		g_variant_builder_init(&senza_opzioni, G_VARIANT_TYPE("a{sv}"));
 		risposta = g_dbus_connection_call_with_unix_fd_list_sync(
@@ -625,8 +625,8 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		if (!risposta)
 		{
 			registro_dice(AREA,
-			              "⚠ ConnectToEIS rifiutata (%s): la sessione si apre lo stesso, ma "
-			              "NESSUN input arrivera' al desktop",
+			              "⚠ ConnectToEIS refused (%s): the session opens all the same, but "
+			              "NO input will reach the desktop",
 			              sbaglio_eis->message);
 		}
 		else
@@ -634,20 +634,20 @@ MutterSessione *mutter_apri(GError **sbaglio)
 			g_variant_get(risposta, "(h)", &indice);
 			sessione->eis = g_unix_fd_list_get(descrittori, indice, &sbaglio_eis);
 			if (sessione->eis < 0)
-				registro_dice(AREA, "⚠ ConnectToEIS ha risposto ma il descrittore non si legge "
-				                    "(%s): nessun input arrivera' al desktop",
+				registro_dice(AREA, "⚠ ConnectToEIS answered but the descriptor cannot be read "
+				                    "(%s): no input will reach the desktop",
 				              sbaglio_eis->message);
 			else
-				registro_dice(AREA, "canale di input aperto: descrittore EIS %d", sessione->eis);
+				registro_dice(AREA, "input channel open: EIS descriptor %d", sessione->eis);
 		}
 	}
 
-	/* --- 2. la cattura, che si registra sul controllo non ancora avviato --- */
+	/* --- 2. the capture, which registers on the control not yet started -- */
 	g_variant_builder_init(&proprieta, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&proprieta, "{sv}", "remote-desktop-session-id",
 	                      g_variant_new_string(id_controllo));
-	/* Presa dal riferimento: le animazioni di GNOME su un collegamento remoto
-	 * costano banda e non aggiungono nulla. */
+	/* Taken from the reference: GNOME's animations over a remote link
+	 * cost bandwidth and add nothing. */
 	g_variant_builder_add(&proprieta, "{sv}", "disable-animations", g_variant_new_boolean(TRUE));
 	{
 		g_autoptr(GVariant) risposta = chiama(
@@ -658,7 +658,7 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		g_variant_get(risposta, "(o)", &sessione->cattura);
 	}
 
-	/* --- 3. ADESSO si avvia il controllo ---------------------------------- */
+	/* --- 3. NOW the control is started ------------------------------------ */
 	{
 		g_autoptr(GVariant) risposta =
 		    chiama(sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "Start",
@@ -667,12 +667,12 @@ MutterSessione *mutter_apri(GError **sbaglio)
 			goto guasto;
 	}
 
-	/* --- 4. il monitor virtuale ------------------------------------------- */
+	/* --- 4. the virtual monitor ------------------------------------------- */
 	g_variant_builder_init(&proprieta, G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(&proprieta, "{sv}", "cursor-mode", g_variant_new_uint32(CURSORE_METADATO));
-	/* Dichiara che il monitor virtuale e' «di piattaforma», cioe' trattato come
-	 * uno schermo vero dal punto di vista della configurazione dei monitor: lo fa
-	 * anche il riferimento. */
+	/* Declares the virtual monitor a "platform" one, that is treated as
+	 * a real screen from the point of view of monitor configuration: the
+	 * reference does it too. */
 	g_variant_builder_add(&proprieta, "{sv}", "is-platform", g_variant_new_boolean(TRUE));
 	sessione->mapping_id = g_uuid_string_random();
 	g_variant_builder_add(&proprieta, "{sv}", "mapping-id",
@@ -687,29 +687,29 @@ MutterSessione *mutter_apri(GError **sbaglio)
 		g_variant_get(risposta, "(o)", &sessione->flusso);
 	}
 
-	/* --- 5. l'ascolto, e poi l'avvio del flusso --------------------------- */
+	/* --- 5. listening, and then starting the stream ----------------------- */
 	if (!attendi_nodo(sessione, sbaglio))
 		goto guasto;
 
-	/* ⛔ E QUI NON SI CERCA IL NOSTRO MONITOR: a questo punto non esiste ancora,
-	 *    ed e' misurato — nemmeno tre secondi dopo `Stream.Start` compare.  Lo
-	 *    cerca `mutter_monitor_cerca`, che chi cattura chiama quando il flusso e'
-	 *    attivo.  Cercarlo qui vorrebbe dire scrivere «non e' comparso nessun
-	 *    monitor» su una sessione sana. */
+	/* ⛔ AND OUR MONITOR IS NOT LOOKED FOR HERE: at this point it does not exist yet,
+	 *    and that is measured — it does not appear even three seconds after `Stream.Start`.
+	 *    `mutter_monitor_cerca` looks for it, called by the capturer when the stream is
+	 *    active.  Looking for it here would mean writing "no monitor
+	 *    appeared" on a healthy session. */
 
-	/* ⛔⭐ E LA RIGA DICE QUEL CHE C'E', NON QUEL CHE CI SARA' — 27 agosto
-	 *     2026.  Qui c'era scritto «monitor virtuale montato», due righe sotto
-	 *     il commento che dichiara che **il monitor non esiste ancora**: due
-	 *     affermazioni opposte a distanza di due righe, e quella che si legge
-	 *     nel registro era la falsa.  ⚠ Un messaggio che afferma un fatto che
-	 *     non e' vero e' peggio del silenzio: manda fuori strada chi legge, e
-	 *     il silenzio almeno non lo fa.  ⇒ Adesso dice il fatto vero — la
-	 *     sessione e' avviata e il flusso ha il suo nodo — e nomina quel che
-	 *     manca ancora. */
+	/* ⛔⭐ AND THE LINE SAYS WHAT IS THERE, NOT WHAT WILL BE — 27 August
+	 *     2026.  Here it used to say "virtual monitor mounted", two lines below
+	 *     the comment declaring that **the monitor does not exist yet**: two
+	 *     opposite statements two lines apart, and the one read
+	 *     in the log was the false one.  ⚠ A message that states a fact that
+	 *     is not true is worse than silence: it misleads the reader, and
+	 *     silence at least does not.  ⇒ Now it says the true fact — the
+	 *     session is started and the stream has its node — and names what
+	 *     is still missing. */
 	registro_dice(AREA,
-	              "sessione di cattura AVVIATA: nodo PipeWire %u, flusso %s.  ⚠ Il monitor "
-	              "virtuale NON e' ancora comparso: lo cerca `mutter_monitor_cerca()` quando "
-	              "il flusso consegna (vedi il riquadro qui sopra)",
+	              "capture session STARTED: PipeWire node %u, stream %s.  ⚠ The virtual "
+	              "monitor has NOT appeared yet: `mutter_monitor_cerca()` looks for it when "
+	              "the stream delivers (see the box above)",
 	              sessione->nodo, sessione->flusso);
 	return sessione;
 
@@ -749,57 +749,57 @@ int mutter_eis_fd(const MutterSessione *sessione)
 }
 
 /*
- * ⛔⛔⛔ LA CURA «C» — si rifa' il canale EIS lasciando in piedi TUTTO il resto.
- *       Aggiunta il 21 agosto 2026, e il documento di fase la chiama «C».
- *       🔸 DERIVATA: la decisione e' del coordinatore, non dell'utente.
+ * ⛔⛔⛔ CURE "C" — the EIS channel is rebuilt leaving EVERYTHING else standing.
+ *       Added on 21 August 2026, and the phase document calls it "C".
+ *       🔸 DERIVED: the decision is the coordinator's, not the user's.
  *
- * IL DANNO CHE CURA, `[M]` 21 agosto 2026 (`banchi/06-b33-risveglio.sh`): quando
- * Mutter ricrea i dispositivi assoluti mentre un pulsante e' premuto, quel
- * pulsante resta giu' **nel posto** e da li' in poi **il desktop non prende piu'
- * un clic** — per sempre, e senza un errore da nessuna parte.
+ * THE DAMAGE IT CURES, `[M]` 21 August 2026 (`banchi/06-b33-risveglio.sh`): when
+ * Mutter recreates the absolute devices while a button is pressed, that
+ * button stays down **in the seat** and from then on **the desktop no longer takes
+ * a click** — forever, and without an error anywhere.
  *
- * ⛔ E dal lato del cliente non si recupera: `handle_button`
- *    (`meta-eis-client.c:612-621`) guarda `device->button_state`, che sul
- *    dispositivo NUOVO e' pulito, e ingoia il rilascio **prima** che il posto lo
- *    veda.  `[M]` press+release sul nuovo fa `count` 1→2→1 (giornale di Mutter
- *    con `MUTTER_DEBUG=input`: *«Dropping repeated press … count 2»* e
- *    *«Dropping repeated release … count 1»*).
+ * ⛔ And it cannot be recovered from the client side: `handle_button`
+ *    (`meta-eis-client.c:612-621`) looks at `device->button_state`, which on the
+ *    NEW device is clean, and swallows the release **before** the seat
+ *    sees it.  `[M]` press+release on the new one makes `count` 1→2→1 (Mutter's journal
+ *    with `MUTTER_DEBUG=input`: *"Dropping repeated press … count 2"* and
+ *    *"Dropping repeated release … count 1"*).
  *
- * ⭐ L'UNICO codice che riporta il conto a zero e' `drop_device()`
- *    (`meta-eis-client.c:144-168`), e il suo unico chiamante e'
- *    `meta_eis_client_disconnect()` (`:1075`) — cioe' **la caduta del canale
- *    EIS**.  `[M]` Nel giornale si vedono le sei righe *«Releasing pressed
- *    buttons while destroying virtual input device»* proprio li'.
+ * ⭐ The ONLY code that brings the count back to zero is `drop_device()`
+ *    (`meta-eis-client.c:144-168`), and its only caller is
+ *    `meta_eis_client_disconnect()` (`:1075`) — that is **the EIS channel
+ *    dropping**.  `[M]` In the journal the six lines *"Releasing pressed
+ *    buttons while destroying virtual input device"* appear right there.
  *
- * ⛔⛔ E PERCHE' QUESTA FUNZIONE STA IN `mutter.c` E NON IN `input.c` — e la
- *      ragione NON e' quella che avevo scritto il 21 agosto la prima volta.
+ * ⛔⛔ AND WHY THIS FUNCTION LIVES IN `mutter.c` AND NOT IN `input.c` — and the
+ *      reason is NOT the one I wrote the first time on 21 August.
  *
- *      Avevo scritto: *«chiudere il `dup` di libei non basta, perche' il socket
- *      ha ancora aperto il descrittore di `mutter.c`»*.  ⛔ `[M]` **Smentita**
- *      dal guasto innestato `RG3`: togliendo il `close()` la guarigione
- *      funziona lo stesso.  Il distacco lo manda `ei_disconnect()` come
- *      messaggio di protocollo (`[M]`, guasto `RG4`).
+ *      I had written: *"closing libei's `dup` is not enough, because the socket
+ *      still has `mutter.c`'s descriptor open"*.  ⛔ `[M]` **Refuted**
+ *      by the injected fault `RG3`: removing the `close()` the recovery
+ *      works all the same.  The detach is sent by `ei_disconnect()` as a
+ *      protocol message (`[M]`, fault `RG4`).
  *
- *      ⭐ La ragione vera, che regge: **dopo il distacco il descrittore messo
- *        da parte e' morto**, e per averne uno NUOVO serve una `ConnectToEIS`
- *        — cioe' il bus, il nome e il percorso della sessione.  `input.c` non
- *        li ha e non li deve avere: conosce `libei`, non D-Bus.
+ *      ⭐ The true reason, which holds: **after the detach the descriptor set
+ *        aside is dead**, and getting a NEW one needs a `ConnectToEIS`
+ *        — that is the bus, the name and the path of the session.  `input.c` does not
+ *        have them and must not have them: it knows `libei`, not D-Bus.
  *
- * ⭐ E che una seconda `ConnectToEIS` sia lecita non e' una speranza: `[R]`
- *    `meta-remote-desktop-session.c:1943-1969` — `session->eis` si **riusa** se
- *    c'e' gia', e ogni chiamata aggiunge un cliente col suo socket.  ⇒ La
- *    sessione `RemoteDesktop`, il monitor virtuale e il flusso PipeWire **non si
- *    toccano**: e' questa la differenza fra la cura e «riaccendere il server».
+ * ⭐ And that a second `ConnectToEIS` is legitimate is not a hope: `[R]`
+ *    `meta-remote-desktop-session.c:1943-1969` — `session->eis` is **reused** if
+ *    already there, and every call adds a client with its own socket.  ⇒ The
+ *    `RemoteDesktop` session, the virtual monitor and the PipeWire stream **are not
+ *    touched**: that is the difference between the cure and "restarting the server".
  *
- * ⚠ E le opzioni restano assenti come alla prima chiamata: la `MetaEis` esiste
- *   gia' e le ignorerebbe (vedi il riquadro dentro `mutter_apri`).  Metterle
- *   qui darebbe l'impressione di poter cambiare le capacita' a caldo.
+ * ⚠ And the options stay absent as on the first call: the `MetaEis` already
+ *   exists and would ignore them (see the box inside `mutter_apri`).  Putting them
+ *   here would give the impression that capabilities can be changed on the fly.
  *
- *   ritorna  il descrittore NUOVO (>= 0), gia' messo da parte in questa
- *            sessione: chi lo usa ne fa un `dup`, come sempre;
- *   ritorna  -1 e riempie `sbaglio`: ⛔ e allora il canale EIS **non c'e'
- *            piu'** — il vecchio e' stato chiuso comunque, perche' e' quella
- *            chiusura a guarire il posto.  Chi chiama lo deve dichiarare.
+ *   returns  the NEW descriptor (>= 0), already set aside in this
+ *            session: whoever uses it makes a `dup` of it, as always;
+ *   returns  -1 and fills `sbaglio`: ⛔ and then the EIS channel **is no longer
+ *            there** — the old one was closed anyway, because it is that
+ *            closing that heals the seat.  The caller must declare it.
  */
 int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
 {
@@ -811,43 +811,43 @@ int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
 	if (!sessione || !sessione->bus || !sessione->controllo)
 	{
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "nessuna sessione RemoteDesktap aperta: non c'e' nessun canale EIS da rifare");
+		            "no RemoteDesktap session open: there is no EIS channel to rebuild");
 		return -1;
 	}
 
 	/*
-	 * ⛔⛔ E QUI C'ERA UNA SPIEGAZIONE SBAGLIATA, SMENTITA DALLA MISURA — 21
-	 *      agosto 2026, guasto innestato `RG3` di
+	 * ⛔⛔ AND HERE THERE WAS A WRONG EXPLANATION, REFUTED BY MEASUREMENT — 21
+	 *      August 2026, injected fault `RG3` of
 	 *      `banchi/06-b33-risveglio-guasti.py`.
 	 *
-	 * Diceva: *«si chiude prima e si chiede dopo, e l'ordine E' la cura: finche'
-	 * questo descrittore e' aperto il socket resta connesso e Mutter non vede
-	 * nessun distacco»*.  ⛔ `[M]` **Falso**: tolto questo `close()`, la
-	 * guarigione funziona **esattamente come prima** e nessun caso del banco
-	 * cambia colore.
+	 * It said: *"close first and ask after, and the order IS the cure: as long as
+	 * this descriptor is open the socket stays connected and Mutter sees
+	 * no detach"*.  ⛔ `[M]` **False**: with this `close()` removed, the
+	 * recovery works **exactly as before** and no case of the bench
+	 * changes colour.
 	 *
-	 * ⭐ Il distacco lo manda `ei_disconnect()` (in `input.c`) come **messaggio
-	 *   di protocollo**: Mutter esegue `meta_eis_client_disconnect()` — e quindi
-	 *   `drop_device()` — senza aspettare l'EOF del socket.  `[M]` Lo prova il
-	 *   guasto `RG4`, che toglie proprio quella riga e rompe la guarigione.
+	 * ⭐ The detach is sent by `ei_disconnect()` (in `input.c`) as a **protocol
+	 *   message**: Mutter runs `meta_eis_client_disconnect()` — and therefore
+	 *   `drop_device()` — without waiting for the socket's EOF.  `[M]` Fault
+	 *   `RG4` proves it, removing exactly that line and breaking the recovery.
 	 *
-	 * ⚠ E il `close()` resta, per una ragione piu' modesta e vera: **senza, si
-	 *   perde un descrittore a ogni guarigione**.  ⛔ Un difetto che non fa
-	 *   rumore per ore e poi esaurisce la tavola dei descrittori.
+	 * ⚠ And the `close()` stays, for a more modest and true reason: **without it, one
+	 *   descriptor is leaked at every recovery**.  ⛔ A defect that makes no
+	 *   noise for hours and then exhausts the descriptor table.
 	 *
-	 * ⚠ Questa funzione resta comunque necessaria, e non e' cambiato: dopo il
-	 *   distacco il descrittore messo da parte e' morto, e uno NUOVO lo puo'
-	 *   chiedere solo chi ha il bus e il percorso della sessione — cioe' qui.
+	 * ⚠ This function is still necessary, and that has not changed: after the
+	 *   detach the descriptor set aside is dead, and a NEW one can only be
+	 *   asked for by whoever has the bus and the session path — that is, here.
 	 */
 	if (sessione->eis >= 0)
 	{
 		close(sessione->eis);
 		registro_dice(AREA,
-		              "⭐ canale EIS vecchio chiuso (descrittore %d).  ⚠ Non e' QUESTA la cosa "
-		              "che guarisce il posto — `[M]` 21 ago 2026, guasto RG3: togliendo la "
-		              "chiusura la guarigione funziona lo stesso.  Il distacco lo manda "
-		              "`ei_disconnect()`; questa riga serve a non perdere un descrittore a "
-		              "ogni guarigione",
+		              "⭐ old EIS channel closed (descriptor %d).  ⚠ It is NOT THIS that "
+		              "heals the seat — `[M]` 21 Aug 2026, fault RG3: removing the "
+		              "close the recovery works all the same.  The detach is sent by "
+		              "`ei_disconnect()`; this line serves not to leak a descriptor at "
+		              "every recovery",
 		              sessione->eis);
 		sessione->eis = -1;
 	}
@@ -860,46 +860,46 @@ int mutter_eis_riattacca(MutterSessione *sessione, GError **sbaglio)
 	if (!risposta)
 	{
 		registro_dice(AREA,
-		              "⛔ la seconda ConnectToEIS e' stata rifiutata: da adesso NESSUN input "
-		              "arriva al desktop, e la sessione resta viva solo per guardare");
+		              "⛔ the second ConnectToEIS was refused: from now on NO input "
+		              "reaches the desktop, and the session stays alive only for watching");
 		return -1;
 	}
 	g_variant_get(risposta, "(h)", &indice);
 	sessione->eis = g_unix_fd_list_get(descrittori, indice, sbaglio);
 	if (sessione->eis < 0)
 	{
-		registro_dice(AREA, "⛔ ConnectToEIS ha risposto ma il descrittore non si legge: da "
-		                    "adesso NESSUN input arriva al desktop");
+		registro_dice(AREA, "⛔ ConnectToEIS answered but the descriptor cannot be read: from "
+		                    "now on NO input reaches the desktop");
 		return -1;
 	}
-	registro_dice(AREA, "⭐ canale EIS RIAPERTO: descrittore %d.  ⚠ La sessione, il monitor e il "
-	                    "flusso NON sono stati toccati",
+	registro_dice(AREA, "⭐ EIS channel REOPENED: descriptor %d.  ⚠ The session, the monitor and the "
+	                    "stream were NOT touched",
 	              sessione->eis);
 	return sessione->eis;
 }
 
 /*
- * ⛔⛔ IL `mapping-id` VIENE DA MUTTER, NON DA NOI — e il verso conta.
+ * ⛔⛔ THE `mapping-id` COMES FROM MUTTER, NOT FROM US — and the direction matters.
  *
- * `reference-gnome/rapporti/06-mutter-input.md` §7.2 `[≠]`, riletto nel codice
- * il 14 agosto 2026:
+ * `reference-gnome/rapporti/06-mutter-input.md` §7.2 `[≠]`, reread in the code
+ * on 14 August 2026:
  *
- *   - `handle_record_virtual` (`meta-screen-cast-session.c:747-765`) legge
- *     **`cursor-mode` e `is-platform` e basta**: la nostra proprieta'
- *     `mapping-id` viene **ignorata in silenzio**, senza un errore;
+ *   - `handle_record_virtual` (`meta-screen-cast-session.c:747-765`) reads
+ *     **`cursor-mode` and `is-platform` and nothing else**: our
+ *     `mapping-id` property is **silently ignored**, without an error;
  *   - `meta_screen_cast_stream_initable_init` (`meta-screen-cast-stream.c:445-458`)
- *     chiama `meta_remote_desktop_session_acquire_mapping_id`, che genera un
- *     **UUID casuale** (`:558-575`), e lo pubblica nella proprieta'
- *     `Parameters` del flusso.
+ *     calls `meta_remote_desktop_session_acquire_mapping_id`, which generates a
+ *     **random UUID** (`:558-575`), and publishes it in the stream's
+ *     `Parameters` property.
  *
- * ⇒ Cercare la regione di `libei` con l'UUID che abbiamo dichiarato NOI vuol
- *   dire non trovarla mai, e cadere sul ripiego «prendo la prima» — che con
- *   uno schermo solo funziona, e smette di funzionare esattamente il giorno in
- *   cui gli schermi sono due.  E' il difetto che `input.c` non deve avere.
+ * ⇒ Looking for the `libei` region with the UUID WE declared means
+ *   never finding it, and falling back on "take the first" — which with
+ *   a single screen works, and stops working exactly the day
+ *   there are two screens.  It is the defect `input.c` must not have.
  *
- * ⚠ Si legge PIGRAMENTE, la prima volta che serve: la sequenza di
- *   `mutter_apri` non si tocca (ci lavorano altri anelli), e questa lettura non
- *   ha ragione di stare li' dentro.
+ * ⚠ It is read LAZILY, the first time it is needed: the sequence of
+ *   `mutter_apri` is not touched (other links work on it), and this read has
+ *   no reason to be in there.
  */
 const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 {
@@ -919,10 +919,10 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 	                  &sbaglio);
 	if (!risposta)
 	{
-		/* ⛔ Lettura NEGATA, non «non c'e'»: chi legge questa riga deve poter
-		 *    distinguere i due casi (`CODER.md` §3.10). */
-		registro_dice(AREA, "⚠ i Parameters del flusso non si leggono (%s): il mapping-id di "
-		                    "Mutter resta ignoto, NON dico che manchi",
+		/* ⛔ DENIED read, not "not there": whoever reads this line must be able to
+		 *    tell the two cases apart (`CODER.md` §3.10). */
+		registro_dice(AREA, "⚠ the stream's Parameters cannot be read (%s): Mutter's mapping-id "
+		                    "stays unknown, I do NOT say it is missing",
 		              sbaglio->message);
 		return NULL;
 	}
@@ -930,16 +930,16 @@ const char *mutter_mapping_id_pubblicato(MutterSessione *sessione)
 	if (!g_variant_lookup(valore, "mapping-id", "s", &letto) || !letto || !*letto)
 	{
 		g_free(letto);
-		registro_dice(AREA, "⚠ i Parameters del flusso NON portano un mapping-id: la regione del "
-		                    "puntatore si dovra' riconoscere per geometria");
+		registro_dice(AREA, "⚠ the stream's Parameters do NOT carry a mapping-id: the pointer "
+		                    "region will have to be recognised by geometry");
 		return NULL;
 	}
 
 	sessione->mapping_id_pubblicato = letto;
-	registro_dice(AREA, "mapping-id pubblicato da Mutter: «%s»%s", letto,
+	registro_dice(AREA, "mapping-id published by Mutter: «%s»%s", letto,
 	              g_strcmp0(letto, sessione->mapping_id) == 0
 	                  ? ""
-	                  : "  ⛔ DIVERSO da quello che avevamo dichiarato noi a RecordVirtual");
+	                  : "  ⛔ DIFFERENT from the one we had declared to RecordVirtual");
 	return sessione->mapping_id_pubblicato;
 }
 
@@ -948,22 +948,22 @@ const char *mutter_monitor_nostro(const MutterSessione *sessione)
 	return sessione ? sessione->monitor : NULL;
 }
 
-/* ⛔⭐⭐ LA GUARDIA 2 DI §5.0-sexies, CHIUSA — e chiude un difetto che nessuna
- *     riga di registro raccontava.
+/* ⛔⭐⭐ GUARD 2 OF §5.0-sexies, CLOSED — and it closes a defect no
+ *     log line told.
  *
- * ⚠ Fino al 15 agosto 2026 la scala si LEGGEVA e si DICEVA, e il commento sopra
- *   `scala_dei_monitor_logici()` lo dichiarava: *«con la tela a misura fissa il
- *   danno era teorico, con la tela alla misura del client e' concreto»*.  ⛔ Da
- *   stanotte la tela E' alla misura del client, quindi il danno e' concreto: il
- *   layout del monitor logico e i pixel del flusso non coincidono piu', **e lo
- *   spazio delle coordinate dell'input e' il layout** ⇒ il puntatore va altrove.
+ * ⚠ Until 15 August 2026 the scale was READ and SAID, and the comment above
+ *   `scala_dei_monitor_logici()` declared it: *"with a fixed-size canvas the
+ *   damage was theoretical, with the canvas at the client's size it is concrete"*.  ⛔ Since
+ *   tonight the canvas IS at the client's size, so the damage is concrete: the
+ *   layout of the logical monitor and the stream's pixels no longer match, **and the
+ *   input coordinate space is the layout** ⇒ the pointer goes elsewhere.
  *
- * ⛔ Si chiede a Mutter, e si chiede DEL NOSTRO monitor: la scala peggiore della
- *    macchina direbbe 2,0 su un portatile con lo schermo interno hi-dpi, e
- *    spegnerebbe una sessione che non ha nessun difetto.
+ * ⛔ Mutter is asked, and asked ABOUT OUR monitor: the worst scale of the
+ *    machine would say 2.0 on a laptop with a hi-dpi internal screen, and
+ *    would switch off a session that has no defect at all.
  *
- * Ritorna -1 se non si e' potuta leggere: ⛔ e chi chiama NON deve trattarlo
- * come 1,0 — «non lo so» e «va bene» sono due fatti diversi. */
+ * Returns -1 if it could not be read: ⛔ and the caller must NOT treat it
+ * as 1.0 — "I do not know" and "it is fine" are two different facts. */
 double mutter_scala_nostra(const MutterSessione *sessione)
 {
 	if (!sessione || !sessione->bus || !sessione->monitor || !sessione->monitor[0])
@@ -989,20 +989,20 @@ void mutter_chiudi(MutterSessione *sessione)
 	if (!sessione)
 		return;
 
-	/* Si ferma il CONTROLLO, e la cattura lo segue: fermare direttamente una
-	 * cattura associata Mutter lo rifiuta. */
+	/* The CONTROL is stopped, and the capture follows it: Mutter refuses to stop
+	 * an associated capture directly. */
 	if (sessione->bus && sessione->controllo)
 	{
 		g_autoptr(GError) sbaglio = NULL;
-		/* Attesa CORTA: quasi sempre si arriva qui perche' la sessione grafica se
-		 * n'e' gia' andata, e aspettare quindici secondi una risposta che non puo'
-		 * arrivare terrebbe fermo chi sta smontando. */
+		/* SHORT wait: we almost always get here because the graphical session has
+		 * already gone, and waiting fifteen seconds for an answer that cannot
+		 * arrive would hold up whoever is tearing down. */
 		g_autoptr(GVariant) risposta = g_dbus_connection_call_sync(
 		    sessione->bus, NOME_REMOTE, sessione->controllo, IFACE_REMOTE_SESSIONE, "Stop", NULL,
 		    NULL, G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &sbaglio);
 
 		if (!risposta)
-			registro_dettaglio(AREA, "chiusura della sessione di controllo: %s", sbaglio->message);
+			registro_dettaglio(AREA, "closing the control session: %s", sbaglio->message);
 	}
 
 	if (sessione->eis >= 0)

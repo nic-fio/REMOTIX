@@ -2,9 +2,9 @@ package interfaccia
 
 import "fmt"
 
-// I testi delle schermate, in inglese (DECISIONI §10.35), dal mockup approvato
-// (grafica/tui-mockup/index.html, 10 ott 2026): parole comuni, frasi corte, i dettagli tecnici a
-// parte. Le chiavi mancanti escono come ⟨chiave⟩ (TestTestiInterfaccia le trova).
+// The screens' texts, in English (DECISIONI §10.35), from the approved mockup
+// (grafica/tui-mockup/index.html, 10 Oct 2026): plain words, short sentences, the technical details
+// apart. Missing keys come out as ⟨key⟩ (TestTestiInterfaccia finds them).
 var testi = map[string]string{
 	"intestazione":      "Installation",
 	"passo.1":           "Check",
@@ -16,7 +16,7 @@ var testi = map[string]string{
 	"attendi.piano":     "Preparing the plan: asking the package manager what it would do…",
 	"salvato":           "Saved in %s",
 
-	// i tasti
+	// the keys
 	"k.avanti":   "continue",
 	"k.dettagli": "details",
 	"k.esci":     "quit",
@@ -31,7 +31,7 @@ var testi = map[string]string{
 	"k.chiudi":   "close",
 	"k.salva":    "save the report",
 
-	// i titoletti
+	// the subheadings
 	"h.dettagli": "TECHNICAL DETAILS",
 	"h.registro": "LOG",
 	"h.apri":     "OPEN IN A BROWSER",
@@ -45,7 +45,7 @@ var testi = map[string]string{
 	"tui.stretto": "terminal too narrow: %d columns needed",
 	"tui.basso":   "terminal too short: %d lines needed",
 
-	// 1 · il controllo
+	// 1 · the check
 	"c.ok.titolo":       "Nothing is missing.",
 	"c.cond1.titolo":    "Nothing is missing. One warning:",
 	"c.condN.titolo":    "Nothing is missing. %d warnings:",
@@ -100,7 +100,7 @@ var testi = map[string]string{
 	"t.permessi.n":      "%d people will get permission to use the graphics card",
 	"t.audio":           "tested at the first connection",
 
-	// quel che manca, in una riga del controllo (§10.36: che cosa, non come metterlo)
+	// what is missing, in a line of the check (§10.36: what, not how to provide it)
 	"m.RX-MANCA-001": "a supported desktop",
 	"m.RX-MANCA-002": "a repository REMOTIX's dependencies come from",
 	"m.RX-MANCA-003": "packages a desktop needs",
@@ -110,14 +110,14 @@ var testi = map[string]string{
 	"m.RX-GPU-005":   "no card that encodes H.264 (VA-API or Vulkan Video)",
 	"m.RX-GPU-006":   "no driver that encodes H.264 on this card (VA-API or Vulkan Video)",
 
-	// 2 · le scelte (il controllo per la porta, nella CLI e nelle prove)
+	// 2 · the choices (the check for the port, in the CLI and in the tests)
 	"sc.titolo.1":     "One thing to decide",
 	"sc.sotto":        "Everything else already has a value. It can be changed later, in the configuration.",
 	"sc.porta.errata": "Enter a number between 1 and 65535.",
 	"sc.fw.nessuno":   "No firewall is on: no need to touch it.",
 	"sc.fw.admin":     "The firewall (%s) is on: REMOTIX does not change it, open the port yourself (TCP and UDP).",
 
-	// 3 · il piano
+	// 3 · the plan
 	"p.porta":        "Port",
 	"p.porta.t":      "TCP and UDP",
 	"p.da.run":       "from this installer",
@@ -151,7 +151,7 @@ var testi = map[string]string{
 	"a.servizio.f":   "REMOTIX running on port %s",
 	"a.servizio.b":   "Starting remotix.service",
 
-	// 4 · l'avanzamento
+	// 4 · the progress
 	"av.passo":        "Step %d of %d · %s",
 	"av.fiducia":      "Catalogue and engine checked",
 	"av.piano":        "Plan still valid for this machine",
@@ -160,7 +160,7 @@ var testi = map[string]string{
 	"av.fine":         "Done",
 	"av.annullamento": "Putting the machine back as it was",
 
-	// 5 · pronto
+	// 5 · ready
 	"pr.titolo":             "REMOTIX is running.",
 	"pr.sotto":              "Everything works.",
 	"pr.sotto.cond":         "It works, with one condition: %s",
@@ -188,7 +188,7 @@ var testi = map[string]string{
 	"pr.k.passi":            "Plan steps re-checked (%d of %d)",
 	"pr.k.audio":            "Audio",
 
-	// esiti diversi da pronto
+	// outcomes other than ready
 	"b.titolo.versione":   "This version of %s is not supported",
 	"b.titolo.distro":     "This distribution is not supported",
 	"b.titolo.scheda":     "Without a card that encodes video REMOTIX is not installed",
@@ -210,7 +210,7 @@ var testi = map[string]string{
 	"b.aggiorna":          "Upgrade the machine to %s and run the installer again.",
 }
 
-// T: un testo dell'interfaccia.
+// T: a text of the interface.
 func T(chiave string, args ...any) string {
 	t, ok := testi[chiave]
 	if !ok {

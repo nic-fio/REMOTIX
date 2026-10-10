@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): usa i comandi plan/approve/apply e il piano di prova del
-#   motore, che dalla riga di comando non ci sono più. Le stesse azioni (D-Bus, gpasswd) le provano
-#   go test e il giro vero (banchi/17-distro/17-t10.sh). Non si lancia.
-# Porta sul server il motore appena costruito e lancia un giro in VM (una VM sola, la nostra):
+# ⛔ HISTORY (10 Oct 2026, DECISIONI §10.36): it uses the plan/approve/apply commands and the engine's
+#   trial plan, which no longer exist on the command line. The same actions (D-Bus, gpasswd) are tested by
+#   go test and the real run (banchi/17-distro/17-t10.sh). Do not launch it.
+# Brings the freshly built engine to the server and launches a run in a VM (a single VM, ours):
 #   prove/sul-server.sh debian <macchina> <pacchetto.deb>   → banchi/17-distro/17-t4-motore.sh
 #   prove/sul-server.sh alma   <macchina>                   → banchi/17-distro/17-t4-alma.sh
 set -eu

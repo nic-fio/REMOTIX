@@ -13,28 +13,28 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// Il desktop di una sessione REMOTIX non vive tutto nello scope della sessione: [M] 30 set,
-// debian13-gnome e debian13+LXQt — gnome-shell, kwin, i portali e i servizi del desktop sono
-// unità del GESTORE D'UTENTE (user@UID.service). La regola §10.16 dice «le sessioni REMOTIX e i
-// loro processi», e insieme «mai gli altri processi dell'utente»: il motore parla col gestore
-// d'utente sul D-Bus (il suo socket privato /run/user/UID/systemd/private, che systemd apre a root)
-// e ferma SOLO le unità del desktop — mai user@UID intero, mai TerminateUser.
+// The desktop of a REMOTIX session does not live entirely in the session's scope: [M] 30 Sep,
+// debian13-gnome and debian13+LXQt — gnome-shell, kwin, the portals and the desktop's services are
+// units of the USER MANAGER (user@UID.service). Rule §10.16 says «REMOTIX sessions and their
+// processes», and together «never the user's other processes»: the engine talks to the user
+// manager over D-Bus (its private socket /run/user/UID/systemd/private, which systemd opens to root)
+// and stops ONLY the desktop's units — never the whole user@UID, never TerminateUser.
 //
-// Quali sono: graphical-session.target (con quel che ne dipende), più ogni unità del gestore
-// d'utente che ha un processo nato DENTRO il desktop — riconosciuto dal suo ambiente, che porta
-// WAYLAND_DISPLAY o DISPLAY (il desktop li esporta nel gestore d'utente; pipewire e gli altri
-// servizi nati prima, senza grafica, non li hanno e restano). Il motore lo fa solo se la persona
-// non ha un'altra sessione grafica aperta (un desktop locale davanti al monitor).
+// Which ones: graphical-session.target (with what depends on it), plus every unit of the user
+// manager that has a process born INSIDE the desktop — recognised by its environment, which carries
+// WAYLAND_DISPLAY or DISPLAY (the desktop exports them into the user manager; pipewire and the other
+// services born earlier, without graphics, do not have them and stay). The engine does it only if the person
+// has no other graphical session open (a local desktop in front of the monitor).
 
-// ProcessoGrafico: un processo del desktop nel gestore d'utente, con la sua unità.
+// ProcessoGrafico: a desktop process in the user manager, with its unit.
 type ProcessoGrafico struct {
 	PID   int
 	Unita string
 	Nome  string
 }
 
-// ProcessiGrafici legge /proc: i processi dell'uid dentro user@UID.service con WAYLAND_DISPLAY o
-// DISPLAY nell'ambiente.
+// ProcessiGrafici reads /proc: the uid's processes inside user@UID.service with WAYLAND_DISPLAY or
+// DISPLAY in the environment.
 func ProcessiGrafici(a *Ambiente, uid int) []ProcessoGrafico {
 	var r []ProcessoGrafico
 	voci, _ := filepath.Glob(a.P("/proc") + "/[0-9]*")
@@ -73,11 +73,11 @@ func ProcessiGrafici(a *Ambiente, uid int) []ProcessoGrafico {
 	return r
 }
 
-// condivisa: unità del gestore d'utente che servono a tutta la persona (il bus di sessione, con
-// dentro i servizi attivati «alla vecchia»): non si fermano; si segnalano i soli processi grafici.
+// condivisa: user-manager units that serve the whole person (the session bus, with
+// the services activated «the old way» inside): they are not stopped; only the graphical processes are reported.
 var condivisa = map[string]bool{"dbus.service": true, "dbus-broker.service": true, "init.scope": true}
 
-// gestoreUtente: la connessione diretta al gestore d'utente di systemd.
+// gestoreUtente: the direct connection to systemd's user manager.
 func gestoreUtente(uid int) (*dbus.Conn, error) {
 	conn, err := dbus.Dial(fmt.Sprintf("unix:path=/run/user/%d/systemd/private", uid))
 	if err != nil {
@@ -104,9 +104,9 @@ func uidDi(a *Ambiente, utente string) (int, error) {
 	return 0, Errore("RX-GRUPPI-003", utente)
 }
 
-// ChiudiGraficaUtente: ferma graphical-session.target e le unità coi processi grafici; toglie
-// WAYLAND_DISPLAY e DISPLAY dall'ambiente del gestore (le attivazioni dopo non nascono «nel
-// desktop»); dopo 15 s, a chi resta, SIGKILL alla sua unità (KillUnit). Restituisce le unità fermate.
+// ChiudiGraficaUtente: stops graphical-session.target and the units with graphical processes; removes
+// WAYLAND_DISPLAY and DISPLAY from the manager's environment (later activations are not born «in the
+// desktop»); after 15 s, to whatever remains, SIGKILL to its unit (KillUnit). Returns the stopped units.
 func ChiudiGraficaUtente(a *Ambiente, utente string) ([]string, error) {
 	uid, err := uidDi(a, utente)
 	if err != nil {
@@ -126,7 +126,7 @@ func ChiudiGraficaUtente(a *Ambiente, utente string) ([]string, error) {
 	}
 	var fermate []string
 	for u := range unita {
-		if condivisa[u] { // il bus di sessione è di tutta la persona: si fermano solo i processi del desktop
+		if condivisa[u] { // the session bus belongs to the whole person: only the desktop's processes are stopped
 			continue
 		}
 		if err := o.Call(m+"StopUnit", 0, u, "replace").Store(&job); err == nil {

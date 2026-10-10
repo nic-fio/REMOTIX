@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-// TipoEvento: le righe del registro a scrittura anticipata (§6.6.3).
+// TipoEvento: the lines of the write-ahead log (§6.6.3).
 type TipoEvento string
 
 const (
@@ -20,10 +20,10 @@ const (
 	EvAnnullata           TipoEvento = "ROLLED_BACK"
 	EvAnnullamentoFallito TipoEvento = "ROLLBACK_FAILED"
 	EvNota                TipoEvento = "NOTE"
-	EvComando             TipoEvento = "COMMAND" // un programma dell'elenco chiuso lanciato (R41)
+	EvComando             TipoEvento = "COMMAND" // a program of the closed list launched (R41)
 )
 
-// Evento è una riga del registro (registro.jsonl).
+// Evento is a line of the log (registro.jsonl).
 type Evento struct {
 	N         int             `json:"n"`
 	Ora       string          `json:"time"`
@@ -38,17 +38,17 @@ type Evento struct {
 	Dettaglio string          `json:"detail,omitempty"`
 }
 
-// Registro: il giornale a scrittura anticipata. Ogni riga si scrive con fsync del file (e della
-// cartella alla creazione) PRIMA che il motore faccia il passo successivo.
+// Registro: the write-ahead log. Every line is written with fsync of the file (and of the
+// folder on creation) BEFORE the engine takes the next step.
 type Registro struct {
 	percorso string
 	f        *os.File
 	Eventi   []Evento
 }
 
-// ApriRegistro legge il registro che c'è (o ne crea uno) e lo apre in aggiunta. Una riga finale
-// scritta a metà (il processo ucciso durante la scrittura) si toglie e si dice: le righe si
-// scrivono intere o niente, e senza la sua riga la cosa non è avvenuta.
+// ApriRegistro reads the existing log (or creates one) and opens it for appending. A final line
+// written halfway (the process killed while writing) is removed and reported: lines are
+// written whole or not at all, and without its line the thing did not happen.
 func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 	var avvisi []Messaggio
 	r := &Registro{percorso: percorso}
@@ -91,7 +91,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 	return r, avvisi, nil
 }
 
-// Scrivi aggiunge una riga e la rende durevole prima di tornare.
+// Scrivi appends a line and makes it durable before returning.
 func (r *Registro) Scrivi(e Evento) error {
 	e.N = len(r.Eventi) + 1
 	e.Ora = ora()
@@ -109,10 +109,10 @@ func (r *Registro) Scrivi(e Evento) error {
 	return nil
 }
 
-// Chiudi chiude il file.
+// Chiudi closes the file.
 func (r *Registro) Chiudi() error { return r.f.Close() }
 
-// Ultimo: l'ultima riga di un'azione fra i tipi dati (tutti se nessuno).
+// Ultimo: the last line of an action among the given types (all if none).
 func (r *Registro) Ultimo(azione string, tipi ...TipoEvento) *Evento {
 	for i := len(r.Eventi) - 1; i >= 0; i-- {
 		e := &r.Eventi[i]
@@ -131,9 +131,9 @@ func (r *Registro) Ultimo(azione string, tipi ...TipoEvento) *Evento {
 	return nil
 }
 
-// Intenzione: la PRIMA intenzione di un'azione. Lo stato di prima che conta è quello: se la
-// ripresa rifotografasse la macchina dopo un effetto già avvenuto, scambierebbe una modifica
-// nostra per una PREESISTENTE e non la annullerebbe più (§6.6.4).
+// Intenzione: the FIRST intention of an action. The before-state that counts is that one: if
+// resume re-photographed the machine after an effect had already happened, it would mistake a change
+// of ours for a PRE-EXISTING one and would never undo it (§6.6.4).
 func (r *Registro) Intenzione(azione string) *Evento {
 	for i := range r.Eventi {
 		if r.Eventi[i].Azione == azione && r.Eventi[i].Tipo == EvIntenzione {
@@ -143,7 +143,7 @@ func (r *Registro) Intenzione(azione string) *Evento {
 	return nil
 }
 
-// Toccata: il registro ha almeno un'intenzione, cioè la macchina può essere stata cambiata.
+// Toccata: the log has at least one intention, that is the machine may have been changed.
 func (r *Registro) Toccata() bool {
 	for _, e := range r.Eventi {
 		if e.Tipo == EvIntenzione {

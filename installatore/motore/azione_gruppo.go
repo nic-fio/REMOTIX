@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-// aggiungi-utente-a-gruppo: una persona nel gruppo della scheda (§6.4, DECISIONI §7.21).
-// Reversibilità ESATTA; ⛔ chi c'era già (anche come gruppo principale) è PREESISTENTE e il
-// ritorno indietro non lo toglie mai (R33).
+// aggiungi-utente-a-gruppo: a person in the card's group (§6.4, DECISIONI §7.21).
+// EXACT reversibility; ⛔ whoever was already there (even as primary group) is PRE-EXISTING and
+// rolling back never removes them (R33).
 //
-// parametri: utente, gruppo.
+// parameters: utente, gruppo.
 
 func init() { registraTipo("add-user-to-group", nuovaGruppo) }
 
-// PianoGruppo prepara il passo del piano.
+// PianoGruppo prepares the plan's step.
 func PianoGruppo(id, utente, gruppo string) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "add-user-to-group",
@@ -31,7 +31,7 @@ type gruppo struct{ utente, gruppo string }
 type primaGruppo struct {
 	Origine    Origine  `json:"origin"`
 	Membro     bool     `json:"member"`
-	Principale bool     `json:"primary,omitempty"` // il gruppo è il suo gruppo principale
+	Principale bool     `json:"primary,omitempty"` // the group is their primary group
 	Membri     []string `json:"members"`
 }
 
@@ -39,7 +39,7 @@ func nuovaGruppo(p AzionePiano) (Azione, error) {
 	return &gruppo{p.Parametri["user"], p.Parametri["group"]}, nil
 }
 
-// membro: l'utente è nel gruppo (esplicito o come principale)?
+// membro: is the user in the group (explicitly or as primary)?
 func (g *gruppo) membro(c *Contesto) (esplicito, principale bool, membri []string, err error) {
 	membri, gid, esiste, err := c.Amb.Gruppi.Membri(g.gruppo)
 	if err != nil {
@@ -129,7 +129,7 @@ func (g *gruppo) Annulla(c *Contesto, prima json.RawMessage) error {
 		return err
 	}
 	if p.Origine == PREESISTENTE {
-		return nil // ⛔ mai (R33)
+		return nil // ⛔ never (R33)
 	}
 	esp, _, _, err := g.membro(c)
 	if err != nil || !esp {

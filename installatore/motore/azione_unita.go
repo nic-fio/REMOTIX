@@ -2,17 +2,17 @@ package motore
 
 import "encoding/json"
 
-// abilita-unita: un'unità di systemd abilitata (§6.6.3), sul D-Bus di systemd (EnableUnitFiles e
-// GetUnitFileState: quel che fanno systemctl enable e is-enabled, senza lanciarli, §10.14). Reversibilità ESATTA; un'unità già abilitata è PREESISTENTE e resta
-// abilitata; un'unità mascherata non si tocca (l'amministratore l'ha spenta apposta).
+// abilita-unita: an enabled systemd unit (§6.6.3), over systemd's D-Bus (EnableUnitFiles and
+// GetUnitFileState: what systemctl enable and is-enabled do, without launching them, §10.14). EXACT reversibility; a unit already enabled is PRE-EXISTING and stays
+// enabled; a masked unit is not touched (the administrator turned it off on purpose).
 //
-// parametri: unita; avvia ("yes": anche accesa subito; annullare la spegne e la disabilita). ⚠ Nessun
-// piano nuovo lo usa più (era il timer degli aggiornamenti, tolto con D14, DECISIONI §10.23): resta
-// perché la disinstallazione di un'installazione fatta prima sappia spegnere quel che aveva acceso.
+// parameters: unita; avvia ("yes": also started at once; cancelling stops and disables it). ⚠ No
+// new plan uses it any more (it was the updates timer, removed with D14, DECISIONI §10.23): it stays
+// so that uninstalling an installation made earlier knows how to stop what it had started.
 
 func init() { registraTipo("enable-unit", nuovaUnita) }
 
-// PianoUnita prepara il passo del piano.
+// PianoUnita prepares the plan's step.
 func PianoUnita(id, unita string) AzionePiano {
 	return AzionePiano{
 		ID: id, Tipo: "enable-unit",
@@ -32,7 +32,7 @@ type unita struct {
 
 type primaUnita struct {
 	Origine Origine `json:"origin"`
-	Stato   string  `json:"state"` // quel che diceva is-enabled
+	Stato   string  `json:"state"` // what is-enabled said
 }
 
 func nuovaUnita(p AzionePiano) (Azione, error) {
@@ -147,6 +147,6 @@ func (u *unita) Annullata(c *Contesto, prima json.RawMessage) (bool, string, err
 	if err != nil {
 		return false, "", err
 	}
-	// «annullata» = non più abilitata da noi (un passo dopo può averne tolto il file: not-found)
+	// «cancelled» = no longer enabled by us (a later step may have removed its file: not-found)
 	return s != "enabled", s, nil
 }

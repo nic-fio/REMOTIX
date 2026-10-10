@@ -1,75 +1,75 @@
 /*
- * sessione — la sessione grafica GNOME: REMOTIX la fa NASCERE, e la fa nascere
- * CON UN MONITOR.  Non si limita a trovarla, e non si limita a farla viva.
+ * sessione — the GNOME graphical session: REMOTIX makes it BE BORN, and makes it
+ * be born WITH A MONITOR.  It does not merely find it, and it does not merely keep it alive.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' QUESTO FILE ESISTE IN V2, E PERCHE' NON E' UNA COPIA DI QUELLO DI v1
+ * ⛔ WHY THIS FILE EXISTS IN V2, AND WHY IT IS NOT A COPY OF THE v1 ONE
  *
- * `fondamenta/remotix-c/src/sessione.c:671` e':
+ * `fondamenta/remotix-c/src/sessione.c:671` is:
  *
  *     if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(larghezza, altezza, sbaglio))
  *
- * cioe' il monitor virtuale si scrive **solo per KWin**.  `sessione_assicura()`
- * riceve `larghezza` e `altezza` (righe 650-651) e sul ramo GNOME **non le legge
- * nessuno**: la misura del desktop entra nella funzione e si perde in silenzio.
- * E' la forma d'errore **E3** — una funzione fa MENO di quel che il suo nome
- * promette: si chiama «assicura» e per GNOME non assicura la cosa senza cui non
- * c'e' niente da catturare.
+ * that is, the virtual monitor is written **only for KWin**.  `sessione_assicura()`
+ * receives `larghezza` and `altezza` (lines 650-651) and on the GNOME branch **nobody
+ * reads them**: the desktop size enters the function and is silently lost.
+ * It is error form **E3** — a function does LESS than its name
+ * promises: it is called «ensure» and for GNOME it does not ensure the thing without which
+ * there is nothing to capture.
  *
- * ⛔ E in headless Mutter mette `needs_outputs = false` (`STUDI.md` §gnome §3.1):
- *    senza `--virtual-monitor` la sessione parte **viva, completa e nera**.
- *    Viva vuol dire proprio viva — `IsSessionRunning` risponde `true`,
- *    cinquanta nomi sul bus, Nautilus e il Terminale accesi — e manca una cosa
- *    sola, che manca in silenzio.
+ * ⛔ And in headless mode Mutter sets `needs_outputs = false` (`STUDI.md` §gnome §3.1):
+ *    without `--virtual-monitor` the session starts **alive, complete and black**.
+ *    Alive means really alive — `IsSessionRunning` answers `true`,
+ *    fifty names on the bus, Nautilus and the Terminal running — and only one thing
+ *    is missing, and it is missing silently.
  *
- * ⭐ Non e' un timore: `[M]` 12 agosto 2026, la sessione GNOME viva su NIC-OS
- *    **da due giorni** era esattamente quella, e nessuno se n'era accorto
+ * ⭐ It is not a fear: `[M]` 12 August 2026, the GNOME session alive on NIC-OS
+ *    **for two days** was exactly that, and nobody had noticed
  *    (`fasi/rapporti/F2-1-sessione.md`, `fasi/rapporti/D4-sessione-nera.md`).
- *    Una cattura puntata li' avrebbe misurato zero fotogrammi e mandato a
- *    cercare il difetto dentro PipeWire.
+ *    A capture pointed there would have measured zero frames and sent us to
+ *    look for the defect inside PipeWire.
  *
  * ---------------------------------------------------------------------------
- * ⛔ L'INVARIANTE CHE QUESTO FILE PAGA — **I7** (`CODER.md` §2)
+ * ⛔ THE INVARIANT THIS FILE PAYS FOR — **I7** (`CODER.md` §2)
  *
- *     «La protezione di un difetto noto sta nel programma, non in una riga di
- *      configurazione che si puo' perdere.»
+ *     «The protection against a known defect lives in the program, not in a
+ *      configuration line that can be lost.»
  *
- * Fino al 12 agosto 2026 il monitor virtuale di GNOME lo metteva
- * `fondamenta/banco/provision-server.sh`, cioe' una riga in `/etc/systemd/user/` su un
- * rootfs che vive in RAM.  Quella riga si e' persa — e la macchina e' stata nera
- * due giorni.  D4 l'ha rimessa, ⛔ **ma una riga rimessa e' ancora una riga che
- * si puo' perdere**: qui il monitor lo chiede il PROGRAMMA, a ogni nascita di
- * sessione, e verifica di essere stato obbedito.
- *
- * ---------------------------------------------------------------------------
- * ⛔ LE DUE DOMANDE CHE NON SONO UNA SOLA
- *
- *     «la sessione e' VIVA?»   e   «la sessione HA UN MONITOR?»
- *
- * Il difetto e' rimasto invisibile due giorni perche' se ne faceva **una sola**
- * — quella che rispondeva di si'.  Da cui `sessione_stato()`, che ha un numero
- * per stato, e `sessione_assicura()`, che aspetta **il monitor** e non la
- * vitalita'.
+ * Until 12 August 2026 the GNOME virtual monitor was set by
+ * `fondamenta/banco/provision-server.sh`, that is a line in `/etc/systemd/user/` on a
+ * rootfs that lives in RAM.  That line got lost — and the machine was black
+ * for two days.  D4 put it back, ⛔ **but a line put back is still a line that
+ * can be lost**: here the PROGRAM asks for the monitor, at every session
+ * birth, and verifies that it was obeyed.
  *
  * ---------------------------------------------------------------------------
- * ⛔ E LE DUE REGOLE PAGATE CARE CHE ARRIVANO DA v1 INTATTE
+ * ⛔ THE TWO QUESTIONS THAT ARE NOT ONE
  *
- *   - L'AMBIENTE SI COMPONE, NON SI EREDITA (`CODER.md` §4.5).  Chi avvia la
- *     sessione le regala tutto il proprio ambiente, comprese le variabili che
- *     non c'entrano nulla, e da li' la sessione lo ridistribuisce al gestore
- *     systemd dell'utente e all'attivazione D-Bus, dove SOPRAVVIVE al
- *     compositore.  Una `LC_ALL=C` arrivata per sbaglio da una shell SSH ha
- *     impedito a TUTTE le applicazioni di aprirsi, e il sintomo non diceva
- *     «manca una variabile»: diceva «le applicazioni non partono».
- *   - LA VITALITA' SI ACCERTA SENZA INTERPRETARE LA RISPOSTA.  `sessione_viva()`
- *     guarda solo che la risposta ARRIVI: dichiarare il tipo di ritorno di
- *     `GetCurrentState` significherebbe che la vitalita' della sessione dipende
- *     dall'esattezza di quella dichiarazione, e la prima stesura in Rust
- *     falliva cosi' — la sessione era partita e REMOTIX la dava per morta.
- *     ⭐ `sessione_stato()` invece la risposta la LEGGE, e quando non ha la
- *        forma che sa leggere dice «non ho potuto leggere» (5) e **mai** «zero
- *        monitor» (1): «vuoto» e «proibito» hanno lo stesso aspetto, ed e' la
- *        forma d'errore **E8**.
+ *     «is the session ALIVE?»   and   «does the session HAVE A MONITOR?»
+ *
+ * The defect stayed invisible for two days because **only one** was asked
+ * — the one that answered yes.  Hence `sessione_stato()`, which has one number
+ * per state, and `sessione_assicura()`, which waits for **the monitor** and not for
+ * liveness.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ AND THE TWO DEARLY PAID RULES THAT COME FROM v1 INTACT
+ *
+ *   - THE ENVIRONMENT IS COMPOSED, NOT INHERITED (`CODER.md` §4.5).  Whoever starts the
+ *     session hands it their whole environment, including variables that
+ *     have nothing to do with it, and from there the session redistributes it to the user's
+ *     systemd manager and to D-Bus activation, where it SURVIVES the
+ *     compositor.  An `LC_ALL=C` arriving by mistake from an SSH shell
+ *     prevented ALL applications from opening, and the symptom did not say
+ *     «a variable is missing»: it said «applications do not start».
+ *   - LIVENESS IS ESTABLISHED WITHOUT INTERPRETING THE ANSWER.  `sessione_viva()`
+ *     only checks that the answer ARRIVES: declaring the return type of
+ *     `GetCurrentState` would mean that the session's liveness depends
+ *     on the exactness of that declaration, and the first draft in Rust
+ *     failed that way — the session had started and REMOTIX took it for dead.
+ *     ⭐ `sessione_stato()` instead READS the answer, and when it does not have the
+ *        shape it can read it says «could not read» (5) and **never** «zero
+ *        monitors» (1): «empty» and «forbidden» look the same, and it is
+ *        error form **E8**.
  */
 #ifndef REMOTIX_SESSIONE_H
 #define REMOTIX_SESSIONE_H
@@ -79,234 +79,234 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ⭐ `REG_SESSIONE` sta in `registro.h` accanto alle altre aree, dal 12 agosto
- *    2026: e' l'unica riga che il montaggio ha tolto da questo file, ed e' la
- *    riga che §6.2 di `P2-1-sessione.md` chiedeva di portare li'. */
+/* ⭐ `REG_SESSIONE` lives in `registro.h` next to the other areas, since 12 August
+ *    2026: it is the only line the assembly removed from this file, and it is the
+ *    line that §6.2 of `P2-1-sessione.md` asked to move there. */
 
 /*
- * Come si avvia la sessione, e su quale unita' si scrive il monitor.
+ * How the session is started, and on which unit the monitor is written.
  *
- * ⛔ Il comando e' la parte FACILE.  Quel che decide se il compositore nasce con
- *    qualcosa da catturare e' la sovrascrittura dell'`ExecStart` dell'unita'
- *    della Shell: `gnome-session` NON lancia `gnome-shell`, fa partire l'unita'
- *    d'utente della Shell (`org.gnome.Shell@wayland.service` fino a GNOME 49,
- *    `org.gnome.Shell@user.service` da GNOME 50), il cui `ExecStart` e' fisso.
+ * ⛔ The command is the EASY part.  What decides whether the compositor is born with
+ *    something to capture is the override of the `ExecStart` of the Shell's
+ *    unit: `gnome-session` does NOT launch `gnome-shell`, it starts the Shell's
+ *    user unit (`org.gnome.Shell@wayland.service` up to GNOME 49,
+ *    `org.gnome.Shell@user.service` from GNOME 50), whose `ExecStart` is fixed.
  */
-/* ⭐ FASE 17, D8 (`DECISIONI.md` §10.20): la sessione GNOME NON e' piu' sempre
- *    `gnome`.  E' quella di serie della distribuzione (`ubuntu` su Ubuntu), letta
- *    dalle sessioni che il display manager propone: il criterio sta su
- *    `sessione_gnome()` in `sessione.c`.  `gnome` resta solo come RIPIEGO
- *    DICHIARATO, quando nessuna sessione proposta lancia gnome-session. */
+/* ⭐ PHASE 17, D8 (`DECISIONI.md` §10.20): the GNOME session is NO longer always
+ *    `gnome`.  It is the distribution's default one (`ubuntu` on Ubuntu), read
+ *    from the sessions the display manager offers: the criterion is on
+ *    `sessione_gnome()` in `sessione.c`.  `gnome` remains only as a DECLARED
+ *    FALLBACK, when no offered session launches gnome-session. */
 #define SESSIONE_GNOME_RIPIEGO "gnome"
 /*
- * ⛔⭐ FASE 17 — L'UNITA' DELLA SHELL NON HA UN NOME SOLO (`fasi/17-l-installatore.md` §5.1).
+ * ⛔⭐ PHASE 17 — THE SHELL UNIT DOES NOT HAVE ONE NAME ONLY (`fasi/17-l-installatore.md` §5.1).
  *
- *   · fino a GNOME 49 (Debian 13, Leap 16, Fedora 43): un file per modo,
+ *   · up to GNOME 49 (Debian 13, Leap 16, Fedora 43): one file per mode,
  *     `org.gnome.Shell@wayland.service`;
- *   · da GNOME 50 (Fedora 44, Ubuntu 26.04, Tumbleweed, Arch): il MODELLO
- *     `org.gnome.Shell@.service` con `ExecStart=gnome-shell --mode=%i`, e
- *     gnome-session chiede l'istanza `org.gnome.Shell@user.service`
+ *   · from GNOME 50 (Fedora 44, Ubuntu 26.04, Tumbleweed, Arch): the TEMPLATE
+ *     `org.gnome.Shell@.service` with `ExecStart=gnome-shell --mode=%i`, and
+ *     gnome-session asks for the instance `org.gnome.Shell@user.service`
  *     (`[R]` gnome-shell `0eb754a08`; gnome-session 50.0
  *     `data/gnome.session.conf:3`).
- *   · ⛔ D8: l'istanza e' DELLA SESSIONE, non fissa: `gnome` chiede `@user`,
- *     `ubuntu` chiede `@ubuntu` (`[M]` 30 set 2026, Ubuntu 26.04:
+ *   · ⛔ D8: the instance belongs TO THE SESSION, it is not fixed: `gnome` asks for `@user`,
+ *     `ubuntu` asks for `@ubuntu` (`[M]` 30 Sep 2026, Ubuntu 26.04:
  *     `gnome-session@ubuntu.target.d/ubuntu.session.conf`,
- *     `Requires=org.gnome.Shell@ubuntu.service`) — e l'istanza e' il MODO
- *     della Shell (`--mode=%i`): la dock e i colori di Ubuntu stanno li'.
- *     ⇒ La si chiede al gestore (`Requires` di `gnome-session@<sessione>.target`),
- *     e il drop-in tiene `--mode=%i`.
+ *     `Requires=org.gnome.Shell@ubuntu.service`) — and the instance is the Shell's
+ *     MODE (`--mode=%i`): Ubuntu's dock and colours live there.
+ *     ⇒ It is asked of the manager (`Requires` of `gnome-session@<sessione>.target`),
+ *     and the drop-in keeps `--mode=%i`.
  *
- * ⇒ Si sceglie da quel che e' INSTALLATO (`unita_shell()` in `sessione.c`),
- *   non da un numero di versione.  ⛔ E il drop-in va nella cartella
- *   dell'ISTANZA, mai in quella del modello (`org.gnome.Shell@.service.d/`):
- *   quella vale anche per la Shell di GDM.
+ * ⇒ The choice is made from what is INSTALLED (`unita_shell()` in `sessione.c`),
+ *   not from a version number.  ⛔ And the drop-in goes in the folder
+ *   of the INSTANCE, never in that of the template (`org.gnome.Shell@.service.d/`):
+ *   that one also applies to GDM's Shell.
  */
 #define SESSIONE_UNITA_SHELL_48 "org.gnome.Shell@wayland.service"
 #define SESSIONE_UNITA_SHELL_MODELLO "org.gnome.Shell@.service"
-/* ⚠ L'unita' del gestore di sessione e' `gnome-session-manager@<sessione>.service`:
- *   il nome lo compone `sessione_gnome()` (D8). */
-/* ⛔ E la SECONDA unita' da aspettare: quando una sessione GNOME finisce, GNOME
- * RIAVVIA il bus di sessione con questa.  Una sessione nuova avviata mentre gira
- * nasce su un bus che sta per essere sostituito — e muore senza scrivere niente
- * (`[M]` 16 agosto 2026: il suo registro resta a zero byte). */
+/* ⚠ The session manager unit is `gnome-session-manager@<sessione>.service`:
+ *   the name is composed by `sessione_gnome()` (D8). */
+/* ⛔ And the SECOND unit to wait for: when a GNOME session ends, GNOME
+ * RESTARTS the session bus with this one.  A new session started while it runs
+ * is born on a bus about to be replaced — and dies without writing anything
+ * (`[M]` 16 August 2026: its log stays at zero bytes). */
 #define SESSIONE_UNITA_DBUS "gnome-session-restart-dbus.service"
 
 /*
- * ⭐ FASE 12 — IL SECONDO DESKTOP: PLASMA.  `fasi/12-kde.md`, incremento 1.
+ * ⭐ PHASE 12 — THE SECOND DESKTOP: PLASMA.  `fasi/12-kde.md`, increment 1.
  *
- * ✅ `DECISIONI.md` §4.6-duodetricies: **un desktop per macchina**, e il
- *    server lo riconosce da quel che e' installato.  ⛔ La scelta fra piu'
- *    desktop e' rimandata (`MASTERPLAN.md` M5).
+ * ✅ `DECISIONI.md` §4.6-duodetricies: **one desktop per machine**, and the
+ *    server recognises it from what is installed.  ⛔ The choice among several
+ *    desktops is postponed (`MASTERPLAN.md` M5).
  *
- * ⚠ Le stesse tre cose di GNOME, con i nomi di Plasma — ⛔ non un'eccezione:
- *   la FUNZIONE e' la stessa (la sessione nasce, si riconosce, finisce), cambia
- *   **come** la si chiede.  `startplasma-wayland` non lancia KWin: fa partire
- *   `plasma-kwin_wayland.service`, il cui `ExecStart` si sovrascrive col drop-in
- *   (`STUDI.md` §kde §6.1-§6.2), esattamente come l'unita' della Shell.
+ * ⚠ The same three things as GNOME, with Plasma's names — ⛔ not an exception:
+ *   the FUNCTION is the same (the session is born, is recognised, ends), what changes
+ *   is **how** it is asked for.  `startplasma-wayland` does not launch KWin: it starts
+ *   `plasma-kwin_wayland.service`, whose `ExecStart` is overridden with the drop-in
+ *   (`STUDI.md` §kde §6.1-§6.2), exactly like the Shell unit.
  */
 #define SESSIONE_COMANDO_KDE "exec startplasma-wayland"
 #define SESSIONE_UNITA_KWIN "plasma-kwin_wayland.service"
 #define SESSIONE_UNITA_PLASMA "plasma-workspace.target"
 
 /*
- * ⭐ FASE 13 — IL TERZO DESKTOP: XFCE.  `fasi/13-xfce.md`, incremento 1.
+ * ⭐ PHASE 13 — THE THIRD DESKTOP: XFCE.  `fasi/13-xfce.md`, increment 1.
  *
- * ⛔⛔ E QUI CADE LA FORMA DEI PRIMI DUE, non si ripete.  GNOME porta Mutter e
- *     KDE porta KWin; **XFCE non porta un compositore**: su Wayland si appoggia
- *     a `labwc`, della famiglia `wlroots` (`STUDI.md` §xfce §1).
+ * ⛔⛔ AND HERE THE SHAPE OF THE FIRST TWO FALLS, it does not repeat.  GNOME brings Mutter and
+ *     KDE brings KWin; **XFCE does not bring a compositor**: on Wayland it leans
+ *     on `labwc`, of the `wlroots` family (`STUDI.md` §xfce §1).
  *
- * ⇒ Le conseguenze che cambiano il codice, e non sono di stile:
+ * ⇒ The consequences that change the code, and are not a matter of style:
  *
- *   1. ⛔ **Non c'e' nessuna unita' systemd d'utente da scavalcare.**  Su GNOME
- *      si riscrive l'`ExecStart` di `org.gnome.Shell@wayland.service`, su KDE
- *      quello di `plasma-kwin_wayland.service`; qui il compositore è un
- *      processo che avviamo noi, e `scrivi_dropin()` **non ha oggetto**.
- *   2. ⛔ **La misura NON entra nella nascita.**  `[M]` 20 set 2026, dentro
- *      `rete11-xfce`: l'uscita nasce `HEADLESS-1 1280x720`, cablata, e nessun
- *      protocollo ne crea una della misura voluta.  La misura si da' **dopo**,
- *      da cliente Wayland (`zwlr_output_manager_v1` v4, che c'e').
- *   3. ⭐ **La riga di avvio deve contenere `labwc` E `--session`**, e non per
- *      gusto: `xfce4-session` legge `XFCE4_SESSION_COMPOSITOR` e, se non ci
- *      trova tutt'e due, al logout esegue `loginctl terminate-session ''` —
- *      cioe' ammazza **la sessione logind di REMOTIX** (`STUDI.md` §xfce §9.2).
- *      ⇒ `--session` fa anche il lavoro buono: rende `xfce4-session` il client
- *        primario di labwc, quindi quando esce lui **labwc termina da se'**.
+ *   1. ⛔ **There is no systemd user unit to override.**  On GNOME
+ *      the `ExecStart` of `org.gnome.Shell@wayland.service` is rewritten, on KDE
+ *      that of `plasma-kwin_wayland.service`; here the compositor is a
+ *      process we start ourselves, and `scrivi_dropin()` **has no object**.
+ *   2. ⛔ **The size does NOT enter the birth.**  `[M]` 20 Sep 2026, inside
+ *      `rete11-xfce`: the output is born `HEADLESS-1 1280x720`, hardwired, and no
+ *      protocol creates one of the wanted size.  The size is given **afterwards**,
+ *      as a Wayland client (`zwlr_output_manager_v1` v4, which is there).
+ *   3. ⭐ **The start line must contain `labwc` AND `--session`**, and not out of
+ *      taste: `xfce4-session` reads `XFCE4_SESSION_COMPOSITOR` and, if it does not
+ *      find both, at logout runs `loginctl terminate-session ''` —
+ *      that is it kills **REMOTIX's logind session** (`STUDI.md` §xfce §9.2).
+ *      ⇒ `--session` also does the good work: it makes `xfce4-session` labwc's primary
+ *        client, so when it exits **labwc terminates on its own**.
  */
-/* ⚠ La riga si scrive UNA volta e si usa DUE: come comando (con `exec`) e
- *   dentro `XFCE4_SESSION_COMPOSITOR` (senza).  ⛔ Scriverla due volte vorrebbe
- *   dire poterle far divergere, e divergendo scatterebbe la trappola del
- *   logout senza che nessuna riga lo dica. */
-/* ⭐ FASE 15, D-007 — `-m` (`--merge-config`): labwc legge l'`rc.xml` di
- *    TUTTE le cartelle XDG (la nostra, con la scorciatoia «riporta dentro»,
- *    e quella dell'utente, che resta sua).  Senza, labwc prende SOLO il primo
- *    `rc.xml` che trova, e quello dell'utente nasconderebbe il nostro.  Vedi
- *    `SESSIONE_LABWC_TASTIERA` qui sotto.  ⚠ La riga contiene sempre `labwc`
- *    e `--session`: la cintura del logout resta com'era. */
+/* ⚠ The line is written ONCE and used TWICE: as a command (with `exec`) and
+ *   inside `XFCE4_SESSION_COMPOSITOR` (without).  ⛔ Writing it twice would
+ *   mean they could diverge, and diverging would spring the
+ *   logout trap without any line saying so. */
+/* ⭐ PHASE 15, D-007 — `-m` (`--merge-config`): labwc reads the `rc.xml` of
+ *    ALL the XDG folders (ours, with the «bring back inside» shortcut,
+ *    and the user's, which stays theirs).  Without it, labwc takes ONLY the first
+ *    `rc.xml` it finds, and the user's would hide ours.  See
+ *    `SESSIONE_LABWC_TASTIERA` below.  ⚠ The line always contains `labwc`
+ *    and `--session`: the logout belt stays as it was. */
 #define SESSIONE_TESTA_XFCE "labwc -m --session"
 #define SESSIONE_PRIMARIO_XFCE "xfce4-session"
 #define SESSIONE_RIGA_XFCE SESSIONE_TESTA_XFCE " " SESSIONE_PRIMARIO_XFCE
-/* ⭐ 5 ott 2026: il COMANDO non è più una costante — il client primario nasce
- *    dopo la misura del cliente (`primario_misurato()` in sessione.c), come
- *    su LXQt.  ⚠ La testa è la stessa macro: `labwc` e `--session` restano
- *    nella riga eseguita E in `XFCE4_SESSION_COMPOSITOR`, e la cintura del
- *    logout guarda solo quelle due parole (`STUDI.md` §xfce §9.2). */
-/* ⛔ Il processo del compositore, per nome: su XFCE la guardia contro la
- *    seconda sessione non puo' chiedere a systemd — vedi `unita_inattiva()`. */
+/* ⭐ 5 Oct 2026: the COMMAND is no longer a constant — the primary client is born
+ *    after the client's size (`primario_misurato()` in sessione.c), as
+ *    on LXQt.  ⚠ The head is the same macro: `labwc` and `--session` stay
+ *    in the executed line AND in `XFCE4_SESSION_COMPOSITOR`, and the logout
+ *    belt looks only at those two words (`STUDI.md` §xfce §9.2). */
+/* ⛔ The compositor process, by name: on XFCE the guard against the
+ *    second session cannot ask systemd — see `unita_inattiva()`. */
 #define SESSIONE_PROCESSO_XFCE "labwc"
-/* Il gestore di sessione sul bus D'UTENTE — `[M]` 20 set 2026: compare li', non
- * su un bus privato, perche' `labwc` lo avviamo noi senza `dbus-run-session`.
- * ⚠ Il nome non è l'interfaccia: `org.xfce.Session.Manager` (con un punto in
- * piu') — `STUDI.md` §xfce §9.5. */
+/* The session manager on the USER bus — `[M]` 20 Sep 2026: it appears there, not
+ * on a private bus, because we start `labwc` ourselves without `dbus-run-session`.
+ * ⚠ The name is not the interface: `org.xfce.Session.Manager` (with one more
+ * dot) — `STUDI.md` §xfce §9.5. */
 #define SESSIONE_BUS_XFCE "org.xfce.SessionManager"
 
 /*
- * ⭐ FASE 14 — IL QUARTO DESKTOP: LXQt.  Incremento 1, «si riconosce, nasce e
- *    si vede».  La fonte è `STUDI.md` §lxqt, e dove parla il sorgente upstream
- *    lo si cita con l'indirizzo.
+ * ⭐ PHASE 14 — THE FOURTH DESKTOP: LXQt.  Increment 1, «it is recognised, is born and
+ *    is seen».  The source is `STUDI.md` §lxqt, and where the upstream source speaks
+ *    it is quoted with its address.
  *
- * ⛔⛔ SU TRIXIE LA SESSIONE WAYLAND DI LXQt NON È IMPACCHETTATA: manca il
- *     lanciatore (`lxqt-wayland-session`, `startlxqtwayland`), non il codice
- *     (`STUDI.md` §lxqt §1).  ⇒ Il lanciatore lo facciamo noi, e la forma è
- *     quella del lanciatore upstream coetaneo di LXQt 2.1 — tag 0.1.1 —
+ * ⛔⛔ ON TRIXIE THE LXQt WAYLAND SESSION IS NOT PACKAGED: what is missing is the
+ *     launcher (`lxqt-wayland-session`, `startlxqtwayland`), not the code
+ *     (`STUDI.md` §lxqt §1).  ⇒ We make the launcher ourselves, and its shape is
+ *     that of the upstream launcher contemporary with LXQt 2.1 — tag 0.1.1 —
  *     `[R]` https://raw.githubusercontent.com/lxqt/lxqt-wayland-session/0.1.1/startlxqtwayland.in
- *     (ramo `labwc`):
+ *     (`labwc` branch):
  *
  *         exec labwc -C $XDG_CONFIG_HOME/labwc -S lxqt-session
  *
- *   con UNA differenza voluta: la cartella di `-C` è NOSTRA (sotto
- *   `XDG_RUNTIME_DIR`), non quella dell'utente — lo script upstream ci copia
- *   una volta sola un `autostart` che lancia `swayidle … wlopm --off` a 5
- *   minuti, e la copia è **permanente** (`STUDI.md` §lxqt §6.2).
- *   ⭐ `-C` basta da solo: con `-C` labwc guarda **solo** quella cartella
+ *   with ONE intended difference: the `-C` folder is OURS (under
+ *   `XDG_RUNTIME_DIR`), not the user's — the upstream script copies into it
+ *   once only an `autostart` that launches `swayidle … wlopm --off` at 5
+ *   minutes, and the copy is **permanent** (`STUDI.md` §lxqt §6.2).
+ *   ⭐ `-C` is enough on its own: with `-C` labwc looks **only** at that folder
  *   (`[R]` labwc 0.8.3 `src/common/dir.c:151-157`).
  *
- * ⚠ La stessa forma di XFCE, e per la stessa ragione: `-S` (= `--session`)
- *   rende `lxqt-session` il client primario di labwc ⇒ quando esce lui, labwc
- *   termina.  ✅ E la trappola di XFCE qui non c'è: `lxqt-session` non chiama
+ * ⚠ The same shape as XFCE, and for the same reason: `-S` (= `--session`)
+ *   makes `lxqt-session` labwc's primary client ⇒ when it exits, labwc
+ *   terminates.  ✅ And XFCE's trap is not here: `lxqt-session` does not call
  *   `loginctl terminate-session` (`STUDI.md` §lxqt §3.3, `[✗]`).
  *
- * ⚠ La riga intera non è una costante, al contrario di XFCE: la cartella di
- *   `-C` sta sotto `XDG_RUNTIME_DIR` e si compone in `avvia()`.  Qui ci sono
- *   i due pezzi che non cambiano.
+ * ⚠ The whole line is not a constant, unlike XFCE: the `-C` folder
+ *   is under `XDG_RUNTIME_DIR` and is composed in `avvia()`.  Here are
+ *   the two pieces that do not change.
  */
 #define SESSIONE_MARCATORE_LXQT "lxqt-session"
 #define SESSIONE_PRIMARIO_LXQT "lxqt-session"
-/* ⭐ Il nome sul bus D'UTENTE, e anche l'oggetto e l'interfaccia del logout:
- *    `[R]` lxqt-session 2.1.1 `sessionapplication.cpp:48-49` (servizio e
- *    `/LXQtSession`), `sessiondbusadaptor.h` (interfaccia `org.lxqt.session`)
+/* ⭐ The name on the USER bus, and also the logout object and interface:
+ *    `[R]` lxqt-session 2.1.1 `sessionapplication.cpp:48-49` (service and
+ *    `/LXQtSession`), `sessiondbusadaptor.h` (interface `org.lxqt.session`)
  *    — https://raw.githubusercontent.com/lxqt/lxqt-session/2.1.1/lxqt-session/src/sessiondbusadaptor.h
- * ⚠ Il nome compare nel COSTRUTTORE: «c'è il nome» non vuol dire «desktop su»
- *   (`STUDI.md` §lxqt §3.4).  Vedi `sessione_viva()`. */
+ * ⚠ The name appears in the CONSTRUCTOR: «the name is there» does not mean «desktop up»
+ *   (`STUDI.md` §lxqt §3.4).  See `sessione_viva()`. */
 #define SESSIONE_BUS_LXQT "org.lxqt.session"
 
 /*
- * ⭐⭐ FASE 15, D-007 — LE FINESTRE SI RIPORTANO DENTRO QUANDO L'USCITA SI
- *      RIMPICCIOLISCE (labwc: XFCE e LXQt).
+ * ⭐⭐ PHASE 15, D-007 — WINDOWS ARE BROUGHT BACK INSIDE WHEN THE OUTPUT
+ *      SHRINKS (labwc: XFCE and LXQt).
  *
- * IL DIFETTO `[M]` 25 set 2026: riattaccandosi con la finestra del browser
- * piu' piccola, l'uscita di labwc si rimpicciolisce e una finestra grande
- * resta dov'era, in parte FUORI dal bordo destro/basso.  GNOME e KWin le
- * riportano dentro da se'; labwc NO, e per scelta:
- *   `[R]` labwc 0.8.3 (quella delle scatole, ed e' uguale sul `master` del
- *   22 set 2026) `src/view.c` `adjust_floating_geometry()`: al cambio di
- *   disposizione una finestra fluttuante si sposta SOLO se il suo PUNTO
- *   MEDIO esce dallo schermo (e allora si ricentra); a sinistra e in alto la
- *   si tiene dentro, a destra e in basso no.  Nessuna opzione lo cambia.
+ * THE DEFECT `[M]` 25 Sep 2026: reattaching with a smaller browser window,
+ * labwc's output shrinks and a large window
+ * stays where it was, partly OUTSIDE the right/bottom edge.  GNOME and KWin
+ * bring them back inside on their own; labwc does NOT, and by choice:
+ *   `[R]` labwc 0.8.3 (the one in the boxes, and it is the same on `master` of
+ *   22 Sep 2026) `src/view.c` `adjust_floating_geometry()`: on a layout
+ *   change a floating window moves ONLY if its MIDPOINT
+ *   leaves the screen (and then it is recentred); on the left and top it
+ *   is kept inside, on the right and bottom it is not.  No option changes it.
  *
- * ⛔ Le strade che NON ci sono, lette sul sorgente:
- *   · nessun protocollo Wayland lascia a un cliente spostare le finestre
- *     degli altri (`wlr-foreign-toplevel` ha massimizza/riduci/chiudi, non la
- *     posizione);
- *   · cambiare l'uscita in due tempi non serve: labwc ricorda la posizione
- *     «di prima dei cambi» (`last_layout_geometry`) e la rimette, quindi
- *     l'esito dipende solo da quella e dall'uscita finale;
- *   · l'unica azione di labwc che tiene una finestra dentro a DESTRA e in
- *     BASSO e' `MoveToCursor` (`view_move_to_cursor()`: centra la finestra
- *     sul puntatore e poi la chiude dentro l'area utile); con il puntatore
- *     messo al CENTRO della finestra (`WarpCursor to="window"`) diventa
- *     esattamente «spostala il meno possibile», e `FitToOutput` la
- *     rimpicciolisce SOLO se e' piu' grande dello schermo.
- *     ⚠ `[M]` 25 set 2026: labwc 0.8.3 scrive «Action MoveToCursor is
- *     deprecated … use AutoPlace policy="cursor"» ⇒ si scrive
- *     `AutoPlace policy="cursor"`, che chiama la STESSA funzione
+ * ⛔ The roads that do NOT exist, read in the source:
+ *   · no Wayland protocol lets a client move other clients'
+ *     windows (`wlr-foreign-toplevel` has maximise/minimise/close, not the
+ *     position);
+ *   · changing the output in two steps does not help: labwc remembers the position
+ *     «from before the changes» (`last_layout_geometry`) and puts it back, so
+ *     the result depends only on that and on the final output;
+ *   · the only labwc action that keeps a window inside on the RIGHT and at the
+ *     BOTTOM is `MoveToCursor` (`view_move_to_cursor()`: centres the window
+ *     on the pointer and then clamps it inside the usable area); with the pointer
+ *     placed at the CENTRE of the window (`WarpCursor to="window"`) it becomes
+ *     exactly «move it as little as possible», and `FitToOutput`
+ *     shrinks it ONLY if it is larger than the screen.
+ *     ⚠ `[M]` 25 Sep 2026: labwc 0.8.3 writes «Action MoveToCursor is
+ *     deprecated … use AutoPlace policy="cursor"» ⇒ we write
+ *     `AutoPlace policy="cursor"`, which calls the SAME function
  *     (`view_place_by_policy()` → `view_move_to_cursor()`, `view.c:1080`).
- *     Qui sotto «MoveToCursor» e' il nome della funzione, non dell'azione.
+ *     Below, «MoveToCursor» is the name of the function, not of the action.
  *
- * ⭐ Quindi: una SCORCIATOIA di labwc che nessuno usa (`SESSIONE_LABWC_TASTO`),
- *    scritta nella configurazione di labwc che il prodotto gia' governa, e che
- *    il prodotto BATTE con la sua tastiera virtuale dopo aver cambiato la
- *    misura (`input_riporta_dentro()`).  Quattro passate `ForEach`, piatte
- *    perche' labwc 0.8.3 non annida If/ForEach (`rcxml.c` «cannot be a child
+ * ⭐ Hence: a labwc SHORTCUT nobody uses (`SESSIONE_LABWC_TASTO`),
+ *    written in the labwc configuration the product already governs, and which
+ *    the product TYPES with its virtual keyboard after changing the
+ *    size (`input_riporta_dentro()`).  Four `ForEach` passes, flat
+ *    because labwc 0.8.3 does not nest If/ForEach (`rcxml.c` «cannot be a child
  *    action»):
  *
- *   ⛔ Le finestre MASSIMIZZATE, AFFIANCATE e a TUTTO SCHERMO non si toccano:
- *      labwc le rimette da se' alla misura nuova, e `MoveToCursor` le
- *      farebbe uscire da quello stato.  Le prime due si escludono con le
- *      `query`; il tutto schermo non ha una `query`, e si riconosce da un
- *      effetto: labwc NON cambia la decorazione (`view_set_ssd_mode()`) e NON
- *      arrotola (`view_set_shade()`, niente `ssd`) una finestra a tutto
- *      schermo.  ⇒ Si cambia prima, e si sposta solo chi e' cambiato.
- *   ⛔ E lo spostamento si fa col solo BORDO (`border`), mai con la barra del
- *      titolo: `MoveToCursor` centra sulla finestra COMPRESI i bordi, e con la
- *      barra sopra la finestra scenderebbe di mezza barra a ogni giro.
+ *   ⛔ MAXIMISED, TILED and FULL-SCREEN windows are not touched:
+ *      labwc puts them back at the new size on its own, and `MoveToCursor` would
+ *      take them out of that state.  The first two are excluded with the
+ *      `query`s; full screen has no `query`, and is recognised by an
+ *      effect: labwc does NOT change the decoration (`view_set_ssd_mode()`) and does NOT
+ *      shade (`view_set_shade()`, no `ssd`) a full-screen
+ *      window.  ⇒ Change first, and move only what changed.
+ *   ⛔ And the move is done with the BORDER only (`border`), never with the
+ *      title bar: `MoveToCursor` centres on the window INCLUDING the borders, and with the
+ *      bar on top the window would drop by half a bar at every round.
  *
- *   1. finestre senza decorazione del server (quasi tutte su XFCE: GTK,
- *      Firefox) → bordo del server, provvisorio;
- *   2. quelle ORA col bordo → `FitToOutput`, puntatore al centro,
- *      `MoveToCursor`, di nuovo senza decorazione;
- *   3. finestre con la barra (quasi tutte su LXQt: Qt) → arrotolate, come
- *      segno;
- *   4. quelle arrotolate → srotolate, `FitToOutput`, solo bordo, puntatore al
- *      centro, `MoveToCursor`, di nuovo con la barra.
+ *   1. windows without server-side decoration (almost all on XFCE: GTK,
+ *      Firefox) → server border, temporary;
+ *   2. those NOW with the border → `FitToOutput`, pointer at the centre,
+ *      `MoveToCursor`, back without decoration;
+ *   3. windows with the title bar (almost all on LXQt: Qt) → shaded, as a
+ *      mark;
+ *   4. the shaded ones → unshaded, `FitToOutput`, border only, pointer at the
+ *      centre, `MoveToCursor`, back with the title bar.
  *
- * ⚠ I PREZZI, dichiarati (rari: nascono solo da azioni dell'utente dentro
- *   labwc): una finestra che l'utente aveva messo a «solo bordo» torna senza
- *   bordo; una che aveva ARROTOLATO torna srotolata.  E il puntatore del
- *   compositore resta sull'ultima finestra toccata: `input_riporta_dentro()`
- *   lo rimette dove l'utente l'aveva.
- * ⚠ Tutte le passate girano in UNA scorciatoia, dentro un solo giro di labwc:
- *   nessun fotogramma cade in mezzo, quindi la decorazione provvisoria non si
- *   vede.
+ * ⚠ THE PRICES, declared (rare: they arise only from user actions inside
+ *   labwc): a window the user had set to «border only» comes back without
+ *   border; one they had SHADED comes back unshaded.  And the compositor's
+ *   pointer stays on the last window touched: `input_riporta_dentro()`
+ *   puts it back where the user had it.
+ * ⚠ All the passes run in ONE shortcut, within a single labwc turn:
+ *   no frame falls in between, so the temporary decoration is not
+ *   seen.
  */
 #define SESSIONE_LABWC_TASTO "W-C-A-S-F12"
 #define SESSIONE_LABWC_ESCLUSE                                                  \
@@ -348,301 +348,301 @@
 	"  </keyboard>\n"
 
 /*
- * ⛔⛔ E IL QUARTO VALORE NON E' UN DESKTOP: E' L'ONESTA'.
+ * ⛔⛔ AND THE FOURTH VALUE IS NOT A DESKTOP: IT IS HONESTY.
  *
- * Fino alla fase 12 una macchina che non aveva ne' GNOME ne' KDE veniva
- * dichiarata **GNOME per ripiego**, e il prodotto provava ad avviare
- * `gnome-session` che li' non esiste.  `[M]` 20 set 2026, `rete11-xfce`: il
- * guasto non arrivava dove ci si aspetta — `scrivi_dropin()` rileggeva
- * l'`ExecStart` di un'unita' inesistente, otteneva il vuoto, e scriveva
- * «**un altro drop-in vince sul mio**»; poi la cattura accusava «**Mutter non
- * espone RemoteDesktop**».  ⇒ Due innocenti accusati, e la causa vera —
- * *GNOME non c'e'* — scritta una volta sola, all'avvio del server, dove il
- * banco non la legge.
+ * Until phase 12 a machine that had neither GNOME nor KDE was
+ * declared **GNOME as a fallback**, and the product tried to start
+ * `gnome-session`, which does not exist there.  `[M]` 20 Sep 2026, `rete11-xfce`: the
+ * fault did not show up where one would expect — `scrivi_dropin()` re-read
+ * the `ExecStart` of a non-existent unit, got nothing, and wrote
+ * «**another drop-in wins over mine**»; then capture blamed «**Mutter does not
+ * expose RemoteDesktop**».  ⇒ Two innocents accused, and the real cause —
+ * *GNOME is not there* — written only once, at server startup, where the
+ * bench does not read it.
  *
- * ⭐ Con «un desktop per macchina» (`DECISIONI.md` §0.6) quel ripiego era
- *   **l'unico posto in cui il prodotto poteva sbagliare desktop, e sbagliava in
- *   silenzio**.  ⇒ Non si aggiunge XFCE all'elenco lasciandolo li': si toglie.
- *   Altrimenti il giorno di LXQt si ripete identico.
+ * ⭐ With «one desktop per machine» (`DECISIONI.md` §0.6) that fallback was
+ *   **the only place where the product could get the desktop wrong, and it got it wrong
+ *   silently**.  ⇒ XFCE is not added to the list leaving it there: it is removed.
+ *   Otherwise on LXQt's day the same thing happens again.
  *
- * ⚠ I numeri vanno IN CODA: `SessioneDesktop` viaggia come `uint32_t` fra il
- *   padre e il figlio, e spostare 0 o 1 romperebbe quel confine.
+ * ⚠ The numbers go AT THE END: `SessioneDesktop` travels as a `uint32_t` between the
+ *   parent and the child, and moving 0 or 1 would break that boundary.
  */
 typedef enum {
 	SESSIONE_DESKTOP_GNOME = 0,
 	SESSIONE_DESKTOP_KDE = 1,
 	SESSIONE_DESKTOP_XFCE = 2,
 	SESSIONE_DESKTOP_NESSUNO = 3,
-	/* ⭐ FASE 14 — IN CODA, per la regola qui sopra: 0..3 restano quelli. */
+	/* ⭐ PHASE 14 — AT THE END, per the rule above: 0..3 stay as they are. */
 	SESSIONE_DESKTOP_LXQT = 4,
 } SessioneDesktop;
 
 /*
- * Quale desktop ha questa macchina — deciso UNA volta per processo.
+ * Which desktop this machine has — decided ONCE per process.
  *
- * ⭐ È una RICERCA, non un arbitrato: `DECISIONI.md` §0.6 — una macchina, un
- *   desktop; le macchine con piu' desktop installati sono **fuori scopo**.
+ * ⭐ It is a SEARCH, not an arbitration: `DECISIONI.md` §0.6 — one machine, one
+ *   desktop; machines with several desktops installed are **out of scope**.
  *
- * L'ordine, e ogni riga ha la sua ragione:
+ * The order, and each line has its reason:
  *
- *   1. `startplasma-wayland` **e non** `gnome-session`  → KDE
- *   2. tutti e due                                      → GNOME, e si DICHIARA
- *      ambiguo (fuori scopo: si sceglie e si dice, non si cura)
+ *   1. `startplasma-wayland` **and not** `gnome-session`  → KDE
+ *   2. both                                              → GNOME, and it is DECLARED
+ *      ambiguous (out of scope: choose and say so, do not cure)
  *   3. `gnome-session`                                  → GNOME
- *   4. `xfce4-session`                                  → XFCE   ⭐ fase 13
- *      (e se c'è anche `lxqt-session`: XFCE, e si DICHIARA ambiguo — fase 14)
- *   5. `lxqt-session`                                   → LXQT   ⭐ fase 14
- *   6. nessuno                                          → **NESSUNO**, e non
- *      nasce niente — vedi il riquadro dell'enum
+ *   4. `xfce4-session`                                  → XFCE   ⭐ phase 13
+ *      (and if `lxqt-session` is there too: XFCE, and it is DECLARED ambiguous — phase 14)
+ *   5. `lxqt-session`                                   → LXQT   ⭐ phase 14
+ *   6. none                                             → **NESSUNO**, and nothing
+ *      is born — see the box on the enum
  *
- * ⚠ L'ordine NON è libero: i primi tre rami restano testualmente quelli della
- *   fase 12, quindi **nessuna macchina servita oggi cambia comportamento**.  Il
- *   ramo di XFCE si infila fra l'ultimo desktop conosciuto e il ripiego.
- * ⭐ E quello di LXQt DOPO XFCE, per la stessa ragione: una macchina con XFCE
- *   e LXQt insieme resta XFCE com'era ieri — cambia solo che adesso lo dice.
+ * ⚠ The order is NOT free: the first three branches stay textually those of
+ *   phase 12, so **no machine served today changes behaviour**.  The
+ *   XFCE branch slips in between the last known desktop and the fallback.
+ * ⭐ And LXQt's AFTER XFCE, for the same reason: a machine with XFCE
+ *   and LXQt together stays XFCE as it was yesterday — the only change is that now it says so.
  *
- * ⛔ E il marcatore di XFCE è `xfce4-session`, **non `labwc`**: labwc è il
- *    compositore di FAMIGLIA, lo stesso che usa LXQt, e riconoscere su di lui
- *    confonderebbe due desktop diversi.  `labwc` resta una **precondizione**, e
- *    la sua assenza si dichiara alla nascita invece di scoprirla da un `exec`
- *    fallito.  ⭐ Fase 14: per LXQt, identico, il marcatore è `lxqt-session`.
+ * ⛔ And the XFCE marker is `xfce4-session`, **not `labwc`**: labwc is the
+ *    FAMILY compositor, the same one LXQt uses, and recognising on it
+ *    would confuse two different desktops.  `labwc` remains a **precondition**, and
+ *    its absence is declared at birth instead of being discovered from a failed
+ *    `exec`.  ⭐ Phase 14: for LXQt, identically, the marker is `lxqt-session`.
  */
 SessioneDesktop sessione_desktop(void);
 
-/* La scelta a parole, con il perche' — per la riga di avvio del server. */
+/* The choice in words, with the why — for the server's startup line. */
 const char *sessione_desktop_spiega(void);
 
 /*
- * ⭐ FASE 14 — LA FAMIGLIA, non il desktop: vero su XFCE **e** su LXQt.
+ * ⭐ PHASE 14 — THE FAMILY, not the desktop: true on XFCE **and** on LXQt.
  *
- * Cattura, input, appunti e rimontaggio non parlano col desktop: parlano col
- * COMPOSITORE, e per tutt'e due è labwc (`STUDI.md` §lxqt §5: «riuso
- * integrale»).  ⛔ Fino alla fase 13 `figlio.c` lo scriveva
- * `== SESSIONE_DESKTOP_XFCE` in cinque punti: con un quinto valore dell'enum
- * LXQt sarebbe caduto, tutto insieme e senza un avviso, nel ramo di GNOME/KDE.
- * ⇒ Chi chiede «wlroots?» chiede questo, e non un desktop.
+ * Capture, input, clipboard and remount do not talk to the desktop: they talk to the
+ * COMPOSITOR, and for both it is labwc (`STUDI.md` §lxqt §5: «full
+ * reuse»).  ⛔ Until phase 13 `figlio.c` wrote it as
+ * `== SESSIONE_DESKTOP_XFCE` in five places: with a fifth enum value
+ * LXQt would have fallen, all at once and without a warning, into the GNOME/KDE branch.
+ * ⇒ Whoever asks «wlroots?» asks this, and not a desktop.
  */
 bool sessione_su_wlroots(void);
 
 /*
- * ⛔ IL MONITOR SI SCEGLIE PER NOME, E IL NOME E' QUESTO.
+ * ⛔ THE MONITOR IS CHOSEN BY NAME, AND THIS IS THE NAME.
  *
- * `[M]` 12 agosto 2026: su questa macchina sono stati visti **due** monitor
- * virtuali insieme, e **entrambi 1920x1080@60**:
+ * `[M]` 12 August 2026: on this machine **two** virtual monitors were seen
+ * together, and **both 1920x1080@60**:
  *
- *     Meta-0   MetaVirtualMonitor      0x00       ← il nostro, --virtual-monitor
- *     Meta-1   Virtual remote monitor  0x000001   ← creato da Mutter per se'
+ *     Meta-0   MetaVirtualMonitor      0x00       ← ours, --virtual-monitor
+ *     Meta-1   Virtual remote monitor  0x000001   ← created by Mutter for itself
  *
- * ⭐ Stessa identica misura: chi li distinguesse per risoluzione o per indice
- *    non distinguerebbe niente.  Li distingue **il nome del prodotto**, che
- *    Mutter mette al monitor persistente chiesto con `--virtual-monitor`
- *    (`meta-context-main.c:592-597` `[R]`) contro quello che si crea da se' per
- *    uno ScreenCast virtuale (`meta-screen-cast-virtual-stream-src.c:606-609`
- *    `[R]`).  E' `CODER.md` §3.9 alla lettera: *chiedi il componente per nome, e
- *    verifica che abbia obbedito*.
+ * ⭐ Exactly the same size: whoever told them apart by resolution or by index
+ *    would tell nothing apart.  What tells them apart is **the product name**, which
+ *    Mutter gives to the persistent monitor requested with `--virtual-monitor`
+ *    (`meta-context-main.c:592-597` `[R]`) as opposed to the one it creates by itself for
+ *    a virtual ScreenCast (`meta-screen-cast-virtual-stream-src.c:606-609`
+ *    `[R]`).  It is `CODER.md` §3.9 to the letter: *ask for the component by name, and
+ *    verify that it obeyed*.
  */
 #define SESSIONE_PRODOTTO_CHIESTO "MetaVirtualMonitor"
 
 /*
- * ⛔ I NUMERI DI STATO, E SONO GLI STESSI DEL BANCO.
+ * ⛔ THE STATE NUMBERS, AND THEY ARE THE SAME AS THE BENCH'S.
  *
- * Sono, uno per uno, le uscite di `banchi/02-sessione-stato.py` (0-5), e la
- * coincidenza e' voluta: il prodotto e il banco che lo giudica devono dire la
- * stessa parola per la stessa cosa, o il rapporto fra i due numeri va tradotto
- * a mano da qualcuno, e chi traduce sbaglia.
+ * They are, one by one, the exit codes of `banchi/02-sessione-stato.py` (0-5), and the
+ * coincidence is intended: the product and the bench that judges it must say the
+ * same word for the same thing, or the relation between the two numbers must be translated
+ * by hand by someone, and whoever translates gets it wrong.
  *
- * ⚠ Il banco ha due numeri in piu' che qui non ci sono, e la divisione e'
- *   dichiarata invece che subita:
- *     6 DISACCORDO      riga di comando e bus non dicono lo stesso   ← E1
- *     7 SHELL NON VUOTA gnome-session ripartito in una shell di login
- *   Il **6** il prodotto lo previene invece di misurarlo: scrive il drop-in e
- *   rilegge l'`ExecStart` IN VIGORE prima di avviare (necessario), poi chiede al
- *   bus quanti monitor ci sono davvero (sufficiente).  Il **7** non puo'
- *   accadere: l'ambiente lo compone questo file, e `SHELL` la mette vuota di sua
- *   mano.  ⛔ Che il prodotto non possa produrre uno stato non toglie al banco
- *   il dovere di saperlo vedere: quei due numeri restano suoi.
+ * ⚠ The bench has two more numbers that are not here, and the split is
+ *   declared rather than suffered:
+ *     6 DISAGREEMENT    command line and bus do not say the same   ← E1
+ *     7 NON-EMPTY SHELL gnome-session restarted in a login shell
+ *   The product prevents **6** instead of measuring it: it writes the drop-in and
+ *   re-reads the `ExecStart` IN FORCE before starting (necessary), then asks the
+ *   bus how many monitors there really are (sufficient).  **7** cannot
+ *   happen: this file composes the environment, and sets `SHELL` empty by its own
+ *   hand.  ⛔ That the product cannot produce a state does not relieve the bench
+ *   of the duty to be able to see it: those two numbers remain its own.
  */
 typedef enum {
-	SESSIONE_SANA = 0,          /* un monitor solo, del nome e della misura chiesti */
-	SESSIONE_NERA = 1,          /* viva, e ZERO monitor — il guasto M9 di STUDI.md §gnome §13 */
-	SESSIONE_MISURA_ALTRA = 2,  /* un monitor, ma non della misura chiesta */
-	SESSIONE_SCELTO_DA_SE = 3,  /* prodotto diverso da quello chiesto, o piu' d'uno ← E2 */
-	SESSIONE_MORTA = 4,         /* nessun compositore: il bus non risponde */
-	SESSIONE_NON_LETTA = 5,     /* non ho POTUTO leggere: negata o illeggibile ← E8 */
+	SESSIONE_SANA = 0,          /* one monitor only, of the requested name and size */
+	SESSIONE_NERA = 1,          /* alive, and ZERO monitors — fault M9 of STUDI.md §gnome §13 */
+	SESSIONE_MISURA_ALTRA = 2,  /* one monitor, but not of the requested size */
+	SESSIONE_SCELTO_DA_SE = 3,  /* product other than the requested one, or more than one ← E2 */
+	SESSIONE_MORTA = 4,         /* no compositor: the bus does not answer */
+	SESSIONE_NON_LETTA = 5,     /* I COULD not read: denied or unreadable ← E8 */
 } SessioneStato;
 
-/* La marca a parole, con le stesse parole del banco. */
+/* The mark in words, with the same words as the bench. */
 const char *sessione_marca(SessioneStato stato);
 
-/* Il monitor come lo dichiara Mutter, per chi deve catturarlo per NOME. */
+/* The monitor as Mutter declares it, for whoever must capture it by NAME. */
 typedef struct {
 	char connettore[64]; /* «Meta-0» */
 	char fornitore[64];  /* «MetaVendor» */
-	char prodotto[64];   /* «MetaVirtualMonitor» — e' questo che si guarda */
+	char prodotto[64];   /* «MetaVirtualMonitor» — this is what is looked at */
 	char seriale[64];    /* «0x00» */
 	uint32_t larghezza;
 	uint32_t altezza;
 	double refresh;
-	unsigned quanti; /* quanti monitor c'erano in tutto: 2 e' gia' un difetto */
+	unsigned quanti; /* how many monitors there were in all: 2 is already a defect */
 } SessioneMonitor;
 
 /*
- * L'UNICO modo lecito di prendere il bus di sessione.
+ * The ONLY lawful way to get the session bus.
  *
- * ⛔ Non si chiama mai `g_bus_get_sync(G_BUS_TYPE_SESSION, ...)` direttamente.
+ * ⛔ `g_bus_get_sync(G_BUS_TYPE_SESSION, ...)` is never called directly.
  *
- * GIO, sulla connessione al bus di SESSIONE, tiene acceso «exit-on-close»: se
- * il bus si chiude, la libreria chiama `raise(SIGTERM)` per conto nostro.  Al
- * logout `dbus.service` dell'utente si ferma — e ha un colpevole con nome e
- * riga, `gnome-session-ctl.c:130-133` fa `StopUnit("dbus.service")`
- * (`STUDI.md` §gnome §3.3) — e REMOTIX moriva li': non ucciso da systemd ne' da
- * nessun altro, ma da se stesso.  La pila che lo dimostra e' del 4 agosto 2026.
- * Per il bus di SISTEMA il difetto non esiste: quello resta.
+ * GIO, on the SESSION bus connection, keeps «exit-on-close» on: if
+ * the bus closes, the library calls `raise(SIGTERM)` on our behalf.  At
+ * logout the user's `dbus.service` stops — and it has a culprit with a name and a
+ * line, `gnome-session-ctl.c:130-133` does `StopUnit("dbus.service")`
+ * (`STUDI.md` §gnome §3.3) — and REMOTIX died there: not killed by systemd nor by
+ * anyone else, but by itself.  The stack that proves it is from 4 August 2026.
+ * For the SYSTEM bus the defect does not exist: that one stays.
  *
- * Restituisce un riferimento nuovo, o NULL con `sbaglio` scritto.
+ * Returns a new reference, or NULL with `sbaglio` written.
  */
 GDBusConnection *sessione_bus(GError **sbaglio);
 
 /*
- * La cartella di configurazione della sessione Plasma che serviamo:
- * `$XDG_RUNTIME_DIR/remotix/xdg`, messa DAVANTI in `XDG_CONFIG_DIRS` quando la
- * sessione nasce (le regole del menu, il bordo, `loginMode`).  ⭐ Ci scrive
- * anche `kwin_disposizione()` (`kxkbrc`).  NULL senza `XDG_RUNTIME_DIR`;
- * da liberare con `g_free`.
+ * The configuration folder of the Plasma session we serve:
+ * `$XDG_RUNTIME_DIR/remotix/xdg`, put IN FRONT in `XDG_CONFIG_DIRS` when the
+ * session is born (the menu rules, the border, `loginMode`).  ⭐ `kwin_disposizione()`
+ * writes there too (`kxkbrc`).  NULL without `XDG_RUNTIME_DIR`;
+ * to be freed with `g_free`.
  */
 char *sessione_cartella_kde(void);
 
 /*
- * ⭐ FASE 15, D-015 — il dconf della SESSIONE (solo GNOME): scrive il profilo
- * `$XDG_RUNTIME_DIR/remotix/dconf/profilo` (un database in memoria in cima,
- * quello dell'utente sotto in sola lettura) e mette `DCONF_PROFILE` nel
- * processo.  ⛔ Va chiamata PRIMA di qualunque `GSettings`: il motore di dconf
- * legge la variabile una volta sola.  False su un altro desktop, o se la cura
- * non puo' valere (detto nel registro).
+ * ⭐ PHASE 15, D-015 — the SESSION's dconf (GNOME only): writes the profile
+ * `$XDG_RUNTIME_DIR/remotix/dconf/profilo` (an in-memory database on top,
+ * the user's below, read-only) and sets `DCONF_PROFILE` in the
+ * process.  ⛔ It must be called BEFORE any `GSettings`: the dconf engine
+ * reads the variable only once.  False on another desktop, or if the cure
+ * cannot hold (said in the log).
  */
 bool sessione_dconf_prepara(void);
 
 /*
- * Il dconf della sessione e' in vigore in QUESTO processo?  ⛔ Se no, chi
- * scrive impostazioni di GNOME le scriverebbe in quelle dell'utente.
+ * Is the session's dconf in force in THIS process?  ⛔ If not, whoever
+ * writes GNOME settings would write them into the user's.
  */
 bool sessione_dconf_di_sessione(void);
 
 /*
- * ⭐ FASE 15 (R1/R2) — il GESTORE D'UTENTE di systemd torna com'era dopo la
- * sessione remota: `sessione_fotografa_gestore()` alla nascita salva il
- * valore di prima delle nostre variabili; `sessione_sgombera_gestore()` —
- * a sessione MORTA, altrimenti non fa niente — toglie i nostri drop-in e
- * rimette le variabili.  Il riquadro e' in `sessione.c`.
+ * ⭐ PHASE 15 (R1/R2) — systemd's USER MANAGER goes back to how it was after the
+ * remote session: `sessione_fotografa_gestore()` at birth saves the
+ * value our variables had before; `sessione_sgombera_gestore()` —
+ * with the session DEAD, otherwise it does nothing — removes our drop-ins and
+ * restores the variables.  The box is in `sessione.c`.
  */
 void sessione_fotografa_gestore(void);
-/* A sessione uscita, chiude quel che resta dell'utente nella SUA session-N.scope
- * (detto nel registro).  Il perche' sopra la definizione, in sessione.c. */
+/* Once the session has exited, closes what is left of the user in THEIR session-N.scope
+ * (said in the log).  The why is above the definition, in sessione.c. */
 void sessione_sgombera_scope(void);
 void sessione_sgombera_gestore(const char *perche);
 
 /*
- * C'e' un compositore che risponde?
+ * Is there a compositor that answers?
  *
- * ⚠ E' la domanda DEBOLE, ed e' qui apposta perche' si veda che e' debole: una
- *   sessione nera risponde «si'».  Chi deve sapere se c'e' qualcosa da
- *   catturare chiama `sessione_stato()`.
+ * ⚠ It is the WEAK question, and it is here on purpose so that its weakness shows: a
+ *   black session answers «yes».  Whoever needs to know whether there is something to
+ *   capture calls `sessione_stato()`.
  */
 bool sessione_viva(void);
 
 /*
- * In che stato e' la sessione, con la misura CHIESTA accanto.
+ * What state the session is in, with the REQUESTED size next to it.
  *
- * `scelto` (facoltativo) riceve il monitor trovato — o il primo dei molti,
- * quando sono molti — perche' chi cattura possa nominarlo invece di dedurlo.
+ * `scelto` (optional) receives the monitor found — or the first of many,
+ * when there are many — so that whoever captures can name it instead of deducing it.
  *
- * ⛔ Non tocca niente: si puo' chiamare in qualunque momento, e non fa male a
- *    nessuno.  ⚠ In particolare NON si chiede `org.gnome.Shell.Screenshot`, che
- *    su una sessione a zero monitor fa tentare a Mutter una texture 0x0
- *    (`cogl_texture_2d_new_with_size: assertion 'width >= 1' failed`), fa morire
- *    `gnome-shell` e, con `OnFailure=gnome-session-shutdown.target` e
- *    `Restart=no`, **porta via tutta la sessione** `[M]` 12 ago 2026.  ⇒ Quel
- *    controllo **distrugge la cosa che sta controllando**, e lo fa **solo nel
- *    caso guasto**: verde quando e' sana, macerie quando e' nera.
+ * ⛔ It touches nothing: it can be called at any moment, and harms
+ *    nobody.  ⚠ In particular `org.gnome.Shell.Screenshot` is NOT asked, which
+ *    on a zero-monitor session makes Mutter attempt a 0x0 texture
+ *    (`cogl_texture_2d_new_with_size: assertion 'width >= 1' failed`), kills
+ *    `gnome-shell` and, with `OnFailure=gnome-session-shutdown.target` and
+ *    `Restart=no`, **takes the whole session away** `[M]` 12 Aug 2026.  ⇒ That
+ *    check **destroys the thing it is checking**, and does so **only in the
+ *    faulty case**: green when it is healthy, rubble when it is black.
  */
 SessioneStato sessione_stato(uint32_t larghezza, uint32_t altezza, SessioneMonitor *scelto);
 
 /*
- * Si assicura che ci sia una sessione grafica CON UN MONITOR della misura
- * chiesta, facendola nascere se manca o se e' nera.
+ * Makes sure there is a graphical session WITH A MONITOR of the requested
+ * size, making it be born if it is missing or black.
  *
- * Restituisce **lo stato del mondo quando ha finito**, non un si'/no: 0 e'
- * riuscito, e ogni altro numero dice in che modo non lo e'.  ⛔ Il perche' sta
- * nel registro, area «sessione»: non c'e' un `GError` da propagare perche' non
- * c'e' nessuno a cui propagarlo — chi chiama puo' solo dichiararlo e proseguire
- * con meno (`CODER.md` §4.2), ed e' quel che deve fare.
+ * Returns **the state of the world when it has finished**, not a yes/no: 0 is
+ * success, and every other number says in what way it is not.  ⛔ The why is
+ * in the log, area «sessione»: there is no `GError` to propagate because there
+ * is nobody to propagate it to — the caller can only declare it and carry on
+ * with less (`CODER.md` §4.2), and that is what it must do.
  *
- * `avviata` (facoltativo) dice se l'ha dovuta far nascere.
+ * `avviata` (optional) says whether it had to make it be born.
  *
- * ⛔ CHE COSA FA, CASO PER CASO — scritto qui perche' non si scopra dal codice:
+ * ⛔ WHAT IT DOES, CASE BY CASE — written here so that it is not discovered from the code:
  *
- *   SANA            non tocca niente.  Il palco appartiene alla sessione (I4)
- *   MORTA           scrive il drop-in, avvia, e ASPETTA IL MONITOR
- *   NERA            ⛔ scrive il drop-in e la fa RINASCERE, dichiarandolo forte.
- *                   Perche' e' lecito: un monitor vero ce l'avrebbe una sessione
- *                   locale, e una sessione a ZERO monitor puo' essere solo una
- *                   headless — cioe' nostra.  Non si porta via niente a nessuno
- *   MISURA_ALTRA    ⚠ DICHIARA e prosegue: c'e' qualcosa da catturare, e la
- *                   misura di una sessione gia' viva non si cambia a caldo
- *                   (`STUDI.md` §gnome §8.2: `ensure_virtual_monitor` esce prima se la
- *                   misura non cambia — e che regga un cambio a caldo e' `[?]`)
- *   SCELTO_DA_SE    ⚠ DICHIARA, elenca TUTTI i monitor per nome, e prosegue.
- *                   Rifarla nascere non curerebbe niente: chi crea il monitor
- *                   di troppo e' uno ScreenCast di qualcun altro
- *   NON_LETTA       ⛔ NON TOCCA NIENTE.  «Non ho potuto leggere» non e' «non
- *                   c'e'» (E8), e una sessione buttata giu' per una lettura
- *                   fallita e' un danno fatto per un'ipotesi
+ *   SANA            touches nothing.  The stage belongs to the session (I4)
+ *   MORTA           writes the drop-in, starts, and WAITS FOR THE MONITOR
+ *   NERA            ⛔ writes the drop-in and makes it BE BORN AGAIN, declaring it loudly.
+ *                   Why it is lawful: a local session would have
+ *                   a real monitor, and a session with ZERO monitors can only be a
+ *                   headless one — that is, ours.  Nothing is taken away from anyone
+ *   MISURA_ALTRA    ⚠ DECLARES and carries on: there is something to capture, and the
+ *                   size of an already live session is not changed on the fly
+ *                   (`STUDI.md` §gnome §8.2: `ensure_virtual_monitor` returns early if the
+ *                   size does not change — and whether it survives a hot change is `[?]`)
+ *   SCELTO_DA_SE    ⚠ DECLARES, lists ALL monitors by name, and carries on.
+ *                   Making it be born again would cure nothing: whoever creates the extra
+ *                   monitor is someone else's ScreenCast
+ *   NON_LETTA       ⛔ TOUCHES NOTHING.  «I could not read» is not «there
+ *                   is none» (E8), and a session knocked down because of a failed
+ *                   read is damage done on a hypothesis
  */
-/* ⭐ Chiede la nascita della sessione grafica e TORNA SUBITO — fase 5.
- * Si avvia solo da `SESSIONE_MORTA`; a scoprire che c'e' ci pensa chi riprova.
- * ⛔ La usa il FIGLIO, che in un'attesa di 40 s smetterebbe di rispondere al
- *    padre.  Il perche' per intero sta sopra la funzione in `sessione.c`. */
+/* ⭐ Asks for the birth of the graphical session and RETURNS AT ONCE — phase 5.
+ * It starts only from `SESSIONE_MORTA`; whoever retries takes care of finding out that it is there.
+ * ⛔ The CHILD uses it, which during a 40 s wait would stop answering the
+ *    parent.  The full why is above the function in `sessione.c`. */
 bool sessione_fai_nascere(uint32_t larghezza, uint32_t altezza);
 
-/* ⭐ Le impostazioni che la sessione deve avere PRIMA di nascere: le dodici
- * scorciatoie delle console virtuali (che in headless Mutter ingoia per
- * niente), la voce «Esci…» accesa, la sospensione automatica spenta, il
- * blocca-schermo del desktop spento.  ⛔ Le mette il PRODOTTO e non un file di
- * provisioning: invariante I7.  ⚠ Ogni schema si cerca prima — `g_settings_new`
- * su uno schema assente ABORTISCE il processo. */
+/* ⭐ The settings the session must have BEFORE being born: the twelve
+ * virtual console shortcuts (which headless Mutter swallows for
+ * nothing), the «Log Out…» entry on, automatic suspend off, the
+ * desktop's screen locker off.  ⛔ The PRODUCT sets them and not a
+ * provisioning file: invariant I7.  ⚠ Each schema is looked up first — `g_settings_new`
+ * on a missing schema ABORTS the process. */
 void sessione_impostazioni(void);
 
-/* ⭐ Dice al gestore di sessione che qualcuno sta lavorando: `SUSPEND|IDLE`,
- * ⛔ mai `LOGOUT`.  Restituisce il gettone, 0 se non e' andata.  ⚠ Non si
- * rilascia: vale quanto la sessione.  (`DECISIONI.md` §4.7, terza cintura.) */
+/* ⭐ Tells the session manager that someone is working: `SUSPEND|IDLE`,
+ * ⛔ never `LOGOUT`.  Returns the cookie, 0 if it failed.  ⚠ It is not
+ * released: it lasts as long as the session.  (`DECISIONI.md` §4.7, third belt.) */
 guint32 sessione_inibisci(void);
 
 SessioneStato sessione_assicura(uint32_t larghezza, uint32_t altezza, bool *avviata);
 
 /*
- * Termina la sessione grafica.  Vero se c'era e ora non c'e' piu'.
+ * Terminates the graphical session.  True if it was there and now it is gone.
  *
- * # Perche' esiste
+ * # Why it exists
  *
- * Perche' «la sessione locale vince» (I2) non significa soltanto staccare il
- * client: se il compositore remoto restasse in piedi, l'utente che si siede
- * davanti alla macchina avrebbe **due sessioni grafiche a proprio nome** sullo
- * stesso `$XDG_RUNTIME_DIR`, e la seconda troverebbe `org.gnome.Shell` gia'
- * occupato.  Il difetto si vedrebbe dove nessuno lo cerca: sulla sessione
- * LOCALE che non parte.
+ * Because «the local session wins» (I2) does not only mean detaching the
+ * client: if the remote compositor stayed up, the user who sits down
+ * in front of the machine would have **two graphical sessions in their name** on the
+ * same `$XDG_RUNTIME_DIR`, and the second would find `org.gnome.Shell` already
+ * taken.  The defect would show where nobody looks for it: on the
+ * LOCAL session that does not start.
  *
- * # Prima si chiede, poi si insiste
+ * # First ask, then insist
  *
- * `Logout(1)` e' l'uscita ordinata senza domande.  Ma puo' anche non succedere
- * nulla — un programma con modifiche non salvate ha il diritto di INIBIRE
- * l'uscita, e `Logout(1)` in quel caso mostra il dialogo, che in una sessione
- * non presidiata non chiude nessuno (`STUDI.md` §gnome §3.2).  Dopo dieci secondi si
- * insiste con `Logout(2)`, **dichiarandolo nel registro**: e' una perdita
- * possibile di lavoro non salvato, e chi legge deve poterla ricostruire.
+ * `Logout(1)` is the orderly exit without questions.  But it may also happen that
+ * nothing happens — a program with unsaved changes has the right to INHIBIT
+ * the exit, and `Logout(1)` in that case shows the dialog, which in an
+ * unattended session nobody closes (`STUDI.md` §gnome §3.2).  After ten seconds it
+ * insists with `Logout(2)`, **declaring it in the log**: it is a possible
+ * loss of unsaved work, and whoever reads must be able to reconstruct it.
  *
- * ⛔ E si aspetta `inactive`, NON «diverso da active»: `is-active` passa per
- *    `deactivating`, e far ripartire una sessione li' dentro e' un'altra prima
- *    esecuzione (`FASI.md` §00-ambiente, difetto 4 della fase 0).
+ * ⛔ And it waits for `inactive`, NOT «other than active»: `is-active` goes through
+ *    `deactivating`, and restarting a session in there is another first
+ *    run (`FASI.md` §00-ambiente, defect 4 of phase 0).
  */
 bool sessione_termina(void);
 

@@ -1,75 +1,75 @@
 /*
- * main.c — REMOTIX, il server.
+ * main.c — REMOTIX, the server.
  *
  * ---------------------------------------------------------------------------
- * ⛔ CHE COS'E' QUESTO PROGRAMMA, E CHE COSA NON E' ANCORA
+ * ⛔ WHAT THIS PROGRAM IS, AND WHAT IT IS NOT YET
  *
- * E' il server di `SPECIFICHE.md` §1 alla FASE 1: la stretta di mano di RCP su
- * WebTransport, dai due lati, e la pagina servita dal server stesso.  ⛔ Niente
- * video, niente audio, niente input: quelli sono le fasi da 2 in poi.
+ * It is the server of `SPECIFICHE.md` §1 at PHASE 1: the RCP handshake over
+ * WebTransport, from both sides, and the page served by the server itself.
+ * ⛔ No video, no audio, no input: those are the phases from 2 onwards.
  *
- * ⚠ Quel che l'utente vede e giudica: apre `https://indirizzo:7447`, clicca
- *   l'avviso la prima volta su quel dispositivo, digita utente e parola, e la
- *   pagina dice «ammesso, sessione nuova, tela 1920×1080, desktop GNOME» —
- *   oppure dice PERCHE' no, con una frase e non con un numero (`RCP.md` §8.2).
- *
- * ---------------------------------------------------------------------------
- * ⛔ I DUE ASCOLTATORI, CON LO STESSO NUMERO DI PORTA
- *
- * `RCP.md` §2.4: **7447**, UDP per HTTP/3 e WebTransport, TCP per il primo
- * caricamento della pagina.  ⚠ E le due cose sono INDIPENDENTI: WebTransport
- * non usa `Alt-Svc`, apre la sua connessione da se' (misura S1).  ⛔ Il ripiego
- * silenzioso su TCP dichiarato come pericolo in `PIANO.md` fase 1 non puo'
- * accadere — quella riga e' anteriore alla misura.
+ * ⚠ What the user sees and judges: they open `https://address:7447`, click
+ *   the warning the first time on that device, type user and password, and the
+ *   page says «admitted, new session, canvas 1920×1080, GNOME desktop» — or it
+ *   says WHY not, with a sentence and not with a number (`RCP.md` §8.2).
  *
  * ---------------------------------------------------------------------------
- * ⛔ UN SOLO FILO, E ADESSO NON E' PIU' UN PROBLEMA — 12 agosto 2026
+ * ⛔ THE TWO LISTENERS, WITH THE SAME PORT NUMBER
  *
- * Tutto gira in un ciclo `poll` solo, e resta cosi'.  ⛔ Quel che e' cambiato
- * e' che **il ciclo non chiama piu' PAM**: `DECISIONI.md` §1.10, dall'utente,
- * alla chiusura della fase 1.
+ * `RCP.md` §2.4: **7447**, UDP for HTTP/3 and WebTransport, TCP for the first
+ * load of the page.  ⚠ And the two things are INDEPENDENT: WebTransport does
+ * not use `Alt-Svc`, it opens its connection on its own (measurement S1).
+ * ⛔ The silent fallback to TCP declared as a danger in `PIANO.md` phase 1
+ * cannot happen — that line predates the measurement.
  *
- * ⚠ Quel che questo riquadro diceva fino a ieri — «la verifica PAM BLOCCA quel
- *   filo, quindi la stretta di mano di un utente ritarda i pacchetti di
- *   chiunque altro» — era vero e MISURATO: `[M]` B8, sera dell'11 agosto, **da
- *   1,0 a 2,2 secondi per tentativo**, e a metterceli era PAM (+1034 ms oltre
- *   il secondo fisso sui respinti contro +84 ms sugli ammessi, la firma di
+ * ---------------------------------------------------------------------------
+ * ⛔ ONE SINGLE THREAD, AND NOW IT IS NO LONGER A PROBLEM — 12 Aug 2026
+ *
+ * Everything runs in a single `poll` loop, and stays that way.  ⛔ What has
+ * changed is that **the loop no longer calls PAM**: `DECISIONI.md` §1.10, from
+ * the user, at the close of phase 1.
+ *
+ * ⚠ What this box said until yesterday — «the PAM check BLOCKS that thread,
+ *   so one user's handshake delays everyone else's packets» — was true and
+ *   MEASURED: `[M]` B8, evening of 11 August, **from 1.0 to 2.2 seconds per
+ *   attempt**, and it was PAM adding them (+1034 ms beyond the fixed second on
+ *   the rejected against +84 ms on the admitted, the signature of
  *   `pam_faildelay`).
  *
- * ⭐ Adesso PAM la interroga un **processo aiutante** (`aiutante.c`), e la
- *    forma e' quella decisa dall'utente: un processo, non un filo, perche' PAM
- *    non e' affidabilmente rientrante.  Qui dentro restano tre righe: il
- *    descrittore dell'aiutante entra nel `poll` insieme agli altri, le risposte
- *    si consegnano, e le domande senza risposta scadono.
+ * ⭐ Now PAM is queried by a **helper process** (`aiutante.c`), and the shape
+ *    is the one the user decided: a process, not a thread, because PAM is not
+ *    reliably reentrant.  Three lines remain in here: the helper's descriptor
+ *    enters the `poll` together with the others, the answers are delivered,
+ *    and the questions without an answer expire.
  *
- * ⛔ E la ragione per cui si e' curato PRIMA della fase 2, che non e' di
- *    eleganza: senza video il sintomo era «l'ultimo dei dieci aspetta dieci
- *    secondi»; con il video sarebbe stato **lo schermo di tutti quelli
- *    collegati che si pianta ogni volta che qualcun altro entra** — e chi lo
- *    vede da' la colpa al video, perche' e' li' che si vede.
+ * ⛔ And the reason it was cured BEFORE phase 2, which is not elegance:
+ *    without video the symptom was «the last of ten waits ten seconds»; with
+ *    video it would have been **the screen of everyone connected freezing
+ *    every time someone else logs in** — and whoever sees it blames the video,
+ *    because that is where it shows.
  *
  * ---------------------------------------------------------------------------
- * ⛔⭐ E DAL 12 AGOSTO 2026 QUESTO PROCESSO NON CATTURA PIU' NIENTE — §1.10-bis
+ * ⛔⭐ AND SINCE 12 AUG 2026 THIS PROCESS NO LONGER CAPTURES ANYTHING — §1.10-bis
  *
- * `DECISIONI.md` §1.10-bis: il server resta **privilegiato**, e per ogni utente
- * ammesso genera un **figlio che gira come lui**, che tiene il bus di sessione,
- * la cattura e i dispositivi.  ⛔ La ragione e' una misura, non una preferenza:
- * `[M]` root non si collega al bus di sessione dell'utente, e `[M]` solo root
- * puo' verificare con PAM la parola d'ordine di un altro.
+ * `DECISIONI.md` §1.10-bis: the server stays **privileged**, and for every
+ * admitted user it spawns a **child that runs as that user**, which holds the
+ * session bus, the capture and the devices.  ⛔ The reason is a measurement,
+ * not a preference: `[M]` root does not connect to the user's session bus, and
+ * `[M]` only root can check another user's password with PAM.
  *
- * ⇒ Da qui sono uscite `sessione_assicura()` e `primo_fotogramma()`, che fino a
- *   ieri stavano proprio in questo file: adesso vivono in `figlio.c`, dall'altra
- *   parte del calo di privilegio.  ⭐ E non e' solo una questione di permessi:
- *   **questo processo non tocca piu' ne' GLib ne' PipeWire ne' D-Bus**, quindi
- *   il `fork()` che genera un figlio parte da un processo a un filo solo — che
- *   e' l'unica condizione in cui un `fork` da una libreria con thread non e'
- *   una scommessa.
+ * ⇒ Out of here went `sessione_assicura()` and `primo_fotogramma()`, which
+ *   until yesterday sat right in this file: now they live in `figlio.c`, on
+ *   the other side of the privilege drop.  ⭐ And it is not only a matter of
+ *   permissions: **this process no longer touches GLib, PipeWire or D-Bus**,
+ *   so the `fork()` that spawns a child starts from a single-threaded process
+ *   — which is the only condition in which a `fork` from a library with
+ *   threads is not a gamble.
  */
 #include "aiutante.h"
-/* ⛔ Per `audio_silenzio_taci()`: il tono di prova di `--audio-prova` apre un
- *    codificatore audio in QUESTO processo, non solo nel figlio.  ⚠ Se
- *    l'interruttore lo ricevesse solo il figlio, il banco del tono e il banco
- *    della sessione vera misurerebbero due prodotti diversi. */
+/* ⛔ For `audio_silenzio_taci()`: the test tone of `--audio-prova` opens an
+ *    audio encoder in THIS process, not only in the child.  ⚠ If only the
+ *    child received the switch, the tone bench and the real-session bench
+ *    would measure two different products. */
 #include "audio.h"
 #include "budget.h"
 #include "certificati.h"
@@ -100,47 +100,49 @@
 
 #define PORTA_PREDEFINITA "7447" /* RCP.md §2.4 */
 
-/* ⛔⭐ LA TELA, IN UN POSTO SOLO — e fino al 12 agosto 2026 erano tre.
+/* ⛔⭐ THE CANVAS, IN ONE PLACE ONLY — and until 12 Aug 2026 there were three.
  *
- *     `PIANO.md` fase 1 dichiara «tela 1920×1080»; `src/pagina.html` la chiede
- *     nel `CIAO` (riga 1503); `P2-1-sessione.md` §6.3 scriveva `1920, 1080` a
- *     mano dentro `main.c` e lo dichiarava un debito: *«chi innesta li leghi a
- *     una costante sola, o fra due settimane saranno tre posti»*.
+ *     `PIANO.md` phase 1 declares «canvas 1920×1080»; `src/pagina.html` asks
+ *     for it in the `CIAO` (line 1503); `P2-1-sessione.md` §6.3 wrote
+ *     `1920, 1080` by hand inside `main.c` and declared it a debt: *«whoever
+ *     grafts should tie them to a single constant, or in two weeks they will
+ *     be three places»*.
  *
- * ⭐ Qui la costante e' una, e la usano tutte e tre le cose che devono
- *    combaciare: il monitor virtuale che si chiede alla sessione, la misura con
- *    cui si apre la cattura, e la misura con cui si codifica.  ⛔ Se non
- *    combaciassero il sintomo NON sarebbe un errore: sarebbe un'intestazione di
- *    §6.2 che dichiara una misura mentre i pixel ne portano un'altra, e il
- *    client non ha modo di accorgersene.
+ * ⭐ Here the constant is one, and it is used by all three things that must
+ *    match: the virtual monitor asked of the session, the size with which the
+ *    capture is opened, and the size with which encoding happens.  ⛔ If they
+ *    did not match the symptom would NOT be an error: it would be a §6.2
+ *    header declaring one size while the pixels carry another, and the client
+ *    has no way to notice.
  *
- * ⚠ Quel che resta fuori, e va detto: la tela che il client CHIEDE nel `CIAO`.
- *   Quella e' sua, §4.5 permette al server di ridurla, e `video_forse()` in
- *   `webtransport.c` rifiuta di spedire se non combacia con questa — invece di
- *   spedire un fotogramma che mente. */
+ * ⚠ What stays outside, and must be said: the canvas the client ASKS for in
+ *   the `CIAO`.  That one is the client's, §4.5 allows the server to reduce
+ *   it, and `video_forse()` in `webtransport.c` refuses to send if it does not
+ *   match this one — instead of sending a frame that lies. */
 #define TELA_L 1920u
 #define TELA_A 1080u
 
-/* 1 per l'UDP, 1 per l'ascoltatore TCP, il resto per le connessioni TCP. */
+/* 1 for UDP, 1 for the TCP listener, the rest for the TCP connections. */
 #define MAX_POLL 64
 
-/* ⭐ §5.1 — ogni quanto si ripassano le sessioni grafiche locali.
+/* ⭐ §5.1 — how often the local graphical sessions are checked again.
  *
- * ⚠ Due secondi, e i due numeri che li giustificano sono uno per verso: e' il
- *   RITARDO massimo fra «l'utente si e' seduto davanti alla macchina» e «la
- *   sessione remota cade» — che nessuno guarda col cronometro — ed e' anche il
- *   COSTO, perche' ogni ripasso e' una chiamata sincrona a logind dentro il
- *   ciclo che consegna i fotogrammi (`LEZIONI.md` §6.2-bis).
+ * ⚠ Two seconds, and the two numbers that justify them are one per direction:
+ *   it is the maximum DELAY between «the user sat down in front of the
+ *   machine» and «the remote session drops» — which nobody watches with a
+ *   stopwatch — and it is also the COST, because every check is a synchronous
+ *   call to logind inside the loop that delivers frames (`LEZIONI.md`
+ *   §6.2-bis).
  *
- * ⭐ E DAL 25 AGOSTO 2026 IL COSTO NON DIPENDE PIU' DAGLI INQUILINI: il ripasso
- *   fa **una** domanda per tutti (`sentinella_locali()`), non una per ciascuno.
- *   `[M]` §6.13: era `N × D`, e a N=7 con logind a 286 ms ogni desktop crollava
- *   a 1,3 fotogrammi/s senza che si scrivesse una riga. */
+ * ⭐ AND SINCE 25 AUG 2026 THE COST NO LONGER DEPENDS ON THE TENANTS: the
+ *   check asks **one** question for everyone (`sentinella_locali()`), not one
+ *   for each.  `[M]` §6.13: it was `N × D`, and at N=7 with logind at 286 ms
+ *   every desktop collapsed to 1.3 frames/s without a line being written. */
 #define RIPASSO_LOCALI_MS 2000
 
-/* ⭐ Ogni quanto si scrive il conto del guardiano — vedi il chiamante di
- *   `sentinella_conti()` nel ciclo.  ⚠ Un minuto: e' un conto cumulativo, e a
- *   ogni ripasso sarebbero 43 200 righe al giorno quasi tutte uguali. */
+/* ⭐ How often the guard's count is written — see the caller of
+ *   `sentinella_conti()` in the loop.  ⚠ One minute: it is a cumulative count,
+ *   and at every check it would be 43 200 lines a day, almost all the same. */
 #define CONTO_GUARDIANO_MS 60000
 
 static volatile sig_atomic_t si_ferma;
@@ -154,214 +156,215 @@ static void al_segnale(int s)
 static void aiuto(const char *nome)
 {
 	fprintf(stderr,
-	        "REMOTIX — il server (fase 1: il filo nudo)\n"
+	        "REMOTIX — the server (phase 1: the bare wire)\n"
 	        "\n"
-	        "  %s [opzioni]\n"
+	        "  %s [options]\n"
 	        "  %s --prova-codifica [h264|hevc] [--nodo /dev/dri/renderDN]\n"
 	        "                    [--codifica scheda|vulkan|vaapi]\n"
-	        "                    un fotogramma con la scelta di una sessione\n"
-	        "                    vera, sulla scheda; una riga JSON su stdout,\n"
-	        "                    esce 0 se la scheda codifica, 3 se nessuna\n"
-	        "                    scheda sa codificare, 1 se si apre e non esce\n"
+	        "                    one frame with the choice of a real session,\n"
+	        "                    on the card; one JSON line on stdout,\n"
+	        "                    exits 0 if the card encodes, 3 if no card\n"
+	        "                    can encode, 1 if it opens and produces\n"
+	        "                    nothing\n"
 	        "\n"
-	        "  --codifica STRADA ⭐ fase 19: la strada della scheda — `scheda`\n"
-	        "                    (predefinito: per CAPACITA', Vulkan Video se\n"
-	        "                    la scheda lo offre per quel codec, se no\n"
-	        "                    VA-API), `vulkan` o `vaapi` per forzarla nelle\n"
-	        "                    prove e nella diagnosi (si fallisce dicendolo\n"
-	        "                    se non c'e': niente ripiego sull'altra)\n"
+	        "  --codifica ROUTE  ⭐ phase 19: the card's route — `scheda`\n"
+	        "                    (default: by CAPABILITY, Vulkan Video if\n"
+	        "                    the card offers it for that codec, otherwise\n"
+	        "                    VA-API), `vulkan` or `vaapi` to force it in\n"
+	        "                    tests and diagnosis (it fails saying so\n"
+	        "                    if absent: no fallback to the other)\n"
 	        "\n"
-	        "  --indirizzo IND   su che cosa ascoltare (predefinito: 0.0.0.0)\n"
-	        "  --nome NOME       il nome o l'indirizzo che va nel certificato\n"
-	        "                    (predefinito: quello di --indirizzo, e se e'\n"
-	        "                     0.0.0.0 va dichiarato: un subjectAltName\n"
-	        "                     sbagliato fa comparire un avviso DIVERSO)\n"
-	        "  --porta N         predefinito: %s  (RCP.md §2.4)\n"
-	        "  --certificati DIR dove stanno i due certificati\n"
-	        "  --pagina FILE     la pagina da servire in TCP\n"
-	        "  --ban-file FILE   dove si conserva il ban degli indirizzi\n"
-	        "                    (RCP.md §4.4-bis: sopravvive al riavvio)\n"
-	        "                    ⚠ `--ban` e' lo stesso nome, tenuto perche' e'\n"
-	        "                      quello che questo server usava prima\n"
+	        "  --indirizzo ADDR  what to listen on (default: 0.0.0.0)\n"
+	        "  --nome NAME       the name or address that goes into the certificate\n"
+	        "                    (default: the one of --indirizzo, and if it is\n"
+	        "                     0.0.0.0 it must be declared: a wrong\n"
+	        "                     subjectAltName makes a DIFFERENT warning appear)\n"
+	        "  --porta N         default: %s  (RCP.md §2.4)\n"
+	        "  --certificati DIR where the two certificates are kept\n"
+	        "  --pagina FILE     the page to serve over TCP\n"
+	        "  --ban-file FILE   where the address ban is kept\n"
+	        "                    (RCP.md §4.4-bis: it survives restart)\n"
+	        "                    ⚠ `--ban` is the same name, kept because it is\n"
+	        "                      the one this server used before\n"
 	        "  --comando-socket PATH\n"
-	        "                    il socket Unix 0600 del comando di sblocco:\n"
-	        "                    «SBLOCCA <indirizzo>» oppure «PING».  Senza,\n"
-	        "                    dal ban si esce solo con le 12 ore\n"
-	        "  --rilievo DIR     ⭐ fase 2: ci scrive il fotogramma catturato\n"
-	        "                    (cattura.bgrx) e i due flussi codificati.\n"
-	        "                    Senza, non scrive niente.  Serve al confronto\n"
-	        "                    a pixel di F2.6\n"
-	        "  --parlantina      registro di dettaglio\n"
-	        "  --journal         ⭐ fase 16 §12: ogni riga del registro va ANCHE\n"
-	        "                    al journal di systemd, coi campi REMOTIX_AREA,\n"
+	        "                    the 0600 Unix socket of the unblock command:\n"
+	        "                    «SBLOCCA <address>» or «PING».  Without it,\n"
+	        "                    the only way out of the ban is the 12 hours\n"
+	        "  --rilievo DIR     ⭐ phase 2: writes there the captured frame\n"
+	        "                    (cattura.bgrx) and the two encoded streams.\n"
+	        "                    Without it, writes nothing.  It serves the\n"
+	        "                    pixel comparison of F2.6\n"
+	        "  --parlantina      detailed log\n"
+	        "  --journal         ⭐ phase 16 §12: every log line ALSO goes\n"
+	        "                    to the systemd journal, with the fields REMOTIX_AREA,\n"
 	        "                    REMOTIX_INQUILINO, PRIORITY (3 ⛔, 4 ⚠, 6, 7\n"
-	        "                    parlantina) e SYSLOG_IDENTIFIER=remotix.  La\n"
-	        "                    riga su stderr resta identica; vale anche nei\n"
-	        "                    figli (journalctl -t remotix)\n"
+	        "                    chatter) and SYSLOG_IDENTIFIER=remotix.  The\n"
+	        "                    line on stderr stays identical; it also applies\n"
+	        "                    to the children (journalctl -t remotix)\n"
 	        "\n"
-	        "  ⭐⭐⭐ FASE 9 — LE CINQUE CURE, E DAL 24 AGOSTO 2026 SONO ACCESE\n"
-	        "     TUTT'E CINQUE (decisione dell'utente, dopo averle guardate\n"
-	        "     sul desktop vero: l'invariante I6 e' stata percorsa, non\n"
-	        "     aggirata).  ⛔ Ognuna resta spegnibile, e con UNA strada\n"
-	        "     sola; il valore in vigore finisce nel registro all'avvio,\n"
-	        "     acceso E spento.  Le cinque, e come si spengono:\n"
-	        "        soglia sulla coda video   --sgombra-soglia-ms 0\n"
-	        "        regolatore del ritmo      --niente-ritmo-adattivo\n"
-	        "        linea morta               --niente-linea-morta\n"
-	        "        sfratto del fantasma      --sfratto-ms 0\n"
-	        "        silenzio dell'audio       --niente-audio-silenzio\n"
+	        "  ⭐⭐⭐ PHASE 9 — THE FIVE CURES, AND SINCE 24 AUG 2026 ALL FIVE\n"
+	        "     ARE ON (the user's decision, after looking at them\n"
+	        "     on the real desktop: invariant I6 was walked through, not\n"
+	        "     bypassed).  ⛔ Each one can still be turned off, with ONE road\n"
+	        "     only; the value in force ends up in the log at startup,\n"
+	        "     on AND off.  The five, and how they are turned off:\n"
+	        "        video queue threshold     --sgombra-soglia-ms 0\n"
+	        "        rate regulator            --niente-ritmo-adattivo\n"
+	        "        dead line                 --niente-linea-morta\n"
+	        "        ghost eviction            --sfratto-ms 0\n"
+	        "        audio silence             --niente-audio-silenzio\n"
 	        "  --sgombra-soglia-ms N\n"
-	        "                    §5.1: un delta fermo in coda si abbandona\n"
-	        "                    solo se la coda non si svuota entro N ms;\n"
-	        "                    sotto la soglia si TIENE.  ⭐ PREDEFINITO 100\n"
-	        "                    (acceso dal 24 ago 2026).  0 = SPENTA, e si\n"
-	        "                    abbandona a ogni fotogramma piu' recente,\n"
-	        "                    com'era fino al 23 ago.  ⚠ Il prezzo, `[M]`\n"
-	        "                    09-b79: fino a +160 ms di deriva su rete\n"
-	        "                    cattiva, ZERO sulla linea sana.  La riga la\n"
-	        "                    scrive webtransport.c\n"
-	        "  --qualita-risale  la qualita' torna su di uno scalino dopo un\n"
-	        "                    po' di fotogrammi comodi sotto il tetto di\n"
-	        "                    §6.2.  Senza, scesa una volta resta giu' per\n"
-	        "                    tutta la sessione.  ⛔ Vive nel FIGLIO: la\n"
-	        "                    riga la scrive codificatore.c all'apertura\n"
+	        "                    §5.1: a delta stuck in the queue is abandoned\n"
+	        "                    only if the queue does not drain within N ms;\n"
+	        "                    below the threshold it is KEPT.  ⭐ DEFAULT 100\n"
+	        "                    (on since 24 Aug 2026).  0 = OFF, and it\n"
+	        "                    abandons at every more recent frame,\n"
+	        "                    as it was until 23 Aug.  ⚠ The price, `[M]`\n"
+	        "                    09-b79: up to +160 ms of drift on a bad\n"
+	        "                    network, ZERO on the healthy line.  The line is\n"
+	        "                    written by webtransport.c\n"
+	        "  --qualita-risale  quality goes back up one step after a\n"
+	        "                    number of comfortable frames below the ceiling of\n"
+	        "                    §6.2.  Without it, once down it stays down for\n"
+	        "                    the whole session.  ⛔ It lives in the CHILD: the\n"
+	        "                    line is written by codificatore.c at opening\n"
 	        "  --tetto-banda-mbit N\n"
-	        "                    N e' il PAVIMENTO in Mbit/s (20, §3.1-bis),\n"
-	        "                    non il tetto: filo, punto di lavoro e\n"
-	        "                    serbatoio si derivano da li'.  0 = spento, e\n"
-	        "                    allora nessuno dice di no alla banda.  ⛔ Vive\n"
-	        "                    nel FIGLIO, e vale solo in hardware\n"
-	        "  --sfratto-ms N    ⭐ il FANTASMA: se il posto di un utente e'\n"
-	        "                    occupato da un client che tace da piu' di N\n"
-	        "                    ms, e a chiedere quel posto e' un client\n"
-	        "                    dello STESSO utente, il posto gli viene tolto\n"
-	        "                    e va a chi arriva.  ⭐ PREDEFINITO 15000\n"
-	        "                    (acceso dal 24 ago 2026), cioe' meta'\n"
-	        "                    dell'orologio del silenzio: sotto non si\n"
-	        "                    scende, perche' il keep-alive del browser tace\n"
-	        "                    `[M]` 15 s e si sfratterebbe un client VIVO e\n"
-	        "                    fermo.  ⚠ `[M]` il fantasma passa da 32,13 s e\n"
-	        "                    14 rifiuti a 16,83 s e 7.  0 = SPENTO, e il\n"
-	        "                    posto si libera solo all'orologio del silenzio\n"
-	        "                    (30 s): chi rientra dopo una caduta si sente\n"
-	        "                    dire che il posto e' occupato — da se stesso\n"
+	        "                    N is the FLOOR in Mbit/s (20, §3.1-bis),\n"
+	        "                    not the ceiling: wire, working point and\n"
+	        "                    reservoir are derived from it.  0 = off, and\n"
+	        "                    then nobody says no to bandwidth.  ⛔ It lives\n"
+	        "                    in the CHILD, and applies only in hardware\n"
+	        "  --sfratto-ms N    ⭐ the GHOST: if a user's slot is\n"
+	        "                    held by a client silent for more than N\n"
+	        "                    ms, and whoever asks for that slot is a client\n"
+	        "                    of the SAME user, the slot is taken away\n"
+	        "                    and goes to the newcomer.  ⭐ DEFAULT 15000\n"
+	        "                    (on since 24 Aug 2026), that is half\n"
+	        "                    the silence clock: it does not go\n"
+	        "                    lower, because the browser's keep-alive is silent\n"
+	        "                    `[M]` 15 s and a LIVE idle client would be\n"
+	        "                    evicted.  ⚠ `[M]` the ghost goes from 32.13 s and\n"
+	        "                    14 refusals to 16.83 s and 7.  0 = OFF, and the\n"
+	        "                    slot is freed only by the silence clock\n"
+	        "                    (30 s): whoever comes back after a drop is\n"
+	        "                    told the slot is taken — by themselves\n"
 	        "  --niente-ritmo-adattivo\n"
-	        "                    ⭐⭐ SPEGNE il regolatore del ritmo, che dal 24\n"
-	        "                    ago 2026 e' ACCESO di suo: un fotogramma non\n"
-	        "                    parte quando due delta in volo hanno ancora\n"
-	        "                    byte nella coda d'uscita.  ⚠ Il nome vecchio\n"
-	        "                    `--ritmo-adattivo` NON esiste piu\'\n"
+	        "                    ⭐⭐ TURNS OFF the rate regulator, which since 24\n"
+	        "                    Aug 2026 is ON by default: a frame does not\n"
+	        "                    leave when two deltas in flight still have\n"
+	        "                    bytes in the output queue.  ⚠ The old name\n"
+	        "                    `--ritmo-adattivo` NO LONGER exists\n"
 	        "  --niente-linea-morta\n"
-	        "                    ⛔⭐ SPEGNE la LINEA MORTA, che dal 24 ago 2026\n"
-	        "                    e' ACCESA di suo: una sessione viene CHIUSA\n"
-	        "                    quando la linea non si puo\' piu\' servire — il\n"
-	        "                    filo cade e si rientra a mano (decisione\n"
-	        "                    dell\'utente, 23 ago 2026).  DUE cause: lo\n"
-	        "                    STALLO dell\'uscita e il SILENZIO del client;\n"
-	        "                    ogni scatto scrive nel registro una riga\n"
-	        "                    `linea-morta` coi numeri su cui ha deciso (I1).\n"
-	        "                    ⛔⛔ E\' LA CURA CHE CHIUDE UNA SESSIONE: `[M]`\n"
-	        "                    margine >10x sopra la linea peggiore che REGGE\n"
-	        "                    e 2,9x sotto quella che non serve nessuno.\n"
-	        "                    ⚠ Il nome vecchio `--linea-morta` NON esiste piu\'\n"
+	        "                    ⛔⭐ TURNS OFF the DEAD LINE, which since 24 Aug 2026\n"
+	        "                    is ON by default: a session is CLOSED\n"
+	        "                    when the line can no longer be served — the\n"
+	        "                    wire drops and one gets back in by hand (the\n"
+	        "                    user's decision, 23 Aug 2026).  TWO causes: the\n"
+	        "                    output STALL and the client's SILENCE;\n"
+	        "                    every trigger writes in the log a\n"
+	        "                    `linea-morta` line with the numbers it decided on (I1).\n"
+	        "                    ⛔⛔ IT IS THE CURE THAT CLOSES A SESSION: `[M]`\n"
+	        "                    margin >10x above the worst line that HOLDS\n"
+	        "                    and 2.9x below the one that serves nobody.\n"
+	        "                    ⚠ The old name `--linea-morta` NO LONGER exists\n"
 	        "\n"
-	        "  ⭐⭐⭐ FASE 10 — IL BUDGET DI COMPOSIZIONE, e nasce SPENTO (I6)\n"
+	        "  ⭐⭐⭐ PHASE 10 — THE COMPOSITION BUDGET, and it is born OFF (I6)\n"
 	        "  --budget-mpixel-s N\n"
-	        "                    i Mpixel/s di COMPOSIZIONE che questa macchina\n"
-	        "                    regge.  ⛔ 0 = SPENTO, ed e' il PREDEFINITO:\n"
-	        "                    senza, il server AMMETTE TUTTI e li affama\n"
-	        "                    insieme (`[M]` l'undicesimo entra e la prima\n"
-	        "                    sessione va da 39,60 a 0,96 fot/s, −97,6 %%).\n"
-	        "                    ⛔ NON e' il numero del CODIFICATORE: `[M]` su\n"
-	        "                    una UHD 730 il codificatore nudo regge 1,86\n"
-	        "                    Gpixel/s e la composizione 0,97 — a saturare e'\n"
-	        "                    il compositore, non noi.  Dare qui il primo\n"
-	        "                    ammetterebbe ~22 sessioni dove ne stanno sei.\n"
-	        "                    ⛔⛔ E NON SI AUTO-TARA: finche' la macchina\n"
-	        "                    non ha CEDUTO almeno una volta, il massimo che\n"
-	        "                    si e' letto e' un limite inferiore, non un\n"
-	        "                    soffitto.  Chi batte questa opzione dichiara di\n"
-	        "                    aver misurato.  Chi non ci sta riceve CONGEDO\n"
-	        "                    0x06 BUDGET_PIENO, prima che nasca il suo palco\n"
-	        "  --riserva F       0..1, quanta parte del caso peggiore di un\n"
-	        "                    inquilino FERMO si tiene da parte.  ⭐ 0,5 e' il\n"
-	        "                    PREDEFINITO: `[M]` 0 falsi si' e 0 falsi no,\n"
-	        "                    tetto 6 sature / 10 ferme.  0 = regola\n"
-	        "                    «consegnato» (6 sature, ferme illimitate: cieca\n"
-	        "                    al RISVEGLIO) · 1 = regola «peggiore» (5 e 6,\n"
-	        "                    con un falso no).  ⛔ Serve contro il risveglio:\n"
-	        "                    `[M]` otto ferme da 0,01 %% l'una si accendono\n"
-	        "                    in 19 ms e chiedono il 130 %% del motore\n"
+	        "                    the Mpixel/s of COMPOSITION this machine\n"
+	        "                    holds.  ⛔ 0 = OFF, and it is the DEFAULT:\n"
+	        "                    without it, the server ADMITS EVERYONE and starves them\n"
+	        "                    together (`[M]` the eleventh gets in and the first\n"
+	        "                    session goes from 39.60 to 0.96 fps, −97.6 %%).\n"
+	        "                    ⛔ It is NOT the ENCODER's number: `[M]` on\n"
+	        "                    a UHD 730 the bare encoder holds 1.86\n"
+	        "                    Gpixel/s and composition 0.97 — what saturates is\n"
+	        "                    the compositor, not us.  Giving the former here\n"
+	        "                    would admit ~22 sessions where six fit.\n"
+	        "                    ⛔⛔ AND IT DOES NOT SELF-TUNE: until the machine\n"
+	        "                    has GIVEN WAY at least once, the maximum\n"
+	        "                    read is a lower bound, not a\n"
+	        "                    ceiling.  Whoever types this option declares\n"
+	        "                    they have measured.  Whoever does not fit receives CONGEDO\n"
+	        "                    0x06 BUDGET_PIENO, before their stage is born\n"
+	        "  --riserva F       0..1, how much of the worst case of an\n"
+	        "                    IDLE tenant is kept aside.  ⭐ 0.5 is the\n"
+	        "                    DEFAULT: `[M]` 0 false yes and 0 false no,\n"
+	        "                    cap 6 saturated / 10 idle.  0 = «delivered»\n"
+	        "                    rule (6 saturated, idle unlimited: blind\n"
+	        "                    to WAKE-UP) · 1 = «worst» rule (5 and 6,\n"
+	        "                    with one false no).  ⛔ It serves against wake-up:\n"
+	        "                    `[M]` eight idle ones at 0.01 %% each wake up\n"
+	        "                    in 19 ms and ask for 130 %% of the engine\n"
 	        "  --tetto-sessioni N\n"
-	        "                    il tetto AMMINISTRATIVO (§4.6): quanti utenti\n"
-	        "                    serviti al massimo.  ⭐ PREDEFINITO 10\n"
-	        "                    (SPECIFICHE.md §5.5; era 16 fino al 25 ago\n"
-	        "                    2026, e non l'aveva scelto nessuno).  Da qui si\n"
-	        "                    dimensionano le quattro tabelle che contano un\n"
-	        "                    utente.  ⚠ Chi non ci sta riceve 0x0E, che e'\n"
-	        "                    un altro fatto da 0x06: la tabella e' piena, la\n"
-	        "                    macchina no\n"
+	        "                    the ADMINISTRATIVE cap (§4.6): how many users\n"
+	        "                    served at most.  ⭐ DEFAULT 10\n"
+	        "                    (SPECIFICHE.md §5.5; it was 16 until 25 Aug\n"
+	        "                    2026, and nobody had chosen it).  From here the\n"
+	        "                    four tables that count a user are\n"
+	        "                    sized.  ⚠ Whoever does not fit receives 0x0E, which is\n"
+	        "                    a different fact from 0x06: the table is full, the\n"
+	        "                    machine is not\n"
 	        "  --niente-audio-silenzio\n"
-	        "                    ⭐⭐ SPEGNE il SILENZIO DELL\'AUDIO, che dal 24\n"
-	        "                    ago 2026 e\' ACCESO di suo: un blocco in cui\n"
-	        "                    TUTTI i campioni sono esattamente zero non\n"
-	        "                    diventa un datagram.  ⚠ `[M]` 09-b84: 102,1\n"
-	        "                    volte meno traffico a schermo fermo (557,6 →\n"
-	        "                    5,5 kbit/s), 1 248 blocchi taciuti su 1 248; il\n"
-	        "                    prezzo e\' +2 «mancati» su 5 000 al cliente.\n"
-	        "                    ⛔ Fino al 23 ago era un `-D` di compilazione,\n"
-	        "                    e quel `-D` e\' stato TOLTO: una strada sola\n"
+	        "                    ⭐⭐ TURNS OFF the AUDIO SILENCE, which since 24\n"
+	        "                    Aug 2026 is ON by default: a block in which\n"
+	        "                    ALL the samples are exactly zero does not\n"
+	        "                    become a datagram.  ⚠ `[M]` 09-b84: 102.1\n"
+	        "                    times less traffic with a still screen (557.6 →\n"
+	        "                    5.5 kbit/s), 1 248 blocks silenced out of 1 248; the\n"
+	        "                    price is +2 «missed» out of 5 000 at the client.\n"
+	        "                    ⛔ Until 23 Aug it was a compile-time `-D`,\n"
+	        "                    and that `-D` has been REMOVED: one road only\n"
 	        "  --linea-morta-stallo-ms N\n"
-	        "                    da quanti ms non esce un fotogramma PUR\n"
-	        "                    AVENDONE da mandare.  ⛔ Le due meta' contano\n"
-	        "                    tutt'e due: a scena ferma non c'e' niente da\n"
-	        "                    mandare, e il conto non parte nemmeno.\n"
-	        "                    Predefinito 5000: 5,0 volte sopra il secondo\n"
-	        "                    intero vuoto di `raffica-1`, che REGGE e\n"
-	        "                    consegna 23,94 fotogrammi/s, e 2,9 volte sotto\n"
-	        "                    i 14,26 s di `raffica-forte`, che non serve\n"
-	        "                    nessuno — `[M]` 23 ago 2026.  0 = solo il\n"
-	        "                    silenzio.  ⛔⛔ E la PERDITA non e' piu' una\n"
-	        "                    causa: `--linea-morta-permille` non esiste\n"
-	        "                    piu'.  Su una linea che riordina quella\n"
-	        "                    frazione misura il RIORDINO — `casa-cattiva`\n"
-	        "                    ne dichiarava 512‰ e REGGEVA dieci minuti,\n"
-	        "                    `raffica-forte` 123‰ e non reggeva.  Il\n"
-	        "                    numero resta nel registro come TESTIMONE\n"
+	        "                    for how many ms no frame has gone out WHILE\n"
+	        "                    HAVING some to send.  ⛔ Both halves\n"
+	        "                    count: with a still scene there is nothing to\n"
+	        "                    send, and the count does not even start.\n"
+	        "                    Default 5000: 5.0 times above the whole empty\n"
+	        "                    second of `raffica-1`, which HOLDS and\n"
+	        "                    delivers 23.94 frames/s, and 2.9 times below\n"
+	        "                    the 14.26 s of `raffica-forte`, which serves\n"
+	        "                    nobody — `[M]` 23 Aug 2026.  0 = silence\n"
+	        "                    only.  ⛔⛔ And LOSS is no longer a\n"
+	        "                    cause: `--linea-morta-permille` no longer\n"
+	        "                    exists.  On a line that reorders that\n"
+	        "                    fraction measures the REORDERING — `casa-cattiva`\n"
+	        "                    declared 512‰ of it and HELD for ten minutes,\n"
+	        "                    `raffica-forte` 123‰ and did not hold.  The\n"
+	        "                    number stays in the log as a WITNESS\n"
 	        "  --linea-morta-silenzio-s N\n"
-	        "                    i secondi senza un pacchetto dal client.\n"
-	        "                    Predefinito 10.  ⚠ Accende anche i PING del\n"
-	        "                    trasporto a META' di questo numero, o «non\n"
-	        "                    risponde» e «non gli abbiamo chiesto niente»\n"
-	        "                    avrebbero la stessa faccia.  0 = solo lo\n"
-	        "                    stallo\n"
+	        "                    the seconds without a packet from the client.\n"
+	        "                    Default 10.  ⚠ It also turns on the transport\n"
+	        "                    PINGs at HALF this number, or «does not\n"
+	        "                    answer» and «we did not ask it anything»\n"
+	        "                    would look the same.  0 = stall\n"
+	        "                    only\n"
 	        "\n"
-	        "  ⛔ `--figlio-interno` NON si batte a mano: e' la riga con cui\n"
-	        "     questo stesso binario riparte come figlio di un utente\n"
-	        "     ammesso (DECISIONI.md §1.10-bis).  Se la vedi in `ps`, quello\n"
-	        "     e' un figlio, non un secondo server.\n",
+	        "  ⛔ `--figlio-interno` is NOT typed by hand: it is the line with which\n"
+	        "     this same binary restarts as the child of an admitted\n"
+	        "     user (DECISIONI.md §1.10-bis).  If you see it in `ps`, that\n"
+	        "     is a child, not a second server.\n",
 	        nome, nome, PORTA_PREDEFINITA);
 }
 
-/* ⛔⭐ IL FILE DEL SERVIZIO PAM, GUARDATO ALL'AVVIO — rilievo B-11.
+/* ⛔⭐ THE PAM SERVICE FILE, CHECKED AT STARTUP — finding B-11.
  *
- *     `SPECIFICHE.md` §4.2 vuole il servizio `remotix`.  Se il file non c'e',
- *     Linux-PAM ripiega sul servizio `other`, e nessuno dei due esiti va
- *     bene: su Fedora e Arch `other` e' `pam_deny` (**ogni** parola d'ordine
- *     giusta rifiutata, e l'utente legge «utente o parola d'ordine non
- *     corretti» — una diagnosi che punta sulla parola mentre il difetto e' un
- *     file mancante); su Debian include le pile comuni, cioe' una pila che non
- *     e' la nostra e senza l'esclusione di root (`src/remotix.pam`).
+ *     `SPECIFICHE.md` §4.2 wants the `remotix` service.  If the file is not
+ *     there, Linux-PAM falls back to the `other` service, and neither outcome
+ *     is acceptable: on Fedora and Arch `other` is `pam_deny` (**every** right
+ *     password refused, and the user reads «user or password not correct» — a
+ *     diagnosis pointing at the password while the defect is a missing file);
+ *     on Debian it includes the common stacks, that is a stack that is not
+ *     ours and without the exclusion of root (`src/remotix.pam`).
  *
- * ⭐ FASE 17 (`fasi/17-l-installatore.md` §4.3-§4.4): il file si cerca dove
- *    lo cerca Linux-PAM — prima `/etc/pam.d`, poi `/usr/lib/pam.d`, dove lo
- *    mette il pacchetto di openSUSE.
+ * ⭐ PHASE 17 (`fasi/17-l-installatore.md` §4.3-§4.4): the file is looked for
+ *    where Linux-PAM looks for it — first `/etc/pam.d`, then `/usr/lib/pam.d`,
+ *    where the openSUSE package puts it.
  *
- * ⚠ NON si rifiuta di partire: senza PAM il server non serve a niente, ma il
- *   ban di §4.4-bis, la pagina e i certificati funzionano lo stesso, e
- *   spegnere tutto metterebbe il rosso sull'imputato sbagliato.  ⛔ La riga
- *   pero' si scrive, ed e' la protezione che l'invariante I7 chiede: sta nel
- *   programma, non in una nota di installazione che si perde. */
+ * ⚠ It does NOT refuse to start: without PAM the server is useless, but the
+ *   ban of §4.4-bis, the page and the certificates work anyway, and turning
+ *   everything off would put the red on the wrong defendant.  ⛔ The line,
+ *   however, is written, and it is the protection invariant I7 asks for: it
+ *   lives in the program, not in an installation note that gets lost. */
 static void guarda_il_servizio_pam(void)
 {
 	static const char *const dove[] = { "/etc/pam.d/remotix", "/usr/lib/pam.d/remotix" };
@@ -369,64 +372,66 @@ static void guarda_il_servizio_pam(void)
 	for (size_t i = 0; i < sizeof dove / sizeof dove[0]; i++) {
 		if (stat(dove[i], &st) == 0) {
 			registro_dice(REG_AVVIO,
-			              "servizio PAM «remotix»: %s c'e' (SPECIFICHE.md §4.2)",
+			              "PAM service «remotix»: %s is there (SPECIFICHE.md §4.2)",
 			              dove[i]);
 			return;
 		}
 	}
 	registro_dice(REG_AVVIO,
-	              "⛔ il servizio PAM «remotix» NON C'E' (né %s né %s): PAM "
-	              "ripieghera' sul servizio «other», che NON e' la pila di "
-	              "REMOTIX — su Fedora e Arch e' pam_deny (OGNI parola d'ordine "
-	              "giusta rifiutata, e l'utente leggera' «utente o parola "
-	              "d'ordine non corretti»), su Debian le pile comuni senza "
-	              "l'esclusione di root.  Si installa il file della famiglia: "
+	              "⛔ the PAM service «remotix» DOES NOT EXIST (neither %s nor %s): PAM "
+	              "will fall back to the «other» service, which is NOT the "
+	              "REMOTIX stack — on Fedora and Arch it is pam_deny (EVERY right "
+	              "password refused, and the user will read «user or password "
+	              "not correct»), on Debian the common stacks without "
+	              "the exclusion of root.  Install the file of the family: "
 	              "src/remotix.pam (Debian/Ubuntu), .fedora, .suse, .arch.",
 	              dove[0], dove[1]);
 }
 
-/* ⛔ Le due cose che il ciclo `poll` deve poter raggiungere quando arriva un
- * verdetto di PAM, e non una sola: il trasporto (per far uscire `AMMESSO`) e la
- * tabella dei figli (per generare il palco di chi e' entrato).  ⚠ Sta in una
- * struttura e non in due globali: una globale e' un secondo posto in cui una
- * cosa puo' essere viva o morta. */
+/* ⛔ The two things the `poll` loop must be able to reach when a PAM verdict
+ * arrives, and not one only: the transport (to get `AMMESSO` out) and the
+ * children table (to spawn the stage of whoever got in).  ⚠ It lives in a
+ * structure and not in two globals: a global is a second place where a thing
+ * can be alive or dead. */
 struct ponte {
 	trasporto *t;
 	figli *f;
 };
 
-/* ⛔⭐⭐ FASE 17, T7 — I DESKTOP RITROVATI: palchi vivi che nessun figlio tiene.
+/* ⛔⭐⭐ PHASE 17, T7 — THE DESKTOPS FOUND AGAIN: live stages that no child holds.
  *
- *     `[M]` T2 (`fasi/17-l-installatore.md` §5.2): fermare il servizio NON
- *     uccide i desktop — muoiono padre, aiutante e figlio, il palco nato con
- *     `setsid --fork` resta coi suoi programmi.  ⛔ E questo padre ripartiva
- *     con la tabella dei figli vuota: quei desktop non li contava nessuno, ne'
- *     il tetto delle sessioni, ne' il budget, ne' l'orologio dell'abbandono.
+ *     `[M]` T2 (`fasi/17-l-installatore.md` §5.2): stopping the service does
+ *     NOT kill the desktops — parent, helper and child die, the stage born
+ *     with `setsid --fork` stays with its programs.  ⛔ And this parent
+ *     restarted with an empty children table: nobody counted those desktops,
+ *     neither the session cap, nor the budget, nor the abandonment clock.
  *
- * ⭐ All'avvio si cercano (`ritrovo.h`: sessione logind `remotix` con dentro il
- *    capo del palco) e stanno QUI, «in attesa di riattacco»:
- *      · il TETTO conta figli + ritrovati (`palchi_quanti()`);
- *      · il BUDGET li mette dentro il conto come i palchi coi figli;
- *      · l'OROLOGIO DELL'ABBANDONO parte dall'avvio di questo padre —
- *        dichiarato: l'ultimo gesto visto dal padre di prima era nella sua
- *        memoria, e non c'e' piu';
- *      · al RIATTACCO il figlio nuovo nasce (D1: il figlio muore col padre per
- *        scelta, e si rifa' qui), riprende lo stesso compositore, e l'utente
- *        esce da questa tabella per entrare in quella dei figli;
- *      · se l'orologio scade senza che nessuno sia rientrato, si fa nascere un
- *        figlio che chiuda il desktop: chiudere ogni desktop lo sa solo lui,
- *        che sta nel bus di sessione dell'utente (`sessione_termina()`).
- * ⚠ E ogni RIPASSO_RITROVATI_MS si ricontrolla che ci siano ancora: un desktop
- *   morto da solo non deve occupare un posto del tetto per un'ora.
- * ⛔ Si cercano SOLO all'avvio.  Un figlio morto a padre vivo lascia il suo
- *    desktop come prima (`congeda_figlio()`): non e' il caso di questa tappa. */
+ * ⭐ At startup they are looked for (`ritrovo.h`: logind session `remotix` with
+ *    the stage leader inside) and they sit HERE, «waiting for reattach»:
+ *      · the CAP counts children + found again (`palchi_quanti()`);
+ *      · the BUDGET puts them in the count like the stages with children;
+ *      · the ABANDONMENT CLOCK starts from this parent's startup — declared:
+ *        the last gesture seen by the previous parent was in its memory, and
+ *        is gone;
+ *      · at REATTACH the new child is born (D1: the child dies with the parent
+ *        by choice, and is remade here), picks up the same compositor, and the
+ *        user leaves this table to enter the children one;
+ *      · if the clock expires without anyone coming back, a child is spawned
+ *        to close the desktop: only it knows how to close every desktop,
+ *        since it sits in the user's session bus (`sessione_termina()`).
+ * ⚠ And every RIPASSO_RITROVATI_MS it is checked again that they are still
+ *   there: a desktop that died on its own must not hold a slot of the cap for
+ *   an hour.
+ * ⛔ They are looked for ONLY at startup.  A child that dies while the parent
+ *    is alive leaves its desktop as before (`congeda_figlio()`): it is not the
+ *    case of this stage. */
 #define RIPASSO_RITROVATI_MS 10000u
 #define QUANTI_RITROVATI_MAX 256
 
 static void presenza_segna(const char *utente, uint64_t ora_ms);
 static void presenza_dimentica(const char *utente);
-/* ⚠ Definizione provvisoria (C11 §6.9.2): il valore e il suo riquadro stanno
- *   piu' giu', col terzo orologio di §5.3. */
+/* ⚠ Tentative definition (C11 §6.9.2): the value and its box are further
+ *   down, with the third clock of §5.3. */
 static uint64_t abbandono_ms;
 
 static RitrovoDesktop *ritrovati;
@@ -455,9 +460,9 @@ static void ritrovato_togli(const char *utente)
 	ritrovati_n--;
 }
 
-/* ⭐ «Quanti palchi sono vivi»: i figli, piu' i desktop ritrovati che un figlio
- *    non l'hanno ancora — chi rientra esce da `ritrovati` quando il suo nasce,
- *    quindi nessuno si conta due volte. */
+/* ⭐ «How many stages are alive»: the children, plus the desktops found again
+ *    that do not have a child yet — whoever comes back leaves `ritrovati` when
+ *    theirs is born, so nobody is counted twice. */
 static int palchi_quanti(const struct ponte *p)
 {
 	return figli_quanti(p->f) + ritrovati_n;
@@ -473,18 +478,18 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 	ritrovati = calloc(QUANTI_RITROVATI_MAX, sizeof *ritrovati);
 	if (!ritrovati) {
 		registro_dice(REG_FIGLIO,
-		              "⛔ FASE 17 T7: niente memoria per la tabella dei desktop "
-		              "ritrovati: quelli rimasti vivi da un padre precedente NON "
-		              "si contano (tetto, budget, abbandono)");
+		              "⛔ PHASE 17 T7: no memory for the table of desktops "
+		              "found again: those left alive by a previous parent are NOT "
+		              "counted (cap, budget, abandonment)");
 		return;
 	}
 	n = ritrovo_cerca(ritrovati, QUANTI_RITROVATI_MAX, perche, sizeof perche);
 	if (n < 0) {
 		registro_dice(REG_FIGLIO,
-		              "⛔ FASE 17 T7: non ho potuto cercare i desktop REMOTIX vivi "
-		              "(%s).  ⚠ Se il servizio e' stato riavviato con dei desktop "
-		              "aperti, questi NON si contano: ne' tetto, ne' budget, ne' "
-		              "orologio dell'abbandono",
+		              "⛔ PHASE 17 T7: could not look for live REMOTIX desktops "
+		              "(%s).  ⚠ If the service was restarted with desktops "
+		              "open, they are NOT counted: neither cap, nor budget, nor "
+		              "abandonment clock",
 		              perche);
 		return;
 	}
@@ -493,16 +498,16 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 		int k;
 
 		registro_dice(REG_FIGLIO,
-		              "⭐ FASE 17 T7 — RITROVATO il desktop di «%s» (uid %ld): "
-		              "sessione logind %s (servizio PAM «%s», %u in tutto), palco "
-		              "pid %ld «%s».  Resta IN ATTESA DI RIATTACCO: conta nel "
-		              "tetto e nel budget, e al riattacco il figlio nuovo riprende "
-		              "questo stesso desktop",
+		              "⭐ PHASE 17 T7 — FOUND AGAIN the desktop of «%s» (uid %ld): "
+		              "logind session %s (PAM service «%s», %u in all), stage "
+		              "pid %ld «%s».  It stays WAITING FOR REATTACH: it counts in the "
+		              "cap and in the budget, and at reattach the new child picks up "
+		              "this same desktop",
 		              ritrovati[i].utente, (long)ritrovati[i].uid,
 		              ritrovati[i].sessione, RITROVO_SERVIZIO_PAM,
 		              ritrovati[i].sessioni, (long)ritrovati[i].palco,
 		              ritrovati[i].comm);
-		/* ⚠ L'orologio dell'abbandono riparte da ADESSO, e si dice sotto. */
+		/* ⚠ The abandonment clock restarts from NOW, and it is said below. */
 		presenza_segna(ritrovati[i].utente, ora_ms);
 		k = snprintf(elenco + usati, sizeof elenco - usati, "%s«%s»",
 		             usati ? ", " : "", ritrovati[i].utente);
@@ -510,25 +515,25 @@ static void ritrovati_all_avvio(uint64_t ora_ms)
 			usati += (size_t)k;
 	}
 	registro_dice(REG_FIGLIO,
-	              "⭐ FASE 17 T7 — desktop REMOTIX vivi ritrovati all'avvio: %d%s%s.  "
-	              "I palchi contano %d su un tetto di %d; l'orologio "
-	              "dell'abbandono (%llu s) per loro riparte dall'avvio di questo "
-	              "padre — l'ultimo gesto visto dal padre di prima non e' stato "
-	              "conservato",
-	              n, n ? ": " : " (nessuna sessione logind «remotix» con un palco vivo)",
+	              "⭐ PHASE 17 T7 — live REMOTIX desktops found again at startup: %d%s%s.  "
+	              "The stages count %d out of a cap of %d; the "
+	              "abandonment clock (%llu s) restarts for them from the startup of this "
+	              "parent — the last gesture seen by the previous parent was not "
+	              "kept",
+	              n, n ? ": " : " (no logind session «remotix» with a live stage)",
 	              elenco, n, rcp_tetto(),
 	              (unsigned long long)(abbandono_ms / 1000));
 	if (n > rcp_tetto())
 		registro_dice(REG_FIGLIO,
-		              "⚠ FASE 17 T7: i desktop ritrovati (%d) sono PIU' del tetto "
-		              "delle sessioni (%d): nessun utente NUOVO entra finche' non se "
-		              "ne vanno — chi ha il suo desktop rientra lo stesso",
+		              "⚠ PHASE 17 T7: the desktops found again (%d) are MORE than the "
+		              "session cap (%d): no NEW user gets in until they "
+		              "leave — whoever has their own desktop gets back in anyway",
 		              n, rcp_tetto());
 }
 
-/* ⭐ Il ripasso: un desktop ritrovato che nel frattempo e' morto esce dai conti.
- * ⚠ Solo se ce n'e' almeno uno: a tabella vuota non si chiede niente a
- *   nessuno, e il ciclo che consegna i fotogrammi non paga. */
+/* ⭐ The check: a desktop found again that has died in the meantime leaves the counts.
+ * ⚠ Only if there is at least one: with an empty table nobody is asked
+ *   anything, and the loop that delivers frames does not pay. */
 static void ritrovati_ripassa(uint64_t ora_ms)
 {
 	static uint64_t ultimo;
@@ -548,8 +553,8 @@ static void ritrovati_ripassa(uint64_t ora_ms)
 		if (!muto_detto) {
 			muto_detto = true;
 			registro_dice(REG_FIGLIO,
-			              "⚠ FASE 17 T7: il ripasso dei desktop ritrovati non ha "
-			              "risposta (%s): restano nei conti finche' non si sa",
+			              "⚠ PHASE 17 T7: the check of the desktops found again got no "
+			              "answer (%s): they stay in the counts until it is known",
 			              perche);
 		}
 		free(vivi);
@@ -567,10 +572,10 @@ static void ritrovati_ripassa(uint64_t ora_ms)
 			continue;
 		memcpy(chi, ritrovati[i].utente, sizeof chi);
 		registro_dice(REG_FIGLIO,
-		              "⚠ FASE 17 T7: il desktop ritrovato di «%s» non c'e' piu' "
-		              "(il palco pid %ld «%s» e' sparito senza che nessuno "
-		              "rientrasse): esce dal tetto, dal budget e dall'orologio "
-		              "dell'abbandono",
+		              "⚠ PHASE 17 T7: the desktop found again of «%s» is gone "
+		              "(the stage pid %ld «%s» vanished without anyone "
+		              "coming back): it leaves the cap, the budget and the "
+		              "abandonment clock",
 		              chi, (long)ritrovati[i].palco, ritrovati[i].comm);
 		ritrovato_togli(chi);
 		presenza_dimentica(chi);
@@ -578,29 +583,31 @@ static void ritrovati_ripassa(uint64_t ora_ms)
 	free(vivi);
 }
 
-/* ⛔⭐⭐⭐ «CI STA?» — LA DOMANDA DEL BUDGET, fase 10 (25 agosto 2026).
+/* ⛔⭐⭐⭐ «DOES IT FIT?» — THE BUDGET'S QUESTION, phase 10 (25 Aug 2026).
  *
- *     ⛔ Il difetto che cura, `[M]` §S.2: il prodotto **non aveva un budget —
- *     accettava tutti e affamava tutti insieme**.  L'undicesimo entrava con
- *     `negati 0` e la prima sessione passava da **39,60 a 0,96 fot/s**
- *     (−97,6 %), con 104 rossi appaiati contro l'invariante **I1**.
+ *     ⛔ The defect it cures, `[M]` §S.2: the product **had no budget — it
+ *     accepted everyone and starved everyone together**.  The eleventh got in
+ *     with `negati 0` and the first session went from **39.60 to 0.96 fps**
+ *     (−97.6 %), with 104 paired reds against invariant **I1**.
  *
- * ⛔ E LA GRANDEZZA E' LA **COMPOSIZIONE**, non la codifica.  `DECISIONI.md`
- *    §4.6 dice *«il limite vero lo pone il codificatore»*: `[M]` su questo
- *    ferro **non e' vero** — il codificatore nudo regge 1,86 Gpixel/s, la
- *    composizione **0,97**, e a saturare `rcs0` e' `gnome-shell` al 99,5 %
- *    mentre `remotix` sta a 0,00 % (§6.11, §6.15).  Il perche' di ogni numero
- *    sta in `budget.h`, in testa: **qui c'e' solo la cucitura**.
+ * ⛔ AND THE QUANTITY IS **COMPOSITION**, not encoding.  `DECISIONI.md`
+ *    §4.6 says *«the real limit is set by the encoder»*: `[M]` on this
+ *    hardware **it is not true** — the bare encoder holds 1.86 Gpixel/s,
+ *    composition **0.97**, and what saturates `rcs0` is `gnome-shell` at
+ *    99.5 % while `remotix` sits at 0.00 % (§6.11, §6.15).  The why of every
+ *    number is in `budget.h`, at the top: **here there is only the seam**.
  *
- * ⭐⭐ E «CHI E' DENTRO» SONO I **PALCHI**, non i posti del registro RCP: una
- *     sessione che ha lasciato il posto per silenzio **codifica ancora**
- *     finche' il suo palco e' vivo (§3.2, il *fantasma*), e costa alla GPU
- *     quanto le altre.  ⇒ Contare i posti sottostimerebbe **proprio nella scena
- *     in cui la macchina e' in affanno**, che e' il verso che affama tutti.
+ * ⭐⭐ AND «WHOEVER IS INSIDE» ARE THE **STAGES**, not the slots of the RCP
+ *     registry: a session that left its slot through silence **still encodes**
+ *     as long as its stage is alive (§3.2, the *ghost*), and costs the GPU as
+ *     much as the others.  ⇒ Counting the slots would underestimate
+ *     **precisely in the scene where the machine is struggling**, which is the
+ *     direction that starves everyone.
  *
- * ⛔ Torna `true` anche quando il budget e' SPENTO e quando dice «non so»: un
- *    budget che rifiutasse per non aver saputo misurare farebbe pagare
- *    all'utente un guasto nostro.  ⚠ Il «non so» si scrive, il si' no. */
+ * ⛔ Returns `true` also when the budget is OFF and when it says «I do not
+ *    know»: a budget that refused for not having been able to measure would
+ *    make the user pay for a fault of ours.  ⚠ The «I do not know» is written,
+ *    the yes is not. */
 static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
                          size_t perche_cap, uint8_t *motivo)
 {
@@ -612,15 +619,16 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 	if (!budget_acceso())
 		return true;
 
-	/* ⭐ IL TETTO DELLA TELA DEL NUOVO, e si conosce fin dal `CIAO`.
+	/* ⭐ THE CEILING OF THE NEWCOMER'S CANVAS, and it is known from the `CIAO`.
 	 *
-	 * ⛔ Qui la tela non e' ancora decisa — si decide a `SESSIONE` — ma §4.5
-	 *    impone che quella concessa non superi `video.misura_massima` del
-	 *    client, e quel numero e' gia' arrivato.  ⇒ Si conta il **minimo fra la
-	 *    tela del palco e il tetto del client**, cioe' un maggiorante del costo
-	 *    vero: verso scomodo (`LEZIONI.md` §1.33).
-	 * ⚠ Se il client non l'ha dichiarata resta la tela del palco, che e' il
-	 *   maggiorante buono lo stesso — e NON uno zero. */
+	 * ⛔ Here the canvas is not decided yet — it is decided at `SESSIONE` — but
+	 *    §4.5 requires that the granted one not exceed the client's
+	 *    `video.misura_massima`, and that number has already arrived.  ⇒ The
+	 *    **minimum of the stage canvas and the client's ceiling** is counted,
+	 *    that is an upper bound of the real cost: uncomfortable direction
+	 *    (`LEZIONI.md` §1.33).
+	 * ⚠ If the client did not declare it the stage canvas stays, which is a
+	 *   good upper bound all the same — and NOT a zero. */
 	if (wt_misura_massima_di(utente, &ml, &ma) && ml && ma) {
 		if (ml < tl)
 			tl = ml;
@@ -636,8 +644,8 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 		if (chi && chi[0])
 			budget_conto_dentro(&conto, chi);
 	}
-	/* ⭐ FASE 17 T7: e i desktop ritrovati, che un figlio non l'hanno ancora
-	 *    ma tornano a comporre appena il loro utente rientra. */
+	/* ⭐ PHASE 17 T7: and the desktops found again, which do not have a child
+	 *    yet but go back to composing as soon as their user returns. */
 	for (int i = 0; i < ritrovati_n; i++)
 		budget_conto_dentro(&conto, ritrovati[i].utente);
 	e = budget_conto_verdetto(&conto, utente, tl, ta, perche, perche_cap);
@@ -646,323 +654,329 @@ static bool c_e_capacita(struct ponte *p, const char *utente, char *perche,
 		return false;
 	}
 	if (e == BUDGET_NON_SO) {
-		/* ⛔ «Non ho potuto misurare» non e' «non regge»: si ammette, e si
-		 *    dichiara — un buco dichiarato vale piu' di un numero inventato. */
+		/* ⛔ «I could not measure» is not «it does not hold»: admit, and
+		 *    declare it — a declared hole is worth more than an invented number. */
 		registro_dice(REG_BUDGET,
-		              "⚠ «%s» AMMESSO senza giudizio del budget: %s",
-		              utente, perche && perche[0] ? perche : "non ho misurato");
+		              "⚠ «%s» ADMITTED without the budget's judgement: %s",
+		              utente, perche && perche[0] ? perche : "I did not measure");
 		if (perche && perche_cap)
 			perche[0] = '\0';
 		return true;
 	}
-	registro_dettaglio(REG_BUDGET, "«%s» ci sta: %s", utente,
+	registro_dettaglio(REG_BUDGET, "«%s» fits: %s", utente,
 	                   perche && perche[0] ? perche : "");
 	if (perche && perche_cap)
 		perche[0] = '\0';
 	return true;
 }
 
-/* ⛔⭐ IL PONTE FRA L'AIUTANTE, IL TRASPORTO E IL FIGLIO.
+/* ⛔⭐ THE BRIDGE BETWEEN THE HELPER, THE TRANSPORT AND THE CHILD.
  *
- *     `DECISIONI.md` §1.10-bis: il figlio nasce **quando PAM ha detto si'**, e
- *     questa e' l'unica riga del programma in cui quel fatto esiste con accanto
- *     il NOME dell'utente.  ⛔ Non un istante prima: un figlio generato su
- *     `CREDENZIALI` girerebbe come un utente che non ha ancora dimostrato di
- *     essere lui — invariante I3.
+ *     `DECISIONI.md` §1.10-bis: the child is born **when PAM has said yes**,
+ *     and this is the only line of the program where that fact exists with the
+ *     user's NAME next to it.  ⛔ Not an instant before: a child spawned on
+ *     `CREDENZIALI` would run as a user who has not yet proved to be who they
+ *     are — invariant I3.
  *
- * ⚠ E l'ordine delle due righe conta: prima il figlio, poi il verdetto sul
- *   filo.  Il figlio deve cominciare a collegarsi al bus e a catturare
- *   **mentre** scorre il secondo fisso di §4.4-bis, che e' l'unico tempo
- *   garantito dal protocollo prima che la sessione arrivi a `SESSIONE`.
- *   ⛔ Nessuna delle due aspetta l'altra: `figli_assicura()` fa un `fork` e
- *   torna, `trasporto_verdetto()` fa scorrere lo stato.  Il ciclo non si ferma.
+ * ⚠ And the order of the two lines matters: first the child, then the verdict
+ *   on the wire.  The child must start connecting to the bus and capturing
+ *   **while** the fixed second of §4.4-bis runs, which is the only time
+ *   guaranteed by the protocol before the session reaches `SESSIONE`.
+ *   ⛔ Neither waits for the other: `figli_assicura()` does a `fork` and
+ *   returns, `trasporto_verdetto()` moves the state forward.  The loop does
+ *   not stop.
  *
- * ⭐ E DAL 25 AGOSTO 2026 I PASSI SONO TRE, non due: prima si guarda **se un
- *    palco ci sta**, poi il figlio, poi il verdetto — e se il palco non ci sta
- *    esce un CONGEDO invece del silenzio.  E' la cura del difetto **P3**, e il
- *    riquadro lungo sta sulla riga che la fa. */
-/* ⭐ D-004: la tabella della presenza sta piu' giu', col suo riquadro; qui
- *    serve solo a far partire l'orologio alla nascita del palco. */
+ * ⭐ AND SINCE 25 AUG 2026 THE STEPS ARE THREE, not two: first we check
+ *    **whether a stage fits**, then the child, then the verdict — and if the
+ *    stage does not fit a CONGEDO goes out instead of silence.  It is the cure
+ *    of defect **P3**, and the long box sits on the line that does it. */
+/* ⭐ D-004: the presence table is further down, with its box; here it is only
+ *    needed to start the clock at the birth of the stage. */
 static void presenza_segna(const char *utente, uint64_t ora_ms);
 
 static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
                               const char *utente, const char *rhost)
 {
 	struct ponte *p = (struct ponte *)ctx;
-	/* ⛔ Il congedo si manda DOPO `trasporto_verdetto()`: la ragione lunga sta
-	 *    in fondo alla funzione, sul riquadro «PERCHE' NON QUI». */
+	/* ⛔ The farewell is sent AFTER `trasporto_verdetto()`: the long reason is
+	 *    at the end of the function, in the box «WHY NOT HERE». */
 	char senza_palco[320] = "";
-	/* ⛔⭐ E DAL 25 AGOSTO 2026 (sera) I MOTIVI SONO **DUE**, non uno — §8.1
-	 *     **D5**, e i due NON si sostituiscono:
+	/* ⛔⭐ AND SINCE 25 AUG 2026 (evening) THE REASONS ARE **TWO**, not one —
+	 *     §8.1 **D5**, and the two do NOT replace each other:
 	 *
-	 *       `0x0E` SESSIONE_NON_SERVIBILE  «la tabella e' piena»
-	 *                                      ⇒ limite **amministrativo**
-	 *                                      ⇒ gesto: *«riprova, o chiedi di
-	 *                                        alzare il tetto»*
-	 *       `0x06` BUDGET_PIENO            «questa macchina non ha piu'
-	 *                                      capacita' di composizione»
-	 *                                      ⇒ limite **fisico**
-	 *                                      ⇒ gesto: *«riprova, o entra
-	 *                                        chiedendo meno qualita'»*
+	 *       `0x0E` SESSIONE_NON_SERVIBILE  «the table is full»
+	 *                                      ⇒ **administrative** limit
+	 *                                      ⇒ gesture: *«try again, or ask to
+	 *                                        raise the cap»*
+	 *       `0x06` BUDGET_PIENO            «this machine has no composition
+	 *                                      capacity left»
+	 *                                      ⇒ **physical** limit
+	 *                                      ⇒ gesture: *«try again, or get in
+	 *                                        asking for less quality»*
 	 *
-	 * ⚠ Due fatti diversi non possono avere lo stesso esito (rilievo R9.3): e'
-	 *   la stessa regola per cui `0x0F` era stato tolto da qui.  ⛔ E `0x06`
-	 *   era dichiarato in `rcp.h` dal primo giorno e **non l'aveva mai mandato
-	 *   nessuno** (`[M]` §3.4: `grep -r RCP_BUDGET_PIENO src/ --include=*.c` ⇒ zero
-	 *   chiamanti).  Questa e' la riga che gli da' il suo primo mittente. */
+	 * ⚠ Two different facts cannot have the same outcome (finding R9.3): it is
+	 *   the same rule for which `0x0F` had been removed from here.  ⛔ And
+	 *   `0x06` was declared in `rcp.h` from day one and **nobody had ever sent
+	 *   it** (`[M]` §3.4: `grep -r RCP_BUDGET_PIENO src/ --include=*.c` ⇒ zero
+	 *   callers).  This is the line that gives it its first sender. */
 	uint8_t no_motivo = RCP_SESSIONE_NON_SERVIBILE;
-	/* ⭐ D-001: il palco c'era gia' ⇒ `SESSIONE` dira' `2 = RIPRESA`. */
+	/* ⭐ D-001: the stage was already there ⇒ `SESSIONE` will say `2 = RIPRESA`. */
 	bool ripresa = false;
 
 	if (ammesso && utente && utente[0]) {
-		/* ⛔ «C'era gia'» e «l'ho appena generato» sono due fatti diversi, e la
-		 *    differenza serve una riga piu' sotto: a un figlio appena nato NON
-		 *    si chiede di rimandare il palco — lo sta prendendo adesso, e la
-		 *    domanda produrrebbe un fotogramma doppio. */
+		/* ⛔ «It was already there» and «I have just spawned it» are two
+		 *    different facts, and the difference is needed a line below: a
+		 *    child just born is NOT asked to resend the stage — it is taking
+		 *    it right now, and the request would produce a double frame. */
 		bool c_era = figli_pid_di(p->f, utente) > 0;
 
-		/* ⭐ D-001 — e «c'era gia'» e' esattamente la RIPRESA di §4.5: il
-		 *    figlio vive quanto la sessione grafica (figlio morto = sessione
-		 *    finita, vedi `congeda_figlio()`). */
+		/* ⭐ D-001 — and «it was already there» is exactly the RIPRESA of
+		 *    §4.5: the child lives as long as the graphical session (child
+		 *    dead = session over, see `congeda_figlio()`). */
 		ripresa = c_era;
-		/* ⭐⭐ FASE 17 T7 — il figlio non c'e', ma il DESKTOP si': un padre
-		 *     precedente l'ha lasciato vivo e questo l'ha ritrovato all'avvio.
-		 *     ⇒ Per i conti e' come `c_era` (e' gia' dentro il tetto e il
-		 *     budget, e l'orologio non si rinnova); per il figlio no — nasce
-		 *     adesso (D1) e riprende lo stesso compositore. */
+		/* ⭐⭐ PHASE 17 T7 — the child is not there, but the DESKTOP is: a
+		 *     previous parent left it alive and this one found it again at
+		 *     startup.  ⇒ For the counts it is like `c_era` (it is already
+		 *     inside the cap and the budget, and the clock is not renewed);
+		 *     for the child it is not — it is born now (D1) and picks up the
+		 *     same compositor. */
 		bool ritrovato = !c_era && ritrovato_di(utente);
 
 		if (ritrovato)
 			ripresa = true;
 
-		/* ⛔⛔⭐ IL NO SI DICE PRIMA DI FAR NASCERE IL FIGLIO — 25 agosto 2026,
-		 *      difetto **P3** / rilievo **R10-A1**, e questa e' la riga che lo
-		 *      cura.
+		/* ⛔⛔⭐ THE NO IS SAID BEFORE SPAWNING THE CHILD — 25 Aug 2026,
+		 *      defect **P3** / finding **R10-A1**, and this is the line that
+		 *      cures it.
 		 *
-		 * IL FATTO.  I due tetti si liberano su EVENTI DIVERSI: il posto di
-		 * `attaccate[]` torna libero al distacco (sei strade, tutte per
-		 * `posto_lascia()`), ⛔ **il figlio no** — e' l'invariante **I4**: il
-		 * palco appartiene alla sessione, non alla connessione, e muore solo
-		 * per logout esplicito o per abbandono a 60 minuti senza input.
-		 * ⇒ **La tabella dei figli puo' essere piena mentre quella dei posti e'
-		 *   vuota.**  Dieci inquilini entrano la mattina, lavorano, chiudono il
-		 *   browser: i dieci palchi restano vivi fino a un'ora, e l'undicesimo
-		 *   trova il posto libero e il palco no.
+		 * THE FACT.  The two caps are freed on DIFFERENT EVENTS: the slot in
+		 * `attaccate[]` becomes free at detach (six roads, all through
+		 * `posto_lascia()`), ⛔ **the child does not** — it is invariant **I4**:
+		 * the stage belongs to the session, not to the connection, and dies
+		 * only by explicit logout or by abandonment at 60 minutes without input.
+		 * ⇒ **The children table can be full while the slot table is empty.**
+		 *   Ten tenants get in in the morning, work, close the browser: the
+		 *   ten stages stay alive for up to an hour, and the eleventh finds
+		 *   the slot free and the stage not.
 		 *
-		 * ⛔⛔ IL SINTOMO CHE C'ERA PRIMA.  `figli_assicura()` tornava `false`,
-		 *      si scriveva una riga di registro — *«e' AMMESSO ma non ha un
-		 *      figlio: entra e non vede un pixel»* — e **sul filo non usciva
-		 *      NIENTE**: ne' `0x0E`, ne' `0x06`.  L'utente riceveva `AMMESSO`,
-		 *      riceveva `SESSIONE`, e guardava una **pagina nera senza
-		 *      spiegazione e senza nessun tempo dopo il quale migliorasse**.
-		 *      ⛔ Che e' precisamente il difetto per cui `posto_prendi()` era
-		 *      gia' stato curato (rilievo **R9.3**): un fatto del SERVER che
-		 *      arriva al client come silenzio.
+		 * ⛔⛔ THE SYMPTOM THAT WAS THERE BEFORE.  `figli_assicura()` returned
+		 *      `false`, a log line was written — *«e' AMMESSO ma non ha un
+		 *      figlio: entra e non vede un pixel»* — and **NOTHING went out on
+		 *      the wire**: neither `0x0E`, nor `0x06`.  The user received
+		 *      `AMMESSO`, received `SESSIONE`, and looked at a **black page
+		 *      without explanation and without any time after which it would
+		 *      improve**.  ⛔ Which is precisely the defect for which
+		 *      `posto_prendi()` had already been cured (finding **R9.3**): a
+		 *      fact of the SERVER that reaches the client as silence.
 		 *
-		 * ⭐ IL MODELLO E' `posto_prendi()`, in `rcp.c`: distingue «occupato» da
-		 *    «niente piu' posti» e per il secondo manda `0x0E` col dettaglio nel
-		 *    corpo.  `[M]` §6.4 l'ha visto scattare 10 volte su 10, e §6.8 ha
-		 *    misurato che la capsula arriva al browser 10 su 10.  Questa e' la
-		 *    stessa cucitura, un passo piu' su.
+		 * ⭐ THE MODEL IS `posto_prendi()`, in `rcp.c`: it tells «taken» from
+		 *    «no more slots» and for the second sends `0x0E` with the detail in
+		 *    the body.  `[M]` §6.4 saw it trigger 10 times out of 10, and §6.8
+		 *    measured that the capsule reaches the browser 10 out of 10.  This
+		 *    is the same seam, one step higher.
 		 *
-		 * ⛔ E LA DOMANDA SI FA **PRIMA**, non dopo.  `[M]` §6.4 punto 6: a fine
-		 *    giro un utente **mai ammesso** aveva **42 processi e un
-		 *    `gnome-shell`** — cioe' PAM passata, figlio nato, sessione grafica
-		 *    accesa, e poi il rifiuto.  *«Rifiutare dopo aver acceso un desktop
-		 *    non e' rifiutare: e' fare login e poi cacciare.»*  Qui si guarda il
-		 *    tetto **davanti** a `figli_assicura()`, e chi non ci sta non fa
-		 *    nascere niente: ne' processo, ne' sessione logind, ne' compositore.
+		 * ⛔ AND THE QUESTION IS ASKED **BEFORE**, not after.  `[M]` §6.4 point
+		 *    6: at the end of the round a user **never admitted** had **42
+		 *    processes and a `gnome-shell`** — that is PAM passed, child born,
+		 *    graphical session on, and then the refusal.  *«Refusing after
+		 *    turning on a desktop is not refusing: it is logging in and then
+		 *    throwing out.»*  Here the cap is checked **ahead of**
+		 *    `figli_assicura()`, and whoever does not fit spawns nothing:
+		 *    neither process, nor logind session, nor compositor.
 		 *
-		 * ⚠ `figli_quanti()` e `figli_pid_di()` esistevano gia': non serve
-		 *   nessuna funzione nuova, serve **chiedere prima**. */
+		 * ⚠ `figli_quanti()` and `figli_pid_di()` already existed: no new
+		 *   function is needed, what is needed is **asking first**. */
 		if (!ripresa && palchi_quanti(p) >= rcp_tetto()) {
 			registro_dice(REG_FIGLIO,
-			              "⛔ «%s» ha superato PAM ma NON avra' un palco: i "
-			              "palchi sono %d su %d (%d coi figli, %d ritrovati "
-			              "all'avvio e in attesa di riattacco), e ⛔ il posto "
-			              "nel registro delle sessioni puo' essere LIBERO lo "
-			              "stesso — il palco sopravvive al client (I4), il "
-			              "posto no.  ⭐ Il figlio NON viene generato: niente "
-			              "sessione grafica per chi verra' congedato (§8.1 D6), "
-			              "e il no esce sul filo con 0x0E",
+			              "⛔ «%s» passed PAM but will NOT have a stage: the "
+			              "stages are %d out of %d (%d with children, %d found again "
+			              "at startup and waiting for reattach), and ⛔ the slot "
+			              "in the session registry may be FREE all "
+			              "the same — the stage outlives the client (I4), the "
+			              "slot does not.  ⭐ The child is NOT spawned: no "
+			              "graphical session for whoever will be sent away (§8.1 D6), "
+			              "and the no goes out on the wire with 0x0E",
 			              utente, palchi_quanti(p), rcp_tetto(),
 			              figli_quanti(p->f), ritrovati_n);
 			snprintf(senza_palco, sizeof senza_palco,
-			         "i palchi di questo server sono tutti impegnati (%d su "
-			         "%d): sono sessioni grafiche vive, che si liberano al "
-			         "logout o dopo l'abbandono",
+			         "all the stages of this server are in use (%d of "
+			         "%d): they are live graphical sessions, which are freed at "
+			         "logout or after abandonment",
 			         palchi_quanti(p), rcp_tetto());
 		} else if (!ripresa && !c_e_capacita(p, utente, senza_palco,
 		                                   sizeof senza_palco, &no_motivo)) {
-			/* ⛔⭐⭐⭐ IL BUDGET — fase 10, ed e' la ragione della fase.
+			/* ⛔⭐⭐⭐ THE BUDGET — phase 10, and it is the reason for the phase.
 			 *
-			 *     ⛔ Fino a stasera questa macchina **accettava tutti e li
-			 *     affamava insieme**: `[M]` §S.2 — sulla scena satura
-			 *     l'undicesimo entrava con `negati 0`, e la prima sessione
-			 *     passava da **39,60 a 0,96 fot/s** (−97,6 %), cioe' 104 rossi
-			 *     appaiati contro l'invariante **I1**.
+			 *     ⛔ Until tonight this machine **accepted everyone and
+			 *     starved them together**: `[M]` §S.2 — on the saturated scene
+			 *     the eleventh got in with `negati 0`, and the first session
+			 *     went from **39.60 to 0.96 fps** (−97.6 %), that is 104 paired
+			 *     reds against invariant **I1**.
 			 *
-			 * ⭐ La domanda si fa QUI e non piu' avanti, per la stessa ragione
-			 *    del ramo dei palchi: `[M]` §6.4 punto 6 — un utente **mai
-			 *    ammesso** aveva 42 processi e un `gnome-shell`.  *«Rifiutare
-			 *    dopo aver acceso un desktop non e' rifiutare: e' fare login e
-			 *    poi cacciare.»*
-			 * ⚠ E solo se `!c_era`: un utente che ha gia' un palco e' gia'
-			 *   dentro il conto — rifiutargli il ri-attacco sarebbe un falso NO
-			 *   su una capacita' che sta gia' spendendo comunque.
-			 * ⛔ Il perche' e la scena stanno in `budget.h`, in testa: qui c'e'
-			 *    la cucitura, non la taratura. */
+			 * ⭐ The question is asked HERE and not further on, for the same
+			 *    reason as the stages branch: `[M]` §6.4 point 6 — a user
+			 *    **never admitted** had 42 processes and a `gnome-shell`.
+			 *    *«Refusing after turning on a desktop is not refusing: it is
+			 *    logging in and then throwing out.»*
+			 * ⚠ And only if `!c_era`: a user who already has a stage is already
+			 *   inside the count — refusing them the reattach would be a false
+			 *   NO on a capacity they are already spending anyway.
+			 * ⛔ The why and the scene are in `budget.h`, at the top: here there
+			 *    is the seam, not the calibration. */
 			registro_dice(REG_BUDGET,
-			              "⛔ «%s» ha superato PAM ma NON entra: %s.  ⭐ Il "
-			              "figlio NON viene generato (§8.1 D6) e il no esce sul "
-			              "filo con 0x06 BUDGET_PIENO — che e' un limite "
-			              "FISICO, non la tabella piena di 0x0E",
+			              "⛔ «%s» passed PAM but does NOT get in: %s.  ⭐ The "
+			              "child is NOT spawned (§8.1 D6) and the no goes out on the "
+			              "wire with 0x06 BUDGET_PIENO — which is a "
+			              "PHYSICAL limit, not the full table of 0x0E",
 			              utente, senza_palco);
 		} else if (!figli_assicura_da(p->f, utente, rhost)) {
-			/* ⚠ Le ALTRE cinque strade per cui un figlio non nasce: nome che
-			 *   PAM ammette e NSS non risolve, uid 0, `socketpair`,
-			 *   `SO_PASSCRED`, `fork`.  ⛔ Nessuna di queste e' capacita': sono
-			 *   guasti nostri o di configurazione, e il perche' preciso e' nella
-			 *   riga che `figli_assicura()` ha appena scritto.
-			 * ⭐ Ma per chi sta dall'altro capo del filo l'esito e' identico —
-			 *   una pagina nera — quindi il congedo e' lo stesso, e il
-			 *   dettaglio dice a chi diagnostica dove guardare. */
+			/* ⚠ The OTHER five roads by which a child is not born: a name PAM
+			 *   admits and NSS does not resolve, uid 0, `socketpair`,
+			 *   `SO_PASSCRED`, `fork`.  ⛔ None of these is capacity: they are
+			 *   faults of ours or of configuration, and the precise why is in
+			 *   the line `figli_assicura()` has just written.
+			 * ⭐ But for whoever is at the other end of the wire the outcome is
+			 *   identical — a black page — so the farewell is the same, and the
+			 *   detail tells whoever diagnoses where to look. */
 			registro_dice(REG_FIGLIO,
-			              "⛔ «%s» e' AMMESSO ma non ha un figlio, e NON per il "
-			              "tetto (palchi %d su %d): il perche' e' nella riga qui "
-			              "sopra.  ⭐ Viene congedato con 0x0E invece di entrare "
-			              "su una pagina nera",
+			              "⛔ «%s» is ADMITTED but has no child, and NOT because of the "
+			              "cap (stages %d out of %d): the why is in the line just "
+			              "above.  ⭐ It is sent away with 0x0E instead of getting in "
+			              "on a black page",
 			              utente, palchi_quanti(p), rcp_tetto());
 			snprintf(senza_palco, sizeof senza_palco,
-			         "il palco di «%s» non si e' montato e non e' un problema "
-			         "di capacita': la causa e' nella riga di registro "
-			         "precedente",
+			         "the stage of «%s» did not mount and it is not a capacity "
+			         "problem: the cause is in the previous log "
+			         "line",
 			         utente);
 		} else if (ritrovato) {
-			/* ⭐ FASE 17 T7: il figlio e' nato, e da adesso il desktop e' suo
-			 *    — esce dai ritrovati per non contarlo due volte.  ⛔ La
-			 *    casella della presenza NON si tocca: e' un ri-attacco, e un
-			 *    ri-attacco non rinnova l'orologio (§5.3, 16 agosto 2026). */
+			/* ⭐ PHASE 17 T7: the child is born, and from now on the desktop is
+			 *    its own — it leaves the found-again list so as not to count it
+			 *    twice.  ⛔ The presence slot is NOT touched: it is a reattach,
+			 *    and a reattach does not renew the clock (§5.3, 16 Aug 2026). */
 			int i = ritrovato_indice(utente);
 
 			registro_dice(REG_FIGLIO,
-			              "⭐ FASE 17 T7 — «%s» RIENTRA nel suo desktop "
-			              "ritrovato (sessione logind %s, palco pid %ld «%s»): "
-			              "il figlio nuovo lo riprende, e SESSIONE dira' "
+			              "⭐ PHASE 17 T7 — «%s» COMES BACK to their desktop "
+			              "found again (logind session %s, stage pid %ld «%s»): "
+			              "the new child picks it up, and SESSIONE will say "
 			              "RIPRESA",
 			              utente, ritrovati[i].sessione,
 			              (long)ritrovati[i].palco, ritrovati[i].comm);
 			ritrovato_togli(utente);
 		} else if (!c_era) {
-			/* ⛔⭐ D-004 (fase 15) — L'OROLOGIO DELL'ABBANDONO PARTE ALLA
-			 *     NASCITA, non al primo gesto.
+			/* ⛔⭐ D-004 (phase 15) — THE ABANDONMENT CLOCK STARTS AT BIRTH, not
+			 *     at the first gesture.
 			 *
-			 * ⛔ Prima la tabella della presenza si riempiva SOLO in
-			 *    `input_al_figlio()`: una sessione aperta e mai toccata non
-			 *    entrava in tabella, e ⛔ **non scadeva mai** — il palco restava
-			 *    vivo per sempre, contro §5.3 («60 minuti senza input»).
-			 * ⭐ Da qui l'orologio conta da quando la sessione e' nata.  ⚠ E SOLO
-			 *    alla nascita: un ri-attacco (`c_era`) NON lo rinnova — §5.3,
-			 *    decisione del 16 agosto 2026: «uno che si attacca e resta a
-			 *    guardare non rinnova piu' niente».
-			 * ⚠ E sovrascrive una casella vecchia dello stesso utente, se ce
-			 *   n'era una rimasta da una sessione finita: una sessione nuova non
-			 *   eredita la scadenza di quella morta. */
+			 * ⛔ Before, the presence table was filled ONLY in
+			 *    `input_al_figlio()`: a session opened and never touched did
+			 *    not enter the table, and ⛔ **never expired** — the stage stayed
+			 *    alive forever, against §5.3 («60 minutes without input»).
+			 * ⭐ From here the clock counts from when the session was born.
+			 *    ⚠ And ONLY at birth: a reattach (`c_era`) does NOT renew it —
+			 *    §5.3, decision of 16 Aug 2026: «one who attaches and just
+			 *    watches no longer renews anything».
+			 * ⚠ And it overwrites an old slot of the same user, if one was left
+			 *   from a finished session: a new session does not inherit the
+			 *   expiry of the dead one. */
 			presenza_segna(utente, registro_ora_ms());
 		} else {
-			/* ⛔ Un figlio che c'era gia' puo' avere il ciclo SPENTO — l'ultima
-			 *    sessione di quell'utente se n'era andata e il palco aveva
-			 *    smesso di catturare.  ⚠ Gli si chiede il fotogramma tenuto
-			 *    (l'ultima CHIAVE) cosi' chi rientra vede subito qualcosa,
-			 *    mentre `video_regola()` riaccende il ciclo appena `SESSIONE`
-			 *    parte.  ⛔ A un figlio APPENA NATO no: lo sta gia' prendendo, e
-			 *    la domanda gli farebbe spedire lo stesso fotogramma due
-			 *    volte. */
+			/* ⛔ A child that was already there may have its loop OFF — that
+			 *    user's last session had gone and the stage had stopped
+			 *    capturing.  ⚠ It is asked for the held frame (the last
+			 *    KEYFRAME) so whoever comes back sees something at once, while
+			 *    `video_regola()` turns the loop back on as soon as `SESSIONE`
+			 *    starts.  ⛔ Not to a child JUST BORN: it is already taking it,
+			 *    and the request would make it send the same frame twice. */
 			figli_chiedi_palco(p->f, utente);
 		}
-		/* ⛔⭐ E QUI SI SCRIVE IL CONTO DEI NEGATI — una riga per verdetto,
-		 *     **anche quando il budget e' spento**, ed e' quello il caso che
-		 *     conta: `[M]` §S.2 descrive il difetto in due parole — *«entra con
-		 *     `negati 0`»* — e leggere quello zero e' il fatto che prova **I6**.
-		 * ⚠ Sta DOPO la catena e non dentro i suoi rami: un conto scritto in
-		 *   tre punti diversi e' un conto che un giorno ne dimentichera' uno. */
+		/* ⛔⭐ AND HERE THE COUNT OF THE DENIED IS WRITTEN — one line per
+		 *     verdict, **even when the budget is off**, and that is the case
+		 *     that matters: `[M]` §S.2 describes the defect in two words —
+		 *     *«gets in with `negati 0`»* — and reading that zero is the fact
+		 *     that proves **I6**.
+		 * ⚠ It sits AFTER the chain and not inside its branches: a count
+		 *   written in three different places is a count that one day will
+		 *   forget one. */
 		budget_riga_verdetto(utente, senza_palco[0] == '\0', no_motivo,
 		                     rcp_tetto(), senza_palco);
 	}
-	/* ⛔ `ripresa` solo se entra davvero: con un congedo in arrivo non c'e'
-	 *    nessuna `SESSIONE` da riempire. */
+	/* ⛔ `ripresa` only if it really gets in: with a farewell on its way there
+	 *    is no `SESSIONE` to fill. */
 	trasporto_verdetto(p->t, pratica, ammesso, ripresa && !senza_palco[0]);
 
-	/* ⛔⭐ E IL CONGEDO ESCE QUI, DOPO IL VERDETTO — e l'ordine e' misurato, non
-	 *     estetico.  Tre ragioni, tutte necessarie:
+	/* ⛔⭐ AND THE FAREWELL GOES OUT HERE, AFTER THE VERDICT — and the order is
+	 *     measured, not aesthetic.  Three reasons, all necessary:
 	 *
-	 *  1. ⛔ **`trasporto_verdetto()` e' l'unico posto in cui il conto di
-	 *     §4.4-bis si azzera** (`rcp_verdetto()` → `azzera_falliti()`).
-	 *     Congedando prima, la sessione sarebbe gia' `S_FINITA`, il verdetto non
-	 *     lo prenderebbe nessuno, e ⛔ **un utente che ha indovinato la parola
-	 *     resterebbe con i tentativi falliti addosso**: due sbagli e questo lo
-	 *     bannerebbero per dodici ore.
-	 *  2. ⭐ Cosi' il client **non vede mai `AMMESSO`**: `AMMESSO` non parte da
-	 *     qui, parte da `rcp_tempo()` quando il secondo fisso e' passato, e a
-	 *     quel punto la sessione e' gia' finita col suo motivo.  ⇒ Una verita'
-	 *     sola sul filo, non «entra» seguito da «esci».
-	 *  3. ⚠ §4.4-bis non e' violata.  Quella regola vuole che **il cronometro
-	 *     non distingua quel che il motivo non distingue**; qui il motivo
-	 *     distingue gia', ed e' una scelta dichiarata: chi supera PAM e non ha
-	 *     un palco riceve `0x0E`, chi sbaglia la parola riceve `0x07`.  ⛔ Si',
-	 *     questo dice a chi bussa che la parola era giusta — ed e' il prezzo,
-	 *     dichiarato, di non lasciarlo davanti a una pagina nera.  E' lo stesso
-	 *     prezzo che `posto_prendi()` paga gia' oggi a tabella piena.
+	 *  1. ⛔ **`trasporto_verdetto()` is the only place where the count of
+	 *     §4.4-bis is reset** (`rcp_verdetto()` → `azzera_falliti()`).
+	 *     Sending the farewell first, the session would already be
+	 *     `S_FINITA`, nobody would take the verdict, and ⛔ **a user who got
+	 *     the password right would keep the failed attempts on them**: two
+	 *     mistakes and this one would ban them for twelve hours.
+	 *  2. ⭐ This way the client **never sees `AMMESSO`**: `AMMESSO` does not
+	 *     leave from here, it leaves from `rcp_tempo()` when the fixed second
+	 *     has passed, and at that point the session is already over with its
+	 *     reason.  ⇒ One single truth on the wire, not «get in» followed by
+	 *     «get out».
+	 *  3. ⚠ §4.4-bis is not violated.  That rule wants **the timer not to
+	 *     distinguish what the reason does not distinguish**; here the reason
+	 *     already distinguishes, and it is a declared choice: whoever passes
+	 *     PAM and has no stage receives `0x0E`, whoever gets the password
+	 *     wrong receives `0x07`.  ⛔ Yes, this tells whoever knocks that the
+	 *     password was right — and it is the declared price of not leaving them
+	 *     in front of a black page.  It is the same price `posto_prendi()`
+	 *     already pays today with a full table.
 	 *
-	 * ⚠ E si passa per `wt_congeda_utente()` — la stessa strada di §7.6 — perche'
-	 *   e' `webtransport.c` a sapere quali sessioni sono di quell'utente.  ⛔ Le
-	 *   congeda TUTTE, ed e' giusto qui: se fossimo arrivati in questo ramo,
-	 *   quell'utente non ha un palco, quindi **nessuna** delle sue sessioni sta
-	 *   vedendo un pixel.  Non si sta portando via niente a nessuno.
+	 * ⚠ And it goes through `wt_congeda_utente()` — the same road as §7.6 —
+	 *   because it is `webtransport.c` that knows which sessions belong to that
+	 *   user.  ⛔ It sends ALL of them away, and that is right here: if we got
+	 *   to this branch, that user has no stage, so **none** of their sessions
+	 *   is seeing a pixel.  Nothing is being taken away from anyone.
 	 *
-	 * ⛔ QUEL CHE QUESTA CURA NON CURA: il motivo e' `0x0E`
-	 *    (`SESSIONE_NON_SERVIBILE`) e **non** `0x06` (`BUDGET_PIENO`), ed e' una
-	 *    scelta.  `0x06` dice *«questa macchina non ha piu' capacita' di
-	 *    codifica»*, cioe' un limite **fisico**; qui il limite e' un `#define`
-	 *    — una tabella piena di palchi che **nessuno sta guardando** — cioe' un
-	 *    limite **amministrativo**, che e' esattamente quel che `0x0E` gia' dice
-	 *    per la tabella dei posti.  ⭐ `fasi/10-…md` §8.1 D5: i due motivi si
-	 *    AGGIUNGONO, non si sostituiscono, e `0x06` e' del giro del budget. */
+	 * ⛔ WHAT THIS CURE DOES NOT CURE: the reason is `0x0E`
+	 *    (`SESSIONE_NON_SERVIBILE`) and **not** `0x06` (`BUDGET_PIENO`), and it
+	 *    is a choice.  `0x06` says *«this machine has no encoding capacity
+	 *    left»*, that is a **physical** limit; here the limit is a `#define`
+	 *    — a table full of stages **nobody is watching** — that is an
+	 *    **administrative** limit, which is exactly what `0x0E` already says
+	 *    for the slot table.  ⭐ `fasi/10-…md` §8.1 D5: the two reasons are
+	 *    ADDED, they do not replace each other, and `0x06` belongs to the
+	 *    budget's round. */
 	if (senza_palco[0]) {
 		size_t quante = wt_congeda_utente(utente, no_motivo, senza_palco, NULL);
 		registro_dice(REG_WT,
-		              "⛔ congedati %zu client di «%s» con %#04x: %s.  ⚠ Se qui "
-		              "leggi ZERO, il no NON e' arrivato a nessuno e l'utente "
-		              "e' davanti a una pagina nera — e' il difetto P3, non la "
-		              "sua cura",
+		              "⛔ sent away %zu clients of «%s» with %#04x: %s.  ⚠ If here "
+		              "you read ZERO, the no reached NOBODY and the user "
+		              "is in front of a black page — it is defect P3, not its "
+		              "cure",
 		              quante, utente, no_motivo, senza_palco);
 	}
 }
 
-/* ⛔⭐ IL FOTOGRAMMA CHE ARRIVA DAL PALCO, E DOVE FINISCE.
+/* ⛔⭐ THE FRAME THAT ARRIVES FROM THE STAGE, AND WHERE IT ENDS UP.
  *
- *     Fino alla fase 2 finiva in un DEPOSITO DI PROCESSO — una copia per
- *     codec, con un PADRONE — e il riquadro che stava qui dichiarava il prezzo:
- *     «due utenti collegati insieme non possono vedere tutt'e due il proprio
- *     desktop; la cura vera e' un deposito **per sessione** in
- *     `webtransport.c`».
+ *     Until phase 2 it ended up in a PROCESS DEPOT — one copy per codec, with
+ *     an OWNER — and the box that stood here declared the price: «two users
+ *     connected together cannot both see their own desktop; the real cure is a
+ *     depot **per session** in `webtransport.c`».
  *
- * ⭐ LA CURA VERA E' STATA FATTA, ed e' meglio di un deposito per sessione: non
- *    c'e' piu' nessun deposito.  Il figlio cattura di continuo e ogni
- *    fotogramma viene consegnato **subito** alle sessioni di quell'utente —
- *    `wt_video_diffondi()` confronta il nome dell'utente che ha catturato con
- *    quello che PAM ha ammesso su ciascuna sessione, e sono due fatti diversi
- *    chiesti tutt'e due a chi li sa.
+ * ⭐ THE REAL CURE HAS BEEN DONE, and it is better than a depot per session:
+ *    there is no depot any more.  The child captures continuously and every
+ *    frame is delivered **at once** to that user's sessions —
+ *    `wt_video_diffondi()` compares the name of the user who captured with the
+ *    one PAM admitted on each session, and they are two different facts both
+ *    asked of whoever knows them.
  *
- * ⛔ Quindi la guardia dell'invariante I3 non e' sparita: si e' spostata dove
- *    serviva.  Il difetto misurato il 12 agosto 2026 — «prova» che riceve il
- *    desktop di «nicfio» — non e' piu' possibile perche' non c'e' piu' nessun
- *    posto in cui i pixel di un utente aspettino una sessione qualunque.
+ * ⛔ So the guard of invariant I3 has not disappeared: it has moved to where
+ *    it was needed.  The defect measured on 12 Aug 2026 — «prova» receiving
+ *    «nicfio»'s desktop — is no longer possible because there is no longer any
+ *    place where a user's pixels wait for just any session.
  *
- * ⚠ E il prezzo dichiarato allora e' PAGATO: due utenti collegati insieme
- *   vedono ciascuno il proprio, e nessuno dei due deve rientrare.  ⭐ Vale la
- *   pena scriverlo, perche' era il difetto che il documento chiamava «brutto e
- *   non curabile qui». */
+ * ⚠ And the price declared back then is PAID: two users connected together
+ *   each see their own, and neither has to log in again.  ⭐ It is worth
+ *   writing down, because it was the defect the document called «ugly and not
+ *   curable here». */
 static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
                                 uint8_t codec, bool chiave, const uint8_t *dati,
                                 size_t byte, uint32_t larghezza,
@@ -971,53 +985,55 @@ static void deposita_fotogramma(void *ctx, const char *utente, uid_t uid,
 {
 	(void)ctx;
 	(void)uid;
-	/* ⭐⭐ FASE 4 — E QUI `input` NON E' PIU' ZERO.
+	/* ⭐⭐ PHASE 4 — AND HERE `input` IS NO LONGER ZERO.
 	 *
-	 * ⚠ Questa riga diceva: «`input` e' 0 … quando l'input arrivera' (fase 5)
-	 *   qui passera' il suo identificatore».  ⛔ Due cose erano sbagliate: la
-	 *   fase e' la **4**, e soprattutto il numero **non nasce qui**.
+	 * ⚠ This line said: «`input` is 0 … when input arrives (phase 5) its
+	 *   identifier will pass here».  ⛔ Two things were wrong: the phase is
+	 *   **4**, and above all the number **is not born here**.
 	 *
-	 * ⛔ Lo timbra IL FIGLIO, nell'istante della cattura, e arriva fin qui
-	 *    dentro il fotogramma.  Il padre sa che cosa ha **mandato** al palco;
-	 *    solo il figlio sa che cosa il compositore ha **preso** e quando ha
-	 *    catturato.  ⇒ Riempirlo qui direbbe «l'ultimo input spedito prima
-	 *    della spedizione», un numero piu' alto: e l'anello del ritardo
-	 *    (`DECISIONI.md` §2.6) misurerebbe un ritardo piu' corto del vero, in
-	 *    nostro favore.  `CODER.md` §1-bis: il confine si sposta nella
-	 *    direzione **scomoda**.
-	 * ⚠ E lo zero resta legittimo: §6.2 lo riserva a «nessuno», ed e' quel che
-	 *   vale finche' il client non ha aperto il suo canale di input. */
-	/* ⛔⭐⭐ E DA QUI PASSA ANCHE IL BUDGET — fase 10, 25 agosto 2026, e la
-	 *      riga sta PRIMA della diffusione apposta.
+	 * ⛔ It is stamped BY THE CHILD, at the instant of capture, and arrives here
+	 *    inside the frame.  The parent knows what it has **sent** to the
+	 *    stage; only the child knows what the compositor has **taken** and
+	 *    when it captured.  ⇒ Filling it here would say «the last input sent
+	 *    before the sending», a higher number: and the delay ring
+	 *    (`DECISIONI.md` §2.6) would measure a delay shorter than the truth, in
+	 *    our favour.  `CODER.md` §1-bis: the boundary moves in the
+	 *    **uncomfortable** direction.
+	 * ⚠ And zero stays legitimate: §6.2 reserves it for «none», and it is what
+	 *   applies until the client has opened its input channel. */
+	/* ⛔⭐⭐ AND THE BUDGET PASSES HERE TOO — phase 10, 25 Aug 2026, and the
+	 *      line sits BEFORE the broadcast on purpose.
 	 *
-	 *     ⭐ Questo e' l'unico punto del programma in cui **ogni** fotogramma di
-	 *     **ogni** palco passa con larghezza, altezza e istante: e' esattamente
-	 *     l'accumulatore di cui il budget aveva bisogno, e per questo non e'
-	 *     servito nessun canale nuovo fra padre e figlio (§6.9 punto 5).
+	 *     ⭐ This is the only point of the program where **every** frame of
+	 *     **every** stage passes with width, height and instant: it is exactly
+	 *     the accumulator the budget needed, and that is why no new channel
+	 *     between parent and child was needed (§6.9 point 5).
 	 *
-	 * ⛔⛔ E NON C'E' NESSUNA GUARDIA SU «QUALCUNO GUARDA», ed e' il punto: il
-	 *      figlio chiama questa funzione anche quando nessuna sessione e'
-	 *      attaccata (§3.2, il *fantasma*).  Quei pixel **sono stati composti e
-	 *      codificati davvero**, quindi costano davvero — e un budget che li
-	 *      saltasse sottostimerebbe proprio nella scena in cui la macchina e'
-	 *      in affanno.
-	 * ⚠ Prima di `wt_video_diffondi()` perche' il costo e' del PALCO e non
-	 *   della connessione: se lo si contasse solo per i fotogrammi che trovano
-	 *   un destinatario, si conterebbe la rete invece della GPU. */
+	 * ⛔⛔ AND THERE IS NO GUARD ON «SOMEONE IS WATCHING», and that is the
+	 *      point: the child calls this function even when no session is
+	 *      attached (§3.2, the *ghost*).  Those pixels **were really composed
+	 *      and encoded**, so they really cost — and a budget that skipped them
+	 *      would underestimate precisely in the scene where the machine is
+	 *      struggling.
+	 * ⚠ Before `wt_video_diffondi()` because the cost belongs to the STAGE and
+	 *   not to the connection: if it were counted only for the frames that
+	 *   find a recipient, the network would be counted instead of the GPU. */
 	budget_deposita(utente, larghezza, altezza, istante_us);
 
 	wt_video_diffondi(utente, codec, chiave, dati, byte, larghezza, altezza,
 	                  istante_us, input);
 }
 
-/* ⭐⭐ LA FORMA DEL CURSORE, dal palco al filo — il terzo tubo che attraversa il
- *     confine di processo, e l'unico che lo attraversa **all'incontrario**.
+/* ⭐⭐ THE CURSOR SHAPE, from the stage to the wire — the third pipe that
+ *     crosses the process boundary, and the only one that crosses it **the
+ *     other way round**.
  *
- * ⛔ Il metadato del cursore arriva da PipeWire, cioe' nel figlio; il canale
- *    `CURSORE_FORMA` (`RCP.md` §7.2) vive nel padre.  ⚠ E la POSIZIONE non
- *    viaggia: e' del client, che disegna il puntatore da se' — qui passa solo la
- *    forma, e il ritardo di un giro di rete sulla forma e' il compromesso
- *    accettato (`DECISIONI.md` §5-bis.4). */
+ * ⛔ The cursor metadata arrives from PipeWire, that is in the child; the
+ *    `CURSORE_FORMA` channel (`RCP.md` §7.2) lives in the parent.  ⚠ And the
+ *    POSITION does not travel: it belongs to the client, which draws the
+ *    pointer itself — only the shape passes here, and the delay of one network
+ *    round trip on the shape is the accepted compromise (`DECISIONI.md`
+ *    §5-bis.4). */
 static void cursore_dal_palco(void *ctx, const char *utente, uid_t uid,
                               uint16_t larghezza, uint16_t altezza,
                               int16_t attivo_x, int16_t attivo_y,
@@ -1029,25 +1045,26 @@ static void cursore_dal_palco(void *ctx, const char *utente, uid_t uid,
 	                    byte);
 }
 
-/* ⛔⭐ LA CUCITURA FRA LA CHIAVE CHIESTA E IL CODIFICATORE — punto 4 della
- *     fase 3, e attraversa DUE confini di modulo e uno di processo.
+/* ⛔⭐ THE SEAM BETWEEN THE REQUESTED KEYFRAME AND THE ENCODER — point 4 of
+ *     phase 3, and it crosses TWO module boundaries and one process boundary.
  *
- *     Chi sa che serve una chiave: `rcp.c` (§5.2 — primo dopo `SESSIONE`, tela
- *     cambiata, `RICHIEDI_CHIAVE` del client, delta abbandonato).
- *     Chi sa a quale sessione appartiene: `webtransport.c`.
- *     Chi ha il codificatore: il FIGLIO, che e' un altro processo.
- *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e non decide niente: passa.
+ *     Who knows a keyframe is needed: `rcp.c` (§5.2 — first after `SESSIONE`,
+ *     canvas changed, the client's `RICHIEDI_CHIAVE`, delta abandoned).
+ *     Who knows which session it belongs to: `webtransport.c`.
+ *     Who has the encoder: the CHILD, which is another process.
+ *     ⇒ `main.c` is the only one that knows all three, and decides nothing: it
+ *     passes it on.
  *
- * ⚠ Senza questa riga, `rcp_video_serve_chiave()` restava LETTA e inutile e
- *   `codificatore_chiedi_chiave()` non aveva **nessun chiamante nel prodotto**:
- *   il sintomo era «il desktop si ferma e non riparte piu'», e non nominava ne'
- *   la chiave ne' il codificatore.
+ * ⚠ Without this line, `rcp_video_serve_chiave()` stayed READ and useless and
+ *   `codificatore_chiedi_chiave()` had **no caller in the product**: the
+ *   symptom was «the desktop freezes and never restarts», and it named neither
+ *   the keyframe nor the encoder.
  *
- * ⛔⭐ E DA QUI PASSANO TRE FATTI DELLA SESSIONE, non uno: il codec, la
- *     PROFONDITA' (17 agosto 2026) e da stasera il LIVELLO (§4.3 riga 701).
- *     ⚠ Tutti e tre sono del CLIENT e non del server — cambiano da sessione a
- *     sessione — ed e' la ragione per cui viaggiano di qui e non sulla riga di
- *     comando del figlio, che il figlio la legge una volta alla nascita. */
+ * ⛔⭐ AND THREE FACTS OF THE SESSION PASS HERE, not one: the codec, the
+ *     DEPTH (17 Aug 2026) and from tonight the LEVEL (§4.3 line 701).
+ *     ⚠ All three belong to the CLIENT and not to the server — they change from
+ *     session to session — and that is the reason they travel this way and not
+ *     on the child's command line, which the child reads once at birth. */
 static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
                          uint8_t profondita, uint8_t livello_x10, bool chiave)
 {
@@ -1057,12 +1074,12 @@ static void video_chiedi(void *ctx, const char *utente, uint8_t codec,
 	figli_video(p->f, utente, codec, profondita, livello_x10, chiave);
 }
 
-/* ⭐⭐ LA CUCITURA DELL'AUDIO — fase 7, ed e' la terza della stessa famiglia.
+/* ⭐⭐ THE AUDIO SEAM — phase 7, and it is the third of the same family.
  *
- *     Chi sa che una sessione ha negoziato un codec audio: `rcp.c` (§4.3).
- *     Chi sa a quale sessione appartiene: `webtransport.c`.
- *     ⛔ Chi ha PipeWire: il FIGLIO, che gira come l'utente — un altro processo.
- *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ *     Who knows a session has negotiated an audio codec: `rcp.c` (§4.3).
+ *     Who knows which session it belongs to: `webtransport.c`.
+ *     ⛔ Who has PipeWire: the CHILD, which runs as the user — another process.
+ *     ⇒ `main.c` is the only one that knows all three, and **decides nothing**.
  */
 static void audio_chiedi(void *ctx, const char *utente, uint8_t codec)
 {
@@ -1072,13 +1089,13 @@ static void audio_chiedi(void *ctx, const char *utente, uint8_t codec)
 	figli_audio(p->f, utente, codec);
 }
 
-/* Il verso di ritorno: un blocco gia' codificato, dalla sessione al filo.
+/* The way back: an already encoded block, from the session to the wire.
  *
- * ⛔ E qui NON si controlla niente e non si sceglie niente: la guardia I3 — che
- *    l'utente che ha PRODOTTO il suono sia quello che PAM ha ammesso su quella
- *    sessione — sta dentro `wt_audio_diffondi`, accanto a quella dei pixel.
- *    ⚠ Rifarla qui vorrebbe dire due posti che dicono la stessa cosa, e un
- *    giorno uno dei due la direbbe diversa. */
+ * ⛔ And here NOTHING is checked and nothing is chosen: the I3 guard — that the
+ *    user who PRODUCED the sound is the one PAM admitted on that session —
+ *    sits inside `wt_audio_diffondi`, next to the pixels' one.
+ *    ⚠ Redoing it here would mean two places saying the same thing, and one
+ *    day one of the two would say it differently. */
 static void audio_blocco(void *ctx, const char *utente, uid_t uid, uint8_t codec,
                          uint64_t istante_us, const uint8_t *dati, size_t byte)
 {
@@ -1087,14 +1104,14 @@ static void audio_blocco(void *ctx, const char *utente, uid_t uid, uint8_t codec
 	wt_audio_diffondi(utente, codec, istante_us, dati, byte);
 }
 
-/* ⭐⭐ LA CUCITURA DEGLI APPUNTI — fase 7, ed e' la QUARTA della stessa
- *     famiglia (video, input, audio, appunti).
+/* ⭐⭐ THE CLIPBOARD SEAM — phase 7, and it is the FOURTH of the same family
+ *     (video, input, audio, clipboard).
  *
- *     Chi sa che una sessione ha negoziato `appunti.testo`: `rcp.c` (§4.3).
- *     Chi sa a quale sessione appartiene: `webtransport.c`.
- *     ⛔ Chi parla col compositore: il FIGLIO — la clipboard e' di Mutter
- *        (`STUDI.md` §gnome §10), e Mutter parla con la sessione dell'utente.
- *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ *     Who knows a session has negotiated `appunti.testo`: `rcp.c` (§4.3).
+ *     Who knows which session it belongs to: `webtransport.c`.
+ *     ⛔ Who talks to the compositor: the CHILD — the clipboard is Mutter's
+ *        (`STUDI.md` §gnome §10), and Mutter talks to the user's session.
+ *     ⇒ `main.c` is the only one that knows all three, and **decides nothing**.
  */
 static bool appunti_offri_al_figlio(void *ctx, const char *utente)
 {
@@ -1114,11 +1131,11 @@ static bool appunti_risposta_al_figlio(void *ctx, const char *utente,
 	return figli_appunti_risposta(p->f, utente, serial, testo, byte);
 }
 
-/* I due versi di ritorno, dal desktop al filo.
+/* The two ways back, from the desktop to the wire.
  *
- * ⛔ E anche qui NON si controlla niente: la guardia I3 — che il testo vada
- *    alla connessione di CHI l'ha copiato — sta dentro `webtransport.c`,
- *    accanto a quella dei pixel e a quella del suono. */
+ * ⛔ And here too NOTHING is checked: the I3 guard — that the text goes to the
+ *    connection of WHOEVER copied it — sits inside `webtransport.c`, next to
+ *    the pixels' one and the sound's one. */
 static void appunti_dalla_sessione(void *ctx, const char *utente, uid_t uid,
                                    const char *testo, size_t byte)
 {
@@ -1133,211 +1150,218 @@ static void appunti_richiesta_dalla_sessione(void *ctx, const char *utente,
 	struct ponte *p = (struct ponte *)ctx;
 
 	(void)uid;
-	/* ⛔⛔ E SE NON C'E' NESSUNO A CUI CHIEDERE SI RISPONDE SUBITO, a mani
-	 *      vuote.  Il figlio ha un fondo di tempo che lo coprirebbe comunque,
-	 *      ⚠ ma qui la risposta si sa GIA': far aspettare quattro secondi chi
-	 *      incolla quando la risposta e' certa e' un desktop che sembra
-	 *      piantato per una cosa che avevamo capito subito. */
+	/* ⛔⛔ AND IF THERE IS NOBODY TO ASK, THE ANSWER GOES OUT AT ONCE, empty-
+	 *      handed.  The child has a timeout that would cover it anyway,
+	 *      ⚠ but here the answer is ALREADY known: making whoever pastes wait
+	 *      four seconds when the answer is certain is a desktop that looks
+	 *      frozen for something we had understood at once. */
 	if (wt_appunti_richiesta(utente, serial))
 		return;
 	if (p && p->f)
 		figli_appunti_risposta(p->f, utente, serial, NULL, 0);
 }
 
-/* ⭐⭐ LA CUCITURA DELL'INPUT — fase 4, ed e' la gemella di quella qui sopra.
+/* ⭐⭐ THE INPUT SEAM — phase 4, and it is the twin of the one above.
  *
- *     Chi sa che l'utente ha premuto: `rcp.c`, che ha convalidato il messaggio
- *     secondo `RCP.md` §7.3 — intervalli, surrogati, coordinate sulla tela,
- *     `id` crescente.
- *     Chi sa a quale sessione appartiene: `webtransport.c`.
- *     ⛔ Chi puo' davvero iniettarlo: il FIGLIO, che gira come l'utente ed e'
- *     l'unico ad avere la sessione grafica — cioe' un altro processo.
- *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**:
- *       passa.
+ *     Who knows the user has pressed: `rcp.c`, which has validated the message
+ *     according to `RCP.md` §7.3 — ranges, surrogates, coordinates on the
+ *     canvas, increasing `id`.
+ *     Who knows which session it belongs to: `webtransport.c`.
+ *     ⛔ Who can really inject it: the CHILD, which runs as the user and is the
+ *     only one with the graphical session — that is, another process.
+ *     ⇒ `main.c` is the only one that knows all three, and **decides
+ *       nothing**: it passes it on.
  *
- * ⛔ E QUESTA RIGA E' LA RAGIONE PER CUI LA FASE 4 ESISTE.  Senza, tutto il
- *    resto sarebbe scritto e non collegato: `rcp.c` convaliderebbe i messaggi,
- *    `input.c` saprebbe iniettare, e fra i due non passerebbe un byte — che e'
- *    esattamente la forma di difetto che la fase 3 ha pagato due volte (la
- *    chiave chiesta senza chiamante, e il monitor catturato che non era quello
- *    su cui stava la shell).  ⚠ Le cuciture non hanno un proprietario, e per
- *    questo nessun banco le guarda: questa ce l'ha. */
-/* ⛔⛔⭐ IL TERZO OROLOGIO DI §5.3, E NON E' PIU' QUELLO DELLE SEI ORE.
+ * ⛔ AND THIS LINE IS THE REASON PHASE 4 EXISTS.  Without it, all the rest
+ *    would be written and not connected: `rcp.c` would validate the messages,
+ *    `input.c` would know how to inject, and not one byte would pass between
+ *    the two — which is exactly the form of defect phase 3 paid for twice (the
+ *    keyframe requested without a caller, and the captured monitor that was
+ *    not the one the shell was on).  ⚠ Seams have no owner, and that is why
+ *    no bench looks at them: this one has one. */
+/* ⛔⛔⭐ THE THIRD CLOCK OF §5.3, AND IT IS NO LONGER THE SIX-HOUR ONE.
  *
- *     ✅ Deciso dall'utente il 16 agosto 2026, su misure prese apposta:
+ *     ✅ Decided by the user on 16 Aug 2026, on measurements taken for the
+ *     purpose:
  *
- *       > *«niente timeout delle 6 ore: se dopo 60 minuti non c'e' traccia di
- *       > input la sessione viene killata»*
+ *       > *«no 6-hour timeout: if after 60 minutes there is no trace of
+ *       > input the session gets killed»*
  *
- *     `SPECIFICHE.md` §5.3 diceva «6 ore senza alcun attacco ⇒ la sessione si
- *     chiude».  ⚠ Cambiano DUE cose, non una: il tetto (6 ore → 60 minuti) e
- *     **il criterio** — non piu' «nessuno si e' attaccato», ma «nessuno ha
- *     toccato niente».
+ *     `SPECIFICHE.md` §5.3 said «6 hours without any attach ⇒ the session
+ *     closes».  ⚠ TWO things change, not one: the ceiling (6 hours → 60
+ *     minutes) and **the criterion** — no longer «nobody has attached», but
+ *     «nobody has touched anything».
  *
- * ⭐ E la decisione e' venuta da un numero, non da un'idea: `[M]` una sessione
- *    abbandonata costa **477 MB** (PSS) e **~0,017 % di un nucleo**, e in quattro
- *    minuti di osservazione non cresce di un megabyte — 477 · 476 · 476 · 477 ·
- *    477 · 477 · 477 · 477 · 477.  ⇒ Non e' una perdita, e' un costo fisso; e
- *    l'utente ha scelto di non pagarlo per un'ora invece che per sei.
+ * ⭐ And the decision came from a number, not from an idea: `[M]` an abandoned
+ *    session costs **477 MB** (PSS) and **~0.017 % of a core**, and in four
+ *    minutes of observation it does not grow by one megabyte — 477 · 476 · 476
+ *    · 477 · 477 · 477 · 477 · 477 · 477.  ⇒ It is not a leak, it is a fixed
+ *    cost; and the user chose not to pay it for one hour instead of six.
  *
- * ⛔ CHE COSA CONTA COME «INPUT», e la distinzione e' tutta qui: i cinque gesti
- *    veri.  ⚠ NON il rilascio al distacco (§7.3), che arriva proprio quando
- *    l'utente se ne va e azzererebbe l'orologio nell'istante sbagliato; non la
- *    ritela, che parte da sola al riattacco; non la richiesta di uscire.
+ * ⛔ WHAT COUNTS AS «INPUT», and the distinction is all here: the five real
+ *    gestures.  ⚠ NOT the release at detach (§7.3), which arrives precisely
+ *    when the user leaves and would reset the clock at the wrong instant; not
+ *    the canvas resize, which starts on its own at reattach; not the request
+ *    to log out.
  *
- * ⚠ E si e' considerato — e SCARTATO, con l'utente — di azzerare l'orologio
- *   anche al riaggancio: *«la tua ipotesi comporta il fatto che l'utente in 10
- *   minuti non fa nemmeno un clic col mouse, alquanto improbabile»*.  ⇒ Si conta
- *   l'input e basta, che e' anche la regola piu' semplice da spiegare. */
-#define ABBANDONO_PREDEFINITO_MS 3600000u /* 60 minuti */
+ * ⚠ And resetting the clock at reattach too was considered — and DISCARDED,
+ *   with the user: *«your hypothesis implies that the user does not make even
+ *   one mouse click in 10 minutes, rather unlikely»*.  ⇒ Only input counts,
+ *   which is also the simplest rule to explain. */
+#define ABBANDONO_PREDEFINITO_MS 3600000u /* 60 minutes */
 static uint64_t abbandono_ms = ABBANDONO_PREDEFINITO_MS;
-/* ⛔ Il tono di prova della fase 7: `0` = spento, ed e' il valore di ogni
- *    installazione normale (invariante I6). */
+/* ⛔ The phase 7 test tone: `0` = off, and it is the value of every normal
+ *    installation (invariant I6). */
 static uint32_t audio_prova_hz;
 
-/* ⛔⭐⭐⭐ GLI INTERRUTTORI DELLA FASE 9 — E IL 24 AGOSTO 2026 SI SONO GIRATI.
+/* ⛔⭐⭐⭐ THE PHASE 9 SWITCHES — AND ON 24 AUG 2026 THEY WERE FLIPPED.
  *
- *      **Decisione dell'utente**: *«il prodotto cambia in meglio; questa fase
- *      era per rendere piu' solido il funzionamento di remotix su reti
- *      degradate, senza pretendere di fare miracoli»*.  ⇒ Le cinque cure della
- *      fase 9 nascono ACCESE, e ognuna resta spegnibile con UNA strada sola.
+ *      **The user's decision**: *«the product changes for the better; this
+ *      phase was to make remotix work more solidly on degraded networks,
+ *      without expecting miracles»*.  ⇒ The five cures of phase 9 are born
+ *      ON, and each one can still be turned off with ONE road only.
  *
- * ⛔ PERCHE' PRIMA ERANO SPENTE, e non e' burocrazia: l'invariante I6 — *cio'
- *    che cambia quel che l'utente VEDE resta dietro un interruttore spento
- *    finche' non l'ha guardato*.  ⚠ In v1 una fase intera fu AZZERATA per aver
- *    consegnato miglioramenti che il regista non aveva mai visto.
- * ⭐ E ADESSO IL PRESUPPOSTO E' SODDISFATTO: l'utente ha guardato (§19.6,
- *    §20.3) e ha deciso.  ⇒ I6 non e' aggirata, e' stata percorsa fino in
- *    fondo — l'interruttore c'e' ancora, e' solo girato dall'altra parte.
+ * ⛔ WHY THEY WERE OFF BEFORE, and it is not bureaucracy: invariant I6 — *what
+ *    changes what the user SEES stays behind a switch that is off until they
+ *    have looked at it*.  ⚠ In v1 an entire phase was WIPED OUT for having
+ *    delivered improvements the director had never seen.
+ * ⭐ AND NOW THE PREREQUISITE IS MET: the user has looked (§19.6, §20.3) and
+ *    has decided.  ⇒ I6 is not bypassed, it has been walked to the end — the
+ *    switch is still there, it is just flipped the other way.
  *
- * ⛔⛔ E IL NOME DELL'INTERRUTTORE CONTA.  `--ritmo-adattivo` e `--linea-morta`
- *      erano opzioni senza argomento che volevano dire «accendi»: col
- *      predefinito acceso non vogliono piu' dire niente, e un'opzione che non
- *      fa niente e' peggio di un'opzione che non c'e' (chi la batte crede di
- *      aver tarato qualcosa).  ⇒ Sono state SOSTITUITE dal loro contrario —
- *      `--niente-ritmo-adattivo`, `--niente-linea-morta`,
- *      `--niente-audio-silenzio` — e i nomi vecchi rispondono con un messaggio
- *      e un'uscita 2, non con un silenzio.
+ * ⛔⛔ AND THE SWITCH'S NAME MATTERS.  `--ritmo-adattivo` and `--linea-morta`
+ *      were options without an argument that meant «turn on»: with the default
+ *      on they no longer mean anything, and an option that does nothing is
+ *      worse than an option that does not exist (whoever types it believes
+ *      they have tuned something).  ⇒ They have been REPLACED by their
+ *      opposite — `--niente-ritmo-adattivo`, `--niente-linea-morta`,
+ *      `--niente-audio-silenzio` — and the old names answer with a message and
+ *      exit 2, not with a silence.
  *
- * ⛔ UNA STRADA SOLA PER CIASCUNA CURA: due modi di accendere la stessa cosa
- *    sono due numeri che divergono, ed e' il motivo per cui il ponte via
- *    ambiente e' gia' stato tolto una volta (23 agosto 2026) e per cui il `-D`
- *    `AUDIO_SILENZIO_PREDEFINITO` e' stato tolto oggi.
+ * ⛔ ONE ROAD ONLY FOR EACH CURE: two ways of turning on the same thing are two
+ *    numbers that diverge, and it is the reason the bridge via the environment
+ *    has already been removed once (23 Aug 2026) and the reason the `-D`
+ *    `AUDIO_SILENZIO_PREDEFINITO` was removed today.
  *
- *      Fino al 23 agosto 2026 le cure esistevano ma **nessuno le
- *      chiamava**: un interruttore che non si puo' accendere non e' un
- *      interruttore, e' codice morto — e la fase 9 non poteva misurare ne' il
- *      prima ne' il dopo.
+ *      Until 23 Aug 2026 the cures existed but **nobody called them**: a
+ *      switch that cannot be turned on is not a switch, it is dead code — and
+ *      phase 9 could measure neither the before nor the after.
  *
- * ⛔ E DUE DELLE TRE NON VIVONO QUI.  La soglia della coda video e' del
- *    trasporto, che sta in questo processo; la risalita della qualita' e il
- *    tetto di banda sono del **codificatore**, che sta nel FIGLIO — un altro
- *    programma, nato con `execve` e ambiente composto da zero.  ⇒ Non si
- *    passano con una variabile d'ambiente (non arriverebbe): si passano nella
- *    riga di comando del figlio, come `--parlantina` (`figlio.c`, il riquadro
- *    in `diventa_ed_esegui()`), e `figli_fase9()` e' la porta. */
-/* ⭐ ACCESA di suo a 100 ms (⚠ il numero sta in `webtransport.h`, copia sola).
- * ⚠ IL PREZZO, `[M]` 09-b79 23-24 ago 2026: insieme al regolatore del ritmo,
- *   fino a **+160 ms** di deriva su rete cattiva, e **zero** sulla linea sana —
- *   39,85 / 40,19 / 39,63 fotogrammi/s nei tre bracci, **zero chiavi** in
- *   tutt'e tre.  ⛔ Si spegne con `--sgombra-soglia-ms 0`. */
+ * ⛔ AND TWO OF THE THREE DO NOT LIVE HERE.  The video queue threshold belongs
+ *    to the transport, which is in this process; quality rise and the
+ *    bandwidth ceiling belong to the **encoder**, which is in the CHILD —
+ *    another program, born with `execve` and an environment built from
+ *    scratch.  ⇒ They are not passed with an environment variable (it would
+ *    not arrive): they are passed on the child's command line, like
+ *    `--parlantina` (`figlio.c`, the box in `diventa_ed_esegui()`), and
+ *    `figli_fase9()` is the door. */
+/* ⭐ ON by default at 100 ms (⚠ the number is in `webtransport.h`, single copy).
+ * ⚠ THE PRICE, `[M]` 09-b79 23-24 Aug 2026: together with the rate regulator,
+ *   up to **+160 ms** of drift on a bad network, and **zero** on the healthy
+ *   line — 39.85 / 40.19 / 39.63 frames/s in the three arms, **zero
+ *   keyframes** in all three.  ⛔ It is turned off with `--sgombra-soglia-ms 0`. */
 static uint64_t sgombra_soglia_ms = WT_SGOMBRA_SOGLIA_MS;
-/* ⚠ Queste due NON sono fra le cinque che si accendono: restano spente (I6),
- *   perche' l'utente non le ha ancora guardate. */
-static bool qualita_risale;         /* --qualita-risale, assente = spenta */
-static uint32_t tetto_banda_mbit;   /* --tetto-banda-mbit, 0 = spento    */
-/* ⛔⭐ La QUARTA, ed e' la sola che sta nel TRASPORTO come la prima: il ritmo
- *     lo decide chi vede la coda d'uscita.  ⚠ E dipende dalla prima — con
- *     `--sgombra-soglia-ms 0` non scatta mai, e il server lo SCRIVE all'avvio
- *     invece di lasciar misurare un anello morto (`webtransport.c`,
- *     `wt_ritmo_adattivo()`).  ⭐ Coi predefiniti nascono accesi tutt'e due,
- *     che e' l'unica combinazione in cui questo regolatore misura qualcosa.
- * ⚠ IL PREZZO e' lo stesso della soglia, ed e' scritto qui sopra: le due cure
- *   si sono misurate insieme e non hanno due prezzi separati. */
-static bool ritmo_adattivo = true;  /* ⭐ acceso; --niente-ritmo-adattivo spegne */
-/* ⛔⭐⭐ E LA QUINTA, che e' di un'altra specie: le altre quattro cambiano
- *      QUANTO BENE si vede, questa decide se la sessione ESISTE ancora.
- *      Decisione dell'utente del 23 agosto 2026: una linea che perde a raffiche
- *      non si serve, si dichiara morta — il filo cade e si rientra a mano.
- * ⛔ I due numeri partono dai predefiniti di `webtransport.h`, che sono l'unica
- *    copia; le opzioni servono al banco, che deve poterli muovere senza
- *    ricompilare.
- * ⚠⚠ IL PREZZO, ED E' IL PIU' CARO DEI CINQUE — `[M]` 23-24 agosto 2026:
- *    margine **>10×** sopra `casa-cattiva`, la linea PEGGIORE che regge (dieci
- *    minuti, stallo massimo < 500 ms, zero scatti), e **2,9×** sotto i 14,26 s
- *    di `raffica-forte`, che non serve nessuno.  ⛔ E' LA CURA CHE CHIUDE UNA
- *    SESSIONE: se la soglia fosse tarata male butterebbe fuori chi lavora.
- *    ⇒ Chi tocca `WT_LM_STALLO_MS` rimisura quei due margini, o consegna un
- *    prodotto che stacca la gente per un numero che nessuno ha verificato. */
-static bool linea_morta = true;     /* ⭐ accesa; --niente-linea-morta spegne */
+/* ⚠ These two are NOT among the five that are turned on: they stay off (I6),
+ *   because the user has not looked at them yet. */
+static bool qualita_risale;         /* --qualita-risale, absent = off */
+static uint32_t tetto_banda_mbit;   /* --tetto-banda-mbit, 0 = off    */
+/* ⛔⭐ The FOURTH, and it is the only one that lives in the TRANSPORT like the
+ *     first: the rate is decided by whoever sees the output queue.  ⚠ And it
+ *     depends on the first — with `--sgombra-soglia-ms 0` it never triggers,
+ *     and the server WRITES it at startup instead of letting a dead link be
+ *     measured (`webtransport.c`, `wt_ritmo_adattivo()`).  ⭐ With the defaults
+ *     both are born on, which is the only combination in which this regulator
+ *     measures anything.
+ * ⚠ THE PRICE is the same as the threshold's, and it is written above: the two
+ *   cures were measured together and do not have two separate prices. */
+static bool ritmo_adattivo = true;  /* ⭐ on; --niente-ritmo-adattivo turns off */
+/* ⛔⭐⭐ AND THE FIFTH, which is of another kind: the other four change HOW
+ *      WELL one sees, this one decides whether the session still EXISTS.
+ *      The user's decision of 23 Aug 2026: a line that loses in bursts is not
+ *      served, it is declared dead — the wire drops and one gets back in by
+ *      hand.
+ * ⛔ The two numbers start from the defaults of `webtransport.h`, which are the
+ *    only copy; the options serve the bench, which must be able to move them
+ *    without recompiling.
+ * ⚠⚠ THE PRICE, AND IT IS THE DEAREST OF THE FIVE — `[M]` 23-24 Aug 2026:
+ *    margin **>10×** above `casa-cattiva`, the WORST line that holds (ten
+ *    minutes, maximum stall < 500 ms, zero triggers), and **2.9×** below the
+ *    14.26 s of `raffica-forte`, which serves nobody.  ⛔ IT IS THE CURE THAT
+ *    CLOSES A SESSION: if the threshold were badly tuned it would throw out
+ *    whoever is working.  ⇒ Whoever touches `WT_LM_STALLO_MS` measures those
+ *    two margins again, or delivers a product that disconnects people for a
+ *    number nobody has verified. */
+static bool linea_morta = true;     /* ⭐ on; --niente-linea-morta turns off */
 static uint64_t linea_morta_stallo_ms = WT_LM_STALLO_MS;
 static uint64_t linea_morta_silenzio_s = WT_LM_SILENZIO_S;
-/* ⛔⭐⭐ E L'ULTIMA DELLE CINQUE CHE SI ACCENDONO, ed e' di un'altra specie
- *      ancora: non tocca il video, tocca l'AUDIO.  Un blocco in cui
- *      **tutti** i campioni sono esattamente zero non diventa un datagram.
+/* ⛔⭐⭐ AND THE LAST OF THE FIVE THAT ARE TURNED ON, and it is of yet another
+ *      kind: it does not touch the video, it touches the AUDIO.  A block in
+ *      which **all** the samples are exactly zero does not become a datagram.
  *
- * ⛔ NON VIVE QUI, e non vive nemmeno in un posto solo: il codificatore vero sta
- *    nel FIGLIO (`figli_fase9()`), ma `--audio-prova` ne apre uno anche in
- *    QUESTO processo (`webtransport.c`).  ⇒ Il valore si consegna a tutt'e due,
- *    dallo stesso `bool`, o i due banchi misurerebbero due prodotti diversi.
- * ⚠ `[M]` 24 ago 2026, 09-b84: **102,1 volte** meno traffico a schermo fermo
- *   (557,6 → 5,5 kbit/s), tono di prova puro **1,000**, copertura **0,9996**,
- *   **1 248 blocchi taciuti su 1 248**.  ⚠ Il prezzo: i `mancati` del cliente
- *   salgono di **2 su 5 000** — un buco VOLUTO lascia lo stesso salto di
- *   `istante` di uno perso.
- * ⛔ Fino al 23 agosto l'interruttore era di COMPILAZIONE
- *    (`-DAUDIO_SILENZIO_PREDEFINITO=1`), e quel `-D` e' stato tolto: una strada
- *    sola. */
-static bool audio_silenzio = true;  /* ⭐ acceso; --niente-audio-silenzio spegne */
+ * ⛔ IT DOES NOT LIVE HERE, and it does not even live in one place: the real
+ *    encoder is in the CHILD (`figli_fase9()`), but `--audio-prova` opens one
+ *    in THIS process too (`webtransport.c`).  ⇒ The value is handed to both,
+ *    from the same `bool`, or the two benches would measure two different
+ *    products.
+ * ⚠ `[M]` 24 Aug 2026, 09-b84: **102.1 times** less traffic with a still
+ *   screen (557.6 → 5.5 kbit/s), pure test tone **1.000**, coverage
+ *   **0.9996**, **1 248 blocks silenced out of 1 248**.  ⚠ The price: the
+ *   client's `mancati` rise by **2 out of 5 000** — an INTENDED hole leaves
+ *   the same `istante` jump as a lost one.
+ * ⛔ Until 23 August the switch was a COMPILE-TIME one
+ *    (`-DAUDIO_SILENZIO_PREDEFINITO=1`), and that `-D` has been removed: one
+ *    road only. */
+static bool audio_silenzio = true;  /* ⭐ on; --niente-audio-silenzio turns off */
 
-/* ⛔⭐⭐⭐ FASE 10 — IL BUDGET, E LE SUE TRE MANOPOLE (25 agosto 2026).
+/* ⛔⭐⭐⭐ PHASE 10 — THE BUDGET, AND ITS THREE KNOBS (25 Aug 2026).
  *
- *     Sono TRE perche' sono TRE GRANDEZZE, e mescolarle e' il difetto che la
- *     fase e' andata a curare:
+ *     They are THREE because they are THREE QUANTITIES, and mixing them is the
+ *     defect the phase went to cure:
  *
- *       `--budget-mpixel-s`  il limite **FISICO**: quanti Mpixel/s di
- *                            COMPOSIZIONE questa macchina dichiara di reggere.
- *                            ⛔ `0` = SPENTO, ed e' il predefinito (I6).
- *       `--tetto-sessioni`   il tetto **AMMINISTRATIVO** di §4.6, e da lui si
- *                            dimensionano le quattro tabelle.  Predefinito 10
+ *       `--budget-mpixel-s`  the **PHYSICAL** limit: how many Mpixel/s of
+ *                            COMPOSITION this machine declares it holds.
+ *                            ⛔ `0` = OFF, and it is the default (I6).
+ *       `--tetto-sessioni`   the **ADMINISTRATIVE** cap of §4.6, and the four
+ *                            tables are sized from it.  Default 10
  *                            (`SPECIFICHE.md` §5.5).
- *       `--riserva`          la manopola della regola: quanta parte del caso
- *                            peggiore di un inquilino **fermo** si tiene da
- *                            parte.  Predefinito 0,5, `[M]` §6.9.
+ *       `--riserva`          the rule's knob: how much of the worst case of an
+ *                            **idle** tenant is kept aside.  Default 0.5,
+ *                            `[M]` §6.9.
  *
- * ⛔ Ognuna dichiara nella riga d'avvio il valore in vigore, ACCESO E SPENTO —
- *    la stessa regola delle cinque cure della fase 9, e per la stessa ragione:
- *    due modi di sapere se una cosa e' in vigore sono due numeri che divergono.
- * ⛔⛔ E `--budget-mpixel-s` NON SI AUTO-TARA: `[M]` §6.9 — prima che la
- *      macchina abbia ceduto **una volta**, la capacita' che si legge e' un
- *      **limite inferiore, non un soffitto**.  ⇒ O glielo si da', o non c'e'
- *      budget: un prodotto che deducesse da se' il proprio soffitto
- *      rifiuterebbe utenti per un numero che nessuno ha verificato. */
-static double budget_mpixel_s;                        /* 0 = SPENTO (I6) */
+ * ⛔ Each one declares in the startup line the value in force, ON AND OFF —
+ *    the same rule as the five cures of phase 9, and for the same reason: two
+ *    ways of knowing whether a thing is in force are two numbers that diverge.
+ * ⛔⛔ AND `--budget-mpixel-s` DOES NOT SELF-TUNE: `[M]` §6.9 — before the
+ *      machine has given way **once**, the capacity read is a **lower bound,
+ *      not a ceiling**.  ⇒ Either it is given, or there is no budget: a
+ *      product that deduced its own ceiling would refuse users for a number
+ *      nobody has verified. */
+static double budget_mpixel_s;                        /* 0 = OFF (I6) */
 static double budget_riserva = BUDGET_RISERVA_PREDEFINITA;
 static int tetto_sessioni = RCP_TETTO_SESSIONI;
 
-/* ⛔ Uno per utente, e non per sessione RCP: l'orologio DEVE sopravvivere al
- *    client che se ne va — e' proprio il caso per cui esiste.
- * ⭐ E il numero viene da `rcp.h` (`RCP_TETTO_SESSIONI`), 25 agosto 2026: era
- *    la quarta copia a mano dello stesso 16, l'unica che non dichiarasse
- *    nemmeno un legame.  ⛔ Piu' utenti che posti nel registro delle sessioni
- *    non possono esistere, quindi questa tabella non puo' traboccare **finche'
- *    i due numeri restano lo stesso**: il riquadro in `rcp.h` e' quel che lo
- *    garantisce, e il ripiego qui sotto e' la rete se qualcuno lo slega. */
-/* ⭐⭐ E dalla sera del 25 agosto 2026 si **alloca** su `rcp_tetto()`, che
- *     `--tetto-sessioni` muove all'avvio: il `QUANTI_PRESENTI` che stava qui e'
- *     sparito, e non e' stato lasciato accanto come «massimo» — sarebbe stato
- *     un secondo numero, cioe' la seconda strada di `CODER.md` §2-bis. */
+/* ⛔ One per user, and not per RCP session: the clock MUST survive the client
+ *    that leaves — it is precisely the case it exists for.
+ * ⭐ And the number comes from `rcp.h` (`RCP_TETTO_SESSIONI`), 25 Aug 2026: it
+ *    was the fourth hand-made copy of the same 16, the only one that did not
+ *    even declare a link.  ⛔ More users than slots in the session registry
+ *    cannot exist, so this table cannot overflow **as long as the two numbers
+ *    stay the same**: the box in `rcp.h` is what guarantees it, and the
+ *    fallback below is the net if someone unties them. */
+/* ⭐⭐ And since the evening of 25 Aug 2026 it is **allocated** on
+ *     `rcp_tetto()`, which `--tetto-sessioni` moves at startup: the
+ *     `QUANTI_PRESENTI` that stood here is gone, and was not left alongside as
+ *     a «maximum» — it would have been a second number, that is the second
+ *     road of `CODER.md` §2-bis. */
 static struct presente {
 	char utente[257];
 	uint64_t ultimo_input_ms;
 } *presenti;
 static int quanti_presenti;
 
-/* ⛔ Si alloca alla prima presenza da segnare, una volta sola.  ⚠ Se la memoria
- *    non c'e', vale il ripiego che questa tabella gia' dichiara piu' sotto: gli
- *    utenti non hanno l'orologio dell'abbandono, e si scrive. */
+/* ⛔ It is allocated at the first presence to record, once only.  ⚠ If the
+ *    memory is not there, the fallback this table already declares further
+ *    down applies: the users have no abandonment clock, and it is written. */
 static bool presenti_pronti(void)
 {
 	if (presenti)
@@ -1352,24 +1376,24 @@ static bool presenti_pronti(void)
 	return true;
 }
 
-/* ⭐ «Qui c'e' stato un gesto adesso.»  Se l'utente non c'e' in tabella lo si
- *    aggiunge: il primo gesto e' anche il primo segno di presenza. */
+/* ⭐ «A gesture happened here just now.»  If the user is not in the table they
+ *    are added: the first gesture is also the first sign of presence. */
 static void presenza_segna(const char *utente, uint64_t ora_ms)
 {
 	int libero = -1;
 	if (!utente || !utente[0])
 		return;
 	if (!presenti_pronti()) {
-		/* ⛔ Ripiego dichiarato: senza tabella non c'e' orologio, e il caso
-		 *    e' lo stesso della tabella piena qui sotto. */
+		/* ⛔ Declared fallback: without a table there is no clock, and the
+		 *    case is the same as the full table below. */
 		static bool niente_tabella_detto;
 
 		if (!niente_tabella_detto) {
 			niente_tabella_detto = true;
 			registro_dice(REG_FIGLIO,
-			              "⚠ RIPIEGO DICHIARATO: non c'e' memoria per la "
-			              "tabella della presenza: NESSUNA sessione grafica "
-			              "scadra' per abbandono");
+			              "⚠ DECLARED FALLBACK: there is no memory for the "
+			              "presence table: NO graphical session "
+			              "will expire by abandonment");
 		}
 		return;
 	}
@@ -1385,28 +1409,28 @@ static void presenza_segna(const char *utente, uint64_t ora_ms)
 		}
 	}
 	if (libero < 0) {
-		/* ⛔⭐ IL RIPIEGO SI DICHIARA — `CODER.md` §4.2, 25 agosto 2026.
+		/* ⛔⭐ THE FALLBACK IS DECLARED — `CODER.md` §4.2, 25 Aug 2026.
 		 *
-		 *     Qui c'era un `return` MUTO.  Il costo: il diciassettesimo utente
-		 *     non aveva l'orologio dell'abbandono, quindi la sua sessione
-		 *     grafica **non sarebbe mai scaduta a 60 minuti** — e nessuna riga
-		 *     lo diceva.  ⚠ Il sintomo, un'ora dopo, e' «a quell'utente il
-		 *     palco resta vivo per sempre», che nessuno collega a questa riga.
+		 *     Here there was a MUTE `return`.  The cost: the seventeenth user
+		 *     had no abandonment clock, so their graphical session **would
+		 *     never have expired at 60 minutes** — and no line said so.  ⚠ The
+		 *     symptom, an hour later, is «that user's stage stays alive
+		 *     forever», which nobody connects to this line.
 		 *
-		 * ⚠ Una volta sola e non una per gesto: qui si passa a ogni movimento
-		 *   del mouse, ed e' il difetto dei 30,8 GB di registro.  ⛔ Il fatto
-		 *   non e' «e' successo di nuovo»: e' «da adesso c'e' un utente senza
-		 *   orologio», e si dice quando comincia. */
+		 * ⚠ Once only and not once per gesture: we pass here at every mouse
+		 *   movement, and it is the defect of the 30.8 GB of log.  ⛔ The fact
+		 *   is not «it happened again»: it is «from now on there is a user
+		 *   without a clock», and it is said when it starts. */
 		static bool presenti_pieni_detto;
 
 		if (!presenti_pieni_detto) {
 			presenti_pieni_detto = true;
 			registro_dice(REG_FIGLIO,
-			              "⚠ RIPIEGO DICHIARATO: la tabella della presenza e' "
-			              "piena (%d): «%s» non ci sta, e la sua sessione "
-			              "grafica NON scadra' per abbandono.  ⛔ Se questa "
-			              "riga esiste, i tetti di rcp.h e di main.c si sono "
-			              "slegati: non dovrebbe poter succedere",
+			              "⚠ DECLARED FALLBACK: the presence table is "
+			              "full (%d): «%s» does not fit, and their graphical "
+			              "session will NOT expire by abandonment.  ⛔ If this "
+			              "line exists, the caps of rcp.h and of main.c have come "
+			              "untied: it should not be able to happen",
 			              quanti_presenti, utente);
 		}
 		return;
@@ -1432,7 +1456,7 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
 	struct ponte *p = (struct ponte *)ctx;
 	if (!p || !p->f)
 		return false;
-	/* ⛔ SOLO i cinque gesti veri: la ragione sta sul riquadro qui sopra. */
+	/* ⛔ ONLY the five real gestures: the reason is in the box above. */
 	if (azione == FIGLI_INPUT_PUNTATORE || azione == FIGLI_INPUT_PULSANTE ||
 	    azione == FIGLI_INPUT_ROTELLA || azione == FIGLI_INPUT_LETTERA ||
 	    azione == FIGLI_INPUT_POSIZIONE)
@@ -1440,37 +1464,37 @@ static bool input_al_figlio(void *ctx, const char *utente, uint32_t id,
 	return figli_input(p->f, utente, id, azione, codice, premuto, a, b);
 }
 
-/* ⭐⭐ LA CUCITURA DELLA TELA — e chiude la catena che il mandato della fase 4
- *     chiamava per nome: `figli_ritela()` → `cattura_ridimensiona()`.
+/* ⭐⭐ THE CANVAS SEAM — and it closes the chain that the mandate of phase 4
+ *     called by name: `figli_ritela()` → `cattura_ridimensiona()`.
  *
- *     Chi sa che l'utente ha chiesto un'altra misura: `rcp.c`, che ha applicato
- *     §7.1 e `rcp_misura_ammessa()` — intervallo, parita', e il tetto che tiene
- *     in vita il compositore di chi ci ospita.
- *     Chi sa a quale sessione appartiene: `webtransport.c`.
- *     ⛔ Chi puo' davvero cambiarla: il FIGLIO, che ha il flusso PipeWire.
- *     ⇒ `main.c` e' l'unico che conosce tutt'e tre, e **non decide niente**.
+ *     Who knows the user has asked for another size: `rcp.c`, which has
+ *     applied §7.1 and `rcp_misura_ammessa()` — range, parity, and the ceiling
+ *     that keeps the host's compositor alive.
+ *     Who knows which session it belongs to: `webtransport.c`.
+ *     ⛔ Who can really change it: the CHILD, which has the PipeWire stream.
+ *     ⇒ `main.c` is the only one that knows all three, and **decides nothing**.
  *
- * ⛔ E questa riga vale quattro sintomi, non uno (`DECISIONI.md` §5.0-sexies):
- *    le bande nere laterali, il testo interpolato, il ri-attacco a misura
- *    diversa, e ⭐ **i quattro secondi fra il login e il desktop** — perche'
- *    `pw_stream_update_params()` e' un riavvio del flusso, e un riavvio
- *    consegna un buffer anche a scena ferma. */
+ * ⛔ And this line is worth four symptoms, not one (`DECISIONI.md`
+ *    §5.0-sexies): the black side bands, the interpolated text, the reattach
+ *    at a different size, and ⭐ **the four seconds between login and
+ *    desktop** — because `pw_stream_update_params()` is a restart of the
+ *    stream, and a restart delivers a buffer even with a still scene. */
 /*
- * ⭐⭐ §7.6 di `RCP.md` — «L'UTENTE HA CHIESTO DI USCIRE».
+ * ⭐⭐ §7.6 of `RCP.md` — «THE USER HAS ASKED TO LOG OUT».
  *
- * ⛔ DUE COSE, E IN QUEST'ORDINE:
+ * ⛔ TWO THINGS, AND IN THIS ORDER:
  *
- *   1. si congedano **gli altri client di quell'utente** con `0x10`.  La
- *      sessione grafica e' UNA (I2): chi la stesse guardando da un secondo
- *      dispositivo resterebbe con uno schermo fermo per sempre, e nessuna riga
- *      gli direbbe perche'.  ⚠ Chi ha chiesto e' gia' stato congedato da
- *      `rcp.c`, e infatti si salta (`tranne`);
- *   2. **poi** si chiede al figlio di terminare la sessione.
+ *   1. **that user's other clients** are sent away with `0x10`.  The graphical
+ *      session is ONE (I2): whoever was watching it from a second device would
+ *      be left with a frozen screen forever, and no line would tell them why.
+ *      ⚠ Whoever asked has already been sent away by `rcp.c`, and indeed is
+ *      skipped (`tranne`);
+ *   2. **then** the child is asked to end the session.
  *
- * ⛔ L'ordine e' normativo e non e' una preferenza: quando il compositore cade,
- *    il palco cade con lui e i canali non servono piu'.  Un `0x10` spedito dopo
- *    e' un motivo che esiste e che nessuno riceve — il rilievo B-7 con un nome
- *    nuovo.
+ * ⛔ The order is normative and not a preference: when the compositor falls,
+ *    the stage falls with it and the channels are no longer needed.  A `0x10`
+ *    sent afterwards is a reason that exists and that nobody receives —
+ *    finding B-7 under a new name.
  */
 static void termina_al_figlio(void *ctx, const char *utente)
 {
@@ -1481,95 +1505,95 @@ static void termina_al_figlio(void *ctx, const char *utente)
 		return;
 
 	altri = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
-	                          "un altro client di questo utente ha chiuso la "
-	                          "sessione", NULL);
+	                          "another client of this user has closed the "
+	                          "session", NULL);
 	if (altri)
 		registro_dice(REG_WT,
-		              "⭐ §7.6: congedati con 0x10 anche %zu altri client di «%s» "
-		              "— la sessione grafica e' una sola (I2), e chi la stava "
-		              "guardando deve saperlo adesso, non fra trenta secondi",
+		              "⭐ §7.6: also sent away with 0x10 %zu other clients of «%s» "
+		              "— the graphical session is one only (I2), and whoever was "
+		              "watching it must know now, not in thirty seconds",
 		              altri, utente);
 
 	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_UTENTE))
 		registro_dice(REG_AVVIO,
-		              "⛔ §7.6: la richiesta di terminare la sessione di «%s» NON "
-		              "e' partita verso il figlio: i client sono stati congedati "
-		              "con 0x10 e il desktop e' ancora li'.  ⚠ Due verita' sullo "
-		              "stesso fatto, e questa riga e' l'unico posto in cui si vede",
+		              "⛔ §7.6: the request to end the session of «%s» did NOT "
+		              "leave towards the child: the clients have been sent away "
+		              "with 0x10 and the desktop is still there.  ⚠ Two truths about the "
+		              "same fact, and this line is the only place where it shows",
 		              utente);
 }
 
-/* ⛔⛔⭐ §5.3 — L'ABBANDONO SCADE, e la sessione si chiude.
+/* ⛔⛔⭐ §5.3 — ABANDONMENT EXPIRES, and the session closes.
  *
- *     ⚠ E l'ordine e' lo STESSO di §7.6 e per la stessa ragione normativa:
- *     prima si dice a chi guarda PERCHE', poi si chiude.  Quando il compositore
- *     cade il palco cade con lui, e un motivo spedito dopo e' un motivo che
- *     nessuno riceve (rilievo B-7).
+ *     ⚠ And the order is the SAME as §7.6 and for the same normative reason:
+ *     first whoever is watching is told WHY, then it closes.  When the
+ *     compositor falls the stage falls with it, and a reason sent afterwards
+ *     is a reason nobody receives (finding B-7).
  *
- * ⭐ E il motivo e' `0x03 SESSIONE_ABBANDONATA`, che §8.2 aveva gia' e che
- *    **nessuna riga di codice aveva mai spedito** — la stessa forma E1 di
- *    `0x02` fino a stamattina.  ⚠ Di solito non lo ricevera' nessuno: se
- *    l'orologio scade e' perche' non c'era piu' nessuno.  Ma «di solito» non e'
- *    «mai», e chi c'e' deve leggere una frase invece di guardare uno schermo
- *    fermo. */
+ * ⭐ And the reason is `0x03 SESSIONE_ABBANDONATA`, which §8.2 already had and
+ *    which **no line of code had ever sent** — the same form E1 as `0x02`
+ *    until this morning.  ⚠ Usually nobody will receive it: if the clock
+ *    expires it is because nobody was there any more.  But «usually» is not
+ *    «never», and whoever is there must read a sentence instead of looking at
+ *    a frozen screen. */
 static void abbandono_scaduto(struct ponte *p, const char *utente,
                               uint64_t fermo_ms)
 {
 	size_t quanti;
 
 	registro_dice(REG_AVVIO,
-	              "⭐ §5.3 — ABBANDONO: «%s» non tocca niente da %llu ms (tetto "
-	              "%llu).  ⛔ CHIUDO la sessione grafica, e con lei i suoi "
-	              "programmi: e' la decisione dell'utente del 16 agosto 2026, "
-	              "«se dopo 60 minuti non c'e' traccia di input la sessione "
-	              "viene killata»",
+	              "⭐ §5.3 — ABANDONMENT: «%s» has touched nothing for %llu ms (ceiling "
+	              "%llu).  ⛔ I CLOSE the graphical session, and with it its "
+	              "programs: it is the user's decision of 16 Aug 2026, "
+	              "«if after 60 minutes there is no trace of input the session "
+	              "gets killed»",
 	              utente, (unsigned long long)fermo_ms,
 	              (unsigned long long)abbandono_ms);
 
 	quanti = wt_congeda_utente(utente, RCP_SESSIONE_ABBANDONATA,
-	                           "sessione abbandonata: nessun input entro il "
-	                           "tetto di §5.3",
+	                           "session abandoned: no input within the "
+	                           "ceiling of §5.3",
 	                           NULL);
 	if (quanti)
 		registro_dice(REG_WT,
-		              "⚠ §5.3: c'erano ANCORA %zu client attaccati a «%s», "
-		              "congedati con 0x03 prima di chiudere — guardavano senza "
-		              "toccare niente da %llu ms (tetto %llu).  ⛔ E il numero si "
-		              "SCRIVE invece di dirlo a parole: il tetto e' configurabile, "
-		              "e «un'ora» sarebbe vero solo col valore predefinito",
+		              "⚠ §5.3: there were STILL %zu clients attached to «%s», "
+		              "sent away with 0x03 before closing — they were watching without "
+		              "touching anything for %llu ms (ceiling %llu).  ⛔ And the number is "
+		              "WRITTEN instead of saying it in words: the ceiling is configurable, "
+		              "and «one hour» would be true only with the default value",
 		              quanti, utente, (unsigned long long)fermo_ms,
 		              (unsigned long long)abbandono_ms);
 
-	/* ⭐ FASE 17 T7 — un desktop RITROVATO non ha figlio: nessuno a cui
-	 *    chiedere di chiuderlo.  ⇒ Se ne fa nascere uno (D1: il figlio si
-	 *    rifa'), che sta nel bus di sessione dell'utente e sa chiudere ogni
-	 *    desktop (`sessione_termina()`); la domanda qui sotto lo aspetta nel
-	 *    suo socket.  ⚠ Il padre non chiude da se': da root e fuori dal bus
-	 *    saprebbe solo uccidere, e i desktop si chiudono, non si uccidono. */
+	/* ⭐ PHASE 17 T7 — a desktop FOUND AGAIN has no child: nobody to ask to
+	 *    close it.  ⇒ One is spawned (D1: the child is remade), which sits in
+	 *    the user's session bus and knows how to close every desktop
+	 *    (`sessione_termina()`); the request below waits for it in its socket.
+	 *    ⚠ The parent does not close it by itself: as root and outside the bus
+	 *    it would only know how to kill, and desktops are closed, not killed. */
 	if (figli_pid_di(p->f, utente) <= 0 && ritrovato_di(utente)) {
 		registro_dice(REG_AVVIO,
-		              "⭐ FASE 17 T7: «%s» ha un desktop RITROVATO e nessun "
-		              "figlio — ne faccio nascere uno che lo chiuda",
+		              "⭐ PHASE 17 T7: «%s» has a desktop FOUND AGAIN and no "
+		              "child — I spawn one to close it",
 		              utente);
 		if (figli_assicura(p->f, utente))
 			ritrovato_togli(utente);
 	}
 	if (!figli_termina_sessione(p->f, utente, FIGLI_USCITA_ABBANDONO))
 		registro_dice(REG_AVVIO,
-		              "⛔ §5.3: la richiesta di chiudere la sessione abbandonata "
-		              "di «%s» NON e' partita verso il figlio: i client sono "
-		              "stati congedati con 0x03 e il desktop e' ancora li'",
+		              "⛔ §5.3: the request to close the abandoned session "
+		              "of «%s» did NOT leave towards the child: the clients have "
+		              "been sent away with 0x03 and the desktop is still there",
 		              utente);
-	/* ⛔ Si dimentica COMUNQUE: se la chiusura non e' passata, riprovare ogni
-	 *    giro riempirebbe il registro di una riga al secondo per un guasto che
-	 *    la prima riga ha gia' detto.  ⚠ E se una sessione nuova nascera', il
-	 *    suo primo gesto la rimettera' in tabella. */
+	/* ⛔ It is forgotten ANYWAY: if the closing did not go through, retrying at
+	 *    every round would fill the log with one line per second for a fault
+	 *    the first line has already reported.  ⚠ And if a new session is born,
+	 *    its first gesture will put it back in the table. */
 	presenza_dimentica(utente);
 }
 
-/* ⭐ Il giro dell'orologio.  ⚠ Chiamato a ogni passata del ciclo: non costa
- *    niente (sedici confronti) e una scadenza che aspetta un evento e' una
- *    scadenza che non scatta mai — la lezione di `regola_battito`. */
+/* ⭐ The clock's round.  ⚠ Called at every pass of the loop: it costs nothing
+ *    (sixteen comparisons) and an expiry that waits for an event is an expiry
+ *    that never triggers — the lesson of `regola_battito`. */
 static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
 {
 	if (!abbandono_ms || !p || !p->f)
@@ -1580,11 +1604,11 @@ static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
 		if (ora_ms <= presenti[i].ultimo_input_ms)
 			continue;
 		if (ora_ms - presenti[i].ultimo_input_ms > abbandono_ms) {
-			/* ⛔ Una COPIA, non il puntatore: `abbandono_scaduto()` finisce
-			 *    chiamando `presenza_dimentica()`, che azzera proprio quella
-			 *    casella — e il nome serve fino all'ultima riga.
-			 * ⚠ `memcpy` e non `snprintf`: la sorgente ha la stessa misura
-			 *   della destinazione, e il compilatore non puo' saperlo. */
+			/* ⛔ A COPY, not the pointer: `abbandono_scaduto()` ends up
+			 *    calling `presenza_dimentica()`, which zeroes precisely that
+			 *    slot — and the name is needed until the last line.
+			 * ⚠ `memcpy` and not `snprintf`: the source has the same size as
+			 *   the destination, and the compiler cannot know it. */
 			char chi[sizeof presenti[0].utente];
 			memcpy(chi, presenti[i].utente, sizeof chi);
 			chi[sizeof chi - 1] = '\0';
@@ -1594,12 +1618,13 @@ static void abbandono_giro(struct ponte *p, uint64_t ora_ms)
 }
 
 /*
- * ⭐ §7.6, il gemello: la sessione grafica e' finita e non l'ha chiesta nessun
- *    client — l'utente e' uscito dal menu del desktop.
+ * ⭐ §7.6, the twin: the graphical session has ended and no client asked for
+ *    it — the user logged out from the desktop menu.
  *
- * ⛔ Chi guarda viene congedato con `0x10` ADESSO.  Tacendo, resterebbe su uno
- *    schermo fermo fino ai trenta secondi del silenzio e poi leggerebbe «errore
- *    di rete»: e' il rilievo B-7, e questa e' la riga che lo impedisce.
+ * ⛔ Whoever is watching is sent away with `0x10` NOW.  Staying silent, they
+ *    would be left on a frozen screen until the thirty seconds of silence and
+ *    then read «network error»: it is finding B-7, and this is the line that
+ *    prevents it.
  */
 static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
 {
@@ -1608,16 +1633,16 @@ static void sessione_finita_dal_figlio(void *ctx, const char *utente, uid_t uid)
 	(void)ctx;
 	(void)uid;
 	quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
-	                           "la sessione grafica e' terminata", NULL);
+	                           "the graphical session has ended", NULL);
 	registro_dice(REG_WT,
-	              "⭐ §7.6: la sessione di «%s» e' finita dal desktop — congedati "
-	              "%zu client con 0x10 (⚠ zero e' normale: puo' non guardare "
-	              "nessuno)",
+	              "⭐ §7.6: the session of «%s» was ended from the desktop — sent away "
+	              "%zu clients with 0x10 (⚠ zero is normal: nobody may be "
+	              "watching)",
 	              utente, quanti);
 }
 
-/* ⭐ §7.1: il palco non c'e' ancora — si rimanda il fondo invece di rispondere
- *    `NON_ORA` a una domanda che sta per avere una risposta vera. */
+/* ⭐ §7.1: the stage is not there yet — the bottom is postponed instead of
+ *    answering `NON_ORA` to a question that is about to have a real answer. */
 static void tela_attendi_dal_figlio(void *ctx, const char *utente, uid_t uid,
                                     uint32_t voluta_l, uint32_t voluta_a)
 {
@@ -1626,8 +1651,9 @@ static void tela_attendi_dal_figlio(void *ctx, const char *utente, uid_t uid,
 	wt_tela_rimanda(utente, voluta_l, voluta_a);
 }
 
-/* ⭐ §5-bis.7 — e delega a `figli_disposizione()` come `ritela_al_figlio()`
- *    delega a `figli_ritela()`: questo file e' il ponte, non la regola. */
+/* ⭐ §5-bis.7 — and it delegates to `figli_disposizione()` as
+ *    `ritela_al_figlio()` delegates to `figli_ritela()`: this file is the
+ *    bridge, not the rule. */
 static bool disposizione_al_figlio(void *ctx, const char *utente,
                                    const char *nome)
 {
@@ -1646,103 +1672,105 @@ static bool ritela_al_figlio(void *ctx, const char *utente, uint32_t larghezza,
 	return figli_ritela(p->f, utente, larghezza, altezza);
 }
 
-/* ⛔ Il figlio se n'e' andato.  ⚠ Non c'e' piu' nessun deposito da svuotare —
- * era la cura della fase 2 — ma la riga resta perche' il fatto e' un fatto: da
- * adesso quell'utente non ha piu' un palco, e le sue sessioni non vedranno piu'
- * arrivare fotogrammi.  ⛔ E NON si chiude niente: `SPECIFICHE.md` §8.3, «mai
- * staccare» — una sessione senza fotogrammi vale piu' di una sessione chiusa. */
+/* ⛔ The child has gone.  ⚠ There is no longer any depot to empty — it was
+ * the cure of phase 2 — but the line stays because the fact is a fact: from
+ * now on that user no longer has a stage, and their sessions will no longer
+ * see frames arrive.  ⛔ And NOTHING is closed: `SPECIFICHE.md` §8.3, «never
+ * disconnect» — a session without frames is worth more than a closed session. */
 static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 {
 	(void)ctx;
 	registro_dice(REG_VIDEO,
-	              "⛔ il palco di «%s» (uid %ld) se n'e' andato: da adesso le sue "
-	              "sessioni non ricevono piu' fotogrammi.  ⚠ NON si chiude "
-	              "niente (I1, SPECIFICHE.md §8.3): una sessione ferma vale piu' "
-	              "di una sessione staccata, e il palco puo' rinascere",
+	              "⛔ the stage of «%s» (uid %ld) has gone: from now on their "
+	              "sessions no longer receive frames.  ⚠ NOTHING is "
+	              "closed (I1, SPECIFICHE.md §8.3): a still session is worth more "
+	              "than a disconnected session, and the stage can be born again",
 	              utente, (long)uid);
-	/* ⛔⭐ E LA MISURA DEL SUO PALCO SI DIMENTICA — difetto trovato refutando, la
-	 *     notte del 15 agosto 2026: quel numero serve al RI-ATTACCO
-	 *     (`SESSIONE` concede la tela che il palco ha gia'), e un numero di un
-	 *     palco morto e' peggio di nessun numero — fa concedere una tela che
-	 *     nessun fotogramma avra' mai. */
+	/* ⛔⭐ AND THE SIZE OF ITS STAGE IS FORGOTTEN — defect found while refuting,
+	 *     the night of 15 Aug 2026: that number serves the REATTACH
+	 *     (`SESSIONE` grants the canvas the stage already has), and a number of
+	 *     a dead stage is worse than no number — it makes a canvas be granted
+	 *     that no frame will ever have. */
 	wt_palco_dimentica(utente);
-	/* ⭐ D-004 — e la sua casella nella tabella della presenza: senza palco
-	 *    non c'e' niente da far scadere, e una casella rimasta farebbe
-	 *    chiedere al figlio, un'ora dopo, di chiudere una sessione che non
-	 *    c'e' piu' (la riga «⛔ §5.3 … NON e' partita» per un guasto che non
-	 *    esiste).  Il prossimo palco la riaprira' alla nascita. */
+	/* ⭐ D-004 — and its slot in the presence table: without a stage there is
+	 *    nothing to expire, and a slot left behind would make the child be
+	 *    asked, an hour later, to close a session that no longer exists (the
+	 *    line «⛔ §5.3 … NON e' partita» for a fault that does not exist).  The
+	 *    next stage will reopen it at birth. */
 	presenza_dimentica(utente);
 
 	/*
-	 * ⭐⭐⭐ §7.6, IL GEMELLO — E STA QUI, NON NEL FIGLIO.  Difetto trovato dal
-	 *      banco del logout, 15 agosto 2026.
+	 * ⭐⭐⭐ §7.6, THE TWIN — AND IT LIVES HERE, NOT IN THE CHILD.  Defect found
+	 *      by the logout bench, 15 Aug 2026.
 	 *
-	 * ⛔ Il figlio aveva il codice per accorgersi che la sessione grafica era
-	 *    finita («c'era e adesso non c'e' piu'»), e `[M]` non e' mai scattato:
-	 *    **al logout il figlio muore col segnale 15**.  E' lui il processo
-	 *    GUIDA della sessione logind — la apre lui con `pam_open_session` — e
-	 *    quando la sessione finisce se lo porta via.  ⇒ Non puo' riferire un
-	 *    fatto che lo uccide.
+	 * ⛔ The child had the code to notice that the graphical session had ended
+	 *    («it was there and now it is gone»), and `[M]` it never triggered:
+	 *    **at logout the child dies with signal 15**.  It is the LEADER
+	 *    process of the logind session — it opens it with `pam_open_session`
+	 *    — and when the session ends it takes it away.  ⇒ It cannot report a
+	 *    fact that kills it.
 	 *
-	 * ⭐ Ma il padre lo RACCOGLIE, ed e' esattamente questa riga.  ⇒ Figlio
-	 *    morto = sessione grafica finita, sempre: il palco vive nel figlio, e
-	 *    la sessione logind pure.
+	 * ⭐ But the parent REAPS it, and it is exactly this line.  ⇒ Child dead =
+	 *    graphical session over, always: the stage lives in the child, and so
+	 *    does the logind session.
 	 *
-	 * ⚠ E vale anche se il figlio e' morto per un guasto invece che per una
-	 *   scelta dell'utente: da qui non si distinguono, ⛔ e il comportamento
-	 *   giusto e' lo stesso — dirlo a chi guarda invece di lasciarlo davanti a
-	 *   uno schermo fermo per i trenta secondi del silenzio, che e' il rilievo
-	 *   B-7.  Il motivo `0x10` dice «la sessione e' terminata», che in tutt'e
-	 *   due i casi e' vero.
+	 * ⚠ And it holds even if the child died of a fault instead of a choice of
+	 *   the user: from here they cannot be told apart, ⛔ and the right
+	 *   behaviour is the same — saying it to whoever is watching instead of
+	 *   leaving them in front of a frozen screen for the thirty seconds of
+	 *   silence, which is finding B-7.  The reason `0x10` says «the session has
+	 *   ended», which in both cases is true.
 	 *
-	 * ⛔ MA NON QUANDO SI STA SPEGNENDO IL SERVER: li' il motivo giusto e'
-	 *    `0x0C SERVER_IN_CHIUSURA`, e lo manda `main()` a tutte le sessioni.
-	 *    Dire `0x10` a chi sta per ricevere `0x0C` sarebbe dirgli che la sua
-	 *    sessione e' finita quando invece la ritrovera'.
+	 * ⛔ BUT NOT WHEN THE SERVER IS SHUTTING DOWN: there the right reason is
+	 *    `0x0C SERVER_IN_CHIUSURA`, and `main()` sends it to all sessions.
+	 *    Saying `0x10` to whoever is about to receive `0x0C` would be telling
+	 *    them their session is over when instead they will find it again.
 	 */
 	if (!si_ferma) {
 		size_t quanti = wt_congeda_utente(utente, RCP_SESSIONE_TERMINATA,
-		                                  "la sessione grafica e' terminata",
+		                                  "the graphical session has ended",
 		                                  NULL);
 		if (quanti)
 			registro_dice(REG_WT,
-			              "⭐ §7.6: il palco di «%s» se n'e' andato ⇒ la sessione "
-			              "grafica e' finita: congedati %zu client con 0x10 invece "
-			              "di lasciarli su uno schermo fermo",
+			              "⭐ §7.6: the stage of «%s» has gone ⇒ the graphical "
+			              "session is over: sent away %zu clients with 0x10 instead "
+			              "of leaving them on a frozen screen",
 			              utente, quanti);
 	}
 }
 
-/* ⭐⭐ LA RISPOSTA DEL PALCO SULLA TELA — §7.1, e attraversa il confine nel verso
- *     del cursore: la domanda e' uscita con `figli_ritela()`, questa rientra.
+/* ⭐⭐ THE STAGE'S ANSWER ON THE CANVAS — §7.1, and it crosses the boundary in
+ *     the cursor's direction: the question went out with `figli_ritela()`,
+ *     this comes back in.
  *
- * ⛔ E il padre non la INDOVINA piu' dai fotogrammi: il figlio dice a quale
- *    richiesta risponde (`voluta`) e che cosa il palco ha davvero (`avuta`, con
- *    `0x0` = non ce l'ha fatta).  ⚠ Senza, due `ADATTA_TELA` incatenate — un
- *    utente che trascina il bordo — facevano prendere il fotogramma della prima
- *    per la risposta della seconda. */
-/* ⭐ §5.1 — l'adattatore fra il gancio di `webtransport.c` e `sentinella.c`.
+ * ⛔ And the parent no longer GUESSES it from the frames: the child says which
+ *    request it answers (`voluta`) and what the stage really has (`avuta`, with
+ *    `0x0` = it did not make it).  ⚠ Without this, two chained `ADATTA_TELA` —
+ *    a user dragging the border — made the frame of the first be taken for the
+ *    answer to the second. */
+/* ⭐ §5.1 — the adapter between the hook of `webtransport.c` and `sentinella.c`.
  *
- * ⛔ E' qui e non la' perche' `webtransport.c` non conosce logind e non deve:
- *    quel modulo sa **quali sessioni sono di quell'utente**, questo sa **chi
- *    chiedere**.  Sono due mestieri, e tenerli separati e' quel che permette al
- *    banco di innestare un guardiano finto senza toccare il trasporto. */
+ * ⛔ It is here and not there because `webtransport.c` does not know logind and
+ *    must not: that module knows **which sessions belong to that user**, this
+ *    one knows **whom to ask**.  They are two jobs, and keeping them separate
+ *    is what allows the bench to graft a fake guard without touching the
+ *    transport. */
 static bool chiedi_sessione_locale(void *ctx, const char *utente, char *quale,
                                    size_t quanto)
 {
 	return sentinella_locale((sentinella *)ctx, utente, quale, quanto);
 }
 
-/* ⭐⭐ §5.1 — l'adattatore del RIPASSO, e chiede per TUTTI gli inquilini in una
- *     volta sola.  Il perche' — `[M]` §6.13, `N × D` che diventa `D` — sta per
- *     intero in `sentinella.h` sopra `sentinella_locali()`.
+/* ⭐⭐ §5.1 — the adapter of the CHECK, and it asks for ALL tenants at once.
+ *     The why — `[M]` §6.13, `N × D` that becomes `D` — is written out in full
+ *     in `sentinella.h` above `sentinella_locali()`.
  *
- * ⛔ E' un secondo adattatore e non un parametro in piu' sul primo perche' le
- *    due domande hanno due mestieri diversi: quella sopra la fa `rcp.c`
- *    all'`ATTACCA`, una volta per sessione, e li' il costo non si vede; questa
- *    gira ogni due secondi **dentro il ciclo che consegna i fotogrammi**.
- * ⭐ E resta la leva del banco: il guardiano finto si innesta QUI, e il
- *    trasporto non si tocca. */
+ * ⛔ It is a second adapter and not one more parameter on the first because
+ *    the two questions have two different jobs: the one above is asked by
+ *    `rcp.c` at `ATTACCA`, once per session, and there the cost does not show;
+ *    this one runs every two seconds **inside the loop that delivers frames**.
+ * ⭐ And it stays the bench's lever: the fake guard is grafted HERE, and the
+ *    transport is not touched. */
 static size_t ripassa_sessioni_locali(void *ctx, const char *const *utenti,
                                       size_t quanti, bool *locale, char *quali,
                                       size_t larghezza)
@@ -1775,32 +1803,32 @@ int main(int argc, char **argv)
 	trasporto *t = NULL;
 	pagina *p = NULL;
 	comando *k = NULL;
-	aiutante *pam_aiuto = NULL;  /* ⚠ non «aiuto»: quel nome e' gia' della funzione che stampa l'uso */
+	aiutante *pam_aiuto = NULL;  /* ⚠ not «aiuto»: that name already belongs to the function that prints the usage */
 	figli *prole = NULL;
 	struct ponte ponte;
 	sentinella *guardiano = NULL;
 	time_t ultimo_controllo_cert;
 	uint64_t ultimo_ripasso_locali = 0;
 	uint64_t ultimo_conto_guardiano = 0;
-	bool journal_chiesto = false;   /* --journal, fase 16 §12 */
+	bool journal_chiesto = false;   /* --journal, phase 16 §12 */
 	int esito = 1;
 
-	/* ⛔⭐ E QUESTA E' LA PRIMA RIGA DEL PROGRAMMA, PRIMA DI QUALUNQUE ALTRA
-	 *     COSA: se siamo il figlio, non siamo un server.
+	/* ⛔⭐ AND THIS IS THE FIRST LINE OF THE PROGRAM, BEFORE ANYTHING ELSE: if
+	 *     we are the child, we are not a server.
 	 *
-	 *     `figli_assicura()` ci ha gia' fatto scendere all'uid dell'utente e ha
-	 *     fatto `exec` di questo stesso binario (`figlio.c`, riquadro in testa:
-	 *     senza `exec` il figlio avrebbe in memoria la chiave privata TLS del
-	 *     server, e la memoria di un processo appartiene al suo proprietario).
-	 *     ⛔ Qui non si apre niente, non si legge nessun certificato e non si
-	 *     tocca il file dei ban: si va dritti a `figlio_vive()`, che non torna. */
+	 *     `figli_assicura()` has already brought us down to the user's uid and
+	 *     has done `exec` of this same binary (`figlio.c`, box at the top:
+	 *     without `exec` the child would have the server's private TLS key in
+	 *     memory, and a process's memory belongs to its owner).
+	 *     ⛔ Here nothing is opened, no certificate is read and the ban file is
+	 *     not touched: we go straight to `figlio_vive()`, which does not return. */
 	if (argc >= 2 && strcmp(argv[1], "--figlio-interno") == 0) {
 		figlio_vive(argc, argv);
-		return 1; /* non ci si arriva */
+		return 1; /* never reached */
 	}
-	/* ⭐ FASE 17 (§6.5-bis) — la prova di codifica della certificazione: da
-	 *    sola, prima di tutto il resto — niente certificati, niente rete,
-	 *    niente sessioni.  Il contratto e' in `figlio.h`. */
+	/* ⭐ PHASE 17 (§6.5-bis) — the encoding test of the certification: on its
+	 *    own, before everything else — no certificates, no network, no
+	 *    sessions.  The contract is in `figlio.h`. */
 	if (argc >= 2 && strcmp(argv[1], "--prova-codifica") == 0)
 		return figlio_prova_codifica(argc - 2, argv + 2);
 
@@ -1817,308 +1845,306 @@ int main(int argc, char **argv)
 			dir_cert = argv[++i];
 		else if (strcmp(a, "--pagina") == 0 && v)
 			file_html = argv[++i];
-		/* ⛔ DUE NOMI PER LA STESSA OPZIONE, E SI ACCETTANO TUTT'E DUE —
-		 *    rilievo R12.9a, 10 agosto 2026 notte.  Questo server diceva
-		 *    `--ban`; l'ospite dei banchi (`01-b3-rcp-innesta.py`) e i loro
-		 *    script di lancio dicono `--ban-file`.  ⚠ Chi porta al prodotto la
-		 *    riga di comando che i banchi usano otteneva `aiuto()` e uscita 2
-		 *    — un fallimento chiaro, che e' il modo giusto di sbagliare, ma un
-		 *    fallimento che nessuno dei due documenti spiegava.  Nessun `.md`
-		 *    nomina l'uno o l'altro: finche' non lo fa, li si accetta
-		 *    entrambi e l'aiuto dichiara quale dei due e' il nome buono. */
+		/* ⛔ TWO NAMES FOR THE SAME OPTION, AND BOTH ARE ACCEPTED — finding
+		 *    R12.9a, night of 10 Aug 2026.  This server said `--ban`; the
+		 *    benches' host (`01-b3-rcp-innesta.py`) and their launch scripts
+		 *    say `--ban-file`.  ⚠ Whoever brought to the product the command
+		 *    line the benches use got `aiuto()` and exit 2 — a clear failure,
+		 *    which is the right way to be wrong, but a failure neither of the
+		 *    two documents explained.  No `.md` names either: until one does,
+		 *    both are accepted and the help declares which of the two is the
+		 *    good name. */
 		else if ((strcmp(a, "--ban-file") == 0 || strcmp(a, "--ban") == 0) && v)
 			file_ban = argv[++i];
 		else if (strcmp(a, "--comando-socket") == 0 && v)
 			socket_comando = argv[++i];
-		/* ⭐ FASE 2 — dove scrivere il fotogramma catturato e i due flussi.
+		/* ⭐ PHASE 2 — where to write the captured frame and the two streams.
 		 *
-		 * ⛔ Serve al banco del giudizio a pixel (F2.6): senza, il confronto
-		 *    fra CATTURATO e DIPINTO non ha il primo dei due termini, e
-		 *    l'unico modo di prenderlo sarebbe ricatturare con un altro
-		 *    programma — cioe' confrontare il dipinto con un fotogramma
-		 *    DIVERSO, preso un istante dopo.
-		 * ⚠ E' spento di suo: senza questa opzione il server non scrive un
-		 *   byte in piu' di prima. */
+		 * ⛔ It serves the pixel-judgement bench (F2.6): without it, the
+		 *    comparison between CAPTURED and PAINTED lacks the first of its two
+		 *    terms, and the only way to get it would be to capture again with
+		 *    another program — that is, comparing the painted one with a
+		 *    DIFFERENT frame, taken an instant later.
+		 * ⚠ It is off by default: without this option the server does not
+		 *   write one byte more than before. */
 		else if (strcmp(a, "--rilievo") == 0 && v)
 			dir_rilievo = argv[++i];
 		else if (strcmp(a, "--parlantina") == 0)
 			registro_parlantina(true);
-		/* ⭐ Fase 16 §12 — il riquadro sta in `registro.h`.  ⚠ Se il socket
-		 *   non si apre si dice all'avvio (qui sotto) e si va avanti: il
-		 *   registro su `stderr` non dipende dal journal. */
+		/* ⭐ Phase 16 §12 — the box is in `registro.h`.  ⚠ If the socket does
+		 *   not open it is said at startup (below) and we go on: the log on
+		 *   `stderr` does not depend on the journal. */
 		else if (strcmp(a, "--journal") == 0)
 			journal_chiesto = true;
-		/* ⛔⭐ §5.3 — il secondo dei tre orologi, e il documento vuole che sia
-		 *     configurabile: *«il secondo e il terzo sono configurabili, con
-		 *     quei valori come predefiniti»*.
+		/* ⛔⭐ §5.3 — the second of the three clocks, and the document wants it
+		 *     configurable: *«the second and the third are configurable, with
+		 *     those values as defaults»*.
 		 *
-		 * ⚠ IN SECONDI, non in minuti, e la ragione e' che un tetto da
-		 *   mezz'ora **non si puo' provare** se il minimo e' un minuto: si
-		 *   aspetta mezz'ora ogni volta, cioe' non lo si prova mai.  ⭐ Coi
-		 *   secondi il meccanismo si esercita in dieci, e il NUMERO
-		 *   predefinito si legge nella riga che il server scrive all'avvio.
+		 * ⚠ IN SECONDS, not in minutes, and the reason is that a half-hour
+		 *   ceiling **cannot be tested** if the minimum is one minute: one
+		 *   waits half an hour every time, that is one never tests it.  ⭐ With
+		 *   seconds the mechanism is exercised in ten, and the default NUMBER
+		 *   can be read in the line the server writes at startup.
 		 *
-		 * ⛔ `0` = spenta, ed e' un valore lecito e dichiarato. */
+		 * ⛔ `0` = off, and it is an allowed and declared value. */
 		else if (strcmp(a, "--inattivita-s") == 0 && v)
 			rcp_inattivita_imposta((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
-		/* ⛔⭐ §5.3, il terzo: «se dopo 60 minuti non c'e' traccia di input la
-		 *     sessione viene killata» (decisione dell'utente, 16 agosto 2026).
-		 *     ⚠ `0` = spento, e allora nessuna sessione viene mai chiusa da se'. */
+		/* ⛔⭐ §5.3, the third: «if after 60 minutes there is no trace of input
+		 *     the session gets killed» (the user's decision, 16 Aug 2026).
+		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
 		else if (strcmp(a, "--abbandono-s") == 0 && v)
 			abbandono_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
-		/* ⛔⭐⭐ FASE 9 — LO SFRATTO DEL FANTASMA, e sta accanto agli orologi
-		 *      perche' e' della loro famiglia, ma NON e' un quarto orologio:
-		 *      non scatta da solo, scatta solo quando un client dello stesso
-		 *      utente sta chiedendo quel posto.
+		/* ⛔⭐⭐ PHASE 9 — GHOST EVICTION, and it sits next to the clocks
+		 *      because it belongs to their family, but it is NOT a fourth
+		 *      clock: it does not trigger on its own, it triggers only when a
+		 *      client of the same user is asking for that slot.
 		 *
-		 * ⚠ IN MILLISECONDI e non in secondi, e per la ragione opposta a
-		 *   `--inattivita-s`: qui i numeri che contano stanno sotto il secondo
-		 *   (quanto tace un client vivo fra due keep-alive) e un'unita' da un
-		 *   secondo non saprebbe dirli.
+		 * ⚠ IN MILLISECONDS and not in seconds, and for the opposite reason to
+		 *   `--inattivita-s`: here the numbers that matter are below one second
+		 *   (how long a live client is silent between two keep-alives) and a
+		 *   one-second unit could not express them.
 		 *
-		 * ⛔ `0` = SPENTO, ed e' il predefinito: invariante I6, e senza questa
-		 *    opzione il comportamento e' quello di ieri byte per byte. */
+		 * ⛔ `0` = OFF, and it is the default: invariant I6, and without this
+		 *    option the behaviour is yesterday's byte for byte. */
 		else if (strcmp(a, "--sfratto-ms") == 0 && v)
 			rcp_sfratto_imposta((uint64_t)strtoull(argv[++i], NULL, 10));
-		/* ⭐ FASE 19 — la strada della scheda (`DECISIONI.md` §10.27).  Vale per
-		 *    la prova all'avvio (nel padre, un fork) e per ogni figlio (il padre
-		 *    gliela ripete nella riga di comando).  ⛔ Un nome che non e' uno dei
-		 *    tre e' un errore d'uso, non un «scheda» silenzioso. */
+		/* ⭐ PHASE 19 — the card's route (`DECISIONI.md` §10.27).  It applies to
+		 *    the test at startup (in the parent, a fork) and to every child (the
+		 *    parent repeats it on its command line).  ⛔ A name that is not one
+		 *    of the three is a usage error, not a silent «scheda». */
 		else if (strcmp(a, "--codifica") == 0 && v) {
 			if (!figlio_codifica_strada(argv[++i])) {
-				fprintf(stderr, "⛔ --codifica «%s»: si chiede scheda, vulkan o vaapi\n",
+				fprintf(stderr, "⛔ --codifica «%s»: expected scheda, vulkan or vaapi\n",
 				        argv[i]);
 				return 2;
 			}
 		}
-		/* ⛔⭐ FUNZIONE DI BANCO — fase 7: un tono di prova al posto dell'audio
-		 *     della sessione.  ⚠ Serve a mettere in prova il codificatore, il
-		 *     datagram e il browser con un segnale noto **campione per
-		 *     campione**, invece di accendere cinque anelli e restare con
-		 *     cinque imputati.
+		/* ⛔⭐ BENCH FUNCTION — phase 7: a test tone in place of the session's
+		 *     audio.  ⚠ It serves to test the encoder, the datagram and the
+		 *     browser with a signal known **sample by sample**, instead of
+		 *     turning on five links and being left with five defendants.
 		 *
-		 * ⛔ Spento se nessuno lo accende — invariante I6 — e quando e' acceso
-		 *    il server lo SCRIVE nel registro a ogni sessione. */
+		 * ⛔ Off unless someone turns it on — invariant I6 — and when it is on
+		 *    the server WRITES it in the log at every session. */
 		else if (strcmp(a, "--audio-prova") == 0 && v)
 			audio_prova_hz = (uint32_t)strtoul(argv[++i], NULL, 10);
-		/* ⛔⭐⭐ LE TRE CURE DELLA FASE 9, e valgono tutte la stessa regola dei
-		 *      tre orologi qui sopra: il MECCANISMO si esercita a valori corti
-		 *      dalla riga di comando, il NUMERO in vigore si legge nella riga
-		 *      che il server (o il figlio) scrive all'avvio.
+		/* ⛔⭐⭐ THE THREE CURES OF PHASE 9, and they all follow the same rule as
+		 *      the three clocks above: the MECHANISM is exercised at short values
+		 *      from the command line, the NUMBER in force can be read in the line
+		 *      the server (or the child) writes at startup.
 		 *
-		 * ⚠ In MILLISECONDI e non in fotogrammi: la soglia e' un ritardo che
-		 *   si VEDE, e chi la accende sceglie quanto vecchia puo' essere
-		 *   l'immagine per una frazione di secondo (`webtransport.h`, il
-		 *   riquadro sopra `wt_sgombra_soglia`).  ⛔ `0` = spenta, ed e' il
-		 *   comportamento di oggi byte per byte. */
+		 * ⚠ In MILLISECONDS and not in frames: the threshold is a delay that
+		 *   one SEES, and whoever turns it on chooses how old the picture may be
+		 *   for a fraction of a second (`webtransport.h`, the box above
+		 *   `wt_sgombra_soglia`).  ⛔ `0` = off, and it is today's behaviour
+		 *   byte for byte. */
 		else if (strcmp(a, "--sgombra-soglia-ms") == 0 && v)
 			sgombra_soglia_ms = (uint64_t)strtoull(argv[++i], NULL, 10);
-		/* ⛔ Senza argomento, come `--parlantina`: e' un si'/no, e un numero
-		 *    accanto suggerirebbe una taratura che non c'e' (i tre numeri della
-		 *    risalita stanno in `codificatore.c` e li tara il banco). */
+		/* ⛔ Without an argument, like `--parlantina`: it is a yes/no, and a
+		 *    number next to it would suggest a calibration that does not exist
+		 *    (the three numbers of the rise are in `codificatore.c` and the
+		 *    bench calibrates them). */
 		else if (strcmp(a, "--qualita-risale") == 0)
 			qualita_risale = true;
-		/* ⛔ L'argomento e' il PAVIMENTO in Mbit/s (20, quello di
-		 *    `DECISIONI.md` §3.1-bis), non il tetto: filo, punto di lavoro e
-		 *    serbatoio si derivano da li' in un posto solo (`codificatore.c`).
-		 *    ⚠ `0` = spento, e allora nessuno dice di no alla banda. */
+		/* ⛔ The argument is the FLOOR in Mbit/s (20, the one of
+		 *    `DECISIONI.md` §3.1-bis), not the ceiling: wire, working point and
+		 *    reservoir are derived from it in one place only (`codificatore.c`).
+		 *    ⚠ `0` = off, and then nobody says no to bandwidth. */
 		else if (strcmp(a, "--tetto-banda-mbit") == 0 && v)
 			tetto_banda_mbit = (uint32_t)strtoul(argv[++i], NULL, 10);
-		/* ⛔⭐⭐ FASE 9 — IL REGOLATORE DEL RITMO.  Senza argomento, come
-		 *      `--qualita-risale`: e' un si'/no, e un numero accanto
-		 *      suggerirebbe una taratura che non sta qui (i posti sono
-		 *      `WT_RITMO_POSTI` in `webtransport.c`, e li tara il banco).
+		/* ⛔⭐⭐ PHASE 9 — THE RATE REGULATOR.  Without an argument, like
+		 *      `--qualita-risale`: it is a yes/no, and a number next to it would
+		 *      suggest a calibration that does not live here (the slots are
+		 *      `WT_RITMO_POSTI` in `webtransport.c`, and the bench calibrates
+		 *      them).
 		 *
-		 * ⛔ E' NATO SPENTO (I6) perche' cambia QUEL CHE SI VEDE: meno fotogrammi
-		 *    quando la linea non porta.  L'utente l'ha giudicato sul desktop vero
-		 *    (§19.6, §20.3) prima che diventasse il comportamento normale — e' la
-		 *    lezione pagata con l'azzeramento della fase 10 di v1.  ⭐ Il 24
-		 *    agosto 2026 ha deciso, e adesso nasce ACCESO: qui resta il solo
-		 *    contrario.
+		 * ⛔ IT WAS BORN OFF (I6) because it changes WHAT ONE SEES: fewer frames
+		 *    when the line does not carry.  The user judged it on the real
+		 *    desktop (§19.6, §20.3) before it became the normal behaviour — it
+		 *    is the lesson paid for with the wiping out of phase 10 of v1.  ⭐ On
+		 *    24 Aug 2026 they decided, and now it is born ON: only the opposite
+		 *    remains here.
 		 *
-		 * ⚠⚠ E NON BASTA DA SOLO: senza `--sgombra-soglia-ms N` la coda dei
-		 *    delta si svuota a ogni fotogramma, l'arretrato non supera 1 e
-		 *    questo regolatore non scatta MAI.  Il server lo SCRIVE all'avvio,
-		 *    cosi' nessuno misura un anello morto credendolo vivo.  ⭐ Coi
-		 *    predefiniti nascono accesi tutt'e due, quindi il caso morto va
-		 *    chiesto apposta. */
+		 * ⚠⚠ AND IT IS NOT ENOUGH ON ITS OWN: without `--sgombra-soglia-ms N`
+		 *    the delta queue empties at every frame, the backlog does not exceed
+		 *    1 and this regulator NEVER triggers.  The server WRITES it at
+		 *    startup, so nobody measures a dead link believing it alive.  ⭐ With
+		 *    the defaults both are born on, so the dead case must be asked for
+		 *    on purpose. */
 		else if (strcmp(a, "--niente-ritmo-adattivo") == 0)
 			ritmo_adattivo = false;
-		/* ⛔⭐ E IL NOME VECCHIO NON C'E' PIU', E NON TACE SUL PERCHE' — la
-		 *     stessa forma di `--sblocca` piu' sotto.  `--ritmo-adattivo`
-		 *     voleva dire «accendi»: col predefinito acceso non vuol dire
-		 *     niente, e accettarlo in silenzio sarebbe la SECONDA strada per la
-		 *     stessa cura.  ⚠ Un banco che lo batte deve leggere il cambio, non
-		 *     cercare un refuso. */
+		/* ⛔⭐ AND THE OLD NAME IS GONE, AND IT DOES NOT HIDE WHY — the same
+		 *     form as `--sblocca` further down.  `--ritmo-adattivo` meant «turn
+		 *     on»: with the default on it means nothing, and accepting it
+		 *     silently would be the SECOND road to the same cure.  ⚠ A bench
+		 *     that types it must read about the change, not look for a typo. */
 		else if (strcmp(a, "--ritmo-adattivo") == 0) {
 			fprintf(stderr,
-			        "⛔ --ritmo-adattivo non esiste piu': dal 24 agosto 2026 il "
-			        "regolatore del ritmo e' ACCESO\n"
-			        "   di suo (decisione dell'utente).  Per SPEGNERLO: "
+			        "⛔ --ritmo-adattivo no longer exists: since 24 Aug 2026 the "
+			        "rate regulator is ON\n"
+			        "   by default (the user's decision).  To TURN IT OFF: "
 			        "--niente-ritmo-adattivo\n");
 			return 2;
 		}
-		/* ⛔⭐⭐⭐ FASE 9 — LA LINEA MORTA, decisione dell'utente del 23 agosto
-		 *      2026: una linea che perde a raffiche non si serve, si dichiara
-		 *      morta — il filo cade e l'utente rientra a mano.
+		/* ⛔⭐⭐⭐ PHASE 9 — THE DEAD LINE, the user's decision of 23 Aug 2026:
+		 *      a line that loses in bursts is not served, it is declared dead —
+		 *      the wire drops and the user gets back in by hand.
 		 *
-		 * ⛔ E' l'interruttore piu' visibile del prodotto: BUTTA FUORI UNA
-		 *    SESSIONE.  E' nato spento (I6) e senza discussione: l'utente l'ha
-		 *    guardato sul desktop vero (§19.6, §20.3) prima che diventasse il
-		 *    comportamento normale.  ⭐ Il 24 agosto 2026 ha deciso, e adesso
-		 *    nasce ACCESO: qui resta il solo contrario.  ⚠ I due numeri hanno
-		 *    un'opzione ciascuno perche' il banco deve poterli muovere senza
-		 *    ricompilare — e sono l'UNICA strada, niente variabili d'ambiente
-		 *    (la ragione sta accanto a `wt_sgombra_soglia()`: due strade sono
-		 *    due numeri che divergono).
-		 * ⚠ E i due `0` NON sono una seconda strada per spegnere la cura:
-		 *   spengono una CAUSA per volta, e la riga d'avvio dice quale resta.
-		 *   Chi vuole il prodotto di ieri batte `--niente-linea-morta`. */
+		 * ⛔ It is the most visible switch of the product: IT THROWS A SESSION
+		 *    OUT.  It was born off (I6) and without discussion: the user looked
+		 *    at it on the real desktop (§19.6, §20.3) before it became the
+		 *    normal behaviour.  ⭐ On 24 Aug 2026 they decided, and now it is
+		 *    born ON: only the opposite remains here.  ⚠ The two numbers have
+		 *    one option each because the bench must be able to move them
+		 *    without recompiling — and they are the ONLY road, no environment
+		 *    variables (the reason is next to `wt_sgombra_soglia()`: two roads
+		 *    are two numbers that diverge).
+		 * ⚠ And the two `0` are NOT a second road to turn the cure off: they
+		 *   turn off one CAUSE at a time, and the startup line says which one
+		 *   remains.  Whoever wants yesterday's product types
+		 *   `--niente-linea-morta`. */
 		else if (strcmp(a, "--niente-linea-morta") == 0)
 			linea_morta = false;
-		/* ⛔⭐ E ANCHE QUI IL NOME VECCHIO E' TOLTO E SPIEGATO, non lasciato a
-		 *     non fare niente: e' la stessa regola con cui il 23 agosto e'
-		 *     sparita `--linea-morta-permille`. */
+		/* ⛔⭐ AND HERE TOO THE OLD NAME IS REMOVED AND EXPLAINED, not left to
+		 *     do nothing: it is the same rule with which on 23 August
+		 *     `--linea-morta-permille` disappeared. */
 		else if (strcmp(a, "--linea-morta") == 0) {
 			fprintf(stderr,
-			        "⛔ --linea-morta non esiste piu': dal 24 agosto 2026 la "
-			        "linea morta e' ACCESA di suo\n"
-			        "   (decisione dell'utente; stallo 5000 ms, silenzio 10 s).  "
-			        "Per SPEGNERLA: --niente-linea-morta\n");
+			        "⛔ --linea-morta no longer exists: since 24 Aug 2026 the "
+			        "dead line is ON by default\n"
+			        "   (the user's decision; stall 5000 ms, silence 10 s).  "
+			        "To TURN IT OFF: --niente-linea-morta\n");
 			return 2;
 		}
-		/* ⛔⛔ E `--linea-morta-permille` NON C'E' PIU', ed e' un'opzione TOLTA
-		 *      apposta invece che lasciata a non fare niente — 23 agosto 2026.
-		 *      La frazione di perdita e' stata refutata dal suo banco
-		 *      (`casa-cattiva` dichiarava 512‰ e REGGEVA dieci minuti,
-		 *      `raffica-forte` 123‰ e non reggeva: la grandezza ordina i due
-		 *      casi al contrario).  ⇒ Il numero resta nel registro come
-		 *      TESTIMONE del riordino, ma non ha piu' una soglia da muovere, e
-		 *      un'opzione che accetta un numero senza usarlo e' peggio di
-		 *      un'opzione che non c'e': chi la batte crede di aver tarato
-		 *      qualcosa.  ⚠ Chi la usava — il banco `09-b81` — la vedra'
-		 *      rifiutata dalla riga qui sotto, che e' il modo giusto di
-		 *      accorgersene. */
+		/* ⛔⛔ AND `--linea-morta-permille` IS GONE, and it is an option REMOVED
+		 *      on purpose instead of left to do nothing — 23 Aug 2026.  The
+		 *      loss fraction was refuted by its bench (`casa-cattiva` declared
+		 *      512‰ and HELD for ten minutes, `raffica-forte` 123‰ and did not
+		 *      hold: the quantity orders the two cases the wrong way round).
+		 *      ⇒ The number stays in the log as a WITNESS of the reordering, but
+		 *      it no longer has a threshold to move, and an option that accepts
+		 *      a number without using it is worse than an option that does not
+		 *      exist: whoever types it believes they have tuned something.
+		 *      ⚠ Whoever used it — bench `09-b81` — will see it refused by the
+		 *      line below, which is the right way to notice. */
 		else if (strcmp(a, "--linea-morta-stallo-ms") == 0 && v)
 			linea_morta_stallo_ms = strtoull(argv[++i], NULL, 10);
 		else if (strcmp(a, "--linea-morta-silenzio-s") == 0 && v)
 			linea_morta_silenzio_s = strtoull(argv[++i], NULL, 10);
-		/* ⛔⭐⭐ LA QUINTA CURA — IL SILENZIO DELL'AUDIO, e fino al 23 agosto
-		 *      2026 il suo interruttore era di COMPILAZIONE
-		 *      (`-DAUDIO_SILENZIO_PREDEFINITO=1`).
+		/* ⛔⭐⭐ THE FIFTH CURE — THE AUDIO SILENCE, and until 23 Aug 2026 its
+		 *      switch was a COMPILE-TIME one (`-DAUDIO_SILENZIO_PREDEFINITO=1`).
 		 *
-		 * ⛔ Il `-D` e' stato TOLTO, non lasciato accanto: due strade per la
-		 *    stessa cura sono due numeri che divergono.  ⚠ Chi ricostruisce
-		 *    `09-b84-audio-silenzio.py` deve saperlo — quel banco appaiava due
-		 *    binari con un solo `-D` di differenza, e adesso il braccio spento
-		 *    si fa con questa opzione, sullo STESSO binario (che e' meglio: un
-		 *    imputato in meno).
+		 * ⛔ The `-D` has been REMOVED, not left alongside: two roads for the
+		 *    same cure are two numbers that diverge.  ⚠ Whoever rebuilds
+		 *    `09-b84-audio-silenzio.py` must know it — that bench paired two
+		 *    binaries with a single `-D` of difference, and now the off arm is
+		 *    done with this option, on the SAME binary (which is better: one
+		 *    defendant fewer).
 		 *
-		 * ⚠ Senza argomento, come `--parlantina`: e' un si'/no, e la soglia non
-		 *   esiste apposta — si tace solo sul silenzio DIGITALE (tutti i
-		 *   campioni esattamente 0), che e' l'unico caso in cui «spedito» e
-		 *   «non spedito» suonano identici.  Una soglia («sotto -60 dB») sarebbe
-		 *   una decisione sul suono dell'utente presa dal codice.
+		 * ⚠ Without an argument, like `--parlantina`: it is a yes/no, and the
+		 *   threshold does not exist on purpose — it stays silent only on
+		 *   DIGITAL silence (all samples exactly 0), which is the only case in
+		 *   which «sent» and «not sent» sound identical.  A threshold («below
+		 *   -60 dB») would be a decision on the user's sound taken by the code.
 		 *
-		 * ⛔⛔ E VA CONSEGNATA A DUE PROCESSI: il codificatore vero vive nel
-		 *      FIGLIO (`figli_fase9()`, che la ricopia nell'`argv` del figlio
-		 *      perche' l'ambiente li' e' composto da zero), ma `--audio-prova`
-		 *      ne apre uno anche in QUESTO processo.  Consegnarla a uno solo
-		 *      farebbe misurare al banco del tono un prodotto diverso da quello
-		 *      del banco della sessione vera. */
-		/* ⛔⭐⭐⭐ FASE 10 — IL BUDGET DI COMPOSIZIONE.
+		 * ⛔⛔ AND IT MUST BE HANDED TO TWO PROCESSES: the real encoder lives in
+		 *      the CHILD (`figli_fase9()`, which copies it into the child's
+		 *      `argv` because the environment there is built from scratch), but
+		 *      `--audio-prova` opens one in THIS process too.  Handing it to
+		 *      only one would make the tone bench measure a product different
+		 *      from the real-session bench's. */
+		/* ⛔⭐⭐⭐ PHASE 10 — THE COMPOSITION BUDGET.
 		 *
-		 *     L'argomento sono i **Mpixel/s di COMPOSIZIONE** che questa
-		 *     macchina regge, e la grandezza e' quella e non un'altra: `[M]`
-		 *     §6.11 — il codificatore nudo regge **1,86 Gpixel/s**, la
-		 *     composizione **0,97**, e a saturare `rcs0` e' **`gnome-shell` al
-		 *     99,5 %** mentre `remotix` sta a **0,00 %**.  ⇒ Dare qui il numero
-		 *     del codificatore ammetterebbe `[M]` ~22 sessioni dove ne stanno
-		 *     sei.
+		 *     The argument is the **Mpixel/s of COMPOSITION** this machine
+		 *     holds, and the quantity is that one and no other: `[M]` §6.11 —
+		 *     the bare encoder holds **1.86 Gpixel/s**, composition **0.97**,
+		 *     and what saturates `rcs0` is **`gnome-shell` at 99.5 %** while
+		 *     `remotix` sits at **0.00 %**.  ⇒ Giving the encoder's number here
+		 *     would admit `[M]` ~22 sessions where six fit.
 		 *
-		 * ⛔⛔ E IL NUMERO NON SI AUTO-TARA, ed e' scritto qui perche' e' qui
-		 *      che qualcuno sara' tentato di farglielo dedurre: `[M]` §6.9 —
-		 *      **finche' la macchina non ha ceduto almeno una volta, il massimo
-		 *      che si e' letto e' un LIMITE INFERIORE**, cioe' «il punto in cui
-		 *      si e' smesso di provare».  Un soffitto dedotto da una salita che
-		 *      non ha fatto cedere niente rifiuterebbe utenti per niente.
-		 *      ⇒ Chi batte questa opzione **dichiara** di aver misurato.
+		 * ⛔⛔ AND THE NUMBER DOES NOT SELF-TUNE, and it is written here because
+		 *      it is here that someone will be tempted to have it deduced:
+		 *      `[M]` §6.9 — **until the machine has given way at least once,
+		 *      the maximum read is a LOWER BOUND**, that is «the point where one
+		 *      stopped trying».  A ceiling deduced from a climb that made
+		 *      nothing give way would refuse users for nothing.
+		 *      ⇒ Whoever types this option **declares** they have measured.
 		 *
-		 * ⭐ `0` = SPENTO, ed e' il PREDEFINITO: `CODER.md` I6 — il budget non
-		 *    cura un difetto d'aspetto, **acquista una funzione**, e un utente
-		 *    respinto e' la cosa piu' visibile che un server possa fare. */
+		 * ⭐ `0` = OFF, and it is the DEFAULT: `CODER.md` I6 — the budget does
+		 *    not cure an appearance defect, **it acquires a function**, and a
+		 *    rejected user is the most visible thing a server can do. */
 		else if (strcmp(a, "--budget-mpixel-s") == 0 && v)
 			budget_mpixel_s = strtod(argv[++i], NULL);
-		/* ⭐⭐ LA MANOPOLA DELLA REGOLA — §6.9, e la scala e' misurata:
+		/* ⭐⭐ THE RULE'S KNOB — §6.9, and the scale is measured:
 		 *
-		 *      `0`     regola «consegnato»: chi e' dentro costa quel che
-		 *              consegna adesso.  `[M]` tetto **6 sature**, ⛔ ferme
-		 *              **illimitate** — cioe' cieca al RISVEGLIO;
-		 *      `0,5`   ⭐ il predefinito: `[M]` **0 falsi si' e 0 falsi no**,
-		 *              tetto **6 sature / 10 ferme** — il dieci di
-		 *              `SPECIFICHE.md` §5.5 ritrovato per MISURA;
-		 *      `1`     regola «peggiore»: tutti al massimo. `[M]` 5 e 6, con
-		 *              **un falso no** (rifiuta la sesta, che reggeva).
+		 *      `0`     «delivered» rule: whoever is inside costs what it
+		 *              delivers now.  `[M]` cap **6 saturated**, ⛔ idle
+		 *              **unlimited** — that is, blind to WAKE-UP;
+		 *      `0.5`   ⭐ the default: `[M]` **0 false yes and 0 false no**,
+		 *              cap **6 saturated / 10 idle** — the ten of
+		 *              `SPECIFICHE.md` §5.5 found again by MEASUREMENT;
+		 *      `1`     «worst» rule: everyone at the maximum. `[M]` 5 and 6,
+		 *              with **one false no** (it refuses the sixth, which held).
 		 *
-		 * ⛔ Serve contro il RISVEGLIO, che e' la falla vera: `[M]` §6.16 —
-		 *    otto sessioni ferme ammesse quando costavano 0,01 % l'una si
-		 *    accendono in **19 ms** e chiedono il **130 %** di un motore che ne
-		 *    ha 100; chi lavorava perde il **95,9 %** del ritmo.  ⛔ E il
-		 *    regolatore della fase 9 non lo puo' rimediare: ferma fotogrammi
-		 *    **gia' composti e gia' codificati**. */
+		 * ⛔ It serves against WAKE-UP, which is the real hole: `[M]` §6.16 —
+		 *    eight idle sessions admitted when they cost 0.01 % each wake up in
+		 *    **19 ms** and ask for **130 %** of an engine that has 100; whoever
+		 *    was working loses **95.9 %** of the rate.  ⛔ And the rate
+		 *    regulator of phase 9 cannot remedy it: it holds back frames
+		 *    **already composed and already encoded**. */
 		else if (strcmp(a, "--riserva") == 0 && v)
 			budget_riserva = strtod(argv[++i], NULL);
-		/* ⛔⭐ IL TETTO AMMINISTRATIVO — §4.6: *«dieci non e' il limite: e' il
-		 *     tetto amministrativo»*.  ⭐ Da lui si dimensionano le QUATTRO
-		 *     tabelle che contano un utente servito — `attaccate[]` (`rcp.c`),
-		 *     `v[]` (`figlio.c`), `palchi[]` (`webtransport.c`) e `presenti[]`
-		 *     (qui): fino a stamattina erano quattro `#define` copiati a mano,
-		 *     e `[M]` §6.4 li aveva visti **divergere** (tabella dei posti a 2,
-		 *     tabella dei figli rimasta a 16).
+		/* ⛔⭐ THE ADMINISTRATIVE CAP — §4.6: *«ten is not the limit: it is the
+		 *     administrative cap»*.  ⭐ The FOUR tables that count a served user
+		 *     are sized from it — `attaccate[]` (`rcp.c`), `v[]` (`figlio.c`),
+		 *     `palchi[]` (`webtransport.c`) and `presenti[]` (here): until this
+		 *     morning they were four `#define`s copied by hand, and `[M]` §6.4
+		 *     had seen them **diverge** (slot table at 2, children table left
+		 *     at 16).
 		 *
-		 * ⛔ Si batte PRIMA che le tabelle esistano, e vale una volta sola: la
-		 *    riga d'avvio dice il numero in vigore.
-		 * ⚠ E NON e' il budget: chi non ci sta riceve `0x0E` («la tabella e'
-		 *   piena»), non `0x06` («la macchina non ha piu' capacita'»).  I due si
-		 *   AGGIUNGONO — §8.1 D5 — e il gesto dell'utente e' diverso. */
+		 * ⛔ It is typed BEFORE the tables exist, and applies once only: the
+		 *    startup line says the number in force.
+		 * ⚠ And it is NOT the budget: whoever does not fit receives `0x0E`
+		 *   («the table is full»), not `0x06` («the machine has no capacity
+		 *   left»).  The two are ADDED — §8.1 D5 — and the user's gesture is
+		 *   different. */
 		else if (strcmp(a, "--tetto-sessioni") == 0 && v)
 			tetto_sessioni = (int)strtol(argv[++i], NULL, 10);
 		else if (strcmp(a, "--niente-audio-silenzio") == 0)
 			audio_silenzio = false;
 		else if (strcmp(a, "--sblocca") == 0) {
-			/* ⛔⭐ E QUESTA OPZIONE NON C'E' PIU', E NON SI TACE SUL PERCHE'
-			 *     — rilievo R12.1, 10 agosto 2026 notte.
+			/* ⛔⭐ AND THIS OPTION IS GONE, AND IT DOES NOT HIDE WHY — finding
+			 *     R12.1, night of 10 Aug 2026.
 			 *
-			 *     `remotix --sblocca IND` era un SECONDO PROCESSO: caricava il
-			 *     file dei ban, toglieva la voce dalla tabella **del processo
-			 *     nuovo**, riscriveva il file, stampava «era bannato, adesso
-			 *     e' libero» e usciva **0**.  ⛔ Il processo che SERVE non
-			 *     vedeva niente: la sua `tentativi[]` restava intatta, il
-			 *     quarto tentativo riceveva ancora `TROPPI_TENTATIVI`, e al
-			 *     primo ban successivo di chiunque altro `salva_ban()`
-			 *     riscriveva il file dalla memoria stantia — **il ban tolto
-			 *     tornava anche su disco**.
+			 *     `remotix --sblocca ADDR` was a SECOND PROCESS: it loaded the
+			 *     ban file, removed the entry from the table **of the new
+			 *     process**, rewrote the file, printed «was banned, now it is
+			 *     free» and exited **0**.  ⛔ The SERVING process saw nothing:
+			 *     its `tentativi[]` stayed intact, the fourth attempt still
+			 *     received `TROPPI_TENTATIVI`, and at the next ban of anyone
+			 *     else `salva_ban()` rewrote the file from the stale memory —
+			 *     **the removed ban came back on disk too**.
 			 *
-			 *     ⚠ Il danno non era che non funzionava: era che **usciva 0
-			 *       dicendo che aveva funzionato**.
+			 *     ⚠ The damage was not that it did not work: it was that **it
+			 *       exited 0 saying it had worked**.
 			 *
-			 * ⛔ Un messaggio, e non `aiuto()`: chi ha in mano un comando che
-			 *    per un giorno e' esistito deve leggere PERCHE' non c'e' piu',
-			 *    o cerchera' l'errore di battitura. */
+			 * ⛔ A message, and not `aiuto()`: whoever holds a command that
+			 *    existed for one day must read WHY it is gone, or they will look
+			 *    for a typo. */
 			fprintf(stderr,
-			        "⛔ --sblocca non esiste piu', e non e' un cambio di nome.\n"
-			        "   Il ban vive nella memoria del processo che serve: un "
-			        "secondo processo puo' solo\n"
-			        "   riscrivere il file, e il server continuerebbe a "
-			        "rispondere TROPPI_TENTATIVI fino\n"
-			        "   al riavvio — uscendo 0 come se avesse funzionato "
+			        "⛔ --sblocca no longer exists, and it is not a rename.\n"
+			        "   The ban lives in the memory of the serving process: a "
+			        "second process can only\n"
+			        "   rewrite the file, and the server would keep "
+			        "answering TROPPI_TENTATIVI until\n"
+			        "   restart — exiting 0 as if it had worked "
 			        "(RCP.md §4.4-bis).\n"
 			        "\n"
-			        "   Si accende il server con --comando-socket PATH e si "
-			        "sblocca cosi':\n"
+			        "   Start the server with --comando-socket PATH and "
+			        "unblock like this:\n"
 			        "       python3 banchi/01-b8-sblocca.py --socket PATH "
 			        "192.168.0.2\n"
-			        "   oppure, senza strumenti:\n"
+			        "   or, without tools:\n"
 			        "       printf 'SBLOCCA 192.168.0.2\\n' | nc -U PATH\n");
 			return 2;
 		} else {
@@ -2130,16 +2156,15 @@ int main(int argc, char **argv)
 		nome = indirizzo;
 
 	if (!nome[0] || strcmp(nome, "0.0.0.0") == 0 || strcmp(nome, "::") == 0) {
-		/* ⛔ `RCP.md` §4.1: «il certificato DEVE portare come
-		 *    `subjectAltName` l'indirizzo su cui il server risponde».  Un
-		 *    SAN `0.0.0.0` non combacia con NIENTE, e ⚠ «un browser che
-		 *    trova un SAN che non combacia mostra un avviso DIVERSO, e
-		 *    alcuni non offrono nemmeno il clic per proseguire».  Non si
-		 *    indovina: si chiede. */
+		/* ⛔ `RCP.md` §4.1: «the certificate MUST carry as `subjectAltName`
+		 *    the address on which the server answers».  A SAN `0.0.0.0`
+		 *    matches NOTHING, and ⚠ «a browser that finds a SAN that does not
+		 *    match shows a DIFFERENT warning, and some do not even offer the
+		 *    click to proceed».  No guessing: it is asked for. */
 		fprintf(stderr,
-		        "⛔ serve --nome: il certificato deve portare l'indirizzo su "
-		        "cui il server risponde (RCP.md §4.1), e «%s» non e' un "
-		        "indirizzo.\n",
+		        "⛔ --nome is needed: the certificate must carry the address on "
+		        "which the server answers (RCP.md §4.1), and «%s» is not an "
+		        "address.\n",
 		        nome);
 		return 2;
 	}
@@ -2148,57 +2173,58 @@ int main(int argc, char **argv)
 	signal(SIGTERM, al_segnale);
 	signal(SIGPIPE, SIG_IGN);
 
-	/* ⭐ Il journal si accende PRIMA della prima riga, cosi' ci va anche lei. */
+	/* ⭐ The journal is turned on BEFORE the first line, so that it goes there too. */
 	int journal_errno = 0;
 	if (journal_chiesto && !registro_journal(true))
 		journal_errno = errno;
-	registro_dice(REG_AVVIO, "REMOTIX — fase 1, il filo nudo");
+	registro_dice(REG_AVVIO, "REMOTIX — phase 1, the bare wire");
 	if (journal_chiesto && !journal_errno)
 		registro_dice(REG_AVVIO,
-		              "registro anche nel journal di systemd (--journal): "
-		              "SYSLOG_IDENTIFIER=remotix, campi REMOTIX_AREA e "
-		              "REMOTIX_INQUILINO — la riga qui resta identica");
+		              "log also in the systemd journal (--journal): "
+		              "SYSLOG_IDENTIFIER=remotix, fields REMOTIX_AREA and "
+		              "REMOTIX_INQUILINO — the line here stays identical");
 	else if (journal_chiesto)
 		registro_dice(REG_AVVIO,
-		              "⚠ --journal chiesto ma il socket non si apre (%s): il "
-		              "registro resta SOLO qui",
+		              "⚠ --journal requested but the socket does not open (%s): the "
+		              "log stays ONLY here",
 		              strerror(journal_errno));
-	/* ⭐⭐ FASE 18 — CHE COSA SI OFFRE AL BROWSER, MISURATO ALL'AVVIO.
-	 *     `video.codec` dell'`ECCOMI` (§4.3) dice solo i codec che questa
-	 *     macchina sa fare: HEVC e H.264 se la SCHEDA li codifica.  ⛔ Fase 19
-	 *     (1 ott 2026, `DECISIONI.md` §10.27), parole dell'utente: *«niente cpu
-	 *     senza scheda»* — il ripiego in software (OpenH264) e' uscito.  Senza
-	 *     una scheda capace si dichiara qui, con la ragione, e ogni CIAO
-	 *     finisce in NIENTE_IN_COMUNE. */
+	/* ⭐⭐ PHASE 18 — WHAT IS OFFERED TO THE BROWSER, MEASURED AT STARTUP.
+	 *     `video.codec` of the `ECCOMI` (§4.3) says only the codecs this
+	 *     machine can do: HEVC and H.264 if the CARD encodes them.  ⛔ Phase 19
+	 *     (1 Oct 2026, `DECISIONI.md` §10.27), the user's words: *«no cpu
+	 *     without a card»* — the software fallback (OpenH264) is out.  Without
+	 *     a capable card it is declared here, with the reason, and every CIAO
+	 *     ends in NIENTE_IN_COMUNE. */
 	{
 		char offerti[32], spiega[1024];
 		registro_dice(REG_AVVIO,
-		              "⭐ fase 18 — prova di codifica all'avvio, in un processo a parte: le "
-		              "righe «aperto: …» a 256x256 qui sotto sono sue, non di una sessione");
+		              "⭐ phase 18 — encoding test at startup, in a separate process: the "
+		              "«aperto: …» lines at 256x256 below are its own, not a session's");
 		bool qualcosa = figlio_capacita_video(offerti, sizeof offerti, spiega, sizeof spiega);
 		rcp_video_codec_imposta(offerti);
 		if (qualcosa)
 			registro_dice(REG_AVVIO,
-			              "⭐ fase 18 — video.codec offerti nell'ECCOMI: «%s» — %s",
+			              "⭐ phase 18 — video.codec offered in the ECCOMI: «%s» — %s",
 			              offerti, spiega);
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔⛔ QUESTO SERVER NON SA CODIFICARE VIDEO: nessuna scheda "
-			              "capace, nessun codec nell'ECCOMI, ogni CIAO finira' in "
-			              "NIENTE_IN_COMUNE — %s.  ⛔ REMOTIX codifica SOLO sulla scheda "
-			              "(fase 19, niente ripiego in software): serve una scheda con "
-			              "un driver che codifichi — Vulkan Video (AMD con RADV, NVIDIA "
-			              "col driver proprietario) o VA-API (Intel, AMD)",
+			              "⛔⛔ THIS SERVER CANNOT ENCODE VIDEO: no capable "
+			              "card, no codec in the ECCOMI, every CIAO will end in "
+			              "NIENTE_IN_COMUNE — %s.  ⛔ REMOTIX encodes ONLY on the card "
+			              "(phase 19, no software fallback): it needs a card with "
+			              "a driver that encodes — Vulkan Video (AMD with RADV, NVIDIA "
+			              "with the proprietary driver) or VA-API (Intel, AMD)",
 			              spiega);
 	}
 
-	/* ⭐ FASE 12 — quale desktop accendera' questo server, detto all'avvio: con
-	 *    GNOME e KDE insieme la scelta e' ambigua, e si legge qui invece di
-	 *    scoprirla da un desktop che non e' quello atteso
+	/* ⭐ PHASE 12 — which desktop this server will start, said at startup: with
+	 *    GNOME and KDE together the choice is ambiguous, and it is read here
+	 *    instead of discovering it from a desktop that is not the expected one
 	 *    (`DECISIONI.md` §4.6-duodetricies). */
-	registro_dice(REG_AVVIO, "il desktop di questa macchina: %s", sessione_desktop_spiega());
-	/* ⭐ D-001 — e lo stesso fatto, col nome di §4.5, va nel `SESSIONE` di
-	 *    ogni client: prima diceva «sconosciuto» a tutti, dalla fase 1. */
+	registro_dice(REG_AVVIO, "the desktop of this machine: %s", sessione_desktop_spiega());
+	/* ⭐ D-001 — and the same fact, with the name of §4.5, goes into every
+	 *    client's `SESSIONE`: before it said «sconosciuto» to everyone, since
+	 *    phase 1. */
 	switch (sessione_desktop()) {
 	case SESSIONE_DESKTOP_GNOME:
 		wt_desktop("gnome");
@@ -2217,264 +2243,265 @@ int main(int argc, char **argv)
 		wt_desktop("sconosciuto");
 		break;
 	}
-	/* ⭐ FASE 12, INCREMENTO 2 — su KDE il permesso della cattura si guarda
-	 *    QUI, prima che nasca qualunque sessione: KWin mostra
-	 *    `zkde_screencast_unstable_v1` solo a un eseguibile dichiarato in un
-	 *    `.desktop` (`kwin.h`, `[M]` 18 set 2026).  ⭐ FASE 17: il file e' del
-	 *    pacchetto, e il server non lo scrive piu' — lo verifica e, se non va,
-	 *    dice il codice e il rimedio.  Su GNOME non si guarda niente. */
+	/* ⭐ PHASE 12, INCREMENT 2 — on KDE the capture permission is checked HERE,
+	 *    before any session is born: KWin shows `zkde_screencast_unstable_v1`
+	 *    only to an executable declared in a `.desktop` (`kwin.h`, `[M]` 18 Sep
+	 *    2026).  ⭐ PHASE 17: the file belongs to the package, and the server
+	 *    no longer writes it — it checks it and, if it is not right, gives the
+	 *    code and the remedy.  On GNOME nothing is checked. */
 	if (sessione_desktop() == SESSIONE_DESKTOP_KDE) {
 		char perche[768];
 
 		if (kwin_verifica_permesso(perche, sizeof perche))
-			registro_dice(REG_AVVIO, "⭐ il permesso della cattura per KWin: %s", perche);
+			registro_dice(REG_AVVIO, "⭐ the capture permission for KWin: %s", perche);
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔ il permesso della cattura per KWin NON c'e' (%s): "
-			              "le sessioni Plasma nasceranno ma non si vedranno",
+			              "⛔ the capture permission for KWin is NOT there (%s): "
+			              "Plasma sessions will be born but will not be visible",
 			              perche);
 	}
 
-	/* ⛔⭐ I TRE OROLOGI DI §5.3 SI SCRIVONO ALL'AVVIO, e non e' decorazione.
+	/* ⛔⭐ THE THREE CLOCKS OF §5.3 ARE WRITTEN AT STARTUP, and it is not
+	 *     decoration.
 	 *
-	 *     Un tetto da mezz'ora si prova in due modi: aspettando mezz'ora, o
-	 *     leggendo il numero.  ⚠ Il primo non lo fa nessuno — «significa tenere
-	 *     il PC occupato», parole dell'utente il 16 agosto 2026 — quindi senza
-	 *     questa riga il valore in vigore non lo verifica MAI nessuno, ed e'
-	 *     esattamente la forma E1 («scritto non e' in vigore») che ci e' gia'
-	 *     costata cara.
+	 *     A half-hour ceiling is tested in two ways: waiting half an hour, or
+	 *     reading the number.  ⚠ Nobody does the first — «it means keeping the
+	 *     PC busy», the user's words on 16 Aug 2026 — so without this line the
+	 *     value in force is NEVER verified by anyone, and it is exactly form E1
+	 *     («written is not in force») that has already cost us dearly.
 	 *
-	 * ⭐ Cosi' il MECCANISMO si prova a valori corti (`--inattivita-s 10`) e il
-	 *    NUMERO si legge qui.  Sono due verifiche diverse, e nessuna delle due
-	 *    tiene occupata una macchina. */
+	 * ⭐ This way the MECHANISM is tested at short values (`--inattivita-s 10`)
+	 *    and the NUMBER is read here.  They are two different checks, and
+	 *    neither keeps a machine busy. */
 	registro_dice(REG_AVVIO,
-	              "⭐ §5.3, i tre orologi in vigore: silenzio del client 30 s "
-	              "(fisso) · inattivita' dell'utente %llu s%s · ⛔ abbandono "
-	              "della sessione %llu s%s — e allo scadere la sessione grafica "
-	              "si CHIUDE, coi programmi aperti dentro",
+	              "⭐ §5.3, the three clocks in force: client silence 30 s "
+	              "(fixed) · user inactivity %llu s%s · ⛔ session "
+	              "abandonment %llu s%s — and when it expires the graphical session "
+	              "is CLOSED, with the programs open inside it",
 	              (unsigned long long)(rcp_inattivita() / 1000),
-	              rcp_inattivita() ? "" : " (SPENTA)",
+	              rcp_inattivita() ? "" : " (OFF)",
 	              (unsigned long long)(abbandono_ms / 1000),
-	              abbandono_ms ? "" : " (SPENTO)");
+	              abbandono_ms ? "" : " (OFF)");
 
-	/* ⛔⭐ E LO SFRATTO SI DICHIARA SEMPRE, acceso E spento — come la soglia
-	 *     della coda video e al contrario del tono di prova: qui «spento» non
-	 *     e' rumore, e' il fatto che chi legge il registro dopo un
-	 *     `GIA_ATTIVA_REMOTA` deve poter sapere subito.
-	 * ⛔⛔ E DAL 24 AGOSTO 2026 LA RIGA DICE LO STATO VERO E LA RAGIONE: una
-	 *      riga che dicesse ancora «SPENTO (I6)» su una cura accesa e' peggio di
-	 *      nessuna riga. */
+	/* ⛔⭐ AND THE EVICTION IS ALWAYS DECLARED, on AND off — like the video
+	 *     queue threshold and unlike the test tone: here «off» is not noise, it
+	 *     is the fact that whoever reads the log after a `GIA_ATTIVA_REMOTA`
+	 *     must be able to know at once.
+	 * ⛔⛔ AND SINCE 24 AUG 2026 THE LINE SAYS THE REAL STATE AND THE REASON: a
+	 *      line still saying «OFF (I6)» on a cure that is on is worse than no
+	 *      line. */
 	if (rcp_sfratto())
 		registro_dice(REG_AVVIO,
-		              "⭐ fase 9 — sfratto del fantasma: soglia %llu ms, ACCESO. "
-		              " Il posto di un client che tace da piu' della soglia va a "
-		              "un client dello STESSO utente che lo chieda — ⛔ mai fra "
-		              "utenti diversi.  ⭐ E' il PREDEFINITO dal 24 agosto 2026 "
-		              "(decisione dell'utente; e' meta' dell'orologio del "
-		              "silenzio, %llu ms).  ⚠ `[M]` il fantasma passa da 32,13 s "
-		              "e 14 rifiuti a 16,83 s e 7.  ⛔ Si SPEGNE con "
-		              "`--sfratto-ms 0`, ed e' l'unica strada",
+		              "⭐ phase 9 — ghost eviction: threshold %llu ms, ON. "
+		              " The slot of a client silent for longer than the threshold goes to "
+		              "a client of the SAME user that asks for it — ⛔ never between "
+		              "different users.  ⭐ It is the DEFAULT since 24 Aug 2026 "
+		              "(the user's decision; it is half the silence "
+		              "clock, %llu ms).  ⚠ `[M]` the ghost goes from 32.13 s "
+		              "and 14 refusals to 16.83 s and 7.  ⛔ It is TURNED OFF with "
+		              "`--sfratto-ms 0`, and that is the only road",
 		              (unsigned long long)rcp_sfratto(),
 		              (unsigned long long)rcp_sfratto_consigliato());
 	else
 		registro_dice(REG_AVVIO,
-		              "⛔ fase 9 — sfratto del fantasma: soglia 0 ms, SPENTO a "
-		              "mano (`--sfratto-ms 0`).  Il posto si liberera' solo "
-		              "all'orologio del silenzio (30 s), e chi rientra dopo una "
-		              "caduta si sentira' dire che il posto e' occupato — da se "
-		              "stesso.  ⚠ E NON E' il predefinito: dal 24 agosto 2026 "
-		              "nasce ACCESO a %llu ms (decisione dell'utente), quindi "
-		              "qualcuno l'ha spento apposta",
+		              "⛔ phase 9 — ghost eviction: threshold 0 ms, turned OFF by "
+		              "hand (`--sfratto-ms 0`).  The slot will be freed only "
+		              "by the silence clock (30 s), and whoever comes back after a "
+		              "drop will be told the slot is taken — by "
+		              "themselves.  ⚠ And it is NOT the default: since 24 Aug 2026 "
+		              "it is born ON at %llu ms (the user's decision), so "
+		              "someone turned it off on purpose",
 		              (unsigned long long)rcp_sfratto_consigliato());
 
-	/* ⛔ E il tono di prova si dichiara QUI, prima di ogni sessione: un server
-	 *    che suonasse un tono senza dirlo sarebbe un difetto travestito da
-	 *    funzione.  ⚠ `wt_audio_prova()` scrive la sua riga solo quando e'
-	 *    acceso, ed e' voluto: un registro che ripete «spento» a ogni avvio
-	 *    non si legge piu'. */
+	/* ⛔ And the test tone is declared HERE, before any session: a server that
+	 *    played a tone without saying so would be a defect disguised as a
+	 *    feature.  ⚠ `wt_audio_prova()` writes its line only when it is on, and
+	 *    that is intended: a log that repeats «off» at every startup is no
+	 *    longer read. */
 	wt_audio_prova(audio_prova_hz);
 
-	/* ⛔⭐⭐ E IL SILENZIO DELL'AUDIO SI CONSEGNA A QUESTO PROCESSO, non solo ai
-	 *      figli.  `--audio-prova` apre un `audio_cod` qui dentro
-	 *      (`webtransport.c`): senza questa riga il tono di prova continuerebbe
-	 *      a spedire i suoi zero mentre la sessione vera li tace, e i due banchi
-	 *      misurerebbero due prodotti diversi con lo stesso md5.
-	 * ⚠ La riga del valore IN VIGORE la scrive `audio.c` all'apertura di ogni
-	 *   codificatore — qui non se ne scrive una seconda, o «impostato» e «in
-	 *   vigore» diventerebbero due fatti con la stessa faccia. */
+	/* ⛔⭐⭐ AND THE AUDIO SILENCE IS HANDED TO THIS PROCESS, not only to the
+	 *      children.  `--audio-prova` opens an `audio_cod` in here
+	 *      (`webtransport.c`): without this line the test tone would keep
+	 *      sending its zeros while the real session silences them, and the two
+	 *      benches would measure two different products with the same md5.
+	 * ⚠ The line of the value IN FORCE is written by `audio.c` at the opening
+	 *   of every encoder — no second one is written here, or «set» and «in
+	 *   force» would become two facts with the same face. */
 	audio_silenzio_taci(audio_silenzio);
 
-	/* ⛔⭐⭐ FASE 10 — IL TETTO E IL BUDGET, e le righe si scrivono SEMPRE.
+	/* ⛔⭐⭐ PHASE 10 — THE CAP AND THE BUDGET, and the lines are ALWAYS written.
 	 *
-	 *     Il tetto si impone PRIMA di ogni altra cosa: le quattro tabelle si
-	 *     allocano su di lui alla prima richiesta, e da quel momento non si
-	 *     muove piu'.  ⚠ `figli_accendi()` piu' sotto lo legge: se qualcuno
-	 *     spostasse questa riga dopo di lui, la tabella dei figli nascerebbe
-	 *     col predefinito e le altre col numero chiesto — che e' esattamente
-	 *     la divergenza che `[M]` §6.4 aveva misurato. */
+	 *     The cap is imposed BEFORE anything else: the four tables are allocated
+	 *     on it at the first request, and from that moment it no longer moves.
+	 *     ⚠ `figli_accendi()` further down reads it: if someone moved this line
+	 *     after it, the children table would be born with the default and the
+	 *     others with the requested number — which is exactly the divergence
+	 *     that `[M]` §6.4 had measured. */
 	if (tetto_sessioni < 1) {
 		registro_dice(REG_AVVIO,
-		              "⛔ --tetto-sessioni %d non ha senso: resta %d",
+		              "⛔ --tetto-sessioni %d makes no sense: %d stays",
 		              tetto_sessioni, rcp_tetto());
 	} else if (!rcp_tetto_imposta(tetto_sessioni)) {
 		registro_dice(REG_AVVIO,
-		              "⛔ --tetto-sessioni %d NON e' entrato in vigore (le "
-		              "tabelle erano gia' allocate): resta %d",
+		              "⛔ --tetto-sessioni %d did NOT come into force (the "
+		              "tables were already allocated): %d stays",
 		              tetto_sessioni, rcp_tetto());
 	}
 	registro_dice(REG_AVVIO,
-	              "⭐ fase 10 — tetto AMMINISTRATIVO delle sessioni: **%d** "
-	              "(predefinito %d, `SPECIFICHE.md` §5.5)%s.  ⭐ E' UN NUMERO "
-	              "SOLO: da qui si dimensionano i posti di rcp.c, i palchi di "
-	              "figlio.c, le tele di webtransport.c e la presenza di main.c "
-	              "— `[M]` §6.4 li aveva visti divergere (posti 2, figli 16). "
-	              " ⚠ Chi non ci sta riceve 0x0E, che e' un limite "
-	              "AMMINISTRATIVO: il limite FISICO e' `--budget-mpixel-s`, e "
-	              "dice 0x06",
+	              "⭐ phase 10 — ADMINISTRATIVE session cap: **%d** "
+	              "(default %d, `SPECIFICHE.md` §5.5)%s.  ⭐ IT IS ONE "
+	              "NUMBER ONLY: from here are sized the slots of rcp.c, the stages of "
+	              "figlio.c, the canvases of webtransport.c and the presence of main.c "
+	              "— `[M]` §6.4 had seen them diverge (slots 2, children 16). "
+	              " ⚠ Whoever does not fit receives 0x0E, which is an "
+	              "ADMINISTRATIVE limit: the PHYSICAL limit is `--budget-mpixel-s`, and "
+	              "says 0x06",
 	              rcp_tetto(), RCP_TETTO_SESSIONI,
 	              rcp_tetto() == RCP_TETTO_SESSIONI ? ""
-	                                                : " — mosso a mano");
+	                                                : " — moved by hand");
 
 	budget_caselle(rcp_tetto());
 	budget_accendi(budget_mpixel_s, budget_riserva, TELA_L, TELA_A);
 	budget_riga_avvio(rcp_tetto());
 
-	/* ⛔⭐ E LA SOGLIA DELLA CODA VIDEO SI DICHIARA SEMPRE, accesa **e** spenta
-	 *     — al contrario del tono di prova qui sopra, e la differenza non e'
-	 *     un capriccio: un tono che non suona non lo cerca nessuno, ma una
-	 *     soglia spenta e una soglia che non e' mai scattata producono lo
-	 *     stesso registro (zero abbandoni per soglia), e chi rilegge un banco
-	 *     non saprebbe quale dei due ha misurato.  ⇒ La riga la scrive
-	 *     `webtransport.c`, cioe' **chi il numero lo usa davvero**, e non
-	 *     questo file che l'ha solo letto dalla riga di comando. */
+	/* ⛔⭐ AND THE VIDEO QUEUE THRESHOLD IS ALWAYS DECLARED, on **and** off —
+	 *     unlike the test tone above, and the difference is not a whim: a tone
+	 *     that does not play is looked for by nobody, but a threshold that is
+	 *     off and a threshold that never triggered produce the same log (zero
+	 *     abandonments by threshold), and whoever rereads a bench would not
+	 *     know which of the two it measured.  ⇒ The line is written by
+	 *     `webtransport.c`, that is **whoever really uses the number**, and not
+	 *     by this file which only read it from the command line. */
 	wt_sgombra_soglia(sgombra_soglia_ms);
 
-	/* ⛔⭐⭐ E IL REGOLATORE DEL RITMO SUBITO DOPO, E L'ORDINE NON E' UN CASO.
+	/* ⛔⭐⭐ AND THE RATE REGULATOR RIGHT AFTER, AND THE ORDER IS NOT CHANCE.
 	 *
-	 *      `wt_ritmo_adattivo()` scrive la sua riga d'avvio guardando la soglia
-	 *      GIA' IN VIGORE: se e' spenta, dichiara che il regolatore non potra'
-	 *      mai scattare — l'arretrato non supera 1 e i posti sono 2.  Invertire
-	 *      le due chiamate farebbe leggere zero, e quella riga direbbe il falso
-	 *      proprio nel giro in cui serve.
+	 *      `wt_ritmo_adattivo()` writes its startup line looking at the
+	 *      threshold ALREADY IN FORCE: if it is off, it declares that the
+	 *      regulator will never be able to trigger — the backlog does not
+	 *      exceed 1 and the slots are 2.  Swapping the two calls would make it
+	 *      read zero, and that line would say the false precisely in the round
+	 *      where it is needed.
 	 *
-	 * ⛔ E la riga esce ACCESO E SPENTO che sia, come per la soglia e per la
-	 *    stessa ragione: un regolatore spento e un regolatore che non ha mai
-	 *    dovuto scattare producono lo stesso registro, cioe' nessuna riga. */
+	 * ⛔ And the line goes out ON OR OFF, as for the threshold and for the same
+	 *    reason: a regulator that is off and a regulator that never had to
+	 *    trigger produce the same log, that is no line. */
 	wt_ritmo_adattivo(ritmo_adattivo);
 
-	/* ⛔⭐⭐⭐ E LA LINEA MORTA, e si chiama SEMPRE — accesa e spenta — per la
-	 *       stessa ragione delle due qui sopra, con un peso in piu': questa non
-	 *       fa vedere l'immagine peggio, CHIUDE LA SESSIONE.  Una sessione che
-	 *       sparisce senza una riga che dica se la cura era accesa e con quali
-	 *       numeri e' indistinguibile da un difetto nostro. */
+	/* ⛔⭐⭐⭐ AND THE DEAD LINE, and it is ALWAYS called — on and off — for the
+	 *       same reason as the two above, with one more weight: this one does
+	 *       not make the picture look worse, IT CLOSES THE SESSION.  A session
+	 *       that disappears without a line saying whether the cure was on and
+	 *       with which numbers is indistinguishable from a defect of ours. */
 	wt_linea_morta(linea_morta, linea_morta_stallo_ms, linea_morta_silenzio_s);
 
-	/* ⛔ §4.4-bis: «il ban sopravvive al riavvio», ed e' l'invariante I7 — la
-	 *    protezione di un difetto noto sta nel programma, non in una riga di
-	 *    configurazione che si puo' perdere. */
+	/* ⛔ §4.4-bis: «the ban survives restart», and it is invariant I7 — the
+	 *    protection against a known defect lives in the program, not in a
+	 *    configuration line that can be lost. */
 	{
 		int n = rcp_ban_carica(file_ban, registro_ora_ms());
 		if (n < 0) {
-			/* ⛔ «zero ban» e «non ho potuto guardare» sono due fatti
-			 *    diversi (`rcp.h`, `LEZIONI.md` §1.9 regola 1): il
-			 *    secondo e' la protezione spenta con l'aria di non avere
-			 *    niente da proteggere, cioe' l'invariante I7 rotta in
-			 *    silenzio.  Non si parte. */
+			/* ⛔ «zero bans» and «I could not look» are two different facts
+			 *    (`rcp.h`, `LEZIONI.md` §1.9 rule 1): the second is the
+			 *    protection turned off with the air of having nothing to
+			 *    protect, that is invariant I7 broken silently.  Not
+			 *    starting. */
 			registro_dice(REG_AVVIO,
-			              "⛔ il file dei ban %s c'e' e NON si e' potuto "
-			              "leggere: non e' «zero ban», e' la protezione di "
-			              "§4.4-bis spenta.  Non si parte.",
+			              "⛔ the ban file %s exists and could NOT be "
+			              "read: it is not «zero bans», it is the protection of "
+			              "§4.4-bis turned off.  Not starting.",
 			              file_ban);
 			return 1;
 		}
-		registro_dice(REG_AVVIO, "ban: %s, %d indirizzi caricati", file_ban, n);
+		registro_dice(REG_AVVIO, "ban: %s, %d addresses loaded", file_ban, n);
 	}
 
-	/* ⭐ «Come si esce: le 12 ore che passano, oppure un comando di sblocco sul
-	 *    server — che chiede l'accesso alla macchina, cioe' l'unica chiave che
-	 *    quel caso ammette» (`SPECIFICHE.md` §4.2, `RCP.md` §4.4-bis).  ⛔ E il
-	 *    comando parla col processo VIVO, che e' l'unico che ha in mano la
-	 *    tabella dei ban: vedi il riquadro di `comando.h`, rilievo R12.1.
+	/* ⭐ «How one gets out: the 12 hours passing, or an unblock command on the
+	 *    server — which asks for access to the machine, that is the only key
+	 *    that case admits» (`SPECIFICHE.md` §4.2, `RCP.md` §4.4-bis).  ⛔ And
+	 *    the command talks to the LIVE process, which is the only one holding
+	 *    the ban table: see the box in `comando.h`, finding R12.1.
 	 *
-	 * ⚠ `comando_apri()` restituisce NULL anche quando il socket non e' stato
-	 *   chiesto, e in tutt'e due i casi scrive PERCHE': il server va avanti,
-	 *   perche' senza comando la protezione di §4.4-bis c'e' ancora — si esce
-	 *   solo con le dodici ore. */
-	/* ⛔⭐ L'AIUTANTE SI ACCENDE QUI, E IL «QUI» E' MEZZA CURA — §1.10.
+	 * ⚠ `comando_apri()` returns NULL also when the socket was not requested,
+	 *   and in both cases it writes WHY: the server goes on, because without
+	 *   the command the protection of §4.4-bis is still there — the only way
+	 *   out is the twelve hours. */
+	/* ⛔⭐ THE HELPER IS STARTED HERE, AND THE «HERE» IS HALF THE CURE — §1.10.
 	 *
-	 *     Un `fork()` regala al figlio tutti i descrittori aperti.  ⛔ Acceso
-	 *     dopo `trasporto_apri()` o `pagina_apri()`, l'aiutante si porterebbe
-	 *     dietro il socket UDP e l'ascoltatore TCP della 7447: il server
-	 *     muore, la porta resta occupata da un processo che non la usa, e chi
-	 *     riavvia legge «indirizzo gia' in uso» senza vedere nessun server.
-	 *     ⚠ E' la forma di difetto peggiore — il sintomo non nomina la causa.
+	 *     A `fork()` gives the child all the open descriptors.  ⛔ Started after
+	 *     `trasporto_apri()` or `pagina_apri()`, the helper would carry along
+	 *     the UDP socket and the TCP listener of 7447: the server dies, the port
+	 *     stays held by a process that does not use it, and whoever restarts
+	 *     reads «address already in use» without seeing any server.
+	 *     ⚠ It is the worst form of defect — the symptom does not name the cause.
 	 *
-	 * ⭐ Acceso qui eredita: i tre descrittori standard e il file dei ban, che
-	 *    e' gia' chiuso.  E NON eredita il socket del comando di sblocco, che
-	 *    si apre nella riga sotto.
+	 * ⭐ Started here it inherits: the three standard descriptors and the ban
+	 *    file, which is already closed.  And it does NOT inherit the socket of
+	 *    the unblock command, which is opened in the line below.
 	 *
-	 * ⚠ E se non si accende, il server parte lo stesso e lo dice: senza
-	 *   aiutante ogni autenticazione e' un NO (invariante I3), il che e'
-	 *   sgradevole ma e' la direzione giusta in cui sbagliare. */
-	/* ⛔⭐ E IL PALCO NON SI PRENDE PIU' QUI — §1.10-bis, 12 agosto 2026.
+	 * ⚠ And if it does not start, the server starts anyway and says so: without
+	 *   a helper every authentication is a NO (invariant I3), which is
+	 *   unpleasant but it is the right direction in which to be wrong. */
+	/* ⛔⭐ AND THE STAGE IS NO LONGER TAKEN HERE — §1.10-bis, 12 Aug 2026.
 	 *
-	 *     Fino a ieri, in questo punto, il server chiamava `sessione_assicura()`
-	 *     e `primo_fotogramma()`: prendeva **la sessione grafica dentro cui
-	 *     girava lui**, e la mostrava a chiunque entrasse.  ⛔ `[M]` sulla
-	 *     macchina di prova il server girava come `nicfio` e l'utente entrava
-	 *     come `prova`: quel che si vedeva nella scheda era il desktop di
-	 *     `nicfio` — cioe' il palco era del PROCESSO, non dell'utente.
+	 *     Until yesterday, at this point, the server called `sessione_assicura()`
+	 *     and `primo_fotogramma()`: it took **the graphical session it was
+	 *     running inside**, and showed it to whoever got in.  ⛔ `[M]` on the
+	 *     test machine the server ran as `nicfio` and the user got in as
+	 *     `prova`: what was seen in the tab was `nicfio`'s desktop — that is,
+	 *     the stage belonged to the PROCESS, not to the user.
 	 *
-	 * ⇒ Adesso il palco e' del **figlio**, che nasce quando PAM dice si' e gira
-	 *   come quell'utente (`figlio.h`).  ⚠ La tabella si accende qui perche'
-	 *   `consegna_verdetto()` la vuole gia' pronta; i figli, no: quelli nascono
-	 *   uno per utente ammesso.
+	 * ⇒ Now the stage belongs to the **child**, which is born when PAM says yes
+	 *   and runs as that user (`figlio.h`).  ⚠ The table is started here
+	 *   because `consegna_verdetto()` wants it ready; the children are not:
+	 *   they are born one per admitted user.
 	 *
-	 * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): se la tabella non si accende
-	 *   il server parte lo stesso — pagina e autenticazione funzionano — e
-	 *   nessuno vede un pixel. */
+	 * ⚠ And the fallback is DECLARED (`CODER.md` §4.2): if the table does not
+	 *   start the server starts anyway — page and authentication work — and
+	 *   nobody sees a pixel. */
 	pam_aiuto = aiutante_accendi();
 	if (!pam_aiuto)
 		registro_dice(REG_AVVIO,
-		              "⛔ nessun aiutante di PAM: si ripiega sulla verifica "
-		              "SINCRONA, che ferma il ciclo per 1-2 s a ogni tentativo "
-		              "(DECISIONI.md §1.10).  Il ripiego e' dichiarato, non "
-		              "silenzioso (CODER.md §4.2).");
+		              "⛔ no PAM helper: falling back to the SYNCHRONOUS "
+		              "check, which stops the loop for 1-2 s at every attempt "
+		              "(DECISIONI.md §1.10).  The fallback is declared, not "
+		              "silent (CODER.md §4.2).");
 
 	prole = figli_accendi(TELA_L, TELA_A, dir_rilievo, deposita_fotogramma,
 	                      congeda_figlio, cursore_dal_palco, tela_dal_palco,
 	                      NULL);
 	if (!prole)
 		registro_dice(REG_AVVIO,
-		              "⛔ la tabella dei figli non si accende: NESSUN utente "
-		              "avra' un palco, e la fase 2 non ha oggetto.  Il server "
-		              "parte lo stesso (la fase 1 funziona), e il perche' e' "
-		              "nella riga qui sopra");
-	/* ⛔⭐⭐ LE DUE CURE CHE VIVONO NEL FIGLIO — e questa riga e' l'unica che
-	 *      le fa esistere.  ⚠ Qui NON si accende niente: si consegna alla
-	 *      tabella dei figli quel che ogni figlio dovra' ripetere a se stesso
-	 *      dopo l'`execve`, perche' i codificatori stanno di la'.  ⚠ Il
-	 *      silenzio dell'audio fa eccezione a meta': il codificatore del TONO DI
-	 *      PROVA si apre anche qui, ed e' per questo che `audio_silenzio_taci()`
-	 *      qui sopra riceve lo STESSO `bool`.  ⛔ E chi dichiarera' il valore in vigore
-	 *      sara' `codificatore.c`, all'apertura di ogni codificatore: se
-	 *      l'opzione si perdesse per strada, quelle righe direbbero «spento»
-	 *      e il difetto si vedrebbe subito (forma D5). */
+		              "⛔ the children table does not start: NO user "
+		              "will have a stage, and phase 2 has no object.  The server "
+		              "starts anyway (phase 1 works), and the why is "
+		              "in the line above");
+	/* ⛔⭐⭐ THE TWO CURES THAT LIVE IN THE CHILD — and this line is the only one
+	 *      that makes them exist.  ⚠ NOTHING is turned on here: the children
+	 *      table is handed what every child will have to repeat to itself
+	 *      after the `execve`, because the encoders are over there.  ⚠ The
+	 *      audio silence is a half exception: the encoder of the TEST TONE is
+	 *      opened here too, and that is why `audio_silenzio_taci()` above
+	 *      receives the SAME `bool`.  ⛔ And whoever declares the value in force
+	 *      will be `codificatore.c`, at the opening of every encoder: if the
+	 *      option got lost on the way, those lines would say «off» and the
+	 *      defect would show at once (form D5). */
 	figli_fase9(prole, qualita_risale, tetto_banda_mbit, audio_silenzio);
 
-	/* ⛔ Chi possiede questo processo, scritto una volta e non dedotto dal
-	 *    lettore: da qui dipende se i figli potranno DAVVERO scendere a un
-	 *    altro utente.  ⚠ Un server non privilegiato genera figli che restano
-	 *    lui — `setuid()` fallisce, e `figli_assicura()` lo dichiara. */
+	/* ⛔ Who owns this process, written once and not deduced by the reader: on
+	 *    this depends whether the children can REALLY drop to another user.
+	 *    ⚠ An unprivileged server spawns children that stay itself —
+	 *    `setuid()` fails, and `figli_assicura()` declares it. */
 	registro_dice(REG_AVVIO,
-	              "%s questo processo e' uid %ld: %s",
+	              "%s this process is uid %ld: %s",
 	              geteuid() == 0 ? "⭐" : "⚠", (long)geteuid(),
 	              geteuid() == 0
-	                      ? "puo' verificare con PAM la parola di chiunque e "
-	                        "far scendere i figli all'utente giusto "
+	                      ? "it can check anyone's password with PAM and "
+	                        "drop the children to the right user "
 	                        "(DECISIONI.md §1.10-bis)"
-	                      : "NON e' root — PAM potra' verificare solo il suo "
-	                        "utente, e un figlio potra' nascere solo per lui");
+	                      : "it is NOT root — PAM will be able to check only its own "
+	                        "user, and a child will be able to be born only for it");
 
 	k = comando_apri(socket_comando);
 
@@ -2493,101 +2520,101 @@ int main(int argc, char **argv)
 		goto fine;
 	ponte.t = t;
 	ponte.f = prole;
-	/* ⛔ Il gancio si collega QUI, dopo che la tabella dei figli c'e' e prima
-	 *    che il primo pacchetto arrivi: collegarlo dopo lascerebbe la prima
-	 *    sessione senza la richiesta della sua chiave, cioe' con lo schermo
-	 *    fermo e nessuna riga che dica perche'. */
+	/* ⛔ The hook is connected HERE, after the children table exists and before
+	 *    the first packet arrives: connecting it later would leave the first
+	 *    session without the request for its keyframe, that is with the screen
+	 *    frozen and no line saying why. */
 	wt_video_gancio(video_chiedi, &ponte);
 	wt_audio_gancio(audio_chiedi, &ponte);
-	/* ⭐ E con lui quello dell'input, per la stessa ragione e nello stesso
-	 *    istante: collegarlo dopo lascerebbe la prima sessione con un desktop
-	 *    che si vede e non si comanda, e nessuna riga che dica perche'. */
+	/* ⭐ And with it the input one, for the same reason and at the same
+	 *    instant: connecting it later would leave the first session with a
+	 *    desktop that can be seen and not commanded, and no line saying why. */
 	wt_input_gancio(input_al_figlio, &ponte);
-	/* ⭐⭐ E quello della TELA, nello stesso istante e per una ragione in piu':
-	 *     il client chiede la sua misura **all'attacco**, cioe' nel primo mezzo
-	 *     secondo di ogni sessione.  Un gancio collegato dopo il primo pacchetto
-	 *     farebbe rispondere `COMPOSITORE_INCAPACE` proprio alla richiesta che
-	 *     conta — e il client mostrerebbe «adatta il desktop» come spento su un
-	 *     server che sa farlo. */
+	/* ⭐⭐ And the CANVAS one, at the same instant and for one more reason: the
+	 *     client asks for its size **at attach**, that is in the first half
+	 *     second of every session.  A hook connected after the first packet
+	 *     would answer `COMPOSITORE_INCAPACE` precisely to the request that
+	 *     matters — and the client would show «fit the desktop» as off on a
+	 *     server that can do it. */
 	wt_ritela_gancio(ritela_al_figlio, &ponte);
 	wt_disposizione_gancio(disposizione_al_figlio, &ponte);
 
-	/* ⭐⭐ §5.1 — IL GUARDIANO DELLE SESSIONI LOCALI, e si collega PRIMA della
-	 *     pagina per la stessa ragione degli altri: la domanda `0x05` si fa
-	 *     all'`ATTACCA`, cioe' nel primo mezzo secondo di ogni sessione.  Un
-	 *     gancio collegato dopo il primo pacchetto lascerebbe entrare
-	 *     **proprio** la sessione che questa regola deve tenere fuori.
+	/* ⭐⭐ §5.1 — THE GUARD OF THE LOCAL SESSIONS, and it is connected BEFORE the
+	 *     page for the same reason as the others: the `0x05` question is asked
+	 *     at `ATTACCA`, that is in the first half second of every session.  A
+	 *     hook connected after the first packet would let in **precisely** the
+	 *     session this rule must keep out.
 	 *
-	 * ⛔ E se logind non c'e', `sentinella_apri()` ha gia' scritto nel registro
-	 *    che la regola NON e' in vigore: qui non si collega niente, e `rcp.c`
-	 *    lo dira' a ogni attacco.  ⚠ Non e' un motivo per non partire — I1: una
-	 *    sessione senza una regola vale piu' di nessuna sessione. */
+	 * ⛔ And if logind is not there, `sentinella_apri()` has already written in
+	 *    the log that the rule is NOT in force: nothing is connected here, and
+	 *    `rcp.c` will say so at every attach.  ⚠ It is not a reason not to
+	 *    start — I1: a session without a rule is worth more than no session. */
 	guardiano = sentinella_apri();
 	if (guardiano) {
 		wt_locale_gancio(chiedi_sessione_locale, guardiano);
-		/* ⭐⭐ E IL RIPASSO HA IL SUO GANCIO, che chiede per TUTTI in una volta
-		 *     — la ragione, coi numeri, sta in `sentinella.h` sopra
-		 *     `sentinella_locali()`: `[M]` §6.13, il costo passa da `N × D` a
-		 *     `D` dentro il ciclo che consegna i fotogrammi.  ⛔ Si collegano
-		 *     tutt'e due o nessuno dei due: sono le due meta' della stessa
-		 *     regola, e mezza regola e' peggio di nessuna. */
+		/* ⭐⭐ AND THE CHECK HAS ITS OWN HOOK, which asks for EVERYONE at once
+		 *     — the reason, with the numbers, is in `sentinella.h` above
+		 *     `sentinella_locali()`: `[M]` §6.13, the cost goes from `N × D` to
+		 *     `D` inside the loop that delivers frames.  ⛔ Both are connected
+		 *     or neither: they are the two halves of the same rule, and half a
+		 *     rule is worse than none. */
 		wt_locali_gancio(ripassa_sessioni_locali, guardiano);
 	}
-	/* ⛔⛔ E LA RIGA CHE DICE SE LA SORVEGLIANZA E' IN VIGORE — 25 agosto 2026,
-	 *      rilievo R7 di §5.5, e fino a stamattina NON LA SCRIVEVA NESSUNO.
+	/* ⛔⛔ AND THE LINE THAT SAYS WHETHER SURVEILLANCE IS IN FORCE — 25 Aug 2026,
+	 *      finding R7 of §5.5, and until this morning NOBODY WROTE IT.
 	 *
-	 *      `webtransport.c`, sopra `wt_sorveglia_locali()`, si difendeva dal
-	 *      ripiego silenzioso con queste parole: *«il difetto tornerebbe il
-	 *      giorno in cui qualcuno si dimentica di collegare il gancio, senza
-	 *      una riga rossa — chi non lo collega non applica la meta'
-	 *      «sorvegliata» di §5.1, ed e' `main.c` che lo scrive nel registro
-	 *      all'avvio»*.  ⛔ `main.c` non lo scriveva: il commento dichiarava una
-	 *      rete che non c'era, ed e' la forma E1 del `REVIEWER.md` — chi legge
-	 *      il codice crede che la guardia ci sia.
+	 *      `webtransport.c`, above `wt_sorveglia_locali()`, defended itself from
+	 *      the silent fallback with these words: *«the defect would come back
+	 *      the day someone forgets to connect the hook, without a red line —
+	 *      whoever does not connect it does not apply the «watched» half of
+	 *      §5.1, and it is `main.c` that writes it in the log at startup»*.
+	 *      ⛔ `main.c` did not write it: the comment declared a net that was not
+	 *      there, and it is form E1 of `REVIEWER.md` — whoever reads the code
+	 *      believes the guard is there.
 	 *
-	 * ⇒ ⭐ Adesso c'e', e dice il valore in vigore **acceso E spento**
-	 *      (`CODER.md` §2-bis): «collegato» e «NON collegato» sono due righe
-	 *      diverse, e la seconda e' quella che si cerca quando §5.1 non morde.
-	 * ⚠ E si scrive DOPO l'`if`, non dentro: cosi' la riga esce anche quando il
-	 *   guardiano non c'e' — che e' proprio il caso in cui serve. */
+	 * ⇒ ⭐ Now it is there, and it says the value in force **on AND off**
+	 *      (`CODER.md` §2-bis): «connected» and «NOT connected» are two
+	 *      different lines, and the second is the one looked for when §5.1 does
+	 *      not bite.
+	 * ⚠ And it is written AFTER the `if`, not inside: this way the line goes out
+	 *   even when the guard is not there — which is precisely the case where it
+	 *   is needed. */
 	registro_dice(REG_SESSIONE,
-	              "§5.1, la meta' SORVEGLIATA (il ripasso periodico delle "
-	              "sessioni locali): %s.  ⚠ L'altra meta' — la domanda "
-	              "all'`ATTACCA` — %s",
-	              guardiano ? "COLLEGATA, una domanda a logind per ripasso "
-	                          "(§6.13: era `N × D`, adesso e' `D`)"
-	                        : "⛔ NON collegata: nessuno si accorgera' che un "
-	                          "utente ha aperto una sessione locale mentre la "
-	                          "sua remota lavora",
-	              guardiano ? "e' collegata anche lei"
-	                        : "⛔ non e' collegata: logind non risponde, e la "
-	                          "regola NON e' in vigore su questo server");
+	              "§5.1, the WATCHED half (the periodic check of the "
+	              "local sessions): %s.  ⚠ The other half — the question "
+	              "at `ATTACCA` — %s",
+	              guardiano ? "CONNECTED, one question to logind per check "
+	                          "(§6.13: it was `N × D`, now it is `D`)"
+	                        : "⛔ NOT connected: nobody will notice that a "
+	                          "user has opened a local session while their "
+	                          "remote one is working",
+	              guardiano ? "is connected too"
+	                        : "⛔ is not connected: logind does not answer, and the "
+	                          "rule is NOT in force on this server");
 
-	/* ⭐ §7.6 — e si collega qui con gli altri: la scorciatoia `Ctrl+Alt+Fine`
-	 *    puo' arrivare col primo pacchetto utile della sessione, e un gancio
-	 *    collegato dopo lascerebbe l'utente a premere una combinazione che non
-	 *    fa niente — che e' peggio di non averla. */
+	/* ⭐ §7.6 — and it is connected here with the others: the `Ctrl+Alt+End`
+	 *    shortcut can arrive with the first useful packet of the session, and a
+	 *    hook connected later would leave the user pressing a combination that
+	 *    does nothing — which is worse than not having it. */
 	wt_termina_gancio(termina_al_figlio, &ponte);
-	/* ⭐ E il gemello: il fatto che arriva dal desktop invece che dal filo. */
+	/* ⭐ And the twin: the fact that arrives from the desktop instead of the wire. */
 	figli_gancio_sessione_finita(prole, sessione_finita_dal_figlio, &ponte);
 	figli_gancio_tela_attendi(prole, tela_attendi_dal_figlio, &ponte);
-	/* ⭐ FASE 7: i blocchi d'audio salgono di qui.  ⚠ DOPO `figli_accendi`,
-	 *    come tutti gli altri ganci: prima non c'e' una tabella a cui
-	 *    agganciarli. */
+	/* ⭐ PHASE 7: the audio blocks come up this way.  ⚠ AFTER `figli_accendi`,
+	 *    like all the other hooks: before, there is no table to hook them to. */
 	figli_gancio_blocco(prole, audio_blocco, NULL);
-	/* ⭐⭐ FASE 7 — GLI APPUNTI, nei due versi, e i due ganci si agganciano
-	 *     insieme: `webtransport.c` non collega il canale se ne manca uno, e
-	 *     `figli_gancio_appunti` rifiuta di agganciarne uno solo.  ⚠ Meta'
-	 *     canale l'utente la vede come «gli appunti non funzionano», che e' la
-	 *     stessa faccia di «gli appunti non ci sono». */
+	/* ⭐⭐ PHASE 7 — THE CLIPBOARD, in both directions, and the two hooks are
+	 *     hooked together: `webtransport.c` does not connect the channel if one
+	 *     is missing, and `figli_gancio_appunti` refuses to hook only one.
+	 *     ⚠ Half a channel is seen by the user as «the clipboard does not
+	 *     work», which is the same face as «there is no clipboard». */
 	wt_appunti_gancio(appunti_offri_al_figlio, appunti_risposta_al_figlio,
 	                  &ponte);
 	figli_gancio_appunti(prole, appunti_dalla_sessione,
 	                     appunti_richiesta_dalla_sessione, &ponte);
 
-	/* ⭐⭐ FASE 17 T7 — PRIMA di dire «pronto»: i desktop che un padre
-	 *     precedente ha lasciato vivi entrano nei conti prima che il primo
-	 *     utente possa bussare. */
+	/* ⭐⭐ PHASE 17 T7 — BEFORE saying «ready»: the desktops that a previous
+	 *     parent left alive enter the counts before the first user can knock. */
 	ritrovati_all_avvio(registro_ora_ms());
 
 	p = pagina_apri(indirizzo, porta, ctx_pagina, file_html, &cert);
@@ -2595,8 +2622,8 @@ int main(int argc, char **argv)
 		goto fine;
 
 	registro_dice(REG_AVVIO,
-	              "⭐ pronto: https://%s:%s  —  la sessione WebTransport vive "
-	              "su /rcp/1 (RCP.md §2.2)",
+	              "⭐ ready: https://%s:%s  —  the WebTransport session lives "
+	              "on /rcp/1 (RCP.md §2.2)",
 	              nome, porta);
 
 	ultimo_controllo_cert = time(NULL);
@@ -2616,11 +2643,11 @@ int main(int argc, char **argv)
 		ncomando = comando_descrittori(k, fds + n + npagina,
 		                               MAX_POLL - n - npagina);
 
-		/* ⭐ L'aiutante di PAM entra nel `poll` come tutti gli altri, ed e'
-		 *    tutto quel che serve perche' il ciclo non aspetti piu' nessuno
-		 *    (`DECISIONI.md` §1.10).  ⛔ In coda, dopo la pagina e il comando,
-		 *    perche' i loro conti sono relativi e infilarlo in mezzo
-		 *    sposterebbe gli indici di due chiamate. */
+		/* ⭐ The PAM helper enters the `poll` like all the others, and that is
+		 *    all that is needed for the loop to no longer wait for anyone
+		 *    (`DECISIONI.md` §1.10).  ⛔ At the end, after the page and the
+		 *    command, because their counts are relative and slotting it in
+		 *    between would shift the indices of two calls. */
 		naiuto = 0;
 		if (aiutante_descrittore(pam_aiuto) >= 0
 		    && n + npagina + ncomando < MAX_POLL) {
@@ -2631,26 +2658,27 @@ int main(int argc, char **argv)
 			naiuto = 1;
 		}
 
-		/* ⭐ E i figli dopo l'aiutante, per la stessa ragione: i conti di chi
-		 *    sta prima sono relativi, e infilarli in mezzo sposterebbe gli
-		 *    indici di tre chiamate.  ⛔ E sono l'ultimo blocco anche per una
-		 *    ragione di verita': se `MAX_POLL` finisse, a restare fuori sono i
-		 *    figli — cioe' il video — e non la pagina o l'autenticazione.  Una
-		 *    sessione brutta vale piu' di una sessione chiusa (invariante I1). */
+		/* ⭐ And the children after the helper, for the same reason: the counts
+		 *    of whoever comes before are relative, and slotting them in between
+		 *    would shift the indices of three calls.  ⛔ And they are the last
+		 *    block for a reason of truth too: if `MAX_POLL` ran out, those left
+		 *    out are the children — that is the video — and not the page or the
+		 *    authentication.  An ugly session is worth more than a closed
+		 *    session (invariant I1). */
 		nfigli = figli_descrittori(prole, fds + n + npagina + ncomando + naiuto,
 		                           MAX_POLL - n - npagina - ncomando - naiuto);
 
 		attesa = trasporto_attesa_ms(t);
 		if (attesa < 0 || attesa > 1000)
 			attesa = 1000;
-		/* ⛔ Col tono di prova acceso il ciclo si sveglia ogni 10 ms, perche' i
-		 *    blocchi li genera `wt_batti()` e con un'attesa da un secondo ne
-		 *    uscirebbero cinquanta in un colpo — cioe' una raffica che la coda
-		 *    dei datagram butterebbe, e il registro direbbe «buttati» per un
-		 *    difetto fabbricato dal banco.
-		 * ⚠ NON serve all'audio vero: quello lo ritma PipeWire, che nel `poll`
-		 *   ci sta con un descrittore suo.  ⇒ Questa riga muore con la
-		 *   sorgente di prova, e non e' un debito nascosto. */
+		/* ⛔ With the test tone on the loop wakes up every 10 ms, because the
+		 *    blocks are generated by `wt_batti()` and with a one-second wait
+		 *    fifty would come out at once — that is a burst the datagram queue
+		 *    would throw away, and the log would say «thrown away» for a defect
+		 *    manufactured by the bench.
+		 * ⚠ It is NOT needed by real audio: that one is paced by PipeWire, which
+		 *   sits in the `poll` with a descriptor of its own.  ⇒ This line dies
+		 *   with the test source, and it is not a hidden debt. */
 		if (audio_prova_hz && attesa > 10)
 			attesa = 10;
 
@@ -2663,90 +2691,89 @@ int main(int argc, char **argv)
 
 		if (fds[0].revents & POLLIN)
 			trasporto_leggi(t);
-		/* ⛔ Le risposte di PAM PRIMA di `trasporto_scaduti()`: il verdetto
-		 *    puo' rendere maturo un `AMMESSO`, e consegnarlo dopo aggiungerebbe
-		 *    un giro di ciclo a chi si autentica — cioe' peggiorerebbe proprio
-		 *    il numero che questa cura non deve toccare.
-		 * ⚠ E si chiama anche quando il descrittore NON e' leggibile: e' li'
-		 *   dentro che le pratiche scadono, e una scadenza che aspetta un byte
-		 *   e' una scadenza che non scatta mai — proprio nel caso per cui e'
-		 *   stata scritta (la lezione di `regola_battito`, pagata l'11 agosto
-		 *   con B6). */
+		/* ⛔ PAM's answers BEFORE `trasporto_scaduti()`: the verdict can make an
+		 *    `AMMESSO` ripe, and delivering it later would add one loop round
+		 *    for whoever authenticates — that is, it would worsen precisely the
+		 *    number this cure must not touch.
+		 * ⚠ And it is called even when the descriptor is NOT readable: it is in
+		 *   there that requests expire, and an expiry that waits for a byte is
+		 *   an expiry that never triggers — precisely in the case it was written
+		 *   for (the lesson of `regola_battito`, paid on 11 August with B6). */
 		adesso = registro_ora_ms();
-		/* ⛔⭐⭐⭐ IL BATTITO DEL CICLO — e va PRIMA di tutto quel che giudica.
+		/* ⛔⭐⭐⭐ THE LOOP'S BEAT — and it goes BEFORE everything that judges.
 		 *
-		 * `wt_giro_del_padre()` misura quanto e' passato dalla passata
-		 * precedente, cioe' **quanto siamo stati ciechi**: in quel tempo nessun
-		 * byte poteva uscire e nessun pacchetto del client poteva essere letto.
-		 * ⛔ Senza questa riga la linea morta legge quel buco come *«la linea e'
-		 *    MORTA»* e chiude sessioni sane con `persi=0` scritto accanto —
-		 *    `[M]` §6.7: un `SIGSTOP` di 5 s a UN figlio uccideva TUTTE le
-		 *    sessioni.  Il perche' per intero sta in `webtransport.c`, sopra
+		 * `wt_giro_del_padre()` measures how much time has passed since the
+		 * previous pass, that is **how long we were blind**: in that time no
+		 * byte could go out and no client packet could be read.
+		 * ⛔ Without this line the dead line reads that gap as *«the line is
+		 *    DEAD»* and closes healthy sessions with `persi=0` written next to
+		 *    it — `[M]` §6.7: a 5 s `SIGSTOP` on ONE child killed ALL the
+		 *    sessions.  The full why is in `webtransport.c`, above
 		 *    `WT_GIRO_ATTESO_MS`.
-		 * ⚠ Sta qui e non dentro `poll()` perche' quel che conta e' la distanza
-		 *   fra due passate COMPLETE: un ciclo che si sveglia e poi resta
-		 *   bloccato dentro una chiamata sincrona non ha consegnato niente, e
-		 *   misurarlo dal risveglio direbbe che e' andato tutto bene. */
+		 * ⚠ It is here and not inside `poll()` because what counts is the
+		 *   distance between two COMPLETE passes: a loop that wakes up and then
+		 *   stays blocked inside a synchronous call has delivered nothing, and
+		 *   measuring it from the wake-up would say that all went well. */
 		wt_giro_del_padre(adesso);
-		/* ⛔ §5.3, il terzo orologio: si guarda a OGNI passata, non quando
-		 *    arriva qualcosa.  Il caso che conta e' proprio quello in cui non
-		 *    arriva piu' niente. */
+		/* ⛔ §5.3, the third clock: it is checked at EVERY pass, not when
+		 *    something arrives.  The case that matters is precisely the one
+		 *    where nothing arrives any more. */
 		abbandono_giro(&ponte, adesso);
-		/* ⭐ FASE 17 T7: i desktop ritrovati ci sono ancora?  (Ogni 10 s, e
-		 *    solo se ce n'e' qualcuno in attesa di riattacco.) */
+		/* ⭐ PHASE 17 T7: are the desktops found again still there?  (Every
+		 *    10 s, and only if some are waiting for reattach.) */
 		ritrovati_ripassa(adesso);
 		if (naiuto && (fds[n + npagina + ncomando].revents & POLLIN))
 			aiutante_muovi(pam_aiuto, consegna_verdetto, &ponte);
 		aiutante_scaduti(pam_aiuto, adesso, consegna_verdetto, &ponte);
-		/* ⛔ I figli PRIMA di `trasporto_scaduti()`, e per lo stesso motivo per
-		 *    cui ci stanno le risposte di PAM: un fotogramma appena arrivato dal
-		 *    palco puo' entrare in deposito **in questo giro**, e rimandarlo al
-		 *    prossimo costerebbe un giro intero a chi sta aspettando di vedere
-		 *    il proprio desktop.
-		 * ⚠ E si chiama SEMPRE, anche quando nessun figlio e' leggibile: qui
-		 *   dentro si raccolgono i morti (`waitpid(WNOHANG)`) e scadono le
-		 *   presentazioni, e una scadenza che aspetta un byte non scatta mai. */
+		/* ⛔ The children BEFORE `trasporto_scaduti()`, and for the same reason
+		 *    as PAM's answers: a frame just arrived from the stage can enter the
+		 *    depot **in this round**, and postponing it to the next would cost a
+		 *    whole round to whoever is waiting to see their own desktop.
+		 * ⚠ And it is ALWAYS called, even when no child is readable: in here
+		 *   the dead are reaped (`waitpid(WNOHANG)`) and introductions expire,
+		 *   and an expiry that waits for a byte never triggers. */
 		figli_muovi(prole, fds + n + npagina + ncomando + naiuto, nfigli, adesso);
 		figli_ricontrolla(prole, adesso);
 		trasporto_scaduti(t);
 		pagina_muovi(p, fds + 1, npagina);
 		comando_muovi(k, fds + 1 + npagina, ncomando);
 
-		/* ⛔ LA ROTAZIONE, e si guarda una volta al minuto invece che a
-		 *    ogni giro: «prima che scada», non «quando e' scaduto»
-		 *    (§4.1-bis).  ⚠ Un minuto e' abbondante per un margine di due
-		 *    giorni, e non costa niente. */
-		/* ⭐⭐ §5.1 — IL RIPASSO DELLE SESSIONI LOCALI, ogni RIPASSO_LOCALI_MS.
+		/* ⛔ THE ROTATION, and it is checked once a minute instead of at every
+		 *    round: «before it expires», not «when it has expired»
+		 *    (§4.1-bis).  ⚠ One minute is plenty for a two-day margin, and it
+		 *    costs nothing. */
+		/* ⭐⭐ §5.1 — THE CHECK OF THE LOCAL SESSIONS, every RIPASSO_LOCALI_MS.
 		 *
-		 * ⛔ Non e' l'`ATTACCA`: quella domanda la fa `rcp.c` una volta e
-		 *    basta.  Questa e' l'altra meta' della regola — «apre una sessione
-		 *    LOCALE mentre la remota e' viva» — e non la chiede nessuno: o la
-		 *    si guarda, o `0x04` resta un codice che nessuno spedisce.
+		 * ⛔ It is not the `ATTACCA`: that question is asked by `rcp.c` once and
+		 *    that is all.  This is the other half of the rule — «opens a LOCAL
+		 *    session while the remote one is alive» — and nobody asks it: either
+		 *    it is looked at, or `0x04` stays a code nobody sends.
 		 *
-		 * ⚠ Due secondi e non ogni giro: la domanda costa una chiamata sincrona
-		 *   a logind, e questo e' lo stesso ciclo che consegna i fotogrammi
-		 *   (`LEZIONI.md` §6.2-bis).  ⚠ E due secondi sono il ritardo massimo
-		 *   fra «l'utente si e' seduto davanti alla macchina» e «la sessione
-		 *   remota cade»: e' un'attesa che nessuno guarda col cronometro. */
+		 * ⚠ Two seconds and not every round: the question costs a synchronous
+		 *   call to logind, and this is the same loop that delivers frames
+		 *   (`LEZIONI.md` §6.2-bis).  ⚠ And two seconds are the maximum delay
+		 *   between «the user sat down in front of the machine» and «the remote
+		 *   session drops»: it is a wait nobody watches with a stopwatch. */
 		if (guardiano && adesso - ultimo_ripasso_locali >= RIPASSO_LOCALI_MS) {
 			ultimo_ripasso_locali = adesso;
 			wt_sorveglia_locali();
 		}
 
-		/* ⛔⭐⭐ IL CONTO DEL RIPIEGO, UNA VOLTA AL MINUTO — e fino al 25 agosto
-		 *      2026 non lo emetteva NESSUNO.
+		/* ⛔⭐⭐ THE FALLBACK'S COUNT, ONCE A MINUTE — and until 25 Aug 2026
+		 *      NOBODY emitted it.
 		 *
-		 * `sentinella.h` dichiara `sentinella_conti()` con scritto sopra che
-		 * serve *«perche' la scelta sincrona si possa RIMISURARE invece che
-		 * crederla»* — ⛔ e `sentinella_conti()` **non aveva un chiamante in
-		 * tutto `src/`**.  Un contatore che nessuno emette e' peggio di un
-		 * contatore che manca: chi legge il codice crede che la misura ci sia.
-		 * ⇒ Qui c'e' il chiamante, e la riga porta accanto i buchi del ciclo,
-		 *   perche' sono le due meta' della stessa domanda — *«quanto ci costa
-		 *   chiedere a logind dentro il ciclo che consegna?»*.
-		 * ⚠ Un minuto, non ogni ripasso: e' un conto cumulativo, e a due secondi
-		 *   sarebbero 43 200 righe al giorno che dicono quasi sempre la stessa
-		 *   cosa (il difetto dei 30,8 GB di registro della fase 8). */
+		 * `sentinella.h` declares `sentinella_conti()` with written above it
+		 * that it serves *«so that the synchronous choice can be MEASURED AGAIN
+		 * instead of believed»* — ⛔ and `sentinella_conti()` **had no caller in
+		 * the whole of `src/`**.  A counter nobody emits is worse than a counter
+		 * that is missing: whoever reads the code believes the measurement is
+		 * there.
+		 * ⇒ Here is the caller, and the line carries the loop's gaps next to it,
+		 *   because they are the two halves of the same question — *«how much
+		 *   does asking logind inside the delivering loop cost us?»*.
+		 * ⚠ One minute, not every check: it is a cumulative count, and at two
+		 *   seconds it would be 43 200 lines a day saying almost always the same
+		 *   thing (the defect of the 30.8 GB of log of phase 8). */
 		if (guardiano && adesso - ultimo_conto_guardiano >= CONTO_GUARDIANO_MS) {
 			uint64_t chiamate = 0, peggior_ms = 0;
 			uint64_t fermi = 0, fermo_peggiore = 0;
@@ -2754,21 +2781,21 @@ int main(int argc, char **argv)
 			ultimo_conto_guardiano = adesso;
 			sentinella_conti(guardiano, &chiamate, &peggior_ms);
 			wt_giri_fermi(&fermi, &fermo_peggiore);
-			/* ⛔⛔ E `inquilini=` E' ENTRATO IL 25 AGOSTO 2026 — rilievo R7.
+			/* ⛔⛔ AND `inquilini=` CAME IN ON 25 AUG 2026 — finding R7.
 			 *
-			 *      `sentinella.h` prometteva questi due numeri *«accanto al
-			 *      numero degli inquilini serviti»* e ⛔ **nella riga non
-			 *      c'era**.  ⭐ E' il DENOMINATORE: senza `N` la frase qui in
-			 *      fondo — «una chiamata per ripasso, non per inquilino» — non
-			 *      si puo' **rifiutare**, perche' a un inquilino solo `N × D` e
-			 *      `D` danno lo stesso conto.  ⇒ Con `inquilini=7` e
-			 *      `chiamate=` che cresce di 1 per ripasso, la cura si legge
-			 *      dalla riga invece che dal commento. */
+			 *      `sentinella.h` promised these two numbers *«next to the
+			 *      number of tenants served»* and ⛔ **it was not in the
+			 *      line**.  ⭐ It is the DENOMINATOR: without `N` the sentence at
+			 *      the end here — «one call per check, not per tenant» — cannot
+			 *      be **refuted**, because with a single tenant `N × D` and `D`
+			 *      give the same count.  ⇒ With `inquilini=7` and `chiamate=`
+			 *      growing by 1 per check, the cure is read from the line
+			 *      instead of from the comment. */
 			registro_dice(REG_SESSIONE,
 			              "guardiano: chiamate=%llu peggiore_ms=%llu "
 			              "inquilini=%zu giri_fermi=%llu "
-			              "giro_peggiore_ms=%llu — ⭐ una chiamata per RIPASSO, "
-			              "non per inquilino (§6.13: era `N × D`, adesso e' `D`)",
+			              "giro_peggiore_ms=%llu — ⭐ one call per CHECK, "
+			              "not per tenant (§6.13: it was `N × D`, now it is `D`)",
 			              (unsigned long long)chiamate,
 			              (unsigned long long)peggior_ms,
 			              wt_inquilini_serviti(),
@@ -2782,69 +2809,69 @@ int main(int argc, char **argv)
 				SSL_CTX *nuovo =
 					tls_contesto_quic(cert.sessione_pem, cert.sessione_key);
 				if (nuovo) {
-					/* ⚠ Le connessioni gia' aperte tengono il vecchio
-					 *   contesto: TLS e' gia' fatto, e cambiarlo sotto
-					 *   non ha senso.  ⛔ Le NUOVE prendono questo, e
-					 *   la pagina pubblica gia' l'impronta nuova. */
+					/* ⚠ The connections already open keep the old context:
+					 *   TLS is already done, and changing it underneath
+					 *   makes no sense.  ⛔ The NEW ones take this one, and
+					 *   the page already publishes the new fingerprint. */
 					trasporto_contesto(t, nuovo);
 					SSL_CTX_free(ctx_quic);
 					ctx_quic = nuovo;
 					registro_dice(REG_CERT,
-					              "⭐ il contesto QUIC usa il certificato "
-					              "ruotato; la pagina pubblica gia' la "
-					              "nuova impronta e /impronta la serve");
+					              "⭐ the QUIC context uses the rotated "
+					              "certificate; the page already publishes the "
+					              "new fingerprint and /impronta serves it");
 				} else {
 					registro_dice(REG_CERT,
-					              "⛔ certificato ruotato ma il contesto "
-					              "TLS non si rifa': le nuove sessioni "
-					              "userebbero un certificato di cui la "
-					              "pagina non pubblica l'impronta");
+					              "⛔ certificate rotated but the TLS context "
+					              "cannot be rebuilt: new sessions "
+					              "would use a certificate whose fingerprint the "
+					              "page does not publish");
 				}
 			}
 		}
 	}
 
-	registro_dice(REG_AVVIO, "chiusura richiesta: %zu connessioni QUIC vive",
+	registro_dice(REG_AVVIO, "shutdown requested: %zu live QUIC connections",
 	              trasporto_quante(t));
 
-	/* ⛔⭐ E CHI CHIUDE LO DICE — §8.1, §8.2 motivo `0x0C SERVER_IN_CHIUSURA`.
-	 *     Rilievo B-7, 10 agosto 2026 notte.
+	/* ⛔⭐ AND WHOEVER CLOSES SAYS SO — §8.1, §8.2 reason `0x0C SERVER_IN_CHIUSURA`.
+	 *     Finding B-7, night of 10 Aug 2026.
 	 *
-	 *     Prima di stanotte qui il ciclo usciva e `trasporto_chiudi()` liberava
-	 *     tutto: nessun `CONGEDO`, nessun codice di chiusura, nemmeno un
-	 *     `CONNECTION_CLOSE`.  Chi era collegato aspettava trenta secondi e
-	 *     leggeva «errore di rete» — il difetto di `LEZIONI.md` §1.7 che §3.1
-	 *     esiste per togliere, e qui il server non scriveva nemmeno «congedo».
+	 *     Before tonight the loop exited here and `trasporto_chiudi()` freed
+	 *     everything: no `CONGEDO`, no closing code, not even a
+	 *     `CONNECTION_CLOSE`.  Whoever was connected waited thirty seconds and
+	 *     read «network error» — the defect of `LEZIONI.md` §1.7 that §3.1
+	 *     exists to remove, and here the server did not even write «farewell».
 	 *
-	 * ⛔ E si ASPETTA che i byte escano, invece di contare i giri: la capsula di
-	 *    §3.1 punto 3 matura mezzo secondo dopo che la coda si e' svuotata
-	 *    (vedi `wt_batti`), quindi uscire subito sarebbe scrivere il congedo e
-	 *    buttarlo.  ⚠ Ma l'attesa ha un fondo — due secondi — o un client che
-	 *    non legge piu' terrebbe in piedi lo spegnimento del servizio.  ⛔ La
-	 *    rinuncia si scrive: chi spegne deve poter distinguere «l'hanno saputo
-	 *    tutti» da «non ho fatto in tempo». */
+	 * ⛔ And we WAIT for the bytes to go out, instead of counting rounds: the
+	 *    capsule of §3.1 point 3 ripens half a second after the queue has
+	 *    emptied (see `wt_batti`), so leaving at once would be writing the
+	 *    farewell and throwing it away.  ⚠ But the wait has a bottom — two
+	 *    seconds — or a client that no longer reads would hold up the shutdown
+	 *    of the service.  ⛔ The giving up is written: whoever shuts down must
+	 *    be able to tell «everyone knew» from «I did not make it in time». */
 	{
 		size_t restano = trasporto_congeda_tutte(
-			t, RCP_SERVER_IN_CHIUSURA, "il server si sta spegnendo");
+			t, RCP_SERVER_IN_CHIUSURA, "the server is shutting down");
 		int giri = 0;
-		/* ⛔⭐ IL BUDGET SI CONTA IN TEMPO, NON IN GIRI — e l'11 agosto 2026
-		 *     e' stato misurato che la differenza e' di un fattore quattordici.
+		/* ⛔⭐ THE BUDGET IS COUNTED IN TIME, NOT IN ROUNDS — and on 11 Aug 2026
+		 *     it was measured that the difference is a factor of fourteen.
 		 *
-		 *     Qui c'era `giri < 200`, con accanto scritto «due secondi»: il
-		 *     conto assumeva che ogni giro costasse i 10 ms del `poll`.  ⛔ Ma
-		 *     `poll` ritorna SUBITO quando c'e' qualcosa da leggere, e allo
-		 *     spegnimento c'e' sempre qualcosa: **400 giri sono durati 293 ms**
-		 *     — letto nel registro del server, 08:17:08.756 → 08:17:09.049.
+		 *     Here there was `giri < 200`, with «two seconds» written next to
+		 *     it: the count assumed every round cost the 10 ms of the `poll`.
+		 *     ⛔ But `poll` returns AT ONCE when there is something to read, and
+		 *     at shutdown there is always something: **400 rounds lasted 293
+		 *     ms** — read in the server log, 08:17:08.756 → 08:17:09.049.
 		 *
-		 * ⛔ Da cui il difetto vero: `chiudi_sessione()` arma un fondo di
-		 *    sicurezza a **3 s** per la capsula di §3.1 punto 3, e chi spegne
-		 *    rinunciava dopo tre decimi.  La rete di sicurezza esisteva e non
-		 *    poteva scattare **proprio nel momento per cui era stata scritta**.
+		 * ⛔ Hence the real defect: `chiudi_sessione()` arms a safety bottom at
+		 *    **3 s** for the capsule of §3.1 point 3, and whoever shut down gave
+		 *    up after three tenths.  The safety net existed and could not
+		 *    trigger **precisely at the moment it had been written for**.
 		 *
-		 * ⚠ E un contatore di giri che si crede un orologio non sbaglia di
-		 *   poco: sbaglia di quanto e' veloce la macchina, cioe' di un numero
-		 *   che cambia da un ferro all'altro.  E' la forma peggiore, perche' il
-		 *   banco resta verde dove il ferro e' lento. */
+		 * ⚠ And a round counter that believes itself a clock is not wrong by a
+		 *   little: it is wrong by how fast the machine is, that is by a number
+		 *   that changes from one piece of hardware to another.  It is the worst
+		 *   form, because the bench stays green where the hardware is slow. */
 		struct timespec t0, tn;
 		clock_gettime(CLOCK_MONOTONIC, &t0);
 		while (restano > 0) {
@@ -2867,33 +2894,34 @@ int main(int argc, char **argv)
 				trasporto_leggi(t);
 			trasporto_scaduti(t);
 			restano = trasporto_congeda_tutte(t, RCP_SERVER_IN_CHIUSURA,
-			                                  "il server si sta spegnendo");
+			                                  "the server is shutting down");
 			giri++;
 		}
-		/* ⛔⭐ E POI SI ASPETTA ANCORA — misurato dal banco B7 l'11 agosto 2026,
-		 *     caso `server-in-chiusura`, ed e' il difetto che il caso e' nato
-		 *     per trovare.
+		/* ⛔⭐ AND THEN WE WAIT SOME MORE — measured by bench B7 on 11 Aug 2026,
+		 *     case `server-in-chiusura`, and it is the defect the case was born
+		 *     to find.
 		 *
-		 *     `wt_ha_da_dire()` diventa falsa quando la capsula di chiusura di
-		 *     §3.1 punto 3 e' stata CONSEGNATA A NGTCP2.  ⛔ Ma «consegnato a
-		 *     ngtcp2» non e' «uscito sul filo» — e' la stessa distinzione che
-		 *     `wt_batti` fa per il `CONGEDO`, curata li' e non qui.  Il ciclo
-		 *     usciva, `trasporto_chiudi()` abbatteva QUIC, e quei byte non
-		 *     partivano piu'.
+		 *     `wt_ha_da_dire()` becomes false when the closing capsule of §3.1
+		 *     point 3 has been HANDED TO NGTCP2.  ⛔ But «handed to ngtcp2» is
+		 *     not «out on the wire» — it is the same distinction `wt_batti`
+		 *     makes for the `CONGEDO`, cured there and not here.  The loop
+		 *     exited, `trasporto_chiudi()` tore down QUIC, and those bytes no
+		 *     longer left.
 		 *
-		 * ⛔ Che cosa vedeva il client, misurato: il `CONGEDO 0x0c` arrivava
-		 *    sul canale, e la sessione si chiudeva **senza codice** — QUIC
-		 *    terminato con `codice 0 · nessun motivo`.  Cioe' la SECONDA
-		 *    strada di §3.1 mancava.
+		 * ⛔ What the client saw, measured: the `CONGEDO 0x0c` arrived on the
+		 *    channel, and the session closed **without a code** — QUIC
+		 *    terminated with `codice 0 · nessun motivo`.  That is, the SECOND
+		 *    road of §3.1 was missing.
 		 *
-		 * ⚠ E la seconda strada e' quella che conta: `DECISIONI.md` §7.14 e
-		 *   §7.15, decise oggi, la rendono l'unica che arrivi sempre — su
-		 *   Firefox, che azzera il canale e butta quei byte, era l'UNICA.
-		 *   Un utente di Firefox avrebbe visto il servizio sparire **senza
-		 *   nessun motivo**, che e' esattamente cio' che §8.1 vieta.
+		 * ⚠ And the second road is the one that matters: `DECISIONI.md` §7.14
+		 *   and §7.15, decided today, make it the only one that always arrives
+		 *   — on Firefox, which resets the channel and throws those bytes away,
+		 *   it was the ONLY one.  A Firefox user would have seen the service
+		 *   disappear **without any reason**, which is exactly what §8.1
+		 *   forbids.
 		 *
-		 * ⭐ Mezzo secondo, e si scrive quanto si e' aspettato: la cura non
-		 *    deve poter diventare «aspetta e spera» senza che nessuno lo veda. */
+		 * ⭐ Half a second, and how long we waited is written: the cure must not
+		 *    be able to become «wait and hope» without anyone seeing it. */
 		if (restano == 0) {
 			int coda = 0;
 			while (coda < 50) {
@@ -2907,47 +2935,48 @@ int main(int argc, char **argv)
 				coda++;
 			}
 			registro_dice(REG_AVVIO,
-			              "⭐ congedo 0x0c mandato a tutte le sessioni e uscito "
-			              "sul filo in %d giri, piu' %d giri di coda perche' la "
-			              "capsula di chiusura (§3.1 punto 3) esca davvero "
-			              "(§8.1: mai con un silenzio)",
+			              "⭐ farewell 0x0c sent to all sessions and out "
+			              "on the wire in %d rounds, plus %d rounds of tail so that the "
+			              "closing capsule (§3.1 point 3) really goes out "
+			              "(§8.1: never with a silence)",
 			              giri, coda);
 		}
 		else
 			registro_dice(REG_AVVIO,
-			              "⛔ %zu sessioni non hanno finito dopo 4 s (%d giri) — "
-			              "«%s».  Il congedo 0x0c e' stato scritto ma non e' "
-			              "detto che sia uscito, e ⛔ §3.1 punto 3 — il motivo "
-			              "nel codice di chiusura — potrebbe non essere "
-			              "partito affatto.  Si chiude lo stesso. "
-			              "⚠ B7 `server-in-chiusura` misura esattamente questo.",
+			              "⛔ %zu sessions did not finish after 4 s (%d rounds) — "
+			              "«%s».  The farewell 0x0c was written but it may not "
+			              "have gone out, and ⛔ §3.1 point 3 — the reason "
+			              "in the closing code — may not have "
+			              "left at all.  Closing anyway. "
+			              "⚠ B7 `server-in-chiusura` measures exactly this.",
 			              restano, giri, trasporto_perche_restano(t));
 	}
 	esito = 0;
 
 fine:
-	/* ⛔ L'aiutante si spegne per primo: da qui in poi non c'e' piu' nessuno a
-	 *    cui consegnare un verdetto, e un figlio che scrive su un socket che
-	 *    nessuno legge e' un processo che resta.  ⚠ E `aiutante_spegni()`
-	 *    ASPETTA il figlio — ma fuori dal ciclo asincrono, che e' gia' finito:
-	 *    `CODER.md` §4.4 vieta l'attesa DENTRO il ciclo, e questa e' la riga
-	 *    dopo l'ultimo giro. */
+	/* ⛔ The helper is shut down first: from here on there is nobody left to
+	 *    deliver a verdict to, and a child writing on a socket nobody reads is
+	 *    a process that stays.  ⚠ And `aiutante_spegni()` WAITS for the child
+	 *    — but outside the asynchronous loop, which has already ended:
+	 *    `CODER.md` §4.4 forbids waiting INSIDE the loop, and this is the line
+	 *    after the last round. */
 	aiutante_spegni(pam_aiuto);
-	/* ⚠ Il guardiano prima della pagina e del trasporto: da qui in poi nessuno
-	 *   fa piu' domande su chi e' collegato, e tenere aperto un bus di sistema
-	 *   mentre si chiude non serve a niente. */
+	/* ⚠ The guard before the page and the transport: from here on nobody asks
+	 *   questions about who is connected any more, and keeping a system bus
+	 *   open while closing serves no purpose. */
 	sentinella_chiudi(guardiano);
 	comando_chiudi(k);
 	pagina_chiudi(p);
 	trasporto_chiudi(t);
-	/* ⛔ I figli si spengono DOPO il trasporto: finche' una connessione e' viva
-	 *    puo' esserci un fotogramma in coda, e i suoi byte stanno nel deposito.
-	 * ⚠ E si spengono all'uscita del PROCESSO, non a quella di una connessione:
-	 *   e' l'invariante I4 — il palco appartiene alla sessione, e chi muore
-	 *   quando cade la rete non e' lui.  ⛔ `figli_spegni()` ASPETTA che siano
-	 *   morti, perche' il monitor virtuale sparisce quando sparisce il
-	 *   consumatore: uscire prima lascerebbe un monitor attaccato alla sessione
-	 *   dell'utente senza nessuno che lo guardi. */
+	/* ⛔ The children are shut down AFTER the transport: as long as a
+	 *    connection is alive there may be a frame in the queue, and its bytes
+	 *    are in the depot.
+	 * ⚠ And they are shut down at the exit of the PROCESS, not of a connection:
+	 *   it is invariant I4 — the stage belongs to the session, and whoever dies
+	 *   when the network drops is not it.  ⛔ `figli_spegni()` WAITS for them
+	 *   to be dead, because the virtual monitor disappears when the consumer
+	 *   disappears: leaving earlier would leave a monitor attached to the
+	 *   user's session with nobody watching it. */
 	figli_spegni(prole);
 	if (ctx_quic)
 		SSL_CTX_free(ctx_quic);

@@ -1,11 +1,11 @@
 package motore
 
-// R30 in piccolo: il processo del motore UCCISO davvero (SIGKILL, niente defer, niente pulizia)
-// in ogni punto della tabella di §6.6.3 e in ogni transizione di stato; poi un motore nuovo
-// riprende e deve arrivare a CONFERMATA (o ANNULLATA, se si annulla) con la macchina IDENTICA a
-// quella di un giro senza interruzioni (o a quella di prima). Il processo ucciso è questo stesso
-// binario di prova, rilanciato con REMOTIX_PROVA_FIGLIO=1: il gancio PuntoDiProva esiste solo
-// nelle prove.
+// R30 in small: the engine process really KILLED (SIGKILL, no defer, no cleanup)
+// at every point of the table of §6.6.3 and at every state transition; then a new engine
+// resumes and must reach CONFERMATA (or ANNULLATA, if cancelling) with the machine IDENTICAL to
+// that of a run without interruptions (or to the one before). The killed process is this same
+// test binary, relaunched with REMOTIX_PROVA_FIGLIO=1: the PuntoDiProva hook exists only
+// in the tests.
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// figlio: il motore che verrà ucciso. Esce 3 se il punto non è mai stato raggiunto.
+// figlio: the engine that will be killed. It exits 3 if the point was never reached.
 func figlio() {
 	radice, operazioni := os.Getenv("RADICE"), os.Getenv("OPERAZIONI")
 	bersaglio := os.Getenv("PUNTO")
@@ -56,7 +56,7 @@ func figlio() {
 	os.Exit(3)
 }
 
-// uccidiIn lancia il figlio e controlla che sia morto di SIGKILL nel punto chiesto.
+// uccidiIn launches the child and checks it died of SIGKILL at the requested point.
 func uccidiIn(t *testing.T, radice, operazioni, piano, comando, punto string) {
 	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^$")
@@ -67,10 +67,10 @@ func uccidiIn(t *testing.T, radice, operazioni, piano, comando, punto string) {
 	err := cmd.Run()
 	var ee *exec.ExitError
 	if !errors.As(err, &ee) {
-		t.Fatalf("%s %s: il figlio non è morto (err=%v) %s", comando, punto, err, errOut.String())
+		t.Fatalf("%s %s: the child did not die (err=%v) %s", comando, punto, err, errOut.String())
 	}
 	if ws, ok := ee.Sys().(syscall.WaitStatus); !ok || !ws.Signaled() || ws.Signal() != syscall.SIGKILL {
-		t.Fatalf("%s %s: il punto non è stato raggiunto (uscita %v): %s", comando, punto, err, errOut.String())
+		t.Fatalf("%s %s: the point was not reached (exit %v): %s", comando, punto, err, errOut.String())
 	}
 }
 
@@ -91,7 +91,7 @@ func nuovoBanco(t *testing.T) *banco {
 
 func (b *banco) motore(t *testing.T) *Motore { return motoreFinto(t, b.radice, b.operazioni) }
 
-// riferimento: la macchina dopo un giro intero senza interruzioni.
+// riferimento: the machine after a whole run without interruptions.
 var riferimento map[string]string
 
 func fotoRiferimento(t *testing.T) map[string]string {
@@ -101,13 +101,13 @@ func fotoRiferimento(t *testing.T) map[string]string {
 	b := nuovoBanco(t)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("giro senza interruzioni: %v, stato %v", err, op.Stato)
+		t.Fatalf("run without interruptions: %v, state %v", err, op.Stato)
 	}
 	riferimento = foto(t, b.radice)
 	return riferimento
 }
 
-// controllaRegistro: nessuna azione FATTA due volte, nessuna INTENZIONE doppia (effetto doppio).
+// controllaRegistro: no action DONE twice, no duplicate INTENTION (double effect).
 func controllaRegistro(t *testing.T, op *Operazione) {
 	t.Helper()
 	if err := op.apriRegistro(); err != nil {
@@ -121,7 +121,7 @@ func controllaRegistro(t *testing.T, op *Operazione) {
 	}
 	for k, v := range n {
 		if v > 1 {
-			t.Errorf("%s: %d volte", k, v)
+			t.Errorf("%s: %d times", k, v)
 		}
 	}
 }
@@ -142,7 +142,7 @@ func puntiApplica() []string {
 	return pp
 }
 
-// ⭐ Ucciso durante l'applicazione, ripreso: CONFERMATA, e la macchina come dopo un giro pulito.
+// ⭐ Killed during application, resumed: CONFERMATA, and the machine as after a clean run.
 func TestRipresaDopoInterruzione(t *testing.T) {
 	rif := fotoRiferimento(t)
 	for _, punto := range puntiApplica() {
@@ -151,24 +151,24 @@ func TestRipresaDopoInterruzione(t *testing.T) {
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", punto)
 			op, err := b.motore(t).Riprendi()
 			if err != nil {
-				t.Fatalf("riprendi: %v", err)
+				t.Fatalf("resume: %v", err)
 			}
 			if op.Stato != CONFERMATA {
-				t.Fatalf("stato %s, atteso CONFIRMED", op.Stato)
+				t.Fatalf("state %s, expected CONFIRMED", op.Stato)
 			}
 			if d := differenze(rif, foto(t, b.radice)); len(d) > 0 {
-				t.Fatalf("la macchina non è quella del giro pulito:\n%s", strings.Join(d, "\n"))
+				t.Fatalf("the machine is not that of the clean run:\n%s", strings.Join(d, "\n"))
 			}
 			if _, err := os.Stat(filepath.Join(op.Cartella, "certificate.json")); err != nil {
-				t.Errorf("manca il certificato: %v", err)
+				t.Errorf("the certificate is missing: %v", err)
 			}
 			controllaRegistro(t, op)
 		})
 	}
 }
 
-// ⭐ Ucciso durante l'applicazione, poi annullato: ANNULLATA, e la macchina com'era prima,
-// byte per byte (la regola del firewall e il membro di «video» che c'erano restano).
+// ⭐ Killed during application, then cancelled: ANNULLATA, and the machine as it was before,
+// byte by byte (the firewall rule and the member of «video» that were there stay).
 func TestAnnullaDopoInterruzione(t *testing.T) {
 	for _, punto := range puntiApplica() {
 		t.Run(punto, func(t *testing.T) {
@@ -176,19 +176,19 @@ func TestAnnullaDopoInterruzione(t *testing.T) {
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", punto)
 			op, err := b.motore(t).Annulla()
 			if err != nil {
-				t.Fatalf("annulla: %v", err)
+				t.Fatalf("cancel: %v", err)
 			}
 			if op.Stato != ANNULLATA {
-				t.Fatalf("stato %s, atteso ROLLED_BACK", op.Stato)
+				t.Fatalf("state %s, expected ROLLED_BACK", op.Stato)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
-				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
+				t.Fatalf("the machine did not go back to how it was:\n%s", strings.Join(d, "\n"))
 			}
 		})
 	}
 }
 
-// ⭐ Ucciso DURANTE il ritorno indietro (R30, ultimo punto): la ripresa finisce l'annullamento.
+// ⭐ Killed DURING the rollback (R30, last point): resume finishes the cancellation.
 func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 	var punti []string
 	for _, a := range azioniDiProva() {
@@ -197,15 +197,15 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 	punti = append(punti, "file-a-meta@overwritten-file", "stato:INTERRUPTED@", "stato:ROLLING_BACK@")
 	for _, punto := range punti {
 		if punto == "annulla-dopo-intenzione@group-preexisting" || punto == "annulla-dopo-effetto@group-preexisting" {
-			continue // PREESISTENTE: non ha un annullamento, il punto non si raggiunge (lo si prova sotto)
+			continue // PREESISTENTE: it has no undo, the point is not reached (tested below)
 		}
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
-			// prima un'applicazione uccisa a metà, così c'è qualcosa da annullare
+			// first an application killed halfway, so there is something to cancel
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "annulla", punto)
-			// la ripresa: un'operazione IN_ANNULLAMENTO si riprende annullando; una INTERROTTA la
-			// si annulla di nuovo
+			// resume: an IN_ANNULLAMENTO operation is resumed by cancelling; an INTERROTTA one
+			// is cancelled again
 			m := b.motore(t)
 			ap, _ := m.Aperta()
 			var op *Operazione
@@ -219,14 +219,14 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 				t.Fatal(err)
 			}
 			if op.Stato != ANNULLATA {
-				t.Fatalf("stato %s, atteso ROLLED_BACK", op.Stato)
+				t.Fatalf("state %s, expected ROLLED_BACK", op.Stato)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
-				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
+				t.Fatalf("the machine did not go back to how it was:\n%s", strings.Join(d, "\n"))
 			}
 		})
 	}
-	t.Run("il punto PREEXISTING non si raggiunge", func(t *testing.T) {
+	t.Run("the PREEXISTING point is not reached", func(t *testing.T) {
 		b := nuovoBanco(t)
 		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
@@ -235,7 +235,7 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 		err := cmd.Run()
 		var ee *exec.ExitError
 		if !errors.As(err, &ee) || ee.ExitCode() != 3 {
-			t.Fatalf("atteso: il figlio finisce senza passare dal punto (uscita 3), invece %v", err)
+			t.Fatalf("expected: the child finishes without passing the point (exit 3), got %v", err)
 		}
 		if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
@@ -243,7 +243,7 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 	})
 }
 
-// Interrotta prima di toccare la macchina: la ripresa lo dice e non tocca niente.
+// Interrupted before touching the machine: resume says so and touches nothing.
 func TestInterruzionePrimaDiToccare(t *testing.T) {
 	for _, s := range []Stato{FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA} {
 		t.Run(string(s), func(t *testing.T) {
@@ -251,20 +251,20 @@ func TestInterruzionePrimaDiToccare(t *testing.T) {
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "stato:"+string(s)+"@")
 			op, err := b.motore(t).Riprendi()
 			if err != nil || op.Stato != BLOCCATA {
-				t.Fatalf("stato %v, err %v; atteso BLOCKED (RX-RIPRESA-002)", op.Stato, err)
+				t.Fatalf("state %v, err %v; expected BLOCKED (RX-RIPRESA-002)", op.Stato, err)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("toccata: %s", strings.Join(d, "\n"))
 			}
-			// e non resta aperta: un'applicazione nuova parte
+			// and it does not stay open: a new application starts
 			if op2, err := b.motore(t).Applica(b.piano, false, "prova"); err != nil || op2.Stato != CONFERMATA {
-				t.Fatalf("applica dopo: %v %v", op2, err)
+				t.Fatalf("apply after: %v %v", op2, err)
 			}
 		})
 	}
 }
 
-// Una riga del registro scritta a metà (processo ucciso durante la write): si toglie e si riprende.
+// A log line written halfway (process killed during the write): it is removed and resumed.
 func TestRigaTroncata(t *testing.T) {
 	b := nuovoBanco(t)
 	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-intenzione@unit")
@@ -283,56 +283,56 @@ func TestRigaTroncata(t *testing.T) {
 		}
 	}
 	if !trovata {
-		t.Error("la riga troncata non è stata dichiarata (RX-RIPRESA-003)")
+		t.Error("the truncated line was not declared (RX-RIPRESA-003)")
 	}
 }
 
-// FATTA ma l'effetto non c'è più (ultima riga della tabella): INTERROTTA (RX-RIPRESA-001); poi si annulla.
+// DONE but the effect is gone (last line of the table): INTERROTTA (RX-RIPRESA-001); then it is cancelled.
 func TestModificaConcorrente(t *testing.T) {
-	t.Run("gruppo tolto da altri", func(t *testing.T) {
+	t.Run("group removed by others", func(t *testing.T) {
 		b := nuovoBanco(t)
 		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@group-video")
 		(&gruppiFinti{b.radice}).Togli("prova", "video")
 		m := b.motore(t)
 		op, err := m.Riprendi()
 		if err != nil || op.Stato != INTERROTTA {
-			t.Fatalf("stato %v err %v, atteso INTERRUPTED (RX-RIPRESA-001)", op.Stato, err)
+			t.Fatalf("state %v err %v, expected INTERRUPTED (RX-RIPRESA-001)", op.Stato, err)
 		}
 		if ap, _ := m.Aperta(); ap == nil {
-			t.Fatal("INTERRUPTED deve restare aperta")
+			t.Fatal("INTERRUPTED must stay open")
 		}
 		op, err = m.Annulla()
 		if err != nil || op.Stato != ANNULLATA {
-			t.Fatalf("annulla: %v %v", op.Stato, err)
+			t.Fatalf("cancel: %v %v", op.Stato, err)
 		}
 		if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 			t.Fatalf("%s", strings.Join(d, "\n"))
 		}
 	})
-	t.Run("file cambiato dall'amministratore", func(t *testing.T) {
+	t.Run("file changed by the administrator", func(t *testing.T) {
 		b := nuovoBanco(t)
 		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unit")
 		conf := filepath.Join(b.radice, "etc/remotix/engine-test.conf")
 		os.WriteFile(conf, []byte("porta=9999 # messa a mano\n"), 0o644)
 		m := b.motore(t)
 		if op, _ := m.Riprendi(); op.Stato != INTERROTTA {
-			t.Fatalf("stato %v, atteso INTERRUPTED", op.Stato)
+			t.Fatalf("state %v, expected INTERRUPTED", op.Stato)
 		}
 		op, err := m.Annulla()
 		if err != nil || op.Stato != ANNULLATA_IN_PARTE {
-			t.Fatalf("annulla: %v %v, atteso PARTIALLY_ROLLED_BACK", op.Stato, err)
+			t.Fatalf("cancel: %v %v, expected PARTIALLY_ROLLED_BACK", op.Stato, err)
 		}
 		if c, _ := os.ReadFile(conf); string(c) != "porta=9999 # messa a mano\n" {
-			t.Fatalf("il file dell'amministratore è stato toccato: %q", c)
+			t.Fatalf("the administrator's file was touched: %q", c)
 		}
 	})
 }
 
-// R28 in piccolo: un passo che fallisce (qui: nftables, che il motore non sa ancora cambiare; ufw
-// lo sa da T6) ⇒
-// l'operazione si annulla per intero, e la macchina è com'era.
-// pianoCheFallisce: il piano di prova con un ultimo passo che non può riuscire (una persona che non
-// esiste, RX-GRUPPI-003): tutto quel che è stato fatto prima si annulla.
+// R28 in small: a step that fails (here: nftables, which the engine cannot change yet; ufw
+// can since T6) ⇒
+// the operation is cancelled entirely, and the machine is as it was.
+// pianoCheFallisce: the trial plan with a last step that cannot succeed (a person who does not
+// exist, RX-GRUPPI-003): everything done before is cancelled.
 func pianoCheFallisce(t *testing.T, b *banco) string {
 	p := pianoDiProva(t, b.radice, filepath.Dir(b.radice), false)
 	var pn Piano
@@ -354,15 +354,15 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 	b.prima = foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if err != nil || op.Stato != ANNULLATA {
-		t.Fatalf("stato %v err %v, atteso ROLLED_BACK", op.Stato, err)
+		t.Fatalf("state %v err %v, expected ROLLED_BACK", op.Stato, err)
 	}
 	if u := op.Reg.Ultimo("ghost", EvFallita); u == nil || u.Codice != "RX-GRUPPI-003" {
-		t.Fatalf("il fallimento non porta RX-GRUPPI-003: %+v", u)
+		t.Fatalf("the failure does not carry RX-GRUPPI-003: %+v", u)
 	}
 	if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 		t.Fatalf("%s", strings.Join(d, "\n"))
 	}
-	// e ucciso durante quell'annullamento, poi ripreso
+	// and killed during that cancellation, then resumed
 	for _, punto := range []string{"annulla-dopo-intenzione@unit", "annulla-dopo-effetto@overwritten-file", "stato:ROLLING_BACK@"} {
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
@@ -371,7 +371,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", punto)
 			op, err := b.motore(t).Riprendi()
 			if err != nil || op.Stato != ANNULLATA {
-				t.Fatalf("stato %v err %v", op.Stato, err)
+				t.Fatalf("state %v err %v", op.Stato, err)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("%s", strings.Join(d, "\n"))

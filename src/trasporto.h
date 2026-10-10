@@ -1,41 +1,43 @@
 /*
- * trasporto.h — L'ASCOLTATORE UDP: QUIC, e le connessioni che ci vivono sopra.
+ * trasporto.h — THE UDP LISTENER: QUIC, and the connections that live on it.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL PRIMO DEI DUE ASCOLTATORI (`RCP.md` §2.4)
+ * ⛔ THE FIRST OF THE TWO LISTENERS (`RCP.md` §2.4)
  *
- * «7447, e sono DUE ascoltatori con lo stesso numero: UDP per HTTP/3 e
- * WebTransport, TCP per il primo caricamento della pagina.»  Questo file e'
- * l'UDP; `pagina.h` e' il TCP.
+ * «7447, and they are TWO listeners with the same number: UDP for HTTP/3 and
+ * WebTransport, TCP for the first load of the page.»  This file is the UDP
+ * one; `pagina.h` is the TCP one.
  *
- * ⚠ E le due cose sono INDIPENDENTI — misura S1, `RCP.md` §2.4: WebTransport
- *   non usa `Alt-Svc` affatto, apre la sua connessione da se'.  ⛔ Il ripiego
- *   silenzioso su TCP che il piano dichiarava come pericolo NON PUO' accadere,
- *   perche' non c'e' nessun ripiego da fare.  Chi legge `PIANO.md` fase 1
- *   trovera' ancora scritto «e l'annuncio `Alt-Svc` che li lega»: quella riga e'
- *   anteriore alla misura, e `RCP.md` §2.4 la corregge con un ⛔.
+ * ⚠ And the two things are INDEPENDENT — measurement S1, `RCP.md` §2.4:
+ *   WebTransport does not use `Alt-Svc` at all, it opens its connection on its
+ *   own.  ⛔ The silent fallback to TCP that the plan declared as a danger
+ *   CANNOT happen, because there is no fallback to make.  Whoever reads
+ *   `PIANO.md` phase 1 will still find written «and the `Alt-Svc`
+ *   announcement that binds them»: that line predates the measurement, and
+ *   `RCP.md` §2.4 corrects it with a ⛔.
  *
  * ---------------------------------------------------------------------------
- * ⛔ I PARAMETRI DI TRASPORTO CHE SONO NORMATIVI, E DOVE STANNO
+ * ⛔ THE TRANSPORT PARAMETERS THAT ARE NORMATIVE, AND WHERE THEY ARE
  *
- * `RCP.md` §2.2 e §2.3 impongono al SERVER — non al client, che e' un browser e
- * i suoi parametri li sceglie lui:
+ * `RCP.md` §2.2 and §2.3 impose on the SERVER — not on the client, which is a
+ * browser and chooses its own parameters:
  *
- *   max_idle_timeout          30 s, imposto dal server (§2.2)
- *   datagram                  abilitati (§2.2) — e senza il parametro di
- *                             trasporto, annunciare SETTINGS_H3_DATAGRAM=1 e'
- *                             un errore di protocollo
- *   almeno 16 stream uni      DISPONIBILI IN OGNI MOMENTO al client (§2.3): il
- *                             loro esempio ne concede 3, e con quel credito il
- *                             client non aprirebbe nemmeno lo stream di input —
- *                             il sintomo sarebbe «il desktop non risponde».
- *                             ⛔ Se ne concedono **19**: i tre unidirezionali di
- *                             HTTP/3 (controllo + i due di QPACK) sono aperti
- *                             dal primo secondo e non si chiudono mai, quindi
- *                             16 come TOTALE erano 13 come disponibilita'
- *                             (rilievo B-12)
- *   niente 0-RTT              (§2.3) — sta in `tls.c`, dove si spegne
- *   migrazione non disabilitata (§2.3) — non si tocca `disable_active_migration`
+ *   max_idle_timeout          30 s, imposed by the server (§2.2)
+ *   datagram                  enabled (§2.2) — and without the transport
+ *                             parameter, announcing SETTINGS_H3_DATAGRAM=1 is
+ *                             a protocol error
+ *   at least 16 uni streams   AVAILABLE AT ALL TIMES to the client (§2.3): their
+ *                             example grants 3, and with that credit the
+ *                             client would not even open the input stream —
+ *                             the symptom would be «the desktop does not
+ *                             respond».
+ *                             ⛔ **19** are granted: the three unidirectional
+ *                             ones of HTTP/3 (control + the two of QPACK) are
+ *                             open from the first second and never close, so
+ *                             16 as a TOTAL were 13 as availability
+ *                             (finding B-12)
+ *   no 0-RTT                  (§2.3) — it is in `tls.c`, where it is turned off
+ *   migration not disabled    (§2.3) — `disable_active_migration` is not touched
  */
 #ifndef REMOTIX_TRASPORTO_H
 #define REMOTIX_TRASPORTO_H
@@ -49,57 +51,58 @@
 
 typedef struct trasporto trasporto;
 
-/* Apre il socket UDP e prepara la pila.  `porta` e' la stessa del TCP.
+/* Opens the UDP socket and prepares the stack.  `porta` is the same as TCP's.
  *
- * ⭐ `aiuto` e' l'aiutante di PAM (`DECISIONI.md` §1.10), acceso da `main.c`
- *    PRIMA di questa chiamata — cosi' il processo figlio non eredita ne' il
- *    socket UDP ne' l'ascoltatore TCP.  ⚠ NULL e' lecito: il server verifica
- *    le credenziali per via sincrona, cioe' fermando il filo, ed e' il ripiego
- *    dichiarato di `CODER.md` §4.2. */
+ * ⭐ `aiuto` is the PAM helper (`DECISIONI.md` §1.10), started by `main.c`
+ *    BEFORE this call — so the child process inherits neither the UDP socket
+ *    nor the TCP listener.  ⚠ NULL is allowed: the server checks the
+ *    credentials synchronously, that is stopping the thread, and it is the
+ *    declared fallback of `CODER.md` §4.2. */
 trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
                           aiutante *aiuto);
 
-/* ⭐ Consegna un verdetto di PAM alla connessione che lo aspettava (§1.10).
- * ⚠ Se non lo aspetta piu' nessuno lo scrive nel registro e lo butta: e'
- *   quel che succede quando la connessione muore mentre PAM risponde. */
-/* ⭐ D-001: `ripresa` = il palco di quell'utente c'era gia' prima di questo
- * verdetto; arriva fino a `SESSIONE` (§4.5, `2 = RIPRESA`). */
+/* ⭐ Delivers a PAM verdict to the connection that was waiting for it (§1.10).
+ * ⚠ If nobody waits for it any more it writes it in the log and throws it
+ *   away: it is what happens when the connection dies while PAM answers. */
+/* ⭐ D-001: `ripresa` = that user's stage already existed before this verdict;
+ * it travels up to `SESSIONE` (§4.5, `2 = RIPRESA`). */
 void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
                         bool ripresa);
 void trasporto_chiudi(trasporto *t);
 
 int trasporto_fd(const trasporto *t);
 
-/* ⛔ Dopo una rotazione del certificato di sessione il contesto TLS cambia: le
- * connessioni gia' aperte tengono il loro, le nuove prendono questo.  Chi non
- * lo rifa' serve per quattordici giorni un certificato di cui la pagina non
- * pubblica piu' l'impronta. */
+/* ⛔ After a rotation of the session certificate the TLS context changes: the
+ * connections already open keep theirs, the new ones take this one.  Whoever
+ * does not redo it serves for fourteen days a certificate whose fingerprint
+ * the page no longer publishes. */
 void trasporto_contesto(trasporto *t, SSL_CTX *ctx);
 
-/* Il socket e' leggibile: si legge tutto quel che c'e'. */
+/* The socket is readable: everything there is gets read. */
 void trasporto_leggi(trasporto *t);
 
-/* Si scrive quel che c'e' da scrivere su tutte le connessioni. */
+/* Whatever there is to write is written on all connections. */
 void trasporto_scrivi(trasporto *t);
 
-/* Millisecondi da adesso al primo timer che scade, o -1 se non ce n'e'.
- * ⛔ Non e' «zero se non ce n'e'»: zero significa «adesso», e confondere i due
- *    fa girare il ciclo a vuoto bruciando una CPU. */
+/* Milliseconds from now to the first timer that expires, or -1 if there is none.
+ * ⛔ It is not «zero if there is none»: zero means «now», and confusing the two
+ *    makes the loop spin idle burning a CPU. */
 int trasporto_attesa_ms(const trasporto *t);
 
-/* Fa scadere i timer maturi (di QUIC e nostri) e riscrive. */
+/* Expires the ripe timers (QUIC's and ours) and writes again. */
 void trasporto_scaduti(trasporto *t);
 
-/* Quante connessioni sono vive.  Per il registro. */
+/* How many connections are alive.  For the log. */
 size_t trasporto_quante(const trasporto *t);
 
-/* ⛔ §8.1 — «mai con un silenzio»: manda `CONGEDO` col motivo a tutte le
- * sessioni vive e chiude ciascuna col codice del motivo (§3.1 punto 3).  La
- * chiama chi spegne il server, con `RCP_SERVER_IN_CHIUSURA` (§8.2, `0x0C`).
+/* ⛔ §8.1 — «never with a silence»: sends `CONGEDO` with the reason to all live
+ * sessions and closes each one with the reason's code (§3.1 point 3).  It is
+ * called by whoever shuts the server down, with `RCP_SERVER_IN_CHIUSURA` (§8.2,
+ * `0x0C`).
  *
- * ⭐ Restituisce quante connessioni hanno ancora byte da far uscire: chi spegne
- *    fa girare il ciclo finche' non e' zero (o finche' non scade la sua
- *    pazienza), perche' «consegnato a ngtcp2» non e' «uscito sul filo». */
+ * ⭐ Returns how many connections still have bytes to get out: whoever shuts
+ *    down runs the loop until it is zero (or until its patience runs out),
+ *    because «handed to ngtcp2» is not «out on the wire». */
 const char *trasporto_perche_restano(const trasporto *t);
 size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche);
 

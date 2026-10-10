@@ -1,48 +1,48 @@
 /*
- * input.h — LA CUCITURA del canale di input: dal filo al desktop.
+ * input.h — THE SEAM of the input channel: from the wire to the desktop.
  *
- * ⛔ QUESTO FILE E' DEL COORDINATORE, non dell'anello che lo attua.  La ragione
- *    e' scritta in `fasi/rapporti/F5-desktop-vero.md`: il difetto della fase 3
- *    non era DENTRO un pezzo, era FRA due pezzi «ciascuno corretto per conto
- *    suo» — e le cuciture, non avendo un proprietario, non le guardava nessun
- *    banco.  Qui il proprietario ce l'hanno.
+ * ⛔ THIS FILE BELONGS TO THE COORDINATOR, not to the link that implements it.  The reason
+ *    is written in `fasi/rapporti/F5-desktop-vero.md`: the defect of phase 3
+ *    was not INSIDE a piece, it was BETWEEN two pieces "each correct on its
+ *    own" — and the seams, having no owner, were watched by no
+ *    bench.  Here they have an owner.
  *
- * Chi legge questo file:
- *   · `input.c` — attua queste funzioni su `libei`, sulla sessione di
- *                 `mutter.c`.  ⛔ NON conosce ne' QUIC ne' il formato dei
- *                 messaggi;
- *   · `figlio.c`— ⭐ **cuce i due**: e' lui che include questo file, scrive i
- *                 sei adattatori e li appende ai ganci di `rcp_ganci`.
+ * Who reads this file:
+ *   · `input.c` — implements these functions on `libei`, on the session of
+ *                 `mutter.c`.  ⛔ It knows NEITHER QUIC nor the message
+ *                 format;
+ *   · `figlio.c`— ⭐ **stitches the two together**: it is the one that includes this file, writes the
+ *                 six adapters and hangs them on the hooks of `rcp_ganci`.
  *
- * ⛔⛔ E QUI C'ERA UNA RIGA SBAGLIATA, corretta il 14 agosto 2026 su rilievo
- *      dell'anello che attuava il filo — che l'ha provata invece di crederla.
+ * ⛔⛔ AND HERE THERE WAS A WRONG LINE, corrected on 14 August 2026 on a finding
+ *      of the link that implemented the wire — which tested it instead of believing it.
  *
- * Diceva: *«`rcp.c` decodifica i messaggi di §7.3 e **chiama queste
- * funzioni**»*.  ⛔ **Il costruttore lo rende impossibile**, e non e' una
- * preferenza di stile: `rcp.c` vive in DUE cartelle che il `Makefile`
- * (`GEMELLATI`) pretende identiche byte per byte, e la seconda copia
- * `banchi/01-b3-rcp-innesta.py` la infila dentro `examples/` di ngtcp2, dove
- * `input.h` **non c'e'**.  Un `#include "input.h"` in `rcp.c` non compila
- * l'innesto ⇒ **spegne B3, B5, B6, B8 e B11 in un colpo solo**.
+ * It said: *"`rcp.c` decodes the messages of §7.3 and **calls these
+ * functions**"*.  ⛔ **The build makes it impossible**, and it is not a
+ * matter of style: `rcp.c` lives in TWO folders that the `Makefile`
+ * (`GEMELLATI`) requires identical byte for byte, and the second copy
+ * `banchi/01-b3-rcp-innesta.py` slips into ngtcp2's `examples/`, where
+ * `input.h` **is not there**.  An `#include "input.h"` in `rcp.c` does not compile
+ * the graft ⇒ **it switches off B3, B5, B6, B8 and B11 in one blow**.
  *
- * ⇒ La forma giusta e' quella che `rcp.h` usa gia' per PAM e per gli stream:
- *   **sei ganci in `rcp_ganci`**, con le firme di questo file campo per campo.
- *   ⛔ Si collegano **tutti e sei o nessuno**: un canale che sapesse muovere il
- *   puntatore e non sapesse rilasciare un pulsante lascerebbe il desktop
- *   **peggio di come l'ha trovato**.
+ * ⇒ The right form is the one `rcp.h` already uses for PAM and for the streams:
+ *   **six hooks in `rcp_ganci`**, with the signatures of this file field by field.
+ *   ⛔ They are connected **all six or none**: a channel that could move the
+ *   pointer and could not release a button would leave the desktop
+ *   **worse than it found it**.
  *
- * ⛔⛔ IL CONTRATTO DEL THREAD, e sta scritto perche' e' un difetto che NON DA'
- *      ERRORE — chiesto dall'anello che ha attuato questo file, 14 ago 2026.
+ * ⛔⛔ THE THREAD CONTRACT, and it is written because it is a defect that GIVES NO
+ *      ERROR — asked for by the link that implemented this file, 14 Aug 2026.
  *
- *      **`libei` non e' rientrante.**  TUTTE le funzioni di questo file vanno
- *      chiamate dallo **stesso thread** che chiama `input_gira()`.  Due thread
- *      su uno `struct ei` non danno un errore: danno un programma che a un
- *      certo punto si comporta male, e nessuno collega le due cose.
- * ⚠ Nel prodotto e' il ciclo del figlio (`figlio.c`), che e' a un filo solo.
+ *      **`libei` is not reentrant.**  ALL functions of this file must be
+ *      called from the **same thread** that calls `input_gira()`.  Two threads
+ *      on one `struct ei` do not give an error: they give a program that at some
+ *      point misbehaves, and nobody connects the two things.
+ * ⚠ In the product it is the child's loop (`figlio.c`), which is single-threaded.
  *
- * ⛔ La regola che governa i tipi qui sotto: i codici sono quelli di **evdev**
- *    (`linux/input-event-codes.h`), perche' `libei` lavora in evdev e ogni
- *    altra convenzione aggiungerebbe una tabella che sbaglia in silenzio
+ * ⛔ The rule governing the types below: the codes are those of **evdev**
+ *    (`linux/input-event-codes.h`), because `libei` works in evdev and any
+ *    other convention would add a table that goes wrong silently
  *    (`RCP.md` §7.3).
  */
 #ifndef REMOTIX_INPUT_H
@@ -54,221 +54,221 @@
 typedef struct input Input;
 
 /*
- * Apre il canale verso il compositore.  `sessione_controllo` e' il percorso
- * D-Bus della sessione `RemoteDesktop` gia' avviata da `mutter.c`, da cui si
- * chiede `ConnectToEIS` (vedi il commento di `src/mutter.c:402`).
+ * Opens the channel to the compositor.  `sessione_controllo` is the D-Bus
+ * path of the `RemoteDesktop` session already started by `mutter.c`, from which
+ * `ConnectToEIS` is requested (see the comment of `src/mutter.c:402`).
  *
- * `tela_l`/`tela_a` sono la TELA di `RCP.md` §4.5 — non la vista.  Servono a
- * mappare la regione del puntatore assoluto.
+ * `tela_l`/`tela_a` are the CANVAS of `RCP.md` §4.5 — not the view.  They serve to
+ * map the region of the absolute pointer.
  *
- * ⛔ Ritorna NULL e riempie `*errore` (da liberare con free) se non si apre.
- *    Non si ripiega in silenzio: `CODER.md` §4.2.
+ * ⛔ Returns NULL and fills `*errore` (to be freed with free) if it does not open.
+ *    No silent fallback: `CODER.md` §4.2.
  */
 Input *input_apri(void *sessione_mutter, uint32_t tela_l, uint32_t tela_a,
                   char **errore);
 
-/* ⭐ FASE 12 — lo stesso, con il canale chiesto a KWin (`kwin_eis_fd()`).
- *    `tela_l`/`tela_a` sono la misura dell'uscita di KWin. */
+/* ⭐ PHASE 12 — the same, with the channel asked of KWin (`kwin_eis_fd()`).
+ *    `tela_l`/`tela_a` are the size of KWin's output. */
 struct KwinSessione;
 Input *input_apri_kwin(struct KwinSessione *kwin, uint32_t tela_l, uint32_t tela_a,
                        char **errore);
 
 /*
- * ⭐ FASE 13, INCREMENTO 3 — lo stesso contratto su wlroots (labwc, XFCE).
+ * ⭐ PHASE 13, INCREMENT 3 — the same contract on wlroots (labwc, XFCE).
  *
- * ⛔ Qui `libei` NON esiste (`STUDI.md` §xfce §7, `[✗]`): il trasporto sono la
- *    tastiera e il puntatore virtuali di Wayland (`wlr_input.h`).  Non serve
- *    nessuna sessione da cui chiedere il canale: ci si collega al compositore
- *    dell'utente come qualunque suo client.
+ * ⛔ Here `libei` does NOT exist (`STUDI.md` §xfce §7, `[✗]`): the transport is
+ *    Wayland's virtual keyboard and pointer (`wlr_input.h`).  No
+ *    session is needed to ask the channel from: we connect to the user's
+ *    compositor like any of its clients.
  *
- * ⭐ Le altre funzioni di questo file NON cambiano firma: chi cuce (`figlio.c`)
- *    cambia in un punto solo, il costruttore.  Dentro, le funzioni pubbliche
- *    passano la mano in cima, come fanno gli appunti con `appunti_apri_kde()`.
+ * ⭐ The other functions of this file do NOT change signature: the stitcher (`figlio.c`)
+ *    changes in one place only, the constructor.  Inside, the public functions
+ *    hand over at the top, as the clipboard does with `appunti_apri_kde()`.
  *
- * ⚠ E le due differenze di comportamento che chi cuce deve sapere:
- *   · `input_disposizione()` NON tocca le impostazioni della sessione: la
- *     disposizione diventa la keymap della NOSTRA tastiera virtuale, che labwc
- *     consegna alle applicazioni insieme ai nostri tasti (§7.4);
- *   · non ci sono ricambi di dispositivo né orfani: su wlroots i dispositivi
- *     sono nostri, e il compositore non li ricrea.
+ * ⚠ And the two differences in behaviour the stitcher must know:
+ *   · `input_disposizione()` does NOT touch the session's settings: the
+ *     layout becomes the keymap of OUR virtual keyboard, which labwc
+ *     hands to the applications together with our keys (§7.4);
+ *   · there are no device replacements nor orphans: on wlroots the devices
+ *     are ours, and the compositor does not recreate them.
  */
 Input *input_apri_wlr(uint32_t tela_l, uint32_t tela_a, char **errore);
 
 /*
- * ⛔ I ricambi silenziosi di `libei`, che `STUDI.md` §gnome §9 misura: un cambio di
- *    keymap distrugge e ricrea il dispositivo tastiera, un cambio di geometria
- *    tutti i dispositivi assoluti — e il puntatore al dispositivo vecchio
- *    smette di funzionare SENZA ERRORE.  ⇒ Questa va chiamata dal ciclo del
- *    figlio a ogni giro: dentro rilegge keymap e regioni a ogni `DEVICE_ADDED`.
- *    Ritorna il numero di eventi serviti, o -1.
+ * ⛔ The silent replacements of `libei`, which `STUDI.md` §gnome §9 measures: a keymap
+ *    change destroys and recreates the keyboard device, a geometry change
+ *    all the absolute devices — and the pointer to the old device
+ *    stops working WITHOUT AN ERROR.  ⇒ This must be called from the child's loop
+ *    at every round: inside it rereads keymap and regions at every `DEVICE_ADDED`.
+ *    Returns the number of events served, or -1.
  */
 int input_gira(Input *);
 
 /*
- * ⛔⭐ IL DESCRITTORE DA METTERE NEL `poll()`, e non e' una comodita': e'
- *     millisecondi sul percorso dell'input.
+ * ⛔⭐ THE DESCRIPTOR TO PUT IN THE `poll()`, and it is not a convenience: it is
+ *     milliseconds on the input path.
  *
- *     Senza, l'unica strada e' chiamare `input_gira()` a intervalli — cioe'
- *     **latenza aggiunta proprio dove il terzo numero di `CODER.md` §1-bis la
- *     conta** (tetto 50 ms).  ⚠ Un banco che sonda ogni 50 ms misura benissimo;
- *     un prodotto che lo fa regala fino a 50 ms all'utente su ogni gesto.
+ *     Without it, the only way is to call `input_gira()` at intervals — that is
+ *     **latency added right where the third number of `CODER.md` §1-bis
+ *     counts it** (ceiling 50 ms).  ⚠ A bench that polls every 50 ms measures fine;
+ *     a product that does it gives away up to 50 ms to the user on every gesture.
  *
- * Ritorna -1 se il canale non e' aperto: ⛔ e -1 vuol dire «niente da mettere
- * nel poll», non «errore» — chi chiama lo distingue guardando se `Input` c'e'.
+ * Returns -1 if the channel is not open: ⛔ and -1 means "nothing to put
+ * in the poll", not "error" — the caller tells them apart by looking at whether `Input` exists.
  */
 int input_descrittore(Input *);
 
 /*
- * Le cinque azioni di `RCP.md` §7.3.  Tutte ritornano 0 se l'azione e' stata
- * consegnata al compositore, -1 se no.
+ * The five actions of `RCP.md` §7.3.  All return 0 if the action was
+ * delivered to the compositor, -1 if not.
  *
- * ⛔ `x`/`y` sono INDICI DI PIXEL SULLA TELA: `0 <= x < tela_l`.  Chi chiama ha
- *    gia' rifiutato le coordinate fuori intervallo (e' `rcp.c`): qui non si
- *    applica NESSUNA trasformazione.
+ * ⛔ `x`/`y` are PIXEL INDICES ON THE CANVAS: `0 <= x < tela_l`.  The caller has
+ *    already refused out-of-range coordinates (it is `rcp.c`): here NO
+ *    transformation is applied.
  */
 int input_puntatore(Input *, uint32_t x, uint32_t y);
 
 /*
- * ⛔ LA TELA IN VIGORE E' CAMBIATA (`RCP.md` §7.1, `TELA(ADATTATA)`).  Rimappa
- *    la regione del puntatore assoluto.  0 se fatto, -1 se no.
+ * ⛔ THE CANVAS IN FORCE HAS CHANGED (`RCP.md` §7.1, `TELA(ADATTATA)`).  Remaps
+ *    the region of the absolute pointer.  0 if done, -1 if not.
  *
- * ⚠ Aggiunta il 14 agosto 2026, e la ragione e' un difetto *fra* due pezzi —
- *   la stessa forma che la fase 3 ha gia' pagato.  `input_apri()` prende la
- *   tela **una volta sola**; dopo un `TELA(ADATTATA)` `rcp.c` satura le
- *   coordinate alla tela NUOVA mentre `input.c` resta mappato sulla VECCHIA:
- *   ⛔ due lati con due verita', e nessun errore da nessuna parte.
+ * ⚠ Added on 14 August 2026, and the reason is a defect *between* two pieces —
+ *   the same form phase 3 has already paid for.  `input_apri()` takes the
+ *   canvas **once only**; after a `TELA(ADATTATA)` `rcp.c` saturates the
+ *   coordinates to the NEW canvas while `input.c` stays mapped on the OLD one:
+ *   ⛔ two sides with two truths, and no error anywhere.
  *
- * ⚠ `[?]` Forse `input_gira()` basterebbe gia', perche' rilegge le regioni a
- *   ogni `DEVICE_ADDED` — ⛔ ma **non e' misurato**, e il momento del
- *   `DEVICE_ADDED` non e' il momento del `TELA`.  Finche' resta `[?]`, la
- *   chiamata esplicita e' la strada.
+ * ⚠ `[?]` Maybe `input_gira()` would already suffice, because it rereads the regions at
+ *   every `DEVICE_ADDED` — ⛔ but **it is not measured**, and the moment of the
+ *   `DEVICE_ADDED` is not the moment of the `TELA`.  As long as it stays `[?]`, the
+ *   explicit call is the way.
  */
 int input_ritela(Input *, uint32_t tela_l, uint32_t tela_a);
 
 /*
- * ⭐ FASE 15, D-007 — DOPO UN CAMBIO DI MISURA DELL'USCITA, LE FINESTRE SI
- *    RIPORTANO DENTRO LO SCHERMO (spostate il meno possibile, rimpicciolite
- *    solo se piu' grandi dello schermo).
+ * ⭐ PHASE 15, D-007 — AFTER A CHANGE OF THE OUTPUT'S SIZE, THE WINDOWS ARE
+ *    BROUGHT BACK INSIDE THE SCREEN (moved as little as possible, shrunk
+ *    only if larger than the screen).
  *
- * Su GNOME e KDE lo fa il compositore da se' ⇒ qui non si fa niente, e si
- * torna 0.  Su labwc (XFCE, LXQt) si BATTE la scorciatoia
- * `SESSIONE_LABWC_TASTO` che la sessione ha scritto nella configurazione di
- * labwc (`sessione.h`, il riquadro di `SESSIONE_LABWC_TASTIERA`), e poi si
- * rimette il puntatore dove l'utente l'aveva lasciato.
- * ⚠ Innocua se non c'e' niente da riportare: una finestra gia' dentro resta
- *   dov'e', al pixel.
- * Torna 1 se ha battuto la scorciatoia, 0 se non serve, -1 se l'invio fallisce.
+ * On GNOME and KDE the compositor does it by itself ⇒ here nothing is done, and
+ * 0 is returned.  On labwc (XFCE, LXQt) we TYPE the shortcut
+ * `SESSIONE_LABWC_TASTO` that the session wrote into labwc's
+ * configuration (`sessione.h`, the box of `SESSIONE_LABWC_TASTIERA`), and then
+ * put the pointer back where the user had left it.
+ * ⚠ Harmless if there is nothing to bring back: a window already inside stays
+ *   where it is, to the pixel.
+ * Returns 1 if it typed the shortcut, 0 if not needed, -1 if sending fails.
  */
 int input_riporta_dentro(Input *);
 
 /*
- * ⛔⭐⭐ LA DISPOSIZIONE NEGOZIATA ENTRA NELLA SESSIONE — `DECISIONI.md`
- *      §5-bis.7, decisa dall'utente l'8 agosto 2026 e CONFERMATA il 16.
+ * ⛔⭐⭐ THE NEGOTIATED LAYOUT ENTERS THE SESSION — `DECISIONI.md`
+ *      §5-bis.7, decided by the user on 8 August 2026 and CONFIRMED on the 16th.
  *
- * ⛔ E il verso e' QUESTO, non l'altro.  La strada corta sarebbe stata: tenere
- *    la sessione com'e' e tradurre la lettera con una keymap NOSTRA, quella che
- *    il client ha chiesto.  ⛔ `tastiera.h` spiega perche' e' sbagliata e
- *    `tastiera.c` la misura: con la nostra keymap e la loro sessione escono
- *    **caratteri diversi** — mandiamo il tasto 26 per la `[` di `us` e sullo
- *    schermo, su una sessione `it`, compare una `è`.  Cioe' esattamente cio'
- *    che `RCP.md` §7.3 vieta.
+ * ⛔ And the direction is THIS one, not the other.  The short way would have been: keep
+ *    the session as it is and translate the letter with a keymap of OURS, the one
+ *    the client asked for.  ⛔ `tastiera.h` explains why it is wrong and
+ *    `tastiera.c` measures it: with our keymap and their session
+ *    **different characters** come out — we send key 26 for the `[` of `us` and on
+ *    screen, on an `it` session, an `è` appears.  That is exactly what
+ *    `RCP.md` §7.3 forbids.
  *
- * ⇒ Si cambia la disposizione **della sessione**, e poi la si RILEGGE da
- *   `libei` come si e' sempre fatto.  ⭐ Che quel giro regga non e' una
- *   speranza: `[M]` 16 agosto 2026, banco `06-b34` caso 2s — cambiata la
- *   disposizione della sessione, Mutter distrugge e ricrea il dispositivo
- *   tastiera, `leggi_keymap()` rilegge, e al testimone dentro la sessione
- *   arriva il carattere GIUSTO.
+ * ⇒ The layout **of the session** is changed, and then it is READ BACK from
+ *   `libei` as has always been done.  ⭐ That this trip holds is not a
+ *   hope: `[M]` 16 August 2026, bench `06-b34` case 2s — with the session's layout
+ *   changed, Mutter destroys and recreates the keyboard
+ *   device, `leggi_keymap()` rereads, and the witness inside the session
+ *   receives the RIGHT character.
  *
- * ⛔⛔ E IL DANNO CHE QUESTA FUNZIONE CURA NON E' LA COMODITA' DI DUE ACCENTI.
- *     `SPECIFICHE.md` §7.3: le lettere viaggiano come **lettere**, ma le
- *     scorciatoie viaggiano come **posizioni** — e le posizioni combaciano solo
- *     se le due disposizioni sono la stessa.  Su una tastiera tedesca la `Z`
- *     sta dove sulla nostra sta la `Y` (evdev 21 contro 44): senza rinegoziare,
- *     **`Ctrl+Z` arriva come `Ctrl+Y`**, cioe' «rifai» invece di «annulla».
- *     ⚠ Il sintomo che l'utente descrive e' «l'annulla non funziona», e nessuno
- *       lo collega alla disposizione.
+ * ⛔⛔ AND THE DAMAGE THIS FUNCTION CURES IS NOT THE CONVENIENCE OF TWO ACCENTS.
+ *     `SPECIFICHE.md` §7.3: letters travel as **letters**, but
+ *     shortcuts travel as **key positions** — and key positions match only
+ *     if the two layouts are the same.  On a German keyboard `Z`
+ *     is where on ours `Y` is (evdev 21 versus 44): without renegotiating,
+ *     **`Ctrl+Z` arrives as `Ctrl+Y`**, that is "redo" instead of "undo".
+ *     ⚠ The symptom the user describes is "undo does not work", and nobody
+ *       connects it to the layout.
  *
- * `nome` e' la stringa di `RCP.md` §4.5: `it`, `us`, `de(neo)`.
+ * `nome` is the string of `RCP.md` §4.5: `it`, `us`, `de(neo)`.
  *
- *   ritorna  0  la richiesta e' PARTITA.  ⚠ NON «e' in vigore»: il compositore
- *               ci mette il suo tempo, e chi lo constata e' la riga di
- *               `leggi_keymap()` al `DEVICE_ADDED` che segue;
- *   ritorna -1  non e' partita, ed e' gia' dichiarato nel registro.
+ *   returns  0  the request has LEFT.  ⚠ NOT "it is in force": the compositor
+ *               takes its time, and whoever ascertains it is the line of
+ *               `leggi_keymap()` at the `DEVICE_ADDED` that follows;
+ *   returns -1  it has not left, and it is already declared in the log.
  */
 int input_disposizione(Input *, const char *nome);
 
-/* `codice` e' evdev: `BTN_LEFT` = 0x110.  `premuto` 1 o 0. */
+/* `codice` is evdev: `BTN_LEFT` = 0x110.  `premuto` 1 or 0. */
 int input_pulsante(Input *, uint16_t codice, int premuto);
 
 /*
- * ⛔ Unita' da 120 per scatto, e IL SEGNO DELL'ASSE VERTICALE SI INVERTE QUI
- *    DENTRO — una volta sola, in un posto solo.  E' `[M]` 10 agosto 2026
- *    (`RCP.md` §7.3, riquadro «Il segno della rotella»): il client manda +120
- *    quando l'utente gira in su, e le due convenzioni sono opposte.
- * ⚠ E i mezzi scatti esistono: 60 NON si arrotonda a zero.  `STUDI.md` §gnome §9 dice
- *   che `ei_device_scroll_discrete` fa una divisione intera per 120 e se li
- *   mangia: la strada e' `scroll_delta`, dove la soglia vera e' 60.
+ * ⛔ Units of 120 per notch, and THE SIGN OF THE VERTICAL AXIS IS INVERTED IN
+ *    HERE — once only, in one place only.  It is `[M]` 10 August 2026
+ *    (`RCP.md` §7.3, box «Il segno della rotella»): the client sends +120
+ *    when the user turns up, and the two conventions are opposite.
+ * ⚠ And half notches exist: 60 is NOT rounded to zero.  `STUDI.md` §gnome §9 says
+ *   that `ei_device_scroll_discrete` does an integer division by 120 and
+ *   eats them: the way is `scroll_delta`, where the real threshold is 60.
  */
 int input_rotella(Input *, int32_t asse_x, int32_t asse_y);
 
 /*
- * Una lettera, come valore scalare Unicode.  Passa da `tastiera.h`.
- * ⛔ Se il carattere NON e' producibile nella disposizione della sessione:
- *    ritorna 1 (non 0 e non -1).  ⛔ MAI una lettera diversa, MAI il silenzio
+ * A letter, as a Unicode scalar value.  Goes through `tastiera.h`.
+ * ⛔ If the character is NOT producible in the session's layout:
+ *    returns 1 (not 0 and not -1).  ⛔ NEVER a different letter, NEVER silence
  *    (`RCP.md` §7.3, `SPECIFICHE.md` §7.3).
  *
- * ⚠ CORRETTO IL 14 AGOSTO 2026 — qui c'era scritto «e chi chiama lo scrive nel
- *   registro», ed era la meta' sbagliata della cucitura: **la riga la scrive
- *   gia' `tastiera.c`**, e ci mette dentro **quale disposizione** — che e'
- *   l'unica cosa utile a chi legge il registro sei ore dopo, e che `rcp.c` non
- *   sa.  ⛔ Da cui: **`rcp.c` NON DEVE duplicarla**, o si contano due volte gli
- *   stessi caratteri.
+ * ⚠ CORRECTED ON 14 AUGUST 2026 — here it said "and the caller writes it to the
+ *   log", and it was the wrong half of the seam: **the line is already written
+ *   by `tastiera.c`**, and it puts in it **which layout** — which is the
+ *   only thing useful to whoever reads the log six hours later, and which `rcp.c` does not
+ *   know.  ⛔ Hence: **`rcp.c` MUST NOT duplicate it**, or the same characters
+ *   are counted twice.
  *
- * ⚠ E per la stessa ragione `input_apri()` NON prende la disposizione: la
- *   keymap arriva da `libei` dentro `input.c`, a ogni `DEVICE_ADDED`
- *   (`tastiera_apri_da_keymap()`).  Non e' una dimenticanza: e' il verso
- *   giusto.
+ * ⚠ And for the same reason `input_apri()` does NOT take the layout: the
+ *   keymap arrives from `libei` inside `input.c`, at every `DEVICE_ADDED`
+ *   (`tastiera_apri_da_keymap()`).  It is not an oversight: it is the right
+ *   direction.
  */
 int input_lettera(Input *, uint32_t carattere);
 
-/* Una posizione di tasto, in evdev: `KEY_A` = 30.  `premuto` 1 o 0. */
+/* A key position, in evdev: `KEY_A` = 30.  `premuto` 1 or 0. */
 int input_posizione(Input *, uint16_t codice, int premuto);
 
 /*
- * ⛔⛔ IL RILASCIO AL DISTACCO — `RCP.md` §11 la chiama «la regola col rapporto
- *      danno/costo piu' alto del documento».  Rilascia OGNI tasto e OGNI
- *      pulsante che risultano premuti.  Un Ctrl rimasto giu' in una sessione
- *      che sopravvive al client rende il desktop inservibile al riattacco, e
- *      nessuno collega le due cose.
- * ⇒ Da cui l'obbligo, per chi attua: si TIENE il conto di cosa e' premuto.
- *   Ritorna quanti ne ha rilasciati, perche' il banco possa contarli.
+ * ⛔⛔ THE RELEASE AT DETACH — `RCP.md` §11 calls it "the rule with the highest
+ *      damage/cost ratio in the document".  Releases EVERY key and EVERY
+ *      button that is pressed.  A Ctrl left down in a session
+ *      that survives the client makes the desktop unusable at reattach, and
+ *      nobody connects the two things.
+ * ⇒ Hence the obligation, for the implementer: the count of what is pressed is KEPT.
+ *   Returns how many it released, so that the bench can count them.
  */
 int input_rilascia_tutto(Input *);
 
 /*
- * ⛔⛔ QUANTO C'E' GIU' ADESSO — fra tasti e pulsanti, in un numero solo.
- *      Aggiunta il 21 agosto 2026 per la cura «A».  🔸 Derivata.
+ * ⛔⛔ HOW MUCH IS DOWN NOW — between keys and buttons, in a single number.
+ *      Added on 21 August 2026 for cure "A".  🔸 Derived.
  *
- * ⚠ NON e' una statistica per il registro: e' una **guardia**, e chi la chiama
- *   deve sapere che cosa evita.
+ * ⚠ It is NOT a statistic for the log: it is a **guard**, and the caller
+ *   must know what it prevents.
  *
- * ⛔ IL FATTO, `[M]` 21 agosto 2026 (banco `banchi/06-b33-risveglio.*`): ogni
- *    `cattura_risveglia()` fa ricreare a Mutter i dispositivi assoluti — **3
- *    risvegli, 3 ricambi, con ZERO cambi di tela**.  E se in quel momento un
- *    pulsante e' premuto, quel pulsante resta giu' **nel posto** e ⛔ **il
- *    desktop non prende piu' un clic per tutta la sessione**.
+ * ⛔ THE FACT, `[M]` 21 August 2026 (bench `banchi/06-b33-risveglio.*`): every
+ *    `cattura_risveglia()` makes Mutter recreate the absolute devices — **3
+ *    wake-ups, 3 replacements, with ZERO canvas changes**.  And if at that moment a
+ *    button is pressed, that button stays down **in the seat** and ⛔ **the
+ *    desktop no longer takes a click for the whole session**.
  *
- * ⛔ E il momento in cui `figlio.c` chiama `cattura_risveglia()` e' *«la scena
- *    e' ferma e una chiave e' dovuta»*, cioe' **esattamente** il momento in cui
- *    l'utente puo' tenere giu' il mouse su un desktop che non si muove.
+ * ⛔ And the moment `figlio.c` calls `cattura_risveglia()` is *"the scene
+ *    is still and a keyframe is owed"*, that is **exactly** the moment the
+ *    user may hold the mouse down on a desktop that does not move.
  *
- * ⇒ Chi sta per fare qualcosa che ricrea i dispositivi guarda prima di qui.
+ * ⇒ Whoever is about to do something that recreates the devices looks here first.
  *
- * ⚠ E la cura di `figlio.c:3964` — rilasciare prima di `cattura_ridimensiona()`
- *   — **non copre questa strada**: li' il rilascio si puo' fare perche' e' il
- *   client ad aver chiesto il cambio; qui no, perche' l'utente sta
- *   trascinando e nessuno gli ha chiesto niente.
+ * ⚠ And the cure of `figlio.c:3964` — releasing before `cattura_ridimensiona()`
+ *   — **does not cover this path**: there the release can be done because it is the
+ *   client that asked for the change; here not, because the user is
+ *   dragging and nobody asked them anything.
  */
 unsigned input_premuti(const Input *);
 

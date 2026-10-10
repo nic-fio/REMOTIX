@@ -8,54 +8,54 @@ import (
 	"testing"
 )
 
-// La macchina a stati: solo le transizioni del disegno di §6.6.2, nessuno stato saltato.
+// The state machine: only the transitions of the design of §6.6.2, no state skipped.
 func TestTransizioni(t *testing.T) {
 	cammino := []Stato{NUOVA, FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA,
 		IN_ESECUZIONE, APPLICATA, IN_VERIFICA, VERIFICATA, CONFERMATA}
 	for i := 0; i+1 < len(cammino); i++ {
 		if !Valida(cammino[i], cammino[i+1]) {
-			t.Errorf("%s → %s dovrebbe valere", cammino[i], cammino[i+1])
+			t.Errorf("%s → %s should be valid", cammino[i], cammino[i+1])
 		}
 		for j := i + 2; j < len(cammino); j++ {
 			if Valida(cammino[i], cammino[j]) {
-				t.Errorf("%s → %s salta uno stato", cammino[i], cammino[j])
+				t.Errorf("%s → %s skips a state", cammino[i], cammino[j])
 			}
 		}
 	}
 	for _, s := range []Stato{CONFERMATA, CONFERMATA_A_CONDIZIONI, ANNULLATA, ANNULLATA_IN_PARTE, RIFIUTATA} {
 		if !Finale(s) || len(transizioni[s]) != 0 {
-			t.Errorf("%s deve essere finale e senza uscite", s)
+			t.Errorf("%s must be final and without exits", s)
 		}
 	}
-	// dalle fasi 0-5 si può solo bloccare (o rifiutare dal consenso), mai annullare: niente è stato toccato
+	// from phases 0-5 one can only block (or refuse at consent), never cancel: nothing has been touched
 	for _, s := range []Stato{NUOVA, FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA} {
 		if Valida(s, IN_ANNULLAMENTO) || Valida(s, ANNULLATA) {
-			t.Errorf("%s → annullamento: prima della fase 6 non c'è niente da annullare", s)
+			t.Errorf("%s → cancellation: before phase 6 there is nothing to cancel", s)
 		}
 		if !Valida(s, BLOCCATA) {
-			t.Errorf("%s → BLOCKED deve valere", s)
+			t.Errorf("%s → BLOCKED must be valid", s)
 		}
 	}
 	if Valida(IN_ESECUZIONE, CONFERMATA) || Valida(INTERROTTA, APPLICATA) || Valida(IN_ANNULLAMENTO, CONFERMATA) {
-		t.Error("una scorciatoia è valida")
+		t.Error("a shortcut is valid")
 	}
 	if len(TuttiGliStati()) != 19 {
-		t.Errorf("gli stati sono %d, il disegno ne ha 19", len(TuttiGliStati()))
+		t.Errorf("there are %d states, the design has 19", len(TuttiGliStati()))
 	}
-	// e il motore rifiuta davvero una transizione fuori disegno
+	// and the engine really refuses a transition outside the design
 	b := nuovoBanco(t)
 	op, _ := b.motore(t).Applica(b.piano, false, "prova")
 	if err := op.vai(IN_ESECUZIONE, "", ""); CodiceDi(err) != "RX-STATO-002" {
-		t.Errorf("CONFIRMED → RUNNING accettata: %v", err)
+		t.Errorf("CONFIRMED → RUNNING accepted: %v", err)
 	}
 }
 
-// Ogni codice usato nei sorgenti esiste, e ogni codice ha la forma RX-<AREA>-<NNN> (§6.6.9).
+// Every code used in the sources exists, and every code has the form RX-<AREA>-<NNN> (§6.6.9).
 func TestCodici(t *testing.T) {
 	forma := regexp.MustCompile(`^RX-[A-Z0-9]+-[0-9]{3}$`)
 	for c, v := range Codici {
 		if !forma.MatchString(c) || v.Testo == "" || v.Gravita == "" || v.Natura == "" {
-			t.Errorf("codice malformato: %s %+v", c, v)
+			t.Errorf("malformed code: %s %+v", c, v)
 		}
 	}
 	usati := regexp.MustCompile(`"(RX-[A-Z0-9]+-[0-9]{3})"`)
@@ -65,73 +65,73 @@ func TestCodici(t *testing.T) {
 		b, _ := os.ReadFile(f)
 		for _, m := range usati.FindAllStringSubmatch(string(b), -1) {
 			if _, ok := Codici[m[1]]; !ok {
-				t.Errorf("%s usa %s, che non esiste", f, m[1])
+				t.Errorf("%s uses %s, which does not exist", f, m[1])
 			}
 		}
 	}
 }
 
-// R31 in piccolo: il piano non si applica a una macchina diversa, e non tocca niente.
+// R31 in small: the plan does not apply to a different machine, and touches nothing.
 func TestImprontaCambiata(t *testing.T) {
 	b := nuovoBanco(t)
 	os.WriteFile(filepath.Join(b.radice, "etc/remotix-esistente.conf"), []byte("cambiato dopo il piano\n"), 0o640)
 	dopoCambio := foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if CodiceDi(err) != "RX-PIANO-001" || op.Stato != BLOCCATA {
-		t.Fatalf("atteso BLOCKED con RX-PIANO-001, invece %v %v", op.Stato, err)
+		t.Fatalf("expected BLOCKED with RX-PIANO-001, got %v %v", op.Stato, err)
 	}
 	if !strings.Contains(err.Error(), "file:/etc/remotix-esistente.conf") {
-		t.Errorf("il rifiuto non dice che cosa è cambiato: %v", err)
+		t.Errorf("the refusal does not say what changed: %v", err)
 	}
 	if d := differenze(dopoCambio, foto(t, b.radice)); len(d) > 0 {
 		t.Fatalf("toccata: %v", d)
 	}
 	if ap, _ := b.motore(t).Aperta(); ap != nil {
-		t.Error("una BLOCKED deve essere finale")
+		t.Error("a BLOCKED must be final")
 	}
-	// anche un elemento del profilo: un gruppo della scheda con un membro in più
+	// also an element of the profile: a group of the card with one more member
 	b2 := nuovoBanco(t)
 	(&gruppiFinti{b2.radice}).Aggiungi("root", "video")
 	if _, err := b2.motore(t).Applica(b2.piano, false, "prova"); CodiceDi(err) != "RX-PIANO-001" {
-		t.Errorf("gruppo cambiato: %v", err)
+		t.Errorf("group changed: %v", err)
 	}
 }
 
-// Il consenso: senza, RIFIUTATA; con un'approvazione di un altro piano, RIFIUTATA; niente toccato.
+// The consent: without it, RIFIUTATA; with an approval of another plan, RIFIUTATA; nothing touched.
 func TestConsenso(t *testing.T) {
 	b := nuovoBanco(t)
 	b.piano = pianoDiProva(t, b.radice, filepath.Dir(b.radice), false)
 	if op, _ := b.motore(t).Applica(b.piano, false, "prova"); op.Stato != RIFIUTATA {
-		t.Fatalf("senza approvazione: %s", op.Stato)
+		t.Fatalf("without approval: %s", op.Stato)
 	}
 	var p Piano
 	LeggiJSON(b.piano, &p)
 	p.Approvazione = &Approvazione{Da: "x", DigestPiano: "0000"}
 	ScriviJSON(b.piano, &p)
 	if op, _ := b.motore(t).Applica(b.piano, false, "prova"); op.Stato != RIFIUTATA {
-		t.Fatalf("approvazione di un altro piano: %s", op.Stato)
+		t.Fatalf("approval of another plan: %s", op.Stato)
 	}
 	if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
 		t.Fatalf("toccata: %v", d)
 	}
-	// a mano (--approva): vale
+	// by hand (--approva): it holds
 	if op, err := b.motore(t).Applica(b.piano, true, "prova"); err != nil || op.Stato != RIFIUTATA {
-		// l'approvazione sbagliata nel file vince su --approva: il file dice un altro piano
-		t.Logf("con approvazione sbagliata nel file e --approve: %v %v", op.Stato, err)
+		// the wrong approval in the file wins over --approva: the file names another plan
+		t.Logf("with wrong approval in the file and --approve: %v %v", op.Stato, err)
 	}
 	p.Approvazione = nil
 	ScriviJSON(b.piano, &p)
 	if op, err := b.motore(t).Applica(b.piano, true, "prova"); err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("con --approve: %v %v", op.Stato, err)
+		t.Fatalf("with --approve: %v %v", op.Stato, err)
 	}
 }
 
-// Una sola operazione aperta alla volta; e la serratura.
+// Only one open operation at a time; and the lock.
 func TestUnaAllaVolta(t *testing.T) {
 	b := nuovoBanco(t)
 	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unit")
 	if _, err := b.motore(t).Applica(b.piano, false, "prova"); CodiceDi(err) != "RX-STATO-001" {
-		t.Fatalf("un'operazione aperta non ha fermato la nuova: %v", err)
+		t.Fatalf("an open operation did not stop the new one: %v", err)
 	}
 	m := b.motore(t)
 	if err := m.Blocca(); err != nil {
@@ -139,12 +139,12 @@ func TestUnaAllaVolta(t *testing.T) {
 	}
 	defer m.Sblocca()
 	if _, err := b.motore(t).Riprendi(); CodiceDi(err) != "RX-STATO-003" {
-		t.Fatalf("due motori insieme: %v", err)
+		t.Fatalf("two engines together: %v", err)
 	}
 }
 
-// R5 in piccolo: dopo CONFERMATA, niente da riprendere; e un piano rifatto sulla macchina già a
-// posto ha i passi PREESISTENTI (niente si riscrive).
+// R5 in small: after CONFERMATA, nothing to resume; and a plan redone on the machine already in
+// place has PRE-EXISTING steps (nothing is rewritten).
 func TestIdempotenza(t *testing.T) {
 	b := nuovoBanco(t)
 	if op, err := b.motore(t).Applica(b.piano, false, "prova"); err != nil || op.Stato != CONFERMATA {
@@ -152,7 +152,7 @@ func TestIdempotenza(t *testing.T) {
 	}
 	dopo := foto(t, b.radice)
 	if _, err := b.motore(t).Riprendi(); CodiceDi(err) != "RX-STATO-004" {
-		t.Fatalf("riprendi dopo CONFIRMED: %v", err)
+		t.Fatalf("resume after CONFIRMED: %v", err)
 	}
 	piano2 := pianoDiProva(t, b.radice, t.TempDir(), true)
 	op, err := b.motore(t).Applica(piano2, false, "prova")
@@ -161,22 +161,22 @@ func TestIdempotenza(t *testing.T) {
 	}
 	for _, e := range op.Reg.Eventi {
 		if e.Tipo == EvIntenzione && e.Origine != PREESISTENTE {
-			t.Errorf("%s rifatta come %s", e.Azione, e.Origine)
+			t.Errorf("%s redone as %s", e.Azione, e.Origine)
 		}
 	}
 	if d := differenze(dopo, foto(t, b.radice)); len(d) > 0 {
-		t.Fatalf("la seconda volta ha scritto: %v", d)
+		t.Fatalf("the second time it wrote: %v", d)
 	}
 }
 
-// R32 in piccolo: un controllo che non sa rispondere (systemctl che non risponde) non è PASS.
+// R32 in small: a check that cannot answer (systemctl that does not answer) is not PASS.
 func TestSconosciutoNonPassa(t *testing.T) {
 	b := nuovoBanco(t)
 	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "stato:VERIFYING@")
 	os.WriteFile(filepath.Join(b.radice, "rompi-systemctl"), nil, 0o644)
 	op, _ := b.motore(t).Riprendi()
 	if op.Stato == CONFERMATA || op.Stato == CONFERMATA_A_CONDIZIONI {
-		t.Fatalf("CONFIRMED con un controllo senza risposta")
+		t.Fatalf("CONFIRMED with a check without an answer")
 	}
 	var rv RapportoVerifica
 	LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv)
@@ -187,12 +187,12 @@ func TestSconosciutoNonPassa(t *testing.T) {
 		}
 	}
 	if !trovato {
-		t.Errorf("il controllo dell'unità doveva essere UNKNOWN: %+v", rv.Controlli)
+		t.Errorf("the unit check should have been UNKNOWN: %+v", rv.Controlli)
 	}
 }
 
-// Il certificato e installazione.json: solo i mestieri che installano scrivono lo stato che
-// REMOTIX controlla all'avvio (DECISIONI §10.12, RX-INST-001).
+// The certificate and installazione.json: only the kinds that install write the state that
+// REMOTIX checks at start-up (DECISIONI §10.12, RX-INST-001).
 func TestInstallazione(t *testing.T) {
 	b := nuovoBanco(t)
 	m := b.motore(t)
@@ -200,7 +200,7 @@ func TestInstallazione(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := m.ControllaInstallazione(); CodiceDi(err) != "RX-INST-001" {
-		t.Fatalf("il piano di prova non installa REMOTIX: %v", err)
+		t.Fatalf("the trial plan does not install REMOTIX: %v", err)
 	}
 	var p Piano
 	LeggiJSON(b.piano, &p)
@@ -210,8 +210,8 @@ func TestInstallazione(t *testing.T) {
 	ScriviJSON(b2.piano, &p)
 	m2 := b2.motore(t)
 	op, err := m2.Applica(b2.piano, true, "prova")
-	// il binario di REMOTIX non c'è (e non ha ancora --prova-codifica): la codifica è UNKNOWN,
-	// richiesta ⇒ a condizioni, mai CONFERMATA pulita (§6.6.7)
+	// REMOTIX's binary is not there (and does not have --prova-codifica yet): encoding is UNKNOWN,
+	// required ⇒ conditional, never a clean CONFERMATA (§6.6.7)
 	if err != nil || op.Stato != CONFERMATA_A_CONDIZIONI {
 		t.Fatal(op.Stato, err)
 	}
@@ -230,7 +230,7 @@ func ultimoStato(op *Operazione) string {
 	return ""
 }
 
-// Il piano di prova: i pacchetti in testa, il gruppo per ULTIMO (R28 dal vero su Alma).
+// The trial plan: the packages first, the group LAST (R28 for real on Alma).
 func TestPianoDiProva(t *testing.T) {
 	b := nuovoBanco(t)
 	amb := ambienteFinto(b.radice)
@@ -245,6 +245,6 @@ func TestPianoDiProva(t *testing.T) {
 		tipi = append(tipi, a.Tipo)
 	}
 	if got := strings.Join(tipi, ","); got != "install-packages,write-file,write-file,enable-unit,add-user-to-group" {
-		t.Fatalf("ordine dei passi: %s", got)
+		t.Fatalf("order of the steps: %s", got)
 	}
 }

@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-// Impronta della macchina (§6.6.5): la parte vincolante decide se il piano vale ancora; quella
-// annotata si registra e basta.
+// Impronta of the machine (§6.6.5): the binding part decides whether the plan still holds; the
+// annotated one is only recorded.
 type Impronta struct {
-	Elementi []string `json:"elements"` // vincolanti, ordinati, uno per riga nel testo canonico
-	Digest   string   `json:"digest"`   // sha256 del testo canonico
+	Elementi []string `json:"elements"` // binding, sorted, one per line in the canonical text
+	Digest   string   `json:"digest"`   // sha256 of the canonical text
 	Annotata []string `json:"recorded"`
 }
 
-// chiavi del profilo che entrano nell'impronta vincolante (prefissi). ⚠ Non i pacchetti in
-// generale: solo quelli che il piano tocca o da cui dipende (Piano.Dipende).
+// profile keys that enter the binding fingerprint (prefixes). ⚠ Not the packages in
+// general: only those the plan touches or depends on (Piano.Dipende).
 var prefissiVincolanti = []string{
 	"distro.id", "distro.version", "distro.variant", "system.arch", "system.systemd",
 	"desktop.", "gpu.", "h264.", "selinux", "firewall.",
@@ -36,8 +36,8 @@ func haPrefisso(k string, pp []string) bool {
 	return false
 }
 
-// CalcolaImpronta dal profilo, dal catalogo e dalle azioni (i file, i gruppi, le unità, le regole
-// che il piano tocca, con il loro stato adesso).
+// CalcolaImpronta from the profile, the catalogue and the actions (the files, groups, units, rules
+// the plan touches, with their state now).
 func CalcolaImpronta(p *Profilo, cat *Catalogo, azioni []AzionePiano, dipende []string, c *Contesto) (*Impronta, error) {
 	im := &Impronta{}
 	for _, f := range p.Fatti {
@@ -72,7 +72,7 @@ func CalcolaImpronta(p *Profilo, cat *Catalogo, azioni []AzionePiano, dipende []
 	return im, nil
 }
 
-// DifferenzeImpronta: che cosa è cambiato (per dirlo, non solo per rifiutare — R31).
+// DifferenzeImpronta: what has changed (to say it, not only to refuse — R31).
 func DifferenzeImpronta(prima, dopo []string) (tolti, aggiunti []string) {
 	a, b := map[string]bool{}, map[string]bool{}
 	for _, x := range prima {
@@ -94,8 +94,8 @@ func DifferenzeImpronta(prima, dopo []string) (tolti, aggiunti []string) {
 	return
 }
 
-// Approvazione: il «sì» di chi installa, alla domanda di `install` o nella TUI (DECISIONI §10.36:
-// niente file di risposte). Vale solo per il piano col digest scritto qui.
+// Approvazione: the «yes» of whoever installs, to the question of `install` or in the TUI (DECISIONI §10.36:
+// no answers file). It holds only for the plan with the digest written here.
 type Approvazione struct {
 	Da          string `json:"from"`
 	Ora         string `json:"time"`
@@ -103,39 +103,39 @@ type Approvazione struct {
 	DigestPiano string `json:"digest_plan"`
 }
 
-// Piano: il terzo oggetto (§6.6.1). `install` lo costruisce, lo mostra coi pacchetti esatti, chiede
-// e lo applica; resta nella cartella dell'operazione come documento di quel che è stato fatto.
+// Piano: the third object (§6.6.1). `install` builds it, shows it with the exact packages, asks
+// and applies it; it stays in the operation's folder as a record of what was done.
 type Piano struct {
 	Formato     string        `json:"format"`
 	Oggetto     string        `json:"object"` // "plan"
 	ID          string        `json:"id"`
 	Creato      string        `json:"created"`
-	Mestiere    string        `json:"kind"` // "engine-test" in T4; poi installazione, aggiornamento, disinstallazione
+	Mestiere    string        `json:"kind"` // "engine-test" in T4; then installation, upgrade, uninstallation
 	Motore      RifMotore     `json:"engine"`
 	Catalogo    RifCatalogo   `json:"catalog"`
 	Piattaforma string        `json:"platform"`
 	Impronta    Impronta      `json:"fingerprint"`
-	Dipende     []string      `json:"depends"` // pacchetti da cui il piano dipende (nell'impronta)
+	Dipende     []string      `json:"depends"` // packages the plan depends on (in the fingerprint)
 	Azioni      []AzionePiano `json:"actions"`
-	Consensi    []string      `json:"consents"`   // le domande con una riga loro (IRREVERSIBILE)
-	Condizioni  []Condizione  `json:"conditions"` // quelle del rapporto che valgono per i desktop installati
-	// NonFatto: quel che il piano dichiara di non fare, e perché. Un messaggio BLOCCANTE (quel che
-	// manca, RX-MANCA-*: §10.36) ferma l'operazione prima di toccare niente
+	Consensi    []string      `json:"consents"`   // the questions with a line of their own (IRREVERSIBLE)
+	Condizioni  []Condizione  `json:"conditions"` // those of the report that apply to the installed desktops
+	// NonFatto: what the plan declares it does not do, and why. A BLOCKING message (what is
+	// missing, RX-MANCA-*: §10.36) stops the operation before touching anything
 	NonFatto []Messaggio `json:"not_done"`
-	// Dichiarate: quel che il piano fa SENZA chiedere, detto prima (l'iscrizione ai gruppi della scheda)
+	// Dichiarate: what the plan does WITHOUT asking, stated beforehand (enrolment in the card's groups)
 	Dichiarate []string `json:"declared,omitempty"`
-	// Pacchetti: che cosa farebbe il gestore (la sua simulazione, fatta al momento del piano): il piano
-	// li mostra prima della domanda. Al momento di fare il gestore simula di nuovo (Fotografa)
+	// Pacchetti: what the manager would do (its simulation, made at planning time): the plan
+	// shows them before the question. When doing it, the manager simulates again (Fotografa)
 	Pacchetti []Artefatto `json:"packages,omitempty"`
-	// Dipendenze: i pacchetti della distribuzione che REMOTIX chiede per il desktop della macchina
-	// (labwc, wlr-randr, un carattere), e per quale desktop: il piano li mostra come tali
+	// Dipendenze: the distribution packages REMOTIX requires for the machine's desktop
+	// (labwc, wlr-randr, a font), and for which desktop: the plan shows them as such
 	Dipendenze   []Dipendenza  `json:"dependencies,omitempty"`
 	Approvazione *Approvazione `json:"approval,omitempty"`
-	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
+	// Purge: uninstallation --purge (the configuration too, and the engine's history)
 	Purge bool `json:"purge,omitempty"`
 }
 
-// Digest del piano senza l'approvazione: è quel che l'approvazione firma.
+// Digest of the plan without the approval: it is what the approval signs.
 func (p *Piano) Digest() string {
 	c := *p
 	c.Approvazione = nil
@@ -148,15 +148,15 @@ func nuovoID() string {
 	return time.Now().UTC().Format("20060102T150405Z") + "-" + hex.EncodeToString(b)
 }
 
-// OpzioniPianoProva: il piano di prova di T4 (nessun pacchetto di REMOTIX: quelli sono delle
-// linee B, C, D).
+// OpzioniPianoProva: the trial plan of T4 (no REMOTIX packages: those belong to
+// lines B, C, D).
 type OpzioniPianoProva struct {
-	Utente    string // chi mettere in «video»; vuoto ⇒ il passo non c'è
-	Pacchetti string // pacchetti degli archivi della macchina da far installare (prova del gestore)
+	Utente    string // whom to put in «video»; empty ⇒ the step is not there
+	Pacchetti string // packages from the machine's repositories to have installed (test of the manager)
 	Porta     int
 }
 
-// PianoDiProva costruisce il piano con le quattro azioni di prova.
+// PianoDiProva builds the plan with the four trial actions.
 func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniPianoProva) (*Piano, error) {
 	if o.Porta == 0 {
 		o.Porta = 7447
@@ -176,8 +176,8 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 			"# REMOTIX — installation engine test unit (phase 17, T4): it does nothing.\n[Unit]\nDescription=REMOTIX, installation engine test\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
 		PianoUnita("unit", "remotix-engine-test.service"),
 	)
-	// il gruppo per ultimo: con un utente che non esiste il passo fallisce DOPO tutti gli altri, e
-	// l'operazione si annulla per intero (R28 dal vero)
+	// the group last: with a user that does not exist the step fails AFTER all the others, and
+	// the operation is cancelled entirely (R28 for real)
 	if o.Utente != "" {
 		pn.Azioni = append(pn.Azioni, PianoGruppo("group-video", o.Utente, "video"))
 	} else {

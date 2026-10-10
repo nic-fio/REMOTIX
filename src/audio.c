@@ -1,4 +1,4 @@
-/* audio.c — il codificatore del suono.  Le ragioni stanno in `audio.h`. */
+/* audio.c — the sound encoder.  The reasons are in `audio.h`. */
 
 #include "audio.h"
 
@@ -11,93 +11,93 @@
 #define REG_AUDIO "audio"
 
 /*
- * ⛔ Il bitrate di Opus, e il numero e' 🔸 DERIVATO — non deciso dall'utente.
+ * ⛔ The Opus bitrate, and the number is 🔸 DERIVED — not decided by the user.
  *
- * 96 kbit/s in stereo e' la banda a cui Opus e' trasparente per la musica
- * secondo la sua stessa documentazione `[S]`.  ⚠ Sulla sonda del 17 agosto un
- * blocco da 20 ms a questo bitrate misura **241-376 byte** su Chrome e
- * **309-439** su Firefox `[M]`: sta nel datagram con un margine largo, che e'
- * la ragione per cui non si e' scelto piu' alto.
+ * 96 kbit/s in stereo is the bandwidth at which Opus is transparent for music
+ * according to its own documentation `[S]`.  ⚠ On the 17 August probe a
+ * 20 ms block at this bitrate measures **241-376 bytes** on Chrome and
+ * **309-439** on Firefox `[M]`: it fits in the datagram with a wide margin, which
+ * is the reason a higher one was not chosen.
  *
- * ⏳ Va messo a verbale in `DECISIONI.md` il giorno in cui l'utente lo sente:
- *    `SPECIFICHE.md` §10 il bitrate non lo nomina, e un numero senza una voce
- *    e' una decisione presa a meta' (`LEZIONI.md` §2.3-quater).
+ * ⏳ It must be put on record in `DECISIONI.md` the day the user hears it:
+ *    `SPECIFICHE.md` §10 does not name the bitrate, and a number without an
+ *    entry is a decision half taken (`LEZIONI.md` §2.3-quater).
  */
 #define AUDIO_OPUS_BITRATE 96000
 
 /*
- * ⛔⭐⭐ IL SILENZIO NON SI SPEDISCE — cura della fase 9, e dal 24 agosto 2026
- *       NASCE **ACCESA** (decisione dell'utente; fino al 23 nasceva spenta per
- *       l'invariante I6).
+ * ⛔⭐⭐ SILENCE IS NOT SENT — cure of phase 9, and since 24 August 2026 it is
+ *       BORN **ON** (the user's decision; until the 23rd it was born off for
+ *       invariant I6).
  *
- * `[M]` 24 agosto 2026, `banchi/09-b84-audio-silenzio.py`, porta 7972, binario
- * `b484d699…`: una sessione con **Opus** negoziato e il desktop FERMO consegna
+ * `[M]` 24 August 2026, `banchi/09-b84-audio-silenzio.py`, port 7972, binary
+ * `b484d699…`: a session with **Opus** negotiated and the desktop STILL delivers
  *
- *     50 datagram al secondo · **3 byte di carico ciascuno** · PICCO 0 su 32767
+ *     50 datagrams per second · **3 bytes of payload each** · PEAK 0 of 32767
  *
- * cioe' **1,2 kbit/s** di suono vero.  ⛔ E sul filo quei 50 datagram costano
- * **589 kbit/s**, perche' ognuno si porta via un pacchetto INTERO da 1444 byte
- * (`webtransport.c`, `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`).  ⇒ Il **99,8 %** di
- * quel traffico e' riempimento, e paga la stessa finestra di congestione del
+ * that is **1.2 kbit/s** of real sound.  ⛔ And on the wire those 50 datagrams cost
+ * **589 kbit/s**, because each one takes a WHOLE 1444-byte packet
+ * (`webtransport.c`, `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`).  ⇒ **99.8 %** of
+ * that traffic is padding, and it pays the same congestion window as the
  * video.
  *
- * ⭐ E non c'e' niente da inventare per toglierlo.  `RCP.md` §6.3 mette
- *    l'`istante` dentro ogni datagram e chi riceve rimette i blocchi al loro
- *    posto ASSOLUTO.  ⇒ **Un blocco non spedito e' un buco, e un buco e'
- *    silenzio** — che e' esattamente quel che quel blocco conteneva.  Non si
- *    approssima niente: si smette di spedire lo zero.
+ * ⭐ And there is nothing to invent to remove it.  `RCP.md` §6.3 puts the
+ *    `istante` inside every datagram and the receiver puts the blocks back in
+ *    their ABSOLUTE place.  ⇒ **A block not sent is a gap, and a gap is
+ *    silence** — which is exactly what that block contained.  Nothing is
+ *    approximated: we stop sending the zero.
  *
- * ⛔ E LA SOGLIA NON C'E', APPOSTA.  Si tace solo sul silenzio **digitale** —
- *    tutti i campioni esattamente `0` — perche' quello non e' un giudizio: e'
- *    l'unico caso in cui «spedito» e «non spedito» suonano IDENTICI.  Una
- *    soglia («sotto -60 dB») sarebbe una decisione sul suono dell'utente presa
- *    dal codice, cioe' precisamente la cosa che I6 vuole dietro un interruttore
- *    e che questa fase non ha misurato.
+ * ⛔ AND THERE IS NO THRESHOLD, ON PURPOSE.  Only **digital** silence is muted —
+ *    all samples exactly `0` — because that is not a judgement: it is
+ *    the only case in which "sent" and "not sent" sound IDENTICAL.  A
+ *    threshold ("below -60 dB") would be a decision about the user's sound taken
+ *    by the code, that is precisely the thing I6 wants behind a switch
+ *    and that this phase has not measured.
  *
- * ⚠ IL PREZZO, DICHIARATO — due voci, e sono la ragione per cui l'interruttore
- *   esiste invece di essere un'ovvieta':
- *     1. su Opus il primo blocco dopo un tratto di silenzio riparte con lo
- *        stato del codificatore lasciato PRIMA del tratto (il codificatore
- *        quei blocchi semplicemente non li vede: dal 30 settembre 2026 non
- *        c'e' piu' nemmeno un `pts` da tenere fermo, vedi `opus_apri()`).
- *        E' quel che la DTX di Opus fa da sempre; `[?]` inudibile, e da qui
- *        NON e' misurato;
- *     2. chi riceve vede un salto di `istante` e i suoi contatori lo contano
- *        come **`mancato`** — cioe' un numero che oggi vuol dire «perso»
- *        comincerebbe a voler dire anche «non c'era niente da mandare».
- *        ⛔ Il banco lo misura appaiato apposta, e lo dichiara.
+ * ⚠ THE PRICE, DECLARED — two items, and they are the reason the switch
+ *   exists instead of being obvious:
+ *     1. on Opus the first block after a stretch of silence restarts with the
+ *        encoder state left BEFORE the stretch (the encoder simply never sees
+ *        those blocks: since 30 September 2026 there is not even a `pts` to
+ *        hold still, see `opus_apri()`).
+ *        It is what Opus's DTX has always done; `[?]` inaudible, and from here
+ *        NOT measured;
+ *     2. the receiver sees a jump in `istante` and its counters count it
+ *        as **`mancato`** — that is, a number that today means "lost"
+ *        would start to also mean "there was nothing to send".
+ *        ⛔ The bench measures it paired on purpose, and declares it.
  *
- * ⛔⛔⭐ E L'INTERRUTTORE NON E' PIU' DI COMPILAZIONE — 24 agosto 2026.
+ * ⛔⛔⭐ AND THE SWITCH IS NO LONGER A BUILD ONE — 24 August 2026.
  *
- *      Fino al 23 agosto era `-DAUDIO_SILENZIO_PREDEFINITO=1`, e non era una
- *      scelta di comodo: il codificatore vive nel **figlio**, che e' un
- *      `execve` con l'ambiente **composto da zero** (`figlio.c`, il riquadro
- *      delle due cure della fase 9) — una `REMOTIX_...` non lo raggiunge, e non
- *      lascerebbe nemmeno una riga a dire che non e' arrivata.  L'unico canale
- *      che attraversa l'`exec` e' la coda di `argv`.
+ *      Until 23 August it was `-DAUDIO_SILENZIO_PREDEFINITO=1`, and it was not a
+ *      choice of convenience: the encoder lives in the **child**, which is an
+ *      `execve` with an environment **built from scratch** (`figlio.c`, the box
+ *      of the two cures of phase 9) — a `REMOTIX_...` does not reach it, and would
+ *      not even leave a line saying it did not arrive.  The only channel
+ *      that crosses the `exec` is the tail of `argv`.
  *
- *      ⇒ Adesso la strada c'e', ed e' quella di `--parlantina`:
- *        · `main.c`   riconosce `--niente-audio-silenzio` e tiene un `bool`;
- *        · `figlio.c` lo mette in coda ad `argv` (`diventa_ed_esegui()`) e lo
- *                     rilegge **per nome** in `figlio_vive()`, chiamando
+ *      ⇒ Now the way exists, and it is that of `--parlantina`:
+ *        · `main.c`   recognises `--niente-audio-silenzio` and keeps a `bool`;
+ *        · `figlio.c` puts it at the end of `argv` (`diventa_ed_esegui()`) and
+ *                     reads it back **by name** in `figlio_vive()`, calling
  *                     `audio_silenzio_taci()`;
- *        · qui        non cambia niente: `audio_silenzio_taci()` c'era gia'.
+ *        · here       nothing changes: `audio_silenzio_taci()` was already there.
  *
- * ⛔⛔ E IL `-D` E' STATO TOLTO, non lasciato accanto: due strade per accendere
- *      la stessa cura sono due numeri che possono divergere — la stessa ragione
- *      per cui il ponte via ambiente di `wt_sgombra_soglia()` e' stato tolto il
- *      23 agosto.  ⚠ Chi ricostruisse `09-b84-audio-silenzio.py` deve sapere
- *      che il suo braccio B non si fa piu' con un `-D`, ma con la riga di
- *      comando: il braccio SPENTO adesso e' `--niente-audio-silenzio`.
+ * ⛔⛔ AND THE `-D` WAS REMOVED, not left beside it: two ways to switch on
+ *      the same cure are two numbers that can diverge — the same reason
+ *      the environment bridge of `wt_sgombra_soglia()` was removed on
+ *      23 August.  ⚠ Whoever rebuilds `09-b84-audio-silenzio.py` must know
+ *      that its arm B is no longer made with a `-D`, but with the command
+ *      line: the OFF arm is now `--niente-audio-silenzio`.
  *
- * ⭐⭐⭐ E NASCE ACCESA dal 24 agosto 2026 — decisione dell'utente, dopo aver
- *      guardato (§19.6, §20.3).  ⚠ `[M]` 24 ago 2026, banco `09-b84`: **102,1
- *      volte** meno traffico a schermo fermo (557,6 → 5,5 kbit/s), tono di prova
- *      puro **1,000**, copertura **0,9996**, **1 248 blocchi taciuti su 1 248**.
- *      ⚠ Il prezzo, dichiarato: i `mancati` del cliente salgono di **2 su
- *      5 000** — un buco VOLUTO lascia lo stesso salto di `istante` di uno
- *      perso, e un numero che voleva dire «perso» comincia a voler dire anche
- *      «non c'era niente da mandare».
+ * ⭐⭐⭐ AND IT IS BORN ON since 24 August 2026 — the user's decision, after having
+ *      looked (§19.6, §20.3).  ⚠ `[M]` 24 Aug 2026, bench `09-b84`: **102.1
+ *      times** less traffic with the screen still (557.6 → 5.5 kbit/s), pure test
+ *      tone **1.000**, coverage **0.9996**, **1 248 blocks muted of 1 248**.
+ *      ⚠ The price, declared: the client's `mancati` rise by **2 in
+ *      5 000** — a WANTED gap leaves the same jump in `istante` as a lost
+ *      one, and a number that meant "lost" starts to also mean
+ *      "there was nothing to send".
  */
 static bool audio_taci_silenzio = true;
 
@@ -112,16 +112,16 @@ bool audio_silenzio_acceso(void)
 }
 
 /*
- * ⛔ Lo spazio che si offre a `opus_encode()`, ed e' quello di libavcodec
- *    alla lettera: `(1275 * 6 + 7) * stream_count` (`[R]` FFmpeg 7.1,
- *    `libavcodec/libopusenc.c`, `libopus_encode()`), cioe' 7 657 byte per il
- *    nostro unico flusso.
+ * ⛔ The space offered to `opus_encode()`, and it is libavcodec's to the
+ *    letter: `(1275 * 6 + 7) * stream_count` (`[R]` FFmpeg 7.1,
+ *    `libavcodec/libopusenc.c`, `libopus_encode()`), that is 7 657 bytes for
+ *    our single stream.
  *
- * ⛔ E NON `AUDIO_FUORI_MAX`, apposta: con il tetto passato come spazio,
- *    libopus in VBR **restringerebbe** il pacchetto per farcelo stare, invece
- *    di lasciarlo uscire e farlo buttare dal controllo di sotto.  ⇒ Sarebbe un
- *    comportamento DIVERSO da quello misurato, anche se su 96 kbit/s non si
- *    vede (241-439 byte, riquadro del bitrate).  Costa 7,6 KB per sessione.
+ * ⛔ And NOT `AUDIO_FUORI_MAX`, on purpose: with the ceiling passed as the space,
+ *    libopus in VBR **would shrink** the packet to make it fit, instead
+ *    of letting it out and having it dropped by the check below.  ⇒ It would be
+ *    a behaviour DIFFERENT from the one measured, even if at 96 kbit/s it does
+ *    not show (241-439 bytes, bitrate box).  It costs 7.6 KB per session.
  */
 #define AUDIO_OPUS_SPAZIO (1275 * 6 + 7)
 
@@ -129,65 +129,65 @@ struct audio_cod {
 	uint8_t codec; /* 1 = Opus, 2 = PCM */
 	uint32_t blocco;
 	uint64_t entrati, usciti;
-	uint64_t taciuti; /* blocchi di silenzio digitale NON spediti */
+	uint64_t taciuti; /* blocks of digital silence NOT sent */
 
-	/* solo per Opus */
+	/* Opus only */
 	OpusEncoder *enc;
-	/* ⚠ Il pacchetto nasce QUI e non in `fuori`: `opus_encode()` riceve lo
-	 *   stesso spazio che gli dava libavcodec (vedi `AUDIO_OPUS_SPAZIO`), e il
-	 *   tetto di `AUDIO_FUORI_MAX` resta un controllo DOPO, com'era. */
+	/* ⚠ The packet is born HERE and not in `fuori`: `opus_encode()` gets the
+	 *   same space libavcodec gave it (see `AUDIO_OPUS_SPAZIO`), and the
+	 *   `AUDIO_FUORI_MAX` ceiling stays a check AFTERWARDS, as it was. */
 	uint8_t pacchetto[AUDIO_OPUS_SPAZIO];
 };
 
 /*
- * ⛔⭐ OPUS PARLA CON `libopus` DIRETTA — fase 18, 30 settembre 2026
- *      (`DECISIONI.md` §10.22 e §10.25: ffmpeg esce dal prodotto).
+ * ⛔⭐ OPUS TALKS TO `libopus` DIRECTLY — phase 18, 30 September 2026
+ *      (`DECISIONI.md` §10.22 and §10.25: ffmpeg leaves the product).
  *
- * Fino al 29 settembre si passava da libavcodec, che chiamava lo STESSO
- * `libopus.so.0` con il suo involucro `libopusenc.c`.  ⇒ Togliere l'involucro
- * non cambia il codificatore: cambia solo chi gli detta i parametri.  E allora
- * i parametri si dettano **tutti**, anche quelli che coincidono col predefinito
- * di libopus, perche' il predefinito che contava era quello di libavcodec, e
- * due di loro NON coincidono con quello di libopus:
+ * Until 29 September it went through libavcodec, which called the SAME
+ * `libopus.so.0` with its wrapper `libopusenc.c`.  ⇒ Removing the wrapper
+ * does not change the encoder: it only changes who dictates its parameters.  So
+ * the parameters are dictated **all of them**, even those that match libopus's
+ * default, because the default that counted was libavcodec's, and
+ * two of them do NOT match libopus's:
  *
- *   parametro              libavcodec 7.1 (`[R]` libopusenc.c)   libopus 1.5.2
+ *   parameter              libavcodec 7.1 (`[R]` libopusenc.c)   libopus 1.5.2
  *   ---------------------  -----------------------------------  -------------
- *   application            `audio` (lo chiedevamo noi)          da scegliere
- *   durata della trama     20 ms (lo chiedevamo noi)            da scegliere
- *   bitrate                96 000 (lo chiedevamo noi)           automatico
- *   ⛔ complessita'         **10** (`compression_level` = 10)    9
- *   VBR                    acceso (`vbr` = on)                  acceso
- *   ⛔ VBR vincolato        **NO** (`vbr == 2` falso)            **SI'**
- *   perdita attesa         0 %                                  0 %
- *   FEC in banda           spenta                               spenta
- *   inversione di fase     permessa (`apply_phase_inv`)         permessa
- *   DTX di Opus            mai toccata (7.1 non ha l'opzione)   spenta
- *   banda massima          mai toccata (`cutoff` = 0)           piena
+ *   application            `audio` (we asked for it)            to be chosen
+ *   frame duration         20 ms (we asked for it)              to be chosen
+ *   bitrate                96 000 (we asked for it)             automatic
+ *   ⛔ complexity          **10** (`compression_level` = 10)    9
+ *   VBR                    on (`vbr` = on)                      on
+ *   ⛔ constrained VBR     **NO** (`vbr == 2` false)            **YES**
+ *   expected loss          0 %                                  0 %
+ *   in-band FEC            off                                  off
+ *   phase inversion        allowed (`apply_phase_inv`)          allowed
+ *   Opus DTX               never touched (7.1 lacks the option) off
+ *   maximum bandwidth      never touched (`cutoff` = 0)         full
  *
- * ⚠ E la forma: libavcodec apriva un codificatore **multistream** a un flusso
- *   accoppiato (`opus_multistream_encoder_create(…, 1, 1, {0, 1}, …)`), qui ce
- *   n'e' uno semplice.  `[M]` 30 set 2026, dentro `remotix-costruzione`
- *   (libopus 1.5.2, libavcodec 61 di FFmpeg 7.1.5): i due, e quello di
- *   libavcodec, sugli stessi 1 500 blocchi (parlato, musica, onda quadra a
- *   fondo scala) danno **1 500 pacchetti su 1 500 identici byte per byte**,
- *   439 216 byte ciascuno.  ⇒ Il multistream non si porta dietro: e' un
- *   involucro che con un flusso solo non aggiunge niente.
+ * ⚠ And the form: libavcodec opened a **multistream** encoder with one coupled
+ *   stream (`opus_multistream_encoder_create(…, 1, 1, {0, 1}, …)`), here there
+ *   is a plain one.  `[M]` 30 Sep 2026, inside `remotix-costruzione`
+ *   (libopus 1.5.2, libavcodec 61 of FFmpeg 7.1.5): the two, and libavcodec's,
+ *   on the same 1 500 blocks (speech, music, full-scale square
+ *   wave) give **1 500 packets of 1 500 identical byte for byte**,
+ *   439 216 bytes each.  ⇒ The multistream is not carried over: it is a
+ *   wrapper that with a single stream adds nothing.
  *
- * ⭐ E il banco che lo tiene vero e' `banchi/18-a1/`: il vecchio `audio.c`
- *    (545ec55) e questo, collegati insieme, sullo stesso segnale di 42 s
- *    (parlato, musica, silenzio digitale, salti a fondo scala, buchi di un
- *    blocco, ±1 LSB, rumore forte, tono puro).  `[M]` 30 set 2026 sul server
- *    (`devroot`, libopus 1.5.2): cura ACCESA 1 860 pacchetti + 240 taciuti,
- *    519 998 byte; SPENTA 2 100 pacchetti, 549 180 byte — in tutt'e due
- *    **ogni pacchetto identico byte per byte**, 0 campioni decodificati
- *    diversi su 4 032 000; tutti CELT a banda piena (config 31), stereo,
- *    codice 0; nessun pacchetto da 1-2 byte (la DTX di Opus resta spenta); il
- *    silenzio spedito a cura spenta pesa 3 byte, come in `09-b84`.
+ * ⭐ And the bench that keeps it true is `banchi/18-a1/`: the old `audio.c`
+ *    (545ec55) and this one, linked together, on the same 42 s signal
+ *    (speech, music, digital silence, full-scale jumps, one-block gaps,
+ *    ±1 LSB, loud noise, pure tone).  `[M]` 30 Sep 2026 on the server
+ *    (`devroot`, libopus 1.5.2): cure ON 1 860 packets + 240 muted,
+ *    519 998 bytes; OFF 2 100 packets, 549 180 bytes — in both
+ *    **every packet identical byte for byte**, 0 decoded samples
+ *    different out of 4 032 000; all full-band CELT (config 31), stereo,
+ *    code 0; no 1-2 byte packet (Opus's DTX stays off); the
+ *    silence sent with the cure off weighs 3 bytes, as in `09-b84`.
  *
- * ⭐ E cade da se' la domanda di `banchi/07-b44` (il codificatore trattiene un
- *    blocco?): `opus_encode()` e' SINCRONA, un blocco dentro e un pacchetto
- *    fuori per costruzione.  ⇒ Il ramo `EAGAIN` non esiste piu', invece di
- *    restare scritto e mai percorso.
+ * ⭐ And the question of `banchi/07-b44` falls by itself (does the encoder hold
+ *    back a block?): `opus_encode()` is SYNCHRONOUS, one block in and one packet
+ *    out by construction.  ⇒ The `EAGAIN` branch no longer exists, instead of
+ *    staying written and never taken.
  */
 static bool opus_ctl_o_di(int e, const char *che)
 {
@@ -207,16 +207,16 @@ static bool opus_apri(audio_cod *c)
 	                             OPUS_APPLICATION_AUDIO, &e);
 	if (!c->enc || e != OPUS_OK) {
 		registro_dice(REG_AUDIO,
-		              "⛔ opus_encoder_create: %s.  ⚠ Non si ripiega su PCM "
-		              "da qui: il codec e' negoziato (§4.3), e spedire PCM a "
-		              "chi aspetta Opus produce RUMORE invece di un errore",
+		              "⛔ opus_encoder_create: %s.  ⚠ No fallback to PCM "
+		              "from here: the codec is negotiated (§4.3), and sending PCM to "
+		              "someone expecting Opus produces NOISE instead of an error",
 		              opus_strerror(e));
 		return false;
 	}
 
-	/* ⛔ Nell'ordine di libavcodec (`libopus_configure_encoder()`), e ognuna
-	 *    controllata: una `ctl` rifiutata e taciuta sarebbe un parametro che
-	 *    crediamo di aver messo. */
+	/* ⛔ In libavcodec's order (`libopus_configure_encoder()`), and each one
+	 *    checked: a `ctl` refused and kept quiet would be a parameter we
+	 *    believe we have set. */
 	if (!opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_BITRATE(AUDIO_OPUS_BITRATE)), "BITRATE") ||
 	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_COMPLEXITY(10)), "COMPLEXITY") ||
 	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_VBR(1)), "VBR") ||
@@ -226,31 +226,31 @@ static bool opus_apri(audio_cod *c)
 	    !opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_SET_PHASE_INVERSION_DISABLED(0)), "PHASE_INVERSION_DISABLED"))
 		return false;
 
-	/* ⛔ E si VERIFICA che abbia obbedito, invece di crederci — come prima
-	 *    si verificava il `frame_size` di libavcodec.  ⚠ La durata della
-	 *    trama qui non e' un'impostazione: sono i 960 fotogrammi che
-	 *    `opus_encode()` riceve a ogni chiamata (§5.3), e un numero che
-	 *    libopus non ammette e' un errore alla chiamata, non un suono storto.
-	 *    ⇒ Si rilegge il bitrate, che e' il numero che la sonda ha misurato. */
+	/* ⛔ And we CHECK that it obeyed, instead of believing it — as before
+	 *    libavcodec's `frame_size` was checked.  ⚠ The frame duration here is
+	 *    not a setting: it is the 960 frames that `opus_encode()` gets at
+	 *    every call (§5.3), and a number libopus does not accept is an error
+	 *    at the call, not a crooked sound.
+	 *    ⇒ The bitrate is read back, which is the number the probe measured. */
 	if (!opus_ctl_o_di(opus_encoder_ctl(c->enc, OPUS_GET_BITRATE(&v)), "GET_BITRATE"))
 		return false;
 	if (v != AUDIO_OPUS_BITRATE) {
 		registro_dice(REG_AUDIO,
-		              "⛔ libopus tiene %d bit/s, e ne abbiamo chiesti %d.  "
-		              "Non si adatta in silenzio: si dichiara",
+		              "⛔ libopus holds %d bit/s, and we asked for %d.  "
+		              "It does not adapt silently: it is declared",
 		              (int)v, (int)AUDIO_OPUS_BITRATE);
 		return false;
 	}
-	/* ⚠ Il `pre-skip` (`audio.h`, `[M]` 312 campioni = 6,50 ms) si DICHIARA
-	 *   anche adesso che nessun `pts` lo porta: e' la stessa grandezza, e chi
-	 *   un giorno sincronizzasse audio e video la cerchera' qui. */
+	/* ⚠ The `pre-skip` (`audio.h`, `[M]` 312 samples = 6.50 ms) is DECLARED
+	 *   even now that no `pts` carries it: it is the same quantity, and whoever
+	 *   one day synchronises audio and video will look for it here. */
 	if (opus_encoder_ctl(c->enc, OPUS_GET_LOOKAHEAD(&v)) != OPUS_OK)
 		v = -1;
 
 	registro_dice(REG_AUDIO,
-	              "⭐ Opus aperto: 48 000 Hz, 2 canali, blocchi da %d fotogrammi "
-	              "(20 ms), %d bit/s VBR libero, complessita' 10, pre-skip %d "
-	              "campioni — «libopus» %s diretta, senza libavcodec",
+	              "⭐ Opus opened: 48 000 Hz, 2 channels, blocks of %d frames "
+	              "(20 ms), %d bit/s free VBR, complexity 10, pre-skip %d "
+	              "samples — «libopus» %s directly, without libavcodec",
 	              AUDIO_BLOCCO_OPUS, (int)AUDIO_OPUS_BITRATE, (int)v,
 	              opus_get_version_string());
 	return true;
@@ -263,29 +263,29 @@ audio_cod *audio_cod_apri(uint8_t codec)
 		return NULL;
 	c->codec = codec;
 
-	/* ⛔ L'interruttore si DICHIARA anche quando e' spento: «la cura non c'e'»
-	 *    e «la cura c'e' e non ha fatto niente» devono avere due righe diverse
-	 *    (`CODER.md` §3.10).  ⚠ E' la riga su cui il banco appaiato controlla
-	 *    di aver davvero acceso due bracci diversi. */
+	/* ⛔ The switch is DECLARED even when it is off: "the cure is not there"
+	 *    and "the cure is there and did nothing" must have two different lines
+	 *    (`CODER.md` §3.10).  ⚠ It is the line on which the paired bench checks
+	 *    that it really switched on two different arms. */
 	registro_dice(REG_AUDIO,
-	              "cura del silenzio digitale: %s",
+	              "digital silence cure: %s",
 	              audio_taci_silenzio
-	                  ? "⭐ ACCESA — i blocchi tutti a zero non si spediscono.  "
-	                    "E' il PREDEFINITO dal 24 agosto 2026 (decisione "
-	                    "dell'utente).  `[M]` 09-b84: 102,1 volte meno traffico a "
-	                    "schermo fermo (557,6 → 5,5 kbit/s), 1 248 blocchi taciuti "
-	                    "su 1 248.  ⚠ Il prezzo: i «mancati» del cliente salgono "
-	                    "di 2 su 5 000.  ⛔ Si spegne con `--niente-audio-silenzio`"
-	                  : "⛔ SPENTA a mano (`--niente-audio-silenzio`) — si "
-	                    "spedisce anche il silenzio, cioe' il prodotto fino al 23 "
-	                    "agosto 2026.  ⚠ E NON e' il predefinito: dal 24 agosto "
-	                    "nasce ACCESA");
+	                  ? "⭐ ON — blocks that are all zero are not sent.  "
+	                    "It is the DEFAULT since 24 August 2026 (the user's "
+	                    "decision).  `[M]` 09-b84: 102.1 times less traffic with "
+	                    "the screen still (557.6 → 5.5 kbit/s), 1 248 blocks muted "
+	                    "of 1 248.  ⚠ The price: the client's «mancati» rise "
+	                    "by 2 in 5 000.  ⛔ Switched off with `--niente-audio-silenzio`"
+	                  : "⛔ OFF by hand (`--niente-audio-silenzio`) — "
+	                    "silence is sent too, that is the product until 23 "
+	                    "August 2026.  ⚠ And it is NOT the default: since 24 August "
+	                    "it is born ON");
 
 	if (codec == 2) {
 		c->blocco = AUDIO_BLOCCO_PCM;
 		registro_dice(REG_AUDIO,
-		              "⭐ PCM aperto: 48 000 Hz, 2 canali, s16 little-endian, "
-		              "blocchi da %u fotogrammi (5 ms) = %u byte (§5.3)",
+		              "⭐ PCM opened: 48 000 Hz, 2 channels, s16 little-endian, "
+		              "blocks of %u frames (5 ms) = %u bytes (§5.3)",
 		              c->blocco, c->blocco * AUDIO_CANALI * 2u);
 		return c;
 	}
@@ -299,8 +299,8 @@ audio_cod *audio_cod_apri(uint8_t codec)
 	}
 
 	registro_dice(REG_AUDIO,
-	              "⛔ codec audio %u sconosciuto: RCP/1 ne definisce due, "
-	              "1 = Opus e 2 = PCM (§6.3)",
+	              "⛔ unknown audio codec %u: RCP/1 defines two, "
+	              "1 = Opus and 2 = PCM (§6.3)",
 	              codec);
 	free(c);
 	return NULL;
@@ -310,20 +310,20 @@ void audio_cod_chiudi(audio_cod *c)
 {
 	if (!c)
 		return;
-	/* ⛔⭐ IL CONTO DELLA CURA SI SCRIVE ALLA CHIUSURA, ED E' L'UNICO ISTANTE IN
-	 *     CUI E' COMPLETO (`CODER.md` §3.10).  ⚠ La riga di dentro esce alla
-	 *     prima e poi una ogni mille: chi legge solo quella sa dire «almeno N»,
-	 *     non «N» — e un banco che confondesse le due cose scriverebbe un
-	 *     numero che sembra misurato.  ⭐ E si scrive **con dentro gli zero**:
-	 *     «la cura era spenta» e «la cura era accesa e non ha taciuto niente»
-	 *     sono due fatti diversi, ed e' la differenza su cui la scena col tono
-	 *     si giudica. */
+	/* ⛔⭐ THE CURE'S COUNT IS WRITTEN AT CLOSING, AND IT IS THE ONLY MOMENT
+	 *     IT IS COMPLETE (`CODER.md` §3.10).  ⚠ The inner line comes out on
+	 *     the first and then one every thousand: whoever reads only that can say
+	 *     "at least N", not "N" — and a bench that confused the two would write a
+	 *     number that looks measured.  ⭐ And it is written **with the zeros in**:
+	 *     "the cure was off" and "the cure was on and muted nothing"
+	 *     are two different facts, and it is the difference the tone scene is
+	 *     judged on. */
 	registro_dice(REG_AUDIO,
-	              "conto della cura del silenzio (%s): %llu blocchi taciuti "
-	              "su %llu entrati, %llu usciti sul filo — codec %u",
+	              "silence cure count (%s): %llu blocks muted "
+	              "of %llu in, %llu out on the wire — codec %u",
 	              audio_taci_silenzio
-	                  ? "ACCESA, ed e' il predefinito dal 24 ago 2026"
-	                  : "SPENTA a mano, --niente-audio-silenzio",
+	                  ? "ON, and it is the default since 24 Aug 2026"
+	                  : "OFF by hand, --niente-audio-silenzio",
 	              (unsigned long long)c->taciuti,
 	              (unsigned long long)c->entrati,
 	              (unsigned long long)c->usciti, c->codec);
@@ -337,12 +337,12 @@ uint32_t audio_cod_blocco(const audio_cod *c)
 	return c ? c->blocco : 0;
 }
 
-/* ⛔ Il PCM si scrive LITTLE-endian a mano, non con una `memcpy`.
+/* ⛔ PCM is written LITTLE-endian by hand, not with a `memcpy`.
  *
- *    Una `memcpy` darebbe l'ordine della macchina: giusto su x86, silenziosamente
- *    sbagliato su un ARM big-endian — e il sintomo non e' un errore, e' rumore a
- *    fondo scala.  ⚠ Costa due righe e toglie di mezzo un difetto che si
- *    manifesterebbe solo sull'unica macchina dove nessuno lo prova. */
+ *    A `memcpy` would give machine order: right on x86, silently
+ *    wrong on a big-endian ARM — and the symptom is not an error, it is
+ *    full-scale noise.  ⚠ It costs two lines and removes a defect that would
+ *    show only on the one machine where nobody tests it. */
 static void pcm_scrivi(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fuori)
 {
 	uint32_t n = fotogrammi * AUDIO_CANALI;
@@ -353,11 +353,11 @@ static void pcm_scrivi(const int16_t *campioni, uint32_t fotogrammi, uint8_t *fu
 	}
 }
 
-/* ⛔ Silenzio DIGITALE: tutti i campioni esattamente zero, senza soglie.  ⚠ Il
- *    giro costa `blocco * 2` confronti su interi — 480 per un blocco PCM, 1920
- *    per uno di Opus, cinquanta volte al secondo — ed e' meno lavoro della
- *    `memcpy` che il codificatore fa subito dopo.  ⭐ E si esce al PRIMO
- *    campione diverso da zero: sul suono vero il costo e' una lettura. */
+/* ⛔ DIGITAL silence: all samples exactly zero, no thresholds.  ⚠ The
+ *    loop costs `blocco * 2` integer comparisons — 480 for a PCM block, 1920
+ *    for an Opus one, fifty times a second — and it is less work than the
+ *    `memcpy` the encoder does right after.  ⭐ And it exits at the FIRST
+ *    non-zero sample: on real sound the cost is one read. */
 static bool tutto_zero(const int16_t *campioni, uint32_t fotogrammi)
 {
 	uint32_t n = fotogrammi * AUDIO_CANALI;
@@ -376,32 +376,32 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		return false;
 	c->entrati++;
 
-	/* ⛔⭐ LA CURA DEL SILENZIO — spenta di suo, e il riquadro sta in cima.
+	/* ⛔⭐ THE SILENCE CURE — off by itself, and the box is at the top.
 	 *
-	 * ⚠ Si torna `false` **prima** del codificatore, ed e' quel che
-	 *   `audio.h` promette gia': *«Torna `false` quando non c'e' niente da
-	 *   spedire.  Il chiamante non manda niente e va avanti»*.  ⇒ Nessun
-	 *   chiamante cambia, e l'`istante` di §6.3 continua ad avanzare da solo
-	 *   in `figlio.c` — che e' quel che rende il buco un silenzio al posto
-	 *   giusto invece di uno spostamento di tutto quel che segue.
+	 * ⚠ It returns `false` **before** the encoder, and that is what
+	 *   `audio.h` already promises: *"Returns `false` when there is nothing to
+	 *   send.  The caller sends nothing and goes on"*.  ⇒ No
+	 *   caller changes, and the `istante` of §6.3 keeps advancing by itself
+	 *   in `figlio.c` — which is what makes the gap a silence in the right
+	 *   place instead of a shift of everything that follows.
 	 *
-	 * ⛔ E il codificatore quei blocchi semplicemente NON LI VEDE: il suo
-	 *    stato resta quello dell'ultimo blocco suonato.  ⚠ Fino al 29 set
-	 *    2026 qui si teneva fermo anche il `pts` di libavcodec (che avrebbe
-	 *    visto un salto); con `opus_encode()` il tempo non entra nella
-	 *    chiamata, e il comportamento e' lo stesso per costruzione: `[M]` 30
-	 *    set 2026, `banchi/18-a1`, i pacchetti DOPO un tratto taciuto escono
-	 *    identici byte per byte a quelli di libavcodec. */
+	 * ⛔ And the encoder simply DOES NOT SEE those blocks: its
+	 *    state stays that of the last block played.  ⚠ Until 29 Sep
+	 *    2026 libavcodec's `pts` was also held still here (it would have
+	 *    seen a jump); with `opus_encode()` time does not enter the
+	 *    call, and the behaviour is the same by construction: `[M]` 30
+	 *    Sep 2026, `banchi/18-a1`, the packets AFTER a muted stretch come out
+	 *    identical byte for byte to libavcodec's. */
 	if (audio_taci_silenzio && tutto_zero(campioni, c->blocco)) {
 		c->taciuti++;
-		/* ⚠ Con un fondo, o un desktop muto riempirebbe il registro invece di
-		 *   raccontarlo: la prima e poi una ogni mille (20 s di Opus, 5 di PCM). */
+		/* ⚠ With a floor, or a mute desktop would fill the log instead of
+		 *   telling about it: the first and then one every thousand (20 s of Opus, 5 of PCM). */
 		if (c->taciuti == 1 || c->taciuti % 1000 == 0)
 			registro_dice(REG_AUDIO,
-			              "⭐ silenzio DIGITALE: %llu blocchi non spediti su "
-			              "%llu entrati (I6, cura accesa).  ⚠ Chi riceve vedra' "
-			              "un salto di `istante` e lo contera' fra i «mancati»: "
-			              "e' un buco VOLUTO, non una perdita",
+			              "⭐ DIGITAL silence: %llu blocks not sent of "
+			              "%llu in (I6, cure on).  ⚠ The receiver will see "
+			              "a jump in `istante` and will count it among the «mancati»: "
+			              "it is a WANTED gap, not a loss",
 			              (unsigned long long)c->taciuti,
 			              (unsigned long long)c->entrati);
 		return false;
@@ -417,11 +417,11 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 		return true;
 	}
 
-	/* ⛔ Una chiamata, un pacchetto: `opus_encode()` e' sincrona, e i
-	 *    campioni li legge dove stanno (s16 interlacciati nell'ordine della
-	 *    macchina, che e' quel che vuole) — niente copia in un fotogramma
-	 *    intermedio, e nessuna allocazione per blocco (prima erano un
-	 *    `AVPacket` e il suo carico, 50 volte al secondo). */
+	/* ⛔ One call, one packet: `opus_encode()` is synchronous, and it reads the
+	 *    samples where they are (s16 interleaved in machine order, which is
+	 *    what it wants) — no copy into an intermediate frame, and no
+	 *    allocation per block (before there were an `AVPacket` and its payload,
+	 *    50 times a second). */
 	e = opus_encode(c->enc, campioni, AUDIO_BLOCCO_OPUS, c->pacchetto,
 	                AUDIO_OPUS_SPAZIO);
 	if (e < 0) {
@@ -430,11 +430,11 @@ bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 	}
 
 	if ((size_t)e > AUDIO_FUORI_MAX) {
-		/* ⛔ Non si tronca un pacchetto Opus: un pacchetto monco non e' un
-		 *    suono peggiore, e' un pacchetto che il decodificatore rifiuta. */
+		/* ⛔ An Opus packet is not truncated: a maimed packet is not a worse
+		 *    sound, it is a packet the decoder refuses. */
 		registro_dice(REG_AUDIO,
-		              "⛔ pacchetto Opus di %d byte, oltre il tetto di %d — "
-		              "buttato invece che troncato",
+		              "⛔ Opus packet of %d bytes, over the ceiling of %d — "
+		              "dropped instead of truncated",
 		              e, AUDIO_FUORI_MAX);
 		return false;
 	}
@@ -452,9 +452,9 @@ void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti)
 		*usciti = c ? c->usciti : 0;
 }
 
-/* ⛔ Il terzo numero sta a parte e NON dentro `audio_cod_conti()`: quella
- *    funzione ha gia' un chiamante (`webtransport.c:6891`) e cambiarle la
- *    firma vorrebbe dire toccare un file che non e' di questo modulo. */
+/* ⛔ The third number is kept apart and NOT inside `audio_cod_conti()`: that
+ *    function already has a caller (`webtransport.c:6891`) and changing its
+ *    signature would mean touching a file that is not this module's. */
 uint64_t audio_cod_taciuti(const audio_cod *c)
 {
 	return c ? c->taciuti : 0;

@@ -1,11 +1,11 @@
-// remotix-install: il motore d'installazione di REMOTIX, e la sua riga di comando
-// (fasi/17-l-installatore.md §6.0, §6.6). Binario statico: gira da root su ogni distribuzione
-// prima che sia installato qualunque pacchetto (fase 0 TRUST), senza Python né librerie.
+// remotix-install: REMOTIX's installation engine, and its command line
+// (fasi/17-l-installatore.md §6.0, §6.6). Static binary: it runs as root on every distribution
+// before any package is installed (phase 0 TRUST), without Python or libraries.
 //
-// Dal 10 ott 2026 (DECISIONI §10.36): cinque comandi — check, install, uninstall, status, tui — e
-// REMOTIX che non modifica il sistema (dice cosa manca). Si consegna dentro un file `.run` (il
-// pacchetto unico): `sudo sh remotix-<versione>.run` estrae e lancia `install`; dopo, il motore resta
-// sulla macchina col pacchetto remotix-install. Aggiornare = rilanciare il .run nuovo.
+// Since 10 Oct 2026 (DECISIONI §10.36): five commands — check, install, uninstall, status, tui — and
+// REMOTIX that does not modify the system (it says what is missing). It is delivered inside a `.run` file (the
+// single package): `sudo sh remotix-<versione>.run` extracts and launches `install`; afterwards, the engine stays
+// on the machine with the remotix-install package. Upgrading = relaunching the new .run.
 package main
 
 import (
@@ -43,7 +43,7 @@ func main() {
 		codice, err = stato(arg)
 	case "tui":
 		codice, err = tuiCmd(arg)
-	// nascosti: li usano il comando di rilascio e gli script dei pacchetti
+	// hidden: used by the release command and by the packages' scripts
 	case "catalog":
 		err = mostraCatalogo(arg)
 	case "post-upgrade":
@@ -65,7 +65,7 @@ func main() {
 	os.Exit(codice)
 }
 
-// comuni: le opzioni di tutti i comandi.
+// comuni: the options of all the commands.
 type comuni struct {
 	operazioni, catalogo, pacchetti string
 	porta                           int
@@ -75,11 +75,11 @@ func (c *comuni) aggiungi(fs *flag.FlagSet) {
 	fs.StringVar(&c.operazioni, "state-dir", "/var/lib/remotix/operations", "where the operations are kept")
 	fs.StringVar(&c.catalogo, "catalog", "", "a catalogue given by hand, instead of the engine's (the administrator's responsibility)")
 	fs.IntVar(&c.porta, "port", 7447, "the REMOTIX port (TCP and UDP)")
-	// la cartella packages/ del .run: la passa il .run stesso
+	// the packages/ folder of the .run: the .run itself passes it
 	fs.StringVar(&c.pacchetti, "bundle", "", "the packages folder of the REMOTIX .run file (given by the .run itself)")
 }
 
-// fonti: da dove viene il catalogo (fase 0 TRUST): quello del motore, o quello dato a mano.
+// fonti: where the catalogue comes from (phase 0 TRUST): the engine's, or the one given by hand.
 func (c *comuni) fonti() *motore.FontiFiducia {
 	return &motore.FontiFiducia{Incorporato: catalogo.Incorporato, Esplicito: c.catalogo}
 }
@@ -88,13 +88,13 @@ func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
 	return c.fonti().Fidati(time.Now())
 }
 
-// motore: il motore sulla macchina vera, con gli eventi stampati per chi guarda.
+// motore: the engine on the real machine, with the events printed for whoever is watching.
 func (c *comuni) motore() *motore.Motore {
 	return &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
 		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout}}
 }
 
-// argomenti: le opzioni possono stare prima o dopo i nomi.
+// argomenti: the options can come before or after the names.
 func argomenti(fs *flag.FlagSet, arg []string) ([]string, error) {
 	var posizionali []string
 	for {
@@ -109,7 +109,7 @@ func argomenti(fs *flag.FlagSet, arg []string) ([]string, error) {
 	}
 }
 
-// T: il catalogo dei testi del motore (in inglese, DECISIONI §10.35).
+// T: the catalogue of the engine's texts (in English, DECISIONI §10.35).
 var T = motore.T
 
 func chi() string {
@@ -133,7 +133,7 @@ func daRoot() error {
 	return nil
 }
 
-// chiedi: la domanda, dallo stdin (come apt): sì solo con «y» o «yes».
+// chiedi: the question, from stdin (like apt): yes only with «y» or «yes».
 func chiedi(domanda string) bool {
 	fmt.Print(domanda + " [y/N] ")
 	r, _ := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -149,7 +149,7 @@ func verifica(arg []string) (int, error) {
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
-	cat, fid, errF := c.fidati() // check non scrive niente (R1)
+	cat, fid, errF := c.fidati() // check writes nothing (R1)
 	if errF != nil {
 		if *comeJSON {
 			stampaJSON(map[string]any{"format": motore.Formato, "trust": fid})
@@ -237,7 +237,7 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 	fmt.Println()
 }
 
-// stampaMancano: quel che manca, e che l'amministratore deve mettere (DECISIONI §10.36).
+// stampaMancano: what is missing, and what the administrator must provide (DECISIONI §10.36).
 func stampaMancano(m []motore.Messaggio) {
 	if len(m) == 0 {
 		return
@@ -270,10 +270,10 @@ func tronca(s string, n int) string {
 	return string(r[:n-1]) + "…"
 }
 
-// sistemaAperta: un'operazione non finita (§10.36: mai un sistema a metà). Un'installazione o un
-// aggiornamento si ANNULLANO (prima il rimedio del gestore, nel passo dei pacchetti); una
-// disinstallazione si porta a termine. Poi chi ha chiamato riparte da capo, col suo piano e la sua
-// domanda: nessun ritentare automatico.
+// sistemaAperta: an unfinished operation (§10.36: never a half-done system). An installation or an
+// upgrade is CANCELLED (first the manager's remedy, in the packages step); an
+// uninstallation is carried through. Then the caller starts over, with its plan and its
+// question: no automatic retry.
 func sistemaAperta(m *motore.Motore) error {
 	ap, err := m.Aperta()
 	if err != nil || ap == nil {
@@ -301,9 +301,9 @@ func sistemaAperta(m *motore.Motore) error {
 	return nil
 }
 
-// installa: controllo → simulazione del gestore → piano coi pacchetti esatti → «Proceed? [y/N]» →
-// esecuzione → verifica → servizio acceso. Su una macchina con REMOTIX già installato è un
-// aggiornamento (i pacchetti del .run, e basta).
+// installa: check → manager's simulation → plan with the exact packages → «Proceed? [y/N]» →
+// execution → verification → service started. On a machine with REMOTIX already installed it is an
+// upgrade (the .run's packages, and nothing else).
 func installa(arg []string) (int, error) {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	var c comuni
@@ -357,7 +357,7 @@ func installa(arg []string) (int, error) {
 	return applica(m, p)
 }
 
-// applica: il piano approvato adesso da chi ha risposto «sì», dalla cartella dei piani.
+// applica: the plan approved now by whoever answered «yes», from the plans folder.
 func applica(m *motore.Motore, p *motore.Piano) (int, error) {
 	dir := filepath.Join(filepath.Dir(m.Cartella), "plans")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -416,9 +416,9 @@ func mostraPiano(p *motore.Piano) {
 	stampaMancano(mancano)
 }
 
-// disinstalla: il piano della disinstallazione dal registro dell'installazione confermata, la
-// domanda, e via. Una disinstallazione interrotta si porta a termine; un'installazione interrotta si
-// annulla (e quello è già togliere REMOTIX).
+// disinstalla: the uninstallation plan from the log of the confirmed installation, the
+// question, and off it goes. An interrupted uninstallation is carried through; an interrupted installation is
+// cancelled (and that already removes REMOTIX).
 func disinstalla(arg []string) (int, error) {
 	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
 	var c comuni
@@ -454,8 +454,8 @@ func disinstalla(arg []string) (int, error) {
 	return applica(m, p)
 }
 
-// stato: le operazioni, e — se REMOTIX è installato — i controlli di allora rifatti adesso (§6.6.11,
-// R29): GREEN solo se tutto è PASS e non c'è nessuna condizione; uscita 0 solo se GREEN.
+// stato: the operations, and — if REMOTIX is installed — the checks of then redone now (§6.6.11,
+// R29): GREEN only if everything is PASS and there is no condition; exit 0 only if GREEN.
 func stato(arg []string) (int, error) {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	var c comuni
@@ -514,10 +514,10 @@ func stato(arg []string) (int, error) {
 	return 0, nil
 }
 
-// aggiornato: chiamato dagli script dei pacchetti remotix e remotix-install a ogni cambio di
-// versione: annota le versioni installate, dice se l'installazione è certificata e se la macchina
-// ha un motivo BLOCCANTE. ⛔ Non fa mai fallire il gestore di pacchetti: dice, e restituisce 0. Il
-// riavvio che non chiude i desktop lo fa lo script del pacchetto remotix (try-restart).
+// aggiornato: called by the scripts of the remotix and remotix-install packages at every version
+// change: records the installed versions, says whether the installation is certified and whether the machine
+// has a BLOCKING reason. ⛔ It never makes the package manager fail: it says, and returns 0. The
+// restart that does not close the desktops is done by the remotix package's script (try-restart).
 func aggiornato(arg []string) (int, error) {
 	fs := flag.NewFlagSet("post-upgrade", flag.ContinueOnError)
 	var c comuni
@@ -529,7 +529,7 @@ func aggiornato(arg []string) (int, error) {
 	m := &motore.Motore{Amb: amb, Cartella: c.operazioni}
 	in, err := m.ControllaInstallazione()
 	if err != nil {
-		// REMOTIX non è installato dall'installatore: niente da annotare (§10.12)
+		// REMOTIX was not installed by the installer: nothing to record (§10.12)
 		fmt.Println(err)
 		return 0, nil
 	}

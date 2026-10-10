@@ -10,13 +10,13 @@ import (
 	"syscall"
 )
 
-// togli-registri-utente (decisione dell'utente, 1 ott 2026, che chiude la voce aperta di fasi/17
-// §13.1): alla disinstallazione si toglie, in TUTTE le case, il registro della sessione di REMOTIX —
-// `~/.local/state/remotix/sessione.log` (sessione.c) — e la cartella `~/.local/state/remotix/` se
-// resta vuota. ⛔ Solo quello, nient'altro nelle case. I percorsi si dichiarano nel piano (le
-// «dichiarate») e nel certificato (il dettaglio del controllo). Reversibilità ESATTA: i file si
-// salvano nella cartella dell'operazione e, se la disinstallazione si annulla, si rimettono byte
-// per byte, coi permessi e il proprietario.
+// togli-registri-utente (the user's decision, 1 Oct 2026, which closes the open item of fasi/17
+// §13.1): on uninstallation, in ALL homes, REMOTIX's session log is removed —
+// `~/.local/state/remotix/sessione.log` (sessione.c) — and the folder `~/.local/state/remotix/` if
+// it remains empty. ⛔ Only that, nothing else in the homes. The paths are declared in the plan (the
+// «declared» ones) and in the certificate (the check's detail). EXACT reversibility: the files are
+// saved in the operation's folder and, if the uninstallation is cancelled, put back byte
+// by byte, with permissions and owner.
 
 func init() { registraTipo("remove-user-logs", nuovaTogliRegistri) }
 
@@ -25,8 +25,8 @@ const (
 	fileSessione        = "sessione.log"
 )
 
-// RegistriUtente: i registri di sessione che ci sono ADESSO nelle case (percorsi assoluti, in
-// ordine), lette da /etc/passwd: ogni conto con una casa, root compreso.
+// RegistriUtente: the session logs that are in the homes NOW (absolute paths, in
+// order), read from /etc/passwd: every account with a home, root included.
 func RegistriUtente(a *Ambiente) []string {
 	f, err := os.ReadFile(a.P("/etc/passwd"))
 	if err != nil {
@@ -48,7 +48,7 @@ func RegistriUtente(a *Ambiente) []string {
 	return r
 }
 
-// PianoTogliRegistri prepara il passo del piano, coi percorsi trovati al momento del piano.
+// PianoTogliRegistri prepares the plan's step, with the paths found at planning time.
 func PianoTogliRegistri(id string, percorsi []string) AzionePiano {
 	elenco := T("az.registri.nessuno")
 	if len(percorsi) > 0 {
@@ -69,14 +69,14 @@ type togliRegistri struct{}
 
 func nuovaTogliRegistri(AzionePiano) (Azione, error) { return &togliRegistri{}, nil }
 
-// registroSalvato: un file com'era, e la sua cartella (per rimetterla se si è tolta).
+// registroSalvato: a file as it was, and its folder (to put it back if it was removed).
 type registroSalvato struct {
 	Percorso     string `json:"path"`
 	Sha          string `json:"sha256"`
 	Modo         string `json:"mode"`
 	Uid          int    `json:"uid"`
 	Gid          int    `json:"gid"`
-	Salvataggio  string `json:"backup"` // relativo alla cartella dell'operazione
+	Salvataggio  string `json:"backup"` // relative to the operation's folder
 	CartellaModo string `json:"dir_mode"`
 	CartellaUid  int    `json:"dir_uid"`
 	CartellaGid  int    `json:"dir_gid"`
@@ -130,7 +130,7 @@ func (t *togliRegistri) leggi(prima json.RawMessage) (primaRegistri, error) {
 	return p, err
 }
 
-// Fai toglie i file fotografati, e la cartella di ciascuno solo se resta vuota. Idempotente.
+// Fai removes the photographed files, and each one's folder only if it remains empty. Idempotent.
 func (t *togliRegistri) Fai(c *Contesto, prima json.RawMessage) error {
 	p, err := t.leggi(prima)
 	if err != nil || p.Origine == PREESISTENTE {
@@ -142,14 +142,14 @@ func (t *togliRegistri) Fai(c *Contesto, prima json.RawMessage) error {
 			return err
 		}
 		SincronizzaCartella(filepath.Dir(dest))
-		if err := os.Remove(filepath.Dir(dest)); err == nil { // solo se vuota
+		if err := os.Remove(filepath.Dir(dest)); err == nil { // only if empty
 			SincronizzaCartella(filepath.Dir(filepath.Dir(dest)))
 		}
 	}
 	return nil
 }
 
-// quanti: dei file fotografati, quanti ci sono ancora (e quali).
+// quanti: of the photographed files, how many are still there (and which).
 func (t *togliRegistri) quanti(c *Contesto, p primaRegistri) (ancora, tolti []string) {
 	for _, s := range p.File {
 		if _, err := os.Lstat(c.Amb.P(s.Percorso)); err == nil {
@@ -179,7 +179,7 @@ func (t *togliRegistri) Controlla(c *Contesto, prima json.RawMessage) (Esito, st
 	return A_META, T("az.registri.ancora", strings.Join(ancora, ", ")), nil
 }
 
-// Annulla rimette i file salvati (e la cartella, com'era) dove mancano.
+// Annulla puts the saved files (and the folder, as it was) back where they are missing.
 func (t *togliRegistri) Annulla(c *Contesto, prima json.RawMessage) error {
 	p, err := t.leggi(prima)
 	if err != nil || p.Origine == PREESISTENTE {

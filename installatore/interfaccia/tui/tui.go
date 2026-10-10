@@ -1,9 +1,9 @@
-// Package tui: le schermate dell'installatore nel terminale (Bubble Tea), per chi lavora via ssh o
-// dalla console (fasi/17 §6.6.1), dalle viste di interfaccia (Vista…), sulla sessione del motore;
-// gira da root nel terminale. Il disegno è il mockup approvato dall'utente il 10 ott 2026
-// (grafica/tui-mockup/index.html): una cornice fissa larga quanto il terminale (almeno 80 colonne),
-// quattro passi Check › Plan › Install › Ready, il contenuto che scorre dentro la cornice, i tasti
-// in fondo. Una domanda sola, la porta, e il «sì» al piano (DECISIONI §10.36).
+// Package tui: the installer's screens in the terminal (Bubble Tea), for whoever works over ssh or
+// from the console (fasi/17 §6.6.1), from the interface views (Vista…), on the engine's session;
+// it runs as root in the terminal. The design is the mockup approved by the user on 10 Oct 2026
+// (grafica/tui-mockup/index.html): a fixed frame as wide as the terminal (at least 80 columns),
+// four steps Check › Plan › Install › Ready, the content scrolling inside the frame, the keys
+// at the bottom. A single question, the port, and the «yes» to the plan (DECISIONI §10.36).
 package tui
 
 import (
@@ -31,7 +31,7 @@ const (
 	sFine
 )
 
-// I passi della riga in alto.
+// The steps of the top line.
 const (
 	pCheck = iota
 	pPlan
@@ -42,12 +42,12 @@ const (
 const (
 	larghezzaMinima = 80
 	altezzaMinima   = 12
-	colEtichetta    = 18 // la colonna delle etichette del controllo
-	colStato        = 12 // la colonna dei cartellini
+	colEtichetta    = 18 // the column of the check's labels
+	colStato        = 12 // the column of the state labels
 )
 
-// tema: i colori del mockup. lipgloss li porta da sé a 256 o 16 colori secondo il terminale, e a
-// niente con NO_COLOR (termenv.EnvColorProfile).
+// tema: the mockup's colours. lipgloss brings them down by itself to 256 or 16 colours depending on the terminal, and to
+// none with NO_COLOR (termenv.EnvColorProfile).
 type tema struct {
 	blu, verde, ambra, rosso, grigio, cornice, forte, campo lipgloss.Style
 }
@@ -87,8 +87,8 @@ type modello struct {
 	prog     *tea.Program
 	t        tema
 	schermo  int
-	passo    int  // il passo della riga in alto
-	fallito  bool // il passo si è fermato (✗ rosso)
+	passo    int  // the step of the top line
+	fallito  bool // the step stopped (red ✗)
 	attesa   string
 	ctrl     *interfaccia.Controllo
 	vc       *interfaccia.VistaControllo
@@ -99,8 +99,8 @@ type modello struct {
 	pronto   *interfaccia.VistaPronto
 	fine     *interfaccia.VistaBloccata
 	porta    string
-	modPorta bool   // si sta scrivendo la porta
-	vecchia  string // la porta di prima, per esc
+	modPorta bool   // the port is being typed
+	vecchia  string // the previous port, for esc
 	dett     bool
 	reg      bool
 	fermando bool
@@ -111,8 +111,8 @@ type modello struct {
 	esito    *interfaccia.Esito
 }
 
-// Avvia: la TUI sulla sessione del motore. Il codice d'uscita segue quello della CLI (0 se
-// l'installazione è CONFERMATA).
+// Avvia: the TUI on the engine's session. The exit code follows the CLI's (0 if
+// the installation is CONFERMATA).
 func Avvia(mot interfaccia.Motore) (int, error) {
 	m := nuovoModello(mot, lipgloss.DefaultRenderer())
 	p := tea.NewProgram(m, tea.WithAltScreen())
@@ -169,7 +169,7 @@ func (m *modello) finisci(es *interfaccia.Esito) {
 	m.vai(sFine)
 }
 
-// chiediPiano: il piano per la porta scritta (il motore riesamina la macchina se cambia).
+// chiediPiano: the plan for the typed port (the engine re-examines the machine if it changes).
 func (m *modello) chiediPiano() tea.Cmd {
 	voci := map[string]string{"port": m.porta}
 	m.passo, m.attesa = pPlan, interfaccia.T("attendi.piano")
@@ -232,7 +232,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	s := k.String()
 	if s == "ctrl+c" {
 		if m.schermo == sAvanzamento {
-			return m, nil // mentre lavora non si esce: si ferma con «a», che rimette com'era
+			return m, nil // while it works one cannot quit: it is stopped with «a», which puts things back as they were
 		}
 		return m, tea.Quit
 	}
@@ -293,7 +293,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return msgEsito{es, err}
 			}
 		case "n", "N", "q":
-			return m, tea.Quit // niente è stato toccato
+			return m, tea.Quit // nothing has been touched
 		case "tab":
 			m.modPorta, m.vecchia = true, m.porta
 		}
@@ -315,7 +315,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// tastoPorta: la casella della porta, nel piano.
+// tastoPorta: the port box, in the plan.
 func (m *modello) tastoPorta(s string) (tea.Model, tea.Cmd) {
 	switch s {
 	case "esc":
@@ -355,13 +355,13 @@ func (m *modello) salva(nome string, v any) {
 	m.nota = interfaccia.T("salvato", p)
 }
 
-// ---- la cornice ------------------------------------------------------------------------------
+// ---- the frame -------------------------------------------------------------------------------
 
-func (m *modello) interna() int { return m.larg - 4 } // «│ » e « │»
+func (m *modello) interna() int { return m.larg - 4 } // «│ » and « │»
 
-func (m *modello) altCorpo() int { return m.alt - 6 } // testa, passi, due separatori, tasti, fondo
+func (m *modello) altCorpo() int { return m.alt - 6 } // head, steps, two separators, keys, bottom
 
-// riempi: una riga lunga esattamente n colonne (tagliata con «…» se più lunga).
+// riempi: a line exactly n columns long (cut with «…» if longer).
 func riempi(s string, n int) string {
 	w := ansi.StringWidth(s)
 	if w > n {
@@ -386,7 +386,7 @@ func (m *modello) cornice(corpo []string, tasti string) string {
 	t, w, in := m.t, m.larg, m.interna()
 	bordo := t.cornice.Render
 	var r []string
-	// la testa: «╭─ REMOTIX 1.0 · Installation ───── Debian 13 · GNOME 48 ─╮»
+	// the head: «╭─ REMOTIX 1.0 · Installation ───── Debian 13 · GNOME 48 ─╮»
 	sx := t.blu.Render("REMOTIX") + t.forte.Render(" "+motore.VersioneMotore+" · "+interfaccia.T("intestazione"))
 	dx := ""
 	if m.vc != nil {
@@ -403,7 +403,7 @@ func (m *modello) cornice(corpo []string, tasti string) string {
 	riga := func(s string) string { return bordo("│") + " " + riempi(s, in) + " " + bordo("│") }
 	sep := bordo("├" + strings.Repeat("─", w-2) + "┤")
 	r = append(r, riga(m.passi()), sep)
-	// il corpo, che scorre
+	// the body, which scrolls
 	h := m.altCorpo()
 	massimo := len(corpo) - h
 	if massimo < 0 {
@@ -422,7 +422,7 @@ func (m *modello) cornice(corpo []string, tasti string) string {
 		}
 		r = append(r, riga(s))
 	}
-	// i tasti, e a destra dove si è se il corpo è più lungo dello schermo
+	// the keys, and on the right where we are if the body is longer than the screen
 	if massimo > 0 {
 		pos := t.grigio.Render(fmt.Sprintf("↑↓ %d–%d / %d", m.scorri+1, m.scorri+h, len(corpo)))
 		spazio := in - ansi.StringWidth(pos) - 1
@@ -453,7 +453,7 @@ func (m *modello) passi() string {
 	return strings.Join(ps, t.grigio.Render("  ›  "))
 }
 
-// tasti: «enter continue · d details · q quit», il tasto in grassetto e il resto grigio.
+// tasti: «enter continue · d details · q quit», the key in bold and the rest grey.
 func (m *modello) tasti(coppie ...string) string {
 	var r []string
 	for i := 0; i+1 < len(coppie); i += 2 {
@@ -462,9 +462,9 @@ func (m *modello) tasti(coppie ...string) string {
 	return strings.Join(r, m.t.grigio.Render(" · "))
 }
 
-// ---- le righe del corpo ----------------------------------------------------------------------
+// ---- the body lines --------------------------------------------------------------------------
 
-// par: un testo a capo dentro la cornice, rientrato, tutto in uno stile.
+// par: a text wrapped inside the frame, indented, all in one style.
 func (m *modello) par(testo string, st lipgloss.Style, rientro int) []string {
 	if testo == "" {
 		return nil
@@ -477,7 +477,7 @@ func (m *modello) par(testo string, st lipgloss.Style, rientro int) []string {
 	return r
 }
 
-// colonne: etichetta, testo (a capo nella sua colonna) e cartellino a destra.
+// colonne: label, text (wrapped in its column) and state label on the right.
 func (m *modello) colonne(et, testo, cart string, st lipgloss.Style) []string {
 	tw := m.interna() - colEtichetta - colStato - 1
 	ls := strings.Split(ansi.Wrap(testo, tw, ""), "\n")
@@ -506,7 +506,7 @@ func (m *modello) stileStato(s interfaccia.Stato) lipgloss.Style {
 	return m.t.grigio
 }
 
-// contenuto: il corpo della schermata in corso e la riga dei tasti.
+// contenuto: the body of the current screen and the keys line.
 func (m *modello) contenuto() ([]string, string) {
 	T := interfaccia.T
 	c := []string{""}
@@ -578,7 +578,7 @@ func (m *modello) corpoPiano() []string {
 	T := interfaccia.T
 	t, v := m.t, m.vp
 	var c []string
-	// la porta, l'unica scelta
+	// the port, the only choice
 	campo := "[ " + m.porta + " ]"
 	if m.modPorta {
 		campo = "[ " + m.porta + "▏]"
@@ -587,8 +587,8 @@ func (m *modello) corpoPiano() []string {
 	if _, ok := interfaccia.PortaValida(m.porta); !ok {
 		c = append(c, t.rosso.Render(T("sc.porta.errata")))
 	}
-	// i pacchetti esatti, dalla simulazione del gestore: REMOTIX (dal .run), poi le sue dipendenze
-	// (dagli archivi della distribuzione; labwc, wlr-randr e il carattere col desktop che li chiede)
+	// the exact packages, from the manager's simulation: REMOTIX (from the .run), then its dependencies
+	// (from the distribution's repositories; labwc, wlr-randr and the font with the desktop requiring them)
 	nuovi, aggiornati, presenti := 0, 0, 0
 	var nostri, dip []string
 	for _, a := range v.Pacchetti {
@@ -628,7 +628,7 @@ func (m *modello) corpoPiano() []string {
 	if len(v.Pacchetti) > 0 {
 		c = append(c, t.grigio.Render("    "+T("p.totale", nuovi, aggiornati, presenti)))
 	}
-	// le persone ai gruppi della scheda, il servizio, gli altri passi
+	// the people in the card's groups, the service, the other steps
 	var altri []string
 	irreversibili := []string{}
 	for _, p := range v.Passi {
@@ -746,7 +746,7 @@ func (m *modello) corpoPronto() []string {
 	return c
 }
 
-// puntoAvviso: «  ! testo» in ambra, a capo sotto il testo.
+// puntoAvviso: «  ! text» in amber, wrapped under the text.
 func (m *modello) puntoAvviso(s string) []string {
 	r := m.par(s, lipgloss.NewStyle(), 4)
 	if len(r) > 0 {

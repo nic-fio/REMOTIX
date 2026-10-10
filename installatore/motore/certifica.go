@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-// La certificazione della piattaforma (fase 7, §6.0; R29: su una macchina guasta apposta non deve
-// mai dire verde). Oltre al «controlla» di ogni passo del piano:
-//   - codifica-h264: la fa REMOTIX (`remotix --prova-codifica`, operazione.go);
-//   - pam-risolta: la pila d'accesso di REMOTIX si risolve — il file c'è, ogni modulo e ogni file
-//     incluso esistono. ⚠ Non è «la pila rifiuta un utente inesistente» (servirebbe caricare PAM,
-//     cioè cgo o una richiesta nuova a REMOTIX, §6.5-bis): è la parte statica, e lo dice il nome;
-//   - porta-firewall (7b): il firewall acceso lascia passare la porta TCP e UDP. Una porta chiusa
-//     non annulla l'installazione (aprirla è la decisione D6 dell'amministratore) ma non è mai
-//     verde: FAIL non richiesto + C-AMMINISTRATORE; un firewall che non si sa leggere ⇒ UNKNOWN.
+// The platform certification (phase 7, §6.0; R29: on a machine broken on purpose it must
+// never say green). Beyond the «controlla» of every step of the plan:
+//   - codifica-h264: done by REMOTIX (`remotix --prova-codifica`, operazione.go);
+//   - pam-risolta: REMOTIX's login stack resolves — the file is there, every module and every included
+//     file exist. ⚠ It is not «the stack refuses a non-existent user» (that would need loading PAM,
+//     that is cgo or a new request to REMOTIX, §6.5-bis): it is the static part, and the name says so;
+//   - porta-firewall (7b): the running firewall lets the TCP and UDP port through. A closed port
+//     does not cancel the installation (opening it is the administrator's decision D6) but is never
+//     green: non-required FAIL + C-AMMINISTRATORE; a firewall that cannot be read ⇒ UNKNOWN.
 
-// ControlliPiattaforma: i controlli oltre ai passi. fallito = un controllo RICHIESTO in FAIL.
+// ControlliPiattaforma: the checks beyond the steps. fallito = a REQUIRED check in FAIL.
 func ControlliPiattaforma(a *Ambiente, porta int) (k []Controllo, cond []Condizione, fallito bool) {
 	c, cd := provaCodifica(a)
 	k = append(k, c)
@@ -45,7 +45,7 @@ func ControlliPiattaforma(a *Ambiente, porta int) (k []Controllo, cond []Condizi
 var cartelleModuliPAM = []string{"/usr/lib/security", "/usr/lib64/security", "/lib/security", "/lib64/security",
 	"/usr/lib/x86_64-linux-gnu/security", "/lib/x86_64-linux-gnu/security", "/usr/lib/aarch64-linux-gnu/security"}
 
-// controllaPAM segue la pila da /etc/pam.d/remotix (o /usr/lib/pam.d/remotix).
+// controllaPAM follows the stack from /etc/pam.d/remotix (or /usr/lib/pam.d/remotix).
 func controllaPAM(a *Ambiente) Controllo {
 	k := Controllo{ID: "pam-resolved", Cosa: T("ver.pam"), Richiesto: true}
 	f := trovaPam(a, "remotix")
@@ -109,7 +109,7 @@ func controllaPAM(a *Ambiente) Controllo {
 				continue
 			}
 			mod := resto[0]
-			facoltativo := strings.HasPrefix(c[0], "-") // «-session»: il modulo può mancare
+			facoltativo := strings.HasPrefix(c[0], "-") // «-session»: the module may be missing
 			if !moduloPAM(a, mod) && !facoltativo {
 				guasto = file + ": the module " + mod + " is missing"
 				return
@@ -184,8 +184,8 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 	}
 }
 
-// Certificazione: il rapporto di `remotix-install certifica` (§6.6.11: si rifanno i controlli
-// sull'installazione confermata, e si dice che cosa è ancora come allora).
+// Certificazione: the report of `remotix-install certifica` (§6.6.11: the checks are redone
+// on the confirmed installation, and it says what is still as it was then).
 type Certificazione struct {
 	Formato    string       `json:"format"`
 	Oggetto    string       `json:"object"` // "certification"
@@ -195,7 +195,7 @@ type Certificazione struct {
 	Esito      string       `json:"result"` // VERDE · A_CONDIZIONI · ROSSO
 }
 
-// Certifica rifà, in sola lettura, i controlli dell'installazione confermata.
+// Certifica redoes, read-only, the checks of the confirmed installation.
 func (m *Motore) Certifica() (*Certificazione, error) {
 	in, err := m.ControllaInstallazione()
 	if err != nil {
@@ -258,7 +258,7 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 	case tuttiPass && len(r.Condizioni) == 0:
 		r.Esito = "GREEN"
 	default:
-		r.Esito = "CONDITIONAL" // ⛔ UNKNOWN non è mai PASS, una condizione non è mai verde (R29, R32)
+		r.Esito = "CONDITIONAL" // ⛔ UNKNOWN is never PASS, a condition is never green (R29, R32)
 	}
 	return r, nil
 }

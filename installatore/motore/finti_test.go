@@ -1,8 +1,8 @@
 package motore
 
-// Una macchina finta sotto una cartella: /etc/group, /etc/passwd, i file veri, e systemd e
-// firewalld finti fatti di file JSON (così lo stato sopravvive a un processo ucciso, come sulla
-// macchina vera). Il motore non sa la differenza: usa le stesse interfacce.
+// A fake machine under a folder: /etc/group, /etc/passwd, the real files, and fake systemd and
+// firewalld made of JSON files (so that the state survives a killed process, as on the
+// real machine). The engine does not know the difference: it uses the same interfaces.
 
 import (
 	"crypto/sha256"
@@ -38,7 +38,7 @@ func (g *gruppiFinti) GruppoPrimario(u string) (string, bool, error) {
 	return LeggiUtente(filepath.Join(g.radice, "etc/passwd"), u)
 }
 
-// cambia riscrive la riga del gruppo mantenendo l'ordine dei membri (come gpasswd).
+// cambia rewrites the group's line keeping the members' order (like gpasswd).
 func (g *gruppiFinti) cambia(gruppo string, f func([]string) []string) error {
 	b, err := os.ReadFile(g.file())
 	if err != nil {
@@ -77,7 +77,7 @@ func (g *gruppiFinti) Togli(u, gruppo string) error {
 	})
 }
 
-// statoJSON: una mappa in un file (systemd e firewalld finti).
+// statoJSON: a map in a file (fake systemd and firewalld).
 func leggiMappa(p string) map[string]bool {
 	m := map[string]bool{}
 	if b, err := os.ReadFile(p); err == nil {
@@ -97,7 +97,7 @@ func (u *unitaFinte) file() string { return filepath.Join(u.radice, "var/lib/fin
 
 func (u *unitaFinte) Stato(n string) (string, error) {
 	if _, err := os.Stat(filepath.Join(u.radice, "rompi-systemctl")); err == nil {
-		return "", fmt.Errorf("systemctl: tempo scaduto (finto)")
+		return "", fmt.Errorf("systemctl: timed out (fake)")
 	}
 	if _, err := os.Stat(filepath.Join(u.radice, "etc/systemd/system", n)); err != nil {
 		return "not-found", nil
@@ -161,7 +161,7 @@ func ambienteFinto(radice string) *Ambiente {
 		Pacchetti: &gestoreFinto{radice}, Sessioni: &sessioniFinte{radice}}
 }
 
-// profiloFinto: una Debian 13 con GNOME, scheda Intel che codifica.
+// profiloFinto: a Debian 13 with GNOME, an Intel card that encodes.
 func profiloFinto() *Profilo {
 	p := NuovoProfilo(7447)
 	p.Creato = "2026-09-30T00:00:00Z"
@@ -188,7 +188,7 @@ func catalogoProva(t testing.TB) *Catalogo {
 	return c
 }
 
-// prepara la macchina finta: la foto «prima» di ogni prova.
+// prepara the fake machine: the «before» photo of every test.
 func preparaMacchina(t testing.TB, radice string) {
 	file := map[string]string{
 		"etc/group":                  "root:x:0:\nvideo:x:44:altro\nrender:x:991:\nprova:x:1000:\naltro:x:1001:\n",
@@ -196,15 +196,15 @@ func preparaMacchina(t testing.TB, radice string) {
 		"etc/remotix-esistente.conf": "vecchio contenuto dell'amministratore\n",
 		"etc/os-release":             "ID=debian\nVERSION_ID=\"13\"\nNAME=\"Debian GNU/Linux\"\n",
 		"var/lib/finto-systemd.json": "{}",
-		// una delle quattro regole c'era già: dopo l'annullamento deve restare
+		// one of the four rules was already there: after the cancellation it must remain
 		"var/lib/finto-firewalld.json": `{"public 7447/tcp vive":true}`,
-		// il pacchetto di REMOTIX (finto) e il deposito: libcomune c'è già a una versione vecchia
-		// (sarà AGGIORNATA: INDIRETTA, resta), libnuova e labwc sono nuove
+		// REMOTIX's (fake) package and the repository: libcomune is already there at an old version
+		// (it will be UPGRADED: INDIRETTA, it stays), libnuova and labwc are new
 		"var/pacchetti/remotix.pkg":    `{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`,
 		"var/lib/finto-deposito.json":  `{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0"},"labwc":{"versione":"0.9","dipende":["libnuova"]}}`,
 		"var/lib/finto-pacchetti.json": `{"libcomune":"1.0","bash":"5.2"}`,
 		"var/lib/finto-attive.json":    "{}",
-		// la pila PAM di REMOTIX (certifica.go la segue fino ai moduli)
+		// REMOTIX's PAM stack (certifica.go follows it down to the modules)
 		"etc/pam.d/remotix":            "auth required pam_unix.so\n@include common-account\n",
 		"etc/pam.d/common-account":     "account required pam_unix.so\n-session optional pam_manca.so\n",
 		"usr/lib/security/pam_unix.so": "",
@@ -220,9 +220,9 @@ func preparaMacchina(t testing.TB, radice string) {
 	os.MkdirAll(filepath.Join(radice, "etc/systemd/system"), 0o755)
 }
 
-// azioniDiProva: i passi che coprono i casi: pacchetti (file e dipendenze), file nuovo in una
-// cartella nuova, file che sovrascrive quello dell'amministratore, unità, gruppo nostro, gruppo
-// PREESISTENTE, servizio.
+// azioniDiProva: the steps covering the cases: packages (files and dependencies), new file in a
+// new folder, file overwriting the administrator's, unit, our group, PRE-EXISTING
+// group, service.
 func azioniDiProva() []AzionePiano {
 	return []AzionePiano{
 		PianoPacchetti("packages", "/var/pacchetti/remotix.pkg", "labwc"),
@@ -236,7 +236,7 @@ func azioniDiProva() []AzionePiano {
 	}
 }
 
-// pianoDiProva scrive il piano approvato per la macchina finta, e ne restituisce il percorso.
+// pianoDiProva writes the approved plan for the fake machine, and returns its path.
 func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 	amb := ambienteFinto(radice)
 	cat := catalogoProva(t)
@@ -263,7 +263,7 @@ func motoreFinto(t testing.TB, radice, operazioni string) *Motore {
 		Esamina: profiloFinto, Adesso: func() time.Time { return time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC) }}
 }
 
-// foto: ogni file e cartella della macchina finta, con permessi e contenuto.
+// foto: every file and folder of the fake machine, with permissions and content.
 func foto(t testing.TB, radice string) map[string]string {
 	r := map[string]string{}
 	filepath.WalkDir(radice, func(p string, d fs.DirEntry, err error) error {
@@ -293,7 +293,7 @@ func differenze(a, b map[string]string) []string {
 	}
 	for k, v := range b {
 		if _, ok := a[k]; !ok {
-			d = append(d, fmt.Sprintf("%s: (non c'era) → %q", k, v))
+			d = append(d, fmt.Sprintf("%s: (was not there) → %q", k, v))
 		}
 	}
 	sort.Strings(d)

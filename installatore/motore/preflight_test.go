@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// una radice finta per il PREFLIGHT: i file che legge, e nessun comando (tutti «non c'è»).
+// a fake root for the PREFLIGHT: the files it reads, and no command (all «not there»).
 func radiceFinta(t *testing.T, file map[string]string, collegamenti map[string]string) string {
 	r := t.TempDir()
 	for p, c := range file {
@@ -37,11 +37,11 @@ func condizioniDi(r *Rapporto, d string) string {
 			for _, m := range e.Motivi {
 				c = append(c, m.Codice)
 			}
-			// quel che manca (§10.36): al desktop, e alla macchina intera
+			// what is missing (§10.36): for the desktop, and for the whole machine
 			if len(e.Mancano) > 0 {
 				c = append(c, "RX-MANCA-003")
 			}
-			// i pezzi che il desktop chiede: dipendenze di REMOTIX, li installa il gestore
+			// the pieces the desktop requires: REMOTIX dependencies, the manager installs them
 			if len(e.Dipende) > 0 {
 				c = append(c, "DEP("+strings.Join(e.Dipende, ",")+")")
 			}
@@ -56,7 +56,7 @@ func condizioniDi(r *Rapporto, d string) string {
 	return ""
 }
 
-// Fedora 44 con NVIDIA proprietaria, SELinux, pam_faillock: ogni difetto noto col suo codice (R2).
+// Fedora 44 with proprietary NVIDIA, SELinux, pam_faillock: every known defect with its code (R2).
 func TestPreflightFedoraNvidia(t *testing.T) {
 	r := radiceFinta(t, map[string]string{
 		"etc/os-release":                           "ID=fedora\nVERSION_ID=44\nPRETTY_NAME=\"Fedora Linux 44 (Workstation Edition)\"\n",
@@ -78,40 +78,40 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		"gpu.renderD128.driver": "nvidia", "pam.faillock": "yes", "desktop.gnome": "present", "group.render": "absent",
 		"logind.kill_user_processes": "yes", "system.systemd": "yes"} {
 		if p.V(k) != v {
-			t.Errorf("%s = %q, atteso %q", k, p.V(k), v)
+			t.Errorf("%s = %q, expected %q", k, p.V(k), v)
 		}
 	}
-	// nessun driver VA (NVIDIA proprietaria) ⇒ la scheda non codifica, RILEVATO. Mai «sì»
+	// no VA driver (proprietary NVIDIA) ⇒ the card does not encode, RILEVATO. Never «yes»
 	if f, _ := p.F("h264.gpu"); f.Stato != RILEVATO || f.Valore != "no" {
-		t.Errorf("h264.scheda senza driver VA: %+v", f)
+		t.Errorf("h264.scheda without a VA driver: %+v", f)
 	}
 	codici := map[string]bool{}
 	for _, m := range p.Messaggi {
 		codici[m.Codice] = true
 	}
-	// fase 19: niente ripiego — la sola NVIDIA proprietaria è un rifiuto (RX-GPU-004), già nel
-	// controllo preliminare; RPM Fusion (RX-H264-003) non c'entra, non è una scheda Intel o AMD
+	// phase 19: no fallback — a proprietary NVIDIA alone is a refusal (RX-GPU-004), already in the
+	// preliminary check; RPM Fusion (RX-H264-003) does not matter, it is not an Intel or AMD card
 	for _, c := range []string{"RX-GPU-002", "RX-GPU-004", "RX-PAM-002", "RX-SELINUX-001", "RX-GRUPPI-001", "RX-LOGIND-001"} {
 		if !codici[c] {
-			t.Errorf("manca %s fra %v", c, codici)
+			t.Errorf("%s missing among %v", c, codici)
 		}
 	}
 	for _, c := range []string{"RX-H264-003", "RX-H264-005", "RX-GPU-001"} {
 		if codici[c] {
-			t.Errorf("%s non c'entra più: %v", c, codici)
+			t.Errorf("%s no longer applies: %v", c, codici)
 		}
 	}
-	// fase 19: le due strade attive, Vulkan prima; qui senza nessun ICD ⇒ la NVIDIA resta fuori
+	// phase 19: the two active routes, Vulkan first; here without any ICD ⇒ the NVIDIA stays out
 	if p.V("encoding.routes") != "vulkan,vaapi" || p.V("encoding.vulkan") != "active" || p.V("encoding.vulkan.icd") != "none" {
-		t.Errorf("le strade: %q, vulkan %q, icd %q", p.V("encoding.routes"), p.V("encoding.vulkan"), p.V("encoding.vulkan.icd"))
+		t.Errorf("the routes: %q, vulkan %q, icd %q", p.V("encoding.routes"), p.V("encoding.vulkan"), p.V("encoding.vulkan.icd"))
 	}
 	rap := Valuta(catalogoProva(t), p)
 	for _, d := range DESKTOP {
 		if got := condizioniDi(rap, d); !strings.HasPrefix(got, "UNSUPPORTED RX-GPU-004") {
-			t.Errorf("%s su Fedora 44 con la sola NVIDIA proprietaria: %s", d, got)
+			t.Errorf("%s on Fedora 44 with only the proprietary NVIDIA: %s", d, got)
 		}
 	}
-	// la stessa macchina con una Intel accanto (il portatile «ibrido»): passa, e la NVIDIA si dice
+	// the same machine with an Intel next to it (the «hybrid» laptop): it passes, and the NVIDIA is stated
 	r2 := radiceFinta(t, map[string]string{
 		"etc/os-release":                         "ID=fedora\nVERSION_ID=44\n",
 		"sys/class/drm/renderD128/device/vendor": "0x8086\n",
@@ -127,12 +127,12 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 		}
 	}
 	if got := condizioniDi(Valuta(catalogoProva(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
-		t.Errorf("gnome su Fedora 44 con Intel e NVIDIA: %s", got)
+		t.Errorf("gnome on Fedora 44 with Intel and NVIDIA: %s", got)
 	}
 }
 
-// Fase 19 (DECISIONI §10.27): senza una scheda capace REMOTIX non si installa, e il controllo
-// preliminare lo dice prima di toccare, col codice del caso; con una scheda Intel o AMD capace passa.
+// Phase 19 (DECISIONI §10.27): without a capable card REMOTIX is not installed, and the preliminary
+// check says so before touching, with the case's code; with a capable Intel or AMD card it passes.
 func TestPreflightSenzaSchedaCapace(t *testing.T) {
 	base := map[string]string{"etc/os-release": "ID=debian\nVERSION_ID=13\n", "run/systemd/system/.x": "", "usr/bin/gnome-shell": ""}
 	con := func(extra map[string]string) map[string]string {
@@ -150,12 +150,12 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 		file   map[string]string
 		codice string
 	}{
-		{"nessuna scheda (VM senza scheda)", con(nil), "RX-GPU-003"},
-		{"NVIDIA col driver proprietario", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": ""}), "RX-GPU-004"},
-		{"scheda virtuale (virtio)", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1af4\n"}), "RX-GPU-005"},
+		{"no card (VM without a card)", con(nil), "RX-GPU-003"},
+		{"NVIDIA with the proprietary driver", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": ""}), "RX-GPU-004"},
+		{"virtual card (virtio)", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1af4\n"}), "RX-GPU-005"},
 		{"Intel", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n", "usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so": ""}), ""},
 		{"AMD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n", "usr/lib/x86_64-linux-gnu/dri/radeonsi_drv_video.so": ""}), ""},
-		{"fornitore illeggibile: decide la prova vera (7a)", con(map[string]string{"sys/class/drm/renderD128/device/.x": ""}), ""},
+		{"unreadable vendor: the real test decides (7a)", con(map[string]string{"sys/class/drm/renderD128/device/.x": ""}), ""},
 	} {
 		p := Preflight(&Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}, OpzioniPreflight{})
 		var gpu []string
@@ -163,12 +163,12 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
 				gpu = append(gpu, m.Codice)
 				if m.Gravita != BLOCCANTE || !strings.HasPrefix(m.Testo, "Missing") {
-					t.Errorf("%s: %s non è BLOCKING o non dice che cosa manca: %+v", c.nome, m.Codice, m)
+					t.Errorf("%s: %s is not BLOCKING or does not say what is missing: %+v", c.nome, m.Codice, m)
 				}
 			}
 		}
 		if strings.Join(gpu, ",") != c.codice {
-			t.Errorf("%s: %v, atteso %q", c.nome, gpu, c.codice)
+			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
 		}
 		rap := Valuta(catalogoProva(t), p)
 		got := condizioniDi(rap, "gnome")
@@ -192,7 +192,7 @@ func profiloDi(id, ver string, extra map[string]string) *Profilo {
 	return p
 }
 
-// Il catalogo: la matrice di §3, le derivate, le escluse, le condizioni di §11.1.
+// The catalogue: the matrix of §3, the derivatives, the excluded ones, the conditions of §11.1.
 func TestCatalogo(t *testing.T) {
 	cat := catalogoProva(t)
 	casi := []struct {
@@ -201,38 +201,38 @@ func TestCatalogo(t *testing.T) {
 		atteso           string
 	}{
 		{"debian", "13", "gnome", nil, "COMPATIBLE "},
-		{"ubuntu", "24.04", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // D7 chiusa: fuori
+		{"ubuntu", "24.04", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // D7 closed: out
 		{"linuxmint", "22", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"},
 		{"linuxmint", "23", "gnome", map[string]string{"package.gnome-session": "50.0"}, "COMPATIBLE "},
-		// D8 (30 set): REMOTIX avvia la sessione GNOME di serie (su Ubuntu «ubuntu»): gnome-session non
-		// è più un componente da aggiungere, e non compare nel piano
+		// D8 (30 Sep): REMOTIX starts the stock GNOME session (on Ubuntu «ubuntu»): gnome-session is no
+		// longer a component to add, and does not appear in the plan
 		{"ubuntu", "26.04", "gnome", map[string]string{"package.gnome-session": "absent"}, "COMPATIBLE "},
 		{"debian", "12", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"},
 		{"almalinux", "10.1", "xfce", nil, "UNSUPPORTED RX-COMPAT-005"},
-		{"almalinux", "10.0", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // serve la 10.1 (OpenSSL 3.5)
-		// EPEL serve a REMOTIX stesso su Alma: manca (§10.36), e lo mette l'amministratore
+		{"almalinux", "10.0", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // 10.1 is needed (OpenSSL 3.5)
+		// EPEL is needed by REMOTIX itself on Alma: missing (§10.36), and the administrator adds it
 		{"almalinux", "10.1", "kde", map[string]string{"desktop.kde": "6.4", "repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE RX-MANCA-002"},
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE RX-MANCA-002"},
-		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present"}, "COMPATIBLE "}, // niente più OpenH264 di Cisco
+		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present"}, "COMPATIBLE "}, // no more Cisco OpenH264
 		{"rocky", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present"}, "COMPATIBLE "},
-		// fase 19: su Alma la sola AMD non codifica (Mesa senza VA-API) ⇒ fuori; accanto a una Intel, si dice
+		// phase 19: on Alma an AMD alone does not encode (Mesa without VA-API) ⇒ out; next to an Intel, it is stated
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "gpu.renderD128.vendor": "AMD"}, "UNSUPPORTED RX-GPU-006"},
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present", "repo.rpmfusion-nonfree": "present",
 			"gpu.nodes": "renderD128,renderD129", "gpu.renderD129.vendor": "AMD", "h264.gpu": "no"}, "COMPATIBLE C-HARDWARE"},
-		// Fedora con la Mesa ufficiale (senza H.264) su AMD: manca un driver che codifica, e il motore
-		// non lo installa (§10.36)
+		// Fedora with the official Mesa (without H.264) on AMD: a driver that encodes is missing, and the engine
+		// does not install it (§10.36)
 		{"fedora", "44", "gnome", map[string]string{"gpu.renderD128.vendor": "AMD", "package.mesa-va-drivers": "26.2", "h264.gpu": "no"}, "UNSUPPORTED RX-GPU-006"},
-		// fase 19: senza una scheda capace REMOTIX non si installa, su nessun desktop
+		// phase 19: without a capable card REMOTIX is not installed, on any desktop
 		{"debian", "13", "gnome", map[string]string{"gpu.renderD128.vendor": "virtio"}, "UNSUPPORTED RX-GPU-005"},
 		{"debian", "13", "gnome", map[string]string{"gpu.renderD128.vendor": "NVIDIA", "gpu.nvidia_proprietary": "yes"}, "UNSUPPORTED RX-GPU-004"},
 		{"debian", "13", "gnome", map[string]string{"gpu.nodes": "none"}, "UNSUPPORTED RX-GPU-003"},
 		{"gentoo", "2.17", "gnome", nil, "UNSUPPORTED RX-COMPAT-002"},
 		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "package.breeze6-wallpapers": "absent"}, "COMPATIBLE DEP(breeze6-wallpapers)"},
 		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "package.labwc": "0.8.1", "package.wlr-randr": "0.4", "fonts.scalable": "0"}, "COMPATIBLE C-LIMITE,DEP(google-droid-fonts)"},
-		// fase 19: il deposito Cisco di OpenH264 non si chiede più
+		// phase 19: Cisco's OpenH264 repository is no longer requested
 		{"opensuse-tumbleweed", "20260930", "gnome", nil, "COMPATIBLE "},
-		// Leap 16 + Plasma (KWin 6.4) chiede il 3D (T6 seguiti, KDE 487217): condizione; senza scheda, no
-		// (e, dalla fase 19, senza scheda REMOTIX non si installa su nessun desktop)
+		// Leap 16 + Plasma (KWin 6.4) requires 3D (T6 follow-ups, KDE 487217): a condition; without a card, no
+		// (and, since phase 19, without a card REMOTIX is not installed on any desktop)
 		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4"}, "COMPATIBLE C-HARDWARE"},
 		{"opensuse-leap", "16.0", "kde", map[string]string{"desktop.kde": "6.4", "gpu.nodes": "none"}, "UNSUPPORTED RX-GPU-003,RX-COMPAT-007"},
 		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "gpu.nodes": "none"}, "UNSUPPORTED RX-GPU-003"},
@@ -243,40 +243,40 @@ func TestCatalogo(t *testing.T) {
 	for _, c := range casi {
 		rap := Valuta(cat, profiloDi(c.id, c.ver, c.extra))
 		if got := condizioniDi(rap, c.desktop); got != c.atteso {
-			t.Errorf("%s %s %s: %q, atteso %q (%s)", c.id, c.ver, c.desktop, got, c.atteso, rap.Riconosciuta)
+			t.Errorf("%s %s %s: %q, expected %q (%s)", c.id, c.ver, c.desktop, got, c.atteso, rap.Riconosciuta)
 		}
 	}
-	// nessuna combinazione è CERTIFICATA finché il catalogo non registra un giro intero (T10)
+	// no combination is CERTIFIED until the catalogue records a full run (T10)
 	for _, pl := range cat.Piattaforme {
 		if pl.GiroIntero != "" {
-			t.Errorf("%s: giro intero registrato senza T10", pl.Nome)
+			t.Errorf("%s: full run recorded without T10", pl.Nome)
 		}
 	}
 }
 
-// ⛔ UNKNOWN non è PASS anche nel giudizio: un H.264 non provato è un'incognita scritta.
+// ⛔ UNKNOWN is not PASS in the judgement either: an untested H.264 is a written unknown.
 func TestIncognite(t *testing.T) {
 	p := profiloFinto()
-	p.Sconosciuto("h264.gpu", "ffmpeg non c'è")
+	p.Sconosciuto("h264.gpu", "ffmpeg is not there")
 	rap := Valuta(catalogoProva(t), p)
 	if len(rap.Incognite) == 0 || !strings.Contains(strings.Join(rap.Incognite, " "), "H.264") {
-		t.Fatalf("incognite: %v", rap.Incognite)
+		t.Fatalf("unknowns: %v", rap.Incognite)
 	}
 }
 
-// La tabella del manuale (§3.1) si genera dal catalogo.
+// The manual's table (§3.1) is generated from the catalogue.
 func TestTabellaVersioni(t *testing.T) {
 	tab := TabellaVersioni(catalogoProva(t))
 	for _, x := range []string{"| Debian | **13** (Trixie)", "Rocky Linux", "Ubuntu 24.04", "| OpenSSL | 3.5 |", "labwc #2525"} {
 		if !strings.Contains(tab, x) {
-			t.Errorf("la tabella non contiene %q:\n%s", x, tab)
+			t.Errorf("the table does not contain %q:\n%s", x, tab)
 		}
 	}
 }
 
-// Fase 19, la strada «vulkan» attiva (DECISIONI §10.27): la NVIDIA col driver proprietario e il suo
-// ICD passa (il video lo codifica Vulkan Video); senza l'ICD resta RX-GPU-004; l'AMD con l'ICD di RADV
-// passa anche senza nessun driver VA; l'ICD di llvmpipe (lvp) non è una scheda.
+// Phase 19, the «vulkan» route active (DECISIONI §10.27): the NVIDIA with the proprietary driver and its
+// ICD passes (Vulkan Video encodes the video); without the ICD it stays RX-GPU-004; the AMD with RADV's ICD
+// passes even without any VA driver; llvmpipe's ICD (lvp) is not a card.
 func TestStradaVulkan(t *testing.T) {
 	base := map[string]string{"etc/os-release": "ID=debian\nVERSION_ID=13\n", "run/systemd/system/.x": "", "usr/bin/gnome-shell": ""}
 	con := func(extra map[string]string) map[string]string {
@@ -297,22 +297,22 @@ func TestStradaVulkan(t *testing.T) {
 		schede string
 		codice string
 	}{
-		{"NVIDIA proprietaria con l'ICD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
+		{"proprietary NVIDIA with the ICD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
 			"usr/share/vulkan/icd.d/nvidia_icd.json": "{}"}), "nvidia", "NVIDIA", ""},
-		{"NVIDIA proprietaria senza l'ICD", con(nvidia), "none", "", "RX-GPU-004"},
-		{"NVIDIA proprietaria con l'ICD di llvmpipe soltanto", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
+		{"proprietary NVIDIA without the ICD", con(nvidia), "none", "", "RX-GPU-004"},
+		{"proprietary NVIDIA with only llvmpipe's ICD", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x10de\n", "sys/module/nvidia/x": "",
 			"usr/share/vulkan/icd.d/lvp_icd.x86_64.json": "{}"}), "lvp", "", "RX-GPU-004"},
-		{"AMD con RADV e nessun driver VA", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n",
+		{"AMD with RADV and no VA driver", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x1002\n",
 			"usr/share/vulkan/icd.d/radeon_icd.x86_64.json": "{}", "etc/vulkan/icd.d/radeon_icd.x86_64.json": "{}"}), "radeon", "AMD", ""},
-		{"Intel con ANV: in Vulkan non conta, VA-API sì", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n",
+		{"Intel with ANV: it does not count in Vulkan, VA-API does", con(map[string]string{"sys/class/drm/renderD128/device/vendor": "0x8086\n",
 			"usr/share/vulkan/icd.d/intel_icd.x86_64.json": "{}", "usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so": ""}), "intel", "", ""},
 	} {
 		p := Preflight(&Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}, OpzioniPreflight{})
 		if p.V("encoding.vulkan.icd") != c.icd {
-			t.Errorf("%s: icd %q, atteso %q", c.nome, p.V("encoding.vulkan.icd"), c.icd)
+			t.Errorf("%s: icd %q, expected %q", c.nome, p.V("encoding.vulkan.icd"), c.icd)
 		}
 		if got := strings.Join(schedeVulkan(nil, p), ","); got != c.schede {
-			t.Errorf("%s: schede vulkan %q, atteso %q", c.nome, got, c.schede)
+			t.Errorf("%s: vulkan cards %q, expected %q", c.nome, got, c.schede)
 		}
 		var gpu []string
 		for _, m := range p.Messaggi {
@@ -321,7 +321,7 @@ func TestStradaVulkan(t *testing.T) {
 			}
 		}
 		if strings.Join(gpu, ",") != c.codice {
-			t.Errorf("%s: %v, atteso %q", c.nome, gpu, c.codice)
+			t.Errorf("%s: %v, expected %q", c.nome, gpu, c.codice)
 		}
 		rap := Valuta(catalogoProva(t), p)
 		got := condizioniDi(rap, "gnome")
@@ -329,7 +329,7 @@ func TestStradaVulkan(t *testing.T) {
 			t.Errorf("%s: gnome %s", c.nome, got)
 		}
 		if c.codice == "" && (strings.HasPrefix(got, "UNSUPPORTED") || strings.Contains(got, "C-HARDWARE")) {
-			t.Errorf("%s: gnome %s (con Vulkan la scheda non è fuori)", c.nome, got)
+			t.Errorf("%s: gnome %s (with Vulkan the card is not out)", c.nome, got)
 		}
 	}
 }

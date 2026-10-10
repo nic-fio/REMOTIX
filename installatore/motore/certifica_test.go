@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// R29 in piccolo: la certificazione su una macchina guasta apposta non dice mai VERDE.
+// R29 in small: certification on a machine broken on purpose never says GREEN.
 func TestCertificaGuasti(t *testing.T) {
 	codifica := func(json string, uscita int) Esecutore {
 		return func(_ time.Duration, nome string, _ ...string) (string, int, error) {
@@ -24,53 +24,53 @@ func TestCertificaGuasti(t *testing.T) {
 		guasta func(b *banco, m *Motore)
 		atteso string
 	}{
-		{"sana, scheda che codifica", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "GREEN"},
-		// fase 19: la strada Vulkan Video (AMD, NVIDIA) è «hardware» come VA-API
-		{"sana, scheda che codifica in Vulkan", func(b *banco, m *Motore) {
+		{"healthy, card that encodes", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "GREEN"},
+		// phase 19: the Vulkan Video route (AMD, NVIDIA) is «hardware» like VA-API
+		{"healthy, card that encodes in Vulkan", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"hardware","codificatore":"h264_vulkan","strada":"vulkan","nodo":"/dev/dri/renderD129","motivo":"","codec":"h264","offerti":"hevc,h264","hevc":"hardware","h264":"hardware","hevc_strada":"vulkan","h264_strada":"vulkan"}`, 0)
 			apri(b)
 		}, "GREEN"},
-		{"scheda che si apre ma non codifica il fotogramma", func(b *banco, m *Motore) {
+		{"card that opens but does not encode the frame", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"il fotogramma non esce","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
 			apri(b)
 		}, "RED"},
-		// fase 19: niente ripiego sul processore — nessuna scheda capace (uscita 3) è ROSSO, mai a condizioni
-		{"nessuna scheda sa codificare (uscita 3)", func(b *banco, m *Motore) {
+		// phase 19: no fallback to the processor — no capable card (exit 3) is RED, never conditional
+		{"no card can encode (exit 3)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 3)
 			apri(b)
 		}, "RED"},
-		// un binario vecchio che dice ancora «software»: non è la scheda ⇒ ROSSO
-		{"il vecchio ripiego software", func(b *banco, m *Motore) {
+		// an old binary that still says «software»: it is not the card ⇒ RED
+		{"the old software fallback", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"software","codificatore":"libx264","nodo":"","motivo":"niente VA-API"}`, 0)
 			apri(b)
 		}, "RED"},
-		{"prova di codifica che non risponde", func(b *banco, m *Motore) { apri(b) }, "CONDITIONAL"},
-		{"PAM rotto (modulo tolto)", func(b *banco, m *Motore) {
+		{"encoding test that does not answer", func(b *banco, m *Motore) { apri(b) }, "CONDITIONAL"},
+		{"PAM broken (module removed)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "usr/lib/security/pam_unix.so"))
 		}, "RED"},
-		{"PAM rotto (inclusione tolta)", func(b *banco, m *Motore) {
+		{"PAM broken (include removed)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/pam.d/common-account"))
 		}, "RED"},
-		{"PAM tolto", func(b *banco, m *Motore) {
+		{"PAM removed", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/pam.d/remotix"))
 		}, "RED"},
-		{"porta chiusa dal firewall: aprirla è dell'amministratore (§10.36)", func(b *banco, m *Motore) {
+		{"port closed by the firewall: opening it is the administrator's job (§10.36)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			f := &firewallFinto{b.radice}
 			f.Togli("public", "7447/tcp", false)
 			f.Togli("public", "7447/udp", false)
 		}, "CONDITIONAL"},
-		{"firewall che non si sa leggere (ufw)", func(b *banco, m *Motore) {
+		{"firewall that cannot be read (ufw)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("ufw"), 0o644)
 		}, "CONDITIONAL"},
-		{"un passo disfatto da altri", func(b *banco, m *Motore) {
+		{"a step undone by others", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/remotix/engine-test.conf"))
@@ -86,14 +86,14 @@ func TestCertificaGuasti(t *testing.T) {
 				t.Fatal(err)
 			}
 			if r.Esito != c.atteso {
-				t.Fatalf("esito %s, atteso %s: %+v %+v", r.Esito, c.atteso, r.Controlli, r.Condizioni)
+				t.Fatalf("outcome %s, expected %s: %+v %+v", r.Esito, c.atteso, r.Controlli, r.Condizioni)
 			}
 		})
 	}
 }
 
-// R29 anche nell'installazione: con la scheda che non codifica (fase 19: e non c'è ripiego) la
-// verifica è rossa e l'installazione si annulla.
+// R29 in the installation too: with the card that does not encode (phase 19: and there is no fallback) the
+// verification is red and the installation is cancelled.
 func TestInstallazioneSchedaGuasta(t *testing.T) {
 	b := nuovoBanco(t)
 	var p Piano
@@ -113,8 +113,8 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 	}
 }
 
-// La porta chiusa dal firewall (aprirla è dell'amministratore, §10.36): mai PASS, e una condizione
-// che lo dice, senza comandi.
+// The port closed by the firewall (opening it is the administrator's job, §10.36): never PASS, and a condition
+// that says so, without commands.
 func TestPortaChiusa(t *testing.T) {
 	b := nuovoBanco(t)
 	k, c := controllaPorta(ambienteFinto(b.radice), 7447)
@@ -123,9 +123,9 @@ func TestPortaChiusa(t *testing.T) {
 	}
 }
 
-// D14 (DECISIONI §10.23): REMOTIX e le dipendenze si aggiornano col sistema. Dopo un aggiornamento
-// (versioni più nuove di quelle installate allora) la certificazione resta verde; un ritorno indietro
-// fatto coi comandi del gestore è «a metà» finché `remotix-install aggiornato` non annota le versioni.
+// D14 (DECISIONI §10.23): REMOTIX and the dependencies are upgraded with the system. After an upgrade
+// (versions newer than those installed then) the certification stays green; a rollback
+// done with the manager's commands is «half-done» until `remotix-install aggiornato` records the versions.
 func TestCertificaDopoAggiornamento(t *testing.T) {
 	b := installaFinta(t)
 	m := b.motore(t)
@@ -155,16 +155,16 @@ func TestCertificaDopoAggiornamento(t *testing.T) {
 		}
 		return r.Esito
 	}
-	if e := esito("aggiornato dal sistema", map[string]string{"remotix": "0.17.0-2", "libcomune": "2.1"}); e != "GREEN" {
-		t.Fatalf("dopo l'aggiornamento del sistema: %s", e)
+	if e := esito("upgraded by the system", map[string]string{"remotix": "0.17.0-2", "libcomune": "2.1"}); e != "GREEN" {
+		t.Fatalf("after the system upgrade: %s", e)
 	}
-	if e := esito("tornato indietro, non annotato", map[string]string{"remotix": "0.16.0-1"}); e != "RED" {
-		t.Fatalf("un ritorno indietro non annotato: %s", e)
+	if e := esito("rolled back, not recorded", map[string]string{"remotix": "0.16.0-1"}); e != "RED" {
+		t.Fatalf("a rollback not recorded: %s", e)
 	}
 	if v, err := m.AnnotaVersioni(); err != nil || v["remotix"] != "0.16.0-1" {
-		t.Fatalf("annota: %v %v", v, err)
+		t.Fatalf("record: %v %v", v, err)
 	}
-	if e := esito("tornato indietro, annotato", map[string]string{"remotix": "0.16.0-1"}); e != "GREEN" {
-		t.Fatalf("un ritorno indietro annotato da «aggiornato»: %s", e)
+	if e := esito("rolled back, recorded", map[string]string{"remotix": "0.16.0-1"}); e != "GREEN" {
+		t.Fatalf("a rollback recorded by «aggiornato»: %s", e)
 	}
 }

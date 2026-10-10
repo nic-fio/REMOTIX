@@ -1,39 +1,40 @@
 /*
- * colori709.h — da BGRx (o RGBx) a YUV 4:2:0 BT.709 a intervallo LIMITATO, senza
- *               libswscale.
+ * colori709.h — from BGRx (or RGBx) to YUV 4:2:0 BT.709 in LIMITED range,
+ *               without libswscale.
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' ESISTE — fase 18 (`fasi/18-senza-ffmpeg.md`, `DECISIONI.md` §10.25)
+ * ⛔ WHY IT EXISTS — phase 18 (`fasi/18-senza-ffmpeg.md`, `DECISIONI.md` §10.25)
  *
- * Fino alla fase 17 la conversione la faceva `sws_scale` (`prepara_fotogramma()`
- * in `codificatore.c`) con la matrice IMPOSTA: `sws_setColorspaceDetails(
- * SWS_CS_ITU709)`, sorgente a intervallo pieno, uscita limitata.  Togliendo
- * ffmpeg se ne va anche libswscale, e la conversione va rifatta **identica**:
- * due matrici diverse ai due capi misurerebbero la matrice, non l'immagine
- * (`codificatore.c`, il riquadro «IL COLORE SI DICHIARA»).
+ * Up to phase 17 the conversion was done by `sws_scale` (`prepara_fotogramma()`
+ * in `codificatore.c`) with the matrix IMPOSED: `sws_setColorspaceDetails(
+ * SWS_CS_ITU709)`, full-range source, limited output.  Removing ffmpeg also
+ * removes libswscale, and the conversion has to be redone **identically**:
+ * two different matrices at the two ends would measure the matrix, not the
+ * image (`codificatore.c`, the box «COLOUR IS DECLARED»).
  *
- * ⛔⛔ E NON E' libyuv, e la ragione e' una riga del suo `convert_from_argb.h`
- *      `[M]` 30 settembre 2026, libyuv 0.0.1904 (Debian trixie): da ARGB verso
- *      4:2:0 esistono **solo** `ARGBToI420` (**BT.601** limitato) e
- *      `ARGBToJ420` (JPEG, BT.601 **pieno**).  Nessuna delle due e' la nostra:
- *      usarne una vorrebbe dire cambiare i colori del prodotto senza un errore
- *      da nessuna parte.  ⇒ Codice nostro, ~200 righe, e nessuna dipendenza in
- *      piu' da far trovare all'installatore su sette distribuzioni.
+ * ⛔⛔ AND IT IS NOT libyuv, and the reason is one line of its
+ *      `convert_from_argb.h`
+ *      `[M]` 30 Sep 2026, libyuv 0.0.1904 (Debian trixie): from ARGB to
+ *      4:2:0 there are **only** `ARGBToI420` (**BT.601** limited) and
+ *      `ARGBToJ420` (JPEG, BT.601 **full**).  Neither is ours: using one
+ *      would mean changing the product's colours without an error anywhere.
+ *      ⇒ Our own code, ~200 lines, and no extra dependency for the
+ *      installer to find on seven distributions.
  *
  * ---------------------------------------------------------------------------
- * ⭐ LE REGOLE CHE RIPRODUCE, e ognuna ha la sua misura nel banco
+ * ⭐ THE RULES IT REPRODUCES, and each has its measurement in the bench
  *    `banchi/18-software-confronto.c`:
  *
- *   - la matrice: Kr = 0,2126 · Kb = 0,0722 (BT.709), RGB a intervallo pieno
- *     (0-255) → Y 16-235, Cb/Cr 16-240 (a 10 bit: 64-940, 64-960);
- *   - il croma a meta' in tutt'e due i versi, **media dei quattro pixel** del
- *     quadrato 2x2 fatta in RGB e poi convertita — la stessa cosa che fa
- *     swscale in orizzontale (`rgb32ToUV_half`) e quasi la stessa in
- *     verticale (vedi il riquadro in `colori709.c`);
- *   - l'arrotondamento al piu' vicino, senza retinatura.
+ *   - the matrix: Kr = 0.2126 · Kb = 0.0722 (BT.709), full-range RGB
+ *     (0-255) → Y 16-235, Cb/Cr 16-240 (at 10 bits: 64-940, 64-960);
+ *   - chroma halved in both directions, **average of the four pixels** of
+ *     the 2x2 square taken in RGB and then converted — the same thing
+ *     swscale does horizontally (`rgb32ToUV_half`) and almost the same
+ *     vertically (see the box in `colori709.c`);
+ *   - rounding to nearest, without dithering.
  *
- * ⚠ Le misure devono essere PARI (4:2:0): la guardia sta in `codificatore.c`
- *   e qui si ripete, perche' una larghezza dispari leggerebbe fuori dalla riga.
+ * ⚠ The dimensions must be EVEN (4:2:0): the guard is in `codificatore.c`
+ *   and is repeated here, because an odd width would read past the row.
  */
 #ifndef REMOTIX_COLORI709_H
 #define REMOTIX_COLORI709_H
@@ -41,39 +42,39 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Quale byte e' il rosso: BGRx (GNOME, KDE, …) o RGBx (labwc, fase 13). */
+/* Which byte is red: BGRx (GNOME, KDE, …) or RGBx (labwc, phase 13). */
 typedef enum {
 	COLORI709_BGRX,
 	COLORI709_RGBX,
 } Colori709Ordine;
 
-/* ⭐ 8 bit, tre piani (I420 / `yuv420p`): per OpenH264 e per SVT-AV1 a 8 bit.
- *    Torna false solo se le misure non sono pari o i puntatori mancano. */
+/* ⭐ 8 bits, three planes (I420 / `yuv420p`): for OpenH264 and for 8-bit SVT-AV1.
+ *    Returns false only if the dimensions are not even or pointers are missing. */
 bool colori709_a_i420(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
                       uint8_t *u, uint32_t passo_u,
                       uint8_t *v, uint32_t passo_v);
 
-/* ⭐ 10 bit, tre piani da 16 bit (`yuv420p10le`): per SVT-AV1 a 10 bit.  ⚠ Sono
- *    8 bit PROMOSSI con la matrice calcolata a 10 bit, non 8 bit spostati di
- *    due: e' quel che faceva swscale verso `yuv420p10le`.  I passi sono in
- *    BYTE, come quelli di libavutil. */
+/* ⭐ 10 bits, three 16-bit planes (`yuv420p10le`): for 10-bit SVT-AV1.  ⚠ These
+ *    are 8 bits PROMOTED with the matrix computed at 10 bits, not 8 bits shifted
+ *    by two: it is what swscale did towards `yuv420p10le`.  Strides are in
+ *    BYTES, like libavutil's. */
 bool colori709_a_i420_10(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                          uint32_t altezza, Colori709Ordine ordine,
                          uint16_t *y, uint32_t passo_y,
                          uint16_t *u, uint32_t passo_u,
                          uint16_t *v, uint32_t passo_v);
 
-/* ⭐ 8 bit semi-planare (NV12): per la strada della scheda quando la copia zero
- *    non c'e' e il fotogramma sale dalla memoria (`c->appoggio` in
- *    `codificatore.c`), che oggi passa da swscale verso NV12. */
+/* ⭐ 8-bit semi-planar (NV12): for the card route when zero copy is not
+ *    available and the frame comes up from memory (`c->appoggio` in
+ *    `codificatore.c`), which today goes through swscale towards NV12. */
 bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint8_t *y, uint32_t passo_y,
                       uint8_t *uv, uint32_t passo_uv);
 
-/* ⭐ 10 bit semi-planare (P010: i dieci bit nei bit ALTI di sedici). */
+/* ⭐ 10-bit semi-planar (P010: the ten bits in the HIGH bits of sixteen). */
 bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
                       uint32_t altezza, Colori709Ordine ordine,
                       uint16_t *y, uint32_t passo_y,

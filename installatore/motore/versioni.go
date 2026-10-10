@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// Il confronto delle versioni dei PACCHETTI (dopo D14: un pacchetto dell'installazione portato più
-// avanti da un aggiornamento del sistema è ancora «completo», azione_pacchetti.go). Due algoritmi, quelli dei gestori stessi: dpkg (Debian, Ubuntu) e rpmvercmp
-// (rpm, e pacman che usa lo stesso). ⚠ ConfrontaVersioni (profilo.go) resta quello semplice per le
-// versioni «umane» (GNOME 48, OpenSSL 3.5.1): qui ci sono epoche, revisioni, tilde.
+// Comparing PACKAGE versions (after D14: an installation package moved further
+// ahead by a system upgrade is still «complete», azione_pacchetti.go). Two algorithms, those of the managers themselves: dpkg (Debian, Ubuntu) and rpmvercmp
+// (rpm, and pacman which uses the same one). ⚠ ConfrontaVersioni (profilo.go) stays the simple one for
+// «human» versions (GNOME 48, OpenSSL 3.5.1): here there are epochs, revisions, tildes.
 
-// ConfrontaPacchetti confronta due versioni di pacchetto della famiglia: -1, 0, 1.
+// ConfrontaPacchetti compares two package versions of the family: -1, 0, 1.
 func ConfrontaPacchetti(famiglia, a, b string) int {
 	if famiglia == "debian" {
 		return confrontaDeb(a, b)
@@ -78,7 +78,7 @@ func ordineDeb(s string, i int) int {
 	return int(c) + 256
 }
 
-// verrevcmp: l'algoritmo di dpkg (lib/dpkg/version.c).
+// verrevcmp: dpkg's algorithm (lib/dpkg/version.c).
 func verrevcmp(a, b string) int {
 	i, j := 0, 0
 	for i < len(a) || j < len(b) {
@@ -131,7 +131,7 @@ func confrontaRpm(a, b string) int {
 	return rpmvercmp(ra, rb)
 }
 
-// rpmvercmp: l'algoritmo di rpm (rpmio/rpmvercmp.c), che usa anche pacman (alpm_pkg_vercmp).
+// rpmvercmp: rpm's algorithm (rpmio/rpmvercmp.c), which pacman uses too (alpm_pkg_vercmp).
 func rpmvercmp(a, b string) int {
 	if a == b {
 		return 0

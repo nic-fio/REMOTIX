@@ -7,23 +7,23 @@ import (
 	"testing"
 )
 
-// Ogni codice e ogni chiave ha il suo testo, in inglese (DECISIONI §10.35); ogni chiave usata esiste.
+// Every code and every key has its text, in English (DECISIONI §10.35); every key used exists.
 func TestTesti(t *testing.T) {
 	italiano := regexp.MustCompile(`[àèéìòù]|\b(non|della|perché|questa)\b`)
 	for c, v := range Codici {
 		if v.Testo == "" {
-			t.Errorf("%s senza testo", c)
+			t.Errorf("%s without text", c)
 		}
 		if italiano.MatchString(v.Testo + " " + v.Rimedio) {
-			t.Errorf("%s: italiano rimasto: %q", c, v.Testo+" "+v.Rimedio)
+			t.Errorf("%s: Italian left: %q", c, v.Testo+" "+v.Rimedio)
 		}
 	}
 	for k, v := range testi {
 		if v == "" {
-			t.Errorf("%s: testo vuoto", k)
+			t.Errorf("%s: empty text", k)
 		}
 		if italiano.MatchString(v) {
-			t.Errorf("%s: italiano rimasto: %q", k, v)
+			t.Errorf("%s: Italian left: %q", k, v)
 		}
 	}
 	usate := regexp.MustCompile(`\bT\("([^"]+)"\s*[,)]`)
@@ -33,13 +33,13 @@ func TestTesti(t *testing.T) {
 		b, _ := os.ReadFile(f)
 		for _, m := range usate.FindAllStringSubmatch(string(b), -1) {
 			if _, ok := testi[m[1]]; !ok {
-				t.Errorf("%s usa la chiave %q, che non c'è", f, m[1])
+				t.Errorf("%s uses the key %q, which does not exist", f, m[1])
 			}
 		}
 	}
 	for _, s := range TuttiGliStati() {
 		if _, ok := testi["state."+string(s)]; !ok {
-			t.Errorf("manca il nome dello stato %s", s)
+			t.Errorf("the name of state %s is missing", s)
 		}
 	}
 }

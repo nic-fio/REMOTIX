@@ -1,35 +1,35 @@
 /*
- * wlr_input.c — la tastiera e il puntatore virtuali su wlroots.  Il perché e la
- * divisione del lavoro con `input.c` stanno in `wlr_input.h`.
+ * wlr_input.c — the virtual keyboard and pointer on wlroots.  The why and the
+ * division of labour with `input.c` are in `wlr_input.h`.
  *
- * ⛔⛔ LE CINQUE TRAPPOLE SILENZIOSE di `STUDI.md` §xfce §7.2, e dove stanno qui:
+ * ⛔⛔ THE FIVE SILENT TRAPS of `STUDI.md` §xfce §7.2, and where they are here:
  *
- *   1. la rotella vuole scatti da ±1, non ±120      → `wlr_input_rotella()`
- *   2. `value` non deve mai essere 0                → idem: si manda solo con
- *                                                      almeno uno scatto
- *   3. senza `frame` non arriva niente              → `cornice()` dopo OGNI
- *                                                      gesto del puntatore
- *   4. i modificatori li mandiamo noi, sempre       → `manda_modificatori()`
- *   5. `wlr_pointer_finish()` non rilascia i pulsanti → `wlr_input_chiudi()`
+ *   1. the wheel wants ±1 notches, not ±120         → `wlr_input_rotella()`
+ *   2. `value` must never be 0                      → same: sent only with
+ *                                                      at least one notch
+ *   3. without `frame` nothing arrives              → `cornice()` after EVERY
+ *                                                      pointer gesture
+ *   4. the modifiers are sent by us, always         → `manda_modificatori()`
+ *   5. `wlr_pointer_finish()` does not release buttons → `wlr_input_chiudi()`
  *
- * ⚠ Tutte e cinque sono `[R]` nello studio (wlroots 0.18.2, labwc 0.8.3, le
- *   versioni di Trixie).  ⭐ `[M]` 21 set 2026 SUL PORTATILE — labwc 0.8.3
- *   headless in una cartella privata, testimone `banchi/06-b33-testimone.c`,
- *   ⛔ NON la macchina di prova e NON una sessione XFCE intera:
- *     · Maiusc+A: il testimone vede `MODIFICATORI premuti 1` PRIMA del tasto 30;
- *       la lettera `@` (us) arriva come Maiusc + tasto 3;
- *     · BlocMaiusc ripetuto tre volte: blocca UNA volta, la seconda pressione
- *       vera sblocca;
- *     · rotella +120 dal client ⇒ `v120 -120`, `valore -15` (su); +60 +60 ⇒ uno
- *       scatto solo; orizzontale +120 ⇒ `+120`;
- *     · puntatore 640,360 e 1279,719 esatti; 5000,5000 saturato; tela 1920×1080
- *       su uscita 1280×720 ⇒ 480,270 arriva a 320,180 (la proporzione tiene);
- *     · doppio `press` + un `release` ⇒ il testimone vede UNA coppia;
- *     · disposizione `de` ⇒ keymap nuova al testimone e `z` sul tasto 21;
- *     · chiusura con Ctrl e sinistro giù ⇒ il testimone vede i due rilasci.
- *   ⚠ Quel che NON è misurato: una sessione XFCE vera (pannello, applicazioni
- *     GTK che guardano la cornice), le scorciatoie di labwc (§7.5), e il
- *     percorso intero dal browser.
+ * ⚠ All five are `[R]` in the study (wlroots 0.18.2, labwc 0.8.3, the
+ *   Trixie versions).  ⭐ `[M]` 21 Sep 2026 ON THE LAPTOP — labwc 0.8.3
+ *   headless in a private folder, witness `banchi/06-b33-testimone.c`,
+ *   ⛔ NOT the test machine and NOT a whole XFCE session:
+ *     · Shift+A: the witness sees `MODIFICATORI premuti 1` BEFORE key 30;
+ *       the letter `@` (us) arrives as Shift + key 3;
+ *     · CapsLock repeated three times: it locks ONCE, the second real
+ *       press unlocks;
+ *     · wheel +120 from the client ⇒ `v120 -120`, `valore -15` (up); +60 +60 ⇒ one
+ *       notch only; horizontal +120 ⇒ `+120`;
+ *     · pointer 640,360 and 1279,719 exact; 5000,5000 saturated; canvas 1920×1080
+ *       on a 1280×720 output ⇒ 480,270 arrives at 320,180 (the proportion holds);
+ *     · double `press` + one `release` ⇒ the witness sees ONE pair;
+ *     · layout `de` ⇒ new keymap at the witness and `z` on key 21;
+ *     · closing with Ctrl and left down ⇒ the witness sees the two releases.
+ *   ⚠ What is NOT measured: a real XFCE session (panel, GTK applications
+ *     that look at the frame), labwc's shortcuts (§7.5), and the
+ *     whole path from the browser.
  */
 #include "wlr_input.h"
 
@@ -47,25 +47,25 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
-/* ⚠ La stessa area di `input.c`: chi legge il registro cerca l'input sotto una
- *   parola sola, non sotto il nome del modulo che lo trasporta. */
+/* ⚠ The same area as `input.c`: whoever reads the log looks for input under
+ *   one word, not under the name of the module that transports it. */
 #define AREA "input"
 
-/* ⛔ Il tetto dei codici, lo stesso di `input.c` (`MAX_TASTO`/`MAX_BOTTONE`):
- *    evdev arriva fino a `KEY_MAX` = 0x2ff. */
+/* ⛔ The ceiling of the codes, the same as `input.c` (`MAX_TASTO`/`MAX_BOTTONE`):
+ *    evdev goes up to `KEY_MAX` = 0x2ff. */
 #define MAX_CODICE 0x300u
 
 /*
- * ⭐ Il valore di uno scatto.  wayvnc usa **15.0**, «valore magico misurato con
- *    `wev`» (§7.2 trappola 2), ed è il passo che libinput dà a una rotella
- *    vera: le applicazioni che guardano il `value` e non il `discrete` scorrono
- *    come con un mouse.  ⛔ Mai zero: con `value == 0` wlroots manda un
- *    `axis_stop` e lo scatto sparisce (`wlr_seat_pointer.c:369-391`).
+ * ⭐ The value of one notch.  wayvnc uses **15.0**, "magic value measured with
+ *    `wev`" (§7.2 trap 2), and it is the step libinput gives a real
+ *    wheel: applications that look at `value` and not `discrete` scroll
+ *    as with a mouse.  ⛔ Never zero: with `value == 0` wlroots sends an
+ *    `axis_stop` and the notch vanishes (`wlr_seat_pointer.c:369-391`).
  */
 #define VALORE_SCATTO 15.0
 
-/* ⚠ Il tetto delle attese sincrone (apertura, riattacco).  Chi le fa è il ciclo
- *   del figlio: un compositore muto non deve fermarlo più di così. */
+/* ⚠ The ceiling of the synchronous waits (opening, reattach).  Whoever makes them is the
+ *   child's loop: a mute compositor must not stop it longer than this. */
 #define ATTESA_US (2 * G_USEC_PER_SEC)
 
 struct WlrInput {
@@ -80,31 +80,31 @@ struct WlrInput {
 	struct zwp_virtual_keyboard_v1 *tastiera;
 	struct zwlr_virtual_pointer_v1 *puntatore;
 
-	/* ⭐ La SPIA: una `wl_keyboard` presa una volta sola, per farsi consegnare
-	 *    la keymap della sessione (§7.4) — e poi rilasciata. */
+	/* ⭐ The SPY: a `wl_keyboard` taken once only, to have the session's
+	 *    keymap handed over (§7.4) — and then released. */
 	struct wl_keyboard *spia;
 	char *keymap_sessione;
 	size_t keymap_sessione_len;
 
-	/* ⛔ La keymap IN VIGORE sulla nostra tastiera, e lo stato che la segue. */
+	/* ⛔ The keymap IN FORCE on our keyboard, and the state that follows it. */
 	struct xkb_context *ctx;
 	struct xkb_keymap *keymap;
 	struct xkb_state *stato;
-	char *keymap_testo; /* con lo zero finale; `keymap_len` senza */
+	char *keymap_testo; /* with the final zero; `keymap_len` without */
 	size_t keymap_len;
 	char *keymap_origine;
 	bool keymap_mandata;
 
-	/* L'ultimo stato dei modificatori MANDATO — per non rimandarlo uguale. */
+	/* The last modifier state SENT — so as not to send it again unchanged. */
 	uint32_t mod_giu, mod_agganciati, mod_bloccati, gruppo;
 
-	/* ⛔ Quel che QUESTO dispositivo ha premuto: serve a scartare i doppioni.
-	 *    ⚠ Non è il conto di `RCP.md` §11: quello è di `input.c`. */
+	/* ⛔ What THIS device has pressed: used to discard duplicates.
+	 *    ⚠ It is not the count of `RCP.md` §11: that belongs to `input.c`. */
 	uint8_t tasti_giu[MAX_CODICE / 8];
 	uint8_t bottoni_giu[MAX_CODICE / 8];
 
-	/* ⛔ Gli accumulatori della rotella, uno per asse: i mezzi scatti non si
-	 *    perdono, si sommano al prossimo (weston fa lo stesso, §7.2). */
+	/* ⛔ The wheel accumulators, one per axis: half notches are not
+	 *    lost, they add to the next one (weston does the same, §7.2). */
 	int32_t resto_verticale, resto_orizzontale;
 
 	bool caduto;
@@ -126,18 +126,18 @@ static void metti_bit(uint8_t *m, uint32_t n, bool acceso)
 		m[n / 8u] &= (uint8_t)~(1u << (n % 8u));
 }
 
-/* ⚠ Il tempo del protocollo è in millisecondi e può girare: è un'etichetta per
- *   le applicazioni, non un orologio su cui si fanno conti. */
+/* ⚠ Protocol time is in milliseconds and can wrap: it is a label for
+ *   applications, not a clock to do arithmetic on. */
 static uint32_t ora_ms(void)
 {
 	return (uint32_t)(g_get_monotonic_time() / 1000);
 }
 
 /*
- * ⛔ IL FILO CADUTO SI DICE UNA VOLTA, E CON LA CAUSA.  Un errore di protocollo
- *    (il nostro: `no_keymap`, un asse sbagliato) e un compositore morto hanno
- *    lo stesso sintomo — la connessione non risponde più — e la differenza la
- *    sa solo `wl_display_get_protocol_error()`.
+ * ⛔ THE DROPPED WIRE IS SAID ONCE, AND WITH THE CAUSE.  A protocol error
+ *    (ours: `no_keymap`, a wrong axis) and a dead compositor have
+ *    the same symptom — the connection no longer answers — and only
+ *    `wl_display_get_protocol_error()` knows the difference.
  */
 static void segna_caduta(WlrInput *w, const char *dove)
 {
@@ -156,24 +156,24 @@ static void segna_caduta(WlrInput *w, const char *dove)
 		codice = wl_display_get_protocol_error(w->display, &interfaccia, &id);
 	if (err == EPROTO)
 		registro_dice(AREA,
-		              "⛔⛔ wlroots: il compositore ha CHIUSO la connessione dell'input "
-		              "per un ERRORE DI PROTOCOLLO nostro (%s, oggetto %s@%u, codice %u) — "
-		              "è un difetto di REMOTIX, non del desktop.  ⚠ Da adesso i tasti "
-		              "rimasti giù li rilascia il compositore, i PULSANTI no (§7.2 n.5)",
+		              "⛔⛔ wlroots: the compositor CLOSED the input connection "
+		              "for a PROTOCOL ERROR of ours (%s, object %s@%u, code %u) — "
+		              "it is a REMOTIX defect, not the desktop's.  ⚠ From now on keys "
+		              "left down are released by the compositor, BUTTONS are not (§7.2 n.5)",
 		              dove, interfaccia ? interfaccia->name : "?", id, codice);
 	else
 		registro_dice(AREA,
-		              "⛔ wlroots: la connessione dell'input è CADUTA (%s: %s) — il "
-		              "compositore se n'è andato o ha chiuso il socket",
-		              dove, err ? g_strerror(err) : "senza errore dichiarato");
+		              "⛔ wlroots: the input connection has DROPPED (%s: %s) — the "
+		              "compositor has gone away or closed the socket",
+		              dove, err ? g_strerror(err) : "no error declared");
 }
 
 /*
- * ⛔ Si spedisce SUBITO: le richieste Wayland restano nel buffer del client
- *    finché qualcuno non fa `flush`, e un tasto nel buffer è latenza regalata
- *    all'utente — proprio sul percorso che `CODER.md` §1-bis misura.
- * ⚠ `EAGAIN` non è una caduta: il socket è pieno, e il prossimo giro di
- *   `wlr_input_gira()` riprova.
+ * ⛔ It is sent AT ONCE: Wayland requests stay in the client's buffer
+ *    until someone does a `flush`, and a key in the buffer is latency given away
+ *    to the user — right on the path `CODER.md` §1-bis measures.
+ * ⚠ `EAGAIN` is not a drop: the socket is full, and the next round of
+ *   `wlr_input_gira()` retries.
  */
 static int spedisci(WlrInput *w)
 {
@@ -185,9 +185,9 @@ static int spedisci(WlrInput *w)
 }
 
 /*
- * Un giro della pompa con scadenza — la stessa forma di `pompa()` in
- * `wlroots.c`, e per la stessa ragione: `wl_display_roundtrip()` aspetta senza
- * tetto, e un compositore muto fermerebbe il figlio per sempre.
+ * One pump round with a deadline — the same form as `pompa()` in
+ * `wlroots.c`, and for the same reason: `wl_display_roundtrip()` waits without
+ * a ceiling, and a mute compositor would stop the child forever.
  */
 static bool pompa(WlrInput *w, gint64 scadenza)
 {
@@ -244,7 +244,7 @@ static const struct wl_callback_listener ASCOLTO_SINCRONIA = {
 	.done = sincronia_fatta,
 };
 
-/* Un `roundtrip` con il tetto.  false = caduto o scaduto. */
+/* A `roundtrip` with the ceiling.  false = dropped or expired. */
 static bool sincronizza(WlrInput *w, gint64 scadenza)
 {
 	bool fatto = false;
@@ -257,8 +257,8 @@ static bool sincronizza(WlrInput *w, gint64 scadenza)
 			return false;
 		}
 		if (!fatto && g_get_monotonic_time() >= scadenza) {
-			/* ⚠ La callback resta viva e arriverà a un `fatto` che non esiste
-			 *   più: le si toglie l'ascoltatore distruggendola. */
+			/* ⚠ The callback stays alive and will arrive at a `fatto` that no longer
+			 *   exists: its listener is removed by destroying it. */
 			wl_callback_destroy(cb);
 			return false;
 		}
@@ -267,7 +267,7 @@ static bool sincronizza(WlrInput *w, gint64 scadenza)
 }
 
 /* ------------------------------------------------------------------------- */
-/* La spia: la keymap della sessione, copiata dal filo (§7.4). */
+/* The spy: the session's keymap, copied from the wire (§7.4). */
 
 static void spia_keymap(void *dati, struct wl_keyboard *k, uint32_t formato, int32_t fd,
                         uint32_t misura)
@@ -275,9 +275,9 @@ static void spia_keymap(void *dati, struct wl_keyboard *k, uint32_t formato, int
 	WlrInput *w = dati;
 	void *mappa;
 
-	/* ⛔ Il descrittore è NOSTRO appena arriva, e si chiude su ogni strada: la
-	 *    keymap labwc la rimanda a ogni cambio di tastiera, e un descrittore
-	 *    perso a ogni tasto finisce i descrittori del figlio in un'ora. */
+	/* ⛔ The descriptor is OURS as soon as it arrives, and it is closed on every path: labwc
+	 *    sends the keymap again at every keyboard change, and a descriptor
+	 *    lost at every key runs the child out of descriptors in an hour. */
 	if (formato != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 || misura == 0 || w->keymap_sessione) {
 		close(fd);
 		return;
@@ -286,8 +286,8 @@ static void spia_keymap(void *dati, struct wl_keyboard *k, uint32_t formato, int
 	close(fd);
 	if (mappa == MAP_FAILED)
 		return;
-	/* ⚠ Il testo è terminato dallo zero DENTRO `misura` (è il protocollo), ma
-	 *   non ci si fida: si copia e si termina noi. */
+	/* ⚠ The text is zero-terminated INSIDE `misura` (it is the protocol), but
+	 *   we do not trust it: we copy and terminate ourselves. */
 	w->keymap_sessione = g_malloc0(misura + 1);
 	memcpy(w->keymap_sessione, mappa, misura);
 	w->keymap_sessione_len = strnlen(w->keymap_sessione, misura);
@@ -299,10 +299,10 @@ static void spia_entra(void *d, struct wl_keyboard *k, uint32_t s, struct wl_sur
 static void spia_esce(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface *sf) {}
 static void spia_tasto(void *d, struct wl_keyboard *k, uint32_t s, uint32_t t, uint32_t c,
                        uint32_t st) {}
-/* ⚠ Qui arriverebbero i LUCCHETTI veri (§7.3: labwc li manda a tutti, anche
- *   senza fuoco).  ⛔ Non si leggono in questo incremento, ed è detto: la spia
- *   si rilascia subito, e l'anello di retroazione coi nostri `modifiers` che
- *   §7.3 teme non si apre nemmeno. */
+/* ⚠ Here the real LOCKS would arrive (§7.3: labwc sends them to everyone, even
+ *   without focus).  ⛔ They are not read in this increment, and it is said: the spy
+ *   is released at once, and the feedback loop with our `modifiers` that
+ *   §7.3 fears does not even open. */
 static void spia_modificatori(void *d, struct wl_keyboard *k, uint32_t s, uint32_t g,
                               uint32_t a, uint32_t b, uint32_t gr) {}
 static void spia_ripetizione(void *d, struct wl_keyboard *k, int32_t r, int32_t ri) {}
@@ -320,9 +320,9 @@ static void seat_capacita(void *dati, struct wl_seat *s, uint32_t capacita)
 {
 	WlrInput *w = dati;
 
-	/* ⚠ Una volta sola: dopo che la nostra tastiera virtuale esiste, il seat
-	 *   ridice le sue capacità, e una seconda spia leggerebbe la NOSTRA keymap
-	 *   credendola della sessione. */
+	/* ⚠ Only once: after our virtual keyboard exists, the seat
+	 *   restates its capabilities, and a second spy would read OUR keymap
+	 *   believing it the session's. */
 	if ((capacita & WL_SEAT_CAPABILITY_KEYBOARD) && !w->spia && !w->keymap_sessione &&
 	    !w->tastiera) {
 		w->spia = wl_seat_get_keyboard(s);
@@ -341,9 +341,9 @@ static void spia_via(WlrInput *w)
 {
 	if (!w->spia)
 		return;
-	/* ⚠ `release` esiste da wl_seat v3; prima c'è solo la distruzione lato
-	 *   client, e il compositore continua a mandare eventi a un oggetto che
-	 *   `libwayland` scarta (chiudendone i descrittori). */
+	/* ⚠ `release` exists since wl_seat v3; before there is only client-side
+	 *   destruction, and the compositor keeps sending events to an object that
+	 *   `libwayland` discards (closing its descriptors). */
 	if (wl_keyboard_get_version(w->spia) >= WL_KEYBOARD_RELEASE_SINCE_VERSION)
 		wl_keyboard_release(w->spia);
 	else
@@ -352,7 +352,7 @@ static void spia_via(WlrInput *w)
 }
 
 /* ------------------------------------------------------------------------- */
-/* I global. */
+/* The globals. */
 
 static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
                             const char *interfaccia, uint32_t versione)
@@ -360,9 +360,9 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 	WlrInput *w = dati;
 
 	if (g_strcmp0(interfaccia, wl_seat_interface.name) == 0) {
-		/* ⛔ Il PRIMO seat.  labwc ne ha uno (`seat0`) e non crea
-		 *    `ext_transient_seat_v1` (§7.6): si inietta in quello
-		 *    dell'utente, e su XFCE non c'è scelta. */
+		/* ⛔ The FIRST seat.  labwc has one (`seat0`) and does not create
+		 *    `ext_transient_seat_v1` (§7.6): we inject into the
+		 *    user's, and on XFCE there is no choice. */
 		if (!w->seat) {
 			uint32_t v = versione < 5 ? versione : 5;
 
@@ -370,8 +370,8 @@ static void registro_global(void *dati, struct wl_registry *reg, uint32_t nome,
 			wl_seat_add_listener(w->seat, &ASCOLTO_SEAT, w);
 		}
 	} else if (g_strcmp0(interfaccia, wl_output_interface.name) == 0) {
-		/* ⚠ La PRIMA uscita, come `wlroots.c`: è quella che si cattura, ed è
-		 *   quella su cui si chiede di mappare il puntatore. */
+		/* ⚠ The FIRST output, like `wlroots.c`: it is the one captured, and it is
+		 *   the one on which we ask to map the pointer. */
 		if (!w->uscita)
 			w->uscita = wl_registry_bind(reg, nome, &wl_output_interface, 1);
 	} else if (g_strcmp0(interfaccia, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
@@ -394,24 +394,24 @@ static const struct wl_registry_listener ASCOLTO_REGISTRO = {
 };
 
 /* ------------------------------------------------------------------------- */
-/* La keymap e i modificatori. */
+/* The keymap and the modifiers. */
 
 /*
- * ⛔⛔ I MODIFICATORI — la trappola 4, ed è quella dove si sbaglia in silenzio.
+ * ⛔⛔ THE MODIFIERS — trap 4, and it is the one where one goes wrong silently.
  *
- * `[R]` `wlr_virtual_keyboard_v1.c:92`: wlroots costruisce l'evento del tasto
- * con `update_state = false`, cioè **non** aggiorna il suo `xkb_state`.  ⇒ Il
- * Maiusc premuto arriva alle applicazioni come tasto, ma lo stato dei
- * modificatori resta zero: **Shift+A dà `a`**, Ctrl+C non copia, e nessun
- * errore da nessuna parte.
+ * `[R]` `wlr_virtual_keyboard_v1.c:92`: wlroots builds the key event
+ * with `update_state = false`, that is it does **not** update its `xkb_state`.  ⇒ The
+ * pressed Shift reaches the applications as a key, but the modifier
+ * state stays zero: **Shift+A gives `a`**, Ctrl+C does not copy, and no
+ * error anywhere.
  *
- * ⇒ Lo stato lo teniamo NOI, con un `xkb_state` sulla stessa keymap che abbiamo
- *   mandato, e dopo ogni tasto si manda `modifiers` se è cambiato.  ⭐ È la
- *   forma di wayvnc: tasto prima, modificatori dopo — l'applicazione vede
- *   «premuto Maiusc» e poi «adesso Maiusc è giù», come con una tastiera vera.
+ * ⇒ WE keep the state, with an `xkb_state` on the same keymap we
+ *   sent, and after every key `modifiers` is sent if it changed.  ⭐ It is
+ *   wayvnc's form: key first, modifiers after — the application sees
+ *   "Shift pressed" and then "now Shift is down", as with a real keyboard.
  *
- * ⚠ `forza`: dopo una keymap nuova si manda comunque, perché il compositore ha
- *   appena buttato il suo stato e il nostro «ultimo mandato» non vale più.
+ * ⚠ `forza`: after a new keymap it is sent anyway, because the compositor has
+ *   just thrown away its state and our "last sent" no longer holds.
  */
 static void manda_modificatori(WlrInput *w, bool forza)
 {
@@ -434,13 +434,13 @@ static void manda_modificatori(WlrInput *w, bool forza)
 }
 
 /*
- * Manda `km` come keymap della nostra tastiera, e rifà lo stato su di lei.
+ * Sends `km` as the keymap of our keyboard, and rebuilds the state on it.
  *
- * ⛔ Il testo che si manda è `xkb_keymap_get_as_string()` della keymap GIÀ
- *    COMPILATA, con lo zero finale dentro la misura: wlroots la rilegge con
- *    `xkb_keymap_new_from_string()`, che vuole il terminatore — e una keymap che
- *    non si compila dall'altra parte non torna un errore gentile, chiude la
- *    connessione.
+ * ⛔ The text sent is `xkb_keymap_get_as_string()` of the ALREADY
+ *    COMPILED keymap, with the final zero inside the size: wlroots reads it back with
+ *    `xkb_keymap_new_from_string()`, which wants the terminator — and a keymap that
+ *    does not compile on the other side does not return a gentle error, it closes the
+ *    connection.
  */
 static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
                         GError **sbaglio)
@@ -452,7 +452,7 @@ static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
 
 	if (w->caduto || !w->tastiera) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-		            "la connessione dell'input è caduta: la keymap non ha dove andare");
+		            "the input connection has dropped: the keymap has nowhere to go");
 		xkb_keymap_unref(km);
 		return -1;
 	}
@@ -460,7 +460,7 @@ static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
 	stato = xkb_state_new(km);
 	if (!testo || !stato) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-		            "xkbcommon non ha serializzato la keymap «%s»", origine);
+		            "xkbcommon did not serialise keymap «%s»", origine);
 		free(testo);
 		if (stato)
 			xkb_state_unref(stato);
@@ -472,7 +472,7 @@ static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
 	fd = memfd_create("remotix-keymap", MFD_CLOEXEC);
 	if (fd < 0 || write(fd, testo, len + 1) != (ssize_t)(len + 1)) {
 		g_set_error(sbaglio, G_IO_ERROR, g_io_error_from_errno(errno),
-		            "la keymap non si scrive nel memfd: %s", g_strerror(errno));
+		            "the keymap does not write into the memfd: %s", g_strerror(errno));
 		if (fd >= 0)
 			close(fd);
 		free(testo);
@@ -480,17 +480,17 @@ static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
 		xkb_keymap_unref(km);
 		return -1;
 	}
-	/* ⚠ `libwayland` duplica il descrittore mentre impacchetta la richiesta:
-	 *   il nostro si chiude subito dopo, e non è una doppia chiusura. */
+	/* ⚠ `libwayland` duplicates the descriptor while packing the request:
+	 *   ours is closed right after, and it is not a double close. */
 	zwp_virtual_keyboard_v1_keymap(w->tastiera, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd,
 	                               (uint32_t)(len + 1));
 	close(fd);
 
-	/* ⛔ Lo stato nuovo RIPRENDE i tasti che risultano ancora giù — come fa
-	 *    wlroots dalla sua parte (`wlr_keyboard_set_keymap`).  Chi chiama li ha
-	 *    già rilasciati, e di norma non ce n'è nessuno; ma se il rilascio non
-	 *    fosse partito, uno stato vergine direbbe «Maiusc su» a un compositore
-	 *    che lo tiene giù. */
+	/* ⛔ The new state TAKES BACK the keys that are still down — as
+	 *    wlroots does on its side (`wlr_keyboard_set_keymap`).  The caller has
+	 *    already released them, and normally there are none; but if the release had not
+	 *    left, a virgin state would say "Shift up" to a compositor
+	 *    that holds it down. */
 	for (uint32_t c = 0; c < MAX_CODICE; c++)
 		if (bit(w->tasti_giu, c))
 			xkb_state_update_key(stato, c + 8, XKB_KEY_DOWN);
@@ -513,9 +513,9 @@ static int metti_keymap(WlrInput *w, struct xkb_keymap *km, const char *origine,
 }
 
 /*
- * `de(neo)` → layout `de`, variante `neo`.  ⛔ La stessa forma di `RCP.md` §4.5
- * che `tastiera.c` accetta; e i caratteri si controllano, perché questa stringa
- * arriva dal filo.
+ * `de(neo)` → layout `de`, variant `neo`.  ⛔ The same `RCP.md` §4.5 form
+ * that `tastiera.c` accepts; and the characters are checked, because this string
+ * comes from the wire.
  */
 static bool separa_nome(const char *nome, char *layout, size_t nl, char *variante, size_t nv)
 {
@@ -555,12 +555,12 @@ int wlr_input_keymap_da_nome(WlrInput *w, const char *nome, GError **sbaglio)
 
 	if (!separa_nome(nome, layout, sizeof layout, variante, sizeof variante)) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-		            "«%.64s» non è un nome di disposizione XKB (RCP.md §4.5)", nome);
+		            "«%.64s» is not an XKB layout name (RCP.md §4.5)", nome);
 		return -1;
 	}
-	/* ⚠ Tutti e cinque i campi, come `tastiera.c`: un campo NULL lo riempie
-	 *   l'ambiente (`XKB_DEFAULT_*`), e la disposizione CHIESTA non deve
-	 *   dipendere da chi ha avviato il servizio. */
+	/* ⚠ All five fields, like `tastiera.c`: a NULL field is filled by
+	 *   the environment (`XKB_DEFAULT_*`), and the REQUESTED layout must not
+	 *   depend on whoever started the service. */
 	nomi.rules = "evdev";
 	nomi.model = "pc105";
 	nomi.layout = layout;
@@ -569,7 +569,7 @@ int wlr_input_keymap_da_nome(WlrInput *w, const char *nome, GError **sbaglio)
 	km = xkb_keymap_new_from_names(w->ctx, &nomi, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!km) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "xkbcommon non compila la disposizione «%s»", nome);
+		            "xkbcommon does not compile layout «%s»", nome);
 		return -1;
 	}
 	return metti_keymap(w, km, nome, sbaglio);
@@ -585,7 +585,7 @@ int wlr_input_keymap_da_testo(WlrInput *w, const char *testo, size_t lunghezza,
 	                                XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!km) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-		            "la keymap «%s» non si compila", origine ? origine : "?");
+		            "keymap «%s» does not compile", origine ? origine : "?");
 		return -1;
 	}
 	return metti_keymap(w, km, origine ? origine : "?", sbaglio);
@@ -600,7 +600,7 @@ const char *wlr_input_keymap(const WlrInput *w, size_t *lunghezza)
 
 const char *wlr_input_keymap_origine(const WlrInput *w)
 {
-	return w && w->keymap_origine ? w->keymap_origine : "nessuna";
+	return w && w->keymap_origine ? w->keymap_origine : "none";
 }
 
 /* ------------------------------------------------------------------------- */
@@ -615,8 +615,8 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 
 	w->display = wl_display_connect(nome);
 	if (!w->display && !nome) {
-		/* ⚠ La stessa ricerca di `wlr_apri()`: il figlio non eredita
-		 *   `WAYLAND_DISPLAY` dal compositore che ha appena fatto nascere. */
+		/* ⚠ The same search as `wlr_apri()`: the child does not inherit
+		 *   `WAYLAND_DISPLAY` from the compositor it has just brought to life. */
 		for (int i = 0; i < 10 && !w->display; i++) {
 			g_autofree char *tenta = g_strdup_printf("wayland-%d", i);
 
@@ -625,14 +625,14 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 	}
 	if (!w->display) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		            "nessun compositore Wayland raggiungibile in XDG_RUNTIME_DIR=%s",
-		            g_getenv("XDG_RUNTIME_DIR") ?: "(non impostata)");
+		            "no Wayland compositor reachable in XDG_RUNTIME_DIR=%s",
+		            g_getenv("XDG_RUNTIME_DIR") ?: "(not set)");
 		wlr_input_chiudi(w);
 		return NULL;
 	}
 	w->ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!w->ctx) {
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "contesto xkbcommon non creato");
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED, "xkbcommon context not created");
 		wlr_input_chiudi(w);
 		return NULL;
 	}
@@ -640,24 +640,24 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 	w->registry = wl_display_get_registry(w->display);
 	wl_registry_add_listener(w->registry, &ASCOLTO_REGISTRO, w);
 
-	/* ⚠ TRE giri: i global; le capacità del seat (che chiedono la spia); la
-	 *   keymap che la spia riceve.  Con un tetto solo per tutti e tre. */
+	/* ⚠ THREE rounds: the globals; the seat capabilities (which ask for the spy); the
+	 *   keymap the spy receives.  With a single ceiling for all three. */
 	scadenza = g_get_monotonic_time() + ATTESA_US;
 	if (!sincronizza(w, scadenza) || !sincronizza(w, scadenza)) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-		            "il compositore non ha risposto all'elenco dei global entro %d s",
+		            "the compositor did not answer the list of globals within %d s",
 		            (int)(ATTESA_US / G_USEC_PER_SEC));
 		wlr_input_chiudi(w);
 		return NULL;
 	}
 	if (w->spia)
-		(void)sincronizza(w, scadenza); /* ⚠ senza keymap si va avanti: sotto c'è il ripiego */
+		(void)sincronizza(w, scadenza); /* ⚠ without keymap we go on: below there is the fallback */
 	spia_via(w);
 
 	if (!w->seat || !w->gestore_tastiera || !w->gestore_puntatore) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		            "il compositore non annuncia %s%s%s: su questo desktop l'input non "
-		            "passa di qui",
+		            "the compositor does not announce %s%s%s: on this desktop input does not "
+		            "pass through here",
 		            w->seat ? "" : "wl_seat ",
 		            w->gestore_tastiera ? "" : "zwp_virtual_keyboard_manager_v1 ",
 		            w->gestore_puntatore ? "" : "zwlr_virtual_pointer_manager_v1");
@@ -668,12 +668,12 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 	w->tastiera = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(w->gestore_tastiera,
 	                                                                       w->seat);
 	/*
-	 * ⭐ Il puntatore si LEGA ALL'USCITA quando il manager è v2: le coordinate
-	 *    assolute allora sono relative a lei, e non allo spazio di tutte le
-	 *    uscite.  ⚠ Con un'uscita sola è la stessa cosa; con due, senza questo,
-	 *    il puntatore finirebbe spalmato su entrambe.  `[?]` Che labwc onori
-	 *    l'uscita suggerita (`wlr_cursor_map_input_to_output`) è letto nello
-	 *    studio, non misurato.
+	 * ⭐ The pointer is BOUND TO THE OUTPUT when the manager is v2: absolute
+	 *    coordinates are then relative to it, and not to the space of all
+	 *    outputs.  ⚠ With a single output it is the same thing; with two, without this,
+	 *    the pointer would end up spread over both.  `[?]` That labwc honours
+	 *    the suggested output (`wlr_cursor_map_input_to_output`) is read in the
+	 *    study, not measured.
 	 */
 	if (w->versione_puntatore >= 2 && w->uscita)
 		w->puntatore = zwlr_virtual_pointer_manager_v1_create_virtual_pointer_with_output(
@@ -682,62 +682,62 @@ WlrInput *wlr_input_apri(GError **sbaglio)
 		w->puntatore = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(
 			w->gestore_puntatore, w->seat);
 
-	/* ⛔ La keymap PRIMA di qualunque tasto — e quindi prima di tornare. */
+	/* ⛔ The keymap BEFORE any key — and so before returning. */
 	if (w->keymap_sessione)
 		esito = wlr_input_keymap_da_testo(w, w->keymap_sessione, w->keymap_sessione_len,
-		                                  "sessione", &sb_keymap);
+		                                  "session", &sb_keymap);
 	else
 		esito = -1;
 	if (esito != 0) {
 		/*
-		 * ⚠ IL RIPIEGO, DICHIARATO: la sessione non ci ha dato la sua keymap
-		 *   (`[M]` succede su labwc headless: senza una tastiera vera il seat
-		 *   dichiara capacità 0 e la spia non nasce — `wlr_input.h`).  Allora la
-		 *   compone `xkbcommon` dall'ambiente del figlio (`XKB_DEFAULT_*`, o
-		 *   `us`).  ⛔ Può NON essere la disposizione della sessione: la
-		 *   disposizione negoziata col client (`input_disposizione()`), che
-		 *   arriva subito dopo l'apertura, la sostituisce.
+		 * ⚠ THE FALLBACK, DECLARED: the session did not give us its keymap
+		 *   (`[M]` it happens on headless labwc: without a real keyboard the seat
+		 *   declares capability 0 and the spy is not born — `wlr_input.h`).  Then
+		 *   `xkbcommon` composes it from the child's environment (`XKB_DEFAULT_*`, or
+		 *   `us`).  ⛔ It may NOT be the session's layout: the
+		 *   layout negotiated with the client (`input_disposizione()`), which
+		 *   arrives right after the opening, replaces it.
 		 */
 		struct xkb_rule_names vuoti = { 0 };
 		struct xkb_keymap *km;
 
 		if (sb_keymap)
-			registro_dice(AREA, "⚠ wlroots: la keymap della sessione non si usa (%s)",
+			registro_dice(AREA, "⚠ wlroots: the session's keymap is not used (%s)",
 			              sb_keymap->message);
 		g_clear_error(&sb_keymap);
 		km = xkb_keymap_new_from_names(w->ctx, &vuoti, XKB_KEYMAP_COMPILE_NO_FLAGS);
-		if (!km || metti_keymap(w, km, "ambiente", &sb_keymap) != 0) {
+		if (!km || metti_keymap(w, km, "environment", &sb_keymap) != 0) {
 			g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_FAILED,
-			            "nessuna keymap da presentare alla tastiera virtuale (%s): senza, "
-			            "il primo tasto chiuderebbe la connessione (no_keymap)",
-			            sb_keymap ? sb_keymap->message : "xkbcommon non compone nemmeno "
-			                                             "quella dell'ambiente");
+			            "no keymap to present to the virtual keyboard (%s): without one, "
+			            "the first key would close the connection (no_keymap)",
+			            sb_keymap ? sb_keymap->message : "xkbcommon does not compose even "
+			                                             "the environment's one");
 			wlr_input_chiudi(w);
 			return NULL;
 		}
 		registro_dice(AREA,
-		              "⚠ RIPIEGO DICHIARATO: la sessione non ha consegnato la sua keymap — "
-		              "presento quella dell'AMBIENTE (disposizione «%s»).  ⛔ Può non essere "
-		              "quella della sessione: la corregge la disposizione negoziata col client",
-		              xkb_keymap_layout_get_name(w->keymap, 0) ?: "senza nome");
+		              "⚠ FALLBACK DECLARED: the session did not hand over its keymap — "
+		              "presenting the ENVIRONMENT's (layout «%s»).  ⛔ It may not be "
+		              "the session's: the layout negotiated with the client corrects it",
+		              xkb_keymap_layout_get_name(w->keymap, 0) ?: "unnamed");
 	}
 
-	/* ⛔ E si controlla che il compositore abbia accettato tutto: un errore di
-	 *    protocollo arriva DOPO la richiesta, e senza questo giro lo si
-	 *    scoprirebbe al primo tasto dell'utente. */
+	/* ⛔ And we check that the compositor accepted everything: a protocol
+	 *    error arrives AFTER the request, and without this round it would be
+	 *    discovered at the user's first key. */
 	if (!sincronizza(w, g_get_monotonic_time() + ATTESA_US) || w->caduto) {
 		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
-		            "il compositore non ha accettato i dispositivi virtuali (il registro "
-		            "dice perché)");
+		            "the compositor did not accept the virtual devices (the log "
+		            "says why)");
 		wlr_input_chiudi(w);
 		return NULL;
 	}
 
 	registro_dice(AREA,
-	              "⭐ wlroots: tastiera e puntatore virtuali creati (puntatore v%u%s), keymap "
-	              "dalla %s, %zu byte",
+	              "⭐ wlroots: virtual keyboard and pointer created (pointer v%u%s), keymap "
+	              "from %s, %zu bytes",
 	              w->versione_puntatore,
-	              w->versione_puntatore >= 2 && w->uscita ? ", legato all'uscita" : "",
+	              w->versione_puntatore >= 2 && w->uscita ? ", bound to the output" : "",
 	              w->keymap_origine, w->keymap_len);
 	return w;
 }
@@ -761,8 +761,8 @@ int wlr_input_gira(WlrInput *w)
 
 	if (!w || w->caduto)
 		return -1;
-	/* ⛔ Non si aspetta MAI: è il ciclo del figlio che chiama, e questa è la
-	 *    sua rete di sicurezza a ogni giro — `poll` con zero. */
+	/* ⛔ It NEVER waits: it is the child's loop that calls, and this is
+	 *    its safety net at every round — `poll` with zero. */
 	while (wl_display_prepare_read(w->display) != 0) {
 		if (wl_display_dispatch_pending(w->display) < 0) {
 			segna_caduta(w, "dispatch_pending");
@@ -794,34 +794,34 @@ int wlr_input_gira(WlrInput *w)
 }
 
 /* ------------------------------------------------------------------------- */
-/* I gesti. */
+/* The gestures. */
 
 int wlr_input_tasto(WlrInput *w, uint16_t codice, bool premuto)
 {
 	if (!w || w->caduto || !w->tastiera || codice >= MAX_CODICE)
 		return -1;
-	/* ⛔ `no_keymap`: senza keymap il tasto è un errore di protocollo, e un
-	 *    errore di protocollo chiude la connessione intera. */
+	/* ⛔ `no_keymap`: without a keymap the key is a protocol error, and a
+	 *    protocol error closes the whole connection. */
 	if (!w->keymap_mandata)
 		return -1;
 	if (bit(w->tasti_giu, codice) == premuto)
-		return 0; /* doppione: vedi `wlr_input.h` */
+		return 0; /* duplicate: see `wlr_input.h` */
 
 	zwp_virtual_keyboard_v1_key(w->tastiera, ora_ms(), codice,
 	                            premuto ? WL_KEYBOARD_KEY_STATE_PRESSED
 	                                    : WL_KEYBOARD_KEY_STATE_RELEASED);
 	metti_bit(w->tasti_giu, codice, premuto);
-	/* ⚠ L'offset evdev → XKB è 8 in tutt'e due i versi (§7.1). */
+	/* ⚠ The evdev → XKB offset is 8 in both directions (§7.1). */
 	xkb_state_update_key(w->stato, (xkb_keycode_t)codice + 8, premuto ? XKB_KEY_DOWN : XKB_KEY_UP);
 	manda_modificatori(w, false);
 	return spedisci(w);
 }
 
 /*
- * ⛔ `frame` DOPO OGNI gesto del puntatore (trappola 3): wlroots tiene gli assi
- *    in sospeso finché non arriva, e le applicazioni raccolgono gli eventi per
- *    cornice — un clic senza cornice è un clic che l'applicazione non ha ancora
- *    finito di ricevere.
+ * ⛔ `frame` AFTER EVERY pointer gesture (trap 3): wlroots keeps the axes
+ *    pending until it arrives, and applications gather events per
+ *    frame — a click without a frame is a click the application has not yet
+ *    finished receiving.
  */
 static int cornice(WlrInput *w)
 {
@@ -834,12 +834,12 @@ int wlr_input_assoluto(WlrInput *w, uint32_t x, uint32_t y, uint32_t l, uint32_t
 	if (!w || w->caduto || !w->puntatore || l == 0 || a == 0)
 		return -1;
 	/*
-	 * ⚠ Le coordinate le ha già saturate `rcp.c` sulla sua tela; qui si satura
-	 *   di nuovo sull'ESTENSIONE, perché fra un `ADATTA_TELA` e il `input_ritela`
-	 *   che lo segue le due possono differire per un fotogramma.  ⭐ E il
-	 *   protocollo è NORMALIZZATO (wlroots divide per l'estensione): se l'uscita
-	 *   cambia misura sotto di noi, il punto resta nella stessa proporzione
-	 *   invece di uscire dallo schermo.
+	 * ⚠ The coordinates have already been saturated by `rcp.c` on its canvas; here we saturate
+	 *   again on the EXTENT, because between an `ADATTA_TELA` and the `input_ritela`
+	 *   that follows it the two may differ for one frame.  ⭐ And the
+	 *   protocol is NORMALISED (wlroots divides by the extent): if the output
+	 *   changes size under us, the point stays in the same proportion
+	 *   instead of leaving the screen.
 	 */
 	if (x >= l)
 		x = l - 1;
@@ -854,7 +854,7 @@ int wlr_input_pulsante(WlrInput *w, uint16_t codice, bool premuto)
 	if (!w || w->caduto || !w->puntatore || codice >= MAX_CODICE)
 		return -1;
 	if (bit(w->bottoni_giu, codice) == premuto)
-		return 0; /* doppione: il seat conterebbe due pressioni */
+		return 0; /* duplicate: the seat would count two presses */
 	zwlr_virtual_pointer_v1_button(w->puntatore, ora_ms(), codice,
 	                               premuto ? WL_POINTER_BUTTON_STATE_PRESSED
 	                                       : WL_POINTER_BUTTON_STATE_RELEASED);
@@ -873,12 +873,12 @@ int wlr_input_rilascia_forzato(WlrInput *w, uint16_t codice)
 }
 
 /*
- * ⛔ Unità da 120 → scatti interi, con l'accumulatore.
+ * ⛔ Units of 120 → whole notches, with the accumulator.
  *
- * La soglia è 60, cioè mezzo scatto, come su GNOME (`input.c`,
- * `UNITA_PER_DELTA`): 60 fa uno scatto e lascia -60 nell'accumulatore, e un
- * secondo 60 lo riporta a zero senza scattare.  ⇒ Due mezzi scatti fanno uno
- * scatto, uno solo ne fa uno — come l'utente si aspetta da una rotella fine.
+ * The threshold is 60, that is half a notch, as on GNOME (`input.c`,
+ * `UNITA_PER_DELTA`): 60 makes one notch and leaves -60 in the accumulator, and a
+ * second 60 brings it back to zero without a notch.  ⇒ Two half notches make one
+ * notch, a single one makes one — as the user expects from a fine wheel.
  */
 static int32_t scatti(int32_t *resto, int32_t unita)
 {
@@ -905,11 +905,11 @@ int wlr_input_rotella(WlrInput *w, int32_t orizzontale, int32_t verticale)
 	sv = scatti(&w->resto_verticale, verticale);
 	so = scatti(&w->resto_orizzontale, orizzontale);
 	if (sv == 0 && so == 0)
-		return 0; /* ⛔ niente `value = 0`: trappola 2 */
+		return 0; /* ⛔ no `value = 0`: trap 2 */
 
 	zwlr_virtual_pointer_v1_axis_source(w->puntatore, WL_POINTER_AXIS_SOURCE_WHEEL);
-	/* ⛔ `discrete` in SCATTI, non in 120: wlroots moltiplica lui per 120
-	 *    (`wlr_virtual_pointer_v1.c:183-184`, trappola 1). */
+	/* ⛔ `discrete` in NOTCHES, not in 120: wlroots multiplies by 120 itself
+	 *    (`wlr_virtual_pointer_v1.c:183-184`, trap 1). */
 	if (sv)
 		zwlr_virtual_pointer_v1_axis_discrete(w->puntatore, ora_ms(),
 		                                      WL_POINTER_AXIS_VERTICAL_SCROLL,
@@ -930,13 +930,13 @@ void wlr_input_chiudi(WlrInput *w)
 
 	if (w->display && !w->caduto) {
 		/*
-		 * ⛔⛔ LA TRAPPOLA 5: `wlr_pointer_finish()` NON rilascia i pulsanti
-		 *     (`types/wlr_pointer.c:38-42`).  Distruggere il puntatore con il
-		 *     sinistro giù lascia il desktop col sinistro giù.  ⇒ Si rilascia
-		 *     qui, con la cornice, PRIMA di distruggere.
-		 * ⚠ Di norma non c'è niente: `input_chiudi()` ha già rilasciato col
-		 *   conto di `RCP.md` §11.  Questa è la rete sotto la rete.
-		 * ⭐ La tastiera no: `wlr_keyboard_finish()` rilascia da sé (§7.2).
+		 * ⛔⛔ TRAP 5: `wlr_pointer_finish()` does NOT release the buttons
+		 *     (`types/wlr_pointer.c:38-42`).  Destroying the pointer with the
+		 *     left down leaves the desktop with the left down.  ⇒ They are released
+		 *     here, with the frame, BEFORE destroying.
+		 * ⚠ Normally there is nothing: `input_chiudi()` has already released with the
+		 *   count of `RCP.md` §11.  This is the net under the net.
+		 * ⭐ Not the keyboard: `wlr_keyboard_finish()` releases by itself (§7.2).
 		 */
 		if (w->puntatore)
 			for (uint32_t c = 0; c < MAX_CODICE; c++)
@@ -948,8 +948,8 @@ void wlr_input_chiudi(WlrInput *w)
 			zwp_virtual_keyboard_v1_destroy(w->tastiera);
 		w->puntatore = NULL;
 		w->tastiera = NULL;
-		/* ⛔ `wl_display_disconnect()` NON spedisce quel che è in coda: senza
-		 *    questo, il rilascio qui sopra resterebbe nel nostro buffer. */
+		/* ⛔ `wl_display_disconnect()` does NOT send what is queued: without
+		 *    this, the release above would stay in our buffer. */
 		(void)wl_display_flush(w->display);
 	}
 	spia_via(w);

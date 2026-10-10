@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Gravita e Natura di un messaggio (§6.6.9).
+// Gravita and Natura of a message (§6.6.9).
 type Gravita string
 type Natura string
 
@@ -21,7 +21,7 @@ const (
 	Fatale            Natura = "FATAL"
 )
 
-// Codice è una voce del catalogo dei codici: stabile, mai riusata per un altro significato.
+// Codice is an entry of the codes catalogue: stable, never reused for another meaning.
 type Codice struct {
 	Gravita Gravita `json:"severity"`
 	Natura  Natura  `json:"nature"`
@@ -29,8 +29,8 @@ type Codice struct {
 	Rimedio string  `json:"remedy,omitempty"`
 }
 
-// Messaggio è un codice nel suo contesto: quel che la CLI stampa, il registro annota, il
-// certificato conserva, e ogni futura interfaccia mostra (§6.6.9).
+// Messaggio is a code in its context: what the CLI prints, the log records, the
+// certificate keeps, and every future interface shows (§6.6.9).
 type Messaggio struct {
 	Codice    string  `json:"code"`
 	Gravita   Gravita `json:"severity"`
@@ -40,14 +40,14 @@ type Messaggio struct {
 	Dettaglio string  `json:"detail,omitempty"`
 }
 
-// Codici: ⛔ un codice non si cambia di significato e non si riusa. Se un testo va corretto si
-// corregge il testo; se il significato cambia, si prende un numero nuovo.
+// Codici: ⛔ a code never changes meaning and is never reused. If a text must be corrected,
+// the text is corrected; if the meaning changes, a new number is taken.
 var Codici = map[string]Codice{
-	// fase 0 — TRUST (§6.6.10)
-	// ⛔ 001 e 005 sono RITIRATI con T8, 002 e 006…016 con D11 semplificata (una chiave sola, quella
-	// dell'archivio, verificata dal gestore di pacchetti: DECISIONI §10.21); i codici non si riusano.
-	// (Per 001 e 005: la firma c'era e si verificava sempre, --senza-firma non esiste
-	//    più): restano qui perché i registri vecchi li nominano, e non si riusano.
+	// phase 0 — TRUST (§6.6.10)
+	// ⛔ 001 and 005 are RETIRED with T8, 002 and 006…016 with simplified D11 (a single key, the
+	// repository's, verified by the package manager: DECISIONI §10.21); codes are not reused.
+	// (For 001 and 005: the signature was there and was always verified, --senza-firma no longer
+	//    exists): they stay here because old logs name them, and they are not reused.
 	"RX-TRUST-001": {AVVISO, ServeAzione, "(retired in T8) The catalogue signature could not be verified yet: the engine proceeded only with --senza-firma.", ""},
 	"RX-TRUST-002": {INFO, ServeAzione, "(retired: D11 simplified, DECISIONS §10.21) The catalogue had expired.", ""},
 	"RX-TRUST-003": {BLOCCANTE, ServeAzione, "The catalogue requires a newer engine than this one.", "Use the .run file of a newer REMOTIX release."},
@@ -66,14 +66,14 @@ var Codici = map[string]Codice{
 	"RX-TRUST-016": {INFO, ServeAzione, "(retired: D11 simplified, DECISIONS §10.21) The offline catalogue was older than the stored one.", ""},
 	"RX-TRUST-017": {INFO, ServeAzione, "(retired: DECISIONS §10.36) The downloaded engine was not the published one (install.sh is gone: REMOTIX comes as one .run file).", ""},
 
-	// fase 1 — PREFLIGHT
+	// phase 1 — PREFLIGHT
 	"RX-DISTRO-001":  {BLOCCANTE, ServeAzione, "Cannot tell which distribution is installed (/etc/os-release is missing or unreadable).", ""},
 	"RX-SYSTEMD-001": {BLOCCANTE, ServeAzione, "The machine was not booted with systemd: REMOTIX uses logind and the systemd user manager.", "REMOTIX does not run without systemd."},
-	// ⛔ 001 RITIRATO con la fase 19 (DECISIONI §10.27: niente codifica sul processore): senza scheda
-	// non c'è più un ripiego, c'è il rifiuto (003). I codici non si riusano.
+	// ⛔ 001 RETIRED with phase 19 (DECISIONI §10.27: no encoding on the processor): without a card
+	// there is no fallback any more, there is the refusal (003). Codes are not reused.
 	"RX-GPU-001": {INFO, ServeAzione, "(retired: phase 19, DECISIONS §10.27) There was no graphics card with a render node: encoding was in software.", ""},
 	"RX-GPU-002": {AVVISO, ServeAzione, "The NVIDIA card uses the proprietary driver: it does not encode H.264 through VA-API; video goes through Vulkan Video, if its Vulkan driver (nvidia ICD) is there.", ""},
-	// fase 19: il controllo della scheda (strade.go, VerdettoScheda) — BLOCCANTI, prima di toccare
+	// phase 19: the card check (strade.go, VerdettoScheda) — BLOCKING, before touching
 	"RX-GPU-003":     {BLOCCANTE, ServeAzione, "Missing: a graphics card (no render node /dev/dri/renderD*). REMOTIX requires hardware-accelerated video encoding, and is not installed on this machine.", ""},
 	"RX-GPU-004":     {BLOCCANTE, ServeAzione, "Missing: the Vulkan driver of the NVIDIA card (no nvidia ICD). With the proprietary driver this card encodes only with Vulkan Video: the proprietary driver 550 or newer with its Vulkan ICD is required, or an Intel or AMD card that encodes.", ""},
 	"RX-GPU-005":     {BLOCCANTE, ServeAzione, "Missing: a card that encodes H.264 video (Vulkan Video: AMD and NVIDIA; VA-API: Intel and AMD). REMOTIX is not installed on this machine.", ""},
@@ -104,7 +104,7 @@ var Codici = map[string]Codice{
 	"RX-DESKTOP-001": {INFO, ServeAzione, "(retired: DECISIONS §10.36) No desktop was chosen for installation (the engine no longer installs a desktop).", ""},
 	"RX-DESKTOP-002": {INFO, ServeAzione, "(retired: DECISIONS §10.36) No supported desktop was installed and the engine asked which one to add (now RX-MANCA-001).", ""},
 
-	// fase 2 — COMPATIBILITY (§6.6.8)
+	// phase 2 — COMPATIBILITY (§6.6.8)
 	"RX-COMPAT-001": {BLOCCANTE, ServeAzione, "This distribution is outside REMOTIX.", ""},
 	"RX-COMPAT-002": {BLOCCANTE, ServeAzione, "This distribution is not in the catalogue: whether REMOTIX runs on it is unknown.", ""},
 	"RX-COMPAT-003": {BLOCCANTE, ServeAzione, "Immutable distributions are postponed until after phase 17 (decision D9).", ""},
@@ -112,21 +112,21 @@ var Codici = map[string]Codice{
 	"RX-COMPAT-005": {BLOCCANTE, ServeAzione, "This desktop is not supported on this distribution.", ""},
 	"RX-COMPAT-006": {BLOCCANTE, ServeAzione, "The desktop version is older than the minimum.", ""},
 	"RX-COMPAT-007": {BLOCCANTE, ServeAzione, "The machine lacks an indispensable requirement.", ""},
-	// DECISIONI §10.36: REMOTIX non modifica il sistema — quel che manca si dice, e provvede
-	// l'amministratore (niente pacchetti né comandi suggeriti)
+	// DECISIONI §10.36: REMOTIX does not modify the system — what is missing is stated, and the
+	// administrator provides it (no packages or commands suggested)
 	"RX-MANCA-001": {BLOCCANTE, ServeAzione, "Missing: a supported desktop. REMOTIX does not install one.", ""},
 	"RX-MANCA-002": {BLOCCANTE, ServeAzione, "Missing: a repository that REMOTIX's dependencies come from on this distribution.", ""},
 	"RX-MANCA-003": {BLOCCANTE, ServeAzione, "Missing: packages a desktop needs to run under REMOTIX.", ""},
 	"RX-MANCA-004": {BLOCCANTE, ServeAzione, "Missing: the REMOTIX package for this distribution in this .run file.", ""},
 
-	// fasi 3-4 — PLANNING, CONSENT
+	// phases 3-4 — PLANNING, CONSENT
 	"RX-PIANO-001": {BLOCCANTE, ServeAzione, "The machine changed after the plan was made: the plan is no longer valid.", "Run remotix-install install again."},
 	"RX-PIANO-002": {BLOCCANTE, Fatale, "The plan cannot be read or has an unknown format.", ""},
 	"RX-PIANO-003": {BLOCCANTE, ServeAzione, "The plan was not approved: nothing is touched.", ""},
 	"RX-PIANO-004": {BLOCCANTE, Fatale, "The plan contains a step this engine does not know.", ""},
 	"RX-PIANO-005": {BLOCCANTE, ServeAzione, "The approval does not match this plan (the plan was changed afterwards).", "Run remotix-install install again."},
 
-	// senza domande e senza rete (§6.6.12, T9)
+	// without questions and without network (§6.6.12, T9)
 	"RX-RISPOSTE-001": {INFO, ServeAzione, "(retired: DECISIONS §10.36) The answer file did not give a needed consent (there is no answer file any more).", ""},
 	"RX-RISPOSTE-002": {INFO, ServeAzione, "(retired: DECISIONS §10.36) The answer file could not be read (there is no answer file any more).", ""},
 	"RX-RISPOSTE-003": {INFO, ServeAzione, "(retired: DECISIONS §10.36) An answer in the file had a value not allowed (there is no answer file any more).", ""},
@@ -136,7 +136,7 @@ var Codici = map[string]Codice{
 	"RX-FUORI-004":    {INFO, ServeAzione, "(retired: DECISIONS §10.36) Offline installation was not done for zypper and pacman (prepare-offline is gone: the .run file is already offline).", ""},
 	"RX-FUORI-005":    {INFO, ServeAzione, "(retired: DECISIONS §10.36) A third-party archive could not go into the offline bundle (prepare-offline is gone: the .run file is already offline).", ""},
 
-	// operazione, registro e ripresa (§6.6.2, §6.6.3)
+	// operation, log and resume (§6.6.2, §6.6.3)
 	"RX-STATO-001":     {BLOCCANTE, Recuperabile, "There is an unfinished operation.", "remotix-install install rolls an unfinished installation back first; remotix-install uninstall completes an unfinished uninstallation."},
 	"RX-STATO-002":     {BLOCCANTE, Fatale, "Invalid state transition: this is an engine defect.", ""},
 	"RX-STATO-003":     {BLOCCANTE, Riprovabile, "Another engine is working right now.", "Wait for it to finish."},
@@ -164,7 +164,7 @@ var Codici = map[string]Codice{
 	"RX-FILE-001":      {BLOCCANTE, ServeAzione, "The file was changed by someone else during the operation: it is not touched.", ""},
 	"RX-AZIONE-006":    {BLOCCANTE, ServeAnnullamento, "The installation was stopped by the person installing: what was already done is rolled back.", ""},
 
-	// le interfacce (T9, DECISIONI §10.14, §10.19): TUI e GUI
+	// the interfaces (T9, DECISIONI §10.14, §10.19): TUI and GUI
 	"RX-UI-001": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) This build of remotix-install has no window (it is the static one, for machines without a desktop).", ""},
 	"RX-UI-002": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) The window does not open: there is no graphical session (neither WAYLAND_DISPLAY nor DISPLAY), or its libraries do not answer.", ""},
 	"RX-UI-003": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) The window does not run as administrator (root): it asks polkit for permissions itself, when needed.", ""},
@@ -172,7 +172,7 @@ var Codici = map[string]Codice{
 	"RX-UI-005": {BLOCCANTE, ServeAzione, "The administrator part of the engine stopped.", "remotix-install status tells where the operation is."},
 	"RX-UI-006": {BLOCCANTE, ServeAzione, "The TUI needs a terminal and administrator permissions.", "sudo remotix-install tui"},
 
-	// l'aggiornamento automatico (DECISIONI §10.10, T8)
+	// automatic updating (DECISIONI §10.10, T8)
 	"RX-AGG-001": {INFO, ServeAzione, "(retired: D14, DECISIONS §10.23) REMOTIX was at the latest version of its channel.", ""},
 	"RX-AGG-002": {INFO, ServeAzione, "(retired: D14, DECISIONS §10.23) A maintenance update was available.", ""},
 	"RX-AGG-003": {INFO, ServeAzione, "(retired: D14, DECISIONS §10.23) The new yearly version was available.", ""},
@@ -186,8 +186,8 @@ var Codici = map[string]Codice{
 	"RX-AGG-011": {INFO, ServeAzione, "(retired: D14, DECISIONS §10.23) Automatic updates were suspended after a rollback.", ""},
 }
 
-// Msg costruisce un messaggio da un codice. Un codice sconosciuto è un difetto del motore, e la
-// prova TestCodiciUsatiEsistono lo trova prima che arrivi a qualcuno.
+// Msg builds a message from a code. An unknown code is a defect of the engine, and the
+// test TestCodiciUsatiEsistono finds it before it reaches anyone.
 func Msg(codice, dettaglio string) Messaggio {
 	c, ok := Codici[codice]
 	if !ok {
@@ -196,7 +196,7 @@ func Msg(codice, dettaglio string) Messaggio {
 	return Messaggio{Codice: codice, Gravita: c.Gravita, Natura: c.Natura, Testo: c.Testo, Rimedio: c.Rimedio, Dettaglio: dettaglio}
 }
 
-// ErroreRX è un errore che porta il suo codice stabile.
+// ErroreRX is an error carrying its stable code.
 type ErroreRX struct{ M Messaggio }
 
 func (e *ErroreRX) Error() string {
@@ -206,10 +206,10 @@ func (e *ErroreRX) Error() string {
 	return e.M.Codice + ": " + e.M.Testo
 }
 
-// Errore costruisce un errore con codice.
+// Errore builds an error with a code.
 func Errore(codice, dettaglio string) error { return &ErroreRX{Msg(codice, dettaglio)} }
 
-// CodiceDi estrae il codice da un errore, o "" se l'errore non ne ha.
+// CodiceDi extracts the code from an error, or "" if the error has none.
 func CodiceDi(err error) string {
 	var e *ErroreRX
 	if errors.As(err, &e) {

@@ -1,8 +1,8 @@
 /*
- * ritrovo.c — i desktop REMOTIX vivi che nessun figlio tiene.
+ * ritrovo.c — live REMOTIX desktops that no child holds.
  *
- * Il perche' e il criterio stanno in `ritrovo.h`, che si legge prima.  Qui
- * c'e' solo il come.
+ * The why and the criterion are in `ritrovo.h`, which is read first.  Here
+ * there is only the how.
  */
 #include "ritrovo.h"
 
@@ -21,11 +21,11 @@
 #define PERCORSO_LOGIND "/org/freedesktop/login1"
 #define IFACE_MANAGER "org.freedesktop.login1.Manager"
 #define IFACE_SESSIONE "org.freedesktop.login1.Session"
-/* ⚠ Lo stesso tetto di `sentinella.c`, e per la stessa ragione: la domanda
- *   parte dal ciclo che consegna i fotogrammi. */
+/* ⚠ The same ceiling as `sentinella.c`, and for the same reason: the question
+ *   leaves from the loop that delivers the frames. */
 #define ATTESA_MS 300
-/* Quante sessioni `remotix` si guardano in una volta.  ⚠ Ogni riattacco ne
- * lascia una in piu' col capo morto (`[M]` T2, §5.2 punto b): 256 e' largo. */
+/* How many `remotix` sessions are looked at in one go.  ⚠ Every reattach
+ * leaves one more with a dead leader (`[M]` T2, §5.2 point b): 256 is ample. */
 #define QUANTE_CANDIDATE 256
 
 struct candidata {
@@ -35,7 +35,7 @@ struct candidata {
 	char utente[257];
 };
 
-/* Il contenuto di un file piccolo di /proc, chiuso con '\0'.  -1 se non c'e'. */
+/* The content of a small /proc file, terminated with '\0'.  -1 if it is missing. */
 static ssize_t leggi_piccolo(const char *percorso, char *buf, size_t cap)
 {
 	int fd = open(percorso, O_RDONLY | O_CLOEXEC);
@@ -51,8 +51,8 @@ static ssize_t leggi_piccolo(const char *percorso, char *buf, size_t cap)
 	return n;
 }
 
-/* La cgroup unificata (riga `0::`) del processo, senza il `\n`.  false se non
- * si legge (processo morto nel frattempo: la corsa normale di /proc). */
+/* The unified cgroup (line `0::`) of the process, without the `\n`.  false if it
+ * cannot be read (process died meanwhile: the normal /proc race). */
 static bool cgroup_di(pid_t pid, char *dove, size_t cap)
 {
 	char percorso[64], buf[2048];
@@ -81,7 +81,7 @@ static const char *ultimo_pezzo(const char *cg)
 	return u ? u + 1 : cg;
 }
 
-/* Le sessioni logind col servizio PAM `remotix`.  -1 se logind non risponde. */
+/* The logind sessions with the PAM service `remotix`.  -1 if logind does not answer. */
 static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 {
 	g_autoptr(GError) sbaglio = NULL;
@@ -93,8 +93,8 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 	int n = 0;
 
 	if (!bus) {
-		snprintf(perche, quanto, "bus di sistema: %s",
-		         sbaglio ? sbaglio->message : "senza motivo");
+		snprintf(perche, quanto, "system bus: %s",
+		         sbaglio ? sbaglio->message : "no reason given");
 		return -1;
 	}
 	elenco = g_dbus_connection_call_sync(bus, NOME_LOGIND, PERCORSO_LOGIND, IFACE_MANAGER,
@@ -102,7 +102,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 	                                     G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, &sbaglio);
 	if (!elenco) {
 		snprintf(perche, quanto, "logind ListSessions: %s",
-		         sbaglio ? sbaglio->message : "senza motivo");
+		         sbaglio ? sbaglio->message : "no reason given");
 		return -1;
 	}
 	g_variant_get(elenco, "(a(susso))", &it);
@@ -119,7 +119,7 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 		                                g_variant_new("(s)", IFACE_SESSIONE),
 		                                G_VARIANT_TYPE("(a{sv})"), G_DBUS_CALL_FLAGS_NONE,
 		                                ATTESA_MS, NULL, NULL);
-		/* ⚠ Sparita fra l'elenco e la domanda: la corsa normale di logind. */
+		/* ⚠ Gone between the list and the question: the normal logind race. */
 		if (!r)
 			continue;
 		prop = g_variant_get_child_value(r, 0);
@@ -138,8 +138,8 @@ static int candidate(struct candidata *v, int cap, char *perche, size_t quanto)
 	return n;
 }
 
-/* ⭐ Il cuore: una passata sola su /proc per tutte le candidate.  `solo_uid`
- * (se non (uid_t)-1) restringe a un utente. */
+/* ⭐ The heart: a single pass over /proc for all the candidates.  `solo_uid`
+ * (if not (uid_t)-1) restricts to one user. */
 static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_t quanto)
 {
 	struct candidata *c = calloc(QUANTE_CANDIDATE, sizeof *c);
@@ -148,7 +148,7 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 	struct dirent *e;
 
 	if (!c) {
-		snprintf(perche, quanto, "memoria");
+		snprintf(perche, quanto, "out of memory");
 		return -1;
 	}
 	nc = candidate(c, QUANTE_CANDIDATE, perche, quanto);
@@ -176,11 +176,11 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 		snprintf(percorso, sizeof percorso, "/proc/%ld/stat", pid);
 		if (leggi_piccolo(percorso, stat_buf, sizeof stat_buf) < 0)
 			continue;
-		/* ⚠ Il nome sta fra parentesi e puo' contenerne: si parte dall'ULTIMA. */
+		/* ⚠ The name is in parentheses and may contain some: start from the LAST one. */
 		chiusa = strrchr(stat_buf, ')');
 		if (!chiusa || sscanf(chiusa + 1, " %c %ld %ld %ld", &stato, &ppid, &pgrp, &sid) != 4)
 			continue;
-		/* 1. capo della propria sessione di processi — la firma di setsid */
+		/* 1. leader of its own process session — the setsid signature */
 		if (sid != pid || stato == 'Z')
 			continue;
 		snprintf(percorso, sizeof percorso, "/proc/%ld", pid);
@@ -188,7 +188,7 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 			continue;
 		if (solo_uid != (uid_t)-1 && st.st_uid != solo_uid)
 			continue;
-		/* 2. dentro la scope di una sessione `remotix` dello stesso utente */
+		/* 2. inside the scope of a `remotix` session of the same user */
 		if (!cgroup_di((pid_t)pid, cg, sizeof cg))
 			continue;
 		for (int i = 0; i < nc; i++)
@@ -198,12 +198,12 @@ static int cerca(RitrovoDesktop *v, int cap, uid_t solo_uid, char *perche, size_
 			}
 		if (quale < 0)
 			continue;
-		/* 3. e il padre FUORI da quella scope: orfano di `setsid --fork`, non la
-		 *    shell di un terminale aperto nel desktop */
+		/* 3. and the parent OUTSIDE that scope: orphan of `setsid --fork`, not the
+		 *    shell of a terminal opened in the desktop */
 		if (ppid > 0 && cgroup_di((pid_t)ppid, cg_padre, sizeof cg_padre) &&
 		    strcmp(cg_padre, cg) == 0)
 			continue;
-		/* uno per utente: il primo trovato; gli altri si contano soltanto */
+		/* one per user: the first found; the others are only counted */
 		{
 			int gia = -1;
 

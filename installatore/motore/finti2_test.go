@@ -1,8 +1,8 @@
 package motore
 
-// Gli altri pezzi della macchina finta: un gestore di pacchetti (archivio installato e un
-// deposito in file JSON, transazione che si può interrompere a metà), lo stato acceso/spento delle
-// unità e il bersaglio d'avvio, le sessioni di logind.
+// The other pieces of the fake machine: a package manager (installed database and a
+// repository in JSON files, a transaction that can be interrupted halfway), the on/off state of the
+// units and the boot target, logind's sessions.
 
 import (
 	"encoding/json"
@@ -51,7 +51,7 @@ func (g *gestoreFinto) Versioni(nomi []string) (map[string]string, error) {
 	return r, nil
 }
 
-// chiusura: i pacchetti da installare (file + nomi + dipendenze), nell'ordine.
+// chiusura: the packages to install (files + names + dependencies), in order.
 func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 	dep := g.deposito()
 	in := g.installati()
@@ -66,7 +66,7 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 		for _, d := range pk.Dipende {
 			dp, ok := dep[d]
 			if !ok {
-				return fmt.Errorf("dipendenza %s non nel deposito", d)
+				return fmt.Errorf("dependency %s not in the repository", d)
 			}
 			if err := visita(d, dp, "repo", ""); err != nil {
 				return err
@@ -95,7 +95,7 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 	for _, n := range nomi {
 		pk, ok := dep[n]
 		if !ok {
-			return nil, fmt.Errorf("%s non nel deposito", n)
+			return nil, fmt.Errorf("%s not in the repository", n)
 		}
 		if err := visita(n, pk, "repo", ""); err != nil {
 			return nil, err
@@ -123,7 +123,7 @@ func (g *gestoreFinto) Installa(file, nomi []string) error {
 		if err := ScriviAtomico(g.p("finto-pacchetti.json"), b, 0o644); err != nil {
 			return err
 		}
-		if a.Nome == "sddm" { // il postinst di un display manager: abilita, e accende se policy-rc.d non lo ferma
+		if a.Nome == "sddm" { // a display manager's postinst: enables, and starts if policy-rc.d does not stop it
 			os.WriteFile(filepath.Join(g.radice, "etc/systemd/system/sddm.service"), []byte("[Unit]\n"), 0o644)
 			u := &unitaFinte{g.radice}
 			u.Abilita("sddm.service")
@@ -139,7 +139,7 @@ func (g *gestoreFinto) Installa(file, nomi []string) error {
 	return os.Remove(g.p("finto-pacchetti.transazione"))
 }
 
-// SimulaTogli: chi dipende (anche di rimbalzo) dai nomi dati, fra gli installati.
+// SimulaTogli: whoever depends (also in turn) on the given names, among the installed ones.
 func (g *gestoreFinto) SimulaTogli(nomi []string, purge bool) ([]string, error) {
 	in := g.installati()
 	dep := g.deposito()
@@ -183,7 +183,7 @@ func (g *gestoreFinto) Togli(nomi []string, purge bool) error {
 
 func (g *gestoreFinto) Integro() (bool, string, error) {
 	if _, err := os.Stat(g.p("finto-pacchetti.transazione")); err == nil {
-		return false, "transazione a metà", nil
+		return false, "transaction halfway", nil
 	}
 	return true, "", nil
 }
@@ -193,7 +193,7 @@ func (g *gestoreFinto) Ripara() error {
 	return nil
 }
 
-// ---- unità: acceso/spento, bersaglio d'avvio
+// ---- units: on/off, boot target
 
 func (u *unitaFinte) attive() string { return filepath.Join(u.radice, "var/lib/finto-attive.json") }
 
@@ -225,7 +225,7 @@ func (u *unitaFinte) ImpostaPredefinito(b string) error {
 	return ScriviAtomico(filepath.Join(u.radice, "var/lib/finto-predefinito"), []byte(b), 0o644)
 }
 
-// ---- sessioni di logind
+// ---- logind's sessions
 
 type sessioniFinte struct{ radice string }
 
@@ -239,7 +239,7 @@ func (s *sessioniFinte) Elenco() ([]Sessione, error) {
 
 func (s *sessioniFinte) Segnale(id string, sg int32) error { return s.Termina(id) }
 
-// il desktop nel gestore d'utente, finto: un numero di processi per persona
+// the desktop in the user manager, fake: a number of processes per person
 func (s *sessioniFinte) grafica() string {
 	return filepath.Join(s.radice, "var/lib/finto-grafica.json")
 }
@@ -268,8 +268,8 @@ func (s *sessioniFinte) Termina(id string) error {
 	return ScriviAtomico(s.file(), b, 0o644)
 }
 
-// differenzeDopoAnnullo: la macchina com'era, SALVO l'unica modifica INDIRETTA che il piano di prova
-// fa e che il ritorno indietro non disfa per regola (§6.6.4): libcomune aggiornata da 1.0 a 2.0.
+// differenzeDopoAnnullo: the machine as it was, EXCEPT the only INDIRECT change the trial plan
+// makes and that rolling back does not undo by rule (§6.6.4): libcomune upgraded from 1.0 to 2.0.
 func differenzeDopoAnnullo(t testing.TB, prima, dopo map[string]string) []string {
 	agg := Sha256([]byte(`{"bash":"5.2","libcomune":"2.0"}`))
 	k := "var/lib/finto-pacchetti.json"

@@ -1,8 +1,8 @@
-// Package motore è il motore d'installazione di REMOTIX (fasi/17-l-installatore.md §6.0, §6.6).
+// Package motore is REMOTIX's installation engine (fasi/17-l-installatore.md §6.0, §6.6).
 //
-// Il motore è l'unico posto dove sta la logica d'installazione: la CLI (remotix-install) è il
-// motore stesso, e le future TUI e GUI (D12) parleranno con lui solo attraverso gli oggetti JSON
-// di questo pacchetto e gli eventi JSON a una riga (eventi.go), mai con logica propria (R36).
+// The engine is the only place where the installation logic lives: the CLI (remotix-install) is the
+// engine itself, and the future TUIs and GUIs (D12) will talk to it only through the JSON objects
+// of this package and the one-line JSON events (eventi.go), never with logic of their own (R36).
 package motore
 
 import (
@@ -15,25 +15,25 @@ import (
 	"time"
 )
 
-// Formato è la versione di formato di tutti gli oggetti del motore (§6.6.1). Cambia solo se un
-// oggetto cambia in modo che un lettore vecchio lo leggerebbe male.
+// Formato is the format version of all the engine's objects (§6.6.1). It changes only if an
+// object changes so that an old reader would misread it.
 const Formato = "remotix-install/3"
 
-// VersioneMotore è la versione di questo motore; il catalogo dichiara la minima che lo capisce.
-// Il comando di rilascio (packaging/rilascio.sh) la fissa uguale a quella del rilascio
-// (-ldflags -X), la stessa dei pacchetti remotix e remotix-install.
+// VersioneMotore is the version of this engine; the catalogue declares the minimum that understands it.
+// The release command (packaging/rilascio.sh) sets it equal to the release's
+// (-ldflags -X), the same as the remotix and remotix-install packages.
 var VersioneMotore = "0.1.0"
 
-// ora restituisce l'istante in UTC, con i secondi: è quel che va nei registri.
+// ora returns the instant in UTC, with seconds: it is what goes into the logs.
 func ora() string { return time.Now().UTC().Format(time.RFC3339Nano) }
 
-// Sha256 è l'impronta esadecimale di un testo.
+// Sha256 is the hexadecimal fingerprint of a text.
 func Sha256(b []byte) string {
 	s := sha256.Sum256(b)
 	return hex.EncodeToString(s[:])
 }
 
-// Sha256File è l'impronta di un file; "" se il file non c'è.
+// Sha256File is the fingerprint of a file; "" if the file is not there.
 func Sha256File(percorso string) (string, error) {
 	b, err := os.ReadFile(percorso)
 	if err != nil {
@@ -45,8 +45,8 @@ func Sha256File(percorso string) (string, error) {
 	return Sha256(b), nil
 }
 
-// SincronizzaCartella fa fsync della cartella: senza, una rinomina o una creazione può sparire
-// al salto della corrente anche se il file è stato sincronizzato (§6.6.3).
+// SincronizzaCartella fsyncs the folder: without it, a rename or a creation can vanish
+// on a power cut even if the file was synced (§6.6.3).
 func SincronizzaCartella(cartella string) error {
 	d, err := os.Open(cartella)
 	if err != nil {
@@ -56,8 +56,8 @@ func SincronizzaCartella(cartella string) error {
 	return d.Sync()
 }
 
-// ScriviAtomico scrive un file senza mai lasciarlo a metà: nome temporaneo nella stessa cartella,
-// fsync, rinomina, fsync della cartella. Chi legge vede o il vecchio o il nuovo, mai un pezzo.
+// ScriviAtomico writes a file without ever leaving it half-written: temporary name in the same folder,
+// fsync, rename, fsync of the folder. A reader sees either the old or the new, never a piece.
 func ScriviAtomico(percorso string, dati []byte, modo os.FileMode) error {
 	cartella := filepath.Dir(percorso)
 	tmp, err := os.CreateTemp(cartella, "."+filepath.Base(percorso)+".tmp-*")
@@ -89,7 +89,7 @@ func ScriviAtomico(percorso string, dati []byte, modo os.FileMode) error {
 	return SincronizzaCartella(cartella)
 }
 
-// ScriviJSON scrive un oggetto del motore, in modo atomico e leggibile.
+// ScriviJSON writes an engine object, atomically and readably.
 func ScriviJSON(percorso string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -98,7 +98,7 @@ func ScriviJSON(percorso string, v any) error {
 	return ScriviAtomico(percorso, append(b, '\n'), 0o600)
 }
 
-// LeggiJSON legge un oggetto del motore e controlla la versione di formato, se l'oggetto la ha.
+// LeggiJSON reads an engine object and checks the format version, if the object has one.
 func LeggiJSON(percorso string, v any) error {
 	b, err := os.ReadFile(percorso)
 	if err != nil {
@@ -116,11 +116,11 @@ func LeggiJSON(percorso string, v any) error {
 	return json.Unmarshal(b, v)
 }
 
-// JSONCanonico serializza in modo stabile (le mappe di Go escono già ordinate per chiave).
+// JSONCanonico serialises stably (Go's maps already come out sorted by key).
 func JSONCanonico(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
-		panic(err) // solo tipi nostri: un errore qui è un difetto del motore
+		panic(err) // only our types: an error here is a defect of the engine
 	}
 	return b
 }

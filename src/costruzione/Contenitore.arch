@@ -1,14 +1,14 @@
-# Contenitore.arch — costruzione di REMOTIX per Arch Linux.
+# Contenitore.arch — REMOTIX build for Arch Linux.
 #
-# ⓘ Arch ha gia' ngtcp2 1.25 con crypto_ossl (pacchetto `ngtcp2`): si potrebbe
-#   usare quella.  Si costruisce comunque la nostra, statica, per uniformita'
-#   (una sola versione del trasporto da provare, §6.3).
+# ⓘ Arch already has ngtcp2 1.25 with crypto_ossl (package `ngtcp2`): it could
+#   be used.  Ours is built anyway, static, for uniformity
+#   (a single transport version to test, §6.3).
 #
-# ⓘ labwc, wlr-randr, wireplumber e pipewire-pulse non servono a compilare: sono dipendenze di ESECUZIONE
-#   del pacchetto (packaging/arch/PKGBUILD), e makepkg vuole vederle
-#   installate prima di costruire.
-# ⭐ Fase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-headers` + `vulkan-icd-loader`
-#    (`[M]` 1 ott 2026 nell'immagine: 1.4.357).
+# ⓘ labwc, wlr-randr, wireplumber and pipewire-pulse are not needed to compile: they are RUNTIME
+#   dependencies of the package (packaging/arch/PKGBUILD), and makepkg wants to see them
+#   installed before building.
+# ⭐ Phase 19 (Vulkan Video, `src/vulkanvideo.c`): `vulkan-headers` + `vulkan-icd-loader`
+#    (`[M]` 1 Oct 2026 in the image: 1.4.357).
 FROM docker.io/library/archlinux:latest
 RUN pacman -Syu --noconfirm --needed \
         base-devel git cmake ninja \
@@ -17,7 +17,7 @@ RUN pacman -Syu --noconfirm --needed \
         labwc wlr-randr wireplumber pipewire-pulse \
     && pacman -Scc --noconfirm
 
-# --- uguale per tutti i bersagli: nghttp3 1.18.0 e ngtcp2 1.25.0, statiche
+# --- the same for all targets: nghttp3 1.18.0 and ngtcp2 1.25.0, static
 COPY quic-statiche.sh /usr/local/bin/quic-statiche.sh
 RUN sh /usr/local/bin/quic-statiche.sh
 ENV LIBRARY_PATH=/usr/local/lib \

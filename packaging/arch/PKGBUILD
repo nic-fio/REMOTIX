@@ -1,53 +1,53 @@
-# PKGBUILD — REMOTIX per Arch Linux (Manjaro, EndeavourOS: compatibili, non
-# certificate).  fasi/17-l-installatore.md §6.1-§6.4, tappa T3.
+# PKGBUILD — REMOTIX for Arch Linux (Manjaro, EndeavourOS: compatible, not
+# certified).  fasi/17-l-installatore.md §6.1-§6.4, step T3.
 #
-# ⭐ Si costruisce DAL SORGENTE DEL DEPOSITO, dentro il contenitore di Arch
+# ⭐ Built FROM THE REPOSITORY SOURCE, inside the Arch container
 #    (src/costruzione/Contenitore.arch):
 #       packaging/arch/costruisci.sh [commit]
-#    fa il tarball del commit (src/, banchi/rcp/, packaging/arch/), poi
-#    makepkg e namcap.  Tutti i file del pacchetto vengono da quel tarball.
+#    makes the tarball of the commit (src/, banchi/rcp/, packaging/arch/), then
+#    makepkg and namcap.  Every file of the package comes from that tarball.
 #
-# ⭐ LE DIPENDENZE E IL ROLLING RELEASE (§4.6, §6.2) — la scelta: il pacchetto
-#    si lega al NUMERO DELLA LIBRERIA (soname), non alla versione esatta.
-#    Ogni `libX.so` qui sotto makepkg lo trasforma nel soname che il binario
-#    usa DAVVERO (`libopus.so=0-64`), letto dal binario.  Quindi:
-#      · opus 1.6.0 → 1.6.1 (stesso soname, ABI uguale): si aggiorna libero;
-#      · un soname nuovo: `pacman -Syu` RIFIUTA, dicendo «breaks dependency
-#        'libopus.so=0-64' required by remotix», finche' non si ricostruisce il
-#        pacchetto.  E' quel che fanno i pacchetti di Arch stessi, e §6.2 lo
-#        chiede: «meglio un aggiornamento rifiutato che uno che rompe in
-#        silenzio».
-#    ⛔ La versione ESATTA (`opus=1.6.1-1`) bloccherebbe ogni aggiornamento
-#       della libreria, anche quelli di sicurezza, e con lui l'intero `-Syu`: su
-#       una rolling release vuol dire una macchina che non si aggiorna piu'.
-#    ⇒ A carico nostro: ricostruire a ogni cambio di soname (OpenSSL, glib,
-#      libei, pipewire, di rado).
-#    ⛔ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): openh264 e svt-av1, il
-#      ripiego in software, sono USCITI — svt-av1 era quella senza «provides»
-#      da ricostruire a ogni versione nuova.
+# ⭐ DEPENDENCIES AND THE ROLLING RELEASE (§4.6, §6.2) — the choice: the package
+#    binds to the LIBRARY NUMBER (soname), not to the exact version.
+#    makepkg turns each `libX.so` below into the soname the binary ACTUALLY
+#    uses (`libopus.so=0-64`), read from the binary.  So:
+#      · opus 1.6.0 → 1.6.1 (same soname, same ABI): updates freely;
+#      · a new soname: `pacman -Syu` REFUSES, saying «breaks dependency
+#        'libopus.so=0-64' required by remotix», until the package is
+#        rebuilt.  That is what Arch's own packages do, and §6.2 asks for
+#        it: «better a refused update than one that breaks
+#        silently».
+#    ⛔ The EXACT version (`opus=1.6.1-1`) would block every update of the
+#       library, security ones included, and with it the whole `-Syu`: on a
+#       rolling release that means a machine that no longer updates.
+#    ⇒ Our burden: rebuild at every soname change (OpenSSL, glib,
+#      libei, pipewire, rarely).
+#    ⛔ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): openh264 and svt-av1, the
+#      software fallback, are OUT — svt-av1 was the one without «provides»
+#      that had to be rebuilt at every new version.
 #
-# ⭐ ngtcp2 e nghttp3 DENTRO, statiche, versione fissata (§6.3) — D2 chiusa
-#    («si'», DECISIONI.md §10.6), aggiornamenti di sicurezza a carico nostro.
-#    ⓘ Per la regola di §10.6 («se la distribuzione ce l'ha giusto, si usa il
-#    suo») su Arch si POTREBBE usare quella di sistema: `libngtcp2` e' gia'
-#    1.25 col ponte crypto_ossl, e `libnghttp3` c'e' — basterebbe mettere
-#    `libngtcp2.so libnghttp3.so` nelle depends e togliere build() di quic.
-#    Resta dentro per uniformita' (un solo trasporto da provare su tutte le
-#    famiglie) finche' non si decide diversamente.
+# ⭐ ngtcp2 and nghttp3 INSIDE, static, pinned version (§6.3) — D2 closed
+#    («yes», DECISIONI.md §10.6), security updates are our burden.
+#    ⓘ By the rule of §10.6 («if the distribution has it right, use
+#    theirs») on Arch the system one COULD be used: `libngtcp2` is already
+#    1.25 with the crypto_ossl bridge, and `libnghttp3` is there — it would be
+#    enough to put `libngtcp2.so libnghttp3.so` in depends and drop the quic build().
+#    It stays inside for uniformity (a single transport to test on all
+#    families) until decided otherwise.
 #
-# ⛔ NON entra nel pacchetto (§4.4, §6.4, R14): utenti di prova, sudoers dei
-#    banchi, gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
+# ⛔ NOT in the package (§4.4, §6.4, R14): test users, bench sudoers,
+#    gpu-udev.sh, riavvia-*.sh, ld.so.conf.d, provisiona.sh.
 
 # Maintainer: nicfio <nicfio@gmail.com>
 #
-# ⚠ I PERCORSI DI ARCH: il binario sta in /usr/lib/remotix/, non in
-#   /usr/libexec/remotix/ come dice §6.4 — Arch non usa libexec (namcap:
-#   «ELF file outside of a valid path»).  Unita' e .desktop lo seguono.
+# ⚠ ARCH PATHS: the binary lives in /usr/lib/remotix/, not in
+#   /usr/libexec/remotix/ as §6.4 says — Arch does not use libexec (namcap:
+#   «ELF file outside of a valid path»).  Unit and .desktop follow it.
 
 pkgname=remotix
 pkgver=0.17.0
 pkgrel=3
-pkgdesc='Il desktop Linux nel browser (server: GNOME, KDE, XFCE, LXQt su Wayland)'
+pkgdesc='The Linux desktop in the browser (server: GNOME, KDE, XFCE, LXQt on Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
 license=('LicenseRef-REMOTIX')
@@ -55,74 +55,74 @@ _ngtcp2=1.25.0
 _nghttp3=1.18.0
 depends=(
 	glibc
-	systemd                                   # logind, gestore d'utente, tmpfiles
+	systemd                                   # logind, user manager, tmpfiles
 	pam libpam.so
-	openssl libssl.so libcrypto.so            # >= 3.5: TLS 1.3 con QUIC nativo
-	# ⭐ Fase 18 (`fasi/18-senza-ffmpeg.md`): niente ffmpeg.  Tutto da «extra»,
-	#    `[M]` 30 set: opus 1.6.1, libva 2.24.1 (porta anche libva-drm.so).
-	#    ⛔ Fase 19: niente openh264 e svt-av1 — si codifica solo sulla scheda.
-	opus libopus.so                           # l'audio
-	# ⛔ niente libyuv: la conversione dei colori e' nostra (`src/colori709.c`, fasi/18 §1)
+	openssl libssl.so libcrypto.so            # >= 3.5: TLS 1.3 with native QUIC
+	# ⭐ Phase 18 (`fasi/18-senza-ffmpeg.md`): no ffmpeg.  All from «extra»,
+	#    `[M]` 30 Sep: opus 1.6.1, libva 2.24.1 (also brings libva-drm.so).
+	#    ⛔ Phase 19: no openh264 and svt-av1 — encoding happens only on the GPU.
+	opus libopus.so                           # the audio
+	# ⛔ no libyuv: the colour conversion is ours (`src/colori709.c`, fasi/18 §1)
 	glib2 libglib-2.0.so libgobject-2.0.so libgio-2.0.so
 	libpipewire libpipewire-0.3.so
 	libva libva.so libva-drm.so
-	# ⭐ Fase 19 (`fasi/19-nvidia.md`): Vulkan Video, provata PRIMA di VA-API.
-	#    Il loader si collega; il driver (ICD) e' della scheda: `vulkan-radeon`
-	#    per AMD (RADV), `nvidia-utils` per NVIDIA — `[M]` 1 ott 2026 su Arch
-	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` e'
-	#    un virtuale con piu' fornitori e pacman lo chiederebbe: resta fra gli
-	#    optdepends, e il motore mette quello della scheda che trova (catalogo
+	# ⭐ Phase 19 (`fasi/19-nvidia.md`): Vulkan Video, tried BEFORE VA-API.
+	#    The loader is linked; the driver (ICD) belongs to the GPU: `vulkan-radeon`
+	#    for AMD (RADV), `nvidia-utils` for NVIDIA — `[M]` 1 Oct 2026 on Arch
+	#    vulkan-icd-loader 1.4.357, vulkan-radeon 26.2.3.  ⚠ `vulkan-driver` is
+	#    a virtual with several providers and pacman would ask about it: it stays in
+	#    optdepends, and the engine installs the one for the GPU it finds (catalogue
 	#    2026.10.01.10, `vulkan_scheda`: AMD → vulkan-radeon; NVIDIA: nvidia-utils
-	#    viene col driver, e il motore lo nomina soltanto nel rimedio).
+	#    comes with the driver, and the engine only names it in the remedy).
 	vulkan-icd-loader libvulkan.so
-	libei libei.so                            # >= 1.1: l'input su GNOME e KDE
+	libei libei.so                            # >= 1.1: input on GNOME and KDE
 	libxkbcommon libxkbcommon.so
 	wayland libwayland-client.so
-	mesa                                      # libgbm.so.1 (mesa non la dichiara)
-	# ⭐ Non collegati, ma senza il desktop non arriva (§4.6, §11.1):
-	#    XFCE e LXQt girano sotto labwc, che nessun gruppo di Arch porta;
-	#    wlr-randr serve alla cura della misura su LXQt e XFCE.  ⛔ Come optdepends
-	#    pacman non li installerebbe mai, e R4 («niente a mano») cadrebbe su
-	#    XFCE e LXQt.  Il prezzo: labwc+wlroots anche su GNOME e KDE.
-	#    ⚠ labwc muore senza un carattere scalabile (labwc #2525, leap16-lxqt
-	#    in T1): su Arch labwc dipende da `ttf-font`, e pacman ne porta uno.
-	#    ⛔ Il DESKTOP no: senza desktop lo installa il motore (§10.7).
+	mesa                                      # libgbm.so.1 (mesa does not declare it)
+	# ⭐ Not linked, but without them the desktop does not come up (§4.6, §11.1):
+	#    XFCE and LXQt run under labwc, which no Arch group brings;
+	#    wlr-randr serves the size cure on LXQt and XFCE.  ⛔ As optdepends
+	#    pacman would never install them, and R4 («nothing by hand») would fail on
+	#    XFCE and LXQt.  The price: labwc+wlroots on GNOME and KDE too.
+	#    ⚠ labwc dies without a scalable font (labwc #2525, leap16-lxqt
+	#    in T1): on Arch labwc depends on `ttf-font`, and pacman brings one.
+	#    ⛔ Not the DESKTOP: without a desktop the engine installs it (§10.7).
 	labwc
 	wlr-randr
-	# ⭐ L'AUDIO: il sink e la cattura del suono stanno nel demone PipeWire
-	#    dell'utente, e il gruppo xfce4 di Arch NON lo porta.  `[M]` 29 set,
-	#    arch-xfce col pacchetto -1: «contesto PipeWire non creato … questa
-	#    sessione resta SENZA SUONO».  pipewire-pulse perche' i programmi
-	#    (Firefox, i lettori) suonano con l'API di PulseAudio: senza, il sink
-	#    c'e' e resta muto.  (Plasma li porta gia' tutti e tre.)
-	#    ⚠ pipewire-pulse e' in conflitto con `pulseaudio`: su una macchina che
-	#    usa ancora PulseAudio pacman chiede di toglierlo, e con --noconfirm si
-	#    ferma.  ⇒ Il controllo preliminare del motore (T4) lo deve dire e
-	#    chiedere il consenso: cambia il server audio della macchina.
+	# ⭐ AUDIO: the sink and the sound capture live in the user's PipeWire
+	#    daemon, and Arch's xfce4 group does NOT bring it.  `[M]` 29 Sep,
+	#    arch-xfce with package -1: «contesto PipeWire non creato … questa
+	#    sessione resta SENZA SUONO».  pipewire-pulse because programs
+	#    (Firefox, players) play through the PulseAudio API: without it, the sink
+	#    is there and stays mute.  (Plasma already brings all three.)
+	#    ⚠ pipewire-pulse conflicts with `pulseaudio`: on a machine that
+	#    still uses PulseAudio pacman asks to remove it, and with --noconfirm it
+	#    stops.  ⇒ The engine's preliminary check (T4) must say so and
+	#    ask for consent: it changes the machine's audio server.
 	pipewire
 	wireplumber
 	pipewire-pulse
 )
-makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: da `wayland`, gia' in depends; vulkan-headers: fase 19
+makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: from `wayland`, already in depends; vulkan-headers: phase 19
 optdepends=(
-	'vulkan-radeon: la codifica Vulkan Video sulle schede AMD (RADV), fase 19'
-	'nvidia-utils: la codifica Vulkan Video sulle schede NVIDIA col driver proprietario'
+	'vulkan-radeon: Vulkan Video encoding on AMD GPUs (RADV), phase 19'
+	'nvidia-utils: Vulkan Video encoding on NVIDIA GPUs with the proprietary driver'
 )
 backup=(
 	etc/remotix/utenti-negati
 	etc/pam.d/remotix
 )
 install=remotix.install
-# ⚠ !lto: il prodotto e' misurato senza LTO (fasi 12-16); !debug: niente
-#   pacchetto remotix-debug finche' non c'e' un deposito che lo ospiti.
+# ⚠ !lto: the product is measured without LTO (phases 12-16); !debug: no
+#   remotix-debug package until there is a repository to host it.
 options=('!lto' '!debug')
 source=(
 	"remotix-$pkgver.tar.gz"
 	"https://github.com/ngtcp2/ngtcp2/releases/download/v$_ngtcp2/ngtcp2-$_ngtcp2.tar.xz"
 	"https://github.com/ngtcp2/nghttp3/releases/download/v$_nghttp3/nghttp3-$_nghttp3.tar.xz"
 )
-# ⚠ Il tarball del deposito cambia a ogni commit: costruisci.sh scrive il
-#   commit e la sua sha256 accanto al pacchetto (sorgente.txt).
+# ⚠ The repository tarball changes at every commit: costruisci.sh writes the
+#   commit and its sha256 next to the package (sorgente.txt).
 sha256sums=('SKIP'
             '2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb'
             'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19')
@@ -130,12 +130,12 @@ sha256sums=('SKIP'
 _quic=quic
 
 build() {
-	# R23: i percorsi della costruzione non entrano nel binario (le assert di
-	# ngtcp2/nghttp3 si portano dietro __FILE__: makepkg «reference to $srcdir»)
+	# R23: build paths do not enter the binary (the asserts of
+	# ngtcp2/nghttp3 carry __FILE__ along: makepkg «reference to $srcdir»)
 	export CFLAGS="$CFLAGS -ffile-prefix-map=$srcdir=/usr/src/remotix"
 
-	# ── nghttp3 e ngtcp2: SOLO statiche, in una cartella nostra
-	#    (la stessa ricetta di src/costruzione/quic-statiche.sh)
+	# ── nghttp3 and ngtcp2: static ONLY, in a folder of our own
+	#    (the same recipe as src/costruzione/quic-statiche.sh)
 	local comune=(-GNinja -DCMAKE_BUILD_TYPE=Release
 		-DCMAKE_INSTALL_PREFIX="$srcdir/$_quic" -DCMAKE_INSTALL_LIBDIR=lib
 		-DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_LIB_ONLY=ON
@@ -145,21 +145,21 @@ build() {
 	cmake -B ngtcp2-build -S "ngtcp2-$_ngtcp2" "${comune[@]}" -DENABLE_OPENSSL=ON
 	ninja -C ngtcp2-build install
 	if ls "$srcdir/$_quic"/lib/lib{ngtcp2,nghttp3}*.so* 2>/dev/null; then
-		echo "⛔ ci sono .so di ngtcp2/nghttp3: il binario le userebbe" >&2
+		echo "⛔ there are ngtcp2/nghttp3 .so files: the binary would use them" >&2
 		return 1
 	fi
 
-	# ── REMOTIX.  Le intestazioni e le .a nostre PRIMA di quelle di sistema
-	#    (`libngtcp2` di Arch puo' esserci, la porta curl): CPATH e
-	#    LIBRARY_PATH vengono prima delle cartelle di sistema.
+	# ── REMOTIX.  Our headers and .a files BEFORE the system ones
+	#    (Arch's `libngtcp2` may be there, curl brings it): CPATH and
+	#    LIBRARY_PATH come before the system folders.
 	cd "remotix-$pkgver/src"
 	export CPATH="$srcdir/$_quic/include"
 	export LIBRARY_PATH="$srcdir/$_quic/lib"
 	export PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig"
-	# ⚠ CFLAGS dall'ambiente: il Makefile ha `CFLAGS ?=`, quindi quelli di
-	#   makepkg (FORTIFY, stack-clash, cf-protection) SOSTITUISCONO i suoi; gli
-	#   si rimettono lo standard e gli avvertimenti.  ⛔ Non `make CFLAGS=…`:
-	#   dalla riga di comando i `CFLAGS +=` del Makefile verrebbero ignorati.
+	# ⚠ CFLAGS from the environment: the Makefile has `CFLAGS ?=`, so makepkg's
+	#   (FORTIFY, stack-clash, cf-protection) REPLACE its own; the standard
+	#   and the warnings are added back.  ⛔ Not `make CFLAGS=…`:
+	#   from the command line the Makefile's `CFLAGS +=` would be ignored.
 	export CFLAGS="$CFLAGS -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
 	make dipendenze
 	make pulisci
@@ -168,11 +168,11 @@ build() {
 
 check() {
 	cd "remotix-$pkgver/src"
-	# R13: le funzioni di banco spente nel binario del pacchetto (§4.5)
+	# R13: bench functions switched off in the package binary (§4.5)
 	grep -q '^#define BANCO_ACCESO 0' rcp.c
-	# ngtcp2/nghttp3 davvero dentro, e nessuna libreria mancante
+	# ngtcp2/nghttp3 really inside, and no missing library
 	if ldd ./remotix | grep -E 'ngtcp2|nghttp3|not found'; then
-		echo "⛔ il binario chiede ngtcp2/nghttp3 dinamiche, o librerie che mancano" >&2
+		echo "⛔ the binary asks for dynamic ngtcp2/nghttp3, or for missing libraries" >&2
 		return 1
 	fi
 }
@@ -181,38 +181,38 @@ package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
 	install -Dm644 "$s/pagina.html"      "$pkgdir/usr/share/remotix/pagina.html"
-	# R24 (T8): le versioni delle statiche COLLEGATE, dal pkg-config della
-	#    cartella dove build() le ha installate — per lo SBOM dell'archivio.
-	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config delle .a collegate"}\n' \
+	# R24 (T8): the versions of the static libraries LINKED, from the pkg-config of
+	#    the folder where build() installed them — for the archive's SBOM.
+	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libngtcp2)" \
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libnghttp3)" \
 		>"$pkgdir/usr/share/remotix/incorporate.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
-	# ⭐ D3 chiusa (DECISIONI §10.18): il file e' /etc/pam.d/sshd di Arch (system-remote-login)
-	#   piu' root escluso; il pam_faillock di pambase vale come per ssh (§4.3).
+	# ⭐ D3 closed (DECISIONI §10.18): the file is Arch's /etc/pam.d/sshd (system-remote-login)
+	#   plus root excluded; pambase's pam_faillock applies as for ssh (§4.3).
 	install -Dm644 "$s/remotix.pam.arch" "$pkgdir/etc/pam.d/remotix"
 	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
-	# ⭐ il permesso della cattura di KWin: IDENTICO, byte per byte, a quello
-	#    che scrive `kwin_scrivi_permesso()` (kwin.c:48, main.c) col binario in
-	#    /usr/lib/remotix/remotix — cosi' il programma lo trova uguale e
-	#    non lo riscrive.  ⚠ Il codice va cambiato (§4.4): a esecuzione solo la
-	#    verifica (kwin.c:342), niente scrittura da root in /usr.
+	# ⭐ the KWin capture permission: IDENTICAL, byte for byte, to the one
+	#    that `kwin_scrivi_permesso()` writes (kwin.c:48, main.c) with the binary in
+	#    /usr/lib/remotix/remotix — so the program finds it equal and
+	#    does not rewrite it.  ⚠ The code must change (§4.4): at run time only the
+	#    check (kwin.c:342), no writing as root into /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
-	# ⛔ DECISIONI.md §10.12 — le tre cinture ci sono ma SPENTE: in una
-	#    cartella che nessuno legge.  Le monta il motore col consenso (D4) nei
-	#    percorsi attivi (polkit rules.d, logind.conf.d, sleep.conf.d) e le
-	#    smonta dal suo registro.
-	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d e' 0755 root:root,
-	#    /etc/polkit-1/rules.d 0750 root:polkitd — da sapere per il motore.
+	# ⛔ DECISIONI.md §10.12 — the three belts are there but OFF: in a
+	#    folder nobody reads.  The engine mounts them with consent (D4) in the
+	#    active paths (polkit rules.d, logind.conf.d, sleep.conf.d) and
+	#    unmounts them from its log.
+	#    `[M]` polkit 127-3: /usr/share/polkit-1/rules.d is 0755 root:root,
+	#    /etc/polkit-1/rules.d 0750 root:polkitd — worth knowing for the engine.
 	install -Dm644 "$s/remotix-niente-spegnimento.rules" \
 		"$pkgdir/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules"
 	install -Dm644 "$s/remotix-tasti.conf" \
 		"$pkgdir/usr/share/remotix/cinture/remotix-tasti.conf"
 	install -Dm644 "$a/remotix-niente-sospensione.conf" \
 		"$pkgdir/usr/share/remotix/cinture/remotix-niente-sospensione.conf"
-	# il firewall: il servizio DEFINITO (una descrizione, non una regola: nessuna
-	# porta si apre finche' il motore non lo aggiunge a una zona, D6)
+	# the firewall: the service DEFINED (a description, not a rule: no
+	# port opens until the engine adds it to a zone, D6)
 	install -Dm644 "$a/remotix.firewalld.xml" "$pkgdir/usr/lib/firewalld/services/remotix.xml"
 }

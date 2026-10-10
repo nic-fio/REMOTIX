@@ -14,24 +14,24 @@ import (
 	"time"
 )
 
-// L'installatore è UN programma solo (DECISIONI §10.14): con systemd, logind e firewalld parla
-// dall'interno, via D-Bus (dbus.go); lancia SOLO i programmi di questo elenco chiuso — dove manca
-// un'interfaccia stabile: il gestore di pacchetti e gpasswd/usermod —, col percorso assoluto,
-// e ogni chiamata si annota (nel registro dell'operazione, o nel profilo per «verifica»: R41).
+// The installer is ONE single program (DECISIONI §10.14): it talks to systemd, logind and firewalld
+// from inside, via D-Bus (dbus.go); it launches ONLY the programs of this closed list — where a
+// stable interface is missing: the package manager and gpasswd/usermod —, with the absolute path,
+// and every call is recorded (in the operation's log, or in the profile for «verifica»: R41).
 //
-// ⚠ rpm, dpkg e dpkg-deb stanno nell'elenco perché sono la base dei gestori (l'archivio di rpm non
-// si legge senza di lui; dpkg --audit e --configure -a sono il rimedio di §6.6.3). ffmpeg NON c'è
-// (decisione del coordinatore, 30 set): la prova «la scheda codifica un fotogramma» la fa in 7a il
-// binario di REMOTIX installato (`remotix --prova-codifica`, da fare nel prodotto: §6.5-bis).
+// ⚠ rpm, dpkg and dpkg-deb are in the list because they are the base of the managers (rpm's archive cannot
+// be read without it; dpkg --audit and --configure -a are the remedy of §6.6.3). ffmpeg is NOT there
+// (the coordinator's decision, 30 Sep): the test «the card encodes a frame» is done in 7a by the
+// installed REMOTIX binary (`remotix --prova-codifica`, to be done in the product: §6.5-bis).
 var programmiAmmessi = map[string][]string{
 	"apt-get": {"/usr/bin/apt-get"},
-	// apt-cache: le versioni che l'archivio di REMOTIX offre (madison), per l'aggiornamento (T8)
+	// apt-cache: the versions REMOTIX's repository offers (madison), for upgrading (T8)
 	"apt-cache": {"/usr/bin/apt-cache"},
 	"dnf":       {"/usr/bin/dnf", "/usr/bin/dnf5"},
 	"zypper":    {"/usr/bin/zypper"},
 	"pacman":    {"/usr/bin/pacman"},
-	// pacman-key: il portachiavi di pacman (la chiave dell'archivio di REMOTIX, T8). È lo strumento
-	// ufficiale del gestore: pacman non ha un'interfaccia per le chiavi senza di lui.
+	// pacman-key: pacman's keyring (the key of REMOTIX's repository, T8). It is the manager's official
+	// tool: pacman has no interface for keys without it.
 	"pacman-key": {"/usr/bin/pacman-key"},
 	"rpm":        {"/usr/bin/rpm", "/bin/rpm"},
 	"dpkg":       {"/usr/bin/dpkg"},
@@ -39,15 +39,15 @@ var programmiAmmessi = map[string][]string{
 	"remotix":    {"/usr/libexec/remotix/remotix", "/usr/lib/remotix/remotix"}, // Arch: /usr/lib (PKGBUILD)
 	"gpasswd":    {"/usr/bin/gpasswd", "/usr/sbin/gpasswd", "/bin/gpasswd", "/sbin/gpasswd"},
 	"usermod":    {"/usr/sbin/usermod", "/usr/bin/usermod", "/sbin/usermod"},
-	// ufw: la porta di REMOTIX nel firewall di Ubuntu (T6). ufw non ha un D-Bus: il suo programma è
-	// l'unica interfaccia (lo stesso argomento di pacman-key).
+	// ufw: REMOTIX's port in Ubuntu's firewall (T6). ufw has no D-Bus: its program is
+	// the only interface (the same argument as pacman-key).
 	"ufw": {"/usr/sbin/ufw", "/sbin/ufw"},
 }
 
-// ErrNonAmmesso: il motore non lancia programmi fuori dall'elenco.
+// ErrNonAmmesso: the engine launches no programs outside the list.
 var ErrNonAmmesso = errors.New("program outside the engine's closed list (DECISIONS §10.14)")
 
-// ProgrammiAmmessi: l'elenco, per le prove e per il manuale.
+// ProgrammiAmmessi: the list, for the tests and for the manual.
 func ProgrammiAmmessi() []string {
 	var r []string
 	for n := range programmiAmmessi {
@@ -57,12 +57,12 @@ func ProgrammiAmmessi() []string {
 	return r
 }
 
-// Esecutore lancia un programma dell'elenco e ne restituisce l'uscita, il codice d'uscita e un
-// errore solo se non si è potuto lanciare (exec.ErrNotFound: non c'è — il caso che fa un fatto
-// SCONOSCIUTO, §6.6.7; ErrNonAmmesso: fuori dall'elenco).
+// Esecutore launches a program of the list and returns its output, its exit code and an
+// error only if it could not be launched (exec.ErrNotFound: it is not there — the case that makes a fact
+// SCONOSCIUTO, §6.6.7; ErrNonAmmesso: outside the list).
 type Esecutore func(tempo time.Duration, nome string, argomenti ...string) (uscita string, codice int, err error)
 
-// percorsoAmmesso: il percorso assoluto di un programma dell'elenco, se c'è.
+// percorsoAmmesso: the absolute path of a program of the list, if it is there.
 func percorsoAmmesso(nome string) (string, error) {
 	cand, ok := programmiAmmessi[nome]
 	if !ok {
@@ -76,8 +76,8 @@ func percorsoAmmesso(nome string) (string, error) {
 	return "", exec.ErrNotFound
 }
 
-// eseguiDavvero: percorso assoluto, argomenti fissi, ambiente minimo in lingua C, niente
-// ingresso, tempo massimo; e l'annotazione (R41).
+// eseguiDavvero: absolute path, fixed arguments, minimal environment in the C locale, no
+// input, maximum time; and the record (R41).
 func (a *Ambiente) eseguiDavvero(tempo time.Duration, nome string, argomenti ...string) (string, int, error) {
 	percorso, err := percorsoAmmesso(nome)
 	if err != nil {
@@ -117,20 +117,20 @@ func (a *Ambiente) annota(percorso string, argomenti []string, codice int, err e
 	a.Annota(r)
 }
 
-// GestoreGruppi legge e cambia l'appartenenza ai gruppi.
+// GestoreGruppi reads and changes group membership.
 type GestoreGruppi interface {
-	// Membri: i membri espliciti del gruppo, e se il gruppo esiste.
+	// Membri: the group's explicit members, and whether the group exists.
 	Membri(gruppo string) (membri []string, gid string, esiste bool, err error)
-	// GruppoPrimario: il gid del gruppo principale dell'utente, e se l'utente esiste.
+	// GruppoPrimario: the gid of the user's primary group, and whether the user exists.
 	GruppoPrimario(utente string) (gid string, esiste bool, err error)
 	Aggiungi(utente, gruppo string) error
 	Togli(utente, gruppo string) error
 }
 
-// GestoreUnita abilita, disabilita, accende e spegne le unità di systemd (sul D-Bus).
+// GestoreUnita enables, disables, starts and stops systemd units (over D-Bus).
 type GestoreUnita interface {
-	// Stato: lo stato del file dell'unità (enabled, disabled, static, masked, not-found…), quel che
-	// systemctl is-enabled chiama con lo stesso nome.
+	// Stato: the state of the unit file (enabled, disabled, static, masked, not-found…), what
+	// systemctl is-enabled calls by the same name.
 	Stato(unita string) (string, error)
 	Abilita(unita string) error
 	Disabilita(unita string) error
@@ -139,29 +139,29 @@ type GestoreUnita interface {
 	Avvia(unita string) error
 	Ferma(unita string) error
 	Ricarica(unita string) error
-	// il bersaglio d'avvio (graphical.target / multi-user.target)
+	// the boot target (graphical.target / multi-user.target)
 	Predefinito() (string, error)
 	ImpostaPredefinito(bersaglio string) error
 }
 
-// Sessione: una sessione di logind.
+// Sessione: a logind session.
 type Sessione struct {
 	ID, Utente, Servizio, Stato, Tipo string
 }
 
-// GestoreSessioni: logind, sul D-Bus.
+// GestoreSessioni: logind, over D-Bus.
 type GestoreSessioni interface {
 	Elenco() ([]Sessione, error)
 	Termina(id string) error
-	// Segnale ai processi di UNA sessione (logind KillSession, who=all): resta dentro la sessione.
+	// Segnale to the processes of ONE session (logind KillSession, who=all): it stays inside the session.
 	Segnale(id string, segnale int32) error
-	// Grafici: quanti processi del desktop ha la persona nel suo gestore d'utente.
+	// Grafici: how many desktop processes the person has in their user manager.
 	Grafici(utente string) (int, error)
-	// ChiudiGrafica: ferma le unità del desktop nel gestore d'utente (grafica_utente.go).
+	// ChiudiGrafica: stops the desktop's units in the user manager (grafica_utente.go).
 	ChiudiGrafica(utente string) ([]string, error)
 }
 
-// GestoreFirewall apre e chiude una porta. Oggi solo firewalld (§6.6.4, mandato di T4).
+// GestoreFirewall opens and closes a port. Today only firewalld (§6.6.4, T4's mandate).
 type GestoreFirewall interface {
 	Nome() string // "firewalld", "ufw", "nftables", "none"
 	ZonaPredefinita() (string, error)
@@ -170,22 +170,22 @@ type GestoreFirewall interface {
 	Togli(zona, porta string, permanente bool) error
 }
 
-// Ambiente è tutto quel che il motore tocca o legge della macchina. Le prove ne costruiscono uno
-// finto sotto una cartella; il motore non sa la differenza.
+// Ambiente is everything the engine touches or reads of the machine. The tests build a fake one
+// under a folder; the engine does not know the difference.
 type Ambiente struct {
-	Radice    string // "/" sulla macchina vera; per leggere /etc, /sys, /proc, /usr, /var/lib
+	Radice    string // "/" on the real machine; for reading /etc, /sys, /proc, /usr, /var/lib
 	Esegui    Esecutore
-	Bus       *Bus // D-Bus di sistema (nil nelle prove)
+	Bus       *Bus // system D-Bus (nil in the tests)
 	Famiglia  string
 	Gruppi    GestoreGruppi
 	Unita     GestoreUnita
 	Firewall  GestoreFirewall
 	Pacchetti Gestore
 	Sessioni  GestoreSessioni
-	Annota    func(riga string) // ogni programma lanciato (R41); nil = nessuno ascolta
+	Annota    func(riga string) // every program launched (R41); nil = nobody listens
 }
 
-// P è un percorso della macchina visto dalla radice dell'ambiente.
+// P is a machine path seen from the environment's root.
 func (a *Ambiente) P(percorso string) string {
 	if a.Radice == "" || a.Radice == "/" {
 		return percorso
@@ -193,7 +193,7 @@ func (a *Ambiente) P(percorso string) string {
 	return filepath.Join(a.Radice, percorso)
 }
 
-// AmbienteVero è la macchina su cui il motore gira.
+// AmbienteVero is the machine the engine runs on.
 func AmbienteVero() *Ambiente {
 	a := &Ambiente{Radice: "/", Bus: &Bus{}}
 	a.Esegui = a.eseguiDavvero
@@ -208,7 +208,7 @@ func AmbienteVero() *Ambiente {
 	return a
 }
 
-// LeggiGruppi legge un file nel formato di /etc/group: nome → (gid, membri).
+// LeggiGruppi reads a file in the /etc/group format: name → (gid, members).
 func LeggiGruppi(percorso string) (map[string][2]string, error) {
 	f, err := os.Open(percorso)
 	if err != nil {
@@ -227,7 +227,7 @@ func LeggiGruppi(percorso string) (map[string][2]string, error) {
 	return r, s.Err()
 }
 
-// DividiMembri: "a,b,,c" → [a b c], ordinati.
+// DividiMembri: "a,b,,c" → [a b c], sorted.
 func DividiMembri(s string) []string {
 	var m []string
 	for _, x := range strings.Split(s, ",") {
@@ -239,7 +239,7 @@ func DividiMembri(s string) []string {
 	return m
 }
 
-// LeggiUtente cerca un utente in un file nel formato di /etc/passwd e ne dà il gid.
+// LeggiUtente looks up a user in a file in the /etc/passwd format and gives their gid.
 func LeggiUtente(percorso, utente string) (gid string, esiste bool, err error) {
 	f, err := os.Open(percorso)
 	if err != nil {
@@ -256,9 +256,9 @@ func LeggiUtente(percorso, utente string) (gid string, esiste bool, err error) {
 	return "", false, s.Err()
 }
 
-// gruppiVeri: si legge /etc/group, si cambia con gpasswd (che tiene anche gshadow e la serratura
-// dei file dei conti: non c'è un'interfaccia D-Bus stabile per i gruppi locali). Solo i gruppi
-// locali: sono quelli che REMOTIX tocca (§6.4).
+// gruppiVeri: /etc/group is read, changed with gpasswd (which also keeps gshadow and the lock
+// of the account files: there is no stable D-Bus interface for local groups). Only local
+// groups: they are the ones REMOTIX touches (§6.4).
 type gruppiVeri struct{ a *Ambiente }
 
 func (g *gruppiVeri) Membri(gruppo string) ([]string, string, bool, error) {
@@ -282,8 +282,8 @@ func (g *gruppiVeri) Togli(utente, gruppo string) error {
 	return eseguiOErrore(g.a, "gpasswd", "-d", utente, gruppo)
 }
 
-// firewallNonFatto: nftables è riconosciuto, ma il motore non lo sa ancora cambiare (mandato di
-// T4): ogni cambio restituisce RX-FW-004, e il piano lo dichiara prima. (ufw lo sa, da T6.)
+// firewallNonFatto: nftables is recognised, but the engine cannot change it yet (T4's
+// mandate): every change returns RX-FW-004, and the plan declares it beforehand. (ufw can, since T6.)
 type firewallNonFatto struct{ nome string }
 
 func (f *firewallNonFatto) Nome() string                     { return f.nome }
@@ -294,22 +294,22 @@ func (f *firewallNonFatto) HaPorta(string, string, bool) (bool, error) {
 func (f *firewallNonFatto) Aggiungi(string, string, bool) error { return Errore("RX-FW-004", f.nome) }
 func (f *firewallNonFatto) Togli(string, string, bool) error    { return Errore("RX-FW-004", f.nome) }
 
-// firewallUfw: ufw acceso (T6). Col suo programma (elenco chiuso); un livello solo — le regole di
-// ufw sono vive e permanenti insieme: «vive» si legge come «permanente» e non si cambia da sola.
-// La regola: il profilo dell'applicazione «REMOTIX» (il pacchetto .deb lo mette in
-// /etc/ufw/applications.d/remotix) se c'è e la porta è la sua, altrimenti la porta.
+// firewallUfw: ufw running (T6). With its program (closed list); a single level — ufw's rules
+// are live and permanent together: «live» reads as «permanent» and does not change by itself.
+// The rule: the application profile «REMOTIX» (the .deb package puts it in
+// /etc/ufw/applications.d/remotix) if it is there and the port is its own, otherwise the port.
 type firewallUfw struct{ a *Ambiente }
 
 func (f *firewallUfw) Nome() string                     { return "ufw" }
 func (f *firewallUfw) ZonaPredefinita() (string, error) { return "", nil }
 
-// Conosce: il profilo del servizio c'è (il nome del file è quello del servizio).
+// Conosce: the service profile is there (the file name is the service's).
 func (f *firewallUfw) Conosce(servizio string) (bool, error) {
 	_, err := os.Stat(f.a.P("/etc/ufw/applications.d/" + servizio))
 	return err == nil, nil
 }
 
-// ufwRegola: «servizio:remotix» ⇒ «REMOTIX» (il nome del profilo); «7447/tcp» resta com'è.
+// ufwRegola: «servizio:remotix» ⇒ «REMOTIX» (the profile name); «7447/tcp» stays as it is.
 func ufwRegola(porta string) string {
 	if s := servizioDi(porta); s != "" {
 		return strings.ToUpper(s)
@@ -317,7 +317,7 @@ func ufwRegola(porta string) string {
 	return porta
 }
 
-// HaPorta: la regola è fra quelle aggiunte (`ufw show added`, che risponde anche a ufw spento).
+// HaPorta: the rule is among those added (`ufw show added`, which answers even with ufw off).
 func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
 	out, c, err := f.a.Esegui(time.Minute, "ufw", "show", "added")
 	if err != nil {
@@ -337,7 +337,7 @@ func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
 
 func (f *firewallUfw) Aggiungi(_, porta string, permanente bool) error {
 	if !permanente {
-		return nil // un livello solo: la regola la mette il passo «permanente»
+		return nil // a single level: the rule is put by the «permanent» step
 	}
 	return eseguiOErrore(f.a, "ufw", "allow", ufwRegola(porta))
 }
@@ -349,8 +349,8 @@ func (f *firewallUfw) Togli(_, porta string, permanente bool) error {
 	return eseguiOErrore(f.a, "ufw", "delete", "allow", ufwRegola(porta))
 }
 
-// scegliFirewall: quello acceso. firewalld risponde sul bus; ufw si dice acceso nel suo file;
-// nftables come unità attiva.
+// scegliFirewall: the running one. firewalld answers on the bus; ufw says it is on in its file;
+// nftables as an active unit.
 func scegliFirewall(a *Ambiente) GestoreFirewall {
 	if fw := (&firewalldDBus{a.Bus}); fw.Acceso() {
 		return fw

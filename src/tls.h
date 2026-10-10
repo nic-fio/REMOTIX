@@ -1,25 +1,25 @@
 /*
- * tls.h — i due contesti TLS, uno per ascoltatore.
+ * tls.h — the two TLS contexts, one per listener.
  *
  * ---------------------------------------------------------------------------
- * ⛔ SONO DUE PERCHE' I CERTIFICATI SONO DUE (`RCP.md` §4.1-bis)
+ * ⛔ THERE ARE TWO BECAUSE THERE ARE TWO CERTIFICATES (`RCP.md` §4.1-bis)
  *
- *   quello di QUIC   presenta il certificato BREVE, e si rifa' a ogni
- *                    rotazione;
- *   quello del TCP   presenta il LONGEVO, e non si rifa' quasi mai.
+ *   the QUIC one    presents the SHORT certificate, and is rebuilt at every
+ *                   rotation;
+ *   the TCP one     presents the LONG-LIVED one, and is almost never rebuilt.
  *
- * ⚠ Un solo `SSL_CTX` per tutt'e due sarebbe il difetto di B13.1 scritto in un
- *   punto in cui nessuno lo cerca.
+ * ⚠ A single `SSL_CTX` for both would be the defect of B13.1 written in a
+ *   place where nobody looks for it.
  *
  * ---------------------------------------------------------------------------
- * ⭐ PERCHE' OPENSSL E NON BORINGSSL
+ * ⭐ WHY OPENSSL AND NOT BORINGSSL
  *
- * Il banco B2 ha misurato con BoringSSL, perche' e' quel che l'esempio di
- * ngtcp2 monta di serie.  ⛔ Nel prodotto la pila e' `ngtcp2_crypto_ossl`
- * sull'OpenSSL di sistema (3.5, che porta l'API QUIC nativa): e' `CODER.md`
- * §4.1 — dipendere, non riscrivere, e nemmeno impacchettare una seconda
- * libreria di crittografia dentro il binario.  ⚠ E' un cambiamento di pila
- * rispetto alla misura di B2: va dichiarato, non dato per equivalente.
+ * Bench B2 measured with BoringSSL, because that is what the ngtcp2 example
+ * builds with by default.  ⛔ In the product the stack is `ngtcp2_crypto_ossl`
+ * on the system OpenSSL (3.5, which carries the native QUIC API): this is
+ * `CODER.md` §4.1 — depend, do not rewrite, and do not bundle a second
+ * cryptography library inside the binary either.  ⚠ It is a change of stack
+ * compared to B2's measurement: it must be declared, not taken as equivalent.
  */
 #ifndef REMOTIX_TLS_H
 #define REMOTIX_TLS_H
@@ -27,10 +27,10 @@
 #include <openssl/ssl.h>
 #include <stdbool.h>
 
-/* Il contesto per QUIC: ALPN `h3`, 0-RTT SPENTO, certificato di sessione. */
+/* The QUIC context: ALPN `h3`, 0-RTT OFF, session certificate. */
 SSL_CTX *tls_contesto_quic(const char *pem, const char *key);
 
-/* Il contesto per la pagina in TCP: ALPN `http/1.1`, certificato longevo. */
+/* The context for the page over TCP: ALPN `http/1.1`, long-lived certificate. */
 SSL_CTX *tls_contesto_pagina(const char *pem, const char *key);
 
 #endif

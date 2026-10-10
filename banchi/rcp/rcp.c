@@ -1,23 +1,23 @@
 /*
- * rcp.c — la stretta di mano di RCP/1, lato server.
+ * rcp.c — the RCP/1 handshake, server side.
  *
- * Le regole che seguono hanno tutte un numero di paragrafo accanto: chi le
- * cambia deve cambiare `RCP.md` per primo, o i due si separano in silenzio.
+ * Every rule below carries a paragraph number next to it: whoever changes one
+ * must change `RCP.md` first, or the two drift apart in silence.
  */
 #include "rcp.h"
 
-#include <errno.h> /* §4.4-bis: «non c'e' ancora nessun file» e «non ho potuto
-                    * leggerlo» sono due fatti diversi, e a distinguerli e' il
-                    * solo `errno` (`LEZIONI.md` §1.9 regola 1) */
+#include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
+                    * read it» are two different facts, and what tells them
+                    * apart is `errno` alone (`LEZIONI.md` §1.9 rule 1) */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h> /* §4.4-bis: il file dei ban porta un'ora ASSOLUTA,
-                    * perche' `ora` e' monotona e riparte a ogni processo */
+#include <time.h> /* §4.4-bis: the ban file carries an ABSOLUTE time,
+                    * because `ora` is monotonic and restarts with every process */
 
 /* ------------------------------------------------------------------------ */
-/* I tipi del canale di controllo — §7.1                                     */
+/* The control channel types — §7.1                                          */
 enum {
 	T_CIAO = 0x0001,
 	T_ECCOMI = 0x0002,
@@ -26,54 +26,54 @@ enum {
 	T_RESPINTO = 0x0005,
 	T_ATTACCA = 0x0006,
 	T_SESSIONE = 0x0007,
-	/* §7.2 — la FORMA del cursore, server → client, sul canale di controllo
-	 * (§5).  ⚠ La POSIZIONE non viaggia mai in questo verso: e' del client, che
-	 * disegna il puntatore da se' (`SPECIFICHE.md` §7.1). */
+	/* §7.2 — the cursor SHAPE, server → client, on the control channel
+	 * (§5).  ⚠ The POSITION never travels in this direction: it belongs to the
+	 * client, which draws the pointer itself (`SPECIFICHE.md` §7.1). */
 	T_CURSORE_FORMA = 0x000A,
 	T_CONGEDO = 0x000C,
-	/* ⭐ §5.2, §7.1: «il client chiede una chiave».  Servito dal 12 agosto
-	 * 2026, insieme al canale video: finche' il video non c'era, questo tipo
-	 * cadeva nel `default` e faceva **perdere la sessione** a un client
-	 * conforme che avesse visto un buco — il prezzo che il registro dichiarava
-	 * («la fase 1 non lo serve ancora»). */
+	/* ⭐ §5.2, §7.1: «the client asks for a keyframe».  Served since 12 Aug
+	 * 2026, together with the video channel: while there was no video, this type
+	 * fell into the `default` and made a conforming client that had seen a gap
+	 * **lose the session** — the price the log declared
+	 * («phase 1 does not serve it yet»). */
 	T_RICHIEDI_CHIAVE = 0x000D,
-	/* ⭐ §7.6, 15 agosto 2026: «l'utente vuole uscire».  ⛔ Non e' il
-	 * `CONGEDO`, che lascia la sessione viva: questo la FINISCE. */
+	/* ⭐ §7.6, 15 Aug 2026: «the user wants to leave».  ⛔ It is not the
+	 * `CONGEDO`, which leaves the session alive: this one ENDS it. */
 	T_TERMINA_SESSIONE = 0x0011,
-	/* ⭐ §7.1 — «il client chiede una tela di un'altra misura», e la risposta
-	 * `TELA` che ne dichiara l'esito.  ⛔ Serviti dal 14 agosto 2026: prima
-	 * `ADATTA_TELA` cadeva nel `default` e faceva **perdere la sessione** a un
-	 * client conforme, e `TELA` non veniva spedito **da nessuna riga** —
-	 * `rcp_tela_adattata_ora()` cambiava lo stato e scriveva nel registro, ma sul
-	 * filo non usciva niente.  E' la coppia che `DECISIONI.md` §5.0-sexies
-	 * accende. */
+	/* ⭐ §7.1 — «the client asks for a canvas of another size», and the answer
+	 * `TELA` that declares the outcome.  ⛔ Served since 14 Aug 2026: before,
+	 * `ADATTA_TELA` fell into the `default` and made a conforming client **lose
+	 * the session**, and `TELA` was sent **by no line at all** —
+	 * `rcp_tela_adattata_ora()` changed the state and wrote to the log, but
+	 * nothing went out on the wire.  It is the pair that `DECISIONI.md` §5.0-sexies
+	 * switches on. */
 	T_ADATTA_TELA = 0x000B,
 	T_TELA = 0x000E,
-	/* ⛔⭐ §7.1 — «la vista e' cambiata: nuove larghezza e altezza».  Servita
-	 *     dal 16 agosto 2026 (fase 6, sottofase 6.4): prima cadeva nel `default`
-	 *     con la riga «la fase 1 non lo serve ancora», e il prezzo era scritto
-	 *     li' per intero — **un client conforme che stringe la finestra perde la
-	 *     sessione**, cioe' alla lettera il sintomo che il rilievo R1.17 di §7.1
-	 *     e' stato scritto per rendere impossibile.
+	/* ⛔⭐ §7.1 — «the view has changed: new width and height».  Served
+	 *     since 16 Aug 2026 (phase 6, sub-phase 6.4): before, it fell into the
+	 *     `default` with the line «phase 1 does not serve it yet», and the price
+	 *     was written there in full — **a conforming client that narrows the
+	 *     window loses the session**, that is, literally the symptom that finding
+	 *     R1.17 of §7.1 was written to make impossible.
 	 *
-	 * ⚠ E quel che fa e' poco per una ragione dichiarata, non per pigrizia: §7.1
-	 *   dice che la vista **NON DEVE** far cambiare la tela e che «in RCP/1 non
-	 *   cambia nemmeno la misura di quel che si codifica».  ⇒ Si convalida, si
-	 *   tiene e si scrive.  La tela e' della SESSIONE, la vista della
-	 *   CONNESSIONE. */
+	 * ⚠ And what it does is little for a declared reason, not out of laziness:
+	 *   §7.1 says the view **MUST NOT** change the canvas and that «in RCP/1 not
+	 *   even the size of what is encoded changes».  ⇒ It is validated, kept and
+	 *   logged.  The canvas belongs to the SESSION, the view to the
+	 *   CONNECTION. */
 	T_VISTA = 0x0008,
-	/* ⭐ §7.1 `0x0009` — «la disposizione di tastiera e' cambiata».  ⛔ Servito
-	 *    dal 16 agosto 2026: prima cadeva nel `default` e CHIUDEVA la sessione
-	 *    a un client conforme, che e' il gemello esatto del difetto di `VISTA`.
-	 *    Attuata `DECISIONI.md` §5-bis.7, e' il messaggio con cui la tastiera
-	 *    si cambia **senza staccarsi**. */
+	/* ⭐ §7.1 `0x0009` — «the keyboard layout has changed».  ⛔ Served
+	 *    since 16 Aug 2026: before, it fell into the `default` and CLOSED the
+	 *    session of a conforming client, which is the exact twin of the `VISTA`
+	 *    defect.  It carries out `DECISIONI.md` §5-bis.7, and it is the message
+	 *    with which the keyboard is changed **without detaching**. */
 	T_DISPOSIZIONE = 0x0009,
 	T_BANCO_MARCA = 0x000F,
 	T_BANCO_ESITO = 0x0010,
 };
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ I TIPI DEL CANALE DI INPUT — §7.3, e il byte alto e' 0x01 (§2.5)        */
+/* ⭐ THE INPUT CHANNEL TYPES — §7.3, and the high byte is 0x01 (§2.5)        */
 enum {
 	T_PUNTATORE = 0x0101,
 	T_PULSANTE = 0x0102,
@@ -82,63 +82,63 @@ enum {
 	T_POSIZIONE_TASTO = 0x0105,
 };
 
-/* ⛔ QUANTO OCCUPA IL CORPO DI CIASCUNO — §7.3, e i due campi comuni davanti.
+/* ⛔ HOW LONG EACH BODY IS — §7.3, with the two common fields in front.
  *
- *   u32 id + u64 istante                              = 12  (tutti)
+ *   u32 id + u64 istante                              = 12  (all)
  *   PUNTATORE       + u32 x + u32 y                   = 20
  *   PULSANTE        + u16 codice + u8 premuto         = 15
  *   ROTELLA         + i32 asse_x + i32 asse_y         = 20
  *   LETTERA         + u32 carattere                   = 16
  *   POSIZIONE_TASTO + u16 codice + u8 premuto         = 15
  *
- * ⛔ §6.0: nessun campo e' allineato e nessun riempimento e' ammesso — quindi
- *    15 e' quindici, non sedici.  E' esattamente la forma del difetto corretto
- *    in §6.2 il 9 agosto 2026 (i «quattro byte che fanno tornare i conti»), e
- *    su un messaggio di quindici byte una `struct` C ne conterebbe sedici su
- *    ogni compilatore che questo progetto usa. */
+ * ⛔ §6.0: no field is aligned and no padding is allowed — so
+ *    15 is fifteen, not sixteen.  It is exactly the shape of the defect fixed
+ *    in §6.2 on 9 Aug 2026 (the «four bytes that make the numbers add up»), and
+ *    on a fifteen-byte message a C `struct` would hold sixteen on
+ *    every compiler this project uses. */
 /* ------------------------------------------------------------------------ */
-/* ⭐ I TIPI DEL CANALE APPUNTI — §7.4, e il byte alto e' 0x02 (§2.5)         */
+/* ⭐ THE CLIPBOARD CHANNEL TYPES — §7.4, and the high byte is 0x02 (§2.5)    */
 enum {
-	T_APPUNTI_ANNUNCIO = 0x0201, /* «ho del testo nuovo» */
-	T_APPUNTI_CHIEDI = 0x0202,   /* «mandamelo» */
+	T_APPUNTI_ANNUNCIO = 0x0201, /* «I have new text» */
+	T_APPUNTI_CHIEDI = 0x0202,   /* «send it to me» */
 	T_APPUNTI_TESTO = 0x0203,    /* UTF-8 */
 };
 
-/* ⛔ QUANTO OCCUPA IL CORPO DI CIASCUNO — §7.4.
+/* ⛔ HOW LONG EACH BODY IS — §7.4.
  *
- *   ANNUNCIO  u32 trasferimento + u32 lunghezza        = 8, FISSA
- *   CHIEDI    u32 trasferimento                        = 4, FISSA
- *   TESTO     u32 trasferimento + byte fino alla fine  = 4 + n, VARIABILE
+ *   ANNUNCIO  u32 trasferimento + u32 lunghezza        = 8, FIXED
+ *   CHIEDI    u32 trasferimento                        = 4, FIXED
+ *   TESTO     u32 trasferimento + bytes to the end     = 4 + n, VARIABLE
  *
- * ⛔⭐ E LA SECONDA LUNGHEZZA NON C'E', ed e' una correzione del 9 agosto 2026
- *     (rilievo R1.20): `APPUNTI_TESTO` portava un `u32 lunghezza` **dentro** un
- *     messaggio che ha gia' la sua lunghezza nell'inquadratura di §6.1 — due
- *     verita' sullo stesso fatto, che e' il difetto che §2.2 vieta con quelle
- *     parole.  ⇒ Il testo si legge **fino alla fine del messaggio**, e il tetto
- *     e' quello di §5.4. */
+ * ⛔⭐ AND THE SECOND LENGTH IS NOT THERE, and it is a fix of 9 Aug 2026
+ *     (finding R1.20): `APPUNTI_TESTO` carried a `u32 lunghezza` **inside** a
+ *     message that already has its length in the framing of §6.1 — two
+ *     truths about the same fact, which is the defect §2.2 forbids in those
+ *     words.  ⇒ The text is read **up to the end of the message**, and the
+ *     ceiling is the one of §5.4. */
 #define A_ANNUNCIO 8u
 #define A_CHIEDI 4u
 #define A_TESTO_MINIMO 4u
 
-/* ⛔ Quanti stream del canale appunti si tengono aperti insieme.
+/* ⛔ How many clipboard channel streams are kept open at once.
  *
- * §2.5 ne vuole «uno **per trasferimento**», e non pone un tetto al numero di
- * trasferimenti: il tetto lo pone questo modulo, perche' ogni stream aperto e'
- * un accumulo che vive nella sessione.  ⚠ Otto e' largo: nel verso client →
- * sessione un trasferimento e' un annuncio e un testo, e piu' di due o tre
- * insieme vuol dire che qualcuno tiene giu' la copia.
+ * §2.5 wants «one **per transfer**», and sets no ceiling on the number of
+ * transfers: the ceiling is set by this module, because every open stream is
+ * a buffer that lives in the session.  ⚠ Eight is generous: in the client →
+ * session direction a transfer is one announcement and one text, and more than
+ * two or three at once means someone is holding the copy key down.
  *
- * ⛔ E quando la tabella e' piena NON si chiude la sessione: si butta il piu'
- *    vecchio SENZA byte in sospeso, e ⛔ **si scrive nel registro** (§3: «ogni
- *    tolleranza va scritta nel registro; una tolleranza silenziosa e'
- *    indistinguibile da un difetto»).  ⚠ Se sono tutti a meta' di un messaggio,
- *    allora quella e' una violazione vera e si congeda: significa che il client
- *    apre stream e non li finisce. */
+ * ⛔ And when the table is full the session is NOT closed: the oldest one
+ *    WITHOUT pending bytes is thrown away, and ⛔ **it is written to the log**
+ *    (§3: «every tolerance must be written to the log; a silent tolerance is
+ *    indistinguishable from a defect»).  ⚠ If they are all halfway through a
+ *    message, then that is a real violation and the client is sent away: it
+ *    means the client opens streams and does not finish them. */
 #define A_STREAM_MAX 8
 
-/* ⛔ Il fondo delle richieste di incolla, in millisecondi — vedi il riquadro in
- *    `rcp_tempo()`.  ⚠ Piu' LARGO dei 4000 ms del figlio, e la ragione e'
- *    scritta li': i due fondi pagano due debiti diversi. */
+/* ⛔ The backstop for paste requests, in milliseconds — see the box in
+ *    `rcp_tempo()`.  ⚠ WIDER than the child's 4000 ms, and the reason is
+ *    written there: the two backstops pay two different debts. */
 #define APPUNTI_FONDO 8000
 
 #define I_COMUNI 12u
@@ -148,29 +148,29 @@ enum {
 #define I_LETTERA (I_COMUNI + 4u)
 #define I_POSIZIONE (I_COMUNI + 3u)
 
-/* ⛔⭐ L'ACCUMULO DELL'INPUT E' PICCOLO **PER COSTRUZIONE**, e non e' una
- *     scorciatoia: e' §6.1 applicata prima di allocare, portata all'estremo che
- *     questo canale permette.
+/* ⛔⭐ THE INPUT BUFFER IS SMALL **BY CONSTRUCTION**, and it is not a
+ *     shortcut: it is §6.1 applied before allocating, taken to the extreme this
+ *     channel allows.
  *
- *     Sul canale di controllo la lunghezza dichiarata si puo' conoscere solo
- *     leggendo il corpo (le capacita' di `CIAO` sono un elenco), quindi
- *     l'accumulo cresce fino a 1 MiB.  ⛔ Qui no: i cinque tipi di §7.3 hanno
- *     tutti una lunghezza FISSA e nota dal solo `tipo`.  ⇒ Appena i sei byte
- *     dell'intestazione sono arrivati si sa gia' se la lunghezza e' quella
- *     giusta, e una lunghezza sbagliata e' `ERRORE_PROTOCOLLO` PRIMA che un
- *     solo byte di corpo venga accumulato (§6.1: «la lunghezza si controlla
- *     prima di allocare»).
+ *     On the control channel the declared length can only be known by
+ *     reading the body (the capabilities of `CIAO` are a list), so the
+ *     buffer grows up to 1 MiB.  ⛔ Not here: the five types of §7.3 all
+ *     have a FIXED length known from the `tipo` alone.  ⇒ As soon as the six
+ *     header bytes have arrived it is already known whether the length is the
+ *     right one, and a wrong length is `ERRORE_PROTOCOLLO` BEFORE a
+ *     single byte of body is buffered (§6.1: «the length is checked
+ *     before allocating»).
  *
- * ⭐ Da cui: 6 + 20 = 26 byte bastano per sempre, e stanno nella sessione senza
- *    una `malloc`.  Chi annuncia un megabyte su questo stream non ottiene un
- *    megabyte: ottiene un congedo dopo sei byte. */
+ * ⭐ Hence: 6 + 20 = 26 bytes are enough forever, and they fit in the session
+ *    without a `malloc`.  Whoever announces a megabyte on this stream does not
+ *    get a megabyte: they get a farewell after six bytes. */
 #define I_ACCUMULO 32u
 
-/* §7.1 — il secondo di grazia dopo un cambio di tela, in millisecondi.
- * ⚠ Il confronto e' `<=`: «per un secondo» comprende il millesimo 1000. */
+/* §7.1 — the second of grace after a canvas change, in milliseconds.
+ * ⚠ The comparison is `<=`: «for one second» includes millisecond 1000. */
 #define TELA_GRAZIA 1000
 
-/* §7.5 — l'esito della funzione di banco. */
+/* §7.5 — the outcome of the bench function. */
 enum {
 	BANCO_ACCETTATA = 1,
 	BANCO_RIFIUTATA = 2,
@@ -178,177 +178,184 @@ enum {
 	BANCO_RITARDO_FUORI_LIMITI = 2,
 };
 
-/* ⛔ §7.5 regola 1: la funzione di banco e' SPENTA salvo che l'amministratore
- * non l'accenda — invariante I6, e qui letteralmente dipinge sopra il desktop
- * di qualcuno.  In fase 1 non esiste ancora una configurazione, quindi e'
- * spenta e basta: e' lo stato predefinito di ogni server, ed e' quello che B5
- * mette alla prova. */
+/* ⛔ §7.5 rule 1: the bench function is OFF unless the administrator
+ * switches it on — invariant I6, and here it literally paints over someone's
+ * desktop.  In phase 1 there is no configuration yet, so it is
+ * simply off: it is the default state of every server, and it is what B5
+ * puts to the test. */
 #define BANCO_ACCESO 0
-/* §7.5 regola 4: `ritardo_ms` DEVE stare fra 0 e 10 000. */
+/* §7.5 rule 4: `ritardo_ms` MUST be between 0 and 10 000. */
 #define BANCO_RITARDO_MAX 10000
 
-/* I tetti di §4.6, in millisecondi. */
+/* The ceilings of §4.6, in milliseconds. */
 #define TETTO_CIAO 5000
 #define TETTO_CREDENZIALI 60000
-/* ⛔ DIECI secondi, non sessanta — rilievo R9.9, 10 agosto 2026.
+/* ⛔ TEN seconds, not sixty — finding R9.9, 10 Aug 2026.
  *
- * §4.6, tabella, terza riga: «`AMMESSO` spedito → `ATTACCA` ricevuto → 10 s».
- * Qui c'era 60 000, cioe' lo stesso numero della riga sopra: la forma del
- * difetto che si copia dalla riga precedente e non si rilegge.
+ * §4.6, table, third row: «`AMMESSO` sent → `ATTACCA` received → 10 s».
+ * Here there was 60 000, that is the same number as the row above: the shape
+ * of the defect that is copied from the previous row and not reread.
  *
- * ⚠ Il tetto esiste perche' «una connessione che si ferma a meta' stretta di
- *   mano tiene un posto e non lo dichiara a nessuno» (§4.6): a 60 000 quel
- *   posto — quello di §4.4-bis e quello del registro delle sessioni non ancora
- *   preso — si teneva SEI VOLTE piu' a lungo di quel che il documento concede.
+ * ⚠ The ceiling exists because «a connection that stops halfway through the
+ *   handshake holds a slot and declares it to no one» (§4.6): at 60 000 that
+ *   slot — the one of §4.4-bis and the one of the registry of sessions not yet
+ *   taken — was held SIX TIMES longer than the document allows.
  *
- * ⛔ E nessun banco lo vedeva: B6 (i tre tetti) non e' ancora scritto, e in
- *    `01-b5-violazioni.py` non c'e' nessun caso sui tetti.  Il difetto stava
- *    esattamente dove il banco non guarda. */
+ * ⛔ And no bench saw it: B6 (the three ceilings) is not written yet, and in
+ *    `01-b5-violazioni.py` there is no case on the ceilings.  The defect sat
+ *    exactly where the bench does not look. */
 #define TETTO_ATTACCA 10000
-/* §4.4-bis: il ritardo fisso, e vale ANCHE per AMMESSO. */
+/* §4.4-bis: the fixed delay, and it applies to AMMESSO TOO. */
 #define RITARDO_FISSO 1000
 
-/* ⛔⭐ IL TETTO DEL VERDETTO — 12 agosto 2026, `DECISIONI.md` §1.10.
+/* ⛔⭐ THE VERDICT CEILING — 12 Aug 2026, `DECISIONI.md` §1.10.
  *
- * Non e' un tetto di `RCP.md` §4.6: quei tre misurano il CLIENT, e questo
- * misura NOI.  ⛔ Esiste perche' dal 12 agosto la risposta di PAM arriva da un
- * altro processo, e un altro processo puo' morire: senza questo numero una
- * sessione resterebbe in `attesa-verdetto` per sempre, cioe' un client appeso
- * a un silenzio — precisamente cio' che §8.1 vieta.
+ * It is not a ceiling of `RCP.md` §4.6: those three measure the CLIENT, and this
+ * one measures US.  ⛔ It exists because since 12 August the PAM answer comes
+ * from another process, and another process can die: without this number a
+ * session would stay in `attesa-verdetto` forever, that is a client hanging
+ * on a silence — precisely what §8.1 forbids.
  *
- * ⚠ E' la SECONDA rete, non la prima: l'aiutante ha gia' la sua scadenza a 8 s
- *   (`aiutante.c`).  ⛔ Sono due apposta, e vivono in due processi diversi: la
- *   prima non puo' scattare se a essere guasto e' proprio chi la tiene.
- *   Dodici secondi, cioe' piu' della sua, cosi' nel caso normale il no arriva
- *   da li' — con la sua riga di registro — e questo tetto resta l'ultima
- *   parola invece che la prima.
+ * ⚠ It is the SECOND net, not the first: the helper already has its own
+ *   deadline at 8 s (`aiutante.c`).  ⛔ There are two on purpose, and they live
+ *   in two different processes: the first cannot fire if the one at fault is
+ *   precisely the one holding it.  Twelve seconds, that is more than its own,
+ *   so in the normal case the no comes from there — with its log line — and
+ *   this ceiling stays the last word instead of the first.
  *
- * ⛔ E la scadenza vale NO: `cred_buone` non viene toccata, e parte da false. */
+ * ⛔ And the deadline counts as NO: `cred_buone` is not touched, and it starts
+ *    from false. */
 #define TETTO_VERDETTO 12000
 
-/* ⛔ L'OROLOGIO DEL SILENZIO — `SPECIFICHE.md` §5.3, `DECISIONI.md` §4.4.
+/* ⛔ THE SILENCE CLOCK — `SPECIFICHE.md` §5.3, `DECISIONI.md` §4.4.
  *
- * Trenta secondi senza un byte DAL CLIENT e il client «si considera staccato»:
- * non occupa piu' il posto, e chi arriva entra.  E' la regola che fa sparire
- * il caso «il telefono e' morto in galleria e ora non posso rientrare».
+ * Thirty seconds without a byte FROM THE CLIENT and the client «is considered
+ * detached»: it no longer holds the slot, and whoever arrives gets in.  It is
+ * the rule that makes the case «the phone died in a tunnel and now I cannot
+ * get back in» disappear.
  *
- * ⛔⛔⭐ E QUI SOTTO C'ERA SCRITTO IL CONTRARIO DI QUEL CHE IL CODICE FA — 16
- *      agosto 2026, corretto insieme alla riparazione dell'orologio.
+ * ⛔⛔⭐ AND HERE BELOW IT SAID THE OPPOSITE OF WHAT THE CODE DOES — 16
+ *      Aug 2026, fixed together with the repair of the clock.
  *
- *      Diceva: ~~«si misura sui byte di RCP, non su quelli di QUIC: il
- *      trasporto manda riscontri e battiti per conto suo, e un orologio
- *      appoggiato a quelli direbbe "vivo" di un client che non parla da
- *      un'ora»~~.  ⚠ Il timore era vero e va guardato in faccia, non cancellato:
- *      **un client vivo sul filo ma con la pagina morta adesso tiene il posto.**
+ *      It said: ~~«it is measured on RCP bytes, not on QUIC ones: the
+ *      transport sends acknowledgements and heartbeats on its own, and a clock
+ *      resting on those would say "alive" of a client that has not spoken for
+ *      an hour»~~.  ⚠ The fear was real and must be faced, not erased:
+ *      **a client alive on the wire but with a dead page now holds the slot.**
  *
- * ⭐ Ma la scelta si e' rovesciata su una misura, non su un'opinione: contando i
- *    byte di RCP, **un utente che LEGGEVA perdeva il posto dopo trenta
- *    secondi** — non tocca niente, non manda niente — e un secondo dispositivo
- *    glielo portava via.  `[M]` 16 agosto: `STACCATO per silenzio` a 30013 ms
- *    con la connessione viva, e poi `posto PRESO` da una seconda scheda mentre
- *    la prima guardava.  ⇒ Contare i byte non misurava «il client c'e'»:
- *    misurava «l'utente sta digitando», che e' l'ALTRO orologio di §5.3, quello
- *    da trenta MINUTI.
+ * ⭐ But the choice was reversed on a measurement, not on an opinion: counting
+ *    RCP bytes, **a user who was READING lost the slot after thirty
+ *    seconds** — touches nothing, sends nothing — and a second device
+ *    took it away.  `[M]` 16 August: `DETACHED for silence` at 30013 ms
+ *    with the connection alive, and then `slot TAKEN` by a second tab while
+ *    the first was watching.  ⇒ Counting bytes did not measure «the client is
+ *    there»: it measured «the user is typing», which is the OTHER clock of
+ *    §5.3, the thirty-MINUTE one.
  *
- * ⭐ E il rilievo R3.19 resta soddisfatto, perche' non si e' appaltato l'orologio
- *    a QUIC: il tetto dei trenta secondi resta NOSTRO, e quel che si guarda e'
- *    l'ultimo pacchetto **decifrato e autenticato** (`ultima_vita`).  Con
- *    `max_idle_timeout` a 120 secondi questo server stacca lo stesso a 30.
+ * ⭐ And finding R3.19 stays satisfied, because the clock was not outsourced
+ *    to QUIC: the thirty-second ceiling stays OURS, and what is looked at is
+ *    the last packet **decrypted and authenticated** (`ultima_vita`).  With
+ *    `max_idle_timeout` at 120 seconds this server still detaches at 30.
  *
- * ⚠ E che cosa succede alla connessione di chi tace, il documento NON lo dice.
- *   Qui si sceglie di **lasciarla aperta** e liberare solo il posto: chiuderla
- *   sarebbe un congedo, e §8.2 non ha un motivo che voglia dire «taci da un
- *   po'».  La scelta e' dichiarata in `FASI.md` §01-filo-nudo, perche' e' un
- *   punto in cui RCP.md ammette due letture. */
+ * ⚠ And what happens to the connection of whoever is silent, the document does
+ *   NOT say.  Here the choice is to **leave it open** and free only the slot:
+ *   closing it would be a farewell, and §8.2 has no reason meaning «you have
+ *   been quiet for a while».  The choice is declared in `FASI.md`
+ *   §01-filo-nudo, because it is a point where RCP.md allows two readings. */
 #define SILENZIO 30000
 
-/* ⛔⛔⭐⭐ LO SFRATTO DEL FANTASMA — 23 agosto 2026, fase 9, e NON e' un
- *        orologio nuovo di §5.3: e' una scorciatoia dentro il primo.
+/* ⛔⛔⭐⭐ THE GHOST EVICTION — 23 Aug 2026, phase 9, and it is NOT a
+ *        new clock of §5.3: it is a shortcut inside the first.
  *
- * ⛔ IL FATTO, misurato.  `[M]` 23 agosto (`banchi/09-b78-apertura.py`): l'unico
- *    modo in cui un'apertura di sessione fallisce davvero sotto perdita e'
- *    `ATTACCA` → `CONGEDO(0x0F)`.  Ucciso il client con `-9` — cioe' un addio
- *    MAI DETTO, che per il server e' identico a un addio PERSO — si contano
- *    **undici rifiuti di fila, e il posto torna libero a +30,5 s**: cioe'
- *    `SILENZIO`.  ⛔ E il riquadro qui sopra DICHIARA che quell'orologio «fa
- *    sparire il caso "il telefono e' morto in galleria"».  Non lo fa sparire:
- *    lo **dura trenta secondi**, e in quei trenta secondi la frase che l'utente
- *    legge — «hai gia' una sessione attiva altrove» — parla della SUA sessione,
- *    morta un attimo prima.
+ * ⛔ THE FACT, measured.  `[M]` 23 August (`banchi/09-b78-apertura.py`): the only
+ *    way a session opening really fails under loss is
+ *    `ATTACCA` → `CONGEDO(0x0F)`.  With the client killed by `-9` — that is a
+ *    goodbye NEVER SAID, which to the server is identical to a goodbye LOST —
+ *    one counts **eleven refusals in a row, and the slot is free again at
+ *    +30.5 s**: that is `SILENZIO`.  ⛔ And the box above DECLARES that that
+ *    clock «makes the case "the phone died in a tunnel" disappear».  It does
+ *    not make it disappear: it **lasts thirty seconds**, and in those thirty
+ *    seconds the sentence the user reads — «you already have an active session
+ *    elsewhere» — speaks of THEIR session, dead a moment before.
  *
- * ⛔⛔ E LA DECISIONE DEL REGISTA DEL 23 AGOSTO LO RENDE IL CASO NORMALE, non
- *      piu' l'incidente: su rete cattiva **il filo cade e l'utente rientra a
- *      mano**.  Chi rientra a mano trova il proprio fantasma che gli nega il
- *      posto, e su una linea che perde a raffiche lo trova ogni volta. ⇒ Questa
- *      cura e' il prerequisito di quella decisione, non un di piu'.
+ * ⛔⛔ AND THE DIRECTOR'S DECISION OF 23 AUGUST MAKES IT THE NORMAL CASE, no
+ *      longer the accident: on a bad network **the wire drops and the user
+ *      reconnects by hand**.  Whoever reconnects by hand finds their own ghost
+ *      denying them the slot, and on a line that loses in bursts they find it
+ *      every time. ⇒ This cure is the prerequisite of that decision, not an extra.
  *
- * ⛔ PERCHE' NON SI E' ABBASSATO `SILENZIO` — la strada (a), scartata su una
- *    misura e non su un'opinione.  A 10 s si romperebbe il caso che il 16
- *    agosto 2026 e' costato la riparazione dei due orologi: `[M]` su una scena
- *    ferma, fra due pacchetti autenticati del BROWSER passano **15004, 15005,
- *    15002 ms** — il suo keep-alive, che non e' nostro.  Un tetto a 10 s
- *    staccherebbe **ogni** client che guarda e non tocca, a ogni giro di
- *    keep-alive, e la riga di `rcp_segno_di_vita()` che avverte a `SILENZIO/2`
- *    passerebbe da 15 s a 5 s, cioe' urlerebbe su ogni sessione sana.  ⇒ Non e'
- *    un numero con un mestiere solo: ne governa tre (il posto, il rilascio di
- *    §7.3 al distacco, e la soglia dell'avviso).  Resta 30.
+ * ⛔ WHY `SILENZIO` WAS NOT LOWERED — road (a), discarded on a
+ *    measurement and not on an opinion.  At 10 s it would break the case that
+ *    on 16 Aug 2026 cost the repair of the two clocks: `[M]` on a still
+ *    scene, between two authenticated packets of the BROWSER there are
+ *    **15004, 15005, 15002 ms** — its keep-alive, which is not ours.  A ceiling
+ *    at 10 s would detach **every** client that watches and does not touch, at
+ *    every keep-alive round, and the line of `rcp_segno_di_vita()` that warns at
+ *    `SILENZIO/2` would go from 15 s to 5 s, that is it would shout on every
+ *    healthy session.  ⇒ It is not a number with a single job: it governs three
+ *    (the slot, the §7.3 release on detach, and the warning threshold).  It
+ *    stays 30.
  *
- * ⭐ LA STRADA SCELTA, (b): il posto si puo' TOGLIERE PRIMA, ma solo a chi ha
- *    tutt'e tre queste cose insieme —
- *      1. e' il posto **dello stesso utente** che sta chiedendo di entrare
- *         (⛔ fra utenti diversi sarebbe un buco di sicurezza, non una
- *         comodita': vedi il controllo esplicito in `tratta_attacca()`);
- *      2. tace da piu' di `sfratto_ms`;
- *      3. e qualcuno **sta chiedendo** quel posto — non scatta da solo, cosi'
- *         una sessione sola non viene mai toccata da questa regola.
+ * ⭐ THE ROAD CHOSEN, (b): the slot can be TAKEN AWAY EARLIER, but only from
+ *    whoever has all three of these things together —
+ *      1. it is the slot **of the same user** who is asking to get in
+ *         (⛔ between different users it would be a security hole, not a
+ *         convenience: see the explicit check in `tratta_attacca()`);
+ *      2. it has been silent for more than `sfratto_ms`;
+ *      3. and someone **is asking** for that slot — it does not fire on its own,
+ *         so a lone session is never touched by this rule.
  *
- * ⭐ E NON CONTRADDICE `RCP.md` §8.2 — *«nessun client attaccato e vivo viene
- *    mai spodestato»* — la APPLICA: l'occupante qui e' attaccato ma **non
- *    vivo**, e fino a oggi l'unico orologio che sapesse distinguere le due cose
- *    era quello da trenta secondi.  ⚠ Va scritto qui, o il prossimo che legge
- *    credera' che §8.2 sia stata violata.
+ * ⭐ AND IT DOES NOT CONTRADICT `RCP.md` §8.2 — *«no attached and alive client is
+ *    ever ousted»* — it APPLIES it: the occupant here is attached but **not
+ *    alive**, and until today the only clock that could tell the two apart
+ *    was the thirty-second one.  ⚠ It must be written here, or the next reader
+ *    will believe §8.2 was violated.
  *
- * ⚠⚠ IL PREZZO, ED E' IL MOTIVO DEL VALORE PREDEFINITO.  L'unica cosa che
- *    distingue «morto» da «vivo e fermo» e' quanto tace, e quanto tace un
- *    client VIVO non lo decidiamo noi: lo decide il keep-alive del suo browser,
- *    `[M]` 15 s.  ⇒ Una soglia sotto i 15 s farebbe vincere il secondo
- *    dispositivo quasi sempre — cioe' spegnerebbe l'invariante I2 su ogni
- *    scrivania ferma, e darebbe a chi ha rubato la parola d'ordine il modo di
- *    buttare fuori l'utente vero, che oggi `0x0F` gli impedisce.  Per questo il
- *    predefinito e' `SILENZIO / 2`: e' il punto oltre il quale non abbiamo MAI
- *    misurato un client vivo, ed e' lo stesso numero a cui `rcp_segno_di_vita()`
- *    scrive gia' «il margine si sta assottigliando».  Un numero, un significato.
+ * ⚠⚠ THE PRICE, AND IT IS THE REASON FOR THE DEFAULT VALUE.  The only thing that
+ *    tells «dead» from «alive and still» is how long it is silent, and how long
+ *    an ALIVE client is silent is not up to us: it is up to its browser's
+ *    keep-alive, `[M]` 15 s.  ⇒ A threshold below 15 s would let the second
+ *    device win almost always — that is it would switch off invariant I2 on
+ *    every idle desk, and would give whoever stole the password the means to
+ *    throw out the real user, which today `0x0F` prevents.  That is why the
+ *    default is `SILENZIO / 2`: it is the point beyond which we have NEVER
+ *    measured an alive client, and it is the same number at which
+ *    `rcp_segno_di_vita()` already writes «the margin is getting thin».  One
+ *    number, one meaning.
  *
- * ⭐ LA CURA VERA STA ALTROVE, e va detta: se il server mandasse i PING anche a
- *    sessione attiva (`FASI.md` §05-la-sessione §6-bis, `src/webtransport.c` —
- *    NON questo file), `ultima_vita` di un client vivo non sarebbe mai piu'
- *    vecchia di un paio di secondi, e questa soglia potrebbe scendere a 3.  Con
- *    quella in casa il fantasma dura un respiro; senza, dura meta' di prima.
+ * ⭐ THE REAL CURE LIES ELSEWHERE, and it must be said: if the server sent PINGs
+ *    even during an active session (`FASI.md` §05-la-sessione §6-bis,
+ *    `src/webtransport.c` — NOT this file), the `ultima_vita` of an alive client
+ *    would never again be older than a couple of seconds, and this threshold
+ *    could go down to 3.  With that in place the ghost lasts a breath; without
+ *    it, it lasts half as long as before.
  *
- * ⛔ E' NATO SPENTO — invariante I6.  ⚠ E l'interruttore NON era per la frase
- *    falsa (quella si corregge sempre, piu' sotto): era per lo SFRATTO, che e'
- *    un modo nuovo in cui il server toglie qualcosa a una sessione, e
- *    `DECISIONI.md` §4.1-bis dice che il server non butta fuori una sessione
- *    sana.  Se la soglia fosse tarata male butterebbe fuori uno vivo, che e'
- *    molto peggio di un messaggio sbagliato. ⇒ Lo accende chi ha guardato.
+ * ⛔ IT WAS BORN OFF — invariant I6.  ⚠ And the switch was NOT for the false
+ *    sentence (that one is always fixed, further below): it was for the
+ *    EVICTION, which is a new way in which the server takes something away
+ *    from a session, and
+ *    `DECISIONI.md` §4.1-bis says the server does not throw out a healthy
+ *    session.  If the threshold were badly tuned it would throw out a live one,
+ *    which is much worse than a wrong message. ⇒ It is switched on by whoever
+ *    has looked.
  *
- * ⭐⭐⭐ E CHI HA GUARDATO HA DECISO — 24 agosto 2026.  Dal 24 agosto il
- *      predefinito e' **15 000 ms** (`SILENZIO / 2`, il numero del riquadro qui
- *      sopra), e `0` resta l'unica strada per spegnerlo (`--sfratto-ms 0`).  ⇒
- *      Il presupposto di I6 e' soddisfatto, non aggirato: l'interruttore c'e'
- *      ancora, e' solo girato dall'altra parte.
+ * ⭐⭐⭐ AND WHOEVER LOOKED HAS DECIDED — 24 Aug 2026.  Since 24 August the
+ *      default is **15 000 ms** (`SILENZIO / 2`, the number of the box
+ *      above), and `0` remains the only way to switch it off (`--sfratto-ms 0`).
+ *      ⇒ The premise of I6 is satisfied, not bypassed: the switch is still
+ *      there, it is just turned the other way.
  *
- * ⚠ IL PREZZO E IL GUADAGNO, DICHIARATI — `[M]` 23-24 agosto 2026: il fantasma
- *   passa da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**.  ⛔ Cioe' la
- *   meta' esatta, ed e' esattamente quel che il numero promette: sotto i 15 s
- *   non si scende, perche' il keep-alive del browser tace `[M]` 15 s e si
- *   sfratterebbe un client VIVO e fermo (⇒ I2 spenta su ogni scrivania ferma).
+ * ⚠ THE PRICE AND THE GAIN, DECLARED — `[M]` 23-24 Aug 2026: the ghost
+ *   goes from **32.13 s and 14 refusals** to **16.83 s and 7 refusals**.  ⛔ That
+ *   is exactly half, and it is exactly what the number promises: one does not go
+ *   below 15 s, because the browser's keep-alive is silent for `[M]` 15 s and an
+ *   ALIVE and still client would be evicted (⇒ I2 off on every idle desk).
  *
- * ⛔ Il valore in vigore si SCRIVE all'avvio, acceso o spento, come i tre
- *    orologi di §5.3 — un tetto che nessuno puo' leggere e' la forma E1. */
-#define SFRATTO_PREDEFINITO (SILENZIO / 2) /* 15 s: vedi il riquadro */
-static uint64_t sfratto_ms = SFRATTO_PREDEFINITO; /* 0 = spento, ⭐ dal 24 ago
-                                                   *    2026 nasce ACCESO */
+ * ⛔ The value in force is WRITTEN at startup, on or off, like the three
+ *    clocks of §5.3 — a ceiling nobody can read is the E1 shape. */
+#define SFRATTO_PREDEFINITO (SILENZIO / 2) /* 15 s: see the box */
+static uint64_t sfratto_ms = SFRATTO_PREDEFINITO; /* 0 = off, ⭐ since 24 Aug
+                                                   *    2026 it is born ON */
 
 void rcp_sfratto_imposta(uint64_t ms)
 {
@@ -358,101 +365,100 @@ void rcp_sfratto_imposta(uint64_t ms)
 uint64_t rcp_sfratto(void) { return sfratto_ms; }
 uint64_t rcp_sfratto_consigliato(void) { return SFRATTO_PREDEFINITO; }
 
-/* ⛔⭐ IL SECONDO OROLOGIO DI §5.3 — «inattivita' dell'utente», e fino al 16
- *     agosto 2026 NON ESISTEVA.
+/* ⛔⭐ THE SECOND CLOCK OF §5.3 — «user inactivity», and until 16
+ *     Aug 2026 IT DID NOT EXIST.
  *
- *     `SPECIFICHE.md` §5.3: *«30 minuti senza input ⇒ REMOTIX **stacca** il
- *     client: per rientrare servono utente e password»*, e *«"input" e' quel
- *     che l'utente manda, non quel che guarda: chi resta mezz'ora a guardare un
- *     video senza toccare nulla viene staccato.  Il costo e' piccolo —
- *     riattaccarsi e' rapido»*.  `RCP.md` §8.2 gli da' gia' il motivo `0x02`.
+ *     `SPECIFICHE.md` §5.3: *«30 minutes without input ⇒ REMOTIX **detaches**
+ *     the client: getting back in takes user and password»*, and *«"input" is
+ *     what the user sends, not what they watch: whoever spends half an hour
+ *     watching a video without touching anything is detached.  The cost is
+ *     small — reattaching is quick»*.  `RCP.md` §8.2 already gives it reason `0x02`.
  *
- * ⛔ E `RCP_INATTIVITA = 0x02` stava in `rcp.h` **senza una riga che lo usasse**:
- *    la forma E1, «scritto non e' in vigore».  Un motivo di congedo dichiarato
- *    nel protocollo e mai spedito e' una promessa che un'altra implementazione
- *    avrebbe dovuto gestire per niente.
+ * ⛔ And `RCP_INATTIVITA = 0x02` sat in `rcp.h` **without a line using it**:
+ *    the E1 shape, «written is not in force».  A farewell reason declared
+ *    in the protocol and never sent is a promise that another implementation
+ *    would have had to handle for nothing.
  *
- * ⭐ QUESTO si misura sui byte di RCP (`ultimo_byte`), ed e' il mestiere per cui
- *    quel campo esiste — liberato lo stesso giorno da quello che non era suo.
+ * ⭐ THIS one is measured on RCP bytes (`ultimo_byte`), and it is the job that
+ *    field exists for — freed the same day from the one that was not its own.
  *
- * ⚠ CONFIGURABILE, e §5.3 lo pretende: *«il secondo e il terzo sono
- *   configurabili, con quei valori come predefiniti»*.  ⛔ E il valore in vigore
- *   si SCRIVE nel registro all'avvio: cosi' il numero si legge invece di
- *   aspettarlo mezz'ora — che e' anche l'unico modo di provarlo senza tenere
- *   occupata una macchina. */
-#define INATTIVITA_PREDEFINITA 1800000u /* 30 minuti */
+ * ⚠ CONFIGURABLE, and §5.3 demands it: *«the second and the third are
+ *   configurable, with those values as defaults»*.  ⛔ And the value in force
+ *   is WRITTEN to the log at startup: so the number is read instead of being
+ *   waited for half an hour — which is also the only way to test it without
+ *   tying up a machine. */
+#define INATTIVITA_PREDEFINITA 1800000u /* 30 minutes */
 static uint64_t inattivita_ms = INATTIVITA_PREDEFINITA;
 
 void rcp_inattivita_imposta(uint64_t ms)
 {
-	/* ⛔ Zero vuol dire SPENTA, ed e' un valore lecito: chi guarda un video per
-	 *    ore su una macchina sua non vuole essere buttato fuori.  ⚠ Si dichiara
-	 *    a chi cuce, che lo scrive nel registro. */
+	/* ⛔ Zero means OFF, and it is a legitimate value: whoever watches a video
+	 *    for hours on their own machine does not want to be thrown out.  ⚠ It is
+	 *    declared to whoever sews things together, who writes it to the log. */
 	inattivita_ms = ms;
 }
 
 uint64_t rcp_inattivita(void) { return inattivita_ms; }
 
-/* ⛔⭐ IL TETTO DI §6.1 E' DEL **MESSAGGIO**, NON DEL CORPO — rilievo B-14,
- *     10 agosto 2026 notte.
+/* ⛔⭐ THE CEILING OF §6.1 BELONGS TO THE **MESSAGE**, NOT TO THE BODY — finding
+ *     B-14, night of 10 Aug 2026.
  *
- *     §6.1 dice «nessun **messaggio** DEVE superare 1 MiB», e che «messaggio»
- *     comprenda i sei byte d'inquadratura lo stabilisce §5.4, che per gli
- *     appunti sceglie 1 000 000 e non 1 MiB **proprio perche'** «il messaggio
- *     che lo porta ha sei byte di inquadratura e quattro di lunghezza, e un
- *     tetto uguale a quello del messaggio (§6.1) renderebbe illegale il testo
- *     grande esattamente quanto il tetto».
+ *     §6.1 says «no **message** MUST exceed 1 MiB», and that «message»
+ *     includes the six framing bytes is established by §5.4, which for the
+ *     clipboard chooses 1 000 000 and not 1 MiB **precisely because** «the
+ *     message carrying it has six framing bytes and four of length, and a
+ *     ceiling equal to the message's (§6.1) would make illegal the text
+ *     exactly as large as the ceiling».
  *
- * ⛔ Fino a stanotte il confronto era `lung > MAX_MESSAGGIO` con `lung` =
- *    lunghezza del **corpo**: un `CIAO` da 1 048 576 byte di corpo era
- *    accettato, cioe' **1 048 582 byte sul filo**, sei oltre il tetto.  ⚠ Sei
- *    byte non fanno danno; le due letture che danno byte diversi per lo stesso
- *    ingresso si': un validatore scritto leggendo §6.1 marcherebbe rosso un
- *    messaggio che questo server accetta, ed e' quel che §0 esiste per
- *    impedire.
+ * ⛔ Until tonight the comparison was `lung > MAX_MESSAGGIO` with `lung` =
+ *    length of the **body**: a `CIAO` with a 1 048 576-byte body was
+ *    accepted, that is **1 048 582 bytes on the wire**, six over the ceiling.
+ *    ⚠ Six bytes do no harm; two readings that give different bytes for the
+ *    same input do: a validator written by reading §6.1 would mark red a
+ *    message this server accepts, and that is what §0 exists to prevent.
  *
- * ⭐ Da qui i due nomi, invece di uno: `MAX_MESSAGGIO` e' il tetto del
- *    documento, `MAX_CORPO` e' quel che ne resta per il corpo.  Il numero del
- *    documento resta scritto una volta sola. */
-#define MAX_MESSAGGIO (1024u * 1024u) /* §6.1, INQUADRATURA COMPRESA */
+ * ⭐ Hence the two names, instead of one: `MAX_MESSAGGIO` is the ceiling of the
+ *    document, `MAX_CORPO` is what is left of it for the body.  The number of
+ *    the document stays written only once. */
+#define MAX_MESSAGGIO (1024u * 1024u) /* §6.1, FRAMING INCLUDED */
 #define MAX_CORPO (MAX_MESSAGGIO - 6u)
 
-/* ⛔ L'ACCUMULO E' IL TETTO DI §6.1, NON UN NUMERO SUO — rilievo R9.13.
+/* ⛔ THE BUFFER IS THE CEILING OF §6.1, NOT A NUMBER OF ITS OWN — finding R9.13.
  *
- * Qui c'erano 64 KiB, e §6.1 dice «nessun messaggio DEVE superare 1 MiB» —
- * cioe' **fino a 1 MiB e' conforme**.  I due numeri stavano a due righe di
- * distanza e non concordavano: ogni messaggio fra 64 KiB e 1 MiB moriva con
- * `ERRORE_PROTOCOLLO` e il dettaglio «troppi byte in attesa di un corpo»,
- * prima ancora che la sua intestazione venisse guardata.  ⚠ Un `CIAO` con
- * quattrocento capacita' dal nome lecito e sconosciuto (≈ 82 KiB) e' conforme
- * a §6.1 e a §4.3 in ogni sua parte, e §3 eccezione 1 impone di ignorare i
- * nomi sconosciuti e **proseguire**: il server lo congedava.
+ * Here there were 64 KiB, and §6.1 says «no message MUST exceed 1 MiB» —
+ * that is **up to 1 MiB is conforming**.  The two numbers sat two lines
+ * apart and did not agree: every message between 64 KiB and 1 MiB died with
+ * `ERRORE_PROTOCOLLO` and the detail «troppi byte in attesa di un corpo»,
+ * before its header was even looked at.  ⚠ A `CIAO` with
+ * four hundred capabilities with a legitimate and unknown name (≈ 82 KiB) is
+ * conforming to §6.1 and §4.3 in every part, and §3 exception 1 requires
+ * ignoring unknown names and **carrying on**: the server sent it away.
  *
- * ⚠ E c'era un secondo effetto: il controllo `lung > MAX_MESSAGGIO` era
- *   raggiungibile SOLO dalla lunghezza dichiarata nell'intestazione, mai dai
- *   byte — il tetto di §6.1 non era il tetto di questo server.
+ * ⚠ And there was a second effect: the check `lung > MAX_MESSAGGIO` was
+ *   reachable ONLY from the length declared in the header, never from the
+ *   bytes — the ceiling of §6.1 was not the ceiling of this server.
  *
- * ⭐ Ma un megabyte per connessione preso all'apertura sarebbe un regalo a chi
- *    apre mille connessioni: il buffer **cresce a richiesta** e solo fino a
- *    questo tetto (vedi `accumula()`).
+ * ⭐ But a megabyte per connection taken at opening would be a gift to whoever
+ *    opens a thousand connections: the buffer **grows on demand** and only up to
+ *    this ceiling (see `accumula()`).
  *
- * ⚠ E dal 10 agosto 2026 notte vale `MAX_MESSAGGIO` **esatto**, non
- *   `6 + MAX_MESSAGGIO`: il messaggio piu' lungo che questo server accetta e'
- *   di 1 MiB inquadratura compresa (rilievo B-14), quindi non c'e' niente da
- *   accumulare oltre quel numero. */
+ * ⚠ And since the night of 10 Aug 2026 it is `MAX_MESSAGGIO` **exactly**, not
+ *   `6 + MAX_MESSAGGIO`: the longest message this server accepts is
+ *   1 MiB framing included (finding B-14), so there is nothing to
+ *   buffer beyond that number. */
 #define MAX_ACCUMULO MAX_MESSAGGIO
 
 enum stato {
 	S_ATTESA_CIAO,
 	S_ATTESA_CREDENZIALI,
-	S_ATTESA_VERDETTO, /* CREDENZIALI ricevute, il ritardo fisso scorre */
+	S_ATTESA_VERDETTO, /* CREDENZIALI received, the fixed delay is running */
 	S_ATTESA_ATTACCA,
 	S_ATTIVA,
-	/* ⛔ ATTIVA MA SENZA POSTO: ha taciuto trenta secondi — rilievo R9.2.
-	 * Lo stato esiste perche' «non occupa piu' il posto» e «e' ancora attiva»
-	 * sono due cose diverse, e tenerle sotto la stessa etichetta lasciava DUE
-	 * sessioni `attiva` per lo stesso utente — quel che I2 vieta.  Vedi il
-	 * riquadro sopra `rcp_tempo()`. */
+	/* ⛔ ACTIVE BUT WITHOUT A SLOT: it has been silent for thirty seconds —
+	 * finding R9.2.  The state exists because «no longer holds the slot» and
+	 * «is still active» are two different things, and keeping them under the
+	 * same label left TWO `attiva` sessions for the same user — what I2
+	 * forbids.  See the box above `rcp_tempo()`. */
 	S_STACCATA,
 	S_FINITA,
 };
@@ -466,296 +472,302 @@ struct rcp_sessione {
 	rcp_ganci g;
 	enum stato stato;
 	char provenienza[64];
-	/* ⛔ L'INDIRIZZO SENZA LA PORTA, e non e' un dettaglio: vedi il riquadro
-	 * sopra `rcp_chiave_indirizzo()`. */
+	/* ⛔ THE ADDRESS WITHOUT THE PORT, and it is not a detail: see the box
+	 * above `rcp_chiave_indirizzo()`. */
 	char indirizzo[64];
 	char utente[257];
-	/* ⭐ La disposizione che il client ha DICHIARATO in `ATTACCA` (§4.5),
-	 *    tenuta per due cose: applicarla quando la sessione e' aperta
-	 *    (`DECISIONI.md` §5-bis.7), e riconoscere a `DISPOSIZIONE` (0x0009) se
-	 *    e' davvero cambiata.  ⚠ 64 byte piu' il NUL: e' il tetto di §4.5. */
+	/* ⭐ The layout the client DECLARED in `ATTACCA` (§4.5),
+	 *    kept for two things: applying it when the session is open
+	 *    (`DECISIONI.md` §5-bis.7), and recognising at `DISPOSIZIONE` (0x0009)
+	 *    whether it has really changed.  ⚠ 64 bytes plus the NUL: it is the
+	 *    ceiling of §4.5. */
 	char disposizione[65];
-	uint64_t da_quando;   /* quando e' cominciato lo stato corrente */
-	/* ⛔⛔⭐ DUE OROLOGI, NON UNO — e fino al 16 agosto 2026 ce n'era uno solo
-	 *      che faceva il mestiere di tutt'e due.
+	uint64_t da_quando;   /* when the current state began */
+	/* ⛔⛔⭐ TWO CLOCKS, NOT ONE — and until 16 Aug 2026 there was only one
+	 *      doing the job of both.
 	 *
-	 *      `SPECIFICHE.md` §5.3 ne tiene DUE, con due significati diversi:
+	 *      `SPECIFICHE.md` §5.3 keeps TWO, with two different meanings:
 	 *
-	 *        · «silenzio del CLIENT», 30 SECONDI — «un client che tace e' un
-	 *          client che si e' staccato», e il paragrafo dice perche': *«i 30
-	 *          secondi coprono solo le interruzioni vere»*;
-	 *        · «inattivita' dell'UTENTE», 30 MINUTI — «chi resta mezz'ora a
-	 *          guardare un video senza toccare nulla viene staccato».
+	 *        · «CLIENT silence», 30 SECONDS — «a client that is silent is a
+	 *          client that has detached», and the paragraph says why: *«the 30
+	 *          seconds cover only real interruptions»*;
+	 *        · «USER inactivity», 30 MINUTES — «whoever spends half an hour
+	 *          watching a video without touching anything is detached».
 	 *
-	 *      ⛔ `ultimo_byte` misura il SECONDO e veniva usato per il PRIMO: un
-	 *         client che guarda e non tocca non manda niente, e trenta secondi
-	 *         senza toccare la tastiera valevano «il client e' sparito».
+	 *      ⛔ `ultimo_byte` measures the SECOND and was used for the FIRST: a
+	 *         client that watches and does not touch sends nothing, and thirty
+	 *         seconds without touching the keyboard counted as «the client is gone».
 	 *
-	 *      `[M]` 16 agosto, col browser: sessione aperta, nessun input, e a
-	 *      30013 ms «STACCATO per silenzio, posti occupati: 0» — mentre la
-	 *      connessione era viva (QUIC non ha fiatato per 111 s, e un solo tasto
-	 *      ha ripreso il posto sulla STESSA connessione).  ⛔ E il prezzo si e'
-	 *      pagato: una seconda scheda e' entrata e ha preso il desktop del
-	 *      primo, che si e' congelato.  E' I2 rotta nel caso che `RCP.md` §8.2
-	 *      nomina per iscritto — *«un client vivo occupa, e il nuovo e'
-	 *      rifiutato»*. */
-	uint64_t ultimo_byte; /* l'ultimo byte di RCP dal client: l'UTENTE (§5.3) */
-	uint64_t ultima_vita; /* l'ultimo pacchetto autenticato: il CLIENT (§5.3) */
-	uint64_t cred_arrivo; /* quando e' arrivato CREDENZIALI */
-	bool cred_buone;      /* il verdetto, gia' calcolato ma non ancora detto */
-	uint8_t cred_motivo;  /* se non buone */
-	/* ⭐ LA VERIFICA CHIESTA A UN ALTRO PROCESSO — `DECISIONI.md` §1.10.
+	 *      `[M]` 16 August, with the browser: session open, no input, and at
+	 *      30013 ms «DETACHED for silence, slots taken: 0» — while the
+	 *      connection was alive (QUIC did not make a sound for 111 s, and a
+	 *      single key took the slot back on the SAME connection).  ⛔ And the
+	 *      price was paid: a second tab got in and took the desktop of the
+	 *      first, which froze.  It is I2 broken in the case that `RCP.md` §8.2
+	 *      names in writing — *«an alive client holds the slot, and the new one
+	 *      is refused»*. */
+	uint64_t ultimo_byte; /* the last RCP byte from the client: the USER (§5.3) */
+	uint64_t ultima_vita; /* the last authenticated packet: the CLIENT (§5.3) */
+	uint64_t cred_arrivo; /* when CREDENZIALI arrived */
+	bool cred_buone;      /* the verdict, already computed but not yet told */
+	uint8_t cred_motivo;  /* if not good */
+	/* ⭐ THE CHECK ASKED OF ANOTHER PROCESS — `DECISIONI.md` §1.10.
 	 *
-	 * ⛔ `verdetto_atteso` e' vero fra la domanda e la risposta, ed e' la
-	 *    ragione per cui `cred_buone` non basta piu' da solo: prima del 12
-	 *    agosto 2026 il verdetto era gia' pronto quando lo stato diventava
-	 *    `attesa-verdetto`, perche' PAM aveva bloccato il filo.  ⚠ Adesso
-	 *    `attesa-verdetto` aspetta DUE cose: il secondo fisso di §4.4-bis e la
-	 *    risposta dell'aiutante — e l'ordine fra le due non e' garantito.
+	 * ⛔ `verdetto_atteso` is true between the question and the answer, and it
+	 *    is the reason why `cred_buone` is no longer enough on its own: before
+	 *    12 Aug 2026 the verdict was already ready when the state became
+	 *    `attesa-verdetto`, because PAM had blocked the thread.  ⚠ Now
+	 *    `attesa-verdetto` waits for TWO things: the fixed second of §4.4-bis
+	 *    and the helper's answer — and the order between the two is not
+	 *    guaranteed.
 	 *
-	 * ⛔ E finche' `verdetto_atteso` e' vero, `cred_buone` vale **false**: se
-	 *    qualcosa saltasse via nel mezzo, quel che si legge e' un no
-	 *    (invariante I3). */
+	 * ⛔ And while `verdetto_atteso` is true, `cred_buone` is **false**: if
+	 *    something went wrong in the middle, what is read is a no
+	 *    (invariant I3). */
 	bool verdetto_atteso;
-	uint64_t pratica;     /* il numero con cui la risposta si riconosce */
-	/* ⛔ `true` quando il no NON viene da PAM ma da noi (aiutante spento,
-	 * pratica scaduta): non conta come tentativo fallito di §4.4-bis.  Un
-	 * difetto del server che bannasse l'utente per dodici ore sarebbe «la
-	 * peggiore diagnosi che questo progetto possa produrre» (§4.4-bis). */
+	uint64_t pratica;     /* the number by which the answer is recognised */
+	/* ⛔ `true` when the no does NOT come from PAM but from us (helper off,
+	 * request expired): it does not count as a failed attempt of §4.4-bis.  A
+	 * server defect that banned the user for twelve hours would be «the
+	 * worst diagnosis this project could produce» (§4.4-bis). */
 	bool no_e_nostro;
-	bool attaccata;       /* occupa un posto nel registro delle sessioni */
-	/* ⛔ L'accumulo e' allocato a richiesta, e si azzera prima di liberarlo:
-	 * ci passa la `CREDENZIALI`, cioe' la parola d'ordine in chiaro (§4.4).
-	 * Vedi `accumula()` e `rcp_libera()` — rilievi R9.8 e R9.13. */
+	bool attaccata;       /* holds a slot in the registry of sessions */
+	/* ⛔ The buffer is allocated on demand, and zeroed before being freed:
+	 * `CREDENZIALI` passes through it, that is the password in clear (§4.4).
+	 * See `accumula()` and `rcp_libera()` — findings R9.8 and R9.13. */
 	uint8_t *acc;
 	size_t acc_len, acc_cap;
-	/* le capacita' negoziate, per il registro (§4.3: la scelta si scrive) */
+	/* the negotiated capabilities, for the log (§4.3: the choice is written) */
 	char codec[32];
 	char profondita[32];
 	char audio[32];
-	/* ⛔ IL TETTO DEL DECODIFICATORE — `video.misura_massima` di §4.3.
+	/* ⛔ THE DECODER CEILING — `video.misura_massima` of §4.3.
 	 *
-	 * `0` vuol dire «il client non l'ha dichiarata», e non e' la stessa cosa
-	 * di «l'ha dichiarata zero»: §4.5 vincola la tela concessa **solo se il
-	 * client l'ha dichiarata**.  ⚠ Prima del 10 agosto 2026 (notte) questi due
-	 * campi non esistevano: il nome era riconosciuto come lecito in
-	 * `NOMI_NOTI` e il valore veniva buttato — rilievo B-1. */
+	 * `0` means «the client did not declare it», and it is not the same thing
+	 * as «declared it zero»: §4.5 constrains the granted canvas **only if the
+	 * client declared it**.  ⚠ Before the night of 10 Aug 2026 these two
+	 * fields did not exist: the name was recognised as legitimate in
+	 * `NOMI_NOTI` and the value was thrown away — finding B-1. */
 	uint32_t max_l, max_a;
-	/* ⛔⭐ IL LIVELLO DEL DECODIFICATORE — `video.livello` di §4.3, e fino al
-	 *     23 agosto 2026 era il GEMELLO NON CURATO di `max_l/max_a`: il nome
-	 *     stava in `NOMI_NOTI` e il valore veniva **buttato**, esattamente il
-	 *     rilievo B-1 un campo piu' in la'.
+	/* ⛔⭐ THE DECODER LEVEL — `video.livello` of §4.3, and until
+	 *     23 Aug 2026 it was the UNCURED TWIN of `max_l/max_a`: the name
+	 *     was in `NOMI_NOTI` and the value was **thrown away**, exactly
+	 *     finding B-1 one field further on.
 	 *
-	 * ⛔ Sta in DECIMI: `5.1` ⇒ `51`, `5` ⇒ `50`.  Un `float` per un numero che
-	 *    esce da una stringa e finisce in un confronto sarebbe due modi di
-	 *    scrivere `5.1` che non si uguagliano — e il confronto e' tutto quel per
-	 *    cui questo campo esiste.
-	 * ⚠ `0` vuol dire «il client non l'ha dichiarato», e NON vuol dire «basso»:
-	 *   chi legge questo campo non deve sceglierne uno per conto suo.  §4.3
-	 *   impone al server di non SUPERARE quel che il client dichiara, e su un
-	 *   client che non dichiara niente non c'e' niente da non superare. */
+	 * ⛔ It is in TENTHS: `5.1` ⇒ `51`, `5` ⇒ `50`.  A `float` for a number that
+	 *    comes out of a string and ends up in a comparison would be two ways of
+	 *    writing `5.1` that are not equal — and the comparison is all this
+	 *    field exists for.
+	 * ⚠ `0` means «the client did not declare it», and it does NOT mean «low»:
+	 *   whoever reads this field must not pick one on their own.  §4.3
+	 *   requires the server not to EXCEED what the client declares, and on a
+	 *   client that declares nothing there is nothing not to exceed. */
 	uint32_t livello_x10;
 
 	/* ==================================================================== */
-	/* ⭐ IL CANALE VIDEO — §2.5, §5.1, §5.2, §6.2                          */
+	/* ⭐ THE VIDEO CHANNEL — §2.5, §5.1, §5.2, §6.2                        */
 
-	/* ⛔⭐ «`SESSIONE` E' STATA SPEDITA», E NON «LO STATO E' ATTIVA».
+	/* ⛔⭐ «`SESSIONE` HAS BEEN SENT», AND NOT «THE STATE IS ACTIVE».
 	 *
-	 * §2.5 scrive la regola con queste parole: «nessuno stream video prima di
-	 * aver spedito `SESSIONE`».  ⚠ Lo stato `attiva` e' vicinissimo e NON e'
-	 * la stessa cosa — e' una **grandezza sostitutiva**: cambia con
-	 * `S_STACCATA` (una sessione che ha taciuto trenta secondi ha spedito
-	 * `SESSIONE` da un pezzo), e non cambierebbe affatto se un giorno lo stato
-	 * si mettesse a `attiva` una riga prima di spedire il messaggio.
+	 * §2.5 writes the rule with these words: «no video stream before having
+	 * sent `SESSIONE`».  ⚠ The `attiva` state is very close and is NOT the
+	 * same thing — it is a **proxy quantity**: it changes with
+	 * `S_STACCATA` (a session that has been silent for thirty seconds sent
+	 * `SESSIONE` long ago), and it would not change at all if one day the state
+	 * were set to `attiva` one line before sending the message.
 	 *
-	 * ⛔ Questa riga si accende NELLA STESSA riga che spedisce `SESSIONE`, e
-	 *    solo se il messaggio e' partito davvero (`if (!w.pieno)`).
+	 * ⛔ This flag is switched on IN THE SAME line that sends `SESSIONE`, and
+	 *    only if the message really went out (`if (!w.pieno)`).
 	 *
-	 * ⭐ `LEZIONI.md` §1.13, applicata mentre si scriveva: *«si nomina la
-	 *    grandezza vera del fenomeno, e si guarda se il protocollo la porta
-	 *    gia'»*.  Qui il fenomeno e' «il client sa la tela e il codec», e il
-	 *    fatto che glielo dice e' `SESSIONE` — non uno stato del server. */
+	 * ⭐ `LEZIONI.md` §1.13, applied while writing: *«one names the real
+	 *    quantity of the phenomenon, and looks whether the protocol already
+	 *    carries it»*.  Here the phenomenon is «the client knows the canvas and
+	 *    the codec», and the fact that tells it is `SESSIONE` — not a server state. */
 	bool sessione_spedita;
 
-	/* ⛔ §6.2: LA TELA **IN VIGORE**, che e' quella concessa in `SESSIONE`
-	 * (§4.5) **oppure** l'ultima concessa da `TELA(ADATTATA)` (§7.1).  ⚠ `0`
-	 * qui non e' una misura: e' «non c'e' ancora nessuna tela», e `sessione_
-	 * spedita` e' il fatto che lo dice. */
+	/* ⛔ §6.2: THE CANVAS **IN FORCE**, which is the one granted in `SESSIONE`
+	 * (§4.5) **or** the last one granted by `TELA(ADATTATA)` (§7.1).  ⚠ `0`
+	 * here is not a size: it is «there is no canvas yet», and `sessione_
+	 * spedita` is the fact that says so. */
 	uint32_t tela_l, tela_a;
-	/* ⛔⭐ LA VISTA — §7.1, e sta **accanto** alla tela apposta: sono due
-	 *     grandezze diverse e la riga che le separa e' normativa.
+	/* ⛔⭐ THE VIEW — §7.1, and it sits **next to** the canvas on purpose: they
+	 *     are two different quantities and the line separating them is normative.
 	 *
-	 *   · la **tela** e' della SESSIONE: sopravvive al client (I4), la cambia
-	 *     solo `ADATTA_TELA`, e vincola la misura dei fotogrammi (§6.2);
-	 *   · la **vista** e' della CONNESSIONE: e' «la misura in cui il client
-	 *     disegnera'», arriva con `ATTACCA` (§4.5) e la aggiorna `VISTA`
-	 *     (§7.1).  ⛔ **NON DEVE** far cambiare la tela, e in RCP/1 non cambia
-	 *     nemmeno la misura di quel che si codifica: il server manda la tela
-	 *     intera e il client riscala (`SPECIFICHE.md` §6.1).
+	 *   · the **canvas** belongs to the SESSION: it outlives the client (I4),
+	 *     only `ADATTA_TELA` changes it, and it constrains the frame size (§6.2);
+	 *   · the **view** belongs to the CONNECTION: it is «the size at which the
+	 *     client will draw», it arrives with `ATTACCA` (§4.5) and `VISTA`
+	 *     updates it (§7.1).  ⛔ It **MUST NOT** change the canvas, and in RCP/1
+	 *     it does not even change the size of what is encoded: the server sends
+	 *     the whole canvas and the client rescales (`SPECIFICHE.md` §6.1).
 	 *
-	 * ⚠ E i limiti sono ALTRI: §7.1, rilievo R1.17 — «qualunque misura da 1x1
-	 *   in su e' legale, dispari compresa».  I limiti della tela esistono per i
-	 *   blocchi del codificatore, e alla vista non si applicano perche' in
-	 *   RCP/1 la vista non tocca nessun codificatore.
+	 * ⚠ And the limits are OTHERS: §7.1, finding R1.17 — «any size from 1x1
+	 *   up is legal, odd included».  The canvas limits exist for the encoder's
+	 *   blocks, and they do not apply to the view because in RCP/1 the view
+	 *   touches no encoder.
 	 *
-	 * ⚠ Oggi questo numero non decide niente, ed e' dichiarato: serve «a
-	 *   scegliere quanti bit spendere» (§7.1), e la scelta dei bit e' della
-	 *   fase del codificatore.  ⛔ Ma si TIENE lo stesso, perche' l'alternativa
-	 *   e' leggerlo e buttarlo — cioe' un campo del protocollo che il server
-	 *   dichiara di aver capito e non ha da nessuna parte. */
+	 * ⚠ Today this number decides nothing, and that is declared: it serves «to
+	 *   choose how many bits to spend» (§7.1), and the choice of bits belongs to
+	 *   the encoder phase.  ⛔ But it is KEPT all the same, because the
+	 *   alternative is reading it and throwing it away — that is a protocol
+	 *   field the server declares it understood and does not hold anywhere. */
 	uint32_t vista_l, vista_a;
 
-	/* ⛔ §6.2: il contatore dei fotogrammi.  `0` = **nessuno spedito**, ed e'
-	 * il significato che §7.1 da' allo zero in `RICHIEDI_CHIAVE`: qui non e'
-	 * un sentinella implicito (§6.0), e' quello dichiarato. */
+	/* ⛔ §6.2: the frame counter.  `0` = **none sent**, and it is the meaning
+	 * §7.1 gives to zero in `RICHIEDI_CHIAVE`: here it is not an implicit
+	 * sentinel (§6.0), it is the declared one. */
 	uint32_t video_numero;
 
-	/* ⛔ §5.2: «il prossimo fotogramma DEVE essere una chiave».  Vero:
-	 *   · appena `SESSIONE` e' partita           (primo punto delle regole)
-	 *   · dopo un `TELA(ADATTATA)` che CAMBIA la misura  (secondo punto)
-	 *   · quando il client manda `RICHIEDI_CHIAVE`       (§5.2, §7.1) */
+	/* ⛔ §5.2: «the next frame MUST be a keyframe».  True:
+	 *   · as soon as `SESSIONE` has gone out            (first point of the rules)
+	 *   · after a `TELA(ADATTATA)` that CHANGES the size  (second point)
+	 *   · when the client sends `RICHIEDI_CHIAVE`         (§5.2, §7.1) */
 	bool serve_chiave;
-	/* Perche' serve, per il registro: le tre ragioni non sono la stessa cosa
-	 * e chi diagnostica deve poterle distinguere. */
+	/* Why it is needed, for the log: the three reasons are not the same thing
+	 * and whoever diagnoses must be able to tell them apart. */
 	const char *serve_chiave_perche;
 
-	/* ⛔ §5.2, eccezione 5 di §3: «il server PUO' ignorare una
-	 * `RICHIEDI_CHIAVE` che arrivi entro 200 ms **dall'ultima chiave che ha
-	 * spedito**» — ⛔ non dall'ultima richiesta ricevuta, e la differenza non
-	 * e' una sfumatura: contando dalle richieste, due client insistenti
-	 * spostano l'orologio all'infinito e la chiave non parte mai. */
+	/* ⛔ §5.2, exception 5 of §3: «the server MAY ignore a
+	 * `RICHIEDI_CHIAVE` that arrives within 200 ms **of the last keyframe it
+	 * sent**» — ⛔ not of the last request received, and the difference is
+	 * not a nuance: counting from requests, two insistent clients push the
+	 * clock forward forever and the keyframe never leaves. */
 	uint64_t ultima_chiave_ms;
 	bool mai_spedita_una_chiave;
-	/* ⛔ 22 set 2026 — il `numero` dell'ultima chiave spedita: la grazia dei
-	 *    200 ms vale solo per chi quella chiave NON l'ha ancora vista
+	/* ⛔ 22 Sep 2026 — the `numero` of the last keyframe sent: the 200 ms grace
+	 *    applies only to whoever has NOT yet seen that keyframe
 	 *    (`tratta_richiedi_chiave()`). */
 	uint32_t ultima_chiave_numero;
 
-	/* Il fotogramma aperto adesso — §5.1, uno stream per fotogramma.
-	 * ⛔ `video_aperto` e non «`stream` vale -1»: `0` e' un identificatore di
-	 *    stream legittimo, e un sentinella preso da un valore valido e' quel
-	 *    che §6.0 vieta ai campi del protocollo.  Non lo si fa nemmeno qui. */
+	/* The frame open right now — §5.1, one stream per frame.
+	 * ⛔ `video_aperto` and not «`stream` is -1»: `0` is a legitimate stream
+	 *    identifier, and a sentinel taken from a valid value is what §6.0
+	 *    forbids for protocol fields.  It is not done here either. */
 	bool video_aperto;
 	int64_t video_stream;
-	bool video_e_chiave;      /* §5.2: una chiave NON si abbandona */
+	bool video_e_chiave;      /* §5.2: a keyframe is NOT abandoned */
 	uint32_t video_suo_numero;
-	size_t video_da_scrivere; /* i byte di dati DICHIARATI in `apri` */
-	size_t video_scritti;     /* quelli usciti finora */
-	uint64_t video_aperto_ms; /* l'ora della sessione quando si e' aperto */
-	/* Il conto degli abbandoni, per il registro: §5.1 vuole che ogni
-	 * abbandono si veda, e un conteggio senza denominatore non e' una misura
-	 * (`LEZIONI.md` §1.9). */
+	size_t video_da_scrivere; /* the data bytes DECLARED in `apri` */
+	size_t video_scritti;     /* those gone out so far */
+	uint64_t video_aperto_ms; /* the session time when it was opened */
+	/* The count of abandonments, for the log: §5.1 wants every
+	 * abandonment to be visible, and a count without a denominator is not a
+	 * measurement (`LEZIONI.md` §1.9). */
 	uint32_t video_spediti, video_abbandonati;
 
 	/* ==================================================================== */
-	/* ⭐ IL CANALE DI INPUT — §2.5, §7.1, §7.3                             */
+	/* ⭐ THE INPUT CHANNEL — §2.5, §7.1, §7.3                              */
 
-	/* §2.5: lo stream di input e' **uno solo**.  ⛔ `inp_stream_noto` e non
-	 * «`inp_stream` vale -1»: uno stream 0 e' un identificatore legittimo, e
-	 * un sentinella preso da un valore valido e' quel che §6.0 vieta. */
+	/* §2.5: the input stream is **only one**.  ⛔ `inp_stream_noto` and not
+	 * «`inp_stream` is -1»: a stream 0 is a legitimate identifier, and a
+	 * sentinel taken from a valid value is what §6.0 forbids. */
 	bool inp_stream_noto;
 	int64_t inp_stream;
-	/* L'accumulo, fisso: vedi il riquadro di `I_ACCUMULO`. */
+	/* The buffer, fixed: see the box of `I_ACCUMULO`. */
 	uint8_t inp_acc[I_ACCUMULO];
 	size_t inp_acc_len;
 
-	/* ⛔ §7.3: «l'`id` cresce di **almeno uno** a ogni messaggio, **su tutto
-	 *    il canale di input** — non uno per tipo».  ⇒ UN contatore, e uno
-	 *    solo: cinque contatori per tipo accetterebbero
-	 *    `PUNTATORE(4)` dopo `PULSANTE(9)`, e allora il campo `input` dei
-	 *    fotogrammi (§6.2) non tornerebbe piu' indietro coerente con niente.
-	 * ⚠ `0` = nessuno ancora, ed e' il valore che §7.3 riserva. */
+	/* ⛔ §7.3: «the `id` grows by **at least one** with every message, **across
+	 *    the whole input channel** — not one per type».  ⇒ ONE counter, and only
+	 *    one: five per-type counters would accept
+	 *    `PUNTATORE(4)` after `PULSANTE(9)`, and then the `input` field of the
+	 *    frames (§6.2) would no longer come back consistent with anything.
+	 * ⚠ `0` = none yet, and it is the value §7.3 reserves. */
 	uint32_t inp_ultimo_id;
-	/* ⛔ §6.2: quello che torna nel campo `input` dei fotogrammi — e avanza
-	 * SOLO quando il gancio ha risposto 0.  Vedi `rcp_input_ultimo_iniettato()`. */
+	/* ⛔ §6.2: what comes back in the `input` field of the frames — and it moves
+	 * forward ONLY when the hook has answered 0.  See `rcp_input_ultimo_iniettato()`. */
 	uint32_t inp_ultimo_iniettato;
-	/* Il conto, e sono TRE numeri perche' i fatti sono tre: quanti arrivati,
-	 * quanti iniettati, quanti rifiutati da chi inietta.  ⛔ «Zero iniettati»
-	 * detto da solo non distingue un compositore muto da un client fermo. */
+	/* The count, and they are THREE numbers because the facts are three: how
+	 * many arrived, how many injected, how many refused by the injector.
+	 * ⛔ «Zero injected» on its own does not tell a mute compositor from a
+	 * still client. */
 	uint32_t inp_arrivati, inp_iniettati, inp_non_iniettati;
 
 	/* ==================================================================== */
-	/* ⭐ IL CANALE APPUNTI — §7.4, §5.4, §2.5                              */
+	/* ⭐ THE CLIPBOARD CHANNEL — §7.4, §5.4, §2.5                          */
 
-	/* ⛔⭐ CIASCUN LATO NUMERA I PROPRI TRASFERIMENTI, da 1 e crescendo (§7.4,
-	 *     rilievo R1.11).  ⇒ Due contatori, e sono di due proprietari diversi:
-	 *     ⛔ confonderli e' esattamente il difetto che l'identificatore e' nato
-	 *     per togliere — «con due annunci aperti nei due versi, l'utente copia
-	 *     di qua mentre incolla di la', e le due implementazioni appaiano le
-	 *     richieste agli annunci in ordine diverso e **si scambiano i testi**».
+	/* ⛔⭐ EACH SIDE NUMBERS ITS OWN TRANSFERS, from 1 upwards (§7.4,
+	 *     finding R1.11).  ⇒ Two counters, and they have two different owners:
+	 *     ⛔ confusing them is exactly the defect the identifier was born
+	 *     to remove — «with two announcements open in the two directions, the
+	 *     user copies here while pasting there, and the two implementations pair
+	 *     the requests with the announcements in a different order and **swap the
+	 *     texts**».
 	 *
-	 * ⚠ `0` = «nessun annuncio ancora», e §7.4 riserva lo zero: i trasferimenti
-	 *   cominciano da 1.  Non e' un sentinella implicito (§6.0), e' quello
-	 *   dichiarato dal protocollo. */
-	uint32_t app_mio_id;  /* l'ultimo che ho annunciato IO */
-	/* ⛔ Quanti byte aveva l'ultimo testo che la SESSIONE ci ha dato: serve a
-	 *    sapere se la sessione ha qualcosa da perdere.  Vedi la regola
-	 *    dell'annuncio vuoto, piu' sotto. */
+	 * ⚠ `0` = «no announcement yet», and §7.4 reserves zero: transfers
+	 *   start from 1.  It is not an implicit sentinel (§6.0), it is the one
+	 *   declared by the protocol. */
+	uint32_t app_mio_id;  /* the last one *I* announced */
+	/* ⛔ How many bytes the last text the SESSION gave us had: it serves to
+	 *    know whether the session has something to lose.  See the rule
+	 *    of the empty announcement, further below. */
 	size_t app_mio_len;
-	uint32_t app_suo_id;  /* l'ultimo che ha annunciato il CLIENT */
-	uint32_t app_suo_len; /* quanti byte diceva quell'annuncio */
+	uint32_t app_suo_id;  /* the last one the CLIENT announced */
+	uint32_t app_suo_len; /* how many bytes that announcement said */
 
-	/* ⛔ Il testo che la SESSIONE ha copiato, tenuto qui in attesa che qualcuno
-	 *    lo chieda.  §7.4: «si annuncia e si chiede, invece di spingere».
+	/* ⛔ The text the SESSION copied, kept here waiting for someone to
+	 *    ask for it.  §7.4: «one announces and asks, instead of pushing».
 	 *
-	 * ⚠ Ce n'e' UNO solo, ed e' l'attuale: §7.4 dice che un `APPUNTI_CHIEDI`
-	 *   arrivato quando l'annuncio e' gia' stato superato da uno piu' recente
-	 *   **si serve con il testo attuale**, e il mittente lo scrive nel registro.
-	 *   ⇒ Tenere i vecchi non servirebbe a niente e sarebbe memoria che cresce
-	 *   con ogni copia. */
+	 * ⚠ There is ONLY ONE, and it is the current one: §7.4 says that an
+	 *   `APPUNTI_CHIEDI` arriving when the announcement has already been
+	 *   superseded by a more recent one **is served with the current text**,
+	 *   and the sender writes it to the log.  ⇒ Keeping the old ones would serve
+	 *   no purpose and would be memory growing with every copy. */
 	char *app_testo;
 	size_t app_testo_n;
-	/* ⛔ Il testo qui sopra e' arrivato PRIMA di `SESSIONE` e non e' ancora
-	 *    stato annunciato: lo si annuncia appena la sessione e' aperta
+	/* ⛔ The text above arrived BEFORE `SESSIONE` and has not yet been
+	 *    announced: it is announced as soon as the session is open
 	 *    (`annuncia_il_tenuto`). */
 	bool app_tenuto;
 
-	/* ⛔ I serial delle richieste della SESSIONE in attesa del testo del client.
+	/* ⛔ The serials of the SESSION's requests waiting for the client's text.
 	 *
-	 * ⚠ Ce ne puo' essere piu' d'uno: due programmi che incollano insieme sono
-	 *   due `SelectionTransfer`, e il filo porta un `APPUNTI_CHIEDI` solo — la
-	 *   risposta li serve **tutti**, perche' chiedono lo stesso identificatore
-	 *   di trasferimento, cioe' lo stesso testo. */
+	 * ⚠ There can be more than one: two programs pasting together are
+	 *   two `SelectionTransfer`, and the wire carries a single `APPUNTI_CHIEDI` —
+	 *   the answer serves **all** of them, because they ask for the same
+	 *   transfer identifier, that is the same text. */
 	uint32_t app_serial[A_STREAM_MAX];
 	int app_serial_n;
-	/* ⛔ Un `APPUNTI_CHIEDI` per il lotto in coda e' gia' partito?  ⚠ Serve
-	 *    perche' le richieste possono arrivare PRIMA dell'annuncio (vedi
-	 *    `rcp_appunti_chiedi`), e allora la domanda parte quando l'annuncio
-	 *    arriva: senza questo flag ne partirebbe una per ogni richiesta gia' in
-	 *    coda, e il client riceverebbe tre `CHIEDI` per un testo solo. */
+	/* ⛔ Has an `APPUNTI_CHIEDI` for the queued batch already gone out?  ⚠ It is
+	 *    needed because requests can arrive BEFORE the announcement (see
+	 *    `rcp_appunti_chiedi`), and then the question leaves when the
+	 *    announcement arrives: without this flag one would leave for every
+	 *    request already queued, and the client would receive three `CHIEDI`
+	 *    for a single text. */
 	bool app_chiesto;
-	/* ⛔⭐ E QUALE, non solo «se».  §7.4 dice due cose che sembrano una:
-	 *     un `APPUNTI_TESTO` che NESSUNO ha chiesto e' `ERRORE_PROTOCOLLO`, ma
-	 *     una richiesta servita quando l'annuncio e' gia' stato superato si
-	 *     serve **col testo attuale** e non e' un errore (la quinta eccezione
-	 *     di §3).  ⇒ Il confronto va fatto con quel che HO CHIESTO, non con
-	 *     l'annuncio vivo: fra la domanda e la risposta il client puo' aver
-	 *     annunciato di nuovo, e allora il numero e' vecchio per costruzione.
-	 * ⚠ `[M]` 20 agosto 2026: e' successo davvero, nel verso opposto — la
-	 *   PAGINA chiudeva la sessione per questo, e l'utente vedeva «Firefox si
-	 *   e' bloccato con la clipboard». */
+	/* ⛔⭐ AND WHICH ONE, not only «whether».  §7.4 says two things that look
+	 *     like one: an `APPUNTI_TESTO` that NOBODY asked for is
+	 *     `ERRORE_PROTOCOLLO`, but a request served when the announcement has
+	 *     already been superseded is served **with the current text** and is not
+	 *     an error (the fifth exception of §3).  ⇒ The comparison must be made
+	 *     with what I ASKED FOR, not with the live announcement: between the
+	 *     question and the answer the client may have announced again, and then
+	 *     the number is old by construction.
+	 * ⚠ `[M]` 20 Aug 2026: it really happened, in the opposite direction — the
+	 *   PAGE closed the session because of this, and the user saw «Firefox got
+	 *   stuck with the clipboard». */
 	uint32_t app_chiesto_id;
 
-	/* ⛔⛔⭐ L'OFFERTA CHE ASPETTA LA FINE DEL TRASFERIMENTO — 21 agosto 2026,
-	 *      e il difetto l'ha detto Mutter con parole sue: *«Transfer serial 2
-	 *      doesn't match any transfer request»* (banco `07-b56`).
+	/* ⛔⛔⭐ THE OFFER THAT WAITS FOR THE END OF THE TRANSFER — 21 Aug 2026,
+	 *      and Mutter stated the defect in its own words: *«Transfer serial 2
+	 *      doesn't match any transfer request»* (bench `07-b56`).
 	 *
-	 * ⚠ Offrire la selezione al compositore (`SetSelection`) ANNULLA i
-	 *   trasferimenti in volo: e' il compositore che, vedendo una selezione
-	 *   nuova, butta le richieste aperte sulla vecchia.  ⛔ E noi ri-offrivamo
-	 *   proprio mentre servivamo — il client rilegge la clipboard quando gli si
-	 *   chiede, annuncia il testo nuovo, e quell'annuncio uccideva l'incollata
-	 *   che lo aveva provocato.  ⇒ Chi incollava vedeva **vuoto**.
+	 * ⚠ Offering the selection to the compositor (`SetSelection`) CANCELS the
+	 *   transfers in flight: it is the compositor that, seeing a new selection,
+	 *   throws away the requests open on the old one.  ⛔ And we were re-offering
+	 *   precisely while serving — the client rereads the clipboard when asked,
+	 *   announces the new text, and that announcement killed the paste
+	 *   that had caused it.  ⇒ Whoever was pasting saw **empty**.
 	 *
-	 * ⭐ Allora l'offerta si RIMANDA: finche' c'e' qualcuno in attesa, il
-	 *    compositore resta proprietario di quel che ha, e l'offerta nuova parte
-	 *    quando la risposta e' partita. */
+	 * ⭐ So the offer is POSTPONED: while someone is waiting, the
+	 *    compositor stays the owner of what it has, and the new offer leaves
+	 *    when the answer has gone out. */
 	bool app_offri_dopo;
 
-	/* Gli stream in arrivo, uno per trasferimento (§2.5).  ⛔ L'accumulo e'
-	 * allocato a richiesta e **dopo** aver convalidato la lunghezza dichiarata:
-	 * §6.1 — «un ricevente che alloca `lunghezza` byte e poi verifica ha gia'
-	 * regalato un megabyte a chiunque sappia scrivere sei byte». */
+	/* The incoming streams, one per transfer (§2.5).  ⛔ The buffer is
+	 * allocated on demand and **after** validating the declared length:
+	 * §6.1 — «a receiver that allocates `lunghezza` bytes and then checks has
+	 * already given a megabyte to anyone who can write six bytes». */
 	struct {
 		bool usato;
 		int64_t stream;
@@ -767,160 +779,159 @@ struct rcp_sessione {
 		size_t corpo_n;
 	} app_in[A_STREAM_MAX];
 
-	/* Il conto, e i fatti sono quattro perche' si diagnosticano separatamente:
-	 * quanti annunci ho fatto, quanti me ne hanno chiesti, quanti ne ho
-	 * ricevuti dal client, quanti gliene ho chiesti io. */
+	/* The count, and the facts are four because they are diagnosed separately:
+	 * how many announcements I made, how many were asked of me, how many I
+	 * received from the client, how many I asked of it. */
 	uint32_t app_annunciati, app_serviti, app_ricevuti, app_chiesti;
-	/* Quando la PRIMA richiesta del lotto si e' messa in coda: il fondo di
-	 * `rcp_tempo()` conta da qui. */
+	/* When the FIRST request of the batch was queued: the backstop of
+	 * `rcp_tempo()` counts from here. */
 	uint64_t app_chiesto_ms;
 
-	/* ⛔ §4.3: il client ha dichiarato `appunti.testo = si`?  ⚠ `false` e' lo
-	 *    stato iniziale ed e' il valore giusto: un `CIAO` senza quella capacita'
-	 *    e' un client che non vuole gli appunti, non un client che li vuole di
-	 *    serie. */
+	/* ⛔ §4.3: did the client declare `appunti.testo = si`?  ⚠ `false` is the
+	 *    initial state and it is the right value: a `CIAO` without that
+	 *    capability is a client that does not want the clipboard, not a client
+	 *    that wants it by default. */
 	bool negozia_appunti;
-	/* ⚠ §7.3: l'`istante` del client, in microsecondi.  ⛔ E NON LO CONSUMA
-	 *   NESSUNA REGOLA di questo modulo: «in una pagina l'orologio monotono e'
-	 *   in millisecondi e la sua grana e' deliberatamente ingrossata — il
-	 *   client scrive `millisecondi × 1000` e NON DEVE far credere a una
-	 *   precisione che non ha» (rilievo R1.27).  Sta qui per il registro e per
-	 *   la diagnosi — «quando l'utente ha mosso la mano» invece di «quando il
-	 *   byte e' arrivato» — e ⛔ nessuna misura si costruisce su di lui: il
-	 *   ritardo lo misura l'anello chiuso di `DECISIONI.md` §2.6, e il
-	 *   fotogramma porta indietro l'`id`, non l'istante. */
+	/* ⚠ §7.3: the client's `istante`, in microseconds.  ⛔ And NO RULE of this
+	 *   module CONSUMES IT: «in a page the monotonic clock is in milliseconds
+	 *   and its grain is deliberately coarsened — the client writes
+	 *   `milliseconds × 1000` and MUST NOT suggest a precision it does not
+	 *   have» (finding R1.27).  It is here for the log and for diagnosis —
+	 *   «when the user moved their hand» instead of «when the byte arrived» —
+	 *   and ⛔ no measurement is built on it: the delay is measured by the closed
+	 *   loop of `DECISIONI.md` §2.6, and the frame carries back the `id`, not
+	 *   the instant. */
 	uint64_t inp_ultimo_istante_us;
 
-	/* ⛔ §7.1 / §3 eccezione 3 — IL SECONDO DI GRAZIA.  La tela PRECEDENTE e
-	 * il momento in cui e' stata sostituita: per un secondo una coordinata
-	 * valida su quella si SATURA alla nuova invece di chiudere la sessione.
-	 * ⚠ `tela_prec_l == 0` vuol dire «nessuna grazia in corso», ed e' lecito
-	 *   perche' una tela di larghezza zero non e' mai stata concessa (§4.5). */
+	/* ⛔ §7.1 / §3 exception 3 — THE SECOND OF GRACE.  The PREVIOUS canvas and
+	 * the moment it was replaced: for one second a coordinate valid on that one
+	 * is CLAMPED to the new one instead of closing the session.
+	 * ⚠ `tela_prec_l == 0` means «no grace in progress», and it is legitimate
+	 *   because a canvas of zero width has never been granted (§4.5). */
 	uint32_t tela_prec_l, tela_prec_a;
 	uint64_t tela_grazia_da;
-	/* Quante coordinate ha salvato la grazia: §3 vuole che «ogni tolleranza
-	 * vada scritta nel registro», e un conteggio permette di accorgersi che
-	 * una tolleranza si e' messa a coprire il caso normale. */
+	/* How many coordinates the grace has saved: §3 wants «every tolerance to be
+	 * written to the log», and a count makes it possible to notice that a
+	 * tolerance has started covering the normal case. */
 	uint32_t inp_grazie;
-	/* ⛔ §7.3, ultimo capoverso: il rilascio al distacco si fa **una volta
-	 * sola**.  Le tre strade che finiscono una connessione — congedo,
-	 * silenzio, errore — possono percorrersi in fila, e chiamare il gancio
-	 * due volte non fa danno ma scrive due righe che dicono cose diverse
-	 * sullo stesso fatto. */
+	/* ⛔ §7.3, last paragraph: the release on detach is done **only
+	 * once**.  The three roads that end a connection — farewell, silence,
+	 * error — can be travelled in a row, and calling the hook twice does no
+	 * harm but writes two lines that say different things about the same
+	 * fact. */
 	bool inp_rilasciato;
 
-	/* ⛔⭐⭐ L'`ADATTA_TELA` GIRATA AL PALCO E NON ANCORA RISPOSTA — §7.1, e la
-	 *     catena `figli_ritela()` → `cattura_ridimensiona()` (`DECISIONI.md`
-	 *     §5.0-sexies).
+	/* ⛔⭐⭐ THE `ADATTA_TELA` PASSED TO THE STAGE AND NOT YET ANSWERED — §7.1,
+	 *     and the chain `figli_ritela()` → `cattura_ridimensiona()`
+	 *     (`DECISIONI.md` §5.0-sexies).
 	 *
-	 * ⛔ ESISTE PERCHE' LA RISPOSTA NON TORNA DA DOVE PARTE LA DOMANDA.  Il
-	 *    palco sta in un altro processo, e l'unico modo di sapere che il
-	 *    compositore ha obbedito e' **vedere arrivare un fotogramma alla misura
-	 *    nuova**: puo' volerci qualche decina di millisecondi (`[M]` Mutter 41,6
-	 *    ms, labwc 5,1 ms), puo' arrivarne uno di misura DIVERSA da quella
-	 *    chiesta (§4.5 lo permette), e puo' non arrivarne nessuno.
+	 * ⛔ IT EXISTS BECAUSE THE ANSWER DOES NOT COME BACK FROM WHERE THE QUESTION
+	 *    LEAVES.  The stage lives in another process, and the only way of knowing
+	 *    that the compositor has obeyed is **to see a frame arrive at the new
+	 *    size**: it can take a few tens of milliseconds (`[M]` Mutter 41.6
+	 *    ms, labwc 5.1 ms), one of a size DIFFERENT from the one asked for can
+	 *    arrive (§4.5 allows it), and none may arrive at all.
 	 *
-	 * ⛔ E QUESTO E' PRECISAMENTE IL MOTIVO PER CUI SERVE UN'ATTESA CON UN
-	 *    FONDO: §7.1 impone che *«a ogni `ADATTA_TELA` il server DEVE rispondere
-	 *    con un `TELA`, riuscito o no.  Un silenzio lascia il client ad
-	 *    aspettare per sempre»* — e sul client quel silenzio non e' solo
-	 *    un'attesa: §6.2 gli fa TRATTENERE i fotogrammi finche' una richiesta e'
-	 *    senza risposta, cioe' gli fa crescere la coda in memoria.
+	 * ⛔ AND THIS IS PRECISELY WHY A WAIT WITH A BACKSTOP IS NEEDED: §7.1
+	 *    requires that *«to every `ADATTA_TELA` the server MUST answer with a
+	 *    `TELA`, successful or not.  A silence leaves the client waiting
+	 *    forever»* — and on the client that silence is not just a wait: §6.2
+	 *    makes it HOLD BACK frames while a request is unanswered, that is it
+	 *    makes its queue grow in memory.
 	 *
-	 * ⚠ `tela_volo_da == 0` insieme a `tela_volo` falso: nessuna richiesta in
-	 *   volo.  E se ne arriva una seconda mentre la prima e' in volo, la seconda
-	 *   SOSTITUISCE la prima e il `TELA` che uscira' vale per tutt'e due: il
-	 *   conto sul client scenderebbe di uno solo — ⛔ per questo la prima si
-	 *   RISPONDE prima di accettare la seconda (vedi `T_ADATTA_TELA`). */
+	 * ⚠ `tela_volo_da == 0` together with `tela_volo` false: no request in
+	 *   flight.  And if a second one arrives while the first is in flight, the
+	 *   second REPLACES the first and the `TELA` that goes out counts for both:
+	 *   the count on the client would go down by one only — ⛔ that is why the
+	 *   first is ANSWERED before accepting the second (see `T_ADATTA_TELA`). */
 	bool tela_volo;
 	uint32_t tela_volo_l, tela_volo_a;
 	uint64_t tela_volo_da;
-	/* ⛔ DA QUANDO il palco consegna una misura diversa dalla tela in vigore
-	 *    SENZA che nessuno gliel'abbia chiesto.  ⚠ Zero = sono d'accordo.
+	/* ⛔ SINCE WHEN the stage delivers a size different from the canvas in force
+	 *    WITHOUT anyone having asked for it.  ⚠ Zero = they agree.
 	 *
-	 * ⛔ Non e' un doppione di `tela_volo_da`, ed e' l'altro caso della stessa
-	 *    famiglia: li' il disaccordo lo abbiamo voluto noi e si aspetta che
-	 *    finisca; qui non lo ha voluto nessuno, e la prima mossa e' **chiedere
-	 *    al palco di tornare** alla tela in vigore.  Se dopo
-	 *    `RCP_TELA_ATTESA_MS` non e' tornato, si adotta la sua misura: una
-	 *    sessione con una tela inattesa vale piu' di una sessione che non vede
-	 *    un pixel (`SPECIFICHE.md` §8.3, e I1 — «una sessione brutta vale piu'
-	 *    di una sessione chiusa»). */
+	 * ⛔ It is not a duplicate of `tela_volo_da`, and it is the other case of
+	 *    the same family: there the disagreement was wanted by us and one waits
+	 *    for it to end; here nobody wanted it, and the first move is **asking
+	 *    the stage to go back** to the canvas in force.  If after
+	 *    `RCP_TELA_ATTESA_MS` it has not gone back, its size is adopted: a
+	 *    session with an unexpected canvas is worth more than a session that
+	 *    does not see a pixel (`SPECIFICHE.md` §8.3, and I1 — «an ugly session
+	 *    is worth more than a closed session»). */
 	uint64_t tela_disaccordo_da;
-	/* Quanto si aspetta prima di richiedere al palco di tornare: raddoppia a
-	 * ogni tentativo andato a vuoto, fino a `RCP_TELA_RICHIAMO_MAX_MS`. */
+	/* How long to wait before asking the stage again to go back: it doubles at
+	 * every attempt that came to nothing, up to `RCP_TELA_RICHIAMO_MAX_MS`. */
 	uint64_t tela_disaccordo_attesa;
 };
 
-/* Dichiarata qui perche' il limitatore dei tentativi, qui sotto, DEVE poter
- * scrivere nel registro: un limite raggiunto in silenzio e' un limite che non
- * esiste (§3, e rilievo R9.1). */
+/* Declared here because the attempt limiter, below, MUST be able to
+ * write to the log: a limit reached in silence is a limit that does not
+ * exist (§3, and finding R9.1). */
 static void reg(rcp_sessione *s, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
-
-/* ⛔⭐ §7.3 — «Al distacco si rilascia tutto».  Dichiarata qui perche' la
- *     chiamano TRE strade che stanno piu' in su di dove e' definita — il
- *     congedo, il silenzio di §5.3 e la fine della sessione — e le tre sono
- *     esattamente le tre che §7.3 nomina: «per congedo, per silenzio, per
- *     errore».  Definita nella sezione del canale di input, dov'e' il resto. */
+/* ⛔⭐ §7.3 — «On detach everything is released».  Declared here because
+ *     THREE roads call it that sit higher up than where it is defined — the
+ *     farewell, the silence of §5.3 and the end of the session — and the three
+ *     are exactly the three that §7.3 names: «by farewell, by silence, by
+ *     error».  Defined in the input channel section, where the rest is. */
 static void rilascia_al_distacco(rcp_sessione *s, const char *perche);
 
-/* ⛔ §5.3 / rilievo R9.2 — il posto ripreso da chi torna a parlare.  Dichiarata
- * qui perche' i byte del client entrano da DUE porte (`rcp_ricevi()` e
- * `rcp_ricevi_input()`) e la seconda sta piu' in su della definizione. */
+/* ⛔ §5.3 / finding R9.2 — the slot taken back by whoever speaks again.
+ * Declared here because the client's bytes come in through TWO doors
+ * (`rcp_ricevi()` and `rcp_ricevi_input()`) and the second sits higher up
+ * than the definition. */
 static bool torna_a_parlare(rcp_sessione *s);
 
-/* ⛔⭐⭐ IL DEBITO DI CHIAVE SI ACCENDE E SI SPEGNE DA DUE FUNZIONI SOLE — 23
- *      agosto 2026, e la ragione e' un commento che aveva gia' mentito DUE
- *      volte.  Il riquadro del canale video diceva «acceso in TRE punti», e i
- *      punti erano quattro; corretto in «CINQUE», e i punti erano nove.
- *      ⇒ Un elenco tenuto a mano invecchia al primo ramo nuovo, e invecchia in
- *      silenzio: nessun banco puo' accorgersene, perche' il numero non e'
- *      un comportamento.  ⛔ La cura non e' contare meglio: e' togliere il
- *      conto.  Da qui l'elenco lo fa il compilatore — `grep -n 'chiave_serve('
- *      src/rcp.c` e' l'elenco, sempre e per costruzione.
- * ⚠ Definite nella sezione del canale video, dov'e' il resto; dichiarate qui
- *   perche' la prima accensione (`SESSIONE` spedita, §5.2) sta piu' in su. */
+/* ⛔⭐⭐ THE KEYFRAME DEBT IS SWITCHED ON AND OFF BY TWO FUNCTIONS ONLY — 23
+ *      Aug 2026, and the reason is a comment that had already lied TWICE.
+ *      The box of the video channel said «switched on in THREE places», and the
+ *      places were four; corrected to «FIVE», and the places were nine.
+ *      ⇒ A list kept by hand ages at the first new branch, and it ages in
+ *      silence: no bench can notice, because the number is not a
+ *      behaviour.  ⛔ The cure is not counting better: it is removing the
+ *      count.  From here on the list is made by the compiler — `grep -n
+ *      'chiave_serve(' src/rcp.c` is the list, always and by construction.
+ * ⚠ Defined in the video channel section, where the rest is; declared here
+ *   because the first switch-on (`SESSIONE` sent, §5.2) sits higher up. */
 static void chiave_serve(rcp_sessione *s, const char *perche);
 static void annuncia_il_tenuto(rcp_sessione *s);
 static void chiave_pagata(rcp_sessione *s);
 
 /* ------------------------------------------------------------------------ */
-/* ⛔ IL REGISTRO DELLE SESSIONI ATTACCATE — §8.2 motivo 0x0F
+/* ⛔ THE REGISTRY OF ATTACHED SESSIONS — §8.2 reason 0x0F
  *
- * «Chi viene rifiutato e' chi arriva, non chi c'era»: nessun client attaccato
- * e vivo viene mai spodestato.  Qui basta un elenco piccolo: il banco ne apre
- * due o tre, e un server vero lo sostituira' con la sua tabella delle sessioni
- * — ma la REGOLA sta qui, non li'.                                          */
-/* ⛔⭐ IL NUMERO NON E' PIU' QUI — 25 agosto 2026.  Sta in `rcp.h`
- *     (`RCP_TETTO_SESSIONI`), insieme al riquadro che spiega perche' era
- *     scritto a mano in quattro posti e perche' adesso e' uno solo.
+ * «The one refused is whoever arrives, not whoever was there»: no attached
+ * and alive client is ever ousted.  A small list is enough here: the bench
+ * opens two or three, and a real server will replace it with its session
+ * table — but the RULE lives here, not there.                              */
+/* ⛔⭐ THE NUMBER IS NO LONGER HERE — 25 Aug 2026.  It lives in `rcp.h`
+ *     (`RCP_TETTO_SESSIONI`), together with the box that explains why it was
+ *     written by hand in four places and why now it is only one.
  *
- * ⭐⭐ E DALLA SERA DEL 25 AGOSTO NON E' PIU' NEMMENO UNA MISURA FISSA: la
- *     tabella si **alloca** sul tetto in vigore (`--tetto-sessioni`).  ⛔ Il
- *     `MAX_ATTACCATE` che stava qui **e' sparito**, e non e' stato lasciato
- *     accanto come «massimo»: sarebbe stato un secondo numero, cioe' la
- *     seconda strada di `CODER.md` §2-bis.
- * ⭐ `[M]` §3.3 aveva verificato che le cinque funzioni qui sotto fanno **solo
- *    scansioni lineari con `strcmp`** — nessuna aritmetica di indice, nessun
- *    invariante appoggiato al 16 — ed e' per questo che il cambio costa un
- *    `calloc` e un contatore. */
+ * ⭐⭐ AND SINCE THE EVENING OF 25 AUGUST IT IS NOT EVEN A FIXED SIZE: the
+ *     table is **allocated** on the cap in force (`--tetto-sessioni`).  ⛔ The
+ *     `MAX_ATTACCATE` that was here **has disappeared**, and it was not left
+ *     alongside as a «maximum»: it would have been a second number, that is the
+ *     second road of `CODER.md` §2-bis.
+ * ⭐ `[M]` §3.3 had verified that the five functions below do **only
+ *    linear scans with `strcmp`** — no index arithmetic, no invariant resting
+ *    on the 16 — and that is why the change costs a `calloc` and a counter. */
 static int tetto_in_vigore = RCP_TETTO_SESSIONI;
-static int quanti_posti;   /* ⛔ 0 finche' la tabella non e' allocata */
+static int quanti_posti;   /* ⛔ 0 until the table is allocated */
 static struct posto {
 	char utente[257];
 	bool usato;
-	/* ⛔⭐ CHI occupa il posto, e non e' un doppione del nome — 23 agosto 2026,
-	 *    lo sfratto del fantasma.  Il nome dice CHE il posto e' occupato; per
-	 *    sapere se l'occupante e' ancora VIVO serve la sua `ultima_vita`, che
-	 *    sta nella sua sessione e da qui non si raggiungeva.
+	/* ⛔⭐ WHO holds the slot, and it is not a duplicate of the name — 23 Aug
+	 *    2026, the ghost eviction.  The name says THAT the slot is taken; to
+	 *    know whether the occupant is still ALIVE one needs its `ultima_vita`,
+	 *    which lives in its session and could not be reached from here.
 	 *
-	 * ⚠ E non puo' restare appeso: TUTTE le strade che liberano il posto
-	 *   passano da `posto_lascia()` — `congeda()`, `rcp_libera()`,
-	 *   `rcp_chiusa_dal_client()`, `rcp_canale_chiuso()`, il `CONGEDO` del
-	 *   client e il silenzio di `rcp_tempo()` — e quella lo azzera.  ⛔ Chi
-	 *   aggiunge una sesta strada la fa passare di li', o questo puntatore
-	 *   diventa una lettura di memoria liberata. */
+	 * ⚠ And it cannot be left dangling: ALL the roads that free the slot
+	 *   pass through `posto_lascia()` — `congeda()`, `rcp_libera()`,
+	 *   `rcp_chiusa_dal_client()`, `rcp_canale_chiuso()`, the client's
+	 *   `CONGEDO` and the silence of `rcp_tempo()` — and that one zeroes it.
+	 *   ⛔ Whoever adds a sixth road makes it pass through there, or this
+	 *   pointer becomes a read of freed memory. */
 	rcp_sessione *chi;
 } *attaccate;
 
@@ -933,20 +944,20 @@ bool rcp_tetto_imposta(int quante)
 {
 	if (quante < 1)
 		return false;
-	/* ⛔ Una volta sola, e prima che esista una sessione: se la tabella c'e'
-	 *    gia', muoverne il numero lascerebbe in vigore DUE tetti nello stesso
-	 *    processo — la misura allocata e il numero dichiarato — che e'
-	 *    precisamente il difetto che i quattro `#define` a 16 avevano. */
+	/* ⛔ Only once, and before a session exists: if the table is already
+	 *    there, moving its number would leave TWO caps in force in the same
+	 *    process — the allocated size and the declared number — which is
+	 *    precisely the defect the four `#define`s at 16 had. */
 	if (attaccate)
 		return false;
 	tetto_in_vigore = quante;
 	return true;
 }
 
-/* ⛔ La tabella si alloca alla prima richiesta di posto, e **una volta sola**.
- * ⚠ Se `calloc` fallisce, il chiamante lo tratta come «niente piu' posti»: e'
- *   un ripiego dichiarato, e il no arriva sul filo con un motivo invece che con
- *   un segmentation fault. */
+/* ⛔ The table is allocated at the first slot request, and **only once**.
+ * ⚠ If `calloc` fails, the caller treats it as «no more slots»: it is a
+ *   declared fallback, and the no arrives on the wire with a reason instead of
+ *   with a segmentation fault. */
 static bool posti_pronti(void)
 {
 	if (attaccate)
@@ -967,7 +978,7 @@ static bool posto_occupato(const char *utente)
 	return false;
 }
 
-/* La sessione che occupa il posto di quell'utente, o NULL. */
+/* The session holding that user's slot, or NULL. */
 static rcp_sessione *posto_chi(const char *utente)
 {
 	for (int i = 0; i < quanti_posti; i++)
@@ -976,39 +987,41 @@ static rcp_sessione *posto_chi(const char *utente)
 	return NULL;
 }
 
-/* ⛔⭐ DUE FATTI DIVERSI NON POSSONO AVERE LO STESSO ESITO — rilievo R9.3.
+/* ⛔⭐ TWO DIFFERENT FACTS CANNOT HAVE THE SAME OUTCOME — finding R9.3.
  *
- * `posto_prendi()` restituiva `false` per due cose che non si somigliano
- * nemmeno: «il posto di questo utente e' occupato» e «la tabella e' piena».
- * Il chiamante ne deduceva una sola, e congedava con `GIA_ATTIVA_REMOTA`.
+ * `posto_prendi()` returned `false` for two things that do not even resemble
+ * each other: «this user's slot is taken» and «the table is full».
+ * The caller deduced only one of them, and sent the client away with
+ * `GIA_ATTIVA_REMOTA`.
  *
- * ⛔ Il diciassettesimo utente di una macchina multi-tenant (`SPECIFICHE.md`
- *    §5.5) — che non ha mai aperto niente da nessuna parte — riceveva
- *    `CONGEDO(0x0F)`, e il client, come §8.2 gli impone, ne costruiva la frase
- *    «hai gia' una sessione attiva altrove».  **E' falsa.**  E' letteralmente
- *    il sintomo che il riquadro sopra `rcp_chiusa_dal_client()` dichiara di
- *    essere andato a curare: «mi dice che sono gia' collegato, e non e' vero».
- *    La cura di allora ha tolto una delle due strade; questa era l'altra.
+ * ⛔ The seventeenth user of a multi-tenant machine (`SPECIFICHE.md`
+ *    §5.5) — who never opened anything anywhere — received
+ *    `CONGEDO(0x0F)`, and the client, as §8.2 requires, built from it the
+ *    sentence «you already have an active session elsewhere».  **It is
+ *    false.**  It is literally the symptom that the box above
+ *    `rcp_chiusa_dal_client()` declares it went to cure: «it tells me I am
+ *    already connected, and it is not true».  The cure back then removed one
+ *    of the two roads; this was the other.
  *
- * ⭐ Il motivo giusto per la tabella piena e' §8.2 `0x0E`
- *    SESSIONE_NON_SERVIBILE: «l'attacco e' ben formato ma non si puo'
- *    servire», e DEVE portare il dettaglio nel corpo — che e' esattamente
- *    questo caso. */
+ * ⭐ The right reason for the full table is §8.2 `0x0E`
+ *    SESSIONE_NON_SERVIBILE: «the attach is well formed but cannot be
+ *    served», and it MUST carry the detail in the body — which is exactly
+ *    this case. */
 enum esito_posto {
 	POSTO_PRESO,
-	POSTO_OCCUPATO,       /* c'e' gia' un client attaccato a QUESTA sessione */
-	POSTO_NIENTE_PIU_POSTI /* il registro delle sessioni e' pieno */
+	POSTO_OCCUPATO,       /* there is already a client attached to THIS session */
+	POSTO_NIENTE_PIU_POSTI /* the registry of sessions is full */
 };
 
-/* ⚠ Prende la SESSIONE e non piu' il solo nome: il registro deve sapere CHI
- *   occupa, per lo sfratto del fantasma (vedi `SFRATTO_PREDEFINITO`). */
+/* ⚠ It takes the SESSION and no longer just the name: the registry must know
+ *   WHO holds the slot, for the ghost eviction (see `SFRATTO_PREDEFINITO`). */
 static enum esito_posto posto_prendi(rcp_sessione *s)
 {
 	const char *utente = s->utente;
 
 	if (posto_occupato(utente))
 		return POSTO_OCCUPATO;
-	/* ⛔ Qui — e solo qui — la tabella nasce: e' l'unico posto che AGGIUNGE. */
+	/* ⛔ Here — and only here — the table is born: it is the only place that ADDS. */
 	if (!posti_pronti())
 		return POSTO_NIENTE_PIU_POSTI;
 	for (int i = 0; i < quanti_posti; i++) {
@@ -1037,186 +1050,188 @@ static void posto_lascia(const char *utente)
 	for (int i = 0; i < quanti_posti; i++)
 		if (attaccate[i].usato && strcmp(attaccate[i].utente, utente) == 0) {
 			attaccate[i].usato = false;
-			/* ⛔ E il puntatore si azzera QUI, insieme al posto: e' l'unico
-			 * punto da cui si puo' garantire che non resti addosso al
-			 * registro una sessione che sta per essere liberata. */
+			/* ⛔ And the pointer is zeroed HERE, together with the slot: it is
+			 * the only point from which one can guarantee that a session about
+			 * to be freed does not stay attached to the registry. */
 			attaccate[i].chi = NULL;
 		}
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⛔⭐ IL BAN DELL'INDIRIZZO — §4.4-bis, riscritto il 10 agosto 2026
+/* ⛔⭐ THE ADDRESS BAN — §4.4-bis, rewritten on 10 Aug 2026
  *
- * `DECISIONI.md` §1.9, deciso dall'utente: **tre autenticazioni fallite
- * consecutive dallo stesso indirizzo, e quell'indirizzo e' fuori per 12 ore.**
+ * `DECISIONI.md` §1.9, decided by the user: **three consecutive failed
+ * authentications from the same address, and that address is out for 12 hours.**
  *
- * ⛔ CHE COSA E' SPARITO, E VA SAPUTO LEGGENDO QUESTO FILE.  La forma
- *    precedente — 5 tentativi in 5 minuti, finestra da 30 s che raddoppiava
- *    fino a 15 minuti, **due** contatori (uno per nome utente e uno per
- *    indirizzo), scadenza a 30 minuti di quiete — era 🔸, cioe' scritta da noi e
- *    mai pronunciata.  Ne resta **un contatore solo**, sull'indirizzo.
+ * ⛔ WHAT HAS DISAPPEARED, AND IT MUST BE KNOWN WHEN READING THIS FILE.  The
+ *    previous form — 5 attempts in 5 minutes, a 30 s window doubling up to
+ *    15 minutes, **two** counters (one per user name and one per
+ *    address), expiry after 30 minutes of quiet — was 🔸, that is written by us
+ *    and never spoken.  What remains is **a single counter**, on the address.
  *
- *    ⭐ E con essa sparisce per costruzione il difetto che B5 ha trovato: la
- *       chiave conteneva la PORTA, e con un solo tentativo per connessione
- *       (§4.4) la porta cambia ogni volta — quel contatore valeva sempre 1.
- *       Qui la chiave e' `s->indirizzo`, che `rcp_chiave_indirizzo()` ha gia'
- *       normalizzato.
+ *    ⭐ And with it disappears by construction the defect B5 found: the
+ *       key contained the PORT, and with a single attempt per connection
+ *       (§4.4) the port changes every time — that counter was always 1.
+ *       Here the key is `s->indirizzo`, which `rcp_chiave_indirizzo()` has
+ *       already normalised.
  *
- * ⛔ IL NOME UTENTE NON CONTA.  Tre nomi diversi contano tre: e' la decisione,
- *    ed e' anche l'unica forma che un contatore per indirizzo puo' avere senza
- *    mentire.  Chi cerca qui il contatore per nome non lo trova perche' non c'e'.
+ * ⛔ THE USER NAME DOES NOT COUNT.  Three different names count three: it is
+ *    the decision, and it is also the only form a per-address counter can have
+ *    without lying.  Whoever looks here for the per-name counter does not find
+ *    it because it is not there.
  *
- * ⛔ I TRE FALLIMENTI DEVONO STARE DENTRO CINQUE MINUTI, o il ban non scatta
- *    (regola dell'utente, 10 agosto 2026).  Due errori di lunedi' e uno di
- *    venerdi' NON bannano: chi sbaglia a digitare ogni tanto non e' chi prova
- *    parole d'ordine.  E un'autenticazione **riuscita** azzera comunque tutto.
+ * ⛔ THE THREE FAILURES MUST FALL WITHIN FIVE MINUTES, or the ban does not fire
+ *    (the user's rule, 10 Aug 2026).  Two mistakes on Monday and one on
+ *    Friday do NOT ban: whoever mistypes now and then is not whoever tries
+ *    passwords.  And a **successful** authentication resets everything anyway.
  *
- *    ⚠ La finestra e' SCORREVOLE, e non ancorata al primo fallimento: si tiene
- *      **l'ora degli ultimi tre**, e si guarda se stanno tutti e tre in cinque
- *      minuti.  Con la finestra ancorata al primo, tre fallimenti a 0:00, 4:59 e
- *      5:01 farebbero ripartire il conto da UNO — buttando via anche quello di
- *      4:59, che dista due secondi dall'ultimo.  ⛔ Chi prova parole d'ordine a
- *      un ritmo appena piu' lento della finestra non verrebbe mai fermato, ed e'
- *      esattamente la forma di difetto che «il codice c'era e non faceva
- *      niente» ha gia' prodotto una volta in questo file.
+ *    ⚠ The window is SLIDING, and not anchored to the first failure: one keeps
+ *      **the time of the last three**, and looks whether all three fall within
+ *      five minutes.  With the window anchored to the first, three failures at
+ *      0:00, 4:59 and 5:01 would restart the count from ONE — throwing away
+ *      also the one at 4:59, which is two seconds from the last.  ⛔ Whoever
+ *      tries passwords at a pace just slower than the window would never be
+ *      stopped, and it is exactly the shape of defect that «the code was there
+ *      and did nothing» has already produced once in this file.
  *
- * ⛔ IL BAN SOPRAVVIVE AL RIAVVIO (`DECISIONI.md` §1.9, invariante I7): un ban
- *    che si azzera riavviando e' una protezione che si perde da se', e chi
- *    riavvia per un altro motivo non sa di averla tolta.  Il file lo scrive
- *    `salva_ban()`; `rcp_ban_carica()` lo rilegge all'avvio.
+ * ⛔ THE BAN SURVIVES A RESTART (`DECISIONI.md` §1.9, invariant I7): a ban
+ *    that resets on restart is a protection that loses itself, and whoever
+ *    restarts for another reason does not know they removed it.  The file is
+ *    written by `salva_ban()`; `rcp_ban_carica()` reads it back at startup.
  *
- *    ⚠ E il file porta un'ora **assoluta**, non `ora`: `ora` e' un orologio
- *      MONOTONO che riparte da un punto qualunque a ogni processo, quindi
- *      scriverlo sul disco produrrebbe scadenze senza senso al riavvio.  Si
- *      scrive l'epoch dei secondi e si riconverte al caricamento.
+ *    ⚠ And the file carries an **absolute** time, not `ora`: `ora` is a
+ *      MONOTONIC clock that restarts from an arbitrary point with every
+ *      process, so writing it to disk would produce meaningless expiries after
+ *      a restart.  The epoch in seconds is written and converted back at load.
  *
- * ⛔ E SI ESCE IN DUE MODI (`DECISIONI.md` §1.9): le 12 ore che passano, oppure
- *    `rcp_sblocca()` — che e' il comando di sblocco, e chiede l'accesso alla
- *    macchina.  ⭐ **E' anche quel che rende B8 possibile**: senza, un banco che
- *    misura i tempi dell'autenticazione avrebbe tre campioni e poi mezza
- *    giornata di silenzio.  Ogni sblocco si scrive nel registro.
+ * ⛔ AND THERE ARE TWO WAYS OUT (`DECISIONI.md` §1.9): the 12 hours passing, or
+ *    `rcp_sblocca()` — which is the unblock command, and requires access to
+ *    the machine.  ⭐ **It is also what makes B8 possible**: without it, a bench
+ *    measuring the timing of authentication would have three samples and then
+ *    half a day of silence.  Every unblock is written to the log.
  *
- * ⚠ LA TABELLA HA UN FONDO, e il rilievo R9.1 vale identico: se `trova_o_crea()`
- *   potesse fallire, un fallimento non contato sarebbe un limitatore che non
- *   c'e'.  Quindi non fallisce: sfratta, e lo dichiara.  ⛔ La vittima non e' mai
- *   una voce BANNATA se ce n'e' una che non lo e' — altrimenti riempire la
- *   tabella di indirizzi inventati sarebbe il modo di cancellarsi un ban.
- *   ⚠ Con dodici ore i posti si liberano molto piu' lentamente di prima: da qui
- *     i 256 posti al posto di 64.  `[?]` Che bastino non e' misurato — un
- *     attaccante con piu' di 256 indirizzi si spinge fuori i ban da solo, e la
- *     riga di registro dello sfratto e' l'unico posto in cui lo si vedrebbe.
+ * ⚠ THE TABLE HAS A BOTTOM, and finding R9.1 applies identically: if
+ *   `trova_o_crea()` could fail, an uncounted failure would be a limiter that
+ *   is not there.  So it does not fail: it evicts, and declares it.  ⛔ The
+ *   victim is never a BANNED entry if there is one that is not — otherwise
+ *   filling the table with invented addresses would be the way to erase one's
+ *   own ban.
+ *   ⚠ With twelve hours the slots free up much more slowly than before: hence
+ *     the 256 slots instead of 64.  `[?]` That they are enough is not measured —
+ *     an attacker with more than 256 addresses pushes the bans out alone, and
+ *     the log line of the eviction is the only place where one would see it.
  *
- * ⛔ E NON C'E' PIU' NESSUNA SCADENZA PER QUIETE.  La forma vecchia ne aveva una
- *    (30 minuti) e serviva a restituire i posti alla tabella; qui restituirebbe
- *    anche i **tentativi**, cioe' contraddirebbe «consecutive».  I posti li
- *    restituiscono la scadenza del ban e lo sfratto.                          */
+ * ⛔ AND THERE IS NO LONGER ANY EXPIRY FOR QUIET.  The old form had one
+ *    (30 minutes) and it served to give slots back to the table; here it would
+ *    also give back the **attempts**, that is it would contradict
+ *    «consecutive».  The slots are given back by the expiry of the ban and by
+ *    the eviction.                                                           */
 #define SOGLIA 3
-#define FINESTRA 300000u     /* 5 minuti: i tre fallimenti devono starci dentro */
-#define BAN_DURATA 43200000u /* 12 ore, in millisecondi */
+#define FINESTRA 300000u     /* 5 minutes: the three failures must fit inside */
+#define BAN_DURATA 43200000u /* 12 hours, in milliseconds */
 #define MAX_TENTATIVI 256
 
 static struct {
 	char indirizzo[64];
 	bool usato;
-	/* ⛔ L'ora degli ULTIMI TRE fallimenti, non il loro numero: e' quel che
-	 * serve per rispondere a «tre entro cinque minuti» senza ancorare la
-	 * finestra al primo.  `quanti` dice quanti slot sono pieni. */
+	/* ⛔ The time of the LAST THREE failures, not their number: it is what is
+	 * needed to answer «three within five minutes» without anchoring the
+	 * window to the first.  `quanti` says how many slots are full. */
 	uint64_t falliti_t[SOGLIA];
 	int quanti;
-	uint64_t bannato_fino; /* monotono, come `ora`; 0 = non bannato */
+	uint64_t bannato_fino; /* monotonic, like `ora`; 0 = not banned */
 	uint64_t ultimo_tocco;
 } tentativi[MAX_TENTATIVI];
 
-static char percorso_ban[512]; /* vuoto = non si persiste (il banco, di solito) */
-
-/* ⛔⭐ L'INDIRIZZO SENZA LA PORTA — trovato da B5 il 10 agosto 2026
+static char percorso_ban[512]; /* empty = not persisted (the bench, usually) */
+/* ⛔⭐ THE ADDRESS WITHOUT THE PORT — found by B5 on 10 Aug 2026
  *
- * §4.4-bis vuole «un contatore per **indirizzo di provenienza**».  La prima
- * stesura di questo modulo gli passava `s->provenienza`, che e'
- * `192.168.0.2:44661` — **con la porta**.  E §4.4 ammette **un solo tentativo
- * per connessione**, quindi la porta cambia a ogni tentativo: quel contatore
- * valeva **sempre 1**, e non ha mai bloccato nessuno.
+ * §4.4-bis wants «a counter per **source address**».  The first draft of this
+ * module passed it `s->provenienza`, which is `192.168.0.2:44661` — **with the
+ * port**.  And §4.4 allows **a single attempt per connection**, so the port
+ * changes at every attempt: that counter was **always 1**, and it never
+ * blocked anyone.
  *
- * ⚠ E' la forma peggiore di difetto: il codice c'era, sembrava giusto, si
- *   leggeva bene, e **non faceva niente**.  Nessuna prova a connessione
- *   singola lo vede; nessun registro lo nomina; il sintomo — «si puo' provare
- *   una parola d'ordine all'infinito» — non arriva mai da solo.
+ * ⚠ It is the worst shape of defect: the code was there, it looked right, it
+ *   read well, and **it did nothing**.  No single-connection test sees it; no
+ *   log names it; the symptom — «a password can be tried forever» — never
+ *   shows up on its own.
  *
- * ⭐ L'ha trovato il controllo di B5 che prova SETTE tentativi falliti con
- *    SETTE NOMI DIVERSI dallo stesso indirizzo: coi nomi uguali il contatore
- *    per **nome** copriva il buco, e il banco sarebbe stato verde.  ⛔ Da oggi
- *    quel contatore non esiste piu', quindi la prova a sette nomi e' l'unica
- *    forma possibile — ed e' quel che B8 pretende.
+ * ⭐ It was found by the B5 check that tries SEVEN failed attempts with
+ *    SEVEN DIFFERENT NAMES from the same address: with equal names the
+ *    **per-name** counter covered the hole, and the bench would have been green.
+ *    ⛔ From today that counter no longer exists, so the seven-name test is the
+ *    only possible form — and it is what B8 demands.
  *
- * ⚠ Si taglia agli ULTIMI due punti, non ai primi: un indirizzo IPv6 e'
- *   `[fe80::1]:44661`, e tagliare al primo produrrebbe `[fe80`.
+ * ⚠ It is cut at the LAST colon, not the first: an IPv6 address is
+ *   `[fe80::1]:44661`, and cutting at the first would produce `[fe80`.
  *
- * ⛔ E LA CHIAVE PORTA LE PARENTESI QUADRE ANCHE PER IPv4 — `[M]` 10 agosto
- *    2026, letto nel registro del server e non dedotto: `util::straddr()`
- *    dell'esempio di ngtcp2 scrive **sempre** `[127.0.0.1]:55680`, quindi la
- *    chiave che questo modulo conta e' `[127.0.0.1]`, con le quadre, ed e'
- *    quella che finisce nel file dei ban.  ⚠ Chi chiama da fuori — il comando
- *    di sblocco, che riceve un indirizzo digitato da una persona — deve
- *    passare per `rcp_chiave_indirizzo()`, o cerchera' `192.168.0.2` dove sta
- *    scritto `[192.168.0.2]` e si sentira' rispondere «non era bannato».
+ * ⛔ AND THE KEY CARRIES SQUARE BRACKETS EVEN FOR IPv4 — `[M]` 10 Aug
+ *    2026, read in the server log and not deduced: `util::straddr()` of the
+ *    ngtcp2 example **always** writes `[127.0.0.1]:55680`, so the key this
+ *    module counts is `[127.0.0.1]`, with the brackets, and it is the one that
+ *    ends up in the ban file.  ⚠ Whoever calls from outside — the unblock
+ *    command, which receives an address typed by a person — must go through
+ *    `rcp_chiave_indirizzo()`, or it will look for `192.168.0.2` where
+ *    `[192.168.0.2]` is written and will be told «it was not banned».
  *
- * ⛔ E QUI C'ERA UN'ASSUNZIONE CHE IL COMANDO DI SBLOCCO ROMPE: che la porta ci
- *    sia sempre.  Fino a oggi l'unico chiamante era la sessione, che porta
- *    `[fe80::1]:44661`; il comando di sblocco porta `[fe80::1]` e basta, e
- *    tagliare agli ultimi due punti lo riduceva a `[fe80:`.  ⭐ La guardia e'
- *    una riga: se finisce con `]` la porta non c'e', quindi non c'e' niente da
- *    tagliare.
+ * ⛔ AND HERE THERE WAS AN ASSUMPTION THAT THE UNBLOCK COMMAND BREAKS: that the
+ *    port is always there.  Until today the only caller was the session, which
+ *    carries `[fe80::1]:44661`; the unblock command carries `[fe80::1]` and
+ *    nothing else, and cutting at the last colon reduced it to `[fe80:`.
+ *    ⭐ The guard is one line: if it ends with `]` the port is not there, so
+ *    there is nothing to cut.
  *
  * ---------------------------------------------------------------------------
- * ⛔⭐ E IL 10 AGOSTO 2026 (NOTTE) QUESTA FUNZIONE E' STATA TOLTA — rilievo B-8
+ * ⛔⭐ AND ON 10 AUG 2026 (NIGHT) THIS FUNCTION WAS REMOVED — finding B-8
  *
- * Si chiamava `solo_indirizzo()` e toglieva la porta **senza mettere le
- * quadre**.  La chiamavano tre posti: `rcp_apri()`, `rcp_bannato()` e
- * `rcp_sblocca()`.  Sui primi non faceva danno **per caso** — l'ospite le
- * quadre gliele metteva gia' lui — ma sulle due funzioni PUBBLICHE il danno
- * era misurabile:
+ * It was called `solo_indirizzo()` and removed the port **without adding the
+ * brackets**.  Three places called it: `rcp_apri()`, `rcp_bannato()` and
+ * `rcp_sblocca()`.  On the first ones it did no harm **by chance** — the host
+ * already added the brackets itself — but on the two PUBLIC functions the
+ * harm was measurable:
  *
- *     rcp_bannato("192.168.0.2")   = 0     ⛔ «non e' bannato»
+ *     rcp_bannato("192.168.0.2")   = 0     ⛔ «it is not banned»
  *     rcp_bannato("[192.168.0.2]") = 1
  *
- * ⚠ E la forma che rispondeva **falso** e' esattamente quella che
- *   `pagina.c` costruisce per IPv4 (`getnameinfo` + `"%s:%s"`).  Oggi non fa
- *   danno solo perche' chi chiama normalizza **prima**, cioe' perche' la
- *   normalizzazione era di **chi chiama** — che e' precisamente quel che
- *   §4.4-bis vieta con un ⛔ e quel che `rcp.h` promette di fare **qui
- *   dentro**.
+ * ⚠ And the form that answered **false** is exactly the one that
+ *   `pagina.c` builds for IPv4 (`getnameinfo` + `"%s:%s"`).  Today it does no
+ *   harm only because the caller normalises **first**, that is because the
+ *   normalisation belonged to **the caller** — which is precisely what
+ *   §4.4-bis forbids with a ⛔ and what `rcp.h` promises to do **in
+ *   here**.
  *
- * ⭐ La cura non e' aggiungere le quadre a `solo_indirizzo()`: e' non avere
- *    **due** funzioni che fanno la chiave.  Ne resta una — quella qui sotto —
- *    e la usano tutti e tre i posti.  ⚠ E' idempotente per costruzione, quindi
- *    chi normalizza due volte ottiene la stessa chiave e nessun chiamante
- *    esistente cambia comportamento.
+ * ⭐ The cure is not adding the brackets to `solo_indirizzo()`: it is not having
+ *    **two** functions that make the key.  One remains — the one below —
+ *    and all three places use it.  ⚠ It is idempotent by construction, so
+ *    whoever normalises twice gets the same key and no existing caller
+ *    changes behaviour.
  * ------------------------------------------------------------------------ */
 
-/* ⛔ La CHIAVE del ban, nella forma esatta in cui §4.4-bis la conta — e la
- * ragione per cui e' pubblica sta tutta in una misura.
+/* ⛔ The ban KEY, in the exact form in which §4.4-bis counts it — and the
+ * reason why it is public lies entirely in one measurement.
  *
- * L'ospite ha due strade che arrivano qui, e portano l'indirizzo in due forme
- * diverse:
+ * The host has two roads that arrive here, and they carry the address in two
+ * different forms:
  *
- *   la sessione        `util::straddr()`, cioe' `[127.0.0.1]:55680` — quadre e
- *                      porta, e questa e' la forma che ha fatto la chiave;
- *   il comando         quel che una persona digita: `127.0.0.1`, senza niente.
+ *   the session        `util::straddr()`, that is `[127.0.0.1]:55680` — brackets
+ *                      and port, and this is the form that made the key;
+ *   the command        what a person types: `127.0.0.1`, with nothing.
  *
- * ⛔ Se l'ospite se la costruisse da se', il giorno in cui `straddr()` cambiasse
- *    forma il comando di sblocco comincerebbe a rispondere «non era bannato» a
- *    ogni indirizzo, per sempre e in silenzio: un comando che dice sempre la
- *    stessa cosa non ha nessun sintomo.  Il formato della chiave lo sa questo
- *    file, ed e' l'unico che lo deve sapere.
+ * ⛔ If the host built it itself, the day `straddr()` changed form the unblock
+ *    command would start answering «it was not banned» to every address,
+ *    forever and in silence: a command that always says the same thing has no
+ *    symptom.  The format of the key is known by this file, and it is the
+ *    only one that must know it.
  *
- * ⚠ La regola sui due punti, e vale la riga che costa: con le quadre la porta
- *   si riconosce sempre; senza, `127.0.0.1:53` ha UN due punti (host e porta) e
- *   `fe80::1` ne ha due o piu' (ed e' tutto indirizzo).  E' esattamente la
- *   ragione per cui le quadre esistono.
+ * ⚠ The rule on colons, and it is worth the line it costs: with brackets the
+ *   port is always recognisable; without, `127.0.0.1:53` has ONE colon (host
+ *   and port) and `fe80::1` has two or more (and it is all address).  It is
+ *   exactly the reason brackets exist.
  *
- * ⭐ E DAL 10 AGOSTO 2026 (NOTTE) E' L'UNICA che fa la chiave, dentro e fuori:
- *    la chiamano `rcp_apri()`, `rcp_bannato()` e `rcp_sblocca()`.  Vedi il
- *    riquadro qui sopra, rilievo B-8. */
+ * ⭐ AND SINCE 10 AUG 2026 (NIGHT) IT IS THE ONLY ONE that makes the key, inside
+ *    and outside: `rcp_apri()`, `rcp_bannato()` and `rcp_sblocca()` call it.
+ *    See the box above, finding B-8. */
 void rcp_chiave_indirizzo(const char *testo, char *fuori, size_t cap)
 {
 	char nudo[64];
@@ -1232,7 +1247,7 @@ void rcp_chiave_indirizzo(const char *testo, char *fuori, size_t cap)
 	} else {
 		const char *primo = strchr(testo, ':');
 		const char *ultimo = strrchr(testo, ':');
-		/* un solo due punti = host:porta; due o piu' = IPv6 nudo */
+		/* a single colon = host:port; two or more = bare IPv6 */
 		size_t n = (primo && primo == ultimo) ? (size_t)(primo - testo)
 		                                      : strlen(testo);
 		if (n >= sizeof nudo)
@@ -1243,7 +1258,7 @@ void rcp_chiave_indirizzo(const char *testo, char *fuori, size_t cap)
 	snprintf(fuori, cap, "[%s]", nudo);
 }
 
-/* Cerca e basta: ⛔ interrogare la guardia NON deve consumare un posto. */
+/* Only looks: ⛔ querying the guard MUST NOT consume a slot. */
 static int trova(const char *indirizzo)
 {
 	for (int i = 0; i < MAX_TENTATIVI; i++)
@@ -1253,9 +1268,9 @@ static int trova(const char *indirizzo)
 	return -1;
 }
 
-/* Restituisce la voce, creandola se serve.  ⛔ Non fallisce mai (R9.1): se la
- * tabella e' piena sfratta, e in `*sfrattata` lascia il nome della voce buttata
- * via perche' il chiamante lo SCRIVA nel registro. */
+/* Returns the entry, creating it if needed.  ⛔ It never fails (R9.1): if the
+ * table is full it evicts, and in `*sfrattata` it leaves the name of the entry
+ * thrown away so that the caller WRITES it to the log. */
 static int trova_o_crea(const char *indirizzo, uint64_t ora, const char **sfrattata)
 {
 	static char nome_sfrattato[64];
@@ -1283,7 +1298,7 @@ static int trova_o_crea(const char *indirizzo, uint64_t ora, const char **sfratt
 		}
 	}
 	if (libero < 0) {
-		libero = vittima; /* c'e' sempre: MAX_TENTATIVI > 0 */
+		libero = vittima; /* there always is one: MAX_TENTATIVI > 0 */
 		snprintf(nome_sfrattato, sizeof nome_sfrattato, "%s",
 		         tentativi[libero].indirizzo);
 		*sfrattata = nome_sfrattato;
@@ -1296,14 +1311,14 @@ static int trova_o_crea(const char *indirizzo, uint64_t ora, const char **sfratt
 	return libero;
 }
 
-/* ⛔ Scrive su file i soli indirizzi BANNATI, con la scadenza in secondi
- * dall'epoch.  Si chiama a ogni cambiamento — ban nuovo, sblocco — perche' un
- * ban che vive solo in memoria fino al prossimo salvataggio periodico e' un ban
- * che un riavvio improvviso porta via (I7).
+/* ⛔ Writes to file only the BANNED addresses, with the expiry in seconds
+ * since the epoch.  It is called at every change — new ban, unblock — because a
+ * ban that lives only in memory until the next periodic save is a ban that a
+ * sudden restart takes away (I7).
  *
- * ⚠ Si scrive su un file temporaneo e si rinomina: un `rename()` e' atomico, e
- *   un file dei ban troncato a meta' da un riavvio sarebbe peggio di nessun
- *   file — direbbe «questi indirizzi non erano bannati». */
+ * ⚠ It writes to a temporary file and renames: a `rename()` is atomic, and
+ *   a ban file truncated halfway by a restart would be worse than no
+ *   file — it would say «these addresses were not banned». */
 static void salva_ban(rcp_sessione *s, uint64_t ora)
 {
 	if (percorso_ban[0] == 0)
@@ -1313,8 +1328,8 @@ static void salva_ban(rcp_sessione *s, uint64_t ora)
 	FILE *f = fopen(tmp, "w");
 	if (!f) {
 		if (s)
-			reg(s, "⛔ non ho potuto scrivere il file dei ban «%s»: il ban "
-			       "vive solo in memoria e un riavvio lo toglie (§4.4-bis)",
+			reg(s, "⛔ could not write the ban file «%s»: the ban "
+			       "lives only in memory and a restart removes it (§4.4-bis)",
 			    tmp);
 		return;
 	}
@@ -1330,10 +1345,10 @@ static void salva_ban(rcp_sessione *s, uint64_t ora)
 	}
 	fclose(f);
 	if (rename(tmp, percorso_ban) != 0 && s)
-		reg(s, "⛔ non ho potuto rinominare il file dei ban su «%s»",
+		reg(s, "⛔ could not rename the ban file to «%s»",
 		    percorso_ban);
 	else if (s)
-		reg(s, "il file dei ban e' aggiornato: %d indirizzi in «%s»", quanti,
+		reg(s, "the ban file is up to date: %d addresses in «%s»", quanti,
 		    percorso_ban);
 }
 
@@ -1343,7 +1358,7 @@ static bool bannato(const char *indirizzo, uint64_t ora, uint64_t *restano)
 		*restano = 0;
 	int i = trova(indirizzo);
 	if (i < 0)
-		return false; /* mai fallito niente: e' un fatto, non un posto finito */
+		return false; /* never failed anything: it is a fact, not a slot run out */
 	if (ora >= tentativi[i].bannato_fino)
 		return false;
 	if (restano)
@@ -1356,12 +1371,12 @@ static void segna_fallito(rcp_sessione *s, const char *indirizzo, uint64_t ora)
 	const char *sfrattata = NULL;
 	int i = trova_o_crea(indirizzo, ora, &sfrattata);
 	if (sfrattata)
-		reg(s, "⚠ tabella dei tentativi piena (%d voci): sfrattata la voce "
-		       "«%s» per far posto a «%s» — §4.4-bis",
+		reg(s, "⚠ attempt table full (%d entries): evicted the entry "
+		       "«%s» to make room for «%s» — §4.4-bis",
 		    MAX_TENTATIVI, sfrattata, indirizzo);
 	tentativi[i].ultimo_tocco = ora;
-	/* Il ring degli ultimi SOGLIA fallimenti: si scorre di uno e si scrive in
-	 * coda.  ⚠ Piu' vecchi di cosi' non servono a nessuna domanda. */
+	/* The ring of the last SOGLIA failures: it shifts by one and writes at the
+	 * tail.  ⚠ Older than that they serve no question. */
 	if (tentativi[i].quanti < SOGLIA) {
 		tentativi[i].falliti_t[tentativi[i].quanti++] = ora;
 	} else {
@@ -1373,60 +1388,60 @@ static void segna_fallito(rcp_sessione *s, const char *indirizzo, uint64_t ora)
 	for (int k = 0; k < tentativi[i].quanti; k++)
 		if (ora - tentativi[i].falliti_t[k] <= FINESTRA)
 			dentro++;
-	reg(s, "tentativo fallito da %s: %d di %d dentro i %u minuti (§4.4-bis)",
+	reg(s, "failed attempt from %s: %d of %d within the %u minutes (§4.4-bis)",
 	    indirizzo, dentro, SOGLIA, FINESTRA / 60000u);
 	if (dentro >= SOGLIA) {
 		tentativi[i].bannato_fino = ora + BAN_DURATA;
-		reg(s, "⛔ BANNATO l'indirizzo %s per %u ore: %d autenticazioni "
-		       "fallite dentro %u minuti (§4.4-bis, DECISIONI.md §1.9)",
+		reg(s, "⛔ BANNED address %s for %u hours: %d authentications "
+		       "failed within %u minutes (§4.4-bis, DECISIONI.md §1.9)",
 		    indirizzo, BAN_DURATA / 3600000u, dentro, FINESTRA / 60000u);
 		salva_ban(s, ora);
 	}
 }
 
-/* ⛔ Solo un'autenticazione RIUSCITA azzera, ed e' quel che «consecutive» vuol
- * dire.  Si azzera la voce intera: un indirizzo che entra non ha piu' storia. */
+/* ⛔ Only a SUCCESSFUL authentication resets, and it is what «consecutive»
+ * means.  The whole entry is reset: an address that gets in has no more history. */
 static void azzera_falliti(rcp_sessione *s, const char *indirizzo, uint64_t ora)
 {
 	int i = trova(indirizzo);
 	if (i < 0)
 		return;
 	if (tentativi[i].quanti > 0)
-		reg(s, "accesso riuscito da %s: il conto dei falliti torna a zero "
-		       "(erano %d) — §4.4-bis",
+		reg(s, "successful login from %s: the count of failures goes back to "
+		       "zero (there were %d) — §4.4-bis",
 		    indirizzo, tentativi[i].quanti);
 	memset(&tentativi[i], 0, sizeof tentativi[i]);
 	(void)ora;
 }
-
 /* ------------------------------------------------------------------------ */
-/* Quel che il PADRONE DI CASA chiama: la pagina in TCP e il comando di sblocco.
+/* What the HOST calls: the page over TCP and the unblock command.
  *
- * ⛔ La pagina si serve LO STESSO a un indirizzo bannato, e dice che i tentativi
- *    sono esauriti (`DECISIONI.md` §1.9): chi e' bannato per errore e' quasi
- *    sempre il proprietario, e un errore di rete non gli direbbe niente.  Chi
- *    serve la pagina chiama `rcp_bannato()` e scrive la frase.               */
+ * ⛔ The page is served ALL THE SAME to a banned address, and says the attempts
+ *    are used up (`DECISIONI.md` §1.9): whoever is banned by mistake is almost
+ *    always the owner, and a network error would tell them nothing.  Whoever
+ *    serves the page calls `rcp_bannato()` and writes the sentence.          */
 bool rcp_bannato(const char *provenienza, uint64_t ora, uint64_t *restano_ms)
 {
 	char ind[64];
-	/* ⛔ La chiave la fa `rcp_chiave_indirizzo()`, non un taglio della porta:
-	 *    `rcp.h` promette che «`provenienza` puo' portare la porta: viene
-	 *    tagliata qui dentro», e chi crede all'intestazione passa
-	 *    `192.168.0.2` senza quadre — rilievo B-8. */
+	/* ⛔ The key is made by `rcp_chiave_indirizzo()`, not by cutting the port:
+	 *    `rcp.h` promises that «`provenienza` may carry the port: it is cut
+	 *    in here», and whoever believes the header passes
+	 *    `192.168.0.2` without brackets — finding B-8. */
 	rcp_chiave_indirizzo(provenienza, ind, sizeof ind);
 	return bannato(ind, ora, restano_ms);
 }
 
-/* ⛔ Il comando di sblocco.  Restituisce `true` se qualcosa e' stato tolto:
- * «non era bannato» e «l'ho sbloccato» sono due fatti diversi, e chi comanda
- * deve poterli distinguere.  ⚠ E lo sblocco si scrive nel registro dal
- * chiamante, che ha il contesto: qui non c'e' una sessione a cui appenderlo. */
+/* ⛔ The unblock command.  Returns `true` if something was removed:
+ * «it was not banned» and «I unblocked it» are two different facts, and whoever
+ * commands must be able to tell them apart.  ⚠ And the unblock is written to
+ * the log by the caller, which has the context: here there is no session to
+ * hang it on. */
 bool rcp_sblocca(const char *indirizzo, uint64_t ora)
 {
 	char ind[64];
-	/* ⛔ §4.4-bis: «chi digita `192.168.0.2` al comando di sblocco DEVE
-	 *    arrivare alla stessa chiave: la normalizzazione e' del server, non di
-	 *    chi comanda» — rilievo B-8. */
+	/* ⛔ §4.4-bis: «whoever types `192.168.0.2` at the unblock command MUST
+	 *    reach the same key: normalisation belongs to the server, not to
+	 *    whoever commands» — finding B-8. */
 	rcp_chiave_indirizzo(indirizzo, ind, sizeof ind);
 	int i = trova(ind);
 	if (i < 0)
@@ -1437,11 +1452,11 @@ bool rcp_sblocca(const char *indirizzo, uint64_t ora)
 	return era_bannato;
 }
 
-/* ⛔ Si dichiara dove sta il file dei ban e lo si rilegge: un ban che non
- * sopravvive al riavvio e' una protezione che si perde (I7).  Restituisce
- * quanti ne ha caricati, o -1 se il file c'era e non si e' potuto leggere —
- * ⚠ «zero ban» e «non ho potuto guardare» sono due fatti diversi
- * (`LEZIONI.md` §1.9 regola 1), e il chiamante li deve stampare diversi. */
+/* ⛔ Declares where the ban file lives and reads it back: a ban that does not
+ * survive a restart is a protection that gets lost (I7).  Returns how many it
+ * loaded, or -1 if the file was there and could not be read —
+ * ⚠ «zero bans» and «I could not look» are two different facts
+ * (`LEZIONI.md` §1.9 rule 1), and the caller must print them differently. */
 int rcp_ban_carica(const char *percorso, uint64_t ora)
 {
 	percorso_ban[0] = 0;
@@ -1450,22 +1465,20 @@ int rcp_ban_carica(const char *percorso, uint64_t ora)
 	snprintf(percorso_ban, sizeof percorso_ban, "%s", percorso);
 	FILE *f = fopen(percorso_ban, "r");
 	if (!f) {
-		/* ⛔ QUI STAVA LA SETTIMA VESTE DEL DIFETTO, DENTRO LA FUNZIONE CHE
-		 *    L'INTESTAZIONE DICHIARA IMMUNE.  `rcp.h` promette «-1 se il file
-		 *    c'era e non si e' potuto leggere», e questa riga restituiva `0` a
-		 *    QUALUNQUE fallimento di `fopen()`: un file senza permessi, un
-		 *    percorso il cui genitore non e' una directory, un disco che non
-		 *    risponde — tutti «zero ban», cioe' **la protezione spenta con
-		 *    l'aria di non avere niente da proteggere** (`LEZIONI.md` §1.9
-		 *    regola 1, e I7).
+		/* ⛔ HERE LAY THE SEVENTH GUISE OF THE DEFECT, INSIDE THE FUNCTION THE
+		 *    HEADER DECLARES IMMUNE.  `rcp.h` promises «-1 if the file was
+		 *    there and could not be read», and this line returned `0` on
+		 *    ANY failure of `fopen()`: a file without permissions, a path whose
+		 *    parent is not a directory, a disk that does not answer — all
+		 *    «zero bans», that is **the protection switched off with the air
+		 *    of having nothing to protect** (`LEZIONI.md` §1.9 rule 1, and I7).
 		 *
-		 * ⭐ A distinguere i due fatti c'e' un dato solo, ed e' `errno`:
-		 *    `ENOENT` vuol dire che il file non e' ancora nato — nessun ban, e
-		 *    non e' un errore — e ogni altro valore vuol dire che il file c'e'
-		 *    (o che non si e' potuto nemmeno chiedere) e non si e' potuto
-		 *    guardare.  ⚠ Il chiamante DEVE trattare `-1` come un guasto e non
-		 *    come uno zero: chi serve la pagina lo dice, e chi accende il
-		 *    server si ferma. */
+		 * ⭐ Only one datum tells the two facts apart, and it is `errno`:
+		 *    `ENOENT` means the file has not been born yet — no bans, and it is
+		 *    not an error — and any other value means the file is there (or it
+		 *    could not even be asked) and could not be looked at.  ⚠ The caller
+		 *    MUST treat `-1` as a fault and not as a zero: whoever serves the
+		 *    page says so, and whoever starts the server stops. */
 		return errno == ENOENT ? 0 : -1;
 	}
 	time_t adesso = time(NULL);
@@ -1477,38 +1490,38 @@ int rcp_ban_carica(const char *percorso, uint64_t ora)
 		if (sscanf(riga, "%63s %lld", ind, &scad) != 2)
 			continue;
 		if (scad <= (long long)adesso)
-			continue; /* scaduto mentre il server era spento */
+			continue; /* expired while the server was off */
 		const char *sfrattata = NULL;
 		int i = trova_o_crea(ind, ora, &sfrattata);
-		/* ⛔ Non si ricostruisce nessun conteggio: quel che sopravvive al
-		 * riavvio e' il BAN, non i tentativi che l'hanno prodotto. */
+		/* ⛔ No count is rebuilt: what survives the restart is the BAN, not
+		 * the attempts that produced it. */
 		tentativi[i].bannato_fino =
 		    ora + (uint64_t)(scad - (long long)adesso) * 1000u;
 		quanti++;
 	}
-	/* ⚠ E anche una lettura che si interrompe a meta' e' «non ho potuto
-	 *   guardare»: `fgets` restituisce NULL sia alla fine del file sia su un
-	 *   errore, e i due si distinguono solo con `ferror()`.  Un file dei ban
-	 *   letto per meta' direbbe «questi indirizzi non erano bannati». */
+	/* ⚠ And a read that stops halfway is also «I could not look»: `fgets`
+	 *   returns NULL both at end of file and on an error, and the two are told
+	 *   apart only with `ferror()`.  A ban file read halfway would say «these
+	 *   addresses were not banned». */
 	int rotto = ferror(f);
 	fclose(f);
 	return rotto ? -1 : quanti;
 }
 
-/* ⛔ Solo per il banco: fra una prova e l'altra si riparte da zero.  In un
- * server vero non la chiama nessuno, ed e' scritto nell'intestazione. */
+/* ⛔ For the bench only: between one test and the next one starts from zero.
+ * In a real server nobody calls it, and it is written in the header. */
 void rcp_azzera_registro_sessioni(void)
 {
-	/* ⚠ La tabella e' allocata (fase 10): si azzerano le caselle che ci sono,
-	 *   e se non c'e' ancora non c'e' niente da azzerare. */
+	/* ⚠ The table is allocated (phase 10): the cells that exist are zeroed,
+	 *   and if it is not there yet there is nothing to zero. */
 	if (attaccate)
 		memset(attaccate, 0, (size_t)quanti_posti * sizeof *attaccate);
 	memset(tentativi, 0, sizeof tentativi);
 }
 
 /* ------------------------------------------------------------------------ */
-/* Scrittura dei tipi di §6.0, big-endian, senza allineamento e senza
- * riempimento.                                                              */
+/* Writing the types of §6.0, big-endian, without alignment and without
+ * padding.                                                                  */
 typedef struct {
 	uint8_t *b;
 	size_t cap, len;
@@ -1535,8 +1548,8 @@ static void sc_u32(scrittore *s, uint32_t v)
 	sc_byte(s, (uint8_t)(v >> 8));
 	sc_byte(s, (uint8_t)v);
 }
-/* ⛔ §6.0: `u64` big-endian, e serve al solo campo `istante` di §6.2 — l'unico
- * intero a otto byte che RCP/1 mette sul filo. */
+/* ⛔ §6.0: `u64` big-endian, and it serves only the `istante` field of §6.2 —
+ * the only eight-byte integer RCP/1 puts on the wire. */
 static void sc_u64(scrittore *s, uint64_t v)
 {
 	for (int i = 7; i >= 0; i--)
@@ -1550,7 +1563,7 @@ static void sc_str(scrittore *s, const char *t)
 		sc_byte(s, (uint8_t)t[i]);
 }
 
-/* Lettura, con il controllo dei limiti PRIMA di prendere i byte. */
+/* Reading, with the bounds check BEFORE taking the bytes. */
 typedef struct {
 	const uint8_t *b;
 	size_t len, i;
@@ -1575,8 +1588,8 @@ static uint32_t le_u32(lettore *l)
 	uint32_t a = le_u16(l);
 	return (a << 16) | le_u16(l);
 }
-/* Copia una stringa in `fuori` (che deve avere spazio per n+1 byte).
- * ⛔ Non convalida l'UTF-8: quello lo fa `utf8_valido`, chiamato dove serve. */
+/* Copies a string into `fuori` (which must have room for n+1 bytes).
+ * ⛔ It does not validate UTF-8: that is done by `utf8_valido`, called where needed. */
 static size_t le_str(lettore *l, char *fuori, size_t cap)
 {
 	uint16_t n = le_u16(l);
@@ -1585,7 +1598,7 @@ static size_t le_str(lettore *l, char *fuori, size_t cap)
 		return 0;
 	}
 	if (n + 1u > cap) {
-		/* piu' lunga di quel che il campo ammette: lo dira' chi chiama */
+		/* longer than the field allows: the caller will say so */
 		l->i += n;
 		return (size_t)n;
 	}
@@ -1595,7 +1608,7 @@ static size_t le_str(lettore *l, char *fuori, size_t cap)
 	return n;
 }
 
-/* §6.0: UTF-8 non valido e' ERRORE_PROTOCOLLO. */
+/* §6.0: invalid UTF-8 is ERRORE_PROTOCOLLO. */
 static bool utf8_valido(const char *s, size_t n)
 {
 	size_t i = 0;
@@ -1612,8 +1625,8 @@ static bool utf8_valido(const char *s, size_t n)
 			extra = 3;
 		else
 			return false;
-		/* ⚠ I byte di continuazione devono ESSERCI tutti: senza questo
-		 * controllo una sequenza troncata in fondo alla stringa passerebbe. */
+		/* ⚠ The continuation bytes must ALL BE THERE: without this
+		 * check a sequence truncated at the end of the string would pass. */
 		if (i + extra >= n)
 			return false;
 		for (size_t k = 1; k <= extra; k++)
@@ -1624,45 +1637,43 @@ static bool utf8_valido(const char *s, size_t n)
 	return true;
 }
 
-/* ⛔⭐ UN BYTE NULLO IN MEZZO A UNA STRINGA — rilievo R9.11.
+/* ⛔⭐ A NUL BYTE IN THE MIDDLE OF A STRING — finding R9.11.
  *
- * §6.0 dice che una stringa e' «esattamente `lunghezza` byte».  Tutte le
- * convalide di questo modulo lavorano sulla LUNGHEZZA DICHIARATA; tutti gli
- * usi lavorano sulla STRINGA C che `le_str` termina con uno zero (`%s`,
- * `strcmp`, `voce_presente`, `strchr`, e PAM).  Un `0x00` in mezzo separa le
- * due letture, e `utf8_valido()` lo accetta perche' `c < 0x80`:
+ * §6.0 says a string is «exactly `lunghezza` bytes».  All the validations of
+ * this module work on the DECLARED LENGTH; all the uses work on the C STRING
+ * that `le_str` terminates with a zero (`%s`, `strcmp`, `voce_presente`,
+ * `strchr`, and PAM).  A `0x00` in the middle separates the two readings, and
+ * `utf8_valido()` accepts it because `c < 0x80`:
  *
- *   `audio.codec` con valore `opus\0pcm` — otto byte, dentro il limite —
- *   faceva congedare con `NIENTE_IN_COMUNE` un client che aveva dichiarato
- *   `pcm`, cioe' negava il ripiego a chi non l'aveva rifiutato;
- *   un utente `root\0nemo` — nove byte sul filo — mandava a PAM `root`, e il
- *   registro e la chiave di §4.4-bis dicevano `root`.  Cio' che e' arrivato e
- *   cio' che si e' giudicato erano due stringhe diverse, e nessuna riga lo
- *   diceva.
+ *   `audio.codec` with value `opus\0pcm` — eight bytes, within the limit —
+ *   sent away with `NIENTE_IN_COMUNE` a client that had declared
+ *   `pcm`, that is it denied the fallback to whoever had not refused it;
+ *   a user `root\0nemo` — nine bytes on the wire — sent `root` to PAM, and the
+ *   log and the key of §4.4-bis said `root`.  What arrived and what was judged
+ *   were two different strings, and no line said so.
  *
- * ⭐ §4.3 lo chiude gia' per le capacita': «un valore e' testo UTF-8
- *    **stampabile**».  Qui si applica alla lettera — e vale anche per il nome
- *    utente, per una seconda ragione: il registro e' un file che si conserva
- *    (§11.1), e un ritorno a capo dentro un nome ci scrive righe che nessuno
- *    ha mandato. */
+ * ⭐ §4.3 already closes it for capabilities: «a value is **printable** UTF-8
+ *    text».  Here it is applied to the letter — and it also applies to the user
+ *    name, for a second reason: the log is a file that is kept (§11.1), and a
+ *    newline inside a name writes lines into it that nobody sent. */
 static bool testo_stampabile(const char *s, size_t n)
 {
 	if (!utf8_valido(s, n))
 		return false;
 	for (size_t i = 0; i < n; i++) {
 		uint8_t c = (uint8_t)s[i];
-		if (c < 0x20 || c == 0x7F) /* i comandi C0 e DEL: 0x00 compreso */
+		if (c < 0x20 || c == 0x7F) /* the C0 controls and DEL: 0x00 included */
 			return false;
 	}
 	return true;
 }
 
-/* §8.2: i motivi sono quindici, da 0x01 a 0x0F.  ⛔ E §3.1: «il codice 0
- * significa chiusura senza motivo e NON DEVE essere usato». */
+/* §8.2: the reasons are fifteen, from 0x01 to 0x0F.  ⛔ And §3.1: «code 0
+ * means closing without a reason and MUST NOT be used». */
 static bool motivo_di_82(uint8_t m) { return m >= 0x01 && m <= 0x0F; }
 
 /* ------------------------------------------------------------------------ */
-/* (la dichiarazione sta in cima, sopra il limitatore dei tentativi) */
+/* (the declaration is at the top, above the attempt limiter) */
 static void reg(rcp_sessione *s, const char *fmt, ...)
 {
 	char riga[512];
@@ -1691,32 +1702,32 @@ static void manda_messaggio(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo
 	free(tutto);
 }
 
-/* ⛔ §3.1, nell'ordine: si scrive nel registro CHE COSA, si manda CONGEDO se
- * il canale e' ancora utilizzabile, si chiude la sessione col codice del
- * motivo.  Le due strade esistono perche' se una si rompe l'altra porta
- * comunque il motivo — in v1 il server scriveva «congedo» e il client leggeva
- * «errore di rete» per tre fasi.                                            */
+/* ⛔ §3.1, in order: one writes to the log WHAT happened, sends CONGEDO if
+ * the channel is still usable, closes the session with the reason code.
+ * The two roads exist because if one breaks the other still carries the
+ * reason — in v1 the server wrote «farewell» and the client read
+ * «network error» for three phases.                                         */
 static void congeda(rcp_sessione *s, uint8_t motivo, const char *dettaglio)
 {
 	if (s->stato == S_FINITA)
 		return;
 	reg(s, "congedo motivo=%#04x dettaglio=%s stato=%s", motivo, dettaglio,
 	    NOMI_STATO[s->stato]);
-	/* ⛔⭐ §7.3 — E PRIMA DI TUTTO IL RESTO SI RILASCIA QUEL CHE E' PREMUTO.
+	/* ⛔⭐ §7.3 — AND BEFORE ANYTHING ELSE WHAT IS PRESSED IS RELEASED.
 	 *
-	 *     «Quando una connessione finisce — per congedo, per silenzio, per
-	 *     errore — il server DEVE rilasciare ogni tasto e ogni pulsante che
-	 *     risultano premuti».  ⛔ Sta QUI, dentro `congeda()`, e non accanto a
-	 *     ciascuna delle sue trenta chiamate: `RCP.md` §11 la chiama «la regola
-	 *     col rapporto danno/costo piu' alto del documento», e una regola con
-	 *     quel rapporto non si affida alla disciplina di chi scrive la
-	 *     trentunesima.  E' l'invariante I7 letta da dentro — la protezione sta
-	 *     nel programma, non in una riga che si puo' perdere.
+	 *     «When a connection ends — by farewell, by silence, by
+	 *     error — the server MUST release every key and every button that
+	 *     are pressed».  ⛔ It sits HERE, inside `congeda()`, and not next to
+	 *     each of its thirty calls: `RCP.md` §11 calls it «the rule
+	 *     with the highest harm/cost ratio of the document», and a rule with
+	 *     that ratio is not entrusted to the discipline of whoever writes the
+	 *     thirty-first.  It is invariant I7 read from inside — the protection
+	 *     lives in the program, not in a line that can get lost.
 	 *
-	 * ⚠ Il sintomo che si compra: un Ctrl rimasto giu' in una sessione che
-	 *   sopravvive al client rende il desktop inservibile al riattacco, e
-	 *   nessuno collega le due cose. */
-	rilascia_al_distacco(s, "congedo");
+	 * ⚠ The symptom one buys: a Ctrl left down in a session that
+	 *   outlives the client makes the desktop unusable on reattach, and
+	 *   nobody connects the two things. */
+	rilascia_al_distacco(s, "farewell");
 	uint8_t corpo[512];
 	scrittore w = {corpo, sizeof corpo, 0, false};
 	sc_byte(&w, motivo);
@@ -1731,8 +1742,8 @@ static void congeda(rcp_sessione *s, uint8_t motivo, const char *dettaglio)
 	s->g.chiudi(s->g.ctx, motivo);
 }
 
-/* ⛔ `RESPINTO` e' il congedo dell'autenticazione: dopo di lui si chiude con
- * lo stesso motivo, e NON si manda anche CONGEDO (§4.4).                    */
+/* ⛔ `RESPINTO` is the farewell of authentication: after it one closes with
+ * the same reason, and does NOT also send CONGEDO (§4.4).                   */
 static void respingi(rcp_sessione *s, uint8_t motivo)
 {
 	reg(s, "respinto motivo=%#04x utente=%s da=%s", motivo, s->utente,
@@ -1745,7 +1756,7 @@ static void respingi(rcp_sessione *s, uint8_t motivo)
 }
 
 /* ------------------------------------------------------------------------ */
-/* §4.3 — le capacita'                                                       */
+/* §4.3 — the capabilities                                                   */
 static bool nome_lecito(const char *n, size_t len)
 {
 	if (len < 1 || len > 64)
@@ -1759,7 +1770,7 @@ static bool nome_lecito(const char *n, size_t len)
 	return true;
 }
 
-/* Una voce dentro un elenco separato da virgole. */
+/* An entry inside a comma-separated list. */
 static bool voce_presente(const char *elenco, const char *voce)
 {
 	size_t n = strlen(voce);
@@ -1774,36 +1785,37 @@ static bool voce_presente(const char *elenco, const char *voce)
 	return false;
 }
 
-/* Interseca due elenchi separati da virgole, nell'ordine del CLIENT (§4.3:
- * «chi sceglie e' il server, dentro l'intersezione, seguendo l'ordine di
- * preferenza del client»).  Restituisce la prima voce comune, o NULL.
+/* Intersects two comma-separated lists, in the CLIENT's order (§4.3:
+ * «the one who chooses is the server, within the intersection, following the
+ * client's order of preference»).  Returns the first common entry, or NULL.
  *
- * ⛔ `scarti` raccoglie le voci che si buttano perche' non le conosciamo.  §4.3
- *    dice che si scartano; ⚠ ma uno scarto che non si scrive e' una
- *    negoziazione riuscita con dentro il contrario di quel che si voleva —
- *    trappola 4 di `LEZIONI.md` §4 — e il sintomo arriva mesi dopo, sotto forma
- *    di «va piano e non si capisce perche'».
+ * ⛔ `scarti` collects the entries thrown away because we do not know them.
+ *    §4.3 says they are discarded; ⚠ but a discard that is not written is a
+ *    successful negotiation with the opposite of what was wanted inside it —
+ *    trap 4 of `LEZIONI.md` §4 — and the symptom arrives months later, in the
+ *    form of «it is slow and nobody understands why».
  *
- * ⛔⭐ E TRE SCARTI NON PASSAVANO DA `scarti` — rilievo R9.12, cioe' tre
- *    tolleranze silenziose dentro la funzione che il registro lo cura:
+ * ⛔⭐ AND THREE DISCARDS DID NOT GO THROUGH `scarti` — finding R9.12, that is
+ *    three silent tolerances inside the very function that takes care of the
+ *    log:
  *
- *      una voce lunga ≥ 31 byte: `n + 1 < cap` era falso, perche' `cap` e'
- *      `sizeof s->codec` = 32 — e quella condizione governava la
- *      CLASSIFICAZIONE, non solo la scelta.  La voce non veniva confrontata,
- *      non veniva scelta e non finiva negli scarti;
- *      una voce vuota (`hevc,,av1`): idem;
- *      le voci che non entravano nel buffer degli scarti: scartate due volte,
- *      e la seconda in silenzio.
+ *      an entry ≥ 31 bytes long: `n + 1 < cap` was false, because `cap` is
+ *      `sizeof s->codec` = 32 — and that condition governed the
+ *      CLASSIFICATION, not only the choice.  The entry was not compared,
+ *      was not chosen and did not end up among the discards;
+ *      an empty entry (`hevc,,av1`): same;
+ *      the entries that did not fit in the discard buffer: discarded twice,
+ *      and the second time in silence.
  *
- *    `video.codec = av1,questo.codec.ha.un.nome.lunghissimo` sceglieva `av1` e
- *    scriveva `negoziato video.codec=av1` **senza** la riga degli scarti: il
- *    giorno in cui un client di domani offrira' un codec dal nome lungo, il
- *    registro — che §4.3 dichiara «l'unico posto in cui quel fatto compare» —
- *    non lo conterrebbe.  §3: «una tolleranza silenziosa e' indistinguibile da
- *    un difetto».
+ *    `video.codec = av1,questo.codec.ha.un.nome.lunghissimo` chose `av1` and
+ *    wrote `negoziato video.codec=av1` **without** the discard line: the
+ *    day a client of tomorrow offers a codec with a long name, the
+ *    log — which §4.3 declares «the only place where that fact appears» —
+ *    would not contain it.  §3: «a silent tolerance is indistinguishable from
+ *    a defect».
  *
- * ⭐ `*quanti` conta TUTTI gli scarti, anche quelli che nel buffer non ci
- *    stanno: il numero dice il vero anche quando l'elenco e' troncato. */
+ * ⭐ `*quanti` counts ALL the discards, even those that do not fit in the
+ *    buffer: the number tells the truth even when the list is truncated. */
 static const char *prima_comune(const char *elenco_client, const char *nostro,
                                 char *fuori, size_t cap, char *scarti,
                                 size_t cap_scarti, int *quanti)
@@ -1816,41 +1828,41 @@ static const char *prima_comune(const char *elenco_client, const char *nostro,
 	while (*p) {
 		const char *virgola = strchr(p, ',');
 		size_t n = virgola ? (size_t)(virgola - p) : strlen(p);
-		/* ⚠ 257 e non 64: un valore di capacita' arriva fino a 256 byte (§4.3),
-		 *   e una voce che non ci sta nel buffer del confronto e' proprio la
-		 *   voce che spariva. */
+		/* ⚠ 257 and not 64: a capability value goes up to 256 bytes (§4.3),
+		 *   and an entry that does not fit in the comparison buffer is
+		 *   precisely the entry that used to vanish. */
 		char voce[257];
 		const char *da_scartare = NULL;
 		if (n == 0) {
-			/* `hevc,,av1`: §4.3 vuole le voci separate da virgole, e una voce
-			 * vuota non e' una voce.  Non si chiude — non cambia niente di
-			 * quel che si negozia — ma si SCRIVE. */
-			da_scartare = "(vuota)";
+			/* `hevc,,av1`: §4.3 wants entries separated by commas, and an empty
+			 * entry is not an entry.  It is not closed — it changes nothing of
+			 * what is negotiated — but it is WRITTEN. */
+			da_scartare = "(empty)";
 		} else if (n >= sizeof voce) {
-			da_scartare = "(voce piu' lunga del valore ammesso)";
+			da_scartare = "(entry longer than the allowed value)";
 		} else {
 			memcpy(voce, p, n);
 			voce[n] = 0;
-			/* ⛔ Una voce sconosciuta DENTRO un elenco si scarta, come si
-			 * scarta un nome sconosciuto: e' il meccanismo con cui un
-			 * client di domani parlera' a un server di oggi. */
+			/* ⛔ An unknown entry INSIDE a list is discarded, as an unknown
+			 * name is discarded: it is the mechanism by which a client of
+			 * tomorrow will talk to a server of today. */
 			if (voce_presente(nostro, voce)) {
-				/* ⚠ Si tiene la PRIMA comune, ma non si esce: le voci dopo
-				 *   vanno comunque classificate, o lo scarto che si scrive
-				 *   sarebbe solo quello che precede la scelta. */
+				/* ⚠ The FIRST common one is kept, but one does not leave: the
+				 *   entries after it must still be classified, or the discard
+				 *   that gets written would be only the one preceding the choice. */
 				if (!scelta) {
 					if (n + 1 > cap) {
-						/* ⚠ Non puo' capitare: `nostro` e' una nostra costante
-						 *   e le nostre voci sono corte.  Se capitasse, la
-						 *   voce non si perde in silenzio — si scarta e si
-						 *   scrive, che e' il punto di questo rilievo. */
+						/* ⚠ It cannot happen: `nostro` is one of our constants
+						 *   and our entries are short.  If it happened, the
+						 *   entry is not lost in silence — it is discarded and
+						 *   written, which is the point of this finding. */
 						da_scartare = voce;
 					} else {
-						/* ⚠ `%.*s` e non `%s`: al compilatore la lunghezza di
-						 *   `voce` e' ignota, e con `%s` avverte di una
-						 *   troncatura che la guardia qui sopra ha gia'
-						 *   escluso.  Un avviso che si sa innocuo e' un avviso
-						 *   che il giorno dopo si smette di leggere. */
+						/* ⚠ `%.*s` and not `%s`: to the compiler the length of
+						 *   `voce` is unknown, and with `%s` it warns about a
+						 *   truncation that the guard above has already
+						 *   excluded.  A warning known to be harmless is a
+						 *   warning one stops reading the next day. */
 						snprintf(fuori, cap, "%.*s", (int)n, voce);
 						scelta = fuori;
 					}
@@ -1874,38 +1886,38 @@ static const char *prima_comune(const char *elenco_client, const char *nostro,
 	return scelta;
 }
 
-/* Quel che questo server dichiara. */
-/* ⛔⭐⭐ AV1 E' USCITO — 20 agosto 2026, `DECISIONI.md` §1.13-ter, deciso
- *     dall'utente: «la scelta e' obbligata: dobbiamo abbandonare AV1».
+/* What this server declares. */
+/* ⛔⭐⭐ AV1 HAS GONE — 20 Aug 2026, `DECISIONI.md` §1.13-ter, decided
+ *     by the user: «the choice is forced: we must abandon AV1».
  *
- * Le tre ragioni, e la terza e' arrivata per ultima:
- *   1. **Firefox per Android** non ha ne' HEVC ne' AV1 ⇒ per quel browser il
- *      prodotto non esisteva, contro la promessa di §1.6;
- *   2. `[M]` AV1 era l'unico codec **senza hardware da nessuna parte** in
- *      questo impianto — software ai due capi;
- *   3. ⛔ `[M]` 20 agosto: con AV1 **Firefox dipinge blocchi rettangolari**
- *      dove Chrome e `ffmpeg/dav1d`, **sugli stessi byte e nello stesso
- *      istante**, sono puliti.  Era l'imputato della caccia agli artefatti.
+ * The three reasons, and the third arrived last:
+ *   1. **Firefox for Android** has neither HEVC nor AV1 ⇒ for that browser the
+ *      product did not exist, against the promise of §1.6;
+ *   2. `[M]` AV1 was the only codec **without hardware anywhere** in
+ *      this setup — software at both ends;
+ *   3. ⛔ `[M]` 20 August: with AV1 **Firefox paints rectangular blocks**
+ *      where Chrome and `ffmpeg/dav1d`, **on the same bytes and at the same
+ *      instant**, are clean.  It was the suspect of the artefact hunt.
  *
- * ⚠ Il numero 2 di §6.2 resta AV1 per sempre: non si riusa (un client vecchio
- *   che sentisse «2» dipingerebbe spazzatura senza un errore).  Qui esce dalla
- *   NEGOZIAZIONE, non dal registro dei numeri. */
+ * ⚠ Number 2 of §6.2 stays AV1 forever: it is not reused (an old client
+ *   that heard «2» would paint garbage without an error).  Here it leaves the
+ *   NEGOTIATION, not the register of numbers. */
 #define NOSTRO_CODEC_PREDEFINITO "hevc,h264"
 #define NOSTRA_PROFONDITA "8,10"
 
-/* ⭐⭐ FASE 18 (30 set 2026) — L'ELENCO DEI CODEC E' MISURATO, NON SCRITTO.
+/* ⭐⭐ PHASE 18 (30 Sep 2026) — THE CODEC LIST IS MEASURED, NOT WRITTEN.
  *
- * Il padre lo IMPOSTA all'avvio dopo la prova di `figlio_capacita_video()`:
- * «hevc» solo se la scheda codifica HEVC, «h264» solo se la scheda codifica
- * H.264, «» se niente — ⛔ fase 19 (1 ott 2026, `DECISIONI.md` §10.27): il
- * ripiego in software (OpenH264) e' uscito, niente processore senza scheda.
- * ⛔ Il browser non
- * deve ricevere un'offerta che il server non sa mantenere: negoziare «hevc» e
- * poi non aprirlo era uno schermo nero senza una riga che lo nominasse.
- * ⚠ Il predefinito resta quello di ieri per l'innesto dei banchi
- *   (`banchi/rcp/`), che non ha una scheda da provare; il prodotto lo scrive
- *   SEMPRE (`main.c`), e con l'elenco vuoto ogni CIAO finisce in
- *   NIENTE_IN_COMUNE — dichiarato all'avvio e nel congedo. */
+ * The parent SETS it at startup after the probe of `figlio_capacita_video()`:
+ * «hevc» only if the card encodes HEVC, «h264» only if the card encodes
+ * H.264, «» if nothing — ⛔ phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): the
+ * software fallback (OpenH264) has gone, no processor without a card.
+ * ⛔ The browser must not
+ * receive an offer the server cannot keep: negotiating «hevc» and
+ * then not opening it was a black screen without a line naming it.
+ * ⚠ The default stays yesterday's for the bench harness
+ *   (`banchi/rcp/`), which has no card to probe; the product ALWAYS writes it
+ *   (`main.c`), and with the list empty every CIAO ends in
+ *   NIENTE_IN_COMUNE — declared at startup and in the farewell. */
 static char nostro_codec[64] = NOSTRO_CODEC_PREDEFINITO;
 
 void rcp_video_codec_imposta(const char *elenco)
@@ -1924,7 +1936,7 @@ static void manda_eccomi(rcp_sessione *s)
 	uint8_t corpo[1024];
 	scrittore w = {corpo, sizeof corpo, 0, false};
 	sc_u16(&w, RCP_VERSIONE);
-	sc_u16(&w, 5); /* quante capacita' */
+	sc_u16(&w, 5); /* how many capabilities */
 	sc_str(&w, "video.codec");
 	sc_str(&w, nostro_codec);
 	sc_str(&w, "video.profondita");
@@ -1933,19 +1945,19 @@ static void manda_eccomi(rcp_sessione *s)
 	sc_str(&w, NOSTRO_AUDIO);
 	sc_str(&w, "appunti.testo");
 	sc_str(&w, "si");
-	/* ⛔ §4.3: `banco.marca` vale `no` in ogni installazione normale, e un
-	 * server che la dichiarasse `si` per errore lo scrive nel registro a ogni
-	 * avvio.
+	/* ⛔ §4.3: `banco.marca` is `no` in every normal installation, and a
+	 * server that declared it `si` by mistake writes it to the log at every
+	 * startup.
 	 *
-	 * ⛔⭐ E LA DICHIARAZIONE SI LEGGE DALL'INTERRUTTORE, NON DA UNA COSTANTE —
-	 *    rilievo R9.14.  Qui c'era la stringa `"no"` scritta a mano: portando
-	 *    `BANCO_ACCESO` a 1 — l'unico modo previsto oggi per accendere la
-	 *    funzione — il server ACCETTAVA `BANCO_MARCA` e dipingeva sul desktop
-	 *    di qualcuno mentre il suo `ECCOMI` continuava a dichiarare `no`.  Due
-	 *    luoghi che devono cambiare insieme e nessun legame fra i due: §7.5
-	 *    regola 3 («il server DEVE dichiararla»), e l'invariante I6.
-	 *    ⚠ La riga di registro dell'accensione sta in `rcp_apri()`, che e'
-	 *      l'unico «avvio» che questo modulo conosce. */
+	 * ⛔⭐ AND THE DECLARATION IS READ FROM THE SWITCH, NOT FROM A CONSTANT —
+	 *    finding R9.14.  Here there was the string `"no"` written by hand:
+	 *    bringing `BANCO_ACCESO` to 1 — the only way foreseen today to switch
+	 *    the function on — the server ACCEPTED `BANCO_MARCA` and painted on
+	 *    someone's desktop while its `ECCOMI` kept declaring `no`.  Two
+	 *    places that must change together and no link between them: §7.5
+	 *    rule 3 («the server MUST declare it»), and invariant I6.
+	 *    ⚠ The log line of the switch-on is in `rcp_apri()`, which is
+	 *      the only «startup» this module knows. */
 	sc_str(&w, "banco.marca");
 	sc_str(&w, BANCO_ACCESO ? "si" : "no");
 	if (!w.pieno)
@@ -1953,22 +1965,22 @@ static void manda_eccomi(rcp_sessione *s)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⛔⭐ `video.misura_massima` — IL TETTO DEL DECODIFICATORE (§4.3, §4.5)
+/* ⛔⭐ `video.misura_massima` — THE DECODER CEILING (§4.3, §4.5)
  *
- * Legge `LARGHEZZAxALTEZZA` in **pixel**, cioe' due interi decimali separati da
- * una `x` minuscola e nient'altro.  Restituisce `false` se la stringa non ha
- * quella forma.
+ * Reads `WIDTHxHEIGHT` in **pixels**, that is two decimal integers separated
+ * by a lowercase `x` and nothing else.  Returns `false` if the string does not
+ * have that form.
  *
- * ⛔ E la forma si controlla per intero, cifra per cifra, invece di fidarsi di
- *    `sscanf("%ux%u")`: quello accetta `1080.75x2340.25` leggendo `1080` e
- *    fermandosi al punto, cioe' prenderebbe per buono un tetto che il client
- *    non ha dichiarato.  ⚠ E' esattamente il valore che la nostra pagina
- *    spediva prima del 10 agosto 2026 notte (rilievo B-6): un telefono a
- *    fattore 2,75 manda `1080.75x2340.25`.
+ * ⛔ And the form is checked in full, digit by digit, instead of trusting
+ *    `sscanf("%ux%u")`: that accepts `1080.75x2340.25` reading `1080` and
+ *    stopping at the dot, that is it would take as good a ceiling the client
+ *    did not declare.  ⚠ It is exactly the value our page sent before the
+ *    night of 10 Aug 2026 (finding B-6): a phone at factor 2.75 sends
+ *    `1080.75x2340.25`.
  *
- * ⚠ Zero non e' una misura: un tetto di 0 pixel non e' rispettabile da nessuna
- *   tela legale, e trattarlo come un numero farebbe congedare ogni `ATTACCA`
- *   con `SESSIONE_NON_SERVIBILE` senza che niente nomini il campo. */
+ * ⚠ Zero is not a size: a ceiling of 0 pixels cannot be respected by any
+ *   legal canvas, and treating it as a number would send away every `ATTACCA`
+ *   with `SESSIONE_NON_SERVIBILE` without anything naming the field. */
 static bool misura_massima_legge(const char *v, uint32_t *l, uint32_t *a)
 {
 	unsigned long long n[2] = {0, 0};
@@ -1982,7 +1994,7 @@ static bool misura_massima_legge(const char *v, uint32_t *l, uint32_t *a)
 		}
 		if (*p < '0' || *p > '9')
 			return false;
-		if (quante[i] > 9) /* piu' di dieci cifre: fuori da qualunque schermo */
+		if (quante[i] > 9) /* more than ten digits: beyond any screen */
 			return false;
 		n[i] = n[i] * 10u + (unsigned)(*p - '0');
 		quante[i]++;
@@ -1997,29 +2009,29 @@ static bool misura_massima_legge(const char *v, uint32_t *l, uint32_t *a)
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⛔⭐ `video.livello` — IL LIVELLO DEL DECODIFICATORE (§4.3)
+/* ⛔⭐ `video.livello` — THE DECODER LEVEL (§4.3)
  *
- * Legge `MAGGIORE` o `MAGGIORE.MINORE` — `5`, `5.1`, `3.0` — e restituisce il
- * numero in DECIMI: `5.1` ⇒ `51`, `5` ⇒ `50`.  ⚠ `false` se la stringa non ha
- * quella forma.
+ * Reads `MAJOR` or `MAJOR.MINOR` — `5`, `5.1`, `3.0` — and returns the
+ * number in TENTHS: `5.1` ⇒ `51`, `5` ⇒ `50`.  ⚠ `false` if the string does not
+ * have that form.
  *
- * ⛔ Perche' i decimi e non un `double`: perche' il valore serve a un
- *    CONFRONTO, e due strade che scrivono `5.1` in virgola mobile possono dare
- *    due numeri che non si uguagliano.  ⭐ E i decimi sono anche l'alfabeto in
- *    cui il livello e' scritto nelle stringhe dei decodificatori: H.264 porta
- *    `level_idc = maggiore*10 + minore` (`51` = `0x33`, la coda di
- *    `avc1.640033`), HEVC porta `general_level_idc = (maggiore*10 +
- *    minore) * 3` (`153` = `L153`).  ⇒ Un livello letto qui e uno letto
- *    dall'SPS dall'altra parte si confrontano senza tabelle.
+ * ⛔ Why tenths and not a `double`: because the value serves a
+ *    COMPARISON, and two roads that write `5.1` in floating point can give
+ *    two numbers that are not equal.  ⭐ And tenths are also the alphabet in
+ *    which the level is written in decoder strings: H.264 carries
+ *    `level_idc = major*10 + minor` (`51` = `0x33`, the tail of
+ *    `avc1.640033`), HEVC carries `general_level_idc = (major*10 +
+ *    minor) * 3` (`153` = `L153`).  ⇒ A level read here and one read
+ *    from the SPS on the other side compare without tables.
  *
- * ⚠ La forma si controlla cifra per cifra, e per la stessa ragione di
- *   `misura_massima_legge()`: `sscanf("%u.%u")` prenderebbe per buono
- *   `5.1.2` fermandosi al secondo punto, cioe' un livello che il client non
- *   ha dichiarato.  ⛔ E la parte minore e' UNA cifra: `5.10` non e' una forma
- *   che §4.3 definisca, e leggerla come `5.1` sarebbe indovinare.
+ * ⚠ The form is checked digit by digit, and for the same reason as
+ *   `misura_massima_legge()`: `sscanf("%u.%u")` would take as good
+ *   `5.1.2` stopping at the second dot, that is a level the client did not
+ *   declare.  ⛔ And the minor part is ONE digit: `5.10` is not a form
+ *   that §4.3 defines, and reading it as `5.1` would be guessing.
  *
- * ⚠ Zero non e' un livello: nessun flusso lo puo' rispettare, e prenderlo per
- *   buono farebbe scrivere «prodotto 4.0 > chiesto 0.0» a ogni sessione. */
+ * ⚠ Zero is not a level: no stream can respect it, and taking it as good
+ *   would make every session write «produced 4.0 > asked 0.0». */
 static bool livello_legge(const char *v, uint32_t *x10)
 {
 	unsigned maggiore = 0, minore = 0;
@@ -2034,12 +2046,12 @@ static bool livello_legge(const char *v, uint32_t *x10)
 		if (*p < '0' || *p > '9')
 			return false;
 		if (dopo_il_punto) {
-			if (cifre_mi > 0) /* `5.10`: §4.3 non definisce questa forma */
+			if (cifre_mi > 0) /* `5.10`: §4.3 does not define this form */
 				return false;
 			minore = (unsigned)(*p - '0');
 			cifre_mi++;
 		} else {
-			if (cifre_ma > 2) /* piu' di tre cifre: nessun livello esiste */
+			if (cifre_ma > 2) /* more than three digits: no such level exists */
 				return false;
 			maggiore = maggiore * 10u + (unsigned)(*p - '0');
 			cifre_ma++;
@@ -2054,8 +2066,8 @@ static bool livello_legge(const char *v, uint32_t *x10)
 }
 
 /* ------------------------------------------------------------------------ */
-/* Quanti nomi di capacita' SCONOSCIUTI questo server sa ricordare per il
- * controllo dei duplicati di §4.3 — vedi il riquadro dentro `tratta_ciao()`. */
+/* How many UNKNOWN capability names this server can remember for the
+ * duplicate check of §4.3 — see the box inside `tratta_ciao()`. */
 #define MAX_VISTI 64
 
 static bool tratta_ciao(rcp_sessione *s, lettore *l)
@@ -2065,61 +2077,61 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "CIAO senza versione");
 		return false;
 	}
-	/* ⛔ §2.4: «le due DEVONO coincidere» — il percorso `/rcp/1` dice 1, e un
-	 * `CIAO(2)` su quel percorso e' VERSIONE_INCOMPATIBILE, **non una
-	 * negoziazione da risolvere**.
+	/* ⛔ §2.4: «the two MUST match» — the path `/rcp/1` says 1, and a
+	 * `CIAO(2)` on that path is VERSIONE_INCOMPATIBILE, **not a
+	 * negotiation to resolve**.
 	 *
-	 * ⚠ E qui `RCP.md` si contraddice, ed e' la seconda contraddizione trovata
-	 *   in questo documento da un banco (la prima fu il trattino basso di §4.3,
-	 *   trovata dal validatore di B4).  §9 dice: *«il server sceglie la piu'
-	 *   alta che sa parlare e che non superi quella del CIAO»* — cioe' 1, e un
-	 *   `ECCOMI(1)`.  §2.4 dice `VERSIONE_INCOMPATIBILE`.  Le due regole danno
-	 *   **byte diversi sul filo per lo stesso ingresso**, e nessuna delle due
-	 *   cita l'altra.
+	 * ⚠ And here `RCP.md` contradicts itself, and it is the second contradiction
+	 *   found in this document by a bench (the first was the underscore of §4.3,
+	 *   found by the B4 validator).  §9 says: *«the server chooses the highest
+	 *   it can speak that does not exceed the one of the CIAO»* — that is 1, and
+	 *   an `ECCOMI(1)`.  §2.4 says `VERSIONE_INCOMPATIBILE`.  The two rules give
+	 *   **different bytes on the wire for the same input**, and neither of the
+	 *   two cites the other.
 	 *
-	 * ⭐ Vince §2.4, perche' e' la piu' specifica e perche' e' quella scritta
-	 *    per risolvere proprio questo caso (rilievo R1.24).  ⚠ Il primo giro di
-	 *    questo modulo aveva applicato §9 alla lettera e ACCETTAVA un CIAO(2):
-	 *    lo ha trovato B5.  Sta in `FASI.md` §01-filo-nudo.
+	 * ⭐ §2.4 wins, because it is the more specific and because it is the one
+	 *    written to resolve precisely this case (finding R1.24).  ⚠ The first
+	 *    round of this module had applied §9 to the letter and ACCEPTED a
+	 *    CIAO(2): B5 found it.  It is in `FASI.md` §01-filo-nudo.
 	 *
-	 * ⚠ E il confronto e' con la versione del PERCORSO, che qui e' l'unica che
-	 *   il server serve.  Un server che servisse `/rcp/1` e `/rcp/2` passerebbe
-	 *   di qui la versione del percorso, non una costante. */
+	 * ⚠ And the comparison is with the version of the PATH, which here is the
+	 *   only one the server serves.  A server that served `/rcp/1` and `/rcp/2`
+	 *   would pass here the version of the path, not a constant. */
 	if (versione != RCP_VERSIONE) {
 		congeda(s, RCP_VERSIONE_INCOMPATIBILE,
 		        "la versione del CIAO non e' quella del percorso");
 		return false;
 	}
 	uint16_t quante = le_u16(l);
-	/* ⛔⭐ LA MEMORIA DEI NOMI GIA' VISTI AVEVA UN FONDO, E OLTRE IL FONDO
-	 *    «VINCEVA L'ULTIMO» — rilievo R9.6.
+	/* ⛔⭐ THE MEMORY OF NAMES ALREADY SEEN HAD A BOTTOM, AND BEYOND THE BOTTOM
+	 *    «THE LAST ONE WON» — finding R9.6.
 	 *
-	 *    §4.3: «un nome ripetuto due volte e' ERRORE_PROTOCOLLO.  "Vince
-	 *    l'ultimo" e "vince il primo" sono due implementazioni diverse dello
-	 *    stesso documento».  `quante` e' un `u16`: il client puo' dichiarare
-	 *    fino a 65 535 capacita', e qui se ne ricordavano 32 — con un `if`
-	 *    senza `else` e senza una riga di registro.  Un `CIAO` con 32 capacita'
-	 *    dal nome lecito e sconosciuto seguite da `video.codec=hevc` e
-	 *    `video.codec=av1` non veniva congedato: `snprintf` girava due volte e
-	 *    **vinceva la seconda**.  ⚠ Il caso `capacita-ripetuta` di B5 usa TRE
-	 *    capacita': resta verde per sempre.
+	 *    §4.3: «a name repeated twice is ERRORE_PROTOCOLLO.  "The last one
+	 *    wins" and "the first one wins" are two different implementations of
+	 *    the same document».  `quante` is a `u16`: the client can declare up
+	 *    to 65 535 capabilities, and here 32 were remembered — with an `if`
+	 *    without `else` and without a log line.  A `CIAO` with 32 capabilities
+	 *    with a legitimate and unknown name followed by `video.codec=hevc` and
+	 *    `video.codec=av1` was not sent away: `snprintf` ran twice and
+	 *    **the second won**.  ⚠ The `capacita-ripetuta` case of B5 uses THREE
+	 *    capabilities: it stays green forever.
 	 *
-	 * ⭐ La cura ha due meta', perche' i due casi non pesano uguale:
+	 * ⭐ The cure has two halves, because the two cases do not weigh the same:
 	 *
-	 *    i nomi CONOSCIUTI — i nove di §4.3 — si ricordano **tutti, sempre**,
-	 *    in una maschera di bit.  Sono quelli che cambiano il comportamento, e
-	 *    il duplicato che fa danno e' il loro;
+	 *    the KNOWN names — the nine of §4.3 — are remembered **all, always**,
+	 *    in a bit mask.  They are the ones that change the behaviour, and
+	 *    the duplicate that does harm is theirs;
 	 *
-	 *    i nomi SCONOSCIUTI si ricordano fino a `MAX_VISTI`, e oltre quel
-	 *    numero ⛔ **si scrive nel registro** che da li' in poi la ripetizione
-	 *    di un nome sconosciuto non e' piu' rilevabile.  §3: «ogni tolleranza
-	 *    va scritta nel registro; una tolleranza silenziosa e' indistinguibile
-	 *    da un difetto».
+	 *    the UNKNOWN names are remembered up to `MAX_VISTI`, and beyond that
+	 *    number ⛔ **it is written to the log** that from there on the
+	 *    repetition of an unknown name is no longer detectable.  §3: «every
+	 *    tolerance must be written to the log; a silent tolerance is
+	 *    indistinguishable from a defect».
 	 *
-	 * ⚠ Perche' non si chiude e basta quando la memoria finisce: un `CIAO` con
-	 *   quattrocento capacita' sconosciute e' CONFORME (§6.1), e §3 eccezione 1
-	 *   impone di ignorarle e proseguire.  Chiudere sarebbe un rosso sul codice
-	 *   giusto del client di domani — il difetto opposto, e costa di piu'. */
+	 * ⚠ Why one does not simply close when the memory runs out: a `CIAO` with
+	 *   four hundred unknown capabilities is CONFORMING (§6.1), and §3 exception 1
+	 *   requires ignoring them and carrying on.  Closing would be a red on the
+	 *   right code of tomorrow's client — the opposite defect, and it costs more. */
 	static const char *const NOMI_NOTI[] = {
 	    "video.codec",   "video.profondita", "video.livello",
 	    "video.misura_massima", "audio.codec", "input.tocco",
@@ -2147,16 +2159,16 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "capacita' con valore vuoto");
 			return false;
 		}
-		/* ⚠ L'ordine dei due termini del `||` non e' indifferente e non si
-		 *   tocca: `lv > 256` PRIMA impedisce a `testo_stampabile` di leggere
-		 *   oltre il buffer quando la stringa non ci sta (vedi il commento di
-		 *   `le_str`, e il sospetto R9.18 che resta aperto). */
+		/* ⚠ The order of the two terms of the `||` is not indifferent and is not
+		 *   to be touched: `lv > 256` FIRST prevents `testo_stampabile` from
+		 *   reading beyond the buffer when the string does not fit (see the
+		 *   comment of `le_str`, and suspicion R9.18 which stays open). */
 		if (lv > 256 || !testo_stampabile(valore, lv)) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "valore di capacita' non valido");
 			return false;
 		}
-		/* ⛔ Un nome ripetuto e' ERRORE_PROTOCOLLO: «vince l'ultimo» e «vince
-		 * il primo» sono due implementazioni dello stesso documento. */
+		/* ⛔ A repeated name is ERRORE_PROTOCOLLO: «the last one wins» and «the
+		 * first one wins» are two implementations of the same document. */
 		bool ripetuto = false;
 		int noto = -1;
 		for (int i = 0; NOMI_NOTI[i]; i++)
@@ -2177,9 +2189,9 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 				snprintf(visti[n_visti++], sizeof visti[0], "%s", nome);
 			} else if (!detta_la_memoria_finita) {
 				detta_la_memoria_finita = true;
-				reg(s, "⚠ oltre %d capacita' dal nome sconosciuto: da qui in "
-				       "poi la RIPETIZIONE di un nome sconosciuto non e' piu' "
-				       "rilevabile (§4.3), e i nomi di §4.3 lo restano tutti",
+				reg(s, "⚠ more than %d capabilities with an unknown name: from "
+				       "here on the REPETITION of an unknown name is no longer "
+				       "detectable (§4.3), and the names of §4.3 all remain so",
 				    MAX_VISTI);
 			}
 		}
@@ -2187,8 +2199,8 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "capacita' ripetuta");
 			return false;
 		}
-		/* ⛔ Una capacita' del lato sbagliato e' ERRORE_PROTOCOLLO: il nome e'
-		 * conosciuto, quindi l'eccezione dei nomi sconosciuti non la copre. */
+		/* ⛔ A capability from the wrong side is ERRORE_PROTOCOLLO: the name is
+		 * known, so the exception for unknown names does not cover it. */
 		if (strcmp(nome, "banco.marca") == 0) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "banco.marca non arriva dal client");
 			return false;
@@ -2201,133 +2213,134 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 			snprintf(c_audio, sizeof c_audio, "%s", valore);
 		else if (strcmp(nome, "video.misura_massima") == 0)
 			snprintf(c_misura, sizeof c_misura, "%s", valore);
-		/* ⛔⭐ `video.livello` — E FINO A OGGI QUESTA RIGA NON C'ERA.  Il nome
-		 *     era in `NOMI_NOTI` (cioe' il server lo sapeva RIPETUTO), il
-		 *     valore attraversava il ciclo e nessuno se lo teneva: la stessa
-		 *     forma esatta di B-1 su `video.misura_massima`, e con lo stesso
-		 *     sintomo muto di §4.3 — «il browser non apre il flusso». */
+		/* ⛔⭐ `video.livello` — AND UNTIL TODAY THIS LINE WAS NOT THERE.  The
+		 *     name was in `NOMI_NOTI` (that is the server knew it was
+		 *     REPEATED), the value went through the loop and nobody kept it:
+		 *     the exact same shape as B-1 on `video.misura_massima`, and with
+		 *     the same mute symptom of §4.3 — «the browser does not open the
+		 *     stream». */
 		else if (strcmp(nome, "video.livello") == 0)
 			snprintf(c_livello, sizeof c_livello, "%s", valore);
-		/* ⭐⭐ §7.4 — `appunti.testo`, e fino al 17 agosto 2026 questo valore
-		 *     veniva riconosciuto come nome lecito e poi **buttato**: era
-		 *     esattamente la forma del rilievo B-1 su `video.misura_massima`.
+		/* ⭐⭐ §7.4 — `appunti.testo`, and until 17 Aug 2026 this value
+		 *     was recognised as a legitimate name and then **thrown away**: it
+		 *     was exactly the shape of finding B-1 on `video.misura_massima`.
 		 *
-		 * ⛔ E serve a due cose che senza di lui non si possono fare: NON
-		 *    annunciare appunti a un client che non li ha chiesti, e RIFIUTARE
-		 *    byte sul canale `0x02` da un client che non li ha dichiarati —
-		 *    cioe' una capacita' usata senza negoziarla, che e' il caso che §4.3
-		 *    esiste per rendere impossibile.
-		 * ⚠ Qualunque valore diverso da `si` vale `no`: §4.3 dice che i valori
-		 *   di questa capacita' sono due, e un terzo valore e' un client che
-		 *   dichiara una cosa che il documento non definisce — si tratta come il
-		 *   no, e la riga della negoziazione lo scrive. */
+		 * ⛔ And it serves two things that cannot be done without it: NOT
+		 *    announcing clipboard to a client that did not ask for it, and
+		 *    REFUSING bytes on channel `0x02` from a client that did not declare
+		 *    it — that is a capability used without negotiating it, which is the
+		 *    case §4.3 exists to make impossible.
+		 * ⚠ Any value other than `si` counts as `no`: §4.3 says the values
+		 *   of this capability are two, and a third value is a client that
+		 *   declares something the document does not define — it is treated as
+		 *   the no, and the negotiation line writes it. */
 		else if (strcmp(nome, "appunti.testo") == 0)
 			s->negozia_appunti = strcmp(valore, "si") == 0;
 	}
-	/* ⛔⭐ IL TETTO DEL DECODIFICATORE SI CONSERVA — rilievo B-1, 10 agosto
-	 *     2026 notte.  §4.5: «la tela concessa DEVE rispettare
-	 *     `video.misura_massima` se il client l'ha dichiarata», e §4.3: «non
-	 *     cambia la tela: e' un tetto […] perche' il decodificatore di un
-	 *     telefono ha limiti che il suo schermo non dichiara».
+	/* ⛔⭐ THE DECODER CEILING IS KEPT — finding B-1, night of 10 Aug
+	 *     2026.  §4.5: «the granted canvas MUST respect
+	 *     `video.misura_massima` if the client declared it», and §4.3: «it does
+	 *     not change the canvas: it is a ceiling […] because the decoder of a
+	 *     phone has limits its screen does not declare».
 	 *
-	 * ⛔ Prima di oggi questo valore veniva riconosciuto come nome lecito e poi
-	 *    **buttato**: il server concedeva esattamente quel che il client
-	 *    chiedeva, anche il doppio di quel che aveva dichiarato di saper
-	 *    decodificare.  ⚠ E il sintomo non e' un errore di rete: e' «il browser
-	 *    non apre il flusso» alla fase 2, con la diagnosi puntata sul
-	 *    codificatore.
+	 * ⛔ Before today this value was recognised as a legitimate name and then
+	 *    **thrown away**: the server granted exactly what the client
+	 *    asked for, even twice what it had declared it could
+	 *    decode.  ⚠ And the symptom is not a network error: it is «the browser
+	 *    does not open the stream» in phase 2, with the diagnosis aimed at the
+	 *    encoder.
 	 *
-	 * ⛔ E un valore FUORI FORMA non si prende per buono e non si butta in
-	 *    silenzio: §3 eccezione 1 permette di ignorare un valore che non si
-	 *    capisce, e la riga sotto quella tabella impone di **scriverlo nel
-	 *    registro** — «una tolleranza silenziosa e' indistinguibile da un
-	 *    difetto». */
+	 * ⛔ And a MALFORMED value is not taken as good and not thrown away in
+	 *    silence: §3 exception 1 allows ignoring a value one does not
+	 *    understand, and the line below that table requires **writing it to the
+	 *    log** — «a silent tolerance is indistinguishable from a
+	 *    defect». */
 	if (c_misura[0]) {
 		if (misura_massima_legge(c_misura, &s->max_l, &s->max_a)) {
-			reg(s, "il client dichiara video.misura_massima=%ux%u: e' il tetto "
-			       "che la tela concessa DEVE rispettare (§4.5)",
+			reg(s, "the client declares video.misura_massima=%ux%u: it is the "
+			       "ceiling the granted canvas MUST respect (§4.5)",
 			    s->max_l, s->max_a);
 		} else {
 			s->max_l = s->max_a = 0;
-			reg(s, "⚠ TOLLERANZA (§3 eccezione 1): video.misura_massima=«%s» "
-			       "non ha la forma LARGHEZZAxALTEZZA di §4.3 (pixel interi) — "
-			       "il valore si ignora, e la tela NON avra' nessun tetto",
+			reg(s, "⚠ TOLERANCE (§3 exception 1): video.misura_massima=«%s» "
+			       "does not have the WIDTHxHEIGHT form of §4.3 (whole pixels) — "
+			       "the value is ignored, and the canvas will have NO ceiling",
 			    c_misura);
 		}
 	}
 
-	/* ⛔⭐⭐ `video.livello` — IL SECONDO TETTO DEL DECODIFICATORE, e fino al
-	 *      23 agosto 2026 il server NON LO LEGGEVA.
+	/* ⛔⭐⭐ `video.livello` — THE SECOND DECODER CEILING, and until
+	 *      23 Aug 2026 the server DID NOT READ IT.
 	 *
-	 * `RCP.md` §4.3, riga 701 della tabella delle capacita': *«il livello
-	 * massimo che sa decodificare, es. `5.1`.  ⛔ Il server **DEVE** emettere
-	 * un flusso di livello non superiore, e **non lo indovina**: un livello
-	 * dichiarato troppo basso non da' un errore di rete, **fa rifiutare la
-	 * configurazione dal decodificatore** e il sintomo e' "il browser non apre
-	 * il flusso" (rilievo O12)»*.
+	 * `RCP.md` §4.3, row 701 of the capability table: *«the maximum level it
+	 * can decode, e.g. `5.1`.  ⛔ The server **MUST** emit a stream of a level
+	 * not higher, and **does not guess it**: a level declared too low does not
+	 * give a network error, **it makes the decoder refuse the configuration**
+	 * and the symptom is "the browser does not open the stream" (finding O12)»*.
 	 *
-	 * ⛔ ED E' PROPRIO PERCHE' IL SINTOMO E' MUTO CHE IL NUMERO SI SCRIVE.  Un
-	 *    livello sbagliato non produce un rosso da nessuna parte: produce uno
-	 *    schermo nero, e una caccia che parte dal codificatore o dalla rete —
-	 *    cioe' dalla parte sbagliata.  Queste righe sono l'unico posto in cui
-	 *    il numero CHIESTO compare, e senza di loro non c'e' niente da
-	 *    confrontare con quello prodotto.
+	 * ⛔ AND IT IS PRECISELY BECAUSE THE SYMPTOM IS MUTE THAT THE NUMBER IS
+	 *    WRITTEN.  A wrong level produces a red nowhere: it produces a black
+	 *    screen, and a hunt that starts from the encoder or from the network —
+	 *    that is from the wrong side.  These lines are the only place where
+	 *    the REQUESTED number appears, and without them there is nothing to
+	 *    compare with the one produced.
 	 *
-	 * ⛔⚠ E IL CONFRONTO NON SI FA QUI, ma da stasera SI FA — nel figlio.
-	 *     Questo modulo non vede un byte di flusso: `rcp_video_spedisci()`
-	 *     riceve dati opachi, e §4.3 e' l'unico documento che rcp.c conosce
-	 *     (vedi il riquadro di `rcp.h`).  ⇒ Qui il numero chiesto si legge e si
-	 *     CONSEGNA (`rcp_livello_negoziato()`); il livello prodotto si legge
-	 *     dall'SPS (`codificatore.c`, `leggi_sps_h264`/`leggi_sps_hevc`) e il
-	 *     confronto lo fa chi ha tutt'e due i numeri in mano, cioe' il figlio.
-	 *     ⛔ Fino al 23 agosto 2026 la catena non c'era, e il difetto era
-	 *       MISURATO: `video.livello=5.1` chiesto, **5.2** prodotto a
-	 *       3840x2160.  La catena e' `rcp.h` → `webtransport.c` (il gancio
+	 * ⛔⚠ AND THE COMPARISON IS NOT MADE HERE, but since tonight IT IS MADE — in
+	 *     the child.  This module does not see a byte of stream:
+	 *     `rcp_video_spedisci()` receives opaque data, and §4.3 is the only
+	 *     document rcp.c knows (see the box of `rcp.h`).  ⇒ Here the requested
+	 *     number is read and HANDED OVER (`rcp_livello_negoziato()`); the
+	 *     produced level is read from the SPS (`codificatore.c`,
+	 *     `leggi_sps_h264`/`leggi_sps_hevc`) and the comparison is made by
+	 *     whoever has both numbers in hand, that is the child.
+	 *     ⛔ Until 23 Aug 2026 the chain was not there, and the defect was
+	 *       MEASURED: `video.livello=5.1` requested, **5.2** produced at
+	 *       3840x2160.  The chain is `rcp.h` → `webtransport.c` (the hook
 	 *       `wt_video_richiesta`) → `main.c` → `figlio.h` (`figli_video`) →
-	 *       `figlio.c` (`struct corpo_video`, che il suo byte `riempi` lo
-	 *       teneva libero apposta).  E' la stessa catena che la PROFONDITA'
-	 *       negoziata ha percorso il 17 agosto 2026 — e quel giorno il difetto
-	 *       era identico: due numeri veri in due processi, e nessuno che li
-	 *       mettesse vicini.
+	 *       `figlio.c` (`struct corpo_video`, which kept its `riempi` byte
+	 *       free on purpose).  It is the same chain the negotiated DEPTH
+	 *       travelled on 17 Aug 2026 — and that day the defect was
+	 *       identical: two true numbers in two processes, and nobody putting
+	 *       them side by side.
 	 *
-	 * ⛔ Un valore FUORI FORMA non si prende per buono e non si butta in
-	 *    silenzio, come per `video.misura_massima`: §3 eccezione 1 permette di
-	 *    ignorarlo, e la riga sotto quella tabella impone di scriverlo. */
+	 * ⛔ A MALFORMED value is not taken as good and not thrown away in
+	 *    silence, as for `video.misura_massima`: §3 exception 1 allows
+	 *    ignoring it, and the line below that table requires writing it. */
 	if (c_livello[0]) {
 		if (livello_legge(c_livello, &s->livello_x10)) {
-			reg(s, "il client dichiara video.livello=%s (= %u.%u, cioe' "
-			       "level_idc %u in H.264 e L%u in HEVC): §4.3 vieta al server "
-			       "di emettere un flusso PIU' ALTO di questo",
+			reg(s, "the client declares video.livello=%s (= %u.%u, that is "
+			       "level_idc %u in H.264 and L%u in HEVC): §4.3 forbids the "
+			       "server to emit a stream HIGHER than this",
 			    c_livello, s->livello_x10 / 10u, s->livello_x10 % 10u,
 			    s->livello_x10, s->livello_x10 * 3u);
-			reg(s, "⭐ e da stasera questo numero ATTRAVERSA il confine di "
-			       "processo: `rcp_livello_negoziato()` → `webtransport` → "
-			       "`main` → `figli_video()` → il figlio, che lo IMPONE al "
-			       "codificatore e poi lo rilegge dall'SPS (R31).  ⚠ Il "
-			       "verdetto sta nella riga «§4.3 — LIVELLO» del figlio, non "
-			       "qui: qui c'e' solo il numero chiesto");
+			reg(s, "⭐ and since tonight this number CROSSES the process "
+			       "boundary: `rcp_livello_negoziato()` → `webtransport` → "
+			       "`main` → `figli_video()` → the child, which IMPOSES it on "
+			       "the encoder and then reads it back from the SPS (R31).  ⚠ The "
+			       "verdict is in the child's «§4.3 — LIVELLO» line, not "
+			       "here: here there is only the requested number");
 		} else {
 			s->livello_x10 = 0;
-			reg(s, "⚠ TOLLERANZA (§3 eccezione 1): video.livello=«%s» non ha la "
-			       "forma MAGGIORE.MINORE di §4.3 (es. «5.1») — il valore si "
-			       "ignora, e §4.3 non avra' nessun livello da far rispettare",
+			reg(s, "⚠ TOLERANCE (§3 exception 1): video.livello=«%s» does not "
+			       "have the MAJOR.MINOR form of §4.3 (e.g. «5.1») — the value is "
+			       "ignored, and §4.3 will have no level to enforce",
 			    c_livello);
 		}
 	} else {
-		/* ⚠ §4.3 non OBBLIGA il client a dichiararlo, e l'assenza si scrive
-		 *   lo stesso: «non dichiarato» e «dichiarato e buttato» hanno lo
-		 *   stesso aspetto nel registro di ieri, e sono due cose diverse. */
-		reg(s, "il client NON dichiara video.livello: §4.3 non lo obbliga, e "
-		       "il server non ne indovina uno — nessun tetto di livello");
+		/* ⚠ §4.3 does not OBLIGE the client to declare it, and the absence is
+		 *   written all the same: «not declared» and «declared and thrown away»
+		 *   look the same in yesterday's log, and they are two different things. */
+		reg(s, "the client does NOT declare video.livello: §4.3 does not "
+		       "require it, and the server does not guess one — no level ceiling");
 	}
 
-	/* ⛔ §4.3: `pcm` e `8` DEVONO essere dichiarati da ENTRAMBI — `pcm` e' la
-	 * base sempre disponibile, e serve da controllo positivo quando Opus non si
-	 * negozia.  ⚠ E chi non li dichiara si congeda con NIENTE_IN_COMUNE, **non**
-	 * con ERRORE_PROTOCOLLO: non ha sbagliato a scrivere, non ha di che
-	 * parlare.  Senza questo controllo l'intersezione basta a se stessa — un
-	 * client che offre solo `opus` passa — e la riga di §4.3 non la applica
-	 * nessuno. */
+	/* ⛔ §4.3: `pcm` and `8` MUST be declared by BOTH — `pcm` is the
+	 * base always available, and it serves as a positive control when Opus is
+	 * not negotiated.  ⚠ And whoever does not declare them is sent away with
+	 * NIENTE_IN_COMUNE, **not** with ERRORE_PROTOCOLLO: it did not write
+	 * wrongly, it has nothing to talk about.  Without this check the
+	 * intersection is enough on its own — a client that offers only `opus`
+	 * passes — and nobody applies the line of §4.3. */
 	if (!voce_presente(c_audio, "pcm")) {
 		congeda(s, RCP_NIENTE_IN_COMUNE,
 		        "il client non dichiara pcm in audio.codec");
@@ -2338,13 +2351,14 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		        "il client non dichiara 8 in video.profondita");
 		return false;
 	}
-	/* ⛔ Se l'intersezione e' vuota si congeda con NIENTE_IN_COMUNE, non con
-	 * ERRORE_PROTOCOLLO: non ha sbagliato a scrivere, non ha di che parlare. */
+	/* ⛔ If the intersection is empty the client is sent away with
+	 * NIENTE_IN_COMUNE, not with ERRORE_PROTOCOLLO: it did not write wrongly,
+	 * it has nothing to talk about. */
 	char sc_codec[257], sc_prof[257], sc_audio[257];
 	int n_codec = 0, n_prof = 0, n_audio = 0;
 	if (!nostro_codec[0]) {
-		/* ⛔ Fase 18-19: il server non sa codificare niente, e lo dice col
-		 *    nome della causa — il registro dell'avvio porta la ragione. */
+		/* ⛔ Phase 18-19: the server cannot encode anything, and says so with
+		 *    the name of the cause — the startup log carries the reason. */
 		congeda(s, RCP_NIENTE_IN_COMUNE,
 		        "questo server non sa codificare video: nessuna scheda capace, "
 		        "nessun codec nell'ECCOMI (REMOTIX codifica solo sulla scheda — "
@@ -2360,18 +2374,18 @@ static bool tratta_ciao(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_NIENTE_IN_COMUNE, "nessun codec condiviso");
 		return false;
 	}
-	/* ⛔ La scelta si SCRIVE: una negoziazione riuscita con dentro il
-	 * contrario di quel che si voleva si vede solo se qualcuno la scrive. */
+	/* ⛔ The choice is WRITTEN: a successful negotiation with the opposite
+	 * of what was wanted inside it is seen only if someone writes it. */
 	reg(s, "negoziato video.codec=%s video.profondita=%s audio.codec=%s",
 	    s->codec, s->profondita, s->audio);
-	/* ⛔ E lo SCARTO si scrive a sua volta: «ho scelto hevc» non dice che vp9
-	 * e' stato buttato, e il giorno in cui il client di domani offrira' un
-	 * codec che questo server non conosce, il registro e' l'unico posto in cui
-	 * quel fatto compare. */
-	/* ⚠ E si scrive anche QUANTE sono, non solo quali: l'elenco puo' essere
-	 *   troncato dal buffer, il numero no (rilievo R9.12). */
+	/* ⛔ And the DISCARD is written in turn: «I chose hevc» does not say that
+	 * vp9 was thrown away, and the day tomorrow's client offers a codec this
+	 * server does not know, the log is the only place where that fact
+	 * appears. */
+	/* ⚠ And HOW MANY there are is written too, not only which: the list can be
+	 *   truncated by the buffer, the number cannot (finding R9.12). */
 	if (n_codec || n_prof || n_audio)
-		reg(s, "scartate voci sconosciute: video.codec=[%s] (%d) "
+		reg(s, "discarded unknown entries: video.codec=[%s] (%d) "
 		       "video.profondita=[%s] (%d) audio.codec=[%s] (%d)",
 		    sc_codec, n_codec, sc_prof, n_prof, sc_audio, n_audio);
 	manda_eccomi(s);
@@ -2384,43 +2398,42 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	char utente[257], parola[1025];
 	size_t lu = le_str(l, utente, sizeof utente);
 	size_t lp = le_str(l, parola, sizeof parola);
-	/* ⛔ LA COPIA LOCALE SI AZZERA SU OGNI STRADA, NON SOLO SU QUELLA BUONA —
-	 * rilievo R9.8.  Il `memset` stava in fondo, dopo la risposta di PAM: su
-	 * ogni cammino d'errore che congeda qui sotto — utente non UTF-8, utente o
-	 * parola fuori intervallo — la parola restava sullo stack.  Il caso
-	 * `utente-vuoto` di B5 e' proprio questo: parola di 1024 byte, utente di
-	 * zero, e si esce da qui.  ⚠ Le tre righe ripetute sono volute: un `goto`
-	 * di uscita comune si legge peggio di tre righe che dicono la stessa cosa
-	 * dove capita di guardare. */
+	/* ⛔ THE LOCAL COPY IS ZEROED ON EVERY ROAD, NOT ONLY ON THE GOOD ONE —
+	 * finding R9.8.  The `memset` sat at the bottom, after the PAM answer: on
+	 * every error path that sends the client away below — user not UTF-8, user
+	 * or password out of range — the password stayed on the stack.  The
+	 * `utente-vuoto` case of B5 is exactly this: a 1024-byte password, a user
+	 * of zero, and one leaves from here.  ⚠ The three repeated lines are
+	 * deliberate: a common exit `goto` reads worse than three lines that say
+	 * the same thing where one happens to look. */
 	if (l->corto) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "CREDENZIALI troncate");
 		return false;
 	}
-	/* §4.4: gli intervalli.  Una stringa vuota e' legale per §6.0, e senza
-	 * questi limiti `CREDENZIALI` con due stringhe di zero byte sarebbe
-	 * conforme — e un attaccante non incrementerebbe nessun contatore. */
+	/* §4.4: the ranges.  An empty string is legal by §6.0, and without
+	 * these limits a `CREDENZIALI` with two zero-byte strings would be
+	 * conforming — and an attacker would increment no counter. */
 	if (lu < 1 || lu > 256 || lp < 1 || lp > 1024) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "utente o parola fuori intervallo");
 		return false;
 	}
-	/* ⛔ §4.3 vale per le capacita', ma la ragione di `testo_stampabile` vale
-	 * qui piu' che altrove (rilievo R9.11): un `root\0nemo` di nove byte
-	 * passava gli intervalli, passava `utf8_valido`, e mandava a PAM `root`.
-	 * Quel che e' arrivato e quel che si giudica devono essere la stessa
-	 * stringa, o il registro e la chiave di §4.4-bis nominano un utente che
-	 * sul filo non c'era. */
+	/* ⛔ §4.3 applies to capabilities, but the reason for `testo_stampabile`
+	 * applies here more than anywhere (finding R9.11): a nine-byte `root\0nemo`
+	 * passed the ranges, passed `utf8_valido`, and sent `root` to PAM.
+	 * What arrived and what is judged must be the same string, or the log and
+	 * the key of §4.4-bis name a user that was not on the wire. */
 	if (!testo_stampabile(utente, lu)) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
 		        "l'utente non e' testo UTF-8 stampabile");
 		return false;
 	}
-	/* ⚠ Della parola si controlla SOLO il byte nullo, e la ragione e' la
-	 *   stessa: con uno zero in mezzo PAM giudicherebbe un prefisso di quel
-	 *   che e' arrivato.  ⛔ Non si pretende che sia stampabile: §4.4 non lo
-	 *   chiede, e una parola d'ordine puo' contenere quel che vuole. */
+	/* ⚠ Of the password ONLY the NUL byte is checked, and the reason is the
+	 *   same: with a zero in the middle PAM would judge a prefix of what
+	 *   arrived.  ⛔ It is not required to be printable: §4.4 does not ask it,
+	 *   and a password can contain whatever it wants. */
 	if (strlen(parola) != lp) {
 		memset(parola, 0, sizeof parola);
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
@@ -2429,103 +2442,103 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 		return false;
 	}
 	snprintf(s->utente, sizeof s->utente, "%s", utente);
-	/* ⛔ Tre righe di strumentazione, e non sono di passaggio: il 10 agosto
-	 * 2026 la stretta di mano si fermava qui e «CREDENZIALI non e' arrivato»
-	 * e «PAM non risponde» avevano lo stesso aspetto — cioe' nessuno.
-	 * ⚠ La parola NON compare, a nessun livello (§4.4) — e da oggi nemmeno la
-	 *   sua LUNGHEZZA ESATTA, che qui c'era: §11.1 tratta il registro come un
-	 *   file che si conserva, e la lunghezza di ogni parola d'ordine provata,
-	 *   riuscita o no, non e' una cosa da conservare (rilievo R9.8).  Per
-	 *   distinguere «non e' arrivato» da «PAM non risponde» basta questa
-	 *   riga. */
-	reg(s, "CREDENZIALI ricevute utente=%s (con parola)", s->utente);
+	/* ⛔ Three lines of instrumentation, and they are not incidental: on 10 Aug
+	 * 2026 the handshake stopped here and «CREDENZIALI did not arrive»
+	 * and «PAM does not answer» looked the same — that is like nothing.
+	 * ⚠ The password does NOT appear, at any level (§4.4) — and since today
+	 *   neither does its EXACT LENGTH, which was here: §11.1 treats the log as a
+	 *   file that is kept, and the length of every password tried,
+	 *   successful or not, is not something to keep (finding R9.8).  To tell
+	 *   «it did not arrive» from «PAM does not answer» this line is
+	 *   enough. */
+	reg(s, "CREDENZIALI received utente=%s (with password)", s->utente);
 
-	/* ⛔ Il limitatore PRIMA di PAM, e il rifiuto e' subito: §4.4-bis dice che
-	 * l'attesa e' una FINESTRA in cui si rifiuta, non un ritardo — con un solo
-	 * tentativo per connessione, un server che ritardasse di quindici minuti
-	 * non consegnerebbe mai il rifiuto. */
+	/* ⛔ The limiter BEFORE PAM, and the refusal is immediate: §4.4-bis says
+	 * the wait is a WINDOW in which one refuses, not a delay — with a single
+	 * attempt per connection, a server that delayed by fifteen minutes
+	 * would never deliver the refusal. */
 	uint64_t restano = 0;
-	/* ⛔⭐ E DA QUI IN GIU' SI PARTE DA NEGATO, SEMPRE — invariante I3.
+	/* ⛔⭐ AND FROM HERE DOWN ONE STARTS FROM DENIED, ALWAYS — invariant I3.
 	 *
-	 * Prima del 12 agosto 2026 `cred_buone` prendeva il suo valore dentro
-	 * l'unico `else` qui sotto, e non c'era nessun'altra strada: PAM aveva
-	 * gia' risposto quando questa funzione tornava.  ⚠ Adesso le strade sono
-	 * quattro — bannato, aiutante che non prende la domanda, verifica
-	 * sincrona di ripiego, e la strada buona che ASPETTA — e tre di esse
-	 * escono da qui senza nessun verdetto in mano.  Un campo lasciato al suo
-	 * valore precedente su una di quelle strade sarebbe un «si'» arrivato per
-	 * inerzia. */
+	 * Before 12 Aug 2026 `cred_buone` took its value inside the only `else`
+	 * below, and there was no other road: PAM had already answered when this
+	 * function returned.  ⚠ Now the roads are four — banned, helper that does
+	 * not take the question, synchronous fallback check, and the good road
+	 * that WAITS — and three of them leave here without any verdict in hand.
+	 * A field left at its previous value on one of those roads would be a
+	 * «yes» arrived by inertia. */
 	s->cred_buone = false;
 	s->cred_motivo = RCP_CREDENZIALI_ERRATE;
 	s->verdetto_atteso = false;
 	s->no_e_nostro = false;
 	if (bannato(s->indirizzo, ora, &restano)) {
-		/* ⛔ Il ban rifiuta SENZA interrogare PAM, e va saputo leggendo il
-		 * motivo sul filo: `TROPPI_TENTATIVI` e `CREDENZIALI_ERRATE` non
-		 * possono venire dalla stessa strada.  ⭐ E' il byte che il 10 agosto
-		 * 2026 ha separato i due imputati di B8 — chi legge un
-		 * `CREDENZIALI_ERRATE` sta guardando PAM, non questa riga. */
+		/* ⛔ The ban refuses WITHOUT querying PAM, and it must be known from
+		 * reading the reason on the wire: `TROPPI_TENTATIVI` and
+		 * `CREDENZIALI_ERRATE` cannot come from the same road.  ⭐ It is the
+		 * byte that on 10 Aug 2026 separated the two suspects of B8 — whoever
+		 * reads a `CREDENZIALI_ERRATE` is looking at PAM, not at this line. */
 		s->cred_buone = false;
 		s->cred_motivo = RCP_TROPPI_TENTATIVI;
-		reg(s, "⛔ indirizzo %s BANNATO: restano %llu minuti, PAM non viene "
-		       "interrogata (§4.4-bis)",
+		reg(s, "⛔ address %s BANNED: %llu minutes remain, PAM is not "
+		       "queried (§4.4-bis)",
 		    s->indirizzo, (unsigned long long)(restano / 60000u));
 	} else if (s->g.chiedi_verifica) {
-		/* ⭐⭐ LA STRADA BUONA — `DECISIONI.md` §1.10, 12 agosto 2026.
+		/* ⭐⭐ THE GOOD ROAD — `DECISIONI.md` §1.10, 12 Aug 2026.
 		 *
-		 * ⛔ Qui NON si aspetta PAM.  Si chiede a un processo aiutante e si
-		 *    torna subito a chi ospita, che torna al suo `poll`: e' l'unico
-		 *    modo per cui «mentre uno si autentica, gli altri non se ne
-		 *    accorgono» possa essere vero su un server a un filo solo.
+		 * ⛔ Here one does NOT wait for PAM.  One asks a helper process and
+		 *    returns at once to the host, which returns to its `poll`: it is the
+		 *    only way in which «while one authenticates, the others do not
+		 *    notice» can be true on a single-threaded server.
 		 *
-		 * ⚠ E il conto di §4.4-bis NON si muove qui: adesso si sa che si e'
-		 *   chiesto, non che cosa e' stato risposto.  Si muove in
-		 *   `rcp_verdetto()`, che e' il punto in cui il fatto esiste. */
+		 * ⚠ And the count of §4.4-bis does NOT move here: now one knows that
+		 *   one asked, not what was answered.  It moves in `rcp_verdetto()`,
+		 *   which is the point where the fact exists. */
 		if (s->g.chiedi_verifica(s->g.ctx, utente, parola, &s->pratica)) {
 			s->verdetto_atteso = true;
-			reg(s, "PAM chiesta all'aiutante, pratica %llu: il filo resta "
-			       "libero (DECISIONI.md §1.10)",
+			reg(s, "PAM asked of the helper, request %llu: the thread stays "
+			       "free (DECISIONI.md §1.10)",
 			    (unsigned long long)s->pratica);
 		} else {
-			/* ⛔ LA DOMANDA NON E' PARTITA ⇒ NO, subito.  E' I3 alla lettera:
-			 *    «progetta perche' il fallimento sia un no, non un forse».
-			 * ⚠ E non conta come tentativo fallito: il difetto e' NOSTRO, e
-			 *   §4.4-bis elenca fra le cose che non bannano proprio quelle che
-			 *   «bannerebbero qualcuno che non ha sbagliato niente». */
+			/* ⛔ THE QUESTION DID NOT LEAVE ⇒ NO, at once.  It is I3 to the
+			 *    letter: «design so that failure is a no, not a maybe».
+			 * ⚠ And it does not count as a failed attempt: the defect is OURS,
+			 *   and §4.4-bis lists among the things that do not ban precisely
+			 *   those that «would ban someone who did nothing wrong». */
 			s->no_e_nostro = true;
-			reg(s, "⛔ la domanda a PAM non e' partita: RESPINTO senza appello "
-			       "(invariante I3).  ⚠ E NON conta come tentativo fallito di "
-			       "§4.4-bis: il difetto e' nostro, e un ban per un difetto "
-			       "nostro sarebbe la peggiore diagnosi possibile");
+			reg(s, "⛔ the question to PAM did not leave: RESPINTO without appeal "
+			       "(invariant I3).  ⚠ And it does NOT count as a failed attempt "
+			       "of §4.4-bis: the defect is ours, and a ban for a defect of "
+			       "ours would be the worst possible diagnosis");
 		}
 	} else {
-		/* ⚠ IL RIPIEGO DICHIARATO (`CODER.md` §4.2), e blocca chi lo chiama:
-		 *   e' la strada dei banchi in-processo, dove non c'e' nessun ciclo da
-		 *   liberare — e il GUASTO che `banchi/02-pam-*` innesta per
-		 *   certificarsi, perche' e' esattamente com'era il server prima. */
+		/* ⚠ THE DECLARED FALLBACK (`CODER.md` §4.2), and it blocks whoever
+		 *   calls it: it is the road of the in-process benches, where there is
+		 *   no loop to free — and the FAULT that `banchi/02-pam-*` injects to
+		 *   certify itself, because it is exactly how the server was before. */
 		bool ok = s->g.verifica && s->g.verifica(s->g.ctx, utente, parola);
-		reg(s, "PAM ha risposto: %s  ⚠ (per via SINCRONA: nessun gancio "
-		       "asincrono collegato — il filo e' rimasto fermo)",
-		    ok ? "ammesso" : "respinto");
+		reg(s, "PAM answered: %s  ⚠ (SYNCHRONOUSLY: no asynchronous "
+		       "hook connected — the thread stood still)",
+		    ok ? "admitted" : "refused");
 		s->cred_buone = ok;
 		s->cred_motivo = RCP_CREDENZIALI_ERRATE;
-		/* ⛔ Il conto e' sull'INDIRIZZO e basta: il nome utente non conta
-		 * (`DECISIONI.md` §1.9).  Tre nomi diversi contano tre. */
+		/* ⛔ The count is on the ADDRESS alone: the user name does not count
+		 * (`DECISIONI.md` §1.9).  Three different names count three. */
 		if (ok)
 			azzera_falliti(s, s->indirizzo, ora);
 		else
 			segna_fallito(s, s->indirizzo, ora);
 	}
-	/* ⛔ La parola si azzera appena PAM ha risposto, e non compare in nessun
-	 * registro a nessun livello (§4.4).
-	 * ⚠ Questo azzera la COPIA locale.  L'originale e' arrivato dentro `s->acc`
-	 *   e ci resta finche' il messaggio non viene consumato: la coda
-	 *   dell'accumulo si azzera in `drena()`, e quel che avanza in
-	 *   `rcp_libera()`.  Erano tutti e due scoperti (rilievo R9.8).
-	 * `[?]` ⚠ E un compilatore che ottimizza e' AUTORIZZATO a togliere questo
-	 *   `memset`, perche' `parola` non viene piu' letta: la cura conosciuta e'
-	 *   `explicit_bzero()`, ma prima si guarda l'assembly del binario che gira
-	 *   (sospetto R9.20 — e' una misura, non una riscrittura sulla parola). */
+	/* ⛔ The password is zeroed as soon as PAM has answered, and does not appear
+	 * in any log at any level (§4.4).
+	 * ⚠ This zeroes the local COPY.  The original arrived inside `s->acc`
+	 *   and stays there until the message is consumed: the tail of the
+	 *   buffer is zeroed in `drena()`, and whatever is left over in
+	 *   `rcp_libera()`.  Both were uncovered (finding R9.8).
+	 * `[?]` ⚠ And an optimising compiler is ALLOWED to remove this
+	 *   `memset`, because `parola` is no longer read: the known cure is
+	 *   `explicit_bzero()`, but first one looks at the assembly of the binary
+	 *   that runs (suspicion R9.20 — it is a measurement, not a rewrite on
+	 *   faith). */
 	memset(parola, 0, sizeof parola);
 
 	s->cred_arrivo = ora;
@@ -2534,49 +2547,50 @@ static bool tratta_credenziali(rcp_sessione *s, lettore *l, uint64_t ora)
 	return true;
 }
 
-/* ⛔⛔⭐ L'ALFABETO DEL NOME — 21 agosto 2026, banco `06-b34` caso 8, e
- *      ⚠ E' LA FORMA D1 SOPRAVVISSUTA ALLA PROPRIA CURA.
+/* ⛔⛔⭐ THE ALPHABET OF THE NAME — 21 Aug 2026, bench `06-b34` case 8, and
+ *      ⚠ IT IS THE D1 SHAPE THAT SURVIVED ITS OWN CURE.
  *
- *      Il 16 agosto l'elenco fisso delle 20 disposizioni e' stato tolto e la
- *      domanda «questa macchina ce l'ha?» e' andata a XKB (il gancio
- *      `disposizione_esiste`, `webtransport.c:1626` → `tastiera.c`).  ⛔ Ma
- *      DAVANTI a quel gancio era rimasto un SECONDO elenco scritto a mano, e
- *      nessuno l'aveva guardato: **quali caratteri sono ammessi nel nome**.
+ *      On 16 August the fixed list of 20 layouts was removed and the
+ *      question «does this machine have it?» went to XKB (the hook
+ *      `disposizione_esiste`, `webtransport.c:1626` → `tastiera.c`).  ⛔ But
+ *      IN FRONT OF that hook a SECOND hand-written list had remained, and
+ *      nobody had looked at it: **which characters are allowed in the name**.
  *
- * `[M]` Misurato chiedendolo al sistema attraverso il prodotto stesso
- *   (`06-b34-tabella.c elenco`, cioe' `src/tastiera.c`), su tutte le **590**
- *   coppie disposizione/variante che `/usr/share/X11/xkb/rules/evdev.lst`
- *   dichiara sulla macchina di prova: **589 si compilano**, cioe' la macchina
- *   le ha.  ⛔ E **9 di quelle 589 hanno una maiuscola nel nome**:
+ * `[M]` Measured by asking the system through the product itself
+ *   (`06-b34-tabella.c elenco`, that is `src/tastiera.c`), on all the **590**
+ *   layout/variant pairs that `/usr/share/X11/xkb/rules/evdev.lst`
+ *   declares on the test machine: **589 compile**, that is the machine
+ *   has them.  ⛔ And **9 of those 589 have an uppercase letter in the name**:
  *
  *     de(T3)   ie(CloGaelach)   ie(UnicodeExpert)   in(tamilnet_TAB)
  *     in(tamilnet_TSCII)   jp(OADG109A)   lk(tam_TAB)
  *     ru(phonetic_YAZHERTY)   ua(macOS)
  *
- *   `[M]` Sul filo, prima di questa cura: `de(T3)`, `jp(OADG109A)` e
- *   `ua(macOS)` ricevevano **`0x0b ERRORE_PROTOCOLLO`** — che e' PEGGIO di
- *   `SESSIONE_NON_SERVIBILE`, perche' dice «il tuo client e' rotto» e manda a
- *   cercare il guasto dall'altra parte del filo.
+ *   `[M]` On the wire, before this cure: `de(T3)`, `jp(OADG109A)` and
+ *   `ua(macOS)` received **`0x0b ERRORE_PROTOCOLLO`** — which is WORSE than
+ *   `SESSIONE_NON_SERVIBILE`, because it says «your client is broken» and sends
+ *   people looking for the fault on the other side of the wire.
  *
- * ⛔ E l'altro verso, sempre misurato: `it()` — variante VUOTA — era ben
- *    formata per questa funzione e mal formata per `tastiera.c:forma_valida`,
- *    ⇒ usciva `0x0e` su una stringa **fuori forma**.  §4.5 vuole i due guasti
- *    DISTINTI, e li' erano uniti.
+ * ⛔ And the other direction, also measured: `it()` — EMPTY variant — was well
+ *    formed for this function and malformed for `tastiera.c:forma_valida`,
+ *    ⇒ `0x0e` went out on a **malformed** string.  §4.5 wants the two faults
+ *    DISTINCT, and there they were merged.
  *
- * ⇒ ⭐ LA CURA E' CHE LA FORMA SIA UNA SOLA: qui si usa lo stesso alfabeto di
- *   `tastiera.c:carattere_ammesso()` — `[A-Za-z0-9_-]` — e la stessa regola
- *   sulla variante vuota.  ⛔ Due controlli di forma scritti due volte danno
- *   due risposte sotto la stessa etichetta, che e' la forma d'errore **E2**.
+ * ⇒ ⭐ THE CURE IS THAT THE FORM BE ONE ONLY: here the same alphabet as
+ *   `tastiera.c:carattere_ammesso()` is used — `[A-Za-z0-9_-]` — and the same
+ *   rule on the empty variant.  ⛔ Two form checks written twice give
+ *   two answers under the same label, which is the **E2** error shape.
  *
- * ⚠ E la difesa che questa funzione porta NON si allenta: il punto, la barra e
- *   la virgola restano fuori dall'alfabeto, quindi `../../etc/passwd` e `it,`
- *   sono rifiutati come prima — ed e' l'unica cosa che questa funzione
- *   protegge, perche' la stringa finisce dentro la macchina degli `include`
- *   di XKB, che apre file per nome (`tastiera.c:172`).
+ * ⚠ And the defence this function carries is NOT loosened: the dot, the slash
+ *   and the comma stay out of the alphabet, so `../../etc/passwd` and `it,`
+ *   are refused as before — and it is the only thing this function
+ *   protects, because the string ends up inside the XKB `include`
+ *   machinery, which opens files by name (`tastiera.c:172`).
  *
- * ⚠ Il prezzo dichiarato: `IT` passa la forma e va al gancio, che risponde
- *   «non ce l'ho» ⇒ `0x0e` invece di `0x0b`.  XKB distingue le maiuscole e
- *   `symbols/IT` non esiste: «ben formata, ignota» E' la risposta giusta.
+ * ⚠ The declared price: `IT` passes the form and goes to the hook, which
+ *   answers «I do not have it» ⇒ `0x0e` instead of `0x0b`.  XKB distinguishes
+ *   case and `symbols/IT` does not exist: «well formed, unknown» IS the right
+ *   answer.
  */
 static bool disposizione_carattere_ammesso(char c)
 {
@@ -2586,7 +2600,7 @@ static bool disposizione_carattere_ammesso(char c)
 
 static bool disposizione_ben_formata(const char *d, size_t n)
 {
-	/* §4.5: un nome XKB, eventualmente con la variante fra parentesi. */
+	/* §4.5: an XKB name, possibly with the variant in parentheses. */
 	if (n < 1 || n > 64)
 		return false;
 	size_t i = 0;
@@ -2596,7 +2610,7 @@ static bool disposizione_ben_formata(const char *d, size_t n)
 		return false;
 	if (i == n)
 		return true;
-	/* ⛔ `n < i + 3` = la variante e' VUOTA (`it()`): fuori forma, non ignota. */
+	/* ⛔ `n < i + 3` = the variant is EMPTY (`it()`): malformed, not unknown. */
 	if (d[i] != '(' || d[n - 1] != ')' || n < i + 3)
 		return false;
 	for (size_t k = i + 1; k + 1 < n; k++)
@@ -2605,31 +2619,31 @@ static bool disposizione_ben_formata(const char *d, size_t n)
 	return true;
 }
 
-/* ⛔ §4.5 distingue DUE guasti, e vuole due motivi diversi:
+/* ⛔ §4.5 distinguishes TWO faults, and wants two different reasons:
  *
- *   fuori forma            ERRORE_PROTOCOLLO     — ha sbagliato a scrivere
- *   ben formata, ignota    SESSIONE_NON_SERVIBILE — ha scritto bene una cosa
- *                                                   che questa macchina non ha
+ *   malformed              ERRORE_PROTOCOLLO     — it wrote wrongly
+ *   well formed, unknown   SESSIONE_NON_SERVIBILE — it wrote correctly something
+ *                                                   this machine does not have
  *
- * ⚠ Un server che li unisse darebbe `ERRORE_PROTOCOLLO` a chi ha una tastiera
- *   svedese su una macchina senza il pacchetto XKB svedese, e il sintomo
- *   sarebbe «il client e' rotto» invece di «alla macchina manca una
- *   disposizione».
+ * ⚠ A server that merged them would give `ERRORE_PROTOCOLLO` to whoever has a
+ *   Swedish keyboard on a machine without the Swedish XKB package, and the
+ *   symptom would be «the client is broken» instead of «the machine lacks a
+ *   layout».
  *
- * `[?]` ⚠ **E l'elenco qui sotto e' della fase 1, e va dichiarato.** «Che cosa
- *   il sistema conosce» lo sa il sistema, non RCP: un server vero lo chiede a
- *   XKB.  In fase 1 non c'e' nessun compositore (`SESSIONE` dichiara
- *   `desktop=sconosciuto`), quindi non c'e' nessuno a cui chiedere, e la
- *   scelta e' un elenco fisso.  ⛔ Quel che il banco prova e' **che i due
- *   guasti siano distinti**, non quali disposizioni esistano: il giorno in cui
- *   la domanda andra' a XKB, questa funzione cambia e B5 resta com'e'. */
+ * `[?]` ⚠ **And the list below is from phase 1, and it must be declared.**
+ *   «What the system knows» is known by the system, not by RCP: a real server
+ *   asks XKB.  In phase 1 there is no compositor (`SESSIONE` declares
+ *   `desktop=sconosciuto`), so there is nobody to ask, and the choice is a
+ *   fixed list.  ⛔ What the bench tests is **that the two faults are
+ *   distinct**, not which layouts exist: the day the question goes to XKB,
+ *   this function changes and B5 stays as it is. */
 static bool disposizione_nell_elenco(const char *d)
 {
 	static const char *NOTE[] = {"it", "us", "gb", "de", "fr", "es", "pt",
 	                             "ru", "se", "no", "dk", "fi", "pl", "cz",
 	                             "ch", "at", "be", "nl", "br", "jp", NULL};
-	/* La variante fra parentesi non cambia la disposizione: `de(neo)` e' `de`
-	 * con un'altra mappa, e chi ha `de` ha le due. */
+	/* The variant in parentheses does not change the layout: `de(neo)` is `de`
+	 * with another map, and whoever has `de` has both. */
 	size_t n = 0;
 	while (d[n] && d[n] != '(')
 		n++;
@@ -2639,228 +2653,231 @@ static bool disposizione_nell_elenco(const char *d)
 	return false;
 }
 
-/* ⛔⛔⭐ E ADESSO LA DOMANDA VA A XKB — 16 agosto 2026, banco `06-b34` caso 5.
+/* ⛔⛔⭐ AND NOW THE QUESTION GOES TO XKB — 16 Aug 2026, bench `06-b34` case 5.
  *
- *      L'elenco qui sopra era della fase 1, e la sua stessa nota diceva che «un
- *      server vero lo chiede a XKB».  ⛔ `[M]` finche' ha deciso lui:
- *      **`hu`, `tr`, `gr` e `ua` esistono in `/usr/share/X11/xkb/symbols/` su
- *      questa macchina e venivano rifiutate** con `SESSIONE_NON_SERVIBILE`.
- *      ⇒ Un utente ungherese si vedeva negare la sessione da un elenco scritto
- *        a mano, e il registro gli diceva «disposizione sconosciuta a questa
- *        macchina» — una frase FALSA, che e' il modo peggiore di sbagliare.
+ *      The list above was from phase 1, and its own note said that «a real
+ *      server asks XKB».  ⛔ `[M]` as long as it decided:
+ *      **`hu`, `tr`, `gr` and `ua` exist in `/usr/share/X11/xkb/symbols/` on
+ *      this machine and were refused** with `SESSIONE_NON_SERVIBILE`.
+ *      ⇒ A Hungarian user was denied the session by a hand-written list, and
+ *        the log told them «disposizione sconosciuta a questa macchina» — a
+ *        FALSE sentence, which is the worst way of being wrong.
  *
- *      ⚠ E finche' la disposizione dichiarata non toccava niente il difetto
- *        era invisibile: rifiutava e basta.  Attuata §5-bis.7, diventa la
- *        differenza fra «l'ungherese lavora» e «l'ungherese non entra».
+ *      ⚠ And as long as the declared layout touched nothing the defect was
+ *        invisible: it just refused.  With §5-bis.7 carried out, it becomes the
+ *        difference between «the Hungarian works» and «the Hungarian does not
+ *        get in».
  *
- * ⛔ I TRE ESITI RESTANO TRE, e il terzo e' quello che costa: se il gancio non
- *    c'e' (il gemello di `banchi/rcp/`, gli innesti a QUIC nudo) **non si e'
- *    potuto chiedere**, e «non ho guardato» non e' «non esiste»
- *    (`LEZIONI.md` §1.9 regola 1).  ⇒ Li' si ripiega sull'elenco della fase 1
- *    **dichiarandolo**, invece di accettare tutto o rifiutare tutto in
- *    silenzio.
+ * ⛔ THE THREE OUTCOMES STAY THREE, and the third is the one that costs: if the
+ *    hook is not there (the twin of `banchi/rcp/`, the bare-QUIC harnesses)
+ *    **it could not be asked**, and «I did not look» is not «it does not exist»
+ *    (`LEZIONI.md` §1.9 rule 1).  ⇒ There one falls back on the phase 1 list
+ *    **declaring it**, instead of accepting everything or refusing everything
+ *    in silence.
  *
- *   `1` conosciuta · `0` no · `-1` non si e' potuto chiedere (gia' dichiarato) */
+ *   `1` known · `0` no · `-1` could not be asked (already declared) */
 static int disposizione_conosciuta(rcp_sessione *s, const char *d)
 {
 	if (s->g.disposizione_esiste) {
 		int r = s->g.disposizione_esiste(s->g.ctx, d);
 		if (r >= 0)
 			return r;
-		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): il gancio «disposizione_esiste» "
-		       "non ha saputo rispondere per «%s» — ripiego sull'elenco della "
-		       "fase 1, che NON e' quel che questa macchina ha davvero",
+		reg(s, "⚠ DECLARED FALLBACK (§4.5): the «disposizione_esiste» hook "
+		       "could not answer for «%s» — falling back on the phase 1 "
+		       "list, which is NOT what this machine really has",
 		    d);
 	} else {
-		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): nessun gancio «disposizione_esiste» "
-		       "su questo server — la domanda «%s esiste?» NON e' andata a XKB, "
-		       "e la risposta viene dall'elenco fisso della fase 1",
+		reg(s, "⚠ DECLARED FALLBACK (§4.5): no «disposizione_esiste» hook "
+		       "on this server — the question «does %s exist?» did NOT go to XKB, "
+		       "and the answer comes from the fixed phase 1 list",
 		    d);
 	}
 	return disposizione_nell_elenco(d) ? 1 : 0;
 }
 
-/* ⛔⭐ SI CHIEDE AL PALCO DI METTERE LA DISPOSIZIONE, E SI DICHIARA L'ESITO.
+/* ⛔⭐ THE STAGE IS ASKED TO SET THE LAYOUT, AND THE OUTCOME IS DECLARED.
  *
- * `perche` dice da dove viene la richiesta — «l'attacco» oppure «DISPOSIZIONE
- * (0x0009)» — e finisce nel registro: sei ore dopo, chi legge deve poter
- * distinguere una disposizione messa al riattacco da una cambiata a mano
- * dall'utente, perche' i due guasti che le seguono sono diversi.
+ * `perche` says where the request comes from — «the attach» or «DISPOSIZIONE
+ * (0x0009)» — and ends up in the log: six hours later, whoever reads must be
+ * able to tell a layout set on reattach from one changed by hand by the user,
+ * because the two faults that follow them are different.
  *
- * ⛔ Il ripiego si DICHIARA (`CODER.md` §4.2): senza il gancio la disposizione
- *    NON viene applicata, e tacerlo vorrebbe dire lasciare l'utente con
- *    `Ctrl+Z` sul tasto sbagliato e nessuna riga che lo spieghi.
+ * ⛔ The fallback is DECLARED (`CODER.md` §4.2): without the hook the layout
+ *    is NOT applied, and keeping quiet would mean leaving the user with
+ *    `Ctrl+Z` on the wrong key and no line explaining it.
  *
- * ⚠ `true` = la richiesta e' PARTITA, non «e' in vigore»: chi lo sa e' il
- *   figlio, ed e' lui che scrive la riga col nome della keymap che `libei` gli
- *   consegna davvero.  Stessa regola del rilascio al distacco — un numero (o
- *   un esito) inventato qui sarebbe peggio di nessuno. */
+ * ⚠ `true` = the request has LEFT, not «is in force»: who knows that is the
+ *   child, and it is the child that writes the line with the name of the keymap
+ *   `libei` really hands it.  Same rule as the release on detach — a number (or
+ *   an outcome) invented here would be worse than none. */
 static void applica_disposizione(rcp_sessione *s, const char *perche)
 {
 	if (!s->disposizione[0])
 		return;
 	if (!s->g.disposizione) {
-		reg(s, "⚠ RIPIEGO DICHIARATO (§5-bis.7): %s ha dichiarato la "
-		       "disposizione «%s», ma questo server NON ha il gancio per "
-		       "applicarla — la sessione tiene quella che ha.  ⛔ Le LETTERE "
-		       "usciranno giuste lo stesso (si traduce sulla keymap della "
-		       "sessione), ma le SCORCIATOIE no: `Ctrl+Z` finira' sul tasto "
-		       "che quella posizione ha nell'ALTRA disposizione (§7.3)",
+		reg(s, "⚠ DECLARED FALLBACK (§5-bis.7): %s declared the "
+		       "layout «%s», but this server does NOT have the hook to "
+		       "apply it — the session keeps the one it has.  ⛔ The LETTERS "
+		       "will come out right all the same (they are translated on the "
+		       "session's keymap), but the SHORTCUTS will not: `Ctrl+Z` will land "
+		       "on the key that position has in the OTHER layout (§7.3)",
 		    perche, s->disposizione);
 		return;
 	}
 	if (s->g.disposizione(s->g.ctx, s->disposizione))
-		reg(s, "⭐ §5-bis.7: %s ha dichiarato «%s» — richiesta MANDATA al "
-		       "palco.  ⚠ Questa riga NON dice che sia in vigore: chi lo sa e' "
-		       "il figlio, e lo scrive con il nome che `libei` gli consegna",
+		reg(s, "⭐ §5-bis.7: %s declared «%s» — request SENT to the "
+		       "stage.  ⚠ This line does NOT say it is in force: who knows that is "
+		       "the child, and it writes it with the name `libei` hands it",
 		    perche, s->disposizione);
 	else
-		reg(s, "⛔ §5-bis.7: %s ha dichiarato «%s» e la richiesta NON e' "
-		       "partita: la sessione tiene la disposizione che ha, e le "
-		       "scorciatoie resteranno sfasate",
+		reg(s, "⛔ §5-bis.7: %s declared «%s» and the request did NOT "
+		       "leave: the session keeps the layout it has, and the "
+		       "shortcuts will stay out of step",
 		    perche, s->disposizione);
 }
 
-/* ⛔⭐⭐ LO SFRATTO DEL FANTASMA — la regola sta nel riquadro sopra
- *      `SFRATTO_PREDEFINITO`, qui c'e' il come.
+/* ⛔⭐⭐ THE GHOST EVICTION — the rule is in the box above
+ *      `SFRATTO_PREDEFINITO`, here is the how.
  *
- * Restituisce `true` se il posto e' stato liberato (e allora chi arriva lo puo'
- * chiedere di nuovo), `false` se l'occupante resta dov'e'.  ⚠ `*muto` esce
- * SEMPRE valorizzato con i millisecondi di silenzio dell'occupante — serve alla
- * riga di registro e alla frase, anche quando lo sfratto e' spento.
+ * Returns `true` if the slot has been freed (and then whoever arrives can
+ * ask for it again), `false` if the occupant stays where it is.  ⚠ `*muto`
+ * ALWAYS comes out set with the occupant's milliseconds of silence — it serves
+ * the log line and the sentence, even when eviction is off.
  *
- * ⛔⛔ IL CONTROLLO CHE NON SI PUO' TOGLIERE E' QUELLO DELL'UTENTE.  La regola
- *      vale **solo fra client dello stesso utente**: sfrattare il client di un
- *      altro utente non sarebbe una comodita', sarebbe un buco di sicurezza —
- *      chiunque potrebbe far cadere il desktop di un altro semplicemente
- *      bussando.  ⚠ Oggi il registro dei posti e' indicizzato PER NOME, quindi
- *      `POSTO_OCCUPATO` implica gia' «stesso utente»; il controllo qui sotto e'
- *      ridondante **per costruzione, non per progetto**, e il giorno in cui il
- *      registro diventasse la tabella delle sessioni di un server vero
- *      (il tetto delle sessioni, §4.6) sarebbe l'unica cosa a reggere.  Non si
- *      toglie.
+ * ⛔⛔ THE CHECK THAT CANNOT BE REMOVED IS THE USER ONE.  The rule
+ *      applies **only between clients of the same user**: evicting the client
+ *      of another user would not be a convenience, it would be a security hole —
+ *      anyone could bring down someone else's desktop simply by
+ *      knocking.  ⚠ Today the registry of slots is indexed BY NAME, so
+ *      `POSTO_OCCUPATO` already implies «same user»; the check below is
+ *      redundant **by construction, not by design**, and the day the
+ *      registry became the session table of a real server
+ *      (the session cap, §4.6) it would be the only thing holding.  It is
+ *      not removed.
  *
- * ⛔ E l'occupante NON viene congedato: lo si mette esattamente nello stato in
- *    cui lo mette il silenzio di §5.3 in `rcp_tempo()` — posto lasciato,
- *    `S_STACCATA`, e quel che era premuto rilasciato (§7.3).  ⭐ Da li'
- *    `torna_a_parlare()` sa gia' che farne se il filo dovesse resuscitare: il
- *    posto non e' piu' suo, e si becca `0x0F` con la frase «il posto di questa
- *    sessione e' stato preso da un altro client mentre questa taceva» — che in
- *    quel caso e' VERA.  ⚠ Verificato leggendolo, non dato per buono: quella
- *    funzione riparte **solo** da `S_STACCATA`, e per questo lo stato si
- *    cambia qui e non ci si limita a togliere il posto (rilievo R9.2). */
+ * ⛔ And the occupant is NOT sent away: it is put exactly in the state in
+ *    which the silence of §5.3 puts it in `rcp_tempo()` — slot left,
+ *    `S_STACCATA`, and whatever was pressed released (§7.3).  ⭐ From there
+ *    `torna_a_parlare()` already knows what to do with it should the wire come
+ *    back to life: the slot is no longer its own, and it gets `0x0F` with the
+ *    sentence «il posto di questa sessione e' stato preso da un altro client
+ *    mentre questa taceva» — which in that case is TRUE.  ⚠ Verified by reading
+ *    it, not taken for granted: that function restarts **only** from
+ *    `S_STACCATA`, and that is why the state is changed here and one does not
+ *    just remove the slot (finding R9.2). */
 static bool sfratta_il_fantasma(rcp_sessione *arrivo, uint64_t ora,
                                 uint64_t *muto)
 {
 	rcp_sessione *o = posto_chi(arrivo->utente);
 
 	*muto = 0;
-	/* ⚠ Un posto occupato senza padrone non dovrebbe esistere; se esistesse,
-	 *   non e' il caso di sfrattare al buio — si nega, e il registro dira' che
-	 *   il silenzio dell'occupante era zero. */
+	/* ⚠ A slot taken without an owner should not exist; if it did,
+	 *   it is not the case to evict in the dark — one denies, and the log will
+	 *   say the occupant's silence was zero. */
 	if (!o || o == arrivo)
 		return false;
 	*muto = ora > o->ultima_vita ? ora - o->ultima_vita : 0;
 	if (!sfratto_ms)
 		return false;
-	/* ⛔ Il controllo dell'utente — vedi il riquadro qui sopra. */
+	/* ⛔ The user check — see the box above. */
 	if (strcmp(o->utente, arrivo->utente) != 0) {
-		reg(arrivo, "⛔ SFRATTO NEGATO: il posto risulta di «%s» e a chiedere e' "
-		            "«%s» — fra utenti diversi non si sfratta MAI, e questo "
-		            "registro non dovrebbe nemmeno poterlo proporre",
+		reg(arrivo, "⛔ EVICTION DENIED: the slot belongs to «%s» and the one "
+		            "asking is «%s» — between different users there is NEVER an "
+		            "eviction, and this registry should not even be able to "
+		            "propose it",
 		    o->utente, arrivo->utente);
 		return false;
 	}
-	/* ⚠ Solo un occupante ATTIVO e col posto in mano si sfratta: chiunque
-	 *   altro non e' il caso che questa regola descrive. */
+	/* ⚠ Only an ACTIVE occupant holding the slot is evicted: anyone
+	 *   else is not the case this rule describes. */
 	if (o->stato != S_ATTIVA || !o->attaccata)
 		return false;
 	if (*muto <= sfratto_ms)
 		return false;
 
-	reg(o, "⭐ SFRATTO per silenzio: %llu ms senza un PACCHETTO da %s (soglia "
-	       "%llu ms) — il posto di %s va al client che sta arrivando da %s "
-	       "(§4.4: chi tace e' staccato; §8.2 NON e' violata, questo occupante "
-	       "era attaccato ma non vivo) (posti occupati adesso: %d)",
+	reg(o, "⭐ EVICTION for silence: %llu ms without a PACKET from %s (threshold "
+	       "%llu ms) — the slot of %s goes to the client arriving from %s "
+	       "(§4.4: whoever is silent is detached; §8.2 is NOT violated, this "
+	       "occupant was attached but not alive) (slots taken now: %d)",
 	    (unsigned long long)*muto, o->provenienza,
 	    (unsigned long long)sfratto_ms, o->utente, arrivo->provenienza,
 	    posti_occupati() - 1);
 	posto_lascia(o->utente);
 	o->attaccata = false;
 	o->stato = S_STACCATA;
-	/* ⛔ §7.3: al distacco si rilascia tutto.  Un Ctrl rimasto giu' nel
-	 * fantasma renderebbe inservibile il desktop a chi entra adesso — ed e'
-	 * proprio chi entra adesso a doverlo trovare pulito. */
-	rilascia_al_distacco(o, "sfratto per silenzio");
+	/* ⛔ §7.3: on detach everything is released.  A Ctrl left down in the
+	 * ghost would make the desktop unusable for whoever gets in now — and it
+	 * is precisely whoever gets in now who must find it clean. */
+	rilascia_al_distacco(o, "eviction for silence");
 	return true;
 }
 
-/* ⚠ `ora` serve allo sfratto del fantasma, che confronta l'`ultima_vita`
- *   dell'occupante con adesso.  Arriva da `drena()`, come per
- *   `tratta_credenziali()`: e' l'istante del pacchetto che porta l'`ATTACCA`. */
+/* ⚠ `ora` serves the ghost eviction, which compares the occupant's
+ *   `ultima_vita` with now.  It comes from `drena()`, as for
+ *   `tratta_credenziali()`: it is the instant of the packet carrying the `ATTACCA`. */
 static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 {
 	uint32_t tl = le_u32(l), ta = le_u32(l);
-	/* ⛔ §7.1: la vista NON ha i vincoli della tela — «qualunque misura da 1x1
-	 * in su e' legale, dispari compresa» (rilievo R1.17).  Qui non si controlla
-	 * NIENTE, ed e' voluto.
+	/* ⛔ §7.1: the view does NOT have the constraints of the canvas — «any size
+	 * from 1x1 up is legal, odd included» (finding R1.17).  Here NOTHING is
+	 * checked, and it is deliberate.
 	 *
-	 * ⚠ Chi scrive `ATTACCA` in C scrive UNA `valida_misura()` e la chiama
-	 *   quattro volte: e' la cosa naturale da fare, e produce un server che
-	 *   **chiude la sessione perche' l'utente ha stretto la finestra**.  Su un
-	 *   telefono a fattore 2,75 la vista e' dispari quasi sempre — 393 pixel
-	 *   logici valgono 1080,75 fisici (rilievo R4.10).  B5 lo prova con
-	 *   `300x801` e `1x1`, che DEVONO passare. */
+	 * ⚠ Whoever writes `ATTACCA` in C writes ONE `valida_misura()` and calls it
+	 *   four times: it is the natural thing to do, and it produces a server that
+	 *   **closes the session because the user narrowed the window**.  On a
+	 *   phone at factor 2.75 the view is odd almost always — 393 logical
+	 *   pixels are 1080.75 physical (finding R4.10).  B5 tests it with
+	 *   `300x801` and `1x1`, which MUST pass. */
 	uint32_t vl = le_u32(l), va = le_u32(l);
 	char disp[65];
-	/* ⛔ …NIENTE tranne una cosa, ed e' la sola che §7.1 pretende: **da 1x1 in
-	 *    su**.  Uno zero non e' una vista piccola, e' l'assenza di una vista, e
-	 *    §6.0 vieta i valori sentinella impliciti — un client che manda 0 ha un
-	 *    difetto, e lasciarlo passare lo nasconderebbe insieme alla riga di
-	 *    registro che lo direbbe.  Il controllo vero e' piu' sotto, dopo che il
-	 *    troncamento e' stato escluso. */
+	/* ⛔ …NOTHING except one thing, and it is the only one §7.1 demands: **from
+	 *    1x1 up**.  A zero is not a small view, it is the absence of a view, and
+	 *    §6.0 forbids implicit sentinel values — a client that sends 0 has a
+	 *    defect, and letting it pass would hide it together with the log line
+	 *    that would say so.  The real check is further below, after
+	 *    truncation has been ruled out. */
 	size_t ld = le_str(l, disp, sizeof disp);
 	if (l->corto) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "ATTACCA troncato");
 		return false;
 	}
-	/* ⛔⭐ SOPRA IL MASSIMO SI RIDUCE, NON SI CONGEDA — 1 ottobre 2026, tela
-	 *     al massimo 4096x2304 (decisione dell'utente, riquadro in `rcp.h`).
-	 *     Fino a quel giorno una tela oltre 7680x4320 era `ERRORE_PROTOCOLLO`.
+	/* ⛔⭐ ABOVE THE MAXIMUM IT IS REDUCED, THE CLIENT IS NOT SENT AWAY — 1 Oct
+	 *     2026, canvas at most 4096x2304 (the user's decision, box in `rcp.h`).
+	 *     Until that day a canvas beyond 7680x4320 was `ERRORE_PROTOCOLLO`.
 	 *
-	 * ⚠ Un browser su un monitor 5K o ultralargo chiede la sua finestra, e non
-	 *   ha sbagliato niente: §4.5 permette gia' una tela concessa diversa da
-	 *   quella chiesta.  ⇒ Il lato che sfora va al massimo e l'altro resta —
-	 *   la regola di `rcp_misura_ammessa()` e di `tela_da_chiedere()` nella
-	 *   pagina, cosi' `ATTACCA` e `ADATTA_TELA` concedono lo stesso numero.
-	 * ⛔ Si fa PRIMA del controllo della parita': il massimo e' pari, e un
-	 *    5121 che diventa 4096 non e' piu' un dispari da rifiutare. */
+	 * ⚠ A browser on a 5K or ultrawide monitor asks for its window, and it
+	 *   did nothing wrong: §4.5 already allows a granted canvas different from
+	 *   the one requested.  ⇒ The side that overflows goes to the maximum and
+	 *   the other stays — the rule of `rcp_misura_ammessa()` and of
+	 *   `tela_da_chiedere()` in the page, so `ATTACCA` and `ADATTA_TELA` grant
+	 *   the same number.
+	 * ⛔ It is done BEFORE the parity check: the maximum is even, and a
+	 *    5121 that becomes 4096 is no longer an odd number to refuse. */
 	if (tl > RCP_TELA_L_MASSIMA || ta > RCP_TELA_A_MASSIMA) {
 		uint32_t chiesta_l = tl, chiesta_a = ta;
 		if (tl > RCP_TELA_L_MASSIMA)
 			tl = RCP_TELA_L_MASSIMA;
 		if (ta > RCP_TELA_A_MASSIMA)
 			ta = RCP_TELA_A_MASSIMA;
-		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ATTACCA chiede la tela %ux%u, "
-		       "oltre il massimo %ux%u — la riduco a %ux%u (il lato che sfora "
-		       "al massimo, l'altro com'e')",
+		reg(s, "⚠ DECLARED FALLBACK (§4.5): ATTACCA asks for the canvas %ux%u, "
+		       "beyond the maximum %ux%u — I reduce it to %ux%u (the side that "
+		       "overflows to the maximum, the other as it is)",
 		    chiesta_l, chiesta_a, RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, tl,
 		    ta);
 	}
-	/* ⛔ Il minimo e la parita' restano normativi: una misura dispari la
-	 * arrotonda il codificatore, in silenzio — due misure diverse sotto la
-	 * stessa etichetta, che e' la forma E2. */
+	/* ⛔ The minimum and parity stay normative: an odd size is rounded by the
+	 * encoder, in silence — two different sizes under the same label, which is
+	 * the E2 shape. */
 	if (tl < RCP_TELA_L_MINIMA || ta < RCP_TELA_A_MINIMA || (tl % 2) || (ta % 2)) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "tela sotto il minimo o dispari");
 		return false;
 	}
-	/* ⛔ E l'UNICO limite della vista, §7.1: «qualunque misura da **1x1 in su**».
-	 *    ⚠ Sopra c'e' scritto che qui non si controlla niente, e questa riga non
-	 *    lo contraddice: «da 1x1 in su» e' l'intervallo che l'arbitro DICHIARA,
-	 *    e uno zero ne sta fuori come 100000 sta fuori dalla tela.  Chi lo
-	 *    lasciasse passare avrebbe un campo `u32` con un valore che non
-	 *    significa niente, e il difetto si vedrebbe piu' in la' — quando qualcuno
-	 *    ci dividesse. */
+	/* ⛔ And the ONLY limit of the view, §7.1: «any size **from 1x1 up**».
+	 *    ⚠ Above it says nothing is checked here, and this line does not
+	 *    contradict it: «from 1x1 up» is the range the arbiter DECLARES, and a
+	 *    zero lies outside it just as 100000 lies outside the canvas.  Whoever
+	 *    let it pass would have a `u32` field with a value that means nothing,
+	 *    and the defect would show further on — when someone divided by it. */
 	if (!vl || !va) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
 		        "vista con un lato a zero: §7.1 ammette qualunque misura da 1x1 "
@@ -2872,102 +2889,104 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		return false;
 	}
 	if (!disposizione_conosciuta(s, disp)) {
-		/* ⛔ §8.2: SESSIONE_NON_SERVIBILE «DEVE portare il dettaglio nel
-		 * corpo», e `congeda()` ce lo mette.  Il dettaglio NON si mostra
-		 * all'utente (§8.2): la frase la costruisce il client dal codice. */
+		/* ⛔ §8.2: SESSIONE_NON_SERVIBILE «MUST carry the detail in the
+		 * body», and `congeda()` puts it there.  The detail is NOT shown to the
+		 * user (§8.2): the client builds the sentence from the code. */
 		char d[128];
 		snprintf(d, sizeof d, "disposizione sconosciuta a questa macchina: %s",
 		         disp);
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE, d);
 		return false;
 	}
-	/* ⛔ E la si tiene: serve piu' sotto, quando la sessione e' aperta e la si
-	 *    puo' finalmente APPLICARE (§5-bis.7).  ⚠ Prima di `SESSIONE` no: se
-	 *    l'attacco viene respinto (posto occupato, sessione locale) avremmo
-	 *    cambiato la disposizione a un utente che non e' entrato. */
+	/* ⛔ And it is kept: it is needed further below, when the session is open
+	 *    and it can finally be APPLIED (§5-bis.7).  ⚠ Not before `SESSIONE`: if
+	 *    the attach is refused (slot taken, local session) we would have
+	 *    changed the layout for a user who did not get in. */
 	snprintf(s->disposizione, sizeof s->disposizione, "%s", disp);
 
-	/* ⛔⭐ §5.1 di `SPECIFICHE.md`, motivo `0x05 GIA_ATTIVA_LOCALE` — e viene
-	 *     PRIMA del posto, di proposito.
+	/* ⛔⭐ §5.1 of `SPECIFICHE.md`, reason `0x05 GIA_ATTIVA_LOCALE` — and it comes
+	 *     BEFORE the slot, on purpose.
 	 *
-	 * ⛔ Chiedere il posto e poi rilasciarlo avrebbe lo stesso esito per questo
-	 *    client e uno DIVERSO per il registro: per un istante il posto
-	 *    risulterebbe occupato da chi sta per essere respinto, e un altro
-	 *    client dello stesso utente che arrivasse in quell'istante leggerebbe
-	 *    `0x0F` — «hai gia' una sessione attaccata» — che e' falso.
+	 * ⛔ Asking for the slot and then releasing it would have the same outcome
+	 *    for this client and a DIFFERENT one for the registry: for an instant the
+	 *    slot would appear taken by whoever is about to be refused, and another
+	 *    client of the same user arriving at that instant would read
+	 *    `0x0F` — «you already have an attached session» — which is false.
 	 *
-	 * ⚠ E il gancio e' opzionale: se non c'e', la regola NON e' applicata, e la
-	 *   riga di registro lo dice.  «Nessuna sessione locale» e «nessuno ha
-	 *   guardato» sono due fatti diversi (`LEZIONI.md` §1.9 regola 1). */
+	 * ⚠ And the hook is optional: if it is not there, the rule is NOT applied,
+	 *   and the log line says so.  «No local session» and «nobody
+	 *   looked» are two different facts (`LEZIONI.md` §1.9 rule 1). */
 	if (s->g.sessione_locale) {
 		char quale[160];
 
 		quale[0] = '\0';
 		if (s->g.sessione_locale(s->g.ctx, s->utente, quale, sizeof quale)) {
-			reg(s, "⛔ attacco NEGATO a %s da %s: ha gia' una sessione "
-			       "grafica LOCALE (%s) — §5.1, motivo 0x05",
+			reg(s, "⛔ attach DENIED to %s from %s: they already have a LOCAL "
+			       "graphical session (%s) — §5.1, reason 0x05",
 			    s->utente, s->provenienza,
-			    quale[0] ? quale : "senza dettaglio");
-			/* ⛔ Il dettaglio del corpo NON nomina la sessione altrui:
-			 * §8.2 dice che cosa il client puo' sapere. */
+			    quale[0] ? quale : "without detail");
+			/* ⛔ The detail in the body does NOT name the other session:
+			 * §8.2 says what the client may know. */
 			congeda(s, RCP_GIA_ATTIVA_LOCALE,
 			        "c'e' gia' una sessione grafica locale di questo "
 			        "utente");
 			return false;
 		}
 	} else {
-		reg(s, "⚠ nessun gancio «sessione_locale»: la regola di §5.1 (motivo "
-		       "0x05) NON e' applicata su questo server");
+		reg(s, "⚠ no «sessione_locale» hook: the rule of §5.1 (reason "
+		       "0x05) is NOT applied on this server");
 	}
 
-	/* ⛔ §8.2 motivo 0x0F: chi viene rifiutato e' chi ARRIVA, non chi c'era. */
-	/* ⛔ Il posto si CHIEDE, e l'esito si scrive con quanti erano occupati.
-	 * ⚠ Il 10 agosto 2026 il terzo giro di B3 non riusciva a distinguere «il
-	 *   server non guarda il registro» da «il posto era gia' stato liberato»:
-	 *   sono due difetti opposti, e senza questa riga danno lo stesso rosso. */
-	/* ⛔ E i due modi di non avere un posto NON hanno lo stesso motivo — vedi
-	 * il riquadro sopra `posto_prendi()`, rilievo R9.3. */
+	/* ⛔ §8.2 reason 0x0F: the one refused is whoever ARRIVES, not whoever was there. */
+	/* ⛔ The slot is ASKED for, and the outcome is written with how many were taken.
+	 * ⚠ On 10 Aug 2026 the third round of B3 could not tell «the
+	 *   server does not look at the registry» from «the slot had already been
+	 *   freed»: they are two opposite defects, and without this line they give
+	 *   the same red. */
+	/* ⛔ And the two ways of not having a slot do NOT have the same reason — see
+	 * the box above `posto_prendi()`, finding R9.3. */
 	switch (posto_prendi(s)) {
 	case POSTO_PRESO:
 		break;
 	case POSTO_OCCUPATO: {
-		/* ⭐ PRIMA DI NEGARE SI GUARDA SE L'OCCUPANTE E' VIVO — 23 agosto 2026,
-		 *    lo sfratto del fantasma (il riquadro sopra `SFRATTO_PREDEFINITO`).
-		 * ⚠ `muto` si calcola SEMPRE, anche a sfratto spento: e' il numero che
-		 *   mancava a chi legge il registro per sapere se quel posto era di un
-		 *   client vivo o di un cadavere. */
+		/* ⭐ BEFORE DENYING ONE LOOKS WHETHER THE OCCUPANT IS ALIVE — 23 Aug
+		 *    2026, the ghost eviction (the box above `SFRATTO_PREDEFINITO`).
+		 * ⚠ `muto` is ALWAYS computed, even with eviction off: it is the number
+		 *   that whoever reads the log was missing to know whether that slot
+		 *   belonged to an alive client or to a corpse. */
 		uint64_t muto = 0;
 		char dett[192];
 
 		if (sfratta_il_fantasma(s, ora, &muto) && posto_prendi(s) == POSTO_PRESO)
 			break;
-		reg(s, "posto NEGATO a %s da %s: lo occupa un altro client di questo "
-		       "stesso utente (occupati: %d) — quell'occupante ha dato un segno "
-		       "di vita %llu ms fa, e lo sfratto %s",
+		reg(s, "slot DENIED to %s from %s: another client of this same user "
+		       "holds it (taken: %d) — that occupant gave a sign of life "
+		       "%llu ms ago, and the eviction %s",
 		    s->utente, s->provenienza, posti_occupati(),
 		    (unsigned long long)muto,
-		    sfratto_ms ? "NON e' scattato (soglia in vigore)"
-		               : "e' SPENTO a mano (--sfratto-ms 0; dal 24 ago 2026 il "
-		                 "predefinito e' 15000)");
-		/* ⛔⛔ E LA FRASE NON DIAGNOSTICA PIU' — 23 agosto 2026.
+		    sfratto_ms ? "did NOT fire (threshold in force)"
+		               : "is switched OFF by hand (--sfratto-ms 0; since 24 Aug "
+		                 "2026 the default is 15000)");
+		/* ⛔⛔ AND THE SENTENCE NO LONGER DIAGNOSES — 23 Aug 2026.
 		 *
-		 * Diceva «c'e' gia' un client attaccato a questa sessione», e il client
-		 * ne costruiva **«hai gia' una sessione attiva altrove»**.  ⛔ Per chi
-		 * la legge dopo che gli e' caduto il filo quella frase e' FALSA: quella
-		 * sessione e' la sua, ed e' morta un attimo prima.  ⚠ E il server non
-		 * ha modo di sapere quale delle due sia: non distingue un secondo
-		 * dispositivo da lui stesso caduto un istante fa.
+		 * It said «c'e' gia' un client attaccato a questa sessione», and the
+		 * client built from it **«you already have an active session
+		 * elsewhere»**.  ⛔ For whoever reads it after their wire dropped that
+		 * sentence is FALSE: that session is theirs, and it died a moment
+		 * before.  ⚠ And the server has no way of knowing which of the two it
+		 * is: it does not tell a second device from the user themselves who
+		 * dropped an instant ago.
 		 *
-		 * ⇒ Si dice **solo quel che il server sa davvero**: che il posto
-		 *    risulta occupato, e da quanto quell'occupante tace.  Il numero
-		 *    porta con se' la risposta alla domanda vera di chi legge — «era
-		 *    io?» — senza affermarla: 300 ms vuol dire che c'e' davvero
-		 *    qualcun altro, 4000 ms che quasi certamente era lui.
+		 * ⇒ One says **only what the server really knows**: that the slot
+		 *    appears taken, and how long that occupant has been silent.  The
+		 *    number carries with it the answer to the real question of whoever
+		 *    reads — «was it me?» — without asserting it: 300 ms means there
+		 *    really is someone else, 4000 ms that it almost certainly was them.
 		 *
-		 * ⚠ La frase che l'utente VEDE non e' questa: la pagina non legge il
-		 *   dettaglio, ha la sua tabella (`src/pagina.html`, `MOTIVO[0x0F]`).
-		 *   Quella riga cambia solo se il regista sceglie la frase — e' la sola
-		 *   cosa di questa cura che non si decide da soli. */
+		 * ⚠ The sentence the user SEES is not this one: the page does not read
+		 *   the detail, it has its own table (`src/pagina.html`, `MOTIVO[0x0F]`).
+		 *   That line changes only if the director chooses the sentence — it is
+		 *   the only thing in this cure that is not decided alone. */
 		snprintf(dett, sizeof dett,
 		         "il posto di questa sessione risulta occupato da un client che "
 		         "ha dato un segno di vita %llu ms fa",
@@ -2976,50 +2995,51 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 		return false;
 	}
 	case POSTO_NIENTE_PIU_POSTI:
-		/* ⛔ §8.2 `0x0E`: «ben formato ma non si puo' servire», e DEVE portare
-		 * il dettaglio nel corpo — che `congeda()` ci mette.  ⚠ Dire `0x0F` a
-		 * quest'utente sarebbe dirgli «hai gia' una sessione altrove», che e'
-		 * falso: non ne ha nessuna, e' il server a non avere piu' posti. */
-		reg(s, "⛔ posto NEGATO a %s da %s: il registro delle sessioni di "
-		       "questo server e' PIENO (%d su %d) — NON e' 0x0F, quest'utente "
-		       "non ha nessuna sessione altrove",
+		/* ⛔ §8.2 `0x0E`: «well formed but cannot be served», and it MUST carry
+		 * the detail in the body — which `congeda()` puts there.  ⚠ Saying `0x0F`
+		 * to this user would be telling them «you already have a session
+		 * elsewhere», which is false: they have none, it is the server that has
+		 * no more slots. */
+		reg(s, "⛔ slot DENIED to %s from %s: the session registry of "
+		       "this server is FULL (%d of %d) — it is NOT 0x0F, this user "
+		       "has no session elsewhere",
 		    s->utente, s->provenienza, posti_occupati(), tetto_in_vigore);
 		congeda(s, RCP_SESSIONE_NON_SERVIBILE,
 		        "il registro delle sessioni di questo server e' pieno");
 		return false;
 	}
 	s->attaccata = true;
-	reg(s, "posto PRESO da %s via %s (occupati adesso: %d)", s->utente,
+	reg(s, "slot TAKEN by %s via %s (taken now: %d)", s->utente,
 	    s->provenienza, posti_occupati());
 
-	/* ⛔⭐ LA TELA CONCESSA RISPETTA `video.misura_massima` — §4.5, rilievo B-1
+	/* ⛔⭐ THE GRANTED CANVAS RESPECTS `video.misura_massima` — §4.5, finding B-1
 	 *
-	 *     «La tela concessa DEVE rispettare `video.misura_massima` se il client
-	 *     l'ha dichiarata, e rispettare comunque i limiti e la parita' di
-	 *     sopra.»  Sono due vincoli, e vanno soddisfatti tutti e due: non basta
-	 *     dividere.
+	 *     «The granted canvas MUST respect `video.misura_massima` if the client
+	 *     declared it, and respect in any case the limits and the parity
+	 *     above.»  They are two constraints, and both must be satisfied: dividing
+	 *     is not enough.
 	 *
-	 * ⚠ Si riduce mantenendo le PROPORZIONI, e non si taglia ogni lato al suo
-	 *   tetto: tagliare i lati indipendentemente cambierebbe il rapporto della
-	 *   tela e il desktop remoto arriverebbe schiacciato — un difetto che si
-	 *   VEDE e che nessun codice d'errore nomina.  §4.5 lo permette
-	 *   esplicitamente: «la tela concessa puo' essere diversa da quella
-	 *   chiesta […] il client DEVE adattarsi riscalando».
+	 * ⚠ It is reduced keeping the PROPORTIONS, and each side is not cut to its
+	 *   ceiling: cutting the sides independently would change the ratio of the
+	 *   canvas and the remote desktop would arrive squashed — a defect one
+	 *   SEES and that no error code names.  §4.5 allows it
+	 *   explicitly: «the granted canvas may differ from the one
+	 *   requested […] the client MUST adapt by rescaling».
 	 *
-	 * ⛔ E il ripiego SI SCRIVE NEL REGISTRO — la stessa riga di §4.5 lo impone
-	 *    per il ripiego di KDE, e vale identica qui: una tela diversa da quella
-	 *    chiesta, senza una riga che dica perche', e' indistinguibile da un
-	 *    errore di calcolo.
+	 * ⛔ And the fallback IS WRITTEN TO THE LOG — the same line of §4.5 requires
+	 *    it for the KDE fallback, and it applies identically here: a canvas
+	 *    different from the one requested, without a line saying why, is
+	 *    indistinguishable from a calculation error.
 	 *
-	 * ⚠ E se nemmeno la tela MINIMA legale (320x240) sta sotto il tetto, non si
-	 *   concede una tela illegale e non si tace: §4.5 «se l'attacco non si puo'
-	 *   servire, il server congeda con uno dei motivi di §8.2 — mai con un
-	 *   silenzio». */
+	 * ⚠ And if not even the MINIMUM legal canvas (320x240) fits under the
+	 *   ceiling, an illegal canvas is not granted and one does not keep quiet:
+	 *   §4.5 «if the attach cannot be served, the server sends the client away
+	 *   with one of the reasons of §8.2 — never with a silence». */
 	if (s->max_l && (tl > s->max_l || ta > s->max_a)) {
 		uint32_t cl = tl, ca = ta;
 		uint32_t chiesta_l = tl, chiesta_a = ta;
-		/* Il lato che limita di piu': confronto incrociato, senza divisioni
-		 * in virgola mobile. */
+		/* The side that limits most: cross comparison, without floating-point
+		 * divisions. */
 		if ((uint64_t)tl * s->max_a <= (uint64_t)ta * s->max_l) {
 			ca = s->max_a;
 			cl = (uint32_t)(((uint64_t)tl * s->max_a) / ta);
@@ -3027,7 +3047,7 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 			cl = s->max_l;
 			ca = (uint32_t)(((uint64_t)ta * s->max_l) / tl);
 		}
-		cl -= cl % 2; /* §4.5: entrambe PARI */
+		cl -= cl % 2; /* §4.5: both EVEN */
 		ca -= ca % 2;
 		if (cl < 320)
 			cl = 320;
@@ -3039,41 +3059,43 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 			         "video.misura_massima=%ux%u e' sotto la tela minima "
 			         "legale di 320x240 (§4.5)",
 			         s->max_l, s->max_a);
-			reg(s, "⛔ tela NON concessa a %s: chiesta %ux%u, tetto %ux%u — "
-			       "nemmeno 320x240 ci sta sotto",
+			reg(s, "⛔ canvas NOT granted to %s: requested %ux%u, ceiling %ux%u — "
+			       "not even 320x240 fits under it",
 			    s->utente, chiesta_l, chiesta_a, s->max_l, s->max_a);
 			congeda(s, RCP_SESSIONE_NON_SERVIBILE, d);
 			return false;
 		}
 		tl = cl;
 		ta = ca;
-		reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta %ux%u, tetto del "
-		       "decodificatore %ux%u (video.misura_massima) — CONCESSA %ux%u, "
-		       "proporzioni tenute, entrambe pari",
+		reg(s, "⚠ DECLARED FALLBACK (§4.5): canvas requested %ux%u, decoder "
+		       "ceiling %ux%u (video.misura_massima) — GRANTED %ux%u, "
+		       "proportions kept, both even",
 		    chiesta_l, chiesta_a, s->max_l, s->max_a, tl, ta);
 	}
 
-	/* ⛔⭐⭐ E PRIMA DI CONCEDERE, SI CHIEDE CHE MISURA HA IL PALCO — la cura
-	 *     del RI-ATTACCO, `DECISIONI.md` §5.0-sexies («⏳ per quando si
-	 *     affrontera' il ri-attacco: la soluzione e' gia' misurata»).
+	/* ⛔⭐⭐ AND BEFORE GRANTING, THE STAGE IS ASKED WHAT SIZE IT HAS — the cure
+	 *     for the RE-ATTACH, `DECISIONI.md` §5.0-sexies («⏳ for when the
+	 *     re-attach is tackled: the solution is already measured»).
 	 *
-	 * ⛔ Il caso: il palco sopravvive al client (invariante I4), la tela nasce a
-	 *    ogni attacco (§5.0).  Chi si stacca dal DeX con la tela a 1912x1044 e si
-	 *    riattacca dal portatile chiede 1920x1080 — e il palco continua a
-	 *    consegnare 1912x1044.  §6.2 vieta di spedire un fotogramma la cui misura
-	 *    non e' la tela in vigore ⇒ **zero pixel**, e la sola riga che lo direbbe
-	 *    sarebbe «tela in vigore X ma il fotogramma e' Y», detta una volta.
+	 * ⛔ The case: the stage outlives the client (invariant I4), the canvas is born at
+	 *    every attach (§5.0).  Whoever detaches from the DeX with the canvas at
+	 *    1912x1044 and reattaches from the laptop asks for 1920x1080 — and the
+	 *    stage keeps delivering 1912x1044.  §6.2 forbids sending a frame whose
+	 *    size is not the canvas in force ⇒ **zero pixels**, and the only line
+	 *    that would say so would be «canvas in force X but the frame is Y», said
+	 *    once.
 	 *
-	 * ⇒ Si concede quel che il palco HA, e §4.5 lo permette per iscritto: «la
-	 *   tela concessa puo' essere diversa da quella chiesta».  ⭐ Poi la pagina
-	 *   manda il suo `ADATTA_TELA` e si arriva dove si voleva — ma passando per
-	 *   uno stato in cui i pixel arrivano invece che per uno in cui non arrivano.
+	 * ⇒ What the stage HAS is granted, and §4.5 allows it in writing: «the
+	 *   granted canvas may differ from the one requested».  ⭐ Then the page
+	 *   sends its `ADATTA_TELA` and one gets where one wanted — but passing
+	 *   through a state in which pixels arrive instead of one in which they do
+	 *   not.
 	 *
-	 * ⚠ E i limiti si ricontrollano TUTTI, perche' la misura del palco non e'
-	 *   passata da questo cancello: §4.5 (320..4096 x 240..2304, pari) e il tetto
-	 *   del decodificatore di QUESTO client.  ⛔ Se non li passa non si concede e
-	 *   non si tace: se ne occupa `rcp_tela_concessa()`, che al primo fotogramma
-	 *   chiedera' al palco di tornare. */
+	 * ⚠ And the limits are ALL checked again, because the stage's size did not
+	 *   go through this gate: §4.5 (320..4096 x 240..2304, even) and the decoder
+	 *   ceiling of THIS client.  ⛔ If it does not pass them it is not granted
+	 *   and one does not keep quiet: `rcp_tela_concessa()` takes care of it, and
+	 *   at the first frame it will ask the stage to come back. */
 	if (s->g.tela_del_palco) {
 		uint32_t pl = 0, pa = 0;
 		if (s->g.tela_del_palco(s->g.ctx, &pl, &pa) && pl && pa
@@ -3081,24 +3103,24 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 			if (pl < RCP_TELA_L_MINIMA || pl > RCP_TELA_L_MASSIMA
 			    || pa < RCP_TELA_A_MINIMA || pa > RCP_TELA_A_MASSIMA
 			    || (pl % 2) || (pa % 2))
-				reg(s, "⚠ il palco ha la tela %ux%u, che §4.5 non ammette in "
-				       "`SESSIONE` (%u..%u x %u..%u, pari): concedo %ux%u "
-				       "come chiesto, e al primo fotogramma si chiedera' al "
-				       "palco di venire qui",
+				reg(s, "⚠ the stage has the canvas %ux%u, which §4.5 does not "
+				       "allow in `SESSIONE` (%u..%u x %u..%u, even): I grant %ux%u "
+				       "as requested, and at the first frame the stage will be "
+				       "asked to come here",
 				    pl, pa, RCP_TELA_L_MINIMA, RCP_TELA_L_MASSIMA,
 				    RCP_TELA_A_MINIMA, RCP_TELA_A_MASSIMA, tl, ta);
 			else if (s->max_l && (pl > s->max_l || pa > s->max_a))
-				reg(s, "⚠ il palco ha la tela %ux%u, oltre il "
-				       "video.misura_massima di questo client (%ux%u): concedo "
-				       "%ux%u, e al primo fotogramma si chiedera' al palco di "
-				       "venire qui",
+				reg(s, "⚠ the stage has the canvas %ux%u, beyond the "
+				       "video.misura_massima of this client (%ux%u): I grant "
+				       "%ux%u, and at the first frame the stage will be asked "
+				       "to come here",
 				    pl, pa, s->max_l, s->max_a, tl, ta);
 			else {
-				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): chiesta la tela %ux%u, ma "
-				       "il palco di %s ne ha gia' una — %ux%u — e sopravvive al "
-				       "client (I4).  CONCESSA quella del palco: cosi' i "
-				       "fotogrammi arrivano da subito, e la pagina puo' chiedere "
-				       "la sua misura con `ADATTA_TELA`",
+				reg(s, "⚠ DECLARED FALLBACK (§4.5): canvas %ux%u requested, but "
+				       "the stage of %s already has one — %ux%u — and it outlives "
+				       "the client (I4).  GRANTED the stage's: so the "
+				       "frames arrive at once, and the page can ask for "
+				       "its size with `ADATTA_TELA`",
 				    tl, ta, s->utente, pl, pa);
 				tl = pl;
 				ta = pa;
@@ -3108,9 +3130,9 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 
 	uint8_t corpo[128];
 	scrittore w = {corpo, sizeof corpo, 0, false};
-	/* ⭐ D-001 (fase 15): lo stato e il desktop VERI, se chi ospita li sa —
-	 *    il perche' sta sui due ganci in `rcp.h`.  ⚠ Senza ganci resta quel
-	 *    che era: `NUOVA` e `sconosciuto`. */
+	/* ⭐ D-001 (phase 15): the REAL state and desktop, if the host knows them —
+	 *    the why is on the two hooks in `rcp.h`.  ⚠ Without hooks it stays what
+	 *    it was: `NUOVA` and `sconosciuto`. */
 	bool ripresa = s->g.sessione_ripresa && s->g.sessione_ripresa(s->g.ctx);
 	const char *desktop = s->g.desktop ? s->g.desktop(s->g.ctx) : NULL;
 
@@ -3120,95 +3142,96 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 	sc_u32(&w, tl);
 	sc_u32(&w, ta);
 	sc_str(&w, desktop);
-	reg(s, "SESSIONE a %s: %s, tela %ux%u, desktop %s", s->utente,
-	    ripresa ? "RIPRESA (il palco c'era gia')" : "NUOVA", tl, ta, desktop);
+	reg(s, "SESSIONE to %s: %s, canvas %ux%u, desktop %s", s->utente,
+	    ripresa ? "RESUMED (the stage was already there)" : "NEW", tl, ta, desktop);
 	if (!w.pieno) {
 		manda_messaggio(s, T_SESSIONE, corpo, w.len);
-		/* ⛔⭐ IL CANALE VIDEO SI APRE **QUI**, E NON UNA RIGA PIU' SU.
+		/* ⛔⭐ THE VIDEO CHANNEL OPENS **HERE**, AND NOT ONE LINE HIGHER.
 		 *
-		 * §2.5: «uno per fotogramma, ⛔ e **nessuno prima di aver spedito
-		 * `SESSIONE`**: chi ne riceve uno prima chiude con
-		 * `ERRORE_PROTOCOLLO`».  E' l'invariante **I3** sul filo — *chi non
-		 * passa dal validatore non riceve un pixel*.
+		 * §2.5: «one per frame, ⛔ and **none before having sent
+		 * `SESSIONE`**: whoever receives one before closes with
+		 * `ERRORE_PROTOCOLLO`».  It is invariant **I3** on the wire — *whoever
+		 * does not pass the validator does not receive a pixel*.
 		 *
-		 * ⛔ Le tre righe stanno DENTRO il `if`: se il corpo non fosse entrato
-		 *    nel buffer, `SESSIONE` non sarebbe partita, e un canale video
-		 *    aperto lo stesso spedirebbe fotogrammi a un client che non sa ne'
-		 *    la tela ne' il codec.  ⚠ Fuori dal `if` sembrerebbero uguali e
-		 *    non lo sono. */
+		 * ⛔ The three lines sit INSIDE the `if`: if the body had not fit
+		 *    in the buffer, `SESSIONE` would not have left, and a video channel
+		 *    opened all the same would send frames to a client that knows
+		 *    neither the canvas nor the codec.  ⚠ Outside the `if` they would
+		 *    look the same and they are not. */
 		s->tela_l = tl;
 		s->tela_a = ta;
-		/* ⛔ E la vista dell'`ATTACCA` SI TIENE, invece di essere letta e
-		 *    buttata: §4.5 la definisce come «la misura in cui il client
-		 *    disegnera'», e `VISTA` (§7.1) e' il messaggio che la CAMBIA — se
-		 *    non ci fosse un valore di partenza, il primo `VISTA` cambierebbe
-		 *    un campo che non e' mai stato niente. */
+		/* ⛔ And the view of the `ATTACCA` IS KEPT, instead of being read and
+		 *    thrown away: §4.5 defines it as «the size at which the client
+		 *    will draw», and `VISTA` (§7.1) is the message that CHANGES it — if
+		 *    there were no starting value, the first `VISTA` would change
+		 *    a field that has never been anything. */
 		s->vista_l = vl;
 		s->vista_a = va;
 		s->sessione_spedita = true;
-		/* ⛔ §5.2, primo punto: «il primo fotogramma che il server spedisce
-		 * dopo `SESSIONE` DEVE essere una chiave». */
-		chiave_serve(s, "e' il primo dopo SESSIONE (§5.2)");
+		/* ⛔ §5.2, first point: «the first frame the server sends
+		 * after `SESSIONE` MUST be a keyframe». */
+		chiave_serve(s, "it is the first after SESSIONE (§5.2)");
 		s->mai_spedita_una_chiave = true;
 	}
-	reg(s, "sessione aperta utente=%s via=%s tela=%ux%u vista=%ux%u "
+	reg(s, "session open utente=%s via=%s tela=%ux%u vista=%ux%u "
 	       "disposizione=%s",
 	    s->utente, s->provenienza, tl, ta, vl, va, disp);
 	s->stato = S_ATTIVA;
 	annuncia_il_tenuto(s);
 
-	/* ⛔⭐⭐ E ADESSO LA DISPOSIZIONE SI APPLICA — `DECISIONI.md` §5-bis.7,
-	 *      decisa l'8 agosto 2026 e CONFERMATA dall'utente il 16.
+	/* ⛔⭐⭐ AND NOW THE LAYOUT IS APPLIED — `DECISIONI.md` §5-bis.7,
+	 *      decided on 8 Aug 2026 and CONFIRMED by the user on the 16th.
 	 *
-	 * ⛔ Fino a stasera questa riga non c'era, e il messaggio piu' su —
-	 *    «disposizione=%s» — era **tutto quel che il server faceva** della
-	 *    stringa: la convalidava e la scriveva.  `[M]` banco `06-b34` caso 2:
-	 *    riattaccandosi a una sessione `it` dichiarando `us` arrivavano `è` e
-	 *    `ò`, che su `us` non esistono su nessun tasto.
+	 * ⛔ Until tonight this line was not there, and the message above —
+	 *    «disposizione=%s» — was **all the server did** with the
+	 *    string: it validated it and wrote it.  `[M]` bench `06-b34` case 2:
+	 *    reattaching to an `it` session declaring `us`, `è` and `ò` arrived,
+	 *    which on `us` exist on no key.
 	 *
-	 * ⭐ E si fa QUI, dopo `SESSIONE`, non lassu' alla convalida: se l'attacco
-	 *    fosse stato respinto (posto occupato, sessione locale, tela fuori
-	 *    limiti) avremmo cambiato la disposizione a un utente che non e'
-	 *    entrato — e la sessione sopravvive al client (I4), quindi il danno
-	 *    resterebbe li' anche dopo.
+	 * ⭐ And it is done HERE, after `SESSIONE`, not up there at validation: if
+	 *    the attach had been refused (slot taken, local session, canvas out of
+	 *    limits) we would have changed the layout for a user who did not get
+	 *    in — and the session outlives the client (I4), so the harm would stay
+	 *    there even afterwards.
 	 *
-	 * ⚠ E vale per l'attacco E per il riattacco, perche' `ATTACCA` e' lo stesso
-	 *   messaggio per tutt'e due: e' precisamente quel che §5-bis.7 chiede —
-	 *   *«alla creazione della sessione o re-attach viene rinegoziata anche la
-	 *   tastiera»*. */
-	applica_disposizione(s, "l'attacco");
+	 * ⚠ And it applies to the attach AND to the reattach, because `ATTACCA` is
+	 *   the same message for both: it is precisely what §5-bis.7 asks —
+	 *   *«at session creation or re-attach the keyboard is renegotiated
+	 *   too»*. */
+	applica_disposizione(s, "the attach");
 
 	/*
-	 * ⭐⭐⭐ E IL PALCO LO SA SUBITO — 16 agosto 2026, e senza questa riga il
-	 *      palco nasceva a una misura che nessuno aveva chiesto.
+	 * ⭐⭐⭐ AND THE STAGE KNOWS AT ONCE — 16 Aug 2026, and without this line
+	 *      the stage was born at a size nobody had asked for.
 	 *
-	 * ⛔ IL DIFETTO, e ha tre facce che sembravano tre difetti: il figlio nasce
-	 *    con una tela predefinita (1920x1080) e la cambia solo quando arriva un
-	 *    `ADATTA_TELA`.  Finche' la pagina chiedeva 1920x1080 all'`ATTACCA` e si
-	 *    correggeva subito dopo, quel messaggio arrivava sempre — ⛔ ma era un
-	 *    ballo: ogni sessione nasceva sbagliata e si ridimensionava, e il
-	 *    ridimensionamento e' una gara (il fondo di §7.1, il palco che monta,
-	 *    `libei` che ricrea i dispositivi).  `[M]` si perdeva una volta su tre.
+	 * ⛔ THE DEFECT, and it has three faces that looked like three defects: the
+	 *    child is born with a default canvas (1920x1080) and changes it only
+	 *    when an `ADATTA_TELA` arrives.  As long as the page asked for 1920x1080
+	 *    at `ATTACCA` and corrected itself right after, that message always
+	 *    arrived — ⛔ but it was a dance: every session was born wrong and
+	 *    resized, and resizing is a race (the backstop of §7.1, the stage being
+	 *    mounted, `libei` recreating the devices).  `[M]` it was lost one time
+	 *    in three.
 	 *
-	 * ⇒ Curata la pagina — che adesso chiede la finestra fin dall'`ATTACCA`,
-	 *   come §5.0-sexies dice dal 14 agosto — il ballo e' sparito **e con lui
-	 *   il messaggio**: non c'e' piu' niente da correggere, quindi nessuno
-	 *   diceva piu' al figlio quanto e' grande la tela.  ⭐ Il palco nasceva a
-	 *   1920x1080 e i fotogrammi si buttavano tutti.
+	 * ⇒ Once the page was cured — it now asks for the window from `ATTACCA`
+	 *   on, as §5.0-sexies has said since 14 August — the dance disappeared
+	 *   **and with it the message**: there is nothing left to correct, so nobody
+	 *   told the child any more how big the canvas is.  ⭐ The stage was born at
+	 *   1920x1080 and the frames were all thrown away.
 	 *
-	 * ⇒ ⭐ Lo dice il SERVER, qui, nell'istante in cui la tela e' decisa.  E'
-	 *   il posto giusto per una ragione che vale oltre questo caso: **chi
-	 *   decide un numero e' chi deve dirlo a chi lo usa**.  Prima lo diceva il
-	 *   client di rimbalzo, e funzionava per accidente.
+	 * ⇒ ⭐ The SERVER says it, here, at the instant the canvas is decided.  It is
+	 *   the right place for a reason that holds beyond this case: **whoever
+	 *   decides a number is whoever must tell it to whoever uses it**.  Before,
+	 *   the client said it on the rebound, and it worked by accident.
 	 *
-	 * ⚠ E non e' un `ADATTA_TELA` mascherato: non risponde a nessun messaggio e
-	 *   non manda niente sul filo.  Se il palco quella misura ce l'ha gia' — il
-	 *   ri-attacco — il figlio risponde «ce l'ho gia'» e non succede niente.
+	 * ⚠ And it is not a disguised `ADATTA_TELA`: it answers no message and
+	 *   sends nothing on the wire.  If the stage already has that size — the
+	 *   re-attach — the child answers «I already have it» and nothing happens.
 	 */
 	if (s->g.ritela) {
-		reg(s, "⭐ §4.5: dico al palco che la tela di questa sessione e' %ux%u — "
-		       "cosi' nasce gia' cosi' invece di nascere a una misura sua e "
-		       "doverla cambiare (e il cambio e' una gara)",
+		reg(s, "⭐ §4.5: I tell the stage that the canvas of this session is %ux%u — "
+		       "so it is born that way instead of being born at a size of its own "
+		       "and having to change it (and the change is a race)",
 		    tl, ta);
 		s->g.ritela(s->g.ctx, tl, ta);
 	}
@@ -3216,93 +3239,96 @@ static bool tratta_attacca(rcp_sessione *s, lettore *l, uint64_t ora)
 }
 
 /* ========================================================================= */
-/* ⭐⛔ IL CANALE VIDEO — §2.5, §5.1, §5.2, §6.2                              */
+/* ⭐⛔ THE VIDEO CHANNEL — §2.5, §5.1, §5.2, §6.2                            */
 /*                                                                           */
-/* ⛔ LE UNDICI REGOLE, E DOVE STA CIASCUNA IN QUESTE RIGHE                   */
+/* ⛔ THE ELEVEN RULES, AND WHERE EACH ONE LIVES IN THESE LINES               */
 /*                                                                           */
-/*  P1  §2.5   nessuno stream video prima di aver SPEDITO `SESSIONE`          */
-/*             ⇒ `s->sessione_spedita`, accesa dalla riga che lo spedisce     */
-/*  P2  §6.2   `numero` parte da 1, lo 0 e' riservato, e AL GIRO si salta     */
-/*             ⇒ `numero_prossimo()`                                          */
-/*  P3  §2.5   il video vive SOLO su uno stream unidirezionale del server     */
-/*             ⇒ `g.video_apri`, e mai `g.manda` (che e' il controllo)        */
-/*  P4  §6.2   FIN prima dei 28 byte e' `ERRORE_PROTOCOLLO`                   */
-/*             ⇒ i 28 byte escono in UNA scrittura, e se non escono si AZZERA */
-/*  P5  §6.2   `largh.`/`altezza` valgono la tela IN VIGORE                   */
-/*             ⇒ `s->tela_l/tela_a`, che chi chiama non puo' passare          */
-/*  P6  §5.2   il primo fotogramma dopo `SESSIONE` DEVE essere una chiave     */
-/*  P9  §5.2   e lo stesso a ogni cambio di tela                              */
-/*             ⇒ `s->serve_chiave`, che si accende SOLO da `chiave_serve()`   */
-/*               e si spegne SOLO da `chiave_pagata()` — vedi il riquadro     */
-/*               delle due funzioni qui sotto, che porta l'elenco delle cause */
-/*  §6.2       il tetto di 16 MiB vincola PRIMA chi spedisce                  */
-/*             ⇒ il controllo sta prima di aprire lo stream: non parte un byte*/
-/*  §6.2       FIN ⇒ completo · `RESET_STREAM` ⇒ si butta                     */
-/*             ⇒ `rcp_video_finisci()` contro `rcp_video_abbandona()`         */
-/*  §6.2       `codec` DEVE essere quello negoziato in §4.3                   */
-/*             ⇒ `rcp_codec_negoziato()`, e nemmeno questo e' un parametro    */
-/*  §5.1/§5.2  ogni abbandono nel registro, e una CHIAVE non si abbandona     */
+/*  P1  §2.5   no video stream before having SENT `SESSIONE`                  */
+/*             ⇒ `s->sessione_spedita`, switched on by the line that sends it */
+/*  P2  §6.2   `numero` starts from 1, 0 is reserved, and AT WRAPAROUND it is */
+/*             skipped ⇒ `numero_prossimo()`                                  */
+/*  P3  §2.5   video lives ONLY on a unidirectional stream of the server      */
+/*             ⇒ `g.video_apri`, and never `g.manda` (which is control)       */
+/*  P4  §6.2   FIN before the 28 bytes is `ERRORE_PROTOCOLLO`                 */
+/*             ⇒ the 28 bytes go out in ONE write, and if not it is RESET     */
+/*  P5  §6.2   `largh.`/`altezza` are the canvas IN FORCE                     */
+/*             ⇒ `s->tela_l/tela_a`, which the caller cannot pass             */
+/*  P6  §5.2   the first frame after `SESSIONE` MUST be a keyframe            */
+/*  P9  §5.2   and the same at every canvas change                            */
+/*             ⇒ `s->serve_chiave`, switched on ONLY by `chiave_serve()`      */
+/*               and off ONLY by `chiave_pagata()` — see the box of           */
+/*               the two functions below, which carries the list of causes    */
+/*  §6.2       the 16 MiB ceiling binds the sender FIRST                      */
+/*             ⇒ the check is before opening the stream: not a byte leaves    */
+/*  §6.2       FIN ⇒ complete · `RESET_STREAM` ⇒ thrown away                  */
+/*             ⇒ `rcp_video_finisci()` versus `rcp_video_abbandona()`         */
+/*  §6.2       `codec` MUST be the one negotiated in §4.3                     */
+/*             ⇒ `rcp_codec_negoziato()`, and not even this is a parameter    */
+/*  §5.1/§5.2  every abandonment in the log, and a KEYFRAME is not abandoned  */
 /*                                                                           */
-/* ⛔ E LA FORMA DI TUTTE E TRE LE REGOLE «PER COSTRUZIONE»: `largh.`,        */
-/*    `altezza`, `codec` e `numero` **non sono parametri di nessuna funzione  */
-/*    pubblica**.  Chi codifica non li puo' sbagliare perche' non li puo'     */
-/*    toccare.  ⚠ La strada alternativa — passarli e controllarli — sarebbe   */
-/*    stata piu' corta e avrebbe messo la protezione dove si puo' perdere     */
-/*    (invariante I7, letta da dentro il programma).                          */
+/* ⛔ AND THE SHAPE OF ALL THREE RULES «BY CONSTRUCTION»: `largh.`,           */
+/*    `altezza`, `codec` and `numero` **are not parameters of any public      */
+/*    function**.  Whoever encodes cannot get them wrong because they cannot  */
+/*    touch them.  ⚠ The alternative road — passing them and checking them —  */
+/*    would have been shorter and would have put the protection where it can  */
+/*    get lost (invariant I7, read from inside the program).                  */
 
-/* ⛔⭐⭐⭐ IL DEBITO DI CHIAVE — E IL COMMENTO CHE AVEVA MENTITO DUE VOLTE.
+/* ⛔⭐⭐⭐ THE KEYFRAME DEBT — AND THE COMMENT THAT HAD LIED TWICE.
  *
- * Questo riquadro diceva *«acceso in TRE punti e spento in uno»*, e i punti
- * erano QUATTRO.  Corretto, diceva *«CINQUE»*, e le righe che lo accendono
- * sono NOVE, per SETTE cause.  ⛔ Due correzioni a mano, due bugie: la terza
- * era gia' comprata, perche' il numero non e' un comportamento — nessun banco
- * puo' vedere che un elenco e' rimasto indietro, e il compilatore nemmeno.
+ * This box said *«switched on in THREE places and off in one»*, and the places
+ * were FOUR.  Corrected, it said *«FIVE»*, and the lines that switch it on
+ * are NINE, for SEVEN causes.  ⛔ Two corrections by hand, two lies: the third
+ * was already bought, because the number is not a behaviour — no bench
+ * can see that a list has fallen behind, and neither can the compiler.
  *
- * ⭐ ⇒ LA CURA NON E' CONTARE MEGLIO, E' TOGLIERE IL CONTO.  Il campo si
- *      accende SOLO da `chiave_serve()` e si spegne SOLO da `chiave_pagata()`.
- *      L'elenco autorevole e' quindi `grep -n 'chiave_serve(' src/rcp.c`, che
- *      non puo' invecchiare: un ramo nuovo che accendesse il debito senza
- *      passare di qui dovrebbe assegnare il campo a mano, e quello si vede in
- *      una revisione — mentre un numero sbagliato dentro un commento non si
- *      vede in nessuna.
+ * ⭐ ⇒ THE CURE IS NOT COUNTING BETTER, IT IS REMOVING THE COUNT.  The field is
+ *      switched on ONLY by `chiave_serve()` and off ONLY by `chiave_pagata()`.
+ *      The authoritative list is therefore `grep -n 'chiave_serve(' src/rcp.c`,
+ *      which cannot age: a new branch that switched on the debt without
+ *      passing through here would have to assign the field by hand, and that
+ *      shows in a review — while a wrong number inside a comment shows in
+ *      none.
  *
- * ⚠ E QUEL CHE UN BANCO PUO' VERIFICARE, se un giorno lo si vuole scritto:
- *   non «quanti sono» — che e' quel che invecchia — ma che **il campo non si
- *   tocchi fuori dalle due funzioni**.  Sono due righe di `grep` su questo
- *   file, e stanno accanto al controllo `GEMELLATI` del `Makefile`, che gia'
- *   confronta due copie dello stesso modulo:
+ * ⚠ AND WHAT A BENCH CAN VERIFY, if one day one wants it written:
+ *   not «how many there are» — which is what ages — but that **the field is
+ *   not touched outside the two functions**.  They are two `grep` lines on this
+ *   file, and they sit next to the `GEMELLATI` check of the `Makefile`, which
+ *   already compares two copies of the same module:
  *
- *     grep -n 'serve_chiave *=' src/rcp.c   ⇒ DEVE dare 2 righe sole, e sono
- *                                             le due dentro le funzioni qui
- *                                             sotto
- *     grep -n 'serve_chiave_perche *=' src/rcp.c   ⇒ le stesse 2
+ *     grep -n 'serve_chiave *=' src/rcp.c   ⇒ MUST give 2 lines only, and they
+ *                                             are the two inside the functions
+ *                                             below
+ *     grep -n 'serve_chiave_perche *=' src/rcp.c   ⇒ the same 2
  *
- *   ⛔ Questo controllo NON invecchia con l'aggiunta di una causa: e' proprio
- *      l'aggiunta di una causa che lo lascia verde, purche' passi dall'imbuto.
+ *   ⛔ This check does NOT age with the addition of a cause: it is precisely
+ *      the addition of a cause that leaves it green, provided it goes through
+ *      the funnel.
  *
- * ⛔ LE SETTE CAUSE, e la riga di ciascuna al 23 agosto 2026 (⚠ le righe sono
- *    una cortesia per chi legge oggi, NON l'elenco autorevole — quello e' il
- *    `grep` qui sopra):
+ * ⛔ THE SEVEN CAUSES, and the line of each as of 23 Aug 2026 (⚠ the lines are
+ *    a courtesy for whoever reads today, NOT the authoritative list — that is
+ *    the `grep` above):
  *
- *   1. §5.2  `SESSIONE` e' stata spedita: il primo fotogramma dopo di lei
- *            DEVE essere una chiave                                 riga 2774
- *   2. §5.2  la tela e' cambiata (`TELA` adattata): il primo alla misura
- *            nuova DEVE essere una chiave                            riga 3234
- *   3. §5.1  un delta e' stato abbandonato NELLA CODA a valle        riga 3601
- *   4. §2.3  un delta e' stato SALTATO per mancanza di posto — difetto B-18,
- *            ed e' la causa che il commento vecchio non aveva        riga 3663
- *   5. §5.2  un delta e' stato abbandonato da `rcp_video_abbandona()` riga 3699
- *   6. §5.2  un fotogramma si e' ROTTO A META' — ed e' UNA causa su TRE
- *            righe, che e' precisamente il modo in cui il conto sbagliava:
- *            l'intestazione di 28 byte non e' uscita intera (riga 3871), un
- *            pezzo non e' uscito (riga 3883), il FIN e' arrivato con meno
- *            byte del dichiarato (riga 3908)
- *   7. §5.2  il client ha mandato `RICHIEDI_CHIAVE`                  riga 5689
+ *   1. §5.2  `SESSIONE` has been sent: the first frame after it
+ *            MUST be a keyframe                                     line 2774
+ *   2. §5.2  the canvas has changed (`TELA` adapted): the first at the new
+ *            size MUST be a keyframe                                 line 3234
+ *   3. §5.1  a delta was abandoned IN THE QUEUE downstream          line 3601
+ *   4. §2.3  a delta was SKIPPED for lack of room — defect B-18,
+ *            and it is the cause the old comment did not have       line 3663
+ *   5. §5.2  a delta was abandoned by `rcp_video_abbandona()`       line 3699
+ *   6. §5.2  a frame BROKE HALFWAY — and it is ONE cause on THREE
+ *            lines, which is precisely the way the count went wrong:
+ *            the 28-byte header did not go out whole (line 3871), a
+ *            piece did not go out (line 3883), the FIN arrived with fewer
+ *            bytes than declared (line 3908)
+ *   7. §5.2  the client sent `RICHIEDI_CHIAVE`                      line 5689
  *
- * ⛔ E SI SPEGNE IN UNO SOLO: la chiave e' USCITA per intero (riga 3919).
- *    ⚠ E si spegne li' e non all'apertura dello stream: un fotogramma aperto e
- *      poi rotto non ha pagato niente, e spegnere il debito all'apertura
- *      lascerebbe il client senza chiave con il server convinto del contrario.
+ * ⛔ AND IT IS SWITCHED OFF IN ONE PLACE ONLY: the keyframe has GONE OUT whole
+ *    (line 3919).
+ *    ⚠ And it is switched off there and not at the opening of the stream: a
+ *      frame opened and then broken has paid nothing, and switching off the
+ *      debt at opening would leave the client without a keyframe with the
+ *      server convinced of the opposite.
  */
 static void chiave_serve(rcp_sessione *s, const char *perche)
 {
@@ -3316,35 +3342,36 @@ static void chiave_pagata(rcp_sessione *s)
 	s->serve_chiave_perche = NULL;
 }
 
-/* §6.2 — i due valori del campo `tipo`. */
+/* §6.2 — the two values of the `tipo` field. */
 #define V_CHIAVE 0x0301
 #define V_DELTA 0x0302
-/* §6.2 — l'intestazione e' di 28 byte esatti, senza riempimento. */
+/* §6.2 — the header is exactly 28 bytes, without padding. */
 #define V_INTESTAZIONE 28
-/* ⛔ §6.2 — «il server NON DEVE produrre un fotogramma piu' lungo di 16 MiB».
- * ⚠ E il tetto e' del FOTOGRAMMA, cioe' intestazione compresa: e' cosi' che lo
- *   conta chi riceve, che vede uno stream solo e non sa dove finisce la
- *   nostra struttura.  Un tetto contato sui soli dati lascerebbe passare 28
- *   byte di troppo, e la differenza si vede solo al limite — dove i banchi
- *   mettono i loro casi apposta. */
+/* ⛔ §6.2 — «the server MUST NOT produce a frame longer than 16 MiB».
+ * ⚠ And the ceiling belongs to the FRAME, that is header included: that is how
+ *   the receiver counts it, seeing a single stream and not knowing where our
+ *   structure ends.  A ceiling counted on the data alone would let through 28
+ *   bytes too many, and the difference shows only at the limit — where the
+ *   benches put their cases on purpose. */
 #define V_TETTO (16u * 1024u * 1024u)
-/* ⛔ §5.2, eccezione 5 di §3: 200 ms dall'ultima CHIAVE SPEDITA. */
+/* ⛔ §5.2, exception 5 of §3: 200 ms from the last keyframe SENT. */
 #define V_GRAZIA_CHIAVE 200
 
-/* ⛔ §6.2 — IL CONTATORE, E LE DUE RIGHE CHE LO GOVERNANO.
+/* ⛔ §6.2 — THE COUNTER, AND THE TWO LINES THAT GOVERN IT.
  *
- *   «Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` e'
- *    riservato»  —  «E al giro del contatore lo `0` si salta: l'aritmetica e'
- *    modulo 2^32 […] e da `0xFFFFFFFF` si passa a `1`».
+ *   «The first frame of a session carries `numero = 1`, and `0` is
+ *    reserved»  —  «And at counter wraparound `0` is skipped: the arithmetic is
+ *    modulo 2^32 […] and from `0xFFFFFFFF` one goes to `1`».
  *
- * ⚠ La seconda riga e' entrata due ore dopo la prima, il 12 agosto 2026,
- *   perche' senza di essa il valore riservato tornava in circolo da solo dopo
- *   due anni e due mesi di sessione — una volta sola nella vita, e nessuno
- *   l'avrebbe collegato a `RICHIEDI_CHIAVE`.  ⛔ Le due righe sono qui una
- *   sotto l'altra apposta: separarle e' il modo in cui la seconda si perde. */
+ * ⚠ The second line came in two hours after the first, on 12 Aug 2026,
+ *   because without it the reserved value came back into circulation on its own
+ *   after two years and two months of session — only once in a lifetime, and
+ *   nobody would have connected it to `RICHIEDI_CHIAVE`.  ⛔ The two lines are
+ *   here one under the other on purpose: separating them is how the second
+ *   gets lost. */
 static uint32_t numero_prossimo(uint32_t ultimo)
 {
-	uint32_t n = ultimo + 1; /* modulo 2^32, per definizione del tipo */
+	uint32_t n = ultimo + 1; /* modulo 2^32, by definition of the type */
 	if (n == 0)
 		n = 1;
 	return n;
@@ -3352,28 +3379,28 @@ static uint32_t numero_prossimo(uint32_t ultimo)
 
 uint8_t rcp_profondita_negoziata(const rcp_sessione *s)
 {
-	/* ⛔⭐⭐ E QUESTO LETTORE NON C'ERA, e la sua assenza e' costata il difetto
-	 *      piu' caro trovato finora — 17 agosto 2026, sera, su Firefox.
+	/* ⛔⭐⭐ AND THIS READER WAS NOT THERE, and its absence cost the most
+	 *      expensive defect found so far — 17 Aug 2026, evening, on Firefox.
 	 *
-	 *      §4.3 fa negoziare `video.profondita` e la scelta finisce qui dentro.
-	 *      ⛔ Ma **nessuno la leggeva**: il figlio scriveva `r.profondita = 10`
-	 *      a mano, per ogni codec, e il flusso usciva a 10 bit **mentre
-	 *      `ECCOMI` ne dichiarava 8**.
+	 *      §4.3 has `video.profondita` negotiated and the choice ends up in here.
+	 *      ⛔ But **nobody read it**: the child wrote `r.profondita = 10`
+	 *      by hand, for every codec, and the stream went out at 10 bits **while
+	 *      `ECCOMI` declared 8**.
 	 *
-	 * ⚠ Su Chrome non si vedeva: HEVC porta i suoi parametri dentro il flusso
-	 *   (VPS/SPS) e il decodificatore si riconfigura da se'.  ⛔ Su Firefox +
-	 *   AV1 no: la pagina configura `av01.0.12M.08` — la profondita' NEGOZIATA
-	 *   — e dav1d si fida della stringa.  `[M]` prima artefatti, poi il
-	 *   decodificatore si pianta e il desktop si ferma.
+	 * ⚠ On Chrome it did not show: HEVC carries its parameters inside the stream
+	 *   (VPS/SPS) and the decoder reconfigures itself.  ⛔ On Firefox +
+	 *   AV1 no: the page configures `av01.0.12M.08` — the NEGOTIATED depth —
+	 *   and dav1d trusts the string.  `[M]` first artefacts, then the
+	 *   decoder gets stuck and the desktop freezes.
 	 *
-	 * ⭐ Ed e' la stessa forma di `LEZIONI.md` §7.5: **due verita' sullo stesso
-	 *    fatto, e nessuna riga che le leghi**.  Il codec attraversava il
-	 *    confine di processo, la profondita' no — e nessun banco poteva
-	 *    vederlo, perche' i due numeri vivono in due processi diversi.
+	 * ⭐ And it is the same shape as `LEZIONI.md` §7.5: **two truths about the
+	 *    same fact, and no line binding them**.  The codec crossed the process
+	 *    boundary, the depth did not — and no bench could see it, because the
+	 *    two numbers live in two different processes.
 	 *
-	 * ⚠ `0` = non ancora negoziata, e NON e' «8»: chi non ha negoziato non ha
-	 *   una profondita', e sceglierne una per lui sarebbe rifare a mano il
-	 *   difetto che questa funzione esiste per togliere. */
+	 * ⚠ `0` = not yet negotiated, and it is NOT «8»: whoever has not negotiated
+	 *   has no depth, and picking one for them would redo by hand the defect
+	 *   this function exists to remove. */
 	if (!s || !s->profondita[0])
 		return 0;
 	if (strcmp(s->profondita, "8") == 0)
@@ -3385,28 +3412,29 @@ uint8_t rcp_profondita_negoziata(const rcp_sessione *s)
 
 uint8_t rcp_livello_negoziato(const rcp_sessione *s)
 {
-	/* ⛔⭐⭐ E QUESTO LETTORE E' DEL 23 AGOSTO 2026, e nasce da una MISURA:
-	 *      tela 3840x2160, H.264, il client dichiara `video.livello=5.1` e il
-	 *      server produce un flusso di livello **5.2**.  §4.3 riga 701 e' un
-	 *      DEVE — *«il server DEVE emettere un flusso di livello non
-	 *      superiore, e non lo indovina»* — e il server sforava.
+	/* ⛔⭐⭐ AND THIS READER IS FROM 23 AUG 2026, and it is born from a
+	 *      MEASUREMENT: canvas 3840x2160, H.264, the client declares
+	 *      `video.livello=5.1` and the server produces a stream of level
+	 *      **5.2**.  §4.3 row 701 is a MUST — *«the server MUST emit a stream
+	 *      of a level not higher, and does not guess it»* — and the server
+	 *      overshot.
 	 *
-	 * ⛔ Fino a stasera il numero CHIESTO si fermava qui dentro: si scriveva
-	 *    nel registro e non lo leggeva nessuno.  Il numero PRODOTTO vive nel
-	 *    figlio (`codificatore.c`, dall'SPS), che e' un altro processo — due
-	 *    verita' sullo stesso fatto, `LEZIONI.md` §7.5, esattamente la forma
-	 *    della profondita' del 17 agosto.  ⇒ Adesso attraversa il confine per
-	 *    la stessa strada di quella: `rcp.h` → `webtransport.c` → `main.c` →
+	 * ⛔ Until tonight the REQUESTED number stopped in here: it was written
+	 *    to the log and nobody read it.  The PRODUCED number lives in the
+	 *    child (`codificatore.c`, from the SPS), which is another process — two
+	 *    truths about the same fact, `LEZIONI.md` §7.5, exactly the shape of
+	 *    the depth of 17 August.  ⇒ Now it crosses the boundary by the same
+	 *    road as that one: `rcp.h` → `webtransport.c` → `main.c` →
 	 *    `figli_video()` → `struct corpo_video`.
 	 *
-	 * ⚠ In DECIMI, che e' l'alfabeto di §4.3 (`5.1` ⇒ `51`) e quello in cui il
-	 *   figlio riconverte per ciascun codec — H.264 lo usa tale e quale
-	 *   (`level_idc`), HEVC lo triplica (`general_level_idc`).  ⛔ Un `uint8_t`
-	 *   basta e avanza: `6.2` e' 62, e §4.3 non definisce niente sopra.
+	 * ⚠ In TENTHS, which is the alphabet of §4.3 (`5.1` ⇒ `51`) and the one the
+	 *   child converts back from for each codec — H.264 uses it as is
+	 *   (`level_idc`), HEVC triples it (`general_level_idc`).  ⛔ A `uint8_t`
+	 *   is more than enough: `6.2` is 62, and §4.3 defines nothing above.
 	 *
-	 * ⚠ `0` = il client non l'ha dichiarato (§4.3 non lo obbliga) o l'ha
-	 *   scritto fuori forma, e NON vuol dire «basso»: vuol dire «nessun
-	 *   tetto», e chi riceve non deve inventarne uno. */
+	 * ⚠ `0` = the client did not declare it (§4.3 does not require it) or wrote
+	 *   it malformed, and it does NOT mean «low»: it means «no ceiling», and
+	 *   the receiver must not invent one. */
 	if (!s || !s->livello_x10 || s->livello_x10 > 255u)
 		return 0;
 	return (uint8_t) s->livello_x10;
@@ -3416,35 +3444,35 @@ uint8_t rcp_codec_negoziato(const rcp_sessione *s)
 {
 	if (!s)
 		return 0;
-	/* §6.2: «`codec`: 1 = HEVC, 2 = AV1.  DEVE essere quello negoziato in
-	 * §4.3».  ⛔ La stringa la sceglie `prima_comune()` sul `CIAO` del client,
-	 * e la traduzione sta QUI e in nessun altro posto: due tabelle che
-	 * mappano gli stessi nomi divergono, ed e' la stessa forma del difetto che
-	 * §0 di `RCP.md` esiste per togliere. */
+	/* §6.2: «`codec`: 1 = HEVC, 2 = AV1.  MUST be the one negotiated in
+	 * §4.3».  ⛔ The string is chosen by `prima_comune()` on the client's `CIAO`,
+	 * and the translation lives HERE and nowhere else: two tables that
+	 * map the same names diverge, and it is the same shape of the defect that
+	 * §0 of `RCP.md` exists to remove. */
 	if (strcmp(s->codec, "hevc") == 0)
 		return 1;
-	/* ⚠ `av1` resta QUI e non in `nostro_codec`: il numero e' assegnato per
-	 *   sempre (§6.2), e questa riga e' la sua tomba dichiarata — non si
-	 *   negozia piu', ma se comparisse si tradurrebbe giusto. */
+	/* ⚠ `av1` stays HERE and not in `nostro_codec`: the number is assigned
+	 *   forever (§6.2), and this line is its declared tomb — it is no longer
+	 *   negotiated, but if it appeared it would be translated right. */
 	if (strcmp(s->codec, "av1") == 0)
 		return 2;
 	if (strcmp(s->codec, "h264") == 0)
 		return 3;
-	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
+	return 0; /* not yet negotiated, or a name RCP/1 does not define */
 }
 
 uint8_t rcp_audio_negoziato(const rcp_sessione *s)
 {
 	if (!s)
 		return 0;
-	/* §6.3: «`codec`: 1 = Opus, 2 = PCM (§5.3)».  ⛔ Come per il video, la
-	 * traduzione dal nome negoziato al numero sul filo sta QUI e in nessun
-	 * altro posto. */
+	/* §6.3: «`codec`: 1 = Opus, 2 = PCM (§5.3)».  ⛔ As for video, the
+	 * translation from the negotiated name to the number on the wire lives HERE
+	 * and nowhere else. */
 	if (strcmp(s->audio, "opus") == 0)
 		return 1;
 	if (strcmp(s->audio, "pcm") == 0)
 		return 2;
-	return 0; /* non ancora negoziato, o un nome che RCP/1 non definisce */
+	return 0; /* not yet negotiated, or a name RCP/1 does not define */
 }
 
 bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
@@ -3458,7 +3486,7 @@ bool rcp_tela_in_vigore(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
 	return true;
 }
 
-/* La dichiarazione, e perche' la vista NON e' la tela, stanno in `rcp.h`. */
+/* The declaration, and why the view is NOT the canvas, are in `rcp.h`. */
 bool rcp_vista(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
 {
 	if (!s || !s->sessione_spedita)
@@ -3480,50 +3508,50 @@ uint32_t rcp_video_ultimo_numero(const rcp_sessione *s)
 	return s ? s->video_numero : 0;
 }
 
-/* ⛔ §7.1 — la tela e' cambiata, e §5.2 apre il debito SOLO se e' cambiata
- * davvero.  Vedi il riquadro in `rcp.h`.
+/* ⛔ §7.1 — the canvas has changed, and §5.2 opens the debt ONLY if it really
+ * changed.  See the box in `rcp.h`.
  *
- * ⚠ RIPIEGO DICHIARATO (`CODER.md` §4.2): questa forma non ha un orologio,
- *   quindi NON puo' aprire il secondo di grazia di §7.1 sulle coordinate in
- *   volo — e un ripiego silenzioso produce due comportamenti sotto la stessa
- *   etichetta.  La riga di registro lo dice; chi serve `ADATTA_TELA` sul filo
- *   usa `rcp_tela_adattata_ora()`. */
+ * ⚠ DECLARED FALLBACK (`CODER.md` §4.2): this form has no clock,
+ *   so it CANNOT open the second of grace of §7.1 on the coordinates in
+ *   flight — and a silent fallback produces two behaviours under the same
+ *   label.  The log line says so; whoever serves `ADATTA_TELA` on the wire
+ *   uses `rcp_tela_adattata_ora()`. */
 void rcp_tela_adattata(rcp_sessione *s, uint32_t lar, uint32_t alt)
 {
 	if (!s || !s->sessione_spedita)
 		return;
 	if (lar != s->tela_l || alt != s->tela_a)
-		reg(s, "⚠ RIPIEGO DICHIARATO: `rcp_tela_adattata()` senza l'ora — il "
-		       "SECONDO DI GRAZIA di §7.1 sulle coordinate della tela vecchia "
-		       "NON si apre, e un `PUNTATORE` in volo verra' rifiutato con "
-		       "`ERRORE_PROTOCOLLO`.  Chi serve `ADATTA_TELA` sul filo chiami "
-		       "`rcp_tela_adattata_ora()`");
+		reg(s, "⚠ DECLARED FALLBACK: `rcp_tela_adattata()` without the time — the "
+		       "SECOND OF GRACE of §7.1 on the coordinates of the old canvas "
+		       "does NOT open, and a `PUNTATORE` in flight will be refused with "
+		       "`ERRORE_PROTOCOLLO`.  Whoever serves `ADATTA_TELA` on the wire should "
+		       "call `rcp_tela_adattata_ora()`");
 	rcp_tela_adattata_ora(s, lar, alt, 0);
-	/* ⛔⭐ E LA GRAZIA SI CHIUDE DAVVERO, invece di aprirsi con la data ZERO —
-	 *     16 agosto 2026, sottofase 6.4, trovato leggendo.
+	/* ⛔⭐ AND THE GRACE REALLY CLOSES, instead of opening with date ZERO —
+	 *     16 Aug 2026, sub-phase 6.4, found by reading.
 	 *
-	 * ⚠ Senza queste due righe la riga qui sopra **diceva il falso**: `rcp_tela_
-	 *   adattata_ora(…, 0)` mette `tela_grazia_da = 0` e riempie `tela_prec_*`,
-	 *   e la grazia risulta APERTA per tutti gli istanti minori di
-	 *   `TELA_GRAZIA` — cioe' il primo secondo dell'orologio.  ⛔ Con un
-	 *   orologio monotono di sistema non si arriva mai li' e il difetto non si
-	 *   vede; ⚠ con l'orologio artificiale di un banco che parte da zero si',
-	 *   ed e' precisamente il posto in cui questo modulo viene montato nudo.
+	 * ⚠ Without these two lines the line above **said something false**:
+	 *   `rcp_tela_adattata_ora(…, 0)` sets `tela_grazia_da = 0` and fills
+	 *   `tela_prec_*`, and the grace appears OPEN for all instants smaller than
+	 *   `TELA_GRAZIA` — that is the first second of the clock.  ⛔ With a
+	 *   monotonic system clock one never gets there and the defect does not
+	 *   show; ⚠ with the artificial clock of a bench starting from zero it does,
+	 *   and it is precisely the place where this module is mounted bare.
 	 *
-	 * ⇒ Un ripiego che dichiara una cosa e ne fa un'altra e' peggio del ripiego:
-	 *   e' la forma E2, due comportamenti sotto la stessa etichetta, ed e' quel
-	 *   che il `reg()` qui sopra esiste per NON essere.
+	 * ⇒ A fallback that declares one thing and does another is worse than the
+	 *   fallback: it is the E2 shape, two behaviours under the same label, and
+	 *   it is what the `reg()` above exists NOT to be.
 	 *
-	 * ⛔ E NON e' misurato da nessun banco, dichiarato invece che taciuto: per
-	 *    provarlo servirebbe un orologio che parte sotto il secondo, e la
-	 *    stretta di mano di §4.4-bis ne consuma gia' millecinquecento. */
+	 * ⛔ And it is NOT measured by any bench, declared instead of kept quiet: to
+	 *    test it one would need a clock starting below one second, and the
+	 *    handshake of §4.4-bis already consumes fifteen hundred milliseconds. */
 	s->tela_prec_l = 0;
 	s->tela_prec_a = 0;
 	s->tela_grazia_da = 0;
 }
 
-/* La dichiarazione, il perche' e le due misure che uccidono stanno in `rcp.h`:
- * qui c'e' solo la regola. */
+/* The declaration, the why and the two sizes that kill are in `rcp.h`:
+ * here there is only the rule. */
 bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
                         uint32_t *fuori_a)
 {
@@ -3533,43 +3561,43 @@ bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
 		*fuori_l = 0;
 	if (fuori_a)
 		*fuori_a = 0;
-	/* ⛔ Il tetto si controlla PRIMA di troncare: troncare 100000 al pari darebbe
-	 * 100000, cioe' un numero ancora capace di uccidere il compositore.
+	/* ⛔ The ceiling is checked BEFORE truncating: truncating 100000 to even would
+	 * give 100000, that is a number still able to kill the compositor.
 	 *
-	 * ⛔⭐ E I LIMITI SONO QUELLI DI §4.5, PER LATO — corretti la notte del 15
-	 *     agosto 2026, refutando.  La prima stesura usava 200..8192 **su
-	 *     entrambi i lati**, e `RCP.md` §4.5 e' normativo: *«larghezza e altezza
-	 *     della tela DEVONO stare fra 320x240 e 7680x4320»* (il massimo di
-	 *     allora; oggi 4096x2304).  ⚠ Le due regole
-	 *     erano gia' divergenti — `ATTACCA` applicava §4.5 e `ADATTA_TELA` no —
-	 *     ed era **irraggiungibile** finche' `ADATTA_TELA` rispondeva sempre
-	 *     `COMPOSITORE_INCAPACE`.  ⛔ Il caso concreto: si stringe il bordo
-	 *     inferiore della finestra, `ADATTA_TELA(1600, 230)` veniva concessa, e
-	 *     al RI-ATTACCO la stessa misura veniva rifiutata da `ATTACCA` — il
-	 *     server che non concede in `SESSIONE` una tela che aveva concesso lui
-	 *     stesso in `TELA`.
+	 * ⛔⭐ AND THE LIMITS ARE THOSE OF §4.5, PER SIDE — corrected on the night of
+	 *     15 Aug 2026, while refuting.  The first draft used 200..8192 **on
+	 *     both sides**, and `RCP.md` §4.5 is normative: *«width and height
+	 *     of the canvas MUST be between 320x240 and 7680x4320»* (the maximum of
+	 *     the time; today 4096x2304).  ⚠ The two rules
+	 *     already diverged — `ATTACCA` applied §4.5 and `ADATTA_TELA` did not —
+	 *     and it was **unreachable** as long as `ADATTA_TELA` always answered
+	 *     `COMPOSITORE_INCAPACE`.  ⛔ The concrete case: one narrows the bottom
+	 *     edge of the window, `ADATTA_TELA(1600, 230)` was granted, and
+	 *     at RE-ATTACH the same size was refused by `ATTACCA` — the
+	 *     server not granting in `SESSIONE` a canvas it had granted itself
+	 *     in `TELA`.
 	 *
-	 * ⚠ E il tetto vero del compositore resta sotto: `[M]` oltre 16384 per lato
-	 *   `gnome-shell` muore, e 4096 e' molto sotto — vedi il riquadro in `rcp.h`.
+	 * ⚠ And the real ceiling of the compositor stays below: `[M]` beyond 16384 per
+	 *   side `gnome-shell` dies, and 4096 is well below — see the box in `rcp.h`.
 	 *
-	 * ⛔⭐ DAL 1 OTTOBRE 2026 SOPRA IL MASSIMO SI RIDUCE, NON SI RIFIUTA
-	 *     (riquadro in `rcp.h`): il lato che sfora va AL MASSIMO, l'altro resta.
-	 *     ⚠ E il tetto si applica sempre PRIMA di troncare: 100000 diventa 4096,
-	 *     non un numero ancora capace di uccidere il compositore. */
+	 * ⛔⭐ SINCE 1 OCT 2026 ABOVE THE MAXIMUM IT IS REDUCED, NOT REFUSED
+	 *     (box in `rcp.h`): the side that overflows goes TO THE MAXIMUM, the
+	 *     other stays.  ⚠ And the ceiling is always applied BEFORE truncating:
+	 *     100000 becomes 4096, not a number still able to kill the compositor. */
 	if (larghezza < RCP_TELA_L_MINIMA || altezza < RCP_TELA_A_MINIMA)
 		return false;
 	if (larghezza > RCP_TELA_L_MASSIMA)
 		larghezza = RCP_TELA_L_MASSIMA;
 	if (altezza > RCP_TELA_A_MASSIMA)
 		altezza = RCP_TELA_A_MASSIMA;
-	/* ⚠ In GIU', sempre: verso l'alto si uscirebbe dalla finestra del browser, e
-	 * il pixel di troppo tornerebbe come banda o come scala — cioe' come la cosa
-	 * che questa decisione toglie. */
+	/* ⚠ DOWNWARDS, always: upwards one would go out of the browser window, and
+	 * the extra pixel would come back as a band or as a scale — that is as the
+	 * thing this decision removes. */
 	l = larghezza & ~1u;
 	a = altezza & ~1u;
-	/* ⛔ E il troncamento non puo' far scendere sotto il minimo: 321 -> 320 e'
-	 * ancora ammesso, ma la regola si scrive invece di fidarsi che i numeri
-	 * tornino. */
+	/* ⛔ And truncation cannot bring it below the minimum: 321 -> 320 is
+	 * still allowed, but the rule is written instead of trusting that the
+	 * numbers add up. */
 	if (l < RCP_TELA_L_MINIMA || a < RCP_TELA_A_MINIMA)
 		return false;
 	if (fuori_l)
@@ -3579,22 +3607,22 @@ bool rcp_misura_ammessa(uint32_t larghezza, uint32_t altezza, uint32_t *fuori_l,
 	return true;
 }
 
-/* ⛔⭐ IL MESSAGGIO `TELA` SUL FILO — §7.1.
+/* ⛔⭐ THE `TELA` MESSAGE ON THE WIRE — §7.1.
  *
- * ⚠ Fino al 14 agosto 2026 questo pezzo NON esisteva: `rcp_tela_adattata_ora()`
- *   cambiava la tela in vigore, apriva la grazia e scriveva nel registro, ma il
- *   client non riceveva **niente**.  ⇒ Un client che avesse chiesto una misura
- *   sarebbe rimasto ad aspettare una risposta che nessuno spediva, e il difetto
- *   si sarebbe visto come «l'adattamento non funziona» invece che come «non e'
- *   scritto».  E' la forma di guasto che questo progetto paga piu' spesso: il
- *   pezzo che manca **fra** due pezzi che ci sono.
+ * ⚠ Until 14 Aug 2026 this piece did NOT exist: `rcp_tela_adattata_ora()`
+ *   changed the canvas in force, opened the grace and wrote to the log, but the
+ *   client received **nothing**.  ⇒ A client that had asked for a size would
+ *   have been left waiting for an answer nobody sent, and the defect would
+ *   have looked like «adaptation does not work» instead of «it is not
+ *   written».  It is the shape of fault this project pays for most often: the
+ *   piece missing **between** two pieces that are there.
  *
  * `esito`  1 = ADATTATA, 2 = RIFIUTATA
- * `motivo` 0 se adattata; 1 = COMPOSITORE_INCAPACE, 2 = MISURA_FUORI_LIMITI,
+ * `motivo` 0 if adapted; 1 = COMPOSITORE_INCAPACE, 2 = MISURA_FUORI_LIMITI,
  *          3 = NON_ORA
- * ⛔ E i due campi di misura sono **la tela IN VIGORE DOPO questo messaggio**,
- *    non quella chiesta: su un rifiuto valgono quella di prima, ed e' l'unica
- *    riga che dice al client con che cosa continuare. */
+ * ⛔ And the two size fields are **the canvas IN FORCE AFTER this message**,
+ *    not the one requested: on a refusal they are the previous one, and it is
+ *    the only line that tells the client what to continue with. */
 static void manda_tela(rcp_sessione *s, uint8_t esito, uint8_t motivo,
                        uint32_t lar, uint32_t alt)
 {
@@ -3606,112 +3634,115 @@ static void manda_tela(rcp_sessione *s, uint8_t esito, uint8_t motivo,
 	sc_u32(&w, lar);
 	sc_u32(&w, alt);
 	if (w.pieno) {
-		reg(s, "⛔ TELA non spedita: il corpo non ci sta (difetto nostro)");
+		reg(s, "⛔ TELA not sent: the body does not fit (our defect)");
 		return;
 	}
 	manda_messaggio(s, T_TELA, corpo, w.len);
-	reg(s, "TELA spedita: esito %u, motivo %u, tela in vigore %ux%u (§7.1)",
+	reg(s, "TELA sent: outcome %u, reason %u, canvas in force %ux%u (§7.1)",
 	    esito, motivo, lar, alt);
 }
 
-/* ⛔ §7.1 / §3 eccezione 3 — la forma che sa QUANDO, e apre la grazia. */
+/* ⛔ §7.1 / §3 exception 3 — the form that knows WHEN, and opens the grace. */
 void rcp_tela_adattata_ora(rcp_sessione *s, uint32_t lar, uint32_t alt,
                            uint64_t ora_ms)
 {
 	if (!s || !s->sessione_spedita)
 		return;
 	if (lar == s->tela_l && alt == s->tela_a) {
-		/* ⛔ §7.1 risponde `TELA` anche a un `ADATTA_TELA` che chiede la
-		 * misura che c'e' gia': li' non c'e' nessuna «misura nuova», e aprire
-		 * il debito della chiave fermerebbe il video su una sessione sana —
-		 * il rosso all'imputato sbagliato che questa famiglia di regole ha
-		 * gia' pagato quattro volte (P8 → P11 → P13 → P14). */
-		reg(s, "TELA(ADATTATA) alla misura che c'era gia' (%ux%u): la tela in "
-		       "vigore non cambia e §5.2 NON apre il debito della chiave",
+		/* ⛔ §7.1 answers `TELA` even to an `ADATTA_TELA` asking for the
+		 * size that is already there: there is no «new size» there, and opening
+		 * the keyframe debt would stop the video on a healthy session —
+		 * the red to the wrong suspect that this family of rules has
+		 * already paid for four times (P8 → P11 → P13 → P14). */
+		reg(s, "TELA(ADATTATA) at the size that was already there (%ux%u): the "
+		       "canvas in force does not change and §5.2 does NOT open the keyframe debt",
 		    lar, alt);
-		/* ⛔ Si risponde LO STESSO: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`,
-		 *    e un client che non ricevesse niente aspetterebbe per sempre. */
+		/* ⛔ One answers ALL THE SAME: §7.1 wants one `TELA` for every
+		 *    `ADATTA_TELA`, and a client that received nothing would wait forever. */
 		manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
 		return;
 	}
-	reg(s, "tela IN VIGORE cambiata da %ux%u a %ux%u (§7.1): da qui §6.2 lega "
-	       "largh./altezza alla nuova, e §5.2 vuole una CHIAVE alla misura "
-	       "nuova",
+	reg(s, "canvas IN FORCE changed from %ux%u to %ux%u (§7.1): from here §6.2 binds "
+	       "width/height to the new one, and §5.2 wants a KEYFRAME at the new "
+	       "size",
 	    s->tela_l, s->tela_a, lar, alt);
-	/* ⛔ §7.1, terza eccezione di §3 — LA GRAZIA SI APRE QUI, e la tela
-	 * precedente si tiene PRIMA di sostituirla: «gli input partiti prima che la
-	 * risposta arrivasse non sono un difetto del client».  ⚠ Un secondo, e non
-	 * di piu': oltre, il DEVE di §7.3 torna intero. */
+	/* ⛔ §7.1, third exception of §3 — THE GRACE OPENS HERE, and the previous
+	 * canvas is kept BEFORE replacing it: «inputs that left before the answer
+	 * arrived are not a defect of the client».  ⚠ One second, and no more:
+	 * beyond it, the MUST of §7.3 is whole again. */
 	s->tela_prec_l = s->tela_l;
 	s->tela_prec_a = s->tela_a;
 	s->tela_grazia_da = ora_ms;
 	s->tela_l = lar;
 	s->tela_a = alt;
-	chiave_serve(s, "e' il primo alla misura nuova dopo TELA (§5.2)");
-	/* ⛔ E il messaggio esce DOPO che lo stato e' cambiato, non prima: i due
-	 *    campi di misura devono dire la tela **in vigore dopo**, ed e' l'unico
-	 *    ordine in cui possono dirla senza copiarla in una variabile a parte. */
+	chiave_serve(s, "it is the first at the new size after TELA (§5.2)");
+	/* ⛔ And the message goes out AFTER the state has changed, not before: the two
+	 *    size fields must state the canvas **in force after**, and it is the only
+	 *    order in which they can state it without copying it into a separate
+	 *    variable. */
 	manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
 }
 
-/* ⛔⭐⭐ «IL PALCO DEVE SERVIRE LA TELA IN VIGORE» — e quando non lo fa, glielo si
- *     RICHIEDE, con un'attesa che cresce.
+/* ⛔⭐⭐ «THE STAGE MUST SERVE THE CANVAS IN FORCE» — and when it does not, it is
+ *     ASKED AGAIN, with a growing wait.
  *
- * ⛔ E' l'unica uscita onesta dal disaccordo, e la ragione e' del protocollo:
- *    §6.2 vieta di spedire un fotogramma la cui misura non e' la tela in vigore,
- *    e §7.1 non da' al server nessun modo di cambiare la tela **di sua
- *    iniziativa** — un `TELA` non richiesto e' `ERRORE_PROTOCOLLO` per il
- *    client.  ⇒ Delle due parti in disaccordo, quella che deve muoversi e' il
- *    palco, che e' nostro.
+ * ⛔ It is the only honest way out of the disagreement, and the reason lies in
+ *    the protocol: §6.2 forbids sending a frame whose size is not the canvas in
+ *    force, and §7.1 gives the server no way to change the canvas **on its own
+ *    initiative** — an unrequested `TELA` is `ERRORE_PROTOCOLLO` for the
+ *    client.  ⇒ Of the two parties in disagreement, the one that must move is
+ *    the stage, which is ours.
  *
- * ⚠ E l'attesa cresce perche' il caso in cui non si muove esiste (un compositore
- *   che non sa ridimensionare): senza, questa riga chiederebbe la stessa cosa a
- *   ogni fotogramma — sessanta rinegoziazioni al secondo, che e' la forma dei
- *   30,8 GB di registro del 14 agosto in un altro punto della catena.
+ * ⚠ And the wait grows because the case in which it does not move exists (a
+ *   compositor that cannot resize): without it, this line would ask the same
+ *   thing at every frame — sixty renegotiations per second, which is the shape
+ *   of the 30.8 GB of log of 14 August at another point of the chain.
  *
- * ⚠ Nel frattempo la sessione mostra l'ultima immagine buona: brutta e viva
- *   (I1).  Il registro lo dice a ogni tentativo, cosi' chi guarda distingue «il
- *   desktop e' fermo» da «il desktop non c'e' piu'». */
+ * ⚠ Meanwhile the session shows the last good image: ugly and alive
+ *   (I1).  The log says so at every attempt, so whoever watches tells «the
+ *   desktop is still» from «the desktop is no longer there». */
 static void tela_richiama_il_palco(rcp_sessione *s, uint64_t ora_ms)
 {
-	/* ⛔⛔⛔ CHI NON HA IL POSTO NON COMANDA IL PALCO — e senza questa riga due
-	 *      sessioni dello stesso utente si CONTENDONO la tela, per sempre.
+	/* ⛔⛔⛔ WHOEVER DOES NOT HOLD THE SLOT DOES NOT COMMAND THE STAGE — and
+	 *      without this line two sessions of the same user FIGHT OVER the
+	 *      canvas, forever.
 	 *
-	 * `[M]` 15 agosto 2026, mattina, sessione VERA dell'utente — ed e' un difetto
-	 * che ho introdotto io stanotte, trovato dal suo «su Android il mouse non
-	 * prende piu' i click»:
+	 * `[M]` 15 Aug 2026, morning, the user's REAL session — and it is a defect
+	 * I introduced myself last night, found from their «on Android the mouse no
+	 * longer takes clicks»:
 	 *
-	 *   05:10  il portatile attacca, tela 2544x926
-	 *   05:12  tace trenta secondi ⇒ STACCATO per silenzio, lascia il posto —
-	 *          ⛔ ma la sessione resta viva, col suo canale video acceso e la
-	 *          sua tela in vigore
-	 *   05:14  il telefono attacca, tela 2560x926
-	 *   05:14  da qui **diciassette richieste al secondo**: il portatile richiede
-	 *          2544, il telefono 2560, il portatile 2544 … per sempre
+	 *   05:10  the laptop attaches, canvas 2544x926
+	 *   05:12  silent for thirty seconds ⇒ DETACHED for silence, leaves the slot —
+	 *          ⛔ but the session stays alive, with its video channel on and
+	 *          its canvas in force
+	 *   05:14  the phone attaches, canvas 2560x926
+	 *   05:14  from here **seventeen requests per second**: the laptop asks for
+	 *          2544, the phone 2560, the laptop 2544 … forever
 	 *
-	 * ⇒ E ogni giro **riavvia il flusso PipeWire**, che su Mutter distrugge e
-	 *   ricrea i dispositivi di `libei`: `[M]` 640 «ricambi» del puntatore, e la
-	 *   regione dell'input mai d'accordo con la tela («⚠ la regione 2560x926 NON
-	 *   e' grande come la tela 2544x926: scalo le coordinate»).  ⛔ Il sintomo per
-	 *   l'utente non nomina niente di tutto questo: **i clic non prendono piu'**.
+	 * ⇒ And every round **restarts the PipeWire stream**, which on Mutter destroys
+	 *   and recreates the `libei` devices: `[M]` 640 pointer «replacements», and
+	 *   the input region never in agreement with the canvas («⚠ the region
+	 *   2560x926 is NOT as big as the canvas 2544x926: I scale the
+	 *   coordinates»).  ⛔ The symptom for the user names none of this: **clicks
+	 *   no longer take**.
 	 *
-	 * ⛔ E l'attesa che cresce NON bastava, per una ragione che va detta: si
-	 *    azzera quando il palco arriva dove questa sessione lo vuole — che nel
-	 *    ping-pong succede a ogni giro.  Un fondo temporale non cura due padroni:
-	 *    cura un padrone insistente.
+	 * ⛔ And the growing wait was NOT enough, for a reason that must be said: it
+	 *    resets when the stage arrives where this session wants it — which in
+	 *    the ping-pong happens at every round.  A time backstop does not cure two
+	 *    masters: it cures one insistent master.
 	 *
-	 * ⇒ ⭐ La cura e' l'invariante che c'era gia': I2 dice **una sola sessione
-	 *   grafica per utente**, e il posto (§8.2 `0x0F`) e' il modo in cui questo
-	 *   modulo lo fa rispettare.  Chi il posto non ce l'ha **guarda** — non
-	 *   comanda.  ⚠ E quando torna a parlare il posto se lo riprende, e da quel
-	 *   momento comanda lui. */
+	 * ⇒ ⭐ The cure is the invariant that was already there: I2 says **a single
+	 *   graphical session per user**, and the slot (§8.2 `0x0F`) is the way this
+	 *   module enforces it.  Whoever does not hold the slot **watches** — does
+	 *   not command.  ⚠ And when it speaks again it takes the slot back, and from
+	 *   that moment it is the one in command. */
 	if (!s->attaccata) {
 		if (!s->tela_disaccordo_da) {
 			s->tela_disaccordo_da = ora_ms;
-			reg(s, "⚠ il palco non e' alla tela in vigore %ux%u, ma questa "
-			       "sessione NON ha il posto (I2): non gli chiedo niente — "
-			       "comanda chi e' attaccato.  ⛔ Due sessioni che comandassero "
-			       "lo stesso palco se lo contenderebbero a ogni fotogramma",
+			reg(s, "⚠ the stage is not at the canvas in force %ux%u, but this "
+			       "session does NOT hold the slot (I2): I ask it nothing — "
+			       "whoever is attached commands.  ⛔ Two sessions commanding "
+			       "the same stage would fight over it at every frame",
 			    s->tela_l, s->tela_a);
 		}
 		return;
@@ -3719,113 +3750,113 @@ static void tela_richiama_il_palco(rcp_sessione *s, uint64_t ora_ms)
 	if (!s->g.ritela) {
 		if (!s->tela_disaccordo_da) {
 			s->tela_disaccordo_da = ora_ms;
-			reg(s, "⛔ il palco non e' alla tela in vigore %ux%u e non ho un "
-			       "gancio per chiedergli di venirci: da qui i fotogrammi si "
-			       "scartano tutti (§6.2), e questa riga e' l'unica che lo dice",
+			reg(s, "⛔ the stage is not at the canvas in force %ux%u and I have no "
+			       "hook to ask it to come there: from here all frames are "
+			       "discarded (§6.2), and this line is the only one that says so",
 			    s->tela_l, s->tela_a);
 		}
 		return;
 	}
 	if (s->tela_disaccordo_da
 	    && ora_ms - s->tela_disaccordo_da < s->tela_disaccordo_attesa)
-		return; /* si e' gia' chiesto da poco: non si insiste a ogni fotogramma */
+		return; /* asked only recently: one does not insist at every frame */
 
-	/* ⛔⭐⭐ A QUALE MISURA SI RICHIAMA IL PALCO, E NON E' SEMPRE LA TELA IN
-	 *      VIGORE — cura del 16 agosto 2026, banco `06-b36` caso 13.
+	/* ⛔⭐⭐ TO WHICH SIZE THE STAGE IS CALLED BACK, AND IT IS NOT ALWAYS THE CANVAS
+	 *      IN FORCE — cure of 16 Aug 2026, bench `06-b36` case 13.
 	 *
-	 * ⛔ LA SCENA, ed e' quella che il riquadro di §7.1 nomina per prima: *«un
-	 *    rimontaggio della sessione grafica dopo una caduta»*.  L'utente stringe
-	 *    la finestra, il server gira `ADATTA_TELA(1600x900)` al palco, e un
-	 *    istante dopo il palco si rimonta a 1024x768 di suo — cioe' NON in
-	 *    risposta a niente.  Il ramo 3 di `rcp_tela_dal_palco()` non riconosce
-	 *    la richiesta e finisce qui.
+	 * ⛔ THE SCENE, and it is the one the box of §7.1 names first: *«a
+	 *    remount of the graphical session after a crash»*.  The user narrows
+	 *    the window, the server passes `ADATTA_TELA(1600x900)` to the stage, and
+	 *    an instant later the stage remounts at 1024x768 on its own — that is NOT
+	 *    in response to anything.  Branch 3 of `rcp_tela_dal_palco()` does not
+	 *    recognise the request and ends up here.
 	 *
-	 * ⛔ Richiamandolo alla tela IN VIGORE (1920x1080) il server contraddice la
-	 *    richiesta che ha girato lui stesso un istante prima, e **condanna al
-	 *    `NON_ORA` una `ADATTA_TELA` che stava per riuscire**: il palco torna a
-	 *    1920x1080, il fondo di §7.1 scade, e l'utente vede la sua finestra
-	 *    rifiutata da un server che gli ha chiesto lui di tornare indietro.
-	 *    ⚠ Nessun banco lo vedeva, perche' il conto dei `TELA` torna: uno solo,
-	 *    ed e' il `NON_ORA` — il verde all'imputato sbagliato.
+	 * ⛔ Calling it back to the canvas IN FORCE (1920x1080) the server contradicts
+	 *    the request it passed on itself an instant before, and **condemns to
+	 *    `NON_ORA` an `ADATTA_TELA` that was about to succeed**: the stage goes
+	 *    back to 1920x1080, the backstop of §7.1 expires, and the user sees their
+	 *    window refused by a server that itself asked the stage to go back.
+	 *    ⚠ No bench saw it, because the count of `TELA`s adds up: only one,
+	 *    and it is the `NON_ORA` — the green to the wrong suspect.
 	 *
-	 * ⇒ Se una richiesta e' IN VOLO si richiama il palco a **quella** misura.
-	 *   ⛔ E non e' un `TELA` non sollecitato mascherato, che e' la cosa da non
-	 *   fare mai: sul filo non esce niente.  §3, eccezione 8: finche' c'e' una
-	 *   `ADATTA_TELA` senza risposta il client TRATTIENE i fotogrammi di una
-	 *   misura mai annunciata, quindi chiedere al palco la misura in volo e'
-	 *   esattamente la misura che il client e' pronto a ricevere.
+	 * ⇒ If a request is IN FLIGHT the stage is called back to **that** size.
+	 *   ⛔ And it is not a disguised unsolicited `TELA`, which is the thing never
+	 *   to do: nothing goes out on the wire.  §3, exception 8: as long as there
+	 *   is an unanswered `ADATTA_TELA` the client HOLDS BACK frames of a size
+	 *   never announced, so asking the stage for the size in flight is exactly
+	 *   the size the client is ready to receive.
 	 *
-	 * ⚠ E se il palco ci arriva, `rcp_tela_dal_palco()` la riconosce come
-	 *   risposta (`voluta` = quel che si e' chiesto) e il `TELA(ADATTATA)` esce
-	 *   per la strada normale: la richiesta dell'utente RIESCE invece di
-	 *   scadere. */
+	 * ⚠ And if the stage gets there, `rcp_tela_dal_palco()` recognises it as an
+	 *   answer (`voluta` = what was asked for) and the `TELA(ADATTATA)` goes out
+	 *   by the normal road: the user's request SUCCEEDS instead of
+	 *   expiring. */
 	uint32_t verso_l = s->tela_volo ? s->tela_volo_l : s->tela_l;
 	uint32_t verso_a = s->tela_volo ? s->tela_volo_a : s->tela_a;
 
 	if (!s->tela_disaccordo_da) {
 		s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MS;
 		if (s->tela_volo)
-			reg(s, "⛔ il palco e' andato per conto suo MENTRE %ux%u era in volo: "
-			       "gli richiedo %ux%u — la misura IN VOLO, non la tela in vigore "
-			       "%ux%u.  ⚠ Richiamarlo indietro condannerebbe al NON_ORA una "
-			       "`ADATTA_TELA` che sta per riuscire, e §3 eccezione 8 dice che "
-			       "il client TRATTIENE i fotogrammi finche' aspetta la risposta",
+			reg(s, "⛔ the stage went its own way WHILE %ux%u was in flight: "
+			       "I ask it for %ux%u — the size IN FLIGHT, not the canvas in force "
+			       "%ux%u.  ⚠ Calling it back would condemn to NON_ORA an "
+			       "`ADATTA_TELA` that is about to succeed, and §3 exception 8 says "
+			       "the client HOLDS BACK frames while it waits for the answer",
 			    s->tela_volo_l, s->tela_volo_a, verso_l, verso_a, s->tela_l,
 			    s->tela_a);
 		else
-			reg(s, "⛔ il palco non e' alla tela in vigore %ux%u: §6.2 vieta di "
-			       "spedire un fotogramma di misura diversa, quindi da qui non "
-			       "parte piu' niente.  Gli richiedo %ux%u — e insistero' con "
-			       "un'attesa che cresce, perche' un `TELA` che nessuno ha "
-			       "chiesto farebbe chiudere la sessione al client (§6.2)",
+			reg(s, "⛔ the stage is not at the canvas in force %ux%u: §6.2 forbids "
+			       "sending a frame of a different size, so from here nothing "
+			       "leaves any more.  I ask it for %ux%u — and I will insist with "
+			       "a growing wait, because a `TELA` nobody "
+			       "asked for would make the client close the session (§6.2)",
 			    s->tela_l, s->tela_a, verso_l, verso_a);
 	} else {
 		s->tela_disaccordo_attesa *= 2;
 		if (s->tela_disaccordo_attesa > RCP_TELA_RICHIAMO_MAX_MS)
 			s->tela_disaccordo_attesa = RCP_TELA_RICHIAMO_MAX_MS;
-		reg(s, "⛔ il palco non e' ancora a %ux%u (tela in vigore %ux%u%s): "
-		       "richiesta ripetuta, prossima fra %llu ms",
+		reg(s, "⛔ the stage is not yet at %ux%u (canvas in force %ux%u%s): "
+		       "request repeated, next in %llu ms",
 		    verso_l, verso_a, s->tela_l, s->tela_a,
-		    s->tela_volo ? ", con una richiesta in volo" : "",
+		    s->tela_volo ? ", with a request in flight" : "",
 		    (unsigned long long)s->tela_disaccordo_attesa);
 	}
 	s->tela_disaccordo_da = ora_ms;
 	s->g.ritela(s->g.ctx, verso_l, verso_a);
 }
 
-/* ⭐⭐ LA RISPOSTA DEL PALCO — vedi `rcp.h`, e i tre casi sono tre.
+/* ⭐⭐ THE STAGE'S ANSWER — see `rcp.h`, and the three cases are three.
  *
- * ⛔⛔ E QUEL CHE QUESTA FUNZIONE **NON FA PIU'**, perche' era il difetto piu'
- *     grave della prima stesura: **non manda mai un `TELA` che nessuno ha
- *     chiesto.**
+ * ⛔⛔ AND WHAT THIS FUNCTION **NO LONGER DOES**, because it was the most
+ *     serious defect of the first draft: **it never sends a `TELA` nobody
+ *     asked for.**
  *
- *     La prima stesura, quando il palco cambiava misura da solo, adottava la sua
- *     e spediva `TELA` per non lasciare la sessione senza pixel.  ⚠ Sembrava la
- *     scelta gentile e ⛔ era fatale: §6.2 dice che il client trattiene una
- *     misura mai annunciata **solo finche' ha una `ADATTA_TELA` senza risposta**,
- *     e li' non ne ha nessuna ⇒ `ERRORE_PROTOCOLLO`, sessione chiusa.  E il
- *     fotogramma viaggia su uno stream suo, quindi puo' arrivare **prima** del
- *     `TELA` che lo giustificherebbe: la meta' delle volte.
+ *     The first draft, when the stage changed size on its own, adopted its size
+ *     and sent `TELA` so as not to leave the session without pixels.  ⚠ It
+ *     looked like the kind choice and ⛔ it was fatal: §6.2 says the client
+ *     holds back a size never announced **only while it has an unanswered
+ *     `ADATTA_TELA`**, and there it has none ⇒ `ERRORE_PROTOCOLLO`, session
+ *     closed.  And the frame travels on a stream of its own, so it can arrive
+ *     **before** the `TELA` that would justify it: half the time.
  *
- * ⇒ Il palco deve servire la tela in vigore, e se non ci sta gli si RICHIEDE,
- *   con un'attesa che cresce.  ⚠ Nel frattempo la sessione mostra l'ultima
- *   immagine buona: e' brutta e viva, che e' quel che I1 impone. */
+ * ⇒ The stage must serve the canvas in force, and if it is not there it is
+ *   ASKED AGAIN, with a growing wait.  ⚠ Meanwhile the session shows the last
+ *   good image: it is ugly and alive, which is what I1 requires. */
 void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
                         uint32_t avuta_l, uint32_t avuta_a, uint64_t ora_ms)
 {
 	if (!s || !s->sessione_spedita)
 		return;
 
-	/* --- 1. il palco non ce l'ha fatta --------------------------------- */
-	/* ⛔ `0x0` non e' una misura: e' «non ce l'ho fatta», e va distinto dal
-	 *    silenzio (`CODER.md` §3.10).  ⇒ Se stava rispondendo a una richiesta
-	 *    NOSTRA, si risponde `NON_ORA` **adesso** invece di far scadere il fondo:
-	 *    tre secondi di attesa per una notizia che c'e' gia'. */
+	/* --- 1. the stage did not make it ---------------------------------- */
+	/* ⛔ `0x0` is not a size: it is «I did not make it», and it must be told
+	 *    apart from silence (`CODER.md` §3.10).  ⇒ If it was answering a request
+	 *    of OURS, `NON_ORA` is answered **now** instead of letting the backstop
+	 *    expire: three seconds of waiting for news that is already there. */
 	if (!avuta_l || !avuta_a) {
 		if (s->tela_volo && voluta_l == s->tela_volo_l
 		    && voluta_a == s->tela_volo_a) {
-			reg(s, "il palco non ha potuto dare la tela %ux%u: NON_ORA subito, "
-			       "senza aspettare il fondo di %u ms (§7.1).  La tela resta "
+			reg(s, "the stage could not give the canvas %ux%u: NON_ORA at once, "
+			       "without waiting for the %u ms backstop (§7.1).  The canvas stays "
 			       "%ux%u",
 			    voluta_l, voluta_a, (unsigned)RCP_TELA_ATTESA_MS, s->tela_l,
 			    s->tela_a);
@@ -3836,51 +3867,51 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 		return;
 	}
 
-	/* --- 2. il palco e' dove deve essere -------------------------------- */
+	/* --- 2. the stage is where it must be ------------------------------ */
 	if (avuta_l == s->tela_l && avuta_a == s->tela_a) {
 		if (s->tela_disaccordo_da) {
-			reg(s, "⭐ il palco e' tornato alla tela in vigore %ux%u: il "
-			       "disaccordo e' finito",
+			reg(s, "⭐ the stage is back at the canvas in force %ux%u: the "
+			       "disagreement is over",
 			    avuta_l, avuta_a);
 			s->tela_disaccordo_da = 0;
 			s->tela_disaccordo_attesa = 0;
 		}
-		/* ⛔ E se la richiesta in volo chiedeva PROPRIO questa misura, e' una
-		 *    risposta: il palco ce l'aveva gia'.  ⚠ Senza questa riga, chiedere
-		 *    la misura che c'e' gia' mentre un'altra e' in volo non si chiuderebbe
-		 *    con nessun fotogramma — e si finirebbe sul fondo dei tre secondi. */
+		/* ⛔ And if the request in flight asked for PRECISELY this size, it is
+		 *    an answer: the stage already had it.  ⚠ Without this line, asking
+		 *    for the size that is already there while another is in flight would
+		 *    close with no frame — and one would end up on the three-second
+		 *    backstop. */
 		if (s->tela_volo && voluta_l == s->tela_volo_l
 		    && voluta_a == s->tela_volo_a) {
 			s->tela_volo = false;
-			reg(s, "TELA(ADATTATA) %ux%u: il palco quella misura ce l'aveva gia'",
+			reg(s, "TELA(ADATTATA) %ux%u: the stage already had that size",
 			    avuta_l, avuta_a);
 			manda_tela(s, 1 /* ADATTATA */, 0, s->tela_l, s->tela_a);
 		}
 		return;
 	}
-
-	/* --- 3. il palco e' altrove ----------------------------------------- */
-	/* ⛔⭐ E SI ADOTTA **SOLO** SE RISPONDE ALLA NOSTRA RICHIESTA, cioe' se
-	 *     `voluta` e' quella che abbiamo chiesto.  ⚠ La misura AVUTA puo' essere
-	 *     un'altra ancora — §4.5 lo permette, e su KWin < 6.8 e' la strada
-	 *     normale — ma il RICONOSCIMENTO si fa sulla domanda, non sulla risposta.
-	 *     ⛔ Riconoscere sulla risposta era il difetto delle due richieste
-	 *     incatenate: il fotogramma della prima veniva preso per la risposta
-	 *     della seconda, e il desktop si assestava sulla misura sbagliata. */
+	/* --- 3. the stage is elsewhere ------------------------------------- */
+	/* ⛔⭐ AND IT IS ADOPTED **ONLY** IF IT ANSWERS OUR REQUEST, that is if
+	 *     `voluta` is the one we asked for.  ⚠ The size OBTAINED may be yet
+	 *     another — §4.5 allows it, and on KWin < 6.8 it is the normal road —
+	 *     but the RECOGNITION is made on the question, not on the answer.
+	 *     ⛔ Recognising on the answer was the defect of the two chained
+	 *     requests: the frame of the first was taken as the answer to the
+	 *     second, and the desktop settled on the wrong size. */
 	if (s->tela_volo && voluta_l == s->tela_volo_l
 	    && voluta_a == s->tela_volo_a) {
 		if (avuta_l != voluta_l || avuta_a != voluta_a)
-			reg(s, "⚠ il palco ha concesso %ux%u dove si era chiesto %ux%u: §4.5 "
-			       "lo permette, e il `TELA` che parte adesso porta la misura "
-			       "VERA",
+			reg(s, "⚠ the stage granted %ux%u where %ux%u was asked: §4.5 "
+			       "allows it, and the `TELA` leaving now carries the REAL "
+			       "size",
 			    avuta_l, avuta_a, voluta_l, voluta_a);
-		/* ⛔ Il tetto del decodificatore NON si scavalca nemmeno qui (§4.5): una
-		 *    tela che il client non sa decodificare e' uno schermo nero
-		 *    dichiarato invece che taciuto — ma pur sempre nero. */
+		/* ⛔ The decoder ceiling is NOT overridden here either (§4.5): a
+		 *    canvas the client cannot decode is a black screen declared
+		 *    instead of kept quiet — but black all the same. */
 		if (s->max_l && (avuta_l > s->max_l || avuta_a > s->max_a)) {
-			reg(s, "⛔ il palco ha dato %ux%u, oltre il video.misura_massima di "
-			       "questo client (%ux%u): NON la adotto, e rispondo NON_ORA.  "
-			       "La tela resta %ux%u e al palco si richiede quella",
+			reg(s, "⛔ the stage gave %ux%u, beyond the video.misura_massima of "
+			       "this client (%ux%u): I do NOT adopt it, and I answer NON_ORA.  "
+			       "The canvas stays %ux%u and the stage is asked for that one",
 			    avuta_l, avuta_a, s->max_l, s->max_a, s->tela_l, s->tela_a);
 			s->tela_volo = false;
 			manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
@@ -3891,63 +3922,63 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 		s->tela_volo = false;
 		s->tela_disaccordo_da = 0;
 		s->tela_disaccordo_attesa = 0;
-		/* ⛔ E il resto lo fa la funzione che c'era gia': cambia la tela in
-		 *    vigore, apre il secondo di grazia sulle coordinate, segna il debito
-		 *    della chiave (§5.2) e spedisce `TELA(ADATTATA)`. */
+		/* ⛔ And the rest is done by the function that was already there: it
+		 *    changes the canvas in force, opens the second of grace on the
+		 *    coordinates, marks the keyframe debt (§5.2) and sends `TELA(ADATTATA)`. */
 		rcp_tela_adattata_ora(s, avuta_l, avuta_a, ora_ms);
 		return;
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════
-	 * ⛔⛔ 4. IL PALCO ERA GIA' LI' E NON SI MUOVE — e il video non e' mai
-	 *      partito.  22 settembre 2026, prova a mano dell'utente su KDE.
+	 * ⛔⛔ 4. THE STAGE WAS ALREADY THERE AND DOES NOT MOVE — and the video never
+	 *      started.  22 Sep 2026, the user's manual test on KDE.
 	 *
-	 * ⛔ LA SCENA, e l'ha trovata lui: il server si riavvia, la sessione
-	 *    Plasma gli SOPRAVVIVE (invariante I4) col suo palco a 2544x926, e il
-	 *    client rientra da una finestra di un'altra misura chiedendo
-	 *    2560x962.  ⚠ La tabella delle tele dei palchi vive nel PROCESSO: col
-	 *    riavvio si azzera, quindi il ripiego di `ATTACCA` — «si concede quel
-	 *    che il palco HA» — non ha niente da concedere e passa la misura del
-	 *    client.  ⇒ Tela in vigore 2560x962, palco 2544x926, e §6.2 vieta di
-	 *    spedire un fotogramma di misura diversa: **schermo nero per sempre**,
-	 *    mentre il registro ripete «gli richiedo 2560x962» con un'attesa che
-	 *    raddoppia.  ⛔ E KWin `--virtual` non ridimensiona: la richiesta non
-	 *    puo' riuscire ne' oggi ne' fra un'ora.  `[M]` curato a mano chiudendo
-	 *    la sessione dell'utente, che e' il contrario di quel che I4 promette.
+	 * ⛔ THE SCENE, and they found it: the server restarts, the Plasma session
+	 *    OUTLIVES it (invariant I4) with its stage at 2544x926, and the
+	 *    client comes back in from a window of another size asking for
+	 *    2560x962.  ⚠ The table of the stages' canvases lives in the PROCESS:
+	 *    with the restart it resets, so the `ATTACCA` fallback — «what the
+	 *    stage HAS is granted» — has nothing to grant and passes the client's
+	 *    size.  ⇒ Canvas in force 2560x962, stage 2544x926, and §6.2 forbids
+	 *    sending a frame of a different size: **black screen forever**,
+	 *    while the log repeats «I ask it for 2560x962» with a wait that
+	 *    doubles.  ⛔ And KWin `--virtual` does not resize: the request
+	 *    cannot succeed either today or in an hour.  `[M]` cured by hand by
+	 *    closing the user's session, which is the opposite of what I4 promises.
 	 *
-	 * ⭐ LA CURA: si adotta la misura del palco, esattamente come fa `ATTACCA`
-	 *    quando la sa — ⛔ ma SOLO finche' non e' uscito nemmeno un fotogramma.
-	 *    Prima del primo fotogramma il client non ha visto un pixel a questa
-	 *    tela, non ne ha nessuno in volo, e non c'e' nessuna corsa fra stream
-	 *    da arbitrare: il `TELA` che parte adesso e' l'unica verita' che avra'
-	 *    mai avuto.  ⚠ Dopo il primo fotogramma NON si tocca niente e si
-	 *    continua a richiedere, perche' li' un `TELA` non sollecitato
-	 *    contraddirebbe fotogrammi gia' consegnati (§6.2) — e la regola sta
-	 *    scritta in `RCP.md` §7.1 invece che solo qui.
+	 * ⭐ THE CURE: the stage's size is adopted, exactly as `ATTACCA` does
+	 *    when it knows it — ⛔ but ONLY as long as not even one frame has gone out.
+	 *    Before the first frame the client has not seen a pixel at this
+	 *    canvas, has none in flight, and there is no race between streams
+	 *    to arbitrate: the `TELA` leaving now is the only truth it will
+	 *    ever have had.  ⚠ After the first frame NOTHING is touched and one
+	 *    keeps asking, because there an unsolicited `TELA` would contradict
+	 *    frames already delivered (§6.2) — and the rule is written in
+	 *    `RCP.md` §7.1 instead of only here.
 	 *
-	 * ⚠ E i limiti si ricontrollano, come nel ramo 3: §4.5 e il tetto del
-	 *   decodificatore di QUESTO client.  Un palco fuori limiti non si adotta
-	 *   — si continua a richiedere, e lo schermo nero resta dichiarato. */
+	 * ⚠ And the limits are checked again, as in branch 3: §4.5 and the decoder
+	 *   ceiling of THIS client.  A stage out of limits is not adopted
+	 *   — one keeps asking, and the black screen stays declared. */
 	if (!s->video_spediti && !s->tela_volo
 	    && (avuta_l != s->tela_l || avuta_a != s->tela_a)) {
 		uint32_t pl = 0, pa = 0;
 		if (!rcp_misura_ammessa(avuta_l, avuta_a, &pl, &pa)
 		    || pl != avuta_l || pa != avuta_a) {
-			reg(s, "⚠ il palco e' a %ux%u, che §4.5 non ammette: NON la adotto "
-			       "e continuo a richiedere la tela in vigore %ux%u",
+			reg(s, "⚠ the stage is at %ux%u, which §4.5 does not allow: I do NOT "
+			       "adopt it and keep asking for the canvas in force %ux%u",
 			    avuta_l, avuta_a, s->tela_l, s->tela_a);
 		} else if (s->max_l && (avuta_l > s->max_l || avuta_a > s->max_a)) {
-			reg(s, "⚠ il palco e' a %ux%u, oltre il video.misura_massima di "
-			       "questo client (%ux%u): NON la adotto e continuo a "
-			       "richiedere la tela in vigore %ux%u",
+			reg(s, "⚠ the stage is at %ux%u, beyond the video.misura_massima of "
+			       "this client (%ux%u): I do NOT adopt it and keep "
+			       "asking for the canvas in force %ux%u",
 			    avuta_l, avuta_a, s->max_l, s->max_a, s->tela_l, s->tela_a);
 		} else {
-			reg(s, "⭐ §7.1: il palco era gia' a %ux%u quando questa sessione e' "
-			       "nata (tela in vigore %ux%u) e NESSUN fotogramma e' ancora "
-			       "uscito: ADOTTO la sua misura invece di richiedergliene una "
-			       "che non sa dare.  ⛔ Senza questa riga un compositore che "
-			       "non ridimensiona (KWin --virtual) lascia lo schermo nero "
-			       "per sempre dopo un riavvio del server",
+			reg(s, "⭐ §7.1: the stage was already at %ux%u when this session was "
+			       "born (canvas in force %ux%u) and NO frame has gone out "
+			       "yet: I ADOPT its size instead of asking it for one "
+			       "it cannot give.  ⛔ Without this line a compositor that "
+			       "does not resize (KWin --virtual) leaves the screen black "
+			       "forever after a server restart",
 			    avuta_l, avuta_a, s->tela_l, s->tela_a);
 			s->tela_disaccordo_da = 0;
 			s->tela_disaccordo_attesa = 0;
@@ -3956,10 +3987,10 @@ void rcp_tela_dal_palco(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 		}
 	}
 
-	/* ⛔ Nessuna richiesta nostra, o una richiesta diversa: il palco e' altrove
-	 *    di suo.  ⚠ Puo' essere un rimontaggio dopo una caduta della sessione
-	 *    grafica, o il fotogramma in ritardo di una richiesta gia' scaduta.  ⇒ Si
-	 *    RICHIEDE la tela in vigore, e non si adotta niente. */
+	/* ⛔ No request of ours, or a different request: the stage is elsewhere
+	 *    on its own.  ⚠ It may be a remount after a crash of the graphical
+	 *    session, or the late frame of a request that has already expired.  ⇒
+	 *    The canvas in force is ASKED FOR AGAIN, and nothing is adopted. */
 	tela_richiama_il_palco(s, ora_ms);
 }
 
@@ -3970,12 +4001,12 @@ bool rcp_tela_rimanda(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
 		return false;
 	if (voluta_l != s->tela_volo_l || voluta_a != s->tela_volo_a)
 		return false;
-	/* ⭐ Si sposta l'inizio, non si allunga il fondo: cosi' il tetto di §7.1
-	 *    resta quello, e vale da quando c'e' davvero qualcuno che prova. */
+	/* ⭐ The start is moved, the backstop is not lengthened: so the ceiling of
+	 *    §7.1 stays what it is, and counts from when someone is really trying. */
 	s->tela_volo_da = ora_ms;
-	reg(s, "§7.1: il palco non c'e' ANCORA per la tela %ux%u — il fondo di %u ms "
-	       "si RIMANDA invece di rispondere NON_ORA a una domanda che sta per "
-	       "avere una risposta vera",
+	reg(s, "§7.1: the stage is NOT there YET for the canvas %ux%u — the %u ms "
+	       "backstop is POSTPONED instead of answering NON_ORA to a question about "
+	       "to get a real answer",
 	    voluta_l, voluta_a, (unsigned)RCP_TELA_ATTESA_MS);
 	return true;
 }
@@ -3991,23 +4022,23 @@ bool rcp_tela_in_volo(const rcp_sessione *s, uint32_t *lar, uint32_t *alt)
 	return true;
 }
 
-/* ⛔ §7.1 — IL FONDO DELL'ATTESA: «a ogni `ADATTA_TELA` il server DEVE rispondere
- *    con un `TELA`, riuscito o no».  Chiamata da `rcp_tempo()`, cioe' dall'unico
- *    posto che vede scorrere il tempo anche quando non arriva un byte.
+/* ⛔ §7.1 — THE BACKSTOP OF THE WAIT: «to every `ADATTA_TELA` the server MUST
+ *    answer with a `TELA`, successful or not».  Called by `rcp_tempo()`, that is
+ *    by the only place that sees time pass even when no byte arrives.
  *
- * ⚠ E il ritardo NON si misura da quando e' arrivato il messaggio ma da quando
- *   la domanda e' PARTITA verso il palco: sono lo stesso istante oggi, e il
- *   giorno in cui in mezzo ci fosse una coda non lo sarebbero piu'. */
+ * ⚠ And the delay is NOT measured from when the message arrived but from when
+ *   the question LEFT for the stage: they are the same instant today, and the
+ *   day a queue sat in between they would no longer be. */
 static void tela_scade(rcp_sessione *s, uint64_t ora_ms)
 {
 	if (!s->tela_volo)
 		return;
 	if (ora_ms - s->tela_volo_da < RCP_TELA_ATTESA_MS)
 		return;
-	reg(s, "⛔ ADATTA_TELA %ux%u: il palco non ha consegnato un fotogramma a "
-	       "quella misura entro %u ms — rispondo NON_ORA (§7.1: un silenzio "
-	       "lascerebbe il client ad aspettare per sempre, e §6.2 gli fa "
-	       "TRATTENERE i fotogrammi finche' aspetta).  La tela resta %ux%u",
+	reg(s, "⛔ ADATTA_TELA %ux%u: the stage did not deliver a frame at "
+	       "that size within %u ms — I answer NON_ORA (§7.1: a silence "
+	       "would leave the client waiting forever, and §6.2 makes it "
+	       "HOLD BACK frames while it waits).  The canvas stays %ux%u",
 	    s->tela_volo_l, s->tela_volo_a, (unsigned)RCP_TELA_ATTESA_MS, s->tela_l,
 	    s->tela_a);
 	s->tela_volo = false;
@@ -4023,264 +4054,267 @@ void rcp_video_conti(const rcp_sessione *s, uint32_t *spediti,
 		*abbandonati = s ? s->video_abbandonati : 0;
 }
 
-/* ⛔⭐ §5.1 — L'ABBANDONO DECISO A VALLE, E PERCHE' NON BASTAVA QUELLO DI SOPRA.
+/* ⛔⭐ §5.1 — THE ABANDONMENT DECIDED DOWNSTREAM, AND WHY THE ONE ABOVE WAS NOT
+ * ENOUGH.
  *
- * `rcp_video_abbandona()` qui sotto sa abbandonare **il fotogramma aperto**,
- * cioe' uno a cui manca ancora un pezzo da scrivere.  ⛔ Ma la scena che §5.1
- * descrive con le sue stesse parole — «il server PUO' chiamare `RESET_STREAM`
- * su un fotogramma che non serve piu', **perche' ne e' gia' partito uno piu'
- * recente**» — non e' quella: li' il fotogramma vecchio e' stato scritto TUTTO
- * e chiuso con FIN, e sta fermo nella coda d'uscita del trasporto perche' la
- * linea non lo porta via.  Per RCP quel fotogramma e' gia' finito
- * (`video_aperto` e' falso), e `rcp_video_abbandona()` restituirebbe `false`
- * senza scrivere una riga.
+ * `rcp_video_abbandona()` below can abandon **the open frame**, that is one
+ * still missing a piece to write.  ⛔ But the scene §5.1 describes in its own
+ * words — «the server MAY call `RESET_STREAM` on a frame that is no longer
+ * needed, **because a more recent one has already left**» — is not that one:
+ * there the old frame was written WHOLE and closed with FIN, and it sits still
+ * in the transport's output queue because the line does not carry it away.
+ * For RCP that frame is already finished (`video_aperto` is false), and
+ * `rcp_video_abbandona()` would return `false` without writing a line.
  *
- * ⇒ Chi tiene la coda — `webtransport.c` — e' l'unico che sa quali fotogrammi
- *   sono ancora **sul filo o prima del filo**, e quindi l'unico che puo'
- *   decidere l'abbandono di §5.1.  ⛔ Ma le tre conseguenze di quell'abbandono
- *   sono di RCP e non sue: la riga di registro obbligatoria (§5.1), il conto
- *   degli abbandonati, e ⛔ **il debito della chiave** (§5.2 — «quando il
- *   server abbandona un delta DEVE mandare un fotogramma chiave appena puo'»).
- *   Lasciarle a chi tiene la coda vorrebbe dire due copie dello stesso stato,
- *   che e' la forma che `RCP.md` §0 esiste per togliere.
+ * ⇒ Whoever holds the queue — `webtransport.c` — is the only one that knows
+ *   which frames are still **on the wire or before the wire**, and therefore
+ *   the only one that can decide the abandonment of §5.1.  ⛔ But the three
+ *   consequences of that abandonment belong to RCP and not to it: the mandatory
+ *   log line (§5.1), the count of the abandoned, and ⛔ **the keyframe debt**
+ *   (§5.2 — «when the server abandons a delta it MUST send a keyframe as soon
+ *   as it can»).  Leaving them to whoever holds the queue would mean two copies
+ *   of the same state, which is the shape `RCP.md` §0 exists to remove.
  *
- * ⛔ E LA CHIAVE NON SI ABBANDONA NEMMENO DA VALLE: §5.2 lo vieta senza
- *    distinguere chi decide.  Qui si RIFIUTA e si scrive, come sopra —
- *    altrimenti la regola varrebbe per una strada e non per l'altra, e quale
- *    delle due si percorra dipenderebbe da quanto e' veloce la linea. */
+ * ⛔ AND THE KEYFRAME IS NOT ABANDONED EVEN DOWNSTREAM: §5.2 forbids it without
+ *    distinguishing who decides.  Here it is REFUSED and written, as above —
+ *    otherwise the rule would apply to one road and not to the other, and
+ *    which of the two is travelled would depend on how fast the line is. */
 bool rcp_video_abbandonato_a_valle(rcp_sessione *s, uint32_t numero, bool chiave,
                                    size_t byte_non_usciti, const char *perche)
 {
 	if (!s)
 		return false;
 	if (chiave) {
-		reg(s, "⛔ NON abbandono il fotogramma %u nella coda: e' una CHIAVE, e "
-		       "§5.2 lo vieta anche a valle (motivo chiesto: %s) — restavano "
-		       "%zu byte da far uscire",
-		    numero, perche ? perche : "non dichiarato", byte_non_usciti);
+		reg(s, "⛔ I do NOT abandon frame %u in the queue: it is a KEYFRAME, and "
+		       "§5.2 forbids it downstream too (reason asked: %s) — %zu bytes "
+		       "were left to go out",
+		    numero, perche ? perche : "undeclared", byte_non_usciti);
 		return false;
 	}
 	s->video_abbandonati++;
-	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
-	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
-	 * dal lato che riceve».  ⚠ E si dice quanti byte NON sono usciti: e' la
-	 * differenza fra «l'ho buttato prima di spendere banda» e «l'avevo gia'
-	 * quasi spedito», che sono due fatti diversi per chi regola il ritmo. */
-	reg(s, "fotogramma %u ABBANDONATO NELLA CODA (§5.1, RESET_STREAM): %zu byte "
-	       "non sono usciti, perche': %s — spediti %u, abbandonati %u",
-	    numero, byte_non_usciti, perche ? perche : "non dichiarato",
+	/* ⛔ §5.1: «every abandonment MUST be written to the log: a frame lost in
+	 * silence and one abandoned on purpose look the same from the receiving
+	 * side».  ⚠ And it says how many bytes did NOT go out: it is the
+	 * difference between «I threw it away before spending bandwidth» and «I had
+	 * almost sent it already», which are two different facts for whoever
+	 * regulates the rate. */
+	reg(s, "frame %u ABANDONED IN THE QUEUE (§5.1, RESET_STREAM): %zu bytes "
+	       "did not go out, why: %s — sent %u, abandoned %u",
+	    numero, byte_non_usciti, perche ? perche : "undeclared",
 	    s->video_spediti, s->video_abbandonati);
-	/* ⛔ §5.2: «quando il server abbandona un delta, DEVE mandare un fotogramma
-	 * chiave appena puo' — senza aspettare che il client lo chieda». */
-	chiave_serve(s, "un delta e' stato abbandonato nella coda (§5.1)");
+	/* ⛔ §5.2: «when the server abandons a delta, it MUST send a keyframe
+	 * as soon as it can — without waiting for the client to ask». */
+	chiave_serve(s, "a delta was abandoned in the queue (§5.1)");
 	return true;
 }
 
-/* ⛔ §2.3 — IL CREDITO DI STREAM MANCATO, SCRITTO NEL REGISTRO DA UN POSTO SOLO.
+/* ⛔ §2.3 — THE MISSING STREAM CREDIT, WRITTEN TO THE LOG FROM ONE PLACE ONLY.
  *
- * §2.3 chiude cosi': «e in tutt'e due i casi **si scrive nel registro**», dove
- * i due casi sono il delta buttato e la chiave che aspetta.  ⛔ La riga esiste
- * perche' senza di essa il sintomo e' *«schermo fermo, e nessuna riga nel
- * registro che dica perche'»* — il rilievo R1.9 la nomina parola per parola.
+ * §2.3 ends like this: «and in both cases **it is written to the log**», where
+ * the two cases are the delta thrown away and the keyframe that waits.  ⛔ The
+ * line exists because without it the symptom is *«screen frozen, and no line in
+ * the log saying why»* — finding R1.9 names it word for word.
  *
- * ⚠ E il contatore degli abbandonati NON si tocca: qui lo stream non e' mai
- *   nato, quindi non c'e' niente da azzerare sul filo e il `numero` non e'
- *   stato consumato (§6.2: «NON per quelli che non spedisce affatto»).  Sono
- *   due grandezze diverse e tenerle insieme confonderebbe chi diagnostica. */
+ * ⚠ And the counter of the abandoned is NOT touched: here the stream was never
+ *   born, so there is nothing to reset on the wire and the `numero` has not
+ *   been consumed (§6.2: «NOT for those it does not send at all»).  They are
+ *   two different quantities and keeping them together would confuse whoever
+ *   diagnoses. */
 void rcp_video_niente_credito(rcp_sessione *s, bool chiave, uint64_t restano)
 {
 	if (!s)
 		return;
 	if (chiave) {
-		reg(s, "⛔ §2.3: nessuno stream unidirezionale per una CHIAVE (il client "
-		       "ne concede ancora %llu).  ⚠ La chiave NON si butta: §5.2 la "
-		       "vuole, il debito resta acceso e si riprova al prossimo "
-		       "fotogramma — «aspettare un posto libero» e' esattamente quel "
-		       "che §2.3 prescrive per le chiavi",
+		reg(s, "⛔ §2.3: no unidirectional stream for a KEYFRAME (the client "
+		       "still grants %llu).  ⚠ The keyframe is NOT thrown away: §5.2 "
+		       "wants it, the debt stays on and it is retried at the next "
+		       "frame — «waiting for a free slot» is exactly what "
+		       "§2.3 prescribes for keyframes",
 		    (unsigned long long)restano);
 		return;
 	}
-	reg(s, "⚠ §2.3: nessuno stream unidirezionale per il delta che veniva dopo "
-	       "il %u (il client ne concede ancora %llu): il delta si BUTTA — «un "
-	       "delta vecchio non serve piu', ne sta gia' arrivando uno nuovo».  ⛔ "
-	       "E non e' un errore fatale: la sessione regge (§2.3)",
+	reg(s, "⚠ §2.3: no unidirectional stream for the delta that came after "
+	       "%u (the client still grants %llu): the delta is THROWN AWAY — «an "
+	       "old delta is no longer needed, a new one is already arriving».  ⛔ "
+	       "And it is not a fatal error: the session holds (§2.3)",
 	    s->video_numero, (unsigned long long)restano);
-	/* ⛔⭐ E SI ACCENDE IL DEBITO DI CHIAVE — mancava, ed e' il difetto B-18.
+	/* ⛔⭐ AND THE KEYFRAME DEBT IS SWITCHED ON — it was missing, and it is defect
+	 *     B-18.
 	 *
-	 *   §5.2: «quando il server abbandona un delta, DEVE mandare un fotogramma
-	 *   chiave appena puo', senza aspettare che il client lo chieda».  I due
-	 *   gemelli che abbandonano un delta lo fanno gia' — l'abbandono nella coda
-	 *   (piu' su, §5.1) e `rcp_video_abbandona()` (piu' giu', §5.2) — e QUI il
-	 *   danno visto dal lato che riceve e' lo stesso: al decodificatore manca un
-	 *   delta, e da li' in poi produce immagini via via piu' sfasciate.
+	 *   §5.2: «when the server abandons a delta, it MUST send a keyframe as
+	 *   soon as it can, without waiting for the client to ask».  The two
+	 *   twins that abandon a delta already do so — the abandonment in the queue
+	 *   (above, §5.1) and `rcp_video_abbandona()` (below, §5.2) — and HERE the
+	 *   harm seen from the receiving side is the same: the decoder is missing a
+	 *   delta, and from there on it produces images more and more broken.
 	 *
-	 * ⛔ E QUI SERVE PIU' CHE NEI DUE GEMELLI, perche' il client non se ne
-	 *    accorge MAI da solo:
-	 *      · il `numero` NON e' stato consumato (il riquadro qui sopra, §6.2),
-	 *        quindi nei numeri non resta **nessun buco** — ed e' l'unico segnale
-	 *        su cui §5.2 fa chiedere una chiave al client;
-	 *      · il codificatore gira a GOP infinito (`chiavi_ogni = 0`, in
-	 *        `codificatore_di()` di `src/figlio.c` — riga 4220 al 23 agosto
-	 *        2026; ⚠ il riferimento diceva `src/figlio.c:1568`, che e' un punto
-	 *        del file che quel codice non abita da un pezzo: e' la stessa
-	 *        malattia del conto delle accensioni qui sotto, e per questo qui
-	 *        c'e' il NOME della funzione, che non scorre con le righe), quindi
-	 *        un'altra chiave non arriverebbe **mai piu'** da sola.
-	 *    ⇒ Senza questa riga, UN SOLO delta saltato per mancanza di posto
-	 *      sfascia l'immagine **per sempre e in silenzio**: nessun errore,
-	 *      nessuna riga, e il client che non ha modo di chiedere la cura.
+	 * ⛔ AND HERE IT IS NEEDED MORE THAN IN THE TWO TWINS, because the client
+	 *    NEVER notices on its own:
+	 *      · the `numero` has NOT been consumed (the box above, §6.2),
+	 *        so in the numbers there remains **no gap** — and it is the only signal
+	 *        on which §5.2 has the client ask for a keyframe;
+	 *      · the encoder runs with an infinite GOP (`chiavi_ogni = 0`, in
+	 *        `codificatore_di()` of `src/figlio.c` — line 4220 as of 23 Aug
+	 *        2026; ⚠ the reference said `src/figlio.c:1568`, which is a point
+	 *        of the file that code has not lived in for a while: it is the same
+	 *        disease as the count of switch-ons below, and that is why here
+	 *        there is the NAME of the function, which does not drift with the
+	 *        lines), so another keyframe would **never again** arrive on its own.
+	 *    ⇒ Without this line, ONE SINGLE delta skipped for lack of room
+	 *      wrecks the image **forever and in silence**: no error,
+	 *      no line, and the client has no way of asking for the cure.
 	 *
-	 * ⚠ E se il posto manca ancora quando la chiave sara' pronta, non si ricade
-	 *   nel caso vietato da R1.9: il ramo `chiave` qui sopra NON la butta —
-	 *   tiene il debito acceso e riprova al fotogramma dopo, che e' quel che
-	 *   §2.3 prescrive per le chiavi. */
-	chiave_serve(s, "un delta e' stato saltato per mancanza di posto (§2.3), e "
-	                "nei numeri non resta nessun buco");
+	 * ⚠ And if room is still missing when the keyframe is ready, one does not fall
+	 *   back into the case forbidden by R1.9: the `chiave` branch above does NOT
+	 *   throw it away — it keeps the debt on and retries at the next frame, which
+	 *   is what §2.3 prescribes for keyframes. */
+	chiave_serve(s, "a delta was skipped for lack of room (§2.3), and "
+	                "no gap remains in the numbers");
 }
 
-/* ⛔ §5.1 — l'abbandono, e §5.2 vieta di abbandonare una CHIAVE. */
+/* ⛔ §5.1 — the abandonment, and §5.2 forbids abandoning a KEYFRAME. */
 bool rcp_video_abbandona(rcp_sessione *s, const char *perche)
 {
 	if (!s || !s->video_aperto)
 		return false;
 	if (s->video_e_chiave) {
-		/* ⛔ §5.2: «il server NON DEVE abbandonare un fotogramma chiave.
-		 * Abbandonare la cura non e' una cura».  ⚠ E il rifiuto si SCRIVE: un
-		 * divieto che si fa rispettare in silenzio e' indistinguibile da un
-		 * divieto che nessuno ha applicato. */
-		reg(s, "⛔ NON abbandono il fotogramma %u: e' una CHIAVE, e §5.2 lo "
-		       "vieta (motivo chiesto: %s)",
-		    s->video_suo_numero, perche ? perche : "non dichiarato");
+		/* ⛔ §5.2: «the server MUST NOT abandon a keyframe.
+		 * Abandoning the cure is not a cure».  ⚠ And the refusal is WRITTEN: a
+		 * prohibition enforced in silence is indistinguishable from a
+		 * prohibition nobody applied. */
+		reg(s, "⛔ I do NOT abandon frame %u: it is a KEYFRAME, and §5.2 "
+		       "forbids it (reason asked: %s)",
+		    s->video_suo_numero, perche ? perche : "undeclared");
 		return false;
 	}
 	s->g.video_azzera(s->g.ctx, s->video_stream);
 	s->video_aperto = false;
 	s->video_abbandonati++;
-	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
-	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
-	 * dal lato che riceve». */
-	reg(s, "fotogramma %u ABBANDONATO (§5.1) dopo %zu byte su %zu, stream %lld, "
-	       "perche': %s — spediti %u, abbandonati %u",
+	/* ⛔ §5.1: «every abandonment MUST be written to the log: a frame lost in
+	 * silence and one abandoned on purpose look the same from the receiving
+	 * side». */
+	reg(s, "frame %u ABANDONED (§5.1) after %zu bytes of %zu, stream %lld, "
+	       "why: %s — sent %u, abandoned %u",
 	    s->video_suo_numero, s->video_scritti, s->video_da_scrivere,
-	    (long long)s->video_stream, perche ? perche : "non dichiarato",
+	    (long long)s->video_stream, perche ? perche : "undeclared",
 	    s->video_spediti, s->video_abbandonati);
-	/* ⛔ §5.2: «quando il server abbandona un delta, DEVE mandare un
-	 * fotogramma chiave appena puo' — senza aspettare che il client lo
-	 * chieda, perche' il client se ne accorge un giro di rete piu' tardi».
-	 * ⭐ E' l'unica cura che abbiamo: a un delta mancante il decodificatore
-	 * non solleva nessun errore, si limita a produrre immagini via via piu'
-	 * sfasciate. */
-	chiave_serve(s, "un delta e' stato abbandonato (§5.2)");
+	/* ⛔ §5.2: «when the server abandons a delta, it MUST send a
+	 * keyframe as soon as it can — without waiting for the client to
+	 * ask, because the client notices one network round trip later».
+	 * ⭐ It is the only cure we have: at a missing delta the decoder raises
+	 * no error, it just produces images more and more broken. */
+	chiave_serve(s, "a delta was abandoned (§5.2)");
 	return true;
 }
 
-/* ⛔⭐⭐⭐ IL FOTOGRAMMA BUTTATO **PRIMA DEL FILO** — la forma che il ricevente
- *        non vede, e che fino al 23 settembre 2026 NON PAGAVA LA CHIAVE.
+/* ⛔⭐⭐⭐ THE FRAME THROWN AWAY **BEFORE THE WIRE** — the form the receiver
+ *        does not see, and that until 23 Sep 2026 DID NOT PAY THE KEYFRAME.
  *
- * `RCP.md` §5.1 elenca DUE forme osservabili dell'abbandono — lo stream
- * azzerato (A) e il buco nei `numero` (B) — e poi ne nomina una terza che
- * «non e' osservabile affatto», il delta buttato per mancanza di credito
- * (§2.3, causa 4).  ⛔ Di quella terza forma ce n'erano **tre istanze**, e una
- * sola pagava il debito:
+ * `RCP.md` §5.1 lists TWO observable forms of abandonment — the stream
+ * reset (A) and the gap in the `numero`s (B) — and then names a third that
+ * «is not observable at all», the delta thrown away for lack of credit
+ * (§2.3, cause 4).  ⛔ Of that third form there were **three instances**, and
+ * only one paid the debt:
  *
- *   | chi butta                          | numero consumato | debito pagato |
+ *   | who throws away                    | number consumed | debt paid |
  *   |---|---|---|
- *   | §2.3, il credito finito            | no | ✅ `rcp_video_niente_credito()` |
- *   | ⛔ il REGOLATORE DEL RITMO (fase 9) | no | ⛔ **nessuno** |
- *   | ⛔ la TELA CHE NON COMBACIA (§6.2)  | no | ⛔ **nessuno** |
+ *   | §2.3, the credit run out           | no | ✅ `rcp_video_niente_credito()` |
+ *   | ⛔ the RATE REGULATOR (phase 9)     | no | ⛔ **none** |
+ *   | ⛔ the CANVAS THAT DOES NOT MATCH (§6.2) | no | ⛔ **none** |
  *
- * ⭐⭐ E' §1.20 un'altra volta: *«una cura si cerca dovunque valga, non dove e'
- *     stata trovata»*.  La cura di causa 4 fu scritta per il credito, e i due
- *     rami nati dopo — il regolatore della fase 9 e il controllo della tela —
- *     buttano un fotogramma **gia' codificato** nello stesso identico modo
- *     senza che nessuno l'abbia notato.
+ * ⭐⭐ It is §1.20 once more: *«a cure is sought wherever it applies, not where
+ *     it was found»*.  The cure of cause 4 was written for the credit, and the
+ *     two branches born later — the phase 9 regulator and the canvas check —
+ *     throw away an **already encoded** frame in the very same way
+ *     without anyone noticing.
  *
- * ⛔⛔ IL DANNO, E PERCHE' NESSUN CONTATORE LO VEDE — `[M]` 23 settembre 2026,
- *      scatola `rete11-gnome`, scenario `due-inquilini`, 180 s, due giri:
+ * ⛔⛔ THE HARM, AND WHY NO COUNTER SEES IT — `[M]` 23 Sep 2026,
+ *      box `rete11-gnome`, scenario `due-inquilini`, 180 s, two rounds:
  *
  *      | | Firefox (H.264) | Chrome (HEVC) |
  *      |---|---|---|
- *      | fotogrammi spediti | 6938, numerati 1…6938 | 7351, numerati 1…7351 |
- *      | **buchi nella numerazione** | **0** | **0** |
- *      | fotogrammi mai partiti per il ritmo | **27** | **38** |
- *      | CHIAVI spedite in tutta la sessione | **1** | **1** |
- *      | `RICHIEDI_CHIAVE` ricevute | **0** | **0** |
+ *      | frames sent | 6938, numbered 1…6938 | 7351, numbered 1…7351 |
+ *      | **gaps in the numbering** | **0** | **0** |
+ *      | frames never sent because of the rate | **27** | **38** |
+ *      | KEYFRAMES sent in the whole session | **1** | **1** |
+ *      | `RICHIEDI_CHIAVE` received | **0** | **0** |
  *
- *      ⇒ 65 fotogrammi codificati buttati, e il client non poteva accorgersene
- *        in nessun modo: la numerazione che gli arriva e' CONTINUA, perche' il
- *        `numero` nasce in `rcp_video_apri()` e quei fotogrammi non ci
- *        arrivano mai.  ⛔ E il codificatore gira a GOP infinito
- *        (`chiavi_ogni = 0`, `codificatore_di()` in `src/figlio.c`): dopo la
- *        chiave 1 un'altra chiave non arriva **mai piu'** da sola.
- *      ⇒ L'utente vedeva l'immagine A TESSERE — le zone ferme (le icone)
- *        restavano il mosaico sbagliato, quelle in movimento si ridipingevano
- *        e sembravano sane — con **tutti i contatori verdi**.  E' esattamente
- *        quel che §5.2 descrive: *«a un delta mancante il decodificatore non
- *        solleva nessun errore, si limita a produrre immagini via via piu'
- *        sfasciate fino alla chiave successiva»*.
+ *      ⇒ 65 encoded frames thrown away, and the client could not notice
+ *        in any way: the numbering that reaches it is CONTINUOUS, because the
+ *        `numero` is born in `rcp_video_apri()` and those frames never get
+ *        there.  ⛔ And the encoder runs with an infinite GOP
+ *        (`chiavi_ogni = 0`, `codificatore_di()` in `src/figlio.c`): after
+ *        keyframe 1 another keyframe **never again** arrives on its own.
+ *      ⇒ The user saw the image IN TILES — the still areas (the icons)
+ *        stayed the wrong mosaic, the moving ones were repainted
+ *        and looked healthy — with **all counters green**.  It is exactly
+ *        what §5.2 describes: *«at a missing delta the decoder raises no
+ *        error, it just produces images more and more broken until the
+ *        next keyframe»*.
  *
- * ⚠ PERCHE' UNA FUNZIONE NUOVA E NON `rcp_video_abbandonato_a_valle()`: quella
- *   e' la forma **A**, e la sua riga dice «ABBANDONATO NELLA CODA (§5.1,
- *   RESET_STREAM): N byte non sono usciti».  Qui di stream non ne e' mai nato
- *   uno e di byte non ne e' uscito nessuno: usarla scriverebbe nel registro una
- *   forma al posto di un'altra — la forma E8 che `RCP.md` §11.1 (rilievo P7)
- *   esiste per togliere — e farebbe crescere `video_abbandonati`, che il
- *   riquadro di `rcp_video_niente_credito()` qui sopra vieta espressamente
- *   («qui lo stream non e' mai nato, quindi non c'e' niente da azzerare sul
- *   filo e il `numero` non e' stato consumato»).
+ * ⚠ WHY A NEW FUNCTION AND NOT `rcp_video_abbandonato_a_valle()`: that one
+ *   is form **A**, and its line says «ABANDONED IN THE QUEUE (§5.1,
+ *   RESET_STREAM): N bytes did not go out».  Here no stream was ever born
+ *   and no byte went out: using it would write into the log one form in place
+ *   of another — the E8 shape that `RCP.md` §11.1 (finding P7) exists to
+ *   remove — and would make `video_abbandonati` grow, which the box of
+ *   `rcp_video_niente_credito()` above expressly forbids («here the stream
+ *   was never born, so there is nothing to reset on the wire and the `numero`
+ *   has not been consumed»).
  *
- * ⚠ E il debito si accende SEMPRE, anche se quel che si butta era una CHIAVE:
- *   una chiave buttata prima del filo non e' una chiave «abbandonata» ai sensi
- *   di §5.2 — non le e' stato negato niente, semplicemente non poteva partire
- *   con quei numeri (tela sbagliata).  ⛔ Lasciare il debito spento li'
- *   vorrebbe dire nessuna chiave mai piu', che e' il guasto peggiore dei due.
+ * ⚠ And the debt is ALWAYS switched on, even if what is thrown away was a
+ *   KEYFRAME: a keyframe thrown away before the wire is not an «abandoned»
+ *   keyframe in the sense of §5.2 — nothing was denied to it, it simply could
+ *   not leave with those numbers (wrong canvas).  ⛔ Leaving the debt off there
+ *   would mean no keyframe ever again, which is the worse fault of the two.
  *
- * ⭐ E si passa dall'imbuto: `chiave_serve()`.  Il campo `serve_chiave` non si
- *    tocca a mano — vedi il riquadro delle due funzioni, e il controllo
- *    `grep -n 'serve_chiave *=' src/rcp.c` che deve dare DUE righe sole. */
+ * ⭐ And it goes through the funnel: `chiave_serve()`.  The `serve_chiave` field
+ *    is not touched by hand — see the box of the two functions, and the check
+ *    `grep -n 'serve_chiave *=' src/rcp.c` which must give TWO lines only. */
 void rcp_video_scartato_prima_del_filo(rcp_sessione *s, bool chiave,
                                        const char *perche)
 {
 	if (!s)
 		return;
-	/* ⛔ §5.1: «ogni abbandono DEVE essere scritto nel registro: un fotogramma
-	 * perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto
-	 * dal lato che riceve».  ⭐ E QUI VALE DOPPIO, perche' dal lato che riceve
-	 * questo non ha **nessun** aspetto: la riga del registro e' l'unico posto
-	 * al mondo in cui questo fatto esiste.
+	/* ⛔ §5.1: «every abandonment MUST be written to the log: a frame lost in
+	 * silence and one abandoned on purpose look the same from the receiving
+	 * side».  ⭐ AND HERE IT COUNTS DOUBLE, because from the receiving side
+	 * this has **no** look at all: the log line is the only place in the world
+	 * where this fact exists.
 	 *
-	 * ⚠ MA UNA RIGA PER EPISODIO, NON PER FOTOGRAMMA: sotto congestione questo
-	 *   ramo si percorre a 60/s, e sessanta righe al secondo sono il difetto dei
-	 *   30,8 GB di registro — quello che `chiave_intervallo_ms()` e la riga
-	 *   «il ritmo SCENDE» esistono gia' per non rifare.  ⭐ E l'episodio ha un
-	 *   confine NATURALE e non un orologio: finche' il debito e' acceso la cura
-	 *   e' gia' in viaggio e il fatto non e' cambiato; quando si spegne vuol
-	 *   dire che una chiave e' USCITA INTERA (`chiave_pagata()`), e il prossimo
-	 *   scarto e' un fatto nuovo che merita la sua riga.
-	 * ⛔ E IL CONTO NON SI PERDE: quanti fotogrammi siano stati buttati lo
-	 *    sanno gia' i contatori di `webtransport.c` — `video_ritmo_scesi` per il
-	 *    regolatore e `video_saltati` per la tela — e li scrivono la riga
-	 *    «ritmo di …» (una al secondo) e il «conto finale» della sessione.
-	 *    ⇒ Qui la riga porta la CAUSA, che li' non c'e'; il numero sta li', che
-	 *      qui non ci sta. */
+	 * ⚠ BUT ONE LINE PER EPISODE, NOT PER FRAME: under congestion this
+	 *   branch is travelled at 60/s, and sixty lines per second are the defect of
+	 *   the 30.8 GB of log — the one that `chiave_intervallo_ms()` and the line
+	 *   «the rate GOES DOWN» already exist not to redo.  ⭐ And the episode has a
+	 *   NATURAL boundary and not a clock: as long as the debt is on the cure
+	 *   is already travelling and the fact has not changed; when it goes off it
+	 *   means a keyframe has GONE OUT WHOLE (`chiave_pagata()`), and the next
+	 *   discard is a new fact that deserves its own line.
+	 * ⛔ AND THE COUNT IS NOT LOST: how many frames were thrown away is
+	 *    already known by the counters of `webtransport.c` — `video_ritmo_scesi`
+	 *    for the regulator and `video_saltati` for the canvas — and they are
+	 *    written by the «ritmo di …» line (one per second) and by the session's
+	 *    «conto finale».
+	 *    ⇒ Here the line carries the CAUSE, which is not there; the number is
+	 *      there, which does not fit here. */
 	if (!s->serve_chiave)
-		reg(s, "⛔ fotogramma %s BUTTATO PRIMA DEL FILO (la terza forma di §5.1, "
-		       "quella che il ricevente non vede): %s.  ⚠ Nessuno stream aperto, "
-		       "nessun byte uscito, e il `numero` NON e' stato consumato — dopo "
-		       "il %u ne arrivera' uno di seguito, quindi nei numeri non resta "
-		       "nessun buco e il client non puo' chiedere niente.  ⭐ §5.2: il "
-		       "debito della CHIAVE si accende qui, o l'immagine resta sfasciata "
-		       "per sempre.  ⚠ Una riga per EPISODIO di debito: quanti ne siano "
-		       "stati buttati lo dicono `video_ritmo_scesi` e `video_saltati` "
-		       "nella riga «ritmo di …» e nel conto finale",
-		    chiave ? "CHIAVE" : "delta", perche ? perche : "non dichiarato",
+		reg(s, "⛔ %s frame THROWN AWAY BEFORE THE WIRE (the third form of §5.1, "
+		       "the one the receiver does not see): %s.  ⚠ No stream opened, "
+		       "no byte gone out, and the `numero` has NOT been consumed — after "
+		       "%u the next in sequence will arrive, so no gap remains in the "
+		       "numbers and the client cannot ask for anything.  ⭐ §5.2: the "
+		       "KEYFRAME debt is switched on here, or the image stays broken "
+		       "forever.  ⚠ One line per debt EPISODE: how many were "
+		       "thrown away is said by `video_ritmo_scesi` and `video_saltati` "
+		       "in the «ritmo di …» line and in the final count",
+		    chiave ? "KEYFRAME" : "delta", perche ? perche : "undeclared",
 		    s->video_numero);
-	/* ⛔ E IL DEBITO SI ACCENDE SEMPRE, riga o non riga: e' un booleano, costa
-	 *    zero riaccenderlo, e legarlo alla riga vorrebbe dire legare una cura a
-	 *    una decisione di volume del registro — che e' il modo di perdere la
-	 *    cura il giorno in cui qualcuno tocca il fondo. */
-	chiave_serve(s, "un fotogramma e' stato buttato prima del filo, e nei "
-	                "numeri non resta nessun buco (§5.1 terza forma, §5.2)");
+	/* ⛔ AND THE DEBT IS ALWAYS SWITCHED ON, line or no line: it is a boolean, it
+	 *    costs nothing to switch it on again, and tying it to the line would mean
+	 *    tying a cure to a decision about log volume — which is the way to lose
+	 *    the cure the day someone touches the backstop. */
+	chiave_serve(s, "a frame was thrown away before the wire, and no gap "
+	                "remains in the numbers (§5.1 third form, §5.2)");
 }
 
 int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
@@ -4289,9 +4323,9 @@ int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
 	if (!s)
 		return RCP_VIDEO_NIENTE_CANALE;
 
-	/* ⛔ I QUATTRO GANCI O NESSUNO.  Un ospite che sapesse aprire e non
-	 * azzerare non potrebbe onorare §5.1, e se ne accorgerebbe a meta' di un
-	 * fotogramma: qui la cosa si dice prima di aprire qualunque cosa. */
+	/* ⛔ ALL FOUR HOOKS OR NONE.  A host that could open and not
+	 * reset could not honour §5.1, and would notice halfway through a
+	 * frame: here the thing is said before opening anything. */
 	if (!s->g.video_apri || !s->g.video_scrivi || !s->g.video_fin ||
 	    !s->g.video_azzera)
 		return RCP_VIDEO_NIENTE_CANALE;
@@ -4299,120 +4333,120 @@ int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
 	if (s->video_aperto)
 		return RCP_VIDEO_GIA_APERTO;
 
-	/* ⛔ P1 / §2.5 / invariante I3 — «nessuno prima di aver spedito
-	 * `SESSIONE`».  ⚠ E la sessione FINITA vale come «non piu'»: dopo un
-	 * congedo il canale di controllo non c'e' piu', e un fotogramma che
-	 * partisse adesso arriverebbe a nessuno. */
+	/* ⛔ P1 / §2.5 / invariant I3 — «none before having sent
+	 * `SESSIONE`».  ⚠ And the FINISHED session counts as «no longer»: after a
+	 * farewell the control channel is no longer there, and a frame that
+	 * left now would reach nobody. */
 	if (!s->sessione_spedita || s->stato == S_FINITA) {
-		reg(s, "⛔ NIENTE VIDEO: `SESSIONE` non e' stata spedita (stato %s) — "
-		       "§2.5 vieta di aprire uno stream video prima, ed e' "
-		       "l'invariante I3 sul filo",
+		reg(s, "⛔ NO VIDEO: `SESSIONE` has not been sent (state %s) — "
+		       "§2.5 forbids opening a video stream before, and it is "
+		       "invariant I3 on the wire",
 		    NOMI_STATO[s->stato]);
 		return RCP_VIDEO_PRIMA_DI_SESSIONE;
 	}
 
-	/* ⛔ P6 e P9 / §5.2 — il primo dopo `SESSIONE`, e il primo alla misura
-	 * nuova dopo un `TELA`, DEVONO essere una chiave.  ⚠ Qui si RIFIUTA
-	 * invece di promuovere il delta a chiave: promuoverlo sarebbe mentire sul
-	 * campo `tipo`, e il fotogramma non diventerebbe decodificabile da solo.
-	 * Chi codifica ha la risposta giusta — `rcp_video_serve_chiave()` — e la
-	 * puo' chiedere PRIMA di codificare. */
+	/* ⛔ P6 and P9 / §5.2 — the first after `SESSIONE`, and the first at the new
+	 * size after a `TELA`, MUST be a keyframe.  ⚠ Here one REFUSES
+	 * instead of promoting the delta to keyframe: promoting it would be lying
+	 * about the `tipo` field, and the frame would not become decodable on its own.
+	 * The encoder has the right answer — `rcp_video_serve_chiave()` — and can
+	 * ask it BEFORE encoding. */
 	if (!chiave && s->serve_chiave) {
-		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: e' un delta e §5.2 vuole una CHIAVE "
-		       "(%s).  ⚠ Chiedere `rcp_video_serve_chiave()` prima di "
-		       "codificare costa zero; qui il fotogramma si butta",
+		reg(s, "⛔ FRAME NOT SENT: it is a delta and §5.2 wants a KEYFRAME "
+		       "(%s).  ⚠ Asking `rcp_video_serve_chiave()` before "
+		       "encoding costs nothing; here the frame is thrown away",
 		    s->serve_chiave_perche ? s->serve_chiave_perche : "§5.2");
 		return RCP_VIDEO_SERVE_UNA_CHIAVE;
 	}
 
-	/* ⛔ §6.2 — IL TETTO VINCOLA PRIMA DI TUTTO CHI SPEDISCE, e per questo il
-	 * controllo sta QUI: prima di aprire lo stream, prima che parta un byte.
-	 * «Se la codifica ne producesse uno piu' grande, DEVE ricodificarlo a
-	 * qualita' inferiore e scriverlo nel registro — mai spedirlo».
+	/* ⛔ §6.2 — THE CEILING BINDS THE SENDER BEFORE ANYTHING ELSE, and that is
+	 * why the check sits HERE: before opening the stream, before a byte leaves.
+	 * «If encoding produced a larger one, it MUST re-encode it at lower
+	 * quality and write it to the log — never send it».
 	 *
-	 * ⚠ E il confronto e' `>` e non `>=`: 16 MiB esatti sono legali, il tetto
-	 *   e' un massimo.  La differenza si vede su un caso solo, ed e' il caso
-	 *   che i banchi mettono apposta. */
+	 * ⚠ And the comparison is `>` and not `>=`: exactly 16 MiB is legal, the
+	 *   ceiling is a maximum.  The difference shows on one case only, and it is
+	 *   the case the benches put there on purpose. */
 	if (lunghezza > (size_t)(V_TETTO - V_INTESTAZIONE)) {
-		reg(s, "⛔ FOTOGRAMMA NON SPEDITO: %zu byte di dati + %d di "
-		       "intestazione superano i %u del tetto di §6.2 — si RICODIFICA a "
-		       "qualita' inferiore, non si spedisce",
+		reg(s, "⛔ FRAME NOT SENT: %zu data bytes + %d of "
+		       "header exceed the %u of the §6.2 ceiling — it is RE-ENCODED at "
+		       "lower quality, not sent",
 		    lunghezza, V_INTESTAZIONE, V_TETTO);
 		return RCP_VIDEO_TROPPO_GRANDE;
 	}
 
 	uint8_t codec = rcp_codec_negoziato(s);
 	if (codec == 0) {
-		/* §6.2: «DEVE essere quello negoziato in §4.3».  Se non c'e' una
-		 * negoziazione non c'e' un valore lecito da scrivere, e inventarne uno
-		 * sarebbe la forma E2 — due comportamenti sotto la stessa etichetta. */
-		reg(s, "⛔ NIENTE VIDEO: nessun codec negoziato in §4.3 (codec=«%s»), e "
-		       "§6.2 vuole quello negoziato",
+		/* §6.2: «MUST be the one negotiated in §4.3».  If there is no
+		 * negotiation there is no legitimate value to write, and inventing one
+		 * would be the E2 shape — two behaviours under the same label. */
+		reg(s, "⛔ NO VIDEO: no codec negotiated in §4.3 (codec=«%s»), and "
+		       "§6.2 wants the negotiated one",
 		    s->codec);
 		return RCP_VIDEO_NIENTE_CANALE;
 	}
 
 	int64_t stream = 0;
-	/* ⛔ P3 / §2.5 — «solo su uno stream unidirezionale aperto dal server: un
-	 * `0x03` sul canale di controllo e' `ERRORE_PROTOCOLLO`».  ⭐ Il canale di
-	 * controllo in questo modulo si scrive con `s->g.manda`, e da qui in giu'
-	 * quella funzione non compare: e' l'unico modo di rendere la regola
-	 * impossibile da violare invece che facile da rispettare. */
+	/* ⛔ P3 / §2.5 — «only on a unidirectional stream opened by the server: a
+	 * `0x03` on the control channel is `ERRORE_PROTOCOLLO`».  ⭐ The control
+	 * channel in this module is written with `s->g.manda`, and from here down
+	 * that function does not appear: it is the only way of making the rule
+	 * impossible to violate instead of easy to respect. */
 	uint64_t restano = 0;
 	if (!s->g.video_apri(s->g.ctx, &stream, &restano)) {
-		/* ⛔ §2.3 — e i due casi NON sono lo stesso caso: un delta si butta,
-		 * una chiave si aspetta.  La riga la scrive una funzione sola, perche'
-		 * due righe scritte in due posti divergono. */
+		/* ⛔ §2.3 — and the two cases are NOT the same case: a delta is thrown
+		 * away, a keyframe waits.  The line is written by one function only,
+		 * because two lines written in two places diverge. */
 		rcp_video_niente_credito(s, chiave, restano);
 		return RCP_VIDEO_STREAM_NON_APERTO;
 	}
 
 	uint32_t num = numero_prossimo(s->video_numero);
 
-	/* ⛔ §6.2 — I 28 BYTE, IN QUEST'ORDINE E SENZA UN BYTE DI RIEMPIMENTO.
+	/* ⛔ §6.2 — THE 28 BYTES, IN THIS ORDER AND WITHOUT A BYTE OF PADDING.
 	 *
 	 *   0  tipo u16 · 2 codec u16 · 4 largh. u32 · 8 altezza u32 ·
 	 *   12 numero u32 · 16 istante u64 · 24 input u32 · 28 dati
 	 *
-	 * ⚠ Il disegno diceva «… 24 │ 32» fino al 9 agosto 2026: quattro byte di
-	 *   riempimento mai dichiarati, che due implementazioni potevano indovinare
-	 *   uguali senza che nessuno se ne accorgesse.  ⛔ `scrittore` scrive byte
-	 *   per byte in ordine di rete apposta: una `struct` C con `memcpy` qui
-	 *   rimetterebbe quel difetto, e nemmeno un banco lo vedrebbe finche' i due
-	 *   lati non girassero su due architetture diverse. */
+	 * ⚠ The drawing said «… 24 │ 32» until 9 Aug 2026: four bytes of
+	 *   padding never declared, which two implementations could guess
+	 *   the same without anyone noticing.  ⛔ `scrittore` writes byte
+	 *   by byte in network order on purpose: a C `struct` with `memcpy` here
+	 *   would bring that defect back, and not even a bench would see it until the
+	 *   two sides ran on two different architectures. */
 	uint8_t testa[V_INTESTAZIONE];
 	scrittore w = {testa, sizeof testa, 0, false};
 	sc_u16(&w, chiave ? V_CHIAVE : V_DELTA);
 	sc_u16(&w, codec);
-	/* ⛔ P5 / §6.2: la tela IN VIGORE — quella di `SESSIONE` (§4.5) oppure
-	 * l'ultima concessa da `TELA` (§7.1).  Non un parametro. */
+	/* ⛔ P5 / §6.2: the canvas IN FORCE — the one of `SESSIONE` (§4.5) or
+	 * the last one granted by `TELA` (§7.1).  Not a parameter. */
 	sc_u32(&w, s->tela_l);
 	sc_u32(&w, s->tela_a);
 	sc_u32(&w, num);
-	/* ⚠ §6.2: microsecondi dell'orologio MONOTONO del server alla cattura.
-	 *   Non e' un'ora, e il client NON DEVE confrontarlo col proprio. */
+	/* ⚠ §6.2: microseconds of the server's MONOTONIC clock at capture.
+	 *   It is not a time of day, and the client MUST NOT compare it with its own. */
 	sc_u64(&w, istante_us);
-	/* §6.2, §7.3: l'ultimo input iniettato prima della cattura, 0 se nessuno. */
+	/* §6.2, §7.3: the last input injected before capture, 0 if none. */
 	sc_u32(&w, input);
 
-	/* ⛔ P4 / §6.2 — «uno stream chiuso con FIN prima dei 28 byte
-	 * dell'intestazione e' `ERRORE_PROTOCOLLO`: non e' un fotogramma corto, e'
-	 * una lunghezza che non torna».
+	/* ⛔ P4 / §6.2 — «a stream closed with FIN before the 28 bytes
+	 * of the header is `ERRORE_PROTOCOLLO`: it is not a short frame, it is
+	 * a length that does not add up».
 	 *
-	 * ⭐ Da cui la forma di queste sei righe: i 28 byte escono in **una sola**
-	 *    scrittura, e se non escono si AZZERA.  Uno stream azzerato a zero
-	 *    byte e' un fotogramma abbandonato — §5.1, legale, la sessione regge —
-	 *    mentre un FIN a zero byte sarebbe `ERRORE_PROTOCOLLO` e farebbe
-	 *    cadere una sessione in cui a sbagliare siamo stati noi.
-	 *    ⛔ Le due chiusure NON sono intercambiabili, ed e' tutto §6.2. */
+	 * ⭐ Hence the form of these six lines: the 28 bytes go out in **a single**
+	 *    write, and if they do not, it is RESET.  A stream reset at zero
+	 *    bytes is an abandoned frame — §5.1, legal, the session holds —
+	 *    while a FIN at zero bytes would be `ERRORE_PROTOCOLLO` and would bring
+	 *    down a session in which the one at fault was us.
+	 *    ⛔ The two closures are NOT interchangeable, and that is all of §6.2. */
 	if (w.pieno || !s->g.video_scrivi(s->g.ctx, stream, testa, sizeof testa)) {
 		s->g.video_azzera(s->g.ctx, stream);
-		reg(s, "⛔ i 28 byte dell'intestazione del fotogramma %u non sono "
-		       "usciti: stream %lld AZZERATO (§6.2) — ⚠ mai chiuso con FIN, o "
-		       "sarebbe stato «una lunghezza che non torna»",
+		reg(s, "⛔ the 28 header bytes of frame %u did not "
+		       "go out: stream %lld RESET (§6.2) — ⚠ never closed with FIN, or "
+		       "it would have been «a length that does not add up»",
 		    num, (long long)stream);
-		/* Il numero e' stato consumato: §6.2 dice che il contatore cresce
-		 * «compresi quelli che poi abbandona», e un buco «significa qualcosa». */
+		/* The number has been consumed: §6.2 says the counter grows
+		 * «including those it then abandons», and a gap «means something». */
 		s->video_numero = num;
 		return RCP_VIDEO_ROTTO_A_META;
 	}
@@ -4424,11 +4458,11 @@ int rcp_video_apri(rcp_sessione *s, bool chiave, size_t lunghezza,
 	s->video_da_scrivere = lunghezza;
 	s->video_scritti = 0;
 	s->video_numero = num;
-	/* ⛔ L'ora si tiene DA QUI, e non si va a chiederla al campo `istante`:
-	 * `istante` e' l'orologio della CATTURA in microsecondi (§6.2) e `ora_ms`
-	 * quello della sessione in millisecondi.  Che siano lo stesso orologio e'
-	 * probabile e non e' scritto da nessuna parte — e derivarne uno dall'altro
-	 * sarebbe indicizzare i 200 ms di §5.2 su una grandezza sostitutiva
+	/* ⛔ The time is kept FROM HERE, and one does not go and ask the `istante`
+	 * field for it: `istante` is the CAPTURE clock in microseconds (§6.2) and
+	 * `ora_ms` the session clock in milliseconds.  That they are the same clock
+	 * is likely and is written nowhere — and deriving one from the other
+	 * would be indexing the 200 ms of §5.2 on a proxy quantity
 	 * (`LEZIONI.md` §1.13). */
 	s->video_aperto_ms = ora_ms;
 	return RCP_VIDEO_SPEDITO;
@@ -4440,30 +4474,30 @@ int rcp_video_pezzo(rcp_sessione *s, const uint8_t *dati, size_t len)
 		return RCP_VIDEO_STREAM_NON_APERTO;
 	if (len == 0)
 		return RCP_VIDEO_SPEDITO;
-	/* ⛔ Piu' byte di quanti se ne erano dichiarati vorrebbe dire che il tetto
-	 * di §6.2 e' stato controllato su un numero e il filo ne porta un altro:
-	 * il controllo diventerebbe una formalita'.  Si azzera. */
+	/* ⛔ More bytes than were declared would mean that the ceiling of §6.2
+	 * was checked on one number and the wire carries another:
+	 * the check would become a formality.  It is reset. */
 	if (len > s->video_da_scrivere - s->video_scritti) {
-		reg(s, "⛔ il fotogramma %u vuole scrivere %zu byte oltre i %zu "
-		       "dichiarati: stream AZZERATO — il tetto di §6.2 era stato "
-		       "controllato sui byte dichiarati",
+		reg(s, "⛔ frame %u wants to write %zu bytes beyond the %zu "
+		       "declared: stream RESET — the ceiling of §6.2 had been "
+		       "checked on the declared bytes",
 		    s->video_suo_numero, len, s->video_da_scrivere);
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
 		s->video_abbandonati++;
-		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
+		chiave_serve(s, "a frame broke halfway (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	if (!s->g.video_scrivi(s->g.ctx, s->video_stream, dati, len)) {
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
 		s->video_abbandonati++;
-		reg(s, "⛔ il fotogramma %u si e' rotto a %zu byte su %zu: stream "
-		       "AZZERATO (§6.2) — il client lo butta e lo tratta come un buco, "
-		       "che e' vero; con un FIN lo avrebbe consegnato al "
-		       "decodificatore, che e' falso",
+		reg(s, "⛔ frame %u broke at %zu bytes of %zu: stream "
+		       "RESET (§6.2) — the client throws it away and treats it as a gap, "
+		       "which is true; with a FIN it would have handed it to the "
+		       "decoder, which is false",
 		    s->video_suo_numero, s->video_scritti, s->video_da_scrivere);
-		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
+		chiave_serve(s, "a frame broke halfway (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	s->video_scritti += len;
@@ -4474,43 +4508,43 @@ int rcp_video_finisci(rcp_sessione *s)
 {
 	if (!s || !s->video_aperto)
 		return RCP_VIDEO_STREAM_NON_APERTO;
-	/* ⛔ §6.2 — «uno stream chiuso con FIN porta un fotogramma COMPLETO».  Il
-	 * FIN e' un'affermazione, non un modo di chiudere: se mancano byte si
-	 * azzera, e il client trattera' il fotogramma come un buco invece di
-	 * consegnare mezza immagine al decodificatore (rilievo R1.7, 9 agosto
-	 * 2026 — «un fotogramma abbandonato e uno completo avevano lo stesso
-	 * aspetto», la forma d'errore E8). */
+	/* ⛔ §6.2 — «a stream closed with FIN carries a COMPLETE frame».  The
+	 * FIN is a statement, not a way of closing: if bytes are missing it is
+	 * reset, and the client will treat the frame as a gap instead of
+	 * handing half an image to the decoder (finding R1.7, 9 Aug
+	 * 2026 — «an abandoned frame and a complete one looked the
+	 * same», the E8 error shape). */
 	if (s->video_scritti != s->video_da_scrivere) {
-		reg(s, "⛔ il fotogramma %u ha %zu byte sui %zu dichiarati: stream "
-		       "AZZERATO invece che chiuso con FIN — FIN vuol dire COMPLETO "
+		reg(s, "⛔ frame %u has %zu bytes of the %zu declared: stream "
+		       "RESET instead of closed with FIN — FIN means COMPLETE "
 		       "(§6.2)",
 		    s->video_suo_numero, s->video_scritti, s->video_da_scrivere);
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
 		s->video_abbandonati++;
-		chiave_serve(s, "un fotogramma si e' rotto a meta' (§5.2)");
+		chiave_serve(s, "a frame broke halfway (§5.2)");
 		return RCP_VIDEO_ROTTO_A_META;
 	}
 	s->g.video_fin(s->g.ctx, s->video_stream);
 	s->video_aperto = false;
 	s->video_spediti++;
 	if (s->video_e_chiave) {
-		/* ⛔ §5.2: il debito si paga UNA volta.  ⚠ E si spegne QUI e non
-		 * all'apertura: un fotogramma aperto e poi rotto non ha pagato niente,
-		 * e spegnere il debito li' avrebbe lasciato il client senza chiave con
-		 * il server convinto di avergliela mandata. */
+		/* ⛔ §5.2: the debt is paid ONCE.  ⚠ And it is switched off HERE and not
+		 * at opening: a frame opened and then broken has paid nothing,
+		 * and switching off the debt there would have left the client without a
+		 * keyframe with the server convinced it had sent one. */
 		chiave_pagata(s);
 		s->mai_spedita_una_chiave = false;
-		/* ⛔ §5.2 / §3 eccezione 5 — l'orologio dei 200 ms parte da QUI, cioe'
-		 * dalla chiave SPEDITA.  ⚠ E «spedita» vuol dire «i byte sono usciti
-		 * da noi», non «e' arrivata»: vedi il rilievo P17 nel rapporto, che
-		 * dichiara la differenza invece di correggerla di testa propria. */
+		/* ⛔ §5.2 / §3 exception 5 — the 200 ms clock starts from HERE, that is
+		 * from the keyframe SENT.  ⚠ And «sent» means «the bytes left
+		 * us», not «it arrived»: see finding P17 in the report, which
+		 * declares the difference instead of correcting it on its own initiative. */
 		s->ultima_chiave_ms = s->video_aperto_ms;
 		s->ultima_chiave_numero = s->video_suo_numero;
 	}
-	reg(s, "fotogramma %u SPEDITO: %s, codec %u, %ux%u, %zu byte di dati, "
-	       "stream %lld, FIN (§6.2: completo) — spediti %u, abbandonati %u",
-	    s->video_suo_numero, s->video_e_chiave ? "CHIAVE 0x0301" : "delta 0x0302",
+	reg(s, "frame %u SENT: %s, codec %u, %ux%u, %zu data bytes, "
+	       "stream %lld, FIN (§6.2: complete) — sent %u, abandoned %u",
+	    s->video_suo_numero, s->video_e_chiave ? "KEYFRAME 0x0301" : "delta 0x0302",
 	    rcp_codec_negoziato(s), s->tela_l, s->tela_a, s->video_scritti,
 	    (long long)s->video_stream, s->video_spediti, s->video_abbandonati);
 	return RCP_VIDEO_SPEDITO;
@@ -4532,94 +4566,94 @@ int rcp_video_spedisci(rcp_sessione *s, bool chiave, const uint8_t *dati,
 }
 
 /* ========================================================================= */
-/* ⭐ IL CANALE DI INPUT — `RCP.md` §2.5, §3, §3.1, §6.0, §6.1, §7.1, §7.3   */
+/* ⭐ THE INPUT CHANNEL — `RCP.md` §2.5, §3, §3.1, §6.0, §6.1, §7.1, §7.3    */
 /*                                                                           */
-/* ⛔ QUEL CHE QUESTA SEZIONE NON SA, ED E' LA META' DEL SUO MESTIERE:        */
-/*    non sa che cosa sia `libei`, non sa che cosa sia una disposizione di    */
-/*    tastiera, non sa che cosa sia un dispositivo.  Legge byte, li giudica   */
-/*    contro §7.3 riga per riga, e chiama uno dei cinque ganci.  L'altra      */
-/*    meta' — quella che tocca il desktop vero — sta in `src/input.c`.        */
+/* ⛔ WHAT THIS SECTION DOES NOT KNOW, AND IT IS HALF ITS JOB:                */
+/*    it does not know what `libei` is, it does not know what a keyboard      */
+/*    layout is, it does not know what a device is.  It reads bytes, judges   */
+/*    them against §7.3 line by line, and calls one of the five hooks.  The   */
+/*    other half — the one that touches the real desktop — is in `src/input.c`. */
 /*                                                                           */
-/* ⛔ E LA REGOLA DI RIGORE (§3) VALE QUI COME ALTROVE: un tipo che non si    */
-/*    conosce, una lunghezza che non torna, un campo fuori intervallo, un     */
-/*    messaggio nello stato sbagliato ⇒ `ERRORE_PROTOCOLLO`, col motivo, per  */
-/*    tutt'e due le strade di §3.1.  ⚠ Con UNA eccezione dichiarata, ed e' la */
-/*    terza dell'elenco di §3: il secondo di grazia di §7.1.                  */
+/* ⛔ AND THE RIGOR RULE (§3) APPLIES HERE AS ELSEWHERE: an unknown type, a   */
+/*    length that does not add up, a field out of range, a message in the     */
+/*    wrong state ⇒ `ERRORE_PROTOCOLLO`, with the reason, by both roads of    */
+/*    §3.1.  ⚠ With ONE declared exception, and it is the third of the list   */
+/*    of §3: the second of grace of §7.1.                                     */
 
-/* ⛔⭐ §7.3 — «Al distacco si rilascia tutto», e le quattro strade che
- *     finiscono una connessione passano tutte di qui.
+/* ⛔⭐ §7.3 — «On detach everything is released», and the four roads that
+ *     end a connection all pass through here.
  *
- * ⚠ E il ripiego si DICHIARA (`CODER.md` §4.2): se il gancio non c'e', questa
- *   funzione scrive che non c'e' invece di tacere — perche' «nessun tasto era
- *   premuto» e «non ho potuto rilasciare niente» hanno lo stesso aspetto, ed e'
- *   `LEZIONI.md` §1.9 regola 1 sul campo in cui costa di piu': il sintomo di
- *   tutt'e due e' un desktop che al riattacco non risponde. */
+ * ⚠ And the fallback is DECLARED (`CODER.md` §4.2): if the hook is not there,
+ *   this function writes that it is not there instead of keeping quiet —
+ *   because «no key was pressed» and «I could not release anything» look the
+ *   same, and it is `LEZIONI.md` §1.9 rule 1 in the field where it costs most:
+ *   the symptom of both is a desktop that does not respond on reattach. */
 static void rilascia_al_distacco(rcp_sessione *s, const char *perche)
 {
 	if (!s || s->inp_rilasciato)
 		return;
 	s->inp_rilasciato = true;
 	if (!s->g.input_rilascia_tutto) {
-		/* ⛔ Si scrive SOLO se questo canale ha visto passare qualcosa: su una
-		 * sessione senza input — i banchi in-processo, l'innesto di ngtcp2 —
-		 * la riga sarebbe rumore a ogni congedo, e il rumore fa smettere di
-		 * leggere il registro proprio dove serve. */
+		/* ⛔ It is written ONLY if this channel has seen something pass: on a
+		 * session without input — the in-process benches, the ngtcp2 harness —
+		 * the line would be noise at every farewell, and noise makes people stop
+		 * reading the log precisely where it is needed. */
 		if (s->inp_arrivati)
-			reg(s, "⚠ RIPIEGO DICHIARATO (§7.3): la connessione finisce (%s) e "
-			       "questo server NON ha il gancio del rilascio — %u input erano "
-			       "arrivati e %u iniettati.  Se qualcosa e' rimasto premuto, "
-			       "resta premuto",
+			reg(s, "⚠ DECLARED FALLBACK (§7.3): the connection ends (%s) and "
+			       "this server does NOT have the release hook — %u inputs had "
+			       "arrived and %u injected.  If something was left pressed, "
+			       "it stays pressed",
 			    perche, s->inp_arrivati, s->inp_iniettati);
 		return;
 	}
 	int quanti = s->g.input_rilascia_tutto(s->g.ctx);
-	/* ⛔⛔⭐ TRE ESITI, TRE RIGHE DIVERSE — 16 agosto 2026, e prima ce n'era
-	 *      una sola che stampava `quanti` come se fosse sempre un conto.
+	/* ⛔⛔⭐ THREE OUTCOMES, THREE DIFFERENT LINES — 16 Aug 2026, and before there
+	 *      was only one that printed `quanti` as if it were always a count.
 	 *
-	 *      Nel prodotto vero non lo e' MAI: chi tiene la mappa dei tasti
-	 *      premuti e' il figlio, e la sua risposta non torna indietro.  ⇒ La
-	 *      riga diceva «0 erano premuti» a ogni distacco, compresi i quattro
-	 *      in cui il figlio, subito sotto, scriveva `2`.
+	 *      In the real product it NEVER is: the one holding the map of pressed
+	 *      keys is the child, and its answer does not come back.  ⇒ The
+	 *      line said «0 were pressed» at every detach, including the four
+	 *      in which the child, just below, wrote `2`.
 	 *
-	 *      ⚠ Un numero inventato e' peggio di nessun numero, e qui era il
-	 *        peggiore possibile: uno ZERO su una regola il cui unico modo di
-	 *        fallire e' non rilasciare niente.  `LEZIONI.md` §1.9 — «vuoto» e
-	 *        «giusto» con la stessa faccia. */
+	 *      ⚠ An invented number is worse than no number, and here it was the
+	 *        worst possible: a ZERO on a rule whose only way of failing is
+	 *        releasing nothing.  `LEZIONI.md` §1.9 — «empty» and
+	 *        «right» with the same face. */
 	if (quanti == RCP_RILASCIO_IMPOSSIBILE) {
-		reg(s, "⛔ §7.3 — RILASCIO AL DISTACCO (%s): NON si e' potuto chiedere "
-		       "il rilascio al palco.  ⚠ Se qualcosa era premuto, RESTA "
-		       "premuto: al riattacco il desktop puo' essere inservibile, e "
-		       "questa e' la riga che lo collega",
+		reg(s, "⛔ §7.3 — RELEASE ON DETACH (%s): the release could NOT be "
+		       "requested from the stage.  ⚠ If something was pressed, it STAYS "
+		       "pressed: on reattach the desktop may be unusable, and "
+		       "this is the line that connects the two",
 		    perche);
 		return;
 	}
 	if (quanti == RCP_RILASCIO_SENZA_CONTO) {
-		reg(s, "⭐ §7.3 — RILASCIO AL DISTACCO (%s): richiesta MANDATA al palco. "
-		       " ⚠ Questa riga NON porta il numero, perche' chi lo sa e' il "
-		       "figlio: il conto vero e' la riga «rilascio al distacco: N fra "
-		       "tasti e pulsanti», qualche millisecondo piu' sotto",
+		reg(s, "⭐ §7.3 — RELEASE ON DETACH (%s): request SENT to the stage. "
+		       " ⚠ This line does NOT carry the number, because the one who knows "
+		       "it is the child: the real count is the line «rilascio al distacco: "
+		       "N fra tasti e pulsanti», a few milliseconds further down",
 		    perche);
 		return;
 	}
-	reg(s, "⭐ §7.3 — RILASCIO AL DISTACCO (%s): %d fra tasti e pulsanti erano "
-	       "premuti e sono stati rilasciati.  ⚠ Zero e' un esito normale e NON "
-	       "e' un fallimento: vuol dire che non c'era niente giu'",
+	reg(s, "⭐ §7.3 — RELEASE ON DETACH (%s): %d keys and buttons were "
+	       "pressed and have been released.  ⚠ Zero is a normal outcome and is NOT "
+	       "a failure: it means nothing was down",
 	    perche, quanti);
 }
 
-/* ⛔ §3.1 applicata a questo canale: si scrive CHE COSA — il tipo, il campo, il
- * valore, lo stato — e poi si congeda per tutt'e due le strade.  ⭐ Il `CONGEDO`
- * esce sul canale di CONTROLLO anche quando la violazione e' arrivata sullo
- * stream di input, ed e' §3.1 punto 2 alla lettera: «sul canale di controllo,
- * **se il canale di controllo e' ancora utilizzabile**» — e qui di solito lo e'. */
+/* ⛔ §3.1 applied to this channel: one writes WHAT — the type, the field, the
+ * value, the state — and then sends the farewell by both roads.  ⭐ The `CONGEDO`
+ * goes out on the CONTROL channel even when the violation arrived on the
+ * input stream, and it is §3.1 point 2 to the letter: «on the control channel,
+ * **if the control channel is still usable**» — and here it usually is. */
 static void viola_input(rcp_sessione *s, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
-/* ⭐ I MODIFICATORI, gli unici tasti il cui codice va nel registro (fase 16
- *    §12): Ctrl 29/97, Maiusc 42/54, Alt 56/100, BlocMaiusc 58, Meta 125/126.
- * ⚠ Gemello di `registro_tasto_dicibile()` (`src/registro.c`): questo modulo
- *   si monta anche senza il registro del server (`banchi/rcp/`), e quindi la
- *   lista la porta con se'. */
+/* ⭐ THE MODIFIERS, the only keys whose code goes into the log (phase 16
+ *    §12): Ctrl 29/97, Shift 42/54, Alt 56/100, CapsLock 58, Meta 125/126.
+ * ⚠ Twin of `registro_tasto_dicibile()` (`src/registro.c`): this module
+ *   is also mounted without the server's log (`banchi/rcp/`), and so it
+ *   carries the list with it. */
 static bool tasto_dicibile(unsigned c)
 {
 	switch (c) {
@@ -4640,9 +4674,9 @@ static void viola_input(rcp_sessione *s, const char *fmt, ...)
 	congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 }
 
-/* Quanti byte di corpo prevede questo tipo di §7.3.  ⛔ `0` = tipo che questo
- * canale non conosce, e allora e' `ERRORE_PROTOCOLLO` (§3): nessuno dei cinque
- * ha corpo vuoto, quindi lo zero non e' ambiguo. */
+/* How many body bytes this type of §7.3 expects.  ⛔ `0` = a type this
+ * channel does not know, and then it is `ERRORE_PROTOCOLLO` (§3): none of the five
+ * has an empty body, so zero is not ambiguous. */
 static uint32_t misura_input(uint16_t tipo)
 {
 	switch (tipo) {
@@ -4679,87 +4713,87 @@ static const char *nome_input(uint16_t tipo)
 	}
 }
 
-/* ⛔ I cinque ganci o nessuno — la stessa regola dei quattro del video, e per la
- * stessa ragione: un canale che sapesse muovere il puntatore e non sapesse
- * rilasciare un pulsante lascerebbe il desktop peggio di come l'ha trovato. */
+/* ⛔ All five hooks or none — the same rule as the four of video, and for the
+ * same reason: a channel that could move the pointer and could not
+ * release a button would leave the desktop worse than it found it. */
 static bool ha_canale_input(const rcp_sessione *s)
 {
 	return s->g.input_puntatore && s->g.input_pulsante && s->g.input_rotella &&
 	       s->g.input_lettera && s->g.input_posizione;
 }
 
-/* ⛔⭐ IL SEGNAPUNTI DELL'INIEZIONE — e i tre esiti sono TRE, non due.
+/* ⛔⭐ THE INJECTION SCOREKEEPER — and the outcomes are THREE, not two.
  *
- *   0  consegnato al compositore  ⇒ l'`id` avanza nel campo `input` di §6.2
- *  -1  non consegnato             ⇒ NON avanza, e si scrive
- *   1  (solo `LETTERA`) il carattere non e' producibile con la disposizione
- *      della sessione ⇒ NON avanza, e §7.3 OBBLIGA a scriverlo: «il server DEVE
- *      scriverlo nel registro e NON DEVE mandare un carattere diverso ne'
- *      tacere».
+ *   0  delivered to the compositor  ⇒ the `id` advances in the `input` field of §6.2
+ *  -1  not delivered                ⇒ it does NOT advance, and it is written
+ *   1  (`LETTERA` only) the character cannot be produced with the session's
+ *      layout ⇒ it does NOT advance, and §7.3 REQUIRES writing it: «the server MUST
+ *      write it to the log and MUST NOT send a different character nor
+ *      keep quiet».
  *
- * ⛔ Nessuno dei tre e' una violazione del CLIENT: il messaggio era valido, e
- *    chiudere la sessione perche' il nostro compositore ha detto di no
- *    punirebbe chi non ha sbagliato niente — «una sessione brutta vale piu' di
- *    una sessione chiusa» (`CODER.md` §1). */
+ * ⛔ None of the three is a violation by the CLIENT: the message was valid, and
+ *    closing the session because our compositor said no
+ *    would punish whoever did nothing wrong — «an ugly session is worth more than
+ *    a closed session» (`CODER.md` §1). */
 static void segna_iniezione(rcp_sessione *s, uint16_t tipo, uint32_t id,
                             int esito, const char *cosa)
 {
 	if (esito == 0) {
 		s->inp_iniettati++;
-		/* ⛔ §6.2: e' QUI che il numero che tornera' nei fotogrammi avanza —
-		 * nell'unico punto in cui «iniettato» e' un fatto e non una speranza. */
+		/* ⛔ §6.2: it is HERE that the number that will come back in the frames
+		 * advances — at the only point where «injected» is a fact and not a hope. */
 		s->inp_ultimo_iniettato = id;
 		return;
 	}
 	s->inp_non_iniettati++;
 	if (esito == 1 && tipo == T_LETTERA)
-		reg(s, "⛔ §7.3: la LETTERA %s (input id=%u) NON e' producibile con la "
-		       "disposizione di questa sessione.  ⚠ Non si manda un carattere "
-		       "diverso e non si tace: la riga e' questa, e il campo `input` dei "
-		       "fotogrammi resta a %u perche' non e' stato iniettato niente",
+		reg(s, "⛔ §7.3: the LETTERA %s (input id=%u) CANNOT be produced with the "
+		       "layout of this session.  ⚠ No different character is sent "
+		       "and one does not keep quiet: this is the line, and the `input` field "
+		       "of the frames stays at %u because nothing was injected",
 		    cosa, id, s->inp_ultimo_iniettato);
 	else
-		reg(s, "⚠ %s (input id=%u, %s) NON e' stato consegnato al compositore "
-		       "(esito %d): la sessione REGGE — il client non ha sbagliato "
-		       "niente — e il campo `input` di §6.2 resta a %u",
+		reg(s, "⚠ %s (input id=%u, %s) was NOT delivered to the compositor "
+		       "(outcome %d): the session HOLDS — the client did nothing "
+		       "wrong — and the `input` field of §6.2 stays at %u",
 		    nome_input(tipo), id, cosa, esito, s->inp_ultimo_iniettato);
 }
 
-/* ⛔ §7.3 — LE COORDINATE, e questa e' la funzione che ha gia' un rilievo
- *    (R1.16) scritto contro di se'.
+/* ⛔ §7.3 — THE COORDINATES, and this is the function that already has a finding
+ *    (R1.16) written against it.
  *
- *   «`0 ≤ x < tela_larghezza`, `0 ≤ y < tela_altezza`.  Su una tela 1920×1080
- *    l'angolo in basso a destra e' **1919, 1079**.»
+ *   «`0 ≤ x < tela_larghezza`, `0 ≤ y < tela_altezza`.  On a 1920×1080 canvas
+ *    the bottom-right corner is **1919, 1079**.»
  *
- * ⭐ Da cui i due casi che vanno tenuti separati, e sbagliarli e' costato un
- *    rilievo: **1919 su una tela 1920 PASSA** — e' l'ultimo pixel, non un
- *    errore — mentre **1920 su una tela 1920 NON passa**.  Il primo dei due e'
- *    quello che un controllo scritto con `>` invece di `>=` rovina in silenzio,
- *    e il sintomo sarebbe una colonna di pixel a destra che non si puo'
- *    cliccare.
+ * ⭐ Hence the two cases that must be kept apart, and getting them wrong cost a
+ *    finding: **1919 on a 1920 canvas PASSES** — it is the last pixel, not an
+ *    error — while **1920 on a 1920 canvas does NOT pass**.  The first of the two
+ *    is the one a check written with `>` instead of `>=` ruins in silence,
+ *    and the symptom would be a column of pixels on the right that cannot be
+ *    clicked.
  *
- * ⛔ E IL SECONDO DI GRAZIA (§7.1, terza eccezione di §3) e' l'altra meta':
- *    «una pagina che divide la posizione del mouse per il fattore di scala e
- *    arrotonda per eccesso produce 1920 su una tela di 1920: una lettura lo
- *    inietta, l'altra CHIUDE LA SESSIONE — e chiudere la sessione per un
- *    arrotondamento e' la cosa che `SPECIFICHE.md` §8.3 vieta».  ⇒ Per un
- *    secondo dopo un cambio di tela una coordinata valida sulla PRECEDENTE si
- *    SATURA all'ultimo pixel valido invece di uccidere la sessione.
+ * ⛔ AND THE SECOND OF GRACE (§7.1, third exception of §3) is the other half:
+ *    «a page that divides the mouse position by the scale factor and
+ *    rounds up produces 1920 on a canvas of 1920: one reading
+ *    injects it, the other CLOSES THE SESSION — and closing the session for a
+ *    rounding is the thing `SPECIFICHE.md` §8.3 forbids».  ⇒ For one
+ *    second after a canvas change a coordinate valid on the PREVIOUS one is
+ *    CLAMPED to the last valid pixel instead of killing the session.
  *
- * ⚠ Fuori da quel secondo, e fuori da un cambio di tela, il DEVE di §7.3 resta
- *   intero: chiudere.  ⛔ La grazia NON e' una tolleranza generale sulle
- *   coordinate — sarebbe l'indulgenza che §3 esiste per togliere — ed e' per
- *   questo che ha una data d'inizio e una durata.
+ * ⚠ Outside that second, and outside a canvas change, the MUST of §7.3 stays
+ *   whole: close.  ⛔ The grace is NOT a general tolerance on the
+ *   coordinates — it would be the indulgence §3 exists to remove — and that is
+ *   why it has a start date and a duration.
  *
- * Restituisce `true` se si puo' iniettare; riempie `*sx`/`*sy` con quel che va
- * iniettato (uguale all'ingresso, salvo saturazione). */
+ * Returns `true` if it can be injected; fills `*sx`/`*sy` with what must be
+ * injected (equal to the input, save for clamping). */
 static bool coordinate_ammesse(rcp_sessione *s, uint32_t id, uint32_t x,
                                uint32_t y, uint64_t ora, uint32_t *sx,
                                uint32_t *sy)
 {
 	*sx = x;
 	*sy = y;
-	/* ⛔ Il caso normale, e il confronto e' `<` perche' sono INDICI DI PIXEL. */
+	/* ⛔ The normal case, and the comparison is `<` because they are PIXEL INDICES. */
 	if (x < s->tela_l && y < s->tela_a)
 		return true;
 
@@ -4770,21 +4804,21 @@ static bool coordinate_ammesse(rcp_sessione *s, uint32_t id, uint32_t x,
 		*sx = x < s->tela_l ? x : s->tela_l - 1;
 		*sy = y < s->tela_a ? y : s->tela_a - 1;
 		s->inp_grazie++;
-		/* ⛔ §3: «ogni tolleranza va scritta nel registro.  Una tolleranza
-		 * silenziosa e' indistinguibile da un difetto». */
-		reg(s, "⭐ §7.1 SECONDO DI GRAZIA (%u-esima volta): input id=%u porta "
-		       "(%u,%u), valida sulla tela precedente %ux%u e fuori dalla tela "
-		       "in vigore %ux%u — SATURATA a (%u,%u) invece di chiudere.  Sono "
-		       "passati %llu ms su %d dal cambio di tela",
+		/* ⛔ §3: «every tolerance must be written to the log.  A silent
+		 * tolerance is indistinguishable from a defect». */
+		reg(s, "⭐ §7.1 SECOND OF GRACE (time no. %u): input id=%u carries "
+		       "(%u,%u), valid on the previous canvas %ux%u and outside the canvas "
+		       "in force %ux%u — CLAMPED to (%u,%u) instead of closing.  %llu ms "
+		       "of %d have passed since the canvas change",
 		    s->inp_grazie, id, x, y, s->tela_prec_l, s->tela_prec_a, s->tela_l,
 		    s->tela_a, *sx, *sy,
 		    (unsigned long long)(ora - s->tela_grazia_da), TELA_GRAZIA);
 		return true;
 	}
 
-	/* ⛔ §3.1 punto 1: si dice CHE COSA, e si dice anche perche' la grazia non
-	 * copriva — «fuori intervallo» da solo manderebbe a cercare il difetto nel
-	 * client anche quando il difetto e' un secondo scaduto di un millisecondo. */
+	/* ⛔ §3.1 point 1: one says WHAT, and one also says why the grace did not
+	 * cover — «out of range» alone would send people looking for the defect in
+	 * the client even when the defect is a second expired by one millisecond. */
 	if (s->tela_prec_l && !grazia_aperta)
 		viola_input(s, "PUNTATORE id=%u a (%u,%u): fuori dalla tela in vigore "
 		               "%ux%u (§7.3: 0<=x<%u, 0<=y<%u), e il secondo di grazia "
@@ -4810,7 +4844,7 @@ static bool coordinate_ammesse(rcp_sessione *s, uint32_t id, uint32_t x,
 	return false;
 }
 
-/* Un messaggio di input intero, gia' inquadrato.  `false` = sessione finita. */
+/* A whole input message, already framed.  `false` = session finished. */
 static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
                          uint32_t lung, uint64_t ora)
 {
@@ -4820,11 +4854,11 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	for (int i = 0; i < 8; i++)
 		istante = (istante << 8) | le_u8(&l);
 
-	/* ⛔ §7.3: «⛔ 0 e' riservato e vuol dire "nessun input"».  E' il valore che
-	 * §6.2 mette nel campo `input` dei fotogrammi quando non c'e' stato niente:
-	 * accettarlo qui vorrebbe dire che un fotogramma non puo' piu' dire «non e'
-	 * stato iniettato niente» senza dire anche «e' stato iniettato il primo» —
-	 * cioe' il valore sentinella implicito che §6.0 vieta. */
+	/* ⛔ §7.3: «⛔ 0 is reserved and means "no input"».  It is the value that
+	 * §6.2 puts in the `input` field of frames when there has been nothing:
+	 * accepting it here would mean that a frame could no longer say «nothing
+	 * was injected» without also saying «the first was injected» —
+	 * that is the implicit sentinel value §6.0 forbids. */
 	if (id == 0) {
 		viola_input(s, "%s con id=0: §7.3 riserva lo zero e gli da' il "
 		               "significato «nessun input» nel campo `input` dei "
@@ -4832,19 +4866,19 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		            nome_input(tipo));
 		return false;
 	}
-	/* ⛔⭐ §7.3: «cresce di ALMENO UNO a ogni messaggio, SU TUTTO IL CANALE DI
-	 *     INPUT — non uno per tipo.  E' quello che torna nel campo `input` dei
-	 *     fotogrammi (§6.2), e con contatori separati non tornerebbe niente».
+	/* ⛔⭐ §7.3: «it grows by AT LEAST ONE with every message, ACROSS THE WHOLE
+	 *     INPUT CHANNEL — not one per type.  It is what comes back in the `input`
+	 *     field of frames (§6.2), and with separate counters nothing would add up».
 	 *
-	 * ⚠ «Almeno uno» e non «esattamente uno»: i salti sono leciti — un client
-	 *   che scarta un evento suo non deve mentire sul numero — e quel che non e'
-	 *   lecito e' tornare indietro o ripetersi.
+	 * ⚠ «At least one» and not «exactly one»: jumps are legitimate — a client
+	 *   that discards an event of its own must not lie about the number — and what
+	 *   is not legitimate is going back or repeating.
 	 *
-	 * ⛔ E il caso che smaschera i contatori separati e' uno solo, e va messo nel
-	 *    banco: `PULSANTE(9)` e poi `PUNTATORE(4)`.  Con un contatore per tipo
-	 *    quel 4 e' un legittimo «primo PUNTATORE» e passa; con la regola scritta
-	 *    e' una violazione.  Un banco che mandasse solo id crescenti dentro
-	 *    ciascun tipo non distinguerebbe le due implementazioni. */
+	 * ⛔ And the case that unmasks separate counters is only one, and it must go in
+	 *    the bench: `PULSANTE(9)` and then `PUNTATORE(4)`.  With one counter per
+	 *    type that 4 is a legitimate «first PUNTATORE» and passes; with the written
+	 *    rule it is a violation.  A bench that sent only increasing ids within
+	 *    each type would not tell the two implementations apart. */
 	if (id <= s->inp_ultimo_id) {
 		viola_input(s, "%s con id=%u, e l'ultimo id di QUESTO CANALE era %u: "
 		               "§7.3 vuole che cresca di almeno uno su tutto il canale, "
@@ -4873,11 +4907,11 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	case T_POSIZIONE_TASTO: {
 		uint16_t codice = le_u16(&l);
 		uint8_t premuto = le_u8(&l);
-		/* ⛔ §7.3: «1 = premuto, 0 = rilasciato», e §3 chiude su «un campo fuori
-		 * intervallo».  ⚠ Un 2 letto come «vero» sarebbe la forma esatta del
-		 * parser indulgente: due implementazioni che si comportano uguale
-		 * finche' una delle due non manda 2 per sbaglio, e allora il tasto resta
-		 * giu' per sempre e nessuno sa perche'. */
+		/* ⛔ §7.3: «1 = pressed, 0 = released», and §3 closes on «a field out of
+		 * range».  ⚠ A 2 read as «true» would be the exact shape of the
+		 * lenient parser: two implementations that behave the same
+		 * until one of the two sends 2 by mistake, and then the key stays
+		 * down forever and nobody knows why. */
 		if (premuto > 1) {
 			viola_input(s, "%s id=%u codice=%u con premuto=%u: §7.3 ammette 1 "
 			               "(premuto) e 0 (rilasciato), e nient'altro",
@@ -4886,19 +4920,19 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		}
 		s->inp_ultimo_id = id;
 		s->inp_ultimo_istante_us = istante;
-		/* ⛔⛔ FASE 16 §12: «le battute si registrano come "tasto", mai come
-		 *      carattere» — e un codice evdev E' un carattere, a meno della
-		 *      disposizione: questa riga, una per battuta, faceva del
-		 *      registro un registratore di tasti.  ⭐ Il codice resta per i
-		 *      PULSANTI e per i MODIFICATORI (`tasto_dicibile()`), che non
-		 *      dicono niente di quel che si scrive e sono quelli che restano
-		 *      giu' (§11). */
+		/* ⛔⛔ PHASE 16 §12: «keystrokes are logged as "key", never as a
+		 *      character» — and an evdev code IS a character, up to the
+		 *      layout: this line, one per keystroke, turned the
+		 *      log into a keylogger.  ⭐ The code stays for
+		 *      BUTTONS and for MODIFIERS (`tasto_dicibile()`), which
+		 *      say nothing about what is being typed and are the ones that stay
+		 *      down (§11). */
 		if (tipo == T_PULSANTE || tasto_dicibile(codice))
-			snprintf(cosa, sizeof cosa, "codice evdev %u (%#x) %s", codice,
-			         codice, premuto ? "premuto" : "rilasciato");
+			snprintf(cosa, sizeof cosa, "evdev code %u (%#x) %s", codice,
+			         codice, premuto ? "pressed" : "released");
 		else
-			snprintf(cosa, sizeof cosa, "tasto %s",
-			         premuto ? "premuto" : "rilasciato");
+			snprintf(cosa, sizeof cosa, "key %s",
+			         premuto ? "pressed" : "released");
 		if (!ha_canale_input(s))
 			esito = -1;
 		else if (tipo == T_PULSANTE)
@@ -4908,9 +4942,9 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		break;
 	}
 	case T_ROTELLA: {
-		/* ⛔ §6.0: `i32` in complemento a due.  Il cast da `uint32_t` a
-		 * `int32_t` e' definito dall'implementazione fino a C17; qui si fa a
-		 * mano, cosi' il valore non dipende dal compilatore. */
+		/* ⛔ §6.0: `i32` in two's complement.  The cast from `uint32_t` to
+		 * `int32_t` is implementation-defined up to C17; here it is done by
+		 * hand, so the value does not depend on the compiler. */
 		uint32_t ux = le_u32(&l), uy = le_u32(&l);
 		int32_t ax = (int32_t)(ux <= 0x7FFFFFFFu ? (int64_t)ux
 		                                         : (int64_t)ux - 4294967296LL);
@@ -4918,45 +4952,45 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		                                         : (int64_t)uy - 4294967296LL);
 		s->inp_ultimo_id = id;
 		s->inp_ultimo_istante_us = istante;
-		/* ⛔⛔ E QUI NON SI TOCCA NIENTE: ne' il segno, ne' l'arrotondamento.
+		/* ⛔⛔ AND HERE NOTHING IS TOUCHED: neither the sign, nor the rounding.
 		 *
-		 *     Il segno dell'asse verticale lo inverte `input_rotella()`, UNA
-		 *     VOLTA SOLA e in un posto solo — sta scritto in `src/input.h` e in
-		 *     `RCP.md` §7.3, riquadro «Il segno della rotella», `[M]` 10 agosto
-		 *     2026.  ⛔ Invertirlo anche qui lo ANNULLA, e il sintomo — «la
-		 *     rotella va al contrario» — e' la forma d'errore E11 che quel
-		 *     riquadro esiste per evitare.
+		 *     The sign of the vertical axis is inverted by `input_rotella()`, ONLY
+		 *     ONCE and in one place only — it is written in `src/input.h` and in
+		 *     `RCP.md` §7.3, box «The sign of the wheel», `[M]` 10 Aug
+		 *     2026.  ⛔ Inverting it here too CANCELS it, and the symptom — «the
+		 *     wheel goes backwards» — is the E11 error shape that that
+		 *     box exists to avoid.
 		 *
-		 * ⚠ E i mezzi scatti esistono: 120 e' uno scatto, **60 e' mezzo scatto e
-		 *   NON si arrotonda a zero**.  `STUDI.md` §gnome §9 dice che
-		 *   `ei_device_scroll_discrete` fa una divisione intera per 120 e se li
-		 *   mangia — ma quella e' una scelta di `input.c`, non di qui: da questo
-		 *   lato il numero passa intero, com'e' arrivato. */
-		snprintf(cosa, sizeof cosa, "asse_x=%ld asse_y=%ld (120 = uno scatto)",
+		 * ⚠ And half notches exist: 120 is one notch, **60 is half a notch and
+		 *   is NOT rounded to zero**.  `STUDI.md` §gnome §9 says that
+		 *   `ei_device_scroll_discrete` does an integer division by 120 and
+		 *   eats them — but that is a choice of `input.c`, not of here: on this
+		 *   side the number passes whole, as it arrived. */
+		snprintf(cosa, sizeof cosa, "asse_x=%ld asse_y=%ld (120 = one notch)",
 		         (long)ax, (long)ay);
 		esito = ha_canale_input(s) ? s->g.input_rotella(s->g.ctx, ax, ay) : -1;
 		break;
 	}
 	case T_LETTERA: {
 		uint32_t car = le_u32(&l);
-		/* ⛔ §7.3: «un VALORE SCALARE UNICODE: da 0 a 0x10FFFF, esclusi i
-		 * surrogati 0xD800-0xDFFF.  Fuori intervallo e' `ERRORE_PROTOCOLLO`».
+		/* ⛔ §7.3: «a UNICODE SCALAR VALUE: from 0 to 0x10FFFF, excluding the
+		 * surrogates 0xD800-0xDFFF.  Out of range is `ERRORE_PROTOCOLLO`».
 		 *
-		 * ⚠ «Valore scalare» e' il termine tecnico, e i surrogati sono
-		 *   precisamente quel che lo distingue da «punto di codice»: un
-		 *   controllo che si fermasse a `car > 0x10FFFF` lascerebbe passare
-		 *   0xD800, che in UTF-8 non si puo' nemmeno scrivere.  ⛔ E' il caso
-		 *   che una pagina produce da sola: JavaScript conta in UTF-16, e
-		 *   `charCodeAt` su un'emoji restituisce **meta' coppia surrogata**.
-		 *   Chi scrive il client con `charCodeAt` invece di `codePointAt` manda
-		 *   0xD83D, e il difetto va visto qui — non iniettato come se fosse una
-		 *   lettera.
+		 * ⚠ «Scalar value» is the technical term, and the surrogates are
+		 *   precisely what distinguishes it from «code point»: a
+		 *   check that stopped at `car > 0x10FFFF` would let through
+		 *   0xD800, which cannot even be written in UTF-8.  ⛔ It is the case
+		 *   a page produces on its own: JavaScript counts in UTF-16, and
+		 *   `charCodeAt` on an emoji returns **half a surrogate pair**.
+		 *   Whoever writes the client with `charCodeAt` instead of `codePointAt` sends
+		 *   0xD83D, and the defect must be seen here — not injected as if it were a
+		 *   letter.
 		 *
-		 * ⚠ E lo ZERO E' LECITO: U+0000 e' un valore scalare valido, e §7.3 dice
-		 *   «da 0».  ⛔ Non e' un doppione della regola sull'`id`, dove lo zero e'
-		 *   riservato: sono due campi diversi con due regole diverse, e
-		 *   ricopiare la prima sulla seconda rifiuterebbe un carattere che
-		 *   l'arbitro ammette. */
+		 * ⚠ And ZERO IS LEGITIMATE: U+0000 is a valid scalar value, and §7.3 says
+		 *   «from 0».  ⛔ It is not a duplicate of the rule on the `id`, where zero is
+		 *   reserved: they are two different fields with two different rules, and
+		 *   copying the first onto the second would refuse a character that
+		 *   the arbiter allows. */
 		if (car > 0x10FFFFu) {
 			viola_input(s, "LETTERA id=%u con carattere U+%X: §7.3 vuole un "
 			               "valore scalare Unicode, da 0 a 0x10FFFF",
@@ -4972,17 +5006,17 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		}
 		s->inp_ultimo_id = id;
 		s->inp_ultimo_istante_us = istante;
-		/* ⛔ FASE 16 §12: il carattere NON si scrive (vedi POSIZIONE_TASTO
-		 *    qui sopra).  ⚠ I due `viola_input` di sopra lo citano ancora:
-		 *    sono valori che una lettera non puo' essere, non battute. */
-		snprintf(cosa, sizeof cosa, "«un carattere»");
+		/* ⛔ PHASE 16 §12: the character is NOT written (see POSIZIONE_TASTO
+		 *    above).  ⚠ The two `viola_input` above still quote it:
+		 *    they are values a letter cannot be, not keystrokes. */
+		snprintf(cosa, sizeof cosa, "«a character»");
 		esito = ha_canale_input(s) ? s->g.input_lettera(s->g.ctx, car) : -1;
 		break;
 	}
 	default:
-		/* Non ci si arriva: `misura_input()` ha gia' rifiutato i tipi che non
-		 * conosce, prima di accumulare un byte.  La riga sta qui perche' il
-		 * giorno in cui i due elenchi si separassero lo dicesse qualcuno. */
+		/* Never reached: `misura_input()` has already refused the types it does
+		 * not know, before buffering a byte.  The line is here so that the
+		 * day the two lists drifted apart someone would say so. */
 		viola_input(s, "tipo %#06x sul canale di input: §7.3 ne definisce cinque, "
 		               "da 0x0101 a 0x0105",
 		            tipo);
@@ -4991,56 +5025,56 @@ static bool tratta_input(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 
 	s->inp_arrivati++;
 	if (!ha_canale_input(s)) {
-		/* ⛔ «Non ho un canale di input» NON e' «il client ha sbagliato».  Il
-		 * messaggio era valido in ogni sua parte — l'abbiamo appena giudicato —
-		 * e chiudere qui punirebbe chi non ha sbagliato niente.  ⚠ E' la stessa
-		 * distinzione di `RCP_VIDEO_NIENTE_CANALE`, e il ripiego si DICHIARA
-		 * (`CODER.md` §4.2): la riga e' questa. */
+		/* ⛔ «I have no input channel» is NOT «the client got it wrong».  The
+		 * message was valid in every part — we have just judged it —
+		 * and closing here would punish whoever did nothing wrong.  ⚠ It is the same
+		 * distinction as `RCP_VIDEO_NIENTE_CANALE`, and the fallback is DECLARED
+		 * (`CODER.md` §4.2): this is the line. */
 		s->inp_non_iniettati++;
-		reg(s, "⚠ %s id=%u %s: VALIDO e NON iniettato — questo server non ha i "
-		       "cinque ganci del canale di input (§7.3).  La sessione REGGE",
+		reg(s, "⚠ %s id=%u %s: VALID and NOT injected — this server does not have the "
+		       "five hooks of the input channel (§7.3).  The session HOLDS",
 		    nome_input(tipo), id, cosa);
 	} else {
 		segna_iniezione(s, tipo, id, esito, cosa);
 	}
 
-	/* ⚠ L'`istante` compare nel registro e in nessun conto: §7.3 dice che
-	 *   «nessuna regola di questo documento lo consuma», e che in una pagina la
-	 *   grana e' deliberatamente ingrossata — `millisecondi × 1000` (rilievo
-	 *   R1.27).  ⛔ Chi ne ricavasse un ritardo misurerebbe la grana del
-	 *   `performance.now()` di un browser, non il nostro anello. */
-	reg(s, "input id=%u (era %u) %s %s · istante del client %llu us ⚠ grana "
-	       "ingrossata, §7.3: nessuna misura ci si costruisce sopra",
+	/* ⚠ The `istante` appears in the log and in no count: §7.3 says that
+	 *   «no rule of this document consumes it», and that in a page the
+	 *   grain is deliberately coarsened — `milliseconds × 1000` (finding
+	 *   R1.27).  ⛔ Whoever derived a delay from it would measure the grain of a
+	 *   browser's `performance.now()`, not our loop. */
+	reg(s, "input id=%u (was %u) %s %s · client instant %llu us ⚠ coarsened "
+	       "grain, §7.3: no measurement is built on it",
 	    id, precedente, nome_input(tipo), cosa,
 	    (unsigned long long)istante);
 	return true;
 }
 
 /* ========================================================================= */
-/* ⭐ IL CURSORE — `RCP.md` §7.2, §5.5, §5, §6.1                             */
+/* ⭐ THE CURSOR — `RCP.md` §7.2, §5.5, §5, §6.1                             */
 /*                                                                           */
-/* ⛔ CHI CONTROLLA CHE COSA, e la riga si legge una volta sola:              */
+/* ⛔ WHO CHECKS WHAT, and the line is read only once:                        */
 /*                                                                           */
-/*    · i limiti di **§5.5** — 256 per lato, il punto attivo dentro           */
-/*      l'immagine, `0×0` con `0,0` per il nascosto — li fa rispettare        */
-/*      `src/cursore.c` (A6), e QUI NON SI RICONTROLLANO.  Due controlli      */
-/*      sulla stessa regola in due posti diventano due regole diverse il      */
-/*      giorno in cui una cambia, ed e' la forma di difetto che `RCP.md` §0   */
-/*      esiste per impedire;                                                  */
-/*    · la **lunghezza del messaggio** e' di questo modulo, e §7.2 la scrive  */
-/*      con un DEVE: «la lunghezza del messaggio DEVE valere esattamente      */
+/*    · the limits of **§5.5** — 256 per side, the hotspot inside             */
+/*      the image, `0×0` with `0,0` for the hidden one — are enforced by      */
+/*      `src/cursore.c` (A6), and HERE THEY ARE NOT CHECKED AGAIN.  Two checks */
+/*      on the same rule in two places become two different rules the        */
+/*      day one changes, and it is the shape of defect `RCP.md` §0            */
+/*      exists to prevent;                                                    */
+/*    · the **length of the message** belongs to this module, and §7.2 writes */
+/*      it with a MUST: «the length of the message MUST be exactly            */
 /*      `8 + larghezza × altezza × 4`».                                       */
 /*                                                                           */
-/* ⛔⭐ E LA CONSEGUENZA DI SBAGLIARLA E' NOSTRA, NON DEL CLIENT: §7.2 dice   */
-/*     che una lunghezza che non torna e' `ERRORE_PROTOCOLLO` — ma a          */
-/*     rilevarla e' CHI RICEVE.  ⇒ Un messaggio storto spedito da qui fa      */
-/*     chiudere la sessione **alla pagina**, e il registro del server non ne  */
-/*     saprebbe niente.  «Un cursore fatto di memoria altrui» e' il sintomo   */
-/*     che §7.2 nomina; la sessione persa e' quello che vede l'utente.        */
+/* ⛔⭐ AND THE CONSEQUENCE OF GETTING IT WRONG IS OURS, NOT THE CLIENT'S: §7.2 */
+/*     says a length that does not add up is `ERRORE_PROTOCOLLO` — but the    */
+/*     one detecting it is THE RECEIVER.  ⇒ A crooked message sent from here  */
+/*     makes **the page** close the session, and the server log would know    */
+/*     nothing about it.  «A cursor made of someone else's memory» is the     */
+/*     symptom §7.2 names; the lost session is what the user sees.            */
 /*                                                                           */
-/* ⇒ Da cui la regola di questa funzione: **nel dubbio non si manda**, e si   */
-/*   scrive perche' (`CODER.md` §4.2 — il ripiego si DICHIARA).  Un cursore   */
-/*   che non si aggiorna e' brutto; una sessione che cade e' rotta.           */
+/* ⇒ Hence the rule of this function: **when in doubt it is not sent**, and   */
+/*   one writes why (`CODER.md` §4.2 — the fallback is DECLARED).  A cursor   */
+/*   that does not update is ugly; a session that drops is broken.            */
 
 int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
                       int16_t attivo_x, int16_t attivo_y,
@@ -5048,185 +5082,186 @@ int rcp_cursore_forma(rcp_sessione *s, uint16_t larghezza, uint16_t altezza,
 {
 	if (!s)
 		return -1;
-	/* §5: il cursore vive sul canale di CONTROLLO, e prima di `SESSIONE` non
-	 * c'e' nessuno che lo disegni — il client non e' ancora attaccato (§4.5).
-	 * ⚠ Non e' una violazione di nessuno: e' una forma arrivata troppo presto
-	 *   dalla cattura, che parte prima che il client si attacchi. */
+	/* §5: the cursor lives on the CONTROL channel, and before `SESSIONE` there
+	 * is nobody to draw it — the client is not yet attached (§4.5).
+	 * ⚠ It is nobody's violation: it is a shape arriving too early
+	 *   from capture, which starts before the client attaches. */
 	if (s->stato == S_FINITA || !s->sessione_spedita) {
-		reg(s, "⚠ CURSORE_FORMA %ux%u NON spedita: `SESSIONE` non e' partita "
-		       "(stato %s) — §5, e non e' un errore di nessuno: la cattura "
-		       "comincia prima che il client si attacchi",
+		reg(s, "⚠ CURSORE_FORMA %ux%u NOT sent: `SESSIONE` has not gone out "
+		       "(state %s) — §5, and it is nobody's error: capture "
+		       "begins before the client attaches",
 		    larghezza, altezza, NOMI_STATO[s->stato]);
 		return -1;
 	}
 
-	/* ⛔⭐ §5.5 — «UNA SOLA DELLE DUE A ZERO E' `ERRORE_PROTOCOLLO`», e questo
-	 *     controllo sta QUI ANCHE SE STA GIA' IN `cursore.c` — deciso dal
-	 *     coordinatore il 14 agosto 2026, dopo che questo rapporto lo aveva
-	 *     segnalato come buco aperto.
+	/* ⛔⭐ §5.5 — «ONLY ONE OF THE TWO AT ZERO IS `ERRORE_PROTOCOLLO`», and this
+	 *     check sits HERE EVEN THOUGH IT IS ALREADY IN `cursore.c` — decided by the
+	 *     coordinator on 14 Aug 2026, after this report had
+	 *     flagged it as an open hole.
 	 *
-	 * ⛔ E NON e' tornare a duplicare i limiti di §5.5: la divisione e' un'altra,
-	 *    e va letta perche' e' la ragione per cui questa riga non contraddice il
-	 *    riquadro qui sopra —
+	 * ⛔ And it is NOT going back to duplicating the limits of §5.5: the split is
+	 *    another one, and it must be read because it is the reason this line does
+	 *    not contradict the box above —
 	 *
-	 *      `cursore.c` decide **che cos'e'** quel cursore: quanto e' grande,
-	 *                  dov'e' il punto attivo, se e' nascosto o non pervenuto;
-	 *      `rcp.c`     ⛔ non deve **EMETTERE** un messaggio che la specifica
-	 *                  vieta, MAI, da nessuna strada.
+	 *      `cursore.c` decides **what** that cursor is: how big it is,
+	 *                  where the hotspot is, whether it is hidden or not received;
+	 *      `rcp.c`     ⛔ must not **EMIT** a message the specification
+	 *                  forbids, EVER, by any road.
 	 *
-	 * ⛔⭐ E QUESTO E' L'UNICO CASO IN CUI IL CONTROLLO DI LUNGHEZZA — che e'
-	 *     giusto — **NON BASTA**: `0×5` da' `0 × 5 × 4 = 0` byte d'immagine,
-	 *     cioe' un messaggio di **otto byte** la cui lunghezza **TORNA**.  Il
-	 *     valore malformato passa proprio il controllo che dovrebbe fermarlo, e
-	 *     nessuna delle altre righe di questa funzione lo guarda.
+	 * ⛔⭐ AND THIS IS THE ONLY CASE IN WHICH THE LENGTH CHECK — which is
+	 *     right — **IS NOT ENOUGH**: `0×5` gives `0 × 5 × 4 = 0` image bytes,
+	 *     that is a message of **eight bytes** whose length **ADDS UP**.  The
+	 *     malformed value passes precisely the check that should stop it, and
+	 *     none of the other lines of this function looks at it.
 	 *
-	 * ⚠ Il prezzo di non averlo: se un domani qualcuno chiamasse questa funzione
-	 *   da una strada che non passa da `cursore.c`, il client riceverebbe un
-	 *   messaggio che §5.5 gli ORDINA di rifiutare ⇒ **cadrebbe la sessione per
-	 *   colpa nostra**, e il registro del server non ne saprebbe niente.
+	 * ⚠ The price of not having it: if one day someone called this function
+	 *   from a road that does not pass through `cursore.c`, the client would receive a
+	 *   message that §5.5 ORDERS it to refuse ⇒ **the session would drop
+	 *   through our fault**, and the server log would know nothing about it.
 	 *
-	 * ⛔ E la coppia si distingue solo con tutt'e due i casi nel banco: `0×0` e'
-	 *    il cursore NASCOSTO e **deve passare**, `0×5` e `5×0` no.  Un controllo
-	 *    che rifiutasse tutti gli zeri sarebbe verde col solo `0×0` — e farebbe
-	 *    sparire per sempre il cursore nascosto, cioe' il sintomo «il puntatore
-	 *    resta fermo quando entro in un campo di testo». */
+	 * ⛔ And the pair is told apart only with both cases in the bench: `0×0` is
+	 *    the HIDDEN cursor and **must pass**, `0×5` and `5×0` must not.  A check
+	 *    that refused all zeros would be green with `0×0` alone — and would make
+	 *    the hidden cursor disappear forever, that is the symptom «the pointer
+	 *    stays still when I enter a text field». */
 	if ((larghezza == 0) != (altezza == 0)) {
-		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: §5.5 vuole le due misure a "
-		       "zero INSIEME per il cursore nascosto, e «una sola delle due a "
-		       "zero e' ERRORE_PROTOCOLLO».  ⚠ La lunghezza TORNEREBBE (8 byte, "
-		       "nessun pixel): e' l'unico caso in cui il controllo di lunghezza "
-		       "non basta, e spedirla farebbe chiudere la sessione ALLA PAGINA",
+		reg(s, "⛔ CURSORE_FORMA %ux%u NOT sent: §5.5 wants both sizes at "
+		       "zero TOGETHER for the hidden cursor, and «only one of the two at "
+		       "zero is ERRORE_PROTOCOLLO».  ⚠ The length WOULD ADD UP (8 bytes, "
+		       "no pixel): it is the only case in which the length check "
+		       "is not enough, and sending it would make THE PAGE close the session",
 		    larghezza, altezza);
 		return -1;
 	}
 
-	/* ⛔ §7.2 — LA LUNGHEZZA, e si CALCOLA in un posto solo.
+	/* ⛔ §7.2 — THE LENGTH, and it is COMPUTED in one place only.
 	 *
-	 * ⚠ `(size_t)` sui fattori, e non e' pedanteria: `larghezza` e `altezza`
-	 *   sono `uint16_t` e in C promuovono a `int`.  `65535 * 65535 * 4` in
-	 *   `int` e' **traboccamento con segno**, cioe' comportamento indefinito —
-	 *   il compilatore e' libero di dare qualunque cosa, e con `-O2` di solito
-	 *   da' un numero piccolo.  E' lo stesso difetto che la certificazione del
-	 *   banco ha trovato il 14 agosto 2026 su `6u + lung`, in un altro campo e
-	 *   con lo stesso meccanismo: l'aritmetica stretta che nessuno guarda. */
+	 * ⚠ `(size_t)` on the factors, and it is not pedantry: `larghezza` and `altezza`
+	 *   are `uint16_t` and in C they promote to `int`.  `65535 * 65535 * 4` in
+	 *   `int` is **signed overflow**, that is undefined behaviour —
+	 *   the compiler is free to give anything, and with `-O2` it usually
+	 *   gives a small number.  It is the same defect the bench certification
+	 *   found on 14 Aug 2026 on `6u + lung`, in another field and
+	 *   with the same mechanism: the narrow arithmetic nobody looks at. */
 	size_t pixel = (size_t)larghezza * (size_t)altezza;
 	size_t byte_immagine = pixel * 4u;
 
-	/* ⛔ La lunghezza dichiarata dal chiamante e quella che §7.2 impone devono
-	 * combaciare.  ⭐ E il confronto NON e' una formalita': senza `immagine_n`
-	 * questa funzione leggerebbe `larghezza × altezza × 4` byte **sulla fiducia**
-	 * — cioe' farebbe esattamente quel che §7.2 descrive come «leggo quel che
-	 * c'e' e vado avanti», solo dal lato del mittente, dove il cursore fatto di
-	 * memoria altrui lo confezioniamo noi. */
+	/* ⛔ The length declared by the caller and the one §7.2 imposes must
+	 * match.  ⭐ And the comparison is NOT a formality: without `immagine_n`
+	 * this function would read `larghezza × altezza × 4` bytes **on trust**
+	 * — that is it would do exactly what §7.2 describes as «I read what is
+	 * there and go on», only on the sender's side, where we would be the ones
+	 * packaging the cursor made of someone else's memory. */
 	if (byte_immagine != immagine_n) {
-		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: §7.2 vuole %zu byte "
-		       "d'immagine (8 + %ux%ux4 nel messaggio) e chi chiama ne porta "
-		       "%zu.  ⚠ Spedirla farebbe chiudere la sessione ALLA PAGINA per "
-		       "ERRORE_PROTOCOLLO, e questo registro non lo saprebbe",
+		reg(s, "⛔ CURSORE_FORMA %ux%u NOT sent: §7.2 wants %zu image "
+		       "bytes (8 + %ux%ux4 in the message) and the caller brings "
+		       "%zu.  ⚠ Sending it would make THE PAGE close the session for "
+		       "ERRORE_PROTOCOLLO, and this log would not know it",
 		    larghezza, altezza, byte_immagine, larghezza, altezza, immagine_n);
 		return -1;
 	}
-	/* ⛔ «Zero byte» e «nessun puntatore» sono due fatti diversi: il cursore
-	 * NASCOSTO di §5.5 e' `0×0` **e** nessun byte, e li' `NULL` e' giusto.  Con
-	 * una misura addosso, invece, un `NULL` e' un difetto di chi chiama — e
-	 * leggerlo sarebbe la fine del processo. */
+	/* ⛔ «Zero bytes» and «no pointer» are two different facts: the HIDDEN
+	 * cursor of §5.5 is `0×0` **and** no byte, and there `NULL` is right.  With
+	 * a size on it, instead, a `NULL` is a defect of the caller — and
+	 * reading it would be the end of the process. */
 	if (byte_immagine && !immagine) {
-		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: la misura vuole %zu byte e "
-		       "il puntatore all'immagine e' NULL",
+		reg(s, "⛔ CURSORE_FORMA %ux%u NOT sent: the size wants %zu bytes and "
+		       "the image pointer is NULL",
 		    larghezza, altezza, byte_immagine);
 		return -1;
 	}
 
-	/* ⛔ §6.1 — «nessun messaggio DEVE superare 1 MiB», inquadratura compresa
-	 * (rilievo B-14).  ⭐ QUESTA regola e' di questo modulo, non di `cursore.c`:
-	 * la' vive §5.5 (256 per lato), qui §6.1 — e sono due paragrafi diversi con
-	 * due numeri diversi.  ⚠ Al massimo che §5.5 concede, 256×256, il messaggio
-	 * pesa 262 158 byte: **passa**, e deve passare.  Un tetto messo male qui
-	 * ucciderebbe il cursore piu' grande che l'arbitro ammette. */
+	/* ⛔ §6.1 — «no message MUST exceed 1 MiB», framing included
+	 * (finding B-14).  ⭐ THIS rule belongs to this module, not to `cursore.c`:
+	 * there lives §5.5 (256 per side), here §6.1 — and they are two different
+	 * paragraphs with two different numbers.  ⚠ At the maximum §5.5 allows,
+	 * 256×256, the message weighs 262 158 bytes: **it passes**, and must pass.
+	 * A ceiling set wrongly here would kill the largest cursor the arbiter allows. */
 	if (byte_immagine + 8u + 6u > MAX_MESSAGGIO) {
-		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: il messaggio peserebbe %zu "
-		       "byte e §6.1 ne ammette %u, inquadratura compresa.  ⚠ §5.5 ferma "
-		       "a 256 per lato e a quella misura sono 262 158: se si arriva qui, "
-		       "il limite di §5.5 non e' stato fatto rispettare a monte",
+		reg(s, "⛔ CURSORE_FORMA %ux%u NOT sent: the message would weigh %zu "
+		       "bytes and §6.1 allows %u, framing included.  ⚠ §5.5 stops "
+		       "at 256 per side and at that size it is 262 158: if we get here, "
+		       "the limit of §5.5 was not enforced upstream",
 		    larghezza, altezza, byte_immagine + 8u + 6u, MAX_MESSAGGIO);
 		return -1;
 	}
 
-	/* ⛔ §7.2 — GLI OTTO BYTE, IN QUEST'ORDINE E SENZA RIEMPIMENTO (§6.0):
+	/* ⛔ §7.2 — THE EIGHT BYTES, IN THIS ORDER AND WITHOUT PADDING (§6.0):
 	 *   0 larghezza u16 · 2 altezza u16 · 4 attivo_x i16 · 6 attivo_y i16 · 8 …
 	 *
-	 * ⚠ `serie` di `CursoreForma` NON viaggia: e' il numero con cui `cursore.c`
-	 *   riconosce che la forma non e' cambiata, e §7.2 non lo prevede.  Metterlo
-	 *   sul filo sarebbe un campo che due implementazioni indovinano diverso.
-	 * ⚠ E la POSIZIONE non c'e', perche' §7.2 dice che «non viaggia mai in
-	 *   questo verso»: qui viaggia solo la forma. */
+	 * ⚠ `serie` of `CursoreForma` does NOT travel: it is the number by which
+	 *   `cursore.c` recognises that the shape has not changed, and §7.2 does not
+	 *   provide for it.  Putting it on the wire would be a field two implementations
+	 *   guess differently.
+	 * ⚠ And the POSITION is not there, because §7.2 says it «never travels in
+	 *   this direction»: here only the shape travels. */
 	size_t n = 8u + byte_immagine;
 	uint8_t *corpo = (uint8_t *)malloc(n);
 	if (!corpo) {
-		reg(s, "⛔ CURSORE_FORMA %ux%u NON spedita: memoria esaurita (%zu byte)",
+		reg(s, "⛔ CURSORE_FORMA %ux%u NOT sent: out of memory (%zu bytes)",
 		    larghezza, altezza, n);
 		return -1;
 	}
 	scrittore w = {corpo, n, 0, false};
 	sc_u16(&w, larghezza);
 	sc_u16(&w, altezza);
-	/* §6.0: `i16` in complemento a due, big-endian.  La conversione verso
-	 * `uint16_t` e' definita dal linguaggio e da' esattamente quei bit. */
+	/* §6.0: `i16` in two's complement, big-endian.  The conversion to
+	 * `uint16_t` is defined by the language and gives exactly those bits. */
 	sc_u16(&w, (uint16_t)attivo_x);
 	sc_u16(&w, (uint16_t)attivo_y);
 	if (byte_immagine)
 		memcpy(corpo + 8, immagine, byte_immagine);
-	/* ⛔⭐ E SI SPEDISCE `n`, NON `w.len` — trovato dal banco al primo giro, il
-	 *     14 agosto 2026.
+	/* ⛔⭐ AND `n` IS SENT, NOT `w.len` — found by the bench at the first round,
+	 *     14 Aug 2026.
 	 *
-	 *     `scrittore` conta i byte che sono passati DA LUI, e l'immagine ci
-	 *     arriva con una `memcpy` che `w.len` non vede: dopo i quattro `sc_u16`
-	 *     vale **8**, e mandare `w.len` spediva un `CURSORE_FORMA` che dichiara
-	 *     `larghezza=16, altezza=16` con **otto byte di corpo**.
+	 *     `scrittore` counts the bytes that went through IT, and the image gets
+	 *     there with a `memcpy` that `w.len` does not see: after the four `sc_u16`
+	 *     it is **8**, and sending `w.len` sent a `CURSORE_FORMA` declaring
+	 *     `larghezza=16, altezza=16` with **eight bytes of body**.
 	 *
-	 * ⛔ Cioe' esattamente la lunghezza che non torna, prodotta da noi: la pagina
-	 *    avrebbe chiuso con `ERRORE_PROTOCOLLO` a ogni cambio di forma del
-	 *    cursore, e il sintomo per l'utente sarebbe stato «la sessione cade
-	 *    quando muovo il mouse su un bordo».  ⚠ Il registro del server scriveva
-	 *    la riga giusta — «%zu byte di corpo = 8 + 16x16x4» — perche' la
-	 *    calcolava da `n`: **il registro diceva il vero e il filo un'altra
-	 *    cosa**, che e' la forma di difetto per cui `CODER.md` §3.8 vuole che si
-	 *    verifichi dal lato che riceve.
+	 * ⛔ That is exactly the length that does not add up, produced by us: the page
+	 *    would have closed with `ERRORE_PROTOCOLLO` at every cursor shape change,
+	 *    and the symptom for the user would have been «the session drops
+	 *    when I move the mouse over an edge».  ⚠ The server log wrote
+	 *    the right line — «%zu bytes of body = 8 + 16x16x4» — because it
+	 *    computed it from `n`: **the log told the truth and the wire something
+	 *    else**, which is the shape of defect for which `CODER.md` §3.8 wants
+	 *    verification from the receiving side.
 	 *
-	 * ⭐ A vederlo non e' stata una rilettura: e' stato il giudice, che riapre i
-	 *    byte usciti e rifa' il conto di §7.2 su quelli. */
+	 * ⭐ What saw it was not a rereading: it was the judge, which reopens the
+	 *    bytes that went out and redoes the count of §7.2 on them. */
 	if (w.pieno || w.len != 8u) {
-		/* Non ci si arriva: `corpo` e' grande `n` e i campi sono otto byte.  La
-		 * riga c'e' perche' il giorno in cui non fosse piu' vero lo dicesse
-		 * qualcuno, invece di spedire un messaggio storto. */
-		reg(s, "⛔ CURSORE_FORMA NON spedita: gli otto byte dei campi non sono "
-		       "usciti (scritti %zu)",
+		/* Never reached: `corpo` is `n` big and the fields are eight bytes.  The
+		 * line is there so that the day it were no longer true someone would
+		 * say so, instead of sending a crooked message. */
+		reg(s, "⛔ CURSORE_FORMA NOT sent: the eight bytes of the fields did not "
+		       "go out (written %zu)",
 		    w.len);
 		free(corpo);
 		return -1;
 	}
 
-	/* ⛔⭐ L'IMMAGINE SI COPIA QUI DENTRO, E LA CHIAMATA NON LA TIENE.
+	/* ⛔⭐ THE IMAGE IS COPIED IN HERE, AND THE CALL DOES NOT KEEP IT.
 	 *
-	 *     `src/cursore.h` lo dice: «vive fino al richiamo successivo: chi la
-	 *     vuole tenere la copia».  ⇒ Quando questa funzione torna, questo modulo
-	 *     non ha piu' nessun puntatore a quei byte.
+	 *     `src/cursore.h` says so: «it lives until the next callback: whoever
+	 *     wants to keep it copies it».  ⇒ When this function returns, this module
+	 *     no longer has any pointer to those bytes.
 	 *
-	 * ⚠ Il prezzo, dichiarato: i byte si copiano DUE volte — qui dentro
-	 *   `corpo`, e poi in `manda_messaggio()` che ci mette davanti i sei byte
-	 *   d'inquadratura.  ⛔ Si paga apposta: l'inquadratura di §6.1 si scrive in
-	 *   UN posto solo, e ricopiarla qui per risparmiare una `memcpy` metterebbe
-	 *   due lettori sullo stesso campo.  Al massimo di §5.5 sono 256 KiB su un
-	 *   evento che accade quando la FORMA cambia — non a ogni fotogramma, perche'
-	 *   `cursore.c` toglie i ripetuti. */
+	 * ⚠ The price, declared: the bytes are copied TWICE — here into
+	 *   `corpo`, and then in `manda_messaggio()` which puts the six framing
+	 *   bytes in front.  ⛔ It is paid on purpose: the framing of §6.1 is written
+	 *   in ONE place only, and copying it here to save a `memcpy` would put
+	 *   two readers on the same field.  At the maximum of §5.5 it is 256 KiB on an
+	 *   event that happens when the SHAPE changes — not at every frame, because
+	 *   `cursore.c` removes the repeats. */
 	manda_messaggio(s, T_CURSORE_FORMA, corpo, n);
 	free(corpo);
 
 	if (larghezza == 0 && altezza == 0)
-		reg(s, "⭐ CURSORE_FORMA: cursore NASCOSTO (§5.5), 8 byte di corpo");
+		reg(s, "⭐ CURSORE_FORMA: HIDDEN cursor (§5.5), 8 bytes of body");
 	else
-		reg(s, "⭐ CURSORE_FORMA %ux%u spedita, punto attivo (%d,%d): %zu byte "
-		       "di corpo = 8 + %ux%ux4 (§7.2)",
+		reg(s, "⭐ CURSORE_FORMA %ux%u sent, hotspot (%d,%d): %zu bytes "
+		       "of body = 8 + %ux%ux4 (§7.2)",
 		    larghezza, altezza, attivo_x, attivo_y, n, larghezza, altezza);
 	return 0;
 }
@@ -5247,31 +5282,31 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	if (!s)
 		return false;
 	if (s->stato == S_FINITA) {
-		/* ⚠ Come in `rcp_ricevi()`: e' l'unico posto da cui si osserva un
-		 *   client che spedisce dopo la fine (§4.2), e tacere renderebbe
-		 *   indistinguibile chi insiste da chi si e' fermato.  ⛔ Ma qui non si
-		 *   giudica «commiato o tentativo»: §8.1 il commiato lo vuole sul canale
-		 *   di CONTROLLO, e un `CONGEDO` su questo stream sarebbe comunque un
-		 *   canale nel verso sbagliato. */
-		reg(s, "⛔ %zu byte sullo stream di input %lld DOPO la fine della "
-		       "sessione da %s: §4.2 vieta di spedire su qualunque canale",
+		/* ⚠ As in `rcp_ricevi()`: it is the only place from which one observes a
+		 *   client that sends after the end (§4.2), and keeping quiet would make
+		 *   whoever insists indistinguishable from whoever stopped.  ⛔ But here one
+		 *   does not judge «farewell or attempt»: §8.1 wants the farewell on the
+		 *   CONTROL channel, and a `CONGEDO` on this stream would anyway be a
+		 *   channel in the wrong direction. */
+		reg(s, "⛔ %zu bytes on input stream %lld AFTER the end of the "
+		       "session from %s: §4.2 forbids sending on any channel",
 		    len, (long long)stream, s->provenienza);
 		return false;
 	}
 
-	/* ⛔⭐ §2.5 — «lo stream di input si apre DOPO aver ricevuto `SESSIONE`».
+	/* ⛔⭐ §2.5 — «the input stream is opened AFTER receiving `SESSIONE`».
 	 *
-	 *     ⚠ E la grandezza da guardare e' «`SESSIONE` E' PARTITA», non «lo stato
-	 *       e' attiva»: e' la stessa scelta gia' fatta per il video, e per la
-	 *       stessa ragione (vedi il campo `sessione_spedita`).
+	 *     ⚠ And the quantity to look at is «`SESSIONE` HAS GONE OUT», not «the
+	 *       state is active»: it is the same choice already made for video, and for
+	 *       the same reason (see the `sessione_spedita` field).
 	 *
-	 * ⛔⭐ E QUESTA VOLTA IL GIUDIZIO E' LEGITTIMO, mentre il gemello di P20 non
-	 *     lo era, e vale la pena dire perche': la' il CLIENT non poteva misurare
-	 *     l'ordine fra due stream indipendenti; qui il SERVER misura una cosa
-	 *     che ha fatto LUI — se ha spedito `SESSIONE` o no.  E' la «grandezza
-	 *     locale, monotona, indipendente dalla consegna» di P20, dal lato
-	 *     giusto: se `SESSIONE` non e' partita, il client non l'ha ricevuta, e
-	 *     nessuna perdita di pacchetti puo' cambiarlo. */
+	 * ⛔⭐ AND THIS TIME THE JUDGEMENT IS LEGITIMATE, while the twin of P20 was
+	 *     not, and it is worth saying why: there the CLIENT could not measure
+	 *     the order between two independent streams; here the SERVER measures
+	 *     something IT did — whether it sent `SESSIONE` or not.  It is the «local,
+	 *     monotonic quantity independent of delivery» of P20, from the right
+	 *     side: if `SESSIONE` has not gone out, the client has not received it,
+	 *     and no packet loss can change that. */
 	if (!s->sessione_spedita) {
 		viola_input(s, "byte sullo stream di input (%lld) prima che `SESSIONE` "
 		               "sia partita: §2.5 lo apre DOPO averla ricevuta (stato: "
@@ -5280,14 +5315,14 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		return false;
 	}
 
-	/* ⛔ §2.5: «**uno solo**, e tenuto aperto». */
+	/* ⛔ §2.5: «**only one**, and kept open». */
 	if (!s->inp_stream_noto) {
 		s->inp_stream_noto = true;
 		s->inp_stream = stream;
-		reg(s, "⭐ canale di INPUT aperto sullo stream %lld (§2.5: uno solo, "
-		       "dopo `SESSIONE`, e tenuto aperto).  I ganci d'iniezione: %s",
+		reg(s, "⭐ INPUT channel open on stream %lld (§2.5: only one, "
+		       "after `SESSIONE`, and kept open).  The injection hooks: %s",
 		    (long long)stream,
-		    ha_canale_input(s) ? "collegati" : "⚠ NON collegati");
+		    ha_canale_input(s) ? "connected" : "⚠ NOT connected");
 	} else if (stream != s->inp_stream) {
 		viola_input(s, "un SECONDO stream di input (%lld) mentre il primo (%lld) "
 		               "e' ancora quello: §2.5 ne ammette uno solo",
@@ -5295,45 +5330,45 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		return false;
 	}
 
-	/* ⛔ L'orologio del silenzio (§5.3) si azzera anche sui byte dell'input, e
-	 * non e' una comodita': senza questa riga chi usa il desktop **senza
-	 * scrivere niente sul canale di controllo** — cioe' chiunque stia solo
-	 * muovendo il mouse — perde il posto dopo trenta secondi mentre sta
-	 * lavorando.  §5.3 dice «senza un byte DAL CLIENT», e questi sono byte del
-	 * client. */
+	/* ⛔ The silence clock (§5.3) is also reset on input bytes, and it is not a
+	 * convenience: without this line whoever uses the desktop **without
+	 * writing anything on the control channel** — that is anyone just
+	 * moving the mouse — loses the slot after thirty seconds while
+	 * working.  §5.3 says «without a byte FROM THE CLIENT», and these are bytes
+	 * of the client. */
 	s->ultimo_byte = ora;
-	/* ⛔⭐ E ANCHE IL SEGNO DI VITA, per una ragione che viene prima della
-	 *     comodita': **un byte di RCP e' arrivato dentro un pacchetto**.  Se
-	 *     il byte c'e', il pacchetto c'era — dirlo qui non e' una scorciatoia,
-	 *     e' la stessa cosa detta dove si vede.
+	/* ⛔⭐ AND THE SIGN OF LIFE TOO, for a reason that comes before
+	 *     convenience: **an RCP byte arrived inside a packet**.  If
+	 *     the byte is there, the packet was there — saying it here is not a
+	 *     shortcut, it is the same thing said where it is seen.
 	 *
-	 * ⚠ E rende `rcp_segno_di_vita()` una PURA AGGIUNTA: copre il caso in cui
-	 *   arrivano pacchetti SENZA byte di RCP — cioe' l'utente che guarda e non
-	 *   tocca, che e' il caso per cui e' nata.  ⛔ Senza questa riga i banchi
-	 *   in processo (`04-b31`, `01-b12`) non avrebbero nessun segno di vita:
-	 *   non passano dal trasporto, e si staccherebbero trenta secondi dopo
-	 *   l'apertura qualunque cosa facessero. */
+	 * ⚠ And it makes `rcp_segno_di_vita()` a PURE ADDITION: it covers the case in
+	 *   which packets arrive WITHOUT RCP bytes — that is the user who watches and
+	 *   does not touch, which is the case it was born for.  ⛔ Without this line
+	 *   the in-process benches (`04-b31`, `01-b12`) would have no sign of life:
+	 *   they do not go through the transport, and they would detach thirty seconds
+	 *   after opening whatever they did. */
 	s->ultima_vita = ora;
 	if (!torna_a_parlare(s))
 		return false;
 
 	while (len) {
-		/* ⛔⭐ LA LUNGHEZZA SI CONTROLLA SUI SEI BYTE DELL'INTESTAZIONE, PRIMA DI
-		 *     ACCUMULARE UN BYTE DI CORPO — §6.1: «la lunghezza si controlla
-		 *     prima di allocare.  Un ricevente che alloca `lunghezza` byte e poi
-		 *     verifica ha gia' regalato un megabyte a chiunque sappia scrivere
-		 *     sei byte».
+		/* ⛔⭐ THE LENGTH IS CHECKED ON THE SIX HEADER BYTES, BEFORE
+		 *     BUFFERING A BYTE OF BODY — §6.1: «the length is checked
+		 *     before allocating.  A receiver that allocates `lunghezza` bytes and
+		 *     then checks has already given a megabyte to anyone who can write
+		 *     six bytes».
 		 *
-		 * ⭐ Su questo canale si puo' fare fino in fondo, e sul controllo no: i
-		 *    cinque tipi di §7.3 hanno una lunghezza FISSA, nota dal solo
-		 *    `tipo`.  ⇒ L'accumulo non supera mai 26 byte, e chi annuncia un
-		 *    megabyte ne ottiene sei e un congedo. */
+		 * ⭐ On this channel it can be done all the way, and on control it cannot:
+		 *    the five types of §7.3 have a FIXED length, known from the `tipo`
+		 *    alone.  ⇒ The buffer never exceeds 26 bytes, and whoever announces a
+		 *    megabyte gets six and a farewell. */
 		size_t spazio = I_ACCUMULO - s->inp_acc_len;
 		size_t quanti = len < spazio ? len : spazio;
 		if (quanti == 0) {
-			/* Non ci si arriva finche' la potatura qui sotto funziona: la riga
-			 * c'e' perche' il giorno in cui non funzionasse lo dicesse qualcuno,
-			 * invece di girare in tondo. */
+			/* Never reached as long as the pruning below works: the line
+			 * is there so that the day it did not work someone would say so,
+			 * instead of going round in circles. */
 			viola_input(s, "accumulo dello stream di input pieno (%zu byte) "
 			               "senza un messaggio intero: e' un difetto NOSTRO",
 			            s->inp_acc_len);
@@ -5351,10 +5386,10 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			uint16_t tipo = le_u16(&intest);
 			uint32_t lung = le_u32(&intest);
 
-			/* ⛔ §2.5: su questo stream il byte alto e' 0x01.  Un `0x00` qui e'
-			 * «il canale di controllo su uno stream unidirezionale», un `0x03`
-			 * e' «il video dal client»: sono violazioni con nomi diversi, e §3.1
-			 * punto 1 vuole il nome. */
+			/* ⛔ §2.5: on this stream the high byte is 0x01.  A `0x00` here is
+			 * «the control channel on a unidirectional stream», a `0x03`
+			 * is «video from the client»: they are violations with different names,
+			 * and §3.1 point 1 wants the name. */
 			if ((tipo >> 8) != 0x01) {
 				const char *chi = (tipo >> 8) == 0x00   ? "il CONTROLLO, che vive "
 				                                          "solo sul primo stream "
@@ -5369,10 +5404,10 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 				                                          "sui datagram"
 				                                        : "un canale che §2.5 non "
 				                                          "definisce";
-				/* ⚠ `0x%02x` e non `%#04x`: quest'ultimo, sul valore ZERO, non
-				 *   stampa il prefisso — scrive `0000` — e il canale di
-				 *   controllo e' proprio lo `0x00`.  Il byte alto piu'
-				 *   importante di tutti sarebbe stato l'unico illeggibile. */
+				/* ⚠ `0x%02x` and not `%#04x`: the latter, on the value ZERO, does
+				 *   not print the prefix — it writes `0000` — and the control
+				 *   channel is precisely `0x00`.  The most important high byte
+				 *   of all would have been the only unreadable one. */
 				viola_input(s, "tipo %#06x sullo stream di input: il byte alto "
 				               "0x%02x e' %s (§2.5)",
 				            tipo, (unsigned)(tipo >> 8), chi);
@@ -5388,11 +5423,11 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 				            tipo);
 				return false;
 			}
-			/* ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del
-			 * corpo.  Un ricevente che legge una lunghezza incoerente con quel
-			 * che il tipo prevede DEVE chiudere».  ⚠ E si dice da che parte
-			 * sbaglia: «in piu'» e «in meno» mandano a cercare due difetti
-			 * diversi nel client. */
+			/* ⛔ §6.1: «`lunghezza` MUST be the exact number of body bytes.  A
+			 * receiver that reads a length inconsistent with what the type
+			 * expects MUST close».  ⚠ And one says in which direction it is
+			 * wrong: «more» and «fewer» send people looking for two different
+			 * defects in the client. */
 			if (lung != attesa) {
 				if (lung > MAX_CORPO)
 					viola_input(s, "%s (%#06x) annuncia %u byte di corpo: oltre "
@@ -5410,26 +5445,26 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 					                          : "byte in MENO");
 				return false;
 			}
-			/* ⛔⭐ `(size_t)6u`, E NON `6u` — trovato dalla certificazione del
-			 *     banco il 14 agosto 2026, innestando il guasto
-			 *     `lunghezza-tardiva`.
+			/* ⛔⭐ `(size_t)6u`, AND NOT `6u` — found by the bench certification
+			 *     on 14 Aug 2026, injecting the `lunghezza-tardiva`
+			 *     fault.
 			 *
-			 *     `lung` e' `uint32_t`: `6u + lung` si calcola a **32 bit**, e
-			 *     con `lung = 0xFFFFFFFF` il risultato non e' 4 294 967 301 —
-			 *     e' **5**.  ⇒ Un confronto `inp_acc_len < 6u + lung` direbbe
-			 *     «il corpo e' tutto arrivato» dopo sei byte, e si leggerebbero
-			 *     quattro gigabyte di memoria altrui a partire da un accumulo di
-			 *     32.
+			 *     `lung` is `uint32_t`: `6u + lung` is computed at **32 bits**, and
+			 *     with `lung = 0xFFFFFFFF` the result is not 4 294 967 301 —
+			 *     it is **5**.  ⇒ A comparison `inp_acc_len < 6u + lung` would say
+			 *     «the body has all arrived» after six bytes, and four gigabytes
+			 *     of someone else's memory would be read starting from a buffer
+			 *     of 32.
 			 *
-			 * ⚠ Qui NON e' raggiungibile — il controllo `lung != attesa` sta
-			 *   sopra e chiude prima — ma «non raggiungibile oggi» e «non
-			 *   pericoloso» sono due fatti diversi: chi domani spostasse quel
-			 *   controllo di tre righe rimetterebbe la lettura fuori dai limiti
-			 *   senza che niente cambiasse colore.  ⭐ E' l'invariante I7 letta
-			 *   da dentro: la protezione sta nel programma, non nell'ordine in
-			 *   cui qualcuno ha lasciato due `if`. */
+			 * ⚠ Here it is NOT reachable — the check `lung != attesa` sits
+			 *   above and closes first — but «not reachable today» and «not
+			 *   dangerous» are two different facts: whoever tomorrow moved that
+			 *   check by three lines would put the out-of-bounds read back
+			 *   without anything changing colour.  ⭐ It is invariant I7 read
+			 *   from inside: the protection lives in the program, not in the order
+			 *   in which someone left two `if`s. */
 			if (s->inp_acc_len < (size_t)6u + lung)
-				break; /* il corpo non e' tutto arrivato */
+				break; /* the body has not all arrived */
 
 			if (!tratta_input(s, tipo, s->inp_acc + 6, lung, ora))
 				return false;
@@ -5444,12 +5479,12 @@ bool rcp_ricevi_input(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 }
 
 /* ========================================================================== */
-/* ⭐⭐ GLI APPUNTI — §7.4, §5.4, §2.5                                        */
+/* ⭐⭐ THE CLIPBOARD — §7.4, §5.4, §2.5                                      */
 /*                                                                            */
-/* ⛔ E IL VERSO CHE SI USA DI PIU' E' QUELLO CHE COSTA PIU' LAVORO: «copio un */
-/*    indirizzo sul telefono e lo incollo nella sessione» (`DECISIONI.md`      */
-/*    §5-ter.1).  Di la' il testo ce l'abbiamo gia'; di qua bisogna andarlo a  */
-/*    chiedere **mentre qualcuno sta aspettando col dito su Ctrl+V**.          */
+/* ⛔ AND THE DIRECTION USED MOST IS THE ONE THAT COSTS MOST WORK: «I copy an */
+/*    address on the phone and paste it into the session» (`DECISIONI.md`    */
+/*    §5-ter.1).  Over there we already have the text; over here it has to be */
+/*    asked for **while someone is waiting with a finger on Ctrl+V**.         */
 
 static bool ha_canale_appunti(const rcp_sessione *s)
 {
@@ -5470,27 +5505,27 @@ static void viola_appunti(rcp_sessione *s, const char *fmt, ...)
 }
 
 /*
- * Spedisce UN messaggio del canale appunti, sul suo stream, e lo chiude.
+ * Sends ONE clipboard channel message, on its own stream, and closes it.
  *
- * ⛔⭐ UNO STREAM PER MESSAGGIO, E NON PER TRASFERIMENTO — ed e' un punto in cui
- *     §2.5 ammette due letture, quindi la scelta si scrive qui invece di
- *     restare implicita (`PIANO.md` §0.4).
+ * ⛔⭐ ONE STREAM PER MESSAGE, AND NOT PER TRANSFER — and it is a point where
+ *     §2.5 allows two readings, so the choice is written here instead of
+ *     staying implicit (`PIANO.md` §0.4).
  *
- *     §2.5 dice «uno **per trasferimento**».  Un trasferimento dalla nostra
- *     parte e' fatto di due messaggi lontani nel tempo — `APPUNTI_ANNUNCIO`
- *     adesso, `APPUNTI_TESTO` **se e quando** qualcuno chiede — e tenere aperto
- *     uno stream fra i due vorrebbe dire tenerlo aperto **per sempre** nella
- *     stragrande maggioranza dei casi: si copia molto piu' spesso di quanto si
- *     incolli, e §2.5 concede al server un numero finito di stream.
+ *     §2.5 says «one **per transfer**».  A transfer on our side is made of two
+ *     messages far apart in time — `APPUNTI_ANNUNCIO` now, `APPUNTI_TESTO`
+ *     **if and when** someone asks — and keeping a stream open between the two
+ *     would mean keeping it open **forever** in the vast majority of cases:
+ *     one copies much more often than one pastes, and §2.5 grants the server a
+ *     finite number of streams.
  *
- * ⭐ E si puo' fare, perche' a legare i messaggi di un trasferimento NON e' lo
- *    stream: e' il campo `trasferimento`, che esiste esattamente per questo
- *    (rilievo R1.11, 9 agosto 2026).  Chi riceve appaia per identificatore, e
- *    su quale stream sia arrivato non lo guarda nessuno.
+ * ⭐ And it can be done, because what binds the messages of a transfer is NOT
+ *    the stream: it is the `trasferimento` field, which exists exactly for this
+ *    (finding R1.11, 9 Aug 2026).  The receiver pairs by identifier, and which
+ *    stream it arrived on nobody looks at.
  *
- * ⚠ Il prezzo, dichiarato: un client che contasse gli stream per contare i
- *   trasferimenti conterebbe il doppio.  Nessuna riga di `RCP.md` gli dice di
- *   farlo, e il campo che deve guardare ce l'ha.
+ * ⚠ The price, declared: a client that counted streams to count transfers
+ *   would count double.  No line of `RCP.md` tells it to do so, and it has the
+ *   field it must look at.
  */
 static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
                           size_t corpo_n, const char *coda, size_t coda_n)
@@ -5503,13 +5538,13 @@ static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		return false;
 
 	if (!s->g.appunti_apri(s->g.ctx, &stream, &restano)) {
-		/* ⛔ Non e' partito un byte, ed e' meglio di mezzo messaggio.  ⚠ La riga
-		 *    dice **quanti stream restano**, chiesti a chi tiene il trasporto:
-		 *    senza quel numero «non si e' potuto» non manda da nessuna parte —
-		 *    e' la stessa ragione del `restano` del video (§2.3). */
-		reg(s, "⛔ APPUNTI: nessuno stream unidirezionale per il messaggio "
-		       "%#06x — il client ne concede ancora %llu (§2.5 ne vuole uno per "
-		       "trasferimento)",
+		/* ⛔ Not a byte has left, and that is better than half a message.  ⚠ The
+		 *    line says **how many streams remain**, asked of whoever holds the
+		 *    transport: without that number «it could not be done» points
+		 *    nowhere — it is the same reason as the video's `restano` (§2.3). */
+		reg(s, "⛔ APPUNTI: no unidirectional stream for message "
+		       "%#06x — the client still grants %llu (§2.5 wants one per "
+		       "transfer)",
 		    tipo, (unsigned long long)restano);
 		return false;
 	}
@@ -5529,14 +5564,14 @@ static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	    || (coda_n
 	        && !s->g.appunti_scrivi(s->g.ctx, stream, (const uint8_t *)coda,
 	                                coda_n))) {
-		/* ⛔ Si chiude lo stream lo stesso: uno stream aperto e muto tiene un
-		 *    posto nel conto del client e non diventa mai un messaggio — «vuoto
-		 *    e proibito con la stessa faccia», dal lato di chi aspetta.
-		 * ⚠ Il FIN su un messaggio a meta' e' meno peggio di nessun FIN: chi
-		 *   riceve trova un'inquadratura incompleta e lo dice, invece di
-		 *   aspettare byte che non arriveranno. */
-		reg(s, "⛔ APPUNTI: il messaggio %#06x non e' entrato in coda sullo "
-		       "stream %lld: chiudo lo stream a meta'",
+		/* ⛔ The stream is closed all the same: an open and mute stream holds a
+		 *    slot in the client's count and never becomes a message — «empty
+		 *    and forbidden with the same face», from the side of whoever waits.
+		 * ⚠ The FIN on a half message is less bad than no FIN: the receiver
+		 *   finds an incomplete framing and says so, instead of waiting for
+		 *   bytes that will not arrive. */
+		reg(s, "⛔ APPUNTI: message %#06x did not get into the queue on "
+		       "stream %lld: I close the stream halfway",
 		    tipo, (long long)stream);
 		s->g.appunti_fin(s->g.ctx, stream);
 		return false;
@@ -5546,14 +5581,14 @@ static bool manda_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 }
 
 /*
- * ⛔⭐ IL TESTO TENUTO SI ANNUNCIA QUANDO LA SESSIONE SI APRE — 19 set 2026.
+ * ⛔⭐ THE HELD TEXT IS ANNOUNCED WHEN THE SESSION OPENS — 19 Sep 2026.
  *
- * `[M]` fase 12, scatola `kde`: un client che si RIATTACCA a un figlio vivo fa
- * rileggere la clipboard del desktop (`figlio.c`, il ramo del riattacco), e la
- * lettura arriva quando la sessione RCP e' ancora in `attesa-verdetto`.  Il
- * testo si teneva — «per chi si attacchera'» — ⛔ ma nessuno lo annunciava mai
- * dopo: il client entrava e non sapeva che cosa c'era negli appunti.
- * ⇒ Si annuncia qui, dopo `SESSIONE` (§2.5: nessuno stream prima).
+ * `[M]` phase 12, `kde` box: a client that REATTACHES to a live child makes
+ * the desktop clipboard be reread (`figlio.c`, the reattach branch), and the
+ * read arrives while the RCP session is still in `attesa-verdetto`.  The
+ * text was held — «for whoever will attach» — ⛔ but nobody ever announced it
+ * afterwards: the client got in and did not know what was in the clipboard.
+ * ⇒ It is announced here, after `SESSIONE` (§2.5: no stream before).
  */
 static void annuncia_il_tenuto(rcp_sessione *s)
 {
@@ -5568,8 +5603,8 @@ static void annuncia_il_tenuto(rcp_sessione *s)
 	if (w.pieno || !manda_appunti(s, T_APPUNTI_ANNUNCIO, corpo, w.len, NULL, 0))
 		return;
 	s->app_annunciati++;
-	reg(s, "⭐ APPUNTI §7.4: annunciato al client il trasferimento %u — %zu byte "
-	       "copiati nella sessione PRIMA che si aprisse, e tenuti fin qui",
+	reg(s, "⭐ APPUNTI §7.4: announced transfer %u to the client — %zu bytes "
+	       "copied in the session BEFORE it opened, and held until now",
 	    s->app_mio_id, s->app_testo_n);
 }
 
@@ -5582,41 +5617,41 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 	if (!s || !testo)
 		return false;
 
-	/* ⛔ §5.4 — «testo piu' grande: non si annuncia affatto, e il mittente lo
-	 *    scrive nel registro.  NON DEVE essere troncato».  ⚠ E il confronto e'
-	 *    `>`: un testo grande **esattamente** quanto il tetto e' lecito, ed e'
-	 *    il caso al limite per cui §5.4 ha scelto 1 000 000 invece di 1 MiB. */
+	/* ⛔ §5.4 — «larger text: it is not announced at all, and the sender writes
+	 *    it to the log.  It MUST NOT be truncated».  ⚠ And the comparison is
+	 *    `>`: a text **exactly** as large as the ceiling is legitimate, and it is
+	 *    the limit case for which §5.4 chose 1 000 000 instead of 1 MiB. */
 	if (byte > RCP_APPUNTI_TETTO) {
-		reg(s, "⛔ APPUNTI: la sessione ha copiato %zu byte, oltre il tetto di "
-		       "§5.4 (%u): NON si annuncia, e NON si tronca — un testo tagliato "
-		       "incollato in un terminale e' peggio di un testo mancante",
+		reg(s, "⛔ APPUNTI: the session copied %zu bytes, beyond the ceiling of "
+		       "§5.4 (%u): it is NOT announced, and NOT truncated — a cut text "
+		       "pasted into a terminal is worse than a missing text",
 		    byte, RCP_APPUNTI_TETTO);
 		return false;
 	}
 
 	if (!s->sessione_spedita || s->stato == S_FINITA) {
-		/* ⚠ Non e' un errore di nessuno: la sessione grafica sopravvive al
-		 *   client (I4), quindi si puo' copiare quando non c'e' ancora — o non
-		 *   c'e' piu' — nessuno a cui annunciarlo.  ⛔ Ma il testo si TIENE:
-		 *   chi si attacchera' dopo lo ritrova, ed e' il caso che `STUDI.md`
-		 *   §gnome §10 chiama «chi si ricollega». */
-		reg(s, "APPUNTI: la sessione ha copiato %zu byte e non c'e' nessuno a "
-		       "cui annunciarli (stato %s): il testo si tiene per chi si "
-		       "attacchera'",
+		/* ⚠ It is nobody's error: the graphical session outlives the
+		 *   client (I4), so one can copy when there is not yet — or no longer —
+		 *   anyone to announce it to.  ⛔ But the text is KEPT: whoever attaches
+		 *   later finds it again, and it is the case that `STUDI.md`
+		 *   §gnome §10 calls «whoever reconnects». */
+		reg(s, "APPUNTI: the session copied %zu bytes and there is nobody to "
+		       "announce them to (state %s): the text is kept for whoever "
+		       "attaches",
 		    byte, NOMI_STATO[s->stato]);
 	}
 
 	if (!s->negozia_appunti) {
-		reg(s, "APPUNTI: la sessione ha copiato %zu byte e il client non ha "
-		       "dichiarato `appunti.testo` (§4.3): non si annuncia niente",
+		reg(s, "APPUNTI: the session copied %zu bytes and the client did not "
+		       "declare `appunti.testo` (§4.3): nothing is announced",
 		    byte);
 		return false;
 	}
 
 	copia = (char *)malloc(byte + 1u);
 	if (!copia) {
-		reg(s, "⛔ APPUNTI: %zu byte copiati dalla sessione non entrano in "
-		       "memoria: niente annuncio",
+		reg(s, "⛔ APPUNTI: %zu bytes copied from the session do not fit in "
+		       "memory: no announcement",
 		    byte);
 		return false;
 	}
@@ -5626,10 +5661,10 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 	s->app_testo = copia;
 	s->app_testo_n = byte;
 
-	/* ⛔ §7.4: «ciascun lato numera **i propri** trasferimenti, da 1 e
-	 *    crescendo».  ⚠ Lo zero e' riservato — vuol dire «nessun annuncio» —
-	 *    quindi al giro del contatore si salta, come fa il `numero` dei
-	 *    fotogrammi di §6.2 per la stessa ragione. */
+	/* ⛔ §7.4: «each side numbers **its own** transfers, from 1
+	 *    upwards».  ⚠ Zero is reserved — it means «no announcement» —
+	 *    so at counter wraparound it is skipped, as the `numero` of the
+	 *    frames of §6.2 does for the same reason. */
 	s->app_mio_id = s->app_mio_id == 0xFFFFFFFFu ? 1u : s->app_mio_id + 1u;
 	s->app_mio_len = byte;
 
@@ -5648,9 +5683,9 @@ bool rcp_appunti_dalla_sessione(rcp_sessione *s, const char *testo, size_t byte)
 		return false;
 
 	s->app_annunciati++;
-	reg(s, "⭐ APPUNTI §7.4: annunciato al client il trasferimento %u — %zu byte "
-	       "di testo copiati nella sessione.  ⚠ Non si spedisce niente finche' "
-	       "non li chiede",
+	reg(s, "⭐ APPUNTI §7.4: announced transfer %u to the client — %zu bytes "
+	       "of text copied in the session.  ⚠ Nothing is sent until "
+	       "it asks for them",
 	    s->app_mio_id, byte);
 	return true;
 }
@@ -5664,69 +5699,70 @@ bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms)
 		return false;
 
 	if (!s->sessione_spedita || s->stato == S_FINITA) {
-		reg(s, "APPUNTI: qualcuno nella sessione incolla (richiesta %u) e non "
-		       "c'e' nessun client attaccato (stato %s)",
+		reg(s, "APPUNTI: someone in the session is pasting (request %u) and "
+		       "there is no client attached (state %s)",
 		    serial, NOMI_STATO[s->stato]);
 		return false;
 	}
 
-	/* ⛔ La richiesta si mette in coda PRIMA di spedire: se il testo arrivasse
-	 *    fra la spedizione e l'annotazione — impossibile oggi, il modulo e' a un
-	 *    filo solo — la risposta non troverebbe nessuno da servire.  ⚠ E' la
-	 *    stessa forma della regola «prima si conta il credito, poi si consegna»
-	 *    di `webtransport.c`: l'ordine costa zero e toglie una classe di
-	 *    difetti. */
+	/* ⛔ The request is queued BEFORE sending: if the text arrived
+	 *    between the sending and the note — impossible today, the module is
+	 *    single-threaded — the answer would find nobody to serve.  ⚠ It is the
+	 *    same shape as the rule «first the credit is counted, then delivered»
+	 *    of `webtransport.c`: the order costs nothing and removes a class of
+	 *    defects. */
 	if (s->app_serial_n >= A_STREAM_MAX) {
-		reg(s, "⛔ APPUNTI: gia' %d richieste di incolla in attesa del testo del "
-		       "client: la %u non entra.  ⚠ Chi ospita deve rispondere «non ce "
-		       "l'ho» a questa, o l'applicazione che incolla resta appesa",
+		reg(s, "⛔ APPUNTI: already %d paste requests waiting for the client's "
+		       "text: request %u does not fit.  ⚠ The host must answer «I do not "
+		       "have it» to this one, or the pasting application stays hanging",
 		    s->app_serial_n, serial);
 		return false;
 	}
 	s->app_serial[s->app_serial_n++] = serial;
-	/* ⛔ L'orologio del fondo parte dalla PRIMA richiesta del lotto, non
-	 *    dall'ultima: e' la prima che sta aspettando, ed e' la sua attesa che
-	 *    va limitata. */
+	/* ⛔ The backstop clock starts from the FIRST request of the batch, not
+	 *    from the last: it is the first that is waiting, and it is its wait
+	 *    that must be limited. */
 	if (s->app_serial_n == 1)
 		s->app_chiesto_ms = ora_ms;
 
-	/* ⛔⭐⭐ E SE IL CLIENT NON HA ANCORA ANNUNCIATO NIENTE, SI ASPETTA — e
-	 *      questa e' la cura della corsa fra `Ctrl+V` e la lettura degli
-	 *      appunti, che `SPECIFICHE.md` §9 nomina e dichiara di NON voler
-	 *      risolvere come Xpra.
+	/* ⛔⭐⭐ AND IF THE CLIENT HAS NOT YET ANNOUNCED ANYTHING, ONE WAITS — and
+	 *      this is the cure for the race between `Ctrl+V` and the reading of the
+	 *      clipboard, which `SPECIFICHE.md` §9 names and declares it does NOT
+	 *      want to solve like Xpra.
 	 *
-	 *      La corsa, per esteso: l'utente batte `Ctrl+V` nel browser.  I tasti
-	 *      partono sul canale di input e arrivano al desktop; l'annuncio degli
-	 *      appunti parte sul canale appunti e fa la stessa strada.  ⛔ Ma il
-	 *      desktop, ricevuto il `Ctrl+V`, chiede il testo **subito** — e
-	 *      l'annuncio puo' non essere ancora arrivato.  ⇒ La PRIMA incollata di
-	 *      ogni testo nuovo tornerebbe vuota.
+	 *      The race, in full: the user hits `Ctrl+V` in the browser.  The keys
+	 *      leave on the input channel and arrive at the desktop; the clipboard
+	 *      announcement leaves on the clipboard channel and travels the same
+	 *      road.  ⛔ But the desktop, having received the `Ctrl+V`, asks for the
+	 *      text **at once** — and the announcement may not have arrived yet.
+	 *      ⇒ The FIRST paste of every new text would come back empty.
 	 *
-	 * ⛔ La cura di Xpra e' ritardare **ogni battuta di 100 ms**: §9 la rifiuta
-	 *    con un numero — «per noi sono due volte il tetto del ritardo», cioe' si
-	 *    pagherebbe su ogni tasto di ogni sessione per una cosa che succede
-	 *    quando si incolla.
+	 * ⛔ Xpra's cure is delaying **every keystroke by 100 ms**: §9 refuses it
+	 *    with a number — «for us it is twice the delay ceiling», that is one
+	 *    would pay on every key of every session for something that happens
+	 *    when pasting.
 	 *
-	 * ⭐ La sostituzione costa zero e non tocca nessun tasto: la richiesta si
-	 *    METTE IN CODA e la domanda parte quando l'annuncio arriva (vedi
-	 *    `T_APPUNTI_ANNUNCIO` in `tratta_appunti`).  ⚠ E l'attesa e' gia'
-	 *    limitata da qualcun altro: il fondo di tempo del figlio risponde «non
-	 *    ce l'ho» a chi incolla se l'annuncio non arriva mai — ⛔ e quel fondo
-	 *    sta li' perche' il debito verso il compositore e' suo, non nostro. */
+	 * ⭐ The replacement costs nothing and touches no key: the request is
+	 *    QUEUED and the question leaves when the announcement arrives (see
+	 *    `T_APPUNTI_ANNUNCIO` in `tratta_appunti`).  ⚠ And the wait is already
+	 *    limited by someone else: the child's time backstop answers «I do not
+	 *    have it» to whoever pastes if the announcement never arrives — ⛔ and
+	 *    that backstop is there because the debt towards the compositor is the
+	 *    child's, not ours. */
 	if (s->app_suo_id == 0) {
-		reg(s, "⭐ APPUNTI: qualcuno nella sessione incolla (richiesta %u) e "
-		       "l'annuncio del client non e' ancora arrivato: la domanda ASPETTA "
-		       "l'annuncio invece di tornare vuota (§9 — la corsa con `Ctrl+V`, "
-		       "curata senza ritardare i tasti)",
+		reg(s, "⭐ APPUNTI: someone in the session is pasting (request %u) and "
+		       "the client's announcement has not arrived yet: the question WAITS "
+		       "for the announcement instead of coming back empty (§9 — the race "
+		       "with `Ctrl+V`, cured without delaying keys)",
 		    serial);
 		return true;
 	}
-	/* ⚠ Un `CHIEDI` per il lotto, non uno per richiesta: due programmi che
-	 *   incollano insieme chiedono lo stesso trasferimento, cioe' lo stesso
-	 *   testo, e la risposta li serve tutti. */
+	/* ⚠ One `CHIEDI` for the batch, not one per request: two programs that
+	 *   paste together ask for the same transfer, that is the same text, and
+	 *   the answer serves them all. */
 	if (s->app_chiesto) {
-		reg(s, "APPUNTI: la richiesta %u si accoda al trasferimento %u gia' "
-		       "chiesto: una domanda sola, e la risposta le serve tutte",
+		reg(s, "APPUNTI: request %u joins transfer %u already "
+		       "asked for: a single question, and the answer serves them all",
 		    serial, s->app_suo_id);
 		return true;
 	}
@@ -5740,15 +5776,15 @@ bool rcp_appunti_chiedi(rcp_sessione *s, uint32_t serial, uint64_t ora_ms)
 	s->app_chiesto = true;
 	s->app_chiesto_id = s->app_suo_id;
 	s->app_chiesti++;
-	reg(s, "⭐ APPUNTI §7.4: chiesto al client il trasferimento %u (%u byte "
-	       "annunciati) — qualcuno nella sessione sta incollando (richiesta %u)",
+	reg(s, "⭐ APPUNTI §7.4: asked the client for transfer %u (%u bytes "
+	       "announced) — someone in the session is pasting (request %u)",
 	    s->app_suo_id, s->app_suo_len, serial);
 	return true;
 }
 
-/* La domanda che era rimasta in attesa dell'annuncio: adesso c'e'.
- * ⛔ `false` = non e' partita, e allora le richieste in coda restano appese al
- *    fondo di tempo del figlio. */
+/* The question that had been left waiting for the announcement: now it is here.
+ * ⛔ `false` = it did not leave, and then the queued requests stay hanging on
+ *    the child's time backstop. */
 static bool appunti_chiedi_l_arretrato(rcp_sessione *s)
 {
 	uint8_t corpo[A_CHIEDI];
@@ -5764,17 +5800,17 @@ static bool appunti_chiedi_l_arretrato(rcp_sessione *s)
 	s->app_chiesto = true;
 	s->app_chiesto_id = s->app_suo_id;
 	s->app_chiesti++;
-	reg(s, "⭐ APPUNTI §9: l'annuncio %u e' arrivato, e c'erano gia' %d "
-	       "richieste di incolla ad aspettarlo: la domanda parte ADESSO.  E' la "
-	       "corsa con `Ctrl+V`, vinta senza ritardare un solo tasto",
+	reg(s, "⭐ APPUNTI §9: announcement %u has arrived, and there were already %d "
+	       "paste requests waiting for it: the question leaves NOW.  It is the "
+	       "race with `Ctrl+V`, won without delaying a single key",
 	    s->app_suo_id, s->app_serial_n);
 	return true;
 }
 
-/* Serve TUTTE le richieste in attesa con lo stesso testo: chiedono lo stesso
- * identificatore di trasferimento, cioe' lo stesso contenuto.  ⛔ E la coda si
- * svuota **prima** di rispondere: una risposta che rientrasse qui dentro non
- * deve ritrovare le richieste che sta gia' servendo. */
+/* Serves ALL the waiting requests with the same text: they ask for the same
+ * transfer identifier, that is the same content.  ⛔ And the queue is emptied
+ * **before** answering: an answer that re-entered here must not find again the
+ * requests it is already serving. */
 static void appunti_servi_in_attesa(rcp_sessione *s, const char *testo,
                                     size_t byte)
 {
@@ -5786,34 +5822,34 @@ static void appunti_servi_in_attesa(rcp_sessione *s, const char *testo,
 	s->app_chiesto = false;
 
 	if (!s->g.appunti_risposta) {
-		reg(s, "⛔ APPUNTI: %d richieste di incolla senza nessun gancio che "
-		       "risponda: chi incolla resta appeso finche' non scade il fondo "
-		       "dall'altra parte del confine",
+		reg(s, "⛔ APPUNTI: %d paste requests without any hook to "
+		       "answer: whoever pastes stays hanging until the backstop expires "
+		       "on the other side of the boundary",
 		    quanti);
 		return;
 	}
 	for (int i = 0; i < quanti; i++)
 		s->g.appunti_risposta(s->g.ctx, serial[i], testo, byte);
 	if (quanti)
-		reg(s, "⭐ APPUNTI: %zu byte dal client consegnati a %d richieste di "
-		       "incolla",
+		reg(s, "⭐ APPUNTI: %zu bytes from the client delivered to %d paste "
+		       "requests",
 		    byte, quanti);
 
-	/* ⭐ E ADESSO l'offerta che era stata rimandata: il trasferimento e'
-	 *    finito, e il compositore puo' prendere la selezione nuova senza
-	 *    buttare niente. */
+	/* ⭐ And NOW the offer that had been postponed: the transfer is over,
+	 *    and the compositor can take the new selection without throwing
+	 *    anything away. */
 	if (s->app_offri_dopo && s->g.appunti_offri) {
 		s->app_offri_dopo = false;
 		if (!s->g.appunti_offri(s->g.ctx))
-			reg(s, "⛔ APPUNTI: l'offerta rimandata non e' riuscita: dentro il "
-			       "desktop la prossima incollata non trovera' il testo nuovo");
+			reg(s, "⛔ APPUNTI: the postponed offer did not succeed: inside the "
+			       "desktop the next paste will not find the new text");
 		else
-			reg(s, "⭐ APPUNTI: servita l'incollata, l'offerta rimandata e' "
-			       "partita: il desktop ha il testo NUOVO del client");
+			reg(s, "⭐ APPUNTI: the paste served, the postponed offer has "
+			       "left: the desktop has the client's NEW text");
 	}
 }
 
-/* Un messaggio intero del canale appunti.  `false` = la sessione e' finita. */
+/* A whole message of the clipboard channel.  `false` = the session is over. */
 static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
                            uint32_t lung)
 {
@@ -5827,19 +5863,19 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		trasf = le_u32(&l);
 		quanti = le_u32(&l);
 		if (l.corto)
-			return true; /* la misura fissa e' gia' stata convalidata */
+			return true; /* the fixed size has already been validated */
 
-		/* ⛔ §7.4: i trasferimenti si numerano «da 1 e crescendo», e lo zero e'
-		 *    riservato.  Un annuncio con `trasferimento = 0` non e' un annuncio
-		 *    povero: e' un identificatore che non si potra' mai chiedere. */
+		/* ⛔ §7.4: transfers are numbered «from 1 upwards», and zero is
+		 *    reserved.  An announcement with `trasferimento = 0` is not a poor
+		 *    announcement: it is an identifier that can never be asked for. */
 		if (trasf == 0) {
 			viola_appunti(s, "APPUNTI_ANNUNCIO con trasferimento 0: §7.4 li "
 			                 "numera da 1, e lo 0 vuol dire «nessun annuncio»");
 			return false;
 		}
-		/* ⛔ §5.4: il tetto vincola prima di tutto chi spedisce, ma chi riceve
-		 *    un annuncio piu' grande non deve prepararsi ad accoglierlo: e' un
-		 *    client che ha violato §5.4, e §3 non fa sconti. */
+		/* ⛔ §5.4: the ceiling binds the sender first of all, but whoever
+		 *    receives a larger announcement must not get ready to take it in: it
+		 *    is a client that has violated §5.4, and §3 makes no discounts. */
 		if (quanti > RCP_APPUNTI_TETTO) {
 			viola_appunti(s, "APPUNTI_ANNUNCIO di %u byte: §5.4 si ferma a %u, e "
 			                 "oltre il tetto NON si annuncia affatto",
@@ -5849,57 +5885,59 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 
 		s->app_suo_id = trasf;
 		s->app_suo_len = quanti;
-		reg(s, "⭐ APPUNTI §7.4: il client annuncia il trasferimento %u — %u "
-		       "byte.  ⚠ Non si tira niente finche' qualcuno nella sessione non "
-		       "incolla",
+		reg(s, "⭐ APPUNTI §7.4: the client announces transfer %u — %u "
+		       "bytes.  ⚠ Nothing is pulled until someone in the session "
+		       "pastes",
 		    trasf, quanti);
 
-		/* ⛔ E lo si OFFRE alla sessione, subito: senza questo passo il
-		 *    compositore non e' proprietario della selezione, e dentro il
-		 *    desktop **non si puo' nemmeno provare a incollare** — il tasto non
-		 *    fa niente, e non c'e' nessun errore da nessuna parte. */
+		/* ⛔ And it is OFFERED to the session, at once: without this step the
+		 *    compositor does not own the selection, and inside the desktop
+		 *    **one cannot even try to paste** — the key does nothing, and there
+		 *    is no error anywhere. */
 		if (!s->g.appunti_offri) {
-			reg(s, "⚠ APPUNTI: nessun gancio per offrire alla sessione — il "
-			       "client ha copiato del testo e dentro il desktop non si "
-			       "potra' incollare.  ⛔ Non e' un errore del client: e' questo "
-			       "server che non ha quel canale");
+			reg(s, "⚠ APPUNTI: no hook to offer to the session — the "
+			       "client copied some text and inside the desktop it will not "
+			       "be possible to paste.  ⛔ It is not an error of the client: it "
+			       "is this server that does not have that channel");
 			return true;
 		}
-		/* ⛔⛔⭐ E UN ANNUNCIO VUOTO SI OFFRE LO STESSO, ed e' una scelta.
+		/* ⛔⛔⭐ AND AN EMPTY ANNOUNCEMENT IS OFFERED ALL THE SAME, and it is a
+		 *      choice.
 		 *
-		 * ⚠ Il client manda un annuncio da zero byte appena la sessione nasce,
-		 *   per farsi trovare quando qualcuno di qua incolla col mouse: senza,
-		 *   il server non gli chiederebbe mai niente (vedi `rcp_appunti_chiedi`).
-		 *   ⛔ E offrire vuol dire prendersi la selezione, che e' UNA: la
-		 *     clipboard del desktop passa di mano.
-		 * ⭐ Passa di mano ma NON si perde: se il client non ha niente da dare,
-		 *   `appunti.c` rende alla sessione l'ultimo testo che la sessione
-		 *   stessa ci aveva dato.  ⇒ Il contenuto e' salvo, e la strada
-		 *   dell'incolla col mouse resta aperta.
-		 * ⚠ Qui c'era una regola che NON offriva sugli annunci vuoti: proteggeva
-		 *   la clipboard ma chiudeva la strada del mouse, e la protezione sta
-		 *   meglio dov'e' adesso — dove il testo c'e' davvero. */
+		 * ⚠ The client sends a zero-byte announcement as soon as the session is
+		 *   born, to be found when someone on this side pastes with the mouse:
+		 *   without it, the server would never ask it anything (see
+		 *   `rcp_appunti_chiedi`).
+		 *   ⛔ And offering means taking the selection, which is ONE: the
+		 *     desktop clipboard changes hands.
+		 * ⭐ It changes hands but is NOT lost: if the client has nothing to give,
+		 *   `appunti.c` gives back to the session the last text the session
+		 *   itself had given us.  ⇒ The content is safe, and the road of
+		 *   pasting with the mouse stays open.
+		 * ⚠ Here there was a rule that did NOT offer on empty announcements: it
+		 *   protected the clipboard but closed the mouse road, and the protection
+		 *   sits better where it is now — where the text really is. */
 
-		/* ⛔ Ma NON mentre qualcuno sta incollando: vedi `app_offri_dopo`. */
+		/* ⛔ But NOT while someone is pasting: see `app_offri_dopo`. */
 		if (s->app_serial_n > 0) {
 			s->app_offri_dopo = true;
-			reg(s, "⚠ APPUNTI: l'annuncio %u arriva mentre %d richieste di "
-			       "incolla aspettano il testo: l'offerta alla sessione si "
-			       "RIMANDA, o il compositore butterebbe proprio "
-			       "l'incollata in corso",
+			reg(s, "⚠ APPUNTI: announcement %u arrives while %d paste "
+			       "requests are waiting for the text: the offer to the session is "
+			       "POSTPONED, or the compositor would throw away precisely "
+			       "the paste in progress",
 			    trasf, s->app_serial_n);
 			appunti_chiedi_l_arretrato(s);
 			return true;
 		}
 		if (!s->g.appunti_offri(s->g.ctx))
-			reg(s, "⛔ APPUNTI: l'offerta del trasferimento %u alla sessione non "
-			       "e' riuscita: dentro il desktop non si potra' incollare quel "
-			       "che il client ha copiato",
+			reg(s, "⛔ APPUNTI: the offer of transfer %u to the session did not "
+			       "succeed: inside the desktop it will not be possible to paste "
+			       "what the client copied",
 			    trasf);
 
-		/* ⭐⭐ E QUI SI VINCE LA CORSA CON `Ctrl+V`: se qualcuno stava gia'
-		 *     incollando quando l'annuncio e' arrivato, la domanda parte adesso
-		 *     invece di essere tornata vuota un momento fa (§9, e il riquadro di
+		/* ⭐⭐ AND HERE THE RACE WITH `Ctrl+V` IS WON: if someone was already
+		 *     pasting when the announcement arrived, the question leaves now
+		 *     instead of having come back empty a moment ago (§9, and the box of
 		 *     `rcp_appunti_chiedi`). */
 		appunti_chiedi_l_arretrato(s);
 		return true;
@@ -5910,10 +5948,10 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		if (l.corto)
 			return true;
 
-		/* ⛔ §7.4: «un `APPUNTI_CHIEDI` con un identificatore che non
-		 *    corrisponde a nessun annuncio vivo e' `ERRORE_PROTOCOLLO`».  ⚠ E
-		 *    «vivo» comprende quelli superati: vedi il caso subito sotto, che e'
-		 *    la QUINTA eccezione dichiarata a §3. */
+		/* ⛔ §7.4: «an `APPUNTI_CHIEDI` with an identifier that does not
+		 *    match any live announcement is `ERRORE_PROTOCOLLO`».  ⚠ And
+		 *    «live» includes superseded ones: see the case just below, which is
+		 *    the FIFTH exception declared in §3. */
 		if (trasf == 0 || trasf > s->app_mio_id) {
 			viola_appunti(s, "APPUNTI_CHIEDI per il trasferimento %u, che non "
 			                 "corrisponde a nessun annuncio: ne ho fatti %u "
@@ -5922,27 +5960,27 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			return false;
 		}
 		if (!s->app_testo) {
-			/* ⚠ Puo' succedere: si e' annunciato, e poi il palco si e' smontato
-			 *   portandosi via il testo.  Non e' colpa del client, e §3.1 vuole
-			 *   che si dica invece di tacere. */
-			reg(s, "⛔ APPUNTI: il client chiede il trasferimento %u e il testo "
-			       "non c'e' piu': non gli arrivera' niente",
+			/* ⚠ It can happen: one announced, and then the stage was taken down
+			 *   carrying the text away.  It is not the client's fault, and §3.1
+			 *   wants it said instead of kept quiet. */
+			reg(s, "⛔ APPUNTI: the client asks for transfer %u and the text "
+			       "is no longer there: nothing will reach it",
 			    trasf);
 			return true;
 		}
-		/* ⛔⭐ LA QUINTA ECCEZIONE DICHIARATA A §3 — §7.4: «un `APPUNTI_CHIEDI`
-		 *     che arriva quando l'annuncio e' gia' stato superato da uno piu'
-		 *     recente **si serve con il testo attuale**, e il mittente lo scrive
-		 *     nel registro: e' la corsa normale fra due persone che copiano, non
-		 *     un errore».
-		 * ⚠ E si RISPONDE con l'identificatore CHIESTO, non con quello attuale:
-		 *   il client aspetta una risposta alla sua domanda, e cambiargli il
-		 *   numero sotto sarebbe una risposta che non sa appaiare. */
+		/* ⛔⭐ THE FIFTH EXCEPTION DECLARED IN §3 — §7.4: «an `APPUNTI_CHIEDI`
+		 *     arriving when the announcement has already been superseded by a
+		 *     more recent one **is served with the current text**, and the
+		 *     sender writes it to the log: it is the normal race between two
+		 *     people copying, not an error».
+		 * ⚠ And one ANSWERS with the identifier ASKED FOR, not the current one:
+		 *   the client expects an answer to its question, and changing the
+		 *   number under it would be an answer it cannot pair. */
 		if (trasf != s->app_mio_id)
-			reg(s, "⚠ APPUNTI §7.4: il client chiede il trasferimento %u, che e' "
-			       "gia' stato superato dal %u: lo servo con il testo ATTUALE "
-			       "(%zu byte).  E' la corsa normale fra due che copiano, non un "
-			       "errore",
+			reg(s, "⚠ APPUNTI §7.4: the client asks for transfer %u, which has "
+			       "already been superseded by %u: I serve it with the CURRENT text "
+			       "(%zu bytes).  It is the normal race between two people copying, "
+			       "not an error",
 			    trasf, s->app_mio_id, s->app_testo_n);
 
 		{
@@ -5955,14 +5993,13 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			if (manda_appunti(s, T_APPUNTI_TESTO, testa_corpo, w.len,
 			                  s->app_testo, s->app_testo_n)) {
 				s->app_serviti++;
-				reg(s, "⭐ APPUNTI §7.4: spediti %zu byte al client "
-				       "(trasferimento %u)",
+				reg(s, "⭐ APPUNTI §7.4: sent %zu bytes to the client "
+				       "(transfer %u)",
 				    s->app_testo_n, trasf);
 			}
 		}
 		return true;
 	}
-
 	case T_APPUNTI_TESTO: {
 		const char *testo;
 		size_t byte;
@@ -5973,8 +6010,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 		testo = (const char *)corpo + A_TESTO_MINIMO;
 		byte = lung - A_TESTO_MINIMO;
 
-		/* ⛔ §7.4: «un `APPUNTI_TESTO` che nessuno ha chiesto e'
-		 *    `ERRORE_PROTOCOLLO`: gli appunti si tirano, non si spingono». */
+		/* ⛔ §7.4: «an `APPUNTI_TESTO` nobody asked for is
+		 *    `ERRORE_PROTOCOLLO`: the clipboard is pulled, not pushed». */
 		if (s->app_serial_n == 0) {
 			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) che "
 			                 "nessuno ha chiesto: §7.4 — gli appunti si tirano, "
@@ -5982,15 +6019,15 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			              trasf, byte);
 			return false;
 		}
-		/* ⛔⛔⭐ E QUI SI CHIUDEVA LA SESSIONE PER UNA CORSA NORMALE — la stessa
-		 *      riga, con lo stesso sbaglio, che il 20 agosto 2026 nella PAGINA
-		 *      ha prodotto «Firefox si e' bloccato con la clipboard».
+		/* ⛔⛔⭐ AND HERE THE SESSION WAS CLOSED FOR A NORMAL RACE — the same
+		 *      line, with the same mistake, that on 20 Aug 2026 in the PAGE
+		 *      produced «Firefox got stuck with the clipboard».
 		 *
-		 * ⚠ Il confronto era con l'annuncio VIVO: se fra la nostra domanda e la
-		 *   sua risposta il client ha annunciato di nuovo (due copie in un
-		 *   millisecondo — `[M]`, succede), la risposta porta il numero VECCHIO
-		 *   per costruzione, e §7.4 dice che si serve col testo attuale e **non
-		 *   e' un errore**.  ⇒ Si confronta con quel che si e' CHIESTO. */
+		 * ⚠ The comparison was with the LIVE announcement: if between our
+		 *   question and its answer the client announced again (two copies in a
+		 *   millisecond — `[M]`, it happens), the answer carries the OLD number
+		 *   by construction, and §7.4 says it is served with the current text and
+		 *   **is not an error**.  ⇒ One compares with what one ASKED FOR. */
 		if (trasf != s->app_chiesto_id && trasf != s->app_suo_id) {
 			viola_appunti(s, "APPUNTI_TESTO per il trasferimento %u, che non ho "
 			                 "mai chiesto (ho chiesto il %u, l'annuncio vivo e' "
@@ -6000,48 +6037,49 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 			return false;
 		}
 		if (trasf != s->app_suo_id)
-			reg(s, "⚠ APPUNTI §7.4: il testo del trasferimento %u arriva quando "
-			       "l'annuncio vivo e' il %u: e' la corsa normale fra due che "
-			       "copiano, e il testo e' quello ATTUALE",
+			reg(s, "⚠ APPUNTI §7.4: the text of transfer %u arrives when "
+			       "the live announcement is %u: it is the normal race between two "
+			       "people copying, and the text is the CURRENT one",
 			    trasf, s->app_suo_id);
-		/* ⛔ E l'annuncio diceva quanti byte: se il testo ne porta altri, uno
-		 *    dei due messaggi mente.  §6.1 — «una lunghezza incoerente con quel
-		 *    che il tipo prevede».  ⚠ Qui la lunghezza attesa non viene dal
-		 *    tipo, viene dall'annuncio dello stesso lato: e' la stessa regola
-		 *    applicata a una promessa che il client ha fatto lui. */
-		/* ⚠ E la misura si pretende SOLO sul trasferimento vivo: su uno
-		 *   superato il client ha servito il testo di ADESSO, che non e' quello
-		 *   annunciato allora — pretendere la lunghezza vecchia rifiuterebbe
-		 *   proprio quel che l'eccezione permette. */
+		/* ⛔ And the announcement said how many bytes: if the text carries a
+		 *    different number, one of the two messages lies.  §6.1 — «a length
+		 *    inconsistent with what the type foresees».  ⚠ Here the expected
+		 *    length does not come from the type, it comes from the announcement
+		 *    of the same side: it is the same rule applied to a promise the
+		 *    client made itself. */
+		/* ⚠ And the size is demanded ONLY on the live transfer: on a
+		 *   superseded one the client served the text of NOW, which is not the
+		 *   one announced back then — demanding the old length would refuse
+		 *   precisely what the exception allows. */
 		if (trasf == s->app_suo_id && byte != s->app_suo_len) {
 			viola_appunti(s, "APPUNTI_TESTO porta %zu byte e l'annuncio %u ne "
 			                 "dichiarava %u (§7.4)",
 			              byte, trasf, s->app_suo_len);
 			return false;
 		}
-		/* ⛔ §5.4: «il testo DEVE essere UTF-8 valido».  ⚠ E si convalida QUI,
-		 *    prima di farlo attraversare il confine di processo: un testo non
-		 *    valido consegnato al compositore e' un difetto NOSTRO che ha la
-		 *    faccia di un difetto del desktop. */
+		/* ⛔ §5.4: «the text MUST be valid UTF-8».  ⚠ And it is validated HERE,
+		 *    before letting it cross the process boundary: an invalid text
+		 *    delivered to the compositor is a defect of OURS with the face of a
+		 *    defect of the desktop. */
 		if (!utf8_valido(testo, byte)) {
 			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) non e' "
 			                 "UTF-8 valido, e §5.4 lo pretende",
 			              trasf, byte);
 			return false;
 		}
-		/* ⛔⭐ E NIENTE ZERI IN MEZZO — rilievo R9.11 applicato a questo canale.
+		/* ⛔⭐ AND NO ZEROS IN THE MIDDLE — finding R9.11 applied to this channel.
 		 *
-		 *     `utf8_valido()` lo accetta (`c < 0x80`), ⛔ ma da qui in poi il
-		 *     testo attraversa un confine di processo e arriva a `appunti.c`,
-		 *     che lo consegna al compositore.  ⚠ E il verso OPPOSTO lo rifiuta
-		 *     gia' (`appunti.c`, `leggi_il_testo`): accettarlo di qua vorrebbe
-		 *     dire due regole diverse per la stessa grandezza nei due versi,
-		 *     cioe' un testo che si puo' incollare nel desktop e non si puo'
-		 *     copiare da dentro.
-		 * ⚠ E NON si usa `testo_stampabile()`, che sarebbe la funzione «gia'
-		 *   pronta»: quella rifiuta anche `\n` e `\t`, ⛔ cioe' rifiuterebbe
-		 *   **qualunque testo copiato da un editor**.  La regola giusta e' piu'
-		 *   stretta di UTF-8 e piu' larga di «stampabile». */
+		 *     `utf8_valido()` accepts it (`c < 0x80`), ⛔ but from here on the
+		 *     text crosses a process boundary and reaches `appunti.c`, which
+		 *     delivers it to the compositor.  ⚠ And the OPPOSITE direction
+		 *     already refuses it (`appunti.c`, `leggi_il_testo`): accepting it
+		 *     here would mean two different rules for the same quantity in the
+		 *     two directions, that is a text that can be pasted into the desktop
+		 *     and cannot be copied from inside.
+		 * ⚠ And `testo_stampabile()` is NOT used, which would be the «ready
+		 *   made» function: it also refuses `\n` and `\t`, ⛔ that is it would
+		 *   refuse **any text copied from an editor**.  The right rule is
+		 *   stricter than UTF-8 and wider than «printable». */
 		if (memchr(testo, 0, byte)) {
 			viola_appunti(s, "APPUNTI_TESTO (trasferimento %u, %zu byte) porta "
 			                 "uno zero in mezzo: quel che si incollerebbe "
@@ -6056,9 +6094,9 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	}
 
 	default:
-		/* ⛔ §7.4 ne definisce TRE, e il byte alto e' gia' stato riconosciuto
-		 *    come `0x02`: qui siamo su un tipo del canale appunti che non
-		 *    esiste.  §3: non si ignora. */
+		/* ⛔ §7.4 defines THREE, and the high byte has already been recognised
+		 *    as `0x02`: here we are on a clipboard channel type that does not
+		 *    exist.  §3: it is not ignored. */
 		viola_appunti(s, "tipo %#06x sul canale appunti: §7.4 ne definisce TRE — "
 		                 "0x0201 ANNUNCIO, 0x0202 CHIEDI, 0x0203 TESTO",
 		              tipo);
@@ -6066,8 +6104,8 @@ static bool tratta_appunti(rcp_sessione *s, uint16_t tipo, const uint8_t *corpo,
 	}
 }
 
-/* Il posto di questo stream nella tabella, creandolo se serve.  NULL = non c'e'
- * posto, e chi chiama ha gia' congedato. */
+/* The slot of this stream in the table, creating it if needed.  NULL = there
+ * is no slot, and the caller has already sent the client away. */
 static int appunti_posto(rcp_sessione *s, int64_t stream)
 {
 	int libero = -1;
@@ -6080,22 +6118,22 @@ static int appunti_posto(rcp_sessione *s, int64_t stream)
 			libero = i;
 			break;
 		}
-	/* ⛔ Pieno: si butta il primo che NON ha byte in sospeso — uno stream aperto
-	 *    e vuoto non porta via niente a nessuno — e ⛔ si scrive nel registro,
-	 *    perche' §3 vuole che ogni tolleranza si veda. */
+	/* ⛔ Full: the first one WITHOUT pending bytes is thrown away — an open and
+	 *    empty stream takes nothing away from anyone — and ⛔ it is written to
+	 *    the log, because §3 wants every tolerance to be visible. */
 	if (libero < 0)
 		for (int i = 0; i < A_STREAM_MAX; i++)
 			if (s->app_in[i].testa_n == 0 && !s->app_in[i].corpo) {
-				reg(s, "⚠ APPUNTI: %d stream aperti insieme (§2.5 ne vuole uno "
-				       "per trasferimento): lascio andare il %lld, che non "
-				       "aveva byte in sospeso",
+				reg(s, "⚠ APPUNTI: %d streams open at once (§2.5 wants one "
+				       "per transfer): I let go of %lld, which had no "
+				       "pending bytes",
 				    A_STREAM_MAX, (long long)s->app_in[i].stream);
 				libero = i;
 				break;
 			}
 	if (libero < 0) {
-		/* ⛔ Tutti a meta' di un messaggio: e' un client che apre stream e non
-		 *    li finisce, e non e' piu' una tolleranza — e' §3. */
+		/* ⛔ All halfway through a message: it is a client that opens streams and
+		 *    does not finish them, and it is no longer a tolerance — it is §3. */
 		viola_appunti(s, "%d stream di appunti aperti insieme e tutti a meta' di "
 		                 "un messaggio: §2.5 ne vuole uno per trasferimento",
 		              A_STREAM_MAX);
@@ -6123,13 +6161,13 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	if (!s)
 		return false;
 	if (s->stato == S_FINITA) {
-		reg(s, "⛔ %zu byte sullo stream di appunti %lld DOPO la fine della "
-		       "sessione da %s: §4.2 vieta di spedire su qualunque canale",
+		reg(s, "⛔ %zu bytes on clipboard stream %lld AFTER the end of the "
+		       "session from %s: §4.2 forbids sending on any channel",
 		    len, (long long)stream, s->provenienza);
 		return false;
 	}
 
-	/* ⛔ §2.5, come l'input: niente prima che `SESSIONE` sia partita. */
+	/* ⛔ §2.5, like input: nothing before `SESSIONE` has gone out. */
 	if (!s->sessione_spedita) {
 		viola_appunti(s, "byte sullo stream di appunti (%lld) prima che "
 		                 "`SESSIONE` sia partita (stato: %s)",
@@ -6137,9 +6175,9 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		return false;
 	}
 
-	/* ⛔ §4.3: il client non ha dichiarato `appunti.testo`, e adesso ne manda.
-	 *    ⚠ NON e' una tolleranza: e' una capacita' non negoziata usata lo
-	 *    stesso, cioe' il caso che §4.3 esiste per rendere impossibile. */
+	/* ⛔ §4.3: the client did not declare `appunti.testo`, and now it sends some.
+	 *    ⚠ It is NOT a tolerance: it is a non-negotiated capability used all
+	 *    the same, that is the case §4.3 exists to make impossible. */
 	if (!s->negozia_appunti) {
 		viola_appunti(s, "byte sul canale appunti da un client che non ha "
 		                 "dichiarato `appunti.testo` in `CIAO` (§4.3)");
@@ -6156,8 +6194,8 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		return false;
 
 	while (len) {
-		/* Prima i sei byte dell'inquadratura (§6.1), e uno alla volta se serve:
-		 * un pacchetto puo' tagliarla in mezzo. */
+		/* First the six framing bytes (§6.1), and one at a time if needed:
+		 * a packet can cut them in the middle. */
 		if (s->app_in[i].testa_n < 6) {
 			size_t manca = 6 - s->app_in[i].testa_n;
 			size_t quanti = len < manca ? len : manca;
@@ -6175,7 +6213,7 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 				uint32_t lung = le_u32(&intest);
 				uint32_t attesa_min, attesa_max;
 
-				/* ⛔ §2.5: su questo stream il byte alto e' 0x02. */
+				/* ⛔ §2.5: on this stream the high byte is 0x02. */
 				if ((tipo >> 8) != 0x02) {
 					viola_appunti(s, "tipo %#06x sullo stream di appunti: il "
 					                 "byte alto 0x%02x non e' il canale appunti "
@@ -6183,11 +6221,11 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 					              tipo, (unsigned)(tipo >> 8));
 					return false;
 				}
-				/* ⛔ La lunghezza si convalida PRIMA di allocare — §6.1, e sui
-				 *    tre tipi di §7.4 si sa gia' che cosa aspettarsi: due hanno
-				 *    misura fissa e il terzo ha un minimo e un tetto.
-				 * ⭐ Quindi chi annuncia un megabyte su un `CHIEDI` non ottiene
-				 *    un megabyte: ottiene sei byte e un congedo. */
+				/* ⛔ The length is validated BEFORE allocating — §6.1, and on the
+				 *    three types of §7.4 one already knows what to expect: two have
+				 *    a fixed size and the third has a minimum and a ceiling.
+				 * ⭐ So whoever announces a megabyte on a `CHIEDI` does not get
+				 *    a megabyte: it gets six bytes and a farewell. */
 				switch (tipo) {
 				case T_APPUNTI_ANNUNCIO:
 					attesa_min = attesa_max = A_ANNUNCIO;
@@ -6222,8 +6260,8 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 				if (lung) {
 					s->app_in[i].corpo = (uint8_t *)malloc(lung);
 					if (!s->app_in[i].corpo) {
-						reg(s, "⛔ APPUNTI: %u byte di corpo non entrano in "
-						       "memoria: butto il messaggio e chiudo lo stream",
+						reg(s, "⛔ APPUNTI: %u bytes of body do not fit in "
+						       "memory: I throw the message away and close the stream",
 						    lung);
 						appunti_posto_libera(s, i);
 						return true;
@@ -6232,7 +6270,7 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			}
 		}
 
-		/* Poi il corpo. */
+		/* Then the body. */
 		{
 			size_t manca = s->app_in[i].lung - s->app_in[i].corpo_n;
 			size_t quanti = len < manca ? len : manca;
@@ -6253,11 +6291,11 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 			uint8_t *corpo = s->app_in[i].corpo;
 			bool vivo;
 
-			/* ⛔ Il posto si azzera PRIMA di trattare il messaggio: `tratta_
-			 *    appunti` puo' spedire (e quindi rientrare in questo modulo), e
-			 *    un posto lasciato mezzo pieno sarebbe uno stato che nessuno sa
-			 *    piu' a chi appartiene.  ⚠ `corpo` resta valido: la memoria e'
-			 *    nostra finche' non la liberiamo tre righe piu' giu'. */
+			/* ⛔ The slot is reset BEFORE handling the message: `tratta_
+			 *    appunti` can send (and so re-enter this module), and a slot
+			 *    left half full would be a state nobody knows any more whom it
+			 *    belongs to.  ⚠ `corpo` stays valid: the memory is ours until
+			 *    we free it three lines further down. */
 			s->app_in[i].corpo = NULL;
 			s->app_in[i].corpo_n = 0;
 			s->app_in[i].testa_n = 0;
@@ -6270,18 +6308,18 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 		}
 	}
 
-	/* ⛔ §6.1 e §2.5: uno stream che finisce a meta' di un messaggio non porta
-	 *    un messaggio corto — porta una lunghezza che non torna.  ⚠ E qui NON
-	 *    si congeda: il messaggio a meta' non ha ancora fatto niente, e chiudere
-	 *    la sessione per uno stream troncato punirebbe anche il client a cui
-	 *    e' caduta la rete a meta' trasferimento.  ⇒ Si dichiara e si butta —
-	 *    ed e' una tolleranza SCRITTA (§3). */
+	/* ⛔ §6.1 and §2.5: a stream that ends halfway through a message does not
+	 *    carry a short message — it carries a length that does not add up.
+	 *    ⚠ And here the client is NOT sent away: the half message has not done
+	 *    anything yet, and closing the session for a truncated stream would also
+	 *    punish the client whose network dropped halfway through a transfer.
+	 *    ⇒ It is declared and thrown away — and it is a WRITTEN tolerance (§3). */
 	if (fin) {
 		if (s->app_in[i].testa_n || s->app_in[i].corpo)
-			reg(s, "⚠ APPUNTI: lo stream %lld e' finito con un messaggio a meta' "
-			       "(%zu byte d'intestazione, %zu di corpo su %u): si butta.  "
-			       "Non congedo — un trasferimento troncato non e' un client che "
-			       "sbaglia",
+			reg(s, "⚠ APPUNTI: stream %lld ended with a message halfway "
+			       "(%zu header bytes, %zu of body out of %u): it is thrown away.  "
+			       "I do not send the client away — a truncated transfer is not a "
+			       "client making a mistake",
 			    (long long)stream, s->app_in[i].testa_n, s->app_in[i].corpo_n,
 			    s->app_in[i].lung);
 		appunti_posto_libera(s, i);
@@ -6289,17 +6327,17 @@ bool rcp_ricevi_appunti(rcp_sessione *s, int64_t stream, const uint8_t *dati,
 	return true;
 }
 
-/* ⛔ §5.2 e §7.1 — `RICHIEDI_CHIAVE`, servito dal 12 agosto 2026.
+/* ⛔ §5.2 and §7.1 — `RICHIEDI_CHIAVE`, served since 12 Aug 2026.
  *
- * ⚠ Fino a oggi questo tipo cadeva nel `default` dello switch e faceva
- *   **perdere la sessione** a un client conforme che avesse visto un buco: il
- *   registro lo dichiarava («la fase 1 non lo serve ancora»), e il prezzo era
- *   dichiarato ma reale.  Con il canale video quel prezzo non si puo' piu'
- *   pagare, perche' §5.2 obbliga il client a mandarlo.
+ * ⚠ Until today this type fell into the `default` of the switch and made a
+ *   conforming client that had seen a gap **lose the session**: the log
+ *   declared it («phase 1 does not serve it yet»), and the price was
+ *   declared but real.  With the video channel that price can no longer be
+ *   paid, because §5.2 obliges the client to send it.
  *
- * ⛔ E l'ORLOGIO SI CONTA DALL'ULTIMA CHIAVE SPEDITA, non dall'ultima richiesta
- *    ricevuta: «contando dalle richieste, due client insistenti spostano
- *    l'orologio all'infinito e la chiave non parte mai».                     */
+ * ⛔ And the CLOCK COUNTS FROM THE LAST KEYFRAME SENT, not from the last request
+ *    received: «counting from requests, two insistent clients push the clock
+ *    forward forever and the keyframe never leaves».                        */
 static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
 {
 	uint32_t ultimo = le_u32(l);
@@ -6308,71 +6346,71 @@ static bool tratta_richiedi_chiave(rcp_sessione *s, lettore *l, uint64_t ora)
 		        "RICHIEDI_CHIAVE senza `ultimo_numero`");
 		return false;
 	}
-	/* §5.2: la si serve solo a sessione aperta — prima non ci sono fotogrammi
-	 * di cui accorgersi. */
+	/* §5.2: it is served only with the session open — before there are no
+	 * frames to notice anything about. */
 	if (!s->sessione_spedita) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO,
 		        "RICHIEDI_CHIAVE prima di SESSIONE: non c'e' nessun fotogramma");
 		return false;
 	}
-	/* ⛔ §7.1: «`ultimo_numero`: l'ultimo fotogramma decodificato, **0 se
-	 * nessuno**».  E' il significato che P2 ha riservato allo zero in §6.2:
-	 * qui si legge, non si indovina. */
-	/* ⛔⛔ 22 set 2026 — LA GRAZIA E' PER I DOPPIONI, non per i buchi nuovi.
-	 *     Una richiesta con `ultimo_numero` uguale o piu' nuovo dell'ultima
-	 *     chiave spedita dice che il client quella chiave l'ha GIA'
-	 *     decodificata: il buco e' venuto dopo, e ignorarla lo lascia fermo per
-	 *     sempre (la pagina non ne chiede una seconda per lo stesso buco).
-	 *     `[M]` Firefox su KDE, video pesante: «ignorata — 157 ms» con
-	 *     `ultimo_numero` = la chiave appena arrivata, e la pagina congelata
-	 *     finche' la linea e' morta.  ⚠ Confronto in aritmetica di numeri di
-	 *     serie: il `numero` di §6.2 gira. */
+	/* ⛔ §7.1: «`ultimo_numero`: the last decoded frame, **0 if
+	 * none**».  It is the meaning P2 reserved for zero in §6.2: here it is
+	 * read, not guessed. */
+	/* ⛔⛔ 22 Sep 2026 — THE GRACE IS FOR DUPLICATES, not for new gaps.
+	 *     A request with `ultimo_numero` equal to or newer than the last
+	 *     keyframe sent says the client has ALREADY decoded that keyframe: the
+	 *     gap came afterwards, and ignoring it leaves it frozen forever (the
+	 *     page does not ask for a second one for the same gap).
+	 *     `[M]` Firefox on KDE, heavy video: «ignored — 157 ms» with
+	 *     `ultimo_numero` = the keyframe just arrived, and the page frozen
+	 *     until the line died.  ⚠ Comparison in serial-number arithmetic: the
+	 *     `numero` of §6.2 wraps around. */
 	bool gia_vista = (int32_t)(ultimo - s->ultima_chiave_numero) >= 0;
 	if (!s->mai_spedita_una_chiave && !gia_vista &&
 	    ora - s->ultima_chiave_ms < V_GRAZIA_CHIAVE) {
-		/* ⛔ §3: «ogni tolleranza va scritta nel registro.  Una tolleranza
-		 * silenziosa e' indistinguibile da un difetto».  E' l'eccezione 5. */
-		reg(s, "⚠ TOLLERANZA DICHIARATA (§3 eccezione 5, §5.2): "
-		       "RICHIEDI_CHIAVE(ultimo_numero=%u) ignorata — sono passati %llu "
-		       "ms dall'ultima CHIAVE spedita, meno dei %d ammessi",
+		/* ⛔ §3: «every tolerance must be written to the log.  A silent
+		 * tolerance is indistinguishable from a defect».  It is exception 5. */
+		reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): "
+		       "RICHIEDI_CHIAVE(ultimo_numero=%u) ignored — %llu ms have "
+		       "passed since the last KEYFRAME sent, fewer than the %d allowed",
 		    ultimo, (unsigned long long)(ora - s->ultima_chiave_ms),
 		    V_GRAZIA_CHIAVE);
 		return true;
 	}
-	reg(s, "RICHIEDI_CHIAVE(ultimo_numero=%u) accolta (§5.2): il prossimo "
-	       "fotogramma sara' una CHIAVE — ultimo spedito da noi: %u",
+	reg(s, "RICHIEDI_CHIAVE(ultimo_numero=%u) accepted (§5.2): the next "
+	       "frame will be a KEYFRAME — last one sent by us: %u",
 	    ultimo, s->video_numero);
-	chiave_serve(s, "il client ne ha chiesta una (§5.2)");
+	chiave_serve(s, "the client asked for one (§5.2)");
 	return true;
 }
 
 /* ------------------------------------------------------------------------ */
-/* ⭐ §7.5 — LA FUNZIONE DI BANCO, E IL CASO CHE NON DEVE FAR CADERE NIENTE
+/* ⭐ §7.5 — THE BENCH FUNCTION, AND THE CASE THAT MUST NOT BRING ANYTHING DOWN
  *
- * ⛔ Questo e' l'unico messaggio del canale di controllo a cui un server
- *    conforme risponde **rifiutando senza chiudere**.  Le due regole:
+ * ⛔ This is the only control channel message to which a conforming server
+ *    answers **by refusing without closing**.  The two rules:
  *
- *    regola 2  spenta -> `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`.  ⛔ NON
- *              DEVE tacere e NON DEVE chiudere: «un client che chiede una
- *              funzione spenta non ha violato niente», e un silenzio lascia il
- *              banco della fase 3 ad aspettare per sempre — il sintomo sarebbe
- *              «il banco si e' piantato», che non nomina ne' la funzione ne'
- *              l'interruttore;
- *    regola 4  `ritardo_ms` fuori da 0..10 000 -> `RITARDO_FUORI_LIMITI`, e
- *              ⛔ **non** `ERRORE_PROTOCOLLO`: far cadere la sessione al banco
- *              che si sta tarando e' la stessa cattiva idea che §7.1 evita per
- *              le misure fuori limite.
+ *    rule 2    off -> `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`.  ⛔ It MUST
+ *              NOT stay silent and MUST NOT close: «a client asking for a
+ *              function that is off has violated nothing», and a silence leaves
+ *              the phase 3 bench waiting forever — the symptom would be
+ *              «the bench got stuck», which names neither the function nor
+ *              the switch;
+ *    rule 4    `ritardo_ms` outside 0..10 000 -> `RITARDO_FUORI_LIMITI`, and
+ *              ⛔ **not** `ERRORE_PROTOCOLLO`: bringing down the session of the
+ *              bench being calibrated is the same bad idea §7.1 avoids for
+ *              out-of-limit sizes.
  *
- * ⚠ E l'ORDINE fra le due `RCP.md` non lo dice: con la funzione spenta E il
- *   ritardo fuori limite, i motivi difendibili sono due.  ⭐ Qui si controlla
- *   PRIMA il parametro, perche' e' quello che il banco puo' correggere: dirgli
- *   «spenta» quando ha anche sbagliato il numero gli fa accendere la funzione e
- *   ritrovarsi lo stesso rifiuto, con un motivo diverso, al secondo giro.  La
- *   scelta e' dichiarata in `FASI.md` §01-filo-nudo.
+ * ⚠ And the ORDER between the two `RCP.md` does not say: with the function off
+ *   AND the delay out of limits, the defensible reasons are two.  ⭐ Here the
+ *   parameter is checked FIRST, because it is the one the bench can correct:
+ *   telling it «off» when it also got the number wrong makes it switch the
+ *   function on and find the same refusal, with a different reason, at the
+ *   second round.  The choice is declared in `FASI.md` §01-filo-nudo.
  *
- * ⛔ Regola 5: ogni `BANCO_MARCA` si scrive nel registro — anche i rifiuti.
- *    «Una sessione che dipinge quadratini colorati sul desktop di una persona
- *    deve poterlo dimostrare dal registro.» */
+ * ⛔ Rule 5: every `BANCO_MARCA` is written to the log — refusals too.
+ *    «A session that paints coloured squares on a person's desktop must be
+ *    able to prove it from the log.» */
 static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
 {
 	uint32_t id = le_u32(l), colore = le_u32(l), ritardo = le_u32(l);
@@ -6380,9 +6418,9 @@ static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA troncato");
 		return false;
 	}
-	/* ⛔ §7.5: «0 e' riservato».  Un id zero non e' un parametro di banco
-	 * sbagliato, e' un messaggio malformato: qui la sessione cade.
-	 * ⚠ Scelta nostra — il documento dice «riservato» e non dice l'esito. */
+	/* ⛔ §7.5: «0 is reserved».  A zero id is not a wrong bench parameter,
+	 * it is a malformed message: here the session drops.
+	 * ⚠ Our choice — the document says «reserved» and does not say the outcome. */
 	if (id == 0) {
 		congeda(s, RCP_ERRORE_PROTOCOLLO, "BANCO_MARCA con id 0, che e' riservato");
 		return false;
@@ -6394,9 +6432,9 @@ static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
 	} else if (!BANCO_ACCESO) {
 		motivo = BANCO_FUNZIONE_SPENTA;
 	} else {
-		/* In fase 1 non c'e' nessun fotogramma su cui dipingere: la funzione
-		 * resta spenta, e questo ramo esiste per non far dimenticare che
-		 * l'accensione va scritta nel registro (regola 5). */
+		/* In phase 1 there is no frame to paint on: the function stays off,
+		 * and this branch exists so as not to forget that switching it on
+		 * must be written to the log (rule 5). */
 		esito = BANCO_ACCETTATA;
 		motivo = 0;
 	}
@@ -6409,13 +6447,13 @@ static bool tratta_banco_marca(rcp_sessione *s, lettore *l)
 	sc_u32(&w, id);
 	sc_byte(&w, esito);
 	sc_byte(&w, motivo);
-	/* ⛔ `istante`: 0 se rifiutata, «ed e' l'unico significato di *assente*
-	 * per questo campo» (§6.0). */
+	/* ⛔ `istante`: 0 if refused, «and it is the only meaning of *absent*
+	 * for this field» (§6.0). */
 	for (int i = 0; i < 8; i++)
 		sc_byte(&w, 0);
 	if (!w.pieno)
 		manda_messaggio(s, T_BANCO_ESITO, corpo, w.len);
-	/* ⭐ E la sessione RESTA APERTA. */
+	/* ⭐ And the session STAYS OPEN. */
 	return true;
 }
 
@@ -6430,24 +6468,24 @@ rcp_sessione *rcp_apri(const rcp_ganci *g, const char *provenienza,
 	s->stato = S_ATTESA_CIAO;
 	s->da_quando = ora_ms;
 	s->ultimo_byte = ora_ms;
-	/* ⛔ E ANCHE QUESTO parte da adesso, non da zero: una sessione appena
-	 *    aperta non ha ancora visto passare un pacchetto per le mani di questo
-	 *    modulo, e uno zero la farebbe staccare per silenzio al primo giro. */
+	/* ⛔ And THIS too starts from now, not from zero: a session just
+	 *    opened has not yet seen a packet pass through the hands of this
+	 *    module, and a zero would make it detach for silence at the first round. */
 	s->ultima_vita = ora_ms;
 	snprintf(s->provenienza, sizeof s->provenienza, "%s",
 	         provenienza ? provenienza : "?");
 	rcp_chiave_indirizzo(s->provenienza, s->indirizzo, sizeof s->indirizzo);
-	reg(s, "canale di controllo aperto da %s (indirizzo per §4.4-bis: %s)",
+	reg(s, "control channel opened from %s (address for §4.4-bis: %s)",
 	    s->provenienza, s->indirizzo);
-	/* ⛔ §7.5 regola 5 e §4.3: «un server che la dichiarasse `si` per errore lo
-	 * scrive nel registro a ogni avvio».  Questo modulo non ha un avvio — non
-	 * apre socket e non legge configurazioni — e il primo momento che vede e'
-	 * l'apertura di un canale: la riga sta qui (rilievo R9.14).  ⚠ Chi
-	 * diagnostica un quadratino colorato sul desktop di qualcuno deve poter
-	 * risalire alla riga che dice che la funzione era accesa. */
+	/* ⛔ §7.5 rule 5 and §4.3: «a server that declared it `si` by mistake
+	 * writes it to the log at every startup».  This module has no startup — it
+	 * opens no socket and reads no configuration — and the first moment it sees
+	 * is the opening of a channel: the line sits here (finding R9.14).  ⚠ Whoever
+	 * diagnoses a coloured square on someone's desktop must be able to trace
+	 * back to the line saying the function was on. */
 	if (BANCO_ACCESO)
-		reg(s, "⛔ la FUNZIONE DI BANCO e' ACCESA (§7.5): questo server accetta "
-		       "BANCO_MARCA e dipinge sopra il desktop, e `ECCOMI` dichiara "
+		reg(s, "⛔ the BENCH FUNCTION is ON (§7.5): this server accepts "
+		       "BANCO_MARCA and paints over the desktop, and `ECCOMI` declares "
 		       "banco.marca=si");
 	return s;
 }
@@ -6456,47 +6494,47 @@ void rcp_libera(rcp_sessione *s)
 {
 	if (!s)
 		return;
-	/* ⛔ §7.3 — l'ultima delle strade, e la rete di sicurezza di tutte le altre:
-	 * qualunque cosa sia successa, di qui si passa.  ⚠ `inp_rilasciato` impedisce
-	 * da solo di rilasciare due volte. */
-	rilascia_al_distacco(s, "la sessione si libera");
-	/* ⛔ §6.2 — UNO STREAM VIDEO LASCIATO A META' SI AZZERA, NON SI ABBANDONA
-	 * AL TRASPORTO.  Un fotogramma aperto quando la sessione finisce e' per
-	 * definizione incompleto: azzerarlo lo dice, ed e' l'unica chiusura che
-	 * significa «buttalo».  ⚠ E si passa dal gancio, non da
-	 * `rcp_video_abbandona()`: quello rifiuta le chiavi (§5.2) e ha ragione
-	 * finche' la sessione vive — qui non c'e' piu' niente da proteggere, e una
-	 * chiave lasciata aperta resterebbe aperta per sempre. */
+	/* ⛔ §7.3 — the last of the roads, and the safety net of all the others:
+	 * whatever happened, one passes through here.  ⚠ `inp_rilasciato` alone
+	 * prevents releasing twice. */
+	rilascia_al_distacco(s, "the session is being freed");
+	/* ⛔ §6.2 — A VIDEO STREAM LEFT HALFWAY IS RESET, NOT ABANDONED TO THE
+	 * TRANSPORT.  A frame open when the session ends is by definition
+	 * incomplete: resetting it says so, and it is the only closing that means
+	 * «throw it away».  ⚠ And one goes through the hook, not through
+	 * `rcp_video_abbandona()`: that one refuses keyframes (§5.2) and is right
+	 * while the session lives — here there is nothing left to protect, and a
+	 * keyframe left open would stay open forever. */
 	if (s->video_aperto && s->g.video_azzera) {
 		s->g.video_azzera(s->g.ctx, s->video_stream);
 		s->video_aperto = false;
-		reg(s, "⚠ il fotogramma %u era ancora aperto alla fine della sessione: "
-		       "stream %lld AZZERATO (§6.2), %zu byte su %zu",
+		reg(s, "⚠ frame %u was still open at the end of the session: "
+		       "stream %lld RESET (§6.2), %zu bytes out of %zu",
 		    s->video_suo_numero, (long long)s->video_stream, s->video_scritti,
 		    s->video_da_scrivere);
 	}
 	if (s->attaccata) {
 		posto_lascia(s->utente);
-		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		reg(s, "slot LEFT by %s via %s (taken now: %d)", s->utente,
 		    s->provenienza, posti_occupati());
 	}
-	/* ⛔ L'accumulo si azzera PRIMA di liberarlo — rilievo R9.8.  Ci e' passata
-	 * la `CREDENZIALI`, e su ogni strada che congeda prima di consumare il
-	 * messaggio la parola d'ordine in chiaro e' ancora li'.  `free()` non
-	 * azzera niente: quei byte finivano nel mucchio liberato, disponibili a
-	 * qualunque allocazione successiva di un processo che serve TUTTI gli
-	 * utenti della macchina (`SPECIFICHE.md` §5.5). */
+	/* ⛔ The buffer is zeroed BEFORE freeing it — finding R9.8.  The
+	 * `CREDENZIALI` passed through it, and on every road that sends the client
+	 * away before consuming the message the password in clear is still there.
+	 * `free()` zeroes nothing: those bytes ended up in the freed heap,
+	 * available to any later allocation of a process that serves ALL the
+	 * users of the machine (`SPECIFICHE.md` §5.5). */
 	if (s->acc) {
 		memset(s->acc, 0, s->acc_cap);
 		free(s->acc);
 	}
-	/* ⛔⭐ E GLI APPUNTI SI LIBERANO QUI, tutti e due i lati.
+	/* ⛔⭐ AND THE CLIPBOARD IS FREED HERE, both sides.
 	 *
-	 * ⛔ E si AZZERANO prima, come l'accumulo e per una ragione della stessa
-	 *    famiglia: quel che l'utente copia e' spesso proprio quel che non
-	 *    vorrebbe lasciare in giro — una parola d'ordine incollata da un gestore
-	 *    di credenziali passa **per intero** da questo buffer.  ⚠ `free()` non
-	 *    azzera niente, e questo processo serve TUTTI gli utenti della macchina
+	 * ⛔ And it is ZEROED first, like the buffer and for a reason of the same
+	 *    family: what the user copies is often precisely what they would not
+	 *    want to leave lying around — a password pasted from a credential
+	 *    manager passes **whole** through this buffer.  ⚠ `free()` zeroes
+	 *    nothing, and this process serves ALL the users of the machine
 	 *    (`SPECIFICHE.md` §5.5). */
 	if (s->app_testo) {
 		memset(s->app_testo, 0, s->app_testo_n);
@@ -6513,36 +6551,36 @@ void rcp_libera(rcp_sessione *s)
 
 bool rcp_e_finita(const rcp_sessione *s) { return s && s->stato == S_FINITA; }
 
-/* ⛔⭐ §4.2 — LA SESSIONE E' FINITA PERCHE' LO DICE IL CLIENT, E IL POSTO SI
- * LASCIA ADESSO, NON QUANDO IL TRASPORTO AVRA' FINITO DI SMONTARSI.
+/* ⛔⭐ §4.2 — THE SESSION IS OVER BECAUSE THE CLIENT SAYS SO, AND THE SLOT IS
+ * LEFT NOW, NOT WHEN THE TRANSPORT HAS FINISHED TAKING ITSELF DOWN.
  *
- * Il client chiude la sessione WebTransport con una capsula che porta il
- * motivo (§3.1 punto 3).  ⚠ Aspettare la chiusura degli stream per liberare il
- * posto (§8.2 motivo 0x0F) significa tenerlo occupato per tutto il tempo dello
- * smontaggio — e chi si ricollega **subito** si sente rispondere che c'e' gia'
- * una sessione.
+ * The client closes the WebTransport session with a capsule carrying the
+ * reason (§3.1 point 3).  ⚠ Waiting for the streams to close before freeing the
+ * slot (§8.2 reason 0x0F) means keeping it taken for the whole time of the
+ * teardown — and whoever reconnects **at once** is told there is already a
+ * session.
  *
- * ⭐ Trovato da B11 il 10 agosto 2026: due casi consecutivi, il secondo
- *    respinto con `GIA_ATTIVA_REMOTA` perche' il primo non aveva ancora finito
- *    di andarsene.  ⛔ Sul banco e' un caso rosso ogni tanto; per chi usa il
- *    prodotto e' «mi dice che sono gia' collegato, e non e' vero».            */
+ * ⭐ Found by B11 on 10 Aug 2026: two consecutive cases, the second
+ *    refused with `GIA_ATTIVA_REMOTA` because the first had not yet finished
+ *    leaving.  ⛔ On the bench it is a red case now and then; for whoever uses
+ *    the product it is «it tells me I am already connected, and it is not true». */
 void rcp_chiusa_dal_client(rcp_sessione *s, uint8_t codice)
 {
-	/* ⚠ Nessuna guardia sullo stato: il posto lo si lascia anche se la
-	 *   sessione era gia' finita per altra via — `attaccata` impedisce da
-	 *   sola di lasciarlo due volte, ed e' l'unica cosa che conta. */
+	/* ⚠ No guard on the state: the slot is left even if the session had
+	 *   already ended by another road — `attaccata` alone prevents leaving it
+	 *   twice, and it is the only thing that matters. */
 	if (!s)
 		return;
-	reg(s, "la pagina ha chiuso la sessione, motivo %#04x: §4.2, la sessione "
-	       "e' finita (stato: %s)",
+	reg(s, "the page closed the session, reason %#04x: §4.2, the session "
+	       "is over (state: %s)",
 	    codice, NOMI_STATO[s->stato]);
-	/* ⛔ §7.3: la terza strada — la pagina se ne va senza passare da
-	 * `congeda()`.  Un browser chiuso con la crocetta arriva di qui. */
-	rilascia_al_distacco(s, "la pagina ha chiuso la sessione");
+	/* ⛔ §7.3: the third road — the page leaves without going through
+	 * `congeda()`.  A browser closed with the little cross arrives here. */
+	rilascia_al_distacco(s, "the page closed the session");
 	if (s->attaccata) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
-		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		reg(s, "slot LEFT by %s via %s (taken now: %d)", s->utente,
 		    s->provenienza, posti_occupati());
 	}
 	s->stato = S_FINITA;
@@ -6555,17 +6593,17 @@ const char *rcp_stato_nome(const rcp_sessione *s)
 
 const char *rcp_utente(const rcp_sessione *s) { return s ? s->utente : ""; }
 
-/* ⛔⭐ IL TETTO DEL DECODIFICATORE, PORTATO FUORI — fase 10, 25 agosto 2026.
+/* ⛔⭐ THE DECODER CEILING, BROUGHT OUTSIDE — phase 10, 25 Aug 2026.
  *
- *     `max_l`/`max_a` esistevano dal 10 agosto (rilievo B-1) e servivano a UNA
- *     cosa sola: non concedere una tela che il client non sa decodificare
- *     (§4.5).  ⭐ Il budget ne ha bisogno per un'altra: e' il **maggiorante del
- *     costo** di chi sta bussando, e si conosce fin dal `CIAO` — cioe' molto
- *     prima che la tela sia decisa.  ⇒ Nessun campo nuovo, nessun canale nuovo:
- *     solo un accessore.
+ *     `max_l`/`max_a` had existed since 10 August (finding B-1) and served ONE
+ *     thing only: not granting a canvas the client cannot decode
+ *     (§4.5).  ⭐ The budget needs them for another: it is the **upper bound of
+ *     the cost** of whoever is knocking, and it is known from `CIAO` on — that
+ *     is long before the canvas is decided.  ⇒ No new field, no new channel:
+ *     only an accessor.
  *
- * ⚠ `false` = «il client non l'ha dichiarata», ed e' un fatto diverso da «zero»
- *   (§4.5 vincola la tela concessa **solo se il client l'ha dichiarata**). */
+ * ⚠ `false` = «the client did not declare it», and it is a fact different from
+ *   «zero» (§4.5 constrains the granted canvas **only if the client declared it**). */
 bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a)
 {
 	if (!s || !s->max_l || !s->max_a)
@@ -6577,71 +6615,71 @@ bool rcp_misura_massima(const rcp_sessione *s, uint32_t *l, uint32_t *a)
 	return true;
 }
 
-/* ⛔⭐ §5.3 — «IL CLIENT E' ANCORA LI'», e lo dice il TRASPORTO, non RCP.
+/* ⛔⭐ §5.3 — «THE CLIENT IS STILL THERE», and the TRANSPORT says so, not RCP.
  *
- *     La chiama `trasporto.c` dopo ogni pacchetto che `ngtcp2_conn_read_pkt()`
- *     ha accettato: cioe' **decifrato e autenticato**.  ⛔ Non basta che un
- *     datagram UDP arrivi — chiunque puo' spedirne uno con l'indirizzo di un
- *     altro, e terrebbe occupato il posto di qualcun altro.
+ *     `trasporto.c` calls it after every packet `ngtcp2_conn_read_pkt()`
+ *     has accepted: that is **decrypted and authenticated**.  ⛔ It is not
+ *     enough for a UDP datagram to arrive — anyone can send one with someone
+ *     else's address, and would keep someone else's slot taken.
  *
- * ⭐ E' l'unico segno di vita che esiste quando l'utente guarda e non tocca, ed
- *    e' quello GIUSTO: nella prova del 16 agosto il filo e' stato tagliato alle
- *    13:33:13 e questo orologio l'ha dichiarato alle 13:33:43 — **trenta
- *    secondi netti**, mentre quello dei byte di RCP l'aveva dichiarato 36
- *    secondi PRIMA, e a torto.
+ * ⭐ It is the only sign of life that exists when the user watches and does not
+ *    touch, and it is the RIGHT one: in the test of 16 August the wire was cut at
+ *    13:33:13 and this clock declared it at 13:33:43 — **thirty seconds
+ *    flat**, while the RCP bytes clock had declared it 36 seconds EARLIER, and
+ *    wrongly.
  *
- * ⚠ Nessun messaggio nuovo, nessun battito da aggiungere alla pagina: il
- *   segnale c'era gia' e nessuno lo passava di qui. */
+ * ⚠ No new message, no heartbeat to add to the page: the signal was already
+ *   there and nobody passed it through here. */
 void rcp_segno_di_vita(rcp_sessione *s, uint64_t ora_ms)
 {
 	if (!s || s->stato == S_FINITA)
 		return;
-	/* ⛔⭐⭐ E IL BUCO FRA DUE PACCHETTI SI SORVEGLIA, perche' questa
-	 *      riparazione POGGIA SU UN'ASSUNZIONE: che fra un pacchetto e l'altro
-	 *      passi meno del tetto di §5.3.
+	/* ⛔⭐⭐ AND THE GAP BETWEEN TWO PACKETS IS WATCHED, because this repair
+	 *      RESTS ON AN ASSUMPTION: that between one packet and the next less
+	 *      than the ceiling of §5.3 passes.
 	 *
-	 * ⛔ Nessuno la garantisce.  I PING del trasporto sono accesi SOLO nella
-	 *    finestra delle credenziali, e per una ragione scritta
-	 *    (`webtransport.c`, `regola_tienila_viva()`: tenerli sempre accesi
-	 *    cambierebbe il significato dei 30 s di §2.2).  ⇒ Durante la sessione
-	 *    i pacchetti arrivano perche' QUALCOSA si muove — fotogrammi, cursore,
-	 *    riscontri — e su una scena ferma con nessuno che tocca niente non e'
-	 *    detto che si muova abbastanza spesso.
+	 * ⛔ Nobody guarantees it.  The transport PINGs are on ONLY in the
+	 *    credentials window, and for a written reason (`webtransport.c`,
+	 *    `regola_tienila_viva()`: keeping them always on would change the
+	 *    meaning of the 30 s of §2.2).  ⇒ During the session packets arrive
+	 *    because SOMETHING moves — frames, cursor, acknowledgements — and on a
+	 *    still scene with nobody touching anything it is not certain that
+	 *    something moves often enough.
 	 *
-	 * ⚠ Quindi quando il buco supera META' del tetto lo si SCRIVE.  E' l'unico
-	 *   modo di vedere ARRIVARE il giorno in cui non basta piu', invece di
-	 *   scoprirlo da un utente buttato fuori mentre leggeva — cioe' di non
-	 *   rifare, nella cura, il difetto che la cura e' venuta a togliere: una
-	 *   protezione che poggia su qualcosa che nessuno puo' guardare.
+	 * ⚠ So when the gap exceeds HALF the ceiling it is WRITTEN.  It is the only
+	 *   way to see the day COMING when it is no longer enough, instead of
+	 *   discovering it from a user thrown out while reading — that is not to
+	 *   redo, in the cure, the defect the cure came to remove: a protection
+	 *   resting on something nobody can look at.
 	 *
-	 * ⛔⭐ `[M]` E ALLA PRIMA CORSA QUESTA RIGA HA GIA' PARLATO, 16 agosto 2026:
-	 *      sessione ferma per 260 s, il posto ha tenuto — ⛔ ma il buco fra due
-	 *      pacchetti e' **15004, 15005, 15002 ms**, cioe' QUINDICI SECONDI
-	 *      ESATTI, meta' netta del tetto.
+	 * ⛔⭐ `[M]` AND AT THE FIRST RUN THIS LINE ALREADY SPOKE, 16 Aug 2026:
+	 *      session still for 260 s, the slot held — ⛔ but the gap between two
+	 *      packets is **15004, 15005, 15002 ms**, that is EXACTLY FIFTEEN
+	 *      SECONDS, a clean half of the ceiling.
 	 *
-	 *      ⇒ Il margine e' 2x, ed e' regolarissimo perche' NON E' NOSTRO: e' il
-	 *      keep-alive del browser.  ⚠ Un browser diverso, o Chrome che cambia
-	 *      quel numero, e i posti ricominciano a cadere.  ⛔ La cura vera —
-	 *      mandare i PING anche a sessione attiva — e' una DECISIONE, non una
-	 *      riparazione: cambia il significato dei 30 s di §2.2 per la scheda
-	 *      CONGELATA, che `SPECIFICHE.md` §5.3 dice doversi staccare.  E' scritta
-	 *      in `FASI.md` §05-la-sessione §6-bis e aspetta l'utente. */
+	 *      ⇒ The margin is 2x, and it is very regular because it is NOT OURS: it
+	 *      is the browser's keep-alive.  ⚠ A different browser, or Chrome
+	 *      changing that number, and slots start dropping again.  ⛔ The real
+	 *      cure — sending PINGs even with the session active — is a DECISION,
+	 *      not a repair: it changes the meaning of the 30 s of §2.2 for the
+	 *      FROZEN tab, which `SPECIFICHE.md` §5.3 says must be detached.  It is
+	 *      written in `FASI.md` §05-la-sessione §6-bis and waits for the user. */
 	if (ora_ms > s->ultima_vita && ora_ms - s->ultima_vita > SILENZIO / 2)
-		reg(s, "⚠ §5.3: fra due pacchetti da %s sono passati %llu ms, e il "
-		       "tetto del silenzio e' %u — il margine si sta assottigliando",
+		reg(s, "⚠ §5.3: between two packets from %s %llu ms have passed, and the "
+		       "silence ceiling is %u — the margin is getting thin",
 		    s->provenienza, (unsigned long long)(ora_ms - s->ultima_vita),
 		    (unsigned)SILENZIO);
 	s->ultima_vita = ora_ms;
 }
 
-/* ⛔ L'accumulo cresce a richiesta fino al tetto di §6.1 (vedi MAX_ACCUMULO).
+/* ⛔ The buffer grows on demand up to the ceiling of §6.1 (see MAX_ACCUMULO).
  *
- * ⚠ E NON si usa `realloc`: quel buffer contiene la `CREDENZIALI` in chiaro, e
- *   `realloc` che sposta lascia la copia vecchia nel mucchio senza azzerarla —
- *   cioe' rimetterebbe il difetto che R9.8 e' venuto a togliere.  Si alloca, si
- *   copia, si AZZERA il vecchio, si libera.
+ * ⚠ And `realloc` is NOT used: that buffer contains the `CREDENZIALI` in clear,
+ *   and a `realloc` that moves leaves the old copy in the heap without zeroing
+ *   it — that is it would put back the defect R9.8 came to remove.  One
+ *   allocates, copies, ZEROES the old one, frees.
  *
- * Restituisce: 1 fatto · 0 non ci sta (il chiamante congeda) · -1 memoria. */
+ * Returns: 1 done · 0 does not fit (the caller sends the client away) · -1 memory. */
 static int accumula(rcp_sessione *s, const uint8_t *dati, size_t n)
 {
 	if (s->acc_len + n > MAX_ACCUMULO)
@@ -6667,36 +6705,36 @@ static int accumula(rcp_sessione *s, const uint8_t *dati, size_t n)
 	s->acc_len += n;
 	return 1;
 }
-
-/* ⛔⭐ QUANTO OCCUPANO I CAMPI DI QUESTO TIPO — rilievo R9.4, e il difetto era
- *    l'ORDINE, non il controllo.
+/* ⛔⭐ HOW LONG THE FIELDS OF THIS TYPE ARE — finding R9.4, and the defect was
+ *    the ORDER, not the check.
  *
- * §6.1: «un ricevente che legge una lunghezza incoerente con quel che il tipo
- * prevede DEVE chiudere con `ERRORE_PROTOCOLLO`», e §3: «NON DEVE proseguire».
- * Il controllo `l.i != lung` c'era, ed era scritto giusto — ma stava DOPO
- * `avanti = tratta_*()`, cioe' dopo che il messaggio era stato eseguito per
- * intero, con tutti i suoi effetti sul filo e sullo stato:
+ * §6.1: «a receiver that reads a length inconsistent with what the type
+ * foresees MUST close with `ERRORE_PROTOCOLLO`», and §3: «MUST NOT carry on».
+ * The check `l.i != lung` was there, and it was written right — but it sat AFTER
+ * `avanti = tratta_*()`, that is after the message had been executed in
+ * full, with all its effects on the wire and on the state:
  *
- *   un `CIAO` con quattro byte di riempimento in coda — il caso
- *   `lunghezza-in-piu` di B5 — riceveva `ECCOMI` e SOLO POI il congedo;
- *   un `ATTACCA` con un byte in coda prendeva il posto, spediva `SESSIONE`,
- *   scriveva «sessione aperta» e poi congedava: sul filo, in quest'ordine,
- *   `SESSIONE` e `CONGEDO(0x0B)`.  ⛔ Un client che ha ricevuto `SESSIONE` e'
- *   autorizzato da §2.5 ad aprire il suo stream di input, e lo apriva su una
- *   sessione che stava morendo;
- *   una `CREDENZIALI` con un byte in coda faceva interrogare PAM e MUOVEVA i
- *   contatori di §4.4-bis — cioe' proprio la proprieta' che B5 verifica con
- *   `malformati-non-contano`, e la verificava sull'altra meta' dei malformati.
+ *   a `CIAO` with four padding bytes at the tail — the
+ *   `lunghezza-in-piu` case of B5 — received `ECCOMI` and ONLY THEN the farewell;
+ *   an `ATTACCA` with one byte at the tail took the slot, sent `SESSIONE`,
+ *   wrote «session open» and then sent the client away: on the wire, in this
+ *   order, `SESSIONE` and `CONGEDO(0x0B)`.  ⛔ A client that has received
+ *   `SESSIONE` is authorised by §2.5 to open its input stream, and it opened it
+ *   on a session that was dying;
+ *   a `CREDENZIALI` with one byte at the tail made PAM be queried and MOVED the
+ *   counters of §4.4-bis — that is precisely the property B5 checks with
+ *   `malformati-non-contano`, and it checked it on the other half of the
+ *   malformed ones.
  *
- * ⚠ Questa funzione e' un SECONDO lettore degli stessi campi, e i due si
- *   possono separare: chi cambia un corpo in `tratta_*()` cambia anche qui.  Il
- *   controllo che resta DOPO lo switch non e' un doppione — e' quel che se ne
- *   accorge.
+ * ⚠ This function is a SECOND reader of the same fields, and the two can
+ *   drift apart: whoever changes a body in `tratta_*()` changes it here too.  The
+ *   check that remains AFTER the switch is not a duplicate — it is what
+ *   notices.
  *
- * ⭐ E restituisce `false` quando il corpo e' piu' CORTO dei campi: quel caso
- *    lo lascia a `tratta_*()`, che sa dire quale campo mancava.  §3.1 punto 1
- *    vuole «che cosa» non si e' capito, e «CIAO senza versione» vale piu' di
- *    «la lunghezza non torna». */
+ * ⭐ And it returns `false` when the body is SHORTER than the fields: that case
+ *    it leaves to `tratta_*()`, which can say which field was missing.  §3.1
+ *    point 1 wants «what» was not understood, and «CIAO senza versione» is worth
+ *    more than «the length does not add up». */
 static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
                          size_t *quanti)
 {
@@ -6732,43 +6770,44 @@ static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
 		le_u8(&l);
 		le_str(&l, buf, sizeof buf);
 		break;
-	/* §7.1: `RICHIEDI_CHIAVE` ├── u32 ultimo_numero.  Quattro byte, e non uno
-	 * di piu': un corpo piu' lungo e' `ERRORE_PROTOCOLLO` come per gli altri
-	 * (§6.1), e questa riga e' quel che lo fa succedere. */
+	/* §7.1: `RICHIEDI_CHIAVE` ├── u32 ultimo_numero.  Four bytes, and not one
+	 * more: a longer body is `ERRORE_PROTOCOLLO` as for the others
+	 * (§6.1), and this line is what makes it happen. */
 	case T_RICHIEDI_CHIAVE:
 		le_u32(&l);
 		break;
-	/* ⭐ §7.6: `TERMINA_SESSIONE` ha il corpo VUOTO — non c'e' niente da dire
-	 * oltre al fatto.  ⚠ E un corpo piu' lungo e' `ERRORE_PROTOCOLLO` come per
-	 * tutti gli altri (§6.1): non «si ignora quel che avanza». */
+	/* ⭐ §7.6: `TERMINA_SESSIONE` has an EMPTY body — there is nothing to say
+	 * beyond the fact.  ⚠ And a longer body is `ERRORE_PROTOCOLLO` as for
+	 * all the others (§6.1): not «whatever is left over is ignored». */
 	case T_TERMINA_SESSIONE:
 		break;
-	/* ⛔⭐⭐ `ADATTA_TELA` E `VISTA` — due `u32` ciascuno (§7.1), e MANCAVANO
-	 *      tutt'e due: 16 agosto 2026, banco `06-b36` caso 20.
+	/* ⛔⭐⭐ `ADATTA_TELA` AND `VISTA` — two `u32` each (§7.1), and BOTH were
+	 *      MISSING: 16 Aug 2026, bench `06-b36` case 20.
 	 *
-	 * ⚠ E' **R9.4 di nuovo**, sul messaggio piu' recente: il commento in cima a
-	 *   questa funzione racconta il difetto — «un `ATTACCA` con un byte in coda
-	 *   prendeva il posto, spediva `SESSIONE` e POI congedava» — e
-	 *   `ADATTA_TELA`, servito il 14 agosto, non e' mai entrato nell'elenco.
+	 * ⚠ It is **R9.4 again**, on the most recent message: the comment at the top
+	 *   of this function tells the defect — «an `ATTACCA` with one byte at the
+	 *   tail took the slot, sent `SESSIONE` and THEN sent the client away» — and
+	 *   `ADATTA_TELA`, served on 14 August, never entered the list.
 	 *
-	 * ⛔ Il prezzo `[M]`: un `ADATTA_TELA` di 12 byte cadeva nel `default`,
-	 *    questa funzione restituiva `false` (cioe' «non lo giudico»), il ramo
-	 *    `T_ADATTA_TELA` girava la richiesta al palco **per intero** e solo il
-	 *    controllo `l.i != lung` DOPO lo switch congedava.  ⇒ Sul filo un `TELA`
-	 *    e poi un `CONGEDO`, e sul compositore un ridimensionamento vero — che
-	 *    riavvia il flusso PipeWire e su Mutter distrugge e ricrea i dispositivi
-	 *    di `libei`.  §3: «NON DEVE proseguire».
+	 * ⛔ The price `[M]`: a 12-byte `ADATTA_TELA` fell into the `default`,
+	 *    this function returned `false` (that is «I do not judge it»), the
+	 *    `T_ADATTA_TELA` branch passed the request to the stage **in full** and
+	 *    only the check `l.i != lung` AFTER the switch sent the client away.  ⇒
+	 *    On the wire a `TELA` and then a `CONGEDO`, and on the compositor a real
+	 *    resize — which restarts the PipeWire stream and on Mutter destroys and
+	 *    recreates the `libei` devices.  §3: «MUST NOT carry on».
 	 *
-	 * ⚠ `VISTA` entra qui insieme perche' entra insieme nello switch: chi
-	 *   aggiunge un tipo e non aggiunge la sua riga qui riapre lo stesso buco. */
+	 * ⚠ `VISTA` comes in here together because it comes into the switch
+	 *   together: whoever adds a type and does not add its line here reopens the
+	 *   same hole. */
 	case T_ADATTA_TELA:
 	case T_VISTA:
 		le_u32(&l);
 		le_u32(&l);
 		break;
 	default:
-		/* un tipo che non arriveremo comunque a trattare: decide lo switch, e
-		 * la sua riga di registro e' piu' precisa di questa */
+		/* a type we will not get to handle anyway: the switch decides, and
+		 * its log line is more precise than this one */
 		return false;
 	}
 	if (l.corto)
@@ -6777,10 +6816,10 @@ static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
 	return true;
 }
 
-/* Il filo si e' fermato al confine fra due messaggi?  Serve a `giudica_dopo_la_
- * fine()`: se il server ha chiuso mentre un corpo era a meta', i byte che
- * arrivano dopo NON cominciano con un'intestazione, e leggerli come tale
- * significa dare un nome a due byte di corpo. */
+/* Has the wire stopped at the boundary between two messages?  It serves
+ * `giudica_dopo_la_fine()`: if the server closed while a body was halfway,
+ * the bytes arriving afterwards do NOT start with a header, and reading them
+ * as such means giving a name to two body bytes. */
 static bool a_confine(const rcp_sessione *s)
 {
 	if (s->acc_len == 0)
@@ -6793,30 +6832,30 @@ static bool a_confine(const rcp_sessione *s)
 	return s->acc_len >= 6u + (size_t)lung;
 }
 
-/* ⛔⭐ DOPO LA FINE SI GIUDICA SUI MESSAGGI, NON SUI PRIMI SEI BYTE DEL PEZZO —
- *    rilievo R9.15.
+/* ⛔⭐ AFTER THE END ONE JUDGES ON MESSAGES, NOT ON THE FIRST SIX BYTES OF THE
+ *    PIECE — finding R9.15.
  *
- * §4.4 vieta al client UNA cosa: **riprovare**.  §8.1 gliene impone un'altra:
- * chi chiude DEVE mandare `CONGEDO` col motivo.  ⭐ Le due si incontrano quando
- * il server sbaglia DOPO `RESPINTO` — il caso `respinto-poi-congedo` di B11: la
- * pagina vede un messaggio che non doveva arrivare, chiude come impone §3, e il
- * suo `CONGEDO` parte quando per noi la sessione e' gia' finita.
+ * §4.4 forbids the client ONE thing: **retrying**.  §8.1 imposes another:
+ * whoever closes MUST send `CONGEDO` with the reason.  ⭐ The two meet when
+ * the server errs AFTER `RESPINTO` — the `respinto-poi-congedo` case of B11: the
+ * page sees a message that should not have arrived, closes as §3 requires, and
+ * its `CONGEDO` leaves when for us the session is already over.
  *
- * ⚠ Il 10 agosto 2026 quel `CONGEDO` di 69 byte e' stato contato come «spedito
- *   dopo la fine», e il rosso e' andato sulla pagina che stava facendo
- *   esattamente quel che §8.1 le impone.  ⛔ La cura di quel giorno leggeva pero'
- *   **i primi due byte di `dati`** e assolveva TUTTO il pezzo: chi scriveva in
- *   una sola volta `CONGEDO` **piu'** una seconda `CREDENZIALI` si portava via
- *   l'assoluzione, e la violazione che B11 esiste per accusare non compariva in
- *   nessuna riga.  Il falso rosso era diventato un falso verde, che e' la stessa
- *   forma — e il documento su cui ci si appoggia, §4.4, parla di MESSAGGI. */
+ * ⚠ On 10 Aug 2026 that 69-byte `CONGEDO` was counted as «sent after the
+ *   end», and the red went to the page that was doing exactly what §8.1
+ *   requires of it.  ⛔ The cure of that day however read **the first two bytes
+ *   of `dati`** and acquitted the WHOLE piece: whoever wrote in a single go
+ *   `CONGEDO` **plus** a second `CREDENZIALI` walked away with the
+ *   acquittal, and the violation B11 exists to accuse appeared in no line.
+ *   The false red had become a false green, which is the same shape — and the
+ *   document one relies on, §4.4, speaks of MESSAGES. */
 static void giudica_dopo_la_fine(rcp_sessione *s, const uint8_t *dati,
                                  size_t len)
 {
 	if (!a_confine(s)) {
-		reg(s, "⚠ %zu byte arrivati DOPO la fine della sessione da %s, e NON "
-		       "sono giudicabili: il filo si era fermato a meta' di un corpo, "
-		       "quindi questi byte non cominciano con un'intestazione",
+		reg(s, "⚠ %zu bytes arrived AFTER the end of the session from %s, and they "
+		       "CANNOT be judged: the wire had stopped halfway through a body, "
+		       "so these bytes do not start with a header",
 		    len, s->provenienza);
 		return;
 	}
@@ -6828,33 +6867,33 @@ static void giudica_dopo_la_fine(rcp_sessione *s, const uint8_t *dati,
 		uint16_t tipo = le_u16(&l);
 		uint32_t lung = le_u32(&l);
 		if (lung > MAX_CORPO || (size_t)6 + lung > len - off)
-			break; /* l'ultimo e' troncato: `off < len` lo dira' */
+			break; /* the last one is truncated: `off < len` will say so */
 		if (quanti == 0)
 			primo = tipo;
 		quanti++;
 		off += 6 + lung;
 	}
 	if (quanti == 1 && primo == T_CONGEDO && off == len) {
-		reg(s, "⭐ CONGEDO di commiato da %s a sessione gia' finita: §8.1 lo "
-		       "IMPONE a chi chiude, e §4.4 vieta i tentativi, non i commiati "
-		       "— %zu byte, un messaggio solo, e non sono di troppo",
+		reg(s, "⭐ parting CONGEDO from %s with the session already over: §8.1 "
+		       "REQUIRES it of whoever closes, and §4.4 forbids attempts, not partings "
+		       "— %zu bytes, a single message, and they are not too many",
 		    s->provenienza, len);
 		return;
 	}
 	if (quanti >= 1 && primo == T_CONGEDO) {
-		reg(s, "⛔ da %s un CONGEDO di commiato E POI dell'altro: %d messaggi "
-		       "in %zu byte (%zu byte oltre l'ultimo intero).  §8.1 impone il "
-		       "commiato, §4.4 vieta tutto il resto",
+		reg(s, "⛔ from %s a parting CONGEDO AND THEN something else: %d messages "
+		       "in %zu bytes (%zu bytes beyond the last whole one).  §8.1 requires "
+		       "the parting, §4.4 forbids everything else",
 		    s->provenienza, quanti, len, len - off);
 		return;
 	}
-	reg(s, "⛔ %zu byte arrivati DOPO la fine della sessione da %s: %d messaggi "
-	       "interi, il primo di tipo %#06x",
+	reg(s, "⛔ %zu bytes arrived AFTER the end of the session from %s: %d whole "
+	       "messages, the first of type %#06x",
 	    len, s->provenienza, quanti, primo);
 }
 
-/* Estrae dall'accumulo tutti i messaggi interi che ci sono.  `false` = la
- * sessione e' finita, e il chiamante non deve accumulare altro. */
+/* Extracts from the buffer all the whole messages that are there.  `false` = the
+ * session is over, and the caller must not buffer anything else. */
 static bool drena(rcp_sessione *s, uint64_t ora)
 {
 	for (;;) {
@@ -6863,25 +6902,25 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		lettore intest = {s->acc, s->acc_len, 0, false};
 		uint16_t tipo = le_u16(&intest);
 		uint32_t lung = le_u32(&intest);
-		/* ⛔ La lunghezza si controlla PRIMA di allocare: chi alloca e poi
-		 * verifica ha gia' regalato un megabyte a chi sa scrivere sei byte. */
-		/* ⛔ E il tetto e' del MESSAGGIO, inquadratura compresa (§6.1 letta
-		 * insieme a §5.4) — rilievo B-14: qui `lung` e' il CORPO, e il corpo
-		 * piu' lungo ammesso e' `MAX_MESSAGGIO - 6`. */
+		/* ⛔ The length is checked BEFORE allocating: whoever allocates and then
+		 * checks has already given a megabyte to anyone who can write six bytes. */
+		/* ⛔ And the ceiling belongs to the MESSAGE, framing included (§6.1 read
+		 * together with §5.4) — finding B-14: here `lung` is the BODY, and the
+		 * longest body allowed is `MAX_MESSAGGIO - 6`. */
 		if (lung > MAX_CORPO) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "messaggio oltre 1 MiB");
 			return false;
 		}
 		if (s->acc_len < 6u + lung)
-			return true; /* il corpo non e' tutto arrivato */
+			return true; /* the body has not all arrived */
 
-		/* §2.5: sul canale di controllo il byte alto del tipo e' 0x00. */
+		/* §2.5: on the control channel the high byte of the type is 0x00. */
 		if ((tipo >> 8) != 0x00) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO, "byte alto del tipo non e' controllo");
 			return false;
 		}
-		/* ⛔ E QUI, PRIMA DI QUALUNQUE EFFETTO: la lunghezza dichiarata deve
-		 * essere quella dei campi del tipo (§6.1).  Vedi `misura_campi()`. */
+		/* ⛔ AND HERE, BEFORE ANY EFFECT: the declared length must be the one of
+		 * the type's fields (§6.1).  See `misura_campi()`. */
 		size_t attesa = 0;
 		if (misura_campi(tipo, s->acc + 6, lung, &attesa) && attesa != lung) {
 			char d[128];
@@ -6917,9 +6956,9 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			avanti = tratta_attacca(s, &l, ora);
 			break;
 		case T_BANCO_MARCA:
-			/* §7.5: la marca si dipinge su un fotogramma, e i fotogrammi
-			 * cominciano con `SESSIONE`.  Prima, e' un messaggio nello stato
-			 * sbagliato come tutti gli altri. */
+			/* §7.5: the mark is painted on a frame, and frames
+			 * start with `SESSIONE`.  Before, it is a message in the wrong
+			 * state like all the others. */
 			if (s->stato != S_ATTIVA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "BANCO_MARCA nello stato sbagliato");
@@ -6928,13 +6967,13 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			avanti = tratta_banco_marca(s, &l);
 			break;
 		case T_RICHIEDI_CHIAVE:
-			/* ⛔ §5.2: si chiede una chiave perche' c'e' un buco fra i
-			 * fotogrammi, e i fotogrammi cominciano con `SESSIONE`.  Prima e'
-			 * un messaggio nello stato sbagliato come tutti gli altri (§1, §3).
-			 * ⚠ `S_STACCATA` va bene: quella sessione ha spedito `SESSIONE` da
-			 *   un pezzo, ha solo lasciato il posto per silenzio (R9.2) — e
-			 *   rifiutarle una chiave sarebbe punire il client per un tetto
-			 *   del server. */
+			/* ⛔ §5.2: a keyframe is asked for because there is a gap between
+			 * frames, and frames start with `SESSIONE`.  Before, it is a
+			 * message in the wrong state like all the others (§1, §3).
+			 * ⚠ `S_STACCATA` is fine: that session sent `SESSIONE` long
+			 *   ago, it only left the slot for silence (R9.2) — and refusing
+			 *   it a keyframe would be punishing the client for a ceiling
+			 *   of the server. */
 			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "RICHIEDI_CHIAVE nello stato sbagliato");
@@ -6944,63 +6983,63 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			break;
 		case T_TERMINA_SESSIONE:
 			/*
-			 * ⭐⭐ §7.6 — «HO FINITO», ed e' l'altra uscita di
+			 * ⭐⭐ §7.6 — «I AM DONE», and it is the other exit of
 			 *     `DECISIONI.md` §4.1-ter.
 			 *
-			 * ⛔ SOLO A SESSIONE ATTACCATA: prima dell'`ATTACCA` non c'e'
-			 *    nessuna sessione grafica da terminare, e §3 non fa sconti.
-			 * ⚠ `S_STACCATA` va bene per la stessa ragione di
-			 *   `RICHIEDI_CHIAVE`: quel client la sessione ce l'ha, ha solo
-			 *   lasciato il posto per silenzio.
+			 * ⛔ ONLY WITH THE SESSION ATTACHED: before `ATTACCA` there is no
+			 *    graphical session to end, and §3 makes no allowances.
+			 * ⚠ `S_STACCATA` is fine for the same reason as
+			 *   `RICHIEDI_CHIAVE`: that client has the session, it only
+			 *   left the slot for silence.
 			 */
 			if (s->stato != S_ATTIVA && s->stato != S_STACCATA) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "TERMINA_SESSIONE nello stato sbagliato");
 				return false;
 			}
-			reg(s, "⭐ §7.6: %s ha chiesto di USCIRE — la sessione grafica "
-			       "finisce e i suoi programmi si chiudono.  ⛔ NON e' un "
-			       "distacco: al prossimo attacco ne nascera' una NUOVA",
+			reg(s, "⭐ §7.6: %s asked to LEAVE — the graphical session "
+			       "ends and its programs close.  ⛔ It is NOT a "
+			       "detach: at the next attach a NEW one will be born",
 			    s->utente);
 			/*
-			 * ⛔⛔ L'ORDINE E' NORMATIVO, e non e' una preferenza: il congedo
-			 *     PRIMA, la richiesta di terminare DOPO.  Quando il
-			 *     compositore cade il palco cade con lui e il canale non
-			 *     serve piu' — un `0x10` spedito dopo e' un motivo che
-			 *     esiste e che nessuno riceve, cioe' il rilievo B-7.
+			 * ⛔⛔ THE ORDER IS NORMATIVE, and it is not a preference: the farewell
+			 *     FIRST, the request to end AFTER.  When the compositor falls
+			 *     the stage falls with it and the channel is no longer
+			 *     needed — a `0x10` sent afterwards is a reason that exists
+			 *     and that nobody receives, that is finding B-7.
 			 */
 			congeda(s, RCP_SESSIONE_TERMINATA,
 			        "l'utente ha chiesto di uscire dalla sessione");
 			if (s->g.termina_sessione)
 				s->g.termina_sessione(s->g.ctx);
 			else
-				reg(s, "⚠ nessun gancio «termina_sessione»: il client e' "
-				       "stato congedato con 0x10 ma la sessione grafica NON "
-				       "e' stata toccata.  ⛔ Le due verita' non combaciano, "
-				       "e questa riga e' l'unico posto in cui si vede");
+				reg(s, "⚠ no «termina_sessione» hook: the client was "
+				       "sent away with 0x10 but the graphical session was NOT "
+				       "touched.  ⛔ The two truths do not match, "
+				       "and this line is the only place where it shows");
 			return false;
 		case T_CONGEDO: {
-			/* ⛔⭐ QUATTRO COSE IN NOVE RIGHE — rilievo R9.5.
+			/* ⛔⭐ FOUR THINGS IN NINE LINES — finding R9.5.
 			 *
-			 *   1. `lung` non si guardava mai: `le_u8()` su un corpo vuoto
-			 *      mette `corto` e restituisce 0, e nessuno leggeva `corto`;
-			 *   2. quello zero veniva TAPPATO (`motivo ? motivo : 0x01`): il
-			 *      server INVENTAVA `CHIUSO_DALL_UTENTE` per un motivo che il
-			 *      client non aveva mandato.  ⛔ Il registro scriveva
-			 *      `motivo=0x00` e la sessione si chiudeva con `0x01`: due
-			 *      verita' sullo stesso fatto, che e' la forma per cui §3.1
-			 *      punto 3 esiste;
-			 *   3. il `dettaglio` non si leggeva — ne' come stringa, ne' come
-			 *      UTF-8, ne' come lunghezza — ed e' esattamente quel che §8.2
-			 *      destina al REGISTRO;
-			 *   4. il motivo si rispediva senza convalida dentro il codice di
-			 *      chiusura della sessione, dove §3.1 punto 3 vuole «il codice
-			 *      del motivo DI §8.2».
+			 *   1. `lung` was never looked at: `le_u8()` on an empty body
+			 *      sets `corto` and returns 0, and nobody read `corto`;
+			 *   2. that zero was PLUGGED (`motivo ? motivo : 0x01`): the
+			 *      server INVENTED `CHIUSO_DALL_UTENTE` for a reason the
+			 *      client had not sent.  ⛔ The log wrote
+			 *      `motivo=0x00` and the session closed with `0x01`: two
+			 *      truths about the same fact, which is the shape §3.1
+			 *      point 3 exists for;
+			 *   3. the `dettaglio` was not read — neither as a string, nor as
+			 *      UTF-8, nor as a length — and it is exactly what §8.2
+			 *      assigns to the LOG;
+			 *   4. the reason was sent back without validation inside the
+			 *      session close code, where §3.1 point 3 wants «the code
+			 *      of the reason OF §8.2».
 			 *
-			 * ⛔ E §3.1: «il codice 0 significa chiusura senza motivo e NON
-			 *    DEVE essere usato».  Un `CONGEDO(0x00)` e' una violazione del
-			 *    client, non un motivo da indovinare — ed e' lo stesso caso che
-			 *    B11 pretende dalla PAGINA quando a sbagliare e' il server. */
+			 * ⛔ And §3.1: «code 0 means closing without a reason and MUST
+			 *    NOT be used».  A `CONGEDO(0x00)` is a violation by the
+			 *    client, not a reason to guess — and it is the same case that
+			 *    B11 demands of the PAGE when the one at fault is the server. */
 			uint8_t motivo = le_u8(&l);
 			size_t p = l.i;
 			char dett[257];
@@ -7010,10 +7049,10 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				        "CONGEDO senza motivo o senza dettaglio");
 				return false;
 			}
-			/* ⚠ Il dettaglio si convalida sui BYTE ARRIVATI, non sulla copia:
-			 *   §7.1 non gli mette un tetto e `le_str` non copia quel che non
-			 *   ci sta (vedi il suo commento).  Cosi' anche un dettaglio piu'
-			 *   lungo del nostro campo viene giudicato invece che ignorato. */
+			/* ⚠ The detail is validated on the BYTES THAT ARRIVED, not on the
+			 *   copy: §7.1 puts no ceiling on it and `le_str` does not copy what
+			 *   does not fit (see its comment).  So even a detail longer than
+			 *   our field is judged instead of ignored. */
 			if (!utf8_valido((const char *)(l.b + p + 2), ld)) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "il dettaglio del CONGEDO non e' UTF-8 valido (§6.0)");
@@ -7028,87 +7067,87 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				congeda(s, RCP_ERRORE_PROTOCOLLO, d);
 				return false;
 			}
-			reg(s, "il client si congeda, motivo=%#04x dettaglio=%s", motivo,
+			reg(s, "the client takes its farewell, motivo=%#04x dettaglio=%s", motivo,
 			    ld < sizeof dett ? dett
-			                     : "(piu' lungo del campo: non riportato)");
-			/* ⛔ §7.3: e questa e' la strada PIU' BATTUTA di tutte quando il
-			 * prodotto e' sano — il client che se ne va per bene.  Se il
-			 * rilascio stesse solo in `congeda()` mancherebbe proprio qui. */
-			rilascia_al_distacco(s, "congedo del client");
+			                     : "(longer than the field: not reported)");
+			/* ⛔ §7.3: and this is the MOST TRAVELLED road of all when the
+			 * product is healthy — the client leaving properly.  If the
+			 * release lived only in `congeda()` it would be missing right here. */
+			rilascia_al_distacco(s, "client farewell");
 			s->stato = S_FINITA;
-			/* ⛔⭐ E IL POSTO LASCIATO SI SCRIVE, come negli altri tre punti —
-			 * cura della tarda serata dell'11 agosto 2026.
+			/* ⛔⭐ AND THE SLOT LEFT IS WRITTEN, as in the other three places —
+			 * cure of the late evening of 11 Aug 2026.
 			 *
-			 * Questo era l'unico dei quattro luoghi che liberano il posto a NON
-			 * chiamare `reg()`: `rcp_libera`, `rcp_pagina_ha_chiuso` e
-			 * `rcp_canale_chiuso` lo scrivono tutti.  ⛔ E il buco stava
-			 * precisamente sulla strada che §8.1 IMPONE — il client che si
-			 * congeda — cioe' la piu' battuta di tutte quando il prodotto e'
-			 * sano.
+			 * This was the only one of the four places that free the slot NOT
+			 * to call `reg()`: `rcp_libera`, `rcp_pagina_ha_chiuso` and
+			 * `rcp_canale_chiuso` all write it.  ⛔ And the hole lay
+			 * precisely on the road §8.1 REQUIRES — the client taking its
+			 * farewell — that is the most travelled of all when the product is
+			 * healthy.
 			 *
-			 * ⚠ Il posto si liberava davvero: `[M]` 11 agosto 2026, dodici
-			 *   sessioni di fila nei registri di `01-p5-ff-*`, e ogni «posto
-			 *   PRESO» successivo dice «occupati adesso: 1».  Il difetto non era
-			 *   una perdita, era che **l'invariante §8.2 `0x0F` non si poteva
-			 *   piu' osservare**: P5 giudica il numero finale di «occupati
-			 *   adesso», e su questa strada nessuna riga lo portava. ⇒ Il banco
-			 *   avrebbe scritto «IL POSTO NON SI E' LIBERATO» su un server che
-			 *   aveva fatto il suo mestiere — un rosso all'imputato sbagliato,
-			 *   che e' la settima veste di `LEZIONI.md` §1.9.
+			 * ⚠ The slot was really freed: `[M]` 11 Aug 2026, twelve
+			 *   sessions in a row in the logs of `01-p5-ff-*`, and every later
+			 *   «slot TAKEN» says «taken now: 1».  The defect was not
+			 *   a leak, it was that **invariant §8.2 `0x0F` could no longer
+			 *   be observed**: P5 judges the final number of «taken
+			 *   now», and on this road no line carried it. ⇒ The bench
+			 *   would have written «THE SLOT WAS NOT FREED» on a server that
+			 *   had done its job — a red to the wrong suspect,
+			 *   which is the seventh guise of `LEZIONI.md` §1.9.
 			 *
-			 * ⛔ E prima della cura del congedo era INVISIBILE: il client non si
-			 *    congedava mai, quindi questa riga non veniva mai percorsa e il
-			 *    posto se ne andava sempre per il tetto d'inattivita', che la
-			 *    sua riga la scrive. */
+			 * ⛔ And before the cure of the farewell it was INVISIBLE: the client
+			 *    never took its farewell, so this line was never travelled and
+			 *    the slot always went away through the inactivity ceiling, which
+			 *    writes its own line. */
 			if (s->attaccata) {
 				posto_lascia(s->utente);
 				s->attaccata = false;
-				reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)",
+				reg(s, "slot LEFT by %s via %s (taken now: %d)",
 				    s->utente, s->provenienza, posti_occupati());
 			}
-			/* ⭐ Lo stesso numero che il registro ha appena scritto: una sola
-			 * verita' sul fatto, su tutt'e due le strade di §3.1. */
+			/* ⭐ The same number the log has just written: a single
+			 * truth about the fact, on both roads of §3.1. */
 			s->g.chiudi(s->g.ctx, motivo);
 			return false;
 		}
 		case T_VISTA: {
-			/* ⛔⭐⭐ §7.1 — «la vista e' cambiata», ed e' il messaggio che
-			 *      questo server ha fatto pagare piu' caro senza servirlo.
+			/* ⛔⭐⭐ §7.1 — «the view has changed», and it is the message this
+			 *      server made pay most dearly without serving it.
 			 *
-			 * ⚠ Fino al 16 agosto 2026 cadeva nel `default` con la riga «e' del
-			 *   client e §7.1 lo definisce, ma la fase 1 non lo serve ancora», e
-			 *   il prezzo era dichiarato li' per intero: **un client conforme
-			 *   che stringe la finestra perde la sessione**.  ⛔ Ed e' alla
-			 *   lettera il sintomo che il rilievo R1.17 di §7.1 e' stato scritto
-			 *   per rendere impossibile: *«l'utente stringe la finestra del
-			 *   browser a 300 pixel […] con la riga vecchia il client aveva tre
-			 *   scelte, tutte cattive — mandare `VISTA(300x800)` e farsi
-			 *   chiudere la sessione perche' ha ridimensionato una finestra»*.
-			 *   Il documento ha tolto la riga cattiva dal lato del client; il
-			 *   server la applicava lo stesso.
+			 * ⚠ Until 16 Aug 2026 it fell into the `default` with the line «it
+			 *   belongs to the client and §7.1 defines it, but phase 1 does not
+			 *   serve it yet», and the price was declared there in full: **a
+			 *   conforming client that narrows the window loses the session**.
+			 *   ⛔ And it is literally the symptom that finding R1.17 of §7.1 was
+			 *   written to make impossible: *«the user narrows the browser
+			 *   window to 300 pixels […] with the old line the client had three
+			 *   choices, all bad — send `VISTA(300x800)` and have the session
+			 *   closed because it resized a window»*.
+			 *   The document removed the bad line from the client side; the
+			 *   server applied it all the same.
 			 *
-			 * ⛔⭐ E QUEL CHE QUESTO RAMO **NON FA** E' LA META' NORMATIVA:
+			 * ⛔⭐ AND WHAT THIS BRANCH **DOES NOT DO** IS THE NORMATIVE HALF:
 			 *
-			 *   · **non tocca la tela**.  §7.1: «`VISTA` NON DEVE far cambiare
-			 *     la tela […] L'unico messaggio che cambia la tela e'
-			 *     `ADATTA_TELA`».  ⚠ La forma sbagliata qui non e' «chiude», e'
-			 *     «funziona troppo»: un server che prendesse la vista per una
-			 *     richiesta di tela farebbe rimpicciolire il desktop a chi ha
-			 *     solo stretto la finestra, e **senza mandare nessun `TELA`** —
-			 *     cioe' i due lati che si separano in silenzio (E2);
-			 *   · **non tocca il codificatore**.  §7.1: «in RCP/1 non cambia
-			 *     nemmeno la misura di quel che si codifica»; §6.2 lega
-			 *     `largh.`/`altezza` alla tela in vigore, e chi ne riceve altre
-			 *     chiude.  ⇒ Codificare alla vista farebbe chiudere il client;
-			 *   · **non risponde niente sul filo**.  §7.1 non prevede nessuna
-			 *     risposta a `VISTA`, e §6.2 fa chiudere la sessione al client
-			 *     davanti a un `TELA` che non ha chiesto: un «grazie ricevuto»
-			 *     scritto come `TELA` ucciderebbe la sessione;
-			 *   · **non applica i limiti della tela**.  §7.1 dopo R1.17:
-			 *     «qualunque misura da 1x1 in su e' legale, dispari compresa».
+			 *   · **it does not touch the canvas**.  §7.1: «`VISTA` MUST NOT
+			 *     change the canvas […] The only message that changes the canvas
+			 *     is `ADATTA_TELA`».  ⚠ The wrong form here is not «closes», it
+			 *     is «works too much»: a server that took the view for a canvas
+			 *     request would shrink the desktop of whoever only narrowed the
+			 *     window, and **without sending any `TELA`** — that is the two
+			 *     sides drifting apart in silence (E2);
+			 *   · **it does not touch the encoder**.  §7.1: «in RCP/1 not even
+			 *     the size of what is encoded changes»; §6.2 binds
+			 *     `largh.`/`altezza` to the canvas in force, and whoever receives
+			 *     others closes.  ⇒ Encoding at the view would make the client close;
+			 *   · **it answers nothing on the wire**.  §7.1 foresees no
+			 *     answer to `VISTA`, and §6.2 makes the client close the session
+			 *     in front of a `TELA` it did not ask for: a «thanks, received»
+			 *     written as `TELA` would kill the session;
+			 *   · **it does not apply the canvas limits**.  §7.1 after R1.17:
+			 *     «any size from 1x1 up is legal, odd included».
 			 *
-			 * ⇒ Convalida, tiene, scrive.  E' poco, ed e' quel che l'arbitro
-			 *   chiede: la tela e' della SESSIONE, la vista della CONNESSIONE. */
+			 * ⇒ Validate, keep, write.  It is little, and it is what the arbiter
+			 *   asks: the canvas belongs to the SESSION, the view to the CONNECTION. */
 			uint32_t nuova_l = le_u32(&l);
 			uint32_t nuova_a = le_u32(&l);
 
@@ -7117,30 +7156,30 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				        "VISTA corta: §7.1 vuole due u32");
 				return false;
 			}
-			/* ⛔ Lo stato: §7.1 mette `VISTA` fra i messaggi della sessione, e
-			 *    una vista senza una sessione non ha niente da descrivere.
-			 *    Stessa guardia di `ADATTA_TELA`, e per la stessa ragione. */
+			/* ⛔ The state: §7.1 puts `VISTA` among the messages of the session,
+			 *    and a view without a session has nothing to describe.
+			 *    Same guard as `ADATTA_TELA`, and for the same reason. */
 			if (!s->sessione_spedita) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "VISTA prima di SESSIONE: §7.1 la ammette solo a "
 				        "sessione aperta");
 				return false;
 			}
-			/* ⛔ L'unico limite, e lo zero ne sta fuori — come in `ATTACCA`, e
-			 *    la regola e' scritta nei due posti perche' i due messaggi
-			 *    arrivano per strade diverse.  ⚠ Se un giorno diventassero tre,
-			 *    diventa una funzione. */
+			/* ⛔ The only limit, and zero lies outside it — as in `ATTACCA`, and
+			 *    the rule is written in the two places because the two messages
+			 *    arrive by different roads.  ⚠ If one day they became three,
+			 *    it becomes a function. */
 			if (!nuova_l || !nuova_a) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "VISTA con un lato a zero: §7.1 ammette qualunque "
 				        "misura da 1x1 in su, e lo zero non e' una misura");
 				return false;
 			}
-			reg(s, "VISTA: la finestra del client passa da %ux%u a %ux%u (§7.1) "
-			       "— ⛔ la tela NON cambia e resta %ux%u, e in RCP/1 non cambia "
-			       "nemmeno la misura di quel che si codifica: il client "
-			       "riscala.  I limiti di §4.5 alla vista non si applicano "
-			       "(R1.17): qualunque misura da 1x1 in su, dispari compresa",
+			reg(s, "VISTA: the client's window goes from %ux%u to %ux%u (§7.1) "
+			       "— ⛔ the canvas does NOT change and stays %ux%u, and in RCP/1 not "
+			       "even the size of what is encoded changes: the client "
+			       "rescales.  The limits of §4.5 do not apply to the view "
+			       "(R1.17): any size from 1x1 up, odd included",
 			    s->vista_l, s->vista_a, nuova_l, nuova_a, s->tela_l, s->tela_a);
 			s->vista_l = nuova_l;
 			s->vista_a = nuova_a;
@@ -7148,37 +7187,36 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		}
 
 		case T_DISPOSIZIONE: {
-			/* ⛔⭐⭐ §7.1 `0x0009` — «la disposizione di tastiera e' cambiata»,
-			 *      ed e' il gemello esatto di `VISTA`: fino al 16 agosto 2026
-			 *      cadeva nello stesso `default` e **chiudeva la sessione a un
-			 *      client conforme**.  `[M]` banco `06-b34` caso 3: congedo
-			 *      `0x0b ERRORE_PROTOCOLLO`, connessione caduta.
+			/* ⛔⭐⭐ §7.1 `0x0009` — «the keyboard layout has changed»,
+			 *      and it is the exact twin of `VISTA`: until 16 Aug 2026
+			 *      it fell into the same `default` and **closed the session of a
+			 *      conforming client**.  `[M]` bench `06-b34` case 3: farewell
+			 *      `0x0b ERRORE_PROTOCOLLO`, connection dropped.
 			 *
-			 * ⚠ Il sintomo, in una riga: *l'utente cambia disposizione di
-			 *   tastiera mentre lavora, e la sessione gli cade.*  E' la stessa
-			 *   forma che il rilievo R1.17 di §7.1 esiste per rendere
-			 *   impossibile — punire chi fa quel che l'arbitro definisce.
+			 * ⚠ The symptom, in one line: *the user changes keyboard layout
+			 *   while working, and the session drops.*  It is the same
+			 *   shape that finding R1.17 of §7.1 exists to make
+			 *   impossible — punishing whoever does what the arbiter defines.
 			 *
-			 * ⭐ E adesso serve DAVVERO: attuata §5-bis.7, questo e' il
-			 *    messaggio con cui la disposizione si cambia **senza
-			 *    staccarsi**.  Senza di lui, l'unico modo di cambiare tastiera
-			 *    sarebbe chiudere la sessione e riattaccarsi.
+			 * ⭐ And now it is REALLY needed: with §5-bis.7 carried out, this is the
+			 *    message with which the layout is changed **without
+			 *    detaching**.  Without it, the only way of changing keyboard
+			 *    would be closing the session and reattaching.
 			 *
-			 * ⛔⛔ E QUI L'ARBITRO NON DICE UNA COSA CHE IL PRODOTTO DEVE
-			 *     DECIDERE: che cosa si fa se la disposizione e' ben formata ma
-			 *     **sconosciuta**.  A `ATTACCA` §4.5 lo dice (congedo
-			 *     `SESSIONE_NON_SERVIBILE`); a sessione aperta no.
+			 * ⛔⛔ AND HERE THE ARBITER DOES NOT SAY SOMETHING THE PRODUCT MUST
+			 *     DECIDE: what is done if the layout is well formed but
+			 *     **unknown**.  At `ATTACCA` §4.5 says it (farewell
+			 *     `SESSIONE_NON_SERVIBILE`); with the session open it does not.
 			 *
-			 *     ⇒ Qui si SCEGLIE di **non chiudere**: si tiene quella in
-			 *       vigore e si scrive perche'.  La ragione e' `SPECIFICHE.md`
-			 *       §8.3 — *«mai staccare»* — e I1: chiudere la sessione di chi
-			 *       ha scelto una tastiera che questa macchina non ha
-			 *       significa togliergli il lavoro per un guasto che non gli
-			 *       costa niente, visto che la tastiera di prima funziona
-			 *       ancora.  ⚠ A `ATTACCA` e' diverso, e giustamente: li' non
-			 *       c'e' nessuna sessione da salvare.
-			 *     ⚠ E' una regola del PRODOTTO che l'arbitro non nomina: va
-			 *       portata in `RCP.md` §7.1, e il rapporto la consegna. */
+			 *     ⇒ Here the CHOICE is **not to close**: the one in force is
+			 *       kept and the reason is written.  The reason is `SPECIFICHE.md`
+			 *       §8.3 — *«never detach»* — and I1: closing the session of whoever
+			 *       chose a keyboard this machine does not have means taking
+			 *       away their work for a fault that costs them nothing, since
+			 *       the previous keyboard still works.  ⚠ At `ATTACCA` it is
+			 *       different, and rightly so: there is no session there to save.
+			 *     ⚠ It is a PRODUCT rule the arbiter does not name: it must be
+			 *       carried into `RCP.md` §7.1, and the report delivers it. */
 			char nuova[65];
 			size_t ln = le_str(&l, nuova, sizeof nuova);
 
@@ -7187,72 +7225,72 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				        "DISPOSIZIONE corta: §7.1 vuole una stringa");
 				return false;
 			}
-			/* ⛔ Lo stato, come per `VISTA`: §7.1 mette `DISPOSIZIONE` fra i
-			 *    messaggi della sessione, e una disposizione senza sessione non
-			 *    ha niente da cambiare. */
+			/* ⛔ The state, as for `VISTA`: §7.1 puts `DISPOSIZIONE` among the
+			 *    messages of the session, and a layout without a session has
+			 *    nothing to change. */
 			if (!s->sessione_spedita) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "DISPOSIZIONE prima di SESSIONE: §7.1 la ammette solo "
 				        "a sessione aperta");
 				return false;
 			}
-			/* ⛔ La FORMA resta `ERRORE_PROTOCOLLO` anche qui, e non e' una
-			 *    disuguaglianza con la riga sopra: §4.5 tiene i due guasti
-			 *    distinti perche' sono due difetti diversi — chi manda
-			 *    «../../etc/passwd» ha un client rotto (o ostile), chi manda
-			 *    «hu» ha solo una tastiera che questa macchina non ha. */
+			/* ⛔ The FORM stays `ERRORE_PROTOCOLLO` here too, and it is not an
+			 *    inconsistency with the line above: §4.5 keeps the two faults
+			 *    distinct because they are two different defects — whoever sends
+			 *    «../../etc/passwd» has a broken (or hostile) client, whoever sends
+			 *    «hu» only has a keyboard this machine does not have. */
 			if (!disposizione_ben_formata(nuova, ln)) {
 				congeda(s, RCP_ERRORE_PROTOCOLLO,
 				        "DISPOSIZIONE fuori forma");
 				return false;
 			}
 			if (!disposizione_conosciuta(s, nuova)) {
-				reg(s, "⚠ DISPOSIZIONE «%s»: questa macchina non ce l'ha.  ⛔ La "
-				       "sessione NON si chiude (§8.3, «mai staccare») e tiene "
-				       "«%s»: la tastiera di prima funziona ancora, e togliere "
-				       "il lavoro per una tastiera mancante costerebbe piu' del "
-				       "guasto.  ⚠ A `ATTACCA` §4.5 vuole il congedo, e li' e' "
-				       "giusto: non c'e' nessuna sessione da salvare",
-				    nuova, s->disposizione[0] ? s->disposizione : "quella della sessione");
+				reg(s, "⚠ DISPOSIZIONE «%s»: this machine does not have it.  ⛔ The "
+				       "session is NOT closed (§8.3, «never detach») and keeps "
+				       "«%s»: the previous keyboard still works, and taking away "
+				       "the work for a missing keyboard would cost more than the "
+				       "fault.  ⚠ At `ATTACCA` §4.5 wants the farewell, and there it is "
+				       "right: there is no session to save",
+				    nuova, s->disposizione[0] ? s->disposizione : "the session's own");
 				break;
 			}
 			if (strcmp(nuova, s->disposizione) == 0) {
-				/* ⚠ Si scrive lo stesso: un client che rimanda la stessa
-				 *   disposizione non e' un guasto, ma un ricambio di keymap
-				 *   costa a Mutter la DISTRUZIONE del dispositivo tastiera
-				 *   (`STUDI.md` §gnome §9) — e non farlo per niente e' un
-				 *   risparmio che si vede. */
-				reg(s, "DISPOSIZIONE «%s»: e' gia' quella in vigore, non chiedo "
-				       "niente al palco (un ricambio inutile costerebbe la "
-				       "distruzione del dispositivo tastiera)",
+				/* ⚠ It is written all the same: a client that sends the same
+				 *   layout again is not a fault, but a keymap replacement
+				 *   costs Mutter the DESTRUCTION of the keyboard device
+				 *   (`STUDI.md` §gnome §9) — and not doing it for nothing is a
+				 *   saving one sees. */
+				reg(s, "DISPOSIZIONE «%s»: it is already the one in force, I ask "
+				       "nothing of the stage (a useless replacement would cost the "
+				       "destruction of the keyboard device)",
 				    nuova);
 				break;
 			}
-			reg(s, "DISPOSIZIONE: da «%s» a «%s», a sessione APERTA (§7.1 0x0009)",
-			    s->disposizione[0] ? s->disposizione : "(nessuna)", nuova);
+			reg(s, "DISPOSIZIONE: from «%s» to «%s», with the session OPEN (§7.1 0x0009)",
+			    s->disposizione[0] ? s->disposizione : "(none)", nuova);
 			snprintf(s->disposizione, sizeof s->disposizione, "%s", nuova);
 			applica_disposizione(s, "DISPOSIZIONE (0x0009)");
-			/* ⛔ E NON si risponde niente sul filo: §7.1 non prevede nessuna
-			 *    risposta a `DISPOSIZIONE`, esattamente come per `VISTA`.  Un
-			 *    «grazie ricevuto» inventato qui sarebbe un messaggio non
-			 *    sollecitato, e §6.2 fa chiudere la sessione al client davanti
-			 *    a un messaggio che non ha chiesto. */
+			/* ⛔ And NOTHING is answered on the wire: §7.1 foresees no
+			 *    answer to `DISPOSIZIONE`, exactly as for `VISTA`.  A
+			 *    «thanks, received» invented here would be an unsolicited
+			 *    message, and §6.2 makes the client close the session in front
+			 *    of a message it did not ask for. */
 			break;
 		}
 		case T_ADATTA_TELA: {
-			/* ⛔⭐⭐ §7.1 — «il client chiede una tela di un'altra misura».
+			/* ⛔⭐⭐ §7.1 — «the client asks for a canvas of another size».
 			 *
-			 * ⚠ Fino al 14 agosto 2026 questo tipo cadeva nel `default` e faceva
-			 *   **perdere la sessione** a un client conforme, con la riga «la
-			 *   fase 1 non lo serve ancora».  ⛔ Ed era una violazione nostra:
-			 *   `RCP.md:483` punto 4 dice che una misura fuori limiti si rifiuta
-			 *   con `TELA(MISURA_FUORI_LIMITI)` **invece di chiudere**, e la
-			 *   ragione e' scritta accanto — «l'utente che trascina male una
-			 *   finestra non deve perdere la sessione».
+			 * ⚠ Until 14 Aug 2026 this type fell into the `default` and made a
+			 *   conforming client **lose the session**, with the line «phase 1
+			 *   does not serve it yet».  ⛔ And it was a violation of ours:
+			 *   `RCP.md:483` point 4 says an out-of-limits size is refused
+			 *   with `TELA(MISURA_FUORI_LIMITI)` **instead of closing**, and the
+			 *   reason is written next to it — «the user who drags a window
+			 *   badly must not lose the session».
 			 *
-			 * ⇒ Adesso si risponde sempre, e il client sa **con che cosa
-			 *   continuare**: i due campi di `TELA` portano la tela in vigore
-			 *   DOPO la risposta, che su un rifiuto e' quella di prima. */
+			 * ⇒ Now one always answers, and the client knows **what to
+			 *   continue with**: the two fields of `TELA` carry the canvas in
+			 *   force AFTER the answer, which on a refusal is the previous one. */
 			uint32_t chiesta_l = le_u32(&l);
 			uint32_t chiesta_a = le_u32(&l);
 			uint32_t buona_l = 0, buona_a = 0;
@@ -7268,64 +7306,62 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 				        "sessione aperta");
 				return false;
 			}
-			/* ⛔⭐ E QUI NON SERVE UNA GUARDIA SUL POSTO, e va detto perche' la
-			 *     prima stesura di questa cura ce l'aveva messa: sarebbe stata
-			 *     **codice morto che sembra vivo**.
+			/* ⛔⭐ AND HERE NO GUARD ON THE SLOT IS NEEDED, and it must be said
+			 *     because the first draft of this cure had put one: it would have
+			 *     been **dead code that looks alive**.
 			 *
-			 * `torna_a_parlare()` gira in cima a `rcp_ricevi()`, prima di
-			 * qualunque messaggio: una sessione staccata per silenzio o si
-			 * riprende il posto (e allora comanda a pieno diritto) o viene
-			 * congedata con §8.2 `0x0F`.  ⇒ Chi arriva fin qui il posto ce l'ha
-			 * **sempre**, e un `if` che non puo' essere falso e' peggio di
-			 * niente: il giorno in cui quella regola cambiasse, nessuno saprebbe
-			 * che questa riga la stava duplicando.
-			 * ⚠ La guardia VIVA e' l'altra, in `tela_richiama_il_palco()`: li' la
-			 * sessione senza posto ci arriva davvero, perche' i FOTOGRAMMI le
-			 * arrivano anche quando tace (banco `04-b31`, caso 18). */
-			/* ⛔ Il tetto e la parita' stanno in UN posto solo, e non qui:
-			 *    `rcp_misura_ammessa()` (`rcp.h`).  Riscrivere qui la
-			 *    stessa regola vorrebbe dire averne due, e il giorno in cui una
-			 *    cambia il difetto e' «il server accetta una misura che il
-			 *    compositore non regge» — cioe' la sessione di chi ci ospita che
-			 *    muore in silenzio. */
+			 * `torna_a_parlare()` runs at the top of `rcp_ricevi()`, before
+			 * any message: a session detached for silence either takes the slot
+			 * back (and then commands by full right) or is sent away with §8.2
+			 * `0x0F`.  ⇒ Whoever gets this far ALWAYS holds the slot, and an
+			 * `if` that cannot be false is worse than nothing: the day that rule
+			 * changed, nobody would know this line was duplicating it.
+			 * ⚠ The LIVE guard is the other one, in `tela_richiama_il_palco()`:
+			 * there the session without a slot really gets there, because the
+			 * FRAMES reach it even when it is silent (bench `04-b31`, case 18). */
+			/* ⛔ The ceiling and parity live in ONE place only, and not here:
+			 *    `rcp_misura_ammessa()` (`rcp.h`).  Rewriting the same rule here
+			 *    would mean having two, and the day one changes the defect is
+			 *    «the server accepts a size the compositor cannot take» — that
+			 *    is the session of whoever hosts us dying in silence. */
 			if (!rcp_misura_ammessa(chiesta_l, chiesta_a, &buona_l, &buona_a)) {
-				reg(s, "ADATTA_TELA %ux%u RIFIUTATA: sotto il minimo di §4.5 "
-				       "(%ux%u .. %ux%u) — la tela resta %ux%u",
+				reg(s, "ADATTA_TELA %ux%u REFUSED: below the minimum of §4.5 "
+				       "(%ux%u .. %ux%u) — the canvas stays %ux%u",
 				    chiesta_l, chiesta_a, RCP_TELA_L_MINIMA, RCP_TELA_A_MINIMA,
 				    RCP_TELA_L_MASSIMA, RCP_TELA_A_MASSIMA, s->tela_l, s->tela_a);
 				manda_tela(s, 2 /* RIFIUTATA */, 2 /* MISURA_FUORI_LIMITI */,
 				           s->tela_l, s->tela_a);
 				break;
 			}
-			/* ⛔⭐ SOPRA IL MASSIMO SI RIDUCE E SI DICE — 1 ottobre 2026, tela al
-			 *     massimo 4096x2304 (riquadro in `rcp.h`).  Un monitor 5K non e'
-			 *     un errore del client: `TELA(ADATTATA)` gli dira' la misura vera,
-			 *     e questa riga dice perche' non e' quella chiesta. */
+			/* ⛔⭐ ABOVE THE MAXIMUM IT IS REDUCED AND SAID — 1 Oct 2026, canvas at
+			 *     most 4096x2304 (box in `rcp.h`).  A 5K monitor is not an
+			 *     error of the client: `TELA(ADATTATA)` will tell it the real size,
+			 *     and this line says why it is not the one requested. */
 			if (chiesta_l > RCP_TELA_L_MASSIMA || chiesta_a > RCP_TELA_A_MASSIMA)
-				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ADATTA_TELA %ux%u oltre il "
-				       "massimo della tela %ux%u — ridotta a %ux%u (il lato che "
-				       "sfora al massimo, l'altro com'e')",
+				reg(s, "⚠ DECLARED FALLBACK (§4.5): ADATTA_TELA %ux%u beyond the "
+				       "canvas maximum %ux%u — reduced to %ux%u (the side that "
+				       "overflows to the maximum, the other as it is)",
 				    chiesta_l, chiesta_a, RCP_TELA_L_MASSIMA,
 				    RCP_TELA_A_MASSIMA, buona_l, buona_a);
-			/* ⛔⛔ E IL TETTO DEL DECODIFICATORE SI RISPETTA ANCHE QUI — §4.5:
-			 *     *«la tela concessa DEVE rispettare `video.misura_massima` se il
-			 *     client l'ha dichiarata»*.  ⚠ Difetto trovato refutando: questo
-			 *     controllo c'era in `ATTACCA` — dove riduce in proporzione, coi
-			 *     lati pari, e lo dichiara — e **non** qui.  ⇒ Un client hi-dpi
-			 *     che chiedesse la misura della propria finestra in pixel fisici
-			 *     poteva far concedere una tela che il suo decodificatore non
-			 *     regge, e da li' non si tornava indietro: lo schermo si ferma e
-			 *     non riparte.
+			/* ⛔⛔ AND THE DECODER CEILING IS RESPECTED HERE TOO — §4.5:
+			 *     *«the granted canvas MUST respect `video.misura_massima` if the
+			 *     client declared it»*.  ⚠ Defect found while refuting: this
+			 *     check was in `ATTACCA` — where it reduces in proportion, with
+			 *     even sides, and declares it — and **not** here.  ⇒ A hi-dpi
+			 *     client asking for the size of its own window in physical pixels
+			 *     could get a canvas granted that its decoder cannot take, and
+			 *     from there there was no going back: the screen stops and does
+			 *     not restart.
 			 *
-			 * ⚠ Si RIDUCE invece di rifiutare, perche' il client non ha sbagliato
-			 *   niente — ha chiesto la misura della sua finestra — e `TELA` gli
-			 *   dira' che cosa ha ottenuto.  E' la stessa scelta di §4.5 in
-			 *   `ATTACCA`, con lo stesso conto. */
+			 * ⚠ It is REDUCED instead of refused, because the client did nothing
+			 *   wrong — it asked for the size of its window — and `TELA` will
+			 *   tell it what it got.  It is the same choice as §4.5 in
+			 *   `ATTACCA`, with the same arithmetic. */
 			if (s->max_l && (buona_l > s->max_l || buona_a > s->max_a)) {
 				uint32_t prima_l = buona_l, prima_a = buona_a;
 				uint32_t cl, ca;
-				/* Il lato che limita di piu': confronto incrociato, senza
-				 * divisioni in virgola mobile. */
+				/* The side that limits most: cross comparison, without
+				 * floating-point divisions. */
 				if ((uint64_t)buona_l * s->max_a <= (uint64_t)buona_a * s->max_l) {
 					ca = s->max_a;
 					cl = (uint32_t)(((uint64_t)buona_l * s->max_a) / buona_a);
@@ -7333,95 +7369,95 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 					cl = s->max_l;
 					ca = (uint32_t)(((uint64_t)buona_a * s->max_l) / buona_l);
 				}
-				/* ⛔ E il risultato ripassa dalla stessa regola: la riduzione
-				 *    puo' aver prodotto un dispari o un numero sotto il minimo, e
-				 *    riscrivere qui la parita' vorrebbe dire averla in due
-				 *    posti. */
+				/* ⛔ And the result goes back through the same rule: the reduction
+				 *    may have produced an odd number or one below the minimum, and
+				 *    rewriting parity here would mean having it in two
+				 *    places. */
 				if (!rcp_misura_ammessa(cl, ca, &buona_l, &buona_a)) {
-					reg(s, "ADATTA_TELA %ux%u RIFIUTATA: ridotta al "
-					       "video.misura_massima (%ux%u) darebbe %ux%u, che §4.5 "
-					       "non ammette — la tela resta %ux%u",
+					reg(s, "ADATTA_TELA %ux%u REFUSED: reduced to the "
+					       "video.misura_massima (%ux%u) it would give %ux%u, which §4.5 "
+					       "does not allow — the canvas stays %ux%u",
 					    chiesta_l, chiesta_a, s->max_l, s->max_a, cl, ca,
 					    s->tela_l, s->tela_a);
 					manda_tela(s, 2 /* RIFIUTATA */, 2 /* MISURA_FUORI_LIMITI */,
 					           s->tela_l, s->tela_a);
 					break;
 				}
-				reg(s, "⚠ RIPIEGO DICHIARATO (§4.5): ADATTA_TELA %ux%u supera il "
-				       "video.misura_massima di questo client (%ux%u) — ridotta a "
-				       "%ux%u, proporzioni tenute, entrambe pari",
+				reg(s, "⚠ DECLARED FALLBACK (§4.5): ADATTA_TELA %ux%u exceeds the "
+				       "video.misura_massima of this client (%ux%u) — reduced to "
+				       "%ux%u, proportions kept, both even",
 				    prima_l, prima_a, s->max_l, s->max_a, buona_l, buona_a);
 			}
-			/* ⭐⭐ E QUI COMINCIA LA CATENA CHE IL 14 AGOSTO 2026 MANCAVA.
+			/* ⭐⭐ AND HERE STARTS THE CHAIN THAT WAS MISSING ON 14 AUG 2026.
 			 *
-			 * ⚠ Fino a ieri questo punto rispondeva `COMPOSITORE_INCAPACE`
-			 *   NOMINANDO il pezzo mancante — *«manca `figli_ritela()` →
-			 *   `cattura_ridimensiona()`»* — ed era vero.  Adesso i due pezzi ci
-			 *   sono, e la risposta non e' piu' una riga: e' un giro fino al
-			 *   compositore e ritorno.
+			 * ⚠ Until yesterday this point answered `COMPOSITORE_INCAPACE`
+			 *   NAMING the missing piece — *«`figli_ritela()` →
+			 *   `cattura_ridimensiona()` is missing»* — and it was true.  Now the
+			 *   two pieces are there, and the answer is no longer a line: it is a
+			 *   round trip to the compositor and back.
 			 *
-			 * ⛔ IL PRIMO CASO E' QUELLO CHE NON DEVE MUOVERE NIENTE: la misura
-			 *    chiesta e' gia' quella in vigore.  ⚠ Non e' un caso di scuola —
-			 *    e' il piu' frequente di tutti: il client manda la misura della
-			 *    sua finestra a ogni ridimensionamento, e chi trascina un bordo
-			 *    ne manda venti al secondo.  Girarla al palco vorrebbe dire
-			 *    riavviare il flusso per niente, cioe' **perdere un fotogramma a
-			 *    ogni richiesta inutile** (`STUDI.md` §kde §8.2-bis).
+			 * ⛔ THE FIRST CASE IS THE ONE THAT MUST MOVE NOTHING: the size
+			 *    requested is already the one in force.  ⚠ It is not a textbook
+			 *    case — it is the most frequent of all: the client sends the size
+			 *    of its window at every resize, and whoever drags an edge
+			 *    sends twenty per second.  Passing it to the stage would mean
+			 *    restarting the stream for nothing, that is **losing a frame at
+			 *    every useless request** (`STUDI.md` §kde §8.2-bis).
 			 *
-			 * ⚠ Ma solo se non c'e' gia' una richiesta in volo: se ce n'e' una, il
-			 *   palco sta andando ALTROVE, e questa e' un ripensamento che va
-			 *   girato per davvero. */
+			 * ⚠ But only if there is no request already in flight: if there is one,
+			 *   the stage is going ELSEWHERE, and this is a change of mind that
+			 *   must really be passed on. */
 			if (buona_l == s->tela_l && buona_a == s->tela_a && !s->tela_volo) {
-				/* ⛔ Risponde `TELA(ADATTATA)` e NON apre il debito della chiave:
-				 *    lo fa la forma «misura che c'era gia'» di
-				 *    `rcp_tela_adattata_ora()`, che esiste per questo. */
+				/* ⛔ It answers `TELA(ADATTATA)` and does NOT open the keyframe
+				 *    debt: the «size that was already there» form of
+				 *    `rcp_tela_adattata_ora()` does it, and exists for this. */
 				rcp_tela_adattata_ora(s, buona_l, buona_a, ora);
 				break;
 			}
 
-			/* ⛔ NESSUN GANCIO = COMPOSITORE_INCAPACE, ed e' la risposta VERA per
-			 *    chi ci ospita senza un palco: i banchi in-processo della fase 1
-			 *    e l'innesto di `banchi/01-b3-rcp-innesta.py`.  §7.1: «se il
-			 *    compositore non sa ridimensionare, il server DEVE rispondere con
-			 *    `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)`, e il client DEVE
-			 *    mostrare la voce come spenta.  NON DEVE fingere che sia
-			 *    riuscito». */
+			/* ⛔ NO HOOK = COMPOSITORE_INCAPACE, and it is the TRUE answer for
+			 *    whoever hosts us without a stage: the in-process benches of phase 1
+			 *    and the harness of `banchi/01-b3-rcp-innesta.py`.  §7.1: «if the
+			 *    compositor cannot resize, the server MUST answer with
+			 *    `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)`, and the client MUST
+			 *    show the entry as off.  It MUST NOT pretend it
+			 *    succeeded». */
 			if (!s->g.ritela) {
-				reg(s, "ADATTA_TELA %ux%u → %ux%u ammessa, ma questo ospite non ha "
-				       "un palco da ridimensionare (gancio `ritela` non "
-				       "collegato): COMPOSITORE_INCAPACE, e la tela resta %ux%u",
+				reg(s, "ADATTA_TELA %ux%u → %ux%u allowed, but this host has no "
+				       "stage to resize (hook `ritela` not "
+				       "connected): COMPOSITORE_INCAPACE, and the canvas stays %ux%u",
 				    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
 				manda_tela(s, 2 /* RIFIUTATA */, 1 /* COMPOSITORE_INCAPACE */,
 				           s->tela_l, s->tela_a);
 				break;
 			}
 
-			/* ⛔⭐ UNA RICHIESTA IN VOLO SI RISPONDE PRIMA DI ACCETTARNE UN'ALTRA
-			 *     — §7.1: «l'n-esimo `TELA` risponde all'n-esima `ADATTA_TELA`».
+			/* ⛔⭐ A REQUEST IN FLIGHT IS ANSWERED BEFORE ACCEPTING ANOTHER
+			 *     — §7.1: «the n-th `TELA` answers the n-th `ADATTA_TELA`».
 			 *
-			 * ⚠ Il client TIENE IL CONTO delle richieste senza risposta (§6.2, e
-			 *   ci decide se trattenere un fotogramma o chiudere la sessione).
-			 *   Se due `ADATTA_TELA` ricevessero un `TELA` solo, quel conto non
-			 *   tornerebbe piu' a zero e il client tratterrebbe fotogrammi per
-			 *   sempre — cioe' la sua memoria.  ⛔ Chi trascina un bordo ne manda
-			 *   proprio due di fila: non e' un caso raro, e' IL caso. */
+			 * ⚠ The client KEEPS COUNT of the unanswered requests (§6.2, and
+			 *   from it decides whether to hold back a frame or close the session).
+			 *   If two `ADATTA_TELA` received only one `TELA`, that count would
+			 *   never return to zero and the client would hold back frames
+			 *   forever — that is its memory.  ⛔ Whoever drags an edge sends
+			 *   exactly two in a row: it is not a rare case, it is THE case. */
 			if (s->tela_volo) {
-				reg(s, "ADATTA_TELA %ux%u arrivata mentre %ux%u era ancora in volo "
-				       "verso il palco: rispondo NON_ORA alla PRIMA (§7.1 vuole un "
-				       "TELA per ciascuna) e giro la seconda",
+				reg(s, "ADATTA_TELA %ux%u arrived while %ux%u was still in flight "
+				       "to the stage: I answer NON_ORA to the FIRST (§7.1 wants one "
+				       "TELA for each) and pass on the second",
 				    buona_l, buona_a, s->tela_volo_l, s->tela_volo_a);
 				manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
 				           s->tela_a);
 				s->tela_volo = false;
 			}
 
-			/* ⛔ E il gancio dice se la DOMANDA e' partita, non se la tela e'
-			 *    cambiata: la prova arriva con un fotogramma, e la porta qui
-			 *    dentro `rcp_tela_concessa()`. */
+			/* ⛔ And the hook says whether the QUESTION left, not whether the canvas
+			 *    changed: the proof arrives with a frame, and
+			 *    `rcp_tela_concessa()` brings it in here. */
 			if (!s->g.ritela(s->g.ctx, buona_l, buona_a)) {
-				reg(s, "⛔ ADATTA_TELA %ux%u → %ux%u: la richiesta NON e' partita "
-				       "verso il palco (nessun figlio, o il socket non l'ha "
-				       "presa).  NON_ORA, e la tela resta %ux%u",
+				reg(s, "⛔ ADATTA_TELA %ux%u → %ux%u: the request did NOT leave "
+				       "for the stage (no child, or the socket did not "
+				       "take it).  NON_ORA, and the canvas stays %ux%u",
 				    chiesta_l, chiesta_a, buona_l, buona_a, s->tela_l, s->tela_a);
 				manda_tela(s, 2 /* RIFIUTATA */, 3 /* NON_ORA */, s->tela_l,
 				           s->tela_a);
@@ -7431,60 +7467,60 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			s->tela_volo_l = buona_l;
 			s->tela_volo_a = buona_a;
 			s->tela_volo_da = ora;
-			/* ⛔ E il disaccordo di prima si CHIUDE: da adesso il palco ha una
-			 *    richiesta nuova, e datare il fondo su un disaccordo vecchio lo
-			 *    farebbe scadere all'indietro. */
+			/* ⛔ And the previous disagreement is CLOSED: from now the stage has a
+			 *    new request, and dating the backstop on an old disagreement would
+			 *    make it expire backwards. */
 			s->tela_disaccordo_da = 0;
 			s->tela_disaccordo_attesa = 0;
-			reg(s, "⭐ ADATTA_TELA %ux%u → %ux%u GIRATA al palco (`figli_ritela()` "
-			       "→ `cattura_ridimensiona()`).  ⚠ Nessun `TELA` adesso: la "
-			       "risposta e' il primo fotogramma alla misura nuova, e se non "
-			       "arriva entro %u ms si risponde NON_ORA (§7.1)",
+			reg(s, "⭐ ADATTA_TELA %ux%u → %ux%u PASSED to the stage (`figli_ritela()` "
+			       "→ `cattura_ridimensiona()`).  ⚠ No `TELA` now: the "
+			       "answer is the first frame at the new size, and if it does not "
+			       "arrive within %u ms NON_ORA is answered (§7.1)",
 			    chiesta_l, chiesta_a, buona_l, buona_a,
 			    (unsigned)RCP_TELA_ATTESA_MS);
 			break;
 		}
 		default: {
-			/* §7.1 + §3: un tipo sconosciuto sul canale di controllo non si
-			 * ignora — la connessione cade.
+			/* §7.1 + §3: an unknown type on the control channel is not
+			 * ignored — the connection drops.
 			 *
-			 * ⛔ Ma §3.1 punto 1 chiede di scrivere CHE COSA non si e' capito,
-			 * e «sconosciuto» sarebbe falso per meta' dei casi: `ECCOMI`,
-			 * `AMMESSO`, `RESPINTO`, `SESSIONE`, `CURSORE_FORMA`, `TELA` e
-			 * `BANCO_ESITO` sono tipi CONOSCIUTI che viaggiano nell'altro verso
-			 * (§7.1).  Un client che ne manda uno ha un difetto diverso da chi
-			 * inventa un tipo, e il registro deve distinguerli.
+			 * ⛔ But §3.1 point 1 asks to write WHAT was not understood,
+			 * and «unknown» would be false for half the cases: `ECCOMI`,
+			 * `AMMESSO`, `RESPINTO`, `SESSIONE`, `CURSORE_FORMA`, `TELA` and
+			 * `BANCO_ESITO` are KNOWN types that travel in the other direction
+			 * (§7.1).  A client sending one has a different defect from one
+			 * that invents a type, and the log must tell them apart.
 			 *
-			 * ⛔⭐ E I QUATTRO CHE RESTANO NON SONO «SCONOSCIUTI» — rilievo
-			 *    R9.7.  §7.1 li numera e li assegna al CLIENT: `0x0008 VISTA`,
+			 * ⛔⭐ AND THE FOUR THAT REMAIN ARE NOT «UNKNOWN» — finding
+			 *    R9.7.  §7.1 numbers them and assigns them to the CLIENT: `0x0008 VISTA`,
 			 *    `0x0009 DISPOSIZIONE`, `0x000B ADATTA_TELA`,
-			 *    `0x000D RICHIEDI_CHIAVE`.  Scrivere «sconosciuto» su un tipo
-			 *    che l'arbitro definisce e' dire il falso nel registro, ed e' lo
-			 *    stesso difetto che il capoverso qui sopra dichiara di aver
-			 *    corretto per i tipi del server.
+			 *    `0x000D RICHIEDI_CHIAVE`.  Writing «unknown» on a type
+			 *    the arbiter defines is saying something false in the log, and it is
+			 *    the same defect the paragraph above declares it
+			 *    corrected for the server's types.
 			 *
-			 * ⭐ E DAL 16 AGOSTO 2026 NE RESTA **UNO**: `0x0009 DISPOSIZIONE`.
-			 *    Gli altri tre se ne sono andati uno per volta, e ognuno
-			 *    portava via lo stesso prezzo — una sessione persa a un client
-			 *    conforme:
-			 *      · `0x000D RICHIEDI_CHIAVE` il 12 agosto, col canale video:
-			 *        §5.2 obbliga il client a mandarlo appena vede un buco;
-			 *      · `0x000B ADATTA_TELA` il 14 agosto, col palco che sa
-			 *        ridimensionare: §7.1 gli impone un `TELA` con un DEVE;
-			 *      · `0x0008 VISTA` il 16 agosto, sottofase 6.4: e' il piu'
-			 *        caro dei tre, perche' non richiedeva **niente** — la vista
-			 *        non tocca la tela, non tocca il codificatore e non ha
-			 *        risposta.  ⛔ Bastava tenerla, e per due fasi ha chiuso la
-			 *        sessione a chi stringeva la finestra del browser.
+			 * ⭐ AND SINCE 16 AUG 2026 **ONE** REMAINS: `0x0009 DISPOSIZIONE`.
+			 *    The other three went away one at a time, and each one
+			 *    took away the same price — a session lost to a conforming
+			 *    client:
+			 *      · `0x000D RICHIEDI_CHIAVE` on 12 August, with the video channel:
+			 *        §5.2 obliges the client to send it as soon as it sees a gap;
+			 *      · `0x000B ADATTA_TELA` on 14 August, with the stage able to
+			 *        resize: §7.1 requires a `TELA` for it with a MUST;
+			 *      · `0x0008 VISTA` on 16 August, sub-phase 6.4: it is the most
+			 *        expensive of the three, because it required **nothing** — the
+			 *        view does not touch the canvas, does not touch the encoder and
+			 *        has no answer.  ⛔ Keeping it was enough, and for two phases it
+			 *        closed the session of whoever narrowed the browser window.
 			 *
-			 * ⚠ E `0x0009 DISPOSIZIONE` resta fuori con un prezzo VERO, non con
-			 *   una dimenticanza: rinegoziare una keymap distrugge e ricrea il
-			 *   dispositivo tastiera di `libei` (`STUDI.md` §gnome §9), e quella
-			 *   catena e' della sottofase 6.2.  ⛔ Finche' resta fuori, un client
-			 *   conforme che cambia disposizione **perde la sessione**, e questa
-			 *   riga e' quel che lo dice: chi legge «non ancora servito in fase
-			 *   1» sa che il difetto e' nostro e sa dove sparisce; chi leggeva
-			 *   «sconosciuto» andava a cercare un difetto del client. */
+			 * ⚠ And `0x0009 DISPOSIZIONE` stays out with a REAL price, not through
+			 *   forgetfulness: renegotiating a keymap destroys and recreates the
+			 *   `libei` keyboard device (`STUDI.md` §gnome §9), and that
+			 *   chain belongs to sub-phase 6.2.  ⛔ As long as it stays out, a
+			 *   conforming client that changes layout **loses the session**, and
+			 *   this line is what says so: whoever reads «not yet served in phase
+			 *   1» knows the defect is ours and knows where it disappears; whoever
+			 *   read «unknown» went looking for a defect of the client. */
 			bool del_server = tipo == T_ECCOMI || tipo == T_AMMESSO ||
 			                  tipo == T_RESPINTO || tipo == T_SESSIONE ||
 			                  tipo == T_CURSORE_FORMA ||
@@ -7492,16 +7528,16 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 			                  tipo == T_BANCO_ESITO;
 			const char *del_client = NULL;
 			switch (tipo) {
-			/* ⚠ `0x0008 VISTA` non compare piu' qui: dal 16 agosto 2026 ha un
-			 *   caso suo e non arriva mai al `default` — come `0x000B` il 14.
-			 *   Tolto invece di lasciato «per sicurezza»: un ramo
-			 *   irraggiungibile che nomina un tipo servito e' una riga che
-			 *   mente a chi legge il registro, ed e' il difetto che questo
-			 *   stesso capoverso dichiara di aver corretto per gli altri. */
-			/* ⚠ `0x000B ADATTA_TELA` non compare piu' qui: dal 14 agosto 2026 ha
-			 *   un caso suo e non arriva mai al `default`.  Tolto invece di
-			 *   lasciato «per sicurezza»: un ramo irraggiungibile che nomina un
-			 *   tipo servito e' una riga che mente a chi legge. */
+			/* ⚠ `0x0008 VISTA` no longer appears here: since 16 Aug 2026 it has
+			 *   a case of its own and never reaches the `default` — like `0x000B`
+			 *   on the 14th.  Removed instead of left «for safety»: an
+			 *   unreachable branch naming a served type is a line that
+			 *   lies to whoever reads the log, and it is the defect this
+			 *   same paragraph declares it corrected for the others. */
+			/* ⚠ `0x000B ADATTA_TELA` no longer appears here: since 14 Aug 2026 it
+			 *   has a case of its own and never reaches the `default`.  Removed
+			 *   instead of left «for safety»: an unreachable branch naming a
+			 *   served type is a line that lies to whoever reads. */
 			default:
 				break;
 			}
@@ -7523,11 +7559,11 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		}
 		if (!avanti)
 			return false;
-		/* ⛔ §6.0: si avanza della lunghezza DICHIARATA, non di quanto si e'
-		 * letto.  ⚠ Il controllo qui non e' un doppione di quello che sta prima
-		 * dello switch: quello parla PRIMA degli effetti ed e' il controllo di
-		 * §6.1; questo scatta solo se `misura_campi()` e `tratta_*()` si sono
-		 * separati, cioe' se qualcuno ha cambiato un corpo in un posto solo. */
+		/* ⛔ §6.0: one advances by the DECLARED length, not by how much was
+		 * read.  ⚠ The check here is not a duplicate of the one before
+		 * the switch: that one speaks BEFORE the effects and is the check of
+		 * §6.1; this one fires only if `misura_campi()` and `tratta_*()` have
+		 * drifted apart, that is if someone changed a body in one place only. */
 		if (l.i != lung) {
 			congeda(s, RCP_ERRORE_PROTOCOLLO,
 			        "il corpo ha byte in piu' dei campi previsti");
@@ -7536,46 +7572,48 @@ static bool drena(rcp_sessione *s, uint64_t ora)
 		size_t prima = s->acc_len;
 		memmove(s->acc, s->acc + 6 + lung, s->acc_len - 6 - lung);
 		s->acc_len -= 6 + lung;
-		/* ⛔ E LA CODA SI AZZERA — rilievo R9.8.  Il `memmove` faceva scorrere
-		 * in giu' il residuo e lasciava dov'erano i byte del messaggio appena
-		 * consumato: quelli di una `CREDENZIALI` sono la parola d'ordine in
-		 * chiaro, e restavano nella sessione fino alla fine della connessione.
-		 * §4.4: «va azzerata appena PAM ha risposto». */
+		/* ⛔ AND THE TAIL IS ZEROED — finding R9.8.  The `memmove` slid the
+		 * remainder down and left the bytes of the message just consumed where
+		 * they were: those of a `CREDENZIALI` are the password in clear, and
+		 * they stayed in the session until the end of the connection.
+		 * §4.4: «it must be zeroed as soon as PAM has answered». */
 		memset(s->acc + s->acc_len, 0, prima - s->acc_len);
 		s->da_quando = ora;
 	}
 }
 
-/* ⛔⭐ CHI HA TACIUTO TRENTA SECONDI NON E' PIU' ATTACCATO, E QUANDO TORNA A
- *    PARLARE LO DEVE SAPERE — rilievo R9.2.
+/* ⛔⭐ WHOEVER HAS BEEN SILENT FOR THIRTY SECONDS IS NO LONGER ATTACHED, AND WHEN
+ *    THEY SPEAK AGAIN THEY MUST KNOW IT — finding R9.2.
  *
- *    Il ramo del silenzio di `rcp_tempo()` lasciava il posto e metteva
- *    `attaccata = false`, ma lo stato restava `S_ATTIVA`: da li' in poi il
- *    server aveva DUE sessioni «attiva» per lo stesso utente — quel che I2
- *    vieta — e la prima continuava a essere servita come se niente fosse, senza
- *    aver mai ricevuto un `CONGEDO`, un motivo o un codice di chiusura.  §8.2:
- *    «nessun client attaccato e vivo viene mai spodestato», e quello veniva
- *    spodestato in silenzio.
+ *    The silence branch of `rcp_tempo()` left the slot and set
+ *    `attaccata = false`, but the state stayed `S_ATTIVA`: from there on the
+ *    server had TWO «active» sessions for the same user — what I2
+ *    forbids — and the first kept being served as if nothing had happened,
+ *    without ever having received a `CONGEDO`, a reason or a close code.  §8.2:
+ *    «no attached and alive client is ever ousted», and that one was
+ *    ousted in silence.
  *
- * ⭐ Il posto si puo' RIPRENDERE, e non e' una concessione: §8.2 dice che «il
- *    discrimine e' l'orologio del silenzio, non l'intenzione di chi arriva», e
- *    il caso che l'orologio esiste per servire e' il telefono tornato dalla
- *    galleria.  Se nessuno ha occupato il posto, quel client riprende
- *    esattamente da dove era.
+ * ⭐ The slot can be TAKEN BACK, and it is not a concession: §8.2 says that «the
+ *    criterion is the silence clock, not the intention of whoever arrives», and
+ *    the case the clock exists to serve is the phone back from the
+ *    tunnel.  If nobody has taken the slot, that client resumes
+ *    exactly from where it was.
  *
- * ⛔ Se invece il posto e' stato preso, il congedo e' `GIA_ATTIVA_REMOTA` e la
- *    frase che il client ne costruira' — «hai gia' una sessione attiva altrove»
- *    — questa volta e' VERA.  ⚠ E resta vero che «chi viene rifiutato e' chi
- *    arriva»: qui chi arriva e' lui, chi c'era e' l'altro.
+ * ⛔ If instead the slot has been taken, the farewell is `GIA_ATTIVA_REMOTA` and
+ *    the sentence the client will build from it — «you already have an active
+ *    session elsewhere» — this time is TRUE.  ⚠ And it stays true that «the one
+ *    refused is whoever arrives»: here whoever arrives is them, whoever was
+ *    there is the other.
  *
- * ⛔⭐ ED E' UNA FUNZIONE, dal 14 agosto 2026, perche' adesso i byte del client
- *     entrano da DUE porte — `rcp_ricevi()` e `rcp_ricevi_input()`.  ⚠ Lasciarla
- *     scritta a mano dentro la prima avrebbe voluto dire che chi torna a parlare
- *     **muovendo il mouse** non riprende il posto, e il sintomo sarebbe stato:
- *     il video riparte se scrivi, non se muovi la mano.  Due copie di uno stato
- *     divergono, e questa e' la copia che non si e' fatta.
+ * ⛔⭐ AND IT IS A FUNCTION, since 14 Aug 2026, because now the client's bytes
+ *     come in through TWO doors — `rcp_ricevi()` and `rcp_ricevi_input()`.
+ *     ⚠ Leaving it written by hand inside the first would have meant that
+ *     whoever speaks again **by moving the mouse** does not take back the slot,
+ *     and the symptom would have been: the video restarts if you type, not if
+ *     you move your hand.  Two copies of a state diverge, and this is the copy
+ *     that was not made.
  *
- * Restituisce `false` se la sessione e' stata congedata. */
+ * Returns `false` if the session has been sent away. */
 static bool torna_a_parlare(rcp_sessione *s)
 {
 	if (s->stato != S_STACCATA)
@@ -7583,17 +7621,17 @@ static bool torna_a_parlare(rcp_sessione *s)
 	if (posto_prendi(s) == POSTO_PRESO) {
 		s->attaccata = true;
 		s->stato = S_ATTIVA;
-		/* ⛔ §7.3: il rilascio del distacco e' gia' avvenuto (il silenzio l'ha
-		 * fatto scattare), e questa sessione ricomincia con le mani libere: se
-		 * tacesse una seconda volta, il rilascio deve poter riscattare. */
+		/* ⛔ §7.3: the release on detach has already happened (the silence
+		 * triggered it), and this session starts again with free hands: if it
+		 * fell silent a second time, the release must be able to fire again. */
 		s->inp_rilasciato = false;
-		reg(s, "⭐ posto RIPRESO da %s via %s dopo il silenzio: nessun "
-		       "altro lo aveva occupato (occupati adesso: %d)",
+		reg(s, "⭐ slot TAKEN BACK by %s via %s after the silence: nobody "
+		       "else had taken it (taken now: %d)",
 		    s->utente, s->provenienza, posti_occupati());
 		return true;
 	}
-	reg(s, "⛔ %s torna a parlare dopo il silenzio, ma il suo posto e' "
-	       "di un altro client: §8.2 0x0F, e questa volta e' vero",
+	reg(s, "⛔ %s speaks again after the silence, but their slot belongs "
+	       "to another client: §8.2 0x0F, and this time it is true",
 	    s->utente);
 	congeda(s, RCP_GIA_ATTIVA_REMOTA,
 	        "il posto di questa sessione e' stato preso da un altro "
@@ -7604,52 +7642,52 @@ static bool torna_a_parlare(rcp_sessione *s)
 bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 {
 	if (s->stato == S_FINITA) {
-		/* ⛔ E si SCRIVE.  §4.4 dice che dopo `RESPINTO` il client non deve
-		 * riprovare sulla stessa connessione, e §4.2 che dopo la fine della
-		 * sessione non si spedisce piu' niente: sono due DEVE del CLIENT, e
-		 * l'unico posto da cui si possono osservare e' qui.  ⚠ Senza questa
-		 * riga un client che riprova e' indistinguibile da uno che si e'
-		 * fermato — B11 misurerebbe il silenzio del server invece del
-		 * comportamento della pagina.
+		/* ⛔ And it is WRITTEN.  §4.4 says that after `RESPINTO` the client must
+		 * not retry on the same connection, and §4.2 that after the end of the
+		 * session nothing more is sent: they are two MUSTs of the CLIENT, and
+		 * the only place from which they can be observed is here.  ⚠ Without
+		 * this line a client that retries is indistinguishable from one that
+		 * stopped — B11 would measure the server's silence instead of the
+		 * page's behaviour.
 		 *
-		 * ⛔⭐ MA NON TUTTO QUEL CHE ARRIVA DOPO LA FINE E' UNA VIOLAZIONE, e
-		 *    contarlo tutto insieme ha puntato un rosso sull'imputato
-		 *    sbagliato — la settima veste di `LEZIONI.md` §1.9.
+		 * ⛔⭐ BUT NOT EVERYTHING THAT ARRIVES AFTER THE END IS A VIOLATION, and
+		 *    counting it all together pointed a red at the wrong
+		 *    suspect — the seventh guise of `LEZIONI.md` §1.9.
 		 *
-		 * §4.4 vieta al client UNA cosa: **riprovare**.  §8.1 gliene impone
-		 * un'altra: chi chiude **DEVE** mandare `CONGEDO` col motivo.  ⭐ Le
-		 * due si incontrano quando il server sbaglia DOPO `RESPINTO` — il caso
-		 * `respinto-poi-congedo` di B11: la pagina vede un messaggio che non
-		 * doveva arrivare, chiude come impone §3, e il suo `CONGEDO` parte
-		 * quando per noi la sessione e' gia' finita.
+		 * §4.4 forbids the client ONE thing: **retrying**.  §8.1 imposes
+		 * another: whoever closes **MUST** send `CONGEDO` with the reason.  ⭐ The
+		 * two meet when the server errs AFTER `RESPINTO` — the
+		 * `respinto-poi-congedo` case of B11: the page sees a message that should
+		 * not have arrived, closes as §3 requires, and its `CONGEDO` leaves
+		 * when for us the session is already over.
 		 *
-		 * ⚠ Il 10 agosto 2026 quel `CONGEDO` di 69 byte e' stato contato come
-		 *   «spedito dopo la fine», e il rosso e' andato sulla pagina che stava
-		 *   facendo **esattamente** quel che §8.1 le impone.  ⛔ Il canale di
-		 *   controllo non aveva nessun FIN: §4.2 non c'entrava, e la sola
-		 *   regola in gioco — §4.4 — parla di tentativi, non di commiati.
+		 * ⚠ On 10 Aug 2026 that 69-byte `CONGEDO` was counted as
+		 *   «sent after the end», and the red went to the page that was
+		 *   doing **exactly** what §8.1 requires of it.  ⛔ The control
+		 *   channel had no FIN: §4.2 had nothing to do with it, and the only
+		 *   rule in play — §4.4 — speaks of attempts, not of partings.
 		 *
-		 * ⭐ Quindi si distingue, e si distingue **sui messaggi**, non sui primi
-		 *    sei byte del pezzo: vedi `giudica_dopo_la_fine()`, rilievo R9.15. */
+		 * ⭐ So one distinguishes, and distinguishes **on messages**, not on the
+		 *    first six bytes of the piece: see `giudica_dopo_la_fine()`, finding R9.15. */
 		giudica_dopo_la_fine(s, dati, len);
 		return false;
 	}
-	/* ⭐ L'orologio dell'INATTIVITA' dell'utente si azzera qui, sui byte di RCP
-	 *    — e con lui il segno di vita, perche' un byte arrivato e' un pacchetto
-	 *    arrivato.  ⚠ La ragione lunga sta sull'altra delle due chiamate, in
+	/* ⭐ The user's INACTIVITY clock is reset here, on RCP bytes
+	 *    — and with it the sign of life, because a byte that arrived is a packet
+	 *    that arrived.  ⚠ The long reason is on the other of the two calls, in
 	 *    `rcp_ricevi_input()`. */
 	s->ultimo_byte = ora;
 	s->ultima_vita = ora;
 
-	/* ⚠ La connessione non si chiude per il solo silenzio — quella scelta e'
-	 *   dichiarata nel riquadro in cima e non cambia.  Quel che cambia e' che
-	 *   lo STATO dice il vero.  Vedi `torna_a_parlare()`, rilievo R9.2. */
+	/* ⚠ The connection is not closed for silence alone — that choice is
+	 *   declared in the box at the top and does not change.  What changes is
+	 *   that the STATE tells the truth.  See `torna_a_parlare()`, finding R9.2. */
 	if (!torna_a_parlare(s))
 		return false;
 
-	/* ⛔ Si accumula A PEZZI e si drena dopo ciascuno: cosi' il tetto e' quello
-	 * di §6.1 e non quello di un buffer, e un pezzo grande non muore perche'
-	 * dentro ci stanno piu' messaggi (rilievo R9.13). */
+	/* ⛔ It is buffered IN PIECES and drained after each one: so the ceiling is
+	 * the one of §6.1 and not that of a buffer, and a big piece does not die
+	 * because more messages fit inside it (finding R9.13). */
 	while (len) {
 		size_t spazio = MAX_ACCUMULO - s->acc_len;
 		if (spazio == 0) {
@@ -7663,10 +7701,10 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 			return false;
 		}
 		if (esito < 0) {
-			/* ⚠ §8.2 non ha un motivo che voglia dire «la memoria e' finita»:
-			 *   `SESSIONE_NON_SERVIBILE` e' il piu' vicino — «non si puo'
-			 *   servire» — e porta il dettaglio nel corpo.  Scelta nostra, e
-			 *   dichiarata qui perche' non venga letta come una regola. */
+			/* ⚠ §8.2 has no reason meaning «memory is exhausted»:
+			 *   `SESSIONE_NON_SERVIBILE` is the closest — «cannot be
+			 *   served» — and carries the detail in the body.  Our choice, and
+			 *   declared here so that it is not read as a rule. */
 			congeda(s, RCP_SESSIONE_NON_SERVIBILE,
 			        "memoria esaurita nell'accumulo del canale di controllo");
 			return false;
@@ -7679,44 +7717,45 @@ bool rcp_ricevi(rcp_sessione *s, const uint8_t *dati, size_t len, uint64_t ora)
 	return true;
 }
 
-/* ⛔ §2.5 — la violazione che NON arriva dal canale di controllo.
+/* ⛔ §2.5 — the violation that does NOT come from the control channel.
  *
- * Chi apre uno stream in piu', o ci mette dentro il canale sbagliato, non ha
- * mandato nessun messaggio di controllo: la violazione la rileva l'OSPITE, che
- * e' l'unico a vedere gli stream.  ⛔ Ma la chiusura deve restare quella di
- * §3.1 — registro, `CONGEDO` sul canale di controllo se e' ancora utilizzabile,
- * e il codice del motivo nella chiusura della sessione — e quelle tre cose le
- * sa fare solo questo modulo.
+ * Whoever opens one stream too many, or puts the wrong channel inside it, has
+ * sent no control message: the violation is detected by the HOST, which
+ * is the only one that sees the streams.  ⛔ But the closing must stay that of
+ * §3.1 — log, `CONGEDO` on the control channel if it is still usable,
+ * and the reason code in the closing of the session — and those three things
+ * only this module knows how to do.
  *
- * ⚠ E' il **secondo condizionale di §3.1** a rendere il caso interessante: qui
- *   il canale di controllo di solito e' ancora buono, quindi il `CONGEDO`
- *   parte davvero.  Un banco che pretendesse tutt'e tre i punti SEMPRE darebbe
- *   rosso sul codice giusto il giorno in cui non lo fosse (rilievo R3.3).
+ * ⚠ It is the **second conditional of §3.1** that makes the case interesting:
+ *   here the control channel is usually still good, so the `CONGEDO`
+ *   really leaves.  A bench that demanded all three points ALWAYS would give
+ *   red on the right code the day it was not (finding R3.3).
  *
- * ⛔⭐ E A SESSIONE FINITA NON SI TACE — rilievo R9.16.  Questa funzione passava
- *    tutta e sola per `congeda()`, che se lo stato e' `S_FINITA` esce alla
- *    prima riga: niente registro, niente `CONGEDO`, niente codice di chiusura.
- *    Un client che si congeda regolarmente e POI apre uno stream nel verso
- *    sbagliato (§2.5) non lasciava **nessuna** traccia — e l'ospite, che quello
- *    stream lo ha visto, non ha altro posto dove dirlo.
+ * ⛔⭐ AND WITH THE SESSION OVER ONE DOES NOT KEEP QUIET — finding R9.16.  This
+ *    function went entirely and only through `congeda()`, which if the state is
+ *    `S_FINITA` leaves at the first line: no log, no `CONGEDO`, no close code.
+ *    A client that takes its farewell properly and THEN opens a stream in the
+ *    wrong direction (§2.5) left **no** trace — and the host, which saw that
+ *    stream, has no other place to say it.
  *
- * ⚠ Il confronto e' interno a questo file: `rcp_ricevi()` scrive «byte arrivati
- *   DOPO la fine della sessione» proprio perche' «l'unico posto da cui si
- *   possono osservare e' qui».  Per gli STREAM quel posto e' questa funzione. */
-/* ⛔⭐ IL CONGEDO CHE VIENE DA FUORI — §8.1, e il caso per cui e' stato scritto
- *     e' `SERVER_IN_CHIUSURA` (§8.2, `0x0C`).  Rilievo B-7, 10 agosto 2026
- *     notte.
+ * ⚠ The comparison is internal to this file: `rcp_ricevi()` writes «bytes
+ *   arrived AFTER the end of the session» precisely because «the only place
+ *   from which they can be observed is here».  For STREAMS that place is this
+ *   function. */
+/* ⛔⭐ THE FAREWELL THAT COMES FROM OUTSIDE — §8.1, and the case it was written
+ *     for is `SERVER_IN_CHIUSURA` (§8.2, `0x0C`).  Finding B-7, night of
+ *     10 Aug 2026.
  *
- *     `0x0C` era definito in `rcp.h` e **non lo emetteva nessuna riga del
- *     prodotto**: a un `systemctl stop` con una sessione attiva il server
- *     liberava tutto e taceva.  Il client restava ad aspettare i 30 s
- *     dell'inattivita' e mostrava «errore di rete» — cioe' alla lettera il
- *     difetto di `LEZIONI.md` §1.7 che §3.1 esiste per togliere.
+ *     `0x0C` was defined in `rcp.h` and **no line of the product emitted it**:
+ *     at a `systemctl stop` with an active session the server freed everything
+ *     and kept quiet.  The client stayed waiting for the 30 s of inactivity
+ *     and showed «network error» — that is literally the defect of
+ *     `LEZIONI.md` §1.7 that §3.1 exists to remove.
  *
- * ⚠ Chi chiude DEVE mandare `CONGEDO` col motivo **e** ripetere il motivo nel
- *   codice della chiusura: le due strade le percorre `congeda()`, ed e' per
- *   questo che questa funzione non fa altro che chiamarla.  ⛔ Il motivo lo
- *   sceglie chi ospita, perche' solo lui sa perche' sta chiudendo. */
+ * ⚠ Whoever closes MUST send `CONGEDO` with the reason **and** repeat the reason
+ *   in the close code: both roads are travelled by `congeda()`, and that is
+ *   why this function does nothing but call it.  ⛔ The reason is chosen
+ *   by the host, because only it knows why it is closing. */
 void rcp_congeda(rcp_sessione *s, uint8_t motivo, const char *dettaglio)
 {
 	if (!s || s->stato == S_FINITA)
@@ -7729,73 +7768,74 @@ void rcp_violazione(rcp_sessione *s, const char *dettaglio)
 	if (!s)
 		return;
 	if (s->stato == S_FINITA) {
-		/* ⛔ §3.1 punto 1 vale lo stesso: si scrive CHE COSA.  I punti 2 e 3
-		 * no, ed e' giusto — la sessione e' gia' chiusa col suo motivo, e
-		 * mandarne un secondo direbbe due verita' sullo stesso fatto. */
-		reg(s, "⛔ violazione rilevata DOPO la fine della sessione da %s: %s "
-		       "— la sessione era gia' chiusa, quindi niente CONGEDO e niente "
-		       "codice di chiusura (§3.1), ma il registro la nomina",
+		/* ⛔ §3.1 point 1 applies all the same: one writes WHAT.  Points 2 and
+		 * 3 do not, and rightly — the session is already closed with its
+		 * reason, and sending a second one would state two truths about the
+		 * same fact. */
+		reg(s, "⛔ violation detected AFTER the end of the session from %s: %s "
+		       "— the session was already closed, so no CONGEDO and no "
+		       "close code (§3.1), but the log names it",
 		    s->provenienza, dettaglio);
 		return;
 	}
 	congeda(s, RCP_ERRORE_PROTOCOLLO, dettaglio);
 }
 
-/* ⛔⭐ §4.2 — IL CANALE DI CONTROLLO CHE SI CHIUDE E' LA FINE DELLA SESSIONE,
- * E VALE ANCHE QUANDO A CHIUDERLO E' IL SERVER.
+/* ⛔⭐ §4.2 — THE CONTROL CHANNEL CLOSING IS THE END OF THE SESSION,
+ * AND IT HOLDS EVEN WHEN THE ONE CLOSING IT IS THE SERVER.
  *
- * Da quell'istante nessun messaggio del client puo' piu' arrivare — §4.2 gli
- * vieta di spedire su qualunque canale — quindi il posto (§8.2 motivo 0x0F)
- * non lo libererebbe piu' NESSUNO fino alla morte della connessione.  E una
- * connessione, un browser, la tiene viva.
+ * From that instant no client message can arrive any more — §4.2 forbids it
+ * to send on any channel — so the slot (§8.2 reason 0x0F) would be freed by
+ * NOBODY until the death of the connection.  And a connection, a browser keeps
+ * it alive.
  *
- * ⭐ Trovato da B11 il 10 agosto 2026, e solo su Chrome: dopo il caso in cui
- *    il server chiude il canale con un FIN, i tre casi successivi ricevevano
- *    `GIA_ATTIVA_REMOTA`.  Su Firefox no — li' il trasporto chiudeva lo stream
- *    in tempo e `rcp_libera()` arrivava lo stesso.  ⛔ Il difetto viveva nella
- *    differenza fra due motori, e nessun cliente di prova poteva vederlo.
+ * ⭐ Found by B11 on 10 Aug 2026, and only on Chrome: after the case in which
+ *    the server closes the channel with a FIN, the three following cases received
+ *    `GIA_ATTIVA_REMOTA`.  Not on Firefox — there the transport closed the stream
+ *    in time and `rcp_libera()` arrived all the same.  ⛔ The defect lived in the
+ *    difference between two engines, and no test client could see it.
  *
- * ⚠ La sessione non si libera e non si congeda: mandare un `CONGEDO` su un
- *   canale che abbiamo appena chiuso non ha senso, e il motivo — se ce n'era
- *   uno — e' gia' viaggiato nel codice di chiusura (§3.1 punto 3).  Resta viva
- *   perche' e' l'unico punto da cui si osserva un client che spedisce dopo la
- *   fine, che e' il DEVE di §4.2.                                            */
+ * ⚠ The session is not freed and not sent away: sending a `CONGEDO` on a
+ *   channel we have just closed makes no sense, and the reason — if there was
+ *   one — has already travelled in the close code (§3.1 point 3).  It stays alive
+ *   because it is the only point from which one observes a client sending after
+ *   the end, which is the MUST of §4.2.                                      */
 void rcp_canale_chiuso(rcp_sessione *s)
 {
 	if (!s || s->stato == S_FINITA)
 		return;
-	reg(s, "il canale di controllo si e' chiuso dal lato del server: "
-	       "§4.2, la sessione e' finita (stato: %s)",
+	reg(s, "the control channel closed on the server side: "
+	       "§4.2, the session is over (state: %s)",
 	    NOMI_STATO[s->stato]);
-	/* ⛔ §7.3: la quarta strada — il canale muore e non passa da `congeda()`. */
-	rilascia_al_distacco(s, "il canale di controllo si e' chiuso");
+	/* ⛔ §7.3: the fourth road — the channel dies and does not go through `congeda()`. */
+	rilascia_al_distacco(s, "the control channel closed");
 	if (s->attaccata) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
-		reg(s, "posto LASCIATO da %s via %s (occupati adesso: %d)", s->utente,
+		reg(s, "slot LEFT by %s via %s (taken now: %d)", s->utente,
 		    s->provenienza, posti_occupati());
 	}
 	s->stato = S_FINITA;
 }
 
-/* ⭐ L'ESITO DELLA VERIFICA ASINCRONA RIENTRA DA QUI — `DECISIONI.md` §1.10.
+/* ⭐ THE OUTCOME OF THE ASYNCHRONOUS CHECK COMES BACK IN HERE — `DECISIONI.md` §1.10.
  *
- * ⛔ E CI SONO QUATTRO MURI PRIMA DI TOCCARE `cred_buone`, uno per ciascuna
- *    strada per cui un «si'» potrebbe entrare dove non deve (invariante I3):
+ * ⛔ AND THERE ARE FOUR WALLS BEFORE TOUCHING `cred_buone`, one for each
+ *    road by which a «yes» could get in where it must not (invariant I3):
  *
- *   1. la sessione dev'essere viva e in `attesa-verdetto` — un verdetto che
- *      arriva su una sessione gia' `attiva` non la puo' riaprire;
- *   2. dev'essere STATA CHIESTA (`verdetto_atteso`) — cosi' una pratica
- *      inventata non trova nessuno che l'aspetti;
- *   3. il numero dev'essere il SUO — la pratica e' del processo, non della
- *      sessione, e senza questo confronto la risposta di un utente potrebbe
- *      ammetterne un altro.  ⛔ E' il muro che vale di piu';
- *   4. `verdetto_atteso` si spegne QUI: una seconda risposta per la stessa
- *      pratica non entra, e «ho ricevuto due verdetti» non diventa «vince
- *      l'ultimo».
+ *   1. the session must be alive and in `attesa-verdetto` — a verdict that
+ *      arrives on a session already `attiva` cannot reopen it;
+ *   2. it must HAVE BEEN ASKED (`verdetto_atteso`) — so an invented request
+ *      finds nobody waiting for it;
+ *   3. the number must be ITS OWN — the request belongs to the process, not to
+ *      the session, and without this comparison one user's answer could
+ *      admit another.  ⛔ It is the wall that counts most;
+ *   4. `verdetto_atteso` is switched off HERE: a second answer for the same
+ *      request does not get in, and «I received two verdicts» does not become
+ *      «the last one wins».
  *
- * ⚠ E non manda niente sul filo: ci pensa `rcp_tempo()`, quando anche il
- *   secondo fisso di §4.4-bis sara' passato. */
+ * ⚠ And it sends nothing on the wire: `rcp_tempo()` takes care of that, when
+ *   the fixed second of §4.4-bis has passed too. */
 bool rcp_verdetto(rcp_sessione *s, uint64_t pratica, bool ammesso,
                   uint64_t ora)
 {
@@ -7807,15 +7847,15 @@ bool rcp_verdetto(rcp_sessione *s, uint64_t pratica, bool ammesso,
 	s->verdetto_atteso = false;
 	s->cred_buone = ammesso;
 	s->cred_motivo = RCP_CREDENZIALI_ERRATE;
-	reg(s, "PAM ha risposto (pratica %llu): %s  ⭐ e il filo non si e' mai "
-	       "fermato (DECISIONI.md §1.10)",
-	    (unsigned long long)pratica, ammesso ? "ammesso" : "respinto");
+	reg(s, "PAM answered (request %llu): %s  ⭐ and the thread never "
+	       "stopped (DECISIONI.md §1.10)",
+	    (unsigned long long)pratica, ammesso ? "admitted" : "refused");
 
-	/* ⛔ IL CONTO DI §4.4-bis SI MUOVE QUI, ed e' l'unico posto in cui adesso
-	 *    esiste il fatto «un tentativo e' fallito».  ⚠ Portarlo qui e' la sola
-	 *    cosa che il ban ha dovuto subire da questa cura: la regola non
-	 *    cambia — tre falliti dallo stesso indirizzo in cinque minuti, dodici
-	 *    ore — cambia il momento in cui si sa. */
+	/* ⛔ THE COUNT OF §4.4-bis MOVES HERE, and it is the only place where the
+	 *    fact «an attempt failed» now exists.  ⚠ Bringing it here is the only
+	 *    thing the ban had to undergo from this cure: the rule does not
+	 *    change — three failures from the same address in five minutes, twelve
+	 *    hours — the moment at which it is known changes. */
 	if (ammesso)
 		azzera_falliti(s, s->indirizzo, ora);
 	else
@@ -7828,78 +7868,78 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 	if (s->stato == S_FINITA)
 		return false;
 
-	/* ⛔⛔ IL FONDO DELLE RICHIESTE DI INCOLLA, e senza di lui il canale
-	 *      appunti funziona una volta sola.
+	/* ⛔⛔ THE BACKSTOP OF PASTE REQUESTS, and without it the clipboard
+	 *      channel works only once.
 	 *
-	 *      Il caso: si chiede il testo al client (`APPUNTI_CHIEDI`) e il client
-	 *      non risponde mai — si e' staccato, o non sa servire quel
-	 *      trasferimento.  ⛔ La coda non si svuota, `app_chiesto` resta vero, e
-	 *      da li' in poi **ogni incollata successiva si accoda a una domanda che
-	 *      non avra' mai risposta**: il sintomo e' «gli appunti hanno funzionato
-	 *      una volta e poi mai piu'», che nessuno collega a un client che non ha
-	 *      risposto mezz'ora fa.
+	 *      The case: the text is asked of the client (`APPUNTI_CHIEDI`) and the
+	 *      client never answers — it has detached, or cannot serve that
+	 *      transfer.  ⛔ The queue does not empty, `app_chiesto` stays true, and
+	 *      from there on **every later paste queues behind a question that
+	 *      will never have an answer**: the symptom is «the clipboard worked
+	 *      once and then never again», which nobody connects to a client that
+	 *      did not answer half an hour ago.
 	 *
-	 * ⚠ E questo fondo e' piu' LARGO di quello del figlio (4 s) apposta: la'
-	 *   si paga il debito verso il compositore — chi incolla ha gia' avuto la
-	 *   sua risposta vuota — qui si rimette in sesto il canale.  ⛔ Stringerlo
-	 *   fino a coincidere farebbe scadere le due cose insieme, e un testo
-	 *   arrivato al millesimo giusto non troverebbe piu' nessuno da servire da
-	 *   nessuna delle due parti. */
+	 * ⚠ And this backstop is WIDER than the child's (4 s) on purpose: there
+	 *   the debt towards the compositor is paid — whoever pastes has already had
+	 *   their empty answer — here the channel is put back on its feet.  ⛔ Narrowing
+	 *   it until they coincide would make the two things expire together, and a
+	 *   text arriving at just the right millisecond would no longer find anyone
+	 *   to serve on either side. */
 	if (s->app_serial_n > 0 && ora - s->app_chiesto_ms > APPUNTI_FONDO) {
-		reg(s, "⚠ APPUNTI: %d richieste di incolla senza risposta dal client "
-		       "dopo %llu ms (fondo %d): la coda si svuota.  ⛔ Chi incollava ha "
-		       "gia' avuto la sua risposta vuota dal figlio; questo fondo serve a "
-		       "non lasciare il canale bloccato per le incollate DOPO",
+		reg(s, "⚠ APPUNTI: %d paste requests without an answer from the client "
+		       "after %llu ms (backstop %d): the queue is emptied.  ⛔ Whoever was "
+		       "pasting has already had their empty answer from the child; this "
+		       "backstop serves not to leave the channel blocked for the pastes AFTER",
 		    s->app_serial_n, (unsigned long long)(ora - s->app_chiesto_ms),
 		    APPUNTI_FONDO);
 		s->app_serial_n = 0;
 		s->app_chiesto = false;
 	}
 
-	/* ⛔ §4.4-bis: il ritardo fisso vale ANCHE per AMMESSO.  Applicarlo solo
-	 * ai rifiuti rimetterebbe il tempismo dall'altra parte, e la distinzione
-	 * che §4.4 vieta di scrivere nel motivo si leggerebbe col cronometro. */
+	/* ⛔ §4.4-bis: the fixed delay applies to AMMESSO TOO.  Applying it only
+	 * to refusals would put the timing back on the other side, and the
+	 * distinction §4.4 forbids writing in the reason would be read with a stopwatch. */
 	if (s->stato == S_ATTESA_VERDETTO) {
-		/* ⛔⭐ ADESSO SI ASPETTANO DUE COSE, E L'ORDINE NON E' GARANTITO —
-		 *     `DECISIONI.md` §1.10, 12 agosto 2026.
+		/* ⛔⭐ NOW TWO THINGS ARE AWAITED, AND THE ORDER IS NOT GUARANTEED —
+		 *     `DECISIONI.md` §1.10, 12 Aug 2026.
 		 *
-		 *     Il secondo fisso di §4.4-bis e la risposta dell'aiutante.  Fino
-		 *     a ieri la seconda era gia' arrivata quando questo stato
-		 *     cominciava — PAM aveva bloccato il filo — e qui bastava
-		 *     guardare l'orologio.
+		 *     The fixed second of §4.4-bis and the helper's answer.  Until
+		 *     yesterday the second had already arrived when this state
+		 *     began — PAM had blocked the thread — and here it was enough to
+		 *     look at the clock.
 		 *
-		 * ⭐ E il tempo di chi si autentica NON cambia: PAM ci mette da 1,0 a
-		 *    2,2 s (`[M]` B8), quindi il verdetto arriva quasi sempre DOPO il
-		 *    secondo fisso ed e' lui a dettare il ritmo — esattamente come
-		 *    prima.  Quel che cambia e' che nel frattempo il filo lavora.
+		 * ⭐ And the time of whoever authenticates does NOT change: PAM takes
+		 *    from 1.0 to 2.2 s (`[M]` B8), so the verdict almost always arrives
+		 *    AFTER the fixed second and it is the verdict that sets the pace —
+		 *    exactly as before.  What changes is that meanwhile the thread works.
 		 *
-		 * ⛔ E il secondo fisso resta un PAVIMENTO, non un soffitto: una
-		 *    risposta arrivata in 10 ms non fa uscire `AMMESSO` in 10 ms,
-		 *    perche' §4.4-bis vuole che il cronometro non distingua quel che
-		 *    il motivo non distingue. */
+		 * ⛔ And the fixed second stays a FLOOR, not a ceiling: an
+		 *    answer arrived in 10 ms does not make `AMMESSO` go out in 10 ms,
+		 *    because §4.4-bis wants the stopwatch not to distinguish what
+		 *    the reason does not distinguish. */
 		if (s->verdetto_atteso && ora - s->cred_arrivo > TETTO_VERDETTO) {
-			/* ⛔ La rete di sicurezza, e vale NO.  `cred_buone` e' false da
-			 *    quando `CREDENZIALI` e' arrivata: qui non si tocca niente,
-			 *    si smette di aspettare. */
+			/* ⛔ The safety net, and it counts as NO.  `cred_buone` has been false
+			 *    since `CREDENZIALI` arrived: here nothing is touched,
+			 *    one stops waiting. */
 			s->verdetto_atteso = false;
 			s->no_e_nostro = true;
-			reg(s, "⛔ nessun verdetto dall'aiutante dopo %llu ms (tetto %d): "
-			       "RESPINTO.  ⚠ E' un difetto NOSTRO, non una parola "
-			       "sbagliata — e per questo NON conta come tentativo fallito "
-			       "di §4.4-bis",
+			reg(s, "⛔ no verdict from the helper after %llu ms (ceiling %d): "
+			       "RESPINTO.  ⚠ It is OUR defect, not a wrong "
+			       "password — and that is why it does NOT count as a failed attempt "
+			       "of §4.4-bis",
 			    (unsigned long long)(ora - s->cred_arrivo), TETTO_VERDETTO);
 		}
 		if (s->verdetto_atteso)
-			return true; /* PAM sta ancora rispondendo, e il filo intanto gira */
-		/* ⛔ `<=` e non `<`: `ora` e `cred_arrivo` sono millisecondi TRONCATI,
-		 *    quindi una differenza di 1000 puo' essere 999,x ms veri.  `[M]` 23
-		 *    set 2026: 15 ammessi su 50 a 999 ms su gnome, 16 su 50 su kde — e
-		 *    il cliente di prova, che §4.4-bis la guarda, se ne andava dicendo
-		 *    «meno di un secondo» (C20 «non ho potuto guardare» su gnome e kde).
-		 *    Il secondo fisso e' un PAVIMENTO: si paga al massimo 1 ms in piu'. */
+			return true; /* PAM is still answering, and meanwhile the thread turns */
+		/* ⛔ `<=` and not `<`: `ora` and `cred_arrivo` are TRUNCATED milliseconds,
+		 *    so a difference of 1000 can be 999.x real ms.  `[M]` 23
+		 *    Sep 2026: 15 admitted out of 50 at 999 ms on gnome, 16 out of 50 on kde —
+		 *    and the test client, which watches §4.4-bis, left saying
+		 *    «less than a second» (C20 «I could not look» on gnome and kde).
+		 *    The fixed second is a FLOOR: at most 1 ms more is paid. */
 		if (ora - s->cred_arrivo <= RITARDO_FISSO)
 			return true;
-		reg(s, "il secondo fisso e' passato (%llu ms)",
+		reg(s, "the fixed second has passed (%llu ms)",
 		    (unsigned long long)(ora - s->cred_arrivo));
 		if (s->cred_buone) {
 			manda_messaggio(s, T_AMMESSO, NULL, 0);
@@ -7908,87 +7948,87 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 			reg(s, "ammesso utente=%s da=%s", s->utente, s->provenienza);
 			return true;
 		}
-		/* ⛔⭐ E SUL FILO IL MOTIVO E' LO STESSO, ma nel registro no — e' la
-		 *     stessa distinzione che `autenticazione.c` fa fra «PAM ha
-		 *     rifiutato» e «PAM non ha potuto giudicare».  §4.4 vieta di dire
-		 *     al client perche', perche' sarebbe un oracolo; ⛔ ma chi
-		 *     diagnostica deve poter distinguere mille parole sbagliate da un
-		 *     aiutante morto, o cerchera' nella parola d'ordine per ore. */
+		/* ⛔⭐ AND ON THE WIRE THE REASON IS THE SAME, but not in the log — it is
+		 *     the same distinction `autenticazione.c` makes between «PAM
+		 *     refused» and «PAM could not judge».  §4.4 forbids telling the
+		 *     client why, because it would be an oracle; ⛔ but whoever
+		 *     diagnoses must be able to tell a thousand wrong passwords from a
+		 *     dead helper, or they will search in the password for hours. */
 		if (s->no_e_nostro)
-			reg(s, "⛔ e questo RESPINTO e' NOSTRO, non di PAM: la verifica non "
-			       "e' stata fatta.  ⚠ Sul filo il motivo e' lo stesso (§4.4 "
-			       "vieta di distinguerli), e il conto di §4.4-bis NON e' stato "
-			       "toccato");
+			reg(s, "⛔ and this RESPINTO is OURS, not PAM's: the check was "
+			       "not made.  ⚠ On the wire the reason is the same (§4.4 "
+			       "forbids distinguishing them), and the count of §4.4-bis was NOT "
+			       "touched");
 		respingi(s, s->cred_motivo);
 		return false;
 	}
 
-	/* ⛔ Il silenzio: chi tace da trenta secondi non occupa piu' il posto.
-	 * ⚠ La connessione resta aperta — vedi il riquadro in cima.
+	/* ⛔ The silence: whoever has been silent for thirty seconds no longer holds the slot.
+	 * ⚠ The connection stays open — see the box at the top.
 	 *
-	 * ⛔⭐ E LO STATO CAMBIA CON IL POSTO — rilievo R9.2.  Qui si lasciava il
-	 *    posto e si metteva `attaccata = false`, ma lo stato restava
-	 *    `S_ATTIVA`: `rcp_stato_nome()` continuava a rispondere «attiva» — ed
-	 *    e' quel che l'ospite interroga — e `s->stato != S_ATTIVA` e' la sola
-	 *    guardia di `BANCO_MARCA`.  Dopo che un secondo client fosse entrato,
-	 *    il server aveva DUE sessioni «attiva» per lo stesso utente, che e'
-	 *    precisamente cio' che I2 vieta.
+	 * ⛔⭐ AND THE STATE CHANGES WITH THE SLOT — finding R9.2.  Here the slot was
+	 *    left and `attaccata = false` was set, but the state stayed
+	 *    `S_ATTIVA`: `rcp_stato_nome()` kept answering «attiva» — and
+	 *    it is what the host queries — and `s->stato != S_ATTIVA` is the only
+	 *    guard of `BANCO_MARCA`.  After a second client had got in,
+	 *    the server had TWO «attiva» sessions for the same user, which is
+	 *    precisely what I2 forbids.
 	 *
-	 *    ⚠ Il riquadro in cima dichiara una scelta — lasciare la connessione
-	 *      aperta — ed e' difendibile.  ⛔ Ma «non chiudere la connessione» e
-	 *      «restare attiva» sono due cose diverse, e la seconda non era
-	 *      dichiarata da nessuna parte.  Il ritorno da qui sta in
-	 *      `rcp_ricevi()`: il posto si riprende se e' libero. */
-	/* ⛔⭐ E SI GUARDA `ultima_vita`, NON `ultimo_byte` — la riparazione del 16
-	 *     agosto 2026, e la ragione lunga sta sul campo, in cima al file.
+	 *    ⚠ The box at the top declares a choice — leaving the connection
+	 *      open — and it is defensible.  ⛔ But «not closing the connection» and
+	 *      «staying active» are two different things, and the second was not
+	 *      declared anywhere.  The way back from here is in
+	 *      `rcp_ricevi()`: the slot is taken back if it is free. */
+	/* ⛔⭐ AND `ultima_vita` IS LOOKED AT, NOT `ultimo_byte` — the repair of 16
+	 *     Aug 2026, and the long reason is on the field, at the top of the file.
 	 *
-	 * ⚠ `ultimo_byte` non sparisce: e' l'orologio dell'INATTIVITA' DELL'UTENTE
-	 *   (30 minuti, §5.3), che questo modulo non ha ancora e che adesso ha il
-	 *   suo campo pronto e giusto.  ⛔ Tenerne uno solo per due mestieri e' il
-	 *   difetto che abbiamo appena pagato: non si rifa'. */
+	 * ⚠ `ultimo_byte` does not disappear: it is the clock of USER INACTIVITY
+	 *   (30 minutes, §5.3), which this module does not have yet and which now has
+	 *   its field ready and right.  ⛔ Keeping one only for two jobs is the
+	 *   defect we have just paid for: it is not done again. */
 	if (s->stato == S_ATTIVA && s->attaccata &&
 	    ora - s->ultima_vita > SILENZIO) {
 		posto_lascia(s->utente);
 		s->attaccata = false;
 		s->stato = S_STACCATA;
-		reg(s, "STACCATO per silenzio: %llu ms senza un PACCHETTO da %s — e "
-		       "l'ultimo byte di RCP e' di %llu ms fa (§5.3: qui conta il "
-		       "client che tace, non l'utente che non tocca) "
-		       "(posti occupati adesso: %d; stato: %s)",
+		reg(s, "DETACHED for silence: %llu ms without a PACKET from %s — and "
+		       "the last RCP byte is from %llu ms ago (§5.3: here what counts is the "
+		       "client that is silent, not the user who does not touch) "
+		       "(slots taken now: %d; state: %s)",
 		    (unsigned long long)(ora - s->ultima_vita), s->provenienza,
 		    (unsigned long long)(ora - s->ultimo_byte),
 		    posti_occupati(), NOMI_STATO[s->stato]);
-		/* ⛔⭐ §7.3 NOMINA IL SILENZIO PER PRIMO fra i tre modi in cui «una
-		 *     connessione finisce», ed e' il caso peggiore dei tre: qui il
-		 *     client non ha detto niente e non dira' piu' niente — e' il
-		 *     telefono morto in galleria — mentre la SESSIONE GRAFICA
-		 *     sopravvive (invariante I4).  Un Ctrl premuto un attimo prima
-		 *     che la linea cadesse resterebbe premuto sul desktop vero, e
-		 *     l'utente lo troverebbe cosi' al riattacco.
-		 * ⚠ E la sessione RCP non e' finita: qui si e' solo lasciato il
-		 *   posto.  Se torna a parlare, `inp_rilasciato` si riaccende in
-		 *   `rcp_ricevi()`/`rcp_ricevi_input()` insieme al posto ripreso. */
-		rilascia_al_distacco(s, "silenzio di §5.3");
+		/* ⛔⭐ §7.3 NAMES SILENCE FIRST among the three ways in which «a
+		 *     connection ends», and it is the worst case of the three: here the
+		 *     client has said nothing and will say nothing more — it is the
+		 *     phone dead in the tunnel — while the GRAPHICAL SESSION
+		 *     survives (invariant I4).  A Ctrl pressed a moment before
+		 *     the line dropped would stay pressed on the real desktop, and
+		 *     the user would find it so on reattach.
+		 * ⚠ And the RCP session is not over: here only the slot has been
+		 *   left.  If it speaks again, `inp_rilasciato` is switched back on in
+		 *   `rcp_ricevi()`/`rcp_ricevi_input()` together with the slot taken back. */
+		rilascia_al_distacco(s, "silence of §5.3");
 	}
 
-	/* ⛔⭐ §5.3 — L'INATTIVITA' DELL'UTENTE, il secondo dei tre orologi.
+	/* ⛔⭐ §5.3 — USER INACTIVITY, the second of the three clocks.
 	 *
-	 *     «30 minuti senza input ⇒ REMOTIX stacca il client: per rientrare
-	 *     servono utente e password.»  ⇒ E' un CONGEDO, non uno stacco per
-	 *     silenzio: la connessione si chiude col motivo `0x02`, e la pagina
-	 *     torna al modulo d'accesso.
+	 *     «30 minutes without input ⇒ REMOTIX detaches the client: getting back
+	 *     in takes user and password.»  ⇒ It is a CONGEDO, not a detach for
+	 *     silence: the connection closes with reason `0x02`, and the page
+	 *     goes back to the login form.
 	 *
-	 * ⛔ E l'ordine con l'orologio di sopra NON e' indifferente: prima il
-	 *    silenzio.  Un client che ha smesso di rispondere sul filo dev'essere
-	 *    dichiarato staccato — cosi' chi arriva entra (§8.2) — e non
-	 *    congedato per inattivita', che vorrebbe dire «l'utente c'era e non
-	 *    toccava niente».  ⚠ Sono due cose diverse e producono due frasi
-	 *    diverse per chi legge.
+	 * ⛔ And the order with the clock above is NOT indifferent: silence first.
+	 *    A client that has stopped answering on the wire must be
+	 *    declared detached — so whoever arrives gets in (§8.2) — and not
+	 *    sent away for inactivity, which would mean «the user was there and
+	 *    touched nothing».  ⚠ They are two different things and produce two
+	 *    different sentences for whoever reads.
 	 *
-	 * ⚠ E si guarda `s->attaccata`: una sessione che il posto non ce l'ha non
-	 *   ha un utente da dichiarare inattivo.  ⭐ La SESSIONE GRAFICA sopravvive
-	 *   comunque (I4): questo congedo stacca il client, non chiude il desktop —
-	 *   quello e' il TERZO orologio, ed e' un'altra cosa. */
+	 * ⚠ And `s->attaccata` is looked at: a session that does not hold the slot
+	 *   has no user to declare inactive.  ⭐ The GRAPHICAL SESSION survives
+	 *   anyway (I4): this farewell detaches the client, it does not close the
+	 *   desktop — that is the THIRD clock, and it is another thing. */
 	if (inattivita_ms && s->stato == S_ATTIVA && s->attaccata &&
 	    ora - s->ultimo_byte > inattivita_ms) {
 		char d[192];
@@ -7997,20 +8037,20 @@ bool rcp_tempo(rcp_sessione *s, uint64_t ora)
 		         "rientrare servono utente e parola d'ordine",
 		         (unsigned long long)(ora - s->ultimo_byte),
 		         (unsigned long long)inattivita_ms);
-		reg(s, "⭐ §5.3 — INATTIVITA': %s.  ⚠ La sessione grafica RESTA (I4): "
-		       "si stacca il client, non si chiude il desktop",
+		reg(s, "⭐ §5.3 — INACTIVITY: %s.  ⚠ The graphical session STAYS (I4): "
+		       "the client is detached, the desktop is not closed",
 		    d);
 		congeda(s, RCP_INATTIVITA, d);
-		/* ⛔ `false` come per gli altri tetti: la sessione e' finita, e chi
-		 *    chiama non deve continuare a lavorarci sopra. */
+		/* ⛔ `false` as for the other ceilings: the session is over, and the
+		 *    caller must not keep working on it. */
 		return false;
 	}
 
-	/* ⛔ §7.1 — il fondo dell'attesa dell'`ADATTA_TELA`.  ⚠ Sta QUI, e non dove
-	 *    arrivano i fotogrammi, per la lezione di `regola_battito` (pagata
-	 *    l'11 agosto con B6): una scadenza che scatta solo quando arriva
-	 *    qualcosa e' una scadenza che non scatta mai — e il caso che conta e'
-	 *    proprio quello in cui non arriva niente. */
+	/* ⛔ §7.1 — the backstop of the `ADATTA_TELA` wait.  ⚠ It sits HERE, and not
+	 *    where the frames arrive, for the lesson of `regola_battito` (paid for
+	 *    on 11 August with B6): a deadline that fires only when something
+	 *    arrives is a deadline that never fires — and the case that matters is
+	 *    precisely the one in which nothing arrives. */
 	tela_scade(s, ora);
 
 	uint64_t tetto = 0;

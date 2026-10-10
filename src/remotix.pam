@@ -1,118 +1,118 @@
-# remotix — il servizio PAM del server REMOTIX.  ⭐ DEBIAN E UBUNTU (e Mint).
+# remotix — the PAM service of the REMOTIX server.  ⭐ DEBIAN AND UBUNTU (and Mint).
 #
-#   si installa in /etc/pam.d/remotix   (lo fa `costruisci.sh`)
+#   installed in /etc/pam.d/remotix   (done by `costruisci.sh`)
 #
-# ⭐ FASE 17 — un file per famiglia, come Cockpit (`fasi/17-l-installatore.md`
-#    §4.3): `@include` qui sotto e' una modifica di Debian a Linux-PAM, e
-#    altrove la riga e' «illegal module type».  Gli altri tre:
+# ⭐ PHASE 17 — one file per family, like Cockpit (`fasi/17-l-installatore.md`
+#    §4.3): `@include` below is a Debian modification to Linux-PAM, and
+#    elsewhere the line is "illegal module type".  The other three:
 #      remotix.pam.fedora   Fedora, RHEL, Rocky, Alma   → /etc/pam.d/remotix
 #      remotix.pam.suse     openSUSE                    → /usr/lib/pam.d/remotix
 #      remotix.pam.arch     Arch, Manjaro               → /etc/pam.d/remotix
 #
 # -----------------------------------------------------------------------------
-# ⛔ PERCHE' ESISTE, E PERCHE' NON SI USA `login`
+# ⛔ WHY IT EXISTS, AND WHY `login` IS NOT USED
 #
-# `SPECIFICHE.md` §4.2, prima riga: «PAM locale, servizio `remotix`, con il ban
-# dell'indirizzo dopo tre tentativi falliti».  Fino al 10 agosto 2026 il codice
-# diceva `login` (rilievo B-11), e il prezzo non era di forma: su Debian
-# `/etc/pam.d/login` e' la pila della CONSOLE LOCALE.  Ci sta dentro
-# `pam_securetty` (che ragiona su /etc/securetty e su un terminale che qui non
-# c'e'), `pam_lastlog`, `pam_motd`, `pam_limits`, `pam_selinux`, `pam_keyinit`
-# — politiche pensate per chi si siede davanti alla macchina.  ⚠ Un accesso di
-# rete che passa di li' le eredita tutte, e quale comportamento cambi non e'
-# nemmeno prevedibile leggendo: dipende da come quella macchina e' configurata.
+# `SPECIFICHE.md` §4.2, first line: "local PAM, service `remotix`, with the ban
+# of the address after three failed attempts".  Until 10 August 2026 the code
+# said `login` (finding B-11), and the price was not one of form: on Debian
+# `/etc/pam.d/login` is the LOCAL CONSOLE stack.  Inside it there are
+# `pam_securetty` (which reasons on /etc/securetty and on a terminal that is not
+# here), `pam_lastlog`, `pam_motd`, `pam_limits`, `pam_selinux`, `pam_keyinit`
+# — policies meant for whoever sits in front of the machine.  ⚠ A network
+# access that passes there inherits them all, and which behaviour changes is not
+# even predictable by reading: it depends on how that machine is configured.
 #
-# ⚠ E c'e' una conseguenza sulle MISURE: la mediana dei tentativi respinti che
-#   B8 ha misurato la notte del 10 agosto — 2636 ms — e' la mediana di `login`,
-#   non di questo servizio.  Va rifatta, e il `[?]` sul secondo fisso di
-#   §4.4-bis non si chiude con quella.
-#
-# -----------------------------------------------------------------------------
-# ⛔ SE QUESTO FILE NON C'E', OGNI PAROLA D'ORDINE GIUSTA VIENE RIFIUTATA
-#
-# Linux-PAM, quando il servizio chiesto non ha un file, ripiega sul servizio
-# `other`.  ⛔ Che cosa faccia `other` dipende dalla distribuzione: su Fedora e
-# Arch e' `pam_deny` (il sintomo sarebbe «utente o parola d'ordine non
-# corretti» per chiunque, cioe' una diagnosi che punta sulla parola d'ordine
-# mentre il difetto e' un file mancante); su Debian include le pile comuni —
-# e non e' meglio: e' una pila che non e' la nostra (vedi §session qui sotto,
-# 15 agosto 2026, e l'esclusione di root che li' non c'e').  Da cui le due
-# protezioni, che stanno nel programma (invariante I7):
-#
-#   1. `main.c` guarda /etc/pam.d/remotix (e /usr/lib/pam.d/remotix, dove lo
-#      mette openSUSE) all'avvio e lo DICE se non c'e';
-#   2. `autenticazione.c` distingue nel registro «PAM ha rifiutato» da «PAM non
-#      ha potuto giudicare», e nomina questo file nella seconda.
+# ⚠ And there is a consequence on the MEASUREMENTS: the median of the rejected attempts that
+#   B8 measured on the night of 10 August — 2636 ms — is the median of `login`,
+#   not of this service.  It must be redone, and the `[?]` on the fixed second of
+#   §4.4-bis is not closed with that one.
 #
 # -----------------------------------------------------------------------------
-# ⚠ Le pile comuni si INCLUDONO invece di riscriverle: `CODER.md` §4.1,
-#   «dipendere, non riscrivere».  Chi amministra la macchina configura
-#   `common-auth` una volta e vale per tutti i servizi, compreso questo.
+# ⛔ IF THIS FILE IS NOT THERE, EVERY RIGHT PASSWORD IS REFUSED
+#
+# Linux-PAM, when the requested service has no file, falls back to the service
+# `other`.  ⛔ What `other` does depends on the distribution: on Fedora and
+# Arch it is `pam_deny` (the symptom would be "wrong user or
+# password" for anyone, that is a diagnosis pointing at the password
+# while the defect is a missing file); on Debian it includes the common stacks —
+# and it is not better: it is a stack that is not ours (see §session below,
+# 15 August 2026, and the exclusion of root that is not there).  Hence the two
+# protections, which live in the program (invariant I7):
+#
+#   1. `main.c` looks at /etc/pam.d/remotix (and /usr/lib/pam.d/remotix, where
+#      openSUSE puts it) at startup and SAYS so if it is not there;
+#   2. `autenticazione.c` tells apart in the log "PAM refused" from "PAM could not
+#      judge", and names this file in the second.
 #
 # -----------------------------------------------------------------------------
-# ⭐⭐ D3 CHIUSA (`DECISIONI.md` §10.18, 30 set 2026) — REMOTIX RISPECCHIA
-#    l'autenticazione del sistema: *«non voglio che REMOTIX si disallinei
-#    rispetto all'autenticazione di default del sistema, deve rispecchiare
-#    PAM»*.  ⇒ Da qui in giu' e' /etc/pam.d/sshd di Debian e di Ubuntu, riga per
-#    riga, con UNA riga in piu' in testa: root escluso (come ssh di serie).
-#    `[M]` 30 set, confronto con /etc/pam.d/sshd su debian13-gnome-iso e
-#    ubuntu2604-gnome-iso (identici fra loro): 15 righe su 15 uguali
-#    (`banchi/17-t6/t6-leggi-pam.sh`).  Le righe che c'erano prima (la pila
-#    `common-session-noninteractive` + `pam_systemd` per nome, `pam_nologin`
-#    in auth) erano una politica NOSTRA: il §«session» qui sotto racconta
-#    perche' erano nate, e perche' la regola di D3 le supera — `common-session`
-#    di serie porta `pam_systemd` (`[M]` Debian 13 e Ubuntu 26.04), e quel che
-#    c'e' in piu' (`pam_motd`, `pam_mail`, `pam_limits`, `pam_env`) e' lo
-#    stesso che riceve chi entra con ssh.
-#    ⛔ La vecchia obiezione a `login` resta vera: `login` e' la pila della
-#       CONSOLE (pam_securetty & co.); sshd e' la pila dell'accesso da RETE, e
-#       REMOTIX e' un accesso da rete.
+# ⚠ The common stacks are INCLUDED instead of rewritten: `CODER.md` §4.1,
+#   "depend, do not rewrite".  Whoever administers the machine configures
+#   `common-auth` once and it holds for all services, this one included.
+#
+# -----------------------------------------------------------------------------
+# ⭐⭐ D3 CLOSED (`DECISIONI.md` §10.18, 30 Sep 2026) — REMOTIX MIRRORS
+#    the system's authentication: *"I do not want REMOTIX to drift
+#    from the system's default authentication, it must mirror
+#    PAM"*.  ⇒ From here down it is Debian's and Ubuntu's /etc/pam.d/sshd, line by
+#    line, with ONE extra line at the top: root excluded (like stock ssh).
+#    `[M]` 30 Sep, comparison with /etc/pam.d/sshd on debian13-gnome-iso and
+#    ubuntu2604-gnome-iso (identical to each other): 15 lines of 15 equal
+#    (`banchi/17-t6/t6-leggi-pam.sh`).  The lines that were there before (the
+#    `common-session-noninteractive` stack + `pam_systemd` by name, `pam_nologin`
+#    in auth) were a policy of OURS: the «session» § below tells
+#    why they were born, and why the rule of D3 supersedes them — stock `common-session`
+#    carries `pam_systemd` (`[M]` Debian 13 and Ubuntu 26.04), and what
+#    is extra (`pam_motd`, `pam_mail`, `pam_limits`, `pam_env`) is the
+#    same that whoever logs in with ssh receives.
+#    ⛔ The old objection to `login` stays true: `login` is the
+#       CONSOLE stack (pam_securetty & co.); sshd is the NETWORK access stack, and
+#       REMOTIX is a network access.
 
-# ── auth: «questa parola d'ordine e' giusta?»
+# ── auth: "is this password right?"
 #
-# ⭐ ROOT ESCLUSO, e PRIMA della parola d'ordine (`fasi/17` §4.3).  E' l'unica
-#    differenza voluta da sshd (D3).  Il file elenca un nome per riga; si
-#    installa con dentro `root`, di proprieta' di root e non scrivibile da altri
-#    (`pam_listfile` altrimenti lo rifiuta).  Cockpit fa lo stesso con
+# ⭐ ROOT EXCLUDED, and BEFORE the password (`fasi/17` §4.3).  It is the only
+#    intended difference from sshd (D3).  The file lists one name per line; it is
+#    installed with `root` in it, owned by root and not writable by others
+#    (`pam_listfile` refuses it otherwise).  Cockpit does the same with
 #    /etc/cockpit/disallowed-users.
-#  · in `auth` e `requisite`, non in `account`: con la riga in `account` la
-#    parola di root verrebbe comunque PROVATA, e «parola giusta ma conto
-#    negato» risponde diverso da «parola sbagliata» — un oracolo per chi
-#    indovina la parola di root dalla rete;
-#  · ⛔ `onerr=fail` (Cockpit usa `succeed`): se il file manca o e' scritto
-#    male NESSUNO entra, e il registro di PAM lo dice.  Con `succeed` il
-#    file perso toglierebbe l'esclusione di root in silenzio — una
-#    protezione in una riga che si puo' perdere, cioe' quel che I7 vieta.
+#  · in `auth` and `requisite`, not in `account`: with the line in `account` the
+#    root password would be TRIED anyway, and "right password but account
+#    denied" answers differently from "wrong password" — an oracle for whoever
+#    guesses root's password from the network;
+#  · ⛔ `onerr=fail` (Cockpit uses `succeed`): if the file is missing or badly
+#    written NOBODY gets in, and PAM's log says so.  With `succeed` the
+#    lost file would silently remove root's exclusion — a
+#    protection in a line that can be lost, that is what I7 forbids.
 auth       requisite    pam_listfile.so item=user sense=deny file=/etc/remotix/utenti-negati onerr=fail
 #
-# ⭐ `pam_faillock`, se l'amministratore l'ha messo in `common-auth`, arriva
-#   con la pila: vale per REMOTIX come per ssh (D3).
+# ⭐ `pam_faillock`, if the administrator has put it in `common-auth`, comes
+#   with the stack: it holds for REMOTIX as for ssh (D3).
 @include common-auth
 
-# ── account: «questo conto e' utilizzabile?»  (conto scaduto, bloccato, ...)
-#    ⚠ Non e' un di piu': `pam_authenticate` non risponde a questa domanda, e
-#      `autenticazione.c` chiama `pam_acct_mgmt` apposta.
+# ── account: "is this account usable?"  (account expired, locked, ...)
+#    ⚠ It is not an extra: `pam_authenticate` does not answer this question, and
+#      `autenticazione.c` calls `pam_acct_mgmt` on purpose.
 account    required     pam_nologin.so
 @include common-account
 
-# ── session: `figlio.c` chiama `pam_open_session`, ed e' quella chiamata che fa
-#    nascere la sessione logind dell'utente — con `pam_systemd`, che sta in
-#    `common-session` (`[M]` 30 set: Debian 13 e Ubuntu 26.04).
+# ── session: `figlio.c` calls `pam_open_session`, and it is that call that makes
+#    the user's logind session be born — with `pam_systemd`, which is in
+#    `common-session` (`[M]` 30 Sep: Debian 13 and Ubuntu 26.04).
 #
-# ⛔ STORIA, 15 agosto 2026 (fase 5): allora il file includeva
-#    `common-session-noninteractive`, che `pam_systemd` NON lo ha — e senza,
-#    l'utente non ha una sessione logind, `is_headless()` di Mutter non ha
-#    niente da guardare (`DECISIONI.md` §4.3-bis) e la regola di §5.1 perde il
-#    suo soggetto.  Il difetto era invisibile per un accidente: il file non era
-#    installato e PAM ripiegava su `other`, che su Debian include le pile
-#    comuni.  La cura di allora fu `pam_systemd` per nome; con D3 la cura e'
-#    la pila di sshd, che lo porta.  ⛔ La prova che resta: `provisiona.sh`
-#    controlla che il file installato arrivi a `pam_systemd`.
+# ⛔ HISTORY, 15 August 2026 (phase 5): back then the file included
+#    `common-session-noninteractive`, which does NOT have `pam_systemd` — and without it,
+#    the user has no logind session, Mutter's `is_headless()` has
+#    nothing to look at (`DECISIONI.md` §4.3-bis) and the rule of §5.1 loses its
+#    subject.  The defect was invisible by accident: the file was not
+#    installed and PAM fell back to `other`, which on Debian includes the common
+#    stacks.  The cure back then was `pam_systemd` by name; with D3 the cure is
+#    sshd's stack, which carries it.  ⛔ The proof that remains: `provisiona.sh`
+#    checks that the installed file reaches `pam_systemd`.
 #
-# ⚠ `pam_loginuid` `required` come sshd: il servizio (e `riavvia-7700.sh`,
-#   con `systemd-run`) parte da systemd, senza loginuid, e lo puo' scrivere.
-# ⚠ `pam_selinux` c'e' come in sshd, con le azioni che lo fanno tacere dove il
-#   modulo non c'e' (Debian e Ubuntu di serie sono senza SELinux).
+# ⚠ `pam_loginuid` `required` like sshd: the service (and `riavvia-7700.sh`,
+#   with `systemd-run`) starts from systemd, without loginuid, and can write it.
+# ⚠ `pam_selinux` is there as in sshd, with the actions that silence it where the
+#   module is not there (stock Debian and Ubuntu are without SELinux).
 session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so close
 session    required     pam_loginuid.so
 session    optional     pam_keyinit.so force revoke
