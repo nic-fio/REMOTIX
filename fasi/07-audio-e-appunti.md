@@ -1285,231 +1285,231 @@ fault is not.**
 ⏳ `[?]` **And one thing remains unmeasured**: the spiral is proven with the **test client**, not against
 a real browser. That test is done by the coordinator on the merged product.
 
-## 8-quater · ⛔⛔ 22 agosto 2026 — **il ritardo tornava da solo**, e «il suono parte al primo clic» era una promessa vuota
+## 8-quater · ⛔⛔ 22 Aug 2026 — **the delay came back by itself**, and «the sound starts at the first click» was an empty promise
 
-### ⛔⛔ Il difetto nuovo: la coda si gonfia a metà sessione, e resta gonfia
+### ⛔⛔ The new fault: the queue swells mid-session, and stays swollen
 
-`[M]` Giro di **cinque minuti sul ferro**, carico 2,25: la coda è saltata da **266 a 519 ms in una
-finestra sola** (`BUCHI 1`, `mancati 4`) e **lì è rimasta** per il resto della sessione.
+`[M]` A **five-minute round on the iron**, load 2.25: the queue jumped from **266 to 519 ms in a
+single window** (`BUCHI 1`, `mancati 4`) and **stayed there** for the rest of the session.
 
-**Il meccanismo**, e non è la deriva: quando il thread principale si ferma un attimo, i datagram si
-accumulano nel lettore e **arrivano tutti insieme**. Il primo del mucchio è vecchio ⇒ riarmo, e
-l'ancora si aggancia **a lui**; ⛔ ma dietro ce ne sono altri dodici, ognuno col suo posto 20 ms più
-in là ⇒ **il mucchio finisce nel futuro e il cuscino si gonfia di quanto era lungo il mucchio**.
-`250 + 13×20 = 510`. ⚠ È **la raffica dell'attacco rifatta a metà sessione**, dove la tirata
-dell'ancora era già chiusa.
+**The mechanism**, and it is not the drift: when the main thread stops for a moment, the datagrams
+accumulate in the reader and **arrive all together**. The first of the heap is old ⇒ re-arm, and
+the anchor hooks onto **it**; ⛔ but behind it there are twelve more, each with its slot 20 ms further
+on ⇒ **the heap ends up in the future and the cushion swells by as much as the heap was long**.
+`250 + 13×20 = 510`. ⚠ It is **the attach burst redone mid-session**, where the anchor's
+pull window was already closed.
 
-⭐ **La cura è una riga**: la finestra della tirata si riapre a ogni **riancoraggio** — ⛔ non a ogni
-blocco, che era il difetto muto del 21 agosto (`tirate 4506 su 4508`, silenzio con tutti i contatori
-verdi). Nelle sessioni sane si riapre **zero volte**.
+⭐ **The cure is one line**: the pull window reopens at every **re-anchoring** — ⛔ not at every
+block, which was the silent fault of 21 Aug (`tirate 4506 su 4508`, silence with all counters
+green). In healthy sessions it reopens **zero times**.
 
-| stessi 5 minuti, carico 2,25 | prima | dopo |
+| same 5 minutes, load 2.25 | before | after |
 |---|---|---|
-| coda | 266 → **519**, poi 585 | ⭐ **269-289, ferma** |
-| BUCHI | 1 | ⭐ **0** |
-| perdite | `mancati 4` → scatto e gonfiore | `mancati 7` → ⭐ **niente**, né scatto né gonfiore |
+| queue | 266 → **519**, then 585 | ⭐ **269-289, still** |
+| GAPS | 1 | ⭐ **0** |
+| losses | `mancati 4` → jump and swelling | `mancati 7` → ⭐ **nothing**, neither jump nor swelling |
 
-### ⛔⛔ E il banco aveva dato **46 su 46** al codice che portava ancora il difetto
+### ⛔⛔ And the bench had given **46 out of 46** to the code that still carried the fault
 
-La scena dello stallo era scritta con un mucchio di **20 blocchi**: `250 + 400 = 650 ms`, cioè
-**oltre il tetto dei 600**, e il **traboccamento rimetteva a posto da sé**. ⇒ Il banco assolveva. Con
-**13 blocchi** (510 ms, **sotto** il tetto) il guasto si vede.
+The stall scene was written with a heap of **20 blocks**: `250 + 400 = 650 ms`, that is
+**beyond the 600 ceiling**, and the **overflow put things right by itself**. ⇒ The bench acquitted. With
+**13 blocks** (510 ms, **below** the ceiling) the fault shows.
 
-⭐⭐ **Ed è la ragione per cui il difetto era invisibile: la rete di sicurezza esisteva e ci passava
-sopra.** ⚠ Una scena scelta *oltre* il limite di guardia prova il limite di guardia, non il difetto —
-ed è una forma nuova, cugina di `LEZIONI.md` §1.20.
+⭐⭐ **And it is the reason the fault was invisible: the safety net existed and passed over it.**
+⚠ A scene chosen *beyond* the guard limit tests the guard limit, not the fault —
+and it is a new form, a cousin of `LEZIONI.md` §1.20.
 
-### ⭐ «Il suono parte al primo clic sulla pagina» — era una promessa vuota
+### ⭐ «The sound starts at the first click on the page» — it was an empty promise
 
-*La pagina lo scriveva all'utente; nel file c'era **un solo `resume()`**, alla nascita del contesto.*
+*The page wrote it to the user; in the file there was **a single `resume()`**, at the birth of the context.*
 
-`[M]` `banchi/07-b62-il-primo-clic.py`, **Firefox con schermo** (non headless), carico 1,44 — ⭐ e il
-controllo positivo **è la pagina di ieri**, non un guasto sintetico:
+`[M]` `banchi/07-b62-il-primo-clic.py`, **Firefox with a screen** (not headless), load 1.44 — ⭐ and the
+positive control **is yesterday's page**, not a synthetic fault:
 
-| | pagina di prima | pagina curata |
+| | page before | cured page |
 |---|---|---|
-| come nasce | `suspended` | `suspended` |
-| dopo 25 s senza toccare | `suspended`, **usciti 0** | `suspended`, **usciti 0** |
-| **dopo un clic vero** | ⛔ **`suspended`, usciti 0** | ⭐ **`running`, usciti 388**, coda 259 ms |
+| how it is born | `suspended` | `suspended` |
+| after 25 s without touching | `suspended`, **usciti 0** | `suspended`, **usciti 0** |
+| **after a real click** | ⛔ **`suspended`, usciti 0** | ⭐ **`running`, usciti 388**, queue 259 ms |
 
-⛔ **La risposta era la peggiore delle due**: non solo mancava il gestore, ma **non si svegliava da sé
-nemmeno su un browser con schermo**. ⇒ Curato con quattro eventi in `passive` + cattura (non
-intercettano niente: il clic arriva al desktop come prima), che si tolgono da soli al risveglio, più
-un `resume()` riprovato ogni 5 s di blocchi buttati.
+⛔ **The answer was the worse of the two**: not only was the handler missing, but **it did not wake up by itself
+even on a browser with a screen**. ⇒ Cured with four `passive` + capture events (they do not
+intercept anything: the click reaches the desktop as before), which remove themselves on wake-up, plus
+a `resume()` retried every 5 s of thrown-away blocks.
 
-### ⭐ E la deriva fra gli orologi: **il numero era mio ed era sbagliato**
+### ⭐ And the drift between the clocks: **the number was mine and it was wrong**
 
-⛔ I **0,7-1,4 ms/s** dichiarati in §8 erano **in gran parte il difetto qui sopra letto come deriva**.
-Tolto quello, su cinque minuti puliti: **~0,07 ms/s** (±0,05). ⇒ Dal cuscino al tetto dei 600
-ci vorrebbero **~80 minuti**, non quattro.
+⛔ The **0.7-1.4 ms/s** declared in §8 were **largely the fault above read as drift**.
+With that removed, over five clean minutes: **~0.07 ms/s** (±0.05). ⇒ From the cushion to the 600 ceiling
+it would take **~80 minutes**, not four.
 
-⏳ **La forma della cura c'è, e la raccomandazione è di non scriverla adesso.** L'unica correzione
-*continua* è rendere l'ancora affine (`quando = base + istante/r`, ogni blocco a `playbackRate = r`):
-prezzo, uno scostamento d'intonazione **costante** ≤ 0,15 % = **2,6 cent**, sotto la soglia
-percettiva. ⛔ Le alternative sono peggiori, **e sono state scartate con un numero**: far scorrere
-l'ancora a passetti dà ~1,4 campioni di gradino per blocco = **un ronzio a 50 Hz**; inserire o
-togliere un blocco = **un tic**. ⚠ Ma a 0,07 ms/s **non vale il rischio dello stimatore**: resta
-aperta, e si rimisura su una sessione vera dell'utente, dove le due schede audio sono altre.
+⏳ **The form of the cure is there, and the recommendation is not to write it now.** The only *continuous*
+correction is making the anchor affine (`quando = base + istante/r`, every block at `playbackRate = r`):
+price, a **constant** pitch offset ≤ 0.15 % = **2.6 cents**, below the perceptual
+threshold. ⛔ The alternatives are worse, **and they were discarded with a number**: sliding
+the anchor in small steps gives ~1.4 samples of step per block = **a 50 Hz hum**; inserting or
+removing a block = **a tick**. ⚠ But at 0.07 ms/s **it is not worth the estimator's risk**: it stays
+open, and it is re-measured on a real session of the user, where the two sound cards are different.
 
-### ⛔ E la finestra di riordino è USCITA — appartiene alla fase 9
+### ⛔ And the reordering window is OUT — it belongs to phase 9
 
-Era scritta e certificata (`vecchi 0 / riord 400` contro `vecchi 400` con la regola vecchia), ⛔ ma
-l'utente ha corretto lo scopo: *«i problemi di rete non rientrano in questa fase»*. ⇒ Tolta dal
-prodotto **invece di lasciarla dentro spenta**, e il lavoro è descritto in `PIANO.md` fase 9.
+It was written and certified (`vecchi 0 / riord 400` against `vecchi 400` with the old rule), ⛔ but
+the user corrected the scope: *«i problemi di rete non rientrano in questa fase»*. ⇒ Removed from the
+product **instead of leaving it inside switched off**, and the work is described in `PIANO.md` phase 9.
 
-## 8-quinquies · ⛔⭐ 22 agosto — **il giudice dell'orecchio dava il voto massimo al silenzio**, e c'era un buco cieco esatto
+## 8-quinquies · ⛔⭐ 22 Aug — **the ear judge gave silence the top mark**, and there was an exact blind spot
 
-*Rilievo della revisione, confermato **riproducendolo** invece che leggendolo.*
+*A remark of the review, confirmed **by reproducing it** instead of by reading it.*
 
-`[M]` `picco = max(abs(x)…) or 1.0` ⇒ a campioni **tutti zero** il picco diventa 1.0, la soglia si
-abbassa con lui, i residui sono 0 ⇒ **`scoppiettii 0`, `resa 1,000`**: il giudice dell'audio **dà il
-massimo al silenzio**. Quattro secondi di zeri, verificati.
+`[M]` `picco = max(abs(x)…) or 1.0` ⇒ with samples **all zero** the peak becomes 1.0, the threshold
+drops with it, the residuals are 0 ⇒ **`scoppiettii 0`, `resa 1.000`**: the audio judge **gives
+silence the top mark**. Four seconds of zeros, verified.
 
-⛔⛔ **E il buco cieco è aritmetico, non statistico**: il blocco PCM è 240 campioni = 5,0 ms, quindi
-**5 blocchi = 1 200 campioni = esattamente 11,000 cicli di 440 Hz**. `[M]` tagli di **1 200 e 2 400
-campioni** ⇒ `scoppiettii 0`; tagli di 240 e **1 201** ⇒ si vedono. ⇒ Una perdita a raffiche di
-cinque blocchi **si ricuce continua e in fase**, e nessun algoritmo può sentirla.
+⛔⛔ **And the blind spot is arithmetic, not statistical**: the PCM block is 240 samples = 5.0 ms, so
+**5 blocks = 1 200 samples = exactly 11.000 cycles of 440 Hz**. `[M]` cuts of **1 200 and 2 400
+samples** ⇒ `scoppiettii 0`; cuts of 240 and **1 201** ⇒ they show. ⇒ A loss in bursts of
+five blocks **is stitched back continuous and in phase**, and no algorithm can hear it.
 
-⭐ **La cura ha due gambe, e la seconda è la parte che conta**: il silenzio non prende più il massimo
-(sotto un picco di 400 il giudice risponde **`SILENZIO O QUASI — NON GIUDICO`**, che è un esito suo);
-e ⭐ **il buco cieco si cura contando, non ascoltando** — il giudice riceve ora i campioni **attesi** e
-riporta l'ammanco, *«perché su un seno perfetto un taglio di 11 cicli non lascia traccia nei campioni
+⭐ **The cure has two legs, and the second is the part that counts**: silence no longer gets the top mark
+(below a peak of 400 the judge answers **`SILENZIO O QUASI — NON GIUDICO`**, which is an outcome of its own);
+and ⭐ **the blind spot is cured by counting, not by listening** — the judge now receives the **expected** samples and
+reports the shortfall, *«perché su un seno perfetto un taglio di 11 cicli non lascia traccia nei campioni
 e nessun algoritmo può vederlo»*.
 
-⭐ Certificazione da 4 a **7 casi**, e un ottavo chiude la diagnosi: **lo stesso taglio a 443 Hz si
-vede** (11,075 cicli) ⇒ **il buco è del tono, non del rivelatore**. ⏳ Proposto 443 Hz per le scene
-future — non cambiato oggi, perché renderebbe incomparabili i numeri di ieri.
+⭐ Certification from 4 to **7 cases**, and an eighth closes the diagnosis: **the same cut at 443 Hz
+shows** (11.075 cycles) ⇒ **the blind spot belongs to the tone, not to the detector**. ⏳ 443 Hz proposed for future
+scenes — not changed today, because it would make yesterday's numbers incomparable.
 
-#### ⭐⭐ E la domanda che conta: **quante misure ne erano affette?**
+#### ⭐⭐ And the question that counts: **how many measurements were affected?**
 
-Rigiudicate **tutte le 31 prese conservate** col giudice curato:
+**All 31 kept takes** re-judged with the cured judge:
 
-- ⛔ **sei cambiano esito**, tutte del primo giro con la rete guastata: adesso dicono *«silenzio o
-  quasi — non giudico»* dove dicevano `scoppiettii 0`. ⚠ **R7a stava mordendo per davvero in una
-  misura nostra** — erano già state annullate e rifatte, ma **leggendole a occhio**; adesso è il
-  giudice a **rifiutarsi da solo**;
-- ⭐⭐ **nessun numero riportato cambia**: l'A/B di R26 è identico riga per riga, e la seconda gamba
-  conferma che **non c'erano perdite a raffica nascoste** (`campioni_mancanti` 0 o 240 in tutte le
-  prese). Reggono anche la tabella della rete e i numeri della spirale.
+- ⛔ **six change outcome**, all from the first round with the network broken: now they say *«silenzio o
+  quasi — non giudico»* where they said `scoppiettii 0`. ⚠ **R7a was really biting in a
+  measurement of ours** — they had already been cancelled and redone, but **by reading them by eye**; now it is the
+  judge that **refuses by itself**;
+- ⭐⭐ **no reported number changes**: the A/B of R26 is identical line by line, and the second leg
+  confirms that **there were no hidden burst losses** (`campioni_mancanti` 0 or 240 in all the
+  takes). The network table and the spiral numbers also hold.
 
-#### ⛔ E il sorvegliante stampava «acceso» senza aver acceso niente
+#### ⛔ And the watcher printed «on» without having turned anything on
 
-*(Il difetto era del coordinatore, che aveva scritto quel file; la cura è dell'agente.)* `& echo
-acceso` riesce **sempre**, il registro d'avvio **non lo leggeva nessuno**, e il file di sorveglianza
-era un percorso **fisso**. ⇒ Il sorvegliante non parte, l'utente fa la sessione, e si legge **la
-sorveglianza di ieri**.
-⭐ Curato con quattro gambe — si uccide il precedente, il file porta **l'ora nel nome**, si verifica
-che il processo sia vivo **e che il file cresca** — e provato **nei due versi**: *«NON È PARTITA, e
-non lo dico da una parola stampata, lo dico da tre fatti»*, uscita 2.
-⚠ E la cura ne ha scoperto un secondo dentro di sé: `pgrep -f <copione>` trovava il sorvegliante di
-**un giro precedente** ⇒ *«è vivo?»* rispondeva sì **guardando il processo sbagliato**. L'ha visto
-solo l'altra gamba, il file che non cresceva.
+*(The fault was the coordinator's, who had written that file; the cure is the agent's.)* `& echo
+acceso` **always** succeeds, the start-up log **was read by nobody**, and the watch file
+was a **fixed** path. ⇒ The watcher does not start, the user does the session, and one reads **yesterday's
+watch**.
+⭐ Cured with four legs — the previous one is killed, the file carries **the time in its name**, one verifies
+that the process is alive **and that the file grows** — and tested **in both directions**: *«NON È PARTITA, e
+non lo dico da una parola stampata, lo dico da tre fatti»*, exit 2.
+⚠ And the cure discovered a second one inside itself: `pgrep -f <script>` found the watcher of
+**a previous round** ⇒ *«is it alive?»* answered yes **looking at the wrong process**. Only
+the other leg saw it, the file that did not grow.
 
-## 9 · Il giudizio dell'utente
+## 9 · The user's judgement
 
-### 9.8 · ⭐⭐⭐ **«Le quattro prove che ho eseguito davano un audio OK»** — 22 agosto 2026
+### 9.8 · ⭐⭐⭐ **«Le quattro prove che ho eseguito davano un audio OK»** — 22 Aug 2026
 
 > *«Le 4 prove che ho eseguito prima davano un audio OK. L'unico piccolo appunto è
-> un'ottimizzazione sulle performance grafiche, che credo sia lo scopo della fase 8.»* — l'utente.
+> un'ottimizzazione sulle performance grafiche, che credo sia lo scopo della fase 8.»* — the user.
 
-⭐ **Le quattro prove sono i quattro motori dichiarati la stessa mattina** (`DECISIONI.md` §7.20):
-Linux Chrome, Linux Firefox, Windows Chrome, Android Chrome. ⇒ Non è un giudizio su una
-piattaforma: è **su tutte quelle che il prodotto dichiara di servire**.
+⭐ **The four tests are the four engines declared the same morning** (`DECISIONI.md` §7.20):
+Linux Chrome, Linux Firefox, Windows Chrome, Android Chrome. ⇒ It is not a judgement on one
+platform: it is **on all those the product declares it serves**.
 
-⭐⭐ **E con questo l'audio della fase 7 ha il giudizio che le mancava.** Il metro è sempre stato
-**I8** — quel che l'utente sente — e adesso quel metro ha parlato su quattro motori invece che su
-uno.
+⭐⭐ **And with this the audio of phase 7 has the judgement it was missing.** The yardstick has always been
+**I8** — what the user hears — and now that yardstick has spoken on four engines instead of on
+one.
 
-⭐⭐ **E il ritardo fra audio e video È CHIUSO** — chiesto e confermato: *«ho già scritto prima che il
-ritardo audio/video è ok»*. ⇒ Il *«audio OK»* delle quattro prove comprendeva **la sincronia**, non
-solo la pulizia del flusso.
+⭐⭐ **And the delay between audio and video IS CLOSED** — asked and confirmed: *«ho già scritto prima che il
+ritardo audio/video è ok»*. ⇒ The *«audio OK»* of the four tests included **synchronisation**, not
+only the cleanliness of the stream.
 
-⛔ **Era l'ultimo difetto vero della fase 7**, ed è quello che l'utente aveva confermato il 21 sera
-con *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Fra le due frasi ci
-sono: l'**ancora all'`istante` del server** (la coda non è più un serbatoio a senso unico), la
-**riapertura della tirata a ogni riancoraggio** (la coda non si gonfia più a metà sessione), la cura
-della **spirale delle chiavi** (l'audio non muore più quando la linea stringe) e il **primo clic**
-che adesso accende davvero il suono.
+⛔ **It was the last real fault of phase 7**, and it is the one the user had confirmed on the evening of the 21st
+with *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Between the two sentences there
+are: the **anchor to the server's `istante`** (the queue is no longer a one-way tank), the
+**reopening of the pull at every re-anchoring** (the queue no longer swells mid-session), the cure
+of the **key-frame spiral** (the audio no longer dies when the line narrows) and the **first click**
+that now really turns the sound on.
 
-⚠ **E la misura `AV` resta da riprendere lo stesso** (§8-bis, con l'`aoff` curato): non serve più a
-decidere se il difetto c'è — quello l'ha deciso l'orecchio — ⭐ serve a **accorgersi se un giorno
-torna**, che è un mestiere diverso e altrettanto utile.
+⚠ **And the `AV` measurement still remains to be retaken** (§8-bis, with the cured `aoff`): it is no longer needed to
+decide whether the fault is there — the ear decided that — ⭐ it serves to **notice if one day it
+comes back**, which is a different and equally useful job.
 
-⇒ ⭐ **E l'unico appunto che resta è di un'altra fase**: le prestazioni grafiche, che sono la
-**fase 8** — e l'utente l'ha indirizzata da sé.
+⇒ ⭐ **And the only remark left belongs to another phase**: graphics performance, which is
+**phase 8** — and the user pointed there himself.
 
 
 
-*La fase si chiude su una misura giudicata dall'utente, non su un documento completo.
-⛔ Non si scrive un verdetto che l'utente non ha dato.*
+*The phase closes on a measurement judged by the user, not on a complete document.
+⛔ A verdict the user did not give is not written.*
 
-### 9.1 · ⭐⭐⭐ L'AUDIO: **«problema audio risolto»** — 17 agosto 2026
+### 9.1 · ⭐⭐⭐ AUDIO: **«problema audio risolto»** — 17 Aug 2026
 
-Dato su un **video di YouTube** riprodotto nella sessione remota, e confermato dai contatori:
+Given on a **YouTube video** played in the remote session, and confirmed by the counters:
 
 | | |
 |---|---|
-| blocchi ricevuti dalla pagina | 2184 → 3183 in 20 s = **49,95/s** contro 50 prodotti |
-| perdita | **zero** |
-| **buchi nella riproduzione** | **2**, e fermi — nessun nuovo buco in venti secondi |
-| coda | stabile a **311-341 ms** |
+| blocks received by the page | 2184 → 3183 in 20 s = **49.95/s** against 50 produced |
+| loss | **zero** |
+| **gaps in playback** | **2**, and stopped — no new gap in twenty seconds |
+| queue | stable at **311-341 ms** |
 
-### 9.2-bis · ⭐⭐⭐ GLI APPUNTI: **«clipboard funziona in entrambi i versi»** — 17 agosto 2026
+### 9.2-bis · ⭐⭐⭐ THE CLIPBOARD: **«clipboard funziona in entrambi i versi»** — 17 Aug 2026
 
-*Dato dall'utente col browser, sulla porta 7730, sessione dell'utente `prova`.*
+*Given by the user with the browser, on port 7730, session of user `prova`.*
 
-⛔ **È il metro I8, e non lo sostituisce niente**: nessun banco automatico ha mai visto passare un
-byte di appunti — l'arbitro esterno che §2.4 prometteva **non esiste** (§6.9), e quel verdetto è
-l'unica prova che questa metà della fase abbia.
+⛔ **It is the I8 yardstick, and nothing replaces it**: no automatic bench has ever seen a
+byte of clipboard pass — the external arbiter §2.4 promised **does not exist** (§6.9), and that verdict is
+the only proof this half of the phase has.
 
-⭐ **E copre tutt'e due i versi**, cioè anche quello che `DECISIONI.md` §5-ter.1 dichiara il più
-usato: *«copio un indirizzo sul telefono e lo incollo nel browser remoto»*.
+⭐ **And it covers both directions**, that is also the one `DECISIONI.md` §5-ter.1 declares the most
+used: *«copio un indirizzo sul telefono e lo incollo nel browser remoto»*.
 
-⭐ **E con lui passa, di striscio, la cura della corsa con `Ctrl+V`** (§4.5.2): il verso
-`dispositivo → sessione` **è** quella corsa: l'annuncio e i tasti partono insieme, e se la cura non
-avesse funzionato la prima incollata sarebbe tornata vuota.
+⭐ **And with it passes, in passing, the cure of the race with `Ctrl+V`** (§4.5.2): the
+`device → session` direction **is** that race: the announcement and the keys leave together, and if the cure had not
+worked the first paste would have come back empty.
 
-> ⚠ **Quel che il verdetto NON dice**, e va scritto perché non venga letto per più di quel che è:
+> ⚠ **What the verdict does NOT say**, and it must be written so that it is not read for more than it is:
 >
-> - **su quale browser**: la riga del registro della pagina — quella che dice se `clipboardchange`
->   c'è e **dove sta** — non è stata riportata. ⇒ Resta `[?]` se il verso
->   `dispositivo → sessione` abbia funzionato per **sorveglianza** (Chrome) o per **`Ctrl+V` sulla
->   pagina** (Firefox e Safari). Sono due strade diverse (§4.5, `pagina.html`), e sapere quale ha
->   retto cambia che cosa si dichiara all'utente in §9 di `SPECIFICHE.md`;
-> - **niente numeri**: nessuna misura di quanto testo, di quanto tempo, né del secondo giro quando
->   il browser nega la scrittura negli appunti;
-> - **il DeX e il telefono** restano `[?]`, come per l'audio.
+> - **on which browser**: the page's log line — the one that says whether `clipboardchange`
+>   is there and **where it is** — was not reported. ⇒ It stays `[?]` whether the
+>   `device → session` direction worked by **watching** (Chrome) or by **`Ctrl+V` on the
+>   page** (Firefox and Safari). They are two different roads (§4.5, `pagina.html`), and knowing which one
+>   held changes what is declared to the user in §9 of `SPECIFICHE.md`;
+> - **no numbers**: no measurement of how much text, how much time, nor of the second round when
+>   the browser denies writing to the clipboard;
+> - **the DeX and the phone** stay `[?]`, as for audio.
 
-⇒ **La fase 7 ha adesso i suoi due giudizi**: *«problema audio risolto»* e *«clipboard funziona in
-entrambi i versi»*. ⛔ E la **fase 6 resta aperta**: il suo §8 aspetta ancora il giudizio su due
-scene (il trascinamento del bordo e il clic tenuto giù), e quel che resta della 6 **non si chiude da
-sé**.
+⇒ **Phase 7 now has its two judgements**: *«problema audio risolto»* and *«clipboard funziona in
+entrambi i versi»*. ⛔ And **phase 6 stays open**: its §8 still awaits the judgement on two
+scenes (dragging the border and the click held down), and what remains of 6 **does not close by
+itself**.
 
-### 9.2 · ⛔⛔ E PRIMA DEL «RISOLTO» CI SONO STATI SETTE «FA SCHIFO»
+### 9.2 · ⛔⛔ AND BEFORE THE «RISOLTO» THERE WERE SEVEN «FA SCHIFO»
 
-*Va scritto, perché è la parte che insegna.* Il banco `07-b43` era **verde su cinque giri su
-cinque** — 440 Hz esatti, ampiezza esatta, volume che governa — e l'utente sentiva
-*«jitter pazzesco»*. ⇒ **I8 non è una formalità**: il metro è quel che l'utente sente, e cinque
-verdi non lo sostituiscono.
+*It must be written, because it is the part that teaches.* Bench `07-b43` was **green on five rounds out of
+five** — exactly 440 Hz, exact amplitude, volume that governs — and the user heard
+*«jitter pazzesco»*. ⇒ **I8 is not a formality**: the yardstick is what the user hears, and five
+greens do not replace it.
 
-⭐ **E tre passi avanti su quattro li ha fatti lui, non io:**
+⭐ **And three steps forward out of four were taken by him, not by me:**
 
-1. *«forse il datagram è troppo piccolo?»* → il manuale di ngtcp2 dà ragione all'intuizione in una
-   riga: un lotto GSO si scrive **solo se il primo pacchetto è di misura piena**;
-2. *«nella cartella REMOTIX l'audio funzionava, esaminala»* → **R26**, la priorità di tempo reale
-   negata dall'unità, misurata il 5 agosto 2026 e da me riscritta come `[?]` senza mai farla;
-3. *«riproduci un video e monitora byte per byte»* → è il giro che ha prodotto **il numero
-   esatto**, e da lì la diagnosi ha smesso di essere una serie di ipotesi.
+1. *«forse il datagram è troppo piccolo?»* → ngtcp2's manual proves the intuition right in one
+   line: a GSO batch is written **only if the first packet is full size**;
+2. *«nella cartella REMOTIX l'audio funzionava, esaminala»* → **R26**, the real-time priority
+   denied by the unit, measured on 5 Aug 2026 and rewritten by me as `[?]` without ever doing it;
+3. *«riproduci un video e monitora byte per byte»* → it is the round that produced **the exact
+   number**, and from there the diagnosis stopped being a series of hypotheses.
 
 ---
 
-### 9.3 · ⛔⛔⭐ «SI È BLOCCATO FIREFOX CON LA CLIPBOARD» — e non era Firefox
+### 9.3 · ⛔⛔⭐ «SI È BLOCCATO FIREFOX CON LA CLIPBOARD» — and it was not Firefox
 
-*20 agosto 2026, difetto riferito dall'utente mentre provava i due browser. ⚠ Non era un blocco del
-browser: era **la nostra pagina** che mandava `ERRORE_PROTOCOLLO` e chiudeva la sessione — e da
-fuori si vede come un'immagine che si ferma.*
+*20 Aug 2026, fault reported by the user while testing the two browsers. ⚠ It was not the
+browser freezing: it was **our page** sending `ERRORE_PROTOCOLLO` and closing the session — and from
+outside it looks like an image that stops.*
 
-**`[M]` Il registro del server, 19:04:06, e la catena sta in quattro righe:**
+**`[M]` The server's log, 19:04:06, and the chain fits in four lines:**
 
 ```
 19:04:06.560  annunciato al client il trasferimento 3 — 1155 byte
@@ -1519,66 +1519,66 @@ fuori si vede come un'immagine che si ferma.*
               diversi non si mescolano (§7.4)»
 ```
 
-⇒ ⭐ **Il server aveva ragione e la pagina torto**, e l'arbitro è scritto: `RCP.md` §7.4 dice
+⇒ ⭐ **The server was right and the page wrong**, and the arbiter is written: `RCP.md` §7.4 says
 *«un `APPUNTI_CHIEDI` che arriva quando l'annuncio è già stato superato si serve **con il testo
-attuale** … è la corsa normale fra due che copiano, **non un errore**»* — la **quinta eccezione
-dichiarata a §3**. La pagina applicava la regola generale e ignorava l'eccezione.
+attuale** … è la corsa normale fra due che copiano, **non un errore**»* — the **fifth exception
+declared in §3**. The page applied the general rule and ignored the exception.
 
-⛔⛔ **E lo stesso sbaglio era scritto nei DUE capi**: `rcp.c` chiudeva la sessione nel caso
-speculare (il client che serve una richiesta superata). ⚠ La pagina, invece, applicava l'eccezione
-**correttamente** quando era lei a *servire*: la stessa regola scritta due volte, e la seconda
-diversa — è la forma **E2** dentro un solo file.
+⛔⛔ **And the same mistake was written at BOTH ends**: `rcp.c` closed the session in the mirror
+case (the client serving a superseded request). ⚠ The page, on the other hand, applied the exception
+**correctly** when it was the one *serving*: the same rule written twice, and the second one
+different — it is form **E2** inside a single file.
 
-**La cura, ai due capi**: l'errore è un testo **che nessuno ha mai chiesto**, non un testo con un
-numero vecchio. ⇒ Si confronta con **quel che si è chiesto** (`APPUNTI.chiesti` nella pagina,
-`app_chiesto_id` nel server), e la lunghezza si pretende **solo** sul trasferimento vivo — su uno
-superato il testo servito è quello di *adesso*.
+**The cure, at both ends**: the error is a text **that nobody ever asked for**, not a text with an
+old number. ⇒ It is compared with **what was asked for** (`APPUNTI.chiesti` in the page,
+`app_chiesto_id` in the server), and the length is demanded **only** on the live transfer — on a
+superseded one the text served is the *current* one.
 
-#### ⭐⭐ E il banco ne ha trovati altri DUE, tutti e due miei, dopo la cura
+#### ⭐⭐ And the bench found TWO more, both mine, after the cure
 
-*È il valore di `banchi/07-b53-appunti-corsa.py`, ed è il motivo per cui esiste.*
+*It is the value of `banchi/07-b53-appunti-corsa.py`, and it is the reason it exists.*
 
-| | il difetto | come si presentava |
+| | the fault | how it showed |
 |---|---|---|
-| 1 | **cancellavo il ricordo al primo uso** | una seconda risposta per lo stesso trasferimento — legittima — trovava il ricordo vuoto e chiudeva la sessione. ⇒ La domanda giusta è *«l'ho MAI chiesto?»*, non *«ne ho una in volo?»* |
-| 2 | ⛔ **segnavo la richiesta DOPO l'`await`** | e la risposta può arrivare prima che l'attesa si sciolga: ⭐ **verde su Firefox, rosso su Chrome**, per un decimo di millisecondo. ⇒ Il fatto si segna **prima** di consegnare, e si segna l'identificatore che si è messo nel messaggio — non quello riletto dopo |
+| 1 | **I deleted the record at first use** | a second answer for the same transfer — legitimate — found the record empty and closed the session. ⇒ The right question is *«did I EVER ask for it?»*, not *«do I have one in flight?»* |
+| 2 | ⛔ **I marked the request AFTER the `await`** | and the answer can arrive before the wait resolves: ⭐ **green on Firefox, red on Chrome**, by a tenth of a millisecond. ⇒ The fact is marked **before** delivering, and the identifier put in the message is marked — not the one read back afterwards |
 
-⛔ **Il secondo è la ragione per cui un banco solo non basta**: la stessa cura, sullo stesso
-prodotto, nello stesso minuto, **passava su un motore e falliva sull'altro**.
+⛔ **The second is the reason a single bench is not enough**: the same cure, on the same
+product, in the same minute, **passed on one engine and failed on the other**.
 
-#### ⚙ Il banco, e perché riproduce uno STATO invece di una coincidenza
+#### ⚙ The bench, and why it reproduces a STATE instead of a coincidence
 
-⚠ `[M]` La finestra vera dura quanto la lettura della clipboard dalla sessione: **sotto il
-millisecondo** su rete locale. Sei copie a raffica dentro la sessione (`wl-copy`, 15 ms l'una
-dall'altra) **non l'hanno aperta nemmeno una volta**. ⇒ Il banco mette la pagina **esattamente
-nello stato** che ha chiuso la sessione dell'utente: chiede un trasferimento e fa arrivare — prima
-della risposta — un annuncio più nuovo. ⛔ È bianco, tocca `REMOTIX.appunti`, **e lo dichiara**:
-quel che verifica è la **regola**, non il tempismo.
+⚠ `[M]` The real window lasts as long as reading the clipboard from the session: **under a
+millisecond** on a local network. Six copies in a burst inside the session (`wl-copy`, 15 ms
+apart) **did not open it even once**. ⇒ The bench puts the page **exactly
+in the state** that closed the user's session: it requests a transfer and makes a newer announcement arrive — before
+the answer. ⛔ It is white-box, it touches `REMOTIX.appunti`, **and it declares it**:
+what it verifies is the **rule**, not the timing.
 
-⭐ **E si certifica**: rimessa la riga vecchia, `[M]` il banco vede la sessione chiudersi con
-`motivo=0x0b` — la stessa faccia del difetto dell'utente. Rimessa la cura, **4 giri su 4 verdi,
-Firefox e Chrome**.
+⭐ **And it certifies itself**: with the old line put back, `[M]` the bench sees the session close with
+`motivo=0x0b` — the same face as the user's fault. With the cure put back, **4 rounds out of 4 green,
+Firefox and Chrome**.
 
-⛔ **E un difetto che ho fatto mentre curavo**, perché è la parte che insegna: per esporre lo stato
-al banco avevo agganciato `APPUNTI` al riquadro `window.REMOTIX`, che gira **molto prima** della sua
-dichiarazione — leggere un `const` nella sua zona morta ferma **tutto il resto dello script**.
-⚠ Il sintomo non nominava niente di tutto questo: il modulo d'accesso perdeva il suo gestore e la
-pagina finiva in `GET /?utente=…&parola=…`, cioè **la parola d'ordine nella barra dell'indirizzo**.
-Un difetto di ordine di dichiarazione diventato, per due minuti, un difetto di privatezza.
+⛔ **And a fault I made while curing**, because it is the part that teaches: to expose the state
+to the bench I had hooked `APPUNTI` to the `window.REMOTIX` box, which runs **long before** its
+declaration — reading a `const` in its dead zone stops **the whole rest of the script**.
+⚠ The symptom named none of this: the login form lost its handler and the
+page ended up at `GET /?utente=…&parola=…`, that is **the password in the address bar**.
+A declaration-order fault turned, for two minutes, into a privacy fault.
 
 ---
 
-### 9.4 · ⛔⛔⭐ «DA SERVER A CLIENT FUNZIONA, IL CONTRARIO NO» — su Firefox, e le cause erano TRE
+### 9.4 · ⛔⛔⭐ «DA SERVER A CLIENT FUNZIONA, IL CONTRARIO NO» — on Firefox, and the causes were THREE
 
-*20 agosto 2026, riferito dall'utente. ⚠ E il verso che non funzionava è quello che nessun banco
-aveva mai provato **con i tasti veri su un browser vero**: `07-b45` misurava il protocollo, non il
-percorso del browser.*
+*20 Aug 2026, reported by the user. ⚠ And the direction that did not work is the one no bench
+had ever tested **with real keys on a real browser**: `07-b45` measured the protocol, not the
+browser's path.*
 
-#### La riproduzione, ed è la parte che decide
+#### The reproduction, and it is the part that decides
 
-⛔ **In headless il difetto NON si vede**: l'evento `paste` arriva lo stesso. Neanche su X11 (Xvfb).
-⭐ Si vede in **un compositore Wayland annidato** (`cage`), con il testo copiato da **un'altra
-applicazione** — cioè l'ambiente dell'utente. `[M]` Il diario della pagina, tre righe:
+⛔ **In headless the fault does NOT show**: the `paste` event arrives anyway. Not on X11 (Xvfb) either.
+⭐ It shows in **a nested Wayland compositor** (`cage`), with the text copied from **another
+application** — that is the user's environment. `[M]` The page's diary, three lines:
 
 ```
 appunti · Ctrl+V visto · sorveglianza=«nessuna»
@@ -1586,275 +1586,275 @@ appunti · evento `paste` arrivato · 0 caratteri          ← VUOTO
 appunti · l'evento `paste` è arrivato: strada gratis, nessun permesso
 ```
 
-e `annunciati: 0`: **non è mai partito niente**.
+and `annunciati: 0`: **nothing ever left**.
 
-#### Le tre cause, e sono tutte nostre
+#### The three causes, and they are all ours
 
-| | la causa | perché mordeva |
+| | the cause | why it bit |
 |---|---|---|
-| 1 | ⛔ **un `paste` vuoto contava come consegna** | `ultimo_paste_ms` si segnava **prima** di guardare se ci fosse del testo ⇒ il ripiego `readText()` veniva spento («strada gratis») e non si provava più niente |
-| 2 | ⛔ **non c'era niente di modificabile a fuoco** | e l'evento `paste` nasce solo lì. ⚠ Il commento di §9 diceva *«la cura ovvia non si può fare»* perché un `TEXTAREA` a fuoco spegne la tastiera (`cl_nel_modulo`) — ⭐ **era falso**: bastava **nominare l'eccezione** invece di rinunciare |
-| 3 | ⛔ **il testo «in attesa di gesto» rubava gli appunti** | il testo venuto dal desktop remoto aspettava un gesto per entrare negli appunti locali, e il gesto poteva essere **il `Ctrl+V` dell'utente** — cioè gli si scriveva sopra la copia proprio mentre la incollava. `[M]` Il banco l'ha visto: il desktop remoto riceveva **indietro il proprio testo** |
+| 1 | ⛔ **an empty `paste` counted as a delivery** | `ultimo_paste_ms` was marked **before** checking whether there was text ⇒ the `readText()` fallback was switched off («free road») and nothing else was tried |
+| 2 | ⛔ **nothing editable had focus** | and the `paste` event is born only there. ⚠ The comment of §9 said *«la cura ovvia non si può fare»* because a focused `TEXTAREA` switches off the keyboard (`cl_nel_modulo`) — ⭐ **it was false**: it was enough to **name the exception** instead of giving up |
+| 3 | ⛔ **the text «waiting for a gesture» stole the clipboard** | the text coming from the remote desktop waited for a gesture to enter the local clipboard, and the gesture could be **the user's `Ctrl+V`** — that is it was written over his copy exactly while he was pasting it. `[M]` The bench saw it: the remote desktop received **its own text back** |
 
-#### Le cure, e sono quattro
+#### The cures, and they are four
 
-⭐ **Il campo nascosto** (`incolla_campo_prendi`): prende il fuoco **solo per i 400 ms del `Ctrl+V`**,
-l'incolla del browser ha dove andare, l'evento `paste` nasce col testo dentro, e **non si chiede
-nessun permesso**. ⛔ E `cl_nel_modulo()` lo esenta per nome: i tasti continuano ad andare al
-desktop remoto — il banco lo verifica battendo una lettera **dopo** ogni incolla.
+⭐ **The hidden field** (`incolla_campo_prendi`): it takes focus **only for the 400 ms of the `Ctrl+V`**,
+the browser's paste has somewhere to go, the `paste` event is born with the text inside, and **no
+permission is asked**. ⛔ And `cl_nel_modulo()` exempts it by name: keys keep going to the
+remote desktop — the bench verifies it by typing a letter **after** every paste.
 
-⭐ **La seconda strada**: dopo 120 ms si legge **quel che il browser ha davvero incollato nel
-campo**. Non dipende da `clipboardData`, che può arrivare vuoto. `[M]` Su X11 è la strada che ha
-consegnato: *«il campo dell'incolla porta 45 caratteri»*.
+⭐ **The second road**: after 120 ms **what the browser really pasted into the
+field** is read. It does not depend on `clipboardData`, which may arrive empty. `[M]` On X11 it is the road that
+delivered: *«il campo dell'incolla porta 45 caratteri»*.
 
-⭐ **Un `paste` vuoto non conta**, quindi il ripiego `readText()` resta disponibile.
+⭐ **An empty `paste` does not count**, so the `readText()` fallback stays available.
 
-⭐ **E il testo in attesa non si scrive mai su un gesto della clipboard** (`Ctrl+V`, `Ctrl+C`,
-`Ctrl+X`), ⛔ e **si butta** se l'utente copia qualcosa di suo: *«i suoi appunti valgono di più»*.
+⭐ **And the waiting text is never written on a clipboard gesture** (`Ctrl+V`, `Ctrl+C`,
+`Ctrl+X`), ⛔ and **it is thrown away** if the user copies something of his own: *«his clipboard is worth more»*.
 
-⛔ **E il silenzio si rompe**: se `readText()` non risponde entro 1,5 s — su Wayland Firefox apre il
-suo bottoncino «Incolla» e **aspetta**, senza risolvere né fallire — la pagina lo **dice** all'utente
-invece di lasciarlo davanti a una cosa che «non funziona».
+⛔ **And the silence is broken**: if `readText()` does not answer within 1.5 s — on Wayland Firefox opens its
+little «Incolla» button and **waits**, neither resolving nor failing — the page **tells** the user
+instead of leaving him in front of something that «does not work».
 
-#### ⚙ Il banco — `banchi/07-b54-appunti-due-versi.py`, e misura QUATTRO caselle
+#### ⚙ The bench — `banchi/07-b54-appunti-due-versi.py`, and it measures FOUR boxes
 
-*sessione→client e client→sessione, per Firefox e per Chrome, ⭐ più una quinta: **la tastiera è
-ancora viva dopo l'incolla?*** — perché una cura che aggiusta gli appunti e spegne i tasti sarebbe
-un pessimo affare.
+*session→client and client→session, for Firefox and for Chrome, ⭐ plus a fifth: **is the keyboard
+still alive after the paste?*** — because a cure that fixes the clipboard and switches off the keys would be
+a terrible deal.
 
-⛔ **E non usa nessun permesso speciale**: le preferenze di prova di Firefox
-(`dom.events.testing.asyncClipboard`) spegnerebbero proprio il difetto che si cerca. La clipboard si
-riempie con un `Ctrl+C` **vero** e si legge con un `Ctrl+V` **vero**. ⚠ E il gesto che sblocca la
-scrittura dev'essere un **clic del guidatore**: un evento fabbricato in JavaScript non è
-un'«attivazione dell'utente», e il browser rifiuta lo stesso.
+⛔ **And it uses no special permission**: Firefox's test preferences
+(`dom.events.testing.asyncClipboard`) would switch off precisely the fault being looked for. The clipboard is
+filled with a **real** `Ctrl+C` and read with a **real** `Ctrl+V`. ⚠ And the gesture that unlocks
+writing must be a **click from the driver**: an event fabricated in JavaScript is not
+a «user activation», and the browser refuses anyway.
 
-**`[M]` L'esito, 20 agosto 2026 — quattro ambienti:**
+**`[M]` The outcome, 20 Aug 2026 — four environments:**
 
-| ambiente | firefox | chrome |
+| environment | firefox | chrome |
 |---|---|---|
 | headless | ⭐ ⭐ ⭐ | ⭐ ⭐ ⭐ |
-| X11 (Xvfb, browser veri) | ⭐ ⭐ ⭐ | ⭐ ⭐ ⭐ |
-| Wayland (`cage` annidato) | ⭐ ⭐ ⭐ | *(non provato)* |
-| copia da **un'altra applicazione** → incolla nel prodotto (X11) | ⭐ | — |
+| X11 (Xvfb, real browsers) | ⭐ ⭐ ⭐ | ⭐ ⭐ ⭐ |
+| Wayland (nested `cage`) | ⭐ ⭐ ⭐ | *(not tested)* |
+| copy from **another application** → paste into the product (X11) | ⭐ | — |
 
-⚠ **E quel che NON si è potuto provare, dichiarato**: il caso «Wayland **+** clipboard di un'altra
-applicazione **+** tasti sintetici» resta rosso, e ⛔ **non è il prodotto**: Wayland consegna gli
-appunti solo a fronte di un evento d'input **vero** (serve il *serial* del compositore), che un tasto
-finto non ha. ⇒ Su quel percorso l'ultima parola è di una tastiera vera — cioè dell'utente.
+⚠ **And what could not be tested, declared**: the case «Wayland **+** clipboard of another
+application **+** synthetic keys» stays red, and ⛔ **it is not the product**: Wayland delivers the
+clipboard only in response to a **real** input event (the compositor's *serial* is needed), which a fake
+key does not have. ⇒ On that path the last word belongs to a real keyboard — that is to the user.
 
 ---
 
-### 9.5 · ⛔⛔⭐ «FUNZIONA CON `Ctrl+V`, MA NON COL MOUSE» — 21 agosto 2026, e gli anelli rotti erano **quattro**
+### 9.5 · ⛔⛔⭐ «FUNZIONA CON `Ctrl+V`, MA NON COL MOUSE» — 21 Aug 2026, and the broken rings were **four**
 
 > *«Ecco perche'! Funziona l'incolla con ctrl+v, ma non con il mouse e scegliendo dal menu la voce
-> "incolla"»* — l'utente, la mattina del 21 agosto, subito dopo aver verificato la cura di §9.4.
+> "incolla"»* — the user, on the morning of 21 Aug, right after verifying the cure of §9.4.
 
-⭐ **Una frase che vale una giornata di diagnosi**: dice che la cura del giorno prima è entrata (il
-`Ctrl+V` consegna) e nomina esattamente la strada rimasta scoperta.
+⭐ **A sentence worth a day of diagnosis**: it says that the previous day's cure went in (the
+`Ctrl+V` delivers) and names exactly the road left uncovered.
 
-#### La differenza, e perché nessuno dei quattro banchi verdi poteva vederla
+#### The difference, and why none of the four green benches could see it
 
-| l'utente fa | chi tocca | che cosa nasce sulla pagina |
+| the user does | who touches | what is born on the page |
 |---|---|---|
-| `Ctrl+V` sulla pagina | **il browser** | l'evento `paste`, con dentro il testo — gratis |
-| tasto destro → «Incolla» **dentro il desktop remoto** | **il desktop remoto** | ⛔ **niente** |
+| `Ctrl+V` on the page | **the browser** | the `paste` event, with the text inside — for free |
+| right button → «Incolla» **inside the remote desktop** | **the remote desktop** | ⛔ **nothing** |
 
-⇒ Quel menu è dipinto nel video, e la voce «Incolla» la esegue un'applicazione che sta dall'altra
-parte del filo. L'unica notizia che ne arriva alla pagina è l'`APPUNTI_CHIEDI` del server.
-⛔ **E i quattro banchi verdi di §9.4 battevano tutti `Ctrl+V`**: misuravano l'unica strada che già
-funzionava. Il banco che mancava è `banchi/07-b56-incolla-col-mouse.py`, che non batte mai un tasto.
+⇒ That menu is painted in the video, and the «Incolla» item is executed by an application on the other
+side of the wire. The only news of it that reaches the page is the server's `APPUNTI_CHIEDI`.
+⛔ **And the four green benches of §9.4 all pressed `Ctrl+V`**: they measured the only road that already
+worked. The missing bench is `banchi/07-b56-incolla-col-mouse.py`, which never presses a key.
 
-#### I quattro anelli, in ordine di scoperta — e **tre erano miei**
+#### The four rings, in order of discovery — and **three were mine**
 
-**1 · La pagina non veniva nemmeno interpellata.** `rcp.c` non chiede niente a un client che non ha
-mai annunciato: mette la richiesta in coda («*la domanda ASPETTA l'annuncio*») e il fondo del figlio
-la chiude a mani vuote dopo quattro secondi. ⇒ Finché l'utente non aveva battuto **almeno un**
-`Ctrl+V`, un incolla col mouse non arrivava a fare **nemmeno una domanda**: nessuna riga, da nessuna
-parte.
-⭐ **Cura**: la pagina manda un **annuncio d'apertura da zero byte** appena la sessione è nata.
-Costa otto byte una volta, apre il canale della domanda, e dice il vero — in quell'istante di
-appunti letti non ne ha.
+**1 · The page was not even consulted.** `rcp.c` asks nothing of a client that
+has never
+announced: it queues the request («*the question WAITS for the announcement*») and the child's bottom
+closes it empty-handed after four seconds. ⇒ Until the user had pressed **at least one**
+`Ctrl+V`, a paste with the mouse did not get to ask **even one question**: no line, anywhere.
+⭐ **Cure**: the page sends a **zero-byte opening announcement** as soon as the session is born.
+It costs eight bytes once, opens the question channel, and tells the truth — at that instant it has
+no clipboard read.
 
-**2 · ⛔ E quell'annuncio partiva TROPPO PRESTO, e chiudeva la sessione.** `[M]` Registro delle
+**2 · ⛔ And that announcement left TOO EARLY, and closed the session.** `[M]` Log of
 05:55:42: *«congedo motivo=0x0b — byte sullo stream di appunti (14) prima che `SESSIONE` sia partita
-(stato: attesa-verdetto)»*. `avvia_appunti()` gira all'ECCOMI, cioè **prima delle credenziali**.
-⇒ L'annuncio d'apertura è stato spostato dopo `SESSIONE` (`appunti_apri_la_domanda`).
+(stato: attesa-verdetto)»*. `avvia_appunti()` runs at ECCOMI, that is **before the credentials**.
+⇒ The opening announcement was moved after `SESSIONE` (`appunti_apri_la_domanda`).
 
-**3 · ⛔ L'offerta alla sessione cadeva nel vuoto, e nessuno la rifaceva.** `[M]` 06:00:15 —
-l'annuncio alle `.868`, l'apertura degli appunti della sessione alle `.982`: **114 ms** in mezzo, e
-in quei 114 ms il figlio scriveva *«gli appunti della sessione non ci sono: l'offerta cade»*.
-⇒ Il compositore non diventava mai proprietario della selezione, e dentro il desktop la voce
-«Incolla» **non aveva niente da dare**.
-⭐ **Cura**: `figlio.c` tiene **un bit** (`appunti_offerta_arretrata`) e rifà l'offerta appena gli
-appunti si aprono. È la stessa forma della domanda arretrata di `rcp.c`: invece di ritardare
-qualcosa per tutti, si ricuce.
+**3 · ⛔ The offer to the session fell into the void, and nobody redid it.** `[M]` 06:00:15 —
+the announcement at `.868`, the opening of the session's clipboard at `.982`: **114 ms** in between, and
+in those 114 ms the child wrote *«gli appunti della sessione non ci sono: l'offerta cade»*.
+⇒ The compositor never became owner of the selection, and inside the desktop the «Incolla» item
+**had nothing to give**.
+⭐ **Cure**: `figlio.c` keeps **one bit** (`appunti_offerta_arretrata`) and redoes the offer as soon as the
+clipboard opens. It is the same shape as `rcp.c`'s backlogged question: instead of delaying
+something for everyone, one stitches it back.
 
-**4 · ⛔⛔ E l'annuncio nuovo UCCIDEVA l'incollata che lo aveva provocato.** Il difetto l'ha detto
-Mutter con parole sue: `[M]` *«SelectionWrite per la richiesta 2 è stata rifiutata — Transfer serial
+**4 · ⛔⛔ And the new announcement KILLED the paste that had provoked it.** The fault was told by
+Mutter in its own words: `[M]` *«SelectionWrite per la richiesta 2 è stata rifiutata — Transfer serial
 2 doesn't match any transfer request»*.
-⚠ Offrire la selezione al compositore (`SetSelection`) **annulla i trasferimenti in volo**: è il
-compositore che, vedendo una selezione nuova, butta le richieste aperte sulla vecchia. E noi
-ri-offrivamo *proprio mentre servivamo* — la pagina rilegge la clipboard, annuncia il testo nuovo, e
-quell'annuncio buttava l'incollata in corso. ⇒ **Chi incollava vedeva vuoto**, che è il sintomo da
-cui eravamo partiti.
-⭐ **Cura**: finché ci sono richieste in attesa l'offerta si **rimanda** (`app_offri_dopo`), e parte
-quando la risposta è partita.
+⚠ Offering the selection to the compositor (`SetSelection`) **cancels the transfers in flight**: it is the
+compositor that, seeing a new selection, throws away the requests open on the old one. And we
+re-offered *exactly while we were serving* — the page re-reads the clipboard, announces the new text, and
+that announcement threw away the paste in progress. ⇒ **Whoever pasted saw empty**, which is the symptom
+we had started from.
+⭐ **Cure**: while there are pending requests the offer is **postponed** (`app_offri_dopo`), and it leaves
+once the answer has left.
 
-#### E la cura che sta al centro: **si rilegge quando il desktop chiede**
+#### And the cure at the centre: **the clipboard is re-read when the desktop asks**
 
-`appunti_rileggi_prima_di_servire()` — sull'`APPUNTI_CHIEDI`, prima di servire, la pagina rilegge la
-clipboard del dispositivo. ⭐ Il permesso c'è: **il clic sulla voce «Incolla» del menu remoto è un
-clic su questa pagina**, quindi l'attivazione transitoria è fresca di millisecondi.
+`appunti_rileggi_prima_di_servire()` — on `APPUNTI_CHIEDI`, before serving, the page re-reads the
+device's clipboard. ⭐ The permission is there: **the click on the «Incolla» item of the remote menu is a
+click on this page**, so the transient activation is milliseconds fresh.
 
-⛔ **E non si rilegge se la strada gratis ha appena consegnato** (`paste` da meno di 4 000 ms):
-senza questa riga si curava l'incolla col mouse **rompendo quello con la tastiera**, perché su
-Firefox ogni rilettura costa il bottoncino «Incolla».
+⛔ **And it is not re-read if the free road has just delivered** (`paste` less than 4 000 ms ago):
+without this line one cured mouse pasting **by breaking keyboard pasting**, because on
+Firefox every re-read costs the little «Incolla» button.
 
-#### Il prezzo, misurato — `banchi/07-b56`, 3 incollate per browser
+#### The price, measured — `banchi/07-b56`, 3 pastes per browser
 
 | | Chrome | Firefox |
 |---|---|---|
-| l'incolla col mouse arriva | ⭐ **3 su 3** | ⭐ **3 su 3** |
-| il bottoncino «Incolla» compare | **mai** | ⚠ **3 volte su 3** |
-| incollando lo **stesso** testo una seconda volta | — | ⚠ compare **di nuovo** |
+| the mouse paste arrives | ⭐ **3 out of 3** | ⭐ **3 out of 3** |
+| the little «Incolla» button appears | **never** | ⚠ **3 times out of 3** |
+| pasting the **same** text a second time | — | ⚠ it appears **again** |
 
-⚠ **Su Firefox l'incolla col mouse costa un clic in più, ogni volta.** Non è una scelta nostra:
-`readText()` lì apre sempre il bottoncino di conferma, anche a clipboard immutata (`SPECIFICHE.md`
-§9 — «*ogni lettura costa il menu Incolla*»). ⭐ Ma stavolta compare **dove l'utente sta già
-cliccando**, non in un angolo che nessuno guarda. E il `Ctrl+V` resta gratis su tutti e due i
-motori.
+⚠ **On Firefox pasting with the mouse costs one more click, every time.** It is not our choice:
+`readText()` there always opens the confirmation button, even with an unchanged clipboard (`SPECIFICHE.md`
+§9 — «*ogni lettura costa il menu Incolla*»). ⭐ But this time it appears **where the user is already
+clicking**, not in a corner nobody looks at. And `Ctrl+V` stays free on both
+engines.
 
-#### ⛔ Tre difetti del banco, e due avrebbero dichiarato rotto un prodotto sano
+#### ⛔ Three faults of the bench, and two would have declared a healthy product broken
 
-1. **Chrome non andava sullo schermo del banco.** Senza `--ozone-platform=x11` prende Ozone/Wayland
-   e si attacca alla sessione grafica **vera**: leggeva un'**altra** clipboard, e `readText()`
-   tornava vuoto mentre `xclip -o` sullo schermo del banco mostrava il testo.
-2. **Il banco cliccava troppo presto.** Fra il clic e `wl-paste` ci sono `ssh`, `sudo` e `runuser`:
-   `[M]` secondi interi, e l'attivazione transitoria dura cinque secondi. ⇒ *«lack of user
-   activation»* era il banco, non il prodotto. Cura: il copione remoto dice **`PRONTO`** e aspetta
-   un secondo e mezzo, così l'ordine dei fatti è quello vero.
-3. **`xclip` appendeva il banco**, come `wl-copy` nella sessione: si biforca per *servire* la
-   selezione e tiene aperte le sue uscite. ⇒ Non si aspetta.
+1. **Chrome did not go onto the bench's screen.** Without `--ozone-platform=x11` it takes Ozone/Wayland
+   and attaches to the **real** graphical session: it read **another** clipboard, and `readText()`
+   came back empty while `xclip -o` on the bench's screen showed the text.
+2. **The bench clicked too early.** Between the click and `wl-paste` there are `ssh`, `sudo` and `runuser`:
+   `[M]` whole seconds, and transient activation lasts five seconds. ⇒ *«lack of user
+   activation»* was the bench, not the product. Cure: the remote script says **`PRONTO`** and waits
+   a second and a half, so the order of events is the real one.
+3. **`xclip` hung the bench**, like `wl-copy` in the session: it forks to *serve* the
+   selection and keeps its outputs open. ⇒ It is not waited for.
 
-⭐ E per cliccare il bottoncino di Firefox il banco entra nel **contesto chrome**
-(`clipboardReadPasteMenuPopup`), con `-remote-allow-system-access`: ⛔ **non** si accende
-`dom.events.testing.asyncClipboard`, che spegnerebbe proprio la cosa da misurare. Il banco paga il
-prezzo davanti a tutti e **riferisce quante volte**.
+⭐ And to click Firefox's little button the bench enters the **chrome context**
+(`clipboardReadPasteMenuPopup`), with `-remote-allow-system-access`: ⛔ `dom.events.testing.asyncClipboard`
+is **not** turned on, since it would switch off precisely the thing to be measured. The bench pays the
+price in front of everyone and **reports how many times**.
 
-### 9.6 · ⛔⛔⭐ «COME UNA SESSIONE LOCALE» — la direttiva, e il difetto che ha fatto emergere
+### 9.6 · ⛔⛔⭐ «COME UNA SESSIONE LOCALE» — the directive, and the fault it brought out
 
 > *«L'esperienza dell'utente con REMOTIX dev'essere quanto più vicina possibile all'esperienza con
 > una sessione grafica locale. […] niente trucchi, pulsanti strani o soluzioni tecniche che si
-> allontanino da questa direttiva»* — l'utente, 21 agosto 2026. `DECISIONI.md` §5-ter.8.
+> allontanino da questa direttiva»* — the user, 21 Aug 2026. `DECISIONI.md` §5-ter.8.
 
-⭐ Verificando la cura di §9.5 alla luce di quella frase è saltata fuori una domanda che nessun banco
-aveva mai fatto: **se nel desktop avevo già copiato qualcosa e poi mi collego, quel testo c'è
-ancora?**
+⭐ Verifying the cure of §9.5 in the light of that sentence, a question came up that no bench
+had ever asked: **if I had already copied something in the desktop and then I connect, is that text
+still there?**
 
-⛔ `[M]` **No, e la colpa era della cura del mattino.** `wl-paste` dentro la sessione diceva
-`TESTO-CHE-ERA-GIA-NEL-DESKTOP` prima del collegamento e **`«»`** dopo.
+⛔ `[M]` **No, and the morning's cure was to blame.** `wl-paste` inside the session said
+`TESTO-CHE-ERA-GIA-NEL-DESKTOP` before connecting and **`«»`** after.
 
-⇒ La catena: per farsi trovare quando qualcuno incolla col mouse, la pagina si annuncia appena entra
-— e annunciarsi vuol dire **prendersi la selezione**, che è una sola. Prendendola a mani vuote si
-cancellava quel che l'utente aveva copiato di là. ⛔ È esattamente il contrario di una sessione
-locale, dove la clipboard non sparisce perché è entrato qualcuno.
+⇒ The chain: to be found when someone pastes with the mouse, the page announces itself as soon as it enters
+— and announcing itself means **taking the selection**, which is a single one. Taking it empty-handed
+erased what the user had copied over there. ⛔ It is exactly the opposite of a local
+session, where the clipboard does not vanish because someone came in.
 
-#### E la diagnosi ha corretto una riga di codice che affermava il falso
+#### And the diagnosis corrected a line of code that asserted something false
 
-`appunti.c` diceva che `EnableClipboard` con opzioni vuote fa arrivare un `SelectionOwnerChanged`
-**subito**, *«ed è proprio l'annuncio che fa ritrovare gli appunti a chi si ricollega»*.
-⛔ **Falso, misurato**: `wl-copy` vivo e proprietario, `wl-paste` che rilegge il suo testo prima e
-dopo, e nel registro del figlio **nessuna riga di lettura**. Mutter racconta i **cambi** di
-proprietario, non chi lo è già. ⇒ La clipboard che c'è si **chiede** (`appunti_leggi_adesso()`), e
-si richiede **a ogni riattacco** — il figlio sopravvive fra un collegamento e l'altro, quindi la
-lettura fatta all'accensione vale una volta sola (`MSG_RIMANDA_PALCO`, che vuol dire esattamente
-«un client si è riattaccato»).
+`appunti.c` said that `EnableClipboard` with empty options makes a `SelectionOwnerChanged` arrive
+**immediately**, *«ed è proprio l'annuncio che fa ritrovare gli appunti a chi si ricollega»*.
+⛔ **False, measured**: `wl-copy` alive and owner, `wl-paste` re-reading its text before and
+after, and in the child's log **no read line**. Mutter reports **changes** of
+owner, not who already is one. ⇒ The clipboard that is there is **asked for** (`appunti_leggi_adesso()`), and
+asked for again **at every reattach** — the child survives between one connection and the next, so the
+read done at start-up holds only once (`MSG_RIMANDA_PALCO`, which means exactly
+«a client has reattached»).
 
-#### La cura definitiva sta dove il testo c'è davvero
+#### The definitive cure lives where the text really is
 
-⭐ **Se il client non ha appunti da dare, il figlio rende alla sessione l'ultimo testo che la
-sessione stessa gli aveva dato** (`appunti_rispondi`). La selezione cambia di mano, **il contenuto
-no**. ⇒ Chi si collega non perde niente, e la strada dell'incolla col mouse resta aperta.
+⭐ **If the client has no clipboard to give, the child gives back to the session the last text the
+session itself had given it** (`appunti_rispondi`). The selection changes hands, **the content
+does not**. ⇒ Whoever connects loses nothing, and the mouse-paste road stays open.
 
-⚠ **E due cure intermedie sono state buttate, con la loro ragione**:
+⚠ **And two intermediate cures were thrown away, with their reason**:
 
-| cura provata | perché è caduta |
+| cure tried | why it fell |
 |---|---|
-| «un annuncio vuoto non porta via la selezione a chi ha qualcosa» (in `rcp.c`) | proteggeva la clipboard **chiudendo la strada del mouse**: senza la selezione, il desktop non ci chiede niente |
-| «il primo testo della sessione si impara ma non si scrive negli appunti del dispositivo» (nella pagina) | non sapeva distinguere *lo stato iniziale* dalla *prima copia fatta nella sessione*, e ha mandato rosso il verso sessione → client su tutti e due i motori (`07-b54`) |
+| «an empty announcement does not take the selection away from whoever has something» (in `rcp.c`) | it protected the clipboard **by closing the mouse road**: without the selection, the desktop asks us nothing |
+| «the session's first text is learned but not written into the device's clipboard» (in the page) | it could not tell *the initial state* from *the first copy made in the session*, and it turned red the session → client direction on both engines (`07-b54`) |
 
-⇒ ⭐ La lezione, ed è la stessa di sempre: **la cura va messa dove l'informazione c'è**. Né la pagina
-né il protocollo sanno che cosa contiene la clipboard del desktop; il figlio sì.
+⇒ ⭐ The lesson, and it is the same as always: **the cure goes where the information is**. Neither the page
+nor the protocol knows what the desktop's clipboard contains; the child does.
 
-#### ⛔ E tre altri difetti del banco, tutti che dichiaravano rotto un prodotto sano
+#### ⛔ And three more faults of the bench, all declaring a healthy product broken
 
-1. **`wl-copy` ucciso dal `timeout` del banco**: si biforca per *servire* la selezione, e il
-   `timeout 12` che avvolge il copione se lo portava via insieme al gruppo. ⇒ `setsid`, e la copia
-   **si verifica rileggendola**.
-2. **La clipboard del browser non era vuota**: il banco chiedeva «il desktop ha perso il suo testo?»
-   mentre il dispositivo aveva del testo suo — e allora il desktop riceve **quello**, ed è giusto.
-   ⇒ La domanda si fa solo a clipboard del dispositivo vuota, e la si svuota con un proprietario che
-   dichiara zero byte (⛔ non rileggendola con `readText()`: su Firefox quella lettura vuole un
-   gesto, e si finirebbe per misurare il permesso).
-3. **Dal secondo browser in poi non si misura un collegamento, si misura una coda**: il figlio
-   sopravvive e si porta dietro lo stato della prova precedente. ⇒ La prova «sopravvive?» si fa col
-   **primo** browser del giro, e per l'altro motore si rilancia il banco a server appena acceso.
+1. **`wl-copy` killed by the bench's `timeout`**: it forks to *serve* the selection, and the
+   `timeout 12` wrapping the script took it away along with the group. ⇒ `setsid`, and the copy
+   **is verified by reading it back**.
+2. **The browser's clipboard was not empty**: the bench asked «has the desktop lost its text?»
+   while the device had text of its own — and then the desktop receives **that**, and rightly so.
+   ⇒ The question is asked only with the device's clipboard empty, and it is emptied with an owner that
+   declares zero bytes (⛔ not by re-reading it with `readText()`: on Firefox that read wants a
+   gesture, and one would end up measuring the permission).
+3. **From the second browser on one does not measure a connection, one measures a tail**: the child
+   survives and carries the previous test's state along. ⇒ The «does it survive?» test is done with the
+   **first** browser of the round, and for the other engine the bench is relaunched with a freshly started server.
 
-#### Lo stato misurato — 21 agosto 2026
+#### The measured state — 21 Aug 2026
 
 | | Firefox | Chrome |
 |---|---|---|
-| incolla col mouse (`07-b56`) | ⭐ 3 su 3 | ⭐ 3 su 3 |
-| la clipboard del desktop sopravvive al collegamento | ⭐ sì | ⚠ non misurabile da solo *(vedi difetto 3; la cura è nel figlio, non nel motore)* |
-| `Ctrl+V` nei due versi (`07-b54`) | ⭐ | ⭐ |
-| la corsa di §7.4 (`07-b53`) · la tela e il clic (`07-b51`) | ⭐ · ⭐ 4/4 | ⭐ · ⭐ 4/4 |
-| il bottoncino «Incolla» di Firefox | ⚠ **ogni volta** | mai |
+| mouse paste (`07-b56`) | ⭐ 3 out of 3 | ⭐ 3 out of 3 |
+| the desktop clipboard survives the connection | ⭐ yes | ⚠ not measurable on its own *(see fault 3; the cure is in the child, not in the engine)* |
+| `Ctrl+V` in both directions (`07-b54`) | ⭐ | ⭐ |
+| the race of §7.4 (`07-b53`) · the canvas and the click (`07-b51`) | ⭐ · ⭐ 4/4 | ⭐ · ⭐ 4/4 |
+| Firefox's little «Incolla» button | ⚠ **every time** | never |
 
 
-### 9.7 · ⭐⭐⭐ CHROME PER ANDROID: **«un'esperienza completa, audio e video perfetti»** — 21 agosto 2026, sera
+### 9.7 · ⭐⭐⭐ CHROME FOR ANDROID: **«un'esperienza completa, audio e video perfetti»** — 21 Aug 2026, evening
 
-> *«Chrome su Android offre un'esperienza completa: audio e video perfetti.»* — l'utente.
+> *«Chrome su Android offre un'esperienza completa: audio e video perfetti.»* — the user.
 
-⭐ **È il giudizio che mancava a questa fase**, ed è quello che il §2.1 pretendeva fin dall'inizio:
-*si ascolta, non si contano i blocchi*. I contatori della prima sessione Android erano verdi già la
-mattina — **8 935 blocchi ricevuti, 8 933 suonati, 2 buchi in 3 min 30** — ma un contatore verde non
-ha mai chiuso niente qui dentro.
+⭐ **It is the judgement this phase was missing**, and it is what §2.1 demanded from the start:
+*one listens, one does not count blocks*. The counters of the first Android session were already green in the
+morning — **8 935 blocks received, 8 933 played, 2 gaps in 3 min 30** — but a green counter has
+never closed anything in here.
 
-⛔ **E chiude il difetto che al mattino era l'unico vero aperto**: la coda dell'audio che si assestava
-a **401 → 421 ms**. ⚠ La misura non era sbagliata, e non è stata «spiegata»: è stata **giudicata**.
-Quattro decimi di secondo di coda si sentono in una scena — un metronomo, un video con le labbra in
-campo — e in questa non si sono sentiti. ⇒ Il numero resta scritto dov'è, come numero; smette di
-essere un difetto.
+⛔ **And it closes the fault that in the morning was the only real one open**: the audio queue settling
+at **401 → 421 ms**. ⚠ The measurement was not wrong, and it was not «explained»: it was **judged**.
+Four tenths of a second of queue can be heard in a scene — a metronome, a video with lips in
+frame — and in this one they were not heard. ⇒ The number stays written where it is, as a number; it stops
+being a fault.
 
-⭐ **Con questo, l'audio della fase 7 ha tre giudizi dell'utente, su tre mezzi diversi**: il video di
-YouTube da desktop (§9.1), gli appunti nei due versi (§9.2-bis), e adesso **un telefono**.
+⭐ **With this, phase 7's audio has three user judgements, on three different media**: the
+YouTube video from the desktop (§9.1), the clipboard in both directions (§9.2-bis), and now **a phone**.
 
-⚠ **E il confine si scrive, perché "pienamente supportato" vuol dire *funziona, e sai in che
-condizioni*** (`DECISIONI.md` §0.1-bis):
-
-| | |
-|---|---|
-| il giudizio vale per | **Chrome per Android**, Samsung DeX, rete di casa |
-| ⛔ **non** vale per | **Firefox per Android** — dichiarato incompatibile dall'utente lo stesso giorno (`DECISIONI.md` §7.18) |
-| resta non misurato | il **datagram su rete non locale**, e la **priorità in tempo reale** dentro il figlio |
-
-#### ⛔ 9.7-bis · E un'ora dopo, la precisazione che RIAPRE il difetto — **«400 ms fra audio e video, te lo confermo»**
-
-> *«Su Windows ci siamo quasi, però a un certo punto l'audio è a scatti.»* → sessione sorvegliata
-> con `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo di
-> 400 ms tra audio e video in generale te lo confermo.**»* — l'utente, 21 agosto 2026, sera.
-
-⛔ **Due verdetti in una frase, e vanno separati**:
+⚠ **And the boundary is written, because "fully supported" means *it works, and you know under what
+conditions*** (`DECISIONI.md` §0.1-bis):
 
 | | |
 |---|---|
-| l'audio **a scatti** | ⭐ **non è nostro** — non si è ripresentato sotto sorveglianza, ed è del suo PC |
-| il ritardo **fra audio e video** | ⛔ **è nostro, è generale, ed è confermato dall'orecchio**: ~400 ms |
+| the judgement holds for | **Chrome for Android**, Samsung DeX, home network |
+| ⛔ it does **not** hold for | **Firefox for Android** — declared incompatible by the user the same day (`DECISIONI.md` §7.18) |
+| remains unmeasured | the **datagram on a non-local network**, and the **real-time priority** inside the child |
 
-⚠ **E il primo giudizio non era sbagliato: era meno preciso.** *«Audio e video perfetti»* voleva dire
-*ogni flusso è pulito* — ed è vero, `[M]`: zero perdite su ogni riga di ogni anello. ⛔ Quel che non
-è pulito è la **distanza fra i due**, e un difetto di sincronia non si vede in nessun contatore che
-guardi un flusso alla volta. ⇒ **Va scritto qui**, perché è la forma di difetto che questa fase sa
-fabbricare meglio: quattro anelli tutti verdi, e l'esperienza sbagliata.
+#### ⛔ 9.7-bis · And an hour later, the clarification that REOPENS the fault — **«400 ms fra audio e video, te lo confermo»**
 
-⇒ La causa, la misura sulla sessione di Windows e la cura nominata stanno in **§8**.
+> *«Su Windows ci siamo quasi, però a un certo punto l'audio è a scatti.»* → monitored session
+> with `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo di
+> 400 ms tra audio e video in generale te lo confermo.**»* — the user, 21 Aug 2026, evening.
+
+⛔ **Two verdicts in one sentence, and they must be separated**:
+
+| | |
+|---|---|
+| the **choppy** audio | ⭐ **it is not ours** — it did not recur under monitoring, and it belongs to his PC |
+| the delay **between audio and video** | ⛔ **it is ours, it is general, and it is confirmed by the ear**: ~400 ms |
+
+⚠ **And the first judgement was not wrong: it was less precise.** *«Audio e video perfetti»* meant
+*each stream is clean* — and it is true, `[M]`: zero losses on every line of every ring. ⛔ What is not
+clean is the **distance between the two**, and a synchronisation fault does not show in any counter that
+looks at one stream at a time. ⇒ **It must be written here**, because it is the form of fault this phase knows how to
+manufacture best: four rings all green, and the wrong experience.
+
+⇒ The cause, the measurement on the Windows session and the named cure are in **§8**.
