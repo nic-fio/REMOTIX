@@ -391,9 +391,10 @@ def classifica(rec, caso):
 #    are produced **only by the graft**, `01-b3-rcp-innesta.py:1105-1139`.  ⛔ The
 #    product server in `src/` says the same thing in another way:
 #
-#      · `src/pagina.c:257-262` writes «I tentativi di accesso da questo
-#        indirizzo sono **esauriti**.  Riprova fra %llu ore e %llu minuti…» —
-#        seven words in between, so the substring looked for here is NOT there;
+#      · `src/pagina.c:257-262` then wrote the notice in Italian, with seven
+#        words between «attempts» and «exhausted», so the substring looked for
+#        here was NOT there; ⚠ today (`src/pagina.c:403`) it writes «<b>attempts
+#        exhausted</b>: three failed login attempts came from this address…»;
 #      · the remaining milliseconds **do not appear at all** in the served
 #        document: the product already formats them into hours and minutes and
 #        throws away the rest;
@@ -728,8 +729,8 @@ R_BAN = {"caricati": "bans loaded:",
 #    of `DECISIONI.md` §1.10 (PAM off the single thread) appended to its tail
 #    the explanation of the fallback:
 #
-#      PAM ha risposto: ammesso  ⚠ (per via SINCRONA: nessun gancio asincrono
-#      collegato — il filo e' rimasto fermo)
+#      PAM answered: admitted  ⚠ (SYNCHRONOUSLY: no asynchronous hook
+#      connected — the thread stood still)
 #
 #    ⇒ `endswith("ammesso")` became **always false**, every answer ended up among
 #    the refused — **52 lines, 0 admitted** — `imputato_dei_tempi()` could no
@@ -752,7 +753,7 @@ R_BAN = {"caricati": "bans loaded:",
 #
 # ⚠ And `[^:]*` between «answered» and the colon is not a whim: the cure of §1.10
 #   wrote a SECOND form of the same line, for the asynchronous road —
-#   `rcp.c:2636`, «PAM ha risposto (pratica 7): ammesso  ⭐ …» — which the graft
+#   `rcp.c:2636` (today `rcp.c:7850`), «PAM answered (request 7): admitted  ⭐ …» — which the graft
 #   today does not travel but the product will.  An anchor that demanded the
 #   colon right after «answered» would be blind to that one, and the blindness
 #   would arrive **the day the bench is pointed at the product**.
@@ -815,7 +816,7 @@ def tutto_in_una_casella(che_cosa, caselle, minimo=SOGLIA_MONOCATEGORIA):
         f"read the facts» here have the same face",
         f"⚠ to look at first: the anchor with which the log line is "
         f"read.  On 12 Aug 2026 an explanation appended at the tail of "
-        f"«PAM ha risposto: ammesso» was enough to put 52 out of 52 in the "
+        f"«PAM answered: admitted» was enough to put 52 out of 52 in the "
         f"wrong box, and B8 went from 5 to 1 on a healthy product",
     ]
 

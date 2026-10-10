@@ -1411,7 +1411,7 @@ famiglia_tutto() {
 		# ⭐ C7 — the leftovers.  ⚠ «only detaches» must NOT give red (I4):
 		#   the stage belongs to the session and survives the disconnection.
 		esegui_maglia "C7($d)" false GIRA_C7 "$d"
-		esegui_maglia "C7($d) si stacca soltanto" false GIRA_C7 "$d" --solo-distacco
+		esegui_maglia "C7($d) detach only" false GIRA_C7 "$d" --solo-distacco
 		# ⚠ `--attesa-chiusura 10` is not a borrowed ceiling (§1.45): with the
 		#   fault injected it is KNOWN that the field will not become free again, and 10 s are
 		#   nine times the measured closing (`[M]` 1,13 s).

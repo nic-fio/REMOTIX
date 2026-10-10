@@ -4110,7 +4110,7 @@ static void involo_pulisci(wt *w)
  *
  *       ⭐ And outside the step the cure must be INERT: at 20 Mbit/s — the
  *       floor of `DECISIONI.md` §3.1-bis — the queue never reaches 100 ms,
- *       so `abbandonati per soglia` = 0 and the chain's delay stays
+ *       so `abandoned by threshold` = 0 and the chain's delay stays
  *       the one of phase 8 (55.20 ms `[M]`).
  *
  * ⛔ THE FOUR REDS THAT WOULD PROVE ME WRONG — and each says where to look:
@@ -4119,8 +4119,8 @@ static void involo_pulisci(wt *w)
  *       ⇒ The §5.2 debt is switched on by ANOTHER of the seven causes, almost
  *       certainly 4 (`rcp.c:3441`, the missing credit — the shape invisible
  *       to the receiver), and the cure spins idle.  ⚠ The final count tells the
- *       two apart on purpose: `abbandonati per soglia` against `non accettati per credito
- *       mancato`.  It is the lesson already paid for («105 requests against 346
+ *       two apart on purpose: `abandoned by threshold` against `NOT ACCEPTED for
+ *       missing credit`.  It is the lesson already paid for («105 requests against 346
  *       refusals in the same run»);
  *    2. **frames/s in seconds 8-10 do not rise, or drop below 13.**
  *       ⇒ The kept deltas arrive too late to be of use: the threshold is too

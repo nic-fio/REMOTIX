@@ -634,7 +634,7 @@ def scaletta(percorso, finestre=8, finestra_s=1):
       stitching the edges would make it invisible to the tone judge.
     """
     if not os.path.exists(percorso) or os.path.getsize(percorso) == 0:
-        return {"esito": "NIENTE DA GIUDICARE — the JSONL is missing or empty"}
+        return {"esito": "NOTHING TO JUDGE — the JSONL is missing or empty"}
     blocchi, visti, dop = [], set(), 0
     fuori_arrivo, massimo = 0, None
     for r in open(percorso):
@@ -656,13 +656,13 @@ def scaletta(percorso, finestre=8, finestra_s=1):
         massimo = ist if massimo is None else max(massimo, ist)
         blocchi.append((ist, base64.b64decode(d["byte"])))
     if len(blocchi) < 200:
-        return {"esito": "NIENTE DA GIUDICARE — %d blocks" % len(blocchi),
+        return {"esito": "NOTHING TO JUDGE — %d blocks" % len(blocchi),
                 "blocchi": len(blocchi)}
     base = min(i for i, _ in blocchi)
     fine = max(i for i, _ in blocchi)
     n_tot = int(round((fine - base) / 1e6 * FREQUENZA)) + (FREQUENZA * PASSO_PCM_US // 1000000)
     if n_tot <= 0 or n_tot > FREQUENZA * 3600:
-        return {"esito": "NIENTE DA GIUDICARE — absurd timeline (%d)" % n_tot}
+        return {"esito": "NOTHING TO JUDGE — absurd timeline (%d)" % n_tot}
     tela = [0] * n_tot
     pieno = bytearray(n_tot)
     for ist, b in blocchi:
@@ -768,7 +768,7 @@ def conti_del_server(riga0):
                       "count' | tail -1" % (riga0 + 1, LAV))
     r = out.strip()
     if not r:
-        return {"esito": "NIENTE DA LEGGERE — no «final count» in this run"}
+        return {"esito": "NOTHING TO READ — no «final count» in this run"}
     m = re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
                   r"(\d+) DEFERRED", r)
     if not m:
@@ -791,7 +791,7 @@ def testimone_del_server(riga0):
                       "'rete-quic ' | tail -40" % (riga0 + 1, LAV))
     righe = [r for r in out.split("\n") if "rete-quic " in r]
     if not righe:
-        return {"esito": "NIENTE DA LEGGERE — no «rete-quic» line in "
+        return {"esito": "NOTHING TO READ — no «rete-quic» line in "
                          "this run", "righe": 0}
     fuori = {"righe": len(righe)}
     for campo in ("dgram_persi", "dgram_ok", "dgram_falsi"):
@@ -1491,7 +1491,7 @@ def misura(a):
             if leg <= 0:
                 ko("the tone no longer plays: I do NOT judge this profile")
                 esiti.append({"profilo": nome, "passa": None,
-                              "esito": "NIENTE DA GIUDICARE — the tone was silent"})
+                              "esito": "NOTHING TO JUDGE — the tone was silent"})
                 continue
 
             giri = {}

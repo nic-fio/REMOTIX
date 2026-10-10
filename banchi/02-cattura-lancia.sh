@@ -96,9 +96,9 @@
 #
 #   0  ⭐ VERDE: a frame is there, it is of the requested size, and it contains the scene
 #   1  ROSSO: there is a frame and something does not add up. The mark says what —
-#      FOTOGRAMMA NERO · FOTOGRAMMA UNIFORME · SCENA NON RICONOSCIUTA ·
-#      BYTE NON TORNANO · MISURA DIVERSA DA QUELLA CHIESTA · IL BUFFER NON E'
-#      CAMBIATO
+#      BLACK FRAME · UNIFORM FRAME · SCENE NOT RECOGNISED ·
+#      BYTES DO NOT ADD UP · SIZE DIFFERENT FROM THE ONE REQUESTED ·
+#      THE BUFFER DID NOT CHANGE
 #   3  ⭐ ZERO FRAMES, or DMA-BUF road (pixels not readable from here): there is
 #      nothing to judge, and it is NOT a red
 #   2  ⛔ I FAILED: the scene does not start, the stream was never active or
@@ -239,12 +239,12 @@ elenco()
   ⛔ And the opposite case, written beforehand (LEZIONI.md §1.11):
      what would the CONTRARY look like?
 
-       black and valid frame      → average luma ≈ 0, mark FOTOGRAMMA NERO.
+       black and valid frame      → average luma ≈ 0, mark BLACK FRAME.
                                     It is what a session without a
                                     virtual monitor would give: alive, complete and black
        scene not started          → the producer exits 2 with «the scene was
                                     never declared on», not a zero
-       still desktop              → exit 3, ZERO FOTOGRAMMI: legitimate
+       still desktop              → exit 3, ZERO FRAMES: legitimate
        buffer of another card     → ⚠ this bench would NOT see it: on the memory
                                     road the pixels arrive anyway
 FINE
@@ -438,7 +438,7 @@ for connettore, venditore, prodotto in re.findall(
         print(prodotto)
         break
 else:
-    print("SCONOSCIUTO")
+    print("UNKNOWN")
 FINE
 }
 
@@ -556,7 +556,7 @@ avvia_scena()
 		;;
 	fermo)
 		# ⭐ The opposite case, as a scene: nobody paints.  The expectation is exit 3
-		#    (ZERO FOTOGRAMMI), not a red and not a green.
+		#    (ZERO FRAMES), not a red and not a green.
 		echo 0
 		;;
 	*)
@@ -691,12 +691,12 @@ misura()
 	inf "the producer exited with $uscita_prod"
 	if [ $uscita_prod -eq 2 ]; then
 		ko "⛔ I FAILED: there is no frame to judge"
-		registra "$prefisso" "$uscita_prod" 2 "SONO FALLITO" ""
+		registra "$prefisso" "$uscita_prod" 2 "I FAILED" ""
 		return 2
 	fi
 	if [ $uscita_prod -eq 1 ]; then
 		ko "⛔ the environment: monitor not mounted or file not written"
-		registra "$prefisso" "$uscita_prod" 2 "AMBIENTE" ""
+		registra "$prefisso" "$uscita_prod" 2 "ENVIRONMENT" ""
 		return 2
 	fi
 

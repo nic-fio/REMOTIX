@@ -560,7 +560,7 @@ def raccogli(chi):
 
     d[HOME] = "%d entries" % conta_file("/home/%s" % chi)
     d[TEMPORANEI] = "%d entries" % file_di_uid("/tmp", uid)
-    d["_schede in tutto"] = schede_in_tutto()
+    d["_cards in all"] = schede_in_tutto()
     return d
 
 
@@ -943,7 +943,7 @@ def stampa_impronta(titolo, d):
     for voce in STAMPATE:
         print("     %-34s %s   ⚠ printed, NOT judged" % (voce, d.get(voce)))
     print("     %-34s %s   ⚠ printed, NOT judged"
-          % ("processes with /dev/dri, in all", d.get("_schede in tutto")))
+          % ("processes with /dev/dri, in all", d.get("_cards in all")))
     print()
 
 

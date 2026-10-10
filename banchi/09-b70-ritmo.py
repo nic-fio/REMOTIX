@@ -516,7 +516,7 @@ def principale():
     with open(traccia, "rb") as f:
         d = f.read()
     if len(d) < 16 or d[:8] != MAGIA:
-        print(json.dumps({"esito": "NON HO NIENTE DA GIUDICARE — the trace does not "
+        print(json.dumps({"esito": "I HAVE NOTHING TO JUDGE — the trace does not "
                                    "carry the magic of §11.1",
                           "primi8": d[:8].hex()}))
         return 3
@@ -524,7 +524,7 @@ def principale():
     if A.OROLOGIO.get(orologio) != "client":
         # ⛔ Without knowing WHOSE the times are, the drift cannot even be
         #    stated: we do not guess.
-        print(json.dumps({"esito": "NON GIUDICO — the trace's clock is not "
+        print(json.dumps({"esito": "I DO NOT JUDGE — the trace's clock is not "
                                    "the client's", "orologio": orologio}))
         return 3
     p, letti = 16, 0
@@ -605,7 +605,7 @@ def misura(giornale, chiesto_s, server=None, filo=None, azzerati=None,
          "scaldata_s": scaldata_s, "server": server or {},
          "azzerati_sul_filo": azzerati}
     if not giornale:
-        n["esito"] = ("NON HO NIENTE DA GIUDICARE — no frame in the "
+        n["esito"] = ("I HAVE NOTHING TO JUDGE — no frame in the "
                       "trace")
         return n
     a0 = giornale[0]["arrivo_ms"]
@@ -619,14 +619,14 @@ def misura(giornale, chiesto_s, server=None, filo=None, azzerati=None,
     a_regime = [f for f in giornale if (f["arrivo_ms"] - a0) / 1000.0 >= scaldata_s]
     n["fotogrammi_scaldata"] = len(giornale) - len(a_regime)
     if len(a_regime) < MINIMO_FOTOGRAMMI:
-        n["esito"] = ("NON HO NIENTE DA GIUDICARE — %d frames at steady state, "
+        n["esito"] = ("I HAVE NOTHING TO JUDGE — %d frames at steady state, "
                       "fewer than the minimum of %d" % (len(a_regime), MINIMO_FOTOGRAMMI))
         n["fotogrammi"] = len(a_regime)
         return n
     r0 = a_regime[0]["arrivo_ms"]
     durata = (a_regime[-1]["arrivo_ms"] - r0) / 1000.0
     if durata <= 0:
-        n["esito"] = "NON HO NIENTE DA GIUDICARE — zero steady-state duration"
+        n["esito"] = "I HAVE NOTHING TO JUDGE — zero steady-state duration"
         return n
     n["fotogrammi"] = len(a_regime)
     n["durata_s"] = round(durata, 3)
@@ -1182,7 +1182,7 @@ def certifica():
     #        opposite outcomes, because the reason for the emptiness is different.
     n_muta = misura([], 33, SRV, FILO)
     n_muta["traccia_non_letta"] = "⛔ THE §11.1 TRACE WAS NOT READ: test"
-    n_muta["esito"] = "NON HO NIENTE DA GIUDICARE — trace not read"
+    n_muta["esito"] = "I HAVE NOTHING TO JUDGE — trace not read"
     casi.append(("6c-⛔⛔ the journal empty because I DID NOT READ IT (against "
                  "case 6, empty because nothing arrived)",
                  n_muta,
@@ -1798,7 +1798,7 @@ def conti_del_server(riga0):
                       "annunci_tela": int(m.group(5))})
     else:
         # ⛔ `CODER.md` §3.10: «I did not read» is not «zero».
-        fuori["esito_video"] = "NIENTE DA LEGGERE — no video «final count»"
+        fuori["esito_video"] = "NOTHING TO READ — no video «final count»"
     rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio of .*final "
                       "count' | tail -1" % (riga0 + 1, LAV))
     m = re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
@@ -1834,7 +1834,7 @@ def conti_del_server(riga0):
                             "attese_a_vuoto": int(p1[2]) - int(p0[2]),
                             "righe_ciclo": len(righe)}
     else:
-        fuori["cattura"] = {"esito": "NIENTE DA LEGGERE — fewer than two "
+        fuori["cattura"] = {"esito": "NOTHING TO READ — fewer than two "
                                      "«loop:» lines in this run"}
     # ⭐ AND THE LINES OF THE SPIRAL, counted: they are the bridge between the numbers of this
     #    page and the cause named in `fasi/09...` §0.3.
@@ -1957,7 +1957,7 @@ def giro(nome, movimento, tela, secondi, con_traccia=True):
         filo = {"byte": b, "pacchetti": pk, "secondi": vero,
                 "byte_per_pacchetto": round(b / pk, 1) if pk else None}
     server = conti_del_server(riga0)
-    giornale, letto, muta = [], {"esito": "senza traccia"}, None
+    giornale, letto, muta = [], {"esito": "without trace"}, None
     if con_traccia:
         rc, out2, err2 = root("python3 %s/09-b70-leggi.py %s/%s.rcpreg "
                               "%s/banchi/01-b4-validatore.py"
@@ -1983,7 +1983,7 @@ def giro(nome, movimento, tela, secondi, con_traccia=True):
                azzerati=letto.get("azzerati"))
     if muta:
         n["traccia_non_letta"] = muta
-        n["esito"] = "NON HO NIENTE DA GIUDICARE — " + muta
+        n["esito"] = "I HAVE NOTHING TO JUDGE — " + muta
     n["nome"] = nome
     n["movimento"] = movimento
     n["linea"] = linea          # ⭐ the premise of the second leg of I1
@@ -2151,7 +2151,7 @@ def principale():
                 if not usc:
                     _ko("the «%s» scene does not start: I do NOT judge this step"
                         % movimento)
-                    coppia[etichetta] = {"esito": "NON HO NIENTE DA GIUDICARE — "
+                    coppia[etichetta] = {"esito": "I HAVE NOTHING TO JUDGE — "
                                                  "the scene did not start"}
                     continue
                 _inf("scene «%s» on monitor %s" % (movimento, usc))

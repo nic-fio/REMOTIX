@@ -1008,8 +1008,8 @@ async def _(campo, es):
     cli = await campo.apri()
     await campo.sessione(cli)
     es.fase = "provocation"
-    cli.manda(congedo(CHIUSO_DALL_UTENTE, "il banco B7 chiude, come farebbe "
-                                          "l'utente"))
+    cli.manda(congedo(CHIUSO_DALL_UTENTE, "bench B7 closes, as the user "
+                                          "would"))
     await asyncio.sleep(0.3)   # ⚠ the two bytes must not leave in the same
     cli.chiudi_sessione(CHIUSO_DALL_UTENTE)   # flight: it is the race B11
     es.provocato = True                       # found, here from the client's side
@@ -1162,8 +1162,8 @@ async def stretta_intera(a, disp="it"):
             # ⛔ One takes leave properly, instead of letting the connection
             #    drop: that way the place is free **immediately** for the next
             #    case, and not «when the transport has finished tearing down».
-            cli.manda(congedo(CHIUSO_DALL_UTENTE, "controllo dello stato "
-                                                  "iniziale di B7"))
+            cli.manda(congedo(CHIUSO_DALL_UTENTE, "check of B7's initial "
+                                                  "state"))
             await asyncio.sleep(0.3)
             cli.chiudi_sessione(CHIUSO_DALL_UTENTE)
             await asyncio.sleep(0.4)

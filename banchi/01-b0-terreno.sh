@@ -247,15 +247,15 @@ posto_unico() # $1 = tree, $2 = the binary I am about to judge
 #
 # This file had four lines written by hand:
 #
-#     nessuno "guasti di B12 nel codec"        examples/http3_server_proto_codec.cc
-#     nessuno "guasti di B12 in rcp.c"         examples/rcp.c
-#     nessuno "guasti di B12 in server.cc"     examples/server.cc
-#     nessuno "guasti di B12 in remotix/rcp.c" remotix/rcp.c        ← ⛔ THIS ONE
+#     nessuno "B12 faults in the codec"      examples/http3_server_proto_codec.cc
+#     nessuno "B12 faults in rcp.c"         examples/rcp.c
+#     nessuno "B12 faults in server.cc"     examples/server.cc
+#     nessuno "B12 faults in remotix/rcp.c" remotix/rcp.c        ← ⛔ THIS ONE
 #
 # The last one **could not turn red in any case**: `01-b12-guasti.py`
 # does not graft into `remotix/rcp.c` and never has — by declared
-# design, because *"an original is never broken"* (its §"LA CARTELLA
-# DELLE COPIE").  ⇒ A check green by construction, which GUARDATI counted
+# design, because *"an original is never broken"* (its §"THE FOLDER
+# OF THE COPIES").  ⇒ A check green by construction, which GUARDATI counted
 # as one of the checks done.  ⛔ It is worse than an absent check: whoever
 # reads "no trace" believes someone looked.
 #
@@ -482,7 +482,7 @@ else
 		dub "⛔ I could not compare the two rcp.c"
 		IGNOTI=$((IGNOTI + 1))
 	fi
-	# ⛔ HERE THERE WAS `nessuno "guasti di B12 in remotix/rcp.c"`, AND IT COULD NOT
+	# ⛔ HERE THERE WAS `nessuno "B12 faults in remotix/rcp.c"`, AND IT COULD NOT
 	#    TURN RED: `01-b12-guasti.py` does not graft into the originals, by
 	#    declared design.  The reason at length is next to
 	#    `guasti_rimasti_addosso()`, which now sieves the REAL targets — and

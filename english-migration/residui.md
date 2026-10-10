@@ -52,3 +52,4 @@
 - incidente: un aiutante (b11b) ha fatto git stash/pop per pochi secondi durante l'ondata dei banchi → controllo finale: nessun banco tradotto tornato italiano
 - C8 righe 849/851 riepilogo «A · il browser rende la pagina» letto da C14 RIGA_A → cambiare insieme
 - C24 RIGA_NASCITA «formato negoziato»; 16-classifica «il palco di «…» se n'e' andato» → doppia forma (registri vecchi)
+- src/costruzione/costruisci-deb.sh:127-155: etichette dei controlli in controlli.txt «R13 opzioni-di-banco-nell-unita», «R14 file-del-banco», «R23 riproducibile» ed esiti «SI»/«NO» (anche «R4 ldd SI/NO») → token, programma. Lettore: costruisci-deb.sh:158 `grep -q ' NO'`; citati in costruisci-deb.sh:28 e docs/sources/technical/ch17_build.py:284 → cambiare insieme (en-41)

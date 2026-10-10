@@ -15,8 +15,8 @@
 #   impronta <name>         the fingerprint of the machine (17-t3-impronta*.sh) and of the repositories (R18)
 #   motore                  the engine downloaded FROM THE ARCHIVE (as install.sh does) and its sha256
 #   installa [channel]      check → plan --install --archive → approve → apply
-#   script                  like the administrator: install.sh and its sha256 from the archive, the
-#                           check (sha256sum -c), then `sh install.sh --archive … --answers …`
+#   script                  (retired, §10.36) like the administrator: install.sh and its sha256 from
+#                           the archive, the check (sha256sum -c), then `sh install.sh --archive … --answers …`
 #   aggiorna                the SYSTEM upgrade (apt-get upgrade · dnf upgrade): REMOTIX
 #                           comes with it (DECISIONI §10.23); the journal of remotix.service
 #   disinstalla             uninstall --purge → apply, and what is left of REMOTIX
@@ -94,6 +94,9 @@ sudo install -m 755 /tmp/remotix-install /root/remotix-install
 sudo /root/remotix-install version" | tee "$E/motore.txt"
 	;;
 script)
+	# ⛔ RETIRED (10 Oct 2026, §10.36): nothing in today's .run prints «Engine VERIFIED» or
+	#   «install.sh: » (RX-TRUST-017 is retired too). The body below stays as history.
+	echo "⛔ step «script» retired (DECISIONI §10.36): install.sh and the engine checked against its sha256 no longer exist — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"; exit 2
 	# the answers: the person "prova" in the GPU groups; firewall and RPM Fusion with consent (D5,
 	# D6: the engine notes those not needed on this machine)
 	vm "printf 'format = remotix-answers/2\nusers = prova\nconsent.firewall = yes\n' | sudo tee /root/risposte.conf >/dev/null

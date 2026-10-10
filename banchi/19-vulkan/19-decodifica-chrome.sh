@@ -11,7 +11,7 @@
 #   until `timeout` closes it.
 # ⚠ HEVC in Chrome exists ONLY in hardware: without the GPU `isConfigSupported`
 #   says no for both versions, and a "0 = 0" is not a PASS — the
-#   table writes it as NON PROVATO.
+#   table writes it as NOT TESTED.
 set -u
 CARTELLA=${1:?folder with the *.bin streams and esiti.jsonl}; shift
 PAGINA=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-scheda/18-decodifica-chrome.html
@@ -52,7 +52,7 @@ for prova, v in sorted(per.items()):
     if not a or not b:
         print(f"FAIL {prova}: one version is missing"); rossi += 1; continue
     if not a.get("supportato") and not b.get("supportato"):
-        print(f"NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)"); non_provati += 1; continue
+        print(f"NOT TESTED {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)"); non_provati += 1; continue
     uguali = a["decodificati"] > 0 and a["decodificati"] == b["decodificati"] and not b["errori"] and b.get("supportato")
     print(f"{'PASS' if uguali else 'FAIL'} {prova}: vaapi {a['decodificati']}/{a['chunk']} vulkan {b['decodificati']}/{b['chunk']} · size {b.get('misura')} · errors {b['errori']} · fingerprints {'equal' if a['impronte']==b['impronte'] else 'DIFFERENT'}")
     rossi += 0 if uguali else 1

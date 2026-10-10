@@ -1251,7 +1251,7 @@ void remotix_comando_servi(int fd) {
     std::println(stderr, "REMOTIX B3: ⚠ empty command on the control socket "
                          "({} bytes read): I removed nothing",
                  letti);
-    remotix_scrivi_tutto(fd, "NON-CAPITO riga vuota\n");
+    remotix_scrivi_tutto(fd, "NON-CAPITO empty line\n");
     return;
   }
   std::string riga{buf.data(), static_cast<size_t>(letti)};

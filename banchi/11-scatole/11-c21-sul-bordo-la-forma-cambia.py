@@ -490,11 +490,11 @@ def cursori_finti():
     d.rectangle([8, 2, 11, 12], fill=(0, 0, 0, 255))
     d.rectangle([5, 10, 19, 21], fill=(0, 0, 0, 255))
     return {"freccia": (("png", _png(fr), 3, 3), "freccia"),
-            "doppia di Breeze": (("png", _png(dp), 15, 15), "orizzontale"),
-            "e-resize di Adwaita": (("png", _png(ae), 19, 12), "orizzontale"),
+            "Breeze double arrow": (("png", _png(dp), 15, 15), "orizzontale"),
+            "Adwaita e-resize": (("png", _png(ae), 19, 12), "orizzontale"),
             "text bar": (("png", _png(te), 15, 15), "testo"),
-            "clessidra piena": (("png", _png(cl), 11, 11), "altra"),
-            "mano": (("png", _png(ma), 9, 2), "altra")}
+            "full hourglass": (("png", _png(cl), 11, 11), "altra"),
+            "hand": (("png", _png(ma), 9, 2), "altra")}
 
 
 def certifica():
@@ -514,7 +514,7 @@ def certifica():
         print("⛔ PIL is not there: I cannot certify ⇒ 3")
         return 3
     # 1. the CSS rule is read, in the two spellings of the browsers
-    dv = c["doppia di Breeze"][0]
+    dv = c["Breeze double arrow"][0]
     b64 = base64.b64encode(dv[1]).decode()
     for s in ('url("data:image/png;base64,%s") 15 15, default' % b64,
               "url(data:image/png;base64,%s) 15 15, default" % b64):

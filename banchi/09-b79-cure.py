@@ -169,7 +169,7 @@ is READ, not assumed.  There are three checks, and none is a line of reasoning:
     `accendi`, and this bench restarts the server at **every arm**.
     `[M]` the counter-proof: no pair of cells carries identical numbers from the
     log, and three cells (`perdita-3` A, `raffica-forte` A and B) said
-    **«NIENTE DA LEGGERE»** instead of reporting the neighbour's number — which is the
+    **«NOTHING TO READ»** instead of reporting the neighbour's number — which is the
     proof that in the window there was no one else's count to steal.
 
 ⭐⭐ AND THE THING THAT COUNTS MOST, and it is a division, not an acquittal:
@@ -753,8 +753,8 @@ def md5_binario():
 #     is no count of the previous arm to steal, and the slot is free because
 #     the process holding it is dead.  `[M]` the counter-proof on the 36 runs of
 #     23 August: no pair of cells carries identical numbers from the log, and
-#     three cells (`perdita-3` A, `raffica-forte` A and B) said «NIENTE DA
-#     LEGGERE» instead of reporting the neighbour's number.
+#     three cells (`perdita-3` A, `raffica-forte` A and B) said «NOTHING TO
+#     READ» instead of reporting the neighbour's number.
 #
 # ⛔ What STAYS uncovered, and that is why the two functions are there: inside
 #    ONE arm before the run there is the **trigger session**, and its «final
@@ -831,7 +831,7 @@ def leggi_rete_quic(riga0):
                       "'rete-quic ' | tail -400\"" % (riga0 + 1, LAV))
     righe = [r for r in out.splitlines() if "rete-quic " in r]
     if not righe:
-        return {"esito": "NIENTE DA LEGGERE — no «rete-quic» line in this run"}
+        return {"esito": "NOTHING TO READ — no «rete-quic» line in this run"}
     campi = []
     for r in righe:
         d = {}
@@ -1268,19 +1268,19 @@ def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
     if not ok:
         _ko("⛔ arm %s is NOT in force: I do not measure this cell"
             % etichetta)
-        voce["esito"] = "IL BRACCIO NON E' IN VIGORE"
+        voce["esito"] = "THE ARM IS NOT IN FORCE"
         return voce
     # 3 · the trigger session, ON A CLEAN NETWORK (see the header, point 3)
     if not B70.innesca_sessione():
         _ko("the trigger session does not open: I do not measure this cell")
-        voce["esito"] = "LA SESSIONE D'INNESCO NON SI APRE"
+        voce["esito"] = "THE TRIGGER SESSION DOES NOT OPEN"
         return voce
     # 4 · the profile, and it is reread
     passa_r, perche_r, riletta = installa_profilo(regole)
     voce["regola_riletta"] = riletta
     (_ok if passa_r else _ko)("the rule: %s" % perche_r)
     if not passa_r:
-        voce["esito"] = "LA REGOLA INSTALLATA NON E' QUELLA CHIESTA"
+        voce["esito"] = "THE INSTALLED RULE IS NOT THE ONE REQUESTED"
         return voce
     # 5 · the probe: was the fault put in?  ⛔ and it is redone at every arm
     s = B76.sonda_gira()
@@ -1294,7 +1294,7 @@ def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
     usc = B76.scena_accendi("barra")
     if not usc:
         _ko("the scene does not start: I do NOT judge this cell")
-        voce["esito"] = "LA SCENA NON E' PARTITA"
+        voce["esito"] = "THE SCENE DID NOT START"
         return voce
     prima = B76.conti_qdisc()
     # ⛔ The trigger session must have FINISHED closing, or its «final

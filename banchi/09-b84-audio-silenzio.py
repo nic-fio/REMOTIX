@@ -485,7 +485,7 @@ def rete_del_giro(riga0):
         if m:
             righe.append(tuple(int(x) for x in m.groups()))
     if len(righe) < 3:
-        return {"esito": "NIENTE DA LEGGERE — %d «rete-quic» lines in this "
+        return {"esito": "NOTHING TO READ — %d «rete-quic» lines in this "
                          "run (3 are needed)" % len(righe), "righe": len(righe)}
     # ⛔ The FIRST line is discarded: its `da_ms` also covers the start of the
     #    connection, and the start is not the steady state I want to measure.
@@ -511,7 +511,7 @@ def conti_del_server(riga0):
                       "count' | tail -1" % (riga0 + 1, LAV))
     r = out.strip()
     if not r:
-        return {"esito": "NIENTE DA LEGGERE — no «final count»"}
+        return {"esito": "NOTHING TO READ — no «final count»"}
     m = re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
                   r"(\d+) DEFERRED", r)
     if not m:
@@ -744,7 +744,7 @@ def giro(braccio, scena, codec, secondi):
     # ⭐ The second leg, from the SAMPLES: only PCM is judged this way
     #   (`09-b77.scaletta()` skips the blocks that are not codec 2).
     sc = B77.scaletta(j_fuori) if codec == "pcm" else {
-        "esito": "NON GIUDICATO — Opus samples cannot be read without "
+        "esito": "NOT JUDGED — Opus samples cannot be read without "
                  "decoding them, and this bench has no decoder"}
     n["scaletta"] = sc
     n["copertura"] = sc.get("copertura")
@@ -842,7 +842,7 @@ def certifica():
         esiti.append(bene)
         (ok if bene else ko)("%s → %s  [%s]"
                              % (titolo, {True: "VERDE", False: "ROSSO",
-                                         None: "NON GIUDICATO"}[passa], perche))
+                                         None: "NOT JUDGED"}[passa], perche))
 
     log("1 · `a_il_riempimento_c_e` — the positive control of the fact")
     f = a_il_riempimento_c_e()

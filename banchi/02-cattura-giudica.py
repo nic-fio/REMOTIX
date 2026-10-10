@@ -87,9 +87,9 @@ uncertified.  At the end of every round the judge builds three frames by itself 
 looks at itself:
 
   the synthetic flag     → must say VERDE
-  the full black         → must say ROSSO with the mark FOTOGRAMMA NERO
-  the uniform grey       → must say ROSSO with the mark SCENA NON RICONOSCIUTA
-                            (⛔ and **not** FOTOGRAMMA NERO: if a judge called
+  the full black         → must say ROSSO with the mark BLACK FRAME
+  the uniform grey       → must say ROSSO with the mark SCENE NOT RECOGNISED
+                            (⛔ and **not** BLACK FRAME: if a judge called
                              a grey black, its worst diagnosis would be
                              wrong precisely in the case where it is needed)
 
@@ -182,8 +182,8 @@ BYTE_PER_PIXEL = 4
 #    black (`STUDI.md` §gnome §3.1, test M9 of §13).  It is the fault this sub-phase
 #    exists to see, and on `primo` it shows earlier than elsewhere.
 MARCHE_ROSSE = {
-    "primo":  {"FOTOGRAMMA NERO", "BYTE NON TORNANO",
-               "MISURA DIVERSA DA QUELLA CHIESTA", "FILE ASSENTE"},
+    "primo":  {"BLACK FRAME", "BYTES DO NOT ADD UP",
+               "SIZE DIFFERENT FROM THE ONE REQUESTED", "FILE MISSING"},
     # On `regime` the scene is declared alive: there everything counts.
     "regime": None,   # None = all
 }
@@ -266,7 +266,7 @@ def media_e_scarto(valori):
 def controlla_nero(fg, rilievi, misure):
     punti = campiona_griglia(fg)
     if not punti:
-        rilievi.append(("BYTE NON TORNANO",
+        rilievi.append(("BYTES DO NOT ADD UP",
                         "the grid did not find even one readable pixel: "
                         "stride or height do not match the bytes of the file"))
         return
@@ -279,7 +279,7 @@ def controlla_nero(fg, rilievi, misure):
     misure["punti_campionati"] = len(punti)
 
     if media <= SOGLIE["nero_luma_media"] and massima <= SOGLIE["nero_luma_massima"]:
-        rilievi.append(("FOTOGRAMMA NERO",
+        rilievi.append(("BLACK FRAME",
                         "average luma %.2f (threshold %.1f) and maximum %.2f (threshold %.1f) "
                         "over %d points: the frame is valid and contains nothing. "
                         "It is the worst fault of F2.2 — STUDI.md §gnome §3.1, alive, "
@@ -288,7 +288,7 @@ def controlla_nero(fg, rilievi, misure):
                            SOGLIE["nero_luma_massima"], len(punti))))
         return
     if scarto <= SOGLIE["uniforme_scarto"]:
-        rilievi.append(("FOTOGRAMMA UNIFORME",
+        rilievi.append(("UNIFORM FRAME",
                         "luma deviation %.2f (threshold %.1f) over %d points: a flat "
                         "tint, not black. ⚠ It is not «black», and it is a different diagnosis: "
                         "a buffer never painted, or filled with grey"
@@ -421,18 +421,18 @@ def controlla_byte(fg, atteso_larghezza, atteso_altezza, rilievi, misure):
     misure["stride_minimo_larghezza_per_4"] = minimo
 
     if fg.stride < minimo:
-        rilievi.append(("BYTE NON TORNANO",
+        rilievi.append(("BYTES DO NOT ADD UP",
                         "declared stride %d, but at least %d bytes are needed for a row of "
                         "%d pixels at 32 bits" % (fg.stride, minimo, fg.larghezza)))
     if fg.byte < atteso:
-        rilievi.append(("BYTE NON TORNANO",
+        rilievi.append(("BYTES DO NOT ADD UP",
                         "the file has %d bytes, %d are needed (stride %d × height %d): "
                         "the frame is TRUNCATED" % (fg.byte, atteso, fg.stride, fg.altezza)))
     elif fg.byte > atteso:
         misure["byte_in_piu"] = fg.byte - atteso
 
     if atteso_larghezza and (fg.larghezza != atteso_larghezza or fg.altezza != atteso_altezza):
-        rilievi.append(("MISURA DIVERSA DA QUELLA CHIESTA",
+        rilievi.append(("SIZE DIFFERENT FROM THE ONE REQUESTED",
                         "requested %d×%d, negotiated %d×%d. ⛔ On Mutter it is a fault: the "
                         "virtual monitor is requested and it makes it of the requested size "
                         "(cattura.h, `misura_negoziabile` FALSE). On KWin it would be the "
@@ -475,7 +475,7 @@ def controlla_firma(fg, rilievi, misure):
     bande = leggi_bande(fg)
     misure["bande"] = bande
     if any(b["campioni"] == 0 for b in bande):
-        rilievi.append(("SCENA NON RICONOSCIUTA",
+        rilievi.append(("SCENE NOT RECOGNISED",
                         "a band has not even one sample: the signature row cannot be read"))
         return
 
@@ -510,7 +510,7 @@ def controlla_firma(fg, rilievi, misure):
                           % ([(i, i + 1) for i in non_cala], salti, SOGLIE["salto_luma"]))
         if sbagliate:
             motivi.append("F3 — channel signature: %s" % sbagliate)
-        rilievi.append(("SCENA NON RICONOSCIUTA",
+        rilievi.append(("SCENE NOT RECOGNISED",
                         "the frame is not black but it is not the declared «bandiera» scene. "
                         + " · ".join(motivi)))
 
@@ -533,7 +533,7 @@ def controlla_cambiato(a, b, rilievi, misure):
     misure["punti_diversi_fra_primo_e_regime"] = diversi
     misure["frazione_diversa"] = round(frazione, 4)
     if frazione < SOGLIE["cambiato_frazione"]:
-        rilievi.append(("IL BUFFER NON E' CAMBIATO",
+        rilievi.append(("THE BUFFER DID NOT CHANGE",
                         "between `primo` and `regime` only %d points out of %d differ (%.2f %%, "
                         "threshold %.2f %%): the producer might have given us back the same "
                         "buffer, and an old screen looks the same as a new one"
@@ -547,7 +547,7 @@ def giudica_uno(percorso, larghezza, altezza, stride, colore, scena,
                 chiesto_larghezza, chiesto_altezza):
     rilievi, misure = [], {}
     if not os.path.exists(percorso):
-        return [("FILE ASSENTE", "there is no file to judge: %s" % percorso)], misure, None
+        return [("FILE MISSING", "there is no file to judge: %s" % percorso)], misure, None
     fg = Fotogramma(percorso, larghezza, altezza, stride, colore)
     controlla_byte(fg, chiesto_larghezza, chiesto_altezza, rilievi, misure)
     misura_profondita(fg, misure)
@@ -558,7 +558,7 @@ def giudica_uno(percorso, larghezza, altezza, stride, colore, scena,
     #    on a black one it would fail too, and three marks for a single cause make
     #    what is one defect look like three.
     marche = [m for m, _ in rilievi]
-    if scena == "bandiera" and "FOTOGRAMMA NERO" not in marche:
+    if scena == "bandiera" and "BLACK FRAME" not in marche:
         controlla_firma(fg, rilievi, misure)
     elif scena != "bandiera":
         misure["firma"] = "not checked: scene «%s», no signature declared" % scena
@@ -601,17 +601,17 @@ def controllo_positivo(cartella, righe):
     S = L * BYTE_PER_PIXEL
     #  name                what       REQUIRED marks          FORBIDDEN marks
     prove = [
-        ("synthetic flag",     "bandiera", [],                        ["FOTOGRAMMA NERO",
-                                                                       "SCENA NON RICONOSCIUTA",
-                                                                       "FOTOGRAMMA UNIFORME",
-                                                                       "BYTE NON TORNANO"]),
-        ("full black",         "nero",     ["FOTOGRAMMA NERO"],       []),
+        ("synthetic flag",     "bandiera", [],                        ["BLACK FRAME",
+                                                                       "SCENE NOT RECOGNISED",
+                                                                       "UNIFORM FRAME",
+                                                                       "BYTES DO NOT ADD UP"]),
+        ("full black",         "nero",     ["BLACK FRAME"],           []),
         # ⛔ THE TEST THAT COUNTS DOUBLE, and the «forbidden» column is the half that
         #    counts: a judge that called a grey BLACK would get its
         #    worst diagnosis wrong precisely in the case where it is needed.  Requiring only
         #    «it says something red» would not tell it apart.
-        ("uniform grey",       "grigio",   ["SCENA NON RICONOSCIUTA",
-                                            "FOTOGRAMMA UNIFORME"],   ["FOTOGRAMMA NERO"]),
+        ("uniform grey",       "grigio",   ["SCENE NOT RECOGNISED",
+                                            "UNIFORM FRAME"],       ["BLACK FRAME"]),
     ]
     tutto_bene = True
     for nome, che, pretese, vietate in prove:
@@ -682,22 +682,22 @@ def main():
     print("   producer: %s (exit %s)" % (man.get("esito"), man.get("uscita")))
 
     # ⛔ ZERO IS NOT FAILURE, and here is the point where they part.
-    if man.get("uscita") == 3 or man.get("esito") == "ZERO FOTOGRAMMI":
+    if man.get("uscita") == 3 or man.get("esito") in ("ZERO FRAMES", "ZERO FOTOGRAMMI"):
         print("%s--%s  ZERO FRAMES: there is nothing to judge, and it is not a red.\n"
               "      The stream was active for the whole take and the desktop did not\n"
               "      change: on Mutter it is the declared behaviour (LEZIONI.md §4\n"
               "      trap 8), not a fault. ⚠ But with a scene declared ALIVE it is\n"
               "      heavy information: it means the scene was not painting."
               % (GIALLO, GRIGIO))
-        verdetto["verdetto"] = "ZERO FOTOGRAMMI"
+        verdetto["verdetto"] = "ZERO FRAMES"
         codice = 3
         rilievi_tutti = []
-    elif str(man.get("esito", "")).startswith("TIPO DICHIARATO"):
+    elif str(man.get("esito", "")).startswith(("TYPE DECLARED", "TIPO DICHIARATO")):
         print("%s--%s  DMA-BUF road: the buffer type is declared, the pixels are NOT\n"
               "      read from here (the descriptor lives on the card). This round\n"
               "      answers «what type is the buffer», not «what is inside»."
               % (GIALLO, GRIGIO))
-        verdetto["verdetto"] = "SOLO IL TIPO"
+        verdetto["verdetto"] = "ONLY THE TYPE"
         codice = 3
         rilievi_tutti = []
     else:
@@ -759,7 +759,7 @@ def main():
                 verdetto["zero_legittimo_confermato"] = True
                 continue
             if f and q == "regime" and o.scena == "fermo":
-                rilievi_tutti.append((q, "QUALCOSA SI MUOVEVA E NON L'ABBIAMO DICHIARATO",
+                rilievi_tutti.append((q, "SOMETHING WAS MOVING AND WE DID NOT DECLARE IT",
                                       "on the «fermo» scene no steady-state "
                                       "frame should have arrived, and one did: on the "
                                       "screen something moves that the bench does not know, "
@@ -778,7 +778,7 @@ def main():
                 # It is form E8: silence mistaken for zero.  The frame
                 # that is missing is the one that ANSWERS the question of F2.2 — and
                 # without it there is no green to give.
-                rilievi_tutti.append((q, "IL FOTOGRAMMA MANCA",
+                rilievi_tutti.append((q, "THE FRAME IS MISSING",
                                       "the producer did not take «%s». If the "
                                       "«regime» is missing, there is no frame with the scene "
                                       "inside: no green is given" % q))
@@ -875,9 +875,9 @@ def main():
         #    is a frame with PARTIAL damage nevertheless WHOLE?
         reg = man.get("regime") or {}
         if reg.get("danno") == "parziale":
-            firma_ok = not any(q == "regime" and m == "SCENA NON RICONOSCIUTA"
+            firma_ok = not any(q == "regime" and m == "SCENE NOT RECOGNISED"
                                for q, m, _ in rilievi_tutti)
-            nero = any(q == "regime" and m == "FOTOGRAMMA NERO" for q, m, _ in rilievi_tutti)
+            nero = any(q == "regime" and m == "BLACK FRAME" for q, m, _ in rilievi_tutti)
             verdetto["danno_parziale_ma_intero"] = bool(firma_ok and not nero)
             print("\n   ⭐ the steady-state frame carries PARTIAL damage and the scene %s"
                   % ("IS SEEN WHOLE ⇒ the buffer is whole (STUDI.md §gnome §8.1: blit of the whole "
@@ -904,7 +904,7 @@ def main():
               "   The verdict on the real frame is NOT issued — a tool that cannot\n"
               "   find what is surely there is not clean, it is uncertified\n"
               "   (LEZIONI.md §1.9, second rule)." % (ROSSO, GRIGIO))
-        verdetto["verdetto"] = "GIUDICE NON CERTIFICATO"
+        verdetto["verdetto"] = "JUDGE NOT CERTIFIED"
         codice = 2
 
     if o.json:

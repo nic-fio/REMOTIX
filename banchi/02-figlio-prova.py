@@ -622,9 +622,9 @@ def caso_senza_palco(a, reg, guai):
     else:
         ko("⛔ the child did not declare the absence of the bus")
         guai.append("senza-palco: absence not declared")
-    if "NON entra in deposito" in testo:
-        ok("⭐ and had it delivered, someone else's store would have "
-           "refused it (the guard of `main.c`)")
+    # ⚠ the old check «NON entra in deposito» (the store guard of `main.c`) is
+    #   gone: commit 92105b5 (13 Aug 2026) removed the process store altogether
+    #   (one stream per frame, per session), so there is no guard line to look for.
 
 def caso_guasto(a, reg, guai, cieco):
     nome = "guasto-cieco" if cieco else "guasto-uid"

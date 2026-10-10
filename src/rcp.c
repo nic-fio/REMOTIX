@@ -4630,8 +4630,8 @@ static void rilascia_al_distacco(rcp_sessione *s, const char *perche)
 	if (quanti == RCP_RILASCIO_SENZA_CONTO) {
 		reg(s, "⭐ §7.3 — RELEASE ON DETACH (%s): request SENT to the stage. "
 		       " ⚠ This line does NOT carry the number, because the one who knows "
-		       "it is the child: the real count is the line «rilascio al distacco: "
-		       "N fra tasti e pulsanti», a few milliseconds further down",
+		       "it is the child: the real count is the line «release at detach: "
+		       "N keys and buttons», a few milliseconds further down",
 		    perche);
 		return;
 	}
@@ -6733,7 +6733,7 @@ static int accumula(rcp_sessione *s, const uint8_t *dati, size_t n)
  *
  * ⭐ And it returns `false` when the body is SHORTER than the fields: that case
  *    it leaves to `tratta_*()`, which can say which field was missing.  §3.1
- *    point 1 wants «what» was not understood, and «CIAO senza versione» is worth
+ *    point 1 wants «what» was not understood, and «CIAO without version» is worth
  *    more than «the length does not add up». */
 static bool misura_campi(uint16_t tipo, const uint8_t *corpo, uint32_t lung,
                          size_t *quanti)

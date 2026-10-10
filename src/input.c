@@ -1401,7 +1401,7 @@ static void guarisci(Input *in)
 	 *     `drop_device()` has just sent the seat the release of everything
 	 *     that was pressed.  ⚠ Keeping them marked would make the detach
 	 *     release things nobody holds down, and would keep on forever the
-	 *     «NON PARTE» line on a channel that instead works.
+	 *     «DOES NOT LEAVE» line on a channel that instead works.
 	 */
 	memset(in->tasti, 0, sizeof in->tasti);
 	memset(in->bottoni, 0, sizeof in->bottoni);
