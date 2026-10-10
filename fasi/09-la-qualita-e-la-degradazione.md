@@ -4099,176 +4099,176 @@ where ssh passes, and that one is not touched. ssh is TCP on 22 and is not filte
 ⚠ And the fault **disarms itself** after N seconds, with a detached guardian: the same discipline
 already used on `lo`.
 
-## 19.1 ⭐⭐⭐ LA SCALA, E VIENE DAI SUOI OCCHI
+## 19.1 ⭐⭐⭐ THE LADDER, AND IT COMES FROM HIS EYES
 
-| perdita **misurata sul filo** | il suo giudizio |
+| loss **measured on the wire** | his judgement |
 |---|---|
 | 1 % | *«mi sembra ok»* |
-| **5,6 %** | *«è tutto fluido»* |
+| **5.6 %** | *«è tutto fluido»* |
 | ⛔ **10 %** | *«adesso si è bloccato»* |
 
-> ⇒ **Il confine dell'uso reale sta fra il 5 e il 10 per cento di perdita.**
+> ⇒ **The border of real use lies between 5 and 10 per cent loss.**
 
-⛔⛔ **E questo CONTRADDICE il banco, di un ordine di grandezza.** §17.11 mette il dirupo dentro il
-primo punto percentuale: la spirale di chiavi parte allo **0,10 %** e il ritmo casca sotto il
-pavimento allo **0,53-0,75 %**. `[M]` Sul percorso vero, al **5,6 %** — cioè da **sette a
-cinquantasei volte** più perdita — l'utente non se ne accorge.
+⛔⛔ **And this CONTRADICTS the bench, by an order of magnitude.** §17.11 puts the cliff inside the
+first percentage point: the keyframe spiral starts at **0.10 %** and the rate falls below the
+floor at **0.53-0.75 %**. `[M]` On the real path, at **5.6 %** — that is from **seven to
+fifty-six times** more loss — the user does not notice.
 
-## 19.2 ⛔ E LA PROVA È STATA RIFATTA DUE VOLTE, PERCHÉ LA PRIMA NON MORDEVA
+## 19.2 ⛔ AND THE TEST WAS REDONE TWICE, BECAUSE THE FIRST DID NOT BITE
 
-⚠ **Va scritto perché è un errore di metodo mio, ed è il terzo della stessa famiglia** (dopo il
-video pieno di grana di §16.4 e i nove «attesi» mai confrontati di R13): un giudizio su una prova che
-non sollecita non è un giudizio.
+⚠ **It must be written because it is an error of method of mine, and it is the third of the same family** (after the
+video full of grain of §16.4 and the nine «expected» never compared of R13): a judgement on a test that
+does not stress is not a judgement.
 
-`[M]` **Primo giro, e non valeva**: perdita all'1 % accesa e verificata (il server la vedeva:
-*«la linea perde»*, 27 pacchetti dichiarati persi, 22 datagram audio perduti), **zero fotogrammi
-abbandonati su 920**, **due chiavi in tutto**. ⇒ Nessuna spirale — ma la ragione era nel numero che
-non stavo guardando: ⛔ **i suoi fotogrammi pesavano 242-283 byte.** Duecento byte. Il banco crollava
-su una scena che riempiva il filo con 3 Mbit/s; qui la perdita **non aveva niente da rompere**.
+`[M]` **First round, and it did not count**: loss at 1 % on and verified (the server saw it:
+*«the line is losing»*, 27 packets declared lost, 22 audio datagrams lost), **zero frames
+abandoned out of 920**, **two keyframes in all**. ⇒ No spiral — but the reason was in the number I
+was not looking at: ⛔ **his frames weighed 242-283 bytes.** Two hundred bytes. The bench collapsed
+on a scene that filled the wire with 3 Mbit/s; here the loss **had nothing to break**.
 
-`[M]` **Secondo tentativo, il trascinamento di una finestra**: fotogrammi fino a **3 801 byte**,
-**zero chiavi** su 400, **2 abbandoni su 2 181**. ⇒ Ancora insufficiente: il banco lavorava su
-fotogrammi **sette volte più grossi**.
+`[M]` **Second attempt, dragging a window**: frames up to **3 801 bytes**,
+**zero keyframes** out of 400, **2 abandons out of 2 181**. ⇒ Still not enough: the bench worked on
+frames **seven times larger**.
 
-`[M]` **E al 5 % il primo giudizio è stato RITIRATO prima di scriverlo**, contando i pacchetti
-passati davvero dentro il guasto: **221, con 18 buttati**. ⛔ Diciotto pacchetti non sono una prova.
-⇒ Rifatto con **trenta secondi senza mai fermarsi**, e allora sì: **7 596 pacchetti nel guasto, 423
-buttati = 5,6 % reale**.
+`[M]` **And at 5 % the first judgement was WITHDRAWN before writing it**, by counting the packets
+that really went through the fault: **221, with 18 thrown away**. ⛔ Eighteen packets are not a test.
+⇒ Redone with **thirty seconds without ever stopping**, and then yes: **7 596 packets in the fault, 423
+thrown away = 5.6 % real**.
 
-⭐ **Il numero che rende valido il giro buono** — e che mancava ai due precedenti: fotogrammi fino a
-**77 304 byte**, cioè ⭐ **tre volte più grossi di quelli su cui il banco crollava**. Con quelli:
-**chiavi 3,8 %** (23 su 600), **abbandoni 11 su 3 017** (0,36 %), e il giudizio *«è tutto fluido»*.
+⭐ **The number that makes the good round valid** — and that the two previous ones lacked: frames up to
+**77 304 bytes**, that is ⭐ **three times larger than those on which the bench collapsed**. With those:
+**keyframes 3.8 %** (23 out of 600), **abandons 11 out of 3 017** (0.36 %), and the judgement *«è tutto fluido»*.
 
-⛔ **La lezione, e vale oltre questa fase**: il gradino non lo decide la perdita, lo decide **quanto
-la scena chiede**. Il banco produce una sollecitazione che pretende **quaranta fotogrammi al secondo
-di cambiamento continuo**; un desktop vero — anche mentre si trascina una finestra — cambia **a
-strappi**. ⇒ **Non è la stessa sollecitazione**, e le previsioni del banco **non si applicano al
-prodotto così com'è usato**.
+⛔ **The lesson, and it holds beyond this phase**: the step is not decided by the loss, it is decided by **how much
+the scene asks**. The bench produces a stress that demands **forty frames per second
+of continuous change**; a real desktop — even while dragging a window — changes **in
+jerks**. ⇒ **It is not the same stress**, and the bench's predictions **do not apply to the
+product as it is used**.
 
-## 19.3 ⭐⭐ IL BLOCCO AL 10 %, COLTO NELL'ISTANTE — e il meccanismo è quello di §17.1-ter
+## 19.3 ⭐⭐ THE FREEZE AT 10 %, CAUGHT IN THE INSTANT — and the mechanism is the one of §17.1-ter
 
-`[M]` Nel momento in cui l'utente ha detto *«si è bloccato»*, il registro del server diceva:
+`[M]` At the moment the user said *«si è bloccato»*, the server's log said:
 
 | | |
 |---|---|
-| **`cwnd = 2 888 byte`** | ⛔ la finestra di congestione **collassata a due pacchetti** — dieci volte meno del minuto prima |
-| `cwnd_left = 2 888` · **in volo = 0** | ⛔⭐ **non è che il filo sia pieno: non c'è NIENTE in volo.** Il server *potrebbe* mandare, e non manda |
-| **27 fotogrammi `NON SPEDITO`** | e il contatore dei consegnati **fermo a 3 117** su tre letture di fila |
-| chiavi | salite da 4 a **16** |
+| **`cwnd = 2 888 byte`** | ⛔ the congestion window **collapsed to two packets** — ten times less than the minute before |
+| `cwnd_left = 2 888` · **in flight = 0** | ⛔⭐ **it is not that the wire is full: there is NOTHING in flight.** The server *could* send, and does not |
+| **27 `NON SPEDITO` frames** | and the delivered counter **stuck at 3 117** over three readings in a row |
+| keyframes | risen from 4 to **16** |
 | `persi=664` · `dgram_persi=493` | `giudizio=⛔ la linea perde` |
 
-⇒ ⭐ **È esattamente la catena di §17.1-ter, vista sul percorso vero**: la finestra si chiude → i
-fotogrammi non partono → si chiedono chiavi → lo schermo si ferma. Il meccanismo del banco **è
-giusto**; sbagliato era **dove** lo collocava.
+⇒ ⭐ **It is exactly the chain of §17.1-ter, seen on the real path**: the window closes → the
+frames do not leave → keyframes are requested → the screen stops. The bench's mechanism **is
+right**; what was wrong was **where** it placed it.
 
-⭐⭐ **E `cwnd_left = cwnd` con «in volo = 0» è la firma che assolve il filo e accusa noi**: non è
-congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-forte` (§17.9-quater,
-`cwnd` mediana 8 948 B, `cwnd_left` mediana 0) su una linea vera.
+⭐⭐ **And `cwnd_left = cwnd` with «in flight = 0» is the signature that acquits the wire and accuses us**: it is not
+observed congestion, it is the pacer refusing. It is the same picture as `raffica-forte` (§17.9-quater,
+`cwnd` median 8 948 B, `cwnd_left` median 0) on a real line.
 
-## 19.4 ⚠ E DUE COSE CHE QUESTA SESSIONE NON HA POTUTO PROVARE
+## 19.4 ⚠ AND TWO THINGS THIS SESSION COULD NOT TEST
 
-1. ⛔⛔ ~~**Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**~~
-   → **ERRATA, e la correzione è in §20.1.** `[M]` `mpv` **arriva eccome** — 241 fotogrammi in 8 s
-   su un banco controllato. Quando l'ho giudicato *«non arriva»* ⛔ **non c'era nessun cliente
-   attaccato**: il server non spediva, e il contatore era fermo **per costruzione**. I «167 byte»
-   erano gli ultimi valori di prima.
-   ⚠ **Ho giudicato con un metro che in quella scena non poteva dire niente**, ed è la stessa ferita
-   di §19.2 — la terza volta in due giorni. **Firefox** invece è rotto davvero, ma `[M]` **anche
-   fuori da REMOTIX**: non è nostro (§20.1).
-2. ⭐ **Le cure sono state provate a occhio** ⇒ **§19.6**, e il verdetto è che **fanno quel che
-   promettevano e non basta**.
+1. ⛔⛔ ~~**The applications the coordinator launches do not reach the user's screen.**~~
+   → **WRONG, and the correction is in §20.1.** `[M]` `mpv` **does arrive** — 241 frames in 8 s
+   on a controlled bench. When I judged it *«does not arrive»* ⛔ **there was no client
+   attached**: the server was not sending, and the counter was stuck **by construction**. The «167 bytes»
+   were the last values from before.
+   ⚠ **I judged with a yardstick that in that scene could say nothing**, and it is the same wound
+   as §19.2 — the third time in two days. **Firefox** instead is really broken, but `[M]` **also
+   outside REMOTIX**: it is not ours (§20.1).
+2. ⭐ **The cures were tested by eye** ⇒ **§19.6**, and the verdict is that **they do what they
+   promised and it is not enough**.
 
-## 19.6 ⭐⭐⭐ LE CURE, GUARDATE — **fanno quel che promettevano, e non basta**
+## 19.6 ⭐⭐⭐ THE CURES, LOOKED AT — **they do what they promised, and it is not enough**
 
-`[M]` 24 agosto, stessa sessione, stesso binario, **stesso 10 % di perdita**, e a cambiare **solo
-gli interruttori del server** — verificati dalle righe d'avvio, non dalla riga di comando: soglia
-della coda **100 ms**, regolatore del ritmo **ACCESO**, ⛔ **linea morta e sfratto SPENTI di
-proposito** (se il filo cadesse non si saprebbe se è merito o colpa delle cure).
+`[M]` 24 Aug, same session, same binary, **same 10 % loss**, and changing **only
+the server's switches** — verified from the startup lines, not from the command line: queue
+threshold **100 ms**, rate regulator **ON**, ⛔ **dead line and eviction OFF on
+purpose** (if the wire dropped one would not know whether it was thanks to or because of the cures).
 
-Perdita **misurata sul filo**: 8 597 pacchetti passati, **905 buttati = 10,5 %**.
+Loss **measured on the wire**: 8 597 packets passed, **905 thrown away = 10.5 %**.
 
-| | **senza** cure | **con** le cure |
+| | **without** cures | **with** the cures |
 |---|---|---|
-| fotogrammi consegnati | ⛔ **fermi** — stesso numero su tre letture di fila | ⭐ **continuano**: 1533 → 1552 → 1557 |
-| fotogrammi mai spediti | **27**, in una raffica | ⭐ **1** |
+| frames delivered | ⛔ **stuck** — same number over three readings in a row | ⭐ **they continue**: 1533 → 1552 → 1557 |
+| frames never sent | **27**, in one burst | ⭐ **1** |
 | `cwnd` | 2 888 B | 3 652 B |
-| chiavi | 16 | 17 |
-| **il giudizio dell'utente** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
+| keyframes | 16 | 17 |
+| **the user's judgement** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
 
-⭐ **Le cure fanno esattamente quel che il banco prometteva**: senza, la consegna si **ferma**; con,
-va avanti a **cinque-venti fotogrammi al secondo**, e i fotogrammi mai spediti passano da 27 a **1**.
-Il meccanismo è curato.
+⭐ **The cures do exactly what the bench promised**: without them, delivery **stops**; with them,
+it goes on at **five to twenty frames per second**, and the frames never sent go from 27 to **1**.
+The mechanism is cured.
 
-⛔⛔ **E non basta.** Per chi guarda, cinque fotogrammi al secondo con quel ritardo **sono un blocco
-lo stesso**. ⇒ Il numero migliora e **l'esperienza no**, ed è precisamente la distinzione che questa
-fase esisteva per proteggere (v1: *«siamo tornati indietro»* su numeri che erano migliorati).
+⛔⛔ **And it is not enough.** For whoever watches, five frames per second with that delay **are a freeze
+all the same**. ⇒ The number improves and **the experience does not**, and it is precisely the distinction this
+phase existed to protect (v1: *«siamo tornati indietro»* on numbers that had improved).
 
-⭐⭐⭐ **E questo è l'argomento più forte a favore di §3.1-quater**, la decisione presa dall'utente
-la notte prima **senza avere questo numero**: al 10 % di perdita **non esiste una versione buona** —
-o lo schermo si ferma, o si muove in un modo che l'utente chiama **comunque bloccato**. ⇒ *«Nessuno
-dei due va servito»* non era una preferenza: era la lettura giusta, e adesso ha la prova.
+⭐⭐⭐ **And this is the strongest argument in favour of §3.1-quater**, the decision taken by the user
+the night before **without having this number**: at 10 % loss **a good version does not exist** —
+either the screen stops, or it moves in a way the user calls **frozen anyway**. ⇒ *«Nessuno
+dei due va servito»* was not a preference: it was the right reading, and now it has the proof.
 
-**La scala completa, tutta dai suoi occhi:**
+**The complete ladder, all from his eyes:**
 
-| perdita reale | **senza** cure | **con** cure |
+| real loss | **without** cures | **with** cures |
 |---|---|---|
 | 1 % | *«mi sembra ok»* | — |
-| 5,6 % | *«è tutto fluido»* | — |
+| 5.6 % | *«è tutto fluido»* | — |
 | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 
-### 19.6-bis ⚠ E DUE COSE VISTE DI PASSAGGIO, che non erano nel programma
+### 19.6-bis ⚠ AND TWO THINGS SEEN IN PASSING, which were not in the programme
 
-1. ⭐ **La regola dei sessanta minuti ha scattato su una sessione vera, ed è la prima volta.**
-   `[M]` *«prova2 non tocca niente da 3 600 012 ms (tetto 3 600 000) — CHIUDO la sessione grafica»*
-   (`DECISIONI.md` §4.8). Ha chiesto l'uscita gentilmente e, **dopo dieci secondi**, l'ha chiusa a
-   forza (`Logout 1` → `Logout 2`). ⚠ E ha prodotto un falso allarme: l'utente ha visto lo schermo
-   fermo e ha detto *«il server è ancora bloccato»* — ⛔ **non lo era**: `NRestarts=0`, acceso da
-   un'ora e mezza, e il solo core presente era di **ieri**.
-2. ⛔⭐ **«Sessione viva e muta» è indistinguibile da «programma morto», e l'utente l'ha dimostrato
-   di persona** — due volte, dicendo *«si è bloccato»* e *«il server è ancora bloccato»* di un
-   server che stava benissimo. ⇒ È lo stesso fatto di §17.1-quater e §17.9-quater visto **dall'altro
-   lato**: là il banco chiamava «stacco» una consegna ferma, qui l'utente chiama «server bloccato»
-   la stessa cosa. ⭐ **Ed è la ragione per cui la cura della linea morta serve**: non perché
-   migliori l'immagine — non può — ma perché **dice la verità** invece di lasciare uno schermo fermo
-   che sembra un guasto del programma.
-   ⚠ E la sessione **si riprende da sé**: `[M]` tolta la perdita, `cwnd` risale da 2 888 a
-   **46 412 byte** (sedici volte) senza che nessuno tocchi niente.
+1. ⭐ **The sixty-minute rule fired on a real session, and it is the first time.**
+   `[M]` *«prova2 has not touched anything for 3 600 012 ms (cap 3 600 000) — I CLOSE the graphical session»*
+   (`DECISIONI.md` §4.8). It asked for the logout politely and, **after ten seconds**, closed it by
+   force (`Logout 1` → `Logout 2`). ⚠ And it produced a false alarm: the user saw the screen
+   still and said *«il server è ancora bloccato»* — ⛔ **it was not**: `NRestarts=0`, up for
+   an hour and a half, and the only core present was from **yesterday**.
+2. ⛔⭐ **«Live and mute session» is indistinguishable from «dead program», and the user proved it
+   in person** — twice, saying *«si è bloccato»* and *«il server è ancora bloccato»* of a
+   server that was perfectly fine. ⇒ It is the same fact as §17.1-quater and §17.9-quater seen **from the other
+   side**: there the bench called «detach» a stopped delivery, here the user calls «server frozen»
+   the same thing. ⭐ **And it is the reason why the dead line cure is needed**: not because it
+   improves the image — it cannot — but because **it tells the truth** instead of leaving a still screen
+   that looks like a fault of the program.
+   ⚠ And the session **recovers by itself**: `[M]` with the loss removed, `cwnd` climbs back from 2 888 to
+   **46 412 bytes** (sixteen times) without anybody touching anything.
 
-## 19.5 ⭐ Che cosa questa sezione cambia nelle decisioni
+## 19.5 ⭐ What this section changes in the decisions
 
-1. ⭐⭐ **Le cure servono, ma non per il lavoro quotidiano dell'utente.** `[M]` Fino al 5,6 % di
-   perdita il prodotto **così com'è** è giudicato fluido. ⇒ Le cure servono al **caso a raffiche** e a
-   **chi guarda video**, non a chi lavora. ⚠ È un buon motivo per accenderle **con calma**, e non di
-   corsa — e I6 resta rispettata senza costi;
-1-bis. ⛔ **E al 10 % non salvano l'esperienza** (§19.6): curano il meccanismo — consegna che continua
-   invece di fermarsi, fotogrammi mai spediti da 27 a 1 — ma il giudizio dell'utente **non cambia**.
-   ⇒ Sopra una certa perdita **la scala di degradazione non ha più niente da offrire**, e l'unica
-   risposta onesta è §3.1-quater: dichiarare la linea morta;
-2. ⛔ **Il pavimento di banda (§3.1-sexies, 30 Mbit/s) non c'entra niente con tutto questo.** `[M]`
-   Nel giro buono i fotogrammi grossi arrivavano a 77 KB e la linea non era mai satura: quel che si
-   chiudeva era la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma
-   più forte**: la banda è una premessa, la grandezza che decide è la **qualità** del filo;
-3. ⚠ **e le soglie del banco vanno lette per quel che sono**: `[M]` misure su una sollecitazione
-   **dieci volte più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va
-   scritto accanto a ogni numero di §17 che qualcuno potrebbe prendere per una promessa.
+1. ⭐⭐ **The cures are needed, but not for the user's daily work.** `[M]` Up to 5.6 %
+   loss the product **as it is** is judged smooth. ⇒ The cures are needed for the **burst case** and for
+   **whoever watches video**, not for whoever works. ⚠ It is a good reason to switch them on **calmly**, and not in a
+   rush — and I6 stays respected at no cost;
+1-bis. ⛔ **And at 10 % they do not save the experience** (§19.6): they cure the mechanism — delivery that continues
+   instead of stopping, frames never sent from 27 to 1 — but the user's judgement **does not change**.
+   ⇒ Above a certain loss **the degradation ladder has nothing more to offer**, and the only
+   honest answer is §3.1-quater: declare the line dead;
+2. ⛔ **The bandwidth floor (§3.1-sexies, 30 Mbit/s) has nothing to do with all this.** `[M]`
+   In the good round the large frames reached 77 KB and the line was never saturated: what
+   closed was the **congestion window**, not the bandwidth. ⇒ ⭐ **§3.1-ter receives its strongest
+   confirmation**: bandwidth is a premise, the quantity that decides is the **quality** of the wire;
+3. ⚠ **and the bench thresholds must be read for what they are**: `[M]` measurements on a stress
+   **ten times harsher** than real use. They are not wrong — they are a **worst case**, and it must be
+   written beside every number of §17 that someone might take for a promise.
 
 ---
 
-# §20 · ⭐⭐⭐ I PUNTI APERTI, CHIUSI — *24 agosto 2026*
+# §20 · ⭐⭐⭐ THE OPEN POINTS, CLOSED — *24 Aug 2026*
 
-⛔ **E due dei quattro hanno demolito una premessa che questo documento dava per buona.** Si scrive
-la correzione, non si liscia.
+⛔ **And two of the four demolished a premise this document took for granted.** The correction is
+written, not smoothed over.
 
-## 20.1 ⛔⛔ «LE APPLICAZIONI NON ARRIVANO SULLO SCHERMO» — **era falso, ed era mio**
+## 20.1 ⛔⛔ «APPLICATIONS DO NOT REACH THE SCREEN» — **it was false, and it was mine**
 
-`banchi/09-b82-mostra.sh` · binario `b86cf6df…` dall'albero di lavoro.
+`banchi/09-b82-mostra.sh` · binary `b86cf6df…` from the working tree.
 
-⭐ **`mpv` arriva eccome.** `[M]` Con **solo** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
-fotogrammi in 8 s, 38 513 byte medi**. Con `systemd-run --user` (la strada del menu): **317**. E
-`WAYLAND_DISPLAY` **c'era già** nell'ambiente del gestore d'utente — ce lo scrive GNOME.
+⭐ **`mpv` does arrive.** `[M]` With **only** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
+frames in 8 s, 38 513 bytes on average**. With `systemd-run --user` (the menu's route): **317**. And
+`WAYLAND_DISPLAY` **was already there** in the user manager's environment — GNOME writes it there.
 
-⇒ ⛔ **La causa vera del caso di stamattina: non c'era nessuno che guardava.** `[M]` Il registro
-della 7920, minuto per minuto:
+⇒ ⛔ **The real cause of this morning's case: nobody was watching.** `[M]` The 7920 log,
+minute by minute:
 
 ```
 08:33   765 fotogrammi ·  49 battiti rete-quic
@@ -4278,198 +4278,198 @@ della 7920, minuto per minuto:
 poi     NIENTE, solo «il legame regge» ogni minuto
 ```
 
-Senza un cliente attaccato il server **non spedisce**, il contatore è fermo **per costruzione**, e i
-«167 byte» erano gli ultimi valori di prima. ⚠ **Ho giudicato in una scena in cui il metro non
-poteva dire niente** — la terza volta in due giorni (§19.2, §16.4).
+Without an attached client the server **does not send**, the counter is stuck **by construction**, and the
+«167 bytes» were the last values from before. ⚠ **I judged in a scene in which the yardstick could
+say nothing** — the third time in two days (§19.2, §16.4).
 
-**Le tre ipotesi che avevo scritto sono tutte cadute** `[M]`: un solo compositore e un solo
-`wayland-0` (⚠ la data del 23 agosto che avevo letto era quella di `bus`, non del socket); **un
-monitor solo**, `Meta-0` «Virtual remote monitor» 2544×926 scala 1,000; l'ambiente **non** era
-incompleto.
+**The three hypotheses I had written all fell** `[M]`: a single compositor and a single
+`wayland-0` (⚠ the date of 23 Aug I had read was that of `bus`, not of the socket); **a single
+monitor**, `Meta-0` «Virtual remote monitor» 2544×926 scale 1.000; the environment was **not**
+incomplete.
 
-### 20.1-bis ⛔ E ANCHE IL METRO ERA SBAGLIATO — i byte non dicono quel che credevo
+### 20.1-bis ⛔ AND THE YARDSTICK WAS WRONG TOO — bytes do not say what I believed
 
-`[M]` Calibrazione su finestre di 8 s:
+`[M]` Calibration on 8 s windows:
 
-| scena | fotogrammi | byte medi |
+| scene | frames | average bytes |
 |---|---|---|
-| desktop fermo | 0-1 | 238-283 |
-| ⛔ una **bandiera a schermo intero** | **321** | **268** |
+| still desktop | 0-1 | 238-283 |
+| ⛔ a **full-screen flag** | **321** | **268** |
 | `film-grana.webm` | 226 | 18 600 |
 | `duro.mp4` | 240 | 37 081 |
 
-⇒ **Una finestra viva a schermo intero può produrre fotogrammi da 268 byte, cioè quanto un desktop
-fermo.** ⭐ **Il verdetto è il CONTO, non i byte**: i byte dicono *quanto* cambia, il conto dice *se*
-cambia. ⚠ E in §19.2 avevo usato i byte come metro: quel ragionamento regge sul merito (i suoi
-fotogrammi *erano* piccoli) ma il metro giusto era un altro.
+⇒ **A live full-screen window can produce 268-byte frames, that is as much as a still
+desktop.** ⭐ **The verdict is the COUNT, not the bytes**: bytes say *how much* changes, the count says *whether*
+it changes. ⚠ And in §19.2 I had used bytes as the yardstick: that reasoning holds on the merits (his
+frames *were* small) but the right yardstick was another one.
 
-### 20.1-ter ⛔⛔⛔ ~~Firefox è rotto — e non è nostro~~ → **REFUTATA il 25 agosto 2026**
+### 20.1-ter ⛔⛔⛔ ~~Firefox is broken — and it is not ours~~ → **REFUTED on 25 Aug 2026**
 
-> ## ⛔⛔⛔ QUESTA SEZIONE È SBAGLIATA, E LA PROVA CHE LA CHIUDEVA ERA VIZIATA
+> ## ⛔⛔⛔ THIS SECTION IS WRONG, AND THE PROOF THAT CLOSED IT WAS FLAWED
 >
-> *Refutata nella fase 10, `fasi/10-multi-tenant-e-il-budget.md` §5.10.* ⭐ **Firefox non è mai stato
-> rotto su questa macchina.**
+> *Refuted in phase 10, `fasi/10-multi-tenant-e-il-budget.md` §5.10.* ⭐ **Firefox was never
+> broken on this machine.**
 >
-> ⛔ **La causa vera**: `~/.cache` è un **collegamento a `/tmp`** (da `/etc/skel`, immagine base del
-> 30 luglio). Firefox tiene il profilo *locale* sotto `$HOME/.cache/mozilla` = **`/tmp/mozilla`**, e
-> `[M]` **`/tmp/mozilla` appartiene a `prova2`, modo `0700`, creata il 23 agosto alle 08:03** — cioè
-> **prima** di tutte le misure di questa sezione. ⇒ Per ogni altro utente il profilo **non nasce**.
+> ⛔ **The real cause**: `~/.cache` is a **link to `/tmp`** (from `/etc/skel`, base image of
+> 30 Jul). Firefox keeps the *local* profile under `$HOME/.cache/mozilla` = **`/tmp/mozilla`**, and
+> `[M]` **`/tmp/mozilla` belongs to `prova2`, mode `0700`, created on 23 Aug at 08:03** — that is
+> **before** all the measurements of this section. ⇒ For every other user the profile **is not born**.
 >
-> ### ⛔⛔ E il difetto di METODO è nel «controllo che chiude la questione»
+> ### ⛔⛔ And the defect of METHOD is in the «check that closes the question»
 >
-> Diceva: *«`firefox --headless --screenshot` come **`nicfio`** — nessuna sessione REMOTIX, nessun
-> Wayland, nessun monitor — **si pianta uguale**»*.
+> It said: *«`firefox --headless --screenshot` as **`nicfio`** — no REMOTIX session, no
+> Wayland, no monitor — **hangs the same way**»*.
 >
-> ⇒ ⛔ **Ma `nicfio` ha lo STESSO `~/.cache -> /tmp`**, e quindi lo stesso `/tmp/mozilla` di
-> `prova2`. `[M]` Verificato il 25 agosto: `lrwxrwxrwx nicfio -> /tmp`, e dentro
+> ⇒ ⛔ **But `nicfio` has the SAME `~/.cache -> /tmp`**, and therefore the same `/tmp/mozilla` as
+> `prova2`. `[M]` Verified on 25 Aug: `lrwxrwxrwx nicfio -> /tmp`, and inside
 > `drwx------ prova2 prova2`.
 >
-> ⭐⭐ **Il controllo CONDIVIDEVA il fattore che avrebbe dovuto escludere** — e un controllo così non
-> controlla niente: mostra lo stesso guasto per la stessa ragione, e chi lo legge conclude *«allora
-> non è la sessione»* quando invece **non era mai stata in prova la sessione**.
+> ⭐⭐ **The check SHARED the factor it should have excluded** — and such a check does not
+> check anything: it shows the same fault for the same reason, and whoever reads it concludes *«then
+> it is not the session»* when instead **the session had never been under test**.
 >
-> ### ⭐ La rimisura, con la sola cosa cambiata
+> ### ⭐ The remeasurement, with only one thing changed
 >
-> `~/.cache` di `nicfio` rifatta **cartella vera**, e **niente altro** — stesso comando, stessa
-> macchina, stesso Firefox:
+> `nicfio`'s `~/.cache` remade as a **real folder**, and **nothing else** — same command, same
+> machine, same Firefox:
 >
-> | | fase 9, 24 agosto | ⭐ 25 agosto, dopo |
+> | | phase 9, 24 Aug | ⭐ 25 Aug, after |
 > |---|---|---|
-> | `firefox --headless --screenshot` come `nicfio` | ⛔ **si pianta**, ucciso a **60 s**, profilo vuoto | ⭐ **`rc=0`**, e uno scatto da **5,5 MB** |
+> | `firefox --headless --screenshot` as `nicfio` | ⛔ **hangs**, killed at **60 s**, empty profile | ⭐ **`rc=0`**, and a **5.5 MB** screenshot |
 >
-> ⚠ **Restano veri i due indizi in fondo alla sezione** (*«More than 1 GPU vendor detected»*, la
-> Radeon recintata): ⛔ **sono avvertimenti, non la causa** — la stessa riga esce anche adesso, col
-> browser che funziona.
+> ⚠ **The two clues at the bottom of the section remain true** (*«More than 1 GPU vendor detected»*, the
+> fenced-off Radeon): ⛔ **they are warnings, not the cause** — the same line comes out even now, with the
+> browser working.
 >
-> ⭐ **E quel che resta di giusto**: *«il difetto c'è, la diagnosi no»*, scritto qui in fondo il 24
-> agosto. ⇒ **Era la frase esatta**, ed è quella che andava seguita invece di chiudere con un ✅.
+> ⭐ **And what remains right**: *«the defect is there, the diagnosis is not»*, written here at the bottom on 24
+> Aug. ⇒ **It was the exact sentence**, and it is the one that should have been followed instead of closing with a ✅.
 
-### ~~20.1-ter~~ *(il testo originale, conservato)* ✅ Firefox è rotto — **e non è nostro**
+### ~~20.1-ter~~ *(the original text, kept)* ✅ Firefox is broken — **and it is not ours**
 
-`[M]` Firefox `140.14.0esr`: vivo (80 thread, 126 MB), **zero fotogrammi dopo 90 s**, mai attaccato
-al socket Wayland. Fallisce identico da `systemd-run --user`, con `--profile` esplicito, con
+`[M]` Firefox `140.14.0esr`: alive (80 threads, 126 MB), **zero frames after 90 s**, never attached
+to the Wayland socket. It fails identically from `systemd-run --user`, with explicit `--profile`, with
 `MOZ_CRASHREPORTER_DISABLE`, `MOZ_DISABLE_GPU_PROCESS`, `LIBGL_ALWAYS_SOFTWARE`,
-`MOZ_ENABLE_WAYLAND=0`, sandbox spente.
+`MOZ_ENABLE_WAYLAND=0`, sandboxes off.
 
-⭐⭐ **Il controllo che chiude la questione**: `firefox --headless --screenshot` come **`nicfio`** —
-nessuna sessione REMOTIX, nessun Wayland, nessun monitor — **si pianta uguale** e viene ucciso a
-60 s col profilo vuoto. ⇒ **Firefox è rotto su questa macchina per tutti, dentro e fuori REMOTIX.**
-Non è un difetto del prodotto, e §14.7/§16.5 vanno lette così.
+⭐⭐ **The check that closes the question**: `firefox --headless --screenshot` as **`nicfio`** —
+no REMOTIX session, no Wayland, no monitor — **hangs the same way** and is killed at
+60 s with an empty profile. ⇒ **Firefox is broken on this machine for everyone, inside and outside REMOTIX.**
+It is not a defect of the product, and §14.7/§16.5 must be read this way.
 
-⚠ Due indizi per chi lo riprenderà: `[GFX1-]: More than 1 GPU vendor detected via PCI, cannot deduce
-vendor` (Intel `0x8086/0x4680` + AMD `0x1002/0x73bf`), e `/dev/dri/renderD129` è del gruppo
-`remotix-nogpu` — la scheda AMD è recintata **apposta** (§4.6-ter).
-⭐ E il `[M]` del 23 agosto (*«il profilo non viene mai creato in `~/.mozilla/firefox/`»*) guardava
-**il posto sbagliato**: Debian `firefox-esr` usa `~/.mozilla/firefox-esr/`. ⚠ Anche quella resta
-vuota — il difetto c'è, la diagnosi no.
+⚠ Two clues for whoever picks it up again: `[GFX1-]: More than 1 GPU vendor detected via PCI, cannot deduce
+vendor` (Intel `0x8086/0x4680` + AMD `0x1002/0x73bf`), and `/dev/dri/renderD129` belongs to the group
+`remotix-nogpu` — the AMD card is fenced off **on purpose** (§4.6-ter).
+⭐ And the `[M]` of 23 Aug (*«the profile is never created in `~/.mozilla/firefox/`»*) looked at
+**the wrong place**: Debian `firefox-esr` uses `~/.mozilla/firefox-esr/`. ⚠ That one stays
+empty too — the defect is there, the diagnosis is not.
 
-### 20.1-quater ⭐ Lo strumento che mancava — `banchi/09-b82-mostra.sh`
+### 20.1-quater ⭐ The tool that was missing — `banchi/09-b82-mostra.sh`
 
-Lancia un comando dentro la sessione di un utente con `systemd-run --user` (cioè in `app.slice`,
-dove finirebbe scegliendolo dal menu), poi **conta i fotogrammi prima e dopo e dà il verdetto su quel
-numero** — ⛔ mai su *«il processo è vivo»*. Quattro guardie: un compositore solo · un monitor solo e
-nostro · l'ambiente **letto** da `systemctl --user show-environment` invece che inventato · e
-⭐⭐ **G4: c'è qualcuno che guarda?** — zero battiti `rete-quic` ⇒ **nessun verdetto**.
+It launches a command inside a user's session with `systemd-run --user` (that is in `app.slice`,
+where it would end up when chosen from the menu), then **counts the frames before and after and gives the verdict on that
+number** — ⛔ never on *«the process is alive»*. Four guards: a single compositor · a single monitor and
+ours · the environment **read** from `systemctl --user show-environment` instead of invented · and
+⭐⭐ **G4: is someone watching?** — zero `rete-quic` beats ⇒ **no verdict**.
 
-⭐ **G4 è nata da un rosso su codice giusto**, ed è la guardia che avrebbe evitato le tre prove
-bloccate di stamattina. Provata nei tre versi: `mpv` 240 contro 0 (verde) · `gnome-terminal` 40
-contro 1 (verde) · `firefox` 0 contro 1 (rosso) · senza cliente, **si rifiuta di giudicare**.
+⭐ **G4 was born from a red on right code**, and it is the guard that would have avoided the three blocked
+tests of this morning. Tested in the three directions: `mpv` 240 against 0 (green) · `gnome-terminal` 40
+against 1 (green) · `firefox` 0 against 1 (red) · without a client, **it refuses to judge**.
 
-⛔ **E non c'era niente da curare in `src/`**: il figlio prepara la sessione bene — un compositore, un
-monitor, scala 1,0, ambiente completo. La cura era **nel modo di giudicare**.
+⛔ **And there was nothing to cure in `src/`**: the child prepares the session well — one compositor, one
+monitor, scale 1.0, complete environment. The cure was **in the way of judging**.
 
-## 20.2 ⛔⛔⛔ L'AUDIO — la premessa era falsa, e sotto c'era di peggio
+## 20.2 ⛔⛔⛔ AUDIO — the premise was false, and underneath there was worse
 
-### 20.2-bis ⛔ «Il 36 % dell'audio non raggiunge il filo» era una proprietà **del banco**
+### 20.2-bis ⛔ «36 % of audio does not reach the wire» was a property **of the bench**
 
-`[M]` Il registro della 7920, **quattro attacchi su quattro** della sessione vera dell'utente:
+`[M]` The 7920 log, **four attaches out of four** of the user's real session:
 `negoziato … audio.codec=opus` → `canale audio ACCESO — codec 1 (Opus)`.
 
-⇒ ⛔ **L'utente non è mai stato su PCM.** `[R]` Il PCM lo impongono **i banchi**: `09-b68:191`,
-`09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` passano tutti `--audio-codec pcm`.
-⇒ **§17.2-quater e §18.5 vanno lette così**: il 36 % di rifiutati e i 2 463 kbit/s sono proprietà di
-una **configurazione di banco**, non del prodotto in uso.
+⇒ ⛔ **The user was never on PCM.** `[R]` PCM is imposed by **the benches**: `09-b68:191`,
+`09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` all pass `--audio-codec pcm`.
+⇒ **§17.2-quater and §18.5 must be read this way**: the 36 % refused and the 2 463 kbit/s are properties of
+a **bench configuration**, not of the product in use.
 
-### 20.2-ter ⭐⭐⭐ E QUEL CHE C'ERA SOTTO: **si spendono 589 kbit/s per portare 1,2 kbit/s di silenzio**
+### 20.2-ter ⭐⭐⭐ AND WHAT WAS UNDERNEATH: **589 kbit/s are spent to carry 1.2 kbit/s of silence**
 
-`[M]` Che cosa viene rifiutato, sulla sessione **vera**: `datagram di 16 byte` = 1 (prefisso) + 12
-(§6.3) + **3 di carico**. Riprodotto sul banco: `codec 1 (Opus), 3 byte di carico`, 1 248 su 1 248, e
-`suono.c` dice **`PICCO 0 su 32767`**. ⇒ **Si rifiuta il silenzio digitale.**
+`[M]` What gets refused, on the **real** session: `datagram di 16 byte` = 1 (prefix) + 12
+(§6.3) + **3 of payload**. Reproduced on the bench: `codec 1 (Opus), 3 byte di carico`, 1 248 out of 1 248, and
+`suono.c` says **`PICCO 0 su 32767`**. ⇒ **Digital silence is being refused.**
 
-`[M]` A desktop fermo, Opus: **48,0 datagram al secondo su 48,4 pacchetti** — il filo è *tutto*
-audio — e ogni pacchetto è **pieno**, 1 441 byte su 1 452, per il `PADDING`.
+`[M]` With a still desktop, Opus: **48.0 datagrams per second out of 48.4 packets** — the wire is *all*
+audio — and every packet is **full**, 1 441 bytes out of 1 452, because of the `PADDING`.
 
-**La cura** (`src/audio.c`, ⛔ nasce **spenta**, I6): un blocco in cui **tutti** i campioni sono
-esattamente zero **non diventa un datagram**. ⭐ La ragione per cui è lecito: §6.3 mette l'`istante`
-in ogni blocco e chi riceve lo rimette al posto assoluto ⇒ **un blocco non spedito è un buco, e un
-buco è silenzio** — che è esattamente quel che quel blocco conteneva. ⛔ Nessuna soglia: **solo lo
-zero digitale**, l'unico caso in cui «spedito» e «non spedito» suonano identici.
+**The cure** (`src/audio.c`, ⛔ born **off**, I6): a block in which **all** samples are
+exactly zero **does not become a datagram**. ⭐ The reason why it is legitimate: §6.3 puts the `istante`
+in every block and the receiver puts it back in its absolute place ⇒ **a block not sent is a hole, and a
+hole is silence** — which is exactly what that block contained. ⛔ No threshold: **only digital
+zero**, the only case in which «sent» and «not sent» sound identical.
 
-| desktop fermo, Opus | sul filo | pacchetti/s | datagram/s | byte/pacchetto | carico utile |
+| still desktop, Opus | on the wire | packets/s | datagrams/s | bytes/packet | payload |
 |---|---|---|---|---|---|
-| **spenta** | 557,6 kbit/s | 48,4 | 48,0 | 1 441 | 1,18 kbit/s |
-| ⭐ **accesa** | **5,5 kbit/s** | 0,5 | 0,0 | — | 0,00 |
+| **off** | 557.6 kbit/s | 48.4 | 48.0 | 1 441 | 1.18 kbit/s |
+| ⭐ **on** | **5.5 kbit/s** | 0.5 | 0.0 | — | 0.00 |
 
-⇒ ⭐⭐ **102,1 volte**, e 1 248 blocchi taciuti su 1 248. **Oggi una sessione ferma spende 589 kbit/s
-per portare 1,2 kbit/s di silenzio: il 99,8 % è riempimento.**
+⇒ ⭐⭐ **102.1 times**, and 1 248 blocks silenced out of 1 248. **Today a still session spends 589 kbit/s
+to carry 1.2 kbit/s of silence: 99.8 % is padding.**
 
-**Il controllo che protegge l'utente** (tono a 440 Hz nel sink, giudice di `07-b42`): copertura
-**1,0000 → 0,9996**, purezza del tono **1,000 → 1,000**, blocchi taciuti **1 su 5 001** — e quell'uno
-precede i primi campioni. ⚠ Prezzo dichiarato: i `mancati` del cliente vanno da 0 a 2 (un buco voluto
-lascia lo stesso salto di `istante` di uno perso).
+**The check that protects the user** (440 Hz tone in the sink, judge of `07-b42`): coverage
+**1.0000 → 0.9996**, tone purity **1.000 → 1.000**, blocks silenced **1 out of 5 001** — and that one
+precedes the first samples. ⚠ Declared price: the client's `mancati` go from 0 to 2 (a wanted hole
+leaves the same jump of `istante` as a lost one).
 
-⚠ ~~L'interruttore oggi è **di compilazione** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ la riga di
-comando è **descritta e non scritta**.~~
-> ✅ **SCRITTA, il 24 agosto 2026** *(riallineato al codice il 28)*. Il `-D` **è stato tolto**, e
-> l'unica strada è **`--niente-audio-silenzio`** sulla riga di comando del server, che `figlio.c`
-> ricopia in coda all'`argv` del figlio come fa già con `--parlantina`. ⛔ E vale per **due
-> processi**: il codificatore vero sta nel figlio, ma il tono di `--audio-prova` apre un `audio_cod`
-> nel server — se se ne accendesse uno solo, i due banchi misurerebbero due prodotti diversi.
-> ⚠ La ragione per cui non ce ne sono due: *«due strade per la stessa cura sono due numeri che
-> divergono»* (`src/audio.h`).
+⚠ ~~The switch today is **a build-time one** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ the command
+line is **described and not written**.~~
+> ✅ **WRITTEN, on 24 Aug 2026** *(realigned to the code on the 28th)*. The `-D` **was removed**, and
+> the only road is **`--niente-audio-silenzio`** on the server's command line, which `figlio.c`
+> copies at the end of the child's `argv` as it already does with `--parlantina`. ⛔ And it holds for **two
+> processes**: the real encoder sits in the child, but the `--audio-prova` tone opens an `audio_cod`
+> in the server — if only one were switched on, the two benches would measure two different products.
+> ⚠ The reason why there are not two of them: *«two roads for the same cure are two numbers that
+> diverge»* (`src/audio.h`).
 
-### 20.2-quater ⛔ DUE DIFETTI TROVATI STRADA FACENDO, e nessuno dei due era cercato
+### 20.2-quater ⛔ TWO DEFECTS FOUND ALONG THE WAY, and neither was looked for
 
-1. ⛔⭐ **`WT_DGRAM_RIMANDI_MAX` non misura quel che il suo commento dichiara.** `[R]`
-   `w->dgram_rimandi` è un campo di `struct wt`, cioè **della connessione**: sale a ogni passata
-   rifiutata e torna a zero solo su un successo. Il commento accanto dice *«quante passate di fila
-   **il blocco in testa** è stato rimandato»* — ⛔ ma la testa nel frattempo è stata sostituita
-   decine di volte. ⇒ **Non misura l'età del blocco: misura da quanto la connessione non spedisce
-   nulla.** `[M]` Ed è per questo che il primo rifiuto è avvenuto **a finestra aperta**
-   (`cwnd_left = 7 424`, e la riga stessa dice *«NON è la congestione»*).
-   ⭐ E i rifiuti sono **a raffica, non sparsi**: fuori dalla raffica 0,004 %, **dentro 100 %** — 100
-   rifiuti ogni 2,00 s = ogni blocco prodotto, per venti secondi. Non click sparsi: **venti secondi
-   di niente**.
-2. ⛔ **«L'audio non dev'essere affamato dal video» NON È SCRITTO DA NESSUNA PARTE.** `[R]` Cercato
-   in `SPECIFICHE.md` (§10 e gli invarianti), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **niente**.
-   L'unico posto in cui la domanda è decisa è il codice — `wt_scrivi():7286`, *«I DATAGRAM PRIMA
-   DEGLI STREAM»*. ⇒ ⚠ **Una decisione presa nel codice e mai messa a verbale**, ed è precisamente
-   il genere di cosa che questa fase esiste per scoprire.
-   `[M]` E oggi vince **l'audio**: a desktop fermo il filo è tutto suo; sulla sessione vera col
-   desktop in movimento tocca il **25-33 %** dei pacchetti.
+1. ⛔⭐ **`WT_DGRAM_RIMANDI_MAX` does not measure what its comment declares.** `[R]`
+   `w->dgram_rimandi` is a field of `struct wt`, that is **of the connection**: it rises at every refused
+   pass and goes back to zero only on a success. The comment beside it says *«how many passes in a row
+   **the block at the head** has been postponed»* — ⛔ but the head has meanwhile been replaced
+   dozens of times. ⇒ **It does not measure the age of the block: it measures how long the connection has not sent
+   anything.** `[M]` And that is why the first refusal happened **with the window open**
+   (`cwnd_left = 7 424`, and the line itself says *«it is NOT congestion»*).
+   ⭐ And the refusals are **in bursts, not scattered**: outside the burst 0.004 %, **inside 100 %** — 100
+   refusals every 2.00 s = every block produced, for twenty seconds. Not scattered clicks: **twenty seconds
+   of nothing**.
+2. ⛔ **«Audio must not be starved by video» IS NOT WRITTEN ANYWHERE.** `[R]` Searched
+   in `SPECIFICHE.md` (§10 and the invariants), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **nothing**.
+   The only place where the question is decided is the code — `wt_scrivi():7286`, *«DATAGRAMS BEFORE
+   STREAMS»*. ⇒ ⚠ **A decision taken in the code and never put on record**, and it is precisely
+   the kind of thing this phase exists to discover.
+   `[M]` And today **audio** wins: with a still desktop the wire is all its own; on the real session with the
+   desktop moving it takes **25-33 %** of the packets.
 
-### 20.2-quinquies ⛔ E UNA PREVISIONE DELL'AGENTE CHE NON HA RETTO — scritta com'è
+### 20.2-quinquies ⛔ AND A PREDICTION OF THE AGENT THAT DID NOT HOLD — written as it is
 
-`casa-cattiva`, scena col tono, stesso `netem`, cura spenta:
+`casa-cattiva`, scene with the tone, same `netem`, cure off:
 
-| codec | sul filo | spediti | rifiutati | ‰ | **copertura** |
+| codec | on the wire | sent | refused | ‰ | **coverage** |
 |---|---|---|---|---|---|
-| PCM | 1 024,5 kbit/s | 3 135 | **1 880** | **375‰** | 0,6088 |
-| Opus | 366,3 kbit/s | 1 127 | **126** | **101‰** | **0,8803** |
+| PCM | 1 024.5 kbit/s | 3 135 | **1 880** | **375‰** | 0.6088 |
+| Opus | 366.3 kbit/s | 1 127 | **126** | **101‰** | **0.8803** |
 
-⭐ La copertura sale **0,61 → 0,88** (+27 punti di audio che arriva davvero). ⛔ Ma il predicato
-chiedeva *«Opus sotto 20‰»* e ha dato **rosso**: Opus divide il rifiuto per 3,7, **non lo toglie**.
-⇒ **Il codec è la cura del costo, non del rifiuto.** Il confine è stato lasciato dov'era e il rosso
-scritto nel banco, invece di ritarare la soglia dopo aver visto il numero.
+⭐ Coverage rises **0.61 → 0.88** (+27 points of audio that really arrives). ⛔ But the predicate
+asked for *«Opus below 20‰»* and gave **red**: Opus divides the refusal by 3.7, **it does not remove it**.
+⇒ **The codec is the cure of the cost, not of the refusal.** The border was left where it was and the red
+written in the bench, instead of retuning the threshold after seeing the number.
 
-### 20.2-sexies ⏳ La mezza cura descritta e non scritta — il `PADDING`
+### 20.2-sexies ⏳ The half cure described and not written — the `PADDING`
 
-`dgram_scrivi_uno()`, righe **1613** e **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` va
-**condizionato** al fatto che ci sia davvero un lotto da comporre (più di un datagram in coda, o byte
-di video da infilare). Con **un** datagram solo e la coda video vuota il lotto GSO è di un pacchetto
-e il riempimento **non compra niente** — costa 1 425 byte su 1 441. ⛔ **Non si toglie, si
-condiziona**: il riquadro di `:1581` spiega perché c'è (un primo pacchetto corto fa collassare il
-lotto GSO).
+`dgram_scrivi_uno()`, lines **1613** and **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` must be
+**conditioned** on there really being a batch to compose (more than one datagram in the queue, or video bytes
+to slip in). With **one** datagram only and the video queue empty the GSO batch is one packet
+and the padding **buys nothing** — it costs 1 425 bytes out of 1 441. ⛔ **It is not removed, it is
+conditioned**: the box at `:1581` explains why it is there (a short first packet makes the
+GSO batch collapse).
 
 ## 20.3 ⭐⭐⭐ IL DISALLINEAMENTO AUDIO-VIDEO — il numero regge, **la lettura no**, e si sente
 
