@@ -92,7 +92,7 @@ configuration and apply as written.
 promises what it **produces and delivers onto the line**. What the device on the other side
 manages to decode and paint **is measured and declared, not promised** — it is not our
 code. ⚠ With one boundary: a client that does not hold the minimum must be **told**, with the reason. A
-silent fallback stays forbidden even when the fault is not ours.
+silent fallback stays forbidden even when the blame is not ours.
 
 ### 3.1 Image quality
 
@@ -320,7 +320,7 @@ one** graphical one — local or remote. Text and graphical sessions coexist.
 | has an active **local** graphical session and opens a remote one | ⛔ the remote one is **refused**, with an explicit message |
 | has an active **remote** graphical session and opens a local one | ⛔ **the local one wins**: the remote one is closed |
 | ⭐ has a remote one **active and alive** and connects from a **second device** | ⛔ **the second connection is refused** *(decided on 9 Aug 2026)* — it is invariant I2, and the reason is `GIA_ATTIVA_REMOTA` |
-| has a remote one whose client **has been silent for 30 seconds** | that client is **detached** (§5.3): it does not hold the seat, and the new device **gets in** |
+| has a remote one whose client **has been silent for 30 seconds** | that client is **detached** (§5.3): it does not hold the slot, and the new device **gets in** |
 
 ⚠ **The last two rows do not contradict each other, and the deciding factor is the silence clock**: a live
 client occupies, a mute client does not. ⛔ The price, declared: if the laptop switches off suddenly without
@@ -411,7 +411,7 @@ ceiling is not verified by anyone waiting an hour.
 > cost — and the user chose to pay it for one hour instead of six. The whole reasoning, with
 > the measurement, is in `DECISIONI.md` §4.8.
 
-⭐ **A client that is silent is a client that has detached**, and no connection «holds the seat».
+⭐ **A client that is silent is a client that has detached**, and no connection «holds the slot».
 Whoever arrives gets in, with no timeout to wait for: the case «the phone died in a tunnel and
 now I cannot get back into my session» disappears. (`DECISIONI.md` §4.4)
 
@@ -629,7 +629,7 @@ symptom, find the step, and look at **who** had to do it. ⛔ Never start from t
 
 | # | what | if it goes wrong |
 |---|---|---|
-| C1 | the **wire dropping** (tab closed, PC off, signal lost) ⇒ the seat is freed, **the session stays alive** (I4) | the work of whoever only wanted to change room is lost |
+| C1 | the **wire dropping** (tab closed, PC off, signal lost) ⇒ the slot is freed, **the session stays alive** (I4) | the work of whoever only wanted to change room is lost |
 | C2 | **«Log Out»** — from the menu or with `Ctrl+Alt+Fine` ⇒ the session ends and the programs are closed | — |
 | C3 | ⛔ the farewell **`0x10`** leaves **BEFORE** the session dies, and goes to **all** the clients of that user | whoever is watching stays on a frozen screen for thirty seconds and reads «network error» (finding B-7) |
 | C4 | ⛔ the child does **not** redo the session after a logout: it waits for a new attach | the desktop the user has just closed **reappears by itself** |
@@ -1175,7 +1175,7 @@ GNOME's road nor wlroots'. Feasibility depends on a single measurement, and the 
 in between: REMOTIX sets the parameters, manages the buffers and writes the stream headers itself.
 The ladder:
 
-1. **on the graphics card**, with `libva`: **H.264** and **HEVC** — the only road. On zero-copy the
+1. **on the graphics card**, with `libva`: **H.264** and **HEVC** — the only route. On zero-copy the
    **colour conversion** too is done on the card (VA-API VPP); on the «from memory» road the
    colours are converted on the processor and the planes go up to the card, where they are encoded
 2. ⛔ **No encoding on the processor** — *decision of the user, 1 Oct 2026* (`DECISIONI.md`
@@ -1188,7 +1188,7 @@ The ladder:
      (the card encodes), 1 (it opens but the frame does not come out) and 2 (usage error);
    - the **installer** already refuses in the preliminary check, with the reason: **RX-GPU-003**
      no card · **RX-GPU-004** only NVIDIA with the proprietary driver **without its Vulkan
-     driver** (the `nvidia` ICD: with that one the Vulkan Video road takes it) · **RX-GPU-005**
+     driver** (the `nvidia` ICD: with that one the Vulkan Video route takes it) · **RX-GPU-005**
      no Intel, AMD or NVIDIA card (virtio, VMware, nouveau) · **RX-GPU-006** a card that on
      this distribution encodes neither in VA-API nor in Vulkan and has no driver to add
      (today AMD on Alma: RHEL's Mesa is built without H.264, in VA-API and in RADV). The Vulkan
@@ -1199,7 +1199,7 @@ The ladder:
 3. ⛔ **No GPL dependencies**: all the server's libraries are permissive (MIT, BSD, Apache),
    a condition of the licence (`DECISIONI.md` §10.22)
 
-⭐ The **Vulkan Video** road (AMD, NVIDIA) is phase 19 (`fasi/19-nvidia.md`), ✅ grafted in on
+⭐ The **Vulkan Video** route (AMD, NVIDIA) is phase 19 (`fasi/19-nvidia.md`), ✅ grafted in on
 1 Oct 2026: it is chosen by capability when each encoder opens (`h264_scheda`/`hevc_scheda`,
 `src/codificatore.c`), Vulkan first and VA-API where Vulkan is not there; `--codifica vulkan|vaapi` forces it
 for tests, and `--prova-codifica` says which one encoded (`strada`). `[M]` 1 Oct 2026 on the server:
@@ -1243,7 +1243,7 @@ problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX 
 
 - The Red Hat family is tested on **Alma**, which stands in for it (Red Hat is paid).
 - A «no» to the drivers' repository **blocks** the installation (D5): without it, on that machine the card does not encode.
-- ⚠ **NVIDIA**: the road is written (Vulkan Video) but nobody has seen it work on a real NVIDIA — the
+- ⚠ **NVIDIA**: the route is written (Vulkan Video) but nobody has seen it work on a real NVIDIA — the
   lab has none. It stays «not tested» until it is tested (a rented machine or a user with the card).
 - Without a capable card: REMOTIX does not install (§11.4). Virtual machines work only with the card
   passed to the machine (passthrough, vGPU).

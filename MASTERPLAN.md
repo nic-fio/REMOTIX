@@ -186,4 +186,4 @@ nel masterplan»* (then, on 10 Oct, **M6** came in). ⇒ Removed, and the number
 | | what it was | why it left |
 |---|---|---|
 | **M1** | GNOME delivers fewer frames than it is asked for (to get 60 you would have to ask it for more, and `MOVIMENTO_FPS` is a constant) | decided by the user: it is no longer work for «afterwards». The fact stays written in `DECISIONI.md` §2.5-bis |
-| **M4** | two clients on the same desktop at the same time | decided by the user: it is not work for «afterwards». Invariant I2 (one seat per user) stays as it is, `DECISIONI.md` §7.3 |
+| **M4** | two clients on the same desktop at the same time | decided by the user: it is not work for «afterwards». Invariant I2 (one slot per user) stays as it is, `DECISIONI.md` §7.3 |
