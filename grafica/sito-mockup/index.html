@@ -3,106 +3,167 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — The remote desktop server for Linux</title>
+<title>REMOTIX — Connect to your Linux desktop from anywhere</title>
 <link rel="stylesheet" href="stile.css">
 <style>
-  /* l'apertura */
-  .apertura { padding: 3rem 0 5rem; }
-  .apertura .impianto { display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
-  @media (min-width: 960px) { .apertura { padding: 4rem 0 7rem; } .apertura .impianto { grid-template-columns: 1.05fr 1fr; gap: 4rem; } }
-  .apertura h1 { margin: 1.6rem 0 .5em; font-size: clamp(2.1rem, 4.2vw, 3.3rem); line-height: 1.08; letter-spacing: -.03em; color: #fff; text-wrap: balance; }
-  .apertura .sotto { margin: 0; font-size: 1.12rem; color: var(--tenue-fondo); max-width: 31em; }
-  .apertura .bottoni { display: flex; flex-wrap: wrap; gap: .75rem; margin: 2rem 0 1.6rem; }
-  .apertura .bottoni .pulsante { font-size: 1rem; padding: .8em 1.35em; }
-  .punti { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6em 1.6em; font-size: .9rem; color: var(--chiaro-fondo); }
-  .punti li { display: flex; align-items: center; gap: .5em; }
-  .punti svg { width: 1.1em; height: 1.1em; color: var(--ciano); flex: none; }
+  /* widescreen: il contenuto arriva a 1320px, le fasce scure vanno da bordo a bordo */
+  .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
+  @media (min-width: 720px) { .largo { padding: 0 40px; } }
+  .blu { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), radial-gradient(60% 60% at 10% 90%, #0b3aa8 0%, transparent 70%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); position: relative; overflow: hidden; }
+  .blu::after { content: ""; position: absolute; inset: auto -10% -30% -10%; height: 60%; pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 100%, rgba(0,180,255,.25), transparent 70%); }
+  .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accento); margin: 0 0 .8em; }
+  .blu .occhiello { color: var(--ciano); }
 
-  /* le sezioni */
-  .sezione { padding: 4.5rem 0; }
-  .sezione.bianca { background: var(--carta); }
-  .occhiello { font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accento); margin: 0 0 .7em; }
-  .sezione h2 { margin: 0 0 .5em; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; max-width: 22em; }
-  .sezione .guida { margin: 0 0 2.6rem; color: var(--tenue); font-size: 1.05rem; max-width: 40em; }
-  .griglia { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .griglia.tre { grid-template-columns: repeat(3, 1fr); } .griglia.due { grid-template-columns: repeat(2, 1fr); } }
-  .voce h3 { margin: .8em 0 .35em; font-size: 1.08rem; }
-  .voce p { margin: 0; color: var(--tenue); font-size: .95rem; }
-  .icona { width: 2.6rem; height: 2.6rem; border-radius: .7rem; display: grid; place-items: center; color: var(--accento);
-    background: linear-gradient(180deg, #eef4ff, #e1ebff); box-shadow: inset 0 0 0 1px #cfdcfb; }
-  .icona svg { width: 1.3rem; height: 1.3rem; }
+  /* testata */
+  .testata { position: relative; z-index: 3; }
+  .testata .riga { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
+  .testata nav { display: none; gap: 2.2rem; margin: 0 auto; font-size: .95rem; }
+  .testata nav a { color: var(--chiaro-fondo); text-decoration: none; }
+  .testata nav a:hover { color: #fff; }
+  .testata .azioni { margin-left: auto; }
+  @media (min-width: 900px) { .testata nav { display: flex; } .testata .azioni { margin-left: 0; } }
 
-  /* il confronto */
-  .confronto td:first-child { font-weight: 600; }
-  .si { color: var(--vivo); font-weight: 700; }
-  .no { color: #98a2b3; }
+  /* apertura */
+  .apertura { position: relative; z-index: 2; text-align: center; padding: 2.5rem 0 0; }
+  .apertura h1 { margin: 0 auto .45em; max-width: 16em; font-size: clamp(2.3rem, 5vw, 4.4rem); line-height: 1.05; letter-spacing: -.035em; text-wrap: balance; }
+  .apertura h1 em { font-style: normal; background: linear-gradient(90deg, #5fd3ff, #1a9cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .apertura .sotto { margin: 0 auto; max-width: 36em; font-size: clamp(1.05rem, 1.4vw, 1.25rem); color: var(--chiaro-fondo); }
+  .bottoni { display: flex; flex-wrap: wrap; justify-content: center; gap: .9rem; margin: 2.2rem 0 0; }
+  .bottoni .pulsante { font-size: 1rem; padding: .85em 1.6em; min-width: 11rem; }
+  .vetro-blu { color: #fff; background: rgba(10,30,90,.35); box-shadow: inset 0 0 0 1.5px rgba(95,160,255,.6); }
+  .vetro-blu:hover { background: rgba(20,60,160,.45); }
 
-  /* lo scaricamento */
-  .scarica { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
-  @media (min-width: 860px) { .scarica { grid-template-columns: 1.25fr 1fr; } }
-  .file { display: flex; flex-direction: column; gap: 1.1rem; padding: 2rem; }
-  .file .nome { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
-  .file .nome small { display: block; font-size: .85rem; font-weight: 500; color: var(--tenue); letter-spacing: 0; margin-top: .2em; }
-  .terminale { background: #0b1430; color: #dfe7ff; border-radius: .6em; padding: 1em 1.1em; font-size: .86rem; line-height: 1.7; overflow-x: auto; white-space: pre; }
-  .terminale .c { color: #7f8db3; }
-  .impronta { font-size: .78rem; color: var(--tenue); word-break: break-all; }
-  .distro { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
-  .distro li { display: flex; gap: .55em; }
-  .distro li svg { width: 1.15em; height: 1.15em; flex: none; color: var(--vivo); margin-top: .2em; }
+  /* lo schema: dispositivi → cifrato → server ↔ desktop */
+  .schema { display: grid; align-items: center; gap: 1.5rem; margin: 3.5rem 0 0; grid-template-columns: 1fr; }
+  @media (min-width: 1000px) { .schema { grid-template-columns: 9rem 10rem 4rem 12rem 4rem 1fr; gap: 0; } }
+  .dispositivi { display: flex; justify-content: center; gap: 2rem; }
+  @media (min-width: 1000px) { .dispositivi { flex-direction: column; gap: 1.6rem; } }
+  .disp { text-align: center; font-size: .92rem; color: #eaf0ff; }
+  .disp .icona-d { margin: 0 auto .45rem; display: grid; place-items: center; }
+  .icona-d svg { color: #9cc3ff; }
+  .cifrato { display: none; position: relative; height: 15rem; }
+  @media (min-width: 1000px) { .cifrato { display: block; } }
+  .cifrato svg.fili { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .cifrato .lucchetto { position: absolute; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-size: .85rem; color: var(--chiaro-fondo); line-height: 1.3; background: #0a1f5c; padding: .3rem .2rem; }
+  .cifrato .lucchetto svg { width: 1.6rem; height: 1.6rem; color: var(--ciano); display: block; margin: 0 auto .3rem; }
+  .freccia { display: none; color: var(--ciano); text-align: center; font-size: 1.6rem; }
+  @media (min-width: 1000px) { .freccia { display: block; } }
+  .server { margin: 0 auto; width: 12rem; padding: 1.1rem 1rem 1.3rem; border-radius: 1rem; text-align: center;
+    background: linear-gradient(180deg, #0f2a78, #0a1d58); box-shadow: 0 0 0 1.5px rgba(80,150,255,.7), 0 0 50px rgba(30,120,255,.45), inset 0 1px 0 rgba(255,255,255,.12); }
+  .server .cassetto { height: 1.9rem; margin-bottom: .55rem; border-radius: .35rem; background: #08164a; box-shadow: inset 0 0 0 1px rgba(90,150,255,.3);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 .7rem; }
+  .server .cassetto i { width: 55%; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #22d3a6, #5fd3ff); }
+  .server .cassetto b { width: 6px; height: 6px; border-radius: 50%; background: #3fe39b; box-shadow: 0 0 8px #3fe39b; }
+  .server strong { display: block; margin-top: 1rem; font-size: 1.3rem; letter-spacing: .02em; }
+  .server span { font-size: .85rem; color: var(--chiaro-fondo); }
+  .portatile { text-align: center; }
+  .portatile .didascalia { margin-top: .9rem; font-size: .95rem; color: #eaf0ff; font-weight: 600; }
+  .portatile .didascalia small { display: block; color: var(--chiaro-fondo); font-size: .88rem; font-weight: 400; }
 
-  /* la licenza */
-  .licenza { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .licenza { grid-template-columns: 1fr 1fr; } }
-  .licenza h3 { margin: 0 0 .7em; font-size: 1.08rem; }
-  .licenza ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
-  .licenza li { display: flex; gap: .55em; }
-  .licenza li svg { width: 1.15em; height: 1.15em; flex: none; margin-top: .2em; }
-  .licenza .libero svg { color: var(--vivo); }
-  .licenza .chiedi svg { color: var(--accento); }
+  /* dispositivi disegnati, con dentro la schermata vera */
+  .schermo { position: relative; overflow: hidden; background: linear-gradient(160deg, #1d2b6e 0%, #4b3ca8 45%, #f08a5d 75%, #233a7a 100%); }
+  .schermo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .laptop { max-width: 34rem; margin: 0 auto; }
+  .laptop .coperchio { padding: 2.2% 2.2% 2.6%; border-radius: 1rem 1rem .3rem .3rem; background: #0c1020; box-shadow: 0 0 0 1px #2a3352, 0 30px 60px rgba(0,0,0,.4); }
+  .laptop .schermo { aspect-ratio: 16 / 10; border-radius: .25rem; }
+  .laptop .base { height: .9rem; margin: 0 -6%; border-radius: 0 0 1.2rem 1.2rem; background: linear-gradient(180deg, #c9cfdc, #8d95a8); position: relative; }
+  .laptop .base::before { content: ""; position: absolute; left: 42%; right: 42%; top: 0; height: 35%; border-radius: 0 0 .4rem .4rem; background: #79819a; }
+  .tablet { padding: .7rem; border-radius: 1.4rem; background: #0c1020; box-shadow: 0 0 0 1px #2a3352, 0 25px 50px rgba(0,0,0,.35); }
+  .tablet .schermo { aspect-ratio: 4 / 3; border-radius: .5rem; }
+  .telefono { padding: .4rem; border-radius: 1.6rem; background: #0c1020; box-shadow: 0 0 0 1px #2a3352, 0 20px 40px rgba(0,0,0,.35); }
+  .telefono .schermo { aspect-ratio: 9 / 19.5; border-radius: 1.1rem; }
 
-  /* domande */
-  details { background: var(--carta); border-radius: .8em; box-shadow: var(--ombra); padding: 1.05rem 1.3rem; }
-  details + details { margin-top: .7rem; }
-  summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
-  summary::after { content: "+"; color: var(--accento); font-weight: 700; }
-  details[open] summary::after { content: "–"; }
-  details p { margin: .8em 0 0; color: var(--tenue); font-size: .95rem; }
+  /* striscia dei quattro punti */
+  .striscia { position: relative; z-index: 2; display: grid; gap: 1.5rem; grid-template-columns: 1fr; padding: 3.5rem 0 3rem; }
+  @media (min-width: 720px) { .striscia { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1100px) { .striscia { grid-template-columns: repeat(4, 1fr); gap: 0; } .striscia > div + div { border-left: 1px solid rgba(255,255,255,.12); } }
+  .striscia > div { display: flex; gap: 1rem; align-items: center; padding: 0 1.5rem; }
+  .striscia .ico { width: 3.2rem; height: 3.2rem; flex: none; display: grid; place-items: center; border-radius: .8rem; background: rgba(40,90,220,.25); box-shadow: inset 0 0 0 1px rgba(110,170,255,.35); }
+  .striscia .ico svg { width: 1.5rem; height: 1.5rem; color: #cfe2ff; }
+  .striscia b { display: block; font-size: 1rem; }
+  .striscia .tux { width: 1.6rem; height: 1.6rem; background: #cfe2ff; -webkit-mask: url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/linux.svg) center / contain no-repeat; mask: url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/linux.svg) center / contain no-repeat; }
+  .striscia span { font-size: .88rem; color: var(--chiaro-fondo); }
 
-  /* l'invito finale */
-  .invito { padding: 4rem 0; text-align: center; }
-  .invito h2 { color: #fff; margin: 0 auto .4em; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; max-width: 20em; }
-  .invito p { color: var(--tenue-fondo); margin: 0 auto 1.8rem; max-width: 34em; }
+  /* sezioni chiare */
+  .sezione { padding: 5.5rem 0; }
+  .sezione.chiara { background: #fff; }
+  .sezione.grigia { background: linear-gradient(180deg, #f3f6fc, #eef3fb); }
+  .sezione h2 { margin: 0 0 .45em; font-size: clamp(1.9rem, 3.2vw, 2.8rem); line-height: 1.1; letter-spacing: -.03em; color: var(--inchiostro); }
+  .sezione .guida { margin: 0; color: var(--tenue); font-size: 1.1rem; max-width: 34em; }
+  .due-col { display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 1000px) { .due-col { grid-template-columns: 5fr 7fr; gap: 4rem; } }
+  .punti-v { list-style: none; margin: 2rem 0 0; padding: 0; display: grid; gap: 1.4rem; }
+  .punti-v li { display: flex; gap: 1rem; align-items: flex-start; }
+  .punti-v .ico { width: 2.8rem; height: 2.8rem; flex: none; display: grid; place-items: center; border-radius: .7rem; background: #eef4ff; box-shadow: inset 0 0 0 1px #d4e1fb; }
+  .punti-v .ico svg { width: 1.35rem; height: 1.35rem; color: var(--accento); }
+  .punti-v b { display: block; font-size: 1.02rem; }
+  .punti-v span { color: var(--tenue); font-size: .95rem; }
 
-  /* i tre passi */
-  .passi { counter-reset: passo; }
-  .passi .voce h3::before { counter-increment: passo; content: counter(passo); display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem;
-    margin-right: .55rem; border-radius: 50%; background: var(--accento); color: #fff; font-size: .85rem; }
+  /* la famiglia di dispositivi */
+  .famiglia { position: relative; padding-bottom: 10%; }
+  .famiglia .laptop { max-width: none; width: 78%; margin: 0; }
+  .famiglia .tablet { position: absolute; width: 42%; right: 13%; bottom: 0; }
+  .famiglia .telefono { position: absolute; width: 16%; right: 0; bottom: 0; }
 
-  /* il prodotto in grande */
-  .vetrina { margin: 0; border-radius: 1em; background: #0e1a3f; box-shadow: var(--ombra-notte); overflow: hidden; }
-  .vetrina .barra { display: flex; align-items: center; gap: .45rem; padding: .65rem .9rem; background: #121f4a; }
-  .vetrina .barra i { width: .65rem; height: .65rem; border-radius: 50%; background: #2c3a6b; display: block; }
-  .vetrina .indirizzo { margin-left: .6rem; flex: 1; font-size: .78rem; color: var(--tenue-fondo); background: #0b1638; border-radius: .4em; padding: .3em .7em; }
-  .vetrina .tela { position: relative; aspect-ratio: 16 / 10; display: grid; place-items: center;
-    background: radial-gradient(120% 90% at 20% 10%, #2a5bd7, transparent 60%), radial-gradient(90% 80% at 90% 90%, #6b4fe0, transparent 60%), #1b2b6b; }
-  .vetrina .tela img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .vetrina .segnaposto { color: rgba(255,255,255,.7); font-size: .9rem; letter-spacing: .04em; }
-  .vetrina figcaption { padding: .75rem 1rem; font-size: .82rem; color: var(--tenue-fondo); background: #0b1638; }
+  /* come funziona */
+  .come { display: grid; gap: 2.5rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .come { grid-template-columns: 4fr 8fr; gap: 4rem; } }
+  .passi { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: stretch; }
+  @media (min-width: 760px) { .passi { grid-template-columns: 1fr auto 1fr auto 1fr; } }
+  .passo { background: #fff; border-radius: 1rem; box-shadow: var(--ombra); padding: 1.3rem 1.3rem 1.5rem; }
+  .passo h3 { margin: 0; font-size: 1.05rem; }
+  .passo h3 i { font-style: normal; color: var(--accento); margin-right: .3rem; }
+  .passo p { margin: .15rem 0 1rem; color: var(--tenue); font-size: .9rem; }
+  .passo .figura { height: 7.5rem; display: flex; align-items: flex-end; justify-content: center; gap: .6rem; }
+  .passi .tratteggio { display: none; align-self: center; color: var(--accento); font-weight: 700; letter-spacing: .1em; }
+  @media (min-width: 760px) { .passi .tratteggio { display: block; } }
+  .mini-server { width: 4.2rem; padding: .5rem .4rem; border-radius: .5rem; background: linear-gradient(180deg, #0f2a78, #0a1d58); box-shadow: 0 0 0 1px rgba(80,150,255,.6), 0 6px 18px rgba(20,90,230,.35); }
+  .mini-server i { display: block; height: .7rem; margin-bottom: .3rem; border-radius: .2rem; background: #08164a; box-shadow: inset 0 0 0 1px rgba(90,150,255,.35); }
+  .mini-server i:last-child { margin-bottom: 0; }
 
-  .apertura .vetrina { box-shadow: var(--ombra-notte); }
-  .schema-rete { display: grid; gap: 1rem; align-items: center; grid-template-columns: 1fr; }
-  @media (min-width: 860px) { .schema-rete { grid-template-columns: 1.1fr .5fr 1fr; } }
-  .schema-rete .nodo { background: var(--carta); border-radius: .9em; box-shadow: var(--ombra); padding: 1rem 1.2rem; display: grid; grid-template-columns: 2rem 1fr; column-gap: .8rem; align-items: center; }
-  .schema-rete .nodo svg { width: 2rem; height: 2rem; color: var(--accento); grid-row: span 2; }
-  .schema-rete .nodo b { font-size: .98rem; }
-  .schema-rete .nodo span { font-size: .82rem; color: var(--tenue); }
-  .schema-rete .server { padding: 1.4rem; box-shadow: var(--ombra), inset 0 0 0 2px #cfdcfb; }
-  .schema-rete .sessioni { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
-  .schema-rete .sessioni em { font-style: normal; font-size: .78rem; padding: .35em .7em; border-radius: .45em; background: #eef4ff; color: var(--accento-scuro); font-weight: 600; }
-  .schema-rete .fili { text-align: center; font-size: .78rem; color: var(--tenue); position: relative; }
-  .schema-rete .fili::before { content: ""; display: block; height: 2px; margin-bottom: .5rem; background: repeating-linear-gradient(90deg, var(--accento) 0 8px, transparent 8px 14px); }
-  .schema-rete .clienti { display: grid; gap: .6rem; }
-  .passi .terminale { font-size: .82rem; padding: .7em .9em; }
+  /* distribuzioni + inizia ora */
+  .distro-riga { display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .distro-riga { grid-template-columns: 7fr 5fr; } }
+  .distro-riga h2 { font-size: clamp(1.3rem, 2vw, 1.7rem); font-weight: 600; letter-spacing: -.01em; }
+  .loghi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem 1rem; margin-top: 2.2rem; text-align: center; }
+  @media (min-width: 760px) { .loghi { grid-template-columns: repeat(6, 1fr); } }
+  .loghi div { font-weight: 650; font-size: .95rem; }
+  .loghi i { display: block; width: 3.4rem; height: 3.4rem; margin: 0 auto .7rem; background: var(--c);
+    -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+  .inizia { background: #f3f6fc; border-radius: 1.2rem; padding: 2rem 2.2rem; box-shadow: inset 0 0 0 1px var(--bordo); }
+  .inizia h3 { margin: 0 0 .3em; font-size: 1.5rem; letter-spacing: -.02em; }
+  .inizia p { margin: 0 0 1.4rem; color: var(--tenue); font-size: .95rem; }
+  .inizia .bottoni { justify-content: flex-start; margin: 0; }
+  .inizia .bottoni .pulsante { flex: 1; }
+  .bordo-blu { color: var(--inchiostro); background: #fff; box-shadow: inset 0 0 0 1.5px #b9cdf3; }
+  .bordo-blu:hover { box-shadow: inset 0 0 0 1.5px var(--accento); }
+  .spunte { display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; margin-top: 1.4rem; font-size: .88rem; }
+  .spunte span { display: inline-flex; align-items: center; gap: .45rem; }
+  .spunte svg { width: 1.1rem; height: 1.1rem; color: #fff; background: var(--accento); border-radius: 50%; padding: .15rem; }
+
+  /* fascia finale */
+  .finale { padding: 4.5rem 0; }
+  .finale .griglia-f { position: relative; z-index: 2; display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .finale .griglia-f { grid-template-columns: 6fr 6fr; } }
+  .finale h2 { margin: 0 0 1.4rem; font-size: clamp(1.6rem, 2.6vw, 2.3rem); line-height: 1.15; letter-spacing: -.02em; max-width: 18em; }
+  .finale .bottoni { justify-content: flex-start; margin: 0; }
+  .usi { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+  @media (min-width: 720px) { .usi { grid-template-columns: repeat(3, 1fr); gap: 0; } .usi > div + div { border-left: 1px solid rgba(255,255,255,.14); } }
+  .usi > div { padding: 0 1.5rem; }
+  .usi .ico { width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: .8rem; background: rgba(40,90,220,.25); box-shadow: inset 0 0 0 1px rgba(110,170,255,.35); margin-bottom: 1rem; }
+  .usi .ico svg { width: 1.4rem; height: 1.4rem; color: #cfe2ff; }
+  .usi b { display: block; }
+  .usi span { font-size: .9rem; color: var(--chiaro-fondo); }
+
+  /* piede */
+  .piede-chiaro { background: #fff; border-top: 1px solid var(--bordo); padding: 1.6rem 0; }
+  .piede-chiaro .riga { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
+  .piede-chiaro .marchio { color: var(--inchiostro); }
+  .piede-chiaro .marchio svg { height: 1.6rem; }
+  .piede-chiaro nav { display: flex; gap: 1.8rem; flex-wrap: wrap; }
+  .piede-chiaro nav a { color: var(--tenue); text-decoration: none; }
+  .piede-chiaro .destra { margin-left: auto; color: var(--tenue); font-size: .82rem; }
 </style>
 </head>
 <body>
@@ -115,211 +176,163 @@
       <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </symbol>
-    <symbol id="spunta" viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="spunta" viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-portatile" viewBox="0 0 64 48"><rect x="10" y="4" width="44" height="30" rx="2.5" fill="#0e2466" stroke="currentColor" stroke-width="2"/><rect x="14" y="8" width="36" height="22" fill="url(#rx-g)" opacity=".75"/><path d="M2 38h60l-4 6H6z" fill="currentColor"/></symbol>
+    <symbol id="i-tablet" viewBox="0 0 64 48"><rect x="8" y="6" width="48" height="36" rx="4" fill="#0e2466" stroke="currentColor" stroke-width="2"/><rect x="12" y="10" width="40" height="28" rx="1" fill="url(#rx-g)" opacity=".75"/></symbol>
+    <symbol id="i-telefono" viewBox="0 0 64 48"><rect x="22" y="2" width="20" height="44" rx="4" fill="#0e2466" stroke="currentColor" stroke-width="2"/><rect x="25" y="6" width="14" height="34" rx="1" fill="url(#rx-g)" opacity=".75"/></symbol>
   </defs>
 </svg>
 
-<div class="notte">
-  <div class="satin"></div>
+<div class="blu">
   <header class="testata">
-    <div class="contenitore riga">
+    <div class="largo riga">
       <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-      <nav aria-label="Main">
-        <a href="#how">How it works</a><a href="#why">Why REMOTIX</a><a href="#download">Download</a><a href="#license">License</a><a href="#">Docs</a>
-      </nav>
-      <div class="azioni">
-        <a class="pulsante vetro piccolo" href="#download">Download</a>
-      </div>
+      <nav aria-label="Main"><a href="#features">Features</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a></nav>
+      <div class="azioni"><a class="pulsante primario" href="#download">Get started</a></div>
     </div>
   </header>
 
   <section class="apertura">
-    <div class="contenitore impianto">
-      <div>
-        <h1>The remote desktop server for Linux.</h1>
-        <p class="sotto">Install REMOTIX on a Linux machine, and everyone who has an account on it gets their own desktop, from any browser. Nothing to install on the devices that connect. Free.</p>
-        <div class="bottoni">
-          <a class="pulsante primario" href="#download">Download the server</a>
-          <a class="pulsante vetro" href="#how">How it works</a>
-        </div>
-        <ul class="punti">
-          <li><svg><use href="#spunta"/></svg>Runs on your server</li>
-          <li><svg><use href="#spunta"/></svg>A desktop per user</li>
-          <li><svg><use href="#spunta"/></svg>Clients: just a browser</li>
-        </ul>
+    <div class="largo">
+      <p class="occhiello">Simple. Secure. Free.</p>
+      <h1>Connect to your Linux desktop from <em>anywhere</em></h1>
+      <p class="sotto">REMOTIX turns your Linux server into remote desktops for you and your team, reachable from any device using only a web browser.</p>
+      <div class="bottoni">
+        <a class="pulsante primario" href="#download">Download now</a>
+        <a class="pulsante vetro-blu" href="https://github.com/nic-fio/REMOTIX">View on GitHub</a>
       </div>
-      <figure class="vetrina" style="margin:0">
-        <div class="barra"><i></i><i></i><i></i><span class="indirizzo">https://office-server:7447</span></div>
-        <div class="tela"><img src="schermate/gnome.png" alt="A GNOME desktop served by REMOTIX, inside a browser tab" onerror="this.remove()"><span class="segnaposto">real screenshot from the test server</span></div>
-      </figure>
+
+      <div class="schema" aria-label="Laptop, tablet and phone connect over an encrypted connection to the REMOTIX Linux server, which delivers the desktop to the browser">
+        <div class="dispositivi">
+          <div class="disp"><div class="icona-d"><svg width="76" height="57"><use href="#i-portatile"/></svg></div>Laptop</div>
+          <div class="disp"><div class="icona-d"><svg width="76" height="57"><use href="#i-tablet"/></svg></div>Tablet</div>
+          <div class="disp"><div class="icona-d"><svg width="76" height="57"><use href="#i-telefono"/></svg></div>Phone</div>
+        </div>
+        <div class="cifrato" aria-hidden="true">
+          <svg class="fili" viewBox="0 0 160 240" preserveAspectRatio="none" fill="none" stroke="#5fd3ff" stroke-width="1.6">
+            <path d="M0 40 C 70 40, 50 120, 130 120"/><path d="M0 120 H 130"/><path d="M0 200 C 70 200, 50 120, 130 120"/>
+          </svg>
+          <div class="lucchetto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Encrypted<br>connection</div>
+        </div>
+        <div class="freccia" aria-hidden="true">⟶</div>
+        <div class="server" aria-hidden="true">
+          <div class="cassetto"><i></i><b></b></div><div class="cassetto"><i></i><b></b></div><div class="cassetto"><i></i><b></b></div>
+          <strong>REMOTIX</strong><span>Linux server</span>
+        </div>
+        <div class="freccia" aria-hidden="true">⟷</div>
+        <div class="portatile">
+          <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate/gnome.png" alt="A GNOME desktop served by REMOTIX in a browser" onerror="this.remove()"></div></div><div class="base"></div></div>
+          <div class="didascalia">Your desktop, in the browser<small>No client required</small></div>
+        </div>
+      </div>
     </div>
   </section>
+
+  <div class="largo">
+    <div class="striscia" id="features">
+      <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><b>Encrypted connections</b><span>Your data stays on your server.</span></div></div>
+      <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><div><b>No client required</b><span>Just a web browser.</span></div></div>
+      <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></span><div><b>Source available</b><span>Free and auditable.</span></div></div>
+      <div><span class="ico"><i class="tux"></i></span><div><b>Works on Linux</b><span>GNOME, KDE Plasma, XFCE, LXQt.</span></div></div>
+    </div>
+  </div>
 </div>
 
 <main>
-  <section class="sezione bianca" id="how">
-    <div class="contenitore">
-      <p class="occhiello">How it works</p>
-      <h2>One server. Every user. Any browser.</h2>
-      <p class="guida">REMOTIX is the server half of remote desktop: it runs on the Linux machine, creates a desktop session for each user who signs in, and serves the page they connect with.</p>
-      <div class="schema-rete" aria-hidden="true">
-        <div class="nodo server">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/><path d="M7 6.5h.01M7 17.5h.01"/></svg>
-          <b>Your Linux server</b><span>REMOTIX + GNOME, KDE, XFCE or LXQt</span>
-          <div class="sessioni"><em>anna's desktop</em><em>marco's desktop</em><em>luca's desktop</em></div>
-        </div>
-        <div class="fili"><span>HTTPS · encrypted</span></div>
-        <div class="clienti">
-          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="11" rx="1.5"/><path d="M1 19h22"/></svg><b>anna</b><span>Chrome on Windows</span></div>
-          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><b>marco</b><span>Firefox on Linux</span></div>
-          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg><b>luca</b><span>Chrome on Android</span></div>
+  <section class="sezione chiara">
+    <div class="largo due-col">
+      <div>
+        <p class="occhiello">Use it anywhere</p>
+        <h2>Use your desktop from any device</h2>
+        <p class="guida">The same desktop on a laptop, a tablet or a phone. Your Linux environment, with all its applications and settings, directly in the web browser.</p>
+        <ul class="punti-v">
+          <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><div><b>Full desktop</b><span>Use your applications as if you were sitting at the server.</span></div></li>
+          <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><div><b>Fast, from the graphics card</b><span>The server's GPU encodes the screen; the browser decodes it in hardware.</span></div></li>
+          <li><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></span><div><b>Always where you left it</b><span>Close the browser, switch device: your windows keep running on the server.</span></div></li>
+        </ul>
+      </div>
+      <div class="famiglia" aria-hidden="true">
+        <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate/kde.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div>
+        <div class="tablet"><div class="schermo"><img src="schermate/xfce.png" alt="" onerror="this.remove()"></div></div>
+        <div class="telefono"><div class="schermo"><img src="schermate/telefono.png" alt="" onerror="this.remove()"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione grigia" id="how">
+    <div class="largo come">
+      <div>
+        <p class="occhiello">How it works</p>
+        <h2>A simple and secure architecture</h2>
+        <p class="guida">Run REMOTIX on your Linux server and open your desktop and applications from any device, using only a web browser.</p>
+      </div>
+      <div class="passi">
+        <div class="passo"><h3><i>1.</i>Any device</h3><p>with a web browser</p>
+          <div class="figura"><svg width="76" height="57" style="color:#5b6478"><use href="#i-portatile"/></svg><svg width="52" height="57" style="color:#5b6478"><use href="#i-tablet"/></svg><svg width="40" height="57" style="color:#5b6478"><use href="#i-telefono"/></svg></div></div>
+        <div class="tratteggio" aria-hidden="true">- - →</div>
+        <div class="passo"><h3><i>2.</i>REMOTIX</h3><p>on your Linux server</p>
+          <div class="figura"><div class="mini-server"><i></i><i></i><i></i><i></i></div></div></div>
+        <div class="tratteggio" aria-hidden="true">- - →</div>
+        <div class="passo"><h3><i>3.</i>Your desktop</h3><p>and applications</p>
+          <div class="figura"><div class="laptop" style="width:9rem"><div class="coperchio"><div class="schermo"><img src="schermate/gnome.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione chiara" id="download">
+    <div class="largo distro-riga">
+      <div>
+        <p class="occhiello">Supported distributions</p>
+        <h2>REMOTIX works with the main Linux distributions.</h2>
+        <div class="loghi">
+          <div><i style="--c:#E95420;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/ubuntu.svg)"></i>Ubuntu</div>
+          <div><i style="--c:#A81D33;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/debian.svg)"></i>Debian</div>
+          <div><i style="--c:#51A2DA;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/fedora.svg)"></i>Fedora</div>
+          <div><i style="--c:#0F4266;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/almalinux.svg)"></i>AlmaLinux</div>
+          <div><i style="--c:#1793D1;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/archlinux.svg)"></i>Arch Linux</div>
+          <div><i style="--c:#73BA25;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/opensuse.svg)"></i>openSUSE</div>
         </div>
       </div>
-      <div class="griglia tre passi" style="margin-top:2.6rem">
-        <div class="scheda voce">
-          <h3>Install it on the server</h3>
-          <div class="terminale">sudo sh remotix-0.18.0-1.run</div>
-          <p style="margin-top:.8rem">One file for every supported distribution. It checks the machine first.</p>
+      <div class="inizia">
+        <h3>Get started now</h3>
+        <p>Download one file, install it on your server, and open your remote desktop in minutes.</p>
+        <div class="bottoni">
+          <a class="pulsante primario" href="download/remotix-0.18.0-1.run">Download for Linux</a>
+          <a class="pulsante bordo-blu" href="https://github.com/nic-fio/REMOTIX">View on GitHub</a>
         </div>
-        <div class="scheda voce">
-          <h3>Open it in a browser</h3>
-          <div class="terminale">https://your-server:7447</div>
-          <p style="margin-top:.8rem">From a laptop, a workstation, a tablet or a phone. No app, no plug-in.</p>
-        </div>
-        <div class="scheda voce">
-          <h3>Sign in, get your desktop</h3>
-          <div class="terminale">user: anna  ·  password: ●●●●●●</div>
-          <p style="margin-top:.8rem">The same account as SSH. Each user lands in their own session.</p>
+        <div class="spunte">
+          <span><svg><use href="#spunta"/></svg>Free</span>
+          <span><svg><use href="#spunta"/></svg>No client required</span>
+          <span><svg><use href="#spunta"/></svg>No account, no tracking</span>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="sezione" id="why">
-    <div class="contenitore">
-      <p class="occhiello">Why REMOTIX</p>
-      <h2>Built for Linux, not adapted to it.</h2>
-      <div class="griglia tre">
-        <div class="voce">
-          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
-          <h3>The desktop waits for you</h3>
-          <p>Close the browser, change device, come back tomorrow: the session keeps running and your windows are still there.</p>
-        </div>
-        <div class="voce">
-          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
-          <h3>Video from the graphics card</h3>
-          <p>Intel, AMD or NVIDIA encode the screen in H.264 or HEVC; the browser decodes it in hardware. Audio and clipboard included.</p>
-        </div>
-        <div class="voce">
-          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-          <h3>Safe defaults</h3>
-          <p>Always encrypted, root excluded, three wrong passwords and the address is out for twelve hours. Nobody can switch the server off from a session.</p>
+  <section class="blu finale">
+    <div class="largo griglia-f">
+      <div>
+        <p class="occhiello">Start using REMOTIX today</p>
+        <h2>Get your Linux desktop working online in a few minutes.</h2>
+        <div class="bottoni">
+          <a class="pulsante primario" href="#download">Download for Linux</a>
+          <a class="pulsante vetro-blu" href="https://github.com/nic-fio/REMOTIX">View on GitHub</a>
         </div>
       </div>
-      <div class="scheda scorre" style="padding:.4rem .6rem;margin-top:2.6rem">
-        <table class="tabella confronto">
-          <thead><tr><th></th><th>REMOTIX</th><th>xrdp</th><th>VNC server</th></tr></thead>
-          <tbody>
-            <tr><td>What users install</td><td class="si">Nothing, a browser</td><td>An RDP client</td><td>A VNC client</td></tr>
-            <tr><td>Desktops</td><td class="si">Wayland: GNOME, KDE, XFCE, LXQt</td><td>X11 sessions</td><td>X11 sessions</td></tr>
-            <tr><td>Session survives a disconnect</td><td class="si">Yes</td><td>Yes</td><td>Yes</td></tr>
-          </tbody>
-        </table>
+      <div class="usi">
+        <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><b>Personal use</b><span>Your own desktop, from anywhere.</span></div>
+        <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3 3 0 0 1 0 6M21 20c0-2.6-1.6-4.8-4-5.6"/></svg></span><b>Teams</b><span>A desktop for each user, on one server.</span></div>
+        <div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg></span><b>Infrastructure</b><span>Fits your existing Linux setup and accounts.</span></div>
       </div>
-    </div>
-  </section>
-
-  <section class="sezione bianca" id="download">
-    <div class="contenitore">
-      <p class="occhiello">Download</p>
-      <h2>One file. Every supported distribution.</h2>
-      <p class="guida">The installer checks your machine first, says what it can do and what is missing, then installs with your system's package manager. Nothing is added to your repositories.</p>
-      <div class="scarica">
-        <div class="scheda file">
-          <div class="nome">remotix-0.18.0-1.run<small>Released 2026-10-?? · 64-bit x86 · ~40 MB</small></div>
-          <a class="pulsante primario" href="download/remotix-0.18.0-1.run">Download</a>
-          <div class="terminale"><span class="c"># see what REMOTIX can do on this machine</span>
-sh remotix-0.18.0-1.run check
-<span class="c"># install it (or upgrade to this version)</span>
-sudo sh remotix-0.18.0-1.run</div>
-          <div class="impronta">SHA-256 <span class="mono">3f9c…e21a</span> · <a href="download/remotix-0.18.0-1.run.sha256">.sha256</a> · <a href="#">Release notes</a> · <a href="#">Older versions</a></div>
-        </div>
-        <div class="scheda voce">
-          <h3 style="margin-top:0">Supported distributions</h3>
-          <ul class="distro">
-            <li><svg><use href="#spunta"/></svg>Debian 13</li>
-            <li><svg><use href="#spunta"/></svg>Ubuntu 26.04</li>
-            <li><svg><use href="#spunta"/></svg>Fedora 44</li>
-            <li><svg><use href="#spunta"/></svg>AlmaLinux 10</li>
-            <li><svg><use href="#spunta"/></svg>openSUSE Tumbleweed and Leap 16</li>
-            <li><svg><use href="#spunta"/></svg>Arch Linux</li>
-          </ul>
-          <p style="margin:1.2rem 0 0;font-size:.93rem;color:var(--tenue)"><b style="color:var(--inchiostro)">Desktops</b> GNOME, KDE Plasma, XFCE, LXQt.<br><b style="color:var(--inchiostro)">GPU</b> Intel, AMD or NVIDIA recommended; software encoding otherwise.<br><b style="color:var(--inchiostro)">Users connect with</b> Chrome or Edge on Windows and Linux, Chrome on Android, Firefox on Linux.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="sezione" id="license">
-    <div class="contenitore">
-      <p class="occhiello">License</p>
-      <h2>Free for everyone. Companies included.</h2>
-      <p class="guida">REMOTIX is freeware with visible source code. Use it at home or at work, on as many servers and for as many users as you like. No trial, no key, no account.</p>
-      <div class="licenza">
-        <div class="scheda libero">
-          <h3>You can, for free</h3>
-          <ul>
-            <li><svg><use href="#spunta"/></svg>Use it, privately or in your organisation</li>
-            <li><svg><use href="#spunta"/></svg>Read, build and modify the source for yourself</li>
-            <li><svg><use href="#spunta"/></svg>Share the original, unmodified installer</li>
-          </ul>
-        </div>
-        <div class="scheda chiedi">
-          <h3>Ask us first, to</h3>
-          <ul>
-            <li><svg><use href="#spunta"/></svg>Sell it, or include it in a product</li>
-            <li><svg><use href="#spunta"/></svg>Sell access to desktops served by REMOTIX</li>
-            <li><svg><use href="#spunta"/></svg>Distribute a modified version</li>
-          </ul>
-          <p style="margin:1.2rem 0 0;font-size:.93rem;color:var(--tenue)">Write to <a href="mailto:remotix@nicfio.it">remotix@nicfio.it</a>. <a href="#">Read the full license</a>.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="sezione" id="faq">
-    <div class="contenitore" style="max-width:52rem">
-      <p class="occhiello">FAQ</p>
-      <h2>Questions.</h2>
-      <details><summary>How many users can one server serve?</summary><p>It depends on the CPU, the graphics card and what users do: office work and video are very different loads. REMOTIX admits a new session only while the server can carry it, and refuses with the reason when it cannot. The sizing guide in the documentation has measurements on real hardware.</p></details>
-      <details><summary>Which accounts can sign in?</summary><p>REMOTIX uses the same PAM stack as SSH. If your users can already log in to the server with SSH, through local accounts or a directory, they can open a desktop. Root is always excluded.</p></details>
-      <details><summary>What happens when a user closes the browser?</summary><p>The session keeps running. They can reconnect from the same or another device and find their windows as they left them. After 60 minutes without input the session is closed cleanly.</p></details>
-      <details><summary>Is it really free, even for a company?</summary><p>Yes. Using REMOTIX costs nothing, at home or at work. A license is needed only to sell it, build it into a product, or sell access to desktops served by it.</p></details>
-      <details><summary>Is REMOTIX open source?</summary><p>The source code is visible, and you can build and modify it for yourself. It is not "open source" in the OSI sense, because selling it and distributing modified copies are reserved.</p></details>
-      <details><summary>Does REMOTIX phone home?</summary><p>No. There is no account, no key and no license check: once installed, REMOTIX works without internet access.</p></details>
-    </div>
-  </section>
-
-  <section class="notte invito">
-    <div class="satin"></div>
-    <div class="contenitore">
-      <h2>Turn your Linux machine into a remote desktop server.</h2>
-      <p>Download one file, install it on the server, and open your desktop in a browser.</p>
-      <a class="pulsante primario" href="#download">Download REMOTIX</a>
     </div>
   </section>
 </main>
 
-<footer class="piede">
-  <div class="contenitore">
-    <div class="colonne">
-      <div><a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-        <p style="margin:1rem 0 0;max-width:22em">The remote desktop server for Linux.</p></div>
-      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#why">Why REMOTIX</a></li><li><a href="#download">Download</a></li></ul></div>
-      <div><h4>Resources</h4><ul><li><a href="#">Documentation</a></li><li><a href="#">Release notes</a></li><li><a href="#">Report a problem</a></li></ul></div>
-      <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#license">License</a></li><li><a href="mailto:remotix@nicfio.it">Contact</a></li></ul></div>
-    </div>
-    <div class="fondo">© 2026 REMOTIX</div>
+<footer class="piede-chiaro">
+  <div class="largo riga">
+    <a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+    <nav><a href="#features">Features</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a><a href="#">License</a></nav>
+    <span class="destra">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
   </div>
 </footer>
 
