@@ -63,18 +63,28 @@
   /* le prestazioni */
   .nota-ferro { margin-top: 1rem; font-size: .85rem; color: var(--tenue); }
 
-  /* i prezzi */
-  .prezzi { display: grid; gap: 1.2rem; grid-template-columns: 1fr; max-width: 52rem; }
-  @media (min-width: 720px) { .prezzi { grid-template-columns: 1fr 1fr; } }
-  .prezzo { display: flex; flex-direction: column; gap: 1rem; padding: 2rem; }
-  .prezzo.in-vista { outline: 2px solid var(--accento); }
-  .prezzo h3 { margin: 0; font-size: 1.15rem; }
-  .prezzo .cifra { font-size: 2.3rem; font-weight: 750; letter-spacing: -.03em; line-height: 1; }
-  .prezzo .cifra small { font-size: .9rem; font-weight: 500; color: var(--tenue); letter-spacing: 0; }
-  .prezzo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
-  .prezzo li { display: flex; gap: .55em; }
-  .prezzo li svg { width: 1.15em; height: 1.15em; flex: none; color: var(--vivo); margin-top: .2em; }
-  .prezzo .pulsante { margin-top: auto; }
+  /* lo scaricamento */
+  .scarica { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .scarica { grid-template-columns: 1.25fr 1fr; } }
+  .file { display: flex; flex-direction: column; gap: 1.1rem; padding: 2rem; }
+  .file .nome { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
+  .file .nome small { display: block; font-size: .85rem; font-weight: 500; color: var(--tenue); letter-spacing: 0; margin-top: .2em; }
+  .terminale { background: #0b1430; color: #dfe7ff; border-radius: .6em; padding: 1em 1.1em; font-size: .86rem; line-height: 1.7; overflow-x: auto; white-space: pre; }
+  .terminale .c { color: #7f8db3; }
+  .impronta { font-size: .78rem; color: var(--tenue); word-break: break-all; }
+  .distro { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
+  .distro li { display: flex; gap: .55em; }
+  .distro li svg { width: 1.15em; height: 1.15em; flex: none; color: var(--vivo); margin-top: .2em; }
+
+  /* la licenza */
+  .licenza { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .licenza { grid-template-columns: 1fr 1fr; } }
+  .licenza h3 { margin: 0 0 .7em; font-size: 1.08rem; }
+  .licenza ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55em; font-size: .93rem; }
+  .licenza li { display: flex; gap: .55em; }
+  .licenza li svg { width: 1.15em; height: 1.15em; flex: none; margin-top: .2em; }
+  .licenza .libero svg { color: var(--vivo); }
+  .licenza .chiedi svg { color: var(--accento); }
 
   /* domande */
   details { background: var(--carta); border-radius: .8em; box-shadow: var(--ombra); padding: 1.05rem 1.3rem; }
@@ -110,10 +120,10 @@
     <div class="contenitore riga">
       <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
       <nav aria-label="Main">
-        <a href="#how">How it works</a><a href="#requirements">Requirements</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="#">Docs</a>
+        <a href="#how">How it works</a><a href="#requirements">Requirements</a><a href="#license">License</a><a href="#faq">FAQ</a><a href="#">Docs</a>
       </nav>
       <div class="azioni">
-        <a class="pulsante vetro piccolo" href="signin.html">Sign in</a>
+        <a class="pulsante vetro piccolo" href="#download">Download</a>
       </div>
     </div>
   </header>
@@ -122,15 +132,16 @@
     <div class="contenitore impianto">
       <div>
         <h1>Your Linux desktop, in your browser.</h1>
-        <p class="sotto">REMOTIX turns a Linux server into desktops for your whole team. Open a browser on a laptop, a phone or a tablet, sign in, and find your windows just as you left them.</p>
+        <p class="sotto">REMOTIX turns a Linux server into desktops for your whole team. Open a browser on a laptop, a phone or a tablet, sign in, and find your windows just as you left them. Free, for everyone.</p>
         <div class="bottoni">
-          <a class="pulsante primario" href="signin.html">Try it free for 14 days</a>
+          <a class="pulsante primario" href="#download">Download REMOTIX</a>
           <a class="pulsante vetro" href="#how">See how it works</a>
         </div>
         <ul class="punti">
           <li><svg><use href="#spunta"/></svg>Nothing to install on the client</li>
           <li><svg><use href="#spunta"/></svg>A desktop for each user</li>
           <li><svg><use href="#spunta"/></svg>Hardware video encoding</li>
+          <li><svg><use href="#spunta"/></svg>Free, no account, no key</li>
         </ul>
       </div>
       <div class="finestra" aria-hidden="true">
@@ -197,7 +208,7 @@
       <div class="griglia due">
         <div class="scheda voce">
           <h3>The server</h3>
-          <p>A Linux machine, physical or virtual, with internet access for the license. Debian, Ubuntu, Fedora and their families. An Intel, AMD or NVIDIA graphics card is recommended; without one REMOTIX encodes in software and declares it.</p>
+          <p>A Linux machine, physical or virtual: Debian, Ubuntu, Fedora, AlmaLinux, openSUSE or Arch (see <a href="#download">Download</a> for the versions). An Intel, AMD or NVIDIA graphics card is recommended; without one REMOTIX encodes in software and declares it.</p>
         </div>
         <div class="scheda voce">
           <h3>Whoever connects</h3>
@@ -208,31 +219,59 @@
     </div>
   </section>
 
-  <section class="sezione bianca" id="pricing">
+  <section class="sezione bianca" id="download">
     <div class="contenitore">
-      <p class="occhiello">Pricing</p>
-      <h2>One license per server. Unlimited users.</h2>
-      <p class="guida">We don't count users: the license covers one machine. Updates are included while the license is active.</p>
-      <div class="prezzi">
-        <div class="scheda prezzo">
-          <h3>Trial</h3>
-          <div class="cifra">Free <small>· 14 days</small></div>
-          <ul>
-            <li><svg><use href="#spunta"/></svg>Every feature, unlimited users</li>
-            <li><svg><use href="#spunta"/></svg>One trial per machine</li>
-            <li><svg><use href="#spunta"/></svg>Upgrade to full without reinstalling</li>
-          </ul>
-          <a class="pulsante secondario" href="signin.html">Get a trial key</a>
+      <p class="occhiello">Download</p>
+      <h2>One file. Every supported distribution.</h2>
+      <p class="guida">The installer checks your machine first, says what it can do and what is missing, then installs with your system's package manager. Nothing is added to your repositories.</p>
+      <div class="scarica">
+        <div class="scheda file">
+          <div class="nome">remotix-0.18.0-1.run<small>Released 2026-10-?? · 64-bit x86 · ~40 MB</small></div>
+          <a class="pulsante primario" href="download/remotix-0.18.0-1.run">Download</a>
+          <div class="terminale"><span class="c"># see what REMOTIX can do on this machine</span>
+sh remotix-0.18.0-1.run check
+<span class="c"># install it (or upgrade to this version)</span>
+sudo sh remotix-0.18.0-1.run</div>
+          <div class="impronta">SHA-256 <span class="mono">3f9c…e21a</span> · <a href="download/remotix-0.18.0-1.run.sha256">.sha256</a> · <a href="#">Release notes</a> · <a href="#">Older versions</a></div>
         </div>
-        <div class="scheda prezzo in-vista">
-          <h3>Full</h3>
-          <div class="cifra">€ — <small>/ server / year</small></div>
-          <ul>
-            <li><svg><use href="#spunta"/></svg>Everything in the trial, for a year</li>
-            <li><svg><use href="#spunta"/></svg>Renew by hand or automatically, your choice</li>
-            <li><svg><use href="#spunta"/></svg>Move it to a new server whenever you want</li>
+        <div class="scheda voce">
+          <h3 style="margin-top:0">Supported distributions</h3>
+          <ul class="distro">
+            <li><svg><use href="#spunta"/></svg>Debian 13</li>
+            <li><svg><use href="#spunta"/></svg>Ubuntu 26.04</li>
+            <li><svg><use href="#spunta"/></svg>Fedora 44</li>
+            <li><svg><use href="#spunta"/></svg>AlmaLinux 10</li>
+            <li><svg><use href="#spunta"/></svg>openSUSE Tumbleweed and Leap 16</li>
+            <li><svg><use href="#spunta"/></svg>Arch Linux</li>
           </ul>
-          <a class="pulsante primario" href="signin.html">Buy a license</a>
+          <p style="margin:1.2rem 0 0">Desktops: GNOME, KDE Plasma, XFCE, LXQt.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione" id="license">
+    <div class="contenitore">
+      <p class="occhiello">License</p>
+      <h2>Free for everyone. Companies included.</h2>
+      <p class="guida">REMOTIX is freeware with visible source code. Use it at home or at work, on as many servers and for as many users as you like. No trial, no key, no account.</p>
+      <div class="licenza">
+        <div class="scheda libero">
+          <h3>You can, for free</h3>
+          <ul>
+            <li><svg><use href="#spunta"/></svg>Use it, privately or in your organisation</li>
+            <li><svg><use href="#spunta"/></svg>Read, build and modify the source for yourself</li>
+            <li><svg><use href="#spunta"/></svg>Share the original, unmodified installer</li>
+          </ul>
+        </div>
+        <div class="scheda chiedi">
+          <h3>Ask us first, to</h3>
+          <ul>
+            <li><svg><use href="#spunta"/></svg>Sell it, or include it in a product</li>
+            <li><svg><use href="#spunta"/></svg>Sell access to desktops served by REMOTIX</li>
+            <li><svg><use href="#spunta"/></svg>Distribute a modified version</li>
+          </ul>
+          <p style="margin:1.2rem 0 0;font-size:.93rem;color:var(--tenue)">Write to <a href="mailto:remotix@nicfio.it">remotix@nicfio.it</a>. <a href="#">Read the full license</a>.</p>
         </div>
       </div>
     </div>
@@ -243,9 +282,10 @@
       <p class="occhiello">FAQ</p>
       <h2>Questions.</h2>
       <details><summary>Can I use REMOTIX on Windows servers?</summary><p>No. REMOTIX serves Linux desktops only. You can connect from Windows, though: any modern browser will do.</p></details>
-      <details><summary>What happens if my server loses internet access?</summary><p>REMOTIX keeps working for 14 days from the last successful license check, and tells the administrator how many days are left.</p></details>
-      <details><summary>Does the license stop my server if it expires?</summary><p>Only REMOTIX stops, after 14 days of grace. SSH and local logins are never touched, and running desktops stay alive until you renew.</p></details>
-      <details><summary>I'm moving to a new server. Do I need a new key?</summary><p>No. Copy REMOTIX over and switch the old server off: the license follows the installation.</p></details>
+      <details><summary>Is it really free, even for a company?</summary><p>Yes. Using REMOTIX costs nothing, at home or at work. A license is needed only to sell it, build it into a product, or sell access to desktops served by it.</p></details>
+      <details><summary>Is REMOTIX open source?</summary><p>The source code is visible, and you can build and modify it for yourself. It is not "open source" in the OSI sense, because selling it and distributing modified copies are reserved.</p></details>
+      <details><summary>Does REMOTIX phone home?</summary><p>No. There is no account, no key and no license check: once installed, REMOTIX works without internet access.</p></details>
+      <details><summary>Does it change my system?</summary><p>No. The installer says what is missing and leaves providing it to you; packages come from the repositories your machine already has, and uninstalling removes what REMOTIX added.</p></details>
     </div>
   </section>
 
@@ -253,8 +293,8 @@
     <div class="satin"></div>
     <div class="contenitore">
       <h2>Try it on your own server.</h2>
-      <p>Request a trial key, install REMOTIX, and open your first desktop in the browser.</p>
-      <a class="pulsante primario" href="signin.html">Try it free for 14 days</a>
+      <p>Download one file, install REMOTIX, and open your first desktop in the browser.</p>
+      <a class="pulsante primario" href="#download">Download REMOTIX</a>
     </div>
   </section>
 </main>
@@ -264,14 +304,14 @@
     <div class="colonne">
       <div><a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
         <p style="margin:1rem 0 0;max-width:22em">Remote Linux desktops in the browser.</p></div>
-      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li></li><li><a href="#pricing">Pricing</a></li></ul></div>
-      <div><h4>Account</h4><ul><li><a href="signin.html">Sign in</a></li><li><a href="signin.html">Free trial</a></li><li><a href="account.html">My licenses</a></li></ul></div>
-      <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Contact</a></li></ul></div>
+      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#download">Download</a></li></ul></div>
+      <div><h4>Resources</h4><ul><li><a href="#">Documentation</a></li><li><a href="#">Release notes</a></li><li><a href="#">Report a problem</a></li></ul></div>
+      <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#license">License</a></li><li><a href="mailto:remotix@nicfio.it">Contact</a></li></ul></div>
     </div>
     <div class="fondo">© 2026 REMOTIX</div>
   </div>
 </footer>
 
-<div class="nastro">Mockup · <a href="account.html">account</a> · <a href="console.html">console</a></div>
+<div class="nastro">Mockup</div>
 </body>
 </html>

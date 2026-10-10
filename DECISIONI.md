@@ -6508,6 +6508,9 @@ prossimo step sarà l'installer»*.
   «codice visibile», non «open source», o la comunità lo contesta.
 - ⚠ **Le aziende la usano gratis anche al lavoro**, come Phonestra: si compra solo per rivendere, includere in
   un prodotto o offrire come servizio. È l'opposto di §10.22 (che vietava anche l'uso interno).
+- ✅ **Il sito `remotix.nicfio.it` diventa solo vetrina e scaricamento** (10 ott): file fissi serviti da Caddy
+  sulla VPS, niente parti vive. ✅ **Il `.run` si scarica dalla VPS** (utente, 10 ott: *«dalla VPS»*), con accanto
+  il suo `.sha256`; il deposito GitHub resta privato. Mockup in `grafica/sito-mockup/index.html`.
 - Resta il vincolo di §11.4 delle SPECIFICHE, nessuna dipendenza GPL: la GPL chiederebbe di distribuire tutto
   sotto GPL.
 

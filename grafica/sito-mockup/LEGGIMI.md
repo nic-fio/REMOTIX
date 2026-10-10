@@ -1,14 +1,24 @@
-# Il sito remotix.nicfio.it — mockup (9 ott 2026)
+# Il sito remotix.nicfio.it — mockup
 
-Prove di veste, **non il sito**: dati finti, nessun collegamento vero. In inglese (utente, 9 ott). Lo stile
-è quello della pagina d'accesso del prodotto (`src/pagina.html`, classe `.accesso`), raccolto in `stile.css`.
-Le decisioni stanno in `fasi/21-la-licenza.md` §4-bis e in `SPECIFICHE.md` §15.
+Prova di veste, **non il sito**: dati finti (versione, data, impronta del `.run`), nessun collegamento vero. In
+inglese (utente, 9 ott). Lo stile è quello della pagina d'accesso del prodotto (`src/pagina.html`, classe
+`.accesso`), raccolto in `stile.css`.
 
-| pagina | che cosa prova |
+✅ **10 ott 2026: REMOTIX è gratuito** (DECISIONI §10.33) ⇒ il sito è solo **file fissi** serviti da Caddy sulla
+VPS, come gli altri siti (`~/Documenti/VPS`): niente accesso, area cliente, pannello né prezzi. Tolti
+`signin.html`, `account.html`, `console.html` (restano nella storia di git, commit 91b7bc5).
+✅ **Il `.run` si scarica dalla VPS** (utente, 10 ott): `remotix.nicfio.it/download/remotix-X.Y.Z-R.run` con
+accanto il suo `.sha256`; il deposito GitHub resta privato.
+
+| sezione di `index.html` | che cosa c'è |
 |---|---|
-| `index.html` | la vetrina pubblica: apertura, come funziona, confronto, requisiti, prezzi, domande. ⛔ Niente prestazioni: stanno nella documentazione tecnica (utente, 9 ott) |
-| `signin.html` | l'accesso all'area cliente: Google oppure il link all'email. È anche la porta di «Prova gratis» e «Acquista» |
-| `account.html` | l'area cliente: lo sdoppiamento con la scelta della copia, una full, una trial nella tolleranza, e **«Get a new license»**: trial e full si chiedono solo da qui (9 ott, `trial.html` tolta). Le licenze si mostrano con la chiave mascherata (`RXF-…-6YRB`), senza numero |
-| `console.html` | il pannello di chi vende: «da decidere», le licenze, la full a mano, il registro |
+| apertura | il desktop nel browser, «Free, for everyone», pulsante **Download** |
+| How it works · Why | invariate dal 9 ott |
+| Requirements | server: le sette distribuzioni dei pacchetti; chi si collega: il browser |
+| **Download** | il `.run`, i due comandi (`check` e `sudo sh … .run`), l'impronta, le distribuzioni, i desktop |
+| **License** | gratis per tutti, aziende comprese; cosa si può e cosa va chiesto (da `LICENSE.md`, ⏳ non ancora approvata) |
+| FAQ | gratis anche per un'azienda? open source? chiama casa? cambia il sistema? |
 
-Si aprono direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
+⛔ Niente prestazioni nella vetrina: stanno nella documentazione tecnica (utente, 9 ott).
+
+Si apre direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
