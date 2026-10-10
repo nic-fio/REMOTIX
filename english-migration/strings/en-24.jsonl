@@ -1,0 +1,3 @@
+{"file": "src/pagina.html", "prima": "protocol error", "dopo": "the server and this page misunderstood each other: reload the page and try again"}
+{"file": "banchi/18-scheda/18-confronto.sh", "prima": "   $nome $versione: codice $codice · ${byte:-0} byte · decodificati ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe", "dopo": "   $nome $versione: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"}
+{"file": "banchi/12-c20-veri.py", "prima": "NON HO POTUTO GUARDARE", "dopo": "I COULD NOT LOOK"}

@@ -121,11 +121,21 @@ INNESTI = [
         "the unknown type",
     ),
     # ── 5. SESSIONE: odd canvas and lying desktop ──────────────────────────
+    #
+    # ⚠ The foothold changed on 10 Oct 2026.  It was the phase-1 line
+    #   `sc_str(&w, "sconosciuto"); /* il desktop: in fase 1 … */`, which
+    #   D-001 (phase 15) removed: `rcp.c` now sends the REAL desktop given by
+    #   the host hook, and «unknown» only when there is no hook.  ⛔ The purpose
+    #   of the graft did not change — an odd canvas the page must refuse, a
+    #   desktop the page must not act on (§4.5), a CONGEDO with reason 0x00
+    #   (§3.1) — so it is re-anchored, not retired.  ⭐ It is split in two
+    #   footholds that carry no log text: the SESSIONE body (canvas and
+    #   desktop) and the sending of SESSIONE (the CONGEDO right behind it).
+    #   The lying desktop overrides `desktop` BEFORE the `reg`, so the server
+    #   log says what really went on the wire.
     (
         "rcp.c",
-        '\tsc_byte(&w, 1); /* 1 = NUOVA */\n\tsc_u32(&w, tl);\n\tsc_u32(&w, ta);\n'
-        '\tsc_str(&w, "sconosciuto"); /* il desktop: in fase 1 non c\'e\' compositore */\n'
-        '\tif (!w.pieno)\n\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n',
+        '\tsc_u32(&w, tl);\n\tsc_u32(&w, ta);\n\tsc_str(&w, desktop);\n',
         '\t/* ⚠ REMOTIX B11 GUASTO — two faults inside SESSIONE:\n'
         '\t *   sessione-tela-dispari   the GRANTED canvas is odd: the page\n'
         '\t *                           must REFUSE, not adapt\n'
@@ -133,25 +143,28 @@ INNESTI = [
         '\t *                           forbids the page to change\n'
         '\t *                           behaviour based on this field */\n'
         '\tbool g_disp = strcmp(s->guasto, "sessione-tela-dispari") == 0;\n'
-        '\tconst char *g_desk = "sconosciuto";\n'
         '\tif (strcmp(s->guasto, "sessione-desktop-kde") == 0)\n'
-        '\t\tg_desk = "kde";\n'
+        '\t\tdesktop = "kde";\n'
         '\telse if (strcmp(s->guasto, "sessione-desktop-gnome") == 0)\n'
-        '\t\tg_desk = "gnome";\n'
-        '\tsc_byte(&w, 1); /* 1 = NUOVA */\n'
+        '\t\tdesktop = "gnome";\n'
         '\tsc_u32(&w, g_disp ? tl + 1 : tl);\n'
         '\tsc_u32(&w, g_disp ? ta + 1 : ta);\n'
-        '\tsc_str(&w, g_desk);\n'
-        '\tif (!w.pieno)\n\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n'
-        '\t/* ⚠ REMOTIX B11 GUASTO — a CONGEDO with reason 0x00, which §3.1 forbids. */\n'
-        '\tif (strcmp(s->guasto, "congedo-motivo-zero") == 0) {\n'
-        '\t\tuint8_t c0[8];\n'
-        '\t\tscrittore w0 = {c0, sizeof c0, 0, false};\n'
-        '\t\tsc_byte(&w0, 0);\n'
-        '\t\tsc_str(&w0, "");\n'
-        '\t\tmanda_messaggio(s, T_CONGEDO, c0, w0.len);\n'
-        '\t}\n',
+        '\tsc_str(&w, desktop);\n',
         "the faults of SESSIONE",
+    ),
+    (
+        "rcp.c",
+        '\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n',
+        '\t\tmanda_messaggio(s, T_SESSIONE, corpo, w.len);\n'
+        '\t\t/* ⚠ REMOTIX B11 GUASTO — a CONGEDO with reason 0x00, which §3.1 forbids. */\n'
+        '\t\tif (strcmp(s->guasto, "congedo-motivo-zero") == 0) {\n'
+        '\t\t\tuint8_t c0[8];\n'
+        '\t\t\tscrittore w0 = {c0, sizeof c0, 0, false};\n'
+        '\t\t\tsc_byte(&w0, 0);\n'
+        '\t\t\tsc_str(&w0, "");\n'
+        '\t\t\tmanda_messaggio(s, T_CONGEDO, c0, w0.len);\n'
+        '\t\t}\n',
+        "the CONGEDO with reason zero",
     ),
     # ── 6. A CONGEDO after RESPINTO, which §4.4 forbids ────────────────────
     (

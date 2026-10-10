@@ -406,7 +406,7 @@ def main():
             r = {"browser": b, "esito": CIECO, "perche": "the bench fell over: %r" % e}
         finally:
             sc.sgombera(chi)
-        print("   ▶ %s: %s — %s" % (b, {0: "VERDE", 1: "ROSSO", 3: "NON HO POTUTO GUARDARE"}
+        print("   ▶ %s: %s — %s" % (b, {0: "VERDE", 1: "ROSSO", 3: "I COULD NOT LOOK"}
                                    .get(r["esito"], r["esito"]), r.get("perche")))
         for x in r.get("server") or []:
             print("      server: %s" % x[:200])

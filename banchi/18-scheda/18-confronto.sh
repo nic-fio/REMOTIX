@@ -87,7 +87,7 @@ prova() {
 	byte=$(stat -c %s "$flusso" 2>/dev/null)
 	printf '{"prova":"%s","versione":"%s","nodo":"renderD%s","codec":"%s","profondita":%s,"misura":"%s","strada":"%s","extra":"%s","codice":%s,"secondi":%.2f,"byte_flusso":%s,"decodificati":"%s","errori_decodifica":%s,"ffprobe":"%s","psnr":"%s","ssim":"%s","banco":%s}\n' \
 		"$nome" "$versione" "$nodo" "$codec" "$prof" "$misura" "$strada" "$*" "$codice" "$(awk "BEGIN{print $t1 - $t0}")" "${byte:-0}" "${decodificati:-?}" "${errori_dec:-0}" "$probe" "$psnr" "$ssim" "$json" >> "$USCITA/esiti.jsonl"
-	echo "   $nome $versione: codice $codice · ${byte:-0} byte · decodificati ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"
+	echo "   $nome $versione: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"
 }
 
 matrice() {
