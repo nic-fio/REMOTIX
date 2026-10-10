@@ -1,651 +1,651 @@
-# Fase 7 — Audio e appunti
+# Phase 7 — Audio and clipboard
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
+*⚠ Historical measurements, on the machine of that time. With phase 18 (without ffmpeg) the ones that the change invalidated were removed — encoding without the card and colour conversion with swscale; the ones for encoding on the card and for audio stay, because the new stream is identical (comparison of 30 Sep 2026). User's decision. The measurements redone after the change (1 Oct 2026) are in `fasi/18-senza-ffmpeg.md` §5.*
 
-⭐ **Aperta il 17 agosto 2026**, col suo documento e **prima di una riga di codice**
-(`PIANO.md` §0.1). Il piano è `PIANO.md` §«Fase 7 — Audio e appunti»; il modello di questo
-documento è `PIANO.md` §0.2.
+⭐ **Opened on 17 Aug 2026**, with its document and **before a line of code**
+(`PIANO.md` §0.1). The plan is `PIANO.md` §«Fase 7 — Audio e appunti»; the model for this
+document is `PIANO.md` §0.2.
 
-> **La scena che l'utente giudicherà**: *«apre un video nel desktop remoto e lo **sente** dal
+> **The scene the user will judge**: *«apre un video nel desktop remoto e lo **sente** dal
 > portatile; copia un indirizzo sul telefono e lo **incolla** dentro la sessione, e viceversa.»*
 
-⚠ **E una cosa da dire subito, perché non sia una scoperta**: la **fase 6 non è chiusa** — il suo
-§8 aspetta il giudizio dell'utente su due scene (il trascinamento del bordo e il clic tenuto giù).
-Aprire la 7 è una decisione dell'utente del 17 agosto 2026 (*«in questa sessione sviluppiamo la
-fase 7»*); ⛔ quel che resta della 6 **resta aperto e non si chiude da sé**.
+⚠ **And one thing to say right away, so that it is not a discovery**: **phase 6 is not closed** — its
+§8 awaits the user's judgement on two scenes (dragging the border and the click held down).
+Opening 7 is a user decision of 17 Aug 2026 (*«in questa sessione sviluppiamo la
+fase 7»*); ⛔ what remains of 6 **stays open and does not close by itself**.
 
 ---
 
-> # 📅 COM'ERA IL **17 agosto 2026, sera** — *ripresa di allora*
+> # 📅 HOW IT WAS ON **17 Aug 2026, evening** — *the resume of that time*
 >
-> ⚠ **Non si riparte da qui**: il punto d'ingresso è il riquadro **⏸** in testa a `README.md`.
+> ⚠ **Do not restart from here**: the entry point is the **⏸** box at the head of `README.md`.
 >
-> *Deciso dall'utente: «per gli appunti apriamo una nuova sessione».*
+> *Decided by the user: «per gli appunti apriamo una nuova sessione».*
 >
-> ## ✅ L'AUDIO È FATTO, e il giudizio c'è: **«problema audio risolto»**
->
-> | | |
-> |---|---|
-> | **la misura** | 49,95 blocchi/s ricevuti contro 50 prodotti — **perdita zero**, **2 buchi** (dell'avvio) e coda stabile a 311-341 ms |
-> | **la scena** | un video di **YouTube** riprodotto nella sessione remota, giudicato a orecchio |
-> | ⛔ **e prima ci sono stati sette «fa schifo»** | §6.8, ed è il capitolo che insegna: sei cure su otto erano difetti **veri** che non erano quello che l'utente sentiva |
->
-> ## ⭐⭐ E GLI APPUNTI SONO FATTI — **«clipboard funziona in entrambi i versi»**, 17 ago 2026 sera
->
-> *Giudizio dell'utente col browser, porta 7730.* ⇒ 📖 §4.5 (che cosa è stato scritto), §6.9
-> (⛔ l'arbitro esterno del banco **non esiste**, e perché), §9.2-bis (il verdetto, e che cosa non
-> dice).
->
-> ⛔ **Nessun banco automatico ha mai visto passare un byte di appunti**: quel giudizio è l'unica
-> prova che questa metà della fase abbia.
->
-> *Quel che segue era il piano di partenza, ed è rimasto vero tranne §2.4:*
->
-> Il piano è §0 e §2 di questo documento; tutto quel che serve è già scritto lì:
->
-> - ⭐ **il lato indipendente c'è ed è gratis**: su GNOME la sponda X11 di Mutter è incondizionata,
->   quindi **`xclip` funziona senza una nostra sessione** — è l'arbitro esterno (§2.4);
-> - ⛔ **tre trappole di Mutter** che il banco non vede e il prodotto sì (`PIANO.md` §Fase 7):
->   `DisableClipboard` è **a senso unico** (non si chiama mai); la firma di `mime-types` è
->   **asimmetrica** e chi legge col tipo sbagliato ottiene `NULL` **senza errore**; il gestore
->   interno tiene **un solo tipo MIME**;
-> - **si riusa** `fondamenta/remotix-c/src/appunti_mutter.c` (450 righe, GNOME);
-> - ⚠ e la clipboard **si svuota all'inizio di ogni giro**, o quel che resta dal giro prima viene
->   annunciato e sembra un risultato (`LEZIONI.md` §2.3-quinquies).
->
-> ## ⚙ Lo stato della macchina, per non ricostruirlo
+> ## ✅ AUDIO IS DONE, and the judgement is there: **«problema audio risolto»**
 >
 > | | |
 > |---|---|
-> | **il server dell'audio** | acceso sulla **7710** (`banchi/07-b41-accendi.sh --hz 0`), albero `/media/REMOTIX/src/07-audio-src` |
-> | ⛔ **le porte occupate** | 7448 · **7700** · 7710 — un banco nuovo prende la sua (07-b43 usa la 7720) |
-> | **la parola di `prova`/`prova2`** | `prova2026`, dalla riga `chpasswd` di `src/provisiona.sh`. ⛔ **Non** quella di `credenziali-banchi`, che è del `prova2` **del contenitore** |
-> | ⛔ **niente è stato messo in `git`** | ~2300 righe in 13 file modificati e 7 nuovi. **Va deciso dall'utente** |
+> | **the measurement** | 49.95 blocks/s received against 50 produced — **zero loss**, **2 gaps** (at start-up) and queue stable at 311-341 ms |
+> | **the scene** | a **YouTube** video played in the remote session, judged by ear |
+> | ⛔ **and before that there were seven «fa schifo»** | §6.8, and it is the chapter that teaches: six cures out of eight were **real** faults that were not what the user was hearing |
 >
-> ## ⏳ E quel che resta aperto sull'audio, dichiarato
+> ## ⭐⭐ AND THE CLIPBOARD IS DONE — **«clipboard funziona in entrambi i versi»**, 17 Aug 2026 evening
 >
-> - ⚠ **il cuscino di 250 ms** non è mai stato giudicato per sé: l'utente ha detto «risolto», non
->   «e il ritardo va bene». Se un giorno dà fastidio, la cura non è stringerlo ma togliere l'audio
->   dal thread principale (`AudioWorklet`);
-> - ⏳ **il bitrate di Opus (96 kbit/s)** e il cuscino vanno a verbale in `DECISIONI.md`, che per
->   l'audio **non ha ancora un capitolo** (§7);
-> - ⛔ **il banco `07-b43` va rifatto dopo tutte queste cure**: l'ultimo giro verde è di **prima**
->   delle otto modifiche al trasporto;
-> - ⚠ e restano i due `[?]` della revisione (§6.4) e la **fase 6 non chiusa**.
+> *User's judgement with the browser, port 7730.* ⇒ 📖 §4.5 (what was written), §6.9
+> (⛔ the bench's external arbiter **does not exist**, and why), §9.2-bis (the verdict, and what it does not
+> say).
+>
+> ⛔ **No automatic bench has ever seen a byte of clipboard pass**: that judgement is the only
+> proof this half of the phase has.
+>
+> *What follows was the starting plan, and it stayed true except for §2.4:*
+>
+> The plan is §0 and §2 of this document; everything needed is already written there:
+>
+> - ⭐ **the independent side is there and it is free**: on GNOME Mutter's X11 bridge is unconditional,
+>   so **`xclip` works without a session of ours** — it is the external arbiter (§2.4);
+> - ⛔ **three Mutter traps** the bench does not see and the product does (`PIANO.md` §Fase 7):
+>   `DisableClipboard` is **one-way** (it is never called); the signature of `mime-types` is
+>   **asymmetric** and whoever reads with the wrong type gets `NULL` **without an error**; the internal
+>   manager holds **a single MIME type**;
+> - `fondamenta/remotix-c/src/appunti_mutter.c` **is reused** (450 lines, GNOME);
+> - ⚠ and the clipboard **is emptied at the start of every round**, or what is left from the previous round gets
+>   announced and looks like a result (`LEZIONI.md` §2.3-quinquies).
+>
+> ## ⚙ The state of the machine, so as not to reconstruct it
+>
+> | | |
+> |---|---|
+> | **the audio server** | running on **7710** (`banchi/07-b41-accendi.sh --hz 0`), tree `/media/REMOTIX/src/07-audio-src` |
+> | ⛔ **the ports taken** | 7448 · **7700** · 7710 — a new bench takes its own (07-b43 uses 7720) |
+> | **the password of `prova`/`prova2`** | `prova2026`, from the `chpasswd` line of `src/provisiona.sh`. ⛔ **Not** the one in `credenziali-banchi`, which belongs to the `prova2` **of the container** |
+> | ⛔ **nothing has been put in `git`** | ~2300 lines in 13 modified files and 7 new ones. **The user must decide** |
+>
+> ## ⏳ And what remains open on audio, declared
+>
+> - ⚠ **the 250 ms cushion** was never judged on its own: the user said «risolto», not
+>   «e il ritardo va bene». If one day it gets annoying, the cure is not tightening it but moving the audio
+>   off the main thread (`AudioWorklet`);
+> - ⏳ **the Opus bitrate (96 kbit/s)** and the cushion must be recorded in `DECISIONI.md`, which for
+>   audio **does not yet have a chapter** (§7);
+> - ⛔ **bench `07-b43` must be redone after all these cures**: the last green round is from **before**
+>   the eight changes to the transport;
+> - ⚠ and the two `[?]` of the review (§6.4) and **phase 6 not closed** remain.
 
 ---
 
-## 0 · Che cosa deve produrre questa fase
+## 0 · What this phase must produce
 
 | | |
 |---|---|
-| **l'audio** | il suono della sessione sul dispositivo dell'utente: **Opus**, con **PCM** come base sempre disponibile (`SPECIFICHE.md` §10, `RCP.md` §5.3) |
-| **gli appunti** | testo semplice, **nei due versi** (`DECISIONI.md` §5-ter.1) |
+| **audio** | the session's sound on the user's device: **Opus**, with **PCM** as the always-available base (`SPECIFICHE.md` §10, `RCP.md` §5.3) |
+| **clipboard** | plain text, **in both directions** (`DECISIONI.md` §5-ter.1) |
 
-⛔ **Fuori, e dichiarato**: il **microfono** (client → sessione). `SPECIFICHE.md` §10 lo dà per
-non urgente e `RCP.md` §12 dichiara che *«il verso è previsto in §5, il formato non è definito»*.
-Non si inventa un formato in questa fase.
+⛔ **Out, and declared**: the **microphone** (client → session). `SPECIFICHE.md` §10 calls it
+not urgent and `RCP.md` §12 declares that *«il verso è previsto in §5, il formato non è definito»*.
+A format is not invented in this phase.
 
-⛔ **Fuori anche**: immagini e file negli appunti (`SPECIFICHE.md` §9, `DECISIONI.md` §5-ter.1).
+⛔ **Also out**: images and files in the clipboard (`SPECIFICHE.md` §9, `DECISIONI.md` §5-ter.1).
 
-### 0.1 · L'ordine di lavoro, deciso dall'utente
+### 0.1 · The work order, decided by the user
 
-**Prima l'audio, poi gli appunti** (*«cominciamo con l'audio»*, 17 agosto 2026). Questo documento
-è scritto per intero lo stesso, perché il banco si scrive prima e le due metà condividono un
-pezzo — il **canale di controllo** e la **negoziazione** — ma il lavoro si fa in quest'ordine.
-
----
-
-## 1 · Quel che già esiste, e non si riscrive
-
-### 1.1 · Nel prodotto di V2, oggi
-
-| | stato | dove |
-|---|---|---|
-| ✅ la **negoziazione** di `audio.codec` | **fatta e viva**: `opus,pcm` dichiarati dai due lati, intersezione, scarto scritto nel registro, `pcm` obbligatorio per entrambi | `src/rcp.c:1513-1816`, `src/pagina.html` · `collega()` |
-| ✅ la **negoziazione** di `appunti.testo` | dichiarata dai due lati (`si`) | `src/rcp.c` · `T_APPUNTI_TESTO`, `src/pagina.html` · `MP4_DURATA_MAX()` |
-| ✅ il **rifiuto** dell'audio su uno stream | il canale `0x04` su uno stream è `ERRORE_PROTOCOLLO`, e la riga di registro lo nomina | `src/webtransport.c`, `src/rcp.c` |
-| ✅ lo **scarto dichiarato** dei datagram | alla fase 1 si scartava scrivendolo nel registro, apposta perché *«la differenza fra "l'audio non arriva" e "l'audio arriva e lo butto" si vede solo se questa riga esiste da prima»* | `src/trasporto.c:333-357` |
-| ⛔ il **verso di uscita** dei datagram | **NON ESISTE**: nessuna funzione manda un datagram. `webtransport.h` non ne ha una, e `wt_scrivi` non li tocca | — |
-| ⛔ i **tre messaggi degli appunti** | **NON ESISTONO**: `0x0201/0x0202/0x0203` non compaiono in nessun file del prodotto. La pagina riceve uno stream `0x02` e scrive *«ricevuto e non usato»* | `src/pagina.html` · `ascolta_controllo()` |
-| ⛔ il **suono nella sessione** | **NON ESISTE**: nessun sink, nessuna cattura audio. `libpipewire` è già collegato, ma per i **fotogrammi** | `src/cattura.c` |
-
-### 1.2 · Da v1, e sono le cose più intatte che il progetto abbia
-
-| file | righe | che cosa vale |
-|---|---|---|
-| `fondamenta/remotix-c/src/suono.c` + `.h` | 582 + 87 | ⭐⭐ **il pezzo più riusabile della fase**: crea il sink virtuale (`support.null-audio-sink`) e ne cattura il **monitor**. Non tocca RDP in nessuna riga |
-| `fondamenta/remotix-c/src/altoparlante.c` + `.h` | 892 + 117 | ⛔ **RDP dentro fino al collo** (`WTSVirtualChannelWrite`, `SendSamples2`, i formati di MS-RDPEA). ⭐ **Ma la forma si eredita**: la coda fra il thread PipeWire e il ciclo della connessione, il buttare **i campioni più vecchi**, il blocco intero per giro |
-| `fondamenta/remotix-c/src/appunti.c` + `.h` | 115 + 136 | lo smistamento fra le due strade |
-| `fondamenta/remotix-c/src/appunti_mutter.c` + `.h` | 450 + 28 | **GNOME**, che è il desktop di questa fase |
-| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | KDE, XFCE e LXQt — **fasi 11 e 12**, non questa |
-
-⛔ **E la divisione che v1 aveva già trovato, e che qui vale identica**: *«il sink è della
-SESSIONE, la cattura è della CONNESSIONE»* (`fondamenta/…/suono.h`). È la stessa forma di I4: un
-dispositivo audio che compare e sparisce a ogni riconnessione lascia le applicazioni già aperte
-su un dispositivo morto.
+**First audio, then clipboard** (*«cominciamo con l'audio»*, 17 Aug 2026). This document
+is written in full all the same, because the bench is written first and the two halves share a
+piece — the **control channel** and the **negotiation** — but the work is done in this order.
 
 ---
 
-## 2 · Il banco — ⛔ scritto PRIMA del prodotto
+## 1 · What already exists, and is not rewritten
 
-`PIANO.md` §0.3.4: *«il banco si certifica prima di essere creduto»*. E `PIANO.md` §«Fase 7» pone
-tre regole che nascono da tre difetti veri di v1, non da prudenza.
+### 1.1 · In the V2 product, today
 
-### 2.1 · ⛔ Si ASCOLTA, non si contano i blocchi
+| | state | where |
+|---|---|---|
+| ✅ the **negotiation** of `audio.codec` | **done and alive**: `opus,pcm` declared by both sides, intersection, discard written in the log, `pcm` mandatory for both | `src/rcp.c:1513-1816`, `src/pagina.html` · `collega()` |
+| ✅ the **negotiation** of `appunti.testo` | declared by both sides (`si`) | `src/rcp.c` · `T_APPUNTI_TESTO`, `src/pagina.html` · `MP4_DURATA_MAX()` |
+| ✅ the **rejection** of audio on a stream | channel `0x04` on a stream is `ERRORE_PROTOCOLLO`, and the log line names it | `src/webtransport.c`, `src/rcp.c` |
+| ✅ the **declared discard** of datagrams | in phase 1 they were discarded writing it in the log, on purpose because *«la differenza fra "l'audio non arriva" e "l'audio arriva e lo butto" si vede solo se questa riga esiste da prima»* | `src/trasporto.c:333-357` |
+| ⛔ the **outgoing direction** of datagrams | **DOES NOT EXIST**: no function sends a datagram. `webtransport.h` does not have one, and `wt_scrivi` does not touch them | — |
+| ⛔ the **three clipboard messages** | **DO NOT EXIST**: `0x0201/0x0202/0x0203` appear in no product file. The page receives a `0x02` stream and writes *«ricevuto e non usato»* | `src/pagina.html` · `ascolta_controllo()` |
+| ⛔ the **sound in the session** | **DOES NOT EXIST**: no sink, no audio capture. `libpipewire` is already linked, but for the **frames** | `src/cattura.c` |
 
-`LEZIONI.md` §2.2, prima riga: *«il banco contava fotogrammi spediti e blocchi riscontrati; il
-difetto cambiava **i campioni** — l'audio era rumore a fondo scala»*. Un banco che conta resta
-verde per tutto il tempo in cui il difetto è vivo.
+### 1.2 · From v1, and they are the most intact things the project has
 
-⇒ **Il giudice misura il segnale, non il traffico.**
+| file | lines | what it is worth |
+|---|---|---|
+| `fondamenta/remotix-c/src/suono.c` + `.h` | 582 + 87 | ⭐⭐ **the most reusable piece of the phase**: it creates the virtual sink (`support.null-audio-sink`) and captures its **monitor**. It does not touch RDP in any line |
+| `fondamenta/remotix-c/src/altoparlante.c` + `.h` | 892 + 117 | ⛔ **RDP up to the neck** (`WTSVirtualChannelWrite`, `SendSamples2`, the MS-RDPEA formats). ⭐ **But the shape is inherited**: the queue between the PipeWire thread and the connection loop, throwing away **the oldest samples**, the whole block per round |
+| `fondamenta/remotix-c/src/appunti.c` + `.h` | 115 + 136 | the dispatching between the two roads |
+| `fondamenta/remotix-c/src/appunti_mutter.c` + `.h` | 450 + 28 | **GNOME**, which is this phase's desktop |
+| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | KDE, XFCE and LXQt — **phases 11 and 12**, not this one |
 
-| la scena | un **tono puro a 440 Hz**, ampiezza nota, suonato **dentro la sessione** su un'applicazione vera |
+⛔ **And the division v1 had already found, and which holds identically here**: *«il sink è della
+SESSIONE, la cattura è della CONNESSIONE»* (`fondamenta/…/suono.h`). It is the same shape as I4: an
+audio device that appears and disappears at every reconnection leaves the applications already open
+on a dead device.
+
+---
+
+## 2 · The bench — ⛔ written BEFORE the product
+
+`PIANO.md` §0.3.4: *«il banco si certifica prima di essere creduto»*. And `PIANO.md` §«Fase 7» sets
+three rules that come from three real faults of v1, not from prudence.
+
+### 2.1 · ⛔ One LISTENS, one does not count blocks
+
+`LEZIONI.md` §2.2, first line: *«il banco contava fotogrammi spediti e blocchi riscontrati; il
+difetto cambiava **i campioni** — l'audio era rumore a fondo scala»*. A bench that counts stays
+green for the whole time the fault is alive.
+
+⇒ **The judge measures the signal, not the traffic.**
+
+| the scene | a **pure 440 Hz tone**, known amplitude, played **inside the session** on a real application |
 |---|---|
-| **che cosa si misura** | la **frequenza dominante** e l'**ampiezza** dei campioni ricevuti dal lato client, dopo la decodifica |
-| **l'atteso** | 440 Hz ± tolleranza, e l'ampiezza attesa entro la tolleranza del codificatore |
+| **what is measured** | the **dominant frequency** and the **amplitude** of the samples received on the client side, after decoding |
+| **the expected value** | 440 Hz ± tolerance, and the expected amplitude within the encoder's tolerance |
 
-⛔ **E i quattro controlli positivi, scritti prima**, cioè le quattro forme in cui questo banco
-**deve** dare rosso — sono le stesse che `RCP.md` §11 nomina:
+⛔ **And the four positive controls, written beforehand**, that is the four forms in which this bench
+**must** give red — they are the same ones `RCP.md` §11 names:
 
-| il guasto innestato | che cosa deve vedere il giudice |
+| the grafted fault | what the judge must see |
 |---|---|
-| il server spedisce a **44 100 Hz** dichiarando 48 000 | la frequenza dominante si sposta |
-| il PCM parte **big-endian** | il tono sparisce: rumore a banda larga, nessuna riga dominante |
-| i canali **non interlacciati** | ⚠ da decidere che aspetto abbia: se il giudice non lo distingue, il caso non entra |
-| il **silenzio** (nessun campione) | ⛔ e va distinto da *«ho ricevuto e non ho saputo leggere»*: `CODER.md` §3.10 — una misura che può dire zero deve poter distinguere lo zero dal fallimento |
+| the server sends at **44 100 Hz** declaring 48 000 | the dominant frequency shifts |
+| the PCM leaves **big-endian** | the tone disappears: wideband noise, no dominant line |
+| the channels **not interleaved** | ⚠ to be decided what it looks like: if the judge does not tell it apart, the case does not go in |
+| **silence** (no samples) | ⛔ and it must be told apart from *«I received and could not read»*: `CODER.md` §3.10 — a measurement that can say zero must be able to tell zero from failure |
 
-⚠ **Il quarto è il più importante e il più facile da scrivere male**: senza di lui *«non ho
-sentito niente»* e *«non ho guardato»* hanno lo stesso aspetto.
+⚠ **The fourth is the most important and the easiest to write badly**: without it *«I did not
+hear anything»* and *«I did not look»* look the same.
 
-> ### ⛔⛔ E IL GIUDICE AVEVA UN DIFETTO CHE AVREBBE BOCCIATO CODICE GIUSTO
+> ### ⛔⛔ AND THE JUDGE HAD A FAULT THAT WOULD HAVE FAILED RIGHT CODE
 >
-> *Trovato il 17 agosto 2026 dal banco dell'audio vero (`07-b43`), mentre lo scriveva.*
+> *Found on 17 Aug 2026 by the real audio bench (`07-b43`), while it was being written.*
 >
-> **La purezza dipende dalla lunghezza della finestra.** `[M]` stesso file, stesso tono:
+> **Purity depends on the window length.** `[M]` same file, same tone:
 >
-> | finestra | 0,25 s | 0,5 s | 1 s | 2 s |
+> | window | 0.25 s | 0.5 s | 1 s | 2 s |
 > |---|---|---|---|---|
-> | purezza | **0,2501** | **0,5001** | **1,000** | **1,000** |
+> | purity | **0.2501** | **0.5001** | **1.000** | **1.000** |
 >
-> ⛔ La soglia del giudice è **0,80**. ⇒ Mezzo secondo di analisi avrebbe scritto *«non è un
-> tono, è rumore — il difetto di v1»* **su un tono perfetto**. È `LEZIONI.md` §2.3: *«una prova
+> ⛔ The judge's threshold is **0.80**. ⇒ Half a second of analysis would have written *«it is not a
+> tone, it is noise — v1's fault»* **on a perfect tone**. It is `LEZIONI.md` §2.3: *«una prova
 > che boccia il codice giusto costa quanto una che promuove quello sbagliato»*.
 >
-> ⭐ La cura non è alzare la soglia: è che il giudice **rifiuta** una finestra che non sia un
-> numero intero di secondi, invece di giudicare su una finestra che non sa valutare.
+> ⭐ The cure is not raising the threshold: it is that the judge **rejects** a window that is not a
+> whole number of seconds, instead of judging on a window it does not know how to evaluate.
 >
-> ⚠ E la ragione è aritmetica, non un difetto del Goertzel: 440 Hz in mezzo secondo non è un
-> numero intero di periodi, e l'energia si sparpaglia sulle righe vicine. Il giudice misurava
-> bene una cosa che non aveva senso misurare così.
+> ⚠ And the reason is arithmetic, not a fault of Goertzel: 440 Hz in half a second is not a
+> whole number of periods, and the energy spreads over the neighbouring lines. The judge measured
+> well a thing that made no sense to measure that way.
 
-> ### ⭐⭐ IL GIUDICE È CERTIFICATO — `[M]` 17 agosto 2026, **sei casi su sei**, su due motori
+> ### ⭐⭐ THE JUDGE IS CERTIFIED — `[M]` 17 Aug 2026, **six cases out of six**, on two engines
 >
-> `banchi/07-b40-sonda-audio.html`, funzione `giudica()`: frequenza dominante (Goertzel, passo
-> 1 Hz, 100-2000 Hz), ampiezza RMS, e ⭐ **la purezza** — quanta parte dell'energia sta nella
-> riga dominante, che è ciò che distingue **un tono da rumore a fondo scala**, cioè il difetto
-> di v1 che nessun conta-blocchi vedeva (`LEZIONI.md` §2.2).
+> `banchi/07-b40-sonda-audio.html`, function `giudica()`: dominant frequency (Goertzel, step
+> 1 Hz, 100-2000 Hz), RMS amplitude, and ⭐ **purity** — how much of the energy is in the
+> dominant line, which is what tells **a tone from full-scale noise**, that is the v1 fault
+> no block-counter saw (`LEZIONI.md` §2.2).
 >
-> | # | il caso | `hz` | `rms` | purezza | verdetto |
+> | # | the case | `hz` | `rms` | purity | verdict |
 > |---|---|---|---|---|---|
-> | **0** | ⭐ sano, 48 000 Hz | **440** | 0,3536 | **1,000** | ✅ verde |
-> | **1** | 44 100 Hz spacciati per 48 000 | **479** | 0,3536 | 0,975 | ⛔ **visto** |
-> | **2** | PCM big-endian riletto little | 1000 | 0,5644 | **0,142** | ⛔ **visto** |
-> | **3** | canali **non** interlacciati | 880 | 0,3536 | 0,500 | ⛔ **visto** |
-> | **4** | silenzio (campioni a zero) | 0 | **0** | — | ⛔ **visto** |
-> | **5** | non ho letto niente | — | — | — | ⭐ **`NIENTE DA GIUDICARE`**, esito a sé |
+> | **0** | ⭐ healthy, 48 000 Hz | **440** | 0.3536 | **1.000** | ✅ green |
+> | **1** | 44 100 Hz passed off as 48 000 | **479** | 0.3536 | 0.975 | ⛔ **seen** |
+> | **2** | big-endian PCM read back as little | 1000 | 0.5644 | **0.142** | ⛔ **seen** |
+> | **3** | channels **not** interleaved | 880 | 0.3536 | 0.500 | ⛔ **seen** |
+> | **4** | silence (zero samples) | 0 | **0** | — | ⛔ **seen** |
+> | **5** | I read nothing | — | — | — | ⭐ **`NIENTE DA GIUDICARE`**, an outcome of its own |
 >
-> ⛔ **E l'atteso del caso 1 scritto qui sopra era SBAGLIATO, in direzione.** Questo documento
-> prediceva *«440 × 44100/48000 ≈ 404 Hz»*; la misura dà **479**, che è 440 × 48000/44100. ⚠ Un
-> campionamento più **lento** spacciato per uno più veloce fa suonare il tono **più acuto**, non
-> più grave. ⇒ La predizione stava scritta **prima** della misura, ed è la ragione per cui
-> l'errore si vede invece di sparire: `LEZIONI.md` §1.11.
+> ⛔ **And the expected value of case 1 written above was WRONG, in direction.** This document
+> predicted *«440 × 44100/48000 ≈ 404 Hz»*; the measurement gives **479**, which is 440 × 48000/44100. ⚠ A
+> **slower** sampling passed off as a faster one makes the tone sound **higher**, not
+> lower. ⇒ The prediction was written **before** the measurement, and that is why
+> the error shows instead of vanishing: `LEZIONI.md` §1.11.
 >
-> ⭐ **Il caso 2 è quello che conta**: il big-endian **non** si riconosce dalla frequenza — il
-> giudice legge 1000 Hz, un numero perfettamente rispettabile — ⛔ **si riconosce dalla
-> purezza, 0,142 contro 1,000**. Un giudice che guardasse la sola frequenza dominante avrebbe
-> dato **verde a un rumore a fondo scala**, che è letteralmente il difetto di v1.
+> ⭐ **Case 2 is the one that counts**: big-endian is **not** recognised from the frequency — the
+> judge reads 1000 Hz, a perfectly respectable number — ⛔ **it is recognised from the
+> purity, 0.142 against 1.000**. A judge looking only at the dominant frequency would have
+> given **green to full-scale noise**, which is literally v1's fault.
 
-### 2.2 · ⛔ I due lati si sincronizzano con MARCATORI, non con `sleep`
+### 2.2 · ⛔ The two sides synchronise with MARKERS, not with `sleep`
 
-`LEZIONI.md` §2.3-quinquies: al banco degli appunti di KDE i due lati erano sfasati di **tredici
-secondi**, e il controllo dava **rosso su codice che funzionava**. Un file che il primo tocca e il
-secondo aspetta costa tre righe.
+`LEZIONI.md` §2.3-quinquies: at the KDE clipboard bench the two sides were out of step by **thirteen
+seconds**, and the check gave **red on code that worked**. A file that the first touches and the
+second waits for costs three lines.
 
-### 2.3 · ⚠ La clipboard si SVUOTA all'inizio di ogni giro
+### 2.3 · ⚠ The clipboard is EMPTIED at the start of every round
 
-Stesso §2.3-quinquies, il corollario: quel che resta dal giro prima viene annunciato alla
-connessione **e sembra un risultato**.
+Same §2.3-quinquies, the corollary: what is left from the previous round gets announced at
+connection **and looks like a result**.
 
-### 2.4 · ⛔ Il lato indipendente degli appunti NON c'è — *corretto il 17 agosto 2026, misurando*
+### 2.4 · ⛔ The independent side of the clipboard is NOT there — *corrected on 17 Aug 2026, by measuring*
 
-> ⛔⛔ **QUESTO PARAGRAFO DICEVA IL CONTRARIO, E LA MISURA LO HA SMENTITO.**
-> Diceva: *«il lato indipendente c'è già, ed è gratis — `STUDI.md` §gnome §10 `[R]`: la sponda X11
+> ⛔⛔ **THIS PARAGRAPH SAID THE OPPOSITE, AND THE MEASUREMENT REFUTED IT.**
+> It said: *«il lato indipendente c'è già, ed è gratis — `STUDI.md` §gnome §10 `[R]`: la sponda X11
 > di Mutter è incondizionata nei due versi ⇒ **`xclip` funziona senza una nostra sessione**. È
 > l'arbitro esterno che a questa fase serviva e che non credevamo di avere.»*
 >
-> ⛔ `[M]` 17 agosto 2026: il compositore gira come **`gnome-shell --headless --no-x11`**, cioè
-> **XWayland non parte affatto**. La riga di `STUDI.md` è vera del **codice** di Mutter e falsa
-> delle **nostre sessioni** — ed è una `[R]` letta nel sorgente, non una `[M]` presa sulla
-> macchina.
+> ⛔ `[M]` 17 Aug 2026: the compositor runs as **`gnome-shell --headless --no-x11`**, that is
+> **XWayland does not start at all**. The line of `STUDI.md` is true of Mutter's **code** and false
+> of **our sessions** — and it is an `[R]` read in the source, not an `[M]` taken on the
+> machine.
 >
-> ⚠ E il ripiego su un client Wayland vero (GTK) non regge neanche lui: per possedere la selezione
-> serve il *serial* di un evento d'ingresso, e in una sessione headless non arriva a nessuno.
+> ⚠ And the fallback to a real Wayland client (GTK) does not hold either: owning the selection
+> needs the *serial* of an input event, and in a headless session none reaches anyone.
 >
-> ⇒ 📖 **§6.9**, che è il capitolo che insegna: i tre tentativi, la causa vera, e perché REMOTIX ci
-> riesce lo stesso.
+> ⇒ 📖 **§6.9**, which is the chapter that teaches: the three attempts, the real cause, and why REMOTIX
+> manages anyway.
 
-⇒ **Che cosa resta.** Il verso `dispositivo → sessione` un arbitro ce l'ha — il **cliente di
-prova**, che ha letto solo `RCP.md` (`PIANO.md` §1.1). ⛔ Il verso `sessione → dispositivo` no, e
-oggi lo giudica **l'utente**: è l'invariante I8, non un ripiego.
+⇒ **What remains.** The `device → session` direction has an arbiter — the **test
+client**, which has read only `RCP.md` (`PIANO.md` §1.1). ⛔ The `session → device` direction does not, and
+today it is judged by **the user**: it is invariant I8, not a fallback.
 
-### 2.5 · ⛔ E il secondo lettore resta il cliente di prova
+### 2.5 · ⛔ And the second reader remains the test client
 
-`PIANO.md` §1.1: il cliente di prova (`banchi/01-b3-cliente.py`, in Python, scritto leggendo solo
-`RCP.md`) **cresce con le fasi**. I messaggi nuovi di questa fase — il datagram `0x0401` e i tre
-degli appunti — ci entrano, o il filo di questa fase sarebbe validato da **una sola**
-implementazione. E il **validatore** (`banchi/01-b4-validatore.py`) impara le stesse inquadrature.
+`PIANO.md` §1.1: the test client (`banchi/01-b3-cliente.py`, in Python, written reading only
+`RCP.md`) **grows with the phases**. This phase's new messages — the `0x0401` datagram and the three
+clipboard ones — go into it, or this phase's wire would be validated by **a single**
+implementation. And the **validator** (`banchi/01-b4-validatore.py`) learns the same framings.
 
 ---
 
-## 3 · Le domande da chiudere PRIMA di scrivere l'audio
+## 3 · The questions to close BEFORE writing the audio
 
-⛔ Sono quattro, e **tre cambiano quel che si scrive**. `PIANO.md` §1.2 chiama questa cosa «la
-sonda», e la regola che porta è di `LEZIONI.md` §1.11: *per ogni prova indiretta si scrive prima
-che aspetto avrebbe il contrario*.
+⛔ There are four, and **three change what gets written**. `PIANO.md` §1.2 calls this thing «the
+probe», and the rule it carries is from `LEZIONI.md` §1.11: *for every indirect test one writes first
+what the opposite would look like*.
 
-| # | La domanda | Che cosa decide | stato |
+| # | The question | What it decides | state |
 |---|---|---|---|
-| **A1** | ⛔ il browser **decodifica Opus**? `AudioDecoder` di WebCodecs con `codec: "opus"`, su Chrome e su Firefox | se Opus è una strada o solo una dichiarazione. ⚠ Se **no su un motore**, `RCP.md` §4.3 ha già la risposta pronta: si negozia **`pcm`**, che è la base obbligatoria per entrambi — **non è un ripiego improvvisato, è il meccanismo** | ✅ **CHIUSA** `[M]` 17 ago — §3.2 |
-| **A2** | ⛔ **quanti byte porta davvero un datagram** su ciascun motore | `RCP.md` §5.3 la dichiara `[?]` **per nome**: il PCM è dimensionato a **5 ms = 972 byte** su un carico utile stimato `[S]` ~1200. ⛔ Se il numero vero fosse più basso, **il PCM scende ancora** — e il PCM è il controllo positivo di Opus | ✅ **CHIUSA** `[M]` 17 ago — §3.3 |
-| **A3** | come si **suona** nella pagina senza accumulare ritardo | `AudioContext` + `AudioWorklet` con un anello, o `decodeAudioData`. ⚠ Il riferimento ha un **regolatore di latenza a 300 ms** (`STUDI.md` §gnome §11): per noi è **sei volte il tetto del video** — si guarda, non si copia | ⏳ **da progettare** |
-| **A4** | il **sink** e il **monitor**: la trappola del volume | ⭐ **già chiusa da v1, e con una misura**: `monitor.channel-volumes = "true"` fra le proprietà del sink, o il volume **non arriva, muto compreso** (`STUDI.md` §kde §10.5, `LEZIONI.md` §5) | ✅ `[M]` 8 ago 2026 |
+| **A1** | ⛔ does the browser **decode Opus**? WebCodecs `AudioDecoder` with `codec: "opus"`, on Chrome and on Firefox | whether Opus is a road or only a declaration. ⚠ If **no on one engine**, `RCP.md` §4.3 already has the answer ready: **`pcm`** is negotiated, which is the mandatory base for both — **it is not an improvised fallback, it is the mechanism** | ✅ **CLOSED** `[M]` 17 Aug — §3.2 |
+| **A2** | ⛔ **how many bytes a datagram really carries** on each engine | `RCP.md` §5.3 declares it `[?]` **by name**: the PCM is sized at **5 ms = 972 bytes** on an estimated payload `[S]` of ~1200. ⛔ If the real number were lower, **the PCM goes down further** — and the PCM is Opus's positive control | ✅ **CLOSED** `[M]` 17 Aug — §3.3 |
+| **A3** | how to **play** in the page without accumulating delay | `AudioContext` + `AudioWorklet` with a ring, or `decodeAudioData`. ⚠ The reference has a **latency regulator at 300 ms** (`STUDI.md` §gnome §11): for us it is **six times the video ceiling** — it is looked at, not copied | ⏳ **to be designed** |
+| **A4** | the **sink** and the **monitor**: the volume trap | ⭐ **already closed by v1, and with a measurement**: `monitor.channel-volumes = "true"` among the sink's properties, or the volume **does not arrive, mute included** (`STUDI.md` §kde §10.5, `LEZIONI.md` §5) | ✅ `[M]` 8 Aug 2026 |
 
-### 3.2 · ⭐⭐ A1 è CHIUSA — Opus si decodifica su tutt'e due i motori, **misurato non dichiarato**
+### 3.2 · ⭐⭐ A1 is CLOSED — Opus decodes on both engines, **measured, not declared**
 
-`[M]` 17 agosto 2026, `banchi/07-b40-lancia.py chrome|firefox`.
+`[M]` 17 Aug 2026, `banchi/07-b40-lancia.py chrome|firefox`.
 
-⛔ **`isConfigSupported` dice `true` su tutt'e due, e non è la risposta**: è una dichiarazione, e
-`CODER.md` §3.9 vieta di crederci. ⇒ Si è fatto **il giro vero**: si codifica un tono a 440 Hz in
-Opus, si danno al decodificatore i **pacchetti nudi** — nessun contenitore, come impone
-`RCP.md` §6.3 (*«un datagram, un blocco di Opus»*) — e si giudica **quel che esce**.
-
-| | Chrome 151 | Firefox 140esr |
-|---|---|---|
-| `AudioDecoder` / `AudioEncoder` / `AudioWorklet` | ✅ tutti | ✅ tutti |
-| pacchetti codificati (50 blocchi da 20 ms) | 51 | 51 |
-| ⭐ **frequenza dominante decodificata** | **440 Hz** | **440 Hz** |
-| ⭐ **ampiezza RMS** (attesa **0,3536**) | **0,3504** | **0,3510** |
-| byte per pacchetto, min-max (96 kbit/s, stereo) | **241 - 376** | **309 - 439** |
-| errori di codifica o decodifica | nessuno | nessuno |
-
-⇒ ⭐ **Opus è una strada vera, non una dichiarazione**, e il decodificatore accetta i pacchetti
-**senza contenitore** — che è la forma in cui il protocollo li manda.
-
-⚠ **E tre cose vanno dette invece che taciute:**
-
-1. ⛔ **è un browser di banco, non il dispositivo dell'utente**: `HeadlessChrome/151` e
-   `Firefox/140` su questo portatile. È la forma d'errore **E10** (`REVIEWER.md`), e la regola
-   di `PIANO.md` §1.2 è *«si sviluppa sull'emulatore, si misura sul telefono»*. ⭐ Il giro su
-   **Chrome 151 non headless** (il browser vero dell'utente su questa macchina) è stato fatto e
-   dà gli stessi numeri; ⛔ **su Samsung DeX e sul telefono resta `[?]`**, e il telefono ce l'ha
-   l'utente;
-2. ⚠ **il giro misura il decodificatore con il NOSTRO codificatore del browser**, non con
-   `libopus` del server: i due possono divergere. La prova che chiude questo punto è il banco
-   della fase, non la sonda;
-3. ⚠ **`byte per pacchetto` è a 96 kbit/s scelti da noi**: non è il bitrate del prodotto, che
-   non è ancora deciso.
-
-### 3.3 · ⛔⭐ A2 è CHIUSA, e il numero è **più basso della stima** — ma il PCM sopravvive
-
-`[M]` 17 agosto 2026, contro il **server vero** (`https://192.168.0.2:7700/rcp/1`, prodotto vivo
-sulla macchina di prova), impronta pubblicata, nessuna credenziale e nessuna sessione: si apre, si
-legge `datagrams.maxDatagramSize` e si congeda.
+⛔ **`isConfigSupported` says `true` on both, and it is not the answer**: it is a declaration, and
+`CODER.md` §3.9 forbids believing it. ⇒ **The real round** was done: a 440 Hz tone is encoded in
+Opus, the **bare packets** are given to the decoder — no container, as
+`RCP.md` §6.3 imposes (*«un datagram, un blocco di Opus»*) — and **what comes out** is judged.
 
 | | Chrome 151 | Firefox 140esr |
 |---|---|---|
-| subito dopo `ready` | **1024** byte | **1024** byte |
-| dopo 800 ms | **1024** byte | ⭐ **1214** byte |
-| il PCM di §5.3 ne chiede (12 + 480×2) | 972 | 972 |
-| ⭐ **ci sta?** | **sì**, margine **52 byte** | **sì**, margine **242 byte** |
+| `AudioDecoder` / `AudioEncoder` / `AudioWorklet` | ✅ all | ✅ all |
+| encoded packets (50 blocks of 20 ms) | 51 | 51 |
+| ⭐ **decoded dominant frequency** | **440 Hz** | **440 Hz** |
+| ⭐ **RMS amplitude** (expected **0.3536**) | **0.3504** | **0.3510** |
+| bytes per packet, min-max (96 kbit/s, stereo) | **241 - 376** | **309 - 439** |
+| encoding or decoding errors | none | none |
 
-⛔ **`RCP.md` §5.3 stimava `[S]` «~1200 byte» e la stima era ottimista di un quinto su Chrome.**
-La riga di §5.3 che apriva la `[?]` — *«se il numero fosse più basso di 972, il PCM scende
-ancora»* — **non scatta**: 1024 > 972. ⭐ Ma il margine su Chrome è **52 byte**, cioè il PCM di
-questo protocollo sta dentro il datagram di Chrome **per meno del 6 %**.
+⇒ ⭐ **Opus is a real road, not a declaration**, and the decoder accepts the packets
+**without a container** — which is the form in which the protocol sends them.
 
-⚠ **E i due motori non danno lo stesso numero, né lo stesso numero nel tempo**: Firefox parte da
-1024 e **cresce a 1214** quando ha misurato il percorso. ⇒ ⛔ **Chi dimensionasse i blocchi
-leggendo `maxDatagramSize` una volta sola, subito dopo `ready`, prenderebbe il numero peggiore e
-non lo saprebbe.** Il blocco del PCM però è **fisso in specifica**, non negoziato: qui il numero
-serve a sapere che ci sta, non a scegliere.
+⚠ **And three things must be said instead of kept quiet:**
 
-`[?]` **Quel che resta aperto, e non si estrapola**: questa misura è su **rete locale, cavo**.
-Su rete mobile — dove `SPECIFICHE.md` §3.1 mette lo scenario dei 30 Mbps — il percorso può
-portare meno. ⛔ Il PCM a 972 byte è la strada che **non ha margine**, ed è proprio quella su cui
-si ripiega quando Opus non si negozia.
+1. ⛔ **it is a bench browser, not the user's device**: `HeadlessChrome/151` and
+   `Firefox/140` on this laptop. It is error form **E10** (`REVIEWER.md`), and the rule
+   of `PIANO.md` §1.2 is *«si sviluppa sull'emulatore, si misura sul telefono»*. ⭐ The round on
+   **non-headless Chrome 151** (the user's real browser on this machine) was done and
+   gives the same numbers; ⛔ **on Samsung DeX and on the phone it stays `[?]`**, and the phone is with
+   the user;
+2. ⚠ **the round measures the decoder with OUR browser encoder**, not with the server's
+   `libopus`: the two can diverge. The test that closes this point is the phase's bench,
+   not the probe;
+3. ⚠ **`bytes per packet` is at 96 kbit/s chosen by us**: it is not the product's bitrate, which
+   is not decided yet.
 
-### 3.4 · ⛔ E una quinta domanda, che non è del browser ma della nostra architettura
+### 3.3 · ⛔⭐ A2 is CLOSED, and the number is **lower than the estimate** — but the PCM survives
 
-**Da dove escono i campioni.** Il sink e la cattura vivono nel **figlio** (`src/figlio.h`), che è
-l'unico processo che ha il bus di sessione e `/run/user/<uid>`; i datagram li scrive il **padre**,
-che tiene la connessione QUIC. ⇒ Serve un messaggio nuovo sul socket fra i due — la forma è quella
-di `FiglioDeposito`, che già porta i fotogrammi.
+`[M]` 17 Aug 2026, against the **real server** (`https://192.168.0.2:7700/rcp/1`, live product
+on the test machine), published fingerprint, no credentials and no session: it opens, reads
+`datagrams.maxDatagramSize` and says farewell.
 
-⚠ **E la regola di v1 vale identica qui, ed è la ragione per cui c'è una coda**: il thread di
-PipeWire gira **in tempo reale**, e chi ci scrive dentro una chiamata che aspetta *«non ferma
+| | Chrome 151 | Firefox 140esr |
+|---|---|---|
+| right after `ready` | **1024** bytes | **1024** bytes |
+| after 800 ms | **1024** bytes | ⭐ **1214** bytes |
+| the PCM of §5.3 asks for (12 + 480×2) | 972 | 972 |
+| ⭐ **does it fit?** | **yes**, margin **52 bytes** | **yes**, margin **242 bytes** |
+
+⛔ **`RCP.md` §5.3 estimated `[S]` «~1200 bytes» and the estimate was optimistic by a fifth on Chrome.**
+The line of §5.3 that opened the `[?]` — *«if the number were lower than 972, the PCM goes down
+further»* — **does not trigger**: 1024 > 972. ⭐ But the margin on Chrome is **52 bytes**, that is the PCM of
+this protocol fits inside Chrome's datagram **by less than 6 %**.
+
+⚠ **And the two engines do not give the same number, nor the same number over time**: Firefox starts from
+1024 and **grows to 1214** once it has measured the path. ⇒ ⛔ **Whoever sized the blocks
+reading `maxDatagramSize` only once, right after `ready`, would take the worst number and
+not know it.** The PCM block however is **fixed in the specification**, not negotiated: here the number
+serves to know that it fits, not to choose.
+
+`[?]` **What remains open, and is not extrapolated**: this measurement is on a **local network, cable**.
+On a mobile network — where `SPECIFICHE.md` §3.1 puts the 30 Mbps scenario — the path may
+carry less. ⛔ The PCM at 972 bytes is the road that **has no margin**, and it is exactly the one
+fallen back on when Opus is not negotiated.
+
+### 3.4 · ⛔ And a fifth question, which is not the browser's but our architecture's
+
+**Where the samples come from.** The sink and the capture live in the **child** (`src/figlio.h`), which is
+the only process that has the session bus and `/run/user/<uid>`; the datagrams are written by the **parent**,
+which holds the QUIC connection. ⇒ A new message is needed on the socket between the two — the shape is that
+of `FiglioDeposito`, which already carries the frames.
+
+⚠ **And v1's rule holds identically here, and it is the reason there is a queue**: the PipeWire thread
+runs **in real time**, and whoever writes a waiting call inside it *«non ferma
 soltanto l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del desktop compresa»*
-(`fondamenta/…/suono.h`). Si copia e si torna.
+(`fondamenta/…/suono.h`). One copies and returns.
 
-⛔ **E la priorità è del sistema, non del processo**: `LEZIONI.md` §5 — *«il percorso audio vuole
+⛔ **And the priority belongs to the system, not to the process**: `LEZIONI.md` §5 — *«il percorso audio vuole
 tempo reale, e va concesso dall'unità di sistema; un processo senza quel permesso non può
 chiederlo, e il sintomo è audio che scoppietta quando il desktop lavora»*.
 
 ---
 
-## 4 · Che cosa è stato sviluppato
+## 4 · What was developed
 
-### 4.1 · Il banco, prima del prodotto — **17 agosto 2026**
+### 4.1 · The bench, before the product — **17 Aug 2026**
 
-| file | che cos'è |
+| file | what it is |
 |---|---|
-| `banchi/07-b40-sonda-audio.html` | la **sonda dell'audio**: capacità dichiarate, il **giro vero** Opus (codifica → pacchetti nudi → decodifica → giudizio), la misura del **datagram** contro il server vero, e ⭐ **il controllo positivo del giudice** — sei casi, cinque guasti innestati |
-| `banchi/07-b40-lancia.py` | il lanciatore: serve la pagina su `http://localhost` (contesto sicuro su tutt'e due i motori), apre **il motore che gli si nomina**, e aspetta il **portatore** invece di leggere uno scatto. ⛔ Verifica dallo `user agent` che a rispondere sia stato quello chiamato (`CODER.md` §3.9) |
+| `banchi/07-b40-sonda-audio.html` | the **audio probe**: declared capabilities, the **real** Opus round (encoding → bare packets → decoding → judgement), the **datagram** measurement against the real server, and ⭐ **the judge's positive control** — six cases, five grafted faults |
+| `banchi/07-b40-lancia.py` | the launcher: it serves the page on `http://localhost` (secure context on both engines), opens **the engine it is told to**, and waits for the **carrier** instead of reading a snapshot. ⛔ It verifies from the `user agent` that the one that answered is the one called (`CODER.md` §3.9) |
 
-⛔ **Del prodotto non era stata scritta una riga**, ed era voluto: `PIANO.md` §0.3.4 — il banco si
-certifica prima di essere creduto. Il prodotto è §4.2.
+⛔ **Not a line of the product had been written**, and that was intended: `PIANO.md` §0.3.4 — the bench is
+certified before being believed. The product is §4.2.
 
-### 4.2 · Il prodotto — **17 agosto 2026**, il verso d'uscita dei datagram
+### 4.2 · The product — **17 Aug 2026**, the outgoing direction of datagrams
 
-| file | che cosa fa |
+| file | what it does |
 |---|---|
-| ⭐ `src/audio.c` + `.h` (nuovi, ~250 righe) | il **codificatore**: Opus per `libavcodec` (encoder `libopus`, chiesto **per nome**), PCM s16 **little-endian scritto a mano** — non con una `memcpy`, che darebbe l'ordine della macchina |
-| ⭐⭐ `src/webtransport.c` | il **verso d'uscita dei datagram**, che non esisteva: la coda (8 blocchi, e chi non ci sta si **butta** — §6.3 vieta la ritrasmissione), il prefisso di **RFC 9297**, l'inquadratura di §6.3, `wt_audio_diffondi()` con la guardia **I3**, e `audio_regola()` che accende il canale |
-| `src/rcp.c` + `.h` | `rcp_audio_negoziato()`: da `opus`/`pcm` ai numeri `1`/`2` di §6.3, **in un posto solo** |
-| `src/main.c` | `--audio-prova <hz>`: la sorgente di prova, **spenta** se nessuno la accende (I6) |
-| ⭐ `src/pagina.html` | il **ricevente**: legge i datagram, applica §6.3 (corti · tipo · **istante non più recente**), decodifica Opus con `AudioDecoder` o srotola il PCM, e suona con un cuscino di **250 ms** ⛔ *(era 60: alzato il 17 agosto per togliere i buchi, ed è la causa del ritardo di §8)* |
-| `banchi/01-b3-cliente.py` | ⭐ il **secondo lettore cresce con la fase** (`PIANO.md` §1.1): riceve i datagram e tiene **sei contatori**, uno per ogni regola di §6.3 che può essere violata |
-| `banchi/07-b41-accendi.sh` · `07-b42-giudice.py` | il server del banco (porta, ban-file e socket **propri**) e il giudice che *ascolta* |
-| ⭐ `banchi/07-b43-audio-vero.sh` · `07-b43-giudizio.py` | il banco dell'audio **vero**: la sessione suona, il client raccoglie, il giudice ascolta. Porta **7720**, albero e socket propri |
-| ⭐ `banchi/07-b44-ritardo-opus.c` | il programma minimo che chiede a `libopus` **una cosa sola**: accumula i blocchi? (`CODER.md` §3.6) |
+| ⭐ `src/audio.c` + `.h` (new, ~250 lines) | the **encoder**: Opus through `libavcodec` (encoder `libopus`, asked for **by name**), s16 PCM **little-endian written by hand** — not with a `memcpy`, which would give the machine's byte order |
+| ⭐⭐ `src/webtransport.c` | the **outgoing direction of datagrams**, which did not exist: the queue (8 blocks, and whoever does not fit is **thrown away** — §6.3 forbids retransmission), the **RFC 9297** prefix, the framing of §6.3, `wt_audio_diffondi()` with the **I3** guard, and `audio_regola()` which turns the channel on |
+| `src/rcp.c` + `.h` | `rcp_audio_negoziato()`: from `opus`/`pcm` to the numbers `1`/`2` of §6.3, **in one place only** |
+| `src/main.c` | `--audio-prova <hz>`: the test source, **off** if nobody turns it on (I6) |
+| ⭐ `src/pagina.html` | the **receiver**: reads the datagrams, applies §6.3 (short · type · **instant not more recent**), decodes Opus with `AudioDecoder` or unrolls the PCM, and plays with a **250 ms** cushion ⛔ *(it was 60: raised on 17 Aug to remove the gaps, and it is the cause of the delay of §8)* |
+| `banchi/01-b3-cliente.py` | ⭐ the **second reader grows with the phase** (`PIANO.md` §1.1): it receives the datagrams and keeps **six counters**, one for each rule of §6.3 that can be violated |
+| `banchi/07-b41-accendi.sh` · `07-b42-giudice.py` | the bench's server (port, ban-file and socket **of its own**) and the judge that *listens* |
+| ⭐ `banchi/07-b43-audio-vero.sh` · `07-b43-giudizio.py` | the **real** audio bench: the session plays, the client collects, the judge listens. Port **7720**, own tree and socket |
+| ⭐ `banchi/07-b44-ritardo-opus.c` | the minimal program that asks `libopus` **one thing only**: does it accumulate blocks? (`CODER.md` §3.6) |
 
-### 4.3 · La cucitura fra padre e figlio — **17 agosto 2026**
+### 4.3 · The stitching between parent and child — **17 Aug 2026**
 
-⛔ **L'audio attraversa un confine di processo, ed è la terza volta che succede per la stessa
-ragione** — dopo `MSG_VIDEO` (fase 3) e `MSG_INPUT` (fase 4). Ormai è una legge
-dell'architettura, non una scelta: **PipeWire parla con la sessione dell'utente, e quella sta nel
-figlio**; i datagram li scrive **il padre**, che tiene QUIC.
+⛔ **Audio crosses a process boundary, and it is the third time this happens for the same
+reason** — after `MSG_VIDEO` (phase 3) and `MSG_INPUT` (phase 4). By now it is a law
+of the architecture, not a choice: **PipeWire talks to the user's session, and that is in the
+child**; the datagrams are written by **the parent**, which holds QUIC.
 
 | | |
 |---|---|
-| `MSG_AUDIO` (padre → figlio) | *«cattura l'audio, e codificalo così»* — `0` = spegni |
-| `MSG_BLOCCO` (figlio → padre) | un blocco **già codificato**, con il suo `istante` |
+| `MSG_AUDIO` (parent → child) | *«capture the audio, and encode it like this»* — `0` = switch off |
+| `MSG_BLOCCO` (child → parent) | a block **already encoded**, with its `istante` |
 
-⛔ **E il figlio codifica PRIMA di mandare**, invece di spedire i campioni crudi. Non è
-un'ottimizzazione qualunque: 20 ms di PCM stereo sono **3840 byte**, lo stesso blocco in Opus ne
-misura `[M]` **241-439**. Spedire crudo costerebbe **dieci volte** il socket, cinquanta volte al
-secondo.
+⛔ **And the child encodes BEFORE sending**, instead of shipping the raw samples. It is not
+just any optimisation: 20 ms of stereo PCM are **3840 bytes**, the same block in Opus
+measures `[M]` **241-439**. Shipping raw would cost **ten times** the socket, fifty times per
+second.
 
-⛔⭐ **E la cosa che governa tutto il disegno è un vincolo, non un'architettura**: il richiamo dei
-campioni gira sul **thread di PipeWire, in tempo reale**. Chi ci scrive dentro una chiamata che
-aspetta *«non ferma soltanto l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del
-desktop compresa»*. ⇒ Fra i due c'è un **anello a un produttore e un consumatore**, senza
-lucchetti — il produttore muove solo `testa`, il consumatore solo `coda`, e i due indici sono
-atomici. ⚠ E nel richiamo **non si scrive nel registro**: il traboccamento si *conta* lì e si
-*scrive* dal ciclo.
+⛔⭐ **And the thing that governs the whole design is a constraint, not an architecture**: the samples
+callback runs on the **PipeWire thread, in real time**. Whoever writes a waiting call inside it
+*«non ferma soltanto l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del
+desktop compresa»*. ⇒ Between the two there is a **single-producer single-consumer ring**, without
+locks — the producer moves only `testa`, the consumer only `coda`, and the two indices are
+atomic. ⚠ And in the callback **nothing is written to the log**: the overflow is *counted* there and
+*written* from the loop.
 
-⭐ **Tre decisioni che il codice porta con la loro ragione accanto:**
+⭐ **Three decisions the code carries with their reason beside them:**
 
-1. **il sink è della sessione, il codificatore della connessione** — I4. Spegnere ferma la
-   cattura, **non** il sink: farlo sparire a ogni distacco interromperebbe il suono a chi ascolta
-   *dentro* la sessione e lascerebbe le applicazioni su un dispositivo morto;
-2. **l'orologio dell'audio è il conto dei campioni**, non `CLOCK_MONOTONIC`. §6.3 vuole *«l'istante
-   del primo campione»*; l'ora di parete al momento dell'invio metterebbe nel campo **quando l'ho
-   spedito**, e il client riordinerebbe sul nostro jitter invece che sul suono. ⛔ E quando
-   l'anello trabocca **la base si sposta dei campioni persi**, o gli `istante` racconterebbero un
-   suono continuo dove c'è stato un buco;
-3. ⛔ **l'audio si svuota PRIMA della parte video**, che esce con `continue` quando nessuno guarda.
-   Altrimenti *«audio acceso, video spento»* non suonerebbe e **nessuna riga direbbe perché** — ed
-   è il caso di chi ascolta musica con la scheda in secondo piano. ⚠ Per la stessa ragione il
-   ciclo, con l'audio acceso, non può più dormire un secondo: l'anello si riempie a 48 000
-   fotogrammi al secondo **anche col desktop fermo**.
+1. **the sink belongs to the session, the encoder to the connection** — I4. Switching off stops the
+   capture, **not** the sink: making it disappear at every detach would cut the sound for whoever listens
+   *inside* the session and would leave the applications on a dead device;
+2. **the audio clock is the sample count**, not `CLOCK_MONOTONIC`. §6.3 wants *«the instant
+   of the first sample»*; the wall-clock time at the moment of sending would put in the field **when I
+   sent it**, and the client would reorder on our jitter instead of on the sound. ⛔ And when
+   the ring overflows **the base moves by the lost samples**, or the `istante`s would tell of a continuous
+   sound where there was a gap;
+3. ⛔ **audio is drained BEFORE the video part**, which exits with `continue` when nobody is watching.
+   Otherwise *«audio on, video off»* would not play and **no line would say why** — and
+   it is the case of whoever listens to music with the tab in the background. ⚠ For the same reason the
+   loop, with audio on, can no longer sleep for a second: the ring fills at 48 000
+   frames per second **even with the desktop still**.
 
-### 4.4 · `suono.c` — il sink e la cattura, portati da v1 · **17 agosto 2026**
+### 4.4 · `suono.c` — the sink and the capture, ported from v1 · **17 Aug 2026**
 
-**869 righe**, compila pulito. ⛔ **Nella sessione non c'è niente da catturare e va creato**: `[M]`
-5 agosto 2026, con `pipewire`, `pipewire-pulse` e `wireplumber` tutti attivi, `wpctl status` mostra
-**zero device, zero sink, zero source** — è il caso normale di un server senza scheda sonora.
-⚠ Il riferimento (`gnome-remote-desktop`) apre la cattura sui sink che **trova** e un sink non lo
-crea mai: col suo codice, qui, non arriverebbe un campione — e senza un errore da nessuna parte.
+**869 lines**, compiles clean. ⛔ **In the session there is nothing to capture and it must be created**: `[M]`
+5 Aug 2026, with `pipewire`, `pipewire-pulse` and `wireplumber` all active, `wpctl status` shows
+**zero devices, zero sinks, zero sources** — it is the normal case of a server without a sound card.
+⚠ The reference (`gnome-remote-desktop`) opens the capture on the sinks it **finds** and never
+creates a sink: with its code, here, not one sample would arrive — and without an error anywhere.
 
-> #### ⛔⛔ E IL PORTO HA TROVATO UN DIFETTO IN v1: **l'attesa che non aspettava**
+> #### ⛔⛔ AND THE PORT FOUND A FAULT IN v1: **the wait that did not wait**
 >
-> `suono_ascolto_ferma()` di v1 dichiarava *«il lucchetto del ciclo **è** l'attesa»*, e su quella
-> riga poggiava il permesso di liberare il contesto della connessione.
+> v1's `suono_ascolto_ferma()` declared *«il lucchetto del ciclo **è** l'attesa»*, and on that
+> line rested the permission to free the connection's context.
 >
-> ⛔ **È falsa con `PW_STREAM_FLAG_RT_PROCESS`**: la richiamata arriva dal **thread dei dati**, che
-> quel lucchetto non ferma `[R]` (`pipewire/stream.h:150` e `:466`). ⇒ Chi tornava da lì poteva
-> liberare la memoria **mentre il thread di tempo reale ci stava ancora scrivendo** — un difetto
-> che si presenta una volta ogni tanto, alla chiusura, cioè dove nessuno guarda.
+> ⛔ **It is false with `PW_STREAM_FLAG_RT_PROCESS`**: the callback comes from the **data thread**, which
+> that lock does not stop `[R]` (`pipewire/stream.h:150` and `:466`). ⇒ Whoever returned from there could
+> free the memory **while the real-time thread was still writing into it** — a fault
+> that shows up once in a while, at close, that is where nobody looks.
 >
-> ⭐ **Adesso l'attesa è in due tempi**: si spegne un flag atomico di consegna e si aspetta che il
-> richiamo sia davvero uscito; **poi** si distrugge il flusso. Con un tetto di 2 s, e se scade si
-> esce **dichiarando «⛔ NON liberare il contesto»** invece di appendere la sessione.
+> ⭐ **Now the wait is in two steps**: an atomic delivery flag is switched off and one waits until the
+> callback has really exited; **then** the stream is destroyed. With a ceiling of 2 s, and if it expires it
+> exits **declaring «⛔ NON liberare il contesto»** instead of hanging the session.
 >
-> ⚠ E una seconda cosa che v1 faceva e qui non si fa: **stampare dal thread di tempo reale**. Una
-> riga di registro è una `vsnprintf` più una `write`, cioè esattamente la chiamata che non si può
-> fare lì. ⇒ Il thread conta, e quel che v1 stampava **si chiede da fuori**.
+> ⚠ And a second thing v1 did and is not done here: **printing from the real-time thread**. A
+> log line is a `vsnprintf` plus a `write`, that is exactly the call that cannot be
+> made there. ⇒ The thread counts, and what v1 printed **is asked from outside**.
 
-⚠ **E quel che `suono.c` NON accumula, dichiarato**: consegna i fotogrammi come PipeWire glieli dà
-(~256 per richiamo, e il numero **varia**). L'accumulo in blocchi da 960 o 240 lo fa l'anello nel
-figlio — una seconda memoria intermedia per lo stesso mestiere avrebbe deciso *quando* il suono
-parte, che è di chi spedisce, e allo spegnimento avrebbe buttato in silenzio fino a 959 fotogrammi.
+⚠ **And what `suono.c` does NOT accumulate, declared**: it delivers frames as PipeWire gives them
+(~256 per callback, and the number **varies**). The accumulation into blocks of 960 or 240 is done by the ring in the
+child — a second intermediate buffer for the same job would have decided *when* the sound
+starts, which belongs to whoever sends, and at switch-off it would have silently thrown away up to 959 frames.
 
-⛔ **Non è stato eseguito niente**: l'agente non aveva una sessione grafica. Che il sink compaia,
-che il monitor consegni campioni e che `monitor.channel-volumes` funzioni **su questa macchina**
-sono `[?]`, e li chiude il banco.
+⛔ **Nothing was run**: the agent did not have a graphical session. That the sink appears,
+that the monitor delivers samples and that `monitor.channel-volumes` works **on this machine**
+are `[?]`, and the bench closes them.
 
 ---
 
-### 4.5 · ⭐⭐ GLI APPUNTI — **17 agosto 2026, sera**, e sono la seconda metà della fase
+### 4.5 · ⭐⭐ THE CLIPBOARD — **17 Aug 2026, evening**, and it is the second half of the phase
 
-*Ordine di lavoro dell'utente: «prima l'audio, poi gli appunti» (§0.1). L'audio è chiuso col suo
-giudizio; questa sezione è quel che è stato scritto dopo.*
+*The user's work order: «prima l'audio, poi gli appunti» (§0.1). Audio is closed with its
+judgement; this section is what was written afterwards.*
 
-> ### ⛔ E LA DOMANDA DELL'UTENTE ERA «TESTO FORMATTATO» — chiusa prima di scrivere una riga
+> ### ⛔ AND THE USER'S QUESTION WAS «FORMATTED TEXT» — closed before writing a line
 >
-> L'apertura di questa sessione chiedeva *«la copia server↔client di **testo formattato**»*.
-> ⛔ `DECISIONI.md` §5-ter.1 dice l'opposto, **con parole sue del 9 agosto**: *«per la clipboard ho
-> idea precisa: solo testo»* — niente immagini, niente file, **niente formati ricchi**.
+> The opening of this session asked for *«la copia server↔client di **testo formattato**»*.
+> ⛔ `DECISIONI.md` §5-ter.1 says the opposite, **in his own words of 9 Aug**: *«per la clipboard ho
+> idea precisa: solo testo»* — no images, no files, **no rich formats**.
 >
-> ⚠ E non era una sfumatura: `RCP.md` §7.4 ha costruito i tre messaggi **senza nessun campo che
-> dichiari il tipo**, e ci ha scritto accanto la ragione — *«non esiste perché non c'è niente da
-> scegliere»*. Per l'HTML servirebbe quel campo, e §9 vieta di aggiungere campi a messaggi esistenti
-> dentro una versione maggiore: **la finestra è chiusa dal 10 agosto**.
+> ⚠ And it was not a nuance: `RCP.md` §7.4 built the three messages **without any field that
+> declares the type**, and wrote the reason beside it — *«non esiste perché non c'è niente da
+> scegliere»*. HTML would need that field, and §9 forbids adding fields to existing messages
+> within a major version: **the window has been closed since 10 Aug**.
 >
-> ⭐ Chiesto all'utente prima di scrivere codice, e **ha scelto «solo testo semplice»**. ⇒ La
-> decisione del 9 agosto regge, e questa riga esiste perché la prossima volta che qualcuno legge
-> «formattato» sappia che la domanda è già stata fatta.
+> ⭐ Asked the user before writing code, and **he chose «solo testo semplice»**. ⇒ The
+> decision of 9 Aug holds, and this line exists so that the next time someone reads
+> «formatted» they know the question has already been asked.
 
-#### 4.5.1 · I sei file, e che cosa fa ciascuno
+#### 4.5.1 · The six files, and what each one does
 
-| file | che cosa porta |
+| file | what it carries |
 |---|---|
-| ⭐ `src/appunti.h` + `.c` (**nuovi**, ~640 righe) | il lato **Mutter**, portato da `fondamenta/…/appunti_mutter.c` con le quattro trappole disinnescate sul posto. ⛔ Solo testo: i tipi MIME vivono lì dentro e non escono |
-| `src/figlio.c` | quattro messaggi nuovi sul socket padre↔figlio (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), il **terzo tavolo di montaggio** e il **fondo di tempo** di chi incolla |
-| `src/rcp.c` + `.h` | i tre messaggi di §7.4, la tabella degli stream in arrivo, i cinque ganci nuovi, e la **cura della corsa con `Ctrl+V`** |
-| `src/webtransport.c` + `.h` | il canale `0x02` in arrivo (`G_UNI_APPUNTI`) e i tre ganci che aprono uno stream verso il client |
-| `src/main.c` | la **quarta cucitura** della stessa famiglia: video, input, audio, appunti |
-| `src/pagina.html` | il lato browser: `clipboardchange` dove c'è, l'evento `paste` dove non c'è, e la scrittura negli appunti locali col ripiego dichiarato |
+| ⭐ `src/appunti.h` + `.c` (**new**, ~640 lines) | the **Mutter** side, ported from `fondamenta/…/appunti_mutter.c` with the four traps defused on the spot. ⛔ Text only: the MIME types live in there and do not come out |
+| `src/figlio.c` | four new messages on the parent↔child socket (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), the **third assembly table** and the **time bottom** of whoever pastes |
+| `src/rcp.c` + `.h` | the three messages of §7.4, the table of incoming streams, the five new hooks, and the **cure of the race with `Ctrl+V`** |
+| `src/webtransport.c` + `.h` | the incoming channel `0x02` (`G_UNI_APPUNTI`) and the three hooks that open a stream towards the client |
+| `src/main.c` | the **fourth stitching** of the same family: video, input, audio, clipboard |
+| `src/pagina.html` | the browser side: `clipboardchange` where it exists, the `paste` event where it does not, and writing to the local clipboard with the declared fallback |
 
-⭐ **E `mutter.h` ha una riga nuova sola**: `mutter_bus()`. Gli appunti vivono sulla **stessa**
-sessione `RemoteDesktop` del palco, e aprire una seconda connessione al bus vorrebbe dire un secondo
-nome sul bus — cioè un mittente che Mutter non riconosce come proprietario della sessione.
+⭐ **And `mutter.h` has a single new line**: `mutter_bus()`. The clipboard lives on the **same**
+`RemoteDesktop` session as the stage, and opening a second connection to the bus would mean a second
+name on the bus — that is a sender Mutter does not recognise as the owner of the session.
 
-#### 4.5.2 · ⛔⭐⭐ LA CORSA FRA `Ctrl+V` E L'ANNUNCIO, e la cura NON è quella di Xpra
+#### 4.5.2 · ⛔⭐⭐ THE RACE BETWEEN `Ctrl+V` AND THE ANNOUNCEMENT, and the cure is NOT Xpra's
 
-`SPECIFICHE.md` §9 la nomina e dichiara di **non** volerla risolvere come il riferimento:
+`SPECIFICHE.md` §9 names it and declares it does **not** want to solve it like the reference:
 
 > *«una trappola che tutti e tre i riferimenti letti disinnescano a mano: la corsa fra `Ctrl+V` e la
 > lettura degli appunti. Xpra la risolve ritardando **ogni battuta di 100 ms** — ⛔ per noi sono
 > **due volte il tetto del ritardo**: quella cura non si copia, si sostituisce.»*
 
-**La corsa, per esteso.** L'utente batte `Ctrl+V` nel browser. I tasti partono sul canale di input;
-l'annuncio degli appunti parte sul canale appunti e fa la stessa strada. ⛔ Ma il desktop, ricevuto
-il `Ctrl+V`, chiede il testo **subito** — e l'annuncio può non essere ancora arrivato. ⇒ **La prima
-incollata di ogni testo nuovo tornerebbe vuota**, e la seconda funzionerebbe: il sintomo peggiore
-che ci sia, perché «a volte non va» non manda a cercare da nessuna parte.
+**The race, in full.** The user presses `Ctrl+V` in the browser. The keys leave on the input channel;
+the clipboard announcement leaves on the clipboard channel and travels the same road. ⛔ But the desktop, having received
+the `Ctrl+V`, asks for the text **immediately** — and the announcement may not have arrived yet. ⇒ **The first
+paste of every new text would come back empty**, and the second would work: the worst symptom
+there is, because «sometimes it does not work» sends nobody looking anywhere.
 
-⭐ **La sostituzione costa zero e non tocca nessun tasto**: la richiesta di incolla **si mette in
-coda** invece di tornare vuota, e la domanda al client parte **quando l'annuncio arriva**
-(`rcp.c`, `rcp_appunti_chiedi` e il ramo `T_APPUNTI_ANNUNCIO` di `tratta_appunti`).
+⭐ **The replacement costs zero and touches no key**: the paste request **is queued**
+instead of returning empty, and the question to the client leaves **when the announcement arrives**
+(`rcp.c`, `rcp_appunti_chiedi` and the `T_APPUNTI_ANNUNCIO` branch of `tratta_appunti`).
 
-⚠ E l'attesa è limitata da qualcun altro, non da un timer nostro in più: il **fondo di 4 s del
-figlio** risponde «non ce l'ho» a chi incolla se l'annuncio non arriva mai.
+⚠ And the wait is bounded by someone else, not by one more timer of ours: the **child's 4 s
+bottom** answers «I don't have it» to whoever pastes if the announcement never arrives.
 
-#### 4.5.3 · ⛔ I DUE FONDI DI TEMPO, e sono due perché i debiti sono due
+#### 4.5.3 · ⛔ THE TWO TIME BOTTOMS, and they are two because the debts are two
 
-Questa è la parte che nessun banco avrebbe chiesto e che il prodotto sì.
+This is the part no bench would have asked for and the product did.
 
-| dove | quanto | che debito paga |
+| where | how much | which debt it pays |
 |---|---|---|
-| ⛔ **nel figlio** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | il debito verso **Mutter**. Un `SelectionTransfer` senza risposta lascia appesa **a tempo indeterminato** l'applicazione che sta incollando, e quel che l'utente vede è **un desktop piantato** — un difetto che nessuno collega agli appunti |
-| ⚠ **nel padre** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | che il **canale** non resti bloccato. Senza, un client che non risponde una volta manda in coda **tutte le incollate successive**: «gli appunti hanno funzionato una volta e poi mai più» |
+| ⛔ **in the child** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a fault nobody connects to the clipboard |
+| ⚠ **in the parent** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | that the **channel** does not stay blocked. Without it, a client that fails to answer once queues **all subsequent pastes**: «the clipboard worked once and then never again» |
 
-⭐ **E il fondo verso Mutter sta nel FIGLIO, non nel padre**, per una ragione che non è di comodità:
-il padre può non avere nessun client attaccato (la sessione sopravvive al client — invariante I4), il
-client può sparire a metà trasferimento, e il padre stesso può morire. ⛔ Il debito verso il
-compositore invece resta di chi ha la sessione, **e la sessione è nel figlio**.
+⭐ **And the bottom towards Mutter is in the CHILD, not in the parent**, for a reason that is not convenience:
+the parent may have no client attached (the session outlives the client — invariant I4), the
+client may vanish halfway through a transfer, and the parent itself may die. ⛔ The debt towards the
+compositor on the other hand stays with whoever has the session, **and the session is in the child**.
 
-⚠ E i due numeri sono diversi **apposta**: stringerli fino a coincidere li farebbe scadere insieme,
-e un testo arrivato al millesimo giusto non troverebbe più nessuno da servire da nessuna delle due
-parti.
+⚠ And the two numbers are different **on purpose**: tightening them until they coincide would make them expire together,
+and a text arriving at exactly the right millisecond would no longer find anyone to serve on either
+side.
 
-#### 4.5.4 · 🔸 Dove §2.5 ammetteva due letture, e quale si è presa
+#### 4.5.4 · 🔸 Where §2.5 allowed two readings, and which was taken
 
-`RCP.md` §2.5 dice che il canale appunti vuole uno stream *«uno **per trasferimento**»*. ⚠ Un
-trasferimento dalla nostra parte è fatto di **due messaggi lontani nel tempo** — `APPUNTI_ANNUNCIO`
-adesso, `APPUNTI_TESTO` **se e quando** qualcuno chiede.
+`RCP.md` §2.5 says that the clipboard channel wants a stream *«uno **per trasferimento**»*. ⚠ A
+transfer on our side is made of **two messages far apart in time** — `APPUNTI_ANNUNCIO`
+now, `APPUNTI_TESTO` **if and when** someone asks.
 
-⇒ Si è presa la lettura **uno stream per messaggio**, e la ragione è un conto: si copia molto più
-spesso di quanto si incolli, quindi tenere aperto uno stream fra i due messaggi vorrebbe dire
-tenerlo aperto **per sempre** nella stragrande maggioranza dei casi — e §2.5 concede al server un
-numero finito di stream.
+⇒ The reading **one stream per message** was taken, and the reason is a calculation: one copies much more
+often than one pastes, so keeping a stream open between the two messages would mean
+keeping it open **for ever** in the vast majority of cases — and §2.5 grants the server a
+finite number of streams.
 
-⭐ **E si può fare, perché a legare i messaggi di un trasferimento NON è lo stream**: è il campo
-`trasferimento`, che esiste esattamente per questo (rilievo R1.11, 9 agosto 2026).
+⭐ **And it can be done, because what ties the messages of a transfer together is NOT the stream**: it is the field
+`trasferimento`, which exists exactly for this (remark R1.11, 9 Aug 2026).
 
-⚠ Il prezzo, dichiarato: un client che contasse gli stream per contare i trasferimenti conterebbe il
-doppio. Nessuna riga di `RCP.md` gli dice di farlo, e il campo che deve guardare ce l'ha. ⭐ Il
-cliente di prova ha fatto **la stessa scelta leggendo solo il documento**, il che dice che la riga è
-ambigua ma che l'ambiguità non morde.
+⚠ The price, declared: a client that counted streams to count transfers would count
+double. No line of `RCP.md` tells it to do so, and it has the field it must look at. ⭐ The
+test client made **the same choice reading only the document**, which says that the line is
+ambiguous but that the ambiguity does not bite.
 
-#### 4.5.5 · ⛔ Due valori che venivano LETTI E BUTTATI, e la stessa forma del rilievo B-1
+#### 4.5.5 · ⛔ Two values that were READ AND THROWN AWAY, and the same form as remark B-1
 
-| dove | che cosa succedeva |
+| where | what happened |
 |---|---|
-| `src/rcp.c` (`CIAO`) | `appunti.testo` era in `NOMI_NOTI` come nome lecito e il **valore veniva buttato**. ⇒ Il server non poteva né evitare di annunciare a chi non li aveva chiesti, né rifiutare byte sul canale `0x02` da un client che non li aveva dichiarati — cioè **una capacità usata senza negoziarla**, che è il caso che §4.3 esiste per rendere impossibile |
-| `src/pagina.html` (`ECCOMI`) | idem: la pagina lo stampava nella riga dell'`ECCOMI` e non lo teneva da nessuna parte. ⇒ Non avrebbe potuto accendere niente |
+| `src/rcp.c` (`CIAO`) | `appunti.testo` was in `NOMI_NOTI` as a lawful name and the **value was thrown away**. ⇒ The server could neither avoid announcing to whoever had not asked, nor refuse bytes on channel `0x02` from a client that had not declared it — that is **a capability used without negotiating it**, which is the case §4.3 exists to make impossible |
+| `src/pagina.html` (`ECCOMI`) | same: the page printed it in the `ECCOMI` line and kept it nowhere. ⇒ It could not have turned anything on |
 
-⚠ È **la stessa forma del rilievo B-1** su `video.misura_massima` (10 agosto 2026): un valore del
-protocollo che si dichiara di aver capito e non si ha da nessuna parte.
-
----
-
-## 5 · Le misure
-
-*(si riempie strada facendo — la scena dichiarata accanto a ogni numero)*
-
-| che cosa | atteso | misurato | data |
-|---|---|---|---|
-| ⭐ **il codificatore Opus non costa una dipendenza nuova** | — | `libavcodec` **61.19.101** sulla macchina di prova **è collegato a `libopus.so.0`**, e `ffmpeg -encoders` dichiara **`libopus`** (oltre al nativo `opus`, sperimentale). ⇒ `avcodec_find_encoder_by_name("libopus")`, e il `Makefile` **non cambia** | `[M]` 17 ago 2026, dentro `enter.sh --root` sulla macchina di prova |
-| ⚠ **e `opus.pc` NON c'è** | — | nessun `libopus-dev` in `devroot`: la strada dell'API nativa di libopus **costerebbe un pacchetto su due ambienti di costruzione** (il contenitore del portatile e il `devroot` della macchina di prova) | `[M]` 17 ago 2026 |
-| ⭐⭐ **il browser decodifica Opus** (A1) | ⏳ ignoto | **440 Hz**, RMS **0,3504** (Chrome 151) e **0,3510** (Firefox 140esr), contro 0,3536 attesa — pacchetti **nudi**, nessun errore. Scena: 50 blocchi da 20 ms, tono 440 Hz ampiezza 0,5, 48 kHz stereo, giro codifica→decodifica dentro il browser | `[M]` 17 ago 2026, `07-b40`, **due motori** |
-| ⭐⭐ **il giudice vede i guasti** | 5 su 5 | ⭐ **6 casi su 6**: sano verde, quattro guasti visti, e `NIENTE DA GIUDICARE` come esito a sé. ⛔ Il big-endian si riconosce **dalla purezza (0,142)**, non dalla frequenza | `[M]` 17 ago 2026, `07-b40`, due motori |
-| ⛔ **quanti byte porta un datagram** (A2) | `[S]` ~1200 | **1024** su Chrome 151 (fisso) · **1024 → 1214** su Firefox 140esr. Scena: server **vero** sulla macchina di prova, porta 7700, rete locale via cavo, nessuna sessione aperta | `[M]` 17 ago 2026, `07-b40 --wt` |
-| ⭐ **il PCM di §5.3 ci sta** | ci deve stare | **sì su tutt'e due**, margine **52 byte** su Chrome e **242** su Firefox | `[M]` 17 ago 2026 |
-| ⭐⭐ **il filo dell'audio, PCM** | 200 blocchi/s, 440 Hz | **1000 blocchi su 1000** in 5,000 s — **resa 100,0 %**, passo fra gli `istante` **sempre 5000 µs**, zero fuori passo. Segnale: **440 Hz**, RMS **0,3535** (attesa 0,3536), **purezza 0,9963** | `[M]` 17 ago 2026, `07-b41` + `01-b3-cliente` + `07-b42` |
-| ⭐⭐ **il filo dell'audio, Opus** | 50 blocchi/s | **251 blocchi** in 5 s (50,2/s = i 20 ms di §5.3), **279-439 byte** per pacchetto a 96 kbit/s | `[M]` 17 ago 2026 |
-| ⭐⭐⭐ **i pacchetti del NOSTRO server decodificati dal BROWSER** | — | **440 Hz**, RMS **0,3515**, purezza **0,997**, su **Chrome 151 e Firefox 140esr**, 251 pacchetti su 251, zero errori. ⛔ Non i pacchetti che il browser aveva codificato da sé: quelli usciti da `libopus` dentro il server, presi **dal filo** | `[M]` 17 ago 2026, `07-b40 --pacchetti` |
-| ⭐⭐ **la catena VERA è viva** (sink → monitor → Opus → socket → datagram) | 50 blocchi/s | **397 blocchi in 8 s = 49,6/s**, zero persi, zero scartati. Il sink compare in `wpctl status` come **predefinito**, `monitor.channel-volumes: true`. Scena: sessione GNOME di `prova2` sul server, tono di prova **spento** | `[M]` 17 ago 2026, porta 7710 |
-| ⭐⭐⭐ **e il suono della sessione ARRIVA** | 440 Hz | ⛔ *La prima misura diceva «silenzio», ed era la SCENA a essere rotta — vedi §6.5.* Con la scena certificata: `suono.c` consegna **PICCO 16383 su 32767** (= metà fondo scala, l'ampiezza esatta del tono) e i tratti contigui danno **440 Hz, rms 0,3535** — identici a quel che legge `pw-record` sullo stesso monitor | `[M]` 17 ago 2026, `07-b43` |
-| ⭐⭐ **e il volume GOVERNA** | I5 e §kde §10.5 | volume pieno **0,3536** · al 25 % **0,0078** (atteso 0,005525) · muto **0,0**. ⇒ La trappola del monitor a monte del volume **non c'è**: `monitor.channel-volumes` è chiesta e funziona | `[M]` 17 ago 2026, `07-b43`, contro il prodotto |
-| ⭐⭐⭐ **il banco dell'audio vero: 5 giri su 5** | l'atteso scritto **prima** | **1-sano** 440 Hz rms 0,3535 (atteso 0,3536) · **2-silenzio** 0 Hz rms 0,0 · **3-frequenza** 660 Hz · **4-volume-25** rms **0,0055** (atteso 0,0055) · **5-muto** 0,0. ⛔ E i giri 2 e 3 sono difetti **innestati apposta**: il banco li vede, quindi non è cieco | `[M]` 17 ago 2026, `07-b43`, contro il prodotto |
-| ⭐⭐ **e RIFATTO dopo le otto cure al trasporto** | 5 su 5 | **5 su 5**, e ⭐ **meglio di prima**: la purezza è **1,000** su tutti i giri con segnale (era **0,29** quando i blocchi si perdevano), e il giudice ha potuto guardare **96 000 campioni** invece di 48 000 — perché adesso c'è abbastanza suono **contiguo** da giudicare. ⛔ Rifarlo non era una formalità: l'altro verde era di **prima** che si toccassero la coda dei datagram, il tetto ai rinvii, la coalescenza e il riempimento — cioè un verde vecchio su un codice nuovo | `[M]` 17 ago 2026, sera |
-| ⭐ **il datagram che non partiva** | 0 % di perdita | da **38,5 %** a **0,3 %**: 2994 spediti, 8 rifiutati, 1 buttato per coda piena su ~3003. ⚠ Su **Opus** la perdita era già **zero** (0 su 747): il difetto mordeva il **PCM**, che costa 13 volte la banda | `[M]` 17 ago 2026 |
-| ⭐ **libopus non accumula** | `[?]` | **1000 blocchi entrati, 1000 usciti, zero EAGAIN** ⇒ l'`istante` di §6.3 appartiene al blocco che parte | `[M]` 17 ago 2026, `07-b44` |
-| ⚠ **il pre-skip di Opus** | non dichiarato da nessuno | `initial_padding` = **312 campioni = 6,50 ms**, **costante** su mille pacchetti. Il decodificatore lo toglie da sé, quindi end-to-end si cancella | `[M]` 17 ago 2026, `07-b44` |
-| ⭐⭐ **gli appunti si aprono su una sessione GNOME VERA** | `EnableClipboard` concesso | ⭐ `appunti della sessione accesi (solo testo, nei due versi) su /org/gnome/Mutter/RemoteDesktop/Session/u1`. ⛔ È la prima e per ora **unica** prova che `appunti.c` funziona contro Mutter | `[M]` 17 ago 2026, porta 7730, utente `prova` |
-| ⛔⛔ **XWayland NON esiste nelle nostre sessioni** | `xclip` doveva funzionare (§2.4) | `gnome-shell --headless --no-x11` ⇒ **nessuna sponda X11**. ⚠ I due socket in `/tmp/.X11-unix` sono avanzi del **15 agosto**: un banco che li avesse presi per buoni avrebbe misurato una sessione morta | `[M]` 17 ago 2026 |
-| ⛔ **e nessun client Wayland ordinario possiede la selezione lì dentro** | l'arbitro doveva copiare | `wl-copy` dice **«This seat has no keyboard»**; un client GTK dice `COPIATO` ⛔ **e al compositore non arriva niente** — il prodotto, che è strumentato, non registra **nessun** `SelectionOwnerChanged`. ⚠ Nemmeno con una finestra presentata, e nemmeno con un client REMOTIX attaccato (cioè con la tastiera virtuale di libei presente) | `[M]` 17 ago 2026, tre tentativi |
-| ⭐⭐ **la trappola del volume, riprodotta** | il volume deve arrivare | due sink gemelli, PipeWire **1.4.2**: con `monitor.channel-volumes=true` il monitor legge **0,3535 · 0,0055 · 0,0000** al 100 % · 25 % · muto; ⛔ **senza**, legge **0,3535 sempre, muto compreso** | `[M]` 17 ago 2026, `07-b43` |
+⚠ It is **the same form as remark B-1** on `video.misura_massima` (10 Aug 2026): a protocol
+value one declares to have understood and does not have anywhere.
 
 ---
 
-## 6 · ⛔ Che cosa NON ha funzionato
+## 5 · The measurements
 
-*`PIANO.md` §0.3.2: si riempie anche quando fa una brutta figura.*
+*(filled in along the way — the scene declared beside every number)*
 
-### 6.1 · Due difetti del banco nel primo pomeriggio, e tutt'e due mentivano sul MOTIVO
-
-⭐ **Nessuno dei due dava un risultato sbagliato: davano il risultato giusto con la ragione
-sbagliata scritta accanto** — che è la forma che costa mezza giornata quando si presenta su un
-numero che conta.
-
-| # | il difetto | come si presentava | la cura |
+| what | expected | measured | date |
 |---|---|---|---|
-| **1** | il servente confrontava `self.path` **con la query dentro**: `/?wt=…` non è `/`, quindi **404** | *«nessun portatore in 45 s»* — cioè *«la pagina non è arrivata in fondo»*, mentre la pagina **non era mai stata servita** | si taglia la query prima del confronto |
-| **2** | `wt.ready` **può non tornare mai**, né risolta né respinta, e la sonda non aveva tetto | anche qui *«nessun portatore»*: la scadenza del **lanciatore** scritta al posto della scadenza della **connessione** | un tetto di 10 s, con l'esito **`SCADUTA`** distinto dagli altri |
+| ⭐ **the Opus encoder does not cost a new dependency** | — | `libavcodec` **61.19.101** on the test machine **is linked to `libopus.so.0`**, and `ffmpeg -encoders` declares **`libopus`** (besides the native `opus`, experimental). ⇒ `avcodec_find_encoder_by_name("libopus")`, and the `Makefile` **does not change** | `[M]` 17 Aug 2026, inside `enter.sh --root` on the test machine |
+| ⚠ **and `opus.pc` is NOT there** | — | no `libopus-dev` in `devroot`: the road of libopus's native API **would cost a package on two build environments** (the laptop's container and the test machine's `devroot`) | `[M]` 17 Aug 2026 |
+| ⭐⭐ **the browser decodes Opus** (A1) | ⏳ unknown | **440 Hz**, RMS **0.3504** (Chrome 151) and **0.3510** (Firefox 140esr), against 0.3536 expected — **bare** packets, no errors. Scene: 50 blocks of 20 ms, 440 Hz tone amplitude 0.5, 48 kHz stereo, encode→decode round inside the browser | `[M]` 17 Aug 2026, `07-b40`, **two engines** |
+| ⭐⭐ **the judge sees the faults** | 5 out of 5 | ⭐ **6 cases out of 6**: healthy green, four faults seen, and `NIENTE DA GIUDICARE` as an outcome of its own. ⛔ Big-endian is recognised **from the purity (0.142)**, not from the frequency | `[M]` 17 Aug 2026, `07-b40`, two engines |
+| ⛔ **how many bytes a datagram carries** (A2) | `[S]` ~1200 | **1024** on Chrome 151 (fixed) · **1024 → 1214** on Firefox 140esr. Scene: **real** server on the test machine, port 7700, wired local network, no session open | `[M]` 17 Aug 2026, `07-b40 --wt` |
+| ⭐ **the PCM of §5.3 fits** | it must fit | **yes on both**, margin **52 bytes** on Chrome and **242** on Firefox | `[M]` 17 Aug 2026 |
+| ⭐⭐ **the audio wire, PCM** | 200 blocks/s, 440 Hz | **1000 blocks out of 1000** in 5.000 s — **yield 100.0 %**, step between the `istante`s **always 5000 µs**, zero out of step. Signal: **440 Hz**, RMS **0.3535** (expected 0.3536), **purity 0.9963** | `[M]` 17 Aug 2026, `07-b41` + `01-b3-cliente` + `07-b42` |
+| ⭐⭐ **the audio wire, Opus** | 50 blocks/s | **251 blocks** in 5 s (50.2/s = the 20 ms of §5.3), **279-439 bytes** per packet at 96 kbit/s | `[M]` 17 Aug 2026 |
+| ⭐⭐⭐ **OUR server's packets decoded by the BROWSER** | — | **440 Hz**, RMS **0.3515**, purity **0.997**, on **Chrome 151 and Firefox 140esr**, 251 packets out of 251, zero errors. ⛔ Not the packets the browser had encoded itself: those that came out of `libopus` inside the server, taken **from the wire** | `[M]` 17 Aug 2026, `07-b40 --pacchetti` |
+| ⭐⭐ **the REAL chain is alive** (sink → monitor → Opus → socket → datagram) | 50 blocks/s | **397 blocks in 8 s = 49.6/s**, zero lost, zero discarded. The sink appears in `wpctl status` as **default**, `monitor.channel-volumes: true`. Scene: `prova2`'s GNOME session on the server, test tone **off** | `[M]` 17 Aug 2026, port 7710 |
+| ⭐⭐⭐ **and the session's sound ARRIVES** | 440 Hz | ⛔ *The first measurement said «silence», and it was the SCENE that was broken — see §6.5.* With the certified scene: `suono.c` delivers **PEAK 16383 out of 32767** (= half full scale, the exact amplitude of the tone) and the contiguous stretches give **440 Hz, rms 0.3535** — identical to what `pw-record` reads on the same monitor | `[M]` 17 Aug 2026, `07-b43` |
+| ⭐⭐ **and the volume GOVERNS** | I5 and §kde §10.5 | full volume **0.3536** · at 25 % **0.0078** (expected 0.005525) · mute **0.0**. ⇒ The trap of the monitor upstream of the volume **is not there**: `monitor.channel-volumes` is requested and works | `[M]` 17 Aug 2026, `07-b43`, against the product |
+| ⭐⭐⭐ **the real audio bench: 5 rounds out of 5** | the expected value written **beforehand** | **1-healthy** 440 Hz rms 0.3535 (expected 0.3536) · **2-silence** 0 Hz rms 0.0 · **3-frequency** 660 Hz · **4-volume-25** rms **0.0055** (expected 0.0055) · **5-mute** 0.0. ⛔ And rounds 2 and 3 are faults **grafted on purpose**: the bench sees them, so it is not blind | `[M]` 17 Aug 2026, `07-b43`, against the product |
+| ⭐⭐ **and REDONE after the eight cures to the transport** | 5 out of 5 | **5 out of 5**, and ⭐ **better than before**: purity is **1.000** on all rounds with signal (it was **0.29** when blocks were being lost), and the judge could look at **96 000 samples** instead of 48 000 — because now there is enough **contiguous** sound to judge. ⛔ Redoing it was not a formality: the other green was from **before** the datagram queue, the retransmission cap, coalescing and padding were touched — that is an old green on new code | `[M]` 17 Aug 2026, evening |
+| ⭐ **the datagram that did not leave** | 0 % loss | from **38.5 %** to **0.3 %**: 2994 sent, 8 refused, 1 thrown away for full queue out of ~3003. ⚠ On **Opus** the loss was already **zero** (0 out of 747): the fault bit the **PCM**, which costs 13 times the bandwidth | `[M]` 17 Aug 2026 |
+| ⭐ **libopus does not accumulate** | `[?]` | **1000 blocks in, 1000 out, zero EAGAIN** ⇒ the `istante` of §6.3 belongs to the block that leaves | `[M]` 17 Aug 2026, `07-b44` |
+| ⚠ **Opus's pre-skip** | declared by nobody | `initial_padding` = **312 samples = 6.50 ms**, **constant** over a thousand packets. The decoder removes it by itself, so end to end it cancels out | `[M]` 17 Aug 2026, `07-b44` |
+| ⭐⭐ **the clipboard opens on a REAL GNOME session** | `EnableClipboard` granted | ⭐ `appunti della sessione accesi (solo testo, nei due versi) su /org/gnome/Mutter/RemoteDesktop/Session/u1`. ⛔ It is the first and for now **only** proof that `appunti.c` works against Mutter | `[M]` 17 Aug 2026, port 7730, user `prova` |
+| ⛔⛔ **XWayland does NOT exist in our sessions** | `xclip` was supposed to work (§2.4) | `gnome-shell --headless --no-x11` ⇒ **no X11 bridge**. ⚠ The two sockets in `/tmp/.X11-unix` are leftovers from **15 Aug**: a bench that took them as good would have measured a dead session | `[M]` 17 Aug 2026 |
+| ⛔ **and no ordinary Wayland client owns the selection in there** | the arbiter was supposed to copy | `wl-copy` says **«This seat has no keyboard»**; a GTK client says `COPIATO` ⛔ **and nothing reaches the compositor** — the product, which is instrumented, records **no** `SelectionOwnerChanged`. ⚠ Not even with a presented window, and not even with a REMOTIX client attached (that is with libei's virtual keyboard present) | `[M]` 17 Aug 2026, three attempts |
+| ⭐⭐ **the volume trap, reproduced** | the volume must arrive | two twin sinks, PipeWire **1.4.2**: with `monitor.channel-volumes=true` the monitor reads **0.3535 · 0.0055 · 0.0000** at 100 % · 25 % · mute; ⛔ **without**, it reads **0.3535 always, mute included** | `[M]` 17 Aug 2026, `07-b43` |
 
-⇒ ⛔ **Due volte nello stesso pomeriggio il banco ha detto «non ho misurato» quando doveva dire
-«ho misurato e non ci sono riuscito, ecco dove».** È `CODER.md` §3.10 — *«una lettura negata non
-è una lettura che dice zero»* — trovata nello strumento scritto per applicarla.
+---
 
-⚠ **E il primo dei due si è visto solo perché la sonda funzionava già senza `--wt`**: il caso
-sano esisteva da prima. Senza quel confronto, l'imputato sarebbe stato il motore.
+## 6 · ⛔ What did NOT work
 
-### 6.2 · ⛔⛔ Una diagnosi sbagliata che «migliorava» — e mi ha quasi comprato una modifica
+*`PIANO.md` §0.3.2: it is filled in even when it looks bad.*
 
-*È il difetto più istruttivo della giornata, e non è nel prodotto: è nel mio ragionamento.*
+### 6.1 · Two faults of the bench in the early afternoon, and both lied about the REASON
 
-Il primo giro del tono dava **402 blocchi su 600** in 3 s — resa **67 %** — ⭐ con **zero blocchi
-persi**: il passo fra gli `istante` era **sempre esattamente 5000 µs**. Ho concluso *«la coda dei
-datagram è diventata il tetto del ritmo»* e l'ho portata da 8 a 32.
+⭐ **Neither of the two gave a wrong result: they gave the right result with the wrong
+reason written beside it** — which is the form that costs half a day when it shows up on a
+number that counts.
 
-⭐ **La resa è salita a 80 %.** Cioè il numero è migliorato, e sembrava una conferma.
+| # | the fault | how it showed | the cure |
+|---|---|---|---|
+| **1** | the server compared `self.path` **with the query inside**: `/?wt=…` is not `/`, so **404** | *«no carrier in 45 s»* — that is *«the page did not reach the end»*, while the page **had never been served** | the query is cut before the comparison |
+| **2** | `wt.ready` **may never return**, neither resolved nor rejected, and the probe had no ceiling | here too *«no carrier»*: the **launcher's** deadline written in place of the **connection's** deadline | a ceiling of 10 s, with the outcome **`SCADUTA`** distinct from the others |
 
-⛔ **Non confermava niente.** 2,01 s su 3 e 4,01 su 5 non sono una frazione: sono **T − 1**. Il
-terzo punto l'ha deciso in trenta secondi — **9,01 s su 10**. ⇒ Non era una resa: era **un secondo
-fisso in testa a ogni presa**, e la coda non c'entrava.
+⇒ ⛔ **Twice in the same afternoon the bench said «I did not measure» when it should have said
+«I measured and did not succeed, here is where».** It is `CODER.md` §3.10 — *«una lettura negata non
+è una lettura che dice zero»* — found in the tool written to apply it.
+
+⚠ **And the first of the two was seen only because the probe already worked without `--wt`**: the healthy
+case existed from before. Without that comparison, the suspect would have been the engine.
+
+### 6.2 · ⛔⛔ A wrong diagnosis that «improved» — and it almost bought me a change
+
+*It is the most instructive fault of the day, and it is not in the product: it is in my reasoning.*
+
+The first round of the tone gave **402 blocks out of 600** in 3 s — yield **67 %** — ⭐ with **zero blocks
+lost**: the step between the `istante`s was **always exactly 5000 µs**. I concluded *«the datagram
+queue has become the rate ceiling»* and took it from 8 to 32.
+
+⭐ **The yield rose to 80 %.** That is, the number improved, and it looked like a confirmation.
+
+⛔ **It confirmed nothing.** 2.01 s out of 3 and 4.01 out of 5 are not a fraction: they are **T − 1**. The
+third point decided it in thirty seconds — **9.01 s out of 10**. ⇒ It was not a yield: it was **a fixed
+second at the head of every take**, and the queue had nothing to do with it.
 
 | | |
 |---|---|
-| **la causa vera** | il tono aspettava il **battito normale** di QUIC prima del primo blocco, perché `wt_battito_ns()` accorciava l'attesa solo *dopo* che il primo blocco era stato prodotto |
-| **la cura** | due righe: il primo blocco è **dovuto subito** |
-| **il risultato** | **1000 blocchi su 1000**, resa **100,0 %** |
-| ⛔ **e il 32 è tornato 8** | `[M]` a 8 i blocchi persi erano **già zero**: era sufficiente. Un valore più alto sarebbe rimasto nel codice **senza una ragione**, giustificato da una diagnosi falsa |
+| **the real cause** | the tone waited for QUIC's **normal beat** before the first block, because `wt_battito_ns()` shortened the wait only *after* the first block had been produced |
+| **the cure** | two lines: the first block is **due immediately** |
+| **the result** | **1000 blocks out of 1000**, yield **100.0 %** |
+| ⛔ **and the 32 went back to 8** | `[M]` at 8 the lost blocks were **already zero**: it was enough. A higher value would have stayed in the code **without a reason**, justified by a false diagnosis |
 
-⇒ ⭐ **La lezione è di metodo, e vale oltre l'audio**: *un numero che migliora non è una conferma*.
-Due punti stanno su una retta per caso; il terzo costava trenta secondi. ⚠ E il sintomo — una
-**percentuale** — indirizzava verso il *ritmo*, mentre il difetto era un **ritardo d'avvio**: due
-posti completamente diversi del codice. La forma è quella di `LEZIONI.md` §1.9, *il rosso puntato
-sull'imputato sbagliato*, in una variante nuova: **il verde parziale che sale**.
+⇒ ⭐ **The lesson is about method, and it holds beyond audio**: *a number that improves is not a confirmation*.
+Two points lie on a straight line by chance; the third cost thirty seconds. ⚠ And the symptom — a
+**percentage** — pointed towards the *rate*, while the fault was a **start-up delay**: two
+completely different places in the code. The form is that of `LEZIONI.md` §1.9, *the red pinned
+on the wrong suspect*, in a new variant: **the partial green that rises**.
 
-### 6.3 · E tre inciampi minori, con la loro causa
+### 6.3 · And three minor stumbles, with their cause
 
-1. ⛔ **`printf … | sudo -S` si mangia lo `stdin`** — due volte nello stesso script: la prima ha
-   fatto leggere al `tar` la parola d'ordine (*«gzip: stdin: not in gzip format»*), la seconda ha
-   dato a `bash -s` uno stdin vuoto, ⚠ **e quella non ha dato nessun errore**: il passo stampava
-   la sua intestazione e non faceva niente. *«Non ha fatto niente» aveva la stessa faccia di «ha
-   funzionato»*;
-2. ⛔ **ho spedito alla macchina di prova anche i `.o` del portatile**, e `make` non ha compilato
-   niente. ⭐ **Il controllo `ldd` l'ha rifiutato** — è il suo mestiere — ma senza quel controllo
-   avrei misurato il codice del portatile credendolo del server: il difetto **D5**;
-3. ⛔ **la parola d'ordine di `prova2` l'ho presa dal file sbagliato**: `credenziali-banchi` è del
-   `prova2` **del contenitore**, non di quello dell'host che PAM verifica. ⚠ **Era già scritto**,
-   in `banchi/06-b38-tela.sh`, con le parole *«sono due utenti diversi con lo stesso nome, e le due
-   parole si somigliano abbastanza da far perdere un'ora»*. Costo: **1 tentativo su 3** prima del
-   ban di §4.4-bis.
+1. ⛔ **`printf … | sudo -S` eats the `stdin`** — twice in the same script: the first time it
+   made `tar` read the password (*«gzip: stdin: not in gzip format»*), the second it
+   gave `bash -s` an empty stdin, ⚠ **and that one gave no error**: the step printed
+   its header and did nothing. *«It did nothing» had the same face as «it
+   worked»*;
+2. ⛔ **I shipped the laptop's `.o` files to the test machine too**, and `make` compiled
+   nothing. ⭐ **The `ldd` check rejected it** — that is its job — but without that check
+   I would have measured the laptop's code believing it the server's: fault **D5**;
+3. ⛔ **I took `prova2`'s password from the wrong file**: `credenziali-banchi` belongs to the
+   `prova2` **of the container**, not to the host's one that PAM verifies. ⚠ **It was already written**,
+   in `banchi/06-b38-tela.sh`, with the words *«sono due utenti diversi con lo stesso nome, e le due
+   parole si somigliano abbastanza da far perdere un'ora»*. Cost: **1 attempt out of 3** before the
+   ban of §4.4-bis.
 
 ---
 
