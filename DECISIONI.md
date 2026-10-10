@@ -6713,3 +6713,7 @@ ma riprendere una sessione e non avere il resize al reattach non è accettabile�
   on reattach (user: *«accade la stessa cosa anche sugli altri DE»*). The only KDE detail (August note above: KWin
   puts windows back where they were the last time it saw that size) is measured alongside GNOME, not treated as a
   defect.
+- ✅ **No migration to Forky to solve KWin** (user's idea, then agreed, 10 Oct): REMOTIX runs on the customer's
+  distribution, and KWin < 6.8 stays on Debian 13 (≥ 2028) and Ubuntu 26.04 LTS (≥ 2031). ⇒ One path that works on
+  every KWin, no branch per compositor version; Forky joins the test matrix once it carries Plasma 6.8, to check that
+  the same path holds there.
