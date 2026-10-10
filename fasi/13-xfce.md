@@ -818,7 +818,7 @@ The user, 23 Sep: *«prima si chiudono i punti aperti»*. How they were at 19 h 
 
   ⭐⭐ **AND THE RESIDUE IS NOT A DELAY — the proof is `voff`, which was already on the same line.**
   `voff` = (client time at the glass) − (the server's `istante` of that frame): if the residue were
-  a queue, `voff` should grow **with it**, by `residue / rate`.
+  a queue, `voff` should grow **with it**, by `residuo / ritmo`.
 
   | `[M]` 22 Sep, 190-200 s per round | final residue | growth of `voff` expected **if it were a queue** | growth of `voff` **measured** |
   |---|---|---|---|
@@ -981,147 +981,147 @@ The user, 23 Sep: *«prima si chiudono i punti aperti»*. How they were at 19 h 
   to turn off the frame loop on the same event that frees the seat — ⚠ but it must be checked against
   I4 ("the stage stays standing"), which is another thing: stopping the *capture* is not dismantling the stage.
 
-- ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
-  xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
-  ⚠ La rete usa il cliente Python, non un browser: il blocco del video in **Firefox** qui sotto NON lo
-  vede. ✅ E `13-w4` **è diventato una maglia fissa della rete** — 23 set 2026, vedi `C20` qui sotto.
-- ✅ **LA RETE SPORCA LE SCATOLE: adesso è un VERDETTO** — chiuso il 23 set 2026. La sgomberata era
-  già fatta (22 set, `08172a6`, `d0406fd`): il **gancio** sgombera dopo ogni maglia, sullo spazio di
-  nomi della rete (utenti, home, unità `user@` fallite, orfani di `/tmp`); la scena si lancia con
-  `setsid`; C3 ferma solo il processo del prodotto e non più il browser.
-  ⭐ Mancava il giudizio, ed è **C19** (`banchi/11-scatole/11-c19-la-scatola-resta-pulita.py`,
-  `la_scatola_resta_pulita` nel gancio, **ultima maglia di ogni scatola** in `tutto` e in
-  `desktop-nuovo`): *«a fine giro non sopravvive nessun inquilino della rete»*. Prima la sporcizia era
-  una riga `inf` annotata `riuscita=true`, cioè ⛔ la rete poteva lasciare venti inquilini dentro una
-  scatola e dirsi verde lo stesso.
-  ⭐⭐ **L'insidia di `nictest` è risolta contando per NOME, non per uid.** `bilancio` conta
-  `uid>=1000` escluso il solo `provanic` ⇒ per lui `nictest` è un inquilino; C19 conta sullo **spazio
-  di nomi della rete** (`^c[0-9]+b?u[0-9]+$`, lo stesso di `sgombera_inquilini`) ⇒ `nictest`,
-  `provanic` e gli utenti di sistema non ci cascano dentro **per forma**, non per una lista di
-  eccezioni. I due restano diversi apposta: `bilancio` è una misura per chi diagnostica, C19 è il
-  giudizio.
-  ⚠ Giudica **U** (utenti), **C** (case rimaste, cioè il `userdel` senza `-r`) e **P** (processi);
-  unità `user@` fallite orfane e orfani di `/tmp` restano **rilievo**, non verdetto — sono la
-  spazzatura degli inquilini, non gli inquilini, e un rosso perpetuo per un file in `/tmp` sarebbe un
-  interruttore che qualcuno spegne (§1.49). Chi vuole misurarli lo chiede: `--anche-lo-sporco`.
-  `[M]` 23 set 2026, binario `9b5df38b`, scatole **kde** e **xfce**: giro sano **VERDE** su tutt'e due
-  (0 inquilini, 0 case, 0 processi; rilievo kde 8 unità fallite · 0 orfani, xfce 10 · 49), e i **due**
-  guasti innestati **VISTI** su tutt'e due — `--lascia-un-inquilino` (U·C·P rossi) e
-  `--lascia-una-casa` (solo C rosso: ⭐ il residuo che nessun `pgrep` e nessun `getent` vedrebbero).
-  ⚠ E un rilievo che la maglia stampa e nessuno guardava: in kde c'era `occhio2`, in xfce `corrx1` e
-  `corrx2` — inquilini di altri banchi **fuori** dallo spazio di nomi, quindi né sgomberati dal gancio
-  né contati da C19. 🔸 I banchi nuovi diano ai loro inquilini un nome `c<n>u<n>`, come fa C20.
-- ✅ **`13-w4` È DIVENTATO C20, MAGLIA FISSA DELLA RETE** — 23 set 2026.
-  `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, dentro `le_cinque_nuove` (cioè in
-  `tutto` e in `desktop-nuovo`), col cancello delle capacità: vuole l'**immagine**.
-  Sorveglia il difetto che l'utente ha trovato il 22 set su KDE con Chrome — dopo «Esci» e un nuovo
-  accesso lo schermo alternava desktop, schermata d'uscita e nero — e che `src/codificatore.c`
-  descrive come *«un'immagine VECCHIA, senza nessun errore»*: ⛔ proprio perché non c'è errore, se ne
-  accorge solo chi **guarda**.
-  ⭐ Entrando nella rete ha preso tre cose che da banco di una sera non aveva:
-  (1) **il guasto innestato** `--scena-che-lampeggia` (senza, il giorno che il giudice smettesse di
-  guardare direbbe verde per sempre); (2) **non sa più che cosa sia Plasma** — nascita e fine della
-  sessione le legge dal registro del prodotto (`formato negoziato`, `la sessione grafica … E' FINITA`)
-  e il gesto «Esci» se lo cerca con la stessa domanda di `src/sessione.c` (`org.kde.Shutdown` ·
-  `org.gnome.SessionManager` · `xfce4-session-logout`); (3) l'inquilino si chiama **`c20u<n>`**,
-  dentro lo spazio di nomi della rete, così il gancio lo sgombera e C19 lo vede.
-  ⛔⛔ **E ha dovuto mettere lei una scena, come C3** — è la misura che ha riscritto la maglia. A
-  desktop fermo, nel secondo accesso: **kde 1 800 fotogrammi in 45 s** (KWin consegna sempre),
-  **xfce 7 in 60 s** (labwc, come ogni wlroots, consegna solo sul danno) ⇒ su xfce e lxqt la maglia
-  sarebbe stata **3 per sempre**. La cura è `banchi/11-scatole/11-c20-scena.html`: una banda scura che
-  scorre su fondo chiaro, **due** bande a 100 punti di distanza così che in vista ci sia sempre
-  esattamente il 20 % di scuro ⇒ ⭐ ogni fotogramma è diverso (c'è danno, quindi consegna) **e la
-  luminanza media non si muove**. `[M]` misurata: **156**, e un **solo valore distinto** su 2 166
-  fotogrammi.
-  `[M]` 23 set 2026, binario `9b5df38b`, con la scena dichiarata:
+- ✅ **THE NET AFTER THE CURE OF THE GHOSTS HAS RUN** — 22 Sep 2026, `--famiglia tutto --scatola "gnome kde
+  xfce"`, binary `defc5ad5`: **no red**, 13 506 s, C14 included (alone and together, same fingerprint).
+  ⚠ The net uses the Python client, not a browser: it does NOT see the video freeze in **Firefox**
+  below. ✅ And `13-w4` **has become a fixed mesh of the net** — 23 Sep 2026, see `C20` below.
+- ✅ **THE NET DIRTIES THE BOXES: now it is a VERDICT** — closed on 23 Sep 2026. The clear-out was
+  already done (22 Sep, `08172a6`, `d0406fd`): the **hook** clears out after every mesh, on the net's
+  namespace (users, homes, failed `user@` units, orphans in `/tmp`); the scene is launched with
+  `setsid`; C3 stops only the product's process and no longer the browser.
+  ⭐ The verdict was missing, and it is **C19** (`banchi/11-scatole/11-c19-la-scatola-resta-pulita.py`,
+  `la_scatola_resta_pulita` in the hook, **last mesh of every box** in `tutto` and in
+  `desktop-nuovo`): *«a fine giro non sopravvive nessun inquilino della rete»*. Before, the dirt was
+  an `inf` line noted `riuscita=true`, that is ⛔ the net could leave twenty tenants inside a
+  box and call itself green all the same.
+  ⭐⭐ **The `nictest` pitfall is solved by counting by NAME, not by uid.** `bilancio` counts
+  `uid>=1000` excluding only `provanic` ⇒ for it `nictest` is a tenant; C19 counts on the **net's
+  namespace** (`^c[0-9]+b?u[0-9]+$`, the same as `sgombera_inquilini`) ⇒ `nictest`,
+  `provanic` and the system users do not fall into it **by shape**, not by a list of
+  exceptions. The two stay different on purpose: `bilancio` is a measurement for whoever diagnoses, C19 is the
+  verdict.
+  ⚠ It judges **U** (users), **C** (homes left, that is `userdel` without `-r`) and **P** (processes);
+  failed orphan `user@` units and orphans in `/tmp` stay a **finding**, not a verdict — they are the
+  tenants' rubbish, not the tenants, and a perpetual red for a file in `/tmp` would be a
+  switch that somebody turns off (§1.49). Whoever wants to measure them asks for it: `--anche-lo-sporco`.
+  `[M]` 23 Sep 2026, binary `9b5df38b`, boxes **kde** and **xfce**: healthy round **GREEN** on both
+  (0 tenants, 0 homes, 0 processes; finding kde 8 failed units · 0 orphans, xfce 10 · 49), and the **two**
+  injected faults **SEEN** on both — `--lascia-un-inquilino` (U·C·P red) and
+  `--lascia-una-casa` (only C red: ⭐ the residue that no `pgrep` and no `getent` would see).
+  ⚠ And a finding the mesh prints and nobody looked at: in kde there was `occhio2`, in xfce `corrx1` and
+  `corrx2` — tenants of other benches **outside** the namespace, hence neither cleared out by the hook
+  nor counted by C19. 🔸 New benches should give their tenants a `c<n>u<n>` name, as C20 does.
+- ✅ **`13-w4` HAS BECOME C20, A FIXED MESH OF THE NET** — 23 Sep 2026.
+  `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, inside `le_cinque_nuove` (that is in
+  `tutto` and in `desktop-nuovo`), with the capability gate: it wants the **image**.
+  It watches the defect the user found on 22 Sep on KDE with Chrome — after "Log Out" and a new
+  login the screen alternated desktop, logout screen and black — and that `src/codificatore.c`
+  describes as *«un'immagine VECCHIA, senza nessun errore»*: ⛔ precisely because there is no error, only
+  whoever **looks** notices it.
+  ⭐ On entering the net it took three things that as a one-evening bench it did not have:
+  (1) **the injected fault** `--scena-che-lampeggia` (without it, the day the judge stopped
+  looking it would say green forever); (2) **it no longer knows what Plasma is** — birth and end of the
+  session it reads from the product's log (`formato negoziato`, `la sessione grafica … E' FINITA`)
+  and the "Log Out" gesture it looks for with the same question as `src/sessione.c` (`org.kde.Shutdown` ·
+  `org.gnome.SessionManager` · `xfce4-session-logout`); (3) the tenant is called **`c20u<n>`**,
+  inside the net's namespace, so the hook clears it out and C19 sees it.
+  ⛔⛔ **And it had to put a scene there itself, like C3** — it is the measurement that rewrote the mesh. With the
+  desktop still, at the second login: **kde 1 800 frames in 45 s** (KWin always delivers),
+  **xfce 7 in 60 s** (labwc, like every wlroots, delivers only on damage) ⇒ on xfce and lxqt the mesh
+  would have been **3 forever**. The cure is `banchi/11-scatole/11-c20-scena.html`: a dark band that
+  scrolls on a light background, **two** bands 100 points apart so that in view there is always
+  exactly 20 % dark ⇒ ⭐ every frame is different (there is damage, hence delivery) **and the
+  mean luminance does not move**. `[M]` measured: **156**, and a **single distinct value** over 2 166
+  frames.
+  `[M]` 23 Sep 2026, binary `9b5df38b`, with the declared scene:
 
-  | | giro sano | guasto innestato (`--scena-che-lampeggia`) |
+  | | healthy round | injected fault (`--scena-che-lampeggia`) |
   |---|---|---|
-  | **kde** | ⭐ VERDE (esito 0) — 4 332 fotogrammi, coda 2 166, **0 salti**, luminanza **156**, 1 valore distinto; cache: 4 superfici buttate | ⭐ VISTO (esito 0) — **762 salti** su una coda di 2 167, 26 valori distinti (14…234) |
-  | **xfce** | ⭐ VERDE (esito 0) — 4 454 fotogrammi, coda 2 227, **0 salti**, luminanza **156**, 1 valore distinto; cache: 5 superfici | ⭐ VISTO (esito 0) — **766 salti** su una coda di 2 229, 25 valori distinti |
+  | **kde** | ⭐ GREEN (outcome 0) — 4 332 frames, tail 2 166, **0 skips**, luminance **156**, 1 distinct value; cache: 4 surfaces thrown away | ⭐ SEEN (outcome 0) — **762 skips** over a tail of 2 167, 26 distinct values (14…234) |
+  | **xfce** | ⭐ GREEN (outcome 0) — 4 454 frames, tail 2 227, **0 skips**, luminance **156**, 1 distinct value; cache: 5 surfaces | ⭐ SEEN (outcome 0) — **766 skips** over a tail of 2 229, 25 distinct values |
 
-  ⚠ Due insidie trovate mentre si certificava, e tutt'e due erano del BANCO:
-  (a) il browser non dipingeva perché `/tmp/mozilla` era di un altro inquilino — è la cura della
-  provvista che C3 paga dal 27 agosto, e adesso C20 la chiama (⛔ non se ne fa una copia);
-  (b) il controllo «lo schermo è nero» stava **prima** di quello sul lampeggio ⇒ la scena di C3, che
-  è scura (mediana 17), faceva uscire **3** invece che rosso. ⭐ Uno schermo che alterna non è mai
-  ambiguo, per quanto scuro: è il nero **fermo** che non si distingue da un'immagine congelata.
-- 🔸 **La rete non guarda i browser veri sotto carico — MEZZO CHIUSO** — 23 set 2026. ⭐ Adesso
-  l'attrezzo c'è: `banchi/14-stress/stress_occhio.py`, il giudice che **guarda l'immagine** invece
-  di contare i fotogrammi, agganciato a quattro scenari (`ac59daf`, `99a4a74`). `[M]` Col guasto
-  innestato i contatori sono PERFETTI (320 consegnati, 320 dipinti, 0 buchi) e l'occhio dà **ROSSO**
-  su tutti e quattro, dove con l'occhio spento davano **VERDE** — cioè quel che la suite vedeva la
-  notte fra il 22 e il 23 mentre l'utente guardava un mosaico.
-  ⏳ Resta aperto: la suite non ha mai girato per intero (decisione dell'utente il 23 set: la prova
-  sotto stress la disegna lui, dopo LXQt), e la **rete** continua a usare il cliente Python.
-  ⛔⛔ E il 23 set si è scoperto quanto conta: il difetto più grave della giornata (58 % di schermo
-  fermo) era invisibile perché **nessun banco muoveva il mouse**. Vedi la voce del battito.
-- ⏳ **La rete non guarda i browser veri sotto carico** — 22 set 2026, e per questo la spirale della
-  chiave è passata: la rete usa il cliente Python, e `12-client-veri.py` prova Firefox e Chrome veri
-  per **8 s a desktop fermo**. 🔸 Serve un giro con un video a schermo intero per minuti, coi contatori
-  della pagina (`video consegnati→dipinti`, `buchi`) come giudizio.
-- ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
-- ✅ **I gruppi `video`/`render` su TUTTI i desktop** — chiuso il 22 set 2026, e la cura non serviva:
-  il codice che iscrive (`src/figlio.c`, `iscrivi_ai_gruppi_della_scheda`) sta nel **padre**, gira da
-  root dopo PAM e **prima del `fork`** ⇒ non sa nemmeno quale compositore nascerà, e vale su ogni
-  desktop. Era **misurato** solo su kde, non fatto solo per kde.
-  `[M]` 22 set 2026, inquilini creati SENZA gruppi, browser **veri** e finestra vera: gnome Firefox 140
-  **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In tutti e quattro il
-  registro dice «PRIMA CONNESSIONE … ce lo METTO io» e poi «è nei gruppi della scheda … può vedere in
-  hardware», `id -nG` passa da «solo se stesso» a «video render», e il primo fotogramma arriva in
-  0,6–1,6 s. (kde era già `[M]` il 20 set, `DECISIONI.md` §7.21.)
-  ⭐ **E adesso la rete lo guarda**: maglia **C18** «i gruppi della scheda li mette il prodotto»,
-  l'unica che NON chiama `garantisci_i_gruppi` — tutte le altre glieli mettono da sé e così
-  **nascondevano** quel pezzo di prodotto. Guasto innestato `--senza-usermod` (si nasconde `usermod`
-  per la durata del giro, e si rimette sempre): `[M]` VERDE e guasto VISTO su gnome e xfce.
-- ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
-  gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
-  l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre
-  ricette. ⭐ `[M]` 21 set 2026, sera: immagini rifatte, `nictest` in `sudo video render` nelle tre
-  scatole, `sudo` risponde, e Firefox entra come `nictest` su **8511 · 8512 · 8513**: PASS su tutti e
-  tre. ⏳ Restano le prove dell'utente.
-- ✅ **«Cambia utente»** — ⭐ DECISO dall'utente il 21 set 2026, sera: esce **su tutti i desktop**,
-  resta solo «Esci». `[M]` binario `eb327ffd`: XFCE `-switch-user` nel pannello e
-  `ShowSwitchUser=false`; GNOME `disable-user-switching=true` con `always-show-log-out=true`; KDE
-  già dalla fase 12. ⭐ `[M]` rete **gnome+xfce** (ridotta per decisione dell'utente: KDE non passa dal codice toccato), innesco `fase13-cambia-utente`, 9 275 s: **GNOME 27/27 · XFCE 27/27 · guasti 26/26 visti**, C10 C12 C15 C16 verdi sul portatile.
-- `[?]` **La sessione del prodotto è `closing` dalla nascita**, su ogni desktop («logged out.
-  Waiting for processes to exit» nel giornale subito dopo «New session»). Non è di questa fase né
-  una regressione (GNOME è uguale), ma con `KillUserProcesses=yes` logind potrebbe trattarla da
-  sessione finita. ⇒ Da guardare in una fase sua.
-- `[?]` Le scelte 2, 3, 4, 6, 7 della tabella sopra sono state **affrontate nel codice** dagli
-  incrementi (ridimensionamento acceso, bus d'utente, vitalità dai fatti di `/proc` e del bus) e
-  vanno rilette con l'utente, non date per decise.
+  ⚠ Two pitfalls found while certifying, and both were the BENCH's:
+  (a) the browser did not paint because `/tmp/mozilla` belonged to another tenant — it is the cure of the
+  provisioning that C3 has paid for since 27 August, and now C20 calls it (⛔ no copy is made of it);
+  (b) the "the screen is black" check was **before** the one on flashing ⇒ C3's scene, which
+  is dark (median 17), made it output **3** instead of red. ⭐ A screen that alternates is never
+  ambiguous, however dark: it is the **still** black that cannot be told from a frozen image.
+- 🔸 **The net does not look at real browsers under load — HALF CLOSED** — 23 Sep 2026. ⭐ Now
+  the tool is there: `banchi/14-stress/stress_occhio.py`, the judge that **looks at the image** instead
+  of counting frames, hooked to four scenarios (`ac59daf`, `99a4a74`). `[M]` With the injected fault
+  the counters are PERFECT (320 delivered, 320 painted, 0 gaps) and the eye gives **RED**
+  on all four, where with the eye off they gave **GREEN** — that is what the suite saw on the
+  night between the 22nd and the 23rd while the user was looking at a mosaic.
+  ⏳ Still open: the suite has never run in full (the user's decision on 23 Sep: the stress
+  test is designed by him, after LXQt), and the **net** keeps using the Python client.
+  ⛔⛔ And on 23 Sep it was discovered how much it matters: the most serious defect of the day (58 % of the screen
+  still) was invisible because **no bench moved the mouse**. See the heartbeat item.
+- ⏳ **The net does not look at real browsers under load** — 22 Sep 2026, and that is why the keyframe
+  spiral got through: the net uses the Python client, and `12-client-veri.py` tests real Firefox and Chrome
+  for **8 s with the desktop still**. 🔸 A round with a full-screen video for minutes is needed, with the page's
+  counters (`video consegnati→dipinti`, `buchi`) as the verdict.
+- ⏳ **Chrome Android** on XFCE: the validation is the user's.
+- ✅ **The `video`/`render` groups on ALL desktops** — closed on 22 Sep 2026, and the cure was not needed:
+  the code that enrols (`src/figlio.c`, `iscrivi_ai_gruppi_della_scheda`) is in the **parent**, runs as
+  root after PAM and **before the `fork`** ⇒ it does not even know which compositor will be born, and holds on every
+  desktop. It was **measured** only on kde, not done only for kde.
+  `[M]` 22 Sep 2026, tenants created WITHOUT groups, **real** browsers and a real window: gnome Firefox 140
+  **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In all four the
+  log says «PRIMA CONNESSIONE … ce lo METTO io» and then «è nei gruppi della scheda … può vedere in
+  hardware», `id -nG` goes from "only itself" to "video render", and the first frame arrives in
+  0.6–1.6 s. (kde was already `[M]` on 20 Sep, `DECISIONI.md` §7.21.)
+  ⭐ **And now the net looks at it**: mesh **C18** "the card's groups are put by the product",
+  the only one that does NOT call `garantisci_i_gruppi` — all the others put them in by themselves and thus
+  **hid** that piece of the product. Injected fault `--senza-usermod` (`usermod` is hidden
+  for the duration of the round, and always put back): `[M]` GREEN and fault SEEN on gnome and xfce.
+- ⏳ ⛔ **BEFORE LXQt, the user's tests by hand** — asked on 21 Sep 2026: in the three boxes
+  gnome, kde and xfce there are Firefox, a terminal and a file manager (already in the layers), and
+  the tenant **`nictest`** (password `nictest`, in the `sudo` group), a new last layer of the three
+  recipes. ⭐ `[M]` 21 Sep 2026, evening: images rebuilt, `nictest` in `sudo video render` in the three
+  boxes, `sudo` answers, and Firefox gets in as `nictest` on **8511 · 8512 · 8513**: PASS on all
+  three. ⏳ The user's tests remain.
+- ✅ **"Switch User"** — ⭐ DECIDED by the user on 21 Sep 2026, evening: it goes **on all desktops**,
+  only "Log Out" stays. `[M]` binary `eb327ffd`: XFCE `-switch-user` in the panel and
+  `ShowSwitchUser=false`; GNOME `disable-user-switching=true` with `always-show-log-out=true`; KDE
+  already since phase 12. ⭐ `[M]` net **gnome+xfce** (reduced by the user's decision: KDE does not go through the touched code), trigger `fase13-cambia-utente`, 9 275 s: **GNOME 27/27 · XFCE 27/27 · faults 26/26 seen**, C10 C12 C15 C16 green on the laptop.
+- `[?]` **The product's session is `closing` from birth**, on every desktop («logged out.
+  Waiting for processes to exit» in the journal right after «New session»). It does not belong to this phase nor
+  is it a regression (GNOME is the same), but with `KillUserProcesses=yes` logind could treat it as a
+  finished session. ⇒ To be looked at in a phase of its own.
+- `[?]` Choices 2, 3, 4, 6, 7 of the table above were **dealt with in the code** by the
+  increments (resizing on, user bus, liveness from the facts of `/proc` and of the bus) and
+  must be reread with the user, not taken as decided.
 
-## Il giudizio dell'utente
+## The user's verdict
 
-- ⛔⛔ **IL BATTITO SI POTEVA RIMANDARE ALL'INFINITO — il difetto più grave del progetto, e stava lì da
-  sempre** — trovato e curato il 23 set 2026 (`2be9527`, `2737d56`), binario `3fa352a2`.
-  `batti_fra()` spostava **in avanti** la scadenza del battito a ogni chiamata, e `regola_battito()`
-  gira in fondo a `rcp_passa_input()`, cioè **a ogni messaggio di input del client**. Un browser vero
-  che segue il mouse ne manda ~40 al secondo ⇒ il battito **non maturava mai**. E col battito fermo
-  non gira `video_regola()`, l'unico posto da cui si chiede la CHIAVE al palco — né `rcp_tempo()`,
-  cioè l'orologio del silenzio (§5.3) e i tetti di §4.6: ⛔ **per sei minuti nessuna protezione
-  poteva scattare**.
-  `[M]` Firefox vero e visibile, `rete11-kde`, 20 minuti, scena in movimento: **698 s su 1199 (58 %)**
-  senza un solo fotogramma nuovo, sette blocchi (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
-  fotogrammi codificati e buttati (~13 GB per nessuno su una UHD 730). ⭐ E **l'immagine non si rompe
-  mai** (1146 fotografie, 0 celle guaste): non era corruzione, era un **blocco**. Il blocco finiva
-  quando si smetteva di muovere il mouse per un secondo — è nel registro.
-  ⭐ Cura a due cinture: `batti_fra()` fissa un **tetto** e non un appuntamento (una scadenza più
-  vicina resta dov'è); e se il debito di §5.2 è acceso da oltre 1000 ms la chiave si richiede dal
-  rifiuto del fotogramma, per una strada che non passa dal battito.
-  `[M]` Dopo: **0 secondi fermi su 340**, blocco più lungo **0 s**, battiti da 22 in 3 min a 508 in
-  8 min, `da_ms` più lungo da **46 192 ms** a **1 102 ms**, richieste di chiave 0,76/s (non 6-7/s:
-  sarebbe la spirale di `07-b65`).
-  ⛔⛔ **PERCHÉ ERA INVISIBILE, ed è la lezione che vale più della cura**: la rete usa il cliente
-  Python, che non manda input, e i banchi coi browser veri aprivano la pagina e **guardavano**. Tutti
-  i nostri clienti erano *educati*. ⇒ La rete intera era passata **verde** su quello stesso binario
-  poche ore prima. Il banco che l'ha trovato fa una cosa sola: muove il mouse
+- ⛔⛔ **THE HEARTBEAT COULD BE POSTPONED FOREVER — the most serious defect of the project, and it had been there
+  forever** — found and cured on 23 Sep 2026 (`2be9527`, `2737d56`), binary `3fa352a2`.
+  `batti_fra()` moved the heartbeat's deadline **forward** at every call, and `regola_battito()`
+  runs at the end of `rcp_passa_input()`, that is **at every input message from the client**. A real browser
+  following the mouse sends ~40 per second ⇒ the heartbeat **never matured**. And with the heartbeat stopped
+  `video_regola()` does not run, the only place from which the KEYFRAME is asked of the stage — nor `rcp_tempo()`,
+  that is the silence clock (§5.3) and the caps of §4.6: ⛔ **for six minutes no protection
+  could fire**.
+  `[M]` Real and visible Firefox, `rete11-kde`, 20 minutes, moving scene: **698 s out of 1199 (58 %)**
+  without a single new frame, seven freezes (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
+  frames encoded and thrown away (~13 GB for nobody on a UHD 730). ⭐ And **the image never
+  breaks** (1146 photos, 0 broken cells): it was not corruption, it was a **freeze**. The freeze ended
+  when one stopped moving the mouse for a second — it is in the log.
+  ⭐ A two-belt cure: `batti_fra()` sets a **cap** and not an appointment (a nearer deadline
+  stays where it is); and if the debt of §5.2 has been on for over 1000 ms the keyframe is requested again from the
+  refusal of the frame, by a route that does not go through the heartbeat.
+  `[M]` After: **0 seconds still out of 340**, longest freeze **0 s**, heartbeats from 22 in 3 min to 508 in
+  8 min, longest `da_ms` from **46 192 ms** to **1 102 ms**, keyframe requests 0.76/s (not 6-7/s:
+  that would be the spiral of `07-b65`).
+  ⛔⛔ **WHY IT WAS INVISIBLE, and it is the lesson worth more than the cure**: the net uses the Python
+  client, which sends no input, and the benches with real browsers opened the page and **watched**. All
+  our clients were *polite*. ⇒ The whole net had passed **green** on that same binary
+  a few hours earlier. The bench that found it does one thing only: it moves the mouse
   (`banchi/14-stress/14-il-cliente-che-non-sta-fermo.py`).
-  ⚠ E un difetto che ha bisogno di **due** condizioni insieme (input fitto **e** debito acceso) non si
-  esclude con nessun verde: il giro di controllo sul binario rotto, senza la seconda, non ha bloccato
-  niente.
-  🔸 Resta da fare: portare il movimento del mouse **dentro gli scenari che già esistono**, tarare la
-  soglia sul blocco più lungo (fra 46 s col difetto e 1,1 s curato c'è un fattore quaranta, quindi non
-  è delicata), e solo alla fine il guasto innestato. ⛔ Finché mancano i primi due, metterlo in rete
-  vorrebbe dire aggiungere una guardia che non sa diventare rossa.
+  ⚠ And a defect that needs **two** conditions together (dense input **and** debt on) cannot be
+  ruled out by any green: the control round on the broken binary, without the second one, froze
+  nothing.
+  🔸 Still to do: bring the mouse movement **into the scenarios that already exist**, tune the
+  threshold on the longest freeze (between 46 s with the defect and 1.1 s cured there is a factor of forty, so it
+  is not delicate), and only at the end the injected fault. ⛔ As long as the first two are missing, putting it in the net
+  would mean adding a guard that cannot turn red.
