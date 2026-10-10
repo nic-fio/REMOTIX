@@ -1176,279 +1176,279 @@ seconds of the QUIC idle timeout: that one measures the **silence of the network
 
 ---
 
-## 5. Il quadro dei canali
+## 5. The channel map
 
-| Canale | Trasporto | Verso | Affidabile? |
+| Channel | Transport | Direction | Reliable? |
 |---|---|---|---|
-| **controllo** | il **primo** stream bidirezionale della sessione (§4.2) | ↔ | sì |
-| **video** | **uno stream unidirezionale per fotogramma** | server → client | sì, ma abbandonabile |
-| **audio** | datagram | server → client, e ↑ per il microfono | no |
-| **input** | uno stream unidirezionale riservato | client → server | sì |
-| **appunti** | uno stream unidirezionale per trasferimento | ↔ | sì |
-| **cursore** | sul canale di controllo | server → client | sì |
+| **control** | the **first** bidirectional stream of the session (§4.2) | ↔ | yes |
+| **video** | **one unidirectional stream per frame** | server → client | yes, but abandonable |
+| **audio** | datagrams | server → client, and ↑ for the microphone | no |
+| **input** | one reserved unidirectional stream | client → server | yes |
+| **clipboard** | one unidirectional stream per transfer | ↔ | yes |
+| **cursor** | on the control channel | server → client | yes |
 
-⚠ Il microfono è nella tabella perché il verso è previsto, **ma RCP/1 non lo definisce**: vedi §12.
+⚠ The microphone is in the table because the direction is foreseen, **but RCP/1 does not define it**: see §12.
 
-### 5.1 ⭐ Perché un fotogramma è uno stream
+### 5.1 ⭐ Why a frame is a stream
 
-È la scelta di disegno più importante del protocollo.
+It is the most important design choice of the protocol.
 
-Se il video viaggiasse su **un solo** stream, un fotogramma lento bloccherebbe tutti quelli dopo —
-il blocco di testa — e su una rete mobile la sessione si accumulerebbe addosso il proprio
-passato. Se viaggiasse su **datagram**, dovremmo riscrivere frammentazione e ritrasmissione, cioè
-rifare QUIC dentro QUIC.
+If video travelled on **a single** stream, a slow frame would block all the ones after it —
+head-of-line blocking — and on a mobile network the session would pile up its own
+past. If it travelled on **datagrams**, we would have to rewrite fragmentation and retransmission, that is
+redo QUIC inside QUIC.
 
-Con uno stream per fotogramma: gli stream sono indipendenti, quindi un fotogramma in ritardo non
-tocca i successivi; e soprattutto il server **PUÒ** chiamare `RESET_STREAM` su un fotogramma che
-non serve più — perché ne è già partito uno più recente — e i byte non ancora spediti non partono
-affatto.
+With one stream per frame: the streams are independent, so a late frame does not
+touch the following ones; and above all the server **MAY** call `RESET_STREAM` on a frame that
+is no longer needed — because a more recent one has already left — and the bytes not yet sent do not leave
+at all.
 
-⛔ **È così che si onora l'invariante I1 senza tradirla**: non si *riduce la qualità* per prudenza,
-si *butta il passato* quando è passato. E ogni abbandono **DEVE** essere scritto nel registro:
-un fotogramma perso in silenzio e uno abbandonato di proposito hanno lo stesso aspetto dal lato che
-riceve.
+⛔ **This is how invariant I1 is honoured without betraying it**: one does not *reduce quality* out of prudence,
+one *throws away the past* when it is past. And every abandonment **MUST** be written in the log:
+a frame lost in silence and one abandoned on purpose look the same from the receiving
+side.
 
-> ### ⛔ L'abbandono ha **DUE forme osservabili**, non una — *13 agosto 2026, `[M]`*
+> ### ⛔ Abandonment has **TWO observable forms**, not one — *13 Aug 2026, `[M]`*
 >
-> *Questo paragrafo, e §6.2 con lui, descrivevano una forma sola: lo stream **azzerato**. Alla fase
-> 3 se n'è vista una seconda, e un client scritto sulla prima **non la riconosce**.*
+> *This paragraph, and §6.2 with it, described a single form: the **reset** stream. At phase
+> 3 a second one was seen, and a client written on the first **does not recognise it**.*
 >
-> | forma | che cosa vede il client | quando succede |
+> | form | what the client sees | when it happens |
 > |---|---|---|
-> | **A — lo stream azzerato** | uno stream aperto che finisce con `RESET_STREAM` invece che con FIN | il server aveva già **fatto uscire almeno un byte** di quel fotogramma |
-> | ⛔ **B — il buco nei `numero`** | **nessuno stream**, e il `numero` successivo salta di uno | il server aveva **consumato il `numero`** e poi ha abbandonato **prima che un byte uscisse** |
+> | **A — the reset stream** | an open stream that ends with `RESET_STREAM` instead of FIN | the server had already **let out at least one byte** of that frame |
+> | ⛔ **B — the hole in the `numero` values** | **no stream**, and the next `numero` skips by one | the server had **consumed the `numero`** and then abandoned **before a byte left** |
 >
-> ⛔ **Quale delle due il client veda dipende da un dettaglio che nessuno dei due lati controlla:
-> se un byte era già uscito.** Non è una scelta del server e non è un'informazione che il protocollo
-> porti — è il momento in cui l'abbandono cade rispetto alla scrittura.
+> ⛔ **Which of the two the client sees depends on a detail neither side controls:
+> whether a byte had already left.** It is not a choice of the server and it is not information the protocol
+> carries — it is the moment the abandonment falls relative to the writing.
 >
-> ⇒ **Le conseguenze, e sono normative:**
+> ⇒ **The consequences, and they are normative:**
 >
-> - il client **DEVE** trattare **tutt'e due** le forme come un buco, e in tutt'e due mandare
->   `RICHIEDI_CHIAVE` (§5.2). ⛔ Un client che guardi i soli `RESET_STREAM` **perde la forma B in
->   silenzio**, e il sintomo è quello che §5.2 esiste per evitare: immagini via via più sfasciate
->   senza nessun errore sollevato da nessuno;
-> - il server **DEVE** scrivere nel registro **tutt'e due**, e distinguerle: sono la stessa
->   decisione, ma dal lato che riceve hanno **aspetti diversi**, e un registro che ne nomina una
->   sola non spiega quel che il client ha visto;
-> - ⚠ e un banco che innesta l'abbandono **deve saper produrre tutt'e due**, o certifica metà della
->   regola credendo di certificarla tutta.
+> - the client **MUST** treat **both** forms as a hole, and in both send
+>   `RICHIEDI_CHIAVE` (§5.2). ⛔ A client that looks only at `RESET_STREAM` **loses form B in
+>   silence**, and the symptom is the one §5.2 exists to avoid: pictures more and more wrecked
+>   without any error raised by anyone;
+> - the server **MUST** write **both** in the log, and distinguish them: they are the same
+>   decision, but on the receiving side they have **different appearances**, and a log that names only one
+>   does not explain what the client saw;
+> - ⚠ and a bench that injects abandonment **must be able to produce both**, or it certifies half of the
+>   rule believing it certifies all of it.
 >
-> ### ⛔⛔ E c'è un terzo caso, che **non è osservabile affatto** — ed è il più pericoloso
+> ### ⛔⛔ And there is a third case, which is **not observable at all** — and it is the most dangerous
 >
-> Un fotogramma **buttato per mancanza di credito** (§2.3) non è nessuna delle due forme: non si apre
-> nessuno stream **e il `numero` non viene consumato**, perché §6.2 lo fa crescere solo per i
-> fotogrammi che il server **decide di spedire**. ⇒ ⛔ **Nessuno stream, nessun buco, nessun segnale:
-> dal lato che riceve non è successo niente.**
+> A frame **thrown away for lack of credit** (§2.3) is neither of the two forms: no stream
+> is opened **and the `numero` is not consumed**, because §6.2 makes it grow only for the
+> frames the server **decides to send**. ⇒ ⛔ **No stream, no hole, no signal:
+> on the receiving side nothing has happened.**
 >
-> ⛔ **Quindi il client non può accorgersene, e non può chiedere la chiave.** Se il server non la
-> produce **da sé**, l'immagine si sfascia **per sempre e in silenzio** — con un GOP lungo non ne
-> arriva più una da sola. È il difetto **B-18**, trovato il 13 agosto 2026.
-> ⇒ ⭐ **È la ragione per cui l'obbligo di §5.2 — «quando il server abbandona un delta DEVE mandare
-> una chiave appena può, senza aspettare che il client la chieda» — non è una prudenza: in questo
-> caso è l'unica cosa che esiste.** Il client non ha una domanda da fare.
+> ⛔ **So the client cannot notice it, and cannot ask for the keyframe.** If the server does not
+> produce it **by itself**, the picture is wrecked **forever and in silence** — with a long GOP none
+> arrives any more on its own. It is defect **B-18**, found on 13 Aug 2026.
+> ⇒ ⭐ **This is the reason why the obligation of §5.2 — «quando il server abbandona un delta DEVE mandare
+> una chiave appena può, senza aspettare che il client la chieda» — is not a prudence: in this
+> case it is the only thing that exists.** The client has no question to ask.
 
-### 5.2 ⛔ Il prezzo dell'abbandono, e come si paga
+### 5.2 ⛔ The price of abandonment, and how it is paid
 
-*Aggiunta il 9 agosto 2026, ed è il difetto di disegno che il censimento ha trovato — non una
-lacuna di scrittura.*
+*Added on 9 Aug 2026, and it is the design defect the census found — not a
+writing gap.*
 
-Il video è compresso **con predizione fra fotogrammi**: un fotogramma *delta* è la differenza da
-quelli precedenti. Abbandonarne uno, o perderne uno, non rovina **quel** fotogramma: rovina **tutti
-quelli che vengono dopo**, finché non arriva un fotogramma **chiave** — che si decodifica da solo.
+The video is compressed **with prediction between frames**: a *delta* frame is the difference from
+the previous ones. Abandoning one, or losing one, does not ruin **that** frame: it ruins **all
+the ones that come after**, until a **keyframe** arrives — which decodes on its own.
 
-§5.1 concede l'abbandono e non diceva né come si riconosce un fotogramma chiave, né come se ne
-chiede uno. Le due cose, e la prima costa **zero byte**:
+§5.1 allows abandonment and said neither how a keyframe is recognised, nor how one is
+asked for. The two things, and the first costs **zero bytes**:
 
-1. ⛔ **il tipo del fotogramma lo dice l'intestazione**: `0x0301` è un fotogramma **chiave**,
-   `0x0302` un **delta** (§6.2). Il campo `tipo` c'era già e i suoi valori non erano definiti;
-2. ⛔ **il client chiede una chiave** con `RICHIEDI_CHIAVE` (`0x000D`, §7.1) sul canale di
-   controllo.
+1. ⛔ **the type of the frame is said by the header**: `0x0301` is a **keyframe**,
+   `0x0302` a **delta** (§6.2). The `tipo` field was already there and its values were not defined;
+2. ⛔ **the client asks for a keyframe** with `RICHIEDI_CHIAVE` (`0x000D`, §7.1) on the control
+   channel.
 
-**Le regole:**
+**The rules:**
 
-- ⛔ **il primo fotogramma che il server spedisce dopo `SESSIONE` DEVE essere una chiave**
-  (`0x0301`). ⚠ Senza questa riga un delta in apertura è conforme, e il client non ha modo di
-  accorgersene: non c'è nessun buco nella successione dei `numero`, e il decodificatore non solleva
-  errori. Il sintomo sarebbe *«il desktop compare a pezzi»*, e non nominerebbe né il protocollo né
-  la chiave;
-- ⛔ **e lo stesso vale a ogni cambio di tela**: il primo fotogramma spedito alla **misura nuova**,
-  dopo un `TELA(ADATTATA…)` (§7.1), **DEVE** essere una chiave (`0x0301`) — e **DEVE** essere una
-  chiave *vera*, cioè portare con sé tutto quel che serve a decodificarla da sola: per HEVC i suoi
-  VPS/SPS/PPS davanti all'IDR. ⚠ Senza questa riga un delta alla misura nuova è **conforme**, e il
-  client non ha modo di accorgersene: non c'è nessun buco nei `numero`, e — `[M]` 12 agosto 2026,
-  Chrome 151 su Linux con VA-API, banco `banchi/02-pagina-tela-*` — **il decodificatore HEVC non
-  solleva nessun errore**: continua a emettere fotogrammi alla misura **vecchia** e dipinge
-  un'immagine sfasciata, diversa a ogni giro. Il sintomo sarebbe *«il desktop si strappa quando
-  ridimensiono la finestra»*, e non nominerebbe né il protocollo né la tela. ⛔ E la stessa prova su
-  **AV1** dà `EncodingError` su Chrome e su Firefox `[M]`: ⇒ **la regola serve perché sul codec
-  principale il sintomo è muto**, e una regola non si scrive sul codec che si comporta bene;
-- ⛔ **e il client riconfigura il decodificatore sulla prima CHIAVE alla misura nuova, non sul
-  `TELA`.** ⚠ *Senza questa riga le due cure del 12 agosto si contraddicono sullo stesso fotogramma:
-  §6.2 dice che un fotogramma in volo alla misura precedente **DEVE** essere accettato e dipinto,
-  questa riga qui sotto dice che uno alla misura sbagliata **si butta** — e chi avesse riconfigurato
-  sul `TELA` (la lettura naturale di §7.1, «la tela in vigore **dopo** questo messaggio») si
-  troverebbe le due regole a comandare il contrario. Il documento non diceva **in nessun punto**
-  quando si riconfigura, e le due letture erano tutt'e due conformi e divergevano sul filo. Rilievo
-  **P10**, trovato applicando la cura di poche ore prima.* ⭐ E costa zero: `[M]` la chiave vera va
-  bene **sia** riconfigurando **sia** senza;
-- ⛔ il client, dal canto suo, **NON DEVE** consegnare al decodificatore un fotogramma la cui misura
-  non è quella per cui il decodificatore è configurato **né quella tollerata da §6.2**: lo butta e lo
-  tratta come un buco. ⚠ E non è una prudenza in più: `[M]` un `VideoDecoder` riconfigurato alla misura nuova pretende una chiave
-  (`DataError: a key frame is required after configure()`), quindi senza la riga qui sopra quella
-  chiave non arriverebbe mai e il cambio di tela costerebbe un `RICHIEDI_CHIAVE` e un fermo-immagine
-  **ogni volta**. ⭐ Con la riga qui sopra, `[M]` la stessa chiave va bene **sia** riconfigurando
-  **sia** senza: 8 celle su 8 su HEVC e su AV1, su Chrome e su Firefox, in tutt'e due i versi;
-- ⛔ il server **NON DEVE** abbandonare un fotogramma **chiave**. Abbandonare la cura non è una cura;
-- ⛔ quando il server abbandona un delta, **DEVE** mandare un fotogramma chiave **appena può** —
-  senza aspettare che il client lo chieda, perché il client se ne accorge un giro di rete più tardi.
-  ⭐ **E questo obbligo non è una prudenza: è l'unica cura che abbiamo** `[S]` — a un delta mancante
-  il decodificatore **non solleva nessun errore**, si limita a produrre immagini via via più
-  sfasciate fino alla chiave successiva. `[?]` L'alternativa vera sarebbero i **sotto-livelli
-  temporali**, che permettono di buttare certi fotogrammi senza rompere niente: se `EncSliceLP`
-  dell'Intel li sappia produrre — ✅ **MISURATO il 22 agosto 2026, ed è NO**: `[M]` il driver non
-  dichiara `EncRateControlExt` su **7 profili su 7**, mentre lo dichiara per **VP9 sullo stesso
-  entrypoint** e per H.264/HEVC su **AMD `EncSlice`** — ⭐ due controlli positivi; e nei byte che
-  escono **6 celle su 6** danno `sps_max_sub_layers = 1` con tutti i `temporal_id = 0`.
-  ⇒ ⭐ **«Ogni abbandono costa una chiave» resta in vigore, e adesso ha una misura sotto invece di
-  una `[?]`.** ⚠ E la strada vicina è chiusa dal **ritardo**, non dalla banda: `[M]` con `-bf 1`
-  escono **59 figure buttabili su 120** a qualità invariata (−0,065 dB) e **−16 % di banda**, ⛔ ma
-  **67 ms di riordino** — da solo oltre i 50 ms dati a *tutto* il pezzo nostro. `[?]` Resta aperto
-  se un codificatore VA-API scritto da noi potrebbe costruirli lo stesso: `EncPackedHeaders = 0x1f`
-  dice che le intestazioni le impacchetta **l'applicazione**. 📖 `fasi/08-l-anello.md` §4-D;
-- ⛔ il client **DEVE** mandare `RICHIEDI_CHIAVE` quando si accorge di un **buco** nella successione
-  dei `numero`, o quando il decodificatore rifiuta un fotogramma;
-- ⛔ finché non arriva una chiave, il client **NON DEVE** mostrare fotogrammi che sa incompleti:
-  tiene l'ultimo buono. Un'immagine sfasciata è peggio di un'immagine ferma per un decimo di secondo;
-- ⚠ il server **PUÒ** ignorare una `RICHIEDI_CHIAVE` che arrivi entro **200 ms dall'ultima chiave
-  che ha spedito** — ⛔ non dall'ultima richiesta ricevuta, e la differenza non è una sfumatura:
-  contando dalle richieste, due client insistenti spostano l'orologio all'infinito e la chiave non
-  parte mai. Durante una raffica di perdite le richieste arrivano a decine, e ogni chiave costa
-  dieci volte un delta: assecondarle peggiorerebbe esattamente la condizione che le ha provocate.
-  ⭐ **È l'eccezione 5 di §3, ed è dichiarata lì.**
-  ⛔ **La grazia vale solo per i doppioni** (22 set 2026): una `RICHIEDI_CHIAVE` il cui
-  `ultimo_numero` è uguale o più nuovo dell'ultima chiave spedita dice che il client quella chiave
-  l'ha già decodificata — il buco è venuto dopo — e il server **DEVE** accoglierla. `[M]` Ignorarla
-  lasciava la pagina ferma per sempre con un video pesante, su Firefox e su Chrome;
-- ⛔ il client manda **una** `RICHIEDI_CHIAVE` per buco; se la chiave non arriva entro **1 s** ne
-  manda un'altra (22 set 2026). Una al secondo, non una per fotogramma: la spirale resta chiusa;
-- ⛔ finché una **chiave** è ancora nella coda d'uscita, il server **NON** abbandona i delta che le
-  vengono dietro per la soglia della coda (§5.1): non la accorcerebbero, e ogni delta abbandonato
-  apre un buco che chiede un'altra chiave (22 set 2026, `[M]` la spirale vista con un video 4K).
+- ⛔ **the first frame the server sends after `SESSIONE` MUST be a keyframe**
+  (`0x0301`). ⚠ Without this line a delta at the opening is conforming, and the client has no way to
+  notice it: there is no hole in the sequence of `numero` values, and the decoder raises no
+  errors. The symptom would be *«il desktop compare a pezzi»*, and it would name neither the protocol nor
+  the keyframe;
+- ⛔ **and the same holds at every canvas change**: the first frame sent at the **new size**,
+  after a `TELA(ADATTATA…)` (§7.1), **MUST** be a keyframe (`0x0301`) — and **MUST** be a
+  *true* keyframe, that is carry with it everything needed to decode it on its own: for HEVC its
+  VPS/SPS/PPS in front of the IDR. ⚠ Without this line a delta at the new size is **conforming**, and the
+  client has no way to notice it: there is no hole in the `numero` values, and — `[M]` 12 Aug 2026,
+  Chrome 151 on Linux with VA-API, bench `banchi/02-pagina-tela-*` — **the HEVC decoder raises
+  no error**: it keeps emitting frames at the **old** size and paints
+  a wrecked picture, different at each run. The symptom would be *«il desktop si strappa quando
+  ridimensiono la finestra»*, and it would name neither the protocol nor the canvas. ⛔ And the same test on
+  **AV1** gives `EncodingError` on Chrome and on Firefox `[M]`: ⇒ **the rule is needed because on the
+  main codec the symptom is silent**, and a rule is not written on the codec that behaves well;
+- ⛔ **and the client reconfigures the decoder on the first KEYFRAME at the new size, not on the
+  `TELA`.** ⚠ *Without this line the two cures of 12 Aug contradict each other on the same frame:
+  §6.2 says that a frame in flight at the previous size **MUST** be accepted and painted,
+  the line below says that one at the wrong size **is thrown away** — and whoever had reconfigured
+  on the `TELA` (the natural reading of §7.1, «la tela in vigore **dopo** questo messaggio») would
+  find the two rules commanding the opposite. The document did not say **anywhere**
+  when to reconfigure, and the two readings were both conforming and diverged on the wire. Finding
+  **P10**, found by applying the cure of a few hours before.* ⭐ And it costs zero: `[M]` the true keyframe works
+  **both** reconfiguring **and** without;
+- ⛔ the client, for its part, **MUST NOT** hand to the decoder a frame whose size
+  is neither the one the decoder is configured for **nor the one tolerated by §6.2**: it throws it away and
+  treats it as a hole. ⚠ And it is not an extra prudence: `[M]` a `VideoDecoder` reconfigured at the new size demands a keyframe
+  (`DataError: a key frame is required after configure()`), so without the line above that
+  keyframe would never arrive and the canvas change would cost a `RICHIEDI_CHIAVE` and a freeze
+  **every time**. ⭐ With the line above, `[M]` the same keyframe works **both** reconfiguring
+  **and** without: 8 cells out of 8 on HEVC and on AV1, on Chrome and on Firefox, in both directions;
+- ⛔ the server **MUST NOT** abandon a **keyframe**. Abandoning the cure is not a cure;
+- ⛔ when the server abandons a delta, it **MUST** send a keyframe **as soon as it can** —
+  without waiting for the client to ask, because the client notices it one network round trip later.
+  ⭐ **And this obligation is not a prudence: it is the only cure we have** `[S]` — on a missing delta
+  the decoder **raises no error**, it merely produces pictures more and more
+  wrecked until the next keyframe. `[?]` The real alternative would be **temporal
+  sub-layers**, which allow throwing away certain frames without breaking anything: whether Intel's `EncSliceLP`
+  can produce them — ✅ **MEASURED on 22 Aug 2026, and it is NO**: `[M]` the driver does not
+  declare `EncRateControlExt` on **7 profiles out of 7**, while it declares it for **VP9 on the same
+  entrypoint** and for H.264/HEVC on **AMD `EncSlice`** — ⭐ two positive controls; and in the bytes that
+  come out **6 cells out of 6** give `sps_max_sub_layers = 1` with all `temporal_id = 0`.
+  ⇒ ⭐ **«Ogni abbandono costa una chiave» stays in force, and now it has a measurement under it instead of
+  a `[?]`.** ⚠ And the nearby road is closed by **delay**, not by bandwidth: `[M]` with `-bf 1`
+  **59 droppable pictures out of 120** come out at unchanged quality (−0.065 dB) and **−16 % bandwidth**, ⛔ but
+  **67 ms of reordering** — on its own beyond the 50 ms given to *the whole* of our piece. `[?]` It stays open
+  whether a VA-API encoder written by us could build them all the same: `EncPackedHeaders = 0x1f`
+  says that the headers are packed by **the application**. 📖 `fasi/08-l-anello.md` §4-D;
+- ⛔ the client **MUST** send `RICHIEDI_CHIAVE` when it notices a **hole** in the sequence
+  of `numero` values, or when the decoder refuses a frame;
+- ⛔ until a keyframe arrives, the client **MUST NOT** show frames it knows to be incomplete:
+  it keeps the last good one. A wrecked picture is worse than a picture frozen for a tenth of a second;
+- ⚠ the server **MAY** ignore a `RICHIEDI_CHIAVE` that arrives within **200 ms of the last keyframe
+  it sent** — ⛔ not of the last request received, and the difference is not a nuance:
+  counting from requests, two insistent clients move the clock forever and the keyframe never
+  leaves. During a burst of losses requests arrive by the dozen, and every keyframe costs
+  ten times a delta: indulging them would worsen exactly the condition that caused them.
+  ⭐ **It is exception 5 of §3, and it is declared there.**
+  ⛔ **The grace holds only for duplicates** (22 Sep 2026): a `RICHIEDI_CHIAVE` whose
+  `ultimo_numero` is equal to or newer than the last keyframe sent says that the client has already
+  decoded that keyframe — the hole came after — and the server **MUST** accept it. `[M]` Ignoring it
+  left the page frozen forever with a heavy video, on Firefox and on Chrome;
+- ⛔ the client sends **one** `RICHIEDI_CHIAVE` per hole; if the keyframe does not arrive within **1 s** it
+  sends another (22 Sep 2026). One per second, not one per frame: the spiral stays closed;
+- ⛔ as long as a **keyframe** is still in the output queue, the server does **NOT** abandon the deltas that
+  come behind it because of the queue threshold (§5.1): they would not shorten it, and every abandoned delta
+  opens a hole that asks for another keyframe (22 Sep 2026, `[M]` the spiral seen with a 4K video).
 
-⚠ **E una conseguenza che tocca la fase 9**: se la linea è così cattiva da far abbandonare in
-continuazione, il rimedio **non** è mandare chiavi in continuazione — è **calare i fotogrammi**,
-come dice `SPECIFICHE.md` §8.3. Un fotogramma chiave per ogni delta abbandonato è la spirale.
+⚠ **And a consequence that touches phase 9**: if the line is so bad as to cause abandonment
+continuously, the remedy is **not** sending keyframes continuously — it is **lowering the frame rate**,
+as `SPECIFICHE.md` §8.3 says. A keyframe for every abandoned delta is the spiral.
 
-### 5.3 L'audio: il formato è fisso, non negoziato
+### 5.3 Audio: the format is fixed, not negotiated
 
-*Aggiunta il 9 agosto 2026: «Opus, con PCM come base» dice il codec e non dice il formato, e due
-implementazioni che scelgono due frequenze diverse producono un rumore che sembra un difetto di
-rete.*
+*Added on 9 Aug 2026: «Opus, con PCM come base» says the codec and does not say the format, and two
+implementations that choose two different sample rates produce a noise that looks like a network
+defect.*
 
 | | |
 |---|---|
-| frequenza | **48 000 Hz**, sempre, per entrambi i codec |
-| canali | **2**, interlacciati |
-| **Opus** | un pacchetto Opus per datagram, blocchi da **20 ms** |
-| **PCM** | campioni **s16, little-endian**, ⛔ **5 ms per datagram** — 480 campioni, **960 byte**, che con i 12 dell'intestazione fanno **972** |
+| sample rate | **48 000 Hz**, always, for both codecs |
+| channels | **2**, interleaved |
+| **Opus** | one Opus packet per datagram, blocks of **20 ms** |
+| **PCM** | samples **s16, little-endian**, ⛔ **5 ms per datagram** — 480 samples, **960 bytes**, which with the 12 of the header make **972** |
 
-> ### ⛔ Corretto la sera del 9 agosto 2026 — rilievo **R1.1**, il più grave della revisione
+> ### ⛔ Corrected on the evening of 9 Aug 2026 — finding **R1.1**, the most serious of the review
 >
-> Questa riga diceva **20 ms anche per il PCM**: 1920 campioni, **3840 byte**, più 12 di
-> intestazione = **3852**. ⛔ Un datagram QUIC **non è frammentabile** — deve stare in un pacchetto
-> solo — e su un percorso vero il carico utile disponibile è **~1200 byte** `[S]`.
+> This line said **20 ms for PCM too**: 1920 samples, **3840 bytes**, plus 12 of
+> header = **3852**. ⛔ A QUIC datagram **cannot be fragmented** — it must fit in a single
+> packet — and on a real path the available payload is **~1200 bytes** `[S]`.
 >
-> **Quindi l'audio PCM non sarebbe partito mai, su nessuna rete.** E il danno era doppio, perché
-> §4.3 fa del PCM **il controllo positivo di Opus**: il giorno in cui Opus non si negozia, si
-> ripiega su una strada che non esiste — e il banco cercherebbe il difetto in Opus.
+> **So PCM audio would never have left, on any network.** And the damage was double, because
+> §4.3 makes PCM **the positive control of Opus**: the day Opus is not negotiated, one
+> falls back on a road that does not exist — and the bench would look for the defect in Opus.
 >
-> ⚠ **La forma dell'errore è quella di `LEZIONI.md` §2.2**, dove il banco contava i blocchi mentre
-> l'audio era rumore a fondo scala. Qui non sarebbe arrivato nemmeno il rumore.
+> ⚠ **The form of the error is that of `LEZIONI.md` §2.2**, where the bench counted the blocks while
+> the audio was full-scale noise. Here not even the noise would have arrived.
 >
-> ⭐⭐ **MISURATO — `[M]` 17 agosto 2026, e la stima era ottimista di un quinto.**
+> ⭐⭐ **MEASURED — `[M]` 17 Aug 2026, and the estimate was optimistic by a fifth.**
 >
 > | | Chrome 151 | Firefox 140esr |
 > |---|---|---|
-> | subito dopo `ready` | **1024** byte | **1024** byte |
-> | dopo 800 ms | **1024** byte | ⭐ **1214** byte |
+> | right after `ready` | **1024** bytes | **1024** bytes |
+> | after 800 ms | **1024** bytes | ⭐ **1214** bytes |
 >
-> ⇒ Il PCM di questo paragrafo (972 byte, intestazione compresa) **ci sta**, ma su Chrome per
-> **52 byte** — cioè per meno del 6 %. ⛔ La riga che apriva la `[?]` — *«se il numero fosse più
-> basso di 972, il PCM scende ancora»* — **non scatta**, e i 5 ms restano.
+> ⇒ The PCM of this paragraph (972 bytes, header included) **fits**, but on Chrome by
+> **52 bytes** — that is by less than 6 %. ⛔ The line that opened the `[?]` — *«se il numero fosse più
+> basso di 972, il PCM scende ancora»* — **does not trip**, and the 5 ms stay.
 >
-> ⚠ E i due motori non danno lo stesso numero né lo stesso numero nel tempo: Firefox parte da 1024
-> e **cresce a 1214** quando ha misurato il percorso. ⇒ Chi dimensionasse i blocchi leggendo
-> `maxDatagramSize` **una volta sola** prenderebbe il numero peggiore senza saperlo.
+> ⚠ And the two engines give neither the same number nor the same number over time: Firefox starts from 1024
+> and **grows to 1214** once it has measured the path. ⇒ Whoever sized the blocks by reading
+> `maxDatagramSize` **only once** would take the worst number without knowing it.
 >
-> `[?]` **Resta aperto il percorso non locale**: questa misura è su rete locale, via cavo. Su rete
-> mobile il percorso può portare meno, e il PCM è la strada **senza margine** — proprio quella su
-> cui si ripiega quando Opus non si negozia. La sonda è `banchi/07-b40`.
+> `[?]` **The non-local path stays open**: this measurement is on a local network, wired. On a mobile
+> network the path may carry less, and PCM is the road **without margin** — precisely the one
+> fallen back on when Opus is not negotiated. The probe is `banchi/07-b40`.
 
-⛔ **Il little-endian del PCM è l'unica eccezione all'ordine di rete di §6, ed è deliberata**: sono
-un carico utile, come i byte di HEVC, non un campo di protocollo. Scritta qui perché un'eccezione
-non dichiarata è una divergenza silenziosa fra due implementazioni.
+⛔ **The little-endian of PCM is the only exception to the network order of §6, and it is deliberate**: they are
+a payload, like the bytes of HEVC, not a protocol field. Written here because an undeclared exception
+is a silent divergence between two implementations.
 
-⚠ Il volume **non viaggia**: appartiene alla sessione ed è al massimo (invariante I5,
+⚠ The volume **does not travel**: it belongs to the session and is at maximum (invariant I5,
 `SPECIFICHE.md` §10).
 
-### 5.4 Gli appunti: i limiti
+### 5.4 The clipboard: the limits
 
 | | |
 |---|---|
-| tetto di un trasferimento | **1 000 000 byte** ⚠ — non 1 MiB: il messaggio che lo porta ha sei byte di inquadratura e quattro di lunghezza, e un tetto uguale a quello del messaggio (§6.1) renderebbe **illegale il testo grande esattamente quanto il tetto** |
-| testo più grande | ⛔ **non si annuncia affatto**, e il mittente lo **scrive nel registro**. NON DEVE essere troncato: un testo troncato incollato in un terminale è peggio di un testo mancante |
-| tipo | ⛔ solo `text/plain;charset=utf-8`, e il testo **DEVE** essere UTF-8 valido |
+| ceiling of one transfer | **1 000 000 bytes** ⚠ — not 1 MiB: the message that carries it has six bytes of framing and four of length, and a ceiling equal to that of the message (§6.1) would make **text exactly as large as the ceiling illegal** |
+| larger text | ⛔ **it is not announced at all**, and the sender **writes it in the log**. It MUST NOT be truncated: truncated text pasted in a terminal is worse than missing text |
+| type | ⛔ only `text/plain;charset=utf-8`, and the text **MUST** be valid UTF-8 |
 
-### 5.5 Il cursore: i limiti
+### 5.5 The cursor: the limits
 
 | | |
 |---|---|
-| misura massima | **256×256** |
-| formato | **BGRA premoltiplicato**, riga per riga senza riempimento: `larghezza × altezza × 4` byte |
-| cursore nascosto | ⛔ `larghezza = 0` **e** `altezza = 0`, tutt'e due, e nessun byte d'immagine. Una sola delle due a zero è `ERRORE_PROTOCOLLO` |
-| il punto attivo | ⛔ **DEVE** stare dentro l'immagine: `0 ≤ attivo_x < larghezza`, `0 ≤ attivo_y < altezza`. ⛔ **Unica eccezione, il cursore nascosto**: con `larghezza = altezza = 0` l'intervallo è vuoto, e allora `attivo_x` e `attivo_y` **DEVONO** valere `0`; qualunque altro valore è `ERRORE_PROTOCOLLO`. ⚠ *Il tipo resta `i16` e la riga «può essere negativo» è caduta: senza un intervallo, `attivo_x = -32768` era legale secondo ogni riga del documento, e due client avrebbero disegnato il puntatore in due posti diversi (rilievo **R1.21**)* |
+| maximum size | **256×256** |
+| format | **premultiplied BGRA**, row by row without padding: `larghezza × altezza × 4` bytes |
+| hidden cursor | ⛔ `larghezza = 0` **and** `altezza = 0`, both, and no image bytes. Only one of the two at zero is `ERRORE_PROTOCOLLO` |
+| the hotspot | ⛔ **MUST** be inside the image: `0 ≤ attivo_x < larghezza`, `0 ≤ attivo_y < altezza`. ⛔ **Only exception, the hidden cursor**: with `larghezza = altezza = 0` the range is empty, and then `attivo_x` and `attivo_y` **MUST** be `0`; any other value is `ERRORE_PROTOCOLLO`. ⚠ *The type stays `i16` and the line «può essere negativo» has fallen: without a range, `attivo_x = -32768` was lawful according to every line of the document, and two clients would have drawn the pointer in two different places (finding **R1.21**)* |
 
-> ⛔ *L'eccezione è del 10 agosto 2026, rilievo **R11.11**, ed è 🔸 derivata: si corregge senza
-> discussione.* La riga sopra dichiara **obbligatorio** `larghezza = 0` **e** `altezza = 0` per il
-> cursore nascosto; la riga sotto pretende `0 ≤ attivo_x < larghezza`, e con `larghezza = 0`
-> quell'intervallo è **vuoto**: nessun valore di un `i16` lo soddisfa. ⛔ **Un `CURSORE_FORMA` di
-> cursore nascosto violava la riga accanto sempre, qualunque cosa il mittente ci mettesse** — e un
-> ricevente che applicasse §5.5 alla lettera chiudeva con `ERRORE_PROTOCOLLO` ogni volta che il
-> puntatore sparisce, con il sintomo *«la sessione cade quando entro in un campo di testo»*, che
-> non nomina né il cursore né la regola.
+> ⛔ *The exception is from 10 Aug 2026, finding **R11.11**, and it is 🔸 derived: it is corrected without
+> discussion.* The row above declares `larghezza = 0` **and** `altezza = 0` **mandatory** for the
+> hidden cursor; the row below demands `0 ≤ attivo_x < larghezza`, and with `larghezza = 0`
+> that range is **empty**: no value of an `i16` satisfies it. ⛔ **A `CURSORE_FORMA` of a
+> hidden cursor always violated the adjacent row, whatever the sender put in it** — and a
+> receiver that applied §5.5 to the letter closed with `ERRORE_PROTOCOLLO` every time the
+> pointer disappears, with the symptom *«la sessione cade quando entro in un campo di testo»*, which
+> names neither the cursor nor the rule.
 >
-> ⚠ È la stessa forma del trattino basso di §4.3 trovato dal validatore di B4: **una regola che
-> vieta un caso che il documento stesso definisce**. E R1.21 dichiarava di aver chiuso proprio
-> questo — *«larghezza 0 con altezza diversa da 0, e un punto attivo senza intervallo»*: l'intervallo
-> era stato aggiunto **senza eccettuare il caso che la riga accanto rende obbligatorio**.
+> ⚠ It is the same form as the underscore of §4.3 found by the validator of B4: **a rule that
+> forbids a case the document itself defines**. And R1.21 declared it had closed precisely
+> this — *«larghezza 0 con altezza diversa da 0, e un punto attivo senza intervallo»*: the range
+> had been added **without excepting the case the adjacent row makes mandatory**.
 
 ---
 
-## 6. Il formato dei messaggi
+## 6. The message format
 
-**Ordine dei byte: rete (big-endian).** Nessun campo a lunghezza variabile fuori da quelli
-dichiarati con una lunghezza esplicita.
+**Byte order: network (big-endian).** No variable-length field outside those
+declared with an explicit length.
 
-### 6.0 I tipi elementari
+### 6.0 The elementary types
 
-*Aggiunta il 9 agosto 2026. Erano usati in tutto il documento e definiti da nessuna parte.*
+*Added on 9 Aug 2026. They were used throughout the document and defined nowhere.*
 
-| Tipo | | |
+| Type | | |
 |---|---|---|
-| `u8`, `u16`, `u32`, `u64` | interi senza segno, big-endian | |
-| `i16`, `i32` | interi con segno, **complemento a due**, big-endian | |
-| **stringa** | `u16 lunghezza` + esattamente `lunghezza` byte di **UTF-8**, **senza terminatore** | ⛔ UTF-8 non valido è `ERRORE_PROTOCOLLO`. Una stringa vuota è `lunghezza = 0` |
-| **elenco** | `u16 quante` + gli elementi in fila | |
+| `u8`, `u16`, `u32`, `u64` | unsigned integers, big-endian | |
+| `i16`, `i32` | signed integers, **two's complement**, big-endian | |
+| **stringa** | `u16 lunghezza` + exactly `lunghezza` bytes of **UTF-8**, **without terminator** | ⛔ invalid UTF-8 is `ERRORE_PROTOCOLLO`. An empty string is `lunghezza = 0` |
+| **elenco** | `u16 quante` + the elements in a row | |
 
-⛔ **Nessun campo è allineato e nessun riempimento è ammesso.** I campi si leggono e si scrivono in
-sequenza, uno dopo l'altro. Un byte in più che «fa tornare i conti» in una struttura C è la forma
-esatta del difetto corretto in §6.2 il 9 agosto.
+⛔ **No field is aligned and no padding is admitted.** Fields are read and written in
+sequence, one after the other. An extra byte that «fa tornare i conti» in a C structure is the exact
+form of the defect corrected in §6.2 on 9 Aug.
 
-⛔ **Ogni intero ha un solo significato di «assente»**, e va dichiarato dove serve: non esistono
-valori sentinella impliciti.
+⛔ **Every integer has a single meaning of «assente»**, and it must be declared where needed: there are no
+implicit sentinel values.
 
-### 6.1 Sui canali affidabili — controllo, input, appunti
+### 6.1 On the reliable channels — control, input, clipboard
 
 ```
  0        2        6                    6+lunghezza
@@ -1457,38 +1457,38 @@ valori sentinella impliciti.
  │ u16    │ u32    │                     │
 ```
 
-⛔ `lunghezza` **DEVE** essere il numero esatto dei byte del corpo. Un ricevente che legge una
-lunghezza incoerente con quel che il tipo prevede **DEVE** chiudere con `ERRORE_PROTOCOLLO`.
+⛔ `lunghezza` **MUST** be the exact number of bytes of the body. A receiver that reads a
+length inconsistent with what the type provides for **MUST** close with `ERRORE_PROTOCOLLO`.
 
-⛔ Nessun messaggio **DEVE** superare **1 MiB**. Chi ne annuncia uno più grande viola il protocollo.
+⛔ No message **MUST** exceed **1 MiB**. Whoever announces a larger one violates the protocol.
 
-⛔ **E la lunghezza si controlla prima di allocare.** Un ricevente che alloca `lunghezza` byte e poi
-verifica ha già regalato un megabyte a chiunque sappia scrivere sei byte.
+⛔ **And the length is checked before allocating.** A receiver that allocates `lunghezza` bytes and then
+checks has already given away a megabyte to anyone who can write six bytes.
 
-### 6.2 Sugli stream del video
+### 6.2 On the video streams
 
-Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine del fotogramma** —
-⛔ **ma solo se lo stream è finito con un FIN**.
+One stream, one frame. No length: **the end of the stream is the end of the frame** —
+⛔ **but only if the stream finished with a FIN**.
 
-> ⛔ *Aggiunte due parole la sera del 9 agosto 2026, rilievo **R1.7**, e senza di esse il documento
-> era rotto proprio dove §5.1 concede di abbandonare.* Il server apre lo stream del fotogramma 101,
-> spedisce l'intestazione e 40 KB su 60, poi lo **azzera** perché è partito il 102. Il client ha in
-> mano 40 KB e uno stream «finito»: consegnandoli al decodificatore ottiene un rifiuto o — peggio —
-> mezza immagine. **Un fotogramma abbandonato e uno completo avevano lo stesso aspetto**, ed è la
-> forma d'errore **E8**.
+> ⛔ *Two words added on the evening of 9 Aug 2026, finding **R1.7**, and without them the document
+> was broken exactly where §5.1 allows abandoning.* The server opens the stream of frame 101,
+> sends the header and 40 KB out of 60, then **resets** it because 102 has left. The client has in
+> hand 40 KB and a «finito» stream: handing them to the decoder it gets a refusal or — worse —
+> half a picture. **An abandoned frame and a complete one looked the same**, and it is
+> error form **E8**.
 
-⛔ **La regola, in due righe:**
+⛔ **The rule, in two lines:**
 
-- uno stream chiuso con **FIN** porta un fotogramma **completo**;
-- uno stream **azzerato** (`RESET_STREAM`) porta un fotogramma **incompleto**: il client **DEVE**
-  buttare quel che ha ricevuto, **NON DEVE** consegnarlo al decodificatore, e **DEVE** trattarlo
-  come un buco (§5.2);
-- uno stream chiuso con **FIN prima dei 28 byte** dell'intestazione è `ERRORE_PROTOCOLLO`: non è un
-  fotogramma corto, è una lunghezza che non torna (§3);
-- ⛔ **e un fotogramma abbandonato può non presentarsi come stream affatto**: se il server ha
-  consumato il `numero` e ha abbandonato **prima che un byte uscisse**, il client non vede nessuno
-  stream — vede un **buco nella successione dei `numero`**. È la **forma B** dell'abbandono, e va
-  trattata come un buco esattamente come l'azzeramento (§5.1, il riquadro delle due forme).
+- a stream closed with **FIN** carries a **complete** frame;
+- a **reset** stream (`RESET_STREAM`) carries an **incomplete** frame: the client **MUST**
+  throw away what it has received, **MUST NOT** hand it to the decoder, and **MUST** treat it
+  as a hole (§5.2);
+- a stream closed with **FIN before the 28 bytes** of the header is `ERRORE_PROTOCOLLO`: it is not a
+  short frame, it is a length that does not add up (§3);
+- ⛔ **and an abandoned frame may not present itself as a stream at all**: if the server has
+  consumed the `numero` and abandoned **before a byte left**, the client sees no
+  stream — it sees a **hole in the sequence of `numero` values**. It is **form B** of abandonment, and it must be
+  treated as a hole exactly like the reset (§5.1, the box of the two forms).
 
 ```
  0        2        4        8        12       16       24       28   28+…
@@ -1497,183 +1497,183 @@ Uno stream, un fotogramma. Nessuna lunghezza: **la fine dello stream è la fine 
  │ u16    │ u16    │ u32    │ u32    │ u32    │ u64    │ u32    │     │
 ```
 
-⛔ **L'intestazione è di 28 byte esatti, senza riempimento**, e i dati del fotogramma cominciano
-all'offset 28. Nessun campo è allineato: si legge e si scrive in sequenza.
+⛔ **The header is exactly 28 bytes, without padding**, and the frame data start
+at offset 28. No field is aligned: it is read and written in sequence.
 
-> ⚠ *Corretta il 9 agosto 2026, prima di qualunque implementazione.* Il disegno dava `… 24 │ 32`,
-> cioè otto byte a un campo dichiarato `u32`: quattro byte di riempimento non dichiarati, e due
-> implementazioni che potevano indovinare uguale senza che nessuno se ne accorgesse — il difetto
-> muto contro cui questo documento è stato scritto (§0). Scelto **28** dall'utente: un riempimento
-> va giustificato, e qui non lo giustificava niente.
+> ⚠ *Corrected on 9 Aug 2026, before any implementation.* The drawing gave `… 24 │ 32`,
+> that is eight bytes to a field declared `u32`: four undeclared padding bytes, and two
+> implementations that could guess the same without anyone noticing — the silent
+> defect against which this document was written (§0). **28** chosen by the user: padding
+> must be justified, and here nothing justified it.
 
-| Campo | |
+| Field | |
 |---|---|
-| `tipo` | ⭐ `0x0301` **fotogramma chiave**, `0x0302` **fotogramma delta** (§5.2). Altri valori: `ERRORE_PROTOCOLLO` |
-| `codec` | `1` = HEVC, `2` = AV1, ⭐ `3` = **H.264** (dal 20 agosto 2026). **DEVE** essere quello negoziato in §4.3. ⛔ **Un numero non si riusa mai**: il `2` resta AV1 anche adesso che AV1 non si negozia più, perché un client vecchio che sentisse «2» e ricevesse altro **dipingerebbe spazzatura senza un errore**. ⚠ E il numero massimo definito sta in **un posto solo** nel codice (`RCP_CODEC_VIDEO_MAX`): il giorno in cui è entrato il 3, tre guardie diverse portavano il numero scritto a mano e una è rimasta indietro — **ogni fotogramma H.264 è stato buttato in silenzio** |
-| `largh.`, `altezza` | la misura di **questo** fotogramma. ⛔ In RCP/1 **DEVONO** valere la **tela in vigore** — quella concessa in `SESSIONE` (§4.5), **oppure** l'ultima concessa da `TELA` se nel frattempo è stata adattata (§7.1) — e chi ne riceve altre chiude con `ERRORE_PROTOCOLLO`: il client riscala alla **vista**, non alla tela (`SPECIFICHE.md` §6.1). Il campo esiste lo stesso perché il giorno in cui si decidesse di codificare più piccolo quando la finestra è piccola — `DECISIONI.md` §5.0-ter, che è una `[?]` volutamente fuori dal modello — **il protocollo non cambia**: cambierebbe questa riga |
-| `numero` | ⛔ contatore dei fotogrammi **che il server decide di spedire**, che cresce di uno per ciascuno — **compresi quelli che poi abbandona**, e ⛔ **NON** per quelli che non spedisce affatto. ⚠ *Diceva «dei fotogrammi **catturati**» e insieme «che il server decide di spedire»: **due letture nella stessa frase**, e alla fase 3 si separano — calando i fotogrammi quando la linea non porta (I1, §8.3), la prima lettura aprirebbe **un buco per ogni salto**, quindi una `RICHIEDI_CHIAVE` per ognuno, cioè **la spirale che §5.2 esiste per evitare** proprio quando la linea è cattiva. Corretto il 12 agosto 2026, rilievo **P16**, trovato scrivendo il prodotto.* Un buco nella successione è quindi normale e **significa qualcosa**: è il segnale su cui §5.2 fa chiedere una chiave. ⛔ **Il primo fotogramma di una sessione porta `numero = 1`, e lo `0` è riservato**: vuol dire «nessun fotogramma», che è il significato che §7.1 gli dà in `RICHIEDI_CHIAVE`. ⚠ È la stessa convenzione dell'`id` dell'input (§7.3), e per la stessa ragione: senza, `RICHIEDI_CHIAVE(0)` vuol dire due cose e il server non può scegliere — cioè il valore sentinella implicito che §6.0 vieta. ⛔ **E al giro del contatore lo `0` si salta**: l'aritmetica è modulo 2³², una sessione può durare più di un giro, e da `0xFFFFFFFF` si passa a **`1`** — senza questa riga il valore riservato tornerebbe in circolo da solo |
-| `istante` | microsecondi dell'orologio **monotono del server** alla cattura |
-| `input` | ⭐ **l'identificatore dell'ultimo input iniettato prima della cattura**; **0** se nessuno |
+| `tipo` | ⭐ `0x0301` **keyframe**, `0x0302` **delta frame** (§5.2). Other values: `ERRORE_PROTOCOLLO` |
+| `codec` | `1` = HEVC, `2` = AV1, ⭐ `3` = **H.264** (since 20 Aug 2026). **MUST** be the one negotiated in §4.3. ⛔ **A number is never reused**: `2` stays AV1 even now that AV1 is no longer negotiated, because an old client that heard «2» and received something else **would paint garbage without an error**. ⚠ And the maximum defined number is in **a single place** in the code (`RCP_CODEC_VIDEO_MAX`): the day 3 came in, three different guards carried the number written by hand and one was left behind — **every H.264 frame was thrown away in silence** |
+| `largh.`, `altezza` | the size of **this** frame. ⛔ In RCP/1 they **MUST** be the **canvas in force** — the one granted in `SESSIONE` (§4.5), **or** the last one granted by `TELA` if meanwhile it has been adapted (§7.1) — and whoever receives others closes with `ERRORE_PROTOCOLLO`: the client rescales to the **view**, not to the canvas (`SPECIFICHE.md` §6.1). The field exists all the same because on the day it were decided to encode smaller when the window is small — `DECISIONI.md` §5.0-ter, which is a `[?]` deliberately outside the model — **the protocol does not change**: this row would change |
+| `numero` | ⛔ counter of the frames **the server decides to send**, which grows by one for each — **including those it then abandons**, and ⛔ **NOT** for those it does not send at all. ⚠ *It said «dei fotogrammi **catturati**» and at the same time «che il server decide di spedire»: **two readings in the same sentence**, and at phase 3 they separate — lowering the frame rate when the line does not carry (I1, §8.3), the first reading would open **a hole for every skip**, hence a `RICHIEDI_CHIAVE` for each, that is **the spiral §5.2 exists to avoid** precisely when the line is bad. Corrected on 12 Aug 2026, finding **P16**, found while writing the product.* A hole in the sequence is therefore normal and **means something**: it is the signal on which §5.2 has a keyframe asked for. ⛔ **The first frame of a session carries `numero = 1`, and `0` is reserved**: it means «nessun fotogramma», which is the meaning §7.1 gives it in `RICHIEDI_CHIAVE`. ⚠ It is the same convention as the `id` of input (§7.3), and for the same reason: without it, `RICHIEDI_CHIAVE(0)` means two things and the server cannot choose — that is the implicit sentinel value §6.0 forbids. ⛔ **And at the wrap of the counter `0` is skipped**: the arithmetic is modulo 2³², a session can last more than one wrap, and from `0xFFFFFFFF` it goes to **`1`** — without this line the reserved value would come back into circulation by itself |
+| `istante` | microseconds of the **server's monotonic clock** at capture |
+| `input` | ⭐ **the identifier of the last input injected before capture**; **0** if none |
 
-⛔ **Il tetto vincola prima di tutto chi spedisce**: il server **NON DEVE** produrre un fotogramma
-più lungo di **16 MiB**. Se la codifica ne producesse uno più grande, **DEVE** ricodificarlo a
-qualità inferiore e **scriverlo nel registro** — mai spedirlo. Chi ne riceve uno più lungo chiude
-con `ERRORE_PROTOCOLLO` invece di continuare ad accumulare.
+⛔ **The ceiling binds the sender first of all**: the server **MUST NOT** produce a frame
+longer than **16 MiB**. If encoding produced a larger one, it **MUST** re-encode it at
+lower quality and **write it in the log** — never send it. Whoever receives a longer one closes
+with `ERRORE_PROTOCOLLO` instead of continuing to accumulate.
 
-> ⚠ *La prima metà è della sera del 9 agosto 2026, rilievo **R1.23**: il tetto vincolava solo il
-> **ricevente**, cioè era una punizione per chi subisce.* Una tela 7680×4320 è legale (§4.5) e il
-> desiderato è a 10 bit: un fotogramma chiave di una scena complessa a quella misura può superare i
-> 16 MiB. Il client avrebbe staccato la sessione perché il server ha fatto una cosa che §4.5 gli
-> permette — e §5.2 gli vieta pure di abbandonare le chiavi, quindi non aveva vie d'uscita.
+> ⚠ *The first half is from the evening of 9 Aug 2026, finding **R1.23**: the ceiling bound only the
+> **receiver**, that is it was a punishment for whoever suffers.* A 7680×4320 canvas is lawful (§4.5) and the
+> desired depth is 10 bits: a keyframe of a complex scene at that size can exceed
+> 16 MiB. The client would have detached the session because the server did something §4.5
+> allows it — and §5.2 also forbids it to abandon keyframes, so it had no way out.
 >
-> ✅ **MISURATO il 22 agosto 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D:
-> - ⭐ **alla tela dell'utente il tetto è irraggiungibile**: 2560×1080, **404 chiavi vere**, massimo
->   **21 433 byte = 0,13 %**, margine **782×**. Nemmeno il rumore uniforme ci arriva (15,1 %);
-> - ⛔ **a 7680×4320 si sfonda davvero**: rumore uniforme **28,9 MiB, 8 su 8** sopra il tetto, e la
->   grana forte arriva al **94,9 %**. *(La misura del ripiego in software, `libx264` passando da
->   libavcodec, non vale più dopo la fase 18.)*;
-> - ⚠ e i **10 bit qui sono otto promossi** — `DECISIONI.md` §2.3-ter. Infatti `[M]` l'etichetta
->   `main10` a 8K costa **933 byte in MENO** di `main`: non porta informazione che non ci sia;
-> - ⛔⛔ **il difetto di forma però non è quello che si credeva.** La **scala delle ricodifiche è
->   corta di uno scalino** — l'ultimo tentativo lascia **16,654 MiB**, il quarto ce l'avrebbe fatta,
->   e si perde per il **4 %** — e quando si arrende il codificatore **butta il fotogramma anche se è
->   una chiave**, che **§5.2 vieta**. ⇒ È la spirale: il client resta rotto, e ogni
->   `RICHIEDI_CHIAVE` costa tre ricodifiche che non producono niente. ⭐ La cura ha già il suo
->   numero: `[M]` **QP 51 dà 1,771 MiB a 8K**, quindi una chiave **entra sempre**.
+> ✅ **MEASURED on 22 Aug 2026** — `[M]`, 📖 `fasi/08-l-anello.md` §4-D:
+> - ⭐ **at the user's canvas the ceiling is unreachable**: 2560×1080, **404 true keyframes**, maximum
+>   **21 433 bytes = 0.13 %**, margin **782×**. Not even uniform noise gets there (15.1 %);
+> - ⛔ **at 7680×4320 it really breaks through**: uniform noise **28.9 MiB, 8 out of 8** above the ceiling, and
+>   strong grain reaches **94.9 %**. *(The measurement of the software fallback, `libx264` going through
+>   libavcodec, no longer holds after phase 18.)*;
+> - ⚠ and the **10 bits here are eight promoted** — `DECISIONI.md` §2.3-ter. Indeed `[M]` the label
+>   `main10` at 8K costs **933 bytes LESS** than `main`: it carries no information that is not there;
+> - ⛔⛔ **the form defect however is not the one believed.** The **re-encoding ladder is
+>   one rung short** — the last attempt leaves **16.654 MiB**, the fourth would have made it,
+>   and it is lost by **4 %** — and when it gives up the encoder **throws away the frame even if it is
+>   a keyframe**, which **§5.2 forbids**. ⇒ It is the spiral: the client stays broken, and every
+>   `RICHIEDI_CHIAVE` costs three re-encodings that produce nothing. ⭐ The cure already has its
+>   number: `[M]` **QP 51 gives 1.771 MiB at 8K**, so a keyframe **always fits**.
 
-⛔ **L'ordine, e chi lo rimette a posto.** Gli stream sono indipendenti, quindi i fotogrammi
-**possono arrivare fuori ordine**. Il client:
+⛔ **The order, and who puts it back in place.** The streams are independent, so frames
+**can arrive out of order**. The client:
 
-- **DEVE** scartare un fotogramma il cui `numero` è **precedente** all'ultimo già consegnato al
-  decodificatore;
-- **DEVE** trattare `numero` come aritmetica **modulo 2³²**, confrontando le differenze con segno —
-  a 60 fotogrammi al secondo il contatore gira dopo due anni e due mesi, e una sessione può durare
-  di più;
-- **DEVE** riconoscere un **buco** e chiedere una chiave (§5.2).
+- **MUST** discard a frame whose `numero` is **earlier** than the last one already handed to the
+  decoder;
+- **MUST** treat `numero` as **modulo 2³²** arithmetic, comparing signed differences —
+  at 60 frames per second the counter wraps after two years and two months, and a session can last
+  longer;
+- **MUST** recognise a **hole** and ask for a keyframe (§5.2).
 
-⛔ **E c'è il verso opposto, che è il quinto della stessa famiglia**: un fotogramma alla misura
-**nuova** può arrivare **prima** del `TELA` che la concede — il `TELA` viaggia sul canale di
-controllo, il fotogramma su uno stream suo, e **niente ne ordina la consegna**. ⇒ Il client che
-ricevesse una misura che «non è mai stata in vigore» chiuderebbe **una sessione in cui nessuno ha
-sbagliato**.
+⛔ **And there is the opposite direction, which is the fifth of the same family**: a frame at the **new**
+size can arrive **before** the `TELA` that grants it — the `TELA` travels on the control
+channel, the frame on a stream of its own, and **nothing orders their delivery**. ⇒ The client that
+received a size that «non è mai stata in vigore» would close **a session in which nobody has
+erred**.
 
-⛔ **Il client NON DEVE chiudere: trattiene il fotogramma**, e lo scrive nel registro. ⭐ **E fino a
-quando lo trattiene non è un numero: è una condizione** — finché resta una `ADATTA_TELA` che **il
-client ha spedito** e a cui nessun `TELA` ha ancora risposto. Arrivato quel `TELA`, il fotogramma
-trattenuto **si rigiudica** contro la tela che quel `TELA` dichiara in vigore, e da lì è un
-fotogramma come tutti gli altri: prima la regola dell'ordine, poi quella della misura. ⛔ **E se
-nessuna `ADATTA_TELA` è senza risposta non si trattiene niente**: una misura che il client non ha
-nessun motivo di aspettarsi è `ERRORE_PROTOCOLLO` subito.
+⛔ **The client MUST NOT close: it holds back the frame**, and writes it in the log. ⭐ **And how long
+it holds it back is not a number: it is a condition** — as long as there is an `ADATTA_TELA` that **the
+client has sent** and to which no `TELA` has yet answered. Once that `TELA` has arrived, the
+held-back frame **is judged again** against the canvas that `TELA` declares in force, and from there it is a
+frame like all the others: first the order rule, then the size rule. ⛔ **And if
+no `ADATTA_TELA` is without answer nothing is held back**: a size the client has
+no reason to expect is `ERRORE_PROTOCOLLO` at once.
 
-⚠ **E il `TELA` arriva per forza**, che è la ragione per cui questa è una fine e non un'attesa
-aperta: §7.1 impone *«a ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o no»*,
-e il canale di controllo è **uno solo, affidabile e ordinato** (§4.2) ⇒ l'n-esimo `TELA` risponde
-all'n-esima `ADATTA_TELA`, e chi trascina una finestra ne manda due senza che il conto si perda.
-⛔ Un `TELA(RIFIUTATA)` chiude l'attesa quanto un `TELA(ADATTATA)`: il trattenuto si rigiudica contro
-la tela rimasta in vigore, e di norma **è `ERRORE_PROTOCOLLO`** — il server ha spedito una misura che
-non ha mai avuto.
+⚠ **And the `TELA` necessarily arrives**, which is the reason this is an end and not an open
+wait: §7.1 imposes *«a ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`, riuscito o no»*,
+and the control channel is **only one, reliable and ordered** (§4.2) ⇒ the n-th `TELA` answers
+the n-th `ADATTA_TELA`, and whoever drags a window sends two without the count getting lost.
+⛔ A `TELA(RIFIUTATA)` closes the wait as much as a `TELA(ADATTATA)`: the held-back frame is judged again against
+the canvas that remained in force, and as a rule **it is `ERRORE_PROTOCOLLO`** — the server has sent a size it
+never had.
 
-⭐ **E la grandezza è «una richiesta in volo», non «la misura che il client ha chiesto»**: §4.5 dice
-che *«la tela concessa può essere diversa da quella chiesta»* — su KWin < 6.8 è la strada normale
-(`SPECIFICHE.md` §6.3) e la negoziazione di §6.4 concede il modo che il compositore **ha**. ⇒ Un
-client che trattenesse solo i numeri che ha nominato chiuderebbe una sessione in cui il server ha
-fatto esattamente quel che §7.1 gli permette. ⚠ È la stessa grandezza di **P20** — *quel che il
-client ha spedito lui*: locale, monotona, indipendente dalla consegna.
+⭐ **And the quantity is «una richiesta in volo», not «la misura che il client ha chiesto»**: §4.5 says
+that *«la tela concessa può essere diversa da quella chiesta»* — on KWin < 6.8 it is the normal road
+(`SPECIFICHE.md` §6.3) and the negotiation of §6.4 grants the mode the compositor **has**. ⇒ A
+client that held back only the numbers it named would close a session in which the server has
+done exactly what §7.1 allows it. ⚠ It is the same quantity as **P20** — *what the
+client has sent itself*: local, monotonic, independent of delivery.
 
-> ⚠ *Questo paragrafo diceva «trattiene **finché non sa decidere**», e accanto portava un riquadro
-> `[?]` che dichiarava aperta la domanda «fino a quando». Il prodotto la chiudeva con **otto
-> fotogrammi** — un fondo osservabile invece di un orologio, che era già la lezione di P13, ⛔ ma pur
-> sempre **una grandezza sostitutiva**. Chiusa il 13 agosto 2026, rilievo **P21**. ⭐ E la prima cura
-> proposta — «la misura che il client ha nominato» — è stata **bocciata da un caso**: §4.5 permette
-> al server di concedere una tela diversa da quella chiesta, quindi sarebbe stata l'ottava stesura.*
+> ⚠ *This paragraph said «trattiene **finché non sa decidere**», and beside it carried a box
+> `[?]` that declared open the question «fino a quando». The product closed it with **eight
+> frames** — an observable bound instead of a clock, which was already the lesson of P13, ⛔ but still
+> **a substitute quantity**. Closed on 13 Aug 2026, finding **P21**. ⭐ And the first cure
+> proposed — «la misura che il client ha nominato» — was **failed by a case**: §4.5 allows
+> the server to grant a canvas different from the one asked for, so it would have been the eighth draft.*
 
-> ### ⛔ E il trattenimento **non ha tetto in byte** — la riga mancava
+> ### ⛔ And holding back **has no ceiling in bytes** — the line was missing
 >
-> *13 agosto 2026. Il paragrafo qui sopra dice fino a **quando** si trattiene, e non dice **quanto**.
-> Sono due domande diverse, e la seconda non aveva risposta da nessuna parte.*
+> *13 Aug 2026. The paragraph above says until **when** one holds back, and does not say **how much**.
+> They are two different questions, and the second had no answer anywhere.*
 >
-> ⛔ **La condizione di fine è corretta e non basta.** §7.1 obbliga il server a rispondere a ogni
-> `ADATTA_TELA` con un `TELA`, riuscito o no — ed è la ragione per cui la condizione «finché una
-> `ADATTA_TELA` è senza risposta» **finisce**. ⛔ Ma un server che **non risponde** non viola una
-> regola che il client possa far rispettare: fa crescere la coda del client **senza limite**, e il
-> client conforme continua a trattenere finché la memoria regge. ⇒ Il difetto non è del client:
-> **è una riga che manca a questo documento.**
+> ⛔ **The end condition is correct and not enough.** §7.1 obliges the server to answer every
+> `ADATTA_TELA` with a `TELA`, successful or not — and it is the reason the condition «finché una
+> `ADATTA_TELA` è senza risposta» **ends**. ⛔ But a server that **does not answer** does not violate a
+> rule the client can enforce: it makes the client's queue grow **without limit**, and the
+> conforming client keeps holding back as long as memory holds. ⇒ The defect is not the client's:
+> **it is a line missing from this document.**
 >
-> ⇒ **Le due regole:**
+> ⇒ **The two rules:**
 >
-> - ⛔ il client **DEVE** avere un tetto al trattenuto, e superarlo **NON è `ERRORE_PROTOCOLLO`**:
->   il server non ha sbagliato niente in un modo che il client possa dimostrare. Si butta il più
->   vecchio, **lo si scrive nel registro**, e si tratta come un buco (§5.2). Un fermo-immagine con
->   una riga di registro è meglio di una sessione che finisce la memoria in silenzio;
-> - ⛔ **e il tetto si conta in FOTOGRAMMI, non in richieste in volo.** ⚠ Il paragrafo qui sopra non
->   lo diceva, e sono due grandezze diverse: le richieste in volo dicono **se** si trattiene, i
->   fotogrammi dicono **quanto**. ⭐ E un fotogramma si conta **una volta sola anche se viene
->   rigiudicato due volte** — un trattenuto che al primo `TELA` non si risolve e resta in attesa del
->   secondo **non è due fotogrammi**. *Il prodotto lo faceva già giusto; il documento non lo diceva.*
+> - ⛔ the client **MUST** have a ceiling on what is held back, and exceeding it is **NOT `ERRORE_PROTOCOLLO`**:
+>   the server has not done anything wrong in a way the client can prove. The oldest is thrown away,
+>   **it is written in the log**, and it is treated as a hole (§5.2). A freeze with
+>   a log line is better than a session that runs out of memory in silence;
+> - ⛔ **and the ceiling is counted in FRAMES, not in requests in flight.** ⚠ The paragraph above did not
+>   say it, and they are two different quantities: the requests in flight say **whether** one holds back, the
+>   frames say **how much**. ⭐ And a frame is counted **only once even if it is
+>   judged again twice** — a held-back frame that does not resolve at the first `TELA` and stays waiting for the
+>   second **is not two frames**. *The product already did it right; the document did not say it.*
 >
-> ⏳ `[?]` **Quale sia il numero non è deciso qui**: dipende dalla memoria del dispositivo e dal peso
-> di una chiave (§6.2 ne ammette 16 MiB), e sceglierlo a caso rifarebbe l'errore di §1.13 —
-> una grandezza sostitutiva al posto di quella vera. ⛔ Ma *«non c'è tetto»* non è una risposta, ed
-> era quel che il documento diceva tacendo.
+> ⏳ `[?]` **What the number is is not decided here**: it depends on the device's memory and on the weight
+> of a keyframe (§6.2 admits 16 MiB), and choosing it at random would redo the mistake of §1.13 —
+> a substitute quantity in place of the true one. ⛔ But *«non c'è tetto»* is not an answer, and
+> it was what the document said by keeping silent.
 
-⛔ **E la regola dell'ordine si applica PRIMA di quella della misura**: un fotogramma il cui `numero`
-è precedente all'ultimo già consegnato **si scarta**, e la sua misura non si guarda nemmeno.
-⚠ *Senza questa precedenza le due righe di questa stessa sezione si contraddicono, e vince la più
-severa su una scena in cui nessuno ha sbagliato: la chiave che chiude la tolleranza **scavalca** i
-fotogrammi in volo — non per caso, ma perché quello vecchio è **il più grosso** (§5.2 vieta di
-abbandonare una chiave) e quello nuovo è più piccolo. Rilievo **P14**, 12 agosto 2026, e la stessa
-famiglia si era già spostata di un passo tre volte: **P8 → P11 → P13 → P14**.*
+⛔ **And the order rule applies BEFORE the size rule**: a frame whose `numero`
+is earlier than the last one already delivered **is discarded**, and its size is not even looked at.
+⚠ *Without this precedence the two lines of this same section contradict each other, and the more
+severe wins on a scene in which nobody has erred: the keyframe that closes the tolerance **overtakes** the
+frames in flight — not by chance, but because the old one is **the biggest** (§5.2 forbids
+abandoning a keyframe) and the new one is smaller. Finding **P14**, 12 Aug 2026, and the same
+family had already moved one step three times: **P8 → P11 → P13 → P14**.*
 
-⚠ **Il cambio di tela e i fotogrammi in volo.** Dopo aver ricevuto un `TELA(ADATTATA)` (§7.1) il
-client **DEVE** accettare i fotogrammi la cui misura vale **una tela che è stata in vigore da quando
-la coda ha cominciato a svuotarsi**, dipingendoli riscalati alla vista e scrivendolo nel registro.
-⛔ **E la tolleranza non finisce a orologio: finisce quando arriva la prima chiave alla misura
-nuova**, che §5.2 gli garantisce. Da quel fotogramma in poi una misura vecchia è
-`ERRORE_PROTOCOLLO`; e lo è **subito** una misura che non è mai stata in vigore in quella finestra
-⛔ **e che nessuna `ADATTA_TELA` senza risposta può ancora concedere**: se una c'è, il fotogramma
-**si trattiene** invece di far chiudere (il paragrafo qui sopra).
+⚠ **The canvas change and the frames in flight.** After receiving a `TELA(ADATTATA)` (§7.1) the
+client **MUST** accept the frames whose size is **a canvas that has been in force since
+the queue started to drain**, painting them rescaled to the view and writing it in the log.
+⛔ **And the tolerance does not end by the clock: it ends when the first keyframe at the new
+size arrives**, which §5.2 guarantees to it. From that frame on an old size is
+`ERRORE_PROTOCOLLO`; and **at once** so is a size that has never been in force in that window
+⛔ **and that no `ADATTA_TELA` without answer can still grant**: if there is one, the frame
+**is held back** instead of causing a close (the paragraph above).
 
-> ⚠ *Diceva «la tela **precedente**», al singolare, e ⛔ **chi trascina una finestra ne manda due**:
-> 1920×1080 → `TELA(1600,900)` → `TELA(1280,720)`, e la chiave aperta prima di tutto — la più
-> grossa, la più lenta, e quella che §5.2 vieta al server di abbandonare — porta 1920×1080, che non
-> è né quella in vigore né la precedente. La sessione sana cadeva lo stesso, **un passo più in là**
-> della scena che la cura aveva appena chiuso. Corretto il 12 agosto 2026, rilievo **P11**.*
-⭐ È la **sesta** eccezione dichiarata a §3, ed è la terza scritta per il verso in cui mancava: §7.1
-la dà già alle coordinate di input, per la stessa ragione — il cambio di tela è l'unico momento in
-cui i due lati hanno legittimamente due verità diverse. ⛔ Senza, un client conforme **uccide una
-sessione sana**: gli stream sono indipendenti, il fotogramma aperto prima che l'`ADATTA_TELA`
-arrivasse al server porta legittimamente la misura di prima, e §5.2 vieta al server di abbandonare
-una chiave — cioè di sgombrare il tubo proprio dei fotogrammi più grossi, che sono i più probabili
-a essere in volo. ⇒ **Dal lato server non è curabile**, e per questo la riga è del client.
+> ⚠ *It said «la tela **precedente**», in the singular, and ⛔ **whoever drags a window sends two**:
+> 1920×1080 → `TELA(1600,900)` → `TELA(1280,720)`, and the keyframe opened before everything — the
+> biggest, the slowest, and the one §5.2 forbids the server to abandon — carries 1920×1080, which is
+> neither the one in force nor the previous one. The healthy session dropped all the same, **one step further**
+> than the scene the cure had just closed. Corrected on 12 Aug 2026, finding **P11**.*
+⭐ It is the **sixth** exception declared in §3, and it is the third written for the direction in which it was missing: §7.1
+already gives it to the input coordinates, for the same reason — the canvas change is the only moment in
+which the two sides legitimately have two different truths. ⛔ Without it, a conforming client **kills a
+healthy session**: the streams are independent, the frame opened before the `ADATTA_TELA`
+reached the server legitimately carries the previous size, and §5.2 forbids the server to abandon
+a keyframe — that is to clear the pipe of precisely the biggest frames, which are the most likely
+to be in flight. ⇒ **On the server side it is not curable**, and that is why the line is the client's.
 
-> ⛔⛔ *E la prima stesura di questa riga diceva «**per un secondo**», con un orologio — corretta due
-> ore dopo, rilievo **P13**. La ragione è che **il secondo era la grandezza sbagliata**: quel che
-> deve svuotarsi è una **coda**, e quanto ci mette un fotogramma già in volo dipende dalla **banda**,
-> non dall'orologio. Una chiave 1920×1080 può pesare qualche MiB (§6.2 ne ammette 16) e su una linea
-> cattiva — che è **dentro** il modello, il minimo dichiarato è 480p a 25 — arriva **dopo** il
-> secondo. ⇒ Il client avrebbe chiuso un fotogramma spedito quando era legale, e che §5.2 vietava al
-> server di abbandonare: non è solo una sessione sana che cade, è l'invariante **I1** — «mai a
-> staccare» — rotta **perché la linea è lenta**, cioè nella condizione esatta che I1 esiste per
-> proteggere. ⭐ E allungare il secondo avrebbe spostato il difetto invece di toglierlo: la
-> tolleranza finisce su un **fatto osservabile sul filo** — la prima chiave alla misura nuova — che
-> §5.2 garantisce esistere.*
+> ⛔⛔ *And the first draft of this line said «**per un secondo**», with a clock — corrected two
+> hours later, finding **P13**. The reason is that **the second was the wrong quantity**: what
+> must drain is a **queue**, and how long an already-in-flight frame takes depends on **bandwidth**,
+> not on the clock. A 1920×1080 keyframe can weigh a few MiB (§6.2 admits 16) and on a bad
+> line — which is **inside** the model, the declared minimum is 480p at 25 — it arrives **after** the
+> second. ⇒ The client would have closed on a frame sent when it was lawful, and which §5.2 forbade the
+> server to abandon: it is not only a healthy session that drops, it is invariant **I1** — «mai a
+> staccare» — broken **because the line is slow**, that is in the exact condition I1 exists to
+> protect. ⭐ And lengthening the second would have moved the defect instead of removing it: the
+> tolerance ends on a **fact observable on the wire** — the first keyframe at the new size — which
+> §5.2 guarantees exists.*
 >
-> ⚠ *Aggiunta il 12 agosto 2026, difetto **D14**, e la marca non è nessuna delle due che questo
-> documento usava: non è una **lettura doppia** e non è una **regola derivata** — è una
-> **contraddizione interna**. Due implementazioni conformi e attente qui **non divergono**:
-> producono lo stesso byte, la chiusura, ed è sbagliato. ⛔ È la specie che nessun confronto fra due
-> implementazioni può trovare, ed è la stessa che la prima stesura di **P5** ha avuto per due ore
-> quella mattina.*
+> ⚠ *Added on 12 Aug 2026, defect **D14**, and the label is neither of the two this
+> document used: it is not a **double reading** and it is not a **derived rule** — it is an
+> **internal contradiction**. Two conforming and careful implementations here **do not diverge**:
+> they produce the same byte, the closing, and it is wrong. ⛔ It is the species no comparison between two
+> implementations can find, and it is the same one the first draft of **P5** had for two hours
+> that morning.*
 
-⚠ **Che cosa il campo `input` dice davvero**, e va scritto qui perché nessuno gli attribuisca di
-più: dice quale input era stato **iniettato**, non quale era stato **disegnato**. Che il
-compositore l'avesse già reso non è garantito da nessuno. È una stima utile e gratuita — non la
-misura del ritardo. Quella la dà il banco ad anello chiuso di `DECISIONI.md` §2.6.
+⚠ **What the `input` field really says**, and it must be written here so that nobody attributes more to it:
+it says which input had been **injected**, not which had been **drawn**. That the
+compositor had already rendered it is guaranteed by nobody. It is a useful and free estimate — not the
+measurement of the delay. That is given by the closed-loop bench of `DECISIONI.md` §2.6.
 
-⚠ **E `istante` non è un'ora**: è un orologio monotono che parte da un punto qualunque. Il client
-**NON DEVE** confrontarlo con il proprio: solo con altri `istante` dello stesso server.
+⚠ **And `istante` is not a time of day**: it is a monotonic clock that starts from an arbitrary point. The client
+**MUST NOT** compare it with its own: only with other `istante` values of the same server.
 
-### 6.3 Sui datagram — l'audio
+### 6.3 On datagrams — audio
 
 ```
  0        2        4        12                12+…
@@ -1682,47 +1682,47 @@ misura del ritardo. Quella la dà il banco ad anello chiuso di `DECISIONI.md` §
  │ u16    │ u16    │ u64    │                  │
 ```
 
-| Campo | |
+| Field | |
 |---|---|
-| `tipo` | `0x0401` — l'unico definito in RCP/1 |
+| `tipo` | `0x0401` — the only one defined in RCP/1 |
 | `codec` | `1` = Opus, `2` = PCM (§5.3) |
-| `istante` | microsecondi dell'orologio monotono del server, del **primo** campione del blocco |
+| `istante` | microseconds of the server's monotonic clock, of the **first** sample of the block |
 
-Un datagram, un blocco di Opus (o di PCM). Nessuna ritrasmissione, nessun riordino: chi riceve
-scarta i datagram arrivati in ritardo rispetto a quelli già consumati.
+One datagram, one block of Opus (or of PCM). No retransmission, no reordering: the receiver
+discards datagrams arrived late relative to those already consumed.
 
-⛔ Un datagram più corto di 12 byte, o con un `tipo` diverso da `0x0401`, si **scarta scrivendolo
-nel registro**: ⚠ ed è la seconda eccezione dichiarata a §3, perché un datagram è per definizione
-inaffidabile e chiudere la connessione per un pacchetto corrotto sarebbe una punizione della rete,
-non del mittente.
+⛔ A datagram shorter than 12 bytes, or with a `tipo` other than `0x0401`, **is discarded and written
+in the log**: ⚠ and it is the second exception declared in §3, because a datagram is by definition
+unreliable and closing the connection for a corrupted packet would be a punishment of the network,
+not of the sender.
 
 ---
 
-## 7. I messaggi
+## 7. The messages
 
-### 7.1 Controllo
+### 7.1 Control
 
-| Tipo | Nome | Verso | |
+| Type | Name | Direction | |
 |---|---|---|---|
-| `0x0001` | `CIAO` | → | versione e capacità del client |
-| `0x0002` | `ECCOMI` | ← | versione e capacità del server |
-| `0x0003` | `CREDENZIALI` | → | utente, parola d'ordine |
+| `0x0001` | `CIAO` | → | version and capabilities of the client |
+| `0x0002` | `ECCOMI` | ← | version and capabilities of the server |
+| `0x0003` | `CREDENZIALI` | → | user, password |
 | `0x0004` | `AMMESSO` | ← | |
-| `0x0005` | `RESPINTO` | ← | motivo |
-| `0x0006` | `ATTACCA` | → | tela, disposizione, vista |
-| `0x0007` | `SESSIONE` | ← | stato, tela concessa, desktop |
-| `0x0008` | `VISTA` | → | la vista è cambiata: nuove larghezza e altezza |
-| `0x0009` | `DISPOSIZIONE` | → | la disposizione di tastiera è cambiata |
-| `0x000A` | `CURSORE_FORMA` | ← | forma e punto attivo del puntatore |
-| `0x000B` | `ADATTA_TELA` | → | «adatta il desktop a questa finestra» — ⚠ dal nostro client **solo all'attacco e al riattacco** (§7.1); il protocollo lo ammette a sessione aperta da chiunque |
-| `0x000C` | `CONGEDO` | ↔ | motivo |
-| `0x000D` | `RICHIEDI_CHIAVE` | → | ⭐ *nuovo, 9 ago*: serve un fotogramma chiave (§5.2) |
-| `0x000E` | `TELA` | ← | ⭐ *nuovo, 9 ago*: l'esito di `ADATTA_TELA` |
-| `0x000F` | `BANCO_MARCA` | → | ⭐ *nuovo, 9 ago notte*: **funzione di banco** — cambia la marca, con un ritardo noto (§7.5) |
-| `0x0010` | `BANCO_ESITO` | ← | ⭐ *nuovo, 9 ago notte*: l'esito di `BANCO_MARCA` (§7.5) |
-| `0x0011` | `TERMINA_SESSIONE` | → | ⭐ *nuovo, 15 ago*: **l'utente vuole uscire** — la sessione grafica finisce e i suoi programmi si chiudono (§7.6) |
+| `0x0005` | `RESPINTO` | ← | reason |
+| `0x0006` | `ATTACCA` | → | canvas, layout, view |
+| `0x0007` | `SESSIONE` | ← | state, granted canvas, desktop |
+| `0x0008` | `VISTA` | → | the view has changed: new width and height |
+| `0x0009` | `DISPOSIZIONE` | → | the keyboard layout has changed |
+| `0x000A` | `CURSORE_FORMA` | ← | shape and hotspot of the pointer |
+| `0x000B` | `ADATTA_TELA` | → | «adatta il desktop a questa finestra» — ⚠ from our client **only at attach and reattach** (§7.1); the protocol admits it with the session open from anyone |
+| `0x000C` | `CONGEDO` | ↔ | reason |
+| `0x000D` | `RICHIEDI_CHIAVE` | → | ⭐ *new, 9 Aug*: a keyframe is needed (§5.2) |
+| `0x000E` | `TELA` | ← | ⭐ *new, 9 Aug*: the outcome of `ADATTA_TELA` |
+| `0x000F` | `BANCO_MARCA` | → | ⭐ *new, night of 9 Aug*: **bench function** — changes the mark, with a known delay (§7.5) |
+| `0x0010` | `BANCO_ESITO` | ← | ⭐ *new, night of 9 Aug*: the outcome of `BANCO_MARCA` (§7.5) |
+| `0x0011` | `TERMINA_SESSIONE` | → | ⭐ *new, 15 Aug*: **the user wants to log out** — the graphical session ends and its programs close (§7.6) |
 
-**I corpi** (`CIAO`, `ECCOMI`, `CREDENZIALI`, `AMMESSO`, `RESPINTO`, `ATTACCA`, `SESSIONE` stanno
+**The bodies** (`CIAO`, `ECCOMI`, `CREDENZIALI`, `AMMESSO`, `RESPINTO`, `ATTACCA`, `SESSIONE` are
 in §4.3-4.5):
 
 ```
@@ -1731,7 +1731,7 @@ VISTA
  └── u32 altezza
 
 DISPOSIZIONE
- └── stringa disposizione            (la forma è quella di §4.5)
+ └── stringa disposizione            (the form is that of §4.5)
 
 ADATTA_TELA
  ├── u32 larghezza
@@ -1739,264 +1739,264 @@ ADATTA_TELA
 
 TELA
  ├── u8  esito        1 = ADATTATA, 2 = RIFIUTATA
- ├── u8  motivo       0 se adattata; altrimenti:
+ ├── u8  motivo       0 if adapted; otherwise:
  │                      1 = COMPOSITORE_INCAPACE
  │                      2 = MISURA_FUORI_LIMITI
  │                      3 = NON_ORA
- ├── u32 tela_larghezza      ⚠ la tela in vigore DOPO questo messaggio
+ ├── u32 tela_larghezza      ⚠ the canvas in force AFTER this message
  └── u32 tela_altezza
 
 RICHIEDI_CHIAVE
- └── u32 ultimo_numero        l'ultimo fotogramma decodificato, 0 se nessuno
+ └── u32 ultimo_numero        the last frame decoded, 0 if none
 
 CONGEDO
  ├── u8      motivo           §8.2
- └── stringa dettaglio        per il registro, non per l'utente; può essere vuota
+ └── stringa dettaglio        for the log, not for the user; may be empty
 ```
 
-⛔ **`DISPOSIZIONE` a sessione aperta: una disposizione ben formata ma sconosciuta NON chiude la
-sessione.** Il server **DEVE** scriverlo nel registro e **DEVE** tenere in vigore quella di prima.
-⚠ È diverso da `ATTACCA` (§4.5), dove il congedo `SESSIONE_NON_SERVIBILE` è giusto perché non c'è
-nessuna sessione da salvare: qui la tastiera di prima funziona ancora, e togliere all'utente il
-lavoro aperto costerebbe **più del guasto** (`SPECIFICHE.md` §8.3, «mai staccare»).
+⛔ **`DISPOSIZIONE` with the session open: a well-formed but unknown layout does NOT close the
+session.** The server **MUST** write it in the log and **MUST** keep the previous one in force.
+⚠ It is different from `ATTACCA` (§4.5), where the farewell `SESSIONE_NON_SERVIBILE` is right because there is
+no session to save: here the previous keyboard still works, and taking away from the user the
+open work would cost **more than the fault** (`SPECIFICHE.md` §8.3, «mai staccare»).
 
-⚠ `VISTA` **NON DEVE** far cambiare la tela, e ⛔ **in RCP/1 non cambia nemmeno la misura di quel
-che si codifica**: i fotogrammi restano della misura della tela e il client riscala
-(`SPECIFICHE.md` §6.1). Serve a due cose — a scegliere quanti bit spendere, perché una finestra
-piccola guardata su uno schermo piccolo non ne merita quanti una grande; e a rendere gratuito il
-giorno in cui `DECISIONI.md` §5.0-ter venisse chiusa. L'unico messaggio che cambia la tela è
+⚠ `VISTA` **MUST NOT** make the canvas change, and ⛔ **in RCP/1 it does not even change the size of what
+is encoded**: the frames stay at the size of the canvas and the client rescales
+(`SPECIFICHE.md` §6.1). It serves two things — choosing how many bits to spend, because a small window
+looked at on a small screen does not deserve as many as a large one; and making free the
+day `DECISIONI.md` §5.0-ter were closed. The only message that changes the canvas is
 `ADATTA_TELA`.
 
-> ⛔ **Qui c'era scritto anche «ed è una scelta esplicita dell'utente», e dal 15 agosto 2026 non è
-> più vero.** `DECISIONI.md` §5.0-sexies — decisa dall'utente il 14 agosto — fa chiedere al client
-> **la tela della propria finestra all'attacco di ogni sessione**, da sé. ⇒ `ADATTA_TELA` resta
-> l'unico messaggio che cambia la tela, ma non è più detto che dietro ci sia un dito: può esserci
-> l'attacco. ⚠ Per l'arbitro non cambia niente — il messaggio, i controlli e la risposta sono gli
-> stessi — e la riga si corregge perché **un documento che descrive un client che non esiste più
-> smette di essere l'arbitro**.
+> ⛔ **Here it also said «ed è una scelta esplicita dell'utente», and since 15 Aug 2026 it is no
+> longer true.** `DECISIONI.md` §5.0-sexies — decided by the user on 14 Aug — makes the client ask for
+> **the canvas of its own window at the attach of every session**, by itself. ⇒ `ADATTA_TELA` remains
+> the only message that changes the canvas, but it is no longer certain that behind it there is a finger: there may be
+> the attach. ⚠ For the referee nothing changes — the message, the checks and the answer are the
+> same — and the line is corrected because **a document that describes a client that no longer exists
+> stops being the referee**.
 >
-> ### ⛔⛔ E DAL 17 AGOSTO 2026 DIETRO NON C'È **MAI** UN DITO — `DECISIONI.md` §5.1-bis
+> ### ⛔⛔ And SINCE 17 AUG 2026 THERE IS **NEVER** A FINGER BEHIND IT — `DECISIONI.md` §5.1-bis
 >
-> Il ridimensionamento a caldo è uscito dal prodotto (*«non voglio mettere delle eccezioni nel
-> progetto»*): **la nostra pagina manda `ADATTA_TELA` solo all'attacco e al riattacco**, e
-> ridimensionare la finestra non ne produce nessuno.
+> Live resizing has left the product (*«non voglio mettere delle eccezioni nel
+> progetto»*): **our page sends `ADATTA_TELA` only at attach and reattach**, and
+> resizing the window produces none.
 >
-> ⛔⭐ **Ma questa è una scelta del NOSTRO client, non una regola del protocollo, e le due non si
-> confondono**: RCP/1 continua ad ammettere `ADATTA_TELA` **in qualunque momento a sessione
-> aperta**, e il server **DEVE** continuare a rispondere con un `TELA` a chiunque lo mandi. ⚠ Un
-> arbitro che scrivesse «il client non lo manda durante la sessione» dichiarerebbe **non conforme
-> un client conforme** — e il primo a rimetterci sarebbe il nostro, il giorno in cui la decisione
-> cambiasse. La riga sta qui perché descrive **chi lo manda oggi**, non che cosa è lecito.
+> ⛔⭐ **But this is a choice of OUR client, not a rule of the protocol, and the two are not
+> confused**: RCP/1 keeps admitting `ADATTA_TELA` **at any moment with the session
+> open**, and the server **MUST** keep answering with a `TELA` to anyone who sends it. ⚠ A
+> referee that wrote «il client non lo manda durante la sessione» would declare **non-conforming
+> a conforming client** — and the first to lose out would be ours, the day the decision
+> changed. The line is here because it describes **who sends it today**, not what is lawful.
 >
-> ⏳ **E resta una riga da scrivere**, trovata refutando la notte del 15 agosto: *che cosa fa il
-> server quando il palco cambia misura **senza che nessun `ADATTA_TELA` gliel'abbia chiesto*** — un
-> rimontaggio della sessione grafica dopo una caduta, per esempio. §6.2 dà al client un solo modo di
-> accettare una misura inattesa (trattenere finché una richiesta è senza risposta), quindi un `TELA`
-> non sollecitato **fa chiudere una sessione sana**: il server oggi non lo manda, e RICHIEDE invece
-> al palco di tornare alla tela in vigore, con un'attesa che cresce. Funziona, ⚠ ma è una regola del
-> prodotto che l'arbitro non nomina.
+> ⏳ **And there remains a line to write**, found while refuting on the night of 15 Aug: *what the
+> server does when the stage changes size **without any `ADATTA_TELA` having asked it*** — a
+> remount of the graphical session after a crash, for example. §6.2 gives the client only one way to
+> accept an unexpected size (holding back while a request is without answer), so an unsolicited `TELA`
+> **makes a healthy session close**: the server today does not send it, and instead ASKS
+> the stage to go back to the canvas in force, with a growing wait. It works, ⚠ but it is a rule of the
+> product the referee does not name.
 >
-> ### ⭐ LA RIGA, SCRITTA IL 22 SETTEMBRE 2026 — e la richiesta non basta sempre
+> ### ⭐ THE LINE, WRITTEN ON 22 SEP 2026 — and the request is not always enough
 >
-> ⛔ Il server **PUÒ** mandare **un** `TELA(ADATTATA)` non sollecitato, e **solo** quando in quella
-> sessione **non è ancora uscito nessun fotogramma**: lì il client non ha visto un pixel a quella
-> tela, non ne ha nessuno in volo, e non c'è nessuna corsa fra stream da arbitrare — il `TELA` è
-> l'unica verità che avrà mai avuto. ⛔ **Dopo il primo fotogramma resta vietato**, e vale la regola
-> di sopra: si richiede al palco, con un'attesa che cresce.
+> ⛔ The server **MAY** send **one** unsolicited `TELA(ADATTATA)`, and **only** when in that
+> session **no frame has yet left**: there the client has not seen one pixel at that
+> canvas, has none in flight, and there is no race between streams to referee — the `TELA` is
+> the only truth it will ever have had. ⛔ **After the first frame it stays forbidden**, and the rule
+> above holds: one asks the stage, with a growing wait.
 >
-> ⚠ *Perché serve, e non è un'astrazione*: `[M]` 22 settembre 2026, prova a mano dell'utente su KDE.
-> Il server si riavvia, la sessione Plasma gli **sopravvive** (I4) col palco a 2544×926, e il client
-> rientra da una finestra di un'altra misura chiedendo 2560×962. La tabella delle tele dei palchi
-> vive nel processo ⇒ col riavvio si azzera, e il ripiego di §4.5 — «si concede quel che il palco
-> **ha**» — non ha niente da concedere. Tela in vigore 2560×962, palco 2544×926, §6.2 vieta di
-> spedire un fotogramma di misura diversa: **schermo nero per sempre**, perché **KWin `--virtual`
-> non ridimensiona** e la richiesta non può riuscire né oggi né fra un'ora. ⇒ «Richiedere al palco»
-> è una cura che presuppone un palco capace di obbedire, e questa riga dice che cosa fare quando non
-> lo è.
+> ⚠ *Why it is needed, and it is not an abstraction*: `[M]` 22 Sep 2026, manual test by the user on KDE.
+> The server restarts, the Plasma session **outlives** it (I4) with the stage at 2544×926, and the client
+> comes back from a window of another size asking for 2560×962. The table of the stages' canvases
+> lives in the process ⇒ with the restart it is reset, and the fallback of §4.5 — «si concede quel che il palco
+> **ha**» — has nothing to grant. Canvas in force 2560×962, stage 2544×926, §6.2 forbids
+> sending a frame of different size: **black screen forever**, because **KWin `--virtual`
+> does not resize** and the request cannot succeed either today or in an hour. ⇒ «Richiedere al palco»
+> is a cure that presupposes a stage capable of obeying, and this line says what to do when it
+> is not.
 
-> ⚠ *Chiarito il 9 agosto 2026, e non era una sfumatura.* Questa riga diceva «serve al server per
-> sapere **a che misura codificare**», e ci sono due voci di `DECISIONI.md` che si contraddicono
-> sullo stesso punto: §5.2 dice che *«il codificatore lavora alla misura della finestra, non della
-> tela»*, §5.0-ter dice che *«il server continua a codificare la tela intera e il client la
-> rimpicciolisce»* e mette il contrario **volutamente fuori dal modello**, come `[?]`. Vince la
-> seconda, perché è quella che regge insieme a `SPECIFICHE.md` §6.1 e §6.3 — dove il ripiego su
-> KDE *«non costa una riga in più, perché è lo stesso codice del punto durante la sessione»*, e
-> quel codice è la **riscalatura nel client**. La correzione è in `DECISIONI.md` §5.2.
+> ⚠ *Clarified on 9 Aug 2026, and it was not a nuance.* This line said «serve al server per
+> sapere **a che misura codificare**», and there are two entries of `DECISIONI.md` that contradict each other
+> on the same point: §5.2 says that *«il codificatore lavora alla misura della finestra, non della
+> tela»*, §5.0-ter says that *«il server continua a codificare la tela intera e il client la
+> rimpicciolisce»* and puts the opposite **deliberately outside the model**, as `[?]`. The
+> second wins, because it is the one that holds together with `SPECIFICHE.md` §6.1 and §6.3 — where the fallback on
+> KDE *«non costa una riga in più, perché è lo stesso codice del punto durante la sessione»*, and
+> that code is the **rescaling in the client**. The correction is in `DECISIONI.md` §5.2.
 
-⛔ Se il compositore non sa ridimensionare, il server **DEVE** rispondere ad `ADATTA_TELA` con
-`TELA(RIFIUTATA, COMPOSITORE_INCAPACE)`, e il client **DEVE** mostrare la voce come spenta. NON
-DEVE fingere che sia riuscito.
+⛔ If the compositor cannot resize, the server **MUST** answer `ADATTA_TELA` with
+`TELA(RIFIUTATA, COMPOSITORE_INCAPACE)`, and the client **MUST** show the item as off. It MUST
+NOT pretend it succeeded.
 
-⛔ **A ogni `ADATTA_TELA` il server DEVE rispondere con un `TELA`**, riuscito o no. Un silenzio
-lascia il client ad aspettare per sempre una risposta che non arriverà, e il sintomo è
+⛔ **To every `ADATTA_TELA` the server MUST answer with a `TELA`**, successful or not. A silence
+leaves the client waiting forever for an answer that will not arrive, and the symptom is
 «l'applicazione si è piantata».
 
-⛔ **La vista non ha i vincoli della tela**, e va detto perché la riga precedente diceva il
-contrario: qualunque misura da **1×1 in su** è legale, dispari compresa.
+⛔ **The view does not have the constraints of the canvas**, and it must be said because the previous line said the
+opposite: any size from **1×1 upwards** is lawful, odd included.
 
-> ⛔ *Corretto la sera del 9 agosto 2026, rilievo **R1.17**.* Qui c'era scritto che la vista deve
-> stare fra 320×240 e 7680×4320 **con i lati pari**, cioè i limiti della tela — e i limiti della
-> tela esistono per una ragione che alla vista **non si applica**: i blocchi del codificatore. In
-> RCP/1 la vista **non tocca nessun codificatore** (lo dice questa stessa sezione due righe sopra).
+> ⛔ *Corrected on the evening of 9 Aug 2026, finding **R1.17**.* Here it was written that the view must
+> be between 320×240 and 7680×4320 **with even sides**, that is the limits of the canvas — and the limits of the
+> canvas exist for a reason that **does not apply** to the view: the blocks of the encoder. In
+> RCP/1 the view **touches no encoder** (this same section says so two lines above).
 >
-> Il caso concreto: l'utente stringe la finestra del browser a 300 pixel, o apre la pagina
-> affiancata sul telefono. Con la riga vecchia il client aveva tre scelte, tutte cattive — mandare
-> `VISTA(300×800)` e **farsi chiudere la sessione perché ha ridimensionato una finestra**; mentire
-> arrotondando a 320, che è la forma d'errore **E2**; o tacere, e lasciare che il server spenda bit
-> per una vista che non esiste più. ⚠ Su un telefono con fattore di scala 2,75 nessun
-> arrotondamento è innocente: 393 pixel logici valgono 1080,75 fisici.
+> The concrete case: the user narrows the browser window to 300 pixels, or opens the page
+> side by side on the phone. With the old line the client had three choices, all bad — send
+> `VISTA(300×800)` and **have the session closed because it resized a window**; lie
+> by rounding to 320, which is error form **E2**; or keep silent, and let the server spend bits
+> for a view that no longer exists. ⚠ On a phone with scale factor 2.75 no
+> rounding is innocent: 393 logical pixels are 1080.75 physical.
 
-⚠ La vista non ha nessun vincolo di proporzione con la tela: se le proporzioni non combaciano, si
-impagina con le bande (`SPECIFICHE.md` §6.2).
+⚠ The view has no proportion constraint with the canvas: if the proportions do not match, it is
+laid out with bars (`SPECIFICHE.md` §6.2).
 
-⚠ **Il cambio di tela e le coordinate in volo.** Dopo aver mandato `TELA(ADATTATA)` il server
-**DEVE** accettare per **un secondo** coordinate di input valide sulla tela **precedente**,
-saturandole alla nuova e scrivendolo nel registro; passato quel secondo, sono
-`ERRORE_PROTOCOLLO`. ⭐ È la terza eccezione dichiarata a §3, e c'è perché il cambio di tela è
-l'unico momento in cui i due lati hanno legittimamente due verità diverse: gli input partiti prima
-che la risposta arrivasse non sono un difetto del client.
+⚠ **The canvas change and the coordinates in flight.** After sending `TELA(ADATTATA)` the server
+**MUST** accept for **one second** input coordinates valid on the **previous** canvas,
+saturating them to the new one and writing it in the log; once that second has passed, they are
+`ERRORE_PROTOCOLLO`. ⭐ It is the third exception declared in §3, and it exists because the canvas change is
+the only moment in which the two sides legitimately have two different truths: the inputs that left before
+the answer arrived are not a defect of the client.
 
-### 7.2 Cursore
+### 7.2 Cursor
 
-`CURSORE_FORMA` porta la forma che il client deve disegnare:
+`CURSORE_FORMA` carries the shape the client must draw:
 
 ```
 CURSORE_FORMA
- ├── u16 larghezza          0 con altezza 0 = cursore nascosto (§5.5)
+ ├── u16 larghezza          0 with altezza 0 = hidden cursor (§5.5)
  ├── u16 altezza
- ├── i16 attivo_x           il punto che «punta», dentro l'immagine — ⛔ 0 se nascosto (§5.5)
+ ├── i16 attivo_x           the point that «punta», inside the image — ⛔ 0 if hidden (§5.5)
  ├── i16 attivo_y
- └── immagine               larghezza × altezza × 4 byte, BGRA premoltiplicato
+ └── immagine               larghezza × altezza × 4 bytes, premultiplied BGRA
 ```
 
-⛔ `larghezza` e `altezza` **NON DEVONO** superare 256 (§5.5), e la lunghezza del messaggio **DEVE**
-valere esattamente `8 + larghezza × altezza × 4`. Una lunghezza che non torna è
-`ERRORE_PROTOCOLLO`: è il caso in cui «leggo quel che c'è e vado avanti» produce un cursore fatto
-di memoria altrui.
+⛔ `larghezza` and `altezza` **MUST NOT** exceed 256 (§5.5), and the length of the message **MUST**
+be exactly `8 + larghezza × altezza × 4`. A length that does not add up is
+`ERRORE_PROTOCOLLO`: it is the case in which «leggo quel che c'è e vado avanti» produces a cursor made
+of someone else's memory.
 
-⚠ **La posizione non viaggia mai in questo verso.** La posizione del puntatore è del client, che
-lo disegna da sé (`SPECIFICHE.md` §7.1). Qui viaggia solo la **forma**, e il ritardo di un giro di
-rete sulla forma è il compromesso accettato.
+⚠ **The position never travels in this direction.** The position of the pointer belongs to the client, which
+draws it by itself (`SPECIFICHE.md` §7.1). Here only the **shape** travels, and the delay of one network
+round trip on the shape is the accepted compromise.
 
 ### 7.3 Input
 
-| Tipo | Nome | |
+| Type | Name | |
 |---|---|---|
-| `0x0101` | `PUNTATORE` | posizione assoluta sulla **tela**, non sulla vista |
-| `0x0102` | `PULSANTE` | quale, premuto o rilasciato |
-| `0x0103` | `ROTELLA` | assi, in scatti |
-| `0x0104` | `LETTERA` | un carattere Unicode |
-| `0x0105` | `POSIZIONE_TASTO` | codice di posizione, premuto o rilasciato |
+| `0x0101` | `PUNTATORE` | absolute position on the **canvas**, not on the view |
+| `0x0102` | `PULSANTE` | which one, pressed or released |
+| `0x0103` | `ROTELLA` | axes, in notches |
+| `0x0104` | `LETTERA` | a Unicode character |
+| `0x0105` | `POSIZIONE_TASTO` | position code, pressed or released |
 
-⛔ **Ogni messaggio di input comincia con gli stessi due campi**, e poi ha i suoi:
+⛔ **Every input message starts with the same two fields**, and then has its own:
 
 ```
- ├── u32 id             crescente, comincia da 1.  ⛔ 0 è riservato e vuol dire «nessun input»
- └── u64 istante        microsecondi dell'orologio monotono del CLIENT
+ ├── u32 id             increasing, starts from 1.  ⛔ 0 is reserved and means «nessun input»
+ └── u64 istante        microseconds of the CLIENT's monotonic clock
 
-PUNTATORE          + u32 x  · u32 y            coordinate sulla tela
-PULSANTE           + u16 codice · u8 premuto   1 = premuto, 0 = rilasciato
-ROTELLA            + i32 asse_x · i32 asse_y   unità da 120 per scatto
-LETTERA            + u32 carattere             valore scalare Unicode
+PUNTATORE          + u32 x  · u32 y            coordinates on the canvas
+PULSANTE           + u16 codice · u8 premuto   1 = pressed, 0 = released
+ROTELLA            + i32 asse_x · i32 asse_y   units of 120 per notch
+LETTERA            + u32 carattere             Unicode scalar value
 POSIZIONE_TASTO    + u16 codice · u8 premuto
 ```
 
 | | |
 |---|---|
-| **i codici dei pulsanti e dei tasti** | ⛔ sono quelli di **evdev** (`linux/input-event-codes.h`): `BTN_LEFT` = `0x110`, `KEY_A` = `30`. ⭐ Non è una scelta di comodo: `libei` — cioè l'unico modo che abbiamo di iniettare input in un compositore Wayland — lavora in evdev, e ogni altra convenzione aggiungerebbe una tabella di traduzione che sbaglia in silenzio |
-| **la rotella** | ⛔ unità da **120 per scatto**, ⚠ e i mezzi scatti esistono: `60` è mezzo scatto e **non DEVE** essere arrotondato a zero. ⭐ **Il segno è MISURATO** *(10 agosto 2026, su Mutter)*: il client manda `+120` quando l'utente gira la rotella **in su**, e ⛔ **il server DEVE invertire l'asse verticale** prima di passarlo a `libei` — vedi il riquadro |
-| **il carattere** | ⛔ un **valore scalare Unicode**: da `0` a `0x10FFFF`, esclusi i surrogati `0xD800`-`0xDFFF`. Fuori intervallo è `ERRORE_PROTOCOLLO` |
-| **l'identificatore** | ⛔ cresce di **almeno uno** a ogni messaggio, su tutto il canale di input — non uno per tipo. È quello che torna nel campo `input` dei fotogrammi (§6.2), e con contatori separati non tornerebbe niente |
-| **l'`istante`** | ⚠ **nessuna regola di questo documento lo consuma**: il ritardo lo misura l'anello chiuso di `DECISIONI.md` §2.6, e il fotogramma porta indietro l'`id`, non l'istante. Resta perché è l'unico modo di sapere **quando l'utente ha mosso la mano** invece di quando il byte è arrivato, e serve alla diagnosi. ⛔ Il client scrive **microsecondi veri** e **NON DEVE** far credere a una precisione che non ha *(rilievo **R1.27**)*. ⚠ ⛔ **E la premessa di questa riga era FALSA — corretta il 14 agosto 2026, su misura dell'anello del modo classico della fase 4**: diceva *«l'orologio monotono è in millisecondi e la sua grana è deliberatamente ingrossata: il client scrive `millisecondi × 1000`»*. `[M]` su **Chrome 151**, pagina isolata fra origini, `performance.now()` ha grana **5 µs** — **duecento volte** più fine di quel che c'era scritto. ⇒ ⭐ **La regola sopravvive alla premessa che l'aveva prodotta** (*si scrive quel che si sa*), ⛔ ma un client che moltiplicasse i millisecondi per mille butterebbe via **199 parti su 200** di una misura che ha già in mano. ⚠ E la grana **dipende dall'isolamento fra origini**: dove non c'è, torna grossa — quindi si scrive quella che si ha e **si dichiara**, invece di fissarne una nel documento |
+| **the codes of buttons and keys** | ⛔ they are those of **evdev** (`linux/input-event-codes.h`): `BTN_LEFT` = `0x110`, `KEY_A` = `30`. ⭐ It is not a choice of convenience: `libei` — that is the only way we have to inject input into a Wayland compositor — works in evdev, and any other convention would add a translation table that errs in silence |
+| **the wheel** | ⛔ units of **120 per notch**, ⚠ and half notches exist: `60` is half a notch and **MUST NOT** be rounded to zero. ⭐ **The sign is MEASURED** *(10 Aug 2026, on Mutter)*: the client sends `+120` when the user turns the wheel **up**, and ⛔ **the server MUST invert the vertical axis** before passing it to `libei` — see the box |
+| **the character** | ⛔ a **Unicode scalar value**: from `0` to `0x10FFFF`, excluding the surrogates `0xD800`-`0xDFFF`. Out of range is `ERRORE_PROTOCOLLO` |
+| **the identifier** | ⛔ grows by **at least one** at every message, over the whole input channel — not one per type. It is what comes back in the `input` field of the frames (§6.2), and with separate counters nothing would add up |
+| **the `istante`** | ⚠ **no rule of this document consumes it**: the delay is measured by the closed loop of `DECISIONI.md` §2.6, and the frame carries back the `id`, not the instant. It stays because it is the only way to know **when the user moved their hand** instead of when the byte arrived, and it serves diagnosis. ⛔ The client writes **true microseconds** and **MUST NOT** make believe in a precision it does not have *(finding **R1.27**)*. ⚠ ⛔ **And the premise of this row was FALSE — corrected on 14 Aug 2026, on a measurement of the loop of the classic mode of phase 4**: it said *«l'orologio monotono è in millisecondi e la sua grana è deliberatamente ingrossata: il client scrive `millisecondi × 1000`»*. `[M]` on **Chrome 151**, cross-origin-isolated page, `performance.now()` has a granularity of **5 µs** — **two hundred times** finer than what was written. ⇒ ⭐ **The rule survives the premise that produced it** (*one writes what one knows*), ⛔ but a client that multiplied milliseconds by a thousand would throw away **199 parts out of 200** of a measurement it already has in hand. ⚠ And the granularity **depends on cross-origin isolation**: where it is missing, it becomes coarse again — so one writes the one one has and **declares it**, instead of fixing one in the document |
 
-> ### ⭐ Il segno della rotella — rilievo **R1.26**, ed è MISURATO
+> ### ⭐ The sign of the wheel — finding **R1.26**, and it is MEASURED
 >
-> ⚠ *Questo riquadro finiva, fino all'11 agosto 2026, con* «**Finché non è misurata, questa riga
-> resta `[?]`**» *— e la misura era stata presa la notte del 10, senza che nessuno la portasse qui
-> (rilievo **R12C.7**, e la sonda lo aveva scritto di suo in* `web/rapporti/S-esiti-sonda.md` *§9,
-> voce S.7). Chi avesse scritto l'iniezione dell'input alla fase 4 leggendo questa riga avrebbe
-> scelto il segno a caso, e il sintomo è* «la rotella va al contrario» *— cioè la forma **E11** che
-> questo riquadro esiste per evitare.*
+> ⚠ *This box ended, until 11 Aug 2026, with* «**Finché non è misurata, questa riga
+> resta `[?]`**» *— and the measurement had been taken on the night of the 10th, without anyone bringing it here
+> (finding **R12C.7**, and the probe had written it on its own in* `web/rapporti/S-esiti-sonda.md` *§9,
+> entry S.7). Whoever had written the input injection at phase 4 by reading this line would have
+> chosen the sign at random, and the symptom is* «la rotella va al contrario» *— that is form **E11** that
+> this box exists to avoid.*
 >
-> **Perché la domanda esisteva.** Questa riga diceva *«positive verso l'alto e verso sinistra. È
-> l'unità di `wl_pointer.axis_value120`, quindi non si converte niente»*. ⛔ **Le due metà citano
-> due convenzioni con segni opposti**: in evdev la rotella è positiva verso l'alto, in `wl_pointer`
-> il valore è positivo nel verso in cui **scorre il contenuto**, cioè verso il basso. E «positive
-> verso sinistra» non corrisponde a nessuna delle due. ⛔ E `libei` **non la scioglie**:
-> `ei_device_scroll_discrete` documenta *«the y scroll distance in fractions or multiples of 120»* —
-> **dichiara la grandezza e non il verso**. La convenzione non sta nell'API, sta nel compositore.
+> **Why the question existed.** This line said *«positive verso l'alto e verso sinistra. È
+> l'unità di `wl_pointer.axis_value120`, quindi non si converte niente»*. ⛔ **The two halves cite
+> two conventions with opposite signs**: in evdev the wheel is positive upwards, in `wl_pointer`
+> the value is positive in the direction in which **the content scrolls**, that is downwards. And «positive
+> verso sinistra» corresponds to neither. ⛔ And `libei` **does not untie it**:
+> `ei_device_scroll_discrete` documents *«the y scroll distance in fractions or multiples of 120»* —
+> **it declares the magnitude and not the direction**. The convention is not in the API, it is in the compositor.
 >
-> ⭐ **LA MISURA — `[M]` 10 agosto 2026, 20:59:27→20:59:57 UTC.**
+> ⭐ **THE MEASUREMENT — `[M]` 10 Aug 2026, 20:59:27→20:59:57 UTC.**
 >
 > | | |
 > |---|---|
-> | **che cosa si è visto** | `ei_device_scroll_discrete(0, **+120**)` → l'evento `wheel` della pagina porta **`deltaY = +114`** (`deltaMode = 0`, pixel) e la pagina **scende** di 114 px, cioè va **verso la fine del documento**. Con **−120**, `deltaY = −114` e la pagina **sale** |
-> | **la scena, per intero** | macchina di prova **192.168.0.2**; sessione GNOME senza monitor da `banchi/00-sessione-gnome.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; la pagina in **Firefox 140.13.0esr** in `--kiosk` a schermo pieno sul monitor virtuale, `dpr` 1 |
-> | **dove si ricontrolla** | `banchi/01-s7-esiti.jsonl` (due giri, `7sd0u7jv` e `oq7jqrdv`), e il rapporto `web/rapporti/S-esiti-sonda.md` §1 |
+> | **what was seen** | `ei_device_scroll_discrete(0, **+120**)` → the page's `wheel` event carries **`deltaY = +114`** (`deltaMode = 0`, pixels) and the page **goes down** by 114 px, that is it goes **towards the end of the document**. With **−120**, `deltaY = −114` and the page **goes up** |
+> | **the scene, in full** | test machine **192.168.0.2**; GNOME session without monitor from `banchi/00-sessione-gnome.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; the page in **Firefox 140.13.0esr** in `--kiosk` full screen on the virtual monitor, `dpr` 1 |
+> | **where to check again** | `banchi/01-s7-esiti.jsonl` (two runs, `7sd0u7jv` and `oq7jqrdv`), and the report `web/rapporti/S-esiti-sonda.md` §1 |
 >
-> ⛔ **La conseguenza, ed è del server**: `deltaY` positivo vuol dire che il contenuto va **verso la
-> fine** del documento, cioè che l'utente ha girato la rotella **in giù**; questa sezione fissa
-> l'altra metà — il client manda `+120` quando l'utente gira **in su**. Le due convenzioni sono
-> **opposte**, quindi **il server DEVE invertire il segno dell'asse verticale** prima di passarlo a
-> `ei_device_scroll_discrete`. Iniettando il valore così com'è, lo schermo remoto scorrerebbe al
-> contrario per **ogni** utente.
+> ⛔ **The consequence, and it is the server's**: positive `deltaY` means that the content goes **towards the
+> end** of the document, that is that the user turned the wheel **down**; this section fixes
+> the other half — the client sends `+120` when the user turns **up**. The two conventions are
+> **opposite**, so **the server MUST invert the sign of the vertical axis** before passing it to
+> `ei_device_scroll_discrete`. Injecting the value as it is, the remote screen would scroll
+> backwards for **every** user.
 >
-> ⭐ **E il confronto è onesto perché i due lati parlano la stessa lingua**: `deltaY` è esattamente
-> la grandezza che il client legge quando l'utente gira la rotella vera. Non si confrontano due
-> mondi: si misura due volte lo stesso strumento.
+> ⭐ **And the comparison is honest because the two sides speak the same language**: `deltaY` is exactly
+> the quantity the client reads when the user turns the real wheel. Two worlds are not
+> compared: the same instrument is measured twice.
 >
-> **I controlli, e quel che ciascuno vale** *(la ricontata dell'11 agosto, `S-esiti-sonda.md` §0-bis,
-> ha separato quel che è nel registro da quel che stava solo a schermo — e qui si riporta la
-> separazione, non solo l'esito)*:
+> **The controls, and what each is worth** *(the recount of 11 Aug, `S-esiti-sonda.md` §0-bis,
+> separated what is in the log from what was only on screen — and here the separation is reported,
+> not only the outcome)*:
 >
-> | Controllo | Esito | `[M]` o `[?]` |
+> | Control | Outcome | `[M]` or `[?]` |
 > |---|---|---|
-> | ⛔ **il segno opposto** — si inietta anche `−120` | ✅ `+120 → +114`, `−120 → −114`: si misura **il segno**, non «che qualcosa si muove» | `[M]`, nel registro |
-> | ⛔ **i due strumenti concordano** — l'evento `wheel` e lo spostamento vero di `scrollY` | ✅ concordano su tutte le prove | `[M]`, nel registro |
-> | ⛔ **`natural-scroll` nei due stati**, col dispositivo rifatto da capo | ✅ **il segno NON cambia**: `+120 → +114` in tutt'e due i giri | ⚠ **metà**: `[M]` che due giri indipendenti danno lo stesso segno; `[?]` **che fossero i due stati** — l'etichetta stava solo nell'uscita a schermo del lanciatore |
-> | **il silenzio** — dieci secondi senza iniettare | ✅ nessuno scatto | ⚠ è un'**assenza** di righe: coerente coi timbri, non provata da loro |
-> | *in più* — `ei_device_scroll_delta` ha lo stesso verso? | ✅ sì | ⛔ **non ritrovabile**: nessuna riga del registro lo porta. Resta cosa vista, non misura consegnata |
+> | ⛔ **the opposite sign** — `−120` is injected too | ✅ `+120 → +114`, `−120 → −114`: **the sign** is measured, not «che qualcosa si muove» | `[M]`, in the log |
+> | ⛔ **the two instruments agree** — the `wheel` event and the real movement of `scrollY` | ✅ they agree on all tests | `[M]`, in the log |
+> | ⛔ **`natural-scroll` in its two states**, with the device rebuilt from scratch | ✅ **the sign does NOT change**: `+120 → +114` in both runs | ⚠ **half**: `[M]` that two independent runs give the same sign; `[?]` **that they were the two states** — the label was only in the launcher's on-screen output |
+> | **silence** — ten seconds without injecting | ✅ no notch | ⚠ it is an **absence** of lines: consistent with the timestamps, not proved by them |
+> | *in addition* — does `ei_device_scroll_delta` have the same direction? | ✅ yes | ⛔ **not traceable**: no log line carries it. It stays a thing seen, not a delivered measurement |
 >
-> ⚠ **Un fatto in più, per chi scriverà l'iniezione**: uno scatto (120 unità) si traduce in **114
-> pixel** su Firefox+Mutter, cioè tre righe. È il fattore di conversione di quella coppia, **non una
-> costante del protocollo**: non si scrive qui e non si mette in nessuna formula.
+> ⚠ **One more fact, for whoever will write the injection**: one notch (120 units) translates into **114
+> pixels** on Firefox+Mutter, that is three lines. It is the conversion factor of that pair, **not a
+> constant of the protocol**: it is not written here and not put in any formula.
 >
-> ⛔ **E che cosa NON è chiuso, perché «non chiuso» e «non misurato» sono due stati diversi.** La
-> misura è su **Mutter**, e questa sezione vincola **cinque** desktop. Se a normalizzare è `libei`,
-> il numero vale ovunque; se normalizza il compositore, la fase di KDE (la 11) troverà un segno diverso su KWin.
-> `[?]` **resta per gli altri quattro**, e il banco è rieseguibile su KWin senza cambiare una riga
-> della pagina (`banchi/01-s7-rotella.sh` + `01-s7-pagina.html`).
+> ⛔ **And what is NOT closed, because «non chiuso» and «non misurato» are two different states.** The
+> measurement is on **Mutter**, and this section binds **five** desktops. If `libei` normalises,
+> the number holds everywhere; if the compositor normalises, the KDE phase (11) will find a different sign on KWin.
+> `[?]` **stays for the other four**, and the bench can be rerun on KWin without changing a line
+> of the page (`banchi/01-s7-rotella.sh` + `01-s7-pagina.html`).
 >
-> ⚠ *Il precedente che questa riga citava era sbagliato, ed è stato corretto la notte del 9 agosto
-> 2026 (rilievo **R4.15**): diceva che «in v1 questa esatta tabella di conversione è costata il
-> banco della rotella». `LEZIONI.md` §2.3 dice un'altra cosa — il banco della rotella cercava
-> `asse dy=-10` mentre il registro scriveva `asse dx=0 dy=-10`: **rosso, col codice corretto**. È
-> una stringa cercata male, non una conversione col segno sbagliato, e citando la lezione sbagliata
-> la si perde nel punto in cui si applicherebbe.*
+> ⚠ *The precedent this line cited was wrong, and it was corrected on the night of 9 Aug
+> 2026 (finding **R4.15**): it said that «in v1 questa esatta tabella di conversione è costata il
+> banco della rotella». `LEZIONI.md` §2.3 says something else — the wheel bench looked for
+> `asse dy=-10` while the log wrote `asse dx=0 dy=-10`: **red, with the correct code**. It is
+> a string searched badly, not a conversion with the wrong sign, and citing the wrong lesson
+> loses it at the point where it would apply.*
 
-⛔ **Le coordinate sono sulla tela, e sono indici di pixel**: `0 ≤ x < tela_larghezza`,
-`0 ≤ y < tela_altezza`. Su una tela 1920×1080 l'angolo in basso a destra è **1919, 1079**. Il client
-conosce la tela (§4.5) e sa dov'è la sua vista dentro di essa: la conversione è sua, **arrotondando
-per difetto**. Il server **NON DEVE** applicare nessuna trasformazione alle coordinate ricevute, e
-**DEVE** rifiutare con `ERRORE_PROTOCOLLO` una coordinata fuori intervallo — salvo il secondo di
-grazia di §7.1, dove satura all'ultimo pixel valido.
+⛔ **The coordinates are on the canvas, and they are pixel indices**: `0 ≤ x < tela_larghezza`,
+`0 ≤ y < tela_altezza`. On a 1920×1080 canvas the bottom-right corner is **1919, 1079**. The client
+knows the canvas (§4.5) and knows where its view is inside it: the conversion is its own, **rounding
+down**. The server **MUST NOT** apply any transformation to the received coordinates, and
+**MUST** refuse with `ERRORE_PROTOCOLLO` an out-of-range coordinate — except for the second of
+grace of §7.1, where it saturates to the last valid pixel.
 
-> ⚠ *L'intervallo mancava, e la riga diceva solo «fuori dalla tela» (rilievo **R1.16**). Una pagina
-> che divide la posizione del mouse per il fattore di scala e arrotonda per eccesso produce 1920 su
-> una tela di 1920: una lettura lo inietta, l'altra **chiude la sessione**. E chiudere la sessione
-> per un arrotondamento è la cosa che `SPECIFICHE.md` §8.3 vieta — «mai staccare».*
+> ⚠ *The range was missing, and the line said only «fuori dalla tela» (finding **R1.16**). A page
+> that divides the mouse position by the scale factor and rounds up produces 1920 on
+> a canvas of 1920: one reading injects it, the other **closes the session**. And closing the session
+> for a rounding is the thing `SPECIFICHE.md` §8.3 forbids — «mai staccare».*
 
-⛔ **`LETTERA` si usa quando si scrive del testo; `POSIZIONE_TASTO` quando è premuto un
-modificatore di comando** — Ctrl, Alt, Super. Maiusc e AltGr **non** contano come comando: servono
-a fare la lettera, e restano nel percorso di `LETTERA` (`SPECIFICHE.md` §7.3).
+⛔ **`LETTERA` is used when text is typed; `POSIZIONE_TASTO` when a command
+modifier is pressed** — Ctrl, Alt, Super. Shift and AltGr **do not** count as command: they serve
+to make the letter, and stay in the path of `LETTERA` (`SPECIFICHE.md` §7.3).
 
-⛔ Se una `LETTERA` non è producibile nella disposizione della sessione, il server **DEVE**
-scriverlo nel registro e **NON DEVE** mandare un carattere diverso né tacere.
+⛔ If a `LETTERA` cannot be produced in the layout of the session, the server **MUST**
+write it in the log and **MUST NOT** send a different character nor keep silent.
 
-⛔ **Al distacco si rilascia tutto.** Quando una connessione finisce — per congedo, per silenzio,
-per errore — il server **DEVE** rilasciare **ogni tasto e ogni pulsante che risultano premuti**.
-⭐ È la trappola 11 di `LEZIONI.md` §4 nella sua forma peggiore: un Ctrl rimasto giù in una sessione
-che sopravvive al client rende il desktop inservibile al riattacco, e nessuno collega le due cose.
+⛔ **On detach everything is released.** When a connection ends — by farewell, by silence,
+by error — the server **MUST** release **every key and every button that is pressed**.
+⭐ It is trap 11 of `LEZIONI.md` §4 in its worst form: a Ctrl left down in a session
+that outlives the client makes the desktop unusable at reattach, and nobody connects the two things.
 
 ### 7.4 Appunti
 
