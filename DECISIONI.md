@@ -6662,6 +6662,32 @@ and on the counter-proposal to keep the project diary in Italian: *«no, remotix
 
 ---
 
+### 10.39 ✅ The licence: free for personal and non-profit use, source readable, no modifications, no redistribution (10 Oct 2026)
+
+> Supersedes the licence part of §10.33 (free for everyone, companies included; draft "Phonestra-style" licence).
+
+User's words: *«remotix può essere scaricato e installato da privati, è vietato l'uso in ambienti commerciali
+(altrimenti le aziende ne trarrebbero un beneficio economico). Il codice sorgente è consultabile, ma non si può
+modificare né redistribuire»*; then *«se la comunità vuole proporre modifiche fa delle richieste su github (ecco il
+perché del repo pubblico)»*; *«scuole ed enti pubblici no (ricadono nel caso di uso commerciale)»*; and, on Claude's
+proposal of the sharpest rule (free only for natural persons, every organisation asks): *«la tua proposta migliora,
+estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi»*.
+
+- **Free**: Personal Use (a natural person, not connected with any work, even from home) and Non-profit Use
+  (non-profit associations and foundations recognised by law — ETS, ONLUS, APS, ASD — and churches, religious
+  communities, orders and institutes, **for their non-profit activities**).
+- **Commercial Use, written licence needed**: companies, professionals and the self-employed for their work, schools
+  and universities, public bodies, healthcare; and the business activities run by non-profit or religious bodies
+  (a school, a clinic, a shop, paid courses). The licence can be granted free of charge, case by case.
+- **Source code**: readable and buildable **unmodified** (to check it); no modifications, no redistribution
+  (not even unmodified: no distro repositories, images, containers). REMOTIX comes only from remotix.nicfio.it.
+- **Contributions**: issues on GitHub only; pull requests are closed (`CONTRIBUTING.md`). The repository is public
+  on purpose (user, 10 Oct).
+- **Why not a standard text**: PolyForm Strict 1.0.0 matched three points out of four, but lets schools and
+  government bodies in for free, and PolyForm texts cannot be altered while keeping their name. ⚠ So the text is
+  ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
+- ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
