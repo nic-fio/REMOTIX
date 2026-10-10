@@ -1,511 +1,511 @@
-# Fase 19 — La codifica sempre sulla scheda: Vulkan per primo
+# Phase 19 — Encoding always on the card: Vulkan first
 
-*Aperta il **1 ottobre 2026** (`DECISIONI.md` §10.27). Requisito dell'utente: su una macchina con una scheda
-capace di codificare, REMOTIX codifica **sulla scheda**, NVIDIA compresa. Oggi su NVIDIA si ripiega sul
-processore (OpenH264).*
+*Opened on **1 Oct 2026** (`DECISIONI.md` §10.27). The user's requirement: on a machine with a card
+capable of encoding, REMOTIX encodes **on the card**, NVIDIA included. Today on NVIDIA it falls back to the
+processor (OpenH264).*
 
-## 1. La strada (decisa il 1 ott, `DECISIONI.md` §10.27)
+## 1. The route (decided on 1 Oct, `DECISIONI.md` §10.27)
 
-Si sceglie **per capacità**, all'avvio, non per marca:
+The choice is made **by capability**, at startup, not by brand:
 
-| ordine | strada | oggi la usano |
+| order | route | who uses it today |
 |---|---|---|
-| 1 | **Vulkan Video** (H.264 per Firefox, HEVC per Chrome) | AMD (RADV, `[M]` Mesa 25.0.7), NVIDIA (driver proprietario) |
-| 2 | **VA-API** (`src/vadiretta.c`, com'è oggi) | Intel integrata e Arc (in Vulkan solo sperimentale, `[M]` Mesa 26.2.3) |
-| — | ⛔ niente processore | senza scheda capace REMOTIX non si installa |
+| 1 | **Vulkan Video** (H.264 for Firefox, HEVC for Chrome) | AMD (RADV, `[M]` Mesa 25.0.7), NVIDIA (proprietary driver) |
+| 2 | **VA-API** (`src/vadiretta.c`, as it is today) | Intel integrated and Arc (in Vulkan only experimental, `[M]` Mesa 26.2.3) |
+| — | ⛔ no processor | without a capable card REMOTIX does not install |
 
-## 2. Il lavoro
-1. La strada Vulkan (codifica H.264 e HEVC, copia zero da dmabuf, conversione dei colori sulla scheda), provata
-   sulla Radeon contro VA-API: flusso dello stesso tipo, qualità e tempi non peggiori.
-   ✅ **modulo e prova** (1 ott, §3): `src/vulkanvideo.c/.h` + `banchi/19-vulkan/`; ✅ **l'innesto** (1 ott,
-   `1ddaa89`): in `codificatore.c` la strada si sceglie per capacità all'apertura di ogni codificatore
-   (`h264_scheda`/`hevc_scheda`: `vulkanvideo_capacita()` per il nodo e il codec, se codifica Vulkan, se no
-   VA-API dicendo perché; `*_vulkan`/`*_vaapi` per nome, senza ripiego), `--codifica scheda|vulkan|vaapi` per
-   forzarla, `--prova-codifica` dice la strada (`strada`, `hevc_strada`, `h264_strada`), il `Makefile` e
-   `src/Contenitore` (`libvulkan-dev`); ✅ `installatore/motore/strade.go` (`3a00878`): la strada «vulkan»
-   attiva con la sonda degli ICD, NVIDIA proprietaria ammessa se ha il suo ICD; ✅ pacchetti, contenitori di
-   costruzione e scatole (`6c2ca0d`). `[M]` 1 ott sul server: Intel → `vaapi`, Radeon → `vulkan`, H.264 e HEVC.
-2. Via il ripiego software (`src/ripiego.c`, `src/colori709.c` se non serve più alla strada dalla memoria,
-   OpenH264, SVT-AV1) dal prodotto, dai pacchetti, dal catalogo e dal motore dell'installatore; il controllo
-   preliminare rifiuta senza una scheda capace, con la ragione.  ⭐ Fatto dalla linea 1 (§3);
-   `src/colori709.c` RESTA: serve alla strada «dalla memoria» di VA-API.
-3. **La rete anti-regressione** (parola dell'utente, 1 ott: *«bisognerà rivedere tutti i 4 DE per evitare che uno
-   di loro smetta di funzionare»*): la suite completa della fase 15 gira **due volte** sulle 4 scatole (GNOME, KDE,
-   XFCE, LXQt), coi browser veri in 4K — **Intel = VA-API** (niente deve rompersi di ciò che oggi è verde) e
-   **Radeon = Vulkan** (la scheda passata alle scatole come nella fase 16, `--scheda amd`). Un desktop è a posto
-   solo se è verde in tutti e due i giri. T10 ridotto al rifiuto pulito nelle VM; le prove complete
-   dell'installatore nei contenitori con la scheda vera.
-⭐ **Le precedenze** (parola dell'utente, 1 ott: *«la precedenza assoluta va alla suite di funzionalità: quelle devono
-restare inalterate. Per la suite delle performance quella dovrà essere rimisurata da capo»*): (a) la suite della
-fase 15 si rilancia **identica** e deve tornare verde sui 4 desktop in tutti e due i giri — ⛔ una prova rossa si
-cura nel **prodotto**, mai ritoccando la prova; l'unica eccezione è una prova che guarda un comportamento cambiato
-apposta dall'utente (oggi: la tela oltre 4096 ridotta invece che rifiutata), e va aggiornata **dichiarandolo** con
-la decisione accanto; (b) la campagna di prestazioni si rifà **da zero**, una volta, a architettura finita, con un
-piano approvato prima dall'utente.
+## 2. The work
+1. The Vulkan route (H.264 and HEVC encoding, zero copy from dmabuf, colour conversion on the card), tested
+   on the Radeon against VA-API: a stream of the same type, quality and times no worse.
+   ✅ **module and test** (1 Oct, §3): `src/vulkanvideo.c/.h` + `banchi/19-vulkan/`; ✅ **the graft** (1 Oct,
+   `1ddaa89`): in `codificatore.c` the route is chosen by capability when each encoder is opened
+   (`h264_scheda`/`hevc_scheda`: `vulkanvideo_capacita()` for the node and the codec, if it encodes Vulkan, otherwise
+   VA-API saying why; `*_vulkan`/`*_vaapi` by name, with no fallback), `--codifica scheda|vulkan|vaapi` to
+   force it, `--prova-codifica` states the route (`strada`, `hevc_strada`, `h264_strada`), the `Makefile` and
+   `src/Contenitore` (`libvulkan-dev`); ✅ `installatore/motore/strade.go` (`3a00878`): the «vulkan» route
+   active with the ICD probe, proprietary NVIDIA admitted if it has its ICD; ✅ packages, build
+   containers and boxes (`6c2ca0d`). `[M]` 1 Oct on the server: Intel → `vaapi`, Radeon → `vulkan`, H.264 and HEVC.
+2. Out with the software fallback (`src/ripiego.c`, `src/colori709.c` if it is no longer needed by the from-memory route,
+   OpenH264, SVT-AV1) from the product, the packages, the catalogue and the installer's engine; the preliminary
+   check refuses without a capable card, with the reason.  ⭐ Done by line 1 (§3);
+   `src/colori709.c` STAYS: it serves VA-API's «from memory» route.
+3. **The anti-regression net** (the user's words, 1 Oct: *«bisognerà rivedere tutti i 4 DE per evitare che uno
+   di loro smetta di funzionare»*): the full phase-15 suite runs **twice** on the 4 boxes (GNOME, KDE,
+   XFCE, LXQt), with the real browsers in 4K — **Intel = VA-API** (nothing that is green today must break) and
+   **Radeon = Vulkan** (the card passed to the boxes as in phase 16, `--scheda amd`). A desktop is fine
+   only if it is green in both rounds. T10 reduced to the clean refusal in the VMs; the full installer
+   tests in the containers with the real card.
+⭐ **The priorities** (the user's words, 1 Oct: *«la precedenza assoluta va alla suite di funzionalità: quelle devono
+restare inalterate. Per la suite delle performance quella dovrà essere rimisurata da capo»*): (a) the phase-15
+suite is relaunched **identical** and must come back green on the 4 desktops in both rounds — ⛔ a red test is
+cured in the **product**, never by retouching the test; the only exception is a test that looks at a behaviour changed
+on purpose by the user (today: the canvas above 4096 reduced instead of refused), and it is updated **declaring it**, with
+the decision next to it; (b) the performance campaign is redone **from zero**, once, with the architecture finished, with a
+plan approved beforehand by the user.
 
-⭐ **Android** (parola dell'utente, 1 ott: *«ricordiamoci poi il discorso Android»*): nei due giri della suite entra
-anche **Chrome su Android** (l'emulatore sul server, `/media/REMOTIX/android`, come da memoria del progetto: Chrome,
-mai Firefox Android, §7.18), almeno le prove che toccano il client: collegamento, video H.264 e HEVC, tastiera,
-tocco, appunti, rientro.
+⭐ **Android** (the user's words, 1 Oct: *«ricordiamoci poi il discorso Android»*): the two rounds of the suite also include
+**Chrome on Android** (the emulator on the server, `/media/REMOTIX/android`, as per the project memory: Chrome,
+never Firefox Android, §7.18), at least the tests that touch the client: connection, H.264 and HEVC video, keyboard,
+touch, clipboard, re-entry.
 
-4. ✅ **NVIDIA a noleggio** (parola dell'utente, 1 ott: *«al momento opportuno noleggerò un server nvidia per 1 o 2
-   giorni»*). ⇒ Prima del noleggio si prepara un **banco pronto** (`banchi/19-nvidia/`): su una macchina appena
-   accesa installa desktop, REMOTIX e la suite, e la fa girare senza improvvisare. Cosa noleggiare: scheda NVIDIA
-   dalla serie RTX 20 / T4 in su (L4, A10, RTX vanno bene), Ubuntu o Debian, accesso root via ssh, driver
-   NVIDIA ≥ 550. Account e carta sono dell'utente.
-   ✅ **Il banco è pronto** (1 ott, registro §3): `banchi/19-nvidia/` — `LEGGIMI.md` per l'utente,
-   `19-nvidia.sh prepara` (prima, sul portatile) e `19-nvidia.sh tutto INDIRIZZO` (il giorno del
-   noleggio), `pulisci INDIRIZZO` alla fine. Sistema: Debian 13 o Ubuntu 26.04 (⛔ 22.04/24.04 no);
-   ⛔ niente A100/H100/H200 (senza codificatore video).
-   (vecchia voce) ❓ NVIDIA: serve una scheda vera (nel server, o macchina in affitto). La strada c'è (Vulkan Video, la
-   stessa della Radeon): da provare `remotix --prova-codifica` col driver proprietario e il suo ICD.
-5. ❓ Dopo l'innesto: le **scatole** `rete11-*` vanno ricostruite (`libvulkan1` + `mesa-vulkan-drivers` nelle
-   ricette, `6c2ca0d`) prima della rete del punto 3, o la Radeon nelle scatole resta a VA-API (e il registro lo
-   direbbe: *«Vulkan Video NON è adatta … ⇒ si prova VA-API»*).
-   ✅ **Fatto** (1 ott, registro §3): le 4 scatole ricostruite dalle ricette di `fase-19`, con l'ICD RADV dentro; giro Intel VERDE, giro Radeon in Vulkan (col difetto qui sotto).
-6. ✅ **Chiuso il 3 ott 2026 — `remotix.pam`** (`cb6061e`: nelle scatole il file del prodotto, md5 `467ee6bb`, e `utenti-negati`=root come `provisiona.sh`; rete completa `pam-d3-intel` **702 PASS**, 2 BLOCKED = F-030 in parallelo; `banchi/11-scatole/11-pam-root-negato.py`: root respinto dall'elenco e nictest dentro, 4/4). Era: **Punto aperto — `remotix.pam`**: nelle scatole `rete11-*` il file PAM è restato quello della fase 18
+4. ✅ **NVIDIA on rent** (the user's words, 1 Oct: *«al momento opportuno noleggerò un server nvidia per 1 o 2
+   giorni»*). ⇒ Before the rental a **ready bench** is prepared (`banchi/19-nvidia/`): on a freshly
+   started machine it installs desktop, REMOTIX and the suite, and runs it without improvising. What to rent: an NVIDIA card
+   from the RTX 20 / T4 series up (L4, A10, RTX are fine), Ubuntu or Debian, root access via ssh, NVIDIA driver
+   ≥ 550. Account and card are the user's.
+   ✅ **The bench is ready** (1 Oct, log §3): `banchi/19-nvidia/` — `LEGGIMI.md` for the user,
+   `19-nvidia.sh prepara` (before, on the laptop) and `19-nvidia.sh tutto INDIRIZZO` (on the day of the
+   rental), `pulisci INDIRIZZO` at the end. System: Debian 13 or Ubuntu 26.04 (⛔ 22.04/24.04 no);
+   ⛔ no A100/H100/H200 (no video encoder).
+   (old entry) ❓ NVIDIA: a real card is needed (in the server, or a rented machine). The route exists (Vulkan Video, the
+   same as the Radeon's): `remotix --prova-codifica` to be tested with the proprietary driver and its ICD.
+5. ❓ After the graft: the `rete11-*` **boxes** must be rebuilt (`libvulkan1` + `mesa-vulkan-drivers` in the
+   recipes, `6c2ca0d`) before the net of point 3, or the Radeon in the boxes stays on VA-API (and the log would
+   say so: *«Vulkan Video NON è adatta … ⇒ si prova VA-API»*).
+   ✅ **Done** (1 Oct, log §3): the 4 boxes rebuilt from the `fase-19` recipes, with the RADV ICD inside; Intel round GREEN, Radeon round in Vulkan (with the defect below).
+6. ✅ **Closed on 3 Oct 2026 — `remotix.pam`** (`cb6061e`: in the boxes the product's file, md5 `467ee6bb`, and `utenti-negati`=root like `provisiona.sh`; full net `pam-d3-intel` **702 PASS**, 2 BLOCKED = F-030 in parallel; `banchi/11-scatole/11-pam-root-negato.py`: root rejected by the list and nictest in, 4/4). It was: **Open point — `remotix.pam`**: in the `rete11-*` boxes the PAM file remained the phase-18 one
    (`rete11/prodotto/remotix.pam`, md5 `d1734958`, `@include common-session-noninteractive` + `pam_systemd`),
-   NON quello di `src/remotix.pam` della fase 17/D3 (sshd, `pam_listfile` su `/etc/remotix/utenti-negati`, root
-   escluso). La suite è stata rilanciata **identica** alla fase 18 (regola della precedenza), quindi non è stato
-   toccato; ma allinearlo (e mettere il file `/etc/remotix/utenti-negati` nelle scatole) è una decisione a sé —
-   da fare in un giro dedicato, non dentro la rete anti-regressione.
-7. ⛔ **Il difetto fase 19 da decidere** (registro §3): la codifica **Vulkan** sulla RX 6800 va in GPU hang
-   (`VK_ERROR_DEVICE_LOST` ⇒ amdgpu page fault ⇒ ring gfx/vcn_enc timeout ⇒ MODE1 reset, VRAM persa) al **cambio
-   di tela** (`F-018`/`P-C`, 4K→2560→4K); VA-API sullo stesso resize è pulita. Il reset azzera la scheda condivisa
-   e fa cadere a cascata le sessioni di tutte le scatole in parallelo. La cura non è minima né ovvia (confine col
-   driver RADV/amdgpu): **la sceglie l'utente** prima di rifare il giro Radeon.
+   NOT the one of `src/remotix.pam` from phase 17/D3 (sshd, `pam_listfile` on `/etc/remotix/utenti-negati`, root
+   excluded). The suite was relaunched **identical** to phase 18 (the priority rule), so it was not
+   touched; but aligning it (and putting the file `/etc/remotix/utenti-negati` in the boxes) is a decision of its own —
+   to be done in a dedicated round, not inside the anti-regression net.
+7. ⛔ **The phase-19 defect to be decided** (log §3): **Vulkan** encoding on the RX 6800 goes into a GPU hang
+   (`VK_ERROR_DEVICE_LOST` ⇒ amdgpu page fault ⇒ ring gfx/vcn_enc timeout ⇒ MODE1 reset, VRAM lost) on the **canvas
+   change** (`F-018`/`P-C`, 4K→2560→4K); VA-API on the same resize is clean. The reset wipes the shared card
+   and brings down in cascade the sessions of all the boxes in parallel. The cure is neither minimal nor obvious (the border with
+   the RADV/amdgpu driver): **the user chooses it** before redoing the Radeon round.
 
-## 3. Il registro delle modifiche — per il manuale tecnico
+## 3. The change log — for the technical manual
 
-| commit | che cosa | perché | misura | installata |
+| commit | what | why | measure | installed |
 |---|---|---|---|---|
-| `9162e76` | **via il ripiego su CPU dal prodotto**: tolti `src/ripiego.c/.h` (OpenH264 via dlopen, SVT-AV1), il confine `sw_*` di `codificatore.c`, `codificatore_ripiego_software/_software_pronto/_software_rimedio`, `CRF_SOFTWARE`, `--software` di `--prova-codifica`, AV1 dal rilievo. `codificatore_di()` apre solo `h264_vaapi`/`hevc_vaapi`; un altro nome si rifiuta con la ragione. `--prova-codifica`: esito `hardware`\|`nessuno`, niente `rimedio`, codici **0** scheda · **1** si apre ma non esce · **2** uso · **3** nessuna scheda. All'avvio il server lo dichiara (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*, con la ragione per codec) e l'`ECCOMI` non offre codec. Makefile: via openh264/SvtAv1Enc da CFLAGS, LIBS, `MINIMI` e intestazioni controllate (`-ldl` resta: libselinux in `figlio.c`). `colori709.c` RESTA (strada «dalla memoria»). Contenitori di costruzione e scatole senza le due librerie; `costruisci-tutti.sh` rifiuta un `ldd` che le nomina. Banchi 18-*: compilano senza `src/ripiego.c` (18-software lo prende da git `6bacca7`, come storia) | `DECISIONI.md` §10.27: *«niente cpu senza scheda»*, *«eliminare la questione della codifica su cpu senza scheda»*, indipendenza da ffmpeg e altri pezzi per le licenze | `[M]` 1 ott, sul server (`/media/REMOTIX/src/f19-cpu`): `--prova-codifica` Intel renderD128 H.264 e HEVC = `hardware`, codice 0; Radeon renderD129 H.264 e HEVC = `hardware`, codice 0; `--nodo /dev/dri/renderD199` = `nessuno`, codice **3**; `--software` = uso, codice 2. Server su 7633 col driver VA nascosto (`LIBVA_DRIVERS_PATH` vuota): riga ⛔⛔ all'avvio, `offerti` vuoto; con la scheda `«hevc,h264»`. `ldd` del binario (contenitore) senza openh264/SvtAv1 | no |
-| `35e3b44` | **via OpenH264 e SVT-AV1 dai pacchetti**: `debian/control` (Build-Depends, Recommends `libopenh264-8 \| libopenh264-cisco8`), `remotix.spec` (BuildRequires, `Recommends: openh264` su Fedora e Alma), `PKGBUILD` (depends `openh264`, `svt-av1`), il testo delle licenze | come sopra | — (si costruiscono col rilascio) | no |
-| `2246cbc` | **via OpenH264 e SVT-AV1 dall'installatore, e il controllo preliminare che rifiuta senza scheda**: catalogo 2026.10.01.9 (seq. 9) senza il deposito `openh264`, `software_di_serie`, `pacchetti_software`; motore senza il tipo di deposito «openh264» (`fedora-cisco-openh264`, `epel-cisco-openh264`, `repo-openh264`), `deposito.resta_epel`, i fatti `h264.software`/`h264.openh264`, le condizioni C-RIPIEGO; `consenso.deposito.openh264` ritirato (un file vecchio finisce fra le «superflue»); RX-H264-005 e RX-GPU-001 ritirati, RX-FUORI-005 riscritto senza ripiego. ⭐ `motore/strade.go`: la tabella `StradeCodifica` (vulkan dichiarata e non attiva, vaapi attiva) e `VerdettoScheda` — per aggiungere Vulkan basta `Attiva: true` con la sua `Rileva`/`Schede`. Codici nuovi BLOCCANTI: **RX-GPU-003** nessuna scheda, **RX-GPU-004** solo NVIDIA col driver proprietario (arriva con la strada Vulkan), **RX-GPU-005** nessuna Intel/AMD (virtio, VMware, nouveau), **RX-GPU-006** Intel/AMD che su questa distro non codifica senza driver da aggiungere (oggi AMD su Alma). La scheda che si completa con un deposito di terzi resta un avviso col consenso (D5). La prova dopo l'installazione: uscita 3 = FAIL. EPEL su Alma RESTA (KDE, RPM Fusion EL): esce solo la parte SVT-AV1 | `DECISIONI.md` §10.27 | `[M]` `installatore/costruisci.sh prove`: **205 PASS**, 0 FAIL, `go vet`/`gofmt` puliti; controprova: col verdetto che non rifiuta mai, tre prove diventano rosse. ⚠ Non rimisurato se `intel-media-driver` di RPM Fusion EL tiri dipendenze da EPEL. ⚠ Una macchina installata col motore della fase 18 col passo «openh264» nel registro non si disinstalla col motore nuovo (solo scatole di laboratorio) | no |
-| `49cce49` | **Linea 2: il codificatore Vulkan Video** — `src/vulkanvideo.c/.h` (modulo autonomo, non ancora innestato in `codificatore.c`): scoperta delle capacità per nodo DRM (`vulkanvideo_capacita`: scheda scelta con `VK_EXT_physical_device_drm`, non «la prima»), sessione H.264 High / HEVC Main / Main 10 con `VK_KHR_video_encode_h264/h265`, parameter set `StdVideo*` con gli stessi valori di `vadiretta.c` (niente B, un riferimento, BT.709 limitato nel VUI, livello calcolato come ffmpeg o imposto), SPS/PPS/VPS presi dal driver (`vkGetEncodedVideoSessionParametersKHR`, un set per chiamata) e messi in Annex-B davanti a ogni chiave, CQP e VBR col tetto (media = punto, massimo = filo, serbatoio 40 ms, QP chiesto = QP minimo del regolatore), chiave a richiesta, cambio di qualità a caldo, cambio di tela (riapertura), `ULTRA_LOW_LATENCY` chiesto nel profilo; ingresso copia zero da DMA-BUF (`VK_EXT_external_memory_dma_buf` + `VK_EXT_image_drm_format_modifier`, cache per generazione come `codificatore.c`) e dalla memoria (BGRx/RGBx → buffer di scala → immagine RGB); conversione RGB→NV12/P010 con lo shader di calcolo `src/vulkanvideo_rgb_nv12.comp` (SPIR-V incorporato in `vulkanvideo_rgb_nv12_spv.h`, generato da `banchi/19-vulkan/19-shader.sh`), che riscrive `colori709.c` in interi: stessi coefficienti, stesso filtro di croma 1-3-3-1; scrive direttamente nei piani (viste `R8`/`R8G8` sull'immagine NV12 con `MUTABLE_FORMAT`+`EXTENDED_USAGE`) o, dove la scheda non lo permette, in due immagini e poi `vkCmdCopyImage` nei piani. Banco `banchi/19-vulkan/` (`19-confronto.c/.sh`, `19-tabella.py`, `19-decodifica-chrome.sh`): la scena del banco 18, Vulkan contro VA-API (il prodotto) sulla stessa Radeon | `DECISIONI.md` §10.27: Vulkan per primo, scelto per capacità | `[M]` 1 ott 2026, server, Radeon RX 6800 (RADV, Mesa 25.0.7, devroot Debian trixie), 120 fotogrammi a 60 fps di desktop finto, QP 26, 42 prove, **tutte 120/120 decodificate** (ffmpeg come strumento). **Qualità**: dalla memoria lo shader dà gli STESSI piani di `colori709.c` — PSNR identico alla cifra (H.264 1080p 39,619 dB tutt'e due; 4K 42,646; HEVC 44,54/44,55; HEVC10 44,97/44,97) e in Chrome **impronte dei pixel UGUALI** (1080p e 4K H.264). Dalla scheda (copia zero) Vulkan converte meglio della VPP di radeonsi: H.264 1080p 39,62 dB contro 38,55 (u: 39,5 contro 36,9), 4K 42,65 contro 39,02; HEVC 1080p 44,55 contro 42,15, 4K 46,93 contro 40,57 — con byte +11 % a 1080p H.264 (qualità più alta, stessi byte della strada dalla memoria) e −6 % in HEVC 4K. **Tempi** (mediana per fotogramma, copia zero): codifica H.264 1080p 2,96 ms Vulkan contro 3,35 VA-API, 4K 9,74 contro 11,25; HEVC 1080p 3,06 contro 3,38, 4K 9,79 contro 11,61; HEVC10 4K 9,77 contro 9,82; conversione Vulkan 0,55-0,62 ms a 1080p e 1,7-1,8 ms a 4K (con l'attesa della fence dentro; la VPP di VA-API conta 0 perché asincrona e il suo costo sta nella codifica); dalla memoria il caricamento+conversione Vulkan 0,84-0,94 ms a 1080p (VA-API 1,8-2,2 in CPU), 3,1 ms a 4K (VA-API 6,5-8,6). La strada della copia (forzata col `REMOTIX_VULKAN_CONVERSIONE=copia` del banco) dà **byte identici** alla diretta (4/4, `cmp`) e costa +0,06 ms a 1080p, +0,2 ms a 4K. **Profilo/livello/colore** (ffprobe) uguali a VA-API in tutte le prove: High L4.2/L5.2, Main L4.0/L5.0, Main 10, yuv420p, tv, bt709×3. **Chiave a richiesta** (fotogramma 40: 583 KB, poi delta), **tela nuova** (60: riapertura e chiave 1280x720), **qualità a caldo** (60: QP 26→36, PSNR 39,6→33,4 H.264), **tetto** 20 Mbit/s (non morde: la scena costa 8,5 Mbit/s; Vulkan resta a QP 26 = 2,14 MB, il QVBR di radeonsi scende lo stesso a 1,31 MB e 35,9 dB) e **tetto 2 Mbit/s** (morde: Vulkan 640 KB con la chiave ridotta a 307 KB, VA-API 784 KB; HEVC Vulkan 619 KB a 37,0 dB contro 760 KB a 32,4). **Chrome 154 vero, WebCodecs** (`19-decodifica-chrome.sh`): 8/8 prove H.264 PASS (1080p, 4K, chiave, tela, tetto, tetto2: 120/120); HEVC NON PROVATO (Chrome headless senza GPU non configura `hev1`, con e senza i flag VA-API/Vulkan, come nella fase 18). **Quel che il driver RADV 25.0.7 non sa fare / fa a modo suo**: `transform_8x8` NO (`stdSyntaxFlags` 0x5880: CABAC sì, 8x8 no — scritto a prescindere il flusso non si decodificava, «error while decoding MB 0 0»); `maxLevelIdc` non dichiarato (0): la struttura del livello nella sessione si omette; nell'HEVC scrive `general_level_idc` nell'alfabeto di H.264 (40 per 4.0, 31 per 3.1): il modulo corregge il byte nel VPS e nell'SPS e lo dichiara (`livello_corretto_nei_byte`); `hasOverrides` sempre vero sui parameter set; `imageUsageFlags` delle proprietà video riporta solo l'uso chiesto (la scelta diretta/copia si fa con `vkGetPhysicalDeviceImageFormatProperties2`); il layer di validazione segna le viste `STORAGE` sui piani NV12 (VUID 02275) ma il risultato è bit-identico alla copia: falso positivo da chiarire. Capacità Radeon: H.264 fino a 4096x4096, HEVC 8192x4352, RC CQP/CBR/VBR, QP 0-51, 2 livelli di qualità, granularità 16x16 (H.264) e 64x16 (HEVC). **Intel UHD 770 (ANV, Mesa 25.0.7)**: niente `VK_KHR_video_encode_queue` neanche con `ANV_DEBUG=video-encode` — l'esperimento NON si è potuto fare con il Mesa dell'ospite (con 26.2.3 di Arch c'era, §10.27); su Intel la strada resta VA-API | no (modulo e banco; nessun file del prodotto toccato) |
-| `7f0e8f6` | **la tela al massimo 4096×2304** (era 7680×4320): `RCP_TELA_L/A_MASSIMA` in `rcp.h` (e il gemello `banchi/rcp/`), `TELA_L/A_MASSIMA` in `pagina.html`, `RCP.md` §4.5, `SPECIFICHE.md` §6.1-bis. ⭐ **Sopra il massimo non si rifiuta: si riduce** — il lato che sfora va al massimo, l'altro resta (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), con la riga «⚠ RIPIEGO DICHIARATO (§4.5)» nel registro, in `ATTACCA` (prima era `ERRORE_PROTOCOLLO`) e in `ADATTA_TELA` (prima `TELA(MISURA_FUORI_LIMITI)`, ora `TELA(ADATTATA)` alla misura ridotta). Sotto il minimo (320×240) e il dispari restano rifiutati come prima. La pagina chiede già lei al più il massimo, con la stessa regola (`tela_da_chiedere()`); il massimo è una costante del protocollo, non un campo dell'`ECCOMI` (il filo non cambia). Il controllo della misura massima del driver in `codificatore.c` RESTA: è del driver, non del protocollo | decisione dell'utente, 1 ott: *«4096 max di larghezza va benissimo, non ho mai preteso di più»* — H.264 su Intel (`EncSliceLP`) si ferma a 4096 px per lato e Firefox su Linux riceve solo H.264; 2304 = 16:9 a 4096 e `MaxFS` dei livelli H.264 5.1/5.2 (36 864 macroblocchi) | `[M]` 1 ott, portatile: `rcp_misura_ammessa()` diretta — 3840×2160 e 4096×2304 uguali, 5120×2880 e 7680×4320 → 4096×2304, 5120×1440 → 4096×1440, 319×240 rifiutata; `tela_da_chiedere()` della pagina (node) dà gli stessi numeri; costruzione nel contenitore e sul server (`enter.sh`) pulita. ⚠ **NON provato un attacco vero** (cliente Python o Chrome) sul prodotto acceso: le parole d'ordine di `prova`/`prova2` sono cambiate il 29 set e quella in `credenziali-banchi` è respinta da PAM. ⚠ Banchi vecchi che pretendono il rifiuto sopra 7680 (`04-b31` caso 5, `06-b36` casi 14-15, `06-b35`, `06-b38`, `06-b40`, `01-b4`) non aggiornati | no |
-| `1ddaa89` | **L'INNESTO: la strada della scheda si sceglie per capacità** — `codificatore.c`: `apri_dispositivo()` chiede `vulkanvideo_capacita()` per il nodo e il codec (profilo H.264 High / HEVC Main / Main 10, tela fra min e max della scheda, il modo di bitrate che il tetto chiede — VBR col tetto, CQP senza —, il QP nell'intervallo dichiarato, ingresso RGB: il banco in yuv420p10le resta a VA-API); se adatta apre `vulkanvideo_apri_dispositivo` e la strada è `vulkan` (copia zero dal DMA-BUF e conversione nello shader; dalla memoria i BGRx/RGBx salgono e li converte lo shader, niente appoggio NV12), se no scrive perché e va a VA-API. ⭐ **Sei nomi** (`codificatore.h`): `h264_scheda`/`hevc_scheda` per capacità (il prodotto), `*_vulkan` e `*_vaapi` per nome — chiesta per nome non si ripiega sull'altra. `apri_scheda_vulkan()` con gli stessi numeri di VA-API (tetto in tre numeri, serbatoio ≤ 50 ms, livello §4.3, chiavi su richiesta); `chiudi/apri_contesto` per strada; `codifica_vulkan()` è l'UNICO `if` fra le due strade dentro `comprimi_comune()`, prima del confine dei byte: tutto a valle (16 MiB, scala e risalita, tetto, `forma_va_bene`, confessione dall'SPS, cornice D-023, chiave su richiesta, ridimensiona) resta uno. Confessione: `strada` («vaapi»/«vulkan»), `componente` = il nome aperto, `fornitore_va` = scheda + driver Vulkan, `modo_bitrate` 3 = VBR, `misura_massima`/`modi_bitrate` dalle capacità Vulkan (entrypoint: non esiste in Vulkan, `bassa_potenza_verificata` falso). `codificatore_strada()`. `figlio.c`: `componente_di()` da `--codifica scheda|vulkan|vaapi` (server, passata al figlio come le cure della fase 9; `--prova-codifica`); il JSON porta `strada`, `hevc_strada`, `h264_strada`, i campi di ieri invariati (`codificatore` è `h264_vulkan`/`h264_vaapi`). `Makefile`: `vulkanvideo.c`, `pkg-config vulkan` (`-lvulkan`), MINIMI `vulkan:1.3.274`, `vulkan/vulkan.h`, `-Wno-missing-field-initializers` solo su `vulkanvideo.o`; `src/Contenitore`: `libvulkan-dev` | `DECISIONI.md` §10.27: Vulkan prima, per capacità, niente processore | `[M]` 1 ott 2026, server (`/media/REMOTIX/src/f19-innesto/albero`, binario costruito in `enter.sh`): `--prova-codifica` **Intel renderD128**: H.264 e HEVC `hardware` via `h264_vaapi`/`hevc_vaapi` (strada `vaapi`, EncSliceLP), forzata `--codifica vulkan` → `nessuno`, codice **3** (*«nessun dispositivo Vulkan con la coda di codifica … Intel(R) UHD Graphics 770»*); **Radeon renderD129**: H.264 e HEVC `hardware` via `h264_vulkan`/`hevc_vulkan` (strada `vulkan`, *«AMD Radeon RX 6800 (RADV NAVI21) · radv Mesa 25.0.7»*), forzata `--codifica vaapi` → `vaapi` (EncSlice piena); 256×256 un fotogramma H.264: 1221 byte in Vulkan contro 1386 in VA-API, HEVC 1435 contro 1420; `offerti` «hevc,h264» su tutt'e due; nodo inesistente → codice 3. ⚠ **Stringa HEVC**: Vulkan dichiara `hev1.1.2.L60.B0`, VA-API `hev1.1.6.L60.B0` — il byte di compatibilità del profilo lo scrive il driver (RADV: solo Main; iHD/radeonsi: Main + Main 10): da guardare in Chrome (il banco 19 del 1 ott lo decodifica con ffmpeg, Chrome HEVC non provato). Costruzione nel contenitore pulita (nessun avviso nei tre file toccati; `ldd` porta `libvulkan.so.1`) | no |
-| `3a00878` | **installatore: la strada «vulkan» attiva** — `strade.go`: `rilevaVulkan` legge gli ICD del loader (`/usr/share/vulkan/icd.d`, `/etc/vulkan/icd.d`; `radeon_icd.x86_64.json` → `radeon`, `nvidia_icd.json` → `nvidia`, `lvp`, `intel`…) in `codifica.vulkan.icd` («nessuno» se vuoto) e `codifica.vulkan=attiva`; `schedeVulkan` = AMD con l'ICD `radeon`, NVIDIA col driver proprietario e l'ICD `nvidia` (⛔ Intel no: ANV sperimentale, resta a VA-API); `SchedaSullaStrada` e la condizione C-HARDWARE della NVIDIA solo SENZA ICD (`compatibilita.go`). Codici: **RX-GPU-004** = NVIDIA proprietaria SENZA il driver Vulkan (rimedio: il driver completo con l'ICD, o una Intel/AMD accanto), RX-GPU-002/005/006 riscritti con le due strade, it/en; `operazione.go` legge `strada` da `--prova-codifica` (un binario che non lo scrive passa lo stesso). ⚠ Il controllo preliminare NON lancia programmi né apre la scheda (R1): la prova vera resta 7a. `[?]` La versione minima di Mesa con la codifica RADV di serie non è misurata (`[M]` 25.0.7 sì): su una Mesa più vecchia il preliminare direbbe sì e 7a no | `DECISIONI.md` §10.27 | `[M]` 1 ott 2026: `installatore/costruisci.sh prove` gofmt/vet puliti, `go test` ok; nuovi: `TestStradaVulkan` (NVIDIA con ICD → passa senza C-HARDWARE; senza ICD → RX-GPU-004; solo `lvp` → RX-GPU-004; AMD con RADV e nessun driver VA → passa; Intel con ANV → VA-API), la certificazione con `h264_vulkan` VERDE, le strade «vulkan,vaapi» | no |
-| `6c2ca0d` | **pacchetti, contenitori di costruzione, scatole**: `src/costruzione/Contenitore.*` con il loader+intestazioni per distro; `.deb` Build-Depends `libvulkan-dev (>= 1.3.274)` e Recommends `mesa-vulkan-drivers`; `.rpm` BuildRequires `pkgconfig(vulkan) >= 1.3.274`, Recommends `mesa-vulkan-drivers`; Arch depends `vulkan-icd-loader`, makedepends `vulkan-headers`, optdepends `vulkan-radeon`/`nvidia-utils` (⚠ il virtuale `vulkan-driver` pacman lo chiederebbe: il driver della scheda lo mette il motore, T4 — da aggiungere al catalogo); scatole `rete11-*` (4 ricette): `libvulkan1` + `mesa-vulkan-drivers` (RADV per la Radeon) | la rete «Radeon = Vulkan» (§2.3) senza l'ICD misurerebbe VA-API | `[M]` 1 ott 2026 nelle immagini podman: Debian 13 `libvulkan-dev` 1.4.309, Ubuntu 26.04 1.4.341, Fedora 44 `vulkan-loader-devel` 1.4.341, Alma 10 1.4.328 (AppStream, non CRB), Leap 16 `vulkan-devel` 1.4.309, Tumbleweed 1.4.357, Arch `vulkan-headers`/`vulkan-icd-loader` 1.4.357, `vulkan-radeon` 26.2.3; `mesa-vulkan-drivers` Debian 25.0.7. ⚠ Le immagini e le scatole NON sono state ricostruite | no |
-| `ccec594` | **i banchi vecchi della tela alla regola nuova** (sopra 4096×2304 si riduce): `04-b31` caso 5, `06-b36` casi 14-15 e le mutazioni H11/H12 (ancore della `rcp.c` di oggi), `04-b31-certifica` G9, `06-b35` giro «limiti», `06-b38` giro 3 e la mutazione dell'arbitro, `06-b40` specchio e casi 3/8, `01-b4` arbitro (ATTACCA: minimo e parità, il massimo è della tela concessa) e registrazioni 38/39 a 4096×2304 | la riga ⚠ di `7f0e8f6` | `[M]` 1 ott 2026, contenitore: `04-b31` caso 5 OK; `06-b36` 14 e 15 OK; `01-b4-lancia.py` **57 su 57**. ⛔ **Restano rossi, ed erano rossi prima**: `04-b31` casi **9** («il palco fa di testa sua») e **18** («due sessioni, un palco solo»), `06-b36` casi **12** («il palco cambia tre volte da sé») e **24** («la data zero del ripiego senza orologio»); per quei rossi i due `*-certifica.sh` si fermano a «ROSSO sul codice intatto» e le mutazioni non girano (le ancore nuove verificate a mano in `rcp.c`). ⚠ `06-b35`, `06-b38`, `06-b40` non rigirati (vogliono il server acceso e il cliente di prova) | no |
-| `(questo commit)` | **i banchi sull'albero integrato e i documenti**: `banchi/19-vulkan/19-confronto.{c,sh}` + `19-tabella.py` col terzo motore **`scheda`** (il prodotto integrato: `h264_scheda`/`hevc_scheda`, la scelta per capacità dentro `codificatore.c`, con tutte le cure a valle dei byte; il JSON porta `strada_scheda`); `banchi/18-scheda/18-confronto.sh` compila il codificatore integrato (`vulkanvideo.c`, `-lvulkan`) e misura VA-API per nome; `SPECIFICHE.md` (RX-GPU-004/005/006, la strada innestata); questo registro | la rete anti-regressione di §2.3 parte da qui | `[M]` 1 ott 2026, server, albero `/media/REMOTIX/src/f19-innesto/albero` (binario `src/remotix` costruito in `enter.sh`, commit `1ddaa89`+). **19-confronto sulla Radeon** (`tmp/confronto19`, 62 prove, tutte codice 0 e 120/120 decodificate): il prodotto integrato («scheda») dà **gli stessi byte e lo stesso PSNR del modulo** Vulkan da solo, prova per prova (es. H.264 1080p copia zero 2 124 327 byte, 39,619 dB; 4K 1 957 479, 42,646; HEVC 1080p 1 495 205, 44,546; HEVC10 4K 2 828 429, 47,480) — e quindi contro VA-API sulla stessa scheda vale quel che la linea 2 aveva misurato: copia zero H.264 1080p 39,62 dB contro 38,55, 4K 42,65 contro 39,02, HEVC 1080p 44,55 contro 42,15, 4K 46,93 contro 40,57, HEVC10 4K 47,48 contro 44,72; mediana della codifica H.264 1080p **2,99 ms** (VA-API 3,68), 4K 9,66 (11,24), HEVC 1080p 2,96 (3,80), 4K 9,88 (11,51); conversione nello shader 0,44-0,69 ms a 1080p, 1,77-1,86 a 4K, dalla memoria caricamento+conversione 0,84-0,96 ms (VA-API in CPU 1,7-2,2) e 3,05-3,23 a 4K (6,6-8,6). Chiave a richiesta, tela nuova, tetto 20 e tetto 2 Mbit/s: tutti verdi e identici al modulo. Le differenze da VA-API già note (byte +11 % a 1080p H.264 copia zero con PSNR +1 dB; il tetto 20 non morde in Vulkan, +61 %/+33 % di byte con PSNR più alto; tetto 2 H.264 30,18 → 28,18 dB con −18 % di byte, HEVC 32,36 → 37,02). **18-confronto** (`tmp/confronto18`, Intel e Radeon, VA-API per nome, vecchio libavcodec contro integrato): *«nessuna prova in cui il nuovo sia peggio del vecchio»* — byte e PSNR uguali alla cifra sulla copia zero sui due nodi, chiave/tela/tetto compresi. **Il prodotto acceso** sulla porta **7651** (`accendi-7651.sh` in `/media/REMOTIX/src/f19-innesto/`, unità `remotix-7651`, registro in `/media/REMOTIX/tmp/f19-innesto/registro.log`): parte, dichiara *«strada per capacità su renderD128 — Vulkan Video NON è adatta (… non ha VK_KHR_video_encode_queue) ⇒ si prova VA-API»*, apre `hevc_vaapi`/`h264_vaapi` (*«strada vaapi (chiesta «scheda»)»*), `ECCOMI` «hevc,h264». ⚠ Il server della sessione apre `NODO_RENDERING` = renderD128 (Intel): la Radeon in Vulkan nel prodotto acceso la si vede nelle scatole con `--scheda amd` (il nodo mappato), non su questa porta. ⚠ Chrome vero NON rigirato sull'albero integrato (`19-decodifica-chrome.sh` resta della linea 2); la stringa HEVC di Vulkan è `hev1.1.2` (compat solo Main) contro `hev1.1.6` di VA-API: da guardare in Chrome con la rete. ⚠ Le scatole `rete11-*` non ricostruite | no — binario pronto in `/media/REMOTIX/src/f19-innesto/albero/src/remotix` |
-| `(questo commit)` | **LA RETE ANTI-REGRESSIONE (§2.3): le 4 scatole ricostruite, giro Intel=VA-API VERDE, giro Radeon=Vulkan col PRIMO DIFETTO della fase 19** — (1) `banchi/15-suite/registro.jsonl` (copia del server, solo aggiunte) coi giri `19-intel` e `19-radeon`; (2) rapporti generati `banchi/15-suite/rapporto-giro19-intel.{txt,html}` e `rapporto-giro19-radeon.{txt,html}` (mai scritti a mano); (3) gli attrezzi `banchi/15-suite/19-scatole-scheda.sh` (rifà le 4 scatole su `intel`\|`amd`, come `15-rifai-scatole.sh` ma con `REMOTIX_SCHEDA`) e `banchi/15-suite/19-f018-prova.sh` (confronto binario/strada su una scatola). ⚠ `rete11/prodotto/remotix.pam` è restato quello della fase 18 (pre-D3): vedi il punto aperto in §2 | la rete anti-regressione dell'utente (1 ott): *«bisognerà rivedere tutti i 4 DE»*, e §2 ⭐ «la precedenza assoluta va alla suite» | `[M]` 1 ott 2026, server (i5-13500T · Intel UHD 770 · AMD RX 6800 renderD129, RADV Mesa 25.0.7, kernel 7.0). **Le scatole**: ricostruite DA ZERO dalle ricette di `fase-19` (`Contenitore.*` con `libvulkan1`+`mesa-vulkan-drivers`, senza OpenH264/SVT-AV1, `firefox-esr` 140.16.0esr dal .deb dell'ospite in `hold`), binario di **HEAD `fase-19` (`0a1715f`)** costruito sul server in `enter.sh` (`src/costruisci.sh`, md5 **`18746ac2`**), pagina `210ff091`. Versioni dentro = fase 18 §5.2 e ospite (`intel-media-va-driver` 25.2.3, `libva2`/`libva-drm2` 2.22.0-3, `mesa-va-drivers`/`libgl1-mesa-dri`/`mesa-vulkan-drivers` 25.0.7-2+deb13u1, `libigdgmm12` 22.7.2, `libvulkan1` 1.4.309); `nictest` (sudo video render) in tutt'e quattro; `radeon_icd.json` presente. **GIRO 1 — Intel = VA-API** (`19-intel`, strada `vaapi` su tutte, ECCOMI «hevc,h264»): **337 passate sane PASS + 336 col guasto viste = 673, 0 FAIL, 0 BLOCKED**; strato tecnico C7/C9/C18/C19 (sane e col guasto) verde, **C14 verde** (786 s); 135 min, 4 desktop in parallelo × Firefox 140 e Chrome 154 veri, 3840x2160. ⇒ **nulla di ciò che era verde si è rotto sulla strada VA-API**. **GIRO 2 — Radeon = Vulkan** (`--scheda amd`, renderD129 mappato dentro come card0/renderD128; strada `vulkan` 8/8 all'avvio: `h264_vulkan`/`hevc_vulkan`, «AMD Radeon RX 6800 (RADV NAVI21)»): ⛔ **INTERROTTO al primo difetto** — 82 sane PASS, **2 FAIL** (`T-P-C-lxqt-firefox`, `T-012-xfce-firefox`), 4 BLOCKED (`F-018b/c` gnome e kde). **IL DIFETTO È DELLA FASE 19**: la STESSA prova `F-018`/`P-C` (riattacco a misura diversa, 4K→2560→4K) sulla STESSA scatola lxqt col binario `18746ac2` forzato `--codifica vaapi` = **PASS**, e col binario della fase 18 `4b39195c` (VA-API) = **PASS**; solo la strada **Vulkan** rompe (attrezzo `19-f018-prova.sh`, esiti E1…E4 in `/media/REMOTIX/misure/fase15/giro19-diagnosi/`). **Causa, con evidenza** (`journalctl -k` dell'ospite, registri delle scatole): al cambio di tela la codifica Vulkan sulla RX 6800 va in **`VK_ERROR_DEVICE_LOST`** (`vkQueueSubmit2`) ⇒ amdgpu **page fault** (gfxhub/mmhub, client TCP poi VMC) ⇒ **ring `gfx_0.0.0` e `vcn_enc_0.0` in timeout** ⇒ **GPU MODE1 reset** (*«VRAM is lost»*, `devcoredump` scritto). Intermittente ma riproducibile (E3r su lxqt, E4r su xfce; E4 prima corsa pulita). ⚠ **Il reset azzera la scheda CONDIVISA**: tutte le sessioni Vulkan delle 4 scatole in parallelo perdono il dispositivo a cascata — i 2 FAIL + 4 BLOCKED e i molti «DEVICE_LOST»/«il palco se n'è andato» nei quattro registri vengono da un solo hang. Nei fault compaiono come processi anche **`labwc` e `kwin_wayland`**: lo stack amdgpu/RADV si destabilizza sulla riconfigurazione dell'uscita insieme all'encode. **VA-API sullo stesso resize è pulita** (0 fault, 0 reset: E1 ed E2). ⇒ **Decisione dell'utente**: la cura non è né minima né ovvia (sta al confine col driver RADV/amdgpu di questo Mesa) — il giro Radeon **NON è verde** e **non è stato rifatto**, in attesa della sua scelta. **HEVC in Chrome su Vulkan** (`hev1.1.2` contro `hev1.1.6` di VA-API): **NON verificato**, il giro Radeon è stato fermato prima di arrivarci. **Android**: prove a mano dell'utente col telefono (decisione 1 ott). Scatole lasciate su **Intel** (card0/renderD128 = UHD 770), binario `18746ac2`, strada `vaapi` | no |
-| `(questo commit)` | **installatore: il driver Vulkan della scheda dal catalogo** — catalogo **2026.10.01.10** (seq. 10): nel blocco `h264` di ogni piattaforma `vulkan_scheda` (fornitore → driver Vulkan UFFICIALE che codifica, installato dal motore senza consenso: Debian e Ubuntu `mesa-vulkan-drivers`, **Arch `vulkan-radeon`**, solo per AMD) e `vulkan_nvidia` (il pacchetto che porta l'ICD col driver proprietario, **solo nel rimedio** di RX-GPU-004: deve avere il numero del driver, che può venire anche da NVIDIA); openSUSE: `libvulkan_radeon` di Packman insieme a `Mesa-dri,Mesa-libva` (`pacchetti_scheda` AMD e comandi del deposito). Motore: `H264Piattaforma.VulkanScheda/VulkanNvidia`, `VulkanPerLaScheda`, il passo **`vulkan`** del piano dopo il pacchetto; `schedeVulkan` col catalogo giudica AMD dalla piattaforma (Arch senza ICD conta; Alma con l'ICD `radeon` NO ⇒ RX-GPU-006); RX-GPU-006 riscritto (it/en), `SPECIFICHE.md`, il commento del `PKGBUILD`. ⛔ Intel mai (ANV sperimentale, resta a VA-API); ⛔ Fedora niente in Vulkan: la RADV coi codec di RPM Fusion (`mesa-vulkan-drivers-freeworld`) **sostituisce** quella ufficiale (dnf la mette solo con uno «swap»: aggiunta, ha scelto l'i686), resta VA-API freeworld | `vulkan-radeon` su Arch è solo un optdepends, e un «Recommends» si salta sulle macchine senza raccomandati; e sulle distribuzioni con la Mesa «all_free» l'ICD `radeon` faceva dire sì al preliminare quando 7a avrebbe detto no | `[M]` 1 ott 2026, immagini podman `remotix-costruzione-*`: **chi porta gli ICD** — Debian 13: `mesa-vulkan-drivers` 25.0.7 (`radeon_icd.json`, `intel_icd.json`), NVIDIA `nvidia-vulkan-icd` 550.163.01 (non-free; per `nvidia-driver-libs` solo *Recommends*); Ubuntu 26.04: `mesa-vulkan-drivers` 26.0.8, NVIDIA `libnvidia-gl-<N>` (`nvidia_icd.json`, *Depends* di `nvidia-driver-<N>`, fino a 610); Fedora 44: `mesa-vulkan-drivers` 26.2.3, RPM Fusion `mesa-vulkan-drivers-freeworld` 26.2.3 e `xorg-x11-drv-nvidia-libs` 615.71.09 (`nvidia_icd.x86_64.json`); Alma 10: `mesa-vulkan-drivers` 25.2.7 (AppStream), **nessuna** freeworld in RPM Fusion EL; Leap 16: `libvulkan_radeon`/`libvulkan_intel` 24.3.3 (ufficiale e Packman), NVIDIA `nvidia-gl-G06/G07` (deposito di NVIDIA); Tumbleweed: idem 26.2.3, Packman `.pm.`; Arch: `vulkan-radeon`, `vulkan-intel` 26.2.3, `nvidia-utils` 615.71.09 (tutti *Provides* `vulkan-driver`). **I codec**: Fedora 44 e Alma 10 costruiscono Mesa senza `-Dvideo-codecs` ⇒ `all_free` (dallo spec e da `meson.options` del sorgente), openSUSE li toglie («re-disable video codecs»); Packman: `zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon` = 3 aggiornati col cambio di fornitore, niente tolto. `[?]` che la RADV di Packman e di Leap 24.3.3 codifichi davvero non si è potuto provare (senza scheda: il dispositivo «nullo» di RADV non ha code video). `installatore/costruisci.sh prove` verde (gofmt/vet puliti), nuove `TestVulkanDelCatalogo` e `TestPianoVulkan` | no |
-| `(questo commit)` | **il banco per il noleggio NVIDIA** (`banchi/19-nvidia/`, §2.4): `LEGGIMI.md` (una pagina per l'utente: cosa noleggiare, come lanciare, quanto dura); `19-nvidia.sh` dal portatile — `prepara` (i .deb per Debian 13 e Ubuntu 26.04 con `costruisci-deb.sh`, l'installatore, i banchi: la «valigia» in `costruzione-uscita/19-nvidia/`), `tutto IP` (manda, avvia in un'unità di systemd che sopravvive a ssh, segue, riavvia da sé se il driver lo chiede, raccoglie in `misure/19-nvidia/` con lo sha256), `pulisci IP`, e a pezzi `manda/avvia/segui/stato/raccogli/entra`; `UTENTE=ubuntu` con sudo, `CONTENITORE=` per la prova locale. `19-nv-macchina.sh` sulla macchina, da root, un passo alla volta e ripartibile: **controlli** (distribuzione, scheda dal bus, `nvidia-smi` ≥ 550, ⛔ schede senza NVENC A100/H100/H200, `nvidia-drm modeset`, i nodi DRM e QUALE è della NVIDIA — il server codifica su `renderD128` —, l'ICD, `vulkaninfo` con `VK_KHR_video_encode_queue/h264/h265`, dmabuf, modificatori; e la fotografia della macchina com'era) · **driver** (solo se manca: Debian `nvidia-driver`+`nvidia-vulkan-icd` da non-free, Ubuntu `ubuntu-drivers install` — ⛔ non `--gpgpu`, che è senza ICD —; l'ICD da solo se il driver è «headless»; `modeset=1`; uscita 10 = riavvio) · **dipendenze** (XFCE sotto labwc come la scatola `rete11-xfce`, gli attrezzi, `firefox-esr` — su Ubuntu dal deposito di Mozilla —, Chrome di Google, l'utente `rxbanco`) · **remotix** (con l'INSTALLATORE: `verifica`, `piano --installa --pacchetto`, `applica --approva`, `certifica`; se rifiuta, il rifiuto resta come risultato e il .deb va col gestore; nome nel certificato e stderr in un file dichiarati in due file di `/etc` che `pulisci` toglie) · **codifica** (`--prova-codifica` h264/hevc, sul nodo NVIDIA, forzata vulkan, e da utente: VERDE solo con strada `vulkan`) · **confronto** (`19-confronto.sh` con `MOTORI="vulkan scheda"`, `ORDINE_PRODOTTO=1`) · **suite** (`19-nv-suite.py`: F-001 F-002 F-003 F-011 F-013 F-016 F-018, Firefox e Chrome, sana+guasto, le prove della fase 15 IDENTICHE, con `Scatola.dentro` = `sudo -n sh -c` sulla macchina; browser nel loro labwc senza schermo, pixman, 3840x2160, o headless dichiarato; registro col formato di `15-giro.py`, giro `19-nvidia`, rapporto da `15-rapporto.py`) · **raccogli** · **pulisci** (installatore `disinstalla --purge`, utenti del banco, `modeset`, i pacchetti NUOVI solo se la simulazione di apt non tocca nessun pacchetto che c'era, `/etc/apt` com'era). `19-confronto.sh`: `MOTORI` e la prova della tela **in ciclo** (`--ciclo 20:3840x2160,2560x1440`, H.264 e HEVC). `19-nv-prova-contenitore.sh`: la prova locale senza scheda | §2.4: il banco pronto prima del noleggio, *«senza improvvisare»* | `[M]` 1 ott 2026, portatile: `bash -n` e `shellcheck -S warning` puliti (esclusi solo gli avvisi voluti), `py_compile`; `prepara` VERDE (i due .deb coi controlli R13/R14/R4 SI, installatore, valigia); **prova in contenitore con systemd e senza scheda, Debian 13 e Ubuntu 26.04**: controlli ROSSI (nessuna NVIDIA: giusto), dipendenze VERDI (Firefox 153.4.0esr, Chrome 154, labwc 0.8.3 / 0.9.3, XFCE 4.20), l'installatore installa, la sua verifica 7a non passa (nessun driver) e **annulla da sé**, il .deb col gestore, il server ascolta e dichiara *«QUESTO SERVER NON SA CODIFICARE VIDEO»*, `--prova-codifica` codice 3, `19-confronto` si compila, suite NON GUARDATA (nessun nodo NVIDIA), archivio portato con lo sha256 uguale, **pulisci: pacchetti, `/etc/apt`, utenti e cartelle esattamente come prima**. `19-nv-suite.py --interno … --certifica` su f001 e f018: le funzioni pure passano attraverso l'innesto. Curati nella prova: un purge cieco si fermava sul `sudo` lasciando dpkg in sospeso (⇒ simulazione prima, `SUDO_FORCE_REMOVE`, `dpkg --configure -a`); su Ubuntu `apt-cache show firefox-esr` esce 0 per un nome senza candidato (⇒ `apt-cache policy`). ⚠ Nel contenitore senza `/dev/dri` il preliminare dell'installatore non dà RX-GPU-003 (nodi non letti = non si rifiuta) e il rifiuto arriva solo dalla 7a: da guardare. ⛔ NON provati senza la scheda: il passo driver, la corsa di `19-confronto`, la suite coi browser | no |
-| `(questo commit)` | **Chrome verde sulla Radeon: la misura codificata HEVC si allinea alla granularita' della scheda** — `src/vulkanvideo.c`: `larg_cod`/`alt_cod` (la misura nell'SPS e nel `codedExtent`) si allineano, oltre che a 16, a `encodeInputPictureGranularity` della scheda (RX 6800/RADV: **64x16**), e il resto lo taglia la finestra di conformita' (come radeonsi in VA-API, 1920x1088). Prima a 2544x1344 l'SPS diceva 2544 e la scheda codificava a blocchi di 64. Il banco: `banchi/19-vulkan/chrome/` (pagina WebCodecs con la configurazione del prodotto, `hev1.1.6.L153.B0`, in un labwc proprio). ⚠ La stringa `hev1.1.2` (Vulkan) contro `hev1.1.6` (VA-API) NON c'entra: e' il flag di compatibilita' Main10 nell'SPS, e la pagina configura comunque `hev1.1.6` | nelle suite F-002/003/… su Chrome la tela restava **verde** (0,136,0) alla tela del browser **2544x1344** (finestra 2560x1353): 2544 non e' multiplo di 64. A 3840/3776 non si vedeva (multipli di 64); Firefox verde-OK per caso di misura/codec | `[M]` 1 ott 2026 sul server, `19-confronto --motore scheda` sulla Radeon, 30 fotogrammi: **prima** 2544x1344 ⇒ ffmpeg «cu_qp_delta 35 outside the valid range» e immagine giusta solo nelle prime righe di CTB, poi verde; Chrome 154 (VA-API Intel) dominante (0,136,0) su 30/30. **Dopo** (codificata 2560x1344): ffmpeg 0 errori e immagine intera, Chrome 30/30 decodificati non degeneri; 3824x2064 (codificata 3840x2064) idem; 3840x2160 e 1918x1078 (→1920x1088) 0 errori; H.264 2544x1344 0 errori. VA-API Intel non toccata (solo `vulkanvideo.c`); `--prova-codifica`: Radeon `strada vulkan` (hevc e h264), Intel `vaapi`. Nessun page fault/timeout nel kernel | `rete11/prodotto/remotix.ad3ba33a` (non installato: `prodotto/remotix` resta `e678cf8b`) |
-| `(questo commit)` | **il banco delle prove Android sul telefono vero (§5, §5.1)** — `banchi/19-android/`: `19-android.sh`/`19-android.py` dal portatile (`controlla` · `prova <1..10>|tutte [--desktop]` · `ripristina` · `a-secco`), `telefono.py` (la guida `--browser telefono` della suite: una scheda NOSTRA via `/json/new`, solo verso `https://192.168.0.2:8511-8514/8611-8614`, guardia della chiamata prima dei gesti), `LEGGIMI.md` per l'utente; prova nuova **`15-f031-tocco.py`** (F-031, `SOLO_TELEFONO`: dito vero `adb input swipe`, tocco vero `adb input tap`, tocco-e-mezzo col protocollo; scena e giudici di F-004). Le prove sono QUELLE della suite, coi loro giudici e guasti, lanciate SUL SERVER da `15-giro.py --browser telefono` con `ssh -R` (19333 → DevTools del telefono via `adb forward`, 19334 → lo «sportello» del portatile, l'unico che usa adb: chiamata?, pronto, tocca, scorri, ruota, uccidi-chrome). Agganci minimi: `suite.py` (scelta «telefono»), `15-g6-comune.py` (`uccidi_browser` → `am force-stop`; `accendi_a_misura` → telefono girato), `11-c21` (`foto_piena` a `devicePixelRatio`), `15-f014` (permesso appunti anche al telefono), `15-giro.py` (`REMOTIX_SISTEMA_15`, `SOLO_TELEFONO`), `15-rapporto.py` (colonna «telefono»), `15-porta.sh` (porta anche `19-android`). Registro suo: `/media/REMOTIX/misure/fase19-android/registro.jsonl`; banchi portati in `/media/REMOTIX/src/controllo-android` (non tocca `controllo`). Il telefono si lascia come trovato: schede dell'utente annotate e mai toccate, rotazione e `screen_off_timeout` rimessi, Chrome richiuso se lo era (stato in `~/.cache/remotix-19-android/`). La prova 9 taglia la linea dal SERVER (nft della suite), non il Wi-Fi: col Wi-Fi spento si perderebbe adb | la decisione dell'utente del 1 ott (§5: «il telefono è tuo», Phonestra) e la regola della suite: stesse prove, stessi giudici | `[M]` 1 ott 2026 sul portatile, **a secco** (telefono e server NON toccati): `19-android.sh a-secco` **22/22** — senza telefono `controlla` e `prova 1` dicono «telefono non visto» ed escono con 2 (adb ha avuto solo `devices`); con un adb FINTO e un Chrome 154 del portatile (`--headless=new`, profilo usa e getta) su una pagina locale: scheda sua, rifiuto di un indirizzo fuori dalle scatole, fotografia della tela via CDP, clic/tasto/dito alla pagina, puntatore a trackpad portato sul bersaglio (errore < 1 px), chiamata ⇒ 409 e gesto fermato, chiusura e ripristino (scheda dell'utente intatta, schede verso le scatole chiuse, rotazione e spegnimento rimessi). `--certifica` di f031/f001/f018 verde. ⚠ NON provati: il telefono vero (adb, `input`, rotazione, `force-stop`, DevTools di Chrome Android) e la corsa sul server — si provano con la prima `prova` | no |
-| `(questo commit)` | **il labwc «comune» delle prove LUNGHE ha un nome suo** — `banchi/15-suite/15-compositori.sh` accende anche «comune» (socket scritto in `$XDG_RUNTIME_DIR/15-compositori/comune`), `15-giro.py` → `compositore()` lo legge per le prove LUNGHE invece di `REMOTIX_WAYLAND_VERI`/«wayland-0». Nessun giudice toccato | dopo il riavvio del server (1 ott) `15-compositori.sh accendi` era partito per primo e «wayland-0» era il labwc di **gnome**: le F-030 dei quattro desktop finivano lì, sotto il browser della fila di gnome, e una restava coperta ⇒ tela «DEGENERE» nera (T-030-xfce nei giri `19-radeon-ff`/`-3`, T-030-kde in `-3b`). Non era il prodotto: il server mandava il desktop e la pagina dipingeva (registri della scatola e diario della pagina) | `[M]` 1 ott 2026, server: giro `19-radeon-3` (binario `ad3ba33a`, Radeon = Vulkan, 4 desktop × Firefox 153 e Chrome 154, strato tecnico) **669 PASS, 0 FAIL, 4 BLOCKED** (T-030-xfce, T-029-kde, sana+guasto), kernel pulito (0 page fault, 0 reset, 0 fence fallback, 0 ring timeout); da sole: F-030 xfce 2/2 PASS, F-029 kde 3/3 PASS; mini-giro `19-radeon-3b` (f029+f030, 4 desktop) 14 PASS e T-030-kde BLOCKED — la coperta si sposta; **col labwc «comune» curato, mini-giro `19-radeon-3c` (f029+f030, 4 desktop insieme, Firefox) 16/16 PASS**; giro corto `19-intel-3` (f001/f003/f011/f018, Intel = VA-API) **128/128 PASS**. T-029-kde del giro: Plasma non partito 1 avvio su 50 (kcminit fermo, ksplash «eglSwapBuffers failed»), schermo davvero nero: non della codifica | no |
-| `(questo commit)` | **Android sul telefono vero: le prove 1-10 verdi (giro pieno GNOME, corto KDE/XFCE/LXQt), e le cure del banco** — `11-c21` `foto_piena`: col dpr > 1 la foto del vetro intero e il ritaglio (Chrome Android con `clip.scale` > 1 ripete la pagina a mattonelle); `telefono.py`: il dito del protocollo e quello vero consumano la sbavatura come la pagina (D_TAP 9 px: un passo sacrificale, +10 px al dito vero), lo scorrimento vero parte dal centro della tela, corto (≤ 30 %) e atteso fino a 3 s; `15-f031` fino a 8 passate di dito; `telefono.py` ammette la porta 8599 (il server inesistente del guasto di F-001); `19-android.py` legge la scheda dalla strada nel registro della scatola (in `/sys` della scatola renderD128 e' sempre la Intel); `15-f018` confronta la tela con la vista × devicePixelRatio (la pagina: `misura_vista()`) — sul computer dpr 1, esiti invariati (`--certifica` verde) | §5 e §4-bis: il secondo cancello | `[M]` 2 ott 2026, S23+ (Android 16, Chrome 154.0.8037.92), scatole sulla Radeon (Vulkan, `ad3ba33a`). **Verticale, schermo vero** (telefono in mano): GNOME 1 (4/4), 2 F-031 (sana e guasto PASS: dito che muove, tocco che clicca, tocco-e-mezzo che trascina), 3 tastiera, 4 appunti, 7 telefono girato e rimesso (F-018 + P-C: tela 2096x832 per la vista 750x297 CSS × dpr 2,8125, e indietro 1072x1936), 8 Chrome ucciso e rientro, 9 rete che cade, 10 Esci — tutte PASS sana+guasto; KDE/XFCE/LXQt 1 e 9 PASS. ⚠ In verticale la 5 (video: la mira del giudice fuori dal ritaglio sul video stretto, 11 % dei quadri; il video era pieno, nessun mosaico) e la 6 (F-003: la finestra di prova sulla tela larga 1072 il desktop la massimizza, e trascinata si rimpicciolisce) non passano: sono della tela stretta, non del prodotto. **Orizzontale** (Chrome dal cassetto di Phonestra, schermo virtuale 2560x1000 — il caso DeX, suggerimento dell'utente): 6 PASS sui quattro desktop, 5 PASS (video 100 % quadri buoni, audio), 1/3/4/8 PASS. ⚠ Aperto: con l'S23+ uno `adb input swipe` che parte nella meta' bassa della tela durante la sessione non arriva alla pagina (su una pagina vuota si'): da guardare a mano | no |
-| `(questo commit)` | **«Tastiera solo a richiesta» (DECISIONI §10.28)** — `src/pagina.html`: col telefono in mano (disposizione a tocco) il campo nascosto dell'incolla porta `inputmode="none"`, `virtualkeyboardpolicy="manual"`, `autocapitalize`/`autocorrect="off"` (tolti nel classico: computer e DeX col mouse identici); il comando **⌨ in alto a destra** (40 px, solo con `data-disposizione="tocco"` e la sessione accesa; `touchend` nel gesto: `blur`+`focus` col nuovo `inputmode` e `navigator.virtualKeyboard.show/hide`) apre e chiude la tastiera; la chiusura di Android («indietro») si vede dalla `visualViewport` che torna alta. ⭐ E il testo ARRIVA: `tastiera_su_input` spedisce la DIFFERENZA del campo (lettere come `LETTERA`, quel che sparisce come Cancella, `\n` come Invio — correzioni automatiche comprese), `tastiera_su_keydown` i tasti veri (Invio/Cancella col campo vuoto, tastiera Bluetooth senza mouse); il campo si svuota fuori dalla composizione. `incolla_campo_crea()` separato da `incolla_campo_prendi()`; le letture dell'incolla saltano a tastiera aperta. `REMOTIX.tocco.tastiera()` da leggere. Banco: `15-f031` quarto gesto «tastiera» (chiusa dopo i gesti · il ⌨ con un tocco VERO la apre · «prova» via composizione+commit CDP arriva nel campo «a» della scena · il ⌨ la richiude; guasto: il tocco 60 px a sinistra del ⌨ ⇒ rosso; `--certifica` col giudice `giudica_tastiera`); `19-android.py` sportello `/tastiera` (`dumpsys input_method`, `mInputShown`) e adb finto; `telefono.py` `tastiera_aperta`/`aspetta_tastiera`/`comando_tastiera`/`tocco_vero_in`/`scrivi_ime`; SPECIFICHE §7.2-7.3 | `[M]` 2 ott, S23+: la tastiera si apriva da sola e copriva la metà bassa per il 60 % di F-031 (gli `adb swipe` nella metà bassa «non arrivavano»: cadevano sulla tastiera); e non scriveva niente: `[M]` pagina del prodotto in Chrome col tocco emulato, prima della cura, «ciao» dal metodo d'inserimento e dai tasti ⇒ **zero** messaggi (nel modo a tocco nessuno ascoltava) | a secco (2 ott): banco locale sulla pagina del prodotto in Chrome headless 16/16 (tocco: `inputmode=none`, ⌨ visibile, un tocco sulla tela non apre, il ⌨ apre, «ciao » composta arriva, «cisao»→«ciao» = 3 Cancella + «ao», tasti x/Invio/Cancella, la tela a tastiera aperta non la chiude, il ⌨ richiude; classico: niente attributi, niente ⌨, «ci» parte una volta, il testo IME no — come prima); gesto «tastiera» di `15-f031` contro la pagina vera con sportello finto 5/5 (sana PASS, guasto FAIL, aperta da sola FAIL); `15-f031 --certifica` verde; `19-android a-secco` 25/26 (i 4 nuovi verdi; rosso «il puntatore si porta sul bersaglio» già prima: `porta_il_puntatore` non toccato). ⛔ Il telefono vero non l'ho usato: la prova è dell'utente | no |
-| `(questo commit)` | **Il lavoro del 2 ottobre che stava solo sul server, e la freccia sotto cattura sul DeX (3 ottobre)** — riportati da `/media/REMOTIX/src/f19-audio/albero` (binario `54a98acc`, pagina `d827a225`, in vigore nelle scatole dal 2 ott): `sessione.c` ferma il `pipewire-pulse` avanzato dalla sessione di prima (GNOME muto dopo «Esci», prova a mano dell'utente); `trasporto.c` rende il credito degli stream quando uno stream del client si chiude (`[M]` dopo 19 stream gli appunti si fermavano); `pagina.html` gli appunti (niente avviso a ogni accesso su GNOME/KDE senza un gesto dell'utente, il Ctrl+V dopo una copia remota, il secondo pulsante come «chorded button»). ⭐ E una riga nuova, pagina `34fde3d7`: `:not([data-agganciato="si"])` sulla regola che nasconde `#puntatore` nel modo `sistema` — `[M]` sul DeX (S23, Android 16, Chrome 154 e Samsung Internet 30) l'hover non arriva (noVNC #1727: posizione solo prima del clic, id in fila) e la freccia doppia sul bordo non compare mai; con la cattura del puntatore arrivano i movimenti a tasti alzati (>150 di fila) ma la freccia era sparita. Con la riga, l'utente: «con la cattura la situazione migliora», ridimensionamento dal bordo visto nel registro (hover → premuto → trascinato). |
-| `63f5562` `67628ff` `(questo commit)` | **Sul DeX la cattura del puntatore al primo clic (DECISIONI §10.29)** — `src/pagina.html`: `cl_hover_manca()` al `pointerdown` di tipo `mouse` (nessun passaggio a tasti alzati dal caricamento o dall'ultimo rilascio, o l'ultimo a `CL_SALTO_PX`=8 px o più dal clic ⇒ `cl_aggancia()`; ⛔ la prima versione contava i passaggi, <10, e `[M]` giro `19-cattura` il Firefox del banco con 5 passaggi è stato catturato su un computer); `cl_spinta_oltre_il_bordo()` rilascia dopo `CL_SPINTA_USCITA`=160 px CSS di spinta fuori dalla tela; il primo `movementX` dopo la lock oltre `CL_SALTO_FINTO`=100 px si scarta (`[M]` due rilasci nello stesso secondo dell'accensione). `[M]` 3 ott, DeX, Radeon poi Intel: accensione al primo clic su GNOME, KDE, XFCE, LXQt, uscita dal bordo e ricattura, nessun rilascio spurio con la pagina `1f1cbb73`; l'utente: «risultato eccellente». |
-| `8d30a7c` `a0a3aa5` | **La verifica sui computer, e quel che ha trovato** — `[M]` giro `19-cattura` (criterio «<10 passaggi»): il Firefox del banco catturato con 5 passaggi ⇒ criterio nuovo (nessun passaggio, o l'ultimo ad almeno 8 px dal clic). Giro `19-cattura-2` (39 PASS, 1 FAIL, 24 BLOCKED): BLOCKED del banco (porte della scena lasciate dal giro interrotto; C22/F-003 contavano solo i `mousedown`, che la pagina dal 2 ott spegne prendendo il clic da `pointerdown` ⇒ ora contano anche i pointer) e un FAIL vero, Chrome su GNOME selezionava «beta gamma delt»: **anche il rilascio porta la sua posizione** (`cl_su_mouseup`). Giro `19-cattura-3`, pagina `f78df3ed`, Intel: **F-003 F-004 F-006, 4 desktop × Firefox/Chrome, 48/48 PASS**; nessuna cattura accesa dal banco. |
-| `(questo commit)` | **Prova a mano dell'utente, Linux, Intel (3 ott, mattina)** — parole sue: *«sui 4 DE il resize delle finestre funziona», «la selezione del testo funziona»*. `[M]` diario delle 4 scatole: client `piattaforma=Linux`, **nessuna cattura accesa** (la regola del DeX non scatta sul computer). |
-| `(questo commit)` | **Prova a mano dell'utente, Linux, Radeon (3 ott)** — parole sue: *«resize ok anche sulla radeon»*. Scatole rifatte con `19-scatole-scheda.sh amd` (prima fallito: le copie della `shm` dentro devroot, curato in `3535800`). |
-| `(questo commit)` | **Android, prova 2 (F-031 tocco) ROSSA sulla tastiera — e NON è la pagina** — `[M]` 3 ott, S23 (Android 16, Chrome 154, tastiera Samsung 5.9.30.97, nessun aggiornamento da ieri), Radeon, GNOME: «il secondo tocco sul ⌨ NON chiude la tastiera», poi al ritentare «aperta da sola» (conseguenza: era rimasta aperta). Rossa con Phonestra, rossa **senza** Phonestra, e rossa **con la pagina di ieri `3fc5777d`** che il 1 ott era verde ⇒ è cambiato il telefono, non il prodotto. Nessuna tastiera esterna collegata. `[?]` Diversi da ieri: Debug USB acceso oggi dall'utente, Chrome riavviato con `am start`, il telefono stamattina sul DeX. ⭐ **Poi l'utente a mano, telefono in verticale: «la tastiera si apre e si chiude»** ⇒ il rosso è del BANCO. Sospetto da verificare: `telefono.py` `tastiera_aperta()` legge `dumpsys input_method | grep -m1 mInputShown=` — la PRIMA riga, che oggi può non essere quella di Chrome (altri schermi/clienti dopo DeX e Phonestra). La prova 3 non è stata fatta. adb: si entra con `ADB_VENDOR_KEYS=~/.config/Phonestra/adbkey` (la chiave dell'adb del tablet il telefono non la riconosce più). |
-| `cd7c59e` | **La rete completa per chiudere: giro `19-chiusura-intel`, Intel, binario `54a98acc`, pagina `f78df3ed`: 700 PASS, 2 FAIL, 2 BLOCKED (129 min)** — FAIL: F-012B su GNOME (il `pipewire-pulse` della sessione di prima: all'«Esci» `pipewire` si ferma e il pulse no, al nuovo accesso `pipewire` riparte prima del controllo) ⇒ `sessione.c` confronta gli istanti d'avvio; binario **`05e7c7d1`**: F-012B **20/20 PASS** sui 4 desktop × 2 browser. BLOCKED: F-030 (tela nera di Firefox nei primi 45 s) solo con le prove lunghe in parallelo, ogni volta su un desktop diverso (LXQt; poi KDE e XFCE) ⇒ rifatta un desktop alla volta: **4/4 PASS** ⇒ è il carico del banco (4 Firefox in 4K che decodificano sulla stessa Intel che codifica), non il prodotto. |
+| `9162e76` | **CPU fallback out of the product**: removed `src/ripiego.c/.h` (OpenH264 via dlopen, SVT-AV1), the `sw_*` border of `codificatore.c`, `codificatore_ripiego_software/_software_pronto/_software_rimedio`, `CRF_SOFTWARE`, `--software` of `--prova-codifica`, AV1 from the survey. `codificatore_di()` opens only `h264_vaapi`/`hevc_vaapi`; any other name is refused with the reason. `--prova-codifica`: outcome `hardware`\|`nessuno`, no `rimedio`, codes **0** card · **1** opens but nothing comes out · **2** usage · **3** no card. At startup the server declares it (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*, with the reason per codec) and the `ECCOMI` offers no codec. Makefile: openh264/SvtAv1Enc out of CFLAGS, LIBS, `MINIMI` and checked headers (`-ldl` stays: libselinux in `figlio.c`). `colori709.c` STAYS (the «from memory» route). Build containers and boxes without the two libraries; `costruisci-tutti.sh` refuses an `ldd` that names them. 18-* benches: they compile without `src/ripiego.c` (18-software takes it from git `6bacca7`, as history) | `DECISIONI.md` §10.27: *«niente cpu senza scheda»*, *«eliminare la questione della codifica su cpu senza scheda»*, independence from ffmpeg and other pieces for the licences | `[M]` 1 Oct, on the server (`/media/REMOTIX/src/f19-cpu`): `--prova-codifica` Intel renderD128 H.264 and HEVC = `hardware`, code 0; Radeon renderD129 H.264 and HEVC = `hardware`, code 0; `--nodo /dev/dri/renderD199` = `nessuno`, code **3**; `--software` = usage, code 2. Server on 7633 with the VA driver hidden (`LIBVA_DRIVERS_PATH` empty): ⛔⛔ line at startup, `offerti` empty; with the card `«hevc,h264»`. `ldd` of the binary (container) without openh264/SvtAv1 | no |
+| `35e3b44` | **OpenH264 and SVT-AV1 out of the packages**: `debian/control` (Build-Depends, Recommends `libopenh264-8 \| libopenh264-cisco8`), `remotix.spec` (BuildRequires, `Recommends: openh264` on Fedora and Alma), `PKGBUILD` (depends `openh264`, `svt-av1`), the licence text | as above | — (they are built with the release) | no |
+| `2246cbc` | **OpenH264 and SVT-AV1 out of the installer, and the preliminary check that refuses without a card**: catalogue 2026.10.01.9 (seq. 9) without the `openh264` repository, `software_di_serie`, `pacchetti_software`; engine without the «openh264» repository type (`fedora-cisco-openh264`, `epel-cisco-openh264`, `repo-openh264`), `deposito.resta_epel`, the facts `h264.software`/`h264.openh264`, the C-RIPIEGO conditions; `consenso.deposito.openh264` withdrawn (an old file ends up among the «superflue»); RX-H264-005 and RX-GPU-001 withdrawn, RX-FUORI-005 rewritten without fallback. ⭐ `motore/strade.go`: the `StradeCodifica` table (vulkan declared and not active, vaapi active) and `VerdettoScheda` — to add Vulkan, `Attiva: true` with its `Rileva`/`Schede` is enough. New BLOCKING codes: **RX-GPU-003** no card, **RX-GPU-004** only NVIDIA with the proprietary driver (comes with the Vulkan route), **RX-GPU-005** no Intel/AMD (virtio, VMware, nouveau), **RX-GPU-006** Intel/AMD that on this distro does not encode without drivers to be added (today AMD on Alma). The card that is completed with a third-party repository stays a warning with consent (D5). The test after installation: output 3 = FAIL. EPEL on Alma STAYS (KDE, RPM Fusion EL): only the SVT-AV1 part goes | `DECISIONI.md` §10.27 | `[M]` `installatore/costruisci.sh prove`: **205 PASS**, 0 FAIL, `go vet`/`gofmt` clean; counter-test: with the verdict that never refuses, three tests turn red. ⚠ Not re-measured whether `intel-media-driver` from RPM Fusion EL pulls dependencies from EPEL. ⚠ A machine installed with the phase-18 engine with the «openh264» step in the log does not uninstall with the new engine (lab boxes only) | no |
+| `49cce49` | **Line 2: the Vulkan Video encoder** — `src/vulkanvideo.c/.h` (standalone module, not yet grafted into `codificatore.c`): capability discovery per DRM node (`vulkanvideo_capacita`: card chosen with `VK_EXT_physical_device_drm`, not «the first one»), H.264 High / HEVC Main / Main 10 session with `VK_KHR_video_encode_h264/h265`, `StdVideo*` parameter sets with the same values as `vadiretta.c` (no B, one reference, limited BT.709 in the VUI, level computed like ffmpeg or imposed), SPS/PPS/VPS taken from the driver (`vkGetEncodedVideoSessionParametersKHR`, one set per call) and put in Annex-B in front of every key, CQP and VBR with the cap (mean = target, maximum = wire, buffer 40 ms, requested QP = the regulator's minimum QP), key on request, hot quality change, canvas change (reopening), `ULTRA_LOW_LATENCY` requested in the profile; zero-copy input from DMA-BUF (`VK_EXT_external_memory_dma_buf` + `VK_EXT_image_drm_format_modifier`, cache per generation like `codificatore.c`) and from memory (BGRx/RGBx → staging buffer → RGB image); RGB→NV12/P010 conversion with the compute shader `src/vulkanvideo_rgb_nv12.comp` (SPIR-V embedded in `vulkanvideo_rgb_nv12_spv.h`, generated by `banchi/19-vulkan/19-shader.sh`), which rewrites `colori709.c` in integers: same coefficients, same 1-3-3-1 chroma filter; it writes directly into the planes (`R8`/`R8G8` views on the NV12 image with `MUTABLE_FORMAT`+`EXTENDED_USAGE`) or, where the card does not allow it, into two images and then `vkCmdCopyImage` into the planes. Bench `banchi/19-vulkan/` (`19-confronto.c/.sh`, `19-tabella.py`, `19-decodifica-chrome.sh`): the scene of bench 18, Vulkan against VA-API (the product) on the same Radeon | `DECISIONI.md` §10.27: Vulkan first, chosen by capability | `[M]` 1 Oct 2026, server, Radeon RX 6800 (RADV, Mesa 25.0.7, devroot Debian trixie), 120 frames at 60 fps of fake desktop, QP 26, 42 tests, **all 120/120 decoded** (ffmpeg as a tool). **Quality**: from memory the shader gives the SAME planes as `colori709.c` — PSNR identical to the digit (H.264 1080p 39.619 dB both; 4K 42.646; HEVC 44.54/44.55; HEVC10 44.97/44.97) and in Chrome **pixel fingerprints EQUAL** (1080p and 4K H.264). From the card (zero copy) Vulkan converts better than radeonsi's VPP: H.264 1080p 39.62 dB against 38.55 (u: 39.5 against 36.9), 4K 42.65 against 39.02; HEVC 1080p 44.55 against 42.15, 4K 46.93 against 40.57 — with bytes +11 % at 1080p H.264 (higher quality, same bytes as the from-memory route) and −6 % in HEVC 4K. **Times** (median per frame, zero copy): encoding H.264 1080p 2.96 ms Vulkan against 3.35 VA-API, 4K 9.74 against 11.25; HEVC 1080p 3.06 against 3.38, 4K 9.79 against 11.61; HEVC10 4K 9.77 against 9.82; Vulkan conversion 0.55-0.62 ms at 1080p and 1.7-1.8 ms at 4K (with the fence wait inside; VA-API's VPP counts 0 because it is asynchronous and its cost sits in the encoding); from memory the Vulkan upload+conversion 0.84-0.94 ms at 1080p (VA-API 1.8-2.2 in CPU), 3.1 ms at 4K (VA-API 6.5-8.6). The copy route (forced with the bench's `REMOTIX_VULKAN_CONVERSIONE=copia`) gives **identical bytes** to the direct one (4/4, `cmp`) and costs +0.06 ms at 1080p, +0.2 ms at 4K. **Profile/level/colour** (ffprobe) equal to VA-API in all tests: High L4.2/L5.2, Main L4.0/L5.0, Main 10, yuv420p, tv, bt709×3. **Key on request** (frame 40: 583 KB, then delta), **new canvas** (60: reopening and key 1280x720), **hot quality** (60: QP 26→36, PSNR 39.6→33.4 H.264), **cap** 20 Mbit/s (does not bite: the scene costs 8.5 Mbit/s; Vulkan stays at QP 26 = 2.14 MB, radeonsi's QVBR drops all the same to 1.31 MB and 35.9 dB) and **cap 2 Mbit/s** (bites: Vulkan 640 KB with the key reduced to 307 KB, VA-API 784 KB; HEVC Vulkan 619 KB at 37.0 dB against 760 KB at 32.4). **Real Chrome 154, WebCodecs** (`19-decodifica-chrome.sh`): 8/8 H.264 tests PASS (1080p, 4K, key, canvas, cap, cap2: 120/120); HEVC NOT TESTED (headless Chrome without GPU does not configure `hev1`, with and without the VA-API/Vulkan flags, as in phase 18). **What the RADV 25.0.7 driver cannot do / does its own way**: `transform_8x8` NO (`stdSyntaxFlags` 0x5880: CABAC yes, 8x8 no — written regardless, the stream would not decode, «error while decoding MB 0 0»); `maxLevelIdc` not declared (0): the level structure in the session is omitted; in HEVC it writes `general_level_idc` in H.264's alphabet (40 for 4.0, 31 for 3.1): the module corrects the byte in the VPS and in the SPS and declares it (`livello_corretto_nei_byte`); `hasOverrides` always true on the parameter sets; `imageUsageFlags` of the video properties reports only the requested usage (the direct/copy choice is made with `vkGetPhysicalDeviceImageFormatProperties2`); the validation layer flags the `STORAGE` views on the NV12 planes (VUID 02275) but the result is bit-identical to the copy: a false positive to be clarified. Radeon capabilities: H.264 up to 4096x4096, HEVC 8192x4352, RC CQP/CBR/VBR, QP 0-51, 2 quality levels, granularity 16x16 (H.264) and 64x16 (HEVC). **Intel UHD 770 (ANV, Mesa 25.0.7)**: no `VK_KHR_video_encode_queue` even with `ANV_DEBUG=video-encode` — the experiment could NOT be done with the host's Mesa (with Arch's 26.2.3 it was there, §10.27); on Intel the route stays VA-API | no (module and bench; no product file touched) |
+| `7f0e8f6` | **the canvas at most 4096×2304** (it was 7680×4320): `RCP_TELA_L/A_MASSIMA` in `rcp.h` (and the twin `banchi/rcp/`), `TELA_L/A_MASSIMA` in `pagina.html`, `RCP.md` §4.5, `SPECIFICHE.md` §6.1-bis. ⭐ **Above the maximum it is not refused: it is reduced** — the side that overflows goes to the maximum, the other stays (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), with the line «⚠ RIPIEGO DICHIARATO (§4.5)» in the log, in `ATTACCA` (before it was `ERRORE_PROTOCOLLO`) and in `ADATTA_TELA` (before `TELA(MISURA_FUORI_LIMITI)`, now `TELA(ADATTATA)` at the reduced size). Below the minimum (320×240) and the odd size stay refused as before. The page itself already asks for at most the maximum, with the same rule (`tela_da_chiedere()`); the maximum is a constant of the protocol, not a field of the `ECCOMI` (the wire does not change). The check of the driver's maximum size in `codificatore.c` STAYS: it belongs to the driver, not to the protocol | the user's decision, 1 Oct: *«4096 max di larghezza va benissimo, non ho mai preteso di più»* — H.264 on Intel (`EncSliceLP`) stops at 4096 px per side and Firefox on Linux receives only H.264; 2304 = 16:9 at 4096 and `MaxFS` of the H.264 levels 5.1/5.2 (36 864 macroblocks) | `[M]` 1 Oct, laptop: `rcp_misura_ammessa()` directly — 3840×2160 and 4096×2304 equal, 5120×2880 and 7680×4320 → 4096×2304, 5120×1440 → 4096×1440, 319×240 refused; the page's `tela_da_chiedere()` (node) gives the same numbers; build in the container and on the server (`enter.sh`) clean. ⚠ **A real attach NOT tested** (Python client or Chrome) on the running product: the passwords of `prova`/`prova2` changed on 29 Sep and the one in `credenziali-banchi` is rejected by PAM. ⚠ Old benches that demand the refusal above 7680 (`04-b31` case 5, `06-b36` cases 14-15, `06-b35`, `06-b38`, `06-b40`, `01-b4`) not updated | no |
+| `1ddaa89` | **THE GRAFT: the card's route is chosen by capability** — `codificatore.c`: `apri_dispositivo()` asks `vulkanvideo_capacita()` for the node and the codec (profile H.264 High / HEVC Main / Main 10, canvas between the card's min and max, the bitrate mode the cap asks for — VBR with the cap, CQP without —, the QP in the declared range, RGB input: the bench in yuv420p10le stays on VA-API); if suitable it opens `vulkanvideo_apri_dispositivo` and the route is `vulkan` (zero copy from the DMA-BUF and conversion in the shader; from memory the BGRx/RGBx go up and the shader converts them, no NV12 staging), otherwise it writes why and goes to VA-API. ⭐ **Six names** (`codificatore.h`): `h264_scheda`/`hevc_scheda` by capability (the product), `*_vulkan` and `*_vaapi` by name — requested by name it does not fall back on the other. `apri_scheda_vulkan()` with the same numbers as VA-API (cap in three numbers, buffer ≤ 50 ms, level §4.3, keys on request); `chiudi/apri_contesto` per route; `codifica_vulkan()` is the ONLY `if` between the two routes inside `comprimi_comune()`, before the byte border: everything downstream (16 MiB, scale and climb back, cap, `forma_va_bene`, confession from the SPS, D-023 frame, key on request, resize) stays one. Confession: `strada` («vaapi»/«vulkan»), `componente` = the name opened, `fornitore_va` = card + Vulkan driver, `modo_bitrate` 3 = VBR, `misura_massima`/`modi_bitrate` from the Vulkan capabilities (entrypoint: does not exist in Vulkan, `bassa_potenza_verificata` false). `codificatore_strada()`. `figlio.c`: `componente_di()` from `--codifica scheda|vulkan|vaapi` (server, passed to the child like the phase-9 cures; `--prova-codifica`); the JSON carries `strada`, `hevc_strada`, `h264_strada`, yesterday's fields unchanged (`codificatore` is `h264_vulkan`/`h264_vaapi`). `Makefile`: `vulkanvideo.c`, `pkg-config vulkan` (`-lvulkan`), MINIMI `vulkan:1.3.274`, `vulkan/vulkan.h`, `-Wno-missing-field-initializers` only on `vulkanvideo.o`; `src/Contenitore`: `libvulkan-dev` | `DECISIONI.md` §10.27: Vulkan first, by capability, no processor | `[M]` 1 Oct 2026, server (`/media/REMOTIX/src/f19-innesto/albero`, binary built in `enter.sh`): `--prova-codifica` **Intel renderD128**: H.264 and HEVC `hardware` via `h264_vaapi`/`hevc_vaapi` (route `vaapi`, EncSliceLP), forced `--codifica vulkan` → `nessuno`, code **3** (*«nessun dispositivo Vulkan con la coda di codifica … Intel(R) UHD Graphics 770»*); **Radeon renderD129**: H.264 and HEVC `hardware` via `h264_vulkan`/`hevc_vulkan` (route `vulkan`, *«AMD Radeon RX 6800 (RADV NAVI21) · radv Mesa 25.0.7»*), forced `--codifica vaapi` → `vaapi` (full EncSlice); 256×256 one H.264 frame: 1221 bytes in Vulkan against 1386 in VA-API, HEVC 1435 against 1420; `offerti` «hevc,h264» on both; non-existent node → code 3. ⚠ **HEVC string**: Vulkan declares `hev1.1.2.L60.B0`, VA-API `hev1.1.6.L60.B0` — the profile compatibility byte is written by the driver (RADV: Main only; iHD/radeonsi: Main + Main 10): to be checked in Chrome (bench 19 of 1 Oct decodes it with ffmpeg, Chrome HEVC not tested). Build in the container clean (no warning in the three files touched; `ldd` carries `libvulkan.so.1`) | no |
+| `3a00878` | **installer: the «vulkan» route active** — `strade.go`: `rilevaVulkan` reads the loader's ICDs (`/usr/share/vulkan/icd.d`, `/etc/vulkan/icd.d`; `radeon_icd.x86_64.json` → `radeon`, `nvidia_icd.json` → `nvidia`, `lvp`, `intel`…) into `codifica.vulkan.icd` («nessuno» if empty) and `codifica.vulkan=attiva`; `schedeVulkan` = AMD with the `radeon` ICD, NVIDIA with the proprietary driver and the `nvidia` ICD (⛔ Intel no: ANV experimental, stays on VA-API); `SchedaSullaStrada` and the NVIDIA C-HARDWARE condition only WITHOUT ICD (`compatibilita.go`). Codes: **RX-GPU-004** = proprietary NVIDIA WITHOUT the Vulkan driver (remedy: the full driver with the ICD, or an Intel/AMD alongside), RX-GPU-002/005/006 rewritten with the two routes, it/en; `operazione.go` reads `strada` from `--prova-codifica` (a binary that does not write it passes all the same). ⚠ The preliminary check does NOT launch programs nor open the card (R1): the real test stays 7a. `[?]` The minimum Mesa version with RADV encoding by default is not measured (`[M]` 25.0.7 yes): on an older Mesa the preliminary would say yes and 7a no | `DECISIONI.md` §10.27 | `[M]` 1 Oct 2026: `installatore/costruisci.sh prove` gofmt/vet clean, `go test` ok; new: `TestStradaVulkan` (NVIDIA with ICD → passes without C-HARDWARE; without ICD → RX-GPU-004; only `lvp` → RX-GPU-004; AMD with RADV and no VA driver → passes; Intel with ANV → VA-API), the certification with `h264_vulkan` GREEN, the routes «vulkan,vaapi» | no |
+| `6c2ca0d` | **packages, build containers, boxes**: `src/costruzione/Contenitore.*` with the loader+headers per distro; `.deb` Build-Depends `libvulkan-dev (>= 1.3.274)` and Recommends `mesa-vulkan-drivers`; `.rpm` BuildRequires `pkgconfig(vulkan) >= 1.3.274`, Recommends `mesa-vulkan-drivers`; Arch depends `vulkan-icd-loader`, makedepends `vulkan-headers`, optdepends `vulkan-radeon`/`nvidia-utils` (⚠ pacman's virtual `vulkan-driver` would ask for it: the card's driver is put in by the engine, T4 — to be added to the catalogue); `rete11-*` boxes (4 recipes): `libvulkan1` + `mesa-vulkan-drivers` (RADV for the Radeon) | the «Radeon = Vulkan» net (§2.3) without the ICD would measure VA-API | `[M]` 1 Oct 2026 in the podman images: Debian 13 `libvulkan-dev` 1.4.309, Ubuntu 26.04 1.4.341, Fedora 44 `vulkan-loader-devel` 1.4.341, Alma 10 1.4.328 (AppStream, not CRB), Leap 16 `vulkan-devel` 1.4.309, Tumbleweed 1.4.357, Arch `vulkan-headers`/`vulkan-icd-loader` 1.4.357, `vulkan-radeon` 26.2.3; `mesa-vulkan-drivers` Debian 25.0.7. ⚠ The images and the boxes have NOT been rebuilt | no |
+| `ccec594` | **the old canvas benches to the new rule** (above 4096×2304 it is reduced): `04-b31` case 5, `06-b36` cases 14-15 and the mutations H11/H12 (anchors of today's `rcp.c`), `04-b31-certifica` G9, `06-b35` «limiti» round, `06-b38` round 3 and the arbiter's mutation, `06-b40` mirror and cases 3/8, `01-b4` arbiter (ATTACCA: minimum and parity, the maximum belongs to the granted canvas) and recordings 38/39 at 4096×2304 | the ⚠ line of `7f0e8f6` | `[M]` 1 Oct 2026, container: `04-b31` case 5 OK; `06-b36` 14 and 15 OK; `01-b4-lancia.py` **57 out of 57**. ⛔ **They stay red, and they were red before**: `04-b31` cases **9** («il palco fa di testa sua») and **18** («due sessioni, un palco solo»), `06-b36` cases **12** («il palco cambia tre volte da sé») and **24** («la data zero del ripiego senza orologio»); for those reds the two `*-certifica.sh` stop at «ROSSO sul codice intatto» and the mutations do not run (the new anchors verified by hand in `rcp.c`). ⚠ `06-b35`, `06-b38`, `06-b40` not rerun (they want the server running and the test client) | no |
+| `(questo commit)` | **the benches on the integrated tree and the documents**: `banchi/19-vulkan/19-confronto.{c,sh}` + `19-tabella.py` with the third engine **`scheda`** (the integrated product: `h264_scheda`/`hevc_scheda`, the choice by capability inside `codificatore.c`, with all the cures downstream of the bytes; the JSON carries `strada_scheda`); `banchi/18-scheda/18-confronto.sh` compiles the integrated encoder (`vulkanvideo.c`, `-lvulkan`) and measures VA-API by name; `SPECIFICHE.md` (RX-GPU-004/005/006, the grafted route); this log | the anti-regression net of §2.3 starts from here | `[M]` 1 Oct 2026, server, tree `/media/REMOTIX/src/f19-innesto/albero` (binary `src/remotix` built in `enter.sh`, commit `1ddaa89`+). **19-confronto on the Radeon** (`tmp/confronto19`, 62 tests, all code 0 and 120/120 decoded): the integrated product («scheda») gives **the same bytes and the same PSNR as the Vulkan module** alone, test by test (e.g. H.264 1080p zero copy 2 124 327 bytes, 39.619 dB; 4K 1 957 479, 42.646; HEVC 1080p 1 495 205, 44.546; HEVC10 4K 2 828 429, 47.480) — and so against VA-API on the same card what line 2 had measured holds: zero copy H.264 1080p 39.62 dB against 38.55, 4K 42.65 against 39.02, HEVC 1080p 44.55 against 42.15, 4K 46.93 against 40.57, HEVC10 4K 47.48 against 44.72; median of H.264 1080p encoding **2.99 ms** (VA-API 3.68), 4K 9.66 (11.24), HEVC 1080p 2.96 (3.80), 4K 9.88 (11.51); conversion in the shader 0.44-0.69 ms at 1080p, 1.77-1.86 at 4K, from memory upload+conversion 0.84-0.96 ms (VA-API in CPU 1.7-2.2) and 3.05-3.23 at 4K (6.6-8.6). Key on request, new canvas, cap 20 and cap 2 Mbit/s: all green and identical to the module. The differences from VA-API already known (bytes +11 % at 1080p H.264 zero copy with PSNR +1 dB; cap 20 does not bite in Vulkan, +61 %/+33 % bytes with higher PSNR; cap 2 H.264 30.18 → 28.18 dB with −18 % bytes, HEVC 32.36 → 37.02). **18-confronto** (`tmp/confronto18`, Intel and Radeon, VA-API by name, old libavcodec against integrated): *«nessuna prova in cui il nuovo sia peggio del vecchio»* — bytes and PSNR equal to the digit on the zero copy on the two nodes, key/canvas/cap included. **The running product** on port **7651** (`accendi-7651.sh` in `/media/REMOTIX/src/f19-innesto/`, unit `remotix-7651`, log in `/media/REMOTIX/tmp/f19-innesto/registro.log`): it starts, declares *«strada per capacità su renderD128 — Vulkan Video NON è adatta (… non ha VK_KHR_video_encode_queue) ⇒ si prova VA-API»*, opens `hevc_vaapi`/`h264_vaapi` (*«strada vaapi (chiesta «scheda»)»*), `ECCOMI` «hevc,h264». ⚠ The session server opens `NODO_RENDERING` = renderD128 (Intel): the Radeon in Vulkan in the running product is seen in the boxes with `--scheda amd` (the mapped node), not on this port. ⚠ Real Chrome NOT rerun on the integrated tree (`19-decodifica-chrome.sh` remains line 2's); Vulkan's HEVC string is `hev1.1.2` (compat Main only) against VA-API's `hev1.1.6`: to be checked in Chrome with the net. ⚠ The `rete11-*` boxes not rebuilt | no — binary ready in `/media/REMOTIX/src/f19-innesto/albero/src/remotix` |
+| `(questo commit)` | **THE ANTI-REGRESSION NET (§2.3): the 4 boxes rebuilt, Intel=VA-API round GREEN, Radeon=Vulkan round with the FIRST DEFECT of phase 19** — (1) `banchi/15-suite/registro.jsonl` (copy from the server, additions only) with the rounds `19-intel` and `19-radeon`; (2) generated reports `banchi/15-suite/rapporto-giro19-intel.{txt,html}` and `rapporto-giro19-radeon.{txt,html}` (never written by hand); (3) the tools `banchi/15-suite/19-scatole-scheda.sh` (redoes the 4 boxes on `intel`\|`amd`, like `15-rifai-scatole.sh` but with `REMOTIX_SCHEDA`) and `banchi/15-suite/19-f018-prova.sh` (binary/route comparison on one box). ⚠ `rete11/prodotto/remotix.pam` remained the phase-18 one (pre-D3): see the open point in §2 | the user's anti-regression net (1 Oct): *«bisognerà rivedere tutti i 4 DE»*, and §2 ⭐ «la precedenza assoluta va alla suite» | `[M]` 1 Oct 2026, server (i5-13500T · Intel UHD 770 · AMD RX 6800 renderD129, RADV Mesa 25.0.7, kernel 7.0). **The boxes**: rebuilt FROM ZERO from the `fase-19` recipes (`Contenitore.*` with `libvulkan1`+`mesa-vulkan-drivers`, without OpenH264/SVT-AV1, `firefox-esr` 140.16.0esr from the host's .deb on `hold`), binary of **HEAD `fase-19` (`0a1715f`)** built on the server in `enter.sh` (`src/costruisci.sh`, md5 **`18746ac2`**), page `210ff091`. Versions inside = phase 18 §5.2 and host (`intel-media-va-driver` 25.2.3, `libva2`/`libva-drm2` 2.22.0-3, `mesa-va-drivers`/`libgl1-mesa-dri`/`mesa-vulkan-drivers` 25.0.7-2+deb13u1, `libigdgmm12` 22.7.2, `libvulkan1` 1.4.309); `nictest` (sudo video render) in all four; `radeon_icd.json` present. **ROUND 1 — Intel = VA-API** (`19-intel`, route `vaapi` on all, ECCOMI «hevc,h264»): **337 healthy passes PASS + 336 with the fault seen = 673, 0 FAIL, 0 BLOCKED**; technical layer C7/C9/C18/C19 (healthy and with the fault) green, **C14 green** (786 s); 135 min, 4 desktops in parallel × real Firefox 140 and Chrome 154, 3840x2160. ⇒ **nothing that was green broke on the VA-API route**. **ROUND 2 — Radeon = Vulkan** (`--scheda amd`, renderD129 mapped inside as card0/renderD128; route `vulkan` 8/8 at startup: `h264_vulkan`/`hevc_vulkan`, «AMD Radeon RX 6800 (RADV NAVI21)»): ⛔ **STOPPED at the first defect** — 82 healthy PASS, **2 FAIL** (`T-P-C-lxqt-firefox`, `T-012-xfce-firefox`), 4 BLOCKED (`F-018b/c` gnome and kde). **THE DEFECT BELONGS TO PHASE 19**: the SAME test `F-018`/`P-C` (re-attach at a different size, 4K→2560→4K) on the SAME lxqt box with the binary `18746ac2` forced `--codifica vaapi` = **PASS**, and with the phase-18 binary `4b39195c` (VA-API) = **PASS**; only the **Vulkan** route breaks (tool `19-f018-prova.sh`, outcomes E1…E4 in `/media/REMOTIX/misure/fase15/giro19-diagnosi/`). **Cause, with evidence** (`journalctl -k` of the host, logs of the boxes): on the canvas change Vulkan encoding on the RX 6800 goes into **`VK_ERROR_DEVICE_LOST`** (`vkQueueSubmit2`) ⇒ amdgpu **page fault** (gfxhub/mmhub, client TCP then VMC) ⇒ **ring `gfx_0.0.0` and `vcn_enc_0.0` in timeout** ⇒ **GPU MODE1 reset** (*«VRAM is lost»*, `devcoredump` written). Intermittent but reproducible (E3r on lxqt, E4r on xfce; E4 first run clean). ⚠ **The reset wipes the SHARED card**: all the Vulkan sessions of the 4 boxes in parallel lose the device in cascade — the 2 FAIL + 4 BLOCKED and the many «DEVICE_LOST»/«il palco se n'è andato» in the four logs come from a single hang. In the faults **`labwc` and `kwin_wayland`** also appear as processes: the amdgpu/RADV stack destabilises on the reconfiguration of the output together with the encode. **VA-API on the same resize is clean** (0 faults, 0 resets: E1 and E2). ⇒ **The user's decision**: the cure is neither minimal nor obvious (it sits at the border with the RADV/amdgpu driver of this Mesa) — the Radeon round is **NOT green** and **has not been redone**, waiting for the user's choice. **HEVC in Chrome on Vulkan** (`hev1.1.2` against VA-API's `hev1.1.6`): **NOT verified**, the Radeon round was stopped before getting there. **Android**: hand tests by the user with the phone (decision of 1 Oct). Boxes left on **Intel** (card0/renderD128 = UHD 770), binary `18746ac2`, route `vaapi` | no |
+| `(questo commit)` | **installer: the card's Vulkan driver from the catalogue** — catalogue **2026.10.01.10** (seq. 10): in the `h264` block of every platform `vulkan_scheda` (vendor → OFFICIAL Vulkan driver that encodes, installed by the engine without consent: Debian and Ubuntu `mesa-vulkan-drivers`, **Arch `vulkan-radeon`**, only for AMD) and `vulkan_nvidia` (the package that carries the ICD with the proprietary driver, **only in the remedy** of RX-GPU-004: it must have the driver's number, which can also come from NVIDIA); openSUSE: Packman's `libvulkan_radeon` together with `Mesa-dri,Mesa-libva` (`pacchetti_scheda` AMD and repository commands). Engine: `H264Piattaforma.VulkanScheda/VulkanNvidia`, `VulkanPerLaScheda`, the **`vulkan`** step of the plan after the package; `schedeVulkan` with the catalogue judges AMD from the platform (Arch without ICD counts; Alma with the `radeon` ICD NO ⇒ RX-GPU-006); RX-GPU-006 rewritten (it/en), `SPECIFICHE.md`, the comment of the `PKGBUILD`. ⛔ Intel never (ANV experimental, stays on VA-API); ⛔ Fedora nothing in Vulkan: the RADV with RPM Fusion's codecs (`mesa-vulkan-drivers-freeworld`) **replaces** the official one (dnf puts it in only with a «swap»: as an addition, it chose the i686), it stays VA-API freeworld | `vulkan-radeon` on Arch is only an optdepends, and a «Recommends» is skipped on machines without recommends; and on the distributions with the «all_free» Mesa the `radeon` ICD made the preliminary say yes when 7a would have said no | `[M]` 1 Oct 2026, podman images `remotix-costruzione-*`: **who carries the ICDs** — Debian 13: `mesa-vulkan-drivers` 25.0.7 (`radeon_icd.json`, `intel_icd.json`), NVIDIA `nvidia-vulkan-icd` 550.163.01 (non-free; for `nvidia-driver-libs` only *Recommends*); Ubuntu 26.04: `mesa-vulkan-drivers` 26.0.8, NVIDIA `libnvidia-gl-<N>` (`nvidia_icd.json`, *Depends* of `nvidia-driver-<N>`, up to 610); Fedora 44: `mesa-vulkan-drivers` 26.2.3, RPM Fusion `mesa-vulkan-drivers-freeworld` 26.2.3 and `xorg-x11-drv-nvidia-libs` 615.71.09 (`nvidia_icd.x86_64.json`); Alma 10: `mesa-vulkan-drivers` 25.2.7 (AppStream), **no** freeworld in RPM Fusion EL; Leap 16: `libvulkan_radeon`/`libvulkan_intel` 24.3.3 (official and Packman), NVIDIA `nvidia-gl-G06/G07` (NVIDIA's repository); Tumbleweed: same 26.2.3, Packman `.pm.`; Arch: `vulkan-radeon`, `vulkan-intel` 26.2.3, `nvidia-utils` 615.71.09 (all *Provides* `vulkan-driver`). **The codecs**: Fedora 44 and Alma 10 build Mesa without `-Dvideo-codecs` ⇒ `all_free` (from the spec and from the source's `meson.options`), openSUSE removes them («re-disable video codecs»); Packman: `zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon` = 3 updated with the vendor change, nothing removed. `[?]` that Packman's and Leap's 24.3.3 RADV really encodes could not be tested (no card: RADV's «null» device has no video queues). `installatore/costruisci.sh prove` green (gofmt/vet clean), new `TestVulkanDelCatalogo` and `TestPianoVulkan` | no |
+| `(questo commit)` | **the bench for the NVIDIA rental** (`banchi/19-nvidia/`, §2.4): `LEGGIMI.md` (one page for the user: what to rent, how to launch, how long it lasts); `19-nvidia.sh` from the laptop — `prepara` (the .debs for Debian 13 and Ubuntu 26.04 with `costruisci-deb.sh`, the installer, the benches: the «suitcase» in `costruzione-uscita/19-nvidia/`), `tutto IP` (sends, starts in a systemd unit that survives ssh, follows, reboots by itself if the driver asks for it, collects into `misure/19-nvidia/` with the sha256), `pulisci IP`, and in pieces `manda/avvia/segui/stato/raccogli/entra`; `UTENTE=ubuntu` with sudo, `CONTENITORE=` for the local test. `19-nv-macchina.sh` on the machine, as root, one step at a time and restartable: **checks** (distribution, card from the bus, `nvidia-smi` ≥ 550, ⛔ cards without NVENC A100/H100/H200, `nvidia-drm modeset`, the DRM nodes and WHICH one is the NVIDIA's — the server encodes on `renderD128` —, the ICD, `vulkaninfo` with `VK_KHR_video_encode_queue/h264/h265`, dmabuf, modifiers; and the snapshot of the machine as it was) · **driver** (only if missing: Debian `nvidia-driver`+`nvidia-vulkan-icd` from non-free, Ubuntu `ubuntu-drivers install` — ⛔ not `--gpgpu`, which has no ICD —; the ICD alone if the driver is «headless»; `modeset=1`; output 10 = reboot) · **dependencies** (XFCE under labwc like the `rete11-xfce` box, the tools, `firefox-esr` — on Ubuntu from Mozilla's repository —, Google's Chrome, the user `rxbanco`) · **remotix** (with the INSTALLER: `verifica`, `piano --installa --pacchetto`, `applica --approva`, `certifica`; if it refuses, the refusal stays as a result and the .deb goes with the package manager; name in the certificate and stderr in a file declared in two files of `/etc` that `pulisci` removes) · **encoding** (`--prova-codifica` h264/hevc, on the NVIDIA node, forced vulkan, and as a user: GREEN only with route `vulkan`) · **comparison** (`19-confronto.sh` with `MOTORI="vulkan scheda"`, `ORDINE_PRODOTTO=1`) · **suite** (`19-nv-suite.py`: F-001 F-002 F-003 F-011 F-013 F-016 F-018, Firefox and Chrome, healthy+fault, the phase-15 tests IDENTICAL, with `Scatola.dentro` = `sudo -n sh -c` on the machine; browsers in their own labwc without a screen, pixman, 3840x2160, or declared headless; log in the format of `15-giro.py`, round `19-nvidia`, report from `15-rapporto.py`) · **collect** · **clean** (installer `disinstalla --purge`, the bench's users, `modeset`, the NEW packages only if apt's simulation touches no package that was there, `/etc/apt` as it was). `19-confronto.sh`: `MOTORI` and the canvas test **in a cycle** (`--ciclo 20:3840x2160,2560x1440`, H.264 and HEVC). `19-nv-prova-contenitore.sh`: the local test without a card | §2.4: the bench ready before the rental, *«senza improvvisare»* | `[M]` 1 Oct 2026, laptop: `bash -n` and `shellcheck -S warning` clean (excluding only the intended warnings), `py_compile`; `prepara` GREEN (the two .debs with the checks R13/R14/R4 YES, installer, suitcase); **test in a container with systemd and without a card, Debian 13 and Ubuntu 26.04**: checks RED (no NVIDIA: correct), dependencies GREEN (Firefox 153.4.0esr, Chrome 154, labwc 0.8.3 / 0.9.3, XFCE 4.20), the installer installs, its verification 7a does not pass (no driver) and **rolls back by itself**, the .deb with the package manager, the server listens and declares *«QUESTO SERVER NON SA CODIFICARE VIDEO»*, `--prova-codifica` code 3, `19-confronto` compiles, suite NOT LOOKED AT (no NVIDIA node), archive brought back with the same sha256, **clean: packages, `/etc/apt`, users and folders exactly as before**. `19-nv-suite.py --interno … --certifica` on f001 and f018: the pure functions pass through the graft. Cured during the test: a blind purge stopped on `sudo` leaving dpkg pending (⇒ simulation first, `SUDO_FORCE_REMOVE`, `dpkg --configure -a`); on Ubuntu `apt-cache show firefox-esr` exits 0 for a name with no candidate (⇒ `apt-cache policy`). ⚠ In the container without `/dev/dri` the installer's preliminary does not give RX-GPU-003 (nodes not read = no refusal) and the refusal comes only from 7a: to be looked at. ⛔ NOT tested without the card: the driver step, the run of `19-confronto`, the suite with the browsers | no |
+| `(questo commit)` | **Chrome green on the Radeon: the HEVC coded size aligns to the card's granularity** — `src/vulkanvideo.c`: `larg_cod`/`alt_cod` (the size in the SPS and in the `codedExtent`) are aligned, besides 16, to the card's `encodeInputPictureGranularity` (RX 6800/RADV: **64x16**), and the rest is cut by the conformance window (like radeonsi in VA-API, 1920x1088). Before, at 2544x1344 the SPS said 2544 and the card encoded in blocks of 64. The bench: `banchi/19-vulkan/chrome/` (WebCodecs page with the product's configuration, `hev1.1.6.L153.B0`, in its own labwc). ⚠ The string `hev1.1.2` (Vulkan) against `hev1.1.6` (VA-API) has NOTHING to do with it: it is the Main10 compatibility flag in the SPS, and the page configures `hev1.1.6` anyway | in the F-002/003/… suites on Chrome the canvas stayed **green** (0,136,0) at the browser's canvas **2544x1344** (window 2560x1353): 2544 is not a multiple of 64. At 3840/3776 it did not show (multiples of 64); Firefox green-OK by chance of size/codec | `[M]` 1 Oct 2026 on the server, `19-confronto --motore scheda` on the Radeon, 30 frames: **before** 2544x1344 ⇒ ffmpeg «cu_qp_delta 35 outside the valid range» and image correct only in the first CTB rows, then green; Chrome 154 (VA-API Intel) dominant (0,136,0) on 30/30. **After** (coded 2560x1344): ffmpeg 0 errors and whole image, Chrome 30/30 decoded, not degenerate; 3824x2064 (coded 3840x2064) same; 3840x2160 and 1918x1078 (→1920x1088) 0 errors; H.264 2544x1344 0 errors. VA-API Intel not touched (only `vulkanvideo.c`); `--prova-codifica`: Radeon `strada vulkan` (hevc and h264), Intel `vaapi`. No page fault/timeout in the kernel | `rete11/prodotto/remotix.ad3ba33a` (not installed: `prodotto/remotix` stays `e678cf8b`) |
+| `(questo commit)` | **the bench of the Android tests on the real phone (§5, §5.1)** — `banchi/19-android/`: `19-android.sh`/`19-android.py` from the laptop (`controlla` · `prova <1..10>|tutte [--desktop]` · `ripristina` · `a-secco`), `telefono.py` (the suite's `--browser telefono` driver: a tab of OURS via `/json/new`, only towards `https://192.168.0.2:8511-8514/8611-8614`, a call guard before the gestures), `LEGGIMI.md` for the user; new test **`15-f031-tocco.py`** (F-031, `SOLO_TELEFONO`: real finger `adb input swipe`, real tap `adb input tap`, tap-and-a-half with the protocol; scene and judges of F-004). The tests are THOSE of the suite, with their judges and faults, launched ON THE SERVER by `15-giro.py --browser telefono` with `ssh -R` (19333 → the phone's DevTools via `adb forward`, 19334 → the laptop's «counter», the only one that uses adb: call?, ready, tap, scroll, rotate, kill-chrome). Minimal hooks: `suite.py` («telefono» choice), `15-g6-comune.py` (`uccidi_browser` → `am force-stop`; `accendi_a_misura` → phone rotated), `11-c21` (`foto_piena` at `devicePixelRatio`), `15-f014` (clipboard permission for the phone too), `15-giro.py` (`REMOTIX_SISTEMA_15`, `SOLO_TELEFONO`), `15-rapporto.py` («telefono» column), `15-porta.sh` (also carries `19-android`). Its own log: `/media/REMOTIX/misure/fase19-android/registro.jsonl`; benches brought into `/media/REMOTIX/src/controllo-android` (does not touch `controllo`). The phone is left as found: the user's tabs noted and never touched, rotation and `screen_off_timeout` put back, Chrome closed again if it was (state in `~/.cache/remotix-19-android/`). Test 9 cuts the line from the SERVER (the suite's nft), not the Wi-Fi: with the Wi-Fi off adb would be lost | the user's decision of 1 Oct (§5: «il telefono è tuo», Phonestra) and the suite's rule: same tests, same judges | `[M]` 1 Oct 2026 on the laptop, **dry** (phone and server NOT touched): `19-android.sh a-secco` **22/22** — without a phone `controlla` and `prova 1` say «telefono non visto» and exit with 2 (adb only got `devices`); with a FAKE adb and a laptop Chrome 154 (`--headless=new`, throwaway profile) on a local page: its own tab, refusal of an address outside the boxes, snapshot of the canvas via CDP, click/key/finger to the page, trackpad pointer brought onto the target (error < 1 px), call ⇒ 409 and gesture stopped, closing and restoring (the user's tab intact, tabs towards the boxes closed, rotation and screen-off put back). `--certifica` of f031/f001/f018 green. ⚠ NOT tested: the real phone (adb, `input`, rotation, `force-stop`, Chrome Android's DevTools) and the run on the server — they are tested with the first `prova` | no |
+| `(questo commit)` | **the «comune» labwc of the LONG tests has its own name** — `banchi/15-suite/15-compositori.sh` also starts «comune» (socket written in `$XDG_RUNTIME_DIR/15-compositori/comune`), `15-giro.py` → `compositore()` reads it for the LONG tests instead of `REMOTIX_WAYLAND_VERI`/«wayland-0». No judge touched | after the server reboot (1 Oct) `15-compositori.sh accendi` had started first and «wayland-0» was **gnome**'s labwc: the F-030 tests of the four desktops ended up there, under the browser of gnome's row, and one stayed covered ⇒ black «DEGENERE» canvas (T-030-xfce in the rounds `19-radeon-ff`/`-3`, T-030-kde in `-3b`). It was not the product: the server was sending the desktop and the page was painting (the box's logs and the page's diary) | `[M]` 1 Oct 2026, server: round `19-radeon-3` (binary `ad3ba33a`, Radeon = Vulkan, 4 desktops × Firefox 153 and Chrome 154, technical layer) **669 PASS, 0 FAIL, 4 BLOCKED** (T-030-xfce, T-029-kde, healthy+fault), kernel clean (0 page faults, 0 resets, 0 fence fallbacks, 0 ring timeouts); alone: F-030 xfce 2/2 PASS, F-029 kde 3/3 PASS; mini-round `19-radeon-3b` (f029+f030, 4 desktops) 14 PASS and T-030-kde BLOCKED — the covering moves; **with the «comune» labwc cured, mini-round `19-radeon-3c` (f029+f030, 4 desktops together, Firefox) 16/16 PASS**; short round `19-intel-3` (f001/f003/f011/f018, Intel = VA-API) **128/128 PASS**. T-029-kde of the round: Plasma did not start 1 boot in 50 (kcminit stuck, ksplash «eglSwapBuffers failed»), screen really black: not the encoding's | no |
+| `(questo commit)` | **Android on the real phone: tests 1-10 green (full round GNOME, short KDE/XFCE/LXQt), and the bench's cures** — `11-c21` `foto_piena`: with dpr > 1 the snapshot of the whole glass and the crop (Chrome Android with `clip.scale` > 1 repeats the page in tiles); `telefono.py`: the protocol's finger and the real one consume the slop like the page does (D_TAP 9 px: one sacrificial step, +10 px to the real finger), the real scroll starts from the centre of the canvas, short (≤ 30 %) and waited for up to 3 s; `15-f031` up to 8 finger passes; `telefono.py` admits port 8599 (the non-existent server of F-001's fault); `19-android.py` reads the card from the route in the box's log (in the box's `/sys` renderD128 is always the Intel); `15-f018` compares the canvas with the view × devicePixelRatio (the page: `misura_vista()`) — on the computer dpr 1, outcomes unchanged (`--certifica` green) | §5 and §4-bis: the second gate | `[M]` 2 Oct 2026, S23+ (Android 16, Chrome 154.0.8037.92), boxes on the Radeon (Vulkan, `ad3ba33a`). **Portrait, real screen** (phone in hand): GNOME 1 (4/4), 2 F-031 (healthy and fault PASS: a finger that moves, a tap that clicks, a tap-and-a-half that drags), 3 keyboard, 4 clipboard, 7 phone rotated and put back (F-018 + P-C: canvas 2096x832 for the view 750x297 CSS × dpr 2.8125, and back 1072x1936), 8 Chrome killed and re-entry, 9 network dropping, 10 Esci — all PASS healthy+fault; KDE/XFCE/LXQt 1 and 9 PASS. ⚠ In portrait test 5 (video: the judge's aim outside the crop on the narrow video, 11 % of the frames; the video was full, no mosaic) and test 6 (F-003: the test window on the 1072-wide canvas is maximised by the desktop, and dragged it shrinks) do not pass: they belong to the narrow canvas, not to the product. **Landscape** (Chrome from Phonestra's drawer, virtual screen 2560x1000 — the DeX case, the user's suggestion): 6 PASS on the four desktops, 5 PASS (video 100 % good frames, audio), 1/3/4/8 PASS. ⚠ Open: with the S23+ an `adb input swipe` that starts in the lower half of the canvas during the session does not reach the page (on an empty page it does): to be looked at by hand | no |
+| `(questo commit)` | **«Tastiera solo a richiesta» (DECISIONI §10.28)** — `src/pagina.html`: with the phone in hand (touch layout) the hidden paste field carries `inputmode="none"`, `virtualkeyboardpolicy="manual"`, `autocapitalize`/`autocorrect="off"` (removed in the classic one: computer and DeX with mouse identical); the **⌨ command at the top right** (40 px, only with `data-disposizione="tocco"` and the session on; `touchend` in the gesture: `blur`+`focus` with the new `inputmode` and `navigator.virtualKeyboard.show/hide`) opens and closes the keyboard; Android's closing («back») is seen from the `visualViewport` that goes back up tall. ⭐ And the text ARRIVES: `tastiera_su_input` sends the field's DIFFERENCE (letters as `LETTERA`, what disappears as Backspace, `\n` as Enter — autocorrections included), `tastiera_su_keydown` the real keys (Enter/Backspace with the field empty, Bluetooth keyboard without mouse); the field empties outside composition. `incolla_campo_crea()` separated from `incolla_campo_prendi()`; the paste reads are skipped with the keyboard open. `REMOTIX.tocco.tastiera()` to read. Bench: `15-f031` fourth gesture «tastiera» (closed after the gestures · the ⌨ with a REAL tap opens it · «prova» via composition+commit CDP arrives in field «a» of the scene · the ⌨ closes it again; fault: the tap 60 px to the left of the ⌨ ⇒ red; `--certifica` with the judge `giudica_tastiera`); `19-android.py` counter `/tastiera` (`dumpsys input_method`, `mInputShown`) and fake adb; `telefono.py` `tastiera_aperta`/`aspetta_tastiera`/`comando_tastiera`/`tocco_vero_in`/`scrivi_ime`; SPECIFICHE §7.2-7.3 | `[M]` 2 Oct, S23+: the keyboard opened by itself and covered the lower half for 60 % of F-031 (the `adb swipe` in the lower half «did not arrive»: they fell on the keyboard); and it wrote nothing: `[M]` the product's page in Chrome with emulated touch, before the cure, «ciao» from the input method and from the keys ⇒ **zero** messages (in touch mode nobody was listening) | dry (2 Oct): local bench on the product's page in headless Chrome 16/16 (touch: `inputmode=none`, ⌨ visible, a tap on the canvas does not open, the ⌨ opens, «ciao » composed arrives, «cisao»→«ciao» = 3 Backspace + «ao», keys x/Enter/Backspace, the canvas with the keyboard open does not close it, the ⌨ closes it again; classic: no attributes, no ⌨, «ci» goes once, the IME text no — as before); gesture «tastiera» of `15-f031` against the real page with a fake counter 5/5 (healthy PASS, fault FAIL, opened by itself FAIL); `15-f031 --certifica` green; `19-android a-secco` 25/26 (the 4 new ones green; red «il puntatore si porta sul bersaglio» already before: `porta_il_puntatore` not touched). ⛔ I did not use the real phone: the test is the user's | no |
+| `(questo commit)` | **The work of 2 October that was only on the server, and the arrow under capture on the DeX (3 October)** — brought back from `/media/REMOTIX/src/f19-audio/albero` (binary `54a98acc`, page `d827a225`, in force in the boxes since 2 Oct): `sessione.c` stops the `pipewire-pulse` left over from the previous session (GNOME mute after «Esci», the user's hand test); `trasporto.c` gives back the streams' credit when a client stream closes (`[M]` after 19 streams the clipboard stopped); `pagina.html` the clipboard (no warning at every access on GNOME/KDE without a user gesture, the Ctrl+V after a remote copy, the second button as a «chorded button»). ⭐ And one new line, page `34fde3d7`: `:not([data-agganciato="si"])` on the rule that hides `#puntatore` in `sistema` mode — `[M]` on the DeX (S23, Android 16, Chrome 154 and Samsung Internet 30) hover does not arrive (noVNC #1727: position only before the click, ids in a row) and the double arrow on the border never appears; with pointer capture the movements with buttons up arrive (>150 in a row) but the arrow had disappeared. With the line, the user: «con la cattura la situazione migliora», resizing from the border seen in the log (hover → pressed → dragged). |
+| `63f5562` `67628ff` `(questo commit)` | **On the DeX pointer capture at the first click (DECISIONI §10.29)** — `src/pagina.html`: `cl_hover_manca()` on `pointerdown` of type `mouse` (no pass with buttons up since loading or since the last release, or the last one at `CL_SALTO_PX`=8 px or more from the click ⇒ `cl_aggancia()`; ⛔ the first version counted the passes, <10, and `[M]` round `19-cattura` the bench's Firefox with 5 passes was captured on a computer); `cl_spinta_oltre_il_bordo()` releases after `CL_SPINTA_USCITA`=160 CSS px of push out of the canvas; the first `movementX` after the lock beyond `CL_SALTO_FINTO`=100 px is discarded (`[M]` two releases in the same second as the start). `[M]` 3 Oct, DeX, Radeon then Intel: capture on at the first click on GNOME, KDE, XFCE, LXQt, exit from the border and recapture, no spurious release with the page `1f1cbb73`; the user: «risultato eccellente». |
+| `8d30a7c` `a0a3aa5` | **The check on the computers, and what it found** — `[M]` round `19-cattura` (criterion «<10 passaggi»): the bench's Firefox captured with 5 passes ⇒ new criterion (no pass, or the last one at least 8 px from the click). Round `19-cattura-2` (39 PASS, 1 FAIL, 24 BLOCKED): BLOCKED of the bench (the scene's ports left by the interrupted round; C22/F-003 counted only the `mousedown`, which the page since 2 Oct turns off by taking the click from `pointerdown` ⇒ now they count the pointers too) and one real FAIL, Chrome on GNOME selected «beta gamma delt»: **the release too carries its position** (`cl_su_mouseup`). Round `19-cattura-3`, page `f78df3ed`, Intel: **F-003 F-004 F-006, 4 desktops × Firefox/Chrome, 48/48 PASS**; no capture switched on by the bench. |
+| `(questo commit)` | **The user's hand test, Linux, Intel (3 Oct, morning)** — the user's words: *«sui 4 DE il resize delle finestre funziona», «la selezione del testo funziona»*. `[M]` diary of the 4 boxes: client `piattaforma=Linux`, **no capture switched on** (the DeX rule does not trigger on the computer). |
+| `(questo commit)` | **The user's hand test, Linux, Radeon (3 Oct)** — the user's words: *«resize ok anche sulla radeon»*. Boxes redone with `19-scatole-scheda.sh amd` (it failed before: the copies of the `shm` inside devroot, cured in `3535800`). |
+| `(questo commit)` | **Android, test 2 (F-031 touch) RED on the keyboard — and it is NOT the page** — `[M]` 3 Oct, S23 (Android 16, Chrome 154, Samsung keyboard 5.9.30.97, no update since yesterday), Radeon, GNOME: «il secondo tocco sul ⌨ NON chiude la tastiera», then on retrying «aperta da sola» (consequence: it had stayed open). Red with Phonestra, red **without** Phonestra, and red **with yesterday's page `3fc5777d`** which on 1 Oct was green ⇒ the phone changed, not the product. No external keyboard connected. `[?]` Different from yesterday: USB debugging switched on today by the user, Chrome restarted with `am start`, the phone this morning on the DeX. ⭐ **Then the user by hand, phone in portrait: «la tastiera si apre e si chiude»** ⇒ the red belongs to the BENCH. Suspicion to be verified: `telefono.py` `tastiera_aperta()` reads `dumpsys input_method | grep -m1 mInputShown=` — the FIRST line, which today may not be Chrome's (other screens/clients after DeX and Phonestra). Test 3 was not done. adb: one gets in with `ADB_VENDOR_KEYS=~/.config/Phonestra/adbkey` (the phone no longer recognises the key of the tablet's adb). |
+| `cd7c59e` | **The full net to close: round `19-chiusura-intel`, Intel, binary `54a98acc`, page `f78df3ed`: 700 PASS, 2 FAIL, 2 BLOCKED (129 min)** — FAIL: F-012B on GNOME (the previous session's `pipewire-pulse`: at «Esci» `pipewire` stops and pulse does not, at the new login `pipewire` restarts before the check) ⇒ `sessione.c` compares the start instants; binary **`05e7c7d1`**: F-012B **20/20 PASS** on the 4 desktops × 2 browsers. BLOCKED: F-030 (black Firefox canvas in the first 45 s) only with the long tests in parallel, each time on a different desktop (LXQt; then KDE and XFCE) ⇒ redone one desktop at a time: **4/4 PASS** ⇒ it is the bench's load (4 Firefox in 4K decoding on the same Intel that encodes), not the product. |
 
-## 4-bis. La chiusura delle prove di funzionalità
+## 4-bis. The closing of the functionality tests
 
-Parola dell'utente (1 ott 2026): *«prima di ritenere chiusi i test di funzionalità voglio verificare di persona che
-tutto sia ok»*. ⇒ Tre cancelli, in ordine: (1) la suite automatica verde in tutti e due i giri (Intel = VA-API,
-Radeon = Vulkan); (2) Android sul telefono dell'utente (§5); (3) **la prova a mano dell'utente** sulle scatole
-(prima i 4 desktop sulla **Intel**, poi i 4 sulla **Radeon** — scelta dell'utente; utente `nictest`, porte 8511-8514), a server fermo. Solo dopo
-il terzo la fase 19 si dichiara chiusa e il ramo `fase-19` entra in `fase-10-cure`.
+The user's words (1 Oct 2026): *«prima di ritenere chiusi i test di funzionalità voglio verificare di persona che
+tutto sia ok»*. ⇒ Three gates, in order: (1) the automatic suite green in both rounds (Intel = VA-API,
+Radeon = Vulkan); (2) Android on the user's phone (§5); (3) **the user's hand test** on the boxes
+(first the 4 desktops on the **Intel**, then the 4 on the **Radeon** — the user's choice; user `nictest`, ports 8511-8514), with the server stopped. Only after
+the third is phase 19 declared closed and the `fase-19` branch goes into `fase-10-cure`.
 
-### 4-bis.1 La prova a mano sulla Intel (2 ott 2026)
+### 4-bis.1 The hand test on the Intel (2 Oct 2026)
 
-Prima passata dell'utente sui 4 desktop: *«funziona quasi tutto bene»*, tre segnalazioni.
-1. **Ctrl+C / Ctrl+V «non sempre»** — due difetti veri, curati e misurati (commit `5443a77`, `18419b7`;
-   binario `fbfceb41`, pagina `1fb65a01`): il server concedeva **19 stream unidirezionali in tutta la
-   sessione** (`trasporto.c`, il credito ora si rende alla chiusura), e il `Ctrl+V` partiva prima
-   dell'annuncio degli appunti (la V ora aspetta la lettura, al massimo 400 ms, solo sul `Ctrl+V`).
-   Prova nuova `15-f014c` (gli appunti come li usa la persona): col prodotto vecchio **rossa** (4-5 giri
-   su 5 col testo vecchio), con le cure **verde**; giro `cure-intel-6` **128/128**. ⚠ Nel terminale
-   `Ctrl+V` scrive «^V»: è il terminale (incolla con `Ctrl+Maiusc+V`), non un difetto.
-2. **Il ridimensionamento a caldo** — già fuori dal prodotto dal 17 agosto (`DECISIONI.md` §5.1-bis);
-   riconfermato, tolte le due frasi superate.
-3. **Android, Chrome col mouse: i clic non arrivano** — i clic ora vengono dai pointer events (pagina);
-   verificato dall'utente **col DeX: «i clic funzionano»**. Resta il limite dichiarato dei Samsung
-   (niente hover ⇒ niente forma sui bordi, `SPECIFICHE.md` §7.4). ⚠ La prima segnalazione era fatta con
-   **Phonestra** dal portatile, che inietta eventi nel telefono. ⇒ **Decisione dell'utente (2 ott): la sua
-   prova a mano su Android si fa col DeX**, non con Phonestra (che resta lo strumento dei banchi
-   automatici, `banchi/19-android`).
+The user's first pass on the 4 desktops: *«funziona quasi tutto bene»*, three reports.
+1. **Ctrl+C / Ctrl+V «non sempre»** — two real defects, cured and measured (commits `5443a77`, `18419b7`;
+   binary `fbfceb41`, page `1fb65a01`): the server granted **19 unidirectional streams in the whole
+   session** (`trasporto.c`, the credit is now given back at closing), and the `Ctrl+V` left before
+   the clipboard announcement (the V now waits for the read, at most 400 ms, only on `Ctrl+V`).
+   New test `15-f014c` (the clipboard as a person uses it): with the old product **red** (4-5 rounds
+   out of 5 with the old text), with the cures **green**; round `cure-intel-6` **128/128**. ⚠ In the terminal
+   `Ctrl+V` writes «^V»: it is the terminal (paste with `Ctrl+Maiusc+V`), not a defect.
+2. **Hot resizing** — already out of the product since 17 August (`DECISIONI.md` §5.1-bis);
+   reconfirmed, the two outdated sentences removed.
+3. **Android, Chrome with the mouse: the clicks do not arrive** — the clicks now come from the pointer events (page);
+   verified by the user **with the DeX: «i clic funzionano»**. The declared limit of the Samsungs remains
+   (no hover ⇒ no shape on the borders, `SPECIFICHE.md` §7.4). ⚠ The first report was made with
+   **Phonestra** from the laptop, which injects events into the phone. ⇒ **The user's decision (2 Oct): the user's
+   hand test on Android is done with the DeX**, not with Phonestra (which remains the tool of the automatic
+   benches, `banchi/19-android`).
 
-✅ **Seconda passata, stesso giorno: «Test incolla ok».** ⇒ **La Intel è chiusa** (Android escluso:
-si rifà sulla Radeon col telefono).
+✅ **Second pass, same day: «Test incolla ok».** ⇒ **The Intel is closed** (Android excluded:
+it is redone on the Radeon with the phone).
 
-### 4-bis.2 La prova a mano su Android col DeX (4 ott 2026)
+### 4-bis.2 The hand test on Android with the DeX (4 Oct 2026)
 
-Parola dell'utente: *«Possiamo chiudere il caso DEX»*. Provato con successo (binario `05e7c7d1`, pagina `f78df3ed`, il prodotto della chiusura, §7):
-- audio e video sincronizzati su un video **4K** di YouTube;
-- **stacco e rientro** della sessione mentre il video suona;
-- il **ridimensionamento delle finestre** delle applicazioni;
-- gli **appunti**.
+The user's words: *«Possiamo chiudere il caso DEX»*. Tested successfully (binary `05e7c7d1`, page `f78df3ed`, the closing product, §7):
+- audio and video synchronised on a **4K** YouTube video;
+- **detach and re-entry** of the session while the video plays;
+- the **resizing of the windows** of the applications;
+- the **clipboard**.
 
-✅ ⇒ **Android col DeX è chiuso**, e con lui il terzo cancello di §4-bis.
+✅ ⇒ **Android with the DeX is closed**, and with it the third gate of §4-bis.
 
-## 5. Android: il telefono vero, comandato da qui
+## 5. Android: the real phone, driven from here
 
-⭐ **1 ott 2026, parola dell'utente: «ti lancio l'app e il telefono è tuo»** — grazie a **Phonestra** (progetto
-dell'utente) il suo telefono (Samsung S23+, Android 16, Chrome 154) è raggiungibile via adb senza fili con la
-chiave già autorizzata da Phonestra: `[M]` collegamento riuscito, Chrome comandabile per intero col protocollo
-DevTools (`adb forward … localabstract:chrome_devtools_remote`), tocchi veri con `adb shell input`. ⇒ Le prove
-della tabella qui sotto si fanno **automatiche**, sul telefono vero, a ogni giro. Il collegamento resta sul
-portatile e arriva alla suite sul server con un tunnel ssh: la chiave del telefono non lascia mai il portatile.
-⛔ Solo Chrome verso le scatole; mai durante una chiamata (`dumpsys telephony.registry`, una riga per SIM); il
-telefono si lascia come lo si è trovato.
+⭐ **1 Oct 2026, the user's words: «ti lancio l'app e il telefono è tuo»** — thanks to **Phonestra** (the user's
+project) the user's phone (Samsung S23+, Android 16, Chrome 154) can be reached via wireless adb with the
+key already authorised by Phonestra: `[M]` connection successful, Chrome fully drivable with the DevTools
+protocol (`adb forward … localabstract:chrome_devtools_remote`), real taps with `adb shell input`. ⇒ The tests
+of the table below become **automatic**, on the real phone, at every round. The connection stays on the
+laptop and reaches the suite on the server through an ssh tunnel: the phone's key never leaves the laptop.
+⛔ Only Chrome towards the boxes; never during a call (`dumpsys telephony.registry`, one line per SIM); the
+phone is left as it was found.
 
-*(La tabella era nata come scheda a mano dell'utente; resta come elenco delle prove.)*
+*(The table was born as the user's hand sheet; it remains as the list of tests.)*
 
-### 5.1 Le prove
+### 5.1 The tests
 
 
-*Decisione dell'utente (1 ott 2026): «per android i test funzionali li faccio io». Col suo telefono, **Chrome**
-(mai Firefox Android, `DECISIONI.md` §7.18), in rete locale verso le scatole del server (`https://192.168.0.2:8511`
-GNOME · `8512` KDE · `8513` XFCE · `8514` LXQt), utente `nictest`. Ogni riga si segna **PASS / FAIL / BLOCKED** con
-data, desktop, scheda (Intel o Radeon) e, se FAIL, una frase su cosa si è visto; entra nel registro della suite
-con esecutore «utente».*
+*The user's decision (1 Oct 2026): «per android i test funzionali li faccio io». With the user's phone, **Chrome**
+(never Firefox Android, `DECISIONI.md` §7.18), on the local network towards the server's boxes (`https://192.168.0.2:8511`
+GNOME · `8512` KDE · `8513` XFCE · `8514` LXQt), user `nictest`. Each row is marked **PASS / FAIL / BLOCKED** with
+date, desktop, card (Intel or Radeon) and, if FAIL, a sentence on what was seen; it enters the suite's log
+with executor «utente».*
 
-**Giro pieno**: GNOME, con la scatola sulla **Radeon** (la strada nuova, Vulkan). **Giro corto** (righe 1, 2, 6, 9):
+**Full round**: GNOME, with the box on the **Radeon** (the new route, Vulkan). **Short round** (rows 1, 2, 6, 9):
 KDE, XFCE, LXQt.
 
-| # | prova (rif. fase 15) | cosa fare | cosa deve succedere |
+| # | test (ref. phase 15) | what to do | what must happen |
 |---|---|---|---|
-| 1 | F-001, F-002 accesso e prima immagine | aprire l'indirizzo, accettare il certificato, entrare | modulo, poi il desktop in vista entro pochi secondi, non nero né a pezzi |
-| 2 | F-031 tocco | tocco su un'icona; tocco e mezzo per trascinare una finestra; il bottoncino ⌨ in alto a destra, una parola, di nuovo ⌨ | il clic arriva dove si tocca; la finestra segue il dito; la tastiera non si apre da sola, il ⌨ la apre, la parola arriva, il ⌨ la chiude |
-| 3 | F-007, F-009 tastiera | aprire un editor, scrivere «Prova è à @ €», Invio, cancellare | i caratteri giusti, accenti compresi |
-| 4 | F-014, F-015 appunti | copiare un testo sul telefono e incollarlo nell'editor; e al contrario | il testo passa nei due versi |
-| 5 | F-012, F-013 audio e video | aprire un video nel desktop remoto | immagine continua e suono sul telefono |
-| 6 | F-003 aggiornamento | aprire, spostare e chiudere una finestra | lo schermo segue senza resti né ritardi visibili |
-| 7 | F-018 riattacco a misura diversa | ruotare il telefono (verticale ↔ orizzontale), poi ricaricare la pagina | la tela prende la misura nuova (su KDE: resta e si riscala, eccezione) |
-| 8 | F-016, F-017, F-020 stacco e rientro | chiudere Chrome di colpo, riaprirlo, rientrare | la sessione c'è ancora, con l'editor e il testo scritto |
-| 9 | F-019 rete | spegnere il Wi-Fi per 20 secondi, riaccenderlo, rientrare | si rientra e la sessione c'è |
-| 10 | F-021 Esci | «Esci» dal menu | la sessione finisce, la pagina torna al modulo |
+| 1 | F-001, F-002 access and first image | open the address, accept the certificate, enter | form, then the desktop in view within a few seconds, not black nor in pieces |
+| 2 | F-031 touch | tap on an icon; tap-and-a-half to drag a window; the little ⌨ button at the top right, a word, ⌨ again | the click arrives where you tap; the window follows the finger; the keyboard does not open by itself, the ⌨ opens it, the word arrives, the ⌨ closes it |
+| 3 | F-007, F-009 keyboard | open an editor, write «Prova è à @ €», Enter, delete | the right characters, accents included |
+| 4 | F-014, F-015 clipboard | copy a text on the phone and paste it into the editor; and the other way round | the text passes in both directions |
+| 5 | F-012, F-013 audio and video | open a video in the remote desktop | continuous image and sound on the phone |
+| 6 | F-003 update | open, move and close a window | the screen follows with no leftovers nor visible delays |
+| 7 | F-018 re-attach at a different size | rotate the phone (portrait ↔ landscape), then reload the page | the canvas takes the new size (on KDE: it stays and rescales, exception) |
+| 8 | F-016, F-017, F-020 detach and re-entry | close Chrome abruptly, reopen it, re-enter | the session is still there, with the editor and the text written |
+| 9 | F-019 network | turn off the Wi-Fi for 20 seconds, turn it back on, re-enter | you get back in and the session is there |
+| 10 | F-021 Esci | «Esci» from the menu | the session ends, the page goes back to the form |
 
-## 7. ✅ FASE 19 CHIUSA — 3 ottobre 2026
+## 7. ✅ PHASE 19 CLOSED — 3 Oct 2026
 
-Chiusa su parola dell'utente («Chiudi la fase 19»). Stato alla chiusura: binario **`05e7c7d1`**, pagina **`f78df3ed`**,
-scatole sulla **Intel**. Rete completa `19-chiusura-intel` 700 PASS + le cure rifatte verdi (F-012B 20/20, F-030 4/4 da
-sola); prova a mano dell'utente verde su Linux (Intel e Radeon: ridimensionamento, selezione del testo) e sul DeX
-(cattura al primo clic, DECISIONI §10.29; appunti).
-**Lasciato aperto, dichiarato:**
-- F-031 sul telefono in mano: il banco dice che il ⌨ non richiude la tastiera, l'utente a mano vede che la richiude ⇒
-  difetto del BANCO (sospetto `grep -m1 mInputShown`); la prova 3 non fatta. Il tocco è il ripiego (§5-bis), non blocca.
-- F-030 con le prove lunghe in parallelo sulla sola Intel: tela nera di Firefox per carico del banco.
-- Lavori dopo la fase: §6 «Lavori da fare dopo la fase 19».
+Closed on the user's word («Chiudi la fase 19»). State at closing: binary **`05e7c7d1`**, page **`f78df3ed`**,
+boxes on the **Intel**. Full net `19-chiusura-intel` 700 PASS + the cures redone green (F-012B 20/20, F-030 4/4
+alone); the user's hand test green on Linux (Intel and Radeon: resizing, text selection) and on the DeX
+(capture at the first click, DECISIONI §10.29; clipboard).
+**Left open, declared:**
+- F-031 on the phone in hand: the bench says the ⌨ does not close the keyboard again, the user by hand sees that it does ⇒
+  a defect of the BENCH (suspect `grep -m1 mInputShown`); test 3 not done. Touch is the fallback (§5-bis), it does not block.
+- F-030 with the long tests in parallel on the Intel alone: black Firefox canvas because of the bench's load.
+- Work after the phase: §6 «Lavori da fare dopo la fase 19».
 
-### 7-bis. Dopo la chiusura — 4 ottobre 2026
+### 7-bis. After the closing — 4 Oct 2026
 
-- ✅ **La prova a mano dell'utente col DeX** (§4-bis.2): *«Possiamo chiudere il caso DEX»*.
-- ✅ **F-012B sui 4 desktop** col prodotto della chiusura (`05e7c7d1`/`f78df3ed`), Firefox: giri `f012b-1` (GNOME,
-  LXQt) e `f012b-2` (KDE, XFCE), PASS=8. **Controprova** su GNOME col binario vecchio `fbfceb41`: **ROSSA**
-  (`f012b-controprova`, FAIL=1); rimesso `05e7c7d1`, di nuovo verde (`f012b-ritorno`).
-- 🔀 Due storie riunite: dal 2 ott questo ramo aveva in locale, mai spinte, le prove `15-f014c` (gli appunti come li
-  usa la persona) e `15-f012b` (l'audio dopo «Esci»), che `fase-10-cure` non aveva; il prodotto (`src/`) era già
-  uguale nelle due. Nelle sonde di C22 e F-003 resta la versione della chiusura (conta `mouse*` e pointer insieme).
+- ✅ **The user's hand test with the DeX** (§4-bis.2): *«Possiamo chiudere il caso DEX»*.
+- ✅ **F-012B on the 4 desktops** with the closing product (`05e7c7d1`/`f78df3ed`), Firefox: rounds `f012b-1` (GNOME,
+  LXQt) and `f012b-2` (KDE, XFCE), PASS=8. **Counter-test** on GNOME with the old binary `fbfceb41`: **RED**
+  (`f012b-controprova`, FAIL=1); `05e7c7d1` put back, green again (`f012b-ritorno`).
+- 🔀 Two histories reunited: since 2 Oct this branch had locally, never pushed, the tests `15-f014c` (the clipboard as
+  a person uses it) and `15-f012b` (the audio after «Esci»), which `fase-10-cure` did not have; the product (`src/`) was already
+  equal in the two. In the probes of C22 and F-003 the closing version stays (it counts `mouse*` and pointer together).
 
-## 6. Da qui si riparte (2 ott 2026, sera — sessione chiusa dall'utente)
+## 6. Restart from here (2 Oct 2026, evening — session closed by the user)
 
-**Stato.** Suite automatica VERDE sulle due schede (Radeon = Vulkan, giro `19-radeon-3` 669 PASS, i 4 BLOCKED del banco
-rifatti 16/16; Intel = VA-API, giro corto `19-intel-3` 128/128). Android sul telefono vero verde (righe 1-10 su GNOME,
-corte sugli altri tre; in verticale F-003 e F-013 dipendono dalla tela stretta, in orizzontale verdi). Scatole sulla
-**Radeon**, binario `ad3ba33a`, pagina `210ff091`. Ultimo lavoro: **la tastiera del telefono solo a richiesta**
-(DECISIONI §10.28, commit `25f878a`/`5168275`): pagina `prodotto/pagina.html.3fc5777d` sul server, NON ancora nelle scatole.
+**State.** Automatic suite GREEN on the two cards (Radeon = Vulkan, round `19-radeon-3` 669 PASS, the bench's 4 BLOCKED
+redone 16/16; Intel = VA-API, short round `19-intel-3` 128/128). Android on the real phone green (rows 1-10 on GNOME,
+short on the other three; in portrait F-003 and F-013 depend on the narrow canvas, in landscape green). Boxes on the
+**Radeon**, binary `ad3ba33a`, page `210ff091`. Last work: **the phone's keyboard only on request**
+(DECISIONI §10.28, commits `25f878a`/`5168275`): page `prodotto/pagina.html.3fc5777d` on the server, NOT yet in the boxes.
 
-**Prima cosa della sessione nuova, in ordine:**
-1. dal ramo `fase-19`: `bash banchi/15-suite/15-porta.sh`; sul server la pagina nuova nelle scatole
+**First thing of the new session, in order:**
+1. from the `fase-19` branch: `bash banchi/15-suite/15-porta.sh`; on the server the new page in the boxes
    (`cp -n prodotto/pagina.html prodotto/pagina.html.210ff091 && cp prodotto/pagina.html.3fc5777d prodotto/pagina.html`,
-   poi `11-accendi.sh prodotto|server` per i 4 desktop) e il giro mirato
+   then `11-accendi.sh prodotto|server` for the 4 desktops) and the targeted round
    `15-giro.py --giro 19-tastiera --desktop gnome,kde,xfce,lxqt --browser firefox,chrome --prove f007,f009,f014,f031-tocco`;
-   ⚠ dopo un riavvio del server, prima `15-compositori.sh accendi`;
-2. Android col telefono (Phonestra aperto): `bash banchi/19-android/19-android.sh prova 2` e `prova 3`
-   (il ⌨, e `[?]` il cancella a campo vuoto con la tastiera Samsung) — ~20 minuti;
-3. **la prova a mano dell'utente** (§4-bis): prima i 4 desktop sulla Intel, poi i 4 sulla Radeon (nictest, 8511-8514);
-   sul telefono: un dito che parte dalla meta' bassa muove il puntatore (con la tastiera chiusa);
-4. chiusura della fase 19 e `fase-19` dentro `fase-10-cure`.
+   ⚠ after a server reboot, first `15-compositori.sh accendi`;
+2. Android with the phone (Phonestra open): `bash banchi/19-android/19-android.sh prova 2` and `prova 3`
+   (the ⌨, and `[?]` the backspace on an empty field with the Samsung keyboard) — ~20 minutes;
+3. **the user's hand test** (§4-bis): first the 4 desktops on the Intel, then the 4 on the Radeon (nictest, 8511-8514);
+   on the phone: a finger that starts from the lower half moves the pointer (with the keyboard closed);
+4. closing of phase 19 and `fase-19` into `fase-10-cure`.
 
-**L'ordine dei lavori dopo la fase 19** (decisione dell'utente, 4 ott 2026):
-1. **misure di prestazione** (da zero, con un piano che approva l'utente);
-2. **prove di funzionalità sulla macchina NVIDIA** — ⛔ niente misure di prestazione su NVIDIA: la macchina è a
-   noleggio, il tempo è poco. *Proposte di Claude, da confermare:* (a) nello stesso noleggio anche l'installatore,
-   o servirebbe un secondo noleggio; (b) i tempi che il prodotto già scrive nel registro si tengono come
-   osservazione, mai dichiarati come misura;
-3. **versione trial e full**;
-4. **installatore**.
-(Il file di accesso delle scatole, D3, è già fatto: commit `cb6061e`/`1fc64bb`, 3 ott.)
+**The order of the work after phase 19** (the user's decision, 4 Oct 2026):
+1. **performance measures** (from zero, with a plan the user approves);
+2. **functionality tests on the NVIDIA machine** — ⛔ no performance measures on NVIDIA: the machine is
+   rented, time is short. *Claude's proposals, to be confirmed:* (a) in the same rental the installer too,
+   or a second rental would be needed; (b) the times the product already writes in the log are kept as an
+   observation, never declared as a measure;
+3. **trial and full version**;
+4. **installer**.
+(The boxes' access file, D3, is already done: commits `cb6061e`/`1fc64bb`, 3 Oct.)
 
-⭐ **Da qui si riparte (4 ott 2026, sessione chiusa dall'utente — limite d'uso, si riprende mercoledì 7 ott
-pomeriggio).** Fase 19 chiusa e spinta (`fase-10-cure` = `fase-19`). Prima cosa: `git fetch`, poi il **piano
-delle misure di prestazione**, su **tutte e due le schede del server, Intel e Radeon** (risposta dell'utente, 4 ott: VA-API e Vulkan
-sono due strade del prodotto, ognuna coi suoi numeri). E le due proposte sulla NVIDIA (punto 2) da confermare. Scatole: prodotto `05e7c7d1`/`f78df3ed`
-sui 4 desktop, nessuna sessione dell'utente aperta.
-⭐ **4 ott, sera:** nelle scatole la pagina d'accesso nuova «Satinato» (`2e72f3c`, scelta dall'utente fra le
-20 proposte di `grafica/login-premium/`): prodotto `05e7c7d1`/**`cc09a1aa`**, i 4 server riaccesi (8511-8514) e
-`[M]` serviti con la pagina nuova; il binario non è cambiato.
+⭐ **Restart from here (4 Oct 2026, session closed by the user — usage limit, it resumes Wednesday 7 Oct
+afternoon).** Phase 19 closed and pushed (`fase-10-cure` = `fase-19`). First thing: `git fetch`, then the **plan
+of the performance measures**, on **both of the server's cards, Intel and Radeon** (the user's answer, 4 Oct: VA-API and Vulkan
+are two routes of the product, each with its own numbers). And the two proposals about the NVIDIA (point 2) to be confirmed. Boxes: product `05e7c7d1`/`f78df3ed`
+on the 4 desktops, no user session open.
+⭐ **4 Oct, evening:** in the boxes the new login page «Satinato» (`2e72f3c`, chosen by the user among the
+20 proposals of `grafica/login-premium/`): product `05e7c7d1`/**`cc09a1aa`**, the 4 servers restarted (8511-8514) and
+`[M]` served with the new page; the binary has not changed.
 
-**Lavori da fare dopo la fase 19** (elenco dell'utente, 2 ott 2026):
-- scatole: il file di login `remotix.pam` aggiornato (D3), in un giro a parte;
-- **versione trial e full** (da definire con l'utente);
-- NVIDIA: la prova sulla macchina noleggiata, col banco gia' pronto (`banchi/19-nvidia/LEGGIMI.md`);
-- prestazioni: le misure da rifare da zero, con un piano che approva l'utente;
-- installatore: le prove nei contenitori con la scheda vera, e una VM senza scheda che deve rifiutare con un messaggio chiaro.
+**Work to be done after phase 19** (the user's list, 2 Oct 2026):
+- boxes: the login file `remotix.pam` updated (D3), in a separate round;
+- **trial and full version** (to be defined with the user);
+- NVIDIA: the test on the rented machine, with the bench already ready (`banchi/19-nvidia/LEGGIMI.md`);
+- performance: the measures to be redone from zero, with a plan the user approves;
+- installer: the tests in the containers with the real card, and a VM without a card that must refuse with a clear message.
 
-⭐ **5 ott 2026 — si comincia dalla NVIDIA** (utente: *«partirei dai test funzionali su nvidia, visto che devo
-sborsare un po' di soldi»*; e prima delle misure, così le misure restano ad architettura finita). Noleggio
-previsto: **LeaderGPU**, 1× RTX 3090, macchina intera, 64 GB, Xeon E5-2609 v4, 0,62 €/h, al più 48 ore; sistemi
-automatici Ubuntu 22.04/24.04, su richiesta entro un giorno lavorativo (da chiedere: 26.04 o Debian 13, e la
-console d'emergenza). Il banco (`8412ad3`): passo **«aggiorna»** (Ubuntu 20.04/22.04/24.04 ⇒ 26.04 con
-`do-release-upgrade`, un salto e un riavvio alla volta, fino a 10 riavvii dal portatile; ⛔ non si disfa) e
-**memoria di scorta** di 4 GiB sotto i 12 GiB. `[M]` 5 ott, portatile: `prepara` + prova a vuoto Debian 13 col
-prodotto `a8396bc` VERDE come il 1 ott (pulizia identica al principio); in contenitore ubuntu:24.04 ⇒ 26.04 in
-un salto, ubuntu:22.04 ⇒ 24.04 ⇒ 26.04 in due, poi «niente da aggiornare». ⚠ Un contenitore non ha nucleo,
-rete del noleggiatore né driver: sulla macchina vera il rischio del salto resta (per questo la console).
+⭐ **5 Oct 2026 — we start from the NVIDIA** (the user: *«partirei dai test funzionali su nvidia, visto che devo
+sborsare un po' di soldi»*; and before the measures, so that the measures stay with the architecture finished). Planned
+rental: **LeaderGPU**, 1× RTX 3090, whole machine, 64 GB, Xeon E5-2609 v4, 0.62 €/h, at most 48 hours; automatic
+systems Ubuntu 22.04/24.04, on request within one working day (to ask: 26.04 or Debian 13, and the
+emergency console). The bench (`8412ad3`): step **«aggiorna»** (Ubuntu 20.04/22.04/24.04 ⇒ 26.04 with
+`do-release-upgrade`, one jump and one reboot at a time, up to 10 reboots from the laptop; ⛔ it cannot be undone) and
+**spare memory** of 4 GiB below 12 GiB. `[M]` 5 Oct, laptop: `prepara` + empty test Debian 13 with the
+product `a8396bc` GREEN as on 1 Oct (cleaning identical to the start); in container ubuntu:24.04 ⇒ 26.04 in
+one jump, ubuntu:22.04 ⇒ 24.04 ⇒ 26.04 in two, then «niente da aggiornare». ⚠ A container has no kernel,
+nor the renter's network nor drivers: on the real machine the risk of the jump remains (hence the console).
 
-### 7-ter. La NVIDIA vera — 5 ottobre 2026, LeaderGPU (RTX 4090)
+### 7-ter. The real NVIDIA — 5 Oct 2026, LeaderGPU (RTX 4090)
 
-`[M]` Macchina intera, 1× RTX 4090, Xeon E5-2630 v4, 128 GB; consegnata Ubuntu 24.04, portata dal banco alla
-**26.04.1** (un salto), driver **595.91.07 open** dal deposito di Ubuntu, ICD Vulkan, `modeset=Y`, `renderD128`.
-- **Installatore**: verde, certificato 0. **Codifica**: H.264 e HEVC sulla strada **Vulkan** (`h264_vulkan`,
-  `hevc_vulkan`, «NVIDIA GeForce RTX 4090 · NVIDIA 595.91.07»), HEVC `hev1.1.2.L60.B0` come la RADV.
-- **Confronto dalla memoria**: 12 su 12 buoni, 1080p e 4K, H.264 / HEVC 8 / HEVC 10 (PSNR 38,6–46,2 dB, SSIM
-  0,985–0,996). ⛔ **Dalla scheda (copia zero): 0 su 34** — il GBM della NVIDIA rifiuta `LINEAR|RENDERING`
-  (`Invalid argument`; accetta LINEAR senza RENDERING, o RENDERING col modificatore suo `0x300000000e08014`).
-  Il prodotto ripiega sulla memoria **e lo dichiara**. Cura possibile (lastre col modificatore della scheda e
-  import Vulkan col modificatore): **da decidere**.
-- ⛔ **DIFETTO DEL PRODOTTO trovato e curato** (`129e488`): sulla NVIDIA labwc offre in memoria solo `BG24`
-  (3 byte per pixel); a valle si leggono 4 byte ⇒ ogni fotogramma SCARTATO, sessione nera (F-001 rosso).
-  Cura in `src/wlroots.c`: i 24 bit si allargano a 32 (`BG24`→`XB24`, `RG24`→`XR24`), solo su quella strada.
-- **Due difetti del BANCO, curati senza toccare le prove** (`abb7f1a`, `479630e`): Firefox ESR 153 di Mozilla
-  apre la finestra «Terms of Use» sopra la scena (regola `SkipTermsOfUse`); e gira come `firefox-bin`, mentre
-  F-016/F-017 cercano `firefox-esr` (nome allineato con un collegamento).
-- **Suite su XFCE, Firefox 153 e Chrome 154: 43 PASS, 0 FAIL, 1 BLOCKED** (F-013 Firefox: l'«orecchio» ha
-  raccolto 106 campioni su 120 — misura del banco, non un rosso). Giri: 1 (prima della cura) F-001 rosso e 38
-  BLOCKED; 2 (con la cura) 15 PASS; 3 (regola di Firefox) 30 PASS 9 FAIL; 4 (nome allineato) 43 PASS.
-- ⭐ **Copia zero sulla NVIDIA** (`d62958c`): il GBM rifiuta la lastra lineare; la lastra nasce con uno dei
-  modificatori che il codificatore Vulkan dichiara di importare (`0x300000000606014`). Confronto dalla scheda
-  **28 su 28** buoni. Il server consegna a 60/s con ~22 ms dalla cattura ai byte (dalla memoria: ~11/s, ~90 ms).
+`[M]` Whole machine, 1× RTX 4090, Xeon E5-2630 v4, 128 GB; delivered Ubuntu 24.04, brought by the bench to
+**26.04.1** (one jump), driver **595.91.07 open** from Ubuntu's repository, Vulkan ICD, `modeset=Y`, `renderD128`.
+- **Installer**: green, certificate 0. **Encoding**: H.264 and HEVC on the **Vulkan** route (`h264_vulkan`,
+  `hevc_vulkan`, «NVIDIA GeForce RTX 4090 · NVIDIA 595.91.07»), HEVC `hev1.1.2.L60.B0` like the RADV.
+- **Comparison from memory**: 12 out of 12 good, 1080p and 4K, H.264 / HEVC 8 / HEVC 10 (PSNR 38.6–46.2 dB, SSIM
+  0.985–0.996). ⛔ **From the card (zero copy): 0 out of 34** — NVIDIA's GBM refuses `LINEAR|RENDERING`
+  (`Invalid argument`; it accepts LINEAR without RENDERING, or RENDERING with its own modifier `0x300000000e08014`).
+  The product falls back to memory **and declares it**. Possible cure (slabs with the card's modifier and
+  Vulkan import with the modifier): **to be decided**.
+- ⛔ **PRODUCT DEFECT found and cured** (`129e488`): on the NVIDIA labwc offers in memory only `BG24`
+  (3 bytes per pixel); downstream 4 bytes are read ⇒ every frame DISCARDED, black session (F-001 red).
+  Cure in `src/wlroots.c`: the 24 bits are widened to 32 (`BG24`→`XB24`, `RG24`→`XR24`), only on that route.
+- **Two defects of the BENCH, cured without touching the tests** (`abb7f1a`, `479630e`): Mozilla's Firefox ESR 153
+  opens the «Terms of Use» window on top of the scene (rule `SkipTermsOfUse`); and it runs as `firefox-bin`, while
+  F-016/F-017 look for `firefox-esr` (name aligned with a link).
+- **Suite on XFCE, Firefox 153 and Chrome 154: 43 PASS, 0 FAIL, 1 BLOCKED** (F-013 Firefox: the «ear» has
+  collected 106 samples out of 120 — a measure of the bench, not a red). Rounds: 1 (before the cure) F-001 red and 38
+  BLOCKED; 2 (with the cure) 15 PASS; 3 (Firefox rule) 30 PASS 9 FAIL; 4 (name aligned) 43 PASS.
+- ⭐ **Zero copy on the NVIDIA** (`d62958c`): the GBM refuses the linear slab; the slab is born with one of the
+  modifiers that the Vulkan encoder declares it imports (`0x300000000606014`). Comparison from the card
+  **28 out of 28** good. The server delivers at 60/s with ~22 ms from capture to bytes (from memory: ~11/s, ~90 ms).
 
-#### 7-ter.1 Il pannello di XFCE che non si ferma — 5-6 ottobre 2026
+#### 7-ter.1 The XFCE panel that does not stop — 5-6 Oct 2026
 
-`[M]` Dopo la copia zero F-003 su Firefox era rosso in 4 giri su 4 («foto vecchia» di 1-4,7 s), Chrome verde.
-- **Il testimone nuovo** (`wlroots.c`, solo con `--parlantina`): il danno che il compositore DICHIARA, ogni 120
-  fotogrammi — area media, interi, e l'ultimo rettangolo. E una sonda `copy_with_damage` scritta per l'occasione
-  (in memoria, fuori dal prodotto) attaccata alla sessione viva.
-- **Il fatto**: su un desktop FERMO il compositore risponde a 60/s, col danno su un rettangolo di 49 px di
-  altezza in fondo (o 27 in cima): è `xfce4-panel` che si ridisegna a OGNI fotogramma, alternando la posizione
-  della barra centrata per 1280 (x=487) e per la tela vera. ⇒ 60 fotogrammi 4K al secondo per niente, e un
-  cliente lento resta indietro di secondi.
-- **Non è la copia zero**: col pacchetto senza copia zero e lo stesso testimone, il ciclo c'è lo stesso (e
-  F-003 rosso); la copia zero lo fa solo correre più forte (60/s invece di ~11). Il verde «senza copia zero»
-  del primo confronto era una nascita fortunata.
-- **È la gara della nascita** (la stessa di pcmanfm-qt su LXQt, fase 14): l'uscita di labwc nasce 1280x720 e
-  la misura del cliente arriva ~200 ms dopo; se `xfce4-panel` nasce nel mezzo, resta nel ciclo. `[M]`
-  riavviato il pannello (`xfce4-panel -r`) il ciclo sparisce e F-003 torna verde; ridimensionata (`wlr-randr`)
-  una sessione GIÀ nata, il ciclo non nasce. labwc 0.9.3, xfce4-panel 4.20.7, gtk-layer-shell 0.10.0.
-- ⭐ **La cura** (`sessione.c`, `primario_misurato()`, ex `primario_lxqt()`): anche su XFCE il client primario
-  di labwc è un `sh` che dà la misura con `wlr-randr` e poi fa `exec xfce4-session`. La testa della riga
-  (`labwc -m --session`) è la stessa macro di `XFCE4_SESSION_COMPOSITOR`: la cintura del logout non cambia.
-  ⇒ `wlr-randr` entra nei componenti di XFCE **e di LXQt** nel catalogo (2026.10.05.11: mancava su tutte le
-  piattaforme tranne Leap, anche per la cura già esistente di LXQt), e nell'rpm `(wlr-randr if xfce4-session)`.
-- **Misurato**: F-003 verde su Firefox e Chrome; a schermo fermo il server non consegna più niente.
-  **Suite XFCE completa con copia zero e cura: 43 PASS, 1 FAIL** (giro `remotix-nv-ubuntu2404-20261005-2215`).
-- **La cintura del logout col comando nuovo**: F-021 («Esci») **4/4 PASS**, F-012B (il suono dopo «Esci»)
-  4/4, F-004 (il mouse) 4/4, F-012 (il suono) 4/4 — Firefox 153 e Chrome. ⚠ F-021 sulla NVIDIA vuole le scene
-  in `/opt/remotix` come sulle scatole: il banco ce le mette, e `pulisci` le toglie se la cartella era sua.
+`[M]` After the zero copy F-003 on Firefox was red in 4 rounds out of 4 («foto vecchia» of 1-4.7 s), Chrome green.
+- **The new witness** (`wlroots.c`, only with `--parlantina`): the damage the compositor DECLARES, every 120
+  frames — mean area, whole ones, and the last rectangle. And a `copy_with_damage` probe written for the occasion
+  (in memory, outside the product) attached to the live session.
+- **The fact**: on a STILL desktop the compositor answers at 60/s, with the damage on a rectangle 49 px
+  high at the bottom (or 27 at the top): it is `xfce4-panel` redrawing itself at EVERY frame, alternating the position
+  of the bar centred for 1280 (x=487) and for the real canvas. ⇒ 60 4K frames per second for nothing, and a
+  slow client falls behind by seconds.
+- **It is not the zero copy**: with the package without zero copy and the same witness, the cycle is there all the same (and
+  F-003 red); the zero copy only makes it run faster (60/s instead of ~11). The «without zero copy» green
+  of the first comparison was a lucky birth.
+- **It is the birth race** (the same as pcmanfm-qt on LXQt, phase 14): labwc's output is born 1280x720 and
+  the client's size arrives ~200 ms later; if `xfce4-panel` is born in between, it stays in the cycle. `[M]`
+  with the panel restarted (`xfce4-panel -r`) the cycle disappears and F-003 goes back to green; with a session ALREADY born
+  resized (`wlr-randr`), the cycle is not born. labwc 0.9.3, xfce4-panel 4.20.7, gtk-layer-shell 0.10.0.
+- ⭐ **The cure** (`sessione.c`, `primario_misurato()`, formerly `primario_lxqt()`): on XFCE too labwc's primary client
+  is an `sh` that gives the size with `wlr-randr` and then does `exec xfce4-session`. The head of the line
+  (`labwc -m --session`) is the same macro as `XFCE4_SESSION_COMPOSITOR`: the logout belt does not change.
+  ⇒ `wlr-randr` enters the components of XFCE **and of LXQt** in the catalogue (2026.10.05.11: it was missing on all
+  platforms except Leap, also for the already existing LXQt cure), and in the rpm `(wlr-randr if xfce4-session)`.
+- **Measured**: F-003 green on Firefox and Chrome; with a still screen the server no longer delivers anything.
+  **Full XFCE suite with zero copy and cure: 43 PASS, 1 FAIL** (round `remotix-nv-ubuntu2404-20261005-2215`).
+- **The logout belt with the new command**: F-021 («Esci») **4/4 PASS**, F-012B (the sound after «Esci»)
+  4/4, F-004 (the mouse) 4/4, F-012 (the sound) 4/4 — Firefox 153 and Chrome. ⚠ F-021 on the NVIDIA wants the scenes
+  in `/opt/remotix` as on the boxes: the bench puts them there, and `pulisci` removes them if the folder was its own.
 
-#### 7-ter.2 F-013 su Firefox: resta rosso — aperto
+#### 7-ter.2 F-013 on Firefox: it stays red — open
 
-- L'**immagine** a tratti ferma è del CLIENTE: i browser del banco disegnano in software (labwc pixman,
-  llvmpipe; `CanvasRenderer` di Firefox ~65%) su uno Xeon E5-2630 v4. Controprova `CLIENTE_SCHEDA=1` (il
-  compositore dei browser sulla scheda, solo per la controprova): l'immagine passa.
-- Il **suono** no: udibile 23-56% anche col cliente sulla scheda. Il server spedisce ~50 blocchi al secondo,
-  0 persi, senza buchi; l'«orecchio» dentro la pagina sente il suono a raffiche. Su questa macchina Firefox
-  non l'aveva mai misurato (prima della copia zero: BLOCKED, 104-106 campioni su 120). Firefox qui è il
-  **153 ESR di Mozilla**; sui banchi Intel, dove F-013 passa, è un'altra versione. ⏳ Da capire se è il ferro
-  o Firefox 153 (si prova fuori da questa macchina).
-  `[M]` 6 ott: **F-012 (il suono SENZA video) verde su Firefox 153 e Chrome** sulla stessa macchina ⇒ Firefox 153
-  il suono lo riceve e lo suona; si rompe solo col video 4K a 60/s addosso. ⇒ Il sospetto va sul ferro del
-  cliente (Firefox decodifica in software, `RDD` ~45%, su uno Xeon del 2016), non sul prodotto. ⚠ Non è chiuso:
-  manca la prova di Firefox 153 + video 4K su un cliente veloce.
-- **Un difetto del banco**: Ubuntu 26.04 ha i coreutils in Rust, e `tail -5` è un errore (`tail -n 5`
-  funziona). Le prove raccoglievano le evidenze con `tail -N`: corretto in tutti i banchi.
+- The **image** stopping at times belongs to the CLIENT: the bench's browsers draw in software (labwc pixman,
+  llvmpipe; Firefox's `CanvasRenderer` ~65%) on a Xeon E5-2630 v4. Counter-test `CLIENTE_SCHEDA=1` (the
+  browsers' compositor on the card, only for the counter-test): the image passes.
+- The **sound** does not: audible 23-56% even with the client on the card. The server sends ~50 blocks per second,
+  0 lost, without holes; the «ear» inside the page hears the sound in bursts. On this machine Firefox
+  had never measured it (before the zero copy: BLOCKED, 104-106 samples out of 120). Firefox here is
+  **Mozilla's 153 ESR**; on the Intel benches, where F-013 passes, it is another version. ⏳ To understand whether it is the iron
+  or Firefox 153 (it is tested outside this machine).
+  `[M]` 6 Oct: **F-012 (the sound WITHOUT video) green on Firefox 153 and Chrome** on the same machine ⇒ Firefox 153
+  receives the sound and plays it; it breaks only with the 4K video at 60/s on top. ⇒ The suspicion goes to the client's
+  iron (Firefox decodes in software, `RDD` ~45%, on a Xeon from 2016), not to the product. ⚠ It is not closed:
+  the test of Firefox 153 + 4K video on a fast client is missing.
+- **A defect of the bench**: Ubuntu 26.04 has the coreutils in Rust, and `tail -5` is an error (`tail -n 5`
+  works). The tests collected the evidence with `tail -N`: corrected in all the benches.
 
-#### 7-ter.3 GNOME sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente: il tempo di noleggio che resta)
+#### 7-ter.3 GNOME on the NVIDIA — 6 Oct 2026 (the user's choice: the rental time that remains)
 
-`[M]` GNOME 50.1 (`ubuntu-session`, mutter 50.1) installato accanto a XFCE (`DESKTOP_NV=gnome`); il prodotto,
-trovati tutti e due, sceglie GNOME. ⚠ L'installazione è durata ~4 ore (non spiegato).
-- ⛔ **DIFETTO DEL PRODOTTO, sessione NERA**: la proposta della cattura offriva LINEARE e INVALID; Mutter sulla
-  NVIDIA concordava INVALID, non riusciva ad allocarlo, lo ritirava ⇒ «no more input formats», mai un
-  fotogramma. E il ripiego sulla memoria non scattava: guardava solo «nessun formato concordato».
+`[M]` GNOME 50.1 (`ubuntu-session`, mutter 50.1) installed alongside XFCE (`DESKTOP_NV=gnome`); the product,
+having found both, chooses GNOME. ⚠ The installation lasted ~4 hours (not explained).
+- ⛔ **PRODUCT DEFECT, BLACK session**: the capture's proposal offered LINEAR and INVALID; Mutter on the
+  NVIDIA agreed on INVALID, could not allocate it, withdrew it ⇒ «no more input formats», never a
+  frame. And the fallback to memory did not trigger: it looked only at «nessun formato concordato».
   Suite: 4 PASS, 2 FAIL, 38 BLOCKED.
-- ⭐ **La cura**, due pezzi:
-  1. `figlio.c` `modificatori_per_la_strada()` + `cattura_modificatori_scheda()`: se la scheda RIFIUTA la lastra
-     lineare (`vulkanvideo_scheda_rifiuta_il_lineare()`, la stessa domanda di `wlroots.c`), la proposta offre
-     anche i modificatori che il codificatore Vulkan importa, fra LINEARE e INVALID. Dove il lineare riesce
-     (Intel, Radeon) la proposta resta quella di sempre. `[M]` concordato `0x300000000606014`: copia zero.
-  2. `cattura_formato_rifiutato()`: è rifiuto anche «formato concordato ma nessun fotogramma mai arrivato»
-     — la rete sotto, per ogni scheda. ⚠ Da rimisurare su Intel e Radeon (non è stato possibile qui).
-- **Suite GNOME con la cura: 41 PASS, 2 FAIL, 1 BLOCKED** (giro `remotix-nv-ubuntu2404-20261006-0524`):
-  F-013 Firefox (lo stesso di XFCE, §7-ter.2); **F-003 Chrome «chiude»**: chiuso il programma, la finestra
-  resta nella foto per 10,7 s — il server consegna due fotogrammi alla chiusura (l'ultimo di 47 KB) e poi
-  NIENTE: Mutter non manda più danno. Rifatta 8 volte (2 Chrome, poi 3 × Firefox e Chrome): tutte verdi
-  ⇒ **1 su 9**. ⏳ Intermittente, aperto: mai visto sulla Intel; da guardare se torna.
+- ⭐ **The cure**, two pieces:
+  1. `figlio.c` `modificatori_per_la_strada()` + `cattura_modificatori_scheda()`: if the card REFUSES the linear
+     slab (`vulkanvideo_scheda_rifiuta_il_lineare()`, the same question as `wlroots.c`), the proposal also offers
+     the modifiers that the Vulkan encoder imports, between LINEAR and INVALID. Where linear succeeds
+     (Intel, Radeon) the proposal stays the usual one. `[M]` agreed `0x300000000606014`: zero copy.
+  2. `cattura_formato_rifiutato()`: «format agreed but no frame ever arrived» is also a refusal
+     — the net underneath, for every card. ⚠ To be re-measured on Intel and Radeon (it was not possible here).
+- **GNOME suite with the cure: 41 PASS, 2 FAIL, 1 BLOCKED** (round `remotix-nv-ubuntu2404-20261006-0524`):
+  F-013 Firefox (the same as XFCE, §7-ter.2); **F-003 Chrome «chiude»**: with the program closed, the window
+  stays in the snapshot for 10.7 s — the server delivers two frames at closing (the last one of 47 KB) and then
+  NOTHING: Mutter sends no more damage. Redone 8 times (2 Chrome, then 3 × Firefox and Chrome): all green
+  ⇒ **1 out of 9**. ⏳ Intermittent, open: never seen on the Intel; to be looked at if it comes back.
 
-#### 7-ter.4 Chiusura del noleggio — 6 ottobre 2026
+#### 7-ter.4 Closing of the rental — 6 Oct 2026
 
-Scelta dell'utente: si chiude. `19-nvidia.sh pulisci`: REMOTIX disinstallato dall'installatore, 649 pacchetti
-nuovi tolti, `/etc/apt` com'era, nessun pacchetto diverso da prima; valigia e cartelle di lavoro tolte.
-Restano utenti creati dai pacchetti (`colord`, `geoclue`, `pipewire`) e `rxprova` (uid 1003, di un giro di
-prova); riavvio consigliato. ⏳ Aperti: F-013 Firefox (suono col video, §7-ter.2), F-003 «chiude» su GNOME
-(1 su 9, §7-ter.3), il ripiego nuovo da rimisurare su Intel e Radeon.
+The user's choice: it closes. `19-nvidia.sh pulisci`: REMOTIX uninstalled by the installer, 649 new
+packages removed, `/etc/apt` as it was, no package different from before; suitcase and work folders removed.
+What remains: users created by the packages (`colord`, `geoclue`, `pipewire`) and `rxprova` (uid 1003, from a test
+round); reboot advised. ⏳ Open: F-013 Firefox (sound with video, §7-ter.2), F-003 «chiude» on GNOME
+(1 out of 9, §7-ter.3), the new fallback to be re-measured on Intel and Radeon.
 
-#### 7-ter.5 Quante codifiche insieme — 6 ottobre 2026 (scelta dell'utente)
+#### 7-ter.5 How many encodings together — 6 Oct 2026 (the user's choice)
 
-`[M]` RTX 4090, driver 595, ffmpeg 8.0 `h264_vulkan` (la stessa API del prodotto), 4K60 a gradini:
-1 → 122 fps; 8 → 8×31; 9 → 9×28; 10 → 10×25; 12 → 12×21; **16 → 12 riuscite, 4 rifiutate**
-(`AuthorizeEncoderSession: Failed to authorize this encoder instance`). ⇒ **Il driver dà 12 posti di
-codifica in tutto**, contati su TUTTA la scheda (anche i programmi dell'utente che codificano). Il tetto
-di REMOTIX è 10 sessioni: ci sta, con 2 posti di margine. ⚠ I fps qui sono del generatore (`testsrc2` in
-software, sul processore lento): il conto che vale è quello dei posti, non la velocità.
-- **Con i 12 posti occupati** una sessione vera entra («Ammesso») e resta NERA: `vkCreateVideoSessionKHR`
-  torna -10. Il registro diceva «VkResult sconosciuto» e «questo codec NON c'è su questa macchina» —
-  falso. ⇒ `VK_ERROR_TOO_MANY_OBJECTS` ha un nome, e la riga dice «la scheda c'è ma ha FINITO i posti».
-- **Il riprovo già c'era e funziona**: posti liberati dopo 45 s, la sessione ha il primo fotogramma
-  ~8 s dopo (riprova a 0,5 → 10 s), F-001 PASS. ⏳ Al browser non si dice niente nel frattempo: da decidere.
+`[M]` RTX 4090, driver 595, ffmpeg 8.0 `h264_vulkan` (the same API as the product), 4K60 in steps:
+1 → 122 fps; 8 → 8×31; 9 → 9×28; 10 → 10×25; 12 → 12×21; **16 → 12 succeeded, 4 refused**
+(`AuthorizeEncoderSession: Failed to authorize this encoder instance`). ⇒ **The driver gives 12 encoding
+slots in all**, counted on the WHOLE card (the user's programs that encode too). REMOTIX's cap
+is 10 sessions: it fits, with 2 slots of margin. ⚠ The fps here are the generator's (`testsrc2` in
+software, on the slow processor): the count that matters is the slots, not the speed.
+- **With the 12 slots occupied** a real session gets in («Ammesso») and stays BLACK: `vkCreateVideoSessionKHR`
+  returns -10. The log said «VkResult sconosciuto» and «questo codec NON c'è su questa macchina» —
+  false. ⇒ `VK_ERROR_TOO_MANY_OBJECTS` has a name, and the line says «la scheda c'è ma ha FINITO i posti».
+- **The retry was already there and works**: slots freed after 45 s, the session has the first frame
+  ~8 s later (retries at 0.5 → 10 s), F-001 PASS. ⏳ The browser is told nothing in the meantime: to be decided.
 
-#### 7-ter.6 Un'ora di video — 6 ottobre 2026 (scelta dell'utente)
+#### 7-ter.6 An hour of video — 6 Oct 2026 (the user's choice)
 
-`[M]` GNOME, Chrome, F-013 (video 4K con suono) **19 volte di fila in 60 minuti: 19/19 PASS**, sullo stesso
-server senza riavvii; ogni 30 s la scheda e il padre (`misure/19-nvidia/campioni-sessione-lunga-20261006.txt`):
-memoria della scheda ~913 MB durante le sessioni e **torna a 1 MB** fra l'una e l'altra; il padre `remotix`
-**19,1 → 19,3 MB** di RSS e 11-12 descrittori dal primo all'ultimo campione. ⇒ Nessuna perdita fra una
-sessione e l'altra. ⚠ Quel che NON dice: una sessione sola tenuta un'ora (ognuna qui dura ~3 min).
+`[M]` GNOME, Chrome, F-013 (4K video with sound) **19 times in a row in 60 minutes: 19/19 PASS**, on the same
+server without restarts; every 30 s the card and the parent (`misure/19-nvidia/campioni-sessione-lunga-20261006.txt`):
+card memory ~913 MB during the sessions and **back to 1 MB** between one and the next; the parent `remotix`
+**19.1 → 19.3 MB** of RSS and 11-12 descriptors from the first to the last sample. ⇒ No leak between one
+session and the next. ⚠ What it does NOT say: a single session held for an hour (each one here lasts ~3 min).
 
-#### 7-ter.7 La rete completa sulla Intel con le cure — 6 ottobre 2026 (in parallelo alla NVIDIA, scelta dell'utente)
+#### 7-ter.7 The full net on the Intel with the cures — 6 Oct 2026 (in parallel with the NVIDIA, the user's choice)
 
-`[M]` Server di casa, le 4 scatole rifatte (`19-scatole-scheda.sh intel`), binario **`5c186779`** (`02bb7f3`:
-la cura di XFCE, la proposta coi modificatori, il ripiego «nessun fotogramma mai arrivato»), pagina `ae66b9b4`;
-`wlr-randr` messo anche nella scatola XFCE (e in `Contenitore.xfce`). Giro **`19-nvcure-intel`**, 4 desktop
-× Firefox 140 e Chrome 154 + lo strato tecnico: **737 PASS, 0 FAIL, 0 BLOCKED (146 min)**
-(`banchi/15-suite/rapporto-giro19-nvcure-intel.{txt,html}`). ⇒ Le cure non rompono niente sulla Intel.
-E sulla **Radeon** (`19-scatole-scheda.sh amd`, stesso binario, codifica Vulkan): giro **`19-nvcure-radeon`**,
+`[M]` Home server, the 4 boxes redone (`19-scatole-scheda.sh intel`), binary **`5c186779`** (`02bb7f3`:
+the XFCE cure, the proposal with the modifiers, the fallback «no frame ever arrived»), page `ae66b9b4`;
+`wlr-randr` also put in the XFCE box (and in `Contenitore.xfce`). Round **`19-nvcure-intel`**, 4 desktops
+× Firefox 140 and Chrome 154 + the technical layer: **737 PASS, 0 FAIL, 0 BLOCKED (146 min)**
+(`banchi/15-suite/rapporto-giro19-nvcure-intel.{txt,html}`). ⇒ The cures break nothing on the Intel.
+And on the **Radeon** (`19-scatole-scheda.sh amd`, same binary, Vulkan encoding): round **`19-nvcure-radeon`**,
 **737 PASS, 0 FAIL, 0 BLOCKED (146 min)** (`rapporto-giro19-nvcure-radeon.{txt,html}`).
 
-#### 7-ter.8 F-013 su Firefox 153: chiuso — è il ferro del cliente
+#### 7-ter.8 F-013 on Firefox 153: closed — it is the client's iron
 
-`[M]` Server di casa (i5-13500T, ~3,3 volte più veloce dello Xeon E5-2630 v4 su un filo: lo stesso conto in
-Python, 1,13 s contro 3,72 s), Firefox **153.4.0esr** di Mozilla in una cartella sua
-(`/media/REMOTIX/strumenti/firefox-153`, davanti nel PATH, con la stessa regola `SkipTermsOfUse`), giro
-`ff153-intel`: **F-013 PASS su XFCE e su GNOME**, sana e guasto (la versione la scrive il registro). ⇒ Il rosso
-di F-013 sulla NVIDIA (immagine e suono) è del cliente lento, non di Firefox 153 né del prodotto.
+`[M]` Home server (i5-13500T, ~3.3 times faster than the Xeon E5-2630 v4 on one thread: the same computation in
+Python, 1.13 s against 3.72 s), Mozilla's Firefox **153.4.0esr** in a folder of its own
+(`/media/REMOTIX/strumenti/firefox-153`, first in the PATH, with the same `SkipTermsOfUse` rule), round
+`ff153-intel`: **F-013 PASS on XFCE and on GNOME**, healthy and fault (the version is written by the log). ⇒ The red
+of F-013 on the NVIDIA (image and sound) belongs to the slow client, not to Firefox 153 nor to the product.
 
-#### 7-ter.9 KDE sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente)
+#### 7-ter.9 KDE on the NVIDIA — 6 Oct 2026 (the user's choice)
 
-`[M]` Plasma di Ubuntu 26.04 (`plasma-workspace`, `kwin-wayland`; `gnome-session-bin` tolto perché il prodotto
-non scelga GNOME), installato in ~1,5 minuti. La cattura di KWin concorda `0x300000000606014`: **la cura della
-proposta (§7-ter.3) vale anche per KWin**, copia zero. **Suite KDE: 41 PASS, 2 FAIL, 1 BLOCKED.**
-- F-013 Firefox: il suono, come su XFCE e GNOME — il cliente lento (§7-ter.8).
-- **F-003 Firefox «foto vecchia» (0,8-2,3 s), 4 su 4 rosso, anche col cliente sulla scheda (`CLIENTE_SCHEDA=1`)**:
-  KWin consegna ~58 fotogrammi/s dove Mutter e labwc ne consegnano ~5-7 (stessa scena), e ~80% arrivano
-  col danno DICHIARATO VUOTO (sulla Intel, KWin di Debian: 0 su 1200). Il server tiene (≈20 ms dalla cattura
-  ai byte); è il cliente lento a non stare dietro a 60 fotogrammi 4K.
-- ⛔ **Cura provata e TOLTA**: rendere subito i fotogrammi col danno dichiarato vuoto. F-003 Firefox verde,
-  ma **F-003 Chrome «chiude» rosso 4 volte su 5** (la finestra chiusa resta a schermo): su KWin un danno
-  vuoto a volte porta un cambiamento vero. ⇒ Meglio un cliente lento in ritardo che una finestra fantasma.
-  Non è nel prodotto.
+`[M]` Ubuntu 26.04's Plasma (`plasma-workspace`, `kwin-wayland`; `gnome-session-bin` removed so that the product
+does not choose GNOME), installed in ~1.5 minutes. KWin's capture agrees on `0x300000000606014`: **the cure of the
+proposal (§7-ter.3) holds for KWin too**, zero copy. **KDE suite: 41 PASS, 2 FAIL, 1 BLOCKED.**
+- F-013 Firefox: the sound, as on XFCE and GNOME — the slow client (§7-ter.8).
+- **F-003 Firefox «foto vecchia» (0.8-2.3 s), 4 out of 4 red, even with the client on the card (`CLIENTE_SCHEDA=1`)**:
+  KWin delivers ~58 frames/s where Mutter and labwc deliver ~5-7 (same scene), and ~80% arrive
+  with the damage DECLARED EMPTY (on the Intel, Debian's KWin: 0 out of 1200). The server holds (≈20 ms from capture
+  to bytes); it is the slow client that cannot keep up with 60 4K frames.
+- ⛔ **Cure tested and REMOVED**: giving back at once the frames with the damage declared empty. F-003 Firefox green,
+  but **F-003 Chrome «chiude» red 4 times out of 5** (the closed window stays on screen): on KWin an empty
+  damage sometimes carries a real change. ⇒ Better a slow client lagging than a ghost window.
+  It is not in the product.
 
-#### 7-ter.10 LXQt sulla NVIDIA — 6 ottobre 2026 (scelta dell'utente)
+#### 7-ter.10 LXQt on the NVIDIA — 6 Oct 2026 (the user's choice)
 
-`[M]` LXQt di Ubuntu 26.04 sotto labwc 0.9.3 (Plasma, XFCE e GNOME tolti: il prodotto li sceglierebbe prima),
-la misura data prima di `lxqt-session` (`primario_misurato()`, `wlr-randr`). **Suite LXQt: 43 PASS, 1 FAIL** —
-F-013 Firefox, il suono del cliente lento (§7-ter.8). ⇒ **Sulla NVIDIA i quattro desktop girano**: XFCE 43/44,
-GNOME 41/44, KDE 41/44, LXQt 43/44; tutti i rossi rimasti sono del cliente lento, tranne F-003 «chiude» su GNOME
-(intermittente, 3 su 23).
+`[M]` Ubuntu 26.04's LXQt under labwc 0.9.3 (Plasma, XFCE and GNOME removed: the product would choose them first),
+the size given before `lxqt-session` (`primario_misurato()`, `wlr-randr`). **LXQt suite: 43 PASS, 1 FAIL** —
+F-013 Firefox, the sound of the slow client (§7-ter.8). ⇒ **On the NVIDIA the four desktops run**: XFCE 43/44,
+GNOME 41/44, KDE 41/44, LXQt 43/44; all the remaining reds belong to the slow client, except F-003 «chiude» on GNOME
+(intermittent, 3 out of 23).
 
-#### 7-ter.11 La caccia a F-003 «chiude» su GNOME — 6 ottobre 2026 (scelta dell'utente)
+#### 7-ter.11 The hunt for F-003 «chiude» on GNOME — 6 Oct 2026 (the user's choice)
 
-Strumenti (messi da parte in `git stash` «nvidia-chiude-traccia-e-fence», non nel prodotto): una riga per OGNI
-buffer di Mutter con la sua sorte, e sui consegnati della scheda la frazione di pixel CIANO (la finestra
-della prova) su 4096 campioni della memoria mappata (il tiling permuta i pixel, non ne cambia il conto).
-`[M]` 10 sessioni, 3 rosse:
-- alla chiusura Mutter consegna **due** fotogrammi a danno pieno a ~40 ms: il primo SENZA finestra (ciano
-  12-26 su 4096), il secondo **con la finestra di nuovo** (153-653 su 4096; finestra intera = 678); poi per
-  ~1 s nessun buffer, nemmeno di solo cursore. **Succede in TUTTE le sessioni**, verdi e rosse: la prova
-  diventa rossa quando quel secondo fotogramma ha abbastanza ciano da passare la soglia (16%).
-- ⛔ **Ipotesi smentita**: «leggiamo prima che la GPU di Mutter abbia finito». Con l'attesa della fence del
-  DMA-BUF (come sulla strada wlroots): 69 fence aspettate, **0 scadute**, e lo stesso rosso. Tolta.
-- ⏳ Aperto: è l'animazione di chiusura di GNOME 50 (il secondo fotogramma ne è l'inizio) che Mutter smette
-  di registrare mentre teniamo i buffer (la RITENUTA)? Il prossimo passo: la stessa traccia sulla Intel
-  (GNOME 48 di Debian), per vedere se lo schema c'è anche lì.
-- `[M]` **La stessa traccia sulla Radeon** (scatola rete11-gnome, GNOME 48 di Debian, binario `baf0ce80` solo
-  per la prova, poi rimesso `5c186779`): F-003 6 volte, 6 PASS. Alla chiusura **UN** fotogramma, ciano **0**
-  su 4096, e basta; e i buffer di solo cursore sono pochi (~120 in tutta la sessione, contro ~1100 sulla
-  NVIDIA). ⇒ Il secondo fotogramma «con la finestra» è di GNOME 50 sulla NVIDIA, non della nostra cattura
-  in sé. ⏳ La prova che separa: GNOME 50 con le animazioni spente (se il secondo fotogramma è l'inizio
-  dell'animazione di chiusura, sparisce).
+Tools (put aside in `git stash` «nvidia-chiude-traccia-e-fence», not in the product): one line for EVERY
+Mutter buffer with its fate, and on the card's delivered ones the fraction of CYAN pixels (the test's
+window) over 4096 samples of the mapped memory (tiling permutes the pixels, it does not change their count).
+`[M]` 10 sessions, 3 red:
+- at closing Mutter delivers **two** full-damage frames at ~40 ms: the first WITHOUT the window (cyan
+  12-26 out of 4096), the second **with the window again** (153-653 out of 4096; whole window = 678); then for
+  ~1 s no buffer, not even cursor-only. **It happens in ALL the sessions**, green and red: the test
+  turns red when that second frame has enough cyan to pass the threshold (16%).
+- ⛔ **Hypothesis refuted**: «we read before Mutter's GPU has finished». With the wait for the
+  DMA-BUF fence (as on the wlroots route): 69 fences waited for, **0 expired**, and the same red. Removed.
+- ⏳ Open: is it GNOME 50's closing animation (the second frame being its start) that Mutter stops
+  recording while we hold the buffers (the RETENTION)? The next step: the same trace on the Intel
+  (Debian's GNOME 48), to see whether the pattern is there too.
+- `[M]` **The same trace on the Radeon** (box rete11-gnome, Debian's GNOME 48, binary `baf0ce80` only
+  for the test, then `5c186779` put back): F-003 6 times, 6 PASS. At closing **ONE** frame, cyan **0**
+  out of 4096, and that's all; and the cursor-only buffers are few (~120 in the whole session, against ~1100 on the
+  NVIDIA). ⇒ The second frame «with the window» belongs to GNOME 50 on the NVIDIA, not to our capture
+  in itself. ⏳ The test that separates: GNOME 50 with the animations off (if the second frame is the start
+  of the closing animation, it disappears).
 
-#### 7-ter.12 La suite intera su GNOME e KDE — 6 ottobre 2026 (Ubuntu 26.04: GNOME 50.1, Plasma 6.6.6)
+#### 7-ter.12 The whole suite on GNOME and KDE — 6 Oct 2026 (Ubuntu 26.04: GNOME 50.1, Plasma 6.6.6)
 
-**GNOME** (31 prove, 2 browser): 129 PASS, 7 FAIL, 40 BLOCKED. I BLOCKED sono prove che qui non si fanno
-(porta del server nostro, server G8, tesseract, telefono vero). FAIL: F-013 Firefox (cliente lento, già
-noto) e **F-014C/F-014D/F-015C** (appunti del computer ↔ sessione) su tutti e due i browser: il server
-consegna i byte nei due versi (registro), sul server di casa passano ovunque ⇒ lato cliente di questa
-macchina, ⏳ non chiuso.
+**GNOME** (31 tests, 2 browsers): 129 PASS, 7 FAIL, 40 BLOCKED. The BLOCKED are tests that are not done here
+(our server's port, G8 server, tesseract, real phone). FAIL: F-013 Firefox (slow client, already
+known) and **F-014C/F-014D/F-015C** (computer clipboard ↔ session) on both browsers: the server
+delivers the bytes in both directions (log), on the home server they pass everywhere ⇒ client side of this
+machine, ⏳ not closed.
 
-**KDE**, primo giro: 115 PASS, 18 FAIL, 43 BLOCKED. Due **difetti veri del prodotto**, tutti e due di
-Plasma 6.6 (sul server di casa c'è il 6.3, e lì passava tutto):
-- **gli appunti non si aprivano**: KWin 6.6 non espone più `zwlr_data_control_manager_v1`, solo lo
-  standard `ext_data_control_manager_v1`. I due sono uguali nel filo (XML confrontati) ⇒ `appunti_kde.c`
-  lega `ext` se `zwlr` manca e lo guida con le stesse funzioni (`2f1ad7d`). [M] «appunti agganciati a KWin
+**KDE**, first round: 115 PASS, 18 FAIL, 43 BLOCKED. Two **real defects of the product**, both from
+Plasma 6.6 (on the home server there is 6.3, and there everything passed):
+- **the clipboard did not open**: KWin 6.6 no longer exposes `zwlr_data_control_manager_v1`, only the
+  standard `ext_data_control_manager_v1`. The two are equal on the wire (XMLs compared) ⇒ `appunti_kde.c`
+  binds `ext` if `zwlr` is missing and drives it with the same functions (`2f1ad7d`). [M] «appunti agganciati a KWin
   con ext_data_control_manager_v1 v1», F-014 Chrome PASS.
-- **la sessione restava inglese** (F-009): KWin 6.6 non ascolta più `org.kde.keyboard reloadConfig`, guarda
-  kxkbrc con un `KConfigWatcher` ⇒ `kwin_disposizione()` manda anche `org.kde.kconfig.notify
-  ConfigChanged` su `/kxkbrc` (gruppo «Layout»). [M] KEYMAP CAMBIATA → «it [Italian]», F-009 PASS=4.
-  Più una rete: se la keymap che arriva non è la negoziata, si richiede (max 3).
-- di passaggio: `19-nv-suite.py` cadeva su una riga tagliata a metà di un'emoji (registro con
-  `backslashreplace`); e i .deb dello stesso giorno si ordinano per hash (`2f1ad7d` < `22c178e`) ⇒ apt li
-  vede come «downgrade»: sul banco `dpkg -r` prima.
-⏳ Restano su KDE: F-007/F-008 su Firefox (tasti RIPETUTI: «Enter» ×10, Ctrl+V incollato 3 volte — la
-ripetizione automatica di KWin quando il rilascio arriva tardi dal cliente lento?), F-003 Firefox (foto
-vecchia fino a 3.4 s), F-026 immagine. Secondo giro intero con le cure in corso.
+- **the session stayed English** (F-009): KWin 6.6 no longer listens to `org.kde.keyboard reloadConfig`, it watches
+  kxkbrc with a `KConfigWatcher` ⇒ `kwin_disposizione()` also sends `org.kde.kconfig.notify
+  ConfigChanged` on `/kxkbrc` (group «Layout»). [M] KEYMAP CAMBIATA → «it [Italian]», F-009 PASS=4.
+  Plus a net: if the keymap that arrives is not the negotiated one, it is requested again (max 3).
+- in passing: `19-nv-suite.py` fell over a line cut in the middle of an emoji (log with
+  `backslashreplace`); and the .debs of the same day are sorted by hash (`2f1ad7d` < `22c178e`) ⇒ apt
+  sees them as a «downgrade»: on the bench `dpkg -r` first.
+⏳ What remains on KDE: F-007/F-008 on Firefox (REPEATED keys: «Enter» ×10, Ctrl+V pasted 3 times — KWin's
+autorepeat when the release arrives late from the slow client?), F-003 Firefox (old
+snapshot up to 3.4 s), F-026 image. Second whole round with the cures in progress.
 
-#### 7-ter.13 Altri due difetti veri, e il giro di conferma — 6/7 ottobre 2026
+#### 7-ter.13 Two more real defects, and the confirmation round — 6/7 Oct 2026
 
-- **la forma del puntatore non cambiava mai su LXQt e XFCE** (F-005, solo NVIDIA): labwc sulla NVIDIA
-  offre alla sonda 3x3 un formato wl_shm a **3 byte** (stride 9), e la sonda pretendeva 4 ⇒ «non ha un
-  buffer». `wlroots.c` legge anche RGB888/BGR888 (`sonda_bpp`). [M] F-005 PASS su XFCE e LXQt.
-- **dopo «Esci» restavano processi** (F-021, XFCE su Ubuntu 26.04): `localsearch-3` e `agent` (geoclue),
-  dall'autostart che la macchina ha per i pacchetti di GNOME, nella `session-N.scope`. ⇒
-  `sessione_sgombera_scope()`: a sessione uscita (dal menu o dal prodotto) SIGTERM a quel che resta
-  dell'utente nello scope, 2 s, poi SIGKILL. [M] «SIGTERM a 2 processi (localsearch-3 agent)», F-021 PASS.
+- **the pointer shape never changed on LXQt and XFCE** (F-005, NVIDIA only): labwc on the NVIDIA
+  offers the 3x3 probe a wl_shm format of **3 bytes** (stride 9), and the probe demanded 4 ⇒ «non ha un
+  buffer». `wlroots.c` also reads RGB888/BGR888 (`sonda_bpp`). [M] F-005 PASS on XFCE and LXQt.
+- **after «Esci» processes remained** (F-021, XFCE on Ubuntu 26.04): `localsearch-3` and `agent` (geoclue),
+  from the autostart the machine has for GNOME's packages, in the `session-N.scope`. ⇒
+  `sessione_sgombera_scope()`: with the session exited (from the menu or from the product) SIGTERM to what remains
+  of the user in the scope, 2 s, then SIGKILL. [M] «SIGTERM a 2 processi (localsearch-3 agent)», F-021 PASS.
 
-**Giro di conferma** sulla NVIDIA col binario `716e35b` (tutte le cure), suite intera:
-GNOME 129/7, KDE 122/12, LXQt 129/7, XFCE 129/7 (PASS/FAIL; i BLOCKED sono le prove che qui non si fanno).
-I FAIL che restano NON sono del prodotto: F-013 Firefox (cliente lento), F-014C/D/F-015C su tutti i desktop
-e i due browser (appunti del computer del cliente; il server consegna nei due versi), e su KDE Firefox
-F-003/F-004/F-007/F-008 (tasti ripetuti, foto vecchie: il cliente lento) e F-026 Chrome (⏳).
+**Confirmation round** on the NVIDIA with the binary `716e35b` (all the cures), whole suite:
+GNOME 129/7, KDE 122/12, LXQt 129/7, XFCE 129/7 (PASS/FAIL; the BLOCKED are the tests that are not done here).
+The FAILs that remain are NOT the product's: F-013 Firefox (slow client), F-014C/D/F-015C on all desktops
+and both browsers (the client computer's clipboard; the server delivers in both directions), and on KDE Firefox
+F-003/F-004/F-007/F-008 (repeated keys, old snapshots: the slow client) and F-026 Chrome (⏳).
 
-**Server di casa**, stesso commit (`716e35b`, binario `e2b1afae`, `rete11/prodotto/VERSIONE` scritta):
-giro `19-finale-intel` **732 PASS, 0 FAIL, 5 BLOCKED**; `19-finale-amd` **733 PASS, 0 FAIL, 4 BLOCKED**.
-Ripetute le bloccate: tutte PASS tranne **F-030 Firefox** (primo fotogramma nero 45 s, una volta per giro
-su un desktop diverso; col binario `5c186779` mai visto in 2 giri) ⇒ ⏳ prova A/B vecchio/nuovo in corso.
-- ✅ **chiusi, non sono del prodotto** (7 ott mattina): **F-026 KDE Chrome** 3 PASS su 3 ripetuto da solo
-  (era intermittente); **F-007/F-008 KDE Firefox** (tasti ripetuti): nel registro del server, per le sessioni
-  Firefox il rilascio arriva 700–1160 ms dopo la pressione **secondo l'istante del client stesso** (Chrome:
-  ≤150 ms) ⇒ il ritardo nasce nel browser sul processore lento; KWin ripete un tasto tenuto oltre ~600 ms,
-  come deve con un tasto tenuto davvero. Il prodotto inoltra i tempi giusti.
+**Home server**, same commit (`716e35b`, binary `e2b1afae`, `rete11/prodotto/VERSIONE` written):
+round `19-finale-intel` **732 PASS, 0 FAIL, 5 BLOCKED**; `19-finale-amd` **733 PASS, 0 FAIL, 4 BLOCKED**.
+The blocked ones repeated: all PASS except **F-030 Firefox** (first frame black 45 s, once per round
+on a different desktop; with the binary `5c186779` never seen in 2 rounds) ⇒ ⏳ A/B test old/new in progress.
+- ✅ **closed, they are not the product's** (7 Oct morning): **F-026 KDE Chrome** 3 PASS out of 3 repeated alone
+  (it was intermittent); **F-007/F-008 KDE Firefox** (repeated keys): in the server's log, for the Firefox
+  sessions the release arrives 700–1160 ms after the press **according to the client's own instant** (Chrome:
+  ≤150 ms) ⇒ the delay is born in the browser on the slow processor; KWin repeats a key held beyond ~600 ms,
+  as it must with a key really held. The product forwards the right times.
 
-#### 7-ter.14 Il noleggio chiuso — 7 ottobre 2026, ~11:00 (decisione dell'utente: *«abbiamo svolto dei test esaurienti»*)
+#### 7-ter.14 The rental closed — 7 Oct 2026, ~11:00 (the user's decision: *«abbiamo svolto dei test esaurienti»*)
 
-- **GNOME «chiude»**: animazioni spente (dconf di sistema `enable-animations=false`) ⇒ F-003 Firefox **20/20
-  PASS**; controprova con le animazioni accese, stesso giorno ⇒ **8/8 PASS** (fermata lì). ⇒ L'ipotesi
-  «animazione di chiusura di GNOME 50» NON è provata: oggi il rosso non compare in nessuna delle due. Resta
-  intermittente (3/23 il 6 ott), causa ignota, e la cattura consegna quel che Mutter le dà.
-- **Appunti del computer** (F-014C/D, F-015C): rossi fissi, tutti i desktop, tutti e due i browser; il server
-  consegna nei due versi e sul server di casa passano ⇒ guasto fra browser e appunti del compositore del
-  banco su quella macchina. ⏳ Non dimostrato; non tocca il prodotto.
-- Evidenze raccolte (`misure/19-nvidia/remotix-nv-ubuntu2404-20261007-0851.tar.gz`), tolto a mano quel che
-  la prova delle animazioni aveva aggiunto (`/etc/dconf/profile/user`, `db/local*`, `dconf-cli`), poi
-  `19-nvidia.sh pulisci`: REMOTIX disinstallato, 1028 pacchetti nuovi tolti, `/etc/apt` com'era, valigia
-  tolta. ⚠ «riavvio consigliato» (driver/modeset tolti): la macchina si restituisce, non serve.
+- **GNOME «chiude»**: animations off (system dconf `enable-animations=false`) ⇒ F-003 Firefox **20/20
+  PASS**; counter-test with the animations on, same day ⇒ **8/8 PASS** (stopped there). ⇒ The hypothesis
+  «GNOME 50's closing animation» is NOT proven: today the red does not appear in either of the two. It stays
+  intermittent (3/23 on 6 Oct), cause unknown, and the capture delivers what Mutter gives it.
+- **Computer clipboard** (F-014C/D, F-015C): steadily red, all desktops, both browsers; the server
+  delivers in both directions and on the home server they pass ⇒ a fault between the browser and the clipboard of the bench's
+  compositor on that machine. ⏳ Not demonstrated; it does not touch the product.
+- Evidence collected (`misure/19-nvidia/remotix-nv-ubuntu2404-20261007-0851.tar.gz`), removed by hand what
+  the animation test had added (`/etc/dconf/profile/user`, `db/local*`, `dconf-cli`), then
+  `19-nvidia.sh pulisci`: REMOTIX uninstalled, 1028 new packages removed, `/etc/apt` as it was, suitcase
+  removed. ⚠ «riavvio consigliato» (driver/modeset removed): the machine is being returned, it is not needed.
