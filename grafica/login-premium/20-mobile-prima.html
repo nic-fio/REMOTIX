@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Mobile prima» — sul telefono il modulo è un foglio bianco che sale dal basso, coi campi grandi da dito, e il logo sta in alto sul blu notte; sul computer il foglio diventa una scheda centrata.
-     Idea: disegnata a partire dal pollice — tutto quel che si tocca sta nella metà bassa dello schermo, e sul computer resta la stessa pagina, solo raccolta. -->
-<html lang="it">
+<!-- Style: «Mobile first» — on the phone the form is a white sheet rising from the bottom, with large finger-sized fields, and the logo sits at the top on night blue; on the computer the sheet becomes a centred card.
+     Idea: designed starting from the thumb — everything you touch is in the lower half of the screen, and on the computer it stays the same page, just gathered. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1430">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --notte:#0b1430; --notte-b:#0b2463; --testo-fondo:#eaf0ff; --tenue-fondo:#a9b8db;
@@ -29,7 +29,7 @@
     -webkit-tap-highlight-color:transparent;
   }
 
-  /* TELEFONO (la base): il logo in alto, il foglio che sale dal basso */
+  /* PHONE (the base): the logo at the top, the sheet rising from the bottom */
   .cima{
     flex:1 0 auto; min-height:15rem; display:flex; flex-direction:column; justify-content:center; align-items:center;
     padding:calc(2rem + env(safe-area-inset-top)) 1.5rem 2.2rem; text-align:center;
@@ -108,7 +108,7 @@
   .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--inchiostro); font-size:.95em}
   .piede .sep{opacity:.5}
 
-  /* COMPUTER: lo stesso foglio, raccolto in una scheda al centro */
+  /* COMPUTER: the same sheet, gathered into a card in the centre */
   @media (min-width:720px) and (min-height:560px){
     body{justify-content:center; align-items:center; padding:2.5rem 1.5rem}
     .cima{flex:none; min-height:0; padding:0 0 2rem}
@@ -156,28 +156,28 @@
     </g>
     <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
   </svg>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 </header>
 
 <main class="foglio" aria-labelledby="titolo">
   <span class="maniglia" aria-hidden="true"></span>
-  <h1 id="titolo">Accedi</h1>
-  <p class="sotto">Con l'utente e la parola d'ordine del server.</p>
+  <h1 id="titolo">Sign in</h1>
+  <p class="sotto">With the server's user and password.</p>
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post" novalidate>
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <div class="campo">
         <input id="parola" name="parola" type="password" autocomplete="current-password" enterkeyhint="go" required>
-        <button type="button" class="mostra" aria-controls="parola" aria-pressed="false">Mostra</button>
+        <button type="button" class="mostra" aria-controls="parola" aria-pressed="false">Show</button>
       </div>
     </div>
-    <button type="submit" id="vai">Collegati
+    <button type="submit" id="vai">Connect
       <span class="giro" aria-hidden="true"></span>
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -188,7 +188,7 @@
 
   <p class="piede">
     <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-    Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+    Encrypted connection <span class="sep">·</span> <code>alfa.lan</code>
   </p>
 </main>
 
@@ -199,11 +199,11 @@
   var mostra=document.querySelector('.mostra');
   mostra.addEventListener('click',function(){
     var vedi=parola.type==='password'; parola.type=vedi?'text':'password';
-    mostra.textContent=vedi?'Nascondi':'Mostra'; mostra.setAttribute('aria-pressed',vedi?'true':'false');
+    mostra.textContent=vedi?'Hide':'Show'; mostra.setAttribute('aria-pressed',vedi?'true':'false');
   });
   function errore(){
     esito.className='errore';
-    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Invalid user or password.</span>';
     utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
   }
   function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
@@ -215,7 +215,7 @@
   var stato=new URLSearchParams(location.search).get('stato');
   if(stato==='errore') errore();
   if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
-  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+  if(stato==='avviso') $('avviso').textContent='The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes.';
 })();
 </script>
 </body>

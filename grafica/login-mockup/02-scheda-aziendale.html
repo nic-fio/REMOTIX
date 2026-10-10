@@ -1,11 +1,11 @@
-<!-- Stile: SCHEDA AZIENDALE — una scheda bianca centrata su grigio chiarissimo, accento blu aziendale.
-     Idea: il login «da prodotto serio»: ordinato, rassicurante, con ogni stato (passaggio, fuoco, errore) curato. -->
+<!-- Style: CORPORATE CARD — a white card centred on very light grey, corporate blue accent.
+     Idea: the «serious product» login: tidy, reassuring, with every state (hover, focus, error) looked after. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root {
     --bg: #f3f5f8;
@@ -13,7 +13,7 @@
     --ink: #0f1b2d;
     --muted: #55637a;
     --line: #d5dbe4;
-    --blue: #1f5fd1;         /* bianco su blu 5,6:1 */
+    --blue: #1f5fd1;         /* white on blue 5.6:1 */
     --blue-dark: #174aa6;
     --blue-soft: #e8f0fd;
     --err-bg: #fdf1f1;
@@ -97,7 +97,7 @@
   button:active { transform: translateY(1px); }
   button:focus-visible { outline: none; box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--blue); }
 
-  /* esempio: errore */
+  /* example: error */
   .error {
     display: flex; gap: .65rem; align-items: flex-start;
     margin-top: 1.1rem;
@@ -129,7 +129,7 @@
 <div class="wrap">
   <div class="brand">
     <div class="logo">
-      <!-- Logo: monitor con due archi di collegamento -->
+      <!-- Logo: monitor with two connection arcs -->
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="12" rx="2"/>
         <path d="M9 20h6M12 16v4"/>
@@ -138,40 +138,40 @@
       </svg>
     </div>
     <h1>REMOTIX</h1>
-    <p>Il tuo desktop Linux, da qualunque browser</p>
+    <p>Your Linux desktop, from any browser</p>
   </div>
 
   <main class="card">
-    <h2>Accedi al tuo desktop</h2>
-    <p class="sub">Usa le credenziali del tuo utente sul server.</p>
+    <h2>Sign in to your desktop</h2>
+    <p class="sub">Use your user's credentials on the server.</p>
     <form action="#" method="post" onsubmit="return false">
       <div class="field">
-        <label for="u">Utente</label>
+        <label for="u">User</label>
         <div class="input">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
           <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         </div>
       </div>
       <div class="field">
-        <label for="p">Parola d'ordine</label>
+        <label for="p">Password</label>
         <div class="input">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <input id="p" name="parola" type="password" autocomplete="current-password" required>
         </div>
       </div>
-      <button type="submit">Collegati</button>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: stato d'errore, visibile solo nel mockup -->
+    <!-- example: error state, visible only in the mockup -->
     <div class="error" role="alert">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5" stroke-linecap="round"/></svg>
-      <div><b>Accesso non riuscito</b>Utente o parola d'ordine non corretti.</div>
+      <div><b>Sign-in failed</b>Wrong user or password.</div>
     </div>
   </main>
 
   <p class="foot">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
-    Connessione cifrata · niente da installare
+    Encrypted connection · nothing to install
   </p>
 </div>
 </body>

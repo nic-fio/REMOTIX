@@ -1,11 +1,11 @@
-<!-- Stile: MEDITERRANEO — terracotta tenue, sabbia e blu mare, linee pulite.
-     Idea: una finestra ad arco affacciata sul mare (SVG) accanto a una scheda color sabbia; calma estiva, geometria semplice. -->
+<!-- Style: MEDITERRANEAN — soft terracotta, sand and sea blue, clean lines.
+     Idea: an arched window overlooking the sea (SVG) next to a sand-coloured card; summer calm, simple geometry. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --sabbia:#f4ead9; --sabbia-2:#ead9bd; --calce:#fffaf2; --terracotta:#c0643f; --terracotta-scura:#9a4526;
@@ -105,22 +105,22 @@
       </svg>
       <b>REMOTIX</b>
     </div>
-    <h1>Bentornato.</h1>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+    <h1>Welcome back.</h1>
+    <p class="motto">Your Linux desktop, from any browser.</p>
 
     <form action="#" method="post">
-      <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
-      <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
-      <button type="submit">Collegati</button>
+      <div><label for="utente">User</label><input id="utente" name="utente" autocomplete="username" required></div>
+      <div><label for="parola">Password</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: stato d'errore, visibile solo per il mockup -->
+    <!-- example: error state, visible only for the mockup -->
     <p class="errore" role="alert">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#c0643f"/><path d="M10 5.5v5.5M10 14.2v.3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
-      Utente o parola d'ordine non corretti.
+      Wrong user or password.
     </p>
 
-    <p class="piede">Connessione cifrata · niente da installare</p>
+    <p class="piede">Encrypted connection · nothing to install</p>
   </section>
 </main>
 </body>

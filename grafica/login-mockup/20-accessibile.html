@@ -1,11 +1,11 @@
-<!-- Stile: ACCESSIBILE AL MASSIMO — alto contrasto su fondo chiaro, grandi aree cliccabili, testi generosi.
-     Idea: ogni cosa si legge da lontano e si tocca col pollice (campi alti 64 px, contrasto AAA), il fuoco è un anello giallo+nero che non si perde mai; bello per chiarezza, non per decorazione. -->
+<!-- Style: MAXIMALLY ACCESSIBLE — high contrast on a light background, large clickable areas, generous text.
+     Idea: everything can be read from afar and touched with a thumb (64 px tall fields, AAA contrast), focus is a yellow+black ring that is never lost; beautiful through clarity, not decoration. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#f5f7fa; --bianco:#ffffff; --nero:#0b1220; --testo-2:#2f3a4c;
@@ -69,7 +69,7 @@
 </style>
 </head>
 <body>
-<a class="salta" href="#utente">Vai al modulo d'accesso</a>
+<a class="salta" href="#utente">Skip to the sign-in form</a>
 <main class="scheda">
   <div class="testa">
     <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -80,34 +80,34 @@
     </svg>
     <p class="marchio">REMOTIX</p>
   </div>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
-  <h1>Accedi</h1>
+  <h1>Sign in</h1>
   <form action="#" method="post" aria-describedby="err">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" autocomplete="username" required aria-invalid="true" aria-describedby="err">
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
-      <span class="aiuto" id="aiuto-parola">Attenzione a maiuscole e minuscole.</span>
+      <label for="parola">Password</label>
+      <span class="aiuto" id="aiuto-parola">Mind upper and lower case.</span>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required aria-invalid="true" aria-describedby="aiuto-parola err">
-      <label class="riga"><input type="checkbox" id="mostra"> Mostra la parola d'ordine</label>
+      <label class="riga"><input type="checkbox" id="mostra"> Show the password</label>
     </div>
-    <button type="submit">Collegati
+    <button type="submit">Connect
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
 
-  <!-- esempio: stato d'errore, visibile solo per il mockup -->
+  <!-- example: error state, visible only for the mockup -->
   <div class="errore" id="err" role="alert">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L1 21h22z" fill="#b00020"/><path d="M12 9v5M12 17.5v.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
-    <div>Utente o parola d'ordine non corretti.<small>Controlla e riprova.</small></div>
+    <div>Wrong user or password.<small>Check and try again.</small></div>
   </div>
 
   <p class="piede">
     <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="9" rx="2" fill="#0a6b3d"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="#0a6b3d" stroke-width="2"/></svg>
-    Connessione cifrata · niente da installare
+    Encrypted connection · nothing to install
   </p>
 </main>
 <script>document.getElementById("mostra").addEventListener("change",function(){document.getElementById("parola").type=this.checked?"text":"password"});</script>

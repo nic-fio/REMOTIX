@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Grafite» — monocromo grafite su una griglia tipografica a dodici colonne, filetti sottili e cifre monospaziate; l'unico colore è il gradiente della R, del fuoco e del bottone.
-     Idea: precisione svizzera: l'ordine della pagina è il lusso, e il blu del marchio pesa di più perché è l'unico. -->
-<html lang="it">
+<!-- Style: «Graphite» — graphite monochrome on a twelve-column typographic grid, thin rules and monospaced figures; the only colour is the gradient of the R, of the focus and of the button.
+     Idea: Swiss precision: the order of the page is the luxury, and the brand's blue weighs more because it is the only one. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#111214; --carta:#151619; --testo:#ededee; --tenue:#8f9196; --fioco:#6c6f75;
@@ -28,7 +28,7 @@
     animation:entra .5s ease-out both;
   }
   @keyframes entra{from{opacity:0} to{opacity:1}}
-  /* la griglia, visibile appena: dodici colonne di filetti */
+  /* the grid, barely visible: twelve columns of rules */
   .foglio::before{
     content:""; position:absolute; inset:0; pointer-events:none; z-index:-1;
     background:repeating-linear-gradient(90deg, transparent 0 calc((100% + 1.5em)/12 - 1px), rgba(255,255,255,.028) calc((100% + 1.5em)/12 - 1px) calc((100% + 1.5em)/12));
@@ -61,7 +61,7 @@
     padding:.55em 0 .5em; border:0; border-radius:0; background:transparent;
     border-bottom:1px solid var(--filo-forte); transition:border-color .15s;
   }
-  /* il filetto del fuoco nei colori del marchio: cresce con transform, non con la geometria */
+  /* the focus rule in the brand's colours: it grows with transform, not with geometry */
   .campo::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--marchio);
     transform:scaleX(0); transform-origin:0 50%; transition:transform .3s ease}
   .campo:focus-within::after{transform:scaleX(1)}
@@ -139,23 +139,23 @@
   </header>
 
   <section class="voce">
-    <p class="indice" aria-hidden="true">01 — ACCESSO</p>
-    <h2>Il tuo<br><em>desktop Linux.</em></h2>
-    <p class="motto">Da qualunque browser, su questo server.</p>
+    <p class="indice" aria-hidden="true">01 — SIGN IN</p>
+    <h2>Your<br><em>Linux desktop.</em></h2>
+    <p class="motto">From any browser, on this server.</p>
   </section>
 
   <main class="scheda">
     <div id="avviso"></div>
     <form id="modulo" action="#" method="post">
       <div class="campo">
-        <label for="utente"><span class="n" aria-hidden="true">01</span>Utente</label>
+        <label for="utente"><span class="n" aria-hidden="true">01</span>User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div class="campo">
-        <label for="parola"><span class="n" aria-hidden="true">02</span>Parola d'ordine</label>
+        <label for="parola"><span class="n" aria-hidden="true">02</span>Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai"><span>Collegati</span>
+      <button type="submit" id="vai"><span>Connect</span>
         <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M11.5 5.5L16 10l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
         <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="1.8"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
       </button>
@@ -165,8 +165,8 @@
   </main>
 
   <footer class="coda">
-    <span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>CONNESSIONE CIFRATA</span>
-    <span>NIENTE DA INSTALLARE</span>
+    <span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>ENCRYPTED CONNECTION</span>
+    <span>NOTHING TO INSTALL</span>
   </footer>
 </div>
 <script>
@@ -174,7 +174,7 @@
   var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
       campi=[document.getElementById("utente"), document.getElementById("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    esito.textContent="Invalid user or password."; esito.className="male";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
   campi.forEach(function(c){c.addEventListener("input",function(){

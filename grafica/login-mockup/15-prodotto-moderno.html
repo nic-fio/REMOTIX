@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Prodotto moderno» — il linguaggio dei servizi in rete di oggi: tanto bianco, tipografia grande, un solo colore.
-     Idea: il gradiente indaco-azzurro compare soltanto nel logo e nel pulsante, così l'occhio va dritto a «Collegati». -->
-<html lang="it">
+<!-- Style: «Modern product» — the language of today's online services: lots of white, large typography, a single colour.
+     Idea: the indigo-to-blue gradient appears only in the logo and the button, so the eye goes straight to «Connect». -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --inchiostro:#0f1729; --tenue:#5b6478; --leggero:#6b7488; --bordo:#e4e7ee; --campo:#fafbfc;
@@ -56,7 +56,7 @@
     box-shadow:0 1px 2px rgba(15,23,41,.1), 0 10px 22px -10px rgba(79,70,229,.7);
     transition:transform .15s, box-shadow .15s;
   }
-  /* un riflesso che attraversa il pulsante al passaggio */
+  /* a gleam that crosses the button on hover */
   button::after{
     content:""; position:absolute; inset:0; transform:translateX(-120%);
     background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%);
@@ -67,7 +67,7 @@
   button:active{transform:translateY(0)}
   button:focus-visible{outline:3px solid #a5b4fc; outline-offset:3px}
 
-  /* esempio: stato d'errore */
+  /* example: error state */
   .errore{
     margin-top:1.1rem; display:flex; gap:.6rem; align-items:flex-start; padding:.75rem .9rem;
     border-radius:.65rem; font-size:.88rem;
@@ -118,31 +118,31 @@
         <path d="M10.5 14.5a7.5 7.5 0 0 1 11 0M13.3 17a3.6 3.6 0 0 1 5.4 0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>
       </svg>
     </div>
-    <h1><span>REMOTIX</span>Accedi al tuo desktop</h1>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+    <h1><span>REMOTIX</span>Sign in to your desktop</h1>
+    <p class="motto">Your Linux desktop, from any browser.</p>
 
     <form action="#" method="post">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati</button>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <!-- example: error state after a wrong attempt -->
     <div class="errore" role="alert">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.2" fill="currentColor"/></svg>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <span>Wrong user or password.</span>
     </div>
   </div>
 </main>
 
 <footer>
-  <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Connessione cifrata</span> · niente da installare
+  <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Encrypted connection</span> · nothing to install
 </footer>
 </body>
 </html>

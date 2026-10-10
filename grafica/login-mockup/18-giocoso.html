@@ -1,11 +1,11 @@
-<!-- Stile: GIOCOSO MA SERIO — colori vivaci su bianco, un piccolo schermo sorridente con antenne.
-     Idea: la mascotte SVG saluta (e sbatte le palpebre), il modulo resta sobrio e chiaro; allegria nei dettagli, serietà nella sostanza. -->
+<!-- Style: PLAYFUL BUT SERIOUS — bright colours on white, a small smiling screen with antennae.
+     Idea: the SVG mascot waves (and blinks), the form stays sober and clear; cheerfulness in the details, seriousness in the substance. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --bianco:#ffffff; --fondo:#fbfbfe; --testo:#1c1b33; --testo-2:#55536e;
@@ -80,18 +80,18 @@
   </svg>
 
   <p class="marchio"><b>REMOT<span>IX</span></b></p>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.<br>Ciao, ti stavamo aspettando!</p>
+  <p class="motto">Your Linux desktop, from any browser.<br>Hi, we were waiting for you!</p>
 
   <form action="#" method="post">
-    <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
-    <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
-    <button type="submit">Collegati</button>
+    <div><label for="utente">User</label><input id="utente" name="utente" autocomplete="username" required></div>
+    <div><label for="parola">Password</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+    <button type="submit">Connect</button>
   </form>
 
-  <!-- esempio: stato d'errore, visibile solo per il mockup -->
-  <p class="errore" role="alert"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true" style="flex:none"><rect x="2" y="4" width="20" height="15" rx="4" fill="#ff6b6b" stroke="#a4161a" stroke-width="1.5"/><circle cx="9" cy="10.5" r="1.3" fill="#fff"/><circle cx="15" cy="10.5" r="1.3" fill="#fff"/><path d="M8.5 16q3.5-3 7 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg> Ops: utente o parola d'ordine non corretti.</p>
+  <!-- example: error state, visible only for the mockup -->
+  <p class="errore" role="alert"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true" style="flex:none"><rect x="2" y="4" width="20" height="15" rx="4" fill="#ff6b6b" stroke="#a4161a" stroke-width="1.5"/><circle cx="9" cy="10.5" r="1.3" fill="#fff"/><circle cx="15" cy="10.5" r="1.3" fill="#fff"/><path d="M8.5 16q3.5-3 7 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg> Oops: wrong user or password.</p>
 
-  <p class="piede"><i aria-hidden="true"></i>Connessione cifrata · niente da installare</p>
+  <p class="piede"><i aria-hidden="true"></i>Encrypted connection · nothing to install</p>
 </main>
 </body>
 </html>

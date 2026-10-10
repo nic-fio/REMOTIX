@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Editoriale scuro» — a sinistra il logo e un titolo enorme («Il tuo desktop. Ovunque.»), a destra il modulo senza cornice, separati da un filo.
-     Idea: come la copertina di una rivista: la tipografia fa da immagine, e lo spazio vuoto dice «qualità» più di ogni decorazione. -->
-<html lang="it">
+<!-- Style: «Dark editorial» — on the left the logo and a huge title («Your desktop. Anywhere.»), on the right the frameless form, separated by a thread.
+     Idea: like a magazine cover: the typography acts as the image, and the empty space says «quality» more than any decoration. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#0a0c11; --testo:#f3f4f7; --tenue:#a2a8b8; --fioco:#8a90a2; --filo:rgba(255,255,255,.1);
@@ -25,7 +25,7 @@
     display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); align-items:center; column-gap:0;
   }
 
-  /* — la copertina — */
+  /* — the cover — */
   .copertina{padding-right:4.5rem; animation:sale .9s cubic-bezier(.2,.7,.2,1) both}
   .logo{display:block; height:2.1rem; width:auto; color:#fff; margin-bottom:3.2rem}
   .titolo{
@@ -41,7 +41,7 @@
   .motto{margin:1.8rem 0 0; max-width:24rem; color:var(--tenue); font-size:1.05rem; line-height:1.55}
   .motto strong{color:var(--testo); font-weight:600}
 
-  /* — il modulo — */
+  /* — the form — */
   .accesso{
     border-left:1px solid var(--filo); padding:1rem 0 1rem 4.5rem; max-width:27rem;
     animation:sale .9s .12s cubic-bezier(.2,.7,.2,1) both;
@@ -91,7 +91,7 @@
   #dichiarazione{margin-top:1.2rem; font-size:.84rem; color:var(--tenue)}
   #dichiarazione:empty{display:none}
 
-  /* — il piede, come un colophon — */
+  /* — the footer, like a colophon — */
   .piede{
     width:100%; max-width:76rem; margin:0 auto; padding:1.4rem 3rem 1.8rem;
     display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
@@ -135,26 +135,26 @@
       </g>
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
-    <h1 class="titolo"><span>Il tuo desktop.</span><span class="ovunque">Ovunque.</span></h1>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser: <strong>portatile, telefono o tablet</strong>. Niente da installare.</p>
+    <h1 class="titolo"><span>Your desktop.</span><span class="ovunque">Anywhere.</span></h1>
+    <p class="motto">Your Linux desktop, from any browser: <strong>laptop, phone or tablet</strong>. Nothing to install.</p>
   </header>
 
   <main class="accesso" aria-labelledby="entra">
-    <h2 id="entra">Accedi</h2>
-    <p class="sotto">Con l'utente e la parola d'ordine del server.</p>
+    <h2 id="entra">Sign in</h2>
+    <p class="sotto">With the server's user and password.</p>
 
     <div id="avviso"></div>
 
     <form id="modulo" action="#" method="post">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai"><span class="testo">Collegati</span>
+      <button type="submit" id="vai"><span class="testo">Connect</span>
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </form>
@@ -165,7 +165,7 @@
 </div>
 
 <footer class="piede">
-  <span><i class="vivo" aria-hidden="true"></i>Connessione cifrata</span>
+  <span><i class="vivo" aria-hidden="true"></i>Encrypted connection</span>
   <span>Server <code>alfa.lan</code></span>
 </footer>
 
@@ -174,7 +174,7 @@
   var $=function(i){return document.getElementById(i)};
   var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.textContent="Invalid user or password.";
     esito.className="errore";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
@@ -186,12 +186,12 @@
   campi.forEach(function(c){c.addEventListener("input",pulisci)});
   $("modulo").addEventListener("submit",function(ev){
     ev.preventDefault(); pulisci();
-    vai.disabled=true; testo.textContent="Collegamento…";
-    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+    vai.disabled=true; testo.textContent="Connecting…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Connect"; errore(); $("parola").select();},700);
   });
   var stato=new URLSearchParams(location.search).get("stato");
   if(stato==="errore")errore();
-  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+  if(stato==="avviso")$("avviso").textContent="The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes, or unblock the address from the server.";
 })();
 </script>
 </body>

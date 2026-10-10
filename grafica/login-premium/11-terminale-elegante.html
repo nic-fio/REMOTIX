@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Terminale elegante» — fondo quasi nero, scheda grafite, tre righe di stato in monospace sopra un modulo normale.
-     Idea: il registro degli strumenti per sviluppatori di lusso (Warp, Raycast): precisione da console, cura da prodotto. -->
-<html lang="it">
+<!-- Style: «Elegant terminal» — near-black background, graphite card, three monospace status lines above a normal form.
+     Idea: the register of luxury developer tools (Warp, Raycast): console precision, product care. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#08090b; --scheda:#111216; --scheda-alta:#16171c; --campo:#0b0c0f;
@@ -23,7 +23,7 @@
     background-image:radial-gradient(70rem 32rem at 50% -12%, rgba(26,124,255,.17), transparent 70%);
     -webkit-font-smoothing:antialiased;
   }
-  /* trama di punti appena accennata, che svanisce verso i bordi */
+  /* a barely hinted dot texture, fading towards the edges */
   body::before{
     content:""; position:fixed; inset:0; pointer-events:none;
     background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size:1.6rem 1.6rem;
@@ -38,7 +38,7 @@
     box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.06) inset, 0 30px 80px -30px rgba(0,0,0,.9), 0 0 120px -40px rgba(26,124,255,.35);
     animation:entra .6s cubic-bezier(.2,.7,.2,1) both;
   }
-  /* il filo di luce sul bordo superiore */
+  /* the thread of light on the top edge */
   .scheda::before{
     content:""; position:absolute; top:-1px; left:18%; right:18%; height:1px;
     background:linear-gradient(90deg, transparent, rgba(0,216,255,.7), transparent);
@@ -143,33 +143,33 @@
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
   </h1>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
-  <div class="console" aria-label="Stato del collegamento">
+  <div class="console" aria-label="Connection status">
     <p><span class="pr" aria-hidden="true"></span><b>alfa.lan</b><span class="sep">·</span>TLS 1.3<span class="sep">·</span>QUIC</p>
-    <p><span class="ok">✓</span>server raggiungibile<span class="sep">·</span>desktop pronto</p>
-    <p><span class="pr" aria-hidden="true"></span>in attesa delle credenziali<span class="cursore" aria-hidden="true"></span></p>
+    <p><span class="ok">✓</span>server reachable<span class="sep">·</span>desktop ready</p>
+    <p><span class="pr" aria-hidden="true"></span>waiting for credentials<span class="cursore" aria-hidden="true"></span></p>
   </div>
 
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span class="testo">Collegati</span> <kbd aria-hidden="true">↵</kbd></button>
+    <button type="submit" id="vai"><span class="testo">Connect</span> <kbd aria-hidden="true">↵</kbd></button>
   </form>
 
   <div id="esito" role="status" aria-live="polite"></div>
   <div id="dichiarazione"></div>
 
   <footer class="piede">
-    <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>connessione cifrata</span>
+    <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>encrypted connection</span>
     <span class="destra">alfa.lan</span>
   </footer>
 </main>
@@ -179,7 +179,7 @@
   var $=function(i){return document.getElementById(i)};
   var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.textContent="Invalid user or password.";
     esito.className="errore";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
@@ -191,12 +191,12 @@
   campi.forEach(function(c){c.addEventListener("input",pulisci)});
   $("modulo").addEventListener("submit",function(ev){
     ev.preventDefault(); pulisci();
-    vai.disabled=true; testo.textContent="Collegamento…";
-    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+    vai.disabled=true; testo.textContent="Connecting…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Connect"; errore(); $("parola").select();},700);
   });
   var stato=new URLSearchParams(location.search).get("stato");
   if(stato==="errore")errore();
-  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+  if(stato==="avviso")$("avviso").textContent="The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes, or unblock the address from the server.";
 })();
 </script>
 </body>

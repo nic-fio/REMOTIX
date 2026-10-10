@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Costellazione» — su un blu notte, punti e fili sottilissimi (SVG fermo) come una mappa di stelle; tre punti sono minuscoli dispositivi. La scheda galleggia in primo piano.
-     Idea: tanti dispositivi collegati allo stesso server, detto in sordina: il disegno si sente più che vedersi, e lascia la scena al modulo. -->
-<html lang="it">
+<!-- Style: «Constellation» — on a night blue, dots and very thin threads (static SVG) like a star map; three dots are tiny devices. The card floats in the foreground.
+     Idea: many devices connected to the same server, said quietly: the drawing is felt more than seen, and leaves the stage to the form. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#060a17; --scheda:rgba(11,17,34,.92); --bordo:rgba(140,180,255,.14);
@@ -24,7 +24,7 @@
     -webkit-font-smoothing:antialiased; overflow-x:hidden;
   }
 
-  /* — il cielo — */
+  /* — the sky — */
   .cielo{position:fixed; inset:0; width:100%; height:100%; pointer-events:none}
   .cielo .fili path{stroke:#6f93d6; stroke-width:.7; opacity:.32; fill:none}
   .cielo .nodi circle{fill:#8fb2ec; opacity:.55}
@@ -35,7 +35,7 @@
   .cielo .aloni .a2{animation-delay:4.6s}
   @keyframes respira{0%{opacity:.5; transform:scale(.4)} 60%,100%{opacity:0; transform:scale(2.2)}}
 
-  /* — la scheda — */
+  /* — the card — */
   .scheda{
     position:relative; width:100%; max-width:24rem; text-align:left;
     background:var(--scheda); border:1px solid var(--bordo); border-radius:1.1rem;
@@ -112,7 +112,7 @@
   <g class="fili"><path d="M529 172L578 57"/><path d="M529 172L370 243"/><path d="M1032 98L874 89"/><path d="M1032 98L937 277"/><path d="M855 374L1014 380"/><path d="M855 374L728 312"/><path d="M855 374L937 277"/><path d="M855 374L748 485"/><path d="M119 507L90 658"/><path d="M119 507L186 372"/><path d="M138 115L221 240"/><path d="M138 115L30 172"/><path d="M684 807L505 797"/><path d="M684 807L839 853"/><path d="M684 807L624 659"/><path d="M221 240L289 140"/><path d="M221 240L186 372"/><path d="M221 240L370 243"/><path d="M996 921L839 853"/><path d="M996 921L1036 782"/><path d="M1533 74L1306 182"/><path d="M1352 302L1306 182"/><path d="M1352 302L1503 450"/><path d="M1352 302L1324 481"/><path d="M505 797L429 681"/><path d="M308 577L287 756"/><path d="M308 577L429 681"/><path d="M1014 380L1153 301"/><path d="M1014 380L937 277"/><path d="M874 89L937 277"/><path d="M514 580L624 659"/><path d="M514 580L459 420"/><path d="M514 580L429 681"/><path d="M728 312L634 405"/><path d="M1253 687L1207 569"/><path d="M1253 687L1377 780"/><path d="M839 853L895 744"/><path d="M1153 301L1306 182"/><path d="M90 658L69 852"/><path d="M1207 569L1324 481"/><path d="M1324 918L1377 780"/><path d="M1324 918L1473 959"/><path d="M760 654L624 659"/><path d="M760 654L895 744"/><path d="M289 140L370 243"/><path d="M459 420L634 405"/><path d="M1498 679L1377 780"/><path d="M1498 679L1503 450"/><path d="M1377 780L1473 959"/><path d="M634 405L748 485"/><path d="M30 172L73 293"/><path d="M186 372L73 293"/><path d="M69 852L232 885"/><path d="M287 756L429 681"/><path d="M287 756L232 885"/><path d="M1503 450L1324 481"/><path d="M1036 782L895 744"/></g>
   <g class="nodi"><circle cx="529" cy="172" r="1.4"/><circle cx="1032" cy="98" r="1.4"/><circle cx="855" cy="374" r="1.4"/><circle cx="119" cy="507" r="1.4"/><circle cx="684" cy="807" r="1.4"/><circle cx="221" cy="240" r="1.4"/><circle cx="996" cy="921" r="1.4"/><circle cx="1533" cy="74" r="1.4"/><circle cx="1352" cy="302" r="1.4"/><circle cx="505" cy="797" r="1.4"/><circle cx="308" cy="577" r="1.4"/><circle cx="874" cy="89" r="1.4"/><circle cx="514" cy="580" r="1.4"/><circle cx="728" cy="312" r="1.4"/><circle cx="1253" cy="687" r="1.4"/><circle cx="1153" cy="301" r="1.4"/><circle cx="90" cy="658" r="1.4"/><circle cx="1324" cy="918" r="1.4"/><circle cx="760" cy="654" r="1.4"/><circle cx="624" cy="659" r="1.4"/><circle cx="289" cy="140" r="1.4"/><circle cx="459" cy="420" r="1.4"/><circle cx="937" cy="277" r="1.4"/><circle cx="1498" cy="679" r="1.4"/><circle cx="634" cy="405" r="1.4"/><circle cx="30" cy="172" r="1.4"/><circle cx="186" cy="372" r="1.4"/><circle cx="748" cy="485" r="1.4"/><circle cx="1306" cy="182" r="1.4"/><circle cx="287" cy="756" r="1.4"/><circle cx="578" cy="57" r="1.4"/><circle cx="73" cy="293" r="1.4"/><circle cx="1473" cy="959" r="1.4"/><circle cx="1324" cy="481" r="1.4"/><circle cx="1036" cy="782" r="1.4"/><circle cx="232" cy="885" r="1.4"/><circle cx="895" cy="744" r="1.4"/></g>
   <g class="accesi"><circle cx="138" cy="115" r="2.6"/><circle cx="1503" cy="450" r="2.6"/><circle cx="69" cy="852" r="2.6"/><circle cx="1014" cy="380" r="2.6"/><circle cx="839" cy="853" r="2.6"/></g>
-  <!-- tre punti sono dispositivi: un portatile, un telefono, un monitor -->
+  <!-- three dots are devices: a laptop, a phone, a monitor -->
   <g class="dispositivi">
     <g transform="translate(370 243)"><rect x="-11" y="-8" width="22" height="14" rx="1.5"/><path d="M-14 8.5h28"/></g>
     <g transform="translate(1207 569)"><rect x="-5.5" y="-9" width="11" height="18" rx="2"/></g>
@@ -142,21 +142,21 @@
         <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
       </svg>
     </h1>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+    <p class="motto">Your Linux desktop, from any browser.</p>
   </div>
 
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span class="testo">Collegati</span>
+    <button type="submit" id="vai"><span class="testo">Connect</span>
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
@@ -164,7 +164,7 @@
   <div id="esito" role="status" aria-live="polite"></div>
   <div id="dichiarazione"></div>
 
-  <p class="piede"><i class="vivo" aria-hidden="true"></i>Connessione cifrata · <code>alfa.lan</code></p>
+  <p class="piede"><i class="vivo" aria-hidden="true"></i>Encrypted connection · <code>alfa.lan</code></p>
 </main>
 
 <script>
@@ -172,7 +172,7 @@
   var $=function(i){return document.getElementById(i)};
   var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.textContent="Invalid user or password.";
     esito.className="errore";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
@@ -184,12 +184,12 @@
   campi.forEach(function(c){c.addEventListener("input",pulisci)});
   $("modulo").addEventListener("submit",function(ev){
     ev.preventDefault(); pulisci();
-    vai.disabled=true; testo.textContent="Collegamento…";
-    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+    vai.disabled=true; testo.textContent="Connecting…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Connect"; errore(); $("parola").select();},700);
   });
   var stato=new URLSearchParams(location.search).get("stato");
   if(stato==="errore")errore();
-  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+  if(stato==="avviso")$("avviso").textContent="The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes, or unblock the address from the server.";
 })();
 </script>
 </body>

@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Fascio di luce» — un cono di luce fredda scende dall'alto e illumina la scheda su un palcoscenico buio.
-     Idea: tutto il resto è spento, così l'occhio va dritto al logo e ai due campi; la luce si accende una volta sola. -->
-<html lang="it">
+<!-- Style: «Beam of light» — a cone of cold light comes down from above and lights the card on a dark stage.
+     Idea: everything else is off, so the eye goes straight to the logo and the two fields; the light switches on only once. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --buio:#040508; --scheda:#0d1016; --scheda-alta:#161b25;
@@ -23,9 +23,9 @@
     color:var(--testo); background:var(--buio); overflow-x:hidden; position:relative;
   }
 
-  /* la lampada e il fascio: due gradienti conici dal punto della lampada, bordi morbidi senza filtri */
+  /* the lamp and the beam: two conic gradients from the lamp's point, soft edges without filters */
   .luce{position:fixed; inset:0; pointer-events:none; animation:accende 1.6s ease-out both}
-  .luce::before{ /* la lampada */
+  .luce::before{ /* the lamp */
     content:""; position:absolute; left:50%; top:0; width:7rem; height:.35rem; transform:translateX(-50%);
     border-radius:0 0 .4rem .4rem; background:linear-gradient(90deg,#2a3242,#7f8aa0,#2a3242);
     box-shadow:0 0 1.6rem .4rem rgba(170,210,255,.35);
@@ -51,12 +51,12 @@
     background:linear-gradient(180deg, var(--scheda-alta), var(--scheda) 45%);
     border:1px solid #20263a;
     box-shadow:
-      inset 0 1px 0 rgba(210,230,255,.22),            /* lo spigolo alto preso dalla luce */
+      inset 0 1px 0 rgba(210,230,255,.22),            /* the top edge caught by the light */
       0 -1px 2.5rem -.6rem rgba(150,200,255,.18),
       0 2.5rem 4rem -1.2rem rgba(0,0,0,.9);
     animation:entra .9s .25s ease-out both;
   }
-  .scheda::before{ /* la luce che cade sulla parte alta della scheda */
+  .scheda::before{ /* the light falling on the top part of the card */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     background:radial-gradient(120% 60% at 50% -10%, rgba(170,210,255,.10), transparent 60%);
   }
@@ -148,20 +148,20 @@
     </g>
     <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
   </svg>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
-  <main class="scheda" aria-label="Accesso">
+  <main class="scheda" aria-label="Sign in">
     <div id="avviso"></div>
     <form id="modulo" action="#" method="post" novalidate>
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai">Collegati
+      <button type="submit" id="vai">Connect
         <span class="giro" aria-hidden="true"></span>
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -172,7 +172,7 @@
 
   <p class="piede">
     <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-    Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+    Encrypted connection <span class="sep">·</span> <code>alfa.lan</code>
   </p>
 </div>
 
@@ -182,7 +182,7 @@
   var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
   function errore(){
     esito.className='errore';
-    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Invalid user or password.</span>';
     utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
   }
   function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
@@ -194,7 +194,7 @@
   var stato=new URLSearchParams(location.search).get('stato');
   if(stato==='errore') errore();
   if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
-  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+  if(stato==='avviso') $('avviso').textContent='The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes.';
 })();
 </script>
 </body>

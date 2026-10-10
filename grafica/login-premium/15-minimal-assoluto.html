@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Minimal assoluto» — nero puro; il logo, due campi segnati da una sola linea, il bottone bianco. Nient'altro, se non un piede sussurrato.
-     Idea: lusso per sottrazione: quando non c'è nulla da guardare, ogni millimetro rimasto deve essere giusto. -->
-<html lang="it">
+<!-- Style: «Absolute minimal» — pure black; the logo, two fields marked by a single line, the white button. Nothing else, apart from a whispered footer.
+     Idea: luxury by subtraction: when there is nothing to look at, every millimetre left must be right. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{--nero:#000; --bianco:#fff; --grigio:#9b9b9b; --fioco:#7f7f7f; --linea:#333; --rosso:#ff6f6f}
   *{box-sizing:border-box}
@@ -42,7 +42,7 @@
   input[aria-invalid="true"]{border-bottom-color:var(--rosso); box-shadow:0 1px 0 var(--rosso)}
   input[aria-invalid="true"]:focus{box-shadow:0 1px 0 var(--rosso)}
   .campo:has(input[aria-invalid="true"]) label{color:var(--rosso)}
-  /* niente fondo giallo del riempimento automatico */
+  /* no yellow autofill background */
   input:-webkit-autofill{-webkit-text-fill-color:#fff; -webkit-box-shadow:0 0 0 100px #000 inset}
 
   button{
@@ -90,34 +90,34 @@
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
   </h1>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div class="campo">
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div class="campo">
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span class="testo">Collegati</span></button>
+    <button type="submit" id="vai"><span class="testo">Connect</span></button>
   </form>
 
   <div id="esito" role="status" aria-live="polite"></div>
   <div id="dichiarazione"></div>
 </main>
 
-<p class="piede">Connessione cifrata · alfa.lan</p>
+<p class="piede">Encrypted connection · alfa.lan</p>
 
 <script>
 (function(){
   var $=function(i){return document.getElementById(i)};
   var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.textContent="Invalid user or password.";
     esito.className="errore";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
@@ -129,12 +129,12 @@
   campi.forEach(function(c){c.addEventListener("input",pulisci)});
   $("modulo").addEventListener("submit",function(ev){
     ev.preventDefault(); pulisci();
-    vai.disabled=true; testo.textContent="Collegamento…";
-    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+    vai.disabled=true; testo.textContent="Connecting…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Connect"; errore(); $("parola").select();},700);
   });
   var stato=new URLSearchParams(location.search).get("stato");
   if(stato==="errore")errore();
-  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+  if(stato==="avviso")$("avviso").textContent="The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes, or unblock the address from the server.";
 })();
 </script>
 </body>

@@ -1,11 +1,11 @@
-<!-- Stile: META ILLUSTRATA — pagina divisa: a sinistra un'illustrazione SVG del desktop remoto su fondo pastello, a destra il modulo.
-     Idea: far capire in un colpo d'occhio cosa fa il prodotto (portatile → browser → desktop Linux) prima ancora di leggere. -->
+<!-- Style: ILLUSTRATED HALF — split page: on the left an SVG illustration of the remote desktop on a pastel background, on the right the form.
+     Idea: make clear at a glance what the product does (laptop → browser → Linux desktop) before even reading. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root {
     --pastel: #e9f0ff;
@@ -13,7 +13,7 @@
     --ink: #1c2233;
     --muted: #5b6275;
     --line: #d4d8e2;
-    --accent: #4f46e5;       /* indaco: bianco su indaco 6,3:1 */
+    --accent: #4f46e5;       /* indigo: white on indigo 6.3:1 */
     --accent-dark: #3f37c9;
     --err-bg: #fff1f2;
     --err-line: #fecdd3;
@@ -83,7 +83,7 @@
   button:hover svg { transform: translateX(3px); }
   button:focus-visible { outline: 3px solid #1c2233; outline-offset: 3px; }
 
-  /* esempio: errore */
+  /* example: error */
   .error {
     display: flex; gap: .6rem; align-items: center;
     margin-top: 1.1rem; padding: .75rem .95rem;
@@ -119,17 +119,17 @@
 <body>
 <div class="split">
   <aside class="art" aria-hidden="true">
-    <!-- Illustrazione: un portatile col browser, il filo di punti, e lo schermo del server col desktop Linux -->
+    <!-- Illustration: a laptop with the browser, the thread of dots, and the server's screen with the Linux desktop -->
     <svg class="scene" viewBox="0 0 560 360" fill="none">
-      <!-- server / monitor grande -->
+      <!-- server / large monitor -->
       <rect x="250" y="30" width="290" height="190" rx="14" fill="#fff" stroke="#c7cff0" stroke-width="2"/>
       <rect x="262" y="42" width="266" height="152" rx="6" fill="#eef2ff"/>
-      <!-- barra del desktop -->
+      <!-- desktop bar -->
       <rect x="262" y="180" width="266" height="14" rx="0" fill="#c7d2fe"/>
       <circle cx="274" cy="187" r="4" fill="#4f46e5"/>
       <rect x="286" y="184" width="26" height="6" rx="3" fill="#a5b4fc"/>
       <rect x="318" y="184" width="26" height="6" rx="3" fill="#a5b4fc"/>
-      <!-- finestre -->
+      <!-- windows -->
       <rect x="278" y="56" width="140" height="90" rx="6" fill="#fff" stroke="#c7d2fe"/>
       <rect x="278" y="56" width="140" height="14" rx="6" fill="#e0e7ff"/>
       <circle cx="288" cy="63" r="2.5" fill="#fb7185"/><circle cx="297" cy="63" r="2.5" fill="#fbbf24"/><circle cx="306" cy="63" r="2.5" fill="#34d399"/>
@@ -141,43 +141,43 @@
       <rect x="400" y="92" width="112" height="14" rx="6" fill="#ffedd5"/>
       <path d="M412 152l18-20 14 12 16-22 18 30z" fill="#fdba74" opacity=".8"/>
       <circle cx="488" cy="122" r="7" fill="#fcd34d"/>
-      <!-- cursore remoto -->
+      <!-- remote cursor -->
       <g class="cursor"><path d="M350 128l0 20 5-5 4 9 4-2-4-9 7 0z" fill="#1c2233" stroke="#fff" stroke-width="1.2"/></g>
-      <!-- piede del monitor -->
+      <!-- monitor stand -->
       <path d="M375 220h40l8 26h-56z" fill="#dfe4f7"/>
       <rect x="350" y="244" width="90" height="8" rx="4" fill="#c7cff0"/>
 
-      <!-- il filo: una traccia tratteggiata che scorre dal portatile al server -->
+      <!-- the thread: a dashed trail running from the laptop to the server -->
       <path class="wire" d="M150 198 C 150 130, 190 110, 248 110" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9"/>
       <circle cx="150" cy="198" r="4.5" fill="#4f46e5"/>
       <circle cx="248" cy="110" r="4.5" fill="#4f46e5"/>
-      <!-- portatile col browser -->
+      <!-- laptop with the browser -->
       <rect x="30" y="200" width="180" height="116" rx="10" fill="#fff" stroke="#c7cff0" stroke-width="2"/>
       <rect x="40" y="210" width="160" height="96" rx="4" fill="#f8fafc"/>
       <rect x="40" y="210" width="160" height="14" rx="4" fill="#e2e8f0"/>
       <rect x="62" y="214" width="110" height="6" rx="3" fill="#fff"/>
       <circle cx="48" cy="217" r="2.3" fill="#94a3b8"/>
-      <!-- miniatura del desktop dentro il browser -->
+      <!-- desktop thumbnail inside the browser -->
       <rect x="50" y="232" width="140" height="66" rx="3" fill="#eef2ff"/>
       <rect x="58" y="238" width="70" height="42" rx="3" fill="#fff" stroke="#c7d2fe"/>
       <rect x="120" y="254" width="58" height="36" rx="3" fill="#fff" stroke="#fed7aa"/>
       <rect x="50" y="292" width="140" height="6" fill="#c7d2fe"/>
       <path d="M14 316h212l-10 14H24z" fill="#dfe4f7"/>
 
-      <!-- lucchetto sul filo -->
+      <!-- padlock on the thread -->
       <g transform="translate(172 136)">
         <circle r="17" fill="#fff" stroke="#c7d2fe" stroke-width="2"/>
         <rect x="-7" y="-2" width="14" height="10" rx="2" fill="#4f46e5"/>
         <path d="M-4.5 -2v-3a4.5 4.5 0 0 1 9 0v3" stroke="#4f46e5" stroke-width="2"/>
       </g>
     </svg>
-    <p class="caption"><strong>Apri il browser, e il tuo desktop è lì.</strong> Le finestre, i file e i programmi del server, come se fossi seduto davanti.</p>
+    <p class="caption"><strong>Open the browser, and your desktop is there.</strong> The server's windows, files and programs, as if you were sitting in front of it.</p>
   </aside>
 
   <main class="side">
     <div class="inner">
       <div class="brand">
-        <!-- Logo: schermo con la «X» di collegamento fatta di due frecce -->
+        <!-- Logo: screen with the connection «X» made of two arrows -->
         <svg viewBox="0 0 40 40" aria-hidden="true">
           <rect x="3" y="6" width="34" height="22" rx="5" fill="#4f46e5"/>
           <path d="M14 12l12 10M26 12L14 22" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
@@ -185,32 +185,32 @@
         </svg>
         <span>REMOTIX</span>
       </div>
-      <h1>Bentornato</h1>
-      <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+      <h1>Welcome back</h1>
+      <p class="motto">Your Linux desktop, from any browser.</p>
 
       <form action="#" method="post" onsubmit="return false">
         <div class="field">
-          <label for="u">Utente</label>
+          <label for="u">User</label>
           <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         </div>
         <div class="field">
-          <label for="p">Parola d'ordine</label>
+          <label for="p">Password</label>
           <input id="p" name="parola" type="password" autocomplete="current-password" required>
         </div>
-        <button type="submit">Collegati
+        <button type="submit">Connect
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
 
-      <!-- esempio: stato d'errore, visibile solo nel mockup -->
+      <!-- example: error state, visible only in the mockup -->
       <div class="error" role="alert">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>
-        Utente o parola d'ordine non corretti.
+        Wrong user or password.
       </div>
 
       <p class="foot">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        Connessione cifrata · niente da installare
+        Encrypted connection · nothing to install
       </p>
     </div>
   </main>

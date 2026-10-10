@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Stato del server» — una scheda chiara in due metà: a sinistra il modulo, a destra un riquadro tenue con i dati del server in «chip».
-     Idea: prima di entrare si vede DOVE si entra e che il server è vivo (host, cifratura, protocollo, sessioni, desktop), col tono di un prodotto e non di un cruscotto. -->
-<html lang="it">
+<!-- Style: «Server status» — a light card in two halves: on the left the form, on the right a soft box with the server's data in «chips».
+     Idea: before entering you see WHERE you are entering and that the server is alive (host, encryption, protocol, sessions, desktop), in the tone of a product and not of a dashboard. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#f4f6fa; --carta:#ffffff; --inchiostro:#0b1430; --tenue:#5b6478; --etichetta:#2b3550;
@@ -35,7 +35,7 @@
   }
   @keyframes entra{from{opacity:0; transform:translateY(12px)}}
 
-  /* metà sinistra: il modulo */
+  /* left half: the form */
   .accesso{padding:2.6rem 2.6rem 2rem; display:flex; flex-direction:column}
   .logo{width:10.5rem; height:auto; color:#0b1430; display:block; margin:0 0 2.2rem}
   .accesso h1{margin:0 0 .35rem; font-size:1.4rem; font-weight:700; letter-spacing:-.015em}
@@ -90,7 +90,7 @@
   .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--inchiostro); font-size:.95em}
   .piede .sep{opacity:.5}
 
-  /* metà destra: lo stato del server */
+  /* right half: the server status */
   .stato{
     position:relative; padding:2.6rem 2.4rem 2rem; border-left:1px solid var(--bordo); overflow:hidden;
     background:linear-gradient(160deg, var(--pannello-a), var(--pannello-b) 60%);
@@ -163,20 +163,20 @@
         </g>
         <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
       </svg>
-      <h1 id="titolo">Accedi</h1>
-      <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+      <h1 id="titolo">Sign in</h1>
+      <p class="motto">Your Linux desktop, from any browser.</p>
       <div id="avviso"></div>
 
       <form id="modulo" action="#" method="post" novalidate>
         <div>
-          <label for="utente">Utente</label>
+          <label for="utente">User</label>
           <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
         </div>
         <div>
-          <label for="parola">Parola d'ordine</label>
+          <label for="parola">Password</label>
           <input id="parola" name="parola" type="password" autocomplete="current-password" required>
         </div>
-        <button type="submit" id="vai">Collegati
+        <button type="submit" id="vai">Connect
           <span class="giro" aria-hidden="true"></span>
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -187,12 +187,12 @@
 
       <p class="piede">
         <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-        Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+        Encrypted connection <span class="sep">·</span> <code>alfa.lan</code>
       </p>
     </section>
 
     <aside class="stato" aria-labelledby="titolo-stato">
-      <!-- il solo segno della R, come filigrana: gradiente con id proprio -->
+      <!-- only the R mark, as a watermark: gradient with its own id -->
       <svg class="segno" viewBox="0 0 442 356" aria-hidden="true">
         <defs><linearGradient id="rx-g-segno" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient></defs>
         <g fill="url(#rx-g-segno)">
@@ -201,33 +201,33 @@
           <path d="M150 180H232L442 356H296Z"/>
         </g>
       </svg>
-      <p class="occhiello">Stato del server</p>
-      <h2 id="titolo-stato">Pronto per collegarti</h2>
-      <span class="vivo"><span class="punto" aria-hidden="true"></span>In linea</span>
+      <p class="occhiello">Server status</p>
+      <h2 id="titolo-stato">Ready for you to connect</h2>
+      <span class="vivo"><span class="punto" aria-hidden="true"></span>Online</span>
 
       <ul class="chip-elenco">
         <li class="chip largo">
           <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="11.5" width="14" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="6" r=".9" fill="currentColor"/><circle cx="6" cy="14" r=".9" fill="currentColor"/></svg></span>
-          <dl><dt>Nome host</dt><dd><code>alfa.lan</code></dd></dl>
+          <dl><dt>Host name</dt><dd><code>alfa.lan</code></dd></dl>
         </li>
         <li class="chip">
           <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
-          <dl><dt>Cifratura</dt><dd>TLS 1.3</dd></dl>
+          <dl><dt>Encryption</dt><dd>TLS 1.3</dd></dl>
         </li>
         <li class="chip">
           <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 2.5L5 11h4.5l-1 6.5L15 9h-4.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
-          <dl><dt>Protocollo</dt><dd>QUIC</dd></dl>
+          <dl><dt>Protocol</dt><dd>QUIC</dd></dl>
         </li>
         <li class="chip">
           <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7.5" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 16.5a4.8 4.8 0 0 1 9.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="13.8" cy="7.6" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13.6 11.6a4 4 0 0 1 3.9 4.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-          <dl><dt>Sessioni attive</dt><dd>3</dd></dl>
+          <dl><dt>Active sessions</dt><dd>3</dd></dl>
         </li>
         <li class="chip">
           <span class="icona"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="10.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 17h6M10 14v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
           <dl><dt>Desktop</dt><dd>GNOME</dd></dl>
         </li>
       </ul>
-      <p class="nota">Dati letti dal server all'apertura della pagina.</p>
+      <p class="nota">Data read from the server when the page opened.</p>
     </aside>
   </main>
 </div>
@@ -238,7 +238,7 @@
   var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
   function errore(){
     esito.className='errore';
-    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Invalid user or password.</span>';
     utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
   }
   function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
@@ -250,7 +250,7 @@
   var stato=new URLSearchParams(location.search).get('stato');
   if(stato==='errore') errore();
   if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
-  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+  if(stato==='avviso') $('avviso').textContent='The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes.';
 })();
 </script>
 </body>
