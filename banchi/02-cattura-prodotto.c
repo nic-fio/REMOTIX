@@ -423,12 +423,12 @@ int main(int argc, char **argv)
 
 	if (conto.arrivati == 0)
 	{
-		esito = "ZERO FOTOGRAMMI";
+		esito = "ZERO FRAMES";
 		codice = 3;
 	}
 	else if (strada == CATTURA_STRADA_SCHEDA)
 	{
-		esito = "TIPO DICHIARATO, PIXEL NON LETTI (dmabuf)";
+		esito = "TYPE DECLARED, PIXELS NOT READ (dmabuf)";
 		codice = 0;
 	}
 	else if (!primo.preso && !regime.preso)
@@ -443,7 +443,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		esito = "UN FOTOGRAMMA";
+		esito = "ONE FRAME";
 		codice = 0;
 		if (primo.preso &&
 		    !g_file_set_contents(file_primo, (const char *) primo.fermo.pixel,

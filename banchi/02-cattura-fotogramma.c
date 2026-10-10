@@ -1168,7 +1168,7 @@ int main(int argc, char **argv)
 		 *    The stream was active for the whole take: if no frame
 		 *    arrived, the desktop did not change — which on Mutter is the
 		 *    declared behaviour, not a fault (trap 8). */
-		esito = "ZERO FOTOGRAMMI";
+		esito = "ZERO FRAMES";
 		codice = 3;
 	}
 	else if (vuole_dmabuf)
@@ -1178,7 +1178,7 @@ int main(int argc, char **argv)
 		 *    importing it, that is half the stage.  This round serves to DECLARE
 		 *    the buffer type, not to judge the image, and a `.raw` written
 		 *    from here would be empty under the label of a frame. */
-		esito = "TIPO DICHIARATO, PIXEL NON LETTI (dmabuf)";
+		esito = "TYPE DECLARED, PIXELS NOT READ (dmabuf)";
 		codice = 0;
 	}
 	else if (!p.regime.preso && !p.primo.preso)
@@ -1194,7 +1194,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		esito = "UN FOTOGRAMMA";
+		esito = "ONE FRAME";
 		codice = 0;
 		if (p.primo.preso && !scrivi_raw(file_primo, &p.primo, &sbaglio))
 		{

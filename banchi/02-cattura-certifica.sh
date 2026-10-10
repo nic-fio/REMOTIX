@@ -50,10 +50,10 @@
 #
 #   | # | the fault injected into the .raw | expected | REQUIRED mark           | FORBIDDEN mark |
 #   |---|-------------------------------|--------|-------------------------|---------------|
-#   | G1| full black, same bytes        |   1    | FOTOGRAMMA NERO         | —             |
-#   | G2| uniform grey, same bytes      |   1    | SCENA NON RICONOSCIUTA  | FOTOGRAMMA NERO |
-#   | G3| last bytes cut off            |   1    | BYTE NON TORNANO        | —             |
-#   | G4| the «first» copied onto «steady»|  1    | IL BUFFER NON E' CAMBIATO| FOTOGRAMMA NERO |
+#   | G1| full black, same bytes        |   1    | BLACK FRAME             | —             |
+#   | G2| uniform grey, same bytes      |   1    | SCENE NOT RECOGNISED    | BLACK FRAME   |
+#   | G3| last bytes cut off            |   1    | BYTES DO NOT ADD UP     | —             |
+#   | G4| the «first» copied onto «steady»|  1    | THE BUFFER DID NOT CHANGE | BLACK FRAME |
 #
 #   and the HEALED one goes back to 0 after each.
 #
@@ -256,10 +256,10 @@ fi
 FALLITI=0
 #      name        expected  REQUIRED mark             FORBIDDEN mark
 GUASTI=(
-	"nero|1|FOTOGRAMMA NERO|"
-	"grigio|1|SCENA NON RICONOSCIUTA|FOTOGRAMMA NERO"
-	"troncato|1|BYTE NON TORNANO|"
-	"copia|1|IL BUFFER NON E' CAMBIATO|FOTOGRAMMA NERO"
+	"nero|1|BLACK FRAME|"
+	"grigio|1|SCENE NOT RECOGNISED|BLACK FRAME"
+	"troncato|1|BYTES DO NOT ADD UP|"
+	"copia|1|THE BUFFER DID NOT CHANGE|BLACK FRAME"
 )
 for voce in "${GUASTI[@]}"; do
 	IFS='|' read -r NOME ATT PRETESA VIETATA <<< "$voce"
