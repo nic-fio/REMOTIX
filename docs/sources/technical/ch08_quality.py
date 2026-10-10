@@ -495,7 +495,7 @@ S13 = p("How many sessions fit depends on the hardware and on the scene, and is 
       "the cliff, instead of the eighth, inside it. The control runs: budget off again → 26 violations and no "
       "0x06; ten <i>idle</i> sessions with the budget on → zero refused; budget set to 40 Mpx/s, below one 1080p "
       "session → the first user refused, zero processes started.") + \
-    p("Later capacity campaigns on other hardware belong to the chapter on performance and capacity.") + \
+    p("The phase 20 campaigns, on all four desktops and both cards, are in " + rif("Performance and capacity") + ".") + \
     tip("measure your own machine before switching the budget on: run the saturated scene with the budget off, "
         "find the step where the rate collapses, and pass the composed Mpixel/s of the last healthy step. "
         + c("BUDGET_RITMO_MAX_FOT_S") + " (39.54) is also a property of the test machine; on very different "

@@ -845,7 +845,7 @@ S23 = p("Client and server are tested against the specification, not against eac
          "success resets, and the ban survives a restart"],
         [c("01-b9-letture.py") + " (readings)", "the places where " + c("RCP.md") + " admitted two readings, with the bytes compared"],
         [c("01-b11-guasto-innesta.py") + " (graft a fault)", "a server broken on purpose, against real browsers"],
-        [c("01-b12-guasti.py") + " (faults)", "a hand-built fault for every bench: a bench that cannot go red certifies nothing"],
+        ["B12 (faults; its file left the repository with the benches of closed phases on 10 Oct 2026)", "a hand-built fault for every bench: a bench that cannot go red certifies nothing"],
         [c("02-filo-cliente.py") + ", " + c("02-filo-validatore.py") + " («filo» = wire)", "the video channel: receiving and judging frames"],
     ], "«TAB» — The benches of the protocol (folder banchi/)") + \
     code("""header (16 bytes)
