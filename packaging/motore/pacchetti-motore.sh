@@ -56,7 +56,8 @@ Copyright: 2026 Nicola Fiorillo
 License: LicenseRef-REMOTIX
 EOF
 	sed -e 's/^$/./' -e 's/^/ /' "$L/LICENSE.md"
-} >"$D/usr/share/doc/remotix-install/copyright"
+} >"$L/copyright"
+install -m 644 "$L/copyright" "$D/usr/share/doc/remotix-install/"
 cat >"$D/DEBIAN/control" <<EOF
 Package: remotix-install
 Version: $V-$R
