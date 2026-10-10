@@ -710,9 +710,9 @@ BERSAGLIO = {"bersaglio": "non dichiarato", "porta": None, "md5": "ignota"}
 #    below are the graft's and serve only so that the module can be imported: if
 #    these stayed against the product, the reader would say «the server said
 #    nothing about the ban» on a server that does say it.
-R_BAN = {"caricati": "ban caricati:",
-         "illeggibile": "NON HO POTUTO LEGGERE il file dei ban",
-         "pagina": "pagina TCP a"}
+R_BAN = {"caricati": "bans loaded:",
+         "illeggibile": "COULD NOT READ the ban file",
+         "pagina": "TCP page at"}
 
 # ===========================================================================
 # ⛔⭐ HOW A PAM VERDICT IS READ IN THE LOG — and why NOT FROM THE END
@@ -1102,9 +1102,11 @@ def leggi_registro(percorso):
                     d["vite"] += 1
                     # ⛔⭐ AND THE START-UP LINE IS WRITTEN DIFFERENTLY IN THE TWO SERVERS.
                     #
-                    #     innesto   «REMOTIX B3: ban caricati: N»
+                    #     innesto   «REMOTIX B3: bans loaded: N»
+                    #               (logs saved before 10 Oct 2026:
+                    #               «ban caricati: N», still read)
                     #     prodotto  «HH:MM:SS.mmm avvio  ban: <file>, N
-                    #               indirizzi caricati»
+                    #               addresses loaded»
                     #
                     #  ⚠ Looking for the graft's form against the product would
                     #    have given «vite = 0» and «the server said NOTHING about
@@ -1112,7 +1114,7 @@ def leggi_registro(percorso):
                     #    write that line, and the red would have ended up on the
                     #    wrong defendant.
                     m = re.search(r"(-?\d+) addresses loaded", riga) or \
-                        re.search(r"ban caricati: (-?\d+)", riga)
+                        re.search(r"(?:bans loaded|ban caricati): (-?\d+)", riga)
                     d["carichi"].append(int(m.group(1)) if m else None)
                     d["avvii"].append(riga.strip())
                 elif R_BAN["illeggibile"] in riga:
@@ -2008,7 +2010,8 @@ def _guasti_possibili():
                 if x.get("etichetta") != "bannato-dopo-riavvio"], reg
 
     def registro_smemorato(d, reg):
-        return d, [r.replace("ban caricati: 1", "ban caricati: 0") for r in reg]
+        return d, [r.replace("bans loaded: 1", "bans loaded: 0")
+                    .replace("ban caricati: 1", "ban caricati: 0") for r in reg]
 
     def imputato_nostro(d, reg):
         # ⛔ The fault that certifies the cure of A18: the delay is put on the
@@ -2092,7 +2095,7 @@ def _guasti_possibili():
          sblocco_cieco, "NON-BANNATO (expected TOLTO)"),
         ("persistence was not proved (the page after the restart is missing)",
          niente_persistenza, "persistence was not proved"),
-        ("the second start declares «ban caricati: 0»",
+        ("the second start declares «bans loaded: 0»",
          registro_smemorato, "the second start declares bans loaded"),
         ("⛔ ZERO attempts: «all those tested went well» on zero tested",
          nessun_tentativo, "ZERO attempts"),

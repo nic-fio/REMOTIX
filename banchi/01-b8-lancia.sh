@@ -197,9 +197,9 @@ if [ "$AZIONE" = costruisci ]; then
 	bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py --togli > /dev/null"
 	bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py --togli > /dev/null"
 	bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py" \
-		| grep -E "appiglio|righe|CODICE" | sed 's/^/        /'
+		| grep -E "foothold|lines|CODE" | sed 's/^/        /'
 	bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py" \
-		| grep -E "appiglio|NO |file nostri" | sed 's/^/        /'
+		| grep -E "foothold|NO |our files" | sed 's/^/        /'
 	# ⛔ And the graft is COUNTED in the two files, before compiling: a graft that
 	#    does not find an anchor prints «NO» and goes on.
 	QUANTI=$(bash "$ENTRA" --root "grep -c 'REMOTIX B3' $SORG_MAIN" | tr -cd '0-9')
@@ -483,13 +483,13 @@ ACCENDI() # $1 = why
 		ko "   server said nothing about the ban», it is that I could not look"
 		return 4
 	fi
-	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|ban lato ospite|pagina e' servita|$B_R_PAGINA|unblock command" \
+	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|host-side ban|the page is served|$B_R_PAGINA|unblock command" \
 		"$B_LOG_FUORI" | sed 's/^/        /'
 	# ⛔⭐ AND THE TWO LINES ARE WRITTEN DIFFERENTLY IN THE TWO SERVERS — they come
 	#     from the profile, not from here.
-	#       innesto   «ban caricati: N»  ·  «NON HO POTUTO LEGGERE il file dei ban»
-	#       prodotto  «ban: <file>, N indirizzi caricati»  ·  «c'e' e NON si e'
-	#                 potuto leggere»  — ⛔ and in that case the product does NOT
+	#       innesto   «bans loaded: N»  ·  «COULD NOT READ the ban file»
+	#       prodotto  «ban: <file>, N addresses loaded»  ·  «exists and could
+	#                 NOT be read»  — ⛔ and in that case the product does NOT
 	#                 START at all, so one does not even get here.
 	CARICHI=$(grep -c "$B_R_BAN_CARICATI" "$B_LOG_FUORI")
 	ILLEGGIBILI=$(grep -c "$B_R_BAN_ILLEGGIBILE" "$B_LOG_FUORI")
