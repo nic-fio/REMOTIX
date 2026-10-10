@@ -2128,590 +2128,590 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 > *«non certificato»*, and the tool does well not to merge them — but the count **still depends on where
 > one asks for it**, and it is the same `[?]` as the afternoon, not cured.
 
-#### B13 — ⭐ Sei cose che la fase produce e che nessun banco guardava
+#### B13 — ⭐ Six things the phase produces that no bench was looking at
 
-*Rilievo **R3.24**. Tre hanno un ⛔ scritto in `RCP.md`.*
+*Finding **R3.24**. Three have a ⛔ written in `RCP.md`.*
 
-| # | Che cosa si verifica | Quando morderebbe |
+| # | What is verified | When it would bite |
 |---|---|---|
-| **1** | ⛔ **che i due certificati siano DUE** (§4.1-bis): impronte diverse, scadenze diverse | un server che ne genera uno solo a scadenza breve **passa tutti i banchi** — e l'avviso ricompare **quattordici giorni dopo**, quando *«nessuno collegherebbe le due cose»* |
-| **2** | ⛔ **che la parola d'ordine non sia in nessun registro**: un `grep` della parola di prova su **tutti** i file prodotti dal giro — registro del server, registro della pagina, registrazione del validatore | la fase riusa `registro.c`, che in v1 è *«un registratore di battitura»*, e aggiunge un registratore di byte decifrati |
-| **3** | **la chiave privata a `0600`**, il `subjectAltName` che combacia, e ⛔ **che un certificato d'autorità installato venga usato senza rigenerare il proprio** (§4.1) | nessuna fase lo dichiarava |
-| **4** | **la pagina servita in TCP**: che si carichi, che pubblichi l'impronta **corrente**, e che **l'endpoint da cui si ritira l'impronta aggiornata esista** (§4.1-bis) | è il secondo mestiere che il server acquista qui, e B3 lo presupponeva in una riga |
-| **5** | **il credito di almeno 16 stream unidirezionali** concessi al client (§2.3) | se finisse, *«l'input non partirebbe affatto»* e il sintomo sarebbe «il desktop non risponde» — alla fase 4, lontano da qui |
-| **6** | ⛔ **che `stato` valga SEMPRE `NUOVA`**, cioè che nessuno abbia scritto per prudenza un ramo `RIPRESA` che nessuno proverà fino alla fase 5 | un `[?]` implementato a metà e non provato è quel che il confine dichiara di voler evitare |
+| **1** | ⛔ **that the two certificates are TWO** (§4.1-bis): different fingerprints, different expiries | a server that generates only one with a short expiry **passes every bench** — and the warning reappears **fourteen days later**, when *«nobody would connect the two things»* |
+| **2** | ⛔ **that the password is in no log**: a `grep` for the test password across **all** the files produced by the round — server log, page log, validator recording | the phase reuses `registro.c`, which in v1 is *«a keystroke logger»*, and adds a logger of decrypted bytes |
+| **3** | **the private key at `0600`**, the matching `subjectAltName`, and ⛔ **that an installed authority certificate is used without regenerating its own** (§4.1) | no phase declared it |
+| **4** | **the page served over TCP**: that it loads, that it publishes the **current** fingerprint, and that **the endpoint from which the updated fingerprint is fetched exists** (§4.1-bis) | it is the second job the server acquires here, and B3 assumed it in one line |
+| **5** | **the credit of at least 16 unidirectional streams** granted to the client (§2.3) | if it ran out, *«input would not start at all»* and the symptom would be «the desktop does not respond» — at phase 4, far from here |
+| **6** | ⛔ **that `stato` is ALWAYS `NUOVA`**, i.e. that nobody wrote, out of caution, a `RIPRESA` branch that nobody will test until phase 5 | a half-implemented, untested `[?]` is exactly what the boundary declares it wants to avoid |
 
-#### B14 — che cosa di `RCP.md` §11 questa fase NON prende, e dove va
+#### B14 — what of `RCP.md` §11 this phase does NOT take, and where it goes
 
-| Banco di §11 | Dove |
+| §11 bench | Where |
 |---|---|
-| ⛔ **il rilascio dei tasti al distacco** | **fase 5**, non fase 4 — *corretto da R4.7*: §11 ne scrive la procedura come *«si stacca una connessione con un tasto premuto **e si riattacca**»*, e alla fase 4 non esiste una sessione a cui riattaccarsi. Alla fase 4 la sessione **muore con la connessione**, quindi il banco o non si scrive o **si scrive verde per costruzione** |
-| l'audio ascoltato, il formato del PCM | **fase 7** — ⚠ ma **S6** è qui, perché decide i 5 ms |
-| gli appunti, i tre messaggi, i due trasferimenti insieme | **fase 7** |
-| l'anello del ritardo | **fase 3**, ⛔ **e S4 con lui** (vedi «L'ordine») |
-| il fotogramma abbandonato e la chiave che segue | **fase 3** |
-| il credito degli stream oltre i 256 fotogrammi | **fase 3** — ⚠ il **credito concesso al client** invece è qui (B13.5): sono due versi diversi dello stesso obbligo |
-| ⏳ **`GIA_ATTIVA_LOCALE` `0x05`** | ⛔ **non era di nessuna fase** *(R4.16)*: nasce all'attacco, cioè nel messaggio che questa fase scrive, e la riga di `SPECIFICHE.md` §5.1 che lo impone è la stessa che genera `GIA_ATTIVA_REMOTA`. ⚠ **Va alla fase 5**, con i tre orologi e la sessione locale — ma **dichiarato qui**, o cadeva fra le fasi |
+| ⛔ **releasing the keys on detach** | **phase 5**, not phase 4 — *corrected by R4.7*: §11 writes its procedure as *«a connection is detached with a key pressed **and reattached**»*, and at phase 4 there is no session to reattach to. At phase 4 the session **dies with the connection**, so the bench is either not written or **written green by construction** |
+| the audio listened to, the PCM format | **phase 7** — ⚠ but **S6** is here, because it decides the 5 ms |
+| the clipboard, the three messages, the two transfers together | **phase 7** |
+| the delay loop | **phase 3**, ⛔ **and S4 with it** (see «The order») |
+| the dropped frame and the key that follows | **phase 3** |
+| the stream credit beyond 256 frames | **phase 3** — ⚠ the **credit granted to the client**, on the other hand, is here (B13.5): they are two different directions of the same obligation |
+| ⏳ **`GIA_ATTIVA_LOCALE` `0x05`** | ⛔ **belonged to no phase** *(R4.16)*: it is born at attach, i.e. in the message this phase writes, and the line of `SPECIFICHE.md` §5.1 that mandates it is the same one that generates `GIA_ATTIVA_REMOTA`. ⚠ **It goes to phase 5**, with the three clocks and the local session — but **declared here**, or it fell between phases |
 
 ---
 
-## Che cosa è stato sviluppato
+## What was developed
 
-> ⚠ **Questo capitolo si apriva con** *«Nessuna riga di **prodotto** scritta. Quel che c'è è
-> banco.»* — ⛔ **ed era falso dalla notte del 10 agosto 2026**, quando `src/` è nato: venti file,
-> poi ventidue. Nessuno dei dieci documenti del progetto nominava quella cartella, e `PIANO.md` §0.2
-> assegna proprio a questo capitolo il compito di dire che cosa la fase ha prodotto. ⛔ **Il costo
-> era concreto**: chi riprendeva la fase leggeva *«nessuna riga di prodotto»* e **riscriveva da zero
-> un server che esiste** — oppure lo trovava per caso con un `ls` e non sapeva se fosse prodotto,
-> scarto o l'esperimento di qualcuno. Riscritto l'11 agosto 2026, rilievo **R12C.1**.
+> ⚠ **This chapter opened with** *«No line of **product** written. What there is is
+> bench.»* — ⛔ **and it had been false since the night of 10 Aug 2026**, when `src/` was born: twenty files,
+> then twenty-two. None of the project's ten documents named that folder, and `PIANO.md` §0.2
+> assigns precisely to this chapter the task of saying what the phase produced. ⛔ **The cost
+> was concrete**: whoever resumed the phase read *«no line of product»* and **rewrote from scratch
+> a server that exists** — or found it by chance with an `ls` and did not know whether it was product,
+> scrap or somebody's experiment. Rewritten on 11 Aug 2026, finding **R12C.1**.
 >
-> ⛔ **E c'è una seconda cosa che quella riga faceva, meno visibile**: da quando `src/` esiste, ogni
-> frase che dice *«il server»* ha **due soggetti** — il prodotto e l'innesto di
-> `banchi/01-b3-rcp-innesta.py` dentro `bsslserver`. In questo documento, da qui in poi, *«il
-> prodotto»* è `src/` e *«l'innesto»* è l'altro, **e i banchi misurano l'innesto**.
+> ⛔ **And there is a second thing that line did, less visible**: since `src/` has existed, every
+> sentence that says *«the server»* has **two subjects** — the product and the graft of
+> `banchi/01-b3-rcp-innesta.py` into `bsslserver`. In this document, from here on, *«the
+> product»* is `src/` and *«the graft»* is the other one, **and the benches measure the graft**.
 
-### ⭐⭐ Il prodotto — `src/`, il server della fase 1 in C
+### ⭐⭐ The product — `src/`, the phase 1 server in C
 
-`[M]` **11 agosto 2026** (`wc -l` e `grep -cvE` su questo albero, codice fermo alle 00:36):
-**22 file**, **9.647 righe**, di cui **5.248 di codice** nei `.c`/`.h`.
+`[M]` **11 Aug 2026** (`wc -l` and `grep -cvE` on this tree, code frozen at 00:36):
+**22 files**, **9.647 lines**, of which **5.248 of code** in the `.c`/`.h`.
 
-⭐ **Che cosa fa, in una riga**: un browser vero apre `https://192.168.0.2:7447`, l'utente digita
-nome e parola d'ordine, e **la stretta di mano di RCP/1 arriva fino a `SESSIONE`** — con i due
-certificati, la pagina servita dal server stesso, e il ban di `RCP.md` §4.4-bis. ⛔ **Niente video,
-niente audio, niente input**: quelle sono le fasi da 2 in poi.
+⭐ **What it does, in one line**: a real browser opens `https://192.168.0.2:7447`, the user types
+name and password, and **the RCP/1 handshake gets as far as `SESSIONE`** — with the two
+certificates, the page served by the server itself, and the ban of `RCP.md` §4.4-bis. ⛔ **No video,
+no audio, no input**: those are the phases from 2 onwards.
 
 | | |
 |---|---|
-| `src/main.c` | ⛔ **i due ascoltatori sulla stessa porta 7447** (`RCP.md` §2.4): UDP per HTTP/3 e WebTransport, TCP per il primo caricamento della pagina — e sono **indipendenti**, WebTransport non passa da `Alt-Svc`. Un ciclo `poll` solo. ⭐ All'avvio **guarda che `/etc/pam.d/remotix` ci sia** e lo scrive: senza, Linux-PAM ripiega su `other` (che su Debian è `pam_deny`) e **ogni parola giusta viene rifiutata**, con una diagnosi che punta sulla parola d'ordine mentre il difetto è un file mancante. ⭐ E alla chiusura **congeda tutti** con `SERVER_IN_CHIUSURA` (§8.2 `0x0C`) invece di sparire |
-| `src/trasporto.c` | QUIC su **ngtcp2**: `max_idle_timeout` 30 s imposto dal server, datagram annunciati, **19** stream unidirezionali concessi (§2.3 ne vuole 16 *disponibili* e HTTP/3 se ne prende 3 — il numero si dichiara invece di essere sottratto in silenzio), migrazione non disabilitata. ⭐ I datagram che arrivano si **contano e si scartano scrivendolo nel registro** (§6.3), invece di sparire in un callback che non c'è |
-| `src/webtransport.c` | HTTP/3 e WebTransport: la `CONNECT` estesa **solo** su `/rcp/1` (404 altrove, §2.2), le capsule, la chiusura col codice del motivo. ⭐ E i **PING del trasporto** mentre il server aspetta le credenziali — senza, al trentesimo secondo la connessione muore in silenzio e i 60 s di §4.6 non scadono mai (§4.6, rilievo R1.8) |
-| ⭐⭐ `src/rcp.c` + `rcp.h` | **RCP/1**, la stretta di mano e il ban. ⛔ **Identici byte per byte a `banchi/rcp/`** — `[M]` 11 agosto 2026, `md5sum`: `cb7af778…` (`rcp.c`), `0458f154…` (`rcp.h`). ⚠ **Identici per fortuna, non per costruzione**: nessuno script confronta le due copie a ogni giro, e da stanotte hanno **due storie diverse** (una in git, una no). `src/costruisci.sh` accetta `GEMELLO=` per dichiarare il confronto |
-| `src/autenticazione.c` + `remotix.pam` | PAM, ⭐ **servizio `remotix`** come vuole `SPECIFICHE.md` §4.2 — con il file del servizio nella cartella, non in una nota d'installazione. ⚠ *Il 10 agosto notte diceva `pam_start("login")`, cioè la pila della **console locale** con `pam_securetty`, `pam_lastlog`, `pam_limits`: rilievo **B-11** di `fasi/rapporti/R12-B-prodotto.md`, curato nel codice la stessa notte* |
-| `src/certificati.c` | i **due** certificati di §4.1-bis, con il rifiuto di partire se le due impronte coincidono, il breve a 13 giorni che ruota quando ne restano due, e `/impronta` servito con `no-store` |
-| `src/tls.c` | TLS per l'ascoltatore TCP. ⭐ **0-RTT spento a livello di contesto**, dove nessuna sessione lo può riaccendere (§2.3) |
-| `src/pagina.c` + `pagina.html` | la pagina servita dal server: l'impronta corrente, la stretta di mano dal lato del browser, e l'avviso di chi è bannato con **le ore che mancano** (§4.4-bis). ⭐ Il server **si rifiuta di partire** se la pagina non contiene i segni da sostituire, o se ne contiene due — una sostituzione che «riesce senza fare niente» servirebbe per sempre una pagina senza impronta |
-| ⭐ `src/comando.c` + `comando.h` | **il comando di sblocco di §4.4-bis**, su un **socket Unix `0600`**: `SBLOCCA <indirizzo>` → `TOLTO` / `NON-BANNATO`, `PING` → `PONG`. ⛔ È lo stesso protocollo, byte per byte, che parla `banchi/01-b8-sblocca.py`, cioè lo strumento della regola **B0.3** |
-| `src/registro.c` | riusato da v1, con l'obbligo di **B13.2**: la parola d'ordine non compare in nessun registro |
-| `src/Makefile` + `costruisci.sh` | ⭐ **butta il binario prima di ricostruire** (così *«c'è»* vuol dire *«è di adesso»*) e **controlla cinque marche dentro il binario prodotto**, con il controllo positivo dello strumento. È la ottava veste di `LEZIONI.md` §1.9 curata prima di pagarla |
+| `src/main.c` | ⛔ **the two listeners on the same port 7447** (`RCP.md` §2.4): UDP for HTTP/3 and WebTransport, TCP for the first load of the page — and they are **independent**, WebTransport does not go through `Alt-Svc`. A single `poll` loop. ⭐ At startup it **checks that `/etc/pam.d/remotix` is there** and writes it: without it, Linux-PAM falls back to `other` (which on Debian is `pam_deny`) and **every correct password is rejected**, with a diagnosis that points at the password while the defect is a missing file. ⭐ And on shutdown it **bids everyone farewell** with `SERVER_IN_CHIUSURA` (§8.2 `0x0C`) instead of vanishing |
+| `src/trasporto.c` | QUIC on **ngtcp2**: `max_idle_timeout` 30 s set by the server, datagrams advertised, **19** unidirectional streams granted (§2.3 wants 16 *available* and HTTP/3 takes 3 — the number is declared instead of being silently subtracted), migration not disabled. ⭐ Incoming datagrams are **counted and discarded, writing it in the log** (§6.3), instead of vanishing into a callback that does not exist |
+| `src/webtransport.c` | HTTP/3 and WebTransport: the extended `CONNECT` **only** on `/rcp/1` (404 elsewhere, §2.2), the capsules, the close with the reason code. ⭐ And the **transport PINGs** while the server waits for the credentials — without them, at the thirtieth second the connection dies silently and the 60 s of §4.6 never expire (§4.6, finding R1.8) |
+| ⭐⭐ `src/rcp.c` + `rcp.h` | **RCP/1**, the handshake and the ban. ⛔ **Byte-for-byte identical to `banchi/rcp/`** — `[M]` 11 Aug 2026, `md5sum`: `cb7af778…` (`rcp.c`), `0458f154…` (`rcp.h`). ⚠ **Identical by luck, not by construction**: no script compares the two copies at every round, and since tonight they have **two different histories** (one in git, one not). `src/costruisci.sh` accepts `GEMELLO=` to declare the comparison |
+| `src/autenticazione.c` + `remotix.pam` | PAM, ⭐ **service `remotix`** as `SPECIFICHE.md` §4.2 wants — with the service file in the folder, not in an installation note. ⚠ *On the night of 10 Aug it said `pam_start("login")`, i.e. the **local console** stack with `pam_securetty`, `pam_lastlog`, `pam_limits`: finding **B-11** of `fasi/rapporti/R12-B-prodotto.md`, cured in the code the same night* |
+| `src/certificati.c` | the **two** certificates of §4.1-bis, with the refusal to start if the two fingerprints coincide, the short one at 13 days that rotates when two remain, and `/impronta` served with `no-store` |
+| `src/tls.c` | TLS for the TCP listener. ⭐ **0-RTT off at context level**, where no session can turn it back on (§2.3) |
+| `src/pagina.c` + `pagina.html` | the page served by the server: the current fingerprint, the handshake from the browser side, and the notice to whoever is banned with **the hours remaining** (§4.4-bis). ⭐ The server **refuses to start** if the page does not contain the markers to substitute, or contains two of them — a substitution that «succeeds without doing anything» would forever serve a page with no fingerprint |
+| ⭐ `src/comando.c` + `comando.h` | **the unlock command of §4.4-bis**, on a **Unix socket `0600`**: `SBLOCCA <indirizzo>` → `TOLTO` / `NON-BANNATO`, `PING` → `PONG`. ⛔ It is the same protocol, byte for byte, spoken by `banchi/01-b8-sblocca.py`, i.e. the tool of rule **B0.3** |
+| `src/registro.c` | reused from v1, with the obligation of **B13.2**: the password appears in no log |
+| `src/Makefile` + `costruisci.sh` | ⭐ **throws away the binary before rebuilding** (so *«it's there»* means *«it's from now»*) and **checks five marks inside the produced binary**, with the tool's positive control. It is the eighth guise of `LEZIONI.md` §1.9 cured before paying for it |
 
-#### ⛔ Che cosa di `src/` NON è provato
+#### ⛔ What of `src/` is NOT tested
 
-*Elencato riga per riga, perché è la metà che non si vede. Le prime due voci vengono da
-`fasi/rapporti/R12-B-prodotto.md` §0; le altre le ho misurate io l'11 agosto 2026, e dove ho
-misurato lo dico.*
+*Listed line by line, because it is the half that cannot be seen. The first two entries come from
+`fasi/rapporti/R12-B-prodotto.md` §0; the others I measured myself on 11 Aug 2026, and where I
+measured I say so.*
 
 | | |
 |---|---|
-| ⛔ **il server intero non è mai stato eseguito da un revisore** | sulla macchina del revisore mancano `ngtcp2`, `nghttp3`, `libssl-dev` e `libpam0g-dev` (`make dipendenze` dà **cinque NO**). ⇒ tutto quel che riguarda `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` è **letto, non misurato**. ⭐ L'unica esecuzione è `src/rcp.c` **compilato isolato** con `-Wall -Wextra` — **zero avvisi** — contro un driver del revisore, sei ingressi byte per byte |
-| ⛔ **UN SOLO MOTORE** | l'unica traccia di un giro con un **browser vero** contro questo server è un commento dentro `src/pagina.html`: `[M]` 10 agosto notte, **Firefox** — e quel giro ha trovato un difetto vero (la pagina mandava `disposizione = en`, che **non è** un nome XKB, e il server congedava con `SESSIONE_NON_SERVIBILE` facendo esattamente il suo mestiere). ⛔ **Di Chrome contro questo server non c'è nessuna traccia**, e il criterio di B2 vuole **due motori su due** |
-| ⛔ **e quel giro non è riverificabile da questa parte** | `[M]` 11 agosto 2026, **mattina**: in `src/` non c'è né il binario `remotix` né un `.o`; nessun `.jsonl`; `git status` dà `src/` **untracked**, mai committata. E **nessuno dei 14 script `01-*-lancia.sh` accende il prodotto**: `bsslserver` compare in **11** di loro, il binario `remotix` in **zero** (l'unica occorrenza della parola è `remotix.prova`, un nome SNI in `01-b2-lancia-sni.sh`). ⚠ ⛔ **E questa riga è SCADUTA la sera dello stesso giorno, e va letta con la data addosso**: `[M]` 11 agosto **sera** — `git ls-files src/` dà **22 file** (commit `ffeb341`), gli script di lancio sono **16** e **11 di loro sanno puntare al `BERSAGLIO=prodotto`**, tre accendono il binario per nome. ⭐ *Una riga che dichiara un'assenza invecchia nel verso peggiore: resta vera nell'aspetto e falsa nei fatti, e chi la legge non ha nessun motivo di sospettarla* |
-| ⛔ **le proprietà di trasporto non sono state rimisurate contro questo server** | le sei di B2 — tetto 30 s · datagram · credito uni · migrazione · niente 0-RTT · `allowPooling` — sono `[M]` **sull'innesto**, letto dal pari. `src/trasporto.c` oggi dichiara **19** stream uni dove la misura di B2 ne leggeva 16: è un numero diverso, ed è **la sonda `01-b2-sonda-trasporto.py` puntata al prodotto** che lo direbbe |
-| `[?]` **il rinnovo del credito degli stream** | il prodotto lo dichiara **di suo** (`src/trasporto.c`): ngtcp2 non alza il tetto da sé *«tranne quando uno stream si chiude senza che `stream_open` sia stato chiamato»*, e questo codice cade **probabilmente** in quell'eccezione. Nessuno l'ha misurato. ⛔ Si misura alla **fase 4**, quando gli appunti apriranno uno stream per trasferimento: prima di allora nessun client ne apre più di quattro, e una misura senza il carico che la provoca non è una misura |
-| ⚠ **la pagina del prodotto e quella dell'innesto sono due documenti diversi** | e **B8 misura i marcatori che solo l'innesto produceva**. Curato nel prodotto la notte del 10 (`data-bannato` e `data-restano-ms` ci sono, in una sola occorrenza ciascuno, e il server rifiuta di partire se ce ne fossero due) — ⛔ **ma nessuno ha puntato B8 al prodotto per verificarlo**: finché non lo si fa, «curato» è letto e non misurato |
+| ⛔ **the whole server has never been run by a reviewer** | the reviewer's machine lacks `ngtcp2`, `nghttp3`, `libssl-dev` and `libpam0g-dev` (`make dipendenze` gives **five NOs**). ⇒ everything concerning `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` is **read, not measured**. ⭐ The only execution is `src/rcp.c` **compiled in isolation** with `-Wall -Wextra` — **zero warnings** — against a reviewer's driver, six inputs byte by byte |
+| ⛔ **ONE ENGINE ONLY** | the only trace of a round with a **real browser** against this server is a comment inside `src/pagina.html`: `[M]` night of 10 Aug, **Firefox** — and that round found a real defect (the page sent `disposizione = en`, which **is not** an XKB name, and the server bid farewell with `SESSIONE_NON_SERVIBILE`, doing exactly its job). ⛔ **Of Chrome against this server there is no trace at all**, and the B2 criterion wants **two engines out of two** |
+| ⛔ **and that round cannot be re-verified from this side** | `[M]` 11 Aug 2026, **morning**: in `src/` there is neither the `remotix` binary nor a `.o`; no `.jsonl`; `git status` gives `src/` **untracked**, never committed. And **none of the 14 `01-*-lancia.sh` scripts starts the product**: `bsslserver` appears in **11** of them, the `remotix` binary in **zero** (the only occurrence of the word is `remotix.prova`, an SNI name in `01-b2-lancia-sni.sh`). ⚠ ⛔ **And this line EXPIRED on the evening of the same day, and must be read with its date on**: `[M]` 11 Aug **evening** — `git ls-files src/` gives **22 files** (commit `ffeb341`), the launch scripts are **16** and **11 of them can point at `BERSAGLIO=prodotto`**, three start the binary by name. ⭐ *A line that declares an absence ages in the worst direction: it stays true in appearance and false in fact, and whoever reads it has no reason to suspect it* |
+| ⛔ **the transport properties have not been re-measured against this server** | the six of B2 — 30 s cap · datagrams · uni credit · migration · no 0-RTT · `allowPooling` — are `[M]` **on the graft**, read from the peer. `src/trasporto.c` today declares **19** uni streams where the B2 measurement read 16: it is a different number, and it is **the probe `01-b2-sonda-trasporto.py` pointed at the product** that would tell |
+| `[?]` **the renewal of the stream credit** | the product declares it **on its own** (`src/trasporto.c`): ngtcp2 does not raise the cap by itself *«except when a stream is closed without `stream_open` having been called»*, and this code **probably** falls into that exception. Nobody has measured it. ⛔ It is measured at **phase 4**, when the clipboard will open one stream per transfer: before then no client opens more than four, and a measurement without the load that triggers it is not a measurement |
+| ⚠ **the product's page and the graft's page are two different documents** | and **B8 measures the markers that only the graft produced**. Cured in the product on the night of the 10th (`data-bannato` and `data-restano-ms` are there, one occurrence each, and the server refuses to start if there were two) — ⛔ **but nobody has pointed B8 at the product to verify it**: until that is done, «cured» is read and not measured |
 
-#### ⛔ I ripieghi di fase — due che pesano e uno minore, dichiarati qui e non solo in un commento
+#### ⛔ The phase fallbacks — two that weigh and one minor, declared here and not only in a comment
 
-> ### ⭐ E i due che pesano hanno una SCADENZA, decisa dall'utente alla chiusura della fase
+> ### ⭐ And the two that weigh have a DEADLINE, decided by the user at the close of the phase
 >
-> *11 agosto 2026, sera. ⛔ Le decisioni stanno in `DECISIONI.md` e qui si rimanda: sotto c'è la
-> conseguenza sulla fase, non la decisione.*
+> *11 Aug 2026, evening. ⛔ The decisions live in `DECISIONI.md` and here we refer to them: below is the
+> consequence for the phase, not the decision.*
 >
 > | | |
 > |---|---|
-> | **il filo** | **`DECISIONI.md` §1.10** — ⛔ **si cura PRIMA della fase 2**, e con un **processo aiutante** (PAM non è affidabilmente rientrante). ⭐ A spostare la scadenza dalla fase 5 alla 2 è stato **un numero di B8**: il blocco è di **1,0-2,2 s** a tentativo, ⛔ **e a metterlo è PAM**. Fino alla fase 1 il sintomo è *«l'ultimo dei dieci aspetta»*; **dalla fase 2 in poi è lo schermo di chi sta già lavorando che si pianta quando entra qualcun altro**, e chi lo vede lo attribuisce al video. ⛔ **E la proprietà da provare non è «PAM funziona ancora»**: è *«mentre uno si autentica, gli altri non se ne accorgono»* — e **quel banco oggi non esiste** |
-> | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: `SPECIFICHE.md` §5.5 dice di sé che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto. ⚠ **Il prezzo dichiarato**: per due fasi il codice dice **16** e la specifica dice **dieci**. ⛔ E vale per qualunque numero: **nessun banco ha mai visto quel tetto mordere** — riempirlo vuole dieci utenti **diversi** (I2), e il motivo del rifiuto è di fase 3 |
+> | **the thread** | **`DECISIONI.md` §1.10** — ⛔ **cured BEFORE phase 2**, and with a **helper process** (PAM is not reliably reentrant). ⭐ What moved the deadline from phase 5 to 2 was **a B8 number**: the block is **1,0-2,2 s** per attempt, ⛔ **and PAM is what puts it there**. Up to phase 1 the symptom is *«the last of the ten waits»*; **from phase 2 on it is the screen of whoever is already working that freezes when someone else logs in**, and whoever sees it blames the video. ⛔ **And the property to test is not «PAM still works»**: it is *«while one authenticates, the others do not notice»* — and **that bench does not exist today** |
+> | **the cap** | **`DECISIONI.md` §1.11** — ⛔ **stays fixed at 16 until phase 3**, on purpose: `SPECIFICHE.md` §5.5 says of itself that *«the real limit is not a count, it is a budget of pixels per second»*, so any number today is a placeholder. ⚠ **The declared price**: for two phases the code says **16** and the specification says **ten**. ⛔ And it holds for any number: **no bench has ever seen that cap bite** — filling it takes ten **different** users (I2), and the reason for refusal belongs to phase 3 |
 
-*Rilievo **R12C.17**: stavano scritti in `src/main.c` e `src/rcp.c`, cioè dove non li legge nessuno
-che non stia leggendo quel file — mentre `SPECIFICHE.md` §5.5 e `DECISIONI.md` §4.6 promettono dieci
-sessioni insieme senza una riga che dica il contrario. ⚠ Un ripiego di fase dichiarato nel codice non
-è una promessa rotta: è una promessa **non ancora dovuta**. Ma il posto in cui si scrive è dove la
-fase dichiara i propri confini.*
-
-| | |
-|---|---|
-| ⛔ **un solo filo, e la verifica PAM lo BLOCCA** | tutto gira in un ciclo `poll` solo, e `pam_authenticate` è sincrona: la stretta di mano di un utente **ritarda i pacchetti di chiunque altro**. ⛔ E il secondo fisso di §4.4-bis lo rende misurabile: con dieci utenti che entrano insieme, l'ultimo aspetta **dieci secondi** — e il sintomo, *«il server è lento quando c'è gente»*, non nomina né PAM né il filo. **Prima della fase 5 la verifica va su un filo a parte** |
-| ⚠ **sedici sessioni attaccate, in compilazione** | `src/rcp.c`: `#define MAX_ATTACCATE 16`, col commento *«un server vero lo sostituirà con la sua tabella delle sessioni»*. `SPECIFICHE.md` §5.5 dice **dieci, configurabile**: qui è sedici e fisso |
-| ⚠ **e un terzo, minore, che vale la pena di nominare adesso** | l'interruttore della funzione di banco di `RCP.md` §7.5 è `#define BANCO_ACCESO 0`. L'invariante **I6** è rispettata — è spenta di suo — ⛔ ma §7.5 la vuole accendibile **nella configurazione del server**, e oggi accenderla richiede di **ricompilare**. Il giorno in cui la configurazione ci sarà, questa è la riga da cambiare |
-
-### I banchi
+*Finding **R12C.17**: they were written in `src/main.c` and `src/rcp.c`, i.e. where nobody reads them
+who is not reading that file — while `SPECIFICHE.md` §5.5 and `DECISIONI.md` §4.6 promise ten
+sessions together without a line saying otherwise. ⚠ A phase fallback declared in the code is not
+a broken promise: it is a promise **not yet due**. But the place where it is written is where the
+phase declares its own boundaries.*
 
 | | |
 |---|---|
-| ⭐ `banchi/01-b2-costruisci.sh` | **nuovo**: costruisce BoringSSL e `lsquic` con `-DLSQUIC_WEBTRANSPORT=ON`, e ⛔ **verifica che il flag abbia prodotto i simboli** — non che compili |
-| ⭐ `banchi/01-b2-certificati.sh` | **nuovo**: i **due** certificati di `RCP.md` §4.1-bis con quattro controlli — curva, `subjectAltName`, durata sotto i 14 giorni, e ⛔ **che i due siano davvero due** (il difetto di B13.1, colto alla nascita invece che due settimane dopo) |
-| ⭐ `banchi/01-b2-controllo-aioquic.py` | **nuovo**: ⛔ **il controllo positivo di B2** — una sessione WebTransport che *deve* riuscire. Senza, «la candidata non apre la sessione» e «il banco non sa aprirne nessuna» hanno lo stesso aspetto (R3.17) |
-| ⭐ `banchi/01-b2-cliente-aioquic.py` | **nuovo**: il germe del **cliente di prova** (B9), e il controllo d'ambiente che separa «il server non regge» da «il browser non accetta» |
-| ⭐ `banchi/01-b2-sonda.html` | **nuovo**: la pagina, ⛔ **servita da `localhost`** — contesto sicuro senza avvisi, così quel che si misura è **la sessione** e non il clic dell'utente |
-| ⭐ `banchi/01-b2-sni-ngtcp2.sh` | **nuovo, 10 agosto**: costruisce `bsslserver`, il server d'esempio di `ngtcp2`, che è il bersaglio della prova SNI. ⛔ **Non guarda l'uscita di `ninja`: guarda se il binario c'è** — `examples/CMakeLists.txt` costruisce quel blocco solo `if(LIBEV_FOUND AND HAVE_BORINGSSL AND LIBNGHTTP3_FOUND)`, e se una manca cmake **salta in silenzio** |
-| ⭐ `banchi/01-b2-sonda-sni.py` | **nuovo, 10 agosto**: la sonda del criterio nuovo di `DECISIONI.md` §6.4. Due gambe (senza SNI · con SNI), e ⛔ **due gradini per gamba**: la stretta di mano riesce **e** l'impronta del certificato ricevuto combacia con quella del file |
-| ⭐ `banchi/01-b2-sni-quiche.sh` | **nuovo, 10 agosto**: la terza candidata. ⛔ **Due azioni separate — `leggi` e `costruisci`** — perché se leggere e misurare stanno nello stesso comando la previsione la si scrive **dopo** aver visto il risultato, cioè non la si scrive. ⭐ E **sceglie la versione**: confronta il `rust-version` di ogni etichetta col compilatore presente, e dice quale e perché |
-| ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **nuovo, 10 agosto**: ⭐ **la stretta di mano di RCP/1 E IL BAN DELL'INDIRIZZO, in C** — `[M]` **11 agosto 2026** (`wc -l` su questo albero, codice fermo alle 00:36): `rcp.c` **2.566 righe / 1.418 di codice**, `rcp.h` **197 / 54**. ⚠ *Diceva «**1292 righe / 875 di codice**, `rcp.h` **131 / 49**», `[M]` delle **ore 16:30 del 10 agosto**, e alle 23:48 il file ne misurava già 2.339: lo scarto era dell'**81 %** — rilievo **R12C.12**. E prima ancora diceva «807 righe, 662 di codice», il conto della mattina. ⛔ **La cura era già in questa tabella, tre righe più giù**, applicata a un numero della stessa natura (la riga del collante di B2, che porta «alle 08:00 la stessa misura dava 456/329»): una cura applicata in un posto solo, dentro la stessa tabella.* ⛔ **E la riga non nominava il ban**, che è il lavoro della notte del 10 — `FINESTRA` di 5 minuti, `BAN_DURATA` di 12 ore, `salva_ban`, `rcp_ban_carica`, `rcp_sblocca`, `rcp_bannato`, la tabella da 256 posti con lo sfratto che non butta mai una voce bannata — cioè la decisione dell'utente del giorno (`DECISIONI.md` §1.9). ⛔ **E questo numero non c'entra con quello dello strato WebTransport**: il protocollo **non dipende da ngtcp2** — riceve byte, restituisce byte, e non entra in nessuna delle misure di collante di B2. ⛔ **Non sa che sotto c'è QUIC**: riceve byte, restituisce byte, e il tempo glielo passa chi lo ospita. È la ragione per cui potrà passare al server vero senza riscritture, e per cui §6.4 — se si riaprisse — non porterebbe via il protocollo |
-| ⭐ `banchi/rcp/autenticazione.c` | **nuovo, 10 agosto**: `[M]` **99 righe / 52 di codice** (ore 16:30) — PAM, derivato da `fondamenta/remotix-c/src/autenticazione.c` con ⛔ **la cura di B10** — è caduto il confronto con l'utente del processo, che contraddiceva il multi-tenant di `SPECIFICHE.md` §5.5 |
-| ⭐ `banchi/01-b3-rcp-innesta.py` | **nuovo, 10 agosto**: ⛔ **un innesto SEPARATO da quello di B2**, perché quel numero misura WebTransport e farlo crescere con RCP dentro renderebbe due misure diverse sotto la stessa etichetta (E2) |
-| ⭐ `banchi/01-b3-cliente.py` | **nuovo, 10 agosto**: **il cliente di prova** — la stretta di mano scritta una seconda volta, in un linguaggio diverso, e **registra** nel formato di §11.1 con la parola d'ordine oscurata |
-| ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **nuovi, 10 agosto**: le tre connessioni di B3, e ⛔ **ogni traccia passa dal validatore di B4** — non si collauda il server contro il client |
-| ⭐⭐ `banchi/01-b3-quarto-giro.sh` | **nuovo, 10 agosto**: l'**orologio del silenzio** — 35 s a `max_idle_timeout` 120, con il controllo a +6 s che dice **no**. ⛔ Senza quel primo tempo, «dopo 35 s la seconda entra» è compatibile con «la seconda entra sempre» |
-| ⭐⭐ `banchi/01-b3-quinto-giro.sh` | **nuovo, 10 agosto**: ⚠ **gira da questa parte del filo** — ruota il certificato, riavvia, e prova che la pagina ritira l'**impronta corrente**. ⛔ E che con la **vecchia** non si apre: senza quel controllo, «funziona con la nuova» è compatibile con un browser che l'impronta non la guarda |
-| ⭐⭐ `banchi/01-b4-validatore.py` | **nuovo, 10 agosto**: ⭐ **il validatore del filo** — un terzo programma che legge una registrazione e dice **quale byte** non è conforme a `RCP.md`. ⛔ Scritto leggendo **solo la specifica**, prima che esistesse un byte di server. Ha **tre** esiti, non due: conforme · non conforme · ⚠ *registrazione malformata*, perché «il file è rotto» e «il filo non era conforme» sono due fatti con due cure |
-| ⭐ `banchi/01-b4-registrazioni.py` + `01-b4-lancia.py` | **nuovi, 10 agosto**: le **sette** registrazioni, ciascuna col **byte offensivo dichiarato in anticipo** in un manifesto — e il confronto lo fa il banco, non chi guarda |
-| ⭐ `banchi/01-b2-sonda-trasporto.py` + `01-b2-lancia-trasporto.sh` | **nuovi, 10 agosto**: le sei proprietà, lette **dal pari** con una spia dichiarata su `pull_quic_transport_parameters` di `aioquic`. ⛔ Hanno trovato due difetti che nessun banco funzionale vedeva, e il secondo giro (`--timeout=10s`) misura la proprietà che serve a **B3** |
-| ⭐ `banchi/01-b2-sonda-impostazioni.py` | **nuovo, 10 agosto**: legge **sul filo** quali impostazioni un server HTTP/3 dichiara (`received_settings` di `aioquic`), e dice se c'è WebTransport. ⛔ È la prova che ha chiuso §6.4, e stampa **tutte** le impostazioni: un elenco vuoto e uno senza le due che interessano sono due fatti diversi |
-| `banchi/01-b2-quiche-wt-innesta.py` + `01-b2-lancia-impostazioni.sh` | **nuovi, 10 agosto**: accendono su `quiche` tutto quel che la sua API C permette (3 righe di codice), e conducono il confronto con `ngtcp2` come **controllo positivo** |
-| ⭐⭐ `banchi/01-b2-ngtcp2-wt-innesta.py` | **nuovo, 10 agosto**: ⭐ **il server minimo** — innesta lo strato WebTransport nel server d'esempio di `ngtcp2`. ⛔ Ogni innesto ha un **appiglio che deve comparire una volta sola**: zero o due, e lo script si ferma dicendo quante ne ha trovate. E **conta le righe nostre** da `git diff`, che è il dato di §6.4 |
-| ⭐ `banchi/01-b2-lancia-wt.sh` | **nuovo, 10 agosto**: misura il server minimo col cliente di prova, ⛔ **e col controllo che dice no** — `/rcp/9` deve essere rifiutato (`RCP.md` §2.2). `accendi`/`spegni` servono alla misura col browser |
-| ⭐ `banchi/01-b2-lancia-sonda.sh` | **nuovo, 10 agosto**: ⚠ **gira sulla macchina di chi guarda, non sul server** — i browser stanno lì. Accende il server dall'altra parte, serve la pagina da `127.0.0.1`, lancia i due motori sotto `xvfb` e aspetta che il **registro cresca**, non un tempo fisso |
-| `banchi/01-b2-sonda.html` | **corretto**: `?avvia=1` fa partire la prova da sé. ⛔ Un banco che ha bisogno di una mano **non si può rifare uguale**, e rifarlo uguale è l'unico modo di sapere se una misura è cambiata perché è cambiato il server |
-| `banchi/01-b2-raccogli.py` | **corretto**: registra **ogni richiesta**. Prima taceva, «il rumore non serve» — ed è quel silenzio che ha reso indistinguibili «il browser non ha caricato la pagina» e «l'ha caricata e la prova è fallita» |
-| ⭐ `banchi/01-b2-lancia-sni.sh` | **nuovo, 10 agosto**: conduce la prova sui **tre** bersagli — `ngtcp2`, `quiche`, e `lsquic` come **controllo negativo** in coda, che a ogni esecuzione ridimostra che la sonda sa vedere un rifiuto. ⛔ Verifica che le porte siano libere **prima**, che i server ascoltino davvero (`ss`, non solo «il processo è vivo»), e li ferma **per PID** |
-| `fondamenta/banco/provision.sh` | **corretto**: `libev-dev` fra i pacchetti — è quel che serve agli esempi di `ngtcp2`, ed è **un'altra libreria** da `libevent-dev` che c'era già. ⚠ Senza, cmake mette `LIBEV_LIBRARY-NOTFOUND` e **salta gli esempi senza dire niente** |
-| `fondamenta/banco/provision.sh` | **corretto**: `golang-go` fra i pacchetti del contenitore. Serve a compilare BoringSSL, che è la sola pila TLS con cui `lsquic` e `quiche` parlano QUIC. ⛔ Nel provisioning, non a mano (`LEZIONI.md` §2.5-bis) |
+| ⛔ **a single thread, and the PAM check BLOCKS it** | everything runs in a single `poll` loop, and `pam_authenticate` is synchronous: one user's handshake **delays everyone else's packets**. ⛔ And the fixed second of §4.4-bis makes it measurable: with ten users logging in together, the last one waits **ten seconds** — and the symptom, *«the server is slow when there are people»*, names neither PAM nor the thread. **Before phase 5 the check goes on a separate thread** |
+| ⚠ **sixteen attached sessions, at compile time** | `src/rcp.c`: `#define MAX_ATTACCATE 16`, with the comment *«a real server will replace it with its session table»*. `SPECIFICHE.md` §5.5 says **ten, configurable**: here it is sixteen and fixed |
+| ⚠ **and a third, minor, worth naming now** | the switch for the bench function of `RCP.md` §7.5 is `#define BANCO_ACCESO 0`. Invariant **I6** is respected — it is off by itself — ⛔ but §7.5 wants it switchable **in the server configuration**, and today switching it on requires **recompiling**. The day the configuration exists, this is the line to change |
 
-> #### ⛔ E i banchi che questa tabella non nominava — undici, contati
+### The benches
+
+| | |
+|---|---|
+| ⭐ `banchi/01-b2-costruisci.sh` | **new**: builds BoringSSL and `lsquic` with `-DLSQUIC_WEBTRANSPORT=ON`, and ⛔ **verifies that the flag produced the symbols** — not that it compiles |
+| ⭐ `banchi/01-b2-certificati.sh` | **new**: the **two** certificates of `RCP.md` §4.1-bis with four checks — curve, `subjectAltName`, lifetime under 14 days, and ⛔ **that the two really are two** (the defect of B13.1, caught at birth instead of two weeks later) |
+| ⭐ `banchi/01-b2-controllo-aioquic.py` | **new**: ⛔ **the positive control of B2** — a WebTransport session that *must* succeed. Without it, «the candidate does not open the session» and «the bench cannot open any» look the same (R3.17) |
+| ⭐ `banchi/01-b2-cliente-aioquic.py` | **new**: the seed of the **test client** (B9), and the environment check that separates «the server doesn't hold up» from «the browser doesn't accept» |
+| ⭐ `banchi/01-b2-sonda.html` | **new**: the page, ⛔ **served from `localhost`** — a secure context without warnings, so what is measured is **the session** and not the user's click |
+| ⭐ `banchi/01-b2-sni-ngtcp2.sh` | **new, 10 Aug**: builds `bsslserver`, the example server of `ngtcp2`, which is the target of the SNI test. ⛔ **It does not look at the output of `ninja`: it looks at whether the binary is there** — `examples/CMakeLists.txt` builds that block only `if(LIBEV_FOUND AND HAVE_BORINGSSL AND LIBNGHTTP3_FOUND)`, and if one is missing cmake **skips silently** |
+| ⭐ `banchi/01-b2-sonda-sni.py` | **new, 10 Aug**: the probe for the new criterion of `DECISIONI.md` §6.4. Two legs (without SNI · with SNI), and ⛔ **two steps per leg**: the handshake succeeds **and** the fingerprint of the received certificate matches that of the file |
+| ⭐ `banchi/01-b2-sni-quiche.sh` | **new, 10 Aug**: the third candidate. ⛔ **Two separate actions — `leggi` and `costruisci`** — because if reading and measuring are in the same command the prediction gets written **after** seeing the result, i.e. it does not get written. ⭐ And it **picks the version**: it compares the `rust-version` of each tag with the compiler present, and says which and why |
+| ⭐⭐ `banchi/rcp/rcp.c` + `rcp.h` | **new, 10 Aug**: ⭐ **the RCP/1 handshake AND THE ADDRESS BAN, in C** — `[M]` **11 Aug 2026** (`wc -l` on this tree, code frozen at 00:36): `rcp.c` **2.566 lines / 1.418 of code**, `rcp.h` **197 / 54**. ⚠ *It said «**1292 lines / 875 of code**, `rcp.h` **131 / 49**», `[M]` from **16:30 on 10 Aug**, and at 23:48 the file already measured 2.339: the gap was **81 %** — finding **R12C.12**. And before that it said «807 lines, 662 of code», the morning's count. ⛔ **The cure was already in this table, three rows further down**, applied to a number of the same kind (the B2 glue row, which carries «at 08:00 the same measurement gave 456/329»): a cure applied in one place only, inside the same table.* ⛔ **And the row did not name the ban**, which is the work of the night of the 10th — `FINESTRA` of 5 minutes, `BAN_DURATA` of 12 hours, `salva_ban`, `rcp_ban_carica`, `rcp_sblocca`, `rcp_bannato`, the 256-slot table with the eviction that never throws out a banned entry — i.e. the user's decision of the day (`DECISIONI.md` §1.9). ⛔ **And this number has nothing to do with that of the WebTransport layer**: the protocol **does not depend on ngtcp2** — it receives bytes, returns bytes, and enters none of the B2 glue measurements. ⛔ **It does not know there is QUIC underneath**: it receives bytes, returns bytes, and time is passed to it by whoever hosts it. That is the reason it will be able to move to the real server without rewrites, and why §6.4 — if it were reopened — would not take the protocol away |
+| ⭐ `banchi/rcp/autenticazione.c` | **new, 10 Aug**: `[M]` **99 lines / 52 of code** (16:30) — PAM, derived from `fondamenta/remotix-c/src/autenticazione.c` with ⛔ **the cure of B10** — the comparison with the process user was dropped, which contradicted the multi-tenancy of `SPECIFICHE.md` §5.5 |
+| ⭐ `banchi/01-b3-rcp-innesta.py` | **new, 10 Aug**: ⛔ **a graft SEPARATE from the B2 one**, because that number measures WebTransport and making it grow with RCP inside would give two different measurements under the same label (E2) |
+| ⭐ `banchi/01-b3-cliente.py` | **new, 10 Aug**: **the test client** — the handshake written a second time, in a different language, and it **records** in the format of §11.1 with the password masked |
+| ⭐ `banchi/01-b3-lancia.sh` + `01-b3-terzo-giro.sh` | **new, 10 Aug**: the three connections of B3, and ⛔ **every trace goes through the B4 validator** — the server is not acceptance-tested against the client |
+| ⭐⭐ `banchi/01-b3-quarto-giro.sh` | **new, 10 Aug**: the **silence clock** — 35 s at `max_idle_timeout` 120, with the check at +6 s that says **no**. ⛔ Without that first time, «after 35 s the second gets in» is compatible with «the second always gets in» |
+| ⭐⭐ `banchi/01-b3-quinto-giro.sh` | **new, 10 Aug**: ⚠ **runs from this side of the wire** — rotates the certificate, restarts, and proves that the page fetches the **current fingerprint**. ⛔ And that with the **old** one it does not open: without that check, «it works with the new one» is compatible with a browser that does not look at the fingerprint |
+| ⭐⭐ `banchi/01-b4-validatore.py` | **new, 10 Aug**: ⭐ **the wire validator** — a third program that reads a recording and says **which byte** does not conform to `RCP.md`. ⛔ Written by reading **only the specification**, before a single byte of server existed. It has **three** outcomes, not two: conforming · non-conforming · ⚠ *malformed recording*, because «the file is broken» and «the wire was not conforming» are two facts with two cures |
+| ⭐ `banchi/01-b4-registrazioni.py` + `01-b4-lancia.py` | **new, 10 Aug**: the **seven** recordings, each with the **offending byte declared in advance** in a manifest — and the comparison is done by the bench, not by whoever is watching |
+| ⭐ `banchi/01-b2-sonda-trasporto.py` + `01-b2-lancia-trasporto.sh` | **new, 10 Aug**: the six properties, read **from the peer** with a declared spy on `pull_quic_transport_parameters` of `aioquic`. ⛔ They found two defects that no functional bench saw, and the second round (`--timeout=10s`) measures the property that **B3** needs |
+| ⭐ `banchi/01-b2-sonda-impostazioni.py` | **new, 10 Aug**: reads **on the wire** which settings an HTTP/3 server declares (`received_settings` of `aioquic`), and says whether WebTransport is there. ⛔ It is the test that closed §6.4, and it prints **all** the settings: an empty list and one without the two that matter are two different facts |
+| `banchi/01-b2-quiche-wt-innesta.py` + `01-b2-lancia-impostazioni.sh` | **new, 10 Aug**: they switch on in `quiche` everything its C API allows (3 lines of code), and run the comparison with `ngtcp2` as the **positive control** |
+| ⭐⭐ `banchi/01-b2-ngtcp2-wt-innesta.py` | **new, 10 Aug**: ⭐ **the minimal server** — grafts the WebTransport layer into the example server of `ngtcp2`. ⛔ Every graft has an **anchor that must appear exactly once**: zero or two, and the script stops saying how many it found. And it **counts our lines** from `git diff`, which is the figure for §6.4 |
+| ⭐ `banchi/01-b2-lancia-wt.sh` | **new, 10 Aug**: measures the minimal server with the test client, ⛔ **and with the check that says no** — `/rcp/9` must be refused (`RCP.md` §2.2). `accendi`/`spegni` serve the measurement with the browser |
+| ⭐ `banchi/01-b2-lancia-sonda.sh` | **new, 10 Aug**: ⚠ **runs on the watcher's machine, not on the server** — that is where the browsers are. It starts the server on the other side, serves the page from `127.0.0.1`, launches the two engines under `xvfb` and waits for the **log to grow**, not for a fixed time |
+| `banchi/01-b2-sonda.html` | **corrected**: `?avvia=1` starts the test by itself. ⛔ A bench that needs a hand **cannot be redone identically**, and redoing it identically is the only way to know whether a measurement changed because the server changed |
+| `banchi/01-b2-raccogli.py` | **corrected**: logs **every request**. Before it was silent, «the noise is no use» — and it is that silence that made «the browser did not load the page» and «it loaded it and the test failed» indistinguishable |
+| ⭐ `banchi/01-b2-lancia-sni.sh` | **new, 10 Aug**: runs the test on the **three** targets — `ngtcp2`, `quiche`, and `lsquic` as the **negative control** at the end, which at every run re-demonstrates that the probe can see a refusal. ⛔ It verifies that the ports are free **first**, that the servers are really listening (`ss`, not just «the process is alive»), and stops them **by PID** |
+| `fondamenta/banco/provision.sh` | **corrected**: `libev-dev` among the packages — it is what the `ngtcp2` examples need, and it is **a different library** from `libevent-dev`, which was already there. ⚠ Without it, cmake sets `LIBEV_LIBRARY-NOTFOUND` and **skips the examples without saying anything** |
+| `fondamenta/banco/provision.sh` | **corrected**: `golang-go` among the container packages. It is needed to compile BoringSSL, which is the only TLS stack with which `lsquic` and `quiche` speak QUIC. ⛔ In the provisioning, not by hand (`LEZIONI.md` §2.5-bis) |
+
+> #### ⛔ And the benches this table did not name — eleven, counted
 >
-> *Rilievo **R12C.13**. Questa tabella si fermava a B5 e agli innesti di B2, mentre il README
-> dichiarava chiusi B6, B7, B8 e B11 e la notte del 10 ne ha fatti nascere altri quattro. ⛔ La
-> regola con cui **R11.21** era stato chiuso sta nel `README.md` e vale identica qui: «un banco che
-> non è nominato dove si dice come rimettere in piedi i banchi **non si può rifare uguale**», e
-> rifarlo uguale è l'unico modo di sapere se una misura è cambiata perché è cambiato il server.
-> Aggiunti l'11 agosto 2026.*
+> *Finding **R12C.13**. This table stopped at B5 and the B2 grafts, while the README
+> declared B6, B7, B8 and B11 closed and the night of the 10th gave birth to four more. ⛔ The
+> rule by which **R11.21** had been closed is in `README.md` and applies identically here: «a bench that
+> is not named where it says how to set the benches back up **cannot be redone identically**», and
+> redoing it identically is the only way to know whether a measurement changed because the server changed.
+> Added on 11 Aug 2026.*
 >
 > | | |
 > |---|---|
-> | `banchi/01-b6-lancia.sh` + `01-b6-tetti.py` | **B6**, i tre tetti di §4.6. ⭐ Legge i `#define TETTO_*` **da tutt'e due** le copie del sorgente — quella dei banchi e quella compilata — e pretende che combacino, «perché una copia stantia darebbe un numero che nel binario non c'è». ⭐ E ha **tre esiti separati**: il server sbaglia · il **documento** sbaglia · non ho saputo classificare |
-> | `banchi/01-b7-lancia.sh` + `01-b7-congedo.py` | **B7**, il congedo dal lato che riceve. ⛔ Dichiara il **denominatore vero**: §8.2 ha **quindici** motivi, i provocabili in questa fase sono **sette**, e gli altri otto stanno in una tabella `ESCLUSI` con la ragione di ciascuno |
-> | `banchi/01-b8-lancia.sh` + `01-b8-cronometro.py` + `01-b8-prova-ban.c` + ⭐ `01-b8-sblocca.py` | **B8**, il secondo fisso e il ban. ⭐ `01-b8-sblocca.py` **non è un pezzo di B8**: è lo strumento della regola **B0.3**, e parla il socket di comando di §4.4-bis con tre esiti distinti (`TOLTO` · `NON-BANNATO` · «non ho parlato con nessuno», che esce **3**) |
-> | ⭐ `banchi/01-b9-letture.py` | **B9**, il secondo lettore messo a confronto con l'arbitro: **dodici** punti in cui `RCP.md` ammette due letture, ciascuno con **i byte che cambiano sul filo**. L'elenco sta in «Che cosa NON ha funzionato» |
-> | `banchi/01-b11-lancia.sh` + `01-b11-pagina.html` + `01-b11-guasto.sh` + `01-b11-guasto-innesta.py` | **B11**, le violazioni verso la **pagina**, col server guasto di proposito e `ricostruisci()` che rimette quello sano nei due `--togli` nell'ordine |
-> | `banchi/01-b12-guasti.py` + `01-b12-lancia.sh` + `01-b12-copie/` + `01-b12-registro.jsonl` | **B12**, il banco che certifica gli altri: un guasto costruito a mano per ogni banco, e il registro delle certificazioni con la data e le impronte. ⛔ Quel che ha certificato davvero sta più sotto, ed è **3 su 12** |
-> | `banchi/01-b13-lancia.sh` + `01-b13-proprieta.py` | **B13**, le sei cose che nessun altro banco guardava |
-> | `banchi/01-c2-lancia.sh` + `01-c2-diagnosi.py` | **C2**, le tre diagnosi del collegamento guasto — nessuno in ascolto · UDP filtrato col TCP che risponde · impronta non corrente |
-> | ⭐ **le sette pagine della sonda** | `01-s1b-eccezione.sh` + `01-s1b-pagina.html` + `01-s1b-sito.sh` + `01-s1b-servi.py` (**S1b**, l'orologio dei sette giorni) · `01-s2-pagina.html` (**S2**) · `01-s3a-pagina.html` (**S3a**) · `01-s5-tela.sh` + `01-s5-pagina.html` + `01-s5-raccogli.py` (**S5**) · `01-s6-pagina.html` (**S6**) · `01-s7-rotella.sh` + `01-s7-rotella.c` + `01-s7-pagina.html` + `01-s7-raccogli.py` (**S7**) · `01-s-telefono.sh` (le procedure che aspettano un dispositivo) |
+> | `banchi/01-b6-lancia.sh` + `01-b6-tetti.py` | **B6**, the three caps of §4.6. ⭐ It reads the `#define TETTO_*` **from both** copies of the source — the benches' one and the compiled one — and demands that they match, «because a stale copy would give a number that is not in the binary». ⭐ And it has **three separate outcomes**: the server is wrong · the **document** is wrong · I could not classify |
+> | `banchi/01-b7-lancia.sh` + `01-b7-congedo.py` | **B7**, the farewell from the receiving side. ⛔ It declares the **true denominator**: §8.2 has **fifteen** reasons, those that can be provoked in this phase are **seven**, and the other eight are in an `ESCLUSI` table with the reason for each |
+> | `banchi/01-b8-lancia.sh` + `01-b8-cronometro.py` + `01-b8-prova-ban.c` + ⭐ `01-b8-sblocca.py` | **B8**, the fixed second and the ban. ⭐ `01-b8-sblocca.py` **is not a piece of B8**: it is the tool of rule **B0.3**, and it speaks the command socket of §4.4-bis with three distinct outcomes (`TOLTO` · `NON-BANNATO` · «I spoke to nobody», which exits **3**) |
+> | ⭐ `banchi/01-b9-letture.py` | **B9**, the second reader set against the arbiter: **twelve** points where `RCP.md` admits two readings, each with **the bytes that change on the wire**. The list is in «What did NOT work» |
+> | `banchi/01-b11-lancia.sh` + `01-b11-pagina.html` + `01-b11-guasto.sh` + `01-b11-guasto-innesta.py` | **B11**, the violations towards the **page**, with the server faulty on purpose and `ricostruisci()` putting the healthy one back with the two `--togli` in order |
+> | `banchi/01-b12-guasti.py` + `01-b12-lancia.sh` + `01-b12-copie/` + `01-b12-registro.jsonl` | **B12**, the bench that certifies the others: a fault built by hand for each bench, and the log of the certifications with the date and the fingerprints. ⛔ What it really certified is further below, and it is **3 out of 12** |
+> | `banchi/01-b13-lancia.sh` + `01-b13-proprieta.py` | **B13**, the six things no other bench was looking at |
+> | `banchi/01-c2-lancia.sh` + `01-c2-diagnosi.py` | **C2**, the three diagnoses of the broken connection — nobody listening · UDP filtered with TCP answering · fingerprint not current |
+> | ⭐ **the seven probe pages** | `01-s1b-eccezione.sh` + `01-s1b-pagina.html` + `01-s1b-sito.sh` + `01-s1b-servi.py` (**S1b**, the seven-day clock) · `01-s2-pagina.html` (**S2**) · `01-s3a-pagina.html` (**S3a**) · `01-s5-tela.sh` + `01-s5-pagina.html` + `01-s5-raccogli.py` (**S5**) · `01-s6-pagina.html` (**S6**) · `01-s7-rotella.sh` + `01-s7-rotella.c` + `01-s7-pagina.html` + `01-s7-raccogli.py` (**S7**) · `01-s-telefono.sh` (the procedures that wait for a device) |
 >
-> ⚠ **E i registri che quei banchi lasciano**, perché un banco senza il suo registro non è
-> riverificabile: `banchi/01-s7-esiti.jsonl` · `01-s5-esiti.jsonl` · `01-s1b-stato.jsonl` ·
-> `01-b12-registro.jsonl` · `b2-esiti.jsonl`. ⛔ **B6, B7, B8, B11, B13 e C2 non ne hanno nessuno**:
-> i loro numeri vivono nell'uscita a schermo del giro, e quando la scena è smontata non ci si torna.
+> ⚠ **And the logs those benches leave**, because a bench without its log is not
+> re-verifiable: `banchi/01-s7-esiti.jsonl` · `01-s5-esiti.jsonl` · `01-s1b-stato.jsonl` ·
+> `01-b12-registro.jsonl` · `b2-esiti.jsonl`. ⛔ **B6, B7, B8, B11, B13 and C2 have none**:
+> their numbers live in the on-screen output of the round, and once the scene is dismantled there is no going back to it.
 
-**Si riusa** (`PIANO.md` fase 1): `autenticazione.c` di v1 (144 righe) — ⛔ **con la cura di B10**,
-e quel che ne è uscito misura **99 righe / 52 di codice** `[M]` — e `registro.c` (140) — ⚠ **con
-l'obbligo di B13.2**.
+**Reused** (`PIANO.md` phase 1): `autenticazione.c` from v1 (144 lines) — ⛔ **with the cure of B10**,
+and what came out of it measures **99 lines / 52 of code** `[M]` — and `registro.c` (140) — ⚠ **with
+the obligation of B13.2**.
 
 ---
 
-## Le misure
+## The measurements
 
-*⛔ Con la scena, il dispositivo e la **versione** dichiarati accanto a ogni numero (B0.6).*
+*⛔ With the scene, the device and the **version** declared next to every number (B0.6).*
 
-#### La sonda
+#### The probe
 
-⛔ **Gli esiti per esteso, con i registri e la ricontata dei numeri, stanno in
-`web/rapporti/S-esiti-sonda.md`** — qui c'è il numero con la
-data, come vuole B0.6. ⚠ *Fino all'11 agosto 2026 queste sei celle erano **vuote** mentre tre delle
-misure erano state prese la notte del 10: chi leggeva questo documento credeva che la misura non ci
-fosse (rilievi **R12.7** e **R12C.7**, e la sonda lo aveva scritto di suo — voce S.6 del suo §9).*
+⛔ **The outcomes in full, with the logs and the recount of the numbers, are in
+`web/rapporti/S-esiti-sonda.md`** — here is the number with the
+date, as B0.6 wants. ⚠ *Until 11 Aug 2026 these six cells were **empty** while three of the
+measurements had been taken on the night of the 10th: whoever read this document believed the measurement did not
+exist (findings **R12.7** and **R12C.7**, and the probe had written it on its own — item S.6 of its §9).*
 
-| # | Che cosa | Dispositivo · versione | Atteso | Misurato | Data |
+| # | What | Device · version | Expected | Measured | Date |
 |---|---|---|---|---|---|
-| S1b | durata dell'eccezione su Chrome | **Chrome 151.0.7922.108**, profilo persistente, `Xvfb :77 1280x1024x24` | **7 giorni** `[R]` | ⏳ **AVVIATA — giorno 0 preso.** Chrome si è segnato la scadenza **2026-08-17T21:09:47.889Z** `[M]` (grezzo su disco, conversione dichiarata). ⚠ `[?]` **che siano 604 800 s esatti dal clic**: l'istante del clic non l'ha registrato nessuno. Il numero sul campo si legge **il 17-18 agosto** | **10 ago**, 21:10:01Z |
-| S2 | HEVC Main10 **in hardware** | ✅ telefono + PC per `chrome://inspect` | `[?]` — ⛔ *non «sì da Chrome 108»* | ⛔ **non eseguita**: manca il telefono, manca il PC per il controllo C, e le cinque sequenze dipendono dal codificatore della **fase 2**. ⭐ Banco pronto: `01-s2-pagina.html`, e finché A e B non passano **non pubblica verdetti** | |
-| S3a | tastiera, nei tre stati di O8 | ✅ DeX — ⚠ `[?]` **verificare che sia ≥ Android 16 QPR1** | `[?]` | ⛔ **non eseguita**: manca il DeX. ⚠ E una riga di S3 §4.4 non è eseguibile **nemmeno col DeX**: `requestFullscreen({keyboardLock})` vuole **Firefox ≥ 151** e questa macchina ha la **140.13.0esr** — chi provasse qui misurerebbe l'assenza della lock e la scambierebbe per scorciatoie perdute | |
-| S5 | tela dichiarata, zoom 100 %/150 % | **Chrome 151.0.7922.108** e **Firefox 140.13.0esr** su `Xvfb 1920×1080×24` (⛔ il **DeX** manca) | **uguale nei due**, e = risoluzione fisica | ⛔ **I DUE MOTORI NON CONCORDANO.** Firefox: `screen` 1280×720 a 150 % ⇒ tela **1920×1080**, invariante ✅. Chrome: `screen` resta 1920×1080 ⇒ tela **2880×1620**, del **50 % più grande** ⛔. `[M]`, due giri identici, `01-s5-esiti.jsonl`. ⇒ la formula di `SPECIFICHE.md` §6.1-bis **non regge su Chrome** | **10 ago**, 23:13-23:14 |
-| S7 | segno della rotella, `natural-scroll` nei due stati | **server 192.168.0.2**, GNOME headless, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**, **Firefox 140.13.0esr** in `--kiosk` | `[?]`, e **non deve cambiare** con la gsetting | ⭐ **`+120` → `deltaY +114`, la pagina SCENDE** ⇒ ⛔ **il server inverte l'asse verticale**. `[M]`, due giri, `01-s7-esiti.jsonl`. Il segno **non cambia** fra i due giri ⚠ (`[?]` che fossero i due stati di `natural-scroll`: l'etichetta non è nel registro). ⛔ Misurata **su Mutter**: per gli altri quattro desktop resta `[?]` | **10 ago**, 20:59 UTC |
-| S6 | carico utile di un datagram, **sul percorso peggiore** | ✅ telefono su LTE | ≥ **972 byte** | ⛔ **non eseguita**: manca una LTE vera e manca la metà di server che faccia l'**eco** dei datagram. ⭐ Banco pronto: `01-s6-pagina.html`, che **si rifiuta di misurare senza `?percorso=`** | |
-| ⛔ S1a | eccezione ⇒ WebTransport su Safari | ⛔ **niente Mac** | *fuori dalla fase, resta `[?]`* | | |
-| ⏳ S3b | PWA su Chrome per Android | ⛔ + certificato vero | *rimandata* | | |
-| ⏳ S4 | anello del ritardo del disegno | | *→ fase 3* | | |
+| S1b | duration of the exception on Chrome | **Chrome 151.0.7922.108**, persistent profile, `Xvfb :77 1280x1024x24` | **7 days** `[R]` | ⏳ **STARTED — day 0 taken.** Chrome recorded the expiry **2026-08-17T21:09:47.889Z** `[M]` (raw on disk, conversion declared). ⚠ `[?]` **that it is exactly 604 800 s from the click**: nobody recorded the instant of the click. The number in the field is read **on 17-18 Aug** | **10 Aug**, 21:10:01Z |
+| S2 | HEVC Main10 **in hardware** | ✅ phone + PC for `chrome://inspect` | `[?]` — ⛔ *not «yes since Chrome 108»* | ⛔ **not run**: the phone is missing, the PC for check C is missing, and the five sequences depend on the encoder of **phase 2**. ⭐ Bench ready: `01-s2-pagina.html`, and until A and B pass it **publishes no verdicts** | |
+| S3a | keyboard, in the three states of O8 | ✅ DeX — ⚠ `[?]` **verify that it is ≥ Android 16 QPR1** | `[?]` | ⛔ **not run**: the DeX is missing. ⚠ And one line of S3 §4.4 cannot be run **even with the DeX**: `requestFullscreen({keyboardLock})` wants **Firefox ≥ 151** and this machine has **140.13.0esr** — whoever tested here would measure the absence of the lock and mistake it for lost shortcuts | |
+| S5 | declared canvas, zoom 100 %/150 % | **Chrome 151.0.7922.108** and **Firefox 140.13.0esr** on `Xvfb 1920×1080×24` (⛔ the **DeX** is missing) | **the same in both**, and = physical resolution | ⛔ **THE TWO ENGINES DISAGREE.** Firefox: `screen` 1280×720 at 150 % ⇒ canvas **1920×1080**, invariant ✅. Chrome: `screen` stays 1920×1080 ⇒ canvas **2880×1620**, **50 % larger** ⛔. `[M]`, two identical rounds, `01-s5-esiti.jsonl`. ⇒ the formula of `SPECIFICHE.md` §6.1-bis **does not hold on Chrome** | **10 Aug**, 23:13-23:14 |
+| S7 | wheel sign, `natural-scroll` in both states | **server 192.168.0.2**, headless GNOME, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**, **Firefox 140.13.0esr** in `--kiosk` | `[?]`, and **must not change** with the gsetting | ⭐ **`+120` → `deltaY +114`, the page SCROLLS DOWN** ⇒ ⛔ **the server inverts the vertical axis**. `[M]`, two rounds, `01-s7-esiti.jsonl`. The sign **does not change** between the two rounds ⚠ (`[?]` that they were the two states of `natural-scroll`: the label is not in the log). ⛔ Measured **on Mutter**: for the other four desktops it stays `[?]` | **10 Aug**, 20:59 UTC |
+| S6 | datagram payload, **on the worst path** | ✅ phone on LTE | ≥ **972 bytes** | ⛔ **not run**: a real LTE is missing, and so is the half of the server that **echoes** the datagrams. ⭐ Bench ready: `01-s6-pagina.html`, which **refuses to measure without `?percorso=`** | |
+| ⛔ S1a | exception ⇒ WebTransport on Safari | ⛔ **no Mac** | *outside the phase, stays `[?]`* | | |
+| ⏳ S3b | PWA on Chrome for Android | ⛔ + real certificate | *postponed* | | |
+| ⏳ S4 | drawing delay loop | | *→ phase 3* | | |
 
-#### Il filo
+#### The wire
 
-⚠ *Tre `[M]` di **B3** — la 2ª mentre la 1ª è viva, l'orologio del silenzio, la 3ª col certificato
-ruotato — stavano in questa tabella **senza la cella della data**, in un capitolo che apre
-imponendola: rilievo **R11.17**. La data c'è dal 10 agosto 2026, e la cella mancante non era
-formalismo — `[M]` è definito come «misurato da noi, sul ferro, **con la data**» (`README.md`), e
-la riga della 3ª è quella che dichiara un esito su **due browser**, cioè quella che B0.6 nomina per
-prima.*
-⚠ *E la stessa cura è dovuta tornare l'11 agosto 2026, tre righe sotto quel riquadro: la riga di
-**B8** portava il suo `[M]` nella colonna dell'**atteso**, con «Misurato» e «Data» vuote e il «10
-ago» dentro il testo invece che nella cella — rilievo **R12C.14**. ⛔ Il controllo meccanico che
-aveva trovato R11.17 (contare le `|`) qui **non vede niente**: le celle sono cinque su tutte le
-righe, e il difetto è nel loro **ordine**. Cioè la cura era stata applicata alla forma che il rilievo
-descriveva e non alla proprietà che il rilievo proteggeva — che è, di nuovo, «una cura applicata in
-un posto solo».*
+⚠ *Three `[M]` of **B3** — the 2nd while the 1st is alive, the silence clock, the 3rd with the certificate
+rotated — sat in this table **without the date cell**, in a chapter that opens by
+requiring it: finding **R11.17**. The date has been there since 10 Aug 2026, and the missing cell was not
+formalism — `[M]` is defined as «measured by us, on the hardware, **with the date**» (`README.md`), and
+the row of the 3rd is the one that declares an outcome on **two browsers**, i.e. the one B0.6 names
+first.*
+⚠ *And the same cure had to come back on 11 Aug 2026, three rows below that box: the row of
+**B8** carried its `[M]` in the **expected** column, with «Measured» and «Date» empty and the «10
+Aug» inside the text instead of in the cell — finding **R12C.14**. ⛔ The mechanical check that
+had found R11.17 (counting the `|`) **sees nothing** here: the cells are five on all
+rows, and the defect is in their **order**. That is, the cure had been applied to the form the finding
+described and not to the property the finding protected — which is, again, «a cure applied in
+one place only».*
 
-⛔ **E la scena, che B0.6 pretende accanto a ogni numero**: i giri **1-4** di B3 li fa il cliente
-`banchi/01-b3-cliente.py` contro il server minimo su `ngtcp2`, sulla macchina di prova — **nessun
-browser**, quindi nessuna versione di browser da annotare; il **quinto** (certificato ruotato) è
-l'unico coi browser veri, e le loro versioni sono dentro la riga.
+⛔ **And the scene, which B0.6 demands next to every number**: rounds **1-4** of B3 are done by the client
+`banchi/01-b3-cliente.py` against the minimal server on `ngtcp2`, on the test machine — **no
+browser**, hence no browser version to note; the **fifth** (rotated certificate) is
+the only one with real browsers, and their versions are inside the row.
 
-| Che cosa | Atteso | Misurato | Data |
+| What | Expected | Measured | Date |
 |---|---|---|---|
-| **B2** — BoringSSL compila nel `devroot` | sì | ✅ **sì** — ramo predefinito, `libssl.a` e `libcrypto.a` | 9 ago |
-| **B2** — `lsquic` compila con `-DLSQUIC_WEBTRANSPORT=ON` | sì | ✅ **sì**, v4.9.3, e la define è nei `FLAGS` di `build.ninja` | 9 ago |
-| ⛔ **B2** — **il flag ha prodotto i simboli?** | **4 su 4** | ⭐ **4 su 4** `[M]` — dopo aver curato il banco, vedi sotto | 9 ago |
-| **B9** — `aioquic` porta WebTransport? | `[?]` | ⭐ **sì** `[M]` 1.2.0: 29 occorrenze nel modulo h3, l'evento e `create_webtransport_stream`. *Era la `[?]` di R3.21: se fosse stata «no», cadeva l'arbitro* | 9 ago |
-| **B2** — i due certificati, quattro controlli | 4 su 4 | ✅ **4 su 4** — e i due sono davvero due | 9 ago |
-| ⭐ **B2** — **il controllo positivo d'ambiente** (senza browser) | sessione accettata **e** byte che tornano | ⭐ **`:status = 200`, `b'ciao'` torna identico** `[M]` | 9 ago |
-| ⭐ **B2** — **la sessione si apre da un BROWSER VERO** | si apre, e i byte tornano | ⭐ **APERTA in 30,2 ms** su **Chrome 151.0.0.0** (X11, Linux), `"ciao"` torna identico `[M]` | 9 ago |
-| ⭐ **B2** — lo stesso su **Firefox** | si apre | ⭐ **APERTA in 52,0 ms** su **Firefox 140.0**, `"ciao"` torna identico `[M]` | 9 ago |
-| ⭐ **B2** — ⛔ **`ngtcp2` serve il certificato SENZA SNI?** | **sì** (previsione scritta prima: zero ricerche per nome in 109+18 file) | ⭐ **sì** `[M]` — sessione stabilita, e **l'impronta del certificato ricevuto combacia** con quella del file | 10 ago |
-| **B2** — lo stesso con SNI, il controllo | sì | ✅ **sì** — `remotix.prova` | 10 ago |
-| ⭐ **B2** — ⛔ **`quiche` serve il certificato SENZA SNI?** | **sì** (previsione scritta prima: l'unico punto che nomina l'SNI è un **lettore**, `tls/mod.rs:510`) | ⭐ **sì** `[M]` su **`quiche` 0.28.0** — sessione stabilita, **impronta combaciante** | 10 ago |
-| **B2** — lo stesso con SNI, il controllo | sì | ✅ **sì** | 10 ago |
-| ⛔ **B2** — quale `quiche` si costruisce con `rustc` di Trixie? | *non era una domanda* | ⛔ **la 0.28.0**: la **0.29.3 pretende rustc 1.88**, Trixie ha **1.85** `[M]` | 10 ago |
-| ⭐ **B2** — il **controllo negativo**: `lsquic` senza SNI | **fallisce** | ⭐ **fallisce** `[M]`, e il suo registro dice **perché**: `SNI is not set … fail certificate lookup` | 10 ago |
-| ⭐ **B2** — `lsquic` **con** SNI: trova il certificato? | sì — *la metà che mancava alla diagnosi del 9* | ⭐ **sì** `[M]`: `looked up cert for remotix.prova`. ⚠ poi cade su ALPN (avviso 120), **causa non indagata** | 10 ago |
-| ⭐⭐ **B2** — **la sessione si apre da un BROWSER VERO, su `ngtcp2`** | 2 motori su 2 | ⭐ **2 su 2** `[M]`: **Chrome 151.0.0.0** (118,6 ms) e **Firefox 140.0** (140,0 ms), impronta pubblicata, nessun avviso, `"ciao"` torna identico | 10 ago |
-| ⛔ **B2** — e il percorso **sbagliato** si rifiuta? | non 200 | ⭐ **404** su `/rcp/9` `[M]`, come impone §2.2 (R1.24) | 10 ago |
-| ⭐ **B2** — le sei proprietà della libreria | 6 su 6 | ⭐ **6 su 6** `[M]`, e **lette dal pari, non dal registro del server**: `max_idle_timeout` 30 000 ms · datagram 65 536 · credito uni **16** · migrazione **non** disabilitata · **niente 0-RTT** · `allowPooling: false` | 10 ago |
-| ⛔ **B2** — e il tetto d'inattività si può **cambiare**? (serve a B3) | il pari vede il valore nuovo | ⭐ **sì** `[M]`: con `--timeout=10s` il pari legge **10 000 ms**. B3 potrà distinguere il tetto del protocollo da quello del trasporto | 10 ago |
-| ⛔ **B2** — ⭐ **due difetti trovati proprio da queste misure** | *nessuno era atteso* | ⛔ il server offriva **0-RTT** (2 biglietti, `max_early_data_size` 0xffffffff) e concedeva **3** stream unidirezionali invece di 16. **Nessuno dei due ha un sintomo funzionale**: la sessione si apriva uguale | 10 ago |
-| ⛔⭐ **B2** — **`quiche` riesce a dichiarare WebTransport dal C?** | **no** (previsione scritta prima: `set_additional_settings` esiste in Rust, **non nell'FFI**) | ⛔ **no** `[M]`: 4 impostazioni sul filo, **nessuna** delle due di WebTransport. Il controllo positivo (`ngtcp2`) ne dichiara 7 | 10 ago |
-| **B2** — la sessione si apre, **per candidata** | 2 motori su 2, **e le sei proprietà** | ⭐ **fatto su `ngtcp2`**; su `quiche` **non si arriva a provarlo**: cade al cancello prima | 10 ago |
-| ⭐ **B2** — righe di collante **per lo strato WebTransport** | *si conta, non si stima* | ⭐ **`ngtcp2`, lo strato di B2 da solo: 553 righe aggiunte — 373 di CODICE, 134 di commento, 46 vuote** `[M]` **ore 16:30**, su albero pulito dopo i due `--togli` e riapplicando il solo innesto di B2. ⚠ *Alle 08:00 la stessa misura dava **456 / 329**: la lettura della capsula di chiusura è cresciuta lì dentro. La successione sta in `DECISIONI.md` §6.4, non qui.* ⛔ **I 972 / 618 dei due innesti insieme non vanno in questa riga.** ⚠ Su `quiche` il numero **non esiste e non esisterà**: la candidata cade prima, ed è il lavoro che non abbiamo speso | 10 ago |
-| **B2** — quanto pesa il loro esempio (il punto di partenza) | *si conta* | `ngtcp2` **7.041 righe** (HTTP/3 completo, C++, 13 file) · `quiche` **614** (esempio minimo, C, 1 file) `[M]`. ⛔ Due etichette diverse: non si sottraggono | 10 ago |
-| ⭐ **B3** — la **1ª** connessione, fino a `SESSIONE` | passa | ⭐ **passa** `[M]` 10 ago: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, e ⛔ **la traccia è dichiarata CONFORME dal validatore di B4** | 10 ago |
-| ⭐ **B3** — la **2ª dopo la chiusura della 1ª** | **identica alla prima** | ⭐ **passa** `[M]`, e anche la sua traccia è conforme. ⛔ **Non lo era al primo giro**: vedi il difetto qui sotto | 10 ago |
-| ⭐ **B3** — la **2ª mentre la 1ª è viva** | `CONGEDO(0x0F)` a chi arriva, e la 1ª sopravvive | ⭐ **passa** `[M]`: la seconda riceve `GIA_ATTIVA_REMOTA` **per tutt'e due le strade di §3.1** — `CONGEDO` sul controllo *e* codice `0x0f` nella chiusura della sessione — e la prima sopravvive. ⚠ *Era rossa al primo giro, e il difetto era del banco* | 10 ago |
-| ⭐⭐ **B3** — la 2ª **dopo il silenzio** della 1ª, 35 s a `max_idle_timeout` **120** | **entra** | ⭐ **entra** `[M]`, e ⛔ **con il controllo che dice no**: a **+6 s** la seconda è **rifiutata** con `0x0F`, a **+35 s** la terza **entra**. Il registro: `STACCATO per silenzio: 30072 ms`. ⭐ E la connessione della prima è **ancora viva**: a liberare il posto è stato **il server**, non QUIC | 10 ago |
-| ⭐ **B3** — la 3ª con il certificato **ruotato a mano** | passa | ⭐ **PASSA, pieno** `[M]` **2026-08-10 sera**: rotazione (impronta nuova ≠ vecchia, quattro controlli sui certificati su quattro), la pagina ritira la nuova e apre su Chrome 151 e Firefox 140, **e il server risponde `ECCOMI` al `CIAO` della sonda** — la seconda metà del criterio di B2 è soddisfatta —, e con la vecchia **tutt'e due rifiutano**. ⛔ Il rosso del mattino era della SONDA, non del certificato: mandava `ciao` e aspettava l'eco di B2, che con RCP innestato non esiste più. ⚠ Resta `[?]` che a rifiutare sia il confronto dell'impronta e non una delle altre due cause con lo stesso aspetto.<br><br>*Quel che diceva prima* `[M]` **2026-08-10 09:36**, Chrome **151.0.0.0** e Firefox **140.0**: con l'impronta corrente (`5o99/7rSTJER…`) la **sessione si apre** su tutt'e due — 149,0 ms Firefox, 180,0 ms Chrome — ⛔ **ma lo stream non ha funzionato in nessuno dei due** (`remote WebTransport close` · `The session is closed.`), e il criterio di B2 vuole *«la sessione si apre su Chrome e Firefox, **e la pagina riceve un byte dal server**»*. ⚠ Con l'impronta vecchia (`35wqjGTOmKSj…`) **tutt'e due rifiutano** — Firefox `WebTransport connection rejected`, ⚠ Chrome `Opening handshake failed.`, *due frasi diverse* — ma `[?]` **che a rifiutare sia il confronto dell'impronta non è dimostrato**: l'esito registrato dichiara di suo **tre cause con lo stesso aspetto** (UDP filtrato · impronta non del certificato servito · certificato oltre i 14 giorni), e nessuno le ha distinte. È la forma **E1**, e il banco l'aveva già dichiarata | 10 ago |
-| ⭐ **B3** — il **secondo fisso** di §4.4-bis, cronometrato | ≥ 1000 ms **anche su `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` su tre connessioni. È una proprietà che nessun altro banco vede | 10 ago |
-| ⭐ **B10** — PAM, con `pamtester` come controllo | entra | ⭐ **entra** `[M]`: `pamtester login prova authenticate` riesce, e il server ammette lo stesso utente | 10 ago |
-| ⭐ **B4** — sette guaste, quattro rotte, una conforme, una senza niente da giudicare | i **quattro esiti** coperti, byte esatto | ⭐ **13 su 13** `[M]` 10 ago sera: ciascuna guasta accusata sul **byte dichiarato in anticipo**, e i quattro codici d'uscita del validatore tutti esercitati (0 conforme · 1 non conforme · 2 registrazione rotta · 3 niente da giudicare). Il validatore è **certificato** | 10 ago |
-| ⭐⭐ **B4** — e ha trovato una contraddizione in `RCP.md` | *non era un atteso* | ⛔ §4.3 vietava il trattino basso nei nomi di capacità **e ne definisce uno che ce l'ha** (`video.misura_massima`). Curato in `RCP.md` §4.3 | 10 ago |
-| ⭐⭐ **B5** — le violazioni, e il server vivo dopo ciascuna | motivo giusto sempre, **server vivo sempre** | ⭐ **36 violazioni su 36 + 8 verdi attesi su 8** `[M]` 10 ago sera, e per **tutt'e due le strade di §3.1** ogni volta — ⛔ **36 su 36 anche sul punto 3**, che nessuno aveva mai contato: `CONGEDO` sul controllo *e* il codice del motivo nella chiusura della sessione. ⛔ E dopo **ciascuna** una connessione nuova arriva a `ECCOMI`: il server è sempre lì | 10 ago |
-| ⭐ **B5** — i cinque casi che **devono passare** | *nessuna caduta* | ⭐ **5 su 5** `[M]`: `hevc,vp9` sceglie `hevc` e scrive lo scarto · **vista 300×801** e **1×1** passano (§7.1, R4.10) · `BANCO_MARCA` a funzione spenta risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` e **la sessione regge** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`, **non** `ERRORE_PROTOCOLLO`. ⛔ Senza di loro «il server chiude su tutto» darebbe 44 verdi su 44 | 10 ago |
-| ⭐⭐ **B5** — e ha trovato **un difetto che nessun altro banco vedeva** | *non era un atteso* | ⛔ il contatore **per indirizzo** di §4.4-bis era chiavato sulla `provenienza`, che contiene **la porta**: con un solo tentativo per connessione (§4.4) la porta cambia ogni volta, e quel contatore **valeva sempre 1**. Codice presente, che sembrava giusto, e che non faceva niente. Curato, e ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — anche per la parola d'ordine **giusta**. ⚠ *Il **sesto** è della regola di quel giorno; dal 10 agosto sera la regola è il **ban al quarto** (`DECISIONI.md` §1.9), e questa riga resta com'è perché una misura porta la data della regola che misurava* | 10 ago |
-| ⭐ **B5** — e una **seconda contraddizione in `RCP.md`** | *non era un atteso* | ⛔ §2.2 dice che un `CIAO(2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`; §9 dice che il server sceglie *«la più alta che non superi quella del `CIAO`»*, cioè `ECCOMI(1)`. **Byte diversi sul filo per lo stesso ingresso**, e nessuna delle due cita l'altra. Vince §2.2 (la più specifica); `RCP.md` §9 curata. ⚠ *La cura citava **§2.4**, che è «La porta»: numero corretto lo stesso giorno, rilievo **R11.2*** | 10 ago |
-| ⭐⭐ **B11** — le violazioni verso la pagina | 13 su 13 | ⭐ **13 su 13 su TUTT'E DUE i motori** `[M]` 10 ago sera — Firefox **140.0** e Chrome **151.0.0.0**, `CONFORME` con **0 guasti** — **più le due proprietà negative** (`desktop` non cambia i byte usciti · nessun battito applicativo). ⭐ **E ripetuto**: due giri completi conformi, `15:51:54`+`15:52:28` e `15:54:51`+`15:55:24`. ⚠ *Alle 11 questa riga diceva «12 su 12 su Firefox, 9 su 12 su Chrome»: i tre rossi di Chrome sono stati chiusi la sera stessa, e questo documento era rimasto indietro fino al rilievo **R11.4** del 10 agosto* | 10 ago |
-| ⛔ **B11** — e il controllo che dice **no** | la pagina contro un server **SANO** deve dire NON-CONFORME | ⭐ **NON-CONFORME** `[M]`, **9 casi su 13** falliti. Senza, «tredici verdi» sarebbe compatibile con una pagina che approva qualunque cosa. ⚠ `[?]` **gira su un motore solo** (Firefox), e il banco lo dichiara di suo — **rilievo R11.24**. ⭐ *Dalla notte del 10 agosto 2026 lo dichiara anche il `README.md`, che prima lo elencava dentro «su tutt'e due i motori»: resta da **eseguirlo anche su Chrome**, e la differenza morde proprio qui, perché i tre casi rossi di stasera vivevano **nella differenza fra i due motori*** | 10 ago |
-| **B6** — i tre tetti | 5 s · 60 s · 10 s, **col motivo giusto** | ⚠ **5,0 · 60,1 · 10,0 s**, e ⭐ **il cronometro parte dall'apertura del CANALE DI CONTROLLO** — R3.27 chiusa, `RCP.md` §4.6 riga 1 cambiata di una parola. ⛔ **E una seconda risposta**: la sessione che il canale non lo apre mai **non ha addosso nessun tetto** (`DECISIONI.md` §7.17). ⛔ **Questi tre numeri non hanno un registro**: non esiste nessun `.jsonl` di B6, la scena di quel giro non è dichiarata da nessuna parte e **non sono riverificabili** — si rifanno col registro, o restano tre numeri di cui si sa solo l'ordine di grandezza | **10 ago**, ora non registrata |
-| **B7** — i motivi dal lato che riceve, frasi distinte, nessun numero | ⛔ **7 provocabili su 15 dichiarati** + **15 frasi distinte** | ⭐ **7 su 7 + 15 su 15**, con gli **otto esclusi** e la ragione di ciascuno. ⚠ *L'atteso di questa riga diceva «**8 su 8** + 8 frasi distinte», e l'ottavo — `SERVER_IN_CHIUSURA` — è quello che il banco **misura** di non poter produrre sull'innesto* | **10 ago** |
-| **B8** — ≥ 1 s per campione, **e le tre mediane indistinguibili** | ≥ 1 s in **ogni** campione, e le tre mediane **indistinguibili** fra loro | ⚠ **parziale**: **2636 ms** di mediana sui **42** tentativi respinti, dove §4.4-bis vuole ~1000 ⇒ ⛔ **a governare i tempi è PAM, non il nostro ritardo fisso**. Le tre mediane **restano da confrontare**. ⚠ E il numero è la mediana **del servizio `login`**: il prodotto usa `remotix`, quindi con lui **la misura va rifatta** | **10 ago** |
-| ⛔ **B8** — il ban: tre falliti con **tre nomi diversi**, poi il quarto con la parola **giusta** | il quarto **rifiutato** con `TROPPI_TENTATIVI`, e la pagina lo dice | | |
-| ⭐ **B8** — i tre controlli che dicono *no* | un **altro** indirizzo entra · **2 falliti · 1 riuscito · 2 falliti** non banna · il ban **sopravvive al riavvio** | | |
-| **B8** — lo sblocco, in fondo al giro | l'indirizzo rientra, e lo sblocco è **nel registro** | | |
-| **B9** — `aioquic` porta WebTransport; la stretta di mano completa | sì; e **l'elenco delle ambiguità trovate** | ⭐ **12 punti su 12**, ciascuno con le due letture, la lettura che il secondo lettore ha scelto, **i byte che cambiano sul filo** e il caso concreto in cui la differenza morde. L'elenco sta in «Che cosa NON ha funzionato» — ⛔ **sono difetti del documento, non del banco** | **10 ago** |
-| **B10** — l'utente `prova` entra, con `pamtester` come controllo | entra | ⭐ **entra** — vedi la riga di B10 qui sopra | **10 ago** |
-| **B13** — le sei cose | 6 su 6 | ⛔ **non certificato**: il guasto costruito per lui **non è quello giusto** (accende il server con l'altro certificato, che B13.1 non guarda perché legge le impronte dei **file su disco**), e l'orchestratore non lo sa nemmeno innestare. `[M]` B12, 10 ago 22:24 e 22:25 | **10 ago** |
-| **C1** — dodici guasti costruiti a mano | **12 rossi su 12** | ⛔ **3 su 12**, e le parole giuste per gli altri: vedi il riquadro «Che cosa B12 ha certificato davvero» | **10-11 ago** |
-| **C2** — tre modi di fallire | **tre diagnosi diverse** | ⭐ **certificato** `[M]` 10 ago 22:32 (macchina `NIC-OS`), con una marca **discriminante**. ⚠ Un giro precedente (22:28) lo dava **non certificato**: fra i due è cambiato il file, non il verdetto — l'impronta di `01-c2-diagnosi.py` è diversa nelle due righe | **10 ago** |
+| **B2** — BoringSSL compiles in the `devroot` | yes | ✅ **yes** — default branch, `libssl.a` and `libcrypto.a` | 9 Aug |
+| **B2** — `lsquic` compiles with `-DLSQUIC_WEBTRANSPORT=ON` | yes | ✅ **yes**, v4.9.3, and the define is in the `FLAGS` of `build.ninja` | 9 Aug |
+| ⛔ **B2** — **did the flag produce the symbols?** | **4 of 4** | ⭐ **4 of 4** `[M]` — after curing the bench, see below | 9 Aug |
+| **B9** — does `aioquic` carry WebTransport? | `[?]` | ⭐ **yes** `[M]` 1.2.0: 29 occurrences in the h3 module, the event and `create_webtransport_stream`. *It was the `[?]` of R3.21: had it been «no», the arbiter would have fallen* | 9 Aug |
+| **B2** — the two certificates, four checks | 4 of 4 | ✅ **4 of 4** — and the two really are two | 9 Aug |
+| ⭐ **B2** — **the positive environment control** (no browser) | session accepted **and** bytes coming back | ⭐ **`:status = 200`, `b'ciao'` comes back identical** `[M]` | 9 Aug |
+| ⭐ **B2** — **the session opens from a REAL BROWSER** | it opens, and the bytes come back | ⭐ **OPENED in 30,2 ms** on **Chrome 151.0.0.0** (X11, Linux), `"ciao"` comes back identical `[M]` | 9 Aug |
+| ⭐ **B2** — the same on **Firefox** | it opens | ⭐ **OPENED in 52,0 ms** on **Firefox 140.0**, `"ciao"` comes back identical `[M]` | 9 Aug |
+| ⭐ **B2** — ⛔ **does `ngtcp2` serve the certificate WITHOUT SNI?** | **yes** (prediction written beforehand: zero lookups by name in 109+18 files) | ⭐ **yes** `[M]` — session established, and **the fingerprint of the received certificate matches** that of the file | 10 Aug |
+| **B2** — the same with SNI, the control | yes | ✅ **yes** — `remotix.prova` | 10 Aug |
+| ⭐ **B2** — ⛔ **does `quiche` serve the certificate WITHOUT SNI?** | **yes** (prediction written beforehand: the only place that names SNI is a **reader**, `tls/mod.rs:510`) | ⭐ **yes** `[M]` on **`quiche` 0.28.0** — session established, **fingerprint matching** | 10 Aug |
+| **B2** — the same with SNI, the control | yes | ✅ **yes** | 10 Aug |
+| ⛔ **B2** — which `quiche` builds with Trixie's `rustc`? | *it was not a question* | ⛔ **0.28.0**: **0.29.3 demands rustc 1.88**, Trixie has **1.85** `[M]` | 10 Aug |
+| ⭐ **B2** — the **negative control**: `lsquic` without SNI | **fails** | ⭐ **fails** `[M]`, and its log says **why**: `SNI is not set … fail certificate lookup` | 10 Aug |
+| ⭐ **B2** — `lsquic` **with** SNI: does it find the certificate? | yes — *the half missing from the diagnosis of the 9th* | ⭐ **yes** `[M]`: `looked up cert for remotix.prova`. ⚠ then it falls on ALPN (alert 120), **cause not investigated** | 10 Aug |
+| ⭐⭐ **B2** — **the session opens from a REAL BROWSER, on `ngtcp2`** | 2 engines of 2 | ⭐ **2 of 2** `[M]`: **Chrome 151.0.0.0** (118,6 ms) and **Firefox 140.0** (140,0 ms), fingerprint published, no warning, `"ciao"` comes back identical | 10 Aug |
+| ⛔ **B2** — and is the **wrong** path refused? | not 200 | ⭐ **404** on `/rcp/9` `[M]`, as §2.2 mandates (R1.24) | 10 Aug |
+| ⭐ **B2** — the six properties of the library | 6 of 6 | ⭐ **6 of 6** `[M]`, and **read from the peer, not from the server log**: `max_idle_timeout` 30 000 ms · datagrams 65 536 · uni credit **16** · migration **not** disabled · **no 0-RTT** · `allowPooling: false` | 10 Aug |
+| ⛔ **B2** — and can the idle cap be **changed**? (B3 needs it) | the peer sees the new value | ⭐ **yes** `[M]`: with `--timeout=10s` the peer reads **10 000 ms**. B3 will be able to tell the protocol cap from the transport one | 10 Aug |
+| ⛔ **B2** — ⭐ **two defects found precisely by these measurements** | *none was expected* | ⛔ the server offered **0-RTT** (2 tickets, `max_early_data_size` 0xffffffff) and granted **3** unidirectional streams instead of 16. **Neither of the two has a functional symptom**: the session opened all the same | 10 Aug |
+| ⛔⭐ **B2** — **can `quiche` declare WebTransport from C?** | **no** (prediction written beforehand: `set_additional_settings` exists in Rust, **not in the FFI**) | ⛔ **no** `[M]`: 4 settings on the wire, **neither** of the two WebTransport ones. The positive control (`ngtcp2`) declares 7 | 10 Aug |
+| **B2** — the session opens, **per candidate** | 2 engines of 2, **and the six properties** | ⭐ **done on `ngtcp2`**; on `quiche` **it never gets as far as testing it**: it falls at the gate before | 10 Aug |
+| ⭐ **B2** — glue lines **for the WebTransport layer** | *counted, not estimated* | ⭐ **`ngtcp2`, the B2 layer alone: 553 lines added — 373 of CODE, 134 of comment, 46 blank** `[M]` **16:30**, on a clean tree after the two `--togli` and reapplying only the B2 graft. ⚠ *At 08:00 the same measurement gave **456 / 329**: the reading of the close capsule grew in there. The sequence is in `DECISIONI.md` §6.4, not here.* ⛔ **The 972 / 618 of the two grafts together do not belong in this row.** ⚠ On `quiche` the number **does not exist and will not exist**: the candidate falls earlier, and it is the work we did not spend | 10 Aug |
+| **B2** — how much their example weighs (the starting point) | *counted* | `ngtcp2` **7.041 lines** (full HTTP/3, C++, 13 files) · `quiche` **614** (minimal example, C, 1 file) `[M]`. ⛔ Two different labels: they are not subtracted | 10 Aug |
+| ⭐ **B3** — the **1st** connection, up to `SESSIONE` | passes | ⭐ **passes** `[M]` 10 Aug: `CIAO`→`ECCOMI`→`CREDENZIALI`(PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, and ⛔ **the trace is declared CONFORMING by the B4 validator** | 10 Aug |
+| ⭐ **B3** — the **2nd after the 1st is closed** | **identical to the first** | ⭐ **passes** `[M]`, and its trace is conforming too. ⛔ **It was not on the first round**: see the defect below | 10 Aug |
+| ⭐ **B3** — the **2nd while the 1st is alive** | `CONGEDO(0x0F)` to the newcomer, and the 1st survives | ⭐ **passes** `[M]`: the second receives `GIA_ATTIVA_REMOTA` **by both routes of §3.1** — `CONGEDO` on the control channel *and* code `0x0f` in the session close — and the first survives. ⚠ *It was red on the first round, and the defect was the bench's* | 10 Aug |
+| ⭐⭐ **B3** — the 2nd **after the silence** of the 1st, 35 s at `max_idle_timeout` **120** | **gets in** | ⭐ **gets in** `[M]`, and ⛔ **with the check that says no**: at **+6 s** the second is **refused** with `0x0F`, at **+35 s** the third **gets in**. The log: `STACCATO per silenzio: 30072 ms`. ⭐ And the connection of the first is **still alive**: what freed the slot was **the server**, not QUIC | 10 Aug |
+| ⭐ **B3** — the 3rd with the certificate **rotated by hand** | passes | ⭐ **PASSES, fully** `[M]` **2026-08-10 evening**: rotation (new fingerprint ≠ old, four certificate checks out of four), the page fetches the new one and opens on Chrome 151 and Firefox 140, **and the server answers `ECCOMI` to the probe's `CIAO`** — the second half of the B2 criterion is satisfied —, and with the old one **both refuse**. ⛔ The morning's red was the PROBE's, not the certificate's: it sent `ciao` and waited for the B2 echo, which no longer exists with RCP grafted in. ⚠ It remains `[?]` that what refuses is the fingerprint comparison and not one of the other two causes with the same appearance.<br><br>*What it said before* `[M]` **2026-08-10 09:36**, Chrome **151.0.0.0** and Firefox **140.0**: with the current fingerprint (`5o99/7rSTJER…`) the **session opens** on both — 149,0 ms Firefox, 180,0 ms Chrome — ⛔ **but the stream did not work in either** (`remote WebTransport close` · `The session is closed.`), and the B2 criterion wants *«the session opens on Chrome and Firefox, **and the page receives a byte from the server**»*. ⚠ With the old fingerprint (`35wqjGTOmKSj…`) **both refuse** — Firefox `WebTransport connection rejected`, ⚠ Chrome `Opening handshake failed.`, *two different sentences* — but `[?]` **that what refuses is the fingerprint comparison is not demonstrated**: the recorded outcome declares on its own **three causes with the same appearance** (UDP filtered · fingerprint not of the served certificate · certificate beyond 14 days), and nobody has told them apart. It is form **E1**, and the bench had already declared it | 10 Aug |
+| ⭐ **B3** — the **fixed second** of §4.4-bis, timed | ≥ 1000 ms **also on `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` over three connections. It is a property no other bench sees | 10 Aug |
+| ⭐ **B10** — PAM, with `pamtester` as the control | gets in | ⭐ **gets in** `[M]`: `pamtester login prova authenticate` succeeds, and the server admits the same user | 10 Aug |
+| ⭐ **B4** — seven faulty, four broken, one conforming, one with nothing to judge | the **four outcomes** covered, exact byte | ⭐ **13 of 13** `[M]` 10 Aug evening: each faulty one accused on the **byte declared in advance**, and the validator's four exit codes all exercised (0 conforming · 1 non-conforming · 2 broken recording · 3 nothing to judge). The validator is **certified** | 10 Aug |
+| ⭐⭐ **B4** — and it found a contradiction in `RCP.md` | *it was not an expected* | ⛔ §4.3 forbade the underscore in capability names **and defines one that has it** (`video.misura_massima`). Cured in `RCP.md` §4.3 | 10 Aug |
+| ⭐⭐ **B5** — the violations, and the server alive after each | right reason always, **server alive always** | ⭐ **36 violations of 36 + 8 expected greens of 8** `[M]` 10 Aug evening, and by **both routes of §3.1** every time — ⛔ **36 of 36 also on point 3**, which nobody had ever counted: `CONGEDO` on the control channel *and* the reason code in the session close. ⛔ And after **each** one a new connection reaches `ECCOMI`: the server is always there | 10 Aug |
+| ⭐ **B5** — the five cases that **must pass** | *no drop* | ⭐ **5 of 5** `[M]`: `hevc,vp9` chooses `hevc` and logs the discard · **view 300×801** and **1×1** pass (§7.1, R4.10) · `BANCO_MARCA` with the function off answers `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` and **the session holds** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`, **not** `ERRORE_PROTOCOLLO`. ⛔ Without them «the server closes on everything» would give 44 greens of 44 | 10 Aug |
+| ⭐⭐ **B5** — and it found **a defect no other bench saw** | *it was not an expected* | ⛔ the **per-address** counter of §4.4-bis was keyed on `provenienza`, which contains **the port**: with a single attempt per connection (§4.4) the port changes every time, and that counter **was always 1**. Code that was present, that looked right, and that did nothing. Cured, and now at the **sixth** attempt `TROPPI_TENTATIVI` fires — even for the **right** password. ⚠ *The **sixth** belongs to the rule of that day; since the evening of 10 Aug the rule is the **ban at the fourth** (`DECISIONI.md` §1.9), and this row stays as it is because a measurement carries the date of the rule it measured* | 10 Aug |
+| ⭐ **B5** — and a **second contradiction in `RCP.md`** | *it was not an expected* | ⛔ §2.2 says that a `CIAO(2)` on `/rcp/1` is `VERSIONE_INCOMPATIBILE`; §9 says the server chooses *«the highest that does not exceed that of the `CIAO`»*, i.e. `ECCOMI(1)`. **Different bytes on the wire for the same input**, and neither cites the other. §2.2 wins (the more specific); `RCP.md` §9 cured. ⚠ *The cure cited **§2.4**, which is «The port»: number corrected the same day, finding **R11.2*** | 10 Aug |
+| ⭐⭐ **B11** — the violations towards the page | 13 of 13 | ⭐ **13 of 13 on BOTH engines** `[M]` 10 Aug evening — Firefox **140.0** and Chrome **151.0.0.0**, `CONFORME` with **0 faults** — **plus the two negative properties** (`desktop` does not change the bytes sent · no application heartbeat). ⭐ **And repeated**: two complete conforming rounds, `15:51:54`+`15:52:28` and `15:54:51`+`15:55:24`. ⚠ *At 11 this row said «12 of 12 on Firefox, 9 of 12 on Chrome»: Chrome's three reds were closed that same evening, and this document had stayed behind until finding **R11.4** of 10 Aug* | 10 Aug |
+| ⛔ **B11** — and the check that says **no** | the page against a **HEALTHY** server must say NON-CONFORMING | ⭐ **NON-CONFORMING** `[M]`, **9 cases of 13** failed. Without it, «thirteen greens» would be compatible with a page that approves anything. ⚠ `[?]` **it runs on one engine only** (Firefox), and the bench declares it on its own — **finding R11.24**. ⭐ *Since the night of 10 Aug 2026 the `README.md` declares it too, which before listed it under «on both engines»: it remains to **run it on Chrome too**, and the difference bites exactly here, because tonight's three red cases lived **in the difference between the two engines*** | 10 Aug |
+| **B6** — the three caps | 5 s · 60 s · 10 s, **with the right reason** | ⚠ **5,0 · 60,1 · 10,0 s**, and ⭐ **the stopwatch starts from the opening of the CONTROL CHANNEL** — R3.27 closed, `RCP.md` §4.6 line 1 changed by one word. ⛔ **And a second answer**: the session that never opens the channel **has no cap on it at all** (`DECISIONI.md` §7.17). ⛔ **These three numbers have no log**: there is no `.jsonl` of B6, the scene of that round is declared nowhere and **they are not re-verifiable** — they are redone with the log, or they remain three numbers of which only the order of magnitude is known | **10 Aug**, time not recorded |
+| **B7** — the reasons from the receiving side, distinct sentences, no number | ⛔ **7 provocable of 15 declared** + **15 distinct sentences** | ⭐ **7 of 7 + 15 of 15**, with the **eight excluded** and the reason for each. ⚠ *The expected value of this row said «**8 of 8** + 8 distinct sentences», and the eighth — `SERVER_IN_CHIUSURA` — is the one the bench **measures** it cannot produce on the graft* | **10 Aug** |
+| **B8** — ≥ 1 s per sample, **and the three medians indistinguishable** | ≥ 1 s in **every** sample, and the three medians **indistinguishable** from one another | ⚠ **partial**: **2636 ms** median over the **42** rejected attempts, where §4.4-bis wants ~1000 ⇒ ⛔ **what governs the timings is PAM, not our fixed delay**. The three medians **remain to be compared**. ⚠ And the number is the median **of the `login` service**: the product uses `remotix`, so with it **the measurement must be redone** | **10 Aug** |
+| ⛔ **B8** — the ban: three failures with **three different names**, then the fourth with the **right** password | the fourth **refused** with `TROPPI_TENTATIVI`, and the page says so | | |
+| ⭐ **B8** — the three checks that say *no* | **another** address gets in · **2 failed · 1 succeeded · 2 failed** does not ban · the ban **survives the restart** | | |
+| **B8** — the unlock, at the end of the round | the address gets back in, and the unlock is **in the log** | | |
+| **B9** — `aioquic` carries WebTransport; the complete handshake | yes; and **the list of ambiguities found** | ⭐ **12 points of 12**, each with the two readings, the reading the second reader chose, **the bytes that change on the wire** and the concrete case in which the difference bites. The list is in «What did NOT work» — ⛔ **they are defects of the document, not of the bench** | **10 Aug** |
+| **B10** — user `prova` gets in, with `pamtester` as the control | gets in | ⭐ **gets in** — see the B10 row above | **10 Aug** |
+| **B13** — the six things | 6 of 6 | ⛔ **not certified**: the fault built for it **is not the right one** (it starts the server with the other certificate, which B13.1 does not look at because it reads the fingerprints of the **files on disk**), and the orchestrator cannot even graft it. `[M]` B12, 10 Aug 22:24 and 22:25 | **10 Aug** |
+| **C1** — twelve faults built by hand | **12 reds of 12** | ⛔ **3 of 12**, and the right words for the others: see the box «What B12 really certified» | **10-11 Aug** |
+| **C2** — three ways to fail | **three different diagnoses** | ⭐ **certified** `[M]` 10 Aug 22:32 (machine `NIC-OS`), with a **discriminating** mark. ⚠ A previous round (22:28) gave it as **not certified**: between the two the file changed, not the verdict — the fingerprint of `01-c2-diagnosi.py` is different in the two rows | **10 Aug** |
 
 ---
 
-## ⛔ Che cosa NON ha funzionato
+## ⛔ What did NOT work
 
-*Si riempie anche quando fa una brutta figura* (`PIANO.md` §0.3 regola 2). ⭐ **E qui va ogni punto
-in cui `RCP.md` ha ammesso due letture**: sono difetti del documento, e questa è la fase in cui
-costano meno.
+*It gets filled in even when it makes us look bad* (`PIANO.md` §0.3 rule 2). ⭐ **And every point
+where `RCP.md` admitted two readings goes here**: they are defects of the document, and this is the phase in which
+they cost least.
 
-### ⭐⭐ I dodici punti in cui `RCP.md` ammette due letture — B9, 10 agosto 2026
+### ⭐⭐ The twelve points where `RCP.md` admits two readings — B9, 10 Aug 2026
 
-*È **l'esito più prezioso di B9**, e questa sezione lo dichiarava in anticipo: «l'esito più prezioso
-non è "passa": è ogni punto in cui chi lo scrive ha dovuto scegliere perché `RCP.md` ammetteva due
-letture». `banchi/01-b9-letture.py` li ha trovati e li tiene con **gli appigli citati alla lettera**
-— una citazione che non si trova più è una voce che parla di un altro documento — e con **i byte che
-cambiano sul filo** fra l'una e l'altra. ⛔ Portati qui l'11 agosto 2026: finché stavano solo nel
-banco, erano dodici difetti del documento che il documento non sapeva di avere.*
+*This is **the most valuable outcome of B9**, and this section declared it in advance: «the most valuable outcome
+is not "it passes": it is every point where whoever writes it had to choose because `RCP.md` admitted two
+readings». `banchi/01-b9-letture.py` found them and keeps them with **the footholds quoted verbatim**
+— a quotation that can no longer be found is an entry talking about another document — and with **the bytes that
+change on the wire** between one reading and the other. ⛔ Brought here on 11 Aug 2026: as long as they lived only in the
+bench, they were twelve defects of the document that the document did not know it had.*
 
-⛔ **Perché la colonna dei byte è quella che conta**: due letture che producono gli stessi byte sono
-una questione di gusto. Queste **producono byte diversi per lo stesso ingresso**, cioè due
-implementazioni conformi a `RCP.md` divergono senza che nessuna delle due abbia torto — che è
-esattamente ciò che §0 esiste per impedire.
+⛔ **Why the bytes column is the one that counts**: two readings that produce the same bytes are
+a matter of taste. These **produce different bytes for the same input**, i.e. two
+implementations conforming to `RCP.md` diverge without either of them being wrong — which is
+exactly what §0 exists to prevent.
 
-| # | Dove | La domanda | Che cosa ha scelto il secondo lettore | ⛔ Il byte che cambia |
+| # | Where | The question | What the second reader chose | ⛔ The byte that changes |
 |---|---|---|---|---|
-| **L1** | §4.3 | `ECCOMI` porta **l'elenco** dei codec del server o **la scelta**? | ⚠ nessuna delle due: legge i due byte della versione e **butta il resto** — la lettura A **per omissione**, cioè la scelta fatta senza accorgersi di sceglierla | il valore di `video.codec`: `0008 «hevc,av1»` contro `0004 «hevc»`, e con lui la `lunghezza` u32 |
-| **L2** | §3.1 punto 3 | il codice d'errore della chiusura: il motivo **nudo** nei 32 bit, o **mappato** come vuole HTTP/3? | A — e ⛔ **in più tronca**: legge l'**ultimo dei quattro byte**, quindi un codice sopra 255 gli arriverebbe come **un altro motivo**, senza una riga che lo dica | `00 00 00 0D` contro otto byte di un valore mappato — e la capsula cambia lunghezza. ⚠ `RCP.md` **non dichiara la larghezza del campo in nessun punto** |
-| **L3** | §3.1 p. 2 contro §4.2 | dopo il `CONGEDO`, il canale si chiude **con un FIN** o si chiude solo la sessione? | B — non manda mai il FIN; e dal lato che riceve chiama il FIN *«il canale si è chiuso»*, che è un esito **diverso** da «sessione chiusa dal server» | il **bit FIN** del frame STREAM che porta il `CONGEDO`: gli stessi byte di carico, un bit di trasporto in più |
-| **L4** | §6.1 | byte in più in coda al corpo, con la `lunghezza` che li conta: **violazione** o **riserva** per il futuro? | ⛔ **i nostri due lettori hanno scelto DIVERSAMENTE**: il cliente di prova legge `lunghezza` byte e passa il corpo così com'è (B, tollerante); il **validatore di B4** ha una registrazione apposta per bocciarlo (A) | quattro byte in coda e la `lunghezza`: `0000002A` contro `0000002E`. ⛔ È il difetto che B9 esiste per trovare: **l'arbitro e il secondo lettore non leggono la stessa specifica** |
-| **L5** | §4.3 | una capacità **assente** è un elenco **vuoto** (⇒ `NIENTE_IN_COMUNE`) o una cosa **non negoziata**? | ⚠ **la domanda l'ha evitata**: dichiara sempre tutte e otto le capacità, quindi nessuna sua esecuzione la farà mai emergere | il campo `quante`: `0003` contro `0002`, e ventidue byte in meno |
-| **L6** | §4.6 riga 1 | da quale istante parte il primo tetto? | ⛔ **ha scelto B6**, che lo fa partire dall'apertura del canale — ed è una scelta **del banco**, non del documento | ⛔ **nessuno, e va detto invece di inventarne uno**: le due letture mandano lo stesso `CIAO`. Cambia **quando** arriva il `CONGEDO(TEMPO_SCADUTO)` — e nel caso della sessione senza canale, **se** arriva. ⇒ `DECISIONI.md` §7.17 |
-| **L7** | §2.2 | la `CONNECT` estesa deve portare un `origin`? | A — **lo manda**, copiando il browser. ⚠ È prudente e ha un prezzo: mandandolo, **non può più scoprire** se il server lo pretenda — l'arbitro si è adattato all'imputato | il campo `origin` nell'intestazione della `CONNECT`: una riga in più, compressa da QPACK |
-| **L8** | §4.5 | un `desktop` fuori dai sei nomi: **campo fuori intervallo** (§3) o **stringa di diagnosi** da non guardare? | B — lo stampa e non lo controlla | la stringa in fondo a `SESSIONE`: `0005 «gnome»` contro `0007 «plasma6»` — e la connessione che sopravvive o cade. ⚠ **Le due letture stanno in sei righe, una sotto l'altra, e sono opposte** |
-| **L9** | §11.1 contro §6.0 | nella registrazione, che cosa si scrive in `stream` quando l'identificatore non si conosce? | ⛔ **sempre zero** — ma §6.0 vieta i valori sentinella impliciti, e **zero è un identificatore di stream legale** (è quello della `CONNECT`) | gli otto byte di `stream`: `…04` contro `…00`. ⚠ E il validatore **non se ne può accorgere**: un campo sempre zero e un campo assente hanno lo stesso aspetto — forma **E8** |
-| **L10** | §8.1 contro §4.4 | il client, dopo un `RESPINTO`, deve mandare `CONGEDO`? | ⚠ **una terza cosa**: non manda mai un `CONGEDO`, in nessun caso — cioè **non esercita mai** l'obbligo che §8.1 mette su chi chiude | un'inquadratura di **undici byte** contro **il silenzio**. ⛔ Il caso è già costato un rosso: il server contava come «byte dopo la fine» anche il congedo **conforme** della pagina |
-| **L11** | §9 contro §2.2 | che versione mette nel `CIAO` un client che ne sa parlare **due**, su `/rcp/1`? | ⚠ scrive `1` a mano perché ne sa parlare una sola: **la domanda non gli si è posta**, e non se la porrà finché RCP/2 non esisterà | i due byte di `versione`: `0002` contro `0001` — e una connessione che vive o muore |
-| **L12** | §4.5 contro §7.1 | i limiti 320×240-7680×4320 e la parità valgono anche per `vista_*` dentro `ATTACCA`? | ⚠ manda **vista = tela**: ancora una volta la domanda evitata, non risposta | `vista_larghezza`/`vista_altezza`: `00000780 00000438` contro `0000012C 00000321` (sotto il minimo e dispari). ⭐ **La risposta esiste ed è B**, ma sta in **§7.1** — chi implementa `ATTACCA` leggendo §4.5 non ha nessun motivo di andarci |
+| **L1** | §4.3 | Does `ECCOMI` carry **the list** of the server's codecs or **the choice**? | ⚠ neither: it reads the two version bytes and **throws away the rest** — reading A **by omission**, i.e. the choice made without noticing it was choosing | the value of `video.codec`: `0008 «hevc,av1»` versus `0004 «hevc»`, and with it the u32 `lunghezza` |
+| **L2** | §3.1 point 3 | the close error code: the **bare** reason in the 32 bits, or **mapped** as HTTP/3 wants? | A — and ⛔ **it also truncates**: it reads the **last of the four bytes**, so a code above 255 would reach it as **a different reason**, without a line saying so | `00 00 00 0D` versus eight bytes of a mapped value — and the capsule changes length. ⚠ `RCP.md` **does not declare the width of the field anywhere** |
+| **L3** | §3.1 p. 2 versus §4.2 | after the `CONGEDO`, is the channel closed **with a FIN** or is only the session closed? | B — it never sends the FIN; and on the receiving side it calls the FIN *«il canale si è chiuso»*, which is a **different** outcome from «session closed by the server» | the **FIN bit** of the STREAM frame carrying the `CONGEDO`: the same payload bytes, one more transport bit |
+| **L4** | §6.1 | extra bytes at the end of the body, with the `lunghezza` counting them: **violation** or **reserved** for the future? | ⛔ **our two readers chose DIFFERENTLY**: the test client reads `lunghezza` bytes and passes the body as it is (B, tolerant); the **B4 validator** has a recording made on purpose to reject it (A) | four trailing bytes and the `lunghezza`: `0000002A` versus `0000002E`. ⛔ It is the defect B9 exists to find: **the referee and the second reader do not read the same specification** |
+| **L5** | §4.3 | is an **absent** capability an **empty** list (⇒ `NIENTE_IN_COMUNE`) or something **not negotiated**? | ⚠ **it avoided the question**: it always declares all eight capabilities, so none of its runs will ever bring it out | the `quante` field: `0003` versus `0002`, and twenty-two fewer bytes |
+| **L6** | §4.6 row 1 | from which instant does the first cap start? | ⛔ **it chose B6**, which starts it from the opening of the channel — and that is a choice **of the bench**, not of the document | ⛔ **none, and that must be said instead of inventing one**: the two readings send the same `CIAO`. What changes is **when** the `CONGEDO(TEMPO_SCADUTO)` arrives — and in the case of the session without a channel, **whether** it arrives. ⇒ `DECISIONI.md` §7.17 |
+| **L7** | §2.2 | must the extended `CONNECT` carry an `origin`? | A — **it sends it**, copying the browser. ⚠ It is cautious and has a price: by sending it, it **can no longer discover** whether the server requires it — the referee adapted to the defendant | the `origin` field in the `CONNECT` header: one more line, compressed by QPACK |
+| **L8** | §4.5 | a `desktop` outside the six names: **out-of-range field** (§3) or **diagnostic string** not to be looked at? | B — it prints it and does not check it | the string at the end of `SESSIONE`: `0005 «gnome»` versus `0007 «plasma6»` — and the connection that survives or drops. ⚠ **The two readings sit within six lines, one below the other, and they are opposite** |
+| **L9** | §11.1 versus §6.0 | in the recording, what is written in `stream` when the identifier is not known? | ⛔ **always zero** — but §6.0 forbids implicit sentinel values, and **zero is a legal stream identifier** (it is the one of the `CONNECT`) | the eight bytes of `stream`: `…04` versus `…00`. ⚠ And the validator **cannot notice**: an always-zero field and an absent field look the same — form **E8** |
+| **L10** | §8.1 versus §4.4 | must the client, after a `RESPINTO`, send `CONGEDO`? | ⚠ **a third thing**: it never sends a `CONGEDO`, in any case — i.e. it **never exercises** the obligation that §8.1 puts on whoever closes | a framing of **eleven bytes** versus **silence**. ⛔ The case has already cost a red: the server counted as «bytes after the end» even the page's **conforming** farewell |
+| **L11** | §9 versus §2.2 | what version does a client that can speak **two** of them put in the `CIAO`, on `/rcp/1`? | ⚠ it writes `1` by hand because it can speak only one: **the question never arose for it**, and it will not arise until RCP/2 exists | the two bytes of `versione`: `0002` versus `0001` — and a connection that lives or dies |
+| **L12** | §4.5 versus §7.1 | do the limits 320×240-7680×4320 and the parity also apply to `vista_*` inside `ATTACCA`? | ⚠ it sends **view = canvas**: once again the question avoided, not answered | `vista_larghezza`/`vista_altezza`: `00000780 00000438` versus `0000012C 00000321` (below the minimum and odd). ⭐ **The answer exists and it is B**, but it sits in **§7.1** — whoever implements `ATTACCA` reading §4.5 has no reason to go there |
 
-⛔ **Che cosa se ne fa**, e non è «si sistemano tutte adesso»: **tre** di queste dodici sono già
-domande aperte dove le decisioni stanno — L3 in `DECISIONI.md` §7.14, L10 in §7.15, L6 in §7.17. Le
-altre nove sono **difetti di scrittura di `RCP.md`**, e il posto in cui si curano è `RCP.md`, una
-riga per volta, ⛔ **senza aggiungere tipi di messaggio**: la clausola di §9 è consumata dal 10
-agosto.
+⛔ **What is done with them**, and it is not «fix them all now»: **three** of these twelve are already
+open questions where the decisions live — L3 in `DECISIONI.md` §7.14, L10 in §7.15, L6 in §7.17. The
+other nine are **writing defects of `RCP.md`**, and the place where they are cured is `RCP.md`, one
+line at a time, ⛔ **without adding message types**: the clause of §9 has been used up since 10
+Aug.
 
-⚠ **E una cosa che B9 dice di sé, e va letta**: `01-b9-letture.py` verifica che le due letture di
-ogni voce producano **byte diversi**, e una voce «UGUALI» è **un rosso di B9**. Cioè l'elenco non
-può crescere di voci inventate per far tornare la colonna — e L6, che byte non ne cambia, lo
-**dichiara** invece di fabbricarne uno.
+⚠ **And one thing B9 says about itself, which must be read**: `01-b9-letture.py` checks that the two readings of
+each entry produce **different bytes**, and an «UGUALI» entry is **a B9 red**. That is, the list cannot
+grow with invented entries to make the column add up — and L6, which changes no bytes,
+**declares** so instead of fabricating one.
 
-### ⛔ Tre trappole in un giro solo, e la terza non era nei banchi — 11 agosto 2026, sera
+### ⛔ Three traps in a single round, and the third was not in the benches — 11 Aug 2026, evening
 
-*Dal giro che ha certificato **B8**. ⭐ Le prime due sono difetti che il progetto aveva già scritto,
-e la terza spiega perché le prime due erano rimaste invisibili.*
+*From the round that certified **B8**. ⭐ The first two are defects the project had already written down,
+and the third explains why the first two had stayed invisible.*
 
-- ⛔ **La pagina del ban era illeggibile sull'innesto, e nessuno lo sapeva.** `leggi_pagina()`
-  incartava **sempre** in TLS — `[M]` `SSLError: WRONG_VERSION_NUMBER` da tutt'e due gli indirizzi —
-  perché l'innesto la serve **in chiaro**. ⇒ Il banco scriveva *«la pagina non si è caricata»*, cioè
-  **il silenzio che §4.4-bis vieta al ban**, su un server che la pagina la serve. ⚠ **Ed era la cura
-  del giorno prima ad averlo spostato**: era stata scritta per il **prodotto**, che vuole HTTPS. Due
-  rossi opposti a un giorno di distanza, e in tutt'e due i casi **il server faceva la cosa giusta**.
-  ⭐ Ora il dialetto lo **dichiara il bersaglio**, e se quello dichiarato tace si prova l'altro:
-  *«il dialetto è l'altro»* è un fatto, *«non ho parlato con nessuno»* è un altro fatto.
-- ⛔ **Due redirezioni ATTORNO a `enter.sh` — dentro i due file che quella trappola la descrivono in
-  testa.** La richiesta di `sudo` esce su **stderr**: buttandola via, **nessuno può rispondere**.
-  `[M]` `ps` sul server: `sudo -v -S -p Password` fermo, ⛔ **col guasto ancora addosso al codice**,
-  che è il peggior punto in cui fermarsi. ⚠ Da un terminale interattivo è **invisibile** finché il
-  credito di `sudo` regge: morde solo sui giri lunghi, cioè quelli che costano di più da rifare.
-  ⇒ È la **quinta veste** della regola pagata il 10 agosto, e stavolta dentro i suoi stessi guardiani.
-- ⛔⭐ **E la causa vera stava nello strumento, non nei banchi**: `fondamenta/strumenti/sshpw.py` rispondeva
-  ad al massimo **64** richieste di parola d'ordine, e un giro di certificazione di B8 — **tre**
-  esecuzioni del banco, una sessantina di ingressi nel contenitore ciascuna — ne chiede **oltre
-  200**. Il giro si fermava a metà del passo «guasto», ⚠ **e il sintomo era di nuovo quello che
-  inganna: non un errore, una prova «lenta»**. Chi guardava il registro vedeva l'ultimo blocco
-  stampato e credeva che stesse ancora misurando. ⚠ Il tetto era **già stato alzato una volta**, da 8
-  a 64, per la stessa ragione: **è la terza**. ⭐ Il numero giusto non è *«quante ne servono oggi»*:
-  a proteggere non è il tetto, è **l'ancora** che spedisce la parola d'ordine solo a chi la sta
-  chiedendo **in quell'istante**.
+- ⛔ **The ban page was unreadable on the graft, and nobody knew.** `leggi_pagina()`
+  **always** wrapped in TLS — `[M]` `SSLError: WRONG_VERSION_NUMBER` from both addresses —
+  because the graft serves it **in clear**. ⇒ The bench wrote *«la pagina non si è caricata»*, i.e.
+  **the silence that §4.4-bis forbids to the ban**, on a server that does serve the page. ⚠ **And it was the cure
+  of the day before that had moved it**: it had been written for the **product**, which wants HTTPS. Two
+  opposite reds one day apart, and in both cases **the server was doing the right thing**.
+  ⭐ Now the dialect is **declared by the target**, and if the declared one is silent the other is tried:
+  *«the dialect is the other one»* is one fact, *«I did not talk to anybody»* is another fact.
+- ⛔ **Two redirections AROUND `enter.sh` — inside the two files that describe that very trap at the
+  top.** The `sudo` prompt goes out on **stderr**: throwing it away, **nobody can answer**.
+  `[M]` `ps` on the server: `sudo -v -S -p Password` stuck, ⛔ **with the fault still on the code**,
+  which is the worst point to stop at. ⚠ From an interactive terminal it is **invisible** as long as the
+  `sudo` credit holds: it bites only on long rounds, i.e. the ones that cost most to redo.
+  ⇒ It is the **fifth guise** of the rule paid for on 10 Aug, and this time inside its own guardians.
+- ⛔⭐ **And the real cause was in the tool, not in the benches**: `fondamenta/strumenti/sshpw.py` answered
+  at most **64** password requests, and a B8 certification round — **three**
+  runs of the bench, about sixty entries into the container each — asks for **over
+  200**. The round stopped halfway through the «fault» step, ⚠ **and the symptom was again the one that
+  deceives: not an error, a «slow» test**. Whoever looked at the log saw the last block
+  printed and believed it was still measuring. ⚠ The cap had **already been raised once**, from 8
+  to 64, for the same reason: **this is the third**. ⭐ The right number is not *«as many as are needed today»*:
+  what protects is not the cap, it is **the anchor** that sends the password only to whoever is asking for it
+  **at that instant**.
 
-### I difetti pagati, uno per uno
+### The defects paid for, one by one
 
 | | |
 |---|---|
-| ⛔ **la prima stesura del banco, 9 agosto** | 44 rilievi su due revisioni. La forma che si ripete: **cadeva sempre il controllo che dice *no***, e in tre casi era già stato scritto da chi ci era passato prima. ⚠ *Due delle tre amputazioni erano state bocciate da `R2` poche ore prima, con l'istruzione «curare prima di scrivere una riga di banco»: il documento che le doveva ereditare curate le ha ereditate intatte* |
+| ⛔ **the first draft of the bench, 9 Aug** | 44 findings over two reviews. The recurring form: **the check that says *no* was always the one dropped**, and in three cases it had already been written by whoever had been there before. ⚠ *Two of the three amputations had been rejected by `R2` a few hours earlier, with the instruction «cure before writing a single line of bench»: the document that was to inherit them cured inherited them intact* |
 
-#### ⛔ Tre difetti di banco pagati in un'ora, sul primo banco eseguito — 9 agosto 2026
+#### ⛔ Three bench defects paid for in one hour, on the first bench run — 9 Aug 2026
 
-*E il terzo è il più istruttivo del progetto finora, perché **stava per cancellare la candidata
-migliore** con un `[M]` falso contro un `[R]`.*
+*And the third is the most instructive of the project so far, because **it was about to delete the best
+candidate** with a false `[M]` against an `[R]`.*
 
-| # | Che cosa è successo | Che cosa insegna |
+| # | What happened | What it teaches |
 |---|---|---|
-| **1** | `git clone -b master` di BoringSSL: *«Remote branch master not found»*. Google l'ha rinominato | ⚠ **un ramo scritto a mano è una dipendenza dal nome di qualcun altro**. Tolto: si prende il predefinito |
-| **2** | ⛔ il fallimento è arrivato **con «uscita 0»** a chi guardava, perché avevo messo `\| tail` in coda al comando remoto: lo stato d'uscita era quello di `tail` | `LEZIONI.md` §1.9 — *zero e fallimento con la stessa faccia* — **presa nell'invocazione invece che nello script**. Il banco era innocente; chi lo lanciava no |
-| **3** | ⛔⭐ il banco ha dichiarato **«0 simboli su 4»** stampando **i quattro simboli tre righe sopra** | vedi il riquadro |
+| **1** | `git clone -b master` of BoringSSL: *«Remote branch master not found»*. Google renamed it | ⚠ **a branch written by hand is a dependency on someone else's name**. Removed: the default is taken |
+| **2** | ⛔ the failure reached whoever was watching **with «exit 0»**, because I had put `\| tail` at the end of the remote command: the exit status was that of `tail` | `LEZIONI.md` §1.9 — *zero and failure with the same face* — **caught in the invocation instead of in the script**. The bench was innocent; whoever launched it was not |
+| **3** | ⛔⭐ the bench declared **«0 symbols out of 4»** while printing **the four symbols three lines above** | see the box |
 
-> ##### ⛔ Il terzo: `set -o pipefail` più `grep -q`, cioè un falso rosso garantito
+> ##### ⛔ The third: `set -o pipefail` plus `grep -q`, i.e. a guaranteed false red
 >
-> Il controllo era `nm -g --defined-only "$LIB" \| grep -q " $s$"`. **`grep -q` esce al primo
-> riscontro** e chiude il tubo; `nm` sta ancora scrivendo, prende `SIGPIPE`, muore con **141**; e
-> `set -o pipefail`, in cima allo script, fa valere **quel 141** come esito della pipeline.
+> The check was `nm -g --defined-only "$LIB" \| grep -q " $s$"`. **`grep -q` exits at the first
+> match** and closes the pipe; `nm` is still writing, gets `SIGPIPE`, dies with **141**; and
+> `set -o pipefail`, at the top of the script, makes **that 141** count as the outcome of the pipeline.
 >
-> ⛔ **Il riscontro riuscito veniva letto come fallimento** — e la perversione è che *più il simbolo
-> era facile da trovare, prima `grep` usciva, più sicuro era il falso rosso.*
+> ⛔ **The successful match was read as a failure** — and the perversity is that *the easier the symbol
+> was to find, the sooner `grep` exited, the more certain the false red.*
 >
-> ⚠ **Che cosa avrebbe prodotto se nessuno avesse guardato**: la riga *«il flag di `lsquic` non
-> produce niente»* in `DECISIONI.md` §6.4 — cioè **la candidata con più WebTransport dentro,
-> cancellata da un difetto del banco**, con un `[M]` falso che avrebbe battuto un `[R]` letto nel
-> codice. È `LEZIONI.md` §2.3 (*una prova che boccia il codice giusto costa quanto una che promuove
-> quello sbagliato*) e `CODER.md` §3.11 (*quando codice letto e misura si contraddicono, il sospetto
-> va prima sulla misura*) nello stesso difetto.
+> ⚠ **What it would have produced if nobody had looked**: the line *«the `lsquic` flag
+> produces nothing»* in `DECISIONI.md` §6.4 — i.e. **the candidate with the most WebTransport inside,
+> deleted by a bench defect**, with a false `[M]` that would have beaten an `[R]` read in the
+> code. It is `LEZIONI.md` §2.3 (*a test that rejects the right code costs as much as one that promotes
+> the wrong one*) and `CODER.md` §3.11 (*when code read and measurement contradict each other, suspicion
+> goes first to the measurement*) in the same defect.
 >
-> ⭐ **Che cosa l'ha fatto emergere**: non l'intuito — **tre righe di strumentazione nel banco**, che
-> dichiarano su quale archivio si sta guardando e quanti simboli si vedono *prima* di dire quali
-> mancano. Ora sono permanenti: erano la differenza fra «chi dei due mente» e mezza giornata di
-> supposizioni.
+> ⭐ **What brought it out**: not intuition — **three lines of instrumentation in the bench**, which
+> declare which archive is being looked at and how many symbols are seen *before* saying which ones
+> are missing. Now they are permanent: they were the difference between «which of the two is lying» and half a day of
+> guesswork.
 >
-> ⚠ **E una quarta, che non è un difetto ma un'abitudine da prendere**: la diagnosi a mano era
-> passata attraverso **tre shell annidate** (locale → ssh → `enter.sh` → chroot) e si è rotta sulle
-> virgolette, restituendo `grep: ...: No such file or directory`. La regola della fase 0 vale qui:
-> **le righe di comando si mettono in un file, non si ricordano**.
+> ⚠ **And a fourth, which is not a defect but a habit to acquire**: the manual diagnosis had
+> passed through **three nested shells** (local → ssh → `enter.sh` → chroot) and broke on the
+> quotes, returning `grep: ...: No such file or directory`. The phase 0 rule applies here:
+> **command lines go in a file, they are not remembered**.
 
-#### ⛔ E il terzo difetto della stessa famiglia, che ha stampato un VERDE
+#### ⛔ And the third defect of the same family, which printed a GREEN
 
-*9 agosto, banco di `ngtcp2`.* Il controllo diceva **«nessuna traccia di `SETTINGS_WT_MAX_SESSIONS`:
-la previsione regge»** — ⛔ **da una ricerca mai eseguita**. I due alberi erano passati a `grep` come
-**una stringa sola**, quindi cercava in un percorso con uno spazio dentro che non esiste; e
-`2>/dev/null` nascondeva il «No such file or directory» che l'avrebbe detto subito.
+*9 Aug, `ngtcp2` bench.* The check said **«no trace of `SETTINGS_WT_MAX_SESSIONS`:
+the prediction holds»** — ⛔ **from a search never executed**. The two trees had been passed to `grep` as
+**a single string**, so it searched a path with a space inside that does not exist; and
+`2>/dev/null` hid the «No such file or directory» that would have said so at once.
 
-⛔ **È il peggiore dei tre, perché gli altri due davano rosso e questo ha dato verde** — e un verde
-non lo si va a verificare. A insospettirmi non è stato il banco: è stato **un numero impossibile**
-nella riga accanto — «extended CONNECT in 0 file» su una libreria che implementa RFC 9220.
+⛔ **It is the worst of the three, because the other two gave red and this one gave green** — and a green
+is not something one goes to verify. What made me suspicious was not the bench: it was **an impossible number**
+in the next line — «extended CONNECT in 0 files» on a library that implements RFC 9220.
 
-⭐ **La cura è diventata una regola generale**, ed è entrata in `LEZIONI.md` §1.9 come **quarta
-regola**: *una misura deve dichiarare su che cosa ha guardato — il denominatore, non solo il
-risultato*. Adesso il banco stampa «dentro 447 file di 2 alberi» e **cerca una cosa che deve
-esserci** (`nghttp3`, trovata in 110 file) prima di credere a uno zero.
+⭐ **The cure became a general rule**, and it went into `LEZIONI.md` §1.9 as the **fourth
+rule**: *a measurement must declare what it looked at — the denominator, not just the
+result*. Now the bench prints «inside 447 files of 2 trees» and **searches for something that must
+be there** (`nghttp3`, found in 110 files) before believing a zero.
 
-#### ⚠ `aioquic` sa creare uno stream WebTransport e non sa riconoscerlo quando risponde
+#### ⚠ `aioquic` can create a WebTransport stream and cannot recognise it when it answers
 
-*Trovato costruendo il controllo positivo, 9 agosto 2026, ed è del **cliente di prova** — quindi
-tornerà a mordere a ogni fase in cui quello cresce.*
+*Found while building the positive check, 9 Aug 2026, and it belongs to the **test client** — so
+it will bite again in every phase in which that grows.*
 
-Il primo giro andava in **timeout aspettando il ritorno**, mentre il server dichiarava di averlo
-spedito. `[R]` `H3Connection.create_webtransport_stream` di aioquic 1.2 scrive l'intestazione dello
-stream e **non registra lo stream in ricezione**: i byte tornano — si vedono a livello QUIC — e il
-livello H3 non emette nessun `WebTransportStreamDataReceived`.
+The first round went into **timeout waiting for the return**, while the server declared it had
+sent it. `[R]` `H3Connection.create_webtransport_stream` of aioquic 1.2 writes the stream
+header and **does not register the stream for receiving**: the bytes come back — they can be seen at QUIC level — and the
+H3 level emits no `WebTransportStreamDataReceived`.
 
-⛔ **Che cosa l'ha distinto**: due righe che stampano gli eventi **a tutt'e due i livelli**. Senza,
-*«i byte non arrivano»* e *«i byte arrivano e nessuno li riconosce»* sono lo stesso rosso — e sono
-due difetti in due posti diversi. È la seconda volta in un'ora che la strumentazione batte
-l'intuito.
+⛔ **What told them apart**: two lines that print the events **at both levels**. Without them,
+*«the bytes do not arrive»* and *«the bytes arrive and nobody recognises them»* are the same red — and they are
+two defects in two different places. It is the second time in an hour that instrumentation beats
+intuition.
 
-⚠ **La cura è dichiarata, non nascosta**: il ritorno si legge a livello QUIC, **scrivendo perché**.
-Fingere che l'abbia riconosciuto il livello H3 sarebbe stato comodo e falso.
+⚠ **The cure is declared, not hidden**: the return is read at QUIC level, **writing down why**.
+Pretending the H3 level had recognised it would have been convenient and false.
 
-#### ⛔ Sei difetti di banco per una prova che dura due secondi — 10 agosto 2026
+#### ⛔ Six bench defects for a test that lasts two seconds — 10 Aug 2026
 
-*La prova SNI di B2 è **una connessione**. Ci sono volute **sei esecuzioni** per arrivarci, e
-nessuno dei sei difetti era della libreria che si stava misurando.*
+*B2's SNI test is **one connection**. It took **six runs** to get there, and
+none of the six defects belonged to the library being measured.*
 
-| # | Che cosa è successo | Che cosa insegna |
+| # | What happened | What it teaches |
 |---|---|---|
-| **1** | ⛔ **Due server della sessione del 9 agosto erano ancora vivi**, otto ore dopo, e tenevano le porte 7447 e 7448. `bsslserver` ha scritto *«Could not bind»* ed è morto | ⚠ Il rootfs del server è in RAM e **non si riavvia mai**: *«l'avevo fermato»* non è un'informazione. ⛔ E il rosso non sarebbe stato «il banco non parte», sarebbe stato **«`ngtcp2` rifiuta»** — un rosso attribuito alla libreria. Ora la porta si controlla **prima** |
-| **2** | La sessione remota è rimasta **appesa senza stampare nulla** | `>/dev/null 2>&1` su una chiamata a `enter.sh`: era la prima della sessione, `sudo` chiedeva la parola d'ordine, e **la domanda finiva nel nulla**. ⛔ È il `2>/dev/null` del 9 agosto in una veste peggiore: un errore nascosto fa sbagliare diagnosi, **una domanda nascosta ferma la macchina** |
-| **3** | ⛔ E non si vedeva **dove** si fermasse, perché avevo messo `\| tail` in coda al comando remoto | ⚠ **Identico al difetto n. 2 del 9 agosto**, commesso di nuovo dalla stessa mano il giorno dopo: `tail` non stampa niente finché il flusso non finisce. La cura non è ricordarsene — è **scrivere su un file e leggerlo** |
-| **4** | Il banco ha dichiarato **MORTI due server che stavano ascoltando** | `setsid` **forca**: `$!` era il PID di `setsid`, che esce subito, non quello del server. ⭐ E `lsquic` lo smentiva **tre righe sotto**, con un *«in ascolto»* stampato nel suo stesso registro |
-| **5** | E l'ha rifatto dopo la cura | `kill -0` da utente normale su un processo di **root** risponde *«operazione non permessa»* — cioè **un errore**, non *«non esiste»*. ⛔ **Vuoto e proibito con la stessa faccia**, `LEZIONI.md` §1.9 regola 1, su un controllo di sanità. Cura: `[ -d /proc/<pid> ]` |
-| **6** | Il collegamento è caduto su `cannot find -lngtcp2`, e ⛔ **il banco ha dato la diagnosi opposta** — *«cmake ha saltato gli esempi in silenzio»* | Cmake li aveva configurati benissimo: mancava la libreria **condivisa** (`ENABLE_SHARED_LIB=OFF`), che è il bersaglio che gli esempi chiedono. ⚠ Un messaggio d'errore che indovina la causa **manda a cercare nel posto sbagliato**: ora il banco distingue «ninja è fallito» da «ninja è riuscito e il file non c'è» |
+| **1** | ⛔ **Two servers from the 9 Aug session were still alive**, eight hours later, and were holding ports 7447 and 7448. `bsslserver` wrote *«Could not bind»* and died | ⚠ The server's rootfs is in RAM and **is never rebooted**: *«I had stopped it»* is not information. ⛔ And the red would not have been «the bench does not start», it would have been **«`ngtcp2` refuses»** — a red attributed to the library. Now the port is checked **first** |
+| **2** | The remote session stayed **hung without printing anything** | `>/dev/null 2>&1` on a call to `enter.sh`: it was the first of the session, `sudo` was asking for the password, and **the question went into the void**. ⛔ It is the `2>/dev/null` of 9 Aug in a worse guise: a hidden error leads to a wrong diagnosis, **a hidden question stops the machine** |
+| **3** | ⛔ And you could not see **where** it stopped, because I had put `\| tail` at the end of the remote command | ⚠ **Identical to defect no. 2 of 9 Aug**, committed again by the same hand the next day: `tail` prints nothing until the stream ends. The cure is not remembering it — it is **writing to a file and reading it** |
+| **4** | The bench declared **DEAD two servers that were listening** | `setsid` **forks**: `$!` was the PID of `setsid`, which exits at once, not that of the server. ⭐ And `lsquic` contradicted it **three lines below**, with an *«in ascolto»* printed in its own log |
+| **5** | And it did it again after the cure | `kill -0` as a normal user on a **root** process answers *«operation not permitted»* — i.e. **an error**, not *«does not exist»*. ⛔ **Empty and forbidden with the same face**, `LEZIONI.md` §1.9 rule 1, on a sanity check. Cure: `[ -d /proc/<pid> ]` |
+| **6** | The link failed on `cannot find -lngtcp2`, and ⛔ **the bench gave the opposite diagnosis** — *«cmake silently skipped the examples»* | Cmake had configured them perfectly: what was missing was the **shared** library (`ENABLE_SHARED_LIB=OFF`), which is the target the examples ask for. ⚠ An error message that guesses the cause **sends you looking in the wrong place**: now the bench distinguishes «ninja failed» from «ninja succeeded and the file is not there» |
 
-> ##### ⛔⭐ E il settimo, che è il più grave del progetto finora: **la sonda dichiarava un denominatore falso**
+> ##### ⛔⭐ And the seventh, which is the most serious of the project so far: **the probe declared a false denominator**
 >
-> La quarta regola di `LEZIONI.md` §1.9 era **applicata**: la sonda stampava, a ogni gamba, che cosa
-> avesse messo nel campo `server_name`. Diceva `'192.168.0.2'` — **e sul filo non andava niente.**
+> The fourth rule of `LEZIONI.md` §1.9 was **applied**: the probe printed, for each leg, what it
+> had put in the `server_name` field. It said `'192.168.0.2'` — **and nothing went on the wire.**
 >
-> Due righe di `aioquic`, in due file diversi: `asyncio/client.py:66` riempie il campo con l'ospite
-> **anche se è un indirizzo IP**; `tls.py:1551` poi, scrivendo il ClientHello, **butta gli indirizzi
-> IP**. La sonda leggeva la prima e credeva di descrivere la seconda.
+> Two lines of `aioquic`, in two different files: `asyncio/client.py:66` fills the field with the host
+> **even if it is an IP address**; `tls.py:1551` then, when writing the ClientHello, **throws away IP
+> addresses**. The probe read the first and believed it was describing the second.
 >
-> ⛔ **Conseguenza: la gamba «con SNI» mandava esattamente quel che mandava la gamba «senza SNI».**
-> Le due gambe misuravano **la stessa cosa** mentre la sonda dichiarava che erano opposte — cioè il
-> controllo che doveva distinguere «la libreria pretende l'SNI» da «il banco è rotto» **non
-> distingueva niente**.
+> ⛔ **Consequence: the «with SNI» leg sent exactly what the «without SNI» leg sent.**
+> The two legs measured **the same thing** while the probe declared they were opposite — i.e. the
+> check that was supposed to distinguish «the library requires SNI» from «the bench is broken» **distinguished
+> nothing**.
 >
-> ⚠ **E il verde di `ngtcp2` era già stampato quando me ne sono accorto.** Era vero — la misura
-> rifatta lo conferma — ma era vero **per caso**: nessuna delle due gambe stava provando quel che
-> diceva di provare.
+> ⚠ **And the `ngtcp2` green had already been printed when I noticed.** It was true — the measurement
+> redone confirms it — but it was true **by chance**: neither of the two legs was testing what it
+> claimed to test.
 >
-> ⭐ **Che cosa l'ha fatto emergere**: non un sospetto, la riga stessa. `server_name spedito:
-> '192.168.0.2'` in **tutt'e due** le gambe è un'impossibilità visibile — e l'ha resa visibile
-> proprio la regola che stava sbagliando. Un denominatore falso si scopre solo se lo si stampa.
+> ⭐ **What brought it out**: not a suspicion, the line itself. `server_name spedito:
+> '192.168.0.2'` in **both** legs is a visible impossibility — and it was made visible
+> precisely by the rule that was going wrong. A false denominator is discovered only if it is printed.
 >
-> ⛔ **La cura, in tre pezzi**: la sonda stampa il valore configurato **e** quel che finisce sul
-> filo, con la riga di codice che li separa; la gamba di controllo usa un **nome** (`remotix.prova`)
-> invece dell'indirizzo, perché è l'unico modo di far comparire l'estensione davvero; e ⭐ **il
-> testimone finale non è nostro** — il registro di `lsquic`, che scrive *«SNI is not set»* guardando
-> lo stesso filo dall'altro capo. È entrata in `LEZIONI.md` §1.9 come **corollario della quarta
-> regola**: *un denominatore si legge dove la cosa succede*.
+> ⛔ **The cure, in three pieces**: the probe prints the configured value **and** what ends up on the
+> wire, with the line of code that separates them; the control leg uses a **name** (`remotix.prova`)
+> instead of the address, because it is the only way to make the extension really appear; and ⭐ **the
+> final witness is not ours** — the `lsquic` log, which writes *«SNI is not set»* looking at
+> the same wire from the other end. It went into `LEZIONI.md` §1.9 as a **corollary of the fourth
+> rule**: *a denominator is read where the thing happens*.
 
-#### ⚠ E su `quiche`, quattro intoppi e **una trappola vera** — 10 agosto 2026
+#### ⚠ And on `quiche`, four snags and **one real trap** — 10 Aug 2026
 
-*I primi tre sono cronaca di costruzione, e stanno qui perché costano tempo a chi li rifà. Il
-quarto è un fatto per `DECISIONI.md` §6.4. **La trappola è il quinto**, e sarebbe stata il terzo
-falso rosso attribuito a una libreria in due giorni.*
+*The first three are a construction chronicle, and they are here because they cost time to whoever redoes them. The
+fourth is a fact for `DECISIONI.md` §6.4. **The trap is the fifth**, and it would have been the third
+false red attributed to a library in two days.*
 
-| | Che cosa è successo | |
+| | What happened | |
 |---|---|---|
-| **1** | `cargo`/`rustc` **non erano nel contenitore** | ⚠ Il `[M]` del 9 agosto diceva che *Trixie li offre* (1.85.0) — ed era vero. **«Disponibile come pacchetto» e «installato» sono due cose diverse**, e la seconda ora sta in `provision.sh` |
-| **2** | Gli esempi in C stanno in `quiche/examples`, non in `examples` | Il deposito ha una cassetta per ogni pezzo e una si chiama come il deposito. ⭐ **Il banco l'ha detto** invece di contare zero: era la quarta regola che funzionava |
-| **3** | Il loro esempio non compilava: manca `uthash.h` | Nel `provision.sh`, come le altre. È una dipendenza del **banco** di `quiche`, non del prodotto |
-| **4** | ⛔ `cargo` si è fermato: **`quiche` 0.29.3 pretende `rustc` 1.88**, Trixie ne ha **1.85** | ⭐ **Non è un intoppo, è un dato della decisione.** Il banco adesso sceglie da sé la versione più recente che il compilatore presente sa costruire — la **0.28.0** — e stampa quale e perché. ⚠ E nemmeno quella basta da sola: il loro `workspace` tira dentro `tonic`, `icu`, `image`; si costruisce `-p quiche`, il solo pacchetto che useremmo |
+| **1** | `cargo`/`rustc` **were not in the container** | ⚠ The `[M]` of 9 Aug said that *Trixie offers them* (1.85.0) — and it was true. **«Available as a package» and «installed» are two different things**, and the second is now in `provision.sh` |
+| **2** | The C examples are in `quiche/examples`, not in `examples` | The repository has a crate for each piece and one is named like the repository. ⭐ **The bench said so** instead of counting zero: it was the fourth rule working |
+| **3** | Their example did not compile: `uthash.h` is missing | Into `provision.sh`, like the others. It is a dependency of the `quiche` **bench**, not of the product |
+| **4** | ⛔ `cargo` stopped: **`quiche` 0.29.3 requires `rustc` 1.88**, Trixie has **1.85** | ⭐ **It is not a snag, it is a datum of the decision.** The bench now chooses by itself the most recent version the present compiler can build — **0.28.0** — and prints which and why. ⚠ And even that is not enough alone: their `workspace` pulls in `tonic`, `icu`, `image`; one builds `-p quiche`, the only package we would use |
 
-> ##### ⛔ La trappola: il loro esempio **non controlla** di aver caricato il certificato
+> ##### ⛔ The trap: their example **does not check** that it loaded the certificate
 >
-> `[R]` `quiche/examples/http3-server.c:564-565`: legge `./cert.crt` e `./cert.key` **dalla
-> cartella corrente**, e ⛔ **ignora l'esito** di `quiche_config_load_cert_chain_from_pem_file`.
+> `[R]` `quiche/examples/http3-server.c:564-565`: it reads `./cert.crt` and `./cert.key` **from the
+> current directory**, and ⛔ **ignores the outcome** of `quiche_config_load_cert_chain_from_pem_file`.
 >
-> ⚠ Con i due file assenti **il server parte lo stesso**, ascolta, e ogni stretta di mano
-> fallisce — che alla sonda ha esattamente l'aspetto di *«`quiche` pretende l'SNI»*. Sarebbe stato
-> il **terzo falso rosso attribuito a una libreria in due giorni**, dopo il `0 su 4` di `lsquic` e i
-> due server dichiarati morti.
+> ⚠ With the two files absent **the server starts anyway**, listens, and every handshake
+> fails — which to the probe looks exactly like *«`quiche` requires SNI»*. It would have been
+> the **third false red attributed to a library in two days**, after the `0 su 4` of `lsquic` and the
+> two servers declared dead.
 >
-> ⭐ **La cura sta nel conduttore, non nella speranza**: mette i due file con i nomi che l'esempio
-> pretende e **controlla che ci siano** prima di avviare. ⚠ E il controllo usa `case`, non
-> `grep -q` in un tubo: con `pipefail`, `grep -q` esce al primo riscontro e il **riscontro riuscito**
-> diventa un errore — il difetto del 9 agosto, che qui non si è ripetuto perché era scritto.
+> ⭐ **The cure lies in the driver, not in hope**: it puts the two files with the names the example
+> requires and **checks they are there** before starting. ⚠ And the check uses `case`, not
+> `grep -q` in a pipe: with `pipefail`, `grep -q` exits at the first match and the **successful match**
+> becomes an error — the 9 Aug defect, which did not repeat here because it was written down.
 
-#### ⛔ E la misura col browser: **quattro silenzi**, e un verde su zero misure
+#### ⛔ And the browser measurement: **four silences**, and a green on zero measurements
 
-*Il server minimo ha funzionato al primo colpo col cliente di prova. La misura col **browser** — che
-è il criterio vero di B2 — ha richiesto cinque giri, e nessuno dei difetti era del server.*
+*The minimal server worked first time with the test client. The measurement with the **browser** — which
+is B2's real criterion — took five rounds, and none of the defects belonged to the server.*
 
-| | Che cosa è successo | Che cosa insegna |
+| | What happened | What it teaches |
 |---|---|---|
-| **1** | ⛔ **L'impronta del certificato arrivava tagliata della prima cifra** | Il banco la estraeva con `[A-Za-z0-9+/]{42}=`, e un SHA-256 in base64 è **43** cifre più il riempimento. ⚠ Il sintomo sarebbe stato *«i browser non aprono la sessione con `ngtcp2`»* — cioè **una candidata bocciata per una lettera**. Ora il banco **conta i caratteri** invece di fidarsi dell'espressione |
-| **2** | Firefox non chiedeva nemmeno la pagina, e **non lo diceva** | La cartella del profilo non esisteva: con `--profile` su una cartella assente, Firefox si ferma sul suo gestore dei profili. ⛔ **Silenzio su tutt'e due i lati** — zero richieste al raccoglitore, registro del browser vuoto — per una cartella mancante |
-| **3** | ⛔ E non c'era modo di saperlo, perché il raccoglitore **taceva le richieste** | `log_message` era `pass`, con scritto accanto *«il rumore delle richieste non serve: serve l'esito»*. È falso: la richiesta **è il denominatore dell'esito**. Senza, *«il browser non è partito»* e *«è partito e la prova è fallita»* sono lo stesso silenzio |
-| **4** | E il primo tentativo di denominatore **contava sé stesso** | Cercavo `01-b2-sonda.html` nel registro del raccoglitore, e quel nome compare anche nel suo **banner d'avvio**: ha stampato *«richieste: 1»* quando erano **zero**. ⚠ Terzo falso denominatore in due giorni, e stavolta l'ho scritto io mentre curavo il secondo |
+| **1** | ⛔ **The certificate fingerprint arrived cut by its first digit** | The bench extracted it with `[A-Za-z0-9+/]{42}=`, and a SHA-256 in base64 is **43** digits plus the padding. ⚠ The symptom would have been *«browsers do not open the session with `ngtcp2`»* — i.e. **a candidate rejected for one letter**. Now the bench **counts the characters** instead of trusting the expression |
+| **2** | Firefox did not even request the page, and **did not say so** | The profile directory did not exist: with `--profile` on an absent directory, Firefox stops at its profile manager. ⛔ **Silence on both sides** — zero requests to the collector, empty browser log — for a missing directory |
+| **3** | ⛔ And there was no way of knowing, because the collector **kept the requests quiet** | `log_message` was `pass`, with written next to it *«the noise of the requests is not needed: the outcome is»*. It is false: the request **is the denominator of the outcome**. Without it, *«the browser did not start»* and *«it started and the test failed»* are the same silence |
+| **4** | And the first attempt at a denominator **counted itself** | I was searching for `01-b2-sonda.html` in the collector's log, and that name also appears in its **startup banner**: it printed *«requests: 1»* when they were **zero**. ⚠ Third false denominator in two days, and this time I wrote it myself while curing the second |
 
-> ##### ⛔ E il peggiore, che non è un difetto di diagnosi ma di giudizio: **OK su zero motori**
+> ##### ⛔ And the worst, which is not a defect of diagnosis but of judgement: **OK on zero engines**
 >
-> Un giro ha stampato `OK — i motori provati hanno registrato il loro esito`, e i motori provati
-> erano **zero**: il controllo di presenza guardava `xvfb-run -a`, cioè verificava che esistesse un
-> programma chiamato `-a`, e saltava tutt'e due i browser dicendolo in una riga di avviso che
-> l'esito finale contraddiceva.
+> A round printed `OK — i motori provati hanno registrato il loro esito`, and the engines tested
+> were **zero**: the presence check looked at `xvfb-run -a`, i.e. it verified that a
+> program called `-a` existed, and skipped both browsers saying so in a warning line that
+> the final outcome contradicted.
 >
-> ⛔ *«Tutti quelli provati sono andati bene»* **è vero anche quando i provati sono zero**, ed è la
-> forma di verde più vuota che ci sia — perché non ha nemmeno bisogno che qualcosa vada storto.
-> ⭐ Ora il banco conta i motori provati, li stampa, e **si rifiuta di dare un esito se sono zero**.
+> ⛔ *«All those tested went well»* **is true even when those tested are zero**, and it is the
+> emptiest form of green there is — because it does not even need something to go wrong.
+> ⭐ Now the bench counts the engines tested, prints them, and **refuses to give an outcome if they are zero**.
 >
-> ⚠ *E vale la pena dire come si è visto: non da un sospetto, ma perché il numero dei motori è stato
-> messo accanto al verdetto. È la quarta regola di `LEZIONI.md` §1.9 applicata al **verdetto**
-> invece che alla misura — il denominatore di un'approvazione è quante cose ha approvato.*
+> ⚠ *And it is worth saying how it was seen: not from a suspicion, but because the number of engines had been
+> put next to the verdict. It is the fourth rule of `LEZIONI.md` §1.9 applied to the **verdict**
+> instead of to the measurement — the denominator of an approval is how many things it approved.*
 
-#### ⭐⛔ Le sei proprietà: due difetti veri, e nessuno dei due aveva un sintomo
+#### ⭐⛔ The six properties: two real defects, and neither of them had a symptom
 
-*E il difetto peggiore era in una misura **nostra**, dichiarata verde poche ore prima.*
+*And the worst defect was in a measurement of **ours**, declared green a few hours earlier.*
 
-> ##### ⛔ La misura che non misurava: il server che si dà ragione da solo
+> ##### ⛔ The measurement that did not measure: the server that proves itself right
 >
-> Il 10 agosto il server minimo stampava all'avvio
-> `REMOTIX B2: max_idle_timeout=30000ms max_datagram_frame_size=65536`, e quella riga è finita nei
-> documenti come una misura di `RCP.md` §2.2. ⛔ **Ma è la sua configurazione, non il filo**: dice
-> che cosa il server ha *chiesto* a ngtcp2, non che cosa è *arrivato* al pari.
+> On 10 Aug the minimal server printed at startup
+> `REMOTIX B2: max_idle_timeout=30000ms max_datagram_frame_size=65536`, and that line ended up in the
+> documents as a measurement of `RCP.md` §2.2. ⛔ **But it is its configuration, not the wire**: it says
+> what the server *asked* ngtcp2 for, not what *arrived* at the peer.
 >
-> ⚠ È **esattamente** il corollario di `LEZIONI.md` §1.9 nato quella stessa mattina — *un
-> denominatore si legge dove la cosa succede* — e l'ho violato io, quel pomeriggio, su una misura
-> mia. La regola scritta contro `aioquic` non mi ha protetto dal commetterla contro me stesso.
+> ⚠ It is **exactly** the corollary of `LEZIONI.md` §1.9 born that same morning — *a
+> denominator is read where the thing happens* — and I violated it myself, that afternoon, on a measurement
+> of mine. The rule written against `aioquic` did not protect me from committing it against myself.
 >
-> ⭐ La cura è `01-b2-sonda-trasporto.py`, che legge i parametri **dal pari**. E leggendoli da lì ha
-> trovato subito due cose che nessuno aveva chiesto:
+> ⭐ The cure is `01-b2-sonda-trasporto.py`, which reads the parameters **from the peer**. And reading them from there it
+> immediately found two things nobody had asked for:
 
-| | Che cosa si è visto | Perché nessun banco lo vedeva |
+| | What was seen | Why no bench saw it |
 |---|---|---|
-| ⛔ **il server offriva 0-RTT** | due biglietti di sessione con `max_early_data_size` = `0xffffffff`. `RCP.md` §2.3 lo **vieta**: i dati 0-RTT si possono ripetere, e il secondo messaggio di RCP è `CREDENZIALI` | ⭐ **Il documento l'aveva previsto**: *«il sintomo di 0-RTT acceso non esiste… le librerie QUIC lo offrono per impostazione predefinita»*. La sessione si apre uguale, i byte tornano uguali |
-| ⛔ **concedeva 3 stream unidirezionali su 16** | `initial_max_streams_uni = 3` — quanti ne vuole HTTP/3 per il controllo e QPACK. §2.3 ne impone **almeno 16** «in ogni momento» | Il client di prova non ne apre nessuno. Il sintomo sarebbe comparso **nella fase 3**, come *«il desktop non risponde»* — e nessuno l'avrebbe collegato al credito |
-| ⚠ **e la pagina non passava `allowPooling: false`** | §4.1-bis lo mette fra i vincoli, accanto al certificato di 14 giorni e alla chiave P-256 | Mettendolo a `true` la sessione si aprirebbe **uguale**: è un vincolo senza sintomo, e i due browser avevano già dato verde senza di lui |
+| ⛔ **the server offered 0-RTT** | two session tickets with `max_early_data_size` = `0xffffffff`. `RCP.md` §2.3 **forbids** it: 0-RTT data can be replayed, and the second RCP message is `CREDENZIALI` | ⭐ **The document had foreseen it**: *«the symptom of 0-RTT switched on does not exist… QUIC libraries offer it by default»*. The session opens the same, the bytes come back the same |
+| ⛔ **it granted 3 unidirectional streams out of 16** | `initial_max_streams_uni = 3` — as many as HTTP/3 wants for control and QPACK. §2.3 requires **at least 16** «at all times» | The test client opens none. The symptom would have appeared **in phase 3**, as *«the desktop does not respond»* — and nobody would have connected it to the credit |
+| ⚠ **and the page did not pass `allowPooling: false`** | §4.1-bis lists it among the constraints, next to the 14-day certificate and the P-256 key | Setting it to `true` the session would open **the same**: it is a constraint without a symptom, and the two browsers had already given green without it |
 
-⭐ **E il 0-RTT ha avuto il suo controllo positivo per caso, dal bersaglio stesso**: la sonda ha
-*visto* un 0-RTT acceso prima di vederne uno spento. Il verde che è seguito è un verde dopo una
-cura, non un verde da uno strumento cieco — che è la differenza fra i due che conta.
+⭐ **And the 0-RTT got its positive check by chance, from the target itself**: the probe
+*saw* a 0-RTT switched on before seeing one switched off. The green that followed is a green after a
+cure, not a green from a blind tool — which is the difference between the two that counts.
 
-⚠ **E un colpo a vuoto, mio, che vale come regola**: curando la pagina ho sostituito una riga con
-`str.replace` in Python su un appiglio con l'indentazione sbagliata. ⛔ **Python non protesta**:
-restituisce la stringa intatta. La proprietà era nel codice ma non nell'esito registrato — cioè
-affermata dal sorgente e non vista da nessuno. `01-b2-ngtcp2-wt-innesta.py` questo controllo ce
-l'ha (l'appiglio dev'essere **uno**); le modifiche fatte a mano no, finché non l'ho aggiunto.
+⚠ **And a miss, mine, that counts as a rule**: while curing the page I replaced a line with
+`str.replace` in Python on a foothold with the wrong indentation. ⛔ **Python does not complain**:
+it returns the string intact. The property was in the code but not in the recorded outcome — i.e.
+asserted by the source and seen by nobody. `01-b2-ngtcp2-wt-innesta.py` has this check
+(the foothold must be **one**); the edits made by hand did not, until I added it.
 
-#### ⭐⛔ B3: due difetti veri, e il primo è **esattamente** quello che B3 esiste per trovare
+#### ⭐⛔ B3: two real defects, and the first is **exactly** what B3 exists to find
 
-> ##### ⛔ La stretta di mano funzionava **una volta sola**
+> ##### ⛔ The handshake worked **only once**
 >
-> Al primo giro di B3 la **prima** connessione veniva rifiutata con
-> `GIA_ATTIVA_REMOTA` — cioè il server diceva *«c'è già qualcuno»* a un client che era solo.
+> In the first B3 round the **first** connection was refused with
+> `GIA_ATTIVA_REMOTA` — i.e. the server said *«someone is already here»* to a client that was alone.
 >
-> La causa: `rcp_libera()`, che libera il posto nel registro delle sessioni, **non la chiamava
-> nessuno**. Ogni connessione occupava un posto per sempre; dopo la prima riuscita, il server
-> rispondeva `0x0F` a chiunque, per sempre.
+> The cause: `rcp_libera()`, which frees the slot in the session registry, **was called by
+> nobody**. Every connection occupied a slot forever; after the first success, the server
+> answered `0x0F` to anyone, forever.
 >
-> ⭐ **È la forma di `LEZIONI.md` §2.1 alla lettera**: *in v1 un certificato condiviso uccideva il
-> server alla seconda connessione, e una prova a collegamento singolo resta verde per sempre*. Il
-> banco che B3 impone — **due, mai una** — l'ha preso al primo giro. Una prova a connessione
-> singola sarebbe stata verde e sarebbe rimasta verde fino alla fase 5.
+> ⭐ **It is the form of `LEZIONI.md` §2.1 to the letter**: *in v1 a shared certificate killed the
+> server at the second connection, and a single-connection test stays green forever*. The
+> bench that B3 imposes — **two, never one** — caught it in the first round. A single-connection
+> test would have been green and would have stayed green until phase 5.
 >
-> ⚠ E si noti dove **non** si sarebbe visto: la traccia della prima connessione è *conforme* a
-> `RCP.md`. Il validatore non poteva dire niente — il difetto non è nei byte, è nello stato del
-> server fra una connessione e l'altra.
+> ⚠ And note where it would **not** have been seen: the trace of the first connection *conforms* to
+> `RCP.md`. The validator could say nothing — the defect is not in the bytes, it is in the state of the
+> server between one connection and the next.
 
-> ##### ⭐⛔ Il secondo: il banco accusava il server, e il colpevole era il buffer di Python
+> ##### ⭐⛔ The second: the bench accused the server, and the culprit was Python's buffer
 >
-> Il terzo giro dava **rosso sul server**: la seconda connessione, che arriva mentre la prima è
-> attaccata, veniva **accettata** invece che rifiutata con `0x0F`. Sembrava una violazione
-> dell'invariante **I2** — *«la seconda connessione è rifiutata con messaggio esplicito»*.
+> The third round gave **red on the server**: the second connection, arriving while the first is
+> attached, was **accepted** instead of being refused with `0x0F`. It looked like a violation
+> of invariant **I2** — *«the second connection is refused with an explicit message»*.
 >
-> ⛔ **Non lo era. Il server aveva ragione dal primo istante.**
+> ⛔ **It was not. The server was right from the first instant.**
 >
-> La diagnosi, e sono state due righe di strumentazione — *chi prende il posto, chi lo lascia, e
-> quanti ne restano occupati*:
+> The diagnosis, and it took two lines of instrumentation — *who takes the slot, who leaves it, and
+> how many remain occupied*:
 >
 > ```
 > posto PRESO da prova via [..]:39390 (occupati adesso: 1)
@@ -2719,94 +2719,94 @@ l'ha (l'appiglio dev'essere **uno**); le modifiche fatte a mano no, finché non 
 > posto LASCIATO da prova via [..]:39390 (occupati adesso: 0)   ← prima che la 2ª arrivi
 > ```
 >
-> E i **timestamp** di ngtcp2 hanno chiuso il caso: la prima connessione si chiude a **t≈13,1 s**
-> con `CONNECTION_CLOSE 0x0` — cioè ha retto i suoi dodici secondi — e la seconda arriva **dopo**.
-> Le due non erano mai state contemporanee.
+> And ngtcp2's **timestamps** closed the case: the first connection closes at **t≈13,1 s**
+> with `CONNECTION_CLOSE 0x0` — i.e. it held its twelve seconds — and the second arrives **after**.
+> The two had never been simultaneous.
 >
-> ⭐ **La causa**: il banco aspettava la parola `SESSIONE` nel registro della prima connessione, e
-> **Python bufferizza lo stdout quando è rediretto su un file**. Quella riga compariva solo
-> all'uscita del processo — cioè **nell'istante esatto in cui il client si staccava**. Il controllo
-> stampava `OK la prima è attaccata` leggendo una verità appena scaduta, e la seconda trovava
-> sempre il posto libero.
+> ⭐ **The cause**: the bench waited for the word `SESSIONE` in the log of the first connection, and
+> **Python buffers stdout when it is redirected to a file**. That line appeared only
+> when the process exited — i.e. **at the exact instant the client detached**. The check
+> printed `OK la prima è attaccata` reading a truth that had just expired, and the second always found
+> the slot free.
 >
-> ⛔ **È la forma peggiore di difetto di banco**: non un rosso su un verde, ma **un rosso puntato
-> sull'imputato sbagliato**. Il server rispettava §3.1 alla lettera — manda `CONGEDO(0x0F)` sul
-> canale di controllo *e* chiude la sessione col codice `0x0f` — e il banco lo dichiarava in
-> violazione di un'invariante.
+> ⛔ **It is the worst form of bench defect**: not a red on a green, but **a red pointed
+> at the wrong defendant**. The server respected §3.1 to the letter — it sends `CONGEDO(0x0F)` on the
+> control channel *and* closes the session with code `0x0f` — and the bench declared it in
+> violation of an invariant.
 >
-> ⭐ **La cura, e la regola che ne esce**: il client scrive un **file** quando la sessione è aperta,
-> e il banco aspetta quel file. *Un file scritto e chiuso è un fatto; una riga stampata è una
-> speranza sul momento in cui qualcuno la vedrà.* (E `python3 -u`, che toglie l'altra metà della
-> causa.)
+> ⭐ **The cure, and the rule that comes out of it**: the client writes a **file** when the session is open,
+> and the bench waits for that file. *A file written and closed is a fact; a printed line is a
+> hope about the moment someone will see it.* (And `python3 -u`, which removes the other half of the
+> cause.)
 >
-> ⚠ E vale la pena dire **come non si è visto prima**: il controllo «la prima è attaccata» c'era, ed
-> era proprio quello che doveva impedire questo errore. Era scritto giusto e misurava l'istante
-> sbagliato.
+> ⚠ And it is worth saying **how it was not seen earlier**: the check «the first is attached» was there, and
+> it was precisely the one that was supposed to prevent this error. It was written correctly and measured the wrong
+> instant.
 
-#### ⛔ E due difetti di banco degli ultimi due giri, uno dei quali ha dato un VERDE
+#### ⛔ And two bench defects from the last two rounds, one of which gave a GREEN
 
-| | Che cosa è successo | |
+| | What happened | |
 |---|---|---|
-| **1** | ⛔ Il validatore ha dichiarato **«conforme»** una registrazione mentre il cliente di *quel* giro non si era nemmeno collegato | Stava giudicando il **file rimasto dal giro precedente**. ⚠ Un verde da un file stantio: la registrazione ora si **butta prima**, e se manca il banco dice *«non ho niente da giudicare»* — che non è «conforme» |
-| **2** | Il cliente «non si collegava», e il colpevole ero io | `shift 3` con **meno di tre argomenti non sposta niente e non fallisce**: `$*` restava `accendi`, il server riceveva il nome dell'azione come opzione e moriva con *«port: invalid port number»*. ⛔ **Di nuovo il rosso sull'imputato sbagliato**, e stavolta a una manciata d'ore dalla lezione che l'aveva appena nominato |
+| **1** | ⛔ The validator declared a recording **«conforming»** while the client of *that* round had not even connected | It was judging the **file left over from the previous round**. ⚠ A green from a stale file: the recording is now **thrown away first**, and if it is missing the bench says *«I have nothing to judge»* — which is not «conforming» |
+| **2** | The client «did not connect», and the culprit was me | `shift 3` with **fewer than three arguments shifts nothing and does not fail**: `$*` stayed `accendi`, the server received the name of the action as an option and died with *«port: invalid port number»*. ⛔ **Again the red on the wrong defendant**, and this time a handful of hours after the lesson that had just named it |
 
-> ⚠ **E una scelta di documento, dichiarata invece che nascosta**: `SPECIFICHE.md` §5.3 dice che un
-> client silenzioso da trenta secondi «si considera staccato», e **non dice che cosa succede alla
-> sua connessione**. Qui si è scelto di **lasciarla aperta** e liberare solo il posto: chiuderla
-> sarebbe un congedo, e §8.2 non ha un motivo che voglia dire *«taci da un po'»*. È uno dei punti
-> in cui `RCP.md` ammette due letture, ed è quel che questa sezione esiste per raccogliere.
+> ⚠ **And a document choice, declared rather than hidden**: `SPECIFICHE.md` §5.3 says that a
+> client silent for thirty seconds «is considered detached», and **does not say what happens to its
+> connection**. Here the choice was to **leave it open** and free only the slot: closing it
+> would be a farewell, and §8.2 has no reason meaning *«you've been quiet for a while»*. It is one of the points
+> where `RCP.md` admits two readings, and it is what this section exists to collect.
 >
-> ⚠ **E un filo dell'ospite, non del protocollo**: per valutare l'orologio mentre il client tace, il
-> server accende il **keep-alive di QUIC a 5 s** — è un battito del *trasporto*, che §2.2 non
-> vieta, ma un server vero armerà un proprio timer e non metterà niente sul filo.
+> ⚠ **And a thread of the host, not of the protocol**: to evaluate the clock while the client is silent, the
+> server switches on **QUIC keep-alive at 5 s** — it is a heartbeat of the *transport*, which §2.2 does not
+> forbid, but a real server will arm its own timer and put nothing on the wire.
 
-#### ⛔ E tre trappole di shell in una sera, tutte la stessa
+#### ⛔ And three shell traps in one evening, all the same one
 
-Il terzo giro di B3 si è impiccato **tre volte**, e ogni volta per lo stesso motivo in una veste
-diversa: una **sottoshell in secondo piano**, una **sostituzione di comando**, e un
-**`nohup ... &` con le virgolette annidate** — tutt'e tre attorno a `enter.sh`, e tutt'e tre si
-portano via la richiesta di password di `sudo`. Lo script resta ad aspettare una domanda che
-nessuno vede.
+The third B3 round hung **three times**, and each time for the same reason in a different
+guise: a **background subshell**, a **command substitution**, and a
+**`nohup ... &` with nested quotes** — all three around `enter.sh`, and all three
+carry away `sudo`'s password prompt. The script stays waiting for a question that
+nobody sees.
 
-⭐ **La cura è la regola che il progetto aveva già**: le righe di comando si mettono in un file. Il
-terzo giro adesso è `01-b3-terzo-giro.sh`, e gira **dentro** il contenitore, dove non c'è nessun
-`sudo` e nessuna shell annidata.
+⭐ **The cure is the rule the project already had**: command lines go in a file. The
+third round is now `01-b3-terzo-giro.sh`, and it runs **inside** the container, where there is no
+`sudo` and no nested shell.
 
-⚠ **E un'ultima, a mio carico**: fermando i banchi ho scritto `pkill -f "01-b2-raccogli.py"`, e il
-comando **ha ucciso la shell che lo eseguiva** — il modello compariva nella sua stessa riga di
-comando. È la trappola del 9 agosto, scritta nel README di questo progetto, ripetuta il giorno dopo
-da chi l'aveva appena documentata. Si ferma **per PID**.
+⚠ **And one last one, on me**: stopping the benches I wrote `pkill -f "01-b2-raccogli.py"`, and the
+command **killed the shell running it** — the pattern appeared in its own command
+line. It is the 9 Aug trap, written in this project's README, repeated the next day
+by whoever had just documented it. Stop **by PID**.
 
-⛔ **E la quarta veste, la sera dopo, su `01-b5-lancia.sh`**: `bash enter.sh --root "ninja …" > log
-2>&1`. Nessuna sottoshell, nessun `&`, nessuna virgoletta annidata — **solo una redirezione**, e
-`sudo` si è fermato lo stesso. Sei minuti a guardare un processo senza figli e un registro vuoto.
-⭐ **La regola è più larga di come era stata scritta**: *non è `>/dev/null`, è **qualunque
-redirezione attorno a `enter.sh`***. Dentro le virgolette invece è del comando remoto, e la
-richiesta resta sul filo dove qualcuno la vede.
+⛔ **And the fourth guise, the evening after, on `01-b5-lancia.sh`**: `bash enter.sh --root "ninja …" > log
+2>&1`. No subshell, no `&`, no nested quote — **just a redirection**, and
+`sudo` stopped all the same. Six minutes watching a process without children and an empty log.
+⭐ **The rule is broader than it had been written**: *it is not `>/dev/null`, it is **any
+redirection around `enter.sh`***. Inside the quotes, instead, it belongs to the remote command, and the
+prompt stays on the wire where someone sees it.
 
-#### ⭐⛔ B5: quarantaquattro violazioni, e **un difetto che nessun altro banco poteva vedere**
+#### ⭐⛔ B5: forty-four violations, and **a defect no other bench could see**
 
-*Il banco è passato al primo giro su tutte le violazioni. Il rosso è arrivato da un **controllo**,
-ed era stato **previsto per iscritto dentro il banco prima di misurare**.*
+*The bench passed on the first round on all violations. The red came from a **check**,
+and it had been **foreseen in writing inside the bench before measuring**.*
 
-⛔ **Il contatore per indirizzo di §4.4-bis non ha mai bloccato nessuno.** La chiave era
-`s->provenienza`, cioè `192.168.0.2:44661` — **con la porta**. E §4.4 ammette **un solo tentativo
-per connessione**: la porta cambia ogni volta, quindi quel contatore valeva **sempre 1**.
+⛔ **The per-address counter of §4.4-bis never blocked anybody.** The key was
+`s->provenienza`, i.e. `192.168.0.2:44661` — **with the port**. And §4.4 allows **a single attempt
+per connection**: the port changes every time, so that counter was **always 1**.
 
-⚠ **È la forma peggiore**: il codice c'era, si leggeva bene, sembrava giusto, e **non faceva
-niente**. Nessun registro lo nominava; il sintomo — *«si può provare una parola d'ordine
-all'infinito»* — non arriva mai da solo.
+⚠ **It is the worst form**: the code was there, it read well, it looked right, and **did
+nothing**. No log named it; the symptom — *«a password can be tried
+forever»* — never arrives on its own.
 
-⭐ **E il controllo che l'ha trovato è preciso**: sette tentativi falliti con **sette nomi diversi**
-dallo stesso indirizzo. Con lo stesso nome, il contatore **per nome** copriva il buco e il banco
-sarebbe stato verde. Curato; ora al **sesto** tentativo scatta `TROPPI_TENTATIVI` — ⛔ **anche per
-la parola d'ordine giusta**, che è il secondo controllo, quello che distingue un contatore da un
-blocco.
+⭐ **And the check that found it is precise**: seven failed attempts with **seven different names**
+from the same address. With the same name, the **per-name** counter covered the hole and the bench
+would have been green. Cured; now at the **sixth** attempt `TROPPI_TENTATIVI` fires — ⛔ **even for
+the right password**, which is the second check, the one that distinguishes a counter from a
+lock.
 
-⚠ **E un ordine che è una misura**: il giro completo buono si esegue **prima** del limitatore. Dopo,
-l'indirizzo è bloccato per trenta secondi, e un banco che mettesse la stretta di mano in coda
-leggerebbe quel rifiuto come *«il server è rotto»* — cioè darebbe rosso **proprio quando la regola
-funziona**.
+⚠ **And an ordering that is a measurement**: the good complete round is run **before** the limiter. After it,
+the address is blocked for thirty seconds, and a bench that put the handshake at the end
+would read that refusal as *«the server is broken»* — i.e. it would give red **precisely when the rule
+works**.
 
 #### ⭐⛔ B11: il difetto che serviva **un browser vero** per esistere
 
@@ -3218,485 +3218,161 @@ esiste **solo via VA-API**, e senza GPU sparisce.
 > `isConfigSupported` resta la forma **E1** (*necessario scambiato per sufficiente*): dice che la
 > configurazione è accettata, **non** che il pixel arriva. Quello lo dice il banco di F2.5.
 
-#### ⭐⭐ 4. E su Firefox tre testimoni concordi dicono il falso
+#### ⭐⭐ 4. And on Firefox three agreeing witnesses tell a falsehood
 
-`[M]`: `mediaCapabilities` risponde `supported / smooth / powerEfficient: true` e `canPlayType`
-risponde *«probably»* per **tutte e sette** le stringhe HEVC — mentre `isConfigSupported` dice
-**false** e il pixel **non arriva**.
+`[M]`: `mediaCapabilities` answers `supported / smooth / powerEfficient: true` and `canPlayType`
+answers *«probably»* for **all seven** HEVC strings — while `isConfigSupported` says
+**false** and the pixel **does not arrive**.
 
-⇒ ⛔ **Una pagina che scegliesse il codec da lì non dipingerebbe niente**, e nessuno dei tre testimoni
-l'avrebbe avvertita. È una trappola di prodotto, non di banco.
+⇒ ⛔ **A page that chose the codec from there would paint nothing**, and none of the three witnesses
+would have warned it. It is a product trap, not a bench trap.
 
-#### 5. Le altre misure, in breve
+#### 5. The other measurements, in brief
 
 | | |
 |---|---|
-| ⭐ **il prefisso non conta** | `hev1.` **e** `hvc1.` vanno tutti e due in Annex-B puro `[M]`: Chromium decide dalla presenza della `description`, non dal prefisso. ⇒ la `[?]` che F2.3 aveva lasciato aperta **è chiusa** |
-| ⛔ **il livello non lo controlla il browser** | Chrome accetta `L30` su un flusso di livello 3.0 e **dipinge 8 su 8** `[M]`. L'atteso del banco è stato **smentito**, col guasto verificato in vigore ⇒ **il controllo del livello deve stare dal lato server** |
-| ⛔ **`ffmpeg` non rifiuta un flusso corrotto: lo conceala** | due storpiature su tre escono con stato **0** `[M]` ⇒ un giudizio sulla decodifica **non si prende mai dallo stato d'uscita**: si prende sui pixel |
-| ⛔ **il codec non è un rivelatore di corruzione** | un byte girato nell'intestazione di uno slice ha lasciato il fotogramma **identico bit per bit** `[M]` — numero da avere in mano se qualcuno propone scorciatoie attorno alle garanzie di QUIC |
-| ⚠ **x265 sceglie da sé** | `bframes=4` e `open-gop` di default, che nessuno ha chiesto: costano **un fotogramma di ritardo** contro un tetto di 50 ms. v1 li vietava a mano ⇒ si decide, non si eredita |
-| ⭐ **`cattura.h` e `STUDI.md` §gnome §8.1 si contraddicevano** | sul buffer riciclato. Misurato: danno **parziale** e le sette bande **intere** ⇒ ha ragione `STUDI.md` §gnome, il commento nel codice è vecchio. ⛔ Se avesse avuto ragione `cattura.h`, la fase 2 avrebbe consegnato **mezzo desktop senza un errore** |
-| ⛔ **la `[?]` del piano sull'ordine di `libei` è contraddetta** | `[M]`, riprodotta due volte: un client Wayland tenuto vivo *attraverso* la nascita del puntatore **riceve** `capabilities(0)` → `capabilities(1)`. La spiegazione *«non si iscrive mai»* **non regge**, e la caccia si sposta dal compositore al client. ⭐ E la regola vera è più stretta del piano: `ensure_virtual_device()` sta nei gestori di `NotifyPointerMotion*`, **non** in `Start()` — il puntatore nasce al **primo movimento iniettato**, la tastiera al **primo tasto** `[R]` |
-| ⛔ **E2 preso sul campo** | sul server ci sono **due** monitor virtuali, `Meta-0`/`MetaVirtualMonitor` e `Meta-1`/`Virtual remote monitor`, **entrambi 1920×1080@60**: li distingue **il nome del prodotto**, non la misura. Sceglierne uno «per misura» o «per indice» è la forma E2 |
+| ⭐ **the prefix does not matter** | `hev1.` **and** `hvc1.` both go in pure Annex-B `[M]`: Chromium decides from the presence of the `description`, not from the prefix. ⇒ the `[?]` that F2.3 had left open **is closed** |
+| ⛔ **the browser does not check the level** | Chrome accepts `L30` on a level 3.0 stream and **paints 8 out of 8** `[M]`. The bench's expectation was **refuted**, with the fault verified in force ⇒ **the level check must live on the server side** |
+| ⛔ **`ffmpeg` does not reject a corrupted stream: it conceals it** | two manglings out of three exit with status **0** `[M]` ⇒ a verdict on decoding **is never taken from the exit status**: it is taken on the pixels |
+| ⛔ **the codec is not a corruption detector** | a byte flipped in a slice header left the frame **bit-for-bit identical** `[M]` — a number to have in hand if someone proposes shortcuts around QUIC's guarantees |
+| ⚠ **x265 chooses by itself** | `bframes=4` and `open-gop` by default, which nobody asked for: they cost **one frame of delay** against a cap of 50 ms. v1 forbade them by hand ⇒ it is decided, not inherited |
+| ⭐ **`cattura.h` and `STUDI.md` §gnome §8.1 contradicted each other** | on the recycled buffer. Measured: **partial** damage and the seven bands **whole** ⇒ `STUDI.md` §gnome is right, the comment in the code is old. ⛔ Had `cattura.h` been right, phase 2 would have delivered **half a desktop without an error** |
+| ⛔ **the plan's `[?]` on the order of `libei` is contradicted** | `[M]`, reproduced twice: a Wayland client kept alive *across* the birth of the pointer **receives** `capabilities(0)` → `capabilities(1)`. The explanation *«non si iscrive mai»* **does not hold**, and the hunt moves from the compositor to the client. ⭐ And the real rule is stricter than the plan: `ensure_virtual_device()` lives in the `NotifyPointerMotion*` handlers, **not** in `Start()` — the pointer is born at the **first injected motion**, the keyboard at the **first key** `[R]` |
+| ⛔ **E2 caught in the field** | on the server there are **two** virtual monitors, `Meta-0`/`MetaVirtualMonitor` and `Meta-1`/`Virtual remote monitor`, **both 1920×1080@60**: what tells them apart is **the product name**, not the size. Picking one «by size» or «by index» is the E2 shape |
 
 ---
 
-### Le decisioni prodotte
+### The decisions produced
 
-| | La decisione | Perché |
+| | The decision | Why |
 |---|---|---|
-| ⭐ **D1 — Annex-B puro, e NESSUNA `description`** | il flusso sul filo è `[00 00 00 01] VPS · SPS · PPS · SEI · IDR` | quattro ragioni **lette**: è quel che `libavcodec` già produce (l'hvcC lo fa il muxer MP4, e sarebbe codice nostro da mantenere — `CODER.md` §4.1); in Chromium l'hvcC costa **un'allocazione e una copia per fotogramma** perché converte comunque ad Annex-B `[R]`; l'hvcC ha una trappola documentata sul profile-tier-level che fa **rifiutare** `isConfigSupported()`; tre progetti su tre fanno così. ⚠ **Il prezzo dichiarato**: WebKit fa la conversione inversa ⇒ si paga su Safari |
-| ⭐ **D2 — il primo fotogramma è sempre chiave, coi parameter set dentro** | e ogni chiave si decodifica da sola | oggi `RCP.md` lascia **conforme** un delta in apertura, e il client **non ha modo di accorgersene**: nessun buco, nessun errore dal decodificatore ⇒ la fase 2 mostrerebbe spazzatura **senza che nessuno abbia torto** |
-| ⭐ **D3 — il metro della fase è a due piani** | *piano 1*: `pagina ⟷ riferimento ffmpeg`, perdita ammessa **zero**, soglia **PSNR-Y ≥ 45 dB** — perché la decodifica HEVC è **normativa** · *piano 2*: `Δ = PSNR(pagina, cattura) − PSNR(riferimento, cattura) ≥ −0,5 dB` | il piano 2 è una **differenza**: il QP scelto da F2.3 si cancella, e **la soglia non invecchia** quando la codifica cambia. ⭐ E il riferimento `ffmpeg` è **il secondo lettore** che `PIANO.md` §0.4 dichiara mancante |
-| ⛔ **D4 — il controllo del livello sta dal lato server** | non dal lato pagina | misurato: Chrome accetta un livello sbagliato e dipinge lo stesso |
-| ⛔ **D5 — `codificatore.c` si riscrive, non si «riporta»** | ne sopravvive **la forma**, non le righe | 889 righe (la cifra del piano è giusta), ma **77 nominano H.264/AVC**, **47 nominano RDP/FreeRDP**, e *HEVC*, *265*, *10 bit* compaiono **zero volte**: è un codificatore H.264 AVC420 per RDP, quattro candidati tutti `h264_*`, tutti **NV12 a 8 bit**. Sopravvivono il giro dei tentativi, il divieto di ripiego silenzioso, il conto dei tempi, il divieto di `GLOBAL_HEADER` |
+| ⭐ **D1 — pure Annex-B, and NO `description`** | the stream on the wire is `[00 00 00 01] VPS · SPS · PPS · SEI · IDR` | four **read** reasons: it is what `libavcodec` already produces (the hvcC is made by the MP4 muxer, and would be our code to maintain — `CODER.md` §4.1); in Chromium the hvcC costs **one allocation and one copy per frame** because it converts to Annex-B anyway `[R]`; the hvcC has a documented trap on the profile-tier-level that makes `isConfigSupported()` **reject**; three projects out of three do it this way. ⚠ **The declared price**: WebKit does the reverse conversion ⇒ it is paid on Safari |
+| ⭐ **D2 — the first frame is always a key frame, with the parameter sets inside** | and every key frame decodes by itself | today `RCP.md` leaves an opening delta **conformant**, and the client **has no way to notice**: no gap, no error from the decoder ⇒ phase 2 would show garbage **without anyone being wrong** |
+| ⭐ **D3 — the phase's yardstick has two tiers** | *tier 1*: `pagina ⟷ riferimento ffmpeg`, allowed loss **zero**, threshold **PSNR-Y ≥ 45 dB** — because HEVC decoding is **normative** · *tier 2*: `Δ = PSNR(pagina, cattura) − PSNR(riferimento, cattura) ≥ −0,5 dB` | tier 2 is a **difference**: the QP chosen by F2.3 cancels out, and **the threshold does not age** when the encoding changes. ⭐ And the `ffmpeg` reference is **the second reader** that `PIANO.md` §0.4 declares missing |
+| ⛔ **D4 — the level check lives on the server side** | not on the page side | measured: Chrome accepts a wrong level and paints anyway |
+| ⛔ **D5 — `codificatore.c` is rewritten, not «ported»** | what survives is **the shape**, not the lines | 889 lines (the plan's figure is right), but **77 name H.264/AVC**, **47 name RDP/FreeRDP**, and *HEVC*, *265*, *10 bit* appear **zero times**: it is an H.264 AVC420 encoder for RDP, four candidates all `h264_*`, all **8-bit NV12**. What survives is the round of attempts, the ban on silent fallback, the timing account, the ban on `GLOBAL_HEADER` |
 
-#### ⚠ E una correzione a una misura della fase 1
+#### ⚠ And a correction to a phase 1 measurement
 
-⛔ **La prova dei 10 bit «contando le bande»** — sonda **S2**, `web/` §3.7 punto 2 — **non
-sopravvive alla codifica con perdita**: `[M]` rapporto **4,13** prima, **1,31** dopo QP 20.
-⭐ Sostituita dai **due bit bassi del piano Y sulle zone sfumate**, che convergono con la misura
-indipendente di F2.3 (**0,25** su catena sana contro **1,000** su un flusso troncato a 8 bit).
-⚠ E la firma dei «multipli di 4» **non sopravvive alla conversione RGB→YUV**: i bit veri si misurano
-**alla sorgente**, o non si misurano.
-
----
-
-### ⛔ Che cosa NON ha funzionato
-
-- ⛔ **La sessione del server è caduta**, chiamando `Shell.Screenshot` su zero monitor. Rimessa in
-  due minuti; **7448 e 7501 verificate intatte** prima e dopo (girano nel contenitore). ⭐ Da lì è
-  uscita la scoperta che la sessione nera è **fragile**, che vale più del disturbo.
-- ⛔ **Un banco verde col difetto vivo** (F2.2, sopra). La forma E8, dentro un banco appena scritto.
-- ⛔ **Nove difetti di banco** trovati girando (elenco sopra).
-- ⚠ **In Chrome headless `VideoEncoder.flush()` non ritorna.** Aggirato con una finestra vera,
-  ⛔ **non capito**: resta `[?]`, e chi lo riusa altrove deve saperlo.
-- ⛔⛔ **E un difetto del COORDINAMENTO, che è mio.** La regola *«ogni agente possiede file suoi, e
-  non tocca quelli degli altri»* — scritta per impedire che sei agenti si sovrascrivessero — ha
-  prodotto questo: l'agente degli arbitri ha **fatto e riferito cinque ricertificazioni**, e
-  **nessuna ha scritto una riga nel registro**, perché il registro apparteneva a un altro agente.
-  ⇒ Per ore il conto ha detto *«B9 scaduta»* mentre B9 era stato rigirato **quattro volte**.
-  ⚠ È la stessa forma che questa giornata ha inseguito tutto il tempo — ***«fatto» e «scritto dove
-  qualcuno lo legge» sono due cose diverse*** — applicata al registro invece che al filo.
-  ⭐ **La regola che ne esce**: *chi è autorizzato a certificare deve essere autorizzato a scrivere
-  la riga della certificazione*. Un permesso a metà produce lavoro che non esiste per nessuno.
-- ⚠ **`misura-cattura.c` stampa nella riga di esito la misura CHIESTA, non quella negoziata** — la
-  voce 12-bis fu curata in `misura-wlroots` e **non lì**. Rilievo `[R]` **lasciato aperto e non
-  toccato**: non è di questa fase, ed è lo strumento che certifica gli altri banchi.
+⛔ **The 10-bit test «by counting the bands»** — probe **S2**, `web/` §3.7 point 2 — **does not
+survive lossy encoding**: `[M]` ratio **4,13** before, **1,31** after QP 20.
+⭐ Replaced by **the two low bits of the Y plane on the gradient areas**, which converge with the independent
+measurement of F2.3 (**0,25** on a healthy chain against **1,000** on a stream truncated to 8 bits).
+⚠ And the «multiples of 4» signature **does not survive the RGB→YUV conversion**: the real bits are measured
+**at the source**, or not at all.
 
 ---
 
-### Che cosa resta `[?]`
+### ⛔ What did NOT work
+
+- ⛔ **The server session went down**, by calling `Shell.Screenshot` on zero monitors. Restored in
+  two minutes; **7448 and 7501 verified intact** before and after (they run in the container). ⭐ From that
+  came the discovery that the black session is **fragile**, which is worth more than the disruption.
+- ⛔ **A green bench with the defect alive** (F2.2, above). The E8 shape, inside a freshly written bench.
+- ⛔ **Nine bench defects** found while running (list above).
+- ⚠ **In headless Chrome `VideoEncoder.flush()` does not return.** Worked around with a real window,
+  ⛔ **not understood**: it stays `[?]`, and whoever reuses it elsewhere must know it.
+- ⛔⛔ **And a defect of the COORDINATION, which is mine.** The rule *«ogni agente possiede file suoi, e
+  non tocca quelli degli altri»* — written to prevent six agents from overwriting each other — has
+  produced this: the referees' agent **did and reported five recertifications**, and
+  **none wrote a line in the log**, because the log belonged to another agent.
+  ⇒ For hours the tally said *«B9 scaduta»* while B9 had been rerun **four times**.
+  ⚠ It is the same shape this whole day chased all along — ***«done» and «written where
+  someone reads it» are two different things*** — applied to the log instead of the wire.
+  ⭐ **The rule that comes out of it**: *whoever is authorised to certify must be authorised to write
+  the certification line*. A half permission produces work that exists for nobody.
+- ⚠ **`misura-cattura.c` prints in the outcome line the REQUESTED size, not the negotiated one** — the
+  entry 12-bis was cured in `misura-wlroots` and **not there**. Finding `[R]` **left open and not
+  touched**: it does not belong to this phase, and it is the tool that certifies the other benches.
+
+---
+
+### What remains `[?]`
 
 | | |
 |---|---|
-| ⛔ **i 10 bit veri** | ⇒ **`DECISIONI.md` §2.3-ter, e non è più una `[?]`**: non escono da Mutter per **nessuna** strada — né MemFd né DMA-BUF, e i formati a 10 bit chiesti **per nome** danno `no more input formats` su tutt'e due, col controllo positivo accanto. ⚠ *Questa riga diceva «restano possibili solo per via DMA-BUF, non provata»: era una **copia invecchiata di una decisione**, cioè proprio quel che il riquadro in testa promette di non fare, e teneva aperta una speranza che una misura aveva chiuso (R13.5b)* |
-| ⚠ **il telefono, e la `[?]` adesso è più stretta** | `[M]` **13 agosto 2026**, telefono vero — **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte**, HEVC Main10 **e** AV1 10 bit. ⛔ **Ma `copyTo` dà `format` `RGBA` e 4 byte per pixel**: al capo del dispositivo i dieci bit sono **otto promossi**, come alla sorgente. ⛔ **E resta aperto l'hardware**: senza cavo dati non si legge `Created MediaCodec <nome>`, quindi *«lo decodifica il silicio o la CPU?»* non ha risposta — e il criterio A/B esce `valido: false`, perché misura **spesa fissa**. ⚠ *Questa riga diceva «nessun numero prodotto, e nessuno dedotto», e i numeri stanno in `banchi/02-giudizio-sonda.jsonl` dalle 07:53 del 13 (R13.5a)* |
-| ⛔ **il buffer della scheda sbagliata** | il banco della cattura **non lo vedrebbe**, e il suo verde **non lo assolve**. La macchina ha due GPU |
-| ✅ **che un fotogramma arrivi davvero sul filo** | ⭐ **chiusa il 13 agosto**: l'utente l'ha guardato, e il registro del server lo scrive — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
-| ⛔ **M5 — lo scarto di crominanza fra due decodificatori** | 0,9791 contro un limite di 0,98: è **l'unico rosso rimasto su catena sana** — M0 e M1 erano rossi ai giri delle 09:19-09:20, prima della cura del riscalamento. ⛔ **Non si riproduce sulla mira**, e **la soglia non è stata allargata**: il rosso non è stato curato, **è sparito quando è cambiata la scena** |
-| ⛔ **P15** | `RCP.md` §7.1, il secondo di grazia sulle coordinate: **l'ultimo posto della fase dove un orologio decide**. Sta per esteso in `rapporti/F2-4-filo.md` |
-| ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **non lo copre nessun banco**, ed è il buco più grande della fase. `[M]` 13 agosto: il caso `senza-palco` di `02-figlio-prova.py` prova **la metà negativa** — `prova` (uid 1001, tutti e quattro i campi chiesti al nucleo) **non** vede il desktop di `nicfio`, e il cliente RCP indipendente conta **zero** fotogrammi dove il 12 agosto ne contava uno conforme. ⛔ **Ma la metà positiva no**: su quella macchina `prova` non ha mai fatto login — niente `/run/user/1001`, niente bus, niente palco — quindi **un prodotto che non consegnasse niente a nessuno passerebbe allo stesso modo**. La metà positiva regge oggi **solo per uid 1000**. ⚠ Guardati e scartati: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` si fermano tutti **all'autenticazione**, non al vedere |
-| ⚠ **`02-figlio-accendi.sh` conta i figli di tutti** | `pgrep -f -- "--figlio-interno" \| wc -l` non guarda **di chi** sono: allo spegnimento ha accusato due orfani che erano figli vivi di padri vivi (la 7693 di un altro banco e ⛔ **la 7561 dell'utente**). È la stessa forma che il file **vieta trenta righe più su** per l'azione `stato`. ⚠ Non cura, non ferma nessuno (`spegni` esce 0 lo stesso) — si accende solo quando due banchi girano in parallelo, e il 12 agosto infatti taceva. ⇒ ✅ **Curato in fase 3** (13 agosto 2026) — ⛔ **`[R]`, non eseguito**: la cura è letta nel codice e **non è stata girata**, quindi non porta la marca `[M]` |
-| ⛔ **la risoluzione del desktop, `1920×1080`** | ⛔ **ereditata dalla scena di un banco, senza decisione né misura** — `grep 1920 DECISIONI.md` non trova nessuna decisione che la fissi, e in v1 era **2560×1080**. ⚠ È la tela che l'utente vedrà: `LEZIONI.md` §2.3-quater la vuole scritta come **provvisoria**, ed è quel che questa riga fa. ⇒ ✅ **CHIUSA il 13 agosto 2026, e decisa dall'utente**: **1920×1080 resta**, con il prezzo misurato accanto (tela dipinta all'**86 %**, **912 px di nero**) e la ragione di metodo scritta — `DECISIONI.md` §5.0-quinquies. ⛔ E le bande nere **non sono la risoluzione**: sono la forma della finestra |
-| ⚠ **`VideoEncoder.flush()` in headless** | aggirato, non capito |
-| ⚠ **le soglie M1b e M3 del metro** | **calcolate**, non tarate sul campo |
-| ⚠ **Safari, e Chrome per Android/DeX** | manca il dispositivo |
-| ⚠ **Firefox con `media.hevc.enabled`** | **non provato di proposito**: si misura il browser che l'utente ha, non quello che potrebbe configurare |
+| ⛔ **the real 10 bits** | ⇒ **`DECISIONI.md` §2.3-ter, and it is no longer a `[?]`**: they do not come out of Mutter by **any** route — neither MemFd nor DMA-BUF, and the 10-bit formats requested **by name** give `no more input formats` on both, with the positive control alongside. ⚠ *This row said «restano possibili solo per via DMA-BUF, non provata»: it was an **aged copy of a decision**, i.e. exactly what the box at the top promises not to do, and it kept open a hope that a measurement had closed (R13.5b)* |
+| ⚠ **the phone, and the `[?]` is now narrower** | `[M]` **13 Aug 2026**, real phone — **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequences out of 4 painted**, HEVC Main10 **and** AV1 10 bit. ⛔ **But `copyTo` gives `format` `RGBA` and 4 bytes per pixel**: at the device end the ten bits are **eight promoted**, as at the source. ⛔ **And the hardware remains open**: without a data cable `Created MediaCodec <nome>` cannot be read, so *«lo decodifica il silicio o la CPU?»* has no answer — and the A/B criterion comes out `valido: false`, because it measures **fixed cost**. ⚠ *This row said «nessun numero prodotto, e nessuno dedotto», and the numbers have been in `banchi/02-giudizio-sonda.jsonl` since 07:53 on the 13th (R13.5a)* |
+| ⛔ **the buffer of the wrong card** | the capture bench **would not see it**, and its green **does not absolve it**. The machine has two GPUs |
+| ✅ **that a frame really arrives on the wire** | ⭐ **closed on 13 Aug**: the user looked at it, and the server log writes it — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
+| ⛔ **M5 — the chroma gap between two decoders** | 0,9791 against a limit of 0,98: it is **the only red left on a healthy chain** — M0 and M1 were red in the rounds of 09:19-09:20, before the rescaling cure. ⛔ **It does not reproduce on the target pattern**, and **the threshold was not widened**: the red was not cured, **it disappeared when the scene changed** |
+| ⛔ **P15** | `RCP.md` §7.1, the grace second on the coordinates: **the last place in the phase where a clock decides**. It is set out in full in `rapporti/F2-4-filo.md` |
+| ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **no bench covers it**, and it is the phase's biggest hole. `[M]` 13 Aug: the `senza-palco` case of `02-figlio-prova.py` tests **the negative half** — `prova` (uid 1001, all four fields asked of the kernel) does **not** see the desktop of `nicfio`, and the independent RCP client counts **zero** frames where on 12 Aug it counted one conformant. ⛔ **But not the positive half**: on that machine `prova` has never logged in — no `/run/user/1001`, no bus, no stage — so **a product that delivered nothing to anyone would pass the same way**. The positive half holds today **only for uid 1000**. ⚠ Looked at and discarded: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` all stop **at authentication**, not at seeing |
+| ⚠ **`02-figlio-accendi.sh` counts everyone's children** | `pgrep -f -- "--figlio-interno" \| wc -l` does not look at **whose** they are: at shutdown it accused two orphans that were live children of live parents (the 7693 of another bench and ⛔ **the user's 7561**). It is the same shape the file **forbids thirty lines higher up** for the `stato` action. ⚠ It does not cure, it stops no one (`spegni` exits 0 anyway) — it only fires when two benches run in parallel, and indeed on 12 Aug it was silent. ⇒ ✅ **Cured in phase 3** (13 Aug 2026) — ⛔ **`[R]`, not executed**: the cure is read in the code and **has not been run**, so it does not carry the `[M]` mark |
+| ⛔ **the desktop resolution, `1920×1080`** | ⛔ **inherited from a bench's scene, with neither decision nor measurement** — `grep 1920 DECISIONI.md` finds no decision fixing it, and in v1 it was **2560×1080**. ⚠ It is the canvas the user will see: `LEZIONI.md` §2.3-quater wants it written as **provisional**, and that is what this row does. ⇒ ✅ **CLOSED on 13 Aug 2026, and decided by the user**: **1920×1080 stays**, with the measured price alongside (canvas painted at **86 %**, **912 px of black**) and the method reason written — `DECISIONI.md` §5.0-quinquies. ⛔ And the black bands **are not the resolution**: they are the shape of the window |
+| ⚠ **`VideoEncoder.flush()` in headless** | worked around, not understood |
+| ⚠ **the yardstick's M1b and M3 thresholds** | **computed**, not calibrated in the field |
+| ⚠ **Safari, and Chrome for Android/DeX** | the device is missing |
+| ⚠ **Firefox with `media.hevc.enabled`** | **deliberately not tested**: we measure the browser the user has, not the one they could configure |
 
 ---
 
-### Che cosa aspetta l'utente
+### What awaits the user
 
-#### ✅ 1. ~~Una decisione: HEVC esclude Firefox~~ — **decisa e chiusa il 12 agosto**
+#### ✅ 1. ~~A decision: HEVC excludes Firefox~~ — **decided and closed on 12 Aug**
 
-Il progetto promette *«nessun client da installare — basta un browser moderno»*, e con HEVC quella
-frase valeva per **Chrome con una GPU che porta VA-API**: Firefox non dipinge, e Chrome senza GPU
-nemmeno. ⛔ La difesa dei tre motori indipendenti — quella che `DECISIONI.md` §1.6 comprava al posto
-dell'arbitro perduto — **su HEVC non c'era**.
+The project promises *«nessun client da installare — basta un browser moderno»*, and with HEVC that
+sentence held for **Chrome with a GPU that carries VA-API**: Firefox does not paint, and Chrome without a GPU
+does not either. ⛔ The defence of the three independent engines — the one that `DECISIONI.md` §1.6 bought in place
+of the lost referee — **was not there on HEVC**.
 
-✅ **L'utente ha deciso: `DECISIONI.md` §1.13** — HEVC **con un ripiego negoziato**, non un requisito
-dichiarato, perché `CODER.md` §4.2 impone che ogni dipendenza mancante abbia un ripiego e che il
-ripiego **si dichiari**.
+✅ **The user decided: `DECISIONI.md` §1.13** — HEVC **with a negotiated fallback**, not a declared
+requirement, because `CODER.md` §4.2 requires that every missing dependency has a fallback and that the
+fallback **declares itself**.
 
-🔸 **E il secondo codec è AV1**, chiuso lo stesso giorno **su una misura** e non su una preferenza:
-`[M]` **quattro caselle su quattro** — i due motori, con GPU e senza — a **8 e a 10 bit**, e ⛔ **con
-`prefer-software`**, cioè senza dipendere dalla GPU. ⭐ AV1 riempie **esattamente** le tre caselle che
-HEVC lascia vuote, e ⭐⭐ i 10 bit su Chrome diventano per la prima volta **osservabili**
-(`VideoFrame.format` = `I420P10`, massimo del luma **870** — impossibile a 8 bit).
+🔸 **And the second codec is AV1**, closed the same day **on a measurement** and not on a preference:
+`[M]` **four boxes out of four** — the two engines, with GPU and without — at **8 and 10 bits**, and ⛔ **with
+`prefer-software`**, i.e. without depending on the GPU. ⭐ AV1 fills **exactly** the three boxes that
+HEVC leaves empty, and ⭐⭐ the 10 bits on Chrome become **observable** for the first time
+(`VideoFrame.format` = `I420P10`, luma maximum **870** — impossible at 8 bits).
 
-⭐ **E non costa una riga di protocollo**: `av1` era già fra i valori ammessi di `RCP.md` §4.3 e aveva
-già `codec = 2` in §6.2 ⇒ **§9 non viene sfiorata**. ⛔ *VP9, che pure era misurato funzionare,
-sarebbe costato **RCP/2**: in §4.3 compare come l'esempio di valore che RCP/1 deve **ignorare**.*
+⭐ **And it does not cost a line of protocol**: `av1` was already among the allowed values of `RCP.md` §4.3 and already had
+`codec = 2` in §6.2 ⇒ **§9 is not touched**. ⛔ *VP9, which was also measured to work,
+would have cost **RCP/2**: in §4.3 it appears as the example of a value that RCP/1 must **ignore**.*
 
-⛔ **L'ordine di preferenza non si rovescia**: resta `hevc,av1`. HEVC è ancora il primo, perché è
-quello che il telefono decodifica in hardware — ed è la domanda **S2**, ancora aperta.
+⛔ **The order of preference is not reversed**: it stays `hevc,av1`. HEVC is still first, because it is
+the one the phone decodes in hardware — and that is question **S2**, still open.
 
-#### ⚖️ 2. La sonda del telefono, che non si fa da soli
+#### ⚖️ 2. The phone probe, which cannot be done alone
 
-*Un telefono **Android** con **Chrome ≥ 108** — non il portatile — sulla stessa WiFi, con un cavo
-USB e il debug acceso per `chrome://inspect`. Si apre l'indirizzo stampato da
-`bash banchi/02-giudizio-telefono.sh serve`, si accetta l'avviso del certificato **una volta**, si
-premono i bottoni 1 e 2 tenendo schermo acceso e scheda in primo piano: **~10 minuti**, più 10 di
-fila per il decadimento quando le sequenze di F2.3 ci sono.*
+*An **Android** phone with **Chrome ≥ 108** — not the laptop — on the same WiFi, with a USB
+cable and debugging on for `chrome://inspect`. Open the address printed by
+`bash banchi/02-giudizio-telefono.sh serve`, accept the certificate warning **once**,
+press buttons 1 and 2 keeping the screen on and the tab in the foreground: **~10 minutes**, plus 10 in a
+row for the decay when the F2.3 sequences are there.*
 
-⛔ **Non gli si chiede se «si vede bene»: la sonda produce numeri.**
+⛔ **We do not ask them whether «si vede bene»: the probe produces numbers.**
 
-#### ⛔ 3. E un debito della fase 1 che questa fase NON può scavalcare
+#### ⛔ 3. And a phase 1 debt that this phase can NOT skip over
 
-⚠ *Il `README.md` elenca fra «quel che aspetta l'utente» i due ripieghi — il filo unico e il tetto
-delle sessioni. **Quella riga è scaduta**: tutt'e due sono state decise dall'utente la sera dell'11
-agosto, e stanno in `DECISIONI.md` §1.10 e §1.11. Corretto il 12 agosto 2026.*
+⚠ *The `README.md` lists among «quel che aspetta l'utente» the two fallbacks — the single wire and the session
+cap. **That row has expired**: both were decided by the user on the evening of 11
+Aug, and they are in `DECISIONI.md` §1.10 and §1.11. Corrected on 12 Aug 2026.*
 
-⛔ **E `DECISIONI.md` §1.10 impone una cosa a questa fase**: la verifica PAM esce dal filo unico
-**prima che la fase 2 si apra**, con un **processo aiutante** e non con un filo — perché PAM non è
-affidabilmente rientrante.
+⛔ **And `DECISIONI.md` §1.10 imposes one thing on this phase**: the PAM check leaves the single wire
+**before phase 2 opens**, with a **helper process** and not with a thread — because PAM is not
+reliably reentrant.
 
-La ragione è scritta lì, ed è del video: *«finché non c'è video il sintomo è «l'ultimo dei dieci
+The reason is written there, and it is about video: *«finché non c'è video il sintomo è «l'ultimo dei dieci
 aspetta dieci secondi», sgradevole e circoscritto; dalla fase 2 in poi lo schermo di **tutti** quelli
 collegati si pianta per uno o due secondi ogni volta che **qualcun altro** entra — e chi lo vedrà lo
-attribuirà al **video**»*. `[M]` da B8: **da 1,0 a 2,2 secondi** per tentativo, e il ritardo lo mette
-`pam_faildelay`, non il nostro codice.
+attribuirà al **video**»*. `[M]` from B8: **from 1,0 to 2,2 seconds** per attempt, and the delay is put there by
+`pam_faildelay`, not by our code.
 
-⇒ ⭐ **Il banco di questa fase poteva nascere prima della cura — il prodotto no.** Questo giro ha
-scritto solo banchi, quindi il debito non è stato violato; ⛔ **ma la prima riga di prodotto della
-fase 2 viene dopo quella cura**, o si misura il video con dentro un difetto che si attribuirà al
+⇒ ⭐ **This phase's bench could be born before the cure — the product could not.** This round
+wrote only benches, so the debt was not violated; ⛔ **but the first product line of
+phase 2 comes after that cure**, or the video is measured with a defect inside that will be blamed on the
 video.
 
-#### ⏳ 4. Il tetto delle sessioni resta 16, e il prezzo è dichiarato
+#### ⏳ 4. The session cap stays 16, and the price is declared
 
-`DECISIONI.md` §1.11: non si cambia fino alla fase 3, perché *«il limite vero non è un conteggio: è
-un budget di pixel al secondo, e lo pone il codificatore»*. ⚠ Per due fasi **il codice dice 16 e la
-specifica dice 10**.
-
----
-
----
-
-### ⭐ LA SERA DEL 12 AGOSTO — il cancello si apre, e l'arbitro si corregge sei volte
-
-*Su richiesta dell'utente — «fai una lista dei bug, assegna un agente a ciascuno, e arriva al
-completamento della fase 2» — sono stati aperti **dodici difetti** (`rapporti/DIFETTI-12-agosto.md`)
-e affidati a un agente ciascuno, in ondate che non si pestassero i piedi.*
-
-#### ⭐⭐ Il cancello della fase 2 è aperto: `DECISIONI.md` §1.10 è applicata e misurata
-
-La verifica PAM esce dal filo unico, **con un processo aiutante** — tre piani: il server scrive su un
-`socketpair` SEQPACKET e torna al `poll`; uno **smistatore** che non chiama mai PAM legge e forca; un
-**nipote** fa **una sola** transazione PAM e muore. ⇒ La rientranza di PAM non è *«gestita»*: **non è
-in gioco**.
-
-| | `[M]` 12 agosto 2026, cinque giri per lato |
-|---|---|
-| ⭐⭐ **chi NON si autentica** | picco **2259 → 3 ms** |
-| ⭐ **la stretta di mano di chi arriva in quel momento** | **2262 → 10 ms** |
-| ⚠ **chi si autentica** | 2260 → 1844 ms, cioè **invariato** — e deve restarlo: quel tempo lo mette PAM |
-
-⛔ **E il fallimento è un no, non un forse** (I3): il `true` nasce in **un punto solo del programma**,
-e sette strade portano a un no. Provato ammazzando l'aiutante con `SIGKILL` e presentando la parola
-**giusta** → `RESPINTO` in 1001 ms, col controllo positivo accanto.
-
-⭐ **E il filo NON è cambiato**: B3 `0→2→0` e B5 `0→1→0` danno gli **stessi identici numeri** di
-prima della cura. L'ipotesi di chi l'ha scritta è diventata una misura.
-
-#### ⛔ Il prodotto sul server non era il prodotto che avevamo scritto
-
-`[M]`: **10 file su 24 diversi**, e i due che mancavano **del tutto** erano i due nuovi
-(`aiutante.c`, `aiutante.h`); il binario girava dall'11 agosto con `exe` marcato `(deleted)`.
-
-⭐ **E la cura non è la copia: è l'attrezzo che mancava** — `banchi/attrezzi-allinea-prodotto.sh`,
-che **enumera l'albero intero** invece di un elenco scritto a mano. È esattamente la lezione del
-difetto: *i due file che mancavano sono quelli che un elenco a mano non avrebbe mai avuto*. E non si
-ferma ai sorgenti: ⛔ **sorgenti allineati e binario nuovo non bastano finché il processo vivo è
-l'altro**.
-
-#### ⛔⛔ E l'arbitro si è corretto sei volte in una sera
-
-Le sette righe di F2.4 sono entrate in `RCP.md`; ⛔ **due erano sbagliate**, e le due cure che le
-sistemavano ne hanno generate altre quattro. La successione **P8 → P11 → P13 → P14** e la lezione che
-ne esce stanno in **`LEZIONI.md` §1.13**, ed è la cosa più riusabile prodotta oggi:
-
-> ⭐ *Una tolleranza si scrive sulla **grandezza vera del fenomeno**, o si sposta di un passo a ogni
-> rilettura.* La risposta esatta stava dentro i 28 byte dell'intestazione da tre giorni — il campo
-> `numero` — e le prime tre stesure hanno usato una **grandezza sostitutiva**: una misura, un tempo,
-> un evento.
-
-⚠ **E chi le ha trovate, tutte e quattro: non chi rileggeva il documento, ma chi doveva far
-rispettare la regola** scrivendo l'arbitro che la giudica.
-
-#### Il conto dei banchi, la sera del 12 agosto
-
-```
-banchi nel catalogo: 15   (P5R e' entrato: il guasto che toglie il RITIRO, non il valore)
-13  certificati e valgono oggi
- 0  non riverificabili        ⭐ la riga di P5R adesso porta le impronte
-```
-
-⚠ **E il numero è sceso e risalito sei volte in una sera**, sempre per la stessa ragione dichiarata:
-curare il prodotto o l'arbitro **fa scadere le certificazioni che li guardavano**. ⛔ *«Scaduta» non
-è «fallita»*, e non è nemmeno «pulita».
-
-#### ⭐ Gli attrezzi nuovi, e servono al prossimo giro
-
-- **`attrezzi-allinea-prodotto.sh`** — quel che il `README` dichiarava mancante da ieri.
-- **`02-sessione-guardia.sh`** — si mette **davanti** a una misura e fa le **due domande separate**:
-  *«è viva?»* e *«ha un monitor?»*. Con tre bande d'uscita, così un **rifiuto** non si confonde con
-  un fallimento del comando.
-- ⭐⭐ **il controllo positivo dell'àncora** (in `01-b8-cronometro.py`, riusato in
-  `01-b10-secondo-utente.py`) — allunga la riga di registro nei modi già successi e pretende che
-  l'esito **non cambi**. ⛔ Nato perché **un'àncora fragile passa tutti i guasti**: rompersi *fa*
-  diventare rossi, quindi nessuno dei quindici guasti la smascherava.
-- **`01-b12-lancia.sh`** prende `B12_BERSAGLIO=innesto|prodotto`, e ⛔ **la scena finisce in ogni
-  riga del registro**: chi non la dichiara ottiene *«non dichiarata»*, mai «innesto».
-
----
-
-### ⭐⭐⭐ L'UTENTE HA VISTO IL PROPRIO DESKTOP — 13 agosto 2026, mattina
-
-*Non è il giudizio di fase: è il fatto che la catena consegna. Si scrive qui perché è la prima volta
-che un essere umano guarda l'uscita di questo prodotto, e perché fin qui tutto quel che ne sapevamo
-erano decibel.*
-
-> **«È lo sfondo GNOME, è OK.»** — l'utente, davanti a `https://192.168.0.2:7561/`, entrato come sé
-> stesso.
-
-⭐ Cattura → codifica → filo → `VideoDecoder` → pixel sullo schermo di una persona, con in mezzo un
-protocollo scritto da zero. Il registro del server, dalla stessa sessione:
-
-```
-il client dichiara video.misura_massima=3840x2160   ← MISURATA decodificando, non dedotta dallo schermo
-sessione aperta utente=nicfio  tela=1920x1080  vista=2559x922
-fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN — spediti 1, abbandonati 0
-```
-
-⚠ **E si scrive che cosa questo NON è**: non è il giudizio della fase, e la fase resta aperta.
-
-⚠ *Questo riquadro, chiuso alle **08:36**, proseguiva così: «L'immagine è **piccola** — la pagina non
-riscala alla vista, che §6.1 le impone — e il metro a pixel sulla catena vera non è stato girato».
-⛔ **Tutt'e due le metà sono morte nell'ora e venti che è seguita**, e il documento è rimasto indietro
-di quattro commit (R13.2):*
-
-- ⭐ *il riscalamento è **in servizio** dalle **08:56** (`dc2f6a9`): due grandezze si chiamavano
-  tutt'e due «larghezza della tela». E il rimando era **rotto** — `RCP.md` §6.1 è «Sui canali
-  affidabili» e non nomina né vista né riscalamento; la sezione giusta è **`SPECIFICHE.md` §6.1**,
-  ed è la terza volta in due fasi che un `§x.y` manda altrove (R13.8);*
-- ⭐ *il metro a pixel **ha girato sulla catena vera** alle **09:50** — e quel che dice, per intero e
-  senza arrotondarlo, sta nella sezione qui sotto.*
-
-#### ⛔ E i tre difetti che l'utente ha trovato in una mattina, che 518 file di banco non avevano preso
-
-| | Che cosa ha visto | Perché il banco non lo vedeva |
-|---|---|---|
-| **1** | ⛔ entrando come `prova` vedeva il desktop di **`nicfio`** | il deposito dei fotogrammi era **di processo**, non di sessione — e nessun banco entrava con **due** utenti diversi sullo stesso server |
-| **2** | ⛔ **pagina vuota**, nessuna spiegazione | la pagina dichiarava `video.misura_massima` dalla **misura dello schermo** invece che da quel che sa decodificare ⇒ tela concessa più piccola della cattura, e il prodotto **si rifiutava di spedire**. ⚠ Le pagine di prova dichiaravano un tetto comodo: **solo la pagina del prodotto, su uno schermo vero, sbagliava** |
-| **3** | ⚠ l'immagine è **piccola** | i banchi guardano **se** i pixel arrivano, non **quanto grandi** sono dipinti |
-
-⇒ ⭐ **È l'invariante I8 in azione** — *il metro è quel che l'utente vede, non il numero che esce dal
-banco*. Quella notte i banchi dicevano **48,27 dB**; l'utente ha detto *«non vedo nessun desktop»*, e
-aveva ragione lui.
+`DECISIONI.md` §1.11: it does not change until phase 3, because *«il limite vero non è un conteggio: è
+un budget di pixel al secondo, e lo pone il codificatore»*. ⚠ For two phases **the code says 16 and the
+specification says 10**.
 
 ---
 
 ---
-
-### ⭐ Il metro ha girato sulla catena vera — e che cosa dice, per intero
-
-`[M]` **13 agosto 2026**. I quattro ingressi messi insieme per la prima volta: la **cattura** (il
-buffer BGRx che il prodotto ha scritto con `--rilievo`), il **flusso** che il prodotto ha spedito, il
-**riferimento** (lo stesso flusso decodificato da `ffmpeg` — ⭐ il *secondo lettore* che `PIANO.md`
-§0.4 dichiarava mancante) e la **pagina** (`getImageData` dalla tela, in un browser vero collegato al
-server vero).
-
-| la scena | l'esito | PSNR-Y | strumenti vivi |
-|---|---|---|---|
-| ⭐ **la mira di F2.6 a sfondo del desktop** | **PROMOSSO** | **62,09 dB** (soglia 45) | **12 su 12**, zero ciechi |
-| ⛔ **il desktop naturale dell'utente** | **BOCCIATO su M5** | 58,62 dB | 8 su 12 — ciechi *precedente · otto-bit · piani · ribaltato* |
-
-⛔ **E le due righe non si scelgono: si leggono insieme.** Il verde è del metro **con la mira**; sul
-desktop nudo il metro vede meno — senza i marcatori, M4, M7 e M-V si spengono per costruzione — e
-trova un rosso. ⚠ Il rosso di M5 **non è stato curato: è sparito quando è cambiata la scena**, e
-resta `[?]`.
-
-#### ⛔ E uno dei dodici era verde per costruzione
-
-Trovato da una **revisione avversariale** il 13 agosto, mandata a *refutare* la frase invece che a
-confermarla. M8 leggeva un contatore `reset` che la pagina del prodotto chiama **`azzerati`**: valeva
-sempre zero, e con lui due costanti scritte a mano. ⇒ **erano 11 vivi più un verde vuoto.**
-
-⭐ Curato, **e la cura di una parola era sbagliata**: `azzerati > 0` è *il prodotto che si comporta
-bene*, quindi leggerlo lì avrebbe prodotto un **falso rosso**. La grandezza vera è l'invariante
-**`consegnati > completi`**. La storia intera, col controllo del falso rosso e con quel che la
-certificazione **non** dice, sta in `rapporti/F2-6-giudizio.md` — qui non
-si ricopia.
-
-#### ⛔ Il punto cieco che non è del metro: **a monte della cattura**
-
-Il fondo di verità del metro è **il buffer che il prodotto stesso ha catturato**. ⇒ Quale monitor,
-quale sessione, **quale utente** sono fuori dalla sua portata: se il prodotto catturasse il desktop
-di un altro utente, cattura, flusso, riferimento e pagina sarebbero **tutti d'accordo**, e il metro
-direbbe **62 dB e promosso**.
-
-⛔ **Ed è il difetto numero 1 che l'utente ha trovato in una mattina.** Lo copre un altro banco,
-`02-figlio-prova.py` — rigirato il 13 agosto sul prodotto di oggi, **9 misure, 9 uscite 0, nessuna
-uscita 2** — ⛔ ma solo per **metà**: vedi la tavola «Che cosa resta `[?]`».
-
----
-
-### ⛔ Che cosa va detto insieme al verde, o il giudizio è preso su metà quadro
-
-*Scritta il 13 agosto 2026, revisione **R13** rilievo 9. ⛔ Queste tre cose vivevano solo in un
-riquadro del `README`, e chi leggeva **questo** documento — che il `README` gli dice di leggere per
-primo — ne trovava una e mezza, e sbagliata.*
-
-#### 1. Il **piano 2** del metro non è applicabile: la catena intera non è stata giudicata
-
-Il metro ha due piani (`banchi/02-giudizio-metro.py:46,56`): **piano 1** confronta *pagina ⟷
-riferimento* — il browser contro `ffmpeg` **sullo stesso flusso**, cioè due decodificatori
-indipendenti; **piano 2** confronta *pagina ⟷ cattura*, che è la catena intera.
-
-⛔ **Il numero che il verde porta è del piano 1.** Il piano 2 il metro lo dichiara **non
-applicabile**, e la ragione è aritmetica: perché la sottrazione misuri il client e non la tela, la
-perdita del codificatore deve stare **10 dB sotto** il rumore della tela a 8 bit, e qui ne sta
-**7,01** (55,08 contro 62,09). Il numero grezzo esiste — **54,11 dB** — ma non è un giudizio.
-
-> ⚠ **E si dichiara un difetto dello strumento**: il messaggio che finisce nel file di esiti dice
-> *«non è almeno **6 dB** sotto la prima»* mentre il codice usa **10** (`02-giudizio-metro.py` · `m2_catena_intera()`).
-> La soglia vera è quella del codice; il messaggio è rimasto alla prima stesura.
-
-#### 2. I dieci bit sono **otto promossi**, e lo sono **a tutt'e due i capi**
-
-- **alla sorgente**: ⇒ `DECISIONI.md` §2.3-ter — non escono da Mutter per **nessuna** strada, né
-  MemFd né DMA-BUF, e i formati a 10 bit chiesti per nome danno `no more input formats`;
-- **al dispositivo**: `[M]` 13 agosto sul telefono vero — `VideoFrame.format` è **`RGBA`** e `copyTo`
-  dà **4 byte per pixel**, su una sequenza dichiarata `hev1.2.4.L90.90`, profondità 10.
-
-⇒ ⛔ **L'etichetta `Main10` continuerebbe a dirlo per tutta la catena senza che nessuno se ne
-accorga**: l'immagine viene bene lo stesso. Non è un ripiego nostro, ed è per questo che si scrive.
-
-#### 3. Il telefono **è stato misurato**, ma non sull'hardware
-
-`[M]` 13 agosto, **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequenze su 4 dipinte** — HEVC
-Main10 **e** AV1 10 bit, `tela_rileggibile: true`.
-
-⛔ **Quel che non ha risposta è «lo decodifica il silicio o la CPU?»**: nel browser il nome del
-decodificatore non c'è, senza cavo dati non si legge `Created MediaCodec <nome>` da
-`chrome://media-internals`, e il criterio A/B esce **`valido: false`** perché misura *spesa fissa*.
-⇒ `[?]` dichiarata — ed è la misura **S2** che `PIANO.md` §1.2 mette in questa fase.
-
----
-
-### ⭐⭐⭐ Il giudizio dell'utente — **dato il 13 agosto 2026, e la fase è chiusa**
-
-L'utente ha riaperto `https://192.168.0.2:7561/` **come sé stesso** dopo la cura del riscalamento, ha
-consegnato lo scatto come risultato, e — messe davanti le **sette cose dichiarate aperte** — ha deciso
-di **chiudere la fase adesso**, con quelle scritte come aperte.
-
-⭐ **E questa volta il giudizio non è solo una frase**: lo scatto è stato letto **pixel per pixel**, e
-il numero si confronta con quel che il server dichiara.
-
-| dal registro del server, `08:45:44 UTC` | dai pixel dello scatto, otto secondi dopo |
-|---|---|
-| `vista=2545x927` | la zona dipinta è alta **927 px** ⭐ **identico** |
-| `tela=1920x1080` | larga **1648 px**, rapporto **1,7778** contro un 16:9 di **1,7778** |
-
-⇒ ⭐⭐ **La pagina riscala alla vista rispettando la proporzione, e non di un pixel storta** — è
-`SPECIFICHE.md` §6.1 misurata **sul vetro**, non dichiarata. Le bande nere (448 a sinistra, 464 a
-destra) sono la conseguenza aritmetica di una finestra 2,74 che ospita una tela 16:9: l'alternativa
-sarebbe **stirare**, che §6.1 vieta.
-
-⛔ **E lo scatto ha sollevato una cosa che nessun banco aveva visto**: la tela viene dipinta all'**86%**
-su un monitor largo **2560**. Non è un difetto del riscalamento — è la `[?]` sulla risoluzione, e
-**912 px di nero** sono il suo prezzo, misurato.
-
-⚠ *Si scrive quel che è successo e non una frase che non è stata detta: il verdetto dell'11 agosto
-era una **citazione**, questo è una **decisione presa davanti a un elenco**. Le due cose hanno lo
-stesso valore e non la stessa forma.* ⇒
-`rapporti/GIUDIZIO-13-agosto.md`.
-
-
----
-
-<a id="03-movimento"></a>
-
-## Fase 3 — Il movimento
-
-Aperta il **13 agosto 2026**, subito dopo la chiusura della fase 2.
-⏳ **In corso.** Questo documento è aperto **all'apertura della fase**, non alla chiusura: è la
-regola di [`README.md`](README.md) di questa cartella, e la ragione è che in un documento scritto
-dopo le misure si *ricordano* invece di essere *registrate*.
-
-> ⛔ **Stato al 13 agosto 2026, sera**: le **misure sono finite**, i **documenti sono allineati**,
-> e restano due cose prima del giudizio — **rigirare le certificazioni** (curare il prodotto le ha
-> fatte scadere, ed era previsto) e **il giudizio dell'utente**. ⚠ La fase **non si chiude su un
-> documento completo**: si chiude su una misura che l'utente guarda.
-
-> Il modello sta in [`PIANO.md`](PIANO.md) §0.2; le decisioni stanno in
-> [`DECISIONI.md`](DECISIONI.md) e qui si **rimanda**, non si copia.
-
----
-
-### Che cosa deve produrre
-
-Uno **stream per fotogramma**, l'abbandono con `RESET_STREAM`, la **cadenza**.
-
-**Che cosa vede e giudica l'utente**: il desktop **che si muove**, e dice se è fluido.
-
-**I numeri da raggiungere**: ritardo **≤ 50 ms**, traguardo **40** (`SPECIFICHE.md` §3.2).
-
----
-
-### ⛔ Le tre cose decise PRIMA di scrivere, e da chi
-
-*Il punto di ripresa del 13 agosto ne elencava tre, e imponeva di scioglierle prima di qualunque
-riga. Sciolte tutte e tre la mattina del 13 agosto, a codice ancora fermo.*
-
-| # | La cosa | Decisa da | Che cosa è stato deciso |
-|---|---|---|---|
-| **1** | ⛔⛔ **la risoluzione della tela** | ⭐ **l'utente**, 13 agosto 2026 | **1920×1080 resta**. Era ereditata dalla scena di un banco e mai decisa; adesso è **decisa** |
-| **2** | ⛔ **la scena** | il progetto, su `LEZIONI.md` §1.1 | un client **a schermo intero, opaco, che ridisegna a ogni *frame callback*** del compositore, che **conta da sé quanto disegna**, e che porta una **marca leggibile a macchina** |
-| **3** | ⚠ **l'attesa dichiarata in anticipo** | il progetto, su `SPECIFICHE.md` §3.2 | il numero da battere è **≤ 50 ms**; il traguardo dei **40** è dichiarato **a rischio** sul muro dei 37 fotogrammi di Mutter — ⛔ **e l'attesa è stata sbagliata due volte**, vedi §3 |
-
-#### 1. ⭐ La tela: **1920×1080**, e adesso è una decisione
-
-La domanda era posta con il suo prezzo misurato accanto: sullo schermo dell'utente la tela viene
-dipinta all'**86 %**, cioè **912 px di nero**. Le alternative messe davanti erano tre — tenerla,
-portarla a 2560×1440 (lo schermo dell'utente), o accendere subito `SPECIFICHE.md` §6.1 (*la tela
-nasce dallo schermo del client*, che il prodotto oggi **non** fa: `src/main.c` · `TELA_L` ha `TELA_L 1920`
-scritto a mano).
-
-⭐ **Scelta la prima**, e la ragione è di metodo: la fase 3 misura il **tempo**, non la geometria.
-Con la tela ferma, un ritardo che sfora i 50 ms accusa l'architettura; con la tela cambiata sotto,
-non si saprebbe se accusa l'architettura o il conto dei pixel.
-
-⛔ **E le bande nere non sono la risoluzione**: 2545×927 di finestra fanno un rapporto **2,74**
-contro un 16:9 di **1,7778**. Quelle bande sono la **forma della finestra**, e sparirebbero solo a
-schermo pieno — cambiare la tela non le tocca. Va detto perché la `[?]` non venga riaperta
-credendo di curarle.
-
-⏳ **Resta aperta** — e va nominata alla fase in cui si accende — l'attuazione di `SPECIFICHE.md`
-§6.1: *la tela nasce dallo schermo del client*. Oggi è una specifica scritta e non attuata.
-
-#### 2. ⛔ La scena, e perché non è negoziabile
-
-`LEZIONI.md` §1.1 la prescrive, e il prezzo di averla sbagliata è già stato pagato: **tutte le
-misure di ritmo delle fasi 3-9 di v1 sono state buttate**. Un compositore Wayland consegna un
-fotogramma **solo quando qualcosa cambia** ⇒ una misura di fotogrammi senza la scena dichiarata
-**non è una misura**.
-
-Le due parti, e la seconda è quella che si dimentica:
-
-1. la scena **si muove a ogni ridisegno** — non a raffiche, come farebbe una scena mossa battendo
-   tasti;
-2. ⛔ **si conta quanto disegna il client**, che è il controllo che dice se il tetto è **del
-   compositore** o **della scena**. Senza, il 7 agosto si sarebbe attribuito a Mutter un tetto che
-   era della scena — e viceversa.
-
-⭐ **E la fase 3 ne chiede una terza, che §1.1 non chiede**: la scena porta una **marca** — un
-contatore che cresce a ogni disegno, e l'istante — rileggibile **dai pixel del fotogramma
-decodificato**, e ⛔ **rileggibile dopo la codifica con perdita**, il che va **provato** e non
-supposto. Serve a chiudere **M6** e a riaprire il `giro` di **M8** (qui sotto).
-
 #### 3. ⚠ L'attesa, dichiarata prima della misura
 
 Su GNOME il traguardo dei **40 ms** probabilmente **non si raggiunge**, per il muro dei 37
@@ -4724,544 +4400,544 @@ desktop** (`--app`: **0 riservate già in finestra**); la metà Android resta `[
 
 ---
 
-#### ⛔⭐ E la quinta cucitura rotta della fase, trovata dall'anello che la subiva
+#### ⛔⭐ And the fifth broken seam of the phase, found by the ring that suffered it
 
-`REMOTIX_PUNTATORE.muovi()` non accendeva `cl_noto` ⇒ su una pagina che nasce in **disposizione a
-tocco** e non entra mai nel modo classico, il dito muoveva **un puntatore che non compariva mai** —
-⛔ e senza nessun errore, da nessuna parte. Cura di **una riga**, chiusa dal coordinatore.
-⭐ **E l'anello del tocco nel frattempo aveva fatto la cosa giusta**: ha verificato la cucitura, ha
-**dichiarato il ripiego nel registro** e ha disegnato un puntatore suo — invece di tacere o di
-rompersi. Il ripiego sparisce da sé adesso che la riga c'è.
+`REMOTIX_PUNTATORE.muovi()` did not turn on `cl_noto` ⇒ on a page that is born in **touch
+layout** and never enters classic mode, the finger moved **a pointer that never appeared** —
+⛔ and without any error, anywhere. A **one-line** cure, closed by the coordinator.
+⭐ **And the touch ring had meanwhile done the right thing**: it verified the seam,
+**declared the fallback in the log** and drew a pointer of its own — instead of keeping quiet or
+breaking. The fallback disappears by itself now that the line is there.
 
-⚠ ⭐ **Cinque cuciture rotte su cinque erano FRA due pezzi, e nessuna dentro uno.** È la lezione di
-`fasi/rapporti/F5-desktop-vero.md` verificata cinque volte in una fase sola.
+⚠ ⭐ **Five broken seams out of five were BETWEEN two pieces, and none inside one.** It is the lesson of
+`fasi/rapporti/F5-desktop-vero.md` verified five times in a single phase.
 
 ---
 
-#### ⭐⭐ A10 — il metro dell'anello **input → vetro**
+#### ⭐⭐ A10 — the yardstick of the **input → glass** ring
 
 | | |
 |---|---|
-| ⭐ **la certificazione** | **16 guasti innestati accusati su 16** · **53 controlli su 53** (uscita 0) · di cui il ponte **19 su 19** |
-| ⭐ **tre guasti NUOVI**, che alla fase 3 non erano nemmeno esprimibili | e il più importante è *«la mediana sale di N ma **nel tratto sbagliato**»*: ⛔ **un metro così non diventa mai rosso — dice bugie sulla diagnosi**, che è esattamente quel che è successo all'etichetta del disegno |
-| ⭐ **la catena in UNDICI tratti** (quattro nuovi) | provata sul finto che li somma al totale con scarto **0,00 ms** |
-| ⛔ **e il numero NON c'è: `n = 0`, uscita 3** | *«non ho niente da giudicare»* — ⭐ **e dirlo è la cosa giusta**: il client non manda ancora §7.3. È il difetto che il validatore della fase 1 aveva (conforme e «niente da giudicare» con lo stesso codice d'uscita), qui evitato per costruzione |
-| ⭐ **i pezzi ciechi sono DUE, non uno** | quello in uscita (16-40 ms, noto) e ⭐ **quello in INGRESSO** — `[?]` **4-12 ms** fra la mano e `event.timeStamp` — **che nessuno aveva mai nominato** |
+| ⭐ **the certification** | **16 injected faults caught out of 16** · **53 checks out of 53** (exit 0) · of which the bridge **19 out of 19** |
+| ⭐ **three NEW faults**, which at phase 3 were not even expressible | and the most important is *«the median rises by N but **in the wrong segment**»*: ⛔ **a yardstick like that never turns red — it tells lies about the diagnosis**, which is exactly what happened to the drawing label |
+| ⭐ **the chain in ELEVEN segments** (four new) | tested on the fake that sums them to the total with a gap of **0,00 ms** |
+| ⛔ **and the number is NOT there: `n = 0`, exit 3** | *«non ho niente da giudicare»* — ⭐ **and saying so is the right thing**: the client does not yet send §7.3. It is the defect the phase 1 validator had (conforming and «nothing to judge» with the same exit code), here avoided by construction |
+| ⭐ **the blind pieces are TWO, not one** | the outgoing one (16-40 ms, known) and ⭐ **the INCOMING one** — `[?]` **4-12 ms** between the hand and `event.timeStamp` — **which nobody had ever named** |
 
-⛔ **E il suo controllo di precondizione ha dato un FALSO VERDE**: cercava `0x0101` in `pagina.html`,
-ne trovava cinque, ed erano **tutti commenti**. ⚠ *Pagata dentro il banco che esiste per non pagarla.*
+⛔ **And its precondition check gave a FALSE GREEN**: it looked for `0x0101` in `pagina.html`,
+found five, and they were **all comments**. ⚠ *Paid for inside the very bench that exists so as not to pay for it.*
 
 ---
 
-#### ⭐⭐⭐ O2 — IL NUMERO C'È: **~140 ms fra la mano e il pixel**, e sono **due giri che concordano**
+#### ⭐⭐⭐ O2 — THE NUMBER IS THERE: **~140 ms between the hand and the pixel**, and it is **two rounds that agree**
 
-*14 agosto 2026, pomeriggio. Rapporto in `rapporti/F4-O2-anello-input.md`.*
+*14 Aug 2026, afternoon. Report in `rapporti/F4-O2-anello-input.md`.*
 
-`[M]` **139,40 ms** (n = **326 su 326**) e **141,60 ms** (n = **322 su 322**), due giri indipendenti
-che concordano entro **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **Il tetto è 50 ms: si sfora
-di quasi tre volte.** Coi due pezzi ciechi dichiarati: **160-193 ms sullo schermo di un utente, più
-la rete.** ⚠ E sul prodotto di un'ora prima — senza la cura di O1 in `src/figlio.c` — erano
+`[M]` **139,40 ms** (n = **326 out of 326**) and **141,60 ms** (n = **322 out of 322**), two independent rounds
+that agree within **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **The cap is 50 ms: it is exceeded
+by almost three times.** With the two blind pieces declared: **160-193 ms on a user's screen, plus
+the network.** ⚠ And on the product of an hour before — without the O1 cure in `src/figlio.c` — it was
 **151,17 ms** (n = 573).
 
-⭐ **E la scomposizione dice che NESSUN TRATTO DOMINA** — la tesi 1 del mandato è **refutata**:
+⭐ **And the breakdown says that NO SEGMENT DOMINATES** — thesis 1 of the mandate is **refuted**:
 
-| tratto | ms | | tratto | ms |
+| segment | ms | | segment | ms |
 |---|---|---|---|---|
-| **5** cattura → primo byte *(codifica compresa)* | **30,4** | | **4** la scena disegna → cattura | **16,2** |
-| **3** la scena riceve → disegna | **26,6** | | **1a** evento → il prodotto lo vede | **13,1** |
-| **2** byte usciti → la scena riceve | **26,0** | | **8** la decodifica **vera** | **0,75** |
-| **9** richiamo → 1° `drawImage` *(l'ATTESA)* | **25,6** | | **10** 1° → 2° `drawImage` *(il disegno VERO)* | **0,08** |
+| **5** capture → first byte *(encoding included)* | **30,4** | | **4** the scene draws → capture | **16,2** |
+| **3** the scene receives → draws | **26,6** | | **1a** event → the product sees it | **13,1** |
+| **2** bytes out → the scene receives | **26,0** | | **8** the **real** decoding | **0,75** |
+| **9** callback → 1st `drawImage` *(the WAIT)* | **25,6** | | **10** 1st → 2nd `drawImage` *(the REAL drawing)* | **0,08** |
 
-⇒ I **sei** tratti maggiori valgono fra **13,1 e 30,4 ms** e fanno il **99 %**: curarne uno solo
-toglie al massimo il **22 %** del ritardo, e il tetto resterebbe sforato di due volte e mezzo.
-⚠ La codifica sta **dentro** il tratto 5 e vale **5,3 su 30,4**; la **decodifica** vale **0,75 ms**:
-«il collo di bottiglia è la codifica» resta falsa, e adesso con un numero sotto.
-⭐ **E la scomposizione è ripetibile quanto il totale**: nessun tratto si sposta di più di **1,6 ms**
-fra i due giri.
+⇒ The **six** largest segments are worth between **13,1 and 30,4 ms** and make up **99 %**: curing just one
+removes at most **22 %** of the delay, and the cap would still be exceeded by two and a half times.
+⚠ Encoding is **inside** segment 5 and is worth **5,3 out of 30,4**; **decoding** is worth **0,75 ms**:
+«the bottleneck is encoding» stays false, and now with a number under it.
+⭐ **And the breakdown is as repeatable as the total**: no segment moves by more than **1,6 ms**
+between the two rounds.
 
-⭐⭐ **E i tratti che il metro della fase 3 NON attraversava** (1a + 1b + 2 + 3) valgono **65,8 ms**,
-cioè **il 47 %**: ⛔ *il numero della fase 3 non vedeva quasi metà del ritardo che l'utente sente.*
+⭐⭐ **And the segments that the phase 3 yardstick did NOT cross** (1a + 1b + 2 + 3) are worth **65,8 ms**,
+i.e. **47 %**: ⛔ *the phase 3 number did not see almost half the delay the user feels.*
 
-> ##### ⛔⛔ E IL DIFETTO PIÙ GRAVE NON È UN TRATTO: È UNA CODA CHE CRESCE
-> `[M]` il server consegna **39,6** fotogrammi/s, la pagina ne dipinge **34,7**, e ⛔ **nessuno
-> butta l'avanzo** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ Il ritardo cresce di
-> **+108 ms al secondo**: 31,6 ms dopo 1 s → **4 650 ms dopo 43 s**. **Dopo un minuto l'utente
-> comanda un desktop che ha visto sei secondi fa, e tutti i contatori sono verdi.**
-> ⭐ **Curato** in `src/pagina.html` (ancora `F4-CODA-DEL-DECODIFICATORE`): si salta **il disegno**,
-> non la decodifica — nessun buco, nessuna chiave. `[M]` dopo: pendenza **−2 ms/s**, ritardo **1,3
-> ms** dopo 41 s.
+> ##### ⛔⛔ AND THE WORST DEFECT IS NOT A SEGMENT: IT IS A QUEUE THAT GROWS
+> `[M]` the server delivers **39,6** frames/s, the page paints **34,7**, and ⛔ **nobody
+> throws away the surplus** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ The delay grows by
+> **+108 ms per second**: 31,6 ms after 1 s → **4 650 ms after 43 s**. **After a minute the user
+> is commanding a desktop they saw six seconds ago, and all the counters are green.**
+> ⭐ **Cured** in `src/pagina.html` (anchor `F4-CODA-DEL-DECODIFICATORE`): **the drawing** is skipped,
+> not the decoding — no hole, no key. `[M]` after: slope **−2 ms/s**, delay **1,3
+> ms** after 41 s.
 
-> ##### ⛔ E LA TESI 2 — *«il ritmo è quanto ci consegna Mutter»* — **REFUTATA in questo regime**
-> `[M]` quattro conti nella stessa finestra di 30 s: la scena disegna **59,99/s**, Mutter ce ne
-> consegna **30,84** (il 51 %), il server ne spedisce **30,54**, la pagina ne dipinge **30,6** —
-> ⭐ e le **attese a vuoto sono 0,00/s**: ogni volta che abbiamo chiesto un fotogramma ce n'era già
-> uno pronto. ⇒ **Non stiamo aspettando Mutter: il limite è nel nostro ciclo.**
-> ⚠ `[?]` I 10,8/s che l'utente ha misurato dal suo video sono su un desktop **vero**, cioè in
-> regime di scarsità: le due misure rispondono a due domande diverse.
+> ##### ⛔ AND THESIS 2 — *«the rhythm is what Mutter delivers to us»* — **REFUTED in this regime**
+> `[M]` four counts in the same 30 s window: the scene draws **59,99/s**, Mutter delivers to us
+> **30,84** (51 %), the server sends **30,54**, the page paints **30,6** —
+> ⭐ and the **idle waits are 0,00/s**: every time we asked for a frame there was already
+> one ready. ⇒ **We are not waiting for Mutter: the limit is in our loop.**
+> ⚠ `[?]` The 10,8/s the user measured from their video are on a **real** desktop, i.e. in a
+> regime of scarcity: the two measurements answer two different questions.
 
-> ##### ⛔⛔ E LA TESI 3 (tastiera contro mouse) NON È CHIUSA — ⭐ e a dirlo è **la scomposizione**
-> `[M]` ultimo giro: **35 sonde chiuse su 296**, mediana **151,7 ms** contro i **141,6** del mouse
-> nello stesso giro. ⚠ Verosimile: *«la tastiera è 10 ms più lenta»*. ⛔ **È falso**, e la prova è
-> che la sua scomposizione **non è fisica**: `2 byte usciti → la scena riceve` = **−562,8 ms**,
-> negativo. ⇒ L'accoppiamento prende il fotogramma sbagliato, e **il totale da solo non lo direbbe
-> mai**: è il **guasto n. 12 della certificazione di A10** visto dal vivo.
-> ⇒ ⛔ **Il numero non è stato pubblicato.** Serve un eco della tastiera che non si sovrascriva
-> (lavoro mio su `04-b30-scena.c`).
+> ##### ⛔⛔ AND THESIS 3 (keyboard versus mouse) IS NOT CLOSED — ⭐ and what says so is **the breakdown**
+> `[M]` last round: **35 probes closed out of 296**, median **151,7 ms** versus the **141,6** of the mouse
+> in the same round. ⚠ Plausible: *«the keyboard is 10 ms slower»*. ⛔ **It is false**, and the proof is
+> that its breakdown **is not physical**: `2 byte usciti → la scena riceve` = **−562,8 ms**,
+> negative. ⇒ The matching takes the wrong frame, and **the total alone would never
+> say it**: it is **fault no. 12 of the A10 certification** seen live.
+> ⇒ ⛔ **The number was not published.** A keyboard echo that does not overwrite itself is needed
+> (my work on `04-b30-scena.c`).
 
-⭐ **Quel che invece è `[M]` e regge: il cammino della tastiera arriva al compositore** — `Escape`
-mandato dal canale del prodotto **chiude la Panoramica di GNOME**, quattro volte su quattro,
-verificato nei pixel; e la scena riceve **744** eventi di tastiera in un giro.
+⭐ **What instead is `[M]` and holds: the keyboard path reaches the compositor** — `Escape`
+sent from the product's channel **closes the GNOME Overview**, four times out of four,
+verified in the pixels; and the scene receives **744** keyboard events in one round.
 
-⭐⭐ **E Q6 — il controllo del ramo d'ANDATA, che alla fase 3 non poteva esistere — PASSA sul ferro**:
-iniettando 30 ms il totale sale di **30,84** e il surplus compare **tutto nel tratto 2** (+33,49) e
-**in nessun altro**. ⇒ Metà dell'anello che non aveva nessuna taratura adesso ce l'ha.
-⛔ Q5 (ramo di ritorno) resta rosso **per 0,2 ms**: il surplus sta nel tratto giusto (+24,70 contro
-N = 25) ma il totale sale di 20,78. ⚠ **La tolleranza non è stata allargata.**
+⭐⭐ **And Q6 — the check of the OUTBOUND branch, which at phase 3 could not exist — PASSES on the hardware**:
+injecting 30 ms the total rises by **30,84** and the surplus appears **entirely in segment 2** (+33,49) and
+**in no other**. ⇒ Half of the ring that had no calibration now has one.
+⛔ Q5 (return branch) stays red **by 0,2 ms**: the surplus is in the right segment (+24,70 against
+N = 25) but the total rises by 20,78. ⚠ **The tolerance was not widened.**
 
-**⛔ E i tre difetti che tenevano `n = 0` erano tutti del banco o del contorno, nessuno del canale:**
+**⛔ And the three defects that kept `n = 0` were all of the bench or of the surroundings, none of the channel:**
 
 | | |
 |---|---|
-| ⛔⛔ **la Panoramica di GNOME** | una sessione headless appena nata si apre in Panoramica: la scena «a schermo intero» era **una miniatura a 0,79** e la Panoramica teneva il fuoco. ⇒ `eventi_puntatore = 0` (diagnosi suggerita: «`libei` non consegna») **e** 0 marche lette su 966 (diagnosi suggerita: «l'eco non si legge»). ⭐ **A trovarlo è stato guardare l'immagine**, non leggere un numero |
-| ⛔ **`04-b30-scena.c`: `oy` sommato due volte** | le celle della **seconda** marca finivano fuori dalla loro zona di quiete, sullo sfondo del desktop. Sulla marca 1 (`oy = 0`) non si vedeva. ⭐ E la certificazione era verde 53 su 53: **i sedici guasti si innestano nel verbale, e nessuno dipinge un pixel** |
-| ⛔ **il controllo di precondizione di A10, falso ROSSO** | cercava i ganci in `figlio.c`; stanno in `webtransport.c` (il canale è del **padre**). ⚠ Stamattina lo stesso controllo aveva dato un falso **verde**: adesso guarda tutt'e due i lati del confine |
+| ⛔⛔ **the GNOME Overview** | a freshly born headless session opens in the Overview: the «full-screen» scene was **a thumbnail at 0,79** and the Overview held the focus. ⇒ `eventi_puntatore = 0` (suggested diagnosis: «`libei` does not deliver») **and** 0 marks read out of 966 (suggested diagnosis: «the echo cannot be read»). ⭐ **What found it was looking at the image**, not reading a number |
+| ⛔ **`04-b30-scena.c`: `oy` added twice** | the cells of the **second** mark ended up outside their quiet zone, on the desktop background. On mark 1 (`oy = 0`) it did not show. ⭐ And the certification was green 53 out of 53: **the sixteen faults are injected into the record, and none paints a pixel** |
+| ⛔ **A10's precondition check, false RED** | it looked for the hooks in `figlio.c`; they are in `webtransport.c` (the channel belongs to the **parent**). ⚠ This morning the same check had given a false **green**: now it looks at both sides of the border |
 
 ---
 
-#### ⭐ A5 — la tastiera: **26 prove, 0 rosse** `[M]` 14 agosto 2026
+#### ⭐ A5 — the keyboard: **26 tests, 0 red** `[M]` 14 Aug 2026
 
-Identiche in locale e nel contenitore (`xkbcommon` 1.7.0 su tutt'e due). Si ricontrolla con
-`bash banchi/04-b25-lancia.sh` — ⭐ **senza sessione, senza `libei` e senza nessuna porta**.
-
-| | |
-|---|---|
-| ⭐ **il metro è la lettera che ESCE** | non il codice che parte: il banco simula il compositore su una `xkb_state` costruita da sé e **legge il carattere** |
-| ⭐ **e ha un controllo negativo** | tasto 26 **senza** Maiusc ⇒ `è`, non `é`. Senza di lui, un simulatore compiacente avrebbe dato verde anche a chi dimentica i modificatori |
-| **le tre prove che `PIANO.md` nomina** | `é` su `it` ⇒ `42+26`, esce `é` · `é` su `us` ⇒ ⛔ **niente**, e la riga nel registro · `@` per due strade: `100(AltGr)+16` su `it`, `42(Maiusc)+3` su `us` · emoji e `中` non producibili ovunque |
-| ⭐ **il banco è CERTIFICATO** | tre implementazioni sbagliate apposta, e il lanciatore pretende **ROSSO sulla prova giusta**: quella che manda `e` al posto di `é` è rossa |
-| **il ripiego non è silenzioso** | `[M]` `xkbcommon` 1.7.0 **non ripiega da sé** (ritorna NULL), e `tastiera_disposizione()` dice `it [Italian]` ⇒ un ripiego entrato da altrove si leggerebbe nel registro come `it [English (US)]` |
-
-⛔ **E tre misure hanno cambiato il codice** — cioè il banco ha lavorato:
+Identical locally and in the container (`xkbcommon` 1.7.0 on both). It is rechecked with
+`bash banchi/04-b25-lancia.sh` — ⭐ **without a session, without `libei` and without any port**.
 
 | | |
 |---|---|
-| ⛔ **evdev 84 non esiste** | la prima stesura sceglieva per l'AltGr italiano un codice che **non è in `linux/input-event-codes.h`** (c'è un buco fra 83 e 85). ⚠ **Il banco era VERDE**: dal lato che riceve quel codice funziona. Trovato **guardando il numero**, non dal banco. Ora esce `100` |
-| **`de(neo)`** | `√` vuole `100+43+17`, e il terzo livello lì è il tasto **43**, non il `100` che v1 aveva scritto a mano. ⭐ E la stessa misura risponde alla domanda implicita del contratto: **quattro posizioni bastano**, il caso peggiore ne usa tre |
-| il Maiusc | usciva **destro**; ora sinistro |
+| ⭐ **the yardstick is the letter that COMES OUT** | not the code that goes out: the bench simulates the compositor on an `xkb_state` it builds itself and **reads the character** |
+| ⭐ **and it has a negative control** | key 26 **without** Shift ⇒ `è`, not `é`. Without it, an accommodating simulator would have given green even to whoever forgets the modifiers |
+| **the three tests `PIANO.md` names** | `é` on `it` ⇒ `42+26`, `é` comes out · `é` on `us` ⇒ ⛔ **nothing**, and the line in the log · `@` by two paths: `100(AltGr)+16` on `it`, `42(Maiusc)+3` on `us` · emoji and `中` not producible anywhere |
+| ⭐ **the bench is CERTIFIED** | three implementations wrong on purpose, and the launcher demands **RED on the right test**: the one that sends `e` instead of `é` is red |
+| **the fallback is not silent** | `[M]` `xkbcommon` 1.7.0 **does not fall back by itself** (it returns NULL), and `tastiera_disposizione()` says `it [Italian]` ⇒ a fallback coming in from elsewhere would read in the log as `it [English (US)]` |
 
-#### ⛔⛔ E il contratto della tastiera era SBAGLIATO — il rifiuto è stato accolto
-
-*`src/tastiera.h` diceva: «la disposizione è la stringa negoziata all'attacco». L'anello l'ha
-attuata, ha visto che funzionava, **e l'ha rifiutata lo stesso** — con la ragione giusta.*
-
-⛔ **Non scegliamo noi la disposizione della sessione: la sceglie GNOME, e `libei` ce la CONSEGNA**
-col dispositivo tastiera. Il danno, in concreto — sessione `it`, client che ha negoziato `us`,
-l'utente scrive `[`:
+⛔ **And three measurements changed the code** — i.e. the bench did work:
 
 | | |
 |---|---|
-| su `us` | `[` sta sul tasto **26**, da solo |
-| su `it` | sul tasto **26** c'è la **`è`**, e `[` vuole l'AltGr |
+| ⛔ **evdev 84 does not exist** | the first draft chose for the Italian AltGr a code that **is not in `linux/input-event-codes.h`** (there is a gap between 83 and 85). ⚠ **The bench was GREEN**: on the receiving side that code works. Found **by looking at the number**, not by the bench. Now `100` comes out |
+| **`de(neo)`** | `√` wants `100+43+17`, and the third level there is key **43**, not the `100` that v1 had written by hand. ⭐ And the same measurement answers the contract's implicit question: **four positions are enough**, the worst case uses three |
+| the Shift | the **right** one came out; now the left one |
 
-⇒ Mandiamo `26` e sullo schermo compare **`è`**: ⛔ non un carattere *mancante* — **un carattere
-DIVERSO**, che `RCP.md` §7.3 vieta. E nessuno collegherebbe il sintomo alla disposizione.
-⚠ **E rende falsa una riga che credevamo vera**: `DECISIONI.md` §5-bis.7 dice che la degradazione è
-morbida — *«mai caratteri sbagliati, al massimo un paio di accenti irraggiungibili»*. È vero **solo**
-usando la keymap della sessione.
-⭐ **E v1 lo faceva già così** (`fondamenta/remotix-c/src/tastiera.c:69`): è l'unico pezzo di v1 che il primo
-contratto di V2 non aveva ripreso.
+#### ⛔⛔ And the keyboard contract was WRONG — the refusal was accepted
 
-⇒ ✅ **Accolto il 14 agosto 2026**: `tastiera_apri_da_keymap()` è in `src/tastiera.h`, e
-`input_apri()` **non** prende la disposizione — la keymap arriva da `libei` dentro `input.c`, a ogni
+*`src/tastiera.h` said: «the layout is the string negotiated at attach». The ring
+implemented it, saw that it worked, **and refused it all the same** — with the right reason.*
+
+⛔ **We do not choose the session's layout: GNOME chooses it, and `libei` DELIVERS it to us**
+with the keyboard device. The damage, concretely — session `it`, client that negotiated `us`,
+the user types `[`:
+
+| | |
+|---|---|
+| on `us` | `[` is on key **26**, by itself |
+| on `it` | on key **26** there is **`è`**, and `[` wants AltGr |
+
+⇒ We send `26` and **`è`** appears on screen: ⛔ not a *missing* character — **a DIFFERENT
+character**, which `RCP.md` §7.3 forbids. And nobody would connect the symptom to the layout.
+⚠ **And it makes false a line we believed true**: `DECISIONI.md` §5-bis.7 says the degradation is
+soft — *«mai caratteri sbagliati, al massimo un paio di accenti irraggiungibili»*. It is true **only**
+using the session's keymap.
+⭐ **And v1 already did it this way** (`fondamenta/remotix-c/src/tastiera.c:69`): it is the only piece of v1 that the first
+V2 contract had not taken back.
+
+⇒ ✅ **Accepted on 14 Aug 2026**: `tastiera_apri_da_keymap()` is in `src/tastiera.h`, and
+`input_apri()` does **not** take the layout — the keymap arrives from `libei` inside `input.c`, at every
 `DEVICE_ADDED`.
 
 ---
 
-### ⛔ Che cosa NON ha funzionato
+### ⛔ What did NOT work
 
-⏳ *si riempie anche quando fa una brutta figura.*
-
----
-
-### Le decisioni prodotte
-
-⏳ *le decisioni stanno in `DECISIONI.md` una sola volta: qui si **rimanda**.*
+⏳ *it gets filled in even when it looks bad.*
 
 ---
 
-### Che cosa resta [?]
+### The decisions produced
 
-Aperte all'apertura della fase, e vanno **misurate prima di essere credute**:
-
-1. ~~chi decide la misura del monitor ora che non la dà più la sessione~~ ⇒ ✅ **CHIUSA il
-   14 agosto 2026, e la risposta era un'altra da quella che la domanda supponeva**: ⛔ **non la
-   decide `RecordVirtual` — la decide il NOSTRO formato PipeWire** `[R]`. E la promessa della tela
-   concessa **oggi nessuno la mantiene**: `[M]` client a 1280×720 ⇒ il server la concede, il palco
-   cattura a 1920×1080 (costante di compilazione), `rcp` rifiuta ogni fotogramma — **145 prodotti,
-   0 spediti, client nero senza errori**. ⏳ La cura è lavoro della fase 6 (`RCP.md` §4.5);
-2. ⚠ `PIANO.md` **399, 402-404, 591-593** e `STUDI.md` §gnome **108-109, 111-112, 551** dicono che
-   `--virtual-monitor` **non è opzionale**: ⛔ sono vere solo per una sessione che deve vivere
-   **senza nessuno che la catturi**, e vanno riscritte. *(Righe individuate da A1, non toccate da
-   lui: si riscrivono a codice fermo.)*
-3. `[?]` la Keyboard Lock su **DeX**, e la PWA su **Chrome per Android** (`SPECIFICHE.md` §7.3-bis);
-4. `[?]` il segno della rotella sugli **altri quattro** compositori (`RCP.md` §7.3);
-5. ⭐ **CHIUSA il 14 agosto 2026 — la persistenza al distacco REGGE**, e la tesi del difetto è
-   **falsa**: il monitor non sparisce (sempre 1, anche senza nessuno), l'applicazione lavora
-   (1 160 righe in 240 s senza un buco), `libmutter` non scrive asserzioni nuove, e al riattacco
-   si ritrova **la stessa finestra** (pid invariato), due volte di fila. ⚠ **Ma il palco muore col
-   FIGLIO, non con la sessione**: chi congederà un figlio che gira a vuoto toglierebbe il monitor a
-   una sessione viva — ⏳ **fase 5**;
-6. ⛔ **aperta il 14 agosto, e nessuno l'aveva posta**: se la sessione ha `us` e il client ha
-   negoziato `it`, **chi cambia la disposizione della sessione?** `DECISIONI.md` §5-bis.7 dice che
-   si rinegozia all'attacco — ⚠ ma un client `libei` **non può imporre una keymap all'EIS: la
-   riceve**. ⇒ O la si cambia dalla sessione (`org.gnome.desktop.input-sources`, prima di
-   attaccare), oppure §5-bis.7 va riscritta come *«il client **dichiara**, il server **si adegua a
-   quel che trova**, e lo dice»*. `[?]` — nessuno l'ha misurato.
+⏳ *the decisions are in `DECISIONI.md` only once: here they are **referenced**.*
 
 ---
 
-### Il giudizio dell'utente — ⭐ DATO il 14 agosto 2026
+### What remains [?]
+
+Open at the opening of the phase, and they must be **measured before being believed**:
+
+1. ~~who decides the monitor's size now that the session no longer gives it~~ ⇒ ✅ **CLOSED on
+   14 Aug 2026, and the answer was different from what the question assumed**: ⛔ **it is not
+   decided by `RecordVirtual` — it is decided by OUR PipeWire format** `[R]`. And the promise of the granted
+   canvas **nobody keeps today**: `[M]` client at 1280×720 ⇒ the server grants it, the stage
+   captures at 1920×1080 (compile-time constant), `rcp` rejects every frame — **145 produced,
+   0 sent, black client without errors**. ⏳ The cure is phase 6 work (`RCP.md` §4.5);
+2. ⚠ `PIANO.md` **399, 402-404, 591-593** and `STUDI.md` §gnome **108-109, 111-112, 551** say that
+   `--virtual-monitor` **is not optional**: ⛔ they are true only for a session that must live
+   **with nobody capturing it**, and they must be rewritten. *(Lines identified by A1, not touched by
+   it: they are rewritten when the code is still.)*
+3. `[?]` Keyboard Lock on **DeX**, and the PWA on **Chrome for Android** (`SPECIFICHE.md` §7.3-bis);
+4. `[?]` the sign of the wheel on the **other four** compositors (`RCP.md` §7.3);
+5. ⭐ **CLOSED on 14 Aug 2026 — persistence on detach HOLDS**, and the defect thesis is
+   **false**: the monitor does not disappear (always 1, even with nobody), the application works
+   (1 160 lines in 240 s without a gap), `libmutter` writes no new assertions, and on reattach
+   **the same window** is found again (pid unchanged), twice in a row. ⚠ **But the stage dies with the
+   CHILD, not with the session**: whoever dismisses a child spinning idle would take the monitor away from
+   a live session — ⏳ **phase 5**;
+6. ⛔ **opened on 14 Aug, and nobody had raised it**: if the session has `us` and the client has
+   negotiated `it`, **who changes the session's layout?** `DECISIONI.md` §5-bis.7 says that
+   it is renegotiated at attach — ⚠ but a `libei` client **cannot impose a keymap on the EIS: it
+   receives it**. ⇒ Either it is changed from the session (`org.gnome.desktop.input-sources`, before
+   attaching), or §5-bis.7 must be rewritten as *«the client **declares**, the server **adapts to
+   what it finds**, and says so»*. `[?]` — nobody has measured it.
+
+---
+
+### The user's judgement — ⭐ GIVEN on 14 Aug 2026
 
 > ### *«Mi sembra ok.»*
-> — l'utente, 14 agosto 2026, dopo aver usato il desktop di `prova` dentro una scheda di Chrome
+> — the user, 14 Aug 2026, after using `prova`'s desktop inside a Chrome tab
 >
-> e, poco prima, sulle due cose che aveva chiesto di ottimizzare:
+> and, shortly before, on the two things they had asked to optimise:
 > > *«La situazione mi sembra migliorata. La comparsa del desktop è più immediata.»*
 
-⭐⭐ **E la fase si chiude qui**, come `PIANO.md` §0.2 impone: *«su una misura giudicata dall'utente,
+⭐⭐ **And the phase closes here**, as `PIANO.md` §0.2 requires: *«su una misura giudicata dall'utente,
 non su un documento completo»*.
 
-#### ⭐ Che cosa il giudizio ha confermato, e con quale numero accanto
+#### ⭐ What the judgement confirmed, and with which number next to it
 
-| la sua frase | il numero che le corrisponde |
+| their sentence | the number that corresponds to it |
 |---|---|
-| *«la comparsa del desktop è più immediata»* | `[M]` **5,11 s → 1,04-1,13 s** (7 giri) — e di quel secondo, **1,00 s è il secondo fisso di §4.4-bis**: ⭐ quel che è nostro sono **34-124 ms** |
-| *«mi sembra ok»* (dopo qualche minuto d'uso) | `[M]` il ritardo **non cresce più**: pendenza da **+108 ms/s a −2 ms/s**, e **1,3 ms** dopo 41 s |
+| *«la comparsa del desktop è più immediata»* | `[M]` **5,11 s → 1,04-1,13 s** (7 rounds) — and of that second, **1,00 s is the fixed second of §4.4-bis**: ⭐ what is ours is **34-124 ms** |
+| *«mi sembra ok»* (after a few minutes of use) | `[M]` the delay **no longer grows**: slope from **+108 ms/s to −2 ms/s**, and **1,3 ms** after 41 s |
 
-#### ⛔ E i limiti del giudizio, scritti PRIMA che lo desse e non dopo
+#### ⛔ And the limits of the judgement, written BEFORE it was given and not after
 
-*Gli sono stati messi davanti in tavola prima della prova — «un giudizio dato senza sapere che cosa
-manca è un'approvazione al buio», la stessa regola con cui ha chiuso la fase 2.*
+*They were laid on the table before the test — «un giudizio dato senza sapere che cosa
+manca è un'approvazione al buio», the same rule with which phase 2 was closed.*
 
 | | |
 |---|---|
-| ⛔ **il ritardo SFORA** | `[M]` **139,40 ms** (n=326) contro un tetto di **50**. ⚠ Ha giudicato **con gli occhi**, non su quel numero — e i due non si sostituiscono |
-| ⛔ **nessun tratto domina** | sei tratti da ~25 ms: **nessuna cura singola** porta 140 a 50. È lavoro della **fase 8**, e va detto perché il giudizio non venga letto come «il ritardo è a posto» |
-| ⛔ **la tela non è la sua** | il suo schermo è **21:9**, il desktop remoto **16:9** ⇒ `[M]` dal suo video, **il 36 % dei pixel è banda nera**. Ha giudicato una finestra, non uno schermo pieno |
-| ⚠ **un browser solo** | **Chrome 151**. Safari, iPhone e DeX restano `[?]` **dichiarate, non dedotte** |
-| ⚠ **qualche minuto, non qualche ora** | i tre orologi della sessione sono della **fase 5**: l'abbandono lungo non è stato giudicato |
+| ⛔ **the delay EXCEEDS** | `[M]` **139,40 ms** (n=326) against a cap of **50**. ⚠ They judged **with their eyes**, not on that number — and the two do not replace each other |
+| ⛔ **no segment dominates** | six segments of ~25 ms: **no single cure** brings 140 to 50. It is work for **phase 8**, and it must be said so the judgement is not read as «the delay is fine» |
+| ⛔ **the canvas is not theirs** | their screen is **21:9**, the remote desktop **16:9** ⇒ `[M]` from their video, **36 % of the pixels are black band**. They judged a window, not a full screen |
+| ⚠ **a single browser** | **Chrome 151**. Safari, iPhone and DeX remain `[?]` **declared, not deduced** |
+| ⚠ **a few minutes, not a few hours** | the session's three clocks belong to **phase 5**: long abandonment was not judged |
 
-#### ⭐⭐ E il giudizio dell'utente ha trovato SETTE difetti che nessuno dei dieci banchi vedeva
+#### ⭐⭐ And the user's judgement found SEVEN defects that none of the ten benches saw
 
-*Non è un aneddoto: è il conto della giornata, ed è la ragione per cui il piano fa chiudere le fasi
-così.*
+*It is not an anecdote: it is the day's tally, and it is the reason why the plan has phases
+close this way.*
 
-| che cosa ha detto | che cosa c'era sotto |
+| what they said | what was underneath |
 |---|---|
-| *«se il server non mostra il desktop, a che serve REMOTIX?»* | il monitor aggiunto e vuoto — **due fasi** l'avevano preso per uno sfondo |
-| *«non si vede nessun desktop»* | **due server nostri** che montavano un monitor a testa sulla stessa sessione |
-| *«lo schermo appare strano»* | la dichiarazione delle scorciatoie che copriva il **38 %** della finestra |
-| *«non vedo il drawer di gnome»* | la barra piazzata **esattamente dove GNOME tiene il dock** |
-| *«il puntatore sembra catturato… studia XPRA»* | ⭐ `SPECIFICHE.md` §7.1 che contraddiceva §7.5: la cattura **non comprava niente** |
-| *«niente desktop»*, due volte | il figlio che tiene per sempre **un palco fallito** |
-| *«il tempo fra login e desktop è troppo lungo»* | ⛔ **una riga del coordinatore**: `poll()` su due descrittori e `pf.revents` mai guardato |
+| *«se il server non mostra il desktop, a che serve REMOTIX?»* | the added, empty monitor — **two phases** had taken it for a background |
+| *«non si vede nessun desktop»* | **two servers of ours** each mounting a monitor on the same session |
+| *«lo schermo appare strano»* | the shortcuts declaration covering **38 %** of the window |
+| *«non vedo il drawer di gnome»* | the bar placed **exactly where GNOME keeps the dock** |
+| *«il puntatore sembra catturato… studia XPRA»* | ⭐ `SPECIFICHE.md` §7.1 contradicting §7.5: the capture **bought nothing** |
+| *«niente desktop»*, twice | the child holding on forever to **a failed stage** |
+| *«il tempo fra login e desktop è troppo lungo»* | ⛔ **one line of the coordinator**: `poll()` on two descriptors and `pf.revents` never looked at |
 
-⛔ **Sette su sette stavano FRA i pezzi, nessuno dentro uno** — ed è la lezione di
-`fasi/rapporti/F5-desktop-vero.md` verificata sette volte in una giornata sola.
+⛔ **Seven out of seven were BETWEEN the pieces, none inside one** — and it is the lesson of
+`fasi/rapporti/F5-desktop-vero.md` verified seven times in a single day.
 
 ---
 
-### ⭐⭐ Il numero della fase — `[M]` 14 agosto 2026
+### ⭐⭐ The number of the phase — `[M]` 14 Aug 2026
 
-*L'anello **input → vetro**, che alla fase 3 non era misurabile: il campo `input` valeva 0 in 953
-fotogrammi su 953, perché il canale non esisteva.*
+*The **input → glass** ring, which at phase 3 was not measurable: the `input` field was 0 in 953
+frames out of 953, because the channel did not exist.*
 
 | | |
 |---|---|
-| ⭐ **il numero** | **139,40 ms** (n = 326 su 326) e **141,60 ms** (n = 322 su 322), ⭐ **due giri indipendenti che concordano entro 2,2 ms** |
-| ⚠ **coi pezzi ciechi** | **160-193 ms** sullo schermo dell'utente, **più la rete** |
-| ⛔ **contro il tetto** | **50 ms**. Si sfora di quasi **tre volte**, e si scrive com'è |
+| ⭐ **the number** | **139,40 ms** (n = 326 out of 326) and **141,60 ms** (n = 322 out of 322), ⭐ **two independent rounds that agree within 2,2 ms** |
+| ⚠ **with the blind pieces** | **160-193 ms** on the user's screen, **plus the network** |
+| ⛔ **against the cap** | **50 ms**. It is exceeded by almost **three times**, and it is written as it is |
 
-#### ⭐ La scomposizione, e la risposta a «che cosa ottimizzo?»
+#### ⭐ The breakdown, and the answer to «what do I optimise?»
 
-| tratto | mediana |
+| segment | median |
 |---|---|
-| cattura → primo byte | **30,4 ms** |
-| la scena riceve → disegna *(è il desktop remoto, non noi)* | 26,6 |
-| byte → scena | 26,0 |
-| richiamo → primo `drawImage` | 25,6 |
-| disegno → cattura | 16,2 |
-| decodifica | 0,75 |
-| ⭐ **il `drawImage` vero** | **0,08** |
+| capture → first byte | **30,4 ms** |
+| the scene receives → draws *(it is the remote desktop, not us)* | 26,6 |
+| byte → scene | 26,0 |
+| callback → first `drawImage` | 25,6 |
+| drawing → capture | 16,2 |
+| decoding | 0,75 |
+| ⭐ **the real `drawImage`** | **0,08** |
 
-⇒ ⛔ **Nessun tratto domina**: sono sei tratti da ~25 ms. **Nessuna cura singola porta 140 a 50.**
-⭐ La somma dei tratti fa **139,08** contro un totale di **139,40** — scarto **0,32 ms**: la
-scomposizione è completa, non ha buchi.
-⭐⭐ **E i tratti che il metro della fase 3 NON attraversava valgono 65,8 ms, il 47 %**: metà del
-ritardo vero stava fuori dal vecchio metro.
+⇒ ⛔ **No segment dominates**: they are six segments of ~25 ms. **No single cure brings 140 to 50.**
+⭐ The sum of the segments makes **139,08** against a total of **139,40** — gap **0,32 ms**: the
+breakdown is complete, it has no holes.
+⭐⭐ **And the segments the phase 3 yardstick did NOT cross are worth 65,8 ms, 47 %**: half of the
+real delay was outside the old yardstick.
 
-> #### ⭐⭐ E la prova sul ferro che l'etichetta corretta stamattina era giusta
-> Il **primo** `drawImage` costa **25,6-27,1 ms**, il **secondo 0,080** ⇒ **320-339 volte**.
-> ⛔ *Il disegno non è mai stato caro: era l'attesa del fotogramma dalla GPU.*
+> #### ⭐⭐ And the proof on the hardware that the label corrected this morning was right
+> The **first** `drawImage` costs **25,6-27,1 ms**, the **second 0,080** ⇒ **320-339 times**.
+> ⛔ *Drawing was never expensive: it was the wait for the frame from the GPU.*
 
 ---
 
-### ⭐⭐ Le due ottimizzazioni chieste dall'utente — e tutt'e due erano NOSTRE
+### ⭐⭐ The two optimisations asked for by the user — and both were OURS
 
-#### 1. Il login → desktop: **5,11 s → 1,04-1,13 s**
+#### 1. Login → desktop: **5,11 s → 1,04-1,13 s**
 
-⛔⛔ **E la causa era una riga del coordinatore, scritta la mattina stessa.** Per far arrivare
-l'input più in fretta era stato messo il descrittore di `libei` nello stesso `poll()` del figlio —
-⛔ ma il codice dopo **non guardava `pf.revents`**: svegliandosi per `libei`, il figlio andava lo
-stesso a leggere il socket del padre, **bloccante**.
-⇒ *Una modifica fatta per risparmiare millisecondi sull'input costava **quattro secondi** al login.*
-⭐ **La cura è una riga**: `if (!pf.revents) break;`
+⛔⛔ **And the cause was a line of the coordinator, written that same morning.** To make
+input arrive faster, `libei`'s descriptor had been put in the same `poll()` as the child —
+⛔ but the code after it **did not look at `pf.revents`**: waking up for `libei`, the child still went
+to read the parent's socket, **blocking**.
+⇒ *A change made to save milliseconds on input cost **four seconds** at login.*
+⭐ **The cure is one line**: `if (!pf.revents) break;`
 
-⚠ **E il registro lo diceva già**: *«0 fotogrammi consegnati, **0 attese a vuoto**»* — zero attese a
-vuoto vuol dire che il ciclo **non aveva nemmeno provato** a catturare. ⛔ Era scritto, ed è stato
-letto due volte come «la scena è ferma». *Il difetto ha resistito a due sonde leggere che davano
-risposte opposte: l'ha chiuso solo un debugger attaccato al processo.*
+⚠ **And the log already said so**: *«0 fotogrammi consegnati, **0 attese a vuoto**»* — zero idle
+waits means that the loop **had not even tried** to capture. ⛔ It was written, and it was
+read twice as «the scene is still». *The defect withstood two light probes that gave
+opposite answers: only a debugger attached to the process closed it.*
 
-#### 2. ⭐⭐ E il ritardo CRESCEVA senza limite, con tutti i contatori verdi
+#### 2. ⭐⭐ And the delay GREW without limit, with all counters green
 
-`[M]` il server consegnava **39,6 fotogrammi/s**, la pagina ne dipingeva **34,7**, e **nessuno
-buttava l'avanzo**: `scartati_ordine 0 · trattenuti 0 · corti 0`.
+`[M]` the server delivered **39,6 frames/s**, the page painted **34,7**, and **nobody
+threw away the surplus**: `scartati_ordine 0 · trattenuti 0 · corti 0`.
 
 | | |
 |---|---|
-| la crescita | ⛔ **+108 ms al secondo** |
-| dopo 43 s | ⛔ **4 650 ms** — si comandava un desktop visto **sei secondi prima** |
-| ⭐ curato | pendenza **−2 ms/s**, ritardo **1,3 ms** dopo 41 s |
+| the growth | ⛔ **+108 ms per second** |
+| after 43 s | ⛔ **4 650 ms** — one was commanding a desktop seen **six seconds earlier** |
+| ⭐ cured | slope **−2 ms/s**, delay **1,3 ms** after 41 s |
 
-⇒ ⛔ **È il difetto che l'utente sentiva e che nessun contatore contava**: tutti verdi, e la coda del
-decodificatore che si allungava e basta.
+⇒ ⛔ **It is the defect the user felt and that no counter counted**: all green, and the decoder's
+queue just getting longer.
 
-#### ⭐ E i due difetti che potevano rovinare una macchina vera
+#### ⭐ And the two defects that could ruin a real machine
 
-| | prima | dopo |
+| | before | after |
 |---|---|---|
-| il registro a raffica | **151,9 MB/s** (⛔ `[M]` **30,8 GB** scritti in una mattina) | **284 B/s** |
-| un nucleo bruciato a vuoto | **1,00** | **0,00** |
-| il desktop dopo che la sessione grafica torna | ⛔ **non tornava mai** | ⭐ **1,11 s, stesso figlio** |
+| the log in bursts | **151,9 MB/s** (⛔ `[M]` **30,8 GB** written in one morning) | **284 B/s** |
+| a core burned idle | **1,00** | **0,00** |
+| the desktop after the graphical session comes back | ⛔ **never came back** | ⭐ **1,11 s, same child** |
 
-⚠ ⭐ **E il ciclo a vuoto ha DUE facce, e una è MUTA**: per questo il banco misura il registro **e**
-la CPU. E con un client muto **un difetto ne nasconde un altro** — serve un client che *chieda le
-chiavi*, come fa un client vero che non vede niente.
+⚠ ⭐ **And the idle loop has TWO faces, and one is MUTE**: that is why the bench measures the log **and**
+the CPU. And with a mute client **one defect hides another** — a client that *asks for the
+keys* is needed, as a real client that sees nothing does.
 
 
 ---
 ---
 
-## ⭐⭐ LA CODA DELLA FASE 4 — 15 agosto 2026, la notte in cui la tela è diventata la finestra
+## ⭐⭐ THE TAIL OF PHASE 4 — 15 Aug 2026, the night the canvas became the window
 
-*Questa fase è stata giudicata «mi sembra ok» il 14 agosto sera, ⛔ ma il suo mandato
-(`fasi/rapporti/F4-IN-12-mandato-prossima-sessione.md`) diceva **«a lavoro riuscito ma non
-finito»**: mancava un pezzo solo, `figli_ritela()` → `cattura_ridimensiona()`, e da lì dipendevano
-quattro sintomi che l'utente vedeva sull'input e sul video.*
+*This phase was judged «mi sembra ok» on the evening of 14 Aug, ⛔ but its mandate
+(`fasi/rapporti/F4-IN-12-mandato-prossima-sessione.md`) said **«a lavoro riuscito ma non
+finito»**: only one piece was missing, `figli_ritela()` → `cattura_ridimensiona()`, and on it depended
+four symptoms the user saw on input and on video.*
 
-⛔ **E questa coda NON è la fase 6**, anche se ne tocca il contenuto: il numero della fase lo dà il
-**perché si è fatto il lavoro**, non l'elenco delle cose prodotte. Qui si è fatto per **curare il
-mouse e il ritardo dei clic**, cioè per finire la fase 4 — e infatti tutti i rapporti della notte si
-chiamano `F4-IN-*`. ⚠ La fase 6 resta **aperta**: `PIANO.md` dice quali sue parti si trovano già
-fatte e quali no.
+⛔ **And this tail is NOT phase 6**, even though it touches its content: the phase number is given by
+**why the work was done**, not by the list of things produced. Here it was done to **cure the
+mouse and the click delay**, i.e. to finish phase 4 — and indeed all the night's reports are
+called `F4-IN-*`. ⚠ Phase 6 stays **open**: `PIANO.md` says which of its parts are already
+done and which are not.
 
-⚠ **E vale la riserva di forma di questo documento**: queste righe sono scritte **alla chiusura**.
-⭐ Le misure però non sono ricordate: ognuna viene da un registro del server o da un giro di banco,
-con l'ora accanto.
+⚠ **And this document's reservation of form applies**: these lines are written **at closing**.
+⭐ The measurements, however, are not remembered: each comes from a server log or a bench round,
+with the time next to it.
 
-### Che cosa doveva produrre questa coda
+### What this tail was to produce
 
-Il mandato di `F4-IN-12` §1, in una riga: **scrivere la catena `figli_ritela()` →
-`cattura_ridimensiona()`**, quella che porta la misura chiesta dal client dal filo fino al
-compositore.
+The mandate of `F4-IN-12` §1, in one line: **write the chain `figli_ritela()` →
+`cattura_ridimensiona()`**, the one that carries the size requested by the client from the wire to the
+compositor.
 
-⭐ **E vale più di quanto sembri perché chiude QUATTRO sintomi, non uno** — tutti e quattro nascono
-dalla stessa cosa, *la misura della tela non la chiede nessuno*:
+⭐ **And it is worth more than it seems because it closes FOUR symptoms, not one** — all four come
+from the same thing, *nobody asks for the canvas size*:
 
-| sintomo | perché sparisce |
+| symptom | why it disappears |
 |---|---|
-| le bande nere laterali | le due tele combaciano ⇒ niente da impaginare |
-| il testo interpolato | scala **1** ⇒ nessuno ricampiona l'immagine |
-| il ri-attacco a misura diversa | la tela si cambia a caldo |
-| ⭐⭐ i 4 secondi fra login e desktop | riavviare il flusso **consegna un buffer** |
+| the black side bands | the two canvases match ⇒ nothing to lay out |
+| the interpolated text | scale **1** ⇒ nobody resamples the image |
+| reattaching at a different size | the canvas changes hot |
+| ⭐⭐ the 4 seconds between login and desktop | restarting the stream **delivers a buffer** |
 
-**Che cosa l'utente vede e giudica**: il desktop remoto riempie la finestra del browser, **senza
-bande nere e senza testo sfocato**, ritrova la sua misura quando si riattacca, e **risponde al
-clic** invece di farsi aspettare.
+**What the user sees and judges**: the remote desktop fills the browser window, **without
+black bands and without blurry text**, finds its size again when it reattaches, and **responds to the
+click** instead of making you wait.
 
 ---
 
-### Il banco
+### The bench
 
-⛔ **Scritto DOPO la prima stesura del codice, non prima** — e va detto: la regola di §0.2 vuole il
-banco per primo. Quel che ha retto al posto suo è stato il mandato **avversariale** a quattro agenti
-(§«che cosa non ha funzionato»), che ha trovato dieci difetti prima che il banco esistesse.
+⛔ **Written AFTER the first draft of the code, not before** — and it must be said: the rule of §0.2 wants the
+bench first. What held in its place was the **adversarial** mandate to four agents
+(§«che cosa non ha funzionato»), which found ten defects before the bench existed.
 
 | | |
 |---|---|
-| `banchi/04-b31-tela.c` | monta `rcp.c` **nudo**, con un palco finto che si può far rispondere in ritardo, concedere un'altra misura, o non rispondere affatto. **19 casi**, ciascuno con l'atteso dichiarato prima (⭐ il 19° aggiunto il 16 agosto 2026, vedi §05-la-sessione §6-ter) |
-| `banchi/04-b31-certifica.sh` | ⭐ **il controllo positivo**: innesta **12 guasti** in una copia di `rcp.c` e pretende che diventino rossi **i casi attesi** — non «che diventi rosso qualcosa» |
+| `banchi/04-b31-tela.c` | mounts **bare** `rcp.c`, with a fake stage that can be made to answer late, grant another size, or not answer at all. **19 cases**, each with the expectation declared beforehand (⭐ the 19th added on 16 Aug 2026, see §05-la-sessione §6-ter) |
+| `banchi/04-b31-certifica.sh` | ⭐ **the positive control**: injects **12 faults** into a copy of `rcp.c` and demands that **the expected cases** turn red — not «that something turns red» |
 
-⛔ **E il banco è stato corretto due volte dalla misura, non il contrario**: l'atteso di G1 diceva
-dieci casi e ne ha accesi sei; G9 restava verde perché un **secondo** controllo mascherava il guasto
-innestato nel primo. Tutt'e due scritti accanto al guasto, con la ragione.
+⛔ **And the bench was corrected twice by the measurement, not the other way round**: G1's expectation said
+ten cases and it lit six; G9 stayed green because a **second** check masked the fault
+injected into the first. Both written next to the fault, with the reason.
 
-⚠ **Quel che questo banco NON prova, dichiarato**: non prova che il compositore ridimensioni
-(quello è `[M]` di `banchi/04-in8-misura.c`), non prova che i pixel siano giusti (qui non c'è un
-pixel), non prova la pagina. Prova la sola cosa che sta in mezzo, e che nessun banco guardava: **che
-a ogni `ADATTA_TELA` risponda esattamente un `TELA`, e che la tela in vigore non prenda mai un
-valore che nessuno ha concesso.**
+⚠ **What this bench does NOT prove, declared**: it does not prove that the compositor resizes
+(that is `[M]` of `banchi/04-in8-misura.c`), it does not prove the pixels are right (there is no
+pixel here), it does not prove the page. It proves the one thing that sits in between, and that no bench looked at: **that
+every `ADATTA_TELA` is answered by exactly one `TELA`, and that the canvas in force never takes a
+value nobody granted.**
 
 ---
 
-### Che cosa è stato sviluppato
+### What was developed
 
-| file | che cosa |
+| file | what |
 |---|---|
-| `src/cattura.c` · `.h` | `cattura_ridimensiona()` (l'esito è la RICHIESTA, non il cambio), `cattura_risveglia()`, `cattura_misura_negoziata()`, i quattro parametri di consumo in un posto solo, la guardia sulla geometria incoerente |
-| `src/figlio.c` · `.h` | `figli_ritela()`, il ramo `RITELA`, **la riconciliazione sul fotogramma** (codificatore riaperto, puntatore rimappato, chiavi tenute buttate), `MSG_TELA` — la risposta al padre —, la tela *voluta* per il rimontaggio, l'attesa che cresce sul codificatore |
-| `src/rcp.c` · `.h` | i ganci `ritela` e `tela_del_palco`, `rcp_tela_dal_palco()` (tre casi), `tela_richiama_il_palco()`, il fondo di §7.1, i limiti di §4.5 per lato, il tetto `video.misura_massima` anche su `ADATTA_TELA` |
-| `src/webtransport.c` · `.h` | il ponte dei due ganci, la tabella delle tele dei palchi per utente |
-| `src/main.c` | le due cuciture, e `wt_palco_dimentica()` alla morte del figlio |
-| `src/mutter.c` · `.h` | `mutter_scala_nostra()` — la scala del **nostro** monitor logico |
-| `src/pagina.html` | `chiedi_tela()`, `tela_da_chiedere()`, l'interruttore `?adatta=`, il bersaglio, i limiti per lato, e tre correzioni al lettore dei fotogrammi |
-| ⭐ `src/Contenitore` · `src/costruisci-in-contenitore.sh` | **come si costruisce**, che era il blocco dichiarato di `F4-IN-12` §3 |
+| `src/cattura.c` · `.h` | `cattura_ridimensiona()` (the outcome is the REQUEST, not the change), `cattura_risveglia()`, `cattura_misura_negoziata()`, the four consumption parameters in a single place, the guard on inconsistent geometry |
+| `src/figlio.c` · `.h` | `figli_ritela()`, the `RITELA` branch, **reconciliation on the frame** (encoder reopened, pointer remapped, held keys discarded), `MSG_TELA` — the answer to the parent —, the *wanted* canvas for remounting, the growing wait on the encoder |
+| `src/rcp.c` · `.h` | the `ritela` and `tela_del_palco` hooks, `rcp_tela_dal_palco()` (three cases), `tela_richiama_il_palco()`, the backstop of §7.1, the per-side limits of §4.5, the `video.misura_massima` cap also on `ADATTA_TELA` |
+| `src/webtransport.c` · `.h` | the bridge for the two hooks, the table of the stages' canvases per user |
+| `src/main.c` | the two seams, and `wt_palco_dimentica()` on the child's death |
+| `src/mutter.c` · `.h` | `mutter_scala_nostra()` — the scale of **our** logical monitor |
+| `src/pagina.html` | `chiedi_tela()`, `tela_da_chiedere()`, the `?adatta=` switch, the target, the per-side limits, and three fixes to the frame reader |
+| ⭐ `src/Contenitore` · `src/costruisci-in-contenitore.sh` | **how to build**, which was the declared blocker of `F4-IN-12` §3 |
 
 ---
 
-### Le misure
+### The measurements
 
-Tutte sulla macchina di prova (`192.168.0.2`, NIC-OS, GNOME headless), utente `prova`, client
-Chrome. ⚠ L'orologio di quella macchina è **indietro di due ore** rispetto a quello del portatile:
-le ore qui sono le sue.
+All on the test machine (`192.168.0.2`, NIC-OS, headless GNOME), user `prova`, client
+Chrome. ⚠ That machine's clock is **two hours behind** the laptop's:
+the times here are its own.
 
-| che cosa | scena | atteso | misurato | data |
+| what | scene | expected | measured | date |
 |---|---|---|---|---|
-| tela concordata all'attacco | finestra 1265×800 | la misura della finestra | **1264×800** (pari, troncata in giù) | 15 ago |
-| ⭐ dal canale video al primo fotogramma | login, desktop fermo | «meno dei 4,4 s del 14 ago» | **311 ms** | 15 ago |
-| scala di disegno del client | idem | 1,000 | **1,000**, `imageRendering: pixelated` | 15 ago |
-| ridimensionamento a caldo | 1264×800 → 1000×640 | ~41 ms (`[M]` F4-IN-8) | **6 ms** dalla risposta del palco alla chiave spedita | 15 ago |
-| ri-attacco a misura diversa | palco a 1264×800, pagina che chiede 1920×1080 | i pixel arrivano subito | `SESSIONE` concede **1264×800** (§4.5), **0 fotogrammi scartati** | 15 ago |
-| fotogrammi scartati per misura · trattenuti · errori | sessione intera | 0 · 0 · 0 | **0 · 0 · 0** | 15 ago |
-| guardia 2 (la scala del monitor) | montaggio del palco | 1,000 | **1,000** su «Meta-0», e la riga si scrive **anche quando è buona** | 15 ago |
-| ⭐⭐ clic → primo fotogramma spedito | 25 clic veri dell'utente, desktop fermo | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **136 ms** (peggiore 502) → dopo la cura **41 ms** (peggiore 47) | 15 ago |
-| il giro completo, misurato dalla pagina (`GIRO`) | 10 clic, portatile su rete locale | — | **55 ms**, peggiore 71 (era 135 dal DeX il 14 ago) | 15 ago |
-| il banco | `04-b31` | 18 verdi | **18 verdi**, e **11 guasti su 11** visti | 15 ago |
-| ⛔ **e il 16 agosto era 11/18** | `04-b31` | — | l'atteso di sette casi non contava la richiesta della nascita di `477d708`. ✅ **19/19 e 12 guasti su 12**, col caso 19 a guardia della cura | 16 ago |
+| canvas agreed at attach | window 1265×800 | the window's size | **1264×800** (even, truncated down) | 15 Aug |
+| ⭐ from the video channel to the first frame | login, still desktop | «less than the 4,4 s of 14 Aug» | **311 ms** | 15 Aug |
+| client drawing scale | same | 1,000 | **1,000**, `imageRendering: pixelated` | 15 Aug |
+| hot resize | 1264×800 → 1000×640 | ~41 ms (`[M]` F4-IN-8) | **6 ms** from the stage's answer to the key sent | 15 Aug |
+| reattach at a different size | stage at 1264×800, page asking for 1920×1080 | the pixels arrive at once | `SESSIONE` grants **1264×800** (§4.5), **0 frames discarded** | 15 Aug |
+| frames discarded for size · held · errors | whole session | 0 · 0 · 0 | **0 · 0 · 0** | 15 Aug |
+| guard 2 (the monitor's scale) | stage mounting | 1,000 | **1,000** on «Meta-0», and the line is written **even when it is good** | 15 Aug |
+| ⭐⭐ click → first frame sent | 25 real clicks by the user, still desktop | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **136 ms** (worst 502) → after the cure **41 ms** (worst 47) | 15 Aug |
+| the full round, measured by the page (`GIRO`) | 10 clicks, laptop on local network | — | **55 ms**, worst 71 (it was 135 from the DeX on 14 Aug) | 15 Aug |
+| the bench | `04-b31` | 18 green | **18 green**, and **11 faults out of 11** seen | 15 Aug |
+| ⛔ **and on 16 Aug it was 11/18** | `04-b31` | — | the expectation of seven cases did not count the birth request of `477d708`. ✅ **19/19 and 12 faults out of 12**, with case 19 guarding the cure | 16 Aug |
 
-⭐ **E la misura che non viene da noi**: GNOME *Impostazioni → Displays*, **dentro** la sessione
-remota, dichiara **«Resolution 1264 × 800 (3:2)»** e **«Scale 100%»**. È il compositore che dice la
-misura che gli abbiamo chiesto.
+⭐ **And the measurement that does not come from us**: GNOME *Settings → Displays*, **inside** the remote
+session, declares **«Resolution 1264 × 800 (3:2)»** and **«Scale 100%»**. It is the compositor stating the
+size we asked of it.
 
 ---
 
-### ⛔ Che cosa NON ha funzionato
+### ⛔ What did NOT work
 
-#### I dieci difetti trovati refutando la cura appena scritta
+#### The ten defects found by refuting the cure just written
 
-Quattro agenti, mandato **avversariale** («parti dall'ipotesi che sia falsa»). ⭐ Tre affermazioni su
-quattro sono state smentite, e **otto dei dieci difetti erano nati quella notte insieme alla cura**.
-L'elenco per intero è in `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §3. I quattro che avrebbero
-fatto danno:
+Four agents, **adversarial** mandate («start from the hypothesis that it is false»). ⭐ Three claims out of
+four were refuted, and **eight of the ten defects had been born that night together with the cure**.
+The full list is in `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md` §3. The four that would have
+done damage:
 
-1. una **lettura oltre la memoria copiata** quando la tela si allarga (la guardia copriva un verso
-   solo dei due);
-2. il **`TELA` non richiesto**, che per §6.2 fa **chiudere una sessione sana**;
-3. **due `ADATTA_TELA` incatenate**: il fotogramma della prima preso per la risposta della seconda,
-   e il desktop assestato sulla misura sbagliata **con i conti dei messaggi in ordine**;
-4. il ritorno a una misura **già stata in vigore**, che chiudeva la sessione di chi trascina un
-   bordo e lo rimette dov'era.
+1. a **read beyond the copied memory** when the canvas widens (the guard covered only one direction
+   of the two);
+2. the **unrequested `TELA`**, which under §6.2 makes **a healthy session close**;
+3. **two chained `ADATTA_TELA`**: the frame of the first taken as the answer to the second,
+   and the desktop settled on the wrong size **with the message counts in order**;
+4. the return to a size **already in force before**, which closed the session of whoever drags an
+   edge and puts it back where it was.
 
-#### ⛔⛔ E il difetto che ha trovato l'UTENTE, non il banco
+#### ⛔⛔ And the defect the USER found, not the bench
 
-*15 agosto, mattina, con queste parole: «su Android il mouse dà problemi: non prende più i click».*
+*15 Aug, morning, with these words: «su Android il mouse dà problemi: non prende più i click».*
 
-Erano **due sue sessioni che si contendevano il palco**: il portatile staccato per silenzio aveva
-perso il posto **ma continuava a pretendere la sua misura**, il telefono pretendeva la propria, e il
-palco rimbalzava fra 2544×926 e 2560×926 **diciassette volte al secondo**. Ogni giro riavviava il
-flusso, e Mutter ricreava i dispositivi di `libei`: `[M]` **640 «ricambi»** del puntatore, e la
-regione dell'input mai d'accordo con la tela. ⇒ I clic partivano, arrivavano, venivano iniettati — e
-finivano altrove.
+It was **two of their sessions fighting over the stage**: the laptop, detached for silence, had
+lost the seat **but kept demanding its size**, the phone demanded its own, and the
+stage bounced between 2544×926 and 2560×926 **seventeen times a second**. Every round restarted the
+stream, and Mutter recreated `libei`'s devices: `[M]` **640 «replacements»** of the pointer, and the
+input region never agreeing with the canvas. ⇒ The clicks went out, arrived, were injected — and
+ended up elsewhere.
 
-⭐ La cura è l'invariante che c'era già: **I2 — chi non ha il posto guarda, non comanda**. Una riga.
-⛔ E la mia difesa dell'attesa che cresce **non bastava**, per una ragione che vale più della cura:
-si azzerava ogni volta che il palco arrivava dove *quella* sessione lo voleva, cioè a ogni giro del
-ping-pong. **Un fondo temporale cura un padrone insistente, non due padroni.**
+⭐ The cure is the invariant that was already there: **I2 — whoever does not have the seat watches, does not command**. One line.
+⛔ And my defence of the growing wait **was not enough**, for a reason worth more than the cure:
+it reset every time the stage reached where *that* session wanted it, i.e. at every round of the
+ping-pong. **A time backstop cures an insistent master, not two masters.**
 
-#### ⛔ Il quarto di secondo su ogni clic, e il numero che stava nel registro da un giorno
+#### ⛔ The quarter of a second on every click, and the number that had been in the log for a day
 
-Il ciclo del figlio aspettava un fotogramma fino a **250 ms**, e in quell'attesa non leggeva il
-socket del padre. `[M]` 136 ms di mediana sui clic veri. ⭐ E la causa era stampata **una volta al
-secondo** in una riga scritta per un'altra domanda: *«3 attese a vuoto»* = quattro giri al secondo =
-250 ms per giro. È la seconda volta in due giorni che il registro aveva già il fatto
+The child's loop waited for a frame up to **250 ms**, and during that wait it did not read the
+parent's socket. `[M]` 136 ms median on real clicks. ⭐ And the cause was printed **once a
+second** in a line written for another question: *«3 attese a vuoto»* = four rounds a second =
+250 ms per round. It is the second time in two days that the log already had the fact
 (`LEZIONI.md` §6.2-ter).
 
-#### Le tre cose che ho sbagliato di metodo, e che il banco ha corretto
+#### The three things I got wrong in method, and that the bench corrected
 
-- l'**atteso di G1** dichiarava dieci casi rossi e ne ha accesi sei;
-- **G9 restava verde** perché un secondo controllo mascherava il guasto innestato nel primo;
-- il **caso 18** non riproduceva la scena vera finché non ha avuto **due** sessioni: con una sola, il
-  posto se lo riprendeva da sé e il difetto non compariva.
+- **G1's expectation** declared ten red cases and it lit six;
+- **G9 stayed green** because a second check masked the fault injected into the first;
+- **case 18** did not reproduce the real scene until it had **two** sessions: with just one, the
+  seat was taken back by itself and the defect did not appear.
 
 ---
 
-### Le decisioni prodotte
+### The decisions produced
 
-- `DECISIONI.md` **§5.0-sexies** — attuata per intero, con le misure della notte, le tre guardie
-  chiuse e i quattro tempi (`RCP_TELA_ATTESA_MS`, `RCP_TELA_RICHIAMO_MS`, `TELA_FONDO_MS`,
+- `DECISIONI.md` **§5.0-sexies** — implemented in full, with the night's measurements, the three guards
+  closed and the four times (`RCP_TELA_ATTESA_MS`, `RCP_TELA_RICHIAMO_MS`, `TELA_FONDO_MS`,
   `RISVEGLIO_MS`);
-- `DECISIONI.md` **§5.1** — vale **durante** la sessione, non all'attacco: l'inseguimento della
-  finestra sta dietro `?adatta=segui`, spento di suo (I6). ⛔ **E il 17 agosto 2026 è uscito del
-  tutto** — `DECISIONI.md` **§5.1-bis**, decisione dell'utente: *«non voglio mettere delle
-  eccezioni nel progetto»*. Durante la sessione la tela non si tocca, e non c'è più interruttore;
-- `SPECIFICHE.md` **§6.4** e `RCP.md` **§7.1** — corrette: *«mai come automatismo»* non è più vero
-  all'attacco, e il perché è scritto con la data;
-- `LEZIONI.md` **§7.5** (una deduzione al posto di un messaggio), **§6.2-bis** (un'attesa che
-  protegge un anello è un ritardo per gli altri), **§6.2-ter** (il numero è già nel registro).
+- `DECISIONI.md` **§5.1** — it holds **during** the session, not at attach: following the
+  window is behind `?adatta=segui`, off by default (I6). ⛔ **And on 17 Aug 2026 it went out
+  entirely** — `DECISIONI.md` **§5.1-bis**, the user's decision: *«non voglio mettere delle
+  eccezioni nel progetto»*. During the session the canvas is not touched, and there is no longer a switch;
+- `SPECIFICHE.md` **§6.4** and `RCP.md` **§7.1** — corrected: *«mai come automatismo»* is no longer true
+  at attach, and the why is written with the date;
+- `LEZIONI.md` **§7.5** (a deduction in place of a message), **§6.2-bis** (a wait that
+  protects one ring is a delay for the others), **§6.2-ter** (the number is already in the log).
 
 ---
 
-### Che cosa resta `[?]`
+### What remains `[?]`
 
 | | |
 |---|---|
-| ⏳ **la riga che manca a `RCP.md` §7.1** | che cosa fa il server quando il palco cambia misura **da sé**. Oggi lo richiama e non manda nessun `TELA` — funziona, ma è una regola del prodotto che l'arbitro non nomina |
-| ⛔ **il banco del riattacco che BATTE UN TASTO dopo** | `PIANO.md` lo chiede per questa fase. `[M]` si è visto nel registro che `libei` ricrea i dispositivi al cambio di geometria e che `input.c` li riaggancia, ⛔ **e l'utente ha scritto in un terminale dopo un riattacco** — ma un banco che lo provi non c'è |
-| ⛔ **il ripiego su KWin dichiarato nel registro** | `PIANO.md` lo chiede per questa fase e **non è verificabile**: KDE è la fase 11, e su questa macchina non c'è. Il percorso di codice esiste (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 del banco, **su un ospite finto** |
-| `[?]` **il mezzo pixel del `margin: 0 auto`** | quando `clientWidth × devicePixelRatio` è dispari. ⭐ Giudizio dell'utente sul DeX: *«tutto perfetto»* ⇒ **non si presenta**, ma nessuno l'ha misurato |
-| ⚠ **i 4 ms di ritardo medio aggiunto** | l'attesa di 8 ms è un **ripiego dichiarato**: la cura vera è un descrittore che la cattura scrive quando il fotogramma è pronto, nello stesso `poll()` del padre e di `libei` |
-| ⚠ **il multi-monitor** | `SPECIFICHE.md` §6.5, fuori scopo come funzione |
-| ⚠ **i banchi RCP/1 non esercitano la strada nuova** | `01-b3-cliente.py` e `01-b4-validatore.py` restano verdi perché il filo non è cambiato, ⛔ ma nessuno dei due manda un `ADATTA_TELA` |
+| ⏳ **the line missing from `RCP.md` §7.1** | what the server does when the stage changes size **by itself**. Today it calls it back and sends no `TELA` — it works, but it is a product rule the arbiter does not name |
+| ⛔ **the reattach bench that TYPES A KEY afterwards** | `PIANO.md` asks for it for this phase. `[M]` it was seen in the log that `libei` recreates the devices on a geometry change and that `input.c` reattaches them, ⛔ **and the user typed in a terminal after a reattach** — but there is no bench that tests it |
+| ⛔ **the KWin fallback declared in the log** | `PIANO.md` asks for it for this phase and **it is not verifiable**: KDE is phase 11, and it is not on this machine. The code path exists (`COMPOSITORE_INCAPACE`) and is tested by case 11 of the bench, **on a fake guest** |
+| `[?]` **the half pixel of `margin: 0 auto`** | when `clientWidth × devicePixelRatio` is odd. ⭐ The user's judgement on the DeX: *«tutto perfetto»* ⇒ **it does not show up**, but nobody has measured it |
+| ⚠ **the 4 ms of mean added delay** | the 8 ms wait is a **declared fallback**: the real cure is a descriptor the capture writes when the frame is ready, in the same `poll()` as the parent and `libei` |
+| ⚠ **multi-monitor** | `SPECIFICHE.md` §6.5, out of scope as a function |
+| ⚠ **the RCP/1 benches do not exercise the new path** | `01-b3-cliente.py` and `01-b4-validatore.py` stay green because the wire has not changed, ⛔ but neither of them sends an `ADATTA_TELA` |
 
 ---
 
-### Il giudizio dell'utente
+### The user's judgement
 
 > **«Funziona. Niente barre nere, il desktop riempie perfettamente la finestra del browser e mouse e
-> tastiera funzionano.»** — 15 agosto 2026, dal portatile Linux
+> tastiera funzionano.»** — 15 Aug 2026, from the Linux laptop
 >
 > **«Sia su Linux sia su Android (DeX) è tutto perfetto. Ci sono i presupposti per chiudere la
-> fase.»** — 15 agosto 2026, dopo la cura del ritardo
+> fase.»** — 15 Aug 2026, after the cure of the delay
 
-⭐ E prima, con l'immagine del desktop remoto a schermo intero: **«Questo è linux!»**
+⭐ And before, with the image of the remote desktop full screen: **«Questo è linux!»**
 
 
 ---
 
 <a id="05-la-sessione"></a>
 
-## Fase 5 — La sessione
+## Phase 5 — The session
 
-⭐ **Aperta il 15 agosto 2026**, col suo documento e prima di una riga di codice (questo documento).
-Il mandato di partenza è `rapporti/F5-IN-0-mandato.md`; il piano è
+⭐ **Opened on 15 Aug 2026**, with its document and before a line of code (this document).
+The starting mandate is `rapporti/F5-IN-0-mandato.md`; the plan is
 `PIANO.md` §«Fase 5 — La sessione».
 
-> **La scena che l'utente giudicherà**: *«chiude il client, va a pranzo, riapre — e ritrova tutto
+> **The scene the user will judge**: *«chiude il client, va a pranzo, riapre — e ritrova tutto
 > com'era»*.
 
-⛔ **E il 15 agosto l'utente ha aggiunto quattro punti** che il piano non conteneva, o conteneva
-sparsi. Sono il §1 di questo documento, prima del resto, perché due di essi **cambiano l'ordine del
-lavoro**: il primo tocca la configurazione del desktop, il secondo apre una decisione di protocollo.
+⛔ **And on 15 Aug the user added four points** that the plan did not contain, or contained
+scattered. They are §1 of this document, before the rest, because two of them **change the order of the
+work**: the first touches the desktop's configuration, the second opens a protocol decision.
 
 ---
 
