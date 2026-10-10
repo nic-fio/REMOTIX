@@ -6688,41 +6688,6 @@ estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi
   ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
 - ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
 
-### 10.42 ✅ Chrome on Android with DeX: 4K YouTube judged excellent (user, 10 Oct 2026)
-
-User's words: *«Direi eccellente. Ho fatto una prova cattiva riproducendo un video a 2160P da youtube: il video era
-fluido e in sync, ha avuto problemi solo quando ho spostato la barra di youtube avanti e indietro e lì l'audio ha
-avuto stuttering. A 1440p però i problemi sono spariti e sembrava davvero di essere davanti al PC.»*
-
-| | |
-|---|---|
-| server | the CHUWI tablet: Intel N100, 4 threads, 7.5 GB, GNOME |
-| client | Samsung DeX, Chrome for Android, home network; then Chrome on Windows |
-| 2160p | video smooth and in sync; ⚠ **audio stutters only while dragging the YouTube seek bar** |
-| 1440p | no problems: *«like sitting at the PC»* |
-| register | **tuning, not a defect** — the user called it excellent |
-
-⭐ **The server was the CHUWI tablet itself** (Intel N100, 4 threads, 7.5 GB, GNOME, REMOTIX installed as a
-package), not the test machine — which makes the result weigh more, not less.
-
-✅ **Same scene from Chrome on Windows (same evening): same result** — user's words: *«stesso risultato di
-android»*: the stutter on seek at 4K, the rest perfect. ⇒ The stutter is **not of the client**: it is born on the
-server side (the N100 refetching and redecoding 4K on seek, or REMOTIX's audio under that load) — `[?]` which of
-the two, because the tablet's REMOTIX log needs administrator rights and the CPU sampler started after the video. It
-follows §7.19.
-
-✅ **Closed by the user, same evening, after the heavy 4K seek test**: *«il limite è proprio il 4K e mi ritengo
-soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*. ⇒ 4K seek on an N100 is the
-**declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
-at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
-
-## Come si tiene questo documento
-
-Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
-si risponde in fondo. Una voce 🔸 che l'utente conferma diventa ✅. Una voce ✅ si riapre solo
-con una misura che la smentisce — e allora si riscrive **nello stesso momento**, con la data e
-la fonte (`CODER.md` §5).
-
 ### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026)
 
 User's words, after the report «on KDE the desktop sits at half height» (Windows + Chrome, and a friend on Zorin OS
@@ -6760,3 +6725,37 @@ stampanti»*, then *«solo pdf, server -> client. La annotiamo nel masterplan»*
   taking a document out (the dialog can save it as PDF): off until the administrator turns it on, every print in
   the log.
 
+### 10.42 ✅ Chrome on Android with DeX: 4K YouTube judged excellent (user, 10 Oct 2026)
+
+User's words: *«Direi eccellente. Ho fatto una prova cattiva riproducendo un video a 2160P da youtube: il video era
+fluido e in sync, ha avuto problemi solo quando ho spostato la barra di youtube avanti e indietro e lì l'audio ha
+avuto stuttering. A 1440p però i problemi sono spariti e sembrava davvero di essere davanti al PC.»*
+
+| | |
+|---|---|
+| server | the CHUWI tablet: Intel N100, 4 threads, 7.5 GB, GNOME |
+| client | Samsung DeX, Chrome for Android, home network; then Chrome on Windows |
+| 2160p | video smooth and in sync; ⚠ **audio stutters only while dragging the YouTube seek bar** |
+| 1440p | no problems: *«like sitting at the PC»* |
+| register | **tuning, not a defect** — the user called it excellent |
+
+⭐ **The server was the CHUWI tablet itself** (Intel N100, 4 threads, 7.5 GB, GNOME, REMOTIX installed as a
+package), not the test machine — which makes the result weigh more, not less.
+
+✅ **Same scene from Chrome on Windows (same evening): same result** — user's words: *«stesso risultato di
+android»*: the stutter on seek at 4K, the rest perfect. ⇒ The stutter is **not of the client**: it is born on the
+server side (the N100 refetching and redecoding 4K on seek, or REMOTIX's audio under that load) — `[?]` which of
+the two, because the tablet's REMOTIX log needs administrator rights and the CPU sampler started after the video. It
+follows §7.19.
+
+✅ **Closed by the user, same evening, after the heavy 4K seek test**: *«il limite è proprio il 4K e mi ritengo
+soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*. ⇒ 4K seek on an N100 is the
+**declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
+at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
+
+## Come si tiene questo documento
+
+Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
+si risponde in fondo. Una voce 🔸 che l'utente conferma diventa ✅. Una voce ✅ si riapre solo
+con una misura che la smentisce — e allora si riscrive **nello stesso momento**, con la data e
+la fonte (`CODER.md` §5).
