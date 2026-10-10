@@ -353,7 +353,7 @@ STAMPATE = (HOME, TEMPORANEI)
 
 # ⛔ The value that means «empty» — and it is not `None`.  `None` means «I could not
 #    look», and the two things must not have the same face.
-VUOTO = "(niente)"
+VUOTO = "(nothing)"
 
 # ⭐⭐ THE CHILD'S NAME — and it is the entry on which the whole JUDGEMENT 1 rests.
 #

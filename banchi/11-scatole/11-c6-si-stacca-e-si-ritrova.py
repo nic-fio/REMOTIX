@@ -258,7 +258,7 @@ NOME_FIGLIO = "remotix"
 # ⛔ The value that means «I looked and it is not there».  ⚠ `None` means «I could
 #    not look», and the two things must not have the same face
 #    (§4.5, and lesson §1.47).  It is the same convention as C7.
-VUOTO = "(niente)"
+VUOTO = "(nothing)"
 
 # ---------------------------------------------------------------------------
 # ⭐ HOW MUCH THE SCENE CAN CHANGE AND STAY «THE SAME» — and it is not generic

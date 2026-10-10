@@ -843,12 +843,12 @@ def main():
     rb = sum(1 for e in esiti if e["b"] is True)
     fb = sum(1 for e in esiti if e["b"] is False)
     ib = sum(1 for e in esiti if e["b"] is None)
-    # ⛔ THESE TWO SUMMARY LINES STAY IN ITALIAN FOR NOW: `11-c14-…py` reads the
-    #    «A · …» one with a regular expression (`RIGA_A`), and its certification
-    #    quotes the «B · …» one.  ⇒ They change together with C14, not before.
-    print("  A · il browser rende la pagina    : %d si' · ⛔ %d no · %d non giudicati"
+    # ⛔ `11-c14-…py` reads the «A · …» line with a regular expression
+    #    (`RIGA_A`), and its certification quotes the «B · …» one.  ⇒ They
+    #    change together with C14, never one without the other.
+    print("  A · the browser renders the page      : %d yes · ⛔ %d no · %d not judged"
           % (ra, fa, ia))
-    print("  B · e la pagina si vede DAL CLIENTE: %d si' · ⛔ %d no · %d non giudicati"
+    print("  B · and the page shows FROM THE CLIENT: %d yes · ⛔ %d no · %d not judged"
           % (rb, fb, ib))
 
     if a.senza_cura:

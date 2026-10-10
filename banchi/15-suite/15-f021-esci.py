@@ -202,7 +202,7 @@ def certifica():
         guai += not ok
         print("  %s %-62s %s (expected %s)" % ("OK " if ok else "NO ", nome, ottenuto, atteso))
 
-    buona = {"finita": "E' FINITA", "modulo": True,
+    buona = {"finita": "IS OVER", "modulo": True,
              "frase": "the session has ended: the programs were closed",
              "rimasti": [], "programma": False, "nascite": []}
     g = lambda **k: giudica_uscita(dict(buona, **k))[0]           # noqa: E731
