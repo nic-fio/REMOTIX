@@ -7,16 +7,14 @@ import (
 )
 
 // La fase 0 TRUST (fasi/17-l-installatore.md §6.0 punto 1, §6.6.10), dopo D11 semplificata
-// (DECISIONI §10.21): UNA chiave sola, quella che firma i pacchetti e l'archivio di REMOTIX, e la
-// verifica il gestore di pacchetti. Il motore non verifica firme sue.
+// (DECISIONI §10.21, §10.36): niente chiavi né archivio; il pacchetto unico (il .run) si verifica con
+// lo sha256 pubblicato sul sito. Il motore non verifica firme sue.
 //
 // Il catalogo è quello che il motore porta dentro (catalogo/catalogo.json, incorporato alla
 // costruzione): lo stesso file viaggia nel pacchetto remotix-install e si aggiorna con lui. Chi
 // garantisce che è autentico è chi ha consegnato il motore:
-//   - il motore del pacchetto (/usr/bin/remotix-install): il gestore di pacchetti, dall'archivio
-//     firmato;
-//   - il motore scaricato da install.sh: il suo sha256, pubblicato accanto e scaricato in HTTPS;
-//     install.sh stesso l'amministratore lo verifica con lo sha256 pubblicato sul sito.
+//   - il motore del pacchetto (/usr/bin/remotix-install): installato dal .run;
+//   - il motore dentro il .run: lo sha256 del .run, pubblicato sul sito, e quello del suo carico.
 // Un catalogo dato a mano (--catalogo FILE) è dell'amministratore: si usa al posto di quello
 // incorporato, e il certificato lo dice.
 //

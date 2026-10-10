@@ -3,10 +3,9 @@
 // la tabella del manuale (§3.1) si genera da lì.
 //
 // ⭐ D11 semplificata (DECISIONI §10.21): il catalogo non ha una firma sua. Viaggia DENTRO il
-// motore, e il motore dentro il pacchetto remotix-install (firmato con la chiave dell'archivio,
-// verificato dal gestore di pacchetti) o scaricato da install.sh (verificato con lo sha256
-// pubblicato). Si aggiorna come ogni pacchetto: un catalogo nuovo è un rilascio nuovo
-// (packaging/rilascio.sh), con la «sequenza» più alta.
+// motore, e il motore dentro il pacchetto unico di REMOTIX (il .run, verificato con lo sha256
+// pubblicato: DECISIONI §10.36) e poi nel pacchetto remotix-install installato. Un catalogo nuovo è
+// un rilascio nuovo (packaging/rilascio.sh), con la «sequenza» più alta.
 package catalogo
 
 import _ "embed"

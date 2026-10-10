@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"remotix/installatore/catalogo"
-	"remotix/installatore/chiavi"
 )
 
 // La fase 0 TRUST dopo D11 semplificata (DECISIONI §10.21): il catalogo è quello del motore, e il
-// motore l'ha consegnato il gestore di pacchetti (il pacchetto remotix-install) o install.sh (lo
-// sha256). Il motore non verifica firme sue: le prove guardano che il catalogo si legga, che questo
+// motore l'ha consegnato il .run (lo sha256) o il pacchetto remotix-install che il .run ha installato. Il motore non verifica firme sue: le prove guardano che il catalogo si legga, che questo
 // motore lo capisca, e che fiducia.json dica da dove viene.
 
 // fontiProva: il catalogo incorporato, un motore «scaricato».
@@ -53,10 +51,7 @@ func TestCatalogoIncorporato(t *testing.T) {
 	if !strings.Contains(fid.Fonte, "/non/esiste/motore") || !strings.Contains(fid.Fonte, "sha256") {
 		t.Errorf("il motore scaricato deve dire che lo garantisce lo sha256: %q", fid.Fonte)
 	}
-	if chiavi.ImprontaArchivio() == "" || !strings.Contains(chiavi.Archivio, "BEGIN PGP PUBLIC KEY BLOCK") {
-		t.Errorf("la chiave dell'archivio incorporata non c'è")
-	}
-	// il motore del pacchetto: il catalogo lo garantisce il gestore di pacchetti
+	// il motore del pacchetto remotix-install installato
 	f := fontiProva(t)
 	f.Motore = MotoreDelPacchetto
 	if _, fid, err := f.Fidati(oggi); err != nil || !strings.Contains(fid.Fonte, "remotix-install") {

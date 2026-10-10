@@ -75,7 +75,7 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 		if in[n] == pk.Versione {
 			return nil
 		}
-		a := Artefatto{Nome: n, Versione: pk.Versione, Origine: origine, File: f, Esito: "new"}
+		a := Artefatto{Nome: n, Versione: pk.Versione, Origine: origine, Esito: "new"}
 		if in[n] != "" {
 			a.Esito, a.Prima = "upgraded", in[n]
 		}
@@ -104,13 +104,13 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 	return r, nil
 }
 
-func (g *gestoreFinto) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
+func (g *gestoreFinto) Simula(file, nomi []string) ([]Artefatto, error) {
 	r, err := g.chiusura(file, nomi)
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
 	return r, err
 }
 
-func (g *gestoreFinto) Installa(cache string, file, nomi []string) error {
+func (g *gestoreFinto) Installa(file, nomi []string) error {
 	r, err := g.chiusura(file, nomi)
 	if err != nil {
 		return err

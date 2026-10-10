@@ -10,7 +10,7 @@ import (
 )
 
 // La VISTA: gli oggetti del motore in parole comuni, per le cinque schermate e le varianti
-// (fasi/17 §10). TUI e GUI disegnano questi valori e nient'altro: così dicono le stesse cose.
+// (fasi/17 §10). La TUI disegna questi valori e nient'altro.
 
 // Stato di una riga: il colore del cartellino.
 type Stato int
@@ -64,27 +64,11 @@ type VistaBloccata struct {
 	Toccata         bool // la macchina è stata toccata (annullata): il cerchio non è rosso ma ambra
 }
 
-// Opzione: una risposta possibile.
-type Opzione struct {
-	Valore, Titolo, Nota, Testo string
-	Verde                       bool // la nota è «consigliato» (verde)
-}
-
-// Domanda: una domanda della schermata delle scelte, con la voce del file di risposte che riempie.
-type Domanda struct {
-	Voce, Titolo, Spiega string
-	Opzioni              []Opzione
-	Griglia              bool // i desktop: due colonne
-}
-
-// VistaScelte: la schermata 2 (o la variante «nessun desktop»).
+// VistaScelte: la schermata 2 — la porta.
 type VistaScelte struct {
 	Titolo, Sotto string
-	SenzaDesktop  bool
-	PortaRiga     string // la riga sotto la porta (verde se il firewall non va toccato)
+	PortaRiga     string // la riga sotto la porta (verde se non c'è un firewall acceso)
 	PortaVerde    bool
-	Domande       []Domanda
-	Nota          string
 }
 
 // Passo: una riga del piano, con le azioni del motore che raccoglie.
@@ -111,6 +95,8 @@ func (p Passo) Cartellino() string {
 type VistaPiano struct {
 	Passi    []Passo
 	Dettagli string
+	// Pacchetti: che cosa farà il gestore (la sua simulazione), da mostrare prima del «sì»
+	Pacchetti []motore.Artefatto
 }
 
 // ---- 1 · il controllo ------------------------------------------------------------------------
@@ -262,6 +248,12 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 		v.Bloccata = vistaNonSupportata(prof, rap)
 		return v
 	}
+	// quel che manca (DECISIONI §10.36): REMOTIX non lo installa, lo dice; provvede l'amministratore
+	if len(rap.Mancano) > 0 {
+		v.Esito = BLOCCATA
+		v.Bloccata = VistaMancano(rap.Mancano)
+		return v
+	}
 
 	var righe []Riga
 	// sistema
@@ -279,12 +271,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 		}
 	}
 	condizioni := []string{}
-	if len(ds) > 0 {
-		righe = append(righe, Riga{T("r.desktop"), T("t.desktop.ok", strings.Join(ds, ", ")), OK})
-	} else {
-		righe = append(righe, Riga{T("r.desktop"), T("t.desktop.nessuno"), CONSENSO})
-		condizioni = append(condizioni, T("c.cond.desktop"))
-	}
+	righe = append(righe, Riga{T("r.desktop"), T("t.desktop.ok", strings.Join(ds, ", ")), OK})
 	// scheda
 	switch {
 	case prof.V("gpu.nvidia_proprietary") == "yes":
@@ -294,20 +281,8 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	default:
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.ok", nomeScheda(prof)), OK})
 	}
-	// video
-	video := false
-	for _, x := range dom.Depositi {
-		if x.Per == "h264" {
-			video = true
-		}
-	}
-	switch {
-	case video:
-		righe = append(righe, Riga{T("r.video"), T("t.video.deposito", distro), CONSENSO})
-		condizioni = append(condizioni, T("c.cond.video", distro))
-	default:
-		righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
-	}
+	// video: la prova vera è dopo l'installazione (7a)
+	righe = append(righe, Riga{T("r.video"), T("t.video.ok"), DOPO})
 	// accesso
 	if m := haMessaggio(prof.Messaggi, "RX-PAM-001"); m != nil {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.male"), MALE})
@@ -323,17 +298,12 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	default:
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.no"), OK})
 	}
-	// firewall
-	switch {
-	case dom.Firewall == "open":
-		righe = append(righe, Riga{T("r.firewall"), T("t.fw.aperto"), OK})
-	case dom.Firewall == "closed":
-		righe = append(righe, Riga{T("r.firewall"), T("t.fw.chiuso"), CONSENSO})
-		condizioni = append(condizioni, T("c.cond.firewall"))
-	case dom.Firewall == "none":
+	// firewall: aprirlo è dell'amministratore (§10.36)
+	if dom.Firewall == "none" {
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.nessuno"), OK})
-	default:
-		righe = append(righe, Riga{T("r.firewall"), T("t.fw.altro", strings.TrimPrefix(dom.Firewall, "other:")), DOPO})
+	} else {
+		righe = append(righe, Riga{T("r.firewall"), T("t.fw.admin", dom.Firewall, dom.Porta), DOPO})
+		condizioni = append(condizioni, T("c.cond.firewall", dom.Porta))
 	}
 	// porta
 	p := dom.Porta
@@ -461,68 +431,30 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 	return b
 }
 
+// VistaMancano: la schermata «manca qualcosa» — che cosa, senza dire come metterlo (§10.36).
+func VistaMancano(m []motore.Messaggio) *VistaBloccata {
+	b := &VistaBloccata{Titolo: T("b.titolo.manca"), Sotto: T("b.sotto.intatta"), CheFare: T("b.manca.chefare")}
+	var r, cod []string
+	for _, x := range m {
+		r = append(r, strings.TrimSpace(x.Testo+" "+x.Dettaglio))
+		cod = append(cod, x.Codice)
+	}
+	b.Perche = "• " + strings.Join(r, "\n• ")
+	b.Codice = strings.Join(cod, " ")
+	return b
+}
+
 // ---- 2 · le scelte ---------------------------------------------------------------------------
 
-// VistaDelleScelte: la schermata 2, dalle domande del motore.
+// VistaDelleScelte: la schermata 2 — una domanda sola, la porta (§10.36: niente archivi, firewall o
+// desktop da scegliere).
 func VistaDelleScelte(c *Controllo) *VistaScelte {
-	prof, dom := c.Profilo, c.Domande
-	distro := nomeDistro(prof)
-	v := &VistaScelte{Sotto: T("sc.sotto")}
-	switch {
-	case dom.Firewall == "open":
-		v.PortaRiga, v.PortaVerde = T("sc.fw.aperto"), true
-	case dom.Firewall == "none":
+	dom := c.Domande
+	v := &VistaScelte{Titolo: T("sc.titolo.1"), Sotto: T("sc.sotto")}
+	if dom.Firewall == "none" {
 		v.PortaRiga, v.PortaVerde = T("sc.fw.nessuno"), true
-	case strings.HasPrefix(dom.Firewall, "other:"):
-		v.PortaRiga = T("sc.fw.altro", strings.TrimPrefix(dom.Firewall, "other:"))
-	}
-	if dom.Desktop != nil {
-		v.SenzaDesktop = true
-		v.Titolo, v.Sotto = T("nd.titolo"), T("nd.sotto", distro)
-		d := Domanda{Voce: "desktop", Titolo: T("nd.quale"), Griglia: true}
-		for _, o := range dom.Desktop.Opzioni {
-			if o == "no" {
-				continue
-			}
-			op := Opzione{Valore: o, Titolo: T("nd." + o), Testo: T("nd." + o + ".t")}
-			if o == dom.Desktop.Predefinita {
-				op.Nota, op.Verde = T("nd.rif", distro), true
-			}
-			d.Opzioni = append(d.Opzioni, op)
-		}
-		d.Opzioni = append(d.Opzioni, Opzione{Valore: "no", Titolo: T("nd.no"), Testo: T("nd.no.t")})
-		v.Domande = append(v.Domande, d)
-		v.Nota = T("nd.nota", distro)
-	}
-	for _, x := range dom.Depositi {
-		if x.Per == "h264" {
-			no := T("sc.video.no.t") // D5: senza, REMOTIX non si installa
-			v.Domande = append(v.Domande, Domanda{Voce: "consent.repo." + x.ID, Titolo: T("sc.video.titolo"),
-				Spiega: T("sc.video.spiega", distro, x.Nome, distro), Opzioni: []Opzione{
-					{Valore: "yes", Titolo: T("sc.video.si", x.Nome), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.video.si.t")},
-					{Valore: "no", Titolo: T("sc.video.no"), Testo: no}}})
-		} else {
-			v.Domande = append(v.Domande, Domanda{Voce: "consent.repo." + x.ID, Titolo: T("sc.dep.titolo", x.Nome),
-				Spiega: T("sc.dep.spiega", distro, x.Nome), Opzioni: []Opzione{
-					{Valore: "yes", Titolo: T("sc.dep.si", x.Nome), Nota: T("sc.consigliato"), Verde: true},
-					{Valore: "no", Titolo: T("sc.dep.no"), Testo: T("sc.dep.no.t")}}})
-		}
-	}
-	if dom.Firewall == "closed" {
-		v.Domande = append(v.Domande, Domanda{Voce: "consent.firewall", Titolo: T("sc.fw.titolo"), Spiega: T("sc.fw.spiega"),
-			Opzioni: []Opzione{{Valore: "yes", Titolo: T("sc.fw.si"), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.fw.si.t")},
-				{Valore: "no", Titolo: T("sc.fw.no"), Testo: T("sc.fw.no.t")}}})
-	}
-	if v.Titolo == "" {
-		n := 1 + len(v.Domande) // la porta, più le domande
-		switch n {
-		case 1:
-			v.Titolo = T("sc.titolo.1")
-		case 2:
-			v.Titolo = T("sc.titolo.2")
-		default:
-			v.Titolo = T("sc.titolo.n", numero(n))
-		}
+	} else {
+		v.PortaRiga = T("sc.fw.admin", dom.Firewall)
 	}
 	return v
 }
@@ -571,12 +503,8 @@ func elenco(nomi []string) string {
 
 // VistaDelPiano: le azioni del piano raccolte in passi detti in parole comuni. L'ordine è quello
 // del piano (il primo passo di ogni gruppo decide dove sta il gruppo).
-func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string]string) *VistaPiano {
+func VistaDelPiano(p *motore.Piano) *VistaPiano {
 	v := &VistaPiano{}
-	distro := "Linux"
-	if prof != nil {
-		distro = nomeDistro(prof)
-	}
 	gruppo := map[string]int{}
 	var utentiGruppi []string
 	visti := map[string]bool{}
@@ -594,32 +522,6 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 	porta := ""
 	for _, a := range p.Azioni {
 		switch {
-		case a.Tipo == "add-repo" && a.ID == "remotix-archive":
-			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.archivio"), Sotto: T("a.archivio.t"), Fatto: T("a.archivio.f"), Breve: T("a.archivio.f")}
-			}, a)
-		case a.Tipo == "add-repo":
-			id := strings.TrimPrefix(a.ID, "repo-")
-			nome := id
-			if n := catDepositi[id]; n != "" {
-				nome = n
-			}
-			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.deposito", nome), Nota: T("a.acconsentito"), Sotto: T("a.deposito.t"), Fatto: T("a.deposito.f", nome), Breve: T("a.deposito.f", nome)}
-			}, a)
-		case a.Tipo == "install-packages" && a.ID == "codec":
-			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.codec"), Sotto: T("a.codec.t", distro), Fatto: T("a.codec.f"), Breve: T("a.codec.f")}
-			}, a)
-		case a.Tipo == "install-desktop":
-			d := NomeDesktop(a.Parametri["desktop"])
-			metti("desktop", func() Passo {
-				return Passo{Titolo: T("a.desktop", d), Sotto: T("a.desktop.t", distro), Fatto: T("a.desktop.f", d), Breve: T("a.desktop.f", d)}
-			}, a)
-		case a.Tipo == "install-packages" && (a.ID == "components" || a.ID == "desktop-components"):
-			metti("components", func() Passo {
-				return Passo{Titolo: T("a.componenti"), Sotto: T("a.componenti.t"), Fatto: T("a.componenti.f"), Breve: T("a.componenti.f")}
-			}, a)
 		case a.Tipo == "install-packages":
 			metti("packages", func() Passo {
 				return Passo{Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.f")}
@@ -630,15 +532,6 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 				utentiGruppi = append(utentiGruppi, u)
 			}
 			metti("gruppi", func() Passo { return Passo{} }, a)
-		case a.Tipo == "enable-guard":
-			metti("cinture", func() Passo {
-				return Passo{Titolo: T("a.cinture"), Sotto: T("a.cinture.t"), Fatto: T("a.cinture.f"), Breve: T("a.cinture.f")}
-			}, a)
-		case a.Tipo == "firewall-rule":
-			ps := a.Parametri["port"]
-			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.firewall", ps), Nota: T("a.acconsentito"), Sotto: T("a.firewall.t"), Fatto: T("a.firewall.f", ps), Breve: T("a.firewall.f", ps)}
-			}, a)
 		case a.Tipo == "start-service":
 			porta = a.Parametri["port"]
 			metti(a.ID, func() Passo {
@@ -672,6 +565,7 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 		d = append(d, strings.TrimSpace(m.Codice+" "+m.Testo))
 	}
 	v.Dettagli = strings.Join(d, " · ")
+	v.Pacchetti = p.Pacchetti
 	return v
 }
 
@@ -864,7 +758,7 @@ type VistaPronto struct {
 }
 
 // VistaDelPronto: dal certificato, dal piano (i passi fatti) e dall'esito.
-func VistaDelPronto(es *Esito, vp *VistaPiano, porta int, depositoVideo string) *VistaPronto {
+func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 	v := &VistaPronto{Sotto: T("pr.sotto")}
 	ind := "[indirizzo]"
 	if len(es.Indirizzi) > 0 {
@@ -935,10 +829,7 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int, depositoVideo string) 
 		}
 	}
 	v.Prove = append(v.Prove, Riga{T("pr.k.audio"), T("pr.primo"), DOPO})
-	switch {
-	case depositoVideo != "":
-		v.Sotto = T("pr.sotto.dep", depositoVideo)
-	case len(v.Condizioni) > 0:
+	if len(v.Condizioni) > 0 {
 		v.Sotto = T("pr.sotto.cond", v.Condizioni[0])
 	}
 	return v
@@ -977,11 +868,8 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 		b.Perche = strings.Join(es.Certificato.Resti, "; ")
 	}
 	if m != nil {
-		if m.Codice == "RX-DESKTOP-001" {
-			b.Titolo = T("b.titolo.desktop")
-		}
-		if m.Codice == "RX-H264-006" {
-			b.Titolo = T("b.titolo.video")
+		if strings.HasPrefix(m.Codice, "RX-MANCA-") {
+			b.Titolo = T("b.titolo.manca")
 		}
 		b.Perche, b.CheFare, b.Codice = m.Testo, m.Rimedio, m.Codice
 		b.Dettagli = m.Dettaglio
@@ -992,8 +880,8 @@ func VistaDellaFine(es *Esito, registro []string) *VistaBloccata {
 	return b
 }
 
-// BloccoNelPiano: un «no» che ferma tutto già nel piano (D5: l'archivio della codifica), da dire
-// subito invece di chiedere la conferma di un piano che il motore rifiuterà.
+// BloccoNelPiano: quel che manca, già nel piano (la simulazione del gestore che non risolve, per
+// esempio), da dire subito invece di chiedere la conferma di un piano che il motore rifiuterà.
 func BloccoNelPiano(p *motore.Piano) *motore.Messaggio {
 	for i := range p.NonFatto {
 		if p.NonFatto[i].Gravita == motore.BLOCCANTE {
@@ -1011,28 +899,6 @@ func UltimoMessaggio(evs []motore.EventoPubblico) *motore.Messaggio {
 		}
 	}
 	return nil
-}
-
-// DepositoVideo: il nome dell'archivio per H.264 a cui si è acconsentito, se c'è.
-func DepositoVideo(dom *motore.Domande, voci map[string]string) string {
-	for _, x := range dom.Depositi {
-		if x.Per == "h264" && voci["consent.repo."+x.ID] == "yes" {
-			return x.Nome
-		}
-	}
-	return ""
-}
-
-// NomiDepositi: id → nome, per il piano.
-func NomiDepositi(dom *motore.Domande) map[string]string {
-	r := map[string]string{}
-	if dom == nil {
-		return r
-	}
-	for _, x := range dom.Depositi {
-		r[x.ID] = x.Nome
-	}
-	return r
 }
 
 // Ordinate: le chiavi di una mappa, in ordine (per scrivere le voci sempre uguali).

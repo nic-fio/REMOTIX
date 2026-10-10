@@ -11,179 +11,110 @@ import (
 	"syscall"
 )
 
-// OpzioniInstallazione: le poche cose che chi installa sceglie (§10: la porta; i consensi D5 e
-// D6; e — finché D4 è aperta — le cinture).
+// OpzioniInstallazione: le poche cose che chi installa sceglie (§10: la porta, chi entra nei gruppi
+// della scheda) e da dove vengono i pacchetti (il pacchetto unico, DECISIONI §10.36).
 type OpzioniInstallazione struct {
-	Pacchetto    string // il pacchetto di REMOTIX da un file locale (le prove di T3-T5); oppure:
-	Archivio     string // l'archivio firmato di REMOTIX (T8): URL di base
-	Canale       string // stabile (predefinito) o candidato
-	Chiave       string // la chiave pubblica dell'archivio (armatura ASCII), e la sua impronta
-	Impronta     string
-	Utenti       []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
-	Depositi     []string // archivi di terzi col consenso (D5): epel, rpmfusion, packman
-	ApriFirewall bool     // D6
-	Porta        int
+	// Pacchetti: la cartella packages/ del .run (o, nelle prove, una cartella qualunque con
+	// <bersaglio>/*.deb|*.rpm|*.pkg.tar.zst); "" ⇒ nessun pacchetto (RX-MANCA-004)
+	Pacchetti string
+	Utenti    []string // chi mettere nei gruppi della scheda; vuoto ⇒ le persone della macchina
+	Porta     int
+	// Aggiornamento: REMOTIX è già installato (un'installazione CONFERMATA): il piano mette solo i
+	// pacchetti nuovi del .run; gruppi, porta e servizio ci sono già
+	Aggiornamento bool
 }
 
-// PianoInstallazione: il piano della prima installazione (§6.0, colonna «prima installazione»):
-// depositi → desktop (se manca) → pacchetti → gruppi → cinture → firewall → accensione.
+// PianoInstallazione: il piano dell'installazione (o dell'aggiornamento) di REMOTIX (§6.0, rifatto il
+// 10 ott 2026 per DECISIONI §10.36). REMOTIX NON modifica il sistema: niente archivi di terzi, driver,
+// desktop, firewall né cinture di sistema. Quel che manca (Rapporto.Mancano) va nel piano come
+// BLOCCANTE e l'operazione si ferma prima di toccare niente; provvede l'amministratore. Il piano fa:
+// i pacchetti di REMOTIX dal .run (le dipendenze le prende il gestore dagli archivi della macchina) →
+// i gruppi della scheda (l'eccezione voluta dall'utente) → la porta, se non è quella di serie →
+// l'accensione. Il gestore simula subito: il piano mostra i pacchetti esatti prima della domanda.
 func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniInstallazione) (*Piano, error) {
 	if o.Porta == 0 {
 		o.Porta = 7447
 	}
 	ps := strconv.Itoa(o.Porta)
-	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "installation",
+	mestiere := "installation"
+	if o.Aggiornamento {
+		mestiere = "upgrade"
+	}
+	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: mestiere,
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
-		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
+		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 
-	if o.Archivio != "" {
-		par, err := ParametriArchivio(amb, o.Archivio, o.Canale, o.Chiave, o.Impronta)
-		if err != nil {
-			return nil, err
-		}
-		pn.Archivio = &RifArchivio{URL: par["archive"], Canale: par["channel"]}
-		pn.Azioni = append(pn.Azioni, PianoDeposito("remotix-archive", "archive", par, ""))
-	}
-	// fase 18 (senza ffmpeg): il deposito dei DRIVER della scheda — quale, e quali driver, dipende dal
-	// fornitore della scheda di questa macchina (H264Piattaforma.PerLaScheda)
-	var depScheda string
-	var pkScheda []string
-	var nonfree bool
-	if rap.pl != nil {
-		depScheda, pkScheda, nonfree = rap.pl.H264.PerLaScheda(prof)
-	}
-	for _, d := range o.Depositi {
-		dc := cat.Depositi[d]
-		cons := T("consent.repo", nonVuoto(dc.Nome, d))
-		var par map[string]string
-		if d == depScheda && nonfree {
-			par = map[string]string{"nonfree": "yes"} // RPM Fusion: il driver Intel completo sta in nonfree
-		}
-		pn.Azioni = append(pn.Azioni, PianoDeposito("repo-"+d, d, par, cons))
-		pn.Consensi = append(pn.Consensi, cons)
-	}
-	// i driver con H.264 da quel deposito (§4.2, fase 18), se c'è o col consenso; già installati, il
-	// passo li trova «presenti» e non tocca niente
-	if depScheda != "" && len(pkScheda) > 0 && (depositoPresente(prof, depScheda, nonfree) || contiene(o.Depositi, depScheda)) {
-		pn.Azioni = append(pn.Azioni, PianoPacchettiDa("codec", strings.Join(pkScheda, ","), depScheda))
-	}
-	// D5 (DECISIONI §10.20): senza l'archivio che porta la codifica video, REMOTIX non si installa. Il
-	// piano lo dice (BLOCCANTE, col nome dell'archivio) e Applica si ferma prima di toccare niente.
-	// Vale per i depositi di REMOTIX stesso (su Alma EPEL) e per quello dei driver della scheda
-	manca := DepositiBaseMancanti(rap.pl, prof)
-	if d := DepositoScheda(rap.pl, prof); d != "" {
-		manca = append(manca, d)
-	}
-	for _, d := range manca {
-		if !contiene(o.Depositi, d) {
-			pn.NonFatto = append(pn.NonFatto, Msg("RX-H264-006", nonVuoto(cat.Depositi[d].Nome, d)))
+	// quel che manca, e i motivi per cui su questa macchina REMOTIX non va: si dicono, e si ferma
+	pn.NonFatto = append(pn.NonFatto, rap.Mancano...)
+	for _, m := range rap.Messaggi {
+		if m.Gravita == BLOCCANTE && !haCodice(pn.NonFatto, m.Codice) {
+			pn.NonFatto = append(pn.NonFatto, m)
 		}
 	}
-	if s := SceltaDesktop(rap); s != nil {
-		pn.Scelte = append(pn.Scelte, *s)
-		pn.Consensi = append(pn.Consensi, s.Domanda)
-		pn.metteDesktop(s.Predefinita, s.Pacchetti[s.Predefinita], s.Componenti[s.Predefinita])
-	}
-	switch {
-	case o.Archivio != "":
-		// dall'archivio: il prodotto, il motore (col catalogo dentro) e, su apt, la chiave. Poi si
-		// aggiornano col sistema (DECISIONI §10.23): niente timer nostro
-		nomi := "remotix,remotix-install"
-		if amb.Famiglia == "debian" {
-			nomi += ",remotix-archive-keyring"
-		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", "", "", nomi))
-	case o.Pacchetto != "":
-		// uno o più file, separati da virgola, in UNA transazione (T6: remotix e remotix-selinux,
-		// che remotix chiede dove c'è la politica «targeted»)
-		var file, shas []string
-		for _, f := range dividiVirgole(o.Pacchetto) {
-			abs, err := filepath.Abs(f)
-			if err != nil {
-				return nil, err
-			}
-			sha, err := Sha256File(amb.P(abs))
-			if err != nil || sha == "" {
-				return nil, fmt.Errorf("%s: %v", abs, err)
-			}
-			file, shas = append(file, abs), append(shas, sha)
-		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), strings.Join(shas, ","), ""))
-	default:
-		return nil, fmt.Errorf("the REMOTIX archive (--archive URL) or a package (--package FILE) is needed")
-	}
-	// fase 19: il driver Vulkan ufficiale della scheda (VulkanScheda: oggi RADV per AMD, dove Mesa
-	// codifica). Nei .deb e negli .rpm è solo un «Recommends» (che una macchina senza raccomandati
-	// salta), su Arch un «optdepends» (che pacman non installa mai): lo chiede il motore. Già
-	// installato, il passo lo trova «presente» e non tocca niente
-	if rap.pl != nil {
-		if vk := rap.pl.H264.VulkanPerLaScheda(prof); len(vk) > 0 {
-			pn.Azioni = append(pn.Azioni, PianoPacchetti("vulkan", "", "", strings.Join(vk, ",")))
-		}
-	}
-	// i pezzi che il desktop di serie non porta (C-COMPONENTE: labwc, breeze6-wallpapers, un
-	// carattere scalabile…): li aggiunge il motore, dopo il pacchetto
-	var comp []string
-	visti := map[string]bool{}
-	for _, e := range rap.Desktop {
-		if e.Livello == NON_SUPPORTATA || e.Installato == "" || e.Installato == "absent" || e.Installato == "unknown" {
-			continue
-		}
-		for _, k := range e.Condizioni {
-			if k.Codice == "C-COMPONENTE" && k.Componente != "" && !visti[k.Componente] {
-				visti[k.Componente] = true
-				comp = append(comp, k.Componente)
+	if !haDesktopBuono(rap) && !rap.SenzaDesktop {
+		for _, e := range rap.Desktop {
+			for _, m := range e.Motivi {
+				if !haCodice(pn.NonFatto, m.Codice) {
+					pn.NonFatto = append(pn.NonFatto, m)
+				}
 			}
 		}
 	}
-	if len(comp) > 0 {
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("components", "", "", strings.Join(comp, ",")))
-	}
 
-	utenti := o.Utenti
-	if len(utenti) == 0 {
-		utenti = Persone(amb)
+	file, err := PacchettiDelRun(amb, o.Pacchetti)
+	if err != nil {
+		pn.NonFatto = append(pn.NonFatto, Msg("RX-MANCA-004", err.Error()))
+	} else {
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), ""))
 	}
-	gruppi := GruppiScheda(amb)
-	for _, u := range utenti {
-		for _, g := range gruppi {
-			pn.Azioni = append(pn.Azioni, PianoGruppo("group-"+u+"-"+g, u, g))
+	if !o.Aggiornamento {
+		utenti := o.Utenti
+		if len(utenti) == 0 {
+			utenti = Persone(amb)
 		}
+		gruppi := GruppiScheda(amb)
+		for _, u := range utenti {
+			for _, g := range gruppi {
+				pn.Azioni = append(pn.Azioni, PianoGruppo("group-"+u+"-"+g, u, g))
+			}
+		}
+		if len(gruppi) == 0 {
+			pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.nessun_gruppo")})
+		} else {
+			pn.Dichiarate = append(pn.Dichiarate, T("np.gruppi", strings.Join(gruppi, ", ")))
+		}
+		// la porta scelta (§6.4: i predefiniti in /usr, le scelte in /etc): remotix.service la legge
+		// da /etc/remotix/remotix.conf.d/*.conf. Solo se non è quella di serie
+		if o.Porta != 7447 {
+			pn.Azioni = append(pn.Azioni, PianoScriviFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
+		}
+		pn.Azioni = append(pn.Azioni, PianoAccendiServizio("service", "remotix.service", o.Porta))
+		// il firewall è dell'amministratore (§10.36): lo si dice, non lo si apre
+		switch g := amb.Firewall.Nome(); g {
+		case "none", "":
+		default:
+			pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: AVVISO, Testo: T("np.firewall", g, ps)})
+		}
+		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.sospensione")})
 	}
-	if len(gruppi) == 0 {
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.nessun_gruppo")})
-	}
-	// la porta scelta (§6.4: i predefiniti in /usr, le scelte in /etc): remotix.service la legge da
-	// /etc/remotix/remotix.conf.d/*.conf. Solo se non è quella di serie — `[M]` 30 set, leap16-kde in
-	// scatola: senza questo passo il servizio partiva su 7447 e il motore lo verificava su 8532
-	if o.Porta != 7447 {
-		pn.Azioni = append(pn.Azioni, PianoScriviFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
-	}
-	// D4 (DECISIONI §4.7, 15 ago 2026): le tre cinture SEMPRE, senza consenso; il piano lo dichiara
-	for _, c := range Cinture {
-		pn.Azioni = append(pn.Azioni, PianoCintura(c.ID, c.Sorgente, c.Percorso, c.Ricarica))
-	}
-	pn.Dichiarate = append(pn.Dichiarate, T("az.cintura.dichiarata"))
-	switch g := amb.Firewall.Nome(); {
-	case !o.ApriFirewall && (g == "firewalld" || g == "ufw"):
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: AVVISO, Testo: T("np.firewall_no", ps)})
-	case !o.ApriFirewall:
-	case g == "firewalld" || g == "ufw":
-		a := PianoFirewall("firewall", ps)
-		pn.Azioni = append(pn.Azioni, a)
-		pn.Consensi = append(pn.Consensi, a.Consenso)
-	case g == "none":
-		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_nessuno")})
-	default:
-		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
-	}
-	pn.Azioni = append(pn.Azioni, PianoAccendiServizio("service", "remotix.service", o.Porta))
-
 	for _, e := range rap.Desktop {
 		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
+	}
+	// la simulazione del gestore: i pacchetti esatti, PRIMA della domanda. Se il gestore non sa
+	// installare (una dipendenza che nessun archivio della macchina dà), lo dice qui
+	if !Bloccato(pn) && amb.Pacchetti != nil && len(file) > 0 {
+		var veri []string
+		for _, f := range file {
+			veri = append(veri, amb.P(f))
+		}
+		ins, err := amb.Pacchetti.Simula(veri, nil)
+		if err != nil {
+			pn.NonFatto = append(pn.NonFatto, Msg("RX-PACCHETTI-005", err.Error()))
+		}
+		pn.Pacchetti = ins
 	}
 	im, err := CalcolaImpronta(prof, cat, pn.Azioni, pn.Dipende, &Contesto{Amb: amb})
 	if err != nil {
@@ -191,6 +122,75 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	}
 	pn.Impronta = *im
 	return pn, nil
+}
+
+// haDesktopBuono: almeno un desktop installato che REMOTIX sostiene.
+func haDesktopBuono(rap *Rapporto) bool {
+	for _, e := range rap.Desktop {
+		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
+			return true
+		}
+	}
+	return false
+}
+
+// Bloccato: il piano ha un messaggio BLOCCANTE (quel che manca): non si applica.
+func Bloccato(p *Piano) bool {
+	for _, m := range p.NonFatto {
+		if m.Gravita == BLOCCANTE {
+			return true
+		}
+	}
+	return false
+}
+
+// NienteDaFare: la simulazione dice che i pacchetti del .run sono già tutti installati, a quella
+// versione (un aggiornamento con lo stesso .run).
+func NienteDaFare(p *Piano) bool {
+	if len(p.Pacchetti) == 0 {
+		return false
+	}
+	for _, a := range p.Pacchetti {
+		if a.Esito != "present" {
+			return false
+		}
+	}
+	return true
+}
+
+// PacchettiDelRun: i file dei pacchetti di REMOTIX per QUESTA distribuzione, nella cartella
+// packages/<bersaglio>/ del .run. remotix-selinux solo dove c'è la politica targeted (il pacchetto
+// remotix lo chiede lì, e altrove porterebbe con sé la politica intera).
+func PacchettiDelRun(a *Ambiente, dir string) ([]string, error) {
+	if dir == "" {
+		return nil, fmt.Errorf("no packages: run the REMOTIX .run file")
+	}
+	b := Bersaglio(a)
+	voci, _ := filepath.Glob(filepath.Join(a.P(dir), b, "*"))
+	var r []string
+	selinux := false
+	if st, err := os.Stat(a.P("/etc/selinux/targeted")); err == nil && st.IsDir() {
+		selinux = true
+	}
+	for _, v := range voci {
+		n := filepath.Base(v)
+		if !strings.HasSuffix(n, ".deb") && !strings.HasSuffix(n, ".rpm") && !strings.HasSuffix(n, ".pkg.tar.zst") {
+			continue
+		}
+		if strings.HasPrefix(n, "remotix-selinux") && !selinux {
+			continue
+		}
+		abs, err := filepath.Abs(filepath.Join(dir, b, n))
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, abs)
+	}
+	sort.Strings(r)
+	if len(r) == 0 {
+		return nil, fmt.Errorf("%s: no packages for %s", dir, b)
+	}
+	return r, nil
 }
 
 // Persone: gli utenti umani della macchina (uid fra UID_MIN e 60000, con una shell vera).

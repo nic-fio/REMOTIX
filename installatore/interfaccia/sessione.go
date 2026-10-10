@@ -1,8 +1,8 @@
 // Package interfaccia: quel che la TUI mostra (T9, fasi/17 §6.6.1, DECISIONI §10.14, §10.31).
 //
-//   - la SESSIONE: il lato del motore, da root. Esamina la macchina, fa il piano dalle risposte,
-//     lo applica. È il motore e basta: le stesse funzioni della riga di comando (Preflight, Valuta,
-//     DomandeDaFare, PianoDaScelte, Applica). La TUI, che gira da root nel terminale, la usa
+//   - la SESSIONE: il lato del motore, da root. Esamina la macchina, fa il piano (con la porta
+//     scelta), lo applica. È il motore e basta: le stesse funzioni della riga di comando (Preflight,
+//     Valuta, DomandeDaFare, PianoInstallazione, Applica). La TUI, che gira da root nel terminale, la usa
 //     direttamente (la GUI, che la raggiungeva con pkexec, è stata tolta il 10 ott: §10.31);
 //   - la VISTA: gli oggetti del motore detti in parole comuni (vista.go).
 //
@@ -62,11 +62,9 @@ type Motore interface {
 // Config: da dove viene il catalogo e dove si installa (le stesse opzioni della riga di comando).
 type Config struct {
 	Operazioni string
-	Archivio   string
-	Canale     string
 	// Fonti: la fase 0 TRUST (la riga di comando sa costruirla: il catalogo del motore)
 	Fonti func() *motore.FontiFiducia
-	// Base: le opzioni d'installazione che non si chiedono (archivio, chiave dell'archivio)
+	// Base: le opzioni d'installazione che non si chiedono (la cartella dei pacchetti del .run)
 	Base motore.OpzioniInstallazione
 	// Chi: la persona che approva (per il registro); Modo: da quale interfaccia
 	Chi, Modo string
@@ -115,7 +113,7 @@ func (s *Sessione) Controlla(porta int) (*Controllo, error) {
 	s.amb = motore.AmbienteVero()
 	s.esamina(porta)
 	return &Controllo{Fiducia: fid, Profilo: s.prof, Rapporto: s.rap,
-		Domande: motore.DomandeDaFare(s.prof, s.rap, cat, s.amb, porta, s.C.Base.Archivio != "", "")}, nil
+		Domande: motore.DomandeDaFare(s.amb, porta)}, nil
 }
 
 func (s *Sessione) esamina(porta int) {
@@ -124,8 +122,8 @@ func (s *Sessione) esamina(porta int) {
 	s.rap = motore.Valuta(s.cat, s.prof)
 }
 
-// Piano: il piano dalle risposte (PianoDaScelte), scritto in /var/lib/remotix/piani/ come quello
-// della riga di comando. Una porta diversa da quella esaminata rifà l'esame (la porta è nel profilo).
+// Piano: il piano con la porta scelta (PianoInstallazione, come `install`), scritto in
+// /var/lib/remotix/plans/. Una porta diversa da quella esaminata rifà l'esame (la porta è nel profilo).
 func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
@@ -138,7 +136,11 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	}
 	o := s.C.Base
 	o.Porta = s.porta
-	p, err := motore.PianoDaScelte(voci, s.prof, s.rap, s.cat, s.amb, o)
+	m := &motore.Motore{Amb: s.amb, Cartella: s.C.Operazioni}
+	if in, err := m.ControllaInstallazione(); err == nil && in != nil {
+		o.Aggiornamento = true
+	}
+	p, err := motore.PianoInstallazione(s.prof, s.rap, s.cat, s.amb, o)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +148,7 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	s.file = filepath.Join(dir, "plan-"+p.ID+".json")
+	s.file = filepath.Join(dir, p.ID+".json")
 	if err := motore.ScriviJSON(s.file, p); err != nil {
 		return nil, err
 	}

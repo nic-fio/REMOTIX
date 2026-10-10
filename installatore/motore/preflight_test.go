@@ -37,6 +37,15 @@ func condizioniDi(r *Rapporto, d string) string {
 			for _, m := range e.Motivi {
 				c = append(c, m.Codice)
 			}
+			// quel che manca (§10.36): al desktop, e alla macchina intera
+			if len(e.Mancano) > 0 {
+				c = append(c, "RX-MANCA-003")
+			}
+			for _, m := range r.Mancano {
+				if m.Codice != "RX-MANCA-003" && e.Livello != NON_SUPPORTATA {
+					c = append(c, m.Codice)
+				}
+			}
 			return e.Livello + " " + strings.Join(c, ",")
 		}
 	}
@@ -113,7 +122,7 @@ func TestPreflightFedoraNvidia(t *testing.T) {
 			t.Errorf("Intel + NVIDIA: %s", m.Codice)
 		}
 	}
-	if got := condizioniDi(Valuta(catalogoProva(t), p2), "gnome"); got != "COMPATIBLE C-DEPOSITO,C-HARDWARE" {
+	if got := condizioniDi(Valuta(catalogoProva(t), p2), "gnome"); got != "COMPATIBLE C-HARDWARE" {
 		t.Errorf("gnome su Fedora 44 con Intel e NVIDIA: %s", got)
 	}
 }
@@ -149,8 +158,8 @@ func TestPreflightSenzaSchedaCapace(t *testing.T) {
 		for _, m := range p.Messaggi {
 			if m.Codice != "RX-GPU-002" && strings.HasPrefix(m.Codice, "RX-GPU-") {
 				gpu = append(gpu, m.Codice)
-				if m.Gravita != BLOCCANTE || m.Rimedio == "" {
-					t.Errorf("%s: %s non è BLOCKING col rimedio: %+v", c.nome, m.Codice, m)
+				if m.Gravita != BLOCCANTE || !strings.HasPrefix(m.Testo, "Missing") {
+					t.Errorf("%s: %s non è BLOCKING o non dice che cosa manca: %+v", c.nome, m.Codice, m)
 				}
 			}
 		}
@@ -197,25 +206,25 @@ func TestCatalogo(t *testing.T) {
 		{"debian", "12", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"},
 		{"almalinux", "10.1", "xfce", nil, "UNSUPPORTED RX-COMPAT-005"},
 		{"almalinux", "10.0", "gnome", nil, "UNSUPPORTED RX-COMPAT-001"}, // serve la 10.1 (OpenSSL 3.5)
-		// EPEL serve a REMOTIX stesso su Alma (RPM Fusion per EL lo vuole prima di sé; fase 19: non più
-		// per SVT-AV1), e anche a KDE: una condizione sola
-		{"almalinux", "10.1", "kde", map[string]string{"desktop.kde": "6.4", "repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE C-DEPOSITO"},
-		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE C-DEPOSITO"},
+		// EPEL serve a REMOTIX stesso su Alma: manca (§10.36), e lo mette l'amministratore
+		{"almalinux", "10.1", "kde", map[string]string{"desktop.kde": "6.4", "repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE RX-MANCA-002"},
+		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "absent", "repo.rpmfusion": "present"}, "COMPATIBLE RX-MANCA-002"},
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present"}, "COMPATIBLE "}, // niente più OpenH264 di Cisco
 		{"rocky", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present"}, "COMPATIBLE "},
 		// fase 19: su Alma la sola AMD non codifica (Mesa senza VA-API) ⇒ fuori; accanto a una Intel, si dice
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "gpu.renderD128.vendor": "AMD"}, "UNSUPPORTED RX-GPU-006"},
 		{"almalinux", "10.1", "gnome", map[string]string{"repo.epel": "present", "repo.rpmfusion": "present", "repo.rpmfusion-nonfree": "present",
 			"gpu.nodes": "renderD128,renderD129", "gpu.renderD129.vendor": "AMD", "h264.gpu": "no"}, "COMPATIBLE C-HARDWARE"},
-		// fase 19: Fedora con la Mesa ufficiale (senza H.264) su AMD: il driver lo dà RPM Fusion ⇒ si chiede, non si rifiuta
-		{"fedora", "44", "gnome", map[string]string{"gpu.renderD128.vendor": "AMD", "package.mesa-va-drivers": "26.2", "h264.gpu": "no"}, "COMPATIBLE C-DEPOSITO"},
+		// Fedora con la Mesa ufficiale (senza H.264) su AMD: manca un driver che codifica, e il motore
+		// non lo installa (§10.36)
+		{"fedora", "44", "gnome", map[string]string{"gpu.renderD128.vendor": "AMD", "package.mesa-va-drivers": "26.2", "h264.gpu": "no"}, "UNSUPPORTED RX-GPU-006"},
 		// fase 19: senza una scheda capace REMOTIX non si installa, su nessun desktop
 		{"debian", "13", "gnome", map[string]string{"gpu.renderD128.vendor": "virtio"}, "UNSUPPORTED RX-GPU-005"},
 		{"debian", "13", "gnome", map[string]string{"gpu.renderD128.vendor": "NVIDIA", "gpu.nvidia_proprietary": "yes"}, "UNSUPPORTED RX-GPU-004"},
 		{"debian", "13", "gnome", map[string]string{"gpu.nodes": "none"}, "UNSUPPORTED RX-GPU-003"},
 		{"gentoo", "2.17", "gnome", nil, "UNSUPPORTED RX-COMPAT-002"},
-		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "package.breeze6-wallpapers": "absent"}, "COMPATIBLE C-COMPONENTE"},
-		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "package.labwc": "0.8.1", "package.wlr-randr": "0.4", "fonts.scalable": "0"}, "COMPATIBLE C-COMPONENTE,C-LIMITE"},
+		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "package.breeze6-wallpapers": "absent"}, "COMPATIBLE RX-MANCA-003"},
+		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "package.labwc": "0.8.1", "package.wlr-randr": "0.4", "fonts.scalable": "0"}, "COMPATIBLE C-LIMITE,RX-MANCA-003"},
 		// fase 19: il deposito Cisco di OpenH264 non si chiede più
 		{"opensuse-tumbleweed", "20260930", "gnome", nil, "COMPATIBLE "},
 		// Leap 16 + Plasma (KWin 6.4) chiede il 3D (T6 seguiti, KDE 487217): condizione; senza scheda, no

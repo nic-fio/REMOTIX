@@ -21,8 +21,11 @@ func TabellaVersioni(c *Catalogo) string {
 				cond = append(cond, x)
 			}
 		}
-		if p.H264.Deposito != "" {
-			metti("H.264: " + c.Depositi[p.H264.Deposito].Nome + " (" + c.Depositi[p.H264.Deposito].Decisione + ")")
+		if len(p.H264.SenzaH264DiSerie) > 0 {
+			metti("H.264 on " + strings.Join(p.H264.SenzaH264DiSerie, " and ") + ": a VA-API driver with H.264, not in the distribution's packages")
+		}
+		for _, d := range p.Depositi {
+			metti(nonVuoto(c.Depositi[d].Nome, d) + " enabled")
 		}
 		for _, d := range DESKTOP {
 			dc, ok := p.Desktop[d]
@@ -36,15 +39,12 @@ func TabellaVersioni(c *Catalogo) string {
 				}
 				metti("`" + k + "` (" + NomeDesktop(d) + ")")
 			}
-			for _, k := range dc.Depositi {
-				metti(c.Depositi[k].Nome + " (" + NomeDesktop(d) + ")")
-			}
 			for _, k := range dc.Limiti {
 				metti(k)
 			}
 			// su openSUSE il pattern lxqt porta il carattere scalabile solo come raccomandato (§11.1)
 			if d == "lxqt" && dc.ServeCarattere && p.Famiglia == "suse" {
-				metti("a scalable font for LXQt (`" + c.CarattereScalabile["suse"] + "`)")
+				metti("a scalable font for LXQt")
 			}
 		}
 		if len(cond) == 0 {

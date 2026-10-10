@@ -59,7 +59,7 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 	}
 	rap := &motore.Rapporto{Riconosciuta: motore.T("comp.nella_matrice", "Fedora 44"),
 		Desktop: []motore.EsitoDesktop{{Desktop: "gnome", Installato: "50.5", Livello: motore.COMPATIBILE}}}
-	dom := &motore.Domande{Porta: 7447, Firewall: "closed", Depositi: []motore.DomandaDeposito{{ID: "rpmfusion", Nome: "RPM Fusion", Per: "h264", Serve: true}}}
+	dom := &motore.Domande{Porta: 7447, Firewall: "firewalld"}
 	for _, l := range []string{"en"} {
 		v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 		if v.Esito != CONDIZIONI {
@@ -78,7 +78,13 @@ func TestVistaControlloParoleComuni(t *testing.T) {
 		}
 	}
 	s := VistaDelleScelte(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
-	if s.Titolo != "Three things to decide" || len(s.Domande) != 2 {
-		t.Errorf("scelte: %q, %d domande", s.Titolo, len(s.Domande))
+	if s.Titolo != T("sc.titolo.1") || s.PortaVerde {
+		t.Errorf("scelte: %q, porta verde %v (col firewall acceso aprirla è dell'amministratore)", s.Titolo, s.PortaVerde)
+	}
+	// quel che manca ferma tutto, e si dice senza suggerire come metterlo (§10.36)
+	rap.Mancano = []motore.Messaggio{motore.Msg("RX-MANCA-003", "XFCE: labwc")}
+	v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
+	if v.Esito != BLOCCATA || v.Bloccata == nil || !strings.Contains(v.Bloccata.Perche, "labwc") {
+		t.Errorf("mancano: esito %v, %+v", v.Esito, v.Bloccata)
 	}
 }

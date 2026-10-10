@@ -26,7 +26,7 @@ func (m *Motore) AnnotaVersioni() (map[string]string, error) {
 	if m.Amb == nil || m.Amb.Pacchetti == nil {
 		return nil, Errore("RX-PACCHETTI-003", "")
 	}
-	v, err := m.Amb.Pacchetti.Versioni(PacchettiArchivio)
+	v, err := m.Amb.Pacchetti.Versioni(PacchettiRemotix)
 	if err != nil {
 		return nil, err
 	}

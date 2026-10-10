@@ -106,10 +106,10 @@ func nomeICD(file string) string {
 // senza il suo ICD non conta: il loader non la vedrebbe, e la prova di 7a direbbe «nessuno».
 // ⚠ Che l'ICD ci sia non vuol dire che codifichi: `[?]` la versione minima di Mesa con la codifica RADV
 // di serie non è misurata (`[M]` 25.0.7 sì); chi lo dice è 7a.
-// ⭐ Col catalogo (pl), per AMD decide la piattaforma: dove la RADV ufficiale codifica (VulkanScheda)
-// conta anche SENZA l'ICD, perché il motore la installa (Arch: `vulkan-radeon` è solo un optdepends);
-// dove Mesa è costruita senza codec (Fedora, RHEL, openSUSE: `all_free`) l'ICD `radeon` non basta, e
-// la scheda AMD la giudica la strada VA-API (col deposito di terzi, se il catalogo lo nomina).
+// ⭐ Col catalogo (pl), per AMD serve anche la piattaforma: l'ICD `radeon` conta solo dove la RADV
+// ufficiale codifica (VulkanCodifica); dove Mesa è costruita senza codec (Fedora, RHEL, openSUSE:
+// `all_free`) non basta, e la scheda AMD la giudica la strada VA-API. Senza l'ICD la scheda AMD non
+// conta: il motore non installa il driver (DECISIONI §10.36), lo dice VerdettoScheda.
 func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	if p.V("gpu.nodes") == "none" {
 		return nil
@@ -124,8 +124,8 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	}
 	var r []string
 	amd := icd["radeon"]
-	if pl != nil {
-		amd = pl.H264.VulkanScheda["AMD"] != ""
+	if pl != nil && !contiene(pl.H264.VulkanCodifica, "AMD") {
+		amd = false
 	}
 	if forn["AMD"] && amd {
 		r = append(r, "AMD")
@@ -201,11 +201,7 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		return "RX-GPU-003", ""
 	case p.V("gpu.nvidia_proprietary") == "yes":
 		// la NVIDIA proprietaria codifica SOLO in Vulkan: se si è qui, il suo ICD non c'è
-		d := strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("encoding.vulkan.icd"), "none")
-		if pl != nil && pl.H264.VulkanNvidia != "" {
-			d += "; on " + pl.Nome + " the ICD comes with " + pl.H264.VulkanNvidia
-		}
-		return "RX-GPU-004", d
+		return "RX-GPU-004", strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("encoding.vulkan.icd"), "none")
 	case forn["Intel"] || forn["AMD"]:
 		// c'è una scheda della strada VA-API, ma su questa piattaforma non codifica e nessun driver
 		// del catalogo la completa (AMD su RHEL e derivate; un driver senza H.264 e niente da aggiungere)

@@ -340,7 +340,7 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 	}
 	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "uninstallation", Purge: purge,
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest},
-		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
+		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 	sess, _ := SessioniRemotix(m.Amb)
 	var utenti []string
 	visti := map[string]bool{}

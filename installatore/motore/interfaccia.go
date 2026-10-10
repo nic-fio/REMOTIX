@@ -1,179 +1,45 @@
 package motore
 
-import (
-	"fmt"
-	"sort"
-	"strings"
-)
+// Quel che le interfacce (CLI e TUI) chiedono al motore oltre ai sette oggetti: che cosa dire a chi
+// installa su QUESTA macchina. Dal 10 ott 2026 (DECISIONI §10.36) l'unica domanda è la porta, più il
+// «sì» al piano: niente archivi di terzi, firewall o desktop da scegliere — quel che manca si dice.
 
-// Quel che le interfacce (TUI e GUI, T9) chiedono al motore oltre ai sette oggetti: QUALI domande
-// fare su questa macchina, e il piano dalle risposte date. ⛔ La decisione di che cosa chiedere e
-// come le risposte diventano azioni sta QUI, nel motore, e usa le stesse regole del file di
-// risposte (§6.6.12): le interfacce mostrano e raccolgono, non scelgono (§6.6.1, R36).
-
-// Domande: le scelte di chi installa su QUESTA macchina (fasi/17 §10: quasi nessuna).
+// Domande: quel che si mostra e si chiede su questa macchina.
 type Domande struct {
 	// Porta: la predefinita (7447); si chiede sempre, una sola, vale per TCP e UDP
 	Porta int `json:"port"`
-	// Firewall: "open" (firewalld lascia già passare la porta) · "closed" (firewalld acceso, la
-	// porta no: consenso D6) · "none" (firewalld spento o assente) · "altro:<nome>" (ufw, nft…:
-	// il motore non lo tocca, lo dice)
+	// Firewall: il nome del firewall acceso ("none" se nessuno): aprire la porta è dell'amministratore
 	Firewall string `json:"firewall"`
-	// Depositi: gli archivi di terzi che su questa macchina servono (D5), col nome da mostrare
-	Depositi []DomandaDeposito `json:"repos"`
-	// Desktop: la scelta del desktop, solo se sulla macchina non ce n'è uno supportato
-	Desktop *Scelta `json:"desktop,omitempty"`
 	// SenzaScheda: le persone a cui manca il permesso di usare la scheda (il motore le iscrive)
 	SenzaScheda []string `json:"no_gpu"`
 	// Persone: chi potrà entrare (le persone della macchina; root è escluso)
 	Persone []string `json:"people"`
 }
 
-// DomandaDeposito: un archivio di terzi da chiedere, e per che cosa serve.
-type DomandaDeposito struct {
-	ID    string `json:"id"`   // rpmfusion · packman · epel
-	Nome  string `json:"name"` // «RPM Fusion (free)»
-	Per   string `json:"for"`  // "h264" · "desktop"
-	Serve bool   `json:"needed"`
-}
-
-// DomandeDaFare: le domande su questa macchina, dal profilo e dal rapporto (le stesse regole di
-// OpzioniDaRisposte). desktopScelto conta per i depositi che chiede quel desktop.
-func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, porta int, archivio bool, desktopScelto string) *Domande {
+// DomandeDaFare: quel che si mostra su questa macchina.
+func DomandeDaFare(amb *Ambiente, porta int) *Domande {
 	if porta == 0 {
 		porta = 7447
 	}
-	d := &Domande{Porta: porta, Depositi: []DomandaDeposito{}, SenzaScheda: []string{}}
-	d.Desktop = SceltaDesktop(rap)
-	if d.Desktop != nil && desktopScelto == "" {
-		desktopScelto = d.Desktop.Predefinita
+	d := &Domande{Porta: porta, Firewall: "none", SenzaScheda: []string{}, Persone: []string{}}
+	if amb == nil {
+		return d
 	}
-	// «per il video»: il deposito dei driver che la scheda chiede e quelli di REMOTIX stesso (su Alma
-	// EPEL, che RPM Fusion per EL vuole prima di sé)
-	per264 := map[string]bool{}
-	if rap.pl != nil {
-		if x, _, _ := rap.pl.H264.PerLaScheda(prof); x != "" {
-			per264[x] = true
-		}
-		for _, x := range rap.pl.Depositi {
-			per264[x] = true
-		}
+	if amb.Firewall != nil && amb.Firewall.Nome() != "" {
+		d.Firewall = amb.Firewall.Nome()
 	}
-	for _, x := range DepositiDaChiedere(rap, prof, desktopScelto) {
-		nome := x
-		if cat != nil {
-			if dc, ok := cat.Depositi[x]; ok && dc.Nome != "" {
-				nome = dc.Nome
+	if p := Persone(amb); p != nil {
+		d.Persone = p
+	}
+	gruppi := GruppiScheda(amb)
+	gr, _ := LeggiGruppi(amb.P("/etc/group"))
+	for _, u := range d.Persone {
+		for _, g := range gruppi {
+			if !contiene(DividiMembri(gr[g][1]), u) {
+				d.SenzaScheda = append(d.SenzaScheda, u)
+				break
 			}
 		}
-		per := "desktop"
-		if per264[x] {
-			per = "h264"
-		}
-		d.Depositi = append(d.Depositi, DomandaDeposito{ID: x, Nome: nome, Per: per, Serve: true})
-	}
-	g := "none"
-	if amb != nil && amb.Firewall != nil {
-		g = amb.Firewall.Nome()
-	}
-	switch {
-	case g == "firewalld" && prof.V(fmt.Sprintf("firewall.port_%d_tcp", porta)) == "open" && prof.V(fmt.Sprintf("firewall.port_%d_udp", porta)) == "open":
-		d.Firewall = "open"
-	case g == "firewalld":
-		d.Firewall = "closed"
-	case g == "none" || g == "":
-		d.Firewall = "none"
-	default:
-		d.Firewall = "other:" + g
-	}
-	if amb != nil {
-		d.Persone = Persone(amb)
-		gruppi := GruppiScheda(amb)
-		gr, _ := LeggiGruppi(amb.P("/etc/group"))
-		for _, u := range d.Persone {
-			for _, g := range gruppi {
-				if !contiene(DividiMembri(gr[g][1]), u) {
-					d.SenzaScheda = append(d.SenzaScheda, u)
-					break
-				}
-			}
-		}
-	}
-	if d.Persone == nil {
-		d.Persone = []string{}
 	}
 	return d
-}
-
-// VociDiserie: le risposte che un'interfaccia propone prima che si tocchi niente (i valori
-// predefiniti di §10: gli aggiornamenti sì, il firewall aperto se serve, l'archivio
-// per H.264 sì — «consigliato» —, il desktop di riferimento). Chi installa ne cambia solo alcune.
-func (d *Domande) VociDiserie() map[string]string {
-	v := map[string]string{"format": FormatoRisposte, "port": fmt.Sprint(d.Porta), "users": "all"}
-	if d.Firewall == "closed" {
-		v["consent.firewall"] = "yes"
-	}
-	for _, x := range d.Depositi {
-		v["consent.repo."+x.ID] = "yes"
-	}
-	if d.Desktop != nil {
-		v["desktop"] = d.Desktop.Predefinita
-	}
-	return v
-}
-
-// TestoRisposte: le voci come un file di risposte (remotix-risposte/1), in ordine: così una scelta
-// fatta nella finestra si può rifare senza domande su altre macchine.
-func TestoRisposte(voci map[string]string) string {
-	var k []string
-	for x := range voci {
-		if x != "format" {
-			k = append(k, x)
-		}
-	}
-	sort.Strings(k)
-	var b strings.Builder
-	b.WriteString("format = " + FormatoRisposte + "\n")
-	for _, x := range k {
-		b.WriteString(x + " = " + voci[x] + "\n")
-	}
-	return b.String()
-}
-
-// PianoDaScelte: il piano d'installazione dalle risposte date in un'interfaccia. Le stesse regole
-// del file di risposte (OpzioniDaRisposte: che cosa serve su questa macchina, i valori ammessi),
-// ma il piano NON porta il riferimento a un file né un'approvazione: il consenso lo dà chi guarda il
-// piano, con un solo «conferma». Così la stessa installazione guidata dalla CLI (le opzioni), dalla
-// TUI o dalla GUI dà lo stesso piano (R36). Un consenso che manca è un errore dell'interfaccia.
-func PianoDaScelte(voci map[string]string, prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniInstallazione) (*Piano, error) {
-	for k, v := range voci {
-		if !vociNote[k] {
-			return nil, Errore("RX-RISPOSTE-002", "unknown entry «"+k+"»")
-		}
-		if strings.HasPrefix(k, "consent.") {
-			sn, ok := rispostaSiNo(v)
-			if !ok {
-				return nil, Errore("RX-RISPOSTE-003", k+" = «"+v+"»")
-			}
-			voci[k] = sn
-		}
-	}
-	r := &FileRisposte{Percorso: "(interfaccia)", Voci: voci}
-	o, rif, desktop, err := r.OpzioniDaRisposte(rap, prof, amb, o)
-	if err != nil {
-		return nil, err
-	}
-	if len(rif.Mancanti) > 0 {
-		return nil, Errore("RX-RISPOSTE-001", strings.Join(rif.Mancanti, ", "))
-	}
-	p, err := PianoInstallazione(prof, rap, cat, amb, o)
-	if err != nil {
-		return nil, err
-	}
-	if desktop != "" {
-		if err := p.Rispondi("desktop", desktop); err != nil {
-			return nil, err
-		}
-	}
-	return p, nil
 }

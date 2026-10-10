@@ -3,43 +3,32 @@ package motore
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// installa-pacchetti: la transazione del gestore di pacchetti (§6.0 regola 1, §6.6.6).
+// installa-pacchetti: la transazione del gestore di pacchetti (§6.0 regola 1, §6.6.6; dal 10 ott
+// 2026 senza cache né sha256 nostri: «non reinventare la ruota», DECISIONI §10.36).
 //
-//   - Fotografa (prima dell'intenzione) = ACQUISITION: il file del piano si copia nella cache
-//     dell'operazione e si confronta col suo sha256; il gestore RISOLVE la transazione, SCARICA
-//     tutto e verifica; l'INSIEME RISOLTO (nome, versione, origine, sha256, nuovo/aggiornato) va
-//     nell'intenzione del registro e in insieme-risolto.json. Una rete che cade qui ferma
-//     l'operazione prima di installare qualunque cosa.
-//   - Fai: il gestore installa quell'insieme DALLA CACHE, senza scaricare.
-//   - Controlla: ogni pacchetto alla versione risolta ⇒ completo; nessuno dei nuovi ⇒ assente;
-//     altrimenti (o il gestore a metà di una transazione) ⇒ a metà.
-//   - Ripara (a metà, alla ripresa): il rimedio del gestore (dpkg --configure -a…), poi si rifà.
+//   - Fotografa (prima dell'intenzione): il gestore SIMULA la transazione; l'insieme (nome, versione,
+//     origine, nuovo/aggiornato) va nell'intenzione del registro e in resolved-set-<passo>.json.
+//   - Fai: il gestore installa — i file del pacchetto unico, con le dipendenze dagli archivi della
+//     macchina, scaricate e verificate da lui.
+//   - Controlla: ogni pacchetto alla versione simulata (o più nuova) ⇒ completo; nessuno dei nuovi ⇒
+//     assente; altrimenti (o il gestore a metà di una transazione) ⇒ a metà.
+//   - Ripara: il rimedio del gestore (dpkg --configure -a…), che serve prima di annullare.
 //   - Annulla: si tolgono i pacchetti NUOVI, e solo quelli (il gestore simula prima: se ne
-//     toglierebbe altri, si ferma); quelli AGGIORNATI restano aggiornati e si dichiarano
+//     toglierebbe altri, li trattiene); quelli AGGIORNATI restano aggiornati e si dichiarano
 //     (INDIRETTA, §6.6.4). Reversibilità AL_MEGLIO.
 //
-// parametri: file (percorsi di pacchetti locali, facoltativi, separati da virgola: una transazione
-// sola — T6: remotix e remotix-selinux insieme), sha256 (uno per file, nello stesso ordine), nomi
-// (separati da virgola, dai depositi), senza_grafica ("yes" per il desktop: vedi azione_desktop.go).
+// parametri: file (percorsi dei pacchetti del .run, separati da virgola: una transazione sola),
+// names (separati da virgola, dagli archivi della macchina).
 
 func init() { registraTipo("install-packages", nuovaPacchetti) }
 
-// PianoPacchettiDa: pacchetti presi da un deposito preciso (la Mesa di Packman, fase 18: su openSUSE
-// sostituisce quella della distribuzione, e zypper lo fa solo con --from e il cambio di fornitore).
-func PianoPacchettiDa(id, nomi, deposito string) AzionePiano {
-	a := PianoPacchetti(id, "", "", nomi)
-	a.Parametri["from"] = deposito
-	return a
-}
-
 // PianoPacchetti prepara il passo del piano.
-func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
+func PianoPacchetti(id, file, nomi string) AzionePiano {
 	var basi []string
 	for _, f := range dividiVirgole(file) {
 		basi = append(basi, filepath.Base(f))
@@ -47,7 +36,7 @@ func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 	cosa := strings.TrimSpace(strings.Join(basi, " ") + " " + nomi)
 	return AzionePiano{
 		ID: id, Tipo: "install-packages",
-		Parametri:      map[string]string{"file": file, "sha256": sha, "names": nomi},
+		Parametri:      map[string]string{"file": file, "names": nomi},
 		Descrizione:    T("az.pacchetti", cosa),
 		ComeSiFa:       T("az.pacchetti.fa"),
 		ComeSiVerifica: T("az.pacchetti.verifica"),
@@ -57,60 +46,38 @@ func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 }
 
 type pacchetti struct {
-	da           string   // un deposito da cui prenderli (zypper: --from, cambiando fornitore)
-	file, sha    []string // i pacchetti locali e i loro sha256, nello stesso ordine
-	nomi         []string
-	senzaGrafica bool
+	file, nomi []string
 }
 
 type primaPacchetti struct {
-	Origine Origine       `json:"origin"`
-	Gestore string        `json:"manager"`
-	Cache   string        `json:"cache"`
-	File    string        `json:"file,omitempty"`        // il file nella cache (il primo)
-	Altri   []string      `json:"other_files,omitempty"` // gli altri file nella cache (T6)
-	Nomi    []string      `json:"names"`
-	Insieme []Artefatto   `json:"resolved_set"`
-	Grafica *primaGrafica `json:"graphical,omitempty"`
+	Origine Origine     `json:"origin"`
+	Gestore string      `json:"manager"`
+	File    []string    `json:"files,omitempty"`
+	Nomi    []string    `json:"names"`
+	Insieme []Artefatto `json:"resolved_set"`
 }
 
 func nuovaPacchetti(p AzionePiano) (Azione, error) {
-	a := &pacchetti{file: dividiVirgole(p.Parametri["file"]), sha: dividiVirgole(p.Parametri["sha256"]),
-		senzaGrafica: p.Parametri["no_graphics"] == "yes", da: p.Parametri["from"]}
-	for _, n := range strings.Split(p.Parametri["names"], ",") {
-		if n = strings.TrimSpace(n); n != "" {
-			a.nomi = append(a.nomi, n)
-		}
-	}
-	if len(a.file) != len(a.sha) {
-		return nil, fmt.Errorf("installa-pacchetti: %d files and %d sha256", len(a.file), len(a.sha))
-	}
-	return a, nil
+	return &pacchetti{file: dividiVirgole(p.Parametri["file"]), nomi: dividiVirgole(p.Parametri["names"])}, nil
 }
 
 func (a *pacchetti) gestore(c *Contesto) (Gestore, error) {
 	if c.Amb.Pacchetti == nil {
 		return nil, Errore("RX-PACCHETTI-003", c.Amb.Famiglia)
 	}
-	if d, ok := c.Amb.Pacchetti.(interface{ Da(string) Gestore }); ok && a.da != "" {
-		return d.Da(a.da), nil
-	}
 	return c.Amb.Pacchetti, nil
 }
 
+// Vincoli: le versioni installate adesso dei pacchetti nominati, e i file del pacchetto unico (per
+// nome: il .run è uno, e il suo sha256 lo garantisce intero).
 func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
-	// il desktop: lo stato dei desktop è già nell'impronta (desktop.* del profilo), e il passo
-	// cambia con la RISPOSTA alla scelta (approva --desktop): non deve cambiare l'impronta
-	if a.senzaGrafica {
-		return nil, nil
-	}
 	g, err := a.gestore(c)
 	if err != nil {
 		return nil, err
 	}
 	var v []string
-	for i, f := range a.file {
-		v = append(v, "package-file:"+filepath.Base(f)+"="+a.sha[i])
+	for _, f := range a.file {
+		v = append(v, "package-file:"+filepath.Base(f))
 	}
 	ver, err := g.Versioni(a.nomi)
 	if err != nil {
@@ -122,56 +89,13 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	return v, nil
 }
 
-// copia i file del piano nella cache dell'operazione, e controlla che siano quelli del piano.
-func (a *pacchetti) inCache(c *Contesto) (string, []string, error) {
-	// una cartella per passo: due passi di pacchetti nella stessa operazione non si mescolano
-	// ([M] 30 set, fedora44-gnome: il codec e remotix nella stessa cartella ⇒ due versioni)
-	cache := filepath.Join(c.Cartella, "cache", c.P.ID)
-	if err := os.MkdirAll(cache, 0o700); err != nil {
-		return "", nil, err
-	}
+// veri: i percorsi dei file sulla macchina (nelle prove, sotto la radice finta).
+func veri(c *Contesto, file []string) []string {
 	var r []string
-	for i, f := range a.file {
-		dest, err := unoInCache(c, cache, f, a.sha[i])
-		if err != nil {
-			return "", nil, err
-		}
-		r = append(r, dest)
+	for _, f := range file {
+		r = append(r, c.Amb.P(f))
 	}
-	if len(r) > 0 {
-		if err := SincronizzaCartella(cache); err != nil {
-			return "", nil, err
-		}
-	}
-	return cache, r, nil
-}
-
-func unoInCache(c *Contesto, cache, file, sha string) (string, error) {
-	dest := filepath.Join(cache, filepath.Base(file))
-	if s, _ := Sha256File(dest); s == sha {
-		return dest, nil
-	}
-	in, err := os.Open(c.Amb.P(file))
-	if err != nil {
-		return "", err
-	}
-	defer in.Close()
-	tmp := dest + ".parziale"
-	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return "", err
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		return "", err
-	}
-	out.Sync()
-	out.Close()
-	if s, _ := Sha256File(tmp); s != sha {
-		os.Remove(tmp)
-		return "", Errore("RX-PACCHETTI-001", file+": sha256 "+s)
-	}
-	return dest, os.Rename(tmp, dest)
+	return r
 }
 
 // dividiVirgole: «a,b» ⇒ [a b]; vuoto ⇒ nessuno.
@@ -195,29 +119,20 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	} else if !ok {
 		return nil, "", Errore("RX-PACCHETTI-004", det)
 	}
-	cache, file, err := a.inCache(c)
-	if err != nil {
-		return nil, "", err
+	for _, f := range a.file {
+		if _, err := os.Stat(c.Amb.P(f)); err != nil {
+			return nil, "", Errore("RX-PACCHETTI-001", f+": "+err.Error())
+		}
 	}
-	ins, err := g.Risolvi(cache, file, a.nomi)
+	ins, err := g.Simula(veri(c, a.file), a.nomi)
 	if err != nil {
 		return nil, "", Errore("RX-PACCHETTI-005", err.Error())
 	}
-	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), Cache: cache, Nomi: a.nomi, Insieme: ins}
-	if len(file) > 0 {
-		p.File, p.Altri = file[0], file[1:]
-	}
+	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), File: a.file, Nomi: a.nomi, Insieme: ins}
 	for _, x := range ins {
 		if x.Esito != "present" {
 			p.Origine = DIRETTA
 		}
-	}
-	if a.senzaGrafica {
-		gr, err := fotografaGrafica(c)
-		if err != nil {
-			return nil, "", err
-		}
-		p.Grafica = gr
 	}
 	if err := ScriviJSON(filepath.Join(c.Cartella, "resolved-set-"+c.P.ID+".json"),
 		map[string]any{"format": Formato, "object": "resolved-set", "action": c.P.ID, "manager": g.Nome(), "artifacts": ins}); err != nil {
@@ -232,13 +147,6 @@ func leggiPrimaPacchetti(prima json.RawMessage) (primaPacchetti, error) {
 	return p, err
 }
 
-func (p primaPacchetti) file() []string {
-	if p.File == "" {
-		return nil
-	}
-	return append([]string{p.File}, p.Altri...)
-}
-
 func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
 	p, err := leggiPrimaPacchetti(prima)
 	if err != nil || p.Origine == PREESISTENTE {
@@ -248,18 +156,7 @@ func (a *pacchetti) Fai(c *Contesto, prima json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	if a.senzaGrafica && p.Grafica != nil {
-		if err := p.Grafica.prima(c); err != nil {
-			return err
-		}
-	}
-	errI := g.Installa(p.Cache, p.file(), p.Nomi)
-	if a.senzaGrafica && p.Grafica != nil {
-		if err := p.Grafica.dopo(c); err != nil && errI == nil {
-			errI = err
-		}
-	}
-	return errI
+	return g.Installa(veri(c, p.File), p.Nomi)
 }
 
 // stato dei pacchetti dell'insieme, adesso.
@@ -313,11 +210,6 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 	if err != nil {
 		return "", "", err
 	}
-	if a.senzaGrafica && p.Grafica != nil {
-		if ok, det := p.Grafica.aPosto(c); !ok && completi == len(p.Insieme) {
-			return A_META, det, nil
-		}
-	}
 	switch {
 	case completi == len(p.Insieme):
 		return COMPLETO, fmt.Sprintf("%d packages at the resolved version", completi), nil
@@ -369,12 +261,7 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 		return err
 	}
 	if len(togli) > 0 {
-		if err := g.Togli(togli, c.Purge); err != nil {
-			return err
-		}
-	}
-	if a.senzaGrafica && p.Grafica != nil {
-		return p.Grafica.rimetti(c)
+		return g.Togli(togli, c.Purge)
 	}
 	return nil
 }
@@ -411,11 +298,6 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	if len(via) > 0 {
 		return false, fmt.Sprintf("%d new packages still installed", len(via)), nil
 	}
-	if a.senzaGrafica && p.Grafica != nil {
-		if ok, det := p.Grafica.comePrima(c); !ok {
-			return false, det, nil
-		}
-	}
 	if len(resta) > 0 {
 		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(resta, ", ")), nil
 	}
@@ -423,9 +305,8 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 }
 
 // trattenuti: dei pacchetti NUOVI da togliere, quelli che si possono togliere e quelli che restano
-// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo (la Mesa di Packman
-// che sostituisce quella di openSUSE, fase 18; prima la libavcodec di
-// Packman o di RPM Fusion, che vuole la libx264 portata da lì), o un programma installato dopo.
+// perché qualcosa che resta li chiede — un pacchetto AGGIORNATO dallo stesso passo, o un programma
+// installato dopo.
 // Toglierli si porterebbe via anche lui (`[M]` 30 set, leap16-kde: `zypper rm` di libx264 & c.
 // trascinava 53 pacchetti, Plasma compreso). ⇒ Non si tolgono, e si dichiarano (§6.6.4: quel che
 // resta di indiretto si dice). Un pacchetto è trattenuto se toglierlo DA SOLO toglierebbe qualcosa

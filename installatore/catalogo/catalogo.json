@@ -1,7 +1,7 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.10.10.12",
-  "sequenza": 12,
+  "versione": "2026.10.10.13",
+  "sequenza": 13,
   "emesso": "2026-10-10",
   "motore_minimo": "0.1.0",
   "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, libopus; pacchetti e depositi [M] 30 set nelle immagini podman), DECISIONI §10.27 e fasi/19-nvidia.md (niente codifica sul processore: via OpenH264, SVT-AV1 e il deposito di Cisco; senza una scheda capace REMOTIX non si installa; il driver Vulkan della scheda, vulkan_scheda e vulkan_nvidia, [M] 1 ott nelle immagini podman): quel che i documenti sanno il 1 ott 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
@@ -15,34 +15,14 @@
   },
   "depositi": {
     "rpmfusion": {
-      "nome": "RPM Fusion",
-      "decisione": "D5",
-      "comandi": {
-        "fedora": "sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install intel-media-driver mesa-va-drivers-freeworld   # Intel: intel-media-driver (nonfree); AMD: mesa-va-drivers-freeworld (free)",
-        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install intel-media-driver   # AFTER EPEL; Intel only: on AMD the RHEL Mesa has no VA-API"
-      }
+      "nome": "RPM Fusion"
     },
     "packman": {
-      "nome": "Packman",
-      "decisione": "D5",
-      "comandi": {
-        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # AMD only: the official Intel driver already encodes",
-        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # AMD only: the official Intel driver already encodes"
-      }
+      "nome": "Packman"
     },
     "epel": {
-      "nome": "EPEL (with CRB)",
-      "decisione": "",
-      "comandi": {
-        "rhel": "sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb"
-      }
+      "nome": "EPEL (with CRB)"
     }
-  },
-  "installa": {
-    "debian": "sudo apt install",
-    "fedora": "sudo dnf install",
-    "arch": "sudo pacman -S",
-    "suse": "sudo zypper install"
   },
   "piattaforme": [
     {
@@ -57,11 +37,9 @@
       "matrice": true,
       "giro_intero": "",
       "h264": {
-        "scheda_di_serie": true,
-        "vulkan_scheda": {
-          "AMD": "mesa-vulkan-drivers"
-        },
-        "vulkan_nvidia": "nvidia-vulkan-icd (non-free; with the nvidia-driver package it is only recommended)"
+        "vulkan_codifica": [
+          "AMD"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -89,13 +67,7 @@
       },
       "note": [
         "the reference platform"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "task-gnome-desktop",
-        "kde": "task-kde-desktop",
-        "xfce": "task-xfce-desktop",
-        "lxqt": "task-lxqt-desktop"
-      }
+      ]
     },
     {
       "id": "ubuntu",
@@ -118,11 +90,9 @@
         }
       ],
       "h264": {
-        "scheda_di_serie": true,
-        "vulkan_scheda": {
-          "AMD": "mesa-vulkan-drivers"
-        },
-        "vulkan_nvidia": "libnvidia-gl-<driver version> (missing with the «headless» driver)"
+        "vulkan_codifica": [
+          "AMD"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -150,12 +120,6 @@
           ],
           "serve_carattere": true
         }
-      },
-      "pacchetti_desktop": {
-        "gnome": "ubuntu-desktop",
-        "kde": "kubuntu-desktop",
-        "xfce": "xubuntu-desktop",
-        "lxqt": "lubuntu-desktop"
       }
     },
     {
@@ -170,17 +134,10 @@
       "matrice": true,
       "giro_intero": "",
       "h264": {
-        "scheda_di_serie": false,
-        "deposito": "rpmfusion",
-        "comando": "fedora",
-        "pacchetti_scheda": {
-          "Intel": "intel-media-driver",
-          "AMD": "mesa-va-drivers-freeworld"
-        },
-        "nonfree": [
+        "senza_h264_di_serie": [
+          "AMD",
           "Intel"
-        ],
-        "vulkan_nvidia": "xorg-x11-drv-nvidia-libs (RPM Fusion nonfree)"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -208,13 +165,7 @@
       },
       "note": [
         "SELinux enforcing: pam_selinux open leads to a denial when the child process runs (§11.1 B), step T6"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "@workstation-product-environment",
-        "kde": "@kde-desktop-environment",
-        "xfce": "@xfce-desktop-environment",
-        "lxqt": "@lxqt-desktop-environment"
-      }
+      ]
     },
     {
       "id": "fedora",
@@ -228,17 +179,10 @@
       "matrice": false,
       "giro_intero": "",
       "h264": {
-        "scheda_di_serie": false,
-        "deposito": "rpmfusion",
-        "comando": "fedora",
-        "pacchetti_scheda": {
-          "Intel": "intel-media-driver",
-          "AMD": "mesa-va-drivers-freeworld"
-        },
-        "nonfree": [
+        "senza_h264_di_serie": [
+          "AMD",
           "Intel"
-        ],
-        "vulkan_nvidia": "xorg-x11-drv-nvidia-libs (RPM Fusion nonfree)"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -266,13 +210,7 @@
       },
       "note": [
         "analysed, not certified: outside the matrix (§3); GNOME 49; out of support at the end of 2026"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "@workstation-product-environment",
-        "kde": "@kde-desktop-environment",
-        "xfce": "@xfce-desktop-environment",
-        "lxqt": "@lxqt-desktop-environment"
-      }
+      ]
     },
     {
       "id": "almalinux",
@@ -305,14 +243,8 @@
         }
       ],
       "h264": {
-        "scheda_di_serie": false,
-        "deposito": "rpmfusion",
-        "comando": "rhel",
         "amd_senza_vaapi": true,
-        "pacchetti_scheda": {
-          "Intel": "intel-media-driver"
-        },
-        "nonfree": [
+        "senza_h264_di_serie": [
           "Intel"
         ]
       },
@@ -324,10 +256,7 @@
           "supportato": true
         },
         "kde": {
-          "supportato": true,
-          "depositi": [
-            "epel"
-          ]
+          "supportato": true
         },
         "xfce": {
           "supportato": false,
@@ -345,11 +274,7 @@
         "on AMD no VA-API (Mesa built without it), and RPM Fusion does not replace it; nor Vulkan Video: the RHEL RADV is built without H.264 (Mesa «all_free», [M] 1 Oct from the spec): with AMD cards only, REMOTIX is not installed (RX-GPU-006)",
         "EPEL remains a REMOTIX repository on Alma: RPM Fusion for EL (the Intel driver with H.264) is installed AFTER EPEL, and KDE needs it; ⚠ that the driver really takes its dependencies from it has not been measured again without ffmpeg. Phase 19: SVT-AV1 and Cisco's OpenH264 removed; libyuv is not there [M] 30 Sep",
         "SELinux enforcing (§11.1 B), step T6"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "@graphical-server-environment",
-        "kde": "@kde-desktop-environment"
-      }
+      ]
     },
     {
       "id": "arch",
@@ -380,11 +305,9 @@
         }
       ],
       "h264": {
-        "scheda_di_serie": true,
-        "vulkan_scheda": {
-          "AMD": "vulkan-radeon"
-        },
-        "vulkan_nvidia": "nvidia-utils"
+        "vulkan_codifica": [
+          "AMD"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -413,13 +336,7 @@
       "note": [
         "pam_faillock in the default stack (D3)",
         "rolling release: the package depends on the library number (soname) — libva, opus — not on the exact version (§6.2)"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "gnome",
-        "kde": "plasma",
-        "xfce": "xfce4,xfce4-goodies",
-        "lxqt": "lxqt,breeze-icons"
-      }
+      ]
     },
     {
       "id": "opensuse-tumbleweed",
@@ -433,13 +350,9 @@
       "matrice": true,
       "giro_intero": "",
       "h264": {
-        "scheda_di_serie": false,
-        "deposito": "packman",
-        "comando": "tumbleweed",
-        "pacchetti_scheda": {
-          "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
-        },
-        "vulkan_nvidia": "nvidia-gl-G06 or nvidia-gl-G07 (NVIDIA repository)"
+        "senza_h264_di_serie": [
+          "AMD"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -476,13 +389,7 @@
       },
       "note": [
         "without ffmpeg: the official Intel driver (intel-media-driver) encodes H.264, the official Mesa does not (h264/h265 removed): Packman is needed only with an AMD card [M] 30 Sep"
-      ],
-      "pacchetti_desktop": {
-        "gnome": "pattern:gnome",
-        "kde": "pattern:kde",
-        "xfce": "pattern:xfce",
-        "lxqt": "pattern:lxqt"
-      }
+      ]
     },
     {
       "id": "opensuse-leap",
@@ -496,13 +403,9 @@
       "matrice": true,
       "giro_intero": "",
       "h264": {
-        "scheda_di_serie": false,
-        "deposito": "packman",
-        "comando": "leap16",
-        "pacchetti_scheda": {
-          "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
-        },
-        "vulkan_nvidia": "nvidia-gl-G06 or nvidia-gl-G07 (NVIDIA repository)"
+        "senza_h264_di_serie": [
+          "AMD"
+        ]
       },
       "desktop": {
         "gnome": {
@@ -537,12 +440,6 @@
           ],
           "serve_carattere": true
         }
-      },
-      "pacchetti_desktop": {
-        "gnome": "pattern:gnome",
-        "kde": "pattern:kde",
-        "xfce": "pattern:xfce",
-        "lxqt": "pattern:lxqt"
       },
       "note": [
         "without ffmpeg: the official Intel driver (intel-media-driver) encodes H.264, the official Mesa does not (h264/h265 removed): Packman is needed only with an AMD card [M] 30 Sep"
@@ -614,21 +511,6 @@
       "motivo": "SLES 16: GNOME only, no Packman — to be reconsidered if a customer asks for it"
     }
   ],
-  "carattere_scalabile": {
-    "debian": "fonts-dejavu-core",
-    "fedora": "dejavu-sans-fonts",
-    "arch": "ttf-dejavu",
-    "suse": "google-droid-fonts"
-  },
-  "desktop_di_riferimento": {
-    "debian": "gnome",
-    "ubuntu": "gnome",
-    "fedora": "gnome",
-    "almalinux": "gnome",
-    "arch": "kde",
-    "opensuse-tumbleweed": "kde",
-    "opensuse-leap": "kde"
-  },
   "componenti_minimi": [
     {
       "componente": "Linux kernel",
@@ -715,6 +597,5 @@
     "distributions without systemd (Alpine, Devuan, Artix with OpenRC…): REMOTIX uses logind and the user manager",
     "immutable ones (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): postponed (D9)",
     "Linux Mint Cinnamon: Cinnamon is not one of the four desktops"
-  ],
-  "nota_pacchetti_desktop": "the official groups, the same as `vesti` (§7.2); they all bring a display manager: the engine leaves it installed but STOPPED and the boot target as it was (R38). [M] 30 Sep, prove/gruppi-desktop.sh: every name resolved by the package manager of each family (Alma's dnf 4 does not understand «@^»: «@<environment>» is written for all)"
+  ]
 }

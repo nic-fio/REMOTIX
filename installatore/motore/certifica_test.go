@@ -60,12 +60,12 @@ func TestCertificaGuasti(t *testing.T) {
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/pam.d/remotix"))
 		}, "RED"},
-		{"porta richiusa da altri dopo l'installazione", func(b *banco, m *Motore) {
+		{"porta chiusa dal firewall: aprirla è dell'amministratore (§10.36)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			f := &firewallFinto{b.radice}
 			f.Togli("public", "7447/tcp", false)
 			f.Togli("public", "7447/udp", false)
-		}, "RED"},
+		}, "CONDITIONAL"},
 		{"firewall che non si sa leggere (ufw)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("ufw"), 0o644)
@@ -113,12 +113,12 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 	}
 }
 
-// La porta chiusa dal firewall (l'amministratore non ha voluto aprirla, D6): mai PASS, e una
-// condizione col comando che la apre.
+// La porta chiusa dal firewall (aprirla è dell'amministratore, §10.36): mai PASS, e una condizione
+// che lo dice, senza comandi.
 func TestPortaChiusa(t *testing.T) {
 	b := nuovoBanco(t)
 	k, c := controllaPorta(ambienteFinto(b.radice), 7447)
-	if k.Esito != "FAIL" || k.Richiesto || c == nil || c.Codice != "C-AMMINISTRATORE" || c.Rimedio == "" {
+	if k.Esito != "FAIL" || k.Richiesto || c == nil || c.Codice != "C-AMMINISTRATORE" || c.Testo == "" {
 		t.Fatalf("%+v %+v", k, c)
 	}
 }

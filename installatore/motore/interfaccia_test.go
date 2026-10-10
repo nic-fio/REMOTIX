@@ -7,139 +7,104 @@ import (
 	"testing"
 )
 
-// R36 in piccolo: la stessa installazione chiesta dalla CLI (le opzioni) e da TUI/GUI (le voci
-// raccolte nelle schermate, PianoDaScelte) dà LO STESSO piano, a parte identificativo e ora.
-// E D4 (DECISIONI §4.7): le tre cinture ci sono sempre, dichiarate, mai fra i consensi.
-func TestPianoDaScelteComeLaCLI(t *testing.T) {
-	radice := t.TempDir()
-	preparaMacchina(t, radice)
-	if err := os.WriteFile(filepath.Join(radice, "remotix.deb"), []byte("pacchetto finto"), 0o644); err != nil {
+// pacchettoUnico: la cartella packages/ di un .run finto, col pacchetto di REMOTIX per la Debian 13
+// della macchina finta (il gestore finto legge il JSON: dipende da libnuova e libcomune).
+func pacchettoUnico(t *testing.T, radice string) string {
+	d := filepath.Join(radice, "run/packages/debian13")
+	os.MkdirAll(d, 0o755)
+	if err := os.WriteFile(filepath.Join(d, "remotix_0.17.0-1_amd64.deb"),
+		[]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	return "/run/packages"
+}
+
+// DECISIONI §10.36: il piano non modifica il sistema — niente archivi, firewall, cinture né desktop;
+// i pacchetti esatti dalla simulazione del gestore, prima della domanda; i gruppi della scheda
+// dichiarati; il firewall acceso si dice, non si apre.
+func TestPianoNonModificaIlSistema(t *testing.T) {
+	radice := t.TempDir()
+	preparaMacchina(t, radice)
 	amb := ambienteFinto(radice)
 	prof := profiloFinto()
 	cat := catalogoProva(t)
 	rap := Valuta(cat, prof)
+	p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetti: pacchettoUnico(t, radice), Porta: 7447})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if Bloccato(p) {
+		t.Fatalf("piano bloccato: %+v", p.NonFatto)
+	}
+	for _, a := range p.Azioni {
+		switch a.Tipo {
+		case "install-packages", "add-user-to-group", "write-file", "start-service":
+		default:
+			t.Errorf("il piano modifica il sistema con %s (%s)", a.ID, a.Tipo)
+		}
+	}
+	esiti := map[string]string{}
+	for _, x := range p.Pacchetti {
+		esiti[x.Nome] = x.Esito
+	}
+	if esiti["remotix"] != "new" || esiti["libnuova"] != "new" || esiti["libcomune"] != "upgraded" {
+		t.Errorf("la simulazione del gestore: %+v", p.Pacchetti)
+	}
+	fw := false
+	for _, m := range p.NonFatto {
+		fw = fw || (m.Gravita == AVVISO && strings.Contains(m.Testo, "firewalld"))
+	}
+	if !fw {
+		t.Errorf("il firewall acceso va detto: %+v", p.NonFatto)
+	}
+	// senza il .run: manca il pacchetto, e il piano si ferma
+	q, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Porta: 7447})
+	if err != nil || !Bloccato(q) || !haCodice(q.NonFatto, "RX-MANCA-004") {
+		t.Errorf("senza pacchetti: %v %+v", err, q)
+	}
+}
 
-	cli, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", ApriFirewall: true, Porta: 7447})
-	if err != nil {
-		t.Fatal(err)
+// Quel che manca si dice e ferma tutto (DECISIONI §10.36): senza desktop RX-MANCA-001, a XFCE senza
+// labwc RX-MANCA-003, su Alma senza EPEL RX-MANCA-002 — senza pacchetti né comandi suggeriti. E un
+// piano BLOCCANTE applicato porta a BLOCCATA senza toccare niente.
+func TestMancaFermaTutto(t *testing.T) {
+	cat := catalogoProva(t)
+	casi := []struct {
+		id, ver string
+		extra   map[string]string
+		codice  string
+	}{
+		{"debian", "13", map[string]string{"desktop.gnome": "absent"}, "RX-MANCA-001"},
+		{"debian", "13", map[string]string{"desktop.gnome": "absent", "desktop.xfce": "4.20.1", "package.labwc": "absent"}, "RX-MANCA-003"},
+		{"almalinux", "10.1", map[string]string{"repo.epel": "absent"}, "RX-MANCA-002"},
 	}
-	dom := DomandeDaFare(prof, rap, cat, amb, 7447, false, "")
-	if dom.Firewall != "closed" {
-		t.Errorf("firewall: %q, atteso «chiuso» (firewalld finto, porta non aperta)", dom.Firewall)
-	}
-	voci := dom.VociDiserie()
-	if _, c := voci["consent.guards"]; c {
-		t.Errorf("D4: le voci di serie chiedono ancora le cinture: %v", voci)
-	}
-	gui, err := PianoDaScelte(voci, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447})
-	if err != nil {
-		t.Fatal(err)
-	}
-	norm := func(p *Piano) string {
-		c := *p
-		c.ID, c.Creato = "", ""
-		return string(JSONCanonico(c))
-	}
-	if norm(cli) != norm(gui) {
-		t.Errorf("il piano della CLI e quello delle schermate sono diversi:\nCLI %s\nGUI %s", norm(cli), norm(gui))
-	}
-	if gui.Risposte != nil || gui.Approvazione != nil {
-		t.Errorf("il piano delle schermate non porta file di risposte né approvazione: %+v %+v", gui.Risposte, gui.Approvazione)
-	}
-	n := 0
-	for _, a := range gui.Azioni {
-		if a.Tipo == "enable-guard" {
-			n++
-			if a.Consenso != "" {
-				t.Errorf("D4: la cintura %s ha ancora un consenso: %q", a.ID, a.Consenso)
+	for _, c := range casi {
+		rap := Valuta(cat, profiloDi(c.id, c.ver, c.extra))
+		if !haCodice(rap.Mancano, c.codice) {
+			t.Errorf("%s %v: manca %s, il rapporto dice %+v", c.id, c.extra, c.codice, rap.Mancano)
+		}
+		for _, m := range rap.Mancano {
+			for _, x := range []string{"sudo", "dnf ", "apt ", "zypper", "pacman"} {
+				if strings.Contains(m.Testo+m.Dettaglio+m.Rimedio, x) {
+					t.Errorf("%s: il messaggio suggerisce un comando (%q): %+v", c.codice, x, m)
+				}
 			}
 		}
 	}
-	if n != 3 {
-		t.Errorf("D4: %d cinture nel piano, attese 3", n)
-	}
-	for _, c := range gui.Consensi {
-		if strings.Contains(strings.ToLower(c), "cintur") || strings.Contains(strings.ToLower(c), "belt") {
-			t.Errorf("D4: le cinture fra i consensi: %q", c)
-		}
-	}
-	dich := false
-	for _, x := range gui.Dichiarate {
-		dich = dich || x == T("az.cintura.dichiarata")
-	}
-	if !dich {
-		t.Errorf("D4: la riga dichiarata delle cinture manca: %+v", gui.Dichiarate)
-	}
 
-	// un consenso che serve e che le schermate non danno è un errore, mai un «no» tacito
-	delete(voci, "consent.firewall")
-	if _, err := PianoDaScelte(voci, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447}); CodiceDi(err) != "RX-RISPOSTE-001" {
-		t.Errorf("consenso mancante: %v, atteso RX-RISPOSTE-001", err)
-	}
-	// una voce sconosciuta non passa
-	if _, err := PianoDaScelte(map[string]string{"consent.firewal": "yes"}, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb"}); CodiceDi(err) != "RX-RISPOSTE-002" {
-		t.Errorf("voce sconosciuta: %v, atteso RX-RISPOSTE-002", err)
-	}
-}
-
-// Il testo delle risposte è sempre lo stesso per le stesse voci (si può rifare senza domande).
-func TestTestoRisposte(t *testing.T) {
-	a := TestoRisposte(map[string]string{"port": "7447", "consent.firewall": "yes", "format": FormatoRisposte})
-	b := TestoRisposte(map[string]string{"consent.firewall": "yes", "port": "7447"})
-	if a != b || !strings.HasPrefix(a, "format = "+FormatoRisposte+"\n") {
-		t.Errorf("%q\n%q", a, b)
-	}
-}
-
-// D5 (DECISIONI §10.20): senza l'archivio per la codifica H.264 REMOTIX NON si installa. Il piano
-// fatto col «no» lo scrive (RX-H264-006, BLOCCANTE); applicarlo porta a BLOCCATA senza toccare.
-func TestSenzaArchivioVideoNonSiInstalla(t *testing.T) {
-	radice := t.TempDir()
-	preparaMacchina(t, radice)
-	os.WriteFile(filepath.Join(radice, "remotix.deb"), []byte("pacchetto finto"), 0o644)
-	amb := ambienteFinto(radice)
-	cat := catalogoProva(t)
-	for _, si := range []bool{false, true} {
-		// «si»: RPM Fusion c'è già, col ramo nonfree che la scheda Intel chiede (sulla macchina finta
-		// non si può aggiungere un deposito vero)
-		extra := map[string]string{}
-		if si {
-			extra["repo.rpmfusion"] = "present"
-			extra["repo.rpmfusion-nonfree"] = "present"
-		}
-		fed := profiloDi("fedora", "44", extra)
-		fed.Verificato("h264.gpu", "no", "finto")
-		rap := Valuta(cat, fed)
-		o := OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447}
-		p, err := PianoInstallazione(fed, rap, cat, amb, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-		bl := false
-		for _, m := range p.NonFatto {
-			bl = bl || (m.Codice == "RX-H264-006" && m.Gravita == BLOCCANTE)
-		}
-		if bl == si {
-			t.Errorf("consenso %v: RX-H264-006 nel piano = %v", si, bl)
-		}
-	}
-
-	// applicato: BLOCCATA prima di toccare
 	b := nuovoBanco(t)
 	m := b.motore(t)
 	var p Piano
 	LeggiJSON(b.piano, &p)
-	p.NonFatto = append(p.NonFatto, Msg("RX-H264-006", "RPM Fusion"))
+	p.NonFatto = append(p.NonFatto, Msg("RX-MANCA-003", "XFCE: labwc"))
 	p.Approvazione = &Approvazione{Da: "prova", Modo: "a mano", DigestPiano: p.Digest()}
 	ScriviJSON(b.piano, &p)
 	op, err := m.Applica(b.piano, false, "prova")
-	if op == nil || op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-H264-006") {
-		t.Errorf("D5: %v %v", op, err)
+	if op == nil || op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-MANCA-003") {
+		t.Errorf("manca: %v %v", op, err)
 	}
 	if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
-		t.Errorf("D5: la macchina è stata toccata: %v", d)
+		t.Errorf("manca: la macchina è stata toccata: %v", d)
 	}
 }
 
@@ -175,13 +140,13 @@ func TestFermataDaChiInstalla(t *testing.T) {
 func TestPianoPortaScelta(t *testing.T) {
 	radice := t.TempDir()
 	preparaMacchina(t, radice)
-	os.WriteFile(filepath.Join(radice, "remotix.deb"), []byte("pacchetto finto"), 0o644)
+	bundle := pacchettoUnico(t, radice)
 	amb := ambienteFinto(radice)
 	prof := profiloFinto()
 	cat := catalogoProva(t)
 	rap := Valuta(cat, prof)
 	for _, porta := range []int{7447, 8531} {
-		p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: porta})
+		p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetti: bundle, Porta: porta})
 		if err != nil {
 			t.Fatal(err)
 		}

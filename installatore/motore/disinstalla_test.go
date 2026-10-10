@@ -122,7 +122,7 @@ func TestDisinstallazioneAnnullata(t *testing.T) {
 	b := installaFinta(t)
 	installata := foto(t, b.radice)
 	pd := pianoDisinstallazione(t, b)
-	uccidiIn(t, b.radice, b.operazioni, pd, "applica", "dopo-fatta@undo-guard-keys")
+	uccidiIn(t, b.radice, b.operazioni, pd, "applica", "dopo-fatta@undo-unit")
 	op, err := b.motore(t).Annulla()
 	if err != nil || op.Stato != ANNULLATA_IN_PARTE {
 		t.Fatalf("%v %v", op.Stato, err)

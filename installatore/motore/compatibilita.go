@@ -2,7 +2,6 @@ package motore
 
 import (
 	"encoding/json"
-	"sort"
 	"strings"
 )
 
@@ -12,21 +11,18 @@ const FormatoCatalogo = "remotix-catalogo/1"
 
 // Catalogo: le combinazioni e le loro regole (§3, §6.6.8).
 type Catalogo struct {
-	Formato            string                      `json:"formato"`
-	Versione           string                      `json:"versione"`
-	Sequenza           int                         `json:"sequenza"`
-	Emesso             string                      `json:"emesso"`
-	MotoreMinimo       string                      `json:"motore_minimo"`
-	Fonte              string                      `json:"fonte"`
-	Requisiti          RequisitiCatalogo           `json:"requisiti"`
-	Depositi           map[string]DepositoCatalogo `json:"depositi"`
-	Installa           map[string]string           `json:"installa"`
-	CarattereScalabile map[string]string           `json:"carattere_scalabile"`
-	DesktopRiferimento map[string]string           `json:"desktop_di_riferimento"`
-	Piattaforme        []Piattaforma               `json:"piattaforme"`
-	Escluse            []Esclusa                   `json:"escluse"`
-	FuoriSempre        []string                    `json:"fuori_sempre"`
-	ComponentiMinimi   []ComponenteMinimo          `json:"componenti_minimi"`
+	Formato          string                      `json:"formato"`
+	Versione         string                      `json:"versione"`
+	Sequenza         int                         `json:"sequenza"`
+	Emesso           string                      `json:"emesso"`
+	MotoreMinimo     string                      `json:"motore_minimo"`
+	Fonte            string                      `json:"fonte"`
+	Requisiti        RequisitiCatalogo           `json:"requisiti"`
+	Depositi         map[string]DepositoCatalogo `json:"depositi"`
+	Piattaforme      []Piattaforma               `json:"piattaforme"`
+	Escluse          []Esclusa                   `json:"escluse"`
+	FuoriSempre      []string                    `json:"fuori_sempre"`
+	ComponentiMinimi []ComponenteMinimo          `json:"componenti_minimi"`
 
 	Digest      string `json:"-"` // sha256 dei byte letti
 	Provenienza string `json:"-"` // da dove viene (fase 0 TRUST): il pacchetto, il motore scaricato, dato a mano
@@ -53,10 +49,10 @@ func (r RequisitiCatalogo) minimaDesktop(d string) string {
 	return map[string]string{"gnome": r.GnomeMinima, "kde": r.KdeMinima, "xfce": r.XfceMinima, "lxqt": r.LxqtMinima}[d]
 }
 
+// DepositoCatalogo: un archivio di terzi che una piattaforma chiede. Il catalogo ne dà solo il nome:
+// aggiungerlo è dell'amministratore (DECISIONI §10.36), il motore dice che manca.
 type DepositoCatalogo struct {
-	Nome      string            `json:"nome"`
-	Decisione string            `json:"decisione"`
-	Comandi   map[string]string `json:"comandi"`
+	Nome string `json:"nome"`
 }
 
 type Piattaforma struct {
@@ -74,10 +70,9 @@ type Piattaforma struct {
 	// Depositi: gli archivi che servono a REMOTIX stesso, su qualunque desktop. Fase 19 (niente
 	// codifica sul processore): resta solo EPEL su Alma, che RPM Fusion per EL (il driver Intel con
 	// H.264) vuole prima di sé; OpenH264 di Cisco e SVT-AV1 sono usciti. D5.
-	Depositi         []string                   `json:"depositi,omitempty"`
-	Desktop          map[string]DesktopCatalogo `json:"desktop"`
-	PacchettiDesktop map[string]string          `json:"pacchetti_desktop"` // desktop → pacchetti (virgole) per installarlo
-	Note             []string                   `json:"note,omitempty"`
+	Depositi []string                   `json:"depositi,omitempty"`
+	Desktop  map[string]DesktopCatalogo `json:"desktop"`
+	Note     []string                   `json:"note,omitempty"`
 }
 
 type Derivata struct {
@@ -89,84 +84,35 @@ type Derivata struct {
 }
 
 // H264Piattaforma: la codifica video della piattaforma, SENZA ffmpeg (fase 18) e SOLO sulla scheda
-// (fase 19: niente ripiego sul processore): libva e il driver VA della distribuzione, la strada
-// «vaapi» di strade.go. ⭐ Il deposito di terzi serve
-// ai DRIVER, e dipende dal fornitore della scheda (`[M]` 30 set, dai binari dei driver nelle
-// immagini podman): Fedora toglie H.264 sia dal driver Intel (libva-intel-media-driver) sia da Mesa
-// ⇒ RPM Fusion per entrambi (Intel: intel-media-driver, nel ramo NONFREE; AMD:
-// mesa-va-drivers-freeworld); openSUSE toglie H.264 solo da Mesa ⇒ Packman solo per AMD; Alma su
-// AMD non ha VA-API affatto.
+// (fase 19: niente ripiego sul processore). Dal 10 ott 2026 (DECISIONI §10.36) il motore non installa
+// driver né archivi di terzi: il catalogo dice soltanto che cosa la piattaforma sa fare coi suoi
+// pacchetti, e la macchina mostra se il driver che c'è codifica (famigliaDriver, la prova di 7a).
 type H264Piattaforma struct {
-	SchedaDiSerie bool   `json:"scheda_di_serie"` // ogni scheda Intel/AMD codifica coi pacchetti ufficiali
-	Deposito      string `json:"deposito,omitempty"`
-	Comando       string `json:"comando,omitempty"`
-	AmdSenzaVaapi bool   `json:"amd_senza_vaapi,omitempty"`
-	// PacchettiScheda: fornitore (come in scheda.*.fornitore: Intel, AMD) → i driver da Deposito,
-	// separati da virgola (dopo il consenso, D5). Un fornitore che non c'è codifica di serie, o non
-	// codifica affatto (AmdSenzaVaapi).
-	PacchettiScheda map[string]string `json:"pacchetti_scheda,omitempty"`
-	// Nonfree: i fornitori il cui driver sta nel ramo «nonfree» del deposito (RPM Fusion: il driver
-	// Intel completo)
-	Nonfree []string `json:"nonfree,omitempty"`
-	// VulkanScheda (fase 19, la strada «vulkan» di strade.go): fornitore → il driver VULKAN dei
-	// depositi UFFICIALI che su questa piattaforma codifica H.264/HEVC, separati da virgola. Il motore
-	// lo installa se la macchina ha quella scheda (VulkanPerLaScheda), senza consenso: è della
-	// distribuzione. Oggi solo AMD (RADV), e solo dove Mesa è costruita coi codec (`[M]` 1 ott 2026,
-	// lo stesso `-Dvideo-codecs` che dà H.264 a radeonsi in VA-API: Debian, Ubuntu, Arch). ⛔ Fedora,
-	// RHEL e openSUSE costruiscono Mesa con `all_free` (niente H.264/H.265 né in VA-API né in RADV):
-	// lì la RADV ufficiale non conta, e il driver coi codec — dove c'è — è del deposito di terzi
-	// (PacchettiScheda, D5). ⛔ Intel no: ANV codifica solo dietro ANV_DEBUG (§10.27), resta a VA-API.
-	// ⛔ NVIDIA no: l'ICD è del driver proprietario e va col suo numero (VulkanNvidia)
-	VulkanScheda map[string]string `json:"vulkan_scheda,omitempty"`
-	// VulkanNvidia: il pacchetto che porta l'ICD Vulkan della NVIDIA (nvidia_icd.json) col driver
-	// proprietario di questa distribuzione. Solo nel rimedio di RX-GPU-004: il motore NON lo installa,
-	// perché deve avere lo stesso numero del driver (che può venire anche dall'installatore di NVIDIA)
-	VulkanNvidia string `json:"vulkan_nvidia,omitempty"`
+	// AmdSenzaVaapi: su questa piattaforma Mesa non ha VA-API (Alma/RHEL): la AMD non codifica in VA-API
+	AmdSenzaVaapi bool `json:"amd_senza_vaapi,omitempty"`
+	// SenzaH264DiSerie: i fornitori il cui driver VA-API, nei pacchetti della distribuzione, è
+	// costruito senza H.264 (Fedora: Intel e AMD; Alma: Intel; openSUSE: AMD). Serve al manuale
+	// (catalog --table); la macchina lo mostra da sé (famigliaDriver)
+	SenzaH264DiSerie []string `json:"senza_h264_di_serie,omitempty"`
+	// VulkanCodifica (fase 19, la strada «vulkan» di strade.go): i fornitori il cui driver Vulkan
+	// UFFICIALE di questa piattaforma codifica H.264/HEVC. Oggi solo AMD (RADV), e solo dove Mesa è
+	// costruita coi codec (`[M]` 1 ott 2026: Debian, Ubuntu, Arch). ⛔ Fedora, RHEL e openSUSE
+	// costruiscono Mesa con `all_free`: lì la RADV ufficiale non codifica. ⛔ Intel no: ANV codifica
+	// solo dietro ANV_DEBUG (§10.27), resta a VA-API. ⛔ NVIDIA no: l'ICD è del driver proprietario
+	VulkanCodifica []string `json:"vulkan_codifica,omitempty"`
 }
 
-// VulkanPerLaScheda: i driver Vulkan ufficiali da installare per le schede di QUESTA macchina
-// (VulkanScheda). Senza schede, o senza sapere di che fornitore sono, niente: la strada VA-API
-// resta, e la prova vera è in 7a.
-func (h H264Piattaforma) VulkanPerLaScheda(p *Profilo) []string {
-	if len(h.VulkanScheda) == 0 || p.V("gpu.nodes") == "none" {
-		return nil
-	}
-	forn, noti := fornitoriScheda(p)
-	if !noti {
-		return nil
-	}
-	var nomi []string
-	for f := range h.VulkanScheda {
-		if forn[f] {
-			nomi = append(nomi, f)
-		}
-	}
-	sort.Strings(nomi)
-	var r []string
-	visti := map[string]bool{}
-	for _, f := range nomi {
-		for _, x := range dividiVirgole(h.VulkanScheda[f]) {
-			if !visti[x] {
-				visti[x] = true
-				r = append(r, x)
-			}
-		}
-	}
-	return r
-}
-
-// codificaPer: un fornitore di schede codifica H.264 via VA-API su questa piattaforma, coi pacchetti
-// ufficiali o col driver che il catalogo prende dal deposito di terzi (D5). driverSenza: la macchina
-// ha per lui solo un driver costruito senza H.264 (famigliaDriver). Solo Intel e AMD hanno la strada.
+// codificaPer: un fornitore di schede codifica H.264 via VA-API su questa piattaforma col driver che
+// la macchina HA. driverSenza: per lui c'è solo un driver costruito senza H.264 (famigliaDriver): non
+// codifica, e il motore non ne installa un altro (§10.36). Solo Intel e AMD hanno la strada.
 func (h H264Piattaforma) codificaPer(fornitore string, driverSenza bool) bool {
 	switch {
 	case fornitore != "Intel" && fornitore != "AMD":
 		return false
 	case fornitore == "AMD" && h.AmdSenzaVaapi:
 		return false
-	case driverSenza && !h.SchedaDiSerie:
-		// il driver che c'è non codifica: serve quello del deposito, se il catalogo lo nomina
-		return h.Deposito != "" && h.PacchettiScheda[fornitore] != ""
+	case driverSenza:
+		return false
 	}
 	return true
 }
@@ -181,60 +127,6 @@ func fornitoriScheda(p *Profilo) (map[string]bool, bool) {
 		}
 	}
 	return r, len(r) > 0
-}
-
-// PerLaScheda: che cosa chiede la codifica sulla scheda SU QUESTA MACCHINA: il deposito di terzi (""
-// se non serve), i driver da prendere lì e se serve il suo ramo nonfree. Senza schede non serve
-// niente; con schede di fornitori che il catalogo non nomina (NVIDIA, virtio…) nemmeno.
-func (h H264Piattaforma) PerLaScheda(p *Profilo) (deposito string, pacchetti []string, nonfree bool) {
-	if h.Deposito == "" || h.SchedaDiSerie || p.V("gpu.nodes") == "none" {
-		return "", nil, false
-	}
-	forn, noti := fornitoriScheda(p)
-	var nomi []string
-	for f := range h.PacchettiScheda {
-		if !noti || forn[f] {
-			nomi = append(nomi, f)
-		}
-	}
-	if !noti && len(h.PacchettiScheda) == 0 {
-		return h.Deposito, nil, len(h.Nonfree) > 0
-	}
-	sort.Strings(nomi)
-	visti := map[string]bool{}
-	for _, f := range nomi {
-		for _, x := range dividiVirgole(h.PacchettiScheda[f]) {
-			if !visti[x] {
-				visti[x] = true
-				pacchetti = append(pacchetti, x)
-			}
-		}
-		if contiene(h.Nonfree, f) {
-			nonfree = true
-		}
-	}
-	if len(pacchetti) == 0 {
-		return "", nil, false
-	}
-	return h.Deposito, pacchetti, nonfree
-}
-
-// depositoPresente: il deposito c'è, acceso (e, se serve, col suo ramo nonfree).
-func depositoPresente(p *Profilo, d string, nonfree bool) bool {
-	return p.V("repo."+d) == "present" && (!nonfree || p.V("repo."+d+"-nonfree") == "present")
-}
-
-// DepositoScheda: il deposito di terzi che la scheda di QUESTA macchina chiede e che manca ("" se
-// non ne chiede, o se c'è già).
-func DepositoScheda(pl *Piattaforma, p *Profilo) string {
-	if pl == nil {
-		return ""
-	}
-	d, _, nf := pl.H264.PerLaScheda(p)
-	if d == "" || depositoPresente(p, d, nf) {
-		return ""
-	}
-	return d
 }
 
 // DepositiBaseMancanti: i depositi che servono a REMOTIX stesso (Piattaforma.Depositi) e mancano.
@@ -257,7 +149,6 @@ type DesktopCatalogo struct {
 	InAttesa   string   `json:"in_attesa,omitempty"` // una decisione dell'utente ancora aperta
 	Motivo     string   `json:"motivo,omitempty"`
 	Componenti []string `json:"componenti,omitempty"`
-	Depositi   []string `json:"depositi,omitempty"`
 	Limiti     []string `json:"limiti,omitempty"`
 	// Richiede3D: il desktop non va senza l'accelerazione 3D della scheda (il perché): condizione
 	// C-HARDWARE; senza nessuna scheda (nessun nodo di rendering) NON_SUPPORTATA, RX-COMPAT-007
@@ -308,13 +199,10 @@ func DigestMotore() string {
 }
 
 // Condizione: una delle condizioni C-… di §6.6.8, col suo rimedio.
+// Condizione: una delle condizioni C-… di §6.6.8: REMOTIX funziona, con un limite detto.
 type Condizione struct {
-	Codice    string `json:"code"`
-	Testo     string `json:"text"`
-	Rimedio   string `json:"remedy,omitempty"`
-	Decisione string `json:"decision,omitempty"` // la decisione dell'utente che la riguarda, se aperta
-	// Componente: per C-COMPONENTE, il pacchetto che l'installatore aggiunge (va nel piano)
-	Componente string `json:"component,omitempty"`
+	Codice string `json:"code"`
+	Testo  string `json:"text"`
 }
 
 // Livelli di compatibilità (§6.6.8).
@@ -326,14 +214,16 @@ const (
 
 // EsitoDesktop: il livello per un desktop.
 type EsitoDesktop struct {
-	Desktop     string       `json:"desktop"`
-	Nome        string       `json:"name"`
-	Installato  string       `json:"installed"` // versione, "absent" o "unknown"
-	Livello     string       `json:"level"`
-	Condizioni  []Condizione `json:"conditions"`
-	Motivi      []Messaggio  `json:"reasons,omitempty"` // perché NON_SUPPORTATA
-	Note        []string     `json:"notes,omitempty"`
-	Riferimento bool         `json:"reference,omitempty"` // il desktop già scelto se se ne installa uno
+	Desktop    string       `json:"desktop"`
+	Nome       string       `json:"name"`
+	Installato string       `json:"installed"` // versione, "absent" o "unknown"
+	Livello    string       `json:"level"`
+	Condizioni []Condizione `json:"conditions"`
+	Motivi     []Messaggio  `json:"reasons,omitempty"` // perché NON_SUPPORTATA
+	// Mancano: quel che manca su questa macchina perché REMOTIX giri su questo desktop installato
+	// (DECISIONI §10.36: lo si dice, provvede l'amministratore; l'installazione si ferma)
+	Mancano []string `json:"missing,omitempty"`
+	Note    []string `json:"notes,omitempty"`
 }
 
 // Rapporto di compatibilità: il secondo oggetto (§6.6.1).
@@ -347,10 +237,13 @@ type Rapporto struct {
 	cat          *Catalogo
 	Riconosciuta string         `json:"recognized"` // matrice · fuori matrice · derivata di … · esclusa · sconosciuta
 	Desktop      []EsitoDesktop `json:"desktop"`
-	SenzaDesktop bool           `json:"no_desktop"`         // nessun desktop supportato installato (§10 e R38)
-	Incognite    []string       `json:"unknowns,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
-	Messaggi     []Messaggio    `json:"messages"`
-	Note         []string       `json:"notes,omitempty"`
+	SenzaDesktop bool           `json:"no_desktop"` // nessun desktop supportato installato
+	// Mancano: tutto quel che manca a questa macchina, BLOCCANTE (DECISIONI §10.36): REMOTIX non
+	// installa niente del sistema, lo dice. Vuoto = si può installare
+	Mancano   []Messaggio `json:"missing"`
+	Incognite []string    `json:"unknowns,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
+	Messaggi  []Messaggio `json:"messages"`
+	Note      []string    `json:"notes,omitempty"`
 	// Minima: per una versione esclusa, la prima versione della stessa distribuzione che il
 	// catalogo sostiene («serve almeno Debian 13»: la schermata «bloccata», T9)
 	Minima string `json:"minimum,omitempty"`
@@ -410,7 +303,6 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 	r := &Rapporto{Formato: Formato, Oggetto: "compatibility", Creato: ora(),
 		Catalogo: RifCatalogo{c.Versione, c.Digest}}
 	id, ver := p.V("distro.id"), p.V("distro.version")
-	fam := p.V("distro.family")
 	r.Piattaforma = strings.TrimSpace(p.V("distro.name"))
 
 	// motivi che valgono per ogni desktop
@@ -465,21 +357,19 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 	if cod, det := VerdettoScheda(pl, p); cod != "" {
 		tutti = append(tutti, Msg(cod, det))
 	}
-	condH264 := condizioniH264(c, pl, p, fam, r)
-	// i depositi che servono a REMOTIX stesso (su Alma EPEL, per RPM Fusion), su ogni desktop
-	var condBase []Condizione
+	condH264 := condizioniH264(pl, p, r)
+	// i depositi che servono a REMOTIX stesso (su Alma EPEL): mancano su ogni desktop
 	for _, dep := range DepositiBaseMancanti(pl, p) {
-		dd := c.Depositi[dep]
-		condBase = append(condBase, Condizione{Codice: "C-DEPOSITO",
-			Testo: T("cond.deposito_base", nonVuoto(dd.Nome, dep)), Rimedio: dd.Comandi[pl.H264.Comando], Decisione: dd.Decisione})
+		r.Mancano = append(r.Mancano, Msg("RX-MANCA-002", nonVuoto(c.Depositi[dep].Nome, dep)))
 	}
-	nessuno := true
+	nessuno, possibile := true, false
 	for _, d := range DESKTOP {
 		inst := p.V("desktop." + d)
 		if f, ok := p.F("desktop." + d); ok && f.Stato == SCONOSCIUTO {
 			inst = "unknown"
 			r.Incognite = append(r.Incognite, T("inc.desktop", NomeDesktop(d)))
 		}
+		installato := inst != "" && inst != "absent" && inst != "unknown"
 		e := EsitoDesktop{Desktop: d, Nome: NomeDesktop(d), Installato: inst, Condizioni: []Condizione{}}
 		e.Motivi = append(e.Motivi, tutti...)
 		if pl != nil {
@@ -492,28 +382,16 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			case !dc.Supportato:
 				e.Motivi = append(e.Motivi, Msg(nonVuoto(dc.Codice, "RX-COMPAT-005"), dc.Motivo))
 			default:
-				e.Condizioni = append(e.Condizioni, condBase...)
 				e.Condizioni = append(e.Condizioni, condH264...)
+				// i pezzi che il desktop di serie non porta (labwc, wlr-randr, un carattere
+				// scalabile…): mancano, e l'amministratore li mette (§10.36)
 				for _, comp := range dc.Componenti {
 					if p.V("package."+comp) == "absent" || p.V("package."+comp) == "" {
-						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
-							Testo:   T("cond.componente", comp),
-							Rimedio: c.Installa[fam] + " " + comp, Componente: comp})
+						e.Mancano = append(e.Mancano, comp)
 					}
 				}
-				car := c.CarattereScalabile[fam]
-				if dc.ServeCarattere && (p.V("fonts.scalable") == "0" ||
-					(p.V("fonts.scalable") == "" && p.V("package."+car) == "absent")) {
-					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
-						Testo:   T("cond.carattere"),
-						Rimedio: c.Installa[fam] + " " + car, Componente: car})
-				}
-				for _, dep := range dc.Depositi {
-					if p.V("repo."+dep) != "present" && !contiene(pl.Depositi, dep) {
-						dd := c.Depositi[dep]
-						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-DEPOSITO",
-							Testo: T("cond.deposito_desktop", NomeDesktop(d), dd.Nome), Rimedio: dd.Comandi["rhel"], Decisione: dd.Decisione})
-					}
+				if dc.ServeCarattere && p.V("fonts.scalable") == "0" {
+					e.Mancano = append(e.Mancano, T("manca.carattere"))
 				}
 				for _, l := range dc.Limiti {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-LIMITE", Testo: l})
@@ -536,36 +414,35 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		case len(e.Motivi) > 0:
 			e.Livello = NON_SUPPORTATA
 			e.Condizioni = []Condizione{}
+			e.Mancano = nil
 		case pl != nil && pl.Matrice && derivata == nil && pl.GiroIntero != "":
 			e.Livello = CERTIFICATA
 		default:
 			e.Livello = COMPATIBILE
 		}
-		if e.Livello != NON_SUPPORTATA && inst != "" && inst != "absent" && inst != "unknown" {
+		if !installato {
+			e.Mancano = nil // quel che manca a un desktop che non c'è non conta
+		}
+		possibile = possibile || e.Livello != NON_SUPPORTATA
+		if e.Livello != NON_SUPPORTATA && installato {
 			nessuno = false
+			if len(e.Mancano) > 0 {
+				r.Mancano = append(r.Mancano, Msg("RX-MANCA-003", NomeDesktop(d)+": "+strings.Join(e.Mancano, ", ")))
+			}
 		}
 		r.Desktop = append(r.Desktop, e)
 	}
 
-	// Senza un desktop supportato (§10, DECISIONI §10.7, R38): la domanda in più, col desktop di
-	// riferimento già selezionato. La risposta NON la dà il motore qui: la dà chi installa.
-	if nessuno {
+	// Senza un desktop supportato installato: REMOTIX non ne installa uno (§10.36, supera §10.7):
+	// manca, e si dice quali vanno bene (se su questa macchina uno è possibile: altrimenti i motivi
+	// del rifiuto bastano)
+	if nessuno && possibile {
 		r.SenzaDesktop = true
-		r.Messaggi = append(r.Messaggi, Msg("RX-DESKTOP-002", ""))
-		rif := c.DesktopRiferimento[id]
-		if rif == "" && pl != nil {
-			rif = c.DesktopRiferimento[pl.ID]
-		}
-		for i := range r.Desktop {
-			e := &r.Desktop[i]
-			if e.Livello == NON_SUPPORTATA {
-				continue
-			}
-			e.Riferimento = e.Desktop == rif
-			e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-DESKTOP",
-				Testo:   T("cond.desktop", NomeDesktop(e.Desktop)),
-				Rimedio: T("cond.desktop_rimedio")})
-		}
+		r.Mancano = append(r.Mancano, Msg("RX-MANCA-001", T("manca.desktop", c.Requisiti.GnomeMinima,
+			c.Requisiti.KdeMinima, c.Requisiti.XfceMinima, c.Requisiti.LxqtMinima)))
+	}
+	if r.Mancano == nil {
+		r.Mancano = []Messaggio{}
 	}
 	for _, m := range p.Messaggi {
 		if m.Gravita != INFO {
@@ -582,27 +459,16 @@ func nonVuoto(a, b string) string {
 	return b
 }
 
-// condizioniH264: la codifica H.264, dalla piattaforma e da quel che la macchina ha mostrato. Fase
-// 19: niente ripiego — qui restano il deposito dei driver (D5) e le schede che non codificano.
-// ⛔ UNKNOWN non è PASS: se la prova non si è potuta fare, niente condizione ma un'incognita
-// dichiarata — non un «va tutto bene».
-func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rapporto) []Condizione {
+// condizioniH264: la codifica H.264, dalla piattaforma e da quel che la macchina ha mostrato: le
+// schede che non codificano ACCANTO a una che sì (la macchina senza nessuna capace è già fuori,
+// VerdettoScheda). ⛔ UNKNOWN non è PASS: se la prova non si è potuta fare, niente condizione ma
+// un'incognita dichiarata — non un «va tutto bene».
+func condizioniH264(pl *Piattaforma, p *Profilo, r *Rapporto) []Condizione {
 	var cc []Condizione
 	h, _ := p.F("h264.gpu")
 	if h.Stato == VERIFICATO && h.Valore == "yes" {
 		return cc
 	}
-	// il deposito dei driver, solo se la scheda di QUESTA macchina lo chiede (fase 18: Packman solo
-	// per AMD; RPM Fusion per Intel e AMD, niente per NVIDIA o senza scheda)
-	if dep := DepositoScheda(pl, p); dep != "" {
-		d := c.Depositi[dep]
-		cc = append(cc, Condizione{Codice: "C-DEPOSITO",
-			Testo:     T("cond.deposito_h264", d.Nome),
-			Rimedio:   d.Comandi[pl.H264.Comando],
-			Decisione: d.Decisione})
-	}
-	// fase 19: una scheda che non codifica ACCANTO a una che sì (la macchina senza nessuna capace è
-	// già fuori, VerdettoScheda): la si dice, e il video lo fa l'altra
 	// ⭐ fase 19: con l'ICD Vulkan la NVIDIA proprietaria codifica (strada «vulkan») e non è più fuori
 	if p.V("gpu.nvidia_proprietary") == "yes" && !SchedaSullaStrada("vulkan", "NVIDIA", pl, p) {
 		cc = append(cc, Condizione{Codice: "C-HARDWARE", Testo: T("cond.nvidia")})

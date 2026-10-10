@@ -2,24 +2,24 @@
 // (fasi/17-l-installatore.md §6.0, §6.6). Binario statico: gira da root su ogni distribuzione
 // prima che sia installato qualunque pacchetto (fase 0 TRUST), senza Python né librerie.
 //
-// T4-T5: verifica (fasi 1-2, sola lettura), piano, approva, applica (fasi 4-8), riprendi, annulla,
-// stato, disinstalla, certifica. T8: l'installazione dall'archivio firmato (--archivio). Dopo D11 e
-// D14 (DECISIONI §10.21, §10.23): il catalogo è quello del motore (nel pacchetto remotix-install), e
-// REMOTIX si aggiorna col sistema — il motore non ha un comando per aggiornare né un timer.
+// Dal 10 ott 2026 (DECISIONI §10.36): cinque comandi — check, install, uninstall, status, tui — e
+// REMOTIX che non modifica il sistema (dice cosa manca). Si consegna dentro un file `.run` (il
+// pacchetto unico): `sudo sh remotix-<versione>.run` estrae e lancia `install`; dopo, il motore resta
+// sulla macchina col pacchetto remotix-install. Aggiornare = rilanciare il .run nuovo.
 package main
 
 import (
+	"bufio"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"remotix/installatore/catalogo"
-	"remotix/installatore/chiavi"
 	"remotix/installatore/motore"
 )
 
@@ -35,32 +35,19 @@ func main() {
 	switch cmd {
 	case "check":
 		codice, err = verifica(arg)
-	case "plan":
-		err = piano(arg)
-	case "approve":
-		err = approva(arg)
-	case "apply", "resume", "rollback":
-		codice, err = opera(cmd, arg)
-	case "status":
-		err = stato(arg)
-	case "post-upgrade":
-		codice, err = aggiornato(arg)
-	case "uninstall":
-		err = disinstalla(arg)
-	case "certify":
-		codice, err = certifica(arg)
-	case "catalog":
-		err = mostraCatalogo(arg)
-	case "upgrade", "downgrade":
-		// DECISIONI §10.23: REMOTIX si aggiorna (e torna indietro) coi comandi del gestore di pacchetti
-		fmt.Fprint(os.Stderr, T("cli.col_sistema"))
-		codice = 2
 	case "install":
 		codice, err = installa(arg)
-	case "prepare-offline":
-		codice, err = preparaFuoriLinea(arg)
+	case "uninstall":
+		codice, err = disinstalla(arg)
+	case "status":
+		codice, err = stato(arg)
 	case "tui":
 		codice, err = tuiCmd(arg)
+	// nascosti: li usano il comando di rilascio e gli script dei pacchetti
+	case "catalog":
+		err = mostraCatalogo(arg)
+	case "post-upgrade":
+		codice, err = aggiornato(arg)
 	case "version", "--version":
 		fmt.Println(motore.VersioneMotore, motore.Formato)
 	case "help", "--help", "-h":
@@ -80,75 +67,16 @@ func main() {
 
 // comuni: le opzioni di tutti i comandi.
 type comuni struct {
-	operazioni, catalogo, archivio, canale string
-	porta                                  int
-	risposte, fuoriLinea                   string
+	operazioni, catalogo, pacchetti string
+	porta                           int
 }
 
 func (c *comuni) aggiungi(fs *flag.FlagSet) {
 	fs.StringVar(&c.operazioni, "state-dir", "/var/lib/remotix/operations", "where the operations are kept")
 	fs.StringVar(&c.catalogo, "catalog", "", "a catalogue given by hand, instead of the engine's (the administrator's responsibility)")
-	fs.StringVar(&c.archivio, "archive", "", "the signed REMOTIX archive (base URL)")
-	fs.StringVar(&c.canale, "channel", "stable", "the archive channel: stable or candidate")
 	fs.IntVar(&c.porta, "port", 7447, "the REMOTIX port (TCP and UDP)")
-	fs.StringVar(&c.risposte, "answers", "", "the answer file: installation without questions")
-	fs.StringVar(&c.fuoriLinea, "offline", "", "the offline bundle (prepara-fuori-linea): it is the archive, no network")
-}
-
-// leggiRisposte: il file di risposte, se c'è. Dà l'archivio e il canale se la riga di comando non li dice.
-func (c *comuni) leggiRisposte() (*motore.FileRisposte, error) {
-	if c.risposte == "" {
-		return nil, nil
-	}
-	r, err := motore.LeggiRisposte(c.risposte)
-	if err != nil {
-		return nil, err
-	}
-	if c.archivio == "" && c.fuoriLinea == "" {
-		c.archivio = r.Voci["archive"]
-	}
-	if v := r.Voci["channel"]; v != "" {
-		c.canale = v
-	}
-	return r, nil
-}
-
-// leggiFuoriLinea: il pacchetto fuori linea, se c'è (ogni file verificato col suo sha256); il suo
-// archivio locale diventa l'archivio.
-func (c *comuni) leggiFuoriLinea() (*motore.PacchettoFuoriLinea, error) {
-	if c.fuoriLinea == "" {
-		return nil, nil
-	}
-	fl, err := motore.LeggiFuoriLinea(c.fuoriLinea)
-	if err != nil {
-		return nil, err
-	}
-	c.archivio, c.canale = fl.URLArchivio(), fl.Canale
-	fmt.Fprintln(os.Stderr, T("cli.fuori_linea", fl.Dir, fl.Bersaglio, fl.Canale, len(fl.Artefatti), len(fl.File), fl.Creato))
-	return fl, nil
-}
-
-// opzioniInstallazione: quelle che vengono dalla riga di comando (archivio, porta).
-func (c *comuni) opzioniInstallazione() motore.OpzioniInstallazione {
-	return motore.OpzioniInstallazione{Archivio: c.archivio, Canale: c.canale, Chiave: chiavi.Archivio,
-		Impronta: chiavi.ImprontaArchivio(), Porta: c.porta}
-}
-
-func stampaRisposte(p *motore.Piano) {
-	r := p.Risposte
-	if r == nil {
-		return
-	}
-	fmt.Println(T("cli.risposte", r.File, r.Sha256[:16]+"…", len(r.Voci)))
-	if len(r.Predefinite) > 0 {
-		fmt.Println(T("cli.risposte_predef", strings.Join(r.Predefinite, ", ")))
-	}
-	if len(r.Superflue) > 0 {
-		fmt.Println(T("cli.risposte_superflue", strings.Join(r.Superflue, ", ")))
-	}
-	if len(r.Mancanti) > 0 {
-		fmt.Println(T("cli.risposte_mancanti", strings.Join(r.Mancanti, ", ")))
-	}
+	// la cartella packages/ del .run: la passa il .run stesso
+	fs.StringVar(&c.pacchetti, "bundle", "", "the packages folder of the REMOTIX .run file (given by the .run itself)")
 }
 
 // fonti: da dove viene il catalogo (fase 0 TRUST): quello del motore, o quello dato a mano.
@@ -156,17 +84,17 @@ func (c *comuni) fonti() *motore.FontiFiducia {
 	return &motore.FontiFiducia{Incorporato: catalogo.Incorporato, Esplicito: c.catalogo}
 }
 
-// leggiCatalogo: la fase 0 TRUST, senza scrivere niente (verifica, piano, catalogo, certifica).
-func (c *comuni) leggiCatalogo() (*motore.Catalogo, error) {
-	cat, _, err := c.fidati()
-	return cat, err
-}
-
 func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
 	return c.fonti().Fidati(time.Now())
 }
 
-// argomenti: le opzioni possono stare prima o dopo i nomi di file.
+// motore: il motore sulla macchina vera, con gli eventi stampati per chi guarda.
+func (c *comuni) motore() *motore.Motore {
+	return &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
+		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout}}
+}
+
+// argomenti: le opzioni possono stare prima o dopo i nomi.
 func argomenti(fs *flag.FlagSet, arg []string) ([]string, error) {
 	var posizionali []string
 	for {
@@ -198,6 +126,21 @@ func stampaJSON(v any) {
 	fmt.Println(string(b))
 }
 
+func daRoot() error {
+	if os.Geteuid() != 0 {
+		return fmt.Errorf("%s", T("cli.root"))
+	}
+	return nil
+}
+
+// chiedi: la domanda, dallo stdin (come apt): sì solo con «y» o «yes».
+func chiedi(domanda string) bool {
+	fmt.Print(domanda + " [y/N] ")
+	r, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	r = strings.ToLower(strings.TrimSpace(r))
+	return r == "y" || r == "yes"
+}
+
 func verifica(arg []string) (int, error) {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	var c comuni
@@ -206,7 +149,7 @@ func verifica(arg []string) (int, error) {
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
-	cat, fid, errF := c.fidati() // verifica non scrive niente (R1)
+	cat, fid, errF := c.fidati() // check non scrive niente (R1)
 	if errF != nil {
 		if *comeJSON {
 			stampaJSON(map[string]any{"format": motore.Formato, "trust": fid})
@@ -223,8 +166,11 @@ func verifica(arg []string) (int, error) {
 	} else {
 		stampaRapporto(fid, prof, rap)
 	}
+	if len(rap.Mancano) > 0 {
+		return 1, nil
+	}
 	for _, e := range rap.Desktop {
-		if e.Livello != motore.NON_SUPPORTATA {
+		if e.Livello != motore.NON_SUPPORTATA && e.Installato != "absent" && e.Installato != "unknown" && e.Installato != "" {
 			return 0, nil
 		}
 	}
@@ -234,7 +180,6 @@ func verifica(arg []string) (int, error) {
 func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) {
 	fmt.Printf("%s\n\n", T("cli.titolo"))
 	fmt.Printf("%s: %s — %s\n", T("cli.distribuzione"), r.Piattaforma, r.Riconosciuta)
-	fmt.Printf("%s\n", T("cli.catalogo", r.Catalogo.Versione))
 	fmt.Printf("%s\n\n", T("cli.fiducia", fid.Catalogo.Versione, fid.Sequenza, fid.Fonte))
 	fmt.Printf("%s\n", T("cli.desktop"))
 	for _, e := range r.Desktop {
@@ -247,30 +192,18 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 		default:
 			inst = T("cli.installato", inst)
 		}
-		rif := ""
-		if e.Riferimento {
-			rif = T("cli.proposto")
-		}
-		fmt.Printf("  %-11s %-28s %s%s\n", e.Nome, inst, e.Livello, rif)
+		fmt.Printf("  %-11s %-28s %s\n", e.Nome, inst, e.Livello)
 		for _, m := range e.Motivi {
 			fmt.Printf("      %s: [%s] %s %s\n", T("cli.perche"), m.Codice, m.Testo, m.Dettaglio)
 		}
 		for _, k := range e.Condizioni {
 			fmt.Printf("      %s %s: %s\n", T("cli.condizione"), k.Codice, k.Testo)
-			if k.Rimedio != "" {
-				fmt.Printf("          %s: %s\n", T("cli.comando"), k.Rimedio)
-			}
-			if k.Decisione != "" {
-				fmt.Printf("          %s\n", T("cli.decisione", k.Decisione))
-			}
 		}
 		for _, n := range e.Note {
 			fmt.Printf("      %s: %s\n", T("cli.nota"), n)
 		}
 	}
-	if r.SenzaDesktop {
-		fmt.Printf("\n%s\n", T("cli.senza_desktop"))
-	}
+	stampaMancano(r.Mancano)
 	if len(r.Incognite) > 0 {
 		fmt.Printf("\n%s\n", T("cli.incognite"))
 		for _, x := range r.Incognite {
@@ -304,6 +237,21 @@ func stampaRapporto(fid *motore.Fiducia, p *motore.Profilo, r *motore.Rapporto) 
 	fmt.Println()
 }
 
+// stampaMancano: quel che manca, e che l'amministratore deve mettere (DECISIONI §10.36).
+func stampaMancano(m []motore.Messaggio) {
+	if len(m) == 0 {
+		return
+	}
+	fmt.Printf("\n%s\n", T("cli.mancano"))
+	for _, x := range m {
+		fmt.Printf("  [%s] %s", x.Codice, x.Testo)
+		if x.Dettaglio != "" {
+			fmt.Printf(" %s", x.Dettaglio)
+		}
+		fmt.Println()
+	}
+}
+
 func peso(g motore.Gravita) int {
 	switch g {
 	case motore.BLOCCANTE:
@@ -322,221 +270,105 @@ func tronca(s string, n int) string {
 	return string(r[:n-1]) + "…"
 }
 
-func piano(arg []string) error {
-	fs := flag.NewFlagSet("plan", flag.ContinueOnError)
-	var c comuni
-	c.aggiungi(fs)
-	uscita := fs.String("output", "", "where to write the plan (default plan-<kind>.json)")
-	utente := fs.String("users", "", "test: who to put in the video group; installation: the people to add to the graphics card groups, comma separated (empty: everyone on the machine)")
-	apri := fs.Bool("open-firewall", false, "put opening the port in the plan")
-	comeJSON := fs.Bool("json", false, "also print the plan as JSON")
-	installa := fs.Bool("install", false, "the REMOTIX INSTALLATION plan (instead of the test plan)")
-	pacchetto := fs.String("package", "", "installation: the REMOTIX package from a file (.deb/.rpm/.pkg.tar.zst), instead of the archive")
-	depositi := fs.String("extra-repos", "", "installation: third-party repositories with consent, comma separated: epel, rpmfusion, packman")
-	nomi := fs.String("packages", "", "test: repository packages to install (comma separated)")
-	if _, err := argomenti(fs, arg); err != nil {
+// sistemaAperta: un'operazione non finita (§10.36: mai un sistema a metà). Un'installazione o un
+// aggiornamento si ANNULLANO (prima il rimedio del gestore, nel passo dei pacchetti); una
+// disinstallazione si porta a termine. Poi chi ha chiamato riparte da capo, col suo piano e la sua
+// domanda: nessun ritentare automatico.
+func sistemaAperta(m *motore.Motore) error {
+	ap, err := m.Aperta()
+	if err != nil || ap == nil {
 		return err
 	}
-	r, err := c.leggiRisposte()
-	if err != nil {
-		return err
-	}
-	if _, err := c.leggiFuoriLinea(); err != nil {
-		return err
-	}
-	cat, err := c.leggiCatalogo()
-	if err != nil {
-		return err
-	}
-	amb := motore.AmbienteVero()
-	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
-	rap := motore.Valuta(cat, prof)
-	var p *motore.Piano
-	if r != nil {
-		// senza domande: le scelte e i consensi SOLO dal file (le opzioni di consenso della riga di
-		// comando non valgono: il consenso è quello scritto)
-		p, err = motore.PianoDaRisposte(r, prof, rap, cat, amb, c.opzioniInstallazione())
-		if err != nil {
-			return err
-		}
-		if *uscita == "" {
-			*uscita = "plan-" + p.Mestiere + ".json"
-		}
-		stampaRisposte(p)
-		return stampaPiano(p, *uscita, *comeJSON)
-	}
-	if *installa {
-		o := motore.OpzioniInstallazione{Pacchetto: *pacchetto, ApriFirewall: *apri, Porta: c.porta}
-		if *pacchetto == "" && c.archivio != "" {
-			o.Archivio, o.Canale, o.Chiave, o.Impronta = c.archivio, c.canale, chiavi.Archivio, chiavi.ImprontaArchivio()
-		}
-		if *utente != "" {
-			o.Utenti = strings.Split(*utente, ",")
-		}
-		if *depositi != "" {
-			o.Depositi = strings.Split(*depositi, ",")
-		}
-		p, err = motore.PianoInstallazione(prof, rap, cat, amb, o)
-	} else {
-		if *utente == "" {
-			*utente = os.Getenv("SUDO_USER")
-		}
-		o := motore.OpzioniPianoProva{Utente: *utente, ApriFirewall: *apri, Porta: c.porta, Pacchetti: *nomi}
-		if *depositi != "" {
-			o.Depositi = strings.Split(*depositi, ",")
-		}
-		p, err = motore.PianoDiProva(prof, rap, cat, amb, o)
-	}
-	if err != nil {
-		return err
-	}
-	if *uscita == "" {
-		*uscita = "plan-" + p.Mestiere + ".json"
-	}
-	return stampaPiano(p, *uscita, *comeJSON)
-}
-
-// disinstalla: il piano della disinstallazione, dal registro dell'installazione confermata.
-func disinstalla(arg []string) error {
-	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
-	var c comuni
-	c.aggiungi(fs)
-	uscita := fs.String("output", "uninstall-plan.json", "where to write the plan")
-	purge := fs.Bool("purge", false, "also remove the configuration (like apt purge)")
-	comeJSON := fs.Bool("json", false, "also print the plan as JSON")
-	if _, err := argomenti(fs, arg); err != nil {
-		return err
-	}
-	cat, err := c.leggiCatalogo()
-	if err != nil {
-		return err
-	}
-	amb := motore.AmbienteVero()
-	m := &motore.Motore{Amb: amb, Cartella: c.operazioni, Catalogo: cat, Porta: c.porta}
-	p, err := m.PianoDisinstallazione(m.Profilo(), *purge)
-	if err != nil {
-		return err
-	}
-	return stampaPiano(p, *uscita, *comeJSON)
-}
-
-func stampaPiano(p *motore.Piano, uscita string, comeJSON bool) error {
-	if err := motore.ScriviJSON(uscita, p); err != nil {
-		return err
-	}
-	if comeJSON {
-		stampaJSON(p)
-		return nil
-	}
-	if err := mostraPiano(p, uscita); err != nil {
-		return err
-	}
-	if p.Approvazione != nil { // già approvato (dal file di risposte): si applica così com'è
-		fmt.Printf("\n%s\n", T("cli.gia_approvato", p.Approvazione.Modo, uscita))
-	} else {
-		fmt.Printf("\n%s\n", T("cli.per_applicarlo", uscita, uscita))
-	}
-	return nil
-}
-
-func mostraPiano(p *motore.Piano, uscitaFile string) error {
-	uscita := &uscitaFile
-	fmt.Println(T("cli.piano_scritto", p.Mestiere, p.ID, *uscita))
-	fmt.Printf("%s\n\n", T("cli.piano_macchina", p.Piattaforma, p.Impronta.Digest[:16], len(p.Impronta.Elementi)))
-	for i, a := range p.Azioni {
-		fmt.Print(T("cli.piano_passo", i+1, a.Descrizione, a.Tipo, a.Reversibilita, a.ComeSiFa, a.ComeSiVerifica, a.ComeSiAnnulla))
-	}
-	for _, x := range p.Consensi {
-		fmt.Printf("\n%s\n", T("cli.consenso", x))
-	}
-	for _, x := range p.Dichiarate {
-		fmt.Printf("\n%s\n", T("cli.dichiarato", x))
-	}
-	for _, m := range p.NonFatto {
-		fmt.Printf("\n%s\n", T("cli.non_fatto", m.Codice, m.Testo, m.Dettaglio))
-	}
-	return nil
-}
-
-func approva(arg []string) error {
-	fs := flag.NewFlagSet("approve", flag.ContinueOnError)
-	desktop := fs.String("desktop", "", "the answer to the desktop question, if the plan asks it")
-	pos, err := argomenti(fs, arg)
-	if err != nil {
-		return err
-	}
-	if len(pos) != 1 {
-		return errors.New(T("cli.serve_piano", "approve"))
-	}
-	arg = pos
 	var p motore.Piano
-	if err := motore.LeggiJSON(arg[0], &p); err != nil {
+	_ = motore.LeggiJSON(filepath.Join(ap.Cartella, "plan.json"), &p)
+	var op *motore.Operazione
+	if p.Mestiere == "uninstallation" {
+		fmt.Println(T("cli.aperta_disinstalla", ap.ID))
+		op, err = m.Riprendi()
+	} else {
+		fmt.Println(T("cli.aperta_annulla", ap.ID))
+		op, err = m.Annulla()
+	}
+	if op != nil {
+		fmt.Printf("%s\n\n", T("cli.operazione", op.ID, op.Stato))
+	}
+	if err != nil {
 		return err
 	}
-	if *desktop != "" {
-		if err := p.Rispondi("desktop", *desktop); err != nil {
-			return err
-		}
+	if fin, _ := op.Finita(); !fin {
+		return motore.Errore("RX-STATO-001", op.ID+" is "+string(op.Stato))
 	}
-	p.Approvazione = &motore.Approvazione{Da: chi(), Ora: time.Now().UTC().Format(time.RFC3339), Modo: "from file (remotix-install approve)", DigestPiano: p.Digest()}
-	if err := motore.ScriviJSON(arg[0], &p); err != nil {
-		return err
-	}
-	fmt.Println(T("cli.approvato", p.ID, p.Approvazione.Da, p.Approvazione.DigestPiano[:16]))
 	return nil
 }
 
-func opera(cmd string, arg []string) (int, error) {
-	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
+// installa: controllo → simulazione del gestore → piano coi pacchetti esatti → «Proceed? [y/N]» →
+// esecuzione → verifica → servizio acceso. Su una macchina con REMOTIX già installato è un
+// aggiornamento (i pacchetti del .run, e basta).
+func installa(arg []string) (int, error) {
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	eventi := fs.Bool("events", false, "events as JSON, one line each")
-	approvaOra := fs.Bool("approve", false, "consent is given now, by whoever runs the command")
-	pos, err := argomenti(fs, arg)
-	if err != nil {
+	utenti := fs.String("users", "", "the people to add to the graphics card groups, comma separated (empty: everyone on the machine)")
+	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
-	// l'archivio del piano: un archivio locale di un pacchetto fuori linea si ritrova da lì
-	if cmd == "apply" && len(pos) == 1 && c.archivio == "" {
-		var p motore.Piano
-		if motore.LeggiJSON(pos[0], &p) == nil && p.Archivio != nil {
-			c.archivio, c.canale = p.Archivio.URL, p.Archivio.Canale
-			// un archivio locale di un pacchetto fuori linea: si installa da quello (R22)
-			if c.fuoriLinea == "" {
-				c.fuoriLinea = motore.DaURLArchivio(p.Archivio.URL)
-			}
-		}
+	if err := daRoot(); err != nil {
+		return 1, err
 	}
-	fl, err := c.leggiFuoriLinea()
+	m := c.motore()
+	if err := sistemaAperta(m); err != nil {
+		return 1, err
+	}
+	cat, fid, err := c.fidati()
+	if err != nil {
+		if fid != nil {
+			stampaFiducia(fid)
+		}
+		return 1, err
+	}
+	m.Catalogo = cat
+	prof := m.Profilo()
+	rap := motore.Valuta(cat, prof)
+	o := motore.OpzioniInstallazione{Pacchetti: c.pacchetti, Porta: c.porta}
+	if *utenti != "" {
+		o.Utenti = strings.Split(*utenti, ",")
+	}
+	if in, err := m.ControllaInstallazione(); err == nil && in != nil {
+		o.Aggiornamento = true
+	}
+	p, err := motore.PianoInstallazione(prof, rap, cat, m.Amb, o)
 	if err != nil {
 		return 1, err
 	}
-	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
-		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout, JSON: *eventi}}
-	if fl != nil {
-		if err := m.UsaFuoriLinea(fl); err != nil {
-			return 1, err
-		}
+	mostraPiano(p)
+	if motore.Bloccato(p) {
+		fmt.Printf("\n%s\n", T("cli.bloccato"))
+		return 1, nil
 	}
-	if cmd != "apply" {
-		// riprendi e annulla non ripassano dalla fase 0: il catalogo per il profilo è quello verificato
-		if m.Catalogo, err = c.leggiCatalogo(); err != nil {
-			return 1, err
-		}
+	if motore.NienteDaFare(p) {
+		fmt.Printf("\n%s\n", T("cli.gia_installato", motore.VersioneMotore))
+		return 0, nil
 	}
-	var op *motore.Operazione
-	switch cmd {
-	case "apply":
-		if len(pos) != 1 {
-			return 2, errors.New(T("cli.serve_piano", "apply"))
-		}
-		op, err = m.Applica(pos[0], *approvaOra, chi())
-	case "resume":
-		op, err = m.Riprendi()
-	case "rollback":
-		op, err = m.Annulla()
+	fmt.Println()
+	if !chiedi(T("cli.procedo")) {
+		fmt.Println(T("cli.niente_toccato"))
+		return 1, nil
 	}
-	if op != nil && !*eventi {
+	return applica(m, p)
+}
+
+// applica: il piano approvato adesso da chi ha risposto «sì», dalla cartella dei piani.
+func applica(m *motore.Motore, p *motore.Piano) (int, error) {
+	dir := filepath.Join(filepath.Dir(m.Cartella), "plans")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return 1, err
+	}
+	file := filepath.Join(dir, p.ID+".json")
+	if err := motore.ScriviJSON(file, p); err != nil {
+		return 1, err
+	}
+	op, err := m.Applica(file, true, chi())
+	if op != nil {
 		fmt.Printf("\n%s\n  %s\n", T("cli.operazione", op.ID, op.Stato), op.Cartella)
 	}
 	if err != nil {
@@ -544,49 +376,148 @@ func opera(cmd string, arg []string) (int, error) {
 	}
 	switch op.Stato {
 	case motore.CONFERMATA, motore.CONFERMATA_A_CONDIZIONI:
-		if !*eventi && op.Piano != nil && op.Piano.Mestiere == "installation" {
-			fmt.Println(T("cli.router", m.Porta)) // D6
+		if p.Mestiere == "installation" {
+			fmt.Println(T("cli.router", m.Porta))
 		}
 		return 0, nil
-	case motore.ANNULLATA:
-		if cmd == "rollback" {
-			return 0, nil
-		}
 	}
 	return 1, nil
 }
 
-func stato(arg []string) error {
+func mostraPiano(p *motore.Piano) {
+	fmt.Println(T("cli.piano", p.Mestiere, p.Piattaforma))
+	for i, a := range p.Azioni {
+		fmt.Printf("  %d. %s  [%s]\n", i+1, a.Descrizione, a.Reversibilita)
+	}
+	if len(p.Pacchetti) > 0 {
+		fmt.Printf("\n%s\n", T("cli.pacchetti"))
+		for _, a := range p.Pacchetti {
+			esito := a.Esito
+			if a.Prima != "" {
+				esito += " (" + a.Prima + ")"
+			}
+			fmt.Printf("  %-36s %-28s %-10s %s\n", a.Nome, a.Versione, esito, a.Origine)
+		}
+	}
+	for _, x := range p.Dichiarate {
+		fmt.Printf("\n%s\n", T("cli.dichiarato", x))
+	}
+	for _, k := range p.Condizioni {
+		fmt.Printf("\n%s %s: %s\n", T("cli.condizione"), k.Codice, k.Testo)
+	}
+	var mancano []motore.Messaggio
+	for _, m := range p.NonFatto {
+		if m.Gravita == motore.BLOCCANTE {
+			mancano = append(mancano, m)
+		} else {
+			fmt.Printf("\n%s\n", T("cli.non_fatto", m.Codice, m.Testo, m.Dettaglio))
+		}
+	}
+	stampaMancano(mancano)
+}
+
+// disinstalla: il piano della disinstallazione dal registro dell'installazione confermata, la
+// domanda, e via. Una disinstallazione interrotta si porta a termine; un'installazione interrotta si
+// annulla (e quello è già togliere REMOTIX).
+func disinstalla(arg []string) (int, error) {
+	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
+	var c comuni
+	c.aggiungi(fs)
+	purge := fs.Bool("purge", false, "also remove the configuration (like apt purge)")
+	if _, err := argomenti(fs, arg); err != nil {
+		return 2, err
+	}
+	if err := daRoot(); err != nil {
+		return 1, err
+	}
+	m := c.motore()
+	if ap, err := m.Aperta(); err != nil {
+		return 1, err
+	} else if ap != nil {
+		return 0, sistemaAperta(m)
+	}
+	cat, _, err := c.fidati()
+	if err != nil {
+		return 1, err
+	}
+	m.Catalogo = cat
+	p, err := m.PianoDisinstallazione(m.Profilo(), *purge)
+	if err != nil {
+		return 1, err
+	}
+	mostraPiano(p)
+	fmt.Println()
+	if !chiedi(T("cli.procedo_togli")) {
+		fmt.Println(T("cli.niente_toccato"))
+		return 1, nil
+	}
+	return applica(m, p)
+}
+
+// stato: le operazioni, e — se REMOTIX è installato — i controlli di allora rifatti adesso (§6.6.11,
+// R29): GREEN solo se tutto è PASS e non c'è nessuna condizione; uscita 0 solo se GREEN.
+func stato(arg []string) (int, error) {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
+	comeJSON := fs.Bool("json", false, "the certification as JSON")
 	if _, err := argomenti(fs, arg); err != nil {
-		return err
+		return 2, err
 	}
-	m := &motore.Motore{Cartella: c.operazioni}
-	ops, err := m.Elenco()
-	if err != nil {
-		return err
-	}
-	if len(ops) == 0 {
-		fmt.Println(T("cli.nessuna_op", c.operazioni))
-	}
-	for _, op := range ops {
-		fin, _ := op.Finita()
-		aperta := ""
-		if !fin {
-			aperta = T("cli.aperta")
+	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Porta: c.porta}
+	if !*comeJSON {
+		ops, err := m.Elenco()
+		if err != nil {
+			return 1, err
 		}
-		fmt.Printf("%s  %-24s%s\n", op.ID, op.Stato, aperta)
+		if len(ops) == 0 {
+			fmt.Println(T("cli.nessuna_op", c.operazioni))
+		}
+		for _, op := range ops {
+			fin, _ := op.Finita()
+			aperta := ""
+			if !fin {
+				aperta = T("cli.aperta")
+			}
+			fmt.Printf("%s  %-24s%s\n", op.ID, op.Stato, aperta)
+		}
 	}
-	return nil
+	if _, err := m.ControllaInstallazione(); err != nil {
+		if !*comeJSON {
+			fmt.Printf("\n%s\n", T("cli.non_installato_ora"))
+		}
+		return 1, nil
+	}
+	cat, _, err := c.fidati()
+	if err != nil {
+		return 1, err
+	}
+	m.Catalogo = cat
+	r, err := m.Certifica()
+	if err != nil {
+		return 1, err
+	}
+	if *comeJSON {
+		stampaJSON(r)
+	} else {
+		fmt.Printf("\n%s\n", T("cli.certifica", r.Operazione, r.Esito))
+		for _, k := range r.Controlli {
+			fmt.Printf("  %-8s %s — %s\n", k.Esito, k.ID, k.Dettaglio)
+		}
+		for _, k := range r.Condizioni {
+			fmt.Printf("  %s %s\n", k.Codice, k.Testo)
+		}
+	}
+	if r.Esito != "GREEN" {
+		return 1, nil
+	}
+	return 0, nil
 }
 
 // aggiornato: chiamato dagli script dei pacchetti remotix e remotix-install a ogni cambio di
-// versione (DECISIONI §10.12 punto 4, §10.23): annota le versioni installate, dice se l'installazione
-// è certificata e se la macchina ha un motivo BLOCCANTE. ⛔ Non fa mai fallire il gestore di
-// pacchetti: dice, e restituisce 0. Il riavvio che non chiude i desktop lo fa lo script del pacchetto
-// remotix (try-restart), non il motore.
+// versione: annota le versioni installate, dice se l'installazione è certificata e se la macchina
+// ha un motivo BLOCCANTE. ⛔ Non fa mai fallire il gestore di pacchetti: dice, e restituisce 0. Il
+// riavvio che non chiude i desktop lo fa lo script del pacchetto remotix (try-restart).
 func aggiornato(arg []string) (int, error) {
 	fs := flag.NewFlagSet("post-upgrade", flag.ContinueOnError)
 	var c comuni
@@ -607,7 +538,7 @@ func aggiornato(arg []string) (int, error) {
 		fmt.Fprintln(os.Stderr, "remotix-install post-upgrade:", err)
 	} else {
 		var r []string
-		for _, n := range motore.PacchettiArchivio {
+		for _, n := range motore.PacchettiRemotix {
 			if v[n] != "" {
 				r = append(r, n+" "+v[n])
 			}
@@ -621,7 +552,7 @@ func aggiornato(arg []string) (int, error) {
 	}
 	prof := motore.Preflight(amb, motore.OpzioniPreflight{Porta: c.porta, Pacchetti: cat.Componenti()})
 	rap := motore.Valuta(cat, prof)
-	for _, x := range rap.Messaggi {
+	for _, x := range append(rap.Messaggi, rap.Mancano...) {
 		if x.Gravita == motore.BLOCCANTE {
 			fmt.Println(motore.Msg("RX-INST-002", x.Codice+" "+x.Testo).Testo, x.Codice)
 		}
@@ -637,7 +568,7 @@ func mostraCatalogo(arg []string) error {
 	if _, err := argomenti(fs, arg); err != nil {
 		return err
 	}
-	cat, err := c.leggiCatalogo()
+	cat, _, err := c.fidati()
 	if err != nil {
 		return err
 	}
@@ -647,42 +578,6 @@ func mostraCatalogo(arg []string) error {
 	}
 	fmt.Print(T("cli.catalogo_info", cat.Versione, cat.Sequenza, cat.Emesso, cat.MotoreMinimo, cat.Digest, cat.Provenienza))
 	return nil
-}
-
-// certifica: rifà, in sola lettura, i controlli dell'installazione confermata (§6.6.11, R29):
-// VERDE solo se tutto è PASS e non c'è nessuna condizione; uscita 0 solo se VERDE.
-func certifica(arg []string) (int, error) {
-	fs := flag.NewFlagSet("certify", flag.ContinueOnError)
-	var c comuni
-	c.aggiungi(fs)
-	comeJSON := fs.Bool("json", false, "as JSON")
-	if _, err := argomenti(fs, arg); err != nil {
-		return 2, err
-	}
-	cat, err := c.leggiCatalogo()
-	if err != nil {
-		return 1, err
-	}
-	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Catalogo: cat, Porta: c.porta}
-	r, err := m.Certifica()
-	if err != nil {
-		return 1, err
-	}
-	if *comeJSON {
-		stampaJSON(r)
-	} else {
-		fmt.Println(T("cli.certifica", r.Operazione, r.Esito))
-		for _, k := range r.Controlli {
-			fmt.Printf("  %-8s %s — %s\n", k.Esito, k.ID, k.Dettaglio)
-		}
-		for _, k := range r.Condizioni {
-			fmt.Printf("  %s %s\n", k.Codice, k.Testo)
-		}
-	}
-	if r.Esito != "GREEN" {
-		return 1, nil
-	}
-	return 0, nil
 }
 
 func stampaFiducia(f *motore.Fiducia) {

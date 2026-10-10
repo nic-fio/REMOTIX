@@ -1,6 +1,6 @@
 // Package tui: le schermate dell'installatore nel terminale (Bubble Tea), per chi lavora via ssh o
-// dalla console (fasi/17 §6.6.1). Le STESSE schermate della finestra, dalle stesse viste
-// (interfaccia.Vista…), sulla stessa sessione del motore; gira da root nel terminale.
+// dalla console (fasi/17 §6.6.1), dalle viste di interfaccia (Vista…), sulla sessione del motore;
+// gira da root nel terminale. Una domanda sola, la porta, e il «sì» al piano (DECISIONI §10.36).
 package tui
 
 import (
@@ -57,11 +57,6 @@ type (
 	}
 )
 
-type voce struct {
-	domanda int // -1 = la porta
-	opzione int
-}
-
 type modello struct {
 	mot      interfaccia.Motore
 	prog     *tea.Program
@@ -76,9 +71,7 @@ type modello struct {
 	eventi   []motore.EventoPubblico
 	pronto   *interfaccia.VistaPronto
 	fine     *interfaccia.VistaBloccata
-	voci     map[string]string
 	porta    string
-	cur      int
 	dett     bool
 	reg      bool
 	fermando bool
@@ -123,8 +116,8 @@ func messaggio(err error) *motore.Messaggio {
 func (m *modello) finisci(es *interfaccia.Esito) {
 	m.esito = es
 	if es.Stato == motore.CONFERMATA || es.Stato == motore.CONFERMATA_A_CONDIZIONI {
-		porta, _ := strconv.Atoi(m.voci["port"])
-		m.pronto = interfaccia.VistaDelPronto(es, m.vp, porta, interfaccia.DepositoVideo(m.ctrl.Domande, m.voci))
+		porta, _ := strconv.Atoi(m.porta)
+		m.pronto = interfaccia.VistaDelPronto(es, m.vp, porta)
 		m.schermo = sPronto
 		return
 	}
@@ -133,17 +126,6 @@ func (m *modello) finisci(es *interfaccia.Esito) {
 	}
 	m.fine = interfaccia.VistaDellaFine(es, nil)
 	m.schermo = sFine
-}
-
-// le voci della schermata delle scelte, in fila (la porta, poi ogni opzione di ogni domanda)
-func (m *modello) fila() []voce {
-	f := []voce{{-1, 0}}
-	for i, d := range m.vs.Domande {
-		for j := range d.Opzioni {
-			f = append(f, voce{i, j})
-		}
-	}
-	return f
 }
 
 func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -162,7 +144,6 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.vs = interfaccia.VistaDelleScelte(x.c)
-		m.voci = x.c.Domande.VociDiserie()
 		m.porta = strconv.Itoa(x.c.Domande.Porta)
 		m.schermo = sControllo
 	case msgPiano:
@@ -175,7 +156,7 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.piano = x.p
-		m.vp = interfaccia.VistaDelPiano(x.p, m.ctrl.Profilo, interfaccia.NomiDepositi(m.ctrl.Domande))
+		m.vp = interfaccia.VistaDelPiano(x.p)
 		m.schermo = sPiano
 	case msgEvento:
 		m.eventi = append(m.eventi, x.ev)
@@ -213,27 +194,12 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.schermo {
 	case sControllo:
 		if s == "enter" {
-			m.schermo, m.cur = sScelte, 0
+			m.schermo = sScelte
 		}
 	case sScelte:
-		f := m.fila()
-		v := f[m.cur]
 		switch s {
-		case "up", "k":
-			if m.cur > 0 {
-				m.cur--
-			}
-		case "down", "j", "tab":
-			if m.cur < len(f)-1 {
-				m.cur++
-			}
-		case " ":
-			if v.domanda >= 0 {
-				d := m.vs.Domande[v.domanda]
-				m.voci[d.Voce] = d.Opzioni[v.opzione].Valore
-			}
 		case "backspace":
-			if v.domanda < 0 && len(m.porta) > 0 {
+			if len(m.porta) > 0 {
 				m.porta = m.porta[:len(m.porta)-1]
 			}
 		case "esc":
@@ -241,26 +207,19 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		case "enter":
-			if v.domanda >= 0 {
-				d := m.vs.Domande[v.domanda]
-				m.voci[d.Voce] = d.Opzioni[v.opzione].Valore
-			}
 			p, ok := interfaccia.PortaValida(m.porta)
 			if !ok {
 				return m, nil
 			}
-			m.voci["port"] = strconv.Itoa(p)
-			voci := map[string]string{}
-			for a, b := range m.voci {
-				voci[a] = b
-			}
+			m.porta = strconv.Itoa(p)
+			voci := map[string]string{"port": m.porta}
 			m.schermo, m.attesa = sAttesa, interfaccia.T("attendi.piano")
 			return m, func() tea.Msg {
 				p, err := m.mot.Piano(voci)
 				return msgPiano{p, err}
 			}
 		default:
-			if v.domanda < 0 && len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
+			if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
 				m.porta += s
 			}
 		}
@@ -268,8 +227,6 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch s {
 		case "esc":
 			m.schermo = sScelte
-		case "s":
-			m.salva("remotix-plan-"+m.piano.ID+".json", m.piano)
 		case "enter":
 			m.av = interfaccia.NuovoAvanzamento(m.vp)
 			m.schermo = sAvanzamento
@@ -407,14 +364,7 @@ func (m *modello) viewScelte(b *strings.Builder) {
 	T := interfaccia.T
 	v := m.vs
 	b.WriteString(stTitolo.Render(v.Titolo) + "\n" + stGrigio.Render(m.a(v.Sotto)) + "\n\n")
-	f := m.fila()
-	sel := f[m.cur]
-	// la porta
-	porta := m.porta
-	if sel.domanda < 0 {
-		porta = stCursore.Render(porta + "▏")
-	}
-	b.WriteString(stTitolo.Render(T("sc.porta")) + "\n  " + T("tui.porta") + porta + "   " + stGrigio.Render(T("sc.porta.nota")) + "\n")
+	b.WriteString(stTitolo.Render(T("sc.porta")) + "\n  " + T("tui.porta") + stCursore.Render(m.porta+"▏") + "   " + stGrigio.Render(T("sc.porta.nota")) + "\n")
 	if _, ok := interfaccia.PortaValida(m.porta); !ok {
 		b.WriteString("  " + stRosso.Render(T("sc.porta.errata")) + "\n")
 	}
@@ -423,34 +373,7 @@ func (m *modello) viewScelte(b *strings.Builder) {
 		if v.PortaVerde {
 			st = stVerde
 		}
-		b.WriteString("  " + st.Render(v.PortaRiga) + "\n")
-	}
-	for i, d := range v.Domande {
-		b.WriteString("\n" + stTitolo.Render(d.Titolo) + "\n")
-		if d.Spiega != "" {
-			b.WriteString(stGrigio.Render(m.a(d.Spiega)) + "\n")
-		}
-		for j, o := range d.Opzioni {
-			pallino := "( )"
-			if m.voci[d.Voce] == o.Valore {
-				pallino = stScelto.Render("(•)")
-			}
-			t := o.Titolo
-			if o.Nota != "" {
-				t += " " + stVerde.Render(o.Nota)
-			}
-			r := "  " + pallino + " " + t
-			if sel.domanda == i && sel.opzione == j {
-				r = stCursore.Render(">") + r[1:]
-			}
-			b.WriteString(r + "\n")
-			if o.Testo != "" {
-				b.WriteString("        " + stGrigio.Render(o.Testo) + "\n")
-			}
-		}
-	}
-	if v.Nota != "" {
-		b.WriteString("\n" + stGrigio.Render(m.a(v.Nota)) + "\n")
+		b.WriteString("  " + st.Render(m.a(v.PortaRiga)) + "\n")
 	}
 	b.WriteString(m.tasti(T("tui.tasti")))
 }
@@ -475,11 +398,21 @@ func (m *modello) viewPiano(b *strings.Builder) {
 			b.WriteString("     " + stGrigio.Render(p.Sotto) + "\n")
 		}
 	}
+	if len(m.vp.Pacchetti) > 0 {
+		b.WriteString("\n" + stTitolo.Render(T("p.pacchetti")) + "\n")
+		for _, a := range m.vp.Pacchetti {
+			esito := a.Esito
+			if a.Prima != "" {
+				esito += " (" + a.Prima + ")"
+			}
+			b.WriteString(fmt.Sprintf("  %-32s %-24s %s\n", a.Nome, a.Versione, stGrigio.Render(esito+" · "+a.Origine)))
+		}
+	}
 	b.WriteString("\n" + stGrigio.Render(m.a(T("p.nota"))) + "\n")
 	if m.dett {
 		b.WriteString("\n" + stGrigio.Render(m.a(m.vp.Dettagli)) + "\n")
 	}
-	b.WriteString(m.tasti(T("tui.conferma"), "s: "+strings.ToLower(T("btn.salva_piano")), T("tui.dettagli"), "esc "+strings.ToLower(T("btn.indietro"))))
+	b.WriteString(m.tasti(T("tui.conferma"), T("tui.dettagli"), "esc "+strings.ToLower(T("btn.indietro"))))
 }
 
 func (m *modello) viewAvanzamento(b *strings.Builder) {

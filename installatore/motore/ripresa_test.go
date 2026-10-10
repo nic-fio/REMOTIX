@@ -331,17 +331,33 @@ func TestModificaConcorrente(t *testing.T) {
 // R28 in piccolo: un passo che fallisce (qui: nftables, che il motore non sa ancora cambiare; ufw
 // lo sa da T6) ⇒
 // l'operazione si annulla per intero, e la macchina è com'era.
+// pianoCheFallisce: il piano di prova con un ultimo passo che non può riuscire (una persona che non
+// esiste, RX-GRUPPI-003): tutto quel che è stato fatto prima si annulla.
+func pianoCheFallisce(t *testing.T, b *banco) string {
+	p := pianoDiProva(t, b.radice, filepath.Dir(b.radice), false)
+	var pn Piano
+	LeggiJSON(p, &pn)
+	pn.Azioni = append(pn.Azioni, PianoGruppo("ghost", "fantasma", "video"))
+	im, err := CalcolaImpronta(profiloFinto(), catalogoProva(t), pn.Azioni, pn.Dipende, &Contesto{Amb: ambienteFinto(b.radice)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pn.Impronta = *im
+	pn.Approvazione = &Approvazione{Da: "prova", Ora: "2026-09-30T00:00:00Z", Modo: "da file", DigestPiano: pn.Digest()}
+	ScriviJSON(p, &pn)
+	return p
+}
+
 func TestFallimentoAnnullaTutto(t *testing.T) {
 	b := nuovoBanco(t)
-	os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("nftables"), 0o644)
-	b.piano = pianoDiProva(t, b.radice, filepath.Dir(b.radice), true)
+	b.piano = pianoCheFallisce(t, b)
 	b.prima = foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if err != nil || op.Stato != ANNULLATA {
 		t.Fatalf("stato %v err %v, atteso ROLLED_BACK", op.Stato, err)
 	}
-	if u := op.Reg.Ultimo("firewall", EvFallita); u == nil || u.Codice != "RX-FW-004" {
-		t.Fatalf("il fallimento non porta RX-FW-004: %+v", u)
+	if u := op.Reg.Ultimo("ghost", EvFallita); u == nil || u.Codice != "RX-GRUPPI-003" {
+		t.Fatalf("il fallimento non porta RX-GRUPPI-003: %+v", u)
 	}
 	if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 		t.Fatalf("%s", strings.Join(d, "\n"))
@@ -350,8 +366,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 	for _, punto := range []string{"annulla-dopo-intenzione@unit", "annulla-dopo-effetto@overwritten-file", "stato:ROLLING_BACK@"} {
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
-			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("nftables"), 0o644)
-			b.piano = pianoDiProva(t, b.radice, filepath.Dir(b.radice), true)
+			b.piano = pianoCheFallisce(t, b)
 			b.prima = foto(t, b.radice)
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", punto)
 			op, err := b.motore(t).Riprendi()

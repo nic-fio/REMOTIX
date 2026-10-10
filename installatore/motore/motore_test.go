@@ -221,54 +221,6 @@ func TestInstallazione(t *testing.T) {
 	}
 }
 
-// Il desktop che manca (DECISIONI §10.7, R38): la scelta c'è, col desktop di riferimento; «no» ⇒
-// BLOCCATA con RX-DESKTOP-001; un desktop ⇒ il passo dichiarato ferma PRIMA di toccare.
-func TestSenzaDesktop(t *testing.T) {
-	cat := catalogoProva(t)
-	prof := profiloFinto()
-	prof.Rilevato("desktop.gnome", "absent", "finto")
-	rap := Valuta(cat, prof)
-	if !rap.SenzaDesktop {
-		t.Fatal("senza desktop non rilevato")
-	}
-	s := SceltaDesktop(rap)
-	if s == nil || s.Predefinita != "gnome" || strings.Join(s.Opzioni, ",") != "gnome,kde,xfce,lxqt,no" || s.Pacchetti["kde"] != "task-kde-desktop" {
-		t.Fatalf("scelta: %+v", s)
-	}
-	for _, rispo := range []string{"no", "kde"} {
-		b := nuovoBanco(t)
-		m := b.motore(t)
-		m.Esamina = func() *Profilo { p := profiloFinto(); p.Rilevato("desktop.gnome", "absent", "finto"); return p }
-		var p Piano
-		LeggiJSON(b.piano, &p)
-		p.Scelte = []Scelta{*s}
-		if err := p.Rispondi("desktop", rispo); err != nil {
-			t.Fatal(err)
-		}
-		im, _ := CalcolaImpronta(m.Profilo(), cat, p.Azioni, p.Dipende, &Contesto{Amb: m.Amb})
-		p.Impronta = *im
-		p.Approvazione = nil
-		ScriviJSON(b.piano, &p)
-		op, err := m.Applica(b.piano, true, "prova")
-		switch rispo {
-		case "no": // niente desktop ⇒ REMOTIX non si installa, niente toccato
-			if op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-DESKTOP-001") {
-				t.Errorf("risposta no: %s %v (atteso BLOCKED RX-DESKTOP-001)", op.Stato, err)
-			}
-		case "kde": // task-kde-desktop non è nel deposito finto: fallisce nell'acquisizione, prima di toccare
-			if op.Stato != ANNULLATA {
-				t.Errorf("risposta kde: %s %v (atteso ROLLED_BACK)", op.Stato, err)
-			}
-		}
-		if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
-			t.Errorf("risposta %s: toccata %v", rispo, d)
-		}
-	}
-	if err := (&Piano{Scelte: []Scelta{*s}}).Rispondi("desktop", "cinnamon"); err == nil {
-		t.Error("cinnamon accettato")
-	}
-}
-
 func ultimoStato(op *Operazione) string {
 	for i := len(op.Reg.Eventi) - 1; i >= 0; i-- {
 		if op.Reg.Eventi[i].Tipo == EvStato {
@@ -278,48 +230,13 @@ func ultimoStato(op *Operazione) string {
 	return ""
 }
 
-// R38 in piccolo: il desktop installato SENZA schermata d'accesso né avvio in grafica — il display
-// manager che il «postinst» abilita e accende resta spento, il bersaglio d'avvio com'era; e
-// l'annullamento lo toglie.
-func TestDesktopSenzaGrafica(t *testing.T) {
-	b := nuovoBanco(t)
-	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-deposito.json"),
-		[]byte(`{"libnuova":{"versione":"1.0"},"libcomune":{"versione":"2.0"},"labwc":{"versione":"0.9","dipende":["libnuova"]},"task-lxqt-desktop":{"versione":"1","dipende":["sddm"]},"sddm":{"versione":"0.21"}}`), 0o644)
-	os.WriteFile(filepath.Join(b.radice, "var/lib/finto-predefinito"), []byte("multi-user.target"), 0o644)
-	os.MkdirAll(filepath.Join(b.radice, "usr/sbin"), 0o755)
-	b.prima = foto(t, b.radice)
-	m := b.motore(t)
-	m.Amb.Famiglia = "debian" // policy-rc.d
-	var p Piano
-	LeggiJSON(pianoDiProva(t, b.radice, t.TempDir(), false), &p)
-	p.Azioni = append([]AzionePiano{PianoDesktop("desktop", "lxqt", "task-lxqt-desktop")}, p.Azioni...)
-	im, _ := CalcolaImpronta(profiloFinto(), m.Catalogo, p.Azioni, p.Dipende, &Contesto{Amb: m.Amb})
-	p.Impronta = *im
-	pp := filepath.Join(t.TempDir(), "p.json")
-	ScriviJSON(pp, &p)
-	op, err := m.Applica(pp, true, "prova")
-	if err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("%v %v %s", op.Stato, err, op.ultimoDettaglio())
-	}
-	u := &unitaFinte{b.radice}
-	f, _ := u.Stato("sddm.service")
-	a, _ := u.Attiva("sddm.service")
-	d, _ := u.Predefinito()
-	if f == "enabled" || a == "active" || d != "multi-user.target" {
-		t.Fatalf("display manager %s %s, bersaglio %s: la macchina parte in grafica", f, a, d)
-	}
-	if _, err := os.Stat(filepath.Join(b.radice, "usr/sbin/policy-rc.d")); err == nil {
-		t.Fatal("è rimasto policy-rc.d")
-	}
-}
-
-// Il piano di prova: i depositi e i pacchetti in testa, il gruppo per ULTIMO (R28 dal vero su Alma).
+// Il piano di prova: i pacchetti in testa, il gruppo per ULTIMO (R28 dal vero su Alma).
 func TestPianoDiProva(t *testing.T) {
 	b := nuovoBanco(t)
 	amb := ambienteFinto(b.radice)
 	cat := catalogoProva(t)
 	prof := profiloFinto()
-	p, err := PianoDiProva(prof, Valuta(cat, prof), cat, amb, OpzioniPianoProva{Utente: "prova", ApriFirewall: true, Pacchetti: "labwc"})
+	p, err := PianoDiProva(prof, Valuta(cat, prof), cat, amb, OpzioniPianoProva{Utente: "prova", Pacchetti: "labwc"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +244,7 @@ func TestPianoDiProva(t *testing.T) {
 	for _, a := range p.Azioni {
 		tipi = append(tipi, a.Tipo)
 	}
-	if got := strings.Join(tipi, ","); got != "install-packages,write-file,write-file,enable-unit,firewall-rule,add-user-to-group" {
+	if got := strings.Join(tipi, ","); got != "install-packages,write-file,write-file,enable-unit,add-user-to-group" {
 		t.Fatalf("ordine dei passi: %s", got)
 	}
 }

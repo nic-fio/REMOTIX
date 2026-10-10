@@ -194,6 +194,7 @@ func preparaMacchina(t testing.TB, radice string) {
 		"etc/group":                  "root:x:0:\nvideo:x:44:altro\nrender:x:991:\nprova:x:1000:\naltro:x:1001:\n",
 		"etc/passwd":                 "root:x:0:0::/root:/bin/sh\nprova:x:1000:1000::/home/prova:/bin/sh\naltro:x:1001:1001::/home/altro:/bin/sh\n",
 		"etc/remotix-esistente.conf": "vecchio contenuto dell'amministratore\n",
+		"etc/os-release":             "ID=debian\nVERSION_ID=\"13\"\nNAME=\"Debian GNU/Linux\"\n",
 		"var/lib/finto-systemd.json": "{}",
 		// una delle quattro regole c'era già: dopo l'annullamento deve restare
 		"var/lib/finto-firewalld.json": `{"public 7447/tcp vive":true}`,
@@ -207,8 +208,6 @@ func preparaMacchina(t testing.TB, radice string) {
 		"etc/pam.d/remotix":            "auth required pam_unix.so\n@include common-account\n",
 		"etc/pam.d/common-account":     "account required pam_unix.so\n-session optional pam_manca.so\n",
 		"usr/lib/security/pam_unix.so": "",
-		// la cintura spenta che il pacchetto porterebbe
-		"usr/share/remotix/cinture/remotix-tasti.conf": "[Login]\nHandlePowerKey=ignore\n",
 	}
 	for p, c := range file {
 		d := filepath.Join(radice, p)
@@ -221,20 +220,18 @@ func preparaMacchina(t testing.TB, radice string) {
 	os.MkdirAll(filepath.Join(radice, "etc/systemd/system"), 0o755)
 }
 
-// azioniDiProva: sette passi che coprono i casi: file nuovo in una cartella nuova, file che
-// sovrascrive quello dell'amministratore, unità, gruppo nostro, gruppo PREESISTENTE, firewall con
-// una regola già presente.
+// azioniDiProva: i passi che coprono i casi: pacchetti (file e dipendenze), file nuovo in una
+// cartella nuova, file che sovrascrive quello dell'amministratore, unità, gruppo nostro, gruppo
+// PREESISTENTE, servizio.
 func azioniDiProva() []AzionePiano {
 	return []AzionePiano{
-		PianoPacchetti("packages", "/var/pacchetti/remotix.pkg", Sha256([]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`)), "labwc"),
+		PianoPacchetti("packages", "/var/pacchetti/remotix.pkg", "labwc"),
 		PianoScriviFile("conf-file", "/etc/remotix/engine-test.conf", "porta=7447\n", "0644"),
 		PianoScriviFile("overwritten-file", "/etc/remotix-esistente.conf", "contenuto di REMOTIX\n", "0644"),
 		PianoScriviFile("unit-file", "/etc/systemd/system/remotix-engine-test.service", "[Unit]\nDescription=prova\n[Install]\nWantedBy=multi-user.target\n", "0644"),
 		PianoUnita("unit", "remotix-engine-test.service"),
 		PianoGruppo("group-video", "prova", "video"),
 		PianoGruppo("group-preexisting", "altro", "video"),
-		PianoFirewall("firewall", "7447"),
-		PianoCintura("guard-keys", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"),
 		PianoAccendiServizio("service", "remotix-engine-test.service", 0),
 	}
 }

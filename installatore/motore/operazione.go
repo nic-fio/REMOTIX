@@ -23,8 +23,6 @@ type Motore struct {
 	Esamina  func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
 	Ev       *Eventi
 	Adesso   func() time.Time
-	// FuoriLinea: il pacchetto fuori linea da cui si installa (R22); la macchina deve combaciare
-	FuoriLinea *PacchettoFuoriLinea
 	// Fermata: chi installa ha chiesto di fermarsi (il pulsante «Annulla e rimetti com'era» di TUI e
 	// GUI). Si guarda fra un passo e l'altro, mai in mezzo a un passo: il passo cominciato finisce,
 	// poi l'operazione va a IN_ANNULLAMENTO (RX-AZIONE-006) e si annulla tutto dal registro.
@@ -76,12 +74,6 @@ func (c *Catalogo) Componenti() []string {
 					r = append(r, x)
 				}
 			}
-		}
-	}
-	for _, x := range c.CarattereScalabile {
-		if !visti[x] {
-			visti[x] = true
-			r = append(r, x)
 		}
 	}
 	sort.Strings(r)
@@ -341,35 +333,16 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		}
 		return op, op.blocca(Errore("RX-PIANO-001", det))
 	}
-	// il pacchetto fuori linea: preparato per QUESTA macchina? (e i suoi file sono integri)
-	if m.FuoriLinea != nil {
-		if _, err := LeggiFuoriLinea(m.FuoriLinea.Dir); err != nil {
-			return op, op.blocca(err)
-		}
-		if err := m.FuoriLinea.Combacia(prof, m.Catalogo, m.Amb); err != nil {
-			return op, op.blocca(err)
-		}
-	}
 	if err := op.vai(PIANIFICATA, "", "fingerprint "+im.Digest[:16]); err != nil {
 		return op, err
 	}
 
 	// 4 CONSENT & SAFETY
-	// senza domande (§6.6.12): un consenso che il file di risposte non dà non è un «sì»
-	if r := piano.Risposte; r != nil && len(r.Mancanti) > 0 {
-		m.Ev.Messaggio(op.ID, Msg("RX-RISPOSTE-001", strings.Join(r.Mancanti, ", ")))
-		return op, op.vai(BLOCCATA, "RX-RISPOSTE-001", strings.Join(r.Mancanti, ", "))
-	}
+	// quel che manca (DECISIONI §10.36): il piano lo dice BLOCCANTE, e ci si ferma prima di toccare
 	for _, x := range piano.NonFatto {
-		if x.Codice == "RX-H264-006" { // D5: il «no» all'archivio della codifica
+		if x.Gravita == BLOCCANTE {
 			m.Ev.Messaggio(op.ID, x)
-			return op, op.vai(BLOCCATA, "RX-H264-006", x.Dettaglio)
-		}
-	}
-	for _, sc := range piano.Scelte {
-		if sc.ID == "desktop" && sc.Valore() == "no" {
-			m.Ev.Messaggio(op.ID, Msg("RX-DESKTOP-001", ""))
-			return op, op.vai(BLOCCATA, "RX-DESKTOP-001", T("op.no_desktop"))
+			return op, op.vai(BLOCCATA, x.Codice, x.Dettaglio)
 		}
 	}
 	appr := piano.Approvazione

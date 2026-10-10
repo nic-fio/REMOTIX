@@ -10,18 +10,12 @@ import (
 	"remotix/installatore/motore"
 )
 
-// L'interfaccia (T9, fasi/17 §6.6.1, DECISIONI §10.14, §10.31):
+// L'interfaccia (T9, fasi/17 §6.6.1, DECISIONI §10.31, §10.36):
 //
-//	remotix-install tui   [--archivio URL] …   da root, nel terminale (ssh, console)
+//	remotix-install tui   [--port N]   da root, nel terminale (ssh, console)
 //
-// La finestra (GUI) è stata tolta il 10 ott 2026 (DECISIONI §10.31): chi installa un server lo fa
-// da un terminale. Restano la riga di comando e la TUI, sullo stesso motore.
-
-// config: le stesse opzioni della riga di comando, per la sessione del motore.
-func (c *comuni) config(modo string) interfaccia.Config {
-	return interfaccia.Config{Operazioni: c.operazioni, Archivio: c.archivio, Canale: c.canale,
-		Fonti: c.fonti, Base: c.opzioniInstallazione(), Chi: chi(), Modo: modo}
-}
+// La finestra (GUI) è stata tolta il 10 ott 2026 (§10.31). La TUI fa quel che fa `install`: la
+// porta, il piano coi pacchetti esatti, il «sì», l'avanzamento, il benvenuto.
 
 func tuiCmd(arg []string) (int, error) {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
@@ -36,6 +30,11 @@ func tuiCmd(arg []string) (int, error) {
 	if st, err := os.Stdin.Stat(); err != nil || st.Mode()&os.ModeCharDevice == 0 {
 		return 1, motore.Errore("RX-UI-006", "stdin is not a terminal")
 	}
-	s := interfaccia.NuovaSessione(c.config("by hand, in the TUI (remotix-install tui)"))
+	// un'operazione non finita si sistema prima (§10.36: mai un sistema a metà), fuori dalla TUI
+	if err := sistemaAperta(c.motore()); err != nil {
+		return 1, err
+	}
+	s := interfaccia.NuovaSessione(interfaccia.Config{Operazioni: c.operazioni, Fonti: c.fonti,
+		Base: motore.OpzioniInstallazione{Pacchetti: c.pacchetti}, Chi: chi(), Modo: "by hand, in the TUI (remotix-install tui)"})
 	return tui.Avvia(s)
 }

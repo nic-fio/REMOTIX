@@ -177,8 +177,7 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 			return k, nil
 		}
 		k.Esito, k.Dettaglio = "FAIL", "firewalld, zone "+zona+": closed "+strings.Join(chiuse, " ")
-		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(chiuse, " ")),
-			Rimedio: "firewall-cmd --permanent --add-port=" + ps + "/tcp --add-port=" + ps + "/udp && firewall-cmd --reload"}
+		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(chiuse, " "))}
 	default:
 		k.Esito, k.Dettaglio = "UNKNOWN", g+": its rules are not evaluated yet"
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
