@@ -102,7 +102,7 @@ user**, and every sub-phase that touches a real desktop brings one of its own.*
 ### The ports and the users — ⛔ taken, and not to be touched
 
 ```
-7448 · 7501 · 7561 · 7571 · 7601 · 7691       other rings': they are COUNTED, not touched
+7448 · 7501 · 7561 · 7571 · 7601 · 7691       other links': they are COUNTED, not touched
 7700   the live product, user `prova`         ⛔ it is the USER's bench
 7711-7715  bench 04-b31, user `provao1`
 ```
@@ -172,7 +172,7 @@ concrete scenario.*
 | **6.1** | **The reattach that commands** | points **1** and **3** of §0: detach, reattach **at a different size**, and then **press a key**, **move the pointer** and **click** — with an application **opened before**. Plus the re-measurement of the four rows of phase 4 | `src/input.c` · `src/input.h` | `06-b33-*` |
 | **6.2** | **The keyboard that is reborn** | point **2**: `DISPOSIZIONE` (0x0009) at reattach, the keymap that destroys and recreates the device, and the **right character** reaching the witness | `src/tastiera.c` · `src/tastiera.h` | `06-b34-*` |
 | **6.3** | **The stage that changes size** | the chain `figli_ritela()` → `cattura_ridimensiona()` on the **real compositor**: repeated resizes, the limits of §4.5, and the case **«the stage changes by itself»** (point 5, product side) | `src/figlio.c` · `.h` · `src/cattura.c` · `.h` · `src/mutter.c` · `.h` | `06-b35-*` |
-| **6.4** | **The canvas on the wire** | points **4** and **5** arbiter side, on **bare** `rcp.c` with a fake stage: `COMPOSITORE_INCAPACE` **declared in the log**, the bottom of §7.1, `NON_ORA`, `MISURA_FUORI_LIMITI`, and ⛔ **the coordinates in flight** in the second after `TELA(ADATTATA)` — which nobody had ever tested | `src/rcp.c` · `src/rcp.h` (+ the twin `banchi/rcp/`) | `06-b36-*`, extends `04-b31-tela.c` |
+| **6.4** | **The canvas on the wire** | points **4** and **5** arbiter side, on **bare** `rcp.c` with a fake stage: `COMPOSITORE_INCAPACE` **declared in the log**, the backstop of §7.1, `NON_ORA`, `MISURA_FUORI_LIMITI`, and ⛔ **the coordinates in flight** in the second after `TELA(ADATTATA)` — which nobody had ever tested | `src/rcp.c` · `src/rcp.h` (+ the twin `banchi/rcp/`) | `06-b36-*`, extends `04-b31-tela.c` |
 | **6.5** | **The page and the browser's numbers** | point **7**: page zoom on two engines, roundings and odd sides, the half pixel of `margin: 0 auto`, the scale and `pixelated`, the bands of §6.2, `?adatta=no\|segui`, and the **item switched off** on `COMPOSITORE_INCAPACE` | `src/pagina.html` | `06-b37-*` |
 | **6.6** | **The arbiter exercises the canvas** | point **6**: the test client sends `ADATTA_TELA` and `VISTA`, and the validator **can accuse** a missing or unsolicited `TELA` — certified with faulty recordings, each accused on the byte declared beforehand | *none* — benches only | `01-b3-cliente.py`, `01-b4-validatore.py`, `01-b4-registrazioni.py`, `06-b38-*` |
 | ~~6.7~~ | ~~the parametric multi-monitor~~ | ⛔ **removed by the user on 16 Aug 2026** — see the box in §0 | — | — |
@@ -684,7 +684,7 @@ that is why every single hypothesis seemed refuted.*
 scene is moved — the GNOME overview opening and closing twenty times — and **three images
 of the same instant** are taken.
 
-| ring | how it is looked at | outcome |
+| link | how it is looked at | outcome |
 |---|---|---|
 | the **capture** | `SIGUSR1` → `scatto-ingresso.bgrx`, the pixels the encoder has in hand | ⭐ **clean**: overview, dock, sharp text |
 | the **sent stream** | `scatto-flusso.obu` given back to `ffmpeg/dav1d` — **22 deltas of the same chain** | ⭐ **clean** |
@@ -745,7 +745,7 @@ the product's faults: it is the **benches that were green without looking**.*
 | the sentence to refute | outcome |
 |---|---|
 | *«the reattach re-hooks the devices and everything works»* (6.1) | ⭐ **holds** on normal input: the application opened before the detach receives **everything**, with exact coordinates. ⛔ It is false **only** for the *held down* state — and that is where the fault lay |
-| *«the chain `figli_ritela()` → `cattura_ridimensiona()` holds»* (6.3) | ⛔ **FALSE**: with two `ADATTA_TELA` 25-35 ms apart — *«whoever drags a border sends exactly two in a row»*, and the code itself calls it «THE case» — **4 rounds out of 18** (then 2/18) leave the desktop **not fitted**, and the client waits for the **3 s** bottom to receive `NON_ORA`. ⚠ On the other hand *«the discarded frames are zero»* **holds**: 0 in all rounds |
+| *«the chain `figli_ritela()` → `cattura_ridimensiona()` holds»* (6.3) | ⛔ **FALSE**: with two `ADATTA_TELA` 25-35 ms apart — *«whoever drags a border sends exactly two in a row»*, and the code itself calls it «THE case» — **4 rounds out of 18** (then 2/18) leave the desktop **not fitted**, and the client waits for the **3 s** backstop to receive `NON_ORA`. ⚠ On the other hand *«the discarded frames are zero»* **holds**: 0 in all rounds |
 | *«since the canvas is the window, zoom no longer falsifies anything»* (6.5) | ⭐ **true** — ⛔ but in the wrong place: what broke sharpness was the **rounding**, not the zoom |
 | *«the product violates §7.1 in at least one canvas case»* (6.6) | **not confirmed** on the five cases exercised against the product |
 
@@ -945,7 +945,7 @@ identical from the new tools on the same log. ⇒ Not everything is to be redone
 
 `[M]` on the log of **16 Aug**, with five benches running: `NON_ORA` has a median of **22 ms** and
 **two cases at 3 000 ms** — the whole deadline of §7.1. On the **17th**, with the machine idle: **6 ms**, and
-none reaches the bottom. ⇒ ⭐ **Contention really moves this scene**, and the *«green holds under
+none reaches the backstop. ⇒ ⭐ **Contention really moves this scene**, and the *«green holds under
 CPU load, not under GPU contention»* of §7.1 now has a second support even before the contention
 scene is launched.
 
@@ -1214,9 +1214,9 @@ so**: that is the reason the **fourth** column exists, and the reconciliation
 > `[M]` Six rounds, from the short scene to one **five times longer**: **799 frames, all
 > inadmissible, and a single announcement**. Five times the activity in the log, **the very same 1**.
 >
-> ⭐ **And it is known why, from the source**: the line sits behind a bottom that re-arms **only when
+> ⭐ **And it is known why, from the source**: the line sits behind a backstop that re-arms **only when
 > the pair (canvas in force, frame size) changes** — and under that fault **it never changes**. First
-> frame: the line comes out. From the second to the 799th: identical, bottom already armed, **silence**. ⇒ It is **once
+> frame: the line comes out. From the second to the 799th: identical, backstop already armed, **silence**. ⇒ It is **once
 > per session, by construction**.
 >
 > ⛔⛔ **So the number is not what its name promises**: `non_spediti` is not *«how many
@@ -1252,7 +1252,7 @@ so**: that is the reason the **fourth** column exists, and the reconciliation
 > and it was called «not sent».
 >
 > ⭐ **And the expected value written beforehand was wrong, and it stayed written**: it said «announcements = 1», as in the
-> round that had opened the case. **4** came out, and that is right: the bottom re-arms at every new pair
+> round that had opened the case. **4** came out, and that is right: the backstop re-arms at every new pair
 > (canvas, size), and that scene changes it three times. ⇒ **The number of announcements follows the
 > distinct sizes, not the frames** — which is exactly the reason it could not act as a count.
 >
@@ -1368,7 +1368,7 @@ records **290.6 ms**. Proof that it looks at **the compositor** and nothing else
 
 ### 5.12 · ⭐⭐ 22 Aug — **the colour inside the session: they are the SAME PIXELS, byte for byte**
 
-*The last ring missing for colour: not from the stream to the glass, but **from the desktop to the glass**.*
+*The last link missing for colour: not from the stream to the glass, but **from the desktop to the glass**.*
 
 ⭐⭐ **Zero different channels out of 2 704 104**, comparison **byte for byte** between what the application
 paints and what the encoder receives.
@@ -1406,13 +1406,13 @@ round measured «no difference» **believing it had the magnifier on**, that is 
 blindness that control was meant to exclude. ⇒ Now the bench **dies** if the read-back from dconf does not
 say what it asked for.
 
-### 5.13 · ⭐⭐ 22 Aug — **the seat ceiling is 30 seconds, not 75** — and the sentence of §5.3 about the frozen tab is false
+### 5.13 · ⭐⭐ 22 Aug — **the slot ceiling is 30 seconds, not 75** — and the sentence of §5.3 about the frozen tab is false
 
-*The `[?]` that bit every day: «the session's seat is one, and the previous one stays
+*The `[?]` that bit every day: «the session's slot is one, and the previous one stays
 attached for about twenty seconds» was folklore. `[M]` port 7801, `provar7`, real GNOME headless,
 load 0.23-1.40.*
 
-| the client goes away… | seat released | another client gets in |
+| the client goes away… | slot released | another client gets in |
 |---|---|---|
 | **clean farewell** | ⭐ **5 ms** | immediately |
 | connection closed without farewell | **7 ms** | immediately |
@@ -1427,27 +1427,27 @@ socket give the same numbers — **ngtcp2 does not react to ICMP**.
 
 *«A frozen tab is silent, so it gets detached»* — ⛔ no: the server fires a **PING every 10 s**, the
 client's QUIC stack **answers by itself** without the page existing, and every answer renews the
-life. ⇒ **The seat is never freed.** `[M]` 26 out of 26 in 745 s. ⚠ The product counts **packets**,
+life. ⇒ **The slot is never freed.** `[M]` 26 out of 26 in 745 s. ⚠ The product counts **packets**,
 not RCP bytes — and it is a right and documented choice, ⛔ but **it is not what §5.3 tells**.
 
 #### ⭐ The line for whoever writes benches — it is the thing everyone needed
 
 > ⛔ **After a client has gone away badly, do not retry before 35 seconds.**
-> ⛔⛔ **And if its process is still alive, 35 s are not enough: the seat stays taken for up to half an hour.**
+> ⛔⛔ **And if its process is still alive, 35 s are not enough: the slot stays taken for up to half an hour.**
 > It is checked with `pgrep`, not with `pkill`.
-> ⭐ **But waiting is almost never needed**: if the server is yours, **restart it** — the seats live in the
+> ⭐ **But waiting is almost never needed**: if the server is yours, **restart it** — the slots live in the
 > process's memory, the graphical session lives outside: `[M]` the first attach after a restart reaches
 > `SESSIONE` in **1.03 s**. ⭐ And if the client is yours, **make it say farewell**: **5-7 ms**.
 
 #### ⛔ And the routes are TWO, with the same number — it is the mechanism behind the false reds
 
-In 4 detaches out of 7 the seat was released by **the silence clock**; in the other 3 by the **death of the
+In 4 detaches out of 7 the slot was released by **the silence clock**; in the other 3 by the **death of the
 QUIC connection** (30.00 s exactly). ⚠ **Which one arrives first is heads or tails**, and they leave **different log
 lines and states**. ⇒ A bench that waits for the line «detached for silence» to know that the
-seat is free **is red one time out of two**.
+slot is free **is red one time out of two**.
 
 ⭐ **And the positive control, without which the 30 s would be worth nothing**: with the inactivity clock
-shortened to 25 s the same case released the seat at **19.8 s** with a different farewell ⇒ the bench
+shortened to 25 s the same case released the slot at **19.8 s** with a different farewell ⇒ the bench
 **can see** a release at a time other than 30.
 
 ⚠ **And what is missing, declared by the author**: no browser. The hypothesis he leaves behind is that
@@ -1460,7 +1460,7 @@ a browser in hand.
 |---|---|
 | ⛔ `2 = RIPRESA` **never comes out** | the byte is a **constant 1** at the only point that builds the message. `[M]` 12 reattaches to the same child: **state 1, always**. It is form **E1** ⇒ whoever writes benches **cannot** use it to know whether they have a new desktop |
 | ⛔ the **two routes** with the same number | above: two lines and two states under the same fact, racing |
-| ⛔ the **live client holds the seat** | up to the half hour of inactivity — measured ≥ 745 s |
+| ⛔ the **live client holds the slot** | up to the half hour of inactivity — measured ≥ 745 s |
 | ⏳ `[?]` **the immortal desktop** | `presenza_segna()` is called **from one place only**, the one that receives input ⇒ whoever attaches and **touches nothing** does not enter the present ones and **the abandonment clock does not start**. If true, every bench that attaches without typing leaves a desktop of **477 MB** that never dies — and that is how a machine with eight benches fills up. ⛔ **It is a reading of the code, not a measurement**: the round that was to prove it was skipped |
 
 ### 5.14 · ⛔ 22 Aug — **a wrong label made the user believe that a removed feature had come back**
@@ -1776,7 +1776,7 @@ the user decides it.
   **200 and 800 µs**. ⇒ It is a race, ⭐ **but a race a bench can program**: one sweeps the distance
   between the two calls. ⚠ The one in `figlio.c` (today `:6764`) remains unexercised: it would need a real
   frame, and the fake stage does not queue any. 📖 §5.16;
-- ✅ ~~**the seat is released after ~75 s** of silence, not the 30 of §5.3~~ — **MEASURED on 22 Aug:
+- ✅ ~~**the slot is released after ~75 s** of silence, not the 30 of §5.3~~ — **MEASURED on 22 Aug:
   it is 30, and the «~75» does not reproduce.** 📖 §5.13;
 - ✅ ~~**the coordinates in flight cannot be arbitrated from a recording**~~: since 21 Aug `RCP.md`
   §11.1 records the **time**, and the rule is testable — ⛔ **in one direction only**, and §5.10 tells

@@ -452,7 +452,7 @@ are `[?]`, and the bench closes them.
 *The user's work order: «prima l'audio, poi gli appunti» (§0.1). Audio is closed with its
 judgement; this section is what was written afterwards.*
 
-> ### ⛔ AND THE USER'S QUESTION WAS «FORMATTED TEXT» — closed before writing a line
+> ### ⛔ AND THE USER'S QUESTION WAS «TESTO FORMATTATO» — closed before writing a line
 >
 > The opening of this session asked for *«la copia server↔client di **testo formattato**»*.
 > ⛔ `DECISIONI.md` §5-ter.1 says the opposite, **in his own words of 9 Aug**: *«per la clipboard ho
@@ -472,7 +472,7 @@ judgement; this section is what was written afterwards.*
 | file | what it carries |
 |---|---|
 | ⭐ `src/appunti.h` + `.c` (**new**, ~640 lines) | the **Mutter** side, ported from `fondamenta/…/appunti_mutter.c` with the four traps defused on the spot. ⛔ Text only: the MIME types live in there and do not come out |
-| `src/figlio.c` | four new messages on the parent↔child socket (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), the **third assembly table** and the **time bottom** of whoever pastes |
+| `src/figlio.c` | four new messages on the parent↔child socket (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), the **third assembly table** and the **time backstop** of whoever pastes |
 | `src/rcp.c` + `.h` | the three messages of §7.4, the table of incoming streams, the five new hooks, and the **cure of the race with `Ctrl+V`** |
 | `src/webtransport.c` + `.h` | the incoming channel `0x02` (`G_UNI_APPUNTI`) and the three hooks that open a stream towards the client |
 | `src/main.c` | the **fourth stitching** of the same family: video, input, audio, clipboard |
@@ -501,9 +501,9 @@ instead of returning empty, and the question to the client leaves **when the ann
 (`rcp.c`, `rcp_appunti_chiedi` and the `T_APPUNTI_ANNUNCIO` branch of `tratta_appunti`).
 
 ⚠ And the wait is bounded by someone else, not by one more timer of ours: the **child's 4 s
-bottom** answers «I don't have it» to whoever pastes if the announcement never arrives.
+backstop** answers «I don't have it» to whoever pastes if the announcement never arrives.
 
-#### 4.5.3 · ⛔ THE TWO TIME BOTTOMS, and they are two because the debts are two
+#### 4.5.3 · ⛔ THE TWO TIME BACKSTOPS, and they are two because the debts are two
 
 This is the part no bench would have asked for and the product did.
 
@@ -512,7 +512,7 @@ This is the part no bench would have asked for and the product did.
 | ⛔ **in the child** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a fault nobody connects to the clipboard |
 | ⚠ **in the parent** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | that the **channel** does not stay blocked. Without it, a client that fails to answer once queues **all subsequent pastes**: «the clipboard worked once and then never again» |
 
-⭐ **And the bottom towards Mutter is in the CHILD, not in the parent**, for a reason that is not convenience:
+⭐ **And the backstop towards Mutter is in the CHILD, not in the parent**, for a reason that is not convenience:
 the parent may have no client attached (the session outlives the client — invariant I4), the
 client may vanish halfway through a transfer, and the parent itself may die. ⛔ The debt towards the
 compositor on the other hand stays with whoever has the session, **and the session is in the child**.
@@ -571,7 +571,7 @@ value one declares to have understood and does not have anywhere.
 | ⭐⭐⭐ **and the session's sound ARRIVES** | 440 Hz | ⛔ *The first measurement said «silence», and it was the SCENE that was broken — see §6.5.* With the certified scene: `suono.c` delivers **PEAK 16383 out of 32767** (= half full scale, the exact amplitude of the tone) and the contiguous stretches give **440 Hz, rms 0.3535** — identical to what `pw-record` reads on the same monitor | `[M]` 17 Aug 2026, `07-b43` |
 | ⭐⭐ **and the volume GOVERNS** | I5 and §kde §10.5 | full volume **0.3536** · at 25 % **0.0078** (expected 0.005525) · mute **0.0**. ⇒ The trap of the monitor upstream of the volume **is not there**: `monitor.channel-volumes` is requested and works | `[M]` 17 Aug 2026, `07-b43`, against the product |
 | ⭐⭐⭐ **the real audio bench: 5 rounds out of 5** | the expected value written **beforehand** | **1-healthy** 440 Hz rms 0.3535 (expected 0.3536) · **2-silence** 0 Hz rms 0.0 · **3-frequency** 660 Hz · **4-volume-25** rms **0.0055** (expected 0.0055) · **5-mute** 0.0. ⛔ And rounds 2 and 3 are faults **grafted on purpose**: the bench sees them, so it is not blind | `[M]` 17 Aug 2026, `07-b43`, against the product |
-| ⭐⭐ **and REDONE after the eight cures to the transport** | 5 out of 5 | **5 out of 5**, and ⭐ **better than before**: purity is **1.000** on all rounds with signal (it was **0.29** when blocks were being lost), and the judge could look at **96 000 samples** instead of 48 000 — because now there is enough **contiguous** sound to judge. ⛔ Redoing it was not a formality: the other green was from **before** the datagram queue, the retransmission cap, coalescing and padding were touched — that is an old green on new code | `[M]` 17 Aug 2026, evening |
+| ⭐⭐ **and REDONE after the eight cures to the transport** | 5 out of 5 | **5 out of 5**, and ⭐ **better than before**: purity is **1.000** on all rounds with signal (it was **0.29** when blocks were being lost), and the judge could look at **96 000 samples** instead of 48 000 — because now there is enough **contiguous** sound to judge. ⛔ Redoing it was not a formality: the other green was from **before** the datagram queue, the postponement cap, coalescing and padding were touched — that is an old green on new code | `[M]` 17 Aug 2026, evening |
 | ⭐ **the datagram that did not leave** | 0 % loss | from **38.5 %** to **0.3 %**: 2994 sent, 8 refused, 1 thrown away for full queue out of ~3003. ⚠ On **Opus** the loss was already **zero** (0 out of 747): the fault bit the **PCM**, which costs 13 times the bandwidth | `[M]` 17 Aug 2026 |
 | ⭐ **libopus does not accumulate** | `[?]` | **1000 blocks in, 1000 out, zero EAGAIN** ⇒ the `istante` of §6.3 belongs to the block that leaves | `[M]` 17 Aug 2026, `07-b44` |
 | ⚠ **Opus's pre-skip** | declared by nobody | `initial_padding` = **312 samples = 6.50 ms**, **constant** over a thousand packets. The decoder removes it by itself, so end to end it cancels out | `[M]` 17 Aug 2026, `07-b44` |
@@ -776,7 +776,7 @@ exactly half; arithmetic is.
 | 5 | GSO padding (`PADDING`) | no change | ⭐ real fault, not this one |
 | 6 | the packet I threw away with the acknowledgements inside | no change | ⭐ real and big fault, not this one |
 | ⭐ **7** | **several datagrams in the same packet** | 50 % → 18 % | **the cause** |
-| ⭐ **8** | and the retransmission cap removed: **the queue decides** | 18 % → **0 %** | the tail of the fault |
+| ⭐ **8** | and the postponement cap removed: **the queue decides** | 18 % → **0 %** | the tail of the fault |
 
 ⇒ ⛔ **Six cures out of eight were real faults that were not what the user was hearing.** Each one
 seemed confirmed by reasoning and none by measurement, because **the measurement that was needed did not
@@ -784,7 +784,7 @@ exist**.
 
 #### ⭐⭐⭐ AND THE LESSON IS A SINGLE ONE, AND IT IS NOT ABOUT AUDIO
 
-**I had the numbers of three rings out of four.** The child said how many blocks it produces, the server
+**I had the numbers of three links out of four.** The child said how many blocks it produces, the server
 how many it sends and how many it refuses, the session how many samples it delivers. ⛔ **Of the page —
 that is of the side that LISTENS — nothing was known**: how many arrive, how many are played,
 how many gaps playback makes.
@@ -975,10 +975,10 @@ in here**, and it is not the network.
 |---|---|
 | «queue **239-270 ms** for the first two minutes» | ⛔ it is **389-539 ms**. The 239-270 are the queue **after the first re-arm** |
 | «**GAPS 4**, all at start-up, the number no longer rises» | ⛔ **1 at start-up and 3 in the middle of the session** (18:00:14, :19, :29), each with a datagram loss in the same window |
-| «the count closes and **acquits all the other rings**: nothing is lost» | ⛔ **something is lost**: 61 blocks = **1 226 ms**, 0.58 %. In another session of the same log: **684 blocks, 13.7 s, 9.43 %** — and in 25 s within that one, **47 %** |
+| «the count closes and **acquits all the other links**: nothing is lost» | ⛔ **something is lost**: 61 blocks = **1 226 ms**, 0.58 %. In another session of the same log: **684 blocks, 13.7 s, 9.43 %** — and in 25 s within that one, **47 %** |
 | «no datagram **discarded by the server**» | ⛔ the server discarded **2 200**, ⭐ and **it also writes why**: first «the pacer's quantum», then `cwnd_left = 0` |
 
-⚠ **How I went wrong, because it is the lesson**: every ring **counted itself** and told the truth.
+⚠ **How I went wrong, because it is the lesson**: every link **counted itself** and told the truth.
 The child: «50.00 sent per second, 0 lost» — true. The page: «10 621 received, 10 617 played»
 — true. ⛔ **Neither counted what was in between**, and nobody did the
 subtraction: 50.00 sent against **49.71** received. I read four green columns and wrote
@@ -1056,7 +1056,7 @@ without real time — stays open but **is not this one**.
 | «the Opus bitrate: 🔸 derived, never judged» | ⭐ judged **on the result**: 96 kbit/s produced a listening the user calls clean. ⛔ **The cushion is not**: that is 250, not 60, and it is the fault of §8 |
 | «the bench's external arbiter does not exist» | ⭐ true, and **it is not worked around**: §6.9. The benches drive real browsers with Marionette and CDP, and the session with `wl-copy`/`wl-paste` |
 | `DISPLAY` of the «prova» session · `xclip` on the test machine | ⛔ no longer needed: the X11 bridge is not there (`gnome-shell --no-x11`), and the benches do not use it |
-| pasting with the **mouse** (right button → «Incolla») | §9.5 — four rings, and `07-b56`: 3 out of 3 per engine |
+| pasting with the **mouse** (right button → «Incolla») | §9.5 — four links, and `07-b56`: 3 out of 3 per engine |
 | the desktop clipboard **lost at connection** | §9.6 — the child gives back to the session the text it had |
 
 
@@ -1067,7 +1067,7 @@ without real time — stays open but **is not this one**.
 ### ⭐⭐ `AV = aoff − voff`: the distance is measured continuously, on any content
 
 ⛔ **The fault the user confirmed had no yardstick**, and that is why four
-green rings coexisted with a wrong experience: **no counter looks at two streams
+green links coexisted with a wrong experience: **no counter looks at two streams
 together**. Now there is one, and it did not cost a new bench — it cost **two numbers**:
 
 - `RCP.md` §6.2 and §6.3 put **the same server clock** in the frame header and
@@ -1141,7 +1141,7 @@ clipboard in both directions, the canvas, the click.
 ### ⛔ And a fault of the bench that gave RED TO THE PRODUCT — the coordinator's fault
 
 Making the user of the clipboard benches parametric (⛔ they logged in as **`prova`**, which is
-the user's: with his session alive it is the single-seat trap) I parametrised **only one
+the user's: with his session alive it is the single-slot trap) I parametrised **only one
 side** — the browser login — leaving `id -u prova` fixed on the **session side**.
 
 `[M]` The result was not a bench error: it was **a red verdict against the product**
@@ -1644,7 +1644,7 @@ key does not have. ⇒ On that path the last word belongs to a real keyboard —
 
 ---
 
-### 9.5 · ⛔⛔⭐ «FUNZIONA CON `Ctrl+V`, MA NON COL MOUSE» — 21 Aug 2026, and the broken rings were **four**
+### 9.5 · ⛔⛔⭐ «FUNZIONA CON `Ctrl+V`, MA NON COL MOUSE» — 21 Aug 2026, and the broken links were **four**
 
 > *«Ecco perche'! Funziona l'incolla con ctrl+v, ma non con il mouse e scegliendo dal menu la voce
 > "incolla"»* — the user, on the morning of 21 Aug, right after verifying the cure of §9.4.
@@ -1664,11 +1664,11 @@ side of the wire. The only news of it that reaches the page is the server's `APP
 ⛔ **And the four green benches of §9.4 all pressed `Ctrl+V`**: they measured the only road that already
 worked. The missing bench is `banchi/07-b56-incolla-col-mouse.py`, which never presses a key.
 
-#### The four rings, in order of discovery — and **three were mine**
+#### The four links, in order of discovery — and **three were mine**
 
 **1 · The page was not even consulted.** `rcp.c` asks nothing of a client that
 has never
-announced: it queues the request («*the question WAITS for the announcement*») and the child's bottom
+announced: it queues the request («*the question WAITS for the announcement*») and the child's backstop
 closes it empty-handed after four seconds. ⇒ Until the user had pressed **at least one**
 `Ctrl+V`, a paste with the mouse did not get to ask **even one question**: no line, anywhere.
 ⭐ **Cure**: the page sends a **zero-byte opening announcement** as soon as the session is born.
@@ -1852,9 +1852,9 @@ conditions*** (`DECISIONI.md` §0.1-bis):
 | the delay **between audio and video** | ⛔ **it is ours, it is general, and it is confirmed by the ear**: ~400 ms |
 
 ⚠ **And the first judgement was not wrong: it was less precise.** *«Audio e video perfetti»* meant
-*each stream is clean* — and it is true, `[M]`: zero losses on every line of every ring. ⛔ What is not
+*each stream is clean* — and it is true, `[M]`: zero losses on every line of every link. ⛔ What is not
 clean is the **distance between the two**, and a synchronisation fault does not show in any counter that
 looks at one stream at a time. ⇒ **It must be written here**, because it is the form of fault this phase knows how to
-manufacture best: four rings all green, and the wrong experience.
+manufacture best: four links all green, and the wrong experience.
 
 ⇒ The cause, the measurement on the Windows session and the named cure are in **§8**.
