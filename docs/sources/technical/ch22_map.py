@@ -7,12 +7,12 @@ M = "installatore/motore/"
 
 
 def t(parole):
-    """La traduzione inglese di un nome italiano, in testa al ruolo."""
+    """The English translation of an Italian name, at the head of the role."""
     return f"(<i>{parole}</i>) "
 
 
 def manuale():
-    """I sorgenti del manuale: il generatore, lo stile, lo script e un file per capitolo, col suo titolo."""
+    """The manual's sources: the generator, the style, the script and one file per chapter, with its title."""
     righe = [
         ("docs/sources/build.py", "Generates the manual: text, table and SVG figure helpers, numbering, the "
          "file map and project figures, and the " + c("--controlla") + " checks (Italian left, cited files, "
