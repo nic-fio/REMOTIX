@@ -38,3 +38,15 @@ Si apre direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
 
 Incorpora CSS, icone (SVG) e schermate (WebP, al massimo 1600 px, qualità 82): **~420 KB, nessuna richiesta a
 terzi** (niente CDN né caratteri esterni). Lo script si rifiuta di scrivere se resta un collegamento a un file esterno.
+
+## Online (10 ott 2026, sera)
+
+✅ Utente: *«ormai la homepage di remotix direi che è ok»* ⇒ pubblicata su **https://remotix.nicfio.it** (DNS A su
+OVH, blocco Caddy con `~/Documenti/VPS/add-site.sh`, certificato Let's Encrypt). Si ripubblica con
+
+    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro
+    scp grafica/sito-mockup/pubblica/index.html progetti@57.131.27.241:/srv/www/remotix.nicfio.it/index.html
+
+Il pulsante che puntava al `.run` è «Coming soon» finché il primo rilascio non sta in `/download/` sulla VPS.
+La scheda di REMOTIX («Coming soon · Free») è nella homepage di nicfio.it (`~/Documenti/VPS/sites/nicfio.it/holding`,
+`publish.sh`). Contatto: alias Zimbra `remotix@nicfio.it` → nicfio@nicfio.it.

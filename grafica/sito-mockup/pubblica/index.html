@@ -273,6 +273,8 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
   .inizia p { margin: 0 0 1.4rem; color: var(--tenue); font-size: .95rem; }
   .inizia .bottoni { justify-content: flex-start; margin: 0; }
   .inizia .bottoni .pulsante { flex: 1; }
+  .presto { cursor: default; opacity: .75; filter: saturate(.7); }
+  .presto:hover { filter: saturate(.7); }
   .bordo-blu { color: var(--inchiostro); background: #fff; box-shadow: inset 0 0 0 1.5px #b9cdf3; }
   .bordo-blu:hover { box-shadow: inset 0 0 0 1.5px var(--accento); }
   .spunte { display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; margin-top: 1.4rem; font-size: .88rem; }
@@ -499,9 +501,9 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
       </div>
       <div class="inizia">
         <h3>Get started now</h3>
-        <p>Download one file, install it on your server, and open your remote desktop in minutes.</p>
+        <p>The first release is on its way: one file to install on your server, and your remote desktop opens in minutes.</p>
         <div class="bottoni">
-          <a class="pulsante primario" href="download/remotix-0.18.0-1.run">Download for Linux</a>
+          <span class="pulsante primario presto" aria-disabled="true">Coming soon</span>
           <a class="pulsante bordo-blu" href="https://github.com/nic-fio/REMOTIX">View on GitHub</a>
         </div>
         <div class="spunte">
@@ -540,6 +542,5 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
   </div>
 </footer>
 
-<div class="nastro">Mockup</div>
 </body>
 </html>
