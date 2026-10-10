@@ -1,6 +1,6 @@
 # PKGBUILD — il motore d'installazione di REMOTIX per Arch.
 # Binario Go STATICO (installatore/costruisci.sh): qui si impacchetta soltanto; il catalogo sta
-# dentro il binario (DECISIONI §10.21). Lo costruisce packaging/archivio/pacchetti-motore.sh, chiamato
+# dentro il binario (DECISIONI §10.21). Lo costruisce packaging/motore/pacchetti-motore.sh, chiamato
 # dal comando di rilascio (pkgver/pkgrel dall'ambiente).
 # ⛔ DECISIONI §10.12: non accende niente. D14 (§10.23): niente timer, REMOTIX si aggiorna col sistema.
 

@@ -2,16 +2,15 @@
 #
 # Il motore è un binario Go STATICO (CGO_ENABLED=0): lo stesso file per Fedora, Alma e openSUSE,
 # costruito da installatore/costruisci.sh; qui lo si impacchetta soltanto (nessuna dipendenza
-# dinamica da calcolare). Lo costruisce packaging/archivio/pacchetti-motore.sh, chiamato dal
+# dinamica da calcolare). Lo costruisce packaging/motore/pacchetti-motore.sh, chiamato dal
 # comando di rilascio (packaging/rilascio.sh). Il catalogo sta DENTRO il binario (DECISIONI §10.21).
 #
 # ⛔ DECISIONI §10.12: il pacchetto non accende niente. D14 (§10.23): niente timer — REMOTIX si
 #    aggiorna col sistema.
 
 %global debug_package %{nil}
-# ⛔ niente brp-strip: il binario del pacchetto resta BYTE PER BYTE quello dell'archivio, il cui
-#    sha256 è pubblicato (motore/remotix-install.sha256): `[M]` 30 set, fedora44, lo strip di rpm
-#    lo cambiava.
+# ⛔ niente brp-strip: il binario del pacchetto resta BYTE PER BYTE quello del .run (lo stesso
+#    motore che ha installato): `[M]` 30 set, fedora44, lo strip di rpm lo cambiava.
 %global __os_install_post %{nil}
 
 Name:           remotix-install

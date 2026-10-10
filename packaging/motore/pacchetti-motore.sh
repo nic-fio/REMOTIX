@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# pacchetti-motore.sh — i pacchetti del MOTORE e della CHIAVE per l'archivio di REMOTIX.
+# pacchetti-motore.sh — i pacchetti del MOTORE, per il pacchetto unico di REMOTIX (il .run).
 #
-#     RX_VERSIONE=X.Y.Z RX_REVISIONE=R packaging/archivio/pacchetti-motore.sh [uscita]
+#     RX_VERSIONE=X.Y.Z RX_REVISIONE=R packaging/motore/pacchetti-motore.sh [uscita]
 #                                                  (predefinito costruzione-uscita/motore)
 #
 # Lo chiama il comando di rilascio (packaging/rilascio.sh), DOPO aver costruito il motore statico
@@ -10,19 +10,17 @@
 #   · remotix-install_<V>-<R>_amd64.deb           (dpkg-deb: nessuna libreria da calcolare)
 #   · remotix-install-<V>-<R>.x86_64.rpm          (rpmbuild nel contenitore fedora:44)
 #   · remotix-install-<V>-<R>-x86_64.pkg.tar.zst  (makepkg nel contenitore di Arch)
-#   · remotix-archive-keyring_<V>-<R>_all.deb     (la chiave dell'archivio in /usr/share/keyrings)
-# Il catalogo sta dentro il motore (DECISIONI §10.21); niente timer (§10.23): a ogni cambio di
-# versione gli script chiamano `remotix-install post-upgrade`.
+# Il catalogo sta dentro il motore (DECISIONI §10.21). Il pacchetto resta sulla macchina dopo
+# l'installazione (status, uninstall); a ogni cambio di versione gli script chiamano
+# `remotix-install post-upgrade`. Niente chiave d'archivio: l'archivio non c'è più (§10.36).
 #
 # Ambiente: RX_VERSIONE (obbligatoria: quella del motore deve essere lei), RX_REVISIONE (1), MOTORE
-# (installatore/uscita/remotix-install), CHIAVI (.chiavi/ del progetto, ignorata da git: la chiave
-# DI PROVA, fuori dal deposito, finché D10 non dà quella vera).
+# (installatore/uscita/remotix-install).
 # ⚠ Niente /tmp: sul portatile è quasi pieno.
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)
 U=${1:-$ALBERO/costruzione-uscita/motore}
-CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
 V=${RX_VERSIONE:?RX_VERSIONE: la versione del rilascio}
 R=${RX_REVISIONE:-1}
 MOTORE=${MOTORE:-$ALBERO/installatore/uscita/remotix-install}
@@ -31,7 +29,7 @@ mkdir -p "$U"
 L=$U/.lavoro; rm -rf "$L"; mkdir -p "$L"
 export TMPDIR=$L
 
-vm=$("$MOTORE" versione | awk '{print $1}')
+vm=$("$MOTORE" version | awk '{print $1}')
 [ "$vm" = "$V" ] || { echo "⛔ il motore $MOTORE dice $vm, il rilascio è $V"; exit 1; }
 cp "$MOTORE" "$L/remotix-install"
 cp "$M/README" "$L/"
@@ -67,26 +65,6 @@ EOF
 chmod 755 "$D/DEBIAN/postinst"
 SOURCE_DATE_EPOCH=$(git -C "$ALBERO" log -1 --format=%ct) \
 	dpkg-deb --root-owner-group -Zxz --build "$D" "$U/remotix-install_${V}-${R}_amd64.deb" >/dev/null
-
-echo "== .deb della chiave (remotix-archive-keyring)"
-K=$L/keyring
-mkdir -p "$K/DEBIAN" "$K/usr/share/keyrings"
-install -m 644 "$CHIAVI/b/archivio.asc" "$K/usr/share/keyrings/remotix-archive-keyring.asc"
-cat >"$K/DEBIAN/control" <<EOF
-Package: remotix-archive-keyring
-Version: $V-$R
-Architecture: all
-Maintainer: nicfio <nicfio@gmail.com>
-Section: misc
-Priority: optional
-Description: la chiave dell'archivio di REMOTIX
- La chiave pubblica che firma i pacchetti e l'archivio apt di REMOTIX (l'unica,
- DECISIONI §10.21), in /usr/share/keyrings/remotix-archive-keyring.asc: la nomina
- solo la sorgente di REMOTIX (Signed-By), mai trusted.gpg.d.  Aggiornandosi
- segue il cambio della chiave.  ⚠ Fase 17: chiave DI PROVA.
-EOF
-SOURCE_DATE_EPOCH=$(git -C "$ALBERO" log -1 --format=%ct) \
-	dpkg-deb --root-owner-group -Zxz --build "$K" "$U/remotix-archive-keyring_${V}-${R}_all.deb" >/dev/null
 
 echo "== .rpm del motore (fedora:44)"
 P=$L/rpm; mkdir -p "$P/SOURCES" "$P/SPECS"

@@ -1,37 +1,33 @@
 #!/usr/bin/env bash
-# rilascio.sh — IL comando di rilascio di REMOTIX (DECISIONI §10.23): a ogni versione, uno solo.
+# rilascio.sh — IL comando di rilascio di REMOTIX: a ogni versione, uno solo.
 #
 #     packaging/rilascio.sh X.Y.Z-R          per esempio  packaging/rilascio.sh 0.17.0-7
 #
 # X.Y.Z è la versione di REMOTIX, R la revisione del pacchetto (una ricostruzione: 0.17.0-7 → 0.17.0-8).
-# La stessa versione va a tutto: remotix, remotix-install (il motore, che la dice con `versione`),
-# remotix-archive-keyring. Che cosa fa, in ordine, e si ferma al primo errore:
+# La stessa versione va a tutto: remotix e remotix-install (il motore, che la dice con `version`).
+# Il prodotto si consegna come UN file, remotix-X.Y.Z-R.run (il pacchetto unico, DECISIONI §10.36):
+# niente archivio da aggiungere al sistema, niente chiavi. Che cosa fa, in ordine, e si ferma al
+# primo errore:
 #   1. l'albero è quello di un commit (niente modifiche non committate in src/, packaging/,
 #      installatore/, banchi/rcp/): i pacchetti dicono da quale commit vengono;
 #   2. il MOTORE: le prove (installatore/costruisci.sh prove, tutte verdi), poi la costruzione
-#      statica con la versione del rilascio (la finestra è stata tolta: DECISIONI §10.31); il
-#      catalogo sta dentro (DECISIONI §10.21);
-#   3. i pacchetti del PRODOTTO per le tre famiglie, con gli script che ci sono: .deb (Debian 13,
-#      Ubuntu 26.04: src/costruzione/costruisci-deb.sh), .rpm (Fedora 44, Alma 10, Tumbleweed, Leap 16:
+#      statica con la versione del rilascio; il catalogo sta dentro (DECISIONI §10.21);
+#   3. i pacchetti del PRODOTTO per le tre famiglie: .deb (Debian 13, Ubuntu 26.04:
+#      src/costruzione/costruisci-deb.sh), .rpm (Fedora 44, Alma 10, Tumbleweed, Leap 16:
 #      packaging/rpm/costruisci-rpm.sh), Arch (packaging/arch/costruisci.sh);
-#   4. i pacchetti del MOTORE e della CHIAVE (packaging/archivio/pacchetti-motore.sh);
-#   5. l'ARCHIVIO (packaging/archivio/pubblica.sh): i pacchetti al loro posto, firmati con l'UNICA
-#      chiave (quella DI PROVA in .chiavi/ del progetto, ignorata da git finché D10 non dà la vera);
-#      il motore col suo sha256; install.sh con lo sha256 del motore scritti dentro, e il suo
-#      sha256; indici e firme, SBOM, il file delle licenze dei componenti, SHA256SUMS;
-#   6. il riassunto: la riga per RILASCI.txt dell'archivio, lo sha256 di install.sh da pubblicare
-#      sul sito, e il comando per caricare l'archivio (D10 aperta: l'indirizzo è un segnaposto).
-#
-# La cartella dell'archivio ($ARCHIVIO, predefinita costruzione-uscita/archivio) CRESCE a ogni
-# rilascio: le versioni vecchie restano (il ritorno indietro coi comandi del gestore, R11). È pronta
-# da caricare così com'è.
+#   4. i pacchetti del MOTORE (packaging/motore/pacchetti-motore.sh): resta sulla macchina
+#      (status, uninstall, post-upgrade);
+#   5. il .RUN: l'intestazione installatore/run.sh (con la versione e lo sha256 del carico scritti
+#      dentro) e sotto il tar.gz con il motore e packages/<bersaglio>/ (prodotto + motore per ogni
+#      distribuzione); accanto il suo .sha256, da pubblicare sul sito.
 #
 # Ambiente:
 #   BERSAGLI   quali (predefinito: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
-#   CANALE     stable (predefinito) · candidate
-#   ARCHIVIO   la cartella dell'archivio;  CHIAVI  la cartella delle chiavi (la privata, fuori dal deposito)
+#   USCITA     dove va il .run (predefinito costruzione-uscita/rilasci)
 #   RX_SPORCO=1  solo per prova: accetta un albero con modifiche non committate (i pacchetti lo dicono)
 # ⚠ Niente /tmp: sul portatile è quasi pieno; tutto sotto costruzione-uscita/.
+# ⏳ Le licenze dei componenti di terzi (THIRD-PARTY-LICENSES) le faceva l'archivio
+#    (archivio/sbom.py, archivio/licenze.py): vanno rimesse nel .run (DECISIONI §10.36, punto aperto).
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/.." && pwd)
@@ -43,21 +39,16 @@ if ! [[ $VERSIONE =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
 fi
 V=${BASH_REMATCH[1]} R=${BASH_REMATCH[2]}
 BERSAGLI=${BERSAGLI:-debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch}
-CANALE=${CANALE:-stable}
-export ARCHIVIO=${ARCHIVIO:-$ALBERO/costruzione-uscita/archivio}
-export CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
-# D10 aperta: dove si carica l'archivio (il VPS). Quando c'è, qui l'indirizzo.
-DESTINAZIONE=${DESTINAZIONE:-'<D10: indirizzo del VPS, per esempio remotix@archivio.example:/srv/remotix/>'}
+USCITA=${USCITA:-$ALBERO/costruzione-uscita/rilasci}
 LAV=$ALBERO/costruzione-uscita/rilascio-$VERSIONE
 # i contenitori (rpm) lasciano file di un altro uid dello spazio utente: si tolgono da lì dentro
 podman unshare rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR=$LAV/tmp
 REG=$LAV/rilascio.log
 passo() { printf '\n== %s\n' "$*" | tee -a "$REG"; }
-case $CANALE in stable | candidate) ;; *) echo "⛔ canale $CANALE"; exit 2 ;; esac
-[ -r "$CHIAVI/b/archivio.impronta" ] || { echo "⛔ la chiave dell'archivio non c'è in $CHIAVI/b"; exit 1; }
+RUN=$USCITA/remotix-$VERSIONE.run
 
-passo "1. l'albero ($VERSIONE, canale $CANALE, bersagli: $BERSAGLI)"
+passo "1. l'albero ($VERSIONE, bersagli: $BERSAGLI)"
 COMMIT=$(git -C "$ALBERO" rev-parse HEAD)
 SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp)
 if [ -n "$SPORCO" ]; then
@@ -65,11 +56,8 @@ if [ -n "$SPORCO" ]; then
 	echo "⚠ RX_SPORCO=1: albero con modifiche non committate (solo per prova)" | tee -a "$REG"
 fi
 echo "commit $COMMIT" | tee -a "$REG"
-# ⛔ la stessa versione non si pubblica due volte con contenuto diverso (pubblica.sh lo rifiuta
-#    pacchetto per pacchetto); qui ci si ferma prima di costruire
-if [ -e "$ARCHIVIO/RELEASES.txt" ] && grep -q "^$VERSIONE " "$ARCHIVIO/RELEASES.txt"; then
-	echo "⛔ $VERSIONE è già nell'archivio (RELEASES.txt): serve una revisione nuova"; exit 1
-fi
+# ⛔ la stessa versione non si pubblica due volte con contenuto diverso: serve una revisione nuova
+[ ! -e "$RUN" ] || { echo "⛔ $RUN c'è già: serve una revisione nuova"; exit 1; }
 
 passo "2. il motore: le prove e la costruzione ($V)"
 "$INST/costruisci.sh" prove >"$LAV/prove-motore.log" 2>&1 || { tail -30 "$LAV/prove-motore.log"; echo "⛔ le prove del motore"; exit 1; }
@@ -107,37 +95,47 @@ if [ $arch = 1 ]; then
 fi
 find "$P" -maxdepth 3 \( -name 'remotix_*.deb' -o -name 'remotix-*.rpm' -o -name 'remotix-*.pkg.tar.zst' \) ! -name '*.src.rpm' ! -name '*-debug*' ! -path '*/.lavoro/*' ! -name 'seconda-*' -printf '   %P\n' | sort | tee -a "$REG"
 
-passo "4. i pacchetti del motore e della chiave"
-RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
-	"$ALBERO/packaging/archivio/pacchetti-motore.sh" "$LAV/motore" >>"$REG" 2>&1 || { tail -20 "$REG"; exit 1; }
-
-passo "5. l'archivio ($ARCHIVIO)"
-PUB="bash $ALBERO/packaging/archivio/pubblica.sh"
+passo "4. i pacchetti del motore"
 M=$LAV/motore
+RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
+	"$ALBERO/packaging/motore/pacchetti-motore.sh" "$M" >>"$REG" 2>&1 || { tail -20 "$REG"; exit 1; }
+
+passo "5. il .run ($RUN)"
+C=$LAV/carico
+mkdir -p "$C/packages"
+cp "$LAV/motore-bin/remotix-install" "$C/"
 for b in "${deb[@]}"; do
-	$PUB aggiungi "$CANALE" "$b" "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$M/remotix-archive-keyring_${V}-${R}_all.deb"
+	mkdir -p "$C/packages/$b"
+	cp "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$C/packages/$b/"
 done
 for b in "${rpm[@]}"; do
-	$PUB aggiungi "$CANALE" "$b" $(ls "$P/rpm/$b"/*.rpm | grep -vE '\.src\.rpm$|-debug(info|source)-') "$M"/remotix-install-"$V"-"$R".x86_64.rpm
+	mkdir -p "$C/packages/$b"
+	cp $(ls "$P/rpm/$b"/*.rpm | grep -vE '\.src\.rpm$|-debug(info|source)-') "$M"/remotix-install-"$V"-"$R".x86_64.rpm "$C/packages/$b/"
 done
 if [ $arch = 1 ]; then
-	$PUB aggiungi "$CANALE" arch "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst
+	mkdir -p "$C/packages/arch"
+	cp "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst "$C/packages/arch/"
 fi
-$PUB motore "$LAV/motore-bin/remotix-install"
-$PUB script
-podman run --rm docker.io/library/golang:1.25 cat /usr/local/go/LICENSE >"$LAV/LICENSE-go"
-LICENZA_GO=$LAV/LICENSE-go $PUB rigenera 2>&1 | tee -a "$REG"
+(cd "$C" && find . -type f | sort | sed 's|^\./|   |') | tee -a "$REG"
+tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$ALBERO" log -1 --format=%ct)" \
+	-C "$C" -cf - . | gzip -n -9 >"$LAV/carico.tar.gz"
+SHA_CARICO=$(sha256sum "$LAV/carico.tar.gz" | cut -d' ' -f1)
+mkdir -p "$USCITA"
+sed -e "s/^VERSIONE=''\$/VERSIONE='$VERSIONE'/" -e "s/^PAYLOAD_SHA256=''\$/PAYLOAD_SHA256='$SHA_CARICO'/" \
+	"$INST/run.sh" >"$RUN.parziale"
+grep -q "^PAYLOAD_SHA256='$SHA_CARICO'\$" "$RUN.parziale" || { echo "⛔ l'intestazione non ha preso lo sha256"; exit 1; }
+cat "$LAV/carico.tar.gz" >>"$RUN.parziale"
+mv "$RUN.parziale" "$RUN"
+(cd "$USCITA" && sha256sum "$(basename "$RUN")" >"$(basename "$RUN").sha256")
+sh "$RUN" version | tee -a "$REG"
 
 passo "6. il riassunto"
-SHA_IS=$(cut -d' ' -f1 "$ARCHIVIO/install.sh.sha256")
-printf '%s %s commit %s canale %s bersagli %s install.sh %s\n' "$VERSIONE" "$(date -u +%FT%TZ)" "$COMMIT" "$CANALE" \
-	"$(echo $BERSAGLI | tr ' ' ',')" "$SHA_IS" >>"$ARCHIVIO/RELEASES.txt"
+printf '%s %s commit %s bersagli %s sha256 %s\n' "$VERSIONE" "$(date -u +%FT%TZ)" "$COMMIT" \
+	"$(echo $BERSAGLI | tr ' ' ',')" "$(cut -d' ' -f1 "$RUN.sha256")" >>"$USCITA/RELEASES.txt"
 cat <<EOF | tee -a "$REG"
-REMOTIX $VERSIONE — pronto in $ARCHIVIO
-  install.sh sha256 (da pubblicare sul sito, in HTTPS):
-      $SHA_IS
-  motore:      $(cut -c1-64 "$ARCHIVIO/engine/remotix-install.sha256")
-  caricarlo (D10 aperta, l'indirizzo è un segnaposto) — senza --delete: le versioni vecchie restano:
-      rsync -a "$ARCHIVIO/" $DESTINAZIONE
+REMOTIX $VERSIONE — pronto: $RUN ($(du -h "$RUN" | cut -f1))
+  sha256 (da pubblicare sul sito, in HTTPS, accanto al file):
+      $(cut -d' ' -f1 "$RUN.sha256")
+  si installa con:  sudo sh $(basename "$RUN")
   il giornale del rilascio: $REG
 EOF
