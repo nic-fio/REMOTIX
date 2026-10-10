@@ -13,25 +13,25 @@
  *    ceiling (`APPUNTI_TETTO`), the same row of types, the same memory
  *    of the last text.
  */
-#ifndef REMOTIX_APPUNTI_KDE_H
-#define REMOTIX_APPUNTI_KDE_H
+#ifndef REMOTIX_CLIPBOARD_KDE_H
+#define REMOTIX_CLIPBOARD_KDE_H
 
 #include "appunti.h"
 
-typedef struct AppuntiKde AppuntiKde;
+typedef struct ClipboardKde ClipboardKde;
 
-AppuntiKde *appunti_kde_apri(GError **sbaglio);
+ClipboardKde *clipboard_kde_open(GError **mistake);
 /* ⭐ PHASE 13 — the same protocol on labwc (XFCE): `zwlr_data_control_manager_v1`
  *    belongs to wlroots, and there we are in its home (`STUDI.md` §xfce §8).  Only
  *    the compositor's name in the log lines changes. */
-AppuntiKde *appunti_kde_apri_wlroots(GError **sbaglio);
-void appunti_kde_chiudi(AppuntiKde *appunti);
-void appunti_kde_ascolta(AppuntiKde *appunti, AppuntiSuTesto su_testo,
-                         AppuntiSuRichiesta su_richiesta, void *dati);
-char *appunti_kde_ultimo_testo(AppuntiKde *appunti, size_t *byte);
-void appunti_kde_leggi_adesso(AppuntiKde *appunti);
-gboolean appunti_kde_offri(AppuntiKde *appunti, GError **sbaglio);
-void appunti_kde_rispondi(AppuntiKde *appunti, uint32_t serial, const char *testo,
+ClipboardKde *clipboard_kde_open_wlroots(GError **mistake);
+void clipboard_kde_close(ClipboardKde *clipboard_text);
+void clipboard_kde_listen(ClipboardKde *clipboard_text, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *data_v);
+char *clipboard_kde_last_text(ClipboardKde *clipboard_text, size_t *byte);
+void clipboard_kde_read_now(ClipboardKde *clipboard_text);
+gboolean clipboard_kde_offer(ClipboardKde *clipboard_text, GError **mistake);
+void clipboard_kde_reply(ClipboardKde *clipboard_text, uint32_t serial, const char *body_text,
                           size_t byte);
 
 #endif

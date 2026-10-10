@@ -163,7 +163,7 @@ would be tuning on a case the product **no longer serves**.
 > **still** scene, which is the condition in which one clicks. No bench was looking at it.
 >
 > `[M]` Measured on the user's real clicks: **median 136 ms, worst 502**. The cause was a single
-> line (`MOVIMENTO_ATTESA_S 0.25`): the child's loop reads the parent's messages **before**
+> line (`MOTION_WAIT_S 0.25`): the child's loop reads the parent's messages **before**
 > the frame wait, and whatever arrives during the wait pays all of it.
 > ⇒ Brought to 8 ms: **median 41 ms, worst 47** — inside the ceiling.
 >
@@ -200,11 +200,11 @@ behaviours are the default**, not a bench option:
 
 | cure | default | turned off **only** with |
 |---|---|---|
-| audio silence | on | `--niente-audio-silenzio` |
-| threshold on the video queue | **100 ms** | `--sgombra-soglia-ms 0` |
-| rate regulator | on | `--niente-ritmo-adattivo` |
-| dead line | on (stall 5 s · silence 10 s) | `--niente-linea-morta` |
-| eviction of the ghost | **15 000 ms** | `--sfratto-ms 0` |
+| audio silence | on | `--no-audio-silence` |
+| threshold on the video queue | **100 ms** | `--clear-threshold-ms 0` |
+| rate regulator | on | `--no-adaptive-rate` |
+| dead line | on (stall 5 s · silence 10 s) | `--no-dead-line` |
+| eviction of the ghost | **15 000 ms** | `--eviction-ms 0` |
 
 ⛔ **One road only for each**: no environment variables, no compile-time
 switches. Two ways of turning on the same cure are **two numbers that diverge**, and this
@@ -238,7 +238,7 @@ and «the bench was not working».
 ### 3.3-bis ⭐⭐ A bench is not finished until it has been seen giving RED
 
 ⛔ `[M]` Phase 9, 23-24 Aug 2026: **nine bench defects, and none of them made a bench fail** —
-all nine made it **stay silent or give green**. ⇒ Every predicate must have in `--certifica` the
+all nine made it **stay silent or give green**. ⇒ Every predicate must have in `--certify` the
 case that makes it **fail**, and that case must be **run**, not imagined.
 
 And three corollaries, each one paid for:
@@ -246,7 +246,7 @@ And three corollaries, each one paid for:
    same face: whoever did not measure returns `None`, and the bench **refuses to judge**;
 2. ⛔ **The guard goes where the number IS CONSUMED**, not where it is produced — if another bench replaces
    your function with its own, the guard inside yours no longer runs;
-3. ⭐ **Do not look for a word inside a text**: `"ACCESA" in dettaglio` is true even when the
+3. ⭐ **Do not look for a word inside a text**: `"ACCESA" in detail` is true even when the
    detail says *«nasce accesa, ed è spenta»*.
 
 ### 3.3-ter ⛔⛔ Count how much stress ARRIVED, before asking for a judgement
@@ -389,12 +389,12 @@ not only its number. (`LEZIONI.md` §2.2.)
 ### ⛔⛔ No apostrophes inside `${…:?…}` and inside double-quoted strings
 
 ```bash
-U=${1:?serve l'utente}            # ⛔ the apostrophe OPENS a quote…
-PROFILO=${2:?serve il profilo}    # …and this line ends up INSIDE the string
+U=${1:?needs l'username}            # ⛔ the apostrophe OPENS a quote…
+PROFILE=${2:?serve il profilo}    # …and this line ends up INSIDE the string
 ```
 
 `[M]` The apostrophe of *«l'utente»* ate **four lines**, up to the next `'` — which was
-in a comment (`E'`). ⇒ `PROFILO=` **was never executed**, and the script died much further on
+in a comment (`E'`). ⇒ `PROFILE=` **was never executed**, and the script died much further on
 with *«PROFILO: unbound variable»*, on a line **that had nothing to do with it**.
 
 ⛔ **And `bash -n` passed**: the syntax **was** valid, it just did not mean what it seemed to.

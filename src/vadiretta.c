@@ -27,27 +27,27 @@
 #include <va/va_enc_h264.h>
 #include <va/va_enc_hevc.h>
 
-#define REG_CODIFICA "video"
+#define LOG_ENCODING "video"
 
 /* ⛔ How many RECONSTRUCTED surfaces the driver keeps for us: the current one and
  *    the reference (a single reference, no B — `codificatore.h`, «latency
  *    weighs more than frames»).  Three and not two, for headroom on the
  *    drivers that keep one extra round in the pipe. */
-#define RICOSTRUITE 3
+#define REBUILT 3
 
 /* How large the buffer of encoded bytes is: the same rule as ffmpeg
  * (`vaapi_encode_alloc_output_buffer`): 3 x width x height + 64 KiB —
  * an uncompressed frame is a ceiling for a compressed one. */
-#define CODED_MARGINE (1u << 16)
+#define CODED_MARGIN (1u << 16)
 
-static void di(char *dove, size_t quanto, const char *fmt, ...)
+static void di(char *dove, size_t how_much, const char *fmt, ...)
 {
 	va_list ap;
 
-	if (!dove || !quanto)
+	if (!dove || !how_much)
 		return;
 	va_start(ap, fmt);
-	vsnprintf(dove, quanto, fmt, ap);
+	vsnprintf(dove, how_much, fmt, ap);
 	va_end(ap);
 }
 
@@ -55,45 +55,45 @@ static void di(char *dove, size_t quanto, const char *fmt, ...)
  * 1. THE DEVICE
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-bool vadiretta_apri_dispositivo(const char *nodo, VaDispositivo *d, char *errore,
-                                size_t errore_byte)
+bool vadirect_open_device(const char *node, VaDevice *d, char *failure,
+                                size_t error_byte)
 {
 	VAStatus st;
-	const char *fornitore;
+	const char *vendor;
 
 	memset(d, 0, sizeof *d);
 	d->fd = -1;
-	if (!nodo || !nodo[0]) {
-		di(errore, errore_byte, "no render node declared");
+	if (!node || !node[0]) {
+		di(failure, error_byte, "no render node declared");
 		return false;
 	}
-	d->fd = open(nodo, O_RDWR | O_CLOEXEC);
+	d->fd = open(node, O_RDWR | O_CLOEXEC);
 	if (d->fd < 0) {
-		di(errore, errore_byte, "«%s» does not open: %s", nodo, strerror(errno));
+		di(failure, error_byte, "«%s» does not open: %s", node, strerror(errno));
 		return false;
 	}
 	d->display = vaGetDisplayDRM(d->fd);
 	if (!d->display) {
-		di(errore, errore_byte, "vaGetDisplayDRM on «%s» returned no display", nodo);
+		di(failure, error_byte, "vaGetDisplayDRM on «%s» returned no display", node);
 		close(d->fd);
 		d->fd = -1;
 		return false;
 	}
-	st = vaInitialize(d->display, &d->maggiore, &d->minore);
+	st = vaInitialize(d->display, &d->greater, &d->less);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "VA-API did not open on «%s»: %s", nodo, vaErrorStr(st));
+		di(failure, error_byte, "VA-API did not open on «%s»: %s", node, vaErrorStr(st));
 		close(d->fd);
 		d->fd = -1;
 		d->display = NULL;
 		return false;
 	}
-	fornitore = vaQueryVendorString(d->display);
-	snprintf(d->fornitore, sizeof d->fornitore, "%s",
-	         fornitore ? fornitore : "(the driver does not say its name)");
+	vendor = vaQueryVendorString(d->display);
+	snprintf(d->vendor, sizeof d->vendor, "%s",
+	         vendor ? vendor : "(the driver does not say its name)");
 	return true;
 }
 
-void vadiretta_chiudi_dispositivo(VaDispositivo *d)
+void vadirect_close_device(VaDevice *d)
 {
 	if (!d)
 		return;
@@ -118,9 +118,9 @@ void vadiretta_chiudi_dispositivo(VaDispositivo *d)
 typedef struct {
 	int level_idc, cs3f;
 	int max_mbps, max_fs, max_dpb_mbs, max_br;
-} LivelloH264;
+} H264Level;
 
-static const LivelloH264 LIVELLI_H264[] = {
+static const H264Level H264_LEVELS[] = {
 	{ 10, 0, 1485, 99, 396, 64 },          { 11, 1, 1485, 99, 396, 128 },
 	{ 9, 0, 1485, 99, 396, 128 },          { 11, 0, 3000, 396, 900, 192 },
 	{ 12, 0, 6000, 396, 2376, 384 },       { 13, 0, 11880, 396, 2376, 768 },
@@ -137,10 +137,10 @@ static const LivelloH264 LIVELLI_H264[] = {
 /* `ff_h264_guess_level(100, bitrate, fps, mbw*16, mbh*16, dpb=1)`.
  * ⚠ 1500 is the NAL factor of High (table A-2); the Baseline/Main profiles
  *   would have 1200, but High is the only one we open. */
-static int livello_h264(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, int dpb)
+static int h264_level(int64_t bitrate, int fps, uint32_t mb_l, uint32_t mb_a, int dpb)
 {
-	for (size_t i = 0; i < sizeof LIVELLI_H264 / sizeof LIVELLI_H264[0]; i++) {
-		const LivelloH264 *L = &LIVELLI_H264[i];
+	for (size_t i = 0; i < sizeof H264_LEVELS / sizeof H264_LEVELS[0]; i++) {
+		const H264Level *L = &H264_LEVELS[i];
 		uint64_t mb = (uint64_t) mb_l * mb_a;
 
 		if (L->cs3f)
@@ -171,9 +171,9 @@ typedef struct {
 	int level_idc;
 	uint32_t max_luma_ps;
 	int max_br_main; /* kbit/s, Main tier */
-} LivelloHEVC;
+} HEVCLevel;
 
-static const LivelloHEVC LIVELLI_HEVC[] = {
+static const HEVCLevel HEVC_LEVELS[] = {
 	{ 30, 36864, 128 },       { 60, 122880, 1500 },     { 63, 245760, 3000 },
 	{ 90, 552960, 6000 },     { 93, 983040, 10000 },    { 120, 2228224, 12000 },
 	{ 123, 2228224, 20000 },  { 150, 8912896, 25000 },  { 153, 8912896, 40000 },
@@ -187,12 +187,12 @@ static const LivelloHEVC LIVELLI_HEVC[] = {
  *   not the wire: that is how `hw_base_encode_h265.c` does it, and H.264 does the
  *   opposite (`ctx->va_bit_rate`, i.e. the wire).  Two asymmetries to be copied,
  *   not corrected. */
-static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
+static int hevc_level(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
 {
 	uint64_t pic = (uint64_t) l * a;
 
-	for (size_t i = 0; i < sizeof LIVELLI_HEVC / sizeof LIVELLI_HEVC[0]; i++) {
-		const LivelloHEVC *L = &LIVELLI_HEVC[i];
+	for (size_t i = 0; i < sizeof HEVC_LEVELS / sizeof HEVC_LEVELS[0]; i++) {
+		const HEVCLevel *L = &HEVC_LEVELS[i];
 		int dpb_max;
 
 		if (pic > L->max_luma_ps)
@@ -222,43 +222,43 @@ static int livello_hevc(int64_t bitrate, uint32_t l, uint32_t a, int dpb)
  * THE STATE
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-struct VaDiretta {
+struct VaDirect {
 	VADisplay display;
-	char fornitore[128];           /* for the SEI: who encoded */
-	VaDirettaRichiesta r;
-	VaDirettaDichiarazione d;
+	char vendor[128];           /* for the SEI: who encoded */
+	VaDirectRequest r;
+	VaDirectDeclaration d;
 
 	VAConfigID config;
-	VAContextID contesto;
-	VASurfaceID *ingresso;         /* the input pool */
-	unsigned quante_ingresso, prossima_ingresso;
-	VASurfaceID ricostruite[RICOSTRUITE];
+	VAContextID context;
+	VASurfaceID *ingress;         /* the input pool */
+	unsigned how_many_ingress, next_ingress;
+	VASurfaceID rebuilt[REBUILT];
 	VABufferID coded;
 	size_t coded_byte;
 
 	/* the bytes of the last frame, in Annex-B, ours */
-	uint8_t *uscita;
-	size_t uscita_capacita, uscita_byte;
+	uint8_t *out_dir;
+	size_t output_capabilities, output_byte;
 
 	/* the sequence state — what ffmpeg kept in `FFHWBaseEncodePicture` */
-	uint64_t ordine;               /* how many frames encoded since this open */
-	uint64_t ultimo_idr;           /* the order of the last IDR */
-	uint32_t nel_gop;              /* frames since the last IDR, inclusive */
-	bool riferimento_valido;       /* there is a previous frame to predict from */
-	unsigned ricostruita_corrente; /* which of the RICOSTRUITE receives this frame */
-	unsigned ricostruita_riferimento;
+	uint64_t order;               /* how many frames encoded since this open */
+	uint64_t last_idr;           /* the order of the last IDR */
+	uint32_t in_gop;              /* frames since the last IDR, inclusive */
+	bool reference_valid;       /* there is a previous frame to predict from */
+	unsigned rebuilt_current; /* which of the REBUILT receives this frame */
+	unsigned rebuilt_reference;
 	/* H.264 */
-	uint32_t frame_num, frame_num_riferimento;
+	uint32_t frame_num, frame_num_reference;
 	uint32_t idr_pic_id;
-	int32_t poc, poc_riferimento;  /* HEVC: display − last IDR · H.264: twice that (poc type 2) */
-	bool sei_identificatore_scritto;
+	int32_t poc, poc_reference;  /* HEVC: display − last IDR · H.264: twice that (poc type 2) */
+	bool sei_identifier_written;
 
 	/* the fixed sequence/picture parameters, filled at open */
 	union {
 		VAEncSequenceParameterBufferH264 h264;
 		VAEncSequenceParameterBufferHEVC hevc;
 	} seq;
-	int qp_fisso;                  /* CQP: the requested QP · QVBR: 26 (H.264) / 30 (HEVC), like ffmpeg */
+	int fixed_qp;                  /* CQP: the requested QP · QVBR: 26 (H.264) / 30 (HEVC), like ffmpeg */
 	uint32_t mb_l, mb_a;           /* H.264: the macroblocks */
 	uint32_t ctb_l, ctb_a;         /* HEVC: the CTBs */
 	/* HEVC: what ends up in the SPS/PPS, decided by the driver's attributes */
@@ -274,28 +274,28 @@ struct VaDiretta {
 /* ═══════════════════════════════════════════════════════════════════════════
  * 3. THE HEADERS — H.264
  *
- * Each function writes the RBSP with `ScrittoreBit` and then the NAL in Annex-B with
+ * Each function writes the RBSP with `WriterBit` and then the NAL in Annex-B with
  * `nal_annexb()`.  ⚠ The capacities are generous on purpose: an SPS is ~30 bytes,
  *   a slice header ~10, the SEI ~120.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-#define INTESTAZIONE_MAX 512
+#define MAX_HEADER 512
 
 /* The three colour numbers, declared and not inherited (as
- * `converti_sulla_gpu()` in `codificatore.c` imposes the matrix): BT.709 on all three entries, limited
+ * `convert_on_gpu()` in `codificatore.c` imposes the matrix): BT.709 on all three entries, limited
  * range.  They are the values of `AVCOL_PRI_BT709`/`AVCOL_TRC_BT709`/
  * `AVCOL_SPC_BT709` = 1, and the full-range flag at 0. */
-#define COLORE_PRIMARI 1
-#define COLORE_TRASFERIMENTO 1
-#define COLORE_MATRICE 1
+#define COLOR_PRIMARIES 1
+#define COLOR_TRANSFER 1
+#define COLOR_MATRIX 1
 
-static bool h264_cqp(const VaDiretta *v)
+static bool h264_cqp(const VaDirect *v)
 {
-	return v->d.modo_va == VA_RC_CQP;
+	return v->d.va_mode == VA_RC_CQP;
 }
 
 /* av_log2: the highest bit set. */
-static int log2_intero(uint64_t x)
+static int log2_int(uint64_t x)
 {
 	int n = -1;
 	while (x) {
@@ -305,7 +305,7 @@ static int log2_intero(uint64_t x)
 	return n < 0 ? 0 : n;
 }
 
-static unsigned taglia_4bit(int x)
+static unsigned trim_4bit(int x)
 {
 	if (x < 0)
 		return 0;
@@ -314,12 +314,12 @@ static unsigned taglia_4bit(int x)
 	return (unsigned) x;
 }
 
-static void h264_hrd_parametri(ScrittoreBit *s, const VaDiretta *v)
+static void h264_hrd_parameters(WriterBit *s, const VaDirect *v)
 {
-	uint64_t bitrate = (uint64_t) v->r.banda_filo;
-	uint64_t cpb = (uint64_t) v->r.serbatoio_bit;
-	unsigned bit_rate_scale = taglia_4bit(log2_intero(bitrate) - 15 - 6);
-	unsigned cpb_size_scale = taglia_4bit(log2_intero(cpb) - 15 - 4);
+	uint64_t bitrate = (uint64_t) v->r.bandwidth_wire;
+	uint64_t cpb = (uint64_t) v->r.reservoir_bit;
+	unsigned bit_rate_scale = trim_4bit(log2_int(bitrate) - 15 - 6);
+	unsigned cpb_size_scale = trim_4bit(log2_int(cpb) - 15 - 4);
 
 	sb_ue(s, 0);                                        /* cpb_cnt_minus1 */
 	sb_u(s, 4, bit_rate_scale);
@@ -333,15 +333,15 @@ static void h264_hrd_parametri(ScrittoreBit *s, const VaDiretta *v)
 	sb_u(s, 5, 0);                                      /* time_offset_length */
 }
 
-static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
+static size_t h264_sps(const VaDirect *v, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa = 0x67; /* nal_ref_idc 3, nal_unit_type 7 */
-	ScrittoreBit s;
-	uint32_t taglio_dx = (16 * v->mb_l - v->r.larghezza) / 2;
-	uint32_t taglio_giu = (16 * v->mb_a - v->r.altezza) / 2;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head = 0x67; /* nal_ref_idc 3, nal_unit_type 7 */
+	WriterBit s;
+	uint32_t crop_right = (16 * v->mb_l - v->r.width_px) / 2;
+	uint32_t crop_bottom = (16 * v->mb_a - v->r.height_px) / 2;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_u(&s, 8, 100);                 /* profile_idc: High, which is what `avc1.64..` says */
 	sb_flag(&s, false);               /* constraint_set0_flag */
 	sb_flag(&s, false);               /* constraint_set1_flag */
@@ -350,11 +350,11 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, true);                /* constraint_set4_flag: High ⇒ 1 */
 	sb_flag(&s, true);                /* constraint_set5_flag: no B ⇒ 1 */
 	sb_u(&s, 2, 0);                   /* reserved_zero_2bits */
-	sb_u(&s, 8, (uint32_t) v->d.livello_idc);
+	sb_u(&s, 8, (uint32_t) v->d.lvl_idc);
 	sb_ue(&s, 0);                     /* seq_parameter_set_id */
 	sb_ue(&s, 1);                     /* chroma_format_idc: 4:2:0 */
-	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_luma_minus8 */
-	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_chroma_minus8 */
+	sb_ue(&s, (uint32_t) (v->r.bit_depth - 8)); /* bit_depth_luma_minus8 */
+	sb_ue(&s, (uint32_t) (v->r.bit_depth - 8)); /* bit_depth_chroma_minus8 */
 	sb_flag(&s, false);               /* qpprime_y_zero_transform_bypass_flag */
 	sb_flag(&s, false);               /* seq_scaling_matrix_present_flag */
 	sb_ue(&s, 4);                     /* log2_max_frame_num_minus4: frame_num on 8 bits */
@@ -365,12 +365,12 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, v->mb_a - 1);           /* pic_height_in_map_units_minus1 */
 	sb_flag(&s, true);                /* frame_mbs_only_flag */
 	sb_flag(&s, true);                /* direct_8x8_inference_flag */
-	if (taglio_dx || taglio_giu) {    /* frame_cropping_flag: the canvas is not a multiple of 16 */
+	if (crop_right || crop_bottom) {    /* frame_cropping_flag: the canvas is not a multiple of 16 */
 		sb_flag(&s, true);
 		sb_ue(&s, 0);
-		sb_ue(&s, taglio_dx);
+		sb_ue(&s, crop_right);
 		sb_ue(&s, 0);
-		sb_ue(&s, taglio_giu);
+		sb_ue(&s, crop_bottom);
 	} else {
 		sb_flag(&s, false);
 	}
@@ -382,13 +382,13 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_u(&s, 3, 5);                   /* video_format: unspecified (table E-2) */
 	sb_flag(&s, false);               /* video_full_range_flag: limited — Firefox ignores full [M] */
 	sb_flag(&s, true);                /* colour_description_present_flag */
-	sb_u(&s, 8, COLORE_PRIMARI);
-	sb_u(&s, 8, COLORE_TRASFERIMENTO);
-	sb_u(&s, 8, COLORE_MATRICE);
+	sb_u(&s, 8, COLOR_PRIMARIES);
+	sb_u(&s, 8, COLOR_TRANSFER);
+	sb_u(&s, 8, COLOR_MATRIX);
 	sb_flag(&s, false);               /* chroma_loc_info_present_flag */
 	sb_flag(&s, true);                /* timing_info_present_flag */
 	sb_u(&s, 32, 1);                  /* num_units_in_tick = framerate.den */
-	sb_u(&s, 32, 2u * v->r.fotogrammi_al_secondo); /* time_scale = 2·num */
+	sb_u(&s, 32, 2u * v->r.frames_per_second); /* time_scale = 2·num */
 	sb_flag(&s, true);                /* fixed_frame_rate_flag */
 	if (h264_cqp(v)) {
 		sb_flag(&s, false);           /* nal_hrd_parameters_present_flag */
@@ -396,7 +396,7 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 		/* low_delay_hrd_flag: absent without HRD (inferred 1 − fixed_frame_rate) */
 	} else {
 		sb_flag(&s, true);            /* nal_hrd_parameters_present_flag: with the cap on, ffmpeg writes them */
-		h264_hrd_parametri(&s, v);
+		h264_hrd_parameters(&s, v);
 		sb_flag(&s, false);           /* vcl_hrd_parameters_present_flag */
 		sb_flag(&s, false);           /* low_delay_hrd_flag */
 	}
@@ -409,19 +409,19 @@ static size_t h264_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 15);                    /* log2_max_mv_length_vertical */
 	sb_ue(&s, 0);                     /* max_num_reorder_frames: no B */
 	sb_ue(&s, 1);                     /* max_dec_frame_buffering: the single reference */
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, &testa, 1, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, &head, 1, rbsp, sb_byte(&s));
 }
 
-static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
+static size_t h264_pps(const VaDirect *v, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa = 0x68; /* nal_ref_idc 3, nal_unit_type 8 */
-	ScrittoreBit s;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head = 0x68; /* nal_ref_idc 3, nal_unit_type 8 */
+	WriterBit s;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_ue(&s, 0);                     /* pic_parameter_set_id */
 	sb_ue(&s, 0);                     /* seq_parameter_set_id */
 	sb_flag(&s, true);                /* entropy_coding_mode_flag: CABAC (High) */
@@ -431,7 +431,7 @@ static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 0);                     /* num_ref_idx_l1_default_active_minus1 */
 	sb_flag(&s, false);               /* weighted_pred_flag */
 	sb_u(&s, 2, 0);                   /* weighted_bipred_idc */
-	sb_se(&s, v->qp_fisso - 26);      /* pic_init_qp_minus26 */
+	sb_se(&s, v->fixed_qp - 26);      /* pic_init_qp_minus26 */
 	sb_se(&s, 0);                     /* pic_init_qs_minus26 */
 	sb_se(&s, 0);                     /* chroma_qp_index_offset */
 	sb_flag(&s, false);               /* deblocking_filter_control_present_flag */
@@ -441,10 +441,10 @@ static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, true);                /* transform_8x8_mode_flag */
 	sb_flag(&s, false);               /* pic_scaling_matrix_present_flag */
 	sb_se(&s, 0);                     /* second_chroma_qp_index_offset */
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, &testa, 1, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, &head, 1, rbsp, sb_byte(&s));
 }
 
 /*
@@ -455,13 +455,13 @@ static size_t h264_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
  *   of this one»), and with a single reference the difference is always 0 —
  *   `[M]` it is in every P of today's trace.
  */
-static size_t h264_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
+static size_t h264_slice(const VaDirect *v, bool idr, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa = idr ? 0x65 : 0x41; /* IDR: ref_idc 3, type 5 · P: ref_idc 1, type 1 */
-	ScrittoreBit s;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head = idr ? 0x65 : 0x41; /* IDR: ref_idc 3, type 5 · P: ref_idc 1, type 1 */
+	WriterBit s;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_ue(&s, 0);                     /* first_mb_in_slice */
 	sb_ue(&s, idr ? 7 : 5);           /* slice_type: I (7) / P (5), «all slices like this» */
 	sb_ue(&s, 0);                     /* pic_parameter_set_id */
@@ -480,15 +480,15 @@ static size_t h264_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 	} else {
 		sb_flag(&s, true);            /* adaptive_ref_pic_marking_mode_flag */
 		sb_ue(&s, 1);                 /* memory_management_control_operation 1 */
-		sb_ue(&s, v->frame_num - v->frame_num_riferimento - 1); /* difference_of_pic_nums_minus1 */
+		sb_ue(&s, v->frame_num - v->frame_num_reference - 1); /* difference_of_pic_nums_minus1 */
 		sb_ue(&s, 0);                 /* memory_management_control_operation 0: end */
 		sb_ue(&s, 0);                 /* cabac_init_idc (CABAC, non-I slice) */
 	}
 	sb_se(&s, 0);                     /* slice_qp_delta: the QP is already in pic_init_qp */
-	sb_allinea_con_uni(&s);           /* cabac_alignment_one_bit */
-	if (s.traboccato)
+	sb_align_with_uni(&s);           /* cabac_alignment_one_bit */
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, &testa, 1, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, &head, 1, rbsp, sb_byte(&s));
 }
 
 /* ⭐ REMOTIX's UUID for the user_data_unregistered SEI (D.1.7): 16 bytes
@@ -499,47 +499,47 @@ static const uint8_t UUID_REMOTIX[16] = { 0x52, 0x45, 0x4d, 0x4f, 0x54, 0x49, 0x
 
 /* The SEI of the first frame: who we are, and with the cap on also the
  * buffering_period (D.1.1) — the same two that ffmpeg puts in a single NAL. */
-static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
+static size_t h264_sei(const VaDirect *v, bool idr, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa = 0x06; /* nal_ref_idc 0, nal_unit_type 6 */
-	ScrittoreBit s;
-	char testo[224];
-	size_t lunghezza;
-	bool identificatore = !v->sei_identificatore_scritto;
-	bool tempi = !h264_cqp(v);
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head = 0x06; /* nal_ref_idc 0, nal_unit_type 6 */
+	WriterBit s;
+	char body_text[224];
+	size_t length;
+	bool identifier = !v->sei_identifier_written;
+	bool times = !h264_cqp(v);
 
-	if (!identificatore && !tempi)
+	if (!identifier && !times)
 		return 0;
-	sb_apri(&s, rbsp, sizeof rbsp);
-	if (identificatore) {
-		snprintf(testo, sizeof testo, "REMOTIX vadiretta / VAAPI %d.%d / %s",
-		         VA_MAJOR_VERSION, VA_MINOR_VERSION, v->fornitore);
-		lunghezza = strlen(testo) + 1; /* with the NUL, like ffmpeg */
+	sb_open(&s, rbsp, sizeof rbsp);
+	if (identifier) {
+		snprintf(body_text, sizeof body_text, "REMOTIX vadiretta / VAAPI %d.%d / %s",
+		         VA_MAJOR_VERSION, VA_MINOR_VERSION, v->vendor);
+		length = strlen(body_text) + 1; /* with the NUL, like ffmpeg */
 		sb_u(&s, 8, 5);                                 /* last_payload_type_byte: user_data_unregistered */
-		sb_u(&s, 8, (uint32_t) (16 + lunghezza));       /* last_payload_size_byte */
+		sb_u(&s, 8, (uint32_t) (16 + length));       /* last_payload_size_byte */
 		for (int i = 0; i < 16; i++)
 			sb_u(&s, 8, UUID_REMOTIX[i]);
-		for (size_t i = 0; i < lunghezza; i++)
-			sb_u(&s, 8, (uint8_t) testo[i]);
+		for (size_t i = 0; i < length; i++)
+			sb_u(&s, 8, (uint8_t) body_text[i]);
 	}
-	if (tempi) {
+	if (times) {
 		/* buffering_period on the IDR (7 bytes: ue sps_id + 2 x u(24)) and
 		 * pic_timing on every frame (u(24) + u(8) = 4 bytes), with the arithmetic of
 		 * `vaapi_encode_h264_init_picture_params`. */
-		uint64_t serbatoio = (uint64_t) v->r.serbatoio_bit;
-		uint64_t pieno = serbatoio * 3 / 4; /* initial_buffer_fullness */
-		uint32_t rimozione_iniziale = (uint32_t) (90000u * pieno / (serbatoio ? serbatoio : 1));
-		uint32_t cpb_delay = (uint32_t) (v->ordine - v->ultimo_idr);
+		uint64_t reservoir = (uint64_t) v->r.reservoir_bit;
+		uint64_t full = reservoir * 3 / 4; /* initial_buffer_fullness */
+		uint32_t initial_removal = (uint32_t) (90000u * full / (reservoir ? reservoir : 1));
+		uint32_t cpb_delay = (uint32_t) (v->order - v->last_idr);
 
 		if (idr) {
 			sb_u(&s, 8, 0);                             /* payloadType 0: buffering_period */
 			sb_u(&s, 8, 7);                             /* payloadSize: ue(0)=1 bit + 48 bits + tail = 7 bytes */
 			sb_ue(&s, 0);                               /* seq_parameter_set_id */
-			sb_u(&s, 24, rimozione_iniziale);           /* initial_cpb_removal_delay[0] */
+			sb_u(&s, 24, initial_removal);           /* initial_cpb_removal_delay[0] */
 			sb_u(&s, 24, 0);                            /* initial_cpb_removal_delay_offset[0] */
 			sb_flag(&s, true);                          /* bit_equal_to_one */
-			while (!sb_allineato(&s))
+			while (!sb_aligned(&s))
 				sb_flag(&s, false);
 		}
 		sb_u(&s, 8, 1);                                 /* payloadType 1: pic_timing */
@@ -547,10 +547,10 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
 		sb_u(&s, 24, 2u * cpb_delay);                   /* cpb_removal_delay */
 		sb_u(&s, 8, 0);                                 /* dpb_output_delay: 2·dpb_delay, with max_b_depth 0 */
 	}
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, &testa, 1, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, &head, 1, rbsp, sb_byte(&s));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -561,16 +561,16 @@ static size_t h264_sei(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capa
  * compat[2].  ⚠ With compat[2] set the constraint branch is the «profile
  *   2» one: 7 reserved bits, one_picture_only, 35 reserved — the order that
  *   `cbs_h265` follows and that today's trace shows. */
-static void hevc_ptl(ScrittoreBit *s, const VaDiretta *v)
+static void hevc_ptl(WriterBit *s, const VaDirect *v)
 {
-	unsigned profilo = v->r.profondita == 10 ? 2 : 1;
-	bool tier_alto = v->d.livello_idc == 255; /* «The tier flag must be set in level 8.5» */
+	unsigned profile_v = v->r.bit_depth == 10 ? 2 : 1;
+	bool tier_alto = v->d.lvl_idc == 255; /* «The tier flag must be set in level 8.5» */
 
 	sb_u(s, 2, 0);                    /* general_profile_space */
 	sb_flag(s, tier_alto);            /* general_tier_flag */
-	sb_u(s, 5, profilo);              /* general_profile_idc */
+	sb_u(s, 5, profile_v);              /* general_profile_idc */
 	for (unsigned j = 0; j < 32; j++) /* general_profile_compatibility_flag[j] */
-		sb_flag(s, j == profilo || (profilo == 1 && j == 2));
+		sb_flag(s, j == profile_v || (profile_v == 1 && j == 2));
 	sb_flag(s, true);                 /* general_progressive_source_flag */
 	sb_flag(s, false);                /* general_interlaced_source_flag */
 	sb_flag(s, true);                 /* general_non_packed_constraint_flag */
@@ -580,16 +580,16 @@ static void hevc_ptl(ScrittoreBit *s, const VaDiretta *v)
 	sb_u(s, 24, 0);                   /* general_reserved_zero_35bits */
 	sb_u(s, 11, 0);
 	sb_flag(s, false);                /* general_inbld_flag */
-	sb_u(s, 8, (uint32_t) v->d.livello_idc); /* general_level_idc */
+	sb_u(s, 8, (uint32_t) v->d.lvl_idc); /* general_level_idc */
 }
 
-static size_t hevc_vps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
+static size_t hevc_vps(const VaDirect *v, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x40, 0x01 }; /* type 32, layer 0, temporal_id_plus1 1 */
-	ScrittoreBit s;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head[2] = { 0x40, 0x01 }; /* type 32, layer 0, temporal_id_plus1 1 */
+	WriterBit s;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_u(&s, 4, 0);                   /* vps_video_parameter_set_id */
 	sb_flag(&s, true);                /* vps_base_layer_internal_flag */
 	sb_flag(&s, true);                /* vps_base_layer_available_flag */
@@ -606,45 +606,45 @@ static size_t hevc_vps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 0);                     /* vps_num_layer_sets_minus1 */
 	sb_flag(&s, true);                /* vps_timing_info_present_flag */
 	sb_u(&s, 32, 1);                  /* vps_num_units_in_tick */
-	sb_u(&s, 32, v->r.fotogrammi_al_secondo); /* vps_time_scale: NOT doubled here */
+	sb_u(&s, 32, v->r.frames_per_second); /* vps_time_scale: NOT doubled here */
 	sb_flag(&s, true);                /* vps_poc_proportional_to_timing_flag */
 	sb_ue(&s, 0);                     /* vps_num_ticks_poc_diff_one_minus1 */
 	sb_ue(&s, 0);                     /* vps_num_hrd_parameters */
 	sb_flag(&s, false);               /* vps_extension_flag */
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, testa, 2, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, head, 2, rbsp, sb_byte(&s));
 }
 
-static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
+static size_t hevc_sps(const VaDirect *v, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x42, 0x01 }; /* type 33 */
-	ScrittoreBit s;
-	uint32_t taglio_dx = (v->d.larghezza_superficie - v->r.larghezza) >> 1;
-	uint32_t taglio_giu = (v->d.altezza_superficie - v->r.altezza) >> 1;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head[2] = { 0x42, 0x01 }; /* type 33 */
+	WriterBit s;
+	uint32_t crop_right = (v->d.surface_width - v->r.width_px) >> 1;
+	uint32_t crop_bottom = (v->d.surface_height - v->r.height_px) >> 1;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_u(&s, 4, 0);                   /* sps_video_parameter_set_id */
 	sb_u(&s, 3, 0);                   /* sps_max_sub_layers_minus1 */
 	sb_flag(&s, true);                /* sps_temporal_id_nesting_flag */
 	hevc_ptl(&s, v);
 	sb_ue(&s, 0);                     /* sps_seq_parameter_set_id */
 	sb_ue(&s, 1);                     /* chroma_format_idc: 4:2:0 */
-	sb_ue(&s, v->d.larghezza_superficie); /* pic_width_in_luma_samples: the surface, aligned */
-	sb_ue(&s, v->d.altezza_superficie);
-	if (taglio_dx || taglio_giu) {    /* conformance_window_flag: the canvas cropped from the surface */
+	sb_ue(&s, v->d.surface_width); /* pic_width_in_luma_samples: the surface, aligned */
+	sb_ue(&s, v->d.surface_height);
+	if (crop_right || crop_bottom) {    /* conformance_window_flag: the canvas cropped from the surface */
 		sb_flag(&s, true);
 		sb_ue(&s, 0);
-		sb_ue(&s, taglio_dx);         /* in chroma units: >> log2_chroma_w */
+		sb_ue(&s, crop_right);         /* in chroma units: >> log2_chroma_w */
 		sb_ue(&s, 0);
-		sb_ue(&s, taglio_giu);
+		sb_ue(&s, crop_bottom);
 	} else {
 		sb_flag(&s, false);
 	}
-	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_luma_minus8 */
-	sb_ue(&s, (uint32_t) (v->r.profondita - 8)); /* bit_depth_chroma_minus8 */
+	sb_ue(&s, (uint32_t) (v->r.bit_depth - 8)); /* bit_depth_luma_minus8 */
+	sb_ue(&s, (uint32_t) (v->r.bit_depth - 8)); /* bit_depth_chroma_minus8 */
 	sb_ue(&s, 8);                     /* log2_max_pic_order_cnt_lsb_minus4: POC lsb on 12 bits */
 	sb_flag(&s, false);               /* sps_sub_layer_ordering_info_present_flag */
 	sb_ue(&s, 1);                     /* sps_max_dec_pic_buffering_minus1[0] */
@@ -672,9 +672,9 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_u(&s, 3, 5);                   /* video_format */
 	sb_flag(&s, false);               /* video_full_range_flag */
 	sb_flag(&s, true);                /* colour_description_present_flag */
-	sb_u(&s, 8, COLORE_PRIMARI);
-	sb_u(&s, 8, COLORE_TRASFERIMENTO);
-	sb_u(&s, 8, COLORE_MATRICE);
+	sb_u(&s, 8, COLOR_PRIMARIES);
+	sb_u(&s, 8, COLOR_TRANSFER);
+	sb_u(&s, 8, COLOR_MATRIX);
 	sb_flag(&s, false);               /* chroma_loc_info_present_flag */
 	sb_flag(&s, false);               /* neutral_chroma_indication_flag */
 	sb_flag(&s, false);               /* field_seq_flag */
@@ -682,7 +682,7 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, false);               /* default_display_window_flag */
 	sb_flag(&s, true);                /* vui_timing_info_present_flag */
 	sb_u(&s, 32, 1);                  /* vui_num_units_in_tick */
-	sb_u(&s, 32, v->r.fotogrammi_al_secondo); /* vui_time_scale */
+	sb_u(&s, 32, v->r.frames_per_second); /* vui_time_scale */
 	sb_flag(&s, true);                /* vui_poc_proportional_to_timing_flag */
 	sb_ue(&s, 0);                     /* vui_num_ticks_poc_diff_one_minus1 */
 	sb_flag(&s, false);               /* vui_hrd_parameters_present_flag: never, not even with the cap */
@@ -696,19 +696,19 @@ static size_t hevc_sps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 15);                    /* log2_max_mv_length_horizontal */
 	sb_ue(&s, 15);                    /* log2_max_mv_length_vertical */
 	sb_flag(&s, false);               /* sps_extension_present_flag */
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, testa, 2, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, head, 2, rbsp, sb_byte(&s));
 }
 
-static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
+static size_t hevc_pps(const VaDirect *v, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { 0x44, 0x01 }; /* type 34 */
-	ScrittoreBit s;
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head[2] = { 0x44, 0x01 }; /* type 34 */
+	WriterBit s;
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_ue(&s, 0);                     /* pps_pic_parameter_set_id */
 	sb_ue(&s, 0);                     /* pps_seq_parameter_set_id */
 	sb_flag(&s, false);               /* dependent_slice_segments_enabled_flag */
@@ -718,7 +718,7 @@ static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_flag(&s, false);               /* cabac_init_present_flag */
 	sb_ue(&s, 0);                     /* num_ref_idx_l0_default_active_minus1 */
 	sb_ue(&s, 0);                     /* num_ref_idx_l1_default_active_minus1 */
-	sb_se(&s, v->qp_fisso - 26);      /* init_qp_minus26 */
+	sb_se(&s, v->fixed_qp - 26);      /* init_qp_minus26 */
 	sb_flag(&s, false);               /* constrained_intra_pred_flag */
 	sb_flag(&s, v->hevc.transform_skip); /* transform_skip_enabled_flag */
 	sb_flag(&s, v->hevc.cu_qp_delta); /* cu_qp_delta_enabled_flag: only with the cap (not CQP) */
@@ -739,10 +739,10 @@ static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
 	sb_ue(&s, 0);                     /* log2_parallel_merge_level_minus2 */
 	sb_flag(&s, false);               /* slice_segment_header_extension_present_flag */
 	sb_flag(&s, false);               /* pps_extension_present_flag */
-	sb_chiudi_rbsp(&s);
-	if (s.traboccato)
+	sb_close_rbsp(&s);
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, testa, 2, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, head, 2, rbsp, sb_byte(&s));
 }
 
 /*
@@ -751,26 +751,26 @@ static size_t hevc_pps(const VaDiretta *v, uint8_t *fuori, size_t capacita)
  * `[M]` today's trace has `slice_type 0` with `mvd_l1_zero_flag` and
  * `collocated_from_l0_flag`, and L1 = L0).
  */
-static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t capacita)
+static size_t hevc_slice(const VaDirect *v, bool idr, uint8_t *outside, size_t capabilities)
 {
-	uint8_t rbsp[INTESTAZIONE_MAX];
-	const uint8_t testa[2] = { idr ? 0x26 : 0x02, 0x01 }; /* 19 (IDR_W_RADL) or 1 (TRAIL_R) */
-	ScrittoreBit s;
-	unsigned tipo = idr ? 2 : (v->d.p_come_b ? 0 : 1); /* I / B / P */
+	uint8_t rbsp[MAX_HEADER];
+	const uint8_t head[2] = { idr ? 0x26 : 0x02, 0x01 }; /* 19 (IDR_W_RADL) or 1 (TRAIL_R) */
+	WriterBit s;
+	unsigned kind = idr ? 2 : (v->d.p_come_b ? 0 : 1); /* I / B / P */
 
-	sb_apri(&s, rbsp, sizeof rbsp);
+	sb_open(&s, rbsp, sizeof rbsp);
 	sb_flag(&s, true);                /* first_slice_segment_in_pic_flag */
 	if (idr)
 		sb_flag(&s, false);           /* no_output_of_prior_pics_flag (IRAP only) */
 	sb_ue(&s, 0);                     /* slice_pic_parameter_set_id */
-	sb_ue(&s, tipo);                  /* slice_type */
+	sb_ue(&s, kind);                  /* slice_type */
 	if (!idr) {
 		sb_u(&s, 12, (uint32_t) v->poc & 0xFFFu); /* slice_pic_order_cnt_lsb */
 		sb_flag(&s, false);           /* short_term_ref_pic_set_sps_flag: the set is here */
 		/* st_ref_pic_set(0): a single negative, the previous one, used */
 		sb_ue(&s, 1);                 /* num_negative_pics */
 		sb_ue(&s, 0);                 /* num_positive_pics */
-		sb_ue(&s, (uint32_t) (v->poc - v->poc_riferimento - 1)); /* delta_poc_s0_minus1[0] */
+		sb_ue(&s, (uint32_t) (v->poc - v->poc_reference - 1)); /* delta_poc_s0_minus1[0] */
 		sb_flag(&s, true);            /* used_by_curr_pic_s0_flag[0] */
 		if (v->hevc.tmvp)
 			sb_flag(&s, true);        /* slice_temporal_mvp_enabled_flag */
@@ -781,11 +781,11 @@ static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 	}
 	if (!idr) {
 		sb_flag(&s, false);           /* num_ref_idx_active_override_flag */
-		if (tipo == 0)
+		if (kind == 0)
 			sb_flag(&s, false);       /* mvd_l1_zero_flag */
 		/* cabac_init_present_flag is 0: no cabac_init_flag */
 		if (v->hevc.tmvp) {
-			if (tipo == 0)
+			if (kind == 0)
 				sb_flag(&s, true);    /* collocated_from_l0_flag */
 			/* collocated_ref_idx: absent, num_ref_idx_l0_active_minus1 = 0 */
 		}
@@ -794,30 +794,30 @@ static size_t hevc_slice(const VaDiretta *v, bool idr, uint8_t *fuori, size_t ca
 	sb_se(&s, 0);                     /* slice_qp_delta */
 	/* pps_loop_filter_across_slices_enabled_flag && (sao || deblocking on) ⇒ present */
 	sb_flag(&s, false);               /* slice_loop_filter_across_slices_enabled_flag */
-	sb_chiudi_rbsp(&s);               /* byte_alignment() */
-	if (s.traboccato)
+	sb_close_rbsp(&s);               /* byte_alignment() */
+	if (s.overflowed)
 		return 0;
-	return nal_annexb(fuori, capacita, testa, 2, rbsp, sb_byte(&s));
+	return nal_annexb(outside, capabilities, head, 2, rbsp, sb_byte(&s));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1-bis. THE OPENING: configuration, context, surfaces, buffers
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static bool attributo(VADisplay d, VAProfile p, VAEntrypoint e, VAConfigAttribType tipo,
-                      uint32_t *valore)
+static bool attribute(VADisplay d, VAProfile p, VAEntrypoint e, VAConfigAttribType kind,
+                      uint32_t *value_v)
 {
-	VAConfigAttrib a = { .type = tipo };
+	VAConfigAttrib a = { .type = kind };
 
 	if (vaGetConfigAttributes(d, p, e, &a, 1) != VA_STATUS_SUCCESS)
 		return false;
 	if (a.value == VA_ATTRIB_NOT_SUPPORTED)
 		return false;
-	*valore = a.value;
+	*value_v = a.value;
 	return true;
 }
 
-static uint32_t allinea(uint32_t x, uint32_t a)
+static uint32_t align(uint32_t x, uint32_t a)
 {
 	return (x + a - 1) / a * a;
 }
@@ -825,13 +825,13 @@ static uint32_t allinea(uint32_t x, uint32_t a)
 /* What the driver can do in HEVC, and the sizes that follow from it: it is
  * ffmpeg's `vaapi_encode_h265_get_encoder_caps` + the «update sps setting
  * according to queried result» block. */
-static void hevc_capacita(VaDiretta *v)
+static void hevc_capabilities(VaDirect *v)
 {
-	uint32_t features = 0, blocchi = 0;
-	bool f_ok = attributo(v->display, v->r.profilo, v->r.entrypoint,
+	uint32_t features = 0, blocks = 0;
+	bool f_ok = attribute(v->display, v->r.profile_v, v->r.entrypoint,
 	                      VAConfigAttribEncHEVCFeatures, &features);
-	bool b_ok = attributo(v->display, v->r.profilo, v->r.entrypoint,
-	                      VAConfigAttribEncHEVCBlockSizes, &blocchi);
+	bool b_ok = attribute(v->display, v->r.profile_v, v->r.entrypoint,
+	                      VAConfigAttribEncHEVCBlockSizes, &blocks);
 
 	/* ffmpeg's defaults («These values come from the capabilities of the
 	 * first encoder implementation in the i965 driver on Intel Skylake»). */
@@ -846,7 +846,7 @@ static void hevc_capacita(VaDiretta *v)
 	v->hevc.tmvp = false;
 	v->hevc.pcm = false;
 	v->hevc.transform_skip = false;
-	v->hevc.cu_qp_delta = v->d.modo_va != VA_RC_CQP;
+	v->hevc.cu_qp_delta = v->d.va_mode != VA_RC_CQP;
 	v->hevc.ctu = 32;
 	v->hevc.min_cb = 16;
 
@@ -857,11 +857,11 @@ static void hevc_capacita(VaDiretta *v)
 		v->hevc.tmvp = f.bits.temporal_mvp != 0;
 		v->hevc.pcm = f.bits.pcm != 0;
 		v->hevc.transform_skip = f.bits.transform_skip != 0;
-		if (v->d.modo_va != VA_RC_CQP)
+		if (v->d.va_mode != VA_RC_CQP)
 			v->hevc.cu_qp_delta = f.bits.cu_qp_delta != 0;
 	}
 	if (b_ok) {
-		VAConfigAttribValEncHEVCBlockSizes b = { .value = blocchi };
+		VAConfigAttribValEncHEVCBlockSizes b = { .value = blocks };
 		v->hevc.ctu = 1u << (b.bits.log2_max_coding_tree_block_size_minus3 + 3);
 		v->hevc.min_cb = 1u << (b.bits.log2_min_luma_coding_block_size_minus3 + 3);
 		v->hevc.log2_min_cb_m3 = b.bits.log2_min_luma_coding_block_size_minus3;
@@ -873,32 +873,32 @@ static void hevc_capacita(VaDiretta *v)
 		v->hevc.depth_inter = b.bits.max_max_transform_hierarchy_depth_inter;
 		v->hevc.depth_intra = b.bits.max_max_transform_hierarchy_depth_intra;
 	}
-	v->d.hevc_attributi_letti = f_ok && b_ok;
+	v->d.hevc_attributes_read = f_ok && b_ok;
 	v->d.hevc_features = features;
-	v->d.hevc_blocchi = blocchi;
-	registro_dice(REG_CODIFICA,
+	v->d.hevc_blocks = blocks;
+	log_says(LOG_ENCODING,
 	              "vadiretta HEVC: the driver %s the attributes — CTB %u, minimum CB %u, "
 	              "amp %d, sao %d, tmvp %d, transform_skip %d, cu_qp_delta %d "
 	              "(features 0x%x, blocks 0x%x)",
-	              v->d.hevc_attributi_letti ? "DECLARES" : "does NOT declare (ffmpeg defaults)",
+	              v->d.hevc_attributes_read ? "DECLARES" : "does NOT declare (ffmpeg defaults)",
 	              v->hevc.ctu, v->hevc.min_cb, v->hevc.amp, v->hevc.sao, v->hevc.tmvp,
-	              v->hevc.transform_skip, v->hevc.cu_qp_delta, features, blocchi);
+	              v->hevc.transform_skip, v->hevc.cu_qp_delta, features, blocks);
 }
 
-static void riempi_sequenza_h264(VaDiretta *v)
+static void fill_h264_sequence(VaDirect *v)
 {
 	VAEncSequenceParameterBufferH264 *q = &v->seq.h264;
-	uint32_t taglio_dx = (16 * v->mb_l - v->r.larghezza) / 2;
-	uint32_t taglio_giu = (16 * v->mb_a - v->r.altezza) / 2;
-	uint32_t gop = v->r.chiavi_ogni ? v->r.chiavi_ogni : (uint32_t) INT_MAX;
+	uint32_t crop_right = (16 * v->mb_l - v->r.width_px) / 2;
+	uint32_t crop_bottom = (16 * v->mb_a - v->r.height_px) / 2;
+	uint32_t gop = v->r.keys_every ? v->r.keys_every : (uint32_t) INT_MAX;
 
 	memset(q, 0, sizeof *q);
 	q->seq_parameter_set_id = 0;
-	q->level_idc = (uint8_t) v->d.livello_idc;
+	q->level_idc = (uint8_t) v->d.lvl_idc;
 	q->intra_period = gop;
 	q->intra_idr_period = gop;
 	q->ip_period = 1;
-	q->bits_per_second = (uint32_t) (v->d.modo_va == VA_RC_CQP ? 0 : v->r.banda_filo);
+	q->bits_per_second = (uint32_t) (v->d.va_mode == VA_RC_CQP ? 0 : v->r.bandwidth_wire);
 	q->max_num_ref_frames = 1;
 	q->picture_width_in_mbs = (uint16_t) v->mb_l;
 	q->picture_height_in_mbs = (uint16_t) v->mb_a;
@@ -908,38 +908,38 @@ static void riempi_sequenza_h264(VaDiretta *v)
 	q->seq_fields.bits.log2_max_frame_num_minus4 = 4;
 	q->seq_fields.bits.pic_order_cnt_type = 2;
 	q->seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 = 0;
-	q->bit_depth_luma_minus8 = (uint8_t) (v->r.profondita - 8);
-	q->bit_depth_chroma_minus8 = (uint8_t) (v->r.profondita - 8);
-	q->frame_cropping_flag = (taglio_dx || taglio_giu) ? 1 : 0;
-	q->frame_crop_right_offset = taglio_dx;
-	q->frame_crop_bottom_offset = taglio_giu;
+	q->bit_depth_luma_minus8 = (uint8_t) (v->r.bit_depth - 8);
+	q->bit_depth_chroma_minus8 = (uint8_t) (v->r.bit_depth - 8);
+	q->frame_cropping_flag = (crop_right || crop_bottom) ? 1 : 0;
+	q->frame_crop_right_offset = crop_right;
+	q->frame_crop_bottom_offset = crop_bottom;
 	q->vui_parameters_present_flag = 1;
 	q->vui_fields.bits.timing_info_present_flag = 1;
 	q->vui_fields.bits.bitstream_restriction_flag = 1;
 	q->vui_fields.bits.log2_max_mv_length_horizontal = 15;
 	q->vui_fields.bits.log2_max_mv_length_vertical = 15;
 	q->num_units_in_tick = 1;
-	q->time_scale = 2u * v->r.fotogrammi_al_secondo;
+	q->time_scale = 2u * v->r.frames_per_second;
 }
 
-static void riempi_sequenza_hevc(VaDiretta *v)
+static void fill_hevc_sequence(VaDirect *v)
 {
 	VAEncSequenceParameterBufferHEVC *q = &v->seq.hevc;
-	uint32_t gop = v->r.chiavi_ogni ? v->r.chiavi_ogni : (uint32_t) INT_MAX;
+	uint32_t gop = v->r.keys_every ? v->r.keys_every : (uint32_t) INT_MAX;
 
 	memset(q, 0, sizeof *q);
-	q->general_profile_idc = v->r.profondita == 10 ? 2 : 1;
-	q->general_level_idc = (uint8_t) v->d.livello_idc;
-	q->general_tier_flag = v->d.livello_idc == 255 ? 1 : 0;
+	q->general_profile_idc = v->r.bit_depth == 10 ? 2 : 1;
+	q->general_level_idc = (uint8_t) v->d.lvl_idc;
+	q->general_tier_flag = v->d.lvl_idc == 255 ? 1 : 0;
 	q->intra_period = gop;
 	q->intra_idr_period = gop;
 	q->ip_period = 1;
-	q->bits_per_second = (uint32_t) (v->d.modo_va == VA_RC_CQP ? 0 : v->r.banda_filo);
-	q->pic_width_in_luma_samples = (uint16_t) v->d.larghezza_superficie;
-	q->pic_height_in_luma_samples = (uint16_t) v->d.altezza_superficie;
+	q->bits_per_second = (uint32_t) (v->d.va_mode == VA_RC_CQP ? 0 : v->r.bandwidth_wire);
+	q->pic_width_in_luma_samples = (uint16_t) v->d.surface_width;
+	q->pic_height_in_luma_samples = (uint16_t) v->d.surface_height;
 	q->seq_fields.bits.chroma_format_idc = 1;
-	q->seq_fields.bits.bit_depth_luma_minus8 = (unsigned) (v->r.profondita - 8);
-	q->seq_fields.bits.bit_depth_chroma_minus8 = (unsigned) (v->r.profondita - 8);
+	q->seq_fields.bits.bit_depth_luma_minus8 = (unsigned) (v->r.bit_depth - 8);
+	q->seq_fields.bits.bit_depth_chroma_minus8 = (unsigned) (v->r.bit_depth - 8);
 	q->seq_fields.bits.amp_enabled_flag = v->hevc.amp;
 	q->seq_fields.bits.sample_adaptive_offset_enabled_flag = v->hevc.sao;
 	q->seq_fields.bits.sps_temporal_mvp_enabled_flag = v->hevc.tmvp;
@@ -952,275 +952,275 @@ static void riempi_sequenza_hevc(VaDiretta *v)
 	q->vui_parameters_present_flag = 0;
 }
 
-VaDiretta *vadiretta_apri(const VaDispositivo *d, const VaDirettaRichiesta *r,
-                          char *errore, size_t errore_byte)
+VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
+                          char *failure, size_t error_byte)
 {
-	VaDiretta *v;
-	VAConfigAttrib attributi[4];
-	int quanti = 0;
-	uint32_t valore;
+	VaDirect *v;
+	VAConfigAttrib attributes[4];
+	int how_many = 0;
+	uint32_t value_v;
 	VAStatus st;
-	bool hevc = r->codec == VADIRETTA_HEVC;
-	bool p10 = r->profondita == 10;
+	bool hevc = r->codec == VADIRECT_HEVC;
+	bool p10 = r->bit_depth == 10;
 
-	if (!d || !d->display || !r || !r->larghezza || !r->altezza) {
-		di(errore, errore_byte, "vadiretta: incomplete request");
+	if (!d || !d->display || !r || !r->width_px || !r->height_px) {
+		di(failure, error_byte, "vadiretta: incomplete request");
 		return NULL;
 	}
 	if (!hevc && p10) {
-		di(errore, errore_byte, "vadiretta: 10-bit H.264 does not open (only 8-bit High)");
+		di(failure, error_byte, "vadiretta: 10-bit H.264 does not open (only 8-bit High)");
 		return NULL;
 	}
 	if (r->qp < 1 || r->qp > 51) {
-		di(errore, errore_byte, "vadiretta: QP %d outside 1..51", r->qp);
+		di(failure, error_byte, "vadiretta: QP %d outside 1..51", r->qp);
 		return NULL;
 	}
 	v = calloc(1, sizeof *v);
 	if (!v) {
-		di(errore, errore_byte, "out of memory");
+		di(failure, error_byte, "out of memory");
 		return NULL;
 	}
 	v->display = d->display;
-	snprintf(v->fornitore, sizeof v->fornitore, "%s", d->fornitore);
+	snprintf(v->vendor, sizeof v->vendor, "%s", d->vendor);
 	v->r = *r;
 	v->config = VA_INVALID_ID;
-	v->contesto = VA_INVALID_ID;
+	v->context = VA_INVALID_ID;
 	v->coded = VA_INVALID_ID;
-	for (unsigned i = 0; i < RICOSTRUITE; i++)
-		v->ricostruite[i] = VA_INVALID_ID;
-	if (!v->r.fotogrammi_al_secondo)
-		v->r.fotogrammi_al_secondo = 30;
-	if (!v->r.superfici_ingresso)
-		v->r.superfici_ingresso = 4;
+	for (unsigned i = 0; i < REBUILT; i++)
+		v->rebuilt[i] = VA_INVALID_ID;
+	if (!v->r.frames_per_second)
+		v->r.frames_per_second = 30;
+	if (!v->r.input_surfaces)
+		v->r.input_surfaces = 4;
 
 	/* ── bitrate control: CQP, or QVBR with the cap ──────────────────────── */
-	if (r->banda_filo > 0) {
-		v->d.modo_va = VA_RC_QVBR;
+	if (r->bandwidth_wire > 0) {
+		v->d.va_mode = VA_RC_QVBR;
 		/* ffmpeg: under a regulated mode pic_init_qp and slice_qp_delta are
 		 * 26 (H.264) and 30 (HEVC), and the requested QP is the quality_factor. */
-		v->qp_fisso = hevc ? 30 : 26;
+		v->fixed_qp = hevc ? 30 : 26;
 	} else {
-		v->d.modo_va = VA_RC_CQP;
-		v->qp_fisso = r->qp;
+		v->d.va_mode = VA_RC_CQP;
+		v->fixed_qp = r->qp;
 	}
 
 	/* ── the surface format, and the driver's declaration of it ──────────── */
-	v->d.formato_rt = p10 ? VA_RT_FORMAT_YUV420_10BPP : VA_RT_FORMAT_YUV420;
-	v->d.fourcc_ingresso = p10 ? VA_FOURCC_P010 : VA_FOURCC_NV12;
-	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribRTFormat, &valore)) {
-		if (!(valore & v->d.formato_rt)) {
-			di(errore, errore_byte,
+	v->d.rt_format = p10 ? VA_RT_FORMAT_YUV420_10BPP : VA_RT_FORMAT_YUV420;
+	v->d.input_fourcc = p10 ? VA_FOURCC_P010 : VA_FOURCC_NV12;
+	if (attribute(d->display, r->profile_v, r->entrypoint, VAConfigAttribRTFormat, &value_v)) {
+		if (!(value_v & v->d.rt_format)) {
+			di(failure, error_byte,
 			   "the driver does not declare format %s for this profile/entrypoint (0x%x)",
-			   p10 ? "YUV420_10" : "YUV420", valore);
+			   p10 ? "YUV420_10" : "YUV420", value_v);
 			free(v);
 			return NULL;
 		}
-		attributi[quanti++] = (VAConfigAttrib){ .type = VAConfigAttribRTFormat,
-			                                    .value = v->d.formato_rt };
+		attributes[how_many++] = (VAConfigAttrib){ .type = VAConfigAttribRTFormat,
+			                                    .value = v->d.rt_format };
 	}
-	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribRateControl, &valore)) {
-		if (!(valore & v->d.modo_va)) {
-			di(errore, errore_byte, "the driver does not declare bitrate mode 0x%x (it has 0x%x)",
-			   v->d.modo_va, valore);
+	if (attribute(d->display, r->profile_v, r->entrypoint, VAConfigAttribRateControl, &value_v)) {
+		if (!(value_v & v->d.va_mode)) {
+			di(failure, error_byte, "the driver does not declare bitrate mode 0x%x (it has 0x%x)",
+			   v->d.va_mode, value_v);
 			free(v);
 			return NULL;
 		}
-		attributi[quanti++] = (VAConfigAttrib){ .type = VAConfigAttribRateControl,
-			                                    .value = v->d.modo_va };
+		attributes[how_many++] = (VAConfigAttrib){ .type = VAConfigAttribRateControl,
+			                                    .value = v->d.va_mode };
 	}
 	/* The packed headers we ask to write ourselves: the
 	 * same three as ffmpeg (SEQUENCE = SPS/PPS/VPS, SLICE, MISC = SEI). */
-	if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribEncPackedHeaders,
-	              &valore)) {
-		v->d.packed_headers_driver = valore;
-		v->d.packed_headers = valore & (VA_ENC_PACKED_HEADER_SEQUENCE
+	if (attribute(d->display, r->profile_v, r->entrypoint, VAConfigAttribEncPackedHeaders,
+	              &value_v)) {
+		v->d.packed_headers_driver = value_v;
+		v->d.packed_headers = value_v & (VA_ENC_PACKED_HEADER_SEQUENCE
 		                                | VA_ENC_PACKED_HEADER_SLICE
 		                                | VA_ENC_PACKED_HEADER_MISC);
 		if (v->d.packed_headers)
-			attributi[quanti++] = (VAConfigAttrib){ .type = VAConfigAttribEncPackedHeaders,
+			attributes[how_many++] = (VAConfigAttrib){ .type = VAConfigAttribEncPackedHeaders,
 				                                    .value = v->d.packed_headers };
 	}
 
 	/* ── P as B?  Ask the driver, like ffmpeg (VAConfigAttribPredictionDirection) */
 	v->d.p_come_b = false;
 	{
-		uint32_t riferimenti = 0, direzione = 0;
+		uint32_t references = 0, direction = 0;
 		uint32_t l0 = 0, l1 = 0;
-		if (attributo(d->display, r->profilo, r->entrypoint, VAConfigAttribEncMaxRefFrames,
-		              &riferimenti)) {
-			l0 = riferimenti & 0xFFFF;
-			l1 = (riferimenti >> 16) & 0xFFFF;
+		if (attribute(d->display, r->profile_v, r->entrypoint, VAConfigAttribEncMaxRefFrames,
+		              &references)) {
+			l0 = references & 0xFFFF;
+			l1 = (references >> 16) & 0xFFFF;
 		}
 		if (l0 < 1) {
-			di(errore, errore_byte, "the driver declares no reference frame");
+			di(failure, error_byte, "the driver declares no reference frame");
 			free(v);
 			return NULL;
 		}
-		if (attributo(d->display, r->profilo, r->entrypoint,
-		              VAConfigAttribPredictionDirection, &direzione)) {
-			if ((direzione & VA_PREDICTION_DIRECTION_BI_NOT_EMPTY) && l0 > 0 && l1 > 0)
+		if (attribute(d->display, r->profile_v, r->entrypoint,
+		              VAConfigAttribPredictionDirection, &direction)) {
+			if ((direction & VA_PREDICTION_DIRECTION_BI_NOT_EMPTY) && l0 > 0 && l1 > 0)
 				v->d.p_come_b = true;
 		}
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "vadiretta: declared references l0=%u l1=%u, directions 0x%x ⇒ the Ps "
-		              "are %s", l0, l1, direzione,
+		              "are %s", l0, l1, direction,
 		              v->d.p_come_b ? "B slices «GPB» (the driver cannot do P)" : "slice P");
 	}
 
 	/* ── the aligned sizes and the level ─────────────────────────────────── */
 	if (hevc) {
-		hevc_capacita(v);
-		v->d.blocco = v->hevc.ctu;
-		v->d.larghezza_superficie = allinea(r->larghezza, v->hevc.min_cb);
-		v->d.altezza_superficie = allinea(r->altezza, v->hevc.min_cb);
-		v->ctb_l = (v->d.larghezza_superficie + v->hevc.ctu - 1) / v->hevc.ctu;
-		v->ctb_a = (v->d.altezza_superficie + v->hevc.ctu - 1) / v->hevc.ctu;
-		v->d.livello_idc = r->livello_idc > 0
-		                       ? r->livello_idc
-		                       : livello_hevc(v->d.modo_va == VA_RC_CQP ? 0 : r->banda_punto,
-		                                      v->d.larghezza_superficie,
-		                                      v->d.altezza_superficie, 1);
+		hevc_capabilities(v);
+		v->d.block = v->hevc.ctu;
+		v->d.surface_width = align(r->width_px, v->hevc.min_cb);
+		v->d.surface_height = align(r->height_px, v->hevc.min_cb);
+		v->ctb_l = (v->d.surface_width + v->hevc.ctu - 1) / v->hevc.ctu;
+		v->ctb_a = (v->d.surface_height + v->hevc.ctu - 1) / v->hevc.ctu;
+		v->d.lvl_idc = r->lvl_idc > 0
+		                       ? r->lvl_idc
+		                       : hevc_level(v->d.va_mode == VA_RC_CQP ? 0 : r->bandwidth_point,
+		                                      v->d.surface_width,
+		                                      v->d.surface_height, 1);
 	} else {
-		v->mb_l = (r->larghezza + 15) / 16;
-		v->mb_a = (r->altezza + 15) / 16;
-		v->d.blocco = 16;
-		v->d.larghezza_superficie = v->mb_l * 16;
-		v->d.altezza_superficie = v->mb_a * 16;
-		v->d.livello_idc = r->livello_idc > 0
-		                       ? r->livello_idc
-		                       : livello_h264(v->d.modo_va == VA_RC_CQP ? 0 : r->banda_filo,
-		                                      (int) v->r.fotogrammi_al_secondo,
+		v->mb_l = (r->width_px + 15) / 16;
+		v->mb_a = (r->height_px + 15) / 16;
+		v->d.block = 16;
+		v->d.surface_width = v->mb_l * 16;
+		v->d.surface_height = v->mb_a * 16;
+		v->d.lvl_idc = r->lvl_idc > 0
+		                       ? r->lvl_idc
+		                       : h264_level(v->d.va_mode == VA_RC_CQP ? 0 : r->bandwidth_wire,
+		                                      (int) v->r.frames_per_second,
 		                                      v->mb_l, v->mb_a, 1);
 	}
 
 	/* ── configuration and context ───────────────────────────────────────── */
-	st = vaCreateConfig(d->display, r->profilo, r->entrypoint, attributi, quanti, &v->config);
+	st = vaCreateConfig(d->display, r->profile_v, r->entrypoint, attributes, how_many, &v->config);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "vaCreateConfig: %s", vaErrorStr(st));
-		vadiretta_chiudi(v);
+		di(failure, error_byte, "vaCreateConfig: %s", vaErrorStr(st));
+		vadirect_close(v);
 		return NULL;
 	}
 	/* the RECONSTRUCTED surfaces, at the aligned size */
-	st = vaCreateSurfaces(d->display, v->d.formato_rt, v->d.larghezza_superficie,
-	                      v->d.altezza_superficie, v->ricostruite, RICOSTRUITE, NULL, 0);
+	st = vaCreateSurfaces(d->display, v->d.rt_format, v->d.surface_width,
+	                      v->d.surface_height, v->rebuilt, REBUILT, NULL, 0);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "the %ux%u reconstructed surfaces were not created: %s",
-		   v->d.larghezza_superficie, v->d.altezza_superficie, vaErrorStr(st));
-		for (unsigned i = 0; i < RICOSTRUITE; i++)
-			v->ricostruite[i] = VA_INVALID_ID;
-		vadiretta_chiudi(v);
+		di(failure, error_byte, "the %ux%u reconstructed surfaces were not created: %s",
+		   v->d.surface_width, v->d.surface_height, vaErrorStr(st));
+		for (unsigned i = 0; i < REBUILT; i++)
+			v->rebuilt[i] = VA_INVALID_ID;
+		vadirect_close(v);
 		return NULL;
 	}
-	st = vaCreateContext(d->display, v->config, (int) v->d.larghezza_superficie,
-	                     (int) v->d.altezza_superficie, VA_PROGRESSIVE, v->ricostruite,
-	                     RICOSTRUITE, &v->contesto);
+	st = vaCreateContext(d->display, v->config, (int) v->d.surface_width,
+	                     (int) v->d.surface_height, VA_PROGRESSIVE, v->rebuilt,
+	                     REBUILT, &v->context);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "vaCreateContext %ux%u: %s", v->d.larghezza_superficie,
-		   v->d.altezza_superficie, vaErrorStr(st));
-		v->contesto = VA_INVALID_ID;
-		vadiretta_chiudi(v);
+		di(failure, error_byte, "vaCreateContext %ux%u: %s", v->d.surface_width,
+		   v->d.surface_height, vaErrorStr(st));
+		v->context = VA_INVALID_ID;
+		vadirect_close(v);
 		return NULL;
 	}
 	/* the input pool, at the size of the CANVAS: the driver pads by itself */
-	v->ingresso = calloc(v->r.superfici_ingresso, sizeof *v->ingresso);
-	if (!v->ingresso) {
-		di(errore, errore_byte, "out of memory for the pool");
-		vadiretta_chiudi(v);
+	v->ingress = calloc(v->r.input_surfaces, sizeof *v->ingress);
+	if (!v->ingress) {
+		di(failure, error_byte, "out of memory for the pool");
+		vadirect_close(v);
 		return NULL;
 	}
 	{
-		VASurfaceAttrib formato = {
+		VASurfaceAttrib schema = {
 			.type = VASurfaceAttribPixelFormat,
 			.flags = VA_SURFACE_ATTRIB_SETTABLE,
 			.value.type = VAGenericValueTypeInteger,
-			.value.value.i = (int) v->d.fourcc_ingresso,
+			.value.value.i = (int) v->d.input_fourcc,
 		};
-		st = vaCreateSurfaces(d->display, v->d.formato_rt, r->larghezza, r->altezza,
-		                      v->ingresso, v->r.superfici_ingresso, &formato, 1);
+		st = vaCreateSurfaces(d->display, v->d.rt_format, r->width_px, r->height_px,
+		                      v->ingress, v->r.input_surfaces, &schema, 1);
 	}
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "the input pool (%u x %s %ux%u) was not created: %s",
-		   v->r.superfici_ingresso, p10 ? "P010" : "NV12", r->larghezza, r->altezza,
+		di(failure, error_byte, "the input pool (%u x %s %ux%u) was not created: %s",
+		   v->r.input_surfaces, p10 ? "P010" : "NV12", r->width_px, r->height_px,
 		   vaErrorStr(st));
-		free(v->ingresso);
-		v->ingresso = NULL;
-		vadiretta_chiudi(v);
+		free(v->ingress);
+		v->ingress = NULL;
+		vadirect_close(v);
 		return NULL;
 	}
-	v->quante_ingresso = v->r.superfici_ingresso;
+	v->how_many_ingress = v->r.input_surfaces;
 	/* the buffer of encoded bytes */
-	v->coded_byte = (size_t) 3 * v->d.larghezza_superficie * v->d.altezza_superficie + CODED_MARGINE;
-	st = vaCreateBuffer(d->display, v->contesto, VAEncCodedBufferType, (unsigned) v->coded_byte,
+	v->coded_byte = (size_t) 3 * v->d.surface_width * v->d.surface_height + CODED_MARGIN;
+	st = vaCreateBuffer(d->display, v->context, VAEncCodedBufferType, (unsigned) v->coded_byte,
 	                    1, NULL, &v->coded);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "the %zu-byte coded buffer was not created: %s",
+		di(failure, error_byte, "the %zu-byte coded buffer was not created: %s",
 		   v->coded_byte, vaErrorStr(st));
 		v->coded = VA_INVALID_ID;
-		vadiretta_chiudi(v);
+		vadirect_close(v);
 		return NULL;
 	}
-	v->uscita_capacita = v->coded_byte;
-	v->uscita = malloc(v->uscita_capacita);
-	if (!v->uscita) {
-		di(errore, errore_byte, "out of memory for the output");
-		vadiretta_chiudi(v);
+	v->output_capabilities = v->coded_byte;
+	v->out_dir = malloc(v->output_capabilities);
+	if (!v->out_dir) {
+		di(failure, error_byte, "out of memory for the output");
+		vadirect_close(v);
 		return NULL;
 	}
 	/* Is `vaSyncBuffer` there?  Ask with the null buffer, like ffmpeg. */
 	v->d.sync_buffer = vaSyncBuffer(d->display, VA_INVALID_ID, 0) != VA_STATUS_ERROR_UNIMPLEMENTED;
 
 	if (hevc)
-		riempi_sequenza_hevc(v);
+		fill_hevc_sequence(v);
 	else
-		riempi_sequenza_h264(v);
+		fill_h264_sequence(v);
 
-	registro_dice(REG_CODIFICA,
+	log_says(LOG_ENCODING,
 	              "vadiretta open: %s %d bit %ux%u (surface %ux%u, block %u) · "
 	              "profile %d entrypoint %d · %s (qp %d) · level %d%s · packed header "
 	              "0x%x (driver 0x%x) · %s · %u input surfaces",
-	              hevc ? "HEVC" : "H.264", r->profondita, r->larghezza, r->altezza,
-	              v->d.larghezza_superficie, v->d.altezza_superficie, v->d.blocco,
-	              (int) r->profilo, (int) r->entrypoint,
-	              v->d.modo_va == VA_RC_CQP ? "CQP" : "QVBR", r->qp, v->d.livello_idc,
-	              r->livello_idc > 0 ? " (imposed)" : " (computed like ffmpeg)",
+	              hevc ? "HEVC" : "H.264", r->bit_depth, r->width_px, r->height_px,
+	              v->d.surface_width, v->d.surface_height, v->d.block,
+	              (int) r->profile_v, (int) r->entrypoint,
+	              v->d.va_mode == VA_RC_CQP ? "CQP" : "QVBR", r->qp, v->d.lvl_idc,
+	              r->lvl_idc > 0 ? " (imposed)" : " (computed like ffmpeg)",
 	              v->d.packed_headers, v->d.packed_headers_driver,
-	              v->d.sync_buffer ? "vaSyncBuffer" : "vaSyncSurface", v->quante_ingresso);
+	              v->d.sync_buffer ? "vaSyncBuffer" : "vaSyncSurface", v->how_many_ingress);
 	return v;
 }
 
-void vadiretta_chiudi(VaDiretta *v)
+void vadirect_close(VaDirect *v)
 {
 	if (!v)
 		return;
 	if (v->coded != VA_INVALID_ID)
 		vaDestroyBuffer(v->display, v->coded);
-	if (v->contesto != VA_INVALID_ID)
-		vaDestroyContext(v->display, v->contesto);
-	if (v->ingresso) {
-		vaDestroySurfaces(v->display, v->ingresso, (int) v->quante_ingresso);
-		free(v->ingresso);
+	if (v->context != VA_INVALID_ID)
+		vaDestroyContext(v->display, v->context);
+	if (v->ingress) {
+		vaDestroySurfaces(v->display, v->ingress, (int) v->how_many_ingress);
+		free(v->ingress);
 	}
-	if (v->ricostruite[0] != VA_INVALID_ID)
-		vaDestroySurfaces(v->display, v->ricostruite, RICOSTRUITE);
+	if (v->rebuilt[0] != VA_INVALID_ID)
+		vaDestroySurfaces(v->display, v->rebuilt, REBUILT);
 	if (v->config != VA_INVALID_ID)
 		vaDestroyConfig(v->display, v->config);
-	free(v->uscita);
+	free(v->out_dir);
 	free(v);
 }
 
-const VaDirettaDichiarazione *vadiretta_dichiarazione(const VaDiretta *v)
+const VaDirectDeclaration *vadirect_declaration(const VaDirect *v)
 {
 	return v ? &v->d : NULL;
 }
 
-VASurfaceID vadiretta_superficie_ingresso(VaDiretta *v)
+VASurfaceID vadirect_input_surface(VaDirect *v)
 {
 	VASurfaceID s;
 
-	if (!v || !v->quante_ingresso)
+	if (!v || !v->how_many_ingress)
 		return VA_INVALID_ID;
-	s = v->ingresso[v->prossima_ingresso];
-	v->prossima_ingresso = (v->prossima_ingresso + 1) % v->quante_ingresso;
+	s = v->ingress[v->next_ingress];
+	v->next_ingress = (v->next_ingress + 1) % v->how_many_ingress;
 	return s;
 }
 
@@ -1235,79 +1235,79 @@ VASurfaceID vadiretta_superficie_ingresso(VaDiretta *v)
 
 typedef struct {
 	VABufferID id[24];
-	int quanti;
-	bool guasto;
-	char errore[256];
+	int how_many;
+	bool fault;
+	char failure[256];
 } Buffer;
 
-static void buffer_param(VaDiretta *v, Buffer *b, VABufferType tipo, const void *dati,
+static void buffer_param(VaDirect *v, Buffer *b, VABufferType kind, const void *data_v,
                          size_t byte)
 {
 	VAStatus st;
 
-	if (b->guasto || b->quanti >= (int) (sizeof b->id / sizeof b->id[0])) {
-		b->guasto = true;
+	if (b->fault || b->how_many >= (int) (sizeof b->id / sizeof b->id[0])) {
+		b->fault = true;
 		return;
 	}
-	st = vaCreateBuffer(v->display, v->contesto, tipo, (unsigned) byte, 1, (void *) dati,
-	                    &b->id[b->quanti]);
+	st = vaCreateBuffer(v->display, v->context, kind, (unsigned) byte, 1, (void *) data_v,
+	                    &b->id[b->how_many]);
 	if (st != VA_STATUS_SUCCESS) {
-		b->guasto = true;
-		snprintf(b->errore, sizeof b->errore, "vaCreateBuffer(type %d, %zu bytes): %s",
-		         (int) tipo, byte, vaErrorStr(st));
+		b->fault = true;
+		snprintf(b->failure, sizeof b->failure, "vaCreateBuffer(type %d, %zu bytes): %s",
+		         (int) kind, byte, vaErrorStr(st));
 		return;
 	}
-	b->quanti++;
+	b->how_many++;
 }
 
-static void buffer_misc(VaDiretta *v, Buffer *b, VAEncMiscParameterType tipo, const void *dati,
+static void buffer_misc(VaDirect *v, Buffer *b, VAEncMiscParameterType kind, const void *data_v,
                         size_t byte)
 {
-	uint8_t scatola[256];
-	VAEncMiscParameterBuffer *testa = (VAEncMiscParameterBuffer *) scatola;
+	uint8_t container_box[256];
+	VAEncMiscParameterBuffer *head = (VAEncMiscParameterBuffer *) container_box;
 
-	if (sizeof(VAEncMiscParameterBuffer) + byte > sizeof scatola) {
-		b->guasto = true;
+	if (sizeof(VAEncMiscParameterBuffer) + byte > sizeof container_box) {
+		b->fault = true;
 		return;
 	}
-	memset(scatola, 0, sizeof scatola);
-	testa->type = tipo;
-	memcpy(testa->data, dati, byte);
-	buffer_param(v, b, VAEncMiscParameterBufferType, scatola,
+	memset(container_box, 0, sizeof container_box);
+	head->type = kind;
+	memcpy(head->data, data_v, byte);
+	buffer_param(v, b, VAEncMiscParameterBufferType, container_box,
 	             sizeof(VAEncMiscParameterBuffer) + byte);
 }
 
 /* A packed header: the parameter (type, length in bits, «already has the
  * emulation bytes») and the data.  ⚠ `has_emulation_bytes = 1`: we put the
  *   `03`s in ourselves in `nal_annexb()`, the driver must not add them again. */
-static void buffer_packed(VaDiretta *v, Buffer *b, unsigned tipo, const uint8_t *dati,
+static void buffer_packed(VaDirect *v, Buffer *b, unsigned kind, const uint8_t *data_v,
                           size_t byte)
 {
 	VAEncPackedHeaderParameterBuffer p = {
-		.type = tipo,
+		.type = kind,
 		.bit_length = (unsigned) (byte * 8),
 		.has_emulation_bytes = 1,
 	};
 
 	if (!byte) {
-		b->guasto = true;
-		snprintf(b->errore, sizeof b->errore, "a packed header is empty (type %u)",
-		         tipo);
+		b->fault = true;
+		snprintf(b->failure, sizeof b->failure, "a packed header is empty (type %u)",
+		         kind);
 		return;
 	}
 	buffer_param(v, b, VAEncPackedHeaderParameterBufferType, &p, sizeof p);
-	buffer_param(v, b, VAEncPackedHeaderDataBufferType, dati, byte);
+	buffer_param(v, b, VAEncPackedHeaderDataBufferType, data_v, byte);
 }
 
-static void parametri_globali(VaDiretta *v, Buffer *b)
+static void global_parameters(VaDirect *v, Buffer *b)
 {
-	if (v->d.modo_va != VA_RC_CQP) {
+	if (v->d.va_mode != VA_RC_CQP) {
 		/* `vaapi_encode_init_rate_control`: wire, share of the point, buffer
 		 * window in ms, and the QP as the QVBR quality factor. */
 		VAEncMiscParameterRateControl rc = {
-			.bits_per_second = (uint32_t) v->r.banda_filo,
-			.target_percentage = (uint32_t) (v->r.banda_punto * 100 / v->r.banda_filo),
-			.window_size = (uint32_t) ((int64_t) v->r.serbatoio_bit * 1000 / v->r.banda_filo),
+			.bits_per_second = (uint32_t) v->r.bandwidth_wire,
+			.target_percentage = (uint32_t) (v->r.bandwidth_point * 100 / v->r.bandwidth_wire),
+			.window_size = (uint32_t) ((int64_t) v->r.reservoir_bit * 1000 / v->r.bandwidth_wire),
 			.initial_qp = 0,
 			.min_qp = 0,
 			.basic_unit_size = 0,
@@ -1316,8 +1316,8 @@ static void parametri_globali(VaDiretta *v, Buffer *b)
 			.quality_factor = (uint32_t) v->r.qp,
 		};
 		VAEncMiscParameterHRD hrd = {
-			.initial_buffer_fullness = (uint32_t) ((int64_t) v->r.serbatoio_bit * 3 / 4),
-			.buffer_size = (uint32_t) v->r.serbatoio_bit,
+			.initial_buffer_fullness = (uint32_t) ((int64_t) v->r.reservoir_bit * 3 / 4),
+			.buffer_size = (uint32_t) v->r.reservoir_bit,
 		};
 		rc.rc_flags.bits.mb_rate_control = 2; /* «blbrc ? 1 : 2», and blbrc is off */
 		buffer_misc(v, b, VAEncMiscParameterTypeRateControl, &rc, sizeof rc);
@@ -1325,84 +1325,84 @@ static void parametri_globali(VaDiretta *v, Buffer *b)
 	}
 	{
 		VAEncMiscParameterFrameRate fr = {
-			.framerate = (1u << 16) | v->r.fotogrammi_al_secondo, /* den << 16 | num */
+			.framerate = (1u << 16) | v->r.frames_per_second, /* den << 16 | num */
 		};
 		buffer_misc(v, b, VAEncMiscParameterTypeFrameRate, &fr, sizeof fr);
 	}
 }
 
-static bool leggi_uscita(VaDiretta *v, char *errore, size_t errore_byte)
+static bool read_output(VaDirect *v, char *failure, size_t error_byte)
 {
-	VACodedBufferSegment *segmento = NULL, *s;
+	VACodedBufferSegment *segment = NULL, *s;
 	VAStatus st;
-	size_t totale = 0;
+	size_t total = 0;
 
-	st = vaMapBuffer(v->display, v->coded, (void **) &segmento);
+	st = vaMapBuffer(v->display, v->coded, (void **) &segment);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "vaMapBuffer on the encoded bytes: %s", vaErrorStr(st));
+		di(failure, error_byte, "vaMapBuffer on the encoded bytes: %s", vaErrorStr(st));
 		return false;
 	}
-	for (s = segmento; s; s = s->next)
-		totale += s->size;
-	if (totale > v->uscita_capacita) {
-		uint8_t *nuovo = realloc(v->uscita, totale);
-		if (!nuovo) {
+	for (s = segment; s; s = s->next)
+		total += s->size;
+	if (total > v->output_capabilities) {
+		uint8_t *fresh = realloc(v->out_dir, total);
+		if (!fresh) {
 			vaUnmapBuffer(v->display, v->coded);
-			di(errore, errore_byte, "out of memory for %zu output bytes", totale);
+			di(failure, error_byte, "out of memory for %zu output bytes", total);
 			return false;
 		}
-		v->uscita = nuovo;
-		v->uscita_capacita = totale;
+		v->out_dir = fresh;
+		v->output_capabilities = total;
 	}
-	totale = 0;
-	for (s = segmento; s; s = s->next) {
-		memcpy(v->uscita + totale, s->buf, s->size);
-		totale += s->size;
+	total = 0;
+	for (s = segment; s; s = s->next) {
+		memcpy(v->out_dir + total, s->buf, s->size);
+		total += s->size;
 	}
-	v->uscita_byte = totale;
+	v->output_byte = total;
 	vaUnmapBuffer(v->display, v->coded);
-	if (!totale) {
-		di(errore, errore_byte, "the driver returned zero bytes");
+	if (!total) {
+		di(failure, error_byte, "the driver returned zero bytes");
 		return false;
 	}
 	return true;
 }
 
-bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
-                        const uint8_t **dati, size_t *byte, char *errore, size_t errore_byte)
+bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key_id,
+                        const uint8_t **data_v, size_t *byte, char *failure, size_t error_byte)
 {
 	Buffer b;
-	uint8_t intestazione[4 * INTESTAZIONE_MAX];
+	uint8_t header[4 * MAX_HEADER];
 	size_t n, tot;
 	VAStatus st, fine;
-	bool hevc = v->r.codec == VADIRETTA_HEVC;
+	bool hevc = v->r.codec == VADIRECT_HEVC;
 	bool idr;
-	unsigned rif;
+	unsigned ref;
 
-	if (!v || ingresso == VA_INVALID_ID) {
-		di(errore, errore_byte, "vadiretta: nothing to encode");
+	if (!v || ingress == VA_INVALID_ID) {
+		di(failure, error_byte, "vadiretta: nothing to encode");
 		return false;
 	}
 	memset(&b, 0, sizeof b);
 
 	/* ── who this frame is ─────────────────────────────────────────────── */
-	idr = chiave || !v->riferimento_valido || v->ordine == 0
-	      || (v->r.chiavi_ogni && v->nel_gop >= v->r.chiavi_ogni);
+	idr = key_id || !v->reference_valid || v->order == 0
+	      || (v->r.keys_every && v->in_gop >= v->r.keys_every);
 	if (idr) {
-		v->ultimo_idr = v->ordine;
-		v->nel_gop = 0;
+		v->last_idr = v->order;
+		v->in_gop = 0;
 		v->frame_num = 0;
 		v->poc = 0;
-		if (v->ordine)
+		if (v->order)
 			v->idr_pic_id = (v->idr_pic_id + 1) & 0xFFFFu;
 	} else {
 		/* `hpic->frame_num = hprev->frame_num + prev->is_reference`: +1, always */
-		v->frame_num = v->frame_num_riferimento + 1;
-		v->poc = (int32_t) (v->ordine - v->ultimo_idr);
+		v->frame_num = v->frame_num_reference + 1;
+		v->poc = (int32_t) (v->order - v->last_idr);
 	}
-	v->nel_gop++;
-	rif = v->ricostruita_riferimento;
-	v->ricostruita_corrente = (rif + 1) % RICOSTRUITE;
+	v->in_gop++;
+	ref = v->rebuilt_reference;
+	v->rebuilt_current = (ref + 1) % REBUILT;
 
 	/* ── 1. sequence and global parameters, on the IDR ────────────────── */
 	if (idr) {
@@ -1410,14 +1410,14 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			buffer_param(v, &b, VAEncSequenceParameterBufferType, &v->seq.hevc, sizeof v->seq.hevc);
 		else
 			buffer_param(v, &b, VAEncSequenceParameterBufferType, &v->seq.h264, sizeof v->seq.h264);
-		parametri_globali(v, &b);
+		global_parameters(v, &b);
 	}
 
 	/* ── 2. the picture ───────────────────────────────────────────────── */
 	if (hevc) {
 		VAEncPictureParameterBufferHEVC p;
 		memset(&p, 0, sizeof p);
-		p.decoded_curr_pic.picture_id = v->ricostruite[v->ricostruita_corrente];
+		p.decoded_curr_pic.picture_id = v->rebuilt[v->rebuilt_current];
 		p.decoded_curr_pic.pic_order_cnt = v->poc;
 		p.decoded_curr_pic.flags = 0;
 		for (unsigned i = 0; i < 15; i++) {
@@ -1425,14 +1425,14 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			p.reference_frames[i].flags = VA_PICTURE_HEVC_INVALID;
 		}
 		if (!idr) {
-			p.reference_frames[0].picture_id = v->ricostruite[rif];
-			p.reference_frames[0].pic_order_cnt = v->poc_riferimento;
+			p.reference_frames[0].picture_id = v->rebuilt[ref];
+			p.reference_frames[0].pic_order_cnt = v->poc_reference;
 			p.reference_frames[0].flags = VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE;
 		}
 		p.coded_buf = v->coded;
 		p.collocated_ref_pic_index = v->hevc.tmvp ? 0 : 0xff;
 		p.last_picture = 0;
-		p.pic_init_qp = (uint8_t) v->qp_fisso;
+		p.pic_init_qp = (uint8_t) v->fixed_qp;
 		p.diff_cu_qp_delta_depth = (uint8_t) (v->hevc.cu_qp_delta ? v->hevc.log2_diff_cb : 0);
 		p.log2_parallel_merge_level_minus2 = 0;
 		p.ctu_max_bitsize_allowed = 0;
@@ -1450,7 +1450,7 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	} else {
 		VAEncPictureParameterBufferH264 p;
 		memset(&p, 0, sizeof p);
-		p.CurrPic.picture_id = v->ricostruite[v->ricostruita_corrente];
+		p.CurrPic.picture_id = v->rebuilt[v->rebuilt_current];
 		p.CurrPic.frame_idx = v->frame_num;
 		p.CurrPic.flags = 0;
 		p.CurrPic.TopFieldOrderCnt = 2 * v->poc; /* poc type 2: twice */
@@ -1460,18 +1460,18 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			p.ReferenceFrames[i].flags = VA_PICTURE_H264_INVALID;
 		}
 		if (!idr) {
-			p.ReferenceFrames[0].picture_id = v->ricostruite[rif];
-			p.ReferenceFrames[0].frame_idx = v->frame_num_riferimento;
+			p.ReferenceFrames[0].picture_id = v->rebuilt[ref];
+			p.ReferenceFrames[0].frame_idx = v->frame_num_reference;
 			p.ReferenceFrames[0].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
-			p.ReferenceFrames[0].TopFieldOrderCnt = 2 * v->poc_riferimento;
-			p.ReferenceFrames[0].BottomFieldOrderCnt = 2 * v->poc_riferimento;
+			p.ReferenceFrames[0].TopFieldOrderCnt = 2 * v->poc_reference;
+			p.ReferenceFrames[0].BottomFieldOrderCnt = 2 * v->poc_reference;
 		}
 		p.coded_buf = v->coded;
 		p.pic_parameter_set_id = 0;
 		p.seq_parameter_set_id = 0;
 		p.last_picture = 0;
 		p.frame_num = (uint16_t) v->frame_num;
-		p.pic_init_qp = (uint8_t) v->qp_fisso;
+		p.pic_init_qp = (uint8_t) v->fixed_qp;
 		p.num_ref_idx_l0_active_minus1 = 0;
 		p.num_ref_idx_l1_active_minus1 = 0;
 		p.chroma_qp_index_offset = 0;
@@ -1487,31 +1487,31 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	if (idr && (v->d.packed_headers & VA_ENC_PACKED_HEADER_SEQUENCE)) {
 		tot = 0;
 		if (hevc) {
-			n = hevc_vps(v, intestazione + tot, sizeof intestazione - tot);
+			n = hevc_vps(v, header + tot, sizeof header - tot);
 			tot += n;
-			n = n ? hevc_sps(v, intestazione + tot, sizeof intestazione - tot) : 0;
+			n = n ? hevc_sps(v, header + tot, sizeof header - tot) : 0;
 			tot += n;
-			n = n ? hevc_pps(v, intestazione + tot, sizeof intestazione - tot) : 0;
+			n = n ? hevc_pps(v, header + tot, sizeof header - tot) : 0;
 			tot += n;
 		} else {
-			n = h264_sps(v, intestazione + tot, sizeof intestazione - tot);
+			n = h264_sps(v, header + tot, sizeof header - tot);
 			tot += n;
-			n = n ? h264_pps(v, intestazione + tot, sizeof intestazione - tot) : 0;
+			n = n ? h264_pps(v, header + tot, sizeof header - tot) : 0;
 			tot += n;
 		}
-		buffer_packed(v, &b, VAEncPackedHeaderSequence, intestazione, n ? tot : 0);
+		buffer_packed(v, &b, VAEncPackedHeaderSequence, header, n ? tot : 0);
 	}
 	if (!hevc && (v->d.packed_headers & VA_ENC_PACKED_HEADER_MISC)) {
-		n = h264_sei(v, idr, intestazione, sizeof intestazione);
+		n = h264_sei(v, idr, header, sizeof header);
 		if (n)
-			buffer_packed(v, &b, VAEncPackedHeaderRawData, intestazione, n);
+			buffer_packed(v, &b, VAEncPackedHeaderRawData, header, n);
 	}
 
 	/* ── 4. the slice: packed header and parameters ───────────────────── */
 	if (v->d.packed_headers & VA_ENC_PACKED_HEADER_SLICE) {
-		n = hevc ? hevc_slice(v, idr, intestazione, sizeof intestazione)
-		         : h264_slice(v, idr, intestazione, sizeof intestazione);
-		buffer_packed(v, &b, VAEncPackedHeaderSlice, intestazione, n);
+		n = hevc ? hevc_slice(v, idr, header, sizeof header)
+		         : h264_slice(v, idr, header, sizeof header);
+		buffer_packed(v, &b, VAEncPackedHeaderSlice, header, n);
 	}
 	if (hevc) {
 		VAEncSliceParameterBufferHEVC s;
@@ -1527,8 +1527,8 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			s.ref_pic_list1[i].flags = VA_PICTURE_HEVC_INVALID;
 		}
 		if (!idr) {
-			s.ref_pic_list0[0].picture_id = v->ricostruite[rif];
-			s.ref_pic_list0[0].pic_order_cnt = v->poc_riferimento;
+			s.ref_pic_list0[0].picture_id = v->rebuilt[ref];
+			s.ref_pic_list0[0].pic_order_cnt = v->poc_reference;
 			s.ref_pic_list0[0].flags = VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE;
 			if (v->d.p_come_b) {
 				/* GPB: L1 = L0, it is ffmpeg's «Reference for GPB B-frame» */
@@ -1565,38 +1565,38 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 			s.RefPicList1[i].flags = VA_PICTURE_H264_INVALID;
 		}
 		if (!idr) {
-			s.RefPicList0[0].picture_id = v->ricostruite[rif];
-			s.RefPicList0[0].frame_idx = v->frame_num_riferimento;
+			s.RefPicList0[0].picture_id = v->rebuilt[ref];
+			s.RefPicList0[0].frame_idx = v->frame_num_reference;
 			s.RefPicList0[0].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
-			s.RefPicList0[0].TopFieldOrderCnt = 2 * v->poc_riferimento;
-			s.RefPicList0[0].BottomFieldOrderCnt = 2 * v->poc_riferimento;
+			s.RefPicList0[0].TopFieldOrderCnt = 2 * v->poc_reference;
+			s.RefPicList0[0].BottomFieldOrderCnt = 2 * v->poc_reference;
 		}
 		s.slice_qp_delta = 0;
 		buffer_param(v, &b, VAEncSliceParameterBufferType, &s, sizeof s);
 	}
 
-	if (b.guasto) {
-		for (int i = 0; i < b.quanti; i++)
+	if (b.fault) {
+		for (int i = 0; i < b.how_many; i++)
 			vaDestroyBuffer(v->display, b.id[i]);
-		di(errore, errore_byte, "the frame buffers were not created: %s",
-		   b.errore[0] ? b.errore : "too many, or an empty header");
+		di(failure, error_byte, "the frame buffers were not created: %s",
+		   b.failure[0] ? b.failure : "too many, or an empty header");
 		return false;
 	}
 
 	/* ── 5. begin / render / end ──────────────────────────────────────── */
-	st = vaBeginPicture(v->display, v->contesto, ingresso);
+	st = vaBeginPicture(v->display, v->context, ingress);
 	if (st != VA_STATUS_SUCCESS) {
-		for (int i = 0; i < b.quanti; i++)
+		for (int i = 0; i < b.how_many; i++)
 			vaDestroyBuffer(v->display, b.id[i]);
-		di(errore, errore_byte, "vaBeginPicture: %s", vaErrorStr(st));
+		di(failure, error_byte, "vaBeginPicture: %s", vaErrorStr(st));
 		return false;
 	}
-	st = vaRenderPicture(v->display, v->contesto, b.id, b.quanti);
-	fine = vaEndPicture(v->display, v->contesto);
-	for (int i = 0; i < b.quanti; i++)
+	st = vaRenderPicture(v->display, v->context, b.id, b.how_many);
+	fine = vaEndPicture(v->display, v->context);
+	for (int i = 0; i < b.how_many; i++)
 		vaDestroyBuffer(v->display, b.id[i]);
 	if (st != VA_STATUS_SUCCESS || fine != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "%s: %s", st != VA_STATUS_SUCCESS ? "vaRenderPicture" : "vaEndPicture",
+		di(failure, error_byte, "%s: %s", st != VA_STATUS_SUCCESS ? "vaRenderPicture" : "vaEndPicture",
 		   vaErrorStr(st != VA_STATUS_SUCCESS ? st : fine));
 		return false;
 	}
@@ -1605,23 +1605,23 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
 	if (v->d.sync_buffer)
 		st = vaSyncBuffer(v->display, v->coded, VA_TIMEOUT_INFINITE);
 	else
-		st = vaSyncSurface(v->display, ingresso);
+		st = vaSyncSurface(v->display, ingress);
 	if (st != VA_STATUS_SUCCESS) {
-		di(errore, errore_byte, "waiting for the encode failed: %s", vaErrorStr(st));
+		di(failure, error_byte, "waiting for the encode failed: %s", vaErrorStr(st));
 		return false;
 	}
-	if (!leggi_uscita(v, errore, errore_byte))
+	if (!read_output(v, failure, error_byte))
 		return false;
 
 	/* ── 7. this frame is the reference for the next ──────────────────── */
-	v->riferimento_valido = true;
-	v->ricostruita_riferimento = v->ricostruita_corrente;
-	v->frame_num_riferimento = v->frame_num;
-	v->poc_riferimento = v->poc;
-	v->sei_identificatore_scritto = true;
-	v->ordine++;
-	*dati = v->uscita;
-	*byte = v->uscita_byte;
+	v->reference_valid = true;
+	v->rebuilt_reference = v->rebuilt_current;
+	v->frame_num_reference = v->frame_num;
+	v->poc_reference = v->poc;
+	v->sei_identifier_written = true;
+	v->order++;
+	*data_v = v->out_dir;
+	*byte = v->output_byte;
 	return true;
 }
 
@@ -1629,62 +1629,62 @@ bool vadiretta_codifica(VaDiretta *v, VASurfaceID ingresso, bool chiave,
  * 5. THE ROUTE FROM MEMORY
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Writes `righe` rows of `byte_per_riga` into an image derived from or created
+/* Writes `line_list` rows of `byte_per_line` into an image derived from or created
  * on the surface: first `vaDeriveImage` (no extra copy), and if the
  * driver does not give it, `vaCreateImage` + `vaPutImage`. */
 typedef struct {
 	const uint8_t *piano[3];
-	uint32_t passo[3];
-	uint32_t righe[3];         /* rows per plane */
-	uint32_t byte_per_riga[3];
-	unsigned piani;
-} Piani;
+	uint32_t step[3];
+	uint32_t line_list[3];         /* rows per plane */
+	uint32_t byte_per_line[3];
+	unsigned plans;
+} Plans;
 
-static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uint32_t l,
-                            uint32_t a, const Piani *p, char *errore, size_t errore_byte)
+static bool write_image(VaDirect *v, VASurfaceID dest, unsigned fourcc, uint32_t l,
+                            uint32_t a, const Plans *p, char *failure, size_t error_byte)
 {
 	VAImage img;
 	VAStatus st;
-	uint8_t *mappa = NULL;
-	bool derivata = true;
+	uint8_t *map = NULL;
+	bool derivative = true;
 
 	st = vaDeriveImage(v->display, dest, &img);
 	if (st != VA_STATUS_SUCCESS || img.format.fourcc != fourcc) {
 		VAImageFormat f;
 		if (st == VA_STATUS_SUCCESS)
 			vaDestroyImage(v->display, img.image_id);
-		derivata = false;
+		derivative = false;
 		memset(&f, 0, sizeof f);
 		f.fourcc = fourcc;
 		f.byte_order = VA_LSB_FIRST;
 		f.bits_per_pixel = (fourcc == VA_FOURCC_NV12) ? 12 : (fourcc == VA_FOURCC_P010 ? 24 : 32);
 		st = vaCreateImage(v->display, &f, (int) l, (int) a, &img);
 		if (st != VA_STATUS_SUCCESS) {
-			di(errore, errore_byte, "neither vaDeriveImage nor vaCreateImage (%c%c%c%c): %s",
+			di(failure, error_byte, "neither vaDeriveImage nor vaCreateImage (%c%c%c%c): %s",
 			   fourcc & 0xff, (fourcc >> 8) & 0xff, (fourcc >> 16) & 0xff, (fourcc >> 24) & 0xff,
 			   vaErrorStr(st));
 			return false;
 		}
 	}
-	st = vaMapBuffer(v->display, img.buf, (void **) &mappa);
+	st = vaMapBuffer(v->display, img.buf, (void **) &map);
 	if (st != VA_STATUS_SUCCESS) {
 		vaDestroyImage(v->display, img.image_id);
-		di(errore, errore_byte, "vaMapBuffer on the image: %s", vaErrorStr(st));
+		di(failure, error_byte, "vaMapBuffer on the image: %s", vaErrorStr(st));
 		return false;
 	}
-	for (unsigned k = 0; k < p->piani && k < img.num_planes; k++) {
-		uint8_t *dove = mappa + img.offsets[k];
-		uint32_t passo_img = img.pitches[k];
-		uint32_t n = p->byte_per_riga[k] < passo_img ? p->byte_per_riga[k] : passo_img;
-		for (uint32_t r = 0; r < p->righe[k]; r++)
-			memcpy(dove + (size_t) r * passo_img, p->piano[k] + (size_t) r * p->passo[k], n);
+	for (unsigned k = 0; k < p->plans && k < img.num_planes; k++) {
+		uint8_t *dove = map + img.offsets[k];
+		uint32_t img_stride = img.pitches[k];
+		uint32_t n = p->byte_per_line[k] < img_stride ? p->byte_per_line[k] : img_stride;
+		for (uint32_t r = 0; r < p->line_list[k]; r++)
+			memcpy(dove + (size_t) r * img_stride, p->piano[k] + (size_t) r * p->step[k], n);
 	}
 	vaUnmapBuffer(v->display, img.buf);
-	if (!derivata) {
+	if (!derivative) {
 		st = vaPutImage(v->display, dest, img.image_id, 0, 0, l, a, 0, 0, l, a);
 		if (st != VA_STATUS_SUCCESS) {
 			vaDestroyImage(v->display, img.image_id);
-			di(errore, errore_byte, "vaPutImage: %s", vaErrorStr(st));
+			di(failure, error_byte, "vaPutImage: %s", vaErrorStr(st));
 			return false;
 		}
 	}
@@ -1702,63 +1702,63 @@ static bool scrivi_immagine(VaDiretta *v, VASurfaceID dest, unsigned fourcc, uin
  *    bytes, HEVC −4 dB and +255 %; Radeon −1…−6 dB).  The VPP stays ONLY on
  *    zero copy, where the frame is already on the card.
  */
-bool vadiretta_carica_nv12(VaDiretta *v, VASurfaceID dest, const uint8_t *y, uint32_t passo_y,
-                           const uint8_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte)
+bool vadirect_load_nv12(VaDirect *v, VASurfaceID dest, const uint8_t *y, uint32_t stride_y,
+                           const uint8_t *uv, uint32_t stride_uv, char *failure, size_t error_byte)
 {
-	uint32_t l = v->r.larghezza, a = v->r.altezza;
-	Piani p = {
+	uint32_t l = v->r.width_px, a = v->r.height_px;
+	Plans p = {
 		.piano = { y, uv },
-		.passo = { passo_y, passo_uv },
-		.righe = { a, a / 2 },
-		.byte_per_riga = { l, l },
-		.piani = 2,
+		.step = { stride_y, stride_uv },
+		.line_list = { a, a / 2 },
+		.byte_per_line = { l, l },
+		.plans = 2,
 	};
 
-	return scrivi_immagine(v, dest, VA_FOURCC_NV12, l, a, &p, errore, errore_byte);
+	return write_image(v, dest, VA_FOURCC_NV12, l, a, &p, failure, error_byte);
 }
 
-bool vadiretta_carica_p010(VaDiretta *v, VASurfaceID dest, const uint16_t *y, uint32_t passo_y,
-                           const uint16_t *uv, uint32_t passo_uv, char *errore, size_t errore_byte)
+bool vadirect_load_p010(VaDirect *v, VASurfaceID dest, const uint16_t *y, uint32_t stride_y,
+                           const uint16_t *uv, uint32_t stride_uv, char *failure, size_t error_byte)
 {
-	uint32_t l = v->r.larghezza, a = v->r.altezza;
-	Piani p = {
+	uint32_t l = v->r.width_px, a = v->r.height_px;
+	Plans p = {
 		.piano = { (const uint8_t *) y, (const uint8_t *) uv },
-		.passo = { passo_y, passo_uv },
-		.righe = { a, a / 2 },
-		.byte_per_riga = { l * 2, l * 2 },
-		.piani = 2,
+		.step = { stride_y, stride_uv },
+		.line_list = { a, a / 2 },
+		.byte_per_line = { l * 2, l * 2 },
+		.plans = 2,
 	};
 
-	return scrivi_immagine(v, dest, VA_FOURCC_P010, l, a, &p, errore, errore_byte);
+	return write_image(v, dest, VA_FOURCC_P010, l, a, &p, failure, error_byte);
 }
 
-bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *pixel,
-                                uint32_t passo_y, char *errore, size_t errore_byte)
+bool vadirect_load_yuv420p10(VaDirect *v, VASurfaceID dest, const uint8_t *pixel,
+                                uint32_t stride_y, char *failure, size_t error_byte)
 {
 	/* yuv420p10le (three planes, 10 bits in the LOW bits of 16) → P010 (Y, then
 	 * interleaved UV, 10 bits in the HIGH bits of 16).  ⛔ They are two different
 	 *    formats with the same number of bits: copying them as they are would give
 	 *    a dark image (`codificatore.c`, the note on P010). */
-	uint32_t l = v->r.larghezza, a = v->r.altezza;
-	uint32_t py = passo_y ? passo_y : l * 2;
+	uint32_t l = v->r.width_px, a = v->r.height_px;
+	uint32_t py = stride_y ? stride_y : l * 2;
 	const uint8_t *y = pixel;
 	const uint8_t *u = y + (size_t) py * a;
 	const uint8_t *w = u + (size_t) (py / 2) * (a / 2);
 	uint16_t *tmp = malloc((size_t) l * a * 2 + (size_t) l * (a / 2) * 2);
 	uint16_t *uv;
-	Piani p;
-	bool esito;
+	Plans p;
+	bool outcome;
 
 	if (!tmp) {
-		di(errore, errore_byte, "out of memory for the staging P010");
+		di(failure, error_byte, "out of memory for the staging P010");
 		return false;
 	}
 	uv = tmp + (size_t) l * a;
 	for (uint32_t r = 0; r < a; r++) {
-		const uint16_t *sorg = (const uint16_t *) (y + (size_t) r * py);
+		const uint16_t *src = (const uint16_t *) (y + (size_t) r * py);
 		uint16_t *dst = tmp + (size_t) r * l;
 		for (uint32_t x = 0; x < l; x++)
-			dst[x] = (uint16_t) (sorg[x] << 6);
+			dst[x] = (uint16_t) (src[x] << 6);
 	}
 	for (uint32_t r = 0; r < a / 2; r++) {
 		const uint16_t *su = (const uint16_t *) (u + (size_t) r * (py / 2));
@@ -1769,14 +1769,14 @@ bool vadiretta_carica_yuv420p10(VaDiretta *v, VASurfaceID dest, const uint8_t *p
 			dst[2 * x + 1] = (uint16_t) (sv[x] << 6);
 		}
 	}
-	p = (Piani){
+	p = (Plans){
 		.piano = { (const uint8_t *) tmp, (const uint8_t *) uv },
-		.passo = { l * 2, l * 2 },
-		.righe = { a, a / 2 },
-		.byte_per_riga = { l * 2, l * 2 },
-		.piani = 2,
+		.step = { l * 2, l * 2 },
+		.line_list = { a, a / 2 },
+		.byte_per_line = { l * 2, l * 2 },
+		.plans = 2,
 	};
-	esito = scrivi_immagine(v, dest, VA_FOURCC_P010, l, a, &p, errore, errore_byte);
+	outcome = write_image(v, dest, VA_FOURCC_P010, l, a, &p, failure, error_byte);
 	free(tmp);
-	return esito;
+	return outcome;
 }

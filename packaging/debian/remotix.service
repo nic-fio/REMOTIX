@@ -3,20 +3,20 @@
 # ⛔ It runs as ROOT, and not for convenience: as root PAM verifies anyone's
 #    password and the server drops to each user's uid for their child
 #    (provisiona.sh, «the three multi-tenant requirements», 27 Aug 2026).
-# ⭐ The certificate: if it is not in /var/lib/remotix/certificati, the program
-#    generates it by itself at startup (certificati_prepara(), certificati.c:302); if
+# ⭐ The certificate: if it is not in /var/lib/remotix/certificates, the program
+#    generates it by itself at startup (certificates_prepare(), certificati.c:302); if
 #    the administrator puts their own there (without the «.nostro» mark) that one is used.
 # ⭐ The name in the certificate is the machine's name (%H).  Whoever connects with an
 #    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
-#        REMOTIX_OPZIONI=--nome 192.168.1.10
-#    (the last --nome wins).  ⚠ PROVISIONAL format, environment variables: the
+#        REMOTIX_OPTIONS=--label_name 192.168.1.10
+#    (the last --label_name wins).  ⚠ PROVISIONAL format, environment variables: the
 #    real configuration («defaults in /usr, choices in /etc», §6.5 point 7)
 #    belongs to the engine (T4).
-# ⛔ No bench options (--rilievo, --comando-socket, --audio-prova,
-#    --parlantina, --sblocca): R13.
+# ⛔ No bench options (--survey, --command-socket, --audio-test,
+#    --chatter, --unblock): R13.
 # ⭐ DECISIONI §10.12, point 3 (final version of 30 Sep): only two routes,
 #    the installer or the source by hand; NO guard preventing a start
-#    without the installer.  `remotix stato` will only say whether the installation
+#    without the installer.  `remotix state` will only say whether the installation
 #    is certified (the engine writes the mark once an operation is CONFIRMED).
 # ⛔ The package does NOT enable and does NOT start this unit: the engine does.
 [Unit]
@@ -31,7 +31,7 @@ EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
 # ⚠ `sh` only to expand the EnvironmentFile variables, then `exec`: the
 #   server stays the main process.  `$$` = one `$` for the shell.
-ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta "$${REMOTIX_PORTA}" --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $${REMOTIX_OPZIONI}'
+ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --label_name %H --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/certificates --page_v /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $${REMOTIX_OPTIONS}'
 # ⭐ `mixed`: SIGTERM to the parent only, then SIGKILL to whatever is left of the unit.
 #    The desktops live OUTSIDE the unit (setsid --fork) and survive
 #    the stop: measured in T2 (fasi/17 §5.2), 10 runs out of 10.

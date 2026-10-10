@@ -2,7 +2,7 @@
 """02-sessione-dispositivi.py — WHEN the virtual pointer is born, and who
 notices.
 
-  python3 02-sessione-dispositivi.py --traccia /run/user/1000/f21-seat.log
+  python3 02-sessione-dispositivi.py --trace /run/user/1000/f21-seat.log
 
 ===========================================================================
 ⛔ WHY IT EXISTS — the question `PIANO.md` carries into phase 2
@@ -102,40 +102,40 @@ from gi.repository import Gio, GLib  # noqa: E402
 RD = "org.gnome.Mutter.RemoteDesktop"
 IDLE = "org.gnome.Mutter.IdleMonitor"
 
-VERDE, ROSSO, GIALLO, FINE = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
+GREEN, RED, YELLOW, FINE = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
 
 def ok(t):
-    print(f"    {VERDE}OK{FINE}  {t}")
+    print(f"    {GREEN}OK{FINE}  {t}")
 
 
 def no(t):
-    print(f"    {ROSSO}NO{FINE}  {t}")
+    print(f"    {RED}NO{FINE}  {t}")
 
 
-def att(t):
-    print(f"    {GIALLO}⚠{FINE}   {t}")
+def expect(t):
+    print(f"    {YELLOW}⚠{FINE}   {t}")
 
 
 def inf(t):
     print(f"    --  {t}")
 
 
-def titolo(t):
+def heading(t):
     print(f"\n\033[1m== {t}{FINE}")
 
 
-def capacita(traccia):
+def capabilities(trace):
     """The `wl_seat#N.capabilities(X)` lines seen so far in the trace.
 
     ⛔ Returns the LIST, not the count: two events with the same value and a
        single event are two different facts, and a count would mix them up."""
     try:
-        with open(traccia) as f:
-            testo = f.read()
+        with open(trace) as f:
+            body_text = f.read()
     except OSError as err:
-        raise RuntimeError(f"cannot read the trace {traccia}: {err}")
-    return re.findall(r"wl_seat#\d+\.capabilities\((\d+)\)", testo)
+        raise RuntimeError(f"cannot read the trace {trace}: {err}")
+    return re.findall(r"wl_seat#\d+\.capabilities\((\d+)\)", body_text)
 
 
 def idletime(conn):
@@ -145,150 +145,150 @@ def idletime(conn):
     return r.unpack()[0]
 
 
-def principale():
+def primary():
     p = argparse.ArgumentParser()
-    p.add_argument("--traccia", required=True,
+    p.add_argument("--trace", required=True,
                    help="the WAYLAND_DEBUG trace of the client kept alive")
-    p.add_argument("--attesa-crollo", type=int, default=5000,
+    p.add_argument("--wait-collapse", type=int, default=5000,
                    help="below how many ms the idle time must fall (expected, "
                         "written beforehand)")
-    p.add_argument("--esiti", default=None)
+    p.add_argument("--outcomes", default=None)
     a = p.parse_args()
-    fatti = {"traccia": a.traccia}
+    done_ones = {"trace": a.trace}
 
-    titolo("The expectations, WRITTEN BEFOREHAND")
+    heading("The expectations, WRITTEN BEFOREHAND")
     inf("step 1: the live client sees capabilities(0) — no pointer")
     inf(f"step 2: after the first motion the idle time falls below "
-        f"{a.attesa_crollo} ms")
+        f"{a.wait_collapse} ms")
     inf("step 3: and the SAME client receives, or does not receive, a second announcement")
 
-    titolo("1. What the client started BEFORE has seen so far")
+    heading("1. What the client started BEFORE has seen so far")
     try:
-        prima = capacita(a.traccia)
+        before = capabilities(a.trace)
     except RuntimeError as err:
         no(f"⛔ {err}")
-        scrivi_esito(a, fatti, 3, '[?] blind tool')
+        write_outcome(a, done_ones, 3, '[?] blind tool')
         return 3
-    inf(f"wl_seat.capabilities announcements so far: {prima}")
-    fatti["capacita_prima"] = prima
-    if not prima:
+    inf(f"wl_seat.capabilities announcements so far: {before}")
+    done_ones["capacita_prima"] = before
+    if not before:
         no("⛔ ZERO announcements in the trace.  ⛔ It is not «zero capabilities»: it is «I")
         no("   read nothing».  The tool is blind, I do not judge.")
-        scrivi_esito(a, fatti, 3, '[?] blind tool')
+        write_outcome(a, done_ones, 3, '[?] blind tool')
         return 3
-    if prima[-1] != "0":
-        att(f"⚠ the last announcement says {prima[-1]}, not 0: in this session a "
+    if before[-1] != "0":
+        expect(f"⚠ the last announcement says {before[-1]}, not 0: in this session a "
             "pointer is already there, and the scene is not the one I wanted")
 
-    titolo("2. I make the pointer be born — ONE single connection, from start to end")
+    heading("2. I make the pointer be born — ONE single connection, from start to end")
     conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     inf(f"my connection: {conn.get_unique_name()}  ⛔ and it stays alive to the end")
 
     r = conn.call_sync(RD, "/org/gnome/Mutter/RemoteDesktop", RD,
                        "CreateSession", None, None, Gio.DBusCallFlags.NONE,
                        15000, None)
-    percorso = r.unpack()[0]
-    ok(f"CreateSession → {percorso}")
+    fpath = r.unpack()[0]
+    ok(f"CreateSession → {fpath}")
 
-    conn.call_sync(RD, percorso, RD + ".Session", "Start", None, None,
+    conn.call_sync(RD, fpath, RD + ".Session", "Start", None, None,
                    Gio.DBusCallFlags.NONE, 15000, None)
     ok("Start succeeded")
 
     # ⛔ AND HERE, and not before, the pointer is born: `ensure_virtual_device()` is
     #    inside the handler of NotifyPointerMotionRelative.
-    idle_prima = idletime(conn)
-    inf(f"idle time before the motion: {idle_prima} ms")
-    conn.call_sync(RD, percorso, RD + ".Session", "NotifyPointerMotionRelative",
+    idle_before = idletime(conn)
+    inf(f"idle time before the motion: {idle_before} ms")
+    conn.call_sync(RD, fpath, RD + ".Session", "NotifyPointerMotionRelative",
                    GLib.Variant("(dd)", (7.0, 5.0)), None,
                    Gio.DBusCallFlags.NONE, 15000, None)
     ok("NotifyPointerMotionRelative(7,5) accepted")
     time.sleep(1.0)
-    idle_dopo = idletime(conn)
-    inf(f"idle time after the motion:  {idle_dopo} ms")
-    fatti["idle_prima_ms"] = idle_prima
-    fatti["idle_dopo_ms"] = idle_dopo
+    idle_after = idletime(conn)
+    inf(f"idle time after the motion:  {idle_after} ms")
+    done_ones["idle_prima_ms"] = idle_before
+    done_ones["idle_dopo_ms"] = idle_after
 
-    esito = 0
-    if idle_dopo >= a.attesa_crollo:
-        no(f"⛔ the idle time did NOT collapse ({idle_dopo} ms ≥ {a.attesa_crollo}):")
+    outcome = 0
+    if idle_after >= a.wait_collapse:
+        no(f"⛔ the idle time did NOT collapse ({idle_after} ms ≥ {a.wait_collapse}):")
         no("   the motion did not reach Mutter, so the pointer was not")
         no("   born and the scene I wanted to measure NEVER HAPPENED.")
         no("   ⛔ I do not judge: a no on a scene that never happened is worse than nothing.")
-        esito = 2
+        outcome = 2
     else:
-        ok(f"⭐ positive control passed: {idle_prima} → {idle_dopo} ms.  Mutter")
+        ok(f"⭐ positive control passed: {idle_before} → {idle_after} ms.  Mutter")
         ok("   really received the motion, so the pointer is there.")
 
     time.sleep(3.0)
 
-    titolo("3. The same client as before: did it get a second announcement?")
-    dopo = capacita(a.traccia)
-    inf(f"announcements now: {dopo} (they were {prima})")
-    fatti["capacita_dopo"] = dopo
-    riceve = len(dopo) > len(prima)
-    if esito == 2:
-        att("⚠ the scene did not happen: what follows is not a verdict")
-    elif riceve:
-        ok(f"⭐ THE CLIENT STARTED BEFORE RECEIVES the announcement: {prima[-1]} → {dopo[-1]}")
+    heading("3. The same client as before: did it get a second announcement?")
+    after = capabilities(a.trace)
+    inf(f"announcements now: {after} (they were {before})")
+    done_ones["capacita_dopo"] = after
+    receives = len(after) > len(before)
+    if outcome == 2:
+        expect("⚠ the scene did not happen: what follows is not a verdict")
+    elif receives:
+        ok(f"⭐ THE CLIENT STARTED BEFORE RECEIVES the announcement: {before[-1]} → {after[-1]}")
         ok("   ⇒ the plan's explanation — «it never subscribes» — does NOT hold,")
         ok("     and the cause of S.4 must be looked for elsewhere.")
-        esito = 1
+        outcome = 1
     else:
         no("⛔ NOTHING new: the client started before is not told that")
         no("   there is now a pointer.  ⇒ The plan's explanation holds, and the")
         no("   `[?]` on the cause becomes `[M]`.")
 
-    titolo("4. The opposite case: a NEW client, born AFTER the pointer")
-    traccia2 = a.traccia + ".dopo"
-    with open(traccia2, "w") as f:
+    heading("4. The opposite case: a NEW client, born AFTER the pointer")
+    trace2 = a.trace + ".after"
+    with open(trace2, "w") as f:
         amb = dict(os.environ, WAYLAND_DEBUG="1", WAYLAND_DISPLAY="wayland-0")
         subprocess.run(["timeout", "25", "foot", "-e", "sleep", "6"],
                        stdout=f, stderr=subprocess.STDOUT, env=amb)
-    nuovo = capacita(traccia2)
-    inf(f"announcements of the new client: {nuovo}")
-    fatti["capacita_client_nuovo"] = nuovo
-    if not nuovo:
+    fresh = capabilities(trace2)
+    inf(f"announcements of the new client: {fresh}")
+    done_ones["capacita_client_nuovo"] = fresh
+    if not fresh:
         no("⛔ zero announcements for the new client too: the tool does not see the")
         no("   seat, and the comparison of step 3 tells nothing apart.")
-        scrivi_esito(a, fatti, 3, '[?] blind tool')
+        write_outcome(a, done_ones, 3, '[?] blind tool')
         return 3
-    if nuovo[-1] == "0":
-        no(f"⛔ the NEW client too sees capabilities({nuovo[-1]}): then it is not")
+    if fresh[-1] == "0":
+        no(f"⛔ the NEW client too sees capabilities({fresh[-1]}): then it is not")
         no("   the order — the pointer does not appear in the Wayland seat at all.")
         no("   ⇒ The comparison of step 3 is not a comparison: I do not judge.")
-        scrivi_esito(a, fatti, 3, '[?] blind tool')
+        write_outcome(a, done_ones, 3, '[?] blind tool')
         return 3
-    ok(f"⭐ the new client sees capabilities({nuovo[-1]}): the pointer in the seat")
+    ok(f"⭐ the new client sees capabilities({fresh[-1]}): the pointer in the seat")
     ok("   is there, and so step 3 is comparing two real things")
 
     # ⛔ The RemoteDesktop session is closed here, on the connection that
     #    created it: leaving it on the graphical session would change the state
     #    for whoever measures next.
-    conn.call_sync(RD, percorso, RD + ".Session", "Stop", None, None,
+    conn.call_sync(RD, fpath, RD + ".Session", "Stop", None, None,
                    Gio.DBusCallFlags.NONE, 10000, None)
     inf("RemoteDesktop session closed")
 
-    titolo("The verdict")
-    frase = {0: "the client started BEFORE receives nothing — the plan holds",
+    heading("The verdict")
+    sentence = {0: "the client started BEFORE receives nothing — the plan holds",
              1: "the client started BEFORE receives — the plan must be rewritten",
              2: "[?] scene never happened",
-             3: "[?] blind tool"}[esito]
-    inf(frase)
-    scrivi_esito(a, fatti, esito, frase)
-    return esito
+             3: "[?] blind tool"}[outcome]
+    inf(sentence)
+    write_outcome(a, done_ones, outcome, sentence)
+    return outcome
 
 
-def scrivi_esito(a, fatti, esito, frase):
-    if not a.esiti:
+def write_outcome(a, done_ones, outcome, sentence):
+    if not a.outcomes:
         return
     import json
-    with open(a.esiti, "a") as f:
+    with open(a.outcomes, "a") as f:
         f.write(json.dumps({
-            "quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "banco": "F2.1", "scena": "dispositivi-ordine",
-            "uscita": esito, "marca": frase, **fatti,
+            "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "bench": "F2.1", "scene": "dispositivi-ordine",
+            "out_dir": outcome, "mark": sentence, **done_ones,
         }, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":
-    sys.exit(principale())
+    sys.exit(primary())

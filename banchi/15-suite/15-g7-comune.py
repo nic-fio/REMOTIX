@@ -23,11 +23,11 @@ import subprocess
 import time
 
 
-def _parola_sudo():
-    """The server's sudo password: from REMOTIX_PAROLA_SUDO, or from the «pass:» line of
+def _sudo_password():
+    """The server's sudo password: from REMOTIX_SUDO_PASSWORD, or from the «pass:» line of
     ~/SERVER.ssh (the same file as fondamenta/strumenti/sshpw.py). ⛔ Never written
     in the benches: they are in the repository."""
-    p = os.environ.get("REMOTIX_PAROLA_SUDO")
+    p = os.environ.get("REMOTIX_SUDO_PASSWORD")
     if p is None:
         try:
             for r in open(os.path.expanduser("~/SERVER.ssh")):
@@ -38,87 +38,87 @@ def _parola_sudo():
             pass
     return (p or "") + "\n"
 
-QUI = os.path.dirname(os.path.abspath(__file__))
-SERVER_SH = os.path.join(QUI, "15-g7-server.sh")
-PORTE_G7 = {"gnome": 8611, "kde": 8612, "xfce": 8613, "lxqt": 8614}
+HERE = os.path.dirname(os.path.abspath(__file__))
+SERVER_SH = os.path.join(HERE, "15-g7-server.sh")
+PORTS_G7 = {"gnome": 8611, "kde": 8612, "xfce": 8613, "lxqt": 8614}
 DIR_G7 = "/var/lib/rete15-g7"
-REGISTRO_G7 = DIR_G7 + "/registro.log"
+G7_LOG = DIR_G7 + "/registro.log"
 
 
-def sudo(argv, secondi=60, entrata=""):
+def sudo(argv, seconds=60, entry=""):
     """(code, output) of `argv` with sudo, on the server (local)."""
     try:
         r = subprocess.run(["sudo", "-S", "-p", ""] + list(argv),
-                           input=_parola_sudo() + entrata, capture_output=True,
-                           text=True, errors="replace", timeout=secondi)
+                           input=_sudo_password() + entry, capture_output=True,
+                           text=True, errors="replace", timeout=seconds)
     except subprocess.TimeoutExpired:
-        return None, "(no answer in %d s)" % secondi
+        return None, "(no answer in %d s)" % seconds
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
-def dentro(desktop, riga, secondi=60):
-    """(code, output) of `riga` as root in the box rete11-<desktop>."""
-    return sudo(["podman", "exec", "rete11-%s" % desktop, "sh", "-c", riga], secondi)
+def inside(desktop, row, seconds=60):
+    """(code, output) of `row` as root in the box rete11-<desktop>."""
+    return sudo(["podman", "exec", "rete11-%s" % desktop, "sh", "-c", row], seconds)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  OUR SERVER
 # ═══════════════════════════════════════════════════════════════════════════
-def server(azione, desktop, *opzioni, secondi=90):
+def server(action, desktop, *options, seconds=90):
     try:
-        r = subprocess.run(["bash", SERVER_SH, azione, desktop] + list(opzioni),
+        r = subprocess.run(["bash", SERVER_SH, action, desktop] + list(options),
                            capture_output=True, text=True, errors="replace",
-                           timeout=secondi)
+                           timeout=seconds)
     except subprocess.TimeoutExpired:
-        return False, "(15-g7-server.sh %s: no answer in %d s)" % (azione, secondi)
+        return False, "(15-g7-server.sh %s: no answer in %d s)" % (action, seconds)
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 
-def orologi_in_vigore(desktop):
+def clocks_in_effect(desktop):
     """The startup line with the three clocks of §5.3: (inattivita_s, abbandono_s, line)."""
-    _c, t = dentro(desktop, "grep -a '§5.3, the three clocks' %s | tail -n 1" % REGISTRO_G7)
+    _c, t = inside(desktop, "grep -a '§5.3, the three clocks' %s | tail -n 1" % G7_LOG)
     m1 = re.search(r"user inactivity (\d+) s", t or "")
     m2 = re.search(r"session abandonment (\d+) s", t or "")
     return (int(m1.group(1)) if m1 else None, int(m2.group(1)) if m2 else None,
             (t or "").strip())
 
 
-class Registro:
-    """OUR server's log, with the same form as Scatola."""
+class Log:
+    """OUR server's log, with the same form as Box."""
 
-    def __init__(self, desktop, percorso=REGISTRO_G7):
-        self.d, self.p = desktop, percorso
+    def __init__(self, desktop, fpath=G7_LOG):
+        self.d, self.p = desktop, fpath
 
-    def righe(self):
-        _c, t = dentro(self.d, "wc -l < %s" % self.p, 30)
+    def line_list(self):
+        _c, t = inside(self.d, "wc -l < %s" % self.p, 30)
         try:
             return int(t.split()[-1])
         except (ValueError, IndexError, AttributeError):
             return None
 
-    def da(self, segno, chi=None):
-        filtro = (" | grep -a -- '%s'" % chi) if chi else ""
-        _c, t = dentro(self.d, "tail -n +%d %s%s" % ((segno or 0) + 1, self.p, filtro), 60)
+    def da(self, sign, chi=None):
+        filter = (" | grep -a -- '%s'" % chi) if chi else ""
+        _c, t = inside(self.d, "tail -n +%d %s%s" % ((sign or 0) + 1, self.p, filter), 60)
         return (t or "").splitlines()
 
-    def aspetta(self, segno, forme, chi=None, tetto=60, passo=1.0):
-        """(form, line, seconds) of the first line with one of the `forme`."""
+    def wait_for(self, sign, shapes, chi=None, ceiling=60, step=1.0):
+        """(form, line, seconds) of the first line with one of the `shapes`."""
         t0 = time.time()
-        while time.time() - t0 < tetto:
-            for r in self.da(segno, chi):
-                for f in forme:
+        while time.time() - t0 < ceiling:
+            for r in self.da(sign, chi):
+                for f in shapes:
                     if f in r:
                         return f, r, time.time() - t0
-            time.sleep(passo)
+            time.sleep(step)
         return None, None, time.time() - t0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE DEAD LINE — nftables on the server, ONLY our port
 # ═══════════════════════════════════════════════════════════════════════════
-class LineaMorta:
+class DeadLine:
     """
-        with LineaMorta(8611) as lm:   # from here no UDP from/to 8611
+        with DeadLine(8611) as lm:   # from here no UDP from/to 8611
             ...
         # here the rule is no longer there (even if the body fell over)
 
@@ -131,99 +131,99 @@ class LineaMorta:
       session's.  Declared: it is the server's network, not the real path from the
       tablet."""
 
-    def __init__(self, porta):
-        self.porta = int(porta)
-        assert 8600 <= self.porta <= 8699, "only our server's ports"
-        self.tabella = "remotix_g7_%d" % self.porta
-        self.messa = None
+    def __init__(self, port):
+        self.port = int(port)
+        assert 8600 <= self.port <= 8699, "only our server's ports"
+        self.table = "remotix_g7_%d" % self.port
+        self.placed = None
 
-    def regole(self):
-        p = self.porta
+    def rules(self):
+        p = self.port
         return ("table inet %(t)s {\n"
-                " chain dentro { type filter hook input priority -10; policy accept;\n"
+                " chain inside { type filter hook input priority -10; policy accept;\n"
                 "  udp dport %(p)d counter drop\n  udp sport %(p)d counter drop\n }\n"
-                " chain fuori { type filter hook output priority -10; policy accept;\n"
+                " chain outside { type filter hook output priority -10; policy accept;\n"
                 "  udp dport %(p)d counter drop\n  udp sport %(p)d counter drop\n }\n"
-                "}\n" % {"t": self.tabella, "p": p})
+                "}\n" % {"t": self.table, "p": p})
 
-    def togli(self):
-        sudo(["/usr/sbin/nft", "delete", "table", "inet", self.tabella], 30)
+    def remove(self):
+        sudo(["/usr/sbin/nft", "delete", "table", "inet", self.table], 30)
         c, t = sudo(["/usr/sbin/nft", "list", "tables"], 30)
-        return self.tabella not in (t or "")
+        return self.table not in (t or "")
 
-    def metti(self):
-        self.togli()                              # a leftover from a round that fell over
+    def put(self):
+        self.remove()                              # a leftover from a round that fell over
         # ⚠ From a FILE, not from stdin: with sudo already authenticated the password is not
         #   consumed and would end up inside the rules (`[M]` «syntax error … nicfio»).
         import tempfile
         with tempfile.NamedTemporaryFile("w", suffix=".nft", delete=False) as f:
-            f.write(self.regole())
+            f.write(self.rules())
         try:
             c, t = sudo(["/usr/sbin/nft", "-f", f.name], 30)
         finally:
             os.unlink(f.name)
         if c != 0:
             raise RuntimeError("nft did not put the rule: %s" % t[-200:])
-        self.messa = time.time()
+        self.placed = time.time()
         return True
 
-    def contati(self):
+    def counted(self):
         """The dropped packets (witness that the rule BITES)."""
-        _c, t = sudo(["/usr/sbin/nft", "list", "table", "inet", self.tabella], 30)
+        _c, t = sudo(["/usr/sbin/nft", "list", "table", "inet", self.table], 30)
         return sum(int(x) for x in re.findall(r"packets (\d+)", t or ""))
 
     def __enter__(self):
-        self.metti()
+        self.put()
         return self
 
     def __exit__(self, *a):
-        tolta = self.togli()
-        if not tolta:
-            print("   ⛔ THE nft RULE %s CANNOT BE REMOVED" % self.tabella, flush=True)
+        removed = self.remove()
+        if not removed:
+            print("   ⛔ THE nft RULE %s CANNOT BE REMOVED" % self.table, flush=True)
         return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PAGE
 # ═══════════════════════════════════════════════════════════════════════════
-JS_PAGINA = r"""
-const e = document.getElementById('esito');
-const m = document.getElementById('modulo');
+JS_PAGE = r"""
+const e = document.getElementById('outcome');
+const m = document.getElementById('module');
 const reg = document.getElementById('registro');
 const vis = (x) => !!x && getComputedStyle(x).display !== 'none'
                   && getComputedStyle(x).visibility !== 'hidden'
                   && x.getBoundingClientRect().width > 0;
-const R = window.REMOTIX, s = R && R.schermo;
-const righe = reg ? reg.textContent.split('\n') : [];
+const R = window.REMOTIX, s = R && R.display_screen;
+const line_list = reg ? reg.textContent.split('\n') : [];
 return {
-  esito: e ? e.textContent : null,
+  outcome: e ? e.textContent : null,
   esito_classe: e ? e.className : null,
   esito_visibile: vis(e) && !!(e && e.textContent.trim()),
   modulo_visibile: vis(m),
-  vestita: document.body ? (document.body.dataset.schermo || null) : null,
-  sessione: !!(s && s.sessione),
+  vestita: document.body ? (document.body.dataset.display_screen || null) : null,
+  session_v: !!(s && s.session_v),
   input: !!window.REMOTIX_INPUT,
-  dipinti: s && s.conti ? s.conti.dipinti : null,
-  coda: righe.filter(r => r.indexOf('audio:') !== 0).slice(-14),
-  n_righe: righe.length,
-  testo: document.body ? document.body.innerText.slice(0, 400) : ''
+  painted: s && s.counts ? s.counts.painted : null,
+  queue: line_list.filter(r => r.indexOf('audio:') !== 0).slice(-14),
+  n_righe: line_list.length,
+  body_text: document.body ? document.body.innerText.slice(0, 400) : ''
 };
 """
 
 
-def pagina(g):
+def page_v(g):
     try:
-        return g.js(JS_PAGINA) or {}
+        return g.js(JS_PAGE) or {}
     except Exception as e:                       # noqa: BLE001
-        return {"errore": str(e)[:200]}
+        return {"failure": str(e)[:200]}
 
 
-def la_pagina_lo_dice(st):
+def page_says(st):
     """⭐ The page TELLS the user that the wire dropped: a visible sentence
     in the outcome line, or the sign-in form back in view (and the
     desktop dress removed).  ⛔ The hidden log (`#registro`, off
     by default) is not «telling»: the user does not see it."""
-    if not isinstance(st, dict) or st.get("errore"):
+    if not isinstance(st, dict) or st.get("failure"):
         return None
     if st.get("esito_visibile") and st.get("esito_classe") == "male":
         return True
@@ -235,8 +235,8 @@ def la_pagina_lo_dice(st):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE BROWSER: stopping it and restarting it (the whole process tree)
 # ═══════════════════════════════════════════════════════════════════════════
-def discendenti(pid):
-    figli = {}
+def descendants(pid):
+    children = {}
     for d in os.listdir("/proc"):
         if not d.isdigit():
             continue
@@ -246,13 +246,13 @@ def discendenti(pid):
             pp = int(st.rsplit(")", 1)[1].split()[1])
         except Exception:                        # noqa: BLE001
             continue
-        figli.setdefault(pp, []).append(int(d))
-    tutti, coda = [], [pid]
-    while coda:
-        p = coda.pop()
-        tutti.append(p)
-        coda.extend(figli.get(p, []))
-    return tutti
+        children.setdefault(pp, []).append(int(d))
+    all_v, queue = [], [pid]
+    while queue:
+        p = queue.pop()
+        all_v.append(p)
+        queue.extend(children.get(p, []))
+    return all_v
 
 
 def pid_browser(g):
@@ -260,34 +260,34 @@ def pid_browser(g):
     return getattr(p, "pid", None)
 
 
-def segnale_albero(g, sig):
+def signal_tree(g, sig):
     pid = pid_browser(g)
     if not pid:
         return []
-    fatti = []
-    for p in discendenti(pid):
+    done_ones = []
+    for p in descendants(pid):
         try:
             os.kill(p, sig)
-            fatti.append(p)
+            done_ones.append(p)
         except ProcessLookupError:
             pass
-    return fatti
+    return done_ones
 
 
-def ferma_browser(g):
-    return segnale_albero(g, signal.SIGSTOP)
+def stop_browser(g):
+    return signal_tree(g, signal.SIGSTOP)
 
 
-def riprendi_browser(g):
-    return segnale_albero(g, signal.SIGCONT)
+def resume_browser(g):
+    return signal_tree(g, signal.SIGCONT)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TENANT IN THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
-def processi_inquilino(desktop, chi):
+def tenant_processes(desktop, chi):
     """{pid: command} of the tenant's processes (empty = the session is not there)."""
-    _c, t = dentro(desktop, "ps -u %s -o pid=,comm= 2>/dev/null" % chi, 30)
+    _c, t = inside(desktop, "ps -u %s -o pid=,comm= 2>/dev/null" % chi, 30)
     ps = {}
     for r in (t or "").splitlines():
         a = r.split(None, 1)
@@ -296,28 +296,28 @@ def processi_inquilino(desktop, chi):
     return ps
 
 
-def nella_sessione(s, comando, secondi=60):
-    """Like `Sessione.nella_sessione(fondo=True)`, but from here (local sudo on the
+def in_session(s, command, seconds=60):
+    """Like `Session.in_session(background=True)`, but from here (local sudo on the
     server) instead of over ssh: `[M]` 24 Sep, with ten agents together the bench's
     ssh to the server itself drops («Connection closed … port 22»)."""
     chi = s.chi
     amb = ("u=$(id -u %(c)s); d=$(ls /run/user/$u 2>/dev/null | grep -E '^wayland-[0-9]+$' "
            "| head -1); [ -n \"$d\" ] || { echo 'no wayland socket'; exit 2; }; "
            % {"c": chi})
-    corpo = ("runuser -u %(c)s -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
+    body_el = ("runuser -u %(c)s -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
              "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
              "XDG_SESSION_TYPE=wayland HOME=/home/%(c)s sh -c %(q)s"
-             % {"c": chi, "q": S_q(comando)})
-    corpo = "setsid %s < /dev/null > /home/%s/.g7-%s.log 2>&1 & echo launched" % (
-        corpo, chi, re.sub(r"\W", "", comando.split()[0])[:20])
-    return dentro(s.o.scatola, amb + corpo, secondi)
+             % {"c": chi, "q": S_q(command)})
+    body_el = "setsid %s < /dev/null > /home/%s/.g7-%s.log 2>&1 & echo launched" % (
+        body_el, chi, re.sub(r"\W", "", command.split()[0])[:20])
+    return inside(s.o.container_box, amb + body_el, seconds)
 
 
 def S_q(x):
     return "'" + x.replace("'", "'\"'\"'") + "'"
 
 
-def lancia_scena(s, S=None, cosa="scena"):
+def launch_scene(s, S=None, what="scene"):
     """The MOVING SCENE inside the session: `weston-simple-egl -f` — the
     spinning triangle, full screen, drawn by the card (EGL) and native
     Wayland: it is in all four boxes.
@@ -326,26 +326,26 @@ def lancia_scena(s, S=None, cosa="scena"):
        cannot be loaded» (even with the profile prepared like C21, even headless
        with a test user) ⇒ the scene never appeared.
     Returns (pid | None, text)."""
-    c, t = nella_sessione(s, "weston-simple-egl -f", 60)
+    c, t = in_session(s, "weston-simple-egl -f", 60)
     for _ in range(40):
-        ps = processi_inquilino(s.o.scatola, s.chi)
+        ps = tenant_processes(s.o.container_box, s.chi)
         f = [p for p, n in ps.items() if n.startswith("weston-simple")]
         if f:
-            return min(f), "weston-simple-egl of the %s: pid %d" % (cosa, min(f))
+            return min(f), "weston-simple-egl of the %s: pid %d" % (what, min(f))
         time.sleep(0.5)
     return None, "weston-simple-egl was not seen starting: %s" % (t or "")[-200:]
 
 
-def lancia_tono(s, secondi=600):
+def launch_tone(s, seconds=600):
     """pw-play of a 440 Hz wave on the product's «remotix» sink, in a loop."""
-    corpo = ("python3 -c \"import math,struct,wave;w=wave.open('/tmp/g7-onda-%(c)s.wav','wb');"
+    body_el = ("python3 -c \"import math,struct,wave;w=wave.open('/tmp/g7-onda-%(c)s.wav','wb');"
              "w.setnchannels(2);w.setsampwidth(2);w.setframerate(48000);"
              "w.writeframes(b''.join(struct.pack('<hh',int(16000*math.sin(2*math.pi*440*i/48000)),"
              "int(16000*math.sin(2*math.pi*440*i/48000))) for i in range(48000*5)));w.close()\" "
              "&& end=$(( $(date +%%s) + %(s)d )); while [ $(date +%%s) -lt $end ]; do "
              "pw-play --target=remotix /tmp/g7-onda-%(c)s.wav; done"
-             % {"c": s.chi, "s": secondi})
-    return nella_sessione(s, corpo, 60)
+             % {"c": s.chi, "s": seconds})
+    return in_session(s, body_el, 60)
 
 
 # ⭐ THE EAR: the page's `AudioBufferSourceNode.start` is wrapped, and for
@@ -353,10 +353,10 @@ def lancia_tono(s, secondi=600):
 #   SAMPLES is measured (blocks are not counted: a stream of zeros is blocks that
 #   arrive and it is silence).  It is put after loading, before the login:
 #   the page creates the sources only with the session open.
-JS_ORECCHIO = r"""
-if (window.__G7_ORECCHIO__) return 'gia';
-const O = window.__G7_ORECCHIO__ = { finestre: [] };
-const vero = AudioBufferSourceNode.prototype.start;
+JS_EAR = r"""
+if (window.__G7_ORECCHIO__) return 'already';
+const O = window.__G7_ORECCHIO__ = { windows: [] };
+const real = AudioBufferSourceNode.prototype.start;
 AudioBufferSourceNode.prototype.start = function () {
   try {
     const b = this.buffer;
@@ -365,42 +365,42 @@ AudioBufferSourceNode.prototype.start = function () {
       let q = 0;
       for (let i = 0; i < d.length; i++) q += d[i] * d[i];
       const t = Math.floor(performance.now() / 1000);
-      let f = O.finestre[O.finestre.length - 1];
-      if (!f || f.t !== t) { f = { t: t, n: 0, q: 0, c: 0 }; O.finestre.push(f);
-                             if (O.finestre.length > 900) O.finestre.shift(); }
+      let f = O.windows[O.windows.length - 1];
+      if (!f || f.t !== t) { f = { t: t, n: 0, q: 0, c: 0 }; O.windows.push(f);
+                             if (O.windows.length > 900) O.windows.shift(); }
       f.q += q; f.c += d.length; f.n += 1;
     }
   } catch (e) {}
-  return vero.apply(this, arguments);
+  return real.apply(this, arguments);
 };
 return 'messo';
 """
 
-JS_ASCOLTA = r"""
+JS_LISTEN = r"""
 const O = window.__G7_ORECCHIO__;
 if (!O) return null;
 const da = arguments[0], a = arguments[1];
 let q = 0, c = 0, n = 0;
-for (const f of O.finestre) if (f.t >= da && f.t < a) { q += f.q; c += f.c; n += f.n; }
-return { rms: c ? Math.sqrt(q / c) : null, campioni: c, buffer: n,
-         adesso: Math.floor(performance.now() / 1000) };
+for (const f of O.windows) if (f.t >= da && f.t < a) { q += f.q; c += f.c; n += f.n; }
+return { rms: c ? Math.sqrt(q / c) : null, samples: c, buffer: n,
+         clock: Math.floor(performance.now() / 1000) };
 """
 
-SOGLIA_RMS = 0.01      # the wave is 16000/32767 ≈ 0.49 peak ⇒ RMS ≈ 0.35
+RMS_THRESHOLD = 0.01      # the wave is 16000/32767 ≈ 0.49 peak ⇒ RMS ≈ 0.35
 
 
-def orecchio(g):
+def ear(g):
     try:
-        return g.js(JS_ORECCHIO)
+        return g.js(JS_EAR)
     except Exception as e:                       # noqa: BLE001
         return "not put: %s" % str(e)[:120]
 
 
-def ascolta(g, secondi):
-    """(rms | None, details) over the last `secondi` of sound PLAYED by the page."""
+def listen(g, seconds):
+    """(rms | None, details) over the last `seconds` of sound PLAYED by the page."""
     try:
-        ora = g.js("return Math.floor(performance.now() / 1000);")
-        r = g.js(JS_ASCOLTA, ora - secondi, ora + 1)
+        now = g.js("return Math.floor(performance.now() / 1000);")
+        r = g.js(JS_LISTEN, now - seconds, now + 1)
     except Exception as e:                       # noqa: BLE001
         return None, "ear unreadable: %s" % str(e)[:120]
     if not r:
@@ -411,7 +411,7 @@ def ascolta(g, secondi):
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PHOTOS: does the scene move?
 # ═══════════════════════════════════════════════════════════════════════════
-def diversita(png_a, png_b):
+def diversity(png_a, png_b):
     """Fraction of pixels that change (|Δ| > 40 on a channel) between two photos,
     at reduced scale.  None if they cannot be compared."""
     try:
@@ -420,48 +420,48 @@ def diversita(png_a, png_b):
         a = Image.open(io.BytesIO(png_a)).convert("RGB").resize((320, 180))
         b = Image.open(io.BytesIO(png_b)).convert("RGB").resize((320, 180))
         d = ImageChops.difference(a, b).getdata()
-        cambiati = sum(1 for p in d if max(p) > 40)
-        return cambiati / float(len(d))
+        changed = sum(1 for p in d if max(p) > 40)
+        return changed / float(len(d))
     except Exception:                            # noqa: BLE001
         return None
 
 
-def colori_scena(png):
+def scene_colors(png):
     """Share of blue (#0000FF) and yellow (#FFFF00) pixels of C3's scene."""
     try:
         import io
         from PIL import Image
         im = Image.open(io.BytesIO(png)).convert("RGB").resize((320, 180))
         px = list(im.getdata())
-        blu = sum(1 for r, g_, b in px if b > 180 and r < 80 and g_ < 80)
-        gia = sum(1 for r, g_, b in px if r > 180 and g_ > 180 and b < 80)
-        return blu / float(len(px)), gia / float(len(px))
+        blue = sum(1 for r, g_, b in px if b > 180 and r < 80 and g_ < 80)
+        already = sum(1 for r, g_, b in px if r > 180 and g_ > 180 and b < 80)
+        return blue / float(len(px)), already / float(len(px))
     except Exception:                            # noqa: BLE001
         return None, None
 
 
-def aspetta_scena(s, S, tetto=40):
+def wait_scene(s, S, ceiling=40):
     """(True | None, description): the moving scene in view within
-    `tetto` — two photos 0.7 s apart differing by > 2 % of the pixels."""
+    `ceiling` — two photos 0.7 s apart differing by > 2 % of the pixels."""
     t0 = time.time()
     desc = ""
-    prima = None
-    while time.time() - t0 < tetto:
+    before = None
+    while time.time() - t0 < ceiling:
         try:
-            png = S.C21.foto_piena(s.g)
+            png = S.C21.full_photo(s.g)
         except Exception as e:                   # noqa: BLE001
             png, desc = None, str(e)[:120]
-        if png and prima:
-            d = diversita(prima, png)
+        if png and before:
+            d = diversity(before, png)
             desc = "change %.1f%%" % (100 * (d or 0))
             if d and d > 0.02:
                 return True, "moving scene after %.0f s (%s)" % (time.time() - t0, desc)
-        prima = png
+        before = png
         time.sleep(0.7)
-    return None, "the moving scene did not appear in %d s (%s)" % (tetto, desc)
+    return None, "the moving scene did not appear in %d s (%s)" % (ceiling, desc)
 
 
-def la_scena_si_muove(s, nome, coppie=3, pausa=None):
+def scene_moves(s, label_name, pairs=3, pause_v=None):
     """(True/False/None, description, [paths]) — photos at IRREGULAR pauses,
     and ALL the pairs are compared: at least one different by > 2 % of the pixels.
 
@@ -470,17 +470,17 @@ def la_scena_si_muove(s, nome, coppie=3, pausa=None):
     same point of the turn of weston-simple-egl's triangle (half a turn
     ~0.9 s) ⇒ 0.9-1.6 % change with the scene ALIVE, and a false FAIL."""
     pause = [0.43, 0.61, 0.77, 0.29, 0.53]
-    foto, ev = [], []
-    for i in range(coppie + 1):
-        png, dove = s.foto("%s-%d" % (nome, i))
+    picture, ev = [], []
+    for i in range(pairs + 1):
+        png, dove = s.picture("%s-%d" % (label_name, i))
         if not png:
             return None, "photo failed: %s" % dove, ev
-        foto.append(png)
+        picture.append(png)
         if dove:
             ev.append(dove)
-        time.sleep(pausa if pausa is not None else pause[i % len(pause)])
-    diffs = [diversita(foto[i], foto[j]) for i in range(len(foto))
-             for j in range(i + 1, len(foto))]
+        time.sleep(pause_v if pause_v is not None else pause[i % len(pause)])
+    diffs = [diversity(picture[i], picture[j]) for i in range(len(picture))
+             for j in range(i + 1, len(picture))]
     if any(d is None for d in diffs):
         return None, "photos not comparable", ev
     desc = "changes between photos %s" % ["%.1f%%" % (100 * d) for d in diffs]
@@ -490,18 +490,18 @@ def la_scena_si_muove(s, nome, coppie=3, pausa=None):
 # ═══════════════════════════════════════════════════════════════════════════
 #  ⛔ THE BOX WITHOUT SSH, when running ON THE SERVER
 # ═══════════════════════════════════════════════════════════════════════════
-def scatola_locale(S):
-    """`[M]` 24 Sep 2026, ten agents together: `Scatola.dentro()` goes through
+def local_box(S):
+    """`[M]` 24 Sep 2026, ten agents together: `Box.inside()` goes through
     `sshpw.py` → ssh to the server ITSELF, and sshd cuts off some of them
     («Connection closed by 192.168.0.2 port 22») ⇒ tenants not created,
-    BLOCKED that are not the product's.  On the server (REMOTIX_SUL_SERVER=1) the
+    BLOCKED that are not the product's.  On the server (REMOTIX_ON_SERVER=1) the
     same line is executed with local `sudo podman exec`.  ⚠ The class loaded by
     suite.py is changed in THIS process, not suite.py."""
-    if os.environ.get("REMOTIX_SUL_SERVER") != "1":
+    if os.environ.get("REMOTIX_ON_SERVER") != "1":
         return False
 
-    def _dentro(self, riga, secondi=90):
-        c, t = sudo(["podman", "exec", self.contenitore, "sh", "-c", riga], secondi)
+    def _inside(self, row, seconds=90):
+        c, t = sudo(["podman", "exec", self.container, "sh", "-c", row], seconds)
         return c, (t or "").strip()
-    S.C20V.Scatola.dentro = _dentro
+    S.C20V.Box.inside = _inside
     return True

@@ -26,12 +26,12 @@
     var h = sec && sec.querySelector("h3.h-sec, h2.h-ch");
     return h ? h.textContent.replace(/\s+/g, " ").trim() : "";
   }
-  function splitTitle(t) { // "5.3 · Interruzioni e ripresa" -> ["5.3", "Interruzioni e ripresa"]
+  function splitTitle(t) { // "5.3 · Interruzioni e resumed" -> ["5.3", "Interruzioni e resumed"]
     var m = /^([\d.]+) · (.*)$/.exec(t);
     return m ? [m[1], m[2]] : ["", t];
   }
 
-  /* ---------------- indice analitico ---------------- */
+  /* ---------------- idx analitico ---------------- */
   var list = document.getElementById("index-list");
   if (list) {
     var terms = {};
@@ -82,7 +82,7 @@
     list.innerHTML = out;
   }
 
-  /* ---------------- ricerca ---------------- */
+  /* ---------------- search ---------------- */
   var box = document.getElementById("srch");
   var q = document.getElementById("srch-q");
   var info = document.getElementById("srch-info");

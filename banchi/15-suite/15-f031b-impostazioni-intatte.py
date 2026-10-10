@@ -4,7 +4,7 @@
 15-f031b — F-031B THE USER'S SETTINGS ARE NOT TOUCHED (D-015, D-017,
            D-018), except lock, restart, suspend and stand-by
 
-    python3 15-f031b-impostazioni-intatte.py --scatola xfce [--guasto]
+    python3 15-f031b-impostazioni-intatte.py --container_box xfce [--fault]
 
 ⭐ THE RULE — the user's decision of 25 Sep 2026, verbatim: «The
    user's settings are not touched EXCEPT those concerning
@@ -29,9 +29,9 @@
    see XFCE's session keys (locked by us).
 
 ⭐ THE JUDGMENT, key by key, in three classes:
-   · ALLOWED (`PERMESSE`) — lock, restart, suspend, stand-by: they may
+   · ALLOWED (`ALLOWED`) — lock, restart, suspend, stand-by: they may
      change, and how is said;
-   · WATCHED (`SORVEGLIATE`) — everything REMOTIX has ever written and
+   · WATCHED (`WATCHED`) — everything REMOTIX has ever written and
      that is NOT of those four kinds (the inventory of the code, 25 Sep
      2026: the layout, Ctrl+Alt+F*, «Log out…», «Switch user» (GNOME and XFCE's dialog), XFCE's logout
      belt, the saved session,
@@ -42,11 +42,11 @@
      scattered files), and they cannot be told apart from here.  ⚠ They are LISTED in the
      evidence and in the line, but they do not decide: it is the declared limit of
      this test.  A new key that REMOTIX started writing must be
-     added to `SORVEGLIATE` (or to `PERMESSE`).
+     added to `WATCHED` (or to `ALLOWED`).
    PASS = no watched key changed.  BLOCKED = not read, or «Exit» did not
    close the session.
 
-FAULT (--guasto, after the healthy pass, session closed): a simulated PERSISTENT
+FAULT (--fault, after the healthy pass, session closed): a simulated PERSISTENT
    WRITE of a watched key — the sentinel of
    `~/.cache/sessions` taken away (the old `rm -rf`), and a key of the
    desktop: GNOME `always-show-log-out` in the user's dconf, XFCE
@@ -65,13 +65,13 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
-F21 = S._carica("f021", os.path.join(S.QUI, "15-f021-esci.py"))
+F21 = S._load("f021", os.path.join(S.HERE, "15-f021-esci.py"))
 
-FUNZIONI = ("F-031B",)
+FUNCTIONS = ("F-031B",)
 PER_BROWSER = False
 
-SENTINELLA = "xfce4-session-c15-sentinella:0"
-ATTESA_IN_PIEDI_S = 20.0
+SENTINEL = "xfce4-session-c15-sentinella:0"
+WAIT_UP_S = 20.0
 
 # ── what is read ─────────────────────────────────────────────────────────────
 DCONF = (
@@ -90,13 +90,13 @@ FILE = (
     ".config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml",
     ".config/lxqt/panel.conf", ".config/lxqt/lxqt.conf", ".config/lxqt/session.conf",
     ".config/lxqt/lxqt-powermanagement.conf", ".config/kxkbrc")
-XFCONF_SESSIONE = ("/general/WaylandLogoutCommand", "/general/SessionName",
+XFCONF_SESSION = ("/general/WaylandLogoutCommand", "/general/SessionName",
                    "/general/SaveOnExit", "/shutdown/ShowSwitchUser")
-VOCI_LXQT = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
+LXQT_ENTRIES = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
              "lxqt-shutdown", "lxqt-reboot")
 
 # ── the classes ──────────────────────────────────────────────────────────────
-PERMESSE = [re.compile(x) for x in (
+ALLOWED = [re.compile(x) for x in (
     r"^dconf:org\.gnome\.settings-daemon\.plugins\.power sleep-inactive-(ac|battery)-type$",
     r"^dconf:org\.gnome\.desktop\.session idle-delay$",
     r"^dconf:org\.gnome\.desktop\.screensaver lock-enabled$",
@@ -111,7 +111,7 @@ PERMESSE = [re.compile(x) for x in (
     r"^lxqt:lxqt\.conf:\[Screensaver\]lock_command_wayland$",
     r"^lxqt:session\.conf:\[General\]lock_command_wayland$",
 )]
-SORVEGLIATE = [re.compile(x) for x in (
+WATCHED = [re.compile(x) for x in (
     r"^dconf:",                                      # those read and not allowed
     r"^xfconf:xfce4-session:/general/(WaylandLogoutCommand|SessionName|SaveOnExit)$",
     r"^xfconf:xfce4-session:/shutdown/ShowSwitchUser$",
@@ -119,24 +119,24 @@ SORVEGLIATE = [re.compile(x) for x in (
     r"^app:",
     r"^kxkbrc:",
     r"^cache:",
-    r"^gestore:",                                    # R1/R2: nothing of ours remains
+    r"^handler:",                                    # R1/R2: nothing of ours remains
 )]
 
 
-def classe(chiave):
-    if any(p.search(chiave) for p in PERMESSE):
+def cls_name(key_id):
+    if any(p.search(key_id) for p in ALLOWED):
         return "permessa"
-    if any(p.search(chiave) for p in SORVEGLIATE):
-        return "sorvegliata"
-    return "altra"
+    if any(p.search(key_id) for p in WATCHED):
+        return "watched"
+    return "the_other"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE READING: a shell line as the user, the rest here
 # ═══════════════════════════════════════════════════════════════════════════
-def riga_lettura(chi):
-    casa = "/home/%s" % chi
-    r = ["export HOME=%s; p=$(mktemp); echo user-db:user > \"$p\"" % casa,
+def line_reading(chi):
+    home = "/home/%s" % chi
+    r = ["export HOME=%s; p=$(mktemp); echo user-db:user > \"$p\"" % home,
          "if command -v gsettings >/dev/null 2>&1; then for sk in %s; do "
          "s=${sk%%%%@*}; k=${sk#*@}; v=$(DCONF_PROFILE=\"$p\" gsettings get \"$s\" \"$k\" "
          "2>/dev/null) || continue; echo \"@@dconf $s $k=$v\"; done; fi; rm -f \"$p\""
@@ -144,7 +144,7 @@ def riga_lettura(chi):
     for f in FILE:
         r.append("f=\"$HOME/%s\"; if [ -f \"$f\" ]; then echo \"@@file %s $(base64 -w0 < \"$f\")\";"
                  " fi" % (f, f))
-    for v in VOCI_LXQT:
+    for v in LXQT_ENTRIES:
         r.append("f=\"$HOME/.local/share/applications/%s.desktop\"; if [ -f \"$f\" ]; then "
                  "echo \"@@app %s $(base64 -w0 < \"$f\")\"; fi" % (v, v))
     r.append("ls -1 \"$HOME/.cache/sessions\" 2>/dev/null | sed 's/^/@@cache /'")
@@ -157,7 +157,7 @@ def riga_lettura(chi):
              "case \"$l\" in DCONF_PROFILE=*|*remotix*) echo \"@@env $l\";; esac; done; "
              "if command -v xfconf-query >/dev/null 2>&1; then for k in %s; do "
              "v=$(xfconf-query -c xfce4-session -p $k 2>/dev/null) && echo \"@@xfq $k=$v\"; "
-             "done; fi; fi" % " ".join(XFCONF_SESSIONE))
+             "done; fi; fi" % " ".join(XFCONF_SESSION))
     r.append("for f in /run/user/$u/systemd/user.control/*/*remotix* "
              "\"$HOME\"/.config/systemd/user/*.d/*remotix*; do [ -e \"$f\" ] && "
              "echo \"@@drop $f\"; done")
@@ -165,129 +165,129 @@ def riga_lettura(chi):
     return "; ".join(r)
 
 
-def ini(testo):
+def ini(body_text):
     """{"[group]key": value} from a QSettings/KConfig file (the top-level
     keys go into [General], as QSettings reads them)."""
     d, g = {}, "General"
-    for riga in testo.splitlines():
-        riga = riga.strip()
-        if not riga or riga[0] in "#;":
+    for row in body_text.splitlines():
+        row = row.strip()
+        if not row or row[0] in "#;":
             continue
-        m = re.match(r"^\[(.*)\]$", riga)
+        m = re.match(r"^\[(.*)\]$", row)
         if m:
             g = m.group(1)
             continue
-        if "=" in riga:
-            k, v = riga.split("=", 1)
+        if "=" in row:
+            k, v = row.split("=", 1)
             d["[%s]%s" % (g, k.strip())] = v.strip()
     return d
 
 
-def xfconf(testo):
+def xfconf(body_text):
     """{"/path": value} from an xfconf channel."""
     d = {}
 
-    def giu(el, base):
+    def down(el, base):
         for p in el.findall("property"):
             via = base + "/" + p.get("name", "?")
             if p.get("type") == "array":
                 d[via] = ",".join(v.get("value", "") for v in p.findall("value"))
             elif p.get("type") != "empty":
                 d[via] = p.get("value", "")
-            giu(p, via)
-    giu(ET.fromstring(testo), "")
+            down(p, via)
+    down(ET.fromstring(body_text), "")
     return d
 
 
-def interpreta(uscita):
-    """{key: value} from what `riga_lettura` printed; None if the
+def interpret(out_dir):
+    """{key: value} from what `line_reading` printed; None if the
     reading did not get to the end."""
-    if "@@fine" not in (uscita or ""):
+    if "@@fine" not in (out_dir or ""):
         return None
     d = {}
-    for riga in uscita.splitlines():
-        if riga.startswith("@@dconf "):
-            k, _, v = riga[8:].partition("=")
+    for row in out_dir.splitlines():
+        if row.startswith("@@dconf "):
+            k, _, v = row[8:].partition("=")
             d["dconf:" + k.strip()] = v.strip()
-        elif riga.startswith("@@file ") or riga.startswith("@@app "):
-            tipo, nome, b64 = (riga.split(" ", 2) + [""])[:3]
-            testo = base64.b64decode(b64).decode("utf-8", "replace") if b64 else ""
-            if tipo == "@@app":
-                h = ini(testo).get("[Desktop Entry]Hidden", "(no Hidden)")
-                d["app:%s:Hidden" % nome] = h
-            elif "/xfconf/" in nome:
-                canale = os.path.basename(nome)[:-4]
+        elif row.startswith("@@file ") or row.startswith("@@app "):
+            kind, label_name, b64 = (row.split(" ", 2) + [""])[:3]
+            body_text = base64.b64decode(b64).decode("utf-8", "replace") if b64 else ""
+            if kind == "@@app":
+                h = ini(body_text).get("[Desktop Entry]Hidden", "(no Hidden)")
+                d["app:%s:Hidden" % label_name] = h
+            elif "/xfconf/" in label_name:
+                channel = os.path.basename(label_name)[:-4]
                 try:
-                    for k, v in xfconf(testo).items():
-                        d["xfconf:%s:%s" % (canale, k)] = v
+                    for k, v in xfconf(body_text).items():
+                        d["xfconf:%s:%s" % (channel, k)] = v
                 except ET.ParseError as e:
-                    d["xfconf:%s:(unreadable)" % canale] = str(e)
-            elif nome.endswith("kxkbrc"):
-                for k, v in ini(testo).items():
+                    d["xfconf:%s:(unreadable)" % channel] = str(e)
+            elif label_name.endswith("kxkbrc"):
+                for k, v in ini(body_text).items():
                     d["kxkbrc:" + k] = v
             else:
-                for k, v in ini(testo).items():
-                    d["lxqt:%s:%s" % (os.path.basename(nome), k)] = v
-        elif riga.startswith("@@cache "):
-            d["cache:" + riga[8:].strip()] = "c'e'"
-        elif riga.startswith("@@env "):
-            k, _, v = riga[6:].partition("=")
-            d["gestore:env:" + k.strip()] = v
-        elif riga.startswith("@@xfq "):
-            k, _, v = riga[6:].partition("=")
-            d["gestore:xfconf:" + k.strip()] = v.strip()
-        elif riga.startswith("@@drop "):
-            d["gestore:dropin:" + riga[7:].strip()] = "c'e'"
+                for k, v in ini(body_text).items():
+                    d["lxqt:%s:%s" % (os.path.basename(label_name), k)] = v
+        elif row.startswith("@@cache "):
+            d["cache:" + row[8:].strip()] = "c'e'"
+        elif row.startswith("@@env "):
+            k, _, v = row[6:].partition("=")
+            d["handler:env:" + k.strip()] = v
+        elif row.startswith("@@xfq "):
+            k, _, v = row[6:].partition("=")
+            d["handler:xfconf:" + k.strip()] = v.strip()
+        elif row.startswith("@@drop "):
+            d["handler:dropin:" + row[7:].strip()] = "c'e'"
     return d
 
 
-def leggi(s):
+def read_it(s):
     for _ in range(3):
-        c, t = s.come_utente("sh -c %s" % S._q(riga_lettura(s.chi)), 90)
-        d = interpreta(t) if c == 0 else None
+        c, t = s.as_user("sh -c %s" % S._q(line_reading(s.chi)), 90)
+        d = interpret(t) if c == 0 else None
         if d is not None:
             return d, t
         time.sleep(2)
     return None, t
 
 
-def giudica(prima, dopo):
+def judge(before, after):
     """(outcome, sentence, detail)."""
-    if prima is None or dopo is None:
+    if before is None or after is None:
         return S.BLOCKED, "the user's settings could not be read (%s)" % (
-            "prima" if prima is None else "dopo"), {}
-    if not any(k.startswith("cache:" + SENTINELLA) for k in prima):
+            "before" if before is None else "after"), {}
+    if not any(k.startswith("cache:" + SENTINEL) for k in before):
         return S.BLOCKED, "the sentinel of ~/.cache/sessions was not there before", {}
-    per = {"permessa": [], "sorvegliata": [], "altra": []}
-    for k in sorted(set(prima) | set(dopo)):
-        a, b = prima.get(k, "(assente)"), dopo.get(k, "(assente)")
+    per = {"permessa": [], "watched": [], "the_other": []}
+    for k in sorted(set(before) | set(after)):
+        a, b = before.get(k, "(assente)"), after.get(k, "(assente)")
         if a != b:
-            c = classe(k)
+            c = cls_name(k)
             m = re.match(r"^lxqt:panel\.conf:\[([^\]]*)\]type$", k)
-            if c == "sorvegliata" and m and a == "(assente)" and b == m.group(1):
+            if c == "watched" and m and a == "(assente)" and b == m.group(1):
                 # ⚠ [M] 25 Sep 2026: lxqt-panel at startup REWRITES in the user's
                 #   file all the configuration it sees, with the standard
                 #   types (the group is named like its type): it is the
                 #   desktop, not us.  A DIFFERENT type (mainmenu) stays red.
-                c = "altra"
+                c = "the_other"
             per[c].append("%s: %s → %s" % (k, a[:80], b[:80]))
-    coda = " · allowed changed: %s · others changed (the desktop's or ours, they do not decide): %d" % (
-        "; ".join(per["permessa"]) or "none", len(per["altra"]))
-    if per["sorvegliata"]:
-        return (S.FAIL, "⛔ USER'S SETTINGS TOUCHED: %s" % "; ".join(per["sorvegliata"])
-                + coda, per)
+    queue = " · allowed changed: %s · others changed (the desktop's or ours, they do not decide): %d" % (
+        "; ".join(per["permessa"]) or "none", len(per["the_other"]))
+    if per["watched"]:
+        return (S.FAIL, "⛔ USER'S SETTINGS TOUCHED: %s" % "; ".join(per["watched"])
+                + queue, per)
     return S.PASS, "no watched key changed (%d read)%s" % (
-        sum(1 for k in prima if classe(k) == "sorvegliata"), coda), per
+        sum(1 for k in before if cls_name(k) == "watched"), queue), per
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE FAULT
 # ═══════════════════════════════════════════════════════════════════════════
-def riga_guasto(chi, desktop):
-    casa = "/home/%s" % chi
-    r = ["export HOME=%s" % casa,
+def fault_line(chi, desktop):
+    home = "/home/%s" % chi
+    r = ["export HOME=%s" % home,
          # the old `rm -rf ~/.cache/sessions`
-         "rm -f \"$HOME/.cache/sessions/%s\"" % SENTINELLA]
+         "rm -f \"$HOME/.cache/sessions/%s\"" % SENTINEL]
     if desktop == "gnome":
         r.append("p=$(mktemp); echo user-db:user > \"$p\"; "
                  "DCONF_PROFILE=\"$p\" gsettings set org.gnome.shell always-show-log-out true "
@@ -304,145 +304,145 @@ def riga_guasto(chi, desktop):
                  "'[Desktop Entry]\\nType=Application\\nName=lxqt-leave\\nHidden=true\\n' > "
                  "\"$d/lxqt-leave.desktop\"")
     elif desktop == "kde":
-        r.append("mkdir -p \"$HOME/.config\"; printf '\\n[Remotix15Guasto]\\nscritta=1\\n' >> "
+        r.append("mkdir -p \"$HOME/.config\"; printf '\\n[Remotix15Guasto]\\nwritten=1\\n' >> "
                  "\"$HOME/.config/kxkbrc\"")
     # R1/R2: a REMOTIX drop-in forgotten in the user manager
     r.append("d=\"$HOME/.config/systemd/user/xfconfd.service.d\"; mkdir -p \"$d\"; printf "
-             "'[Service]\\n# 15-f031b guasto\\n' > \"$d/zz-remotix-finto.conf\"")
-    r.append("echo scritto")
+             "'[Service]\\n# 15-f031b fault\\n' > \"$d/zz-remotix-finto.conf\"")
+    r.append("echo n_written")
     return "; ".join(r)
 
 
-def certifica():
-    guai = []
+def certify():
+    troubles = []
 
-    def prova(cosa, vero, det=""):
-        print("   %s %s%s" % ("⭐ ok " if vero else "⛔ NO ", cosa, (" — " + det) if det else ""))
-        if not vero:
-            guai.append(cosa)
+    def prova(what, real, det=""):
+        print("   %s %s%s" % ("⭐ ok " if real else "⛔ NO ", what, (" — " + det) if det else ""))
+        if not real:
+            troubles.append(what)
 
     b = lambda t: base64.b64encode(t.encode()).decode()             # noqa: E731
     xml = ('<?xml version="1.0"?><channel name="xfce4-session" version="1.0">'
            '<property name="general" type="empty">'
            '<property name="LockCommand" type="string" value="/bin/false"/></property>'
            '</channel>')
-    uscita = "\n".join([
+    out_dir = "\n".join([
         "@@dconf org.gnome.shell always-show-log-out=false",
         "@@dconf org.gnome.desktop.session idle-delay=uint32 300",
         "@@file .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml " + b(xml),
         "@@file .config/lxqt/panel.conf " + b("panels=panel1\n[fancymenu]\ntype=fancymenu\n"),
-        "@@cache " + SENTINELLA, "@@fine"])
-    p = interpreta(uscita)
+        "@@cache " + SENTINEL, "@@fine"])
+    p = interpret(out_dir)
     prova("reading", p and p.get("xfconf:xfce4-session:/general/LockCommand") == "/bin/false"
           and p.get("lxqt:panel.conf:[fancymenu]type") == "fancymenu"
           and p.get("lxqt:panel.conf:[General]panels") == "panel1"
-          and ("cache:" + SENTINELLA) in p, repr(p))
-    prova("truncated reading ⇒ None", interpreta("@@dconf a b=c") is None)
-    prova("equal ⇒ PASS", giudica(p, dict(p))[0] == S.PASS)
+          and ("cache:" + SENTINEL) in p, repr(p))
+    prova("truncated reading ⇒ None", interpret("@@dconf a b=c") is None)
+    prova("equal ⇒ PASS", judge(p, dict(p))[0] == S.PASS)
     prova("idle-delay 0 (allowed) ⇒ PASS",
-          giudica(p, dict(p, **{"dconf:org.gnome.desktop.session idle-delay": "uint32 0"}))[0]
+          judge(p, dict(p, **{"dconf:org.gnome.desktop.session idle-delay": "uint32 0"}))[0]
           == S.PASS)
     prova("LockCommand (allowed) ⇒ PASS",
-          giudica(p, dict(p, **{"xfconf:xfce4-session:/general/LockCommand": "/bin/true"}))[0]
+          judge(p, dict(p, **{"xfconf:xfce4-session:/general/LockCommand": "/bin/true"}))[0]
           == S.PASS)
     prova("ShowSuspend (allowed) ⇒ PASS",
-          giudica(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSuspend": "false"}))[0]
+          judge(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSuspend": "false"}))[0]
           == S.PASS)
     prova("panel buttons (allowed) ⇒ PASS",
-          giudica(p, dict(p, **{"xfconf:xfce4-panel:/plugins/plugin-14/items": "-lock"}))[0]
+          judge(p, dict(p, **{"xfconf:xfce4-panel:/plugins/plugin-14/items": "-lock"}))[0]
           == S.PASS)
     prova("always-show-log-out in the user ⇒ FAIL",
-          giudica(p, dict(p, **{"dconf:org.gnome.shell always-show-log-out": "true"}))[0]
+          judge(p, dict(p, **{"dconf:org.gnome.shell always-show-log-out": "true"}))[0]
           == S.FAIL)
     prova("ShowSwitchUser in the user ⇒ FAIL",
-          giudica(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSwitchUser": "false"}))[0]
+          judge(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSwitchUser": "false"}))[0]
           == S.FAIL)
     prova("WaylandLogoutCommand in the user ⇒ FAIL",
-          giudica(p, dict(p, **{"xfconf:xfce4-session:/general/WaylandLogoutCommand":
+          judge(p, dict(p, **{"xfconf:xfce4-session:/general/WaylandLogoutCommand":
                                 "/bin/true"}))[0] == S.FAIL)
     prova("fancymenu→mainmenu in the user ⇒ FAIL",
-          giudica(p, dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
+          judge(p, dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
     prova("the panel rewritten by the desktop with the standard types ⇒ PASS",
-          giudica(p, dict(p, **{"lxqt:panel.conf:[taskbar]type": "taskbar"}))[0] == S.PASS)
+          judge(p, dict(p, **{"lxqt:panel.conf:[taskbar]type": "taskbar"}))[0] == S.PASS)
     prova("fancymenu→mainmenu written from scratch in the user ⇒ FAIL",
-          giudica({k: v for k, v in p.items() if "fancymenu" not in k},
+          judge({k: v for k, v in p.items() if "fancymenu" not in k},
                   dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
     prova("Hidden entry in the user ⇒ FAIL",
-          giudica(p, dict(p, **{"app:lxqt-leave:Hidden": "true"}))[0] == S.FAIL)
+          judge(p, dict(p, **{"app:lxqt-leave:Hidden": "true"}))[0] == S.FAIL)
     prova("kxkbrc touched ⇒ FAIL",
-          giudica(p, dict(p, **{"kxkbrc:[Layout]LayoutList": "it"}))[0] == S.FAIL)
-    senza = dict(p)
-    senza.pop("cache:" + SENTINELLA)
-    prova("sentinel taken away ⇒ FAIL", giudica(p, senza)[0] == S.FAIL)
+          judge(p, dict(p, **{"kxkbrc:[Layout]LayoutList": "it"}))[0] == S.FAIL)
+    without = dict(p)
+    without.pop("cache:" + SENTINEL)
+    prova("sentinel taken away ⇒ FAIL", judge(p, without)[0] == S.FAIL)
     prova("one more desktop file (other) ⇒ PASS",
-          giudica(p, dict(p, **{"lxqt:lxqt.conf:[General]__userfile__": "true"}))[0] == S.PASS)
-    g = interpreta("@@env DCONF_PROFILE=/run/user/5/remotix/dconf/profilo\n"
+          judge(p, dict(p, **{"lxqt:lxqt.conf:[General]__userfile__": "true"}))[0] == S.PASS)
+    g = interpret("@@env DCONF_PROFILE=/run/user/5/remotix/dconf/profile_v\n"
                    "@@xfq /general/SessionName=REMOTIX\n"
                    "@@drop /run/user/5/systemd/user.control/xfconfd.service.d/"
                    "zz-remotix-sessione.conf\n@@fine")
     prova("reading the manager", g == {
-        "gestore:env:DCONF_PROFILE": "/run/user/5/remotix/dconf/profilo",
-        "gestore:xfconf:/general/SessionName": "REMOTIX",
-        "gestore:dropin:/run/user/5/systemd/user.control/xfconfd.service.d/"
+        "handler:env:DCONF_PROFILE": "/run/user/5/remotix/dconf/profile_v",
+        "handler:xfconf:/general/SessionName": "REMOTIX",
+        "handler:dropin:/run/user/5/systemd/user.control/xfconfd.service.d/"
         "zz-remotix-sessione.conf": "c'e'"}, repr(g))
     for k, v in g.items():
         prova("manager: %s left ⇒ FAIL" % k.split(":")[1],
-              giudica(p, dict(p, **{k: v}))[0] == S.FAIL)
-    prova("not read ⇒ BLOCKED", giudica(None, p)[0] == S.BLOCKED)
+              judge(p, dict(p, **{k: v}))[0] == S.FAIL)
+    prova("not read ⇒ BLOCKED", judge(None, p)[0] == S.BLOCKED)
     prova("reading line: valid shell",
-          os.system("sh -n -c %s" % S._q(riga_lettura("x"))) == 0)
+          os.system("sh -n -c %s" % S._q(line_reading("x"))) == 0)
     for d in S.DESKTOP:
         prova("fault line %s: valid shell" % d,
-              os.system("sh -n -c %s" % S._q(riga_guasto("x", d))) == 0)
-    print("⛔ CERTIFICATION FAILED" if guai else "⭐ CERTIFIED")
-    return 1 if guai else 0
+              os.system("sh -n -c %s" % S._q(fault_line("x", d))) == 0)
+    print("⛔ CERTIFICATION FAILED" if troubles else "⭐ CERTIFIED")
+    return 1 if troubles else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def corpo(o, E):
-    with S.Sessione(o, "031", E) as s:
-        desktop, gesto = s.sc.gesto_esci()
-        if not gesto:
-            raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
-        c, t = s.come_utente("sh -c %s" % S._q(
+def body_el(o, E):
+    with S.Session(o, "031", E) as s:
+        desktop, gesture = s.sc.exit_gesture()
+        if not gesture:
+            raise S.Blocked("I do not know how to say «Exit» in %s" % s.sc.container)
+        c, t = s.as_user("sh -c %s" % S._q(
             "mkdir -p /home/%s/.cache/sessions && echo bench sentinel 15-f031b > "
-            "'/home/%s/.cache/sessions/%s'" % (s.chi, s.chi, SENTINELLA)), 30)
-        prima, tp = leggi(s)
-        ev = [x for x in (s.salva_testo("impostazioni-prima.txt", tp or ""),) if x]
-        print("   before: %s keys" % (None if prima is None else len(prima)), flush=True)
-        ok, m = s.entra()
+            "'/home/%s/.cache/sessions/%s'" % (s.chi, s.chi, SENTINEL)), 30)
+        before, tp = read_it(s)
+        ev = [x for x in (s.save_text("impostazioni-prima.txt", tp or ""),) if x]
+        print("   before: %s keys" % (None if before is None else len(before)), flush=True)
+        ok, m = s.enter()
         if not ok:
-            raise S.Bloccata(m)
-        time.sleep(ATTESA_IN_PIEDI_S)        # the session is born, the panel too
-        d, ev2 = F21.esci_e_guarda(s, gesto, nome="esci")
+            raise S.Blocked(m)
+        time.sleep(WAIT_UP_S)        # the session is born, the panel too
+        d, ev2 = F21.exit_and_look(s, gesture, label_name="exit")
         ev += [x for x in ev2 if x]
-        if not d.get("finita"):
-            raise S.Bloccata("«Exit» (%s) did not close the session: the «after» would not be "
-                             "the after" % gesto)
-        dopo, td = leggi(s)
-        e, frase, per = giudica(prima, dopo)
-        p = s.salva_testo("impostazioni-dopo.txt", td or "")
-        q = s.salva_testo("impostazioni-giudizio.txt", "\n".join(
+        if not d.get("ended"):
+            raise S.Blocked("«Exit» (%s) did not close the session: the «after» would not be "
+                             "the after" % gesture)
+        after, td = read_it(s)
+        e, sentence, per = judge(before, after)
+        p = s.save_text("impostazioni-dopo.txt", td or "")
+        q = s.save_text("impostazioni-giudizio.txt", "\n".join(
             "%s:\n  %s" % (k, "\n  ".join(v) or "-") for k, v in per.items()))
         ev += [x for x in (p, q) if x]
-        E.metti("F-031B", e, frase,
-                atteso="after «Exit» the user's settings are the ones from before, "
+        E.put("F-031B", e, sentence,
+                expected_val="after «Exit» the user's settings are the ones from before, "
                        "except lock, restart, suspend and stand-by",
-                osservato=frase, evidenze=ev)
-        if not o.guasto:
+                observed=sentence, evidence=ev)
+        if not o.fault:
             return
-        _c, tg = s.come_utente("sh -c %s" % S._q(riga_guasto(s.chi, o.scatola)), 60)
-        dopo_g, tdg = leggi(s)
-        eg, fg, _per = giudica(prima, dopo_g)
+        _c, tg = s.as_user("sh -c %s" % S._q(fault_line(s.chi, o.container_box)), 60)
+        after_g, tdg = read_it(s)
+        eg, fg, _per = judge(before, after_g)
         print("   FAULT (%s): %s" % ((tg or "").strip().replace("\n", " | ")[-120:], fg[:300]),
               flush=True)
-        E.guasto("F-031B", None if eg == S.BLOCKED else eg == S.FAIL,
+        E.fault("F-031B", None if eg == S.BLOCKED else eg == S.FAIL,
                  "simulated persistent write (sentinel gone + a key of %s): %s"
-                 % (o.scatola, fg),
-                 atteso="red: a watched key changed", osservato=fg,
-                 evidenze=[x for x in (s.salva_testo("impostazioni-guasto.txt", tdg or ""),)
+                 % (o.container_box, fg),
+                 expected_val="red: a watched key changed", observed=fg,
+                 evidence=[x for x in (s.save_text("impostazioni-guasto.txt", tdg or ""),)
                            if x])
 
 
 if __name__ == "__main__":
-    sys.exit(S.esegui(__doc__, FUNZIONI, corpo, certifica))
+    sys.exit(S.execute(__doc__, FUNCTIONS, body_el, certify))

@@ -1,7 +1,7 @@
 /*
  * 06-b33-testimone.c — ⭐ THE RECEIVING SIDE, without a browser.  Sub-phase 6.1.
  *
- *   ./06-b33-testimone [--misura 1264x800]
+ *   ./06-b33-testimone [--gauge 1264x800]
  *
  * ⛔ It is `04-b24-testimone.c` COPIED, with **one** addition and not one line
  *    fewer: the `RITELA` line, which says when the window changes size under
@@ -64,44 +64,44 @@
 
 #include "xdg-shell-client-protocol.h"
 
-static struct wl_compositor *compositore;
-static struct wl_shm *memoria;
-static struct xdg_wm_base *guscio;
-static struct wl_seat *posto;
-static struct wl_surface *superficie;
+static struct wl_compositor *compositor;
+static struct wl_shm *mem_buf;
+static struct xdg_wm_base *shell;
+static struct wl_seat *slot;
+static struct wl_surface *surface;
 static struct xdg_surface *xdg_sup;
-static struct xdg_toplevel *finestra;
-static struct wl_pointer *puntatore;
-static struct wl_keyboard *tastiera;
+static struct xdg_toplevel *win;
+static struct wl_pointer *ptr;
+static struct wl_keyboard *keyboard;
 
 #define OUTPUT_MAX 8
 static struct
 {
 	struct wl_output *output;
 	int32_t l, a;
-	char nome[64];
-} schermi[OUTPUT_MAX];
-static int quanti_schermi;
+	char label_name[64];
+} screens[OUTPUT_MAX];
+static int how_many_screens;
 
-static uint32_t voluta_l = 1600, voluta_a = 900;
-static int scelto = -1;
-static bool configurata;
-static int32_t larghezza = 1600, altezza = 900;
+static uint32_t intended_w = 1600, intended_h = 900;
+static int chosen = -1;
+static bool configured;
+static int32_t width_px = 1600, height_px = 900;
 /* The size DECLARED in the last line: it serves to write `RITELA` only when
  * it really changes, and not at every `configure`. */
 static int32_t vista_l, vista_a;
-static unsigned long contatore;
+static unsigned long counter;
 
 /* ⛔ One line per event, and ALWAYS with a growing `n`: it is the denominator.
  *    «Nothing arrived» and «I did not print» look the same
  *    without a counter that grows. */
-static void riga(const char *forma, ...)
+static void row(const char *shape, ...)
 {
 	va_list a;
 
-	printf("{\"n\":%lu,", ++contatore);
-	va_start(a, forma);
-	vprintf(forma, a);
+	printf("{\"n\":%lu,", ++counter);
+	va_start(a, shape);
+	vprintf(shape, a);
 	va_end(a);
 	printf("}\n");
 	fflush(stdout);
@@ -110,118 +110,118 @@ static void riga(const char *forma, ...)
 /* ------------------------------------------------------------------ *
  *  The pointer
  * ------------------------------------------------------------------ */
-static void p_entra(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *sup,
+static void p_enter(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *sup,
                     wl_fixed_t x, wl_fixed_t y)
 {
-	riga("\"tipo\":\"PUNTATORE_ENTRA\",\"x\":%.1f,\"y\":%.1f", wl_fixed_to_double(x),
+	row("\"kind\":\"PUNTATORE_ENTRA\",\"x\":%.1f,\"y\":%.1f", wl_fixed_to_double(x),
 	     wl_fixed_to_double(y));
 }
-static void p_esce(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *sup)
+static void p_exits(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *sup)
 {
-	riga("\"tipo\":\"PUNTATORE_ESCE\"");
+	row("\"kind\":\"PUNTATORE_ESCE\"");
 }
-static void p_muove(void *d, struct wl_pointer *p, uint32_t t, wl_fixed_t x, wl_fixed_t y)
+static void p_moves(void *d, struct wl_pointer *p, uint32_t t, wl_fixed_t x, wl_fixed_t y)
 {
 	/* ⛔ Coordinates LOCAL TO THE SURFACE: with a fullscreen window
 	 *    they are the position on the monitor, that is exactly what we
-	 *    asked of `input_puntatore`.  The comparison is direct. */
-	riga("\"tipo\":\"PUNTATORE\",\"x\":%.1f,\"y\":%.1f", wl_fixed_to_double(x),
+	 *    asked of `input_pointer`.  The comparison is direct. */
+	row("\"kind\":\"POINTER\",\"x\":%.1f,\"y\":%.1f", wl_fixed_to_double(x),
 	     wl_fixed_to_double(y));
 }
-static void p_bottone(void *d, struct wl_pointer *p, uint32_t s, uint32_t t, uint32_t bottone,
-                      uint32_t stato)
+static void p_button(void *d, struct wl_pointer *p, uint32_t s, uint32_t t, uint32_t button_code,
+                      uint32_t state)
 {
 	/* ⭐ `wl_pointer.button` carries the **evdev** code: `BTN_LEFT` = 0x110 =
 	 *    272, the same number we sent.  No translation in
 	 *    between, so the comparison is between the same quantity. */
-	riga("\"tipo\":\"BOTTONE\",\"bottone\":%u,\"premuto\":%u", bottone, stato);
+	row("\"kind\":\"BUTTON\",\"button_code\":%u,\"pressed\":%u", button_code, state);
 }
-static void p_asse(void *d, struct wl_pointer *p, uint32_t t, uint32_t asse, wl_fixed_t valore)
+static void p_axis(void *d, struct wl_pointer *p, uint32_t t, uint32_t axis, wl_fixed_t value_v)
 {
-	riga("\"tipo\":\"ASSE\",\"asse\":%u,\"valore\":%.2f", asse, wl_fixed_to_double(valore));
+	row("\"kind\":\"ASSE\",\"axis\":%u,\"value_v\":%.2f", axis, wl_fixed_to_double(value_v));
 }
-static void p_cornice(void *d, struct wl_pointer *p) {}
-static void p_sorgente(void *d, struct wl_pointer *p, uint32_t s)
+static void p_border(void *d, struct wl_pointer *p) {}
+static void p_source(void *d, struct wl_pointer *p, uint32_t s)
 {
-	riga("\"tipo\":\"ASSE_SORGENTE\",\"sorgente\":%u", s);
+	row("\"kind\":\"ASSE_SORGENTE\",\"source\":%u", s);
 }
-static void p_stop(void *d, struct wl_pointer *p, uint32_t t, uint32_t asse) {}
-static void p_discreto(void *d, struct wl_pointer *p, uint32_t asse, int32_t passi)
+static void p_stop(void *d, struct wl_pointer *p, uint32_t t, uint32_t axis) {}
+static void p_discrete(void *d, struct wl_pointer *p, uint32_t axis, int32_t steps)
 {
-	riga("\"tipo\":\"ASSE_DISCRETO\",\"asse\":%u,\"passi\":%d", asse, passi);
+	row("\"kind\":\"ASSE_DISCRETO\",\"axis\":%u,\"steps\":%d", axis, steps);
 }
-static void p_120(void *d, struct wl_pointer *p, uint32_t asse, int32_t v120)
+static void p_120(void *d, struct wl_pointer *p, uint32_t axis, int32_t v120)
 {
 	/* ⭐⭐ THIS IS THE MEASUREMENT OF THE SIGN, and in the same unit as the protocol:
 	 *     `RCP.md` §7.3 counts in units of 120, and `axis_value120` carries 120. */
-	riga("\"tipo\":\"ASSE_120\",\"asse\":%u,\"v120\":%d", asse, v120);
+	row("\"kind\":\"ASSE_120\",\"axis\":%u,\"v120\":%d", axis, v120);
 }
-static void p_direzione(void *d, struct wl_pointer *p, uint32_t asse, uint32_t dir) {}
+static void p_direction(void *d, struct wl_pointer *p, uint32_t axis, uint32_t dir) {}
 
-static const struct wl_pointer_listener ascolto_puntatore = {
-	.enter = p_entra,
-	.leave = p_esce,
-	.motion = p_muove,
-	.button = p_bottone,
-	.axis = p_asse,
-	.frame = p_cornice,
-	.axis_source = p_sorgente,
+static const struct wl_pointer_listener pointer_listener = {
+	.enter = p_enter,
+	.leave = p_exits,
+	.motion = p_moves,
+	.button = p_button,
+	.axis = p_axis,
+	.frame = p_border,
+	.axis_source = p_source,
 	.axis_stop = p_stop,
-	.axis_discrete = p_discreto,
+	.axis_discrete = p_discrete,
 	.axis_value120 = p_120,
-	.axis_relative_direction = p_direzione,
+	.axis_relative_direction = p_direction,
 };
 
 /* ------------------------------------------------------------------ *
  *  The keyboard
  * ------------------------------------------------------------------ */
-static void t_keymap(void *d, struct wl_keyboard *k, uint32_t formato, int32_t fd, uint32_t misura)
+static void t_keymap(void *d, struct wl_keyboard *k, uint32_t schema, int32_t fd, uint32_t gauge)
 {
-	riga("\"tipo\":\"KEYMAP\",\"formato\":%u,\"byte\":%u", formato, misura);
+	row("\"kind\":\"KEYMAP\",\"schema\":%u,\"byte\":%u", schema, gauge);
 	close(fd);
 }
-static void t_entra(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface *sup,
-                    struct wl_array *tasti)
+static void t_enter(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface *sup,
+                    struct wl_array *keys)
 {
-	riga("\"tipo\":\"FUOCO\",\"dentro\":1");
+	row("\"kind\":\"FUOCO\",\"inside\":1");
 }
-static void t_esce(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface *sup)
+static void t_exits(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface *sup)
 {
-	riga("\"tipo\":\"FUOCO\",\"dentro\":0");
+	row("\"kind\":\"FUOCO\",\"inside\":0");
 }
-static void t_tasto(void *d, struct wl_keyboard *k, uint32_t s, uint32_t t, uint32_t tasto,
-                    uint32_t stato)
+static void t_key(void *d, struct wl_keyboard *k, uint32_t s, uint32_t t, uint32_t key,
+                    uint32_t state)
 {
 	/* ⛔ `wl_keyboard.key` carries the **evdev** code, the same one we
-	 *    sent to `input_posizione`.  `KEY_A` = 30 on both sides. */
-	riga("\"tipo\":\"TASTO\",\"codice\":%u,\"premuto\":%u", tasto, stato);
+	 *    sent to `input_position`.  `KEY_A` = 30 on both sides. */
+	row("\"kind\":\"KEY\",\"code_v\":%u,\"pressed\":%u", key, state);
 }
-static void t_modificatori(void *d, struct wl_keyboard *k, uint32_t s, uint32_t premuti,
-                           uint32_t agganciati, uint32_t bloccati, uint32_t gruppo)
+static void t_modifiers(void *d, struct wl_keyboard *k, uint32_t s, uint32_t pressed,
+                           uint32_t latched, uint32_t blocked, uint32_t grp)
 {
-	riga("\"tipo\":\"MODIFICATORI\",\"premuti\":%u,\"bloccati\":%u,\"gruppo\":%u", premuti,
-	     bloccati, gruppo);
+	row("\"kind\":\"MODIFICATORI\",\"pressed\":%u,\"blocked\":%u,\"grp\":%u", pressed,
+	     blocked, grp);
 }
-static void t_ripetizione(void *d, struct wl_keyboard *k, int32_t ritmo, int32_t ritardo) {}
+static void t_repetition(void *d, struct wl_keyboard *k, int32_t rate, int32_t delay) {}
 
-static const struct wl_keyboard_listener ascolto_tastiera = {
+static const struct wl_keyboard_listener keyboard_listener = {
 	.keymap = t_keymap,
-	.enter = t_entra,
-	.leave = t_esce,
-	.key = t_tasto,
-	.modifiers = t_modificatori,
-	.repeat_info = t_ripetizione,
+	.enter = t_enter,
+	.leave = t_exits,
+	.key = t_key,
+	.modifiers = t_modifiers,
+	.repeat_info = t_repetition,
 };
 
 /*
  * ⛔⛔⛔ AND THE CAPABILITY GOES AWAY AND COMES BACK — defect of the WITNESS found on 21
  *       Aug 2026, and it made the instrument mute without saying a word.
  *
- * This function hooked `wl_pointer` **only once** (`&& !puntatore`) and
+ * This function hooked `wl_pointer` **only once** (`&& !ptr`) and
  * never let go of it.  ⇒ When the seat loses the capability and gets it back, the
  * compositor has destroyed its pointer: our object stays there,
  * ⛔ **receives nothing more and gives no error**, and on the return
- * `!puntatore` is false so we never hook again.
+ * `!ptr` is false so we never hook again.
  *
  * ⚠ It is **the same defect** that `STUDI.md` §gnome §9 describes for `libei` —
  *   *«the pointer to the old device stops working without an error»* —
@@ -237,80 +237,80 @@ static const struct wl_keyboard_listener ascolto_tastiera = {
  * ⇒ We let go when the capability drops, and hook again when it returns.  It is
  *   also what a well-written Wayland client must do.
  */
-static void posto_capacita(void *d, struct wl_seat *s, uint32_t cap)
+static void seat_on_capabilities(void *d, struct wl_seat *s, uint32_t cap)
 {
-	riga("\"tipo\":\"POSTO\",\"capacita\":%u", cap);
+	row("\"kind\":\"SLOT\",\"capabilities\":%u", cap);
 
-	if ((cap & WL_SEAT_CAPABILITY_POINTER) && !puntatore)
+	if ((cap & WL_SEAT_CAPABILITY_POINTER) && !ptr)
 	{
-		puntatore = wl_seat_get_pointer(s);
-		wl_pointer_add_listener(puntatore, &ascolto_puntatore, NULL);
-		riga("\"tipo\":\"POSTO_PUNTATORE\",\"stato\":\"agganciato\"");
+		ptr = wl_seat_get_pointer(s);
+		wl_pointer_add_listener(ptr, &pointer_listener, NULL);
+		row("\"kind\":\"POSTO_PUNTATORE\",\"state\":\"hooked\"");
 	}
-	else if (!(cap & WL_SEAT_CAPABILITY_POINTER) && puntatore)
+	else if (!(cap & WL_SEAT_CAPABILITY_POINTER) && ptr)
 	{
-		wl_pointer_release(puntatore);
-		puntatore = NULL;
+		wl_pointer_release(ptr);
+		ptr = NULL;
 		/* ⛔ And it is WRITTEN: without this line «the seat lost the pointer» and
 		 *    «nothing arrived» look the same in the file. */
-		riga("\"tipo\":\"POSTO_PUNTATORE\",\"stato\":\"mollato\"");
+		row("\"kind\":\"POSTO_PUNTATORE\",\"state\":\"mollato\"");
 	}
 
-	if ((cap & WL_SEAT_CAPABILITY_KEYBOARD) && !tastiera)
+	if ((cap & WL_SEAT_CAPABILITY_KEYBOARD) && !keyboard)
 	{
-		tastiera = wl_seat_get_keyboard(s);
-		wl_keyboard_add_listener(tastiera, &ascolto_tastiera, NULL);
-		riga("\"tipo\":\"POSTO_TASTIERA\",\"stato\":\"agganciata\"");
+		keyboard = wl_seat_get_keyboard(s);
+		wl_keyboard_add_listener(keyboard, &keyboard_listener, NULL);
+		row("\"kind\":\"POSTO_TASTIERA\",\"state\":\"agganciata\"");
 	}
-	else if (!(cap & WL_SEAT_CAPABILITY_KEYBOARD) && tastiera)
+	else if (!(cap & WL_SEAT_CAPABILITY_KEYBOARD) && keyboard)
 	{
-		wl_keyboard_release(tastiera);
-		tastiera = NULL;
-		riga("\"tipo\":\"POSTO_TASTIERA\",\"stato\":\"mollata\"");
+		wl_keyboard_release(keyboard);
+		keyboard = NULL;
+		row("\"kind\":\"POSTO_TASTIERA\",\"state\":\"mollata\"");
 	}
 }
-static void posto_nome(void *d, struct wl_seat *s, const char *nome) {}
-static const struct wl_seat_listener ascolto_posto = { posto_capacita, posto_nome };
+static void seat_on_name(void *d, struct wl_seat *s, const char *label_name) {}
+static const struct wl_seat_listener seat_listener = { seat_on_capabilities, seat_on_name };
 
 /* ------------------------------------------------------------------ *
  *  The screens
  * ------------------------------------------------------------------ */
-static void o_geometria(void *d, struct wl_output *o, int32_t x, int32_t y, int32_t lf, int32_t af,
-                        int32_t sub, const char *venditore, const char *modello, int32_t trasf)
+static void o_geometry(void *d, struct wl_output *o, int32_t x, int32_t y, int32_t lf, int32_t af,
+                        int32_t sub, const char *vendor, const char *model, int32_t transform)
 {
 	int i = (int) (intptr_t) d;
 
 	if (i < OUTPUT_MAX)
-		snprintf(schermi[i].nome, sizeof schermi[i].nome, "%s", modello ?: "?");
+		snprintf(screens[i].label_name, sizeof screens[i].label_name, "%s", model ?: "?");
 }
-static void o_modo(void *d, struct wl_output *o, uint32_t bandiere, int32_t l, int32_t a,
-                   int32_t ritmo)
+static void o_mode(void *d, struct wl_output *o, uint32_t flags, int32_t l, int32_t a,
+                   int32_t rate)
 {
 	int i = (int) (intptr_t) d;
 
-	if (i < OUTPUT_MAX && (bandiere & WL_OUTPUT_MODE_CURRENT))
+	if (i < OUTPUT_MAX && (flags & WL_OUTPUT_MODE_CURRENT))
 	{
-		schermi[i].l = l;
-		schermi[i].a = a;
+		screens[i].l = l;
+		screens[i].a = a;
 	}
 }
-static void o_fatto(void *d, struct wl_output *o) {}
-static void o_scala(void *d, struct wl_output *o, int32_t s) {}
-static void o_nome(void *d, struct wl_output *o, const char *n) {}
-static void o_descrizione(void *d, struct wl_output *o, const char *n) {}
-static const struct wl_output_listener ascolto_output = { o_geometria, o_modo,  o_fatto,
-	                                                      o_scala,     o_nome, o_descrizione };
+static void o_done(void *d, struct wl_output *o) {}
+static void o_scale(void *d, struct wl_output *o, int32_t s) {}
+static void o_name(void *d, struct wl_output *o, const char *n) {}
+static void o_description(void *d, struct wl_output *o, const char *n) {}
+static const struct wl_output_listener output_listener = { o_geometry, o_mode,  o_done,
+	                                                      o_scale,     o_name, o_description };
 
 /* ------------------------------------------------------------------ *
  *  The shell
  * ------------------------------------------------------------------ */
-static void guscio_ping(void *d, struct xdg_wm_base *g, uint32_t s)
+static void shell_ping(void *d, struct xdg_wm_base *g, uint32_t s)
 {
 	xdg_wm_base_pong(g, s);
 }
-static const struct xdg_wm_base_listener ascolto_guscio = { guscio_ping };
+static const struct xdg_wm_base_listener wm_base_listener = { shell_ping };
 
-static int memoria_nuova(size_t byte)
+static int new_memory(size_t byte)
 {
 	int fd = memfd_create("b33-testimone", MFD_CLOEXEC);
 
@@ -324,14 +324,14 @@ static int memoria_nuova(size_t byte)
 	return fd;
 }
 
-static void dipingi(void)
+static void paint(void)
 {
-	size_t passo = (size_t) larghezza * 4;
-	size_t byte = passo * (size_t) altezza;
-	int fd = memoria_nuova(byte);
+	size_t step = (size_t) width_px * 4;
+	size_t byte = step * (size_t) height_px;
+	int fd = new_memory(byte);
 	uint32_t *pixel;
-	struct wl_shm_pool *piscina;
-	struct wl_buffer *pacco;
+	struct wl_shm_pool *pool;
+	struct wl_buffer *bundle;
 
 	if (fd < 0)
 		return;
@@ -343,29 +343,29 @@ static void dipingi(void)
 	}
 	for (size_t i = 0; i < byte / 4; i++)
 		pixel[i] = 0xFF101014;
-	piscina = wl_shm_create_pool(memoria, fd, (int32_t) byte);
-	pacco = wl_shm_pool_create_buffer(piscina, 0, larghezza, altezza, (int32_t) passo,
+	pool = wl_shm_create_pool(mem_buf, fd, (int32_t) byte);
+	bundle = wl_shm_pool_create_buffer(pool, 0, width_px, height_px, (int32_t) step,
 	                                  WL_SHM_FORMAT_ARGB8888);
-	wl_shm_pool_destroy(piscina);
+	wl_shm_pool_destroy(pool);
 	munmap(pixel, byte);
 	close(fd);
 
-	wl_surface_attach(superficie, pacco, 0, 0);
-	wl_surface_damage_buffer(superficie, 0, 0, larghezza, altezza);
-	wl_surface_commit(superficie);
+	wl_surface_attach(surface, bundle, 0, 0);
+	wl_surface_damage_buffer(surface, 0, 0, width_px, height_px);
+	wl_surface_commit(surface);
 }
 
-static void sup_configura(void *d, struct xdg_surface *s, uint32_t serie)
+static void sup_configure(void *d, struct xdg_surface *s, uint32_t series)
 {
-	xdg_surface_ack_configure(s, serie);
-	dipingi();
-	if (!configurata)
+	xdg_surface_ack_configure(s, series);
+	paint();
+	if (!configured)
 	{
-		configurata = true;
-		vista_l = larghezza;
-		vista_a = altezza;
-		riga("\"tipo\":\"PRONTA\",\"larghezza\":%d,\"altezza\":%d,\"schermo\":\"%s\"", larghezza,
-		     altezza, scelto >= 0 ? schermi[scelto].nome : "?");
+		configured = true;
+		vista_l = width_px;
+		vista_a = height_px;
+		row("\"kind\":\"READY\",\"width_px\":%d,\"height_px\":%d,\"display_screen\":\"%s\"", width_px,
+		     height_px, chosen >= 0 ? screens[chosen].label_name : "?");
 	}
 	/*
 	 * ⭐⭐ THE ONLY ADDITION TO B24 — and it is written from the side that RECEIVES.
@@ -377,49 +377,49 @@ static void sup_configura(void *d, struct xdg_surface *s, uint32_t serie)
 	 *    line for every `configure` would make a resize
 	 *    indistinguishable from a redraw.
 	 */
-	else if (larghezza != vista_l || altezza != vista_a)
+	else if (width_px != vista_l || height_px != vista_a)
 	{
-		riga("\"tipo\":\"RITELA\",\"da_l\":%d,\"da_a\":%d,\"a_l\":%d,\"a_a\":%d", vista_l, vista_a,
-		     larghezza, altezza);
-		vista_l = larghezza;
-		vista_a = altezza;
+		row("\"kind\":\"RITELA\",\"da_l\":%d,\"da_a\":%d,\"a_l\":%d,\"a_a\":%d", vista_l, vista_a,
+		     width_px, height_px);
+		vista_l = width_px;
+		vista_a = height_px;
 	}
 }
-static const struct xdg_surface_listener ascolto_sup = { sup_configura };
+static const struct xdg_surface_listener surface_listener = { sup_configure };
 
-static void fin_configura(void *d, struct xdg_toplevel *f, int32_t l, int32_t a,
-                          struct wl_array *stati)
+static void fin_configure(void *d, struct xdg_toplevel *f, int32_t l, int32_t a,
+                          struct wl_array *states)
 {
 	if (l > 0 && a > 0)
 	{
-		larghezza = l;
-		altezza = a;
+		width_px = l;
+		height_px = a;
 	}
 }
-static void fin_chiudi(void *d, struct xdg_toplevel *f)
+static void fin_close(void *d, struct xdg_toplevel *f)
 {
-	riga("\"tipo\":\"CHIUSA\"");
+	row("\"kind\":\"CHIUSA\"");
 	exit(0);
 }
-static void fin_limiti(void *d, struct xdg_toplevel *f, int32_t l, int32_t a) {}
-static void fin_stati(void *d, struct xdg_toplevel *f, struct wl_array *c) {}
-static const struct xdg_toplevel_listener ascolto_fin = { fin_configura, fin_chiudi, fin_limiti,
-	                                                      fin_stati };
+static void fin_limits(void *d, struct xdg_toplevel *f, int32_t l, int32_t a) {}
+static void fin_states(void *d, struct xdg_toplevel *f, struct wl_array *c) {}
+static const struct xdg_toplevel_listener toplevel_listener = { fin_configure, fin_close, fin_limits,
+	                                                      fin_states };
 
 /* ------------------------------------------------------------------ *
  *  The global registry
  * ------------------------------------------------------------------ */
-static void registro_globale(void *d, struct wl_registry *r, uint32_t nome, const char *interfaccia,
-                             uint32_t versione)
+static void registry_on_global(void *d, struct wl_registry *r, uint32_t label_name, const char *interfaccia,
+                             uint32_t version_v)
 {
 	if (!strcmp(interfaccia, wl_compositor_interface.name))
-		compositore = wl_registry_bind(r, nome, &wl_compositor_interface, 4);
+		compositor = wl_registry_bind(r, label_name, &wl_compositor_interface, 4);
 	else if (!strcmp(interfaccia, wl_shm_interface.name))
-		memoria = wl_registry_bind(r, nome, &wl_shm_interface, 1);
+		mem_buf = wl_registry_bind(r, label_name, &wl_shm_interface, 1);
 	else if (!strcmp(interfaccia, xdg_wm_base_interface.name))
 	{
-		guscio = wl_registry_bind(r, nome, &xdg_wm_base_interface, 1);
-		xdg_wm_base_add_listener(guscio, &ascolto_guscio, NULL);
+		shell = wl_registry_bind(r, label_name, &xdg_wm_base_interface, 1);
+		xdg_wm_base_add_listener(shell, &wm_base_listener, NULL);
 	}
 	else if (!strcmp(interfaccia, wl_seat_interface.name))
 	{
@@ -427,79 +427,79 @@ static void registro_globale(void *d, struct wl_registry *r, uint32_t nome, cons
 		 *    which `RCP.md` §7.3 counts the wheel.  With a lower version the
 		 *    sign could be measured only on the smooth axis, which is another
 		 *    quantity. */
-		uint32_t v = versione < 8 ? versione : 8;
+		uint32_t v = version_v < 8 ? version_v : 8;
 
-		posto = wl_registry_bind(r, nome, &wl_seat_interface, v);
-		wl_seat_add_listener(posto, &ascolto_posto, NULL);
-		riga("\"tipo\":\"POSTO_LEGATO\",\"versione\":%u", v);
+		slot = wl_registry_bind(r, label_name, &wl_seat_interface, v);
+		wl_seat_add_listener(slot, &seat_listener, NULL);
+		row("\"kind\":\"POSTO_LEGATO\",\"version_v\":%u", v);
 	}
-	else if (!strcmp(interfaccia, wl_output_interface.name) && quanti_schermi < OUTPUT_MAX)
+	else if (!strcmp(interfaccia, wl_output_interface.name) && how_many_screens < OUTPUT_MAX)
 	{
-		int i = quanti_schermi++;
+		int i = how_many_screens++;
 
-		schermi[i].output = wl_registry_bind(r, nome, &wl_output_interface, 2);
-		wl_output_add_listener(schermi[i].output, &ascolto_output, (void *) (intptr_t) i);
+		screens[i].output = wl_registry_bind(r, label_name, &wl_output_interface, 2);
+		wl_output_add_listener(screens[i].output, &output_listener, (void *) (intptr_t) i);
 	}
 }
-static void registro_via(void *d, struct wl_registry *r, uint32_t nome) {}
-static const struct wl_registry_listener ascolto_registro = { registro_globale, registro_via };
+static void registry_remove(void *d, struct wl_registry *r, uint32_t label_name) {}
+static const struct wl_registry_listener registry_listener = { registry_on_global, registry_remove };
 
 int main(int argc, char **argv)
 {
-	struct wl_display *schermo;
-	struct wl_registry *registro;
+	struct wl_display *display_screen;
+	struct wl_registry *logbook;
 
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	for (int i = 1; i < argc; i++)
-		if (!strcmp(argv[i], "--misura") && i + 1 < argc)
-			sscanf(argv[++i], "%ux%u", &voluta_l, &voluta_a);
+		if (!strcmp(argv[i], "--gauge") && i + 1 < argc)
+			sscanf(argv[++i], "%ux%u", &intended_w, &intended_h);
 
-	schermo = wl_display_connect(NULL);
-	if (!schermo)
+	display_screen = wl_display_connect(NULL);
+	if (!display_screen)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"no Wayland compositor\"");
+		row("\"kind\":\"ERRORE\",\"reason_text\":\"no Wayland compositor\"");
 		return 2;
 	}
-	registro = wl_display_get_registry(schermo);
-	wl_registry_add_listener(registro, &ascolto_registro, NULL);
-	wl_display_roundtrip(schermo);
-	wl_display_roundtrip(schermo); /* the second round brings the modes of the outputs */
+	logbook = wl_display_get_registry(display_screen);
+	wl_registry_add_listener(logbook, &registry_listener, NULL);
+	wl_display_roundtrip(display_screen);
+	wl_display_roundtrip(display_screen); /* the second round brings the modes of the outputs */
 
-	if (!compositore || !memoria || !guscio)
+	if (!compositor || !mem_buf || !shell)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"the compositor does not expose shell or memory\"");
+		row("\"kind\":\"ERRORE\",\"reason_text\":\"the compositor does not expose shell or memory\"");
 		return 2;
 	}
 
 	/* ⛔ THE MONITOR IS CHOSEN, and if there is none we exit saying so. */
-	for (int i = 0; i < quanti_schermi; i++)
+	for (int i = 0; i < how_many_screens; i++)
 	{
-		riga("\"tipo\":\"SCHERMO\",\"i\":%d,\"l\":%d,\"a\":%d,\"nome\":\"%s\"", i, schermi[i].l,
-		     schermi[i].a, schermi[i].nome);
-		if (scelto < 0 && (uint32_t) schermi[i].l == voluta_l && (uint32_t) schermi[i].a == voluta_a)
-			scelto = i;
+		row("\"kind\":\"SCREEN\",\"i\":%d,\"l\":%d,\"a\":%d,\"label_name\":\"%s\"", i, screens[i].l,
+		     screens[i].a, screens[i].label_name);
+		if (chosen < 0 && (uint32_t) screens[i].l == intended_w && (uint32_t) screens[i].a == intended_h)
+			chosen = i;
 	}
-	if (scelto < 0)
+	if (chosen < 0)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"no %ux%u screen among the %d announced\"",
-		     voluta_l, voluta_a, quanti_schermi);
+		row("\"kind\":\"ERRORE\",\"reason_text\":\"no %ux%u screen among the %d announced\"",
+		     intended_w, intended_h, how_many_screens);
 		return 3;
 	}
-	larghezza = schermi[scelto].l;
-	altezza = schermi[scelto].a;
+	width_px = screens[chosen].l;
+	height_px = screens[chosen].a;
 
-	superficie = wl_compositor_create_surface(compositore);
-	xdg_sup = xdg_wm_base_get_xdg_surface(guscio, superficie);
-	xdg_surface_add_listener(xdg_sup, &ascolto_sup, NULL);
-	finestra = xdg_surface_get_toplevel(xdg_sup);
-	xdg_toplevel_add_listener(finestra, &ascolto_fin, NULL);
-	xdg_toplevel_set_title(finestra, "B33 witness");
-	xdg_toplevel_set_app_id(finestra, "remotix.b33");
-	xdg_toplevel_set_fullscreen(finestra, schermi[scelto].output);
-	wl_surface_commit(superficie);
+	surface = wl_compositor_create_surface(compositor);
+	xdg_sup = xdg_wm_base_get_xdg_surface(shell, surface);
+	xdg_surface_add_listener(xdg_sup, &surface_listener, NULL);
+	win = xdg_surface_get_toplevel(xdg_sup);
+	xdg_toplevel_add_listener(win, &toplevel_listener, NULL);
+	xdg_toplevel_set_title(win, "B33 witness");
+	xdg_toplevel_set_app_id(win, "remotix.b33");
+	xdg_toplevel_set_fullscreen(win, screens[chosen].output);
+	wl_surface_commit(surface);
 
-	while (wl_display_dispatch(schermo) != -1)
+	while (wl_display_dispatch(display_screen) != -1)
 		;
-	riga("\"tipo\":\"FINE\"");
+	row("\"kind\":\"FINE\"");
 	return 0;
 }

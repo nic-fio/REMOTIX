@@ -2,7 +2,7 @@
 
 A trial of the look, **not the site**: fake data (version, date, fingerprint of the `.run`), no real links. In
 English (user, 9 Oct). The style is that of the product's sign-in page (`src/pagina.html`, class
-`.accesso`), collected in `stile.css`.
+`.access`), collected in `stile.css`.
 
 ✅ **10 Oct 2026: REMOTIX is free of charge** (DECISIONI §10.33) ⇒ the site is only **static files** served by Caddy on the
 VPS, like the other sites (`~/Documenti/VPS`): no sign-in, customer area, panel or prices. Removed

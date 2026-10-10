@@ -1,4 +1,4 @@
-from build import box, c, code, sysf, fig, note, p, rif, steps, table, text, ul, warn, zone
+from build import box, c, code, sysf, fig, note, p, ref, steps, table, text, ul, warn, zone
 
 
 S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor families. Capture, input and "
@@ -26,7 +26,7 @@ S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor f
     ], "«TAB» — The four desktops side by side") + \
     p("<b>One desktop per machine</b> (" + c("DECISIONI.md") + " §0.6, 20 Sep 2026; §4.6-duodetricies): REMOTIX looks for "
       "the desktop that is installed, it does not arbitrate between desktops that coexist, and the "
-      + c("--compositore") + " (compositor) option of v1 is not coming back. Machines with several desktops are out of "
+      + c("--compositor") + " (compositor) option of v1 is not coming back. Machines with several desktops are out of "
       "scope; when two are found the choice is made and declared “ambiguous”. Only Wayland sessions "
       "are served; X11 applications run through XWayland.") + \
     p("The four desktops were added one per phase (12 KDE, 13 XFCE, 14 LXQt) under the user's rule "
@@ -34,8 +34,8 @@ S1 = p("REMOTIX serves four Wayland desktops, which belong to three compositor f
       "<b>in front of</b> the GNOME code, which stays textually unchanged and is skipped with a "
       + c("return") + " or " + c("goto") + ".")
 
-S2 = p(c("riconosci_desktop()") + " (recognise the desktop) decides once per process, from the programs in " + c("PATH") + ", and "
-       "keeps the reason in words for the server's start line (" + c("sessione_desktop_spiega()") + ", “explain”).",
+S2 = p(c("recognize_desktop()") + " (recognise the desktop) decides once per process, from the programs in " + c("PATH") + ", and "
+       "keeps the reason in words for the server's start line (" + c("session_desktop_explain()") + ", “explain”).",
        lead=True) + \
     table(["Found", "Desktop", "Note"], [
         [c("startplasma-wayland") + " and not " + c("gnome-session"), "KDE", ""],
@@ -44,7 +44,7 @@ S2 = p(c("riconosci_desktop()") + " (recognise the desktop) decides once per pro
         [c("xfce4-session"), "XFCE", "with " + c("lxqt-session") + " too: XFCE, declared ambiguous; without "
          + c("labwc") + ", declared that the session cannot be born"],
         [c("lxqt-session"), "LXQt", "without " + c("labwc") + ", declared"],
-        ["none", c("SESSIONE_DESKTOP_NESSUNO") + " (none)", "No session is attempted"],
+        ["none", c("SESSION_DESKTOP_NONE") + " (none)", "No session is attempted"],
     ], "«TAB» — The recognition order") + \
     ul([
         "The XFCE marker is " + c("xfce4-session") + ", not " + c("labwc") + ": labwc is the family's "
@@ -53,14 +53,14 @@ S2 = p(c("riconosci_desktop()") + " (recognise the desktop) decides once per pro
         "the failure surfaced as “another drop-in wins over mine” and “Mutter does not expose "
         "RemoteDesktop”, two innocents accused (measured 20 Sep 2026). The fallback was removed: "
         + c("NESSUNO") + " is honesty, not a desktop.",
-        c("SessioneDesktop") + " travels as a " + c("uint32_t") + " between parent and child, so new values go "
+        c("DesktopSession") + " travels as a " + c("uint32_t") + " between parent and child, so new values go "
         "at the end: GNOME 0, KDE 1, XFCE 2, none 3, LXQt 4.",
-        "Capture, input, clipboard and stage rebuild ask " + c("sessione_su_wlroots()") + " (XFCE or LXQt), not "
+        "Capture, input, clipboard and stage rebuild ask " + c("session_on_wlroots()") + " (XFCE or LXQt), not "
         "“is it XFCE”: with five comparisons against XFCE, LXQt would have fallen silently into the "
         "GNOME/KDE branch.",
     ])
 
-S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c("componi_ambiente()")
+S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c("compose_environment()")
        + ", “compose the environment”): whatever the starter carries ends up in the user's systemd manager and in D-Bus activation, "
        "where it outlives the compositor. A stray " + c("LC_ALL=C") + " from an SSH shell once stopped every "
        "application from opening.", lead=True) + \
@@ -96,7 +96,7 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
       "purpose), and REMOTIX first checks with GBM that a 256×256 " + c("XRGB8888") + " buffer can be created "
       "on it. If not, " + c("WLR_RENDERER=pixman") + " is set and declared: otherwise wlroots would fall back "
       "to software in silence, or the canvas would be black.") + \
-    p("<b>Starting.</b> " + c("avvia()") + " (start) runs " + c("setsid --fork sh -c") + " with the composed "
+    p("<b>Starting.</b> " + c("start()") + " (start) runs " + c("setsid --fork sh -c") + " with the composed "
       "environment and the user's home as working directory, with the session's output appended to "
       + c("~/.local/state/remotix/sessione.log") + " (the session log, under " + c("$XDG_STATE_HOME")
       + "; a directory and file that must belong to the user and "
@@ -105,24 +105,24 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
       + c("setsid --fork") + " the session lives outside the server's unit: measured on 29 Sep 2026, stopping "
       "the unit or killing the parent or the child kills no desktop on any of the four, and a reattach finds "
       "the same compositor and windows. The child does not wait for the birth: "
-      + c("sessione_fai_nascere()") + " (bring the session to life) starts it only from a dead session and "
+      + c("session_spawn()") + " (bring the session to life) starts it only from a dead session and "
       "returns at once (at most one request a minute); the child's retry loop (1 s doubling to 30 s) finds the "
-      "session on a later round. The 40 s wait " + c("ATTESA_AVVIO_MS") + " belongs to the blocking "
-      + c("sessione_assicura()") + ", which the product no longer calls. The life cycle is in "
-      + rif("Startup and life cycle") + ".")
+      "session on a later round. The 40 s wait " + c("WAIT_STARTUP_MS") + " belongs to the blocking "
+      + c("session_ensure()") + ", which the product no longer calls. The life cycle is in "
+      + ref("Startup and life cycle") + ".")
 
 S4 = p("GNOME is started through the distribution's own session, with a systemd drop-in that makes "
        "gnome-shell headless and without monitors: the only monitor is the virtual one that the capture "
        "creates with " + c("RecordVirtual") + ", and that is where GNOME puts its top bar and dock.",
        lead=True) + \
     steps([
-        "<b>Which session</b> (D8, " + c("sessione_gnome()") + "): among " + c("wayland-sessions/*.desktop")
+        "<b>Which session</b> (D8, " + c("gnome_session()") + "): among " + c("wayland-sessions/*.desktop")
         + " entries that run " + c("gnome-session") + " with an installed " + c(".session") + " file, take the only one if "
         "there is just one, otherwise prefer the one named after the distribution (" + c("ID") + " of os-release, e.g. " + c("ubuntu") + "), then "
         + c("gnome") + ", then the first alphabetically, as GDM does; if none, " + c("gnome") + " as a declared "
         "fallback. The " + c("Exec") + " line is used as the command, " + c("DesktopNames")
         + " as " + c("XDG_CURRENT_DESKTOP") + ".",
-        "<b>Which shell unit</b> (" + c("unita_shell()") + ", “shell unit”): up to GNOME 49 " + sysf("org.gnome.Shell@wayland.service")
+        "<b>Which shell unit</b> (" + c("unit_shell()") + ", “shell unit”): up to GNOME 49 " + sysf("org.gnome.Shell@wayland.service")
         + "; from GNOME 50 the template " + sysf("org.gnome.Shell@.service") + " with " + c("--mode=%i")
         + ", whose instance is the one that " + sysf("gnome-session@<session>.target") + " requires ("
         + c("@user") + " for " + c("gnome") + ", " + c("@ubuntu") + " on Ubuntu 26.04). Chosen from what is "
@@ -141,8 +141,8 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
         + " and " + sysf("gnome-session-restart-dbus.service") + " inactive. A session started while GNOME "
         "restarts the session bus dies without writing anything (measured 16 Aug 2026).",
     ]) + \
-    p("<b>The session dconf</b> (D-015, " + c("sessione_dconf_prepara()") + ", “prepare”). The child writes "
-      + c("$XDG_RUNTIME_DIR/remotix/dconf/profilo") + " (the profile) with an in-memory database " + c("service-db:shm/remotix")
+    p("<b>The session dconf</b> (D-015, " + c("session_dconf_prepare()") + ", “prepare”). The child writes "
+      + c("$XDG_RUNTIME_DIR/remotix/dconf/profile_v") + " (the profile) with an in-memory database " + c("service-db:shm/remotix")
       + " on top and the user's databases below, read-only, and sets " + c("DCONF_PROFILE") + " before any "
       "GSettings call; the session gets the same variable. Everything the remote session writes goes to "
       "memory and never to the user's settings, so nothing has to be restored after a crash. The database is "
@@ -162,15 +162,15 @@ S4 = p("GNOME is started through the distribution's own session, with a systemd 
         [c("org.gnome.desktop.screensaver lock-enabled"), "false", "user dconf", "The lock is REMOTIX's, not "
          "the desktop's"],
         [c("org.gnome.desktop.input-sources"), "the negotiated layout", "session dconf (by "
-         + c("input_disposizione()") + ", “layout”, in " + c("input.c") + ")",
-         rif("Keyboard layout negotiation")],
-    ], "«TAB» — GNOME settings, " + c("sessione_impostazioni()") + " (session settings)") + \
+         + c("input_layout()") + ", “layout”, in " + c("input.c") + ")",
+         ref("Keyboard layout negotiation")],
+    ], "«TAB» — GNOME settings, " + c("session_settings()") + " (session settings)") + \
     p("The user decided on 25 Sep 2026 that the user's settings are not touched <b>except</b> those about "
       "lock screen, reboot, suspend and standby, which are dangerous for other users of the machine; those "
-      "are written to the user's dconf writer (" + c("gnome_metti_utente()") + ", “put in the user”) and then read back through "
+      "are written to the user's dconf writer (" + c("gnome_set_user()") + ", “put in the user”) and then read back through "
       "the session profile, as the shell will read them. Every schema is looked up first: "
       + c("g_settings_new()") + " on a missing schema aborts the process. "
-      + c("sessione_inibisci()") + " (inhibit) asks " + c("org.gnome.SessionManager.Inhibit") + " with flags "
+      + c("session_inhibit()") + " (inhibit) asks " + c("org.gnome.SessionManager.Inhibit") + " with flags "
       + c("SUSPEND | IDLE") + " (4 | 8 = 12; never " + c("LOGOUT") + "), and the cookie is never released: it lives "
       "as long as the session.")
 
@@ -187,7 +187,7 @@ ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --heig
          "(" + c("DECISIONI.md") + " §8.6)", "KWin 6.3.6 of Debian stable, and no released branch up to 6.7.4, resizes a "
          "virtual output live; restarting KWin would destroy the session"],
         ["Session configuration", c("$XDG_RUNTIME_DIR/remotix/xdg") + " first in " + c("XDG_CONFIG_DIRS")
-         + " (" + c("sessione_cartella_kde()") + ", “KDE folder”)", "Valid for the remote session only, gone with it; the "
+         + " (" + c("session_folder_kde()") + ", “KDE folder”)", "Valid for the remote session only, gone with it; the "
          "user at the monitor keeps their own"],
         [c("kdeglobals"), c("[KDE Action Restrictions][$i]") + ": " + c("lock_screen") + ", "
          + c("start_new_session") + ", " + c("switch_user") + " false", "KIOSK: no Lock, no Switch User; Log "
@@ -196,15 +196,15 @@ ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --heig
          "border must be grabbed; Breeze's automatic border is too thin. The user may change it"],
         [c("ksmserverrc"), c("loginMode=emptySession"), "After log-out, whoever comes back does not find the "
          "previous programs reopened"],
-        [c("kxkbrc"), "the negotiated layout, keys with " + c("[$i]"), rif("Keyboard layout negotiation")],
+        [c("kxkbrc"), "the negotiated layout, keys with " + c("[$i]"), ref("Keyboard layout negotiation")],
         ["Cursor theme", c("remotix-invisibile") + ", written in " + c("$XDG_RUNTIME_DIR/remotix/icons"),
          "KWin draws the pointer inside the image; the theme's one-pixel shapes are coloured codes that tell "
-         "the client which shape to draw (" + rif("Screen capture per compositor") + ")"],
+         "the client which shape to draw (" + ref("Screen capture per compositor") + ")"],
         ["Power", "A thread waits for " + c("org.kde.Solid.PowerManagement") + " on the bus and calls "
          + c("PolicyAgent.AddInhibition") + " with types 4, again whenever powerdevil restarts",
          "Keeps the screen on and the session not idle; powerdevil may appear late"],
         ["Screen-cast permission", sysf("/usr/share/applications/org.kde.remotix.desktop") + ", shipped by the "
-         "package and only <b>verified</b> by " + c("kwin_verifica_permesso()") + " (verify the permission): the "
+         "package and only <b>verified</b> by " + c("kwin_check_permission()") + " (verify the permission): the "
          "file exists (else " + c("RX-KDE-001") + "), its " + c("Exec") + " resolves to the running binary (else "
          + c("RX-KDE-002") + "), " + c("X-KDE-Wayland-Interfaces") + " lists " + c("zkde_screencast_unstable_v1")
          + " (else " + c("RX-KDE-003") + ")", "KWin compares " + c("/proc/<pid>/exe") + "; without the file the "
@@ -213,20 +213,20 @@ ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width 1920 --heig
     ], "«TAB» — How Plasma is kept") + \
     p("Alive means " + c("org.kde.KWin") + " owns its name on the session bus; the previous session is over "
       "when both " + sysf("plasma-kwin_wayland.service") + " and " + sysf("plasma-workspace.target")
-      + " are inactive. " + c("sessione_impostazioni()") + " writes nothing else for Plasma: the desktop lock "
+      + " are inactive. " + c("session_settings()") + " writes nothing else for Plasma: the desktop lock "
       "is off from the command line (" + c("--no-lockscreen") + ").")
 
 S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is no systemd unit to "
-       "override, so " + c("scrivi_dropin()") + " (write the drop-in) has nothing to do and REMOTIX starts the compositor itself.",
+       "override, so " + c("write_dropin()") + " (write the drop-in) has nothing to do and REMOTIX starts the compositor itself.",
        lead=True) + \
     code("""exec labwc -m --session "sh -c 'u=$(wlr-randr | sed -n 1s/ .*//p);
     wlr-randr --output $u --custom-mode 1920x1080; exec xfce4-session'\"""",
-         "bash", "The XFCE command line for a 1920×1080 canvas, simplified (the inner script is built by primario_misurato(), “sized primary client”)") + \
+         "bash", "The XFCE command line for a 1920×1080 canvas, simplified (the inner script is built by measured_primary(), “sized primary client”)") + \
     table(["Topic", "Behaviour", "Why"], [
         [c("--session") + " (also in " + c("XFCE4_SESSION_COMPOSITOR") + ")", "Makes " + c("xfce4-session")
          + " labwc's primary client: when it exits, labwc exits. Both lines start from the "
-         "same macro, " + c("SESSIONE_TESTA_XFCE") + " (the head, " + c("labwc -m --session") + "), from which "
-         + c("SESSIONE_RIGA_XFCE") + " (the line) is built for the variable", "If " + c("xfce4-session") + " does not find both "
+         "same macro, " + c("SESSION_HEAD_XFCE") + " (the head, " + c("labwc -m --session") + "), from which "
+         + c("SESSION_LINE_XFCE") + " (the line) is built for the variable", "If " + c("xfce4-session") + " does not find both "
          + c("labwc") + " and " + c("--session") + " in that variable, at log-out it runs "
          + c("loginctl terminate-session ''") + " and kills REMOTIX's logind session"],
         [c("-m") + " (merge config)", "labwc reads " + c("rc.xml") + " from every XDG directory: ours (in "
@@ -244,8 +244,8 @@ S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is
          "and on wlroots that makes the capture fail"],
         ["Session", c("LockCommand=/bin/false") + ", " + c("ShowSuspend") + ", " + c("ShowHibernate") + ", "
          + c("ShowHybridSleep") + " false", "No lock (it is REMOTIX's), no suspend in the log-out dialog"],
-        ["Panel action button", "A thread (" + c("guardia_del_pannello_xfce()") + ", the panel guard, started by "
-         + c("sessione_inibisci()") + "; every 2 s for up to "
+        ["Panel action button", "A thread (" + c("xfce_panel_guard()") + ", the panel guard, started by "
+         + c("session_inhibit()") + "; every 2 s for up to "
          "120 s) finds every " + c("actions") + " plugin and turns " + c("lock-screen") + ", "
          + c("switch-user") + ", " + c("suspend") + ", " + c("hibernate") + ", " + c("hybrid-sleep") + ", "
          + c("restart") + ", " + c("shutdown") + " from " + c("+") + " to " + c("-") + "; " + c("logout")
@@ -256,11 +256,11 @@ S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is
     ], "«TAB» — How XFCE is kept") + \
     warn(c("xfconf-query") + " exits with 0 even when the daemon refused and restored the old value: the API "
          "is asynchronous and the local cache answers first. Every key REMOTIX writes ("
-         + c("xfconf_metti()") + ", “set in xfconf”) is therefore read back, and only a read-back value counts as applied.",
+         + c("xfconf_put()") + ", “set in xfconf”) is therefore read back, and only a read-back value counts as applied.",
          "A successful write is not an applied setting.") + \
     p("Alive means " + c("org.xfce.SessionManager") + " owns its name on the <b>user</b> bus (labwc is "
       "started without " + c("dbus-run-session") + "). The previous session is over when no " + c("labwc")
-      + " process of the user is left, read from " + c("/proc") + " (" + c("processi_miei()") + ", “my processes”): asked "
+      + " process of the user is left, read from " + c("/proc") + " (" + c("my_processes()") + ", “my processes”): asked "
       "about a unit that does not exist, systemd would answer " + c("inactive") + ", and the guard would vanish "
       "instead of failing.")
 
@@ -315,22 +315,22 @@ LABWC_FIG = fig(
     + box(460, 48, 196, 56, "3. with title bar", "shade, as a mark", "light")
     + box(672, 48, 196, 56, "4. shaded", "unshade, fit, place, restore", "light")
     + text(450, 136, "maximised, tiled and full-screen windows are excluded: labwc resizes them itself", 11.5),
-    900, 168, "«FIG» — The four passes of the bring-back-inside shortcut (SESSIONE_LABWC_TASTIERA, the keyboard section)")
+    900, 168, "«FIG» — The four passes of the bring-back-inside shortcut (SESSION_LABWC_KEYBOARD, the keyboard section)")
 
 S8 = p("On labwc the output size is not part of the birth: the headless output is born 1280×720, hard-wired "
        "(measured 20 Sep 2026), and no protocol creates one of a chosen size. REMOTIX resizes it as a "
        "Wayland client, twice.", lead=True) + \
     table(["When", "How", "Why"], [
         ["Before the desktop starts", "The primary client is " + c("sh -c") + " running " + c("wlr-randr --output <first> --custom-mode WxH")
-         + " and then " + c("exec") + " of the session manager (" + c("primario_misurato()") + "); joined with "
+         + " and then " + c("exec") + " of the session manager (" + c("measured_primary()") + "); joined with "
          + c(";") + " so that a failure still starts the desktop", "A race at birth: pcmanfm-qt computed the "
          "wallpaper from the old size and kept it. Measured 24 Sep 2026 at 1400×914: 1 bad wallpaper in 20 "
          "before, 0 in 20 after; 0 in 5 at 1920×1080 and at 3840×2160. " + c("wlr-randr") + " is therefore a "
          "dependency of the product on XFCE and LXQt"],
-        ["When the capture starts on an output of another size, and at every " + c("cattura_ridimensiona()")
-         + " (resize the capture)", c("wlr_misura_chiedi()") + " (ask for a size) with " + c("zwlr_output_manager_v1")
+        ["When the capture starts on an output of another size, and at every " + c("capture_resize()")
+         + " (resize the capture)", c("wlr_ask_size()") + " (ask for a size) with " + c("zwlr_output_manager_v1")
          + " (bound at version 4 at most) and a custom mode", "The canvas follows the browser window at attach and on "
-         + c("ADATTA_TELA")],
+         + c("FIT_CANVAS")],
     ], "«TAB» — Sizing the labwc output") + \
     p("<b>Bringing windows back inside</b> (D-007, measured 25 Sep 2026). When the output shrinks, labwc "
       "moves a floating window only if its centre leaves the screen; on the right and bottom edges large "
@@ -340,7 +340,7 @@ S8 = p("On labwc the output size is not part of the birth: the headless output i
       "pointer warped to the window centre it means “move it as little as possible”. REMOTIX "
       "therefore writes into labwc's configuration a keybinding nobody uses, " + c("W-C-A-S-F12") + ", whose "
       "actions do it in four flat passes (labwc 0.8.3 does not nest " + c("ForEach") + "), and the child "
-      "types it after each resize (" + rif("Virtual keyboard and pointer on labwc") + ").") + LABWC_FIG + \
+      "types it after each resize (" + ref("Virtual keyboard and pointer on labwc") + ").") + LABWC_FIG + \
     ul([
         "Full-screen windows have no query of their own: labwc does not change the decoration of a full-screen "
         "window and does not shade it, so only windows that did change are moved.",
@@ -381,14 +381,14 @@ S9 = p("Nobody may shut down, reboot, suspend or hibernate the server, the perso
       + c("[Sleep]") + " section of " + c("remotix-niente-sospensione.conf") + " (“no suspend”). Root keeps "
       + c("CAP_SYS_BOOT") + " and can still run " + c("systemctl poweroff") + " (measured 15 Aug 2026: "
       + c("CanPowerOff") + " is " + c("no") + " for a user and " + c("yes") + " for root); attached clients are "
-      "told with the farewell reason " + c("SERVER_IN_CHIUSURA") + " (server closing). Details in "
-      + rif("The power belts, shipped inert") + ".") + \
+      "told with the farewell reason " + c("SERVER_SHUTTING_DOWN") + " (server closing). Details in "
+      + ref("The power belts, shipped inert") + ".") + \
     note("in " + c("lxqt-leave") + ", reached from fancymenu's fixed Leave button when the user's own panel "
          "configuration wins, shut down, reboot and suspend are grey and “Lock screen” is clickable "
          "but inert. On XFCE the separate “Log Out” window keeps grey entries. Both are declared "
          "residues.", "What is left visible.")
 
-S10 = p(c("sessione_termina()") + " (end the session) ends the graphical session when the product must (for instance when the "
+S10 = p(c("session_terminate()") + " (end the session) ends the graphical session when the product must (for instance when the "
         "same user logs in locally, invariant I2: the local session wins, and two graphical sessions on one "
         + c("XDG_RUNTIME_DIR") + " would make the local one fail). It asks first and insists afterwards.",
         lead=True) + \
@@ -403,22 +403,22 @@ S10 = p(c("sessione_termina()") + " (end the session) ends the graphical session
         ["LXQt", c("org.lxqt.session.logout") + ", no reply expected", "SIGTERM to every " + c("labwc") + " of "
          "the user", "no " + c("labwc") + " of the user left"],
     ], "«TAB» — Ending a session") + \
-    p("After each step REMOTIX waits up to " + c("ATTESA_USCITA_MS") + " (exit wait) = 10 s, checking every 500 ms that the "
+    p("After each step REMOTIX waits up to " + c("WAIT_EXIT_MS") + " (exit wait) = 10 s, checking every 500 ms that the "
       "session is not alive <b>and</b> its units are " + c("inactive") + " (not merely “not active”: "
       + c("deactivating") + " is a trap), then runs " + c("systemctl --user reset-failed") + ". An application "
       "with unsaved changes may inhibit a polite log-out and show a dialog that nobody in an unattended session "
       "will close; that is why the second step exists.") + \
     p("<b>Tidying up after a session.</b> Once the session is dead, never while it lives:") + \
     ul([
-        c("sessione_sgombera_scope()") + " (clear the scope) closes what is left of the user's processes in "
+        c("session_clear_out_scope()") + " (clear the scope) closes what is left of the user's processes in "
         "REMOTIX's own " + c("session-N.scope") + " — SIGTERM, then SIGKILL to whatever is still there after 2 s — "
         "declared in the log.",
-        c("sessione_sgombera_gestore()") + " (clear the manager) gives the user's systemd manager back as it "
+        c("session_clear_out_handler()") + " (clear the manager) gives the user's systemd manager back as it "
         "was — after a session ends, and also at the next birth for what a crash left: it removes our "
         "drop-ins (the KWin and " + sysf("xfconfd.service") + " ones, and the shell instance ones found in the "
         "directory), reloads, restores with " + c("UnsetAndSetEnvironment") + " the values that "
-        + c("sessione_fotografa_gestore()") + " (photograph the manager) recorded at birth for the variables "
-        "REMOTIX sets (" + c("VARIABILI_NOSTRE") + ", “our variables”), and restarts " + sysf("xfconfd.service") + " if it had our directory. "
+        + c("session_snapshot_handler()") + " (photograph the manager) recorded at birth for the variables "
+        "REMOTIX sets (" + c("OUR_VARIABLES") + ", “our variables”), and restarts " + sysf("xfconfd.service") + " if it had our directory. "
         "Without a photograph only values carrying the " + c("remotix") + " mark are removed, declared. If the "
         "child never comes back, the next child does it: the root server does not talk to a user manager.",
         "Everything else REMOTIX wrote for the session lives under " + c("$XDG_RUNTIME_DIR/remotix") + " and is "
@@ -427,25 +427,25 @@ S10 = p(c("sessione_termina()") + " (end the session) ends the graphical session
     ])
 
 S11 = p("Every place where the four desktops differ, in one table: the list to walk when a fifth desktop "
-        "is added (the procedure is in " + rif("Extending REMOTIX") + ").", lead=True) + \
+        "is added (the procedure is in " + ref("Extending REMOTIX") + ").", lead=True) + \
     table(["Concern", "Function", "File"], [
-        ["Recognition", c("riconosci_desktop()") + ", " + c("sessione_su_wlroots()"), c("sessione.c")],
-        ["Environment", c("componi_ambiente()"), c("sessione.c")],
-        ["Command line", c("avvia()") + ", " + c("primario_misurato()"), c("sessione.c")],
-        ["Unit override", c("scrivi_dropin()") + ", " + c("unita_shell()"), c("sessione.c")],
-        ["Alive, state", c("sessione_viva()") + " (alive), " + c("sessione_stato()") + " (state)", c("sessione.c")],
-        ["Previous session over", c("unita_inattiva()") + " (units inactive)", c("sessione.c")],
-        ["Settings and menus", c("sessione_impostazioni()") + ", " + c("impostazioni_lxqt()") + ", "
-         + c("xfce_xfconf_di_sessione()") + " (the session's xfconf)", c("sessione.c")],
-        ["Inhibition and guards", c("sessione_inibisci()"), c("sessione.c")],
-        ["Log-out", c("termina_davvero()") + " (really end)", c("sessione.c")],
-        ["Capture (the “open” functions)", c("mutter_apri()") + ", " + c("kwin_apri()") + ", " + c("wlr_apri()"), c("mutter.c")
+        ["Recognition", c("recognize_desktop()") + ", " + c("session_on_wlroots()"), c("sessione.c")],
+        ["Environment", c("compose_environment()"), c("sessione.c")],
+        ["Command line", c("start()") + ", " + c("measured_primary()"), c("sessione.c")],
+        ["Unit override", c("write_dropin()") + ", " + c("unit_shell()"), c("sessione.c")],
+        ["Alive, state", c("session_alive()") + " (alive), " + c("session_state()") + " (state)", c("sessione.c")],
+        ["Previous session over", c("inactive_unit()") + " (units inactive)", c("sessione.c")],
+        ["Settings and menus", c("session_settings()") + ", " + c("settings_lxqt()") + ", "
+         + c("xfce_session_xfconf()") + " (the session's xfconf)", c("sessione.c")],
+        ["Inhibition and guards", c("session_inhibit()"), c("sessione.c")],
+        ["Log-out", c("really_terminate()") + " (really end)", c("sessione.c")],
+        ["Capture (the “open” functions)", c("mutter_open()") + ", " + c("kwin_open()") + ", " + c("wlr_open()"), c("mutter.c")
          + ", " + c("kwin.c") + ", " + c("wlroots.c")],
-        ["Input", c("input_apri()") + ", " + c("input_apri_kwin()") + ", " + c("input_apri_wlr()"), c("input.c")],
-        ["Clipboard", c("appunti_apri()") + ", " + c("appunti_apri_kde()") + ", " + c("appunti_apri_wlroots()"),
+        ["Input", c("input_open()") + ", " + c("input_open_kwin()") + ", " + c("input_open_wlr()"), c("input.c")],
+        ["Clipboard", c("clipboard_open()") + ", " + c("clipboard_open_kde()") + ", " + c("clipboard_open_wlroots()"),
          c("appunti.c") + ", " + c("appunti_kde.c")],
-        ["Layout", c("input_disposizione()") + ", " + c("kwin_disposizione()") + ", "
-         + c("wlr_input_keymap_da_nome()") + " (keymap from a name)", c("input.c") + ", " + c("kwin.c") + ", " + c("wlr_input.c")],
+        ["Layout", c("input_layout()") + ", " + c("kwin_layout()") + ", "
+         + c("wlr_input_keymap_from_name()") + " (keymap from a name)", c("input.c") + ", " + c("kwin.c") + ", " + c("wlr_input.c")],
     ], "«TAB» — Where the desktops branch") + \
     note(c("SPECIFICHE.md") + " §11.2 still lists XFCE and LXQt as “studied, not yet served”; the code serves "
          "both since phases 13 and 14 (September 2026). Cinnamon was studied on 9 Aug 2026 and is not served: "

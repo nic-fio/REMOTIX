@@ -31,7 +31,7 @@ machine is full, a message that **says why**.
 |---|---|---|
 | 1 | **the real number of the encoder** — pixels/s on `renderD128` | ⛔ never measured: `vainfo` says *which* profiles, not *how many pixels per second* |
 | 2 | **the budget** in place of the count | ⛔ two `#define`s at **16**: `src/rcp.c:886 MAX_ATTACCATE`, `src/figlio.c:91 MAX_FIGLI` — where `SPECIFICHE.md` §5.5 promises **ten, configurable** |
-| 3 | **`BUDGET_PIENO 0x06`** with the reason in the body | ⛔ declared in `src/rcp.h` · `RCP_BUDGET_PIENO` and in `RCP.md` §8.2, **and no line of the server ever sends it** |
+| 3 | **`BUDGET_FULL 0x06`** with the reason in the body | ⛔ declared in `src/rcp.h` · `RCP_BUDGET_FULL` and in `RCP.md` §8.2, **and no line of the server ever sends it** |
 | 4 | **whoever is already working does not get worse** when the eleventh arrives | ⛔ never tested — it is `DECISIONI.md` §4.6-bis and invariant **I1** |
 | 5 | **the NETWORK budget** next to the GPU one | ⛔ never named: `DECISIONI.md` §3.1-bis point 2 leaves it open with *«ten sessions × 30 Mbit/s are 300 Mbit/s on the server's wire»* |
 
@@ -110,7 +110,7 @@ sit at **22-24 %** of the GPU (§6.12).
 ⇒ ⭐ **The product must stop BEFORE the cliff, not inside it** — and this, not «ten», is the work
 of the phase.
 
-⛔ **And today it does not stop at all**: the eleventh of the saturated scene **gets in with `negati 0`**, and the
+⛔ **And today it does not stop at all**: the eleventh of the saturated scene **gets in with `denied 0`**, and the
 first session goes from 39.60 to 0.96 fps (**−97.6 %**). **The product has no budget: it accepts
 everyone and starves everyone together.**
 
@@ -160,8 +160,8 @@ phenomenon**, and must be looked for every time (§1.34).
 |---|---|
 | ⛔⛔ **the eleventh is ADMITTED and does not see a pixel** | the two `16`s are freed on **different events**: the children table can be full while the slots table is empty ⇒ black page **with nothing on the wire**, and no time after which it gets better (§4.1) |
 | ⛔⛔⛔ **the child dies of SIGSEGV on an arbitrary width** | ⭐ **and it has nothing to do with multi-tenant: it concerns everyone.** `[M]` View **1268** — the one Firefox opens on its own — ⇒ DMA-BUF stride **5072, not a multiple of 64** ⇒ the child declares *«remounting the stage on MEMORY»* and **2 ms later it is dead**: **3 out of 3**, against **0 out of 3** at 1280. The user loses the desktop **before the first frame** (§6.8) |
-| ⛔⛔⛔ **two phase 9 cures form a CLOSED LOOP that evicts whoever is working** | `[M]` At **five** sessions, **five clients evicted in 1.3 s**: `arretrato` stays glued to the regulator's cap, which blocks **every** frame ⇒ `usciti_byte=0` ⇒ the client **has nothing left to acknowledge**, goes silent ⇒ **the dead line evicts it with `persi=0`**. ⛔ Here the queue **bites**, that is, these are users who were working (§6.15) |
-| ⚠ **two phase 9 cures fight each other — but only for the test client** | `linea-morta causa=silenzio … persi=0`, desktop still and loss **zero**, session closed at **10 s** with `aioquic` (§6.3). ⭐ **On real Firefox it survives** at 120 s and at 300 s (§6.8) — ⛔ **but because it is OUR `PING`s that keep it alive**, not the browser: the margin is **twice**, and no more |
+| ⛔⛔⛔ **two phase 9 cures form a CLOSED LOOP that evicts whoever is working** | `[M]` At **five** sessions, **five clients evicted in 1.3 s**: `backlog` stays glued to the regulator's cap, which blocks **every** frame ⇒ `exited_bytes=0` ⇒ the client **has nothing left to acknowledge**, goes silent ⇒ **the dead line evicts it with `lost=0`**. ⛔ Here the queue **bites**, that is, these are users who were working (§6.15) |
+| ⚠ **two phase 9 cures fight each other — but only for the test client** | `dead-line reason_why=silence … lost=0`, desktop still and loss **zero**, session closed at **10 s** with `aioquic` (§6.3). ⭐ **On real Firefox it survives** at 120 s and at 300 s (§6.8) — ⛔ **but because it is OUR `PING`s that keep it alive**, not the browser: the margin is **twice**, and no more |
 | ⛔ **the desktop is switched on for someone who will never be admitted** | `[M]` a user **never admitted** at the end of the round had **42 processes and a `gnome-shell`** (§6.4) |
 | ~~the second closing route of §3.1 does not start~~ ⇒ ✅ **WITHDRAWN** | `[M]` §6.8: with **real Firefox** the capsule arrives **10 out of 10**, code `0x0E`, never `0`. *«0 capsules»* was true **for `aioquic`**, which leaves **498 ms before** the capsule starts. ⛔ **The lesson is one of method**: it had been read **where the capsule leaves** instead of **where it arrives** |
 
@@ -181,7 +181,7 @@ was «prima si misura».*
 > ### ⭐⭐ AND THEN: *«prima applica le patch, poi scrivi il prodotto e dopo rifai i test»*
 >
 > ⇒ The budget **is in the product** (`src/budget.c`, `src/budget.h`), with its three knobs; the
-> `#define`s at 16 have become **one**; `BUDGET_PIENO 0x06` **really leaves**. What was
+> `#define`s at 16 have become **one**; `BUDGET_FULL 0x06` **really leaves**. What was
 > built is in **§5**, the cures in **§5.1-5.13**.
 
 ⭐⭐ **And the shape of the budget is now measured, not hypothesised:**
@@ -258,7 +258,7 @@ another saturates does not give red, it gives a plausible number*.
 pointed at a place of its own:
 
 ```
-LUCCHETTO=/media/REMOTIX/tmp/.lucchetto-gpu.d
+LOCK=/media/REMOTIX/tmp/.lucchetto-gpu.d
 ```
 
 ⛔ **And the rule of use is stricter than «take it»**: *every round from which a number comes out that will be
@@ -300,7 +300,7 @@ They come from the five lessons paid for in phase 9 (`LEZIONI.md` §1.29-§1.33)
 `banchi/10-b0-terreno.sh` (+ `10-b0-certifica.sh`, `10-b0-innesta.sh`). It is called like this:
 
 ```
-CHI=10-a4 PORTA=8020 UTENTE=provadec2 ALBERO=/media/REMOTIX/src/10a4-src \
+CHI=10-a4 PORT=8020 ACCOUNT=provadec2 TREE=/media/REMOTIX/src/10a4-src \
   bash banchi/10-b0-terreno.sh || exit 1
 ```
 
@@ -331,7 +331,7 @@ unmask badly written checks — **ssh not answering**, **ssh with exit 0 and zer
 >    healthy tree; reading it **only with the environment** would hide that the choice depends **on who
 >    starts it**. The check reads both and declares it. ⛔ The hole remains: **it does not see the command
 >    line** with which the server will be started.
-> 3. ⛔ **`bash -c "…; sleep N # segno"` loses the mark**: bash replaces itself with the last command, the
+> 3. ⛔ **`bash -c "…; sleep N # sign"` loses the mark**: bash replaces itself with the last command, the
 >    line becomes `sleep N`, `pgrep` does not find it and `pkill` does not kill it. ⇒ The fault **stayed
 >    injected for 40 s and whoever had put it in believed they had not**. Now the mark sits in
 >    `argv[0]` with `exec -a`.
@@ -378,7 +378,7 @@ the measurement nobody guarantees — the lock is the only part that lasts.
 | **Q3** | ⛔ **REFUTED** | **SIX** fit, not ten (§6.5) |
 | **Q4** | ⭐ **CONFIRMED**, and in the worst way | −97.6 % at the first session. ⚠ **But not by the predicted route**: the keyframes **never switch on**, the degradation goes through the **latency** (§6.5) |
 | **Q5** | ⭐ **CONFIRMED in substance, corrected in the mechanism** | what detaches is not the regulator but the **dead line**, and by the route of **silence** (§6.3) |
-| **Q6** | ⭐ **CONFIRMED** by reading | *«THE USER NAME DOES NOT COUNT»*, `rcp.c` · `posto_prendi()` (§4.2) |
+| **Q6** | ⭐ **CONFIRMED** by reading | *«THE USER NAME DOES NOT COUNT»*, `rcp.c` · `slot_take()` (§4.2) |
 | **Q7** | ⭐ **CONFIRMED** | 2 against 16, measured on the binary (§6.4) |
 | **Q8** | ⭐ **CONFIRMED, and worse** | not «refusing after switching on a desktop»: **the desktop is switched on even for someone who will never be admitted** (§6.4) |
 | **Q9** | ⛔ **REFUTED** | ten saturated sessions make **22 Mbit/s** on a 10 Gbit/s card: **0.2 % of the wire** (§6.3, §6.5) |
@@ -389,7 +389,7 @@ the measurement nobody guarantees — the lock is the only part that lasts.
 ## §3 · ⭐⭐ THE DESIGN — where the budget lives, read in the code *(24 Aug 2026)*
 
 > ⛔ **Reading, not code**: the product is touched after the numbers. But when the numbers arrive,
-> this says **exactly** where to put them. Every line carries `file:riga` **and** the name of the
+> this says **exactly** where to put them. Every line carries `file:row` **and** the name of the
 > function, because a line number ages silently.
 
 ### 3.1 ⛔⛔ The admission border — and today the no arrives **after the login**
@@ -398,50 +398,50 @@ The chain, with what already exists after each step:
 
 | step | where | afterwards, exists |
 |---|---|---|
-| `CIAO` | `rcp.c:1972 tratta_ciao()` | nothing: the user does not have a name yet |
-| `ECCOMI` | `rcp.c:1833 manda_eccomi()` | ⭐ codec, depth and level negotiated: **the client decoder's ceiling is already known here** |
-| `CREDENZIALI` | `rcp.c:2284 tratta_credenziali()` | the user name (`s->utente`, line 2333); PAM **asked**, not answered |
-| PAM verdict | `main.c:332 consegna_verdetto()` | ⛔⛔ **`figli_assicura()` at `main.c` · `guarda_il_servizio_pam()` — the child IS BORN HERE**, before `AMMESSO` goes out on the wire |
-| `AMMESSO` | `rcp.c` · `rcp_verdetto()` | the child has already `fork`+`exec`ed, has already dropped to the uid, has already opened the logind session and has already taken the stage (`figlio.c` · `figlio_vive()` → `figlio.c`) |
-| `ATTACCA` | `rcp.c:2702 tratta_attacca()` | **here** the slot is taken: `posto_prendi()`, `rcp.c` · `tratta_attacca()` |
-| `SESSIONE` | `rcp.c` · `tratta_attacca()` | canvas decided, video channel on |
-| the encoder | `webtransport.c:4117 video_regola()` → `main.c:466 figli_video()` → `MSG_VIDEO` → `figlio.c:4306 codificatore_di()` | ⭐ **the VA-API context opens only here**, on `renderD128` (`figlio.c`) |
+| `HELLO` | `rcp.c:1972 handle_hello()` | nothing: the user does not have a name yet |
+| `HERE_I_AM` | `rcp.c:1833 send_here_i_am()` | ⭐ codec, depth and level negotiated: **the client decoder's ceiling is already known here** |
+| `CREDENTIALS` | `rcp.c:2284 handle_credentials()` | the user name (`s->username`, line 2333); PAM **asked**, not answered |
+| PAM verdict | `main.c:332 delivery_verdict()` | ⛔⛔ **`children_ensure()` at `main.c` · `look_pam_service()` — the child IS BORN HERE**, before `ADMITTED` goes out on the wire |
+| `ADMITTED` | `rcp.c` · `rcp_verdict()` | the child has already `fork`+`exec`ed, has already dropped to the uid, has already opened the logind session and has already taken the stage (`figlio.c` · `child_alive()` → `figlio.c`) |
+| `ATTACH` | `rcp.c:2702 handle_attach()` | **here** the slot is taken: `slot_take()`, `rcp.c` · `handle_attach()` |
+| `SESSION` | `rcp.c` · `handle_attach()` | canvas decided, video channel on |
+| the encoder | `webtransport.c:4117 video_rule()` → `main.c:466 children_video()` → `MSG_VIDEO` → `figlio.c:4306 encoder_of()` | ⭐ **the VA-API context opens only here**, on `renderD128` (`figlio.c`) |
 
-⛔ **Hence the fact that decides the design.** `POSTO_NIENTE_PIU_POSTI` triggers at `rcp.c` · `tratta_attacca()`, that is
+⛔ **Hence the fact that decides the design.** `SLOT_NO_MORE_SLOTS` triggers at `rcp.c` · `handle_attach()`, that is
 when the user is **already authenticated**, the child is **already born**, `pam_open_session` has **already** passed
 and mutter and PipeWire are **already** capturing. ⇒ **Refusing there is not refusing: it is logging in and then
 kicking out.** ⭐ **Prediction Q8 is confirmed, and by reading.**
 
-⭐ The right place for the capacity no is **before `figli_assicura()`** (`main.c` · `guarda_il_servizio_pam()`); the second
-best is inside `tratta_attacca()` **before** `posto_prendi()`, and it costs a desktop mounted for
-nothing. ⭐ And between `AMMESSO` and `SESSIONE` there is a window in which **the desktop is on but the GPU is not**.
+⭐ The right place for the capacity no is **before `children_ensure()`** (`main.c` · `look_pam_service()`); the second
+best is inside `handle_attach()` **before** `slot_take()`, and it costs a desktop mounted for
+nothing. ⭐ And between `ADMITTED` and `SESSION` there is a window in which **the desktop is on but the GPU is not**.
 
 ### 3.2 ⛔⛔⛔ The most serious fact of the reading: **the phase 9 regulator does not lower the GPU cost**
 
-The regulator lives in the **parent** (`webtransport.c:4190+`, `WT_RITMO_POSTI` at `:3404`) and decides that a
+The regulator lives in the **parent** (`webtransport.c:4190+`, `WT_RATE_SLOTS` at `:3404`) and decides that a
 frame **does not leave**. ⛔ But that frame **has already been encoded by the child**.
 
 ⇒ **A session on a terrible network costs the GPU exactly as much as a session on fibre.** And the
-counts of the frames sent already exist (`wt_video_conti()`, `webtransport.c`), so
+counts of the frames sent already exist (`wt_video_counts()`, `webtransport.c`), so
 hooking the budget onto them is the natural thing to do — ⛔ **and it would say there is room precisely when there
-is none**. The number to count is **on the other side of the process border**: `us_codifica` in
-`tratti_conta()`, `figlio.c` · `tratti_mediana()`, and today it ends up **only in the log**.
+is none**. The number to count is **on the other side of the process border**: `encode_us` in
+`stretches_count()`, `figlio.c` · `stretches_median()`, and today it ends up **only in the log**.
 
 ⛔ **And the ghost keeps encoding.** Capture stops only when the last WebTransport session
-of that user dies (`webtransport.c` · `apri_http3()`, guard `wt_video_qualcuno_guarda()` at `:5747`,
-which looks at `video_acceso` and **not** at the RCP state). A client silent for 30 s has **left the
-slot** (`rcp.c:7529 posto_lascia()`) and **is still encoding**. ⇒ **slots occupied ≠ GPU load**, and
-a count kept on `attaccate[]` **underestimates** — precisely in the scene in which the machine is struggling.
+of that user dies (`webtransport.c` · `open_http3()`, guard `wt_video_someone_watching()` at `:5747`,
+which looks at `video_on` and **not** at the RCP state). A client silent for 30 s has **left the
+slot** (`rcp.c:7529 slot_leave()`) and **is still encoding**. ⇒ **slots occupied ≠ GPU load**, and
+a count kept on `attached[]` **underestimates** — precisely in the scene in which the machine is struggling.
 
 ### 3.3 ⛔ The two `#define`s at 16 are **four**, plus an **8** that bites at **nine**
 
 | # | where | quantity | bites at |
 |---|---|---|---|
-| 1 | `rcp.c:886 MAX_ATTACCATE 16` — `attaccate[]` at `:902` | RCP slots | 17 |
+| 1 | `rcp.c:886 MAX_ATTACCATE 16` — `attached[]` at `:902` | RCP slots | 17 |
 | 2 | `figlio.c:91 MAX_FIGLI 16` — `v[MAX_FIGLI]` at `:519` | processes/stages | 17 |
-| 3 | `aiutante.c:33 MAX_IN_VOLO 16` | ⚠ **authentications in flight**, not sessions | 17 **simultaneous**, with 0 active sessions |
-| 4 | `main.c:706 QUANTI_PRESENTI 16` — `presenti[]` at `:709` | abandonment clock | 17, ⛔ **silently** (`main.c` · `deposita_fotogramma()`: `return` without a line) |
-| ⛔ | `webtransport.c:5225 WT_PALCHI 8` — `palchi[]` | stage canvas for re-attach | ⛔⛔ **9 — that is, before the promised ten** |
+| 3 | `aiutante.c:33 MAX_IN_FLIGHT 16` | ⚠ **authentications in flight**, not sessions | 17 **simultaneous**, with 0 active sessions |
+| 4 | `main.c:706 QUANTI_PRESENTI 16` — `present[]` at `:709` | abandonment clock | 17, ⛔ **silently** (`main.c` · `deposit_frame()`: `return` without a line) |
+| ⛔ | `webtransport.c:5225 WT_PALCHI 8` — `stages[]` | stage canvas for re-attach | ⛔⛔ **9 — that is, before the promised ten** |
 
 ⭐⭐ **Prediction Q7 is confirmed, and worse than it was written.** The comment of `figlio.c` —
 *«when that becomes a pixel budget, this will follow it from the same place»* — describes a
@@ -451,24 +451,24 @@ same `MAX_ATTACCATE` as `rcp.c`»* — it is not) and for `QUANTI_PRESENTI`.
 ⇒ **Four hand copies of the same number, three of which declare in writing a link that
 the compiler does not know.**
 
-⭐ And dismantling them costs little: the five functions that walk `attaccate[]` (`posto_occupato` 904,
-`posto_chi` 913, `posto_prendi` 947, `posti_occupati` 965, `posto_lascia` 974) do **only linear
+⭐ And dismantling them costs little: the five functions that walk `attached[]` (`slot_taken` 904,
+`slot_holder` 913, `slot_take` 947, `taken_slots` 965, `slot_leave` 974) do **only linear
 scans with `strcmp`** — no index arithmetic, no invariant on the 16. A `calloc` and a
-module counter. ⛔ **The real constraint is another one**: `figli_descrittori()` (`figlio.c`)
-fills the array of the parent's `poll`, and that is `MAX_POLL 64` (`main.c` · `TELA_A`) — see §3.6 item 10.
+module counter. ⛔ **The real constraint is another one**: `children_descriptors()` (`figlio.c`)
+fills the array of the parent's `poll`, and that is `MAX_POLL 64` (`main.c` · `CANVAS_H`) — see §3.6 item 10.
 
-### 3.4 `BUDGET_PIENO 0x06` — and ⛔ **today the page says the sentence of a count**
+### 3.4 `BUDGET_FULL 0x06` — and ⛔ **today the page says the sentence of a count**
 
-`[M]` `grep RCP_BUDGET_PIENO src/*.c` → **no result**: declared at `rcp.h` · `RCP_VERSIONE` and in `RCP.md`
-§8.2, **zero callers**. The model for sending it exists: `congeda()` (`rcp.c` · `utf8_valido()`) writes reason +
-detail (lines 1658-1659), and `POSTO_NIENTE_PIU_POSTI` already uses it at `rcp.c:2856-2867`.
+`[M]` `grep RCP_BUDGET_FULL src/*.c` → **no result**: declared at `rcp.h` · `RCP_VERSION` and in `RCP.md`
+§8.2, **zero callers**. The model for sending it exists: `dismiss()` (`rcp.c` · `valid_utf8()`) writes reason +
+detail (lines 1658-1659), and `SLOT_NO_MORE_SLOTS` already uses it at `rcp.c:2856-2867`.
 
-⛔ **And `src/pagina.html` · `MOTIVO()` says `0x06: "il server e' pieno"`** — it is not false, it is the sentence of a
+⛔ **And `src/pagina.html` · `REASON_TEXT()` says `0x06: "il server e' pieno"`** — it is not false, it is the sentence of a
 **count**, where §4.6-bis decided *«this machine has no more encoding capacity»*.
-⛔⛔ Worse: `0x0E` at `pagina.html` · `MOTIVO()` is *«that session cannot be served»*, and it is **that one** the
+⛔⛔ Worse: `0x0E` at `pagina.html` · `REASON_TEXT()` is *«that session cannot be served»*, and it is **that one** the
 user reads today at a full table — a sentence that speaks of **their** session while the fact
 concerns the **server**.
-⭐ The rest of the page holds: six places consult the `MOTIVO` table, there is always a fallback
+⭐ The rest of the page holds: six places consult the `REASON_TEXT` table, there is always a fallback
 *«dismissed, reason 0x…»*, and since 16 Aug every farewell brings back to the login form
 (`pagina.html:5290-5300`) ⇒ **a `0x06` produces no hammering**.
 
@@ -480,16 +480,16 @@ concerns the **server**.
 | option | quantity | default |
 |---|---|---|
 | `--budget-mpixel-s N` | the **real limit**: encoding Mpixel/s this machine declares | ⛔ `[?]` **the number from the measurement** — not written until it exists. `0` = off, declared in the startup line |
-| `--tetto-sessioni N` | the **administrative cap** of §4.6, and from it `attaccate[]`, `v[]`, `palchi[]`, `presenti[]` are sized | **10** (`SPECIFICHE.md` §5.5) |
+| `--session-cap N` | the **administrative cap** of §4.6, and from it `attached[]`, `v[]`, `stages[]`, `present[]` are sized | **10** (`SPECIFICHE.md` §5.5) |
 
 ⚠ Two and not one because they are **two quantities**, and `DECISIONI.md` §4.6 spells it out: *«ten is not
 the limit: it is the administrative cap. The real limit is set by the encoder»*. ⛔ What
 would violate `CODER.md` §2-bis is **leaving the four `#define`s standing**: those really are the second
 route, and they are already four numbers that can diverge.
 
-⛔⭐ **And there is a third cap that does not exist today: the network one.** `--tetto-banda-mbit`
-(`main.c` · `input_al_figlio()`) is a **floor per child**: `figli_fase9()` (`figlio.c` · `figli_accendi()`) copies it identically
-into the `argv` of **every** child, and `codificatore.c:357 tetto_pavimento_mbit` is a **process**
+⛔⭐ **And there is a third cap that does not exist today: the network one.** `--bandwidth-cap-mbit`
+(`main.c` · `input_to_child()`) is a **floor per child**: `children_phase9()` (`figlio.c` · `children_turn_on()`) copies it identically
+into the `argv` of **every** child, and `codificatore.c:357 cap_floor_mbit` is a **process**
 static. ⇒ Ten children × 20 Mbit/s = **200 Mbit/s on the server's wire, and nobody knows it.** Point
 5 of the phase has today **no line of code**.
 
@@ -497,18 +497,18 @@ static. ⇒ Ten children × 20 Mbit/s = **200 Mbit/s on the server's wire, and n
 
 | # | what | where | bites at |
 |---|---|---|---|
-| 1 | ⛔⛔ **`WT_PALCHI 8`**: from the ninth user the stage canvas is not recorded, and at re-attach `SESSIONE` grants what the client asks for instead of what the stage has ⇒ §6.2 makes it **throw away every frame** until `ADATTA_TELA` arrives — *«I re-attach and see nothing for a second»* | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⛔ **9** |
+| 1 | ⛔⛔ **`WT_PALCHI 8`**: from the ninth user the stage canvas is not recorded, and at re-attach `SESSION` grants what the client asks for instead of what the stage has ⇒ §6.2 makes it **throw away every frame** until `FIT_CANVAS` arrives — *«I re-attach and see nothing for a second»* | `webtransport.c` · `network_cycle()`, `stage_measure_mark()` `:5238` | ⛔ **9** |
 | 2 | the **ghost that encodes** (§3.2): the budget counted on the slots underestimates the real load | `webtransport.c`, `:7208` | **at once** |
-| 3 | the **regulator does not touch the GPU** (§3.2) | `webtransport.c:4190+` vs `figlio.c` · `tratti_mediana()` | **at once** |
-| 4 | `--tetto-banda-mbit` **replicated per child** (§3.5) | `figlio.c` · `figli_accendi()` → `:5998` → `codificatore.c` · `BANDA_FINESTRA_US` | **at once**, visible at 3-4 |
-| 5 | the **refusal after the login** (§3.1) | `main.c` · `guarda_il_servizio_pam()` vs `rcp.c` · `tratta_attacca()` | at every refusal |
-| 6 | ⛔ the **findings folder is shared** and the file names are **fixed** (`cattura.bgrx`, `flusso-h264.264`, `scatto-*.bgrx`): two children with `--rilievo` on **overwrite each other**, and `SIGUSR1` is forwarded to **all** ⇒ the finding attributes to one user the pixels of another | `figlio.c` · `dichiara_priorita_audio()`, `:5595-5637`, `:1918-1929` | **2 users** (only with `--rilievo`) |
-| 7 | ⛔ the **log lines do not say whose they are**: the header is `HH:MM:SS.mmm %-7s`, that is **only the area**, and parent and children **append to the same file**. Ten lines *«STRETCH capture → bytes out: median 3.2 ms»* per second, **indistinguishable** ⚠ and atomicity is guaranteed only under `PIPE_BUF` (4096), which this product's long lines come close to | `registro.c` · `riga()`, box `:37-58` | ⛔ **2**, unreadable at 10 — ⭐ **Q10 confirmed** |
-| 8 | `presenti[]` **overflows silently**: the 17th user has no abandonment clock and **no line says so** | `main.c` · `deposita_fotogramma()`, `presenza_segna()` `:713`, mute `return` at `:730` | 17 |
-| 9 | `MAX_IN_VOLO` is **another quantity** under the same number | `aiutante.c` · `rcp_autentica()` | 17 simultaneous, 0 sessions |
-| 10 | ⛔ **`MAX_POLL 64` and the MUTE truncation of the children**: `figli_descrittori()` stops at `max` **without writing anything**. Worst count today 36 out of 64, the 16 children fit — ⛔ but beyond ~28 children, or with a crowded page, **a child stays out of the `poll` and its user no longer sees a pixel, without a line** | `main.c` · `TELA_A`, `figlio.c` | >28, and **silently** |
-| 11 | ⛔ **nobody sees the software fallback**: if opening VA-API fails, the child falls back to `libx265` (much slower than the card — the measurement no longer holds after phase 18; today OpenH264, measured in `fasi/18-senza-ffmpeg.md` §5.4-§5.5; `figlio.c:4185-4188`) ⇒ the eleventh session can degrade **without the budget noticing**, and **I1 is broken for the newcomer** | `figlio.c` · `potenza_nome()`, `:4470` | `[?]`, depends on the driver |
-| 12 | ⭐ the **ban file and the command socket do NOT break** (one single writer, one single socket) ⚠ but the ban is **per address**: ten users behind the same NAT share the three attempts | `main.c` · `presenza_segna()`, `comando.c` · `comando_descrittori()` | 1 NAT |
+| 3 | the **regulator does not touch the GPU** (§3.2) | `webtransport.c:4190+` vs `figlio.c` · `stretches_median()` | **at once** |
+| 4 | `--bandwidth-cap-mbit` **replicated per child** (§3.5) | `figlio.c` · `children_turn_on()` → `:5998` → `codificatore.c` · `BANDWIDTH_WINDOW_US` | **at once**, visible at 3-4 |
+| 5 | the **refusal after the login** (§3.1) | `main.c` · `look_pam_service()` vs `rcp.c` · `handle_attach()` | at every refusal |
+| 6 | ⛔ the **findings folder is shared** and the file names are **fixed** (`capture_v.bgrx`, `flusso-h264.264`, `scatto-*.bgrx`): two children with `--survey` on **overwrite each other**, and `SIGUSR1` is forwarded to **all** ⇒ the finding attributes to one user the pixels of another | `figlio.c` · `declare_audio_priority()`, `:5595-5637`, `:1918-1929` | **2 users** (only with `--survey`) |
+| 7 | ⛔ the **log lines do not say whose they are**: the header is `HH:MM:SS.mmm %-7s`, that is **only the area**, and parent and children **append to the same file**. Ten lines *«STRETCH capture → bytes out: median 3.2 ms»* per second, **indistinguishable** ⚠ and atomicity is guaranteed only under `PIPE_BUF` (4096), which this product's long lines come close to | `registro.c` · `row()`, box `:37-58` | ⛔ **2**, unreadable at 10 — ⭐ **Q10 confirmed** |
+| 8 | `present[]` **overflows silently**: the 17th user has no abandonment clock and **no line says so** | `main.c` · `deposit_frame()`, `presence_mark()` `:713`, mute `return` at `:730` | 17 |
+| 9 | `MAX_IN_FLIGHT` is **another quantity** under the same number | `aiutante.c` · `rcp_authenticate()` | 17 simultaneous, 0 sessions |
+| 10 | ⛔ **`MAX_POLL 64` and the MUTE truncation of the children**: `children_descriptors()` stops at `max` **without writing anything**. Worst count today 36 out of 64, the 16 children fit — ⛔ but beyond ~28 children, or with a crowded page, **a child stays out of the `poll` and its user no longer sees a pixel, without a line** | `main.c` · `CANVAS_H`, `figlio.c` | >28, and **silently** |
+| 11 | ⛔ **nobody sees the software fallback**: if opening VA-API fails, the child falls back to `libx265` (much slower than the card — the measurement no longer holds after phase 18; today OpenH264, measured in `fasi/18-senza-ffmpeg.md` §5.4-§5.5; `figlio.c:4185-4188`) ⇒ the eleventh session can degrade **without the budget noticing**, and **I1 is broken for the newcomer** | `figlio.c` · `power_name()`, `:4470` | `[?]`, depends on the driver |
+| 12 | ⭐ the **ban file and the command socket do NOT break** (one single writer, one single socket) ⚠ but the ban is **per address**: ten users behind the same NAT share the three attempts | `main.c` · `presence_mark()`, `comando.c` · `command_descriptors()` | 1 NAT |
 
 ### 3.7 The `[?]` the reading does not close
 
@@ -516,9 +516,9 @@ static. ⇒ Ten children × 20 Mbit/s = **200 Mbit/s on the server's wire, and n
 |---|---|
 | **how many pixels/s `renderD128` really sustains** — no line of the code knows it | the saturator `10-b88` |
 | **the right quantity: pixels/s or engine occupancy** | two rounds at **equal pixels/s** with different codecs, and one in hardware against one fallen back: if the number of admissible sessions changes, the right quantity is the **occupancy** |
-| **when the Intel driver stops giving VA-API contexts** | open N of them in N processes until `codificatore_nuovo()` fails, and read the fallback line of `figlio.c` · `codificatore_di()` — it is the assignment of `10-b94` |
-| **whether `cattura_avvia()` costs GPU while nobody watches** | a live child without sessions, and `drm-engine-*` on `gnome-shell` |
-| ⚠ **the aged comment of `figlio.c` · `potenza_nome()`** says *«in practice it is never reached»* and **it is reached**: `prendi_il_palco(primo=true)` calls `codifica_e_manda()` three times before every `MSG_VIDEO` | a log line at the birth of a child |
+| **when the Intel driver stops giving VA-API contexts** | open N of them in N processes until `encoder_new()` fails, and read the fallback line of `figlio.c` · `encoder_of()` — it is the assignment of `10-b94` |
+| **whether `capture_start()` costs GPU while nobody watches** | a live child without sessions, and `drm-engine-*` on `gnome-shell` |
+| ⚠ **the aged comment of `figlio.c` · `power_name()`** says *«in practice it is never reached»* and **it is reached**: `take_stage(first=true)` calls `encode_and_send()` three times before every `MSG_VIDEO` | a log line at the birth of a child |
 
 ---
 
@@ -539,38 +539,38 @@ seams**, and **two break the product at ten**.
 
 ### 4.1 ⛔⛔ R10-A1 · The eleventh is **ADMITTED** and does not see a pixel — and nothing goes out on the wire
 
-**The fact**: the two `16`s **are freed on different events.** The slot in `attaccate[]` is freed at
-detach (`posto_lascia()`, six routes); ⛔ **the child is not** — it is invariant **I4** (`figlio.h`):
-it dies only by explicit logout or by abandonment at **60 minutes** without input (`main.c` · `consegna_verdetto()`).
+**The fact**: the two `16`s **are freed on different events.** The slot in `attached[]` is freed at
+detach (`slot_leave()`, six routes); ⛔ **the child is not** — it is invariant **I4** (`figlio.h`):
+it dies only by explicit logout or by abandonment at **60 minutes** without input (`main.c` · `delivery_verdict()`).
 ⇒ **The children table can be full while the slots table is empty.**
 
 **The scene**: morning, ten tenants come in, work, close the browser. The ten stages stay
-alive for up to an hour. The eleventh passes PAM, receives `AMMESSO`, receives `SESSIONE`, the slot in
-`attaccate[]` **is free** — and `figli_assicura()` (`main.c` · `guarda_il_servizio_pam()`) returns `false`. The code does not change
+alive for up to an hour. The eleventh passes PAM, receives `ADMITTED`, receives `SESSION`, the slot in
+`attached[]` **is free** — and `children_ensure()` (`main.c` · `look_pam_service()`) returns `false`. The code does not change
 the verdict (it is declared, and it is defensible) and writes one single line: *«is ADMITTED but has no child:
 gets in and does not see a pixel»*. ⛔⛔ **Nothing goes out on the wire**: neither `0x0E`, nor `0x06`. The user sees
 a **black page without explanation**, and there is no time after which it gets better.
 
 ⛔ It is point 3 of the phase, and the trap concerns **how** it is closed: *if only the slot count
 is replaced with the budget, the symptom will not be «budget full» — it will be a black screen without
-a reason*, that is exactly the defect for which `posto_prendi()` had already been cured (R9.3).
-⭐ **The model to resemble already exists**: `posto_prendi()` distinguishes «full» from «occupied» and sends
+a reason*, that is exactly the defect for which `slot_take()` had already been cured (R9.3).
+⭐ **The model to resemble already exists**: `slot_take()` distinguishes «full» from «occupied» and sends
 `0x0E` with the right reason. It is the seam done **well**.
 
 ### 4.2 The other findings, by severity
 
 | # | what | where | bites |
 |---|---|---|---|
-| ⛔⛔ **R10-A2** | **The ban is per ADDRESS and ten tenants behind a NAT are one single address.** `rcp.c` · `posto_prendi()` declares it: *«THE USER NAME DOES NOT COUNT. Three different names count three»*. Three **different** tenants who get it wrong once each within five minutes **ban the address**: the other seven stay out for **12 hours** without having got anything wrong, and the only way out is the command socket, which is `0600` of **root** | `rcp.c:1052-1055`, `rcp_chiave_indirizzo()` `:1159`, check `:2364` | ⛔ **10 users in an office**. ⭐ **Q6 confirmed** |
-| ⛔ **R10-A2-bis** | **A successful login removes the ban from memory but NOT from the file: the restart resurrects it.** `azzera_falliti()` does a `memset` of the whole entry, `bannato_fino` included, and ⛔ **does not call `salva_ban()`** — where its twin `rcp_sblocca()` does call it | `rcp.c` · `salva_ban()` vs `rcp.c` · `segna_fallito()` | ⚠ it does not break at once, **it lies later**: two truths about the same fact (**I7**) |
-| ⛔⛔ **R10-A3** | **Ten tenants multiply the logind wait, and the DEAD LINE detaches them all.** `wt_sorveglia_locali()` loops over **all** sessions and for each one makes a **synchronous** D-Bus call, **inside the same `poll` that delivers the frames**; `ATTESA_MS` is 300. With one tenant the worst is 300 ms every 2 s; ⛔ **with ten it is 3 s every 2 s**. While the loop is stopped, `lm_usciti` does not rise for **any** session and `lm_offerti` keeps rising ⇒ past 5 s **`linea_morta_scatta()` throws out all ten**, each with the sentence *«the line is DEAD»* — which **blames the user's network for a defect of the machine** | `webtransport.c` · `video_a_una()`, `main.c` · `ABBANDONO_PREDEFINITO_MS`, `sentinella.c` · `ATTESA_MS`, `webtransport.c` · `WT_RETE_PERDE` | ⛔ **10 users**, ⚠ **conditional** on a slow logind — but what triggers the condition is **the number of tenants** |
-| ⛔ **R10-A4** | **The log does not say whose it is.** `gancio_registra()` receives the session context and **throws it away** (`(void)ctx;`); the format is `ora + area` and that is all — no pid, no user; the children **do not redirect `stderr`** and all ten append to the same file, with the **same area**. `[M]` static census: **79 %** of the lines of `rcp.c`, **63 %** of `webtransport.c`, **64 %** of `figlio.c` and ⛔ **100 %** of `codificatore.c` **without an identifier** | `webtransport.c` · `gancio_manda()`, `registro.c` · `riga()`, `figlio.c` · `diventa_ed_esegui()`, `figlio.h` · `REG_FIGLIO` | ⛔ **2 users**, unreadable at 10. ⭐ **Q10 confirmed, and with a number** |
-| ⛔ **R10-A5** | **The bandwidth cap is PER TENANT, and nobody adds up**: `--tetto-banda-mbit 30` with ten tenants is not a cap of 30, it is a cap of **300**. In the whole of `src/` **there is no aggregate counter of the bytes sent out** | `main.c` · `consegna_verdetto()` → `:1544` → `figlio.c:1215-1217` | ⚠ today it does not break; it is **point 5 of the phase**, confirmed by the code |
-| ⚠ **R10-A6** | **`WT_PALCHI` is EIGHT and the phase aims at ten**: the ninth and the tenth do not enter the table and at re-attach they receive the canvas **as the client asks for it** instead of as the stage has it. ⛔ And the fallback is declared **only once** (`palchi_pieni_detto`): the ninth and the tenth lose it **silently** | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⚠ **9** — ugly, does not detach |
-| ⚠ **R10-A7** | **`MAX_IN_VOLO` is 16 by copy, not by construction**, and the comment declares a link that does not exist. The day the cap goes up, the seventeenth who authenticates **at the same moment** receives `CREDENZIALI_ERRATE` — **indistinguishable from a wrong password** | `aiutante.c` · `rcp_autentica()` | ⚠ not today, ⛔ **on the day of the budget** |
-| ⚠ **R10-A8** | **The findings folder is a single one and the file names are FIXED**, and the benches' terrains create it `1777` (one even `777` **without sticky**). ⇒ (a) tenant B can **read A's `cattura.bgrx`** — a raw frame of their desktop; (b) the second child fails the write and ⛔ **whoever diagnoses looks at the wrong desktop believing it is theirs** | `figlio.c` · `dichiara_priorita_audio()`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **defect of the BENCHES**, not of the product — ⛔ but phase 10 runs ten users right there |
-| ⚠ **R10-A9** | **A hostile tenant prevents another from opening the session with a `touch`**: the session log is `/tmp/remotix-sessione-<uid>.log`, `/tmp` is writable by everyone and the uid can be read from `/etc/passwd`. If the file exists and belongs to someone else, the redirection fails and the shell **exits before running the compositor** — ⛔ and the failure is **mute**, because `setsid --fork` exits `0` anyway | `sessione.c` · `avvia()` | ⚠ requires hostility, ⛔ cost of the attack: **one command**, effect **permanent and without symptom** |
-| ⚠ **R10-A10** | **No cap on the number of QUIC connections**: `t->quante++` exists **only for the log line**. Thousands of connections that never send `CREDENZIALI` live 60 s each, **the ban never triggers** (no authentication fails), and the cost of the eleven scans of the list is paid by **everyone else's frames** | `trasporto.c` · `accetta()`, `webtransport.c` | ⚠ robustness |
+| ⛔⛔ **R10-A2** | **The ban is per ADDRESS and ten tenants behind a NAT are one single address.** `rcp.c` · `slot_take()` declares it: *«THE USER NAME DOES NOT COUNT. Three different names count three»*. Three **different** tenants who get it wrong once each within five minutes **ban the address**: the other seven stay out for **12 hours** without having got anything wrong, and the only way out is the command socket, which is `0600` of **root** | `rcp.c:1052-1055`, `rcp_key_address()` `:1159`, check `:2364` | ⛔ **10 users in an office**. ⭐ **Q6 confirmed** |
+| ⛔ **R10-A2-bis** | **A successful login removes the ban from memory but NOT from the file: the restart resurrects it.** `reset_failed()` does a `memset` of the whole entry, `banned_until` included, and ⛔ **does not call `save_ban()`** — where its twin `rcp_unblock()` does call it | `rcp.c` · `save_ban()` vs `rcp.c` · `mark_failed()` | ⚠ it does not break at once, **it lies later**: two truths about the same fact (**I7**) |
+| ⛔⛔ **R10-A3** | **Ten tenants multiply the logind wait, and the DEAD LINE detaches them all.** `wt_watch_locals()` loops over **all** sessions and for each one makes a **synchronous** D-Bus call, **inside the same `poll` that delivers the frames**; `WAIT_MS` is 300. With one tenant the worst is 300 ms every 2 s; ⛔ **with ten it is 3 s every 2 s**. While the loop is stopped, `lm_out` does not rise for **any** session and `lm_offered` keeps rising ⇒ past 5 s **`dead_line_fires()` throws out all ten**, each with the sentence *«the line is DEAD»* — which **blames the user's network for a defect of the machine** | `webtransport.c` · `video_a_una()`, `main.c` · `DEFAULT_ABANDON_MS`, `sentinella.c` · `WAIT_MS`, `webtransport.c` · `WT_NETWORK_LOSES` | ⛔ **10 users**, ⚠ **conditional** on a slow logind — but what triggers the condition is **the number of tenants** |
+| ⛔ **R10-A4** | **The log does not say whose it is.** `hook_log()` receives the session context and **throws it away** (`(void)ctx;`); the format is `now + area` and that is all — no pid, no user; the children **do not redirect `stderr`** and all ten append to the same file, with the **same area**. `[M]` static census: **79 %** of the lines of `rcp.c`, **63 %** of `webtransport.c`, **64 %** of `figlio.c` and ⛔ **100 %** of `codificatore.c` **without an identifier** | `webtransport.c` · `hook_send()`, `registro.c` · `row()`, `figlio.c` · `become_and_exec()`, `figlio.h` · `LOG_CHILD` | ⛔ **2 users**, unreadable at 10. ⭐ **Q10 confirmed, and with a number** |
+| ⛔ **R10-A5** | **The bandwidth cap is PER TENANT, and nobody adds up**: `--bandwidth-cap-mbit 30` with ten tenants is not a cap of 30, it is a cap of **300**. In the whole of `src/` **there is no aggregate counter of the bytes sent out** | `main.c` · `delivery_verdict()` → `:1544` → `figlio.c:1215-1217` | ⚠ today it does not break; it is **point 5 of the phase**, confirmed by the code |
+| ⚠ **R10-A6** | **`WT_PALCHI` is EIGHT and the phase aims at ten**: the ninth and the tenth do not enter the table and at re-attach they receive the canvas **as the client asks for it** instead of as the stage has it. ⛔ And the fallback is declared **only once** (`stages_full_logged`): the ninth and the tenth lose it **silently** | `webtransport.c` · `network_cycle()`, `stage_measure_mark()` `:5238` | ⚠ **9** — ugly, does not detach |
+| ⚠ **R10-A7** | **`MAX_IN_FLIGHT` is 16 by copy, not by construction**, and the comment declares a link that does not exist. The day the cap goes up, the seventeenth who authenticates **at the same moment** receives `WRONG_CREDENTIALS` — **indistinguishable from a wrong password** | `aiutante.c` · `rcp_authenticate()` | ⚠ not today, ⛔ **on the day of the budget** |
+| ⚠ **R10-A8** | **The findings folder is a single one and the file names are FIXED**, and the benches' terrains create it `1777` (one even `777` **without sticky**). ⇒ (a) tenant B can **read A's `capture_v.bgrx`** — a raw frame of their desktop; (b) the second child fails the write and ⛔ **whoever diagnoses looks at the wrong desktop believing it is theirs** | `figlio.c` · `declare_audio_priority()`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **defect of the BENCHES**, not of the product — ⛔ but phase 10 runs ten users right there |
+| ⚠ **R10-A9** | **A hostile tenant prevents another from opening the session with a `touch`**: the session log is `/tmp/remotix-sessione-<uid>.log`, `/tmp` is writable by everyone and the uid can be read from `/etc/passwd`. If the file exists and belongs to someone else, the redirection fails and the shell **exits before running the compositor** — ⛔ and the failure is **mute**, because `setsid --fork` exits `0` anyway | `sessione.c` · `start()` | ⚠ requires hostility, ⛔ cost of the attack: **one command**, effect **permanent and without symptom** |
+| ⚠ **R10-A10** | **No cap on the number of QUIC connections**: `t->how_many_n++` exists **only for the log line**. Thousands of connections that never send `CREDENTIALS` live 60 s each, **the ban never triggers** (no authentication fails), and the cost of the eleven scans of the list is paid by **everyone else's frames** | `trasporto.c` · `admit()`, `webtransport.c` | ⚠ robustness |
 
 ### 4.3 ⭐ The ten leads **verified and discarded** — they are worth as much as the findings
 
@@ -578,19 +578,19 @@ a reason*, that is exactly the defect for which `posto_prendi()` had already bee
 been looked at there. Line in hand:
 
 1. ⛔⛔ **«The fixed second puts ten users in a queue, the last one waits ten seconds» — IT IS FALSE**, and
-   it is the most important lead to close. `RITARDO_FISSO` (`rcp.c` · `RITARDO_FISSO`) still exists and still applies
+   it is the most important lead to close. `FIXED_DELAY` (`rcp.c` · `FIXED_DELAY`) still exists and still applies
    to the admitted too, ⭐ **but it is not a wait**: it is a **per-session floor** checked in
-   `rcp_tempo()` (`rcp.c` · `rcp_verdetto()`) with a clock comparison that **returns at once**. The wire never
+   `rcp_time()` (`rcp.c` · `rcp_verdict()`) with a clock comparison that **returns at once**. The wire never
    stops. ⇒ Ten users who come in together wait **one second each, in parallel**.
    ⚠ **The phase 1 sentence describes a product that no longer exists: it must be deleted, not
    re-verified.**
-2. **The ban key with the port** — ✅ cured **by construction**: `rcp_chiave_indirizzo()` is
+2. **The ban key with the port** — ✅ cured **by construction**: `rcp_key_address()` is
    the only one that builds the key, all three callers use it, and it is idempotent.
 3. **The PAM helper as a bottleneck at ten** — ⛔ **false**: it is a dispatcher that **never
    calls PAM**, forks a grandchild per request, `SEQPACKET` socket. At 10 it holds with six slots
    to spare.
 4. ⭐⭐ **Invariant I2 and the guardian's question** — ⛔ **the code asks the RIGHT question**:
-   `sentinella.c` · `sentinella_locali()` discards the sessions **of other users** before looking at anything. The
+   `sentinella.c` · `sentinel_local()` discards the sessions **of other users** before looking at anything. The
    fear of `DECISIONI.md` §4.6-quater — *«is there a local graphical session?»* instead of *«…of this
    user?»* — **did not come true**. ⚠ The guardian's problem is not the question: it is the **multiplied
    cost** (R10-A3).
@@ -600,7 +600,7 @@ been looked at there. Line in hand:
    (helper) + 16 (children, **only one per child**) = **52**, twelve of margin in the worst case, and
    the order is already the right one (the children at the end). ⚠ **Two readings that do not agree, and both
    are declared**: the design reading (§3.6 item 10) counted 36 and pointed out that the truncation of
-   `figli_descrittori()` is **mute**. ⇒ They agree on the fact that **today it does not bite**; the finding that
+   `children_descriptors()` is **mute**. ⇒ They agree on the fact that **today it does not bite**; the finding that
    remains standing is not the number, it is that **if one day it bit, no line would say so**.
 7. **Nested or quadratic loops on the number of sessions** — ⛔ **there are none**: all the scans
    are linear over tables of 8-256 entries with a body of one `strcmp`. The only cost that grows with N and
@@ -614,7 +614,7 @@ been looked at there. Line in hand:
    `umask` **before** the `bind` and `0600` re-read via `stat`; certificates `0700` with the key `0600`;
    the child closes everything above 3; the ban file written with atomic `rename()`.
    ⛔ **The only two open are the findings (R10-A8) and the file in `/tmp` (R10-A9).**
-10. **`presenti[16]` and `attaccate[16]` undersized** — ⛔ **not at 10**, and they degrade in a
+10. **`present[16]` and `attached[16]` undersized** — ⛔ **not at 10**, and they degrade in a
     **declared** way.
 
 ### 4.4 The `[?]` of the lens
@@ -622,7 +622,7 @@ been looked at there. Line in hand:
 | `[?]` | why it stays open |
 |---|---|
 | **the real log at ten sessions** | the census is **static** (calls in the source), not a sample run with ten users. The structural conclusion does not depend on the sample; ⚠ the **exact fraction** does |
-| **the cost of ten abandoned sessions** | `[M]` one costs **477 MB (PSS)** and ~0.017 % of a core (`main.c` · `consegna_verdetto()`). Ten would be ~4.8 GB **if it were linear** — ⛔ and it must not be assumed linear: ten `gnome-shell`s share pages. It is a number the phase must take |
+| **the cost of ten abandoned sessions** | `[M]` one costs **477 MB (PSS)** and ~0.017 % of a core (`main.c` · `delivery_verdict()`). Ten would be ~4.8 GB **if it were linear** — ⛔ and it must not be assumed linear: ten `gnome-shell`s share pages. It is a number the phase must take |
 | **the shared encoding engine** | no line of code governs it: there is nothing to refute by reading |
 | **the real threshold of R10-A3** | how slow logind must be is arithmetic (`N × 300 ms` against 5000); ⚠ the real worst case of `ListSessions` with ten sessions open **is not measured** |
 
@@ -653,7 +653,7 @@ the child declares *«remounting the stage on MEMORY»* and **2 ms later dies of
 #4  figlio_vive (…)           at figlio.c:7777
 ```
 
-`[M]` And from the same core: `puntatore = NULL`, `tastiera_dev = NULL`, `regione_nota = 0` — the EIS
+`[M]` And from the same core: `ptr = NULL`, `keyboard_dev = NULL`, `region_known = 0` — the EIS
 channel had been opened **33 ms earlier** and the `libei` handshake **had not arrived yet**.
 ⇒ ⛔⛔ **It is not the stride that kills: it is CLOSING A NEWBORN EIS CHANNEL.**
 
@@ -662,8 +662,8 @@ guard bites, the fallback mounts, **the child survives**.
 
 #### The cure — **only the stream is remounted, not the whole stage**
 
-Only `src/figlio.c` (+115 lines, −4): `rimonta_solo_la_cattura()` stops and reopens the `Cattura` **on the
-same PipeWire node**, and redoes only the seam that lives there. `smonta_il_palco()` **remains as a fallback**
+Only `src/figlio.c` (+115 lines, −4): `remount_only_capture()` stops and reopens the `Capture` **on the
+same PipeWire node**, and redoes only the seam that lives there. `unmount_stage()` **remains as a fallback**
 for the case in which the stream does not reopen.
 
 ⭐⭐ **It is the cure of the defect, not of the symptom**: the pixel route is a property **of the stream**, not
@@ -682,7 +682,7 @@ thrown away **to change something that does not concern them**.
 | view **1268** (stride 5072 ⛔) | ⛔ **dead 3 out of 3** | ⭐ **0 out of 3**, and *«alive, desktop on»* 3 out of 3 |
 | view 1280 (stride 5120 ✅) | 0 out of 3 | 0 out of 3 |
 
-**And the delivery, counted** (new bench `10-c2-ripiego.py`, `--certifica` **27/27**):
+**And the delivery, counted** (new bench `10-c2-ripiego.py`, `--certify` **27/27**):
 
 | canvas | stride | outcome | fr. | bytes/fr | route |
 |---|---|---|---|---|---|
@@ -704,9 +704,9 @@ canvas the product could not do**.
 
 #### ⛔ And what the cure does NOT cure — declared, and outside the mandate
 
-⛔⛔ **The real `libei` defect stays latent**: `input_chiudi()` calls `ei_disconnect()` **even on
+⛔⛔ **The real `libei` defect stays latent**: `input_close()` calls `ei_disconnect()` **even on
 a context that never completed the handshake**, and there `libei` falls. ⇒ The
-**other two** `smonta_il_palco()` remain exposed — *«the stage has gone»* and the exit one: **if the compositor
+**other two** `unmount_stage()` remain exposed — *«the stage has gone»* and the exit one: **if the compositor
 dies in the first tens of milliseconds of a stage's life, the same SIGSEGV comes back.**
 `[?]` Not tested (it cannot be timed by hand). ⭐ The cure would be **a few lines in
 `input.c`**: do not disconnect as long as no device has ever appeared.
@@ -764,8 +764,8 @@ of R12.3 stay intact.
 ⭐⭐ **And a deviation from the assignment, declared and better**: instead of the **pid** the
 **user name** was set. It costs the same, cures the same 359 lines **plus the 70 of `codificatore.c`**, and
 ⭐ **does not need the bridge** — which was the strongest argument of the finding (*rotated log ⇒ line
-mute forever*). ⇒ The three caveats of §6.7 **close by themselves**: that `REG_CODIFICA` is the same
-string as `REG_VIDEO` no longer matters, that the `figlio` area is written **by the parent too** no longer matters,
+mute forever*). ⇒ The three caveats of §6.7 **close by themselves**: that `LOG_ENCODING` is the same
+string as `REG_VIDEO` no longer matters, that the `child` area is written **by the parent too** no longer matters,
 and the bridge is no longer needed.
 
 ⭐ And three detail choices that count: the bracket is composed **in one place only**, at the head of the
@@ -775,7 +775,7 @@ know STAYS SILENT** — no bracket, no bytes.
 
 #### ⚠ What the cure does NOT cure
 
-⛔ **The 100 lines of `webtransport.c`** — `[M]` the family `wt stream uni … per un fotogramma`,
+⛔ **The 100 lines of `webtransport.c`** — `[M]` the family `wt stream uni … per un frame`,
 **18 211 lines**, stays at **0.0 %**. ⭐ The mechanism to cure it **already exists**: 76 in functions that already have
 the context, 24 in the hooks. ⚠ It was left because that file belonged **to another assignment of the
 same round** · the ten direct `fprintf(stderr,…)` stay mute (**none is diagnostic**) · the
@@ -801,7 +801,7 @@ body» keeps working, whoever anchors on the body must tolerate `[nome] ` at the
 ⭐ **And the bench was improved where it was born crooked**: the predicate that *measured* the defect without
 **judging it** now can give red on the cure; the final cleanup no longer uses **two global patterns**
 (⛔ it was the fifth trap of §7.3, **written in the code**: it killed anyone else's clients); and
-`--certifica` goes from 26 to **31 cases**, with the five new ones covering *wrong name ⇒ RED* and
+`--certify` goes from 26 to **31 cases**, with the five new ones covering *wrong name ⇒ RED* and
 *right name but diagnostics still at 4.2 % ⇒ RED all the same*.
 
 ---
@@ -835,31 +835,31 @@ a new tenant cannot connect»* **does not arise at D=286** — `[M]` the newcome
 
 #### ⭐⭐ P2/P5 · *«our silence counted as the network's silence»*
 
-⭐⭐⭐ **And the line was already printing the proof that the network had nothing to do with it**: `persi=0` **and `cwnd_left=13200`** —
+⭐⭐⭐ **And the line was already printing the proof that the network had nothing to do with it**: `lost=0` **and `cwnd_left=13200`** —
 **the congestion window was wide**. ⇒ **There was room to send; we did not send because we were not
 looping.**
 
 | arm | outcome |
 |---|---|
-| ⛔ **before** | `linea-morta causa=stallo stallo_ms=12001 usciti_byte=0 persi=0 cwnd_left=13200` — on a session that **in the same cell was doing 40.36 fps**, ⛔ and **no line said why** |
+| ⛔ **before** | `dead-line reason_why=stall stall_ms=12001 exited_bytes=0 lost=0 cwnd_left=13200` — on a session that **in the same cell was doing 40.36 fps**, ⛔ and **no line said why** |
 | ⭐ **after** | ⭐ **zero evictions**; the guard arms **6 times**, worst gap **10 902 ms** |
 | ⭐ **and it does not bite whom it should not** | 90 s of healthy machine ⇒ **zero** lines |
 | ⛔ **negative control** | the eviction **comes back**, identical signature |
 | ⭐⭐ **and the dead line STILL works** | `kill -9` on the client ⇒ **evicted all the same** in both binaries |
 
-**The cure**: `wt_giro_del_padre()` + a declared budget — if more than that passes between two passes of the loop,
+**The cure**: `wt_parent_round()` + a declared budget — if more than that passes between two passes of the loop,
 **the dead line does not judge that round and the counts restart**, with a line that says so.
 ⛔⭐ **And the piece of design that counts**: *a gap counts as **progress**, not as time to
 subtract* — subtracting it would keep the clock behind forever, and **a client really dead would never
 be recognised**.
 
-⭐⭐ **And the eviction line now carries SEVEN new witnesses** (`fermo_ms=`, `giri_fermi=`,
-`saltati=`, `ritmo_giu=`, `ritmo_arretrato=`, `ritmo_posti=`, `ritmo_scesi=`): §6.15 had to
+⭐⭐ **And the eviction line now carries SEVEN new witnesses** (`stalled_ms=`, `stopped_rounds=`,
+`skipped=`, `rate_down=`, `rate_backlog=`, `rate_slots=`, `rate_lowered=`): §6.15 had to
 **pair two lines by eye** to say *«the regulator was holding back»* — ⭐ **now the eviction line
 says it.**
 
-⭐ And `sentinella_conti()` **finally has a caller**: `[M]` with two sessions, `chiamate=29 → 59 →
-89`, that is **30 per minute = one per pass**, `peggiore_ms=6`. And `LENTA_MS` drops from 20 to **10**,
+⭐ And `sentinel_counts()` **finally has a caller**: `[M]` with two sessions, `calls=29 → 59 →
+89`, that is **30 per minute = one per pass**, `worst_stall_ms=6`. And `SLOW_MS` drops from 20 to **10**,
 because `[M]` at 20 **it would never have spoken**.
 
 #### ⛔⛔ And the honest part: **two defects out of three did not reproduce**
@@ -878,8 +878,8 @@ measure it, and now it exists.
 ⛔ **The P4 cure removes `N`, not `D`**: at N=7/D=286 a toll of **5.6 %** remains. Removing it means
 moving the question **out** of the loop, onto a helper as was already done for PAM — **it is
 another decision** · ⚠ **the guard costs a recognition delay**: a client that dies
-*during* a gap is recognised up to one threshold later, and it is visible in `giri_fermi=` and
-`saltati=` (`[M]` **zero** on a healthy machine).
+*during* a gap is recognised up to one threshold later, and it is visible in `stopped_rounds=` and
+`skipped=` (`[M]` **zero** on a healthy machine).
 
 `[?]` **The positive direction of invariant I2** (a real local session that wins over the remote one) was not
 tested: on the machine **there is no session with a seat**, and creating one would mean
@@ -887,16 +887,16 @@ touching the user's desktop. ⭐ Mitigation: the two forms share **one single bo
 
 #### The injected faults — **44 out of 44**, and ⭐ **14 cases out of 44 end in «I do not judge»**
 
-lever not taken · zero calls · eviction with `persi=0` / without evictions / **with real loss** ·
+lever not taken · zero calls · eviction with `lost=0` / without evictions / **with real loss** ·
 log not read · guard that arms **under** threshold · guard that bites **a healthy machine** ·
 calls per pass **in both directions** · rate that drops and that does not drop.
 
 ⚠ **Five bench defects found by running them**: the delay file with two different names
 (⭐ **the «THE LEVER DID NOT TAKE» guard saved two cells**) · the frame meter not calibrated ·
 `ETXTBSY` copying over a running binary · `0x0F` instead of the handshake (slot not
-yet freed) · ⛔ and **`scatti=None` becoming `[]`** — *«I did not read»* turned into
+yet freed) · ⛔ and **`notches=None` becoming `[]`** — *«I did not read»* turned into
 *«zero»*, ⭐ **exactly the confusion all the predicates exist to avoid**, found by
-`--certifica`.
+`--certify`.
 
 ⚠⚠ **And two declarations of honesty**: ⛔ `10-b97-guardiano.py` **still** carries a `pkill` with a
 **global** pattern — the fifth trap of §7.3, **written in the code**, the one that already matched 24
@@ -915,8 +915,8 @@ exactly the defect: **the children table full while the slots table has room**.
 
 | | ⛔ **RED** (yesterday's product) | ⭐ **GREEN** |
 |---|---|---|
-| on the wire, **read in the client** | ⛔⛔ **nothing**: `AMMESSO` · `SESSIONE` · *«still attached after 60.0 s: nothing dropped»* | ⭐ `CONGEDO invece di AMMESSO: motivo 0x0E` |
-| pixels | ⛔ **no frame in 60 s** | the `AMMESSO` never arrives: **there is no black page to have** |
+| on the wire, **read in the client** | ⛔⛔ **nothing**: `ADMITTED` · `SESSION` · *«still attached after 60.0 s: nothing dropped»* | ⭐ `CONGEDO invece di AMMESSO: motivo 0x0E` |
+| pixels | ⛔ **no frame in 60 s** | the `ADMITTED` never arrives: **there is no black page to have** |
 | how long it takes | ⛔ **61.6 s, and it never gets better** | ⭐ **0.6 s** |
 | the body | — | *«this server's stages are all taken (2 of 2): they are live graphical sessions, freed at logout or after abandonment»* |
 | ⛔ **the sentence the user READS** (real Firefox) | ⛔⛔ **«Admitted, new session, canvas 1188×714, unknown desktop»** | *«that session cannot be served»*, ⭐ byte-identical to the `0x0E` entry of the served file |
@@ -932,15 +932,15 @@ exactly the defect: **the children table full while the slots table has room**.
 
 #### The four `16`s — and ⛔ **the fifth that stays separate, with the reason written**
 
-⭐ One single number, `RCP_TETTO_SESSIONI` in `rcp.h`, with the box that lists the four places where it was
+⭐ One single number, `RCP_SESSION_CAP` in `rcp.h`, with the box that lists the four places where it was
 written by hand **and the three comments that declared a non-existent link**. Now following it are
 `MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c` — ⭐ *the comment that said «will follow it from the same
 place» is now true*), `QUANTI_PRESENTI` (`main.c`), and ⭐⭐ **`WT_PALCHI`, which rises from 8 with them**:
 it bit at **nine**, that is **before the promised ten**.
-⛔ **And `MAX_IN_VOLO` stays 16 and stays SEPARATE**, with the box that explains why: it is **another
+⛔ **And `MAX_IN_FLIGHT` stays 16 and stays SEPARATE**, with the box that explains why: it is **another
 quantity** — the authentications *in flight*, which are counted even **with zero sessions**.
 
-⭐ And the **mute** `return` of `presenza_segna()` becomes a **declared fallback**, one single line and not
+⭐ And the **mute** `return` of `presence_mark()` becomes a **declared fallback**, one single line and not
 one per gesture (`CODER.md` §4.2).
 
 ⭐⭐ **And the proof of the `#define`s is read AFTER THE PREPROCESSOR**, not in the sources: *looking at how they are
@@ -948,7 +948,7 @@ written is the wrong question*, and it is the error that comment had been making
 
 #### ⭐ Why `0x0E` and not `0x06` — the reason, next to the line
 
-`0x06 BUDGET_PIENO` says *«this machine has no more encoding capacity»*: a **physical** limit.
+`0x06 BUDGET_FULL` says *«this machine has no more encoding capacity»*: a **physical** limit.
 Here the limit is **a table full of stages nobody is watching** — **administrative**, which is
 what `0x0E` already says. ⇒ **D5**: the two reasons **add up**, and `0x06` belongs to the budget round.
 
@@ -960,9 +960,9 @@ in any case it gets better at abandonment. ⛔ **It is a decision for the direct
 #### The negative control — **four faults injected and run, plus 38 off-field**
 
 `congedo-muto` ⇒ ⛔ **3 reds out of 8** (it is the red of the table) · `figli-slegati` ⇒ ⛔ `v[16]` against
-`attaccate[2]`, **the red of §6.4 reproduced** · `palchi-otto` ⇒ `palchi[8]` · `presenti-slegati` ⇒
-`presenti[16]` · **healed** ⇒ ⭐ all at 2, and `volo[16]`.
-And off-field `--certifica`: **38 out of 38**, of which **5 meter calibrations that run in the real
+`attached[2]`, **the red of §6.4 reproduced** · `palchi-otto` ⇒ `stages[8]` · `presenti-slegati` ⇒
+`present[16]` · **healed** ⇒ ⭐ all at 2, and `flight[16]`.
+And off-field `--certify`: **38 out of 38**, of which **5 meter calibrations that run in the real
 round too**, and ⛔ *«the empty breath is not a zero»* · ⚠ *«REFUSED ⇒ I did not measure, never refused
 correctly»*.
 
@@ -972,14 +972,14 @@ correctly»*.
    `#define` that **no longer exists**, the `sed` exits **0 without substituting**, the terrain **declares
    success**, the cap stays 16, and the bench ends in *«I did not measure»*. ⭐ **The cure is one line**,
    and it must be done before redoing the tests.
-2. ⛔ **`POSTO_NIENTE_PIU_POSTI` is no longer reachable by a new user**: slots full ⇒ children
+2. ⛔ **`SLOT_NO_MORE_SLOTS` is no longer reachable by a new user**: slots full ⇒ children
    full, and the no arrives **earlier**. ⇒ The cure of **R9.3**, seen triggering for the first time in §6.4,
    **becomes practically unobservable** — the branch stays as a net. ⭐ **And it is D6 coming true**:
    `[M]` the rejected one has **0 `gnome-shell` and 4 processes**, against the **42 processes and 1 `gnome-shell`**
    of §6.4.
 3. ⛔⛔ **Shared users steal each other's password, and EVERYONE's ban pays for it**: `[M]` the
    first round died with a user **rejected for credentials** on a password set half an hour earlier
-   — `07-b64-terreno.sh utente` **rewrites it at every call**, and the last one to call wins.
+   — `07-b64-terreno.sh username` **rewrites it at every call**, and the last one to call wins.
    ⛔⛔ **And every rejected one consumes one of the three attempts of the ban by ADDRESS, which lasts twelve hours and
    puts every other agent out of action.** ⇒ ⭐ **The real cure belongs to coordination**, not to the bench: that
    script must not redo the password of a user that already exists.
@@ -1003,22 +1003,22 @@ cures were stitched without conflicts and the tree compiles ⇒ they work togeth
 verified and discarded**, line by line (the doubled `WT_PALCHI` against the loops that walk it ·
 the log hook called with the session already freed · the pointers held across the
 farewells in the batch · the new `#include` that pulls in a symbol · the identity that survives the
-remount · invariant **I4** · `presenti[]` overflowing · and the types of the seven new fields).
+remount · invariant **I4** · `present[]` overflowing · and the types of the seven new fields).
 
 ⛔⛔ **The second half is FALSE, and in the worst direction: the cures broke each other IN THE BENCHES.**
 ⇒ *«It compiles» was not «it works together», nor even «it can still be measured».*
 
 | # | the finding | how much |
 |---|---|---|
-| **R1** | ⛔⛔⛔ **The log cure breaks the frame meter of FIVE benches**, and ⛔ **the zero that comes out of it ACCUSES the product**: `resa()` with zero matches **does not return `None`, it returns 0** — and its own comment says that zero on a live scene *«is a FAULT»*. ⇒ The bench reports that the server **did not send a pixel** while it was sending them all. It is the rule *«`None` is not zero»* **broken from the inside**, and it touches **point 1 of the phase** | ⛔⛔⛔ |
+| **R1** | ⛔⛔⛔ **The log cure breaks the frame meter of FIVE benches**, and ⛔ **the zero that comes out of it ACCUSES the product**: `rendered()` with zero matches **does not return `None`, it returns 0** — and its own comment says that zero on a live scene *«is a FAULT»*. ⇒ The bench reports that the server **did not send a pixel** while it was sending them all. It is the rule *«`None` is not zero»* **broken from the inside**, and it touches **point 1 of the phase** | ⛔⛔⛔ |
 | **R2** | ⛔ `10-b2-terreno.sh` has **the same dead `sed`** already cured in `10-b93` — ⛔ and its guard is **blind in the permissive direction**: it looks for the old string, does not find it, **and therefore does NOT give red**, going on to measure *«table full»* on a table of sixteen | ⛔⛔ |
-| **R3** | `i_due_numeri()` of `10-b93` is **mute forever** — *«a table of None»* — ⛔ **and `--certifica` stays GREEN**, because it injects the dictionaries by hand. **Green instrument, measurement off** | ⛔ |
+| **R3** | `i_due_numeri()` of `10-b93` is **mute forever** — *«a table of None»* — ⛔ **and `--certify` stays GREEN**, because it injects the dictionaries by hand. **Green instrument, measurement off** | ⛔ |
 | **R4** | ⛔ **None of the new lines of the loop cure carries the name**: 93 mute calls against **one single** that names. ⇒ **The «4.4 % → 100 %» was measured on a tree that did not contain the other cure**, and ⛔ **the eviction line — the most important of phase 9 — is among the mute ones** | ⛔ |
-| **R5** | ⛔ `fermo_ms=` in the eviction line is the **GLOBAL** counter while the comment next to it says *«since this session was born»*. ⇒ On a server running for a day, an eviction after ten seconds would say `fermo_ms=40000`: whoever reads it **acquits the network when the network was involved** — ⭐ **the INVERSE error of the one the cure exists to remove** | ⛔ |
+| **R5** | ⛔ `stalled_ms=` in the eviction line is the **GLOBAL** counter while the comment next to it says *«since this session was born»*. ⇒ On a server running for a day, an eviction after ten seconds would say `stalled_ms=40000`: whoever reads it **acquits the network when the network was involved** — ⭐ **the INVERSE error of the one the cure exists to remove** | ⛔ |
 | **R6** | A **second** branch become unreachable besides the one already declared: *«N children already alive»* will never come out again | ⚠ observability |
 | **R7** | Two new comments that **lie**: one says a line is written by `main.c` (⛔ nobody writes it: if one day the wrong hook is connected, **the pass switches off without a line**), the other promises in the line the **number of tenants**, which ⛔ **is not there** — and it is precisely the denominator needed to **reject** the cure | ⚠ |
-| **R8** | ⛔ **`WT_RIPASSO_INSIEME 32` is the FIFTH hand copy**, born **in the round that unified four of them**, and its comment ties itself to *«the sixteen slots»* — **a literal, not the `#define`** | ⚠ today, ⛔ **on the day of the budget** |
-| **R9** | The cure of the loop gap **also** resets the **stall** clock ⇒ on a machine on which the loop exceeds the budget more often than once every five seconds, ⛔ **neither stall nor silence ever triggers**: the dead line **stops existing**. ⭐ It is not silent (`saltati=` grows), ⛔ but **no predicate looks at that number**, and the price was measured at 1, 2, 5 and 7 sessions — **never at ten** | ⚠ |
+| **R8** | ⛔ **`WT_SWEEP_BATCH 32` is the FIFTH hand copy**, born **in the round that unified four of them**, and its comment ties itself to *«the sixteen slots»* — **a literal, not the `#define`** | ⚠ today, ⛔ **on the day of the budget** |
+| **R9** | The cure of the loop gap **also** resets the **stall** clock ⇒ on a machine on which the loop exceeds the budget more often than once every five seconds, ⛔ **neither stall nor silence ever triggers**: the dead line **stops existing**. ⭐ It is not silent (`skipped=` grows), ⛔ but **no predicate looks at that number**, and the price was measured at 1, 2, 5 and 7 sessions — **never at ten** | ⚠ |
 
 #### ⭐ What was cured at once, and by whom
 
@@ -1038,21 +1038,21 @@ names **as a check**.
 
 #### ⛔ And two defects of the shared terrains, found while measuring
 
-1. ⛔⛔ **`accendi` exited ZERO on a DEAD server**: `[M]` with an option the binary does not know,
+1. ⛔⛔ **`turn_on` exited ZERO on a DEAD server**: `[M]` with an option the binary does not know,
    the server prints its own help and exits, and the terrain said *«OK server 1265806 on port
    8260»* **exiting 0**, with the unit already `inactive` and **no listener**. ⇒ A bench that
    trusted it would say «on», then «the table does not fill», and ⛔ **would end up accusing the
    product of a defect that was a non-existent option**. ⭐ Cured: *«on»* now means
    **that someone is listening**, and if nobody listens the lines that say why are printed.
-2. ⚠ **`RIFAI_PAROLA` did not cross the `ssh`**: the morning's cure — *do not redo the password of a
+2. ⚠ **`REDO_PASSWORD` did not cross the `ssh`**: the morning's cure — *do not redo the password of a
    user that already exists* — had been put in the half that runs **on the server**, but the variable was not
    in the list passed to it. ⇒ **It did nothing, silently.** Cured.
 
 #### ⭐ And a question closed **by reading**, which is worth writing down
 
-⛔ **`POSTO_NIENTE_PIU_POSTI` is no longer reachable by any route.** The new user is stopped
-**before** the `ATTACCA`; and the route of the dying child does not get there, because the death goes through
-`wt_congeda_utente` → `congeda` → `posto_lascia`, which **frees the slot in step**.
+⛔ **`SLOT_NO_MORE_SLOTS` is no longer reachable by any route.** The new user is stopped
+**before** the `ATTACH`; and the route of the dying child does not get there, because the death goes through
+`wt_dismiss_user` → `dismiss` → `slot_leave`, which **frees the slot in step**.
 ⇒ ⭐ **The cure of R9.3, seen triggering for the FIRST time in §6.4, goes back to being unobservable** —
 ⚠ **but this time because the no arrives earlier and better**: the two branches stay as a **net**.
 
@@ -1099,12 +1099,12 @@ steady state, ⭐ **terrain 21 out of 21 before EVERY scene**.
 #### ⭐ The cures seen working, one by one
 
 - **the guardian** — `[M]` **30-31 calls per minute, that is ONE per pass, identical from 1 to 11
-  sessions** and **even inside the collapse**. `giri_fermi=0`, `giro_peggiore_ms=0`. ⭐ Before the cure
+  sessions** and **even inside the collapse**. `stopped_rounds=0`, `worst_round_ms=0`. ⭐ Before the cure
   it would have been `N × D`.
 - **the loop** — ⭐ `[M]` **zero unfair evictions in 27 minutes**, including **five minutes of collapse at
-  1 fps with 1.1 s of latency**. The 22 `linea-morta` lines of the round fall **all** in the two instants
+  1 fps with 1.1 s of latency**. The 22 `dead-line` lines of the round fall **all** in the two instants
   in which the bench kills the clients. ⇒ ⭐ **The dead line is not unconditional and can still bite.**
-- **the cap** — at eleven: `posti occupati 11 · negati 0`, correct. ⛔ **The cure was not
+- **the cap** — at eleven: `slots occupati 11 · denied 0`, correct. ⛔ **The cure was not
   stressed**: seventeen users would be needed.
 - **the stride fallback** — ⛔ **not stressed**: the canvases are 1920×1080, stride a multiple of 64.
   `[M]` **zero SIGSEGV**, and the 44 child deaths of the round are **all signal 15**, that is the clearing.
@@ -1149,10 +1149,10 @@ It matched nobody **only because we always ran with the lock in hand**.
 `[M]` 25 Aug 2026, **saturated** scene 1920×1080 H.264, steps of 30 s, eleven real users, under the
 lock, ⭐ **terrain 21 out of 21 at every arm**.
 
-| step | ⛔ **RED** — budget off | ⭐ **GREEN** — `--budget-mpixel-s 480 --riserva 0.5` |
+| step | ⛔ **RED** — budget off | ⭐ **GREEN** — `--budget-mpixel-s 480 --reserve 0.5` |
 |---|---|---|
 | 6 | 472.5 Mpx/s · 37.98 fps · I1 reds **0** | 478.7 Mpx/s · **38.47 fps** · I1 reds **0** |
-| 7 | 396.0 Mpx/s · **27.28** fps · ⛔ **I1 reds 6** | ⛔⭐ **`CONGEDO 0x06 BUDGET_PIENO`** |
+| 7 | 396.0 Mpx/s · **27.28** fps · ⛔ **I1 reds 6** | ⛔⭐ **`FAREWELL 0x06 BUDGET_FULL`** |
 | 8 | 35.3 Mpx/s · ⛔ **2.12 fps** | ⭐ **does not exist** |
 | `0x06` emitted | **0** | **1** |
 | bench verdict | 8 steps · ⛔ **28 reds** | 7 steps · ⭐ **1 red** (the budget's no) |
@@ -1168,7 +1168,7 @@ lock, ⭐ **terrain 21 out of 21 at every arm**.
 
 | | |
 |---|---|
-| ⛔ **the negative control** | budget switched off again, same scene ⇒ **8 steps · 26 reds**, `2,14 fot/s` at the eighth, `0x06 = 0`. ⭐ **The red comes back** |
+| ⛔ **the negative control** | budget switched off again, same scene ⇒ **8 steps · 26 reds**, `2,14 frame/s` at the eighth, `0x06 = 0`. ⭐ **The red comes back** |
 | ⭐⭐ **the test that counts double** | **ten STILL sessions with the budget on ⇒ ZERO refused**. *A budget that refused ten tenants who cost nothing would be as wrong as one that admits the eighth* |
 | ⭐ **the positive control, and it costs 30 s** | budget at **40** Mpx/s, **below the cost of one single** 1080p ⇒ **the FIRST is refused**, `0x06` on the wire, **zero processes switched on** |
 | ⭐ **the meter calibrated FIRST** | the real module mounted and compared with the certified predictor: ⭐ **8 scenes out of 8 match**, and it finds the numbers of §6.9 again **by construction** — the sixth saturated gets in and the seventh does not · the tenth still one gets in and the eleventh does not · at eight throttled the count on pixels would say *«there is room»* (328 ≤ 484.8) and ⛔ **the latency gate refuses** at 654 ms. Two negative controls bite: the knob in both directions, and **off never denies** |
@@ -1183,9 +1183,9 @@ on the eighth — that is, BEFORE the cliff instead of inside it.**
 #### What changed
 
 `src/budget.h` + `src/budget.c` (**new**) · in `main.c` the capacity question **in front of**
-`figli_assicura()` and the accumulation **inside** `deposita_fotogramma()` — ⭐ **without guards, so it sees
+`children_ensure()` and the accumulation **inside** `deposit_frame()` — ⭐ **without guards, so it sees
 the ghosts too** · the three options and the startup lines · `rcp.h`/`rcp.c` the accessors and
-`attaccate[]` **allocated**, with the default going down **from 16 to 10** · `figlio.c`, `webtransport.c` and
+`attached[]` **allocated**, with the default going down **from 16 to 10** · `figlio.c`, `webtransport.c` and
 `main.c` with the other three tables **allocated** · `registro.h` the new area · the R12.3 twins
 aligned.
 ⇒ ⭐ **The four `#define`s unified by the previous cure become a CONFIGURABLE cap**, which was
@@ -1193,12 +1193,12 @@ the debt with the written deadline.
 
 **The bench contract written beforehand is respected in all five points**: the option names
 · the startup line in the log **on and off** · `0x06` with the body **and the figures** · `0x06 ≠ 0x0E` ·
-the `negati` at every verdict **even with the budget off**.
+the `denied` at every verdict **even with the budget off**.
 
 #### ⛔ The defect the budget unmasked in the sentence, and its cure
 
 **«Shrink the window» was FALSE at the gate.** The `0x06` is decided **before the
-stage is born**, and there the only canvas number in hand is `video.misura_massima`, which is the ceiling of the
+stage is born**, and there the only canvas number in hand is `video.max_size`, which is the ceiling of the
 client's **DECODER** — not of the window (`pagina.html` · `VIA_MSE()` spells it out, and `:1608`
 measures it with `VideoDecoder.isConfigSupported`). ⇒ ⛔ **Whoever shrank and retried received the
 very same no.**
@@ -1208,7 +1208,7 @@ DEVICE, not the window**.
 
 #### The `[?]` and the bench defects
 
-`[?]` **`--tetto-sessioni` is verified only in the startup line** (asked 7 → in force 7): the four
+`[?]` **`--session-cap` is verified only in the startup line** (asked 7 → in force 7): the four
 tables follow it **by construction**, it was not taken to the ceiling with seven users ·
 `[?]` **the latency threshold has never bitten on its own**: the count on pixels always decided ·
 `[?]` **the buffer lead does not cross the process border** — that number lives in the child, and
@@ -1218,7 +1218,7 @@ here there is only the measurement.
 the first campaign **after** it had already taken and released the lock (**an hour lost**; `[M]` 146
 bench scripts were without `+x`, all cured) · a division by zero in the summary of a **still**
 scene · three terrains that run `sed` on a `#define` that is now 10 — ⭐ **and the cure is not
-fixing the `sed`, it is REMOVING it**: `--tetto-sessioni N` does **at runtime** what they did by
+fixing the `sed`, it is REMOVING it**: `--session-cap N` does **at runtime** what they did by
 recompiling · ⛔ **and one is its own, declared**: the summary prints «exit 1» for all five
 arms, and the five `1`s **mean different things** — useless as a judgement, and the real numbers
 must be read from the tables.
@@ -1289,7 +1289,7 @@ awake at 300 MHz against 9.9 % at 1550 MHz**, same load.
 
 #### The injected faults
 
-`--certifica`: **43 out of 43** green, on the laptop and on the test machine as root. `fdinfo` denied
+`--certify`: **43 out of 43** green, on the laptop and on the test machine as root. `fdinfo` denied
 (**live** injection, on 35 real clients) · key missing · pid dead between the two readings · counter
 going backwards · `drm-client-id` changed · impossible jump (3000 %) · recycled pid · `dt = 0`,
 `dt < 0`, `dt = 50 ms` · the kernel writing *«abc ns»* · one of the two readings missing · RC6
@@ -1327,7 +1327,7 @@ QP 26 · bframes 0 · zero copy (DMA-BUF from GBM) · terrain `10-b0` **21 out o
 `testsrc2`, ⛔ **not a real desktop: the rate counts, the Mbit/s do not**.
 ⚠⚠ **And the codec premise was corrected by §6.10**: this ramp is in **H.264**, which the first
 round believed to be *«what the product really negotiates»* — ⛔ **the product negotiates HEVC first**
-(`rcp.c` · `prima_comune()`, `pagina.html` · `inquadra()`), and in HEVC the ceiling is **2.33 Gpixel/s**, **+25 %**.
+(`rcp.c` · `first_in_common()`, `pagina.html` · `wrap()`), and in HEVC the ceiling is **2.33 Gpixel/s**, **+25 %**.
 ⭐ And the isolation **measured, not assumed**: while it ran, the servers of four other benches
 were alive on the machine — `[M]` **the strangers on the video engine were `0,0 %` in all 59 rounds**.
 
@@ -1420,7 +1420,7 @@ inspectable out of ~1400 ⇒ the occupancies are a **lower bound** · ⛔ **synt
 
 `[M]` Jet at **5 · 20 · 60 Mbit/s** (12× range) → deviation on the bytes **+0.0000 %** on all
 three, slope **1.000000**, constant **0**. The accounts close with a zero balance:
-`interfaccia = mio + tara + ICMP + vicini`. ⚠ It counts the **IP length** (verified: 1000 B of payload
+`interfaccia = my + tara + ICMP + neighbors`. ⚠ It counts the **IP length** (verified: 1000 B of payload
 = 1028 B) ⇒ it includes QUIC headers, ACKs, retransmissions and audio; **not** the ethernet frame —
 the datagrams are 1467-1472 B, so **on the copper +2.6 %**.
 
@@ -1455,13 +1455,13 @@ QUIC can sustain is not measured.
 #### ⭐⭐⭐ And the still scene costs **992 times less** — the audio cure of phase 9
 
 `[M]` Phase 9 §14.2 gave **2.427** Mbit/s with a still screen; here it does **0.0024**. With the cure switched off
-(`--niente-audio-silenzio`): **2.4275 Mbit/s**, that is the 2.427 of phase 9 **found again to the third digit**.
+(`--no-audio-silence`): **2.4275 Mbit/s**, that is the 2.427 of phase 9 **found again to the third digit**.
 ⇒ Ten still sessions: **0.024 Mbit/s today against 24.3 before**.
 
 #### ⛔⛔⛔ And the line the product writes by itself: **the two cures fight each other**
 
 ```
-linea-morta causa=silenzio silenzio_ms=10004 prove=16 persi=0 permille=0
+dead-line reason_why=silence silence_ms=10004 prove=16 lost=0 permille=0
 ```
 
 `[M]` On a **still** desktop, on `lo`, with **zero** loss, the session is **closed after 10 s**.
@@ -1476,7 +1476,7 @@ of the same product**.
 > #### ✅⭐⭐ CLOSED BY THE REAL BROWSER — and the finding SHRINKS, without disappearing
 >
 > `[M]` §6.8: on **real Firefox 140 ESR**, still desktop, cures at defaults, the session
-> **survives** at 120 s and at 300 s, and `causa=silenzio` **never triggers**. ⇒ ⛔ **The defect belongs to the
+> **survives** at 120 s and at 300 s, and `reason_why=silence` **never triggers**. ⇒ ⛔ **The defect belongs to the
 > test client, not to the user.**
 >
 > ⚠ **But it is not an acquittal, and it is the part not to lose**: what keeps the line alive **is not the
@@ -1536,7 +1536,7 @@ number **read from the binary at runtime**: *«this server's session register is
 
 | # | question | measurement |
 |---|---|---|
-| 1 | **the reason on the wire** | ⭐ **`CONGEDO 0x0E` in 10 out of 10**, never `0x0F`. **The cure of R9.3 was seen triggering for the first time** |
+| 1 | **the reason on the wire** | ⭐ **`FAREWELL 0x0E` in 10 out of 10**, never `0x0F`. **The cure of R9.3 was seen triggering for the first time** |
 | 2 | **the detail in the body** | present 10 out of 10: *«this server's session register is full»* |
 | 3 | **the PAGE's sentence** | **real** Firefox 140 ESR: *«that session cannot be served»*, byte-identical to the `0x0E` entry of the served page ⇒ built from that reason. It goes back to the login form. ⚠ **Generic, not false** |
 | 4 | ⭐ **does whoever was inside get worse?** | **NO.** `provadec4` 37.82 → **39.23** → 37.38 fps; worst second 33 → 35 → 32; p95 35 → 36 → 35 ms; ⛔ **keyframes 0/0/0**; gaps 0. `provadec5` 38.36 → **39.88** → 37.34. Anchors of the two clocks agreeing within **68 ms** and **54 ms** |
@@ -1553,8 +1553,8 @@ number **read from the binary at runtime**: *«this server's session register is
 > on the mechanism column (keyframes 0/0/0). ⚠ **But the scene is two sessions with the table
 > filled artificially**: the GPU is not under strain. The prediction stays open for the climb to ten.
 
-⚠ **And point 7 corrects phase 9**: what frees the slot **is not the 30 s of `SILENZIO` §5.3** — it is
-the **dead line** (`silenzio_ms=10111 soglia_silenzio_ms=10000`), on by default since 24
+⚠ **And point 7 corrects phase 9**: what frees the slot **is not the 30 s of `SILENCE` §5.3** — it is
+the **dead line** (`silence_ms=10111 silence_threshold_ms=10000`), on by default since 24
 Aug. And the eviction of §4.4 has nothing to do with it: it applies only between clients of the **same** user, and whoever waits is
 someone else.
 
@@ -1564,9 +1564,9 @@ someone else.
 a session close code, and the QUIC connection ends with **0** — which `RCP.md` §3.1 says
 *«MUST NOT be used»*.
 
-⭐ **The mechanism has a name**: `chiudi_sessione()` **delays the capsule by 500 ms**
-(`WT_ATTESA_CHIUSURA_NS`, and it is the cure of **B11**, put there so that a browser would not throw away the
-`CONGEDO`), and a client that detaches as soon as it has read the `CONGEDO` leaves **~2 ms later**.
+⭐ **The mechanism has a name**: `close_session()` **delays the capsule by 500 ms**
+(`WT_CLOSE_WAIT_NS`, and it is the cure of **B11**, put there so that a browser would not throw away the
+`FAREWELL`), and a client that detaches as soon as it has read the `FAREWELL` leaves **~2 ms later**.
 ⇒ **Only one route remains**, and it is precisely the one v1 had already lost for three phases.
 
 > #### ✅⛔ WITHDRAWN BY THE REAL BROWSER — *«0 capsules»* was true **for `aioquic`**
@@ -1575,7 +1575,7 @@ a session close code, and the QUIC connection ends with **0** — which `RCP.md`
 > **`0x0E`** and **never `0`**, at **0.593 s** from the farewell — and the server log says **armed 10,
 > sent 10**.
 > ⇒ ⭐ **The second route of §3.1 is not broken: it is invisible to clients that detach at once.** The
-> test client leaves ~2 ms after the `CONGEDO`, that is **498 ms before** the capsule starts.
+> test client leaves ~2 ms after the `FAREWELL`, that is **498 ms before** the capsule starts.
 > ⛔ **And the lesson is about method, not about the product**: that finding had been taken by reading **where the
 > capsule leaves** instead of **where it arrives**.
 
@@ -1589,12 +1589,12 @@ a session close code, and the QUIC connection ends with **0** — which `RCP.md`
 ⚠ The sentence of `0x0E` **stays generic**, and for a reason: `0x0E` already covers **three** cases in `rcp.c`;
 making it precise for one would make it **false** for the other two.
 ⛔ **And the piece the design must carry along**: the budget must be asked **before the
-child is born**, that is in `consegna_verdetto()`. Deciding it at `ATTACCA` means **refusing when the
+child is born**, that is in `delivery_verdict()`. Deciding it at `ATTACH` means **refusing when the
 budget has already been spent**.
 
 #### The injected faults — **45 tests, 45 did what they had to**
 
-Meter calibration, which runs **in the real round too**: the channel reader finds a known `CONGEDO`
+Meter calibration, which runs **in the real round too**: the channel reader finds a known `FAREWELL`
 again · the chopper finds known rates again (40/12/40) · the anchor refuses a polluted «before» ·
 the offset between the two clocks is found again, is **refused** if the two anchors diverge by 1 s, and is
 **declared unverified** if there is only one anchor.
@@ -1606,7 +1606,7 @@ slot that does not come back or comes back late · the two numbers diverging · 
 looked at · code 0 · the two routes contradicting each other · **armed 10 sent 0**. Every red
 healed right afterwards.
 
-⚠ **The bench defects paid for along the way**: `registro_da()` with the `tail` at the end **lost the `posto
+⚠ **The bench defects paid for along the way**: `log_from()` with the `tail` at the end **lost the `slot
 PRESO`** under thousands of lines · the scene switched off **before** the clients shifted the second anchor
 by **42 s** · `pgrep -f` counted **7** children where there were 3 (the ssh, the sudo and two bashes **that
 were asking**) and then **0**, because the child renames itself with `prctl` and `comm` stays «remotix» ·
@@ -1690,11 +1690,11 @@ and on the other two the **cadence** is reported, which is another quantity · t
 
 ### 6.5 ⭐⭐⭐⭐ THE TEN REAL ONES — **SIX fit**, and the bottleneck **is not the encoder**
 
-`banchi/10-b91-terreno-dieci.sh` + `banchi/10-b92-dieci.py`, `[M]` 24 Aug 2026. Scene **`pieno`**
+`banchi/10-b91-terreno-dieci.sh` + `banchi/10-b92-dieci.py`, `[M]` 24 Aug 2026. Scene **`full`**
 (it saturates the encoder, as written in `PIANO.md`), 1080p, H.264, steps of **45 s at steady state**,
 eleven real users with real GNOME desktops, one single server on 8100, under the lock.
 
-⭐ `[M]` **One at a time they all arrive**: 11 out of 11 at `SESSIONE`, 1894-2075 ms.
+⭐ `[M]` **One at a time they all arrive**: 11 out of 11 at `SESSION`, 1894-2075 ms.
 
 | sessions | fps each | median latency | GPU **render** | GPU video | CPU | PSS | wire |
 |---|---|---|---|---|---|---|---|
@@ -1743,7 +1743,7 @@ is **a stable state**, not a drift that accumulates.
    are **violated for every session at every step from the seventh up**: `[M]` **104 paired reds**.
    ⭐ **The product has no budget: it accepts everyone and starves everyone together.** ⇒ ⭐ **Q4 confirmed**,
    and in the worst way.
-3. **The eleventh?** ⛔ It gets in **without problems**: `posti occupati 11`, **`negati 0`**, and receives **0.94
+3. **The eleventh?** ⛔ It gets in **without problems**: `slots occupati 11`, **`denied 0`**, and receives **0.94
    fps with 1170 ms of latency**, leaving the other ten at the same level.
 
 #### ⭐ The four things nobody expected
@@ -1759,9 +1759,9 @@ is **a stable state**, not a drift that accumulates.
 4. ⛔ **Nine defects were in the bench, not in the product — and eight out of nine WERE SILENT** instead of giving
    red (`REVIEWER.md` **E14**, `LEZIONI.md` §1.29): `pgrep -f` finding itself (⇒ every session
    would have resulted «alive» forever) · path from outside instead of from inside the container · the
-   `lo` counter **that was not its own** (22× bigger than the real one) · the `barra` scene that **did not
+   `lo` counter **that was not its own** (22× bigger than the real one) · the `bar` scene that **did not
    bite** · `drm-engine-capacity-video: 2` read **as nanoseconds**, with a ceiling of 100 instead of 200
-   · the GPU delta over a **changing population of contexts** (occupancy **−76 %**) · `misura()`
+   · the GPU delta over a **changing population of contexts** (occupancy **−76 %**) · `gauge()`
    overestimating the fps by 1/(N−1) · the seven `enable-linger` processes mistaken for an orphan stage.
 
 ⭐ **And two of those nine were avoided by the calibrated meter of §6.1**: the capacity **2** and the lesson of the
@@ -1771,7 +1771,7 @@ is **a stable state**, not a drift that accumulates.
 
 Session that does not open (⛔ **the climb stops**, it does not count nine) · anchor that does not advance · client
 dead ⇒ `None` not zero, **and the mean of the living does not drop** · orphan stage unmasked **before**
-measuring · same `numero` in two steps ⇒ red · ten still screens **unmasked by the bytes** ·
+measuring · same `nr` in two steps ⇒ red · ten still screens **unmasked by the bytes** ·
 keyframe spiral the rate does not see · **I1 in the three outcomes** (healthy / violated / not attributable to
 saturated CPU) · GPU meter: double count, discrete card, capacity 2, dead context, negative
 occupancy, zero while frames pass · clients as bottleneck · latency calibrated with **5 / 40 / 137 ms
@@ -1782,7 +1782,7 @@ injected** · *«I did not read»* ≠ zero.
 ⛔ **The real network**: the clients run on the same machine, on `lo` (MTU 65536) ⇒ the network budget
 is **counted, not tested** · ⛔ **the image**: the bench does not say *«it looks worse»*, and that is said by
 the user · the GPU at the first step, cancelled by the sixth bench defect · **the «empty waits» per
-session**: `figlio.c` · `figlio_vive()` does not say **which child** the line belongs to, and with ten children they can only be read
+session**: `figlio.c` · `child_alive()` does not say **which child** the line belongs to, and with ten children they can only be read
 as a sum (⭐ it is finding R10-A4 of §4.2, found again from the other end) · **the average desktop**: the scene
 saturates on purpose; the light case is worth `[M]` 2 448 B/frame and 0.77 Mbit/s.
 
@@ -1915,7 +1915,7 @@ phase 18, and **the product imports a dmabuf at zero copy** · **sustained** 4K6
 
 `banchi/10-b96-registro.py` (+ `10-b96-terreno.sh`), `[M]` 24 Aug 2026 — **second round**.
 Scene: **four real GNOME sessions of four different users**, scenes **different** from each other, 1080p
-H.264, `--parlantina` on, phase 9 cures all on, under the lock.
+H.264, `--chatter` on, phase 9 cures all on, under the lock.
 
 #### The fraction — and the two that count are not the same
 
@@ -1928,10 +1928,10 @@ H.264, `--parlantina` on, phase 9 cures all on, under the lock.
 
 By family: `fotogramma-spedito` 13 807 lines → **0.0 %** · `ciclo-cattura` 359 → **0.0 %** ·
 `audio-blocchi` 359 → **0.0 %** · `silenzio-audio`, `cattura-danno`, `banda-video` → **0.0 %**.
-⭐ Only `ritmo` and `rete-quic` attributable, at 100 %.
+⭐ Only `rate` and `network-quic` attributable, at 100 %.
 Reconfirmed over **111 900 lines**: 25.4 % / **5.0 %**, and ⭐ **zero ambiguous lines** — no line
 carries discordant identifiers.
-⚠ Without `--parlantina` the total share would rise to ~49 %, ⛔ **but the diagnostic one stays 4.2 %**:
+⚠ Without `--chatter` the total share would rise to ~49 %, ⛔ **but the diagnostic one stays 4.2 %**:
 *the lines that are needed are not detail lines.*
 `[M]` **At eleven sessions** (log of §6.5, not its own): 29.7 % overall, **31.4 %** diagnostic,
 `fotogramma-spedito` **0.0 %**.
@@ -1979,13 +1979,13 @@ proves it instead of declaring it.
 
 #### ⭐ What would be enough — **verified, not repeated**
 
-`gancio_registra` receives `ctx` (= the `wt*`) and does `(void)ctx` (`webtransport.c:2116-2118`); the `wt`
-carries `provenienza[80]` and `struct rcp_sessione *rcp`; `rcp_utente()` **already exists**.
-⭐⭐ **163 lines out of 163 of `rcp.c` go through `reg(rcp_sessione *s, …)`**: the identity **is always there** and
+`hook_log` receives `ctx` (= the `wt*`) and does `(void)ctx` (`webtransport.c:2116-2118`); the `wt`
+carries `provenance[80]` and `struct rcp_session *rcp`; `rcp_user()` **already exists**.
+⭐⭐ **163 lines out of 163 of `rcp.c` go through `reg(rcp_session *s, …)`**: the identity **is always there** and
 is thrown away **in one place only**.
 
 ⇒ The **pid** in the format of `registro.c` cures **the 359 lines of the children in one line of code**;
-`gancio_registra` cures **the 163 of `rcp.c` in one line**; there remain the 100 of `webtransport.c`, of which
+`hook_log` cures **the 163 of `rcp.c` in one line**; there remain the 100 of `webtransport.c`, of which
 **76** in functions that already have `wt *` and **24** in the hooks where `ctx` **is** the `wt*`.
 
 `[M]` **The cost**: 632.8 lines/s with four sessions, 111.5 bytes/line, 70.6 kB/s ⇒ pid **+6.3 %**,
@@ -1994,21 +1994,21 @@ remedy on **the blind diagnosis returns the right name**, at **+7.8 %** bytes.
 
 #### ⭐ The six things nobody expected
 
-1. ⛔⛔ **A `SIGSTOP` of 5 s to the children kills all four sessions**: `linea-morta causa=stallo
-   stallo_ms=5000 usciti_byte=0 coda_video=8862 persi=0`. ⇒ **A stopped child leaves bytes stopped in the
+1. ⛔⛔ **A `SIGSTOP` of 5 s to the children kills all four sessions**: `dead-line reason_why=stall
+   stall_ms=5000 exited_bytes=0 queue_video=8862 lost=0`. ⇒ **A stopped child leaves bytes stopped in the
    PARENT's queue**, and that is the stall the cure counts. ⭐ It is the **third** route by which the dead
    line detaches someone without the network being involved (the other two in §6.3 and §4.2).
-2. ⭐ **`REG_CODIFICA` is the string `"video"`, identical to `REG_VIDEO`**: the 70 lines of
+2. ⭐ **`LOG_ENCODING` is the string `"video"`, identical to `REG_VIDEO`**: the 70 lines of
    `codificatore.c` cannot be told apart **even by area** from those of `webtransport.c`.
-3. ⛔ **With all the children stopped the `figlio` area appears all the same**: the parent writes it too ⇒
+3. ⛔ **With all the children stopped the `child` area appears all the same**: the parent writes it too ⇒
    **not even the area separates parent and children**.
 4. ⭐ **The log is not ours alone**: lines without a mark from **third parties** — `libopus`, SVT-AV1, the
    dynamic loader — without time, without area, without identity.
 5. ⛔⛔ **To attribute a line one must sift the WHOLE log**: the bridge lines are
    **44 out of 201 898**. ⇒ If the log has been **rotated**, the steady-state line stays mute **for
    ever** — and the first round of this bench paid for it: reading the bridge only in the first 4 MB,
-   `ritmo` turned out attributable at **28.6 %** instead of 100 %.
-6. ⭐ **The most voluminous line of the product** is `rcp fotogramma N SPEDITO` — ~38/s per session,
+   `rate` turned out attributable at **28.6 %** instead of 100 %.
+6. ⭐ **The most voluminous line of the product** is `rcp frame N SPEDITO` — ~38/s per session,
    **always**, even without parlantina — and it is **0 % attributable**, although it is born where the session is.
 
 #### The injected faults — **26 out of 26 bit**
@@ -2038,16 +2038,16 @@ cure **on the product**: `src/` was not touched, the cost is arithmetic on the r
 |---|---|
 | **120 s** | ⭐ **SURVIVED** — still screen verified: **7 frames in 121 s** |
 | **300 s** (the second duration of §1.32) | ⭐ **SURVIVED** — 10 in 302 s |
-| control arm `--niente-audio-silenzio`, ⭐ **read from the server's `argv`**, not declared in words | ⭐ **SURVIVED** |
+| control arm `--no-audio-silence`, ⭐ **read from the server's `argv`**, not declared in words | ⭐ **SURVIVED** |
 
-⇒ ⛔ **`linea-morta causa=silenzio` never triggered, in none of the three arms.** The defect of
+⇒ ⛔ **`dead-line reason_why=silence` never triggered, in none of the three arms.** The defect of
 §6.3 **stays true with the test client and does not bite the user.**
 
 ⭐⭐ **And the mechanism is measured, and it is not the one that had been hypothesised.** It is not Firefox keeping itself
 alive: `[M]` on the wire, in the still window, **29 packets out of 29 from the client are ANSWERS** within
 1 s — **zero spontaneous** (66 out of 66 in the long window), with median gap **5.003 s** and answer in
 **2.9-3.3 ms**.
-⇒ What keeps the line alive is **the `PING`s of OUR transport** (`tienila_viva_ns()` = half the
+⇒ What keeps the line alive is **the `PING`s of OUR transport** (`keepalive_ns()` = half the
 silence threshold = 5 s). ⛔ **The cure holds because the server asks, not because the browser talks**:
 if one day the `PING` interval rose above the silence threshold, **the defect would come back
 on browsers too**.
@@ -2066,7 +2066,7 @@ rejected one = real Firefox as a **different user**.
 |---|---|
 | capsule arrived at the browser | ⭐ **10 out of 10** — read **where it ARRIVES** (`wt.closed` resolving), not in the server log |
 | code | **14 = `0x0E`** in all ten · ⛔ **never `0`**, which §3.1 forbids |
-| how long after the `CONGEDO` | median **0.593 s** — the 500 ms of `WT_ATTESA_CHIUSURA_NS` plus the flight |
+| how long after the `FAREWELL` | median **0.593 s** — the 500 ms of `WT_CLOSE_WAIT_NS` plus the flight |
 | what the user sees | *«that session cannot be served»*, identical ten times |
 | the server log, for comparison | armed 10, ⭐ **sent 10** |
 
@@ -2115,7 +2115,7 @@ calibrated with **25 known datagrams → 25 seen, 3200 bytes out of 3200** (devi
 2. the `MutationObserver` **lost two lines**: two rewrites in the same event round arrive
    as **one** mutation. ⭐ The rule that comes out: **presence is read from the raw text, the time
    from the observer**;
-3. the pattern `"BANNATO"` caught the **`"NON-BANNATO"`** of the server greeting ⇒ three healthy
+3. the pattern `"BANNED"` caught the **`"NOT-BANNED"`** of the server greeting ⇒ three healthy
    sessions declared «not measured». ⚠ **A false red, not a false green — and it costs the
    measurement all the same**;
 4. ⛔⛔ **signal 15 was the bench itself**: `sgombra_palco()` sends `SIGTERM`, and the bench
@@ -2154,7 +2154,7 @@ both kinds.
 ⇒ **The quantity that stays constant as the canvas varies is the pixel per second**, and the fixed term per
 frame is worth **0.0162 Mpixel** — a square of 127×127, negligible.
 
-⛔⛔ **And a new trap, of the §CLOCK family**: `us_codifica` per frame is a
+⛔⛔ **And a new trap, of the §CLOCK family**: `encode_us` per frame is a
 **LATENCY, not a COST**. Its curve has a fixed term of **0.400 Mpixel**, **twenty-five times**
 the real one ⇒ whoever calibrated the budget on it **would overvalue a 480p canvas by 2.0 times**.
 ⚠ **And it is the number §3.2 proposed as «the real cost»**: wrong **twice** — wrong engine
@@ -2163,7 +2163,7 @@ the real one ⇒ whoever calibrated the budget on it **would overvalue a 480p ca
 #### 2 · The function, and ⛔ **before the pixels one looks at the LATENCY**
 
 ```
-regge(dentro, nuovo)  ⟺  domanda(dentro) + tela(nuovo) × ritmo_max  ≤  C
+holds(inside, fresh)  ⟺  question(inside) + canvas_size(fresh) × rate_max  ≤  C
 ```
 
 `[M]` **C = 479.8 Mpixel/s** (i5-13500T · UHD 730 · real GNOME desktops · 1080p · H.264 · cures on)
@@ -2197,11 +2197,11 @@ encoded** (§3.2). ⭐ The 50 % reserve limits the overshoot to **2×**.
 
 #### ⭐⭐ 4 · The mechanism of the cliff — the buffer lead is **verified and CORRECTED**
 
-Verified on the code: `cattura.c` · `parametri_di_consumo()` asks for `RANGE(6, 4, 8)` · `cattura.c` · `parametri_di_consumo()` *«at most TWO»* ·
-`cattura.h` · `REMOTIX_CATTURA_H` `buffer_distinti` **is already counted** · `codificatore.c` · `converti_sulla_gpu()` `vaSyncSurface`, which the
+Verified on the code: `cattura.c` · `consumer_parameters()` asks for `RANGE(6, 4, 8)` · `cattura.c` · `consumer_parameters()` *«at most TWO»* ·
+`cattura.h` · `REMOTIX_CAPTURE_H` `distinct_buffers` **is already counted** · `codificatore.c` · `convert_on_gpu()` `vaSyncSurface`, which the
 comment next to it calls *«the release»*.
 
-⛔ **And the prediction deduced from the timings is REFUTED**: it had been deduced that `buffer_distinti ∈ {3,4}`; `[M]`
+⛔ **And the prediction deduced from the timings is REFUTED**: it had been deduced that `distinct_buffers ∈ {3,4}`; `[M]`
 read in the log of the climb to eleven: **6 in 524 lines, 8 in 65**. ⚠ *(Not a blind comparison: that
 log is older than the seal — it counts as a **check**, not as a forward verification.)*
 
@@ -2214,28 +2214,28 @@ crossed exactly at the cliff.**
 confusing them would make one blamed for the damage of the other.
 ⚠ And the constraint is **loose**: the data admit any lead between 4.4 and 41.3 buffers ⇒ **compatible
 with the arithmetic, not a confirmation of it**.
-⛔⛔ **And `buffer_distinti` is not the same for everyone**: 6 for 89 %, 8 for 11 % ⇒ **two sessions
+⛔⛔ **And `distinct_buffers` is not the same for everyone**: 6 for 89 %, 8 for 11 % ⇒ **two sessions
 of the same round have leads differing by 50 %, and the product does not know it.**
 
 > ##### ⛔ And the buffer release is **AFTER THE WHOLE encoding**, not after the conversion — *correction*
 >
-> The first account said, on the faith of the comment of `codificatore.c` · `converti_sulla_gpu()`, that Mutter's buffer
+> The first account said, on the faith of the comment of `codificatore.c` · `convert_on_gpu()`, that Mutter's buffer
 > comes back as soon as the conversion has finished. ⛔ **The code says something else**: the release is at
-> **`figlio.c`**, **after `codifica_e_manda()` in full** — and the comment next to it wants it there
+> **`figlio.c`**, **after `encode_and_send()` in full** — and the comment next to it wants it there
 > on purpose: *«it is called AFTER the encoding… moving it two lines up would bring back the two
 > alternating screens»*.
 >
 > ⇒ ⭐ **The window in which the compositor's buffer is OURS is not the conversion alone: it is
 > conversion + encoding + SENDING** — and the sending is a **blocking** `send()`
-> (`figlio.c` · `figli_spegni()`). ⇒ The threshold is **easier to break through** than it had been told, and — what
+> (`figlio.c` · `children_turn_off()`). ⇒ The threshold is **easier to break through** than it had been told, and — what
 > matters more — it is made of **the three TRATTO entries the bench already reads**: ⭐ **the two sides
 > of the inequality are measured in the same round.**
 >
-> ⭐⭐ **And the two «two»s are read from the structure, not from the comments**: `cattura->posto` is **one single
-> box** and whoever arrives returns at once what it finds (`cattura.c:1160-1165`); `cattura_prendi()` takes
-> away the frame (`:2054`) and whoever consumes returns it in `cattura_fermo_libera()` (`:2197`) ⇒ **one
-> in the box, one in the hand of the reader**. And the 6 of `cattura.c` · `parametri_di_consumo()` are a **requested minimum**, not
-> an order: how many the producer gives is said by `buffer_distinti`, which is **counted**.
+> ⭐⭐ **And the two «two»s are read from the structure, not from the comments**: `capture_v->slot` is **one single
+> box** and whoever arrives returns at once what it finds (`cattura.c:1160-1165`); `capture_take()` takes
+> away the frame (`:2054`) and whoever consumes returns it in `capture_stopped_free()` (`:2197`) ⇒ **one
+> in the box, one in the hand of the reader**. And the 6 of `cattura.c` · `consumer_parameters()` are a **requested minimum**, not
+> an order: how many the producer gives is said by `distinct_buffers`, which is **counted**.
 >
 > ⇒ ⭐⭐⭐ **threshold = (buffers − 2) × period**, and the calibration shows the thing that counts: `[M]` with 6
 > buffers **66.67 ms**, ⭐ **with only 4 buffers 33.33 ms** — that is **the cliff moves with the number of
@@ -2246,18 +2246,18 @@ of the same round have leads differing by 50 %, and the product does not know it
 
 Eight predicates verified on the real `src/`, **not repeated from §3.2**:
 
-- ⭐ `main.c:394 deposita_fotogramma()` receives **every** frame with width, height, instant and
+- ⭐ `main.c:394 deposit_frame()` receives **every** frame with width, height, instant and
   bytes; `figlio.c` calls it **without guards** on «someone is watching» ⇒ **the parent sees the
   ghosts too** of §3.2;
-- ⭐ the newcomer's ceiling is already there **at `CIAO`** (`video.misura_massima` → `rcp.c` · `MAX_ACCUMULO`), ⛔ **but it is not
+- ⭐ the newcomer's ceiling is already there **at `HELLO`** (`video.max_size` → `rcp.c` · `MAX_ACCUMULATION`), ⛔ **but it is not
   exposed by `rcp.h`**;
-- `main.c` · `aiuto()` the verdict has transport and children in hand, and from there one goes back up to the newcomer's RCP
+- `main.c` · `help()` the verdict has transport and children in hand, and from there one goes back up to the newcomer's RCP
   session ⇒ ⭐ **the no can be said where it must be said**;
-- ⛔ no pixels/s counter exists in `src/`; `us_codifica` does not leave the child — ⭐ **and it is not
+- ⛔ no pixels/s counter exists in `src/`; `encode_us` does not leave the child — ⭐ **and it is not
   needed**.
 
-⇒ ⭐ **The minimum**: an **accumulator** in `deposita_fotogramma()` and an **accessor** in `rcp.h`.
-⛔⛔ **The only new number is `buffer_distinti`**, which lives in `cattura.c`, that is **in the child**: without
+⇒ ⭐ **The minimum**: an **accumulator** in `deposit_frame()` and an **accessor** in `rcp.h`.
+⛔⛔ **The only new number is `distinct_buffers`**, which lives in `cattura.c`, that is **in the child**: without
 it the lead cannot be computed.
 
 #### ⛔ 6 · And the fact that scales everything down: **compositing is not observable by the product**
@@ -2272,14 +2272,14 @@ number.** ⇒ The product's budget governs **its own half**, not the machine.
 
 Meter halved · data from **another chain**, from **other hardware**, from the **bare** encoder ⇒
 **«I don't know»** · session without a canvas ⇒ «I don't know», never zero · forty still ones plus one ⇒ the three rules
-give three different answers · lead with 6/4/3/8 buffers, `buffer_distinti` not read ⇒ `None`, all
+give three different answers · lead with 6/4/3/8 buffers, `distinct_buffers` not read ⇒ `None`, all
 held ⇒ **zero and not «I don't know»** · ⭐ **measurement older than the anchor, anchor removed, predictions
 retouched after the seal, non-existent seal** ⇒ **no comparison** · fake machine with the cap at 11
 ⇒ 6 false NOs, with the cap at 3 ⇒ false YESes · ⛔ **bare encoder capacity transferred onto the real
 desktops** ⇒ it would admit **~22** sessions where 6 fit · climb that never makes it give way ⇒ ceiling
 **not seen** · latency gate removed ⇒ false YES on eight throttled · ⭐ a machine that spends
 **frames** ⇒ the currency test answers «frame» (**the negative control**) · and on the
-sources: counter already present ⇒ red, `us_codifica` out of the child ⇒ red.
+sources: counter already present ⇒ red, `encode_us` out of the child ⇒ red.
 
 ⭐⭐ **And three defects were found by the certification in the predictor itself**: (a) the count on pixels
 gave **false YESes after the cliff** — cured with the latency gate; (b) the threshold refused by
@@ -2298,8 +2298,8 @@ extrapolates** · ⚠ the threshold of 22.9 ms is **of this scene**, and the par
 mechanism.
 
 ⇒ ⭐⭐⭐ **The shape of the product that comes out of it**: `--budget-mpixel-s N` **with a function behind it**
-(rule «reserve», with the knob `--riserva`), the no said in `consegna_verdetto()` **before**
-`figli_assicura()`, and `--tetto-sessioni` remaining **only an administrative cap, not a limit**.
+(rule «reserve», with the knob `--reserve`), the no said in `delivery_verdict()` **before**
+`children_ensure()`, and `--session-cap` remaining **only an administrative cap, not a limit**.
 ⛔ And one thing the product **cannot** do: `--budget-mpixel-s` **does not self-calibrate** — before
 the machine has given way once, the capacity is **a lower bound, not a ceiling**.
 
@@ -2312,7 +2312,7 @@ synthetic scene, zero copy from DMA-BUF, `EncSliceLP` **verified on the driver**
 #### ⛔⛔ The fact that reorders the columns: **the product negotiates HEVC first**
 
 `rcp.c:1829 NOSTRO_CODEC "hevc,h264"` · `RCP.md` §4.3 chooses **in the client's order** ·
-`pagina.html:831 PREFERENZA = ["hevc","h264"]`.
+`pagina.html:831 PREFERENCE = ["hevc","h264"]`.
 ⇒ ⭐ **On every browser that decodes HEVC the product sends HEVC**; **H.264 is the fallback**.
 ⚠ The saturator's header said *«the codec is H.264, the one the product really negotiates»*:
 it is **half true**, and it was corrected.
@@ -2345,8 +2345,8 @@ quantities, same direction.**
 
 #### ⛔⛔ QVBR: it is there, it works — **and nobody switches it on**
 
-`[M]` Read in `src/codificatore.c` · `modo_bitrate_voluto()`: two modes, asked **by name**, never `auto`. ⛔ **The
-default is CQP**: `main.c:657 tetto_banda_mbit = 0` (invariant **I6**), and the cap **is not among the
+`[M]` Read in `src/codificatore.c` · `wanted_bitrate_mode()`: two modes, asked **by name**, never `auto`. ⛔ **The
+default is CQP**: `main.c:657 bandwidth_cap_mbit = 0` (invariant **I6**), and the cap **is not among the
 five cures on** of `CODER.md` §2-bis.
 ⇒ ⛔ **Today the product does not use QVBR.** ⭐ The bandwidth cure of phase 9 **exists, works, and is not
 switched on by anyone**.
@@ -2385,7 +2385,7 @@ from the **re-read** context, ⭐ **never from the command given**.
    redo is needed) and redone on a middle scene it gives **8.8×**;
 2. `rampa` called the terrain check with `LUCCHETTO_MIO=1` **before** taking the lock
    ⇒ **guaranteed red on something true but wrong**;
-3. ⚠ **On the lock, five seconds lose against one**: `prendi()` retries every **5 s** while
+3. ⚠ **On the lock, five seconds lose against one**: `take()` retries every **5 s** while
    other pilots retry every second ⇒ a 45-minute window lost. It is the **race** of §7.3, with
    one more asymmetry.
 
@@ -2468,7 +2468,7 @@ is correct, ⛔ but its round **never won the race for the lock**.
 
 #### ⛔⛔ And the dead-line defect, seen a **second time** — and **wider** than it was
 
-`[M]` `causa=silenzio silenzio_ms=10044 persi=0`, on a **healthy** session that a moment earlier
+`[M]` `reason_why=silence silence_ms=10044 lost=0`, on a **healthy** session that a moment earlier
 was delivering **60 commits/s and 5 524 bytes per frame**.
 ⇒ ⛔⛔ **It is not the «still desktop» of §6.3: TEN SECONDS of gap between two scenes are enough.**
 ⭐ And the bench **does not switch off the cure to pass**: it removes the gap.
@@ -2503,9 +2503,9 @@ conversion and encoding **in one single stretch** — declared, not estimated ·
 on two points** · ⚠ the case is the **hard** one ⇒ the number is **a floor**, not a prediction for
 ten users reading their mail.
 
-⭐ And a confirmation of the trap of §7.3, from yet another end: `pgrep -c -f "remotix.*--porta 8110"`
+⭐ And a confirmation of the trap of §7.3, from yet another end: `pgrep -c -f "remotix.*--port 8110"`
 answered **3** on a machine where there was none of its processes — it matched **the command line
-of the shell running it**. With the pattern `--porta 811[0]`: **none**.
+of the shell running it**. With the pattern `--port 811[0]`: **none**.
 
 ### 6.12 ⭐⭐⭐⭐⭐ THE CLIMB ON THE **REAL DESKTOP** — **ELEVEN fit, and there is no cliff**
 
@@ -2570,13 +2570,13 @@ Mpx/s) exceeds the ceiling (≈ 842 from the line), and from there **the product
 full screen and window. Solving on the two arms:
 
 ```
-render %  =  0,145 × (disegni/s)  +  0,0494 × (Mpixel ridisegnati/s)
+render %  =  0,145 × (drawings/s)  +  0,0494 × (Mpixel ridisegnati/s)
 ```
 
 ⇒ at 1080p **59 % of the cost of a redraw is FIXED**, independent of how many pixels changed.
 ⚠ **A two-point solution, not a line with an error**: a hypothesis consistent with both arms, **not a
 validated law**. ⭐ **And it is the same end §6.11 took from the other side** — there `7,1 % fisso +
-0,053 % per Mpixel/s`, here `0,145 per disegno + 0,0494 per Mpixel`: **two benches, two routes, the
+0,053 % per Mpixel/s`, here `0,145 per drawing_v + 0,0494 per Mpixel`: **two benches, two routes, the
 same two-term shape.**
 
 #### ⛔⭐ And the project's meter was wrong for this scene
@@ -2596,7 +2596,7 @@ GPU at 2.2 %**: a scene of **tears** does not produce 25 frames per second, and 
    ONE**, the VDBOXes two. ⇒ It confirms the prediction of §6.4-bis, which had been taken **from one alone**.
 2. ⭐ **The memory of a real desktop costs 60 % more**: **307 MiB** PSS per session against 190
    for the saturated and 184 for the still — they are the open applications.
-3. ⛔ **`--certifica` went knocking at the test machine** while declaring it did not — ⭐
+3. ⛔ **`--certify` went knocking at the test machine** while declaring it did not — ⭐
    found **by looking at the clock** (0.23 s against many seconds), not the code.
 4. ⛔ The case that shows why **the order of the columns matters**: the frozen scene made **1 368
    bytes/frame**, that is **above** the floor of 600 ⇒ **the bytes alone would have given it green**.
@@ -2621,12 +2621,12 @@ say *«it looks worse»* — ⭐ **that is said by the director**.
 ### 6.13 ⭐⭐⭐ THE LOGIND GUARDIAN — **the defect is real, the multiplier is not**, and it bites long before detaching
 
 `banchi/10-b97-guardiano.py` (+ `10-b97-terreno.sh`, `10-b97-innesta.py`), `[M]` 25 Aug 2026, with
-the **fake guardian** injected only on the adapter that `main.c` · `ABBANDONO_PREDEFINITO_MS` declares it put there on purpose
+the **fake guardian** injected only on the adapter that `main.c` · `DEFAULT_ABANDON_MS` declares it put there on purpose
 for this. ⛔ The repository's `src/` **not touched**, the two `md5`s declared.
 
 #### ⭐ The defect **reproduces**, with the signature deduced by reading
 
-`[M]` `causa=stallo stallo_ms=6004 offerti=52 usciti_byte=0 persi=0 permille=0` — the stage was producing,
+`[M]` `reason_why=stall stall_ms=6004 offered=52 exited_bytes=0 lost=0 permille=0` — the stage was producing,
 **nothing went out**, the line was **clean**, and the product told the user *«the line is
 DEAD»*.
 
@@ -2721,7 +2721,7 @@ average.
 ⛔ **With the slow guardian a new tenant cannot connect at all**: the handshake
 expires. ⇒ It is not that it slows down whoever is already inside: **it closes the door on whoever arrives**.
 
-⚠ And a side defect, already named: **`sentinella_conti()` has no caller in `src/`**.
+⚠ And a side defect, already named: **`sentinel_counts()` has no caller in `src/`**.
 It is the counter the header declares it put in so that the choice of querying logind
 **synchronously** could be **re-measured instead of believed** — ⛔ and today nobody emits it.
 
@@ -2781,7 +2781,7 @@ itself**.
 **The row that closes it**: worst case **225 Mbit/s per session** ⇒ **×10 = 2 250** (3 153 at peak)
 against the wire `[M]` measured at 11 900 ⇒ ⭐ **the wire is not the constraint even so** — ⚠ **but the
 margin is 5×, not 200×**.
-⛔⛔ **And against `--tetto-banda-mbit` it is 1 125 % on its own**, with the static that lives **in the child** and
+⛔⛔ **And against `--bandwidth-cap-mbit` it is 1 125 % on its own**, with the static that lives **in the child** and
 **no aggregate counter in the whole of `src/`**: ten children pay it ten times (§3.5).
 
 #### ⭐ The three things nobody expected
@@ -2866,13 +2866,13 @@ hypothesised.
 |---|---|
 | **software fallback** | ⛔ **false** — `[M]` **zero** fallbacks, all on `renderD128` |
 | **a wait that becomes everyone's latency** | ⛔ **false** — zero slow calls, and the parent's CPU is **0.0 cores** |
-| **the queue threshold** (`--sgombra-soglia-ms`) | ⛔ **false** — `[M]` queue above **0**, below **0**, abandonments **0** |
+| **the queue threshold** (`--clear-threshold-ms`) | ⛔ **false** — `[M]` queue above **0**, below **0**, abandonments **0** |
 | **the rate regulator** | ⛔ **false at step 8** — `[M]` goes down **0**, goes back up **0** |
 | **the parent's loop / logind** | ⛔ **false** |
 | ⭐⭐ **the buffer arithmetic** — *the lead that looked the best* | ⛔⛔ **FALSE, and refuted by the one who had proposed it**: `[M]` the producer gives **8**, not 6 ⇒ threshold **100 ms**, and we hold **30.4** — **×0.30**. ⭐ **We are never left without buffers** |
 
 ⭐⭐ **And the two control arms close the two leads that remained**: `[M]` with
-`--sgombra-soglia-ms 0` the cliff is **identical** (1.46-2.08 fps); with `--niente-ritmo-adattivo`
+`--clear-threshold-ms 0` the cliff is **identical** (1.46-2.08 fps); with `--no-adaptive-rate`
 **identical** (1.48-2.76), and at step 8 `non_partiti = 0`, descents **0**, abandonments **0**.
 ⇒ ⛔ **Neither of the two phase 9 cures causes the cliff.**
 
@@ -2881,7 +2881,7 @@ hypothesised.
 load: `[M]` **0 % (5S) → 10 % (6S) → 28 % (7S) → 38 % (8S)**, and **22 % as soon as one scene is switched off**.
 
 ⇒ ⭐⭐ **The chain, in full**: eight compositors saturate `rcs0` → the VPP's `vaSyncSurface`
-(`codificatore.c` · `converti_sulla_gpu()`) does not return → the child stays inside the DRM `ioctl` → capture does not deliver →
+(`codificatore.c` · `convert_on_gpu()`) does not return → the child stays inside the DRM `ioctl` → capture does not deliver →
 ⛔ **the encoder receives nothing more**. ⭐ And *«`GPU video` collapsing»* was **the right symptom,
 read backwards**.
 
@@ -2890,15 +2890,15 @@ read backwards**.
 `[M]` At **five** sessions, **five clients were evicted in 1.3 s**:
 
 ```
-ritmo …: arretrato LETTO 40 volte, massimo 2, ultimo 2, posti 2
-  — 40 fotogrammi NON PARTITI in questo secondo, 444 in tutto
-linea-morta … causa=silenzio usciti_byte=0 coda_video=10443
-  silenzio_ms=10997 persi=0
+rate …: backlog LETTO 40 times, maximum 2, last 2, slots 2
+  — 40 fotogrammi NON PARTITI in questo secondo, 444 in overall
+dead-line … reason_why=silence exited_bytes=0 queue_video=10443
+  silence_ms=10997 lost=0
 ```
 
-⇒ ⛔ **`arretrato` stays glued to the regulator's slot cap**, which blocks **EVERY** frame;
-`usciti_byte=0`; the client **has nothing left to acknowledge**, goes silent; and **the dead line evicts it
-with `persi=0`**.
+⇒ ⛔ **`backlog` stays glued to the regulator's slot cap**, which blocks **EVERY** frame;
+`exited_bytes=0`; the client **has nothing left to acknowledge**, goes silent; and **the dead line evicts it
+with `lost=0`**.
 
 ⭐⭐ **It is a CLOSED LOOP between two phase 9 cures** — the same family as S.4, ⛔ **but here on a
 biting queue, that is on users who are working.**
@@ -2920,7 +2920,7 @@ strengthens the conclusion**: the cliff arrived all the same, with **three** cli
 2. The series count required one child per **declared** session, not per **live** session ⇒
    ⭐ it refused to declare (`None`, never a plausible number).
 
-`--certifica`: **71 cases out of 71**.
+`--certify`: **71 cases out of 71**.
 
 ### 6.16 ⭐⭐⭐⭐⭐ THE MIXED SCENE — **the cap is a FUNCTION, and the costs add up**
 
@@ -3043,10 +3043,10 @@ earlier, and which comes back identical.
 
 | bench | the defects paid for |
 |---|---|
-| **the ten** (§6.5) | ⛔ **nine, and eight out of nine were silent**: `pgrep -f` finding itself (every session would have resulted «alive» forever) · path from outside instead of from inside the container · the `lo` counter **that was not its own** (22× bigger) · the scene that **did not bite** · `drm-engine-capacity-video: 2` read **as nanoseconds**, ceiling 100 instead of 200 · the GPU delta over a **changing** population of contexts (−76 %) · `misura()` overestimating by 1/(N−1) · the `enable-linger` processes mistaken for an **orphan stage** |
+| **the ten** (§6.5) | ⛔ **nine, and eight out of nine were silent**: `pgrep -f` finding itself (every session would have resulted «alive» forever) · path from outside instead of from inside the container · the `lo` counter **that was not its own** (22× bigger) · the scene that **did not bite** · `drm-engine-capacity-video: 2` read **as nanoseconds**, ceiling 100 instead of 200 · the GPU delta over a **changing** population of contexts (−76 %) · `gauge()` overestimating by 1/(N−1) · the `enable-linger` processes mistaken for an **orphan stage** |
 | **the wire** (§6.3) | `wc -l < file` at the end of `sudo -S` ⇒ silent `None` · `awk`'s `$1` expanded by `bash -c` ⇒ empty field · `nft` braces taken by bash · `ss -uanp` that **does not see** the test client's ports · the ICMP that without its own counter ended up under **«neighbours»** |
 | **the full table** (§6.4) | the `tail` that **lost** the line under thousands of lines · the scene switched off **before** the clients (anchor shifted by **42 s**) · `pgrep -f` counting **7** children where there were 3, then **0** · ⛔ **`pkill -f` killing the shell that is running it** ⇒ the next test started **against ghosts** |
-| **the terrain** (§1.4) | ⛔ the most important predicate becoming **UNKNOWN** instead of looking at the named card (shape E8) · `bash -c "…; sleep N # segno"` that **loses the mark** ⇒ the fault stayed injected and whoever had put it in **believed they had not** |
+| **the terrain** (§1.4) | ⛔ the most important predicate becoming **UNKNOWN** instead of looking at the named card (shape E8) · `bash -c "…; sleep N # sign"` that **loses the mark** ⇒ the fault stayed injected and whoever had put it in **believed they had not** |
 | **the cost** (§6.4-bis) | ⛔ the threshold on **bytes per frame**, which ordered the two extremes **backwards** (shape E15) |
 
 ⭐ **And two were avoided by someone else's bench**: the capacity **2** and the §CLOCK, which the calibrated meter of §6.1
@@ -3068,9 +3068,9 @@ already carried written down. ⇒ **A calibrated meter is not only useful to who
 measurement was distorted by a neighbour, and the benches declare it instead of deducing it. ⛔ **But the way
 the turn is awaited was broken, and broken in the shape this phase has learnt to recognise.**
 
-#### ⛔ `prendi()` is not a queue: it is a **race**
+#### ⛔ `take()` is not a queue: it is a **race**
 
-`[M]` The `mkdir` is retried every 5 s and the winner is **whoever arrives first after a `molla`**: no
+`[M]` The `mkdir` is retried every 5 s and the winner is **whoever arrives first after a `release`**: no
 booking, no seniority. With **five** assignments on the same card and turns of ~90 minutes,
 a bench that had been waiting for **two hours** **lost two consecutive hand-overs** without ever touching
 the GPU.
@@ -3125,7 +3125,7 @@ someone else's**.
 pilot asked for 2 120: ⇒ it was not itself, it was **an instance that died before the cleanup trap
 existed**.
 
-> ⛔⛔ **`prendi()` has no branch for «the lock is ALREADY MINE»**: if the name inside matches its
+> ⛔⛔ **`take()` has no branch for «the lock is ALREADY MINE»**: if the name inside matches its
 > own, it waits exactly as if it belonged to someone else.
 
 ⇒ **A pilot that died badly leaves the lock with its own name, and the next pilot waits for itself
@@ -3173,7 +3173,7 @@ after the release, against the up-to-5 000 of before.
 
 #### ⛔⛔ And the fifth, which **was a close shave**: an inherited global cleanup
 
-A bench had inherited from its predecessor the clearing line `pkill -f '…cliente… --cliente'`,
+A bench had inherited from its predecessor the clearing line `pkill -f '…client… --client'`,
 with a **global** pattern. ⛔ But that client name is the one **every** bench of the phase uses, and in
 this round **the users are shared too**.
 `[M]` **At the end of the round that pattern matched 24 LIVE clients, all of another bench** — the one
@@ -3229,12 +3229,12 @@ function returned** ⇒ five measured cells produced a file that said *«no cell
 from closing**, and it was not product code: it was **not knowing how to look**.
 
 `[M]` Four routes tried and **none gave the picture** — the child's internal snapshot
-(`cattura.bgrx` **0 bytes**), the screen photograph (⛔ GNOME does not expose
+(`capture_v.bgrx` **0 bytes**), the screen photograph (⛔ GNOME does not expose
 `wlr-screencopy`), the page's canvas via Marionette (⛔ **every re-attach brought down the RCP
 session**), the frame count (⛔ it says **how many**, not **what**).
 
 ⭐ **The fifth worked at the first shot**: `banchi/10-f1-testimone.py` — the **test client**
-takes the frames **from the wire** (`--video-scrivi`), `ffmpeg -update 1` decodes **the last one**, and
+takes the frames **from the wire** (`--video-write`), `ffmpeg -update 1` decodes **the last one**, and
 a PNG comes out. ⚠ It is declared **where it looks**: **after the wire, before the browser's
 decoder** — it does not replace the canvas, it **precedes** it.
 
@@ -3245,9 +3245,9 @@ decoder** — it does not replace the canvas, it **precedes** it.
 | ⭐ **positive** | the mark of `04-b30-scena` found again by the certified reader: round **«f1-taratura»**, draw **3783**, contrast **0.997** ⇒ it looks at **that** desktop, at **that instant** |
 | ⛔ **negative, on the real one** | background at `#000000` ⇒ **almost black**, lit **0.00121**; and **under the GNOME bar the frame is black byte for byte** (lit 0.00000000, max luma 1). ⭐ The meter senses **one pixel in eight hundred**, and the real desktop sits **800 times** higher |
 | ⛔⛔ **the third outcome** | session just born, stage that has not delivered yet ⇒ ⭐ **«I DID NOT LOOK», exit 3** — **not** «it was black» |
-| ⭐ **it does not break whoever is watching** | with a viewer already attached the witness was **REJECTED** (`congedo 0x0f`, *«the eviction did NOT fire»*), and ⭐ **the viewer stayed attached** |
+| ⭐ **it does not break whoever is watching** | with a viewer already attached the witness was **REJECTED** (`farewell 0x0f`, *«the eviction did NOT fire»*), and ⭐ **the viewer stayed attached** |
 
-⭐ **`--certifica`: 4 predicates, healthy 4 → fault 12 → healed 4.** ⚠ And **two faults bit on
+⭐ **`--certify`: 4 predicates, healthy 4 → fault 12 → healed 4.** ⚠ And **two faults bit on
 the bench's own code**: G8 declared «solid colour» a black screen **with the mark on it**
 (it counted the colours instead of the fraction different from the background); G12 had the fake bar **too
 big** and passed for the wrong reason. ⇒ ⭐ *The meter was corrected by its own
@@ -3280,7 +3280,7 @@ only `Crash Reports` and `Pending Pings` remain. And the first crash is **dated 
 > coordination had been turning for hours — **was the dialog, closed by our own ESC.**
 
 ⚠ **And a second real cause, found along the way, which concerns the benches**: the environment composed by
-`giu()` (`env -i` with eight variables) ⛔ **lacks `XDG_SESSION_TYPE`** — Nautilus refused with
+`down()` (`env -i` with eight variables) ⛔ **lacks `XDG_SESSION_TYPE`** — Nautilus refused with
 *«Unsupported or missing session type ''»*. `XDG_CURRENT_DESKTOP=GNOME` and
 `GTK_A11Y=none` are needed too.
 
@@ -3407,34 +3407,34 @@ a trick that works **only for GNOME**: phases 11 and 12 bring KDE, XFCE and LXQt
 
 ### 5.12 ⭐⭐⭐ THE SIX REMAINING DEFECTS — **six cured, zero postponed**
 
-*25 Aug 2026, the tail of the phase.* ⭐ `banchi/10-f3-cure.py`, **`--certifica` 42 out of 42**.
+*25 Aug 2026, the tail of the phase.* ⭐ `banchi/10-f3-cure.py`, **`--certify` 42 out of 42**.
 
 | # | the defect | ⭐ the red and the green |
 |---|---|---|
-| **1** | ⛔⛔ **the new lines were MUTE**, ⛔ **the EVICTION line included** — the one that says **who** was thrown out | `wt_chi()` and **87 print points** moved to `registro_dice_di()`. `[M]` area `wt`: **0.0 % → 79.2 %** and **0.0 % → 77.3 %** on two scenes; with the certified classifier of `10-b96` (31/31) the diagnostic lines go from **98.8 % to 100 %**. ⭐ **Not foreseen**: it also raised the `rcp` area from **35.6 % to 89.8 %** — many `REG_RCP` lines are written by `webtransport.c`, not `rcp.c` |
-| **2** | ⛔⛔ **`fermo_ms=` LIED**: the comment said «per session», the code read a **global** counter | `[M]` `SIGSTOP` of **6.0 s** to the parent's loop with **no live session**, then the session opens: **`fermo_ms=6143` → `0`**. ⭐ **And the negative control**: session **alive during** the stall, **5800 → 5647** ⇒ *the witness was **corrected**, not switched off* |
-| **3** | ⚠ two **lying comments**, and the **fifth hand copy** of the cap | cured. ⛔ **And `WT_RIPASSO_INSIEME 32` is NOT unified** — see the box |
+| **1** | ⛔⛔ **the new lines were MUTE**, ⛔ **the EVICTION line included** — the one that says **who** was thrown out | `wt_chi()` and **87 print points** moved to `log_says_of()`. `[M]` area `wt`: **0.0 % → 79.2 %** and **0.0 % → 77.3 %** on two scenes; with the certified classifier of `10-b96` (31/31) the diagnostic lines go from **98.8 % to 100 %**. ⭐ **Not foreseen**: it also raised the `rcp` area from **35.6 % to 89.8 %** — many `REG_RCP` lines are written by `webtransport.c`, not `rcp.c` |
+| **2** | ⛔⛔ **`stalled_ms=` LIED**: the comment said «per session», the code read a **global** counter | `[M]` `SIGSTOP` of **6.0 s** to the parent's loop with **no live session**, then the session opens: **`stalled_ms=6143` → `0`**. ⭐ **And the negative control**: session **alive during** the stall, **5800 → 5647** ⇒ *the witness was **corrected**, not switched off* |
+| **3** | ⚠ two **lying comments**, and the **fifth hand copy** of the cap | cured. ⛔ **And `WT_SWEEP_BATCH 32` is NOT unified** — see the box |
 | **4** | ⚠ the **global `pkill`** in two benches | narrowed to what the bench itself switched on. ⛔ In `10-b97` **both were wrong in the worst direction**: one had the folder of **another bench written by hand** — it killed the neighbour's clients and left its own alive |
 | **5** | ⚠ the **`sed` that recompiled** the cap in three terrains | removed. ⛔ **And the red is that today it no longer bites**: the pattern matches **0 lines** ⇒ `10-b2`, `10-b93` and `10-c3` **did not start at all**. ⭐ The guard **changes place**: the cap is read **from the running server**, not from the text it will be born from |
 | **6** | ⚠ the benches' **incomplete environment** (`XDG_SESSION_TYPE` and two others) | cured, and ⭐ **the copies were four, not three**: now in one place only, `banchi/10-ambiente-sessione.sh` |
 
 > ### ⛔ WHY THE FIFTH COPY IS **NOT** UNIFIED — and the reason is written next to the code
 >
-> ⭐ `WT_RIPASSO_INSIEME 32` **is not the same quantity** as `RCP_TETTO_SESSIONI`, for two independent
+> ⭐ `WT_SWEEP_BATCH 32` **is not the same quantity** as `RCP_SESSION_CAP`, for two independent
 > reasons:
 >
 > 1. it is the size of **a batch**, not of a **capacity**: whoever does not fit **enters the next round**, and
 >    the property defended is *«a **fixed** number of calls instead of `N`»* — not *«one»*;
 > 2. ⛔ it must be a **compile-time constant**: it sizes **four arrays on the stack**
->    (`quali[32][160]` = 5 KiB) while the cap now **moves at runtime**. ⇒ Tying them would give a
+>    (`which_ones[32][160]` = 5 KiB) while the cap now **moves at runtime**. ⇒ Tying them would give a
 >    **VLA chosen by the command line inside the loop that delivers the frames**.
 >
 > ⚠ **But the comment really lied** — it said *«32 is above the **sixteen** slots»*, a literal and
 > an aged one at that. ⭐ Replaced with the real link, **an inequality in one direction only**,
-> placed where **the compiler enforces it**: `_Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI)`.
+> placed where **the compiler enforces it**: `_Static_assert(WT_SWEEP_BATCH >= RCP_SESSION_CAP)`.
 >
 > ⇒ ⭐⭐ *Unifying for symmetry what is not the same quantity is a new defect, not a cure.*
-> It is the same reason `MAX_IN_VOLO` had already been left out.
+> It is the same reason `MAX_IN_FLIGHT` had already been left out.
 
 > ### ⛔⭐ AND THE DISCOVERY WORTH MORE THAN THE CURE: **the meter the benches used is BLIND**
 >
@@ -3452,9 +3452,9 @@ a trick that works **only for GNOME**: phases 11 and 12 bring KDE, XFCE and LXQt
 ![Firefox in the remote desktop, on the phase's final product](scatti/10-firefox-nel-prodotto-cucito.png)
 
 ⭐ **Stitched tree, compiled clean** (the R12.3 twins aligned, the builder's positive check
-green), started on **8400** with `--budget-mpixel-s 480 --riserva 0.5
---tetto-sessioni 10`. `[M]` The startup lines declare the three values in force, and ⭐ the guardian's line
-carries the **denominator** that was not there before: `inquilini=0`.
+green), started on **8400** with `--budget-mpixel-s 480 --reserve 0.5
+--session-cap 10`. `[M]` The startup lines declare the three values in force, and ⭐ the guardian's line
+carries the **denominator** that was not there before: `tenants=0`.
 
 ⇒ ⭐⭐⭐ **And this is the remote desktop of the final product**, looked at with the witness: **Firefox with
 two tabs, the address bar, and a rendered page**. ⛔ **No dialog, no missing
@@ -3493,10 +3493,10 @@ profile, no workaround**: the right environment and a `~/.cache` of its own.
 > ⚠ **Two measured findings that hold for anyone reading this log:**
 > · ⛔ **`ZERO MONITOR` is TRANSIENT on every healthy session** — `[M]` it appears **173 ms** before the
 >   monitor exists. Whoever reads it as proof of blindness gives **a false red on all of them**;
-> · ⚠ at **re-attach** `formato negoziato` **is not repeated** if the format does not change. It is not blindness.
+> · ⚠ at **re-attach** `schema negotiated` **is not repeated** if the format does not change. It is not blindness.
 >
-> ⛔ **And the «third state» of this section — the line `(0 prima, 2 dopo)` — does not exist**: it was
-> **uninitialised memory** (`src/figlio.c` · `codifica_e_manda()` sent the structure before the `memset` of
+> ⛔ **And the «third state» of this section — the line `(0 before, 2 after)` — does not exist**: it was
+> **uninitialised memory** (`src/figlio.c` · `encode_and_send()` sent the structure before the `memset` of
 > `:5311`). ⇒ `LEZIONI.md` §1.55. Cured.
 >
 > ⇒ The story that follows stays **as it was written**, because it is the story of a hunt and the four
@@ -3520,9 +3520,9 @@ application can open a window:**
 #### ⭐ The product NOTICES and declares it — it does not deliver black silently
 
 ```
-sessione [provanic9] ⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione
+session_v [provanic9] ⛔ ZERO MONITOR, e la sessione e' viva: e' la session_v
                         «viva, completa e NERA» di STUDI.md §gnome §3.1
-figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0 a 0 bit
+figlio   il palco di «provanic9»: monitor «» (0 before, 0 after), 0x0 stride 0 a 0 bit
 ```
 
 #### ⛔ What it is NOT — four hypotheses refuted, one by one
@@ -3530,7 +3530,7 @@ figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0
 | hypothesis | ⛔ refuted by |
 |---|---|
 | *«it is a race lost at startup»* | at **+73 s** mpv still does not find the output (tried at +5, +11, +23, +43, +73) |
-| *«the client does not declare the view»* | `--adatta 1920x1080@1.0` **changes nothing**: `provanic7` (without) and `provanic8` (with) **identical** |
+| *«the client does not declare the view»* | `--fit 1920x1080@1.0` **changes nothing**: `provanic7` (without) and `provanic8` (with) **identical** |
 | *«it is multi-tenant»* | with **all sessions closed**, a session **on its own** has the same `wl_output = 0` |
 | *«it belongs to new users»* | ⭐⭐ **`provanic3` got the monitor 2 times and then 6 times NOT** — the same user |
 
@@ -3555,7 +3555,7 @@ figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0
 ⇒ Since then we **no longer ask for** the monitor: we count on `RecordVirtual` creating it. ⛔ **And now
 it does not create it, or creates it only sometimes.**
 
-⚠ **And there is a guard that refuses to put it back** (`sessione.c` · `scrivi_dropin()`). ⇒ ⛔ *Whoever cures it must read
+⚠ **And there is a guard that refuses to put it back** (`sessione.c` · `write_dropin()`). ⇒ ⛔ *Whoever cures it must read
 lines 740-840 in full: it was removed for a measured reason, and putting it back blindly redoes the
 defect that line had cured.*
 
@@ -3630,8 +3630,8 @@ border written now so that the day someone is inside, it is already known.**
 | **D2** | ⭐⭐ **The cap is a count of WORK, not of sessions** | `[M]` ten **still** tenants next to one that works cost **+0.2 %** (§6.16); the **eighth saturated** brings everyone to **1.5 fps** (§6.5). ⇒ ⛔ A cap that counts heads **is wrong in both directions** |
 | **D3** | ⭐⭐⭐ **The budget can be computed IN ADVANCE**, and the currency is the **pixel** | `[M]` at the give-ways the Mpixel/s match within **0.6 %** between 1080p and 4K, while the fps differ by **74.9 %** (§6.9). ⛔ **But before the pixels one looks at the LATENCY**, or the count says *«there is room»* while everyone sits at 1.5 fps |
 | **D4** | ⭐ **The proposed rule is «reserve 50 %»**, with the knob in the director's hand | `[M]` 0 false yeses, 0 false nos, cap **6 saturated / 10 still** — ⭐ **the ten of `SPECIFICHE.md` §5.5 found again by measurement instead of by promise** (§6.9) |
-| **D5** | ⭐ **`BUDGET_PIENO 0x06` ADDS TO `0x0E`**, it does not replace it: two different limits, **two different gestures** for the user | §6.4 · and ⛔ `0x0E` **was seen triggering for the first time**, 10 out of 10 |
-| **D6** | ⛔ **The no must be said BEFORE the child is born**, in `consegna_verdetto()` | `[M]` a user **never admitted** had **42 processes and a `gnome-shell`** (§6.4) |
+| **D5** | ⭐ **`BUDGET_FULL 0x06` ADDS TO `0x0E`**, it does not replace it: two different limits, **two different gestures** for the user | §6.4 · and ⛔ `0x0E` **was seen triggering for the first time**, 10 out of 10 |
+| **D6** | ⛔ **The no must be said BEFORE the child is born**, in `delivery_verdict()` | `[M]` a user **never admitted** had **42 processes and a `gnome-shell`** (§6.4) |
 | **D7** | **The four `#define`s at 16 become one**, plus the configurable cap — ⛔ and `WT_PALCHI 8` goes with them, because **it bites at nine** | §3.3, §4.2 |
 | **D8** | ⚠ **`--budget-mpixel-s` does NOT self-calibrate**: before the machine has given way once, the capacity is **a lower bound, not a ceiling** | §6.9 |
 
@@ -3682,16 +3682,16 @@ border written now so that the day someone is inside, it is already known.**
 | ⛔ **The ceiling of the REAL DESKTOP**: `[M]` at eleven sessions one is at **22-24 %** of the GPU, and **the users ran out, not the machine** | more users, or bigger canvases. ⚠ Extrapolation would say ~46 and it is **four times outside what was measured**: it is not reported |
 | ⛔ **The cliff on the real scene**: within eleven **it does not exist**; at what number it is, nobody knows | the same climb, further on |
 | ⛔ **Why the transition is SHARP** instead of proportional inside `i915`/mutter | there is the correlate (composited pixels) and the waiting point (DRM `ioctl`), **not the scheduler's rule** |
-| ⛔ **The BLIND forward verification of the predictor**: the four predictions stay **sealed** with the fingerprint | `bash banchi/10-b99-lancia.sh avanti` + `confronta`, by whoever wins a turn |
+| ⛔ **The BLIND forward verification of the predictor**: the four predictions stay **sealed** with the fingerprint | `bash banchi/10-b99-lancia.sh keep_going` + `compare`, by whoever wins a turn |
 | ⛔ **Chrome**: `DECISIONI.md` §7.20 declares two engines, **one** was run | redo §6.8 on the other |
 | ⛔ **QVBR with a REAL desktop behind** — ⚠ *and it is precisely the scene on which phase 10 of v1 was reset* | the bench exists, the round is missing |
 | ⛔ **The REAL network**: the clients run on the same machine, on `lo` ⇒ the wire is **counted, not tested** | `wondershaper` on the real path |
 | ⚠ **The number of §6.3 on the hard scene**, which §6.14 measures **twice as big** | redo that cell with the meter of §6.14 |
 | `[?]` **Damage that survives its cause**: two sessions stay at 7-9 fps **with the guardian at zero and the scenes drawing** | mechanism unknown, reported as an **observation** |
 | ⛔ **Why Firefox does not create the profile EVEN on its own**, that is the `Compositor crashed ()` crash that stays in the log even with the cured profile | ⚠ It is **a second defect**, declared and left alone: the cure of §5.10 makes the browser start, and this no longer bites |
-| ⛔ **«Si può cliccare e scrivere dentro»** | ⚠ `[M]` tested as *«it opens, draws, renders a page»* — **not** as *«I click inside it»*: the test client sends **only `PUNTATORE`**, it has no buttons or keys (§7.3). ⇒ The client must be extended |
+| ⛔ **«Si può cliccare e scrivere dentro»** | ⚠ `[M]` tested as *«it opens, draws, renders a page»* — **not** as *«I click inside it»*: the test client sends **only `POINTER`**, it has no buttons or keys (§7.3). ⇒ The client must be extended |
 | ⚠ **The session is born in the OVERVIEW** instead of on the desktop (§5.11) | ⛔ **it is a decision for the director**, not a `[?]` to measure: it changes what the user sees |
-| ⚠ **Eleven `segfault`s of `remotix` in `libei.so.1.3.901`** (`segfault at 50`, that is NULL+0x50) — ⭐ **but they are all BEFORE the cure** | ⭐ `[M]` **The last is from 07:06 on 25 Aug**; the cure of `src/input.c` (§5, `stacca_il_contesto()`) was stitched in **at 14:47**, and since then **none** — across an afternoon of three assignments, dozens of sessions opened and closed. ⚠ **It is a strong clue, not a controlled proof**: the red was not reproduced on purpose on the cured tree |
+| ⚠ **Eleven `segfault`s of `remotix` in `libei.so.1.3.901`** (`segfault at 50`, that is NULL+0x50) — ⭐ **but they are all BEFORE the cure** | ⭐ `[M]` **The last is from 07:06 on 25 Aug**; the cure of `src/input.c` (§5, `detach_context()`) was stitched in **at 14:47**, and since then **none** — across an afternoon of three assignments, dozens of sessions opened and closed. ⚠ **It is a strong clue, not a controlled proof**: the red was not reproduced on purpose on the cured tree |
 | ⛔⛔ **THE IMAGE** | ⭐ **The witness now exists** (§5.8) and the remote desktop **has been seen**: it is perfect. ⚠ But *«it looks worse»* no bench says — that is said by the director, and it is §10 |
 
 ---
@@ -3719,7 +3719,7 @@ needed — and he answered by **going down to 10** and throttling ⭐ **the tabl
 | **frames delivered** | 38.5/s | ⭐ **37.4/s** — *practically the same* |
 | **bytes per frame** | 19 377 | ⭐ **10 680** — **half** |
 | **bandwidth** | 6.0 Mbit/s | ⭐ **3.20 Mbit/s** — **half** |
-| **the queue on the wire** | empty | ⭐ **empty** — `arretrato massimo 0, posti 2` |
+| **the queue on the wire** | empty | ⭐ **empty** — `backlog maximum 0, slots 2` |
 | **the engine that COMPOSITES** (`rcs0`) | 41.3 % | **45.6 %** — *the scene moves as before* |
 
 ⇒ ⭐⭐⭐ **It did not slow down: it compressed more.** It **halved the bandwidth without losing a
@@ -3805,7 +3805,7 @@ perfect»*: it says ⭐ **«it spent well the little it had»** — which is exa
 | | what it is | ⚠ what holds **today** |
 |---|---|---|
 | **QVBR** — the per-session bandwidth cap (§8.2, **P7**) | the phase 9 cure: `[M]` **it exists, works, obeys within 5 %**, and covers **8.8×** of bandwidth | ⛔ **OFF.** The default is fixed quality |
-| **the factory numbers** | `--tetto-sessioni` and `--riserva` | **10** and **0.5** — `[M]` at 0.5: **0 false yeses, 0 false nos** |
+| **the factory numbers** | `--session-cap` and `--reserve` | **10** and **0.5** — `[M]` at 0.5: **0 false yeses, 0 false nos** |
 
 > ### ⭐ And the phase brought a NEW argument on QVBR, which was not there before
 >

@@ -5,9 +5,9 @@
 11-c6 — ⭐⭐⭐ «IT DETACHES AND FINDS ITSELF AGAIN»
 ===========================================================================
 
-    python3 11-c6-si-stacca-e-si-ritrova.py --porta 8511
-    python3 11-c6-si-stacca-e-si-ritrova.py --porta 8511 --uccidi-la-sessione
-    python3 11-c6-si-stacca-e-si-ritrova.py --certifica
+    python3 11-c6-si-stacca-e-si-ritrova.py --port 8511
+    python3 11-c6-si-stacca-e-si-ritrova.py --port 8511 --kill-the-session
+    python3 11-c6-si-stacca-e-si-ritrova.py --certify
 
 Line C6 of `fasi/11-la-rete-di-sicurezza.md` §4.1:
 
@@ -95,7 +95,7 @@ and not fragile.
        it is imported, or the day someone calibrates C8 the two meshes would start
        judging the same image in two different ways;
     2. ⭐ **and it is the SAME scene**: the fraction AFTER does not deviate from the one
-       BEFORE by more than **`SCARTO_MASSIMO`** in absolute terms (today 0.25, ⚠ `[?]` not
+       BEFORE by more than **`MAXIMUM_GAP`** in absolute terms (today 0.25, ⚠ `[?]` not
        measured ⇒ it is an argument).  Not «identical»: a window that
        moves by twenty pixels is not a fault, and demanding exact equality
        would be the test that rots;
@@ -140,7 +140,7 @@ and not fragile.
 ---------------------------------------------------------------------------
 
 `11-c7-si-chiude-e-non-resta-niente.py` has, for one case, the identical gesture to
-this one: the client goes away and the session does **not** close (`--solo-distacco`).
+this one: the client goes away and the session does **not** close (`--detach-only`).
 ⛔ And for C7 that case **must be GREEN**: it is I4 doing its job, and a
 red there would be the defect §1.49 (*a red that cannot be made
 green*).
@@ -173,7 +173,7 @@ detach of the consumer, and at **15 s** it is still there.
   and it is printed at every round next to the measurement it comes from.
 
 ---------------------------------------------------------------------------
-⛔ THE GRAFTED FAULT — `--uccidi-la-sessione`, and it is read on the DIFFERENCE
+⛔ THE GRAFTED FAULT — `--kill-the-session`, and it is read on the DIFFERENCE
 ---------------------------------------------------------------------------
 
 §4.1, column «how I know it can say red»: *«the session is killed ⇒ red»*.
@@ -230,7 +230,7 @@ THE OUTCOMES (§4.5 of the phase document)
   · **the product log**: it does not open it (see «the three questions it does not ask»).
   · **the sound, the keys, the latency**: C5, C4, and phase 12.
   · **how many times in a row it holds**: a single round.  ⚠ If one day the defect
-    became intermittent, this line will have to be redone like C1 (`--giri`), and
+    became intermittent, this line will have to be redone like C1 (`--rounds`), and
     it is written now instead of being discovered then.
   · **the very first attach**: C6 starts from an ALREADY LIVE session by
     mandate.  That the session is born and is seen is C1 and C2.
@@ -244,7 +244,7 @@ import subprocess
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ THE CHILD'S NAME — the entry on which «same session» rests.
@@ -253,12 +253,12 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 #    child, and a substring would let it pass.
 # `[M]` 26 Aug 2026 (C7, XFCE box): `pid 12113 remotix, ppid 10575, uid c7u1`.
 # ---------------------------------------------------------------------------
-NOME_FIGLIO = "remotix"
+CHILD_NAME = "remotix"
 
 # ⛔ The value that means «I looked and it is not there».  ⚠ `None` means «I could
 #    not look», and the two things must not have the same face
 #    (§4.5, and lesson §1.47).  It is the same convention as C7.
-VUOTO = "(nothing)"
+EMPTY = "(nothing)"
 
 # ---------------------------------------------------------------------------
 # ⭐ HOW MUCH THE SCENE CAN CHANGE AND STAY «THE SAME» — and it is not generic
@@ -268,13 +268,13 @@ VUOTO = "(nothing)"
 #   window can move by a few pixels, the 4:2:0 encoding returns
 #   slightly different edges.  ⛔ Demanding the same fraction to the thousandth
 #   would be the test that rots in a week.
-# ⛔ And it is not chosen by eye: `--certifica` contains the case «the fraction
+# ⛔ And it is not chosen by eye: `--certify` contains the case «the fraction
 #   moved by as much as the deviation allows ⇒ must stay GREEN» **and** the case
 #   «moved too much ⇒ red», which is the guard that keeps the number honest.
 # `[?]` The value is PRUDENT and not measured on the real thing: ⇒ it is an argument
-#   (`--scarto-massimo`), and it is calibrated at the first green round.
+#   (`--maximum-gap`), and it is calibrated at the first green round.
 # ---------------------------------------------------------------------------
-SCARTO_MASSIMO = 0.25
+MAXIMUM_GAP = 0.25
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ THE MEASURED SURVIVAL OF THE MONITOR, and it is from here that the pause comes.
@@ -285,20 +285,20 @@ SCARTO_MASSIMO = 0.25
 # would re-attach before the stage had a chance to die, and would say green
 # without having proved anything.
 # ---------------------------------------------------------------------------
-SOPRAVVIVENZA_MISURATA_S = 15.0
-PAUSA_PREDEFINITA_S = 2 * SOPRAVVIVENZA_MISURATA_S
+MEASURED_SURVIVAL_S = 15.0
+DEFAULT_PAUSE_S = 2 * MEASURED_SURVIVAL_S
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE JUDGES ARE IMPORTED, NOT REWRITTEN — and here there are TWO
 # ═══════════════════════════════════════════════════════════════════════════
-def _carica(percorsi, nome):
+def _load(paths, label_name):
     """Loads the first module that exists, or `None`.  ⛔ It is a LOADER, not a
        judge: it decides nothing, it only finds the file."""
-    for p in percorsi:
+    for p in paths:
         if not os.path.exists(p):
             continue
-        spec = importlib.util.spec_from_file_location(nome, p)
+        spec = importlib.util.spec_from_file_location(label_name, p)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
@@ -311,17 +311,17 @@ def _carica(percorsi, nome):
 _C1 = None
 
 
-def casa_dell_ammissione():
+def admission_home():
     """⭐⭐ «WAS THE CLIENT ADMITTED?» — ⛔ and its home is C1, not this file.
 
-    ⛔ Until 27 August 2026 there was `"AMMESSO" in coda` here, ⭐ and it could not
+    ⛔ Until 27 August 2026 there was `"ADMITTED" in queue` here, ⭐ and it could not
        say no: `[R]` `01-b3-cliente.py` prints that word also in the
-       **two refusal messages** — «CONGEDO instead of AMMESSO: reason …»
-       (:1315) and «expected AMMESSO, arrived …» (:1322) — and prints them on
+       **two refusal messages** — «FAREWELL instead of ADMITTED: reason …»
+       (:1315) and «expected ADMITTED, arrived …» (:1322) — and prints them on
        **stdout**, i.e. exactly where it looked.  ⇒ `LEZIONI.md` §1.44, a
        predicate that cannot fail: C6 believed it had got back in **even when it
        had been turned away**, and then blamed the product if the scene was not
-       there.  ⚠ And the trouble is double here, because `osservazione()` has always declared
+       there.  ⚠ And the trouble is double here, because `observation()` has always declared
        three states (`True`/`False`/`None`) and the old predicate
        never produced the third.
     ⚠ It was in five meshes: it lives in C1 only (§1.47), and the others import it.
@@ -330,8 +330,8 @@ def casa_dell_ammissione():
     """
     global _C1
     if _C1 is None:
-        m = _carica([os.path.join(QUI, "11-c1-nasce-e-si-vede.py"),
-                     os.path.join(os.path.dirname(QUI), "11-scatole",
+        m = _load([os.path.join(HERE, "11-c1-nasce-e-si-vede.py"),
+                     os.path.join(os.path.dirname(HERE), "11-scatole",
                                   "11-c1-nasce-e-si-vede.py")],
                     "c1_ammissione")
         # ⛔ We verify that what is needed is there, we do not trust the name
@@ -341,9 +341,9 @@ def casa_dell_ammissione():
         #    place (§1.47).  ⛔ We verify they are all there.
         if m is not None and all(
                 callable(getattr(m, x, None))
-                for x in ("e_stato_ammesso", "certifica_ammissione",
-                          "garantisci_i_gruppi", "verdetto_gruppi",
-                          "certifica_gruppi")):
+                for x in ("was_admitted", "certify_admission",
+                          "ensure_groups", "group_verdict",
+                          "certify_groups")):
             _C1 = m
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
@@ -353,18 +353,18 @@ def casa_dell_ammissione():
     return _C1
 
 
-def e_stato_ammesso(coda):
+def was_admitted(queue):
     """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
-    ⛔ `False` is not a product red: `giudica()` brings it to **3**.
+    ⛔ `False` is not a product red: `judge()` brings it to **3**.
     """
-    return casa_dell_ammissione().e_stato_ammesso(coda)
+    return admission_home().was_admitted(queue)
 
 
-def garantisci_i_gruppi(chi, prefisso="   "):
+def ensure_groups(chi, prefix="   "):
     """⭐⭐ THE CARD'S GROUPS — ⛔ and this too lives in one place only (C1).
 
-    Returns `(esito, perche)`: `0` = the tenant sees and it can be measured,
+    Returns `(outcome, reason_text)`: `0` = the tenant sees and it can be measured,
     `3` = ⛔ it is NOT measured.
 
     ⛔ Until 27 August 2026 this mesh created the tenant with
@@ -376,10 +376,10 @@ def garantisci_i_gruppi(chi, prefisso="   "):
     ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
        reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
-    return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
+    return admission_home().ensure_groups(chi, prefix)
 
 
-def giudice_immagini():
+def image_judge():
     """⭐ The judge of DEGENERATION: `10-f1-testimone.py`.
 
     ⛔ It is already calibrated on the real thing (25 August 2026: black desktop measured, threshold
@@ -390,12 +390,12 @@ def giudice_immagini():
     ⚠ It is looked for next to me (inside the box it is in `/opt/remotix`) and one
       level up (in the repository it is in `banchi/`).
     """
-    return _carica([os.path.join(QUI, "10-f1-testimone.py"),
-                    os.path.join(os.path.dirname(QUI), "10-f1-testimone.py")],
+    return _load([os.path.join(HERE, "10-f1-testimone.py"),
+                    os.path.join(os.path.dirname(HERE), "10-f1-testimone.py")],
                    "testimone10f1")
 
 
-def lettore_del_colore():
+def color_reader():
     """⭐⭐ The judge of the scene's COLOUR: it is **C8**'s, not another one.
 
     ⛔ And the reason is worth more than convenience: C6 opens **the same window
@@ -408,7 +408,7 @@ def lettore_del_colore():
       certification of C8 contains the case «colour shifted by as much as the
       tolerance allows ⇒ must be GREEN».  ⛔ C6 does not redo it: it inherits it.
     """
-    return _carica([os.path.join(QUI, "11-c8-il-secondo-apre-il-browser.py")],
+    return _load([os.path.join(HERE, "11-c8-il-secondo-apre-il-browser.py")],
                    "c8_browser")
 
 
@@ -416,22 +416,22 @@ def lettore_del_colore():
 # ⭐ THE JUDGE — ⛔ a PURE function: it does not touch the world, and so it
 #                 is certified without boxes, without sessions and without network.
 # ═══════════════════════════════════════════════════════════════════════════
-def osservazione(ammesso=None, figlio=None, frazione=None, verdetto=None,
-                 fotogrammi=None):
+def observation(admitted=None, child=None, fraction=None, verdict=None,
+                 frames=None):
     """What was seen in ONE attach.
 
     ⛔ Every entry has three states and not two: `None` = «I could not look»,
-       the value = «I looked».  ⚠ For the child there is also `VUOTO` = «I
+       the value = «I looked».  ⚠ For the child there is also `EMPTY` = «I
        looked and it was not there», which ⛔ is not the same thing as `None`.
     """
-    return {"ammesso": ammesso, "figlio": figlio, "frazione": frazione,
-            "verdetto": verdetto, "fotogrammi": fotogrammi}
+    return {"admitted": admitted, "child": child, "fraction": fraction,
+            "verdict": verdict, "frames": frames}
 
 
-def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
-    """⭐ The judgement, all in here.  Returns `(esito, specie, motivi)`.
+def judge(before, after, minimum_fraction, maximum_gap=MAXIMUM_GAP):
+    """⭐ The judgement, all in here.  Returns `(outcome, kind, reasons)`.
 
-    `specie` is a word for whoever reads: «found again» · «the windows are not
+    `kind` is a word for whoever reads: «found again» · «the windows are not
     found again» · «the stage is not found again» · «the scene changed» ·
     «another session» · «the session is gone» · «one cannot get back in» ·
     «I do not know».
@@ -439,25 +439,25 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     # ═══════════════════════════════════════════════════════════════════════
     # THE GUARDS OF THE «BEFORE» — ⛔ without these the comparison is between two zeros
     # ═══════════════════════════════════════════════════════════════════════
-    if prima["ammesso"] is not True:
+    if before["admitted"] is not True:
         return 3, "I do not know", [
             "the client of the FIRST attach was not admitted: there is",
             "no live session to find again, and C6 starts from a session",
             "already alive by mandate (§4.1).",
         ]
-    if prima["figlio"] is None:
+    if before["child"] is None:
         return 3, "I do not know", [
             "I could not read the tenant's processes BEFORE the detach",
             "⇒ I do not know which session I should find again.",
         ]
-    if prima["figlio"] == VUOTO:
+    if before["child"] == EMPTY:
         return 3, "I do not know", [
             "the tenant's «%s» child was not there even BEFORE the detach:"
-            % NOME_FIGLIO,
+            % CHILD_NAME,
             "the session did not really start.  ⛔ And a session that did not",
             "start can neither be lost nor found again.",
         ]
-    if prima["frazione"] is None:
+    if before["fraction"] is None:
         return 3, "I do not know", [
             "I could not look at the image BEFORE the detach (no",
             "frame from the wire, or unreadable image).",
@@ -466,12 +466,12 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     # ⭐⭐⭐ THE GUARD THAT HOLDS EVERYTHING UP (see the top): two zeros are
     #      equal, and «same fraction» would be GREEN on a test that has
     #      never seen anything.
-    if prima["frazione"] < frazione_minima:
+    if before["fraction"] < minimum_fraction:
         return 3, "I do not know", [
             "⛔ THE SCENE WAS NOT SEEN EVEN BEFORE THE DETACH: it covers",
             "   %.1f%% of the screen and at least %.0f%% would be needed."
-            % (prima["frazione"] * 100, frazione_minima * 100),
-            "   The image from before is: «%s»." % (prima["verdetto"] or "?"),
+            % (before["fraction"] * 100, minimum_fraction * 100),
+            "   The image from before is: «%s»." % (before["verdict"] or "?"),
             "⇒ I cannot ask whether a scene is FOUND AGAIN if it was not there.",
             "⛔ And this is NOT a red of C6: it is a defect UPSTREAM — a",
             "   «black» or «near-black» desktop is the late birth",
@@ -482,12 +482,12 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     # ═══════════════════════════════════════════════════════════════════════
     # THE RE-ATTACH — ⭐ from here on we JUDGE
     # ═══════════════════════════════════════════════════════════════════════
-    if dopo["ammesso"] is None:
+    if after["admitted"] is None:
         return 3, "I do not know", [
             "the client of the RE-ATTACH did not come back: it got stuck itself.",
             "⛔ It is a fault of the BENCH, not of the product (`LEZIONI.md` §1.51).",
         ]
-    if dopo["ammesso"] is False:
+    if after["admitted"] is False:
         return 1, "one cannot get back in", [
             "⛔ the RE-ATTACH was REFUSED, and the same password was good",
             "   a minute ago, on the same port and with the same tenant.",
@@ -498,24 +498,24 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     # ⚠ The «same session» half.  ⛔ `None` is not «not there»: if I could not
     #   read the processes, that half stays MUTE — and a mute half
     #   cannot produce a green (§1.47).
-    muta_sessione = False
-    if dopo["figlio"] is None:
-        muta_sessione = True
-    elif dopo["figlio"] == VUOTO:
+    session_muted = False
+    if after["child"] is None:
+        session_muted = True
+    elif after["child"] == EMPTY:
         return 1, "the session is gone", [
             "after the re-attach the tenant no longer has any «%s» child."
-            % NOME_FIGLIO,
+            % CHILD_NAME,
             "⛔ It did not find its session again: there is none.",
         ]
-    elif dopo["figlio"] != prima["figlio"]:
+    elif after["child"] != before["child"]:
         return 1, "another session", [
             "the child CHANGED between the two attaches: %s ⇒ %s"
-            % (prima["figlio"], dopo["figlio"]),
+            % (before["child"], after["child"]),
             "⛔ Whoever re-attached found a NEW session, not its own:",
             "   what it had opened is nowhere.",
         ]
 
-    if dopo["frazione"] is None:
+    if after["fraction"] is None:
         return 3, "I do not know", [
             "I could not look at the image AFTER the re-attach (no",
             "frame from the wire, or unreadable image).",
@@ -526,44 +526,44 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
             "  suit me.",
         ]
 
-    if dopo["frazione"] < frazione_minima:
-        degenere = dopo["verdetto"] in ("nero", "quasi-nero")
-        if degenere:
+    if after["fraction"] < minimum_fraction:
+        degenerate = after["verdict"] in ("nero", "quasi-nero")
+        if degenerate:
             return 1, "the stage is not found again", [
                 "after the re-attach the screen is «%s»: the scene covered"
-                % dopo["verdetto"],
-                "%.1f%% ⇒ %.1f%%." % (prima["frazione"] * 100,
-                                      dopo["frazione"] * 100),
+                % after["verdict"],
+                "%.1f%% ⇒ %.1f%%." % (before["fraction"] * 100,
+                                      after["fraction"] * 100),
                 "⛔ It is not «the window closed»: there is NOTHING left to",
                 "   see.  ⇒ It is the stage that the detach took away —",
                 "   i.e. I4 broken from the user's side.",
             ]
         return 1, "the windows are not found again", [
             "after the re-attach the desktop is «%s» — there is a screen — ⛔ but the"
-            % (dopo["verdetto"] or "?"),
+            % (after["verdict"] or "?"),
             "scene is no longer there: it covered %.1f%% and now it covers %.1f%%."
-            % (prima["frazione"] * 100, dopo["frazione"] * 100),
+            % (before["fraction"] * 100, after["fraction"] * 100),
             "⇒ The session was found again, the WINDOWS were not.",
         ]
 
-    scarto = abs(dopo["frazione"] - prima["frazione"])
-    if scarto > scarto_massimo:
+    gap = abs(after["fraction"] - before["fraction"])
+    if gap > maximum_gap:
         return 1, "the scene changed", [
             "the scene is still there, ⛔ but it is not that one: it covered %.1f%% and"
-            % (prima["frazione"] * 100),
+            % (before["fraction"] * 100),
             "now it covers %.1f%% (deviation %.3f, the maximum allowed is %.3f)."
-            % (dopo["frazione"] * 100, scarto, scarto_massimo),
+            % (after["fraction"] * 100, gap, maximum_gap),
             "⚠ It is the mildest red of the five: something was found again, but",
             "  not everything.  ⇒ If this fired on a healthy product, the number",
-            "  to calibrate is `--scarto-massimo`, and it must be calibrated with a measurement",
+            "  to calibrate is `--maximum-gap`, and it must be calibrated with a measurement",
             "  underneath — not widened until it goes quiet.",
         ]
 
-    if muta_sessione:
+    if session_muted:
         return 3, "I do not know", [
             "⭐ the image holds: the scene was found again (%.1f%% ⇒ %.1f%%,"
-            % (prima["frazione"] * 100, dopo["frazione"] * 100),
-            "   deviation %.3f).  ⛔ BUT I could not read the processes after the" % scarto,
+            % (before["fraction"] * 100, after["fraction"] * 100),
+            "   deviation %.3f).  ⛔ BUT I could not read the processes after the" % gap,
             "   re-attach ⇒ I do not know whether it is the SAME session or a new one that",
             "   resembles it.",
             "⇒ Half a judgement is not a green (`LEZIONI.md` §1.47).",
@@ -572,14 +572,14 @@ def giudica(prima, dopo, frazione_minima, scarto_massimo=SCARTO_MASSIMO):
     return 0, "found again", [
         "the client detached, waited, re-attached,",
         "⭐ and found the SAME session again (child %s) and the SAME scene"
-        % prima["figlio"],
+        % before["child"],
         "  (%.1f%% ⇒ %.1f%%, deviation %.3f ≤ %.3f)"
-        % (prima["frazione"] * 100, dopo["frazione"] * 100, scarto,
-           scarto_massimo),
+        % (before["fraction"] * 100, after["fraction"] * 100, gap,
+           maximum_gap),
     ]
 
 
-def guasto_morso(prima, dopo):
+def fault_bitten(before, after):
     """⛔⛔ §1.52 — with the grafted fault the COLOUR of the verdict is not enough.
 
     ⭐ C6 carries with it a real and already known defect (the stage that dies with the
@@ -598,9 +598,9 @@ def guasto_morso(prima, dopo):
     ⛔ And if I could not read the processes — before or after — it is not «seen»:
        «I do not know» is not a proof that the fault bit.
     """
-    p = prima.get("figlio")
-    d = dopo.get("figlio")
-    if p in (None, VUOTO):
+    p = before.get("child")
+    d = after.get("child")
+    if p in (None, EMPTY):
         return False
     if d is None:
         return False
@@ -610,7 +610,7 @@ def guasto_morso(prima, dopo):
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ THE CERTIFICATION — synthetic cases, and ⭐ it must run ON THE LAPTOP
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
+def certify(minimum_fraction=None, gap=MAXIMUM_GAP):
     """⛔ It proves that the judge can say green, red and «I do not know».
 
     ⚠ And it declares what it covers and what it does not.
@@ -620,72 +620,72 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
       image goes through it and we look at what number comes out.
       ⛔ DOES NOT COVER: that the browser really opens the window, that the stage is
       remounted, that the frames arrive.  That half is told only by the real
-      round inside the box, and it is the `--uccidi-la-sessione` acceptance test.
+      round inside the box, and it is the `--kill-the-session` acceptance test.
     ⇒ A certification that declares itself wider than it is is worth less than
       no certification (C1's rule).
     """
-    c8 = lettore_del_colore()
+    c8 = color_reader()
     if c8 is None:
         print("⛔ I cannot find C8 next to me: the colour reader is ITS and I do not")
         print("   rewrite it here.  ⇒ I could not look")
         return 3
-    if frazione_minima is None:
-        frazione_minima = c8.FRAZIONE_MINIMA
+    if minimum_fraction is None:
+        minimum_fraction = c8.MINIMUM_FRACTION
 
-    fm = frazione_minima
+    fm = minimum_fraction
     print("== certification of C6's judge ==")
     print("   ⛔ it covers the DECISION and the imported reader, not the real round")
     print("   yardstick: colour %s ±%d per channel (from C8) · at least %.0f%% of the"
-          % (c8.COLORE, c8.TOLLERANZA, fm * 100))
-    print("          screen · maximum deviation between before and after %.3f" % scarto)
+          % (c8.COLOR, c8.TOLERANCE, fm * 100))
+    print("          screen · maximum deviation between before and after %.3f" % gap)
     print("   pause: %.0f s = 2 × the measured survival (%.0f s)\n"
-          % (PAUSA_PREDEFINITA_S, SOPRAVVIVENZA_MISURATA_S))
+          % (DEFAULT_PAUSE_S, MEASURED_SURVIVAL_S))
 
     # The two «healthy» observations, from which every case is derived by changing one
     # thing only — ⭐ §3.3 of the phase document: one thing is moved at a time.
     def viva(**c):
-        d = osservazione(ammesso=True, figlio="12113", frazione=0.62,
-                         verdetto="disegnato", fotogrammi=180)
+        d = observation(admitted=True, child="12113", fraction=0.62,
+                         verdict="disegnato", frames=180)
         d.update(c)
         return d
 
-    casi = [
+    cases = [
         # ── the healthy round ───────────────────────────────────────────────
         ("⭐ it detaches and finds itself again: same session, same scene",
-         dict(prima=viva(), dopo=viva()), (0, "found again")),
+         dict(before=viva(), after=viva()), (0, "found again")),
 
         ("⭐ the scene moved a little ⇒ must be GREEN",
-         dict(prima=viva(), dopo=viva(frazione=0.62 - scarto + 0.02)),
+         dict(before=viva(), after=viva(fraction=0.62 - gap + 0.02)),
          (0, "found again")),
 
         # ── the reds, one per kind ──────────────────────────────────────────
         ("⛔⛔ TODAY'S DEFECT: same child, ⛔ windows gone",
-         dict(prima=viva(), dopo=viva(frazione=0.001, verdetto="disegnato")),
+         dict(before=viva(), after=viva(fraction=0.001, verdict="disegnato")),
          (1, "the windows are not found again")),
 
         ("⛔⛔ …and if the screen went back to BLACK it is another kind of red",
-         dict(prima=viva(), dopo=viva(frazione=0.0, verdetto="nero")),
+         dict(before=viva(), after=viva(fraction=0.0, verdict="nero")),
          (1, "the stage is not found again")),
 
         ("⛔ «near-black» counts as black: there is the bar and nothing else",
-         dict(prima=viva(), dopo=viva(frazione=0.0, verdetto="quasi-nero")),
+         dict(before=viva(), after=viva(fraction=0.0, verdict="quasi-nero")),
          (1, "the stage is not found again")),
 
         ("⛔ THE GRAFTED FAULT: the session was killed ⇒ different child",
-         dict(prima=viva(), dopo=viva(figlio="20044", frazione=0.0,
-                                      verdetto="nero")),
+         dict(before=viva(), after=viva(child="20044", fraction=0.0,
+                                      verdict="nero")),
          (1, "another session")),
 
         ("⛔ …and if after the re-attach there is no child at all",
-         dict(prima=viva(), dopo=viva(figlio=VUOTO, frazione=0.0,
-                                      verdetto="nero")),
+         dict(before=viva(), after=viva(child=EMPTY, fraction=0.0,
+                                      verdict="nero")),
          (1, "the session is gone")),
 
         ("⛔ the re-attach is REFUSED, with the password of a minute ago",
-         dict(prima=viva(), dopo=viva(ammesso=False)), (1, "one cannot get back in")),
+         dict(before=viva(), after=viva(admitted=False)), (1, "one cannot get back in")),
 
         ("⛔ the scene is there but changed TOO MUCH ⇒ mild red",
-         dict(prima=viva(), dopo=viva(frazione=0.62 - scarto - 0.05)),
+         dict(before=viva(), after=viva(fraction=0.62 - gap - 0.05)),
          (1, "the scene changed")),
 
         # ═══════════════════════════════════════════════════════════════════
@@ -697,88 +697,88 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
         #   complacent mesh of the net, silently.
         # ═══════════════════════════════════════════════════════════════════
         ("⭐⭐ the scene was not there EVEN BEFORE (0 ⇒ 0) ⇒ ⛔ NEVER green",
-         dict(prima=viva(frazione=0.0, verdetto="nero"),
-              dopo=viva(frazione=0.0, verdetto="nero")), (3, "I do not know")),
+         dict(before=viva(fraction=0.0, verdict="nero"),
+              after=viva(fraction=0.0, verdict="nero")), (3, "I do not know")),
 
         ("⭐⭐ …and not even if AFTER the scene appeared by chance",
-         dict(prima=viva(frazione=0.0, verdetto="nero"), dopo=viva()),
+         dict(before=viva(fraction=0.0, verdict="nero"), after=viva()),
          (3, "I do not know")),
 
         ("⭐ the scene was there but below the threshold (5%) ⇒ I looked at nothing",
-         dict(prima=viva(frazione=0.05), dopo=viva(frazione=0.05)),
+         dict(before=viva(fraction=0.05), after=viva(fraction=0.05)),
          (3, "I do not know")),
 
         # ── the bench's «I do not know» ─────────────────────────────────────
         ("⛔ the FIRST attach was not admitted ⇒ I do not know, not a red",
-         dict(prima=viva(ammesso=False), dopo=viva()), (3, "I do not know")),
+         dict(before=viva(admitted=False), after=viva()), (3, "I do not know")),
 
         ("⛔ the child was never born BEFORE ⇒ there is nothing to find again",
-         dict(prima=viva(figlio=VUOTO), dopo=viva()), (3, "I do not know")),
+         dict(before=viva(child=EMPTY), after=viva()), (3, "I do not know")),
 
         ("⛔ the processes could not be read BEFORE ⇒ I do not know",
-         dict(prima=viva(figlio=None), dopo=viva()), (3, "I do not know")),
+         dict(before=viva(child=None), after=viva()), (3, "I do not know")),
 
         ("⛔ no frame BEFORE ⇒ I do not know, ⛔ not «empty screen»",
-         dict(prima=viva(frazione=None, verdetto=None), dopo=viva()),
+         dict(before=viva(fraction=None, verdict=None), after=viva()),
          (3, "I do not know")),
 
         ("⛔ no frame AFTER ⇒ I do not know, and the doubt is NAMED",
-         dict(prima=viva(), dopo=viva(frazione=None, verdetto=None)),
+         dict(before=viva(), after=viva(fraction=None, verdict=None)),
          (3, "I do not know")),
 
         ("⛔ the client of the re-attach got stuck ⇒ fault of the BENCH",
-         dict(prima=viva(), dopo=viva(ammesso=None)), (3, "I do not know")),
+         dict(before=viva(), after=viva(admitted=None)), (3, "I do not know")),
 
         # ⛔ §1.47: the image holds but the «same session» half is MUTE.
         ("⛔ scene found again, ⛔ but I do not know if it is the same session ⇒ I do not know",
-         dict(prima=viva(), dopo=viva(figlio=None)), (3, "I do not know")),
+         dict(before=viva(), after=viva(child=None)), (3, "I do not know")),
     ]
 
-    guai = 0
-    for nome, arg, atteso in casi:
-        esito, specie, _m = giudica(frazione_minima=fm, scarto_massimo=scarto,
+    troubles = 0
+    for label_name, arg, expected_val in cases:
+        outcome, kind, _m = judge(minimum_fraction=fm, maximum_gap=gap,
                                     **arg)
-        ok = (esito, specie) == atteso
+        ok = (outcome, kind) == expected_val
         print("  %s  %-62s  outcome=%s (%s)   expected %s (%s)"
-              % ("OK " if ok else "NO ", nome, esito, specie,
-                 atteso[0], atteso[1]))
+              % ("OK " if ok else "NO ", label_name, outcome, kind,
+                 expected_val[0], expected_val[1]))
         if not ok:
-            guai += 1
+            troubles += 1
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐ THE SECOND HALF — «did the fault bite?» is not «is the verdict
     #     red?» (§1.52).  ⛔ For C6 it is the part that is worth the most: the mesh
     #     can already be red on its own.
     # ═══════════════════════════════════════════════════════════════════════
-    casi_morso = [
+    cases_bitten = [
         ("⭐ the session killed: the child is another one ⇒ SEEN",
-         dict(prima=viva(), dopo=viva(figlio="20044")), True),
+         dict(before=viva(), after=viva(child="20044")), True),
 
         ("⭐ the session killed and no child was born again ⇒ SEEN",
-         dict(prima=viva(), dopo=viva(figlio=VUOTO)), True),
+         dict(before=viva(), after=viva(child=EMPTY)), True),
 
         ("⛔⛔ RED with the child THE SAME: it is the defect of the STAGE, ⛔ not the",
-         dict(prima=viva(), dopo=viva(frazione=0.0, verdetto="nero")), False),
+         dict(before=viva(), after=viva(fraction=0.0, verdict="nero")), False),
 
         ("⛔ I could not read the processes AFTER ⇒ it is NOT «seen»",
-         dict(prima=viva(), dopo=viva(figlio=None)), False),
+         dict(before=viva(), after=viva(child=None)), False),
 
         ("⛔ I had not read them even BEFORE ⇒ it is NOT «seen»",
-         dict(prima=viva(figlio=None), dopo=viva(figlio="20044")), False),
+         dict(before=viva(child=None), after=viva(child="20044")), False),
 
         ("⛔ the child was already not there before ⇒ it is NOT «seen»",
-         dict(prima=viva(figlio=VUOTO), dopo=viva(figlio=VUOTO)), False),
+         dict(before=viva(child=EMPTY), after=viva(child=EMPTY)), False),
     ]
     print()
     print("   ⛔ and the grafted fault is read on the DIFFERENCE (the PID of the")
     print("      child), not on the colour of the verdict — `LEZIONI.md` §1.52:")
-    for nome, arg, atteso in casi_morso:
-        avuto = guasto_morso(**arg)
-        ok = avuto is atteso
+    for label_name, arg, expected_val in cases_bitten:
+        got = fault_bitten(**arg)
+        ok = got is expected_val
         print("  %s  %-62s  bitten=%-5s  expected %s"
-              % ("OK " if ok else "NO ", nome, avuto, atteso))
+              % ("OK " if ok else "NO ", label_name, got, expected_val))
         if not ok:
-            guai += 1
+            troubles += 1
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐ THE THIRD HALF — is the READER imported from C8 really alive?
@@ -799,31 +799,31 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
         import tempfile
         lav = tempfile.mkdtemp(prefix="c6cert-")
 
-        def dipingi(nome, riempi):
+        def paint(label_name, fill):
             a = np.zeros((216, 384, 3), dtype="uint8")
-            a[:, :] = riempi
-            p = os.path.join(lav, nome + ".png")
+            a[:, :] = fill
+            p = os.path.join(lav, label_name + ".png")
             Image.fromarray(a).save(p)
             return p
 
         prove = [
-            ("the scene fills the screen", dipingi("a", c8.COLORE), True),
-            ("a desktop without the scene", dipingi("b", (58, 62, 70)), False),
+            ("the scene fills the screen", paint("a", c8.COLOR), True),
+            ("a desktop without the scene", paint("b", (58, 62, 70)), False),
             ("a file that is not there ⇒ «I do not know», ⛔ not zero",
              os.path.join(lav, "manca.png"), None),
         ]
-        for nome, png, atteso in prove:
-            fr = c8.frazione_del_colore(png)
-            if atteso is None:
+        for label_name, png, expected_val in prove:
+            fr = c8.color_fraction(png)
+            if expected_val is None:
                 ok = fr is None
-                detto = "unknown" if fr is None else "%.3f" % fr
+                said = "unknown" if fr is None else "%.3f" % fr
             else:
-                ok = fr is not None and ((fr >= fm) == atteso)
-                detto = "unknown" if fr is None else "%.3f" % fr
+                ok = fr is not None and ((fr >= fm) == expected_val)
+                said = "unknown" if fr is None else "%.3f" % fr
             print("  %s  %-62s  fraction=%s"
-                  % ("OK " if ok else "NO ", nome, detto))
+                  % ("OK " if ok else "NO ", label_name, said))
             if not ok:
-                guai += 1
+                troubles += 1
     except ImportError:
         print("  ⛔  numpy or Pillow is missing: I could NOT test the reader")
         print("      ⇒ and this certification is incomplete, not passed")
@@ -833,24 +833,24 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
     #    The predicate lives in C1 and is certified with C1's cases: ⛔ a copy
     #    of the cases here would be a second place to diverge from (§1.47).
     print()
-    guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C6")
-    guai += guai_amm
+    admission_troubles, how_many_admitted = admission_home().certify_admission("C6")
+    troubles += admission_troubles
 
     # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
     #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
     #    never red.  They live in C1 with the step they certify.
     print()
-    guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C6")
-    guai += guai_gr
+    group_troubles, how_many_groups = admission_home().certify_groups("C6")
+    troubles += group_troubles
 
-    quanti = len(casi) + len(casi_morso) + quanti_amm + quanti_gr + 3
+    how_many = len(cases) + len(cases_bitten) + how_many_admitted + how_many_groups + 3
     print()
-    if guai:
+    if troubles:
         print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
-              % (guai, quanti))
+              % (troubles, how_many))
         return 1
     print("⭐ %d cases out of %d: the judge sees the scene when it is found again, it"
-          % (quanti, quanti))
+          % (how_many, how_many))
     print("   sees it disappear when it disappears, ⛔ it does NOT say green when the scene")
     print("   was not there even before, and ⭐ it distinguishes «the fault bit» from")
     print("   «it was already red on its own».")
@@ -861,20 +861,20 @@ def certifica(frazione_minima=None, scarto=SCARTO_MASSIMO):
 # ═══════════════════════════════════════════════════════════════════════════
 # THE WORLD — collecting the facts.  ⛔ From here down the machine is TOUCHED.
 # ═══════════════════════════════════════════════════════════════════════════
-def sh(comando, secondi=120):
+def sh(command, seconds=120):
     """⚠ A shell is used only where it is really needed (`useradd`, `su`, `runuser`):
        `LEZIONI.md` §1.46 — every level of quoting is a place where the
        command can disappear."""
     try:
-        return subprocess.run(["/bin/sh", "-c", comando],
-                              capture_output=True, text=True, timeout=secondi)
+        return subprocess.run(["/bin/sh", "-c", command],
+                              capture_output=True, text=True, timeout=seconds)
     except subprocess.SubprocessError:
         return subprocess.CompletedProcess([], 127, "", "expired")
 
 
-def corri(argv, tempo=60):
+def run_loop(argv, time_limit=60):
     try:
-        p = subprocess.run(argv, capture_output=True, text=True, timeout=tempo)
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=time_limit)
         return p.returncode, (p.stdout or "")
     except (OSError, subprocess.SubprocessError):
         return None, ""
@@ -888,33 +888,33 @@ def uid_di(chi):
         return None
 
 
-def figlio_di(uid):
+def child_of(uid):
     """The pid of the tenant's «remotix» child.
 
-    ⛔ Three outcomes and not two: `None` = «/proc could not be read», `VUOTO` =
+    ⛔ Three outcomes and not two: `None` = «/proc could not be read», `EMPTY` =
        «I looked and it is not there», otherwise the pid (or the pids, separated).
     ⚠ `/proc` is read instead of calling `ps`: one shell fewer, and the same
       choice as C7.
     """
     try:
-        elenco = os.listdir("/proc")
+        listing = os.listdir("/proc")
     except OSError:
         return None
     pid = []
-    for voce in elenco:
-        if not voce.isdigit():
+    for entry in listing:
+        if not entry.isdigit():
             continue
         try:
-            if os.stat("/proc/%s" % voce).st_uid != uid:
+            if os.stat("/proc/%s" % entry).st_uid != uid:
                 continue
-            with open("/proc/%s/comm" % voce) as f:
-                nome = f.read().strip()
+            with open("/proc/%s/comm" % entry) as f:
+                label_name = f.read().strip()
         except OSError:
             continue
-        if nome == NOME_FIGLIO:
-            pid.append(voce)
+        if label_name == CHILD_NAME:
+            pid.append(entry)
     if not pid:
-        return VUOTO
+        return EMPTY
     return " · ".join(sorted(pid, key=int))
 
 
@@ -926,44 +926,44 @@ def socket_wayland(uid):
        this phase exists not to introduce (the same choice as C8).
     """
     try:
-        voci = sorted(os.listdir("/run/user/%d" % uid))
+        entries = sorted(os.listdir("/run/user/%d" % uid))
     except OSError:
         return None
-    for v in voci:
+    for v in entries:
         if re.match(r"^wayland-[0-9]+$", v):
             return v
     return None
 
 
-def aspetta(predicato, tetto, passo=1.0):
+def wait_for(predicate, ceiling, step=1.0):
     """⭐ We wait for the EVENT, not for the clock (`LEZIONI.md` §1.49).
 
-    Returns `(valore, secondi)`; `valore` is `None` if the ceiling expired — and
+    Returns `(value_v, seconds)`; `value_v` is `None` if the ceiling expired — and
     then ⛔ the caller must say «I do not know», not carry on pretending.
     """
-    partenza = time.time()
-    scadenza = partenza + tetto
-    while time.time() < scadenza:
-        v = predicato()
+    departure = time.time()
+    expiry = departure + ceiling
+    while time.time() < expiry:
+        v = predicate()
         if v:
-            return v, time.time() - partenza
-        time.sleep(passo)
-    return None, time.time() - partenza
+            return v, time.time() - departure
+        time.sleep(step)
+    return None, time.time() - departure
 
 
 # ---------------------------------------------------------------------------
 # THE ATTACH — the test client, and the image that comes out of it
 # ---------------------------------------------------------------------------
-def leggi(percorso):
+def read_it(fpath):
     try:
-        with open(percorso, "r", errors="replace") as f:
+        with open(fpath, "r", errors="replace") as f:
             return f.read()
     except OSError:
         return ""
 
 
-def attacca(chi, a, resta, diario, video=None):
-    """Launches the client IN THE BACKGROUND and returns `(processo, presa_del_diario)`.
+def attach(chi, a, stays, diary, video=None):
+    """Launches the client IN THE BACKGROUND and returns `(process, presa_del_diario)`.
 
     ⛔ In the background and non-blocking, and the reason is the whole mesh: the scene
        must be opened **while a client is attached**.  `[M]` (the measurement of 27
@@ -982,81 +982,81 @@ def attacca(chi, a, resta, diario, video=None):
     ⭐ And in addition the diary stays on disk for whoever diagnoses, instead of
       disappearing inside a variable.
     """
-    argv = ["python3", "-u", a.cliente,
-            "--indirizzo", a.indirizzo, "--porta", str(a.porta),
-            "--utente", chi, "--parola", a.parola,
-            "--resta", str(resta)]
+    argv = ["python3", "-u", a.client,
+            "--address", a.address, "--port", str(a.port),
+            "--username", chi, "--password", a.password,
+            "--stays", str(stays)]
     if video:
         if os.path.exists(video):
             os.unlink(video)
-        argv += ["--video-scrivi", video]
-    presa = open(diario, "w")
-    return subprocess.Popen(argv, stdout=presa, stderr=subprocess.STDOUT,
-                            text=True), presa
+        argv += ["--video-write", video]
+    take = open(diary, "w")
+    return subprocess.Popen(argv, stdout=take, stderr=subprocess.STDOUT,
+                            text=True), take
 
 
-def raccogli_il_cliente(proc, presa, diario, tetto):
-    """Waits for the client to finish.  Returns `(ammesso, fotogrammi, coda)`.
+def collect_client(proc, take, diary, ceiling):
+    """Waits for the client to finish.  Returns `(admitted, frames, queue)`.
 
-    ⛔ `ammesso` has THREE states: `True`, `False`, and `None` = «the client did not
+    ⛔ `admitted` has THREE states: `True`, `False`, and `None` = «the client did not
        come back», which is a fault of the BENCH and not of the product (§1.51).
     """
-    scaduto = False
+    expired = False
     try:
-        proc.wait(timeout=tetto)
+        proc.wait(timeout=ceiling)
     except subprocess.TimeoutExpired:
         proc.kill()
         try:
             proc.wait(timeout=30)
         except subprocess.SubprocessError:
             pass
-        scaduto = True
+        expired = True
     try:
-        presa.close()
+        take.close()
     except OSError:
         pass
-    coda = leggi(diario)
-    if scaduto:
+    queue = read_it(diary)
+    if expired:
         return None, None, ("the test client did not come back within the "
-                            "ceiling\n" + coda)
-    # ⛔ NOT `"AMMESSO" in coda`: the word is also in the two refusals, and it
-    #    arrives on stdout — see `e_stato_ammesso()` at the top.  ⭐ And so
+                            "ceiling\n" + queue)
+    # ⛔ NOT `"ADMITTED" in queue`: the word is also in the two refusals, and it
+    #    arrives on stdout — see `was_admitted()` at the top.  ⭐ And so
     #    the third state promised by the docstring above really exists.
-    ammesso = e_stato_ammesso(coda)
+    admitted = was_admitted(queue)
     # ⚠ The frame count is read from the client's `[vid]` line, as
     #   C8 does: it is information, ⛔ not a verdict.
-    quanti = None
-    for riga in coda.splitlines():
-        if "[vid]" in riga and "no frame" not in riga:
+    how_many = None
+    for row in queue.splitlines():
+        if "[vid]" in row and "no frame" not in row:
             try:
-                quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
+                how_many = int(row.split("[vid]", 1)[1].strip().split()[0])
             except (ValueError, IndexError):
                 pass
-    return ammesso, quanti, coda
+    return admitted, how_many, queue
 
 
-def immagine_dal_flusso(flusso, fuori):
+def image_from_stream(flow, outside):
     """The LAST frame of the stream, as PNG.  `None` if none was made.
 
     ⛔ `-update 1` keeps the LAST: it is what the desktop shows now.  The
        first would be the opening keyframe, i.e. a minute ago — and for a mesh
        that asks *«what do I see WHEN I come back»* it would be the wrong question.
     """
-    if os.path.exists(fuori):
-        os.unlink(fuori)
-    if not os.path.exists(flusso) or os.path.getsize(flusso) == 0:
+    if os.path.exists(outside):
+        os.unlink(outside)
+    if not os.path.exists(flow) or os.path.getsize(flow) == 0:
         return None
     sh("ffmpeg -hide_banner -loglevel error -i %s -vsync 0 -update 1 -y %s"
-       % (flusso, fuori), secondi=240)
-    if os.path.exists(fuori) and os.path.getsize(fuori):
-        return fuori
+       % (flow, outside), seconds=240)
+    if os.path.exists(outside) and os.path.getsize(outside):
+        return outside
     return None
 
 
 # ---------------------------------------------------------------------------
 # THE SCENE — ⭐ the window that must be found again
 # ---------------------------------------------------------------------------
-def apri_la_scena(chi, a):
+def open_scene(chi, a):
     """Switches on the browser full screen on the page of the declared colour.
 
     ⛔ The Wayland socket is SEARCHED for (see `socket_wayland`).
@@ -1080,11 +1080,11 @@ def apri_la_scena(chi, a):
     sh("setsid runuser -u %s -- env XDG_RUNTIME_DIR=/run/user/%d WAYLAND_DISPLAY=%s "
        "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
        "%s --kiosk file://%s < /dev/null > /home/%s/.c6-scena.log 2>&1 &"
-       % (chi, uid, display, chi, a.browser, a.pagina, chi), secondi=30)
+       % (chi, uid, display, chi, a.browser, a.page_v, chi), seconds=30)
     return display, None
 
 
-def profilo_del_browser(chi):
+def browser_profile(chi):
     """⭐ The EVENT «the browser started»: its profile exists.
 
     ⛔ It is not «the window is seen» — that is said only by the pixel, and it is the
@@ -1095,7 +1095,7 @@ def profilo_del_browser(chi):
     return r.stdout.strip() or None
 
 
-def scalda_il_browser(chi, a, fuori):
+def warm_up_browser(chi, a, outside):
     """⭐⭐ THE FIRST START IS DONE OUTSIDE THE SESSION, and it serves TWO things.
 
     1. ⛔ **It warms up the profile.**  `LEZIONI.md` §1.45: the first start of Firefox
@@ -1111,30 +1111,30 @@ def scalda_il_browser(chi, a, fuori):
        26 Aug 2026: without `libpci3` Firefox produced no image, and the
        bench read it as a product fault.
 
-    ⚠ And the ceiling is ITS OWN (`--attesa-scena`), not lent by another wait
+    ⚠ And the ceiling is ITS OWN (`--wait-scene`), not lent by another wait
       (§1.45).  ⛔ And the FILE is judged, not the exit code: `[M]` §1.50 —
       with a tight ceiling Firefox exits 124 and **the PNG is there anyway**.
     """
-    if os.path.exists(fuori):
-        os.unlink(fuori)
-    suo = "/home/%s/.c6-scaldata.png" % chi
-    sh("rm -f %s" % suo)
+    if os.path.exists(outside):
+        os.unlink(outside)
+    its = "/home/%s/.c6-scaldata.png" % chi
+    sh("rm -f %s" % its)
     r = sh("runuser -u %s -- env HOME=/home/%s MOZ_HEADLESS=1 "
            "timeout %d %s --headless --screenshot %s file://%s"
-           % (chi, chi, int(a.attesa_scena), a.browser, suo, a.pagina),
-           secondi=int(a.attesa_scena) + 60)
-    if os.path.exists(suo) and os.path.getsize(suo):
-        sh("cp -f %s %s" % (suo, fuori))
-    detto = ((r.stdout or "") + (r.stderr or "")).strip()
-    if os.path.exists(fuori) and os.path.getsize(fuori):
-        return fuori, detto[-160:]
-    return None, detto[-160:]
+           % (chi, chi, int(a.wait_scene), a.browser, its, a.page_v),
+           seconds=int(a.wait_scene) + 60)
+    if os.path.exists(its) and os.path.getsize(its):
+        sh("cp -f %s %s" % (its, outside))
+    said = ((r.stdout or "") + (r.stderr or "")).strip()
+    if os.path.exists(outside) and os.path.getsize(outside):
+        return outside, said[-160:]
+    return None, said[-160:]
 
 
 # ---------------------------------------------------------------------------
 # THE TENANT — it is created new, and ⛔ deleted BEFORE creating it
 # ---------------------------------------------------------------------------
-def sgombera(chi, cancella=True):
+def clear_out(chi, delete=True):
     """⭐ The BENCH's cleanup, which ⛔ is not the test.
 
     The tenant of THIS round is closed **by name**, never a global pattern
@@ -1142,16 +1142,16 @@ def sgombera(chi, cancella=True):
     of another test in progress).  ⚠ And it is done in a `finally`: a bench that leaves
     its leftovers makes the next bench red, and that red is not the product's.
     """
-    corri(["loginctl", "terminate-user", chi], tempo=60)
+    run_loop(["loginctl", "terminate-user", chi], time_limit=60)
     time.sleep(1.0)
-    corri(["pkill", "-KILL", "-u", chi], tempo=60)
+    run_loop(["pkill", "-KILL", "-u", chi], time_limit=60)
     time.sleep(0.5)
-    if cancella:
-        corri(["userdel", "-r", chi], tempo=120)
-        corri(["rm", "-rf", "/home/%s" % chi], tempo=60)
+    if delete:
+        run_loop(["userdel", "-r", chi], time_limit=120)
+        run_loop(["rm", "-rf", "/home/%s" % chi], time_limit=60)
 
 
-def crea(chi, parola):
+def create(chi, password):
     """Creates the tenant **as the product creates it**: `useradd -m`, the password,
        ⭐ and the card's groups READ FROM THE NODES and read back.
 
@@ -1162,16 +1162,16 @@ def crea(chi, parola):
        accusing the product of a fault of the bench (§1.51).
     """
     r = sh("useradd -m -s /bin/bash %s && "
-           "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
+           "printf '%s:%s\n' | chpasswd" % (chi, chi, password))
     if r.returncode != 0:
         return False, ((r.stderr or "") + (r.stdout or "")).strip()[:140]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = ensure_groups(chi, prefix="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     return True, ""
 
 
-def togli_di_mezzo_il_difetto_di_c8(chi, c8):
+def remove_c8_defect(chi, c8):
     """⚠ C6 does NOT test the provisioning defect: it GETS IT OUT OF THE WAY.
 
     ⛔ And the reason is a real danger between benches: `11-c8` prepares the terrain
@@ -1185,91 +1185,91 @@ def togli_di_mezzo_il_difetto_di_c8(chi, c8):
     ⇒ The cure of `src/provisiona.sh` is applied to C6's tenant, and it is the
       SAME line as C8, imported instead of rewritten.
     """
-    c8.applica_la_cura(chi)
+    c8.apply_fix(chi)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--utente", default="c6u1",
+    p.add_argument("--username", default="c6u1",
                    help="the test tenant: it is created NEW and deleted")
-    p.add_argument("--parola", default="provanic2026")
-    p.add_argument("--porta", type=int, default=8511)
-    p.add_argument("--indirizzo", default="127.0.0.1")
-    p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
-    p.add_argument("--pagina", default=os.path.join(QUI, "11-c8-pagina.html"),
+    p.add_argument("--password", default="provanic2026")
+    p.add_argument("--port", type=int, default=8511)
+    p.add_argument("--address", default="127.0.0.1")
+    p.add_argument("--client", default="/opt/remotix/01-b3-cliente.py")
+    p.add_argument("--page_v", default=os.path.join(HERE, "11-c8-pagina.html"),
                    help="the scene's page: it is C8's, and the colour "
                         "is declared by C8")
     p.add_argument("--browser", default="firefox-esr")
-    p.add_argument("--lavoro", default="/var/lib/rete11/c6")
+    p.add_argument("--work", default="/var/lib/rete11/c6")
 
     # ── THE WAITS.  ⛔ Each one has its own NAME and its own VALUE (`LEZIONI.md`
     #    §1.45): reusing a ceiling because «it is there and more or less works» is the
     #    exact way in which a red stops distinguishing the fault from the bench.
-    p.add_argument("--resta-nascita", type=float, default=30.0,
+    p.add_argument("--stay-birth", type=float, default=30.0,
                    help="how long the client that makes the session BE BORN stays "
                         "attached. ⚠ No frame is asked of it")
-    p.add_argument("--attesa-ammissione", type=float, default=60.0,
+    p.add_argument("--wait-admission", type=float, default=60.0,
                    help="how long to wait for the client's diary to say "
-                        "AMMESSO. ⭐ It is an EVENT, not a blind wait")
-    p.add_argument("--aggancio", type=float, default=5.0,
+                        "ADMITTED. ⭐ It is an EVENT, not a blind wait")
+    p.add_argument("--latch", type=float, default=5.0,
                    help="how long the consumer is given to hook onto the stream "
                         "AFTER the admission. `[M]` the wl_output is born 65÷93 ms "
                         "after the hooking: 5 s is very wide on purpose, and it is "
                         "the only point where this time is spent")
-    p.add_argument("--coda-scatto", type=float, default=10.0,
+    p.add_argument("--shot-tail", type=float, default=10.0,
                    help="how long the client stays attached AFTER the scene has "
                         "settled. ⛔ It is needed because the photo is the LAST frame: "
                         "without a tail the last would be the one from half a second "
                         "before the window was in place")
-    p.add_argument("--attesa-compositore", type=float, default=240.0,
+    p.add_argument("--wait-compositor", type=float, default=240.0,
                    help="how long to wait for the tenant's wayland socket "
                         "to appear. ⛔ On GNOME `[M]` 101.0 s (C1, 27 Aug "
                         "2026, maximum over three sessions), and there is a defect "
                         "of the BOX (polkit, ~97 s) being cured right now: "
                         "⇒ the value is wide ON PURPOSE and must be recalibrated when the "
                         "cure is measured")
-    p.add_argument("--attesa-figlio", type=float, default=90.0,
+    p.add_argument("--wait-child", type=float, default=90.0,
                    help="how long to wait for the «%s» child to appear among the "
                         "tenant's processes. Expired: «I do not know»"
-                        % NOME_FIGLIO)
-    p.add_argument("--attesa-scena", type=float, default=180.0,
+                        % CHILD_NAME)
+    p.add_argument("--wait-scene", type=float, default=180.0,
                    help="how long the browser is given to create its profile and "
                         "draw the page OUTSIDE the session (the "
                         "warm-up). ⛔ Wide: `LEZIONI.md` §1.45, the first "
                         "start in a cold box exceeds 25 s")
-    p.add_argument("--posa-scena", type=float, default=40.0,
+    p.add_argument("--scene-settle", type=float, default=40.0,
                    help="how long the window is given to appear in the image "
                         "INSIDE the session, after the profile is already there. "
                         "`[?]` not measured: prudent value, to calibrate")
-    p.add_argument("--resta-prima", type=float, default=75.0,
+    p.add_argument("--stay-before", type=float, default=75.0,
                    help="how long the client that takes the BEFORE photo stays "
-                        "attached. ⚠ It must be longer than --posa-scena, or the "
+                        "attached. ⚠ It must be longer than --scene-settle, or the "
                         "photo arrives before the window")
-    p.add_argument("--pausa-staccato", type=float, default=PAUSA_PREDEFINITA_S,
+    p.add_argument("--detached-pause", type=float, default=DEFAULT_PAUSE_S,
                    help="⭐⭐ how long we stay DETACHED. The default is "
                         "TWICE the measured survival of the monitor "
                         "(`[M]` 15 s): below that threshold one would re-attach "
                         "before the stage has a chance to die, ⛔ and the "
                         "mesh would say green without having proved anything")
-    p.add_argument("--resta-dopo", type=float, default=60.0,
+    p.add_argument("--stay-after", type=float, default=60.0,
                    help="how long the client of the RE-ATTACH stays attached. ⚠ Longer "
                         "than the first on purpose: at the re-attach the stage may "
                         "have to be remounted, and a photo taken too early "
                         "would say «black» on a desktop that is coming back")
 
-    p.add_argument("--scarto-massimo", type=float, default=SCARTO_MASSIMO,
+    p.add_argument("--maximum-gap", type=float, default=MAXIMUM_GAP,
                    help="by how much the scene's fraction can change between "
                         "before and after and stay «the same»")
-    p.add_argument("--uccidi-la-sessione", action="store_true",
+    p.add_argument("--kill-the-session", action="store_true",
                    help="⛔ THE GRAFTED FAULT: between the detach and the re-attach "
                         "the tenant's session is closed. It must give RED, "
                         "⭐ and the bite is read on the child's PID")
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica(scarto=a.scarto_massimo))
+    if a.certify:
+        sys.exit(certify(gap=a.maximum_gap))
 
     if os.geteuid() != 0:
         print("⛔ it must be run as administrator: it creates and deletes a tenant")
@@ -1284,113 +1284,113 @@ def main():
     #   BEFORE» and whoever reads blames the product.
     # ⭐ It is §1.45 applied to the sum instead of the single ceiling: a right
     #   ceiling and a wrong sum give the same false red.
-    minimo = a.aggancio + a.posa_scena + a.coda_scatto
-    if a.resta_prima < minimo:
-        print("⛔ --resta-prima is %.0f s and at least %.0f are needed:"
-              % (a.resta_prima, minimo))
+    minimum = a.latch + a.scene_settle + a.shot_tail
+    if a.stay_before < minimum:
+        print("⛔ --stay-before is %.0f s and at least %.0f are needed:"
+              % (a.stay_before, minimum))
         print("   hooking %.0f + settling of the scene %.0f + tail %.0f"
-              % (a.aggancio, a.posa_scena, a.coda_scatto))
+              % (a.latch, a.scene_settle, a.shot_tail))
         print("   ⇒ this way the photo would arrive before the window, and the red")
         print("     would be the BENCH's, not the product's")
         sys.exit(2)
 
     # ── the things without which we do not judge ──────────────────────────
-    c8 = lettore_del_colore()
+    c8 = color_reader()
     if c8 is None:
         print("⛔ I cannot find C8 next to me: the colour reader is ITS and I do not")
         print("   rewrite it here.  ⇒ I could not look")
         sys.exit(3)
-    giudice = giudice_immagini()
-    if giudice is None:
+    assessor = image_judge()
+    if assessor is None:
         print("⛔ I cannot find the image judge (10-f1-testimone.py)")
         print("   ⇒ I could not look")
         sys.exit(3)
-    for che, dove in (("the test client", a.cliente),
-                      ("the scene's page", a.pagina)):
+    for desc, dove in (("the test client", a.client),
+                      ("the scene's page", a.page_v)):
         if not os.path.exists(dove):
-            print("⛔ I cannot find %s: %s" % (che, dove))
+            print("⛔ I cannot find %s: %s" % (desc, dove))
             print("   ⇒ I could not look")
             sys.exit(3)
-    for attrezzo, perche in ((a.browser, "I cannot open any window"),
+    for tool, reason_text in ((a.browser, "I cannot open any window"),
                              ("ffmpeg", "the frames do not become an image")):
-        if sh("command -v %s" % attrezzo).returncode != 0:
-            print("⛔ the box does not have %s: %s" % (attrezzo, perche))
+        if sh("command -v %s" % tool).returncode != 0:
+            print("⛔ the box does not have %s: %s" % (tool, reason_text))
             print("   ⇒ I could not look")
             sys.exit(3)
 
-    fm = c8.FRAZIONE_MINIMA
-    os.makedirs(a.lavoro, exist_ok=True)
-    chi = a.utente
+    fm = c8.MINIMUM_FRACTION
+    os.makedirs(a.work, exist_ok=True)
+    chi = a.username
 
     print("== C6 — it detaches and finds itself again ==")
     print("   tenant «%s» · port %d · scene %s"
-          % (chi, a.porta, os.path.basename(a.pagina)))
+          % (chi, a.port, os.path.basename(a.page_v)))
     print("   yardstick: colour %s ±%d per channel (C8's) · at least %.0f%% of the"
-          % (c8.COLORE, c8.TOLLERANZA, fm * 100))
-    print("          screen · maximum deviation before/after %.3f" % a.scarto_massimo)
+          % (c8.COLOR, c8.TOLERANCE, fm * 100))
+    print("          screen · maximum deviation before/after %.3f" % a.maximum_gap)
     print("   detached pause: %.0f s  (⭐ = 2 × the %.0f s of measured survival "
-          "of the monitor)" % (a.pausa_staccato, SOPRAVVIVENZA_MISURATA_S))
+          "of the monitor)" % (a.detached_pause, MEASURED_SURVIVAL_S))
     print("   mode: %s" % (
         "⛔ GRAFTED FAULT — between the detach and the re-attach the "
         "session is KILLED: it must give RED, and the bite is the child's PID changing"
-        if a.uccidi_la_sessione else
+        if a.kill_the_session else
         "normal round: it opens, the scene is seen, it detaches, it comes back"))
     print()
 
     # ⛔ IT IS DELETED BEFORE CREATING IT: «from zero» also includes «from zero
     #    with respect to myself of yesterday» (`LEZIONI.md` §1.39).
-    sgombera(chi)
-    fatto, perche = crea(chi, a.parola)
-    if not fatto:
-        print("⛔ I could not create «%s»: %s" % (chi, perche))
+    clear_out(chi)
+    finished, reason_text = create(chi, a.password)
+    if not finished:
+        print("⛔ I could not create «%s»: %s" % (chi, reason_text))
         print("   ⇒ I could not look")
         sys.exit(3)
-    togli_di_mezzo_il_difetto_di_c8(chi, c8)
+    remove_c8_defect(chi, c8)
     uid = uid_di(chi)
 
-    esito = 3
-    prima = osservazione()
-    dopo = osservazione()
+    outcome = 3
+    before = observation()
+    after = observation()
     try:
         # ═══════════════════════════════════════════════════════════════════
         # 1 · THE SESSION BECOMES ALIVE — ⭐ C6 starts from here, by mandate
         # ═══════════════════════════════════════════════════════════════════
         print("  1 · I make the session be born (client attached %.0f s)…"
-              % a.resta_nascita)
-        dn = os.path.join(a.lavoro, "nascita.log")
-        pn, sn = attacca(chi, a, a.resta_nascita, dn)
-        amm_n, _f, coda_n = raccogli_il_cliente(
-            pn, sn, dn, max(120.0, a.resta_nascita * 4))
-        if amm_n is None:
+              % a.stay_birth)
+        dn = os.path.join(a.work, "nascita.log")
+        pn, sn = attach(chi, a, a.stay_birth, dn)
+        admitted_n, _f, tail_n = collect_client(
+            pn, sn, dn, max(120.0, a.stay_birth * 4))
+        if admitted_n is None:
             print("      ⛔ the test client did not come back: it is a fault of the "
                   "BENCH (§1.51)")
             print("   ⇒ I could not look")
             sys.exit(3)
-        if not amm_n:
+        if not admitted_n:
             # ⛔ «Not admitted» on its own is a silence: the REASON is carried
             #    next to the symptom (C1's lesson, 26 Aug 2026).
             motivo = "?"
-            for riga in reversed((coda_n or "").strip().splitlines()):
-                riga = riga.strip()
-                if riga and not riga.startswith("=="):
-                    motivo = riga[:100]
+            for row in reversed((tail_n or "").strip().splitlines()):
+                row = row.strip()
+                if row and not row.startswith("=="):
+                    motivo = row[:100]
                     break
             print("      ⛔ NOT admitted: %s" % motivo)
             print("   ⇒ I could not look")
             sys.exit(3)
 
-        figlio, quanto = aspetta(lambda: (lambda v: v if v != VUOTO else None)(
-            figlio_di(uid)), a.attesa_figlio)
+        child, how_much = wait_for(lambda: (lambda v: v if v != EMPTY else None)(
+            child_of(uid)), a.wait_child)
         print("      the «%s» child: %s"
-              % (NOME_FIGLIO,
-                 ("⭐ pid %s, after %.1f s" % (figlio, quanto)) if figlio
-                 else "⛔ never appeared in %.0f s" % a.attesa_figlio))
-        display, quanto = aspetta(lambda: socket_wayland(uid),
-                                  a.attesa_compositore)
+              % (CHILD_NAME,
+                 ("⭐ pid %s, after %.1f s" % (child, how_much)) if child
+                 else "⛔ never appeared in %.0f s" % a.wait_child))
+        display, how_much = wait_for(lambda: socket_wayland(uid),
+                                  a.wait_compositor)
         print("      the compositor: %s"
-              % (("⭐ %s, after %.1f s" % (display, quanto)) if display
+              % (("⭐ %s, after %.1f s" % (display, how_much)) if display
                  else "⛔ no wayland socket in %.0f s"
-                      % a.attesa_compositore))
+                      % a.wait_compositor))
         if not display:
             print()
             print("⚠ NOT JUDGING (outcome 3) — without a compositor I cannot open")
@@ -1403,15 +1403,15 @@ def main():
         # 2 · THE SCENE — ⭐ first it is warmed up OUTSIDE, then opened INSIDE
         # ═══════════════════════════════════════════════════════════════════
         print("  2 · I warm up the browser outside the session (ceiling %.0f s)…"
-              % a.attesa_scena)
-        png_s, detto = scalda_il_browser(chi, a, os.path.join(a.lavoro, "scaldata.png"))
-        fr_s = c8.frazione_del_colore(png_s) if png_s else None
+              % a.wait_scene)
+        png_s, said = warm_up_browser(chi, a, os.path.join(a.work, "scaldata.png"))
+        fr_s = c8.color_fraction(png_s) if png_s else None
         if fr_s is None or fr_s < fm:
             print("      ⛔ the browser does not draw the page even on its own "
                   "(fraction: %s)" % ("unknown" if fr_s is None
                                       else "%.3f" % fr_s))
-            if detto:
-                print("      ⛔ it says: %s" % detto.replace("\n", " ")[:150])
+            if said:
+                print("      ⛔ it says: %s" % said.replace("\n", " ")[:150])
             print()
             print("⚠ NOT JUDGING (outcome 3) — in this box there is no")
             print("  scene to put in the session.  ⛔ It is not a red of the")
@@ -1422,10 +1422,10 @@ def main():
               "(profile warmed up)" % (fr_s * 100))
 
         print("  3 · «BEFORE» attach (%.0fs) and I open the scene INSIDE the session…"
-              % a.resta_prima)
-        flusso1 = os.path.join(a.lavoro, "prima.264")
-        dp = os.path.join(a.lavoro, "prima.log")
-        pp, sp = attacca(chi, a, a.resta_prima, dp, video=flusso1)
+              % a.stay_before)
+        stream1 = os.path.join(a.work, "prima.264")
+        dp = os.path.join(a.work, "prima.log")
+        pp, sp = attach(chi, a, a.stay_before, dp, video=stream1)
         # ⭐ WE WAIT FOR THE EVENT, NOT FOR THE CLOCK (§1.49): the client's diary
         #    says when it was ADMITTED.  ⛔ Opening the window before
         #    that instant would mean opening it on a desktop that, `[M]`, does not
@@ -1434,58 +1434,58 @@ def main():
         # ⛔ And we wait for the LINE, not the word: with the old predicate this
         #    loop exited **at once and happy** on a TURNED AWAY client, and the
         #    scene opened on a session that did not exist.
-        visto, quanto = aspetta(lambda: e_stato_ammesso(leggi(dp)) is True,
-                                a.attesa_ammissione, passo=0.5)
+        seen_v, how_much = wait_for(lambda: was_admitted(read_it(dp)) is True,
+                                a.wait_admission, step=0.5)
         print("      the «before» client was admitted: %s"
-              % (("⭐ after %.1f s" % quanto) if visto
-                 else "⛔ it did not say so in %.0f s" % a.attesa_ammissione))
+              % (("⭐ after %.1f s" % how_much) if seen_v
+                 else "⛔ it did not say so in %.0f s" % a.wait_admission))
         # ⚠ And then the consumer's hooking, which `[M]` costs 65÷93 ms: the
         #   default value is very wide, and it is the only blind time
         #   this mesh spends.
-        time.sleep(a.aggancio)
-        partita = time.time()
-        display, err = apri_la_scena(chi, a)
+        time.sleep(a.latch)
+        started = time.time()
+        display, err = open_scene(chi, a)
         if display is None:
             print("      ⛔ I could not switch on the scene: %s" % err)
         else:
             # ⛔⛔ THE WAIT FOR THE PROFILE SITS INSIDE THE SETTLING, not on top.
-            #     ⚠ Adding them would break through `--resta-prima` and the photo would arrive
+            #     ⚠ Adding them would break through `--stay-before` and the photo would arrive
             #       AFTER the client had already gone away — i.e. the defect
             #       that the budget check, above, exists to
             #       prevent.
-            prof, q2 = aspetta(lambda: profilo_del_browser(chi),
-                               max(1.0, a.posa_scena / 2.0))
+            prof, q2 = wait_for(lambda: browser_profile(chi),
+                               max(1.0, a.scene_settle / 2.0))
             print("      the browser started: %s"
                   % (("⭐ its own profile after %.1f s" % q2) if prof
                      else "⚠ no profile of its own (it was already warmed up)"))
-            resto = a.posa_scena - (time.time() - partita)
+            rest = a.scene_settle - (time.time() - started)
             print("      the settling of the scene: %.0f s in all (%.0f remain)"
-                  % (a.posa_scena, max(0.0, resto)))
-            if resto > 0:
-                time.sleep(resto)
+                  % (a.scene_settle, max(0.0, rest)))
+            if rest > 0:
+                time.sleep(rest)
 
-        amm_p, fot_p, coda_p = raccogli_il_cliente(
-            pp, sp, dp, max(180.0, a.resta_prima * 3))
-        if amm_p is False:
+        admitted_p, frame_p, tail_p = collect_client(
+            pp, sp, dp, max(180.0, a.stay_before * 3))
+        if admitted_p is False:
             # ⛔ «Not admitted» on its own is a silence: the reason is carried
             #    next to the symptom, as C1 has done since 26 Aug 2026.
             motivo = "?"
-            for riga in reversed((coda_p or "").strip().splitlines()):
-                riga = riga.strip()
-                if riga and not riga.startswith("=="):
-                    motivo = riga[:100]
+            for row in reversed((tail_p or "").strip().splitlines()):
+                row = row.strip()
+                if row and not row.startswith("=="):
+                    motivo = row[:100]
                     break
             print("      ⛔ the «before» client was NOT admitted: %s" % motivo)
-        figlio_p = figlio_di(uid)
-        png1 = immagine_dal_flusso(flusso1, os.path.join(a.lavoro, "prima.png"))
-        fr_p = c8.frazione_del_colore(png1) if png1 else None
-        g1 = giudice.giudica(png1) if png1 else None
-        prima = osservazione(ammesso=amm_p, figlio=figlio_p, frazione=fr_p,
-                             verdetto=(g1 or {}).get("verdetto"),
-                             fotogrammi=fot_p)
+        child_p = child_of(uid)
+        png1 = image_from_stream(stream1, os.path.join(a.work, "prima.png"))
+        fr_p = c8.color_fraction(png1) if png1 else None
+        g1 = assessor.judge(png1) if png1 else None
+        before = observation(admitted=admitted_p, child=child_p, fraction=fr_p,
+                             verdict=(g1 or {}).get("verdict"),
+                             frames=frame_p)
         print("      BEFORE: admitted=%s · child=%s · frames=%s · "
               "image=«%s» · scene=%s"
-              % (amm_p, figlio_p, fot_p, (g1 or {}).get("verdetto", "?"),
+              % (admitted_p, child_p, frame_p, (g1 or {}).get("verdict", "?"),
                  "unknown" if fr_p is None else "%.1f%%" % (fr_p * 100)))
 
         # ═══════════════════════════════════════════════════════════════════
@@ -1494,94 +1494,94 @@ def main():
         #       question of C7, and for it it must be GREEN (I4).
         # ═══════════════════════════════════════════════════════════════════
         print("  4 · the client went away.  ⛔ The session does NOT close: "
-              "I stay detached %.0f s" % a.pausa_staccato)
-        if a.uccidi_la_sessione:
+              "I stay detached %.0f s" % a.detached_pause)
+        if a.kill_the_session:
             # ⛔ THE GRAFTED FAULT, and it is the real gesture: what happens
             #    when the tenant LEAVES (the same line C7 calls
             #    «closing the session»).  ⚠ The product does not have a command
             #    «close the session»: the end of a session, today, is the
             #    end of the `logind` session.
             print("      ⛔ GRAFTED FAULT: I kill the session of «%s»" % chi)
-            corri(["loginctl", "terminate-user", chi], tempo=60)
+            run_loop(["loginctl", "terminate-user", chi], time_limit=60)
             time.sleep(1.0)
-            corri(["pkill", "-KILL", "-u", chi], tempo=60)
-        time.sleep(a.pausa_staccato)
+            run_loop(["pkill", "-KILL", "-u", chi], time_limit=60)
+        time.sleep(a.detached_pause)
 
         # ═══════════════════════════════════════════════════════════════════
         # 5 · THE RE-ATTACH — ⭐ and here we look
         # ═══════════════════════════════════════════════════════════════════
-        print("  5 · re-attach (%.0f s)…" % a.resta_dopo)
-        flusso2 = os.path.join(a.lavoro, "dopo.264")
-        dd = os.path.join(a.lavoro, "dopo.log")
-        pd, sd = attacca(chi, a, a.resta_dopo, dd, video=flusso2)
-        amm_d, fot_d, coda_d = raccogli_il_cliente(
-            pd, sd, dd, max(180.0, a.resta_dopo * 3))
-        if amm_d is False:
+        print("  5 · re-attach (%.0f s)…" % a.stay_after)
+        stream2 = os.path.join(a.work, "dopo.264")
+        dd = os.path.join(a.work, "dopo.log")
+        pd, sd = attach(chi, a, a.stay_after, dd, video=stream2)
+        admitted_d, frame_d, tail_d = collect_client(
+            pd, sd, dd, max(180.0, a.stay_after * 3))
+        if admitted_d is False:
             motivo = "?"
-            for riga in reversed((coda_d or "").strip().splitlines()):
-                riga = riga.strip()
-                if riga and not riga.startswith("=="):
-                    motivo = riga[:100]
+            for row in reversed((tail_d or "").strip().splitlines()):
+                row = row.strip()
+                if row and not row.startswith("=="):
+                    motivo = row[:100]
                     break
             print("      ⛔ the re-attach was NOT admitted: %s" % motivo)
-        figlio_d = figlio_di(uid)
-        png2 = immagine_dal_flusso(flusso2, os.path.join(a.lavoro, "dopo.png"))
-        fr_d = c8.frazione_del_colore(png2) if png2 else None
-        g2 = giudice.giudica(png2) if png2 else None
-        dopo = osservazione(ammesso=amm_d, figlio=figlio_d, frazione=fr_d,
-                            verdetto=(g2 or {}).get("verdetto"),
-                            fotogrammi=fot_d)
+        child_d = child_of(uid)
+        png2 = image_from_stream(stream2, os.path.join(a.work, "dopo.png"))
+        fr_d = c8.color_fraction(png2) if png2 else None
+        g2 = assessor.judge(png2) if png2 else None
+        after = observation(admitted=admitted_d, child=child_d, fraction=fr_d,
+                            verdict=(g2 or {}).get("verdict"),
+                            frames=frame_d)
         print("      AFTER : admitted=%s · child=%s · frames=%s · "
               "image=«%s» · scene=%s"
-              % (amm_d, figlio_d, fot_d, (g2 or {}).get("verdetto", "?"),
+              % (admitted_d, child_d, frame_d, (g2 or {}).get("verdict", "?"),
                  "unknown" if fr_d is None else "%.1f%%" % (fr_d * 100)))
         print()
 
         # ═══════════════════════════════════════════════════════════════════
-        esito, specie, motivi = giudica(prima, dopo, fm, a.scarto_massimo)
-        if esito == 0:
-            print("⭐ GREEN (%s)" % specie)
-        elif esito == 1:
-            print("⛔⛔ RED — kind: %s" % specie)
-        elif esito == 2:
+        outcome, kind, reasons = judge(before, after, fm, a.maximum_gap)
+        if outcome == 0:
+            print("⭐ GREEN (%s)" % kind)
+        elif outcome == 1:
+            print("⛔⛔ RED — kind: %s" % kind)
+        elif outcome == 2:
             print("⛔ BAD TERRAIN (outcome 2)")
         else:
-            print("⚠ NOT JUDGING (outcome 3) — kind: %s" % specie)
-        for riga in motivi:
-            print("   %s" % riga)
-        if esito == 3:
+            print("⚠ NOT JUDGING (outcome 3) — kind: %s" % kind)
+        for row in reasons:
+            print("   %s" % row)
+        if outcome == 3:
             print("   ⛔ And this is not a green: it is an outcome of its own (§4.5).")
 
         # ═══════════════════════════════════════════════════════════════════
         # ⛔⛔ WITH THE GRAFTED FAULT THE OUTCOME IS READ BACKWARDS — it is the
-        #     hook's convention (`11-gancio.sh`, `esegui_maglia`): a
+        #     hook's convention (`11-gancio.sh`, `run_mesh`): a
         #     mesh with the grafted fault exits 0 when the fault WAS
         #     SEEN.  ⇒ From there the hook derives `ha_visto_il_guasto`, and it is
         #     that key that keeps C13 alive.
         # ⛔ And ONLY 0 and 1 are inverted: 2 and 3 are not judgements, and an «I did
         #    not look» turned upside down would become an invented green.
         # ═══════════════════════════════════════════════════════════════════
-        if a.uccidi_la_sessione and esito in (0, 1):
+        if a.kill_the_session and outcome in (0, 1):
             print()
-            morso = guasto_morso(prima, dopo)
-            if esito == 1 and morso:
+            bitten = fault_bitten(before, after)
+            if outcome == 1 and bitten:
                 print("⭐ THE GRAFTED FAULT WAS SEEN ⇒ this mesh CAN "
                       "say red")
                 print("   ⭐ and the bite is measurable: the child went from "
-                      "%s to %s" % (prima["figlio"], dopo["figlio"]))
+                      "%s to %s" % (before["child"], after["child"]))
                 print("   ⚠ and that is why it exits **0**: with the grafted fault the outcome "
                       "is read backwards")
-                esito = 0
-            elif esito == 1:
+                outcome = 0
+            elif outcome == 1:
                 print("⛔⛔ RED, but NOT because of the fault: the child "
-                      "stayed THE SAME (%s)." % prima["figlio"])
+                      "stayed THE SAME (%s)." % before["child"])
                 print("    ⇒ It is the defect of the STAGE, the one C6 exists to")
                 print("      find — not the injection.  ⛔ Certifying the net")
                 print("      on a defect of the product is `LEZIONI.md` §1.52.")
                 print("    ⚠ The red stays true and stays important: ⛔ but it does not")
                 print("      prove that this mesh can say red, and the")
                 print("      two facts must not be confused.")
-                esito = 1
+                outcome = 1
             else:
                 print("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: the session was "
                       "killed and the mesh says GREEN.")
@@ -1589,17 +1589,17 @@ def main():
                 print("      noticing, or this mesh does not look in the right")
                 print("      place — ⛔ and in both cases it cannot")
                 print("      be trusted (`LEZIONI.md` §1.44).")
-                esito = 1
+                outcome = 1
     finally:
         # ⛔ Whoever opens, closes (`LEZIONI.md` §9-ter): even with the grafted fault,
         #    and even if the judgement went badly.
         for f in ("prima.264", "dopo.264"):
             try:
-                os.unlink(os.path.join(a.lavoro, f))
+                os.unlink(os.path.join(a.work, f))
             except OSError:
                 pass
-        sgombera(chi)
-    sys.exit(esito)
+        clear_out(chi)
+    sys.exit(outcome)
 
 
 if __name__ == "__main__":

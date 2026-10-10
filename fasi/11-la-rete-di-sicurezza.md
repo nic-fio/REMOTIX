@@ -242,8 +242,8 @@ on GNOME **answers nothing, and seems to answer.**
 > ### ⛔ And «VA VELOCE» was a contradiction, resolved on 27 Aug 2026
 >
 > This table declared **two** families; ⛔ **§6 declares that the net is not a performance
-> net**; and `[M]` in the hook that family **never existed**: there are `funziona`,
-> `rete`, `rete-intera`, `tutto`, `desktop-nuovo`.
+> net**; and `[M]` in the hook that family **never existed**: there are `works`,
+> `net`, `whole-network`, `overall`, `new-desktop`.
 >
 > ⇒ ⭐ **§6 is right, and the family must not be created.** The fifteen meshes are all yes/no; a
 > family of numbers would duplicate the ~40 benches of phases 9 and 10 **outside the conditions in which
@@ -322,7 +322,7 @@ and a global cleanup command that risked **killing the work of another test in p
 > ⭐⭐ **The rule: everything a measurement depends on is something to certify — and the fact that it does not
 > produce numbers does not exempt it.**
 
-⇒ The net has a `--certifica` of its own: a known fault is injected, and one verifies that the net **sees it**.
+⇒ The net has a `--certify` of its own: a known fault is injected, and one verifies that the net **sees it**.
 ⛔ **Every test of the list has, compulsorily, its injected fault** (column «how I know it can
 give red» in §4), **and that case must be run, not imagined**.
 
@@ -540,9 +540,9 @@ exceeds it **tests are cut**, the cap is not raised.
    commit are exactly the thing this section says gets a hook **switched off**. Whoever wants
    `pre-commit` asks for it by name.
 2. ⚠ *«Before closing a phase»* **is not a path**: it is a decision, and it is asked for by name
-   (`--famiglia tutto`). ⛔ Pretending that a path can guess it would mean a rule that
+   (`--family overall`). ⛔ Pretending that a path can guess it would mean a rule that
    never triggers and nobody notices it has not triggered. ⭐ The arrival of a **new
-   desktop** instead is: it shows from a `Contenitore.<nome>` that appears.
+   desktop** instead is: it shows from a `Contenitore.<label_name>` that appears.
 
 ## 5.2 ⭐⭐ The red policy — *Qwen's finding §3.7, accepted in full*
 
@@ -579,7 +579,7 @@ first important red will generate a discussion, ⇒ **and the discussion costs m
 | **desktop updates** | ⚠ **covered only halfway**: C11 sees that the recipe changed, ⛔ not that the new desktop behaves worse |
 | **thermal degradation** | off target |
 | ⛔⛔ **PERFORMANCE regressions** | ⭐ declared on 27 Aug 2026: **no bench compares yesterday with today**. A frame that becomes slower without anything stopping working **passes**. ⇒ §3.4 |
-| ⛔⛔ **the product on the other three desktops** | `[M]` 27 Aug: the product **can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ on KDE, XFCE and LXQt the net tests **the environment, the sound, the leftovers, the log and the alignment**, ⛔ **not the product**. It is matter for phase 12 |
+| ⛔⛔ **the product on the other three desktops** | `[M]` 27 Aug: the product **can start only GNOME** (`src/sessione.c` · `write_dropin()`) ⇒ on KDE, XFCE and LXQt the net tests **the environment, the sound, the leftovers, the log and the alignment**, ⛔ **not the product**. It is matter for phase 12 |
 | ⛔ **the choices never made** | nothing **broke**: that stuff is in `MASTERPLAN.md` (D6), and the net will never catch it — **and that is right** |
 
 > ### ⛔⛔⛔ AND TODAY THERE IS ONE MORE THING THE NET DOES NOT CATCH, and not by choice — *26 Aug 2026*
@@ -901,7 +901,7 @@ above ran inside the **PLASMA** box.
 | ⛔ **the file that is not there and the empty file ⇒ «I don't know», not zero** | *«I did not look»* and *«I looked and it was not there»* are two different things |
 
 ⚠ **And the certification is declared for what it covers**: the **pixel reader**. ⛔ It does not cover that the
-browser really started — that is said by `--senza-cura` on the real thing, and it is the acceptance test above.
+browser really started — that is said by `--no-fix` on the real thing, and it is the acceptance test above.
 
 ## 7-bis.11 ⛔⛔⛔ **FOUR TIMES THE DEFECT WAS IN THE BENCH** — *and the four lessons*
 
@@ -921,7 +921,7 @@ phase exists not to repeat, and all four ended up in `LEZIONI.md`.
 > The first three gave **red**, and they belonged **to the bench**. ⛔ In a phase that builds a safety
 > net this is danger number one of §1.3: *«a net that gives red for nothing gets switched off by
 > whoever is working»*. ⇒ ⭐ **The injected fault caught all three**, and in ten minutes: without
-> `--senza-cura` they would have passed for «the defect is there, look at that red».
+> `--no-fix` they would have passed for «the defect is there, look at that red».
 >
 > ⛔⛔ **The fourth did not**, and that is why it stands apart: a **green** is caught by no injected fault,
 > because the injected fault serves to check that one can give red. ⇒ ⭐ Against that one needs
@@ -1064,7 +1064,7 @@ together). ⭐ If even this did not hold, the real contention would not need tes
 **only one** box had managed to answer. ⛔ Wrong — *a box that runs and cannot manage to
 report is still occupying the machine*, so the load is there and the judgement of the others counts.
 
-⭐ **And the proof that it can give red on real data, not only on the fake cases**: `--smentisci` runs the
+⭐ **And the proof that it can give red on real data, not only on the fake cases**: `--refute` runs the
 parallel asking on purpose for the **other** mode of C8, so the fingerprints *must* be different ⇒
 **4 boxes out of 4 red.**
 
@@ -1109,8 +1109,8 @@ default is `pre-push`; whoever wants `pre-commit` asks for it by name.
 
 ⚠ And something the path **cannot say**, declared instead of hidden: *«before
 closing a phase»* is not a file that changes, it is a **decision** ⇒ it is asked for by name
-(`--famiglia tutto`). ⭐ The arrival of a new desktop instead **can**: it shows from a
-`Contenitore.<nome>` that appears.
+(`--family overall`). ⭐ The arrival of a new desktop instead **can**: it shows from a
+`Contenitore.<label_name>` that appears.
 
 ### ⛔⛔ THE FIRST REAL ROUND — and it found three things no dry test had caught
 
@@ -1125,7 +1125,7 @@ did not have it, and declared so). ⇒ At the first real round:
 
 ### ⭐⭐⭐ AND THE COMPLETE ROUND WAS DONE — *`[M]` 26 Aug 2026, 28 minutes*
 
-The `tutto` family on GNOME, the one done **before closing a phase**, run by the hook from
+The `overall` family on GNOME, the one done **before closing a phase**, run by the hook from
 beginning to end:
 
 | mesh | outcome | time |
@@ -1167,21 +1167,21 @@ beginning to end:
 | `banchi/11-scatole/Contenitore.gnome` | ⭐ the box's **recipe**: system, desktop, card, tools, the tenant, and the unit that aligns the card's group |
 | `banchi/11-scatole/11-accendi.sh` | build · switch on · product · server · **c1** · **c5** · **c7** · **c8** · **c9** · **c10** · step0 · fingerprint · switch off — ⭐ **with every permission justified by what breaks without it** |
 | `banchi/11-scatole/11-passo0.sh` | ⭐ the **eight checks** of the environment, with the three distinct outcomes |
-| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **the first mesh of the net**, and acceptance test A. With `--certifica`: **5 cases out of 5**, including the one in which *«blind»* must win over *«monitor 1/1»* |
+| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **the first mesh of the net**, and acceptance test A. With `--certify`: **5 cases out of 5**, including the one in which *«blind»* must win over *«monitor 1/1»* |
 | `banchi/11-scatole/Contenitore.kde` | ⭐ the **second box**, with KWin — the proof that the net is not tailor-made for GNOME |
 | `banchi/11-scatole/Contenitore.xfce` · `Contenitore.lxqt` | ⭐ the **third and the fourth**, with `labwc` — ⚠ four boxes, **three** compositors (§7-bis.9) |
 | `banchi/11-scatole/adattatore.{gnome,kde,xfce,lxqt}.sh` | ⭐⭐ **the «how» of every desktop**, at the same path inside every box: the list of tests stays **one** |
-| `banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py` | ⭐⭐⭐ **the most important mesh**, and acceptance test B. With `--certifica`: **8 cases out of 8**; with `--senza-cura`: the injected fault |
+| `banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py` | ⭐⭐⭐ **the most important mesh**, and acceptance test B. With `--certify`: **8 cases out of 8**; with `--no-fix`: the injected fault |
 | `banchi/11-scatole/11-c8-pagina.html` | the **target in the pixels**: `#FF00FF` full screen, with the writing there on purpose so as not to be «solid colour» |
-| `banchi/11-scatole/11-c11-allineamento.py` | ⭐⭐ **the mesh that looks at THE NET**: the four boxes agreeing on thirteen entries, and the product's md5 among them. With `--certifica`: **6 cases out of 6** |
-| `banchi/11-scatole/11-c14-non-si-disturbano.py` | ⭐⭐ **the four boxes do not disturb each other**, measured: same outcome alone and together. With `--certifica`: **15 cases out of 15**; with `--smentisci`: it gives red on real data |
+| `banchi/11-scatole/11-c11-allineamento.py` | ⭐⭐ **the mesh that looks at THE NET**: the four boxes agreeing on thirteen entries, and the product's md5 among them. With `--certify`: **6 cases out of 6** |
+| `banchi/11-scatole/11-c14-non-si-disturbano.py` | ⭐⭐ **the four boxes do not disturb each other**, measured: same outcome alone and together. With `--certify`: **15 cases out of 15**; with `--refute`: it gives red on real data |
 | `banchi/11-scatole/11-gancio.sh` | ⭐⭐⭐ **when the net starts, and what starts** — decided **by path**, with the 3-minute cap and the cut tests declared |
 | `banchi/11-scatole/11-gancio-registro.jsonl` | the **trace** of every round: what started, what outcome, how long it lasted, whether a fault was injected. ⛔ It is what keeps C12 and C13 alive |
-| `banchi/11-scatole/11-c12-il-gancio-e-vivo.py` · `11-c13-la-certificazione-e-recente.py` | ⭐ the two meshes that look at **the hook**. `--certifica`: **11 cases out of 11** each |
-| `banchi/11-scatole/11-c5-il-suono-non-e-silenzio.py` | ⭐⭐ **the sound**: the **RMS** of the samples arriving at the client is measured, declared threshold **328/32767** (−40 dBFS). ⭐ It judges **bytes**, not pixels ⇒ it is the only mesh that today crosses the product from top to bottom. `--certifica`: **12 cases out of 12** |
-| `banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py` | ⭐⭐ **the leftovers**: fingerprint before, session, close, fingerprint after. ⚠ And the case that must **not** give red: «it only detaches» (I4). `--certifica`: **13 cases out of 13** |
-| `banchi/11-scatole/11-c9-il-registro-dice-di-chi.py` | ⭐⭐ **the log**: two tenants alive **together**, and every compulsory line must say which. `--certifica`: **16 cases out of 16** |
-| `banchi/11-scatole/11-c10-le-copie-gemelle.py` | ⭐ **the twin copies**, and ⛔ it **reads** the list **from `src/Makefile`** instead of copying it. `--certifica`: **15 cases out of 15**. ⭐ It runs **everywhere**, in 0.04 s, and switches nothing on |
+| `banchi/11-scatole/11-c12-il-gancio-e-vivo.py` · `11-c13-la-certificazione-e-recente.py` | ⭐ the two meshes that look at **the hook**. `--certify`: **11 cases out of 11** each |
+| `banchi/11-scatole/11-c5-il-suono-non-e-silenzio.py` | ⭐⭐ **the sound**: the **RMS** of the samples arriving at the client is measured, declared threshold **328/32767** (−40 dBFS). ⭐ It judges **bytes**, not pixels ⇒ it is the only mesh that today crosses the product from top to bottom. `--certify`: **12 cases out of 12** |
+| `banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py` | ⭐⭐ **the leftovers**: fingerprint before, session, close, fingerprint after. ⚠ And the case that must **not** give red: «it only detaches» (I4). `--certify`: **13 cases out of 13** |
+| `banchi/11-scatole/11-c9-il-registro-dice-di-chi.py` | ⭐⭐ **the log**: two tenants alive **together**, and every compulsory line must say which. `--certify`: **16 cases out of 16** |
+| `banchi/11-scatole/11-c10-le-copie-gemelle.py` | ⭐ **the twin copies**, and ⛔ it **reads** the list **from `src/Makefile`** instead of copying it. `--certify`: **15 cases out of 15**. ⭐ It runs **everywhere**, in 0.04 s, and switches nothing on |
 | `banchi/10-f1-testimone.py` | ⛔ **it does not belong to this phase and is not touched**: it is the judge of the images, already calibrated on the real thing. C8 **imports** it — two judges that can diverge silently are worse than one |
 
 ## 7-bis.18 ⭐⭐⭐⭐⭐ **FOUR MORE MESHES — and the net now also looks at what is not a pixel**
@@ -1216,7 +1216,7 @@ bottom.
 
 `[M]` C9, on **all four** boxes: 5 752 log lines, **5 490 compulsory**, and **4** that
 cannot be attributed to any tenant. They are `src/tastiera.c` and `:486`, which write in the
-**parent** without `registro_dice_di()`. ⛔ Two lines identical word for word, one per tenant:
+**parent** without `log_says_of()`. ⛔ Two lines identical word for word, one per tenant:
 **with two live sessions one cannot say which belongs to whom.**
 
 ⭐ It is not an injected fault, it is not a bench getting it wrong: **it is the product**, and nobody was
@@ -1271,7 +1271,7 @@ and server put back inside, and the red came back identical. ⛔ Three rounds ou
 
 ### ⛔⛔ AND A DEFECT IN THE WIRING, which no certification could catch
 
-`[M]` `esegui_maglia` reads an injected mesh **in reverse**: `0` means *«the fault was
+`[M]` `run_mesh` reads an injected mesh **in reverse**: `0` means *«the fault was
 seen»*, and what ends up in the log is `ha_visto_il_guasto`, which is what C13 reads. ⛔ **C9 exited with the
 raw verdict** ⇒ in the round with the fault it would have written `false` **precisely when the fault had been
 seen perfectly well**, and C13 would have started lying.
@@ -1282,7 +1282,7 @@ not bitten — a predicate that cannot fail, §1.44 again, and this time holding
 certification of the whole net. ⇒ **Two** things are demanded: red verdict **and** more lines without a
 name than before. `[M]` 4 without the fault ⇒ 5 490 with the fault. ⇒ `LEZIONI.md` §1.52.
 
-⚠ And a second defect of the same kind, `LEZIONI.md` §1.51: `11-accendi.sh prodotto` failed on
+⚠ And a second defect of the same kind, `LEZIONI.md` §1.51: `11-accendi.sh product` failed on
 all four boxes with *«Text file busy»* — ⛔ a red that came from the **order of the
 commands**, not from the product.
 
@@ -1290,10 +1290,10 @@ commands**, not from the product.
 
 §4.6-novemdecies had discovered that the hook has two halves on two machines. ⛔ The one on the laptop
 injected **no** fault ⇒ C13 there could **never** have turned green. ⇒ C10 now has
-a `--guasto-innestato` that copies the **real** files into a temporary folder, changes **one byte** of them and
+a `--grafted-fault` that copies the **real** files into a temporary folder, changes **one byte** of them and
 demands the red.
 
-`[M]` On the laptop, family `rete`: **C10 green · C12 green · C13 green**, ⭐ in **1 second**,
+`[M]` On the laptop, family `net`: **C10 green · C12 green · C13 green**, ⭐ in **1 second**,
 without switching anything on. (C11 and C14 say *«I could not look»*, and that is right: the boxes are not
 there.) The hook was **installed** as `pre-push`.
 
@@ -1302,10 +1302,10 @@ there.) The hook was **installed** as `pre-push`.
 `[M]` The fast family's cap is at **173 s out of 180** — ⚠ measured again on 26 Aug with
 C10 inside and with the new entry of C11: **twenty seconds more than was believed**, and it stays full.
 §5.1 says an extra mesh is
-**swapped**, not added. ⇒ C5 (38 s), C7 (26 s) and C9 (50 s) sit in `tutto` and in `desktop-nuovo`,
+**swapped**, not added. ⇒ C5 (38 s), C7 (26 s) and C9 (50 s) sit in `overall` and in `new-desktop`,
 with their injected fault next to them. ⛔ **The only one that enters the fast family is C10**, which costs less than the
-stopwatch's resolution. ⭐ And it enters **twice**: also in the `rete` family, because the
-twin lives half in `src/` and half in `banchi/rcp/`, and a change **there** triggers `rete` — that is
+stopwatch's resolution. ⭐ And it enters **twice**: also in the `net` family, because the
+twin lives half in `src/` and half in `banchi/rcp/`, and a change **there** triggers `net` — that is
 exactly the change that breaks the twin.
 
 ## 7-bis.19 ⭐⭐⭐⭐⭐ **27 AUGUST — the net is complete, and the plug was not there**
@@ -1379,7 +1379,7 @@ C15 RED** on the same file.
 
 ### ⭐⭐⭐ THE WHOLE ROUND, and the numbers
 
-`[M]` 27 Aug 2026, `--famiglia tutto` on the four boxes, binary `aa950804fed7`:
+`[M]` 27 Aug 2026, `--family overall` on the four boxes, binary `aa950804fed7`:
 
 | | |
 |---|---|
@@ -1392,7 +1392,7 @@ C15 RED** on the same file.
 | **C11** alignment | ⭐ green, 14 entries, same binary in all four |
 | **C14** do not disturb each other | ⭐ green, **801 s**, identical fingerprint alone and in parallel |
 
-⛔ **And the three reds are the product, and it is phase 12**: `[R]` `src/sessione.c` · `scrivi_dropin()` — the product can
+⛔ **And the three reds are the product, and it is phase 12**: `[R]` `src/sessione.c` · `write_dropin()` — the product can
 start **only GNOME**. ⇒ On KDE, XFCE and LXQt the net tests the environment, the sound, the leftovers, the
 log and the alignment; ⛔ **not the product**, because there the product does not run.
 
@@ -1466,7 +1466,7 @@ taken as closed.
 | ~~`[?]`~~ ⭐ **`[M]`** | ~~whether the four boxes really do not disturb each other~~ ⇒ **measured**: same outcome alone and in parallel, four out of four (§7-bis.15). ⚠ **Left out** is the real contention on the graphics card, which needs live sessions |
 | `[?]` | whether a different cut between container and product exists (§8.1) |
 | ~~❓ the user decides~~ ✅ **decided** | the **hook's log** goes into git — decided by the user on 27 Aug 2026. ⭐ With `merge=union` in `.gitattributes`: the notebook is made of lines that are **added**, and two machines writing on different days are not a conflict to resolve by hand. ⚠ The price, declared: the file shows as modified at every round |
-| ⛔ **OPEN, and it is phase 12** | ⭐ `[M]` **the product can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ C1 gives red on kde/xfce/lxqt, and it is **the only red** the whole round produces. ⚠ And something phase 12 will find: ⛔ **KWin cannot be born blind** — with `--output-count 0` it makes an output all the same, so the «zero own monitors» design **does not carry over the same** |
+| ⛔ **OPEN, and it is phase 12** | ⭐ `[M]` **the product can start only GNOME** (`src/sessione.c` · `write_dropin()`) ⇒ C1 gives red on kde/xfce/lxqt, and it is **the only red** the whole round produces. ⚠ And something phase 12 will find: ⛔ **KWin cannot be born blind** — with `--output-count 0` it makes an output all the same, so the «zero own monitors» design **does not carry over the same** |
 | ⚠ **declared debt** | the **stage dies with the child's D-Bus connection** ⇒ on paper it contradicts I4. ⭐ But `[M]` C6 measures **green**: the windows are found again. ⇒ Written, not cured — the cure is architectural (`DECISIONI.md` §4.6-teretvicies) |
 | ~~⛔ open~~ ⭐ **closed** | ~~why the box does not switch itself off~~ ⇒ **it was the SIGNAL, not a hung unit**: `[M]` SIGTERM (the default of `podman stop`) leaves the box standing **30 s out of 30** — `systemd` as the first process ignores it; `SIGRTMIN+3` switches it off in **3.1 s**. ⇒ The «four minutes» were an expired cap, not a wait. The cure (`STOPSIGNAL` in the recipes) is in force, and ⛔ the hypothesis *«a live session keeps it up»* is **refuted**: with a session inside the shutdown is the clean one (§7-bis.18) |
 | ~~⛔⛔ OPEN~~ ⭐ **closed** | ~~C5 is red on GNOME~~ ⇒ **it was the same root as the blind session**: without a stage the product did not empty the audio ring (`[M]` **96 489 ms** of overflow). Cured in `src/figlio.c`; `[M]` C5 green on all four boxes. *(old entry: `[M]` C5 red on GNOME and green on the other three*: **34–41** sound blocks arrive at the client in 25 s instead of **~4 878**, and what arrives is loud and right. ⛔ It is not the aged box (rebuilt from zero, same red) and it is not the threshold. `[?]` The cause is not measured (§7-bis.18) |
@@ -1506,7 +1506,7 @@ do we first cure the session that is born blind?»**
 | | |
 |---|---|
 | ✅ **the hook's notebook in git** | **decided on 27 Aug**: yes, with `merge=union`. ⚠ The price is a file that shows as modified at every round |
-| ⭐ **phase 12 is the next step, and it is no longer blocked** | ⛔ But what it will find is already measured: the product **can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`), and it is **the only red** the whole round produces. ⚠ And KWin **cannot be born blind**: the «zero own monitors» design does not carry over the same |
+| ⭐ **phase 12 is the next step, and it is no longer blocked** | ⛔ But what it will find is already measured: the product **can start only GNOME** (`src/sessione.c` · `write_dropin()`), and it is **the only red** the whole round produces. ⚠ And KWin **cannot be born blind**: the «zero own monitors» design does not carry over the same |
 | ⚠ **a debt, not a job** | the stage dies with the child's D-Bus connection ⇒ on paper it contradicts I4, ⭐ but C6 measures **green**: the windows are found again. Curing it is architectural, and ⇒ `DECISIONI.md` §4.6-teretvicies |
 
 ---

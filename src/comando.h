@@ -95,24 +95,24 @@
  *   and after.  ⭐ The real cure would be in `rcp.c`: `rcp_sblocca()` must be
  *   able to say whether it wrote the file.
  */
-#ifndef REMOTIX_COMANDO_H
-#define REMOTIX_COMANDO_H
+#ifndef REMOTIX_COMMAND_H
+#define REMOTIX_COMMAND_H
 
 #include <poll.h>
 #include <stddef.h>
 
-typedef struct comando comando;
+typedef struct command command;
 
 /* Opens the socket.  ⛔ Returns NULL on any fault, and WRITES it: without the
  * unblock command the protection of §4.4-bis is still there — the only way out
  * is the twelve hours — so whoever starts the server goes on, but the missing
  * half must be readable in the log. */
-comando *comando_apri(const char *percorso);
-void comando_chiudi(comando *k);
+command *command_open(const char *fpath);
+void command_close(command *k);
 
 /* Like `pagina_*`: the descriptor is put in the `poll` and whatever moved is
  * moved. */
-size_t comando_descrittori(comando *k, struct pollfd *dove, size_t cap);
-void comando_muovi(comando *k, struct pollfd *dove, size_t quanti);
+size_t command_descriptors(command *k, struct pollfd *dove, size_t cap);
+void command_move(command *k, struct pollfd *dove, size_t how_many);
 
 #endif

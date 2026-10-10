@@ -26,7 +26,7 @@ on the same network, preferably charging. The boxes running and no other round o
 - Test 8 **closes Chrome abruptly**: normal tabs come back by themselves, **incognito ones do not** —
   close them first, if you have any.
 - If you interrupt it (Ctrl-C) it puts the phone back in order by itself; if it is interrupted badly:
-  `bash banchi/19-android/19-android.sh ripristina`.
+  `bash banchi/19-android/19-android.sh restore`.
 
 **Where the results end up.** In the suite's log, on the server, in
 `/media/REMOTIX/misure/fase19-android/registro.jsonl` (browser "telefono"), with the photos of the canvas

@@ -26,20 +26,20 @@ import (
 // services born earlier, without graphics, do not have them and stay). The engine does it only if the person
 // has no other graphical session open (a local desktop in front of the monitor).
 
-// ProcessoGrafico: a desktop process in the user manager, with its unit.
-type ProcessoGrafico struct {
-	PID   int
-	Unita string
-	Nome  string
+// GraphicalProcess: a desktop process in the user manager, with its unit.
+type GraphicalProcess struct {
+	PID  int
+	Unit string
+	Name string
 }
 
-// ProcessiGrafici reads /proc: the uid's processes inside user@UID.service with WAYLAND_DISPLAY or
+// GraphicalProcesses reads /proc: the uid's processes inside user@UID.service with WAYLAND_DISPLAY or
 // DISPLAY in the environment.
-func ProcessiGrafici(a *Ambiente, uid int) []ProcessoGrafico {
-	var r []ProcessoGrafico
-	voci, _ := filepath.Glob(a.P("/proc") + "/[0-9]*")
-	cerca := fmt.Sprintf("/user@%d.service/", uid)
-	for _, v := range voci {
+func GraphicalProcesses(a *Environment, uid int) []GraphicalProcess {
+	var r []GraphicalProcess
+	entries, _ := filepath.Glob(a.P("/proc") + "/[0-9]*")
+	search := fmt.Sprintf("/user@%d.service/", uid)
+	for _, v := range entries {
 		pid, err := strconv.Atoi(filepath.Base(v))
 		if err != nil {
 			continue
@@ -49,7 +49,7 @@ func ProcessiGrafici(a *Ambiente, uid int) []ProcessoGrafico {
 			continue
 		}
 		c := strings.TrimSpace(string(cg))
-		i := strings.Index(c, cerca)
+		i := strings.Index(c, search)
 		if i < 0 || strings.HasSuffix(c, "/init.scope") {
 			continue
 		}
@@ -57,28 +57,28 @@ func ProcessiGrafici(a *Ambiente, uid int) []ProcessoGrafico {
 		if err != nil {
 			continue
 		}
-		grafico := false
+		graphical := false
 		for _, x := range strings.Split(string(env), "\x00") {
 			if strings.HasPrefix(x, "WAYLAND_DISPLAY=") || strings.HasPrefix(x, "DISPLAY=") {
-				grafico = true
+				graphical = true
 			}
 		}
-		if !grafico {
+		if !graphical {
 			continue
 		}
-		nome, _ := os.ReadFile(v + "/comm")
-		r = append(r, ProcessoGrafico{PID: pid, Unita: filepath.Base(c), Nome: strings.TrimSpace(string(nome))})
+		label_name, _ := os.ReadFile(v + "/comm")
+		r = append(r, GraphicalProcess{PID: pid, Unit: filepath.Base(c), Name: strings.TrimSpace(string(label_name))})
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].PID < r[j].PID })
 	return r
 }
 
-// condivisa: user-manager units that serve the whole person (the session bus, with
+// shared: user-manager units that needs the whole person (the session bus, with
 // the services activated «the old way» inside): they are not stopped; only the graphical processes are reported.
-var condivisa = map[string]bool{"dbus.service": true, "dbus-broker.service": true, "init.scope": true}
+var shared = map[string]bool{"dbus.service": true, "dbus-broker.service": true, "init.scope": true}
 
-// gestoreUtente: the direct connection to systemd's user manager.
-func gestoreUtente(uid int) (*dbus.Conn, error) {
+// userManager: the direct connection to systemd's user manager.
+func userManager(uid int) (*dbus.Conn, error) {
 	conn, err := dbus.Dial(fmt.Sprintf("unix:path=/run/user/%d/systemd/private", uid))
 	if err != nil {
 		return nil, err
@@ -90,29 +90,29 @@ func gestoreUtente(uid int) (*dbus.Conn, error) {
 	return conn, nil
 }
 
-func uidDi(a *Ambiente, utente string) (int, error) {
+func uidDi(a *Environment, username string) (int, error) {
 	f, err := os.ReadFile(a.P("/etc/passwd"))
 	if err != nil {
 		return 0, err
 	}
 	for _, r := range strings.Split(string(f), "\n") {
 		c := strings.Split(r, ":")
-		if len(c) >= 3 && c[0] == utente {
+		if len(c) >= 3 && c[0] == username {
 			return strconv.Atoi(c[2])
 		}
 	}
-	return 0, Errore("RX-GRUPPI-003", utente)
+	return 0, Error("RX-GRUPPI-003", username)
 }
 
-// ChiudiGraficaUtente: stops graphical-session.target and the units with graphical processes; removes
+// CloseGraphicalUser: stops graphical-session.target and the units with graphical processes; removes
 // WAYLAND_DISPLAY and DISPLAY from the manager's environment (later activations are not born «in the
 // desktop»); after 15 s, to whatever remains, SIGKILL to its unit (KillUnit). Returns the stopped units.
-func ChiudiGraficaUtente(a *Ambiente, utente string) ([]string, error) {
-	uid, err := uidDi(a, utente)
+func CloseGraphicalUser(a *Environment, username string) ([]string, error) {
+	uid, err := uidDi(a, username)
 	if err != nil {
 		return nil, err
 	}
-	conn, err := gestoreUtente(uid)
+	conn, err := userManager(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -120,37 +120,37 @@ func ChiudiGraficaUtente(a *Ambiente, utente string) ([]string, error) {
 	o := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
 	m := "org.freedesktop.systemd1.Manager."
 	var job dbus.ObjectPath
-	unita := map[string]bool{"graphical-session.target": true}
-	for _, p := range ProcessiGrafici(a, uid) {
-		unita[p.Unita] = true
+	unit := map[string]bool{"graphical-session.target": true}
+	for _, p := range GraphicalProcesses(a, uid) {
+		unit[p.Unit] = true
 	}
-	var fermate []string
-	for u := range unita {
-		if condivisa[u] { // the session bus belongs to the whole person: only the desktop's processes are stopped
+	var stopped []string
+	for u := range unit {
+		if shared[u] { // the session bus belongs to the whole person: only the desktop's processes are stopped
 			continue
 		}
 		if err := o.Call(m+"StopUnit", 0, u, "replace").Store(&job); err == nil {
-			fermate = append(fermate, u)
+			stopped = append(stopped, u)
 		}
 	}
-	segnale := func(sg syscall.Signal) {
-		for _, p := range ProcessiGrafici(a, uid) {
-			if condivisa[p.Unita] {
+	signal_v := func(sg syscall.Signal) {
+		for _, p := range GraphicalProcesses(a, uid) {
+			if shared[p.Unit] {
 				syscall.Kill(p.PID, sg)
 			}
 		}
 	}
-	segnale(syscall.SIGTERM)
+	signal_v(syscall.SIGTERM)
 	o.Call(m+"UnsetEnvironment", 0, []string{"WAYLAND_DISPLAY", "DISPLAY"})
-	for i := 0; i < 30 && len(ProcessiGrafici(a, uid)) > 0; i++ {
+	for i := 0; i < 30 && len(GraphicalProcesses(a, uid)) > 0; i++ {
 		time.Sleep(500 * time.Millisecond)
 	}
-	segnale(syscall.SIGKILL)
-	for _, p := range ProcessiGrafici(a, uid) {
-		if !condivisa[p.Unita] {
-			o.Call(m+"KillUnit", 0, p.Unita, "all", int32(9))
+	signal_v(syscall.SIGKILL)
+	for _, p := range GraphicalProcesses(a, uid) {
+		if !shared[p.Unit] {
+			o.Call(m+"KillUnit", 0, p.Unit, "all", int32(9))
 		}
 	}
-	sort.Strings(fermate)
-	return fermate, nil
+	sort.Strings(stopped)
+	return stopped, nil
 }

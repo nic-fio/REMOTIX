@@ -3,7 +3,7 @@
 # 01-b2-costruisci.sh — builds the candidates of bench B2 of phase 1.
 #
 #   bash 01-b2-costruisci.sh lsquic     BoringSSL + lsquic with WebTransport
-#   bash 01-b2-costruisci.sh controlla  only says what is already there
+#   bash 01-b2-costruisci.sh check  only says what is already there
 #
 # ---------------------------------------------------------------------------
 # WHAT IT DECIDES, AND WHY READING IS NOT ENOUGH
@@ -61,7 +61,7 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-AZIONE=${1:-lsquic}
+ACTION=${1:-lsquic}
 
 mkdir -p "$SRC" || exit 2
 cd "$SRC" || exit 2
@@ -77,7 +77,7 @@ inf "sources  $SRC"
 [ -d "$SRC/boringssl" ] && inf "boringssl already cloned" || inf "boringssl to be cloned"
 [ -d "$SRC/lsquic" ]    && inf "lsquic already cloned"    || inf "lsquic to be cloned"
 
-if [ "$AZIONE" = controlla ]; then
+if [ "$ACTION" = check ]; then
 	exit 0
 fi
 
@@ -153,7 +153,7 @@ inf "archive $LIB"
 inf "bytes   $(stat -c %s "$LIB" 2>/dev/null || echo '?')"
 inf "symbols naming webtransport, at a glance: $(nm -g --defined-only "$LIB" 2>/dev/null | grep -ci webtransport)"
 nm -g --defined-only "$LIB" 2>/dev/null | grep -i webtransport | sed 's/^/        /' | head -8
-ATTESI=(
+EXPECTED_COUNT=(
 	lsquic_stream_set_webtransport_session
 	lsquic_stream_is_webtransport_session
 	lsquic_stream_is_webtransport_client_bidi_stream
@@ -174,12 +174,12 @@ ATTESI=(
 #    as one that passes the wrong one — in the same family as the scroll wheel
 #    bench.  Here it would have struck off the best candidate of `DECISIONI.md`
 #    §6.4 with a false [M] against an [R].
-SIMBOLI=$(nm -g --defined-only "$LIB" 2>/dev/null)
-TROVATI=0
-for s in "${ATTESI[@]}"; do
-	if grep -q " $s\$" <<<"$SIMBOLI"; then
+SYMBOLS=$(nm -g --defined-only "$LIB" 2>/dev/null)
+FOUND=0
+for s in "${EXPECTED_COUNT[@]}"; do
+	if grep -q " $s\$" <<<"$SYMBOLS"; then
 		ok "$s"
-		TROVATI=$((TROVATI + 1))
+		FOUND=$((FOUND + 1))
 	else
 		ko "$s  — absent"
 	fi
@@ -188,8 +188,8 @@ done
 printf '\n'
 log "Outcome"
 inf "expected:  4 symbols of 4"
-inf "found:     $TROVATI of 4"
-if [ "$TROVATI" -eq 4 ]; then
+inf "found:     $FOUND of 4"
+if [ "$FOUND" -eq 4 ]; then
 	ok "the flag produced code: we can move on to the real session"
 	exit 0
 else

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """01-b7-congedo.py — ⛔ B7: the farewell, read FROM THE RECEIVING SIDE.
 
-    python3 01-b7-congedo.py --indirizzo 192.168.0.2 --porta 7447 \\
-                             --registro /srv/src/b7-server.log \\
-                             --pagina /srv/src/01-b11-pagina.html
+    python3 01-b7-congedo.py --address 192.168.0.2 --port 7447 \\
+                             --logbook /srv/src/b7-server.log \\
+                             --page_v /srv/src/01-b11-pagina.html
     python3 01-b7-congedo.py --solo tempo-scaduto      (a single case)
-    python3 01-b7-congedo.py --elenco                  (the predictions, without measuring)
+    python3 01-b7-congedo.py --listing                  (the predictions, without measuring)
 
 ⚠ It runs INSIDE the container: aioquic lives there, and so does the server log.
 
@@ -22,7 +22,7 @@ The sender's log says it called a function, not that the byte arrived.
 «closing» means:
 
     point 1   one WRITES in the log **what** was not understood;
-    point 2   one sends `CONGEDO` with the reason **on the control channel**,
+    point 2   one sends `FAREWELL` with the reason **on the control channel**,
               *«if the control channel is still usable»*;
     point 3   one closes the **WebTransport session** with the application
               error code equal to the **reason code** of §8.2.
@@ -39,7 +39,7 @@ of 36** in B5, and the fourteen missing were all violations found at the
 **first** message: the closing capsule **did not leave at all**, because the
 deferred work hung on a condition nobody made happen any more.  ⛔ And no bench
 had noticed **because nobody counted that road separately**: it was enough for
-the `CONGEDO` to arrive.  The cure is there (the keep-alive armed in
+the `FAREWELL` to arrive.  The cure is there (the keep-alive armed in
 `wt_chiudi_sessione`); **the permanent witness is this file**.
 
 ⛔ Hence the shape of the verdict, which is the reason B7 exists:
@@ -48,7 +48,7 @@ the `CONGEDO` to arrive.  The cure is there (the keep-alive armed in
     an `&&`, never an `||`
 
 `FASI.md` §01-filo-nudo §C1 builds the fault on purpose: *«the sending of the
-`CONGEDO` is removed and the code in the closing is left: if B7 stays green it
+`FAREWELL` is removed and the code in the closing is left: if B7 stays green it
 is doing an `||` where an `&&` is needed»*.  With an `||` point 2 would
 disappear and the bench would stay green.  Here point 2 and point 3 have **two
 counters, two denominators and two red lines**.
@@ -58,9 +58,9 @@ counters, two denominators and two red lines**.
 
 When **the page** is the one closing:
 
-    Chrome    sends the `CONGEDO` on the control channel **and** closes the
+    Chrome    sends the `FAREWELL` on the control channel **and** closes the
               session with the code: both roads;
-    Firefox   **resets** the control channel and throws away the `CONGEDO`
+    Firefox   **resets** the control channel and throws away the `FAREWELL`
               already queued: the reason arrives **only** in the closing code.
 
 ⚠ **A bench that confused them would say «Firefox does not say farewell», which
@@ -70,7 +70,7 @@ When **the page** is the one closing:
 
 ⭐ That is why the two behaviours are **two distinct cases**, each with its
    roads DECLARED BEFORE measuring, and the denominators do not mix.  The
-   «Firefox-style» case takes nothing away from the `CONGEDO` counter, and the
+   «Firefox-style» case takes nothing away from the `FAREWELL` counter, and the
    «Chrome-style» case gives nothing to the closing one.
 
 ===========================================================================
@@ -80,14 +80,14 @@ When **the page** is the one closing:
 knows how to provoke is true **by construction**, and it is the emptiest form
 of green there is: the denominator must be **declared**, with the list of what
 was excluded and why.  Here those that can be provoked are **seven**, and the
-other eight are in the `ESCLUSI` table with the reason for each — ⭐ and the
-exclusion of `SERVER_IN_CHIUSURA` is not an opinion: it is **measured**, with
+other eight are in the `EXCLUDED` table with the reason for each — ⭐ and the
+exclusion of `SERVER_SHUTTING_DOWN` is not an opinion: it is **measured**, with
 the `grep` of §«the measured exclusions», because an asserted exclusion is a
 hole nobody rechecks.
 
 ⚠ Two exclusions are worth repeating here, because a bench that ignored them
-  would **fail by construction**: `CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI`
-  do not travel in a `CONGEDO` — §4.4 puts them in `RESPINTO`, and §4.4 forbids
+  would **fail by construction**: `WRONG_CREDENTIALS` and `TOO_MANY_ATTEMPTS`
+  do not travel in a `FAREWELL` — §4.4 puts them in `REJECTED`, and §4.4 forbids
   sending both.  Looking for them here would be looking for a message the
   protocol forbids.
 
@@ -113,7 +113,7 @@ there?»*.  B7 has **four** positive controls, and they run BEFORE measuring:
   3. ⭐ **the server log reader can find a line that is there** (and not find
      one that is not), verified on the whole handshake;
   4. ⭐ **the initial state** (B0.1, B0.2): a whole handshake up to
-     `SESSIONE`.  ⛔ Without it, the `GIA_ATTIVA_REMOTA` case would be **green
+     `SESSION`.  ⛔ Without it, the `ALREADY_ACTIVE_REMOTELY` case would be **green
      for the wrong reason** — a place left occupied by the previous run makes
      anyone get `0x0F`, and the bench would read it as skill.
 
@@ -130,7 +130,7 @@ there?»*.  B7 has **four** positive controls, and they run BEFORE measuring:
     which wants a browser.  ⛔ The judgement on what is SEEN stays with the
     user (**I8**), and it goes into the judgement, not into this table;
   · **the value of the caps of §4.6.**  The `tempo-scaduto` case demands the
-    *reason* `TEMPO_SCADUTO` by both roads, and **prints** how long it waited:
+    *reason* `TIMED_OUT` by both roads, and **prints** how long it waited:
     the five seconds are measured by **B6**, and duplicating a threshold here
     would give two different verdicts on the same property;
   · **the client→server direction, on the wire.**  There whoever receives is
@@ -139,7 +139,7 @@ there?»*.  B7 has **four** positive controls, and they run BEFORE measuring:
     it**.  Here whoever sends is the bench.  ⭐ And so as not to rest on a single
     leg, those two cases verify **also on the wire** an observable consequence:
     that the place was left (§8.2 `0x0F`), with a new connection that gets to
-    `SESSIONE`.
+    `SESSION`.
 """
 import argparse
 import asyncio
@@ -156,29 +156,29 @@ from aioquic.h3.connection import H3_ALPN
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.asyncio import connect
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ⛔ The B3 client is IMPORTED, not copied.  Inside it is the line that
 #    prevents it from handing the control-channel events to aioquic's HTTP/3
 #    layer — without which the connection dies at the hand of the CLIENT (10
-#    Aug 2026) — and there is `_capsula_chiusura`, that is the reader of the
+#    Aug 2026) — and there is `_closing_capsule`, that is the reader of the
 #    second road of §3.1.  A diverging copy would bring those defects back here
 #    disguised as server defects.
 _spec = importlib.util.spec_from_file_location(
-    "b3cliente", os.path.join(QUI, "01-b3-cliente.py"))
+    "b3cliente", os.path.join(HERE, "01-b3-cliente.py"))
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
 # ⛔ And the TARGET's profile: the differences between the two servers are in a
 #    single file, and the four benches read them instead of discovering them anew.
 _spec_b0 = importlib.util.spec_from_file_location(
-    "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
+    "b0bersaglio", os.path.join(HERE, "01-b0-bersaglio.py"))
 b0 = importlib.util.module_from_spec(_spec_b0)
 _spec_b0.loader.exec_module(b0)
 
-s, inquadra = b3.s, b3.inquadra
+s, wrap = b3.s, b3.wrap
 
-CONGEDO, RESPINTO = 0x000C, 0x0005
+FAREWELL, REJECTED = 0x000C, 0x0005
 
 # ⛔ §8.2 IN FULL, rewritten from `RCP.md` and imported from nobody.
 #
@@ -188,35 +188,35 @@ CONGEDO, RESPINTO = 0x000C, 0x0005
 #    judged.
 #    ⚠ Two tables written by the same hand confirm nothing: this one comes
 #      from §8.2, that one from whoever wrote the page.
-MOTIVI = {
-    0x01: "CHIUSO_DALL_UTENTE", 0x02: "INATTIVITA",
-    0x03: "SESSIONE_ABBANDONATA", 0x04: "SESSIONE_LOCALE_PREVALSA",
-    0x05: "GIA_ATTIVA_LOCALE", 0x06: "BUDGET_PIENO",
-    0x07: "CREDENZIALI_ERRATE", 0x08: "TROPPI_TENTATIVI",
-    0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
-    0x0B: "ERRORE_PROTOCOLLO", 0x0C: "SERVER_IN_CHIUSURA",
-    0x0D: "TEMPO_SCADUTO", 0x0E: "SESSIONE_NON_SERVIBILE",
-    0x0F: "GIA_ATTIVA_REMOTA",
+REASONS = {
+    0x01: "CLOSED_BY_USER", 0x02: "INACTIVITY",
+    0x03: "SESSION_ABANDONED", 0x04: "LOCAL_SESSION_PREVAILED",
+    0x05: "ALREADY_ACTIVE_LOCAL", 0x06: "BUDGET_FULL",
+    0x07: "WRONG_CREDENTIALS", 0x08: "TOO_MANY_ATTEMPTS",
+    0x09: "NOTHING_IN_COMMON", 0x0A: "INCOMPATIBLE_VERSION",
+    0x0B: "PROTOCOL_ERROR", 0x0C: "SERVER_SHUTTING_DOWN",
+    0x0D: "TIMED_OUT", 0x0E: "SESSION_UNSERVABLE",
+    0x0F: "ALREADY_ACTIVE_REMOTELY",
 }
 
-CHIUSO_DALL_UTENTE = 0x01
-NIENTE_IN_COMUNE = 0x09
-VERSIONE_INCOMPATIBILE = 0x0A
-ERRORE_PROTOCOLLO = 0x0B
-SERVER_IN_CHIUSURA = 0x0C
-TEMPO_SCADUTO = 0x0D
-SESSIONE_NON_SERVIBILE = 0x0E
-GIA_ATTIVA_REMOTA = 0x0F
+CLOSED_BY_USER = 0x01
+NOTHING_IN_COMMON = 0x09
+INCOMPATIBLE_VERSION = 0x0A
+PROTOCOL_ERROR = 0x0B
+SERVER_SHUTTING_DOWN = 0x0C
+TIMED_OUT = 0x0D
+SESSION_UNSERVABLE = 0x0E
+ALREADY_ACTIVE_REMOTELY = 0x0F
 
 # ===========================================================================
 # ⛔ THE DENOMINATOR, DECLARED — «N out of M that can be provoked», and M is here.
 #
-#    Every line of `ESCLUSI` carries the reason why phase 1 cannot produce it.
+#    Every line of `EXCLUDED` carries the reason why phase 1 cannot produce it.
 #    ⚠ Whoever adds a reason to those that can be provoked must remove it from
 #    here: the two tables together must make fifteen, and
-#    `certifica_denominatore()` verifies it instead of trusting.
+#    `certify_denominator()` verifies it instead of trusting.
 # ===========================================================================
-ESCLUSI = [
+EXCLUDED = [
     (0x02, "30 minutes without INPUT: the input channel is born in phase 4 and "
            "the clock in phase 5"),
     (0x03, "6 hours without attaches: it is a clock of the SESSION, phase 5"),
@@ -225,16 +225,16 @@ ESCLUSI = [
     (0x05, "likewise: to say it, the server must be able to look at the "
            "machine's local sessions (phase 2)"),
     (0x06, "it wants the encoding capacity, which is born in phase 3"),
-    (0x07, "⛔ it does NOT travel in a CONGEDO: §4.4 puts it in RESPINTO, and forbids "
+    (0x07, "⛔ it does NOT travel in a FAREWELL: §4.4 puts it in REJECTED, and forbids "
            "sending both.  Looking for it here would fail by construction "
            "— B5 and B8 measure it"),
-    (0x08, "likewise, RESPINTO (§4.4-bis) — ⛔ and provoking it would block this "
+    (0x08, "likewise, REJECTED (§4.4-bis) — ⛔ and provoking it would block this "
            "address for at least 30 s, that is it would poison B8 and B10 (B0.3)"),
     (0x0C, "⛔ the GRAFT has no shutdown path: "
-           "`RCP_SERVER_IN_CHIUSURA` appears on no line of "
+           "`RCP_SERVER_SHUTTING_DOWN` appears on no line of "
            "`01-b3-rcp-innesta.py`.  ⚠ MEASURED below with grep, not "
-           "assumed.  ⭐ And on `--bersaglio prodotto` this line DISAPPEARS: "
-           "`src/main.c` says farewell to everyone with SERVER_IN_CHIUSURA before "
+           "assumed.  ⭐ And on `--target product` this line DISAPPEARS: "
+           "`src/main.c` says farewell to everyone with SERVER_SHUTTING_DOWN before "
            "exiting, and those that can be provoked become EIGHT"),
 ]
 
@@ -242,62 +242,62 @@ ESCLUSI = [
 # ⛔⭐ THE DENOMINATOR DEPENDS ON THE TARGET — and it is the difference between
 #     the two servers that shows from a NUMBER instead of from a behaviour.
 #
-#       innesto    SEVEN that can be provoked + eight excluded = 15
-#       prodotto   EIGHT that can be provoked + seven excluded = 15
+#       graft    SEVEN that can be provoked + eight excluded = 15
+#       product   EIGHT that can be provoked + seven excluded = 15
 #
 # ⛔ *«The number to write next to an outcome is that of the target that was
 #    started»* (`FASI.md` §01-filo-nudo B7).  ⚠ And if B7 pointed at the product
 #    kept saying «seven out of seven», the denominator would be wrong and the
 #    bench would be looking the other way: it would be a green by construction,
 #    the emptiest form there is.
-def esclusi_di(bersaglio):
-    if b0.profilo(bersaglio)["spegnimento"]:
-        return [(c, perche) for c, perche in ESCLUSI if c != SERVER_IN_CHIUSURA]
-    return list(ESCLUSI)
+def excluded_of(target):
+    if b0.profile_v(target)["spegnimento"]:
+        return [(c, reason_text) for c, reason_text in EXCLUDED if c != SERVER_SHUTTING_DOWN]
+    return list(EXCLUDED)
 
 
-def casi_di(bersaglio, tutti=None):
+def cases_of(target, all_v=None):
     """The cases THIS target can produce.
 
     ⛔ `server-in-chiusura` exists only against the product: against the graft
        it would stay waiting for a farewell no line of code can send, and its
-       red would accuse the server of not doing something nobody ever taught
+       red would accusations the server of not doing something nobody ever taught
        it."""
-    fuori = []
-    for c in (tutti if tutti is not None else CASI):
-        if c[1] == SERVER_IN_CHIUSURA and not b0.profilo(bersaglio)["spegnimento"]:
+    outside = []
+    for c in (all_v if all_v is not None else CASES):
+        if c[1] == SERVER_SHUTTING_DOWN and not b0.profile_v(target)["spegnimento"]:
             continue
-        fuori.append(c)
-    return fuori
+        outside.append(c)
+    return outside
 
 
 # ---------------------------------------------------------------------------
 # The bytes, written by hand.
-def capacita(voci, versione=1):
-    out = struct.pack("!HH", versione, len(voci))
-    for n, v in voci:
+def capabilities(entries, version_v=1):
+    out = struct.pack("!HH", version_v, len(entries))
+    for n, v in entries:
         out += s(n) + s(v)
     return out
 
 
-BUONE = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
-         ("audio.codec", "opus,pcm"), ("client.nome", "banco-b7 0.1.0")]
+GOOD = [("video.codec", "hevc,av1"), ("video.bit_depth", "8,10"),
+         ("audio.codec", "opus,pcm"), ("client.label_name", "banco-b7 0.1.0")]
 
 
-def ciao(voci=None, versione=1):
-    return inquadra(0x0001, capacita(BUONE if voci is None else voci, versione))
+def ciao(entries=None, version_v=1):
+    return wrap(0x0001, capabilities(GOOD if entries is None else entries, version_v))
 
 
-def attacca(tl=1920, ta=1080, vl=1920, va=1080, disp="it"):
-    return inquadra(0x0006, struct.pack("!IIII", tl, ta, vl, va) + s(disp))
+def attach(tl=1920, ta=1080, vl=1920, va=1080, avail="it"):
+    return wrap(0x0006, struct.pack("!IIII", tl, ta, vl, va) + s(avail))
 
 
-def congedo(motivo, dettaglio):
-    """§7.1: `CONGEDO` = `u8 motivo` + `stringa dettaglio`."""
-    return inquadra(CONGEDO, bytes([motivo]) + s(dettaglio))
+def farewell(motivo, detail):
+    """§7.1: `FAREWELL` = `u8 motivo` + `string detail`."""
+    return wrap(FAREWELL, bytes([motivo]) + s(detail))
 
 
-def capsula_chiusura(motivo):
+def closing_capsule(motivo):
     """The nine bytes with which a WebTransport session is closed (§3.1 point 3).
 
     ⛔ The `CLOSE_WEBTRANSPORT_SESSION` capsule (type `0x2843`) goes **inside an
@@ -314,16 +314,16 @@ def capsula_chiusura(motivo):
                   4, 0, 0, 0, motivo])  # length, and the code on 4 bytes
 
 
-class Cliente(b3.Cliente):
+class Client(b3.Client):
     """The B3 client, plus the two ways of CLOSING (§3.1, §8.1)."""
 
-    def chiudi_sessione(self, motivo):
+    def close_session(self, motivo):
         """§3.1 point 3 from the client's side: the capsule with the reason, then the FIN."""
-        self._quic.send_stream_data(self.sessione, capsula_chiusura(motivo),
+        self._quic.send_stream_data(self.session_v, closing_capsule(motivo),
                                     end_stream=True)
         self.transmit()
 
-    def azzera_controllo(self, codice=0):
+    def reset_control(self, code_v=0):
         """⛔ What Firefox does: the control channel gets RESET.
 
         From that instant §3.1 point 2 is no longer enforceable — «if the
@@ -337,7 +337,7 @@ class Cliente(b3.Cliente):
                 "this aioquic has no `reset_stream`: the «Firefox-style» case "
                 "cannot be imitated, and pretending to have done it would be a "
                 "green without proof")
-        self._quic.reset_stream(self.controllo, codice)
+        self._quic.reset_stream(self.check, code_v)
         self.transmit()
 
 
@@ -356,25 +356,25 @@ class Cliente(b3.Cliente):
 #    ⛔ The reason the server sends is always and only judged by the two roads,
 #       read on the wire by this process.
 # ===========================================================================
-class Registro:
-    def __init__(self, percorso):
-        self.percorso = percorso
-        self.errore = None
+class Log:
+    def __init__(self, fpath):
+        self.fpath = fpath
+        self.failure = None
 
-    def leggibile(self):
+    def readable(self):
         """⛔ «There is nothing» and «it cannot be read» look the same."""
-        if not self.percorso:
-            return False, "no log declared (--registro)"
-        if not os.path.exists(self.percorso):
-            return False, f"{self.percorso} DOES NOT EXIST"
+        if not self.fpath:
+            return False, "no log declared (--logbook)"
+        if not os.path.exists(self.fpath):
+            return False, f"{self.fpath} DOES NOT EXIST"
         try:
-            with open(self.percorso, "rb") as f:
+            with open(self.fpath, "rb") as f:
                 f.read(1)
         except OSError as e:
-            return False, f"{self.percorso} cannot be read: {e}"
+            return False, f"{self.fpath} cannot be read: {e}"
         return True, ""
 
-    def finestra(self):
+    def win(self):
         """The tick mark from which to look: how long the file was now.
 
         ⭐ It is a marker, not a `sleep` (B0.7): what is judged are the bytes
@@ -382,23 +382,23 @@ class Registro:
            no longer enter a verdict that is not theirs.
         """
         try:
-            return os.path.getsize(self.percorso)
+            return os.path.getsize(self.fpath)
         except OSError:
             return None
 
-    def da(self, inizio):
+    def da(self, start):
         """The text written after the marker.  `None` if it cannot be read."""
-        if inizio is None:
+        if start is None:
             return None
         try:
-            with open(self.percorso, "rb") as f:
-                f.seek(inizio)
+            with open(self.fpath, "rb") as f:
+                f.seek(start)
                 return f.read().decode("utf-8", "replace")
         except OSError as e:
-            self.errore = str(e)
+            self.failure = str(e)
             return None
 
-    async def attendi(self, inizio, frase, entro=6.0):
+    async def should_wait(self, start, sentence, within=6.0):
         """Waits for a line to appear, and says whether it appeared.
 
         ⚠ One waits because the log is written by another process and the two
@@ -406,25 +406,25 @@ class Registro:
           measure our hurry.  ⛔ The window is declared and bounded: if it
           expires, the answer is «not within N s», not «it is not there».
         """
-        fine = asyncio.get_event_loop().time() + entro
+        fine = asyncio.get_event_loop().time() + within
         while True:
-            testo = self.da(inizio)
-            if testo is None:
+            body_text = self.da(start)
+            if body_text is None:
                 return False, "the log cannot be read"
-            if frase in testo:
+            if sentence in body_text:
                 return True, ""
             if asyncio.get_event_loop().time() >= fine:
-                return False, f"did not appear within {entro:.0f} s"
+                return False, f"did not appear within {within:.0f} s"
             await asyncio.sleep(0.05)
 
-    def righe_nostre(self, inizio, quante=14):
+    def our_lines(self, start, how_many_n=14):
         """The RCP lines written in the window — for the diagnosis, not for the
         verdict.  ⚠ ngtcp2's traffic is filtered out, here it is noise."""
-        testo = self.da(inizio)
-        if testo is None:
+        body_text = self.da(start)
+        if body_text is None:
             return ["(the log cannot be read)"]
-        righe = [r for r in testo.splitlines() if "REMOTIX" in r]
-        return righe[-quante:] if righe else ["(no RCP line)"]
+        line_list = [r for r in body_text.splitlines() if "REMOTIX" in r]
+        return line_list[-how_many_n:] if line_list else ["(no RCP line)"]
 
 
 # ===========================================================================
@@ -432,75 +432,75 @@ class Registro:
 #
 # §8.2: *«every reason MUST be showable to the user in an understandable
 # phrase … and the phrase is built by the client, from the code»*.  ⛔ And the
-# `dettaglio` is NOT shown: it is for the log.
+# `detail` is NOT shown: it is for the log.
 #
 # ⛔ «Fifteen out of fifteen» is not enough, and it is finding R3.20: a `switch`
-#    with the default branch — `mostra("Error " + codice)` — produces fifteen
+#    with the default branch — `show_cmd("Error " + code_v)` — produces fifteen
 #    non-empty strings **all distinct from each other**.  The user reads «Error
-#    14» for `SESSIONE_NON_SERVIBILE`, which §8.2 forbids with a ⛔ and an almost
+#    14» for `SESSION_UNSERVABLE`, which §8.2 forbids with a ⛔ and an almost
 #    identical example.  That is why the criteria are four, and the second is
 #    the one that unmasks the `switch`.
 # ===========================================================================
-ANCORA_TABELLA = "const MOTIVO = {"
+TABLE_ANCHOR = "const REASON_TEXT = {"
 # ⚠ Since the page's table became an object literal — `0x07: "phrase",`, with
 #   long phrases split as `"…" + "…"` and comments between the entries — it
 #   carries the PHRASE only, not the name: the name is the one §8.2 gives to
-#   the code (`MOTIVI`), and criterion 3 still checks that the phrase is not it.
-VOCE = re.compile(r'(?<![0-9A-Za-z_])0x([0-9A-Fa-f]{1,2})\s*:\s*'
+#   the code (`REASONS`), and criterion 3 still checks that the phrase is not it.
+ENTRY = re.compile(r'(?<![0-9A-Za-z_])0x([0-9A-Fa-f]{1,2})\s*:\s*'
                   r'((?:"(?:[^"\\\n]|\\.)*"\s*\+?\s*)+)')
-PEZZO = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
-COMMENTO = re.compile(r'/\*.*?\*/|^\s*//[^\n]*', re.S | re.M)
+PIECE = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
+COMMENT = re.compile(r'/\*.*?\*/|^\s*//[^\n]*', re.S | re.M)
 
 
-def leggi_tabella(testo):
+def read_table(body_text):
     """Extracts {code: (name, phrase)} from the client's table.
 
     ⛔ It returns `(None, why)` when the table was not read: «zero phrases» and
        «I did not find the table» are two different facts, and confusing them
        would give a red to the client for a defect of the bench.
     """
-    i = testo.find(ANCORA_TABELLA)
+    i = body_text.find(TABLE_ANCHOR)
     if i < 0:
-        return None, f"the anchor «{ANCORA_TABELLA}» is not in this file"
-    j = testo.find("\n};", i)
+        return None, f"the anchor «{TABLE_ANCHOR}» is not in this file"
+    j = body_text.find("\n};", i)
     if j < 0:
         return None, "the table starts and does not end: «};» is missing"
     # ⛔ The comments go first: they quote old phrases in quotes ("silence
     #    too long") and would be read as entries.
-    corpo = COMMENTO.sub("", testo[i + len(ANCORA_TABELLA):j])
-    voci = {}
-    for m in VOCE.finditer(corpo):
+    body_el = COMMENT.sub("", body_text[i + len(TABLE_ANCHOR):j])
+    entries = {}
+    for m in ENTRY.finditer(body_el):
         c = int(m.group(1), 16)
-        frase = "".join(PEZZO.findall(m.group(2)))
-        voci[c] = (MOTIVI.get(c, f"0x{c:02X}"), frase)
-    if not voci:
+        sentence = "".join(PIECE.findall(m.group(2)))
+        entries[c] = (REASONS.get(c, f"0x{c:02X}"), sentence)
+    if not entries:
         return None, "the anchor is there but no entry matches the expected shape"
-    return voci, ""
+    return entries, ""
 
 
-def giudica_frasi(voci):
+def judge_sentences(entries):
     """The four criteria, one at a time, with the reason for the no.
 
     Returns [(code, ok, why)] for all fifteen reasons of §8.2.
     """
-    fuori = []
-    viste = {}
-    for c in sorted(MOTIVI):
-        nome_atteso = MOTIVI[c]
-        if c not in voci:
-            fuori.append((c, False, "⛔ the reason is not in the client's "
+    outside = []
+    views = {}
+    for c in sorted(REASONS):
+        expected_name = REASONS[c]
+        if c not in entries:
+            outside.append((c, False, "⛔ the reason is not in the client's "
                                     "table: there is no phrase to show"))
             continue
-        nome, frase = voci[c]
-        f = frase.strip()
-        chiave = " ".join(f.lower().split())
-        if nome != nome_atteso:
-            fuori.append((c, False, f"the name says «{nome}», §8.2 says "
-                                    f"«{nome_atteso}»"))
+        label_name, sentence = entries[c]
+        f = sentence.strip()
+        key_id = " ".join(f.lower().split())
+        if label_name != expected_name:
+            outside.append((c, False, f"the name says «{label_name}», §8.2 says "
+                                    f"«{expected_name}»"))
             continue
         # 1. a phrase, not a label
         if len(f.split()) < 3:
-            fuori.append((c, False, f"«{f}» is not a phrase ({len(f.split())} "
+            outside.append((c, False, f"«{f}» is not a phrase ({len(f.split())} "
                                     f"words): §8.2 wants something "
                                     f"showable to the user"))
             continue
@@ -509,23 +509,23 @@ def giudica_frasi(voci):
         if re.search(r"(?<![0-9])%d(?![0-9])" % c, f) or \
            re.search(r"0x0?%x" % c, f, re.I) or \
            re.search(r"error\s*[:\-]?\s*[0-9]", f, re.I):
-            fuori.append((c, False, f"⛔ «{f}» contains the NUMBER of the reason: "
+            outside.append((c, False, f"⛔ «{f}» contains the NUMBER of the reason: "
                                     f"§8.2 forbids «error {c}»"))
             continue
         # 3. the name of the reason is not a phrase for the user
-        if nome.lower() in f.lower() or nome in f:
-            fuori.append((c, False, f"⛔ «{f}» is the NAME of the reason, not a "
+        if label_name.lower() in f.lower() or label_name in f:
+            outside.append((c, False, f"⛔ «{f}» is the NAME of the reason, not a "
                                     f"phrase: it is a number written in letters"))
             continue
         # 4. distinct from each other
-        if chiave in viste:
-            fuori.append((c, False, f"⛔ the same phrase as "
-                                    f"{MOTIVI[viste[chiave]]}: two different "
+        if key_id in views:
+            outside.append((c, False, f"⛔ the same phrase as "
+                                    f"{REASONS[views[key_id]]}: two different "
                                     f"reasons saying the same thing"))
             continue
-        viste[chiave] = c
-        fuori.append((c, True, f))
-    return fuori
+        views[key_id] = c
+        outside.append((c, True, f))
+    return outside
 
 
 # ---------------------------------------------------------------------------
@@ -534,16 +534,16 @@ def giudica_frasi(voci):
 # ⚠ The good phrases contain NO digit, on purpose: criterion 2 looks for the
 #   reason's number, and a test phrase that happened to carry one would make
 #   the positive control fail, blaming the reader.
-def _tabella_finta(frase_di):
-    return {c: (MOTIVI[c], frase_di(c)) for c in MOTIVI}
+def _fake_table(sentence_of):
+    return {c: (REASONS[c], sentence_of(c)) for c in REASONS}
 
 
-def _buone():
-    return _tabella_finta(
+def _good():
+    return _fake_table(
         lambda c: f"this is phrase {chr(96 + c)} to show to the user")
 
 
-def certifica_frasi():
+def certify_sentences():
     """⭐ The tool that judges the phrases can say yes, and can say no.
 
     ⛔ Without this, «fifteen out of fifteen» is compatible with a reader that
@@ -554,42 +554,42 @@ def certifica_frasi():
       default branch produces fifteen non-empty strings **all distinct**, that
       is it passes every criterion except the one R3.20 had to write on purpose.
     """
-    doppia = _buone()
-    doppia[0x03] = (MOTIVI[0x03], doppia[0x04][1])
-    mancante = _buone()
-    del mancante[0x0E]
+    double = _good()
+    double[0x03] = (REASONS[0x03], double[0x04][1])
+    absent_one = _good()
+    del absent_one[0x0E]
     # ⚠ The broken ones are written as someone in good faith would write them —
     #   whole phrases, long, distinct — because a too clumsy broken one would be
     #   rejected by the WRONG criterion, and the check would prove nothing about
     #   the criterion that matters.
     prove = [
-        ("a good table", _buone(), True),
+        ("a good table", _good(), True),
         ("⛔ the switch with the default branch",
-         _tabella_finta(lambda c: f"Error {c} while connecting to the "
+         _fake_table(lambda c: f"Error {c} while connecting to the "
                                   f"server"), False),
         ("⛔ and the same thing written in hexadecimal",
-         _tabella_finta(lambda c: f"the session closed with code "
+         _fake_table(lambda c: f"the session closed with code "
                                   f"0x{c:02x}, try again"), False),
-        ("⛔ two reasons with the same phrase", doppia, False),
+        ("⛔ two reasons with the same phrase", double, False),
         ("⛔ the phrase that carries the NAME of the reason",
-         _tabella_finta(lambda c: f"the server answered {MOTIVI[c]} to "
+         _fake_table(lambda c: f"the server answered {REASONS[c]} to "
                                   f"this request"), False),
-        ("⛔ a reason missing altogether", mancante, False),
+        ("⛔ a reason missing altogether", absent_one, False),
         ("⛔ a label instead of a phrase",
-         _tabella_finta(lambda c: "not servable"), False),
+         _fake_table(lambda c: "not servable"), False),
     ]
-    fuori = []
-    for nome, voci, atteso in prove:
-        esiti = giudica_frasi(voci)
-        passa = all(ok for _, ok, _ in esiti)
-        fuori.append((nome, passa == atteso,
-                      "passed" if passa else
-                      "rejected: " + next(p for _, ok, p in esiti
+    outside = []
+    for label_name, entries, expected_val in prove:
+        outcomes = judge_sentences(entries)
+        pass_on = all(ok for _, ok, _ in outcomes)
+        outside.append((label_name, pass_on == expected_val,
+                      "passed" if pass_on else
+                      "rejected: " + next(p for _, ok, p in outcomes
                                           if not ok)[:78]))
-    return fuori
+    return outside
 
 
-def certifica_lettori():
+def certify_readers():
     """⭐ THE TWO READERS OF THE TWO ROADS, called from outside on known bytes.
 
     `CODER.md` §3.6: when the chain is already narrowed, one does not do another
@@ -601,78 +601,78 @@ def certifica_lettori():
     prove = []
 
     # ── road 2: the closing capsule ────────────────────────────────────────
-    c, nuda = b3._capsula_chiusura(capsula_chiusura(0x0B))
-    prove.append(("the capsule inside the DATA frame", (c, nuda) == (0x0B, False),
-                  f"read {c!r}, bare={nuda}  (expected 11, False)"))
-    c, nuda = b3._capsula_chiusura(capsula_chiusura(0x0B)[2:])
+    c, bare = b3._closing_capsule(closing_capsule(0x0B))
+    prove.append(("the capsule inside the DATA frame", (c, bare) == (0x0B, False),
+                  f"read {c!r}, bare={bare}  (expected 11, False)"))
+    c, bare = b3._closing_capsule(closing_capsule(0x0B)[2:])
     prove.append(("⛔ the BARE capsule is read AND declared",
-                  (c, nuda) == (0x0B, True),
-                  f"read {c!r}, bare={nuda}  (expected 11, True)"))
-    c, nuda = b3._capsula_chiusura(b"\x99\x99\x99\x99")
+                  (c, bare) == (0x0B, True),
+                  f"read {c!r}, bare={bare}  (expected 11, True)"))
+    c, bare = b3._closing_capsule(b"\x99\x99\x99\x99")
     prove.append(("⛔ and on random bytes it says NOTHING, not zero", c is None,
                   f"read {c!r}  (expected None — «0» would be the code that "
                   f"§3.1 forbids)"))
 
-    # ── road 1: the framing of the CONGEDO ─────────────────────────────────
-    #    The REAL `_sfoglia`, the one that runs on the wire, is called from outside.
-    class Finto:
+    # ── road 1: the framing of the FAREWELL ─────────────────────────────────
+    #    The REAL `_browse`, the one that runs on the wire, is called from outside.
+    class Fake:
         def __init__(self):
-            self.arrivati = bytearray()
-            self.messaggi = asyncio.Queue()
+            self.arrived = bytearray()
+            self.messages = asyncio.Queue()
 
-    f = Finto()
-    f.arrivati += congedo(0x0E, "disposizione sconosciuta: zz")
-    b3.Cliente._sfoglia(f)
+    f = Fake()
+    f.arrived += farewell(0x0E, "arrangement sconosciuta: zz")
+    b3.Client._browse(f)
     try:
-        tipo, corpo, _ = f.messaggi.get_nowait()
-        ok = (tipo == CONGEDO and corpo[0] == 0x0E)
-        det = struct.unpack("!H", corpo[1:3])[0]
-        ok = ok and corpo[3:3 + det].decode() == "disposizione sconosciuta: zz"
-        prove.append(("the CONGEDO is parsed, reason and detail", ok,
-                      f"tipo={tipo:#06x} motivo={corpo[0]:#04x}"))
+        kind, body_el, _ = f.messages.get_nowait()
+        ok = (kind == FAREWELL and body_el[0] == 0x0E)
+        det = struct.unpack("!H", body_el[1:3])[0]
+        ok = ok and body_el[3:3 + det].decode() == "arrangement sconosciuta: zz"
+        prove.append(("the FAREWELL is parsed, reason and detail", ok,
+                      f"kind={kind:#06x} motivo={body_el[0]:#04x}"))
     except asyncio.QueueEmpty:
-        prove.append(("the CONGEDO is parsed, reason and detail", False,
+        prove.append(("the FAREWELL is parsed, reason and detail", False,
                       "no message from the reader"))
 
-    f = Finto()
-    f.arrivati += congedo(0x0E, "tronco")[:-3]
-    b3.Cliente._sfoglia(f)
-    prove.append(("⛔ and a truncated CONGEDO does NOT become a reason",
-                  f.messaggi.empty(),
+    f = Fake()
+    f.arrived += farewell(0x0E, "tronco")[:-3]
+    b3.Client._browse(f)
+    prove.append(("⛔ and a truncated FAREWELL does NOT become a reason",
+                  f.messages.empty(),
                   "the reader produced a message from incomplete bytes"
-                  if not f.messaggi.empty() else "nothing, as it must"))
+                  if not f.messages.empty() else "nothing, as it must"))
     return prove
 
 
-def certifica_denominatore(casi, esclusi_lista=None):
+def certify_denominator(cases, excluded_list=None):
     """⛔ M + the excluded must make fifteen, and the count is done by the program.
 
     A number written by hand in a comment is the number nobody recomputes:
     finding R7.14 found three of them in B5, and none of the three matched the
     file.
     """
-    provocabili = {c[1] for c in casi}
-    esclusi = {c for c, _ in (esclusi_lista if esclusi_lista is not None
-                              else ESCLUSI)}
-    doppi = provocabili & esclusi
-    tutti = provocabili | esclusi
-    if doppi:
+    provokable = {c[1] for c in cases}
+    excluded = {c for c, _ in (excluded_list if excluded_list is not None
+                              else EXCLUDED)}
+    duplicates = provokable & excluded
+    all_v = provokable | excluded
+    if duplicates:
         return False, ("these reasons can be provoked AND are excluded: "
-                       + " ".join(MOTIVI[c] for c in sorted(doppi)))
-    if tutti != set(MOTIVI):
-        manca = set(MOTIVI) - tutti
+                       + " ".join(REASONS[c] for c in sorted(duplicates)))
+    if all_v != set(REASONS):
+        missing = set(REASONS) - all_v
         return False, ("§8.2 has 15 reasons and this bench names "
-                       f"{len(tutti)}: missing "
-                       + " ".join(MOTIVI[c] for c in sorted(manca)))
-    return True, (f"{len(provocabili)} that can be provoked + {len(esclusi)} excluded "
-                  f"= {len(MOTIVI)} reasons of §8.2")
+                       f"{len(all_v)}: missing "
+                       + " ".join(REASONS[c] for c in sorted(missing)))
+    return True, (f"{len(provokable)} that can be provoked + {len(excluded)} excluded "
+                  f"= {len(REASONS)} reasons of §8.2")
 
 
 # ===========================================================================
-# ⛔ THE EXCLUSIONS ARE MEASURED — that of `SERVER_IN_CHIUSURA` above all.
+# ⛔ THE EXCLUSIONS ARE MEASURED — that of `SERVER_SHUTTING_DOWN` above all.
 # ===========================================================================
-def esclusione_misurata(sorgenti):
-    """How many times `RCP_SERVER_IN_CHIUSURA` appears in the sources OF THE TARGET.
+def measured_exclusion(sources):
+    """How many times `RCP_SERVER_SHUTTING_DOWN` appears in the sources OF THE TARGET.
 
     ⛔⭐ AND THE SOURCES ARE NOT `rcp.c`, or not only.  Until 11 Aug 2026
         this function looked at `rcp.c` and that was it — and `rcp.c` is
@@ -685,179 +685,179 @@ def esclusione_misurata(sorgenti):
         which does not even know a process exists: on the product it lives in
         `main.c`, `trasporto.c` and `webtransport.c`.
 
-    ⭐ The positive control stays on the same line: `RCP_TEMPO_SCADUTO` is surely
+    ⭐ The positive control stays on the same line: `RCP_TIMED_OUT` is surely
        there, and if the reader did not find even that one its «zero» would be
        worth nothing.
 
-    Returns `(quanti, testo)`, with `quanti = None` if it could not be looked at.
+    Returns `(how_many, body_text)`, with `how_many = None` if it could not be looked at.
     """
-    quanti, controllo, letti, mancati = 0, 0, [], []
-    for sorgente in sorgenti:
+    how_many, check, readings, missed = 0, 0, [], []
+    for source in sources:
         try:
-            with open(sorgente, encoding="utf-8", errors="replace") as f:
-                testo = f.read()
+            with open(source, encoding="utf-8", errors="replace") as f:
+                body_text = f.read()
         except OSError as e:
-            mancati.append(f"{os.path.basename(sorgente)} ({e.strerror})")
+            missed.append(f"{os.path.basename(source)} ({e.strerror})")
             continue
-        quanti += testo.count("RCP_SERVER_IN_CHIUSURA")
-        controllo += testo.count("RCP_TEMPO_SCADUTO")
-        letti.append(os.path.basename(sorgente))
-    if mancati:
-        return None, (f"⛔ {len(mancati)} sources out of {len(sorgenti)} cannot be "
-                      f"read ({', '.join(mancati)}): the exclusion would stay "
+        how_many += body_text.count("RCP_SERVER_SHUTTING_DOWN")
+        check += body_text.count("RCP_TIMED_OUT")
+        readings.append(os.path.basename(source))
+    if missed:
+        return None, (f"⛔ {len(missed)} sources out of {len(sources)} cannot be "
+                      f"read ({', '.join(missed)}): the exclusion would stay "
                       f"ASSERTED instead of measured")
-    if controllo == 0:
-        return None, ("⛔ the reader does not find even `RCP_TEMPO_SCADUTO`, "
+    if check == 0:
+        return None, ("⛔ the reader does not find even `RCP_TIMED_OUT`, "
                       "which is surely there: its «zero» is worth nothing")
-    return quanti, (f"`RCP_SERVER_IN_CHIUSURA`: {quanti} occurrences in "
-                    f"{len(letti)} files ({', '.join(letti)})  ·  positive "
-                    f"control `RCP_TEMPO_SCADUTO`: {controllo}")
+    return how_many, (f"`RCP_SERVER_SHUTTING_DOWN`: {how_many} occurrences in "
+                    f"{len(readings)} files ({', '.join(readings)})  ·  positive "
+                    f"control `RCP_TIMED_OUT`: {check}")
 
 
 # ===========================================================================
 # What happened, from the receiving side.
 # ===========================================================================
-class Esito:
-    def __init__(self, verso=None):
-        self.verso = verso
-        self.motivo = None        # from the CONGEDO — NEVER deduced, NEVER from the log
-        self.tipo_motivo = None   # ⛔ in WHICH message (§11, §4.4)
-        self.dettaglio = ""
-        self.codice_wt = None     # §3.1 point 3, read on the wire
-        self.riga_registro = None # §3.1 point 1
+class Outcome:
+    def __init__(self, which_way=None):
+        self.which_way = which_way
+        self.motivo = None        # from the FAREWELL — NEVER deduced, NEVER from the log
+        self.reason_type = None   # ⛔ in WHICH message (§11, §4.4)
+        self.detail = ""
+        self.code_wt = None     # §3.1 point 3, read on the wire
+        self.log_line = None # §3.1 point 1
         self.al_server = {}       # the client→server direction, from the log
-        self.posto_libero = None  # the observable consequence on the wire
-        self.messaggi = []
-        self.provocato = False    # ⛔ did the provocation really leave?
-        self.fase = "opening"
-        self.attesa_ms = None
-        self.errore = None
+        self.slot_free = None  # the observable consequence on the wire
+        self.messages = []
+        self.caused = False    # ⛔ did the provocation really leave?
+        self.phase = "opening"
+        self.wait_ms = None
+        self.failure = None
 
     def __str__(self):
         p = []
-        if not self.provocato:
-            p.append(f"⛔ provocation NEVER LEFT (stopped in «{self.fase}»)")
+        if not self.caused:
+            p.append(f"⛔ provocation NEVER LEFT (stopped in «{self.phase}»)")
         # ⚠ The first two entries say what THIS process received: they make
         #   sense only when the server is the one closing.  In the other
         #   direction whoever receives is the server, and printing them «absent»
         #   would invite reading a silence as a fault.
-        if self.verso != VERSO_CS:
+        if self.which_way != DIR_CS:
             if self.motivo is not None:
-                p.append(f"CONGEDO={self.motivo:#04x}="
-                         f"{MOTIVI.get(self.motivo, '?')} in {self.tipo_motivo}")
-            elif self.tipo_motivo is not None:
-                p.append(f"{self.tipo_motivo} without a readable reason")
+                p.append(f"FAREWELL={self.motivo:#04x}="
+                         f"{REASONS.get(self.motivo, '?')} in {self.reason_type}")
+            elif self.reason_type is not None:
+                p.append(f"{self.reason_type} without a readable reason")
             else:
-                p.append("CONGEDO=(absent)")
-            p.append("chiusura-WT=" + ("(absent)" if self.codice_wt is None
-                                       else f"{self.codice_wt:#04x}"))
+                p.append("FAREWELL=(absent)")
+            p.append("chiusura-WT=" + ("(absent)" if self.code_wt is None
+                                       else f"{self.code_wt:#04x}"))
         for k, v in self.al_server.items():
             p.append(f"{k}={'yes' if v else 'NO'}")
-        if self.posto_libero is not None:
-            p.append("place=" + ("free" if self.posto_libero else "TAKEN"))
-        if self.attesa_ms is not None:
-            p.append(f"after {self.attesa_ms:.0f} ms")
-        if self.errore:
-            p.append(f"errore={self.errore}")
+        if self.slot_free is not None:
+            p.append("place=" + ("free" if self.slot_free else "TAKEN"))
+        if self.wait_ms is not None:
+            p.append(f"after {self.wait_ms:.0f} ms")
+        if self.failure:
+            p.append(f"failure={self.failure}")
         return "  ".join(p)
 
 
-async def osserva(cli, es, attesa, grazia=3.0):
+async def observe(cli, es, wait, grace=3.0):
     """⛔ The two roads, and BOTH are waited for — even when the first is missing.
 
-    The `CONGEDO` travels on the control channel, the closing of the session is
+    The `FAREWELL` travels on the control channel, the closing of the session is
     a capsule on the CONNECT stream: they are two roads and they arrive at two
     different moments.  ⭐ The server spaces them on purpose by five write
     passes (half a second), because otherwise the browser processes the capsule
-    before the bytes of the stream and **nobody sees the `CONGEDO`**.
+    before the bytes of the stream and **nobody sees the `FAREWELL`**.
 
-    ⛔ And the grace is waited for EVEN if the `CONGEDO` did not arrive: it is the
+    ⛔ And the grace is waited for EVEN if the `FAREWELL` did not arrive: it is the
        case of the §C1 fault — farewell removed, code left — and a bench that
        stopped looking at the second road when the first is missing could not
        say WHICH of the two is missing.
     """
-    orologio = asyncio.get_event_loop().time
-    t0 = orologio()
-    scadenza = t0 + attesa
+    clock_v = asyncio.get_event_loop().time
+    t0 = clock_v()
+    expiry = t0 + wait
     while True:
-        resta = scadenza - orologio()
-        if resta <= 0:
+        stays = expiry - clock_v()
+        if stays <= 0:
             break
         try:
-            m = await asyncio.wait_for(cli.messaggi.get(), timeout=resta)
+            m = await asyncio.wait_for(cli.messages.get(), timeout=stays)
         except asyncio.TimeoutError:
             break
         if m is None:            # connection terminated, or FIN on control
             break
-        tipo, corpo, _ = m
-        es.messaggi.append(tipo)
-        if tipo in (CONGEDO, RESPINTO):
-            es.tipo_motivo = "CONGEDO" if tipo == CONGEDO else "RESPINTO"
-            es.attesa_ms = (orologio() - t0) * 1000
+        kind, body_el, _ = m
+        es.messages.append(kind)
+        if kind in (FAREWELL, REJECTED):
+            es.reason_type = "FAREWELL" if kind == FAREWELL else "REJECTED"
+            es.wait_ms = (clock_v() - t0) * 1000
             # ⛔ An EMPTY body is not «no reason»: §7.1 wants the reason byte,
-            #    and §3.1 forbids code 0.  With `corpo[0] if corpo` a server
+            #    and §3.1 forbids code 0.  With `body_el[0] if body_el` a server
             #    that closes BADLY would be easier to let through than one that
             #    closes well (finding R7.2).
-            if not corpo:
-                es.errore = (f"{es.tipo_motivo} with an EMPTY body: §7.1 wants "
+            if not body_el:
+                es.failure = (f"{es.reason_type} with an EMPTY body: §7.1 wants "
                              "at least the reason byte")
                 break
-            es.motivo = corpo[0]
-            if tipo == CONGEDO and len(corpo) >= 3:
-                n = struct.unpack("!H", corpo[1:3])[0]
-                es.dettaglio = corpo[3:3 + n].decode("utf-8", "replace")
+            es.motivo = body_el[0]
+            if kind == FAREWELL and len(body_el) >= 3:
+                n = struct.unpack("!H", body_el[1:3])[0]
+                es.detail = body_el[3:3 + n].decode("utf-8", "replace")
             break
-    fine = orologio() + grazia
-    while cli.codice_chiusura is None and orologio() < fine:
+    fine = clock_v() + grace
+    while cli.close_code is None and clock_v() < fine:
         await asyncio.sleep(0.02)
-    es.codice_wt = cli.codice_chiusura
+    es.code_wt = cli.close_code
 
 
 # ===========================================================================
 # The field: the connections of a case, and their closing.
 # ===========================================================================
-class Campo:
-    def __init__(self, a, pila, registro, inizio):
+class Field:
+    def __init__(self, a, stack, logbook, start):
         self.a = a
-        self.pila = pila
-        self.registro = registro
-        self.inizio = inizio      # the marker in the server log
+        self.stack = stack
+        self.logbook = logbook
+        self.start = start      # the marker in the server log
 
-    async def apri(self, percorso="/rcp/1"):
+    async def open_it(self, fpath="/rcp/1"):
         conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                                  max_datagram_frame_size=65536)
         conf.verify_mode = ssl.CERT_NONE
-        autorita = f"{self.a.indirizzo}:{self.a.porta}"
-        gestore = connect(self.a.indirizzo, self.a.porta, configuration=conf,
-                          create_protocol=Cliente)
-        cli = await gestore.__aenter__()
-        self.pila.push_async_callback(chiudi_piano, gestore)
+        authority = f"{self.a.address}:{self.a.port}"
+        handler = connect(self.a.address, self.a.port, configuration=conf,
+                          create_protocol=Client)
+        cli = await handler.__aenter__()
+        self.stack.push_async_callback(close_plan, handler)
         await asyncio.wait_for(cli.wait_connected(), timeout=8)
-        cli.apri_sessione(autorita, percorso)
-        stato = await asyncio.wait_for(cli.accettata, timeout=8)
-        if stato != "200":
-            raise RuntimeError(f"the extended CONNECT answered {stato}")
+        cli.open_session(authority, fpath)
+        state = await asyncio.wait_for(cli.accepted, timeout=8)
+        if state != "200":
+            raise RuntimeError(f"the extended CONNECT answered {state}")
         return cli
 
-    async def eccomi(self, cli, corpo=None):
-        cli.apri_controllo()
-        cli.manda(corpo if corpo is not None else ciao())
-        return await b3.attendi(cli, "ECCOMI")
+    async def here_i_am(self, cli, body_el=None):
+        cli.open_control()
+        cli.send_it(body_el if body_el is not None else ciao())
+        return await b3.should_wait(cli, "HERE_I_AM")
 
-    async def ammesso(self, cli):
-        await self.eccomi(cli)
-        cli.manda(inquadra(0x0003, s(self.a.utente) + s(self.a.parola)))
-        return await b3.attendi(cli, "AMMESSO", attesa=20)
+    async def admitted(self, cli):
+        await self.here_i_am(cli)
+        cli.send_it(wrap(0x0003, s(self.a.username) + s(self.a.password)))
+        return await b3.should_wait(cli, "ADMITTED", wait=20)
 
-    async def sessione(self, cli, disp="it"):
-        await self.ammesso(cli)
-        cli.manda(attacca(disp=disp))
-        return await b3.attendi(cli, "SESSIONE")
+    async def session_v(self, cli, avail="it"):
+        await self.admitted(cli)
+        cli.send_it(attach(avail=avail))
+        return await b3.should_wait(cli, "SESSION")
 
 
-async def chiudi_piano(gestore):
+async def close_plan(handler):
     try:
-        await gestore.__aexit__(None, None, None)
+        await handler.__aexit__(None, None, None)
     except Exception:  # noqa: BLE001
         pass
 
@@ -867,13 +867,13 @@ async def chiudi_piano(gestore):
 #    direction, and **which roads of §3.1 are enforceable** — which is the
 #    declaration that prevents saying «Firefox does not say farewell».
 # ===========================================================================
-CASI = []
-VERSO_SC, VERSO_CS = "server→client", "client→server"
+CASES = []
+DIR_SC, DIR_CS = "server→client", "client→server"
 
 
-def caso(nome, motivo, verso, strade, spiega):
+def case_v(label_name, motivo, which_way, routes, explain):
     def dec(f):
-        CASI.append((nome, motivo, verso, strade, spiega, f))
+        CASES.append((label_name, motivo, which_way, routes, explain, f))
         return f
     return dec
 
@@ -883,52 +883,52 @@ def caso(nome, motivo, verso, strade, spiega):
 # ⛔ In ALL these cases the control channel is open and usable at the instant
 #    the server takes leave — the bench opens it, and the server does not take
 #    leave before it exists.  So here the conditional of §3.1 point 2 **does not
-#    bite**, and demanding the `CONGEDO` is not giving red to right code (which
+#    bite**, and demanding the `FAREWELL` is not giving red to right code (which
 #    was the fear of finding R3.3).  The case where the conditional bites is in
 #    the other direction, and it is `chiuso-dall-utente-alla-firefox`.
-@caso("errore-protocollo", ERRORE_PROTOCOLLO, VERSO_SC, ("congedo", "chiusura"),
+@case_v("errore-protocollo", PROTOCOL_ERROR, DIR_SC, ("farewell", "closure"),
       "a type that does not exist on the control channel: §3 forbids ignoring it")
-async def _(campo, es):
-    cli = await campo.apri()
-    await campo.eccomi(cli)
-    es.fase = "provocation"
-    cli.manda(inquadra(0x00FF, b""))
-    es.provocato = True
-    await osserva(cli, es, attesa=12)
+async def _(field, es):
+    cli = await field.open_it()
+    await field.here_i_am(cli)
+    es.phase = "provocation"
+    cli.send_it(wrap(0x00FF, b""))
+    es.caused = True
+    await observe(cli, es, wait=12)
 
 
-@caso("versione-incompatibile", VERSIONE_INCOMPATIBILE, VERSO_SC,
-      ("congedo", "chiusura"),
-      "CIAO(versione=2) on /rcp/1: §2.2 wants the two to coincide")
-async def _(campo, es):
-    cli = await campo.apri()
-    cli.apri_controllo()
-    es.fase = "provocation"
-    cli.manda(ciao(versione=2))
-    es.provocato = True
-    await osserva(cli, es, attesa=12)
+@case_v("versione-incompatibile", INCOMPATIBLE_VERSION, DIR_SC,
+      ("farewell", "closure"),
+      "HELLO(version_v=2) on /rcp/1: §2.2 wants the two to coincide")
+async def _(field, es):
+    cli = await field.open_it()
+    cli.open_control()
+    es.phase = "provocation"
+    cli.send_it(ciao(version_v=2))
+    es.caused = True
+    await observe(cli, es, wait=12)
 
 
-@caso("niente-in-comune", NIENTE_IN_COMUNE, VERSO_SC, ("congedo", "chiusura"),
+@case_v("niente-in-comune", NOTHING_IN_COMMON, DIR_SC, ("farewell", "closure"),
       "`audio.codec = opus` without `pcm`: §4.3 requires it on both sides, and "
-      "whoever does not declare it takes leave with NIENTE_IN_COMUNE — not with "
-      "ERRORE_PROTOCOLLO: it did not misspell, it has nothing to talk about")
-async def _(campo, es):
-    cli = await campo.apri()
-    cli.apri_controllo()
-    es.fase = "provocation"
-    cli.manda(ciao([("video.codec", "hevc"), ("video.profondita", "8"),
+      "whoever does not declare it takes leave with NOTHING_IN_COMMON — not with "
+      "PROTOCOL_ERROR: it did not misspell, it has nothing to talk about")
+async def _(field, es):
+    cli = await field.open_it()
+    cli.open_control()
+    es.phase = "provocation"
+    cli.send_it(ciao([("video.codec", "hevc"), ("video.bit_depth", "8"),
                     ("audio.codec", "opus")]))
-    es.provocato = True
-    await osserva(cli, es, attesa=12)
+    es.caused = True
+    await observe(cli, es, wait=12)
 
 
-@caso("tempo-scaduto", TEMPO_SCADUTO, VERSO_SC, ("congedo", "chiusura"),
-      "the control channel is opened and ONE KEEPS QUIET: §4.6, the cap for the CIAO. "
+@case_v("tempo-scaduto", TIMED_OUT, DIR_SC, ("farewell", "closure"),
+      "the control channel is opened and ONE KEEPS QUIET: §4.6, the cap for the HELLO. "
       "⚠ B7 demands the REASON, not the value of the cap: B6 measures the seconds")
-async def _(campo, es):
-    cli = await campo.apri()
-    cli.apri_controllo()
+async def _(field, es):
+    cli = await field.open_it()
+    cli.open_control()
     # ⛔⭐ AND HERE ONE PUSHES, BECAUSE SILENCE DOES NOT SEND ITSELF.
     #
     #    `create_webtransport_stream` writes the stream header —
@@ -942,42 +942,42 @@ async def _(campo, es):
     # ⭐ From here on the provocation IS the silence, and it has left: the
     #    channel exists on the server's side, and the bench sends nothing more.
     cli.transmit()
-    es.fase = "provocation"
-    es.provocato = True
-    await osserva(cli, es, attesa=20)
+    es.phase = "provocation"
+    es.caused = True
+    await observe(cli, es, wait=20)
 
 
-@caso("sessione-non-servibile", SESSIONE_NON_SERVIBILE, VERSO_SC,
-      ("congedo", "chiusura", "dettaglio"),
-      "ATTACCA with layout `zz`: WELL FORMED and unknown to the machine "
-      "(§4.5 wants two different faults).  ⛔ And §8.2 requires the `dettaglio` in "
+@case_v("sessione-non-servibile", SESSION_UNSERVABLE, DIR_SC,
+      ("farewell", "closure", "detail"),
+      "ATTACH with layout `zz`: WELL FORMED and unknown to the machine "
+      "(§4.5 wants two different faults).  ⛔ And §8.2 requires the `detail` in "
       "the body — which is written in the log and NOT shown to the user")
-async def _(campo, es):
-    cli = await campo.apri()
-    await campo.ammesso(cli)
-    es.fase = "provocation"
-    cli.manda(attacca(disp="zz"))
-    es.provocato = True
-    await osserva(cli, es, attesa=12)
+async def _(field, es):
+    cli = await field.open_it()
+    await field.admitted(cli)
+    es.phase = "provocation"
+    cli.send_it(attach(avail="zz"))
+    es.caused = True
+    await observe(cli, es, wait=12)
 
 
-@caso("gia-attiva-remota", GIA_ATTIVA_REMOTA, VERSO_SC, ("congedo", "chiusura"),
+@case_v("gia-attiva-remota", ALREADY_ACTIVE_REMOTELY, DIR_SC, ("farewell", "closure"),
       "two clients of the same user: the SECOND gets 0x0F (I2, §8.2). "
-      "⛔ And the first must have reached SESSIONE, or the red and the green "
+      "⛔ And the first must have reached SESSION, or the red and the green "
       "would mean the same thing")
-async def _(campo, es):
-    primo = await campo.apri()
-    await campo.sessione(primo)          # ⛔ if this fails, `provocato`
-    es.fase = "provocation"              #    stays false: it is not a failed
-    secondo = await campo.apri()         #    test, it is a test not done
-    await campo.ammesso(secondo)
-    secondo.manda(attacca())
-    es.provocato = True
-    await osserva(secondo, es, attesa=12)
+async def _(field, es):
+    first = await field.open_it()
+    await field.session_v(first)          # ⛔ if this fails, `caused`
+    es.phase = "provocation"              #    stays false: it is not a failed
+    second = await field.open_it()         #    test, it is a test not done
+    await field.admitted(second)
+    second.send_it(attach())
+    es.caused = True
+    await observe(second, es, wait=12)
 
 
 # ── the client→server direction: whoever receives is the server, and the roads are two ──
-async def guarda_il_posto(campo, es):
+async def look_slot(field, es):
     """⛔ THE PLACE IS LOOKED AT WHILE THE CONNECTION IS STILL ALIVE.
 
     §4.2 and §8.2 `0x0F`: whoever takes leave leaves the place **immediately**,
@@ -990,44 +990,44 @@ async def guarda_il_posto(campo, es):
       ignored**: it is exactly the defect B11 found on 10 Aug 2026 with Chrome —
       *«a BROWSER closes the session and keeps the connection alive, and from
       that moment the place stays occupied by a session that no longer
-      exists»*, seven `posto NEGATO` out of nine.  ⭐ Here the case's connection
+      exists»*, seven `slot NEGATO` out of nine.  ⭐ Here the case's connection
       is still open, so only the farewell can have freed the place.
     """
-    libero, perche = await stretta_intera(campo.a)
-    es.posto_libero = libero
-    if not libero:
-        es.errore = (es.errore or "") + f" · the place is NOT free: {perche}"
+    free_slot, reason_text = await full_handshake(field.a)
+    es.slot_free = free_slot
+    if not free_slot:
+        es.failure = (es.failure or "") + f" · the place is NOT free: {reason_text}"
 
 
 
-@caso("chiuso-dall-utente-alla-chrome", CHIUSO_DALL_UTENTE, VERSO_CS,
-      ("congedo", "chiusura", "posto"),
-      "what Chrome does: `CONGEDO(0x01)` on the channel **and** the session closed "
+@case_v("chiuso-dall-utente-alla-chrome", CLOSED_BY_USER, DIR_CS,
+      ("farewell", "closure", "slot"),
+      "what Chrome does: `FAREWELL(0x01)` on the channel **and** the session closed "
       "with code 0x01.  §8.1 requires both of whoever closes")
-async def _(campo, es):
-    cli = await campo.apri()
-    await campo.sessione(cli)
-    es.fase = "provocation"
-    cli.manda(congedo(CHIUSO_DALL_UTENTE, "bench B7 closes, as the user "
+async def _(field, es):
+    cli = await field.open_it()
+    await field.session_v(cli)
+    es.phase = "provocation"
+    cli.send_it(farewell(CLOSED_BY_USER, "bench B7 closes, as the user "
                                           "would"))
     await asyncio.sleep(0.3)   # ⚠ the two bytes must not leave in the same
-    cli.chiudi_sessione(CHIUSO_DALL_UTENTE)   # flight: it is the race B11
-    es.provocato = True                       # found, here from the client's side
+    cli.close_session(CLOSED_BY_USER)   # flight: it is the race B11
+    es.caused = True                       # found, here from the client's side
     await asyncio.sleep(0.5)
-    await guarda_il_posto(campo, es)
+    await look_slot(field, es)
 
 
-@caso("chiuso-dall-utente-alla-firefox", CHIUSO_DALL_UTENTE, VERSO_CS,
-      ("chiusura", "posto"),
+@case_v("chiuso-dall-utente-alla-firefox", CLOSED_BY_USER, DIR_CS,
+      ("closure", "slot"),
       "⛔ what Firefox does: the session closes with code 0x01 and the control "
-      "channel gets RESET, without any CONGEDO. §3.1 point 2 is "
+      "channel gets RESET, without any FAREWELL. §3.1 point 2 is "
       "conditional — «if the channel is still usable» — and here it is not: "
       "⚠ calling it «does not say farewell» would be false, the reason arrives the other way")
-async def _(campo, es):
-    cli = await campo.apri()
-    await campo.sessione(cli)
-    es.fase = "provocation"
-    cli.chiudi_sessione(CHIUSO_DALL_UTENTE)
+async def _(field, es):
+    cli = await field.open_it()
+    await field.session_v(cli)
+    es.phase = "provocation"
+    cli.close_session(CLOSED_BY_USER)
     # ⚠ AND HERE THERE IS A DECLARED WAIT, with what it costs.
     #
     #    Firefox sends the two things in the same flight, and in that flight
@@ -1039,14 +1039,14 @@ async def _(campo, es):
     #    colour at every run.  ⚠ It stays an open `[?]`, and it is written here
     #    so that someone picks it up instead of rediscovering it.
     await asyncio.sleep(0.2)
-    cli.azzera_controllo()
-    es.provocato = True
+    cli.reset_control()
+    es.caused = True
     await asyncio.sleep(0.5)
-    await guarda_il_posto(campo, es)
+    await look_slot(field, es)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⛔ THE CASE THAT EXISTS ONLY AGAINST THE PRODUCT — `SERVER_IN_CHIUSURA` 0x0C.
+# ⭐⛔ THE CASE THAT EXISTS ONLY AGAINST THE PRODUCT — `SERVER_SHUTTING_DOWN` 0x0C.
 #
 # *«And `0x0C` changed subject on the night of 10 August, and it is the first
 # place where the two servers diverge visibly: the product now has a shutdown
@@ -1060,7 +1060,7 @@ async def _(campo, es):
 # ---------------------------------------------------------------------------
 # ⛔ HOW IT IS PROVOKED, AND WHY THE BENCH KILLS ITS OWN SERVER
 #
-# `SERVER_IN_CHIUSURA` is not provoked with a crooked byte: a `SIGTERM` to the
+# `SERVER_SHUTTING_DOWN` is not provoked with a crooked byte: a `SIGTERM` to the
 # process provokes it.  ⚠ So this case **shuts the server down**, and from it
 # on there is nothing more to measure: it runs last, in an invocation of its
 # own, and the launch script restarts the server on purpose before calling it.
@@ -1079,18 +1079,18 @@ async def _(campo, es):
 # process** (finding R8.13, already paid for on `01-b2-lancia-wt.sh`).
 # ⛔ If the name is not the expected one, the case sends NOTHING and declares
 #    «test not done» — which is not «test failed».
-@caso("server-in-chiusura", SERVER_IN_CHIUSURA, VERSO_SC,
-      ("congedo", "chiusura"),
+@case_v("server-in-chiusura", SERVER_SHUTTING_DOWN, DIR_SC,
+      ("farewell", "closure"),
       "⭐ ONLY AGAINST THE PRODUCT: session open, then SIGTERM to the server. "
       "§8.1 forbids closing with a silence, and src/main.c says farewell to everyone with "
       "0x0C and WAITS for the bytes to go out before exiting.  ⛔ Against the graft "
       "this case does not exist: it would wait for a farewell no line can "
       "send")
-async def _(campo, es):
-    a = campo.a
+async def _(field, es):
+    a = field.a
     pid = getattr(a, "pid_server", 0)
     if not pid:
-        es.fase = ("⛔ no --pid-server: I have nobody to send the "
+        es.phase = ("⛔ no --pid-server: I have nobody to send the "
                    "signal to.  Test NOT DONE, not test failed")
         return
     # ⛔ Who is that PID?  The kernel is asked, it is not deduced (CODER.md §3.7).
@@ -1098,53 +1098,53 @@ async def _(campo, es):
         with open(f"/proc/{pid}/comm", encoding="utf-8") as fp:
             comm = fp.read().strip()
     except OSError as e:
-        es.fase = (f"⛔ /proc/{pid}/comm cannot be read ({e.strerror}): the "
+        es.phase = (f"⛔ /proc/{pid}/comm cannot be read ({e.strerror}): the "
                    f"process is no longer there, or it is not mine.  Test NOT "
                    f"DONE — and I send no signal in the dark")
         return
     if comm != "remotix":
-        es.fase = (f"⛔ PID {pid} is now «{comm}», not «remotix»: I send it "
+        es.phase = (f"⛔ PID {pid} is now «{comm}», not «remotix»: I send it "
                    f"NOTHING.  PIDs get reused (R8.13), and a SIGTERM to a "
                    f"system process is not a measurement")
         return
 
-    cli = await campo.apri()
-    # ⛔ It gets to SESSIONE and not to AMMESSO: the farewell of §8.1 must
+    cli = await field.open_it()
+    # ⛔ It gets to SESSION and not to ADMITTED: the farewell of §8.1 must
     #    reach a LIVE session, and a half handshake could drop because of a
     #    §4.6 cap while we wait.
-    await campo.sessione(cli)
-    es.fase = "provocation: SIGTERM to the server"
+    await field.session_v(cli)
+    es.phase = "provocation: SIGTERM to the server"
     os.kill(pid, signal.SIGTERM)
-    es.provocato = True
+    es.caused = True
     # ⚠ The wait is 12 s and not 3: `main.c` waits up to **two seconds** for the
-    #   bytes of the farewell to really go out, and `wt_batti` lets the capsule
+    #   bytes of the farewell to really go out, and `wt_beat` lets the capsule
     #   of §3.1 point 3 mature half a second after the queue emptied.  A bench
     #   that stopped looking right away would read «no closing» on a server that
     #   is still talking.
-    await osserva(cli, es, attesa=12)
+    await observe(cli, es, wait=12)
 
 
 # ===========================================================================
-async def ancora_vivo(a):
+async def still_alive(a):
     """⛔ B0.5 — after every case, the server must still be there.
 
     A server killed by the kernel «drops the connection» exactly like one that
     says farewell, and takes away everyone else's sessions.  ⚠ It gets to
-    `ECCOMI` and not to `SESSIONE`: the second would cost the fixed second of
+    `HERE_I_AM` and not to `SESSION`: the second would cost the fixed second of
     §4.4-bis at every case, and the place is verified by whoever needs it.
     """
-    async with contextlib.AsyncExitStack() as pila:
-        campo = Campo(a, pila, None, None)
+    async with contextlib.AsyncExitStack() as stack:
+        field = Field(a, stack, None, None)
         try:
-            cli = await campo.apri()
-            await campo.eccomi(cli)
+            cli = await field.open_it()
+            await field.here_i_am(cli)
             return True, ""
         except Exception as e:  # noqa: BLE001
             return False, f"{type(e).__name__}: {e}"
 
 
-async def stretta_intera(a, disp="it"):
-    """The good handshake, whole, up to `SESSIONE` — and then it takes leave.
+async def full_handshake(a, avail="it"):
+    """The good handshake, whole, up to `SESSION` — and then it takes leave.
 
     ⭐ It is three things in one: the **initial state** declared and verified (B0.1),
        the **check that says yes** (a server that took leave of everything would
@@ -1152,47 +1152,47 @@ async def stretta_intera(a, disp="it"):
        place is free** — without which `gia-attiva-remota` would be green for the
        wrong reason (B0.2).
     """
-    async with contextlib.AsyncExitStack() as pila:
-        campo = Campo(a, pila, None, None)
+    async with contextlib.AsyncExitStack() as stack:
+        field = Field(a, stack, None, None)
         try:
-            cli = await campo.apri()
-            _, corpo, _ = await campo.sessione(cli, disp)
-            stato = corpo[0]
-            lar, alt = struct.unpack("!II", corpo[1:9])
+            cli = await field.open_it()
+            _, body_el, _ = await field.session_v(cli, avail)
+            state = body_el[0]
+            lar, alt_h = struct.unpack("!II", body_el[1:9])
             # ⛔ One takes leave properly, instead of letting the connection
             #    drop: that way the place is free **immediately** for the next
             #    case, and not «when the transport has finished tearing down».
-            cli.manda(congedo(CHIUSO_DALL_UTENTE, "check of B7's initial "
+            cli.send_it(farewell(CLOSED_BY_USER, "check of B7's initial "
                                                   "state"))
             await asyncio.sleep(0.3)
-            cli.chiudi_sessione(CHIUSO_DALL_UTENTE)
+            cli.close_session(CLOSED_BY_USER)
             await asyncio.sleep(0.4)
-            return True, f"SESSIONE stato={stato} tela={lar}x{alt}"
+            return True, f"SESSION state={state} canvas_size={lar}x{alt_h}"
         except Exception as e:  # noqa: BLE001
             return False, f"{type(e).__name__}: {e}"
 
 
-async def gira_caso(a, registro, inizio, motivo, verso, f):
-    es = Esito(verso)
-    async with contextlib.AsyncExitStack() as pila:
-        campo = Campo(a, pila, registro, inizio)
+async def run_case(a, logbook, start, motivo, which_way, f):
+    es = Outcome(which_way)
+    async with contextlib.AsyncExitStack() as stack:
+        field = Field(a, stack, logbook, start)
         try:
-            await f(campo, es)
+            await f(field, es)
         except Exception as e:  # noqa: BLE001
-            es.errore = f"{type(e).__name__}: {e}"
+            es.failure = f"{type(e).__name__}: {e}"
             # ⛔ AND THE REASON IS NOT SCRAPED FROM THE EXCEPTION TEXT.
             #    `b3.attendi` raises `RuntimeError("CONGEDO invece di …:
-            #    motivo 0x0b = ERRORE_PROTOCOLLO")` even when what drops is the
+            #    motivo 0x0b = PROTOCOL_ERROR")` even when what drops is the
             #    PREPARATION, and that string contains the name of the expected
             #    reason: the more broken the server is upstream, the more green
             #    the case would become (finding R7.1).  The reason is written
-            #    only by `osserva`, from a message that arrived on the wire.
+            #    only by `observe`, from a message that arrived on the wire.
     # ── §3.1 point 1, and the client→server direction: from the server log ──
-    if inizio is not None:
-        if verso == VERSO_SC:
+    if start is not None:
+        if which_way == DIR_SC:
             # ⛔ WITHOUT THE PREFIX, and it is not laziness — 11 Aug 2026.
             #
-            #    Here there was `f"REMOTIX B3: congedo motivo=…"`, that is the
+            #    Here there was `f"REMOTIX B3: farewell motivo=…"`, that is the
             #    GRAFT's prefix.  The product writes the same line preceded by
             #    `HH:MM:SS.mmm rcp `, so against it this wait NEVER found
             #    anything: ⛔ §3.1 point 1 declared absent on EVERY case, that is
@@ -1205,211 +1205,211 @@ async def gira_caso(a, registro, inizio, motivo, verso, f):
             #   project pays for more often than any other.
             #
             # ⭐ The right cure is not a second prefix: it is NO prefix.
-            #    `congedo motivo=0xNN` is what the two servers have in common,
+            #    `farewell motivo=0xNN` is what the two servers have in common,
             #    and it is exactly the part §3.1 point 1 demands — the rest is
             #    the header of whoever writes the log, which is not part of the
             #    protocol.
-            trovata, perche = await registro.attendi(
-                inizio, f"congedo motivo={motivo:#04x}", entro=6)
-            es.riga_registro = (trovata, perche)
+            found_at, reason_text = await logbook.should_wait(
+                start, f"farewell motivo={motivo:#04x}", within=6)
+            es.log_line = (found_at, reason_text)
         else:
-            for chiave, frase in (
+            for key_id, sentence in (
                     ("congedo-al-server",
                      f"the client takes its farewell, motivo={motivo:#04x}"),
                     ("chiusura-al-server",
                      f"the page closed the session, reason {motivo:#04x}")):
-                trovata, _ = await registro.attendi(inizio, frase, entro=6)
-                es.al_server[chiave] = trovata
+                found_at, _ = await logbook.should_wait(start, sentence, within=6)
+                es.al_server[key_id] = found_at
     return es
 
 
-def esigenze(strade, es, motivo, verso):
+def needs(routes, es, motivo, which_way):
     """⛔ The verdict per road, and each with its own line.
 
-    Returns [(label, enforceable, arrived, text)].  ⚠ `esigibile = False` does
+    Returns [(label, enforceable, arrived, text)].  ⚠ `due = False` does
     not mean «it is not looked at»: it is looked at and printed, but it does not
     enter the denominator of that road.  It is the difference between «Firefox
     does not say farewell» and «on Firefox point 2 is not enforceable».
     """
-    fuori = []
-    if verso == VERSO_SC:
-        fuori.append((
+    outside = []
+    if which_way == DIR_SC:
+        outside.append((
             "§3.1 point 1 — the «what» line in the log of whoever closes",
-            es.riga_registro is not None,
-            bool(es.riga_registro and es.riga_registro[0]),
-            "" if not es.riga_registro else (es.riga_registro[1] or "present")))
-        fuori.append((
-            "§3.1 point 2 — the reason in the CONGEDO on the channel",
-            "congedo" in strade,
-            es.motivo == motivo and es.tipo_motivo == "CONGEDO",
+            es.log_line is not None,
+            bool(es.log_line and es.log_line[0]),
+            "" if not es.log_line else (es.log_line[1] or "present")))
+        outside.append((
+            "§3.1 point 2 — the reason in the FAREWELL on the channel",
+            "farewell" in routes,
+            es.motivo == motivo and es.reason_type == "FAREWELL",
             "absent" if es.motivo is None
-            else f"{es.motivo:#04x} in {es.tipo_motivo}"))
-        fuori.append((
+            else f"{es.motivo:#04x} in {es.reason_type}"))
+        outside.append((
             "§3.1 point 3 — the reason in the closing of the session",
-            "chiusura" in strade,
-            es.codice_wt == motivo,
-            "absent" if es.codice_wt is None else f"{es.codice_wt:#04x}"))
+            "closure" in routes,
+            es.code_wt == motivo,
+            "absent" if es.code_wt is None else f"{es.code_wt:#04x}"))
         # ⛔ §11 is counted only if a reason DID arrive: «in which message» is
         #    not a question one can ask a silence, and counting it failed twice
         #    would inflate the red of road 2.
-        fuori.append((
-            "§11 — the reason in the right message (CONGEDO, not RESPINTO)",
+        outside.append((
+            "§11 — the reason in the right message (FAREWELL, not REJECTED)",
             es.motivo is not None,
-            es.tipo_motivo == "CONGEDO",
-            f"arrived in {es.tipo_motivo}" if es.motivo is not None
+            es.reason_type == "FAREWELL",
+            f"arrived in {es.reason_type}" if es.motivo is not None
             else "no reason arrived: the question «in which message» "
                  "has no object"))
-        if "dettaglio" in strade:
-            fuori.append((
-                "§8.2 — the `dettaglio` in the body (for the log, not for "
-                "the user)", True, bool(es.dettaglio),
-                es.dettaglio or "absent"))
+        if "detail" in routes:
+            outside.append((
+                "§8.2 — the `detail` in the body (for the log, not for "
+                "the user)", True, bool(es.detail),
+                es.detail or "absent"))
     else:
-        fuori.append((
-            "§3.1 point 2 — the reason in the CONGEDO on the channel",
-            "congedo" in strade,
+        outside.append((
+            "§3.1 point 2 — the reason in the FAREWELL on the channel",
+            "farewell" in routes,
             bool(es.al_server.get("congedo-al-server")),
             "the server wrote it"
             if es.al_server.get("congedo-al-server")
             else ("absent — and it is expected: the channel is reset"
-                  if "congedo" not in strade else "absent")))
-        fuori.append((
+                  if "farewell" not in routes else "absent")))
+        outside.append((
             "§3.1 point 3 — the reason in the closing of the session",
-            "chiusura" in strade,
+            "closure" in routes,
             bool(es.al_server.get("chiusura-al-server")),
             "the server wrote it"
             if es.al_server.get("chiusura-al-server") else "absent"))
-        if "posto" in strade:
-            fuori.append((
+        if "slot" in routes:
+            outside.append((
                 "and the place is freed, observed ON THE WIRE", True,
-                bool(es.posto_libero), "free" if es.posto_libero
+                bool(es.slot_free), "free" if es.slot_free
                 else "TAKEN: §8.2 0x0F to whoever has no session"))
-    return fuori
+    return outside
 
 
-VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
+GREEN, RED, YELLOW, GRAY = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
 
-def riga(ok, nome, testo):
-    print(f"    {VERDE if ok else ROSSO}{'OK' if ok else 'NO'}{GRIGIO}  "
-          f"{nome:34s} {testo}")
+def row(ok, label_name, body_text):
+    print(f"    {GREEN if ok else RED}{'OK' if ok else 'NO'}{GRAY}  "
+          f"{label_name:34s} {body_text}")
 
 
-def inf(testo):
-    print(f"    --  {testo}")
+def inf(body_text):
+    print(f"    --  {body_text}")
 
 
-async def principale(a):
-    registro = Registro(a.registro)
+async def primary(a):
+    logbook = Log(a.logbook)
     # ⛔ The cases and the excluded are those OF THE TARGET: against the product
     #    `server-in-chiusura` is there and 0x0C leaves the excluded; against the
     #    graft it is the opposite.  ⭐ The number B7 prints next to an outcome is
     #    that of the target that was started, not that of the document.
-    TUTTI = casi_di(a.bersaglio)
-    ESCL = esclusi_di(a.bersaglio)
-    casi = [c for c in TUTTI if not a.solo or a.solo in c[0]]
-    if a.escludi:
-        prima = len(casi)
-        casi = [c for c in casi if a.escludi not in c[0]]
-        a.esclusi_a_mano = prima - len(casi)
+    ALL = cases_of(a.target)
+    EXCL = excluded_of(a.target)
+    cases = [c for c in ALL if not a.solo or a.solo in c[0]]
+    if a.exclude:
+        before = len(cases)
+        cases = [c for c in cases if a.exclude not in c[0]]
+        a.manually_excluded = before - len(cases)
     else:
-        a.esclusi_a_mano = 0
+        a.manually_excluded = 0
 
-    # ── --elenco: the predictions, and the denominator, without measuring ──
-    if a.elenco:
+    # ── --listing: the predictions, and the denominator, without measuring ──
+    if a.listing:
         print(f"== B7 — the farewell from the receiving side\n")
-        print(f"   ⛔ {len({c[1] for c in TUTTI})} reasons THAT CAN BE PROVOKED out of "
-              f"{len(MOTIVI)} of §8.2, in {len(TUTTI)} cases.  Every line is a "
+        print(f"   ⛔ {len({c[1] for c in ALL})} reasons THAT CAN BE PROVOKED out of "
+              f"{len(REASONS)} of §8.2, in {len(ALL)} cases.  Every line is a "
               f"PREDICTION written before measuring\n")
-        for nome, motivo, verso, strade, spiega, _ in TUTTI:
-            print(f"  {nome:34s} {motivo:#04x} {MOTIVI[motivo]}  [{verso}]")
-            print(f"  {'':34s}   enforceable roads: {', '.join(strade)}")
-            print(f"  {'':34s}   {spiega}")
-        print(f"\n   ⛔ AND THE {len(ESCL)} EXCLUDED, with the why — without "
+        for label_name, motivo, which_way, routes, explain, _ in ALL:
+            print(f"  {label_name:34s} {motivo:#04x} {REASONS[motivo]}  [{which_way}]")
+            print(f"  {'':34s}   enforceable roads: {', '.join(routes)}")
+            print(f"  {'':34s}   {explain}")
+        print(f"\n   ⛔ AND THE {len(EXCL)} EXCLUDED, with the why — without "
               f"this list «7 out of 7» would be true by construction:\n")
-        for c, perche in ESCL:
-            print(f"  {MOTIVI[c]:26s} {c:#04x}  {perche}")
-        ok, testo = certifica_denominatore(TUTTI, ESCL)
-        print(f"\n   {'⭐' if ok else '⛔'} {testo}")
+        for c, reason_text in EXCL:
+            print(f"  {REASONS[c]:26s} {c:#04x}  {reason_text}")
+        ok, body_text = certify_denominator(ALL, EXCL)
+        print(f"\n   {'⭐' if ok else '⛔'} {body_text}")
         return 0 if ok else 3
 
     # ⛔ THE RUN'S LOG — and the first line says against what one measures.
     #    Until 11 Aug 2026 B7 had none.
-    a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
+    a.reg = b0.Log(a.out_dir, a.target, a.port, a.lap or None,
                         a.md5 or None)
-    a.reg.apri_giro(
+    a.reg.open_round(
         "B7", "one case per reason, each on a new connection; the "
               "farewell is read ON THE WIRE from the receiving side, never from the log "
               "of whoever sends it",
-        extra={"casi": len(casi), "casi_del_bersaglio": len(TUTTI),
-               "provocabili": len({c[1] for c in TUTTI}),
-               "esclusi": len(ESCL), "filtro": a.solo,
+        extra={"cases": len(cases), "casi_del_bersaglio": len(ALL),
+               "provokable": len({c[1] for c in ALL}),
+               "excluded": len(EXCL), "filter": a.solo,
                # ⛔ THE NUMBER THAT CHANGES WITH THE TARGET, written BEFORE
                #    measuring: seven against the graft, eight against the product.
-               "attesi_provocabili": b0.profilo(a.bersaglio)["motivi_provocabili"],
+               "attesi_provocabili": b0.profile_v(a.target)["motivi_provocabili"],
                "pid_server": getattr(a, "pid_server", 0)})
     print("== B7 — the farewell, verified FROM THE RECEIVING SIDE (§8.1)")
-    print(f"   ⛔ TARGET: {a.bersaglio} · port {a.porta} · binary md5 "
+    print(f"   ⛔ TARGET: {a.target} · port {a.port} · binary md5 "
           f"{(a.md5 or 'unknown')[:12]}…")
-    atteso_prov = b0.profilo(a.bersaglio)["motivi_provocabili"]
-    visti_prov = len({c[1] for c in TUTTI})
-    if visti_prov != atteso_prov:
-        print(f"   {ROSSO}⛔ the reasons that can be provoked on this target should be "
-              f"{atteso_prov} and the cases cover {visti_prov}{GRIGIO}")
+    expected_provocable = b0.profile_v(a.target)["motivi_provocabili"]
+    seen_orig = len({c[1] for c in ALL})
+    if seen_orig != expected_provocable:
+        print(f"   {RED}⛔ the reasons that can be provoked on this target should be "
+              f"{expected_provocable} and the cases cover {seen_orig}{GRAY}")
         print(f"      ⛔ It is not a server red: it is the bench that cannot "
               f"count what it is about to measure.")
         return 3
-    print(f"   ⛔ {visti_prov} reasons that can be provoked out of {len(MOTIVI)} of §8.2 — and "
+    print(f"   ⛔ {seen_orig} reasons that can be provoked out of {len(REASONS)} of §8.2 — and "
           f"the number is the TARGET's, not the document's")
-    print("   ⛔ for every reason: the CONGEDO on the channel **and** the code in the "
+    print("   ⛔ for every reason: the FAREWELL on the channel **and** the code in the "
           "closing")
     print("      of the session — two roads, two counters, one `&&`\n")
 
     # ═══ THE CERTIFICATION, BEFORE MEASURING ═══════════════════════════════
     print("== ⭐ The bench certifies itself before pointing at the unknown "
           "(CODER.md §3.3)")
-    guasti_cert = 0
-    ok, testo = certifica_denominatore(TUTTI, ESCL)
-    riga(ok, "the denominator adds up", testo)
-    guasti_cert += 0 if ok else 1
-    for nome, ok, testo in certifica_lettori():
-        riga(ok, nome, testo)
-        guasti_cert += 0 if ok else 1
-    for nome, ok, testo in certifica_frasi():
-        riga(ok, nome, testo)
-        guasti_cert += 0 if ok else 1
-    if a.registro:
-        ok, perche = registro.leggibile()
-        riga(ok, "the server log can be read", perche or a.registro)
-        guasti_cert += 0 if ok else 1
+    cert_faults = 0
+    ok, body_text = certify_denominator(ALL, EXCL)
+    row(ok, "the denominator adds up", body_text)
+    cert_faults += 0 if ok else 1
+    for label_name, ok, body_text in certify_readers():
+        row(ok, label_name, body_text)
+        cert_faults += 0 if ok else 1
+    for label_name, ok, body_text in certify_sentences():
+        row(ok, label_name, body_text)
+        cert_faults += 0 if ok else 1
+    if a.logbook:
+        ok, reason_text = logbook.readable()
+        row(ok, "the server log can be read", reason_text or a.logbook)
+        cert_faults += 0 if ok else 1
     else:
-        inf("⚠ no --registro: §3.1 point 1 and the client→server direction are NOT")
+        inf("⚠ no --logbook: §3.1 point 1 and the client→server direction are NOT")
         inf("  measured, and the run will be declared PARTIAL")
 
     print("\n== ⭐ The initial state, declared and verified (B0.1, B0.2)")
     inf("a whole handshake: if the place were already occupied by the previous")
     inf("run, `gia-attiva-remota` would be green for the wrong reason")
-    marca = registro.finestra() if a.registro else None
-    ok, testo = await stretta_intera(a)
-    riga(ok, "stretta-di-mano-intera", testo)
-    guasti_cert += 0 if ok else 1
-    if a.registro and ok:
+    mark = logbook.win() if a.logbook else None
+    ok, body_text = await full_handshake(a)
+    row(ok, "stretta-di-mano-intera", body_text)
+    cert_faults += 0 if ok else 1
+    if a.logbook and ok:
         # ⭐ The positive control of the log READER, on the line that must
         #    surely be there — and the negative one on one that is not.
-        trovata, perche = await registro.attendi(
-            marca, f"admitted utente={a.utente}", entro=6)
-        riga(trovata, "⭐ the log reader finds",
-             f"«admitted utente={a.utente}»" if trovata else perche)
-        guasti_cert += 0 if trovata else 1
-        testo_finestra = registro.da(marca) or ""
-        finta = "congedo motivo=0xff" not in testo_finestra
-        riga(finta, "⛔ and does not find what is not there",
-             "«congedo motivo=0xff» is not there, as it must")
-        guasti_cert += 0 if finta else 1
+        found_at, reason_text = await logbook.should_wait(
+            mark, f"admitted username={a.username}", within=6)
+        row(found_at, "⭐ the log reader finds",
+             f"«admitted username={a.username}»" if found_at else reason_text)
+        cert_faults += 0 if found_at else 1
+        window_text = logbook.da(mark) or ""
+        mock = "farewell motivo=0xff" not in window_text
+        row(mock, "⛔ and does not find what is not there",
+             "«farewell motivo=0xff» is not there, as it must")
+        cert_faults += 0 if mock else 1
 
-    if guasti_cert:
-        print(f"\n    {ROSSO}⛔ B7 DOES NOT MEASURE: the tool is not certified "
-              f"({guasti_cert} checks failed){GRIGIO}")
+    if cert_faults:
+        print(f"\n    {RED}⛔ B7 DOES NOT MEASURE: the tool is not certified "
+              f"({cert_faults} checks failed){GRAY}")
         print("       A negative outcome with an uncertified tool is")
         print("       ambiguous between «the server does not work» and «the bench")
         print("       did not work» — and this is NOT a server red.")
@@ -1422,105 +1422,105 @@ async def principale(a):
     #    for a lack of the BENCH, and they would be reds indistinguishable from a
     #    server that ignores farewells.  ⚠ Better one measurement less, declared,
     #    than a measurement that accuses the wrong defendant.
-    if not a.registro:
-        prima = len(casi)
-        casi = [c for c in casi if c[2] != VERSO_CS]
-        if prima != len(casi):
-            print(f"    {GIALLO}⚠{GRIGIO} without --registro the {prima - len(casi)}"
+    if not a.logbook:
+        before = len(cases)
+        cases = [c for c in cases if c[2] != DIR_CS]
+        if before != len(cases):
+            print(f"    {YELLOW}⚠{GRAY} without --logbook the {before - len(cases)}"
                   f" client→server cases are NOT run: the witness is missing")
 
     # ═══ THE CASES  ═════════════════════════════════════════════════════════
-    if not casi:
-        print(f"\n    {ROSSO}⛔ «--solo {a.solo}» selected ZERO cases out of "
-              f"{len(TUTTI)}: there is nothing to measure{GRIGIO}")
-        print("       This is NOT a green.  The names are read with --elenco.")
+    if not cases:
+        print(f"\n    {RED}⛔ «--solo {a.solo}» selected ZERO cases out of "
+              f"{len(ALL)}: there is nothing to measure{GRAY}")
+        print("       This is NOT a green.  The names are read with --listing.")
         return 2
 
-    print(f"\n== The cases: {len(casi)} out of {len(TUTTI)}, "
-          f"{len({c[1] for c in casi})} reasons out of "
-          f"{len({c[1] for c in TUTTI})} that can be provoked")
+    print(f"\n== The cases: {len(cases)} out of {len(ALL)}, "
+          f"{len({c[1] for c in cases})} reasons out of "
+          f"{len({c[1] for c in ALL})} that can be provoked")
     if a.solo:
-        print(f"    {GIALLO}⚠ PARTIAL RUN{GRIGIO}: the green outcome reads «the "
+        print(f"    {YELLOW}⚠ PARTIAL RUN{GRAY}: the green outcome reads «the "
               f"selected cases pass», never «B7 passes»")
-    if a.esclusi_a_mano:
-        print(f"    {GIALLO}⚠{GRIGIO} {a.esclusi_a_mano} cases removed by "
-              f"«--escludi {a.escludi}»: the run is PARTIAL, and the green outcome "
+    if a.manually_excluded:
+        print(f"    {YELLOW}⚠{GRAY} {a.manually_excluded} cases removed by "
+              f"«--exclude {a.exclude}»: the run is PARTIAL, and the green outcome "
               f"does not cover them")
 
-    conti = {
+    counts = {
         "§3.1 point 1 — the «what» line in the log of whoever closes": [0, 0],
-        "§3.1 point 2 — the reason in the CONGEDO on the channel": [0, 0],
+        "§3.1 point 2 — the reason in the FAREWELL on the channel": [0, 0],
         "§3.1 point 3 — the reason in the closing of the session": [0, 0],
-        "§11 — the reason in the right message (CONGEDO, not RESPINTO)": [0, 0],
-        "§8.2 — the `dettaglio` in the body (for the log, not for the user)": [0, 0],
+        "§11 — the reason in the right message (FAREWELL, not REJECTED)": [0, 0],
+        "§8.2 — the `detail` in the body (for the log, not for the user)": [0, 0],
         "and the place is freed, observed ON THE WIRE": [0, 0],
         "⛔ the server is still there after the case (B0.5)": [0, 0],
         "§8.2 — a distinct, showable phrase, never a number": [0, 0],
     }
-    guasti, morto = 0, False
+    faults, dead = 0, False
     # ⛔ A reason counts as «proved» only if ALL its cases pass.
-    #    `CHIUSO_DALL_UTENTE` has two — Chrome-style and Firefox-style — and
+    #    `CLOSED_BY_USER` has two — Chrome-style and Firefox-style — and
     #    counting it full because one of the two went well would be mistaking
     #    «one engine out of two» for «the reason is covered».
-    motivi_visti, motivi_rotti = set(), set()
+    seen_reasons, broken_reasons = set(), set()
 
-    for nome, motivo, verso, strade, spiega, f in casi:
-        inizio = registro.finestra() if a.registro else None
-        es = await gira_caso(a, registro, inizio, motivo, verso, f)
-        motivi_visti.add(motivo)
+    for label_name, motivo, which_way, routes, explain, f in cases:
+        start = logbook.win() if a.logbook else None
+        es = await run_case(a, logbook, start, motivo, which_way, f)
+        seen_reasons.add(motivo)
         # ⚠ The place is looked at by the CASE, with its connection still open
-        #   (see `guarda_il_posto`): looking at it from here, with the connection
+        #   (see `look_slot`): looking at it from here, with the connection
         #   closed, would find it free even with the farewell ignored.
-        prove = esigenze(strade, es, motivo, verso)
-        buono = es.provocato and es.errore is None
-        for etichetta, esigibile, arrivata, testo in prove:
-            if not esigibile:
+        prove = needs(routes, es, motivo, which_way)
+        good = es.caused and es.failure is None
+        for label, due, arrived, body_text in prove:
+            if not due:
                 continue
             # ⚠ `setdefault`: a new label is added to the summary with its
             #   denominator instead of bringing the bench down — and so whoever
             #   adds a road does not have to remember two places.
-            conto = conti.setdefault(etichetta, [0, 0])
-            conto[1] += 1
-            conto[0] += int(arrivata)
-            buono = buono and arrivata
-        riga(buono, nome, str(es))
-        if not buono:
-            motivi_rotti.add(motivo)
-            guasti += 1
-            print(f"        expected: {motivo:#04x} {MOTIVI[motivo]}  "
-                  f"[{verso}]  enforceable roads: {', '.join(strade)}")
-            print(f"        {spiega}")
-            if not es.provocato:
+            count = counts.setdefault(label, [0, 0])
+            count[1] += 1
+            count[0] += int(arrived)
+            good = good and arrived
+        row(good, label_name, str(es))
+        if not good:
+            broken_reasons.add(motivo)
+            faults += 1
+            print(f"        expected: {motivo:#04x} {REASONS[motivo]}  "
+                  f"[{which_way}]  enforceable roads: {', '.join(routes)}")
+            print(f"        {explain}")
+            if not es.caused:
                 print(f"        ⛔ and the provocation NEVER LEFT (stopped "
-                      f"in «{es.fase}»): it is not a failed test, it is a "
+                      f"in «{es.phase}»): it is not a failed test, it is a "
                       f"test not done")
-            for etichetta, esigibile, arrivata, testo in prove:
-                if esigibile and not arrivata:
-                    print(f"        {ROSSO}⛔{GRIGIO} {etichetta}: {testo}")
-            if a.registro and inizio is not None:
+            for label, due, arrived, body_text in prove:
+                if due and not arrived:
+                    print(f"        {RED}⛔{GRAY} {label}: {body_text}")
+            if a.logbook and start is not None:
                 print("        the server log, in that window:")
-                for r in registro.righe_nostre(inizio):
+                for r in logbook.our_lines(start):
                     print(f"          {r[:150]}")
         # ⚠ The roads that are not enforceable are PRINTED anyway: it is the line
         #   that prevents reading «absent» as «broken».
-        for etichetta, esigibile, arrivata, testo in prove:
-            if not esigibile:
-                print(f"        {GIALLO}~{GRIGIO} {etichetta}: {testo} "
+        for label, due, arrived, body_text in prove:
+            if not due:
+                print(f"        {YELLOW}~{GRAY} {label}: {body_text} "
                       f"(not enforceable in this case, and it does not enter the count)")
-        if es.dettaglio:
-            print(f"        detail from the body: «{es.dettaglio}»  "
+        if es.detail:
+            print(f"        detail from the body: «{es.detail}»  "
                   f"⚠ it goes to the log, NOT to the user (§8.2)")
 
         # ⛔ And the fact goes into the log BEFORE any conclusion: a case that
         #    brings the bench down must have left its own line, or the log would
         #    only tell about the runs that went well.
-        a.reg.scrivi({"tipo": "caso", "nome": nome, "esito": bool(buono),
-                      "motivo_atteso": motivo, "verso": verso,
-                      "strade_esigibili": list(strade),
-                      "motivo_visto": es.motivo, "tipo_motivo": es.tipo_motivo,
-                      "codice_wt": es.codice_wt, "provocato": es.provocato,
-                      "fase": es.fase, "errore": es.errore,
-                      "dettaglio": es.dettaglio,
+        a.reg.put_out({"kind": "case_v", "label_name": label_name, "outcome": bool(good),
+                      "motivo_atteso": motivo, "which_way": which_way,
+                      "strade_esigibili": list(routes),
+                      "reason_seen": es.motivo, "reason_type": es.reason_type,
+                      "code_wt": es.code_wt, "caused": es.caused,
+                      "phase": es.phase, "failure": es.failure,
+                      "detail": es.detail,
                       "prove": [[e_, bool(x_), bool(y_)]
                                 for e_, x_, y_, _ in prove]})
 
@@ -1532,24 +1532,24 @@ async def principale(a):
         #    ⚠ Running B0.5 here would give a red on a server that did exactly
         #    what §8.1 asks of it, and it would be the red on the wrong defendant
         #    inside the bench that quotes that lesson.
-        if motivo == SERVER_IN_CHIUSURA:
+        if motivo == SERVER_SHUTTING_DOWN:
             inf("⚠ B0.5 does NOT apply to this case: I turned the server off,")
             inf("  and it is the thing proved.  The count does not touch it, and this line")
             inf("  exists so that «skipped» and «passed» do not have the same")
             inf("  face")
-            a.reg.scrivi({"tipo": "b0.5-saltato", "nome": nome,
-                          "perche": "the case shuts the server down on purpose"})
-            morto = True
+            a.reg.put_out({"kind": "b0.5-saltato", "label_name": label_name,
+                          "reason_text": "the case shuts the server down on purpose"})
+            dead = True
             break
-        conto = conti["⛔ the server is still there after the case (B0.5)"]
-        conto[1] += 1
-        vivo, perche = await ancora_vivo(a)
-        conto[0] += int(vivo)
-        if not vivo:
-            riga(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after «{nome}»: "
-                            f"{perche}")
-            guasti += 1
-            morto = True
+        count = counts["⛔ the server is still there after the case (B0.5)"]
+        count[1] += 1
+        alive, reason_text = await still_alive(a)
+        count[0] += int(alive)
+        if not alive:
+            row(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after «{label_name}»: "
+                            f"{reason_text}")
+            faults += 1
+            dead = True
             break
 
     # ═══ THE PHRASES (§8.2) ═════════════════════════════════════════════════
@@ -1559,37 +1559,37 @@ async def principale(a):
     #   the independent sections are skipped because there they really depended
     #   on the cases — here it is not so, and skipping them would hide a free
     #   measurement.)
-    if not morto:
-        print(f"\n== ⭐ The phrases of §8.2 — «BUDGET_PIENO is not \"error 6\"»")
+    if not dead:
+        print(f"\n== ⭐ The phrases of §8.2 — «BUDGET_FULL is not \"error 6\"»")
         inf(f"the client's TABLE is read, not the screen: whether the phrase")
         inf(f"reaches the user's eyes is the user's judgement (I8)")
         try:
-            with open(a.pagina, encoding="utf-8", errors="replace") as fp:
-                testo = fp.read()
-            voci, perche = leggi_tabella(testo)
+            with open(a.page_v, encoding="utf-8", errors="replace") as fp:
+                body_text = fp.read()
+            entries, reason_text = read_table(body_text)
         except OSError as e:
-            voci, perche = None, f"{a.pagina} cannot be read: {e}"
-        if voci is None:
-            riga(False, "the table can be read", f"⛔ {perche}")
+            entries, reason_text = None, f"{a.page_v} cannot be read: {e}"
+        if entries is None:
+            row(False, "the table can be read", f"⛔ {reason_text}")
             inf("⛔ and this is NOT «zero phrases»: it is «the table was not")
             inf("   read».  The count below stays without a denominator")
-            guasti += 1
+            faults += 1
         else:
-            esiti = giudica_frasi(voci)
-            conti["§8.2 — a distinct, showable phrase, never a number"][1] = \
-                len(esiti)
-            for c, ok, testo in esiti:
-                conti["§8.2 — a distinct, showable phrase, never a "
+            outcomes = judge_sentences(entries)
+            counts["§8.2 — a distinct, showable phrase, never a number"][1] = \
+                len(outcomes)
+            for c, ok, body_text in outcomes:
+                counts["§8.2 — a distinct, showable phrase, never a "
                       "number"][0] += int(ok)
                 if not ok:
-                    riga(False, MOTIVI[c], testo)
-                    guasti += 1
-                elif a.frasi:
-                    riga(True, MOTIVI[c], f"«{testo}»")
-            if all(ok for _, ok, _ in esiti):
-                riga(True, "the 15 phrases", f"distinct, without numbers, from the file "
-                                          f"{os.path.basename(a.pagina)}")
-                inf("(--frasi prints them all)")
+                    row(False, REASONS[c], body_text)
+                    faults += 1
+                elif a.sentences:
+                    row(True, REASONS[c], f"«{body_text}»")
+            if all(ok for _, ok, _ in outcomes):
+                row(True, "the 15 phrases", f"distinct, without numbers, from the file "
+                                          f"{os.path.basename(a.page_v)}")
+                inf("(--sentences prints them all)")
 
         # ═══ THE MEASURED EXCLUSION — AND THE SIGN FLIPS WITH THE TARGET ═══
         #
@@ -1599,19 +1599,19 @@ async def principale(a):
         #    and it is the eighth reason that can be provoked.  ⚠ A zero here would
         #    mean I am measuring a binary **from before** that night, and the
         #    `server-in-chiusura` case would be red for the wrong reason.
-        atteso_positivo = b0.profilo(a.bersaglio)["spegnimento"]
-        sorgenti = b0.sorgenti_spegnimento(a.bersaglio, a.dentro)
-        print(f"\n== ⛔ The exclusion that is MEASURED: SERVER_IN_CHIUSURA (0x0C)")
-        inf(f"one looks WHERE THE THING HAPPENS, and on «{a.bersaglio}» that is "
-            f"{len(sorgenti)} files — ⛔ not `rcp.c` alone, which is identical "
+        expected_positive = b0.profile_v(a.target)["spegnimento"]
+        sources = b0.sources_shutdown(a.target, a.inside)
+        print(f"\n== ⛔ The exclusion that is MEASURED: SERVER_SHUTTING_DOWN (0x0C)")
+        inf(f"one looks WHERE THE THING HAPPENS, and on «{a.target}» that is "
+            f"{len(sources)} files — ⛔ not `rcp.c` alone, which is identical "
             f"in the two servers and does not know a process exists")
-        quanti, testo = esclusione_misurata(sorgenti)
-        if quanti is None:
-            riga(False, "the sources can be read", testo)
-            guasti += 1
-        elif atteso_positivo:
-            riga(quanti > 0, "⭐ SERVER_IN_CHIUSURA IS producible", testo)
-            if quanti > 0:
+        how_many, body_text = measured_exclusion(sources)
+        if how_many is None:
+            row(False, "the sources can be read", body_text)
+            faults += 1
+        elif expected_positive:
+            row(how_many > 0, "⭐ SERVER_SHUTTING_DOWN IS producible", body_text)
+            if how_many > 0:
                 inf("⭐ and indeed those that can be provoked here are EIGHT, not seven: it is the "
                     "first")
                 inf("  visible difference between the two servers (fasi/01-filo-nudo.md B7)")
@@ -1621,10 +1621,10 @@ async def principale(a):
                 inf("  August, or the sources are not those it was")
                 inf("  built from.  ⚠ It is not «the product does not say farewell»: it is that")
                 inf("  I am not looking at the product I believe")
-                guasti += 1
+                faults += 1
         else:
-            riga(quanti == 0, "SERVER_IN_CHIUSURA is not producible", testo)
-            if quanti == 0:
+            row(how_many == 0, "SERVER_SHUTTING_DOWN is not producible", body_text)
+            if how_many == 0:
                 inf("⚠ and `FASI.md` §01-filo-nudo B7 listed it among «the eight")
                 inf("  reasons this phase can produce»: against the graft")
                 inf("  they are seven")
@@ -1632,65 +1632,65 @@ async def principale(a):
                 inf("⭐ the path now exists in the graft too: it must be removed")
                 inf("  from the excluded and a case written for it, or B7 counts one")
                 inf("  reason fewer than the true number")
-                guasti += 1
+                faults += 1
 
     # ═══ THE SUMMARY ═══════════════════════════════════════════════════════
     print("\n    == what this run really looked at")
-    for che, (buoni, tot) in conti.items():
+    for desc, (good_n, tot) in counts.items():
         if tot == 0:
             # ⛔ A zero denominator is DECLARED: «nobody looked» and «all
             #    passed» look the same if one keeps quiet.
-            print(f"    --  {che:62s} no case triggered it")
+            print(f"    --  {desc:62s} no case triggered it")
             continue
-        col = VERDE if buoni == tot else ROSSO
-        print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}")
+        clr = GREEN if good_n == tot else RED
+        print(f"    {clr}{good_n:3d} out of {tot:3d}{GRAY}  {desc}")
 
-    motivi_pieni = motivi_visti - motivi_rotti
+    full_reasons = seen_reasons - broken_reasons
     print()
-    print(f"    ⛔ the reasons: {len(motivi_pieni)} out of {len(motivi_visti)} "
+    print(f"    ⛔ the reasons: {len(full_reasons)} out of {len(seen_reasons)} "
           f"proved in this run, and those THAT CAN BE PROVOKED by phase 1 are "
-          f"{len({c[1] for c in TUTTI})} out of {len(MOTIVI)} of §8.2")
-    print(f"       the other {len(ESCL)} are excluded, each with its "
-          f"why (--elenco), and the exclusion of")
-    print(f"       SERVER_IN_CHIUSURA is measured, not asserted")
+          f"{len({c[1] for c in ALL})} out of {len(REASONS)} of §8.2")
+    print(f"       the other {len(EXCL)} are excluded, each with its "
+          f"why (--listing), and the exclusion of")
+    print(f"       SERVER_SHUTTING_DOWN is measured, not asserted")
 
-    if morto and any(c[1] == SERVER_IN_CHIUSURA for c in casi):
+    if dead and any(c[1] == SERVER_SHUTTING_DOWN for c in cases):
         # ⭐ The server died because I asked it to: it is the
         #    `server-in-chiusura` case, and the sections that follow (the phrases,
         #    the measured exclusion) do not touch the server — they run anyway.
         print(f"\n    ⚠ the server is off because this run turned it off "
               f"on purpose: the run is PARTIAL by construction")
-        a.reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": True,
-                      "perche": "shutdown run"})
-        print(f"    --  {a.reg.riassunto()}")
-        return 1 if guasti else 0
-    if morto:
-        print(f"\n    {ROSSO}⛔ the bench stopped: without a server there is "
-              f"nothing to measure{GRIGIO}")
-        a.reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": True,
-                      "perche": "the server died without my asking it to"})
+        a.reg.put_out({"kind": "verdict", "faults": faults, "partial": True,
+                      "reason_text": "shutdown run"})
+        print(f"    --  {a.reg.summary()}")
+        return 1 if faults else 0
+    if dead:
+        print(f"\n    {RED}⛔ the bench stopped: without a server there is "
+              f"nothing to measure{GRAY}")
+        a.reg.put_out({"kind": "verdict", "faults": faults, "partial": True,
+                      "reason_text": "the server died without my asking it to"})
         return 1
-    a.reg.scrivi({"tipo": "verdetto", "guasti": guasti,
-                  "parziale": bool(a.solo or not a.registro
-                                   or a.esclusi_a_mano),
-                  "motivi_pieni": sorted(motivi_pieni),
-                  "provocabili": len({c[1] for c in TUTTI}),
-                  "conti": {k: v for k, v in conti.items()}})
-    print(f"\n    --  {a.reg.riassunto()}")
-    if guasti:
-        print(f"\n    {ROSSO}⛔ B7: {guasti} points do not pass against "
-              f"«{a.bersaglio}»{GRIGIO}")
+    a.reg.put_out({"kind": "verdict", "faults": faults,
+                  "partial": bool(a.solo or not a.logbook
+                                   or a.manually_excluded),
+                  "full_reasons": sorted(full_reasons),
+                  "provokable": len({c[1] for c in ALL}),
+                  "counts": {k: v for k, v in counts.items()}})
+    print(f"\n    --  {a.reg.summary()}")
+    if faults:
+        print(f"\n    {RED}⛔ B7: {faults} points do not pass against "
+              f"«{a.target}»{GRAY}")
         return 1
-    if a.solo or not a.registro or a.esclusi_a_mano:
-        print(f"\n    {VERDE}⭐ the measured points pass against "
-              f"«{a.bersaglio}»{GRIGIO} — ⚠ and this is NOT «B7 passes»: the run "
+    if a.solo or not a.logbook or a.manually_excluded:
+        print(f"\n    {GREEN}⭐ the measured points pass against "
+              f"«{a.target}»{GRAY} — ⚠ and this is NOT «B7 passes»: the run "
               f"was partial")
         return 0
-    print(f"\n    {VERDE}⭐ B7 passes: {len(motivi_pieni)} out of "
-          f"{len({c[1] for c in TUTTI})} reasons that can be provoked, by BOTH "
-          f"roads of §3.1,{GRIGIO}")
-    print(f"    {VERDE}      and 15 distinct phrases out of 15 — and the numbers above "
-          f"say on what{GRIGIO}")
+    print(f"\n    {GREEN}⭐ B7 passes: {len(full_reasons)} out of "
+          f"{len({c[1] for c in ALL})} reasons that can be provoked, by BOTH "
+          f"roads of §3.1,{GRAY}")
+    print(f"    {GREEN}      and 15 distinct phrases out of 15 — and the numbers above "
+          f"say on what{GRAY}")
     return 0
 
 
@@ -1698,112 +1698,112 @@ async def principale(a):
 # ⛔ THE PASSWORD MUST NOT GO THROUGH THE COMMAND LINE — defect **D12**,
 #    cured on 12 Aug 2026.
 #
-# ⛔ `--parola` ends up in the process `argv`, that is in `/proc/<pid>/cmdline`,
+# ⛔ `--password` ends up in the process `argv`, that is in `/proc/<pid>/cmdline`,
 #    which on Linux is **readable by anyone**: a `ps` launched by another user
 #    during the run prints it in full.
 #
 # ⭐ The good road already existed in the house and this is its extension, not a
-#    second way: `01-b10-secondo-utente.py` takes `--parola-file`, a `0600` file
+#    second way: `01-b10-secondo-utente.py` takes `--password-file`, a `0600` file
 #    that the launcher writes with `printf` — a shell **builtin**, so not even
 #    the writing goes through a process with the password in `argv` — and
 #    deletes with a `trap`.
 #
-# ⚠ And `--parola` was NOT removed, and not out of laziness: some callers not
+# ⚠ And `--password` was NOT removed, and not out of laziness: some callers not
 #   yet cured still pass it, and breaking them **silently** would be worse than
 #   the defect.  ⛔ But the fallback is DECLARED (`CODER.md` §4.2): a silent
 #   fallback produces two behaviours under the same label, which is form
 #   **E2** — and here the two behaviours are «the secret is protected» and
-#   «the secret is public».  ⇒ whoever passes `--parola` gets told.
+#   «the secret is public».  ⇒ whoever passes `--password` gets told.
 #
 # ⚠ And the warning looks at `sys.argv`, not at the value: the default written
 #   in the code is in no command line, and telling it otherwise would be an
 #   alarm one learns to ignore.
-def parola_dagli_argomenti(a):
-    """The password: from `--parola-file` if present, from `--parola` otherwise.
+def password_from_args(a):
+    """The password: from `--password-file` if present, from `--password` otherwise.
 
     ⛔ And the three ways of failing are told apart: «cannot be read», «is
     readable by others» and «is empty» have three different cures, and an empty
     file is NOT an empty password — it is «the launcher did not write it»
     (`LEZIONI.md` §1.9).
     """
-    percorso = getattr(a, "parola_file", "") or ""
-    if percorso:
+    fpath = getattr(a, "password_file", "") or ""
+    if fpath:
         try:
-            modo = os.stat(percorso).st_mode & 0o077
+            manner = os.stat(fpath).st_mode & 0o077
         except OSError as e:
-            print(f"   ⛔ the password file «{percorso}» cannot be read: {e}")
+            print(f"   ⛔ the password file «{fpath}» cannot be read: {e}")
             sys.exit(2)
-        if modo:
-            print(f"   ⚠ «{percorso}» is readable by others (bits {modo:o}): the "
+        if manner:
+            print(f"   ⚠ «{fpath}» is readable by others (bits {manner:o}): the "
                   f"secret is not protected")
         try:
-            with open(percorso, encoding="utf-8") as f:
-                parola = f.read().strip("\n")
+            with open(fpath, encoding="utf-8") as f:
+                password = f.read().strip("\n")
         except OSError as e:
-            print(f"   ⛔ the password cannot be read from «{percorso}»: {e}")
+            print(f"   ⛔ the password cannot be read from «{fpath}»: {e}")
             sys.exit(2)
-        if not parola:
-            print(f"   ⛔ the password file «{percorso}» is EMPTY.  It is not")
+        if not password:
+            print(f"   ⛔ the password file «{fpath}» is EMPTY.  It is not")
             print("      «the password is empty»: it is «the launcher did not write it».")
             sys.exit(2)
-        return parola
-    if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
-        print("   ⚠ D12: the password arrived from `--parola`, that is from the")
+        return password
+    if any(x == "--password" or x.startswith("--password=") for x in sys.argv[1:]):
+        print("   ⚠ D12: the password arrived from `--password`, that is from the")
         print("     COMMAND LINE: it is in `/proc/<pid>/cmdline` and anyone who")
         print("     runs `ps` on this machine sees it.  The run goes on — the caller")
         print("     has not been cured — but it is not a private run.")
-        print("     ⭐ The cure: `--parola-file <0600 file>`, as in B10.")
-    return a.parola
+        print("     ⭐ The cure: `--password-file <0600 file>`, as in B10.")
+    return a.password
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="B7 — the farewell, verified from the receiving side")
-    p.add_argument("--indirizzo", default="192.168.0.2")
+    p.add_argument("--address", default="192.168.0.2")
     # ⛔ No default that names a target: 7447 is the graft and 7448 the
     #    product, and a default here would mean that «--bersaglio prodotto»
     #    without «--porta» measures the graft while declaring the product.
-    p.add_argument("--porta", type=int, required=True)
-    p.add_argument("--utente", default="prova")
-    p.add_argument("--parola", default="parola-di-prova")
-    # ⛔ D12: the road that does NOT go through `ps`.  It wins over `--parola` if
+    p.add_argument("--port", type=int, required=True)
+    p.add_argument("--username", default="prova")
+    p.add_argument("--password", default="parola-di-prova")
+    # ⛔ D12: the road that does NOT go through `ps`.  It wins over `--password` if
     #    both are there — a file written on purpose is always more recent than a
     #    default.
-    p.add_argument("--parola-file", default="",
+    p.add_argument("--password-file", default="",
                    help="0600 file with only the password (⭐ D12: this way "
                         "it does not end up in `ps`)")
-    p.add_argument("--dentro", default=QUI,
+    p.add_argument("--inside", default=HERE,
                    help="the root of the sources from which the exclusion "
-                        "of SERVER_IN_CHIUSURA is measured (depends on the target)")
+                        "of SERVER_SHUTTING_DOWN is measured (depends on the target)")
     # ⛔ The server's PID, for the `server-in-chiusura` case only.  Zero means
     #    «they did not tell me», and that case is declared NOT DONE instead of
     #    sending a signal in the dark.
     p.add_argument("--pid-server", type=int, default=0,
-                   help="the server's PID, to provoke SERVER_IN_CHIUSURA")
-    p.add_argument("--registro", default="",
+                   help="the server's PID, to provoke SERVER_SHUTTING_DOWN")
+    p.add_argument("--logbook", default="",
                    help="the server log: needed for §3.1 point 1 and for the "
                         "client→server direction")
-    p.add_argument("--pagina", default=os.path.join(QUI, "01-b11-pagina.html"),
+    p.add_argument("--page_v", default=os.path.join(HERE, "01-b11-pagina.html"),
                    help="the file where the table of the §8.2 phrases lives")
     p.add_argument("--solo", default="",
                    help="run only the cases that contain this")
-    # ⛔ `--escludi` and not «--solo everything except»: `server-in-chiusura` SHUTS
+    # ⛔ `--exclude` and not «--solo everything except»: `server-in-chiusura` SHUTS
     #    the server DOWN, so the normal run leaves it out and the launch script
     #    calls it afterwards, with the server restarted on purpose.  ⚠ A filter
     #    that removed a case silently would make «N out of N» true by construction:
     #    here the removed case is printed, and the denominator stays the target's.
-    p.add_argument("--escludi", default="",
+    p.add_argument("--exclude", default="",
                    help="does NOT run the cases that contain this, and declares it")
-    p.add_argument("--frasi", action="store_true",
+    p.add_argument("--sentences", action="store_true",
                    help="print all fifteen phrases of §8.2")
-    p.add_argument("--elenco", action="store_true",
+    p.add_argument("--listing", action="store_true",
                    help="print the predictions and the denominator, without measuring")
-    b0.aggiungi_argomenti(p)
-    # ⚠ `--elenco` does not measure and does not need a port.
-    if "--elenco" in sys.argv:
+    b0.add_arguments(p)
+    # ⚠ `--listing` does not measure and does not need a port.
+    if "--listing" in sys.argv:
         for _az in p._actions:
-            if _az.dest == "porta":
+            if _az.dest == "port":
                 _az.required = False
     a = p.parse_args()
-    a.parola = parola_dagli_argomenti(a)
-    sys.exit(asyncio.run(principale(a)))
+    a.password = password_from_args(a)
+    sys.exit(asyncio.run(primary(a)))

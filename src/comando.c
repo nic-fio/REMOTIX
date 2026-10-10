@@ -16,9 +16,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-struct comando {
+struct command {
 	int fd;
-	char percorso[108];
+	char fpath[108];
 };
 
 /* ⛔ 200 ms, and the price is declared instead of hidden.  The line is read and
@@ -32,14 +32,14 @@ struct comando {
  *   arrives whole in one packet.  ⛔ It must be written here and not
  *   elsewhere: a silent fallback produces two behaviours under the same label
  *   (`CODER.md` §4.2). */
-static const struct timeval TETTO = {0, 200000};
+static const struct timeval CAP = {0, 200000};
 
-static void scrivi_tutto(int fd, const char *testo)
+static void write_all(int fd, const char *body_text)
 {
-	size_t n = strlen(testo);
+	size_t n = strlen(body_text);
 	size_t o = 0;
 	while (o < n) {
-		ssize_t k = send(fd, testo + o, n - o, MSG_NOSIGNAL);
+		ssize_t k = send(fd, body_text + o, n - o, MSG_NOSIGNAL);
 		if (k <= 0)
 			return;
 		o += (size_t)k;
@@ -47,18 +47,18 @@ static void scrivi_tutto(int fd, const char *testo)
 }
 
 /* ⛔ A blank line is NOT an address, and the difference is paid for in a
- *    reassuring answer: `rcp_chiave_indirizzo("   ")` produces the key
- *    `[   ]`, which is never in the ban file — so `SBLOCCA` followed by
- *    spaces only would get the answer **NON-BANNATO**, that is «there was
+ *    reassuring answer: `rcp_key_address("   ")` produces the key
+ *    `[   ]`, which is never in the ban file — so `UNBLOCK` followed by
+ *    spaces only would get the answer **NOT-BANNED**, that is «there was
  *    nothing to remove», which is the good face of `LEZIONI.md` §1.9 put on
- *    a command that has not even said whom to act on.  Here it is `NON-CAPITO`.
+ *    a command that has not even said whom to act on.  Here it is `NOT-UNDERSTOOD`.
  *
  * ⚠ And here the two servers DIVERGE, and it is a finding of 11 Aug 2026:
  *   the graft (`01-b3-rcp-innesta.py`, `remotix_comando_servi`) only checks
- *   `riga.starts_with("SBLOCCA ")` and answers a blank line with
- *   `NON-BANNATO []`.  The cure belongs there and not here; this file does
+ *   `row.starts_with("UNBLOCK ")` and answers a blank line with
+ *   `NOT-BANNED []`.  The cure belongs there and not here; this file does
  *   the right thing and declares it. */
-static bool solo_spazi(const char *t)
+static bool only_spaces(const char *t)
 {
 	for (; *t; t++)
 		if (*t != ' ' && *t != '\t')
@@ -66,18 +66,18 @@ static bool solo_spazi(const char *t)
 	return true;
 }
 
-static void servi(int fd)
+static void serve(int fd)
 {
 	char buf[256];
-	char chiave[64];
-	ssize_t letti;
+	char key_id[64];
+	ssize_t readings;
 	size_t n;
 
-	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &TETTO, sizeof TETTO);
-	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &TETTO, sizeof TETTO);
+	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &CAP, sizeof CAP);
+	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &CAP, sizeof CAP);
 
 	/* ⚠ ONE SINGLE `recv`, AND IT IS A DECLARED CHOICE.  A client that split
-	 *   the line into two writes would get `NON-CAPITO` on the first piece.
+	 *   the line into two writes would get `NOT-UNDERSTOOD` on the first piece.
 	 *   ⭐ Reading in a loop up to the end of line would cost the 200 ms
 	 *   ceiling **for every** round, that is it would multiply by N the time
 	 *   in which a silent client stops all the QUIC connections — which is
@@ -85,19 +85,19 @@ static void servi(int fd)
 	 *   neither of the two known clients produces (both write the line in a
 	 *   single `send`: `01-b8-sblocca.py` with `sendall`, `nc -U` one line at
 	 *   a time) would be optimising in the wrong direction.
-	 * ⛔ And the way this case fails is SAFE: `NON-CAPITO` is a distinct
+	 * ⛔ And the way this case fails is SAFE: `NOT-UNDERSTOOD` is a distinct
 	 *   answer, loud and written in the log — it is confused neither with
 	 *   «removed» nor with «was not banned». */
-	letti = recv(fd, buf, sizeof buf - 1, 0);
-	if (letti <= 0) {
-		registro_dice(REG_RCP,
+	readings = recv(fd, buf, sizeof buf - 1, 0);
+	if (readings <= 0) {
+		log_says(REG_RCP,
 		              "⚠ empty command on the unblock socket (read %zd bytes): "
 		              "I removed nothing",
-		              letti);
-		scrivi_tutto(fd, "NON-CAPITO empty line\n");
+		              readings);
+		write_all(fd, "NOT-UNDERSTOOD empty line\n");
 		return;
 	}
-	buf[letti] = 0;
+	buf[readings] = 0;
 	n = strlen(buf);
 	while (n && (buf[n - 1] == '\n' || buf[n - 1] == '\r'))
 		buf[--n] = 0;
@@ -105,22 +105,22 @@ static void servi(int fd)
 	if (strcmp(buf, "PING") == 0) {
 		/* ⭐ And the PING is written too: it is the denominator of B0.3, and a
 		 *    denominator that leaves no trace is of no use to anyone. */
-		registro_dice(REG_RCP, "command PING — the unblock socket is alive, and "
+		log_says(REG_RCP, "command PING — the unblock socket is alive, and "
 		                       "I touched no ban");
-		scrivi_tutto(fd, "PONG\n");
+		write_all(fd, "PONG\n");
 		return;
 	}
 
-	if (strncmp(buf, "SBLOCCA ", 8) != 0 || buf[8] == 0 ||
-	    solo_spazi(buf + 8)) {
-		char fuori[320];
-		registro_dice(REG_RCP,
+	if (strncmp(buf, "UNBLOCK ", 8) != 0 || buf[8] == 0 ||
+	    only_spaces(buf + 8)) {
+		char outside[320];
+		log_says(REG_RCP,
 		              "⚠ unknown command «%s» on the unblock socket: I "
-		              "removed nothing (the forms are «SBLOCCA <address>» and "
+		              "removed nothing (the forms are «UNBLOCK <address>» and "
 		              "«PING»)",
 		              buf);
-		snprintf(fuori, sizeof fuori, "NON-CAPITO %s\n", buf);
-		scrivi_tutto(fd, fuori);
+		snprintf(outside, sizeof outside, "NOT-UNDERSTOOD %s\n", buf);
+		write_all(fd, outside);
 		return;
 	}
 
@@ -129,66 +129,66 @@ static void servi(int fd)
 	 *    written in it.  If this file built it on its own, the day the two
 	 *    forms diverged the command would answer «was not banned» to every
 	 *    address, silently and forever — §4.4-bis forbids it with a ⛔. */
-	rcp_chiave_indirizzo(buf + 8, chiave, sizeof chiave);
+	rcp_key_address(buf + 8, key_id, sizeof key_id);
 	{
-		bool era = rcp_sblocca(chiave, registro_ora_ms());
-		char fuori[160];
+		bool era = rcp_unblock(key_id, log_now_ms());
+		char outside[160];
 		/* ⛔ «Every unblock is written in the log, or a ban removed and a ban
 		 *    never triggered look the same» (§4.4-bis).  The two lines are
 		 *    different, and so is the answer to whoever gives the command. */
 		if (era)
 			/* ⛔ AND HERE THERE WAS A THING SAID AND NOT KNOWN — corrected on
 			 *    11 Aug 2026.  This line said «and the ban file has been
-			 *    rewritten», and this file does not know that: `rcp_sblocca()`
-			 *    calls `salva_ban(NULL, ora)`, and with the session at `NULL`
+			 *    rewritten», and this file does not know that: `rcp_unblock()`
+			 *    calls `save_ban(NULL, now)`, and with the session at `NULL`
 			 *    that function stays silent on EVERYTHING — failed `fopen`,
 			 *    failed `rename`.  If the file could not be written, the ban
 			 *    would vanish from memory, stay on disk, come back at restart,
 			 *    and the log would have just declared the opposite.  ⚠ It is
 			 *    the exact form of R12.1 — «exits 0 saying it worked» — shrunk
 			 *    and moved inside its own cure.
-			 * ⭐ The real cure is not here: `rcp_sblocca()` must be able to say
+			 * ⭐ The real cure is not here: `rcp_unblock()` must be able to say
 			 *    whether it wrote the file (today it returns a single `bool`,
-			 *    and `percorso_ban` is `static` inside `rcp.c`).  Until it says
+			 *    and `ban_path` is `static` inside `rcp.c`).  Until it says
 			 *    so, this line declares what it knows and no more, and whoever
 			 *    measures looks at the file from outside — `01-b8-sblocca.py
 			 *    --ban-file`, which reads it before and after. */
-			registro_dice(REG_RCP,
+			log_says(REG_RCP,
 			              "⛔ UNBLOCKED on command the address %s (asked "
 			              "«%s»): the ban was there and has been removed from the "
 			              "memory of this process, and the ban file has been "
 			              "requested for writing — ⚠ whether that write "
 			              "succeeded this module does NOT know (§4.4-bis)",
-			              chiave, buf + 8);
+			              key_id, buf + 8);
 		else
-			registro_dice(REG_RCP,
+			log_says(REG_RCP,
 			              "unblock asked for %s (asked «%s»): it was NOT "
 			              "banned, I removed nothing (§4.4-bis) — ⚠ and the "
 			              "attempt count of that address restarts "
 			              "from zero anyway",
-			              chiave, buf + 8);
-		snprintf(fuori, sizeof fuori, "%s %s\n", era ? "TOLTO" : "NON-BANNATO",
-		         chiave);
-		scrivi_tutto(fd, fuori);
+			              key_id, buf + 8);
+		snprintf(outside, sizeof outside, "%s %s\n", era ? "REMOVED" : "NOT-BANNED",
+		         key_id);
+		write_all(fd, outside);
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-comando *comando_apri(const char *percorso)
+command *command_open(const char *fpath)
 {
 	struct sockaddr_un dove;
-	comando *k;
+	command *k;
 	int fd;
 
-	if (!percorso || !*percorso) {
+	if (!fpath || !*fpath) {
 		/* ⛔ And the absence is SAID: §4.4-bis wants two ways out of the ban,
 		 *    and without this socket only one is left — the twelve hours.
 		 *    Whoever starts the server must be able to read it, or «the ban
 		 *    cannot be removed» will look like a defect of the command instead
 		 *    of its absence. */
-		registro_dice(REG_RCP,
-		              "⛔ no --comando-socket: the ban is removed ONLY by "
+		log_says(REG_RCP,
+		              "⛔ no --command-socket: the ban is removed ONLY by "
 		              "the passing of the 12 hours.  §4.4-bis wants two "
 		              "ways, and this half is missing.");
 		return NULL;
@@ -196,20 +196,20 @@ comando *comando_apri(const char *percorso)
 
 	memset(&dove, 0, sizeof dove);
 	dove.sun_family = AF_UNIX;
-	if (strlen(percorso) >= sizeof dove.sun_path) {
-		registro_dice(REG_RCP,
+	if (strlen(fpath) >= sizeof dove.sun_path) {
+		log_says(REG_RCP,
 		              "⛔ the path of the command socket is too long "
 		              "(%zu bytes, the maximum is %zu): there will be no "
 		              "unblock command",
-		              strlen(percorso), sizeof dove.sun_path - 1);
+		              strlen(fpath), sizeof dove.sun_path - 1);
 		return NULL;
 	}
-	memcpy(dove.sun_path, percorso, strlen(percorso));
+	memcpy(dove.sun_path, fpath, strlen(fpath));
 
 	/* ⚠ The old file is removed: a socket left there by a previous run makes
 	 *   `bind` fail with EADDRINUSE, and the symptom — «the command does not
 	 *   answer» — looks in every way like a dead server. */
-	unlink(percorso);
+	unlink(fpath);
 
 	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (fd >= 0) {
@@ -224,44 +224,44 @@ comando *comando_apri(const char *percorso)
 		 * ⭐ The `umask` is put back as it was right away: it is a datum of the
 		 *    process, and leaving it tight would change the permissions of
 		 *    everything the server creates afterwards — the ban file included. */
-		mode_t vecchia = umask(0177);
+		mode_t old = umask(0177);
 		if (bind(fd, (struct sockaddr *)&dove, sizeof dove) != 0 ||
 		    listen(fd, 4) != 0) {
-			umask(vecchia);
-			registro_dice(REG_RCP,
+			umask(old);
+			log_says(REG_RCP,
 			              "⛔ the unblock command socket does not start on "
 			              "«%s»: %s.  The ban can be removed only by "
 			              "waiting 12 hours (§4.4-bis).",
-			              percorso, strerror(errno));
+			              fpath, strerror(errno));
 			close(fd);
 			return NULL;
 		}
-		umask(vecchia);
+		umask(old);
 	} else {
-		registro_dice(REG_RCP,
+		log_says(REG_RCP,
 		              "⛔ the unblock command socket does not start on «%s»: "
 		              "%s.  The ban can be removed only by waiting 12 hours "
 		              "(§4.4-bis).",
-		              percorso, strerror(errno));
+		              fpath, strerror(errno));
 		return NULL;
 	}
 
 	/* ⚠ And the `chmod` stays, as a belt on top of the braces: a `umask` does
 	 *   not protect a filesystem that refuses permissions (certain mounts),
 	 *   and on those we want at least to try. */
-	if (chmod(percorso, 0600) != 0)
-		registro_dice(REG_RCP,
+	if (chmod(fpath, 0600) != 0)
+		log_says(REG_RCP,
 		              "⚠ could not set 0600 on «%s»: %s",
-		              percorso, strerror(errno));
+		              fpath, strerror(errno));
 
 	k = calloc(1, sizeof *k);
 	if (!k) {
 		close(fd);
-		unlink(percorso);
+		unlink(fpath);
 		return NULL;
 	}
 	k->fd = fd;
-	snprintf(k->percorso, sizeof k->percorso, "%s", percorso);
+	snprintf(k->fpath, sizeof k->fpath, "%s", fpath);
 
 	/* ⛔ AND THE PERMISSIONS ARE READ BACK INSTEAD OF DECLARED.  The previous
 	 *    line always said «(0600)», even when the `chmod` had just failed and
@@ -272,18 +272,18 @@ comando *comando_apri(const char *percorso)
 	 *    forbidden do not have the same face). */
 	{
 		struct stat st;
-		if (stat(percorso, &st) != 0)
-			registro_dice(REG_RCP,
+		if (stat(fpath, &st) != 0)
+			log_says(REG_RCP,
 			              "the unblock command listens on «%s» — ⚠ and its "
-			              "permissions could not be read back (%s): «SBLOCCA "
+			              "permissions could not be read back (%s): «UNBLOCK "
 			              "<address>» or «PING» (RCP.md §4.4-bis)",
-			              percorso, strerror(errno));
+			              fpath, strerror(errno));
 		else
-			registro_dice(REG_RCP,
+			log_says(REG_RCP,
 			              "the unblock command listens on «%s» (%04o%s) — "
-			              "«SBLOCCA <address>» or «PING» "
+			              "«UNBLOCK <address>» or «PING» "
 			              "(RCP.md §4.4-bis)",
-			              percorso, (unsigned)(st.st_mode & 07777),
+			              fpath, (unsigned)(st.st_mode & 07777),
 			              (st.st_mode & 07777) == 0600
 			                  ? ""
 			                  : " ⛔ and it is NOT 0600: the key of §4.4-bis is "
@@ -292,18 +292,18 @@ comando *comando_apri(const char *percorso)
 	return k;
 }
 
-void comando_chiudi(comando *k)
+void command_close(command *k)
 {
 	if (!k)
 		return;
 	if (k->fd >= 0)
 		close(k->fd);
-	if (k->percorso[0])
-		unlink(k->percorso);
+	if (k->fpath[0])
+		unlink(k->fpath);
 	free(k);
 }
 
-size_t comando_descrittori(comando *k, struct pollfd *dove, size_t cap)
+size_t command_descriptors(command *k, struct pollfd *dove, size_t cap)
 {
 	if (!k || cap == 0)
 		return 0;
@@ -313,11 +313,11 @@ size_t comando_descrittori(comando *k, struct pollfd *dove, size_t cap)
 	return 1;
 }
 
-void comando_muovi(comando *k, struct pollfd *dove, size_t quanti)
+void command_move(command *k, struct pollfd *dove, size_t how_many)
 {
 	if (!k)
 		return;
-	for (size_t i = 0; i < quanti; i++) {
+	for (size_t i = 0; i < how_many; i++) {
 		if (dove[i].fd != k->fd || dove[i].revents == 0)
 			continue;
 		for (;;) {
@@ -325,12 +325,12 @@ void comando_muovi(comando *k, struct pollfd *dove, size_t quanti)
 			if (fd < 0) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK &&
 				    errno != EINTR)
-					registro_dice(REG_RCP,
+					log_says(REG_RCP,
 					              "accept on the unblock socket: %s",
 					              strerror(errno));
 				break;
 			}
-			servi(fd);
+			serve(fd);
 			close(fd);
 		}
 	}

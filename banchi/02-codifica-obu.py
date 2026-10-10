@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """02-codifica-obu.py — the SHAPE of the AV1 stream, read on the bytes.
 
-    python3 02-codifica-obu.py --elenca   <file.obu>
-    python3 02-codifica-obu.py --verifica <file.obu> [--chiavi-attese N]
-    python3 02-codifica-obu.py --storpia  <file.obu> <modo> <uscita>
+    python3 02-codifica-obu.py --list_cmd   <file.obu>
+    python3 02-codifica-obu.py --verify <file.obu> [--expected-keys N]
+    python3 02-codifica-obu.py --mangle  <file.obu> <manner> <out_dir>
                                modes: senza-sequenza | byte-girato | troncato
 
 ===========================================================================
@@ -42,7 +42,7 @@ E2.  `[M]` 12 Aug 2026: in a libsvtav1 stream that string **is not there**.
 
 ⇒ On AV1 the independent witnesses would be **only one** (`ffprobe`), if the
   product did not read the **sequence header OBU by itself** — which is what
-  `src/codificatore.c` does (`leggi_sequenza_av1`).  ⭐ That reader is not a luxury:
+  `src/codificatore.c` does (`read_av1_sequence`).  ⭐ That reader is not a luxury:
   on AV1 it is the only second witness there is, and it does not cost a byte on the wire.
 """
 
@@ -60,19 +60,19 @@ OBU_FRAME = 6
 OBU_REDUNDANT_FRAME_HEADER = 7
 OBU_PADDING = 15
 
-NOMI = {
+NAMES = {
     1: "SEQUENCE_HEADER", 2: "TEMPORAL_DELIMITER", 3: "FRAME_HEADER",
     4: "TILE_GROUP", 5: "METADATA", 6: "FRAME", 7: "REDUNDANT_FRAME_HEADER",
     15: "PADDING",
 }
 
 
-def leb128(dati, i):
+def leb128(data_v, i):
     v = 0
     for k in range(8):
-        if i >= len(dati):
+        if i >= len(data_v):
             return v, i
-        b = dati[i]
+        b = data_v[i]
         i += 1
         v |= (b & 0x7F) << (7 * k)
         if not (b & 0x80):
@@ -80,7 +80,7 @@ def leb128(dati, i):
     return v, i
 
 
-def elenca(percorso):
+def list_cmd(fpath):
     """⛔ It walks over the OBUs with THEIR size, not by eye.
 
     A reader that looked for a byte pattern (like the start codes of
@@ -88,97 +88,97 @@ def elenca(percorso):
     seen OBUs that do not exist.  The `obu_has_size_field` field exists on purpose, and
     a stream that does not have it is declared instead of guessed.
     """
-    dati = open(percorso, "rb").read()
-    if not dati:
-        raise SystemExit(f"⛔ {percorso} is empty: zero bytes is not a stream")
+    data_v = open(fpath, "rb").read()
+    if not data_v:
+        raise SystemExit(f"⛔ {fpath} is empty: zero bytes is not a stream")
     obu = []
     i = 0
-    while i < len(dati):
-        inizio = i
-        testa = dati[i]
+    while i < len(data_v):
+        start = i
+        head = data_v[i]
         i += 1
-        if testa & 0x80:
-            raise SystemExit(f"⛔ obu_forbidden_bit at 1 at offset {inizio}: "
+        if head & 0x80:
+            raise SystemExit(f"⛔ obu_forbidden_bit at 1 at offset {start}: "
                              f"it is not an AV1 stream (or it does not start from an OBU)")
-        tipo = (testa >> 3) & 0xF
-        estensione = (testa >> 2) & 1
-        ha_taglia = (testa >> 1) & 1
-        if estensione:
+        kind = (head >> 3) & 0xF
+        extension = (head >> 2) & 1
+        has_size = (head >> 1) & 1
+        if extension:
             i += 1
-        if ha_taglia:
-            taglia, i = leb128(dati, i)
+        if has_size:
+            trim, i = leb128(data_v, i)
         else:
-            taglia = len(dati) - i
-        if i + taglia > len(dati):
-            taglia = len(dati) - i
-        carico = dati[i:i + taglia]
+            trim = len(data_v) - i
+        if i + trim > len(data_v):
+            trim = len(data_v) - i
+        load = data_v[i:i + trim]
 
-        voce = {"offset": inizio, "tipo": tipo, "nome": NOMI.get(tipo, f"tipo{tipo}"),
-                "byte": taglia, "ha_taglia": bool(ha_taglia)}
-        if tipo in (OBU_FRAME, OBU_FRAME_HEADER) and carico:
-            primo = carico[0]
-            mostra_esistente = (primo >> 7) & 1
-            if mostra_esistente:
-                voce["chiave"] = False
+        entry = {"offset": start, "kind": kind, "label_name": NAMES.get(kind, f"kind{kind}"),
+                "byte": trim, "has_size": bool(has_size)}
+        if kind in (OBU_FRAME, OBU_FRAME_HEADER) and load:
+            first = load[0]
+            show_existing = (first >> 7) & 1
+            if show_existing:
+                entry["key_id"] = False
             else:
-                voce["chiave"] = ((primo >> 5) & 3) == 0  # frame_type 0 = KEY_FRAME
-        obu.append(voce)
-        i += taglia
-        if i <= inizio:
+                entry["key_id"] = ((first >> 5) & 3) == 0  # frame_type 0 = KEY_FRAME
+        obu.append(entry)
+        i += trim
+        if i <= start:
             break
-    return {"file": os.path.basename(percorso), "byte_totali": len(dati), "obu": obu}
+    return {"file": os.path.basename(fpath), "total_bytes": len(data_v), "obu": obu}
 
 
-def verifica(percorso, chiavi_attese):
-    e = elenca(percorso)
+def verify(fpath, expected_keys):
+    e = list_cmd(fpath)
     obu = e["obu"]
-    guasti = []
+    faults = []
 
     if not obu:
-        guasti.append("⛔ no OBU found: it is not an AV1 stream")
+        faults.append("⛔ no OBU found: it is not an AV1 stream")
 
-    tipi = [o["tipo"] for o in obu]
-    if OBU_SEQUENCE_HEADER not in tipi:
-        guasti.append("⛔ no SEQUENCE_HEADER: the stream does not carry with it what "
+    types = [o["kind"] for o in obu]
+    if OBU_SEQUENCE_HEADER not in types:
+        faults.append("⛔ no SEQUENCE_HEADER: the stream does not carry with it what "
                       "is needed to configure the decoder")
 
     # ⛔ The first frame must be a KEYFRAME (RCP.md §5.2, and `VideoDecoder`
     #    after `configure()` requires a `key` chunk or raises DataError).
-    fotogrammi = [o for o in obu if o["tipo"] in (OBU_FRAME, OBU_FRAME_HEADER)]
-    if not fotogrammi:
-        guasti.append("⛔ no frame: the stream carries no pixels")
-    elif not fotogrammi[0].get("chiave"):
-        guasti.append("⛔ the FIRST frame is not a keyframe")
+    frames = [o for o in obu if o["kind"] in (OBU_FRAME, OBU_FRAME_HEADER)]
+    if not frames:
+        faults.append("⛔ no frame: the stream carries no pixels")
+    elif not frames[0].get("key_id"):
+        faults.append("⛔ the FIRST frame is not a keyframe")
 
     # ⛔ And the half that gets forgotten: the sequence in front of EVERY keyframe.
-    gruppi = 0
-    sequenza_vista = False
+    group_list = 0
+    sequence_seen = False
     for o in obu:
-        if o["tipo"] == OBU_SEQUENCE_HEADER:
-            sequenza_vista = True
-        elif o["tipo"] in (OBU_FRAME, OBU_FRAME_HEADER):
-            if o.get("chiave") and sequenza_vista:
-                gruppi += 1
-            sequenza_vista = False
-    if gruppi < chiavi_attese:
-        guasti.append(f"⛔ the SEQUENCE_HEADER precedes {gruppi} keyframes and should have "
-                      f"preceded {chiavi_attese}: a client connecting later "
+        if o["kind"] == OBU_SEQUENCE_HEADER:
+            sequence_seen = True
+        elif o["kind"] in (OBU_FRAME, OBU_FRAME_HEADER):
+            if o.get("key_id") and sequence_seen:
+                group_list += 1
+            sequence_seen = False
+    if group_list < expected_keys:
+        faults.append(f"⛔ the SEQUENCE_HEADER precedes {group_list} keyframes and should have "
+                      f"preceded {expected_keys}: a client connecting later "
                       f"would receive a naked keyframe")
 
-    esito = {
-        "file": e["file"], "byte_totali": e["byte_totali"], "obu_totali": len(obu),
-        "sequenza": [o["nome"] for o in obu[:12]],
-        "sequenze_prima_di_una_chiave": gruppi,
-        "chiavi_attese": chiavi_attese,
-        "primo_fotogramma_e_chiave": bool(fotogrammi) and bool(fotogrammi[0].get("chiave")),
-        "va_bene": not guasti,
-        "guasti": guasti,
+    outcome = {
+        "file": e["file"], "total_bytes": e["total_bytes"], "obu_totali": len(obu),
+        "sequence": [o["label_name"] for o in obu[:12]],
+        "sequences_before_key": group_list,
+        "expected_keys": expected_keys,
+        "first_frame_is_key": bool(frames) and bool(frames[0].get("key_id")),
+        "va_bene": not faults,
+        "faults": faults,
     }
-    print(json.dumps(esito, ensure_ascii=False, indent=2))
-    return 0 if not guasti else 1
+    print(json.dumps(outcome, ensure_ascii=False, indent=2))
+    return 0 if not faults else 1
 
 
-def storpia(percorso, modo, uscita):
+def mangle(fpath, manner, out_dir):
     """⛔ A BENCH THAT HAS NEVER SEEN A REFUSAL CANNOT SEE ONE.
 
     The three modes are the exact twins of those of `02-codifica-nal.py`, and the
@@ -191,57 +191,57 @@ def storpia(percorso, modo, uscita):
       and the decoded frame came back **identical bit for bit**.
       Here it goes in at 2 % of the body of the first frame, for the same reason.
     """
-    dati = bytearray(open(percorso, "rb").read())
-    e = elenca(percorso)
+    data_v = bytearray(open(fpath, "rb").read())
+    e = list_cmd(fpath)
     obu = e["obu"]
     if not obu:
         raise SystemExit("⛔ a stream that could not be read is not mangled")
 
-    if modo == "senza-sequenza":
-        fuori = bytearray()
+    if manner == "senza-sequenza":
+        outside = bytearray()
         for k, o in enumerate(obu):
-            if o["tipo"] == OBU_SEQUENCE_HEADER:
+            if o["kind"] == OBU_SEQUENCE_HEADER:
                 continue
-            fine = obu[k + 1]["offset"] if k + 1 < len(obu) else len(dati)
-            fuori += dati[o["offset"]:fine]
-        nota = "SEQUENCE_HEADER removed, frames left"
-    elif modo == "byte-girato":
-        primo = next((o for o in obu if o["tipo"] in (OBU_FRAME, OBU_TILE_GROUP)), None)
-        if primo is None:
+            fine = obu[k + 1]["offset"] if k + 1 < len(obu) else len(data_v)
+            outside += data_v[o["offset"]:fine]
+        remark = "SEQUENCE_HEADER removed, frames left"
+    elif manner == "byte-girato":
+        first = next((o for o in obu if o["kind"] in (OBU_FRAME, OBU_TILE_GROUP)), None)
+        if first is None:
             raise SystemExit("⛔ no frame to mangle")
-        corpo = primo["offset"] + (primo["byte"] // 50)
-        dove = min(corpo + 64, primo["offset"] + primo["byte"] - 1)
-        dati[dove] ^= 0xFF
-        fuori = dati
-        nota = f"one byte inverted at offset {dove}, inside the body of the first frame"
-    elif modo == "troncato":
-        taglio = int(len(dati) * 0.60)
-        fuori = dati[:taglio]
-        nota = f"cut at {taglio} bytes out of {len(dati)} (60 %)"
+        body_el = first["offset"] + (first["byte"] // 50)
+        dove = min(body_el + 64, first["offset"] + first["byte"] - 1)
+        data_v[dove] ^= 0xFF
+        outside = data_v
+        remark = f"one byte inverted at offset {dove}, inside the body of the first frame"
+    elif manner == "troncato":
+        cut = int(len(data_v) * 0.60)
+        outside = data_v[:cut]
+        remark = f"cut at {cut} bytes out of {len(data_v)} (60 %)"
     else:
-        raise SystemExit(f"⛔ unknown mode: {modo}")
+        raise SystemExit(f"⛔ unknown mode: {manner}")
 
-    with open(uscita, "wb") as f:
-        f.write(bytes(fuori))
-    print(json.dumps({"modo": modo, "nota": nota, "uscita": uscita,
-                      "byte": len(fuori)}, ensure_ascii=False))
+    with open(out_dir, "wb") as f:
+        f.write(bytes(outside))
+    print(json.dumps({"manner": manner, "remark": remark, "out_dir": out_dir,
+                      "byte": len(outside)}, ensure_ascii=False))
     return 0
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--elenca")
-    p.add_argument("--verifica")
-    p.add_argument("--chiavi-attese", type=int, default=1)
-    p.add_argument("--storpia", nargs=3, metavar=("FILE", "MODO", "USCITA"))
+    p.add_argument("--list_cmd")
+    p.add_argument("--verify")
+    p.add_argument("--expected-keys", type=int, default=1)
+    p.add_argument("--mangle", nargs=3, metavar=("FILE", "MODE", "OUTPUT"))
     a = p.parse_args()
-    if a.elenca:
-        print(json.dumps(elenca(a.elenca), ensure_ascii=False, indent=2))
+    if a.list_cmd:
+        print(json.dumps(list_cmd(a.list_cmd), ensure_ascii=False, indent=2))
         return 0
-    if a.verifica:
-        return verifica(a.verifica, a.chiavi_attese)
-    if a.storpia:
-        return storpia(*a.storpia)
+    if a.verify:
+        return verify(a.verify, a.expected_keys)
+    if a.mangle:
+        return mangle(*a.mangle)
     p.print_help()
     return 2
 

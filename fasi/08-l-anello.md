@@ -104,7 +104,7 @@ because the rubber band is proportional to speed.
 
 ### 2.3 ⭐⭐ The first number, and it is not a segment
 
-**`input → vetro`, re-measured on the real scene**, with the network part taken out of the way.
+**`input → glass`, re-measured on the real scene**, with the network part taken out of the way.
 
 ⛔ **Until it exists, every other measurement of this phase is born without a «before».**
 
@@ -203,10 +203,10 @@ path: two agents on the same file stab each other.*
 | where | what |
 |---|---|
 | `cattura.c` · `cattura.h` · `figlio.c` | ⭐ **zero copy**: the stage is mounted on the **card road** (DMA-BUF) and the frame no longer leaves the GPU. The **stride is looked at as measured, never computed**; if it is not importable the stage is remounted on memory **declaring it**; on a canvas change zero copy **retries by itself** |
-| `codificatore.c` | the DMA-BUF imported **as a VA-API surface** ⇒ `sws_scale` and `av_hwframe_transfer_data` disappear. ⭐ **A keyframe is no longer abandoned** (`RCP.md` §5.2). Re-encode ladder lengthened (`CRF_PASSO` 6→9). The maximum size **is asked of the driver before opening**. The fallback line **named the wrong encoder**: cured |
+| `codificatore.c` | the DMA-BUF imported **as a VA-API surface** ⇒ `sws_scale` and `av_hwframe_transfer_data` disappear. ⭐ **A keyframe is no longer abandoned** (`RCP.md` §5.2). Re-encode ladder lengthened (`CRF_STEP` 6→9). The maximum size **is asked of the driver before opening**. The fallback line **named the wrong encoder**: cured |
 | `codificatore.c` · `cattura.c` | ⭐ the **segment instrumentation**, ten entries in a row with the **remainder** declared: it is the tool that disproved two of the coordinator's hypotheses |
-| `pagina.html` | ⭐⭐ **`REMOTIX.tratti()`**: the product **declares by itself** the client's four segments, **same names on all three drawing roads**, at `[M]` ~4 µs per frame. ⇒ There is no longer any need to rewrite a bench's prologue when the page changes the way it paints |
-| `figlio.c` | the diagnostic pass over the pixels moves to a **cadence** instead of every frame (it cost `[M]` 5.34 ms/frame for a log line written **only once**), with the field `pixel_misurati` because `nero == FALSE` can now mean «I did not look» |
+| `pagina.html` | ⭐⭐ **`REMOTIX.stretches()`**: the product **declares by itself** the client's four segments, **same names on all three drawing roads**, at `[M]` ~4 µs per frame. ⇒ There is no longer any need to rewrite a bench's prologue when the page changes the way it paints |
+| `figlio.c` | the diagnostic pass over the pixels moves to a **cadence** instead of every frame (it cost `[M]` 5.34 ms/frame for a log line written **only once**), with the field `measured_pixels` because `nero == FALSE` can now mean «I did not look» |
 
 ### 3.2 In the benches
 
@@ -220,7 +220,7 @@ path: two agents on the same file stab each other.*
 
 | | ⭐ **today**, with zero copy | |
 |---|---|---|
-| **`input → vetro`** — the whole loop | **55.20 ms** | |
+| **`input → glass`** — the whole loop | **55.20 ms** | |
 | ↳ E · encoding and return | **10.27** | |
 | ↳ C · the wait for the frame in the scene | **11.78** | |
 | ↳ D · **Mutter's frame** | 16.01 | ⛔ **the wall**: zero copy does not touch it |
@@ -464,7 +464,7 @@ than the user's**, not longer.
 
 `[M]` Read in the report of **all fifteen rounds**: `barra_px = 720`, which is exactly the
 width of the user's window measured on his video
-(`SCENA_UTENTE.finestra = [720, 433]`, «barra del titolo larga quanto la finestra»).
+(`SCENA_UTENTE.win = [720, 433]`, «barra del titolo larga quanto la finestra»).
 ⇒ **The bench divides by the USER'S bar**, not by one of its own, and there is no hidden factor of 1.8
 in there.
 
@@ -510,7 +510,7 @@ that the client piece is dominated by waits, not by CPU. ⚠ It is an explanatio
 
 ⛔ The hard fact of the mandate: A and B gave two numbers far apart. Redone **today, on the same machine,
 in the same hour, on the same stage, with the laptop idle** (A with `04-b30-anello-input.py`, 1460×888,
-`?tela=2d`; F2 with `08-b67-elastico.py`, 1560×888, `bitmaprenderer`). *(The medians, taken on the binary
+`?canvas_size=2d`; F2 with `08-b67-elastico.py`, 1560×888, `bitmaprenderer`). *(The medians, taken on the binary
 from memory with `sws_scale`, are removed with phase 18.)*
 
 ⇒ ⛔ **The disagreement reproduced, and with the machine idle it was even wider.** And A's canvas
@@ -519,7 +519,7 @@ are measured today, and both are in A's breakdown:**
 
 | | A, today, clean | F2, today, clean | Δ |
 |---|---|---|---|
-| **segment 1a** — `event.timeStamp` → the bytes leave | `[M]` **11.55 ms** | `[M]` **0.165 ms** (`riassunto.tratto_1a_ms`) | **−11.4** |
+| **segment 1a** — `event.timeStamp` → the bytes leave | `[M]` **11.55 ms** | `[M]` **0.165 ms** (`summary.tratto_1a_ms`) | **−11.4** |
 | **segment 3** — the scene receives → the scene **DRAWS** | *(removed, phase 18)* | `[M]` **6.3 – 10.4 ms** (local bench, same field `eco_us → eco_disegnato_us`) | — |
 
 *(A's segment 3, the sum and the residue are removed with phase 18: A ran on the binary from
@@ -615,7 +615,7 @@ this phase: not with a number of ours, but with a prediction his eye can disprov
    §2.0 in person — *a stage declared and not verified*.
    ⇒ **Cure**: a separate piece (`forza.py`) that from outside calls `Browser.setWindowBounds` via
    CDP as soon as Chrome opens the debugging port, **re-reads the bounds obtained** and prints them. And the
-   real check is in the bench: the line `tela 2560x1080` is read **before** taking the number,
+   real check is in the bench: the line `canvas_size 2560x1080` is read **before** taking the number,
    and the rounds with the wrong canvas **are thrown away**. ⚠ I threw away three.
    ⭐ **It must be put inside `08-b67`**: today the remedy is in the head of whoever launches.
 
@@ -637,7 +637,7 @@ this phase: not with a number of ours, but with a prediction his eye can disprov
 
 5. ⛔ **A's bench cannot be run at the user's canvas**, so the A↔F2 comparison is at
    **1460/1560**, not at 2560. `[R]` `04-b30-anello-input.py` builds the stage with
-   `finestra=(1500, 1000)` **written in the source**, and the Xvfb is born accordingly at 1600×1200: a
+   `win=(1500, 1000)` **written in the source**, and the Xvfb is born accordingly at 1600×1200: a
    2600 window does not fit and `forza.py` cannot widen a display. ⇒ `[?]` **A's number
    at 2560×1080 does not exist**.
    ⚠ **And the same bench calls the terrain WITHOUT an environment** (`_sudo("bash %s scena-avvia")`): with the
@@ -688,16 +688,16 @@ this phase: not with a number of ours, but with a prediction his eye can disprov
 
 ```bash
 # on the laptop, from the repository root
-python3 banchi/08-b67-elastico.py --certifica          # 13 faults out of 13 (redone today)
-bash <scratch>/fase8/f2.sh utente ; sessione ; accendi ; ponte ; parola
+python3 banchi/08-b67-elastico.py --certify          # 13 faults out of 13 (redone today)
+bash <scratch>/fase8/f2.sh username ; session_v ; turn_on ; bridge ; password
 (python3 <scratch>/fase8/forza.py 2600 1192 9645 60 &)  # ⛔ without it, the canvas comes out 2544x960
 bash <scratch>/fase8/f2.sh scena-avvia
-bash <scratch>/fase8/f2.sh misura 2600 1192 25 nome     # ⛔ and the line «tela 2560x1080» is VERIFIED
+bash <scratch>/fase8/f2.sh gauge 2600 1192 25 label_name     # ⛔ and the line «tela 2560x1080» is VERIFIED
 bash <scratch>/fase8/carico.sh                          # ⛔ before and after every round
 ```
 
 ⚠ **Left running on the machine**: product on **7765**, bridge on **7766**, scene, and
-`provaf8`'s GNOME session. They are switched off with `f2.sh spegni` — ⛔ which touches **only** my things.
+`provaf8`'s GNOME session. They are switched off with `f2.sh turn_off` — ⛔ which touches **only** my things.
 ⚠ **In the repository** `banchi/08-b67-esiti.jsonl` and `banchi/04-b30-esiti.jsonl` remain modified
 (the round logs) and **nothing else**: `src/` was not touched.
 
@@ -726,7 +726,7 @@ bash <scratch>/fase8/carico.sh                          # ⛔ before and after e
 >
 > ### The segment, and the sub-segments side by side
 >
-> `[M]` `cattura → byte fuori`: **6.41 ms** with zero copy (⛔ the «before», on the road from memory with
+> `[M]` `capture_v → byte outside`: **6.41 ms** with zero copy (⛔ the «before», on the road from memory with
 > `sws_scale`, is removed: it is no longer valid after phase 18). Three **alternating** rounds (A-B-A-B
 > on the same tree), md5 verified different, canvas 1920×1080, **zero copy verified on at
 > every round**. Machine: 20 cores, load 1.31-1.65, 0 Chrome, 0 Xvfb — **the load is declared**,
@@ -789,7 +789,7 @@ bash <scratch>/fase8/carico.sh                          # ⛔ before and after e
 
 > ### ⭐⭐ THE RESULT IN TWO LINES, and the second is worth more than the first
 >
-> `[M]` The `cattura → primo byte` segment drops to **6.41 ms** (the «before» on `sws_scale` is removed,
+> `[M]` The `capture_v → first byte` segment drops to **6.41 ms** (the «before» on `sws_scale` is removed,
 > phase 18), three **alternating** rounds, and ⭐ **this time the frames RISE at the user's yardstick too**: the gap
 > measured with B's bench drops to **0.16 title bars**, with **942** frames
 > painted in 25 s (the «before» is removed, phase 18). The local floor measured by B is **0.13**: we are
@@ -824,7 +824,7 @@ bash <scratch>/fase8/carico.sh                          # ⛔ before and after e
 
 | file | what |
 |---|---|
-| `src/cattura.h` · `src/cattura.c` | ⭐ the **retention** of the `pw_buffer`, the DMA-BUF descriptor inside `CatturaFermo`, the **generation** of the buffers, the measurement of the first frame's pixels via `mmap` |
+| `src/cattura.h` · `src/cattura.c` | ⭐ the **retention** of the `pw_buffer`, the DMA-BUF descriptor inside `CaptureStopped`, the **generation** of the buffers, the measurement of the first frame's pixels via `mmap` |
 | `src/codificatore.h` · `src/codificatore.c` | ⭐ the import of the DMA-BUF as a VA-API surface, the **conversion on the GPU** (VPP) in place of `sws_scale` + `av_hwframe_transfer_data`, the import cache, ⛔ **the guard on the stride** |
 | `src/figlio.c` | ⭐ the road is requested as **CARD**, and it falls back to **MEMORY declaring it** when the frame is not usable |
 
@@ -863,7 +863,7 @@ of the mark (`banchi/03-marca.py`, negative control `[M]` 0 false out of 3 000 n
 | 1560×888 | 6240 | 32 | ⛔ **NO** | 0.510 |
 
 ⭐ **1552 and 1544 are EIGHT pixels apart and give opposite verdicts**: it is not a threshold chosen after
-seeing the result, it is a boundary to the pixel. ⚠ And the stride is exactly `larghezza × 4` in all four,
+seeing the result, it is a boundary to the pixel. ⚠ And the stride is exactly `width_px × 4` in all four,
 modifier **LINEAR**, **read from the chunk** and never computed.
 
 ### ⭐⭐⭐ And the thing that goes in `LEZIONI.md`, not in a footnote
@@ -898,8 +898,8 @@ same «card» binary, **before** the cure **0 echoes read out of 903** — **aft
 two cases it is.
 
 ⚠ **And the full cure is NOT mine to make**: the stride is decided by the producer and it makes it equal to
-`larghezza × 4` `[M]`. ⇒ A canvas **that is a multiple of 16** would always have the good stride, but the canvas rule
-lives in `rcp_misura_ammessa()` (today: only «even»), which is **normative** in `RCP.md` §4.5
+`width_px × 4` `[M]`. ⇒ A canvas **that is a multiple of 16** would always have the good stride, but the canvas rule
+lives in `rcp_size_allowed()` (today: only «even»), which is **normative** in `RCP.md` §4.5
 and does not belong to this file. 🔸 **Passed to the director for the user**, not cured on the sly.
 
 ---
@@ -911,12 +911,12 @@ and does not belong to this file. 🔸 **Passed to the director for the user**, 
 depends on what the producer offers, and when it is not there **there is no error** — there is the
 screen that alternates (`LEZIONI.md` §8, §1.25).
 
-**How it is made**: `cattura_fermo_libera()` **is** the release; the buffer goes back to PipeWire only there.
+**How it is made**: `capture_stopped_free()` **is** the release; the buffer goes back to PipeWire only there.
 The moment at which «the GPU has finished» is the `vaSyncSurface()` inside the conversion: when
-`codificatore_comprimi_scheda()` returns, the card has **finished reading**, and only then does
+`encoder_compress_card()` returns, the card has **finished reading**, and only then does
 `figlio.c` give the buffer back. ⛔ And two things the box imposes: the buffer that was in the slot is
 given back **before** overwriting it, and a buffer that PipeWire has **removed** (`remove_buffer`) is not
-given back at all — the `CatturaFermo` carries the **generation** it was born with and the comparison decides.
+given back at all — the `CaptureStopped` carries the **generation** it was born with and the comparison decides.
 
 **The price, counted**: `[M]` on the card road **six** buffers are requested instead of
 four, because we retain at most two (one in the slot, one in the hands of the reader). Mutter
@@ -936,7 +936,7 @@ verified different by md5.
 | healthy (with the wait) | **2.86 ms** | 2.43 | 6.19 |
 | fault (without the wait) | **0.38 ms** | **4.67** | 6.05 |
 
-⇒ ⭐⭐ **Removing the wait buys nothing**: the time moves from `conversione` to `codifica`,
+⇒ ⭐⭐ **Removing the wait buys nothing**: the time moves from `conversione` to `encoding`,
 because the encoder waits anyway for the VPP it depends on. **6.19 → 6.05 ms**, within the
 spread. ⇒ Explicit synchronisation **costs zero** and in exchange gives the right release
 point: it is a line one keeps without paying for it.
@@ -967,7 +967,7 @@ asked of the **component** (`componente_e_hardware()`: it accepts a surface form
 the entrypoint **read from the driver**, not from ffmpeg.*
 
 ⛔ **Alternating and not in a row** (A-B-A-B on the same tree): the two binaries come from the **same
-source**, **one constant** changes (`COPIA_ZERO`), and the bench **verifies that the md5s differ**
+source**, **one constant** changes (`ZERO_COPY`), and the bench **verifies that the md5s differ**
 before measuring.
 
 | segment | **after** *(card)* |
@@ -985,7 +985,7 @@ before measuring.
 | **TOTAL** | **6.41** |
 | **frames in 45 s** | 1 519 · 1 506 · 1 454 |
 
-*(median of the three rounds per row; the three agree — `conversione` 2.91/2.99/2.98; `totale`
+*(median of the three rounds per row; the three agree — `conversione` 2.91/2.99/2.98; `total`
 6.34/6.48/6.41.)*
 
 ⚠ **The «before» column — the road from memory, with `sws_scale` and `av_hwframe_transfer_data` — is
@@ -1092,7 +1092,7 @@ exists to guarantee.
 | ⏳⏳ **the canvas multiple of 16** | ⛔ It is a **protocol change** (`RCP.md` §4.5 declares «even» normative), so it is the user's. Until it exists, zero copy **does not hold on all canvases** — and one of the uncovered canvases is precisely B's bench's **1560** |
 | ⏳ **is the retention really needed?** | `[R]` the mechanism of §8 is read in Mutter; `[M]` the injected fault **does not reproduce it** on this scene. One would need a scene that keeps the GPU busy longer than the six buffers |
 | `[?]` **the 0.64 ms of `produttore`** | what remains after removing our work from the real-time thread. **That** does look like Mutter's, but it is ten times less than was believed |
-| `[?]` **the child's frames stuck at 33/s** | the scene draws 61. With the segment at 6.41 ms the bottleneck is no longer our CPU: `[?]` it is Mutter's cadence, or the child's loop (`MOVIMENTO_ATTESA_S`) |
+| `[?]` **the child's frames stuck at 33/s** | the scene draws 61. With the segment at 6.41 ms the bottleneck is no longer our CPU: `[?]` it is Mutter's cadence, or the child's loop (`MOTION_WAIT_S`) |
 | `[?]` **other drivers and other compositors** | the 64-byte constraint is `[M]` **on iHD**. On AMD (radeonsi, `renderD129`) and on KWin/wlroots it **was not looked at**. ⚠ The guard however is on the **measured stride**, so it is not a rule on iHD: it is a rule on the stride |
 | `[?]` **10 bits** | ⛔ they do not come back through this door and did not belong to this phase: Mutter delivers BGRx on the card as on memory |
 
@@ -1124,12 +1124,12 @@ point, and the agents' reports are not kept — if the coordinator wants them, t
 
 > ### ⭐⭐⭐ THE NUMBER THE WHOLE PHASE WAS MISSING
 >
-> `[M]` **`input → vetro` = 55.20 ms** with zero copy on; the paired round without it (the road from
+> `[M]` **`input → glass` = 55.20 ms** with zero copy on; the paired round without it (the road from
 > memory with `sws_scale`) is removed with phase 18: zero copy shortened the loop, and the value from
 > before is no longer valid.
 >
 > ⭐⭐ **Two rounds in a row that share EVERYTHING except the binary** — same canvas 1456×888, same
-> stride 5824, same window, same scene, and `macchina carica: false` **written by the bench** in
+> stride 5824, same window, same scene, and `host load: false` **written by the bench** in
 > both (load 1.10 and 0.40 on 4 cores, a single `b30` bench). Md5s read by hand from
 > `/proc/PID/exe`: `f45e9f78…` against `73ce3a1f…`.
 >
@@ -1180,11 +1180,11 @@ point, and the agents' reports are not kept — if the coordinator wants them, t
 > ⭐ **In both cases the bench DIED or said «I could not look»** instead of
 > delivering false numbers.
 
-> ### ⭐⭐⭐ THE MISSING NUMBER: `input → vetro` = `[M]` **55.20 ms** with zero copy
+> ### ⭐⭐⭐ THE MISSING NUMBER: `input → glass` = `[M]` **55.20 ms** with zero copy
 >
 > Paired (the value without zero copy is removed, phase 18) over two rounds in a row in the same quiet half hour that share
 > **everything** except the binary: same canvas (1456×888), same stride (5824), same window, same
-> scene, same user, and `macchina carica: false` **written by the bench** in both.
+> scene, same user, and `host load: false` **written by the bench** in both.
 > ⭐ And zero copy **was really on**: the product declares «strada **scheda**» today and «strada
 > **memoria**» yesterday, **with the identical stride** — the road flips because the binary changes, not the
 > canvas.
@@ -1218,7 +1218,7 @@ point, and the agents' reports are not kept — if the coordinator wants them, t
 
 > ### ⛔⛔⛔ **A's «before» is not a term of comparison**, and the reason is the load
 >
-> My mandate was to redo `input → vetro` on the real road and put it next to A's number.
+> My mandate was to redo `input → glass` on the real road and put it next to A's number.
 > ⛔ **Putting them side by side cannot be done**, and not because the bench cannot get there: because A's number
 > **carries contention inside it**. F3 proved it with three benches; I got there without looking for it,
 > and the two roads meet on the same number.
@@ -1274,7 +1274,7 @@ second bench, a second Xvfb, or a number of Chrome that a single bench cannot ex
 
 ## F1.0 ⭐ The bench recertified itself, and the certification has grown
 
-`[M]` `--certifica` ⇒ **PASSED, 57 checks out of 57, 18 injected faults accused out of 18**
+`[M]` `--certify` ⇒ **PASSED, 57 checks out of 57, 18 injected faults accused out of 18**
 (A had 53 and 16). The checks and the two new faults all belong to **Q11**, the
 boundary check.
 
@@ -1309,14 +1309,14 @@ glass **discriminates**, it does not always say yes.
    what it measures**.
 2. ⛔ **The image is tied to the frame by the ANNOUNCED `pts`**, not by the order of resolution:
    the order is a substitute quantity (`LEZIONI.md` §1.13), and `createImageBitmap` does not promise to
-   resolve in order — it is the reason why the product itself counts the `tardive`.
+   resolve in order — it is the reason why the product itself counts the `belated`.
 3. ⛔ **The pixels are read AFTER the transfer**, not from the `ImageBitmap` before: reading before
    would mean reading something that is not yet on the screen — and delaying it into the bargain.
 
 ### ⭐ And the road is not declared: it is DEDUCED
 
-Every sample carries a `strada` field, filled by what **happened**. `coda_url` is
-the intention, `strade` is the fact — and now **both are in the line deposited** in
+Every sample carries a `route` field, filled by what **happened**. `coda_url` is
+the intention, `routes` is the fact — and now **both are in the line deposited** in
 `04-b30-esiti.jsonl` (it was minor defect no. 5 of §A.4: `[M]` all 11 lines deposited before
 today, including A's five, have `coda_url: null`).
 
@@ -1326,7 +1326,7 @@ frame on which I had not seen a call to `createImageBitmap`. `[M]` In one round
 never painted** (discarded because late). ⚠ **They dirty no number** — I verified it: zero
 `drawImage`, zero cells, and **none of them closed a probe** — ⛔ but calling them «2d» was
 mistaking *«it did not happen»* for *«the other thing happened»*, the same shape as «not arrived» ≠
-«not looked at». ⇒ Now the state is **a third one and is called `non dipinto`**, and counted for what it is
+«not looked at». ⇒ Now the state is **a third one and is called `non on_painted`**, and counted for what it is
 it says something about the product: `[M]` **part of the decoded frames did not reach the glass**
 in that round (the share, on the binary from memory, is removed with phase 18).
 
@@ -1384,7 +1384,7 @@ estimating**. And neither number could be deduced beforehand.
 
 ### ⭐⭐ THE CROSS-CHECK — and it carries a warning for everyone
 
-The product measures by itself the same two quantities as segments 9 and 10 (`bmp_ms`, `vetro_ms`). The bench
+The product measures by itself the same two quantities as segments 9 and 10 (`bmp_ms`, `glass_ms`). The bench
 now brings them out next to its own:
 
 | | the PRODUCT | the BENCH | |
@@ -1392,11 +1392,11 @@ now brings them out next to its own:
 | **segment 9** (`createImageBitmap`) | **0.710** · **0.830** ms | **0.715** · **0.835** | ⭐⭐ discrepancy **+0.005** two times out of two |
 | segment 10 (`transferFromImageBitmap`) | 8.04 · 9.86 ms | 0.05 · 0.065 | ⛔ **it is NOT a disagreement** |
 
-⛔⛔ **And segment 10 is the most important involuntary discovery I leave behind.** The product's `vetro_ms`
+⛔⛔ **And segment 10 is the most important involuntary discovery I leave behind.** The product's `glass_ms`
 times `this.bm.transferFromImageBitmap(bmp)` — but **the bench wraps precisely that method**, and
 inside the wrapper it reads the pixels. ⇒ The product's stopwatch **contains the bench**.
 
-⇒ ⛔⛔ **As long as this bench is attached, the `vetro` field of `pagina.html`'s diagnostic block
+⇒ ⛔⛔ **As long as this bench is attached, the `glass` field of `pagina.html`'s diagnostic block
 is not the product: it is the product plus the bench.** Whoever read it in another report would write
 `[M]` 8-10 ms for a transfer that costs 0.06. ⭐ The bench now declares it instead of
 judging it, and the difference (**7.99** and **9.80**) is a **third opinion on the cost of the bench**, taken
@@ -1467,7 +1467,7 @@ scene on **Meta-0**, confirmed by `wl_surface.enter`.
 (`/media/REMOTIX/src/08-a-src`, `md5sum` of `pagina.html` verified), **same scene binary**
 (identical `md5sum`), same user. ⛔ I rebuilt nothing: rebuilding would have changed one
 end of the comparison without saying so.
-⚠ ⭐ **And so my tree does NOT have F3's `REMOTIX.tratti()`**, which arrived later (`md5sum` of
+⚠ ⭐ **And so my tree does NOT have F3's `REMOTIX.stretches()`**, which arrived later (`md5sum` of
 `src/pagina.html` at HEAD: `d387c166…`, mine: `2fdf13a9…`). ⇒ Whoever redoes these rounds with today's
 product has a better tool than my prologue, and must know it.
 
@@ -1480,7 +1480,7 @@ to the loop (`[?]` 20-52 ms), **plus the network**.
 
 ### ⭐⭐ And the rubber-band calculation of §1.2 must be redone
 
-The box of §4-A multiplied `anello × 3 400 px/s` against the gap the user sees, «within
+The box of §4-A multiplied `ring × 3 400 px/s` against the gap the user sees, «within
 7 %». ⛔ With the number of the real road that product was **far** from what the user saw.
 ⇒ ⭐ **It is not a defect: it is information.** Either the gap the user sees contains the blind pieces
 and the network — and then the account adds up — or he was looking faster than his median. *(The values, on the
@@ -1519,7 +1519,7 @@ changed his verdict without his knowing. ⇒ **It is a single line, and I pass i
 
 ### 2. ⛔⛔ The fact about the number of 14 Aug — reread from the SOURCE, and more comes out
 
-§A.4 point 2 declared it. I reread it from `04-b30-esiti.jsonl` (field `controlli`) and out comes
+§A.4 point 2 declared it. I reread it from `04-b30-esiti.jsonl` (field `checks`) and out comes
 **the MANNER of the red**, which changes the reading:
 
 | round | Q5 | Q6 | ⛔ **how** it failed |
@@ -1541,9 +1541,9 @@ breakdown of 14 Aug must be read with this next to it**, and no document said so
 
 | | |
 |---|---|
-| ⭐ **`coda_url` did not reach `esiti.jsonl`** | cured, and with **two** fields: `coda_url` (the intention) and `strade` (the **fact**). ⛔ Verified that the defect was there: `[M]` all 11 lines deposited before today have `coda_url: null` |
+| ⭐ **`coda_url` did not reach `esiti.jsonl`** | cured, and with **two** fields: `coda_url` (the intention) and `routes` (the **fact**). ⛔ Verified that the defect was there: `[M]` all 11 lines deposited before today have `coda_url: null` |
 | ⭐ **`scena-costruisci` of `04-b30-lancia.sh` broken** | cured: the build is in a **file** (`banchi/04-b30-scena-costruisci.sh`), not in a line that goes through `ssh → enter.sh → bash -c`. ⭐ The rule was **already written** in the header of the same file — *«a file has no levels of quoting»* — only the code did not follow it. The new file also verifies that the binary is not empty before renaming it |
-| ⭐ **the old scene does not let go of the focus** | cured **inside the bench**: `giro_vero()` calls `scena-ferma` **before** `scena-avvia`. ⚠ Before, the remedy was «in the head of whoever launches it», and that is how A lost his first round |
+| ⭐ **the old scene does not let go of the focus** | cured **inside the bench**: `giro_vero()` calls `still-scene` **before** `scena-avvia`. ⚠ Before, the remedy was «in the head of whoever launches it», and that is how A lost his first round |
 
 ### 4. ⭐ And a contribution to `LEZIONI.md` §1.24, which F3 paid for today
 
@@ -1571,7 +1571,7 @@ prende il fuoco») instead of producing a false number — I verified it by read
 
 ## F1.5 ⭐⭐⭐ THE WHOLE LOOP WITH ZERO COPY — the **paired** before/after
 
-> ### ⭐⭐⭐ `input → vetro` with zero copy: `[M]` **55.20 ms**
+> ### ⭐⭐⭐ `input → glass` with zero copy: `[M]` **55.20 ms**
 >
 > *(Yesterday's value, without zero copy — the road from memory with `sws_scale` — is removed with
 > phase 18: zero copy shortened the loop, and the value from before is no longer valid.)* Two rounds in a row, in the same quiet half hour, that share **everything** except the binary.
@@ -1580,7 +1580,7 @@ prende il fuoco») instead of producing a false number — I verified it by read
 
 ⛔⛔ The worst trap would be to measure the new code while it travels the old road, and it is not
 theoretical: `[M]` (F4) the iHD driver **does not honour a stride that is not a multiple of 64 bytes**. The stride is
-`larghezza × 4`, so the condition is **width a multiple of 16 px**:
+`width_px × 4`, so the condition is **width a multiple of 16 px**:
 
 | canvas | stride | remainder mod 64 | |
 |---|---|---|---|
@@ -1593,7 +1593,7 @@ theoretical: `[M]` (F4) the iHD driver **does not honour a stride that is not a 
 **four pixels** from the usual stage instead of the **+63 % of pixels** that 1920×1080 would have brought
 in. ⭐ And the calculation reproduces the cases F4 measured: 1544 and 1560 → remainder 32 (crooked), 1920 → 0
 (good). Two roads, same result.
-⭐ The lever is **the browser window** (`--finestra 1496x1000`, new argument): the page asks
+⭐ The lever is **the browser window** (`--win 1496x1000`, new argument): the page asks
 the server for a canvas as large as its view.
 
 ### ⭐ And that the two rounds are comparable is not hoped for: **the bench verifies it**
@@ -1607,9 +1607,9 @@ the server for a canvas as large as its view.
 | canvas · stride · remainder mod 64 | 1456×888 · 5824 · **0** | **identical** |
 | window | 1496×1000 | **identical** |
 | laptop load, `[M]` **in the report** | load **0.40** · Chrome 13 · Xvfb 1 · **a single bench** | load **1.10** · Chrome 13 · Xvfb 1 · **a single bench** |
-| `macchina carica` | **false** | **false** |
+| `host load` | **false** | **false** |
 
-⇒ ⭐⭐ **The stride is identical and good in both**: the road flips from `memoria` to `scheda`
+⇒ ⭐⭐ **The stride is identical and good in both**: the road flips from `mem_buf` to `gpu_card`
 **because the binary changes**, not because the canvas changes. It is the cleanest control I could
 build.
 ⚠ **I read the fingerprint by hand** (`sudo md5sum /proc/PID/exe`): it is not in the report, because the
@@ -1645,7 +1645,7 @@ they are no longer valid. The four conclusions below remain as qualitative facts
 ### ⭐⭐⭐ The four things this table says
 
 1. ⭐⭐ **Segment 5 is the signature of zero copy, and the account matches F4's.**
-   `[M]` It drops to **9.89 ms** (the «before» is removed, phase 18). F4, on his segment `cattura → byte fuori` and without a browser,
+   `[M]` It drops to **9.89 ms** (the «before» is removed, phase 18). F4, on his segment `capture_v → byte outside` and without a browser,
    had seen the same drop *(his «before», on `sws_scale`, is removed: phase 18)*. ⇒ **Two different benches, two different stages, the same cure,
    the same shape.** It is the cross-confirmation that F4's number lacked.
 2. ⭐⭐⭐ **And it pays off ALSO in segment 3, which is not its own** — `[M]` it drops to **11.78 ms**. The
@@ -1785,7 +1785,7 @@ worsened the median instead of improving it — ⛔ but the denominator is what 
 
 | | |
 |---|---|
-| ✅ ~~**the number with the machine idle, with the load WRITTEN**~~ | **DONE** (F1.5): tonight's two paired rounds have `macchina carica: false` **written by the bench**, load 0.40 and 1.10 on 4 cores, a single b30 bench. ⚠ **And the old entry stays true as it was written**: the four earlier rounds predate the cure (their values are removed, phase 18), and their load was `[R]` |
+| ✅ ~~**the number with the machine idle, with the load WRITTEN**~~ | **DONE** (F1.5): tonight's two paired rounds have `host load: false` **written by the bench**, load 0.40 and 1.10 on 4 cores, a single b30 bench. ⚠ **And the old entry stays true as it was written**: the four earlier rounds predate the cure (their values are removed, phase 18), and their load was `[R]` |
 | ⏳ ⛔ **how much of the number is the bench itself** | `[M]` **7.6-8.8 ms per frame** of reading. The rhythm does not drop (Q9) ⇒ the thread is not saturated, **but on the loop it is not negligible**. ⚠ And it is not separated with Q9's «without reading» slice: without pixels **no probe closes**. ⇒ A round with the reading **halved** (a single `drawImage`) is needed: if `T` does not change, the cost does not enter |
 | ⏳ ⭐⭐ **the rubber-band calculation** | the computed gap against the one the user sees (values removed, phase 18). It is decided **by re-measuring the gap today**, with the video, on the real road. ⛔ And meanwhile **the «within 7 %» agreement of §4-A must be removed** |
 | ⏳ **the KEYBOARD** | 0 out of 276 |
@@ -1818,8 +1818,8 @@ The bench files I changed, all in `banchi/`:
 - `04-b30-anello-input.py` — prologue §4-bis (`createImageBitmap` + `transferFromImageBitmap`) and
   §6 (`leggi_marca_vetro`), **Q11** and its two faults, `--ritardo-vetro`,
   **`carico_della_macchina()`** at both ends and twice, the cross-check with the product,
-  `scena-ferma` before `scena-avvia`, `coda_url` + `strade` + the load in the deposited line,
-  ⭐ **`--finestra`** (the window size commands the canvas, and the canvas commands whether zero copy
+  `still-scene` before `scena-avvia`, `coda_url` + `routes` + the load in the deposited line,
+  ⭐ **`--win`** (the window size commands the canvas, and the canvas commands whether zero copy
   switches on), ⭐ **`strada_di_cattura()`** (zero copy read from the PRODUCT's log, with the stride
   calculation alongside), ⭐ **the binary's fingerprint** read from `/proc/PID/exe`;
 - `04-b30-lancia.sh` — `scena-costruisci`;
@@ -1841,7 +1841,7 @@ The bench files I changed, all in `banchi/`:
 > | how | ms |
 > |---|---|
 > | **real** road (`bitmaprenderer`), real session, HEVC in hardware, n=200 ×2 | **1.18** and **0.49** |
-> | ⛔ **A's same `?tela=2d` road** | **0.39** and **0.97** |
+> | ⛔ **A's same `?canvas_size=2d` road** | **0.39** and **0.97** |
 > | without server or network, real HEVC stream at 60/s | **1.00** (2D) · **2.80** (`bitmaprenderer`) |
 >
 > ⇒ **From 15 to 45 times less, and on both roads** ⇒ ⛔ **the drawing road was not the
@@ -1863,7 +1863,7 @@ The bench files I changed, all in `banchi/`:
 >
 > ### ⭐ And the agent delivered a tool instead of a cure
 >
-> **`REMOTIX.tratti()`, inside `src/pagina.html`**: the product **declares by itself** the client's four
+> **`REMOTIX.stretches()`, inside `src/pagina.html`**: the product **declares by itself** the client's four
 > segments, **with the same names on all three drawing roads**, at `[M]` ~4 µs per
 > frame. ⇒ ⛔ **There is no longer any need to rewrite a bench's prologue every time the page changes
 > the way it paints** — which is exactly the defect that had blocked A (0 probes out of 304).
@@ -1873,17 +1873,17 @@ The bench files I changed, all in `banchi/`:
 
 > ### ⭐⭐⭐ THE POINT LIES IN TWO NUMBERS TAKEN ON THE **SAME** ROAD THAT GAVE THE FIRST
 >
-> Agent A, on the `?tela=2d` road: `[M]` the segment *«decoder callback → 1st
+> Agent A, on the `?canvas_size=2d` road: `[M]` the segment *«decoder callback → 1st
 > `drawImage` finished»* is worth **17.48 ms**, against **0.10** of the real drawing. ⇒ *«the
 > bottleneck is the drawing»* is false — and on this there is nothing to correct: it is right.
 >
 > ⛔⛔ **But the segment itself is not there.** Re-measured today, in a real session, on the **same
-> `?tela=2d` road**, with the same iron and the same codec:
+> `?canvas_size=2d` road**, with the same iron and the same codec:
 >
-> | | `richiamo → vetro` (A's segments 9+10) |
+> | | `richiamo → glass` (A's segments 9+10) |
 > |---|---|
-> | `[M]` **A, 22 Aug, `?tela=2d`** | **17.58 ms** |
-> | `[M]` **F3, `?tela=2d`** — A's road · round 1 · round 2 | ⭐ **0.39** · **0.97 ms** (n=200 ×2) |
+> | `[M]` **A, 22 Aug, `?canvas_size=2d`** | **17.58 ms** |
+> | `[M]` **F3, `?canvas_size=2d`** — A's road · round 1 · round 2 | ⭐ **0.39** · **0.97 ms** (n=200 ×2) |
 > | `[M]` **F3, the REAL road (`bitmaprenderer`)** · round 1 · round 2 | ⭐⭐ **1.18** · **0.49 ms** (n=200 ×2) |
 >
 > *(The column of painted frames, with the product on the road from memory, is removed with phase 18.)*
@@ -1917,10 +1917,10 @@ The bench files I changed, all in `banchi/`:
 
 | file | what it is |
 |---|---|
-| `src/pagina.html` | ⭐⭐ **the client's four segments are declared by the PRODUCT**: `REMOTIX.tratti()` |
-| `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ the bench **without a server**: the same chain `decode() → richiamo → immagine → vetro` on a real stream, with the checks that separate the three hypotheses |
+| `src/pagina.html` | ⭐⭐ **the client's four segments are declared by the PRODUCT**: `REMOTIX.stretches()` |
+| `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ the bench **without a server**: the same chain `decode() → richiamo → bitmap → glass` on a real stream, with the checks that separate the three hypotheses |
 | `banchi/08-f3-lancia.py` | the bench's launcher: the stream with `ffmpeg`, the fourteen rounds, the comparisons |
-| `banchi/08-f3-tratti.py` | ⭐ reads `REMOTIX.tratti()` from a **real session**, on both roads in the same sitting |
+| `banchi/08-f3-tratti.py` | ⭐ reads `REMOTIX.stretches()` from a **real session**, on both roads in the same sitting |
 | `banchi/08-f3-sessione.sh` | my terrain (port, user, tree, scene) |
 | `banchi/08-f3-esiti.json` · `08-f3-esiti.jsonl` | the reports |
 
@@ -1928,7 +1928,7 @@ The bench files I changed, all in `banchi/`:
 
 ### ⭐⭐ And the thing worth more than the bench: **now the segments are declared by the product**
 
-⛔ **The reason is the defect that generated this round.** A's number belongs to the `?tela=2d` road
+⛔ **The reason is the defect that generated this round.** A's number belongs to the `?canvas_size=2d` road
 because the prologue of `04-b30` **reads the pixels from the store**, and since 20 Aug the store does not
 exist (`DECISIONI.md` §5.4). ⇒ The number of the **live** road could not be measured by anyone without
 rewriting a bench's prologue — «half a day», says §A.4.
@@ -1936,12 +1936,12 @@ rewriting a bench's prologue — «half a day», says §A.4.
 ⇒ ⭐ `src/pagina.html` measures by itself the four segments that belong to it and exposes them:
 
 ```
-REMOTIX.tratti()  →  strada · tela · dipinti · saltati_coda · tardive
+REMOTIX.stretches()  →  route · canvas_size · painted · skipped_queue · belated
                      8_decode_richiamo · 9a_richiamo_chiamata · 9b_conversione
                      10_vetro · 9_10_richiamo_vetro · 11_vetro_prossimo_quadro
 ```
 
-⭐ **The same names on all three roads** (`bitmaprenderer`, `?tela=2d`, the fallback): a bench
+⭐ **The same names on all three roads** (`bitmaprenderer`, `?canvas_size=2d`, the fallback): a bench
 reads them with one line and no longer needs to know how the drawing is done inside.
 ⛔ **And it is not a switch** (invariant I6): there is nothing in there that can change what
 the page does.
@@ -2002,7 +2002,7 @@ monitor **1520 × 868 @ 60 Hz**, scene `04-b30-scena` at 60 drawings/s, codec **
 `hev1.1.6.L153.B0` **in hardware**, `VideoFrame.format` **BGRX**, page GPU `ANGLE (Intel,
 Mesa Intel(R) Graphics (ADL-N))`, real WiFi network in between, **no errors**:
 
-| segment | **REAL road** r1 · r2 | `?tela=2d` road r1 · r2 |
+| segment | **REAL road** r1 · r2 | `?canvas_size=2d` road r1 · r2 |
 |---|---|---|
 | 8 · `decode()` → callback | **2.20** · **0.79 ms** | 0.74 · 1.82 |
 | 9a · callback → call | **0.04** · **0.02** | — |
@@ -2045,7 +2045,7 @@ line the report would have said **«not measured»** on all the segments, and wh
 callback**, and the second is the one that weighs:
 
 1. it wraps `CanvasRenderingContext2D.prototype.drawImage` and measures its duration (`t_dip_a =
-   t1 + disegni[0]` ⇒ **segment 9 IS the duration of the first `drawImage`**);
+   t1 + drawings[0]` ⇒ **segment 9 IS the duration of the first `drawImage`**);
 2. ⛔ right after it **rereads the pixels from the store with `getImageData`**, two small windows, **at every
    frame**.
 
@@ -2122,7 +2122,7 @@ because it fails loudly, while the user failed **silently**.
 - ⛔ **the first `bmp_ms` I read was the cost of the bench**: `[M]` `createImageBitmap` **0.90 ms**
   and the control microtask **0.90** — identical, because the checks are inside both.
   ⇒ Cured with the **net** (the twin is subtracted) and with the **clean** rounds (checks switched off);
-- ⛔ **the queue verdict was always green**: the ratio `controlli/attesa` is ~1.0 even on
+- ⛔ **the queue verdict was always green**: the ratio `checks/wait` is ~1.0 even on
   a free thread. It is `LEZIONI.md` §1.20 in person — *«is there a case in which it is zero and the bench
   stays green?»*. ⇒ Cured with an **absolute** threshold next to the ratio;
 - ⛔ **the positive control of the frame was blind**: asking `createImageBitmap` for a
@@ -2147,7 +2147,7 @@ control (b) **declared not executable**. ⇒ **reds: 0.**
 | ⏳ **segment 11 and the `[?]` 16-40 ms** | the code is there, the stage is not: a browser with real scanout is needed |
 | ⏳ **the «after» in title bars** | `08-b67-elastico.py` must be rerun **on an idle laptop** |
 | ⚠ **`createImageBitmap` = 3.8 ms** | `[M]` today it is worth **1.05**. The number of §7.1 belongs to another stage and is no longer cited without redoing it |
-| ⚠ **segment 8 changes with the road** | `[M]` **2.20 ms** on `bitmaprenderer` against **0.74** on `?tela=2d`, same session. ⛔ `decode()` → callback **should not** depend on how one paints: either it is contention, or it is a queue that moves. I did not open it up |
+| ⚠ **segment 8 changes with the road** | `[M]` **2.20 ms** on `bitmaprenderer` against **0.74** on `?canvas_size=2d`, same session. ⛔ `decode()` → callback **should not** depend on how one paints: either it is contention, or it is a queue that moves. I did not open it up |
 
 ---
 
@@ -2184,7 +2184,7 @@ produced, in one day, **two targets cancelled** — which is work saved, not wor
 >
 > The user, looking at the screen and without instruments: the gap between the arrow and the window is
 > **«metà della barra del titolo»**. His drag, measured from the video, has a median speed of
-> **3 400 px/s**. The bench, which knows nothing of all this, measured `input → vetro`, and
+> **3 400 px/s**. The bench, which knows nothing of all this, measured `input → glass`, and
 > `ritardo × velocità` matched the user's gap within 7 %.
 >
 > *(The delay and the pixels of the calculation, on the binary from memory with `sws_scale`, are removed with
@@ -2218,7 +2218,7 @@ produced, in one day, **two targets cancelled** — which is work saved, not wor
 
 ## A.0 ⭐ The bench recertified itself, and the certification counts the faults
 
-`[M]` `python3 banchi/04-b30-anello-input.py --certifica` ⇒ **PASSED, 53 checks out of 53, and 16
+`[M]` `python3 banchi/04-b30-anello-input.py --certify` ⇒ **PASSED, 53 checks out of 53, and 16
 injected faults accused out of 16.** Done twice: before touching the file and after (§A.4).
 ⇒ The bench knows how to fail.
 
@@ -2226,7 +2226,7 @@ injected faults accused out of 16.** Done twice: before touching the file and af
 
 ## A.1 ⭐⭐ TODAY'S NUMBER
 
-`[M]` **22 Aug 2026** — `input → vetro`, **awkward** boundary at both ends
+`[M]` **22 Aug 2026** — `input → glass`, **awkward** boundary at both ends
 (`event.timeStamp` in capture phase → **drawing finished**), **five rounds**, **none below
 99 % of probes closed** (n = 228 · 234 · 224 · 413 · 417). It exceeded the 50 ms and the 40 of `SPECIFICHE.md`
 §3.2, at the median and at the p95.
@@ -2311,7 +2311,7 @@ additive, unlike medians) the sum of segments 1a…10 against the mean of T gave
 
 `[M]` the segments that phase 3's yardstick did not cross are A + B + C (their sum, which
 contains C, is removed with phase 18). ⛔ And the two numbers **are neither added nor
-subtracted**: `input → vetro` **contains** `disegno della scena → vetro`.
+subtracted**: `input → glass` **contains** `disegno della scena → vetro`.
 
 ---
 
@@ -2332,11 +2332,11 @@ was recertified afterwards.
 | ⛔⛔ **the canvas** | **1920 × 1080** = 2 073 600 px | **1460 × 888** = 1 296 480 px | **62.5 % of the pixels**: less to convert, encode, send, decode and draw ⇒ it pulls down **E** and **F**, and maybe **D** |
 | ⛔ **the depth** | `hev1.**2.4**` — HEVC **10 bit**, promotion 8→10 **declared** | `hev1.**1.6**` — HEVC **8 bit**, no promotion *(the times of conversion with `sws_scale`, upload and encoding from memory are removed: phase 18)* | it pulls down **E** |
 
-⚠ **I tried to put back the canvas of the time and I did NOT manage**: `?adatta=no` is the declared
+⚠ **I tried to put back the canvas of the time and I did NOT manage**: `?fit=no` is the declared
 lever («the page from before 15 Aug»), the round with that suffix ran, ⛔ **and the canvas
-stayed 1460 × 888**. `[R]` The server log says why: `cattura formato negoziato:
-1460x888` and `input regione 0: 0,0 1460x888` — **the virtual monitor IS BORN at that size**, so
-`ADATTA_TELA` has nothing to do with it and there is no going back from the address. ⇒ **It remains `[?]`** how much of the
+stayed 1460 × 888**. `[R]` The server log says why: `capture_v schema negotiated:
+1460x888` and `input region 0: 0,0 1460x888` — **the virtual monitor IS BORN at that size**, so
+`FIT_CANVAS` has nothing to do with it and there is no going back from the address. ⇒ **It remains `[?]`** how much of the
 improvement is product and how much is fewer pixels.
 
 ### ⭐ What holds all the same, and holds well
@@ -2370,9 +2370,9 @@ code 3**, «I have nothing to judge». Q2, Q3, Q4, Q5, Q6, Q7, Q8 all **NOT EXEC
 The rest of the chain was healthy: encoding in hardware, scene on `Meta-0`, input arrived at the desktop.
 
 `[R]` **The cause, read in the code and not deduced.** Since 20 Aug (`DECISIONI.md` §5.4,
-`src/pagina.html` · `MP4_DURATA_MAX()`) the normal road is `bitmaprenderer` + `createImageBitmap`. On that road:
+`src/pagina.html` · `MP4_MAX_DURATION()`) the normal road is `bitmaprenderer` + `createImageBitmap`. On that road:
 
-- **the 2D store does not exist** (`src/pagina.html` · `MP4_DURATA_MAX()`: `this.deposito = null; this.deposito_p =
+- **the 2D store does not exist** (`src/pagina.html` · `MP4_MAX_DURATION()`: `this.repository = null; this.repository_p =
   null;`), and the bench's prologue reads the pixels **exactly from there** ⇒ zero marks read;
 - **`drawImage` is never called** ⇒ segments 9 and 10 do not exist and Q8 does not run;
 - ⛔⛔ **and there is worse, and it is the real trap**: the bench takes `t_dip` — the **awkward** boundary,
@@ -2382,7 +2382,7 @@ The rest of the chain was healthy: encoding in hardware, scene on `Meta-0`, inpu
   of `LEZIONI.md` §1.20 in person.
 
 **The cure I applied (the only change to the bench):** `--coda-url`, a new argument that
-appends a suffix to the address. With `--coda-url "?tela=2d"` the page takes the 2D road — which is
+appends a suffix to the address. With `--coda-url "?canvas_size=2d"` the page takes the 2D road — which is
 **exactly the one of 14 Aug** — and the bench measures again. The bench was **recertified
 afterwards**: `[M]` 53 out of 53, 16 faults out of 16. And the suffix ends up in the report (`coda_url`).
 
@@ -2424,11 +2424,11 @@ tests it by injecting delays that are not multiples of 16.7 ms.
 
 ### 4. ⛔ The old scene does not give up its place, and I lost the first round that way
 
-`[M]` first attempt with `?tela=2d`: **«la scena non prende il fuoco del puntatore»**, six
+`[M]` first attempt with `?canvas_size=2d`: **«la scena non prende il fuoco del puntatore»**, six
 attempts, and the bench refused to measure — correctly: a number taken there would be taken on
 a **thumbnail inside GNOME's Overview**, scale 0.79, without CRC and without echo.
 `[R]` The cause: `scena-avvia` says «the scene is already alive» and reuses the one from the previous round, which
-lost the focus. ⇒ **Remedy: `scena-ferma` between one round and the next.** Done for all the
+lost the focus. ⇒ **Remedy: `still-scene` between one round and the next.** Done for all the
 following rounds. ⚠ It must be written in the bench: today the remedy is in the head of whoever launches it.
 
 ### 5. ⚠ Two minor defects, declared and not cured
@@ -2437,7 +2437,7 @@ following rounds. ⚠ It must be written in the bench: today the remedy is in th
   line. ⇒ Whoever rereads `04-b30-esiti.jsonl` **cannot know on which drawing road** a number
   was taken. I put mine in the round's name (`08a-tela2d-*`); that is not enough as a rule.
 - ⛔ **`scena-costruisci` of `04-b30-lancia.sh` does not work**: `ssh → enter.sh → bash -c` has three
-  levels of quoting and `$L`/`$P` get lost along the way ⇒ `gcc -o /scena.nuovo`. `[M]` seen today.
+  levels of quoting and `$L`/`$P` get lost along the way ⇒ `gcc -o /scene.fresh`. `[M]` seen today.
   Remedy: the build is in a **file** (`08-a-scena-costruisci.sh`), not in a line.
 
 ---
@@ -2446,7 +2446,7 @@ following rounds. ⚠ It must be written in the bench: today the remedy is in th
 
 | | |
 |---|---|
-| ⏳ **how much of the 41 ms is product** | the canvas went from 1920×1080 to 1460×888 (**62.5 % of the pixels**) and the flow from 10 to 8 bits, and I did not find a way to put back the canvas of the time (`?adatta=no` is not enough: the virtual monitor is already born at that size). **At least 18 ms are product** (segment B, proven by Q6); the rest is open |
+| ⏳ **how much of the 41 ms is product** | the canvas went from 1920×1080 to 1460×888 (**62.5 % of the pixels**) and the flow from 10 to 8 bits, and I did not find a way to put back the canvas of the time (`?fit=no` is not enough: the virtual monitor is already born at that size). **At least 18 ms are product** (segment B, proven by Q6); the rest is open |
 | ⏳ **the `bitmaprenderer` road** | the number the user lives with **has never been measured by this bench**. The redone prologue is needed (§A.4 point 1) |
 | ⏳ **segment C, 23.25 ms and the widest spread of all** ([13.86 – 28.28]) | it is «the scene receives the input → the scene draws». ⚠ It is partly **the bench's scene**, not the product: before curing it one must know how much is its own |
 | ⏳ **the ~16 ms not explained inside segment 5** | today segment 5 is worth 24.19 and conversion, upload and encoding do not explain all of it *(their times, on the `sws_scale` road, are removed: phase 18)*. The margin is still there, and it is smaller than before |
@@ -2461,7 +2461,7 @@ following rounds. ⚠ It must be written in the bench: today the remedy is in th
 ⭐ User **`provaa8`** (uid 1041) with a GNOME session, tree `/media/REMOTIX/src/08-a-src`, scene
 `/media/REMOTIX/src/08-a-scena-lav/08-a-scena`, terrain `/media/REMOTIX/src/08-a-terreno.sh`,
 work directory `/media/REMOTIX/tmp/08-a`. Product, bridge and scene **switched off**; they are switched back on
-with `08-a-lancia.sh accendi`. ⛔ **Ports 7730 and 7731 and the user's directories were never
+with `08-a-lancia.sh turn_on`. ⛔ **Ports 7730 and 7731 and the user's directories were never
 touched**, and the count of neighbours declares it in every log line of the terrain.
 
 
@@ -2488,7 +2488,7 @@ touched**, and the count of neighbours declares it in every log line of the terr
 > | entry | ms |
 > |---|---|
 > | ⛔ **the producer (Mutter)** — from its `pts` to our callback | *(removed, phase 18)* |
-> | ⛔ **`misura_i_pixel()`** — the diagnostics | **5.34** |
+> | ⛔ **`measure_pixels()`** — the diagnostics | **5.34** |
 > | the copy | 1.30 |
 > | the frame waiting in the slot | **0.08** |
 >
@@ -2497,7 +2497,7 @@ touched**, and the count of neighbours declares it in every log line of the terr
 > showed, contained our work on the road from memory.)*
 >
 > 1. ⛔ **the producer looked like Mutter's**: more than a third of the margin **not ours** (disproved by F4);
-> 2. ⛔⛔ **5.34 ms are DIAGNOSTICS**: `misura_i_pixel()` reads **every pixel of every frame**
+> 2. ⛔⛔ **5.34 ms are DIAGNOSTICS**: `measure_pixels()` reads **every pixel of every frame**
 >    to fill **a log line that is written only once**;
 > 3. ⭐⭐ **and the coordinator's hypothesis was wrong**, refuted by the tool built *before*
 >    the cure: I believed it was the frame ageing in the slot, ⇒ `[M]` **0.08 ms**.
@@ -2536,13 +2536,13 @@ user `provac8`, port **7752**, tree `/media/REMOTIX/src/08-c-src`, work
 
 ### What was built
 
-`src/cattura.h` · `src/cattura.c` · `src/figlio.c`. The `cattura → primo byte` segment is now
+`src/cattura.h` · `src/cattura.c` · `src/figlio.c`. The `capture_v → first byte` segment is now
 broken down **inside the product**, and the line comes out in the log **once per second**:
 
 ```
-⭐ TRATTO cattura → byte fuori: mediana … ms (max …) su 512 fotogrammi del campione,
+⭐ STRETCH capture_v → byte outside: median … ms (max …) su 512 fotogrammi del campione,
    2450 in tutto — produttore … · allocazione 0.00 · copia 1.30 · nel posto 0.08 ·
-   misura 5.34 · conversione … · caricamento … · codifica … · spedizione 0.01 · resto 0.02
+   gauge 5.34 · conversione … · caricamento … · encoding … · spedizione 0.01 · rest 0.02
 ```
 
 *(The shape of the line is the one of the time; the values of the road from memory — producer,
@@ -2550,7 +2550,7 @@ conversion with `sws_scale`, upload, encoding, total — are removed: they are n
 phase 18.)*
 
 Ten entries **disjoint and in a row**, **medians** (not means) over a ring of 512 frames, with the
-**maximum** alongside. ⭐ The last entry is the **`resto`**: what the total has more than the sum
+**maximum** alongside. ⭐ The last entry is the **`rest`**: what the total has more than the sum
 of the others. `[M]` it is worth **0.02 ms** ⇒ **the breakdown has no holes**, and it is the same property
 that made phase 4's credible (deviation 0.32 ms).
 
@@ -2576,7 +2576,7 @@ are the **same `CLOCK_MONOTONIC`**: no clock anchor, no Xvfb, no CDP.
 | allocation *(the slot's `g_malloc`)* | 0.00 | 0.02 | ours — and it costs nothing: the buffer is reused |
 | **copy** *(the `memcpy` in the real-time callback)* | **1.30** | 2.26 | ours |
 | **in the slot** *(the frame ageing while waiting)* | **0.08** | 6.52 | ours |
-| **measurement** *(`misura_i_pixel()`)* | **5.34** | 13.91 | ⛔ **ours, and DIAGNOSTICS** |
+| **measurement** *(`measure_pixels()`)* | **5.34** | 13.91 | ⛔ **ours, and DIAGNOSTICS** |
 | conversion *(`sws_scale`)* | ⛔ removed *(phase 18)* | | ours |
 | upload *(→ GPU)* | ⛔ removed *(phase 18)* | | ours |
 | encoding *(from memory)* | ⛔ removed *(phase 18)* | | ours |
@@ -2813,7 +2813,7 @@ content, and rebuilt a binary on purpose.
 ⚠ CHIAVE sopra il tetto: scendo a QP 44 e RIPROVO (tentativo 3).  …
 ```
 
-⭐⭐ **And the real proof is not the log, it is the frame**: `fotogramma 91 · t = 4,002 s · chiave ·
+⭐⭐ **And the real proof is not the log, it is the frame**: `frame 91 · t = 4,002 s · key_id ·
 4 728 byte · 1920×1080` — **under the fake ceiling**, and **994 complete frames with 2 keyframes** in the
 round. ⛔ Before the cure that round would have written *«nemmeno dopo 3 ricodifiche… il fotogramma NON
 parte»* and **no keyframe would have left**.
@@ -2857,8 +2857,8 @@ under 6 000 bytes by themselves. `[?]` It remains untravelled.
 | ⏳ **the producer's ms** | believed to be Mutter's (value removed, phase 18). `[?]` I do not know **what they are made of** (composition? the PipeWire loop? the compositor's cadence?) — ⛔ answered later by F4: they were largely ours |
 | ⏳ **`conversione` taking the cache** | `[M]` it rises when the scan disappears *(the milliseconds are removed: phase 18)*. `[?]` Whether `sws_scale` accesses memory in an improvable way (more threads, different flags) was not looked at — ⚠ and zero copy deletes it anyway |
 | `[?]` **the «delta abandoned» branch** | not travelled even with the injected fault |
-| `[?]` **`banchi/02-cattura-prodotto.c` reads `nero`/`uniforme` without `pixel_misurati`** | ⛔ **it is not mine and I did not touch it.** It takes few frames and the first is always measured, so today it is not wrong; but the right line is to print it. **One line, for whoever owns it** |
-| `[?]` **the value of `CRF_PASSO`** | 9 is *sufficient*, not *right*: the working point belongs to **phase 9** |
+| `[?]` **`banchi/02-cattura-prodotto.c` reads `nero`/`uniform` without `measured_pixels`** | ⛔ **it is not mine and I did not touch it.** It takes few frames and the first is always measured, so today it is not wrong; but the right line is to print it. **One line, for whoever owns it** |
+| `[?]` **the value of `CRF_STEP`** | 9 is *sufficient*, not *right*: the working point belongs to **phase 9** |
 | `[?]` **the gap in pixels** | ⛔ I did not measure it: it is the whole loop, and it belongs to point A |
 
 ---
@@ -2931,7 +2931,7 @@ work) and §7 (remains `[?]`).*
 the **certified mark reader** come from `03-b17-ritardo.py`; the echo and the shared-block reader
 from `04-b30-anello-input.py`; **the scene is `04-b30-scena.c` without a line changed**; the
 terrain is `04-b32-terreno.sh` **driven by the environment**, not a copy of it. The only piece recopied
-is `batti()` (the `thisisunsafe`), and the reason is written next to it: the module that contains it does
+is `beat()` (the `thisisunsafe`), and the reason is written next to it: the module that contains it does
 `argparse` at module level, and importing it would launch another bench.
 
 ---
@@ -2942,7 +2942,7 @@ is `batti()` (the `thisisunsafe`), and the reason is written next to it: the mod
 
 ```
 udp 0.0.0.0:7741  users:(("remotix",pid=3446627))
-    /media/REMOTIX/src/08-a-src/src/remotix --porta 7741
+    /media/REMOTIX/src/08-a-src/src/remotix --port 7741
       --ban-file /media/REMOTIX/tmp/08-a/ban-7741
 udp 0.0.0.0:7740 / 7742  ("python3")  → the BRIDGE of 08-a
 ```
@@ -2979,8 +2979,8 @@ cursor *and* the drawn arrow, both local). The window chases with **all** the de
    of the event the compositor delivered to it**. The bench reads that mark **from the painted
    canvas** and knows *where the window the user sees is at this instant*. It is the
    **AWKWARD** boundary, and it is **the only one of the two that can give pixels**: the echo *is* a position.
-2. **THE `input` FIELD OF THE 28 BYTES** — `RCP.md` §6.2, which the page already collects in `REMOTIX.giro`.
-   The bench wraps `GIRO.torna`. It is the **CONVENIENT** boundary: the frame has *arrived*, not yet
+2. **THE `input` FIELD OF THE 28 BYTES** — `RCP.md` §6.2, which the page already collects in `REMOTIX.lap`.
+   The bench wraps `ROUND.returns`. It is the **CONVENIENT** boundary: the frame has *arrived*, not yet
    decoded or painted.
 
 ⭐ **The pairing is by COORDINATES**, not by time: the trajectory never passes again over the same
@@ -2990,7 +2990,7 @@ never sent) the sample **is thrown away and counted**.
 ### ⛔ The prologue is new, and the reason is a measurement
 
 A10's reads the pixels from the **store**. `[R]` Since 21 Aug the drawing road is
-`bitmaprenderer` (`DECISIONI.md` §5.4) and **the store no longer exists** (`this.deposito = null`).
+`bitmaprenderer` (`DECISIONI.md` §5.4) and **the store no longer exists** (`this.repository = null`).
 A copied prologue would have read `null` at every frame. ⇒ Here the pixels are read from the **view**,
 and the drawing boundary is the wrapping of **`transferFromImageBitmap`** — not of
 `VideoDecoder.output`, which on this road returns **before** the canvas has changed (the
@@ -3050,7 +3050,7 @@ every frame — and his session has a real desktop on it instead of a scene.
 ### ⭐ And a fact nobody was looking for: **the convenient boundary gives away half of the number**
 
 `[M]` (the values, on the binary from memory, are removed with phase 18). ⇒ ⛔ Whoever measured the loop with only the `input` field of the 28 bytes —
-that is with `REMOTIX.giro`, which is what the page shows the user in diagnostics —
+that is with `REMOTIX.lap`, which is what the page shows the user in diagnostics —
 **would say half of the truth**. The page's number is a lower limit, and it is declared as such
 in its comment; but now there is the measurement of **how much** that limit is worth.
 
@@ -3058,7 +3058,7 @@ in its comment; but now there is the measurement of **how much** that limit is w
 
 ## 5 · The certification: **13 injected faults out of 13 accused**
 
-`python3 banchi/08-b67-elastico.py --certifica` — runs on the laptop, without network and without server,
+`python3 banchi/08-b67-elastico.py --certify` — runs on the laptop, without network and without server,
 and ends **0**. Every green is put to the test with a fault that **must** turn the
 bench red:
 
@@ -3113,8 +3113,8 @@ and it is written with the why.
    as a **reduced and shifted thumbnail**: the mark is there in the pixels but it is neither at (0,0) nor at scale
    1:1, and every CRC fails. ⭐ **I saw it only by photographing the canvas** — a contrast of 0.65 with
    sync 0x00 does not say it. ⇒ Cure: the bench **presses `Escape` on the remote desktop** and retries, up to
-   three times; and green arrives only when the mark is read with `scorrimento [0,0]` and
-   `contrasto 1,0`.
+   three times; and green arrives only when the mark is read with `scroll [0,0]` and
+   `contrast 1,0`.
    ⚠ **And even before that I had skipped the SHIFT step**, which `04-b30` documents as having
    cost *«0 marks out of 966»*. I took the same red word for word believing it a detail of
    A10: **another bench's lesson is worth something only if it is carried out.**
@@ -3162,17 +3162,17 @@ number of this bench, and it is declared instead of hoped small.
 ## 8 · How to rerun it
 
 ```bash
-bash banchi/08-b67-lancia.sh certifica          # here, without a server: 13 faults out of 13
-bash banchi/08-b67-lancia.sh porta costruisci   # tree and container
+bash banchi/08-b67-lancia.sh certify          # here, without a server: 13 faults out of 13
+bash banchi/08-b67-lancia.sh port build   # tree and container
 bash banchi/08-b67-lancia.sh scena-costruisci
-bash banchi/08-b67-lancia.sh terreno accendi
-bash banchi/08-b67-lancia.sh aggancia           # the virtual monitor is born with the child
+bash banchi/08-b67-lancia.sh terrain turn_on
+bash banchi/08-b67-lancia.sh hook           # the virtual monitor is born with the child
 bash banchi/08-b67-lancia.sh scena-avvia
-bash banchi/08-b67-lancia.sh misura 25
+bash banchi/08-b67-lancia.sh gauge 25
 ```
 
 ⚠ **The server on 7746 and the scene were left RUNNING**, so the coordinator can rerun without
-remounting the terrain. They are switched off with `bash banchi/08-b67-lancia.sh spegni` — ⛔ which touches **only**
+remounting the terrain. They are switched off with `bash banchi/08-b67-lancia.sh turn_off` — ⛔ which touches **only**
 my things.
 
 
@@ -3291,7 +3291,7 @@ capture and output — `[M]` **67 ms** at 30/s — that is **on its own it break
 ⇒ ⭐ **The line of `RCP.md` §5.2 — «every abandonment costs a keyframe» — stays in force, and now it has
 a measurement under it instead of a `[?]`.**
 
-⚠ *And the product is already protected should anyone try to touch that number*: `codificatore.c` · `comprimi_comune()`
+⚠ *And the product is already protected should anyone try to touch that number*: `codificatore.c` · `compress_common()`
 looks at `dts ≠ pts` and **writes in the log** that the encoder reorders. The line
 `max_b_frames = 0` is right as it is: ⛔ **it is not touched.**
 
@@ -3384,7 +3384,7 @@ fallback has changed) and it is removed.
 
 ### D.2.4 ⛔⛔ And here is the real defect: **the re-encode ladder is ONE rung short**
 
-`[R]` `codificatore.c` · `RICODIFICHE_MASSIME` `RICODIFICHE_MASSIME 3`, `:46` `CRF_PASSO 6`, `:2061` `abbassa_qualita()`.
+`[R]` `codificatore.c` · `MAX_REENCODES` `MAX_REENCODES 3`, `:46` `CRF_STEP 6`, `:2061` `lower_quality()`.
 The ladder is therefore **QP 26 → 32 → 38** (hardware; in software the same with CRF), and after the third
 attempt `:2203` **returns `false`: the frame does NOT leave.**
 
@@ -3405,7 +3405,7 @@ would have been enough. **QP 38 stands at 104.1 % of the ceiling**: it loses by 
 
 ⛔ **And the consequence is the one `RCP.md` §5.2 exists to avoid.** If the frame that «does not
 leave» is a **keyframe**, §5.2 says *«the server MUST NOT abandon a keyframe»*: the
-client stays broken, sends `RICHIEDI_CHIAVE`, and every request makes it redo **three** re-encodes that
+client stays broken, sends `REQUEST_KEY`, and every request makes it redo **three** re-encodes that
 produce nothing. `[M]` **Every attempt at 8K costs 91-108 ms in hardware** ⇒ **~300 ms** thrown away per
 frame, repeatedly (in software much more; the measurement is removed, phase 18). **It is the spiral.**
 
@@ -3463,7 +3463,7 @@ At the user's canvas, never (§D.2.1). ⇒ It is a **real and proven** defect, n
    **933 bytes less** than `main` — that is the label carries no information.
 3. `[?]` **Whether a real 8K desktop resembles the mosaic or the grain.** The mosaic is a declared
    surrogate.
-4. `[?]` **The lossless regime** (`CODIFICATORE_QUALITA_LOSSLESS`) is not on the path of
+4. `[?]` **The lossless regime** (`ENCODER_QUALITY_LOSSLESS`) is not on the path of
    `figlio.c` and I did not measure it; at 8K a lossless 8-bit frame is worth **47 MiB** of raw
    pixels alone, so it would break through by construction. If one day it is switched on, it must be measured.
 
@@ -3473,8 +3473,8 @@ At the user's canvas, never (§D.2.1). ⇒ It is a **real and proven** defect, n
 
 | # | where | what, and why |
 |---|---|---|
-| **1** | `codificatore.c` · `RICODIFICHE_MASSIME` `#define RICODIFICHE_MASSIME 3` **or** `:46` `#define CRF_PASSO 6` | ⛔ **The ladder is one rung short**, measured on both paths (§D.2.4): the last attempt leaves **16.654 MiB** in hardware, and the fourth would have made it *(the software numbers are removed: phase 18)*. ⭐ **Better to raise the STEP than the number of attempts**: `[M]` every attempt at 8K costs **91-108 ms** in hardware, so a step of **9** costs a third of one more attempt. ⚠ The exact number is a working point between quality and bandwidth ⇒ **it belongs to phase 9**: I only bring the proof that **3×6 is not enough** |
-| **2** | `codificatore.c:2203-2207` — the surrender | ⛔⛔ When it gives up it returns `false` **even for a KEYFRAME**, and `RCP.md` §5.2 forbids abandoning keyframes. ⇒ For a keyframe one cannot give up: one keeps going down until it fits — `[M]` **QP 51 gives 1.771 MiB at 8K**, so it **always** fits — and one writes in the log that the image came out ugly. Abandoning it leaves the client broken **forever**, and every `RICHIEDI_CHIAVE` that follows costs three re-encodes **that produce nothing**: it is the spiral of §5.2 |
+| **1** | `codificatore.c` · `MAX_REENCODES` `#define MAX_REENCODES 3` **or** `:46` `#define CRF_STEP 6` | ⛔ **The ladder is one rung short**, measured on both paths (§D.2.4): the last attempt leaves **16.654 MiB** in hardware, and the fourth would have made it *(the software numbers are removed: phase 18)*. ⭐ **Better to raise the STEP than the number of attempts**: `[M]` every attempt at 8K costs **91-108 ms** in hardware, so a step of **9** costs a third of one more attempt. ⚠ The exact number is a working point between quality and bandwidth ⇒ **it belongs to phase 9**: I only bring the proof that **3×6 is not enough** |
+| **2** | `codificatore.c:2203-2207` — the surrender | ⛔⛔ When it gives up it returns `false` **even for a KEYFRAME**, and `RCP.md` §5.2 forbids abandoning keyframes. ⇒ For a keyframe one cannot give up: one keeps going down until it fits — `[M]` **QP 51 gives 1.771 MiB at 8K**, so it **always** fits — and one writes in the log that the image came out ugly. Abandoning it leaves the client broken **forever**, and every `REQUEST_KEY` that follows costs three re-encodes **that produce nothing**: it is the spiral of §5.2 |
 | **3** | `codificatore.c` ⚠ *(the cited code is no longer there: to be reread)* `c->ctx->max_b_frames = 0` | ⛔ **It is not touched, and now there is the number next to it**: setting it to 1 would give `[M]` 59 droppable pictures out of 120 and −16 % of bandwidth at unchanged quality, **but 67 ms of reordering** — on its own beyond the 50 ms of `DECISIONI.md` §2.4. ⭐ The comment «decided, not inherited» deserves the measurement under it |
 | **4** | *no line: it is something that does not exist* | ⚠ `-max_frame_size` is **not** usable as a ceiling: `[M]` `hevc_vaapi` refuses it in CQP, 3/3. Should anyone think of it, it is already measured that it is not there |
 | **5** | ⚠ **outside `codificatore.c`** — it concerns `figlio.c` / the canvas negotiation | `[M]` `h264_vaapi` on `EncSliceLP` accepts **32-4096 px per side**: **4096×2160 yes, 4112×2160 no**. The legal canvas of `RCP.md` §4.5 goes up to **7680×4320** ⇒ beyond 4096 the `libx264` fallback is not an eventuality, it is **the rule**, and at 8K it costs `[M]` **309 ms** per keyframe on the desktop and **1.2-3.3 s** on the grainy one. `hevc_vaapi` instead holds up to 16384×4320 `[M]`. ⇒ It is worth reading it from the driver instead of discovering it at the first frame |
@@ -3533,10 +3533,10 @@ of the document worth most, and it is read before the measurements.*
 
 | | |
 |---|---|
-| ⛔⛔ **an abandoned keyframe** | after three re-encodes the encoder gave up **even on a keyframe**, which `RCP.md` §5.2 forbids ⇒ the client stays broken **forever** and every `RICHIEDI_CHIAVE` costs three re-encodes that produce nothing. **It is the spiral** |
+| ⛔⛔ **an abandoned keyframe** | after three re-encodes the encoder gave up **even on a keyframe**, which `RCP.md` §5.2 forbids ⇒ the client stays broken **forever** and every `REQUEST_KEY` costs three re-encodes that produce nothing. **It is the spiral** |
 | ⛔ **the ladder one rung short** | the last attempt left 16.654 MiB against a ceiling of 16.777: **it lost by 4 %** |
 | ⛔⛔ **the stride not a multiple of 64** | the desktop came out **skewed by a few pixels per row, without any error**, with the milliseconds already perfect. 1552 and 1544 are **eight pixels** apart and give opposite verdicts |
-| ⛔ **a stopwatch that measured the bench** | `vetro_ms` **wrapped** the bench: it said 8-10 ms for a transfer that costs 0.06 |
+| ⛔ **a stopwatch that measured the bench** | `glass_ms` **wrapped** the bench: it said 8-10 ms for a transfer that costs 0.06 |
 | ⛔ **the diagnostics that cost a quarter of the segment** | every pixel of every frame, for a log line written **only once** |
 | ⛔ **the fallback named the wrong encoder** | ever since that branch also serves H.264 |
 
@@ -3615,7 +3615,7 @@ gli input»* — none was being lost, one could not **see** that they arrived (`
 | | |
 |---|---|
 | ⏳ **at what speed the user looks** | *(the px → ms calculation, on the product of the time, is removed with phase 18)*. ⛔ **It cannot be deduced**: one measures the loop, one does not ask him |
-| ⏳ **the unexplained ~16 ms** | inside `cattura → primo byte` there are conversion, upload and encoding *(their times, on the `sws_scale` road, are removed: phase 18)* — and **~16 that none of the three explains**. ⚠ A margin, not a defect |
+| ⏳ **the unexplained ~16 ms** | inside `capture_v → first byte` there are conversion, upload and encoding *(their times, on the `sws_scale` road, are removed: phase 18)* — and **~16 that none of the three explains**. ⚠ A margin, not a defect |
 | ⏳ **the other five segments** | phase 4 says «six of ~25 ms». ⛔ **This document has named only one.** The other five must be opened up |
 | ⏳ **the six holes** | the WiFi's (§2.4) or ours? The bench separates them |
 | `[?]` **the encoder and its card** | VA-API chooses by itself; if it looked for the discrete card — closed by udev — it would fall back to CPU **silently** (`DECISIONI.md` §4.6-ter) |
@@ -3639,7 +3639,7 @@ minutes**, on a single sentence.*
 ⛔ **The code declares it as a live defect.** `src/pagina.html`, in the comment of 14 Aug:
 *«The browser cursor stays VISIBLE, and we draw the arrow anyway. ⚠ **Two overlapping** ones
 are seen — ugly, and §7.1 calls it a defect»*. And it is the reason why the switch
-`data-puntatore` with three conditions exists, with `due` as the default value **called «the DEFECT» by the
+`data-ptr` with three conditions exists, with `due` as the default value **called «the DEFECT» by the
 code itself**.
 
 ⭐⭐ **And the user, looking at the real screen, says it is not there**, twice and the second time more sharply:
@@ -3743,8 +3743,8 @@ bars**. ⇒ ⛔ **«Fedelmente» is not what the arithmetic says**, and the diff
 #### ⭐ One explanation was EXCLUDED, and it must be said because it was the most dangerous
 
 `[R]` **The pointer's path was not touched today**: `git log` on `src/pagina.html` for
-22 Aug gives a single commit of this phase (**F3**, `REMOTIX.tratti()`, **measurement only**), and the diff
-contains **no line** with `puntatore`, `cursor`, `freccia` or `agganciato`.
+22 Aug gives a single commit of this phase (**F3**, `REMOTIX.stretches()`, **measurement only**), and the diff
+contains **no line** with `ptr`, `cursor`, `arrow` or `hooked`.
 
 ⇒ ⭐ **The worst hypothesis falls**, which would have been invisible to a positive judgement: that the arrow
 had stopped being **local** and was now arriving **late together with the frame**. In that

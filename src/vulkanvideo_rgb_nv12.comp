@@ -22,15 +22,15 @@
  */
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(binding = 0) uniform sampler2D sorgente;
+layout(binding = 0) uniform sampler2D source;
 layout(binding = 1) uniform writeonly image2D piano_y;
 layout(binding = 2) uniform writeonly image2D piano_uv;
 
-layout(push_constant) uniform Parametri {
-	uint larghezza;   /* the canvas (the real pixels of the source) */
-	uint altezza;
-	uint larghezza_codificata; /* the input image, aligned to the block */
-	uint altezza_codificata;
+layout(push_constant) uniform Parameters {
+	uint width_px;   /* the canvas (the real pixels of the source) */
+	uint height_px;
+	uint encoded_width; /* the input image, aligned to the block */
+	uint encoded_height;
 	uint prof10;      /* 0 = NV12, 1 = P010 */
 } p;
 
@@ -44,13 +44,13 @@ const ivec3 CV = ivec3(14392, -13072, -1320);
  * last pixel is read again (the band up to the block is not garbage). */
 ivec3 pixel(int x, int y)
 {
-	x = clamp(x, 0, int(p.larghezza) - 1);
-	y = clamp(y, 0, int(p.altezza) - 1);
-	vec3 c = texelFetch(sorgente, ivec2(x, y), 0).rgb;
+	x = clamp(x, 0, int(p.width_px) - 1);
+	y = clamp(y, 0, int(p.height_px) - 1);
+	vec3 c = texelFetch(source, ivec2(x, y), 0).rgb;
 	return ivec3(round(c * 255.0));
 }
 
-/* `riga()`: Y = (k·Σc·byte + (16k << 15) + (1 << 14)) >> 15. */
+/* `row()`: Y = (k·Σc·byte + (16k << 15) + (1 << 14)) >> 15. */
 void luma(int x, int y, int k)
 {
 	ivec3 c = pixel(x, y);
@@ -64,7 +64,7 @@ void main()
 {
 	int cx = int(gl_GlobalInvocationID.x);
 	int cy = int(gl_GlobalInvocationID.y);
-	if (cx >= int(p.larghezza_codificata) / 2 || cy >= int(p.altezza_codificata) / 2)
+	if (cx >= int(p.encoded_width) / 2 || cy >= int(p.encoded_height) / 2)
 		return;
 	int k = (p.prof10 != 0u) ? 4 : 1;
 	int x = 2 * cx, y = 2 * cy;
@@ -74,14 +74,14 @@ void main()
 	luma(x, y + 1, k);
 	luma(x + 1, y + 1, k);
 
-	/* `croma()`: rows 2cy-1 … 2cy+2 (clamped at the edges), weights 1 3 3 1,
+	/* `chroma_v()`: rows 2cy-1 … 2cy+2 (clamped at the edges), weights 1 3 3 1,
 	 * and in each row the sum of the pixel pair; then the matrix.  The
 	 * shift is SCALE + 4 = 19: 2 pixels · (1+3+3+1) = 16. */
 	ivec3 w = ivec3(0);
 	for (int j = 0; j < 4; j++) {
 		int r = y - 1 + j;
-		int peso = (j == 0 || j == 3) ? 1 : 3;
-		w += peso * (pixel(x, r) + pixel(x + 1, r));
+		int weight = (j == 0 || j == 3) ? 1 : 3;
+		w += weight * (pixel(x, r) + pixel(x + 1, r));
 	}
 	int off = ((128 * k) << 19) + (1 << 18);
 	int U = (k * (CU.r * w.r + CU.g * w.g + CU.b * w.b) + off) >> 19;

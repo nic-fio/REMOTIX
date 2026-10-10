@@ -14,7 +14,7 @@
 `09-b76-rete-cattiva.py` closed `[M]` on 23 August 2026 the bad-network
 grid, with **all cures off** (the defaults, invariant I6), and five
 profiles out of eleven are red.  The mechanism, read from the server log:
-`abbandonato_in_coda` = `abbandonati` = `chiave_aspetta` at every red profile,
+`abbandonato_in_coda` = `abandoned` = `chiave_aspetta` at every red profile,
 with `delta_non_spedito` at 550-800.  ⇒ The chain is:
 
     the wire delays → the send queue grows → §5.1 abandons the deltas
@@ -27,13 +27,13 @@ with `delta_non_spedito` at 550-800.  ⇒ The chain is:
 ⭐⭐⭐ AND THE CURE FOR THIS SPIRAL IS ALREADY WRITTEN AND TESTED.  Two
       switches, and they have a MANDATORY ORDER (`src/webtransport.c`):
 
-  · the QUEUE THRESHOLD.  `video_sgombra()` without a threshold abandons the deltas **at
+  · the QUEUE THRESHOLD.  `video_clear_out()` without a threshold abandons the deltas **at
     every frame**; with the threshold it abandons them only when the queue is really
     hopeless (`byte × smoothed_rtt / cwnd` above N ms).  ⛔ It is the
     prerequisite of the other.
   · the RATE REGULATOR: instead of abandoning, it slows down capture.
-    ⛔ It comes AFTER the threshold, because as long as `video_sgombra()` empties the queue at
-    every frame the quantity it hooks onto (`arretrato`) is **zero by
+    ⛔ It comes AFTER the threshold, because as long as `video_clear_out()` empties the queue at
+    every frame the quantity it hooks onto (`backlog`) is **zero by
     construction**, and a mute regulator and a healthy line look the same.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -45,10 +45,10 @@ with `delta_non_spedito` at 550-800.  ⇒ The chain is:
 `DECISIONI.md` §3.1-septies: the user looked at the cures on the real desktop and
 decided they are born **ON** in the product.  ⇒ The new contract:
 
-    video queue threshold     ON at 100 ms      turned off with `--sgombra-soglia-ms 0`
-    rate regulator            ON                turned off with `--niente-ritmo-adattivo`
+    video queue threshold     ON at 100 ms      turned off with `--clear-threshold-ms 0`
+    rate regulator            ON                turned off with `--no-adaptive-rate`
 
-⛔ `--ritmo-adattivo` **no longer exists**: whoever types it gets exit 2 with a
+⛔ `--adaptive-rate` **no longer exists**: whoever types it gets exit 2 with a
    message explaining the change (`main.c:1211`).  ⇒ Yesterday's arm C —
    the one that typed it — would not have started the server, and a bench that
    does not start does not give red: it gives «ground».  ⚠ It is the worst form of fault of
@@ -78,10 +78,10 @@ Same profile, same duration, same canvas, same scene, **same binary**, and
 only the server switches change.  Three arms per profile, and since
 24 August 2026 they are **reversed** compared with yesterday:
 
-    A   --sgombra-soglia-ms 0 --niente-ritmo-adattivo
+    A   --clear-threshold-ms 0 --no-adaptive-rate
         ⛔ the TERM OF COMPARISON: the two cures switched off BY HAND.  It is the product
            up to 23 August 2026, byte for byte, obtained from today's binary.
-    B   --sgombra-soglia-ms 100 --niente-ritmo-adattivo
+    B   --clear-threshold-ms 100 --no-adaptive-rate
         ⭐ the threshold alone — the middle step, which serves to say WHICH of the two
            cures does the work.
     C   (no option)
@@ -106,8 +106,8 @@ only the server switches change.  Three arms per profile, and since
 ⛔⭐ AND EVERY ARM IS CHECKED FROM THE SERVER LOG, not from what I
     wrote on the command line (`LEZIONI.md` E1, «written is not in
     force»).  At startup the product ALWAYS writes — on and off — the two
-    lines that say the value in force (`sgombra_dichiara()`,
-    `wt_ritmo_adattivo()`), and this bench rereads them and stops if they do not
+    lines that say the value in force (`clear_out_declare()`,
+    `wt_adaptive_rate()`), and this bench rereads them and stops if they do not
     match.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -121,8 +121,8 @@ only the server switches change.  Three arms per profile, and since
     client, and the scene would not know where to draw.
     ⛔⭐ And it is triggered **ON A CLEAN NETWORK**, on purpose: `09-b78-apertura.py` has
         measured that a **lost** goodbye and a goodbye **never said** are the same
-        fact for the server, and the slot stays taken for `SILENZIO` = 30 s
-        (`src/rcp.c:263`) — eleven `CONGEDO 0x0F` in a row, `[M]` 23 August.  If
+        fact for the server, and the slot stays taken for `SILENCE` = 30 s
+        (`src/rcp.c:263`) — eleven `FAREWELL 0x0F` in a row, `[M]` 23 August.  If
         I triggered under the fault, the next run could find the slot
         taken and I would report as «the cure does not work» a thirty-second
         lock.
@@ -132,31 +132,31 @@ only the server switches change.  Three arms per profile, and since
  5. **the probe** — 8 000 numbered packets through the same `netem`: was the
     fault put in or not?  ⛔ And it is redone at EVERY arm, not once per
     profile: a number without its verified fault next to it is not a measurement;
- 6. **the run**, 25 s, 1920×1080, scene `barra`;
- 7. the `qdisc` counters around the run are read, and the `rete-quic` lines
-    of the log (`cwnd`, `srtt_us`, `pto_us`, `dgram_persi`, `dgram_falsi`,
-    `giudizio=`), which are there in the working tree and not in HEAD.
+ 6. **the run**, 25 s, 1920×1080, scene `bar`;
+ 7. the `qdisc` counters around the run are read, and the `network-quic` lines
+    of the log (`cwnd`, `srtt_us`, `pto_us`, `dgram_lost`, `dgram_false`,
+    `judgment=`), which are there in the working tree and not in HEAD.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ⛔⛔ THE REVIEW OF THE EVENING OF 23 AUGUST — «which numbers were dirtied», CHECKED
 ═══════════════════════════════════════════════════════════════════════════════
 
-Tonight's three-arm grid ran while `_root_che_trascrive`
-wrapped `RETE.root` instead of b70's cured `root` (⇒ the box above
+Tonight's three-arm grid ran while `_transcribing_root`
+wrapped `NETWORK.root` instead of b70's cured `root` (⇒ the box above
 that function).  ⇒ It must be said which numbers that line dirtied, and the answer
 is READ, not assumed.  There are three checks, and none is a line of reasoning:
 
  1. ⭐ **THE LINE DIRTIED NOTHING ON THIS GRID — it was a defect still
     to be collected.**  `[R]` at 19:00 on 23 August `09-b70-ritmo.py` at HEAD
-    still had `def root(comando, tetto=300): return RETE.root(comando, tetto)`
-    (line 1236): b70's cure is from 19:41, **after**.  ⇒ Wrapping `RETE.root`
+    still had `def root(command, ceiling=300): return NETWORK.root(command, ceiling)`
+    (line 1236): b70's cure is from 19:41, **after**.  ⇒ Wrapping `NETWORK.root`
     was then identical to wrapping `B70.root`, and the defect is PROSPECTIVE —
     it would have bitten the next run, the one with b70 cured.  ⚠ It is exactly the
     reason it must be cured all the same: its face does not change when it starts
     lying.
- 2. ⭐ **THE `riga0` WAS THERE, and the server counts are FROM THIS RUN.**  `[R]`
+ 2. ⭐ **THE `line0` WAS THERE, and the server counts are FROM THIS RUN.**  `[R]`
     `09-b76-rete-cattiva.py` at HEAD (line 297) already replaces
-    `B70.righe_registro` with its own, which puts the redirect inside a `bash -c`.
+    `B70.log_line_list` with its own, which puts the redirect inside a `bash -c`.
     ⇒ b70's defect 2 (the `< file` that steals stdin from `sudo -S`) **did not
     fire**: b79 did not even go through the broken function.
     `[M]` the counter-proof in the numbers, and it is the opposite signature to the cumulative one:
@@ -166,20 +166,20 @@ is READ, not assumed.  There are three checks, and none is a line of reasoning:
     (`[M]` b70: 4 041 against 1 604, 2.5 times, and rising): here it is not there.
  3. ⭐ **THE COUNT OF ANOTHER RUN IS STRUCTURALLY IMPOSSIBLE HERE**, and not
     by luck: `[R]` `07-b64-terreno.sh:106` does `: > "$LAV/registro.log"` at every
-    `accendi`, and this bench restarts the server at **every arm**.
+    `turn_on`, and this bench restarts the server at **every arm**.
     `[M]` the counter-proof: no pair of cells carries identical numbers from the
     log, and three cells (`perdita-3` A, `raffica-forte` A and B) said
     **«NOTHING TO READ»** instead of reporting the neighbour's number — which is the
     proof that in the window there was no one else's count to steal.
 
 ⭐⭐ AND THE THING THAT COUNTS MOST, and it is a division, not an acquittal:
-   **the verdict does not go through the log.**  `[R]` `p_spirale_spenta` (K′),
-   `p_ritmo_restituito` (F′) and `p_linea_sana` (S′) read only `n["chiavi"]`,
-   `n["fotogrammi"]`, `n["quota_delta"]`, `n["fps"]`, `n["fps_finestra_min"]` and
-   `n["deriva_*"]` — all from `misura(giornale, …)`, that is from the client's **§11.1
+   **the verdict does not go through the log.**  `[R]` `p_spiral_off` (K′),
+   `p_rate_restored` (F′) and `p_healthy_line` (S′) read only `n["keys"]`,
+   `n["frames"]`, `n["quota_delta"]`, `n["fps"]`, `n["fps_finestra_min"]` and
+   `n["deriva_*"]` — all from `gauge(journal, …)`, that is from the client's **§11.1
    trace**.  From the server log come the four numbers that
    CORROBORATE (`delta_non_spedito`, `chiave_aspetta`, `non_spediti`,
-   `abbandonati`) and nothing else.
+   `abandoned`) and nothing else.
    ⇒ «the spiral switches off, but only with arm C: keyframes from 51.7-88.1 % to
      0.0-5.6 %» and «the healthy line pays nothing» are not log numbers, and
      had nothing to be dirtied by.  ⚠ Redoing the five red profiles
@@ -205,16 +205,16 @@ is READ, not assumed.  There are three checks, and none is a line of reasoning:
      (`chiave_aspetta` 1, `delta_non_spedito` 5, `abbandonato_in_coda` 1) and
      `attese_a_vuoto` gives 2 019 / 2 016 / 2 025 against 2 015 / 2 006 / 2 016.  A
      cumulative number does not reproduce; these do.
-   ⭐ And the new guards spoke: `riga0` = 205 / 219 / 229, `p_registro_letto`
+   ⭐ And the new guards spoke: `line0` = 205 / 219 / 229, `p_log_read`
      GREEN on all three, `conti_finali` `[2, 4]` in every arm — that is the two
      counts of the trigger session had already settled and the run wrote two OF ITS OWN.
 
 ═══════════════════════════════════════════════════════════════════════════════
-⛔⛔ THE PREDICATES OF THE PAIR — WRITTEN FIRST, and they return `(passa, perche)`
+⛔⛔ THE PREDICATES OF THE PAIR — WRITTEN FIRST, and they return `(pass_on, reason_text)`
 ═══════════════════════════════════════════════════════════════════════════════
 
 Those of the single run are IMPORTED from `09-b70`/`09-b76` and not rewritten
-(`p_niente_stacco`, `p_degrada_nel_tempo`, `p_guasto_messo`, `p_coda_mia`).  The
+(`p_nothing_detach`, `p_degrades_over_time`, `p_fault_set`, `p_my_queue`).  The
 three that belong to this bench look at the **pair**, which does not exist there:
 
   **K′ · THE CURE SWITCHES OFF THE SPIRAL.**  The arm's keyframe share goes back
@@ -258,29 +258,29 @@ three that belong to this bench look at the **pair**, which does not exist there
 ⛔⛔ `raffica-forte` — «SESSION DETACHED AT 0.3 s OUT OF 25», and the word is wrong
 ═══════════════════════════════════════════════════════════════════════════════
 
-`09-b76` gives red on `raffica-forte` with the predicate `p_niente_stacco`, which says
+`09-b76` gives red on `raffica-forte` with the predicate `p_nothing_detach`, which says
 *«delivery lasted 0.3 s out of 25 requested: it detached»*.  ⛔ But that
 predicate does not look at the connection: it looks at **how long the delivery of
-frames lasted**, and the two things are not the same.  ⇒ The `stacco` step of this
+frames lasted**, and the two things are not the same.  ⇒ The `detach` step of this
 bench asks **who** detached, and asks four independent witnesses:
 
   1. **the client**, which says it by itself and in full: `01-b3-cliente.py:1979`
      prints *«⭐ still attached after N s: nothing dropped»* and returns 0, or
      *«⛔ I did NOT stay attached: …»* and returns 4;
-  2. **the server log**: `congedo motivo=0x..`, `the client takes its farewell`,
+  2. **the server log**: `farewell motivo=0x..`, `the client takes its farewell`,
      `slot DENIED`, `BANNED`, and the video «final count»;
-  3. **the `rete-quic` lines**: `cwnd`, `cwnd_left`, `giudizio=` — if the window
+  3. **the `network-quic` lines**: `cwnd`, `cwnd_left`, `judgment=` — if the window
      closed and never reopened, the session is alive and **mute**, which
      is a fact different from detaching and needs a different name;
   4. ⚠ **the third possibility to rule out explicitly**: at 13 % clustered loss
      the HANDSHAKE might not complete, and «it never
      opened» and «it detached» look the same.  ⭐ It is told apart by the
-     client itself, which prints `SESSIONE` only when the session is open;
+     client itself, which prints `SESSION` only when the session is open;
      and `09-b78-apertura.py` has already measured `[M]` that up to **25 %**
      independent loss the session opens 10 times out of 10 in ~1.3 s.
 
 ⛔ `IDLE_MS` in `src/trasporto.c` is **30 s**: at 0.3 s it is not that, and indeed the
-   `stacco` step rereads it from the source instead of trusting this line.
+   `detach` step rereads it from the source instead of trusting this line.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ⛔⛔⛔ WHAT THIS BENCH CANNOT SEE
@@ -308,7 +308,7 @@ bench asks **who** detached, and asks four independent witnesses:
 
 Binary **md5 `eee17f40b0a5ff79fe3b1b3d060a08ed`** (working tree, not HEAD;
 `webtransport.c` md5 `0f63542bf2ebf3617afa5b0a5bfe2371`), 25 s per cell,
-1920×1080, h264, free bandwidth, scene `barra`, one run per cell.  Every arm
+1920×1080, h264, free bandwidth, scene `bar`, one run per cell.  Every arm
 verified from the product's two startup lines; the fault verified by the
 probe at every cell; nobody attached to the ports not mine before or after.
 
@@ -378,12 +378,12 @@ probe at every cell; nobody attached to the ports not mine before or after.
    `perdita-1`, 3.48 → 8.06 at `jitter-15`): the line was not saturated, it was
    **wasted** — keyframes were being sent instead of deltas.
 
-6. ⭐⭐ **`raffica-forte`: NOBODY DETACHES.**  See the `stacco` step further up and
+6. ⭐⭐ **`raffica-forte`: NOBODY DETACHES.**  See the `detach` step further up and
    the § devoted to it: `[M]` the client stays attached for all 25 s
    («⭐ still attached after 25.0 s: nothing dropped»), the audio arrives for
    the whole run (696 datagrams, purity 1.0000), the server sends no
-   `CONGEDO`, no `slot DENIED`, no ban, and the session had opened
-   normally (`AMMESSO dopo 1837 ms`).  What stops is **only the delivery of
+   `FAREWELL`, no `slot DENIED`, no ban, and the session had opened
+   normally (`ADMITTED after 1837 ms`).  What stops is **only the delivery of
    frames**.  ⇒ The red of `09-b76` is right as a number and **wrong
    as a word**.  ⭐ And the cures change it: delivery, which in A dies after
    4.4 s, in B and C **lasts all 25 s** (4.2/s with empty seconds inside).
@@ -398,8 +398,8 @@ cell.  ⛔ It is not a remeasurement of the grid: it is the proof that the REVER
 bench really runs all the way and that the three arms come into force.
 
   arm       options                                        fps    keyfr.  drift
-  A         --sgombra-soglia-ms 0 --niente-ritmo-adattivo  38.15   0.2 %   1.7 ms
-  B         --sgombra-soglia-ms 100 --niente-ritmo-adattivo 39.61  0.0 %  −0.7 ms
+  A         --clear-threshold-ms 0 --no-adaptive-rate  38.15   0.2 %   1.7 ms
+  B         --clear-threshold-ms 100 --no-adaptive-rate 39.61  0.0 %  −0.7 ms
   C         (no option — the defaults)                     39.78   0.0 %  −0.7 ms
 
 ⭐ **S′ GREEN**: the three arms are indistinguishable on the healthy line (B and C at
@@ -414,11 +414,11 @@ EXIT CODES
     3   ⛔ I HAVE NOTHING TO JUDGE — a run or a predicate refused
 
 Usage (from the laptop):
-    python3 banchi/09-b79-cure.py --certifica     ⭐ without a machine
-    python3 banchi/09-b79-cure.py terreno
-    python3 banchi/09-b79-cure.py stacco          ⛔ the diagnosis of raffica-forte
-    python3 banchi/09-b79-cure.py appaia [--secondi 25] [--solo perdita-1]
-    python3 banchi/09-b79-cure.py rimetti
+    python3 banchi/09-b79-cure.py --certify     ⭐ without a machine
+    python3 banchi/09-b79-cure.py terrain
+    python3 banchi/09-b79-cure.py detach          ⛔ the diagnosis of raffica-forte
+    python3 banchi/09-b79-cure.py appears [--seconds 25] [--solo perdita-1]
+    python3 banchi/09-b79-cure.py restore
 """
 import argparse, importlib.util, json, os, re, sys, time
 
@@ -432,58 +432,58 @@ import argparse, importlib.util, json, os, re, sys, time
 #    the only thing that, when wrong, hurts those who have nothing to do with it.
 # ⛔ 7900, 7910, 7920 are already measured terms of comparison and are NOT
 #    touched; 7930/7931/7932 belong to three other agents.  Mine is **7940**.
-QUI = os.path.dirname(os.path.abspath(__file__))
-MIO = {
-    "PORTA": "7940",
-    "UTENTE": "provanr4",
+HERE = os.path.dirname(os.path.abspath(__file__))
+MY = {
+    "PORT": "7940",
+    "ACCOUNT": "provanr4",
     "UID_B": "1040",
-    "MACCHINA": "nicfio@192.168.0.2",
-    "PAROLA_SUDO": "nicfio",
-    "IND": "192.168.0.2",
+    "MACHINE": "nicfio@192.168.0.2",
+    "SUDO_PASSWORD": "nicfio",
+    "ADDR": "192.168.0.2",
     "LAV": "/media/REMOTIX/tmp/09nr4",
-    "ALBERO": "/media/REMOTIX/src/09nr4-src",
-    "DENTRO_ALB": "/srv/src/09nr4-src",
-    "DENTRO_LAV": "/srv/remotix/tmp/09nr4",
-    "UNITA": "remotix-7940",
+    "TREE": "/media/REMOTIX/src/09nr4-src",
+    "INSIDE_TREE": "/srv/src/09nr4-src",
+    "INSIDE_WORK": "/srv/remotix/tmp/09nr4",
+    "UNIT": "remotix-7940",
     "SHM": "/09nr4",
     # ⛔ The probe port cannot be fixed: `09-b76` lost a whole run
     #    because another agent started a server on it WHILE it
     #    was running.  ⇒ five candidates of mine, and the one free now is chosen.
-    "PORTE_SONDA": "7949,7948,7947,7946,7945",
-    "FUORI": os.environ.get(
-        "FUORI",
+    "PROBE_PORTS": "7949,7948,7947,7946,7945",
+    "OUT": os.environ.get(
+        "OUT",
         "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
         "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad/09nr4"),
 }
-for _k, _v in MIO.items():
+for _k, _v in MY.items():
     os.environ[_k] = os.environ.get(_k) or _v
 
-PORTA = int(os.environ["PORTA"])
-UTENTE = os.environ["UTENTE"]
+PORT = int(os.environ["PORT"])
+ACCOUNT = os.environ["ACCOUNT"]
 LAV = os.environ["LAV"]
-ALB = os.environ["ALBERO"]
-UNITA = os.environ["UNITA"]
-FUORI = os.environ["FUORI"]
-PAROLA_SUDO = os.environ["PAROLA_SUDO"]
-MACCHINA = os.environ["MACCHINA"]
-VIETATA = "enp7s0"
+TREE = os.environ["TREE"]
+UNIT = os.environ["UNIT"]
+OUT = os.environ["OUT"]
+SUDO_PASSWORD = os.environ["SUDO_PASSWORD"]
+MACHINE = os.environ["MACHINE"]
+FORBIDDEN = "enp7s0"
 DEV = "lo"
 
-VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
+GREEN, RED, YELLOW, GRAY = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
 
-def _ok(t):  print("    %sOK%s  %s" % (VERDE, GRIGIO, t), flush=True)
-def _ko(t):  print("    %sNO%s  %s" % (ROSSO, GRIGIO, t), flush=True)
-def _dub(t): print("    %s??%s  %s" % (GIALLO, GRIGIO, t), flush=True)
+def _ok(t):  print("    %sOK%s  %s" % (GREEN, GRAY, t), flush=True)
+def _ko(t):  print("    %sNO%s  %s" % (RED, GRAY, t), flush=True)
+def _dub(t): print("    %s??%s  %s" % (YELLOW, GRAY, t), flush=True)
 def _inf(t): print("    --  %s" % t, flush=True)
 def _log(t): print("\n\033[1m== %s\033[0m" % t, flush=True)
 def _si(p):   return (True, p)
 def _no(p):   return (False, p)
-def _muto(p): return (None, p)
+def _mute(p): return (None, p)
 
 
-def _carica(nome, percorso):
-    spec = importlib.util.spec_from_file_location(nome, percorso)
+def _load(label_name, fpath):
+    spec = importlib.util.spec_from_file_location(label_name, fpath)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m
@@ -495,64 +495,64 @@ def _carica(nome, percorso):
 #
 # ⛔ `09-b76-rete-cattiva.py` carries the profiles, the probe, the reduction of the
 #    arrivals, the rereading of the rule, the `qdisc` counters and 31 green
-#    `--certifica` cases; `09-b70-ritmo.py` carries the reader of the §11.1
+#    `--certify` cases; `09-b70-ritmo.py` carries the reader of the §11.1
 #    trace, the reduction to the five numbers and the predicates of the single run.  Two
 #    copies of the same reduction in two files are two reductions that diverge
 #    (it is the wound of 16 August, `09-b70` line ~430).
 B76 = None
 B70 = None
-RETE = None
+NETWORK = None
 LUC = None
 
 
-def importa(con_rete=True):
-    global B76, B70, RETE, LUC
-    B76 = _carica("b76rete", os.path.join(QUI, "09-b76-rete-cattiva.py"))
-    if not con_rete:
-        B76.importa_finto()
+def import_it(with_network=True):
+    global B76, B70, NETWORK, LUC
+    B76 = _load("b76rete", os.path.join(HERE, "09-b76-rete-cattiva.py"))
+    if not with_network:
+        B76.import_fake()
         B70 = B76.B70
         return
-    B70 = B76.importa()          # ⭐ it is the one that hooks up the network and the lock
-    RETE = B76.RETE
+    B70 = B76.import_it()          # ⭐ it is the one that hooks up the network and the lock
+    NETWORK = B76.NETWORK
     LUC = B76.LUC
-    _aggancia_root()                 # ⛔ see `_root_che_trascrive`
+    _hook_root()                 # ⛔ see `_transcribing_root`
     # ⛔⛔ AND THEN WE CHECK THAT THEY TOOK MY ENVIRONMENT, not theirs.
-    guai = []
-    for nome, mio, suo in (("porta", PORTA, B76.PORTA), ("utente", UTENTE, B76.UTENTE),
-                           ("lavoro", LAV, B76.LAV), ("albero", ALB, B76.ALB),
+    troubles = []
+    for label_name, my, its in (("port", PORT, B76.PORT), ("username", ACCOUNT, B76.ACCOUNT),
+                           ("work", LAV, B76.LAV), ("tree", TREE, B76.TREE),
                            ("shm", os.environ["SHM"], B76.SHM),
-                           ("dev", DEV, B76.DEV), ("vietata", VIETATA, B76.VIETATA)):
-        if str(mio) != str(suo):
-            guai.append("%s: the module has «%s», mine is «%s»" % (nome, suo, mio))
-    if RETE.PORTA != PORTA or RETE.DEV != DEV or RETE.VIETATA != VIETATA:
-        guai.append("the network module has port %d, dev «%s», forbidden «%s»"
-                    % (RETE.PORTA, RETE.DEV, RETE.VIETATA))
-    if guai:
+                           ("dev", DEV, B76.DEV), ("forbidden", FORBIDDEN, B76.FORBIDDEN)):
+        if str(my) != str(its):
+            troubles.append("%s: the module has «%s», mine is «%s»" % (label_name, its, my))
+    if NETWORK.PORT != PORT or NETWORK.DEV != DEV or NETWORK.FORBIDDEN != FORBIDDEN:
+        troubles.append("the network module has port %d, dev «%s», forbidden «%s»"
+                    % (NETWORK.PORT, NETWORK.DEV, NETWORK.FORBIDDEN))
+    if troubles:
         raise SystemExit("⛔ I DO NOT MEASURE: the import did not take my environment — "
-                         + " · ".join(guai))
+                         + " · ".join(troubles))
 
 
-def root(comando, tetto=300):
+def root(command, ceiling=300):
     """⛔ This file's `root` too goes through the CURED chain when there is one.
 
     ⚠ The commands of this file are all already written inside a `bash -c "…"`
       of their own — it is the discipline of `09-b76` — so here not a number changes.
       But the discipline is a convention, and a convention is forgotten by the
-      next one who adds a line: `RETE.root` alone would give them a plausible
-      `0` instead of an error (⇒ the box above `_aggancia_root`).
+      next one who adds a line: `NETWORK.root` alone would give them a plausible
+      `0` instead of an error (⇒ the box above `_hook_root`).
     """
-    if _ROOT_CURATA is not None:
-        return _ROOT_CURATA(comando, tetto)
-    return RETE.root(comando, tetto)
+    if _ROOT_CURED is not None:
+        return _ROOT_CURED(command, ceiling)
+    return NETWORK.root(command, ceiling)
 
 
 # ⛔⛔ THE CLIENT MUST BE LISTENED TO IN FULL, and it is not.
 #
-#    `09-b70.giro()` keeps `coda_cliente = testo[-400:]`, which is enough for the
+#    `09-b70.lap()` keeps `coda_cliente = body_text[-400:]`, which is enough for the
 #    five numbers and **not** for the question «who detached»: `[M]` 23 August
 #    2026, those 400 bytes hold the three final audio lines and do not hold
 #    the line that answers — *«⭐ still attached after 25.0 s»*
-#    (`01-b3-cliente.py:1979`).  ⇒ The first `stacco` run refused to
+#    (`01-b3-cliente.py:1979`).  ⇒ The first `detach` run refused to
 #    judge while holding the answer, cut off.
 #
 # ⇒ Here the WHOLE output of every command that launches the client is recorded,
@@ -564,14 +564,14 @@ def root(comando, tetto=300):
 #      **TO WHOM** it passes it decides whether the cures of the file below still hold
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# Until 23 August 2026 this function called **`RETE.root`**, that is it skipped
+# Until 23 August 2026 this function called **`NETWORK.root`**, that is it skipped
 # `09-b70-ritmo.py:root()` and went straight to the step below.  ⛔ It is a defect
 # that **cannot be seen by reading either of the two files**: here the line is correct (a
 # `root` calling a `root`), and there the cure is written and tested — only
 # nobody runs it any more.  It is the second one this project pays for in one evening.
 #
-# ⛔ `RETE.root` (`07-b64-rete.py:238`) is a single `sudo` **in front of the bare
-#    command**:  `printf parola | sudo -S -p '' <comando>`.  From there come two
+# ⛔ `NETWORK.root` (`07-b64-rete.py:238`) is a single `sudo` **in front of the bare
+#    command**:  `printf password | sudo -S -p '' <command>`.  From there come two
 #    defects, and they are those `09-b70` cured on 23 August:
 #      1. `sudo` covers **only the first link** of the chain: in `a && b > c` the
 #         `b` and the `>` run as the USER, not as root.  `[M]` the reader of the
@@ -579,50 +579,50 @@ def root(comando, tetto=300):
 #      2. a trailing `< file` **steals stdin from `sudo -S`** (the redirect belongs to the
 #         shell and goes to the LAST command of the pipeline, which is `sudo`): the password
 #         does not arrive, `sudo` exits 1, and the number comes back **0 in silence**.  `[M]`
-#         `righe_registro()` returned 0, `conti_del_server()` read the log
+#         `log_line_list()` returned 0, `server_counts()` read the log
 #         **from server startup** instead of from the run, and `attese_a_vuoto`
 #         became cumulative: 4 041 against 1 604 on a still run, 2.5 times.
 #
-# ⭐ `09-b70.root()` cures both with a single line — `catena_root()`, that is
+# ⭐ `09-b70.root()` cures both with a single line — `chain_root()`, that is
 #    **one** `sudo` and the whole chain inside ITS `bash -c`.  ⇒ Whoever wraps to
 #    transcribe must wrap **that one**, or brings the two defects back in
 #    by going through a function named like the cured one.
 #
 # ⛔⛔ AND WRITING `B70.root` IS NOT ENOUGH: when this file arrives, `B70.root` **has
 #     already been replaced** by `09-b76-rete-cattiva.py:416`, with a wrapper
-#     that in turn calls `RETE.root`.  Wrapping `B70.root` then would
+#     that in turn calls `NETWORK.root`.  Wrapping `B70.root` then would
 #     mean wrapping someone else's defect and calling it a cure.  ⇒ The cured
-#     chain is rebuilt **from its pieces** — `B70.catena_root` + `RETE.rem` — which
+#     chain is rebuilt **from its pieces** — `B70.chain_root` + `NETWORK.rem` — which
 #     are what `09-b70.root()` does, and do not go through any substitute.
 #
-# ⚠ And it is hooked ONCE ONLY: `appaia()` does 21 cells in the same process
-#   and `importa()` can be called more than once.  A repeated wrapper
+# ⚠ And it is hooked ONCE ONLY: `appears()` does 21 cells in the same process
+#   and `import_it()` can be called more than once.  A repeated wrapper
 #   does not get the numbers wrong, but it nests 21 calls and the first diagnosis
 #   becomes unreadable.
-ULTIMO_CLIENTE = {"testo": ""}
-_ROOT_CURATA = None
+LAST_CLIENT = {"body_text": ""}
+_ROOT_CURED = None
 
 
-def _aggancia_root():
+def _hook_root():
     """Installs the transcriber ON TOP OF b70's cured `root` — once only."""
-    global _ROOT_CURATA
-    if _ROOT_CURATA is not None:
+    global _ROOT_CURED
+    if _ROOT_CURED is not None:
         return
-    if not hasattr(B70, "catena_root"):
+    if not hasattr(B70, "chain_root"):
         raise SystemExit(
-            "⛔ I DO NOT MEASURE: «09-b70-ritmo.py» has no `catena_root()`, that is it is the "
+            "⛔ I DO NOT MEASURE: «09-b70-ritmo.py» has no `chain_root()`, that is it is the "
             "version with `sudo -S` in front of the bare command.  On that one a "
             "trailing `< file` steals the password from sudo and the server counts "
             "become cumulative from startup (2.5 times, `[M]` 23 Aug 2026). "
             "Align the tree before measuring.")
-    _ROOT_CURATA = lambda c, tetto=300: RETE.rem(B70.catena_root(c), tetto)
-    B70.root = _root_che_trascrive
+    _ROOT_CURED = lambda c, ceiling=300: NETWORK.rem(B70.chain_root(c), ceiling)
+    B70.root = _transcribing_root
 
 
-def _root_che_trascrive(comando, tetto=300):
-    rc, out, err = _ROOT_CURATA(comando, tetto)
-    if "01-b3-cliente.py" in comando:
-        ULTIMO_CLIENTE["testo"] = out + err
+def _transcribing_root(command, ceiling=300):
+    rc, out, err = _ROOT_CURED(command, ceiling)
+    if "01-b3-cliente.py" in command:
+        LAST_CLIENT["body_text"] = out + err
     return rc, out, err
 
 
@@ -635,7 +635,7 @@ def _root_che_trascrive(comando, tetto=300):
 # ⛔⛔⭐ THE DIRECTION IS REVERSED SINCE 24 AUGUST 2026, and the line that counts is the
 #      third: **arm C has no options**.  Until 23 August it was the
 #      opposite — A was `""` (the defaults, then off) and C typed
-#      `--ritmo-adattivo`, an option that today **no longer exists** and makes
+#      `--adaptive-rate`, an option that today **no longer exists** and makes
 #      the server exit with 2.  ⇒ This bench, not reversed, would have measured
 #      nothing: it would have said «the server did not start», which looks like a
 #      fault of the machine and not like a bench to be updated.
@@ -650,11 +650,11 @@ def _root_che_trascrive(comando, tetto=300):
 #    (they would give three identical arms).
 # ⚠ And the check from the log stays identical and MANDATORY all the same: an
 #   old binary would be born with the cures off and would give C the numbers of A.
-BRACCI = [
-    ("A", "--sgombra-soglia-ms 0 --niente-ritmo-adattivo", 0, False,
+ARMS = [
+    ("A", "--clear-threshold-ms 0 --no-adaptive-rate", 0, False,
      "⛔ the two cures switched OFF BY HAND: it is the term of comparison, that is the product "
      "up to 23 August 2026 — and it is remeasured TODAY, on today's binary"),
-    ("B", "--sgombra-soglia-ms 100 --niente-ritmo-adattivo", 100, False,
+    ("B", "--clear-threshold-ms 100 --no-adaptive-rate", 100, False,
      "⭐ the QUEUE THRESHOLD ALONE: a stuck delta is abandoned only when the "
      "queue is hopeless for more than 100 ms, not at every frame"),
     ("C", "", 100, True,
@@ -665,63 +665,63 @@ BRACCI = [
 
 # ⛔ The two lines the product writes at startup, ALWAYS, on and off.
 #    They are the contract on which the arm is checked (`LEZIONI.md` E1).
-RE_SOGLIA = re.compile(r"video queue threshold \(§5\.1\): (\d+) ms")
-RE_RITMO_ACCESO = re.compile(r"the rate regulator is ON")
-RE_RITMO_SPENTO = re.compile(r"the rate regulator is OFF")
+RE_THRESHOLD = re.compile(r"video queue threshold \(§5\.1\): (\d+) ms")
+RE_RATE_ON = re.compile(r"the rate regulator is ON")
+RE_RATE_OFF = re.compile(r"the rate regulator is OFF")
 
 
-def riavvia(opzioni, soglia_attesa, ritmo_atteso):
+def relaunch(options, wait_threshold, expected_rate):
     """⛔⭐ The server restarts with the arm's options, and THEN the log is
        reread to know what is REALLY in force.
 
     `LEZIONI.md` E1 — «written is not in force».  An old binary
-    would refuse `--sgombra-soglia-ms` and would not start; a right binary with
+    would refuse `--clear-threshold-ms` and would not start; a right binary with
     a typo in the option would start with the cure OFF and give three identical
     arms, that is «the cure is not needed» on a cure never switched on.
-    ⇒ Returns `(ok, righe)`, and `ok` is false if the two lines do not match.
+    ⇒ Returns `(ok, line_list)`, and `ok` is false if the two lines do not match.
     """
     amb = " ".join("%s=%s" % (k, os.environ[k]) for k in
-                   ("PORTA", "IND", "UTENTE", "UID_B", "ALBERO", "LAV",
-                    "DENTRO_ALB", "DENTRO_LAV", "UNITA", "MACCHINA",
-                    "PAROLA_SUDO"))
+                   ("PORT", "ADDR", "ACCOUNT", "UID_B", "TREE", "LAV",
+                    "INSIDE_TREE", "INSIDE_WORK", "UNIT", "MACHINE",
+                    "SUDO_PASSWORD"))
     import subprocess
     p = subprocess.run(
-        "%s OPZIONI_SERVER=%s bash %s/09-b79-terreno.sh accendi"
-        % (amb, json.dumps(opzioni), os.path.join(QUI)),
+        "%s SERVER_OPTIONS=%s bash %s/09-b79-terreno.sh turn_on"
+        % (amb, json.dumps(options), os.path.join(HERE)),
         shell=True, capture_output=True, timeout=300)
-    testo = (p.stdout + p.stderr).decode("utf-8", "replace")
-    if "server " not in testo:
-        return False, ["⛔ the server did not start: %s" % testo[-300:]]
+    body_text = (p.stdout + p.stderr).decode("utf-8", "replace")
+    if "server " not in body_text:
+        return False, ["⛔ the server did not start: %s" % body_text[-300:]]
     # ⛔ The log was emptied by the startup: the startup lines are
     #    the first ones, and we wait for them to be there instead of reading whatever is there.
-    righe = []
+    line_list = []
     for _ in range(30):
         rc, out, _e = root("bash -c \"grep -a 'video queue threshold\\|"
                            "rate regulator' %s/registro.log | head -4\"" % LAV)
-        righe = [x for x in out.splitlines() if x.strip()]
-        if len(righe) >= 2:
+        line_list = [x for x in out.splitlines() if x.strip()]
+        if len(line_list) >= 2:
             break
         time.sleep(0.3)
-    testo_righe = "\n".join(righe)
-    m = RE_SOGLIA.search(testo_righe)
-    letta = int(m.group(1)) if m else None
-    acceso = bool(RE_RITMO_ACCESO.search(testo_righe))
-    spento = bool(RE_RITMO_SPENTO.search(testo_righe))
-    guai = []
-    if letta is None:
-        guai.append("the threshold line is not in the log")
-    elif letta != soglia_attesa:
-        guai.append("the threshold in force is %d ms, requested %d" % (letta, soglia_attesa))
-    if ritmo_atteso and not acceso:
-        guai.append("the rate regulator does NOT appear to be on")
-    if (not ritmo_atteso) and not spento:
-        guai.append("the rate regulator does NOT appear to be off")
-    return (not guai), (righe + (["⛔ " + g for g in guai] if guai else []))
+    text_lines = "\n".join(line_list)
+    m = RE_THRESHOLD.search(text_lines)
+    got_read = int(m.group(1)) if m else None
+    lit = bool(RE_RATE_ON.search(text_lines))
+    off = bool(RE_RATE_OFF.search(text_lines))
+    troubles = []
+    if got_read is None:
+        troubles.append("the threshold line is not in the log")
+    elif got_read != wait_threshold:
+        troubles.append("the threshold in force is %d ms, requested %d" % (got_read, wait_threshold))
+    if expected_rate and not lit:
+        troubles.append("the rate regulator does NOT appear to be on")
+    if (not expected_rate) and not off:
+        troubles.append("the rate regulator does NOT appear to be off")
+    return (not troubles), (line_list + (["⛔ " + g for g in troubles] if troubles else []))
 
 
-def md5_binario():
+def md5_binary():
     """⚠ The binary I measure must be the one I think, and it is declared."""
-    rc, out, _ = root("md5sum %s/src/remotix" % ALB)
+    rc, out, _ = root("md5sum %s/src/remotix" % TREE)
     return out.strip().split()[0] if out.strip() else "?"
 
 
@@ -729,27 +729,27 @@ def md5_binario():
 # ⛔⛔ THE PREVIOUS SESSION MUST HAVE FINISHED CLOSING — and it is not obvious
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# `[M]` 23 August 2026, found on `07-b64-rete.py` (`registro_posato()`, line
+# `[M]` 23 August 2026, found on `07-b64-rete.py` (`log_settled()`, line
 # 497) and brought here **without touching that file**: closing a session is
 # SLOW when the pacer has a queue — the profile at 10 % loss took
 # **29 s more** than the others to write its «final count».  ⇒ Two faults,
 # and they have the same root:
 #
-#  1. **the count read belongs to another run.**  `riga0` of the new run is taken
+#  1. **the count read belongs to another run.**  `line0` of the new run is taken
 #     BEFORE the line of the old run is written; that line falls inside the
-#     window, and `conti_del_server()` — which takes the LAST one after `riga0` — reads
+#     window, and `server_counts()` — which takes the LAST one after `line0` — reads
 #     it as its own.  `[M]` three profiles in a row reported «sent 4999 ·
 #     refused 3 · deferred 7410», which was the count of the FIRST of the three;
 #  2. **the slot is still taken.**  Until the old session has
-#     closed, §4.4-bis refuses the new one with `CONGEDO 0x0F GIA_ATTIVA_REMOTA`, and
-#     the lock lasts until `SILENZIO` = 30 s (`09-b78-apertura.py` §4).
+#     closed, §4.4-bis refuses the new one with `FAREWELL 0x0F ALREADY_ACTIVE_REMOTELY`, and
+#     the lock lasts until `SILENCE` = 30 s (`09-b78-apertura.py` §4).
 #     ⇒ A run can fail because of the run BEFORE, and three arms measured in
 #       a row stop being comparable.
 #
 # ⭐⭐ AND IN HERE THE FIRST IS STRUCTURALLY IMPOSSIBLE — it is written because
 #     it is a verified fact, not a hope: `07-b64-terreno.sh:106` does
-#     `: > "$LAV/registro.log"` at EVERY `accendi`, and this bench restarts the
-#     server at **every arm** (`riavvia()`).  ⇒ In the window of an arm there
+#     `: > "$LAV/registro.log"` at EVERY `turn_on`, and this bench restarts the
+#     server at **every arm** (`relaunch()`).  ⇒ In the window of an arm there
 #     is no count of the previous arm to steal, and the slot is free because
 #     the process holding it is dead.  `[M]` the counter-proof on the 36 runs of
 #     23 August: no pair of cells carries identical numbers from the log, and
@@ -761,37 +761,37 @@ def md5_binario():
 #    count» sits in the same log.  If it arrived late it would fall into the
 #    window of the run.  ⇒ We wait for the count to be STILL, and then the run
 #    DEMANDS a line of its own.
-def conta_conti_finali():
+def count_final_counts():
     rc, out, _ = root("bash -c \"grep -ac 'final count' %s/registro.log "
                       "2>/dev/null || true\"" % LAV)
     t = out.strip()
     return int(t) if t.isdigit() else None
 
 
-def registro_posato(tetto=60.0, quiete=3.0):
-    """Waits until the count of «final count» lines stays still for `quiete` s.
+def log_settled(ceiling=60.0, quiet=3.0):
+    """Waits until the count of «final count» lines stays still for `quiet` s.
 
     Returns that count — it is the `n0` from which the new run demands a line OF ITS OWN — or
     `None` if the log was not read (⛔ and `None` is not zero).
     """
-    n = conta_conti_finali()
+    n = count_final_counts()
     if n is None:
         return None
-    fermo, scade = 0.0, time.time() + tetto
-    while time.time() < scade and fermo < quiete:
+    stopped, expires = 0.0, time.time() + ceiling
+    while time.time() < expires and stopped < quiet:
         time.sleep(1.0)
-        m = conta_conti_finali()
+        m = count_final_counts()
         if m is None:
             return None
-        fermo = (fermo + 1.0) if m == n else 0.0
+        stopped = (stopped + 1.0) if m == n else 0.0
         n = m
-    if fermo < quiete:
+    if stopped < quiet:
         _dub("⚠ in %.0f s the log did not settle: someone is still "
-             "closing a session" % tetto)
+             "closing a session" % ceiling)
     return n
 
 
-def conto_e_mio(n0, n):
+def count_is_mine(n0, n):
     """⛔ Is the «final count» inside `n["server"]` from THIS run, or not?
 
     ⇒ If the count of lines has not grown, the line read is from before (at
@@ -804,7 +804,7 @@ def conto_e_mio(n0, n):
         s["conto_dubbio"] = ("⛔ I do not know how many «final count» there were before the "
                              "run: I do not judge the server-side numbers")
         return False
-    n1 = conta_conti_finali()
+    n1 = count_final_counts()
     if n1 is None or n1 <= n0:
         s["conto_dubbio"] = ("⛔ this run did not write a «final count» OF ITS OWN "
                              "(they were %s, they are %s): the line read is from before — "
@@ -815,36 +815,36 @@ def conto_e_mio(n0, n):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ THE `rete-quic` LINES — which are there in the working tree and not in HEAD
+# ⭐ THE `network-quic` LINES — which are there in the working tree and not in HEAD
 # ═══════════════════════════════════════════════════════════════════════════
-def leggi_rete_quic(riga0):
+def read_quic_network(line0):
     """⭐ `src/webtransport.c:3772` fixes the format as a TEXT CONTRACT:
-       prefix `rete-quic`, fields `nome=valore` without spaces, and `giudizio=`
+       prefix `network-quic`, fields `label_name=value_v` without spaces, and `judgment=`
        last, with the value running to the end of the line.  ⇒ `split()` and `split('=',1)`.
 
-    ⛔ It judges nothing: it reduces and prints.  ⚠ `dgram_falsi` = datagrams
+    ⛔ It judges nothing: it reduces and prints.  ⚠ `dgram_false` = datagrams
        declared lost and then acknowledged = **reordering measured on the
        server side**, and it holds for audio only (streams have no
        per-piece identifier: the price is declared).
     """
     rc, out, _ = root("bash -c \"tail -n +%d %s/registro.log | grep -a "
-                      "'rete-quic ' | tail -400\"" % (riga0 + 1, LAV))
-    righe = [r for r in out.splitlines() if "rete-quic " in r]
-    if not righe:
-        return {"esito": "NOTHING TO READ — no «rete-quic» line in this run"}
-    campi = []
-    for r in righe:
+                      "'network-quic ' | tail -400\"" % (line0 + 1, LAV))
+    line_list = [r for r in out.splitlines() if "network-quic " in r]
+    if not line_list:
+        return {"outcome": "NOTHING TO READ — no «network-quic» line in this run"}
+    fields = []
+    for r in line_list:
         d = {}
-        corpo = r.split("rete-quic ", 1)[1]
-        giud = None
-        if "giudizio=" in corpo:
-            corpo, giud = corpo.split("giudizio=", 1)
-        for pezzo in corpo.split():
-            if "=" in pezzo:
-                k, v = pezzo.split("=", 1)
+        body_el = r.split("network-quic ", 1)[1]
+        judge = None
+        if "judgment=" in body_el:
+            body_el, judge = body_el.split("judgment=", 1)
+        for piece in body_el.split():
+            if "=" in piece:
+                k, v = piece.split("=", 1)
                 d[k] = v
-        d["giudizio"] = (giud or "").strip()
-        campi.append(d)
+        d["judgment"] = (judge or "").strip()
+        fields.append(d)
 
     def num(d, k):
         v = d.get(k)
@@ -853,40 +853,40 @@ def leggi_rete_quic(riga0):
         except (TypeError, ValueError):
             return None
 
-    def elenco(k):
-        return [x for x in (num(d, k) for d in campi) if x is not None]
+    def listing(k):
+        return [x for x in (num(d, k) for d in fields) if x is not None]
 
-    ultima = campi[-1]
-    giudizi = {}
-    for d in campi:
-        giudizi[d["giudizio"]] = giudizi.get(d["giudizio"], 0) + 1
-    cwnd = elenco("cwnd")
-    srtt = elenco("srtt_us")
-    rttv = elenco("rttvar_us")
-    n = {"esito": "letto", "righe": len(campi),
-         "persi_tot": num(ultima, "persi"),
-         "spediti_tot": num(ultima, "spediti"),
+    latest = fields[-1]
+    judgments = {}
+    for d in fields:
+        judgments[d["judgment"]] = judgments.get(d["judgment"], 0) + 1
+    cwnd = listing("cwnd")
+    srtt = listing("srtt_us")
+    rttv = listing("rttvar_us")
+    n = {"outcome": "read", "line_list": len(fields),
+         "persi_tot": num(latest, "lost"),
+         "spediti_tot": num(latest, "shipped"),
          "cwnd_min": min(cwnd) if cwnd else None,
          "cwnd_mediana": sorted(cwnd)[len(cwnd) // 2] if cwnd else None,
-         "cwnd_fine": num(ultima, "cwnd"),
+         "cwnd_fine": num(latest, "cwnd"),
          "srtt_us_mediana": sorted(srtt)[len(srtt) // 2] if srtt else None,
          "srtt_us_max": max(srtt) if srtt else None,
          "rttvar_us_mediana": sorted(rttv)[len(rttv) // 2] if rttv else None,
-         "pto_us_fine": num(ultima, "pto_us"),
-         "dgram_persi": num(ultima, "dgram_persi"),
-         "dgram_falsi": num(ultima, "dgram_falsi"),
-         "dgram_ok": num(ultima, "dgram_ok"),
-         "giudizi": giudizi}
+         "pto_us_fine": num(latest, "pto_us"),
+         "dgram_lost": num(latest, "dgram_lost"),
+         "dgram_false": num(latest, "dgram_false"),
+         "dgram_ok": num(latest, "dgram_ok"),
+         "judgments": judgments}
     return n
 
 
-def stampa_rete_quic(n):
-    if n.get("esito") != "letto":
-        _dub("QUIC    %s" % n.get("esito"))
+def print_quic_network(n):
+    if n.get("outcome") != "read":
+        _dub("QUIC    %s" % n.get("outcome"))
         return
     _inf("QUIC    %d lines · lost %s packets out of %s sent · cwnd min %s / "
          "median %s / end %s"
-         % (n["righe"], n["persi_tot"], n["spediti_tot"], n["cwnd_min"],
+         % (n["line_list"], n["persi_tot"], n["spediti_tot"], n["cwnd_min"],
             n["cwnd_mediana"], n["cwnd_fine"]))
     _inf("        srtt median %s us (max %s) · rttvar median %s us · final "
          "pto %s us"
@@ -894,9 +894,9 @@ def stampa_rete_quic(n):
             n["pto_us_fine"]))
     _inf("        datagrams (audio): lost %s · acknowledged %s · ⭐ FALSE "
          "%s (= reordering measured by the server)"
-         % (n["dgram_persi"], n["dgram_ok"], n["dgram_falsi"]))
+         % (n["dgram_lost"], n["dgram_ok"], n["dgram_false"]))
     _inf("        server judgements: %s"
-         % json.dumps(n["giudizi"], ensure_ascii=False))
+         % json.dumps(n["judgments"], ensure_ascii=False))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -904,80 +904,80 @@ def stampa_rete_quic(n):
 # ═══════════════════════════════════════════════════════════════════════════
 #
 # ── the thresholds, in one place only, and each with its reason ────────────
-QUOTA_CHIAVI_MAX = 0.10   # ⛔ the complement of `QUOTA_DELTA = 0.90` of 09-b70,
+MAX_KEY_QUOTA = 0.10   # ⛔ the complement of `QUOTA_DELTA = 0.90` of 09-b70,
                           #    that is §3.3 read backwards.  It is not a new
                           #    threshold: it is the same, and two thresholds for the same
                           #    fact are two thresholds that diverge.
-RUMORE = 0.05             # ⚠ 09-b70 estimates at 5 % the difference between two runs
+NOISE = 0.05             # ⚠ 09-b70 estimates at 5 % the difference between two runs
                           #    of the same machine
-DIFFERENZA_MINIMA = 0.10  # ⛔ TWICE the noise: below it, this bench does not
+MIN_DIFFERENCE = 0.10  # ⛔ TWICE the noise: below it, this bench does not
                           #    judge instead of calling the noise an «effect»
-DERIVA_TOLLERATA_MS = 100.0  # ⭐ = the threshold itself: the cure keeps a delta
+DRIFT_TOLERATED_MS = 100.0  # ⭐ = the threshold itself: the cure keeps a delta
                              #   until the queue is hopeless for more
                              #   than N ms, so the delay it can add
                              #   is N by construction
 
 
-def _quota_chiavi(n):
-    if not B70._ha_misurato(n):
+def _quota_keys(n):
+    if not B70._has_measured(n):
         return None
     return round(1.0 - n["quota_delta"], 4)
 
 
-def p_spirale_spenta(a, x, etichetta):
+def p_spiral_off(a, x, label):
     """**K′ — THE CURE SWITCHES OFF THE SPIRAL.**
 
     ⛔ And it is SILENT where the spiral was not there in A: putting out a fire that is not there
        is not a merit, and it is a green that would award itself.
     """
-    if not B70._ha_misurato(a):
-        return _muto("arm A did not measure: without it there is no "
+    if not B70._has_measured(a):
+        return _mute("arm A did not measure: without it there is no "
                      "pair, and a number without a denominator does not judge")
-    if not B70._ha_misurato(x):
-        return _muto("arm %s did not measure: %s"
-                     % (etichetta, x.get("esito", "?")))
-    qa, qx = _quota_chiavi(a), _quota_chiavi(x)
-    coda = ("keyframes %d out of %d = %.1f %% in arm %s, against %d out of %d = "
-            "%.1f %% in A" % (x["chiavi"], x["fotogrammi"], qx * 100, etichetta,
-                              a["chiavi"], a["fotogrammi"], qa * 100))
-    if qa <= QUOTA_CHIAVI_MAX:
-        return _muto("in A the spiral was NOT there (%.1f %% keyframes, below "
+    if not B70._has_measured(x):
+        return _mute("arm %s did not measure: %s"
+                     % (label, x.get("outcome", "?")))
+    qa, qx = _quota_keys(a), _quota_keys(x)
+    queue = ("keyframes %d out of %d = %.1f %% in arm %s, against %d out of %d = "
+            "%.1f %% in A" % (x["keys"], x["frames"], qx * 100, label,
+                              a["keys"], a["frames"], qa * 100))
+    if qa <= MAX_KEY_QUOTA:
+        return _mute("in A the spiral was NOT there (%.1f %% keyframes, below "
                      "%.0f %%): there is nothing to switch off, and a green here I "
                      "would award myself — %s"
-                     % (qa * 100, QUOTA_CHIAVI_MAX * 100, coda))
-    if qx <= QUOTA_CHIAVI_MAX:
-        return _si("⭐ THE SPIRAL HAS SWITCHED OFF: %s" % coda)
-    return _no("⛔ the spiral did NOT switch off: %s" % coda)
+                     % (qa * 100, MAX_KEY_QUOTA * 100, queue))
+    if qx <= MAX_KEY_QUOTA:
+        return _si("⭐ THE SPIRAL HAS SWITCHED OFF: %s" % queue)
+    return _no("⛔ the spiral did NOT switch off: %s" % queue)
 
 
-def p_ritmo_restituito(a, x, etichetta):
+def p_rate_restored(a, x, label):
     """**F′ — THE CURE GIVES BACK RHYTHM**, and the threshold is twice the noise.
 
     ⚠ Three outcomes, not two: below a 10 % difference this bench says
       «indistinguishable» instead of calling the noise an effect.
     """
-    if not B70._ha_misurato(a) or not B70._ha_misurato(x):
-        return _muto("one of the two arms did not measure: A «%s», %s «%s»"
-                     % (a.get("esito", "?"), etichetta, x.get("esito", "?")))
+    if not B70._has_measured(a) or not B70._has_measured(x):
+        return _mute("one of the two arms did not measure: A «%s», %s «%s»"
+                     % (a.get("outcome", "?"), label, x.get("outcome", "?")))
     if not a["fps"]:
-        return _muto("arm A has zero frames/s: there is no ratio")
+        return _mute("arm A has zero frames/s: there is no ratio")
     r = x["fps"] / a["fps"]
-    coda = ("%.2f/s in arm %s against %.2f/s in A (%.0f %%) · worst "
+    queue = ("%.2f/s in arm %s against %.2f/s in A (%.0f %%) · worst "
             "second %s against %s · ⚠ AND THE PRICE: final drift %s ms against "
             "%s ms (maximum %s against %s)"
-            % (x["fps"], etichetta, a["fps"], r * 100, x["fps_finestra_min"],
+            % (x["fps"], label, a["fps"], r * 100, x["fps_finestra_min"],
                a["fps_finestra_min"], x["deriva_fine_ms"], a["deriva_fine_ms"],
                x["deriva_max_ms"], a["deriva_max_ms"]))
-    if r >= 1.0 + DIFFERENZA_MINIMA:
-        return _si("⭐ the rhythm has come back: %s" % coda)
-    if r <= 1.0 - DIFFERENZA_MINIMA:
-        return _no("⛔ THE CURE TAKES RHYTHM AWAY instead of giving it: %s" % coda)
-    return _muto("indistinguishable from noise (less than %.0f %%, which is "
+    if r >= 1.0 + MIN_DIFFERENCE:
+        return _si("⭐ the rhythm has come back: %s" % queue)
+    if r <= 1.0 - MIN_DIFFERENCE:
+        return _no("⛔ THE CURE TAKES RHYTHM AWAY instead of giving it: %s" % queue)
+    return _mute("indistinguishable from noise (less than %.0f %%, which is "
                  "twice the %.0f %% between two runs of the same machine): %s"
-                 % (DIFFERENZA_MINIMA * 100, RUMORE * 100, coda))
+                 % (MIN_DIFFERENCE * 100, NOISE * 100, queue))
 
 
-def p_linea_sana(bracci):
+def p_healthy_line(arms):
     """**S′ — THE CURE DOES NOT COST ON THE HEALTHY LINE**, and it is worth more than all the
        others put together.
 
@@ -986,41 +986,41 @@ def p_linea_sana(bracci):
        indistinguishable, and if they are not it is the most important discovery of the
        run — because it would mean the cure is paid for even where it is not needed.
 
-    `bracci` = {"A": n, "B": n, "C": n}
+    `arms` = {"A": n, "B": n, "C": n}
     """
-    a = bracci.get("A") or {}
-    if not B70._ha_misurato(a):
-        return _muto("arm A of the healthy line did not measure: %s"
-                     % a.get("esito", "?"))
-    guai, detto = [], []
+    a = arms.get("A") or {}
+    if not B70._has_measured(a):
+        return _mute("arm A of the healthy line did not measure: %s"
+                     % a.get("outcome", "?"))
+    troubles, said = [], []
     for et in ("B", "C"):
-        x = bracci.get(et) or {}
-        if not B70._ha_misurato(x):
-            return _muto("arm %s of the healthy line did not measure: %s"
-                         % (et, x.get("esito", "?")))
+        x = arms.get(et) or {}
+        if not B70._has_measured(x):
+            return _mute("arm %s of the healthy line did not measure: %s"
+                         % (et, x.get("outcome", "?")))
         r = x["fps"] / a["fps"] if a["fps"] else 0.0
-        dq = _quota_chiavi(x)
+        dq = _quota_keys(x)
         dd = x["deriva_fine_ms"] - a["deriva_fine_ms"]
-        detto.append("%s %.2f/s (%.0f %%), keyframes %.1f %%, drift %s ms "
+        said.append("%s %.2f/s (%.0f %%), keyframes %.1f %%, drift %s ms "
                      "(%+.0f against A)"
                      % (et, x["fps"], r * 100, dq * 100, x["deriva_fine_ms"], dd))
-        if abs(r - 1.0) > RUMORE:
-            guai.append("%s: %.2f/s against %.2f/s = %.0f %%, beyond the %.0f %% "
+        if abs(r - 1.0) > NOISE:
+            troubles.append("%s: %.2f/s against %.2f/s = %.0f %%, beyond the %.0f %% "
                         "of noise" % (et, x["fps"], a["fps"], r * 100,
-                                       RUMORE * 100))
-        if dq > QUOTA_CHIAVI_MAX:
-            guai.append("%s: %.1f %% keyframes on a line that loses "
+                                       NOISE * 100))
+        if dq > MAX_KEY_QUOTA:
+            troubles.append("%s: %.1f %% keyframes on a line that loses "
                         "nothing" % (et, dq * 100))
-        if dd > DERIVA_TOLLERATA_MS:
-            guai.append("%s: the final drift grows by %.0f ms, more than the "
+        if dd > DRIFT_TOLERATED_MS:
+            troubles.append("%s: the final drift grows by %.0f ms, more than the "
                         "threshold itself (%.0f ms) — it is not the threshold "
-                        "at work" % (et, dd, DERIVA_TOLLERATA_MS))
-    coda = "A %.2f/s, keyframes %.1f %%, drift %s ms · %s" % (
-        a["fps"], _quota_chiavi(a) * 100, a["deriva_fine_ms"], " · ".join(detto))
-    if guai:
+                        "at work" % (et, dd, DRIFT_TOLERATED_MS))
+    queue = "A %.2f/s, keyframes %.1f %%, drift %s ms · %s" % (
+        a["fps"], _quota_keys(a) * 100, a["deriva_fine_ms"], " · ".join(said))
+    if troubles:
         return _no("⛔⛔ THE CURE COSTS ON THE HEALTHY LINE — %s · %s"
-                   % (" · ".join(guai), coda))
-    return _si("the three arms are indistinguishable on the healthy line: %s" % coda)
+                   % (" · ".join(troubles), queue))
+    return _si("the three arms are indistinguishable on the healthy line: %s" % queue)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1030,61 +1030,61 @@ def p_linea_sana(bracci):
 # ⛔ `PIANO.md` §0.3.4: *«a bench that cannot see the defect it looks for has no
 #    right to green»*.  Here pairs are built and we check that the three
 #    predicates give what is written FIRST — green, red **and mute**.
-def _g(fps, chiave_ogni=0, deriva=0.0, secondi=25):
-    """A fake run, reduced by the SAME `misura()` that runs on the real runs."""
-    return B76._fab_giro(fps, secondi=secondi, chiave_ogni=chiave_ogni,
-                         deriva=deriva)
+def _g(fps, key_every=0, drift=0.0, seconds=25):
+    """A fake run, reduced by the SAME `gauge()` that runs on the real runs."""
+    return B76._make_round(fps, seconds=seconds, key_every=key_every,
+                         drift=drift)
 
 
-def certifica():
+def certify():
     print("⭐ CERTIFICATION OF THE TWO-CURES BENCH — the expected outcome is written "
           "FIRST\n")
     print("   ⛔ No contact with the test machine: here the TOOL is tested,"
           "\n      not the product.\n")
-    importa(con_rete=False)
-    verde = True
+    import_it(with_network=False)
+    green_v = True
 
-    def esito(nome, visto, atteso, perche):
-        nonlocal verde
-        bene = (visto is atteso)
-        verde = verde and bene
-        print("  %s%-64s atteso %-5s visto %-5s\n        %s"
-              % ("OK  " if bene else "⛔  ", nome, atteso, visto, perche[:170]))
+    def outcome(label_name, seen_v, expected_val, reason_text):
+        nonlocal green_v
+        all_ok = (seen_v is expected_val)
+        green_v = green_v and all_ok
+        print("  %s%-64s expected_val %-5s seen_v %-5s\n        %s"
+              % ("OK  " if all_ok else "⛔  ", label_name, expected_val, seen_v, reason_text[:170]))
 
     # ── 1 · K′ · does the spiral switch off? ───────────────────────────────
     print("  ── K′ · the cure switches off the spiral ──\n")
-    # ⭐ `chiave_ogni=1` = all frames are keyframes: it is the face of the
+    # ⭐ `key_every=1` = all frames are keyframes: it is the face of the
     #    defect of 21 August (144 keyframes out of 144).
-    spirale = _g(10, chiave_ogni=1)
+    spiral = _g(10, key_every=1)
     sana = _g(40)
-    p, q = p_spirale_spenta(spirale, sana, "B")
-    esito("1-⭐ A is all keyframes, B has none: the spiral has switched off",
+    p, q = p_spiral_off(spiral, sana, "B")
+    outcome("1-⭐ A is all keyframes, B has none: the spiral has switched off",
           p, True, q)
 
-    p, q = p_spirale_spenta(spirale, _g(12, chiave_ogni=1), "B")
-    esito("2-⛔⛔ A is all keyframes and so is B: the cure switched off nothing",
+    p, q = p_spiral_off(spiral, _g(12, key_every=1), "B")
+    outcome("2-⛔⛔ A is all keyframes and so is B: the cure switched off nothing",
           p, False, q)
 
-    p, q = p_spirale_spenta(sana, _g(41), "B")
-    esito("3-⭐⭐ in A the spiral was NOT there: the bench is SILENT instead of taking "
+    p, q = p_spiral_off(sana, _g(41), "B")
+    outcome("3-⭐⭐ in A the spiral was NOT there: the bench is SILENT instead of taking "
           "a green it would award itself", p, None, q)
 
-    p, q = p_spirale_spenta(B70.misura([], 25, None, None), sana, "B")
-    esito("4-⛔ arm A did not measure: without a denominator, it is SILENT",
+    p, q = p_spiral_off(B70.gauge([], 25, None, None), sana, "B")
+    outcome("4-⛔ arm A did not measure: without a denominator, it is SILENT",
           p, None, q)
 
     # ── 2 · F′ · does the rhythm come back? and below the noise it is SILENT ─
     print("\n  ── F′ · the cure gives back rhythm (and noise is not an "
           "effect) ──\n")
-    p, q = p_ritmo_restituito(_g(10), _g(40), "B")
-    esito("5-⭐ from 10/s to 40/s: the rhythm has come back", p, True, q)
+    p, q = p_rate_restored(_g(10), _g(40), "B")
+    outcome("5-⭐ from 10/s to 40/s: the rhythm has come back", p, True, q)
 
-    p, q = p_ritmo_restituito(_g(40), _g(41), "B")
-    esito("6-⭐⭐ 40 against 41: it is 2.5 %, less than twice the noise — the "
+    p, q = p_rate_restored(_g(40), _g(41), "B")
+    outcome("6-⭐⭐ 40 against 41: it is 2.5 %, less than twice the noise — the "
           "bench does NOT call the noise an effect and is SILENT", p, None, q)
 
-    p, q = p_ritmo_restituito(_g(40), _g(20), "C")
-    esito("7-⛔⛔ THE CURE TAKES RHYTHM AWAY: 40/s in A and 20/s in C — and it is the "
+    p, q = p_rate_restored(_g(40), _g(20), "C")
+    outcome("7-⛔⛔ THE CURE TAKES RHYTHM AWAY: 40/s in A and 20/s in C — and it is the "
           "most important discovery that could come out of here", p, False, q)
 
     # ⚠⚠ THE BOUNDARY, and it must be tested from BOTH sides — a three-outcome
@@ -1093,226 +1093,226 @@ def certifica():
     #    40, which the builder renders as 44.04 against 40.04 = **109.99 %**, that is
     #    a hair BELOW.  ⇒ The case was not fixed by moving the threshold:
     #    the EXPECTATION was fixed, which was mine and not the predicate's.
-    p, q = p_ritmo_restituito(_g(40), _g(44), "B")
-    esito("8-⚠ a hair BELOW the boundary (109.99 %): the bench is silent",
+    p, q = p_rate_restored(_g(40), _g(44), "B")
+    outcome("8-⚠ a hair BELOW the boundary (109.99 %): the bench is silent",
           p, None, q)
 
-    p, q = p_ritmo_restituito(_g(40), _g(45), "B")
-    esito("9-⚠ one step ABOVE the boundary (112.5 %): the bench judges",
+    p, q = p_rate_restored(_g(40), _g(45), "B")
+    outcome("9-⚠ one step ABOVE the boundary (112.5 %): the bench judges",
           p, True, q)
 
     # ── 3 · S′ · ⛔ the healthy line, worth more than all the others ───────
     print("\n  ── ⛔⛔ S′ · the cure must not cost on the healthy line ──\n")
-    p, q = p_linea_sana({"A": _g(40), "B": _g(40.5), "C": _g(39.6)})
-    esito("10-⭐ the three arms within 5 %: indistinguishable", p, True, q)
+    p, q = p_healthy_line({"A": _g(40), "B": _g(40.5), "C": _g(39.6)})
+    outcome("10-⭐ the three arms within 5 %: indistinguishable", p, True, q)
 
-    p, q = p_linea_sana({"A": _g(40), "B": _g(40.2), "C": _g(34)})
-    esito("11-⛔⛔ THE DEFECT THIS PREDICATE EXISTS TO FIND: C loses "
+    p, q = p_healthy_line({"A": _g(40), "B": _g(40.2), "C": _g(34)})
+    outcome("11-⛔⛔ THE DEFECT THIS PREDICATE EXISTS TO FIND: C loses "
           "15 % on the HEALTHY line", p, False, q)
 
-    p, q = p_linea_sana({"A": _g(40), "B": _g(40, chiave_ogni=1), "C": _g(40)})
-    esito("12-⛔⛔ B is all keyframes on a line that loses nothing: the cure "
+    p, q = p_healthy_line({"A": _g(40), "B": _g(40, key_every=1), "C": _g(40)})
+    outcome("12-⛔⛔ B is all keyframes on a line that loses nothing: the cure "
           "SWITCHED ON a spiral where there was none", p, False, q)
 
     # ⭐ The price, and it is the case the mandate asks not to confuse with an
     #   improvement: same rhythm, but the delay grows more than the threshold.
-    p, q = p_linea_sana({"A": _g(40), "B": _g(40, deriva=0.0),
-                         "C": _g(40, deriva=0.5)})
-    esito("13-⛔⭐ THE PRICE: C keeps the rhythm but the drift grows more than the "
+    p, q = p_healthy_line({"A": _g(40), "B": _g(40, drift=0.0),
+                         "C": _g(40, drift=0.5)})
+    outcome("13-⛔⭐ THE PRICE: C keeps the rhythm but the drift grows more than the "
           "threshold itself (100 ms) — it is not the threshold at work", p, False, q)
 
-    p, q = p_linea_sana({"A": _g(40), "B": _g(40),
-                         "C": B70.misura([], 25, None, None)})
-    esito("14-⛔ one arm of the healthy line did not measure: SILENT", p, None, q)
+    p, q = p_healthy_line({"A": _g(40), "B": _g(40),
+                         "C": B70.gauge([], 25, None, None)})
+    outcome("14-⛔ one arm of the healthy line did not measure: SILENT", p, None, q)
 
     # ── 4 · ⛔ the arm is checked from the LOG, not from the command line ───
     print("\n  ── ⛔ «written is not in force»: the two startup lines ──\n")
     # ⚠ Here the machine is not touched: the RECOGNISER is exercised on the real
-    #   lines the product writes (`sgombra_dichiara`, `wt_ritmo_adattivo`).
+    #   lines the product writes (`clear_out_declare`, `wt_adaptive_rate`).
     # ⛔ Updated on 10 Oct 2026 to the lines the product writes NOW, in English
-    #    (`sgombra_dichiara()` and `wt_ritmo_adattivo()` in `src/webtransport.c`).
+    #    (`clear_out_declare()` and `wt_adaptive_rate()` in `src/webtransport.c`).
     #    ⚠ They are not made up: they are the product's text, shortened at the tail.
-    vere_A = ("⛔ PHASE 9, video queue threshold (§5.1): 0 ms — OFF: "
+    real_A = ("⛔ PHASE 9, video queue threshold (§5.1): 0 ms — OFF: "
               "it abandons at every more recent frame, that is the "
               "product up to 23 Aug 2026 byte for byte.  ⚠ And it is NOT "
               "the default: since 24 August it is born ON at 100 ms, so "
-              "someone typed `--sgombra-soglia-ms 0` on purpose.\n"
+              "someone typed `--clear-threshold-ms 0` on purpose.\n"
               "⛔ the rate regulator is OFF by whoever launched the "
-              "server (`--niente-ritmo-adattivo`): no frame "
+              "server (`--no-adaptive-rate`): no frame "
               "will ever be skipped because of the line")
-    vere_C = ("⭐ PHASE 9, video queue threshold (§5.1): 100 ms — "
+    real_C = ("⭐ PHASE 9, video queue threshold (§5.1): 100 ms — "
               "ON: above the threshold a stuck delta is abandoned, below "
               "it is KEPT.  ⭐ It is the DEFAULT since 24 Aug 2026\n"
               "⭐ PHASE 9: the rate regulator is ON — a frame "
               "does NOT leave when 2 deltas in flight still have bytes in my "
               "output queue.  ⭐ It is the DEFAULT since 24 Aug 2026")
 
-    def riconosci(testo, soglia, ritmo):
-        m = RE_SOGLIA.search(testo)
-        letta = int(m.group(1)) if m else None
-        acceso = bool(RE_RITMO_ACCESO.search(testo))
-        spento = bool(RE_RITMO_SPENTO.search(testo))
-        if letta != soglia:
-            return False, "the threshold in force is %s, requested %s" % (letta, soglia)
-        if ritmo and not acceso:
+    def recognize(body_text, threshold, rate):
+        m = RE_THRESHOLD.search(body_text)
+        got_read = int(m.group(1)) if m else None
+        lit = bool(RE_RATE_ON.search(body_text))
+        off = bool(RE_RATE_OFF.search(body_text))
+        if got_read != threshold:
+            return False, "the threshold in force is %s, requested %s" % (got_read, threshold)
+        if rate and not lit:
             return False, "the regulator does not appear to be on"
-        if (not ritmo) and not spento:
+        if (not rate) and not off:
             return False, "the regulator does not appear to be off"
-        return True, "threshold %s ms, regulator %s" % (letta,
-                                                       "on" if ritmo else "off")
+        return True, "threshold %s ms, regulator %s" % (got_read,
+                                                       "on" if rate else "off")
 
-    p, q = riconosci(vere_A, 0, False)
-    esito("15-⭐ arm A recognised from the product's real lines", p, True, q)
-    p, q = riconosci(vere_C, 100, True)
-    esito("16-⭐ arm C recognised from the product's real lines", p, True, q)
-    p, q = riconosci(vere_A, 100, False)
-    esito("17-⛔⛔ threshold 100 REQUESTED and 0 in force: the bench STOPS "
+    p, q = recognize(real_A, 0, False)
+    outcome("15-⭐ arm A recognised from the product's real lines", p, True, q)
+    p, q = recognize(real_C, 100, True)
+    outcome("16-⭐ arm C recognised from the product's real lines", p, True, q)
+    p, q = recognize(real_A, 100, False)
+    outcome("17-⛔⛔ threshold 100 REQUESTED and 0 in force: the bench STOPS "
           "instead of measuring three identical arms and concluding «the cure is not "
           "needed»", p, False, q)
-    p, q = riconosci(vere_C, 100, False)
-    esito("18-⛔ the regulator requested OFF and it appears on", p, False, q)
+    p, q = recognize(real_C, 100, False)
+    outcome("18-⛔ the regulator requested OFF and it appears on", p, False, q)
 
-    # ── 5 · the reduction of the `rete-quic` lines, which is a text contract ─
-    print("\n  ── ⭐ the `rete-quic` lines: the text contract ──\n")
-    finte = [
-        "12:00:01.000 wt      rete-quic 192.168.0.2:52344 da_ms=0 persi=0 "
-        "persi_d=0 cwnd=14000 cwnd_left=14000 srtt_us=30100 rttvar_us=900 "
-        "pto_us=132000 spediti=100 dgram_persi=0 dgram_ok=10 dgram_falsi=0 "
-        "giudizio=-- nothing to report",
-        "12:00:02.000 wt      rete-quic 192.168.0.2:52344 da_ms=1000 persi=7 "
-        "persi_d=7 cwnd=6000 cwnd_left=0 srtt_us=41230 rttvar_us=11400 "
-        "pto_us=132000 spediti=210 dgram_persi=5 dgram_ok=40 dgram_falsi=3 "
-        "giudizio=⛔ the line is losing",
+    # ── 5 · the reduction of the `network-quic` lines, which is a text contract ─
+    print("\n  ── ⭐ the `network-quic` lines: the text contract ──\n")
+    fake = [
+        "12:00:01.000 wt      network-quic 192.168.0.2:52344 da_ms=0 lost=0 "
+        "lost_d=0 cwnd=14000 cwnd_left=14000 srtt_us=30100 rttvar_us=900 "
+        "pto_us=132000 shipped=100 dgram_lost=0 dgram_ok=10 dgram_false=0 "
+        "judgment=-- nothing to report",
+        "12:00:02.000 wt      network-quic 192.168.0.2:52344 da_ms=1000 lost=7 "
+        "lost_d=7 cwnd=6000 cwnd_left=0 srtt_us=41230 rttvar_us=11400 "
+        "pto_us=132000 shipped=210 dgram_lost=5 dgram_ok=40 dgram_false=3 "
+        "judgment=⛔ the line is losing",
     ]
-    salvato = globals().get("root")
-    globals()["root"] = lambda c, tetto=300: (0, "\n".join(finte), "")
-    n = leggi_rete_quic(0)
-    globals()["root"] = salvato
-    esito("19-⭐ two lines reduced: lost 7, cwnd min 6000, ⭐ dgram_falsi 3 "
+    saved = globals().get("root")
+    globals()["root"] = lambda c, ceiling=300: (0, "\n".join(fake), "")
+    n = read_quic_network(0)
+    globals()["root"] = saved
+    outcome("19-⭐ two lines reduced: lost 7, cwnd min 6000, ⭐ dgram_false 3 "
           "(= reordering seen by the server)",
-          (n["righe"] == 2 and n["persi_tot"] == 7 and n["cwnd_min"] == 6000
-           and n["dgram_falsi"] == 3 and n["srtt_us_max"] == 41230),
-          True, json.dumps({k: n[k] for k in ("righe", "persi_tot", "cwnd_min",
-                                              "dgram_falsi", "srtt_us_max")}))
-    esito("20-⭐ and `giudizio=` runs to the end of the line, spaces included",
-          (n["giudizi"].get("⛔ the line is losing") == 1
-           and n["giudizi"].get("-- nothing to report") == 1),
-          True, json.dumps(n["giudizi"], ensure_ascii=False))
+          (n["line_list"] == 2 and n["persi_tot"] == 7 and n["cwnd_min"] == 6000
+           and n["dgram_false"] == 3 and n["srtt_us_max"] == 41230),
+          True, json.dumps({k: n[k] for k in ("line_list", "persi_tot", "cwnd_min",
+                                              "dgram_false", "srtt_us_max")}))
+    outcome("20-⭐ and `judgment=` runs to the end of the line, spaces included",
+          (n["judgments"].get("⛔ the line is losing") == 1
+           and n["judgments"].get("-- nothing to report") == 1),
+          True, json.dumps(n["judgments"], ensure_ascii=False))
 
-    salvato = globals().get("root")
-    globals()["root"] = lambda c, tetto=300: (0, "", "")
-    n = leggi_rete_quic(0)
-    globals()["root"] = salvato
-    esito("21-⛔ no `rete-quic` line: «I did not read» is not «zero» "
-          "(`CODER.md` §3.10)", n.get("esito") != "letto", True, n.get("esito"))
+    saved = globals().get("root")
+    globals()["root"] = lambda c, ceiling=300: (0, "", "")
+    n = read_quic_network(0)
+    globals()["root"] = saved
+    outcome("21-⛔ no `network-quic` line: «I did not read» is not «zero» "
+          "(`CODER.md` §3.10)", n.get("outcome") != "read", True, n.get("outcome"))
 
     print("\n== %s" % ("⭐ THE BENCH CAN SEE THE DEFECTS IT LOOKS FOR — and can stay SILENT "
                        "where it cannot judge"
-                       if verde else
+                       if green_v else
                        "⛔⛔ THE BENCH CANNOT SEE WHAT IT LOOKS FOR: none of its greens "
                        "is to be believed"))
-    return 0 if verde else 1
+    return 0 if green_v else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT TALKS TO THE TEST MACHINE
 # ═══════════════════════════════════════════════════════════════════════════
-def vicini_non_miei():
+def neighbors_not_mine():
     """⚠ `LEZIONI.md` §1.26: two benches on the same machine do not give a
        red, they give **a plausible number**.  ⛔ The 7930 of `09-b76` was left
        on: it is not mine and it is not switched off, but if someone attached to it my
        numbers would be dirty.  ⇒ We count who is ATTACHED, not who
        listens: a server on and idle is not a running bench."""
-    fuori = {}
+    outside = {}
     for p in ("7900", "7910", "7920", "7930", "7932", "7730"):
         rc, out, _ = root("bash -c \"ss -uan 2>/dev/null | grep ':%s ' | "
                           "grep -vc UNCONN || true\"" % p)
-        fuori[p] = out.strip()
+        outside[p] = out.strip()
     rc, out, _ = root("uptime")
-    fuori["carico"] = out.strip()[-32:]
-    return fuori
+    outside["load"] = out.strip()[-32:]
+    return outside
 
 
-def profilo(nome):
-    for p in B76.PROFILI:
-        if p[0] == nome:
+def profile_v(label_name):
+    for p in B76.PROFILES:
+        if p[0] == label_name:
             return p
     return None
 
 
-def installa_profilo(regole):
+def install_profile(rules):
     """⛔ `del root` + `add`, never `change`: `[M]` 23 Aug 2026, `tc qdisc change`
        is STICKY and dragged a `reorder` along for four profiles
        — which would have measured a network nobody had asked for."""
-    ok, q = RETE.stringi(B76._regole(regole))
+    ok, q = NETWORK.tighten(B76._rules(rules))
     if not ok:
         return False, q, ""
-    B76.filtri_sonda()
-    riletta = B76.regola_riletta()
-    passa, perche = B76.controlla_regola(regole, riletta)
-    return passa, perche, riletta
+    B76.probe_filters()
+    reread = B76.rule_reread()
+    pass_on, reason_text = B76.check_rule(rules, reread)
+    return pass_on, reason_text, reread
 
 
-def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
-                ritmo, secondi):
+def one_cell(name_profile, rules, verify, label, options, threshold,
+                rate, seconds):
     """One arm of a profile: the sequence of the seven steps of the header."""
-    voce = {"profilo": nome_profilo, "braccio": etichetta, "opzioni": opzioni}
+    entry = {"profile_v": name_profile, "arm": label, "options": options}
 
     # 1 · the network is put back smooth, so the trigger session is born clean
-    RETE.rimetti(dillo=False)
+    NETWORK.restore(report_it=False)
     # 2 · the server restarts with the arm, and the arm is CHECKED
-    ok, righe = riavvia(opzioni, soglia, ritmo)
-    voce["avvio"] = righe
-    for r in righe:
-        _inf("AVVIO   %s" % r.split("avvio   ")[-1][:150])
+    ok, line_list = relaunch(options, threshold, rate)
+    entry["startup"] = line_list
+    for r in line_list:
+        _inf("AVVIO   %s" % r.split("startup   ")[-1][:150])
     if not ok:
         _ko("⛔ arm %s is NOT in force: I do not measure this cell"
-            % etichetta)
-        voce["esito"] = "THE ARM IS NOT IN FORCE"
-        return voce
+            % label)
+        entry["outcome"] = "THE ARM IS NOT IN FORCE"
+        return entry
     # 3 · the trigger session, ON A CLEAN NETWORK (see the header, point 3)
-    if not B70.innesca_sessione():
+    if not B70.trigger_session():
         _ko("the trigger session does not open: I do not measure this cell")
-        voce["esito"] = "THE TRIGGER SESSION DOES NOT OPEN"
-        return voce
+        entry["outcome"] = "THE TRIGGER SESSION DOES NOT OPEN"
+        return entry
     # 4 · the profile, and it is reread
-    passa_r, perche_r, riletta = installa_profilo(regole)
-    voce["regola_riletta"] = riletta
-    (_ok if passa_r else _ko)("the rule: %s" % perche_r)
-    if not passa_r:
-        voce["esito"] = "THE INSTALLED RULE IS NOT THE ONE REQUESTED"
-        return voce
+    pass_r, why_r, reread = install_profile(rules)
+    entry["rule_reread"] = reread
+    (_ok if pass_r else _ko)("the rule: %s" % why_r)
+    if not pass_r:
+        entry["outcome"] = "THE INSTALLED RULE IS NOT THE ONE REQUESTED"
+        return entry
     # 5 · the probe: was the fault put in?  ⛔ and it is redone at every arm
-    s = B76.sonda_gira()
-    B76.stampa_sonda(s)
-    passa_g, perche_g = B76.p_guasto_messo(nome_profilo, verifica, s)
-    (_ok if passa_g else (_dub if passa_g is None else _ko))(
-        "THE FAULT WAS PUT IN: %s" % perche_g)
-    voce["sonda"] = s
-    voce["guasto"] = {"passa": passa_g, "perche": perche_g}
+    s = B76.run_probe()
+    B76.print_probe(s)
+    pass_g, why_g = B76.p_fault_set(name_profile, verify, s)
+    (_ok if pass_g else (_dub if pass_g is None else _ko))(
+        "THE FAULT WAS PUT IN: %s" % why_g)
+    entry["probe"] = s
+    entry["fault"] = {"pass_on": pass_g, "reason_text": why_g}
     # 6 · the run
-    usc = B76.scena_accendi("barra")
+    usc = B76.scene_turn_on("bar")
     if not usc:
         _ko("the scene does not start: I do NOT judge this cell")
-        voce["esito"] = "THE SCENE DID NOT START"
-        return voce
-    prima = B76.conti_qdisc()
+        entry["outcome"] = "THE SCENE DID NOT START"
+        return entry
+    before = B76.qdisc_counts()
     # ⛔ The trigger session must have FINISHED closing, or its «final
-    #    count» falls into the window of this run (⇒ `registro_posato`).
-    n0 = registro_posato()
-    riga0 = B76.righe_registro()
-    n = B70.giro("%s-%s" % (nome_profilo, etichetta), "barra",
-                 B70.TELA_PIENA, secondi)
-    if not conto_e_mio(n0, n):
+    #    count» falls into the window of this run (⇒ `log_settled`).
+    n0 = log_settled()
+    line0 = B76.log_line_list()
+    n = B70.lap("%s-%s" % (name_profile, label), "bar",
+                 B70.FULL_CANVAS, seconds)
+    if not count_is_mine(n0, n):
         _dub("⚠ %s" % (n.get("server") or {}).get("conto_dubbio"))
-    B76.scena_spegni()
-    dopo = B76.conti_qdisc()
-    # 7 · the counters around the run and the `rete-quic` lines
-    delta = {k: dopo[k] - prima[k] for k in prima} if (prima and dopo) else None
-    voce["qdisc"] = delta
-    quic = leggi_rete_quic(riga0)
-    voce["quic"] = quic
-    B70.stampa_giro(n)
+    B76.scene_turn_off()
+    after = B76.qdisc_counts()
+    # 7 · the counters around the run and the `network-quic` lines
+    delta = {k: after[k] - before[k] for k in before} if (before and after) else None
+    entry["qdisc"] = delta
+    quic = read_quic_network(line0)
+    entry["quic"] = quic
+    B70.print_round(n)
     # ⛔⭐ THE SAFETY NET OF `09-b70` IS USED, NOT BYPASSED: it is the predicate
     #    that refuses to say anything about the server side when the log is not
     #    from this run — that is the only thing that would have caught by itself the
@@ -1320,143 +1320,143 @@ def una_casella(nome_profilo, regole, verifica, etichetta, opzioni, soglia,
     # ⚠ And we declare what it protects: K′ and F′ do NOT go through here (they live on the
     #   client's §11.1 trace), so a red of its own does not touch the verdict —
     #   it marks as not judgeable the four CORROBORATION numbers
-    #   (`delta_non_spedito`, `chiave_aspetta`, `non_spediti`, `abbandonati`).
-    if hasattr(B70, "p_registro_letto"):
-        pr, perche_pr = B70.p_registro_letto(n)
+    #   (`delta_non_spedito`, `chiave_aspetta`, `non_spediti`, `abandoned`).
+    if hasattr(B70, "p_log_read"):
+        pr, why_pr = B70.p_log_read(n)
         (_ok if pr else (_dub if pr is None else _ko))(
-            "the log is from THIS run (§1.9): %s" % perche_pr)
-        voce["registro_letto"] = {"passa": pr, "perche": perche_pr}
+            "the log is from THIS run (§1.9): %s" % why_pr)
+        entry["registro_letto"] = {"pass_on": pr, "reason_text": why_pr}
     _inf("QDISC   around the run: %s" % json.dumps(delta))
-    stampa_rete_quic(quic)
+    print_quic_network(quic)
     # ⛔ The lock of §8.2: if the slot was taken, this cell is not
     #    a measurement of the cure — it is a measurement of thirty seconds of lock.
-    coda = ULTIMO_CLIENTE["testo"] or (n.get("coda_cliente") or "")
-    if "GIA_ATTIVA" in coda or "0x0f" in coda.lower():
+    queue = LAST_CLIENT["body_text"] or (n.get("coda_cliente") or "")
+    if "GIA_ATTIVA" in queue or "0x0f" in queue.lower():
         _dub("⚠ the client found the slot TAKEN (§8.2 reason 0x0F): "
              "this cell does not measure the cure")
-        voce["esito"] = "IL POSTO ERA OCCUPATO"
-    voce["giro"] = n
-    voce["staccato_dal_cliente"] = ("I did NOT stay attached" in coda)
-    return voce
+        entry["outcome"] = "IL POSTO ERA OCCUPATO"
+    entry["lap"] = n
+    entry["staccato_dal_cliente"] = ("I did NOT stay attached" in queue)
+    return entry
 
 
-def appaia(a):
-    _log("09-b79 · THE TWO CURES PAIRED — port %d · dev «%s»" % (PORTA, DEV))
-    print("   ⛔ «%s» (ssh + the user's session) is NOT touched" % VIETATA)
+def appears(a):
+    _log("09-b79 · THE TWO CURES PAIRED — port %d · dev «%s»" % (PORT, DEV))
+    print("   ⛔ «%s» (ssh + the user's session) is NOT touched" % FORBIDDEN)
     print("   ⛔ 7900/7910/7920/7930/7932 belong to others: they are COUNTED, not touched")
-    md5 = md5_binario()
+    md5 = md5_binary()
     print("   ⭐ the binary I measure: md5 %s (working tree, not HEAD)" % md5)
-    print("   --  «%s» before: %s" % (DEV, RETE.qdisc() or "(none)"))
+    print("   --  «%s» before: %s" % (DEV, NETWORK.qdisc() or "(none)"))
 
-    if not B76.spedisci_sonda():
+    if not B76.ship_probe():
         _ko("the scripts were not written in %s" % LAV)
         return 2
-    if B76.scegli_porta_sonda() is None:
+    if B76.choose_probe_port() is None:
         _ko("⛔ none of my probe ports is free: I do NOT measure, "
             "because without the probe I do not know whether the fault was put in")
         return 2
     _ok("the probe and the reader are in %s · the probe will use port %d"
-        % (LAV, B76.PORTA_SONDA))
-    prima_vicini = vicini_non_miei()
+        % (LAV, B76.PROBE_PORT))
+    before_neighbors = neighbors_not_mine()
     _inf("attached to the ports NOT mine, BEFORE: %s"
-         % json.dumps(prima_vicini, ensure_ascii=False))
+         % json.dumps(before_neighbors, ensure_ascii=False))
 
-    nomi = [x.strip() for x in a.profili.split(",") if x.strip()]
+    names = [x.strip() for x in a.profiles.split(",") if x.strip()]
     if a.solo:
-        nomi = [n for n in nomi if a.solo in n]
-    scelti = []
-    for nome in nomi:
-        p = profilo(nome)
+        names = [n for n in names if a.solo in n]
+    chosen = []
+    for label_name in names:
+        p = profile_v(label_name)
         if not p:
-            _ko("the profile «%s» does not exist in 09-b76" % nome)
+            _ko("the profile «%s» does not exist in 09-b76" % label_name)
             return 2
-        scelti.append(p)
-    if not scelti:
+        chosen.append(p)
+    if not chosen:
         _ko("no profile chosen")
         return 2
-    bracci = [b for b in BRACCI if b[0] in a.bracci]
+    arms = [b for b in ARMS if b[0] in a.arms]
     _inf("%d profiles × %d arms = %d cells of %d s"
-         % (len(scelti), len(bracci), len(scelti) * len(bracci), a.secondi))
+         % (len(chosen), len(arms), len(chosen) * len(arms), a.seconds))
 
     CHI = "09-b79"
-    AFFITTO = 900
+    LEASE = 900
     try:
-        LUC.prendi(CHI, secondi=AFFITTO, attesa=a.attesa)
+        LUC.take(CHI, seconds=LEASE, wait=a.wait)
     except Exception as e:
         _ko("⛔ I DO NOT MEASURE: %s" % e)
         return 2
-    scadenza = time.time() + AFFITTO
+    expiry = time.time() + LEASE
 
-    esiti = []
-    RETE.guardiano_arma(min(7200, len(scelti) * len(bracci) * (a.secondi + 90) + 900))
+    outcomes = []
+    NETWORK.guardian_arm(min(7200, len(chosen) * len(arms) * (a.seconds + 90) + 900))
     try:
-        for p in scelti:
-            nome, regole, _pieno, _spir, _senza, perche, verifica = p
-            if time.time() > scadenza - 400:
-                if B76.rinnova(CHI, AFFITTO):
-                    scadenza = time.time() + AFFITTO
-                    _inf("⛔ lock lease renewed for %d s" % AFFITTO)
+        for p in chosen:
+            label_name, rules, _full, _spir, _without, reason_text, verify = p
+            if time.time() > expiry - 400:
+                if B76.renew(CHI, LEASE):
+                    expiry = time.time() + LEASE
+                    _inf("⛔ lock lease renewed for %d s" % LEASE)
                 else:
                     _ko("⛔ the lock is no longer mine: I STOP")
                     break
-            _log("PROFILE «%s» — %s" % (nome, perche[:110]))
-            casella = {}
-            for etichetta, opzioni, soglia, ritmo, perche_b in bracci:
-                _log("  %s · arm %s — %s" % (nome, etichetta, perche_b[:100]))
-                v = una_casella(nome, regole, verifica, etichetta, opzioni,
-                                soglia, ritmo, a.secondi)
-                esiti.append(v)
-                casella[etichetta] = v.get("giro") or {"esito": v.get("esito", "?")}
+            _log("PROFILE «%s» — %s" % (label_name, reason_text[:110]))
+            cell = {}
+            for label, options, threshold, rate, why_b in arms:
+                _log("  %s · arm %s — %s" % (label_name, label, why_b[:100]))
+                v = one_cell(label_name, rules, verify, label, options,
+                                threshold, rate, a.seconds)
+                outcomes.append(v)
+                cell[label] = v.get("lap") or {"outcome": v.get("outcome", "?")}
 
             # ── the predicates of the PAIR, and each one says its why ────────
-            _log("  %s · THE PAIR" % nome)
-            A = casella.get("A") or {}
+            _log("  %s · THE PAIR" % label_name)
+            A = cell.get("A") or {}
             for et in ("B", "C"):
-                if et not in casella:
+                if et not in cell:
                     continue
-                passa, q = p_spirale_spenta(A, casella[et], et)
-                (_ok if passa else (_dub if passa is None else _ko))(
+                pass_on, q = p_spiral_off(A, cell[et], et)
+                (_ok if pass_on else (_dub if pass_on is None else _ko))(
                     "K′ · the cure switches off the spiral (%s): %s" % (et, q))
-                passa2, q2 = p_ritmo_restituito(A, casella[et], et)
-                (_ok if passa2 else (_dub if passa2 is None else _ko))(
+                pass2, q2 = p_rate_restored(A, cell[et], et)
+                (_ok if pass2 else (_dub if pass2 is None else _ko))(
                     "F′ · the cure gives back rhythm (%s): %s" % (et, q2))
-                esiti.append({"profilo": nome, "coppia": et,
-                              "K": {"passa": passa, "perche": q},
-                              "F": {"passa": passa2, "perche": q2}})
-            if nome == "ritardo-30" and len(casella) == 3:
-                passa, q = p_linea_sana(casella)
-                (_ok if passa else (_dub if passa is None else _ko))(
+                outcomes.append({"profile_v": label_name, "pair": et,
+                              "K": {"pass_on": pass_on, "reason_text": q},
+                              "F": {"pass_on": pass2, "reason_text": q2}})
+            if label_name == "ritardo-30" and len(cell) == 3:
+                pass_on, q = p_healthy_line(cell)
+                (_ok if pass_on else (_dub if pass_on is None else _ko))(
                     "⛔⛔ S′ · the cure must NOT cost on the healthy line: %s" % q)
-                esiti.append({"profilo": nome, "linea_sana":
-                              {"passa": passa, "perche": q}})
+                outcomes.append({"profile_v": label_name, "linea_sana":
+                              {"pass_on": pass_on, "reason_text": q}})
     finally:
-        B76.scena_spegni()
+        B76.scene_turn_off()
         _log("⛔ THE NETWORK IS PUT BACK AS IT WAS")
-        rimessa = RETE.rimetti()
-        LUC.molla(CHI)
+        restored = NETWORK.restore()
+        LUC.release(CHI)
 
-    os.makedirs(FUORI, exist_ok=True)
-    dove = os.path.join(FUORI, "09-b79-esiti.json")
+    os.makedirs(OUT, exist_ok=True)
+    dove = os.path.join(OUT, "09-b79-esiti.json")
     with open(dove, "w") as f:
-        json.dump({"md5_binario": md5, "esiti": esiti,
-                   "vicini_prima": prima_vicini,
-                   "vicini_dopo": vicini_non_miei()}, f,
+        json.dump({"md5_binary": md5, "outcomes": outcomes,
+                   "neighbors_before": before_neighbors,
+                   "neighbors_after": neighbors_not_mine()}, f,
                   ensure_ascii=False, indent=1)
     _inf("outcomes in %s" % dove)
-    dopo_vicini = vicini_non_miei()
+    after_neighbors = neighbors_not_mine()
     _inf("attached to the ports NOT mine, AFTER: %s"
-         % json.dumps(dopo_vicini, ensure_ascii=False))
-    tabella(esiti)
-    rossi = [e for e in esiti
-             if any((e.get(k) or {}).get("passa") is False
+         % json.dumps(after_neighbors, ensure_ascii=False))
+    table(outcomes)
+    rossi = [e for e in outcomes
+             if any((e.get(k) or {}).get("pass_on") is False
                     for k in ("K", "F", "linea_sana"))]
-    if not rimessa:
-        _ko("⛔ the network did NOT go back as it was: put it back by hand with «rimetti»")
+    if not restored:
+        _ko("⛔ the network did NOT go back as it was: put it back by hand with «restore»")
         return 2
     return 1 if rossi else 0
 
 
-def tabella(esiti):
+def table(outcomes):
     """⛔ §6.2: ALL the quantities are printed.  ⭐ And the DRIFT sits next to the
        frames/s on every line, because a cure that doubles the rhythm and
        triples the delay is not obviously an improvement — and it is a
@@ -1466,123 +1466,123 @@ def tabella(esiti):
     print("  %-14s %-2s %7s %7s %7s %7s %8s %8s %9s"
           % ("profile", "ar", "fps", "worst", "keyfr%", "drift", "driftMx",
              "Mbit/s", "cwnd_min"))
-    for e in esiti:
-        n = e.get("giro")
+    for e in outcomes:
+        n = e.get("lap")
         if not n:
             continue
-        if not B70._ha_misurato(n):
-            print("  %-14s %-2s   %s" % (e["profilo"], e["braccio"],
-                                         (n.get("esito") or "?")[:70]))
+        if not B70._has_measured(n):
+            print("  %-14s %-2s   %s" % (e["profile_v"], e["arm"],
+                                         (n.get("outcome") or "?")[:70]))
             continue
         q = e.get("quic") or {}
         print("  %-14s %-2s %7.2f %7s %6.1f%% %7s %8s %8s %9s"
-              % (e["profilo"], e["braccio"], n["fps"], n["fps_finestra_min"],
+              % (e["profile_v"], e["arm"], n["fps"], n["fps_finestra_min"],
                  (1 - n["quota_delta"]) * 100, n["deriva_fine_ms"],
                  n["deriva_max_ms"], n["mbit_s_filo"], q.get("cwnd_min")))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ THE `stacco` STEP — «WHO» detached on `raffica-forte`
+# ⛔⛔ THE `detach` STEP — «WHO» detached on `raffica-forte`
 # ═══════════════════════════════════════════════════════════════════════════
-def stacco(a):
+def detach(a):
     """⛔ It does not deduce: it asks four independent witnesses (see
        the header).  ⚠ And the third possibility — «it never opened» —
        is ruled out EXPLICITLY, because it looks the same as detaching."""
     _log("09-b79 · `raffica-forte` — ⛔ WHO DETACHED?")
-    p = profilo("raffica-forte")
-    md5 = md5_binario()
+    p = profile_v("raffica-forte")
+    md5 = md5_binary()
     print("   ⭐ binary md5 %s · netem profile: %s" % (md5, " ".join(p[1])))
 
     # ⭐ The first witness is read in the SOURCE, before running: `IDLE_MS`.
     rc, out, _ = root("bash -c \"grep -n 'IDLE_MS' %s/src/trasporto.c | head -4\""
-                      % ALB)
+                      % TREE)
     _inf("`[R]` src/trasporto.c: %s" % " | ".join(out.split()))
 
-    if not B76.spedisci_sonda() or B76.scegli_porta_sonda() is None:
+    if not B76.ship_probe() or B76.choose_probe_port() is None:
         _ko("the scripts or the probe port are missing")
         return 2
 
     CHI = "09-b79-stacco"
     try:
-        LUC.prendi(CHI, secondi=900, attesa=a.attesa)
+        LUC.take(CHI, seconds=900, wait=a.wait)
     except Exception as e:
         _ko("⛔ I DO NOT MEASURE: %s" % e)
         return 2
-    RETE.guardiano_arma(1800)
-    fuori = {}
+    NETWORK.guardian_arm(1800)
+    outside = {}
     try:
-        RETE.rimetti(dillo=False)
-        ok, righe = riavvia("", 0, False)
+        NETWORK.restore(report_it=False)
+        ok, line_list = relaunch("", 0, False)
         if not ok:
-            _ko("arm A is not in force: %s" % righe)
+            _ko("arm A is not in force: %s" % line_list)
             return 2
-        if not B70.innesca_sessione():
+        if not B70.trigger_session():
             _ko("the trigger session does not open (on a CLEAN network)")
             return 2
         _ok("⭐ on a CLEAN network the session opens: what follows belongs to the fault")
-        passa_r, perche_r, riletta = installa_profilo(p[1])
-        (_ok if passa_r else _ko)("the rule: %s" % perche_r)
-        if not passa_r:
+        pass_r, why_r, reread = install_profile(p[1])
+        (_ok if pass_r else _ko)("the rule: %s" % why_r)
+        if not pass_r:
             return 2
-        s = B76.sonda_gira()
-        B76.stampa_sonda(s)
-        passa_g, perche_g = B76.p_guasto_messo("raffica-forte", p[6], s)
-        (_ok if passa_g else (_dub if passa_g is None else _ko))(
-            "THE FAULT WAS PUT IN: %s" % perche_g)
-        fuori["sonda"] = s
+        s = B76.run_probe()
+        B76.print_probe(s)
+        pass_g, why_g = B76.p_fault_set("raffica-forte", p[6], s)
+        (_ok if pass_g else (_dub if pass_g is None else _ko))(
+            "THE FAULT WAS PUT IN: %s" % why_g)
+        outside["probe"] = s
 
-        usc = B76.scena_accendi("barra")
+        usc = B76.scene_turn_on("bar")
         if not usc:
             _ko("the scene does not start")
             return 2
-        n0 = registro_posato()      # ⛔ see `registro_posato`
-        riga0 = B76.righe_registro()
+        n0 = log_settled()      # ⛔ see `log_settled`
+        line0 = B76.log_line_list()
         t0 = time.time()
-        n = B70.giro("stacco-raffica-forte", "barra", B70.TELA_PIENA, a.secondi)
-        if not conto_e_mio(n0, n):
+        n = B70.lap("stacco-raffica-forte", "bar", B70.FULL_CANVAS, a.seconds)
+        if not count_is_mine(n0, n):
             _dub("⚠ %s" % (n.get("server") or {}).get("conto_dubbio"))
-        B76.scena_spegni()
-        B70.stampa_giro(n)
-        fuori["giro"] = n
-        fuori["quic"] = leggi_rete_quic(riga0)
-        stampa_rete_quic(fuori["quic"])
+        B76.scene_turn_off()
+        B70.print_round(n)
+        outside["lap"] = n
+        outside["quic"] = read_quic_network(line0)
+        print_quic_network(outside["quic"])
 
         # ── WITNESS 1 · THE CLIENT, which says it by itself ────────────────
         _log("WITNESS 1 · the client (`01-b3-cliente.py:1979`)")
-        coda = ULTIMO_CLIENTE["testo"] or (n.get("coda_cliente") or "")
+        queue = LAST_CLIENT["body_text"] or (n.get("coda_cliente") or "")
         print("   ┌─ the client, IN FULL (⛔ not its last 400 bytes) ─")
-        for r in coda.splitlines():
+        for r in queue.splitlines():
             if r.strip() and "tput:" not in r:
                 print("   │ %s" % r[:160])
         print("   └─")
-        attaccato = "still attached after" in coda
-        staccato = "I did NOT stay attached" in coda
-        fuori["cliente"] = {"attaccato_fino_in_fondo": attaccato,
-                            "staccato": staccato, "coda": coda}
-        if attaccato:
+        attached = "still attached after" in queue
+        detached = "I did NOT stay attached" in queue
+        outside["client"] = {"attaccato_fino_in_fondo": attached,
+                            "detached": detached, "queue": queue}
+        if attached:
             _ok("⭐⭐ THE CLIENT SAYS THE SESSION DID **NOT** DETACH: it "
-                "stayed attached for all the %d s requested" % a.secondi)
-        elif staccato:
+                "stayed attached for all the %d s requested" % a.seconds)
+        elif detached:
             _ko("⛔ the client says it dropped — and it also says why")
         else:
             _dub("the client said neither one thing nor the other")
 
         # ── WITNESS 2 · THE SERVER LOG ─────────────────────────────────────
         _log("WITNESS 2 · the server log — the farewell reasons")
-        cercati = ("congedo motivo=", "the client takes its farewell", "slot DENIED",
-                   "BANNED", "SILENZIO", "final count", "closing",
+        searched = ("farewell motivo=", "the client takes its farewell", "slot DENIED",
+                   "BANNED", "SILENCE", "final count", "closing",
                    "GIA_ATTIVA", "idle", "expired")
-        fuori["registro"] = {}
-        for c in cercati:
+        outside["logbook"] = {}
+        for c in searched:
             rc, out, _ = root("bash -c \"tail -n +%d %s/registro.log | grep -a "
-                              "-i '%s' | tail -3\"" % (riga0 + 1, LAV, c))
-            righe = [x[:200] for x in out.splitlines() if x.strip()]
-            fuori["registro"][c] = righe
-            if righe:
-                for r in righe:
+                              "-i '%s' | tail -3\"" % (line0 + 1, LAV, c))
+            line_list = [x[:200] for x in out.splitlines() if x.strip()]
+            outside["logbook"][c] = line_list
+            if line_list:
+                for r in line_list:
                     _inf("«%s» → %s" % (c, r))
-        if not any(fuori["registro"][c] for c in
-                   ("congedo motivo=", "the client takes its farewell", "slot DENIED",
+        if not any(outside["logbook"][c] for c in
+                   ("farewell motivo=", "the client takes its farewell", "slot DENIED",
                     "BANNED", "GIA_ATTIVA")):
             _ok("⭐ NO farewell, NO slot denied, NO ban in the whole "
                 "run: on the server side nobody detached")
@@ -1590,14 +1590,14 @@ def stacco(a):
         # ── WITNESS 3 · THE HANDSHAKE — the third possibility ──────────────
         _log("WITNESS 3 · ⚠ «it never opened» looks the same as "
              "«it detached»")
-        aperta = "SESSIONE" in coda or (n.get("fotogrammi_grezzi") or 0) > 0
+        is_open = "SESSION" in queue or (n.get("fotogrammi_grezzi") or 0) > 0
         rc, out, _ = root("bash -c \"tail -n +%d %s/registro.log | grep -a "
-                          "'AMMESSO\\|ATTACCA\\|session open\\|monitor «' | "
-                          "head -5\"" % (riga0 + 1, LAV))
+                          "'ADMITTED\\|ATTACH\\|session open\\|monitor «' | "
+                          "head -5\"" % (line0 + 1, LAV))
         for r in out.splitlines()[:5]:
             _inf("opening: %s" % r[:180])
-        fuori["apertura"] = {"aperta": aperta, "righe": out.splitlines()[:5]}
-        if aperta:
+        outside["opening"] = {"is_open": is_open, "line_list": out.splitlines()[:5]}
+        if is_open:
             _ok("⭐ THE SESSION OPENED (the hypothesis «the handshake does not "
                 "complete» is ruled out): `09-b78-apertura.py` had already "
                 "measured it up to 25 %% loss, 10 runs out of 10 in ~1.3 s")
@@ -1608,79 +1608,79 @@ def stacco(a):
         _log("WITNESS 4 · the congestion window and the server counts")
         srv = (n.get("server") or {})
         _inf("SERVER  %s" % json.dumps(srv, ensure_ascii=False)[:600])
-        q = fuori["quic"]
-        if q.get("esito") == "letto":
+        q = outside["quic"]
+        if q.get("outcome") == "read":
             _inf("⭐ the window: cwnd min %s, median %s, end %s · judgements %s"
                  % (q["cwnd_min"], q["cwnd_mediana"], q["cwnd_fine"],
-                    json.dumps(q["giudizi"], ensure_ascii=False)))
-        fuori["secondi_veri"] = round(time.time() - t0, 1)
+                    json.dumps(q["judgments"], ensure_ascii=False)))
+        outside["secondi_veri"] = round(time.time() - t0, 1)
     finally:
-        B76.scena_spegni()
-        RETE.rimetti()
-        LUC.molla(CHI)
+        B76.scene_turn_off()
+        NETWORK.restore()
+        LUC.release(CHI)
 
-    os.makedirs(FUORI, exist_ok=True)
-    dove = os.path.join(FUORI, "09-b79-stacco.json")
+    os.makedirs(OUT, exist_ok=True)
+    dove = os.path.join(OUT, "09-b79-stacco.json")
     with open(dove, "w") as f:
-        json.dump(fuori, f, ensure_ascii=False, indent=1)
+        json.dump(outside, f, ensure_ascii=False, indent=1)
     _inf("outcomes in %s" % dove)
 
     # ── THE VERDICT, and the right word ────────────────────────────────────
     _log("THE VERDICT on `raffica-forte`")
-    n = fuori.get("giro") or {}
-    if fuori.get("cliente", {}).get("attaccato_fino_in_fondo"):
+    n = outside.get("lap") or {}
+    if outside.get("client", {}).get("attaccato_fino_in_fondo"):
         _ok("⭐⭐⭐ NOBODY DETACHED.  The connection stayed alive for "
             "all the %d s; what stopped was the DELIVERY OF FRAMES after "
             "%s s.  ⇒ The red of `09-b76` is true as a number and WRONG as a "
-            "word: `p_niente_stacco` measures how long delivery lasted, not "
+            "word: `p_nothing_detach` measures how long delivery lasted, not "
             "whether the connection dropped.  ⛔ And the fact stays serious — a "
             "session alive and MUTE is a frozen screen — but it has another name and "
-            "another cause." % (a.secondi, n.get("vissuto_s")))
+            "another cause." % (a.seconds, n.get("vissuto_s")))
         return 0
-    if fuori.get("cliente", {}).get("staccato"):
-        _ko("⛔ THE CLIENT DROPPED: %s" % fuori["cliente"]["coda"][-300:])
+    if outside.get("client", {}).get("detached"):
+        _ko("⛔ THE CLIENT DROPPED: %s" % outside["client"]["queue"][-300:])
         return 1
     _dub("none of the witnesses answered: I have nothing to judge")
     return 3
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def principale():
+def primary():
     p = argparse.ArgumentParser()
-    p.add_argument("passo", nargs="?",
-                   choices=["terreno", "appaia", "stacco", "rimetti", "stato"])
-    p.add_argument("--certifica", action="store_true",
+    p.add_argument("step", nargs="?",
+                   choices=["terrain", "appears", "detach", "restore", "state"])
+    p.add_argument("--certify", action="store_true",
                    help="⭐ the positive control: it does not touch the machine")
-    p.add_argument("--secondi", type=int, default=25)
+    p.add_argument("--seconds", type=int, default=25)
     p.add_argument("--solo", default="", help="one profile only, by name")
-    p.add_argument("--bracci", default="ABC")
-    p.add_argument("--profili", default=("ritardo-30,perdita-1,perdita-3,"
+    p.add_argument("--arms", default="ABC")
+    p.add_argument("--profiles", default=("ritardo-30,perdita-1,perdita-3,"
                                          "jitter-15,jitter-30,casa-cattiva,"
                                          "raffica-forte"))
-    p.add_argument("--attesa", type=int, default=3600,
+    p.add_argument("--wait", type=int, default=3600,
                    help="how many seconds I wait for the netem lock")
     a = p.parse_args()
 
-    if a.certifica:
-        return certifica()
-    if not a.passo:
-        p.error("a step is needed, or --certifica")
+    if a.certify:
+        return certify()
+    if not a.step:
+        p.error("a step is needed, or --certify")
 
-    importa()
-    if a.passo in ("rimetti", "stato"):
-        _log("the test machine's network — dev «%s», port %d" % (DEV, PORTA))
+    import_it()
+    if a.step in ("restore", "state"):
+        _log("the test machine's network — dev «%s», port %d" % (DEV, PORT))
         _inf("attached to the ports NOT mine: %s"
-             % json.dumps(vicini_non_miei(), ensure_ascii=False))
-        return 0 if RETE.rimetti() else 2
-    if a.passo == "terreno":
-        ok = B76.spedisci_sonda()
-        _inf("binary md5 %s" % md5_binario())
+             % json.dumps(neighbors_not_mine(), ensure_ascii=False))
+        return 0 if NETWORK.restore() else 2
+    if a.step == "terrain":
+        ok = B76.ship_probe()
+        _inf("binary md5 %s" % md5_binary())
 
-        return 0 if (B70.terreno_controlla() and ok) else 2
-    if a.passo == "stacco":
-        return stacco(a)
-    return appaia(a)
+        return 0 if (B70.terrain_check() and ok) else 2
+    if a.step == "detach":
+        return detach(a)
+    return appears(a)
 
 
 if __name__ == "__main__":
-    sys.exit(principale())
+    sys.exit(primary())

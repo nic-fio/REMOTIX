@@ -6,8 +6,8 @@
 ===========================================================================
 
     python3 11-c8-il-secondo-apre-il-browser.py
-    python3 11-c8-il-secondo-apre-il-browser.py --senza-cura
-    python3 11-c8-il-secondo-apre-il-browser.py --certifica
+    python3 11-c8-il-secondo-apre-il-browser.py --no-fix
+    python3 11-c8-il-secondo-apre-il-browser.py --certify
 
 ⛔ It is ACCEPTANCE TEST B of phase 11.  ⭐ It is also, according to both external
    reviewers, **the most important test of the list** — and in the first draft it was
@@ -69,15 +69,15 @@ And we look **BEFORE and AFTER**, not only after:
    two diagnoses.
 
 ---------------------------------------------------------------------------
-⛔ HOW I KNOW IT CAN SAY RED — `--senza-cura`
+⛔ HOW I KNOW IT CAN SAY RED — `--no-fix`
 ---------------------------------------------------------------------------
 
 `fasi/11…` §4.1, column «how I know it can say red»: *«the provisioning cure is
 undone ⇒ red»*.
 
-  without `--senza-cura` the tenants receive the cure of `src/provisiona.sh`:
+  without `--no-fix` the tenants receive the cure of `src/provisiona.sh`:
                         a REAL `~/.cache`, their own folder, mode 0700
-  with `--senza-cura`   ⛔ the cure is NOT applied: the two are born as the
+  with `--no-fix`   ⛔ the cure is NOT applied: the two are born as the
                         code of 25 August 2026 made them ⇒ **the second must give
                         RED**, or this mesh is useless
 
@@ -105,7 +105,7 @@ import subprocess
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -114,33 +114,33 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 # ⛔ It is not convenience: a line repeated in nine files is **nine places to
 #    diverge from**, and they had already diverged.  From `11-c1-nasce-e-si-vede.py`:
 #
-#   · `e_stato_ammesso(coda)`   — «was the client ADMITTED?», which ⛔ is not
+#   · `was_admitted(queue)`   — «was the client ADMITTED?», which ⛔ is not
 #        the word inside a text: the client prints it also in the TWO refusal
 #        messages, and on stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
-#   · `garantisci_i_gruppi(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
+#   · `ensure_groups(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
 #        which `[M]` the session is born BLIND (0 of 4, zero frames,
 #        `fasi/10-…` §7.4) and this mesh would measure the darkness.
 #
 # ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
 #    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
-                "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
+_JOBS_C1 = ("was_admitted", "certify_admission",
+                "ensure_groups", "group_verdict", "certify_groups")
 _C1 = None
 
 
-def _carica_c1():
+def _load_c1():
     """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
     ⚠ It is looked for next to me (in the box everything is in `/opt/remotix`) and one
       level up, because in the repository this mesh sits in
       `banchi/11-scatole/`.
     """
-    for base in (QUI, os.path.dirname(QUI)):
-        perc = os.path.join(base, "11-c1-nasce-e-si-vede.py")
-        if not os.path.exists(perc):
+    for base in (HERE, os.path.dirname(HERE)):
+        path = os.path.join(base, "11-c1-nasce-e-si-vede.py")
+        if not os.path.exists(path):
             continue
-        spec = importlib.util.spec_from_file_location("c1_comune", perc)
+        spec = importlib.util.spec_from_file_location("c1_comune", path)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
@@ -148,17 +148,17 @@ def _carica_c1():
             return None
         # ⛔ We VERIFY that what is needed is there, we do not trust the name of the
         #    file (`CODER.md` §3.9).
-        for mestiere in _MESTIERI_C1:
-            if not callable(getattr(m, mestiere, None)):
+        for duty in _JOBS_C1:
+            if not callable(getattr(m, duty, None)):
                 return None
         return m
     return None
 
 
-def casa_di_c1():
+def c1_home():
     global _C1
     if _C1 is None:
-        _C1 = _carica_c1()
+        _C1 = _load_c1()
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   come the admission predicate and the guarantee of the")
@@ -168,17 +168,17 @@ def casa_di_c1():
     return _C1
 
 
-def e_stato_ammesso(coda):
+def was_admitted(queue):
     """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller says «I could not look» (**3**).
     """
-    return casa_di_c1().e_stato_ammesso(coda)
+    return c1_home().was_admitted(queue)
 
 
-def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ THE CARD'S GROUPS — `(esito, perche)`; `0` = it can be measured.
+def ensure_groups(chi, prefix="   "):
+    """⭐⭐ THE CARD'S GROUPS — `(outcome, reason_text)`; `0` = it can be measured.
 
     ⛔ Until 27 August 2026 this mesh created the tenant with
        `usermod -aG video,render` **and did not read back**: two nailed-down names (which
@@ -186,7 +186,7 @@ def garantisci_i_gruppi(chi, prefisso="   "):
        force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
        from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
-    return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
+    return c1_home().ensure_groups(chi, prefix)
 
 # ---------------------------------------------------------------------------
 # ⛔ THE COLOUR OF THE TARGET AND ITS TOLERANCE — declared here and printed in
@@ -198,13 +198,13 @@ def garantisci_i_gruppi(chi, prefisso="   "):
 #   an H.264 encoding in 4:2:0 (which subsamples precisely the chroma, i.e. the
 #   channel where the whole difference between magenta and non-magenta lies), and demanding
 #   the exact colour would mean a test already dead.
-# ⛔ And the tolerance is CALIBRATED, not chosen: `--certifica` contains the case
+# ⛔ And the tolerance is CALIBRATED, not chosen: `--certify` contains the case
 #   «colour shifted by as much as the tolerance allows ⇒ must stay GREEN» — which
 #   is the same guard C1 has on the image threshold.
 # ---------------------------------------------------------------------------
-COLORE = (0xFF, 0x00, 0xFF)
-TOLLERANZA = 48          # per channel, in levels 0..255
-FRAZIONE_MINIMA = 0.25   # how much of the screen must be that colour
+COLOR = (0xFF, 0x00, 0xFF)
+TOLERANCE = 48          # per channel, in levels 0..255
+MINIMUM_FRACTION = 0.25   # how much of the screen must be that colour
 
 # ⚠ 0.25 and not 0.90: between the window edge, the GNOME bar and the
 #   decorations, the full-screen browser never covers everything.  ⛔ And a
@@ -212,7 +212,7 @@ FRAZIONE_MINIMA = 0.25   # how much of the screen must be that colour
 #   i.e. precisely at phase 12 — which is what this phase exists to avoid.
 
 
-def giudice_immagini():
+def image_judge():
     """⭐ The pixel judge is IMPORTED, not rewritten.
 
     ⛔ `10-f1-testimone.py` is already calibrated on the real thing (25 August 2026: black
@@ -223,10 +223,10 @@ def giudice_immagini():
     ⇒ If it is not there, this test exits **3**: «I could not look».  ⛔ We do not
       fall back on a poorer judgement without saying so.
     """
-    perc = os.path.join(QUI, "10-f1-testimone.py")
-    if not os.path.exists(perc):
+    path = os.path.join(HERE, "10-f1-testimone.py")
+    if not os.path.exists(path):
         return None
-    spec = importlib.util.spec_from_file_location("testimone10f1", perc)
+    spec = importlib.util.spec_from_file_location("testimone10f1", path)
     m = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(m)
@@ -235,7 +235,7 @@ def giudice_immagini():
     return m
 
 
-def frazione_del_colore(percorso, colore=COLORE, tolleranza=TOLLERANZA):
+def color_fraction(fpath, color=COLOR, tolerance=TOLERANCE):
     """How much of the image is of the colour looked for, within the tolerance.
 
     ⛔ Returns **`None`** if it could not look — a file that is not there, an empty
@@ -243,13 +243,13 @@ def frazione_del_colore(percorso, colore=COLORE, tolleranza=TOLLERANZA):
        «zero»: «I did not look» and «I looked and it was not there» are two
        different things, and this project has already paid for confusing them.
     """
-    if not percorso or not os.path.exists(percorso) \
-            or os.path.getsize(percorso) == 0:
+    if not fpath or not os.path.exists(fpath) \
+            or os.path.getsize(fpath) == 0:
         return None
     try:
         import numpy as np
         from PIL import Image
-        img = np.asarray(Image.open(percorso).convert("RGB")).astype("int16")
+        img = np.asarray(Image.open(fpath).convert("RGB")).astype("int16")
     except Exception:
         return None
     if img.ndim != 3 or img.shape[2] != 3 or img.size == 0:
@@ -257,14 +257,14 @@ def frazione_del_colore(percorso, colore=COLORE, tolleranza=TOLLERANZA):
     # ⚠ The distance is taken **channel by channel** (max norm) and not
     #   as a sum: a sum would let through a colour very wrong on a single
     #   channel, provided it is right on the other two.
-    scarto = np.abs(img - np.array(colore, dtype="int16")).max(axis=2)
-    return float((scarto <= tolleranza).mean())
+    gap = np.abs(img - np.array(color, dtype="int16")).max(axis=2)
+    return float((gap <= tolerance).mean())
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ THE JUDGE'S CERTIFICATION — it proves that it CAN give red, and green
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica():
+def certify():
     """⚠ And it declares what it covers and what it does not.
 
     COVERS: the pixel reader — that the colour is found when it is there, that it is NOT
@@ -272,7 +272,7 @@ def certifica():
     tolerance allows** stays GREEN (or the threshold is too tight and the mesh
     gets thrown away in two weeks), and that «I did not look» returns `None`.
     ⛔ DOES NOT COVER: that the browser really started.  That is said by
-    `--senza-cura` on the real thing, and it is the other half of the acceptance test.
+    `--no-fix` on the real thing, and it is the other half of the acceptance test.
     """
     try:
         import numpy as np
@@ -285,73 +285,73 @@ def certifica():
 
     lav = tempfile.mkdtemp(prefix="c8cert-")
 
-    def dipingi(nome, riempi, macchia=None):
+    def paint(label_name, fill, blot=None):
         a = np.zeros((216, 384, 3), dtype="uint8")
-        a[:, :] = riempi
-        if macchia is not None:
-            a[80:136, 100:284] = macchia
-        p = os.path.join(lav, nome + ".png")
+        a[:, :] = fill
+        if blot is not None:
+            a[80:136, 100:284] = blot
+        p = os.path.join(lav, label_name + ".png")
         Image.fromarray(a).save(p)
         return p
 
     # ⭐ The cases, and each one is there for a reason that can be said in one line.
-    casi = []
+    cases = []
     # 1. the whole page is there: the browser drew
-    casi.append(("whole page",
-                 dipingi("a", COLORE, (0, 0, 0)), True))
+    cases.append(("whole page",
+                 paint("a", COLOR, (0, 0, 0)), True))
     # 2. the desktop without browser: no magenta
-    casi.append(("desktop without browser",
-                 dipingi("b", (58, 62, 70), (200, 200, 200)), False))
+    cases.append(("desktop without browser",
+                 paint("b", (58, 62, 70), (200, 200, 200)), False))
     # 3. ⭐ THE CASE THAT CALIBRATES THE THRESHOLD: the colour comes back SHIFTED —
     #    colour profiles, 4:2:0, rescaling.  It must stay GREEN.
-    spostato = tuple(min(255, max(0, c + s))
-                     for c, s in zip(COLORE, (-30, +30, -30)))
-    casi.append(("colour shifted by %s (must be GREEN)" % (spostato,),
-                 dipingi("c", spostato, (0, 0, 0)), True))
+    moved = tuple(min(255, max(0, c + s))
+                     for c, s in zip(COLOR, (-30, +30, -30)))
+    cases.append(("colour shifted by %s (must be GREEN)" % (moved,),
+                 paint("c", moved, (0, 0, 0)), True))
     # 4. and one shifted TOO MUCH must not pass, or the tolerance no longer separates
-    troppo = (0xFF, 0x90, 0xFF)
-    casi.append(("colour shifted TOO MUCH %s (must be RED)" % (troppo,),
-                 dipingi("d", troppo, (0, 0, 0)), False))
+    too = (0xFF, 0x90, 0xFF)
+    cases.append(("colour shifted TOO MUCH %s (must be RED)" % (too,),
+                 paint("d", too, (0, 0, 0)), False))
     # 5. the black screen: it is a red, not an «I do not know»
-    casi.append(("black screen", dipingi("e", (0, 0, 0)), False))
+    cases.append(("black screen", paint("e", (0, 0, 0)), False))
     # 6. ⛔ the window is there but covers little: below the minimum fraction
-    piccola = np.zeros((216, 384, 3), dtype="uint8")
-    piccola[:, :] = (58, 62, 70)
-    piccola[10:40, 10:80] = COLORE          # ~2.7 % of the screen
+    small = np.zeros((216, 384, 3), dtype="uint8")
+    small[:, :] = (58, 62, 70)
+    small[10:40, 10:80] = COLOR          # ~2.7 % of the screen
     pp = os.path.join(lav, "f.png")
-    Image.fromarray(piccola).save(pp)
-    casi.append(("a small spot is not a page", pp, False))
+    Image.fromarray(small).save(pp)
+    cases.append(("a small spot is not a page", pp, False))
 
     print("== certification of C8's judge ==")
     print("   colour %s · tolerance ±%d per channel · minimum fraction %.2f"
-          % (COLORE, TOLLERANZA, FRAZIONE_MINIMA))
-    guai = 0
-    for nome, png, atteso in casi:
-        fr = frazione_del_colore(png)
-        visto = (fr is not None and fr >= FRAZIONE_MINIMA)
-        ok = (visto == atteso)
+          % (COLOR, TOLERANCE, MINIMUM_FRACTION))
+    troubles = 0
+    for label_name, png, expected_val in cases:
+        fr = color_fraction(png)
+        seen_v = (fr is not None and fr >= MINIMUM_FRACTION)
+        ok = (seen_v == expected_val)
         print("  %s  %-52s  fraction=%s  ⇒ %s (expected %s)"
-              % ("OK " if ok else "NO ", nome,
+              % ("OK " if ok else "NO ", label_name,
                  "unknown" if fr is None else "%.3f" % fr,
-                 "page" if visto else "nothing",
-                 "page" if atteso else "nothing"))
+                 "page" if seen_v else "nothing",
+                 "page" if expected_val else "nothing"))
         if not ok:
-            guai += 1
+            troubles += 1
 
     # 7. ⛔ And the case worth more than all: «I could not look» must be
     #    `None`, not zero.  A file that is not there is NOT a screen without a page.
-    for nome, perc in (("the file is not there", os.path.join(lav, "manca.png")),
+    for label_name, path in (("the file is not there", os.path.join(lav, "manca.png")),
                        ("the file is empty", os.path.join(lav, "vuoto.png"))):
-        if "empty" in nome:
-            open(perc, "wb").close()
-        fr = frazione_del_colore(perc)
+        if "empty" in label_name:
+            open(path, "wb").close()
+        fr = color_fraction(path)
         ok = fr is None
         print("  %s  %-52s  fraction=%s  ⇒ %s (expected «I do not know»)"
-              % ("OK " if ok else "NO ", nome,
+              % ("OK " if ok else "NO ", label_name,
                  "unknown" if fr is None else "%.3f" % fr,
                  "unknown" if fr is None else "a number"))
         if not ok:
-            guai += 1
+            troubles += 1
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐ THE CARD'S GROUPS — ⛔ the case that was missing before today.
@@ -364,12 +364,12 @@ def certifica():
     #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_gr, _quanti_gr = casa_di_c1().certifica_gruppi("C8")
-    guai += guai_gr
+    group_troubles, _how_many_groups = c1_home().certify_groups("C8")
+    troubles += group_troubles
 
     print()
-    if guai:
-        print("⛔ the judge is NOT reliable: %d cases wrong" % guai)
+    if troubles:
+        print("⛔ the judge is NOT reliable: %d cases wrong" % troubles)
         return 1
     print("⭐ the judge sees the page when it is there, does not see it when it is not,")
     print("   ⭐ withstands a colour shift, and says «I do not know» instead of zero")
@@ -382,12 +382,12 @@ def certifica():
 # ═══════════════════════════════════════════════════════════════════════════
 # THE TERRAIN — it is prepared, and ⛔ it is VERIFIED to be in force (E1)
 # ═══════════════════════════════════════════════════════════════════════════
-def sh(comando, secondi=120):
-    return subprocess.run(["/bin/sh", "-c", comando],
-                          capture_output=True, text=True, timeout=secondi)
+def sh(command, seconds=120):
+    return subprocess.run(["/bin/sh", "-c", command],
+                          capture_output=True, text=True, timeout=seconds)
 
 
-def sgombra_il_posto_condiviso(base):
+def clear_out_slot_shared(base):
     """⛔ «From zero» also means: **what the previous round left**.
 
     `[M]` The defect lives in `/tmp/mozilla`, which the first tenant takes with
@@ -412,7 +412,7 @@ def sgombra_il_posto_condiviso(base):
     return "cleared %s, which had been left to «%s» from the previous round" % (p, chi)
 
 
-def prepara_lo_scheletro():
+def prepare_skeleton():
     """⭐ Reproduces the configuration of the REAL MACHINE: `/etc/skel/.cache`
     as a link to `/tmp`.
 
@@ -425,7 +425,7 @@ def prepara_lo_scheletro():
     return r.stdout.strip()
 
 
-def crea(chi, parola):
+def create(chi, password):
     """Creates the tenant **as the product creates it**: `useradd -m`.
 
     ⛔ `-m` copies the skeleton, and it is precisely the step from which the
@@ -445,16 +445,16 @@ def crea(chi, parola):
     #   `fasi/10-…` §7.4): this mesh would measure the darkness and call it
     #   a product defect.  ⇒ We do not measure: the caller exits **3**.
     r = sh("useradd -m -s /bin/bash %s && "
-           "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
+           "printf '%s:%s\n' | chpasswd" % (chi, chi, password))
     if r.returncode != 0:
         return False, (r.stderr or "").strip()[:120]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = ensure_groups(chi, prefix="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     return True, ""
 
 
-def applica_la_cura(chi):
+def apply_fix(chi):
     """⭐ The same lines as `src/provisiona.sh`, and not a paraphrase of them.
 
     ⚠ `/etc/skel` is not touched and the `/tmp/mozilla` of whoever already has it
@@ -465,7 +465,7 @@ def applica_la_cura(chi):
        % (c, c, c, chi, chi, c, c))
 
 
-def sa_scrivere_nella_cache(chi):
+def can_write_cache(chi):
     """⛔ «written is not in force» (E1): the link is not looked at, we
        TRY TO WRITE.
 
@@ -486,29 +486,29 @@ def sa_scrivere_nella_cache(chi):
 # ═══════════════════════════════════════════════════════════════════════════
 # THE GRAB — attaching to the session and pulling a PNG out of it, ⛔ IN HERE
 # ═══════════════════════════════════════════════════════════════════════════
-def scatta(chi, parola, fuori, a, resta):
+def fires(chi, password, outside, a, stays):
     """Returns (png|None, how_many_frames|None, why).
 
     ⛔ Three outcomes and not two: «the PNG is there», «no frame arrived»,
        «the frames arrived but no image was made of them» — and the last
        two are *«I did not look»*, not «the screen was empty».
     """
-    flusso = fuori + ".264"
-    for f in (flusso, fuori):
+    flow = outside + ".264"
+    for f in (flow, outside):
         if os.path.exists(f):
             os.unlink(f)
     r = subprocess.run(
-        ["python3", "-u", a.cliente,
-         "--indirizzo", a.indirizzo, "--porta", str(a.porta),
-         "--utente", chi, "--parola", parola,
-         "--video-scrivi", flusso, "--resta", str(resta)],
-        capture_output=True, text=True, timeout=int(resta) + 120)
-    coda = (r.stdout or "") + (r.stderr or "")
-    quanti = None
-    for riga in coda.splitlines():
-        if "[vid]" in riga and "no frame" not in riga:
+        ["python3", "-u", a.client,
+         "--address", a.address, "--port", str(a.port),
+         "--username", chi, "--password", password,
+         "--video-write", flow, "--stays", str(stays)],
+        capture_output=True, text=True, timeout=int(stays) + 120)
+    queue = (r.stdout or "") + (r.stderr or "")
+    how_many = None
+    for row in queue.splitlines():
+        if "[vid]" in row and "no frame" not in row:
             try:
-                quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
+                how_many = int(row.split("[vid]", 1)[1].strip().split()[0])
             except Exception:
                 pass
     # ⛔⛔ BEFORE BLAMING THE WIRE, WE LOOK AT WHETHER THE CLIENT GOT IN.
@@ -519,29 +519,29 @@ def scatta(chi, parola, fuori, a, resta):
     #   ⛔ The outcome was already right (**3**, not a red), ⭐ but the word was not, and
     #   a wrong diagnosis costs as much as a wrong verdict: whoever reads goes
     #   looking for the fault in the place the bench pointed to.
-    # ⛔ And the predicate is NOT `"AMMESSO" in coda`: the client prints that
-    #    word also in the two refusal messages (`e_stato_ammesso()` at the top).
-    ammesso = e_stato_ammesso(coda)
-    if ammesso is not True:
+    # ⛔ And the predicate is NOT `"ADMITTED" in queue`: the client prints that
+    #    word also in the two refusal messages (`was_admitted()` at the top).
+    admitted = was_admitted(queue)
+    if admitted is not True:
         return None, None, (
-            "the client was TURNED AWAY by the server" if ammesso is False
+            "the client was TURNED AWAY by the server" if admitted is False
             else "the test client said nothing: I do not know whether it "
                  "got in")
-    if not quanti:
+    if not how_many:
         return None, None, ("no frame arrived from the wire "
                             "(session not opened, or stage that does not deliver)")
     # ⛔ `-update 1` keeps the LAST frame: it is what the desktop shows
     #    now.  The first would be the opening keyframe, i.e. a second ago.
     d = sh("ffmpeg -hide_banner -loglevel error -i %s -vsync 0 -update 1 -y %s"
-           % (flusso, fuori), secondi=180)
-    if d.returncode != 0 or not os.path.exists(fuori) \
-            or os.path.getsize(fuori) == 0:
-        return None, quanti, ("%d frames arrived but ffmpeg did not make "
-                              "an image of them" % quanti)
-    return fuori, quanti, None
+           % (flow, outside), seconds=180)
+    if d.returncode != 0 or not os.path.exists(outside) \
+            or os.path.getsize(outside) == 0:
+        return None, how_many, ("%d frames arrived but ffmpeg did not make "
+                              "an image of them" % how_many)
+    return outside, how_many, None
 
 
-def rende_la_pagina_da_solo(chi, a, fuori):
+def renders_page_alone(chi, a, outside):
     """⭐⭐ TEST A — *«the browser renders the page»*, ⛔ **without the stage in between**.
 
     Firefox takes a photograph of itself (`--screenshot`), as a user, on the
@@ -566,13 +566,13 @@ def rende_la_pagina_da_solo(chi, a, fuori):
       session**.  ⇒ What this test can NOT see is a defect that
       arose between the browser and the stage.  ⚠ It does not replace it: **it precedes it**.
     """
-    if os.path.exists(fuori):
-        os.unlink(fuori)
+    if os.path.exists(outside):
+        os.unlink(outside)
     # ⚠ `HOME` explicit and not inherited: the defect lives inside `$HOME/.cache`,
     #   and a test that looked at the wrong home would say green forever.
     # ⛔⛔ AND THE CEILING IS ITS OWN, not that of test B — `[M]` 26 August 2026,
     #    and it cost us a false red.  The first draft reused
-    #    `--attesa-browser` (25 s): ⛔ the FIRST start of Firefox in a cold
+    #    `--wait-browser` (25 s): ⛔ the FIRST start of Firefox in a cold
     #    box does not fit in it, and the test gave **RED TO BOTH**
     #    tenants, with the cure and without.
     #    ⚠ I.e. the bench gave red for the wrong reason — and with a red
@@ -599,19 +599,19 @@ def rende_la_pagina_da_solo(chi, a, fuori):
     #    ⚠ The bench read it as «the browser did not draw» — i.e. ⛔ **the
     #      bench gave red to itself and attributed it to the product**.
     #    ⇒ It takes the screenshot in its own home, and root carries it out afterwards.
-    suo = "/home/%s/.c8-scatto.png" % chi
-    sh("rm -f %s" % suo)
+    its = "/home/%s/.c8-scatto.png" % chi
+    sh("rm -f %s" % its)
     r = sh("runuser -u %s -- env HOME=/home/%s MOZ_HEADLESS=1 "
            "timeout %d %s --headless --screenshot %s file://%s"
-           % (chi, chi, int(a.attesa_scatto), a.browser, suo, a.pagina),
-           secondi=int(a.attesa_scatto) + 30)
-    coda = ((r.stdout or "") + (r.stderr or "")).strip()
-    if os.path.exists(suo) and os.path.getsize(suo):
-        sh("cp -f %s %s" % (suo, fuori))
-    return fuori if os.path.exists(fuori) and os.path.getsize(fuori) else None, coda[-200:]
+           % (chi, chi, int(a.wait_shot), a.browser, its, a.page_v),
+           seconds=int(a.wait_shot) + 30)
+    queue = ((r.stdout or "") + (r.stderr or "")).strip()
+    if os.path.exists(its) and os.path.getsize(its):
+        sh("cp -f %s %s" % (its, outside))
+    return outside if os.path.exists(outside) and os.path.getsize(outside) else None, queue[-200:]
 
 
-def apri_il_browser(chi, a):
+def open_browser(chi, a):
     """Switches on the browser INSIDE the tenant's session.
 
     ⛔ The Wayland socket is SEARCHED for, not guessed: the name depends on how
@@ -628,7 +628,7 @@ def apri_il_browser(chi, a):
     if not display:
         return None, ("in %s there is no wayland socket: the session does not have "
                       "a compositor the browser can talk to" % rtd)
-    comando = (
+    command = (
         # ⛔ `setsid` + stdin closed: without it, the browser ends up in a BACKGROUND
         #    process group of the terminal that launched the net and the first
         #    `tcsetattr` gets it a SIGTTOU ⇒ it stays in state `T` from the first
@@ -636,68 +636,68 @@ def apri_il_browser(chi, a):
         "setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
         "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
         "%s --kiosk file://%s < /dev/null > /tmp/c8-%s.log 2>&1 &"
-        % (chi, rtd, display, chi, a.browser, a.pagina, chi))
-    sh(comando, secondi=30)
+        % (chi, rtd, display, chi, a.browser, a.page_v, chi))
+    sh(command, seconds=30)
     return display, None
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--utente-base", default="c8u")
-    p.add_argument("--quanti", type=int, default=2,
+    p.add_argument("--base-user", default="c8u")
+    p.add_argument("--how_many", type=int, default=2,
                    help="⛔ TWO, and not ten: the question is correctness with "
                         "several tenants, not capacity (D2 corrected)")
-    p.add_argument("--parola", default="provanic2026")
-    p.add_argument("--porta", type=int, default=8511)
-    p.add_argument("--indirizzo", default="127.0.0.1")
-    p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
-    p.add_argument("--pagina", default="/opt/remotix/11-c8-pagina.html")
+    p.add_argument("--password", default="provanic2026")
+    p.add_argument("--port", type=int, default=8511)
+    p.add_argument("--address", default="127.0.0.1")
+    p.add_argument("--client", default="/opt/remotix/01-b3-cliente.py")
+    p.add_argument("--page_v", default="/opt/remotix/11-c8-pagina.html")
     p.add_argument("--browser", default="firefox-esr")
-    p.add_argument("--lavoro", default="/var/lib/rete11/c8")
-    p.add_argument("--resta-prima", type=float, default=25.0,
+    p.add_argument("--work", default="/var/lib/rete11/c8")
+    p.add_argument("--stay-before", type=float, default=25.0,
                    help="how long to stay attached for the first screenshot: the stage "
                         "is born in ~13 s, and a short deadline would give «I do not know»")
-    p.add_argument("--resta-dopo", type=float, default=10.0)
-    p.add_argument("--attesa-browser", type=float, default=25.0,
+    p.add_argument("--stay-after", type=float, default=10.0)
+    p.add_argument("--wait-browser", type=float, default=25.0,
                    help="how long the browser is given to draw the page")
-    p.add_argument("--senza-cura", action="store_true",
+    p.add_argument("--no-fix", action="store_true",
                    help="⛔ THE GRAFTED FAULT: the provisioning cure is not "
                         "applied. The second tenant MUST give red")
-    p.add_argument("--attesa-scatto", type=float, default=120.0,
+    p.add_argument("--wait-shot", type=float, default=120.0,
                    help="how long test A is given. ⛔ Wide on purpose: the FIRST "
                         "start of Firefox in a cold box exceeds 25 s, and "
                         "a tight ceiling gives a red that is not the product's")
-    p.add_argument("--senza-sessione", action="store_true",
+    p.add_argument("--no-session", action="store_true",
                    help="skips test B (the page seen FROM THE CLIENT). ⚠ To be "
                         "used when it is already known that sessions are born blind: "
                         "it saves two minutes and changes no judgement")
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica())
+    if a.certify:
+        sys.exit(certify())
 
     if os.geteuid() != 0:
         print("⛔ it must be run as administrator: it has to create two tenants")
         sys.exit(2)
 
     # ── the terrain, and the three things without which we do not judge ────
-    giudice = giudice_immagini()
-    if giudice is None:
+    assessor = image_judge()
+    if assessor is None:
         print("⛔ I cannot find the image judge (10-f1-testimone.py) next to me")
         print("   ⇒ I could not look")
         sys.exit(3)
-    if not os.path.exists(a.pagina):
-        print("⛔ I cannot find the target page: %s" % a.pagina)
+    if not os.path.exists(a.page_v):
+        print("⛔ I cannot find the target page: %s" % a.page_v)
         print("   ⇒ I could not look")
         sys.exit(3)
     # ⚠ The test client serves ONLY test B.  ⭐ And this is the reason
     #   why test A runs in ANY box, even in one where the
     #   product is not even there: it does not look through the product.
-    if not a.senza_sessione and not os.path.exists(a.cliente):
-        print("⛔ I cannot find the test client: %s" % a.cliente)
-        print("   ⇒ I could not look (⚠ with --senza-sessione it would not be needed)")
+    if not a.no_session and not os.path.exists(a.client):
+        print("⛔ I cannot find the test client: %s" % a.client)
+        print("   ⇒ I could not look (⚠ with --no-session it would not be needed)")
         sys.exit(3)
     if sh("command -v %s" % a.browser).returncode != 0:
         print("⛔ the box does not have %s: I cannot ask anyone to "
@@ -710,22 +710,22 @@ def main():
         print("   ⇒ I could not look")
         sys.exit(3)
 
-    os.makedirs(a.lavoro, exist_ok=True)
-    dove = prepara_lo_scheletro()
-    resto = sgombra_il_posto_condiviso(a.utente_base)
+    os.makedirs(a.work, exist_ok=True)
+    dove = prepare_skeleton()
+    rest = clear_out_slot_shared(a.base_user)
 
     print("== C8 — the second user opens the browser ==")
     print("   %d tenants · port %d · page %s"
-          % (a.quanti, a.porta, os.path.basename(a.pagina)))
+          % (a.how_many, a.port, os.path.basename(a.page_v)))
     print("   terrain: /etc/skel/.cache -> %s  (the configuration of the "
           "real machine)" % (dove or "⛔ I COULD NOT PUT IT THERE"))
     print("   provisioning cure: %s"
           % ("⛔ NOT APPLIED (grafted fault: the second MUST give red)"
-             if a.senza_cura else "applied, as src/provisiona.sh"))
+             if a.no_fix else "applied, as src/provisiona.sh"))
     print("   yardstick: colour %s ±%d, at least %.0f%% of the screen"
-          % (COLORE, TOLLERANZA, FRAZIONE_MINIMA * 100))
-    if resto:
-        print("   %s" % resto)
+          % (COLOR, TOLERANCE, MINIMUM_FRACTION * 100))
+    if rest:
+        print("   %s" % rest)
     print()
     if not dove:
         print("⛔ I could not prepare the skeleton: the terrain does not hold")
@@ -750,127 +750,127 @@ def main():
     # ⭐ And the mesh's outcome is decided by **A**.  ⚠ B can make it worse — if
     #   it reaches a judgement and that judgement is red — ⛔ never better.
     # ═══════════════════════════════════════════════════════════════════════
-    esiti = []
-    for n in range(1, a.quanti + 1):
-        chi = "%s%d" % (a.utente_base, n)
-        fatto, perche = crea(chi, a.parola)
-        if not fatto:
-            print("  %-6s  ?   I could not create it: %s" % (chi, perche))
-            esiti.append({"chi": chi, "a": None, "b": None})
+    outcomes = []
+    for n in range(1, a.how_many + 1):
+        chi = "%s%d" % (a.base_user, n)
+        finished, reason_text = create(chi, a.password)
+        if not finished:
+            print("  %-6s  ?   I could not create it: %s" % (chi, reason_text))
+            outcomes.append({"chi": chi, "a": None, "b": None})
             continue
-        if not a.senza_cura:
-            applica_la_cura(chi)
-        scrive = sa_scrivere_nella_cache(chi)
+        if not a.no_fix:
+            apply_fix(chi)
+        writes = can_write_cache(chi)
 
         # ── TEST A ─────────────────────────────────────────────────────────
-        pa = os.path.join(a.lavoro, "%s-A.png" % chi)
-        png_a, detto = rende_la_pagina_da_solo(chi, a, pa)
-        fra = frazione_del_colore(png_a) if png_a else None
+        pa = os.path.join(a.work, "%s-A.png" % chi)
+        png_a, said = renders_page_alone(chi, a, pa)
+        between = color_fraction(png_a) if png_a else None
         # ⛔ «the profile is there» is not enough: with the link to `/tmp` that
         #    folder is SHARED, and the second tenant would see in it the
         #    profile of the FIRST.  ⇒ We look at WHOSE it is.
         prof = sh("ls -d /home/%s/.cache/mozilla/firefox/*/ 2>/dev/null | head -1"
                   % chi).stdout.strip()
-        padrone = sh("stat -c %%U /home/%s/.cache/mozilla 2>/dev/null" % chi).stdout.strip()
+        owner = sh("stat -c %%U /home/%s/.cache/mozilla 2>/dev/null" % chi).stdout.strip()
         if not prof:
-            profilo = "⛔ NEVER BORN"
-        elif padrone and padrone != chi:
-            profilo = "⛔ it belongs to «%s»" % padrone
+            profile_v = "⛔ NEVER BORN"
+        elif owner and owner != chi:
+            profile_v = "⛔ it belongs to «%s»" % owner
         else:
-            profilo = "its own"
-        if fra is None:
+            profile_v = "its own"
+        if between is None:
             vista_a = False
-            comeche = ("⛔ the browser did not even produce an image"
+            anyhow = ("⛔ the browser did not even produce an image"
                        if png_a is None else "⛔ the image could not be read")
         else:
-            vista_a = fra >= FRAZIONE_MINIMA
-            comeche = "the page covers %.1f%% of the image" % (fra * 100)
+            vista_a = between >= MINIMUM_FRACTION
+            anyhow = "the page covers %.1f%% of the image" % (between * 100)
         print("  %-6s  A  %-3s  %-42s  (profile: %s · can write in "
               "~/.cache/mozilla: %s)"
-              % (chi, "YES" if vista_a else "NO", comeche, profilo,
-                 "yes" if scrive else "⛔ NO"))
-        if not vista_a and detto:
+              % (chi, "YES" if vista_a else "NO", anyhow, profile_v,
+                 "yes" if writes else "⛔ NO"))
+        if not vista_a and said:
             # ⭐ The reason next to the symptom: «it did not draw» alone
             #   hides three different faults, and the browser says its own.
-            print("            ⛔ it says: %s" % detto.replace("\n", " ")[:160])
+            print("            ⛔ it says: %s" % said.replace("\n", " ")[:160])
 
         # ── TEST B ─────────────────────────────────────────────────────────
         vista_b = None
-        motivo_b = ""
-        if a.senza_sessione:
-            motivo_b = "not asked for (--senza-sessione)"
+        reason_b = ""
+        if a.no_session:
+            reason_b = "not asked for (--no-session)"
         else:
-            png1 = os.path.join(a.lavoro, "%s-B-prima.png" % chi)
-            p1, f1, err1 = scatta(chi, a.parola, png1, a, a.resta_prima)
-            g1 = giudice.giudica(p1) if p1 else None
+            png1 = os.path.join(a.work, "%s-B-prima.png" % chi)
+            p1, f1, err1 = fires(chi, a.password, png1, a, a.stay_before)
+            g1 = assessor.judge(p1) if p1 else None
             if g1 is None:
-                motivo_b = ("⛔ I could not look at the desktop BEFORE: %s"
+                reason_b = ("⛔ I could not look at the desktop BEFORE: %s"
                             % (err1 or "unreadable image"))
-            elif g1["verdetto"] in ("nero", "quasi-nero"):
-                motivo_b = ("⛔ the desktop is «%s» BEFORE the browser: it is the "
-                            "defect of phase 10 §7.4, not C8" % g1["verdetto"])
+            elif g1["verdict"] in ("nero", "quasi-nero"):
+                reason_b = ("⛔ the desktop is «%s» BEFORE the browser: it is the "
+                            "defect of phase 10 §7.4, not C8" % g1["verdict"])
             else:
-                display, err = apri_il_browser(chi, a)
+                display, err = open_browser(chi, a)
                 if display is None:
-                    motivo_b = "⛔ I could not switch on the browser: %s" % err
+                    reason_b = "⛔ I could not switch on the browser: %s" % err
                 else:
-                    time.sleep(a.attesa_browser)
-                    png2 = os.path.join(a.lavoro, "%s-B-dopo.png" % chi)
-                    p2, f2, err2 = scatta(chi, a.parola, png2, a, a.resta_dopo)
-                    frb = frazione_del_colore(p2) if p2 else None
+                    time.sleep(a.wait_browser)
+                    png2 = os.path.join(a.work, "%s-B-dopo.png" % chi)
+                    p2, f2, err2 = fires(chi, a.password, png2, a, a.stay_after)
+                    frb = color_fraction(p2) if p2 else None
                     if frb is None:
-                        motivo_b = ("⛔ I could not look at the desktop AFTER: %s"
+                        reason_b = ("⛔ I could not look at the desktop AFTER: %s"
                                     % (err2 or "unreadable image"))
                     else:
-                        vista_b = frb >= FRAZIONE_MINIMA
-                        motivo_b = ("the page covers %.1f%% of the screen "
+                        vista_b = frb >= MINIMUM_FRACTION
+                        reason_b = ("the page covers %.1f%% of the screen "
                                     "(desktop before: %s · frames %s/%s)"
-                                    % (frb * 100, g1["verdetto"], f1, f2))
+                                    % (frb * 100, g1["verdict"], f1, f2))
         print("  %-6s  B  %-3s  %s"
               % (chi, "YES" if vista_b else ("NO" if vista_b is False else "?"),
-                 motivo_b))
+                 reason_b))
 
-        esiti.append({"chi": chi, "a": vista_a, "b": vista_b})
+        outcomes.append({"chi": chi, "a": vista_a, "b": vista_b})
         sh("pkill -KILL -u %s 2>/dev/null; loginctl terminate-user %s 2>/dev/null"
            % (chi, chi))
         time.sleep(1.5)
 
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    ra = sum(1 for e in esiti if e["a"] is True)
-    fa = sum(1 for e in esiti if e["a"] is False)
-    ia = sum(1 for e in esiti if e["a"] is None)
-    rb = sum(1 for e in esiti if e["b"] is True)
-    fb = sum(1 for e in esiti if e["b"] is False)
-    ib = sum(1 for e in esiti if e["b"] is None)
+    ra = sum(1 for e in outcomes if e["a"] is True)
+    fa = sum(1 for e in outcomes if e["a"] is False)
+    ia = sum(1 for e in outcomes if e["a"] is None)
+    rb = sum(1 for e in outcomes if e["b"] is True)
+    fb = sum(1 for e in outcomes if e["b"] is False)
+    ib = sum(1 for e in outcomes if e["b"] is None)
     # ⛔ `11-c14-…py` reads the «A · …» line with a regular expression
-    #    (`RIGA_A`), and its certification quotes the «B · …» one.  ⇒ They
+    #    (`LINE_A`), and its certification quotes the «B · …» one.  ⇒ They
     #    change together with C14, never one without the other.
     print("  A · the browser renders the page      : %d yes · ⛔ %d no · %d not judged"
           % (ra, fa, ia))
     print("  B · and the page shows FROM THE CLIENT: %d yes · ⛔ %d no · %d not judged"
           % (rb, fb, ib))
 
-    if a.senza_cura:
+    if a.no_fix:
         # ⛔ With the grafted fault the outcome is READ BACKWARDS: here green is
         #    a red.  ⭐ A net that can no longer give red has
         #    exactly the look of a net that finds nothing (C13).
         print()
         if fa + fb >= 1:
             print("⭐ THE GRAFTED FAULT WAS SEEN: %d tenants out of %d did not "
-                  "open the browser.  ⇒ this mesh CAN say red" % (fa, len(esiti)))
+                  "open the browser.  ⇒ this mesh CAN say red" % (fa, len(outcomes)))
             # ⛔ And it is also said WHO: if the FIRST had given red, the test
             #    would be measuring something else (for example a leftover of the
             #    previous round), and the acceptance test would not count.
-            primi = [e["chi"] for e in esiti if e["a"] is False]
-            print("   ⇒ they did not make it: %s" % ", ".join(primi))
-            if esiti and esiti[0]["a"] is False:
+            first = [e["chi"] for e in outcomes if e["a"] is False]
+            print("   ⇒ they did not make it: %s" % ", ".join(first))
+            if outcomes and outcomes[0]["a"] is False:
                 print("   ⚠ ⛔ BUT THE FIRST FAILED TOO: the expected fault bites from the "
                       "SECOND on.  ⇒ either the shared place was already dirty, or "
                       "what is being measured is not the defect of §4.6-undecies")
                 return 1
             return 0
-        if ia + (ib if not a.senza_sessione else 0) and not (ra or rb):
+        if ia + (ib if not a.no_session else 0) and not (ra or rb):
             print("⛔ I could not judge: I cannot say whether the fault "
                   "would have been seen")
             return 3
@@ -882,13 +882,13 @@ def main():
 
     if fa or fb:
         print("⛔ RED: %d tenants out of %d did not open the browser"
-              % (fa + fb, len(esiti)))
+              % (fa + fb, len(outcomes)))
         return 1
     if ia:
-        print("⛔ I could not look at %d tenants out of %d in test A" % (ia, len(esiti)))
+        print("⛔ I could not look at %d tenants out of %d in test A" % (ia, len(outcomes)))
         return 3
     print("⭐ all %d tenants opened the browser and the page is seen"
-          % len(esiti))
+          % len(outcomes))
     if ib:
         print("⚠ and test B (the page seen FROM THE CLIENT) could not "
               "judge %d of them: the why is written above, and ⛔ it is not a green"

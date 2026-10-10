@@ -423,7 +423,7 @@ conversion in GPU `[R]`. It is also the only one that works on all three engines
 | ⭐ paint **inside the decoder callback**, not on `requestAnimationFrame` | ✅ **it holds, and it is the half that counts** |
 | ⭐ **decoding** off the main thread | ✅ **IT COUNTS, and it is measured**: `[M]` **−3.44 ms** (7.17 → 3.73) |
 | ⛔ the **canvas** off the main thread | ⛔⛔ **IT SINKS THE BILL**: `[M]` **+17.6 ms** on drawing, plus **+10.2** on stream delivery |
-| the **desynchronized** 2D canvas | ⚠ **it was never switched on in the product**: `src/pagina.html` has `desynchronized` **off** `[R]`, and the road to switch it on (`?tela=desincronizzata`) **does not exist** — it is not a switch turned off, it is a switch that isn't there. ⇒ It is not a rejected prescription: it is a prescription **never carried out**, and the gain remains `[?]` |
+| the **desynchronized** 2D canvas | ⚠ **it was never switched on in the product**: `src/pagina.html` has `desynchronized` **off** `[R]`, and the road to switch it on (`?canvas_size=desynchronized`) **does not exist** — it is not a switch turned off, it is a switch that isn't there. ⇒ It is not a rejected prescription: it is a prescription **never carried out**, and the gain remains `[?]` |
 
 > #### ⛔⛔ The worker: implemented, measured — and **wrong BY HALF, not entirely**
 >
@@ -489,7 +489,7 @@ conversion in GPU `[R]`. It is also the only one that works on all three engines
 > ⇒ ⭐ **The code stays in the tree behind `#video=worker`, OFF**, precisely so that on the day of the
 > real GPU the number is redone without rewriting anything (`DECISIONI.md` §2.8).
 > ⚠ **And the switch reads the FRAGMENT, not the query string**, and it is a consequence of a
-> defect: `?video=worker` gets **404** (`src/pagina.c` · `servi()`). The syntax with `?` will become valid again
+> defect: `?video=worker` gets **404** (`src/pagina.c` · `serve()`). The syntax with `?` will become valid again
 > when that defect is cured.
 
 ⚠ *The line «e impone la forma della pagina: il video vive nel worker, l'input nel thread
@@ -658,7 +658,7 @@ Trixie. It is the eighth study of the project, and it closes the round of the fo
 > ⭐ **The result is that this study finds more defects of ours than the other three
 > put together** — and all on the desktop we considered finished.
 
-> **The marks:** **[R]** read in the code, with `file:riga` — it is not a measurement · **[R-pkg]** read in the
+> **The marks:** **[R]** read in the code, with `file:row` — it is not a measurement · **[R-pkg]** read in the
 > Debian package · **[M]** measured · **[?]** deduced · **[✗]** verified absent, with positive
 > control · **`[≠]`** ⚠ **the code contradicts one of our documents**.
 >
@@ -674,7 +674,7 @@ Trixie. It is the eighth study of the project, and it closes the round of the fo
 
 | # | | |
 |---|---|---|
-| 1 | **the drop-in of the Shell's unit** | `scrivi_dropin()` is called **only** `if (tipo == COMPOSITORE_KWIN)` (`src/sessione.c` · `scrivi_dropin()`). On GNOME the Shell starts with a bare `ExecStart=/usr/bin/gnome-shell`, **without `--headless`** |
+| 1 | **the drop-in of the Shell's unit** | `write_dropin()` is called **only** `if (kind == COMPOSITORE_KWIN)` (`src/sessione.c` · `write_dropin()`). On GNOME the Shell starts with a bare `ExecStart=/usr/bin/gnome-shell`, **without `--headless`** |
 | 2 | **power inhibition** | `energia_inibisci()` **returns NULL** on Mutter (`src/energia.c:112-113`) |
 | 3 | **the lock screen** | zero keys, zero recovery |
 | 4 | **the dangerous entries** | no lockdown — on KDE the user had asked for it and had got it |
@@ -1020,8 +1020,8 @@ what a grid produces and a beating does not. ⭐ **This cell is clean** — it i
 **works**: negotiating high (monitor 120) and renegotiating only the cadence (brake 90) brings GNOME to
 **61.4**, that is as much as KWin. It cost three cells and **zero product lines**, as expected.
 
-⛔⛔ **But the product today cannot ask for it, and it must be written here**: `MOVIMENTO_FPS 60` is a
-compile-time constant (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` has no cadence option, and **`RecordVirtual`
+⛔⛔ **But the product today cannot ask for it, and it must be written here**: `MOTION_FPS 60` is a
+compile-time constant (`src/figlio.c` · `MOTION_FPS`), `main.c` has no cadence option, and **`RecordVirtual`
 does not take the frequency** (`src/mutter.h` · the note on `RecordVirtual`) — the four virtual monitors are all
 **1920×1080@60**. ⇒ The result is `[M]` **on the bench** and **zero in production**.
 
@@ -1262,7 +1262,7 @@ Every statement carries a mark, as in `REFERENCE.md`:
 
 | Mark | Meaning |
 |---|---|
-| **[R]** | **read in the code**, with `file:riga`. It is the bulk of this document |
+| **[R]** | **read in the code**, with `file:row`. It is the bulk of this document |
 | **[M]** | measured by us, in the field, with a date |
 | **[?]** | **not decided by the code**: must be measured on the bench. The `[?]` are listed in §14 |
 | **[✗]** | **searched for and not found**: a negative statement, worth as much as a positive one |
@@ -1388,7 +1388,7 @@ must be closed and remade (§8).
 >
 > ✅ **Measured**: `XCURSOR_THEME=remotix-invisibile`, `XCURSOR_SIZE=24` and `XCURSOR_PATH` present
 > in `kwin_wayland`'s environment (read from `/proc/<pid>/environ` with `sudo`, §of the non-dumpable
-> binary), **68 shapes written**, file `Xcur v1.0 1×1 alfa 0` of 68 bytes, and **no
+> binary), **68 shapes written**, file `Xcur v1.0 1×1 alpha_ch 0` of 68 bytes, and **no
 > «Failed to load cursor theme» line** in the compositor unit's journal.
 >
 > ⛔ **The theme must really load.** If `CursorTheme` turns out empty KWin **falls back to the default
@@ -1714,7 +1714,7 @@ DMA-BUF with a single modifier (after fixation), DMA-BUF with the whole list
 |---|---|---|
 | pixel format | 11 DRM↔SPA mappings; for output and region the DMA-BUF format is **always `DRM_FORMAT_ARGB8888`** | and for BGRA/RGBA KWin also announces the variant without alpha: **`BGRx` is negotiable**, and it is what RDP needs (`:775-783`) |
 | `VIDEO_size` | single rectangle of the current size | `resize()` updates it in-band (§8.3) |
-| **`VIDEO_framerate`** | **`SPA_FRACTION(0,1)` fixed** | ⛔ whoever proposes a different **fixed** rate finds no intersection: the same shape as Mutter's dead end, and our bench's `--fissa` option **is unusable on KWin** |
+| **`VIDEO_framerate`** | **`SPA_FRACTION(0,1)` fixed** | ⛔ whoever proposes a different **fixed** rate finds no intersection: the same shape as Mutter's dead end, and our bench's `--fixed` option **is unusable on KWin** |
 | `VIDEO_maxFramerate` | `RANGE(default = refreshRate/1000, 1/1, refreshRate)` | **it is the server-side brake**: KWin coalesces the damage and blits at that rate (`:507-516`) |
 | buffers | **`RANGE(3, 2, 4)`** | the consumer can narrow, not widen. Our bench asks for `RANGE(4,2,8)`: they intersect on 2..4 |
 | data type | `1 << SPA_DATA_DmaBuf` **or** `1 << SPA_DATA_MemFd` | never a union; **`MemPtr` is never offered**: the consumer does the `mmap` |
@@ -1733,7 +1733,7 @@ time.
 | Meta | Size |
 |---|---|
 | `SPA_META_Header` | `sizeof(spa_meta_header)` |
-| `SPA_META_VideoDamage` | `RANGE(16 regioni, 1, 16)` |
+| `SPA_META_VideoDamage` | `RANGE(16 regions, 1, 16)` |
 | `SPA_META_Cursor` | bitmap up to **256×256** |
 | `SPA_META_SyncTimeline` | **only with DMA-BUF** |
 
@@ -1916,7 +1916,7 @@ DRM devices with `drmGetDevices2()` and opens a **render node** (`DRM_NODE_RENDE
 `EGL_PLATFORM_GBM_KHR`), with a swapchain of gbm buffers.
 
 And the proof is **in our own table**: `banco/tabella-altri.txt` reports for KWin
-`tipo=DMA-BUF`, `fence=1010`, 59.50 fps. But a screencast stream **can be DMA-BUF only if the
+`kind=DMA-BUF`, `fence=1010`, 59.50 fps. But a screencast stream **can be DMA-BUF only if the
 compositor is an `AbstractEglBackend`** (`screencaststream.cpp:920-925`, and `:154-155` for the choice
 of buffer type). That is: **in that measurement KWin was already compositing on the GPU.**
 
@@ -1974,7 +1974,7 @@ The only causes of a `findRenderDevice() == nullptr`, from the code: no `/dev/dr
 > and dies with `Aborted`.)
 >
 > 🟡 **What does remain open is the buffer type (M3d).** The stream negotiated on the bench is
-> `1280x720 BGRx, modificatore 0x0, memoria` — i.e. **MemFd**, not DMA-BUF. But this does **not**
+> `1280x720 BGRx, modifier 0x0, mem_buf` — i.e. **MemFd**, not DMA-BUF. But this does **not**
 > contradict the verdict: it is *our* client that does not offer DMA-BUF (zero-copy has been postponed
 > since phase 9). The criterion of §5.3 point 1 holds only the other way round: if the client offers
 > DMA-BUF and KWin denies it, then KWin is in QPainter. To be redone when the client can offer it.
@@ -2342,7 +2342,7 @@ ICE, it requires `libSM`/`libICE` and a `DISPLAY`, and `org.kde.KSMServerInterfa
 ⛔ **And the orderly path can cancel itself.** `KWin::SessionManager::closeWaylandWindows()`
 (`kwin/src/sm.cpp:422-508`): after **10 s** it shows a persistent notification with *Cancel Logout* /
 *Log Out Anyway*, and if **nobody answers** it waits up to **2 minutes** before proceeding. In an
-unattended session nobody ever answers: the second half of our `sgombera` (§5.10 of
+unattended session nobody ever answers: the second half of our `clear_out` (§5.10 of
 `SPECIFICA.md`, `Logout(1)` and then `Logout(2)`) **must be redesigned on KDE** — the second step is
 `StopUnit`.
 
@@ -2557,7 +2557,7 @@ exists but its **only callers are the autotests**.
 > **[M] 8 August 2026.**
 >
 > **M7a — `stream_virtual_output` with `--virtual` does not work**, as the code reading said:
-> `KWin ha rifiutato: Could not find output`. Verified, and without surprises.
+> `KWin ha refused: Could not find output`. Verified, and without surprises.
 >
 > **M11 — the absurd sizes**: `0x0`, `-1x-1`, `1x1`, `16384x16384`, `99999x99999` → **all
 > refused with the same line** (`Could not find output`) and **KWin stays alive after all five**.
@@ -2789,7 +2789,7 @@ into `appunti_mutter.c` — the same shape as `compositore.c`.
 > Whoever owns the clipboard writes and closes. With short data the `poll` can return with **`POLLHUP` and
 > nothing else**: the bytes are in the pipe, but nobody has read them yet. The code looked only at `POLLIN` and
 > concluded «non ha risposto» — **immediately**, writing to the log a five-second timeout
-> *that had never elapsed*. The log said `entro 5000 ms` three seconds after the announcement, and that
+> *that had never elapsed*. The log said `within 5000 ms` three seconds after the announcement, and that
 > impossible number was the only clue.
 >
 > On reading, `POLLHUP` is an outcome (the following `read` will say zero); on writing it is not, there it means that
@@ -3070,15 +3070,15 @@ in order of how hard they would bite us.*
 | **7** | **`queueDepth`/`SUSPEND_FRAME_ACKNOWLEDGEMENT` ignored** with the in-flight window active | `:677-692` (**also in master**) | **eternal block**: if the client says «non aspettare i miei riscontri» and we wait, nothing leaves any more. When it is suspended, **the window is disabled** |
 | **8** | **No recovery from lost acknowledgements** | same | `totalFramesDecoded` **as a floor**, and a timeout for pending frames |
 | **9** | **`close()` closed the channel *before* stopping the sending thread**; the destructor was **empty** | `:194-207`, `:143-145` | the right order is: **stop the streams → wait for the threads → drain the queues → destroy the surfaces → close the channel** |
-| **10** | **The cadence estimator with an always-false condition**: `(estimate.timeStamp - now) > periodo` with `timeStamp <= now`, i.e. a **negative** difference | `:427-433` | unbounded memory leak **and** an average computed over the whole session, which therefore no longer adapts to anything. ⭐ A defect that **no functional test finds**: the program works, it just no longer regulates |
+| **10** | **The cadence estimator with an always-false condition**: `(estimate.timeStamp - now) > period` with `timeStamp <= now`, i.e. a **negative** difference | `:427-433` | unbounded memory leak **and** an average computed over the whole session, which therefore no longer adapts to anything. ⭐ A defect that **no functional test finds**: the program works, it just no longer regulates |
 | **11** | **Bandwidth measurement opened and closed around *every* frame** | `:353`, `:416` | bandwidth measurement is a request/response round trip: doing it 60 times a second **turns it into noise** |
 | **12** | **`uint32` sequence number in a 16-bit field**: the RTT dies after **~76 minutes** and the request hash grows without limit | `NetworkDetection.cpp:69`, `:75`, `:244-252` | a **`uint16_t`** counter with explicit wraparound, and **expiry** of unanswered requests. ⚠ And it is a test that must be done **at 90 minutes**, not at five |
 | **13** | **Probe cadence hung on socket wake-ups**: with the desktop still the measurement **switches off** | `RdpConnection.cpp:563` | a real timer, or a wait with a **timeout** equal to the cadence |
 | **14** | **The wheel with `angleDelta/120`**, **integer** division | `PortalSession.cpp:161` | any step below a notch **is lost**. Confirms §7.2: use `ei_device_scroll_discrete(±120)` and pass the value almost as it is |
 
 > ⭐ **And the most instructive defect of all is in report 14 §2.2**: in 6.3.6 **the direction of
-> key press and release was inverted**. It is the same point that in our `input.c` · `manda_bottone()`
-> we verified to be right (`gboolean premuto = !(flags & KBD_FLAGS_RELEASE)`). A mature RDP
+> key press and release was inverted**. It is the same point that in our `input.c` · `send_button()`
+> we verified to be right (`gboolean pressed = !(flags & KBD_FLAGS_RELEASE)`). A mature RDP
 > server, inside KDE, shipped for one release a defect that shows at the first word typed:
 > **the test on the three clients is not bureaucracy.**
 
@@ -3226,7 +3226,7 @@ permission to ask.
    drag input along**.
 5. ✅ **Two of GNOME's debts do not show up**: the session-bus connection that does not
    survive logout (§6.6), and the defect of alternating screens with zero-copy (§4.6).
-6. ⚠ **`banco/misura-cattura.c` must be corrected before re-measuring on KWin**: `--fissa` cannot
+6. ⚠ **`banco/misura-cattura.c` must be corrected before re-measuring on KWin**: `--fixed` cannot
    negotiate (§4.5), and the cursor's `SPA_CHUNK_FLAG_CORRUPTED` buffers are counted as
    frames (§4.7).
 
@@ -3461,12 +3461,12 @@ at Debian Trixie's versions. It is the project's sixth study, after `protocollo-
 >
 > | | |
 > |---|---|
-> | **[R]** | read in the code, with `file:riga`. **It is not a measurement**: it says what the program *can* do, not what it *does* on our machine |
+> | **[R]** | read in the code, with `file:row`. **It is not a measurement**: it says what the program *can* do, not what it *does* on our machine |
 > | **[M]** | measured. Where present, it says on which machine and when |
 > | **[?]** | deduction or hypothesis. To be treated as an open question, not as a fact |
 > | **[✗]** | verified **absent**, saying how it was searched for and with which positive control |
 >
-> The detail with the `file:riga` references is in the **ten reports** in `reference-xfce/rapporti/`
+> The detail with the `file:row` references is in the **ten reports** in `reference-xfce/rapporti/`
 > (~9 000 lines). Here is what is needed to decide and to write.
 
 ---
@@ -3892,7 +3892,7 @@ for KWin but **against the wlroots protocol**: here we are in its home.
 
 **The three reservations, all ours and all small:**
 
-1. **[?] `kwin_display_apri`** (`appunti_wlr.c:441`): if it filters the socket by name, on labwc nothing
+1. **[?] `kwin_display_open`** (`appunti_wlr.c:441`): if it filters the socket by name, on labwc nothing
    opens. It is the only thing that can stop the file from working;
 2. **wlroots silently discards duplicate MIMEs** (`:47-54`) and our `tipi_uguali` fails on
    differing length: a duplicate in the client's list ⇒ guard skipped ⇒ **infinite loop**;
@@ -4078,15 +4078,15 @@ libxfce4ui. **KIOSK cannot remove the screen lock nor touch the panel.**
 
 ⭐ **The way to preset the panel**: `xfce4/panel/default.xml` looked up along `XDG_CONFIG_DIRS`
 (`migrate/main.c:36-37`, `:63-101`), applied **silently** if it is not the stock one. For the other
-channels the system defaults live in `/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/<canale>.xml`.
+channels the system defaults live in `/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/<channel>.xml`.
 
 #### 10.6 xfconf: the lock, and the write that succeeds without succeeding
 
 | | |
 |---|---|
-| **The lock is an XML attribute**, not a separate file | `locked="utente"` (or `unlocked=`) on `<channel>` or `<property>` (`xfconf/docs/spec/perchannel-xml.txt:44-53`). Allowed **only in system files**: in a user file it is a **parsing error** |
+| **The lock is an XML attribute**, not a separate file | `locked="username"` (or `unlocked=`) on `<channel>` or `<property>` (`xfconf/docs/spec/perchannel-xml.txt:44-53`). Allowed **only in system files**: in a user file it is a **parsing error** |
 | ⭐ **With the channel locked, the user's file is not even read** | (`xfconf-backend-perchannel-xml.c:1710`) — it is the strongest form, and it is the one we need |
-| ⛔ **Two traps of the lock** | **`locked="*"` locks nobody** (no wildcard: only `strcmp`), and **`@gruppo` looks only at `gr_mem[]`**, so it **ignores the primary group** — on Debian `@<nomeutente>` does not work. Write **the bare user name** |
+| ⛔ **Two traps of the lock** | **`locked="*"` locks nobody** (no wildcard: only `strcmp`), and **`@grp` looks only at `gr_mem[]`**, so it **ignores the primary group** — on Debian `@<nomeutente>` does not work. Write **the bare user name** |
 
 ⛔ **And the point that changes the way provisioning is written**: **a write to a locked property
 gives no error to the writer.** The daemon refuses with `XFCONF_ERROR_PERMISSION_DENIED`, but
@@ -4123,7 +4123,7 @@ process** — and the failure is **a modal window in the remote user's face**. O
 delete a file: **you restart the process**.
 
 ⚠ And `XDG_CURRENT_DESKTOP` must be **plain `XFCE`, upper case, with no suffixes**: for submenus garcon
-**does not split on `:`** (while for entries it does), so with `XFCE:qualcosa` the
+**does not split on `:`** (while for entries it does), so with `XFCE:something` the
 `OnlyShowIn=XFCE;` directories **disappear**. With the variable *empty* the filter switches off and you see **more**,
 not less.
 
@@ -4327,7 +4327,7 @@ Trixie versions. It is the project's seventh study, and the **fourth desktop** a
 >
 > | | |
 > |---|---|
-> | **[R]** | read in the code, with `file:riga`. **It is not a measurement** |
+> | **[R]** | read in the code, with `file:row`. **It is not a measurement** |
 > | **[R-pkg]** | read in the Debian package (`apt-cache`, `dpkg-deb -c`): it says what the distribution *ships*, which is a different thing from what the project *writes* |
 > | **[M]** | measured |
 > | **[?]** | deduction or hypothesis |
@@ -4571,7 +4571,7 @@ exclusive** across all of Trixie. It costs zero new lines — the registry conne
 |---|---|
 | **Capture** | `zwlr_screencopy` on labwc: §xfce §4 **in full** |
 | **Input** | `virtual-keyboard` + `virtual-pointer`: §xfce §7 **in full**, including the five traps |
-| **Clipboard** | ✅ **`appunti_wlr.c` as it is**, and the reservation of §xfce §8 **falls**: `kwin_display_apri` **does not filter the socket by name** (`src/kwin.c:451-484`) — it takes `WAYLAND_DISPLAY` and failing that tries `wayland-0`…`wayland-9` |
+| **Clipboard** | ✅ **`appunti_wlr.c` as it is**, and the reservation of §xfce §8 **falls**: `kwin_display_open` **does not filter the socket by name** (`src/kwin.c:451-484`) — it takes `WAYLAND_DISPLAY` and failing that tries `wayland-0`…`wayland-9` |
 | **Resizing** | `set_custom_mode`: **in full, and easier than on XFCE** (§7) |
 | **Audio** | the PipeWire path does not depend on the desktop |
 
@@ -4614,7 +4614,7 @@ theme of **`XCURSOR_THEME`**. ⇒ **a single lever covers compositor and Qt clie
 | | |
 |---|---|
 | `session.conf [Environment]` **is no use** | on Wayland labwc is the **parent**: `lxqt-session`'s variables arrive too late. And LXQt **deliberately removes** `XCURSOR_THEME` from there (`selectwnd.cpp:188-192`) |
-| `~/.icons/default/index.theme` | `lxqt-config-appearance` writes `Inherits=<tema>` into it, and it is **Xcursor's fallback**: if our 1×1 theme does not load, a visible cursor reappears from there |
+| `~/.icons/default/index.theme` | `lxqt-config-appearance` writes `Inherits=<theme>` into it, and it is **Xcursor's fallback**: if our 1×1 theme does not load, a visible cursor reappears from there |
 | Qt's fallback to the theme hint | outside labwc, Qt reads **only** `QPlatformTheme::MouseCursorTheme`, which `lxqt-qtplugin` takes from `session.conf [Mouse]` — with a **hard-wired `cursor_size` 16** that overrides `XCURSOR_SIZE`. ⇒ set **that key too**, which costs one line |
 
 ✅ And a difference in our favour compared with wlroots: if the theme fails **on the Qt side**, Qt does **not**
@@ -4769,7 +4769,7 @@ xfconf's `locked=`. ✅ On the other hand there is a `QFileSystemWatcher`: unlik
 >
 > | Who | What it says |
 > |---|---|
-> | `rapporti/03` | system defaults in **`/etc/xdg/lxqt/*.conf`** work: `QSettings("lxqt", modulo)` falls back key by key, **and it is the mechanism by which Debian customises LXQt** (`lxqt-branding-debian`) |
+> | `rapporti/03` | system defaults in **`/etc/xdg/lxqt/*.conf`** work: `QSettings("lxqt", module)` falls back key by key, **and it is the mechanism by which Debian customises LXQt** (`lxqt-branding-debian`) |
 > | `rapporti/04` and `rapporti/05` | the system path is **only one**, the one fixed when Qt was compiled, and the LXQt files are installed in **`/usr/share/lxqt/`** — so `XDG_CONFIG_DIRS` is needed, and the only safe way is an **ephemeral `XDG_CONFIG_HOME`** |
 >
 > **The two things can coexist** — `QSettings` reads `XDG_CONFIG_DIRS`, whose default is
@@ -5341,7 +5341,7 @@ stopped directly.
 
 **How it notices the session has ended**: the `closed` signal on Mutter's session
 (`on_remote_desktop_session_closed`). There is no registration with `gnome-session`: that is
-a REMOTIX invention (§5.9 of `SPECIFICA.md`, `uscita.rs`), and — given the timings measured there — it is
+a REMOTIX invention (§5.9 of `SPECIFICA.md`, `out_dir.rs`), and — given the timings measured there — it is
 a *better* invention, because Mutter's `closed` signal arrives when teardown has already started.
 
 The only point where `gnome-remote-desktop` talks to `gnome-session` is
@@ -5836,7 +5836,7 @@ the keymap from the session**, and for Unicode events it looks for which physica
 in the current layout, applying the level modifiers:
 
 ```c
-pick_keycode_for_keysym_in_current_group()   /* scorre keycode × livelli */
+pick_keycode_for_keysym_in_current_group()   /* scrolls keycode × levels */
 apply_level_modifiers()                      /* Shift per il livello 1, ISO_Level3_Shift per il 2 */
 ei_device_keyboard_key (evcode, state)
 evcode = xkb_keycode - 8                     /* XKB → evdev */
@@ -5877,7 +5877,7 @@ It is the elegant replacement for the D-Bus stream path that REMOTIX passes to
 
 ```c
 axis_value = flags & WheelRotationMask;        /* complemento a due se negativo */
-axis_step  = -axis_value / 120.0;              /* RDP conta 120 per scatto */
+axis_step  = -axis_value / 120.0;              /* RDP tally 120 per scatto */
 if (flags & PTR_FLAGS_WHEEL_NEGATIVE) axis_step = -axis_step;
 
 vertical:    axis (0,  axis_step * 10.0)
@@ -5999,7 +5999,7 @@ All in GSettings, under `org.gnome.desktop.remote-desktop`, with separate schema
 Daemon command-line options: `--headless`, `--system`, `--handover`, `--rdp-port`,
 `--vnc-port`, `--max-parallel-connections` (default **10**, `0` = unlimited).
 
-`grdctl` has the form `grdctl [--system|--headless] rdp <comando>`, with `set-credentials`,
+`grdctl` has the form `grdctl [--system|--headless] rdp <command>`, with `set-credentials`,
 `set-tls-cert`, `set-tls-key`, `enable`/`disable`, `enable-view-only`/`disable-view-only`,
 `set-auth-methods`, `set-kerberos-keytab`, `--show-credentials`.
 
@@ -6240,7 +6240,7 @@ says why — *«still scene: Mutter delivers only when something changes»*.
 
 | | |
 |---|---|
-| ⛔ **what we are missing** | in `RCP.md` **there is no message that asks for the image**. There is `RICHIEDI_CHIAVE` (§7.1), but it asks for a **keyframe** of what has already been captured: if nothing arrives from the compositor, it produces nothing |
+| ⛔ **what we are missing** | in `RCP.md` **there is no message that asks for the image**. There is `REQUEST_KEY` (§7.1), but it asks for a **keyframe** of what has already been captured: if nothing arrives from the compositor, it produces nothing |
 | ⚠ **and it is not copied literally** | Xpra's `buffer_refresh` is cheap because their server owns the X11 damage model. ⛔ On Wayland **Mutter cannot be ordered to repaint**: the equivalent lever is **restarting the stream**, which delivers a buffer — `[M]` that is how our `+325 ms` frame is born |
 | ⇒ ⭐ **what is inherited** | **the shape**: the client must be able to say «give me the screen now», and the server must have *a* way to obey. Who carries it out is our business |
 
@@ -6279,7 +6279,7 @@ the lock on they switch to movements (`e.movementX`).
 > saw.
 > ⭐ **And the reason it had been put there** — *«otherwise two are seen»* — is solved better
 > the other way, **with the piece we had built that same morning and were not using**:
-> `CURSORE_FORMA` (`RCP.md` §7.2).
+> `CURSOR_SHAPE` (`RCP.md` §7.2).
 >
 > ✅ **Adopted on 14 August 2026**: the browser's cursor wears the remote shape, the drawn
 > arrow gets out of the way in the classic manner, capture stays switchable by hand. The

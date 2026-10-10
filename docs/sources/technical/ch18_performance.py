@@ -1,4 +1,4 @@
-from build import c, code, note, p, rif, table, tip, ul, warn
+from build import c, code, note, p, ref, table, tip, ul, warn
 
 # Every number in this chapter comes from the phase 20 campaigns (7–10 Oct 2026), read from the files of
 # /media/REMOTIX/misure/fase16 and from banchi/16-stress/16-rapporto.py; fasi/20-le-prestazioni.md §8 holds
@@ -35,7 +35,7 @@ S1 = p("This chapter answers one question for whoever maintains REMOTIX: <b>how 
 
 # ── 2. The bench, the scene, the classes ─────────────────────────────────
 S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", described in "
-       + rif("Stress and capacity benches") + ". In short: real browsers on the server, one per user, each in its "
+       + ref("Stress and capacity benches") + ". In short: real browsers on the server, one per user, each in its "
        "own headless compositor, drive real desktops with input sent through the page; four fixed workloads rotate "
        "by user number; every session and every level is classified against frozen thresholds.", lead=True) + \
     table(["Workload", "Users", "What it does"], [
@@ -49,14 +49,14 @@ S2 = p("The bench is the stress harness of " + c("banchi/16-stress/") + ", descr
       "step one more session (user 99) logs in and runs the short functional check: a level where nobody else can "
       "get in is not a healthy level. If 4K breaks, the climb is redone at 3K, then 2K, then Full HD.") + \
     p("<b>Two numbers per climb</b>, both written by " + c("16-coda.sh") + " in the queue log:") + \
-    ul(["<b>true GREEN</b> (" + c("ultimo GREEN vero") + "): the highest level where <i>every</i> session is GREEN "
+    ul(["<b>true GREEN</b> (" + c("last GREEN real") + "): the highest level where <i>every</i> session is GREEN "
         "— the «optimal up to» of the public table;",
-        "<b>good</b> (" + c("buono") + "): the highest level the climb passed, admitting a non-significant DEGRADED "
+        "<b>good</b> (" + c("good") + "): the highest level the climb passed, admitting a non-significant DEGRADED "
         "(at most one session in four, inside the first half of its band) — the «holds up to»."]) + \
     p("A level is FAIL if one session is FAIL, which includes the short check. The thresholds (input → frame delay, "
       "frames skipped, longest freeze, video frames painted per second, audible sound, birth time, drops, memory "
-      "growth) are those of " + c("SOGLIE") + " in " + c("16-classifica.py") + ", approved on 25 Sep 2026 and "
-      "frozen; the table is in " + rif("Stress and capacity benches") + ".") + \
+      "growth) are those of " + c("THRESHOLDS") + " in " + c("16-classifica.py") + ", approved on 25 Sep 2026 and "
+      "frozen; the table is in " + ref("Stress and capacity benches") + ".") + \
     note("until 10 Oct 2026 the actor rebuilt the time of Firefox's keystrokes from the return of the Marionette "
          "chain; a held-back chain moved keys after their own echo and produced false freezes of ~1.1 s (the next "
          "cursor blink). The probe the actor injects now stamps every " + c("keydown") + " in the page clock, and "
@@ -81,7 +81,7 @@ AMD = table(["Desktop", "4K", "3K", "2K", "Full HD"], [
 ], "«TAB» — AMD Radeon RX 6800: users that hold, <b>REMOTIX</b> · xrdp, each as true GREEN / good")
 
 S3 = p("Each cell gives REMOTIX first, in bold, then xrdp; «—» means not even one user. The xrdp figures carry the "
-       "shared-memory note of " + rif("REMOTIX against xrdp") + ".", lead=True) + INTEL + AMD + \
+       "shared-memory note of " + ref("REMOTIX against xrdp") + ".", lead=True) + INTEL + AMD + \
     ul(["<b>15 is the bench's ceiling, not the Radeon's.</b> In the seven cells at 15 the 16-user level fails only "
         "because the 17th session, the short check, paints nothing within 90 s; the sixteen working users are all "
         "GREEN (for example " + c("amd-f20-fhd-xfce") + ", level 16 repeated: 16 GREEN, 1 FAIL — the check).",
@@ -119,13 +119,13 @@ S4 = p("At the first level that is not GREEN, " + c("16-rapporto.py") + " names 
     p("This is the physics of " + c("DECISIONI.md") + " §4.6-nonies, seen again on all four desktops: on the "
       "integrated card the neck is <b>composition</b>, upstream of REMOTIX, and its currency is the composed pixel. "
       "That is why the admission budget of " + c("src/budget.c") + " (" + c("SPECIFICHE.md") + " §5.5; "
-      + rif("The composition budget") + ") counts composed Mpixel/s and the delay of those already inside, and "
-      "refuses a newcomer with " + c("BUDGET_PIENO") + " rather than slowing everyone down. The campaigns ran with "
+      + ref("The composition budget") + ") counts composed Mpixel/s and the delay of those already inside, and "
+      "refuses a newcomer with " + c("BUDGET_FULL") + " rather than slowing everyone down. The campaigns ran with "
       "the budget <i>off</i> on purpose, to find the cliff; the product's default ceiling is 10 sessions ("
-      + c("--tetto-sessioni") + ").") + \
+      + c("--session-cap") + ").") + \
     tip("to switch the budget on for a machine like this one, take the composed Mpixel/s of the last true GREEN "
-        "level of the desktop and size you serve, and pass it to " + c("--budget-mpixel-s") + " as described in "
-        + rif("Configuring quality and capacity") + ". On the Radeon the encoder, not composition, is what fills "
+        "level of the desktop and size you needs, and pass it to " + c("--budget-mpixel-s") + " as described in "
+        + ref("Configuring quality and capacity") + ". On the Radeon the encoder, not composition, is what fills "
         "first: the budget then protects a resource it does not count directly, and the ceiling is the simpler "
         "lever.", "Using the numbers.")
 
@@ -197,7 +197,7 @@ S6 = p("What the numbers above do not say, and why.", lead=True) + \
         "the level is already FAIL.",
         "<b>Not comparable:</b> skipped frames, video-chain holes and audio exist only on the REMOTIX side; GPU "
         "engine readings are empty for xrdp; the delay is compared only as seen by the viewer.",
-        "<b>The 64 MiB wall</b> cuts xrdp's XFCE and LXQt cells (" + rif("REMOTIX against xrdp") + ").",
+        "<b>The 64 MiB wall</b> cuts xrdp's XFCE and LXQt cells (" + ref("REMOTIX against xrdp") + ").",
         "<b>The driver decides two cells</b>: on the Radeon at 4K, GNOME and KDE stop at RADV 25.0.7, not at REMOTIX."])
 
 # ── 7. Repeating the measurements ────────────────────────────────────────
@@ -210,8 +210,8 @@ sudo systemd-run --unit=r20-campagna --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue \\
      bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-f20 amd-f20
 
-# the same for xrdp: every climb gets --sistema xrdp, and the queue must never be the OOM victim
-sudo systemd-run --unit=r20-xrdp --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 -E REMOTIX_16_SISTEMA=xrdp \\
+# the same for xrdp: every climb gets --system_wide xrdp, and the queue must never be the OOM victim
+sudo systemd-run --unit=r20-xrdp --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 -E REMOTIX_16_SYSTEM=xrdp \\
      -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue -p OOMScoreAdjust=-900 \\
      bash /media/REMOTIX/src/controllo/banchi/16-stress/16-campagna.sh intel-x20 amd-x20
 
@@ -220,15 +220,15 @@ touch /media/REMOTIX/misure/fase16/FERMA
 sudo systemctl stop r20-campagna
 """, "bash", "Starting and stopping a campaign") + \
     table(["Step", "What to do", "Why"], [
-        ["Before", "Build the binary, copy it to " + c("rete11/prodotto") + " and write " + c("VERSIONE")
+        ["Before", "Build the binary, copy it to " + c("rete11/prodotto") + " and write " + c("VER")
          + " next to it (" + c("<commit> <md5 of 8>") + "); run the short regression suite of phase 15 on the four "
          "desktops; check the machine is empty (no tenants, no leftover compositors or browsers)",
          "a climb reads the product's commit from there; a red suite means nothing is measured"],
-        ["During", "Read " + c("coda-<label>.log") + ": one line per climb with «good», «break» and «true GREEN», "
+        ["During", "Read " + c("queue-<label>.log") + ": one line per climb with «good», «break» and «true GREEN», "
          "and the estimate of the hours left", "a stalled machine loses its root in RAM and the ssh key"],
-        ["After", c("16-rapporto.py --registro <register> --campagne intel-f20 amd-f20 --testo"),
+        ["After", c("16-rapporto.py --logbook <register> --campaigns intel-f20 amd-f20 --body_text"),
          "the matrix, the curve of every climb and the bottleneck at the first non-GREEN level"],
-        ["After", c("16-riclassifica.py --salita <climb>") + " for every climb measured before the keystroke cure",
+        ["After", c("16-riclassifica.py --climb <climb>") + " for every climb measured before the keystroke cure",
          "writes " + c("riclassificata.json") + " next to the data and exits 2 if the re-judgement is not the climb's own"],
     ], "«TAB» — A campaign, before, during and after") + \
     p("Results land in " + c("/media/REMOTIX/misure/fase16/<label>-<size>-<desktop>/") + ": " + c("salita.jsonl")
@@ -239,7 +239,7 @@ sudo systemctl stop r20-campagna
     note("the measurement folders are treated as read-only evidence. When an analysis has to write beside the "
          "data without touching it, build a shadow tree — a real directory per climb and per level, with symbolic "
          "links to every original file — and run " + c("16-riclassifica.py") + " on that: this is how the "
-         "re-judgement described in " + rif("The bench, the scene and the classes") + " was produced on 10 Oct 2026.",
+         "re-judgement described in " + ref("The bench, the scene and the classes") + " was produced on 10 Oct 2026.",
          "Read-only data.") + \
     p("A full matrix costs about 22 hours of machine on the Intel and 28 on the Radeon for REMOTIX, about 11 and 11 "
       "for xrdp (it breaks earlier). The phases that produced these figures are " + c("fasi/16-stress-e-capacita.md")

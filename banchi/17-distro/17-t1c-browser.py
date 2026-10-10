@@ -5,18 +5,18 @@
 a distribution VM and must SEE the desktop.
 
     (on the server, as nicfio, inside a headless labwc)
-    python3 17-t1c-browser.py --porta 7511 --utente prova --parola prova2026 \\
-        --evidenze /media/REMOTIX/vm17/t1c/esiti/debian13-gnome [--browser chrome]
+    python3 17-t1c-browser.py --port 7511 --username prova --password prova2026 \\
+        --evidence /media/REMOTIX/vm17/t1c/esiti/debian13-gnome [--browser chrome]
 
 ⭐ This is not the suite (fasi/15): the suite wants a BOX (podman exec, server
    log, c15* tenants).  Here the machine is a VM from `17-vm.sh`, and the
    test user is created by whoever installs by hand.  ⇒ ONLY the drivers and
-   the Prova of `12-client-veri.py` are reused (imported, not copied): open → enter →
-   primo_fotogramma, with the pixel judge (a black or single-colour canvas
+   the Test of `12-client-veri.py` are reused (imported, not copied): open → enter →
+   first_frame, with the pixel judge (a black or single-colour canvas
    is RED, not green: "a counter is not looking").
 
 ⚠ The certificate is accepted the way the user accepts it («Procedi» panel,
-  `GuidaCdp.vai`), no `--ignore-certificate-errors`.
+  `CdpDriver.go_to`), no `--ignore-certificate-errors`.
 ⚠ The window is Full HD (1920x1080): there is no GPU in the VM, encoding is
   in software, and the spec of this step is "low resolution".
 
@@ -31,8 +31,8 @@ import sys
 import time
 
 
-def carica(nome, file):
-    s = _iu.spec_from_file_location(nome, file)
+def load(label_name, file):
+    s = _iu.spec_from_file_location(label_name, file)
     m = _iu.module_from_spec(s)
     s.loader.exec_module(m)
     return m
@@ -40,101 +40,101 @@ def carica(nome, file):
 
 def main():
     a = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    a.add_argument("--porta", type=int, required=True, help="the port forwarded on the server")
+    a.add_argument("--port", type=int, required=True, help="the port forwarded on the server")
     a.add_argument("--host", default="localhost")
-    a.add_argument("--utente", default="prova")
-    a.add_argument("--parola", default=os.environ.get("REMOTIX_PAROLA", ""))
+    a.add_argument("--username", default="prova")
+    a.add_argument("--password", default=os.environ.get("REMOTIX_PASSWORD", ""))
     a.add_argument("--browser", choices=("chrome", "firefox"), default="chrome")
-    a.add_argument("--banchi", default=os.environ.get(
-        "REMOTIX_BANCHI", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")),
+    a.add_argument("--benches", default=os.environ.get(
+        "REMOTIX_BENCHES", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")),
         help="the folder that contains 12-client-veri.py")
-    a.add_argument("--evidenze", default="")
-    a.add_argument("--tetto-s", type=int, default=90,
+    a.add_argument("--evidence", default="")
+    a.add_argument("--cap-s", type=int, default=90,
                    help="cap for admission and for the first NON-degenerate frame")
-    a.add_argument("--finestra", default="1920x1080")
-    a.add_argument("--porte-base", type=int, default=3170)
+    a.add_argument("--win", default="1920x1080")
+    a.add_argument("--base-ports", type=int, default=3170)
     o = a.parse_args()
-    if not o.parola:
-        a.error("--parola is required (or REMOTIX_PAROLA)")
+    if not o.password:
+        a.error("--password is required (or REMOTIX_PASSWORD)")
 
-    VERI = carica("veri", os.path.join(o.banchi, "12-client-veri.py"))
-    VERI.FINESTRA[:] = [int(x) for x in o.finestra.split("x")]
-    o.url = "https://%s:%d/" % (o.host, o.porta)
-    o.visibile, o.salva, o.lascia_acceso = True, o.evidenze, False
-    if o.evidenze:
-        os.makedirs(o.evidenze, exist_ok=True)
+    REAL = load("genuine", os.path.join(o.benches, "12-client-veri.py"))
+    REAL.WINDOW[:] = [int(x) for x in o.win.split("x")]
+    o.url = "https://%s:%d/" % (o.host, o.port)
+    o.is_visible, o.store, o.leave_on = True, o.evidence, False
+    if o.evidence:
+        os.makedirs(o.evidence, exist_ok=True)
 
-    riga = {"url": o.url, "browser": o.browser, "utente": o.utente}
-    esito, codice = "BLOCKED", 3
+    row = {"url": o.url, "browser": o.browser, "username": o.username}
+    outcome, code_v = "BLOCKED", 3
     g = None
     t0 = time.time()
     try:
         try:
-            g = VERI.accendi_guida(o.browser, o)
+            g = REAL.turn_on_driver(o.browser, o)
         except Exception as e:                   # noqa: BLE001
-            riga["ragione"] = "the browser did not start: %s" % str(e)[:300]
+            row["rationale"] = "the browser did not start: %s" % str(e)[:300]
             raise StopIteration
-        riga["palco"] = g.palco()
-        pr = VERI.Prova(g, o, o.url, o.parola)
-        ok, m = pr.apri()
-        riga["apri"] = m
+        row["stage"] = g.stage()
+        pr = REAL.Test(g, o, o.url, o.password)
+        ok, m = pr.open_it()
+        row["open_it"] = m
         if not ok:
-            riga["ragione"] = "the page does not open: " + m
+            row["rationale"] = "the page does not open: " + m
             raise StopIteration
-        e, m, s = pr.entra(o.parola)
-        riga["entra"] = m
-        if e != VERI.VERDE:
-            esito, codice = "FAIL", 1
-            riga["ragione"] = "does not get in: " + m
-            riga["registro_pagina"] = ((s or {}).get("registro") or "")[-1500:]
+        e, m, s = pr.enter(o.password)
+        row["enter"] = m
+        if e != REAL.GREEN:
+            outcome, code_v = "FAIL", 1
+            row["rationale"] = "does not get in: " + m
+            row["registro_pagina"] = ((s or {}).get("logbook") or "")[-1500:]
             raise StopIteration
-        e, m, s = pr.primo_fotogramma()
-        riga["prima_immagine"] = m
-        riga["tela"] = (s or {}).get("tela")
+        e, m, s = pr.first_frame()
+        row["prima_immagine"] = m
+        row["canvas_size"] = (s or {}).get("canvas_size")
         # ⭐ the photo of the canvas at full resolution, for the reader's eye
         try:
-            r = g.js("const t=document.getElementById('schermo'); if(!t) return null;"
+            r = g.js("const t=document.getElementById('display_screen'); if(!t) return null;"
                      "const b=t.getBoundingClientRect();"
                      "return [b.left,b.top,b.width,b.height,t.width,t.height];")
-            riga["tela_px"] = r
-            if r and o.evidenze:
-                f = g.cdp.chiama("Page.captureScreenshot", format="png",
+            row["tela_px"] = r
+            if r and o.evidence:
+                f = g.cdp.call("Page.captureScreenshot", format="png",
                                  clip={"x": r[0], "y": r[1], "width": r[2],
                                        "height": r[3], "scale": 1})
-                p = os.path.join(o.evidenze, "desktop.png")
+                p = os.path.join(o.evidence, "desktop.png")
                 with open(p, "wb") as fh:
                     fh.write(base64.b64decode(f["data"]))
-                riga["foto"] = p
+                row["picture"] = p
         except Exception as ex:                  # noqa: BLE001
-            riga["foto"] = "not taken: %s" % str(ex)[:200]
-        if e == VERI.VERDE:
-            esito, codice = "PASS", 0
-            riga["ragione"] = "desktop seen: " + m
+            row["picture"] = "not taken: %s" % str(ex)[:200]
+        if e == REAL.GREEN:
+            outcome, code_v = "PASS", 0
+            row["rationale"] = "desktop seen: " + m
         else:
-            esito, codice = ("FAIL", 1) if e == VERI.ROSSO else ("BLOCKED", 3)
-            riga["ragione"] = "gets in, but the desktop is not visible: " + m
-            riga["registro_pagina"] = ((s or {}).get("registro") or "")[-1500:]
+            outcome, code_v = ("FAIL", 1) if e == REAL.RED else ("BLOCKED", 3)
+            row["rationale"] = "gets in, but the desktop is not visible: " + m
+            row["registro_pagina"] = ((s or {}).get("logbook") or "")[-1500:]
     except StopIteration:
         pass
     except Exception as ex:                      # noqa: BLE001
-        riga["ragione"] = "the bench crashed: %r" % ex
+        row["rationale"] = "the bench crashed: %r" % ex
     finally:
         if g is not None:
             try:
-                js, rete, _ = g.errori_fuori()
-                riga["errori"] = (js + rete)[:10]
+                js, net, _ = g.errors_out()
+                row["errors"] = (js + net)[:10]
             except Exception:                    # noqa: BLE001
                 pass
             try:
-                g.chiudi()
+                g.shut()
             except Exception:                    # noqa: BLE001
                 pass
-    riga.update(esito=esito, secondi=round(time.time() - t0, 1))
-    print("T1C " + json.dumps(riga, ensure_ascii=False), flush=True)
-    if o.evidenze:
-        with open(os.path.join(o.evidenze, "esito.json"), "w") as fh:
-            json.dump(riga, fh, ensure_ascii=False, indent=1)
-    return codice
+    row.update(outcome=outcome, seconds=round(time.time() - t0, 1))
+    print("T1C " + json.dumps(row, ensure_ascii=False), flush=True)
+    if o.evidence:
+        with open(os.path.join(o.evidence, "esito.json"), "w") as fh:
+            json.dump(row, fh, ensure_ascii=False, indent=1)
+    return code_v
 
 
 if __name__ == "__main__":

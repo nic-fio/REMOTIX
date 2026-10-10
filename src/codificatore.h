@@ -35,7 +35,7 @@
  *    capture to the GPU without passing through system memory) stays in
  *    phase 8.  Here the pixels are converted in software and UPLOADED to the
  *    GPU, and the cost of the upload is measured separately — see
- *    `us_caricamento` in `CodificatoreFotogramma`.
+ *    `upload_us` in `EncoderFrame`.
  *
  * ⭐⭐ **PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25): the card NO LONGER goes
  *      through libavcodec.**  `h264_vaapi` and `hevc_vaapi` remain the NAMES of
@@ -100,8 +100,8 @@
  *
  * ⛔ In practice, and in this file: **`AV_CODEC_FLAG_GLOBAL_HEADER` is never
  *    turned on** — and we do not trust ourselves not to have turned it on:
- *    `codificatore_nuovo()` **checks** that it is off after opening, and
- *    `codificatore_comprimi()` checks **on the bytes** that the parameter sets
+ *    `encoder_new()` **checks** that it is off after opening, and
+ *    `encoder_compress()` checks **on the bytes** that the parameter sets
  *    are in front of every keyframe.  It is the same ban v1 had already paid
  *    for (`fondamenta/remotix-c/src/codificatore.c:268-272`, *«on RDP the
  *    sequence parameters must travel IN the stream, in front of the IDR»*):
@@ -125,7 +125,7 @@
  *   fault **F2.3-A** that the bench reproduces.  `SPECIFICHE.md` §3.1 puts
  *   10 bits in the **desired**, and from this source it **cannot be reached**.
  *
- * ⛔ Hence `confessione.promozione_8_a_10`: the promotion **is declared**, and
+ * ⛔ Hence `confession.promotion_8_to_10`: the promotion **is declared**, and
  *    ends up in the log at the first encode.  `DECISIONI.md` §2.7 line 2 —
  *    *«a silent fallback remains forbidden even when the fault is not
  *    ours»*.  An encoder that kept quiet would produce two measurements under
@@ -152,7 +152,7 @@
  *      An option asked for and not applied looks the same as an option
  *      applied.
  *
- * ⇒ Hence the **two witnesses** of `codificatore_confessione()`, and the second
+ * ⇒ Hence the **two witnesses** of `encoder_confession()`, and the second
  *   does not depend on the first:
  *
  *     the context  what the encoder says it opened (component name, pixel
@@ -189,8 +189,8 @@
  *    options we passed it — and it is a witness that holds identically for
  *    both codecs.
  */
-#ifndef REMOTIX_CODIFICATORE_H
-#define REMOTIX_CODIFICATORE_H
+#ifndef REMOTIX_ENCODER_H
+#define REMOTIX_ENCODER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -198,8 +198,8 @@
 
 /* ⛔ The values are those of `RCP.md` §6.2, field `codec`: they are not converted. */
 typedef enum {
-	CODIFICATORE_HEVC = 1,
-	CODIFICATORE_AV1 = 2,
+	ENCODER_HEVC = 1,
+	ENCODER_AV1 = 2,
 	/* ⭐⭐ H.264 — came in on 20 Aug 2026, `DECISIONI.md` §1.13-ter.
 	 *
 	 * ⛔ And the number 3 IS ADDED, not reused: 2 stays AV1 forever,
@@ -211,7 +211,7 @@ typedef enum {
 	 * measurement says the rest: H.264 is the only codec in HARDWARE at both
 	 * ends — 3.11 ms on the server (the fastest of the four) and in hardware
 	 * on the tablet. */
-	CODIFICATORE_H264 = 3,
+	ENCODER_H264 = 3,
 } CodecVideo;
 
 /*
@@ -224,8 +224,8 @@ typedef enum {
  *   measuring the encoder **without** measuring the colour conversion too.
  */
 typedef enum {
-	CODIFICATORE_PIXEL_BGRX,        /* 4 bytes per pixel, B G R x */
-	CODIFICATORE_PIXEL_YUV420P10LE, /* three planes, 2 bytes per sample */
+	ENCODER_PIXEL_BGRX,        /* 4 bytes per pixel, B G R x */
+	ENCODER_PIXEL_YUV420P10, /* three planes, 2 bytes per sample */
 	/*
 	 * ⭐ PHASE 13 — the third real input: **R G B x**, what labwc delivers
 	 *    (`[M]` 21 Sep 2026: `XBGR8888`, the only format offered).
@@ -240,15 +240,15 @@ typedef enum {
 	 * ⭐ And it costs nothing: the conversion to the encoder's format is
 	 *   there anyway, and only how the source is read changes.
 	 */
-	CODIFICATORE_PIXEL_RGBX         /* 4 bytes per pixel, R G B x */
-} FormatoPixel;
+	ENCODER_PIXEL_RGBX         /* 4 bytes per pixel, R G B x */
+} PixelFormat;
 
 /* A single-plane input, four bytes per pixel, in FULL range: it is the
  * question the encoder used to ask with `== BGRX`, and which since RGBX exists
  * has TWO true answers.  ⛔ Asking it with `== BGRX` in even one place
  * would mean treating RGBX as if it were YUV — that is, a broken image. */
-#define FORMATO_PIXEL_IMPACCHETTATO(f) \
-	((f) == CODIFICATORE_PIXEL_BGRX || (f) == CODIFICATORE_PIXEL_RGBX)
+#define PACKED_PIXEL_FORMAT(f) \
+	((f) == ENCODER_PIXEL_BGRX || (f) == ENCODER_PIXEL_RGBX)
 
 /*
  * How quality is asked for.
@@ -260,8 +260,8 @@ typedef enum {
  *    opposite diagnoses under the same label (`F2-3-codifica.md` §2.4).
  */
 typedef enum {
-	CODIFICATORE_QUALITA_LOSSLESS, /* ⚠ HEVC yes; AV1 see the note in .c */
-	CODIFICATORE_QUALITA_CRF,      /* constant quality, `valore` = CRF */
+	ENCODER_QUALITY_LOSSLESS, /* ⚠ HEVC yes; AV1 see the note in .c */
+	ENCODER_QUALITY_CRF,      /* constant quality, `value_v` = CRF */
 	/*
 	 * ⛔⭐ CONSTANT QP — and it is a SEPARATE mode, not «CRF on hardware».
 	 *
@@ -272,8 +272,8 @@ typedef enum {
 	 * calling it CRF would be two measurements under the same label, that is
 	 * form E2 (`CODER.md` §3.9): QP is asked for, and QP is written.
 	 */
-	CODIFICATORE_QUALITA_QP,
-} ModoQualita;
+	ENCODER_QUALITY_QP,
+} QualityMode;
 
 /*
  * ⛔⭐ THE ENTRYPOINT POWER — THREE OUTCOMES, NOT TWO.
@@ -287,7 +287,7 @@ typedef enum {
  *
  * ⚠ And the reason the three outcomes are needed is measured: on the test
  *   machine the two render nodes do NOT have the same entrypoint (`[M]`
- *   13 Aug 2026 — see `nodo_rendering` below), so «low power» and «full» are
+ *   13 Aug 2026 — see `render_node` below), so «low power» and «full» are
  *   not a preference: they are two different machines.
  */
 /*
@@ -303,46 +303,46 @@ typedef enum {
  *    rule the session encoded in SOFTWARE.
  * ⚠ And the fallback to the other entrypoint here is NOT silent: which of the
  *   two was taken, and why, is written by `codificatore.c` to the log, and
- *   `codificatore_nome()` carries the ACTUAL entrypoint inside the name.
+ *   `encoder_name()` carries the ACTUAL entrypoint inside the name.
  *   `BASSA` and `PIENA` stay rigid, for the benches that compare the two.
  */
 typedef enum {
-	CODIFICATORE_POTENZA_NON_DICHIARATA = 0,
-	CODIFICATORE_POTENZA_PIENA,  /* VAEntrypointEncSlice   */
-	CODIFICATORE_POTENZA_BASSA,  /* VAEntrypointEncSliceLP */
-	CODIFICATORE_POTENZA_LA_DICHIARATA, /* LP if the driver declares it, otherwise full */
-} PotenzaEntrypoint;
+	ENCODER_POWER_UNDECLARED = 0,
+	ENCODER_POWER_FULL,  /* VAEntrypointEncSlice   */
+	ENCODER_POWER_LOW,  /* VAEntrypointEncSliceLP */
+	ENCODER_POWER_DECLARED, /* LP if the driver declares it, otherwise full */
+} EntrypointPower;
 
 typedef struct {
 	CodecVideo codec;
 	/*
 	 * ⛔ The component is asked for BY NAME and there is no fallback.
 	 * ⛔ Phase 19: only the card names; NULL or another name and
-	 *    `codificatore_nuovo()` refuses saying so — the software fallback
+	 *    `encoder_new()` refuses saying so — the software fallback
 	 *    (OpenH264, SVT-AV1) has left.  ⭐ And the names are SIX, two per route
 	 *    plus two «by capability» (1 Oct 2026, `DECISIONI.md` §10.27):
 	 *
-	 *      `h264_scheda`  `hevc_scheda`   THE ROUTE IS CHOSEN BY CAPABILITY:
+	 *      `h264_card`  `hevc_card`   THE ROUTE IS CHOSEN BY CAPABILITY:
 	 *                                     Vulkan Video if the card offers it
-	 *                                     for that codec (`vulkanvideo_capacita`),
+	 *                                     for that codec (`vulkanvideo_capabilities`),
 	 *                                     otherwise VA-API — it is what the
 	 *                                     product asks for;
 	 *      `h264_vulkan`  `hevc_vulkan`   Vulkan Video, and nothing else: if it
 	 *                                     is not there, fail saying so (benches,
-	 *                                     diagnosis, `--codifica vulkan`);
+	 *                                     diagnosis, `--encoding vulkan`);
 	 *      `h264_vaapi`   `hevc_vaapi`    VA-API (`vadiretta.c`), and nothing else
-	 *                                     (`--codifica vaapi`, and benches 18/19
+	 *                                     (`--encoding vaapi`, and benches 18/19
 	 *                                     that measure THAT route).
 	 *
-	 *    ⛔ The chosen route ends up in the confession (`strada`) and in the name
-	 *       of the opened component (`componente`), not in the requested name:
-	 *       whoever asks for `h264_scheda` reads back `h264_vulkan` or `h264_vaapi`.
+	 *    ⛔ The chosen route ends up in the confession (`route`) and in the name
+	 *       of the opened component (`component`), not in the requested name:
+	 *       whoever asks for `h264_card` reads back `h264_vulkan` or `h264_vaapi`.
 	 */
-	const char *componente;
+	const char *component;
 	/*
 	 * ⛔⭐ THE RENDER NODE — it is established and DECLARED, not guessed.
 	 *
-	 * Needed only when `componente` is a hardware encoder
+	 * Needed only when `component` is a hardware encoder
 	 * (`h264_vaapi` / `hevc_vaapi`).  ⛔ `NULL` does not mean «the good one»:
 	 * it means **fail saying so**.
 	 *
@@ -360,41 +360,41 @@ typedef struct {
 	 *     A number taken on one does not hold for the other, and code that
 	 *     opened «the first one around» would measure a random machine.
 	 */
-	const char *nodo_rendering;
-	/* ⛔ See `PotenzaEntrypoint`: zero fails, and it does so on purpose. */
-	PotenzaEntrypoint potenza;
-	uint32_t larghezza, altezza;
-	uint32_t fotogrammi_al_secondo;
-	ModoQualita modo;
-	int qualita;                 /* CRF (software) or QP (hardware) */
-	int profondita;              /* 8 or 10 — what is ASKED of the encoder */
+	const char *render_node;
+	/* ⛔ See `EntrypointPower`: zero fails, and it does so on purpose. */
+	EntrypointPower power;
+	uint32_t width_px, height_px;
+	uint32_t frames_per_second;
+	QualityMode manner;
+	int quality;                 /* CRF (software) or QP (hardware) */
+	int bit_depth;              /* 8 or 10 — what is ASKED of the encoder */
 	/*
 	 * ⛔⭐⭐ THE LEVEL CEILING OF `RCP.md` §4.3 (line 701), IN TENTHS:
 	 *      `5.1` ⇒ **51**.  `0` = no ceiling, the component chooses.
 	 *
 	 * ⛔ And it is ASKED FOR instead of discovered afterwards: `[M]` 23 Aug 2026,
-	 *    canvas 3840x2160, H.264 — the client declared `video.livello=5.1` and
+	 *    canvas 3840x2160, H.264 — the client declared `video.level=5.1` and
 	 *    this module produced a level **5.2** stream, because nobody had ever
 	 *    told it what the ceiling was.  §4.3 is a MUST, and the symptom of an
 	 *    exceeded level is not an error: it is the browser's decoder refusing
 	 *    the configuration.
 	 *
-	 * ⚠ The translation into each codec's alphabet lives in `livello_imposto()`
+	 * ⚠ The translation into each codec's alphabet lives in `imposed_level()`
 	 *   and nowhere else: H.264 uses the tenths as they are (`level_idc`),
 	 *   HEVC triples them (`general_level_idc`).  ⛔ And obedience is NOT
-	 *   presumed: it is read back in `livello_flusso` from the SPS bytes.
+	 *   presumed: it is read back in `stream_level` from the SPS bytes.
 	 */
-	int livello_x10;
-	FormatoPixel formato;
+	int level_x10;
+	PixelFormat schema;
 	/*
 	 * Periodic keyframes every N frames; **0 = on request only**.
 	 * ⚠ Zero is the choice of phase 2 and the reason is in `RCP.md` §5.2:
-	 *   keyframes are requested (`RICHIEDI_CHIAVE`), and sending them by the
+	 *   keyframes are requested (`REQUEST_KEY`), and sending them by the
 	 *   clock on a bad line is *«the spiral»* that paragraph forbids.  The
 	 *   operating point belongs to phase 9.
 	 */
-	uint32_t chiavi_ogni;
-} CodificatoreRichiesta;
+	uint32_t keys_every;
+} EncoderRequest;
 
 /*
  * ⭐ THE CONFESSION — what the encoder REALLY did.
@@ -405,22 +405,22 @@ typedef struct {
  */
 typedef struct {
 	CodecVideo codec;
-	const char *componente;       /* the name of the component really opened */
-	bool ha_obbedito;             /* ⛔ false ⇒ nothing is sent */
-	char perche_no[256];          /* the reason, when it did not obey */
+	const char *component;       /* the name of the component really opened */
+	bool has_obeyed;             /* ⛔ false ⇒ nothing is sent */
+	char why_no[256];          /* the reason, when it did not obey */
 
 	/* from the context */
-	int profondita_chiesta;
-	int fotogrammi_b;
+	int requested_depth;
+	int frames_b;
 	bool global_header;           /* ⛔ must be false, always */
 
 	/* ⭐ from the stream's BYTES */
-	bool letto_dal_flusso;
-	int profondita_flusso;        /* bits per sample, from the SPS / seq header */
-	int profilo_flusso;           /* HEVC: profile_idc · AV1: seq_profile */
-	int livello_flusso;           /* HEVC: general_level_idc · AV1: seq_level_idx */
+	bool read_from_stream;
+	int stream_depth;        /* bits per sample, from the SPS / seq header */
+	int stream_profile;           /* HEVC: profile_idc · AV1: seq_profile */
+	int stream_level;           /* HEVC: general_level_idc · AV1: seq_level_idx */
 	bool tier_alto;               /* HEVC: general_tier_flag · AV1: seq_tier */
-	uint32_t larghezza_flusso, altezza_flusso;
+	uint32_t stream_width, stream_height;
 	/*
 	 * ⭐ What the stream ENCODES, which is not always what it SHOWS.
 	 * ⛔ `[M]` 13 Aug 2026: `hevc_vaapi` on AMD (radeonsi, navi21) encodes
@@ -430,14 +430,14 @@ typedef struct {
 	 *    costs bandwidth — and for a whole day the SPS reader confused one with
 	 *    the other and refused EVERY frame from that card.
 	 */
-	uint32_t larghezza_codificata, altezza_codificata;
-	int croma_flusso;             /* 1 = 4:2:0 */
+	uint32_t encoded_width, encoded_height;
+	int stream_chroma;             /* 1 = 4:2:0 */
 	/*
 	 * The string the browser passes to the decoder: `hev1.2.4.L93.B0` /
 	 * `avc1.640033` / `av01.0.04M.10`.
 	 *
 	 * ⛔⭐ AND UNDER H.264 THIS FIELD STAYED EMPTY until 23 Aug 2026:
-	 *     `leggi_sps_hevc()` and `leggi_sps_av1()` composed it, `leggi_sps_
+	 *     `read_hevc_sps()` and `leggi_sps_av1()` composed it, `leggi_sps_
 	 *     h264()` did not — it read profile and level and never wrote them together.
 	 *     ⚠ The log said *«string for the decoder «»»* and nobody
 	 *     read a defect in it, because an empty string looks like a field that
@@ -445,10 +445,10 @@ typedef struct {
 	 *     declares what the client should pass to `configure()`, and it is
 	 *     the witness that says whether the page and the stream agree.
 	 */
-	char stringa_codec[64];       /* `hev1.2.4.L93.B0` / `avc1.640033` */
+	char codec_string[64];       /* `hev1.2.4.L93.B0` / `avc1.640033` */
 
 	/* ⚠ the promotion, declared instead of suffered */
-	bool promozione_8_a_10;
+	bool promotion_8_to_10;
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⭐ THE HARDWARE, AND IT IS DECLARED NEXT TO THE NUMBER — not «at the end
@@ -456,15 +456,15 @@ typedef struct {
 	 *    number that holds for a machine nobody knows.
 	 */
 	bool in_hardware;             /* the card (vadiretta or vulkanvideo), not the fallback */
-	char nodo[64];                /* the REQUESTED node, e.g. /dev/dri/renderD128 */
+	char node[64];                /* the REQUESTED node, e.g. /dev/dri/renderD128 */
 	/*
 	 * ⭐ PHASE 19 — THE ROUTE that answered: `vaapi` (`vadiretta.c`) or
 	 *    `vulkan` (`vulkanvideo.c`).  It is chosen by CAPABILITY at opening
-	 *    (`h264_scheda`/`hevc_scheda`) or by name, and here one reads which of
-	 *    the two really opened.  ⚠ `modi_bitrate` below is in the route's
+	 *    (`h264_card`/`hevc_card`) or by name, and here one reads which of
+	 *    the two really opened.  ⚠ `bitrate_modes` below is in the route's
 	 *    alphabet: `VA_RC_*` for vaapi, `VULKANVIDEO_RC_*` for vulkan.
 	 */
-	char strada[16];
+	char route[16];
 	/*
 	 * ⭐ The vendor that ANSWERED, asked of `vaQueryVendorString()` on the
 	 *    opened display — not deduced from the node name.  It is the witness
@@ -473,19 +473,19 @@ typedef struct {
 	 *    ⭐ On the Vulkan route it is `deviceName` + `driverName`/`driverInfo`
 	 *    of the card chosen BY THE NODE (`VK_EXT_physical_device_drm`).
 	 */
-	char fornitore_va[256];
+	char vendor_va[256];
 	/*
 	 * ⛔ The entrypoint: `false` = full (`VAEntrypointEncSlice`), `true` = low
-	 *    power (`VAEntrypointEncSliceLP`).  ⚠ `bassa_potenza_verificata` says
+	 *    power (`VAEntrypointEncSliceLP`).  ⚠ `low_power_verified` says
 	 *    that the (profile, entrypoint) pair was **read from the driver** with
 	 *    `vaQueryConfigEntrypoints`, not just asked of libavcodec: without that
 	 *    check «I asked for it» and «it did it» look the same.
 	 *    ⚠ On the Vulkan route the entrypoint DOES NOT EXIST: both stay
-	 *    `false`, and a false `bassa_potenza_verificata` there means «the
+	 *    `false`, and a false `low_power_verified` there means «the
 	 *    question does not exist», not «I did not look».
 	 */
-	bool bassa_potenza;
-	bool bassa_potenza_verificata;
+	bool low_power;
+	bool low_power_verified;
 	/*
 	 * ⭐ The maximum size the DRIVER declares for (profile, entrypoint),
 	 *    read with `vaGetConfigAttributes` before opening.
@@ -499,12 +499,12 @@ typedef struct {
 	 *    arises from the protocol; the check stays, because the ceiling is the
 	 *    DRIVER's and another card may declare a lower one.
 	 *
-	 * ⚠ `misura_massima_letta == false` means **«I could not ask for it»**,
+	 * ⚠ `max_size_read == false` means **«I could not ask for it»**,
 	 *   which is NOT «there is no limit»: the two values then mean nothing and
 	 *   are not read (`LEZIONI.md` §1.9).
 	 */
-	uint32_t misura_massima_l, misura_massima_a;
-	bool misura_massima_letta;
+	uint32_t max_size_w, max_size_h;
+	bool max_size_read;
 	/*
 	 * ⛔ How many frames the hardware encoder is ALLOWED to hold in the
 	 *    pipeline: `async_depth`.  ⚠ `[M]` 13 Aug 2026 the default of
@@ -512,7 +512,7 @@ typedef struct {
 	 *    unrequested default as `bframes=4` on x265, in another guise.  It is
 	 *    read by READING BACK the option after opening.
 	 */
-	int profondita_asincrona;
+	int async_depth;
 
 	/*
 	 * ⭐⭐ BITRATE CONTROL — and these are TWO witnesses out of three, because
@@ -525,9 +525,9 @@ typedef struct {
 	 *    nobody had asked for CBR.  CBR was **the name the driver gave that
 	 *    pair of numbers**, and only the bill said so.
 	 *
-	 * `modi_bitrate` is the `VA_RC_*` mask **declared by the driver** for the
+	 * `bitrate_modes` is the `VA_RC_*` mask **declared by the driver** for the
 	 * (profile, entrypoint) pair, read with `vaGetConfigAttributes` **before**
-	 * opening.  ⚠ `modi_bitrate_letti == false` means **«I could not ask for
+	 * opening.  ⚠ `bitrate_modes_read == false` means **«I could not ask for
 	 * it»** or **«the driver does not declare it»**, which is NOT «there is
 	 * only CQP»: it is exactly the deduction libavcodec makes silently
 	 * (*«assuming CQP only»*) and that is not copied (`LEZIONI.md` §1.9).
@@ -535,33 +535,33 @@ typedef struct {
 	 * ⚠ `banda_*` hold only with the ceiling on; with the ceiling off they are
 	 *   zeros, and zero there means **«not asked for»**, not «no limit».
 	 */
-	uint32_t modi_bitrate;
-	bool modi_bitrate_letti;
-	int modo_bitrate;             /* `rc_mode` READ BACK: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
-	int64_t banda_punto;          /* `bit_rate`, bit/s — the operating point */
-	int64_t banda_filo;           /* `rc_max_rate`, bit/s — ⛔ NEVER equal to the point */
-	int banda_serbatoio;          /* `rc_buffer_size`, in **bits** */
+	uint32_t bitrate_modes;
+	bool bitrate_modes_read;
+	int bitrate_mode;             /* `rc_mode` READ BACK: 1 = CQP · 5 = QVBR · 3 = VBR (Vulkan) */
+	int64_t bandwidth_point;          /* `bit_rate`, bit/s — the operating point */
+	int64_t bandwidth_wire;           /* `rc_max_rate`, bit/s — ⛔ NEVER equal to the point */
+	int bandwidth_reservoir;          /* `rc_buffer_size`, in **bits** */
 	/*
 	 * ⛔ The same buffer in MILLISECONDS, and this is the number that
 	 *    `CODER.md` §1-bis judges: in bits one does not see that v1 had
 	 *    **five hundred** (`rc_buffer_size = bit_rate/2` is not «half», it is
 	 *    half a second) against a ceiling of **50** for the whole of our piece.
 	 */
-	uint32_t banda_serbatoio_ms;
+	uint32_t bandwidth_reservoir_ms;
 
 	/* ⚠ latency, measured instead of deduced */
-	bool riordina;                /* a packet with dts != pts */
-	uint32_t fotogrammi_in_volo;  /* how many it held back before the first */
-} CodificatoreConfessione;
+	bool reorders;                /* a packet with dts != pts */
+	uint32_t frames_in_flight;  /* how many it held back before the first */
+} EncoderConfession;
 
 /* A frame ready to send.  The bytes belong to the encoder until
- * `codificatore_rilascia()`. */
+ * `encoder_release()`. */
 typedef struct {
-	const uint8_t *dati;
+	const uint8_t *data_v;
 	size_t byte;
-	bool chiave;                  /* `RCP.md` §6.2: 0x0301 keyframe, 0x0302 delta */
-	uint64_t us_conversione;      /* ⭐ the three times kept apart: without them, */
-	uint64_t us_codifica;         /*    «the rate dropped» cannot be pinned on anything */
+	bool key_id;                  /* `RCP.md` §6.2: 0x0301 keyframe, 0x0302 delta */
+	uint64_t convert_us;      /* ⭐ the three times kept apart: without them, */
+	uint64_t encode_us;         /*    «the rate dropped» cannot be pinned on anything */
 	/*
 	 * ⭐ THE FOURTH TIME, and it is born with the hardware: how much it costs to
 	 *    BRING the frame from system memory to the GPU (`vadiretta_carica_*`).
@@ -571,12 +571,12 @@ typedef struct {
 	 *    software it is always 0, and zero there means «this stretch is not
 	 *    there», not «it is free».
 	 */
-	uint64_t us_caricamento;
-	uint32_t ricodifiche;         /* ⛔ >0 ⇒ the 16 MiB ceiling has bitten */
-	bool trattenuto;              /* ⚠ the encoder did not deliver it at once */
-} CodificatoreFotogramma;
+	uint64_t upload_us;
+	uint32_t reencodes;         /* ⛔ >0 ⇒ the 16 MiB ceiling has bitten */
+	bool held;              /* ⚠ the encoder did not deliver it at once */
+} EncoderFrame;
 
-typedef struct Codificatore Codificatore;
+typedef struct Encoder Encoder;
 
 /*
  * Opens the encoder, or **fails saying why**.
@@ -585,26 +585,26 @@ typedef struct Codificatore Codificatore;
  *    not to 8 bits.  A silent fallback would give two measurements under the
  *    same label (`CODER.md` §3.9, §4.2 second half).
  */
-Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
-                                 char *errore, size_t errore_byte);
-void codificatore_libera(Codificatore *cod);
+Encoder *encoder_new(const EncoderRequest *request,
+                                 char *failure, size_t error_byte);
+void encoder_free(Encoder *cod);
 
 /* For the log: «HEVC 10 bit via hevc_vaapi (in HARDWARE, /dev/dri/renderD128, low
  * power)».  ⛔ The node and the power are INSIDE the name, not beside it: it
  * is the line that ends up in the log next to every number. */
-const char *codificatore_nome(const Codificatore *cod);
+const char *encoder_name(const Encoder *cod);
 
 /* ⭐ PHASE 19: the route really opened — "vaapi" or "vulkan" (see
- *    `CodificatoreConfessione.strada`); "" on NULL. */
-const char *codificatore_strada(const Codificatore *cod);
+ *    `EncoderConfession.route`); "" on NULL. */
+const char *encoder_route(const Encoder *cod);
 
 /* ⭐ PHASE 19: will the «card» route on this node be Vulkan?  True if Vulkan
- *    Video encodes H.264 or HEVC on the node (`vulkanvideo_capacita`), that is
- *    if `h264_scheda`/`hevc_scheda` would open Vulkan there.  ⚠ It is the answer
- *    from BEFORE opening: a request Vulkan cannot serve (size, bitrate) falls
+ *    Video encodes H.264 or HEVC on the node (`vulkanvideo_capabilities`), that is
+ *    if `h264_card`/`hevc_card` would open Vulkan there.  ⚠ It is the answer
+ *    from BEFORE opening: a request Vulkan cannot needs (size, bitrate) falls
  *    back to VA-API anyway.  It serves whoever must get ready before the
  *    encoder (the slabs of `wlroots.c`). */
-bool codificatore_vulkan_sul_nodo(const char *nodo);
+bool encoder_vulkan_on_node(const char *node);
 
 /* ⛔ PHASE 19 (1 Oct 2026, `DECISIONI.md` §10.27): here there were
  *    `codificatore_ripiego_software()`, `codificatore_software_pronto()` and
@@ -612,22 +612,22 @@ bool codificatore_vulkan_sul_nodo(const char *nodo);
  *    SVT-AV1) and the line with the package to install.  They left with it:
  *    without a capable card REMOTIX does not encode, and declares it. */
 
-/* ⭐ Valid after the first `codificatore_comprimi()` for the fields read from the bytes. */
-const CodificatoreConfessione *codificatore_confessione(const Codificatore *cod);
+/* ⭐ Valid after the first `encoder_compress()` for the fields read from the bytes. */
+const EncoderConfession *encoder_confession(const Encoder *cod);
 
 /*
  * Compresses a frame.
  *
- * `pixel` and `passo` are what capture delivers: ⛔ the stride is passed, not
- * computed as `larghezza × 4` — F2.2 reads it from the PipeWire manifest and
+ * `pixel` and `step` are what capture delivers: ⛔ the stride is passed, not
+ * computed as `width_px × 4` — F2.2 reads it from the PipeWire manifest and
  * says to do the same even when today it coincides.
  *
  * Returns `false` and delivers nothing if the encoder did not obey, if the
  * frame exceeds 16 MiB even after the re-encodes (`RCP.md` §6.2), or if the
  * shape of the bytes is not the one promised to F2.5.
  */
-bool codificatore_comprimi(Codificatore *cod, const uint8_t *pixel, uint32_t passo,
-                           CodificatoreFotogramma *fuori);
+bool encoder_compress(Encoder *cod, const uint8_t *pixel, uint32_t step,
+                           EncoderFrame *outside);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⭐⭐⭐ ZERO COPY — the frame that was ALREADY on the GPU
@@ -654,8 +654,8 @@ bool codificatore_comprimi(Codificatore *cod, const uint8_t *pixel, uint32_t pas
  *
  * ⚠ AND IT IS NOT «zero work»: it is **zero copies in system memory**.  The
  *   conversion from RGB to NV12 is done by the GPU (VA-API VPP), and its cost
- *   ends up in `us_conversione` as before — who does it changes, not the fact
- *   that it must be done.  ⛔ `us_caricamento` instead stays **0**, and there
+ *   ends up in `convert_us` as before — who does it changes, not the fact
+ *   that it must be done.  ⛔ `upload_us` instead stays **0**, and there
  *   zero means «this stretch IS NO LONGER THERE», not «it is free».
  */
 typedef struct {
@@ -663,10 +663,10 @@ typedef struct {
 	 *    and whoever closed it would take the image away from itself. */
 	int fd;
 	uint32_t offset;
-	uint32_t stride;              /* ⛔ READ from the chunk, never `larghezza × 4` */
-	uint32_t larghezza, altezza;
-	uint32_t formato_drm;         /* `DRM_FORMAT_XRGB8888` … */
-	uint64_t modificatore;
+	uint32_t stride;              /* ⛔ READ from the chunk, never `width_px × 4` */
+	uint32_t width_px, height_px;
+	uint32_t format_drm;         /* `DRM_FORMAT_XRGB8888` … */
+	uint64_t modifier;
 	/*
 	 * ⛔ The GENERATION of the producer's buffers.  ⚠ It is needed **here** and
 	 *    not elsewhere: importing an `fd` into VA-API costs, so it is cached —
@@ -674,15 +674,15 @@ typedef struct {
 	 *    after every renegotiation, because descriptor numbers are recycled.
 	 *    When this changes, the cache is thrown away.
 	 */
-	uint64_t generazione;
-} CodificatoreSuperficie;
+	uint64_t generation;
+} EncoderSurface;
 
 /*
  * Compresses a frame that is ALREADY on the card.
  *
  * ⛔ It holds **only** in hardware: in software there are no pixels to read,
  *    and this call fails saying so instead of producing an empty image.
- *    The caller checks `codificatore_in_hardware()` **before** asking the
+ *    The caller checks `encoder_in_hardware()` **before** asking the
  *    producer for the card route.
  *
  * ⛔⛔ AND THE DESCRIPTOR MUST STAY VALID FOR THE WHOLE CALL, not a
@@ -692,14 +692,14 @@ typedef struct {
  *      it earlier is precisely the defect of `LEZIONI.md` §8: two screens
  *      alternating, and no error.
  */
-bool codificatore_comprimi_scheda(Codificatore *cod, const CodificatoreSuperficie *superficie,
-                                  CodificatoreFotogramma *fuori);
+bool encoder_compress_card(Encoder *cod, const EncoderSurface *surface,
+                                  EncoderFrame *outside);
 
 /* ⛔ «Is it in hardware?» — the answer comes from `componente_e_hardware()`,
  *    that is from what the COMPONENT declares it accepts (a surface, not
  *    pixels).  ⚠ Not from the name, and not from «it opened a render node»
  *    (`LEZIONI.md` §1.11).  Whoever chooses the capture route asks here. */
-bool codificatore_in_hardware(const Codificatore *cod);
+bool encoder_in_hardware(const Encoder *cod);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⛔⛔⛔ THE DMA-BUF STRIDE MUST BE A MULTIPLE OF 64 — and without this
@@ -731,26 +731,26 @@ bool codificatore_in_hardware(const Codificatore *cod);
  *    green on this defect.  The number to look at is the STRUCTURE.
  *
  * ⚠ And the cure is NOT ours to carry out fully: the stride is decided by the
- *   producer, and the producer makes it equal to `larghezza × 4` `[M]` (4 sizes
+ *   producer, and the producer makes it equal to `width_px × 4` `[M]` (4 sizes
  *   out of 4, LINEAR modifier).  ⇒ A canvas multiple of 16 would always have a
- *   good stride, but the canvas rule lives in `rcp_misura_ammessa()`, which
+ *   good stride, but the canvas rule lives in `rcp_size_allowed()`, which
  *   does not belong to this file.  Here **the route is refused and declared**,
  *   which is what `LEZIONI.md` §1.8 demands: better the copy than a silently
  *   wrong image.
  * ═══════════════════════════════════════════════════════════════════════════ */
-bool codificatore_stride_importabile(uint32_t stride);
-uint32_t codificatore_allineamento_scheda(void);
+bool encoder_stride_importable(uint32_t stride);
+uint32_t encoder_card_alignment(void);
 
-void codificatore_rilascia(Codificatore *cod);
+void encoder_release(Encoder *cod);
 
 /*
  * ⛔ The next encode will be a REAL keyframe — with the parameter sets in front.
  *
- * Needed by `RICHIEDI_CHIAVE` (`RCP.md` §7.1) and by every abandoned delta
+ * Needed by `REQUEST_KEY` (`RCP.md` §7.1) and by every abandoned delta
  * (§5.2: *«the server MUST send a keyframe as soon as it can, without waiting
  * for the client to ask for it»*).
  */
-void codificatore_chiedi_chiave(Codificatore *cod);
+void encoder_ask_key(Encoder *cod);
 
 /*
  * ⛔ The canvas change: it reopens at the new size, and the first frame after
@@ -763,13 +763,13 @@ void codificatore_chiedi_chiave(Codificatore *cod);
  * *«the desktop tears when I resize the window»*, and it would name neither
  * the protocol nor the canvas.
  */
-bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t altezza,
-                               char *errore, size_t errore_byte);
+bool encoder_resize(Encoder *cod, uint32_t width_px, uint32_t height_px,
+                               char *failure, size_t error_byte);
 
 /*
  * ⭐⭐ QUALITY RECOVERY — and it is BORN OFF (invariant I6).
  *
- * ⛔ THE DEFECT IT CURES: `qualita_corrente` goes down when the frame breaks
+ * ⛔ THE DEFECT IT CURES: `current_quality` goes down when the frame breaks
  *    the 16 MiB ceiling of `RCP.md` §6.2, and until 23 Aug 2026 it **never
  *    went back up**.  A single exceptional frame — `[M]` the software fallback
  *    of the time at 7680x4320 on grainy footage broke the ceiling
@@ -780,7 +780,7 @@ bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t a
  *
  * On: after a certain number of frames **in a row** that came out comfortably
  * under the ceiling it goes back up by **ONE** step, and **never** beyond the
- * quality the caller asked for in `CodificatoreRichiesta.qualita`.  Every step,
+ * quality the caller asked for in `EncoderRequest.quality`.  Every step,
  * down and up, ends up in the log with the **measurement** next to the threshold.
  *
  * ⛔ It changes what one SEES ⇒ it is the user who decides that it becomes the
@@ -792,7 +792,7 @@ bool codificatore_ridimensiona(Codificatore *cod, uint32_t larghezza, uint32_t a
  *   log when each one opens — **on and off**, so that «off» and «never
  *   triggered» do not look the same.
  */
-void codificatore_qualita_risale(bool accesa);
+void encoder_quality_rises(bool switched_on);
 
 /*
  * ⭐⭐⭐ THE BANDWIDTH CEILING — phase 9, 23 Aug 2026.  **Born OFF** (0).
@@ -824,6 +824,6 @@ void codificatore_qualita_risale(bool accesa);
  *   fallback stays at its CRF, and the value in force is written to the log
  *   when every encoder opens — **on and off**.
  */
-void codificatore_tetto_banda(uint32_t pavimento_mbit);
+void encoder_bandwidth_cap(uint32_t floor_mbit);
 
 #endif

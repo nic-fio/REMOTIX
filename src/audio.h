@@ -52,12 +52,12 @@
 #include <stdint.h>
 
 /* §5.3, and they hold for both codecs. */
-#define AUDIO_FREQUENZA 48000
-#define AUDIO_CANALI 2
+#define AUDIO_FREQUENCY 48000
+#define AUDIO_CHANNELS 2
 
 /* How many frames (samples per channel) fit in a block, per codec. */
-#define AUDIO_BLOCCO_OPUS 960 /* 20 ms */
-#define AUDIO_BLOCCO_PCM 240  /*  5 ms */
+#define AUDIO_BLOCK_OPUS 960 /* 20 ms */
+#define AUDIO_BLOCK_PCM 240  /*  5 ms */
 
 typedef struct audio_cod audio_cod;
 
@@ -71,18 +71,18 @@ typedef struct audio_cod audio_cod;
  *    codec choice belongs to the negotiation (§4.3), and a server that sent PCM
  *    where the client expects Opus would produce noise instead of an error.
  */
-audio_cod *audio_cod_apri(uint8_t codec);
-void audio_cod_chiudi(audio_cod *c);
+audio_cod *audio_enc_open(uint8_t codec);
+void audio_enc_close(audio_cod *c);
 
 /* How many frames a block of this encoder wants. */
-uint32_t audio_cod_blocco(const audio_cod *c);
+uint32_t audio_enc_block(const audio_cod *c);
 
 /*
  * One block of samples goes in, one block ready for the datagram comes out.
  *
- * `campioni`  exactly `audio_cod_blocco()` frames, interleaved, s16
+ * `samples`  exactly `audio_enc_block()` frames, interleaved, s16
  *             in machine order.
- * `fuori`     at least `AUDIO_FUORI_MAX` bytes.
+ * `outside`     at least `AUDIO_OUT_MAX` bytes.
  *
  * ⛔⛔ THIS PARAGRAPH WAS REWRITTEN ON A MEASUREMENT — 17 August 2026,
  *      finding 7 of the adversarial review, closed by `banchi/07-b44`.
@@ -90,13 +90,13 @@ uint32_t audio_cod_blocco(const audio_cod *c);
  *      It said: *"Returns `false` when there is nothing to send, and it is NOT
  *      an error: Opus may not produce a packet for every block offered"*.
  *      ⛔ **IT IS FALSE for our configuration**, and the falsehood was not
- *      harmless: `RCP.md` §6.3 wants in `istante` the time of the **first
+ *      harmless: `RCP.md` §6.3 wants in `instant` the time of the **first
  *      sample of the block**, and if the encoder really accumulated, the
  *      packet coming out would carry the instant of a block DIFFERENT from the
  *      one it contains — wrong by 20 ms, forever.
  *
  *      `[M]` 1000 blocks in, **1000 packets out**, **zero EAGAIN**:
- *      `libopus` at a fixed 20 ms is ONE FOR ONE.  ⇒ The `istante` belongs to
+ *      `libopus` at a fixed 20 ms is ONE FOR ONE.  ⇒ The `instant` belongs to
  *      the block that leaves, and the `EAGAIN` branch **was never taken**.
  *      ⭐ Since 30 September 2026 the branch is not even there: `opus_encode()`
  *      is synchronous, one block in and one packet out by construction.
@@ -120,20 +120,20 @@ uint32_t audio_cod_blocco(const audio_cod *c);
  *    nothing and goes on — an empty block sent is a block the client
  *    counts and does not hear.
  */
-#define AUDIO_FUORI_MAX 1200
-bool audio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
-                     size_t *quanti);
+#define AUDIO_OUT_MAX 1200
+bool audio_enc_pass(audio_cod *c, const int16_t *samples, uint8_t *outside,
+                     size_t *how_many);
 
 /* The encoder's two numbers, for the log: blocks in and out. */
-void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
+void audio_enc_counts(const audio_cod *c, uint64_t *entered, uint64_t *exited);
 
 /*
  * ⛔⭐ THE DIGITAL SILENCE CURE — phase 9, and since 24 August 2026 it is BORN
  *     **ON** (the user's decision; until the 23rd it was born off for I6).
  *
  * On, a block in which **all** samples are exactly zero does not
- * become a datagram: `audio_cod_passa()` returns `false`, the caller sends
- * nothing, and the receiver — which places blocks at their absolute `istante`
+ * become a datagram: `audio_enc_pass()` returns `false`, the caller sends
+ * nothing, and the receiver — which places blocks at their absolute `instant`
  * (§6.3) — finds a gap.  ⭐ A gap is silence, that is what the block
  * contained: it is not an approximation, it is not sending the zero.
  *
@@ -145,20 +145,20 @@ void audio_cod_conti(const audio_cod *c, uint64_t *entrati, uint64_t *usciti);
  * ⚠ The price, and the reason for the switch, are in the box at the top of
  *   `audio.c`.  ⛔⭐ And the switch is NO longer a build one: the `-D`
  *   `AUDIO_SILENZIO_PREDEFINITO` **was removed** on 24 August 2026, and the only
- *   way is `--niente-audio-silenzio` on the server's command line, which
+ *   way is `--no-audio-silence` on the server's command line, which
  *   `figlio.c` copies to the end of the child's `argv` (where the
- *   encoder lives) as it already does with `--parlantina`.  ⚠ Two ways to the
+ *   encoder lives) as it already does with `--chatter`.  ⚠ Two ways to the
  *   same cure are two numbers that diverge.
  *
  * ⛔ AND IT HOLDS FOR TWO PROCESSES: the real encoder is in the child, but the
- *    test tone of `--audio-prova` opens an `audio_cod` in the SERVER (`webtransport.c`).
+ *    test tone of `--audio-test` opens an `audio_cod` in the SERVER (`webtransport.c`).
  *    ⇒ `main.c` calls this function for itself **and** passes the option to the
  *    children: if it called only one, the tone bench and the real-session bench
  *    would measure two different products.
  */
-void audio_silenzio_taci(bool si);
-bool audio_silenzio_acceso(void);
+void audio_silence_hush(bool si);
+bool audio_silence_on(void);
 
-/* How many blocks the cure has silenced.  ⛔ It is kept apart from `audio_cod_conti()`:
+/* How many blocks the cure has silenced.  ⛔ It is kept apart from `audio_enc_counts()`:
  *    that one already has a caller and its signature is not this module's. */
-uint64_t audio_cod_taciuti(const audio_cod *c);
+uint64_t audio_enc_silenced(const audio_cod *c);

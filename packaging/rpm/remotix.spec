@@ -21,11 +21,11 @@
 #    firewall: the engine mounts them, with consent and in its log (R40).
 #    ⛔ No guard that prevents the service from starting (no
 #    ExecCondition, no ConditionPathExists on a mark): there are TWO ways,
-#    the installer or the source by hand; `remotix stato` will only say, for
+#    the installer or the source by hand; `remotix state` will only say, for
 #    information, whether the installation is certified.
 #
 # ⛔ Never in the package (§6.4, R14): test users, the benches' `sudoers.d`,
-#    `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d`, `provisiona.sh`.
+#    `gpu-udev.sh`, `relaunch-*.sh`, `ld.so.conf.d`, `provisiona.sh`.
 # ⛔ The package NEVER pulls in a desktop (`DECISIONI.md` §10.7: without a
 #    desktop the engine installs it): dependencies tied to a desktop are
 #    CONDITIONAL, `(X if <desktop session>)`.
@@ -47,10 +47,10 @@
 
 Name:           remotix
 # Version and release are given by the release command (packaging/rilascio.sh) through
-# costruisci-rpm.sh: RX_VERSIONE (--define "rx_versione X.Y.Z") and RX_REVISIONE
-# (--define "rx_rilascio N"); defaults 0.17.0 and 1.
-Version:        %{?rx_versione}%{!?rx_versione:0.17.0}
-Release:        %{?rx_rilascio}%{!?rx_rilascio:1}%{?dist}
+# costruisci-rpm.sh: RX_VERSION (--define "rx_version X.Y.Z") and RX_REVISION
+# (--define "rx_release N"); defaults 0.17.0 and 1.
+Version:        %{?rx_version}%{!?rx_version:0.17.0}
+Release:        %{?rx_release}%{!?rx_release:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
 # source readable, no modifications, no redistribution. Its text is LICENSE.md.
@@ -125,7 +125,7 @@ Requires:       firewalld-filesystem
 %if 0%{?fedora}
 # XFCE and LXQt run under labwc (REMOTIX starts it; no default group brings it,
 # §4.6).  xfce4-session 4.20 is X11: under labwc it needs Xwayland.  XFCE and LXQt: the
-# monitor measurement goes through wlr-randr (`primario_misurato()`, XFCE too since 5 Oct).  CONDITIONAL dependencies:
+# monitor measurement goes through wlr-randr (`measured_primary()`, XFCE too since 5 Oct).  CONDITIONAL dependencies:
 # only if that desktop is present.
 Requires:       (labwc if xfce4-session)
 Requires:       (labwc if lxqt-session)
@@ -233,16 +233,16 @@ export LDFLAGS="%{?build_ldflags}"
 # openSUSE: %%{optflags} does not ask for PIE (rpmlint: position-independent-executable-suggested)
 CFLAGS="$CFLAGS -fPIE"; LDFLAGS="$LDFLAGS -pie"
 %endif
-make pulisci >/dev/null
-make %{?_smp_mflags} tutto
+make clean >/dev/null
+make %{?_smp_mflags} overall
 cd ..
 
 # The SELinux module, with the policy interfaces of THIS distribution.
-# ⚠ `--define "rx_selinux_permissivo 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVO=1)
+# ⚠ `--define "rx_selinux_permissive 1"` (costruisci-rpm.sh: RX_SELINUX_PERMISSIVE=1)
 #   builds the module with the domain in «permissive»: to MEASURE the denials of a
 #   whole session in a single run.  ⛔ Never in a published package.
 cd packaging/rpm/selinux
-%{?rx_selinux_permissivo:echo 'permissive remotix_t;' >> remotix.te}
+%{?rx_selinux_permissive:echo 'permissive remotix_t;' >> remotix.te}
 make -f %{_datadir}/selinux/devel/Makefile remotix.pp
 bzip2 -9 remotix.pp
 cd ../../..
@@ -255,7 +255,7 @@ install -D -m 0644 src/pagina.html %{buildroot}%{_datadir}/remotix/pagina.html
 install -D -m 0644 packaging/rpm/remotix.conf %{buildroot}%{_datadir}/remotix/remotix.conf
 # R24 (T8): the versions of the LINKED static libraries (pkg-config in the build
 # container), for the archive SBOM.
-printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
+printf '{"schema":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","source":"pkg-config of the linked .a files"}\n' \
     "$(pkg-config --modversion libngtcp2)" "$(pkg-config --modversion libnghttp3)" \
     > %{buildroot}%{_datadir}/remotix/incorporate.json
 install -D -m 0644 packaging/rpm/remotix.service %{buildroot}%{_unitdir}/remotix.service
@@ -271,7 +271,7 @@ chmod 0644 %{buildroot}%{_sysconfdir}/remotix/utenti-negati
 
 # The KWin capture permission (`zkde_screencast_unstable_v1`): KWin looks for it in
 # XDG_DATA_DIRS.  The package ships it and the program only checks it at start-up
-# (`src/kwin.c`, `kwin_verifica_permesso()`, codes RX-KDE-001..003): it never writes it.
+# (`src/kwin.c`, `kwin_check_permission()`, codes RX-KDE-001..003): it never writes it.
 # The content is byte-for-byte identical to the .deb one (Arch's differs only in Exec=).
 install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}/applications/org.kde.remotix.desktop
 
@@ -297,13 +297,13 @@ install -D -m 0644 packaging/rpm/selinux/remotix_porta.cil %{buildroot}%{_datadi
 
 # The files the service generates by itself: declared %%ghost, so rpm knows them
 # and uninstallation removes them (DIRECT origin, §6.6.4).  `[M]` T3 on
-# Tumbleweed: without the two `.nostro` (the marks of `certificati.c:317,320`)
+# Tumbleweed: without the two `.our` (the marks of `certificati.c:317,320`)
 # /var/lib/remotix remained after `zypper remove`.
-install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificati
-for f in pagina.pem pagina.key pagina.nostro sessione.pem sessione.key sessione.nostro; do
-    touch %{buildroot}%{_sharedstatedir}/remotix/certificati/$f
+install -d -m 0700 %{buildroot}%{_sharedstatedir}/remotix/certificates
+for f in page_v.pem page_v.key page_v.our session_v.pem session_v.key session_v.our; do
+    touch %{buildroot}%{_sharedstatedir}/remotix/certificates/$f
 done
-touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.nuovo
+touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/remotix/ban.fresh
 
 # ⭐ `DECISIONI.md` §10.12 — the scriptlets switch NOTHING on (R40):
 #   · no %%systemd_post / %%service_add_post: they would apply the machine's
@@ -379,15 +379,15 @@ fi
 %{_prefix}/lib/firewalld/services/remotix.xml
 %ghost %dir %attr(0700,root,root) /run/remotix
 %dir %attr(0700,root,root) %{_sharedstatedir}/remotix
-%dir %attr(0700,root,root) %{_sharedstatedir}/remotix/certificati
-%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificati/pagina.pem
-%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificati/pagina.key
-%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificati/sessione.pem
-%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificati/sessione.key
-%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificati/pagina.nostro
-%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificati/sessione.nostro
+%dir %attr(0700,root,root) %{_sharedstatedir}/remotix/certificates
+%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/page_v.pem
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/page_v.key
+%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/session_v.pem
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/certificates/session_v.key
+%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/page_v.our
+%ghost %attr(0644,root,root) %{_sharedstatedir}/remotix/certificates/session_v.our
 %ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban
-%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.nuovo
+%ghost %attr(0600,root,root) %{_sharedstatedir}/remotix/ban.fresh
 
 # ⭐ remotix-selinux: the scriptlets are the policy's (like cockpit-ws-selinux).
 #   The module is just loaded: it switches nothing on (R40).  The relabelling

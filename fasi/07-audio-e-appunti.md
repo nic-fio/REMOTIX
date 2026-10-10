@@ -102,12 +102,12 @@ piece — the **control channel** and the **negotiation** — but the work is do
 
 | | state | where |
 |---|---|---|
-| ✅ the **negotiation** of `audio.codec` | **done and alive**: `opus,pcm` declared by both sides, intersection, discard written in the log, `pcm` mandatory for both | `src/rcp.c:1513-1816`, `src/pagina.html` · `collega()` |
-| ✅ the **negotiation** of `appunti.testo` | declared by both sides (`si`) | `src/rcp.c` · `T_APPUNTI_TESTO`, `src/pagina.html` · `MP4_DURATA_MAX()` |
-| ✅ the **rejection** of audio on a stream | channel `0x04` on a stream is `ERRORE_PROTOCOLLO`, and the log line names it | `src/webtransport.c`, `src/rcp.c` |
+| ✅ the **negotiation** of `audio.codec` | **done and alive**: `opus,pcm` declared by both sides, intersection, discard written in the log, `pcm` mandatory for both | `src/rcp.c:1513-1816`, `src/pagina.html` · `connect()` |
+| ✅ the **negotiation** of `clipboard_text.body_text` | declared by both sides (`si`) | `src/rcp.c` · `T_CLIPBOARD_TEXT`, `src/pagina.html` · `MP4_MAX_DURATION()` |
+| ✅ the **rejection** of audio on a stream | channel `0x04` on a stream is `PROTOCOL_ERROR`, and the log line names it | `src/webtransport.c`, `src/rcp.c` |
 | ✅ the **declared discard** of datagrams | in phase 1 they were discarded writing it in the log, on purpose because *«la differenza fra "l'audio non arriva" e "l'audio arriva e lo butto" si vede solo se questa riga esiste da prima»* | `src/trasporto.c:333-357` |
-| ⛔ the **outgoing direction** of datagrams | **DOES NOT EXIST**: no function sends a datagram. `webtransport.h` does not have one, and `wt_scrivi` does not touch them | — |
-| ⛔ the **three clipboard messages** | **DO NOT EXIST**: `0x0201/0x0202/0x0203` appear in no product file. The page receives a `0x02` stream and writes *«ricevuto e non usato»* | `src/pagina.html` · `ascolta_controllo()` |
+| ⛔ the **outgoing direction** of datagrams | **DOES NOT EXIST**: no function sends a datagram. `webtransport.h` does not have one, and `wt_write` does not touch them | — |
+| ⛔ the **three clipboard messages** | **DO NOT EXIST**: `0x0201/0x0202/0x0203` appear in no product file. The page receives a `0x02` stream and writes *«ricevuto e non usato»* | `src/pagina.html` · `listen_control()` |
 | ⛔ the **sound in the session** | **DOES NOT EXIST**: no sink, no audio capture. `libpipewire` is already linked, but for the **frames** | `src/cattura.c` |
 
 ### 1.2 · From v1, and they are the most intact things the project has
@@ -181,7 +181,7 @@ hear anything»* and *«I did not look»* look the same.
 
 > ### ⭐⭐ THE JUDGE IS CERTIFIED — `[M]` 17 Aug 2026, **six cases out of six**, on two engines
 >
-> `banchi/07-b40-sonda-audio.html`, function `giudica()`: dominant frequency (Goertzel, step
+> `banchi/07-b40-sonda-audio.html`, function `judge()`: dominant frequency (Goertzel, step
 > 1 Hz, 100-2000 Hz), RMS amplitude, and ⭐ **purity** — how much of the energy is in the
 > dominant line, which is what tells **a tone from full-scale noise**, that is the v1 defect
 > no block-counter saw (`LEZIONI.md` §2.2).
@@ -330,7 +330,7 @@ fallen back on when Opus is not negotiated.
 **Where the samples come from.** The sink and the capture live in the **child** (`src/figlio.h`), which is
 the only process that has the session bus and `/run/user/<uid>`; the datagrams are written by the **parent**,
 which holds the QUIC connection. ⇒ A new message is needed on the socket between the two — the shape is that
-of `FiglioDeposito`, which already carries the frames.
+of `ChildRepository`, which already carries the frames.
 
 ⚠ **And v1's rule holds identically here, and it is the reason there is a queue**: the PipeWire thread
 runs **in real time**, and whoever writes a waiting call inside it *«non ferma
@@ -360,9 +360,9 @@ certified before being believed. The product is §4.2.
 | file | what it does |
 |---|---|
 | ⭐ `src/audio.c` + `.h` (new, ~250 lines) | the **encoder**: Opus through `libavcodec` (encoder `libopus`, asked for **by name**), s16 PCM **little-endian written by hand** — not with a `memcpy`, which would give the machine's byte order |
-| ⭐⭐ `src/webtransport.c` | the **outgoing direction of datagrams**, which did not exist: the queue (8 blocks, and whoever does not fit is **thrown away** — §6.3 forbids retransmission), the **RFC 9297** prefix, the framing of §6.3, `wt_audio_diffondi()` with the **I3** guard, and `audio_regola()` which turns the channel on |
-| `src/rcp.c` + `.h` | `rcp_audio_negoziato()`: from `opus`/`pcm` to the numbers `1`/`2` of §6.3, **in one place only** |
-| `src/main.c` | `--audio-prova <hz>`: the test source, **off** if nobody turns it on (I6) |
+| ⭐⭐ `src/webtransport.c` | the **outgoing direction of datagrams**, which did not exist: the queue (8 blocks, and whoever does not fit is **thrown away** — §6.3 forbids retransmission), the **RFC 9297** prefix, the framing of §6.3, `wt_audio_broadcast()` with the **I3** guard, and `audio_rule()` which turns the channel on |
+| `src/rcp.c` + `.h` | `rcp_audio_negotiated()`: from `opus`/`pcm` to the numbers `1`/`2` of §6.3, **in one place only** |
+| `src/main.c` | `--audio-test <hz>`: the test source, **off** if nobody turns it on (I6) |
 | ⭐ `src/pagina.html` | the **receiver**: reads the datagrams, applies §6.3 (short · type · **instant not more recent**), decodes Opus with `AudioDecoder` or unrolls the PCM, and plays with a **250 ms** cushion ⛔ *(it was 60: raised on 17 Aug to remove the gaps, and it is the cause of the delay of §8)* |
 | `banchi/01-b3-cliente.py` | ⭐ the **second reader grows with the phase** (`PIANO.md` §1.1): it receives the datagrams and keeps **six counters**, one for each rule of §6.3 that can be violated |
 | `banchi/07-b41-accendi.sh` · `07-b42-giudice.py` | the bench's server (port, ban-file and socket **of its own**) and the judge that *listens* |
@@ -379,7 +379,7 @@ child**; the datagrams are written by **the parent**, which holds QUIC.
 | | |
 |---|---|
 | `MSG_AUDIO` (parent → child) | *«capture the audio, and encode it like this»* — `0` = switch off |
-| `MSG_BLOCCO` (child → parent) | a block **already encoded**, with its `istante` |
+| `MSG_BLOCK` (child → parent) | a block **already encoded**, with its `instant` |
 
 ⛔ **And the child encodes BEFORE sending**, instead of shipping the raw samples. It is not
 just any optimisation: 20 ms of stereo PCM are **3840 bytes**, the same block in Opus
@@ -390,7 +390,7 @@ second.
 callback runs on the **PipeWire thread, in real time**. Whoever writes a waiting call inside it
 *«non ferma soltanto l'audio: fa saltare il quanto a tutto il grafo PipeWire, cattura del
 desktop compresa»*. ⇒ Between the two there is a **single-producer single-consumer ring**, without
-locks — the producer moves only `testa`, the consumer only `coda`, and the two indices are
+locks — the producer moves only `head`, the consumer only `queue`, and the two indices are
 atomic. ⚠ And in the callback **nothing is written to the log**: the overflow is *counted* there and
 *written* from the loop.
 
@@ -402,7 +402,7 @@ atomic. ⚠ And in the callback **nothing is written to the log**: the overflow 
 2. **the audio clock is the sample count**, not `CLOCK_MONOTONIC`. §6.3 wants *«the instant
    of the first sample»*; the wall-clock time at the moment of sending would put in the field **when I
    sent it**, and the client would reorder on our jitter instead of on the sound. ⛔ And when
-   the ring overflows **the base moves by the lost samples**, or the `istante`s would tell of a continuous
+   the ring overflows **the base moves by the lost samples**, or the `instant`s would tell of a continuous
    sound where there was a gap;
 3. ⛔ **audio is drained BEFORE the video part**, which exits with `continue` when nobody is watching.
    Otherwise *«audio on, video off»* would not play and **no line would say why** — and
@@ -420,7 +420,7 @@ creates a sink: with its code, here, not one sample would arrive — and without
 
 > #### ⛔⛔ AND THE PORT FOUND A DEFECT IN v1: **the wait that did not wait**
 >
-> v1's `suono_ascolto_ferma()` declared *«il lucchetto del ciclo **è** l'attesa»*, and on that
+> v1's `sound_listen_stop()` declared *«il lucchetto del ciclo **è** l'attesa»*, and on that
 > line rested the permission to free the connection's context.
 >
 > ⛔ **It is false with `PW_STREAM_FLAG_RT_PROCESS`**: the callback comes from the **data thread**, which
@@ -474,7 +474,7 @@ judgement; this section is what was written afterwards.*
 | ⭐ `src/appunti.h` + `.c` (**new**, ~640 lines) | the **Mutter** side, ported from `fondamenta/…/appunti_mutter.c` with the four traps defused on the spot. ⛔ Text only: the MIME types live in there and do not come out |
 | `src/figlio.c` | four new messages on the parent↔child socket (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), the **third assembly table** and the **time backstop** of whoever pastes |
 | `src/rcp.c` + `.h` | the three messages of §7.4, the table of incoming streams, the five new hooks, and the **cure of the race with `Ctrl+V`** |
-| `src/webtransport.c` + `.h` | the incoming channel `0x02` (`G_UNI_APPUNTI`) and the three hooks that open a stream towards the client |
+| `src/webtransport.c` + `.h` | the incoming channel `0x02` (`G_UNI_CLIPBOARD`) and the three hooks that open a stream towards the client |
 | `src/main.c` | the **fourth seam** of the same family: video, input, audio, clipboard |
 | `src/pagina.html` | the browser side: `clipboardchange` where it exists, the `paste` event where it does not, and writing to the local clipboard with the declared fallback |
 
@@ -498,7 +498,7 @@ there is, because «sometimes it does not work» sends nobody looking anywhere.
 
 ⭐ **The replacement costs zero and touches no key**: the paste request **is queued**
 instead of returning empty, and the question to the client leaves **when the announcement arrives**
-(`rcp.c`, `rcp_appunti_chiedi` and the `T_APPUNTI_ANNUNCIO` branch of `tratta_appunti`).
+(`rcp.c`, `rcp_clipboard_ask` and the `T_CLIPBOARD_ANNOUNCEMENT` branch of `handle_clipboard`).
 
 ⚠ And the wait is bounded by someone else, not by one more timer of ours: the **child's 4 s
 backstop** answers «I don't have it» to whoever pastes if the announcement never arrives.
@@ -509,8 +509,8 @@ This is the part no bench would have asked for and the product did.
 
 | where | how much | which debt it pays |
 |---|---|---|
-| ⛔ **in the child** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a defect nobody connects to the clipboard |
-| ⚠ **in the parent** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | that the **channel** does not stay blocked. Without it, a client that fails to answer once queues **all subsequent pastes**: «the clipboard worked once and then never again» |
+| ⛔ **in the child** (`figlio.c`, `CLIPBOARD_WAIT_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a defect nobody connects to the clipboard |
+| ⚠ **in the parent** (`rcp.c`, `CLIPBOARD_BACKSTOP`) | **8000 ms** | that the **channel** does not stay blocked. Without it, a client that fails to answer once queues **all subsequent pastes**: «the clipboard worked once and then never again» |
 
 ⭐ **And the backstop towards Mutter is in the CHILD, not in the parent**, for a reason that is not convenience:
 the parent may have no client attached (the session outlives the client — invariant I4), the
@@ -524,8 +524,8 @@ side.
 #### 4.5.4 · 🔸 Where §2.5 allowed two readings, and which was taken
 
 `RCP.md` §2.5 says that the clipboard channel wants a stream *«uno **per trasferimento**»*. ⚠ A
-transfer on our side is made of **two messages far apart in time** — `APPUNTI_ANNUNCIO`
-now, `APPUNTI_TESTO` **if and when** someone asks.
+transfer on our side is made of **two messages far apart in time** — `CLIPBOARD_ANNOUNCE`
+now, `CLIPBOARD_TEXT` **if and when** someone asks.
 
 ⇒ The reading **one stream per message** was taken, and the reason is a calculation: one copies much more
 often than one pastes, so keeping a stream open between the two messages would mean
@@ -533,7 +533,7 @@ keeping it open **for ever** in the vast majority of cases — and §2.5 grants 
 finite number of streams.
 
 ⭐ **And it can be done, because what ties the messages of a transfer together is NOT the stream**: it is the field
-`trasferimento`, which exists exactly for this (remark R1.11, 9 Aug 2026).
+`transfer`, which exists exactly for this (remark R1.11, 9 Aug 2026).
 
 ⚠ The price, declared: a client that counted streams to count transfers would count
 double. No line of `RCP.md` tells it to do so, and it has the field it must look at. ⭐ The
@@ -544,10 +544,10 @@ ambiguous but that the ambiguity does not bite.
 
 | where | what happened |
 |---|---|
-| `src/rcp.c` (`CIAO`) | `appunti.testo` was in `NOMI_NOTI` as a lawful name and the **value was thrown away**. ⇒ The server could neither avoid announcing to whoever had not asked, nor refuse bytes on channel `0x02` from a client that had not declared it — that is **a capability used without negotiating it**, which is the case §4.3 exists to make impossible |
-| `src/pagina.html` (`ECCOMI`) | same: the page printed it in the `ECCOMI` line and kept it nowhere. ⇒ It could not have turned anything on |
+| `src/rcp.c` (`HELLO`) | `clipboard_text.body_text` was in `KNOWN_NAMES` as a lawful name and the **value was thrown away**. ⇒ The server could neither avoid announcing to whoever had not asked, nor refuse bytes on channel `0x02` from a client that had not declared it — that is **a capability used without negotiating it**, which is the case §4.3 exists to make impossible |
+| `src/pagina.html` (`HERE_I_AM`) | same: the page printed it in the `HERE_I_AM` line and kept it nowhere. ⇒ It could not have turned anything on |
 
-⚠ It is **the same form as remark B-1** on `video.misura_massima` (10 Aug 2026): a protocol
+⚠ It is **the same form as remark B-1** on `video.max_size` (10 Aug 2026): a protocol
 value one declares to have understood and does not have anywhere.
 
 ---
@@ -564,16 +564,16 @@ value one declares to have understood and does not have anywhere.
 | ⭐⭐ **the judge sees the faults** | 5 out of 5 | ⭐ **6 cases out of 6**: healthy green, four faults seen, and `NIENTE DA GIUDICARE` as an outcome of its own. ⛔ Big-endian is recognised **from the purity (0.142)**, not from the frequency | `[M]` 17 Aug 2026, `07-b40`, two engines |
 | ⛔ **how many bytes a datagram carries** (A2) | `[S]` ~1200 | **1024** on Chrome 151 (fixed) · **1024 → 1214** on Firefox 140esr. Scene: **real** server on the test machine, port 7700, wired local network, no session open | `[M]` 17 Aug 2026, `07-b40 --wt` |
 | ⭐ **the PCM of §5.3 fits** | it must fit | **yes on both**, margin **52 bytes** on Chrome and **242** on Firefox | `[M]` 17 Aug 2026 |
-| ⭐⭐ **the audio wire, PCM** | 200 blocks/s, 440 Hz | **1000 blocks out of 1000** in 5.000 s — **yield 100.0 %**, step between the `istante`s **always 5000 µs**, zero out of step. Signal: **440 Hz**, RMS **0.3535** (expected 0.3536), **purity 0.9963** | `[M]` 17 Aug 2026, `07-b41` + `01-b3-cliente` + `07-b42` |
+| ⭐⭐ **the audio wire, PCM** | 200 blocks/s, 440 Hz | **1000 blocks out of 1000** in 5.000 s — **yield 100.0 %**, step between the `instant`s **always 5000 µs**, zero out of step. Signal: **440 Hz**, RMS **0.3535** (expected 0.3536), **purity 0.9963** | `[M]` 17 Aug 2026, `07-b41` + `01-b3-cliente` + `07-b42` |
 | ⭐⭐ **the audio wire, Opus** | 50 blocks/s | **251 blocks** in 5 s (50.2/s = the 20 ms of §5.3), **279-439 bytes** per packet at 96 kbit/s | `[M]` 17 Aug 2026 |
-| ⭐⭐⭐ **OUR server's packets decoded by the BROWSER** | — | **440 Hz**, RMS **0.3515**, purity **0.997**, on **Chrome 151 and Firefox 140esr**, 251 packets out of 251, zero errors. ⛔ Not the packets the browser had encoded itself: those that came out of `libopus` inside the server, taken **from the wire** | `[M]` 17 Aug 2026, `07-b40 --pacchetti` |
+| ⭐⭐⭐ **OUR server's packets decoded by the BROWSER** | — | **440 Hz**, RMS **0.3515**, purity **0.997**, on **Chrome 151 and Firefox 140esr**, 251 packets out of 251, zero errors. ⛔ Not the packets the browser had encoded itself: those that came out of `libopus` inside the server, taken **from the wire** | `[M]` 17 Aug 2026, `07-b40 --packets` |
 | ⭐⭐ **the REAL chain is alive** (sink → monitor → Opus → socket → datagram) | 50 blocks/s | **397 blocks in 8 s = 49.6/s**, zero lost, zero discarded. The sink appears in `wpctl status` as **default**, `monitor.channel-volumes: true`. Scene: `prova2`'s GNOME session on the server, test tone **off** | `[M]` 17 Aug 2026, port 7710 |
 | ⭐⭐⭐ **and the session's sound ARRIVES** | 440 Hz | ⛔ *The first measurement said «silence», and it was the SCENE that was broken — see §6.5.* With the certified scene: `suono.c` delivers **PEAK 16383 out of 32767** (= half full scale, the exact amplitude of the tone) and the contiguous stretches give **440 Hz, rms 0.3535** — identical to what `pw-record` reads on the same monitor | `[M]` 17 Aug 2026, `07-b43` |
 | ⭐⭐ **and the volume GOVERNS** | I5 and §kde §10.5 | full volume **0.3536** · at 25 % **0.0078** (expected 0.005525) · mute **0.0**. ⇒ The trap of the monitor upstream of the volume **is not there**: `monitor.channel-volumes` is requested and works | `[M]` 17 Aug 2026, `07-b43`, against the product |
 | ⭐⭐⭐ **the real audio bench: 5 rounds out of 5** | the expected value written **beforehand** | **1-healthy** 440 Hz rms 0.3535 (expected 0.3536) · **2-silence** 0 Hz rms 0.0 · **3-frequency** 660 Hz · **4-volume-25** rms **0.0055** (expected 0.0055) · **5-mute** 0.0. ⛔ And rounds 2 and 3 are defects **grafted on purpose**: the bench sees them, so it is not blind | `[M]` 17 Aug 2026, `07-b43`, against the product |
 | ⭐⭐ **and REDONE after the eight cures to the transport** | 5 out of 5 | **5 out of 5**, and ⭐ **better than before**: purity is **1.000** on all rounds with signal (it was **0.29** when blocks were being lost), and the judge could look at **96 000 samples** instead of 48 000 — because now there is enough **contiguous** sound to judge. ⛔ Redoing it was not a formality: the other green was from **before** the datagram queue, the postponement cap, coalescing and padding were touched — that is an old green on new code | `[M]` 17 Aug 2026, evening |
 | ⭐ **the datagram that did not leave** | 0 % loss | from **38.5 %** to **0.3 %**: 2994 sent, 8 refused, 1 thrown away for full queue out of ~3003. ⚠ On **Opus** the loss was already **zero** (0 out of 747): the defect bit the **PCM**, which costs 13 times the bandwidth | `[M]` 17 Aug 2026 |
-| ⭐ **libopus does not accumulate** | `[?]` | **1000 blocks in, 1000 out, zero EAGAIN** ⇒ the `istante` of §6.3 belongs to the block that leaves | `[M]` 17 Aug 2026, `07-b44` |
+| ⭐ **libopus does not accumulate** | `[?]` | **1000 blocks in, 1000 out, zero EAGAIN** ⇒ the `instant` of §6.3 belongs to the block that leaves | `[M]` 17 Aug 2026, `07-b44` |
 | ⚠ **Opus's pre-skip** | declared by nobody | `initial_padding` = **312 samples = 6.50 ms**, **constant** over a thousand packets. The decoder removes it by itself, so end to end it cancels out | `[M]` 17 Aug 2026, `07-b44` |
 | ⭐⭐ **the clipboard opens on a REAL GNOME session** | `EnableClipboard` granted | ⭐ `appunti della sessione accesi (solo testo, nei due versi) su /org/gnome/Mutter/RemoteDesktop/Session/u1`. ⛔ It is the first and for now **only** proof that `appunti.c` works against Mutter | `[M]` 17 Aug 2026, port 7730, user `prova` |
 | ⛔⛔ **XWayland does NOT exist in our sessions** | `xclip` was supposed to work (§2.4) | `gnome-shell --headless --no-x11` ⇒ **no X11 bridge**. ⚠ The two sockets in `/tmp/.X11-unix` are leftovers from **15 Aug**: a bench that took them as good would have measured a dead session | `[M]` 17 Aug 2026 |
@@ -609,7 +609,7 @@ case existed from before. Without that comparison, the suspect would have been t
 *It is the most instructive defect of the day, and it is not in the product: it is in my reasoning.*
 
 The first round of the tone gave **402 blocks out of 600** in 3 s — yield **67 %** — ⭐ with **zero blocks
-lost**: the step between the `istante`s was **always exactly 5000 µs**. I concluded *«the datagram
+lost**: the step between the `instant`s was **always exactly 5000 µs**. I concluded *«the datagram
 queue has become the rate ceiling»* and took it from 8 to 32.
 
 ⭐ **The yield rose to 80 %.** That is, the number improved, and it looked like a confirmation.
@@ -620,7 +620,7 @@ second at the head of every take**, and the queue had nothing to do with it.
 
 | | |
 |---|---|
-| **the real cause** | the tone waited for QUIC's **normal beat** before the first block, because `wt_battito_ns()` shortened the wait only *after* the first block had been produced |
+| **the real cause** | the tone waited for QUIC's **normal beat** before the first block, because `wt_heartbeat_ns()` shortened the wait only *after* the first block had been produced |
 | **the cure** | two lines: the first block is **due immediately** |
 | **the result** | **1000 blocks out of 1000**, yield **100.0 %** |
 | ⛔ **and the 32 went back to 8** | `[M]` at 8 the lost blocks were **already zero**: it was enough. A higher value would have stayed in the code **without a reason**, justified by a false diagnosis |
@@ -653,7 +653,7 @@ on the wrong suspect*, in a new variant: **the partial green that rises**.
 
 ⭐ None of the three could be seen by reading the code, and the third is worth it on its own:
 
-1. `env $* $SUL_SERVER` put the step's name **before** the command ⇒ `env: 'cancello': No
+1. `env $* $ON_SERVER` put the step's name **before** the command ⇒ `env: 'cancello': No
    such file or directory`, exit 127;
 2. a step wrote into a folder not yet created ⇒ *«No such file or directory»* disguised
    as *«I cannot read the graph»*;
@@ -803,7 +803,7 @@ cushion, the main thread) pointing to the only culprit left.
 **content** (the judge listens to the samples) and **not to the rate**. A bench that listens to *what*
 arrives and not *when* it arrives is blind to half the possible defects.
 
-⛔ **And the endpoint that was needed cost thirty lines** (`/diario` in `pagina.c`): the page's
+⛔ **And the endpoint that was needed cost thirty lines** (`/diary` in `pagina.c`): the page's
 diagnostic box was not enough, because with the desktop on the page is full screen and that
 box **cannot be reached** — asking the user to read it was asking him for something that
 cannot be done.
@@ -863,7 +863,7 @@ Writing the clipboard channel into the second reader of `RCP.md`.
 **1. I expected TWO bytes to recognise a unidirectional stream.** The server's QPACK streams
 carry **only one** (the type, `0x02` and `0x03`) and then fall silent: that byte ended up in my
 accumulator and never reached `aioquic`. ⇒ Its HTTP/3 layer did not deliver the headers
-of the CONNECT, the client kept waiting, ⛔ **and the server said farewell to it with `TEMPO_SCADUTO`
+of the CONNECT, the client kept waiting, ⛔ **and the server said farewell to it with `TIMED_OUT`
 for never having opened the control channel** (§4.6).
 
 ⚠ **The red ended up on the server**, which had done exactly what §4.6 tells it to do.
@@ -889,14 +889,14 @@ received **the code and the specification, not the reasoning of whoever wrote it
 
 | # | the defect | why it was serious |
 |---|---|---|
-| ⛔⛔ **4** | `wt_battito_ns()` and `tono_passo()` had **two different guards for the same fact** | in every case covered by one and not by the other, the beat came back an instant **in the past** and nobody moved it: `poll()` with timeout 0, **loop at 100 % CPU**. ⚠ And the case is normal — *a browser closes the session and keeps the connection alive*, written in our own file |
+| ⛔⛔ **4** | `wt_heartbeat_ns()` and `tone_step()` had **two different guards for the same fact** | in every case covered by one and not by the other, the beat came back an instant **in the past** and nobody moved it: `poll()` with timeout 0, **loop at 100 % CPU**. ⚠ And the case is normal — *a browser closes the session and keeps the connection alive*, written in our own file |
 | ⛔⛔ **1** | the page declared `opus` **without asking itself whether it could decode it** | §4.3 obliges the server to follow the client's order of preference ⇒ on an engine without `AudioDecoder` the server **had to** choose Opus: 50 datagrams/s into a `continue`, and the PCM — which exists to be the positive control — never came into play. ⭐ The video, in the same file, already filtered with `isConfigSupported` |
 | ⛔ **2** | `AudioContext` and `AudioDecoder` **never closed** | at the seventh reattach without reloading, the engine refuses; the exception escaped the datagram reader's `for(;;)` and **killed the audio for the whole session, without a line** |
-| ⛔ **3** | `suona()` **overlapped instead of throwing away** | the comment said «I throw away the oldest»; the code did not keep the references and stopped nothing. ⇒ Not a gap: **a doubled signal** |
-| ⛔ **5** | `opus_apri()` outside the `try` | a rejected `configure()` killed the reader silently, **and left `a.dec` assigned but not configured** |
-| ⛔ **6** | six discard roads out of eight **mute** | and `wt_audio_conti()` **did not have a single caller**: the counters never reached a line. ⇒ «audio thrown away» and «audio never arrived» had the same face |
+| ⛔ **3** | `plays()` **overlapped instead of throwing away** | the comment said «I throw away the oldest»; the code did not keep the references and stopped nothing. ⇒ Not a gap: **a doubled signal** |
+| ⛔ **5** | `opus_open()` outside the `try` | a rejected `configure()` killed the reader silently, **and left `a.dec` assigned but not configured** |
+| ⛔ **6** | six discard roads out of eight **mute** | and `wt_audio_counts()` **did not have a single caller**: the counters never reached a line. ⇒ «audio thrown away» and «audio never arrived» had the same face |
 | ⛔ **8** | *«it writes it in the log at every session»* — **it did not write it** | the I6 switch was there, the declaration that must follow it was not: whoever read the log an hour later could not know that what is heard is a bench tone |
-| ⛔ **13** | `dgram_accoda` refused **without counting and without saying so** | unreachable today, ⚠ but with `figlio.c` the second caller was arriving |
+| ⛔ **13** | `dgram_enqueue` refused **without counting and without saying so** | unreachable today, ⚠ but with `figlio.c` the second caller was arriving |
 
 ⭐ **And remark 7 asked for a measurement, not a discussion** — and it is the one that paid off most:
 *«`audio.h` declares that Opus may not produce a packet for every block; §6.3 wants in the instant
@@ -954,7 +954,7 @@ on audio — the encoder road, the queue depth, how sound is played in the page 
 
 ⛔ **THE AUDIO DELAY BEHIND THE VIDEO — ~400 ms, and the cause is ours and written.**
 
-`[M]` **`src/pagina.html`: `AUDIO_CUSCINO_MS = 250`** — not 60. The 60 was raised to 250 on
+`[M]` **`src/pagina.html`: `AUDIO_CUSHION_MS = 250`** — not 60. The 60 was raised to 250 on
 **17 Aug**, and the code comment says why: *«il video si decodifica e si dipinge sullo
 **stesso thread** che programma l'audio; quando quel lavoro supera il cuscino la riproduzione si è
 già svuotata e il cuscino si riarma — e ogni riarmo è un BUCO»*. ⚠ It was the cure for the *«jitter
@@ -987,10 +987,10 @@ the aggravation that the missing number had to be *computed*, not just read.
 
 #### ⭐⭐ And the `[?]` of the falling queue is CLOSED: **the queue is not a cushion, it is a one-way tank**
 
-`a.prossimo` advanced by `n/48000` **for every block that arrives**, never with the time that passes. ⇒
+`a.upcoming` advanced by `n/48000` **for every block that arrives**, never with the time that passes. ⇒
 
 ```
-coda(n) = coda(n-1) + (ricevuti − attesi) × 20 ms,   riarmata a 250 quando tocca zero
+queue(n) = queue(n-1) + (received_n − expected_vals) × 20 ms,   riarmata a 250 quando tocca zero
 ```
 
 ⛔ **Every lost datagram takes away 20 ms of cushion for ever**, and the only things that raise it again
@@ -1006,17 +1006,17 @@ emptied the playback: the video painted 119-136 frames every 5 s **without skipp
 one**. ⇒ The `AudioWorklet` **is not the first cure**, and the *«jitter pazzesco»* of 17 Aug is explained
 entirely by **losses + tank**: with a 60 ms cushion **three lost blocks** were enough.
 
-#### ⭐ The cure written: the clock is anchored to the server's `istante`
+#### ⭐ The cure written: the clock is anchored to the server's `instant`
 
-Instead of queuing (`prossimo += durata`), playback is anchored to the **`istante` the server
+Instead of queuing (`upcoming += duration`), playback is anchored to the **`instant` the server
 already puts in every datagram** (`RCP.md` §6.3). With the anchor, a loss **does not consume cushion**: the
-next block goes to its place in time, not to the back of the line. ⛔ `AUDIO_CUSCINO_MS` **was not
+next block goes to its place in time, not to the back of the line. ⛔ `AUDIO_CUSHION_MS` **was not
 lowered**: with the anchor it must cover only the arrival jitter, which nobody has measured yet.
 
-⚠ **And the cure is NOT proven where it counts**: on the home network, in 100 s, `mancati 0` — the scene did not
+⚠ **And the cure is NOT proven where it counts**: on the home network, in 100 s, `missed 0` — the scene did not
 get a chance to show the defect. What is proven is that **it breaks nothing** (60 s: queue
-251-259 flat, GAPS 0, full 0, `usciti 2806 su 2823`) and that the algorithm has the declared properties
-(`07-b61-ancora.js`: **22 cases out of 22**, which cuts `suona()` out of `pagina.html` and **runs** it).
+251-259 flat, GAPS 0, full 0, `exited 2806 su 2823`) and that the algorithm has the declared properties
+(`07-b61-ancora.js`: **22 cases out of 22**, which cuts `plays()` out of `pagina.html` and **runs** it).
 
 #### ⛔ And two new things open up, which could not be seen before
 
@@ -1028,7 +1028,7 @@ get a chance to show the defect. What is proven is that **it breaks nothing** (6
    The anchor does not cure it, and sooner or later it leads to the 600 ms ceiling. It must be decided whether to correct it.
 
 `[?]` **And a sentinel that has never triggered**: if the Opus decoder **reconstructed**
-the `istante` instead of carrying it over, the anchor would silently go back to being the old ladder. The
+the `instant` instead of carrying it over, the anchor would silently go back to being the old ladder. The
 page would now declare it — ⚠ but in the test sessions nothing was lost, so the
 sentinel has not yet spoken.
 
@@ -1083,7 +1083,7 @@ together**. Now there is one, and it did not cost a new bench — it cost **two 
 | `AV` | 216 | 223 | **236 ms** | 245 | 247 |
 
 ⭐ **Constant offset, not drift**: 233 → 237 → 236 over 90 s. ⭐ And the premise was **verified,
-not believed**: the marker coming out of the decoder **really is** the server's `istante`
+not believed**: the marker coming out of the decoder **really is** the server's `instant`
 (excursion 32 ms, drift −0.02 ms/s).
 
 ⚠ **And `AV` overestimates, declared**: `aoff` includes `outputLatency` (22-28 ms `[M]`), `voff` cannot
@@ -1092,7 +1092,7 @@ that no API exposes**. ⇒ The real distance is **~200-220 ms**. ⛔ It was not 
 an estimate is fabricating a measurement*.
 
 ⭐⭐ **And the number says by itself where it lies**: at the same instant the audio queue is **253 ms** and
-`AUDIO_CUSCINO_MS` is **250**. ⇒ The distance is **almost all the cushion plus `outputLatency`**, not
+`AUDIO_CUSHION_MS` is **250**. ⇒ The distance is **almost all the cushion plus `outputLatency`**, not
 a delay that accumulates.
 
 ⛔ **And it is not the number the user experienced**: this is the page with the new audio clock. The
@@ -1101,11 +1101,11 @@ a delay that accumulates.
 > ### ⛔⭐ 22 Aug — **the yardstick was accused of being a tautology, and it defended itself with a number**
 >
 > An adversarial review showed **algebraically** that in `aoff_ms()` the instant term
-> **cancels out**: `aoff = (perf − ora·1000) + base·1000 + u`. It looked like a constant, and the coordinator
+> **cancels out**: `aoff = (perf − now·1000) + base·1000 + u`. It looked like a constant, and the coordinator
 > had **withdrawn the measurement**.
 >
 > ⛔ **The conclusion does not hold, and it was refuted with a measurement instead of with a reasoning.**
-> `base` is not arbitrary: at re-anchoring it is `ora + CUSCINO − ist/1e6`, so
+> `base` is not arbitrary: at re-anchoring it is `now + CUSCINO − ist/1e6`, so
 > `aoff = (perf − ist/1000) + CUSCINO + u` — and **`perf − ist/1000` is the real latency of the wire**.
 > ⭐ `[M]` new scene: the wire latency grows by **800 ms** halfway through the session ⇒ **`aoff` goes from
 > −750 to 50, a jump of exactly 800**. The yardstick sees.
@@ -1186,7 +1186,7 @@ anyone measured it:
   against **2 out of 1 019** at 15 Mbit;
 - the log counts **806 key frame requests** and **173 lines** *«la CHIAVE N tiene ancora ~60 000
   byte in coda e §5.2 vieta di abbandonarla: si ASPETTA»*;
-- a 60 KB key frame on 3 Mbit occupies the window for **160 ms**, and `WT_CHIAVE_RICHIESTA_MS` grants
+- a 60 KB key frame on 3 Mbit occupies the window for **160 ms**, and `WT_KEY_REQUEST_MS` grants
   one **every 150** ⇒ ⛔ **a new one is requested before the previous one has left**;
 - in those 160 ms 32 PCM blocks are born, and each finds `cwnd_left = 0`.
 
@@ -1215,7 +1215,7 @@ pacer, and why the three «our» doors were the wrong suspect.
 
 | | price |
 |---|---|
-| 🔸 **A · the key frame is not requested faster than it takes to get out** — `WT_CHIAVE_RICHIESTA_MS` from a constant to a function of the measured bandwidth | ⭐ **the only one that attacks the cause, and it takes nothing away from the audio**. ⚠ **Visible** price: on a narrow line the image stays broken longer after a loss |
+| 🔸 **A · the key frame is not requested faster than it takes to get out** — `WT_KEY_REQUEST_MS` from a constant to a function of the measured bandwidth | ⭐ **the only one that attacks the cause, and it takes nothing away from the audio**. ⚠ **Visible** price: on a narrow line the image stays broken longer after a loss |
 | **B · preventive window reserve** (not reactive, that one is measured at zero) | caps the video at `cwnd − floor`: < 3 % when there is room, bites when it is tight — that is when it is needed. `[?]` **not measured**: it touches the write order of the streams |
 | **C · the audio adapts before dying** | ⛔ **alone it is not enough, and it is measured**: 1/32 of the bandwidth still loses 58 %. A complement, not a cure |
 
@@ -1224,7 +1224,7 @@ pacer, and why the three «our» doors were the wrong suspect.
 
 ### ⭐⭐ Cure A is written and measured — and at 1 Mbit the delivered audio goes **×38**
 
-`chiave_intervallo_ms()` in `webtransport.c`, and ⭐ **the bandwidth is measured instead of guessed**:
+`key_interval_ms()` in `webtransport.c`, and ⭐ **the bandwidth is measured instead of guessed**:
 `cwnd / smoothed_rtt`, that is **the two numbers ngtcp2 itself uses** to decide how much to send. The
 size of the last key frame is taken **where it is a fact**, not from a constant. Floor 150 ms, margin
 +20 %, ⛔ ceiling **2 s** — *a key frame that is no longer requested is a frozen screen, and frozen is not ugly:
@@ -1256,10 +1256,10 @@ not a price.
 ⛔ **And what the cure does NOT do, declared**: at 3 Mbit the audio stays at **27 %** and the frames are
 still **all key frames**. **The spiral is not switched off: it is slower.**
 
-### ⏳ And the real engine is one step further upstream — `video_sgombra()`
+### ⏳ And the real engine is one step further upstream — `video_clear_out()`
 
 ⭐ Found **after** writing the cure, and it is the reason the cure helps but is not enough:
-`video_sgombra()` runs at **every** frame and abandons the deltas still queued because *«a more recent one
+`video_clear_out()` runs at **every** frame and abandons the deltas still queued because *«a more recent one
 has left»* (§5.1). On a wide line it almost never abandons; **on a narrow line a delta does not
 get out in 33 ms, so it is always abandoned** — and every abandonment rekindles the debt of §5.2.
 `[M]` The log says so **28 times per second**.
@@ -1271,13 +1271,13 @@ it does not switch it off.
 threshold on the queue) instead of at every more recent frame — ⭐ **§5.1 allows it, it does not impose it**.
 That way under congestion the video would drop in **rate** while staying made of deltas, instead of becoming a
 stream of key frames only. ⛔ **It was not written**: one cure at a time, and this one touches §5.1 — it is a
-**product decision**. The reasoning and the numbers sit next to `video_sgombra()` so they are not
+**product decision**. The reasoning and the numbers sit next to `video_clear_out()` so they are not
 lost.
 
 ### ⛔ And a bench defect that had moved the diagnosis upstream
 
 `[M]` The line *«vuole una CHIAVE»* appears in **two different messages**: the **request** leaving from
-`video_regola()` and the **refusal** that `rcp.c` writes. The «806 key frame requests» of the first report
+`video_rule()` and the **refusal** that `rcp.c` writes. The «806 key frame requests» of the first report
 were mostly **refusals**: counted separately, in the same round, they are **105 requests against 346
 refusals**. ⇒ **Two lines that look alike must be counted separately, or the diagnosis points where the
 defect is not.**
@@ -1290,7 +1290,7 @@ a real browser. That test is done by the coordinator on the merged product.
 ### ⛔⛔ The new defect: the queue swells mid-session, and stays swollen
 
 `[M]` A **five-minute round on the iron**, load 2.25: the queue jumped from **266 to 519 ms in a
-single window** (`BUCHI 1`, `mancati 4`) and **stayed there** for the rest of the session.
+single window** (`HOLES 1`, `missed 4`) and **stayed there** for the rest of the session.
 
 **The mechanism**, and it is not the drift: when the main thread stops for a moment, the datagrams
 accumulate in the reader and **arrive all together**. The first of the heap is old ⇒ re-arm, and
@@ -1300,14 +1300,14 @@ on ⇒ **the heap ends up in the future and the cushion swells by as much as the
 pull window was already closed.
 
 ⭐ **The cure is one line**: the pull window reopens at every **re-anchoring** — ⛔ not at every
-block, which was the silent defect of 21 Aug (`tirate 4506 su 4508`, silence with all counters
+block, which was the silent defect of 21 Aug (`pulled 4506 su 4508`, silence with all counters
 green). In healthy sessions it reopens **zero times**.
 
 | same 5 minutes, load 2.25 | before | after |
 |---|---|---|
 | queue | 266 → **519**, then 585 | ⭐ **269-289, still** |
 | GAPS | 1 | ⭐ **0** |
-| losses | `mancati 4` → jump and swelling | `mancati 7` → ⭐ **nothing**, neither jump nor swelling |
+| losses | `missed 4` → jump and swelling | `missed 7` → ⭐ **nothing**, neither jump nor swelling |
 
 ### ⛔⛔ And the bench had given **46 out of 46** to the code that still carried the defect
 
@@ -1353,7 +1353,7 @@ open, and it is re-measured on a real session of the user, where the two sound c
 
 ### ⛔ And the reordering window is OUT — it belongs to phase 9
 
-It was written and certified (`vecchi 0 / riord 400` against `vecchi 400` with the old rule), ⛔ but
+It was written and certified (`stale 0 / riord 400` against `stale 400` with the old rule), ⛔ but
 the user corrected the scope: *«i problemi di rete non rientrano in questa fase»*. ⇒ Removed from the
 product **instead of leaving it inside switched off**, and the work is described in `PIANO.md` phase 9.
 
@@ -1361,13 +1361,13 @@ product **instead of leaving it inside switched off**, and the work is described
 
 *A remark of the review, confirmed **by reproducing it** instead of by reading it.*
 
-`[M]` `picco = max(abs(x)…) or 1.0` ⇒ with samples **all zero** the peak becomes 1.0, the threshold
-drops with it, the residuals are 0 ⇒ **`scoppiettii 0`, `resa 1.000`**: the audio judge **gives
+`[M]` `peak = max(abs(x)…) or 1.0` ⇒ with samples **all zero** the peak becomes 1.0, the threshold
+drops with it, the residuals are 0 ⇒ **`crackles 0`, `rendered 1.000`**: the audio judge **gives
 silence the top mark**. Four seconds of zeros, verified.
 
 ⛔⛔ **And the blind spot is arithmetic, not statistical**: the PCM block is 240 samples = 5.0 ms, so
 **5 blocks = 1 200 samples = exactly 11.000 cycles of 440 Hz**. `[M]` cuts of **1 200 and 2 400
-samples** ⇒ `scoppiettii 0`; cuts of 240 and **1 201** ⇒ they show. ⇒ A loss in bursts of
+samples** ⇒ `crackles 0`; cuts of 240 and **1 201** ⇒ they show. ⇒ A loss in bursts of
 five blocks **is stitched back continuous and in phase**, and no algorithm can hear it.
 
 ⭐ **The cure has two legs, and the second is the part that counts**: silence no longer gets the top mark
@@ -1385,7 +1385,7 @@ scenes — not changed today, because it would make yesterday's numbers incompar
 **All 31 kept takes** re-judged with the cured judge:
 
 - ⛔ **six change outcome**, all from the first round with the network broken: now they say *«silenzio o
-  quasi — non giudico»* where they said `scoppiettii 0`. ⚠ **R7a was really biting in a
+  quasi — non giudico»* where they said `crackles 0`. ⚠ **R7a was really biting in a
   measurement of ours** — they had already been cancelled and redone, but **by reading them by eye**; now it is the
   judge that **refuses by itself**;
 - ⭐⭐ **no reported number changes**: the A/B of R26 is identical line by line, and the second leg
@@ -1395,7 +1395,7 @@ scenes — not changed today, because it would make yesterday's numbers incompar
 #### ⛔ And the watcher printed «on» without having turned anything on
 
 *(The defect was the coordinator's, who had written that file; the cure is the agent's.)* `& echo
-acceso` **always** succeeds, the start-up log **was read by nobody**, and the watch file
+lit` **always** succeeds, the start-up log **was read by nobody**, and the watch file
 was a **fixed** path. ⇒ The watcher does not start, the user does the session, and one reads **yesterday's
 watch**.
 ⭐ Cured with four legs — the previous one is killed, the file carries **the time in its name**, one verifies
@@ -1426,7 +1426,7 @@ only the cleanliness of the stream.
 
 ⛔ **It was the last real defect of phase 7**, and it is the one the user had confirmed on the evening of the 21st
 with *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Between the two sentences there
-are: the **anchor to the server's `istante`** (the queue is no longer a one-way tank), the
+are: the **anchor to the server's `instant`** (the queue is no longer a one-way tank), the
 **reopening of the pull at every re-anchoring** (the queue no longer swells mid-session), the cure
 of the **key-frame spiral** (the audio no longer dies when the line narrows) and the **first click**
 that now really turns the sound on.
@@ -1506,7 +1506,7 @@ greens do not replace it.
 ### 9.3 · ⛔⛔⭐ «SI È BLOCCATO FIREFOX CON LA CLIPBOARD» — and it was not Firefox
 
 *20 Aug 2026, defect reported by the user while testing the two browsers. ⚠ It was not the
-browser freezing: it was **our page** sending `ERRORE_PROTOCOLLO` and closing the session — and from
+browser freezing: it was **our page** sending `PROTOCOL_ERROR` and closing the session — and from
 outside it looks like an image that stops.*
 
 **`[M]` The server's log, 19:04:06, and the chain fits in four lines:**
@@ -1530,8 +1530,8 @@ case (the client serving a superseded request). ⚠ The page, on the other hand,
 different — it is form **E2** inside a single file.
 
 **The cure, at both ends**: the error is a text **that nobody ever asked for**, not a text with an
-old number. ⇒ It is compared with **what was asked for** (`APPUNTI.chiesti` in the page,
-`app_chiesto_id` in the server), and the length is demanded **only** on the live transfer — on a
+old number. ⇒ It is compared with **what was asked for** (`CLIPBOARD.asked` in the page,
+`app_requested_id` in the server), and the length is demanded **only** on the live transfer — on a
 superseded one the text served is the *current* one.
 
 #### ⭐⭐ And the bench found TWO more, both mine, after the cure
@@ -1552,7 +1552,7 @@ product, in the same minute, **passed on one engine and failed on the other**.
 millisecond** on a local network. Six copies in a burst inside the session (`wl-copy`, 15 ms
 apart) **did not open it even once**. ⇒ The bench puts the page **exactly
 in the state** that closed the user's session: it requests a transfer and makes a newer announcement arrive — before
-the answer. ⛔ It is white-box, it touches `REMOTIX.appunti`, **and it declares it**:
+the answer. ⛔ It is white-box, it touches `REMOTIX.clipboard_text`, **and it declares it**:
 what it verifies is the **rule**, not the timing.
 
 ⭐ **And it certifies itself**: with the old line put back, `[M]` the bench sees the session close with
@@ -1560,10 +1560,10 @@ what it verifies is the **rule**, not the timing.
 Firefox and Chrome**.
 
 ⛔ **And a defect I made while curing**, because it is the part that teaches: to expose the state
-to the bench I had hooked `APPUNTI` to the `window.REMOTIX` box, which runs **long before** its
+to the bench I had hooked `CLIPBOARD` to the `window.REMOTIX` box, which runs **long before** its
 declaration — reading a `const` in its dead zone stops **the whole rest of the script**.
 ⚠ The symptom named none of this: the login form lost its handler and the
-page ended up at `GET /?utente=…&parola=…`, that is **the password in the address bar**.
+page ended up at `GET /?username=…&password=…`, that is **the password in the address bar**.
 A declaration-order defect turned, for two minutes, into a privacy defect.
 
 ---
@@ -1581,26 +1581,26 @@ browser's path.*
 application** — that is the user's environment. `[M]` The page's diary, three lines:
 
 ```
-appunti · Ctrl+V visto · sorveglianza=«nessuna»
-appunti · evento `paste` arrivato · 0 caratteri          ← VUOTO
-appunti · l'evento `paste` è arrivato: strada gratis, nessun permesso
+clipboard_text · Ctrl+V seen_v · watch=«nessuna»
+clipboard_text · event `paste` landed · 0 characters          ← EMPTY
+clipboard_text · l'event `paste` è arrivato: strada gratis, nessun permesso
 ```
 
-and `annunciati: 0`: **nothing ever left**.
+and `announced: 0`: **nothing ever left**.
 
 #### The three causes, and they are all ours
 
 | | the cause | why it bit |
 |---|---|---|
-| 1 | ⛔ **an empty `paste` counted as a delivery** | `ultimo_paste_ms` was marked **before** checking whether there was text ⇒ the `readText()` fallback was switched off («free road») and nothing else was tried |
-| 2 | ⛔ **nothing editable had focus** | and the `paste` event is born only there. ⚠ The comment of §9 said *«la cura ovvia non si può fare»* because a focused `TEXTAREA` switches off the keyboard (`cl_nel_modulo`) — ⭐ **it was false**: it was enough to **name the exception** instead of giving up |
+| 1 | ⛔ **an empty `paste` counted as a delivery** | `last_paste_ms` was marked **before** checking whether there was text ⇒ the `readText()` fallback was switched off («free road») and nothing else was tried |
+| 2 | ⛔ **nothing editable had focus** | and the `paste` event is born only there. ⚠ The comment of §9 said *«la cura ovvia non si può fare»* because a focused `TEXTAREA` switches off the keyboard (`cl_in_form`) — ⭐ **it was false**: it was enough to **name the exception** instead of giving up |
 | 3 | ⛔ **the text «waiting for a gesture» stole the clipboard** | the text coming from the remote desktop waited for a gesture to enter the local clipboard, and the gesture could be **the user's `Ctrl+V`** — that is it was written over his copy exactly while he was pasting it. `[M]` The bench saw it: the remote desktop received **its own text back** |
 
 #### The cures, and they are four
 
-⭐ **The hidden field** (`incolla_campo_prendi`): it takes focus **only for the 400 ms of the `Ctrl+V`**,
+⭐ **The hidden field** (`paste_field_take`): it takes focus **only for the 400 ms of the `Ctrl+V`**,
 the browser's paste has somewhere to go, the `paste` event is born with the text inside, and **no
-permission is asked**. ⛔ And `cl_nel_modulo()` exempts it by name: keys keep going to the
+permission is asked**. ⛔ And `cl_in_form()` exempts it by name: keys keep going to the
 remote desktop — the bench verifies it by typing a letter **after** every paste.
 
 ⭐ **The second road**: after 120 ms **what the browser really pasted into the
@@ -1660,7 +1660,7 @@ key does not have. ⇒ On that path the last word belongs to a real keyboard —
 | right button → «Incolla» **inside the remote desktop** | **the remote desktop** | ⛔ **nothing** |
 
 ⇒ That menu is painted in the video, and the «Incolla» item is executed by an application on the other
-side of the wire. The only news of it that reaches the page is the server's `APPUNTI_CHIEDI`.
+side of the wire. The only news of it that reaches the page is the server's `CLIPBOARD_ASK`.
 ⛔ **And the four green benches of §9.4 all pressed `Ctrl+V`**: they measured the only road that already
 worked. The missing bench is `banchi/07-b56-incolla-col-mouse.py`, which never presses a key.
 
@@ -1677,15 +1677,15 @@ no clipboard read.
 
 **2 · ⛔ And that announcement left TOO EARLY, and closed the session.** `[M]` Log of
 05:55:42: *«congedo motivo=0x0b — byte sullo stream di appunti (14) prima che `SESSIONE` sia partita
-(stato: attesa-verdetto)»*. `avvia_appunti()` runs at ECCOMI, that is **before the credentials**.
-⇒ The opening announcement was moved after `SESSIONE` (`appunti_apri_la_domanda`).
+(stato: attesa-verdetto)»*. `start_clipboard()` runs at ECCOMI, that is **before the credentials**.
+⇒ The opening announcement was moved after `SESSION` (`clipboard_open_request`).
 
 **3 · ⛔ The offer to the session fell into the void, and nobody redid it.** `[M]` 06:00:15 —
 the announcement at `.868`, the opening of the session's clipboard at `.982`: **114 ms** in between, and
 in those 114 ms the child wrote *«gli appunti della sessione non ci sono: l'offerta cade»*.
 ⇒ The compositor never became owner of the selection, and inside the desktop the «Incolla» item
 **had nothing to give**.
-⭐ **Cure**: `figlio.c` keeps **one bit** (`appunti_offerta_arretrata`) and redoes the offer as soon as the
+⭐ **Cure**: `figlio.c` keeps **one bit** (`clipboard_pending_offer`) and redoes the offer as soon as the
 clipboard opens. It is the same shape as `rcp.c`'s backlogged question: instead of delaying
 something for everyone, one stitches it back.
 
@@ -1697,12 +1697,12 @@ compositor that, seeing a new selection, throws away the requests open on the ol
 re-offered *exactly while we were serving* — the page re-reads the clipboard, announces the new text, and
 that announcement threw away the paste in progress. ⇒ **Whoever pasted saw empty**, which is the symptom
 we had started from.
-⭐ **Cure**: while there are pending requests the offer is **postponed** (`app_offri_dopo`), and it leaves
+⭐ **Cure**: while there are pending requests the offer is **postponed** (`app_offer_later`), and it leaves
 once the answer has left.
 
 #### And the cure at the centre: **the clipboard is re-read when the desktop asks**
 
-`appunti_rileggi_prima_di_servire()` — on `APPUNTI_CHIEDI`, before serving, the page re-reads the
+`clipboard_reread_before_serving()` — on `CLIPBOARD_ASK`, before serving, the page re-reads the
 device's clipboard. ⭐ The permission is there: **the click on the «Incolla» item of the remote menu is a
 click on this page**, so the transient activation is milliseconds fresh.
 
@@ -1731,7 +1731,7 @@ engines.
    came back empty while `xclip -o` on the bench's screen showed the text.
 2. **The bench clicked too early.** Between the click and `wl-paste` there are `ssh`, `sudo` and `runuser`:
    `[M]` whole seconds, and transient activation lasts five seconds. ⇒ *«lack of user
-   activation»* was the bench, not the product. Cure: the remote script says **`PRONTO`** and waits
+   activation»* was the bench, not the product. Cure: the remote script says **`READY`** and waits
    a second and a half, so the order of events is the real one.
 3. **`xclip` hung the bench**, like `wl-copy` in the session: it forks to *serve* the
    selection and keeps its outputs open. ⇒ It is not waited for.
@@ -1765,15 +1765,15 @@ session, where the clipboard does not vanish because someone came in.
 **immediately**, *«ed è proprio l'annuncio che fa ritrovare gli appunti a chi si ricollega»*.
 ⛔ **False, measured**: `wl-copy` alive and owner, `wl-paste` re-reading its text before and
 after, and in the child's log **no read line**. Mutter reports **changes** of
-owner, not who already is one. ⇒ The clipboard that is there is **asked for** (`appunti_leggi_adesso()`), and
+owner, not who already is one. ⇒ The clipboard that is there is **asked for** (`clipboard_read_now()`), and
 asked for again **at every reattach** — the child survives between one connection and the next, so the
-read done at start-up holds only once (`MSG_RIMANDA_PALCO`, which means exactly
+read done at start-up holds only once (`MSG_RESEND_STAGE`, which means exactly
 «a client has reattached»).
 
 #### The definitive cure lives where the text really is
 
 ⭐ **If the client has no clipboard to give, the child gives back to the session the last text the
-session itself had given it** (`appunti_rispondi`). The selection changes hands, **the content
+session itself had given it** (`clipboard_reply`). The selection changes hands, **the content
 does not**. ⇒ Whoever connects loses nothing, and the mouse-paste road stays open.
 
 ⚠ **And two intermediate cures were thrown away, with their reason**:

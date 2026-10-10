@@ -3,7 +3,7 @@
 # 06-b33-costruisci.sh — ⛔ RUNS INSIDE THE CONTAINER.  Builds the witness
 # of sub-phase 6.1 and drops it in the work folder.
 #
-#   printf '<parola>\n' | bash /media/REMOTIX/enter.sh --root \
+#   printf '<password>\n' | bash /media/REMOTIX/enter.sh --root \
 #       'bash /srv/src/06-i-src/banchi/06-b33-costruisci.sh'
 #
 # ⛔ It exists because of the house rule «a file has no levels of quoting»: a
@@ -16,12 +16,12 @@
 #    the same between the healthy run and the faulty run (`CODER.md` §3.3).
 set -uo pipefail
 
-QUI=$(cd -- "$(dirname -- "$0")" && pwd)
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 LAV=${LAV:-/srv/remotix/tmp/06-i}
 XDG=${XDG:-/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml}
 
 mkdir -p "$LAV"
-cd "$QUI" || exit 2
+cd "$HERE" || exit 2
 
 echo "== the xdg-shell protocol"
 [ -f "$XDG" ] || { echo "⛔ $XDG is not there"; exit 2; }

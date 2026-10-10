@@ -4,7 +4,7 @@
 # from `17-vm.sh`, family by family, and started as a service on 7447.
 #
 #   (on the server, as nicfio)
-#   bash 17-t1c-installa.sh <machine> <target> [prodotto|diag]
+#   bash 17-t1c-installa.sh <machine> <target> [product|diag]
 #     <machine>    debian13-gnome, ubuntu2604-gnome, fedora44-gnome, arch-kde, …
 #     <target>     the binary's folder in $T1C/bin/ (debian13, ubuntu2604,
 #                  fedora44, arch, tumbleweed, leap16, alma10)
@@ -33,21 +33,21 @@ m=${1:?machine}; b=${2:?target}; q=${3:-prodotto}
 R=/media/REMOTIX/vm17
 T1C=${T1C:-$R/t1c}
 VM="bash $R/17-vm.sh ssh $m"
-PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
+PASSWORD=${REMOTIX_TEST_PASSWORD:-prova2026}
 
 case $m in
 debian13-*) n=1;; ubuntu2604-*) n=2;; fedora44-*) n=3;; arch-*) n=4;;
 tumbleweed-*) n=5;; leap16-*) n=6;; alma10-*) n=7;; *) echo "unknown machine: $m"; exit 2;;
 esac
 case ${m#*-} in gnome) k=1;; kde) k=2;; xfce) k=3;; lxqt) k=4;; esac
-PORTA_SSH=$((2300 + 10 * n + k))
+SSH_PORT=$((2300 + 10 * n + k))
 O="-i $R/ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 if [ "$q" = diag ]; then BIN=$T1C/diag/$b/remotix; else BIN=$T1C/bin/$b/remotix; fi
 
 echo "==> $m: copying binary ($q), page and system files"
 $VM 'mkdir -p /tmp/t1c'
 # shellcheck disable=SC2086
-scp -q $O -P "$PORTA_SSH" "$BIN" "$T1C/pagina.html" "$T1C"/remotix.pam* \
+scp -q $O -P "$SSH_PORT" "$BIN" "$T1C/pagina.html" "$T1C"/remotix.pam* \
 	"$T1C/remotix-niente-spegnimento.rules" "$T1C/remotix-tasti.conf" nicfio@localhost:/tmp/t1c/
 
 # ── 1. the runtime dependencies, family by family ────────────────────────────
@@ -84,8 +84,8 @@ case $m in
 	tumbleweed-*|leap16-*) $VM 'sudo zypper -n install labwc xwayland' ;;
 	esac ;;
 esac
-MANCANO=$($VM "ldd /tmp/t1c/remotix | grep 'not found' || true")
-if [ -n "$MANCANO" ]; then echo "⛔ missing libraries:"; echo "$MANCANO"; exit 1; fi
+MISSING=$($VM "ldd /tmp/t1c/remotix | grep 'not found' || true")
+if [ -n "$MISSING" ]; then echo "⛔ missing libraries:"; echo "$MISSING"; exit 1; fi
 
 # ── 2. the product, the family's PAM file, the denied users ─────────────────
 echo "==> $m: product and PAM"
@@ -114,7 +114,7 @@ sudo systemctl reload systemd-logind 2>/dev/null || true'
 # ── 4. the test user, in the groups READ BY THE GPU NODES ────────────────────
 echo "==> $m: test user"
 $VM "id -u prova >/dev/null 2>&1 || sudo useradd -m -s /bin/bash prova
-echo 'prova:$PAROLA' | sudo chpasswd
+echo 'prova:$PASSWORD' | sudo chpasswd
 G=\$(for x in /dev/dri/card* /dev/dri/renderD*; do [ -e \$x ] && getent group \$(stat -c %g \$x) | cut -d: -f1; done | sort -u | paste -sd,)
 [ -n \"\$G\" ] && sudo usermod -aG \"\$G\" prova
 sudo loginctl enable-linger prova
@@ -125,7 +125,7 @@ echo "==> $m: REMOTIX as a service on 7447"
 $VM 'sudo mkdir -p /var/lib/remotix
 sudo systemd-run --unit=remotix-t1c --collect --working-directory=/opt/remotix \
   --property=KillMode=mixed --property=LimitRTPRIO=20 --property=LimitNICE=-11 \
-  /opt/remotix/remotix --indirizzo 0.0.0.0 --nome localhost --porta 7447 \
-  --certificati /var/lib/remotix/certificati --pagina /opt/remotix/pagina.html \
+  /opt/remotix/remotix --address 0.0.0.0 --label_name localhost --port 7447 \
+  --certificates /var/lib/remotix/certificates --page_v /opt/remotix/pagina.html \
   --ban-file /var/lib/remotix/ban >/dev/null
 sleep 2; systemctl is-active remotix-t1c; sudo journalctl -u remotix-t1c -o cat --no-pager | grep -E "ready:|PAM" | tail -2'

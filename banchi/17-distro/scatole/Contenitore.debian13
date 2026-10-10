@@ -2,7 +2,7 @@
 # xfce, lxqt), for the round of §7.3 ON THE server's REAL GPU (fasi/17 §7.5). Generalises
 # Contenitore.debian13-kde (1 Oct 2026): one recipe per distribution, the desktop as argument.
 #
-# Like the "cliente" VM (17-vm.sh vesti): the desktop with the distribution's official package
+# Like the "client" VM (17-vm.sh dress): the desktop with the distribution's official package
 # group (task-<desktop>-desktop), and NOTHING of REMOTIX: that is the job of the installer
 # and of the administrator (banchi/17-distro/17-amministratore.sh). In addition, because it is a box:
 #   · systemd as first process, sshd on a port of ITS OWN (--network=host: the ports are the host's);
@@ -11,7 +11,7 @@
 #     udev does it).
 FROM docker.io/library/debian:13
 ARG DESKTOP
-ARG PORTA_SSH=8600
+ARG SSH_PORT=8600
 ENV DEBIAN_FRONTEND=noninteractive
 RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y -q "task-$DESKTOP-desktop" \
     && rm -rf /var/lib/apt/lists/*
 COPY comune.sh /usr/local/sbin/t17-comune
-RUN sh /usr/local/sbin/t17-comune "$PORTA_SSH" ssh.service
+RUN sh /usr/local/sbin/t17-comune "$SSH_PORT" ssh.service
 COPY chiave-banco.pub /root/.ssh/authorized_keys
 RUN chmod 600 /root/.ssh/authorized_keys
 STOPSIGNAL SIGRTMIN+3

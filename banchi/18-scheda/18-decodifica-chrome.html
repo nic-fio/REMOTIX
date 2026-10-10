@@ -6,7 +6,7 @@
   It is opened with headless Chrome (`18-decodifica-chrome.sh`) and the outcome is read
   from the console (`console.log`, with `--enable-logging=stderr`):
     google-chrome --headless=new --allow-file-access-from-files --enable-logging=stderr \
-      "file:///…/18-decodifica-chrome.html?flusso=file:///…/F.bin&codec=avc1.64002a"
+      "file:///…/18-decodifica-chrome.html?flow=file:///…/F.bin&codec=avc1.64002a"
   It is one JSON line: decoded frames, errors, the
   size of the first frame, and a fingerprint (sum of the pixels) of every tenth
   frame — so two «equal» streams are compared on the picture too.
@@ -17,20 +17,20 @@
 -->
 <html><head><meta charset="utf-8"><title>18-decodifica</title></head>
 <body>
-<pre id="esito">running</pre>
+<pre id="outcome">running</pre>
 <script>
 (async () => {
   const p = new URLSearchParams(location.search);
-  const flusso = p.get("flusso"), codec = p.get("codec");
-  const esito = { flusso, codec, decodificati: 0, errori: [], chunk: 0, misura: "", impronte: [] };
+  const flow = p.get("flow"), codec = p.get("codec");
+  const outcome = { flow, codec, decoded: 0, errors: [], chunk: 0, gauge: "", fingerprints: [] };
   const fine = (m) => {
-    const testo = "ESITO " + JSON.stringify(Object.assign(esito, m || {}));
-    document.getElementById("esito").textContent = testo;
-    console.log(testo); /* it is what 18-decodifica-chrome.sh reads from Chrome's log */
+    const body_text = "OUTCOME " + JSON.stringify(Object.assign(outcome, m || {}));
+    document.getElementById("outcome").textContent = body_text;
+    console.log(body_text); /* it is what 18-decodifica-chrome.sh reads from Chrome's log */
     setTimeout(() => window.close(), 300); /* in headless, closing the last window closes Chrome */
   };
   try {
-    const byte = new Uint8Array(await (await fetch(flusso)).arrayBuffer());
+    const byte = new Uint8Array(await (await fetch(flow)).arrayBuffer());
     // the row of NALs: cut at the start codes, grouped into frames
     // (one frame = from the first non-VCL or VCL NAL up to and including the next VCL)
     const hevc = codec.startsWith("hev1") || codec.startsWith("hvc1");
@@ -38,55 +38,55 @@
     let i = 0;
     while (i + 3 <= byte.length) {
       if (byte[i] === 0 && byte[i + 1] === 0 && byte[i + 2] === 1) {
-        const inizio = (i > 0 && byte[i - 1] === 0) ? i - 1 : i;
+        const start = (i > 0 && byte[i - 1] === 0) ? i - 1 : i;
         let j = i + 3;
         while (j + 3 <= byte.length && !(byte[j] === 0 && byte[j + 1] === 0 && byte[j + 2] === 1)) j++;
         let fine_nal = j;
         if (j + 3 <= byte.length && j > 0 && byte[j - 1] === 0) fine_nal = j - 1;
-        nal.push({ inizio, fine: fine_nal, tipo: hevc ? (byte[i + 3] >> 1) & 0x3f : byte[i + 3] & 0x1f });
+        nal.push({ start, fine: fine_nal, kind: hevc ? (byte[i + 3] >> 1) & 0x3f : byte[i + 3] & 0x1f });
         i = j;
       } else i++;
     }
     const vcl = (t) => hevc ? t <= 31 : (t >= 1 && t <= 5);
-    const chiave = (t) => hevc ? (t >= 16 && t <= 23) : t === 5;
-    const fotogrammi = [];
-    let corrente = null;
+    const key_id = (t) => hevc ? (t >= 16 && t <= 23) : t === 5;
+    const frames = [];
+    let current = null;
     for (const n of nal) {
-      if (!corrente) corrente = { inizio: n.inizio, fine: n.fine, chiave: false };
-      corrente.fine = n.fine;
-      if (vcl(n.tipo)) { corrente.chiave = chiave(n.tipo); fotogrammi.push(corrente); corrente = null; }
+      if (!current) current = { start: n.start, fine: n.fine, key_id: false };
+      current.fine = n.fine;
+      if (vcl(n.kind)) { current.key_id = key_id(n.kind); frames.push(current); current = null; }
     }
-    esito.chunk = fotogrammi.length;
+    outcome.chunk = frames.length;
     let n = 0;
-    const tela = document.createElement("canvas");
-    const ctx = tela.getContext("2d", { willReadFrequently: true });
+    const canvas_size = document.createElement("canvas");
+    const ctx = canvas_size.getContext("2d", { willReadFrequently: true });
     const dec = new VideoDecoder({
       output: (f) => {
         n++;
-        if (!esito.misura) esito.misura = f.codedWidth + "x" + f.codedHeight + " (shown " + f.displayWidth + "x" + f.displayHeight + ")";
+        if (!outcome.gauge) outcome.gauge = f.codedWidth + "x" + f.codedHeight + " (shown " + f.displayWidth + "x" + f.displayHeight + ")";
         if ((n - 1) % 10 === 0) {
-          tela.width = 64; tela.height = 36;
+          canvas_size.width = 64; canvas_size.height = 36;
           ctx.drawImage(f, 0, 0, 64, 36);
           const d = ctx.getImageData(0, 0, 64, 36).data;
           let s = 0; for (let k = 0; k < d.length; k += 4) s += d[k] + d[k + 1] + d[k + 2];
-          esito.impronte.push(s);
+          outcome.fingerprints.push(s);
         }
         f.close();
       },
-      error: (e) => { esito.errori.push(String(e)); },
+      error: (e) => { outcome.errors.push(String(e)); },
     });
     const config = { codec, optimizeForLatency: true };
     const sup = await VideoDecoder.isConfigSupported(config);
-    esito.supportato = sup.supported;
-    if (!sup.supported) return fine({ decodificati: 0, perche: "configure not supported" });
+    outcome.supported = sup.supported;
+    if (!sup.supported) return fine({ decoded: 0, reason_text: "configure not supported" });
     dec.configure(config);
-    fotogrammi.forEach((f, k) => {
-      dec.decode(new EncodedVideoChunk({ type: f.chiave ? "key" : "delta", timestamp: k * 16667, data: byte.subarray(f.inizio, f.fine) }));
+    frames.forEach((f, k) => {
+      dec.decode(new EncodedVideoChunk({ type: f.key_id ? "key" : "delta", timestamp: k * 16667, data: byte.subarray(f.start, f.fine) }));
     });
     await dec.flush();
-    fine({ decodificati: n });
+    fine({ decoded: n });
   } catch (e) {
-    fine({ eccezione: String(e) });
+    fine({ exception: String(e) });
   }
 })();
 </script>

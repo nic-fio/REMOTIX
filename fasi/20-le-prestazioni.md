@@ -89,9 +89,9 @@ numbers can be compared with the old ones where needed:
      1.03–1.16 s** (threshold 1 s) in a single actor: a real measure, to be looked at in the campaign, not a defect of the
      bench. ⇒ **the setup is calibrated on 4 desktops × 2 cards**; only the final binary remains.
    - *«commit del prodotto: ?»*: the climb looked for it only in `src/16-prodotto` (stuck at 26 Sep). Now it also reads
-     `rete11/prodotto/VERSIONE` = `<commit> <md5 a 8>`, valid only if the md5 is the binary's.
+     `rete11/prodotto/VER` = `<commit> <md5 a 8>`, valid only if the md5 is the binary's.
      ⇒ **fixed step of the campaign**: with the final binary compiled, it is copied into `rete11/prodotto` and
-     `VERSIONE` is written alongside.
+     `VER` is written alongside.
 4. **The campaigns, one configuration at a time** (performance is not measured in parallel):
    Intel = VA-API on GNOME, KDE, XFCE, LXQt; then Radeon = Vulkan, same order.
 4b. ⭐ **The comparison with xrdp, on the same machine** (decided by the user on 8 Oct: *«sono curioso di vedere
@@ -146,9 +146,9 @@ they too come from the driver. The product stays on Debian 13's RADV 25.0.7 and 
 DEGRADED (at most one actor out of four); «true green» wants them all green. At 4, 8 and 12 users there was **a
 single actor** DEGRADED, always for the **image stall** of 1.06-1.11 s (threshold 1 s). `[M]` In the case
 `intel-f20-fhd-xfce/livello-04` (user 1, profile A, who types text) the **server answers every key in 23-40 ms**
-(log: `input id=1524…1545` → `fotogramma SPEDITO`), no frame skipped, no input lost. `[?]` The
+(log: `input id=1524…1545` → `frame SPEDITO`), no frame skipped, no input lost. `[?]` The
 «still» second is born **before** the server or in the comparison between the time of the keys reconstructed by the actor
-(`ore_dei_tasti`, from the return of the Marionette chain) and the time of the page's paints: **to be verified** before
+(`key_times`, from the return of the Marionette chain) and the time of the page's paints: **to be verified** before
 calling it a defect, with the actor writing every impulse and the paint it attributes to it.
 
 ⭐ **10 Oct 2026, morning — verified on the files, without touching the server** `[M]`: in `intel-f20-fhd-xfce` the stalls above
@@ -156,7 +156,7 @@ threshold are 7 (levels 4, 8, 12: user 1 profile A, users 7 and 3 profile C), al
 with 0 frames skipped and 0 errors. In the **same rows** of `stato.jsonl` (5 s) the **page round trip** (key →
 frame, measured by the page) has its maximum at **24.7-47.5 ms**, and the terminal echo at 24-25 ms. ⇒ The screen
 answered: the «still» second **does not belong to the REMOTIX server**. It sits between Marionette and Firefox: either the time of the keys reconstructed
-by `ore_dei_tasti` (which assumes the chain executed without stops), or Firefox itself stalled on the loaded machine (the
+by `key_times` (which assumes the chain executed without stops), or Firefox itself stalled on the loaded machine (the
 actors run on the server). The 0.7-1.5 s stalls on Firefox appear **on all desktops** (from 0 to 15 per climb,
 levels 1-8); Chrome, which types the keys one by one via CDP with the true time, never has them outside the video.
 ⇒ ⚠ **In the comparison with xrdp it weighs against REMOTIX**: xrdp's actor types with XTEST, true time, and does not have
@@ -165,13 +165,13 @@ GNOME 3K (1, good 4), XFCE 3K (4, good 8). ⏳ Proposed cure: the key's time is 
 `keydown` event), not reconstructed by the actor; and the climbs already done are reclassified from the files, without redoing them.
 ✅ **Cured on 10 Oct 2026** (commit «🧪 fase 20 §3-bis.2», `banchi/16-stress/16-attore.py`): the probe that
 the actor injects into the page (not the product: `src/pagina.html` does not change) notes in capture on `window` the time
-of every `keydown`, `pointerdown` and `wheel`, in the same clock as the paints; `allinea_impulsi` puts every
+of every `keydown`, `pointerdown` and `wheel`, in the same clock as the paints; `align_pulses` puts every
 impulse back at that time (Marionette or CDP estimate only if the page did not see the gesture: then it stays a real
 stall). Every row of `stato.jsonl` carries `impulsi_pagina: [dalla pagina, totali]`. ⭐ The cause, seen in the tests:
 a held-back chain shifts FORWARD the keys typed before the stop, beyond their echo, and the wait becomes
 that of the next paint — the blinking cursor, ~1.1 s. ⏳ **Reclassification to be done with the xrdp campaign
 finished**, on the server, for every climb `intel-f20-*` and `amd-f20-*`:
-`cd /media/REMOTIX/src/controllo/banchi/16-stress && for s in /media/REMOTIX/misure/fase16/{intel,amd}-f20-*/; do python3 16-riclassifica.py --salita "$s"; done`
+`cd /media/REMOTIX/src/controllo/banchi/16-stress && for s in /media/REMOTIX/misure/fase16/{intel,amd}-f20-*/; do python3 16-riclassifica.py --climb "$s"; done`
 (it writes alongside `riclassificata.json` and `livello-NN/classifica-riclassificata.log`; it exits 2 if a level with no rows
 touched changes class, that is if the redone judgement is not the climb's).
 ✅ **Done on the evening of 10 Oct on shadow copies** (the measures stay read-only): 32 climbs, all exited 0, only
@@ -232,7 +232,7 @@ all'avvio» (DECISIONI §10.30), and on a machine bigger than ours: today it can
 1. *«i test su xrdp devono rispecchiare quelli su remotix: 4 DE, Intel e Radeon»* ⇒ **the whole matrix**:
    8 climbs, 4K → Full HD, like `intel-f20` and `amd-f20`. Point 4b of §3 (a single XFCE 2K climb) is superseded.
 2. *«fai in modo che la suite lavori in modo autonomo sul server»* ⇒ the same structure as REMOTIX:
-   `16-campagna.sh` → `16-coda.sh` → `16-salita.py --sistema xrdp`, in a systemd unit, with `FERMA` and resumption.
+   `16-campagna.sh` → `16-coda.sh` → `16-salita.py --system_wide xrdp`, in a systemd unit, with `FERMA` and resumption.
 3. *«e soprattutto evita che il server si blocchi»* ⇒ §7.7.
 4. *«mi aspetto che l'intera suite duri meno dei 3 giorni di remotix»* ⇒ REMOTIX's two campaigns occupied the
    machine for ~50 hours (Intel ~22, Radeon ~28). With the same protocol the duration depends on where xrdp gives way:
@@ -241,7 +241,7 @@ all'avvio» (DECISIONI §10.30), and on a machine bigger than ours: today it can
 
 **The first piece of §7.6 is done and measured** `[M]` (9 Oct, 16:00-16:10):
 - **a single recipe**, `banchi/11-scatole/Contenitore.xrdp` (`ARG DESKTOP`), built **on top of** the measures'
-  image (`rete11/<desktop>:p0`); `11-accendi.sh costruisci|accendi <desktop>-xrdp`. Plus xrdp
+  image (`rete11/<desktop>:p0`); `11-accendi.sh build|turn_on <desktop>-xrdp`. Plus xrdp
   0.10.1-3.1+deb13u2, xorgxrdp 1:0.10.2-1 and pipewire-module-xrdp 0.2-2. To stay on X11, every desktop gets its own
   piece of Debian: GNOME `gnome-session-xsession` (Mutter 48), KDE `kwin-x11` (Plasma 6.3.6), XFCE `xfwm4` and
   `xfce4-settings`, LXQt `openbox`;
@@ -282,15 +282,15 @@ processor**: at 4K, 16 users mean 16 RemoteFX decodings plus 16 Xorg. ⇒ Four n
 **What there is** (commit `31d5b50` and following, in `banchi/16-stress/`):
 - `16-attore-rdp.py`: the same rate and the same four jobs as `16-attore.py`. FreeRDP `/gfx` full
   screen in an Xvfb, the hands with XTEST, the snapshot from the Xvfb, the XDamage probe on FreeRDP's window
-  (bursts at 5 ms). With `--controllo` it does the reduced short check of §7.3 (login, screen, keyboard), with
+  (bursts at 5 ms). With `--check` it does the reduced short check of §7.3 (login, screen, keyboard), with
   one tenant per level (`c16<9NN>u99`), and if the birth fails it saves `~/.xsession-errors` and the
   Xorg log;
 - `16-compositori-rdp.sh` (one Xvfb per user, with `oom_score_adj` 800);
-- `--sistema xrdp` in `16-salita.py` (the box, 3389, xrdp on, xrdp's logs, the versions of the
+- `--system_wide xrdp` in `16-salita.py` (the box, 3389, xrdp on, xrdp's logs, the versions of the
   packages, `dpkg --verify` to prove that the configuration is the package's, the guard of §7.7,
   sshd at −900), in `16-risorse.py` (the enclosures of §7.4) and in `16-classifica.py` (the entries of §7.3; log
   `registro-xrdp.jsonl`);
-- in `16-coda.sh` and `16-campagna.sh`: `REMOTIX_16_SISTEMA=xrdp` and the estimate of the hours written in `campagna.log`
+- in `16-coda.sh` and `16-campagna.sh`: `REMOTIX_16_SYSTEM=xrdp` and the estimate of the hours written in `campagna.log`
   after every climb.
 All the certifications pass: attore-rdp, classification 38 out of 38 (4 new for xrdp), resources 21 out of 21.
 
@@ -329,7 +329,7 @@ stop at 3 users**, on all desktops and at all sizes, because of a crash and not 
 
 ⭐ **The user's choice (9 Oct, evening): number 1.** *«se xrdp ha dei difetti meglio: vuol dire che il nostro prodotto
 e' migliore»*. ⇒ **Campaign started on 9 Oct at 17:47** (unit `r20-xrdp`, `16-campagna.sh intel-x20 amd-x20`,
-`REMOTIX_16_SISTEMA=xrdp`), with the package's configuration (`dpkg --verify` clean).
+`REMOTIX_16_SYSTEM=xrdp`), with the package's configuration (`dpkg --verify` clean).
 ⏳ **After the campaign, one hour: the crash outside the box.** xrdp installed on the host, 4 sessions with one
 watching the film, then the 5th. The measures hold in any case; the check decides how the crash is told. If
 it appears outside the box too, «xrdp non fa entrare il quinto» is written. If it does not appear, it is declared as a
@@ -389,11 +389,11 @@ Read from the files, without touching the server. Two things change what can be 
 
 | today (REMOTIX) | xrdp | who does it |
 |---|---|---|
-| box `rete11-xfce` redone from zero (`11-accendi.sh`), inside `rete11-server` | **the same box** with in addition `xrdp` and `xorgxrdp` (derived image `rete11-xfce-xrdp`, built **once**), `rete11-server` **stopped**; `xrdp` and `xrdp-sesman` on with Debian's files **as they are** | `16-salita.py --sistema xrdp` |
-| tenant `c16NNNuN` created by the actor (`suite.Sessione`), the box's PAM | **the same**: sesman goes through PAM (`/etc/pam.d/xrdp-sesman` → `common-auth`), the tenant is the same | reuse |
+| box `rete11-xfce` redone from zero (`11-accendi.sh`), inside `rete11-server` | **the same box** with in addition `xrdp` and `xorgxrdp` (derived image `rete11-xfce-xrdp`, built **once**), `rete11-server` **stopped**; `xrdp` and `xrdp-sesman` on with Debian's files **as they are** | `16-salita.py --system_wide xrdp` |
+| tenant `c16NNNuN` created by the actor (`suite.Session`), the box's PAM | **the same**: sesman goes through PAM (`/etc/pam.d/xrdp-sesman` → `common-auth`), the tenant is the same | reuse |
 | one **labwc without a screen** per user (`16-compositori.sh`), with a browser inside | one **Xvfb** per user (`:2NN`, 2560×1440) with **`xfreerdp3`** inside, full screen: `/v:127.0.0.1 /u:… /p:… /cert:ignore /gfx /f /sound:sys:fake /wm-class:remotix-rdp-NN` | `16-compositori-rdp.sh` (new) |
-| the input: Marionette/CDP on the page's canvas | **`xdotool`** on the Xvfb's display (mouse, keys, wheel): the input goes **through the RDP channel**, like the user's | new `Mani` |
-| the snapshot: the page's canvas | the snapshot of the Xvfb (`xwd -root` → PIL), **1:1 with the desktop** (no snapshot → desktop conversion) | new `foto_pil` |
+| the input: Marionette/CDP on the page's canvas | **`xdotool`** on the Xvfb's display (mouse, keys, wheel): the input goes **through the RDP channel**, like the user's | new `Hands` |
+| the snapshot: the page's canvas | the snapshot of the Xvfb (`xwd -root` → PIL), **1:1 with the desktop** (no snapshot → desktop conversion) | new `photo_pil` |
 | the paints: the probe in the page (every 10 ms the time of every change) | **XDamage on the Xvfb** (`python3-xlib`): every time FreeRDP draws, the time. ⭐ It is the **same measure from the watcher's side** | new probe |
 
 ⭐ **Why xfreerdp in Xvfb and not sdl-freerdp in labwc.** With Xvfb the input is injected with `xdotool`,
@@ -402,13 +402,13 @@ price, to be declared:** FreeRDP decodes RemoteFX **on the processor** and does 
 browsers sit on the Intel together with the server; with xrdp they do not. On the card xrdp is **advantaged**, on the
 processor **disadvantaged**.
 
-**The new actor** is `16-attore-rdp.py`, not a change to `16-attore.py`. It reuses `Ritmo` (same seeds,
-same choices in the same order) and **all four jobs of `16-lavori.py`**: they use only `dorme`,
-`verifica`, `impulso`, `mani.*`, `foto_pil`, `s.nella_sessione`, `sc.dentro`, `chi`, `desktop`. Of these
+**The new actor** is `16-attore-rdp.py`, not a change to `16-attore.py`. It reuses `Rate` (same seeds,
+same choices in the same order) and **all four jobs of `16-lavori.py`**: they use only `sleeps`,
+`verify`, `pulse`, `hands.*`, `photo_pil`, `s.in_session`, `sc.inside`, `chi`, `desktop`. Of these
 three things change:
-- `nella_sessione`: `DISPLAY=:N` of the tenant's Xorg (read from `ps -u <inquilino>`), `XAUTHORITY`,
+- `in_session`: `DISPLAY=:N` of the tenant's Xorg (read from `ps -u <tenant>`), `XAUTHORITY`,
   the session bus from `/proc/<xfce4-session>/environ`, without `MOZ_ENABLE_WAYLAND`;
-- `Mani`: xdotool with the same pauses and the same typing as the `Ritmo`;
+- `Hands`: xdotool with the same pauses and the same typing as the `Rate`;
 - the snapshot: from the Xvfb.
 
 The state row is written **in the same schema** (`stato.jsonl`, `nascita.json`), so the classification reads it.
@@ -416,19 +416,19 @@ The state row is written **in the same schema** (`stato.jsonl`, `nascita.json`),
 ### 7.2 The work scene: the same
 
 The four profiles A/B/C/D run **inside the XFCE session** as today. The files are prepared the same way
-(`prepara`), the applications are the same (`firefox-esr --kiosk`, `thunar`, `xfce4-terminal`) and
+(`prepare`), the applications are the same (`firefox-esr --kiosk`, `thunar`, `xfce4-terminal`) and
 the video is the same local 4K file (`/rete11/.c16-video/`). The checks look at **the disk** (the notebook,
 the folder created, the bash history) and **do not know** whether REMOTIX or xrdp is in front.
 ⚠ The only difference is that XFCE runs **on X11**, because xrdp does not know Wayland. It is xrdp's natural environment
-(§3 point 4b), and the session is chosen by a `~/.xsession` with `startxfce4` written by `prepara`.
+(§3 point 4b), and the session is chosen by a `~/.xsession` with `startxfce4` written by `prepare`.
 
 ### 7.3 The measures, one by one
 
 | entry (§9, fixed thresholds) | xrdp | how |
 |---|---|---|
-| **input → frame delay** | ⚠ **in another way** | from the watcher's side: p95 per second between the **impulse** (key, click, notch) and the **first** XDamage **paint** after it. ⛔ The campaign's REMOTIX is judged from the **server side** («NOSTRO» + 9 ms). ⇒ In the comparison REMOTIX's **round trip** is put alongside (`stato.jsonl` → `giro`, the page's command → frame delay, **already recorded** in `intel-f20-2k-xfce`): client side against client side. ⚠ The page round trip includes decoding and drawing, XDamage on Xvfb does not: a slight advantage to xrdp, declared |
+| **input → frame delay** | ⚠ **in another way** | from the watcher's side: p95 per second between the **impulse** (key, click, notch) and the **first** XDamage **paint** after it. ⛔ The campaign's REMOTIX is judged from the **server side** («NOSTRO» + 9 ms). ⇒ In the comparison REMOTIX's **round trip** is put alongside (`stato.jsonl` → `lap`, the page's command → frame delay, **already recorded** in `intel-f20-2k-xfce`): client side against client side. ⚠ The page round trip includes decoding and drawing, XDamage on Xvfb does not: a slight advantage to xrdp, declared |
 | **skipped frames** | ⛔ **not measured** | FreeRDP acknowledges every frame (FRAME_ACKNOWLEDGE): xrdp **does not send** those it cannot, it does not skip them. There is no «delivered against painted» to count |
-| **longest image stall** | ✅ **the same** | same function (`attese_impulsi`, `pausa_piu_lunga`), but with the XDamage paints |
+| **longest image stall** | ✅ **the same** | same function (`pulse_waits`, `longest_pause`), but with the XDamage paints |
 | **holes in the video chain** | ⛔ **not measured** | it is a counter of our page, it has no equivalent |
 | **video: paints per second** | ⚠ **in another way** | the XDamage bursts per second in the video window (bursts separated by more than 5 ms). ⚠ xrdp has `rfx_frame_interval=32 ms` by default (≈31 per s): with the film at 30 fps **it does not penalise it** |
 | **audible audio** | ⛔ **not measured** (but **on**) | `pipewire-module-xrdp` in the session and `/sound:sys:fake` in the client: the audio **travels**, so the load is even, but nobody plays it and so it is not counted |
@@ -443,9 +443,9 @@ the folder created, the bash history) and **do not know** whether REMOTIX or xrd
 | enclosure | REMOTIX | xrdp |
 |---|---|---|
 | `remotix` (the server) | `rete11-server` + the `remotix` children | `xrdp`, `xrdp-sesman`, `xrdp-sesexec`, `xrdp-chansrv`, by executable name, inside the box. ⭐ **Here** the RemoteFX compression is done, on the processor |
-| `sessioni` | compositor and applications of the tenants | **the same**, and inside there is also the tenant's **`Xorg` + xorgxrdp**, which does the **capture** (`rdpCapture`, with glamor on the Intel) |
-| `browser` (the watcher) | Firefox/Chrome with the mark `remotix-ff-`/`remotix-cr-` | `xfreerdp3` with the mark `remotix-rdp-` (already foreseen: `--segni-browser`) |
-| `labwc_cliente` | the labwc without a screen | the clients' **Xvfb** (one more line in the recognition) |
+| `sessions` | compositor and applications of the tenants | **the same**, and inside there is also the tenant's **`Xorg` + xorgxrdp**, which does the **capture** (`rdpCapture`, with glamor on the Intel) |
+| `browser` (the watcher) | Firefox/Chrome with the mark `remotix-ff-`/`remotix-cr-` | `xfreerdp3` with the mark `remotix-rdp-` (already foreseen: `--browser-marks`) |
+| `labwc_client` | the labwc without a screen | the clients' **Xvfb** (one more line in the recognition) |
 
 ⛔ The split between «server» and «sessions» is not the same in the two systems: with us the
 `remotix` child copies, in xrdp `Xorg` copies. ⇒ The comparison is made on the **box totals** (CPU, RAM, card),
@@ -468,10 +468,10 @@ side.
 `max_bpp`): if we touch them, the comparison is not valid. An xrdp recompiled with x264 would be **another**
 test, to be proposed to the user only if the result asks for it.
 
-**`16-salita.py --sistema xrdp`**: the check of the empty server is the same, plus port 3389. The box
-is redone from zero with the `-xrdp` image, without `prodotto` and without cap. In place of commit and binary,
+**`16-salita.py --system_wide xrdp`**: the check of the empty server is the same, plus port 3389. The box
+is redone from zero with the `-xrdp` image, without `product` and without cap. In place of commit and binary,
 `livello.json` gets the versions of the packages. `server.log` becomes the extract of `xrdp.log` and
-`xrdp-sesman.log`, and the classification runs with `--sistema xrdp`. **Everything else does not change**: steps 1,4,8,12,16,
+`xrdp-sesman.log`, and the classification runs with `--system_wide xrdp`. **Everything else does not change**: steps 1,4,8,12,16,
 10 minutes (30 the last), repetition, search halfway, clean box between repetitions.
 
 ### 7.6 What it costs, and the risks
@@ -480,8 +480,8 @@ is redone from zero with the `-xrdp` image, without `prodotto` and without cap. 
 |---|---|
 | image `rete11-xfce-xrdp`, xrdp on in the box, **one session by hand** up to the desktop | 2 |
 | `16-attore-rdp.py` (Xvfb, xdotool, XDamage, snapshot, state schema) + certify without server | 6 |
-| `16-compositori-rdp.sh`, `16-risorse.py` (mark and Xvfb), `16-classifica.py --sistema xrdp` | 3 |
-| `16-salita.py --sistema xrdp` | 2 |
+| `16-compositori-rdp.sh`, `16-risorse.py` (mark and Xvfb), `16-classifica.py --system_wide xrdp` | 3 |
+| `16-salita.py --system_wide xrdp` | 2 |
 | tests on the server: 1, 2, 4 users of 5 minutes (as §3 point 3) | 3 |
 | **work** | **~16 hours ≈ 2 days** |
 | **the climb** (XFCE 2K Intel, up to ~11-12 users with the search halfway) | **~2½-3 hours of machine** |
@@ -492,7 +492,7 @@ is redone from zero with the `-xrdp` image, without `prodotto` and without cap. 
    The `browser` enclosure shows it, and it must be declared as it is, without passing it off as an xrdp number.
 2. ✅ **The XDamage probe: tested on the evening of 8 Oct** on the laptop, in a Debian 13 container (`python3-xlib`
    0.33, Xvfb, `xclock -update 1`): the extension is there, the events arrive, **~1 burst per second** like
-   the clock. ⚠ The call is `finestra.damage_create(livello)`, not `display.damage_create`. ⇒ The risk
+   the clock. ⚠ The call is `win.damage_create(level)`, not `display.damage_create`. ⇒ The risk
    goes down; it remains to see it with FreeRDP really drawing. The earlier text, for the record: The fallback is FreeRDP's logs
    (`WLOG_LEVEL=DEBUG` on the rdpgfx channel), but it is likely that in Debian's build the frame
    messages are off. Without paints neither the delay nor the stall can be measured ⇒ it must be tested **first**.
@@ -508,7 +508,7 @@ both**, not with the REMOTIX table's number. ⭐ **What it will say well:** wher
 
 *Written on the evening of **10 Oct 2026**, from the files, without touching the server: the queues `coda-intel-f20.log`,
 `coda-amd-f20.log` (REMOTIX, 7-9 Oct) and `coda-intel-x20.log`, `coda-amd-x20.log` (xrdp, 9 Oct 17:47 → 10 Oct
-16:09 UTC), the logs `registro.jsonl` and `registro-xrdp.jsonl`, `16-rapporto.py --testo` on the four campaigns.
+16:09 UTC), the logs `registro.jsonl` and `registro-xrdp.jsonl`, `16-rapporto.py --body_text` on the four campaigns.
 ⛔ The user's decisions already taken, not put back into question: **climbs are not redone**; the verdict on video and
 processor is solid; for xrdp's capacity the note of the «wall» of §8.3 is written alongside.*
 
@@ -583,7 +583,7 @@ How to read them:
 
 **The processor and the memory**, level **4 users** (the last one xrdp lives through at least in Full HD; at 2K xrdp's level
 4 is FAIL because of the wall of §8.3 but the four work and are measured). Processor **of the machine** (20 threads),
-then the cores of the server side (enclosures `remotix` + `sessioni`, that is server, compositors and applications) and the
+then the cores of the server side (enclosures `remotix` + `sessions`, that is server, compositors and applications) and the
 PSS memory of the same side:
 
 | 4 users | REMOTIX Intel | REMOTIX Radeon | xrdp Intel | xrdp Radeon |

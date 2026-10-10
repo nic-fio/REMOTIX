@@ -52,7 +52,7 @@
  * a password is worse than an entry that is not there: it promises something.
  */
 polkit.addRule(function (action, subject) {
-    var vietate = [
+    var forbidden = [
         "org.freedesktop.login1.power-off",
         "org.freedesktop.login1.power-off-multiple-sessions",
         "org.freedesktop.login1.power-off-ignore-inhibit",
@@ -67,7 +67,7 @@ polkit.addRule(function (action, subject) {
         "org.freedesktop.login1.hibernate-ignore-inhibit"
     ];
 
-    for (var i = 0; i < vietate.length; i++)
-        if (action.id == vietate[i])
+    for (var i = 0; i < forbidden.length; i++)
+        if (action.id == forbidden[i])
             return polkit.Result.NO;
 });

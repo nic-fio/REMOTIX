@@ -232,9 +232,9 @@ KDE number (58.9) stays written.
 > multipli installato sono per il momento fuori scope»*
 
 ⭐ **What is gained, and it is the reason the decision is worth it**: `sessione.c` recognises the
-desktop **by looking at the PATH** (`riconosci_desktop()`, `src/sessione.c:275-303`). With one desktop only
+desktop **by looking at the PATH** (`recognize_desktop()`, `src/sessione.c:275-303`). With one desktop only
 per machine that recognition is a **question with only one answer** — there is nothing to
-arbitrate, no preference to configure, no `--compositore` option to put back (v1 had it,
+arbitrate, no preference to configure, no `--compositor` option to put back (v1 had it,
 `fondamenta/remotix-c/src/main.c:456-459`; v2 removed it and **it is not put back**).
 
 ⚠ **The ambiguous case stays, and stays as it is**: if there were two desktops on the machine, the product
@@ -243,7 +243,7 @@ become one: it is a **line that tells the truth** about a machine that is out of
 
 ⛔⛔ **But what this decision does NOT cover is the defect that opens phase 13**, and it must not be confused
 with it: a machine that has **only XFCE** today is not an ambiguous case — it is an **empty** case. It falls
-into the last branch of `riconosci_desktop()` (`src/sessione.c:295-299`), the product **silently falls back
+into the last branch of `recognize_desktop()` (`src/sessione.c:295-299`), the product **silently falls back
 to GNOME** and then launches `gnome-session`, which does not exist on that machine. ⇒ One desktop
 only, recognised correctly, is **precisely** what this decision demands, and it is the heart
 of increment 1.
@@ -358,7 +358,7 @@ here are only the choices that could have been made otherwise.
 
 ⚠ **And today's total is no longer twenty-two: it is twenty-six**, all defined byte by byte (`RCP.md`
 §0-bis, box corrected by finding **R1.29**). The four added on 9 Aug are
-`RICHIEDI_CHIAVE` and `TELA` (§5.2, §7.1) and ⭐ **`BANCO_MARCA` and `BANCO_ESITO`** (§7.5, the night of the
+`REQUEST_KEY` and `CANVAS` (§5.2, §7.1) and ⭐ **`BENCH_MARK` and `BENCH_OUTCOME`** (§7.5, the night of the
 9th). *The distinction between the two totals dates from 10 Aug 2026, finding **R11.13**: this line said
 «of the twenty-two messages of the protocol» in the present tense, and a reader who checked completeness
 by counting from here — as R1.29 declares it did on §0-bis — found four fewer than
@@ -374,30 +374,30 @@ its denominator is what `LEZIONI.md` §1.9 point 4 forbids.
 |---|---|---|---|
 | 1 | **the port is 7447**, and they are ⛔ **two listeners with the same number**: **UDP** for HTTP/3 and WebTransport, **TCP** for the first load of the page | free in Trixie's `/etc/services` `[M]`. `[?]` IANA not checked. ⚠ *This row said «the port is **UDP** 7447» and nothing more, while `RCP.md` §2.4 has declared the two listeners since 9 Aug: whoever implemented from here opened only UDP, and **the page would not have been served at all** — that is the symptom «`https://192.168.0.2:7447` does not answer», which names neither the port nor the transport. Aligned on the night of 10 Aug 2026 by the **rereading of all twenty-six rows** that `R11-documenti.md` §C point 6 prescribes — `[R]` **N1**, and it was not among R11's findings* | `RCP.md` §2.4 |
 | 2 | **strings** are a `u16` length plus UTF-8, with no terminator | the terminator invites passing the string to `printf` without copying it, and a null byte in the middle becomes a silent truncation | §6.0 |
-| 3 | **the high byte of the `tipo` tells the channel** of a stream | whoever receives a unidirectional stream must know what is inside **before** reading it, and it was not written anywhere | §2.5 |
-| 4 | **no 0-RTT** | 0-RTT data is replayed, and the second message is `CREDENZIALI`. The gain is one network round trip on a session that lasts hours | §2.3 |
+| 3 | **the high byte of the `kind` tells the channel** of a stream | whoever receives a unidirectional stream must know what is inside **before** reading it, and it was not written anywhere | §2.5 |
+| 4 | **no 0-RTT** | 0-RTT data is replayed, and the second message is `CREDENTIALS`. The gain is one network round trip on a session that lasts hours | §2.3 |
 | 5 | `disable_active_migration` **is not sent** | declaring it silently switches off the reason QUIC was chosen | §2.3 |
 | 6 | ⛔ ~~stream credit ≥ 256~~ → **the server grants the client ≥ 16** | *corrected on the evening of 9 Aug (**R1.14**): 256 was a parameter we demanded from the client, and **with a browser it is the browser that chooses it**. Whoever implemented by reading this row wrote 256 where `RCP.md` says 16* | §2.3 |
 | 7 | ⛔ ~~the fingerprint is computed on the public key~~ → **on the certificate in DER form** | *corrected on the evening of 9 Aug (**R1.14**): `serverCertificateHashes` compares the fingerprint **of the certificate**. Whoever published that of the key got a comparison that **never matches**, with the symptom «WebTransport does not connect» and no error naming the fingerprint. ⚠ And the reason that stood next to it — «a certificate reissued with the same key must not trigger the warning» — **has lapsed**: with the fingerprint published by the page, every reissue changes it anyway* | §4.1-bis |
 | 8 | ⛔ ~~the client switches off the X.509 checks by default~~ | *fallen on the evening of 9 Aug (**R1.14**): the client is a page, and has no X.509 check to switch off. It was a leftover of the draft with a client of our own, remaining in the document that says what was decided* | — |
-| 9 | **`RESPINTO` is the farewell of authentication**, and ⛔ **the server** does not send another one | §4.4 and §8.2 overlapped: two implementations could guess differently, or **the same because written by the same hand**. ⚠ *It said «and no other follows», without saying whose: the prohibition is the **server's**, and it applies to `CONGEDO`. **To the client, after `RESPINTO`, there remains one thing it can say, and it is precisely `CONGEDO`** — the prohibition of §4.4 is on **retrying**, not on taking leave (clarification of 10 Aug, bench **B11**, which had put a red on the page while it was doing what §8.1 imposes on it). Whoever implemented the page by reading this row stayed silent, and B11 demands the farewell **once per engine**. Aligned on the night of 10 Aug 2026 by the same rereading — `[R]` **N2**, and it was not among R11's findings* | §4.4 |
+| 9 | **`REJECTED` is the farewell of authentication**, and ⛔ **the server** does not send another one | §4.4 and §8.2 overlapped: two implementations could guess differently, or **the same because written by the same hand**. ⚠ *It said «and no other follows», without saying whose: the prohibition is the **server's**, and it applies to `FAREWELL`. **To the client, after `REJECTED`, there remains one thing it can say, and it is precisely `FAREWELL`** — the prohibition of §4.4 is on **retrying**, not on taking leave (clarification of 10 Aug, bench **B11**, which had put a red on the page while it was doing what §8.1 imposes on it). Whoever implemented the page by reading this row stayed silent, and B11 demands the farewell **once per engine**. Aligned on the night of 10 Aug 2026 by the same rereading — `[R]` **N2**, and it was not among R11's findings* | §4.4 |
 | 10 | **a single credentials attempt per connection** | the limiter counts one thing only, and no state machine is needed for repeated attempts | §4.4 |
 | 11 | ⛔ ~~**rate limiting: 5 in 5 minutes, then a 30 s wait that doubles up to 15 min**, with two counters~~ → **REPLACED on 10 Aug 2026 by §1.9**, which is ✅ the user's: three failed authentications and the address is banned for **12 hours**, with **one** counter only and without the per-user-name one. ⭐ **The rest of the row survives intact**: **the fixed second of delay on every answer, even when it is «admitted»** | the fixed second closes the `[?]` of `SPECIFICHE.md` §4.2 and removes **timing** as a channel: without it, the distinction between «non-existent user» and «wrong password» that §4.4 forbids writing can be read with a stopwatch. ⚠ And on that second there is a measurement that does not add up: B8 gives a median of **2636 ms**, that is, what governs the timings is **PAM** — `[?]` open, and the ban does **not** close it | §4.4-bis, §1.9 |
 | 12 | **the canvas MUST have even sides**, between 320×240 and 7680×4320 | an odd size is rounded **by the encoder, silently**: two sizes under the same label, that is error form **E2** | §4.5 |
 | 13 | **three time caps on the handshake** (5 s, 60 s, 10 s) | a connection stuck halfway holds a slot; and QUIC's 30 s measure the **silence of the network**, not a client that is not doing its job | §4.6 |
-| 14 | ⛔ **keyframes**: `tipo` `0x0301`/`0x0302` and the message `RICHIEDI_CHIAVE` | **it was not a gap, it was a design defect**: §5.1 allows dropping a frame, and the video is compressed with prediction — dropping one leaves the decoder broken until a keyframe arrives, and there was no way either to say so or to ask for one. It costs **zero bytes**: it goes into the values of a field that already existed | §5.2 |
+| 14 | ⛔ **keyframes**: `kind` `0x0301`/`0x0302` and the message `REQUEST_KEY` | **it was not a gap, it was a design defect**: §5.1 allows dropping a frame, and the video is compressed with prediction — dropping one leaves the decoder broken until a keyframe arrives, and there was no way either to say so or to ask for one. It costs **zero bytes**: it goes into the values of a field that already existed | §5.2 |
 | 15 | audio is **48 kHz, 2 channels**; ⛔ **the blocks are 20 ms for Opus and 5 ms for PCM**, and PCM is **s16 little-endian** | «Opus, with PCM as the baseline» is not a format. And the endianness of the payload is the only exception to network order: declaring it is what prevents two implementations from silently diverging. ⛔ *This row said «20 ms blocks» for **audio** and reserved only the endianness for PCM: it is the reading that finding **R1.1** — the most serious of the 9 Aug review — declares **lethal**, because 20 ms of PCM make 1920 samples, 3840 bytes, plus 12 = **3852**, and a QUIC datagram cannot be fragmented on a ~1200-byte path. **PCM audio would never have left, on any network** — and PCM is the positive control of Opus. `RCP.md` §5.3 had been corrected on the evening of the 9th; this row had not. Aligned on 10 Aug 2026, finding **R11.12*** | §5.3 |
 | 16 | the clipboard stops at **1 000 000 bytes**, and beyond that **it is not announced** | truncating a text and pasting it into a terminal is worse than not having it | §5.4 |
-| 17 | the cursor stops at **256×256**, and ⛔ **`larghezza = 0` *and* `altezza = 0` together** mean hidden — only one of the two at zero is `ERRORE_PROTOCOLLO`, and in that case the **hot spot MUST be `0,0`** | a way was needed to say «no cursor» that was not one message less. ⚠ *This row said «`larghezza = 0` means hidden», without the height: whoever implemented from here sent `larghezza=0, altezza=16` and §5.5 declared it `ERRORE_PROTOCOLLO`. Aligned on 10 Aug 2026, finding **R11.11**, together with the exception on the hot spot that §5.5 did not have* | §5.5, §7.2 |
+| 17 | the cursor stops at **256×256**, and ⛔ **`width_px = 0` *and* `height_px = 0` together** mean hidden — only one of the two at zero is `PROTOCOL_ERROR`, and in that case the **hot spot MUST be `0,0`** | a way was needed to say «no cursor» that was not one message less. ⚠ *This row said «`larghezza = 0` means hidden», without the height: whoever implemented from here sent `width_px=0, height_px=16` and §5.5 declared it `PROTOCOL_ERROR`. Aligned on 10 Aug 2026, finding **R11.11**, together with the exception on the hot spot that §5.5 did not have* | §5.5, §7.2 |
 | 18 | **a frame does not exceed 16 MiB**, and the length is checked **before allocating** | without a cap, six bytes written by hand take away the server's memory | §6.1, §6.2 |
 | 19 | frames **can arrive out of order**, and the client discards the old ones with arithmetic **modulo 2³²** | the streams are independent: it is a consequence of §5.1 that nobody had written. At 60 per second the counter wraps in two years, and a session can last longer | §6.2 |
-| 20 | **key and button codes are evdev's**, the wheel in **units of 120** | it is what `libei` wants, that is the only way we have to inject input. Any other convention adds a translation table that gets things wrong silently. ⚠ *Here there was also «and in v1 that table cost the wheel bench (`LEZIONI.md` §2.3)», and it is **false**: §2.3 tells that the wheel bench looked for `asse dy=-10` while the log wrote `asse dx=0 dy=-10` — **red, with correct code**. It is a string searched for wrongly, not a conversion with the wrong sign. `RCP.md` §7.3 had been corrected on the night of 9 Aug (finding **R4.15**); this row had not, and it is the one the project designates as the source. Aligned on 10 Aug 2026, finding **R11.14** — and it matters because by citing the wrong lesson **one loses it at the point where it would apply**, that is S7, which is still to be measured* | §7.3 |
+| 20 | **key and button codes are evdev's**, the wheel in **units of 120** | it is what `libei` wants, that is the only way we have to inject input. Any other convention adds a translation table that gets things wrong silently. ⚠ *Here there was also «and in v1 that table cost the wheel bench (`LEZIONI.md` §2.3)», and it is **false**: §2.3 tells that the wheel bench looked for `axis dy=-10` while the log wrote `axis right=0 dy=-10` — **red, with correct code**. It is a string searched for wrongly, not a conversion with the wrong sign. `RCP.md` §7.3 had been corrected on the night of 9 Aug (finding **R4.15**); this row had not, and it is the one the project designates as the source. Aligned on 10 Aug 2026, finding **R11.14** — and it matters because by citing the wrong lesson **one loses it at the point where it would apply**, that is S7, which is still to be measured* | §7.3 |
 | 21 | the input `id` is **one only for the whole channel**, not one per type | it is what comes back in the `input` field of the frame: with separate counters nothing would add up | §7.3 |
 | 22 | ⛔ **on detach all keys and buttons are released** | a Ctrl left down in a session that survives the client makes the desktop unusable on reattach, and nobody connects the two things | §7.3 |
-| 23 | **`TELA` is the mandatory answer to `ADATTA_TELA`** | §7.1 imposed a «reasoned refusal» and there was no message to say it: the client would have kept waiting forever | §7.1 |
+| 23 | **`CANVAS` is the mandatory answer to `FIT_CANVAS`** | §7.1 imposed a «reasoned refusal» and there was no message to say it: the client would have kept waiting forever | §7.1 |
 | 24 | after a canvas change, **one second of grace** on the old coordinates | it is the only moment when the two sides legitimately have two different truths. Declared as an exception to §3, not left to improvisation | §7.1 |
 | 25 | the reason for the farewell travels **also in the application error code of the WebTransport session close** | if the farewell does not arrive — broken stream, unreadable message — the reason gets through anyway. It is the wound of `LEZIONI.md` §1.7 cured with two routes instead of one. ⚠ *It said «QUIC close», and it is the reading that finding **R1.4** declared impossible for the page: the API exposes the close **of the session**, not that of the HTTP/3 connection underneath. Aligned on 10 Aug 2026, finding **R11.8*** | §3.1 |
-| 26 | ⭐ **the bench function enters the protocol**: two new types, `BANCO_MARCA` (`0x000F`) and `BANCO_ESITO` (`0x0010`) — the 16×16 rectangle, the colour, and the **injectable delay `N`** | the delay loop of §2.6 measures from the receiving side, and for that number to be valid the bench must be able to **inject a known delay** and check that the median rises by exactly that — *«a bench that does not do it does not know it is measuring»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). That command **crosses the wire**: improvising it in the test code would be the silent defect against which `RCP.md` §0 exists. ⛔ **The function is off by default** (invariant I6) and when off it answers `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, never a silence. ⛔⛔ **13 Aug 2026: the function does NOT give the known delay, and at phase 3 it did not give it** — `BANCO_ACCESO 0` and the `ACCETTATA` branch is **a stub** `[R]`. The known delay was injected **outside the product**, and P1 is `[M]` green (N=25 → +25.08; N=60 → +58.58). ⭐ And outside the product is **better**: the clock anchor does not pass through the injected path, so P1 **can still fail**. ⇒ ⏳ it remains to decide whether to complete the branch or remove the two types (`RCP.md` §7.5) | §7.5 |
+| 26 | ⭐ **the bench function enters the protocol**: two new types, `BENCH_MARK` (`0x000F`) and `BENCH_OUTCOME` (`0x0010`) — the 16×16 rectangle, the colour, and the **injectable delay `N`** | the delay loop of §2.6 measures from the receiving side, and for that number to be valid the bench must be able to **inject a known delay** and check that the median rises by exactly that — *«a bench that does not do it does not know it is measuring»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). That command **crosses the wire**: improvising it in the test code would be the silent defect against which `RCP.md` §0 exists. ⛔ **The function is off by default** (invariant I6) and when off it answers `BENCH_OUTCOME(RIFIUTATA, FUNCTION_OFF)`, never a silence. ⛔⛔ **13 Aug 2026: the function does NOT give the known delay, and at phase 3 it did not give it** — `BENCH_ON 0` and the `ACCEPTED` branch is **a stub** `[R]`. The known delay was injected **outside the product**, and P1 is `[M]` green (N=25 → +25.08; N=60 → +58.58). ⭐ And outside the product is **better**: the clock anchor does not pass through the injected path, so P1 **can still fail**. ⇒ ⏳ it remains to decide whether to complete the branch or remove the two types (`RCP.md` §7.5) | §7.5 |
 
 > ⭐ *Row 26 is **from the night of 9 Aug 2026** and was only in `RCP.md` §7.5; it is recorded
 > here on 10 Aug, findings **R11.13** and **R11.15**.* ⛔ **It is 🔸, not ✅**: the origin declared
@@ -412,9 +412,9 @@ its denominator is what `LEZIONI.md` §1.9 point 4 forbids.
 > derived from a review — it stays *«correctable without discussion»*, which is the condition in which
 > one wants it if one day those two types became a nuisance.
 
-⚠ **And FOUR message types were added** — `RICHIEDI_CHIAVE` and `TELA` on 9 Aug,
-⭐ **`BANCO_MARCA` and `BANCO_ESITO` on the night of the 9th** (row 26 above) — plus **three** farewell
-reasons (`TEMPO_SCADUTO`, `SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). §9 forbids it **within** a
+⚠ **And FOUR message types were added** — `REQUEST_KEY` and `CANVAS` on 9 Aug,
+⭐ **`BENCH_MARK` and `BENCH_OUTCOME` on the night of the 9th** (row 26 above) — plus **three** farewell
+reasons (`TIMED_OUT`, `SESSION_UNSERVABLE`, `ALREADY_ACTIVE_REMOTELY`). §9 forbids it **within** a
 major version, and the clause that allowed it was that at the time no
 implementation existed.
 
@@ -739,8 +739,8 @@ no longer exists**: the count looks at the address and nothing else, and three d
 | **the count** | three failed authentications from the same address (**without the port**), ⛔ **within 5 minutes** — *the user's rule, same day: «i 3 tentativi falliti devono avvenire entro i 5 minuti per far scattare il ban»*. The window is **sliding**: the last three are looked at, it does not restart from the first |
 | **the consequence** | that address is out for **12 hours** |
 | **what resets** | 🔸 a **successful** authentication from that address. *Derived from «consecutive»: without it, three typos scattered over a year would ban the address one works from every day* |
-| **what counts** | ✅ **only** the failed authentication. Not protocol errors, not timeouts, and ⛔ **not `GIA_ATTIVA_REMOTA`** — which is what the **same** user's second device receives, and which would ban the user by himself in three reattaches |
-| **what the banned one sees** | ✅ *«viene visualizzata una pagina di login rifiutato (max tries reached)»*: the page is served anyway and **says** that the attempts are exhausted. The WebTransport session is refused with `TROPPI_TENTATIVI` for the tab **already open**, which would otherwise be left waiting |
+| **what counts** | ✅ **only** the failed authentication. Not protocol errors, not timeouts, and ⛔ **not `ALREADY_ACTIVE_REMOTELY`** — which is what the **same** user's second device receives, and which would ban the user by himself in three reattaches |
+| **what the banned one sees** | ✅ *«viene visualizzata una pagina di login rifiutato (max tries reached)»*: the page is served anyway and **says** that the attempts are exhausted. The WebTransport session is refused with `TOO_MANY_ATTEMPTS` for the tab **already open**, which would otherwise be left waiting |
 | **the ban survives the restart** | ✅ **yes, on file.** A ban that resets on restart is a protection that loses itself — invariant **I7** |
 | **how you get out** | ✅ *«comando di sblocco oppure il trascorrere delle 12 ore»*. The command requires access to the machine, which is the only key the case admits, and ⛔ **every unblock is written in the log** |
 
@@ -750,7 +750,7 @@ when the per-address one has already fired». ⛔ And by construction the defect
 found on 10 Aug disappears — the counter's key contained **the port**, which with a single attempt per
 connection (§`RCP.md` 4.4) changes every time, so that counter was **always 1**.
 
-⛔ **And `RCP.md` does not gain a byte**: `TROPPI_TENTATIVI` (`0x08`) was already there, no new type,
+⛔ **And `RCP.md` does not gain a byte**: `TOO_MANY_ATTEMPTS` (`0x08`) was already there, no new type,
 no exemption from the rule of §9 — which is the rule the project gave itself and which from here on
 has no more discounts.
 
@@ -763,7 +763,7 @@ has no more discounts.
 | ⛔ **and the password remains the only key** | three attempts per address raise the cost a lot, and do not close the game: ten thousand addresses make thirty thousand attempts on a single account. What closes it is the strong authentication postponed to the end of the project — §1.7, the security-debt box, ⭐ **and this item goes on the list of those to reread that day** |
 
 ⭐ **And one thing the ban can NOT do**, written so that nobody attributes it to it: nobody can get
-**someone else's** address banned. To reach `CREDENZIALI` you must have completed the
+**someone else's** address banned. To reach `CREDENTIALS` you must have completed the
 QUIC handshake, which demands that packets really return to that address — the sender
 cannot be forged.
 
@@ -847,7 +847,7 @@ session.*
 > because `remotix.pam` ends with `common-session-noninteractive` — which on Debian 13 `[M]` does **not**
 > contain `pam_systemd`, while `common-session` does.
 >
-> ⛔ **The premise was false**: the product **opens no PAM session**. `figlio.c` · `codifica_e_manda()`
+> ⛔ **The premise was false**: the product **opens no PAM session**. `figlio.c` · `encode_and_send()`
 > declares it at length — *«`sessione_assicura()` would make a session BE BORN … that is the road
 > of the real login (`pam_open_session` → `pam_systemd`), and it is not part of this mandate»* — and `grep`
 > confirms it: in `src/` there is no call to `pam_open_session`. ⇒ Which session stack
@@ -889,7 +889,7 @@ that line was an environment condition and not a code defect.
 > matching session»*. Linger gives `/run/user/<uid>` and the bus, ⛔ but it puts the processes in
 > `user@<uid>.service`, which is a scope of class **`manager`** — not a session.
 >
-> **Where**: `figlio.c`, `diventa_ed_esegui()` step **2-bis** — after closing the descriptors and
+> **Where**: `figlio.c`, `become_and_exec()` step **2-bis** — after closing the descriptors and
 > **before** dropping to the uid. With `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`,
 > `PAM_RHOST`, and ⛔ **no `XDG_SEAT`**: the session is born **headless by construction**, which is
 > what §4.3-bis has asked for since August and which until now we had by accident.
@@ -936,7 +936,7 @@ in both places**, or we reach phase 3 believing the cap is ten.
 
 ⚠ **And the other half, which holds for whatever number is chosen**: **no bench has ever seen that cap
 bite**. Filling it requires ten **different** users (a second connection by the same user
-gets `GIA_ATTIVA_REMOTA`, **I2**), and the reason with which the newcomer is refused is among those that
+gets `ALREADY_ACTIVE_REMOTELY`, **I2**), and the reason with which the newcomer is refused is among those that
 want the encoder. ⛔ Until it is there, it is **code present that nobody has seen work** —
 the same form as the per-address counter that **B5** found: it read well, and did
 nothing.
@@ -948,8 +948,8 @@ nothing.
 *11 Aug 2026, late evening, from the user, **after** the close of phase 1.*
 
 **The fact.** The farewell defect of §8.1 — on closing the tab the page sends no
-`CONGEDO`, on both engines — was found and **attributed** in phase 1, and **cured after the
-close**: `src/pagina.html` no longer resets `congeda_corrente` in the `finally` of `submit`, it is reset by
+`FAREWELL`, on both engines — was found and **attributed** in phase 1, and **cured after the
+close**: `src/pagina.html` no longer resets `dismiss_current` in the `finally` of `submit`, it is reset by
 `wt.closed`. ⛔ And the phase document says, in the user's words, that *«una cura di prodotto
 infilata dopo la chiusura non è una cura, è un cambiamento non dichiarato»*.
 
@@ -969,11 +969,11 @@ that cure the new round would be red because of the scene, not the product.
 > ### ⭐ And the same night the rule held a SECOND time — the mute slot
 >
 > *From the user, a few hours later, curing the P5 scene.* ⛔ `src/rcp.c` frees the slot in four
-> places and **three** write it in the log: on the `CONGEDO` road — the one that **§8.1 imposes**,
-> that is the one the healthy product always takes — the `posto LASCIATO` **was not written**.
+> places and **three** write it in the log: on the `FAREWELL` road — the one that **§8.1 imposes**,
+> that is the one the healthy product always takes — the `slot LASCIATO` **was not written**.
 >
-> ⚠ The slot was really freed (`[M]` twelve sessions, each subsequent `posto PRESO` says
-> `occupati adesso: 1`): the defect **was not a leak, it was that invariant §8.2 `0x0F` could
+> ⚠ The slot was really freed (`[M]` twelve sessions, each subsequent `slot PRESO` says
+> `occupati clock: 1`): the defect **was not a leak, it was that invariant §8.2 `0x0F` could
 > no longer be observed**. ⇒ P5 judges that number, did not find it, and would have given **a red to a
 > healthy server**.
 >
@@ -983,7 +983,7 @@ that cure the new round would be red because of the scene, not the product.
 > happens, it does not change a behaviour — and it repairs a hole that makes **unverifiable** an invariant
 > that the phase document declares verified.
 >
-> ⭐ **Measured**: `[M]` two rounds per engine, four out of four `PRESO(1) → si congeda 0x01 →
+> ⭐ **Measured**: `[M]` two rounds per engine, four out of four `PRESO(1) → si dismiss 0x01 →
 > LASCIATO(0)`, and the P5 judge goes from **1 false fault** to **0**. ⛔ *And «zero faults» does not
 > mean «P5 certified»: what is green is the judge on a real segment, not the P5 round.*
 >
@@ -1156,7 +1156,7 @@ No new line of protocol is needed — that is, **§9 is not touched**.
 > without an error.* ⚠ And it is the form of error that **the comment of that same file describes**.
 >
 > The two probes end up **inside `src/pagina.html`**, and the page uses them to decide what to
-> put in the `CIAO`:
+> put in the `HELLO`:
 >
 > | piece | what it did | and it was right |
 > |---|---|---|
@@ -1164,8 +1164,8 @@ No new line of protocol is needed — that is, **§9 is not touched**.
 > | the probe's **bytes** | `profile_idc = **4**` (Rext) | ⛔ no, and nobody read them |
 > | `isConfigSupported` | **`true`** | yes: it answers **to the string** |
 > | the decoder | `EncodingError` **on the bytes** | yes |
-> | `pagina.html` | *«HEVC does not reach the pixel»* ⇒ out of the `CIAO` | yes, given what it saw |
-> | `rcp.c` · `prima_comune()` `prima_comune()` | takes the first entry **of the client's list** ⇒ `av1` = **2** | yes |
+> | `pagina.html` | *«HEVC does not reach the pixel»* ⇒ out of the `HELLO` | yes, given what it saw |
+> | `rcp.c` · `first_in_common()` `first_in_common()` | takes the first entry **of the client's list** ⇒ `av1` = **2** | yes |
 >
 > ⭐ **The cure is two lines** — `keyint=1` removed, probes regenerated — **and the protocol is not
 > touched**. `[M]` `ffprobe` now gives `profile=Main` and `profile=Main 10` (they were Rext), and
@@ -1204,13 +1204,13 @@ No new line of protocol is needed — that is, **§9 is not touched**.
 >
 > > ⛔⭐ **UPDATE 23 Aug 2026 — the string in force is NO longer that one: it is
 > > `avc1.640033`.** `banchi/07-b48` measured **5.0** (`32`); since then
-> > `src/pagina.html` · `LIVELLO_DICHIARATO()` declares `LIVELLO_DICHIARATO = "5.1"`, because the ladder of
-> > `video.misura_massima` reaches **3840×2160** and 5.0 does not reach it. ⇒ The page composes
+> > `src/pagina.html` · `DECLARED_LEVEL()` declares `DECLARED_LEVEL = "5.1"`, because the ladder of
+> > `video.max_size` reaches **3840×2160** and 5.0 does not reach it. ⇒ The page composes
 > > `avc1.6400` + the level in hexadecimal = **`avc1.640033`** (`0x33` = 51 = 5.1), and that is the one
 > > that goes to `configure()`.
 > >
 > > ⭐ **And now the server says it too**, which until tonight left the string
-> > **EMPTY** under H.264: `leggi_sps_h264()` read profile and level and never wrote them together
+> > **EMPTY** under H.264: `read_h264_sps()` read profile and level and never wrote them together
 > > (`src/codificatore.c`). `[M]` 23 Aug 2026, x264 at 3840×2160 with level 5.1 imposed, SPS
 > > read byte by byte: `profile_idc=100 · constraints=0x00 · level_idc=51` ⇒ **`avc1.640033`**,
 > > that is **both ends say the same thing**.
@@ -1537,8 +1537,8 @@ concluding**. The real number is given by the bench of 2.6, and it can refute it
 > > (`STUDI.md` §gnome §13).*
 >
 > ⛔⛔ **But the product today cannot ask for that cure**, and it must be written here or a bench
-> measurement is mistaken for a performance: `MOVIMENTO_FPS 60` is a **compile-time constant**
-> (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` has no cadence option, and **`RecordVirtual` does not take
+> measurement is mistaken for a performance: `MOTION_FPS 60` is a **compile-time constant**
+> (`src/figlio.c` · `MOTION_FPS`), `main.c` has no cadence option, and **`RecordVirtual` does not take
 > the frequency** (`src/mutter.h` · the note on `RecordVirtual`) — the four virtual monitors are all **1920×1080@60**. ⇒ The
 > «monitor 120 / brake 90» is **`[M]` on the bench and zero in production**.
 >
@@ -1613,7 +1613,7 @@ wrong thing:
 > tenths» **do not reproduce**: the low cell gives **a clean and deterministic 0.50**.
 >
 > ⛔⛔ **But the user's decision does NOT change today, and the reason is that the product cannot
-> ask for that cadence**: `MOVIMENTO_FPS 60` is a compile-time constant (`src/figlio.c` · `MOVIMENTO_FPS`),
+> ask for that cadence**: `MOTION_FPS 60` is a compile-time constant (`src/figlio.c` · `MOTION_FPS`),
 > `main.c` has no cadence options, `RecordVirtual` does not take the frequency (`src/mutter.h` · the note on `RecordVirtual`) and
 > the four virtual monitors are all **@60**. ⇒ The 61.4 is `[M]` **on the bench** and **zero in
 > production**. As long as it stays so, *«on GNOME the desired is not promised»* holds — ⛔ **but the
@@ -1951,7 +1951,7 @@ morta.»*
 for **30.5 seconds** he is told **«you already have an active session elsewhere»**. ⚠ **For whoever reads it
 it is false**: that session is **his own**, and it died a moment earlier. The account closes without
 dirtying the network — a **lost** goodbye and a goodbye **never said** are the same fact — and it is
-`SILENZIO` (`src/rcp.c` · `SILENZIO`, 30,000 ms).
+`SILENCE` (`src/rcp.c` · `SILENCE`, 30,000 ms).
 
 ⛔ And the box of `src/rcp.c:229-233` **declares** that that clock *«makes the case "the
 phone died in a tunnel" disappear»*: it does not make it disappear, it makes it **last thirty seconds**.
@@ -1962,7 +1962,7 @@ ghost. On a line that loses in bursts **it repeats**.
 
 | | |
 |---|---|
-| ⭐ **what it says** | ten seconds of silence are enough to declare an occupant dead. ⚠ How it is obtained — lowering `SILENZIO` or adding a tighter rule between clients **of the same user** — is a code matter, and must be chosen looking at **everything** that leans on that number |
+| ⭐ **what it says** | ten seconds of silence are enough to declare an occupant dead. ⚠ How it is obtained — lowering `SILENCE` or adding a tighter rule between clients **of the same user** — is a code matter, and must be chosen looking at **everything** that leans on that number |
 | ⛔ **what it does NOT violate** | §8.2, *«no attached and **alive** client is ever ousted»*: the occupant here is attached but **not alive**. The rule does not contradict §8.2, **it applies it** — and it must be written, or the next one will believe it was violated |
 | ⛔ **the case that does not break** | it holds **only between clients of the same user**. An eviction between different users would be a security hole, not a convenience |
 | ⚠ **and the sentence changes anyway** | *«you already have an active session elsewhere»* is a **diagnosis the server is not able to make**: it does not know whether the other client is another device or the same user who just dropped. ⇒ It must say **what it knows** — that the slot appears occupied, and for how long the occupant has been silent |
@@ -1982,8 +1982,8 @@ hit it, and no amount of work would have.
 
 | cure | new default | what it buys | ⚠ what it costs |
 |---|---|---|---|
-| **audio silence** | on | `[M]` **102× less traffic** with a still screen (557.6 → 5.5 kbit/s); pure test tone **1.000** | the client's `mancati` +2 out of 5,000 |
-| **ghost eviction** | 15,000 ms | `[M]` the ghost from **32.13 s / 14 refusals** to **16.83 s / 7** | nothing visible; ⛔ it does not touch `SILENZIO`, and holds only between clients of the **same** user |
+| **audio silence** | on | `[M]` **102× less traffic** with a still screen (557.6 → 5.5 kbit/s); pure test tone **1.000** | the client's `missed` +2 out of 5,000 |
+| **ghost eviction** | 15,000 ms | `[M]` the ghost from **32.13 s / 14 refusals** to **16.83 s / 7** | nothing visible; ⛔ it does not touch `SILENCE`, and holds only between clients of the **same** user |
 | **dead line** | on (stall 5 s · silence 10 s) | it says the wire is broken instead of leaving a still screen that looks like a dead program | ⛔ **it closes a session**: margin **10×** above the worst line that holds, **2.9×** below the one that serves nobody |
 | **queue threshold** + **rate regulator** | 100 ms · on | `[M]` keyframes from **51.7-88.1 %** to **0.0-5.6 %**; rate from **1.7 to 2.8 times** | ⚠ **up to +160 ms** of drift on a bad network; **zero** on the healthy line |
 
@@ -2072,10 +2072,10 @@ path is a defect, not an oversight.
 | who closes | why it stays |
 |---|---|
 | the ban after three attempts (`§1.9`, `RCP.md` §4.4-bis) | ⭐ **decided by the user on 10 Aug**, and whoever is banned **sees a page that tells them so** |
-| wrong credentials — `RESPINTO` | it is the farewell of authentication, `RCP.md` §4.4 |
-| the rigor rule — `ERRORE_PROTOCOLLO` | `RCP.md` §3: whoever receives something they do not understand **must** close, or a defect goes unnoticed |
-| the three handshake caps — `TEMPO_SCADUTO` | `RCP.md` §4.6, and they come **before** a session exists: there is nothing healthy to throw out yet |
-| the user is already connected elsewhere — `GIA_ATTIVA_REMOTA` | invariant I2 |
+| wrong credentials — `REJECTED` | it is the farewell of authentication, `RCP.md` §4.4 |
+| the rigor rule — `PROTOCOL_ERROR` | `RCP.md` §3: whoever receives something they do not understand **must** close, or a defect goes unnoticed |
+| the three handshake caps — `TIMED_OUT` | `RCP.md` §4.6, and they come **before** a session exists: there is nothing healthy to throw out yet |
+| the user is already connected elsewhere — `ALREADY_ACTIVE_REMOTELY` | invariant I2 |
 | ⚠ **the disconnect after 30 minutes without input** (`§4.3`) and **the closure at 6 hours** (`§4.2`) | ⛔ **decided by the user on 8 Aug**, and they are the two that seem to contradict this rule and do not: the first **disconnects the client and leaves the session alive**, the second reclaims the resources of a session that **has given no sign of life for six hours** — that is, it is no longer «healthy», it is abandoned |
 
 ⛔ **And this rule is measured, not declared.** The bench that verifies it already exists and it is **B7**:
@@ -2103,12 +2103,12 @@ gestures**, and that they lead to two different places.
 
 | the gesture | what it is for us | the outcome |
 |---|---|---|
-| ⭐ **the wire drops** — tab closed, browser closed, **the user's PC switched off or rebooted**, signal lost in a tunnel | ⭐ **one single case**, and there is nothing to distinguish: the user's PC is not an actor of our model | the slot is freed, **the session stays alive** (I4). The `CONGEDO 0x01` goes out if it is in time; if the PC dies suddenly it does not, and what frees the slot is the 30 s silence clock (§4.4) — **same outcome, another road** |
+| ⭐ **the wire drops** — tab closed, browser closed, **the user's PC switched off or rebooted**, signal lost in a tunnel | ⭐ **one single case**, and there is nothing to distinguish: the user's PC is not an actor of our model | the slot is freed, **the session stays alive** (I4). The `FAREWELL 0x01` goes out if it is in time; if the PC dies suddenly it does not, and what frees the slot is the 30 s silence clock (§4.4) — **same outcome, another road** |
 | ⭐ **«Esci/logout» from the desktop menu** | the only gesture that declares *«I'm done»* | ⛔ **the session ends, and the user's programs close**. Nothing to reattach to |
 
 ⭐ **The gain of this distinction is that it removes work instead of adding it**: the client side does not
 have to detect anything — shutdown, reboot and closing the tab are **the same thing, already
-implemented and measured** (`pagehide` → `CONGEDO`, `pagina.html` · `canale_corrente()`).
+implemented and measured** (`pagehide` → `FAREWELL`, `pagina.html` · `current_channel()`).
 
 **And three consequences that were not chosen, they fell out by themselves:**
 
@@ -2116,7 +2116,7 @@ implemented and measured** (`pagehide` → `CONGEDO`, `pagina.html` · `canale_c
    made `org.gnome.SessionManager.Logout` be refused (`STUDI.md` §gnome §5.1). Now that logout is a
    **promised** function, that key would remove the function. ⇒ to remove Power Off/Restart/
    Suspend **only** the polkit rule on logind remains, and ⭐ the server's farewell
-   (`sessione_termina()`) and the user's logout **go through the same door**.
+   (`session_terminate()`) and the user's logout **go through the same door**.
 2. **`org.gnome.shell always-show-log-out` must be switched on.** `[R]` `systemActions.js:394-410`: without it,
    on a machine with one user and one session gnome-shell **does not show** the item. ⚠ It reverses
    `reference-gnome/rapporti/02-shell-blocco-voci.md:214` — *«it must be left `false`»* — written when
@@ -2134,8 +2134,8 @@ The page **goes back to the login form**, with the line *«the session has ended
 to leave is done, whoever clicked by mistake comes back in by typing the password and finds a clean
 desktop. ⛔ **Not a closing screen**, which would be a dead end you get out of by reloading.
 
-⛔ **And a new reason is needed — `0x10 SESSIONE_TERMINATA` (`RCP.md` §8.2)**, not the reuse of `0x01`:
-`CHIUSO_DALL_UTENTE` carries the promise *«reattach and you find everything»*, which after a logout is
+⛔ **And a new reason is needed — `0x10 SESSION_TERMINATED` (`RCP.md` §8.2)**, not the reuse of `0x01`:
+`CLOSED_BY_USER` carries the promise *«reattach and you find everything»*, which after a logout is
 **false**. Two opposite outcomes under the same code are the form of defect that `CODER.md` §4.2
 forbids: a silent fallback produces two behaviours under the same label.
 
@@ -2171,7 +2171,7 @@ to press by mistake; and it has an **RDP precedent that says something else** �
    `libei` → compositor, and it would not arrive precisely in the case in which one looks for it — with the desktop
    no longer responding;
 3. **it ends at the same door as the menu**: `org.gnome.SessionManager.Logout`, that is
-   `sessione_termina()`. ⇒ a single exit path, not two that can diverge.
+   `session_terminate()`. ⇒ a single exit path, not two that can diverge.
 
 ⛔ **And the page swallows it with `preventDefault()`: in the remote session that combination will
 never arrive.** It is the price of every REMOTIX shortcut, and `SPECIFICHE.md` §7.3-bis obliges us to
@@ -2302,11 +2302,11 @@ occupied slot does not exist.
 > | The client that was there | What happens to whoever arrives |
 > |---|---|
 > | **silent for 30 seconds** — the ghost of this item | it is **detached**, it occupies nothing: whoever arrives **gets in** |
-> | **is alive and attached** | whoever arrives is **refused**, with `GIA_ATTIVA_REMOTA` (`RCP.md` §8.2) |
+> | **is alive and attached** | whoever arrives is **refused**, with `ALREADY_ACTIVE_REMOTELY` (`RCP.md` §8.2) |
 >
 > ⭐ **The second line is not new: it is invariant I2** — *«the second connection is refused with an
 > explicit message»* — which nobody had connected to this item. And the new reason is the remote twin
-> of `GIA_ATTIVA_LOCALE`, just as `SPECIFICHE.md` §5.1 already has the local pair.
+> of `ALREADY_ACTIVE_LOCAL`, just as `SPECIFICHE.md` §5.1 already has the local pair.
 >
 > ⚠ **The price, declared**: if the laptop switches off suddenly without saying farewell, from the phone you
 > get in **after thirty seconds**. It is the same clock as §4.5, and nobody has moved it.
@@ -2502,7 +2502,7 @@ budget». The boundary, decided:
 
 | | where | why there |
 |---|---|---|
-| **multi-tenancy as a function** — several remote sessions together, the encoder's **budget**, `BUDGET_PIENO 0x06`, the refusal that does not make whoever is already working worse, `MAX_ATTACCATE` that stops being a `#define` | **phase 10** | ⭐ they need **a real number**, and the real number is given by the hardware encoder of **phase 8**. Measuring them earlier means measuring them twice (`LEZIONI.md` §7.2) |
+| **multi-tenancy as a function** — several remote sessions together, the encoder's **budget**, `BUDGET_FULL 0x06`, the refusal that does not make whoever is already working worse, `MAX_ATTACCATE` that stops being a `#define` | **phase 10** | ⭐ they need **a real number**, and the real number is given by the hardware encoder of **phase 8**. Measuring them earlier means measuring them twice (`LEZIONI.md` §7.2) |
 | **one remote user at a time** | **phase 5** | it is the scene the phase promises, and it is already loaded enough: logout with its new code, the three belts of §4.7, the logind guard, the three clocks, the key release, the suspend inhibition, the declared headless |
 | ⛔ **code keyed on the user**, and the logind guard that **discriminates per user** | ⭐ **phase 5, and it cannot be postponed** — see the box | ⛔ not because it is important: because **it cannot be written «for a single user»** |
 
@@ -2528,12 +2528,12 @@ budget». The boundary, decided:
 `MAX_FIGLI` at 16, which declares it follows it — where `SPECIFICHE.md` §5.5 promises **ten,
 configurable**. Today it does not bite — 16 > 10 — and its deadline is phase 10.~~
 > ✅ **PAID on 25 Aug 2026, evening — phase 10** *(realigned to the code on 28 Aug)*. The number
-> is now **a single one**: `RCP_TETTO_SESSIONI` in `src/rcp.h`, it is **10**, and it is changed with
-> **`--tetto-sessioni N`**. The `#define` is the default; the value in force is given by `rcp_tetto()`.
+> is now **a single one**: `RCP_SESSION_CAP` in `src/rcp.h`, it is **10**, and it is changed with
+> **`--session-cap N`**. The `#define` is the default; the value in force is given by `rcp_cap()`.
 > ⭐ And the four tables (`MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI`) are now
 > **allocated** on that number instead of being four hand-made copies that diverge silently —
 > the defect that `src/rcp.h` recounts at length, and that `[M]` §6.4 had proved in the field.
-⚠ *The reference said `rcp.c` · `MAX_ACCUMULO`, and the `#define` is at **568**: corrected on 16 Aug 2026
+⚠ *The reference said `rcp.c` · `MAX_ACCUMULATION`, and the `#define` is at **568**: corrected on 16 Aug 2026
 by rereading the file. ⛔ A line number ages silently — it is the reason why the name of the constant
 is next to it too.*
 
@@ -2552,7 +2552,7 @@ machine» stays in the multi-tenant phase, and code keyed on the user stays non-
 | KDE | phase 10 | **phase 11** |
 | XFCE and LXQt | phase 11 | **phase 12** |
 | Quality and degradation | phase 9 | **phase 9**, unchanged — and now it has a second client: the degradation ladder is **the way** several sessions fit on the same machine |
-| The service | phase 13 | **phase 13**, unchanged — ⛔ and it stays last **for a reason**: §7.16 has it **remove from the binary** the bench marks `BANCO_MARCA`/`BANCO_ESITO`, which the desktop phases will use to measure themselves. Putting it earlier would mean removing the yardstick and then testing three new desktops without it |
+| The service | phase 13 | **phase 13**, unchanged — ⛔ and it stays last **for a reason**: §7.16 has it **remove from the binary** the bench marks `BENCH_MARK`/`BENCH_OUTCOME`, which the desktop phases will use to measure themselves. Putting it earlier would mean removing the yardstick and then testing three new desktops without it |
 
 ⭐ **The reason is that of §4.6-quater, applied from the other end.** There it was said: *«measuring the
 budget before the hardware encoder means measuring it twice»* (`LEZIONI.md` §7.2). Here:
@@ -2621,7 +2621,7 @@ hardware.
 rientrerà in un discorso più generale sulla sicurezza, che farà parte di un capitolo evolutivo».*
 
 ⛔ **The finding stays true and measured, and is not closed: it is POSTPONED with a name.**
-`fasi/10-multi-tenant-e-il-budget.md` §4.2 (**R10-A2**): `rcp.c` · `posto_prendi()` declares *«IL NOME UTENTE NON
+`fasi/10-multi-tenant-e-il-budget.md` §4.2 (**R10-A2**): `rcp.c` · `slot_take()` declares *«IL NOME UTENTE NON
 CONTA. Tre nomi diversi contano tre»* — and it is the decision of **§1.9**, taken when the product
 served **one tenant**. ⇒ With ten tenants **behind the same NAT** the key is **only one**:
 `[M]` three of them getting it wrong **once each** in five minutes ban the address, and the
@@ -2636,7 +2636,7 @@ the command socket, which is `0600` of **root**: a tenant **cannot unblock himse
 > looked at **as a whole**, with all its items in front.
 >
 > ⚠ **And the piece of design already found stays written, for whoever opens that chapter**: a key
-> `(indirizzo, utente)` with the threshold of §1.9 per pair, **plus** a wider threshold on the address
+> `(address, username)` with the threshold of §1.9 per pair, **plus** a wider threshold on the address
 > alone (many different names failed ⇒ ban of the address), keeps the defence against **the real
 > attack** — which tries **many names** — and removes the collective punishment for **the typo**.
 > ⛔ It is a design, not a decision: the decision belongs to that chapter.
@@ -2689,7 +2689,7 @@ delay of those already inside** — `[M]` threshold **22.9 ms**, derived from he
 **≥ 39.9**, ⭐ **with no overlap at all between the two populations**.
 
 ```
-regge(dentro, nuovo)  ⟺  domanda(dentro) + costo(nuovo)  ≤  C × tolleranza
+holds(inside, fresh)  ⟺  question(inside) + cost(fresh)  ≤  C × tolerance
                           E  il ritardo di chi è dentro sta sotto la soglia
 ```
 
@@ -2814,7 +2814,7 @@ going wrong:
 |---|---|---|
 | **the session that is born blind** (§7.4) | days | ⛔ **nobody ever opened a NEW session and looked at it**: all the tests reused sessions already open, which had the monitor |
 | **the browser that does not start for the second user** (⚠ *not* the `~/.cache` link, which is a **choice** of the user — §4.6-undecies) | **two phases** | ⛔ and the test that *«closed the matter»* ran from a user who **had the same configuration** |
-| **five benches that counted zero frames** | one round | ⛔ a cure to the log had broken their expressions, and `resa()` returned **0 instead of None** |
+| **five benches that counted zero frames** | one round | ⛔ a cure to the log had broken their expressions, and `rendered()` returned **0 instead of None** |
 
 ⇒ ⭐⭐ **None of the three was subtle.** All three were invisible for the **same** reason: one
 always looked at the same piece of the scene, and ⛔ **one looked at the process instead of the pixel.**
@@ -3025,7 +3025,7 @@ now and not the others.
 
 ⚠ **None enters the fast family**, and the cut is declared instead of suffered: `[M]` the cap
 is at **153 s out of 180**, and §5.1 says that an extra mesh is **swapped**, not added. ⇒ C5, C7 and C9
-sit in `tutto` and in `desktop-nuovo`, with their grafted fault next to them. ⛔ **Only exception:
+sit in `overall` and in `new-desktop`, with their grafted fault next to them. ⛔ **Only exception:
 C10**, which costs less than the stopwatch's resolution.
 
 ### 4.6-unetvicies ✅ ⭐⭐ **C10 sits in TWO families, and C10's grafted fault keeps C13 alive on the laptop**
@@ -3033,22 +3033,22 @@ C10**, which costs less than the stopwatch's resolution.
 Two things that were seen only while wiring, and neither of them was foreseen:
 
 1. ⛔ **The twin lives half in `src/` and half in `banchi/rcp/`.** A change to the bench's copy
-   triggers the `rete` family — and it is **exactly** the change that breaks the twin. ⇒ If
+   triggers the `net` family — and it is **exactly** the change that breaks the twin. ⇒ If
    C10 sat only in the fast family, the case that bites hardest would not make it run.
 2. ⭐⭐ **The half of the hook that lives on the laptop grafted no fault** (§4.6-novemdecies:
    the two halves sit on two machines). ⇒ C13, there, could **never** have turned green:
    it would have said forever *«nessun guasto è mai stato iniettato»*, which from outside looks the same
-   as a broken net. ⇒ C10 now has a `--guasto-innestato` that copies the **real** files into
+   as a broken net. ⇒ C10 now has a `--grafted-fault` that copies the **real** files into
    a temporary folder, changes **one byte** of them and demands red. It costs `[M]` **0.1 s**.
 
-`[M]` And the result is measured: on the laptop the `rete` family gives **C10 green · C12 green · C13
+`[M]` And the result is measured: on the laptop the `net` family gives **C10 green · C12 green · C13
 green** in **1 second**, without switching anything on.
 
 ### 4.6-duoetvicies ⛔⛔⛔ **The first red the safety net pulls out of the PRODUCT — and it is two lines**
 
 `[M]` 26 Aug 2026. C9, on all the boxes tried: **4 mandatory lines out of 5 490 cannot be
 attributed to any tenant**. They are `src/tastiera.c` and `:486`, which write in the **parent** without
-`registro_dice_di()`. ⛔ Two lines identical word for word, one per tenant: **with two sessions
+`log_says_of()`. ⛔ Two lines identical word for word, one per tenant: **with two sessions
 alive one cannot tell which is whose.**
 
 ⭐ **And this is the net's job, done for the first time on a defect nobody was looking for**:
@@ -3104,7 +3104,7 @@ the files follow, and the groups' unit takes `Before=polkit.service`. `[M]` From
 ### 4.6-quinquies-vicies ⛔⛔ **The product drives ONE desktop, not four**
 
 `[M]` C1 run ten times per box on KDE, XFCE and LXQt: **0 healthy · 0 blind · 30 «non ho
-potuto guardare»**. The log says it: *«Mutter non espone RemoteDesktop»* ⇒ ⛔ `src/sessione.c` · `scrivi_dropin()`
+potuto guardare»**. The log says it: *«Mutter non espone RemoteDesktop»* ⇒ ⛔ `src/sessione.c` · `write_dropin()`
 and all of `src/mutter.c` can start **only GNOME**, and in the other three boxes `gnome-shell` is not there.
 
 ⭐ **What the other three prove is real but smaller**: the environment (step 0), the sound (C5), the
@@ -3127,10 +3127,10 @@ on the boxes, **C12 green · C13 green · C15 RED** on the same file. Certificat
 ⭐ And the sign is not the machine's name: it is **a mesh that needs a box and reaches a
 VERDICT (0/1) instead of a 3**.
 
-⚠ **The `rete` family declared something false** — *«nessuna accende una sessione»* — while C14 costs
-`[M]` ~800 s and takes all four boxes. ⇒ Split: **`rete`** (C10, C11, C12, C13, C15 —
-`[M]` ~11 s, and it really switches nothing on) and **`rete-intera`** (+ C14), called by `tutto` and
-`desktop-nuovo`.
+⚠ **The `net` family declared something false** — *«nessuna accende una sessione»* — while C14 costs
+`[M]` ~800 s and takes all four boxes. ⇒ Split: **`net`** (C10, C11, C12, C13, C15 —
+`[M]` ~11 s, and it really switches nothing on) and **`whole-network`** (+ C14), called by `overall` and
+`new-desktop`.
 
 ### 4.6-septies-vicies ✅ ⛔ **`VA VELOCE` is not made: §6 is right, §3.4 is wrong**
 
@@ -3257,9 +3257,9 @@ not of a user. ⇒ The exact promise, to be written like this and no wider:
 > the exception is not needed, because it is not polkit that decides for root. The rule stays **flat**, as
 > the user wanted it.*
 
-⭐ **And this rule finally gives a job to `0x0C SERVER_IN_CHIUSURA`**: if the only legitimate
+⭐ **And this rule finally gives a job to `0x0C SERVER_SHUTTING_DOWN`**: if the only legitimate
 switching off is the administrator's, then **that is the only route on which the clients must be
-warned**, and the cure of finding B-7 (`main.c` · `main()`, `trasporto_congeda_tutte`) stops being a
+warned**, and the cure of finding B-7 (`main.c` · `main()`, `transport_dismiss_all`) stops being a
 repair and becomes **the normal path**.
 
 ⚠ **And the three belts are all configuration lines, that is what invariant I7 forbids**: they must be
@@ -3320,10 +3320,10 @@ explain to whoever is subject to it.
 
 ### What it means, in code
 
-- the reason `0x03 SESSIONE_ABBANDONATA` of `RCP.md` §8.2 **has always existed and nobody had ever
+- the reason `0x03 SESSION_ABANDONED` of `RCP.md` §8.2 **has always existed and nobody had ever
   sent it**: now it is its own. ⚠ Usually nobody will receive it — if the cap expires it is because
   nobody was there any more — but whoever is there reads a sentence instead of looking at a frozen screen;
-- **configurable** (`--abbandono-s`), `0` = off, and the value in force **is written in the log
+- **configurable** (`--abandon-s`), `0` = off, and the value in force **is written in the log
   at startup** together with the other two: nobody verifies a one-hour cap by waiting an hour.
 
 ---
@@ -3393,8 +3393,8 @@ optimising in the wrong direction.
 >
 > ⚠ **And the two reasons of this item were not wrong: they were tied to a constraint that no longer
 > exists.** The first said that a small window would give *«a small desktop for the whole
-> session»* — true **as long as the canvas could not be changed**. Since `figli_ritela()` →
-> `cattura_ridimensiona()` exists (`[M]` 6 ms hot, 15 Aug), the canvas is remade **at every
+> session»* — true **as long as the canvas could not be changed**. Since `children_recanvas()` →
+> `capture_resize()` exists (`[M]` 6 ms hot, 15 Aug), the canvas is remade **at every
 > attach and at every reattach**. ⛔ *During* the session no, and since 17 Aug 2026 not even behind a
 > switch: §5.1-bis removed it. ⚠ But the item stays cured all the same — «small forever»
 > meant *for the whole session*, and a session can be reattached.
@@ -3452,7 +3452,7 @@ browser rounding can produce an odd number, which `RCP.md` §4.5 rejects.
 > | | 150 % | **1280×720** | 1.5 | ✅ 1920×1080 |
 >
 > ⛔ **On Chrome `screen.width` does NOT drop with page zoom**, while `devicePixelRatio` rises:
-> the formula of `SPECIFICHE.md` §6.1-bis gives `risoluzione × zoom`. A user on a 1920×1080 laptop
+> the formula of `SPECIFICHE.md` §6.1-bis gives `resolution × zoom`. A user on a 1920×1080 laptop
 > with zoom at 150 % would declare a canvas **50 % larger than the one that exists** — and it is
 > **exactly the defect this decision says it exists to avoid**.
 >
@@ -3482,7 +3482,7 @@ browser rounding can produce an odd number, which `RCP.md` §4.5 rejects.
 > opened the door.
 
 *13 Aug 2026, at the opening of phase 3, **decided by the user**. It was inherited from the scene of a
-bench and had never been decided by anyone: `src/main.c` · `TELA_L` has `TELA_L 1920` written by hand.*
+bench and had never been decided by anyone: `src/main.c` · `CANVAS_W` has `CANVAS_W 1920` written by hand.*
 
 The question was asked with its measured price beside it: on the user's screen the canvas
 is painted at **86 %**, that is **912 px of black**. The three alternatives put forward:
@@ -3539,9 +3539,9 @@ open, and must be named at the phase in which it is switched on, the implementat
 | **KWin** (KDE) | `[R]` no validation: neither minimum, nor maximum, nor parity, nor multiples | ⛔ only on `master` — see §5.0-bis |
 | **the encoder** | `[M]` the constraint is **even, and that is all** — not a multiple of 8 nor of 16 | — |
 
-⛔ **The even constraint is OURS, not the compositors'**: it is 4:2:0 (`src/codificatore.c` · `croma_flusso` and
+⛔ **The even constraint is OURS, not the compositors'**: it is 4:2:0 (`src/codificatore.c` · `stream_chroma` and
 `:1512`). `[M]` In 4:4:4 odd passes too. ⇒ It is truncated **down** (2133 → 2132) and **it is
-declared** with `TELA(ADATTATA)`: a pixel said is worth more than a pixel hidden in a scale.
+declared** with `CANVAS(ADAPTED)`: a pixel said is worth more than a pixel hidden in a scale.
 
 #### ⛔ The three guards we must write ourselves — nobody upstream does them
 
@@ -3556,8 +3556,8 @@ All three discovered by measuring, and all three of the same family: **silence**
    `roundf(2133/2) = 1067` and **1067×2 = 2134 ≠ 2133**. It is the coordinate space of the **input**
    ⇒ **the pointer goes elsewhere and nobody says so.** Cure: read the scale and **fail** if it is not
    `1.0`.
-3. **Asked versus granted.** `[R]` `src/cattura.c` · `chiesta_larghezza`/`chiesta_altezza` never compares the size **asked** of
-   PipeWire with the **negotiated** one, and `codificatore_comprimi()` receives the pixels and the stride but
+3. **Asked versus granted.** `[R]` `src/cattura.c` · `requested_width`/`requested_height` never compares the size **asked** of
+   PipeWire with the **negotiated** one, and `encoder_compress()` receives the pixels and the stride but
    **not** width and height, so it cannot act as witness. ⛔ Today it is unreachable because
    1920×1080 is always asked: **it is this decision that makes it reachable**, and it must be closed
    together, not after.
@@ -3591,7 +3591,7 @@ conversion.
 
 ⇒ ⭐ **Re-attach at a different size is not an open problem: it is a case already covered**, on three
 desktops out of four, at a cost the user does not perceive. Whoever tackles that topic does not have to
-study anything new — they must **call** `cattura_ridimensiona()` and reread this table.
+study anything new — they must **call** `capture_resize()` and reread this table.
 
 > ### ✅ ⭐⭐ WRITTEN AND MEASURED — the night of 15 Aug 2026
 >
@@ -3602,17 +3602,17 @@ study anything new — they must **call** `cattura_ridimensiona()` and reread th
 >
 > | where | what |
 > |---|---|
-> | `src/pagina.html` | `chiedi_tela()` sends `ADATTA_TELA` with the size of the window, **at attach** |
-> | `src/rcp.c` `T_ADATTA_TELA` | applies §4.5 (limits, parity, `video.misura_massima`) and passes the request to the stage. ⛔ **It does not answer right away**: it marks a request «in flight» |
+> | `src/pagina.html` | `ask_canvas()` sends `FIT_CANVAS` with the size of the window, **at attach** |
+> | `src/rcp.c` `T_FIT_CANVAS` | applies §4.5 (limits, parity, `video.max_size`) and passes the request to the stage. ⛔ **It does not answer right away**: it marks a request «in flight» |
 > | `src/webtransport.c` · `src/main.c` | carry the question across the process boundary |
-> | `src/figlio.c` `figli_ritela()` | → `MSG_INPUT/RITELA` to the child |
-> | `src/cattura.c` `cattura_ridimensiona()` | → `pw_stream_update_params()` |
-> | ⭐ and **the answer comes back**: `MSG_TELA` → `rcp_tela_dal_palco()` → `TELA(ADATTATA)` |
+> | `src/figlio.c` `children_recanvas()` | → `MSG_INPUT/RITELA` to the child |
+> | `src/cattura.c` `capture_resize()` | → `pw_stream_update_params()` |
+> | ⭐ and **the answer comes back**: `MSG_CANVAS` → `rcp_canvas_from_stage()` → `CANVAS(ADAPTED)` |
 >
 > ⛔ **The answer comes back, and is not guessed**: tonight's first draft had the parent deduce
 > the outcome **from the frames** («if one of a different size arrives, the stage has obeyed»), and four
 > agents sent to refute it found three cases in which it deduced wrongly — among them **two
-> chained `ADATTA_TELA`**, that is a user dragging the edge of the window. ⇒ The child now
+> chained `FIT_CANVAS`**, that is a user dragging the edge of the window. ⇒ The child now
 > answers carrying **two** sizes: the *asked* one (to recognise which request it is answering) and
 > the *obtained* one (`0x0` = it did not manage).
 >
@@ -3634,24 +3634,24 @@ study anything new — they must **call** `cattura_ridimensiona()` and reread th
 >
 > | guard | state |
 > |---|---|
-> | 1 · the size cap | ✅ `rcp_misura_ammessa()`, and ⛔ **corrected tonight**: the limits are those of §4.5 **per side** (320..7680 × 240..4320), not the 200..8192 of the first draft — which `ATTACCA` would have rejected on re-attach |
-> | 2 · GNOME's scale | ✅ **closed tonight** as §5.0-sexies asked («read the scale and **fail**»): `mutter_scala_nostra()` + the refusal in `prendi_il_palco()`. ⚠ It looks at **our** monitor, not the worst one of the machine: a laptop with the internal screen at 2.0 has no defect. `[M]` on the test machine the scale of our «Meta-0» is **1.000**, and the line is written even when it is good |
-> | 3 · asked versus granted | ✅ in `cattura.c` (`su_parametri`), and since tonight also **in the child**: the 28 bytes of §6.2 carry the size of the FRAME, not the one that had been asked |
+> | 1 · the size cap | ✅ `rcp_size_allowed()`, and ⛔ **corrected tonight**: the limits are those of §4.5 **per side** (320..7680 × 240..4320), not the 200..8192 of the first draft — which `ATTACH` would have rejected on re-attach |
+> | 2 · GNOME's scale | ✅ **closed tonight** as §5.0-sexies asked («read the scale and **fail**»): `mutter_our_scale()` + the refusal in `take_stage()`. ⚠ It looks at **our** monitor, not the worst one of the machine: a laptop with the internal screen at 2.0 has no defect. `[M]` on the test machine the scale of our «Meta-0» is **1.000**, and the line is written even when it is good |
+> | 3 · asked versus granted | ✅ in `cattura.c` (`on_parameters`), and since tonight also **in the child**: the 28 bytes of §6.2 carry the size of the FRAME, not the one that had been asked |
 >
 > #### The timings, and the why of each
 >
 > | | value | why |
 > |---|---|---|
-> | `RCP_TELA_ATTESA_MS` | **3000 ms** | the backstop beyond which `NON_ORA` is answered anyway: §7.1 wants one `TELA` for every `ADATTA_TELA`, and §6.2 makes the client **hold back frames** while it waits |
-> | `RCP_TELA_RICHIAMO_MS` | 500 ms, doubling up to 8 s | how often the stage is **asked** to go back to the canvas in force, when it has one of its own |
+> | `RCP_CANVAS_WAIT_MS` | **3000 ms** | the backstop beyond which `NOT_NOW` is answered anyway: §7.1 wants one `CANVAS` for every `FIT_CANVAS`, and §6.2 makes the client **hold back frames** while it waits |
+> | `RCP_CANVAS_RETRY_MS` | 500 ms, doubling up to 8 s | how often the stage is **asked** to go back to the canvas in force, when it has one of its own |
 > | ~~`TELA_FONDO_MS` (client)~~ ⛔ **REMOVED on 17 Aug 2026** *(realigned on the 28th)* | ~~250 ms~~ | whoever drags an edge produces dozens of `resize` per second — ⭐ but the backstop went out **with the function it served** (`tela_forse_chiedi()`): `src/pagina.html` keeps its tombstone, because the cure would have to be put back only if someone put back the chasing |
-> | `RISVEGLIO_MS` (child) | 400 ms | how often the stream is restarted when **a keyframe is due and the scene is still** — it is the cure for the 4.4 seconds |
+> | `WAKEUP_MS` (child) | 400 ms | how often the stream is restarted when **a keyframe is due and the scene is still** — it is the cure for the 4.4 seconds |
 >
 > ⛔ **And one thing the server does NOT do, because of a line missing from `RCP.md`**: when the stage changes
 > size **without anyone having asked it to**, the server **does not adopt** the new size and sends
-> no `TELA`. The first draft did — it seemed kind — and it is fatal: §6.2 says that the
-> client holds back a never-announced size **only while it has an `ADATTA_TELA` without answer**, and
-> without that it is `ERRORE_PROTOCOLLO`. ⇒ The stage **is asked to go back**, with a wait that
+> no `CANVAS`. The first draft did — it seemed kind — and it is fatal: §6.2 says that the
+> client holds back a never-announced size **only while it has an `FIT_CANVAS` without answer**, and
+> without that it is `PROTOCOL_ERROR`. ⇒ The stage **is asked to go back**, with a wait that
 > grows, and meanwhile the session shows the last good image (I1: ugly and alive). ⏳ The missing
 > line is in `RCP.md` §7.1: *what a server does when the stage changes size by itself*.
 
@@ -3671,19 +3671,19 @@ has not been released yet».
 *Brought to the user as one of the two decisions waiting for him. ⛔ **And I had put it to him with
 a false premise**: «whoever connects inherits the window of whoever was there before». There is no «whoever
 was there before» — multi-tenant is **phase 10** and does not exist, and the graphical session is **one per
-user** (invariant **I2**, `sessione.c` · `sessione_assicura()`). ⭐ **The user spotted it**, and the item is here
+user** (invariant **I2**, `sessione.c` · `session_ensure()`). ⭐ **The user spotted it**, and the item is here
 for that too.*
 
 **What really survives**: not someone else's session, but **the stage size** left
 by **the previous connection of the same user**. `RCP.md` §4.5 declares it — *«the canvas
 SURVIVES the session»* — and `[M]` on 21 Aug on the real product three attaches in a row with
-`ATTACCA(1920×1080)` received `SESSIONE` with **1920×1080**, **1264×800** and **1600×900**: each
+`ATTACH(1920×1080)` received `SESSION` with **1920×1080**, **1264×800** and **1600×900**: each
 time what the previous round had left.
 
 **The decision, for now**: it is left as it is. Three reasons, and the third is the one that counts:
 
-1. ⭐ **it already corrects itself**: the size in `ATTACCA` is a **preference**, but right after
-   `SESSIONE` the client sends `ADATTA_TELA` with its true size (§5.0-sexies, since 15 Aug). ⇒
+1. ⭐ **it already corrects itself**: the size in `ATTACH` is a **preference**, but right after
+   `SESSION` the client sends `FIT_CANVAS` with its true size (§5.0-sexies, since 15 Aug). ⇒
    Only an **instant** remains at attach in which the canvas in force is the old one;
 2. ⛔ **a rest at farewell is a second reshuffle of the windows** done while the user is not
    looking: the desktop reshuffles the windows at **every** change of the monitor size, and that
@@ -3722,17 +3722,17 @@ windows do not move. The same on GNOME, KDE, XFCE and LXQt.
 >
 > ### ⛔⛔ AND SINCE 17 AUG 2026 THERE IS NOT EVEN THE SWITCH ANY MORE — see **§5.1-bis**
 >
-> Chasing the window sat behind `?adatta=segui`, off by default (I6). **It went out of the
+> Chasing the window sat behind `?fit=follow`, off by default (I6). **It went out of the
 > product**: *«non voglio mettere delle eccezioni nel progetto»*. ⇒ This item goes back to holding
-> as it was written on 8 Aug, **without exceptions**, and the values of `?adatta=` remain two:
+> as it was written on 8 Aug, **without exceptions**, and the values of `?fit=` remain two:
 >
-> | `?adatta=` | what it does |
+> | `?fit=` | what it does |
 > |---|---|
 > | *absent* (default) | asks for the canvas **at attach and at reattach**, and that is all |
 > | `no` | ⛔ never asks for it: it is the page from before 15 Aug, and it serves the **A/B comparison** that the user's judgement requires (`LEZIONI.md` §7.3) |
-> | ~~`segui`~~ | ⛔ **removed on 17 Aug 2026**. An old address carrying it counts as the default and switches nothing back on — guarded by `banchi/06-b37-modi.py` |
+> | ~~`follow`~~ | ⛔ **removed on 17 Aug 2026**. An old address carrying it counts as the default and switches nothing back on — guarded by `banchi/06-b37-modi.py` |
 >
-> ⚠ It is read from `?` **and** from `#`, like `video` and `disposizione`.
+> ⚠ It is read from `?` **and** from `#`, like `video` and `arrangement`.
 
 The three reasons, and the third is the one that decided:
 
@@ -3766,7 +3766,7 @@ new size is taken only by reconnecting. The three lines below stay as a chronicl
 esce dalle funzionalità di Remotix.»*
 
 **What goes out:** changing the size of the canvas **while the session is alive**. The switch
-`?adatta=segui`, the backstop `TELA_FONDO_MS`, `tela_forse_chiedi()` and the `resize` branch are removed
+`?fit=follow`, the backstop `TELA_FONDO_MS`, `tela_forse_chiedi()` and the `resize` branch are removed
 from `src/pagina.html`.
 
 **What stays, and it is the logic from before:** ⭐ *the canvas is born with the size of the client's
@@ -3815,18 +3815,18 @@ proposed it again they would find it unchanged:
   window changes shape (resized, or the tablet **rotated**), the proportions no longer match
   and the client rescales with letterboxing — `SPECIFICHE.md` §6.2, «letterbox, do not stretch». It is not a
   defect to cure: it is the choice;
-- ⭐ **`ADATTA_TELA` stays in the protocol** (`RCP.md` §7.1) and the server chain stays alive **in
+- ⭐ **`FIT_CANVAS` stays in the protocol** (`RCP.md` §7.1) and the server chain stays alive **in
   full** — attach uses it, and **reattach** uses it, where the stage already exists with the size of
   another device. ⚠ Whoever removed it believing it a child of the chasing would break
   reattach;
 - `banchi/06-b37-modi.py` changes job: from «the three modes of `?adatta=`» to **guard against the
-  return** — 0 requests in all modes, `?adatta=segui` included, which is now only an old
+  return** — 0 requests in all modes, `?fit=follow` included, which is now only an old
   bookmark;
 - `banchi/06-b37-voce.py` V4 changes question: from «does the voice switch off?» to «has the function really
   gone out?». ⚠ V1–V3 stay: the switched-off voice is still needed, because the canvas is asked at every reattach
-  and the repetition on `NON_ORA` is alive;
+  and the repetition on `NOT_NOW` is alive;
 - ⛔ and **phase 11 (KDE) no longer inherits anything to decide here**: the declared fallback of §6.3 —
-  `COMPOSITORE_INCAPACE`, the client rescales — becomes the **normal** behaviour of everyone,
+  `COMPOSITOR_UNABLE`, the client rescales — becomes the **normal** behaviour of everyone,
   not the poor branch of one.
 
 ### 5.2 🔸 ⛔ ~~The encoder works at the window's size~~ → **no: it works at the canvas's size**
@@ -3849,7 +3849,7 @@ proposed it again they would find it unchanged:
 > as a consequence, that is error form **E5** of `REVIEWER.md`.
 
 **What holds now**: the server encodes at the size of the **canvas**, the client rescales. RCP's
-`VISTA` message exists all the same and serves to choose **how many bits to spend**, not how many
+`VIEW` message exists all the same and serves to choose **how many bits to spend**, not how many
 pixels to produce; and the frame header carries the size as a field, so that the day
 §5.0-ter were closed **the protocol does not change** (`RCP.md` §6.2, §7.1).
 
@@ -3877,13 +3877,13 @@ clean capture, clean encoder (0 spoiled superblocks out of 600), clean `copyTo`,
 
 **The cure**: `createImageBitmap()` + `transferFromImageBitmap()` on a **`bitmaprenderer`** context,
 which does not have the 2D backing store. ⚠ It is not an optimisation and it is not a switch: it is **the** drawing
-route of the product (`niente eccezioni`, §0).
+route of the product (`nothing exceptions`, §0).
 
 **What changes in the product, and what does not:**
 
 | | |
 |---|---|
-| ⛔ **the two 2D canvases disappear** | today the frame passes through `deposito_p.drawImage(f)` **and then** through `pennello.drawImage(deposito)`: two copies and two backing stores |
+| ⛔ **the two 2D canvases disappear** | today the frame passes through `repository_p.drawImage(f)` **and then** through `brush.drawImage(repository)`: two copies and two backing stores |
 | ⭐ **the store canvas is no longer needed** | `transferFromImageBitmap` **sizes the canvas by itself**, and when the window is resized the content **stays**: the reason the store canvas existed (§5.1, black until the next frame) falls by itself |
 | ⭐ **the cursor is not touched** | it is a **CSS** cursor, it is not painted on the canvas ⇒ the visible canvas does not have to **composite** anything |
 | ⚠ **centring is done with CSS** | when the window is wider than the image. The bands were already **outside** the buffer (§5.0-sexies), so no measure is lost |
@@ -4179,7 +4179,7 @@ discards repeated keys, it is the application that repeats); and the layout decl
 (`fasi/rapporti/F4-A7-pagina-classico.md`).*
 
 **What already works** `[M]`: the Italian `à`, because on the Italian layout **it is a key of
-its own** and goes through the `LETTERA` path like all the others.
+its own** and goes through the `LETTER` path like all the others.
 
 ⛔ **What stays out**: **dead keys** (the `à` composed in two keystrokes of a
 French or «US international» keyboard) and the **IME** (Chinese, Japanese, Korean). ⚠ And it stays out
@@ -4221,21 +4221,21 @@ suspect is rare but nobody has measured it.
 > ### ⛔⛔ THIS DECISION WAS NEVER IMPLEMENTED — `[M]` 16 Aug 2026, sub-phase 6.2
 >
 > *Measured on the live product, user `provat6`, port 7721, with a witness inside the graphical
-> session: the layout the client declares in `ATTACCA` is **validated**
-> (`rcp.c:2013-2027`), **written in the log** (`rcp.c` · `tratta_attacca()`), **and it ends there**. It never reaches
+> session: the layout the client declares in `ATTACH` is **validated**
+> (`rcp.c:2013-2027`), **written in the log** (`rcp.c` · `handle_attach()`), **and it ends there**. It never reaches
 > the keyboard.*
 >
 > | scene | expected if the decision were implemented | `[M]` measured |
 > |---|---|---|
 > | session `it`, reattach declaring **`us`** | `è` and `ò` unreachable | **`aèò\@a`** — identical to `it` |
 > | session `it`, reattach declaring **`de`** | `z` and `y` swapped | **`it` behaviour** |
-> | the **session** goes `it`→`de` with the stage live | keymap reread, `azy\a` | ⭐ **`azy\a`** — this piece works: `ricambi_tastiera` 0→1, keymap fingerprint `8315b8d9`→`d1c54543`, «[German]» |
+> | the **session** goes `it`→`de` with the stage live | keymap reread, `azy\a` | ⭐ **`azy\a`** — this piece works: `keyboard_replacements` 0→1, keymap fingerprint `8315b8d9`→`d1c54543`, «[German]» |
 >
 > ⇒ ⭐ **What holds is the hard half**: when the layout **of the session** changes,
 > Mutter destroys and recreates the keyboard device and `tastiera.c` rereads the new keymap — the
 > letters come out right. ⛔ **What is missing is the easy half**: nobody takes the layout
-> *of the client* and gives it to the session. `input.c` · `leggi_regione()` passes `NULL` where the negotiated one should go, and the
-> `RIPIEGO DICHIARATO` line of `tastiera.c` · `tastiera_apri_da_keymap()` **does not appear in any round** — that is, whoever looked for
+> *of the client* and gives it to the session. `input.c` · `read_region()` passes `NULL` where the negotiated one should go, and the
+> `FALLBACK DICHIARATO` line of `tastiera.c` · `keyboard_open_from_keymap()` **does not appear in any round** — that is, whoever looked for
 > that line in the log would conclude *«they always match»*, which is different from *«I did not
 > look»*.
 >
@@ -4408,7 +4408,7 @@ between the two would mean keeping it open **forever** in most cases, and §2.5 
 number of streams.
 
 ⭐ It can be done because what ties the messages of a transfer together **is not the stream**: it is the
-`trasferimento` field (finding R1.11). ⭐ And the test client, reading **only `RCP.md`**, made the same
+`transfer` field (finding R1.11). ⭐ And the test client, reading **only `RCP.md`**, made the same
 choice — the line is ambiguous, but the ambiguity does not bite.
 
 ### 5-ter.8 ✅ Like a local session — and the price Firefox imposes
@@ -4560,7 +4560,7 @@ second copy. Verified by SHA-256 fingerprint, 103 files out of 103.
 > | ⚠ `fondamenta/remotix-rust/` | 23 | 0.4 | **1**, and it is this table | the IronRDP branch, **closed on 3 Aug**. The lesson is written here; the code does not add to it |
 > | ⛔ `fondamenta/banchi/` *(rest)* | ~190 | 4.1 | 17 | 86 `.log`, 8 `.png`, 10 `.tgz/.gz/.xz` archives, 2 `.so`, the outcomes of runs of 1-8 Aug |
 > | ⛔ ~~`fondamenta/tracce/`~~ | 8 | 0.4 | **0** | `.h264` streams and **RDP** provisioning logs — and RDP died with §1.6. ✅ **Removed on 16 Aug 2026** |
-> | ⛔ ~~`fondamenta/banco/*.prima*`, `*.rust`~~ | 4 | 0.05 | **0** | **hand copies** of `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, made before a change. ⚠ A backup copy next to the original is a trap, not a safety net: the safety net is git. ✅ **Removed on 16 Aug 2026** |
+> | ⛔ ~~`fondamenta/banco/*.before*`, `*.rust`~~ | 4 | 0.05 | **0** | **hand copies** of `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, made before a change. ⚠ A backup copy next to the original is a trap, not a safety net: the safety net is git. ✅ **Removed on 16 Aug 2026** |
 >
 > ## ⛔⛔ And the thing that changes the reasoning about the 90 MB: **removing them recovers nothing**
 >
@@ -4593,8 +4593,8 @@ cite it 29 times across 20 sections.
 ### 6.2 🔸 About 79 % of the C survives the death of RDP
 
 Measured by counting the occurrences of `freerdp|winpr|rdpContext|RDPGFX|rdpSettings` per file:
-7,442 **clean** lines (`palco`, `cattura`, `kwin`, `mutter`, `appunti_wlr`, `superficie`,
-`sentinella`, `autenticazione`…), 4,570 with superficial contamination, 1,781 medium, and
+7,442 **clean** lines (`stage`, `capture_v`, `kwin`, `mutter`, `appunti_wlr`, `surface`,
+`sentinel`, `autenticazione`…), 4,570 with superficial contamination, 1,781 medium, and
 **3,688 that die** (`server.c`, 134 occurrences, and `rete.c` which must be replaced by QUIC).
 
 ⚠ It is a first-level measurement: counting the `#include` says who *touches* FreeRDP, not who
@@ -4774,7 +4774,7 @@ with a bench in front, not on paper.
 > inside `#ifndef NDEBUG`**, that is it exists only in debug builds.
 >
 > ⛔ **And this hits the product's primary case, not an edge case.** `SPECIFICHE.md` and §1.7 describe a
-> server **without a domain**, which the user reaches by typing `https://<indirizzo>:7447` — that is
+> server **without a domain**, which the user reaches by typing `https://<address>:7447` — that is
 > **an IP address**. A client connecting to an IP **sends no SNI**: the TLS specification forbids literal
 > addresses in that field. So:
 >
@@ -4850,7 +4850,7 @@ with a bench in front, not on paper.
 
 > ### ⭐ `quiche` passes the same criterion, and brings along a cost that has nothing to do with QUIC — `[M]` 10 Aug 2026
 >
-> *`banchi/01-b2-sni-quiche.sh` (`leggi`, then `costruisci`) · measured by the same conductor and the
+> *`banchi/01-b2-sni-quiche.sh` (`read_it`, then `build`) · measured by the same conductor and the
 > same probe as the other two, in the same run.*
 >
 > **The prediction, written before building** (`LEZIONI.md` §1.11), on **81 files** of 3 trees with the
@@ -4961,7 +4961,7 @@ with a bench in front, not on paper.
 >
 > ⛔ **And reading them from the peer found two defects no functional bench saw**: the server **offered
 > 0-RTT** (two tickets, `max_early_data_size` `0xffffffff`), which §2.3 forbids because 0-RTT data can be
-> replayed and RCP's second message is `CREDENZIALI`; and it granted **3** unidirectional streams instead
+> replayed and RCP's second message is `CREDENTIALS`; and it granted **3** unidirectional streams instead
 > of the 16 that §2.3 imposes. ⚠ *Neither has a symptom: the session opened the same. `FASI.md`
 > §01-filo-nudo had foreseen it for the first — «the symptom of 0-RTT switched on does not exist».*
 >
@@ -4984,8 +4984,8 @@ with a bench in front, not on paper.
 > | ⭐ **16:30** | B2's WebTransport layer **alone**, after reading the close capsule | **553** | **373** | **134** | **46** |
 >
 > ⭐ **How the 16:30 one was taken, and it is the point that makes it repeatable**: on a clean tree, after
-> `01-b3-rcp-innesta.py --togli` and `01-b2-ngtcp2-wt-innesta.py --togli`, reapplying **only**
-> `01-b2-ngtcp2-wt-innesta.py`. It is the sequence that `ricostruisci()` of `banchi/01-b11-guasto.sh`
+> `01-b3-rcp-innesta.py --remove` and `01-b2-ngtcp2-wt-innesta.py --remove`, reapplying **only**
+> `01-b2-ngtcp2-wt-innesta.py`. It is the sequence that `rebuild()` of `banchi/01-b11-guasto.sh`
 > already runs.
 >
 > ⛔ **And a number that does NOT go in this column**: with **both** grafts applied — B2 plus B3's wires —
@@ -5242,12 +5242,12 @@ had given it up as non-existent.
 > | | the answer | and what it brought with it |
 > |---|---|---|
 > | **§7.14** | *«silenzio»* | whoever receives a `FIN` sends nothing more. ⛔ And `RCP.md` §8.1 gains the exception: **whoever has received a `FIN` is not «the one who closes»** |
-> | **§7.15** | *«se si può»* | the `CONGEDO` falls when the channel is dead; the reason stays in the close code. ⭐ It closes a **red on correct code** that B5 and B11 would have given |
+> | **§7.15** | *«se si può»* | the `FAREWELL` falls when the channel is dead; the reason stays in the close code. ⭐ It closes a **red on correct code** that B5 and B11 would have given |
 > | **§7.16** | *«si tiene per i test, nel prodotto si fa pulizia»* | ⭐ and the answer was **wider than the question**: a principle was born — `SPECIFICHE.md` §2 point 6, *on the user's screen there is his desktop and nothing else* — with the cleanup to be measured at phase 13 |
 > | **§7.17** | *«5 secondi»* | ⛔ the last way to **occupy a slot without saying who you are** |
 >
 > ⭐ **And three of them interlock on a single case**: the cap of §7.17 fires when the control
-> channel does not exist yet, so §7.15 says the `CONGEDO` is not sent and §7.14 says which way
+> channel does not exist yet, so §7.15 says the `FAREWELL` is not sent and §7.14 says which way
 > the reason travels. ⚠ *Decided separately, within an hour, and none of the three would have been
 > defensible alone.*
 >
@@ -5273,9 +5273,9 @@ had given it up as non-existent.
 >
 > | when the server closes by itself | how far it is proven |
 > |---|---|
-> | one of the caps of §4.6 expires | `[M]` **B6**: all three seen firing — **5.0 · 60.1 · 10.0 s** — with the farewell `TEMPO_SCADUTO` |
-> | a violation arrives | `[M]` **B5**: **36 cases out of 36**, and after each one a new connection reaches `ECCOMI` |
-> | credentials, ban, slot occupied | `RESPINTO` (§4.4) · `TROPPI_TENTATIVI` (§4.4-bis) · `GIA_ATTIVA_REMOTA` (§8.2) |
+> | one of the caps of §4.6 expires | `[M]` **B6**: all three seen firing — **5.0 · 60.1 · 10.0 s** — with the farewell `TIMED_OUT` |
+> | a violation arrives | `[M]` **B5**: **36 cases out of 36**, and after each one a new connection reaches `HERE_I_AM` |
+> | credentials, ban, slot occupied | `REJECTED` (§4.4) · `TOO_MANY_ATTEMPTS` (§4.4-bis) · `ALREADY_ACTIVE_REMOTELY` (§8.2) |
 > | and the case the question comes from | ⛔ the **fourth defect of B11** was *«the slot is not freed when the one closing the channel is the SERVER»*, `[M]` on Chrome |
 >
 > ⭐ **The decision does not change, and the true reason makes it stronger**: precisely because the server
@@ -5295,7 +5295,7 @@ had given it up as non-existent.
 > ### The reason that holds, and it is a measurement
 >
 > `[M]` **10 Aug 2026**, defect 2 of **B11**: **Chrome throws away a message sent just before
-> closing the session.** The `CONGEDO` of reading B would therefore be a **MUST that one engine out of
+> closing the session.** The `FAREWELL` of reading B would therefore be a **MUST that one engine out of
 > two cannot honour** — the form that finding **R1.4** has already declared a defect. The second
 > route of §3.1 point 3, instead, ⭐ **worked on both engines**, and on Firefox it is
 > **the only one** that carries the reason (the farewell arrives by two different routes, one per engine).
@@ -5307,9 +5307,9 @@ had given it up as non-existent.
 > | `RCP.md` §4.2 | the ban goes from *«on the other channels»* to **«on no channel, the control one included»** |
 > | ⛔ `RCP.md` §8.1 | **the written exception**: *whoever has received a `FIN` is not «the one who closes»*. ⚠ Without it §4.2 forbids the byte and §8.1 imposes it: the decision would have **moved** the contradiction instead of closing it |
 > | ⭐ `banchi/01-b11-lancia.sh` | the case `fin-sul-controllo` already had the expected *«mute»*: ⛔ **the bench applied this reading without any line saying it**, and that is the reason why the question had been asked |
-> | ⛔ `src/pagina.html` **lines 431, 479, 514** | ⛔ **the product today does the OPPOSITE**: in all three places, when the server closes the channel without answering, the page calls `congeda(ERRORE_PROTOCOLLO, …)` — that is, it sends the nine bytes. `[M]` 11 Aug 2026, read in the source. **Three defects to cure**, and the cure is to remove the call leaving the `esito(...)` |
+> | ⛔ `src/pagina.html` **lines 431, 479, 514** | ⛔ **the product today does the OPPOSITE**: in all three places, when the server closes the channel without answering, the page calls `dismiss(PROTOCOL_ERROR, …)` — that is, it sends the nine bytes. `[M]` 11 Aug 2026, read in the source. **Three defects to cure**, and the cure is to remove the call leaving the `outcome(...)` |
 >
-> ⚠ **And one thing the cure must NOT take away**: those three places call `congeda()` also to
+> ⚠ **And one thing the cure must NOT take away**: those three places call `dismiss()` also to
 > **write the outcome to the user**. Whoever removes the line without looking also removes the sentence that says
 > *«the server closed without answering»*, and the symptom becomes a page that explains nothing —
 > which is precisely what §8.2 forbids.
@@ -5321,14 +5321,14 @@ cannot be called back into question when the facts change.*
 **The fact.** §4.2 says: *«a `FIN` on that stream, from either of the two parties, closes the
 session. Whoever receives it **MUST** consider it finished; it **MUST NOT** continue to send **on the
 other channels**»*. The control channel is a **bidirectional** stream: the server's `FIN` closes
-the server's direction, not the page's. And §8.1 requires whoever closes to send `CONGEDO`.
+the server's direction, not the page's. And §8.1 requires whoever closes to send `FAREWELL`.
 ⛔ **The written ban names «the other channels» and does not name the control one**, so the two
 readings both conform to today's text.
 
 | | **A — silence** | **B — the farewell** |
 |---|---|---|
-| **the rule** | the `FIN` closes the session **in both directions**: whoever receives it sends nothing more, not even on the control | the ban is only «on the other channels»: on the control the page **MUST** still send the `CONGEDO` of §8.1, then close |
-| ⛔ **the byte on the wire** | **none.** The reason travels only in the application error code of the session close (§3.1 point 3) | **nine bytes** on the control channel, before the close: `00 0C` (`CONGEDO`, §7.1) · `00 00 00 03` · the reason of §8.2 · `00 00` (empty detail). Then the same close as A |
+| **the rule** | the `FIN` closes the session **in both directions**: whoever receives it sends nothing more, not even on the control | the ban is only «on the other channels»: on the control the page **MUST** still send the `FAREWELL` of §8.1, then close |
+| ⛔ **the byte on the wire** | **none.** The reason travels only in the application error code of the session close (§3.1 point 3) | **nine bytes** on the control channel, before the close: `00 0C` (`FAREWELL`, §7.1) · `00 00 00 03` · the reason of §8.2 · `00 00` (empty detail). Then the same close as A |
 | **who applies it today** | ⛔ **the bench**: the case `fin-sul-controllo` of B11 has as expected *«mute»*, and the page stays silent | nobody |
 | **the price** | §8.1 must gain the written exception — *whoever has received a `FIN` is not «the one who closes»* — or it keeps imposing an obligation that §4.2 forbids | the server cannot count on that byte: ⛔ `[M]` 10 Aug, **Chrome throws away a message sent just before closing the session** (defect 2 of B11). A `MUST` that one engine out of two does not honour |
 
@@ -5336,13 +5336,13 @@ readings both conform to today's text.
 of B11** was born: on Chrome, after the server's `FIN` on the control channel, **the slot of §8.2 `0x0F`
 was not freed** because from there on no byte capable of freeing it arrived any more, and the user
 saw *«mi dice che sono già collegato, e non è vero»*. With reading **B** that byte would exist
-— it is the `CONGEDO` — and it would arrive where the server already looks. With reading **A** the slot is freed
+— it is the `FAREWELL` — and it would arrive where the server already looks. With reading **A** the slot is freed
 by reading the close capsule, which is the cure that was written that evening.
 
 ⭐ **Which one seems most defensible to me, and the reason: A — silence.** Not because of the text, which
 admits both, but because of two measurements from the same day: the second route of §3.1 point 3 —
 the reason inside the close code — **worked on both engines**, while the
-`CONGEDO` of reading B **was seen disappearing on Chrome**. ⛔ A `MUST` that one browser out of two
+`FAREWELL` of reading B **was seen disappearing on Chrome**. ⛔ A `MUST` that one browser out of two
 cannot honour is exactly the form that finding R1.4 declared a defect — *«era conforme
 al testo quanto il primo»*. ⚠ And the price of A must be paid in full: without the exception written in
 §8.1, A leaves the contradiction standing instead of closing it.
@@ -5357,7 +5357,7 @@ also closes the direction of whoever receives it, and §8.1 takes in the excepti
 > *«la soluzione più logica è "se si può". Se una connessione cade nessuno può dire al server
 > "chiudo perché ho finito"»*
 >
-> ⛔ **The obligation of the `CONGEDO` on the control channel falls when the channel is not usable.**
+> ⛔ **The obligation of the `FAREWELL` on the control channel falls when the channel is not usable.**
 > What never falls is the reason inside the **application error code of the close**
 > (`RCP.md` §3.1 point 3), which travels in the close itself and leaves even with a dead channel.
 >
@@ -5382,20 +5382,20 @@ also closes the direction of whoever receives it, and §8.1 takes in the excepti
 two readings below stay as they were.*
 
 **The fact.** §8.1: *«Whoever closes **MUST** send `CONGEDO` with a reason before closing the
-session»*, and the only declared exception is `RESPINTO`. §3.1 point 2, for the same thing:
+session»*, and the only declared exception is `REJECTED`. §3.1 point 2, for the same thing:
 *«it **MUST** send `CONGEDO` (§8) with the reason, on the control channel, **if the control
 channel is still usable**»*. ⛔ An implementation that closes **without** a farewell because the
 channel is broken is **conforming to §3.1 and in violation of §8.1**, in the same document.
 
 | | **A — the obligation is unconditional** | **B — the condition of §3.1 holds** |
 |---|---|---|
-| **the rule** | whoever closes sends `CONGEDO` **always**, except after `RESPINTO` | the obligation falls when the control channel is not usable; the reason passes anyway through point 3 |
-| ⛔ **the byte on the wire** | the nine bytes of the `CONGEDO` **even** when the control is already closed or broken — that is, a byte that often cannot leave | **no byte** in that case: only the application error code of the close remains (§3.1 point 3) |
+| **the rule** | whoever closes sends `FAREWELL` **always**, except after `REJECTED` | the obligation falls when the control channel is not usable; the reason passes anyway through point 3 |
+| ⛔ **the byte on the wire** | the nine bytes of the `FAREWELL` **even** when the control is already closed or broken — that is, a byte that often cannot leave | **no byte** in that case: only the application error code of the close remains (§3.1 point 3) |
 | **who applies it today** | nobody | ⛔ **the bench**: B5 and B11 check the closes *«at the three points of §3.1 with the second conditional»* (`FASI.md` §01-filo-nudo, finding R3.3) |
 | **the price** | a bench written on §8.1 **fails a correct server** every time the violation arrives on a unidirectional stream | §8.1 loses the absolute form, and must be rewritten with the condition inside — one sentence |
 
 **The concrete case.** A violation arrives on a **unidirectional stream** after the control
-channel has already finished: with **A** the server must send a `CONGEDO` on a channel that no longer exists,
+channel has already finished: with **A** the server must send a `FAREWELL` on a channel that no longer exists,
 and the bench that demands all three points of §3.1 **gives red on the correct code** — it is finding
 R3.3, already paid once on this same bench.
 
@@ -5446,14 +5446,14 @@ received it**, is still usable — and it is exactly the point that §7.14 asks.
 >
 > ⚠ **And one thing this decision does NOT say**: that the bench function was a problem. It is born
 > **off**, and `banchi/01-b5-violazioni.py` checks that with the function off the server **refuses**
-> declaring `FUNZIONE_SPENTA`. The defect was not there: the user raised the bar from *«it is not
+> declaring `FUNCTION_OFF`. The defect was not there: the user raised the bar from *«it is not
 > seen»* to *«it is not there»*.
 
 *Asked on the night of 10 Aug 2026, finding **R11.15**. The row is in §1.5 row 26, and it is 🔸 — not
 ✅. The question as it was asked stays below.*
 
-**The fact.** `RCP.md` §7.5 adds to the protocol **two message types** — `BANCO_MARCA`
-(`0x000F`) and `BANCO_ESITO` (`0x0010`) — and §7.5 declares that it comes from **finding R3.4** of the
+**The fact.** `RCP.md` §7.5 adds to the protocol **two message types** — `BENCH_MARK`
+(`0x000F`) and `BENCH_OUTCOME` (`0x0010`) — and §7.5 declares that it comes from **finding R3.4** of the
 bench review, with the motivation from `web/rapporti/S4-ritardo-disegno.md` §5.3. ⛔ **There is
 neither a sentence nor an entry**, while the decisions the user really pronounced (§1.6, §1.8,
 §1.9) carry here the quoted sentence with the date. `FASI.md` §01-filo-nudo marked it ✅, that is
@@ -5528,7 +5528,7 @@ asked. ⚠ And there was a fact weighing on the other side: Mozilla declares mob
 >
 > ⇒ **What changes in the product**: on a browser without WebCodecs the page **declares that it cannot
 > be done** instead of giving half an experience. `VIA_MSE` no longer switches on by itself: only with
-> `?disegno=mse`, which is a bench switch.
+> `?drawing_v=mse`, which is a bench switch.
 >
 > ⭐ **Why the code stays**: it is measurable, and until Mozilla brings WebCodecs to Android it is
 > **the only proof that the problem was not ours**. ⛔ At phase 13 it is decided whether to throw it away — §7.16,
@@ -5586,7 +5586,7 @@ you know under what conditions** — not *the same everywhere*.
 >
 > *«Il ritardo di 400 ms tra audio e video in generale te lo confermo.»*
 >
-> ⛔ **The defect is not closed, and it is not a platform's**: it is `AUDIO_CUSCINO_MS = 250` in
+> ⛔ **The defect is not closed, and it is not a platform's**: it is `AUDIO_CUSHION_MS = 250` in
 > `pagina.html` (raised from 60 on 17 Aug to remove the gaps, with the price declared in the
 > comment) plus the chain of capture, encoding and decoding. ⇒ `fasi/07-audio-e-appunti.md` §8.
 >
@@ -5601,12 +5601,12 @@ you know under what conditions** — not *the same everywhere*.
 > ## ✅ **FIVE SECONDS** — decided by the user on **11 Aug 2026**
 >
 > ⛔ **From the opening of the WebTransport session to the opening of the control channel at most
-> 5 s pass**, then the server closes with `TEMPO_SCADUTO` `0x0D`. ⇒ `RCP.md` §4.6, the row that
+> 5 s pass**, then the server closes with `TIMED_OUT` `0x0D`. ⇒ `RCP.md` §4.6, the row that
 > was missing.
 >
 > ⭐ **Why 5 s, that is the same number as the first cap**: opening the channel is the **first mandatory
 > act** of the session (`RCP.md` §2.5), it does not depend on how fast a person types, and it does not
-> depend on the network any more than the `CIAO` does.
+> depend on the network any more than the `HELLO` does.
 >
 > ⛔ **What it closes**: it was **the last way, in this phase, to occupy a slot without saying who
 > you are**. ⚠ And QUIC's idle timeout did not cover it — that one counts **silence**, and a
@@ -5616,12 +5616,12 @@ you know under what conditions** — not *the same everywhere*.
 >
 > | | |
 > |---|---|
-> | **§7.15** | the control channel does not exist yet, so the `CONGEDO` **is not sent**: without the condition decided an hour earlier, this row would require a byte on a channel never born |
+> | **§7.15** | the control channel does not exist yet, so the `FAREWELL` **is not sent**: without the condition decided an hour earlier, this row would require a byte on a channel never born |
 > | **§7.14** | and the reason travels where it always travels when the channel is not there: in the **application error code of the close** (§3.1 point 3) |
-> | **§4.1-bis** | ⛔ it is a close decided by the server, and **it has its sayable reason**: `TEMPO_SCADUTO`. It is not a healthy session being thrown out — it is a session that never began |
+> | **§4.1-bis** | ⛔ it is a close decided by the server, and **it has its sayable reason**: `TIMED_OUT`. It is not a healthy session being thrown out — it is a session that never began |
 >
 > ⚠ **No new message type is needed**, and that matters: the window of §9 has been closed since 10 Aug
-> 2026. `TEMPO_SCADUTO` was already there.
+> 2026. `TIMED_OUT` was already there.
 >
 > ⛔ **And it remains to be measured**: `B6` gains a fourth case — open the session, do not open the channel,
 > and check that at 5 s `0x0D` arrives **in the close code**, not on the channel. The bench does not
@@ -5635,14 +5635,14 @@ and `FASI.md` §01-filo-nudo B6). It concerns `RCP.md` §4.6. The question as it
 row 1 was corrected by that word on 11 Aug. ⛔ **But the bench gave a second answer,
 and it says that curing the word is not enough**: if the stopwatch starts at the opening of the **channel**, whoever opens
 the WebTransport **session** and never opens the channel **has no cap on them at all**. §4.6 has no
-row for that state: the table starts from *«`CIAO` received»*, and before the `CIAO` there is a
+row for that state: the table starts from *«`CIAO` received»*, and before the `HELLO` there is a
 state in which the server counts nothing.
 
 | | **A — a fourth cap** | **B — no cap, and it is declared** |
 |---|---|---|
-| **what it says** | from the opening of the **session** to the opening of the **control channel** at most *N* seconds pass, then `CONGEDO(TEMPO_SCADUTO)` | that state is covered only by QUIC's idle timeout (30 s of **silence**), and §4.6 writes it down instead of leaving it implicit |
-| ⛔ **what changes on the wire** | a `CONGEDO(0x0D)` arrives — on the channel that is not there, so **only** the code `0x0D` in the session close (§3.1 point 3) — where today nothing arrives | nothing arrives, and it is **what happens today**: the difference is that it stops being an omission |
-| **the cost** | one more cap to measure, and a client slow to call the API sees the session closed as soon as it is opened | ⛔ a session that does not send `CIAO` but **keeps the wire busy** on another stream **never** expires: the slot stays taken |
+| **what it says** | from the opening of the **session** to the opening of the **control channel** at most *N* seconds pass, then `FAREWELL(TIMED_OUT)` | that state is covered only by QUIC's idle timeout (30 s of **silence**), and §4.6 writes it down instead of leaving it implicit |
+| ⛔ **what changes on the wire** | a `FAREWELL(0x0D)` arrives — on the channel that is not there, so **only** the code `0x0D` in the session close (§3.1 point 3) — where today nothing arrives | nothing arrives, and it is **what happens today**: the difference is that it stops being an omission |
+| **the cost** | one more cap to measure, and a client slow to call the API sees the session closed as soon as it is opened | ⛔ a session that does not send `HELLO` but **keeps the wire busy** on another stream **never** expires: the slot stays taken |
 
 **The concrete case, and it is not a lab one.** A page opens the WebTransport session, then the
 browser goes into the background or the network drops between the two steps. With **A** the session dies with a readable
@@ -5652,11 +5652,11 @@ no one»*, that is the sentence §4.6 opens with: the section exists for this ca
 
 ⭐ **Which one seems more defensible to me, and the reason: A, with the same number as row 1 — 5 s.**
 Not for symmetry: because opening the control channel is **the first mandatory act** of the
-session (§2.5), it does not depend on the user, and it does not depend on the network any more than the `CIAO` does.
+session (§2.5), it does not depend on the user, and it does not depend on the network any more than the `HELLO` does.
 ⛔ But it is a normative row that adds a cap to a conforming implementation, so **it stays ❓**
 until you decide it: `RCP.md` §4.6 carries the row marked ❓ and refers here, and §12 lists it among the
 things RCP/1 leaves open. ⭐ **No new message type is needed** — the reason is
-`TEMPO_SCADUTO`, which is already there — and this matters, because the window of §9 has been closed since 10 Aug.
+`TIMED_OUT`, which is already there — and this matters, because the window of §9 has been closed since 10 Aug.
 
 **How it closes:** a number, or *«no cap»*. With the first, §4.6 gains a row and B6 a case;
 with the second, §4.6 still gains **the row that declares the state**, because a declared hole and
@@ -5678,7 +5678,7 @@ purpose, so that ACL never arrives and **only the groups** remain.
 | when | who | what |
 |---|---|---|
 | **at installation** | `src/provisiona.sh` | enrols **all the people already on the machine** — `UID_MIN..UID_MAX` READ from `/etc/login.defs`, and only those with a real shell: service accounts stay out |
-| **in operation** | the product (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`) | every new user, **at the first connection**, is enrolled and their user manager reborn |
+| **in operation** | the product (`figlio.c`, `enroll_in_card_groups`) | every new user, **at the first connection**, is enrolled and their user manager reborn |
 
 ⛔ **And it changes a division that was written down** (I7: *«the product sets what concerns the SESSION;
 accounts, groups, polkit and PAM live in `provisiona.sh`»*). From today the product touches the
@@ -5700,7 +5700,7 @@ server, `provisiona.sh` enrolled **3 people** and `nicfio` went from `nicfio sud
 DE, non solo per KDE»*) and measured on the 22nd. ⚠ There was nothing to extend: the enrolment sits in the
 **parent**, before the `fork`, and the compositor does not even know about it — it was the **measurement** that stopped at
 kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real window
-(`banchi/12-client-veri.py --visibile`):
+(`banchi/12-client-veri.py --is_visible`):
 
 | box | Firefox 140 | Chrome 153 | what the product did |
 |---|---|---|---|
@@ -5708,10 +5708,10 @@ kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real wi
 | **xfce** | ⭐ PASS (0.6 s) | ⭐ PASS (0.9 s) | `id -nG`: `sgruppix`/`sgruppiy` → `… video render` |
 
 ⛔ **And the safety net was not watching it**, because **every mesh gives its tenant the groups by itself**
-(`garantisci_i_gruppi`): when the client arrives, the product has nothing left to enrol ⇒ the
+(`ensure_groups`): when the client arrives, the product has nothing left to enrol ⇒ the
 safety net could be all green with this piece broken. ⇒ Mesh **C18**
 (`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), the only one that arrives **without** groups;
-grafted fault `--senza-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
+grafted fault `--no-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
 
 ---
 
@@ -5807,7 +5807,7 @@ with both browsers, with this expectation.
 ### 9.1 ✅ The log goes into the system journal
 
 With `--journal` the product also writes its **events** to the journal (`journalctl -t remotix`), with the
-fields `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE` and the severity taken from the sign at the
+fields `REMOTIX_AREA`, `REMOTIX_TENANT`, `CODE_FILE`, `CODE_LINE` and the severity taken from the sign at the
 head of the line (⛔ = error, ⚠ = warning). The **chatter** stays only in the file. The file stays for whoever
 administers.
 
@@ -5974,7 +5974,7 @@ in a repository can always be installed by hand, the rule is enforced **by const
    dipendenze e installarseli, tirar su i servizi, configurarli»*. ⇒ REMOTIX provides no middle way:
    **neither blocks nor dedicated options** for whoever starts without the installer (corrected twice on 30 Sep: first
    it was a flat refusal, then an explicit option). Only a piece of information for support remains: `remotix
-   stato` says whether the installation is **certified by the installer** or not;
+   state` says whether the installation is **certified by the installer** or not;
 4. **automatic updates stay** (§10.10): the package manager updates the pieces, then calls
    the installer, which verifies and switches back on without closing the desktops.
 
@@ -6451,7 +6451,7 @@ attraverso una TUI sofisticata»*. ⛔ **Supersedes** §10.5 for the GUI part an
   the second build with cgo on Debian 12's glibc (`Contenitore.gui`), the graphics libraries, polkit and
   the differences between Wayland and X11.
 - ⚠ **The work that follows** (the installer's phase): remove `installatore/interfaccia/gui`,
-  `Contenitore.gui`, `remotix-install-gui`, `install.sh --finestra` and the code `RX-UI-001`, and the dependency
+  `Contenitore.gui`, `remotix-install-gui`, `install.sh --win` and the code `RX-UI-001`, and the dependency
   on Gio in `go.mod`; update `fasi/17-l-installatore.md` §6.6.1 and §6.6.14 and `SPECIFICHE.md`. ⛔ The interface
   code contains no installation logic (§6.6.1), so removing it does not touch the engine.
 - ✅ **Done on 10 Oct 2026**, commit `129e315`: GUI removed from the code, from the release and from the archive; a single
@@ -6470,7 +6470,7 @@ licence), the messages the server sends to the page, the TUI and the installer's
 - The texts are gathered in one place for each program (like `installatore/interfaccia/testi.go`), so
   another language can be added later without hunting for them in the code.
 - ⚠ **The work that follows**: the login page is translated (5 Oct); what remains is the page's other texts,
-  those the server writes into the page (`__AVVISO__` and the ban warnings), the TUI and the installer's
+  those the server writes into the page (`__WARNING__` and the ban warnings), the TUI and the installer's
   messages. The suite's tests find elements by `id`, not by text: the translation does not
   touch them (checked on 5 Oct on the login page).
 
@@ -6515,7 +6515,7 @@ esigenze e le specifiche, e chi vuole usare il prodotto installa quello che serv
   distribution: NVIDIA is **certified on Ubuntu 26.04** (phase 19) and, elsewhere, the requirement holds.
 - **What stays ours**: saying **clearly and first** what is missing. The engine already does it: the preliminary
   check stops the machine without a driver that encodes (RX-GPU-003…006, with the package to install
-  in the remedy), and at the end `remotix --prova-codifica` really encodes on the card. A driver too old
+  in the remedy), and at the end `remotix --encoding-test` really encodes on the card. A driver too old
   for Vulkan Video stops there, with a message, and not with an installed REMOTIX that does not work.
 - Consistent with §10.27 (no encoding on the processor) and with [*no exceptions per compositor*]: what the
   system does not give, REMOTIX does not patch.
@@ -6534,30 +6534,30 @@ dei sysadmin, non agli utenti normali»*.
   in italiano. Gli utenti si collegano e vedono i loro programmi e il desktop in italiano»*). The language of the
   desktops and of the programs the users see is the machine's: REMOTIX does not touch it. Only REMOTIX's **own**
   text is in English: the installer, the login page, the warnings (§10.32).
-- **What changes**: no language choice (`--lingua` goes, as do the reading of `LANG`/`LANGUAGE` and the
-  `lingua` entry of the answers file, which is now an unknown entry and stops the file with RX-RISPOSTE-002 like any
+- **What changes**: no language choice (`--language` goes, as do the reading of `LANG`/`LANGUAGE` and the
+  `language` entry of the answers file, which is now an unknown entry and stops the file with RX-RISPOSTE-002 like any
   other); a single catalogue of texts and codes, in English (`motore/codici.go`, `motore/testi.go`,
   `interfaccia/testi.go`; `codici_en.go` goes); `install.sh` in English; the option descriptions in English.
   The benches that read the engine's output (`17-t10.sh` first of all) look for the English words.
 - ⚠ **What stays in Italian, for now**: the reasons and notes of the combinations catalogue (they are data: they will
   get their English fields with the next version of the catalogue format) and part of the diagnostic **details** that
   go with the codes (in brackets after the message, and in the log). The message and the remedy of every code
-  are in English, and a test (`TestTesti`) stops any accented letter or Italian word that slips back in.
+  are in English, and a test (`TestTexts`) stops any accented letter or Italian word that slips back in.
 - ✅ **Done on 10 Oct 2026**, commit `a1c31ae`: static build, `go vet` clean, `go test` 208 PASS (subtests included), 0 FAIL.
 - ✅ **Completed the same day**, commit `d580561`: in English also the diagnostic details, the results of the
   checks, the notes of the facts, the lines the engine writes into system files and the manual's table
-  (`catalogo --tabella`); the catalogue goes to `2026.10.10.12` (seq. 12) with the reasons, the notes and the limits in English.
+  (`catalogo --table`); the catalogue goes to `2026.10.10.12` (seq. 12) with the reasons, the notes and the limits in English.
   `motore/inglese_test.go` looks for Italian in every string of the code and the catalogue: 211 PASS, 0 FAIL.
   ⚠ **What stays Italian, because they are interface names and changing them is a job of its own**: the commands and options
-  (`verifica`, `installa`, `approva`, `--archivio`, `--risposte`…), the entries and values of the answers file
-  (`consenso.*`, `porta`, `utenti = tutti`, `si`/`no`, `canale = stabile|candidato`), the values of the facts
-  (`presente`, `assente`…) and the names of the states (`RILEVATO`, `CONFERMATA`…). To be decided.
+  (`verify`, `install`, `approves`, `--archive`, `--replies`…), the entries and values of the answers file
+  (`consenso.*`, `port`, `users = all_v`, `si`/`no`, `channel = stabile|try_candidate`), the values of the facts
+  (`present_v`, `assente`…) and the names of the states (`DETECTED`, `CONFIRMED`…). To be decided.
 - ✅ **This is done too, 10 Oct 2026** (commit `5f802d7`): commands, options, answers file, states, values and
   names of the facts, step types, JSON fields, files in `/var/lib/remotix` and in the published archive, in English. The
   old → new table is in `fasi/17-l-installatore.md` §6.6.15. Formats: `remotix-install/2` and
   `remotix-answers/2`. What remains: the `RX-…` and `C-…` codes (identifiers), the catalogue format and what the
-  C product writes. ⚠ The product command `remotix` still has its options in Italian (`--porta`,
-  `--indirizzo`, `--certificati`, `--prova-codifica`…): a job of its own.
+  C product writes. ⚠ The product command `remotix` still has its options in Italian (`--port`,
+  `--address`, `--certificates`, `--encoding-test`…): a job of its own.
 
 ### 10.36 ✅ The simple installer, and REMOTIX that does not modify the system (10 Oct 2026)
 
@@ -6591,7 +6591,7 @@ REMOTIX) and the parts of §10.12, §10.21 and §10.23 that contradict what foll
   for the packages.
 - **The single package, no repository to add** (*«sono più orientato all'idea del pacchetto di
   installazione unico. Questo evita che l'admin debba aggiungere fonti esterne che è sempre un gesto mal visto»*):
-  a single file (e.g. `remotix-<versione>.run`, sha256 published) with the installer and the packages of all the
+  a single file (e.g. `remotix-<version_v>.run`, sha256 published) with the installer and the packages of all the
   distributions; the package manager installs from a local folder. Upgrading = downloading the new `.run` and running it again.
   Supersedes the part of §10.23 on upgrading with `apt upgrade` from a repository of ours.
 - **Rolling-release distributions stay** (Arch, Tumbleweed; and Fedora): *«chi usa arch è consapevole
@@ -6626,7 +6626,7 @@ The user's choices (10 Oct 2026):
 
 🔸 Derived by me, correctable: as in Phonestra the manual is **generated** — `docs/sources/technical/chNN_*.py`, one
 file per chapter, ⇒ `docs/Technical Manual.html` with `python3 docs/sources/build.py`; `style.css` and `manual.js` are
-the **common canon** copied byte for byte from Phonestra (which is not modified in a single project); `--controlla`
+the **common canon** copied byte for byte from Phonestra (which is not modified in a single project); `--check`
 checks that the files, functions, `REMOTIX_*` variables and `RX-` codes cited exist in the code, and that no Italian
 is left. Performance and capacity wait for the xrdp campaign.
 
@@ -6648,7 +6648,7 @@ and on the counter-proposal to keep the project diary in Italian: *«no, remotix
   same word never becomes two different English words in two files.
 - **Nothing reaches the test server until the xrdp campaign has finished**; the rename is built and checked on the
   laptop, then the whole suite runs on the server.
-- The technical manual (§10.37) is regenerated after the rename, and `--controlla` then rejects Italian
+- The technical manual (§10.37) is regenerated after the rename, and `--check` then rejects Italian
   everywhere, `<code>` spans included.
 
 ---

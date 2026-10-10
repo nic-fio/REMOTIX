@@ -21,7 +21,7 @@ prova() {  # prova <fault> <machines…>
 	local g=$1; shift
 	bash $T8/t8-guasta.sh "$g" >/dev/null
 	for m in "$@"; do
-		local out v=ROSSO
+		local out v=RED
 		# no N+1 packages already in cache (those downloaded before are good, and the manager would use them)
 		# and no archive lists already downloaded: with the same InRelease apt does not download Packages again
 		out=$(vm "$m" "sudo apt-get clean 2>/dev/null; sudo dnf clean packages >/dev/null 2>&1; sudo rm -f /var/cache/pacman/pkg/remotix-[0-9]*
@@ -34,14 +34,14 @@ b=\$( (dpkg-query -W -f='\${Version}' remotix; rpm -q remotix; pacman -Q remotix
 echo \"remotix before: \$a · after: \$b\"" 2>&1)
 		# green: the version has NOT changed, and the manager stated the refusal
 		a=$(echo "$out" | sed -n 's/.*remotix before: \(.*\) · after: \(.*\)/\1|\2/p')
-		[ "${a%%|*}" = "${a#*|}" ] && echo "$out" | grep -qiE 'hash|signature|NO_PUBKEY|BADSIG|GPG|invalid|corrupted|error' && v=VERDE
+		[ "${a%%|*}" = "${a#*|}" ] && echo "$out" | grep -qiE 'hash|signature|NO_PUBKEY|BADSIG|GPG|invalid|corrupted|error' && v=GREEN
 		printf '%-6s %-15s %-16s\n' "$v" "$g" "$m"
 		echo "$out" | sed 's/^/         /' | cut -c1-300
 	done
-	bash $T8/t8-guasta.sh ripristina >/dev/null
+	bash $T8/t8-guasta.sh restore >/dev/null
 }
 ms=("$@")
 f=$(fam "${ms[0]}")
-for g in "$f-byte" "$f-firma" pacchetto-byte; do
+for g in "$f-byte" "$f-firma" package-bytes; do
 	prova "$g" "${ms[@]}"
 done

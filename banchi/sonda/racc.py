@@ -4,21 +4,21 @@ import json, sys
 from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-QUI = Path(__file__).resolve().parent
-REG = QUI / "esiti.jsonl"
+HERE = Path(__file__).resolve().parent
+REG = HERE / "esiti.jsonl"
 class H(SimpleHTTPRequestHandler):
-    def __init__(self, *a, **kw): super().__init__(*a, directory=str(QUI), **kw)
+    def __init__(self, *a, **kw): super().__init__(*a, directory=str(HERE), **kw)
     def do_POST(self):
-        if self.path != "/esito":
+        if self.path != "/outcome":
             self.send_error(404); return
         n = int(self.headers.get("Content-Length", 0))
         try: d = json.loads(self.rfile.read(n).decode("utf-8", "replace"))
-        except Exception as e: d = {"esito": "ILLEGGIBILE", "dettaglio": str(e)}
-        d["ora"] = datetime.now().isoformat(timespec="seconds")
+        except Exception as e: d = {"outcome": "ILLEGGIBILE", "detail": str(e)}
+        d["now"] = datetime.now().isoformat(timespec="seconds")
         with REG.open("a") as f: f.write(json.dumps(d, ensure_ascii=False) + "\n")
-        print("=== outcome:", d.get("esito"), "|", (d.get("motore") or "?")[:80], flush=True)
-        print("    ", d.get("dettaglio"), flush=True)
-        for r in (d.get("righe") or []): print("      .", r, flush=True)
+        print("=== outcome:", d.get("outcome"), "|", (d.get("motore") or "?")[:80], flush=True)
+        print("    ", d.get("detail"), flush=True)
+        for r in (d.get("line_list") or []): print("      .", r, flush=True)
         self.send_response(204); self.end_headers()
     def log_message(self, f, *a): print("request:", f % a, flush=True)
 if __name__ == "__main__":

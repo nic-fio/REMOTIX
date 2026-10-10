@@ -6,7 +6,7 @@
 # `LEZIONI.md` §2.5-bis: "dependencies installed by hand become invisible
 # within a day, and the moment you notice is always the one in
 # which you need the machine to start again".  Hence this list, and the
-# `dipendenze` target that CHECKS them before compiling instead of letting them fail
+# `dependencies` target that CHECKS them before compiling instead of letting them fail
 # twenty lines later with an error that does not name them.
 #
 #   ngtcp2 >= 1.25            QUIC                      (DECISIONI.md §6.4)
@@ -58,27 +58,27 @@
 # source, and that is what `banchi/01-b2-costruisci-ngtcp2.sh` does.
 #
 # -----------------------------------------------------------------------------
-#   make PREFISSO=/path/where/ngtcp2/and/nghttp3/are
+#   make PFX=/path/where/ngtcp2/and/nghttp3/are
 #
-# If `pkg-config` finds them by itself, PREFISSO is not needed.
+# If `pkg-config` finds them by itself, PFX is not needed.
 
 CC      ?= cc
-PREFISSO ?=
+PFX ?=
 
-NOME    := remotix
+LABEL_NAME    := remotix
 
-# ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: sessione
-#    (the stage) → cattura+mutter (the pixels) → codificatore (the bytes).  ⚠ The
+# ⭐ THE FOUR FILES OF PHASE 2 are at the end, and in chain order: session_v
+#    (the stage) → capture_v+mutter (the pixels) → encoder (the bytes).  ⚠ The
 #    fifth link, the video channel, does NOT appear: it lives in `rcp.c`, which was
 #    already there — and it is why it is born already compared with `banchi/rcp/`.
-SORGENTI := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
+SOURCES := main.c trasporto.c webtransport.c pagina.c comando.c certificati.c \
             budget.c \
             tls.c registro.c rcp.c autenticazione.c aiutante.c figlio.c \
             sessione.c cattura.c mutter.c codificatore.c vadiretta.c \
             vulkanvideo.c scrittore_bit.c colori709.c audio.c suono.c \
             input.c tastiera.c cursore.c sentinella.c appunti.c kwin.c \
             appunti_kde.c wlroots.c wlr_input.c forma.c ritrovo.c
-OGGETTI  := $(SORGENTI:.c=.o)
+OBJECTS  := $(SOURCES:.c=.o)
 
 # -----------------------------------------------------------------------------
 # ⛔⭐ THE THREE COPIES THAT MUST BE ONE — finding R12.3, night of 10 August 2026.
@@ -89,7 +89,7 @@ OGGETTI  := $(SORGENTI:.c=.o)
 # tonight they were identical **by luck, not by construction**: no file of the
 # repo compared the two copies.
 #
-# The concrete case nobody would have seen: `BAN_DURATA` is changed in
+# The concrete case nobody would have seen: `BAN_DURATION` is changed in
 # `src/rcp.c` from twelve hours to one.  The product bans for an hour; `01-b6-lancia.sh`
 # stays green because it compares `banchi/rcp/` with the copy compiled inside
 # `examples/`; B8 stays green because it starts `bsslserver`.  ⛔ The defect does not
@@ -103,19 +103,19 @@ OGGETTI  := $(SORGENTI:.c=.o)
 #      the copies match             it compiles
 #      the copies DIVERGE           ⛔ it does not compile, and the `diff` is printed
 #      the twin copy IS NOT THERE   ⛔ it does not compile, unless whoever builds
-#                                   DECLARES IT with GEMELLO=nessuno
+#                                   DECLARES IT with TWIN=nobody
 #
 #    ⚠ The third is the one a hastily written check confuses with the
 #      first: "I found no differences" and "I could not look" have the
 #      same face, and the second looking like the first is a check
 #      switched off that looks switched on.
-GEMELLO ?= ../banchi/rcp
-GEMELLATI := rcp.c rcp.h autenticazione.c
+TWIN ?= ../banchi/rcp
+TWINNED := rcp.c rcp.h autenticazione.c
 
 # ⚠ `-std=gnu11` and not `c11`: `accept4`, `SOCK_NONBLOCK` and the ancillary
 #   messages are needed, which pure POSIX does not carry.
-AVVERTIMENTI := -Wall -Wextra -Wno-unused-parameter
-CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
+WARNINGS := -Wall -Wextra -Wno-unused-parameter
+CFLAGS   ?= -O2 -g -std=gnu11 $(WARNINGS)
 
 # ⛔ `override`, and not a plain `+=`: whoever passes `CFLAGS=` on the command line
 #    — as `costruisci.sh` does, adding the `-I`s — would erase this
@@ -264,13 +264,13 @@ SCANNER    ?= wayland-scanner
 #    `wayland-protocols`, which the container does NOT have: the XML is in the repository like
 #    the others, copied from wayland-protocols 1.44.  ⚠ At most v4 is bound
 #    (`[M]` labwc announces it): it is the one with `main_device`.
-PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
+PROTOCOLS := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
               wlr-screencopy-unstable-v1 wlr-output-management-unstable-v1 \
               virtual-keyboard-unstable-v1 wlr-virtual-pointer-unstable-v1 \
               linux-dmabuf-unstable-v1 ext-data-control-v1
-GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
+GENERATED   := $(PROTOCOLS:%=%-client-protocol.h) $(PROTOCOLS:%=%-protocol.c)
 
-# ⭐ PHASE 17 — the PREFISSO's library folder is not always `lib`:
+# ⭐ PHASE 17 — the PFX's library folder is not always `lib`:
 #    cmake calls it `lib64` on Fedora and openSUSE and `lib/<multiarch>` on Debian
 #    (`fasi/17-l-installatore.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
 #    prefix (`PKG_CONFIG_LIBDIR`, which REPLACES the system folders, and
@@ -279,15 +279,15 @@ GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 #    it does not answer, the folders that exist.
 #    ⛔ With static ngtcp2/nghttp3 (§6.3) the rpath will no longer be needed: until
 #    then, let it at least point where they are.
-ifneq ($(PREFISSO),)
+ifneq ($(PFX),)
 MULTIARCH   := $(shell $(CC) -print-multiarch 2>/dev/null)
-PC_PREFISSO := $(PREFISSO)/lib64/pkgconfig:$(PREFISSO)/lib/pkgconfig$(if $(MULTIARCH),:$(PREFISSO)/lib/$(MULTIARCH)/pkgconfig)
-LIB_PREFISSO := $(sort $(shell env -u PKG_CONFIG_PATH PKG_CONFIG_LIBDIR='$(PC_PREFISSO)' pkg-config --variable=libdir libngtcp2 libnghttp3 2>/dev/null))
-ifeq ($(LIB_PREFISSO),)
-LIB_PREFISSO := $(wildcard $(PREFISSO)/lib64 $(if $(MULTIARCH),$(PREFISSO)/lib/$(MULTIARCH)) $(PREFISSO)/lib)
+PC_PREFIX := $(PFX)/lib64/pkgconfig:$(PFX)/lib/pkgconfig$(if $(MULTIARCH),:$(PFX)/lib/$(MULTIARCH)/pkgconfig)
+LIB_PREFIX := $(sort $(shell env -u PKG_CONFIG_PATH PKG_CONFIG_LIBDIR='$(PC_PREFIX)' pkg-config --variable=libdir libngtcp2 libnghttp3 2>/dev/null))
+ifeq ($(LIB_PREFIX),)
+LIB_PREFIX := $(wildcard $(PFX)/lib64 $(if $(MULTIARCH),$(PFX)/lib/$(MULTIARCH)) $(PFX)/lib)
 endif
-CFLAGS  += -I$(PREFISSO)/include
-LDFLAGS += $(foreach d,$(LIB_PREFISSO),-L$(d) -Wl,-rpath,$(d))
+CFLAGS  += -I$(PFX)/include
+LDFLAGS += $(foreach d,$(LIB_PREFIX),-L$(d) -Wl,-rpath,$(d))
 endif
 
 # ⛔ `ngtcp2_crypto_ossl` goes BEFORE `ngtcp2`: the linker resolves symbols from
@@ -300,56 +300,56 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: tutto pulisci dipendenze impronte banco-w1
+.PHONY: overall clean dependencies fingerprints bench-w1
 
-tutto: impronte $(NOME)
+overall: fingerprints $(LABEL_NAME)
 
 # ⛔ The comparison of the three copies: see the box at the top.  It always prints the
 #    fingerprints of what it compared, so that "compared" is a readable fact
 #    and not a green line.
-impronte:
-	@if [ "$(GEMELLO)" = "nessuno" ]; then \
-	  printf '  ⛔ GEMELLO=nessuno: I did NOT compare src/ with banchi/rcp/.\n'; \
+fingerprints:
+	@if [ "$(TWIN)" = "nobody" ]; then \
+	  printf '  ⛔ TWIN=nobody: I did NOT compare src/ with banchi/rcp/.\n'; \
 	  printf '     It is not «the copies match»: it is «I did not look», and whoever\n'; \
 	  printf '     builds has DECLARED it (finding R12.3).\n'; \
 	  exit 0; \
 	fi; \
-	if [ ! -d "$(GEMELLO)" ]; then \
-	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(GEMELLO)"; \
+	if [ ! -d "$(TWIN)" ]; then \
+	  printf '  ⛔ the twin copy «%s» IS NOT THERE: I cannot prove that\n' "$(TWIN)"; \
 	  printf '     src/rcp.c and banchi/rcp/rcp.c are the same module — and they are\n'; \
 	  printf '     the same module mounted on two hosts (R12.3).\n'; \
-	  printf '     Pass GEMELLO=<path>, or GEMELLO=nessuno to\n'; \
+	  printf '     Pass TWIN=<path>, or TWIN=nobody to\n'; \
 	  printf '     DECLARE building without the comparison.\n'; \
 	  exit 2; \
 	fi; \
-	stato=0; \
-	for f in $(GEMELLATI); do \
-	  if [ ! -f "$(GEMELLO)/$$f" ]; then \
-	    printf '  ⛔ %s/%s does not exist\n' "$(GEMELLO)" "$$f"; stato=1; continue; \
+	state=0; \
+	for f in $(TWINNED); do \
+	  if [ ! -f "$(TWIN)/$$f" ]; then \
+	    printf '  ⛔ %s/%s does not exist\n' "$(TWIN)" "$$f"; state=1; continue; \
 	  fi; \
-	  if cmp -s "$$f" "$(GEMELLO)/$$f"; then \
-	    printf '  OK  %-18s identical to %s  (%s)\n' "$$f" "$(GEMELLO)/$$f" \
+	  if cmp -s "$$f" "$(TWIN)/$$f"; then \
+	    printf '  OK  %-18s identical to %s  (%s)\n' "$$f" "$(TWIN)/$$f" \
 	      "$$(md5sum < $$f | cut -c1-32)"; \
 	  else \
-	    printf '  ⛔ %s DIVERGES from %s/%s:\n' "$$f" "$(GEMELLO)" "$$f"; \
-	    diff -u "$(GEMELLO)/$$f" "$$f" | head -40; \
-	    stato=1; \
+	    printf '  ⛔ %s DIVERGES from %s/%s:\n' "$$f" "$(TWIN)" "$$f"; \
+	    diff -u "$(TWIN)/$$f" "$$f" | head -40; \
+	    state=1; \
 	  fi; \
 	done; \
-	if [ $$stato -ne 0 ]; then \
+	if [ $$state -ne 0 ]; then \
 	  printf '  ⛔ the two copies of the SAME module do not match: not compiling.\n'; \
 	  printf '     If the change is intended, it must be carried into both — or the\n'; \
 	  printf '     product and the bench will measure two different codes (R12.3).\n'; \
 	fi; \
-	exit $$stato
+	exit $$state
 
-$(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
-	$(CC) $(CFLAGS) -o $@ $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o) $(LDFLAGS) $(LIBS)
+$(LABEL_NAME): $(OBJECTS) $(PROTOCOLS:%=%-protocol.o)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) $(PROTOCOLS:%=%-protocol.o) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
+kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLS:%=%-client-protocol.h)
 
 # -----------------------------------------------------------------------------
 # ⭐ THE CAPTURE BENCH ON WLROOTS — `banchi/13-w1-un-fotogramma.c`.
@@ -361,16 +361,16 @@ kwin.o appunti_kde.o wlroots.o wlr_input.o: $(PROTOCOLLI:%=%-client-protocol.h)
 # ⚠ It is here and not in `banchi/`: the product's Makefile is the only place that
 #   knows how the protocol headers are generated.
 # -----------------------------------------------------------------------------
-BANCO_W1 := ../banchi/13-w1-un-fotogramma
+BENCH_W1 := ../banchi/13-w1-un-fotogramma
 
-$(BANCO_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
+$(BENCH_W1): ../banchi/13-w1-un-fotogramma.c wlroots.o registro.o \
              wlr-screencopy-unstable-v1-protocol.o \
              wlr-output-management-unstable-v1-protocol.o \
              linux-dmabuf-unstable-v1-protocol.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lglib-2.0 -lgobject-2.0 -lgio-2.0 -lwayland-client \
 	      $(F13_LIBS)
 
-banco-w1: $(BANCO_W1)
+bench-w1: $(BENCH_W1)
 
 
 %-client-protocol.h: protocolli/%.xml
@@ -379,8 +379,8 @@ banco-w1: $(BANCO_W1)
 %-protocol.c: protocolli/%.xml
 	$(SCANNER) private-code $< $@
 
-pulisci:
-	rm -f $(OGGETTI) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o)
+clean:
+	rm -f $(OBJECTS) $(LABEL_NAME) $(GENERATED) $(PROTOCOLS:%=%-protocol.o)
 
 # ⛔ The dependency check SAYS what is missing, instead of making the
 #    compiler fail on an `#include` nobody connects to the missing library.
@@ -397,34 +397,34 @@ pulisci:
 #      libei-1.0 1.1.0        `ei_region_get_mapping_id` (`input.c`); `[R]` missing
 #                             in the 1.0.0 header, present in 1.1.0
 #      libpipewire-0.3 0.3.48 `PW_KEY_NODE_FORCE_QUANTUM`; `[M]` 29 Sep 2026:
-#                             cattura/cursore/suono compile with Ubuntu 22.04's
+#                             capture_v/pointer_shape/sound compile with Ubuntu 22.04's
 #                             0.3.48; `[R]` the key is missing in 0.3.44
 #      gio-2.0 2.80           as it was declared; we would need 2.72
 #                             (`g_get_user_state_dir`, `sessione.c`)
 #    ⛔ Three outcomes and not two: "too old", "pkg-config does not know it" (which
-#       with PREFISSO may only mean that the `.pc` is not in the path) and
+#       with PFX may only mean that the `.pc` is not in the path) and
 #       "fine".  The first two make it exit with an error, but they are SAID differently.
 #      vulkan 1.3.274         the final video encode extensions (phase 19,
 #                             `src/vulkanvideo.c`); `[?]` not tried below
-MINIMI := openssl:3.5.0 libva-drm:0 \
+MINIMUMS := openssl:3.5.0 libva-drm:0 \
           libngtcp2:1.25.0 libngtcp2_crypto_ossl:1.25.0 libnghttp3:1.18.0 \
           libei-1.0:1.1.0 libpipewire-0.3:0.3.48 gio-2.0:2.80 xkbcommon:0 \
           libva:0 libdrm:0 gbm:0 wayland-client:0 opus:1.3 vulkan:1.3.274
 
-dipendenze:
-	@stato=0; \
-	if [ -n "$(PREFISSO)" ]; then \
-	  PKG_CONFIG_PATH="$(PC_PREFISSO)$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}"; \
+dependencies:
+	@state=0; \
+	if [ -n "$(PFX)" ]; then \
+	  PKG_CONFIG_PATH="$(PC_PREFIX)$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}"; \
 	  export PKG_CONFIG_PATH; \
 	fi; \
-	for m in $(MINIMI); do \
+	for m in $(MINIMUMS); do \
 	  p=$${m%%:*}; v=$${m#*:}; d=">= $$v"; [ "$$v" = 0 ] && d="no minimum"; \
 	  if ! pkg-config --exists "$$p" 2>/dev/null; then \
-	    printf '  ??  %-24s pkg-config does not know it (%s)\n' "$$p" "$$d"; stato=1; \
+	    printf '  ??  %-24s pkg-config does not know it (%s)\n' "$$p" "$$d"; state=1; \
 	  elif pkg-config --atleast-version="$$v" "$$p"; then \
 	    printf '  OK  %-24s %s (%s)\n' "$$p" "$$(pkg-config --modversion $$p)" "$$d"; \
 	  else \
-	    printf '  NO  %-24s %s: TOO OLD, >= %s needed\n' "$$p" "$$(pkg-config --modversion $$p)" "$$v"; stato=1; \
+	    printf '  NO  %-24s %s: TOO OLD, >= %s needed\n' "$$p" "$$(pkg-config --modversion $$p)" "$$v"; state=1; \
 	  fi; \
 	done; \
 	for h in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_ossl.h nghttp3/nghttp3.h \
@@ -435,16 +435,16 @@ dipendenze:
 	     $(CC) $(CFLAGS) -x c - -o /dev/null $(LDFLAGS) $(LIBS) 2>/dev/null; then \
 	    printf '  OK  %s\n' "$$h"; \
 	  else \
-	    printf '  NO  %s\n' "$$h"; stato=1; \
+	    printf '  NO  %s\n' "$$h"; state=1; \
 	  fi; \
 	done; \
-	exit $$stato
+	exit $$state
 
 # ⛔ Phase 16 (25 Sep 2026): `registro.h` has become a file of MACROS
-#    (`registro_dice` & co. add __FILE__/__LINE__): an old object
+#    (`log_says` & co. add __FILE__/__LINE__): an old object
 #    looks for the symbol that is no longer there and linking falls half way.  Every
 #    object goes through the log, so it depends on it — all of them, without a list.
-$(OGGETTI): registro.h
+$(OBJECTS): registro.h
 
 # ⛔ `main.c` NO LONGER depends on `sessione.h`, `cattura.h`, `mutter.h` and
 #    `codificatore.h`, and the line that removes them is the same decision as
@@ -465,24 +465,24 @@ rcp.o:            rcp.h
 #   missing and a uniform omission reads better than a single exception.
 autenticazione.o:
 # ⭐ `aiutante.c` — the process that queries PAM in place of the single thread
-#    (`DECISIONI.md` §1.10).  ⚠ It is NOT among the `GEMELLATI`: it belongs to the PRODUCT
+#    (`DECISIONI.md` §1.10).  ⚠ It is NOT among the `TWINNED`: it belongs to the PRODUCT
 #    only, because the graft of `banchi/rcp/` has no loop of its own to free.
 aiutante.o:       aiutante.h registro.h
 # ⭐ `figlio.c` — one process per user, running as them (`DECISIONI.md`
 #    §1.10-bis).  ⚠ It is the ONLY file that sits on both sides of the
 #    privilege drop: the parent's half includes nothing of phase 2, the
-#    child's half includes all four.  ⚠ It is NOT among the `GEMELLATI`: it belongs to the
+#    child's half includes all four.  ⚠ It is NOT among the `TWINNED`: it belongs to the
 #    product only, like `aiutante.c`.
 figlio.o:         figlio.h registro.h sessione.h cattura.h mutter.h codificatore.h \
                   input.h sentinella.h audio.h suono.h appunti.h ritrovo.h
 
-# ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
+# ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `TWINNED`: they belong to the PRODUCT
 #    only — in `banchi/rcp/` they do not exist, because the graft into ngtcp2's
 #    example has neither a graphical session nor an encoder.
 sessione.o:       sessione.h registro.h
 
 # ⭐ THE GUARDIAN OF PHASE 5 — the emitter that was missing for `0x04` and `0x05`.
-# ⚠ It is not among the `GEMELLATI` and cannot go there: `rcp.c` reaches it by
+# ⚠ It is not among the `TWINNED` and cannot go there: `rcp.c` reaches it by
 #   HOOK, because the copy grafted into ngtcp2 has no system bus.
 sentinella.o:     sentinella.h registro.h
 # ⭐ PHASE 17, T7 — the live desktops left by a previous parent (logind and /proc).
@@ -505,7 +505,7 @@ vulkanvideo.o:    CFLAGS += -Wno-missing-field-initializers
 scrittore_bit.o:  scrittore_bit.h
 colori709.o:      colori709.h
 
-# ⭐ THE SOUND ENCODER — phase 7.  ⚠ It is not among the `GEMELLATI`: it belongs to the
+# ⭐ THE SOUND ENCODER — phase 7.  ⚠ It is not among the `TWINNED`: it belongs to the
 #   product, and the graft into ngtcp2 has nothing to play.
 #   ⛔ Since 30 Sep 2026 (phase 18) it calls `libopus` directly: the dependency is
 #      `F18A_LIBS` above.  Until the 29th it went through `libavcodec`.
@@ -534,7 +534,7 @@ input.o:          input.h tastiera.h registro.h mutter.h sessione.h kwin.h
 tastiera.o:       tastiera.h registro.h
 cursore.o:        cursore.h registro.h
 
-# ⭐ THE SESSION'S CLIPBOARD — phase 7.  ⚠ It is not among the `GEMELLATI` and cannot
+# ⭐ THE SESSION'S CLIPBOARD — phase 7.  ⚠ It is not among the `TWINNED` and cannot
 #    go there: it speaks D-Bus (`gio-2.0`), which is not inside ngtcp2's `examples/`.
 #    ⛔ It is the same reason why `rcp.c` reaches this module
 #    by HOOKS and not by `#include`.

@@ -10,17 +10,17 @@
 #    installation engine, with consent (DECISIONI.md §10.12).
 # ⭐ Port and options: defaults in /usr/share/remotix/remotix.conf, the choices
 #    in /etc/remotix/remotix.conf.d/*.conf (they win).  The engine writes the
-#    chosen port there (`porta.conf`, `REMOTIX_PORTA=N`).  Whoever connects with
+#    chosen port there (`porta.conf`, `REMOTIX_PORT=N`).  Whoever connects with
 #    an IP address declares it there too:
-#        REMOTIX_OPZIONI=--nome 192.168.1.10
-#    (the last --nome wins; the default is the machine name, %H).
-#    ⚠ Until 0.18.0-1 this unit set `Environment=REMOTIX_PORTA=7447` and read no
+#        REMOTIX_OPTIONS=--label_name 192.168.1.10
+#    (the last --label_name wins; the default is the machine name, %H).
+#    ⚠ Until 0.18.0-1 this unit set `Environment=REMOTIX_PORT=7447` and read no
 #    EnvironmentFile: on Arch a port other than 7447 was never applied, and the
 #    installer rolled back («active but N/tcp not listening»).
 # ⭐ `--journal`: the lines go to the journal with their fields (priority,
-#    `REMOTIX_AREA`, `REMOTIX_INQUILINO`), also from the child (`registro.h`).
+#    `REMOTIX_AREA`, `REMOTIX_TENANT`), also from the child (`registro.h`).
 # ⛔ No bench tool on the command line (§4.5, R13): no
-#    --comando-socket, --rilievo, --parlantina, --audio-prova, --sblocca.
+#    --command-socket, --survey, --chatter, --audio-test, --unblock.
 # ⚠ ARCH PATH: the binary is in /usr/lib/remotix/ (Arch has no libexec).
 [Unit]
 Description=REMOTIX, the desktop in the browser
@@ -32,10 +32,10 @@ Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
-# ⭐ The program directly, as in the .rpm: `${REMOTIX_PORTA}` is a single word;
-#    `$REMOTIX_OPZIONI` without braces is split into words, and when empty yields
+# ⭐ The program directly, as in the .rpm: `${REMOTIX_PORT}` is a single word;
+#    `$REMOTIX_OPTIONS` without braces is split into words, and when empty yields
 #    none (systemd.service, «Command lines»).
-ExecStart=/usr/lib/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPZIONI
+ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --label_name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page_v /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPTIONS
 # ⭐ The three properties the product has always been measured with
 #    (src/riavvia-7900.sh): KillMode=mixed (T2, §5.2: the desktops survive
 #    the stop), the real-time priority and the children's nice.

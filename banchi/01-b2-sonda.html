@@ -37,11 +37,11 @@
      fifth round of B3: 200 in the collector's log and no outcome in
      40 seconds, on both engines.
 
-  ⭐ So now the probe says a true sentence: a conforming `CIAO` (§4.3,
-     §6.1, §7.1) on the control channel, and waits for the `ECCOMI`.
+  ⭐ So now the probe says a true sentence: a conforming `HELLO` (§4.3,
+     §6.1, §7.1) on the control channel, and waits for the `HERE_I_AM`.
 
   ⚠ **And it stops there, on purpose.**  The whole handshake —
-    `CREDENZIALI`, `AMMESSO`, `ATTACCA`, `SESSIONE` — is not needed for what
+    `CREDENTIALS`, `ADMITTED`, `ATTACH`, `SESSION` — is not needed for what
     this bench tests, which is the **trust model**: the session
     certificate, its fingerprint, its rotation (§4.1-bis).  The
     PROTOCOL is tested by three other benches, which exist for that — B3 (the
@@ -49,9 +49,9 @@
     towards the page).  Redoing a fourth piece of it here would give two different
     measurements under the same label, which is `CODER.md` §3.9.
 
-  ⚠ For the same reason the page does NOT judge the content of the `ECCOMI` —
-    version, capabilities, leftover bytes — and does not send `CONGEDO` at the end:
-    B11 does that, line by line.  Here the `ECCOMI` counts as **proof that the wire
+  ⚠ For the same reason the page does NOT judge the content of the `HERE_I_AM` —
+    version, capabilities, leftover bytes — and does not send `FAREWELL` at the end:
+    B11 does that, line by line.  Here the `HERE_I_AM` counts as **proof that the wire
     carries in both directions**, and that is all.
 
   ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@
   label { display: block; margin: .8rem 0 .2rem; font-weight: 600; }
   input { width: 100%; padding: .4rem; font: inherit; font-family: ui-monospace, monospace; }
   button { margin-top: 1rem; padding: .5rem 1rem; font: inherit; font-weight: 600; }
-  #esito { margin-top: 1.4rem; padding: 1rem; border-radius: .4rem; white-space: pre-wrap;
+  #outcome { margin-top: 1.4rem; padding: 1rem; border-radius: .4rem; white-space: pre-wrap;
            font-family: ui-monospace, monospace; font-size: 13px; background: #8881; }
   .ok   { border-left: 4px solid #2a2; }
   .no   { border-left: 4px solid #c33; }
@@ -82,8 +82,8 @@
 <p>Bench of phase 1. It measures <b>one thing only</b>: whether the engine of this browser
 establishes a WebTransport session with the given server, accepting its
 certificate through the fingerprint published here — and whether on that session
-the server <b>answers</b>, that is whether the <code>CIAO</code> on the control channel
-gets back an <code>ECCOMI</code> (<code>RCP.md</code> §4.2, §4.3). The rest of the
+the server <b>answers</b>, that is whether the <code>HELLO</code> on the control channel
+gets back an <code>HERE_I_AM</code> (<code>RCP.md</code> §4.2, §4.3). The rest of the
 handshake belongs to B3, B5 and B11: here the <b>trust model</b> is tested,
 not the protocol.</p>
 
@@ -91,21 +91,21 @@ not the protocol.</p>
 <input id="url" value="https://192.168.0.2:7447/rcp/1">
 
 <label>SHA-256 fingerprint of the session certificate (base64)</label>
-<input id="impronta" value="">
+<input id="fingerprint" value="">
 
-<button id="vai">Open the session</button>
-<div id="esito">waiting.</div>
+<button id="go_to">Open the session</button>
+<div id="outcome">waiting.</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-const esito = $("esito");
+const outcome = $("outcome");
 
 // ⛔ THE WAIT CAPS — declared here, and repeated inside the outcome.
 //
 //    They are OURS, and it must be said: `RCP.md` §4.6 sets three caps on the
-//    handshake and they are all on the CLIENT ("`CIAO` received" within 5 s, and so on);
+//    handshake and they are all on the CLIENT ("`HELLO` received" within 5 s, and so on);
 //    on the server it imposes no response time.  So at expiry the
-//    page **does not accuse the server of violating anything**: it writes "within N
+//    page **does not accusations the server of violating anything**: it writes "within N
 //    seconds nothing arrived", which is a fact of the measurement.
 //
 // ⚠ The numbers are chosen on the conductor, not at random.  `01-b2-lancia-sonda.sh`
@@ -114,20 +114,20 @@ const esito = $("esito");
 //   32 s of B11 — chosen there to be just above the `max_idle_timeout` of
 //   §2.2, so that the transport is the first to speak — would not fit here
 //   twice, and the bench would go back to the silence this page cures.
-const TETTO_APERTURA = 10000;   // `wt.ready`: neither opened nor refused
-const TETTO_ECCOMI   = 10000;   // from the `CIAO` sent to the complete `ECCOMI`
-const TETTO_TOTALE   = 25000;   // the safety net: beyond this, it records anyway
+const CAP_OPENING = 10000;   // `wt.ready`: neither opened nor refused
+const CAP_HERE_I_AM   = 10000;   // from the `HELLO` sent to the complete `HERE_I_AM`
+const CAP_TOTAL   = 25000;   // the safety net: beyond this, it records anyway
 
 // ⛔ The version this page can speak, written once only: §2.2
-//    wants the one of the path `/rcp/<n>` and the one of the `CIAO` to match.
+//    wants the one of the path `/rcp/<n>` and the one of the `HELLO` to match.
 // ⚠ Here they are NOT compared — the address comes from the query and the bench
 //   takes it as it is.  The comparison is a protocol check, and it is in
 //   `01-b11-pagina.html` (finding R6.19), not in a bench on the certificate.
-const VERSIONE = 1;
+const VER = 1;
 
-const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
-            RESPINTO: 0x0005, SESSIONE: 0x0007, CONGEDO: 0x000C };
-const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+const T = { HELLO: 0x0001, HERE_I_AM: 0x0002, CREDENTIALS: 0x0003, ADMITTED: 0x0004,
+            REJECTED: 0x0005, SESSION: 0x0007, FAREWELL: 0x000C };
+const TYPE_NAME = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
 
 // ⛔ The names of the reasons of §8.2, because "reason 9" is not a diagnosis: if the
 //    server says farewell instead of answering, the outcome must say WHY.
@@ -135,21 +135,21 @@ const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
 //   the user, built by the client: that table is in `01-b11-pagina.html`,
 //   and that is where its presence is measured.  This page writes into a log,
 //   it does not talk to anyone.
-const MOTIVO = { 0x01: "CHIUSO_DALL_UTENTE", 0x02: "INATTIVITA",
-  0x03: "SESSIONE_ABBANDONATA", 0x04: "SESSIONE_LOCALE_PREVALSA",
-  0x05: "GIA_ATTIVA_LOCALE", 0x06: "BUDGET_PIENO", 0x07: "CREDENZIALI_ERRATE",
-  0x08: "TROPPI_TENTATIVI", 0x09: "NIENTE_IN_COMUNE", 0x0A: "VERSIONE_INCOMPATIBILE",
-  0x0B: "ERRORE_PROTOCOLLO", 0x0C: "SERVER_IN_CHIUSURA", 0x0D: "TEMPO_SCADUTO",
-  0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA" };
+const REASON_TEXT = { 0x01: "CLOSED_BY_USER", 0x02: "INACTIVITY",
+  0x03: "SESSION_ABANDONED", 0x04: "LOCAL_SESSION_PREVAILED",
+  0x05: "ALREADY_ACTIVE_LOCAL", 0x06: "BUDGET_FULL", 0x07: "WRONG_CREDENTIALS",
+  0x08: "TOO_MANY_ATTEMPTS", 0x09: "NOTHING_IN_COMMON", 0x0A: "INCOMPATIBLE_VERSION",
+  0x0B: "PROTOCOL_ERROR", 0x0C: "SERVER_SHUTTING_DOWN", 0x0D: "TIMED_OUT",
+  0x0E: "SESSION_UNSERVABLE", 0x0F: "ALREADY_ACTIVE_REMOTELY" };
 
 // ⭐ The capabilities of this page.  ⛔ `pcm` in `audio.codec` and `8` in
-//    `video.profondita` are not decorations: §4.3 imposes them on BOTH
-//    sides, and the server dismisses with `NIENTE_IN_COMUNE` — not with a
-//    protocol error — whoever does not declare them.  A `CIAO` without them would give a
-//    farewell in place of the `ECCOMI`, and this bench would print red on a
+//    `video.bit_depth` are not decorations: §4.3 imposes them on BOTH
+//    sides, and the server dismisses with `NOTHING_IN_COMMON` — not with a
+//    protocol error — whoever does not declare them.  A `HELLO` without them would give a
+//    farewell in place of the `HERE_I_AM`, and this bench would print red on a
 //    defect of its own.
-const NOSTRE = [["video.codec", "hevc,av1"], ["video.profondita", "8,10"],
-                ["audio.codec", "opus,pcm"], ["client.nome", "sonda-b2 0.1.0"]];
+const OUR = [["video.codec", "hevc,av1"], ["video.bit_depth", "8,10"],
+                ["audio.codec", "opus,pcm"], ["client.label_name", "probe-b2 0.1.0"]];
 
 // ── the bytes (§6.0, §6.1) ─────────────────────────────────────────────────
 function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
@@ -160,69 +160,69 @@ function str(t) {
   o.set(b, 2);
   return o;
 }
-function unisci(pezzi) {
-  const o = new Uint8Array(pezzi.reduce((a, p) => a + p.length, 0));
+function merge(pieces) {
+  const o = new Uint8Array(pieces.reduce((a, p) => a + p.length, 0));
   let i = 0;
-  for (const p of pezzi) { o.set(p, i); i += p.length; }
+  for (const p of pieces) { o.set(p, i); i += p.length; }
   return o;
 }
-function inquadra(tipo, corpo) {
+function wrap(kind, body_el) {
   const t = new Uint8Array(6);
   const v = new DataView(t.buffer);
-  v.setUint16(0, tipo);
-  v.setUint32(2, corpo.length);   // ⛔ §6.1: the EXACT number of bytes of the body
-  return unisci([t, corpo]);
+  v.setUint16(0, kind);
+  v.setUint32(2, body_el.length);   // ⛔ §6.1: the EXACT number of bytes of the body
+  return merge([t, body_el]);
 }
-function corpo_ciao() {
-  return unisci([u16(VERSIONE), u16(NOSTRE.length),
-                 ...NOSTRE.flatMap(([n, v]) => [str(n), str(v)])]);
+function body_hello() {
+  return merge([u16(VER), u16(OUR.length),
+                 ...OUR.flatMap(([n, v]) => [str(n), str(v)])]);
 }
 
 // ── the wait with the cap ──────────────────────────────────────────────────
 // ⛔ A promise without a cap is the defect of 10 Aug 2026 in one line:
 //    `await r.read()` on a server that does not answer never returns, and from there
 //    on the page does nothing any more — not even say that it does nothing.
-class Scaduto extends Error {
-  constructor(cosa, ms) {
-    super(cosa + ": nothing within " + (ms / 1000).toFixed(0) + " s");
-    this.cosa = cosa; this.ms = ms;
+class Expired extends Error {
+  constructor(what, ms) {
+    super(what + ": nothing within " + (ms / 1000).toFixed(0) + " s");
+    this.what = what; this.ms = ms;
   }
 }
 // ⭐ The deadline is set ONCE for the whole wait, not at every piece.  A
 //    cap reset to zero at every piece received never expires in front of a
 //    server that sends one byte a second — that is, precisely the case in which it
 //    is needed.
-function attesa(tetto, cosa) {
-  const fine = performance.now() + tetto;
-  return (promessa) => Promise.race([
-    promessa,
-    new Promise((_, rifiuta) =>
-      setTimeout(() => rifiuta(new Scaduto(cosa, tetto)),
+function wait(ceiling, what) {
+  const fine = performance.now() + ceiling;
+  return (promise) => Promise.race([
+    promise,
+    new Promise((_, refuse) =>
+      setTimeout(() => refuse(new Expired(what, ceiling)),
                  Math.max(0, fine - performance.now()))),
   ]);
 }
 
 // ⛔ Reads ONE framed message from the control channel (§6.1), within the
 //    deadline passed to it.  ⚠ A piece received is not a message: it
-//    accumulates until the 6 header bytes and the `lunghezza` body bytes
+//    accumulates until the 6 header bytes and the `length` body bytes
 //    are all there.
-async function leggi_messaggio(r, entro) {
-  let arrivati = new Uint8Array(0);
+async function read_message(r, within) {
+  let arrived = new Uint8Array(0);
   for (;;) {
-    const { value, done } = await entro(r.read());
+    const { value, done } = await within(r.read());
     if (done) return { fine: true };
-    const n = new Uint8Array(arrivati.length + value.length);
-    n.set(arrivati); n.set(value, arrivati.length);
-    arrivati = n;
-    if (arrivati.length < 6) continue;
-    const v = new DataView(arrivati.buffer, arrivati.byteOffset);
-    const tipo = v.getUint16(0), lung = v.getUint32(2);
+    const n = new Uint8Array(arrived.length + value.length);
+    n.set(arrived); n.set(value, arrived.length);
+    arrived = n;
+    if (arrived.length < 6) continue;
+    const v = new DataView(arrived.buffer, arrived.byteOffset);
+    const kind = v.getUint16(0), lung = v.getUint32(2);
     // ⛔ §6.1: the cap is 1 MiB, "and the length is checked BEFORE
     //    allocating".  Here nothing is allocated, but the line holds all the same:
     //    without it, the page would wait forever for a body that will never arrive.
-    if (lung > 1024 * 1024) return { tipo, troppo_lungo: lung };
-    if (arrivati.length < 6 + lung) continue;
-    return { tipo, corpo: arrivati.slice(6, 6 + lung) };
+    if (lung > 1024 * 1024) return { kind, too_long: lung };
+    if (arrived.length < 6 + lung) continue;
+    return { kind, body_el: arrived.slice(6, 6 + lung) };
   }
 }
 
@@ -231,12 +231,12 @@ async function leggi_messaggio(r, entro) {
 // ("command lines are copied from a bench that works, they are not
 // remembered").
 const q = new URLSearchParams(location.search);
-if (q.get("impronta")) $("impronta").value = q.get("impronta");
+if (q.get("fingerprint")) $("fingerprint").value = q.get("fingerprint");
 if (q.get("url")) $("url").value = q.get("url");
 
-function scrivi(testo, buono) {
-  esito.textContent = testo;
-  esito.className = buono === undefined ? "" : (buono ? "ok" : "no");
+function put_out(body_text, good) {
+  outcome.textContent = body_text;
+  outcome.className = good === undefined ? "" : (good ? "ok" : "no");
 }
 
 // ⛔ The outcome is recorded by the bench, not by whoever watches.
@@ -252,33 +252,33 @@ function scrivi(testo, buono) {
 //    normal path can both reach the end; two lines for one
 //    run would put the conductor back to guessing which one is its own
 //    (finding R8.10, road (a)).
-let registrato = false;
-async function registra(stato, dettaglio) {
-  if (registrato) return;
-  registrato = true;
+let registered = false;
+async function record(state, detail) {
+  if (registered) return;
+  registered = true;
   try {
-    const r = await fetch("/esito", {
+    const r = await fetch("/outcome", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        esito: stato,
+        outcome: state,
         motore: navigator.userAgent,
-        indirizzo: $("url").value.trim(),
-        impronta_presente: !!$("impronta").value.trim(),
-        dettaglio: dettaglio,
+        address: $("url").value.trim(),
+        fingerprint_present: !!$("fingerprint").value.trim(),
+        detail: detail,
       }),
     });
     // ⚠ With a 404 or a 500 `fetch` does NOT reject: without this check the
     //   page would take as delivered an outcome that nobody wrote
     //   (finding R6.15, found on `01-b11-pagina.html`).
     if (!r.ok) {
-      esito.textContent += "\n\n⚠ outcome NOT recorded: the collector " +
+      outcome.textContent += "\n\n⚠ outcome NOT recorded: the collector " +
                            "answered " + r.status + " — what is seen here " +
                            "above is not in b2-esiti.jsonl";
     }
   } catch (e) {
     // ⚠ If the collector is not there, the bench must NOT pretend: it says so.
-    esito.textContent += "\n\n⚠ outcome NOT recorded (collector absent): " + e;
+    outcome.textContent += "\n\n⚠ outcome NOT recorded (collector absent): " + e;
   }
 }
 
@@ -289,21 +289,21 @@ function base64ToBytes(b64) {
   return out;
 }
 
-$("vai").onclick = async () => {
+$("go_to").onclick = async () => {
   const url = $("url").value.trim();
-  const b64 = $("impronta").value.trim();
-  const righe = [];
+  const b64 = $("fingerprint").value.trim();
+  const line_list = [];
   const t0 = performance.now();
 
-  righe.push("engine:   " + navigator.userAgent);
-  righe.push("address:  " + url);
+  line_list.push("engine:   " + navigator.userAgent);
+  line_list.push("address:  " + url);
   // ⛔ It is DECLARED in the outcome, not only in the code: a property
   //    asserted by the source and not by the log is a property
   //    that nobody has seen (LEZIONI.md §1.9).
-  righe.push("allowPooling: false   (RCP.md §4.1-bis)");
-  righe.push("wait caps of THIS probe: opening " + TETTO_APERTURA / 1000 +
-             " s · ECCOMI " + TETTO_ECCOMI / 1000 + " s · safety net " +
-             TETTO_TOTALE / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
+  line_list.push("allowPooling: false   (RCP.md §4.1-bis)");
+  line_list.push("wait caps of THIS probe: opening " + CAP_OPENING / 1000 +
+             " s · HERE_I_AM " + CAP_HERE_I_AM / 1000 + " s · safety net " +
+             CAP_TOTAL / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
              "no cap to the server)");
 
   // ⛔ THE SAFETY NET, and it is armed BEFORE anything else.
@@ -317,22 +317,22 @@ $("vai").onclick = async () => {
   //    request the file — and the conductor can tell that from the
   //    collector's log.
   setTimeout(() => {
-    if (registrato) return;
-    righe.push("");
-    righe.push("⛔ SILENCE: the probe did not reach the end within " +
-               TETTO_TOTALE / 1000 + " s, and none of the declared caps" +
+    if (registered) return;
+    line_list.push("");
+    line_list.push("⛔ SILENCE: the probe did not reach the end within " +
+               CAP_TOTAL / 1000 + " s, and none of the declared caps" +
                " fired.  The wait stayed at a point this page" +
                " does not foresee: the line leaves all the same, because \"no line\"" +
                " is the only outcome that cannot be read.");
-    scrivi(righe.join("\n"), false);
-    registra("SILENZIO", righe.join("\n"));
-  }, TETTO_TOTALE);
+    put_out(line_list.join("\n"), false);
+    record("SILENCE", line_list.join("\n"));
+  }, CAP_TOTAL);
 
   if (!("WebTransport" in window)) {
-    righe.push("");
-    righe.push("⛔ this engine does not expose WebTransport at all.");
-    scrivi(righe.join("\n"), false);
-    await registra("NIENTE-WEBTRANSPORT", righe.join("\n"));
+    line_list.push("");
+    line_list.push("⛔ this engine does not expose WebTransport at all.");
+    put_out(line_list.join("\n"), false);
+    await record("NIENTE-WEBTRANSPORT", line_list.join("\n"));
     return;
   }
 
@@ -348,67 +348,67 @@ $("vai").onclick = async () => {
   //
   // ⚠ It was missing until 10 Aug 2026: the page measured the session and not
   //   this, and the two browsers had already given green without it.
-  let opzioni = { allowPooling: false };
+  let options = { allowPooling: false };
   if (b64) {
     try {
-      opzioni = {
+      options = {
         allowPooling: false,
         serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }],
       };
-      righe.push("fingerprint: published (" + b64.slice(0, 12) + "…)");
+      line_list.push("fingerprint: published (" + b64.slice(0, 12) + "…)");
     } catch (e) {
       // ⛔ AND HERE TOO IT IS RECORDED.  This branch exited silently: whoever
       //    launched the bench saw "it recorded nothing in 40 seconds"
       //    — the same sentence as the browser that does not start — for a fingerprint
       //    written badly, that is a defect of the conductor, not of the server.
-      righe.push("");
-      righe.push("⛔ the fingerprint is not valid base64: " + e);
-      scrivi(righe.join("\n"), false);
-      await registra("IMPRONTA-ILLEGGIBILE", righe.join("\n"));
+      line_list.push("");
+      line_list.push("⛔ the fingerprint is not valid base64: " + e);
+      put_out(line_list.join("\n"), false);
+      await record("IMPRONTA-ILLEGGIBILE", line_list.join("\n"));
       return;
     }
   } else {
-    righe.push("fingerprint: NONE — relying on the certificate exception");
+    line_list.push("fingerprint: NONE — relying on the certificate exception");
   }
-  scrivi(righe.join("\n") + "\n\nopening…");
+  put_out(line_list.join("\n") + "\n\nopening…");
 
   try {
     // ── 1. the session ────────────────────────────────────────────────────
-    const wt = new WebTransport(url, opzioni);
+    const wt = new WebTransport(url, options);
     try {
-      await attesa(TETTO_APERTURA, "opening of the session")(wt.ready);
+      await wait(CAP_OPENING, "opening of the session")(wt.ready);
     } catch (e) {
-      righe.push("");
-      if (e instanceof Scaduto) {
+      line_list.push("");
+      if (e instanceof Expired) {
         // ⛔ "NEITHER OPENED NOR REFUSED" IS A THIRD OUTCOME, and carries a name
         //    of its own.  Calling it `NON-APERTA` would make it indistinguishable from the
         //    certificate refusal — and the negative control of the fifth
         //    round of B3, which demands `NON-APERTA`, would pass with a hung
         //    engine instead of with an engine that compares the fingerprint: the
         //    exact false green that check exists not to produce.
-        righe.push("⛔ SILENCE at opening: " + e.message);
-        righe.push("   the session did not open and was not refused either.");
-        righe.push("   ⚠ it is the typical look of UDP thrown away without an answer:");
-        righe.push("      the packets leave, nothing comes back, and nobody says no.");
-        scrivi(righe.join("\n"), false);
-        await registra("SILENZIO", righe.join("\n"));
+        line_list.push("⛔ SILENCE at opening: " + e.message);
+        line_list.push("   the session did not open and was not refused either.");
+        line_list.push("   ⚠ it is the typical look of UDP thrown away without an answer:");
+        line_list.push("      the packets leave, nothing comes back, and nobody says no.");
+        put_out(line_list.join("\n"), false);
+        await record("SILENCE", line_list.join("\n"));
         return;
       }
-      righe.push("⛔ does NOT open: " + e);
+      line_list.push("⛔ does NOT open: " + e);
       // The real reason is often in the closing, not in the exception.
-      righe.push("");
-      righe.push("⚠ three causes with the same look, and they must be told apart by hand:");
-      righe.push("   1. UDP filtered (TCP answers all the same)");
-      righe.push("   2. the fingerprint is not that of the certificate served");
-      righe.push("   3. the session certificate exceeds 14 days");
-      scrivi(righe.join("\n"), false);
-      await registra("NON-APERTA", righe.join("\n"));
+      line_list.push("");
+      line_list.push("⚠ three causes with the same look, and they must be told apart by hand:");
+      line_list.push("   1. UDP filtered (TCP answers all the same)");
+      line_list.push("   2. the fingerprint is not that of the certificate served");
+      line_list.push("   3. the session certificate exceeds 14 days");
+      put_out(line_list.join("\n"), false);
+      await record("NON-APERTA", line_list.join("\n"));
       return;
     }
     const ms = (performance.now() - t0).toFixed(1);
-    righe.push("");
-    righe.push("⭐ SESSION OPEN in " + ms + " ms");
-    scrivi(righe.join("\n") + "\n\nCIAO sent, waiting for ECCOMI…");
+    line_list.push("");
+    line_list.push("⭐ SESSION OPEN in " + ms + " ms");
+    put_out(line_list.join("\n") + "\n\nHELLO sent, waiting for HERE_I_AM…");
 
     // ── 2. does the wire carry? ───────────────────────────────────────────
     // ⛔ "ready" is not enough: a REAL message is sent and the
@@ -420,34 +420,34 @@ $("vai").onclick = async () => {
       const s = await wt.createBidirectionalStream();
       const w = s.writable.getWriter();
       const r = s.readable.getReader();
-      await w.write(inquadra(T.CIAO, corpo_ciao()));
+      await w.write(wrap(T.HELLO, body_hello()));
       // ⛔ AND THE WRITER IS NOT CLOSED.  Here there was `await w.close()`, inherited
       //    from when the stream was an echo: today that FIN on the first
       //    bidirectional stream **is the end of the session** (§4.2, "a FIN on
       //    that stream, from either side, closes the
       //    session").  It would close the door at the exact second in which we
       //    wait for someone to come out of it.
-      const m = await leggi_messaggio(r, attesa(TETTO_ECCOMI, "answer from the server"));
+      const m = await read_message(r, wait(CAP_HERE_I_AM, "answer from the server"));
       if (m.fine) {
-        righe.push("⛔ the control channel closed (FIN) without answering:");
-        righe.push("   §4.2 — that FIN IS the end of the session.");
-      } else if (m.troppo_lungo) {
-        righe.push("⛔ the server announces a message of " + m.troppo_lungo +
+        line_list.push("⛔ the control channel closed (FIN) without answering:");
+        line_list.push("   §4.2 — that FIN IS the end of the session.");
+      } else if (m.too_long) {
+        line_list.push("⛔ the server announces a message of " + m.too_long +
                    " bytes: beyond the 1 MiB cap of §6.1");
-      } else if (m.tipo === T.ECCOMI) {
-        const v = new DataView(m.corpo.buffer, m.corpo.byteOffset);
-        const versione = m.corpo.length >= 2 ? v.getUint16(0) : -1;
-        const quante   = m.corpo.length >= 4 ? v.getUint16(2) : -1;
+      } else if (m.kind === T.HERE_I_AM) {
+        const v = new DataView(m.body_el.buffer, m.body_el.byteOffset);
+        const version_v = m.body_el.length >= 2 ? v.getUint16(0) : -1;
+        const how_many_n   = m.body_el.length >= 4 ? v.getUint16(2) : -1;
         // ⚠ Version and capabilities are REPORTED and not judged: §9 and §4.3
         //   are protocol checks, and B11 does them line by line.  Here
-        //   they serve to make the outcome readable, not to give a verdict.
-        righe.push("answer on the control channel: ECCOMI (0x0002), " +
-                   m.corpo.length + " bytes — version " + versione +
-                   ", declared capabilities " + quante);
+        //   they needs to make the outcome readable, not to give a verdict.
+        line_list.push("answer on the control channel: HERE_I_AM (0x0002), " +
+                   m.body_el.length + " bytes — version " + version_v +
+                   ", declared capabilities " + how_many_n);
         // ⛔ THIS SENTENCE IS SEARCHED FOR BY THE CONDUCTOR, LITERALLY.
         //
         //    `01-b2-lancia-sonda.sh`, inside `cerca_riga`: it looks for "the bytes
-        //    come back identical" in the `dettaglio` field, and it is the check of
+        //    come back identical" in the `detail` field, and it is the check of
         //    finding R8.7 — "APERTA does not mean the bytes come back".  The two
         //    halves of the check are in two files: changing the words in here
         //    turns a bench red without anything having
@@ -458,54 +458,54 @@ $("vai").onclick = async () => {
         //   was the echo, and the echo no longer exists.  The fact proved is the
         //   same as before, and stronger: the wire carries in both directions, and
         //   on the other side there is someone who understands what is said to them.
-        righe.push("✅ the bytes come back identical to what §7.1 prescribes: " +
-                   "type 0x0002 = ECCOMI, in answer to our CIAO");
-      } else if (m.tipo === T.CONGEDO) {
-        const mot = m.corpo.length >= 1 ? m.corpo[0] : -1;
-        righe.push("⛔ the server said FAREWELL instead of answering: reason " +
-                   mot + " = " + (MOTIVO[mot] || "outside §8.2"));
-        righe.push("   ⚠ it is an answer, so the wire carries — but it is not" +
-                   " the ECCOMI that B2 demands: the cause is in the CIAO of this" +
+        line_list.push("✅ the bytes come back identical to what §7.1 prescribes: " +
+                   "type 0x0002 = HERE_I_AM, in answer to our HELLO");
+      } else if (m.kind === T.FAREWELL) {
+        const rsn = m.body_el.length >= 1 ? m.body_el[0] : -1;
+        line_list.push("⛔ the server said FAREWELL instead of answering: reason " +
+                   rsn + " = " + (REASON_TEXT[rsn] || "outside §8.2"));
+        line_list.push("   ⚠ it is an answer, so the wire carries — but it is not" +
+                   " the HERE_I_AM that B2 demands: the cause is in the HELLO of this" +
                    " page or in the server, and the server log names it.");
       } else {
-        righe.push("⛔ on the control channel came back " +
-                   (NOME_T[m.tipo] || "type 0x" + m.tipo.toString(16).padStart(4, "0")) +
-                   " instead of ECCOMI");
+        line_list.push("⛔ on the control channel came back " +
+                   (TYPE_NAME[m.kind] || "type 0x" + m.kind.toString(16).padStart(4, "0")) +
+                   " instead of HERE_I_AM");
       }
     } catch (e) {
-      if (e instanceof Scaduto) {
+      if (e instanceof Expired) {
         // ⛔ THE DEFECT OF 10 AUG, NOW SAID OUT LOUD.  The session
         //    is open — and the outcome stays `APERTA`, because it is a fact — but
         //    the sentence the conductor looks for is NOT written: the line will be
         //    red for check R8.7, with this cause in plain sight.
-        righe.push("⛔ no ECCOMI: " + e.message);
-        righe.push("   the session IS open, the CIAO left, and the server is silent.");
-        righe.push("   ⚠ it is not a violation of RCP: §4.6 gives no" +
+        line_list.push("⛔ no HERE_I_AM: " + e.message);
+        line_list.push("   the session IS open, the HELLO left, and the server is silent.");
+        line_list.push("   ⚠ it is not a violation of RCP: §4.6 gives no" +
                    " cap to the server's answer.  It is this bench's cap.");
       } else {
-        righe.push("⚠ session open but the control channel did not work: " + e);
+        line_list.push("⚠ session open but the control channel did not work: " + e);
       }
     }
 
-    // ⚠ Here the probe stops: no `CONGEDO`, no orderly closing.
+    // ⚠ Here the probe stops: no `FAREWELL`, no orderly closing.
     //   §3.1 and §8.1 are obligations of a real client, and B11 measures them; this
     //   page stops before the credentials, so it has taken no
     //   slot in the server's session register (§4.5) and leaves none
     //   occupied for the engine that runs after it.
-    scrivi(righe.join("\n"), true);
-    await registra("APERTA", righe.join("\n"));
+    put_out(line_list.join("\n"), true);
+    await record("APERTA", line_list.join("\n"));
   } catch (e) {
     // ⛔ And if what breaks is the probe, the probe says so.  A fault of the
     //    page that exited silently would go back to looking like "the browser
     //    did not start", which is the confusion cured today.
-    righe.push("");
-    righe.push("⛔ FAULT OF THE PROBE (not of the server): " + e);
-    scrivi(righe.join("\n"), false);
-    await registra("GUASTO-SONDA", righe.join("\n"));
+    line_list.push("");
+    line_list.push("⛔ FAULT OF THE PROBE (not of the server): " + e);
+    put_out(line_list.join("\n"), false);
+    await record("GUASTO-SONDA", line_list.join("\n"));
   }
 };
 
-// ⭐ The automatic start: `?avvia=1` starts the test without anyone
+// ⭐ The automatic start: `?start=1` starts the test without anyone
 //    pressing anything.
 //
 // ⛔ It is not a convenience: a bench that needs a hand **cannot be
@@ -513,5 +513,5 @@ $("vai").onclick = async () => {
 //    measurement changed because the server changed.  On 9 Aug this
 //    page measured two browsers against `aioquic`; on the 10th it must measure them
 //    against `ngtcp2`, and the two measurements count only if the hand is the same.
-if (q.get("avvia")) $("vai").click();
+if (q.get("start")) $("go_to").click();
 </script>

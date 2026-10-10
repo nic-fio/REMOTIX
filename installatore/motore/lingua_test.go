@@ -8,37 +8,37 @@ import (
 )
 
 // Every code and every key has its text, in English (DECISIONI §10.35); every key used exists.
-func TestTesti(t *testing.T) {
-	italiano := regexp.MustCompile(`[àèéìòù]|\b(non|della|perché|questa)\b`)
-	for c, v := range Codici {
-		if v.Testo == "" {
+func TestTexts(t *testing.T) {
+	italian := regexp.MustCompile(`[àèéìòù]|\b(non|della|perché|questa)\b`)
+	for c, v := range Codes {
+		if v.Text == "" {
 			t.Errorf("%s without text", c)
 		}
-		if italiano.MatchString(v.Testo + " " + v.Rimedio) {
-			t.Errorf("%s: Italian left: %q", c, v.Testo+" "+v.Rimedio)
+		if italian.MatchString(v.Text + " " + v.Remediation) {
+			t.Errorf("%s: Italian left: %q", c, v.Text+" "+v.Remediation)
 		}
 	}
-	for k, v := range testi {
+	for k, v := range texts {
 		if v == "" {
 			t.Errorf("%s: empty text", k)
 		}
-		if italiano.MatchString(v) {
+		if italian.MatchString(v) {
 			t.Errorf("%s: Italian left: %q", k, v)
 		}
 	}
-	usate := regexp.MustCompile(`\bT\("([^"]+)"\s*[,)]`)
-	voci, _ := filepath.Glob("*.go")
-	voci2, _ := filepath.Glob("../cmd/remotix-install/*.go")
-	for _, f := range append(voci, voci2...) {
+	used_count := regexp.MustCompile(`\bT\("([^"]+)"\s*[,)]`)
+	entries, _ := filepath.Glob("*.go")
+	entries2, _ := filepath.Glob("../cmd/remotix-install/*.go")
+	for _, f := range append(entries, entries2...) {
 		b, _ := os.ReadFile(f)
-		for _, m := range usate.FindAllStringSubmatch(string(b), -1) {
-			if _, ok := testi[m[1]]; !ok {
+		for _, m := range used_count.FindAllStringSubmatch(string(b), -1) {
+			if _, ok := texts[m[1]]; !ok {
 				t.Errorf("%s uses the key %q, which does not exist", f, m[1])
 			}
 		}
 	}
-	for _, s := range TuttiGliStati() {
-		if _, ok := testi["state."+string(s)]; !ok {
+	for _, s := range AllStates() {
+		if _, ok := texts["state."+string(s)]; !ok {
 			t.Errorf("the name of state %s is missing", s)
 		}
 	}

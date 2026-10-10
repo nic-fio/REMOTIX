@@ -5,11 +5,11 @@
 11-c3 — ⭐⭐ «THE FRAMES ARRIVE, AND THE SCENE CHANGES»
 ===========================================================================
 
-    python3 11-c3-i-fotogrammi-cambiano.py --porta 8511
-    python3 11-c3-i-fotogrammi-cambiano.py --porta 8511 --scena-ferma
-    python3 11-c3-i-fotogrammi-cambiano.py --porta 8511 --fotogramma-ripetuto
-    python3 11-c3-i-fotogrammi-cambiano.py --porta 8511 --codificatore-fermo
-    python3 11-c3-i-fotogrammi-cambiano.py --certifica
+    python3 11-c3-i-fotogrammi-cambiano.py --port 8511
+    python3 11-c3-i-fotogrammi-cambiano.py --port 8511 --still-scene
+    python3 11-c3-i-fotogrammi-cambiano.py --port 8511 --repeated-frame
+    python3 11-c3-i-fotogrammi-cambiano.py --port 8511 --stopped-encoder
+    python3 11-c3-i-fotogrammi-cambiano.py --certify
 
 It is line **C3** of `fasi/11-la-rete-di-sicurezza.md` §4.1, to the letter:
 
@@ -55,7 +55,7 @@ per scene:
   false red, in a safety net, always ends the same way: the
   net gets switched off by whoever works (§1.3 of the phase document).
 
-⚠ **AND THIS IS THE MEANING OF `--scena-ferma`**: it is the **negative control**, and
+⚠ **AND THIS IS THE MEANING OF `--still-scene`**: it is the **negative control**, and
   it is the other half of `LEZIONI.md` §1.49 (*the fault is removed and green is
   demanded*).  ⛔ With the still scene the JUDGEMENT ON THE FRAMES cannot give
   red: it says «I do not know» and says why — a frozen image and a desktop
@@ -67,17 +67,17 @@ per scene:
   and the desktop was really still»* from *«nothing started»* — a broken
   container gave the same exit code as the successful control, and five minutes
   of session produced a bit that could not vary (§1.44).
-  ⇒ ⭐ Now `--scena-ferma` **asserts**, and demands three things together:
+  ⇒ ⭐ Now `--still-scene` **asserts**, and demands three things together:
 
       · the stage was born        (⇒ the round really happened)
       · the client was admitted
       · and the verdict is «I do not know» **for the right reason** (reason
-        `scena-ferma`), not for another one
+        `still-scene`), not for another one
 
     ⇒ `0` the negative control HOLDS · `1` ⛔ on a still scene the mesh gave
       a verdict, i.e. it is broken · `3` the round did not happen and I checked
       nothing.
-  ⭐ And that round leaves the number with which `--ritmo-minimo` is calibrated: how many
+  ⭐ And that round leaves the number with which `--minimum-rate` is calibrated: how many
     frames a still desktop really delivers **inside the box**.
 
 ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ per scene:
          ⭐ The mesh always prints the frames, the seconds and the rate: they are the
            three numbers with which that `[?]` is closed, and they must be looked at at the first
            green round.
-       · ⇒ The `--ritmo-minimo` threshold is **wide on purpose**: it separates *«a trickle
+       · ⇒ The `--minimum-rate` threshold is **wide on purpose**: it separates *«a trickle
          arrives»* from *«nothing arrives»*, ⛔ **it does not judge smoothness**.
          Smoothness is the user's judgement (I8) and §6 puts it outside the
          net.  ⚠ `[?]` **To be recalibrated in the box**, measuring the real rate.
@@ -127,33 +127,33 @@ per scene:
 ⛔ HOW I KNOW IT CAN SAY RED — two grafted faults, and they are of two natures
 ---------------------------------------------------------------------------
 
-  `--fotogramma-ripetuto`   ⭐ THE FROZEN IMAGE FAULT.  The REAL grab is
+  `--repeated-frame`   ⭐ THE FROZEN IMAGE FAULT.  The REAL grab is
                             taken and **the in-memory copy** of the list of
                             frames is defaced: in place of the sequence
                             N copies of the first one are put.  ⛔ The stream on
                             disk is not touched — it is the same shape C9 uses
-                            (`--togli-nome`), and the healthy control and the fault
+                            (`--remove-name`), and the healthy control and the fault
                             run on the **same data**.  ⇒ A single tenant.
                             ⛔⛔ AND HERE ONE THING MUST BE SAID that a reviewer
                             found and was right about: **the defacement, on its own, cannot
                             fail** — if the healthy one is green, repeating the
                             same frame necessarily gives zero different
                             pairs.  It is arithmetic, and it is already proved by
-                            `--certifica` in three tenths of a second.  ⇒ A round
+                            `--certify` in three tenths of a second.  ⇒ A round
                             on the real thing that asserted only that would spend a
                             session for a bit already known: `LEZIONI.md` §1.44
                             disguised as an acceptance test.
                             ⭐ That is why that round demands **one more thing that
                             can really fail**: that the **weakest** consecutive
                             pair of the healthy round sits at least
-                            `MARGINE_SOGLIA` times above the threshold.  ⇒ It is a
+                            `THRESHOLD_MARGIN` times above the threshold.  ⇒ It is a
                             measurement of the WORLD — how lively the real scene is
                             after the encoding — and if one day it dropped, it would
                             be seen **before** the mesh starts giving
                             false reds.  ⚠ It is what C5 does with the margin
                             of the RMS.
 
-  `--codificatore-fermo`    ⛔ THE REAL FAULT, on the product.  ⭐⭐ **As soon as the
+  `--stopped-encoder`    ⛔ THE REAL FAULT, on the product.  ⭐⭐ **As soon as the
                             scene has been seen moving** — not before — **SIGSTOP**
                             is sent to the tenant's process that
                             encodes and delivers.
@@ -195,10 +195,10 @@ per scene:
      · the healthy control is GREEN     (or the comparison is worth nothing)
      · the faulted one is RED
      · ⭐ the **difference** is measurable:
-         `--fotogramma-ripetuto`  the different pairs collapse to **zero**
-         `--codificatore-fermo`   ⭐⭐ the **work of the client inside the
+         `--repeated-frame`  the different pairs collapse to **zero**
+         `--stopped-encoder`   ⭐⭐ the **work of the client inside the
                                   window** drops below a **SHARE** of
-                                  the healthy one (`QUOTA_GUASTO`, a tenth).
+                                  the healthy one (`QUOTA_FAULT`, a tenth).
                                   ⚠ A share and not an absolute difference:
                                   §1.45, an absolute number is a number taken
                                   from one condition.
@@ -214,14 +214,14 @@ per scene:
                                   numerator and denominator both inside
                                   the window.  ⚠ The gross rate is looked at
                                   anyway, with a share of its own, declared
-                                  (`QUOTA_LORDA`).
+                                  (`GROSS_QUOTA`).
 
 ⚠ And each fault also demands its own **signature**, or it is not that fault:
-   with `--codificatore-fermo` at least one process of the tenant must
+   with `--stopped-encoder` at least one process of the tenant must
    really be in state **T** (stopped).  ⛔ If it is not, the injection touched
    nothing and the red — if there is one — belongs to someone else.
 
-⭐⭐ AND `--codificatore-fermo` DEMANDS ONE MORE THING, since 27 August 2026:
+⭐⭐ AND `--stopped-encoder` DEMANDS ONE MORE THING, since 27 August 2026:
    that the fault fell **at the right moment of the story**.  Three facts, and
    each one is measured and can be missing:
      · the frames had been seen ARRIVING before the graft;
@@ -229,7 +229,7 @@ per scene:
        scene was moving at the instant the encoder died;
      · the window was long enough that the frames born before
        the graft were not enough on their own to make the stream look alive
-       (`finestra_bastante`, and the count is redone **with the real numbers of the round**).
+       (`enough_window`, and the count is redone **with the real numbers of the round**).
    ⛔ If one is missing, the outcome is **3**: saying «the fault was not seen»
       would be accusing the net for an acceptance test that did not run.
 
@@ -246,7 +246,7 @@ per scene:
 `LEZIONI.md` §1.45: *every wait has its own name and its own value*.  ⛔ None
 of the numbers below was measured by whoever wrote this file.
 
-  `--attesa-palco 60`    how long to wait for the compositor to announce a
+  `--wait-stage 60`    how long to wait for the compositor to announce a
                          `wl_output`.  `[M]` (C1's measurement, 27 August 2026,
                          **not mine**) in the GNOME box: 98.0 · 101.0 · 95.5 s
                          ⇒ maximum 101.0.  ⛔ And that delay is the **box's**
@@ -254,11 +254,11 @@ of the numbers below was measured by whoever wrote this file.
                          not the product's: with that cured the stage is born in ~2 s
                          as in the other three boxes ⇒ **put back to ~20 s**.
                          ⚠ The mesh always prints how long it really took.
-  `--attesa-scena 30`    how long the scene is given to be on the screen.
+  `--wait-scene 30`    how long the scene is given to be on the screen.
                          `[?]` — the first start of the browser in a cold
                          box exceeds 25 s (`[M]` C8, 26 Aug 2026).
-  `--finestra 45`        how many seconds the scene in motion is watched.
-  `--ritmo-minimo 4.0`   `[?]` ⇒ ~10 % of the rough reference.  See above:
+  `--win 45`        how many seconds the scene in motion is watched.
+  `--minimum-rate 4.0`   `[?]` ⇒ ~10 % of the rough reference.  See above:
                          wide on purpose, and it does not judge smoothness.
 
 ---------------------------------------------------------------------------
@@ -272,10 +272,10 @@ of the numbers below was measured by whoever wrote this file.
     declared colours was on the screen.  ⚠ If the scene had frozen by
     itself with a colour in view, C3 would say red to the product for something of the
     browser.  ⇒ `[?]` **to be calibrated on the real thing**: the first time this mesh
-    gives red, look at the PNG it leaves in `--lavoro` before believing it.
+    gives red, look at the PNG it leaves in `--work` before believing it.
   · ⚠ **It is not blind to the program**: like C2, today it uses `firefox-esr`, the only
     program in the box that can paint a scene we decide.
-    ⇒ `--applicazione` and `--argomenti` exist to move it elsewhere.
+    ⇒ `--application` and `--call_args` exist to move it elsewhere.
   · ⛔ **It does not look at audio** (that is C5) nor at input (that is C4).
 
 ---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ THE OUTCOMES (§4.5 of the phase document)
 
   0  ⭐ I looked: the frames arrive and the scene CHANGES
      (with the grafted fault: ⭐ **the fault was seen**)
-     (with `--scena-ferma`: ⭐ **the negative control holds**)
+     (with `--still-scene`: ⭐ **the negative control holds**)
   1  I looked: they do not arrive, or they collapsed, or the image is FROZEN
   3  ⛔ I could not look — the stage was not born, the declared scene was not
      on the screen, the client was not admitted, the decoder
@@ -304,7 +304,7 @@ import subprocess
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ THE YARDSTICK, DECLARED HERE AND PRINTED IN EVERY OUTCOME
@@ -313,13 +313,13 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 # ⭐ The two colours of the declared scene — ⛔ **the same as `11-c3-scena.html`**.
 #    If someone changes one there and not here, this mesh will say «the scene
 #    I declared is not on the screen» ⇒ **3**, not a red for the product.
-SCENA_A = (0x00, 0x00, 0xFF)      # blue
-SCENA_B = (0xFF, 0xFF, 0x00)      # yellow
+SCENE_A = (0x00, 0x00, 0xFF)      # blue
+SCENE_B = (0xFF, 0xFF, 0x00)      # yellow
 # ⛔ The tolerance per channel: same quantity and same value as C8 — the
 #    deviation of a declared colour after the same path (compositor →
 #    capture → H.264 4:2:0 → client).  ⚠ It is not a borrowed ceiling
 #    (`LEZIONI.md` §1.45): it is the same number for the same thing.
-# ⛔⛔ BUT IT IS NOT CALIBRATED, and saying so would be §1.50.  `--certifica` crosses it **at the
+# ⛔⛔ BUT IT IS NOT CALIBRATED, and saying so would be §1.50.  `--certify` crosses it **at the
 #     edge** — ±48 must still be the scene, ±49 not — on **synthetic**
 #     images, which have never seen either the 4:2:0 encoding or a
 #     colour profile.  ⇒ It tests that the comparison falls where it says it falls,
@@ -328,40 +328,40 @@ SCENA_B = (0xFF, 0xFF, 0x00)      # yellow
 #    C3 asks for **pure blue** `#0000FF`, which has luma 0.07 and is the worst case
 #    of chroma subsampling.  ⇒ `[?]`, and it is calibrated by looking at the fraction
 #    the mesh prints at the first green round.
-TOLLERANZA = 48
+TOLERANCE = 48
 # ⛔ How much of the screen must be one of the two colours for us to say «the
 #    declared scene is the one I am looking at».  ⚠ The black band covers 20 %,
 #    plus the plate: 0.40 is prudent on the low side on purpose.  `[?]`
-FRAZIONE_SCENA = 0.40
+FRACTION_SCENE = 0.40
 
 # ⭐⭐ THE ROUGH REFERENCE — `[M]` phase 9 §3.1, ⛔ **on the real iron, not in the
 #     box**: 39.67 and 39.00 frames/s on two scenes in motion, against
 #     **0.03** on a still scene.  ⇒ The value used is the lower of the two.
-RIFERIMENTO_FPS = 39.0
+REFERENCE_FPS = 39.0
 # ⛔ Below how many frames per second we say «collapsed».  `[?]` ~10 % of the
 #    reference: wide on purpose (see the top), and to be recalibrated in the box.
-RITMO_MINIMO = 4.0
+MINIMUM_RATE = 4.0
 
 # ⛔ When two frames are DIFFERENT — two numbers, and both are needed.
-#    · below `SOGLIA_RUMORE` levels on a channel, a pixel «did not change»:
+#    · below `NOISE_THRESHOLD` levels on a channel, a pixel «did not change»:
 #      it is the quantisation noise of the encoding, not movement.  `[?]`
-#    · and the changed pixels must be at least `SOGLIA_COPPIA` of the image,
+#    · and the changed pixels must be at least `PAIR_THRESHOLD` of the image,
 #      or a blinking cursor would be enough to declare a dead scene alive.
-SOGLIA_RUMORE = 12
-SOGLIA_COPPIA = 0.01
+NOISE_THRESHOLD = 12
+PAIR_THRESHOLD = 0.01
 # ⛔ How many pairs must be different for the scene to «change».  ⚠ The declared
 #    scene is made to make them ALL differ (the band moves at every
 #    frame): 0.50 leaves half a margin for the cadence of the capture.  `[?]`
-FRAZIONE_COPPIE = 0.50
+PAIR_FRACTION = 0.50
 # How many pairs are looked at, at the end of the grab.
-COPPIE_ESAMINATE = 60
+EXAMINED_PAIRS = 60
 
 # ⭐⭐ With the grafted fault: how much the CLEAN measure must COLLAPSE for us to
 #   be able to say «the fault bit» instead of «the verdict changed».
 #   `LEZIONI.md` §1.52.
 # ⛔⛔ AND SINCE 27 AUGUST 2026 THE CLEAN MEASURE IS NO LONGER THE RATE, but **the work
-#     of the client inside the window** — see `QUOTA_LORDA` below and
-#     `finestra_bastante`.  The rate is gross, i.e. it carries inside it the
+#     of the client inside the window** — see `GROSS_QUOTA` below and
+#     `enough_window`.  The rate is gross, i.e. it carries inside it the
 #     frames born before the graft; the work of the client has numerator and
 #     denominator both inside the window, ⇒ it is the only one of the two on which one
 #     can demand a tenth without cheating.
@@ -372,34 +372,34 @@ COPPIE_ESAMINATE = 60
 #    a margin of 10/s would start saying «the fault did not bite» on a
 #    fault that stopped it completely.  ⇒ A share carries its own scale.
 # ⭐ And it is not a predicate that cannot fail: the healthy rate must already be
-#   above `--ritmo-minimo` (4.0/s) to be green, ⇒ with the fault one demands
+#   above `--minimum-rate` (4.0/s) to be green, ⇒ with the fault one demands
 #   less than 0.4/s, which is the rate of a still desktop ([M] 0.03/s, phase 9 §3.1).
-QUOTA_GUASTO = 0.10
+QUOTA_FAULT = 0.10
 
-OUTPUT_MINIMI = 1
-FIRMA_OUTPUT = re.compile(r"interface:\s*'wl_output'")
+MIN_OUTPUTS = 1
+OUTPUT_SIGNATURE = re.compile(r"interface:\s*'wl_output'")
 
 # ⛔⛔ AND THE ADMISSION SIGNATURE IS A WHOLE LINE, NOT A WORD.
 #    `[R]` `01-b3-cliente.py:1615` writes «   AMMESSO after 1023 ms» when it goes
 #    well, and «CONGEDO instead of AMMESSO: …» / «expected AMMESSO, arrived …»
-#    when it goes badly — ⛔ all three on **stdout** (`:2560`) ⇒ `"AMMESSO" in
-#    testo` would be **true in all three cases**: a predicate that cannot
+#    when it goes badly — ⛔ all three on **stdout** (`:2560`) ⇒ `"ADMITTED" in
+#    body_text` would be **true in all three cases**: a predicate that cannot
 #    say no (`LEZIONI.md` §1.44), precisely in the cases it exists to catch.
 # ⭐⭐ Since 27 August 2026 the rule lives in `11-c1…py` and it lives there **only
-#     once**, for all nine meshes (§1.47): see `e_stato_ammesso()`.
+#     once**, for all nine meshes (§1.47): see `was_admitted()`.
 
 # ⭐ How WIDE the weakest pair of the healthy round must sit with respect to the
 #   threshold, for us to be able to say the scene is lively enough to prove
 #   something.  ⛔ It is the number that makes the round with the «repeated frame»
 #   fault NOT EMPTY (see the top): without it, that round asserts only things
 #   already certified.  ⚠ `[?]` — 2× is prudent, and it is calibrated by looking at the
-#   `margine` the mesh prints at every round.
-MARGINE_SOGLIA = 2.0
+#   `headroom` the mesh prints at every round.
+THRESHOLD_MARGIN = 2.0
 
 # ⛔ If the decoder pulls out many fewer than the client
 #    declares, the stream was truncated and the count is not the
 #    product's: it is «I could not look».  `[?]`
-QUOTA_ESTRATTI = 0.50
+QUOTA_EXTRACTS = 0.50
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ «ARE THE FRAMES ARRIVING NOW?» — the LIVE signal, and it serves to
@@ -421,13 +421,13 @@ QUOTA_ESTRATTI = 0.50
 # ⚠ `[?]` — 0.10 seconds of CPU per second of clock is not calibrated: it is
 #   chosen well below what one expects from a 1080p compression, and the
 #   mesh **always** prints the real value, so it is calibrated by looking.
-SOGLIA_CPU = 0.10
+CPU_THRESHOLD = 0.10
 # ⭐ Every how many seconds the client's work is looked at.  ⛔ It is short on purpose:
 #   between the instant the scene starts painting and the graft lie
 #   **all** the frames that later dirty the gross rate (see
-#   `finestra_bastante`), ⇒ every extra second here is one more frame
+#   `enough_window`), ⇒ every extra second here is one more frame
 #   that arrives anyway with the fault.
-PASSO_CPU = 2.0
+CPU_STEP = 2.0
 
 # ⛔ And the GROSS rate has a share **of its own, wider**, and the reason must be said
 #    instead of hidden: its numerator also contains the frames born
@@ -437,11 +437,11 @@ PASSO_CPU = 2.0
 #    how quick the scene was to be born.  `[?]`
 # ⭐ The tenth is demanded where the measure is clean (`QUOTA_LAVORO`); here it is
 #   demanded only that the gross rate dropped **a lot**, and the count of how much
-#   could be expected is done by `finestra_bastante`.
-QUOTA_LORDA = 0.35
+#   could be expected is done by `enough_window`.
+GROSS_QUOTA = 0.35
 
 
-def e_stato_ammesso(coda):
+def was_admitted(queue):
     """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
     ⛔⛔ AND SINCE 27 AUGUST 2026 THE PREDICATE IS NO LONGER HERE: it lives in C1, and it lives there
@@ -453,7 +453,7 @@ def e_stato_ammesso(coda):
     ⛔ `False` is not a product red: a client turned away is a client
        turned away, and the caller exits **3**.
     """
-    return casa_di_c1().e_stato_ammesso(coda)
+    return c1_home().was_admitted(queue)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -461,38 +461,38 @@ def e_stato_ammesso(coda):
 #
 # ⛔ Two judges that can diverge silently are worse than one
 #    (`banchi/10-f1-testimone.py`).  Here two are imported:
-#      `10-f1-testimone.py`  `giudica()`, to say whether an image is black
-#      `11-c8-…py`           `frazione_del_colore()`, already certified, and it takes
+#      `10-f1-testimone.py`  `judge()`, to say whether an image is black
+#      `11-c8-…py`           `color_fraction()`, already certified, and it takes
 #                            colour and tolerance as ARGUMENTS ⇒ it is used with
 #                            C3's numbers without inheriting C8's
 # ⭐ The third judge — «are two frames different?» — does not exist anywhere
 #   else, so it is born here **and it is certified here**.
 # ═══════════════════════════════════════════════════════════════════════════
-def _carica(nome_file, mestieri):
-    for base in (QUI, os.path.dirname(QUI)):
-        perc = os.path.join(base, nome_file)
-        if not os.path.exists(perc):
+def _load(file_name, jobs):
+    for base in (HERE, os.path.dirname(HERE)):
+        path = os.path.join(base, file_name)
+        if not os.path.exists(path):
             continue
         spec = importlib.util.spec_from_file_location(
-            "importato_" + re.sub(r"\W", "_", nome_file), perc)
+            "importato_" + re.sub(r"\W", "_", file_name), path)
         m = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(m)
         except Exception:
-            return None, perc
-        for mestiere in mestieri:
-            if not callable(getattr(m, mestiere, None)):
-                return None, perc
-        return m, perc
+            return None, path
+        for duty in jobs:
+            if not callable(getattr(m, duty, None)):
+                return None, path
+        return m, path
     return None, ""
 
 
-def giudice_del_desktop():
-    return _carica("10-f1-testimone.py", ("giudica",))
+def desktop_judge():
+    return _load("10-f1-testimone.py", ("judge",))
 
 
-def lettore_del_colore():
-    return _carica("11-c8-il-secondo-apre-il-browser.py", ("frazione_del_colore",))
+def color_reader():
+    return _load("11-c8-il-secondo-apre-il-browser.py", ("color_fraction",))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -520,37 +520,37 @@ def lettore_del_colore():
 # ⛔ The code lives in C2 and ⛔ no copy of it is made here: the same rule in three
 #    files is three places to diverge from, and it is the error this cure repairs.
 # ⚠ It lives in C2 and not in C8 because C8 cannot be modified today; ⭐ the day it
-#   can, it moves next to `applica_la_cura`, and this line changes by itself.
+#   can, it moves next to `apply_fix`, and this line changes by itself.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_PROVVISTA = ("cura_della_provvista", "sgombra_il_mio_rimasuglio",
-                       "certifica_la_provvista")
-_PROVVISTA = None
+_PROVISIONING_JOBS = ("provisioning_fix", "clear_out_my_leftover",
+                       "certify_provisioning")
+_PROVISIONING = None
 
 
-def casa_della_provvista():
-    global _PROVVISTA
-    if _PROVVISTA is None:
-        _PROVVISTA, _ = _carica("11-c2-una-finestra-si-apre.py",
-                                _MESTIERI_PROVVISTA)
-    return _PROVVISTA
+def provisioning_home():
+    global _PROVISIONING
+    if _PROVISIONING is None:
+        _PROVISIONING, _ = _load("11-c2-una-finestra-si-apre.py",
+                                _PROVISIONING_JOBS)
+    return _PROVISIONING
 
 
-def cura_della_provvista(chi):
+def provisioning_fix(chi):
     """⭐⭐ (done, why) — and ⛔ if it does not hold it is NOT a red: it is a **3**."""
-    casa = casa_della_provvista()
-    if casa is None:
+    home = provisioning_home()
+    if home is None:
         return False, ("I cannot find `11-c2-una-finestra-si-apre.py` next to me: "
                        "the provisioning cure comes from there, and ⛔ no "
                        "copy of it is made here (§1.47)")
-    return casa.cura_della_provvista(chi)
+    return home.provisioning_fix(chi)
 
 
-def sgombra_il_mio_rimasuglio(mio_base):
+def clear_out_my_leftover(my_base):
     """Removes `/tmp/mozilla` ⛔ only if it was left to one of MY tenants."""
-    casa = casa_della_provvista()
-    if casa is None:
+    home = provisioning_home()
+    if home is None:
         return "⚠ I cannot find C2: I did not even look at /tmp/mozilla"
-    return casa.sgombra_il_mio_rimasuglio(mio_base)
+    return home.clear_out_my_leftover(my_base)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -560,25 +560,25 @@ def sgombra_il_mio_rimasuglio(mio_base):
 #    to diverge from**, and they had already diverged.  From `11-c1-nasce-e-si-vede.py`
 #    come:
 #
-#   · `e_stato_ammesso(coda)`   — «was the client ADMITTED?», which ⛔ is not
+#   · `was_admitted(queue)`   — «was the client ADMITTED?», which ⛔ is not
 #        the word inside a text: the client prints it also in the TWO refusal
 #        messages, and on stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
-#   · `garantisci_i_gruppi(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
+#   · `ensure_groups(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
 #        which `[M]` the session is born BLIND (0 of 4, zero frames,
 #        `fasi/10-…` §7.4) and this mesh would measure the darkness.
 #
 # ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
 #    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
-_MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
-                "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
+_JOBS_C1 = ("was_admitted", "certify_admission",
+                "ensure_groups", "group_verdict", "certify_groups")
 _C1 = None
 
 
-def casa_di_c1():
+def c1_home():
     global _C1
     if _C1 is None:
-        _C1, _perc = _carica("11-c1-nasce-e-si-vede.py", _MESTIERI_C1)
+        _C1, _path = _load("11-c1-nasce-e-si-vede.py", _JOBS_C1)
     if _C1 is None:
         print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
         print("   come the admission predicate and the guarantee of the")
@@ -588,8 +588,8 @@ def casa_di_c1():
     return _C1
 
 
-def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ THE CARD'S GROUPS — `(esito, perche)`; `0` = it can be measured.
+def ensure_groups(chi, prefix="   "):
+    """⭐⭐ THE CARD'S GROUPS — `(outcome, reason_text)`; `0` = it can be measured.
 
     ⛔ Until 27 August 2026 this mesh created the tenant with
        `usermod -aG video,render` **and did not read back**: two nailed-down names (which
@@ -597,14 +597,14 @@ def garantisci_i_gruppi(chi, prefisso="   "):
        force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
        from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
-    return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
+    return c1_home().ensure_groups(chi, prefix)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⭐⭐ THE NEW JUDGE: «are these two frames different?»
 # ═══════════════════════════════════════════════════════════════════════════
-def coppie_che_cambiano(elenco, soglia_rumore=SOGLIA_RUMORE,
-                        soglia_coppia=SOGLIA_COPPIA):
+def changing_pairs(listing, noise_threshold=NOISE_THRESHOLD,
+                        pair_threshold=PAIR_THRESHOLD):
     """How many consecutive pairs of frames are DIFFERENT from each other.
 
     Returns a dictionary, or ⛔ **`None`** if it could not look
@@ -621,79 +621,79 @@ def coppie_che_cambiano(elenco, soglia_rumore=SOGLIA_RUMORE,
         from PIL import Image
     except ImportError:
         return None
-    if not elenco or len(elenco) < 2:
+    if not listing or len(listing) < 2:
         return None
 
-    precedente = None
-    coppie = diverse = illeggibili = 0
-    minima = None
-    massima = None
-    for p in elenco:
+    previous = None
+    pairs = diverse = unreadable = 0
+    lowest = None
+    max_dims = None
+    for p in listing:
         try:
             img = np.asarray(Image.open(p).convert("RGB")).astype("int16")
         except Exception:
-            illeggibili += 1
-            precedente = None      # ⛔ a pair with a hole in the middle is not a pair
+            unreadable += 1
+            previous = None      # ⛔ a pair with a hole in the middle is not a pair
             continue
         if img.ndim != 3 or img.size == 0:
-            illeggibili += 1
-            precedente = None
+            unreadable += 1
+            previous = None
             continue
-        if precedente is not None and precedente.shape == img.shape:
-            scarto = abs(img - precedente).max(axis=2)
-            quanti = float((scarto > soglia_rumore).mean())
-            coppie += 1
-            if quanti >= soglia_coppia:
+        if previous is not None and previous.shape == img.shape:
+            gap = abs(img - previous).max(axis=2)
+            how_many = float((gap > noise_threshold).mean())
+            pairs += 1
+            if how_many >= pair_threshold:
                 diverse += 1
-            minima = quanti if minima is None else min(minima, quanti)
-            massima = quanti if massima is None else max(massima, quanti)
-        precedente = img
+            lowest = how_many if lowest is None else min(lowest, how_many)
+            max_dims = how_many if max_dims is None else max(max_dims, how_many)
+        previous = img
 
-    if coppie == 0:
+    if pairs == 0:
         return None
-    return {"coppie": coppie, "diverse": diverse,
-            "frazione": diverse / float(coppie),
-            "minima": minima, "massima": massima,
-            "illeggibili": illeggibili}
+    return {"pairs": pairs, "diverse": diverse,
+            "fraction": diverse / float(pairs),
+            "lowest": lowest, "max_dims": max_dims,
+            "unreadable": unreadable}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ THE JUDGEMENT — a PURE function, so `--certifica` runs it on
+# ⭐⭐ THE JUDGEMENT — a PURE function, so `--certify` runs it on
 #    fake frames without switching anything on.
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_il_flusso(elenco, secondi, scena_ferma=False,
-                      ritmo_minimo=RITMO_MINIMO,
-                      frazione_coppie=FRAZIONE_COPPIE,
-                      coppie_esaminate=COPPIE_ESAMINATE,
-                      soglia_rumore=SOGLIA_RUMORE,
-                      soglia_coppia=SOGLIA_COPPIA):
-    """Returns a dictionary with `stato` among:
+def judge_stream(listing, seconds, still_scene=False,
+                      minimum_rate=MINIMUM_RATE,
+                      pair_fraction=PAIR_FRACTION,
+                      examined_pairs=EXAMINED_PAIRS,
+                      noise_threshold=NOISE_THRESHOLD,
+                      pair_threshold=PAIR_THRESHOLD):
+    """Returns a dictionary with `state` among:
 
-        "cambia"     ⭐ the frames arrive and the scene changes  ⇒ green
-        "congelata"     they arrive and do NOT change            ⇒ red
+        "change"     ⭐ the frames arrive and the scene changes  ⇒ green
+        "frozen"     they arrive and do NOT change            ⇒ red
         "crollati"      they do not arrive, or they are a trickle ⇒ red
         "non-lo-so"  ⛔ I could not look                          ⇒ neither one
                      nor the other
     """
     # ⭐⭐ AND NEXT TO THE VERDICT THERE IS A **REASON**, which is a fact and not a
     #    sentence.  ⛔ Without it, whoever wants to know *why* «I do not know» would have to
-    #    read the text of `perche` — i.e. decide on a string, which is the
+    #    read the text of `reason_text` — i.e. decide on a string, which is the
     #    way a bench starts going wrong silently when someone
     #    fixes a typo.  ⇒ The acceptance test of the negative control rests on
     #    this, not on the words.
-    esito = {"stato": "non-lo-so", "motivo": "", "perche": "",
-             "fotogrammi": None, "ritmo": None, "coppie": None,
-             "diverse": None, "frazione_coppie": None, "minima": None,
-             "massima": None, "illeggibili": None}
-    if elenco is None:
-        esito["motivo"] = "niente-elenco"
-        esito["perche"] = "I could not extract any frame from the stream"
-        return esito
+    outcome = {"state": "non-lo-so", "motivo": "", "reason_text": "",
+             "frames": None, "rate": None, "pairs": None,
+             "diverse": None, "pair_fraction": None, "lowest": None,
+             "max_dims": None, "unreadable": None}
+    if listing is None:
+        outcome["motivo"] = "niente-elenco"
+        outcome["reason_text"] = "I could not extract any frame from the stream"
+        return outcome
 
-    n = len(elenco)
-    esito["fotogrammi"] = n
-    ritmo = (n / float(secondi)) if secondi and secondi > 0 else None
-    esito["ritmo"] = ritmo
+    n = len(listing)
+    outcome["frames"] = n
+    rate = (n / float(seconds)) if seconds and seconds > 0 else None
+    outcome["rate"] = rate
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⚠⚠ THE NEGATIVE CONTROL — «still scene» MUST NOT GIVE RED.
@@ -707,84 +707,84 @@ def giudica_il_flusso(elenco, secondi, scena_ferma=False,
     #   shortcut, it is the declaration that in this condition the mesh does not
     #   have a yardstick.
     # ═══════════════════════════════════════════════════════════════════════
-    if scena_ferma:
-        esito["motivo"] = "scena-ferma"
-        esito["perche"] = (
+    if still_scene:
+        outcome["motivo"] = "still-scene"
+        outcome["reason_text"] = (
             "the scene was STILL by my choice: %d frames, rate %s. "
             "⛔ On a still scene the product delivers nothing and that is right "
             "([M] phase 9 §3.1: 0.03 frames/s; [R] src/figlio.c:3373) ⇒ "
             "«frozen image» and «nothing to show» here have the same "
             "look, and I do not tell them apart"
-            % (n, "unknown" if ritmo is None else "%.2f/s" % ritmo))
-        return esito
+            % (n, "unknown" if rate is None else "%.2f/s" % rate))
+        return outcome
 
     # ── 1. the poorest canary ──────────────────────────────────────────────
     if n == 0:
-        esito["stato"] = "crollati"
-        esito["motivo"] = "zero-fotogrammi"
-        esito["perche"] = ("no frame arrived, and the scene was in "
+        outcome["state"] = "crollati"
+        outcome["motivo"] = "zero-fotogrammi"
+        outcome["reason_text"] = ("no frame arrived, and the scene was in "
                            "motion: it is the canary dying")
-        return esito
+        return outcome
 
     # ── 2. the rate, against the rough reference ───────────────────────────
-    if ritmo is None:
-        esito["motivo"] = "niente-secondi"
-        esito["perche"] = "I do not know over how many seconds to count: I do not compute a rate"
-        return esito
-    if ritmo < ritmo_minimo:
-        esito["stato"] = "crollati"
-        esito["motivo"] = "ritmo-crollato"
-        esito["perche"] = ("%d frames in %.0f s = %.2f/s, below the %.2f/s "
+    if rate is None:
+        outcome["motivo"] = "niente-secondi"
+        outcome["reason_text"] = "I do not know over how many seconds to count: I do not compute a rate"
+        return outcome
+    if rate < minimum_rate:
+        outcome["state"] = "crollati"
+        outcome["motivo"] = "ritmo-crollato"
+        outcome["reason_text"] = ("%d frames in %.0f s = %.2f/s, below the %.2f/s "
                            "demanded (rough reference [M] %.1f/s, phase 9 §3.1 "
                            "⇒ %.0f%% of the reference)"
-                           % (n, secondi, ritmo, ritmo_minimo, RIFERIMENTO_FPS,
-                              ritmo / RIFERIMENTO_FPS * 100))
-        return esito
+                           % (n, seconds, rate, minimum_rate, REFERENCE_FPS,
+                              rate / REFERENCE_FPS * 100))
+        return outcome
 
     # ── 3. ⭐ the check that decides: are consecutive ones different? ───────
-    coda = elenco[-(coppie_esaminate + 1):]
-    m = coppie_che_cambiano(coda, soglia_rumore, soglia_coppia)
+    queue = listing[-(examined_pairs + 1):]
+    m = changing_pairs(queue, noise_threshold, pair_threshold)
     if m is None:
-        esito["motivo"] = "niente-coppie"
-        esito["perche"] = ("I could not compare the frames with each other "
+        outcome["motivo"] = "niente-coppie"
+        outcome["reason_text"] = ("I could not compare the frames with each other "
                            "(fewer than two readable, or numpy/Pillow missing)")
-        return esito
-    esito.update({"coppie": m["coppie"], "diverse": m["diverse"],
-                  "frazione_coppie": m["frazione"],
-                  "minima": m["minima"], "massima": m["massima"],
-                  "illeggibili": m["illeggibili"]})
-    if m["frazione"] < frazione_coppie:
-        esito["stato"] = "congelata"
-        esito["motivo"] = "congelata"
-        esito["perche"] = ("⛔ FROZEN IMAGE: only %d pairs out of %d are "
+        return outcome
+    outcome.update({"pairs": m["pairs"], "diverse": m["diverse"],
+                  "pair_fraction": m["fraction"],
+                  "lowest": m["lowest"], "max_dims": m["max_dims"],
+                  "unreadable": m["unreadable"]})
+    if m["fraction"] < pair_fraction:
+        outcome["state"] = "frozen"
+        outcome["motivo"] = "frozen"
+        outcome["reason_text"] = ("⛔ FROZEN IMAGE: only %d pairs out of %d are "
                            "different (%.0f%%, I demand %.0f%%) — the "
                            "frames arrive and they are always the same"
-                           % (m["diverse"], m["coppie"], m["frazione"] * 100,
-                              frazione_coppie * 100))
-        return esito
+                           % (m["diverse"], m["pairs"], m["fraction"] * 100,
+                              pair_fraction * 100))
+        return outcome
 
-    esito["stato"] = "cambia"
-    esito["motivo"] = "cambia"
+    outcome["state"] = "change"
+    outcome["motivo"] = "change"
     # ⭐⭐ AND THE MARGIN IS ALWAYS PRINTED, even when it is green — it is the only thing
     #    that warns BEFORE a threshold becomes a false red.  ⚠ It is what
     #    C5 does (`11-c5…py`: *«the mesh always prints the margin»*), and the first
     #    draft of C3 computed the number and threw it away.
-    esito["perche"] = ("%d frames in %.0f s = %.2f/s (%.0f%% of the "
+    outcome["reason_text"] = ("%d frames in %.0f s = %.2f/s (%.0f%% of the "
                        "rough reference) · %d pairs out of %d are different · "
                        "⭐ the weakest pair changes %.2f%% of the pixels, "
                        "i.e. %.1f times the threshold (%.0f%%)"
-                       % (n, secondi, ritmo, ritmo / RIFERIMENTO_FPS * 100,
-                          m["diverse"], m["coppie"], (m["minima"] or 0) * 100,
-                          (m["minima"] or 0) / soglia_coppia,
-                          soglia_coppia * 100))
-    return esito
+                       % (n, seconds, rate, rate / REFERENCE_FPS * 100,
+                          m["diverse"], m["pairs"], (m["lowest"] or 0) * 100,
+                          (m["lowest"] or 0) / pair_threshold,
+                          pair_threshold * 100))
+    return outcome
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ THE CLIENT'S WORK — PURE functions, so `--certifica` crosses them
+# ⭐⭐ THE CLIENT'S WORK — PURE functions, so `--certify` crosses them
 #    without switching anything on.
 # ═══════════════════════════════════════════════════════════════════════════
-def cpu_dalla_riga(testo, tick=100.0):
+def cpu_from_line(body_text, tick=100.0):
     """The CPU seconds burned by a process, from a line of `/proc/<pid>/stat`.
 
     ⛔⛔ AND THE COMMAND NAME SITS BETWEEN PARENTHESES AND **CAN CONTAIN SPACES** —
@@ -797,50 +797,50 @@ def cpu_dalla_riga(testo, tick=100.0):
     ⛔ Returns **None** if the line cannot be read: «I do not know» is not zero,
        and this mesh has already paid for confusing them.
     """
-    if not testo or ")" not in testo or not tick:
+    if not body_text or ")" not in body_text or not tick:
         return None
-    campi = testo.rsplit(")", 1)[1].split()
-    if len(campi) < 13:
+    fields = body_text.rsplit(")", 1)[1].split()
+    if len(fields) < 13:
         return None
     try:
-        return (int(campi[11]) + int(campi[12])) / float(tick)
+        return (int(fields[11]) + int(fields[12])) / float(tick)
     except (ValueError, ZeroDivisionError):
         return None
 
 
-def lavoro_al_secondo(prima, dopo, secondi):
+def work_per_second(before, after, seconds):
     """⭐ How much CPU per second between two readings.  ⛔ `None` = I do not know.
 
     ⚠ And it is never allowed below zero: a process reborn with the
       same pid would give a negative number, which is not a measurement.
     """
-    if prima is None or dopo is None or not secondi or secondi <= 0:
+    if before is None or after is None or not seconds or seconds <= 0:
         return None
-    return max(0.0, (dopo - prima) / float(secondi))
+    return max(0.0, (after - before) / float(seconds))
 
 
-def cpu_del_cliente(pid):
+def client_cpu(pid):
     """The CPU seconds of process `pid`, read now.  `None` if unknown."""
     try:
         with open("/proc/%d/stat" % pid, "rb") as f:
-            testo = f.read().decode("utf-8", "replace")
+            body_text = f.read().decode("utf-8", "replace")
     except OSError:
         return None
-    return cpu_dalla_riga(testo, float(os.sysconf("SC_CLK_TCK")))
+    return cpu_from_line(body_text, float(os.sysconf("SC_CLK_TCK")))
 
 
-def somma_lavoro(testo, nome):
-    """⭐ PURE: the CPU seconds of the processes whose command contains `nome`.
+def sum_work(body_text, label_name):
+    """⭐ PURE: the CPU seconds of the processes whose command contains `label_name`.
 
     Reads the output of `ps -o times=,args=`.
     ⛔ Returns **None** if there is not even one: *«there is no
        encoder»* and *«the encoder is not working»* are two opposite things, and
        this project has already paid for confusing them.
-    ⚠ And **only** those with `nome` in the command line are summed: counting all the
+    ⚠ And **only** those with `label_name` in the command line are summed: counting all the
       tenant's processes would be a predicate one level too high
-      (`LEZIONI.md` §1.44), the same defect as `ferma_il_codificatore`.
+      (`LEZIONI.md` §1.44), the same defect as `stop_encoder`.
 
-    ⛔⛔ AND «has `nome` in the command line» IS NOT ENOUGH — 22 September 2026.
+    ⛔⛔ AND «has `label_name` in the command line» IS NOT ENOUGH — 22 September 2026.
         The scene's browser opens on `file:///opt/remotix/11-c3-scena.html`
         ⇒ it too has the word `remotix`, and its work ended up in the
         encoder's sum: the measure that decides WHEN to graft the fault
@@ -849,30 +849,30 @@ def somma_lavoro(testo, nome):
     ⇒ The **name of the executable** (`argv[0]`, without path) is compared, not
       a substring of the line.
     """
-    if not testo:
+    if not body_text:
         return None
-    totale = None
-    for riga in testo.splitlines():
-        pezzi = riga.split(None, 1)
-        if len(pezzi) < 2:
+    total = None
+    for row in body_text.splitlines():
+        pieces = row.split(None, 1)
+        if len(pieces) < 2:
             continue
-        argv0 = os.path.basename(pezzi[1].split(None, 1)[0])
-        # ⚠ The product's child RENAMES ITSELF — `remotix-figlio --figlio-interno
+        argv0 = os.path.basename(pieces[1].split(None, 1)[0])
+        # ⚠ The product's child RENAMES ITSELF — `remotix-figlio --internal-child
         #   …` — so «equal to the name» is not enough: the name followed by
         #   `-` or `:` also counts, which is how processes give themselves a title.  ⛔ And the
         #   reverse does not count: `firefox-esr` never becomes `remotix`.
-        if argv0 != nome and not argv0.startswith(nome + "-") \
-           and not argv0.startswith(nome + ":"):
+        if argv0 != label_name and not argv0.startswith(label_name + "-") \
+           and not argv0.startswith(label_name + ":"):
             continue
         try:
-            secondi = int(pezzi[0])
+            seconds = int(pieces[0])
         except ValueError:
             continue
-        totale = secondi if totale is None else totale + secondi
-    return None if totale is None else float(totale)
+        total = seconds if total is None else total + seconds
+    return None if total is None else float(total)
 
 
-def cpu_del_codificatore(chi, nome):
+def encoder_cpu(chi, label_name):
     """⭐⭐ THE ENCODER'S WORK — and it is **the process that is about to be
     stopped**, not another one.
 
@@ -886,25 +886,25 @@ def cpu_del_codificatore(chi, nome):
     ⇒ It is also the right quantity for the question: before stopping an
       encoder one wants to know whether **that** encoder was working.
     """
-    r = sh("ps -u %s -o times=,args=" % chi, secondi=30)
-    return somma_lavoro(r.stdout or "", nome)
+    r = sh("ps -u %s -o times=,args=" % chi, seconds=30)
+    return sum_work(r.stdout or "", label_name)
 
 
-def secondi_in_vista(quanto, passo, soglia, cpu_al_s):
+def seconds_in_view(how_much, step, threshold, cpu_al_s):
     """⭐⭐ HOW MUCH SCENE WENT BY IN VIEW BEFORE THE GRAFT — a CEILING.
 
     ⛔ It is the term that dirties the gross rate: the frames born between the instant
        the scene started painting and the instant of the graft
        arrive **even with the fault**, because the fault came afterwards.
 
-    ⛔⛔ AND THE CEILING IS `quanto`, i.e. ALL the time gone by since the scene
+    ⛔⛔ AND THE CEILING IS `how_much`, i.e. ALL the time gone by since the scene
         was switched on — 22 September 2026, and the old ceiling was
         DISPROVED BY A MEASUREMENT.
 
         Until today that time was weighted with the encoder's work: in the
         intervals in which the CPU was below the threshold it was assumed that the
         scene had delivered **in proportion**, i.e. at most
-        `soglia / cpu_al_s` of the full delivery.  ⇒ `[M]` KDE, 22 Sep 2026:
+        `threshold / cpu_al_s` of the full delivery.  ⇒ `[M]` KDE, 22 Sep 2026:
         estimated ceiling **4.8 s** (443 frames at the healthy rate of 65.1/s), ⛔ but
         in the window **1167** arrived, i.e. 17.9 s of full delivery
         out of 18.1 s elapsed.  The scene was painting at full rate **from
@@ -914,30 +914,30 @@ def secondi_in_vista(quanto, passo, soglia, cpu_al_s):
     ⇒ A ceiling the fact goes through is not a ceiling: we go back to the one that
       cannot be wrong — the scene, at most, painted for all the time
       it was switched on.
-    ⚠ `passo`, `soglia` and `cpu_al_s` stay in the signature because the caller
-      has them and because they serve to say «I do not know»: without the encoder's
+    ⚠ `step`, `threshold` and `cpu_al_s` stay in the signature because the caller
+      has them and because they needs to say «I do not know»: without the encoder's
       work one does not even know whether the scene was on.
 
     ⛔ `None` if one of the numbers is unknown: an invented ceiling would be worse than
       no ceiling.
     """
-    if quanto is None or cpu_al_s is None or not cpu_al_s or cpu_al_s <= 0:
+    if how_much is None or cpu_al_s is None or not cpu_al_s or cpu_al_s <= 0:
         return None
-    if passo is None or soglia is None or passo <= 0 or soglia < 0:
+    if step is None or threshold is None or step <= 0 or threshold < 0:
         return None
-    return max(float(quanto), float(passo))
+    return max(float(how_much), float(step))
 
 
 # ⭐ The window ASKED for the two «encoder stopped» rounds, and its
 #   ceiling.  ⛔ The right number is not one: it depends on the box's rate, and
-#   `finestra_bastante()` computes it.  This is only the starting point.
-FINESTRA_GUASTO = 90.0
+#   `enough_window()` computes it.  This is only the starting point.
+FAULT_WINDOW = 90.0
 # ⚠ And a ceiling is needed: a very slow box would ask for a window that
 #   never ends, and a bench that never ends is a bench that gets switched off.
-FINESTRA_GUASTO_TETTO = 400.0
+FAULT_WINDOW_CAP = 400.0
 
 
-def finestra_bastante(secondi_prima, ritmo_sano, ritmo_minimo=RITMO_MINIMO):
+def enough_window(seconds_before, healthy_rate, minimum_rate=MINIMUM_RATE):
     """⭐⭐ HOW LONG THE WINDOW MUST BE for the fault to be able to BITE.
 
     ⛔⛔ And this is the thing that on 27 August 2026 was missing, and it is the reason why
@@ -946,25 +946,25 @@ def finestra_bastante(secondi_prima, ritmo_sano, ritmo_minimo=RITMO_MINIMO):
     The rate is **gross**: in the numerator there are ALL the frames of the stream,
     including those born before the window opened; in the denominator there is
     only the window.  ⇒ With the encoder stopped the numerator is not zero: it is
-    `secondi_prima × ritmo_sano`, i.e. what the scene did in view between
+    `seconds_before × healthy_rate`, i.e. what the scene did in view between
     the instant it started painting and the instant of the graft.
 
     ⇒ For the mesh to be able to say «collapsed» it takes:
 
-        secondi_prima × ritmo_sano / WINDOW  <  ritmo_minimo
+        seconds_before × healthy_rate / WINDOW  <  minimum_rate
 
     ⭐ Returns the seconds of window needed.  ⛔ `None` if unknown (and
        then no number is faked).
     """
-    if secondi_prima is None or ritmo_sano is None or not ritmo_minimo:
+    if seconds_before is None or healthy_rate is None or not minimum_rate:
         return None
-    if secondi_prima <= 0 or ritmo_sano <= 0 or ritmo_minimo <= 0:
+    if seconds_before <= 0 or healthy_rate <= 0 or minimum_rate <= 0:
         return None
-    return secondi_prima * ritmo_sano / float(ritmo_minimo)
+    return seconds_before * healthy_rate / float(minimum_rate)
 
 
-def aspetta_che_il_desktop_si_fermi(leggi, tetto, soglia=SOGLIA_CPU,
-                                    passo=PASSO_CPU):
+def wait_desktop_settled(read_it, ceiling, threshold=CPU_THRESHOLD,
+                                    step=CPU_STEP):
     """⭐ PHASE 12 (19 Sep 2026) — BEFORE SWITCHING ON THE SCENE, the desktop STILL.
 
     ⛔ `[M]` On KDE the session is born with the Plasma splash screen, which
@@ -972,7 +972,7 @@ def aspetta_che_il_desktop_si_fermi(leggi, tetto, soglia=SOGLIA_CPU,
        fotogrammi_arrivino` passes on the animation and not on the scene, and the
        SIGSTOP of the «encoder stopped» fault fell on black ⇒ the mesh did not
        judge (3).  ⚠ Moving the graft further on is not possible: the rate is
-       GROSS (`finestra_bastante`), and more scene in view before the graft
+       GROSS (`enough_window`), and more scene in view before the graft
        means a fault that can no longer be seen.
     ⭐ Instead the SWITCHING ON of the scene is moved: we wait for the encoder's work
        to drop below the threshold for a whole step — the desktop no longer
@@ -980,65 +980,65 @@ def aspetta_che_il_desktop_si_fermi(leggi, tetto, soglia=SOGLIA_CPU,
        the desktop is already still ⇒ a single step, as it was.  It holds for every
        desktop, without asking which one it is.
 
-    Returns `(fermo, secondi_attesi)` — `fermo` is `True`, `False` (ceiling
+    Returns `(stopped, secondi_attesi)` — `stopped` is `True`, `False` (ceiling
     expired: we go on SAYING SO) or `None` (work unreadable).
     """
-    partito = time.time()
-    prima = leggi()
-    if prima is None:
+    started = time.time()
+    before = read_it()
+    if before is None:
         return None, 0.0
-    while time.time() - partito < tetto:
+    while time.time() - started < ceiling:
         t0 = time.time()
-        time.sleep(passo)
-        dopo = leggi()
-        quanto = lavoro_al_secondo(prima, dopo, time.time() - t0)
-        prima = dopo
-        if quanto is None:
-            return None, round(time.time() - partito, 1)
-        if quanto < soglia:
-            return True, round(time.time() - partito, 1)
-    return False, round(time.time() - partito, 1)
+        time.sleep(step)
+        after = read_it()
+        how_much = work_per_second(before, after, time.time() - t0)
+        before = after
+        if how_much is None:
+            return None, round(time.time() - started, 1)
+        if how_much < threshold:
+            return True, round(time.time() - started, 1)
+    return False, round(time.time() - started, 1)
 
 
-def aspetta_che_i_fotogrammi_arrivino(leggi, tetto, soglia=SOGLIA_CPU,
-                                      passo=PASSO_CPU):
+def wait_for_frames(read_it, ceiling, threshold=CPU_THRESHOLD,
+                                      step=CPU_STEP):
     """⭐⭐ WAITS FOR THE SCENE TO BE SEEN MOVING — and not a fixed time.
 
-    ⛔ It is the step that replaces `time.sleep(--attesa-scena)`: `--attesa-scena`
+    ⛔ It is the step that replaces `time.sleep(--wait-scene)`: `--wait-scene`
        turns from a wait into a **CEILING**, and the round goes on as soon as the frames
        really arrive instead of by the clock.  `LEZIONI.md` §1.45.
-    ⚠ `leggi()` returns the CPU seconds burned so far by whoever delivers, or
+    ⚠ `read_it()` returns the CPU seconds burned so far by whoever delivers, or
       `None`.  ⛔ The bytes on disk are not looked at: the frames file the
       client writes **only at the end** (`[R]` `01-b3-cliente.py:1416`),
       so during the round there is nothing to weigh.
 
-    Returns `(visto, lavoro_al_s, secondi_attesi)` — `visto` is `True`, `False`
+    Returns `(seen_v, lavoro_al_s, secondi_attesi)` — `seen_v` is `True`, `False`
     (the ceiling expired) or ⛔ `None` (I could not read the work).
     """
-    partito = time.time()
-    prima = leggi()
-    if prima is None:
+    started = time.time()
+    before = read_it()
+    if before is None:
         return None, None, 0.0
-    migliore = 0.0
-    while time.time() - partito < tetto:
+    best = 0.0
+    while time.time() - started < ceiling:
         t0 = time.time()
-        time.sleep(passo)
-        dopo = leggi()
-        quanto = lavoro_al_secondo(prima, dopo, time.time() - t0)
-        prima = dopo
-        if quanto is None:
+        time.sleep(step)
+        after = read_it()
+        how_much = work_per_second(before, after, time.time() - t0)
+        before = after
+        if how_much is None:
             # ⛔ Whoever was delivering is no longer there, or cannot be read.
-            return None, migliore, round(time.time() - partito, 1)
-        migliore = max(migliore, quanto)
-        if quanto >= soglia:
-            return True, quanto, round(time.time() - partito, 1)
-    return False, migliore, round(time.time() - partito, 1)
+            return None, best, round(time.time() - started, 1)
+        best = max(best, how_much)
+        if how_much >= threshold:
+            return True, how_much, round(time.time() - started, 1)
+    return False, best, round(time.time() - started, 1)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ THE CERTIFICATION
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica():
+def certify():
     """⚠ And it declares what it covers and what it does not.
 
     It COVERS three things, and the third is the one that gets forgotten:
@@ -1071,9 +1071,9 @@ def certifica():
         return 3
     import tempfile
 
-    lettore, dove_l = lettore_del_colore()
-    giudice, dove_g = giudice_del_desktop()
-    if lettore is None or giudice is None:
+    reader, dove_l = color_reader()
+    assessor, dove_g = desktop_judge()
+    if reader is None or assessor is None:
         print("⛔ I cannot find (or it does not hold up) one of the two imported judges:")
         print("   10-f1-testimone.py    : %s" % (dove_g or "not found"))
         print("   11-c8-…apre-il-browser: %s" % (dove_l or "not found"))
@@ -1083,23 +1083,23 @@ def certifica():
     lav = tempfile.mkdtemp(prefix="c3cert-")
     L, A = 128, 72
 
-    def sequenza(nome, quanti, disegna):
-        """Writes `quanti` PNGs and returns their list.  `disegna(i)` -> array."""
-        dove = os.path.join(lav, nome)
+    def sequence(label_name, how_many, draw):
+        """Writes `how_many` PNGs and returns their list.  `draw(i)` -> array."""
+        dove = os.path.join(lav, label_name)
         os.makedirs(dove, exist_ok=True)
-        fuori = []
-        for i in range(quanti):
+        outside = []
+        for i in range(how_many):
             p = os.path.join(dove, "f-%05d.png" % i)
-            Image.fromarray(disegna(i)).save(p)
-            fuori.append(p)
-        return fuori
+            Image.fromarray(draw(i)).save(p)
+            outside.append(p)
+        return outside
 
-    def fondo(colore):
+    def background(color):
         a = np.zeros((A, L, 3), dtype="uint8")
-        a[:, :] = colore
+        a[:, :] = color
         return a
 
-    def scena(i):
+    def scene(i):
         """The declared scene: the alternating background and the scrolling band.
 
         ⚠ It is the synthetic copy of `11-c3-scena.html`, and the two numbers — the 3 %
@@ -1107,28 +1107,28 @@ def certifica():
           if they diverge, the certification tests a scene that nobody ever puts
           on the screen.
         """
-        a = fondo(SCENA_A if (i // 3) % 2 == 0 else SCENA_B)
+        a = background(SCENE_A if (i // 3) % 2 == 0 else SCENE_B)
         x = (i * 3) % 100
         c0 = int(L * x / 100.0)
         c1 = min(L, c0 + int(L * 0.20))
         a[:, c0:c1] = (10, 10, 10)
         return a
 
-    def congelata(i):
-        return scena(0)
+    def frozen(i):
+        return scene(0)
 
-    def rumore(i, ampiezza):
+    def noise(i, amplitude):
         """A fixed background with a disturbance of declared amplitude: ⭐ it serves to
         cross the NOISE threshold in both directions."""
-        a = fondo(SCENA_A).astype("int16")
-        # half of the image deviates by `ampiezza` on alternate frames
+        a = background(SCENE_A).astype("int16")
+        # half of the image deviates by `amplitude` on alternate frames
         if i % 2:
-            a[: A // 2, :, 0] = np.clip(a[: A // 2, :, 0] + ampiezza, 0, 255)
+            a[: A // 2, :, 0] = np.clip(a[: A // 2, :, 0] + amplitude, 0, 255)
         return a.astype("uint8")
 
-    def macchiolina(i):
+    def speck(i):
         """Changes VERY FEW pixels: ⭐ it crosses the PAIR threshold."""
-        a = fondo(SCENA_A)
+        a = background(SCENE_A)
         a[0, (i * 3) % L] = (255, 255, 255)      # 1 pixel of 9216 = 0.01 %
         return a
 
@@ -1137,117 +1137,117 @@ def certifica():
     print("   colour reader : %s" % dove_l)
     print("   minimum rate %.2f/s (rough reference [M] %.1f/s) · noise ±%d "
           "per channel · pair ≥%.0f%% of the pixels · at least %.0f%% of the pairs"
-          % (RITMO_MINIMO, RIFERIMENTO_FPS, SOGLIA_RUMORE, SOGLIA_COPPIA * 100,
-             FRAZIONE_COPPIE * 100))
+          % (MINIMUM_RATE, REFERENCE_FPS, NOISE_THRESHOLD, PAIR_THRESHOLD * 100,
+             PAIR_FRACTION * 100))
     print()
-    guai = 0
+    troubles = 0
 
-    def prova(nome, ottenuto, atteso, extra=""):
-        nonlocal guai
-        ok = ottenuto == atteso
+    def prova(label_name, obtained, expected_val, extra=""):
+        nonlocal troubles
+        ok = obtained == expected_val
         if not ok:
-            guai += 1
+            troubles += 1
         print("  %s  %-58s  ⇒ %-10s (expected %s)%s"
-              % ("OK " if ok else "NO ", nome, ottenuto, atteso,
+              % ("OK " if ok else "NO ", label_name, obtained, expected_val,
                  ("  %s" % extra) if extra else ""))
 
     # ── 1. the real scene in motion ────────────────────────────────────────
-    viva = sequenza("viva", 61, scena)
-    e = giudica_il_flusso(viva, 2.0)
-    prova("the declared scene moves", e["stato"], "cambia",
-          "different pairs %s/%s" % (e["diverse"], e["coppie"]))
+    viva = sequence("viva", 61, scene)
+    e = judge_stream(viva, 2.0)
+    prova("the declared scene moves", e["state"], "change",
+          "different pairs %s/%s" % (e["diverse"], e["pairs"]))
 
     # ── 2. ⭐ THE FAULT: the same frame repeated ───────────────────────────
-    ferma = sequenza("ferma", 61, congelata)
-    e2 = giudica_il_flusso(ferma, 2.0)
+    halt = sequence("halt", 61, frozen)
+    e2 = judge_stream(halt, 2.0)
     prova("⭐ the same frame repeated ⇒ FROZEN IMAGE",
-          e2["stato"], "congelata",
-          "different pairs %s/%s" % (e2["diverse"], e2["coppie"]))
+          e2["state"], "frozen",
+          "different pairs %s/%s" % (e2["diverse"], e2["pairs"]))
 
     # ── 3. the rate, crossed in BOTH directions ────────────────────────────
     #    61 frames in 5 s = 12.2/s (above 4.0) · in 30 s = 2.03/s (below)
     prova("the rate stays above the threshold (12.2/s)",
-          giudica_il_flusso(viva, 5.0)["stato"], "cambia")
+          judge_stream(viva, 5.0)["state"], "change")
     prova("⭐ the rate COLLAPSES below the threshold (2.03/s)",
-          giudica_il_flusso(viva, 30.0)["stato"], "crollati")
+          judge_stream(viva, 30.0)["state"], "crollati")
     prova("no frame with the scene in motion ⇒ red",
-          giudica_il_flusso([], 10.0)["stato"], "crollati")
+          judge_stream([], 10.0)["state"], "crollati")
 
     # ── 4. ⚠⚠ THE NEGATIVE CONTROL: «still scene» must NEVER give red ──────
     prova("⚠ STILL scene and no frame ⇒ I do not know, NOT red",
-          giudica_il_flusso([], 30.0, scena_ferma=True)["stato"], "non-lo-so")
+          judge_stream([], 30.0, still_scene=True)["state"], "non-lo-so")
     prova("⚠ STILL scene and frames all equal ⇒ I do not know, NOT red",
-          giudica_il_flusso(ferma, 30.0, scena_ferma=True)["stato"], "non-lo-so")
+          judge_stream(halt, 30.0, still_scene=True)["state"], "non-lo-so")
     prova("⚠ STILL scene with a single frame ⇒ I do not know, NOT red",
-          giudica_il_flusso(viva[:1], 30.0, scena_ferma=True)["stato"], "non-lo-so")
+          judge_stream(viva[:1], 30.0, still_scene=True)["state"], "non-lo-so")
 
     # ── 5. the NOISE threshold, crossed in both directions ─────────────────
-    sotto = sequenza("rumore-sotto", 21, lambda i: rumore(i, SOGLIA_RUMORE - 2))
-    sopra = sequenza("rumore-sopra", 21, lambda i: rumore(i, SOGLIA_RUMORE + 6))
-    ms = coppie_che_cambiano(sotto)
-    mp = coppie_che_cambiano(sopra)
-    prova("a disturbance of ±%d levels is NOISE, not movement" % (SOGLIA_RUMORE - 2),
+    below = sequence("rumore-sotto", 21, lambda i: noise(i, NOISE_THRESHOLD - 2))
+    above = sequence("rumore-sopra", 21, lambda i: noise(i, NOISE_THRESHOLD + 6))
+    ms = changing_pairs(below)
+    mp = changing_pairs(above)
+    prova("a disturbance of ±%d levels is NOISE, not movement" % (NOISE_THRESHOLD - 2),
           0 if ms is None else ms["diverse"], 0)
-    prova("⭐ a disturbance of ±%d levels IS movement" % (SOGLIA_RUMORE + 6),
+    prova("⭐ a disturbance of ±%d levels IS movement" % (NOISE_THRESHOLD + 6),
           0 if mp is None else mp["diverse"], 20)
 
     # ── 6. the PAIR threshold, crossed in both directions ──────────────────
-    piccola = sequenza("macchiolina", 21, macchiolina)
-    mm = coppie_che_cambiano(piccola)
+    small = sequence("speck", 21, speck)
+    mm = changing_pairs(small)
     prova("one pixel changing is not a scene moving",
           0 if mm is None else mm["diverse"], 0)
     prova("⇒ and the corresponding stream is FROZEN",
-          giudica_il_flusso(piccola, 1.0)["stato"], "congelata")
+          judge_stream(small, 1.0)["state"], "frozen")
 
     # ── 7. ⛔ the «I do not know», which are neither green nor red ─────────
     prova("⛔ no list (ffmpeg produced nothing) ⇒ I do not know",
-          giudica_il_flusso(None, 10.0)["stato"], "non-lo-so")
+          judge_stream(None, 10.0)["state"], "non-lo-so")
     prova("⛔ a single frame: there are no pairs ⇒ I do not know",
-          giudica_il_flusso(viva[:1], 0.05)["stato"], "non-lo-so")
-    manca = [os.path.join(lav, "non-ci-sono-%d.png" % i) for i in range(5)]
+          judge_stream(viva[:1], 0.05)["state"], "non-lo-so")
+    missing = [os.path.join(lav, "non-ci-sono-%d.png" % i) for i in range(5)]
     prova("⛔ unreadable frames ⇒ I do not know",
-          giudica_il_flusso(manca, 1.0)["stato"], "non-lo-so")
+          judge_stream(missing, 1.0)["state"], "non-lo-so")
     prova("⛔ and the meter returns «I do not know», not zero",
-          "unknown" if coppie_che_cambiano(manca) is None else "a number",
+          "unknown" if changing_pairs(missing) is None else "a number",
           "unknown")
 
     # ── 8. ⭐ is the DECLARED SCENE on the screen? (the imported reader) ────
-    def fr(p, colore):
-        return lettore.frazione_del_colore(p, colore, TOLLERANZA)
+    def fr(p, color):
+        return reader.color_fraction(p, color, TOLERANCE)
 
-    ultimo_viva = viva[-1]
-    ultimo_altro = sequenza("altro", 1, lambda i: fondo((58, 62, 70)))[0]
+    last_alive = viva[-1]
+    last_other = sequence("other_one", 1, lambda i: background((58, 62, 70)))[0]
     prova("the declared scene IS on the screen",
-          "yes" if max(fr(ultimo_viva, SCENA_A), fr(ultimo_viva, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "yes")
+          "yes" if max(fr(last_alive, SCENE_A), fr(last_alive, SCENE_B))
+          >= FRACTION_SCENE else "no", "yes")
     prova("⛔ any desktop is NOT the declared scene",
-          "yes" if max(fr(ultimo_altro, SCENA_A), fr(ultimo_altro, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "no")
+          "yes" if max(fr(last_other, SCENE_A), fr(last_other, SCENE_B))
+          >= FRACTION_SCENE else "no", "no")
     # ⭐ and the colour shifted by as much as the tolerance allows must stay «yes»
-    spostato = sequenza("spostata", 1, lambda i: fondo(
-        tuple(min(255, max(0, c + s)) for c, s in zip(SCENA_A, (+30, +30, -30)))))[0]
+    moved = sequence("spostata", 1, lambda i: background(
+        tuple(min(255, max(0, c + s)) for c, s in zip(SCENE_A, (+30, +30, -30)))))[0]
     prova("⭐ colour shifted within the tolerance ⇒ it is still the scene",
-          "yes" if max(fr(spostato, SCENA_A), fr(spostato, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "yes")
-    troppo = sequenza("troppo", 1, lambda i: fondo(
-        tuple(min(255, max(0, c + s)) for c, s in zip(SCENA_A, (+120, +120, -120)))))[0]
+          "yes" if max(fr(moved, SCENE_A), fr(moved, SCENE_B))
+          >= FRACTION_SCENE else "no", "yes")
+    too = sequence("too", 1, lambda i: background(
+        tuple(min(255, max(0, c + s)) for c, s in zip(SCENE_A, (+120, +120, -120)))))[0]
     prova("colour shifted TOO MUCH ⇒ it is no longer the scene",
-          "yes" if max(fr(troppo, SCENA_A), fr(troppo, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "no")
+          "yes" if max(fr(too, SCENE_A), fr(too, SCENE_B))
+          >= FRACTION_SCENE else "no", "no")
 
     # ── 9. ⭐⭐ AND THE PROOF OF THE «repeated frame» GRAFTED FAULT,
     #        done as it will be done on the real thing: **on the same data**.
     print()
-    sano = giudica_il_flusso(viva, 2.0)
-    sfregiato = giudica_il_flusso(sfregia_ripetendo(viva), 2.0)
-    dimostrato = (sano["stato"] == "cambia" and sfregiato["stato"] == "congelata"
-                  and sano["diverse"] > 0 and sfregiato["diverse"] == 0)
-    if not dimostrato:
-        guai += 1
+    healthy = judge_stream(viva, 2.0)
+    scarred = judge_stream(scar_repeating(viva), 2.0)
+    proven = (healthy["state"] == "change" and scarred["state"] == "frozen"
+                  and healthy["diverse"] > 0 and scarred["diverse"] == 0)
+    if not proven:
+        troubles += 1
     print("  %s  ⭐ the DEFACEMENT on the same data: different pairs from %s to %s, "
           "verdicts «%s» and «%s»"
-          % ("OK " if dimostrato else "NO ", sano["diverse"],
-             sfregiato["diverse"], sano["stato"], sfregiato["stato"]))
+          % ("OK " if proven else "NO ", healthy["diverse"],
+             scarred["diverse"], healthy["state"], scarred["state"]))
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐ THE THRESHOLDS CROSSED **AT THE EDGE**, and not from afar.
@@ -1260,27 +1260,27 @@ def certifica():
     # ═══════════════════════════════════════════════════════════════════════
     print()
     # the NOISE, one level below and one above
-    b_sotto = sequenza("bordo-r-sotto", 11, lambda i: rumore(i, SOGLIA_RUMORE))
-    b_sopra = sequenza("bordo-r-sopra", 11, lambda i: rumore(i, SOGLIA_RUMORE + 1))
-    m1 = coppie_che_cambiano(b_sotto)
-    m2 = coppie_che_cambiano(b_sopra)
-    prova("a deviation of EXACTLY %d levels is still noise" % SOGLIA_RUMORE,
+    b_below = sequence("bordo-r-sotto", 11, lambda i: noise(i, NOISE_THRESHOLD))
+    b_above = sequence("bordo-r-sopra", 11, lambda i: noise(i, NOISE_THRESHOLD + 1))
+    m1 = changing_pairs(b_below)
+    m2 = changing_pairs(b_above)
+    prova("a deviation of EXACTLY %d levels is still noise" % NOISE_THRESHOLD,
           0 if m1 is None else m1["diverse"], 0)
-    prova("⭐ a deviation of %d levels is already movement" % (SOGLIA_RUMORE + 1),
+    prova("⭐ a deviation of %d levels is already movement" % (NOISE_THRESHOLD + 1),
           0 if m2 is None else m2["diverse"], 10)
 
     # the PAIR: how many pixels must change.  9216 pixels ⇒ 1 % = 92.16
-    def blocco(i, quanti_pixel):
-        a = fondo(SCENA_A)
+    def block(i, how_many_pixel):
+        a = background(SCENE_A)
         if i % 2:
-            piatta = a.reshape(-1, 3)
-            piatta[:quanti_pixel] = (255, 255, 255)
-            a = piatta.reshape(A, L, 3)
+            flat = a.reshape(-1, 3)
+            flat[:how_many_pixel] = (255, 255, 255)
+            a = flat.reshape(A, L, 3)
         return a
-    sotto = sequenza("bordo-c-sotto", 11, lambda i: blocco(i, 92))   # 0.998 %
-    sopra = sequenza("bordo-c-sopra", 11, lambda i: blocco(i, 93))   # 1.009 %
-    m3 = coppie_che_cambiano(sotto)
-    m4 = coppie_che_cambiano(sopra)
+    below = sequence("bordo-c-sotto", 11, lambda i: block(i, 92))   # 0.998 %
+    above = sequence("bordo-c-sopra", 11, lambda i: block(i, 93))   # 1.009 %
+    m3 = changing_pairs(below)
+    m4 = changing_pairs(above)
     prova("92 pixels of 9216 (0.998 %) are NOT a change",
           0 if m3 is None else m3["diverse"], 0)
     prova("⭐ 93 pixels of 9216 (1.009 %) ARE",
@@ -1288,36 +1288,36 @@ def certifica():
 
     # the RATE, exactly astride 4.00/s: 61 frames in 15.25 s = 4.000
     prova("the rate at 4.07/s (just above the threshold) ⇒ GREEN",
-          giudica_il_flusso(viva, 15.0)["stato"], "cambia")
+          judge_stream(viva, 15.0)["state"], "change")
     prova("⭐ the rate at 3.94/s (just below) ⇒ RED",
-          giudica_il_flusso(viva, 15.5)["stato"], "crollati")
+          judge_stream(viva, 15.5)["state"], "crollati")
 
     # the TOLERANCE on the scene's colour, at the edge
-    al_limite = sequenza("bordo-t1", 1, lambda i: fondo(
-        (TOLLERANZA, TOLLERANZA, 255 - TOLLERANZA)))[0]
-    oltre = sequenza("bordo-t2", 1, lambda i: fondo(
-        (TOLLERANZA + 1, TOLLERANZA + 1, 255 - TOLLERANZA - 1)))[0]
-    prova("⭐ colour shifted by EXACTLY ±%d ⇒ it is still the scene" % TOLLERANZA,
-          "yes" if max(fr(al_limite, SCENA_A), fr(al_limite, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "yes")
-    prova("colour shifted by ±%d ⇒ it is no longer the scene" % (TOLLERANZA + 1),
-          "yes" if max(fr(oltre, SCENA_A), fr(oltre, SCENA_B))
-          >= FRAZIONE_SCENA else "no", "no")
+    to_limit = sequence("bordo-t1", 1, lambda i: background(
+        (TOLERANCE, TOLERANCE, 255 - TOLERANCE)))[0]
+    beyond = sequence("bordo-t2", 1, lambda i: background(
+        (TOLERANCE + 1, TOLERANCE + 1, 255 - TOLERANCE - 1)))[0]
+    prova("⭐ colour shifted by EXACTLY ±%d ⇒ it is still the scene" % TOLERANCE,
+          "yes" if max(fr(to_limit, SCENE_A), fr(to_limit, SCENE_B))
+          >= FRACTION_SCENE else "no", "yes")
+    prova("colour shifted by ±%d ⇒ it is no longer the scene" % (TOLERANCE + 1),
+          "yes" if max(fr(beyond, SCENE_A), fr(beyond, SCENE_B))
+          >= FRACTION_SCENE else "no", "no")
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐ «WAS THE CLIENT ADMITTED?» — the word inside a text is NOT enough.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    for nome, testo, atteso in (
+    for label_name, body_text, expected_val in (
             ("the real line of the admitted client",
-             "   AMMESSO after 1023 ms\n", True),
-            ("⛔ CONGEDO instead of AMMESSO — the word is there, the sense is opposite",
-             "   ⛔ RuntimeError: CONGEDO instead of AMMESSO: reason 0x03\n", False),
-            ("⛔ «expected AMMESSO, arrived …» — likewise",
-             "   ⛔ RuntimeError: expected AMMESSO, arrived CONGEDO\n", False)):
-        prova(nome, e_stato_ammesso(testo), atteso)
+             "   ADMITTED after 1023 ms\n", True),
+            ("⛔ FAREWELL instead of ADMITTED — the word is there, the sense is opposite",
+             "   ⛔ RuntimeError: FAREWELL instead of ADMITTED: reason 0x03\n", False),
+            ("⛔ «expected ADMITTED, arrived …» — likewise",
+             "   ⛔ RuntimeError: expected ADMITTED, arrived FAREWELL\n", False)):
+        prova(label_name, was_admitted(body_text), expected_val)
     prova("⛔ the client said NOTHING ⇒ I do not know",
-          "unknown" if e_stato_ammesso("") is None else "a yes or a no",
+          "unknown" if was_admitted("") is None else "a yes or a no",
           "unknown")
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -1328,87 +1328,87 @@ def certifica():
     #    runs only inside the box.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    riga_vera = ("42 (remotix) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
+    real_line = ("42 (remotix) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
                  "5 5 20 0 3 0")
     prova("the work of a process, from /proc/<pid>/stat ⇒ 4.00 s of CPU",
-          cpu_dalla_riga(riga_vera, 100.0), 4.0)
+          cpu_from_line(real_line, 100.0), 4.0)
     prova("⛔ the command name WITH A SPACE does not shift the fields",
-          cpu_dalla_riga("42 (a b) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
+          cpu_from_line("42 (a b) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
                          "5 5 20 0 3 0", 100.0), 4.0)
     prova("⛔ the command name with a PARENTHESIS inside: the last one is cut",
-          cpu_dalla_riga("42 (we)ird) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
+          cpu_from_line("42 (we)ird) S 1 42 42 0 -1 4194304 100 0 0 0 300 100 "
                          "5 5 20 0 3 0", 100.0), 4.0)
     prova("⛔ a truncated line ⇒ «I do not know», and not zero",
-          cpu_dalla_riga("42 (remotix) S 1 42", 100.0), None)
+          cpu_from_line("42 (remotix) S 1 42", 100.0), None)
     prova("⛔ no line ⇒ «I do not know», and not zero",
-          cpu_dalla_riga("", 100.0), None)
-    ps_vero = ("   12 /opt/remotix/remotix --sessione c3u1\n"
-               "    3 /opt/remotix/remotix --sessione c3u1 --figlio\n"
+          cpu_from_line("", 100.0), None)
+    real_ps = ("   12 /opt/remotix/remotix --session_v c3u1\n"
+               "    3 /opt/remotix/remotix --session_v c3u1 --child\n"
                # ⛔ THE REAL LINE of the scene's browser, the one that on 22 Sep
                #    2026 ended up in the sum: the word `remotix` is in the
                #    PATH OF THE PAGE, not in the name of the program.
                "  400 /usr/lib/firefox-esr/firefox-esr --kiosk "
                "file:///opt/remotix/11-c3-scena.html\n")
     prova("⭐ the work of the ENCODER, and only its own: 12+3 ⇒ 15 s of CPU",
-          somma_lavoro(ps_vero, "remotix"), 15.0)
+          sum_work(real_ps, "remotix"), 15.0)
     prova("⭐ the child that RENAMES ITSELF «remotix-figlio» counts anyway",
-          somma_lavoro("    9 remotix-figlio --figlio-interno c3u2 4013 4013\n",
+          sum_work("    9 remotix-figlio --internal-child c3u2 4013 4013\n",
                        "remotix"), 9.0)
     prova("⛔ a name that starts the same but is another program does NOT count",
-          somma_lavoro("    9 /usr/bin/remotixaltro --x\n", "remotix"), None)
+          sum_work("    9 /usr/bin/remotixaltro --x\n", "remotix"), None)
     prova("⛔ the browser is not the encoder: it does not enter the sum",
-          somma_lavoro(ps_vero, "remotix") != somma_lavoro(ps_vero, ""), True)
+          sum_work(real_ps, "remotix") != sum_work(real_ps, ""), True)
     prova("⛔ no process with that name ⇒ «I do not know», and ⛔ NOT zero",
-          somma_lavoro(ps_vero, "kwin_wayland"), None)
+          sum_work(real_ps, "kwin_wayland"), None)
     prova("⚠ a line without the time does not throw off the sum",
-          somma_lavoro("nonunnumero /opt/remotix/remotix\n   7 "
+          sum_work("nonunnumero /opt/remotix/remotix\n   7 "
                        "/opt/remotix/remotix\n", "remotix"), 7.0)
-    prova("⛔ no line at all ⇒ «I do not know»", somma_lavoro("", "remotix"),
+    prova("⛔ no line at all ⇒ «I do not know»", sum_work("", "remotix"),
           None)
 
     # ── the pattern that chooses WHOM to stop ─────────────────────────────
     # ⛔ It is the line that on 22 September 2026 stopped the scene's browser
     #    for half a day: here it is tested on REAL lines, taken from `ps`.
-    def prende(riga):
-        return re.match(modello_del_prodotto("remotix"), riga) is not None
+    def takes(row):
+        return re.match(product_model("remotix"), row) is not None
 
     prova("⭐ the child that renames itself («remotix-figlio …») IS taken",
-          prende("remotix-figlio --figlio-interno c3u2 4013 4013 1920 1080 2 -"),
+          takes("remotix-figlio --internal-child c3u2 4013 4013 1920 1080 2 -"),
           True)
     prova("⭐ the binary called by path IS taken",
-          prende("/opt/remotix/remotix --indirizzo 0.0.0.0 --porta 8512"), True)
+          takes("/opt/remotix/remotix --address 0.0.0.0 --port 8512"), True)
     prova("⛔⛔ the SCENE'S BROWSER is not taken, and its line names "
           "«remotix»",
-          prende("/usr/lib/firefox-esr/firefox-esr --kiosk "
+          takes("/usr/lib/firefox-esr/firefox-esr --kiosk "
                  "file:///opt/remotix/11-c3-scena.html"), False)
     prova("⛔ nor the shell running the search (the pkill -f trap)",
-          prende("/bin/sh -c pgrep -u c3u2 -f '^(remotix|/[^ ]*/remotix)'"),
+          takes("/bin/sh -c pgrep -u c3u2 -f '^(remotix|/[^ ]*/remotix)'"),
           False)
     prova("⛔ nor another program that starts the same",
-          prende("/usr/bin/remotixaltro --x"), False)
+          takes("/usr/bin/remotixaltro --x"), False)
     prova("the work per second between two readings (1.0 ⇒ 3.0 in 2 s) ⇒ 1.00/s",
-          lavoro_al_secondo(1.0, 3.0, 2.0), 1.0)
+          work_per_second(1.0, 3.0, 2.0), 1.0)
     prova("⛔ a missing reading ⇒ «I do not know», and not zero",
-          lavoro_al_secondo(None, 3.0, 2.0), None)
+          work_per_second(None, 3.0, 2.0), None)
     prova("⛔ zero seconds between the two readings ⇒ «I do not know»",
-          lavoro_al_secondo(1.0, 3.0, 0.0), None)
+          work_per_second(1.0, 3.0, 0.0), None)
     prova("⚠ a backwards count is not a measurement ⇒ 0, never a negative",
-          lavoro_al_secondo(5.0, 3.0, 2.0), 0.0)
+          work_per_second(5.0, 3.0, 2.0), 0.0)
     prova("⭐ the scene in view before the graft: 27 s of waiting ⇒ at most "
           "27 s (⛔ not 6.17: the old ceiling weighted on the CPU was "
           "disproved, 22 Sep 2026)",
-          round(secondi_in_vista(27.0, 2.0, 0.10, 0.60), 2), 27.0)
+          round(seconds_in_view(27.0, 2.0, 0.10, 0.60), 2), 27.0)
     prova("⭐ if the frames arrive at the first try, it is only the step ⇒ 2.00 s",
-          round(secondi_in_vista(2.0, 2.0, 0.10, 0.60), 2), 2.0)
+          round(seconds_in_view(2.0, 2.0, 0.10, 0.60), 2), 2.0)
     prova("⛔ without the client's work no ceiling is faked ⇒ «I do not know»",
-          secondi_in_vista(27.0, 2.0, 0.10, None), None)
+          seconds_in_view(27.0, 2.0, 0.10, None), None)
     prova("⭐⭐ the window needed: 6 s in view × 30/s healthy ÷ 4/s demanded "
           "⇒ 45 s",
-          finestra_bastante(6.0, 30.0, 4.0), 45.0)
+          enough_window(6.0, 30.0, 4.0), 45.0)
     prova("⛔ without the healthy rate no window is faked ⇒ «I do not know»",
-          finestra_bastante(6.0, None, 4.0), None)
+          enough_window(6.0, None, 4.0), None)
     prova("⛔ without the seconds in view no window is faked ⇒ «I do not know»",
-          finestra_bastante(None, 30.0, 4.0), None)
+          enough_window(None, 30.0, 4.0), None)
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐⭐ THE THREE JOINTS — the exit codes, which are INVERTED and from which C13
@@ -1416,97 +1416,97 @@ def certifica():
     # ═══════════════════════════════════════════════════════════════════════
     print()
 
-    def giro(stato, motivo="", diverse=None, coppie=None, minima=None,
-             ritmo=None, fermati=None, preso=None, fotogrammi=None,
-             secondi=90.0, lavoro_visto=True, coda_frazione=1.0,
-             cpu_prima=0.60, cpu_finestra=0.60, secondi_prima=6.0):
+    def lap(state, motivo="", diverse=None, pairs=None, lowest=None,
+             rate=None, n_stopped=None, taken=None, frames=None,
+             seconds=90.0, work_seen=True, queue_fraction=1.0,
+             cpu_before=0.60, cpu_window=0.60, seconds_before=6.0):
         """⚠ The default values are those of a round **that holds**:
         so every case below breaks ONE thing only, and one knows which."""
-        return {"stato": stato, "motivo": motivo, "perche": "(fake)",
-                "diverse": diverse, "coppie": coppie, "minima": minima,
-                "ritmo": ritmo, "fermati": fermati, "pkill_ha_preso": preso,
-                "chi": "c3uX", "fotogrammi": fotogrammi, "secondi": secondi,
-                "lavoro_visto": lavoro_visto, "coda_frazione": coda_frazione,
-                "coda_diverse": 60, "coda_coppie": 60, "cpu_prima": cpu_prima,
-                "cpu_finestra": cpu_finestra, "secondi_prima": secondi_prima}
+        return {"state": state, "motivo": motivo, "reason_text": "(fake)",
+                "diverse": diverse, "pairs": pairs, "lowest": lowest,
+                "rate": rate, "n_stopped": n_stopped, "pkill_ha_preso": taken,
+                "chi": "c3uX", "frames": frames, "seconds": seconds,
+                "work_seen": work_seen, "queue_fraction": queue_fraction,
+                "coda_diverse": 60, "coda_coppie": 60, "cpu_before": cpu_before,
+                "cpu_window": cpu_window, "seconds_before": seconds_before}
 
-    sano_ok = giro("cambia", "cambia", diverse=60, coppie=60, minima=0.08,
-                   ritmo=30.0)
-    congelato = giro("congelata", "congelata", diverse=0, coppie=60)
+    healthy_ok = lap("change", "change", diverse=60, pairs=60, lowest=0.08,
+                   rate=30.0)
+    frozen_run = lap("frozen", "frozen", diverse=0, pairs=60)
     # ⭐ The round with the fault that HOLDS: the scene was moving, the encoder
     #   died, and inside the window the client no longer worked.
-    rotto_ok = giro("crollati", "ritmo-crollato", ritmo=0.4, fermati=1,
-                    preso=True, cpu_finestra=0.01)
-    giunti = [
+    broken_ok = lap("crollati", "ritmo-crollato", rate=0.4, n_stopped=1,
+                    taken=True, cpu_window=0.01)
+    joints = [
         ("repeated: healthy green + defaced frozen + lively scene ⇒ 0",
-         collauda_il_ripetuto(sano_ok, congelato), 0),
+         test_repeated(healthy_ok, frozen_run), 0),
         ("⛔ repeated: the defacement was NOT seen ⇒ 1",
-         collauda_il_ripetuto(sano_ok, giro("cambia", "cambia", 60, 60)), 1),
+         test_repeated(healthy_ok, lap("change", "change", 60, 60)), 1),
         ("⭐ repeated: the scene is TOO TIMID (1.2× the threshold) ⇒ 1",
-         collauda_il_ripetuto(giro("cambia", "cambia", 60, 60, minima=0.012,
-                                   ritmo=30.0), congelato), 1),
+         test_repeated(lap("change", "change", 60, 60, lowest=0.012,
+                                   rate=30.0), frozen_run), 1),
         ("⭐ repeated: the HEALTHY CONTROL is red ⇒ 3, ⛔ NOT 1",
-         collauda_il_ripetuto(giro("congelata", "congelata", 0, 60), congelato), 3),
+         test_repeated(lap("frozen", "frozen", 0, 60), frozen_run), 3),
         ("repeated: the healthy one could not look ⇒ 3",
-         collauda_il_ripetuto(giro("non-lo-so", "palco-non-nato"), congelato), 3),
+         test_repeated(lap("non-lo-so", "palco-non-nato"), frozen_run), 3),
         ("⭐ repeated: the DEFACED one could not be judged ⇒ 3, not 1",
-         collauda_il_ripetuto(sano_ok, giro("non-lo-so", "niente-coppie")), 3),
+         test_repeated(healthy_ok, lap("non-lo-so", "niente-coppie")), 3),
         ("stopped: healthy green + fault collapsed + signature ⇒ 0",
-         collauda_il_fermo(sano_ok, rotto_ok), 0),
+         test_stopped(healthy_ok, broken_ok), 0),
         ("⛔ stopped: with the encoder stopped the frames arrive anyway ⇒ 1",
-         collauda_il_fermo(sano_ok, giro("cambia", "cambia", ritmo=29.0,
-                                         fermati=1, preso=True,
-                                         cpu_finestra=0.01)), 1),
+         test_stopped(healthy_ok, lap("change", "change", rate=29.0,
+                                         n_stopped=1, taken=True,
+                                         cpu_window=0.01)), 1),
         ("⛔ stopped: the GROSS rate drops little (30 ⇒ 12, above the share) ⇒ 1",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=12.0, fermati=1, preso=True,
-                                         cpu_finestra=0.01)), 1),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=12.0, n_stopped=1, taken=True,
+                                         cpu_window=0.01)), 1),
         ("⭐ stopped: the client STILL WORKS inside the window ⇒ 1",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=0.30)), 1),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=0.30)), 1),
         ("⚠ stopped: `pkill` took nothing ⇒ 3",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=0, preso=False)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=0, taken=False)), 3),
         ("⭐ stopped: the HEALTHY CONTROL is red ⇒ 3, ⛔ NOT 1",
-         collauda_il_fermo(giro("crollati", "ritmo-crollato", ritmo=0.1),
-                           rotto_ok), 3),
+         test_stopped(lap("crollati", "ritmo-crollato", rate=0.1),
+                           broken_ok), 3),
         # ⭐⭐⭐ THE MOMENT OF THE GRAFT — the cases that on 27 August 2026 were
         #     missing, and they are the ones for which the round exited 3.
         ("⭐⭐ stopped: the frames had NEVER been seen arriving ⇒ 3, ⛔ not 1",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=0.01,
-                                         lavoro_visto=False)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=0.01,
+                                         work_seen=False)), 3),
         ("⭐⭐ stopped: the last frames delivered were IDENTICAL "
          "(graft too early) ⇒ 3",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=0.01,
-                                         coda_frazione=0.0)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=0.01,
+                                         queue_fraction=0.0)), 3),
         ("⭐ stopped: I do not know whether the last delivered ones changed ⇒ 3",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=0.01,
-                                         coda_frazione=None)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=0.01,
+                                         queue_fraction=None)), 3),
         ("⭐⭐ stopped: the WINDOW was too short for this rate ⇒ 3, not 1",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=0.01, secondi=30.0)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=0.01, seconds=30.0)), 3),
         ("⭐ stopped: I do not know how much the client worked in the window ⇒ 3",
-         collauda_il_fermo(sano_ok, giro("crollati", "ritmo-crollato",
-                                         ritmo=0.4, fermati=1, preso=True,
-                                         cpu_finestra=None)), 3),
+         test_stopped(healthy_ok, lap("crollati", "ritmo-crollato",
+                                         rate=0.4, n_stopped=1, taken=True,
+                                         cpu_window=None)), 3),
         ("⭐ still scene: the round happened and did not give red ⇒ 0",
-         collauda_la_scena_ferma(giro("non-lo-so", "scena-ferma",
-                                      fotogrammi=1, secondi=60.0)), 0),
+         test_scene_stop(lap("non-lo-so", "still-scene",
+                                      frames=1, seconds=60.0)), 0),
         ("⛔ still scene: the mesh gave RED ⇒ 1 (the control failed)",
-         collauda_la_scena_ferma(giro("crollati", "zero-fotogrammi")), 1),
+         test_scene_stop(lap("crollati", "zero-fotogrammi")), 1),
         ("⚠ still scene: the stage was not born ⇒ 3, ⛔ not a successful control",
-         collauda_la_scena_ferma(giro("non-lo-so", "palco-non-nato")), 3),
+         test_scene_stop(lap("non-lo-so", "palco-non-nato")), 3),
     ]
-    for nome, (e, _righe), atteso in giunti:
-        prova(nome, e, atteso)
+    for label_name, (e, _lines), expected_val in joints:
+        prova(label_name, e, expected_val)
 
     shutil.rmtree(lav, ignore_errors=True)
     # ═══════════════════════════════════════════════════════════════════════
@@ -1520,8 +1520,8 @@ def certifica():
     #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    guai_gr, quanti_gr = casa_di_c1().certifica_gruppi("C3")
-    guai += guai_gr
+    group_troubles, how_many_groups = c1_home().certify_groups("C3")
+    troubles += group_troubles
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐⭐ THE SHARED PROVISIONING — ⛔ the case that on 27 August 2026 was missing,
@@ -1531,29 +1531,29 @@ def certifica():
     #   a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    casa_pr = casa_della_provvista()
-    if casa_pr is None:
+    home_pr = provisioning_home()
+    if home_pr is None:
         print("  NO   ⛔ I cannot find `11-c2-…py`: the provisioning cannot be certified")
-        guai += 1
-        quanti_pr = 0
+        troubles += 1
+        how_many_pr = 0
     else:
-        guai_pr, quanti_pr = casa_pr.certifica_la_provvista("C3", "c3u")
-        guai += guai_pr
+        troubles_pr, how_many_pr = home_pr.certify_provisioning("C3", "c3u")
+        troubles += troubles_pr
 
     print()
-    if guai:
-        print("⛔ C3's judges are NOT reliable: %d cases wrong" % guai)
+    if troubles:
+        print("⛔ C3's judges are NOT reliable: %d cases wrong" % troubles)
         return 1
     print("⭐ the judges see the scene changing and catch the frozen "
           "image, the four thresholds fall where they say (at the edge),")
-    print("   ⭐ «AMMESSO» is a line and not a word, ⚠ on a still scene a red "
+    print("   ⭐ «ADMITTED» is a line and not a word, ⚠ on a still scene a red "
           "never comes out, ⛔ and «I do not know» is not zero,")
     print("   ⭐⭐ and the THREE JOINTS — the exit codes of the two grafted faults and "
           "of the negative control — say 0, 1 and 3 where they must (§1.52)")
     print("   ⭐ and the CARD'S GROUPS: a tenant that cannot see makes it say "
           "«I could not look», ⛔ never red")
     # ⛔ The provisioning line is printed ONLY if the real cases ran.
-    if quanti_pr >= 4:
+    if how_many_pr >= 4:
         print("   ⭐⭐ and THE PROVISIONING: a /tmp/mozilla of another mesh I do not "
               "touch, and my tenant writes anyway — ⛔ never red")
     else:
@@ -1565,38 +1565,38 @@ def certifica():
     return 0
 
 
-def sfregia_ripetendo(elenco):
+def scar_repeating(listing):
     """⭐ THE «repeated frame» GRAFTED FAULT, and it fits in one line.
 
     ⛔ **The in-memory copy** of the list is defaced: the stream on disk is not
-       touched.  It is the same shape as C9 (`--togli-nome`), and it has the merit that
+       touched.  It is the same shape as C9 (`--remove-name`), and it has the merit that
        the healthy control and the fault run **on the same data** ⇒ the difference
        cannot come from a different round.
     """
-    if not elenco:
-        return elenco
-    return [elenco[0]] * len(elenco)
+    if not listing:
+        return listing
+    return [listing[0]] * len(listing)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE TERRAIN AND THE MOVES — ⚠ the same as C2, and for the same reasons
 # ═══════════════════════════════════════════════════════════════════════════
-def sh(comando, secondi=120):
+def sh(command, seconds=120):
     try:
-        return subprocess.run(["/bin/sh", "-c", comando],
-                              capture_output=True, text=True, timeout=secondi)
+        return subprocess.run(["/bin/sh", "-c", command],
+                              capture_output=True, text=True, timeout=seconds)
     except subprocess.TimeoutExpired:
-        return subprocess.CompletedProcess(comando, 124, "", "expired")
+        return subprocess.CompletedProcess(command, 124, "", "expired")
 
 
-def quanti_schermi(testo):
+def how_many_screens(body_text):
     """⛔ `None` = I do not know; `0` = I asked and there is none."""
-    if testo is None:
+    if body_text is None:
         return None
-    return len(FIRMA_OUTPUT.findall(testo))
+    return len(OUTPUT_SIGNATURE.findall(body_text))
 
 
-def crea(chi, parola):
+def create(chi, password):
     """⛔ It is deleted BEFORE creating it: «from zero» includes «from zero with respect to
        myself of yesterday» (`[M]` C1, 26 August 2026)."""
     sh("loginctl terminate-user %s 2>/dev/null; pkill -KILL -u %s 2>/dev/null; "
@@ -1612,23 +1612,23 @@ def crea(chi, parola):
     #   `fasi/10-…` §7.4): this mesh would measure the darkness and call it
     #   a product defect.  ⇒ We do not measure: the caller exits **3**.
     r = sh("useradd -m -s /bin/bash %s && "
-           "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
+           "printf '%s:%s\n' | chpasswd" % (chi, chi, password))
     if r.returncode != 0:
         return False, (r.stderr or "").strip()[:120]
-    e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
+    e_gr, why_groups = ensure_groups(chi, prefix="      ")
     if e_gr != 0:
-        return False, perche_gr
+        return False, why_groups
     # ⭐⭐ AND THE PROVISIONING, right after the `useradd -m` that copies the skeleton:
     #    it is there that the tenant is born with `~/.cache` pointing at `/tmp`, ⇒ it is there
     #    that it is given its own.  ⛔ Before switching anything on.
-    fatto_cura, perche_cura = cura_della_provvista(chi)
-    if not fatto_cura:
-        return False, perche_cura
+    done_fix, why_fix = provisioning_fix(chi)
+    if not done_fix:
+        return False, why_fix
     return True, ""
 
 
-def sgombra(chi, attesa):
-    # ⛔ First it is WOKEN UP: with `--codificatore-fermo` there is a process in state
+def clear_out(chi, wait):
+    # ⛔ First it is WOKEN UP: with `--stopped-encoder` there is a process in state
     #    T, and a stopped process does not go away by itself.  ⚠ And ONLY one's own
     #    stuff is cleared, by name (phase 10 §7.3).
     sh("pkill -CONT -u %s 2>/dev/null" % chi)
@@ -1649,8 +1649,8 @@ def sgombra(chi, attesa):
     time.sleep(1.0)
     sh("pkill -KILL -u %s 2>/dev/null" % chi)
     sh("pkill -KILL -f 'runuser -u [%s]%s ' 2>/dev/null" % (chi[0], chi[1:]))
-    scadenza = time.time() + attesa
-    while time.time() < scadenza:
+    expiry = time.time() + wait
+    while time.time() < expiry:
         viva = sh("loginctl show-user %s >/dev/null 2>&1" % chi).returncode == 0
         proc = sh("pgrep -u %s >/dev/null 2>&1" % chi).returncode == 0
         if not viva and not proc:
@@ -1670,7 +1670,7 @@ def il_socket_di(chi):
     return (rtd, d) if d else (rtd, None)
 
 
-def chiedi_al_compositore(chi):
+def ask_compositor(chi):
     """⭐ We ask the COMPOSITOR whether there is a screen, not the product.
 
     ⛔ `[R]` the line *«⛔ ZERO MONITOR»* of `src/sessione.c:345-348` the product
@@ -1685,20 +1685,20 @@ def chiedi_al_compositore(chi):
         return None, ("in %s there is no wayland socket: the compositor has not "
                       "been born (yet)" % rtd)
     r = sh("runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
-           "wayland-info" % (chi, rtd, display), secondi=60)
+           "wayland-info" % (chi, rtd, display), seconds=60)
     if r.returncode != 0 and not r.stdout:
         return None, ("wayland-info did not speak: %s"
                       % ((r.stderr or "").strip().replace("\n", " ")[:90]))
-    return quanti_schermi(r.stdout), ""
+    return how_many_screens(r.stdout), ""
 
 
-def accendi_la_scena(chi, a):
+def turn_on_scene(chi, a):
     """Switches on the declared scene INSIDE the tenant's session."""
     rtd, display = il_socket_di(chi)
     if display is None:
         return None, ("in %s there is no wayland socket: there is no "
                       "compositor the scene can talk to" % rtd)
-    args = a.argomenti % {"pagina": a.scena}
+    args = a.call_args % {"page_v": a.scene}
     # ⛔⛔ `setsid`, AND IT IS NOT AN ORNAMENT — 22 September 2026.
     #     Put in the background with `&`, the scene ends up in a BACKGROUND
     #     process group of the terminal that launched the bench (the net runs from `ssh
@@ -1715,18 +1715,18 @@ def accendi_la_scena(chi, a):
     sh("setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
        "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
        "%s %s < /dev/null > /home/%s/.c3-scena.log 2>&1 &"
-       % (chi, rtd, display, chi, a.applicazione, args, chi), secondi=30)
+       % (chi, rtd, display, chi, a.application, args, chi), seconds=30)
     return display, ""
 
 
-def la_scena_e_viva(chi, applicazione):
+def scene_is_alive(chi, application):
     """⚠ It does not prove that the scene MOVES: it proves that the program that
        moves it is not dead.  ⛔ And the difference is declared at the top of the file."""
-    r = sh("pgrep -u %s -f %s >/dev/null 2>&1" % (chi, applicazione))
+    r = sh("pgrep -u %s -f %s >/dev/null 2>&1" % (chi, application))
     return r.returncode == 0
 
 
-def modello_del_prodotto(nome):
+def product_model(label_name):
     """⭐ The expression that catches the processes OF THE PRODUCT and nothing else.
 
     ⛔⛔ And here there are two names for the same thing, which on 22 September 2026
@@ -1745,22 +1745,22 @@ def modello_del_prodotto(nome):
         `/opt/remotix/remotix …`  the binary called by path
     ⚠ And the anchor also protects from itself: the command line of the shell that
       runs this search starts with `/bin/sh`, so it does not fish itself out
-      (the `pkill -f` trap — see `sgombra`).
+      (the `pkill -f` trap — see `clear_out`).
     """
-    return "^(%s|/[^ ]*/%s)([ -]|$)" % (nome, nome)
+    return "^(%s|/[^ ]*/%s)([ -]|$)" % (label_name, label_name)
 
 
-def pid_del_codificatore(chi, nome):
+def encoder_pid(chi, label_name):
     """The pids of the product's processes that belong to «chi».  ⛔ Never others."""
-    r = sh("pgrep -u %s -f '%s'" % (chi, modello_del_prodotto(nome)))
+    r = sh("pgrep -u %s -f '%s'" % (chi, product_model(label_name)))
     pid = []
-    for riga in (r.stdout or "").split():
-        if riga.isdigit():
-            pid.append(riga)
+    for row in (r.stdout or "").split():
+        if row.isdigit():
+            pid.append(row)
     return pid
 
 
-def ferma_il_codificatore(chi, nome):
+def stop_encoder(chi, label_name):
     """⛔ THE REAL FAULT: SIGSTOP to the tenant's process that delivers.
 
     ⚠ And the name must be stated right: **it does not stop «the encoder alone»**, it
@@ -1775,24 +1775,24 @@ def ferma_il_codificatore(chi, nome):
     #   the difference between «I stopped the encoder» and «there was nothing to
     #   stop».  ⛔ Throwing it away would mean trusting a command without
     #   looking at whether it was run (`LEZIONI.md` §1.46).
-    pid = pid_del_codificatore(chi, nome)
-    preso = bool(pid)
+    pid = encoder_pid(chi, label_name)
+    taken = bool(pid)
     for p in pid:
         sh("kill -STOP %s 2>/dev/null" % p)
     time.sleep(1.0)
     # ⭐⭐ AND **THOSE** PIDS ARE VERIFIED, not «someone in state T»: it is the signature of the
     #     fault (`LEZIONI.md` §1.52), and a fault that could not be grafted
     #     must be able to say it was not there.
-    fermati = []
+    n_stopped = []
     for p in pid:
         s = sh("ps -o stat=,comm= -p %s" % p)
-        pezzi = (s.stdout or "").split(None, 1)
-        if len(pezzi) == 2 and pezzi[0].startswith("T"):
-            fermati.append(pezzi[1].strip())
-    return len(fermati), fermati, preso
+        pieces = (s.stdout or "").split(None, 1)
+        if len(pieces) == 2 and pieces[0].startswith("T"):
+            n_stopped.append(pieces[1].strip())
+    return len(n_stopped), n_stopped, taken
 
 
-def estrai_i_fotogrammi(flusso, dove, larghezza, altezza, tetto=900.0):
+def extract_frames(flow, dove, width_px, height_px, ceiling=900.0):
     """From the H.264 stream taken from the wire pulls out ALL the frames, scaled down.
 
     ⛔ They are scaled down on purpose: at 1920x1080 a thousand frames are a
@@ -1808,34 +1808,34 @@ def estrai_i_fotogrammi(flusso, dove, larghezza, altezza, tetto=900.0):
         shutil.rmtree(dove, ignore_errors=True)
     os.makedirs(dove, exist_ok=True)
     r = sh("ffmpeg -hide_banner -loglevel error -i %s -vsync 0 -vf scale=%d:%d "
-           "-y %s/f-%%05d.png" % (flusso, larghezza, altezza, dove),
-           secondi=tetto)
-    elenco = sorted(glob.glob(os.path.join(dove, "f-*.png")))
+           "-y %s/f-%%05d.png" % (flow, width_px, height_px, dove),
+           seconds=ceiling)
+    listing = sorted(glob.glob(os.path.join(dove, "f-*.png")))
     # ⛔⛔ AND HERE THE EXIT CODE **IS LOOKED AT**, and it is the reverse of §1.50.
     #    There the exit code had to be ignored because the work was
     #    **done** (the PNG was there and was right).  ⚠ Here an expiry leaves
     #    a **truncated** list, which looks exactly like a lean
     #    grab: ⛔ the rate would come out wrong and the mesh would say «collapsed»
     #    on a healthy session.
-    return (elenco or None), (r.returncode == 124)
+    return (listing or None), (r.returncode == 124)
 
 
-def quanti_fotogrammi_dice_il_cliente(coda):
-    quanti = None
-    for riga in coda.splitlines():
-        if "[vid]" in riga and "no frame" not in riga:
+def client_frame_count(queue):
+    how_many = None
+    for row in queue.splitlines():
+        if "[vid]" in row and "no frame" not in row:
             try:
-                quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
+                how_many = int(row.split("[vid]", 1)[1].strip().split()[0])
             except Exception:
                 pass
-    return quanti
+    return how_many
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ONE ROUND
 # ═══════════════════════════════════════════════════════════════════════════
-def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
-    """`modo` = None (healthy) | "fermo" (SIGSTOP to the encoder).
+def one_round(chi, manner, a, assessor, reader, healthy_rate=None):
+    """`manner` = None (healthy) | "stopped" (SIGSTOP to the encoder).
 
     ⛔⛔ THE ORDER OF THE MOVES — and it is the reason why this mesh can be
          written today:
@@ -1848,10 +1848,10 @@ def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
            4. the declared scene is switched on
            5. ⭐⭐ we wait for the frames to **really arrive** — not a
               fixed time: the client's work is looked at
-              (`aspetta_che_i_fotogrammi_arrivino`)
+              (`wait_for_frames`)
            6. (with the fault: ⛔ SIGSTOP **HERE**) ⇒ ⭐ the scene is there, it moves, and the
               frames are arriving: **then** the encoder dies
-           7. the measuring window is opened and watched for `--finestra` seconds
+           7. the measuring window is opened and watched for `--win` seconds
            8. the client finishes and writes the stream
 
     ⛔⛔ AND POINT 6 IS A CURE OF 27 AUGUST 2026, not a detail.
@@ -1865,31 +1865,31 @@ def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
           wrong moment of the story.  The guardian was not touched: the graft
           was moved.
     """
-    esito = {"chi": chi, "modo": modo or "sano", "stato": "non-lo-so",
-             "perche": "", "fotogrammi": None, "ritmo": None, "coppie": None,
-             "diverse": None, "palco_s": None, "schermi": None,
-             "motivo": "", "scena_viva": None, "scena_viva_prima": None,
-             "frazione_scena": None, "fermati": None, "pkill_ha_preso": None,
-             "elenco": None, "secondi": None, "minima": None, "massima": None,
+    outcome = {"chi": chi, "manner": manner or "healthy", "state": "non-lo-so",
+             "reason_text": "", "frames": None, "rate": None, "pairs": None,
+             "diverse": None, "palco_s": None, "screens": None,
+             "motivo": "", "scene_alive": None, "scena_viva_prima": None,
+             "frazione_scena": None, "n_stopped": None, "pkill_ha_preso": None,
+             "listing": None, "seconds": None, "lowest": None, "max_dims": None,
              # ⭐ the new facts of 27 August 2026 — see the order of the moves
-             "lavoro_visto": None, "cpu_prima": None, "cpu_finestra": None,
-             "secondi_prima": None, "coda_coppie": None, "coda_diverse": None,
-             "coda_frazione": None, "finestra_pretesa": None}
+             "work_seen": None, "cpu_before": None, "cpu_window": None,
+             "seconds_before": None, "coda_coppie": None, "coda_diverse": None,
+             "queue_fraction": None, "finestra_pretesa": None}
 
-    fatto, perche = crea(chi, a.parola)
-    if not fatto:
-        esito["motivo"] = "inquilino-non-creato"
-        esito["perche"] = "I could not create «%s»: %s" % (chi, perche)
-        return esito
+    finished, reason_text = create(chi, a.password)
+    if not finished:
+        outcome["motivo"] = "inquilino-non-creato"
+        outcome["reason_text"] = "I could not create «%s»: %s" % (chi, reason_text)
+        return outcome
 
-    lavoro = os.path.join(a.lavoro, chi)
-    os.makedirs(lavoro, exist_ok=True)
-    flusso = os.path.join(lavoro, "presa.264")
-    if os.path.exists(flusso):
-        os.unlink(flusso)
+    work = os.path.join(a.work, chi)
+    os.makedirs(work, exist_ok=True)
+    flow = os.path.join(work, "take.264")
+    if os.path.exists(flow):
+        os.unlink(flow)
 
-    resta = a.attesa_palco + a.attesa_scena + a.finestra + a.coda
-    partito = time.time()
+    stays = a.wait_stage + a.wait_scene + a.win + a.queue
+    started = time.time()
     # ⛔⛔ AND THE CLIENT'S OUTPUT GOES INTO A FILE, NOT INTO A PIPE — and it is not
     #     style: it is a fault avoided.  This client stays on for minutes
     #     **while the bench does other things**, and with `-u` it writes without restraint.  A
@@ -1899,57 +1899,57 @@ def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
     #     blaming the product.
     # ⚠ The examples do not have this problem because they use `subprocess.run`,
     #   which empties the pipes while it waits.  Here we do not wait: we work.
-    detto_file = os.path.join(lavoro, "cliente.log")
-    detto_fd = open(detto_file, "w")
-    cliente = subprocess.Popen(
-        ["python3", "-u", a.cliente,
-         "--indirizzo", a.indirizzo, "--porta", str(a.porta),
-         "--utente", chi, "--parola", a.parola,
-         "--video-scrivi", flusso, "--resta", str(resta)],
-        stdout=detto_fd, stderr=subprocess.STDOUT, text=True)
+    out_file = os.path.join(work, "cliente.log")
+    out_fd = open(out_file, "w")
+    client = subprocess.Popen(
+        ["python3", "-u", a.client,
+         "--address", a.address, "--port", str(a.port),
+         "--username", chi, "--password", a.password,
+         "--video-write", flow, "--stays", str(stays)],
+        stdout=out_fd, stderr=subprocess.STDOUT, text=True)
 
-    def chiudi_il_cliente(scadenza):
+    def close_client(expiry):
         """Waits for the client to finish, and returns what it said.
 
         ⛔ It always returns a string: if the file cannot be read it is an
-           «I could not look», and the caller sees it as «not AMMESSO».
+           «I could not look», and the caller sees it as «not ADMITTED».
         """
         try:
-            cliente.wait(timeout=scadenza)
+            client.wait(timeout=expiry)
         except subprocess.TimeoutExpired:
-            cliente.kill()
-            cliente.wait()
-        detto_fd.close()
+            client.kill()
+            client.wait()
+        out_fd.close()
         try:
-            with open(detto_file, "r", errors="replace") as f:
+            with open(out_file, "r", errors="replace") as f:
                 return f.read()
         except OSError:
             return ""
 
-    schermi = None
+    screens = None
     motivo = "I was never able to ask"
-    scadenza = time.time() + a.attesa_palco
-    while time.time() < scadenza:
-        if cliente.poll() is not None:
+    expiry = time.time() + a.wait_stage
+    while time.time() < expiry:
+        if client.poll() is not None:
             motivo = "the client went away before a screen was born"
             break
-        schermi, motivo = chiedi_al_compositore(chi)
-        if schermi is not None and schermi >= OUTPUT_MINIMI:
-            esito["palco_s"] = round(time.time() - partito, 1)
+        screens, motivo = ask_compositor(chi)
+        if screens is not None and screens >= MIN_OUTPUTS:
+            outcome["palco_s"] = round(time.time() - started, 1)
             break
-        schermi = None
+        screens = None
         time.sleep(2.0)
-    esito["schermi"] = schermi
+    outcome["screens"] = screens
 
-    if schermi is None or schermi < OUTPUT_MINIMI:
-        esito["motivo"] = "palco-non-nato"
-        esito["perche"] = ("in %.0f s the compositor did not announce any "
+    if screens is None or screens < MIN_OUTPUTS:
+        outcome["motivo"] = "palco-non-nato"
+        outcome["reason_text"] = ("in %.0f s the compositor did not announce any "
                            "screen (%s) ⇒ there was nothing to capture"
-                           % (a.attesa_palco, motivo or "?"))
-        cliente.kill()
-        chiudi_il_cliente(30)
-        sgombra(chi, a.attesa_sgombero)
-        return esito
+                           % (a.wait_stage, motivo or "?"))
+        client.kill()
+        close_client(30)
+        clear_out(chi, a.wait_clearout)
+        return outcome
 
     # ── from here down there is the switching on of the scene and — with the fault — the graft
     # ⛔⛔ AND WE STAY INSIDE A `try/finally`: between the injection and the cleanup there
@@ -1960,102 +1960,102 @@ def un_giro(chi, modo, a, giudice, lettore, ritmo_sano=None):
     #       happened: waking someone who is not asleep costs nothing,
     #       forgetting it a single time does.
     #     ⚠ And the `try` sits HERE and not lower down on purpose: the graft moved
-    #       down into `_il_resto_del_giro` (step 6), but the safety net that
+    #       down into `_rest_of_round` (step 6), but the safety net that
     #       wakes it up must be wider than it.
     try:
-        return _il_resto_del_giro(chi, modo, a, giudice, lettore, esito,
-                                  cliente, chiudi_il_cliente, flusso, lavoro,
-                                  partito, resta, ritmo_sano)
+        return _rest_of_round(chi, manner, a, assessor, reader, outcome,
+                                  client, close_client, flow, work,
+                                  started, stays, healthy_rate)
     finally:
-        if modo == "fermo":
+        if manner == "stopped":
             sh("pkill -CONT -u %s 2>/dev/null" % chi)
 
 
-def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
-                       chiudi_il_cliente, flusso, lavoro, partito, resta,
-                       ritmo_sano=None):
+def _rest_of_round(chi, manner, a, assessor, reader, outcome, client,
+                       close_client, flow, work, started, stays,
+                       healthy_rate=None):
     """The part of the round that sits inside the injection's `try/finally`."""
     # ── 4. the scene ───────────────────────────────────────────────────────
-    if not a.scena_ferma:
-        fermo, attesi = aspetta_che_il_desktop_si_fermi(
-            lambda: cpu_del_codificatore(chi, a.nome_figlio),
-            a.attesa_scena, a.soglia_cpu, a.passo_cpu)
-        esito["desktop_fermo_s"] = attesi
+    if not a.still_scene:
+        stopped, expected_vals = wait_desktop_settled(
+            lambda: encoder_cpu(chi, a.child_name),
+            a.wait_scene, a.cpu_threshold, a.cpu_step)
+        outcome["desktop_fermo_s"] = expected_vals
         print("           %s the desktop %s before the scene (%.1f s)"
-              % ("⭐" if fermo else "⚠",
-                 "is still" if fermo else ("did NOT become still within the ceiling"
-                                          if fermo is False else
-                                          "I do not know whether it is still"), attesi))
-        display, err = accendi_la_scena(chi, a)
+              % ("⭐" if stopped else "⚠",
+                 "is still" if stopped else ("did NOT become still within the ceiling"
+                                          if stopped is False else
+                                          "I do not know whether it is still"), expected_vals))
+        display, err = turn_on_scene(chi, a)
         if display is None:
-            esito["motivo"] = "scena-non-accesa"
-            esito["perche"] = "I could not switch on the scene: %s" % err
-            cliente.kill()
-            chiudi_il_cliente(30)
-            sgombra(chi, a.attesa_sgombero)
-            return esito
+            outcome["motivo"] = "scena-non-accesa"
+            outcome["reason_text"] = "I could not switch on the scene: %s" % err
+            client.kill()
+            close_client(30)
+            clear_out(chi, a.wait_clearout)
+            return outcome
         # ── 5. ⭐⭐ WE WAIT FOR THE FRAMES TO REALLY ARRIVE ─────────────────
-        #    ⛔ And not a fixed time: `--attesa-scena` turns from a wait into a CEILING.
+        #    ⛔ And not a fixed time: `--wait-scene` turns from a wait into a CEILING.
         #    ⚠ The moment the scene starts painting is the one that
         #      decides everything (the graft, and how many frames dirty the gross
         #      rate), and by the clock one does not know it.
-        visto, cpu_al_s, quanto = aspetta_che_i_fotogrammi_arrivino(
-            lambda: cpu_del_codificatore(chi, a.nome_figlio),
-            a.attesa_scena, a.soglia_cpu, a.passo_cpu)
-        esito["lavoro_visto"] = visto
-        esito["cpu_prima"] = cpu_al_s
-        esito["secondi_prima"] = secondi_in_vista(
-            quanto, a.passo_cpu, a.soglia_cpu, cpu_al_s) if visto else None
+        seen_v, cpu_al_s, how_much = wait_for_frames(
+            lambda: encoder_cpu(chi, a.child_name),
+            a.wait_scene, a.cpu_threshold, a.cpu_step)
+        outcome["work_seen"] = seen_v
+        outcome["cpu_before"] = cpu_al_s
+        outcome["seconds_before"] = seconds_in_view(
+            how_much, a.cpu_step, a.cpu_threshold, cpu_al_s) if seen_v else None
         print("           %s the frames arrive: the encoder burns %s "
               "CPU/s (I demand %.2f) after %.1f s · scene in view before "
               "the graft: at most %s s"
-              % ("⭐" if visto else "⚠",
+              % ("⭐" if seen_v else "⚠",
                  "unknown" if cpu_al_s is None else "%.2f" % cpu_al_s,
-                 a.soglia_cpu, quanto,
-                 "unknown" if esito["secondi_prima"] is None
-                 else "%.1f" % esito["secondi_prima"]))
+                 a.cpu_threshold, how_much,
+                 "unknown" if outcome["seconds_before"] is None
+                 else "%.1f" % outcome["seconds_before"]))
         # ⭐ PHASE 12 (19 Sep 2026) — A BREATH BEFORE THE GRAFT, and it is COUNTED.
         #   `[M]` On KDE the SIGSTOP 2 s after the encoder's work fell
         #   halfway through the opening of the window (scene at 58 % of the colour and a
         #   black strip): the last frame was not «the scene» and the mesh
-        #   did not judge.  ⇒ We wait `--respiro-innesco` more, on every
+        #   did not judge.  ⇒ We wait `--respite-trigger` more, on every
         #   desktop, ⛔ and it is ADDED to the seconds of scene in view: the rate is
-        #   gross (`finestra_bastante`), and an uncounted breath would be a
+        #   gross (`enough_window`), and an uncounted breath would be a
         #   fault that stops being visible without saying so.
-        if visto and a.respiro_innesco > 0:
-            time.sleep(a.respiro_innesco)
-            if esito["secondi_prima"] is not None:
-                esito["secondi_prima"] += a.respiro_innesco
+        if seen_v and a.respite_trigger > 0:
+            time.sleep(a.respite_trigger)
+            if outcome["seconds_before"] is not None:
+                outcome["seconds_before"] += a.respite_trigger
             print("           ⭐ breath before the graft: %.1f s (scene in view, "
-                  "counted: at most %.1f s)" % (a.respiro_innesco,
-                                               esito["secondi_prima"] or -1))
-        esito["scena_viva_prima"] = la_scena_e_viva(chi, a.applicazione)
+                  "counted: at most %.1f s)" % (a.respite_trigger,
+                                               outcome["seconds_before"] or -1))
+        outcome["scena_viva_prima"] = scene_is_alive(chi, a.application)
     else:
         # ⚠ THE NEGATIVE CONTROL: nothing is switched on, and we look at a
         #   desktop that has no reason to change.  ⛔ Here the wait
         #   stays by the clock: there is no frame to wait for, and
         #   waiting for one would mean waiting for the ceiling for nothing.
-        time.sleep(a.attesa_scena)
+        time.sleep(a.wait_scene)
 
     # ── 6. ⛔⛔ THE REAL FAULT, AND NOW IT IS AT THE RIGHT MOMENT OF THE STORY ─
     #    ⭐ The scene is on, the program moving it is alive, and the
     #      frames were seen arriving: **then** the encoder dies.
     #    ⇒ It is this question the mesh exists to ask — «do the frames
     #      stop?» — and before 27 August 2026 it was not being asked.
-    if modo == "fermo":
-        quanti, chi_fermato, preso = ferma_il_codificatore(chi, a.nome_figlio)
-        esito["fermati"] = quanti
-        esito["pkill_ha_preso"] = preso
+    if manner == "stopped":
+        how_many, who_stopped, taken = stop_encoder(chi, a.child_name)
+        outcome["n_stopped"] = how_many
+        outcome["pkill_ha_preso"] = taken
         print("           ⛔ `pkill -STOP` %s · processes in state T: %d%s"
-              % ("took hold" if preso else "⚠ did NOT take hold", quanti,
-                 (" (%s)" % ", ".join(sorted(set(chi_fermato))[:6]))
-                 if chi_fermato else ""))
+              % ("took hold" if taken else "⚠ did NOT take hold", how_many,
+                 (" (%s)" % ", ".join(sorted(set(who_stopped))[:6]))
+                 if who_stopped else ""))
 
     # ⭐⭐ AND THE WINDOW GROWS AS MUCH AS NEEDED — 22 September 2026.
     #
     # ⛔ The rate of this mesh is GROSS: inside the window there are also the
     #    frames born BEFORE the graft, and as long as they alone are enough to keep it
-    #    above the threshold the fault cannot bite.  `finestra_bastante()` knows
+    #    above the threshold the fault cannot bite.  `enough_window()` knows
     #    from which second on it can bite, and until now the bench said so **after
     #    having measured**, with a «relaunch with --finestra-guasto N» that nobody
     #    relaunched: in the net a 3 came out — «I could not look» — and the
@@ -2065,51 +2065,51 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
     #   scene itself stopped moving and the rate collapsed much earlier.
     #   ⇒ With the graft cured, this came to the surface.
     # ⭐ The number is not invented: it is the one the bench printed in its
-    #   advice (`serve × 2 + 10`), and it is always said out loud.
-    finestra = a.finestra
-    if modo == "fermo":
-        serve = finestra_bastante(esito.get("secondi_prima"), ritmo_sano,
-                                  a.ritmo_minimo)
-        chiesta_a_mano = abs(a.finestra_guasto - FINESTRA_GUASTO) > 0.001
-        if serve is not None and finestra <= serve and not chiesta_a_mano:
-            finestra = min(serve * 1.25 + 10.0, FINESTRA_GUASTO_TETTO)
+    #   advice (`needs × 2 + 10`), and it is always said out loud.
+    win = a.win
+    if manner == "stopped":
+        needs = enough_window(outcome.get("seconds_before"), healthy_rate,
+                                  a.minimum_rate)
+        requested_manually = abs(a.fault_window - FAULT_WINDOW) > 0.001
+        if needs is not None and win <= needs and not requested_manually:
+            win = min(needs * 1.25 + 10.0, FAULT_WINDOW_CAP)
             print("           ⭐ the window grows to %.0f s: with the healthy "
                   "rate of %.1f/s and %.1f s of scene in view before "
                   "the graft, below %.0f s the fault could not "
                   "bite%s"
-                  % (finestra, ritmo_sano, esito.get("secondi_prima") or -1,
-                     serve,
+                  % (win, healthy_rate, outcome.get("seconds_before") or -1,
+                     needs,
                      " (⚠ CEILING: and it is not enough)"
-                     if finestra >= FINESTRA_GUASTO_TETTO
-                     and serve * 1.25 + 10.0 > FINESTRA_GUASTO_TETTO else ""))
-        elif serve is not None and finestra <= serve:
+                     if win >= FAULT_WINDOW_CAP
+                     and needs * 1.25 + 10.0 > FAULT_WINDOW_CAP else ""))
+        elif needs is not None and win <= needs:
             print("           ⚠ the window asked by hand (%.0f s) is "
                   "shorter than the %.0f s that would be needed: I leave it as you "
                   "asked, and the judgement will say it could not bite"
-                  % (finestra, serve))
+                  % (win, needs))
 
     # ⭐⭐ HERE THE MEASURING WINDOW OPENS, and the instant is MARKED — it is the
     #     denominator of the rate, and a denominator nobody marks is a
     #     number that says whatever happens.
-    inizio_finestra = time.time()
-    cpu_apertura = cpu_del_cliente(cliente.pid)
-    time.sleep(finestra)
+    window_start = time.time()
+    cpu_opening = client_cpu(client.pid)
+    time.sleep(win)
     # ⛔ AND THE CLIENT'S WORK IS READ AGAIN **BEFORE** THE CLIENT DIES:
     #    afterwards, `/proc/<pid>` is no longer there and the measure would be «I do not know» because of
     #    a defect of the bench.
-    esito["cpu_finestra"] = lavoro_al_secondo(
-        cpu_apertura, cpu_del_cliente(cliente.pid), time.time() - inizio_finestra)
+    outcome["cpu_window"] = work_per_second(
+        cpu_opening, client_cpu(client.pid), time.time() - window_start)
 
     # ── 8. the client finishes ─────────────────────────────────────────────
-    coda = chiudi_il_cliente(int(resta) + 240)
+    queue = close_client(int(stays) + 240)
     fine = time.time()
-    detto = quanti_fotogrammi_dice_il_cliente(coda or "")
-    ammesso = e_stato_ammesso(coda)
+    said = client_frame_count(queue or "")
+    admitted = was_admitted(queue)
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⛔⛔ AND THE SCENE IS LOOKED AT AGAIN **NOW**, at the end — not only at the start.
     #
-    # ⚠ The first draft looked at it only once, right after `--attesa-scena`,
+    # ⚠ The first draft looked at it only once, right after `--wait-scene`,
     #   and then declared at the top «alive from start to end».  ⛔ But the pairs
     #   that decide the verdict are the LAST frames, i.e. minutes later:
     #   a scene that dies halfway leaves a declared colour on the screen
@@ -2119,22 +2119,22 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
     # ⇒ It is demanded alive **at the end**; and if it was alive at the start and not at the end,
     #   it is said, because it is a different diagnosis from «it never started».
     # ═══════════════════════════════════════════════════════════════════════
-    if not a.scena_ferma:
-        esito["scena_viva"] = la_scena_e_viva(chi, a.applicazione)
+    if not a.still_scene:
+        outcome["scene_alive"] = scene_is_alive(chi, a.application)
 
-    if ammesso is not True:
-        ultimo = "?"
-        for riga in reversed((coda or "").strip().splitlines()):
-            riga = riga.strip()
-            if riga and not riga.startswith("=="):
-                ultimo = riga[:90]
+    if admitted is not True:
+        last = "?"
+        for row in reversed((queue or "").strip().splitlines()):
+            row = row.strip()
+            if row and not row.startswith("=="):
+                last = row[:90]
                 break
-        esito["motivo"] = "cliente-non-ammesso"
-        esito["perche"] = ("the client %s: %s"
-                           % ("was not ADMITTED" if ammesso is False
-                              else "said NOTHING", ultimo))
-        sgombra(chi, a.attesa_sgombero)
-        return esito
+        outcome["motivo"] = "cliente-non-ammesso"
+        outcome["reason_text"] = ("the client %s: %s"
+                           % ("was not ADMITTED" if admitted is False
+                              else "said NOTHING", last))
+        clear_out(chi, a.wait_clearout)
+        return outcome
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⛔⛔ THE DENOMINATOR OF THE RATE IS **ONLY THE WINDOW IN WHICH THE SCENE
@@ -2166,92 +2166,92 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
     # ⚠ If the stage was born at the limit of the ceiling, the window shortens but
     #   is NOT falsified: it stays what it was, and the rate stays its own.
     # ═══════════════════════════════════════════════════════════════════════
-    secondi = max(1.0, fine - inizio_finestra)
-    esito["secondi"] = round(secondi, 1)
+    seconds = max(1.0, fine - window_start)
+    outcome["seconds"] = round(seconds, 1)
 
-    if not os.path.exists(flusso) or os.path.getsize(flusso) == 0:
+    if not os.path.exists(flow) or os.path.getsize(flow) == 0:
         # ⛔ No byte on the wire.  ⚠ With the STILL scene this is an expected
         #   result; with the scene in motion it is the canary dying, and
-        #   `giudica_il_flusso` says so.
-        g = giudica_il_flusso([], secondi, a.scena_ferma, a.ritmo_minimo)
-        esito.update({k: g[k] for k in ("stato", "motivo", "perche",
-                                        "fotogrammi", "ritmo", "coppie",
-                                        "diverse", "minima", "massima")})
-        sgombra(chi, a.attesa_sgombero)
-        return esito
+        #   `judge_stream` says so.
+        g = judge_stream([], seconds, a.still_scene, a.minimum_rate)
+        outcome.update({k: g[k] for k in ("state", "motivo", "reason_text",
+                                        "frames", "rate", "pairs",
+                                        "diverse", "lowest", "max_dims")})
+        clear_out(chi, a.wait_clearout)
+        return outcome
 
     # ⛔ The ceiling FOLLOWS the work it governs, instead of standing still while
-    #    `--attesa-palco` grows (`LEZIONI.md` §1.17).
-    elenco, scaduto = estrai_i_fotogrammi(
-        flusso, os.path.join(lavoro, "fotogrammi"),
-        a.larghezza, a.altezza, max(900.0, resta * 4.0))
-    esito["elenco"] = elenco
-    if scaduto:
-        esito["motivo"] = "estrazione-troncata"
-        esito["perche"] = ("the decoder did not finish: the list of "
+    #    `--wait-stage` grows (`LEZIONI.md` §1.17).
+    listing, expired = extract_frames(
+        flow, os.path.join(work, "frames"),
+        a.width_px, a.height_px, max(900.0, stays * 4.0))
+    outcome["listing"] = listing
+    if expired:
+        outcome["motivo"] = "estrazione-troncata"
+        outcome["reason_text"] = ("the decoder did not finish: the list of "
                            "frames is TRUNCATED, and a truncated list has "
                            "the look of a lean grab ⇒ I do not judge")
-        sgombra(chi, a.attesa_sgombero)
-        return esito
+        clear_out(chi, a.wait_clearout)
+        return outcome
     # ⭐ And the two counts are compared BEFORE judging, not after: the client
     #   says how many frames it took from the wire, the decoder how many it
     #   pulled out.  ⛔ If the second is much lower, the stream was
     #   lost along the way and the rate is not the product's.
-    if detto and elenco and len(elenco) < detto * QUOTA_ESTRATTI:
-        esito["fotogrammi"] = len(elenco)
-        esito["motivo"] = "estrazione-magra"
-        esito["perche"] = ("the client declares %d frames and the "
+    if said and listing and len(listing) < said * QUOTA_EXTRACTS:
+        outcome["frames"] = len(listing)
+        outcome["motivo"] = "estrazione-magra"
+        outcome["reason_text"] = ("the client declares %d frames and the "
                            "decoder pulled out %d (less than "
                            "%.0f%%): the stream was lost along the way, and the "
                            "rate would not be the product's"
-                           % (detto, len(elenco), QUOTA_ESTRATTI * 100))
-        sgombra(chi, a.attesa_sgombero)
-        return esito
+                           % (said, len(listing), QUOTA_EXTRACTS * 100))
+        clear_out(chi, a.wait_clearout)
+        return outcome
 
     # ── ⭐ IS THE DECLARED SCENE THE ONE I AM LOOKING AT? ──────────────────
     #    ⛔ If it is not, we do not judge: we would say red to the product for
     #       something of the browser.
-    if elenco and not a.scena_ferma:
-        ultimo_png = elenco[-1]
-        g = giudice.giudica(ultimo_png)
-        fa = lettore.frazione_del_colore(ultimo_png, SCENA_A, TOLLERANZA)
-        fb = lettore.frazione_del_colore(ultimo_png, SCENA_B, TOLLERANZA)
-        esito["frazione_scena"] = (None if (fa is None or fb is None)
+    if listing and not a.still_scene:
+        last_png = listing[-1]
+        g = assessor.judge(last_png)
+        fa = reader.color_fraction(last_png, SCENE_A, TOLERANCE)
+        fb = reader.color_fraction(last_png, SCENE_B, TOLERANCE)
+        outcome["frazione_scena"] = (None if (fa is None or fb is None)
                                    else max(fa, fb))
-        if g is not None and g["verdetto"] in ("nero", "quasi-nero"):
-            esito["motivo"] = "desktop-nero"
-            esito["perche"] = ("the last frame is «%s»: the session "
+        if g is not None and g["verdict"] in ("nero", "quasi-nero"):
+            outcome["motivo"] = "desktop-nero"
+            outcome["reason_text"] = ("the last frame is «%s»: the session "
                                "had nothing to show, and this is not a "
-                               "judgement on C3" % g["verdetto"])
-            sgombra(chi, a.attesa_sgombero)
-            return esito
-        if esito["frazione_scena"] is None or esito["frazione_scena"] < FRAZIONE_SCENA:
-            esito["motivo"] = "scena-non-mia"
-            esito["perche"] = (
+                               "judgement on C3" % g["verdict"])
+            clear_out(chi, a.wait_clearout)
+            return outcome
+        if outcome["frazione_scena"] is None or outcome["frazione_scena"] < FRACTION_SCENE:
+            outcome["motivo"] = "scena-non-mia"
+            outcome["reason_text"] = (
                 "the scene I declared is NOT on the screen (its colours "
                 "cover %s, I demand %.0f%%) ⇒ I cannot demand that "
                 "the frames change: the scene alive? %s"
-                % ("unknown" if esito["frazione_scena"] is None
-                   else "%.1f%%" % (esito["frazione_scena"] * 100),
-                   FRAZIONE_SCENA * 100,
-                   "yes" if esito["scena_viva"] else "⛔ NO"))
-            sgombra(chi, a.attesa_sgombero)
-            return esito
-        if not esito["scena_viva"]:
-            esito["motivo"] = "scena-morta"
-            esito["perche"] = (
+                % ("unknown" if outcome["frazione_scena"] is None
+                   else "%.1f%%" % (outcome["frazione_scena"] * 100),
+                   FRACTION_SCENE * 100,
+                   "yes" if outcome["scene_alive"] else "⛔ NO"))
+            clear_out(chi, a.wait_clearout)
+            return outcome
+        if not outcome["scene_alive"]:
+            outcome["motivo"] = "scena-morta"
+            outcome["reason_text"] = (
                 "the program that moves the scene %s: I cannot say whether "
                 "the image was frozen or whether there was nothing left to move"
                 % ("DIED between the start and the end"
-                   if esito["scena_viva_prima"] else "never started"))
-            sgombra(chi, a.attesa_sgombero)
-            return esito
+                   if outcome["scena_viva_prima"] else "never started"))
+            clear_out(chi, a.wait_clearout)
+            return outcome
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐⭐ THE TAIL OF THE DELIVERED FRAMES — and it is ALWAYS looked at, even when
     #    the verdict will come out «crollati».
     #
-    # ⛔ `giudica_il_flusso` compares the pairs **only if the rate holds**: with the
+    # ⛔ `judge_stream` compares the pairs **only if the rate holds**: with the
     #    encoder stopped it exits with «crollati» first, and that number it
     #    never computes.  ⚠ But it is exactly the number that says whether the fault fell
     #    at the right moment of the story: if the LAST frames that arrived —
@@ -2259,73 +2259,73 @@ def _il_resto_del_giro(chi, modo, a, giudice, lettore, esito, cliente,
     #    from each other**, then the scene was there and moving, and what happened
     #    afterwards is that the frames STOPPED.
     # ⇒ If instead they were identical, the graft fell on a still desktop, and the
-    #   round proved nothing: outcome 3, not a red (`collauda_il_fermo`).
+    #   round proved nothing: outcome 3, not a red (`test_stopped`).
     # ═══════════════════════════════════════════════════════════════════════
     # ⚠ And the list can be **None** (the decoder pulled out
     #   nothing): `None` is not an empty list, and slicing it would be a fault
     #   of the bench with the face of a fault of the product.
-    m_coda = (coppie_che_cambiano(elenco[-(a.coppie_esaminate + 1):],
-                                  SOGLIA_RUMORE, a.soglia_coppia)
-              if elenco else None)
-    if m_coda is not None:
-        esito["coda_coppie"] = m_coda["coppie"]
-        esito["coda_diverse"] = m_coda["diverse"]
-        esito["coda_frazione"] = m_coda["frazione"]
+    m_queue = (changing_pairs(listing[-(a.examined_pairs + 1):],
+                                  NOISE_THRESHOLD, a.pair_threshold)
+              if listing else None)
+    if m_queue is not None:
+        outcome["coda_coppie"] = m_queue["pairs"]
+        outcome["coda_diverse"] = m_queue["diverse"]
+        outcome["queue_fraction"] = m_queue["fraction"]
 
-    g = giudica_il_flusso(elenco, secondi, a.scena_ferma, a.ritmo_minimo,
-                          a.frazione_coppie, a.coppie_esaminate,
-                          SOGLIA_RUMORE, a.soglia_coppia)
-    esito.update({k: g[k] for k in ("stato", "motivo", "perche", "fotogrammi",
-                                    "ritmo", "coppie", "diverse", "minima",
-                                    "massima")})
-    if detto is not None and esito["fotogrammi"] is not None \
-            and detto != esito["fotogrammi"]:
+    g = judge_stream(listing, seconds, a.still_scene, a.minimum_rate,
+                          a.pair_fraction, a.examined_pairs,
+                          NOISE_THRESHOLD, a.pair_threshold)
+    outcome.update({k: g[k] for k in ("state", "motivo", "reason_text", "frames",
+                                    "rate", "pairs", "diverse", "lowest",
+                                    "max_dims")})
+    if said is not None and outcome["frames"] is not None \
+            and said != outcome["frames"]:
         # ⚠ It is not a verdict: it is information.  The client counts the
         #   frames taken from the wire, ffmpeg those that were decoded:
         #   ⛔ if the two numbers diverge a lot, the stream has holes and whoever
         #      diagnoses must know it.
-        esito["perche"] += (" ⚠ (the client declares %d of them, the decoder "
-                            "pulled out %d)" % (detto, esito["fotogrammi"]))
-    sgombra(chi, a.attesa_sgombero)
-    return esito
+        outcome["reason_text"] += (" ⚠ (the client declares %d of them, the decoder "
+                            "pulled out %d)" % (said, outcome["frames"]))
+    clear_out(chi, a.wait_clearout)
+    return outcome
 
 
 def _n(x):
     return "unknown" if x is None else x
 
 
-def stampa(e):
-    faccia = {"cambia": "YES", "congelata": "NO ", "crollati": "NO ",
-              "non-lo-so": "?  "}[e["stato"]]
-    print("  %-8s %-6s %s  %s" % (e["chi"], e["modo"], faccia, e["perche"]))
+def print_out(e):
+    face = {"change": "YES", "frozen": "NO ", "crollati": "NO ",
+              "non-lo-so": "?  "}[e["state"]]
+    print("  %-8s %-6s %s  %s" % (e["chi"], e["manner"], face, e["reason_text"]))
     print("           screens: %s · stage in %s s · frames %s in %s s "
-          "(real window, ⚠ not `--finestra`) · different pairs %s/%s"
-          % (_n(e["schermi"]), _n(e["palco_s"]), _n(e["fotogrammi"]),
-             _n(e["secondi"]), _n(e["diverse"]), _n(e["coppie"])))
+          "(real window, ⚠ not `--win`) · different pairs %s/%s"
+          % (_n(e["screens"]), _n(e["palco_s"]), _n(e["frames"]),
+             _n(e["seconds"]), _n(e["diverse"]), _n(e["pairs"])))
     # ⭐⭐ THE MARGIN IS ALWAYS PRINTED, as C5 does: it is the number that warns BEFORE
     #    a threshold becomes a false red, and the first draft computed it
     #    and threw it away.
     # ⭐ AND WHERE THE JUDGED FRAMES ARE: on a red, without the path, there
     #   is nothing to look at without already knowing where to search.  ⚠ And they stay there
     #   on purpose — the next round of the same tenant redoes them.
-    if e["elenco"]:
+    if e["listing"]:
         print("           the judged frames (the last %d of %d): %s"
-              % (min(len(e["elenco"]), COPPIE_ESAMINATE + 1), len(e["elenco"]),
-                 os.path.dirname(e["elenco"][0])))
+              % (min(len(e["listing"]), EXAMINED_PAIRS + 1), len(e["listing"]),
+                 os.path.dirname(e["listing"][0])))
     print("           ⭐ margin on the pair threshold: the weakest %s · "
           "the strongest %s (threshold %.0f%%) · scene on the screen %s · alive "
           "at the end %s"
-          % ("unknown" if e["minima"] is None else "%.2f%%" % (e["minima"] * 100),
-             "unknown" if e["massima"] is None else "%.2f%%" % (e["massima"] * 100),
-             SOGLIA_COPPIA * 100,
+          % ("unknown" if e["lowest"] is None else "%.2f%%" % (e["lowest"] * 100),
+             "unknown" if e["max_dims"] is None else "%.2f%%" % (e["max_dims"] * 100),
+             PAIR_THRESHOLD * 100,
              "unknown" if e["frazione_scena"] is None
              else "%.1f%%" % (e["frazione_scena"] * 100),
-             _n(e["scena_viva"])))
+             _n(e["scene_alive"])))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ THE THREE JOINTS — and they live in PURE functions so that `--certifica` tests them.
+# ⭐⭐⭐ THE THREE JOINTS — and they live in PURE functions so that `--certify` tests them.
 #
 # ⛔⛔ It is the piece `LEZIONI.md` §1.52 was born for: *«C9's certification
 #     tested the judge, C13's the reading of the log; the defect
@@ -2333,14 +2333,14 @@ def stampa(e):
 #     of the two trades»*.  ⇒ Here the exit code with the grafted fault is
 #     **inverted**, and from it `11-gancio.sh` derives `ha_visto_il_guasto`.
 # ═══════════════════════════════════════════════════════════════════════════
-LA_PROVA_NON_E_GIRATA = (
+TEST_DID_NOT_RUN = (
     "palco-non-nato", "scena-non-accesa", "cliente-non-ammesso",
     "estrazione-troncata", "estrazione-magra", "desktop-nero",
     "scena-non-mia", "scena-morta", "inquilino-non-creato", "niente-elenco",
     "niente-secondi", "niente-coppie")
 
 
-def _sano_non_regge(sano, r):
+def _healthy_does_not_hold(healthy, r):
     """The guard common to the two acceptance tests.  Returns the outcome, or `None` if it holds.
 
     ⛔⛔ THE RED HEALTHY CONTROL EXITS **3**, AND NOT 1 — and it is a correction.
@@ -2352,14 +2352,14 @@ def _sano_non_regge(sano, r):
     ⭐ The real red is already there and it is given by the round WITHOUT the fault, which in the family
       runs right before: here there is no need to repeat it, there is a need not to lie.
     """
-    if sano["stato"] == "non-lo-so":
+    if healthy["state"] == "non-lo-so":
         r.append("⚠ the healthy round could not look (%s): I cannot say "
-                 "whether the fault would have been seen" % (sano["motivo"] or "?"))
-        r.append("   ⇒ and this does NOT accuse the mesh (§4.5: «graft not "
+                 "whether the fault would have been seen" % (healthy["motivo"] or "?"))
+        r.append("   ⇒ and this does NOT accusations the mesh (§4.5: «graft not "
                  "judged»)")
         return 3
-    if sano["stato"] != "cambia":
-        r.append("⛔⛔ THE HEALTHY CONTROL IS RED: %s" % sano["perche"])
+    if healthy["state"] != "change":
+        r.append("⛔⛔ THE HEALTHY CONTROL IS RED: %s" % healthy["reason_text"])
         r.append("    ⇒ this round does NOT measure the fault — it measures a red that "
                  "is already there on its own (§1.45).")
         r.append("    ⚠ And the outcome is 3 and not 1: saying «the fault was not "
@@ -2370,21 +2370,21 @@ def _sano_non_regge(sano, r):
     return None
 
 
-def collauda_il_ripetuto(sano, sfregiato, margine_soglia=MARGINE_SOGLIA,
-                         soglia_coppia=SOGLIA_COPPIA):
-    """`--fotogramma-ripetuto`.  Returns `(esito, [lines])`, outcome BACKWARDS.
+def test_repeated(healthy, scarred, threshold_margin=THRESHOLD_MARGIN,
+                         pair_threshold=PAIR_THRESHOLD):
+    """`--repeated-frame`.  Returns `(outcome, [lines])`, outcome BACKWARDS.
 
     ⛔⛔ AND HERE THERE IS A THING THAT MUST BE SAID, because a reviewer found it and
          was right: **the defacement, on its own, cannot fail.**  If the healthy
          round is green, repeating the same frame N times necessarily gives
          zero different pairs: it is arithmetic, and it is already certified in 0.3
-         seconds by `--certifica`.  ⇒ A round on the real thing that asserted **only**
+         seconds by `--certify`.  ⇒ A round on the real thing that asserted **only**
          that would spend a whole session for a bit already known — i.e.
          `LEZIONI.md` §1.44 disguised as an acceptance test.
 
     ⭐ That is why this acceptance test demands **one more thing, and that one can
       really fail**: that the **weakest** consecutive pair of the healthy
-      round sits at least `margine_soglia` times above the threshold.
+      round sits at least `threshold_margin` times above the threshold.
       ⇒ It is a measurement of the WORLD — how lively the real scene is, seen
         through the product, after the encoding — and if one day the scene
         became timid (a browser skipping frames, an encoding that
@@ -2392,54 +2392,54 @@ def collauda_il_ripetuto(sano, sfregiato, margine_soglia=MARGINE_SOGLIA,
         false reds**.  ⚠ It is the same thing C5 does with the margin of the RMS.
     """
     r = []
-    esito = _sano_non_regge(sano, r)
-    if esito is not None:
-        return esito, r
-    if sfregiato is None:
+    outcome = _healthy_does_not_hold(healthy, r)
+    if outcome is not None:
+        return outcome, r
+    if scarred is None:
         r.append("⚠ I do not have a list of frames to deface: I cannot "
                  "graft the fault (outcome 3, not a red)")
         return 3, r
 
-    r.append("  healthy   : %s" % sano["perche"])
-    r.append("  defaced   : %s" % sfregiato["perche"])
+    r.append("  healthy   : %s" % healthy["reason_text"])
+    r.append("  defaced   : %s" % scarred["reason_text"])
     r.append("")
-    if sfregiato["stato"] == "non-lo-so":
+    if scarred["state"] == "non-lo-so":
         # ⛔ «I do not know» is NOT «the fault was not seen»: the first
         #    frame could be unreadable, and accusing the net for a
         #    broken PNG would be the same form of error as §1.47.
         r.append("⚠ the defaced one could not be judged (%s): I cannot "
-                 "say whether the fault would have been seen" % (sfregiato["motivo"] or "?"))
+                 "say whether the fault would have been seen" % (scarred["motivo"] or "?"))
         r.append("   ⇒ outcome 3, not a red.")
         return 3, r
-    if sfregiato["stato"] != "congelata":
+    if scarred["state"] != "frozen":
         r.append("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: the same "
                  "frame repeated passes for a scene that changes.")
         r.append("    ⇒ this mesh does not look in the right place.")
         return 1, r
-    if not (sano["diverse"] and sfregiato["diverse"] == 0):
+    if not (healthy["diverse"] and scarred["diverse"] == 0):
         r.append("⛔ the verdict changed but the NUMBER did not: different pairs "
-                 "%s ⇒ %s." % (_n(sano["diverse"]), _n(sfregiato["diverse"])))
+                 "%s ⇒ %s." % (_n(healthy["diverse"]), _n(scarred["diverse"])))
         return 1, r
     r.append("  ⭐ measurable difference, on the SAME data: the different pairs "
              "go from %s to %s out of %s"
-             % (sano["diverse"], sfregiato["diverse"], sano["coppie"]))
+             % (healthy["diverse"], scarred["diverse"], healthy["pairs"]))
 
     # ⭐⭐ AND THE MEASURE THAT CAN REALLY FAIL: how lively the real scene is.
-    minima = sano["minima"]
-    if minima is None:
+    lowest = healthy["lowest"]
+    if lowest is None:
         r.append("⚠ I do not know how much the weakest pair of the healthy round "
                  "changed: without that number this acceptance test asserts nothing "
                  "about the world (outcome 3).")
         return 3, r
-    volte = minima / soglia_coppia if soglia_coppia else 0.0
+    times = lowest / pair_threshold if pair_threshold else 0.0
     r.append("  ⭐ and the real scene is lively: the weakest pair changes "
              "%.2f%% of the pixels, %.1f times the threshold (I demand %.1f)"
-             % (minima * 100, volte, margine_soglia))
-    if volte < margine_soglia:
+             % (lowest * 100, times, threshold_margin))
+    if times < threshold_margin:
         r.append("⛔ THE SCENE IS TOO TIMID, or the threshold is too close: "
                  "the weakest pair")
         r.append("   sits at %.1f times the threshold instead of %.1f. ⇒ Today the "
-                 "verdict is still right," % (volte, margine_soglia))
+                 "verdict is still right," % (times, threshold_margin))
         r.append("   ⚠ but tomorrow a false red is one step away, and this mesh "
                  "warns BEFORE instead of after.")
         return 1, r
@@ -2450,10 +2450,10 @@ def collauda_il_ripetuto(sano, sfregiato, margine_soglia=MARGINE_SOGLIA,
     return 0, r
 
 
-def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
-                      frazione_coppie=FRAZIONE_COPPIE,
-                      ritmo_minimo=RITMO_MINIMO):
-    """`--codificatore-fermo`.  Returns `(esito, [lines])`, outcome BACKWARDS.
+def test_stopped(healthy, broken, quota=QUOTA_FAULT, gross_quota=GROSS_QUOTA,
+                      pair_fraction=PAIR_FRACTION,
+                      minimum_rate=MINIMUM_RATE):
+    """`--stopped-encoder`.  Returns `(outcome, [lines])`, outcome BACKWARDS.
 
     ⛔⛔ AND SINCE 27 AUGUST 2026 THIS ACCEPTANCE TEST ALSO DEMANDS **THAT THE FAULT
         FELL AT THE RIGHT MOMENT OF THE STORY** — because before it did not
@@ -2463,57 +2463,57 @@ def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
     encoder dies* ⇒ **the frames stop**.  ⇒ For that round to
     count, three things must be true that are MEASURED and that can be missing:
 
-      1. ⭐ the frames had been seen arriving        (`lavoro_visto`)
+      1. ⭐ the frames had been seen arriving        (`work_seen`)
       2. ⭐ the LAST frames delivered were different from each other — i.e. the
          scene was moving at the instant the encoder died
-         (`coda_frazione`)
+         (`queue_fraction`)
       3. ⭐ the window was long enough that the frames born BEFORE
          the graft were not enough to make the stream look alive
-         (`finestra_bastante`)
+         (`enough_window`)
 
     ⛔ If one is missing, the outcome is **3**: what was believed was not grafted,
        and saying «the fault was not seen» would be an accusation against the net for an
        acceptance test that did not run.
     """
     r = []
-    esito = _sano_non_regge(sano, r)
-    if esito is not None:
-        return esito, r
-    if rotto["stato"] == "non-lo-so":
+    outcome = _healthy_does_not_hold(healthy, r)
+    if outcome is not None:
+        return outcome, r
+    if broken["state"] == "non-lo-so":
         r.append("⚠ the round with the fault could not look (%s): I cannot "
-                 "say whether the fault would have been seen" % (rotto["motivo"] or "?"))
+                 "say whether the fault would have been seen" % (broken["motivo"] or "?"))
         r.append("   ⇒ outcome 3, not a red (§4.5).")
         return 3, r
     # ⚠⚠ THE FAULT'S SIGNATURE — and if it is missing the outcome is **3**, not a red.
-    if not rotto["fermati"] or rotto["pkill_ha_preso"] is False:
+    if not broken["n_stopped"] or broken["pkill_ha_preso"] is False:
         r.append("⚠ the injection stopped nothing: `pkill -STOP` %s, and the "
                  "processes of «%s» in state T are %s."
-                 % ("took hold" if rotto["pkill_ha_preso"] else "did NOT take hold",
-                    rotto["chi"], _n(rotto["fermati"])))
+                 % ("took hold" if broken["pkill_ha_preso"] else "did NOT take hold",
+                    broken["chi"], _n(broken["n_stopped"])))
         r.append("   ⇒ whatever verdict comes out is NOT the fault I believed I had "
                  "grafted (§1.52).")
         r.append("   ⇒ outcome 3, not a red.")
         return 3, r
 
     # ── ⭐⭐ THE MOMENT OF THE GRAFT — the cure of 27 August 2026 ───────────
-    if rotto.get("lavoro_visto") is not True:
+    if broken.get("work_seen") is not True:
         r.append("⚠ before stopping the encoder I NEVER saw the frames "
                  "arrive (the encoder was burning %s CPU/s)."
-                 % _n(rotto.get("cpu_prima")))
+                 % _n(broken.get("cpu_before")))
         r.append("   ⇒ I stopped an encoder that was not delivering: "
                  "it is not «the frames stop»,")
         r.append("     it is «they had never started». ⛔ Outcome 3, not a red.")
         return 3, r
-    if rotto.get("coda_frazione") is None:
+    if broken.get("queue_fraction") is None:
         r.append("⚠ I could not compare the last delivered frames with each other: "
                  "I do not know whether the scene was moving")
         r.append("   at the instant the encoder died. ⇒ Outcome 3.")
         return 3, r
-    if rotto["coda_frazione"] < frazione_coppie:
+    if broken["queue_fraction"] < pair_fraction:
         r.append("⛔ THE LAST FRAMES DELIVERED WERE IDENTICAL TO EACH OTHER "
                  "(%s different pairs out of %s, %.0f%%):"
-                 % (_n(rotto["coda_diverse"]), _n(rotto["coda_coppie"]),
-                    rotto["coda_frazione"] * 100))
+                 % (_n(broken["coda_diverse"]), _n(broken["coda_coppie"]),
+                    broken["queue_fraction"] * 100))
         r.append("   the graft fell when the scene was not moving yet "
                  "⇒ this round does NOT prove «the frames stop»,")
         r.append("   it proves «there was nothing to stop». ⛔ Outcome 3, not a "
@@ -2521,40 +2521,40 @@ def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
         return 3, r
     r.append("  ⭐ the graft fell at the right moment: the encoder "
              "was working (%.2f CPU/s) and the last frames delivered"
-             % (rotto.get("cpu_prima") or 0.0))
+             % (broken.get("cpu_before") or 0.0))
     r.append("     were different from each other (%s pairs out of %s, %.0f%%) ⇒ the scene "
              "was there and moving, **then** the encoder died."
-             % (_n(rotto["coda_diverse"]), _n(rotto["coda_coppie"]),
-                rotto["coda_frazione"] * 100))
+             % (_n(broken["coda_diverse"]), _n(broken["coda_coppie"]),
+                broken["queue_fraction"] * 100))
 
     # ── ⭐ WAS THE WINDOW LONG ENOUGH? ─────────────────────────────────────
     #    ⛔ The rate is GROSS: with the frames born before the graft a dead
     #       stream can look alive, and then the round could not bite.
-    serve = finestra_bastante(rotto.get("secondi_prima"), sano["ritmo"],
-                              ritmo_minimo)
-    if serve is not None:
+    needs = enough_window(broken.get("seconds_before"), healthy["rate"],
+                              minimum_rate)
+    if needs is not None:
         r.append("  ⭐ the window: %s s watched, and for this box more than "
                  "%.0f were needed (%.1f s of scene in view before "
                  "the graft × %.1f/s healthy ÷ %.1f/s demanded)"
-                 % (_n(rotto["secondi"]), serve, rotto["secondi_prima"],
-                    sano["ritmo"], ritmo_minimo))
-        if rotto["secondi"] is None or rotto["secondi"] <= serve:
+                 % (_n(broken["seconds"]), needs, broken["seconds_before"],
+                    healthy["rate"], minimum_rate))
+        if broken["seconds"] is None or broken["seconds"] <= needs:
             r.append("⚠ THE WINDOW WAS TOO SHORT for this rate: the "
                      "frames born before the graft are enough on their own")
             r.append("   to keep the gross rate above the threshold ⇒ the fault "
                      "could not bite, and I did not test it.")
             r.append("   ⛔ Outcome 3, not a red. ⇒ Relaunch with "
-                     "`--finestra-guasto %d`." % int(serve * 1.25 + 10))
+                     "`--fault-window %d`." % int(needs * 1.25 + 10))
             return 3, r
 
-    if rotto["stato"] == "cambia":
+    if broken["state"] == "change":
         r.append("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: with the encoder "
                  "stopped the frames arrive anyway.")
         return 1, r
 
     # ── ⭐⭐ THE MEASURABLE DIFFERENCE, and the CLEAN one comes before the gross one ─
-    ls = sano.get("cpu_finestra")
-    lr = rotto.get("cpu_finestra")
+    ls = healthy.get("cpu_window")
+    lr = broken.get("cpu_window")
     if ls is None or lr is None:
         r.append("⚠ I do not know how much the client worked inside the window "
                  "(healthy %s · fault %s): without that number" % (_n(ls), _n(lr)))
@@ -2572,17 +2572,17 @@ def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
         r.append("   and an acceptance test like this does not certify the net (§1.52).")
         return 1, r
 
-    rs = sano["ritmo"] or 0.0
-    rr = rotto["ritmo"] or 0.0
+    rs = healthy["rate"] or 0.0
+    rr = broken["rate"] or 0.0
     r.append("  ⭐ and the GROSS difference, which carries inside it the frames born "
              "before the graft: the rate goes from %.2f/s to %.2f/s"
              % (rs, rr))
     r.append("     ⇒ %.2f/s fewer, i.e. %.1f%% of the healthy one (here I allow "
              "at most %.0f%%, ⛔ and not %.0f%%: the number is dirty "
              "on purpose)"
-             % (rs - rr, (rr / rs * 100) if rs else 0.0, quota_lorda * 100,
+             % (rs - rr, (rr / rs * 100) if rs else 0.0, gross_quota * 100,
                 quota * 100))
-    if rs <= 0 or rr > rs * quota_lorda:
+    if rs <= 0 or rr > rs * gross_quota:
         r.append("⛔ the verdict changed but the NUMBER hardly did: the fault "
                  "bit little, and an acceptance test like this does not certify the net.")
         return 1, r
@@ -2593,7 +2593,7 @@ def collauda_il_fermo(sano, rotto, quota=QUOTA_GUASTO, quota_lorda=QUOTA_LORDA,
     return 0, r
 
 
-def collauda_la_scena_ferma(e):
+def test_scene_stop(e):
     """⚠⚠ THE NEGATIVE CONTROL — and now it ASSERTS something.
 
     ⛔ The first draft exited **3 anyway**, and a reviewer pointed out that
@@ -2606,25 +2606,25 @@ def collauda_la_scena_ferma(e):
          · the stage was born        (⇒ the round really happened)
          · the client was admitted
          · and the verdict is «I do not know» **for the right reason**, i.e. the
-           reason `scena-ferma` and not another
+           reason `still-scene` and not another
        ⇒ `0` = the negative control HOLDS: on a still scene this mesh does not give
          red, and I verified it on a round that really happened.
        ⇒ `1` = ⛔ on a still scene the mesh gave a verdict: **it is broken**.
        ⇒ `3` = the round did not happen, and so I checked nothing.
     """
     r = []
-    if e["stato"] in ("congelata", "crollati"):
+    if e["state"] in ("frozen", "crollati"):
         r.append("⛔⛔ THE NEGATIVE CONTROL FAILED: with the STILL scene "
-                 "this mesh gave RED (%s)." % e["stato"])
+                 "this mesh gave RED (%s)." % e["state"])
         r.append("    ⇒ `[M]` phase 9 §3.1: on a still scene 0.03 "
                  "frames/s come out and it is a RESULT, not a defect.")
         r.append("    ⛔ A mesh that gives red there is a generator of false "
                  "reds, and §1.3 says how it ends.")
         return 1, r
-    if e["motivo"] != "scena-ferma":
+    if e["motivo"] != "still-scene":
         r.append("⚠ the round did not reach the control: it stopped earlier "
                  "(%s)." % (e["motivo"] or "?"))
-        r.append("   ⇒ %s" % e["perche"])
+        r.append("   ⇒ %s" % e["reason_text"])
         r.append("   ⛔ So I verified NOTHING: outcome 3, and it must not be "
                  "mistaken for a successful control.")
         return 3, r
@@ -2632,61 +2632,61 @@ def collauda_la_scena_ferma(e):
              "client admitted),")
     r.append("   the scene was still, and this mesh ⛔ did NOT give red: it "
              "said «I do not know» and said why.")
-    r.append("   ⭐ And the round leaves the number with which `--ritmo-minimo` is calibrated: "
+    r.append("   ⭐ And the round leaves the number with which `--minimum-rate` is calibrated: "
              "%s frames in %s s."
-             % (_n(e["fotogrammi"]), _n(e["secondi"])))
+             % (_n(e["frames"]), _n(e["seconds"])))
     return 0, r
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--utente-base", default="c3u")
-    p.add_argument("--parola", default="provanic2026")
-    p.add_argument("--porta", type=int, default=8511)
-    p.add_argument("--indirizzo", default="127.0.0.1")
-    p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
-    p.add_argument("--scena", default="/opt/remotix/11-c3-scena.html",
+    p.add_argument("--base-user", default="c3u")
+    p.add_argument("--password", default="provanic2026")
+    p.add_argument("--port", type=int, default=8511)
+    p.add_argument("--address", default="127.0.0.1")
+    p.add_argument("--client", default="/opt/remotix/01-b3-cliente.py")
+    p.add_argument("--scene", default="/opt/remotix/11-c3-scena.html",
                    help="⭐ THE DECLARED SCENE: it is this file that decides what "
                         "moves and by how much")
-    p.add_argument("--respiro-innesco", type=float, default=2.0,
+    p.add_argument("--respite-trigger", type=float, default=2.0,
                    help="seconds between «the encoder works» and the graft, COUNTED "
                         "in the scene in view: on KDE the window finishes "
                         "appearing (phase 12)")
-    p.add_argument("--applicazione", default="firefox-esr",
+    p.add_argument("--application", default="firefox-esr",
                    help="⚠ today the browser, because it is the only program in the "
                         "box that can paint a scene we decide. "
                         "⛔ To be moved as soon as there is another one")
-    p.add_argument("--argomenti", default="--kiosk file://%(pagina)s")
-    p.add_argument("--nome-figlio", default="remotix",
+    p.add_argument("--call_args", default="--kiosk file://%(page_v)s")
+    p.add_argument("--child-name", default="remotix",
                    help="what the tenant's process that encodes and delivers "
                         "is called, in the command line")
-    p.add_argument("--lavoro", default="/var/lib/rete11/c3")
-    p.add_argument("--larghezza", type=int, default=128)
-    p.add_argument("--altezza", type=int, default=72)
+    p.add_argument("--work", default="/var/lib/rete11/c3")
+    p.add_argument("--width_px", type=int, default=128)
+    p.add_argument("--height_px", type=int, default=72)
     # ⭐ 60 s, and the number comes from a MEASUREMENT: `[M]` 27 August 2026, inside the
     #   cured GNOME box the stage is born in **2.1÷4.2 s** ⇒ 60 s are more
     #   than ten times the worst measured.  ⛔ The 200 s of before were a
     #   prudent number chosen when the phenomenon seemed to last ~97 s — which
     #   was a fault of the box, later cured (`LEZIONI.md` §1.54).
-    # ⚠ And here it is not a deadline but an ADDEND of `--resta`: every second
+    # ⚠ And here it is not a deadline but an ADDEND of `--stays`: every second
     #   too many is a second thrown away for every tenant, not a margin.
-    p.add_argument("--attesa-palco", type=float, default=60.0,
+    p.add_argument("--wait-stage", type=float, default=60.0,
                    help="⛔ CEILING TO RECALIBRATE: [M] (C1, 27 Aug 2026, not mine) "
                         "95-101 s in the GNOME box because of a defect of the "
                         "BOX; with that cured, ~2 s ⇒ put back to ~20")
-    p.add_argument("--attesa-scena", type=float, default=30.0,
+    p.add_argument("--wait-scene", type=float, default=30.0,
                    help="⛔ CEILING TO RECALIBRATE [?]: how long the scene is given to "
                         "be on the screen")
-    p.add_argument("--finestra", type=float, default=45.0,
+    p.add_argument("--win", type=float, default=45.0,
                    help="⚠ the MINIMUM of seconds in which the scene in "
                         "motion is watched — NOT the real window. ⛔ The client stays "
-                        "attached `--attesa-palco + --attesa-scena + "
-                        "--finestra + --coda` seconds in all, decided at "
+                        "attached `--wait-stage + --wait-scene + "
+                        "--win + --queue` seconds in all, decided at "
                         "launch: if the stage is born early, the real window is "
                         "longer than this number. ⭐ The REAL one the mesh "
                         "prints at every round, and it is the denominator of the rate")
     # ⭐⭐ THE WINDOW OF THE ROUND WITH THE FAULT IS LONGER, and the reason is a
-    #    calculation, not a taste: `finestra_bastante`.  The rate is GROSS, ⇒ the
+    #    calculation, not a taste: `enough_window`.  The rate is GROSS, ⇒ the
     #    frames born between the instant the scene started painting
     #    and the instant of the graft arrive **even with the fault**.  For them not
     #    to be enough to make a dead stream look alive, the window must be
@@ -2697,105 +2697,105 @@ def main():
     #   of the round: if the window was not enough it says so, and exits 3.
     # ⚠ And it holds for **both** rounds of the acceptance test, the healthy and the faulted:
     #   two different windows would make the two rates not comparable.
-    p.add_argument("--finestra-guasto", type=float, default=FINESTRA_GUASTO,
-                   help="⭐ the window of the TWO rounds of `--codificatore-fermo`: "
+    p.add_argument("--fault-window", type=float, default=FAULT_WINDOW,
+                   help="⭐ the window of the TWO rounds of `--stopped-encoder`: "
                         "measuring an absence takes time")
-    p.add_argument("--coda", type=float, default=10.0)
+    p.add_argument("--queue", type=float, default=10.0)
     # ⭐ The live signal «the frames are arriving»: see the top.
-    p.add_argument("--soglia-cpu", type=float, default=SOGLIA_CPU,
+    p.add_argument("--cpu-threshold", type=float, default=CPU_THRESHOLD,
                    help="⭐ how much CPU per second the ENCODER must "
                         "burn for us to say that the frames "
                         "ARRIVE. [?] and the mesh always prints the real value")
-    p.add_argument("--passo-cpu", type=float, default=PASSO_CPU,
+    p.add_argument("--cpu-step", type=float, default=CPU_STEP,
                    help="every how many seconds the client's work is looked at. "
                         "⛔ short on purpose: it is the scene time that ends up in the "
                         "gross rate even with the fault")
-    p.add_argument("--attesa-sgombero", type=float, default=60.0)
-    p.add_argument("--ritmo-minimo", type=float, default=RITMO_MINIMO,
+    p.add_argument("--wait-clearout", type=float, default=60.0)
+    p.add_argument("--minimum-rate", type=float, default=MINIMUM_RATE,
                    help="⛔ [?] wide on purpose: it separates «a trickle» from «nothing», "
                         "it does NOT judge smoothness")
-    p.add_argument("--frazione-coppie", type=float, default=FRAZIONE_COPPIE)
-    p.add_argument("--coppie-esaminate", type=int, default=COPPIE_ESAMINATE)
-    p.add_argument("--soglia-coppia", type=float, default=SOGLIA_COPPIA,
+    p.add_argument("--pair-fraction", type=float, default=PAIR_FRACTION)
+    p.add_argument("--examined-pairs", type=int, default=EXAMINED_PAIRS)
+    p.add_argument("--pair-threshold", type=float, default=PAIR_THRESHOLD,
                    help="how many pixels must change for two frames "
                         "to be «different». [?] to be recalibrated in the box")
-    p.add_argument("--margine-soglia", type=float, default=MARGINE_SOGLIA,
+    p.add_argument("--threshold-margin", type=float, default=THRESHOLD_MARGIN,
                    help="⭐ how many times the WEAKEST pair of the healthy round "
                         "must sit above the threshold. ⛔ It is what makes the "
-                        "`--fotogramma-ripetuto` acceptance test not empty")
-    p.add_argument("--scena-ferma", action="store_true",
+                        "`--repeated-frame` acceptance test not empty")
+    p.add_argument("--still-scene", action="store_true",
                    help="⚠ THE NEGATIVE CONTROL: no scene is switched on. "
                         "⛔ In this mode the mesh CANNOT give red")
-    p.add_argument("--fotogramma-ripetuto", action="store_true",
+    p.add_argument("--repeated-frame", action="store_true",
                    help="⛔ GRAFTED FAULT: the in-memory copy of the list is defaced "
                         "by putting the first frame in it N times. "
                         "The outcome is read BACKWARDS")
-    p.add_argument("--codificatore-fermo", action="store_true",
+    p.add_argument("--stopped-encoder", action="store_true",
                    help="⛔ GRAFTED FAULT: SIGSTOP to the tenant's process "
                         "that delivers. The outcome is read BACKWARDS")
-    p.add_argument("--certifica", action="store_true")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica())
+    if a.certify:
+        sys.exit(certify())
 
-    quanti_guasti = sum([a.fotogramma_ripetuto, a.codificatore_fermo])
-    if quanti_guasti > 1:
+    how_many_faults = sum([a.repeated_frame, a.stopped_encoder])
+    if how_many_faults > 1:
         print("⛔ one fault at a time: if two are grafted one no longer knows "
               "which one bit")
         sys.exit(2)
-    if a.scena_ferma and quanti_guasti:
+    if a.still_scene and how_many_faults:
         print("⛔ «still scene» is the NEGATIVE CONTROL, not a fault: with the "
               "scene still there is nothing to graft")
         sys.exit(2)
     # ⛔⛔ THE GUARDS ON THE NUMBERS — `LEZIONI.md` §1.44: a threshold set to zero
     #     from the command line is a predicate that can no longer fail, and
-    #     `--certifica` would not notice (it certifies the CONSTANTS).
-    if not 0 < a.frazione_coppie <= 1:
-        print("⛔ --frazione-coppie %s: outside 0..1 this mesh could no "
-              "longer give either red or green" % a.frazione_coppie)
+    #     `--certify` would not notice (it certifies the CONSTANTS).
+    if not 0 < a.pair_fraction <= 1:
+        print("⛔ --pair-fraction %s: outside 0..1 this mesh could no "
+              "longer give either red or green" % a.pair_fraction)
         sys.exit(2)
-    if a.soglia_coppia <= 0 or a.ritmo_minimo <= 0:
-        print("⛔ --soglia-coppia and --ritmo-minimo must be greater than "
+    if a.pair_threshold <= 0 or a.minimum_rate <= 0:
+        print("⛔ --pair-threshold and --minimum-rate must be greater than "
               "zero: at zero neither of the two could give red any more")
         sys.exit(2)
-    if a.coppie_esaminate < 2:
-        print("⛔ --coppie-esaminate %d: with fewer than two pairs there is nothing "
-              "to compare" % a.coppie_esaminate)
+    if a.examined_pairs < 2:
+        print("⛔ --examined-pairs %d: with fewer than two pairs there is nothing "
+              "to compare" % a.examined_pairs)
         sys.exit(2)
-    if a.soglia_cpu <= 0 or a.passo_cpu <= 0:
-        print("⛔ --soglia-cpu and --passo-cpu must be greater than zero: at "
+    if a.cpu_threshold <= 0 or a.cpu_step <= 0:
+        print("⛔ --cpu-threshold and --cpu-step must be greater than zero: at "
               "zero «the frames arrive» would always be true, even on a "
               "dead desktop")
         sys.exit(2)
     # ⭐⭐ AND THE WINDOW OF THE ACCEPTANCE TEST WITH THE ENCODER STOPPED IS LONGER — for
     #    both rounds, the healthy and the faulted, or the two rates would not be
-    #    comparable.  ⛔ The reason is a calculation and lives in `finestra_bastante`.
-    if a.codificatore_fermo:
-        a.finestra = a.finestra_guasto
+    #    comparable.  ⛔ The reason is a calculation and lives in `enough_window`.
+    if a.stopped_encoder:
+        a.win = a.fault_window
     if os.geteuid() != 0:
         print("⛔ it must be run as administrator: it has to create new tenants")
         sys.exit(2)
 
-    giudice, dove_g = giudice_del_desktop()
-    if giudice is None:
+    assessor, dove_g = desktop_judge()
+    if assessor is None:
         print("⛔ I cannot find the image judge (10-f1-testimone.py) next to me")
         print("   ⇒ I could not look")
         sys.exit(3)
-    lettore, dove_l = lettore_del_colore()
-    if lettore is None:
+    reader, dove_l = color_reader()
+    if reader is None:
         print("⛔ I cannot find the colour reader (11-c8-…py) next to me")
         print("   ⇒ I could not look")
         sys.exit(3)
-    for che, dove in (("the test client", a.cliente),
-                      ("the declared scene", a.scena)):
+    for desc, dove in (("the test client", a.client),
+                      ("the declared scene", a.scene)):
         if not os.path.exists(dove):
-            print("⛔ I cannot find %s: %s" % (che, dove))
+            print("⛔ I cannot find %s: %s" % (desc, dove))
             print("   ⇒ I could not look")
             sys.exit(3)
-    for programma in (a.applicazione, "ffmpeg", "wayland-info", "runuser"):
-        if sh("command -v %s" % programma).returncode != 0:
-            print("⛔ the box does not have %s" % programma)
+    for program in (a.application, "ffmpeg", "wayland-info", "runuser"):
+        if sh("command -v %s" % program).returncode != 0:
+            print("⛔ the box does not have %s" % program)
             print("   ⇒ I could not look")
             sys.exit(3)
     try:
@@ -2805,104 +2805,104 @@ def main():
         print("   ⇒ I could not look")
         sys.exit(3)
 
-    os.makedirs(a.lavoro, exist_ok=True)
+    os.makedirs(a.work, exist_ok=True)
 
-    # ⭐ BEFORE any `crea`: `crea` does `userdel -r`, and from that moment the
+    # ⭐ BEFORE any `create`: `create` does `userdel -r`, and from that moment the
     #   owner of `/tmp/mozilla` would be a NUMBER instead of a name — i.e.
     #   I would no longer recognise it as mine.
-    resto = sgombra_il_mio_rimasuglio(a.utente_base)
+    rest = clear_out_my_leftover(a.base_user)
 
     print("== C3 — the frames arrive, and the scene CHANGES ==")
     print("   port %d · scene %s · application «%s»"
-          % (a.porta, os.path.basename(a.scena), a.applicazione))
+          % (a.port, os.path.basename(a.scene), a.application))
     print("   yardstick: rate ≥ %.2f/s (rough reference [M] %.1f/s, phase 9 §3.1 "
           "⇒ %.0f%%) · at least %.0f%% of consecutive pairs different"
-          % (a.ritmo_minimo, RIFERIMENTO_FPS,
-             a.ritmo_minimo / RIFERIMENTO_FPS * 100, a.frazione_coppie * 100))
+          % (a.minimum_rate, REFERENCE_FPS,
+             a.minimum_rate / REFERENCE_FPS * 100, a.pair_fraction * 100))
     print("   ⚠ the rate is GROSS and therefore OPTIMISTIC: it is not the check that "
           "decides (see the top)")
     print("   imported judges: %s · %s"
           % (os.path.basename(dove_g), os.path.basename(dove_l)))
     print("   provisioning: the cure of src/provisiona.sh, imported from C2, for every "
           "tenant I create")
-    if resto:
-        print("   %s" % resto)
+    if rest:
+        print("   %s" % rest)
     print("   ceilings (⛔ to recalibrate on the real thing): stage %.0f s · scene %.0f s · "
-          "window %.0f s" % (a.attesa_palco, a.attesa_scena, a.finestra))
-    if a.scena_ferma:
+          "window %.0f s" % (a.wait_stage, a.wait_scene, a.win))
+    if a.still_scene:
         print("   ⚠ NEGATIVE CONTROL «still scene»: ⛔ this mesh in "
               "this mode CANNOT give red, and it will say why")
-    if a.fotogramma_ripetuto:
+    if a.repeated_frame:
         print("   ⛔ GRAFTED FAULT: «the same frame repeated» — it defaces "
               "the IN-MEMORY COPY, the stream on disk is not touched")
         print("   ⭐ healthy control and fault run on the SAME data: the "
               "difference cannot come from a different round")
-    if a.codificatore_fermo:
+    if a.stopped_encoder:
         print("   ⛔ GRAFTED FAULT: SIGSTOP to the tenant's «%s» process"
-              % a.nome_figlio)
+              % a.child_name)
         print("   ⭐ and with it runs a HEALTHY CONTROL, or one could not "
               "distinguish «the fault bit» from «it was already red»")
         print("   ⭐⭐ and the graft falls AFTER the scene was seen moving "
               "(cure of 27 Aug 2026): before, it died on an empty desktop")
         print("   ⚠ window %.0f s for both rounds: measuring "
-              "an absence takes time (see `finestra_bastante`)" % a.finestra)
+              "an absence takes time (see `enough_window`)" % a.win)
     print()
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⭐ «REPEATED FRAME»: a single tenant, and the same data is judged
     #    TWICE.
     # ═══════════════════════════════════════════════════════════════════════
-    if a.fotogramma_ripetuto:
-        e = un_giro("%s1" % a.utente_base, None, a, giudice, lettore)
-        stampa(e)
+    if a.repeated_frame:
+        e = one_round("%s1" % a.base_user, None, a, assessor, reader)
+        print_out(e)
         print()
-        sfregiato = giudica_il_flusso(sfregia_ripetendo(e["elenco"]),
-                                      e["secondi"] or 1.0, False,
-                                      a.ritmo_minimo, a.frazione_coppie,
-                                      a.coppie_esaminate, SOGLIA_RUMORE,
-                                      a.soglia_coppia) if e["elenco"] else None
-        esito, righe = collauda_il_ripetuto(e, sfregiato, a.margine_soglia,
-                                            a.soglia_coppia)
-        for riga in righe:
-            print(riga)
-        sys.exit(esito)
+        scarred = judge_stream(scar_repeating(e["listing"]),
+                                      e["seconds"] or 1.0, False,
+                                      a.minimum_rate, a.pair_fraction,
+                                      a.examined_pairs, NOISE_THRESHOLD,
+                                      a.pair_threshold) if e["listing"] else None
+        outcome, line_list = test_repeated(e, scarred, a.threshold_margin,
+                                            a.pair_threshold)
+        for row in line_list:
+            print(row)
+        sys.exit(outcome)
 
     # ═══════════════════════════════════════════════════════════════════════
     # ⛔ «ENCODER STOPPED»: two tenants, one healthy and one faulted.
     # ═══════════════════════════════════════════════════════════════════════
-    if a.codificatore_fermo:
-        sano = un_giro("%s1" % a.utente_base, None, a, giudice, lettore)
-        stampa(sano)
-        rotto = un_giro("%s2" % a.utente_base, "fermo", a, giudice, lettore,
-                        ritmo_sano=sano.get("ritmo"))
-        stampa(rotto)
+    if a.stopped_encoder:
+        healthy = one_round("%s1" % a.base_user, None, a, assessor, reader)
+        print_out(healthy)
+        broken = one_round("%s2" % a.base_user, "stopped", a, assessor, reader,
+                        healthy_rate=healthy.get("rate"))
+        print_out(broken)
         print()
-        esito, righe = collauda_il_fermo(sano, rotto, QUOTA_GUASTO,
-                                         QUOTA_LORDA, a.frazione_coppie,
-                                         a.ritmo_minimo)
-        for riga in righe:
-            print(riga)
-        sys.exit(esito)
+        outcome, line_list = test_stopped(healthy, broken, QUOTA_FAULT,
+                                         GROSS_QUOTA, a.pair_fraction,
+                                         a.minimum_rate)
+        for row in line_list:
+            print(row)
+        sys.exit(outcome)
 
     # ═══════════════════════════════════════════════════════════════════════
     # THE NORMAL ROUND — and the NEGATIVE CONTROL, which now asserts something
     # ═══════════════════════════════════════════════════════════════════════
-    e = un_giro("%s1" % a.utente_base, None, a, giudice, lettore)
-    stampa(e)
+    e = one_round("%s1" % a.base_user, None, a, assessor, reader)
+    print_out(e)
     print()
-    if a.scena_ferma:
-        esito, righe = collauda_la_scena_ferma(e)
-        for riga in righe:
-            print(riga)
-        sys.exit(esito)
-    if e["stato"] == "cambia":
+    if a.still_scene:
+        outcome, line_list = test_scene_stop(e)
+        for row in line_list:
+            print(row)
+        sys.exit(outcome)
+    if e["state"] == "change":
         print("⭐ GREEN — the frames arrive and the scene CHANGES.")
         sys.exit(0)
-    if e["stato"] == "non-lo-so":
-        print("⚠ NOT JUDGING — %s" % e["perche"])
+    if e["state"] == "non-lo-so":
+        print("⚠ NOT JUDGING — %s" % e["reason_text"])
         print("  ⛔ And this is not a green: it is an outcome of its own (§4.5).")
         sys.exit(3)
-    print("⛔⛔ RED — %s" % e["perche"])
+    print("⛔⛔ RED — %s" % e["reason_text"])
     sys.exit(1)
 
 

@@ -16,8 +16,8 @@ and *«an idle session costs 2 463 kbit/s of PCM audio»*, `[M]` `09-b81`.
      session (port 7920, `/media/REMOTIX/tmp/09c/registro.log`) says
      the opposite, four times out of four:
 
-         negoziato video.codec=hevc video.profondita=8 audio.codec=opus
-         ⭐ FASE 7: canale audio ACCESO … — codec 1 (Opus)
+         negotiated video.codec=hevc video.bit_depth=8 audio.codec=opus
+         ⭐ FASE 7: channel audio ACCESO … — codec 1 (Opus)
 
      ⇒ The 36 % and the 2 463 kbit/s are properties of **a bench
      configuration**, not of the product.  `[R]` `pagina.html:4727` asks
@@ -48,7 +48,7 @@ packets**, and the audio asks for fifty a second to say nothing.
     *«because `webtransport.c:1613` writes the datagram with
     `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`»*.  ⇒ Tried on 24 August: with that
     flag **never** requested the packet stays at 1 441 bytes all the same.  `[R]` What
-    fills it is `wt_scrivi()`, which asks for
+    fills it is `wt_write()`, which asks for
     `NGTCP2_WRITE_STREAM_FLAG_PADDING` at every stream write and closes the
     packet the datagram had left open.  ⚠ The number was measured,
     the cause was not: ⇒ §PADDING at the bottom of this file, with the table.
@@ -58,14 +58,14 @@ packets**, and the audio asks for fifty a second to say nothing.
    **1.000 → 1.000**, blocks silenced **1 out of 5 002** — and that one is the first
    block of the session, which precedes the first samples of the tone.
 
-⚠ THE PRICE, and it is written: on a scene with sound the client's `mancati` may
+⚠ THE PRICE, and it is written: on a scene with sound the client's `missed` may
   rise (⇒ `[M]` 0 → 2 on the first measurement; 0 → 0 on the remeasurement of 24 August).
-  A WANTED gap leaves the same `istante` jump as a lost one, and that
+  A WANTED gap leaves the same `instant` jump as a lost one, and that
   counter does not tell the two apart.
 
 ⭐ THE CURE IS IN `src/audio.c`, AND IT IS BORN OFF (I6): a block in which ALL the
    samples are exactly zero does not become a datagram.  §6.3 puts
-   the `istante` inside every block and the receiver puts them back in their absolute
+   the `instant` inside every block and the receiver puts them back in their absolute
    place ⇒ **a block not sent is a gap, and a gap is silence** —
    which is what that block contained.  It is not an approximation.
 
@@ -87,14 +87,14 @@ bench could only check that the `md5` were DIFFERENT: it could say «they are no
 the same file», not «they differ by what I think».
 
 ⭐ `DECISIONI.md` §3.1-septies removed that `-D`: the cure is born **ON** in the
-   product and is turned off with **`--niente-audio-silenzio`**, which is a command
+   product and is turned off with **`--no-audio-silence`**, which is a command
    line option.
 
 ⇒ **The two arms are the SAME IDENTICAL BINARY**, and the only thing that changes is the
   server's command line:
 
       ON       (no option — it is the product that ships)
-      OFF      --niente-audio-silenzio
+      OFF      --no-audio-silence
 
 ⛔⭐ **ONE SUSPECT LESS, and it is written because it is a gain of method, not
     a simplification.**  Before, if the two arms had given equal numbers,
@@ -104,23 +104,23 @@ the same file», not «they differ by what I think».
     arms apart.
 
 ⛔⛔ AND WHAT TELLS THE ARMS APART NOW IS **ONLY THE PRODUCT'S LOG** —
-    `a_la_cura_ha_parlato()`, which demands `cura_dichiarata` «spenta» in one and
-    «accesa» in the other.  With two binaries that predicate was an extra belt;
+    `a_fix_has_spoken()`, which demands `declared_fix` «spenta» in one and
+    «switched_on» in the other.  With two binaries that predicate was an extra belt;
     with a single binary it is **the only one**, and without it two identical runs with
     the name of two would be indistinguishable from a cure that is not needed.
     ⚠ `LEZIONI.md` E1: «written is not in force».
 
 ═══ ⭐ THE QUANTITIES, AND THE ONE THAT COUNTS IS NOT «HOW MANY I THROW AWAY» ══
 
-  1. **`kbit_s`** — the bytes ngtcp2 declares sent, from the product's `rete-quic`
+  1. **`kbit_s`** — the bytes ngtcp2 declares sent, from the product's `network-quic`
      line.  ⛔ It is not an estimate of mine: it is the transport's counter.
   2. **`pkt_s`** and **`dgram_s`** — packets and datagrams per second.  ⭐ Their
      ratio is the proof of the padding: 50 datagrams in 51 packets means
      «one packet per block».
-  3. **`copertura`** — how much of the timeline really received
-     samples, counted by `09-b77.scaletta()` on the PCM blocks.  ⭐ It is the
+  3. **`coverage`** — how much of the timeline really received
+     samples, counted by `09-b77.ladder()` on the PCM blocks.  ⭐ It is the
      quantity on which the cure can do harm: if it silenced sound, it would drop.
-  4. **`purezza_tono`** — the judge of `07-b42` via `09-b77.purezza_tono()`.
+  4. **`tone_purity`** — the judge of `07-b42` via `09-b77.tone_purity()`.
 
 ═══ ⛔ AND ON A BAD NETWORK THE CODEC IS NOT ENOUGH — the prediction that did NOT hold ══
 
@@ -140,72 +140,72 @@ the same file», not «they differ by what I think».
    The boundary stays where it is and the red stays written.
 
 Usage (from the laptop):
-    python3 banchi/09-b84-audio-silenzio.py --certifica    # ⛔ first of all
-    python3 banchi/09-b84-audio-silenzio.py terreno
-    python3 banchi/09-b84-audio-silenzio.py costruisci     # THE binary (one)
-    python3 banchi/09-b84-audio-silenzio.py muto  [--secondi 25]
-    python3 banchi/09-b84-audio-silenzio.py tono  [--secondi 25]
-    python3 banchi/09-b84-audio-silenzio.py costo [--secondi 25]
-    python3 banchi/09-b84-audio-silenzio.py stretta [--profilo casa-cattiva]
+    python3 banchi/09-b84-audio-silenzio.py --certify    # ⛔ first of all
+    python3 banchi/09-b84-audio-silenzio.py terrain
+    python3 banchi/09-b84-audio-silenzio.py build     # THE binary (one)
+    python3 banchi/09-b84-audio-silenzio.py mute  [--seconds 25]
+    python3 banchi/09-b84-audio-silenzio.py tone  [--seconds 25]
+    python3 banchi/09-b84-audio-silenzio.py cost [--seconds 25]
+    python3 banchi/09-b84-audio-silenzio.py tight [--profile_v casa-cattiva]
     python3 banchi/09-b84-audio-silenzio.py tutto
 """
 import argparse, importlib.util, json, os, re, subprocess, sys, time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
-RADICE = os.path.dirname(QUI)
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ⛔ ISOLATION, and it is written BEFORE importing anything: the modules
 #    underneath read the environment at import time, not at call time
 #    (`LEZIONI.md` §1.26).
 # ═══════════════════════════════════════════════════════════════════════════
-PORTA = int(os.environ.get("PORTA", "7972"))
-UTENTE = os.environ.get("UTENTE", "provanr9")
+PORT = int(os.environ.get("PORT", "7972"))
+ACCOUNT = os.environ.get("ACCOUNT", "provanr9")
 UID_B = int(os.environ.get("UID_B", "1072"))
-ALB = os.environ.get("ALBERO", "/media/REMOTIX/src/09nr9-src")
+TREE = os.environ.get("TREE", "/media/REMOTIX/src/09nr9-src")
 LAV = os.environ.get("LAV", "/media/REMOTIX/tmp/09nr9")
-DENTRO_ALB = os.environ.get("DENTRO_ALB", "/srv/src/09nr9-src")
-DENTRO_LAV = os.environ.get("DENTRO_LAV", "/srv/remotix/tmp/09nr9")
-UNITA = os.environ.get("UNITA", "remotix-%d" % PORTA)
-PAROLA_UTENTE = os.environ.get("PAROLA_UTENTE", "nr9-audio-2026")
-MACCHINA = os.environ.get("MACCHINA", "nicfio@192.168.0.2")
-IND = os.environ.get("IND", "192.168.0.2")
-FUORI = os.environ.get("FUORI", os.path.join(
+INSIDE_TREE = os.environ.get("INSIDE_TREE", "/srv/src/09nr9-src")
+INSIDE_WORK = os.environ.get("INSIDE_WORK", "/srv/remotix/tmp/09nr9")
+UNIT = os.environ.get("UNIT", "remotix-%d" % PORT)
+USER_PASSWORD = os.environ.get("USER_PASSWORD", "nr9-audio-2026")
+MACHINE = os.environ.get("MACHINE", "nicfio@192.168.0.2")
+ADDR = os.environ.get("ADDR", "192.168.0.2")
+OUT = os.environ.get("OUT", os.path.join(
     "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
     "b62d7177-9fdd-47c7-8aa1-567c8b13accf/scratchpad", "b84"))
 
 # ⛔ The ports that are NOT mine.  They are counted, not touched.
-VIETATE = ("7900", "7910", "7920", "7971")
-VIETATA_IFACE = "enp7s0"
+FORBIDDEN = ("7900", "7910", "7920", "7971")
+FORBIDDEN_IFACE = "enp7s0"
 
-for k, v in (("PORTA", str(PORTA)), ("UTENTE", UTENTE), ("UID_B", str(UID_B)),
-             ("ALBERO", ALB), ("LAV", LAV), ("DENTRO_ALB", DENTRO_ALB),
-             ("DENTRO_LAV", DENTRO_LAV), ("FUORI", FUORI), ("IND", IND),
-             ("MACCHINA", MACCHINA), ("PAROLA_UTENTE", PAROLA_UTENTE)):
+for k, v in (("PORT", str(PORT)), ("ACCOUNT", ACCOUNT), ("UID_B", str(UID_B)),
+             ("TREE", TREE), ("LAV", LAV), ("INSIDE_TREE", INSIDE_TREE),
+             ("INSIDE_WORK", INSIDE_WORK), ("OUT", OUT), ("ADDR", ADDR),
+             ("MACHINE", MACHINE), ("USER_PASSWORD", USER_PASSWORD)):
     os.environ[k] = v
-os.makedirs(FUORI, exist_ok=True)
+os.makedirs(OUT, exist_ok=True)
 
 
-def _carica(nome, file_):
-    sp = importlib.util.spec_from_file_location(nome, os.path.join(QUI, file_))
+def _load(label_name, file_):
+    sp = importlib.util.spec_from_file_location(label_name, os.path.join(HERE, file_))
     m = importlib.util.module_from_spec(sp)
     sp.loader.exec_module(m)
     return m
 
 
 # ⛔ `09-b77` is NOT touched: it is IMPORTED.  It has the tone, the samples judge,
-#    the `netem` profiles and 52 green `--certifica` cases — rewriting one
+#    the `netem` profiles and 52 green `--certify` cases — rewriting one
 #    line of it would mean having two judges that can diverge.
-B77 = _carica("b77", "09-b77-audio-riordino.py")
-RETE = B77.RETE            # root(), guasta(), tono_accendi/spegni, guardiano_*
-LUCCHETTO = B77.LUCCHETTO
+B77 = _load("b77", "09-b77-audio-riordino.py")
+NETWORK = B77.NETWORK            # root(), broken(), tone_turn_on/turn_off, guardiano_*
+LOCK = B77.LOCK
 
 CHI = "09-b84"
 # ⛔ ONE binary only, and it is the product's: the arms are made with
-#    `OPZIONI_SERVER` (⇒ the header, «one suspect less»).
-BINARIO = "%s/src/remotix" % ALB
+#    `SERVER_OPTIONS` (⇒ the header, «one suspect less»).
+BINARY = "%s/src/remotix" % TREE
 # ⭐ The command line of each arm, and the ON arm has none.
-OPZIONI = {"accesa": "", "spenta": "--niente-audio-silenzio"}
+OPTIONS = {"switched_on": "", "spenta": "--no-audio-silence"}
 
 
 def log(t):  print("\n\033[1m== %s\033[0m" % t)
@@ -219,26 +219,26 @@ def inf(t):  print("    --  %s" % t)
 # THE PREDICATES — WRITTEN FIRST, AND THEY ARE FUNCTIONS, NOT PROSE
 #
 # ⛔ R13: an expectation in prose stays true «on reading» whatever number comes out.  Here
-#    every expectation is `(s, a) -> (passa, perche)` — `s` are the numbers of the arm
-#    with the cure OFF, `a` those with the cure ON — and `passa=None` means
+#    every expectation is `(s, a) -> (pass_on, reason_text)` — `s` are the numbers of the arm
+#    with the cure OFF, `a` those with the cure ON — and `pass_on=None` means
 #    «I refuse to judge», which is an outcome of ITS OWN and not a green.
 # ═══════════════════════════════════════════════════════════════════════════
-def _p(cond, perche):
-    return (bool(cond), perche)
+def _p(cond, reason_text):
+    return (bool(cond), reason_text)
 
 
-def _muto(perche):
-    return (None, perche)
+def _mute(reason_text):
+    return (None, reason_text)
 
 
-def _c(n, chiave):
+def _c(n, key_id):
     """The value, or `None` if it was not read.  ⛔ `None` is not zero."""
     if not isinstance(n, dict):
         return None
-    return n.get(chiave)
+    return n.get(key_id)
 
 
-def a_il_riempimento_c_e(min_kbit=400.0, max_carico_kbit=5.0):
+def a_fill_is_there(min_kbit=400.0, max_load_kbit=5.0):
     """⭐ THE FACT, measured with the OFF arm — which is today's product.
 
     ⛔ It is also the bench's POSITIVE CONTROL: if the padding does not come out here,
@@ -246,86 +246,86 @@ def a_il_riempimento_c_e(min_kbit=400.0, max_carico_kbit=5.0):
        audio) and the ON arm would prove nothing."""
     def f(s, a):
         k = _c(s, "kbit_s")
-        c = _c(s, "carico_kbit_s")
+        c = _c(s, "load_kbit_s")
         if k is None or c is None:
-            return _muto("I did not read kbit_s (%s) or carico_kbit_s (%s)" % (k, c))
-        return _p(k >= min_kbit and c <= max_carico_kbit,
+            return _mute("I did not read kbit_s (%s) or load_kbit_s (%s)" % (k, c))
+        return _p(k >= min_kbit and c <= max_load_kbit,
                   "cure OFF: %.1f kbit/s on the wire for %.2f kbit/s of payload "
-                  "(expected >= %.0f and <= %.1f)" % (k, c, min_kbit, max_carico_kbit))
+                  "(expected >= %.0f and <= %.1f)" % (k, c, min_kbit, max_load_kbit))
     return f
 
 
-def a_la_cura_taglia(fattore=8.0):
-    """⭐ THE PREDICTION THAT CAN FALL: bandwidth drops by at least `fattore`."""
+def a_fix_trims(factor=8.0):
+    """⭐ THE PREDICTION THAT CAN FALL: bandwidth drops by at least `factor`."""
     def f(s, a):
         ks, ka = _c(s, "kbit_s"), _c(a, "kbit_s")
         if ks is None or ka is None:
-            return _muto("kbit_s: off=%s on=%s" % (ks, ka))
+            return _mute("kbit_s: off=%s on=%s" % (ks, ka))
         if ka <= 0:
             return _p(True, "cure ON: 0 kbit/s (off %.1f)" % ks)
-        return _p(ks / ka >= fattore,
+        return _p(ks / ka >= factor,
                   "%.1f → %.1f kbit/s = %.1f× (expected >= %.0f×)"
-                  % (ks, ka, ks / ka, fattore))
+                  % (ks, ka, ks / ka, factor))
     return f
 
 
-def a_i_datagram_spariscono(tetto_s=2.0):
+def a_datagrams_disappear(cap_s=2.0):
     """⭐ And it shows at the OTHER end: the client no longer receives blocks."""
     def f(s, a):
         ds, da = _c(s, "dgram_s"), _c(a, "dgram_s")
         if ds is None or da is None:
-            return _muto("dgram_s: off=%s on=%s" % (ds, da))
-        return _p(ds >= 40.0 and da <= tetto_s,
+            return _mute("dgram_s: off=%s on=%s" % (ds, da))
+        return _p(ds >= 40.0 and da <= cap_s,
                   "datagrams per second: %.1f → %.1f (expected >= 40 and <= %.1f)"
-                  % (ds, da, tetto_s))
+                  % (ds, da, cap_s))
     return f
 
 
-def a_la_cura_ha_parlato():
+def a_fix_has_spoken():
     """⛔ «I turned it on» is not «it did it»: the PRODUCT's log must say
        that the cure is on AND that it silenced some blocks.  ⚠ Without that, a wrong
        binary would give two identical runs with the name of two."""
     def f(s, a):
-        if _c(a, "cura_dichiarata") != "accesa":
+        if _c(a, "declared_fix") != "switched_on":
             return _p(False, "the log of the ON arm declares «%s»"
-                             % _c(a, "cura_dichiarata"))
-        if _c(s, "cura_dichiarata") != "spenta":
+                             % _c(a, "declared_fix"))
+        if _c(s, "declared_fix") != "spenta":
             return _p(False, "the log of the OFF arm declares «%s»"
-                             % _c(s, "cura_dichiarata"))
-        t = _c(a, "taciuti")
+                             % _c(s, "declared_fix"))
+        t = _c(a, "silenced")
         if t is None:
-            return _muto("the log does not carry the digital silence line")
+            return _mute("the log does not carry the digital silence line")
         return _p(t > 0, "blocks silenced by the ON arm: %s (expected > 0)" % t)
     return f
 
 
-def a_il_suono_non_si_tocca(tolleranza=0.02):
+def a_sound_is_untouched(tolerance=0.02):
     """⛔⛔ THE CHECK WORTH MORE THAN ALL: on the scene with the TONE the cure must
         change NOTHING — the tone is never digital zero.
 
     ⚠ If this says red, the cure eats sound and does not go out the door."""
     def f(s, a):
-        cs, ca = _c(s, "copertura"), _c(a, "copertura")
-        ps, pa = _c(s, "purezza_tono"), _c(a, "purezza_tono")
+        cs, ca = _c(s, "coverage"), _c(a, "coverage")
+        ps, pa = _c(s, "tone_purity"), _c(a, "tone_purity")
         if cs is None or ca is None:
-            return _muto("coverage: off=%s on=%s" % (cs, ca))
-        if abs(cs - ca) > tolleranza:
+            return _mute("coverage: off=%s on=%s" % (cs, ca))
+        if abs(cs - ca) > tolerance:
             return _p(False, "coverage %.4f → %.4f: the cure removed sound"
                              % (cs, ca))
         if ps is None or pa is None:
             return _p(True, "coverage %.4f ≈ %.4f (the tone was not judged)"
                             % (cs, ca))
-        return _p(abs(ps - pa) <= tolleranza * 5,
+        return _p(abs(ps - pa) <= tolerance * 5,
                   "coverage %.4f ≈ %.4f · tone %.3f ≈ %.3f" % (cs, ca, ps, pa))
     return f
 
 
-def a_col_tono_tace_solo_il_primo(tetto=2):
+def a_with_tone_only_first_is_silent(ceiling=2):
     """⛔ THE DIRECT COUNTER-PROOF: with the tone on the cure must not bite.
 
     ⛔⭐ AND THE BOUNDARY IS NOT ZERO, AND IT IS A MEASUREMENT THAT CORRECTED THE BENCH —
-        `[M]` 24 August 2026.  The predicate asked for `taciuti == 0` and gave
-        RED with `taciuti = 1`.  The log says which:
+        `[M]` 24 August 2026.  The predicate asked for `silenced == 0` and gave
+        RED with `silenced = 1`.  The log says which:
 
           09:10:25.701  ⭐ PCM opened …
           09:10:25.731  ⭐ DIGITAL silence: 1 blocks not sent of 1 in
@@ -337,62 +337,62 @@ def a_col_tono_tace_solo_il_primo(tetto=2):
     ⛔ The boundary stays TIGHT (2 out of ~5 000) on purpose: if the cure started to
        really silence, this predicate would see it at once."""
     def f(s, a):
-        t = _c(a, "taciuti")
+        t = _c(a, "silenced")
         e = _c(a, "entrati_cod")
         if t is None:
-            return _muto("the log does not carry the cure's count at closing")
-        return _p(t <= tetto,
+            return _mute("the log does not carry the cure's count at closing")
+        return _p(t <= ceiling,
                   "blocks silenced with the tone on: %s out of %s in "
                   "(expected <= %d: only those preceding the first samples)"
-                  % (t, e, tetto))
+                  % (t, e, ceiling))
     return f
 
 
-def a_il_prezzo_si_dichiara():
+def a_price_is_declared():
     """⚠ IT IS NEITHER A GREEN NOR A RED: it is the price, and it is written.
 
     A wanted gap has, on the receiving side, the same face as a loss:
-    the client's `mancati` grow.  ⛔ Declaring it here is what prevents
+    the client's `missed` grow.  ⛔ Declaring it here is what prevents
     someone tomorrow from reading that number as a network fault."""
     def f(s, a):
-        return _muto("PRICE: `mancati` %s → %s.  A silenced block leaves the "
-                     "same `istante` jump as a lost one: the number does not "
+        return _mute("PRICE: `missed` %s → %s.  A silenced block leaves the "
+                     "same `instant` jump as a lost one: the number does not "
                      "tell the two apart, and from today it must be read knowing it"
-                     % (_c(s, "mancati"), _c(a, "mancati")))
+                     % (_c(s, "missed"), _c(a, "missed")))
     return f
 
 
-def a_opus_costa_meno_del_pcm(fattore=10.0):
+def a_opus_costs_less_than_pcm(factor=10.0):
     """⭐ THE REFUTATION, in one number: the audio payload in PCM against Opus.
 
     ⛔ The PAYLOAD (the bytes of §6.3) is compared, not the bytes on the wire: on the wire the
        padding evens them out, and that is exactly the defect this bench
        found — confusing the two would say «PCM and Opus cost the same»."""
     def f(p, o):
-        cp, co = _c(p, "carico_kbit_s"), _c(o, "carico_kbit_s")
+        cp, co = _c(p, "load_kbit_s"), _c(o, "load_kbit_s")
         if cp is None or co is None or co <= 0:
-            return _muto("carico_kbit_s: pcm=%s opus=%s" % (cp, co))
-        return _p(cp / co >= fattore,
+            return _mute("load_kbit_s: pcm=%s opus=%s" % (cp, co))
+        return _p(cp / co >= factor,
                   "audio payload: PCM %.1f kbit/s against Opus %.2f = %.0f× "
-                  "(expected >= %.0f×)" % (cp, co, cp / co, fattore))
+                  "(expected >= %.0f×)" % (cp, co, cp / co, factor))
     return f
 
 
-def a_il_pcm_si_fa_rifiutare(minimo=100):
+def a_pcm_gets_refused(minimum=100):
     """⛔ THE POSITIVE CONTROL OF THE NARROW NETWORK: with PCM the refusal is there.
 
     ⚠ If PCM does not get refused, the profile does not bite and the comparison with
       Opus proves nothing — it would be the same run twice."""
     def f(p, o):
-        r = _c(p, "rifiutati_server")
+        r = _c(p, "server_refused")
         if r is None:
-            return _muto("the log does not carry the server's refused count")
-        return _p(r >= minimo,
-                  "PCM: %s blocks refused by ngtcp2 (expected >= %d)" % (r, minimo))
+            return _mute("the log does not carry the server's refused count")
+        return _p(r >= minimum,
+                  "PCM: %s blocks refused by ngtcp2 (expected >= %d)" % (r, minimum))
     return f
 
 
-def a_opus_regge_dove_il_pcm_cede(tetto_permille=20):
+def a_opus_holds_where_pcm_gives_way(cap_permille=20):
     """⭐ THE PREDICTION: on the SAME `netem`, Opus gets refused in a
        negligible fraction of what PCM gets refused.
 
@@ -409,52 +409,52 @@ def a_opus_regge_dove_il_pcm_cede(tetto_permille=20):
         all the same, so the codec **is not the cure of the refusal** — it is the cure
         of the cost.  The cure of the refusal, if there is one, lies in the transport."""
     def f(p, o):
-        rp, sp = _c(p, "rifiutati_server"), _c(p, "spediti_server")
-        ro, so = _c(o, "rifiutati_server"), _c(o, "spediti_server")
+        rp, sp = _c(p, "server_refused"), _c(p, "shipped_server")
+        ro, so = _c(o, "server_refused"), _c(o, "shipped_server")
         if None in (rp, sp, ro, so) or (sp + rp) <= 0 or (so + ro) <= 0:
-            return _muto("server counts: pcm=%s/%s opus=%s/%s" % (rp, sp, ro, so))
+            return _mute("server counts: pcm=%s/%s opus=%s/%s" % (rp, sp, ro, so))
         fp = 1000.0 * rp / (sp + rp)
         fo = 1000.0 * ro / (so + ro)
-        return _p(fo <= tetto_permille,
+        return _p(fo <= cap_permille,
                   "refused: PCM %.0f‰ against Opus %.0f‰ (expected Opus <= %d‰)"
-                  % (fp, fo, tetto_permille))
+                  % (fp, fo, cap_permille))
     return f
 
 
-def a_la_copertura_risale(guadagno=0.10):
+def a_coverage_rises(gain=0.10):
     """⭐⭐ THE QUANTITY THAT COUNTS — how much of the PRODUCED audio really arrives.
 
-    ⛔⭐ AND IT IS NOT THE SAMPLES' `copertura`, and the reason is that that one is
-        computed only on PCM (`09-b77.scaletta()` skips the blocks that are not
+    ⛔⭐ AND IT IS NOT THE SAMPLES' `coverage`, and the reason is that that one is
+        computed only on PCM (`09-b77.ladder()` skips the blocks that are not
         codec 2, and this bench has no Opus decoder).  Comparing the
         PCM samples' coverage with **nothing** would give «not judged»
         precisely on the mandate's question.
 
-    ⭐ `copertura_filo` = **blocks the network delivered to the client** divided by
+    ⭐ `wire_coverage` = **blocks the network delivered to the client** divided by
        **blocks the server produced** (sent + refused + dropped).
        ⚠ The network's loss is in there too, and it is declared: the two arms
        sit under the SAME `netem`, so the difference between them still belongs to
        whoever gets refused — but the number alone does not separate the two causes.
-       ⛔ For that there is `a_opus_regge_dove_il_pcm_cede`, which looks at the
+       ⛔ For that there is `a_opus_holds_where_pcm_gives_way`, which looks at the
        refusals only; this one looks at what reaches the ear."""
     def f(p, o):
-        cp, co = _c(p, "copertura_filo"), _c(o, "copertura_filo")
+        cp, co = _c(p, "wire_coverage"), _c(o, "wire_coverage")
         if cp is None or co is None:
-            return _muto("copertura_filo: pcm=%s opus=%s" % (cp, co))
-        return _p(co - cp >= guadagno,
+            return _mute("wire_coverage: pcm=%s opus=%s" % (cp, co))
+        return _p(co - cp >= gain,
                   "wire coverage: PCM %.4f → Opus %.4f (+%.4f, expected >= +%.2f)"
-                  % (cp, co, co - cp, guadagno))
+                  % (cp, co, co - cp, gain))
     return f
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT TALKS TO THE TEST MACHINE
 # ═══════════════════════════════════════════════════════════════════════════
-def root(comando, tetto=300):
-    return RETE.root(comando, tetto)
+def root(command, ceiling=300):
+    return NETWORK.root(command, ceiling)
 
 
-def righe_registro():
+def log_line_list():
     rc, out, _ = root("wc -l < %s/registro.log 2>/dev/null || echo 0" % LAV)
     try:
         return int(out.strip())
@@ -462,364 +462,364 @@ def righe_registro():
         return 0
 
 
-R_RETE = re.compile(
-    r"rete-quic \S+ da_ms=(\d+).*?spediti=(\d+) spediti_d=(\d+) "
-    r"byte_spediti=(\d+).*?dgram_ok=(\d+)")
+R_NETWORK = re.compile(
+    r"network-quic \S+ da_ms=(\d+).*?shipped=(\d+) shipped_d=(\d+) "
+    r"byte_shipped=(\d+).*?dgram_ok=(\d+)")
 
 
-def rete_del_giro(riga0):
+def round_network(line0):
     """⭐ THE BYTES ON THE WIRE ARE TOLD BY THE PRODUCT, not an estimate of mine.
 
-    The `rete-quic` line carries `byte_spediti` (cumulative per connection) and
+    The `network-quic` line carries `byte_shipped` (cumulative per connection) and
     `da_ms` (the TRUE interval between one line and the next).  ⇒ The bandwidth is the
     difference between the first and the last line of the window, divided by the sum
     of the `da_ms` — not by the time I believed I had waited.
 
-    ⛔ And it is read only from `riga0` on, so it belongs to THIS run.
+    ⛔ And it is read only from `line0` on, so it belongs to THIS run.
     ⚠ Fewer than three lines: `None` is returned, not zero (`CODER.md` §3.10)."""
     rc, out, _ = root("tail -n +%d %s/registro.log 2>/dev/null | grep -a "
-                      "'rete-quic '" % (riga0 + 1, LAV))
-    righe = []
+                      "'network-quic '" % (line0 + 1, LAV))
+    line_list = []
     for r in out.split("\n"):
-        m = R_RETE.search(r)
+        m = R_NETWORK.search(r)
         if m:
-            righe.append(tuple(int(x) for x in m.groups()))
-    if len(righe) < 3:
-        return {"esito": "NOTHING TO READ — %d «rete-quic» lines in this "
-                         "run (3 are needed)" % len(righe), "righe": len(righe)}
+            line_list.append(tuple(int(x) for x in m.groups()))
+    if len(line_list) < 3:
+        return {"outcome": "NOTHING TO READ — %d «network-quic» lines in this "
+                         "run (3 are needed)" % len(line_list), "line_list": len(line_list)}
     # ⛔ The FIRST line is discarded: its `da_ms` also covers the start of the
     #    connection, and the start is not the steady state I want to measure.
-    ms = sum(r[0] for r in righe[1:])
+    ms = sum(r[0] for r in line_list[1:])
     if ms <= 0:
-        return {"esito": "sum of da_ms is zero", "righe": len(righe)}
+        return {"outcome": "sum of da_ms is zero", "line_list": len(line_list)}
     return {
-        "righe": len(righe),
-        "secondi": round(ms / 1000.0, 2),
-        "pkt_s": round((righe[-1][1] - righe[0][1]) * 1000.0 / ms, 2),
-        "kbit_s": round((righe[-1][3] - righe[0][3]) * 8.0 / ms, 2),
-        "dgram_s": round((righe[-1][4] - righe[0][4]) * 1000.0 / ms, 2),
-        "byte_per_pkt": (None if righe[-1][1] == righe[0][1] else
-                         round((righe[-1][3] - righe[0][3]) /
-                               float(righe[-1][1] - righe[0][1]), 1)),
+        "line_list": len(line_list),
+        "seconds": round(ms / 1000.0, 2),
+        "pkt_s": round((line_list[-1][1] - line_list[0][1]) * 1000.0 / ms, 2),
+        "kbit_s": round((line_list[-1][3] - line_list[0][3]) * 8.0 / ms, 2),
+        "dgram_s": round((line_list[-1][4] - line_list[0][4]) * 1000.0 / ms, 2),
+        "byte_per_pkt": (None if line_list[-1][1] == line_list[0][1] else
+                         round((line_list[-1][3] - line_list[0][3]) /
+                               float(line_list[-1][1] - line_list[0][1]), 1)),
     }
 
 
-def conti_del_server(riga0):
+def server_counts(line0):
     """⛔ «The network lost it» and «the server never sent it» give the same
        number on the client's side.  Here the SERVER's count is read."""
     rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio of .*final "
-                      "count' | tail -1" % (riga0 + 1, LAV))
+                      "count' | tail -1" % (line0 + 1, LAV))
     r = out.strip()
     if not r:
-        return {"esito": "NOTHING TO READ — no «final count»"}
+        return {"outcome": "NOTHING TO READ — no «final count»"}
     m = re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
                   r"(\d+) DEFERRED", r)
     if not m:
-        return {"esito": "line found but unreadable", "riga": r[:160]}
+        return {"outcome": "line found but unreadable", "row": r[:160]}
     c = re.search(r"codec (\d+)\s*$", r)
-    return {"spediti": int(m.group(1)), "buttati": int(m.group(2)),
-            "rifiutati": int(m.group(3)), "rimandati": int(m.group(4)),
+    return {"shipped": int(m.group(1)), "dropped": int(m.group(2)),
+            "refused": int(m.group(3)), "rimandati": int(m.group(4)),
             "codec": (int(c.group(1)) if c else None)}
 
 
-def cura_del_registro(riga0):
+def log_fix(line0):
     """⛔ THE SWITCH IS READ FROM THE PRODUCT'S LOG, not from what I
        believe I turned on.  ⚠ `audio.c` writes the line even when the cure
        is OFF, on purpose: «the cure is not there» and «the cure is there and did
        nothing» must have two different faces (`CODER.md` §3.10)."""
     rc, out, _ = root("tail -n +%d %s/registro.log 2>/dev/null | grep -a "
-                      "'digital silence cure' | tail -1" % (riga0 + 1, LAV))
-    dett = out.strip()
+                      "'digital silence cure' | tail -1" % (line0 + 1, LAV))
+    details = out.strip()
     # ⛔⛔ AND THE WHOLE SENTENCE IS SEARCHED, NOT THE WORD — `[M]` 24 August 2026, and
     #     this bench would have fallen for it.  Since 24 August the line of the OFF
     #     arm contains *«⚠ And it is NOT the default: since 24 August it is born
-    #     ON»*: an `if "ON" in dett` would have read **on** on an
+    #     ON»*: an `if "ON" in details` would have read **on** on an
     #     OFF arm, that is it would have declared in force the opposite of
-    #     what was in force — and `a_la_cura_ha_parlato()`, which is the ONLY
+    #     what was in force — and `a_fix_has_spoken()`, which is the ONLY
     #     belt left now that the binaries are just one, would have given green to
     #     two wrong arms.
     # ⇒ It is anchored to the two sentences the product writes to SAY the state, and not
     #   to a word that also appears in the explanation (`audio.c:212`).
-    stato = None
-    if "OFF by hand" in dett:
-        stato = "spenta"
-    elif "⭐ ON" in dett:
-        stato = "accesa"
+    state = None
+    if "OFF by hand" in details:
+        state = "spenta"
+    elif "⭐ ON" in details:
+        state = "switched_on"
     # ⛔ THE EXACT COUNT IS THE ONE AT CLOSING, not the one of the line
     #    inside: that one comes out at the first block and then one every thousand, so it says
-    #    «at least N».  ⚠ Reading that one and calling it `taciuti` would be a number
+    #    «at least N».  ⚠ Reading that one and calling it `silenced` would be a number
     #    that looks measured — `[M]` 24 August 2026: 1 249 blocks silenced
     #    printed «1000».
     rc, out2, _ = root("tail -n +%d %s/registro.log 2>/dev/null | grep -a "
-                       "'silence cure count' | tail -1" % (riga0 + 1, LAV))
+                       "'silence cure count' | tail -1" % (line0 + 1, LAV))
     m = re.search(r"(\d+) blocks muted of (\d+) in, (\d+) out", out2)
-    return {"cura_dichiarata": stato,
-            "taciuti": (int(m.group(1)) if m else None),
+    return {"declared_fix": state,
+            "silenced": (int(m.group(1)) if m else None),
             "entrati_cod": (int(m.group(2)) if m else None),
             "usciti_cod": (int(m.group(3)) if m else None),
-            "riga": dett[:120]}
+            "row": details[:120]}
 
 
-DA_LEGGERE = {
-    "sul_filo":   r"on wire\s+(\d+)",
-    "ricevuti":   r"·\s*received\s+(\d+)\s*·",
-    "consegnati": r"delivered\s+(\d+)",
-    "mancati":    r"missed\s+(\d+)",
-    "carico":     r"·\s*(\d+)\s+bytes of payload",
+TO_READ = {
+    "on_wire":   r"on wire\s+(\d+)",
+    "received_n":   r"·\s*received\s+(\d+)\s*·",
+    "delivered": r"delivered\s+(\d+)",
+    "missed":    r"missed\s+(\d+)",
+    "load":     r"·\s*(\d+)\s+bytes of payload",
     "codec_cli":  r"bytes of payload\s*·\s*codec\s+(\d+)",
 }
 
 
-def _num(testo, nome):
+def _num(body_text, label_name):
     """⛔ The LAST occurrence — the counts line comes after all the others — and
        a `None` means «I did not read it», not «zero»."""
-    trovato = None
-    for m in re.finditer(DA_LEGGERE[nome], testo):
-        trovato = int(m.group(1))
-    return trovato
+    located = None
+    for m in re.finditer(TO_READ[label_name], body_text):
+        located = int(m.group(1))
+    return located
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE TWO BINARIES, AND THE SERVER THAT RESTARTS ON ONE OR THE OTHER
 # ═══════════════════════════════════════════════════════════════════════════
-def md5(percorso):
-    rc, out, _ = root("md5sum %s 2>/dev/null | cut -d' ' -f1" % percorso)
+def md5(fpath):
+    rc, out, _ = root("md5sum %s 2>/dev/null | cut -d' ' -f1" % fpath)
     s = out.strip()
     return s if len(s) == 32 else None
 
 
-def costruisci():
+def build():
     """⛔ THE BINARY — one only, and it is the product's.
 
     ⭐ Since 24 August 2026 there is nothing to build twice any more: the `-D`
        `AUDIO_SILENZIO_PREDEFINITO` was removed and the arms are made with
-       `--niente-audio-silenzio` (⇒ the header).  ⚠ Here it is built and its md5
+       `--no-audio-silence` (⇒ the header).  ⚠ Here it is built and its md5
        is DECLARED: it no longer serves to tell two arms apart, it serves to say
        which product I measured.
     ⛔ The sources must already be in the tree: whoever brings them is the ground
-       (`09-b79-terreno.sh porta` or `07-b64-terreno.sh porta`), and this bench
+       (`09-b79-terreno.sh port` or `07-b64-terreno.sh port`), and this bench
        does not keep a second copy of them."""
     log("THE BINARY — one only, and it is the product")
     rc, out, err = root(
-        "bash /media/REMOTIX/enter.sh --root 'PREFISSO=/srv/src/b2/prefisso "
+        "bash /media/REMOTIX/enter.sh --root 'PFX=/srv/src/b2/prefisso "
         "NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 "
-        "bash %s/src/costruisci.sh 2>&1 | tail -6'" % DENTRO_ALB, 1200)
+        "bash %s/src/costruisci.sh 2>&1 | tail -6'" % INSIDE_TREE, 1200)
     for r in (out + err).splitlines()[-6:]:
         inf(r.strip()[:150])
-    m = md5(BINARIO)
+    m = md5(BINARY)
     if not m:
-        ko("⛔ the binary is not there: %s" % BINARIO)
+        ko("⛔ the binary is not there: %s" % BINARY)
         return False
     ok("binary md5 %s" % m)
     # ⛔⭐ AND WE CHECK THAT IT CARRIES THE SWITCH.  A binary from before
-    #    24 August is born with the cure OFF and REFUSES `--niente-audio-silenzio`:
+    #    24 August is born with the cure OFF and REFUSES `--no-audio-silence`:
     #    it would give «the server does not start» on the OFF arm, and an ON arm
     #    that is not on.
-    rc, out, _ = root("grep -qa -- --niente-audio-silenzio %s && echo si || "
-                      "echo no" % BINARIO)
+    rc, out, _ = root("grep -qa -- --no-audio-silence %s && echo si || "
+                      "echo no" % BINARY)
     if "si" not in out:
-        ko("⛔⛔ `--niente-audio-silenzio` is NOT in this binary: it is from before "
+        ko("⛔⛔ `--no-audio-silence` is NOT in this binary: it is from before "
            "24 August 2026, and the two arms would both be «spenta»")
         return False
-    ok("`--niente-audio-silenzio` is in the binary")
+    ok("`--no-audio-silence` is in the binary")
     return True
 
 
-def accendi(braccio):
+def turn_on(arm):
     """⛔ The server restarts on the ONE binary, with the arm's command
        line.  ⚠ And the state of the cure is not checked here: the check is
        `LEZIONI.md` E1 and is done AFTERWARDS, on the product's log
-       (`cura_del_registro()` + `a_la_cura_ha_parlato()`) — «I wrote it on the
+       (`log_fix()` + `a_fix_has_spoken()`) — «I wrote it on the
        command line» is not «it is in force», and it is the only belt left since
        the binary has been just one."""
-    m = md5(BINARIO)
+    m = md5(BINARY)
     if m is None:
-        ko("⛔ the binary is not there (%s): «costruisci»" % BINARIO)
+        ko("⛔ the binary is not there (%s): «build»" % BINARY)
 
         return None
-    subprocess.run(["bash", os.path.join(QUI, "07-b64-terreno.sh"), "accendi"],
+    subprocess.run(["bash", os.path.join(HERE, "07-b64-terreno.sh"), "turn_on"],
                    capture_output=True, timeout=300,
-                   env=dict(os.environ, UNITA=UNITA,
-                            OPZIONI_SERVER=OPZIONI[braccio]))
+                   env=dict(os.environ, UNIT=UNIT,
+                            SERVER_OPTIONS=OPTIONS[arm]))
     for _ in range(50):
-        rc2, o, _ = root("ss -uln 2>/dev/null | grep -c ':%d '" % PORTA)
+        rc2, o, _ = root("ss -uln 2>/dev/null | grep -c ':%d '" % PORT)
         if o.strip() not in ("", "0"):
             break
         time.sleep(0.2)
     return m
 
 
-def giro(braccio, scena, codec, secondi):
-    """One run: arm (spenta|accesa) · scene (muto|tono) · codec (pcm|opus)."""
-    nome = "%s-%s-%s" % (braccio, scena, codec)
-    j_fuori = os.path.join(FUORI, nome + ".jsonl")
-    binario = accendi(braccio)
-    if binario is None:
-        return {"esito": "the binary of arm «%s» did not get in place" % braccio}
+def lap(arm, scene, codec, seconds):
+    """One run: arm (spenta|switched_on) · scene (mute|tone) · codec (pcm|opus)."""
+    label_name = "%s-%s-%s" % (arm, scene, codec)
+    j_out = os.path.join(OUT, label_name + ".jsonl")
+    binary = turn_on(arm)
+    if binary is None:
+        return {"outcome": "the binary of arm «%s» did not get in place" % arm}
 
-    if scena == "tono":
+    if scene == "tone":
         # ⛔⭐ AND THE ORDER IS NOT A DETAIL — `[M]` 24 August 2026, first run
         #     with the tone: the «remotix» sink is created by the CHILD, and the child is born
         #     when a client comes in.  On a freshly restarted server
         #     `pw-play --target remotix` binds to NOTHING, and the bench
         #     would have measured silence calling it network.  ⇒ First a short
         #     session that brings the stage to life (I4: it outlives it), then the tone.
-        if not RETE.innesca_sessione():
-            return {"esito": "⛔ the session does not open: there is no sink to "
+        if not NETWORK.trigger_session():
+            return {"outcome": "⛔ the session does not open: there is no sink to "
                              "play into"}
-        if not RETE.tono_accendi():
-            return {"esito": "⛔ the tone does NOT play in the session: a judge "
+        if not NETWORK.tone_turn_on():
+            return {"outcome": "⛔ the tone does NOT play in the session: a judge "
                              "reading silence would blame the network"}
     else:
-        RETE.tono_spegni()
+        NETWORK.tone_turn_off()
 
-    riga0 = righe_registro()
+    line0 = log_line_list()
     t0 = time.time()
     # ⛔⭐ AND `opus` ALONE CANNOT BE DECLARED — `[M]` 24 August 2026, first
-    #    run: `congedo motivo=0x09 dettaglio=the client does not declare pcm
+    #    run: `farewell motivo=0x09 detail=the client does not declare pcm
     #    in audio.codec`.  §4.3 mandates `pcm` on BOTH sides and `rcp.c:2229` enforces
     #    it.  ⇒ To get Opus one declares **`opus,pcm`**, and the server
     #    picks the first in the client's order of preference.
     #    ⚠ Asking for «opus only» does not give a run without PCM: it gives a run without
     #      ANYTHING, and its zeros would have looked like a measurement.
-    chiesto = "opus,pcm" if codec == "opus" else "pcm"
-    dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
-              "--utente %s --parola-file %s/parola --audio-codec %s "
-              "--audio-scrivi %s/b84-%s.jsonl --resta %d"
-              % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, chiesto,
-                 DENTRO_LAV, nome, secondi))
-    rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % dentro,
-                        secondi + 240)
-    uscita = out + err
-    open(os.path.join(FUORI, nome + ".txt"), "w").write(uscita)
+    requested = "opus,pcm" if codec == "opus" else "pcm"
+    inside = ("python3 -u %s/banchi/01-b3-cliente.py --address %s --port %d "
+              "--username %s --password-file %s/password --audio-codec %s "
+              "--audio-write %s/b84-%s.jsonl --stays %d"
+              % (INSIDE_TREE, ADDR, PORT, ACCOUNT, INSIDE_WORK, requested,
+                 INSIDE_WORK, label_name, seconds))
+    rc, out, err = root("bash /media/REMOTIX/enter.sh --root '%s'" % inside,
+                        seconds + 240)
+    out_dir = out + err
+    open(os.path.join(OUT, label_name + ".txt"), "w").write(out_dir)
     subprocess.run("ssh -o BatchMode=yes %s \"printf '%%s\\n' '%s' | sudo -S -p '' "
                    "cat %s/b84-%s.jsonl\" > %s"
-                   % (MACCHINA, RETE.PAROLA_SUDO, LAV, nome, j_fuori),
+                   % (MACHINE, NETWORK.SUDO_PASSWORD, LAV, label_name, j_out),
                    shell=True)
-    if scena == "tono":
-        RETE.tono_spegni()
+    if scene == "tone":
+        NETWORK.tone_turn_off()
 
-    rq = rete_del_giro(riga0)
-    sv = conti_del_server(riga0)
-    cu = cura_del_registro(riga0)
-    n = {"braccio": braccio, "scena": scena, "codec": codec, "binario": binario,
-         "secondi": round(time.time() - t0, 1),
-         "sul_filo": _num(uscita, "sul_filo"),
-         "ricevuti": _num(uscita, "ricevuti"),
-         "consegnati": _num(uscita, "consegnati"),
-         "mancati": _num(uscita, "mancati"),
-         "carico": _num(uscita, "carico"),
-         "codec_cli": _num(uscita, "codec_cli"),
-         "spediti_server": sv.get("spediti"),
-         "rifiutati_server": sv.get("rifiutati"),
-         "buttati_server": sv.get("buttati"),
+    rq = round_network(line0)
+    sv = server_counts(line0)
+    cu = log_fix(line0)
+    n = {"arm": arm, "scene": scene, "codec": codec, "binary": binary,
+         "seconds": round(time.time() - t0, 1),
+         "on_wire": _num(out_dir, "on_wire"),
+         "received_n": _num(out_dir, "received_n"),
+         "delivered": _num(out_dir, "delivered"),
+         "missed": _num(out_dir, "missed"),
+         "load": _num(out_dir, "load"),
+         "codec_cli": _num(out_dir, "codec_cli"),
+         "shipped_server": sv.get("shipped"),
+         "server_refused": sv.get("refused"),
+         "buttati_server": sv.get("dropped"),
          "rimandati_server": sv.get("rimandati"),
          "codec_server": sv.get("codec"),
-         "server": sv, "rete": rq}
+         "server": sv, "net": rq}
     n.update({k: rq.get(k) for k in ("pkt_s", "kbit_s", "dgram_s", "byte_per_pkt")})
-    n.update({k: cu.get(k) for k in ("cura_dichiarata", "taciuti",
+    n.update({k: cu.get(k) for k in ("declared_fix", "silenced",
                                      "entrati_cod", "usciti_cod")})
     # ⭐ The TRUE audio payload: the bytes of §6.3 the client counted,
     #   over the run's time.  ⛔ It is not `kbit_s`: that is the wire, padding
     #   included, and it is precisely the difference between the two that this bench measures.
-    if n["carico"] is not None and rq.get("secondi"):
-        n["carico_kbit_s"] = round(n["carico"] * 8.0 / 1000.0 / rq["secondi"], 3)
+    if n["load"] is not None and rq.get("seconds"):
+        n["load_kbit_s"] = round(n["load"] * 8.0 / 1000.0 / rq["seconds"], 3)
     else:
-        n["carico_kbit_s"] = None
+        n["load_kbit_s"] = None
     # ⭐⭐ THE WIRE COVERAGE — how much of what is produced arrives, and it holds for
-    #    BOTH codecs.  ⛔ `prodotti` is the SERVER's count (sent +
+    #    BOTH codecs.  ⛔ `products` is the SERVER's count (sent +
     #    refused + dropped): «I never put it on the wire» and «the network
     #    lost it» both end up in here, and it is on purpose — the question is
     #    how much arrives, not whose fault it is.
-    if None not in (n["spediti_server"], n["rifiutati_server"],
-                    n["buttati_server"], n["sul_filo"]):
-        prodotti = (n["spediti_server"] + n["rifiutati_server"] +
+    if None not in (n["shipped_server"], n["server_refused"],
+                    n["buttati_server"], n["on_wire"]):
+        products = (n["shipped_server"] + n["server_refused"] +
                     n["buttati_server"])
-        n["prodotti_server"] = prodotti
-        n["copertura_filo"] = (round(n["sul_filo"] / float(prodotti), 4)
-                               if prodotti > 0 else None)
+        n["prodotti_server"] = products
+        n["wire_coverage"] = (round(n["on_wire"] / float(products), 4)
+                               if products > 0 else None)
     else:
         n["prodotti_server"] = None
-        n["copertura_filo"] = None
+        n["wire_coverage"] = None
     # ⭐ The second leg, from the SAMPLES: only PCM is judged this way
-    #   (`09-b77.scaletta()` skips the blocks that are not codec 2).
-    sc = B77.scaletta(j_fuori) if codec == "pcm" else {
-        "esito": "NOT JUDGED — Opus samples cannot be read without "
+    #   (`09-b77.ladder()` skips the blocks that are not codec 2).
+    sc = B77.ladder(j_out) if codec == "pcm" else {
+        "outcome": "NOT JUDGED — Opus samples cannot be read without "
                  "decoding them, and this bench has no decoder"}
-    n["scaletta"] = sc
-    n["copertura"] = sc.get("copertura")
-    n["purezza_tono"] = sc.get("purezza_tono")
-    n["blocchi"] = sc.get("blocchi")
+    n["ladder"] = sc
+    n["coverage"] = sc.get("coverage")
+    n["tone_purity"] = sc.get("tone_purity")
+    n["blocks"] = sc.get("blocks")
     # ⛔⛔ AND THE CODEC MUST BE THE ONE I ASKED FOR, SAID BY THE SERVER.
     #     «I declared it» is not «it chose it» (`LEZIONI.md` E1): §4.3 makes
     #     the SERVER choose within the intersection, and an «opus» run that ended up in
     #     PCM would be the same run twice with the name of two.
-    atteso = 1 if codec == "opus" else 2
-    if n["codec_server"] is not None and n["codec_server"] != atteso:
-        n["esito"] = ("⛔⛔ I ASKED FOR «%s» (codec %d) AND THE SERVER NEGOTIATED "
-                      "codec %d" % (codec, atteso, n["codec_server"]))
+    expected_val = 1 if codec == "opus" else 2
+    if n["codec_server"] is not None and n["codec_server"] != expected_val:
+        n["outcome"] = ("⛔⛔ I ASKED FOR «%s» (codec %d) AND THE SERVER NEGOTIATED "
+                      "codec %d" % (codec, expected_val, n["codec_server"]))
     return n
 
 
-def riga(n):
+def row(n):
     def q(x, f="%s"):
         return "-" if x is None else (f % x)
     return ("%-7s %-5s %-5s | wire %s kbit/s · %s pkt/s · %s dgram/s · %s B/pkt "
             "| payload %s kbit/s (%s bytes) | srv %s sent %s refused | "
             "cure %s silenced %s | WIRE.COV %s (cov %s tone %s) | miss %s"
-            % (n.get("braccio"), n.get("scena"), n.get("codec"),
+            % (n.get("arm"), n.get("scene"), n.get("codec"),
                q(n.get("kbit_s"), "%.1f"), q(n.get("pkt_s"), "%.1f"),
                q(n.get("dgram_s"), "%.1f"), q(n.get("byte_per_pkt"), "%.0f"),
-               q(n.get("carico_kbit_s"), "%.2f"), q(n.get("carico")),
-               q(n.get("spediti_server")), q(n.get("rifiutati_server")),
-               q(n.get("cura_dichiarata")), q(n.get("taciuti")),
-               q(n.get("copertura_filo"), "%.4f"),
-               q(n.get("copertura"), "%.4f"), q(n.get("purezza_tono"), "%.3f"),
-               q(n.get("mancati"))))
+               q(n.get("load_kbit_s"), "%.2f"), q(n.get("load")),
+               q(n.get("shipped_server")), q(n.get("server_refused")),
+               q(n.get("declared_fix")), q(n.get("silenced")),
+               q(n.get("wire_coverage"), "%.4f"),
+               q(n.get("coverage"), "%.4f"), q(n.get("tone_purity"), "%.3f"),
+               q(n.get("missed"))))
 
 
-def giudica(titolo, atteso, s, a):
-    log(titolo)
-    inf(riga(s)); inf(riga(a))
-    verdi = rossi = muti = 0
-    for f in atteso:
-        passa, perche = f(s, a)
-        if passa is True:
-            ok(perche); verdi += 1
-        elif passa is False:
-            ko(perche); rossi += 1
+def judge(heading, expected_val, s, a):
+    log(heading)
+    inf(row(s)); inf(row(a))
+    greens = rossi = muted = 0
+    for f in expected_val:
+        pass_on, reason_text = f(s, a)
+        if pass_on is True:
+            ok(reason_text); greens += 1
+        elif pass_on is False:
+            ko(reason_text); rossi += 1
         else:
-            dub(perche); muti += 1
-    return verdi, rossi, muti
+            dub(reason_text); muted += 1
+    return greens, rossi, muted
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE GROUND
 # ═══════════════════════════════════════════════════════════════════════════
-def terreno_controlla():
+def terrain_check():
     log("THE GROUND — port %d · user %s (uid %d) · tree %s"
-        % (PORTA, UTENTE, UID_B, ALB))
-    guai = []
-    rc, out, _ = root("id %s >/dev/null 2>&1 && echo si || echo no" % UTENTE)
+        % (PORT, ACCOUNT, UID_B, TREE))
+    troubles = []
+    rc, out, _ = root("id %s >/dev/null 2>&1 && echo si || echo no" % ACCOUNT)
     if "si" not in out:
-        guai.append("the user «%s» does not exist" % UTENTE)
-    rc, out, _ = root("test -s %s/parola && echo si || echo no" % LAV)
+        troubles.append("the user «%s» does not exist" % ACCOUNT)
+    rc, out, _ = root("test -s %s/password && echo si || echo no" % LAV)
     if "si" not in out:
-        guai.append("%s/parola (0600) is missing: D12 forbids the password in argv" % LAV)
-    if not md5(BINARIO):
-        guai.append("the binary is missing (%s): «costruisci»" % BINARIO)
-    conto = []
-    for p in VIETATE:
+        troubles.append("%s/password (0600) is missing: D12 forbids the password in argv" % LAV)
+    if not md5(BINARY):
+        troubles.append("the binary is missing (%s): «build»" % BINARY)
+    count = []
+    for p in FORBIDDEN:
         rc, o, _ = root("ss -uln 2>/dev/null | grep -c ':%s ' || true" % p)
-        conto.append("%s:%s" % (p, o.strip()))
-    inf("FORBIDDEN ports (counted, not touched): %s" % " ".join(conto))
-    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % VIETATA_IFACE)
-    inf("%s — NOT touched: %s" % (VIETATA_IFACE, out.strip().split("\n")[0]))
-    for g in guai:
+        count.append("%s:%s" % (p, o.strip()))
+    inf("FORBIDDEN ports (counted, not touched): %s" % " ".join(count))
+    rc, out, _ = root("/usr/sbin/tc qdisc show dev %s" % FORBIDDEN_IFACE)
+    inf("%s — NOT touched: %s" % (FORBIDDEN_IFACE, out.strip().split("\n")[0]))
+    for g in troubles:
         ko(g)
-    if not guai:
+    if not troubles:
         ok("the ground is there, and it is mine")
-    return not guai
+    return not troubles
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -833,251 +833,251 @@ def _n(**kw):
     return dict(kw)
 
 
-def certifica():
-    esiti = []
+def certify():
+    outcomes = []
 
-    def caso(titolo, f, s, a, atteso):
-        passa, perche = f(s, a)
-        bene = (passa is atteso) if atteso is None else (passa == atteso)
-        esiti.append(bene)
-        (ok if bene else ko)("%s → %s  [%s]"
-                             % (titolo, {True: "VERDE", False: "ROSSO",
-                                         None: "NOT JUDGED"}[passa], perche))
+    def case_v(heading, f, s, a, expected_val):
+        pass_on, reason_text = f(s, a)
+        all_ok = (pass_on is expected_val) if expected_val is None else (pass_on == expected_val)
+        outcomes.append(all_ok)
+        (ok if all_ok else ko)("%s → %s  [%s]"
+                             % (heading, {True: "GREEN", False: "RED",
+                                         None: "NOT JUDGED"}[pass_on], reason_text))
 
-    log("1 · `a_il_riempimento_c_e` — the positive control of the fact")
-    f = a_il_riempimento_c_e()
-    caso("589 kbit/s for 1.2 kbit/s of payload", f,
-         _n(kbit_s=589.0, carico_kbit_s=1.2), {}, True)
-    caso("⛔ 40 kbit/s: the padding is NOT there", f,
-         _n(kbit_s=40.0, carico_kbit_s=1.2), {}, False)
-    caso("⛔ 589 kbit/s but 300 of payload: something is playing", f,
-         _n(kbit_s=589.0, carico_kbit_s=300.0), {}, False)
-    caso("⚠ kbit_s not read", f, _n(kbit_s=None, carico_kbit_s=1.2), {}, None)
+    log("1 · `a_fill_is_there` — the positive control of the fact")
+    f = a_fill_is_there()
+    case_v("589 kbit/s for 1.2 kbit/s of payload", f,
+         _n(kbit_s=589.0, load_kbit_s=1.2), {}, True)
+    case_v("⛔ 40 kbit/s: the padding is NOT there", f,
+         _n(kbit_s=40.0, load_kbit_s=1.2), {}, False)
+    case_v("⛔ 589 kbit/s but 300 of payload: something is playing", f,
+         _n(kbit_s=589.0, load_kbit_s=300.0), {}, False)
+    case_v("⚠ kbit_s not read", f, _n(kbit_s=None, load_kbit_s=1.2), {}, None)
 
-    log("2 · `a_la_cura_taglia` — and it is not content with an improvement")
-    f = a_la_cura_taglia(8.0)
-    caso("589 → 12 kbit/s (49×)", f, _n(kbit_s=589.0), _n(kbit_s=12.0), True)
-    caso("⛔ 589 → 200 kbit/s (2.9×): better, but it is not the cure", f,
+    log("2 · `a_fix_trims` — and it is not content with an improvement")
+    f = a_fix_trims(8.0)
+    case_v("589 → 12 kbit/s (49×)", f, _n(kbit_s=589.0), _n(kbit_s=12.0), True)
+    case_v("⛔ 589 → 200 kbit/s (2.9×): better, but it is not the cure", f,
          _n(kbit_s=589.0), _n(kbit_s=200.0), False)
-    caso("589 → 0 kbit/s", f, _n(kbit_s=589.0), _n(kbit_s=0.0), True)
-    caso("⚠ one end is missing", f, _n(kbit_s=589.0), _n(kbit_s=None), None)
+    case_v("589 → 0 kbit/s", f, _n(kbit_s=589.0), _n(kbit_s=0.0), True)
+    case_v("⚠ one end is missing", f, _n(kbit_s=589.0), _n(kbit_s=None), None)
 
-    log("3 · `a_i_datagram_spariscono` — the other end of the wire")
-    f = a_i_datagram_spariscono()
-    caso("50 → 0 datagram/s", f, _n(dgram_s=50.0), _n(dgram_s=0.0), True)
-    caso("⛔ 50 → 30: the cure did not bite", f,
+    log("3 · `a_datagrams_disappear` — the other end of the wire")
+    f = a_datagrams_disappear()
+    case_v("50 → 0 datagram/s", f, _n(dgram_s=50.0), _n(dgram_s=0.0), True)
+    case_v("⛔ 50 → 30: the cure did not bite", f,
          _n(dgram_s=50.0), _n(dgram_s=30.0), False)
-    caso("⛔ 5 → 0: there was no audio to begin with", f,
+    case_v("⛔ 5 → 0: there was no audio to begin with", f,
          _n(dgram_s=5.0), _n(dgram_s=0.0), False)
 
-    log("4 · `a_la_cura_ha_parlato` — «I turned it on» is not «it did it»")
-    f = a_la_cura_ha_parlato()
-    caso("spenta/accesa, 1249 silenced", f,
-         _n(cura_dichiarata="spenta"), _n(cura_dichiarata="accesa", taciuti=1249), True)
+    log("4 · `a_fix_has_spoken` — «I turned it on» is not «it did it»")
+    f = a_fix_has_spoken()
+    case_v("spenta/switched_on, 1249 silenced", f,
+         _n(declared_fix="spenta"), _n(declared_fix="switched_on", silenced=1249), True)
     # ⛔⛔ AND SINCE 24 AUGUST 2026 THIS CASE IS THE MOST IMPORTANT OF THE FOUR:
     #     the two arms ARE the same binary by construction, so «two identical
     #     runs with the name of two» is no longer a build accident —
-    #     it is what happens if `--niente-audio-silenzio` does not reach the server.
+    #     it is what happens if `--no-audio-silence` does not reach the server.
     #     ⇒ This predicate is the only thing that tells it apart from «the cure is not
     #     needed», which is the opposite conclusion.
-    caso("⛔ both arms declare «spenta»: the option did not arrive", f,
-         _n(cura_dichiarata="spenta"), _n(cura_dichiarata="spenta", taciuti=0), False)
-    caso("⛔ accesa but zero silenced", f,
-         _n(cura_dichiarata="spenta"), _n(cura_dichiarata="accesa", taciuti=0), False)
-    caso("⚠ the log does not have the line", f,
-         _n(cura_dichiarata="spenta"), _n(cura_dichiarata="accesa", taciuti=None), None)
+    case_v("⛔ both arms declare «spenta»: the option did not arrive", f,
+         _n(declared_fix="spenta"), _n(declared_fix="spenta", silenced=0), False)
+    case_v("⛔ switched_on but zero silenced", f,
+         _n(declared_fix="spenta"), _n(declared_fix="switched_on", silenced=0), False)
+    case_v("⚠ the log does not have the line", f,
+         _n(declared_fix="spenta"), _n(declared_fix="switched_on", silenced=None), None)
 
-    log("5 · ⛔⛔ `a_il_suono_non_si_tocca` — the predicate that protects the user")
-    f = a_il_suono_non_si_tocca()
-    caso("coverage 0.998 → 0.997, tone 1.00 → 1.00", f,
-         _n(copertura=0.998, purezza_tono=1.0),
-         _n(copertura=0.997, purezza_tono=1.0), True)
-    caso("⛔ coverage 0.998 → 0.700: the cure eats sound", f,
-         _n(copertura=0.998, purezza_tono=1.0),
-         _n(copertura=0.700, purezza_tono=0.9), False)
-    caso("⛔ same coverage but the tone collapses", f,
-         _n(copertura=0.998, purezza_tono=1.0),
-         _n(copertura=0.998, purezza_tono=0.5), False)
+    log("5 · ⛔⛔ `a_sound_is_untouched` — the predicate that protects the user")
+    f = a_sound_is_untouched()
+    case_v("coverage 0.998 → 0.997, tone 1.00 → 1.00", f,
+         _n(coverage=0.998, tone_purity=1.0),
+         _n(coverage=0.997, tone_purity=1.0), True)
+    case_v("⛔ coverage 0.998 → 0.700: the cure eats sound", f,
+         _n(coverage=0.998, tone_purity=1.0),
+         _n(coverage=0.700, tone_purity=0.9), False)
+    case_v("⛔ same coverage but the tone collapses", f,
+         _n(coverage=0.998, tone_purity=1.0),
+         _n(coverage=0.998, tone_purity=0.5), False)
 
-    log("6 · `a_col_tono_tace_solo_il_primo` — is the scene the one I think?")
-    f = a_col_tono_tace_solo_il_primo()
-    caso("with the tone, zero silenced", f, {}, _n(taciuti=0), True)
-    caso("⛔ with the tone, 300 silenced: the scene has gaps of digital zero", f,
-         {}, _n(taciuti=300), False)
+    log("6 · `a_with_tone_only_first_is_silent` — is the scene the one I think?")
+    f = a_with_tone_only_first_is_silent()
+    case_v("with the tone, zero silenced", f, {}, _n(silenced=0), True)
+    case_v("⛔ with the tone, 300 silenced: the scene has gaps of digital zero", f,
+         {}, _n(silenced=300), False)
 
-    log("7 · `a_opus_costa_meno_del_pcm` — the refutation, in one number")
-    f = a_opus_costa_meno_del_pcm(10.0)
-    caso("PCM 1555 against Opus 1.2 kbit/s", f,
-         _n(carico_kbit_s=1555.0), _n(carico_kbit_s=1.2), True)
-    caso("⛔ PCM 1555 against Opus 500: it is not a factor of ten", f,
-         _n(carico_kbit_s=1555.0), _n(carico_kbit_s=500.0), False)
+    log("7 · `a_opus_costs_less_than_pcm` — the refutation, in one number")
+    f = a_opus_costs_less_than_pcm(10.0)
+    case_v("PCM 1555 against Opus 1.2 kbit/s", f,
+         _n(load_kbit_s=1555.0), _n(load_kbit_s=1.2), True)
+    case_v("⛔ PCM 1555 against Opus 500: it is not a factor of ten", f,
+         _n(load_kbit_s=1555.0), _n(load_kbit_s=500.0), False)
 
-    log("8 · `a_il_pcm_si_fa_rifiutare` — the positive control of the network")
-    f = a_il_pcm_si_fa_rifiutare(100)
-    caso("1823 refused", f, _n(rifiutati_server=1823), {}, True)
-    caso("⛔ 4 refused: the profile does not bite", f, _n(rifiutati_server=4), {}, False)
-    caso("⚠ count not read", f, _n(rifiutati_server=None), {}, None)
+    log("8 · `a_pcm_gets_refused` — the positive control of the network")
+    f = a_pcm_gets_refused(100)
+    case_v("1823 refused", f, _n(server_refused=1823), {}, True)
+    case_v("⛔ 4 refused: the profile does not bite", f, _n(server_refused=4), {}, False)
+    case_v("⚠ count not read", f, _n(server_refused=None), {}, None)
 
-    log("9 · `a_opus_regge_dove_il_pcm_cede`")
-    f = a_opus_regge_dove_il_pcm_cede(20)
-    caso("PCM 366‰ against Opus 2‰", f,
-         _n(rifiutati_server=1823, spediti_server=3160),
-         _n(rifiutati_server=2, spediti_server=1240), True)
-    caso("⛔ Opus 120‰: it does not hold", f,
-         _n(rifiutati_server=1823, spediti_server=3160),
-         _n(rifiutati_server=150, spediti_server=1100), False)
+    log("9 · `a_opus_holds_where_pcm_gives_way`")
+    f = a_opus_holds_where_pcm_gives_way(20)
+    case_v("PCM 366‰ against Opus 2‰", f,
+         _n(server_refused=1823, shipped_server=3160),
+         _n(server_refused=2, shipped_server=1240), True)
+    case_v("⛔ Opus 120‰: it does not hold", f,
+         _n(server_refused=1823, shipped_server=3160),
+         _n(server_refused=150, shipped_server=1100), False)
 
-    log("10 · ⭐⭐ `a_la_copertura_risale` — the quantity that counts")
-    f = a_la_copertura_risale(0.10)
-    caso("0.63 → 0.99", f, _n(copertura_filo=0.6264),
-         _n(copertura_filo=0.99), True)
-    caso("⛔ 0.63 → 0.66: within the noise", f,
-         _n(copertura_filo=0.6264), _n(copertura_filo=0.66), False)
-    caso("⚠ one of the two was not judged", f,
-         _n(copertura_filo=0.6264), _n(copertura_filo=None), None)
+    log("10 · ⭐⭐ `a_coverage_rises` — the quantity that counts")
+    f = a_coverage_rises(0.10)
+    case_v("0.63 → 0.99", f, _n(wire_coverage=0.6264),
+         _n(wire_coverage=0.99), True)
+    case_v("⛔ 0.63 → 0.66: within the noise", f,
+         _n(wire_coverage=0.6264), _n(wire_coverage=0.66), False)
+    case_v("⚠ one of the two was not judged", f,
+         _n(wire_coverage=0.6264), _n(wire_coverage=None), None)
 
-    log("11 · ⚠ `a_il_prezzo_si_dichiara` — it is not a green and not a red")
-    f = a_il_prezzo_si_dichiara()
-    caso("the price is always written", f, _n(mancati=0), _n(mancati=1200), None)
+    log("11 · ⚠ `a_price_is_declared` — it is not a green and not a red")
+    f = a_price_is_declared()
+    case_v("the price is always written", f, _n(missed=0), _n(missed=1200), None)
 
     log("OUTCOME OF THE CERTIFICATION")
-    if all(esiti):
+    if all(outcomes):
         ok("%d cases out of %d: the predicates can give green, red and «I do not judge»"
-           % (sum(esiti), len(esiti)))
+           % (sum(outcomes), len(outcomes)))
         return True
     ko("%d cases out of %d did NOT give the expected outcome: the bench is not a "
-       "tool as long as this line is red" % (len(esiti) - sum(esiti), len(esiti)))
+       "tool as long as this line is red" % (len(outcomes) - sum(outcomes), len(outcomes)))
     return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE MEASUREMENTS
 # ═══════════════════════════════════════════════════════════════════════════
-def misura_muto(secondi):
+def measure_mute(seconds):
     log("SCENE «MUTO» — desktop still, Opus negotiated, cure off against on")
     inf("⛔ it is the product's NORMAL scene: `[M]` on the user's real session "
         "the datagram payload is 3 bytes, that is digital silence")
-    s = giro("spenta", "muto", "opus", secondi)
-    a = giro("accesa", "muto", "opus", secondi)
-    v, r, m = giudica("THE VERDICT — silent scene",
-                      [a_il_riempimento_c_e(), a_la_cura_taglia(8.0),
-                       a_i_datagram_spariscono(), a_la_cura_ha_parlato(),
-                       a_il_prezzo_si_dichiara()], s, a)
-    return {"scena": "muto", "spenta": s, "accesa": a,
-            "verdi": v, "rossi": r, "muti": m}
+    s = lap("spenta", "mute", "opus", seconds)
+    a = lap("switched_on", "mute", "opus", seconds)
+    v, r, m = judge("THE VERDICT — silent scene",
+                      [a_fill_is_there(), a_fix_trims(8.0),
+                       a_datagrams_disappear(), a_fix_has_spoken(),
+                       a_price_is_declared()], s, a)
+    return {"scene": "mute", "spenta": s, "switched_on": a,
+            "greens": v, "rossi": r, "muted": m}
 
 
-def misura_tono(secondi):
+def measure_tone(seconds):
     log("SCENE «TONO» — 440 Hz in the sink, PCM (for the samples judge)")
     inf("⛔ it is the CONTROL that protects the user: with the tone on the cure must "
         "silence nothing, and the coverage must not move")
-    s = giro("spenta", "tono", "pcm", secondi)
-    a = giro("accesa", "tono", "pcm", secondi)
-    v, r, m = giudica("THE VERDICT — scene with the tone",
-                      [a_il_suono_non_si_tocca(), a_col_tono_tace_solo_il_primo()],
+    s = lap("spenta", "tone", "pcm", seconds)
+    a = lap("switched_on", "tone", "pcm", seconds)
+    v, r, m = judge("THE VERDICT — scene with the tone",
+                      [a_sound_is_untouched(), a_with_tone_only_first_is_silent()],
                       s, a)
-    return {"scena": "tono", "spenta": s, "accesa": a,
-            "verdi": v, "rossi": r, "muti": m}
+    return {"scene": "tone", "spenta": s, "switched_on": a,
+            "greens": v, "rossi": r, "muted": m}
 
 
-def misura_costo(secondi):
+def measure_cost(seconds):
     log("THE COST OF THE TWO CODECS — PCM against Opus, same scene, cure OFF")
     inf("⭐ it is the refutation: the 2 463 kbit/s of `09-b81` and the 36 % of `09-b77` "
         "are PCM numbers, and the product negotiates Opus")
-    p = giro("spenta", "muto", "pcm", secondi)
-    o = giro("spenta", "muto", "opus", secondi)
-    v, r, m = giudica("THE VERDICT — what the audio costs",
-                      [a_opus_costa_meno_del_pcm(10.0)], p, o)
-    return {"scena": "costo", "pcm": p, "opus": o, "verdi": v, "rossi": r, "muti": m}
+    p = lap("spenta", "mute", "pcm", seconds)
+    o = lap("spenta", "mute", "opus", seconds)
+    v, r, m = judge("THE VERDICT — what the audio costs",
+                      [a_opus_costs_less_than_pcm(10.0)], p, o)
+    return {"scene": "cost", "pcm": p, "opus": o, "greens": v, "rossi": r, "muted": m}
 
 
-def misura_stretta(nome_profilo, secondi):
+def measure_tight(name_profile, seconds):
     """⛔ HERE THE NETWORK IS BROKEN: lock, `lo` only, filters on my
        port only, detached guardian, and everything released in a `finally`."""
     prof = None
-    for p in B77.PROFILI:
-        if p[0] == nome_profilo:
+    for p in B77.PROFILES:
+        if p[0] == name_profile:
             prof = p
     if prof is None:
-        ko("the profile «%s» is not in 09-b77" % nome_profilo)
+        ko("the profile «%s» is not in 09-b77" % name_profile)
         return None
-    log("THE NARROW NETWORK — profile «%s», PCM against Opus, cure OFF" % nome_profilo)
+    log("THE NARROW NETWORK — profile «%s», PCM against Opus, cure OFF" % name_profile)
     inf("⛔ both runs under the SAME `netem`, set once and "
         "left standing: only the codec changes")
-    LUCCHETTO.prendi(CHI, secondi=900, attesa=3600)
+    LOCK.take(CHI, seconds=900, wait=3600)
     try:
-        RETE.guardiano_arma(900)
-        RETE.guasta(prof[1])
+        NETWORK.guardian_arm(900)
+        NETWORK.broken(prof[1])
         # ⛔ SCENE WITH THE TONE, not silent: the question is what happens
         #    to REAL audio when the window narrows.  On a silent scene
         #    PCM would send 192 blocks of zeros a second and the comparison
         #    would measure the cost of silence, which is something else.
-        p = giro("spenta", "tono", "pcm", secondi)
-        o = giro("spenta", "tono", "opus", secondi)
+        p = lap("spenta", "tone", "pcm", seconds)
+        o = lap("spenta", "tone", "opus", seconds)
     finally:
         try:
-            RETE.rimetti()
+            NETWORK.restore()
         except Exception as e:
             ko("⛔ the `netem` was not removed: %s" % e)
         try:
-            RETE.guardiano_disarma()
+            NETWORK.guardian_disarm()
         except Exception:
             pass
-        LUCCHETTO.molla(CHI)
-    v, r, m = giudica("THE VERDICT — who holds when the window narrows",
-                      [a_il_pcm_si_fa_rifiutare(100),
-                       a_opus_regge_dove_il_pcm_cede(20),
-                       a_la_copertura_risale(0.10)], p, o)
-    return {"scena": "stretta-%s" % nome_profilo, "pcm": p, "opus": o,
-            "verdi": v, "rossi": r, "muti": m}
+        LOCK.release(CHI)
+    v, r, m = judge("THE VERDICT — who holds when the window narrows",
+                      [a_pcm_gets_refused(100),
+                       a_opus_holds_where_pcm_gives_way(20),
+                       a_coverage_rises(0.10)], p, o)
+    return {"scene": "tight-%s" % name_profile, "pcm": p, "opus": o,
+            "greens": v, "rossi": r, "muted": m}
 
 
-def principale():
+def primary():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("passo", nargs="?", default="stato",
-                    choices=("stato", "terreno", "costruisci", "muto", "tono",
-                             "costo", "stretta", "tutto"))
-    ap.add_argument("--secondi", type=int, default=25)
-    ap.add_argument("--profilo", default="casa-cattiva")
-    ap.add_argument("--certifica", action="store_true")
+    ap.add_argument("step", nargs="?", default="state",
+                    choices=("state", "terrain", "build", "mute", "tone",
+                             "cost", "tight", "overall"))
+    ap.add_argument("--seconds", type=int, default=25)
+    ap.add_argument("--profile_v", default="casa-cattiva")
+    ap.add_argument("--certify", action="store_true")
     a = ap.parse_args()
 
-    if a.certifica:
-        sys.exit(0 if certifica() else 1)
+    if a.certify:
+        sys.exit(0 if certify() else 1)
 
-    if a.passo == "stato":
-        terreno_controlla()
+    if a.step == "state":
+        terrain_check()
         return
-    if a.passo == "terreno":
-        sys.exit(0 if terreno_controlla() else 2)
-    if a.passo == "costruisci":
-        sys.exit(0 if costruisci() else 2)
+    if a.step == "terrain":
+        sys.exit(0 if terrain_check() else 2)
+    if a.step == "build":
+        sys.exit(0 if build() else 2)
 
-    if not terreno_controlla():
+    if not terrain_check():
         ko("⛔ I do NOT measure on a ground that is not mine")
         sys.exit(2)
 
-    fuori = []
-    if a.passo in ("muto", "tutto"):
-        fuori.append(misura_muto(a.secondi))
-    if a.passo in ("tono", "tutto"):
-        fuori.append(misura_tono(a.secondi))
-    if a.passo in ("costo", "tutto"):
-        fuori.append(misura_costo(a.secondi))
-    if a.passo in ("stretta", "tutto"):
-        r = misura_stretta(a.profilo, a.secondi)
+    outside = []
+    if a.step in ("mute", "overall"):
+        outside.append(measure_mute(a.seconds))
+    if a.step in ("tone", "overall"):
+        outside.append(measure_tone(a.seconds))
+    if a.step in ("cost", "overall"):
+        outside.append(measure_cost(a.seconds))
+    if a.step in ("tight", "overall"):
+        r = measure_tight(a.profile_v, a.seconds)
         if r:
-            fuori.append(r)
+            outside.append(r)
 
-    percorso = os.path.join(FUORI, "esiti.json")
-    with open(percorso, "w") as f:
-        json.dump(fuori, f, indent=1, ensure_ascii=False)
+    fpath = os.path.join(OUT, "esiti.json")
+    with open(fpath, "w") as f:
+        json.dump(outside, f, indent=1, ensure_ascii=False)
     log("THE VERDICT OF THE WHOLE BENCH")
-    V = sum(x["verdi"] for x in fuori)
-    R = sum(x["rossi"] for x in fuori)
-    M = sum(x["muti"] for x in fuori)
-    inf("the numbers in full: %s" % percorso)
+    V = sum(x["greens"] for x in outside)
+    R = sum(x["rossi"] for x in outside)
+    M = sum(x["muted"] for x in outside)
+    inf("the numbers in full: %s" % fpath)
     (ok if R == 0 else ko)("%d green · %d red · %d not judged" % (V, R, M))
     sys.exit(0 if R == 0 else 1)
 
@@ -1088,7 +1088,7 @@ def principale():
 #            WRONG.  It is left written in full: it is the part that teaches.
 #
 # ⛔ WHAT I HAD WRITTEN HERE: that the 557 kbit/s of an idle session were
-#    padding requested by `dgram_scrivi_uno()` with
+#    padding requested by `dgram_write_one()` with
 #    `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` (`src/webtransport.c:1613` and `:1647`),
 #    and that it was enough to make that flag conditional on there being a batch to
 #    compose.  ⚠ It was a DEDUCTION — I had the number (48.0 datagrams in 48.4
@@ -1112,7 +1112,7 @@ def principale():
 #      not that flag filling it, and the cure I had asked for here would have
 #      changed a line without changing a byte.
 #
-# ⭐⭐⭐ AND IT IS KNOWN WHO FILLS IT — `[R]`: `wt_scrivi()` asks for
+# ⭐⭐⭐ AND IT IS KNOWN WHO FILLS IT — `[R]`: `wt_write()` asks for
 #      **`NGTCP2_WRITE_STREAM_FLAG_PADDING` at EVERY stream write**.
 #      When the datagram returns `NGTCP2_ERR_WRITE_MORE` the packet stays
 #      OPEN and the stream loop, right after, closes it by filling it.
@@ -1136,4 +1136,4 @@ def principale():
 # ═══════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    principale()
+    primary()

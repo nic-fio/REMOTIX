@@ -31,7 +31,7 @@ defect that phase 15 should have seen, we go back to the suite.
 | **the client browsers run ON THE SERVER** | *«è inevitabile che la macchina di test dev'essere lo stesso server su cui gira remotix»* | the tablet is a bottleneck (graphics and Wi-Fi) and would falsify everything (`[M]` phase 15: in 4K the tablet loses frames, the server does not; the phone on 2.4 GHz lost 0.6 % of the packets) |
 | ⇒ **separate accounts** | REMOTIX · sessions · browsers each measured on its own (§6) | the server does two jobs: it produces the desktops and watches them |
 | ⇒ **the result is a LOWER bound** | «N utenti su questo server, **che intanto fa girare anche gli N browser**» | with separate clients the capacity would be equal or higher, never lower |
-| **the session cap raised to 16** | today `--tetto-sessioni 10` (phase 10) would refuse the eleventh | it is raised for the campaign, declared in every recording, then put back; beyond 16 only in overload |
+| **the session cap raised to 16** | today `--session-cap 10` (phase 10) would refuse the eleventh | it is raised for the campaign, declared in every recording, then put back; beyond 16 only in overload |
 | **4K for everyone** | *«puntiamo al 4K, che è il valore a cui aspira Remotix»* | it is the specifications' size (`prove-in-4k`) |
 | **the scale of sizes** | if 4K goes FAIL: **3K → 2K → Full HD** | see §8 |
 | **YouTube 4K: 1 user in 4** | fixed rotation of the four profiles | see §5 |
@@ -135,15 +135,15 @@ against the 24–96 of the one-user-at-a-time plan. They are done in blocks, at 
 | what | from where |
 |---|---|
 | the image updates | snapshot of every browser's canvas at intervals: it changes when the job changes; no long stall |
-| frames painted, skipped, holes | the page's diary (`dipinti`, `video X→Y`, `salt`, `buchi`) — sent to the server every 5 s, it already exists |
+| frames painted, skipped, holes | the page's diary (`painted`, `video X→Y`, `salt`, `holes`) — sent to the server every 5 s, it already exists |
 | **input → frame delay** | what the product measures from its side (`SPECIFICHE` §3.2: **cap 50 ms**, target 40 ms), plus a probe from the browser of a sentinel user |
 | input arrives | every job types and clicks: its effect is seen (text in the terminal, folder created) |
-| the audio (D users) | the page's diary (`suonati`, `BUCHI`, `mancati`) |
+| the audio (D users) | the page's diary (`played`, `HOLES`, `missed`) |
 | birth of a new user | time from login to the new user's first frame |
 | **short functional check** | on ONE user per level, in rotation: login already done → input (F-004/F-007 reduced) → image (F-003 reduced) → clipboard (F-014) — the certified functions must stay up |
 | errors | server log (RCP, WebTransport/QUIC, session), browser consoles, journal |
 
-**The resources, per enclosure** (systemd cgroups: `remotix` · `sessioni` · `browser`):
+**The resources, per enclosure** (systemd cgroups: `remotix` · `sessions` · `browser`):
 
 | resource | measures |
 |---|---|
@@ -151,7 +151,7 @@ against the 24–96 of the one-user-at-a-time plan. They are done in blocks, at 
 | **memory** | total, per enclosure, per session (PSS); growth within the level (a hint of a leak) |
 | **graphics card** | engine usage (drawing, video: encoding and decoding) **per process**, from the kernel (`/proc/<pid>/fdinfo` drm-engine); frequency; temperature; throttling. Intel: `intel_gpu_top` (to be installed). AMD: amdgpu fdinfo, `radeontop` or `amdgpu_top` |
 | **video memory** | RX 6800: VRAM used; Intel: shared memory |
-| **network** | bytes received/sent per session (REMOTIX's QUIC log: `persi`, `spediti`, retransmissions) |
+| **network** | bytes received/sent per session (REMOTIX's QUIC log: `lost`, `shipped`, retransmissions) |
 | **REMOTIX** | live sessions, refusals, encoder queues, frames dropped, «budget», birth times |
 
 ## 8. The scale of sizes
@@ -183,7 +183,7 @@ classification is born from behaviour, and the resources serve to explain it.*
 | birth of a new user (login → first frame) | ≤ 5 s | 5–15 s | > 15 s, or refusal |
 | short functional check | all PASS | — | one FAIL |
 | session dropped, restart, RCP/QUIC error that detaches | none | — | any one |
-| memory of the `remotix` and `sessioni` enclosures within the level, with stable work (the `browser` enclosure is **recorded** but does not classify: the cache of a browsing Firefox grows on its own) | growth ≤ 5 % | 5–15 % (it is flagged) | > 15 % and continuing (leak) |
+| memory of the `remotix` and `sessions` enclosures within the level, with stable work (the `browser` enclosure is **recorded** but does not classify: the cache of a browsing Firefox grows on its own) | growth ≤ 5 % | 5–15 % (it is flagged) | > 15 % and continuing (leak) |
 
 **Which delay classifies** — `[M]` diagnosis of the evening of 25 Sep (xfce box, 1 user, terminal,
 460 letters; evidence in `/media/REMOTIX/misure/fase16/diagnosi-eco/`). The page round trip
@@ -192,7 +192,7 @@ ours:
 
 | stretch (4K, p50/p95 ms) | | whose |
 |---|---|---|
-| the page sends the key → the terminal receives it | 4.9 / 8.7 | **ours** (limited by the child's 8 ms `poll`, `figlio.c` `MOVIMENTO_ATTESA_S`) |
+| the page sends the key → the terminal receives it | 4.9 / 8.7 | **ours** (limited by the child's 8 ms `poll`, `figlio.c` `MOTION_WAIT_S`) |
 | the terminal draws the echo | 10.2 / 16.6 | application |
 | the compositor composes and copies it to us | 14.5 / 19.0 | compositor |
 | conversion + encoding + sending → page | 14.0 / 14.9 | **ours** |
@@ -200,7 +200,7 @@ ours:
 
 ⇒ **Our piece** is ~19 / 24 ms, below the cap of 50. So, as §7 says («what the
 product measures from its side») and the row below («product»): **the product's delay classifies**
-= p95 of the per-second maxima of the child's line `TRATTO cattura → byte fuori` + 9 ms
+= p95 of the per-second maxima of the child's line `STRETCH capture_v → byte outside` + 9 ms
 (the constructive cap of the input stretch). ⚠ On the wlroots route that line counts the copy
 twice (~4 ms more): it is on the prudent side and is not corrected during the campaign. The **page
 round trip** (`giro_eco`, typing only) is **recorded** as the experience delay and does not classify.
@@ -216,11 +216,11 @@ sessions DEGRADED, or a single measure beyond half of the DEGRADED band.
 Like phase 15, an **append-only log**, `banchi/16-stress/registro.jsonl`, one row per
 **level** and one per **session in that level**:
 
-`campagna` (e.g. `intel-4k-gnome`) · `livello` (1, 4, 8, 12, 16 and those of the search) · `utente` · `profilo` · `browser` and version
-· `desktop` · `scheda` and driver · `misura` · `commit` · binary · page · kernel · `inizio` ·
-`durata_s` · all the measures of §7 · `classe` (GREEN/DEGRADED/FAIL) · `ragione` · `evidenze`.
+`campaign` (e.g. `intel-4k-gnome`) · `level` (1, 4, 8, 12, 16 and those of the search) · `username` · `profile_v` · `browser` and version
+· `desktop` · `gpu_card` and driver · `gauge` · `commit` · binary · page · kernel · `start` ·
+`duration_s` · all the measures of §7 · `cls_name` (GREEN/DEGRADED/FAIL) · `rationale` · `evidence`.
 
-The **evidence** sits on the server in `/media/REMOTIX/misure/fase16/<campagna>/livello-NN/`: snapshots
+The **evidence** sits on the server in `/media/REMOTIX/misure/fase16/<campaign>/livello-NN/`: snapshots
 of every canvas, the pages' diary, server log and journal cut to the level, the resource
 series (one row per second), browser consoles. They must be enough to say **what was
 happening** at the moment of degradation.
@@ -272,7 +272,7 @@ Today REMOTIX writes to a file of its own (`registro.log`, from standard output)
    `storage.conf` and the four boxes) — build container, libraries and images sit
    on `/media` and remain; then we **look** that the server is empty (no processes, tenants,
    compositors left over) before the first measure;
-   `[M]` **done on the evening of 25 Sep**: root verified by `provisiona.sh verifica`, boxes on
+   `[M]` **done on the evening of 25 Sep**: root verified by `provisiona.sh verify`, boxes on
    `b1443a0b`/`c5279e66`, smoke F-001/F-002 **16 PASS out of 16** (4 desktops × 2 browsers). The
    recipe was missing three pieces, now added: `labwc` and `wlr-randr` (from the apt cache),
    Chrome (`/media/REMOTIX/cache/chrome.deb`) and `~/SERVER.ssh` on the server (0600: the suite
@@ -302,7 +302,7 @@ skipped ⇒ FAIL** already at the first step; Chrome under the same conditions 3
 (VA-API, 2.3 ms of video engine per frame, like Chrome); the bottleneck is the page's drawing route:
 in Firefox 140 `createImageBitmap(VideoFrame)` does a **synchronous readback from the GPU**
 (~34 ms at 4K, on the main thread, Mozilla bug 1788206), the decoder queue goes above 2 and the
-page skips (`saltati_coda`). With software decoding it drops to 12 %, still above 10.
+page skips (`skipped_queue`). With software decoding it drops to 12 %, still above 10.
 ⇒ It is a limit of the **product with Firefox in 4K** (the page), not of the server nor of the load: the
 campaign measures it as it is, and at 4K every step with a Firefox user is affected.
 Cure candidate, to be measured after the campaign: drawing with **WebGL2 `texImage2D(VideoFrame)`**
@@ -349,9 +349,9 @@ the bench does not use the product as a person would use it.
 
 `[M]` At 1 user, on all the campaigns done: **KDE 14 PageDown with no effect out of 49** (Intel and
 Radeon), the other desktops **0 out of 172**; clicks, typing and wheel on KDE: 0 lost. The key
-**arrives** at the server (`POSIZIONE_TASTO` pressed and released in the log). All the lost ones
+**arrives** at the server (`KEY_POSITION` pressed and released in the log). All the lost ones
 come **after a wheel** (or after another lost PageDown); after a click or a navigation,
-never. Cause: the actor's `aspetta()` returned at the first good row and lost the positions after it,
+never. Cause: the actor's `wait_for()` returned at the first good row and lost the positions after it,
 so after a wheel it believed the page to be halfway while it was at the bottom, and chose PageDown on a
 page that could not go down. On KDE the wheel moves more (`scroll_discrete`, 144 units) and
 the bottom is touched more often. ⇒ **Defect of the bench, not of the product**; cure in §17.2. It made
@@ -449,12 +449,12 @@ all GREEN (5 out of 5).
 
 ### The up/down arrows (reported by the user by hand) — study of 29 Sep
 
-Reading of the code (agent), **no test yet**. The arrows go through `POSIZIONE_TASTO`, which
+Reading of the code (agent), **no test yet**. The arrows go through `KEY_POSITION`, which
 keeps a state in the page and in the server (letters do not): a state defect hits the arrows and
 spares typing. Mechanisms in order: (1) in the page a lost release leaves the code in
-`cl_tasti_premuti` and the next press is silently discarded (`cl_su_keyup` returns at once when
-`cl_nel_modulo`); (2) on Mutter/KWin the libei keyboard paused or exchanged
-(`tastiera_attiva` false) discards the press; (3) between parent and child the non-blocking socket
+`cl_keys_pressed` and the next press is silently discarded (`cl_su_keyup` returns at once when
+`cl_in_form`); (2) on Mutter/KWin the libei keyboard paused or exchanged
+(`keyboard_active` false) discards the press; (3) between parent and child the non-blocking socket
 discards an input on `EAGAIN` when the child is late; (4) the keypad arrows with
 NumLock off arrive as KP_8/KP_2; (5) keys discarded as IME composition. `[M]` in the
 logs of the whole campaign: **0** inputs not sent on to the child, **1** keyboard
@@ -494,19 +494,19 @@ it is **installed** (in the binary or in the boxes' page) or not. The user's dec
 
 | commit | what | why | measure | installed |
 |---|---|---|---|---|
-| `62753e7` | **log in the journal** (`--journal`): the journal's native protocol, one `sendmsg` per line, non-blocking; fields `REMOTIX_AREA`, `REMOTIX_INQUILINO`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; severity 3/4/6 from the ⛔/⚠ mark at the head of the body; the chatter does NOT go to the journal; the child receives it from the parent (`argv[16]`) | §12, DECISIONI §9.1 | 33 lines out of 33 with the fields; stderr identical without the option | yes, from `bdde6bb1` |
+| `62753e7` | **log in the journal** (`--journal`): the journal's native protocol, one `sendmsg` per line, non-blocking; fields `REMOTIX_AREA`, `REMOTIX_TENANT`, `CODE_FILE`, `CODE_LINE`, `SYSLOG_IDENTIFIER=remotix`; severity 3/4/6 from the ⛔/⚠ mark at the head of the body; the chatter does NOT go to the journal; the child receives it from the parent (`argv[16]`) | §12, DECISIONI §9.1 | 33 lines out of 33 with the fields; stderr identical without the option | yes, from `bdde6bb1` |
 | `62753e7` | **input is not written**: `rcp.c` (and the twin `banchi/rcp/rcp.c`), `tastiera.c`, `input.c` — no `U+XXXX` nor key codes, except modifiers and buttons | §12, DECISIONI §9.2 | audit of all the `registro_*` calls | yes |
 | `62753e7` | `Makefile`: every object depends on `registro.h` | `registro.h` became macros (`__FILE__`/`__LINE__`) and a half build did not link | — | — |
 | `ebc9dcd` | **«NOSTRO nel secondo» line** of the child: p95, maximum and median of *copy → bytes out* over only the frames of that second | the TRATTO line uses a ring of 512 frames (a spike stays inside for 8–17 s) and starts from the compositor's `pts`; §3.2 asks for **our piece** | diagnosis of the round trip in 4K: ours ~19/24 ms out of 45/54 (§9, «Quale ritardo classifica») | yes, from `4cba76f6` |
 | `97e94fe` | **encoder entrypoint chosen on the capability declared** by the driver: `EncSliceLP` if present (Intel, identical), otherwise full `EncSlice` (radeonsi), declared; software only if neither is present | the Radeon has no low power ⇒ the product encoded in software | Radeon: «in HARDWARE · radeonsi · EncSlice, piena», OURS p95 17–29 ms | yes, `3fe94e8b` (binary of the Intel campaign) |
 | `86598d6` | **first frame from the card judged by sampling** (64×64 grid, cap 250 ms) instead of reading the whole DMA-BUF slab | on a discrete card the slab is in VRAM: reading it from the CPU cost **63.7 s** and the session was not born | `[M]` 26 Sep, Radeon, XFCE and GNOME 4K: **5.7–6.2 ms** (before 63.7 s), `h264_vaapi` encoding in HARDWARE on radeonsi, sessions GREEN | yes, `45d048c8` |
-| `ea0f82a` | **WebGL2 drawing route** in the page (`?tela=gl`): synchronous `texImage2D(VideoFrame)`, `close()` at once, full-screen quad, same counters | anomaly A1: in Firefox `createImageBitmap(VideoFrame)` reads back from the GPU (~34 ms at 4K) ⇒ 11–50 % skipped with 1 user | to be measured; then the user's look against the squares (DECISIONI §9.4) | **no** (candidate) |
+| `ea0f82a` | **WebGL2 drawing route** in the page (`?canvas_size=gl`): synchronous `texImage2D(VideoFrame)`, `close()` at once, full-screen quad, same counters | anomaly A1: in Firefox `createImageBitmap(VideoFrame)` reads back from the GPU (~34 ms at 4K) ⇒ 11–50 % skipped with 1 user | to be measured; then the user's look against the squares (DECISIONI §9.4) | **no** (candidate) |
 
-| (questo commit) | **the skip rule weighted with the drawing cost**: the drawing is skipped if `coda > 2` **and** `coda × costo_disegno() > 16 ms` (cost = median of the synchronous part of the callback, + the glass on the asynchronous route); plus the counters `cq`/`cu` (queue at delivery and at exit), `dec8`, `eta`, `ric` in the diary | the «coda > 2» rule (14 Aug 2026) saved the 34 ms of 2D drawing; with WebGL (0.26 ms) it saves nothing and threw away 12 % | default Firefox: skips as before (15 = the frames at queue ≥ 3), delay unchanged (36.8 ms); Chrome and WebGL: it does not trigger; to be validated on KDE 4K with `?tela=gl` | **no** |
+| (questo commit) | **the skip rule weighted with the drawing cost**: the drawing is skipped if `queue > 2` **and** `queue × draw_cost() > 16 ms` (cost = median of the synchronous part of the callback, + the glass on the asynchronous route); plus the counters `cq`/`cu` (queue at delivery and at exit), `dec8`, `eta`, `ric` in the diary | the «coda > 2» rule (14 Aug 2026) saved the 34 ms of 2D drawing; with WebGL (0.26 ms) it saves nothing and threw away 12 % | default Firefox: skips as before (15 = the frames at queue ≥ 3), delay unchanged (36.8 ms); Chrome and WebGL: it does not trigger; to be validated on KDE 4K with `?canvas_size=gl` | **no** |
 
-| (questo commit) | **WebGL2 becomes the default drawing route** for all browsers; `?tela=bmp` (or `2d`, `desincronizzata`) puts back the earlier routes for comparison; without WebGL2 the page falls back to `bitmaprenderer` and writes so | anomaly A1; DECISIONI §9.4 | the user's judgement at the screen (KDE, Firefox, 4K video and WebGL aquarium with 30 000 fish): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — no 64×192 blocks | after the short suite |
+| (questo commit) | **WebGL2 becomes the default drawing route** for all browsers; `?canvas_size=bmp` (or `2d`, `desynchronized`) puts back the earlier routes for comparison; without WebGL2 the page falls back to `bitmaprenderer` and writes so | anomaly A1; DECISIONI §9.4 | the user's judgement at the screen (KDE, Firefox, 4K video and WebGL aquarium with 30 000 fish): «l'immagine è perfetta: qualità ottima, 45 fps costanti, nessuno scatto» — no 64×192 blocks | after the short suite |
 
-| (questo commit) | **D-023, the frame the driver does not write**: if the first SPS of a context declares a size larger than the canvas by less than one block (64), `codificatore.c` passes the packets with the SPS (the keys) through `hevc_metadata`/`h264_metadata` with `crop_right`/`crop_bottom`, and declares it (line «⭐ D-023»); any other difference stays refused by `forma_va_bene()` | anomaly A3: on the Radeon (radeonsi 25.0.7) `hevc_vaapi` declares the multiple of 64 without a conformance window (from command-line `ffmpeg` too) ⇒ every HEVC session — Chrome — at a canvas not a multiple of 64 stayed **black** | `banchi/16-stress/16-d023-cornice.sh`, 4 real canvases × 2 codecs: Radeon **8 PASS** (PSNR 47 dB, the image is 1:1), without the cure **HEVC 4 FAIL out of 4**; Intel 8 PASS, the cure never triggers | **yes**, binary **`28a947f5`** (from `678a2da`), 27 Sep: short suite on the Radeon, 4 desktops × 2 browsers, **352 PASS out of 352**; in the boxes' logs the cure triggered 62 times, 0 streams refused |
+| (questo commit) | **D-023, the frame the driver does not write**: if the first SPS of a context declares a size larger than the canvas by less than one block (64), `codificatore.c` passes the packets with the SPS (the keys) through `hevc_metadata`/`h264_metadata` with `crop_right`/`crop_bottom`, and declares it (line «⭐ D-023»); any other difference stays refused by `bitstream_ok()` | anomaly A3: on the Radeon (radeonsi 25.0.7) `hevc_vaapi` declares the multiple of 64 without a conformance window (from command-line `ffmpeg` too) ⇒ every HEVC session — Chrome — at a canvas not a multiple of 64 stayed **black** | `banchi/16-stress/16-d023-cornice.sh`, 4 real canvases × 2 codecs: Radeon **8 PASS** (PSNR 47 dB, the image is 1:1), without the cure **HEVC 4 FAIL out of 4**; Intel 8 PASS, the cure never triggers | **yes**, binary **`28a947f5`** (from `678a2da`), 27 Sep: short suite on the Radeon, 4 desktops × 2 browsers, **352 PASS out of 352**; in the boxes' logs the cure triggered 62 times, 0 streams refused |
 
 | (questo commit) | **D-022, the `SHELL` outside GNOME**: `sessione.c`, at the end of the session's environment, `SHELL` from the user's passwd line for KDE, XFCE and LXQt (GNOME stays empty: `gnome-session`'s trap); without a shell in passwd it says so | anomaly A2: `[M]` in a live XFCE session `labwc` and `xfce4-panel` without `SHELL`, `systemd --user` with `/bin/bash`; qterminal fell back to `/bin/sh` | `banchi/15-suite/15-f032-la-shell-dell-utente.py` (F-032): on the 4 desktops the session's `SHELL` (empty on GNOME), and on LXQt `qterminal` launched with the panel's environment opens `bash`: **4 PASS**, fault red on the 4; with the earlier binary (28a947f5) LXQt **FAIL** («SHELL della sessione None») | **yes**, binary **`4fb3287d`**, 29 Sep (after the campaign); short suite with F-032 in parallel on the 4 desktops: 328 PASS, 4 FAIL, 36 BLOCKED — the 16 red combinations **redone one at a time: 16 out of 16 PASS**. The reds were almost all «utente o parola d'ordine non corretti» with `pam_unix: user unknown` for a tenant created 7 s earlier (`[M]` gnome 04:40:04 created, 04:40:11 unknown) and only with the round in parallel: `[?]` defect of the bench or of the environment, to be understood; on 26 Sep the same round was 352/352 |
 **Binary and page of the new campaign** (from `e4e05dc`): binary **`45d048c8`**, page **`fb9a18f3`** —
@@ -517,15 +517,15 @@ detach and re-attach, re-attach at a different size; 4 desktops × 2 browsers): 
 
 | commit | what | why |
 |---|---|---|
-| `8e7f9ec` | `11-accendi.sh server`: `--journal` and the cap from `REMOTIX_TETTO_SESSIONI` | §12 and §2 (cap at 17) |
-| `87f614e` | `11-accendi.sh accendi`: `REMOTIX_SCHEDA=intel|amd`, a single card inside the box | Radeon campaign (§11) |
+| `8e7f9ec` | `11-accendi.sh server`: `--journal` and the cap from `REMOTIX_SESSION_CAP` | §12 and §2 (cap at 17) |
+| `87f614e` | `11-accendi.sh turn_on`: `REMOTIX_CARD=intel|amd`, a single card inside the box | Radeon campaign (§11) |
 | `8f7bbd8` | the card's nodes enter **with their real name too** when they are not `card0`/`renderD128` | `[M]` libdrm rebuilds the name from the node number: without that node the compositor did not announce DMA-BUF and VA-API would not open (Radeon: 205 ms → 17–29 ms) |
 | various | `banchi/16-stress/`: actor, resources, classification, climb, short check, compositors, queue, report, canvas bench | the setup of §4–§10; corrected after an adversarial review (6 defects) and after the first real climbs (§14) |
 | (questo commit) | job C on LXQt: `qterminal -e bash`, and the actor checks the shell under the terminal | anomaly A2 (D-022, product defect: `SHELL=` empty ⇒ dash) — declared workaround of the bench, the product's cure is after the campaign |
 | (questo commit) | job B on LXQt: deletion is Shift+Del and «y» (pcmanfm-qt: the menu's Del did not trigger; «No» is the dialog's default button), snapshot on failure | `[M]` 27 Sep: «input perso: cancella» gave FAIL to LXQt already at 2 users — defect of the bench, not of the product; the LXQt 4K and 3K climbs are redone |
 | `07-b46` | `REMOTIX_FF_PREFS`: extra preferences in the benches' Firefox profile | to repeat a measure with software decoding |
-| (questo commit) | `16-lavori.py`, actor A: `aspetta()` reads the WHOLE group of rows of the notebook before returning, and before choosing wheel or key the actor rereads the position | anomaly A4: the «lost» PageDown on KDE was the actor's (old position, page already at the bottom). In force on the server from **13:58 UTC on 27 Sep**, that is from the second user of `amd-b-4k-gnome` onwards (user 01 of that step started at 13:55 with the earlier code) |
-| (questo commit) | **the boxes' lock**: `/media/REMOTIX/rete11/.scatole.lock` (flock) taken by `15-giro.py`, `16-salita.py` and `11-gancio.sh` (not by the «carte»); whoever holds it writes so inside; the children inherit `REMOTIX_SCATOLE_TENUTE`; `sgombera_inquilini` does nothing without that variable. ⚠ Not in `/run/lock`: sticky folder + `fs.protected_regular`, root does not reopen nicfio's file | it closes the «user unknown» of 29 Sep (see D-022 in §17.1): every mesh of the hook cleared out ALL the `c<n>u<n>` tenants, and a push during a suite round deleted the tenants just born ⇒ failed logins ⇒ ban of 192.168.0.2 (12 h) | short round `16-corta-serratura-2` (4 desktops × 2 browsers, 60 min) with a «carte» push halfway: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 clear-outs; «rete» hook with the lock held: **refused** (rc 1, «le tiene gia' un altro banco»); with the boxes free it starts (rc 0, no red) | copied to the server, 29 Sep |
+| (questo commit) | `16-lavori.py`, actor A: `wait_for()` reads the WHOLE group of rows of the notebook before returning, and before choosing wheel or key the actor rereads the position | anomaly A4: the «lost» PageDown on KDE was the actor's (old position, page already at the bottom). In force on the server from **13:58 UTC on 27 Sep**, that is from the second user of `amd-b-4k-gnome` onwards (user 01 of that step started at 13:55 with the earlier code) |
+| (questo commit) | **the boxes' lock**: `/media/REMOTIX/rete11/.scatole.lock` (flock) taken by `15-giro.py`, `16-salita.py` and `11-gancio.sh` (not by the «carte»); whoever holds it writes so inside; the children inherit `REMOTIX_KEPT_BOXES`; `clear_out_tenants` does nothing without that variable. ⚠ Not in `/run/lock`: sticky folder + `fs.protected_regular`, root does not reopen nicfio's file | it closes the «user unknown» of 29 Sep (see D-022 in §17.1): every mesh of the hook cleared out ALL the `c<n>u<n>` tenants, and a push during a suite round deleted the tenants just born ⇒ failed logins ⇒ ban of 192.168.0.2 (12 h) | short round `16-corta-serratura-2` (4 desktops × 2 browsers, 60 min) with a «carte» push halfway: **368 PASS, 0 FAIL, 0 BLOCKED**, 0 clear-outs; «rete» hook with the lock held: **refused** (rc 1, «le tiene gia' un altro banco»); with the boxes free it starts (rc 0, no red) | copied to the server, 29 Sep |
 
 ### 17.3 The server's environment (volatile: rootfs in RAM)
 

@@ -7,14 +7,14 @@
 #
 # Starts from the snapshot, reads, powers off and goes back to the snapshot. Output in /media/REMOTIX/vm17/t6/pam/<machine>.txt
 set -uo pipefail
-m=${1:?machine}; foto=${2:?photo}
+m=${1:?machine}; picture=${2:?photo}
 R=/media/REMOTIX/vm17; V="bash $R/17-vm.sh"; O=$R/t6/pam
 mkdir -p "$O"
 if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running"; exit 2; fi
 [ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
-$V torna "$m" "$foto" >/dev/null || exit 1
-$V avvia "$m" >"$O/$m-avvia.log" 2>&1 || { echo "⛔ avvia"; tail -3 "$O/$m-avvia.log"; $V ferma "$m" >/dev/null 2>&1; exit 1; }
-$V ssh "$m" 'sudo bash -s' >"$O/$m.txt" 2>&1 <<'DENTRO'
+$V returns "$m" "$picture" >/dev/null || exit 1
+$V start "$m" >"$O/$m-avvia.log" 2>&1 || { echo "⛔ start"; tail -3 "$O/$m-avvia.log"; $V halt "$m" >/dev/null 2>&1; exit 1; }
+$V ssh "$m" 'sudo bash -s' >"$O/$m.txt" 2>&1 <<'INSIDE'
 grep ^PRETTY /etc/os-release
 for d in /etc/pam.d /usr/lib/pam.d /usr/etc/pam.d; do [ -d $d ] && echo "$d: $(ls $d | tr '\n' ' ')"; done
 for n in sshd cockpit system-remote-login system-login system-auth password-auth postlogin \
@@ -34,6 +34,6 @@ ufw status 2>/dev/null | head -3; ls /etc/ufw/applications.d 2>/dev/null | tr '\
 echo "=== faillock.conf:"; grep -E '^[[:space:]]*[a-z]' /etc/security/faillock.conf 2>/dev/null
 echo "=== sshd_config:"; grep -rihE '^[[:space:]]*(PermitRootLogin|UsePAM|KbdInteractiveAuthentication|PasswordAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/ /usr/etc/ssh/sshd_config /usr/etc/ssh/sshd_config.d/ /usr/lib/ssh/ 2>/dev/null
 echo "=== authselect: $(authselect current 2>/dev/null | tr '\n' ' ')"
-DENTRO
-$V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$foto" >/dev/null 2>&1
-echo "$m ($foto): $(wc -l <"$O/$m.txt") lines"
+INSIDE
+$V halt "$m" >/dev/null 2>&1; $V returns "$m" "$picture" >/dev/null 2>&1
+echo "$m ($picture): $(wc -l <"$O/$m.txt") lines"

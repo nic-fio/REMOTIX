@@ -5,28 +5,28 @@
      page.  The only differences are the automatic start and the POST of the outcome. -->
 <html lang="it"><head><meta charset="utf-8"><title>RCP probe</title></head>
 <body>
-<div id="avviso" hidden></div>
-<form id="modulo"><input id="utente"><input id="parola" type="password"></form>
-<div id="esito"></div><div id="registro"></div>
+<div id="warning" hidden></div>
+<form id="module"><input id="username"><input id="password" type="password"></form>
+<div id="outcome"></div><div id="logbook"></div>
 <script>
 "use strict";
 
 /* ⛔ The fingerprint the SERVER wrote in here while serving the page. */
 const Q = new URLSearchParams(location.search);
 const BASE = Q.get("base");
-const IMPRONTA_SERVITA = Q.get("impronta") || "";
+const SERVED_FINGERPRINT = Q.get("fingerprint") || "";
 
 /* -------------------------------------------------------------------------
  * ⛔⭐ THE CREDENTIALS COME FROM THE FRAGMENT, NOT FROM THE QUERY — survey
  *     R12-A.34, 11 Aug 2026, and B13 found it.
  *
- * This page received `?utente=prova&parola=parola-di-prova`.  ⛔ The query
+ * This page received `?username=prova&password=parola-di-prova`.  ⛔ The query
  * is part of the HTTP REQUEST LINE, and every server logs it as a matter of
  * course: `sonda/racc.log` held the password **in clear**, and it is
  * the line on which B13.2 is red — *"the password appears in 1 logs
  * out of 1288"*.
  *
- * ⚠ And a little further down this same page printed *"CREDENZIALI sent (the
+ * ⚠ And a little further down this same page printed *"CREDENTIALS sent (the
  *   password appears in no log)"*: a sentence that was contradicted by
  *   the file next to it.
  *
@@ -37,7 +37,7 @@ const IMPRONTA_SERVITA = Q.get("impronta") || "";
  * ⛔ AND WHAT THIS CURE DOES **NOT** CLOSE, said here and not elsewhere: the
  *    fragment stays in the HISTORY and in the browser's saved session.
  *    `[M]` 11 Aug 2026: the password was also in
- *    `sonda/prof-<etichetta>/sessionstore-backups/recovery.jsonlz4` — ⚠ and the
+ *    `sonda/prof-<label>/sessionstore-backups/recovery.jsonlz4` — ⚠ and the
  *    folder name is written out in full on purpose: the form with
  *    the asterisk carries the pair of characters that CLOSES a comment in
  *    JavaScript, and in the first draft it split this block in two.  The
@@ -49,29 +49,29 @@ const IMPRONTA_SERVITA = Q.get("impronta") || "";
  *    so that the difference is not forgotten.
  * ------------------------------------------------------------------------- */
 const F = new URLSearchParams((location.hash || "").replace(/^#/, ""));
-const credenziale = (nome) => F.get(nome) || Q.get(nome) || "";
-const AVVISO = "";
+const credential = (label_name) => F.get(label_name) || Q.get(label_name) || "";
+const WARNING = "";
 
 const $ = (i) => document.getElementById(i);
-const righe = [];
-function nota(t) { righe.push(t); $("registro").textContent = righe.join("\n"); }
-function esito(t, bene) { const e = $("esito"); e.textContent = t; e.className = bene ? "bene" : "male"; }
+const line_list = [];
+function remark(t) { line_list.push(t); $("logbook").textContent = line_list.join("\n"); }
+function outcome(t, all_ok) { const e = $("outcome"); e.textContent = t; e.className = all_ok ? "all_ok" : "male"; }
 
-if (AVVISO.trim()) { $("avviso").hidden = false; }
+if (WARNING.trim()) { $("warning").hidden = false; }
 
 /* ── The bytes of RCP (RCP.md §6.0 and §6.1) ───────────────────────────────
    ⛔ Byte order: network (big-endian).  No aligned field, no padding:
       "one extra byte that makes the sums add up in a C struct is the
       exact form of the defect corrected in §6.2".                            */
 
-const TIPO = {
-  CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
-  RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007, CONGEDO: 0x000C,
+const TYPE = {
+  HELLO: 0x0001, HERE_I_AM: 0x0002, CREDENTIALS: 0x0003, ADMITTED: 0x0004,
+  REJECTED: 0x0005, ATTACH: 0x0006, SESSION: 0x0007, FAREWELL: 0x000C,
 };
 
 /* The reasons of §8.2, in words.  ⛔ `RCP.md` §8.2 and `SPECIFICHE.md`: the user
    is told WHY, with a sentence and not with a number. */
-const MOTIVO = {
+const REASON_TEXT = {
   0x01: "the session was closed by the user",
   0x02: "silence too long: the session expired",
   0x03: "the session was abandoned",
@@ -89,7 +89,7 @@ const MOTIVO = {
   0x0F: "that user is already connected from another device",
 };
 
-class Scrittore {
+class Writer {
   constructor() { this.b = []; }
   u8(v)  { this.b.push(v & 0xff); return this; }
   u16(v) { this.b.push((v >> 8) & 0xff, v & 0xff); return this; }
@@ -100,46 +100,46 @@ class Scrittore {
 }
 
 /* The framing of §6.1: u16 type, u32 length, body. */
-function inquadra(tipo, corpo) {
-  const m = new Uint8Array(6 + corpo.length);
+function wrap(kind, body_el) {
+  const m = new Uint8Array(6 + body_el.length);
   const v = new DataView(m.buffer);
-  v.setUint16(0, tipo);
-  v.setUint32(2, corpo.length);
-  m.set(corpo, 6);
+  v.setUint16(0, kind);
+  v.setUint32(2, body_el.length);
+  m.set(body_el, 6);
   return m;
 }
 
-class Lettore {
+class Reader {
   constructor(d) { this.v = new DataView(d.buffer, d.byteOffset, d.byteLength); this.o = 0; }
   u8()  { return this.v.getUint8(this.o++); }
   u16() { const x = this.v.getUint16(this.o); this.o += 2; return x; }
   u32() { const x = this.v.getUint32(this.o); this.o += 4; return x; }
   str() { const n = this.u16(); const d = new Uint8Array(this.v.buffer, this.v.byteOffset + this.o, n); this.o += n; return new TextDecoder().decode(d); }
-  resta() { return this.v.byteLength - this.o; }
+  stays() { return this.v.byteLength - this.o; }
 }
 
 /* The control channel reader: it accumulates and returns one message at a
    time.  ⛔ The length is checked BEFORE allocating (§6.1). */
-class Canale {
+class Channel {
   constructor(stream) {
-    this.lettore = stream.readable.getReader();
-    this.scrittore = stream.writable.getWriter();
+    this.reader = stream.readable.getReader();
+    this.writer = stream.writable.getWriter();
     this.buf = new Uint8Array(0);
   }
-  async manda(tipo, corpo) { await this.scrittore.write(inquadra(tipo, corpo)); }
-  async ricevi() {
+  async send_it(kind, body_el) { await this.writer.write(wrap(kind, body_el)); }
+  async receive() {
     for (;;) {
       if (this.buf.length >= 6) {
         const v = new DataView(this.buf.buffer, this.buf.byteOffset, this.buf.byteLength);
-        const tipo = v.getUint16(0), lung = v.getUint32(2);
+        const kind = v.getUint16(0), lung = v.getUint32(2);
         if (lung > 1024 * 1024) throw new Error("message over 1 MiB: the server violates §6.1");
         if (this.buf.length >= 6 + lung) {
-          const corpo = this.buf.slice(6, 6 + lung);
+          const body_el = this.buf.slice(6, 6 + lung);
           this.buf = this.buf.slice(6 + lung);
-          return { tipo, corpo };
+          return { kind, body_el };
         }
       }
-      const { value, done } = await this.lettore.read();
+      const { value, done } = await this.reader.read();
       if (done) return null;
       const n = new Uint8Array(this.buf.length + value.length);
       n.set(this.buf); n.set(value, this.buf.length);
@@ -160,7 +160,7 @@ function base64ABytes(b64) {
  *    `[M]` 10 Aug 2026, first round with real Firefox: this line said
  *    `navigator.language.slice(0,2)`, and on a browser in English it sent `en`.
  *    ⛔ `en` IS NOT an XKB layout name — that one is called `us` — and
- *    `RCP.md` §4.5 requires the server to dismiss with `SESSIONE_NON_SERVIBILE`
+ *    `RCP.md` §4.5 requires the server to dismiss with `SESSION_UNSERVABLE`
  *    a well-formed layout the system does not know.  The server did
  *    exactly what it must; it was the PAGE asking for a keyboard that
  *    does not exist, and every user with a browser in English would have seen
@@ -171,13 +171,13 @@ function base64ABytes(b64) {
  *   hint, not a fact.  This table is an honest fallback; the real cure is
  *   to let the user choose, and `SPECIFICHE.md` §7.3 is the place where
  *   that decision will be taken. */
-function disposizione() {
+function arrangement() {
   const l = (navigator.language || "it-IT").toLowerCase();
-  const lingua = l.slice(0, 2);
-  const regione = l.length > 3 ? l.slice(3, 5) : "";
-  if (lingua === "en") {
-    const per_regione = {gb: "gb", au: "us", ca: "us", nz: "us", ie: "ie", in: "us", za: "us"};
-    return per_regione[regione] || "us";
+  const language = l.slice(0, 2);
+  const region = l.length > 3 ? l.slice(3, 5) : "";
+  if (language === "en") {
+    const per_region = {gb: "gb", au: "us", ca: "us", nz: "us", ie: "ie", in: "us", za: "us"};
+    return per_region[region] || "us";
   }
   /* The languages in which the XKB name matches the ISO code.  ⛔ Outside these
      it falls back to `us` instead of guessing: a wrong layout does not give
@@ -185,45 +185,45 @@ function disposizione() {
   const note = ["it", "de", "fr", "es", "pt", "nl", "se", "no", "dk", "fi",
                 "pl", "cz", "sk", "hu", "ro", "ru", "ua", "gr", "tr", "il",
                 "jp", "kr", "br", "ch", "be", "at", "si", "hr", "rs", "bg"];
-  if (note.includes(lingua)) return lingua;
-  if (lingua === "sv") return "se";
-  if (lingua === "da") return "dk";
-  if (lingua === "cs") return "cz";
-  if (lingua === "el") return "gr";
-  if (lingua === "he") return "il";
-  if (lingua === "ja") return "jp";
-  if (lingua === "ko") return "kr";
-  if (lingua === "uk") return "ua";
+  if (note.includes(language)) return language;
+  if (language === "sv") return "se";
+  if (language === "da") return "dk";
+  if (language === "cs") return "cz";
+  if (language === "el") return "gr";
+  if (language === "he") return "il";
+  if (language === "ja") return "jp";
+  if (language === "ko") return "kr";
+  if (language === "uk") return "ua";
   return "us";
 }
 
 /* ⛔ The fingerprint is FETCHED AGAIN before every attempt (§4.1-bis). If the
    fetch fails the one served with the page is used, and IT IS SAID: a silent
    fallback produces two behaviours under the same label. */
-async function impronta() {
+async function fingerprint() {
   try {
     const r = await fetch(BASE + "/impronta", { cache: "no-store" });
     if (!r.ok) throw new Error("status " + r.status);
     const j = await r.json();
-    if (j.impronta && j.impronta !== IMPRONTA_SERVITA) {
-      nota("fingerprint: the certificate has been rotated since this page was served — using the new one");
+    if (j.fingerprint && j.fingerprint !== SERVED_FINGERPRINT) {
+      remark("fingerprint: the certificate has been rotated since this page was served — using the new one");
     }
-    return j.impronta || IMPRONTA_SERVITA;
+    return j.fingerprint || SERVED_FINGERPRINT;
   } catch (e) {
-    nota("fingerprint: /impronta does not answer (" + e.message + "): using the one served with the page");
-    return IMPRONTA_SERVITA;
+    remark("fingerprint: /impronta does not answer (" + e.message + "): using the one served with the page");
+    return SERVED_FINGERPRINT;
   }
 }
 
-async function collega(utente, parola) {
+async function connect(username, password) {
   if (!("WebTransport" in window)) {
-    esito("This browser has no WebTransport: you need Chrome/Edge, Firefox or Safari 26+.", false);
+    outcome("This browser has no WebTransport: you need Chrome/Edge, Firefox or Safari 26+.", false);
     return;
   }
 
-  const b64 = await impronta();
+  const b64 = await fingerprint();
   const url = BASE + "/rcp/1";
-  nota("opening " + url);
+  remark("opening " + url);
 
   /* ⛔ `allowPooling: false` and the fingerprint: `RCP.md` §4.1-bis.  With
      `serverCertificateHashes` the browser does NOT look at the exception — it
@@ -236,108 +236,108 @@ async function collega(utente, parola) {
 
   wt.closed.then((info) => {
     const c = info && info.closeCode;
-    if (c && MOTIVO[c]) esito(MOTIVO[c], false);
-    nota("session closed by the server: code " + (c === undefined ? "?" : c));
-  }).catch((e) => nota("session closed with error: " + e));
+    if (c && REASON_TEXT[c]) outcome(REASON_TEXT[c], false);
+    remark("session closed by the server: code " + (c === undefined ? "?" : c));
+  }).catch((e) => remark("session closed with error: " + e));
 
   await wt.ready;
-  nota("WebTransport session open");
+  remark("WebTransport session open");
 
   /* ⛔ §4.2: the client opens the FIRST bidirectional stream of the session.
      That is the control channel, and its closing IS the end of the
      session. */
-  const canale = new Canale(await wt.createBidirectionalStream());
+  const channel = new Channel(await wt.createBidirectionalStream());
 
-  /* ── CIAO (§4.3) ────────────────────────────────────────────────────── */
+  /* ── HELLO (§4.3) ────────────────────────────────────────────────────── */
   const cap = [
     ["video.codec", "hevc,av1"],
-    ["video.profondita", "8,10"],
-    ["video.livello", "5.1"],
-    ["video.misura_massima", screen.width * devicePixelRatio + "x" + screen.height * devicePixelRatio],
+    ["video.bit_depth", "8,10"],
+    ["video.level", "5.1"],
+    ["video.max_size", screen.width * devicePixelRatio + "x" + screen.height * devicePixelRatio],
     ["audio.codec", "opus,pcm"],
-    ["input.tocco", "no"],
-    ["appunti.testo", "si"],
-    ["client.nome", "remotix-pagina 0.1.0"],
+    ["input.tap", "no"],
+    ["clipboard_text.body_text", "si"],
+    ["client.label_name", "remotix-pagina 0.1.0"],
   ];
-  const s = new Scrittore();
+  const s = new Writer();
   s.u16(1);              /* the major version this page can speak */
   s.u16(cap.length);
   for (const [n, v] of cap) s.str(n).str(v);
-  await canale.manda(TIPO.CIAO, s.byte());
-  nota("CIAO sent (" + cap.length + " capabilities)");
+  await channel.send_it(TYPE.HELLO, s.byte());
+  remark("HELLO sent (" + cap.length + " capabilities)");
 
-  let m = await canale.ricevi();
-  if (!m) { esito("The server closed the channel without answering.", false); return; }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
-  if (m.tipo !== TIPO.ECCOMI) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of ECCOMI.", false); return; }
+  let m = await channel.receive();
+  if (!m) { outcome("The server closed the channel without answering.", false); return; }
+  if (m.kind === TYPE.FAREWELL) { const l = new Reader(m.body_el); outcome(REASON_TEXT[l.u8()] || "dismissed", false); return; }
+  if (m.kind !== TYPE.HERE_I_AM) { outcome("The server answered 0x" + m.kind.toString(16) + " instead of HERE_I_AM.", false); return; }
   {
-    const l = new Lettore(m.corpo);
-    const ver = l.u16(), quante = l.u16();
-    const scelte = [];
-    for (let i = 0; i < quante; i++) scelte.push(l.str() + "=" + l.str());
-    nota("ECCOMI: version " + ver + " — " + scelte.join(" · "));
+    const l = new Reader(m.body_el);
+    const ver = l.u16(), how_many_n = l.u16();
+    const choices = [];
+    for (let i = 0; i < how_many_n; i++) choices.push(l.str() + "=" + l.str());
+    remark("HERE_I_AM: version " + ver + " — " + choices.join(" · "));
   }
 
-  /* ── CREDENZIALI (§4.4) ─────────────────────────────────────────────── */
-  await canale.manda(TIPO.CREDENZIALI, new Scrittore().str(utente).str(parola).byte());
-  nota("CREDENZIALI sent — ⛔ and the password appears in no\n  HTTP log because it comes from the FRAGMENT, which the browser does not\n  send to the server (R12-A.34).  \u26a0 It stays in the browser's\n  history: this round's profile is thrown away at the end of the round");
+  /* ── CREDENTIALS (§4.4) ─────────────────────────────────────────────── */
+  await channel.send_it(TYPE.CREDENTIALS, new Writer().str(username).str(password).byte());
+  remark("CREDENTIALS sent — ⛔ and the password appears in no\n  HTTP log because it comes from the FRAGMENT, which the browser does not\n  send to the server (R12-A.34).  \u26a0 It stays in the browser's\n  history: this round's profile is thrown away at the end of the round");
 
-  m = await canale.ricevi();
-  if (!m) { esito("The server closed the channel without answering the credentials.", false); return; }
-  if (m.tipo === TIPO.RESPINTO) {
-    const l = new Lettore(m.corpo);
-    const mot = l.u8();
-    esito(MOTIVO[mot] || ("refused, reason 0x" + mot.toString(16)), false);
+  m = await channel.receive();
+  if (!m) { outcome("The server closed the channel without answering the credentials.", false); return; }
+  if (m.kind === TYPE.REJECTED) {
+    const l = new Reader(m.body_el);
+    const rsn = l.u8();
+    outcome(REASON_TEXT[rsn] || ("refused, reason 0x" + rsn.toString(16)), false);
     /* ⛔ §4.4: "the client MUST NOT retry on the same connection: for a
        second attempt a new one is opened".  And the only thing left for it
-       to say is CONGEDO — which §8.1 REQUIRES of it when it is the one closing;
+       to say is FAREWELL — which §8.1 REQUIRES of it when it is the one closing;
        here the server closes, so it keeps quiet. */
     return;
   }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
-  if (m.tipo !== TIPO.AMMESSO) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of AMMESSO.", false); return; }
-  nota("AMMESSO");
+  if (m.kind === TYPE.FAREWELL) { const l = new Reader(m.body_el); outcome(REASON_TEXT[l.u8()] || "dismissed", false); return; }
+  if (m.kind !== TYPE.ADMITTED) { outcome("The server answered 0x" + m.kind.toString(16) + " instead of ADMITTED.", false); return; }
+  remark("ADMITTED");
 
-  /* ── ATTACCA (§4.5) ─────────────────────────────────────────────────── */
+  /* ── ATTACH (§4.5) ─────────────────────────────────────────────────── */
   /* ⛔ The limits are normative: between 320×240 and 7680×4320, and both EVEN. */
-  const pari = (n, min, max) => Math.max(min, Math.min(max, n - (n % 2)));
-  const tela_l = pari(1920, 320, 7680), tela_a = pari(1080, 240, 4320);
+  const even = (n, min, max) => Math.max(min, Math.min(max, n - (n % 2)));
+  const canvas_w = even(1920, 320, 7680), canvas_h = even(1080, 240, 4320);
   const vista_l = Math.max(1, Math.round(innerWidth * devicePixelRatio));
   const vista_a = Math.max(1, Math.round(innerHeight * devicePixelRatio));
-  const disp = disposizione();
-  await canale.manda(TIPO.ATTACCA,
-    new Scrittore().u32(tela_l).u32(tela_a).u32(vista_l).u32(vista_a).str(disp).byte());
-  nota("ATTACCA: canvas " + tela_l + "×" + tela_a + ", view " + vista_l + "×" + vista_a + ", layout «" + disp + "»");
+  const avail = arrangement();
+  await channel.send_it(TYPE.ATTACH,
+    new Writer().u32(canvas_w).u32(canvas_h).u32(vista_l).u32(vista_a).str(avail).byte());
+  remark("ATTACH: canvas " + canvas_w + "×" + canvas_h + ", view " + vista_l + "×" + vista_a + ", layout «" + avail + "»");
 
-  m = await canale.ricevi();
-  if (!m) { esito("The server closed the channel without answering ATTACCA.", false); return; }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
-  if (m.tipo !== TIPO.SESSIONE) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of SESSIONE.", false); return; }
+  m = await channel.receive();
+  if (!m) { outcome("The server closed the channel without answering ATTACH.", false); return; }
+  if (m.kind === TYPE.FAREWELL) { const l = new Reader(m.body_el); outcome(REASON_TEXT[l.u8()] || "dismissed", false); return; }
+  if (m.kind !== TYPE.SESSION) { outcome("The server answered 0x" + m.kind.toString(16) + " instead of SESSION.", false); return; }
   {
-    const l = new Lettore(m.corpo);
-    const stato = l.u8(), tl = l.u32(), ta = l.u32(), desktop = l.str();
-    esito("Admitted, " + (stato === 1 ? "new" : "resumed") +
+    const l = new Reader(m.body_el);
+    const state = l.u8(), tl = l.u32(), ta = l.u32(), desktop = l.str();
+    outcome("Admitted, " + (state === 1 ? "new" : "resumed") +
           " session, canvas " + tl + "×" + ta + ", desktop " + desktop, true);
   }
 }
 
-async function spedisci(esito, dettaglio) {
+async function ship(outcome, detail) {
   try {
-    await fetch("/esito", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({esito: esito, motore: navigator.userAgent,
-                            dettaglio: dettaglio, righe: righe})});
+    await fetch("/outcome", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({outcome: outcome, motore: navigator.userAgent,
+                            detail: detail, line_list: line_list})});
   } catch (e) { /* there is no other way to say it */ }
 }
 
 (async () => {
-  $("utente").value = credenziale("utente");
-  $("parola").value = credenziale("parola");
+  $("username").value = credential("username");
+  $("password").value = credential("password");
   try {
-    await collega(credenziale("utente"), credenziale("parola"));
-    const t = $("esito").textContent;
-    await spedisci(/^Admitted/.test(t) ? "AMMESSO" : "RIFIUTATO", t);
+    await connect(credential("username"), credential("password"));
+    const t = $("outcome").textContent;
+    await ship(/^Admitted/.test(t) ? "ADMITTED" : "RIFIUTATO", t);
   } catch (e) {
-    await spedisci("ERRORE", String(e && e.message ? e.message : e));
+    await ship("ERRORE", String(e && e.message ? e.message : e));
   }
 })();
 </script></body></html>

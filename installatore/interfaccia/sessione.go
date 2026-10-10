@@ -2,7 +2,7 @@
 //
 //   - the SESSION: the engine's side, as root. It examines the machine, makes the plan (with the chosen
 //     port), applies it. It is the engine and nothing else: the same functions as the command line (Preflight,
-//     Valuta, DomandeDaFare, PianoInstallazione, Applica). The TUI, which runs as root in the terminal, uses it
+//     Evaluate, QuestionsToAsk, PlanInstallation, Apply). The TUI, which runs as root in the terminal, uses it
 //     directly (the GUI, which reached it through pkexec, was removed on 10 Oct: §10.31);
 //   - the VIEW: the engine's objects told in plain words (vista.go).
 //
@@ -28,189 +28,189 @@ import (
 	"remotix/installatore/motore"
 )
 
-// Controllo: what the engine knows about the machine (phases 0-2), for the first screen.
-type Controllo struct {
-	Fiducia  *motore.Fiducia   `json:"trust"`
-	Profilo  *motore.Profilo   `json:"profile"`
-	Rapporto *motore.Rapporto  `json:"compatibility"`
-	Domande  *motore.Domande   `json:"questions"`
-	Errore   *motore.Messaggio `json:"error,omitempty"` // phase 0 does not pass: nothing more to show
+// Check: what the engine knows about the machine (phases 0-2), for the first screen.
+type Check struct {
+	Attestation *motore.Attestation `json:"trust"`
+	Profile     *motore.Profile     `json:"profile"`
+	Report      *motore.Report      `json:"compatibility"`
+	Questions   *motore.Questions   `json:"questions"`
+	Error       *motore.Message     `json:"error,omitempty"` // phase 0 does not pass: nothing more to show
 }
 
-// Esito: how the operation ended.
-type Esito struct {
-	Operazione  string              `json:"operation"`
-	Stato       motore.Stato        `json:"state"`
-	Cartella    string              `json:"dir"`
-	Certificato *motore.Certificato `json:"certificate,omitempty"`
-	Messaggi    []motore.Messaggio  `json:"messages"`
-	Indirizzi   []string            `json:"addresses"`
-	ImprontaTLS string              `json:"tls_fingerprint,omitempty"`
-	Errore      *motore.Messaggio   `json:"error,omitempty"`
+// Outcome: how the operation ended.
+type Outcome struct {
+	Operation      string              `json:"operation"`
+	State          motore.State        `json:"state"`
+	Folder         string              `json:"dir"`
+	Certificate    *motore.Certificate `json:"certificate,omitempty"`
+	Messages       []motore.Message    `json:"messages"`
+	Addresses      []string            `json:"addresses"`
+	FingerprintTLS string              `json:"tls_fingerprint,omitempty"`
+	Error          *motore.Message     `json:"error,omitempty"`
 }
 
-// Motore: what the interface can ask. The Sessione implements it (in this process, as root);
+// Engine: what the interface can ask. The Session implements it (in this process, as root);
 // the TUI tests put in a fake one.
-type Motore interface {
-	Controlla(porta int) (*Controllo, error)
-	Piano(voci map[string]string) (*motore.Piano, error)
-	Applica(digest string, eventi func(motore.EventoPubblico)) (*Esito, error)
-	Ferma()
-	Chiudi()
+type Engine interface {
+	Verify(port int) (*Check, error)
+	Piano(entries map[string]string) (*motore.Piano, error)
+	Apply(digest string, events func(motore.PublicEvent)) (*Outcome, error)
+	Stop()
+	Shut()
 }
 
 // Config: where the catalogue comes from and where to install (the same options as the command line).
 type Config struct {
-	Operazioni string
-	// Fonti: phase 0 TRUST (the command line knows how to build it: the engine's catalogue)
-	Fonti func() *motore.FontiFiducia
+	Operations string
+	// Sources: phase 0 TRUST (the command line knows how to build it: the engine's catalogue)
+	Sources func() *motore.TrustSources
 	// Base: the installation options that are not asked (the .run's packages folder)
-	Base motore.OpzioniInstallazione
-	// Chi: the person approving (for the log); Modo: from which interface
-	Chi, Modo string
+	Base motore.InstallOptions
+	// Chi: the person approving (for the log); Manner: from which interface
+	Chi, Manner string
 }
 
-// Sessione: the engine, as root.
-type Sessione struct {
-	C      Config
-	cat    *motore.Catalogo
-	fid    *motore.Fiducia
-	amb    *motore.Ambiente
-	prof   *motore.Profilo
-	rap    *motore.Rapporto
-	porta  int
-	piano  *motore.Piano
-	file   string
-	fermo  atomic.Bool
-	blocco sync.Mutex
+// Session: the engine, as root.
+type Session struct {
+	C       Config
+	cat     *motore.Catalog
+	fid     *motore.Attestation
+	amb     *motore.Environment
+	prof    *motore.Profile
+	rap     *motore.Report
+	port    int
+	piano   *motore.Piano
+	file    string
+	stopped atomic.Bool
+	block   sync.Mutex
 }
 
-// NuovaSessione: the engine for an interface.
-func NuovaSessione(c Config) *Sessione { return &Sessione{C: c} }
+// NewSession: the engine for an interface.
+func NewSession(c Config) *Session { return &Session{C: c} }
 
-func messaggioDi(err error) *motore.Messaggio {
-	var e *motore.ErroreRX
+func messageOf(err error) *motore.Message {
+	var e *motore.ErrorRX
 	if errors.As(err, &e) {
 		m := e.M
 		return &m
 	}
-	m := motore.Messaggio{Codice: "RX-UI-005", Gravita: motore.BLOCCANTE, Testo: err.Error()}
+	m := motore.Message{Code: "RX-UI-005", Severity: motore.BLOCKING, Text: err.Error()}
 	return &m
 }
 
-// Controlla: phases 0-2 read-only (like «verifica»), and the questions to ask.
-func (s *Sessione) Controlla(porta int) (*Controllo, error) {
-	s.blocco.Lock()
-	defer s.blocco.Unlock()
-	if porta == 0 {
-		porta = 7447
+// Verify: phases 0-2 read-only (like «verifica»), and the questions to ask.
+func (s *Session) Verify(port int) (*Check, error) {
+	s.block.Lock()
+	defer s.block.Unlock()
+	if port == 0 {
+		port = 7447
 	}
-	cat, fid, err := s.C.Fonti().Fidati(time.Now())
+	cat, fid, err := s.C.Sources().Trusted(time.Now())
 	if err != nil {
-		return &Controllo{Fiducia: fid, Errore: messaggioDi(err)}, nil
+		return &Check{Attestation: fid, Error: messageOf(err)}, nil
 	}
 	s.cat, s.fid = cat, fid
-	s.amb = motore.AmbienteVero()
-	s.esamina(porta)
-	return &Controllo{Fiducia: fid, Profilo: s.prof, Rapporto: s.rap,
-		Domande: motore.DomandeDaFare(s.amb, porta)}, nil
+	s.amb = motore.RealEnvironment()
+	s.examine(port)
+	return &Check{Attestation: fid, Profile: s.prof, Report: s.rap,
+		Questions: motore.QuestionsToAsk(s.amb, port)}, nil
 }
 
-func (s *Sessione) esamina(porta int) {
-	s.porta = porta
-	s.prof = motore.Preflight(s.amb, motore.OpzioniPreflight{Porta: porta, Pacchetti: s.cat.Componenti()})
-	s.rap = motore.Valuta(s.cat, s.prof)
+func (s *Session) examine(port int) {
+	s.port = port
+	s.prof = motore.Preflight(s.amb, motore.PreflightOptions{Port: port, Packets: s.cat.Components()})
+	s.rap = motore.Evaluate(s.cat, s.prof)
 }
 
-// Piano: the plan with the chosen port (PianoInstallazione, like `install`), written in
+// Piano: the plan with the chosen port (PlanInstallation, like `install`), written in
 // /var/lib/remotix/plans/. A port different from the one examined redoes the examination (the port is in the profile).
-func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
-	s.blocco.Lock()
-	defer s.blocco.Unlock()
+func (s *Session) Piano(entries map[string]string) (*motore.Piano, error) {
+	s.block.Lock()
+	defer s.block.Unlock()
 	if s.cat == nil {
 		return nil, errors.New("run the check first")
 	}
-	porta, _ := strconv.Atoi(voci["port"])
-	if porta != 0 && porta != s.porta {
-		s.esamina(porta)
+	port, _ := strconv.Atoi(entries["port"])
+	if port != 0 && port != s.port {
+		s.examine(port)
 	}
 	o := s.C.Base
-	o.Porta = s.porta
-	m := &motore.Motore{Amb: s.amb, Cartella: s.C.Operazioni}
-	if in, err := m.ControllaInstallazione(); err == nil && in != nil {
-		o.Aggiornamento = true
+	o.Port = s.port
+	m := &motore.Engine{Amb: s.amb, Folder: s.C.Operations}
+	if in, err := m.CheckInstallation(); err == nil && in != nil {
+		o.Update = true
 	}
-	p, err := motore.PianoInstallazione(s.prof, s.rap, s.cat, s.amb, o)
+	p, err := motore.PlanInstallation(s.prof, s.rap, s.cat, s.amb, o)
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(filepath.Dir(s.C.Operazioni), motore.CartellaPiani)
+	dir := filepath.Join(filepath.Dir(s.C.Operations), motore.PlansFolder)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
 	s.file = filepath.Join(dir, p.ID+".json")
-	if err := motore.ScriviJSON(s.file, p); err != nil {
+	if err := motore.WriteJSON(s.file, p); err != nil {
 		return nil, err
 	}
 	s.piano = p
 	return p, nil
 }
 
-// Applica: the consent (a single «confirm», on the plan with the digest the person saw) and the
+// Apply: the consent (a single «confirm», on the plan with the digest the person saw) and the
 // engine's phases 4-8; the events arrive while it works.
-func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*Esito, error) {
-	s.blocco.Lock()
-	defer s.blocco.Unlock()
+func (s *Session) Apply(digest string, events func(motore.PublicEvent)) (*Outcome, error) {
+	s.block.Lock()
+	defer s.block.Unlock()
 	if s.piano == nil {
 		return nil, errors.New("no plan")
 	}
 	if digest != s.piano.Digest() {
-		return &Esito{Errore: messaggioDi(motore.Errore("RX-PIANO-005", ""))}, nil
+		return &Outcome{Error: messageOf(motore.Error("RX-PIANO-005", ""))}, nil
 	}
-	s.piano.Approvazione = &motore.Approvazione{Da: s.C.Chi, Ora: time.Now().UTC().Format(time.RFC3339),
-		Modo: s.C.Modo, DigestPiano: s.piano.Digest()}
-	if err := motore.ScriviJSON(s.file, s.piano); err != nil {
+	s.piano.Approval = &motore.Approval{Da: s.C.Chi, TimeNow: time.Now().UTC().Format(time.RFC3339),
+		Manner: s.C.Manner, DigestPiano: s.piano.Digest()}
+	if err := motore.WriteJSON(s.file, s.piano); err != nil {
 		return nil, err
 	}
-	m := &motore.Motore{Amb: s.amb, Cartella: s.C.Operazioni, Fonti: s.C.Fonti(), Porta: s.porta,
-		Ev: &motore.Eventi{W: &righeEventi{f: eventi}, JSON: true}, Fermata: s.fermo.Load}
-	op, err := m.Applica(s.file, false, s.C.Chi)
-	es := &Esito{Messaggi: []motore.Messaggio{}}
+	m := &motore.Engine{Amb: s.amb, Folder: s.C.Operations, Sources: s.C.Sources(), Port: s.port,
+		Ev: &motore.Events{W: &eventLines{f: events}, JSON: true}, Stopped: s.stopped.Load}
+	op, err := m.Apply(s.file, false, s.C.Chi)
+	es := &Outcome{Messages: []motore.Message{}}
 	if op != nil {
-		es.Operazione, es.Stato, es.Cartella = op.ID, op.Stato, op.Cartella
-		var c motore.Certificato
-		if motore.LeggiJSON(filepath.Join(op.Cartella, "certificate.json"), &c) == nil {
-			es.Certificato = &c
+		es.Operation, es.State, es.Folder = op.ID, op.State, op.Folder
+		var c motore.Certificate
+		if motore.ReadJSON(filepath.Join(op.Folder, "certificate.json"), &c) == nil {
+			es.Certificate = &c
 		}
 	}
 	if err != nil {
-		es.Errore = messaggioDi(err)
+		es.Error = messageOf(err)
 	}
-	es.Indirizzi = Indirizzi()
-	es.ImprontaTLS = ImprontaTLS("/var/lib/remotix/certificati/pagina.pem")
+	es.Addresses = Addresses()
+	es.FingerprintTLS = FingerprintTLS("/var/lib/remotix/certificates/page_v.pem")
 	return es, nil
 }
 
-// Ferma: between one step and the next the operation stops and is undone (RX-AZIONE-006).
-func (s *Sessione) Ferma() { s.fermo.Store(true) }
+// Stop: between one step and the next the operation stops and is undone (RX-AZIONE-006).
+func (s *Session) Stop() { s.stopped.Store(true) }
 
-// Chiudi: nothing to close in this process.
-func (s *Sessione) Chiudi() {}
+// Shut: nothing to close in this process.
+func (s *Session) Shut() {}
 
-// righeEventi: the engine's JSON events (one line each) become calls.
-type righeEventi struct {
-	f   func(motore.EventoPubblico)
+// eventLines: the engine's JSON events (one line each) become calls.
+type eventLines struct {
+	f   func(motore.PublicEvent)
 	buf []byte
 }
 
-func (r *righeEventi) Write(b []byte) (int, error) {
+func (r *eventLines) Write(b []byte) (int, error) {
 	r.buf = append(r.buf, b...)
 	for {
 		i := strings.IndexByte(string(r.buf), '\n')
 		if i < 0 {
 			return len(b), nil
 		}
-		var ev motore.EventoPubblico
+		var ev motore.PublicEvent
 		if json.Unmarshal(r.buf[:i], &ev) == nil && r.f != nil {
 			r.f(ev)
 		}
@@ -218,8 +218,8 @@ func (r *righeEventi) Write(b []byte) (int, error) {
 	}
 }
 
-// Indirizzi: the addresses to write in the welcome (first the non-loopback IPv4 ones), then the name.
-func Indirizzi() []string {
+// Addresses: the addresses to write in the welcome (first the non-loopback IPv4 ones), then the name.
+func Addresses() []string {
 	var r []string
 	if ifs, err := net.Interfaces(); err == nil {
 		for _, i := range ifs {
@@ -240,9 +240,9 @@ func Indirizzi() []string {
 	return r
 }
 
-// ImprontaTLS: the SHA-256 of the page's certificate (the one the browser shows), if there is one.
-func ImprontaTLS(percorso string) string {
-	b, err := os.ReadFile(percorso)
+// FingerprintTLS: the SHA-256 of the page's certificate (the one the browser shows), if there is one.
+func FingerprintTLS(fpath string) string {
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return ""
 	}
@@ -255,9 +255,9 @@ func ImprontaTLS(percorso string) string {
 	}
 	h := sha256.Sum256(blk.Bytes)
 	x := strings.ToUpper(hex.EncodeToString(h[:]))
-	var parti []string
+	var parts []string
 	for i := 0; i < len(x); i += 2 {
-		parti = append(parti, x[i:i+2])
+		parts = append(parts, x[i:i+2])
 	}
-	return strings.Join(parti, ":")
+	return strings.Join(parts, ":")
 }

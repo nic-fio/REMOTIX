@@ -1,5 +1,5 @@
 #!/bin/sh
-# riassunto.sh DIR — the pieces of the stage in prima/dopo/riattacco
+# riassunto.sh DIR — the pieces of the stage in before/after/riattacco
 cd /media/REMOTIX/tmp/t2/$1 || exit 1
 # «### process» matches both headers: «processes of the user» (t2box.py
 # today) and «processi dell'utente» (captures taken before 10 Oct 2026)

@@ -13,7 +13,7 @@ import (
 // The package manager busy with another program. On a Debian just switched on, unattended-upgrades
 // holds dpkg's lock for minutes and apt-get fails at once («Could not get lock /var/lib/dpkg/lock-frontend.
 // It is held by process … (unattended-upgr)»). Before launching the manager the engine looks at who holds
-// its locks, says so (RX-PACCHETTI-007) and waits up to TettoOccupato; beyond it, it stops having touched
+// its locks, says so (RX-PACCHETTI-007) and waits up to BusyCap; beyond it, it stops having touched
 // nothing (RX-PACCHETTI-008).
 //
 // Where the manager can wait by itself it is told to (DECISIONI §10.36), for the moment between the
@@ -27,11 +27,11 @@ import (
 //   - "pid": a file with the holder's pid inside (dnf 4, zypper) — if that process is alive;
 //   - "open": a file that exists while it is held (pacman's db.lck) — whoever has it open. A db.lck
 //     that nobody has open was left by a pacman that died: it is not a wait, and the engine does not
-//     remove it (Integro says so: RX-PACCHETTI-004).
+//     remove it (Intact says so: RX-PACCHETTI-004).
 
-type lucchetto struct{ percorso, tipo string }
+type lock struct{ fpath, kind string }
 
-var lucchetti = map[string][]lucchetto{
+var lock_set = map[string][]lock{
 	"debian": {{"/var/lib/dpkg/lock-frontend", "lock"}, {"/var/lib/dpkg/lock", "lock"},
 		{"/var/lib/apt/lists/lock", "lock"}, {"/var/cache/apt/archives/lock", "lock"}},
 	// /var/lib/rpm is a link to /usr/lib/sysimage/rpm on the newer ones: the same inode, looked at twice
@@ -43,59 +43,59 @@ var lucchetti = map[string][]lucchetto{
 	"arch": {{"/var/lib/pacman/db.lck", "open"}},
 }
 
-// TettoOccupato: how long the engine waits for a busy manager. Automatic updates on a machine just
+// BusyCap: how long the engine waits for a busy manager. Automatic updates on a machine just
 // switched on take a few minutes; beyond this it is something else, and the person decides.
-var TettoOccupato = 15 * time.Minute
+var BusyCap = 15 * time.Minute
 
-var passoOccupato = 2 * time.Second
+var busyStep = 2 * time.Second
 
-// attendiGestore: while another program holds the family's manager, the engine says who (once for each
-// holder) and waits; beyond TettoOccupato, RX-PACCHETTI-008.
-func attendiGestore(a *Ambiente, fam string) error {
-	fine := time.Now().Add(TettoOccupato)
-	detto := ""
+// waitHandler: while another program holds the family's manager, the engine says who (once for each
+// holder) and waits; beyond BusyCap, RX-PACCHETTI-008.
+func waitHandler(a *Environment, fam string) error {
+	fine := time.Now().Add(BusyCap)
+	said := ""
 	for {
-		chi := chiTiene(a, fam)
+		chi := whoHolds(a, fam)
 		if chi == "" {
 			return nil
 		}
 		if time.Now().After(fine) {
-			return Errore("RX-PACCHETTI-008", chi)
+			return Error("RX-PACCHETTI-008", chi)
 		}
-		if chi != detto {
-			a.avvisa(Msg("RX-PACCHETTI-007", fmt.Sprintf("%s; waiting up to %s", chi, TettoOccupato)))
-			detto = chi
+		if chi != said {
+			a.avvisa(Msg("RX-PACCHETTI-007", fmt.Sprintf("%s; waiting up to %s", chi, BusyCap)))
+			said = chi
 		}
-		time.Sleep(passoOccupato)
+		time.Sleep(busyStep)
 	}
 }
 
-// chiTiene: «pid 1234 (unattended-upgr) holds /var/lib/dpkg/lock-frontend», or "" if the manager is free.
-func chiTiene(a *Ambiente, fam string) string {
-	for _, l := range lucchetti[fam] {
+// whoHolds: «pid 1234 (unattended-upgr) holds /var/lib/dpkg/lock-frontend», or "" if the manager is free.
+func whoHolds(a *Environment, fam string) string {
+	for _, l := range lock_set[fam] {
 		var pid []int
-		switch l.tipo {
+		switch l.kind {
 		case "lock":
-			pid = pidDiBlocco(a, l.percorso)
+			pid = lockHolderPids(a, l.fpath)
 		case "pid":
-			pid = pidDiFile(a, l.percorso)
+			pid = pidDiFile(a, l.fpath)
 		case "open":
-			pid = chiApre(a, l.percorso)
+			pid = whoOpens(a, l.fpath)
 		}
 		for _, p := range pid {
 			if p > 0 && p != os.Getpid() {
-				return fmt.Sprintf("pid %d (%s) holds %s", p, nomeProcesso(a, p), l.percorso)
+				return fmt.Sprintf("pid %d (%s) holds %s", p, processName(a, p), l.fpath)
 			}
 		}
 	}
 	return ""
 }
 
-// pidDiBlocco: the holders of a kernel lock on the file. /proc/locks: «3: POSIX ADVISORY WRITE 1234
+// lockHolderPids: the holders of a kernel lock on the file. /proc/locks: «3: POSIX ADVISORY WRITE 1234
 // 00:8a:858800 0 EOF»; the «->» lines are those waiting, not holding. Only the inode is compared: on
 // btrfs the device in stat is not the one in /proc/locks.
-func pidDiBlocco(a *Ambiente, percorso string) []int {
-	st, err := os.Stat(a.P(percorso))
+func lockHolderPids(a *Environment, fpath string) []int {
+	st, err := os.Stat(a.P(fpath))
 	if err != nil {
 		return nil
 	}
@@ -109,8 +109,8 @@ func pidDiBlocco(a *Ambiente, percorso string) []int {
 	}
 	ino := ":" + strconv.FormatUint(s.Ino, 10)
 	var r []int
-	for _, riga := range strings.Split(string(b), "\n") {
-		c := strings.Fields(riga)
+	for _, row := range strings.Split(string(b), "\n") {
+		c := strings.Fields(row)
 		if len(c) < 6 || c[1] == "->" || !strings.HasSuffix(c[5], ino) {
 			continue
 		}
@@ -122,8 +122,8 @@ func pidDiBlocco(a *Ambiente, percorso string) []int {
 }
 
 // pidDiFile: the pid written in the file, if that process is alive.
-func pidDiFile(a *Ambiente, percorso string) []int {
-	b, err := os.ReadFile(a.P(percorso))
+func pidDiFile(a *Environment, fpath string) []int {
+	b, err := os.ReadFile(a.P(fpath))
 	if err != nil {
 		return nil
 	}
@@ -137,15 +137,15 @@ func pidDiFile(a *Ambiente, percorso string) []int {
 	return []int{p}
 }
 
-// chiApre: the processes that have the file open (its absolute path among their /proc/<pid>/fd).
-func chiApre(a *Ambiente, percorso string) []int {
-	if _, err := os.Stat(a.P(percorso)); err != nil {
+// whoOpens: the processes that have the file open (its absolute path among their /proc/<pid>/fd).
+func whoOpens(a *Environment, fpath string) []int {
+	if _, err := os.Stat(a.P(fpath)); err != nil {
 		return nil
 	}
 	fd, _ := filepath.Glob(a.P("/proc/[0-9]*/fd/*"))
 	var r []int
 	for _, f := range fd {
-		if l, err := os.Readlink(f); err == nil && l == percorso {
+		if l, err := os.Readlink(f); err == nil && l == fpath {
 			if p, err := strconv.Atoi(filepath.Base(filepath.Dir(filepath.Dir(f)))); err == nil {
 				r = append(r, p)
 			}
@@ -154,7 +154,7 @@ func chiApre(a *Ambiente, percorso string) []int {
 	return r
 }
 
-func nomeProcesso(a *Ambiente, pid int) string {
+func processName(a *Environment, pid int) string {
 	b, err := os.ReadFile(a.P("/proc/" + strconv.Itoa(pid) + "/comm"))
 	if err != nil {
 		return "?"

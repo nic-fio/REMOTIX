@@ -38,9 +38,9 @@ excluded one by one with measures; the slowdown is **inside the VCN's encoding c
    browser window). Buffers recycled by the compositor: 4 on KDE, 6 on GNOME.
 2. **Import**: the DMA-BUF becomes a VA-API surface (`vaCreateSurfaces` with
    `VASurfaceAttribExternalBuffers`/DRM PRIME), cached per buffer (`src/codificatore.c`,
-   `importa_dmabuf`).
+   `import_dmabuf`).
 3. **Conversion**: VA-API VideoProc RGB→NV12 into a surface of libavcodec's pool
-   (`converti_sulla_gpu`). ⚠ On radeonsi 25.0.7 from the 16th frame the VPP **does not convert**: it records
+   (`convert_on_gpu`). ⚠ On radeonsi 25.0.7 from the 16th frame the VPP **does not convert**: it records
    the RGB source and returns (EFC, `frontends/va/postproc.c` ~486–507), and the conversion is done by the
    **VCN inside the encoding** reading the linear RGB buffer (`picture.c` ~1203–1207).
 4. **Encoding**: `h264_vaapi`, entrypoint **`VAEntrypointEncSlice`** (the Radeon does not declare
@@ -56,9 +56,9 @@ encoding context** on the same card. With N users there are N VCN contexts in pa
 ## 4. The measures
 
 ### 4.1 The shape of the phenomenon
-The child's per-frame line (`registro_dettaglio`), e.g. from `a3-misura-kde/livello-01/server.log`:
+The child's per-frame line (`log_detail`), e.g. from `a3-misura-kde/livello-01/server.log`:
 ```
-codec 3: 421 byte, delta, caricamento 0 us, codifica 31035 us (invio 31031), barriera 18 us, conversione 41 us
+codec 3: 421 byte, delta, caricamento 0 us, encoding 31035 us (invio 31031), barriera 18 us, conversione 41 us
 ```
 - **Bimodal**: median 8.5–8.7 ms; p99 ~31 ms; maximum 32–35 ms. No intermediate value.
 - **Always 5 frames in a row** (64 groups out of 64 counted in the campaigns `amd-freq-*`,
@@ -104,11 +104,11 @@ of ~30 MB migrated between GTT and VRAM), **non-tiled surfaces**.
 ## 6. How to reproduce it
 
 ### 6.1 With REMOTIX (guaranteed reproduction)
-On the test server, KDE box with the Radeon alone (`REMOTIX_SCHEDA=amd`), one user with the browser
+On the test server, KDE box with the Radeon alone (`REMOTIX_CARD=amd`), one user with the browser
 in 4K browsing (profile A of `banchi/16-stress/16-lavori.py`):
 ```
-python3 banchi/16-stress/16-salita.py --scatola kde --misura 4k --campagna a3-riproduci \
-    --gradini 1 --minuti 6 --minuti-ultimo 6 --scheda amd \
+python3 banchi/16-stress/16-salita.py --container_box kde --gauge 4k --campaign a3-riproduci \
+    --rungs 1 --minutes 6 --last-rung-minutes 6 --gpu_card amd \
     --video /media/REMOTIX/misure/fase16/video/bbb_sunflower_2160p_30fps_x4.mp4 --fps-video 30
 ```
 then in the level's `server.log`: `grep "] codec [0-9]*: [0-9]* byte"` and count the encodings

@@ -25,29 +25,29 @@
 #    `/run/user/<uid>` vanishes from under PipeWire's feet.
 #
 # Usage (from the laptop):
-#     bash banchi/07-b64-terreno.sh utente
-#     bash banchi/07-b64-terreno.sh porta          # sources + build
-#     bash banchi/07-b64-terreno.sh accendi
-#     bash banchi/07-b64-terreno.sh spegni
-#     bash banchi/07-b64-terreno.sh stato
+#     bash banchi/07-b64-terreno.sh username
+#     bash banchi/07-b64-terreno.sh port          # sources + build
+#     bash banchi/07-b64-terreno.sh turn_on
+#     bash banchi/07-b64-terreno.sh turn_off
+#     bash banchi/07-b64-terreno.sh state
 # ===========================================================================
 set -uo pipefail
 
-MACCHINA=${MACCHINA:-nicfio@192.168.0.2}
-PAROLA_SUDO=${PAROLA_SUDO:-nicfio}
-IND=${IND:-192.168.0.2}
-PORTA=${PORTA:-7801}
-UTENTE=${UTENTE:-provar7}
+MACHINE=${MACHINE:-nicfio@192.168.0.2}
+SUDO_PASSWORD=${SUDO_PASSWORD:-nicfio}
+ADDR=${ADDR:-192.168.0.2}
+PORT=${PORT:-7801}
+ACCOUNT=${ACCOUNT:-provar7}
 UID_B=${UID_B:-1018}
-PAROLA_UTENTE=${PAROLA_UTENTE:-r7-audio-2026}
-ALBERO=${ALBERO:-/media/REMOTIX/src/07-r-src}
+USER_PASSWORD=${USER_PASSWORD:-r7-audio-2026}
+TREE=${TREE:-/media/REMOTIX/src/07-r-src}
 LAV=${LAV:-/media/REMOTIX/tmp/07-r}
-DENTRO_ALB=${DENTRO_ALB:-/srv/src/07-r-src}
-DENTRO_LAV=${DENTRO_LAV:-/srv/remotix/tmp/07-r}
-UNITA=${UNITA:-remotix-$PORTA}
+INSIDE_TREE=${INSIDE_TREE:-/srv/src/07-r-src}
+INSIDE_WORK=${INSIDE_WORK:-/srv/remotix/tmp/07-r}
+UNIT=${UNIT:-remotix-$PORT}
 
 # ⛔ The ports that are NOT mine: they are COUNTED before and after, and never touched.
-VICINE="7700 7710 7720 7730"
+NEARBY_PORTS="7700 7710 7720 7730"
 
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -63,35 +63,35 @@ inf() { printf '    --  %s\n' "$*"; }
 #    are in the box at the top of that file — ⛔ they are not copied here, or
 #    they become ten places to diverge from (`LEZIONI.md` §1.47).
 # ═══════════════════════════════════════════════════════════════════════════
-GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
-[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ $GRUPPI_SCHEDA_SH is missing: without it, the tenant would be born BLIND"; exit 2; }
-. "$GRUPPI_SCHEDA_SH"
+CARD_GROUPS_SH=${CARD_GROUPS_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
+[ -f "$CARD_GROUPS_SH" ] || { ko "⛔ $CARD_GROUPS_SH is missing: without it, the tenant would be born BLIND"; exit 2; }
+. "$CARD_GROUPS_SH"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT RUNS ON THE TEST MACHINE, AS ROOT
 # ═══════════════════════════════════════════════════════════════════════════
 if [ "${1:-}" = "--sul-server" ]; then
-	PASSO=${2:-stato}
+	STEP=${2:-state}
 	[ "$(id -u)" -eq 0 ] || { ko "⛔ «--sul-server» must be run AS ROOT"; exit 2; }
 	mkdir -p "$LAV" 2>/dev/null
 
-	vicini() {
+	neighbors() {
 		local r="" p
-		for p in $VICINE; do r="$r$p:$(ss -tuln 2>/dev/null | grep -c ":$p\b") "; done
+		for p in $NEARBY_PORTS; do r="$r$p:$(ss -tuln 2>/dev/null | grep -c ":$p\b") "; done
 		printf '%s— listeners NOT mine (counted, not touched)' "$r"
 	}
 
-	case "$PASSO" in
-	utente)
-		log "The bench user: $UTENTE (uid $UID_B)"
-		inf "$(vicini)"
-		C_ERA_GIA=no
-		if id "$UTENTE" >/dev/null 2>&1; then
-			C_ERA_GIA=si
+	case "$STEP" in
+	username)
+		log "The bench user: $ACCOUNT (uid $UID_B)"
+		inf "$(neighbors)"
+		C_WAS_ALREADY=no
+		if id "$ACCOUNT" >/dev/null 2>&1; then
+			C_WAS_ALREADY=si
 			ok "already there — I do not redo it"
 		else
-			useradd -m -u "$UID_B" -s /bin/bash "$UTENTE" || {
+			useradd -m -u "$UID_B" -s /bin/bash "$ACCOUNT" || {
 				ko "⛔ useradd did not succeed"; exit 2; }
 			ok "created"
 		fi
@@ -102,97 +102,97 @@ if [ "${1:-}" = "--sul-server" ]; then
 		#
 		#   `[M]` In phase 10 the users are SHARED among several benches, and this
 		#   step rewrote the password at every call: the last one to call
-		#   `utente` won, and the others read «wrong credentials» on a
+		#   `username` won, and the others read «wrong credentials» on a
 		#   healthy machine.
 		#   ⛔⛔ And every rejection uses up one of the THREE attempts of the per-ADDRESS
 		#     ban (`RCP.md` §4.4-bis), which lasts TWELVE HOURS and puts out of
 		#     action every other bench that starts from here.
 		#
 		#   ⇒ If the user was already there, the password is NOT touched.  Whoever really
-		#     needs to set it again asks for it: `RIFAI_PAROLA=1`.
-		if [ "${C_ERA_GIA:-no}" = si ] && [ "${RIFAI_PAROLA:-0}" != 1 ]; then
-			ok "⭐ password NOT touched: the user was already there (RIFAI_PAROLA=1 to force)"
+		#     needs to set it again asks for it: `REDO_PASSWORD=1`.
+		if [ "${C_WAS_ALREADY:-no}" = si ] && [ "${REDO_PASSWORD:-0}" != 1 ]; then
+			ok "⭐ password NOT touched: the user was already there (REDO_PASSWORD=1 to force)"
 		else
-			( umask 077; printf '%s:%s\n' "$UTENTE" "$PAROLA_UTENTE" > "$LAV/.chp" )
+			( umask 077; printf '%s:%s\n' "$ACCOUNT" "$USER_PASSWORD" > "$LAV/.chp" )
 			chmod 600 "$LAV/.chp"
 			chpasswd < "$LAV/.chp" || { ko "⛔ chpasswd failed"; rm -f "$LAV/.chp"; exit 2; }
 			rm -f "$LAV/.chp"
 			ok "password set (from stdin, never in argv — D12)"
 		fi
 		# ⛔ Here there were the two HARD-CODED names and no reading back.
-		gruppi_scheda_dai_a "$UTENTE" || exit 3
-		ok "groups: $(id -nG "$UTENTE")"
-		loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger failed"; exit 2; }
+		card_groups_give_to "$ACCOUNT" || exit 3
+		ok "groups: $(id -nG "$ACCOUNT")"
+		loginctl enable-linger "$ACCOUNT" || { ko "⛔ enable-linger failed"; exit 2; }
 		ok "linger on: /run/user/$UID_B will live even with nobody connected"
 		ls -ld "/run/user/$UID_B" 2>&1 | sed 's/^/        /'
 		# The password the client needs, in a 0600 file inside the work directory.
-		( umask 077; printf '%s\n' "$PAROLA_UTENTE" > "$LAV/parola" )
-		chmod 600 "$LAV/parola"
-		ok "the password is in $LAV/parola, 0600 (the client reads it with --parola-file)"
+		( umask 077; printf '%s\n' "$USER_PASSWORD" > "$LAV/password" )
+		chmod 600 "$LAV/password"
+		ok "the password is in $LAV/password, 0600 (the client reads it with --password-file)"
 		exit 0 ;;
 
-	accendi)
-		log "The bench server, on $PORTA — unit $UNITA.service"
-		inf "$(vicini)"
-		mkdir -p "$LAV/certificati" "$LAV/rilievo"; chmod 1777 "$LAV/rilievo"
+	turn_on)
+		log "The bench server, on $PORT — unit $UNIT.service"
+		inf "$(neighbors)"
+		mkdir -p "$LAV/certificates" "$LAV/survey"; chmod 1777 "$LAV/survey"
 		chmod 755 "$LAV"   # ⚠ `provar7` must be able to read the tone file
 		: > "$LAV/registro.log"
 
 		B2=/media/REMOTIX/src/b2
-		export LD_LIBRARY_PATH="$B2/ngtcp2/build/lib:$B2/prefisso/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+		export LD_LIBRARY_PATH="$B2/ngtcp2/build/lib:$B2/prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 		# ⛔ Trap 1 of `riavvia-7700.sh`: without this check the binary
 		#    takes the system ngtcp2, starts just fine and ABORTS at the first one that
 		#    connects.  It is checked BEFORE starting.
-		MANCA=$(ldd "$ALBERO/src/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
-		if [ "$MANCA" != "0" ]; then
+		MISSING=$(ldd "$TREE/src/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
+		if [ "$MISSING" != "0" ]; then
 			ko "⛔ I do NOT start: ngtcp2/nghttp3 would not come from $B2 —"
-			ldd "$ALBERO/src/remotix" | grep -E 'ngtcp2|nghttp3' | sed 's/^/        /'
+			ldd "$TREE/src/remotix" | grep -E 'ngtcp2|nghttp3' | sed 's/^/        /'
 			exit 2
 		fi
 		ok "ldd: ngtcp2 and nghttp3 come from $B2"
 
-		systemctl stop "$UNITA.service" 2>/dev/null
-		systemctl reset-failed "$UNITA.service" 2>/dev/null
+		systemctl stop "$UNIT.service" 2>/dev/null
+		systemctl reset-failed "$UNIT.service" 2>/dev/null
 		i=0
-		while ss -uln 2>/dev/null | grep -q ":$PORTA " && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
+		while ss -uln 2>/dev/null | grep -q ":$PORT " && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
 
 		# ⛔ A SYSTEM unit, not `setsid` from this ssh: `pam_systemd` does not
 		#    create a second logind session for the child and `/run/user/<uid>`
 		#    does not exist — trap 4 of `riavvia-7700.sh`.
 		# ⛔ And the TWO properties this bench measures: `LimitRTPRIO=20` and
 		#    `LimitNICE=-11`.  ⚠ They can be removed from the launcher
-		#    (SENZA_RT=1) — and that is the positive control of R26.
+		#    (WITHOUT_RT=1) — and that is the positive control of R26.
 		# ⭐ `RTPRIO=` can be changed from the launcher, and it is the A/B of R26: 20 is
 		#    what the unit grants today, 95 is what PipeWire would want.
 		RT_PROP=(--property=LimitRTPRIO=${RTPRIO:-20} --property=LimitNICE=-11)
-		if [ "${SENZA_RT:-0}" = 1 ]; then
+		if [ "${WITHOUT_RT:-0}" = 1 ]; then
 			RT_PROP=(--property=LimitRTPRIO=0)
-			inf "⛔ SENZA_RT=1: the unit does NOT grant real time (control of R26)"
+			inf "⛔ WITHOUT_RT=1: the unit does NOT grant real time (control of R26)"
 		fi
-		inf "the unit grants LimitRTPRIO=${SENZA_RT:+0}${RTPRIO:-20}"
-		# ⭐ `--parlantina`: the child without chatter KEEPS SILENT.
+		inf "the unit grants LimitRTPRIO=${WITHOUT_RT:+0}${RTPRIO:-20}"
+		# ⭐ `--chatter`: the child without chatter KEEPS SILENT.
 		# shellcheck disable=SC2086
 		systemd-run \
-			--unit="$UNITA" --collect --description="REMOTIX, bench 07-b64 (A8)" \
-			--working-directory="$ALBERO/src" \
+			--unit="$UNIT" --collect --description="REMOTIX, bench 07-b64 (A8)" \
+			--working-directory="$TREE/src" \
 			--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 			--property=StandardOutput=append:$LAV/registro.log \
 			--property=StandardError=append:$LAV/registro.log \
 			--property=KillMode=mixed \
 			"${RT_PROP[@]}" \
-			"$ALBERO/src/remotix" \
-			--indirizzo 0.0.0.0 --nome "$IND" --porta "$PORTA" \
-			--certificati "$LAV/certificati" \
-			--pagina "$ALBERO/src/pagina.html" \
+			"$TREE/src/remotix" \
+			--address 0.0.0.0 --label_name "$ADDR" --port "$PORT" \
+			--certificates "$LAV/certificates" \
+			--page_v "$TREE/src/pagina.html" \
 			--ban-file "$LAV/ban" \
-			--comando-socket "$LAV/comando.sock" \
-			--rilievo "$LAV/rilievo" \
-			${OPZIONI_SERVER:-} \
-			--parlantina >/dev/null || { ko "⛔ systemd-run refused"; exit 2; }
+			--command-socket "$LAV/command.sock" \
+			--survey "$LAV/survey" \
+			${SERVER_OPTIONS:-} \
+			--chatter >/dev/null || { ko "⛔ systemd-run refused"; exit 2; }
 
 		i=0; PID=0
 		while [ $i -lt 50 ]; do
-			PID=$(systemctl show -p MainPID --value "$UNITA.service" 2>/dev/null || echo 0)
+			PID=$(systemctl show -p MainPID --value "$UNIT.service" 2>/dev/null || echo 0)
 			[ "$PID" != "0" ] && [ -n "$PID" ] && break
 			i=$((i+1)); sleep 0.1
 		done
@@ -201,7 +201,7 @@ if [ "${1:-}" = "--sul-server" ]; then
 			tail -20 "$LAV/registro.log" | sed 's/^/        /'
 			exit 2
 		fi
-		ok "server $PID on port $PORTA"
+		ok "server $PID on port $PORT"
 		# ⛔⛔ AND THE LIMITS ARE READ AFTER THE `exec`, NOT AS SOON AS THERE IS A PID.
 		#
 		#     `[M]` 21 August 2026, and the bench lied twice before I
@@ -244,37 +244,37 @@ if [ "${1:-}" = "--sul-server" ]; then
 		#   are the ones that say **why** — and we exit RED.
 		i=0
 		while [ $i -lt 50 ]; do
-			ss -uln 2>/dev/null | grep -q ":$PORTA " && break
+			ss -uln 2>/dev/null | grep -q ":$PORT " && break
 			i=$((i+1)); sleep 0.1
 		done
 		if [ $i -ge 50 ]; then
-			ko "⛔⛔ NOBODY IS LISTENING on $PORTA after 5 s: the server is NOT on"
-			inf "unit: $(systemctl is-active "$UNITA.service" 2>/dev/null) · the last lines:"
+			ko "⛔⛔ NOBODY IS LISTENING on $PORT after 5 s: the server is NOT on"
+			inf "unit: $(systemctl is-active "$UNIT.service" 2>/dev/null) · the last lines:"
 			tail -25 "$LAV/registro.log" | sed 's/^/        /'
 			exit 2
 		fi
-		ok "⭐ someone is listening on $PORTA — this, not the pid, is «on»"
-		inf "$(vicini)"
+		ok "⭐ someone is listening on $PORT — this, not the pid, is «on»"
+		inf "$(neighbors)"
 		exit 0 ;;
 
-	sblocca)
+	unblock)
 		log "Unblocking the address — §4.4-bis"
 		bash /media/REMOTIX/enter.sh --root \
-			"python3 $DENTRO_ALB/banchi/01-b8-sblocca.py --socket $DENTRO_LAV/comando.sock $IND"
-		inf "unblock of $IND: exit $?"
+			"python3 $INSIDE_TREE/banchi/01-b8-sblocca.py --socket $INSIDE_WORK/command.sock $ADDR"
+		inf "unblock of $ADDR: exit $?"
 		exit 0 ;;
 
-	spegni)
-		log "Stopping $UNITA.service (and ONLY that one)"
-		systemctl stop "$UNITA.service" 2>/dev/null
-		systemctl reset-failed "$UNITA.service" 2>/dev/null
-		ok "stopped · $(vicini)"
+	turn_off)
+		log "Stopping $UNIT.service (and ONLY that one)"
+		systemctl stop "$UNIT.service" 2>/dev/null
+		systemctl reset-failed "$UNIT.service" 2>/dev/null
+		ok "stopped · $(neighbors)"
 		exit 0 ;;
 
 	*)
 		log "Status"
-		inf "$(vicini)"
-		inf "unit: $(systemctl is-active "$UNITA.service" 2>/dev/null)"
+		inf "$(neighbors)"
+		inf "unit: $(systemctl is-active "$UNIT.service" 2>/dev/null)"
 		inf "load: $(uptime | sed 's/.*average/average/')"
 		exit 0 ;;
 	esac
@@ -283,21 +283,21 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # THE HALF THAT RUNS ON THE LAPTOP
 # ═══════════════════════════════════════════════════════════════════════════
-QUI=$(cd "$(dirname "$0")/.." && pwd)
-SUL_SERVER="bash $ALBERO/banchi/$(basename "$0") --sul-server"
+HERE=$(cd "$(dirname "$0")/.." && pwd)
+ON_SERVER="bash $TREE/banchi/$(basename "$0") --sul-server"
 
 # ⛔ The remote script is a FILE already on the machine, and `sudo -S` receives only
 #    the password: `printf … | sudo -S bash -s` would give bash an empty stdin, and
 #    «it did nothing» would look the same as «it worked».
 # ⛔ And no `</dev/null` at the end: that redirect wins over `sudo -S`, which then
 #    no longer reads the password («no password was provided»).
-remoto() { ssh -o BatchMode=yes "$MACCHINA" \
-	"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' env $1 $SUL_SERVER $2"; }
+remote() { ssh -o BatchMode=yes "$MACHINE" \
+	"printf '%s\n' '$SUDO_PASSWORD' | sudo -S -p '' env $1 $ON_SERVER $2"; }
 
-PASSO=${1:-stato}
-case "$PASSO" in
-porta)
-	log "1 · Carrying the sources to $ALBERO"
+STEP=${1:-state}
+case "$STEP" in
+port)
+	log "1 · Carrying the sources to $TREE"
 	# ⛔ WITHOUT `sudo`: `printf … | sudo -S` would eat stdin, which here IS the
 	#    `tar` stream.  And it is not needed: /media/REMOTIX/src belongs to `nicfio`.
 	# ⛔ `banchi/rcp` is carried too: the Makefile refuses to build if it cannot
@@ -305,39 +305,39 @@ porta)
 	# ⛔ And the laptop's objects and binary are EXCLUDED: if they were sent, `make`
 	#    would find everything up to date and the laptop's binary would remain — the
 	#    D5 form, «a stale binary stays green».
-	tar -C "$QUI" --exclude='*.o' --exclude='src/remotix' -czf - \
+	tar -C "$HERE" --exclude='*.o' --exclude='src/remotix' -czf - \
 		src banchi/rcp \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/07-b42-giudice.py \
 		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py | \
-		ssh -o BatchMode=yes "$MACCHINA" "mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {
+		ssh -o BatchMode=yes "$MACHINE" "mkdir -p $TREE && tar -C $TREE -xzf -" || {
 		ko "⛔ the sources did not arrive"; exit 2; }
-	ok "sources in $ALBERO"
+	ok "sources in $TREE"
 
 	log "2 · Building inside the container"
-	if ! ssh -o BatchMode=yes "$MACCHINA" \
-		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
-		 'PREFISSO=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 \
-		  bash $DENTRO_ALB/src/costruisci.sh 2>&1 | tail -20'"; then
+	if ! ssh -o BatchMode=yes "$MACHINE" \
+		"printf '%s\n' '$SUDO_PASSWORD' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
+		 'PFX=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 \
+		  bash $INSIDE_TREE/src/costruisci.sh 2>&1 | tail -20'"; then
 		ko "⛔ the build failed: I do NOT start anything"
 		exit 2
 	fi
 	ok "built"
 	exit 0 ;;
-utente)
-	# ⛔ `RIFAI_PAROLA` MUST CROSS THE ssh — 25 August 2026.
+username)
+	# ⛔ `REDO_PASSWORD` MUST CROSS THE ssh — 25 August 2026.
 	#   This morning's cure (do not redo the password of a user that already
 	#   exists) had been put in the half that runs ON THE SERVER, but the variable
-	#   was not in this list: `RIFAI_PAROLA=1` did not get over there and did
+	#   was not in this list: `REDO_PASSWORD=1` did not get over there and did
 	#   nothing.  ⚠ And the way it failed is the usual one: no
 	#   error, no line, the password simply was not redone.
-	remoto "UTENTE=$UTENTE UID_B=$UID_B PAROLA_UTENTE=$PAROLA_UTENTE LAV=$LAV RIFAI_PAROLA=${RIFAI_PAROLA:-0}" utente ;;
-accendi)
-	remoto "PORTA=$PORTA IND=$IND ALBERO=$ALBERO LAV=$LAV UNITA=$UNITA SENZA_RT=${SENZA_RT:-0} RTPRIO=${RTPRIO:-20} OPZIONI_SERVER='${OPZIONI_SERVER:-}'" accendi ;;
-sblocca)
-	remoto "IND=$IND DENTRO_ALB=$DENTRO_ALB DENTRO_LAV=$DENTRO_LAV" sblocca ;;
-spegni)
-	remoto "PORTA=$PORTA LAV=$LAV UNITA=$UNITA" spegni ;;
+	remote "ACCOUNT=$ACCOUNT UID_B=$UID_B USER_PASSWORD=$USER_PASSWORD LAV=$LAV REDO_PASSWORD=${REDO_PASSWORD:-0}" username ;;
+turn_on)
+	remote "PORT=$PORT ADDR=$ADDR TREE=$TREE LAV=$LAV UNIT=$UNIT WITHOUT_RT=${WITHOUT_RT:-0} RTPRIO=${RTPRIO:-20} SERVER_OPTIONS='${SERVER_OPTIONS:-}'" turn_on ;;
+unblock)
+	remote "ADDR=$ADDR INSIDE_TREE=$INSIDE_TREE INSIDE_WORK=$INSIDE_WORK" unblock ;;
+turn_off)
+	remote "PORT=$PORT LAV=$LAV UNIT=$UNIT" turn_off ;;
 *)
-	remoto "PORTA=$PORTA LAV=$LAV UNITA=$UNITA" stato ;;
+	remote "PORT=$PORT LAV=$LAV UNIT=$UNIT" state ;;
 esac

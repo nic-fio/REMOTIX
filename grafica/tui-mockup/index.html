@@ -6,7 +6,7 @@
 :root {
   --bg: #F3F5F9; --fg: #1B2232; --muted: #5B6578; --line: #D5DBE6; --card: #FFFFFF; --accent: #0A5FE0;
   --t-bg: #0E131D; --t-fg: #D5DCE8; --t-dim: #7D889C; --t-blue: #5A9BFF; --t-green: #3EC27E; --t-amber: #E3A82F; --t-red: #F0625A; --t-line: #3A4457; --t-sel: #22324D;
-  --f-disp: "Sora", "IBM Plex Sans", system-ui, sans-serif;
+  --f-avail: "Sora", "IBM Plex Sans", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
 }
@@ -14,7 +14,7 @@
 :root[data-theme="dark"] { --bg: #10141C; --fg: #E2E7EF; --muted: #98A2B5; --line: #2A3242; --card: #161C27; --accent: #5A9BFF; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
 .wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; }
-header h1 { font-family: var(--f-disp); font-weight: 600; font-size: 1.7rem; margin: 0 0 .3rem; text-wrap: balance; }
+header h1 { font-family: var(--f-avail); font-weight: 600; font-size: 1.7rem; margin: 0 0 .3rem; text-wrap: balance; }
 header h1 b { color: var(--accent); }
 header p { color: var(--muted); max-width: 68ch; margin: 0; }
 .flow { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 18px 0 8px; font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
@@ -23,7 +23,7 @@ section.s { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr)
 @media (max-width: 1100px) { section.s { grid-template-columns: minmax(0, 1fr); } }
 .term { overflow-x: auto; background: var(--t-bg); border-radius: 10px; box-shadow: 0 1px 0 var(--line), 0 10px 30px rgba(10, 20, 40, .18); }
 .term pre { margin: 0; padding: 14px 16px; font-family: var(--f-mono); font-size: 13px; line-height: 1.45; color: var(--t-fg); white-space: pre; }
-.note h2 { font-family: var(--f-disp); font-weight: 600; font-size: 1.15rem; margin: 0 0 .4rem; }
+.note h2 { font-family: var(--f-avail); font-weight: 600; font-size: 1.15rem; margin: 0 0 .4rem; }
 .note .tag { display: inline-block; font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: .3rem; }
 .note p, .note li { max-width: 62ch; }
 .note ul { padding-left: 1.1rem; margin: .4rem 0; }
@@ -49,36 +49,36 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; max-width: 70ch
 // Each screen: rows of segments [text, class]. The drawer pads up to 76 usable columns and adds the frame (80 in all).
 const W = 76;
 const len = s => [...s].length;
-function riga(seg) {
+function row(seg) {
   let out = '', n = 0;
   for (const [t, c] of seg) { n += len(t); out += c ? `<span class="${c}">${esc(t)}</span>` : esc(t); }
   return '<span class="l">│</span> ' + out + ' '.repeat(Math.max(0, W - n)) + ' <span class="l">│</span>';
 }
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function testa(sx, dx) {
-  const mezzo = W + 2 - len(sx) - len(dx) - 6;
-  return `<span class="l">╭─ </span><span class="b">REMOTIX</span><span class="w">${esc(sx.slice(7))}</span><span class="l"> ${'─'.repeat(mezzo)} </span><span class="d">${esc(dx)}</span><span class="l"> ─╮</span>`;
+function head(left_side, right) {
+  const half = W + 2 - len(left_side) - len(right) - 6;
+  return `<span class="l">╭─ </span><span class="b">REMOTIX</span><span class="w">${esc(left_side.slice(7))}</span><span class="l"> ${'─'.repeat(half)} </span><span class="d">${esc(right)}</span><span class="l"> ─╮</span>`;
 }
 const sep = '<span class="l">├' + '─'.repeat(W + 2) + '┤</span>';
-const piede = '<span class="l">╰' + '─'.repeat(W + 2) + '╯</span>';
-function passi(cur) {
-  const nomi = ['Check', 'Plan', 'Install', 'Ready'], seg = [];
-  nomi.forEach((n, i) => {
+const foot = '<span class="l">╰' + '─'.repeat(W + 2) + '╯</span>';
+function steps(cur) {
+  const names = ['Check', 'Plan', 'Install', 'Ready'], seg = [];
+  names.forEach((n, i) => {
     if (i) seg.push(['  ›  ', 'd']);
     if (i < cur) seg.push(['✓ ' + n, 'g']); else if (i === cur) seg.push(['● ' + n, 'b']); else seg.push(['○ ' + n, 'd']);
   });
   return seg;
 }
-function col(et, testo, stato, cl) { // label 18, text 46, status 12
+function clr(et, body_text, state, cl) { // label 18, text 46, status 12
   const pad = (s, n) => s + ' '.repeat(Math.max(0, n - len(s)));
-  return [[pad(et, 18), ''], [pad(testo, 46), ''], [stato, cl]];
+  return [[pad(et, 18), ''], [pad(body_text, 46), ''], [state, cl]];
 }
-function schermo(sx, dx, cur, corpo, tasti) {
-  const L = [testa(sx, dx)];
-  if (cur !== null) L.push(riga(passi(cur)));
-  L.push(sep, riga([]));
-  corpo.forEach(r => L.push(riga(r)));
-  L.push(riga([]), sep, riga(tasti), piede);
+function display_screen(left_side, right, cur, body_el, keys) {
+  const L = [head(left_side, right)];
+  if (cur !== null) L.push(row(steps(cur)));
+  L.push(sep, row([]));
+  body_el.forEach(r => L.push(row(r)));
+  L.push(row([]), sep, row(keys), foot);
   return L.join('\n');
 }
 const DX = 'Debian 13 · GNOME 48';
@@ -87,14 +87,14 @@ const S = [
    'One row per requirement, with the status on the right. No questions: it just looks, and touches nothing.',
    'Warnings (amber) do not stop: here the automatic suspend, which would disconnect all remote users. REMOTIX reports it, it does not change it.',
    'With <code>d</code> the technical details (drivers, versions, paths) open for whoever wants them.'],
-   t: schermo('REMOTIX 1.0 · Installation', DX, 0, [
-     col('System', 'Debian 13 (trixie) · certified', '✓ OK', 'g'),
-     col('Desktop', 'GNOME 48 · Wayland', '✓ OK', 'g'),
-     col('Graphics card', 'Intel UHD 770 · H.264 encode (VA-API)', '✓ OK', 'g'),
-     col('Audio', 'PipeWire 1.4.2', '✓ OK', 'g'),
-     col('Port 7447', 'free', '✓ OK', 'g'),
-     col('Users', '3 people can log in (PAM: sshd rules)', '✓ OK', 'g'),
-     col('Idle suspend', 'the machine can suspend when idle', '! WARNING', 'a'),
+   t: display_screen('REMOTIX 1.0 · Installation', DX, 0, [
+     clr('System', 'Debian 13 (trixie) · certified', '✓ OK', 'g'),
+     clr('Desktop', 'GNOME 48 · Wayland', '✓ OK', 'g'),
+     clr('Graphics card', 'Intel UHD 770 · H.264 encode (VA-API)', '✓ OK', 'g'),
+     clr('Audio', 'PipeWire 1.4.2', '✓ OK', 'g'),
+     clr('Port 7447', 'free', '✓ OK', 'g'),
+     clr('Users', '3 people can log in (PAM: sshd rules)', '✓ OK', 'g'),
+     clr('Idle suspend', 'the machine can suspend when idle', '! WARNING', 'a'),
      [],
      [['Nothing is missing.', 'w']],
      [['Warning: an idle suspend would disconnect every remote user.', 'd']],
@@ -104,14 +104,14 @@ const S = [
    'The heart of the new principle: REMOTIX says <b>what</b> is missing, not <b>how</b> to get it. No package names, no command to copy.',
    'The installation cannot go on: the only useful key is quit. The administrator provides it and runs it again.',
    'The code <code>RX-GPU-005</code> remains for whoever searches the manual or asks for support.'],
-   t: schermo('REMOTIX 1.0 · Installation', 'Fedora 44 · KDE Plasma 6.4', 0, [
-     col('System', 'Fedora 44 · compatible, not certified', '✓ OK', 'g'),
-     col('Desktop', 'KDE Plasma 6.4 · Wayland', '✓ OK', 'g'),
-     col('Graphics card', 'AMD Radeon RX 6800', '✗ MISSING', 'r'),
+   t: display_screen('REMOTIX 1.0 · Installation', 'Fedora 44 · KDE Plasma 6.4', 0, [
+     clr('System', 'Fedora 44 · compatible, not certified', '✓ OK', 'g'),
+     clr('Desktop', 'KDE Plasma 6.4 · Wayland', '✓ OK', 'g'),
+     clr('Graphics card', 'AMD Radeon RX 6800', '✗ MISSING', 'r'),
      [['                  ', ''], ['no driver that encodes H.264 on this card', 'd']],
      [['                  ', ''], ['(VA-API or Vulkan Video)', 'd']],
-     col('Audio', 'PipeWire 1.4.7', '✓ OK', 'g'),
-     col('Port 7447', 'free', '✓ OK', 'g'),
+     clr('Audio', 'PipeWire 1.4.7', '✓ OK', 'g'),
+     clr('Port 7447', 'free', '✓ OK', 'g'),
      [],
      [['REMOTIX cannot be installed yet.', 'r']],
      [['Provide what is missing, then run the installer again.', '']],
@@ -123,7 +123,7 @@ const S = [
    'The packages are the exact ones, from the package manager\'s simulation (apt, dnf, zypper, pacman): versions and size before the yes, as apt does.',
    'Membership of the <code>render</code> group is the only change to what was there, and it is declared with the names.',
    'The firewall does not appear: REMOTIX does not open it. The final screen will say so.'],
-   t: schermo('REMOTIX 1.0 · Installation', DX, 1, [
+   t: display_screen('REMOTIX 1.0 · Installation', DX, 1, [
      [['Port      ', 'w'], ['[ 7447 ]', 'sel'], ['   TCP and UDP', 'd']],
      [],
      [['Packages', 'w'], ['   from REMOTIX 1.0 and Debian\'s own repositories', 'd']],
@@ -141,7 +141,7 @@ const S = [
  { tag: 'Step 3', h: 'Install: the progress', p: [
    'The bar and the steps, one per row: done, in progress, to do. With <code>r</code> you see the live log (the package manager\'s lines).',
    '<code>a</code> stops and puts things back as they were: the step in progress is closed, then everything is undone. If the machine switches off halfway, at the next start of the installer everything is undone and it starts over (§10.36).'],
-   t: schermo('REMOTIX 1.0 · Installation', DX, 2, [
+   t: display_screen('REMOTIX 1.0 · Installation', DX, 2, [
      [['Installing packages', 'w'], ['                                        62 %', '']],
      [['███████████████████████████████', 'b'], ['███████████████████', 'd']],
      [],
@@ -156,7 +156,7 @@ const S = [
    'The address to open in the browser, highlighted.',
    'The administrator opens the port: REMOTIX says which one and that the firewall is closing it right now (or that there is no active firewall).',
    'The final checks in one row each; the certificate fingerprint for whoever wants to verify it at the first sign-in.'],
-   t: schermo('REMOTIX 1.0 · Installation', DX, 3, [
+   t: display_screen('REMOTIX 1.0 · Installation', DX, 3, [
      [['✓ REMOTIX is running.', 'g']],
      [],
      [['OPEN IN A BROWSER', 'w']],

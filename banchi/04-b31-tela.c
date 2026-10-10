@@ -11,8 +11,8 @@
  * round of benches: write the minimal program that calls only the suspect
  * function on a known input.  It costs less and closes sooner.»*
  *
- * The new chain of 15 Aug 2026 — `ADATTA_TELA` → `figli_ritela()` →
- * `cattura_ridimensiona()` → the frame that comes back — crosses **two
+ * The new chain of 15 Aug 2026 — `FIT_CANVAS` → `children_recanvas()` →
+ * `capture_resize()` → the frame that comes back — crosses **two
  * processes, a compositor and a graphics card**.  ⛔ Testing all of it needs the
  * test machine with the graphical session alive; ⭐ but the HALF that decides —
  * the state machine of `rcp.c` — needs none of this: it receives bytes, returns
@@ -29,7 +29,7 @@
  *   · **it does not test the page**: `src/pagina.html` has its own counters
  *     (§6.2), and those are watched from the browser.
  *   ⇒ It tests the one thing that sits in between, and it is the one no bench
- *     was watching: **that every `ADATTA_TELA` gets exactly one `TELA` back, and
+ *     was watching: **that every `FIT_CANVAS` gets exactly one `CANVAS` back, and
  *     that the canvas in force never takes a value nobody granted.**
  *
  * ---------------------------------------------------------------------------
@@ -48,8 +48,8 @@
  *  The wire, in bytes — §6.0/§6.1: network order (big-endian), no padding
  * ------------------------------------------------------------------ */
 
-static uint8_t fuori[4096];
-static size_t fuori_n;
+static uint8_t outside[4096];
+static size_t out_n;
 
 static void mette(uint8_t **p, uint8_t v) { *(*p)++ = v; }
 static void mette16(uint8_t **p, uint16_t v)
@@ -62,7 +62,7 @@ static void mette32(uint8_t **p, uint32_t v)
 	mette16(p, (uint16_t)(v >> 16));
 	mette16(p, (uint16_t)v);
 }
-static void mettestr(uint8_t **p, const char *s)
+static void putstr(uint8_t **p, const char *s)
 {
 	size_t n = strlen(s);
 	mette16(p, (uint16_t)n);
@@ -71,13 +71,13 @@ static void mettestr(uint8_t **p, const char *s)
 }
 
 /* A CLIENT message: header (u16 type, u32 length) + body. */
-static size_t incornicia(uint8_t *buf, uint16_t tipo, const uint8_t *corpo,
+static size_t border(uint8_t *buf, uint16_t kind, const uint8_t *body_el,
                          size_t len)
 {
 	uint8_t *p = buf;
-	mette16(&p, tipo);
+	mette16(&p, kind);
 	mette32(&p, (uint32_t)len);
-	memcpy(p, corpo, len);
+	memcpy(p, body_el, len);
 	return 6 + len;
 }
 
@@ -87,16 +87,16 @@ static size_t incornicia(uint8_t *buf, uint16_t tipo, const uint8_t *corpo,
 
 static struct {
 	/* what it has been asked */
-	uint32_t chiesta_l, chiesta_a;
-	int quante_richieste;
+	uint32_t requested_w, requested_h;
+	int how_many_requests;
 	/* how it answers */
-	bool accetta;        /* does the `ritela` hook return true?             */
-	bool concede_altro;  /* grants a size DIFFERENT from the one asked      */
-	uint32_t altro_l, altro_a;
-	/* what size it has now, for the `tela_del_palco` hook */
-	bool misura_nota;
-	uint32_t misura_l, misura_a;
-} palco;
+	bool admit;        /* does the `recanvas` hook return true?             */
+	bool grants_other;  /* grants a size DIFFERENT from the one asked      */
+	uint32_t other_w, other_h;
+	/* what size it has now, for the `stage_canvas` hook */
+	bool size_known;
+	uint32_t size_w, size_h;
+} stage;
 
 /* ⛔⛔⭐ THE BIRTH REQUEST — 16 Aug 2026, and it kept this bench
  *      RED FOR A WHOLE DAY without anybody noticing.
@@ -109,11 +109,11 @@ static struct {
  *      NxM — so it is born that way instead of being born at a size of its own
  *      and having to change it (and the change is a race)»*.
  *
- *      ⇒ Since then `apri_sessione()` leaves **one** request to the stage behind
+ *      ⇒ Since then `open_session()` leaves **one** request to the stage behind
  *      it, and seven cases out of eighteen were still counting from zero.  ⛔ All
  *      seven with the SAME gap — one request — and four of them also showed
  *      «TELA sent 0», which was not a second defect: they are written
- *      `bene = …; if (bene) { … }`, and once the first condition failed the
+ *      `all_ok = …; if (all_ok) { … }`, and once the first condition failed the
  *      second half was never executed.  One defect only, seven faces.
  *
  * ⭐ AND THE CURE IS NOT ADDING ONE.  If this bench merely expected a bigger
@@ -122,35 +122,35 @@ static struct {
  *    seconds of tail came back — the counts would add up all the same.
  *    ⇒ TWO things are done:
  *
- *      1. the cases count **from after the birth**, with `dopo_la_nascita()`,
+ *      1. the cases count **from after the birth**, with `after_birth()`,
  *         which tells the reader that the birth exists and is another matter;
  *      2. ⭐ **case 19** tests the birth on its own: if it disappears, it is IT
  *         that turns red, and with a message that names the defect. */
-static int nascita_richieste;
+static int birth_requests;
 
-static int dopo_la_nascita(void)
+static int after_birth(void)
 {
-	return palco.quante_richieste - nascita_richieste;
+	return stage.how_many_requests - birth_requests;
 }
 
-static void raccogli(void); /* reads what the server has sent, and empties it */
+static void collect(void); /* reads what the server has sent, and empties it */
 
-static bool g_ritela(void *ctx, uint32_t l, uint32_t a)
+static bool g_recanvas(void *ctx, uint32_t l, uint32_t a)
 {
 	(void)ctx;
-	palco.quante_richieste++;
-	palco.chiesta_l = l;
-	palco.chiesta_a = a;
-	return palco.accetta;
+	stage.how_many_requests++;
+	stage.requested_w = l;
+	stage.requested_h = a;
+	return stage.admit;
 }
 
-static bool g_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
+static bool g_stage_canvas(void *ctx, uint32_t *l, uint32_t *a)
 {
 	(void)ctx;
-	if (!palco.misura_nota)
+	if (!stage.size_known)
 		return false;
-	*l = palco.misura_l;
-	*a = palco.misura_a;
+	*l = stage.size_w;
+	*a = stage.size_h;
 	return true;
 }
 
@@ -160,367 +160,367 @@ static bool g_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
  *
  * `voluta_*` = which request it answers.  ⛔ It is what makes the recognition
  * a FACT instead of a deduction. */
-static void palco_risponde(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
-                           uint64_t ora)
+static void stage_replies(rcp_session *s, uint32_t intended_w, uint32_t intended_h,
+                           uint64_t now)
 {
-	uint32_t l = voluta_l, a = voluta_a;
-	if (palco.concede_altro) {
-		l = palco.altro_l;
-		a = palco.altro_a;
+	uint32_t l = intended_w, a = intended_h;
+	if (stage.grants_other) {
+		l = stage.other_w;
+		a = stage.other_h;
 	}
-	palco.misura_nota = true;
-	palco.misura_l = l;
-	palco.misura_a = a;
-	rcp_tela_dal_palco(s, voluta_l, voluta_a, l, a, ora);
-	raccogli();
+	stage.size_known = true;
+	stage.size_w = l;
+	stage.size_h = a;
+	rcp_canvas_from_stage(s, intended_w, intended_h, l, a, now);
+	collect();
 }
 
 /* The stage answers the LAST request it received. */
-static void palco_consegna(rcp_sessione *s, uint64_t ora)
+static void stage_delivery(rcp_session *s, uint64_t now)
 {
-	palco_risponde(s, palco.chiesta_l, palco.chiesta_a, ora);
+	stage_replies(s, stage.requested_w, stage.requested_h, now);
 }
 
 /* ⛔ «I didn't make it»: `0x0`, which is NOT a size. */
-static void palco_rinuncia(rcp_sessione *s, uint64_t ora)
+static void stage_gives_up(rcp_session *s, uint64_t now)
 {
-	rcp_tela_dal_palco(s, palco.chiesta_l, palco.chiesta_a, 0, 0, ora);
-	raccogli();
+	rcp_canvas_from_stage(s, stage.requested_w, stage.requested_h, 0, 0, now);
+	collect();
 }
 
 /* ------------------------------------------------------------------ *
  *  The hooks
  * ------------------------------------------------------------------ */
 
-static bool chiuso;
-static uint8_t motivo_chiusura;
-static bool parlantina;
+static bool closed;
+static uint8_t close_reason;
+static bool chatter;
 
-static void g_manda(void *ctx, const uint8_t *dati, size_t len)
+static void g_send(void *ctx, const uint8_t *data_v, size_t len)
 {
 	(void)ctx;
-	if (fuori_n + len > sizeof fuori)
+	if (out_n + len > sizeof outside)
 		return;
-	memcpy(fuori + fuori_n, dati, len);
-	fuori_n += len;
+	memcpy(outside + out_n, data_v, len);
+	out_n += len;
 }
-static void g_chiudi(void *ctx, uint8_t motivo)
+static void g_shut(void *ctx, uint8_t motivo)
 {
 	(void)ctx;
-	chiuso = true;
-	motivo_chiusura = motivo;
+	closed = true;
+	close_reason = motivo;
 }
-static void g_registra(void *ctx, const char *riga)
+static void g_record(void *ctx, const char *row)
 {
 	(void)ctx;
-	if (parlantina)
-		printf("      | %s\n", riga);
+	if (chatter)
+		printf("      | %s\n", row);
 }
-static bool g_verifica(void *ctx, const char *utente, const char *parola)
+static bool g_verify(void *ctx, const char *username, const char *password)
 {
 	(void)ctx;
-	return strcmp(utente, "prova") == 0 && strcmp(parola, "prova2026") == 0;
+	return strcmp(username, "prova") == 0 && strcmp(password, "prova2026") == 0;
 }
 
 /* ------------------------------------------------------------------ *
  *  Reading what the server has sent
  * ------------------------------------------------------------------ */
 
-#define T_SESSIONE 0x0007u
-#define T_TELA 0x000Eu
-#define T_ADATTA_TELA 0x000Bu
-#define T_CIAO 0x0001u
-#define T_CREDENZIALI 0x0003u
-#define T_ATTACCA 0x0006u
+#define T_SESSION 0x0007u
+#define T_CANVAS 0x000Eu
+#define T_FIT_CANVAS 0x000Bu
+#define T_HELLO 0x0001u
+#define T_CREDENTIALS 0x0003u
+#define T_ATTACH 0x0006u
 
-struct tela_vista {
-	uint8_t esito, motivo;
+struct seen_canvas {
+	uint8_t outcome, motivo;
 	uint32_t l, a;
 };
 
-static int quanti_tela;
-static struct tela_vista ultima_tela;
-static uint32_t sessione_l, sessione_a;
+static int canvas_count;
+static struct seen_canvas last_canvas;
+static uint32_t session_w, session_h;
 
-/* Reads all the accumulated messages and counts the `TELA`s.  ⛔ It EMPTIES: the
+/* Reads all the accumulated messages and counts the `CANVAS`s.  ⛔ It EMPTIES: the
  * count that matters is «how many have gone out since I last looked», not the
  * total. */
-static void raccogli(void)
+static void collect(void)
 {
 	size_t i = 0;
-	quanti_tela = 0;
-	while (i + 6 <= fuori_n) {
-		uint16_t tipo = (uint16_t)((fuori[i] << 8) | fuori[i + 1]);
-		uint32_t len = ((uint32_t)fuori[i + 2] << 24)
-		             | ((uint32_t)fuori[i + 3] << 16)
-		             | ((uint32_t)fuori[i + 4] << 8) | fuori[i + 5];
-		const uint8_t *c = fuori + i + 6;
-		if (i + 6 + len > fuori_n)
+	canvas_count = 0;
+	while (i + 6 <= out_n) {
+		uint16_t kind = (uint16_t)((outside[i] << 8) | outside[i + 1]);
+		uint32_t len = ((uint32_t)outside[i + 2] << 24)
+		             | ((uint32_t)outside[i + 3] << 16)
+		             | ((uint32_t)outside[i + 4] << 8) | outside[i + 5];
+		const uint8_t *c = outside + i + 6;
+		if (i + 6 + len > out_n)
 			break;
-		if (tipo == T_TELA && len >= 10) {
-			quanti_tela++;
-			ultima_tela.esito = c[0];
-			ultima_tela.motivo = c[1];
-			ultima_tela.l = ((uint32_t)c[2] << 24) | ((uint32_t)c[3] << 16)
+		if (kind == T_CANVAS && len >= 10) {
+			canvas_count++;
+			last_canvas.outcome = c[0];
+			last_canvas.motivo = c[1];
+			last_canvas.l = ((uint32_t)c[2] << 24) | ((uint32_t)c[3] << 16)
 			              | ((uint32_t)c[4] << 8) | c[5];
-			ultima_tela.a = ((uint32_t)c[6] << 24) | ((uint32_t)c[7] << 16)
+			last_canvas.a = ((uint32_t)c[6] << 24) | ((uint32_t)c[7] << 16)
 			              | ((uint32_t)c[8] << 8) | c[9];
 		}
-		if (tipo == T_SESSIONE && len >= 9) {
-			sessione_l = ((uint32_t)c[1] << 24) | ((uint32_t)c[2] << 16)
+		if (kind == T_SESSION && len >= 9) {
+			session_w = ((uint32_t)c[1] << 24) | ((uint32_t)c[2] << 16)
 			           | ((uint32_t)c[3] << 8) | c[4];
-			sessione_a = ((uint32_t)c[5] << 24) | ((uint32_t)c[6] << 16)
+			session_h = ((uint32_t)c[5] << 24) | ((uint32_t)c[6] << 16)
 			           | ((uint32_t)c[7] << 8) | c[8];
 		}
 		i += 6 + len;
 	}
-	fuori_n = 0;
+	out_n = 0;
 }
 
 /* ------------------------------------------------------------------ *
- *  The handshake, up to `SESSIONE`
+ *  The handshake, up to `SESSION`
  * ------------------------------------------------------------------ */
 
-static uint64_t orologio;
+static uint64_t clock_v;
 
 /* ⛔ Where the next session comes from: case 18 needs it, as it wants TWO —
  *    and the slot of §8.2 is per USER, not per address, so two different
  *    origins of the same user compete for the same slot. */
-static const char *prossima_provenienza = "10.0.0.9:5000";
+static const char *next_provenance = "10.0.0.9:5000";
 
-static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
-                                   const char *max_misura, bool con_ganci)
+static rcp_session *open_session(uint32_t canvas_w, uint32_t canvas_h,
+                                   const char *max_measure, bool with_hooks)
 {
-	rcp_ganci g;
-	rcp_sessione *s;
-	uint8_t corpo[512], busta[600];
+	rcp_hooks g;
+	rcp_session *s;
+	uint8_t body_el[512], envelope[600];
 	uint8_t *p;
 	size_t n;
 
 	memset(&g, 0, sizeof g);
-	g.manda = g_manda;
-	g.chiudi = g_chiudi;
-	g.registra = g_registra;
-	g.verifica = g_verifica;
-	if (con_ganci) {
-		g.ritela = g_ritela;
-		g.tela_del_palco = g_tela_del_palco;
+	g.send_it = g_send;
+	g.shut = g_shut;
+	g.record = g_record;
+	g.verify = g_verify;
+	if (with_hooks) {
+		g.recanvas = g_recanvas;
+		g.stage_canvas = g_stage_canvas;
 	}
 
-	chiuso = false;
-	fuori_n = 0;
-	orologio = 1000;
-	s = rcp_apri(&g, prossima_provenienza, orologio);
+	closed = false;
+	out_n = 0;
+	clock_v = 1000;
+	s = rcp_open(&g, next_provenance, clock_v);
 	if (!s)
 		return NULL;
 
-	/* CIAO: version + capabilities (§4.3).
+	/* HELLO: version + capabilities (§4.3).
 	 * ⛔ `audio.codec=pcm` is NOT decoration: §4.3 demands it, and without it the
-	 *    server says farewell with `NIENTE_IN_COMUNE` — something this bench
-	 *    discovered on its first run, with all cases red and zero `SESSIONE`.
+	 *    server says farewell with `NOTHING_IN_COMMON` — something this bench
+	 *    discovered on its first run, with all cases red and zero `SESSION`.
 	 *    It is `CODER.md` §3.3: the bench is certified BEFORE pointing it at the
 	 *    unknown, or a red does not tell «the unknown does not work» from
 	 *    «the bench did not work». */
-	p = corpo;
+	p = body_el;
 	mette16(&p, 1);                      /* version */
-	mette16(&p, max_misura ? 4 : 3);     /* how many capabilities */
-	mettestr(&p, "video.codec");
-	mettestr(&p, "hevc");
-	mettestr(&p, "video.profondita");
-	mettestr(&p, "8,10");
-	mettestr(&p, "audio.codec");
-	mettestr(&p, "pcm");
-	if (max_misura) {
-		mettestr(&p, "video.misura_massima");
-		mettestr(&p, max_misura);
+	mette16(&p, max_measure ? 4 : 3);     /* how many capabilities */
+	putstr(&p, "video.codec");
+	putstr(&p, "hevc");
+	putstr(&p, "video.bit_depth");
+	putstr(&p, "8,10");
+	putstr(&p, "audio.codec");
+	putstr(&p, "pcm");
+	if (max_measure) {
+		putstr(&p, "video.max_size");
+		putstr(&p, max_measure);
 	}
-	n = incornicia(busta, T_CIAO, corpo, (size_t)(p - corpo));
-	rcp_ricevi(s, busta, n, orologio);
+	n = border(envelope, T_HELLO, body_el, (size_t)(p - body_el));
+	rcp_receive(s, envelope, n, clock_v);
 
-	/* CREDENZIALI */
-	p = corpo;
-	mettestr(&p, "prova");
-	mettestr(&p, "prova2026");
-	n = incornicia(busta, T_CREDENZIALI, corpo, (size_t)(p - corpo));
-	rcp_ricevi(s, busta, n, orologio);
+	/* CREDENTIALS */
+	p = body_el;
+	putstr(&p, "prova");
+	putstr(&p, "prova2026");
+	n = border(envelope, T_CREDENTIALS, body_el, (size_t)(p - body_el));
+	rcp_receive(s, envelope, n, clock_v);
 	/* ⛔ §4.4-bis: the fixed second.  Time is made to flow, which is what the
 	 *    server's `poll` loop would do. */
-	orologio += 1500;
-	rcp_tempo(s, orologio);
+	clock_v += 1500;
+	rcp_time(s, clock_v);
 
-	/* ATTACCA */
-	p = corpo;
-	mette32(&p, tela_l);
-	mette32(&p, tela_a);
-	mette32(&p, tela_l); /* view: it does not matter here */
-	mette32(&p, tela_a);
-	mettestr(&p, "it");
-	n = incornicia(busta, T_ATTACCA, corpo, (size_t)(p - corpo));
-	rcp_ricevi(s, busta, n, orologio);
-	raccogli();
+	/* ATTACH */
+	p = body_el;
+	mette32(&p, canvas_w);
+	mette32(&p, canvas_h);
+	mette32(&p, canvas_w); /* view: it does not matter here */
+	mette32(&p, canvas_h);
+	putstr(&p, "it");
+	n = border(envelope, T_ATTACH, body_el, (size_t)(p - body_el));
+	rcp_receive(s, envelope, n, clock_v);
+	collect();
 	/* ⛔ Here the session has already told the stage at what size to be born
 	 *    (§4.5): what the attach left behind is noted, so the cases can count
-	 *    from after it.  ⚠ The long reason is at `nascita_richieste`. */
-	nascita_richieste = palco.quante_richieste;
+	 *    from after it.  ⚠ The long reason is at `birth_requests`. */
+	birth_requests = stage.how_many_requests;
 	return s;
 }
 
-static void manda_adatta(rcp_sessione *s, uint32_t l, uint32_t a)
+static void send_fit(rcp_session *s, uint32_t l, uint32_t a)
 {
-	uint8_t corpo[8], busta[32];
-	uint8_t *p = corpo;
+	uint8_t body_el[8], envelope[32];
+	uint8_t *p = body_el;
 	size_t n;
 	mette32(&p, l);
 	mette32(&p, a);
-	n = incornicia(busta, T_ADATTA_TELA, corpo, 8);
-	rcp_ricevi(s, busta, n, orologio);
-	raccogli();
+	n = border(envelope, T_FIT_CANVAS, body_el, 8);
+	rcp_receive(s, envelope, n, clock_v);
+	collect();
 }
 
 /* ------------------------------------------------------------------ *
  *  The cases
  * ------------------------------------------------------------------ */
 
-static int falliti, passati;
+static int failed, passed;
 
-static void esito(const char *caso, bool bene, const char *atteso,
-                  const char *visto)
+static void outcome(const char *case_v, bool all_ok, const char *expected_val,
+                  const char *seen_v)
 {
-	if (bene) {
-		passati++;
-		printf("  \033[1;32mOK\033[0m  %-34s %s\n", caso, visto);
+	if (all_ok) {
+		passed++;
+		printf("  \033[1;32mOK\033[0m  %-34s %s\n", case_v, seen_v);
 	} else {
-		falliti++;
+		failed++;
 		printf("  \033[1;31mNO\033[0m  %-34s\n        expected: %s\n        seen:     %s\n",
-		       caso, atteso, visto);
+		       case_v, expected_val, seen_v);
 	}
 }
 
-static char detto[256];
-static const char *dillo(void)
+static char said[256];
+static const char *report_it(void)
 {
-	snprintf(detto, sizeof detto,
-	         "TELA sent %d (outcome %u reason %u -> %ux%u), requests to the stage "
+	snprintf(said, sizeof said,
+	         "CANVAS sent %d (outcome %u reason %u -> %ux%u), requests to the stage "
 	         "%d (of which %d at birth, §4.5), canvas in force %ux%u",
-	         quanti_tela, ultima_tela.esito, ultima_tela.motivo, ultima_tela.l,
-	         ultima_tela.a, palco.quante_richieste, nascita_richieste,
-	         ultima_tela.l, ultima_tela.a);
-	return detto;
+	         canvas_count, last_canvas.outcome, last_canvas.motivo, last_canvas.l,
+	         last_canvas.a, stage.how_many_requests, birth_requests,
+	         last_canvas.l, last_canvas.a);
+	return said;
 }
 
-static void azzera_palco(void)
+static void reset_stage(void)
 {
-	memset(&palco, 0, sizeof palco);
-	palco.accetta = true;
-	memset(&ultima_tela, 0, sizeof ultima_tela);
-	quanti_tela = 0;
+	memset(&stage, 0, sizeof stage);
+	stage.admit = true;
+	memset(&last_canvas, 0, sizeof last_canvas);
+	canvas_count = 0;
 }
 
-/* 1 — the good road: it is asked, the stage delivers, ONE `TELA` goes out. */
-static void caso1(void)
+/* 1 — the good road: it is asked, the stage delivers, ONE `CANVAS` goes out. */
+static void case1(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
-	/* ⛔ EXPECTED: no `TELA` yet — the answer is the frame. */
-	bene = quanti_tela == 0 && dopo_la_nascita() == 1
-	    && palco.chiesta_l == 1600 && palco.chiesta_a == 900;
-	if (bene) {
-		palco_consegna(s, orologio);
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 1 && ultima_tela.esito == 1
-		    && ultima_tela.l == 1600 && ultima_tela.a == 900 && l == 1600
-		    && a == 900 && !chiuso;
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
+	/* ⛔ EXPECTED: no `CANVAS` yet — the answer is the frame. */
+	all_ok = canvas_count == 0 && after_birth() == 1
+	    && stage.requested_w == 1600 && stage.requested_h == 900;
+	if (all_ok) {
+		stage_delivery(s, clock_v);
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 1
+		    && last_canvas.l == 1600 && last_canvas.a == 900 && l == 1600
+		    && a == 900 && !closed;
 	}
-	esito("1 the good road", bene,
-	      "no TELA before the frame, then only ONE with 1600x900",
-	      dillo());
-	rcp_libera(s);
+	outcome("1 the good road", all_ok,
+	      "no CANVAS before the frame, then only ONE with 1600x900",
+	      report_it());
+	rcp_free(s);
 }
 
 /* 2 — the size that is already there: answer AT ONCE and do not touch the stage. */
-static void caso2(void)
+static void case2(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1920, 1080);
-	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.motivo == 0
-	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && dopo_la_nascita() == 0 && !chiuso;
-	esito("2 the size already there", bene,
-	      "ONE TELA(ADATTATA 1920x1080) at once, ZERO requests to the stage",
-	      dillo());
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1920, 1080);
+	all_ok = canvas_count == 1 && last_canvas.outcome == 1 && last_canvas.motivo == 0
+	    && last_canvas.l == 1920 && last_canvas.a == 1080
+	    && after_birth() == 0 && !closed;
+	outcome("2 the size already there", all_ok,
+	      "ONE CANVAS(ADAPTED 1920x1080) at once, ZERO requests to the stage",
+	      report_it());
+	rcp_free(s);
 }
 
-/* 3 — two `ADATTA_TELA` in a row: TWO `TELA`s, or the client's count never gets
+/* 3 — two `FIT_CANVAS` in a row: TWO `CANVAS`s, or the client's count never gets
  *     back to zero and the page holds back frames forever (§6.2). */
-static void caso3(void)
+static void case3(void)
 {
-	rcp_sessione *s;
-	int primi, secondi;
-	bool bene;
+	rcp_session *s;
+	int first, seconds;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
-	primi = quanti_tela;
-	manda_adatta(s, 1280, 720);
-	secondi = quanti_tela;
-	/* ⛔ EXPECTED: the second request sends out the `TELA` that answers the
-	 *    FIRST (NON_ORA), and then the frame sends out the one of the second. */
-	bene = primi == 0 && secondi == 1 && ultima_tela.esito == 2
-	    && ultima_tela.motivo == 3;
-	if (bene) {
-		palco_consegna(s, orologio);
-		bene = quanti_tela == 1 && ultima_tela.esito == 1
-		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && !chiuso;
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
+	first = canvas_count;
+	send_fit(s, 1280, 720);
+	seconds = canvas_count;
+	/* ⛔ EXPECTED: the second request sends out the `CANVAS` that answers the
+	 *    FIRST (NOT_NOW), and then the frame sends out the one of the second. */
+	all_ok = first == 0 && seconds == 1 && last_canvas.outcome == 2
+	    && last_canvas.motivo == 3;
+	if (all_ok) {
+		stage_delivery(s, clock_v);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 1
+		    && last_canvas.l == 1280 && last_canvas.a == 720 && !closed;
 	}
-	esito("3 two ADATTA_TELA in a row", bene,
-	      "two TELA in all: NON_ORA to the first, ADATTATA 1280x720 to the second",
-	      dillo());
-	rcp_libera(s);
+	outcome("3 two FIT_CANVAS in a row", all_ok,
+	      "two CANVAS in all: NOT_NOW to the first, ADAPTED 1280x720 to the second",
+	      report_it());
+	rcp_free(s);
 }
 
-/* 4 — the stage does not deliver: after the deadline the answer is `NON_ORA`
+/* 4 — the stage does not deliver: after the deadline the answer is `NOT_NOW`
  *     (§7.1: «a silence leaves the client waiting forever»). */
-static void caso4(void)
+static void case4(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
 	/* one clock tick BEFORE the deadline: nothing must go out */
-	orologio += RCP_TELA_ATTESA_MS - 1;
-	rcp_tempo(s, orologio);
-	raccogli();
-	bene = quanti_tela == 0;
-	if (bene) {
-		orologio += 2;
-		rcp_tempo(s, orologio);
-		raccogli();
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 1 && ultima_tela.esito == 2
-		    && ultima_tela.motivo == 3 && l == 1920 && a == 1080 && !chiuso;
+	clock_v += RCP_CANVAS_WAIT_MS - 1;
+	rcp_time(s, clock_v);
+	collect();
+	all_ok = canvas_count == 0;
+	if (all_ok) {
+		clock_v += 2;
+		rcp_time(s, clock_v);
+		collect();
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 2
+		    && last_canvas.motivo == 3 && l == 1920 && a == 1080 && !closed;
 	}
-	esito("4 the stage does not deliver", bene,
-	      "nothing before the deadline, then ONE TELA(RIFIUTATA, NON_ORA), canvas 1920x1080",
-	      dillo());
-	rcp_libera(s);
+	outcome("4 the stage does not deliver", all_ok,
+	      "nothing before the deadline, then ONE CANVAS(RIFIUTATA, NOT_NOW), canvas 1920x1080",
+	      report_it());
+	rcp_free(s);
 }
 
 /* 5 — the size ABOVE THE MAXIMUM: since 1 Oct 2026 (`RCP.md` §4.5, canvas at
@@ -529,241 +529,241 @@ static void caso4(void)
  *     passed to the stage like any size, with the «DECLARED FALLBACK» line in
  *     the log.  ⛔ And the session stays alive, as before: 100000x100000 was the
  *     number «capable of killing the compositor», and here it becomes 4096x2304
- *     BEFORE reaching the stage.  (Until 30 Sep it was `TELA(RIFIUTATA,
- *     MISURA_FUORI_LIMITI)`; the refusal stays BELOW the minimum: case 17.) */
-static void caso5(void)
+ *     BEFORE reaching the stage.  (Until 30 Sep it was `CANVAS(RIFIUTATA,
+ *     SIZE_OUT_OF_LIMITS)`; the refusal stays BELOW the minimum: case 17.) */
+static void case5(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 100000, 100000);
-	bene = quanti_tela == 0 && dopo_la_nascita() == 1
-	    && palco.chiesta_l == RCP_TELA_L_MASSIMA
-	    && palco.chiesta_a == RCP_TELA_A_MASSIMA && !chiuso;
-	esito("5 size above the maximum: reduced", bene,
-	      "no TELA at once, ONE request to the stage at 4096x2304 (the maximum of "
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 100000, 100000);
+	all_ok = canvas_count == 0 && after_birth() == 1
+	    && stage.requested_w == RCP_CANVAS_MAX_W
+	    && stage.requested_h == RCP_CANVAS_MAX_H && !closed;
+	outcome("5 size above the maximum: reduced", all_ok,
+	      "no CANVAS at once, ONE request to the stage at 4096x2304 (the maximum of "
 	      "§4.5), session ALIVE",
-	      dillo());
-	rcp_libera(s);
+	      report_it());
+	rcp_free(s);
 }
 
 /* 6 — the odd size is truncated down and IT IS SAID (§5.0-sexies: «a pixel
  *     stated is worth more than a pixel hidden in a scale»). */
-static void caso6(void)
+static void case6(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 2133, 1201);
-	bene = dopo_la_nascita() == 1 && palco.chiesta_l == 2132
-	    && palco.chiesta_a == 1200;
-	if (bene) {
-		palco_consegna(s, orologio);
-		bene = quanti_tela == 1 && ultima_tela.l == 2132
-		    && ultima_tela.a == 1200;
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 2133, 1201);
+	all_ok = after_birth() == 1 && stage.requested_w == 2132
+	    && stage.requested_h == 1200;
+	if (all_ok) {
+		stage_delivery(s, clock_v);
+		all_ok = canvas_count == 1 && last_canvas.l == 2132
+		    && last_canvas.a == 1200;
 	}
-	esito("6 the odd size, truncated", bene,
-	      "to the stage 2132x1200 (truncated to even), and the TELA carries that",
-	      dillo());
-	rcp_libera(s);
+	outcome("6 the odd size, truncated", all_ok,
+	      "to the stage 2132x1200 (truncated to even), and the CANVAS carries that",
+	      report_it());
+	rcp_free(s);
 }
 
-/* 7 — §4.5: the stage grants a size DIFFERENT from the one asked.  The `TELA`
+/* 7 — §4.5: the stage grants a size DIFFERENT from the one asked.  The `CANVAS`
  *     must carry the REAL one, not the one asked. */
-static void caso7(void)
+static void case7(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	palco.concede_altro = true;
-	palco.altro_l = 1366;
-	palco.altro_a = 768;
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
-	palco_consegna(s, orologio);
-	rcp_tela_in_vigore(s, &l, &a);
-	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.l == 1366
-	    && ultima_tela.a == 768 && l == 1366 && a == 768 && !chiuso;
-	esito("7 the stage grants other (§4.5)", bene,
-	      "ONE TELA(ADATTATA 1366x768), and the canvas in force is the REAL one",
-	      dillo());
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	stage.grants_other = true;
+	stage.other_w = 1366;
+	stage.other_h = 768;
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
+	stage_delivery(s, clock_v);
+	rcp_canvas_in_effect(s, &l, &a);
+	all_ok = canvas_count == 1 && last_canvas.outcome == 1 && last_canvas.l == 1366
+	    && last_canvas.a == 768 && l == 1366 && a == 768 && !closed;
+	outcome("7 the stage grants other (§4.5)", all_ok,
+	      "ONE CANVAS(ADAPTED 1366x768), and the canvas in force is the REAL one",
+	      report_it());
+	rcp_free(s);
 }
 
 /* 8 — ⭐ THE RE-ATTACH: the stage already has 1912x1044, the page asks 1920x1080.
- *     `SESSIONE` must grant the STAGE's, or not a pixel arrives. */
-static void caso8(void)
+ *     `SESSION` must grant the STAGE's, or not a pixel arrives. */
+static void case8(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	palco.misura_nota = true;
-	palco.misura_l = 1912;
-	palco.misura_a = 1044;
-	s = apri_sessione(1920, 1080, NULL, true);
-	bene = sessione_l == 1912 && sessione_a == 1044 && !chiuso;
-	snprintf(detto, sizeof detto, "SESSIONE grants %ux%u", sessione_l,
-	         sessione_a);
-	esito("8 the re-attach", bene,
-	      "SESSIONE grants 1912x1044 (the stage's, §4.5), not 1920x1080",
-	      detto);
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	stage.size_known = true;
+	stage.size_w = 1912;
+	stage.size_h = 1044;
+	s = open_session(1920, 1080, NULL, true);
+	all_ok = session_w == 1912 && session_h == 1044 && !closed;
+	snprintf(said, sizeof said, "SESSION grants %ux%u", session_w,
+	         session_h);
+	outcome("8 the re-attach", all_ok,
+	      "SESSION grants 1912x1044 (the stage's, §4.5), not 1920x1080",
+	      said);
+	rcp_free(s);
 }
 
 /* 9 — ⭐⭐ THE STAGE GOES ITS OWN WAY — and here the first draft got the
- *      SEVERITY wrong: it adopted the stage's size and sent a `TELA` nobody had
+ *      SEVERITY wrong: it adopted the stage's size and sent a `CANVAS` nobody had
  *      asked for.  ⛔ §6.2 says the client holds back a never-announced size
- *      **only while it has an unanswered `ADATTA_TELA`**: without one, it is
- *      `ERRORE_PROTOCOLLO` — and the frame, which travels on a stream of its
- *      own, arrives before the `TELA` half of the time.  ⇒ The server would have
+ *      **only while it has an unanswered `FIT_CANVAS`**: without one, it is
+ *      `PROTOCOL_ERROR` — and the frame, which travels on a stream of its
+ *      own, arrives before the `CANVAS` half of the time.  ⇒ The server would have
  *      made a session close in which nobody had made a mistake.
  *
- *      ⇒ EXPECTED NOW: **no `TELA`, ever**, and the stage CALLED BACK to the
+ *      ⇒ EXPECTED NOW: **no `CANVAS`, ever**, and the stage CALLED BACK to the
  *      canvas in force with a growing wait. */
-static void caso9(void)
+static void case9(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	int primi;
-	bool bene;
+	int first;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
 	/* the stage says it is at 1280x720 without anybody having asked */
-	rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
-	raccogli();
-	primi = dopo_la_nascita();
-	bene = quanti_tela == 0 && primi == 1 && palco.chiesta_l == 1920
-	    && palco.chiesta_a == 1080;
-	if (bene) {
+	rcp_canvas_from_stage(s, 0, 0, 1280, 720, clock_v);
+	collect();
+	first = after_birth();
+	all_ok = canvas_count == 0 && first == 1 && stage.requested_w == 1920
+	    && stage.requested_h == 1080;
+	if (all_ok) {
 		/* it insists: and the call-back repeats, but not at every message */
-		rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
-		raccogli();
-		bene = quanti_tela == 0 && dopo_la_nascita() == 1;
+		rcp_canvas_from_stage(s, 0, 0, 1280, 720, clock_v);
+		collect();
+		all_ok = canvas_count == 0 && after_birth() == 1;
 	}
-	if (bene) {
-		orologio += RCP_TELA_RICHIAMO_MS + 1;
-		rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
-		raccogli();
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 0 && dopo_la_nascita() == 2 && l == 1920
-		    && a == 1080 && !chiuso;
+	if (all_ok) {
+		clock_v += RCP_CANVAS_RETRY_MS + 1;
+		rcp_canvas_from_stage(s, 0, 0, 1280, 720, clock_v);
+		collect();
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 0 && after_birth() == 2 && l == 1920
+		    && a == 1080 && !closed;
 	}
-	esito("9 the stage goes its own way", bene,
-	      "ZERO TELA (an unrequested one would make the client close), the stage "
+	outcome("9 the stage goes its own way", all_ok,
+	      "ZERO CANVAS (an unrequested one would make the client close), the stage "
 	      "called back to 1920x1080 with the growing wait",
-	      dillo());
-	rcp_libera(s);
+	      report_it());
+	rcp_free(s);
 }
 
-/* 10 — the client's decoder ceiling (§4.5): `ADATTA_TELA` beyond
- *      `video.misura_massima` is REDUCED in proportion, as in `ATTACCA`. */
-static void caso10(void)
+/* 10 — the client's decoder ceiling (§4.5): `FIT_CANVAS` beyond
+ *      `video.max_size` is REDUCED in proportion, as in `ATTACH`. */
+static void case10(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
+	rcp_reset_session_log();
+	reset_stage();
 	/* ⚠ The ceiling is 2560x1440 and not 1920x1080 on purpose: with the latter
 	 *   the reduction would give **exactly the canvas in force**, and the case
 	 *   would end up in the «the size that is already there» branch — which is
 	 *   right, but does not test the reduction.  (The first draft of this case
 	 *   fell for it: the expectation was wrong, not the code.) */
-	s = apri_sessione(1920, 1080, "2560x1440", true);
+	s = open_session(1920, 1080, "2560x1440", true);
 	/* the hi-dpi client asks for the size of its window in PHYSICAL pixels */
-	manda_adatta(s, 3840, 2160);
-	bene = dopo_la_nascita() == 1 && palco.chiesta_l == 2560
-	    && palco.chiesta_a == 1440;
-	if (bene) {
-		palco_consegna(s, orologio);
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 1 && ultima_tela.esito == 1 && l == 2560
-		    && a == 1440 && !chiuso;
+	send_fit(s, 3840, 2160);
+	all_ok = after_birth() == 1 && stage.requested_w == 2560
+	    && stage.requested_h == 1440;
+	if (all_ok) {
+		stage_delivery(s, clock_v);
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 1 && l == 2560
+		    && a == 1440 && !closed;
 	}
-	esito("10 beyond the client's ceiling", bene,
+	outcome("10 beyond the client's ceiling", all_ok,
 	      "reduced to 2560x1440 (proportions kept) and granted, NEVER 3840x2160",
-	      dillo());
-	rcp_libera(s);
+	      report_it());
+	rcp_free(s);
 }
 
-/* 11 — no hook (the host has no stage): `COMPOSITORE_INCAPACE`, which is the
+/* 11 — no hook (the host has no stage): `COMPOSITOR_UNABLE`, which is the
  *      true answer and does not close the session (§7.1). */
-static void caso11(void)
+static void case11(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, false);
-	manda_adatta(s, 1600, 900);
-	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 1
-	    && ultima_tela.l == 1920 && ultima_tela.a == 1080 && !chiuso;
-	esito("11 host without a stage", bene,
-	      "ONE TELA(RIFIUTATA, COMPOSITORE_INCAPACE), session alive", dillo());
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, false);
+	send_fit(s, 1600, 900);
+	all_ok = canvas_count == 1 && last_canvas.outcome == 2 && last_canvas.motivo == 1
+	    && last_canvas.l == 1920 && last_canvas.a == 1080 && !closed;
+	outcome("11 host without a stage", all_ok,
+	      "ONE CANVAS(RIFIUTATA, COMPOSITOR_UNABLE), session alive", report_it());
+	rcp_free(s);
 }
 
-/* 12 — the request that does not leave: `NON_ORA` at once, and nothing hangs. */
-static void caso12(void)
+/* 12 — the request that does not leave: `NOT_NOW` at once, and nothing hangs. */
+static void case12(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	palco.accetta = false;
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
-	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 3
-	    && ultima_tela.l == 1920 && ultima_tela.a == 1080 && !chiuso;
-	esito("12 the request does not leave", bene,
-	      "ONE TELA(RIFIUTATA, NON_ORA) at once", dillo());
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	stage.admit = false;
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
+	all_ok = canvas_count == 1 && last_canvas.outcome == 2 && last_canvas.motivo == 3
+	    && last_canvas.l == 1920 && last_canvas.a == 1080 && !closed;
+	outcome("12 the request does not leave", all_ok,
+	      "ONE CANVAS(RIFIUTATA, NOT_NOW) at once", report_it());
+	rcp_free(s);
 }
 
 /* 13 — ⛔ THE OLD FRAME that arrives while a request is in flight: the
  *      stage is still delivering the previous size.  It must NOT close the
- *      request, or the client would receive `TELA(ADATTATA, the old size)`
+ *      request, or the client would receive `CANVAS(ADAPTED, the old size)`
  *      as the answer to a request that was about to succeed. */
-static void caso13(void)
+static void case13(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
 	/* the stage still states the previous size: it is renegotiating */
-	rcp_tela_dal_palco(s, 0, 0, 1920, 1080, orologio);
-	raccogli();
-	bene = quanti_tela == 0;
-	if (bene) {
-		palco_consegna(s, orologio);
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 1 && ultima_tela.l == 1600
-		    && ultima_tela.a == 900 && l == 1600 && a == 900;
+	rcp_canvas_from_stage(s, 0, 0, 1920, 1080, clock_v);
+	collect();
+	all_ok = canvas_count == 0;
+	if (all_ok) {
+		stage_delivery(s, clock_v);
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 1 && last_canvas.l == 1600
+		    && last_canvas.a == 900 && l == 1600 && a == 900;
 	}
-	esito("13 the old frame in flight", bene,
-	      "the OLD size does not close the request; then TELA(1600x900)",
-	      dillo());
-	rcp_libera(s);
+	outcome("13 the old frame in flight", all_ok,
+	      "the OLD size does not close the request; then CANVAS(1600x900)",
+	      report_it());
+	rcp_free(s);
 }
 
 /* 14 — ⭐⭐ TWO CHAINED REQUESTS, and the answer to the FIRST arriving later:
@@ -771,113 +771,113 @@ static void caso13(void)
  *      draft took the frame of the first request for the answer to the
  *      second — and the desktop settled on the wrong size **with the message
  *      counts in order**, that is without anything saying so. */
-static void caso14(void)
+static void case14(void)
 {
-	rcp_sessione *s;
+	rcp_session *s;
 	uint32_t l = 0, a = 0;
-	bool bene;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);      /* first */
-	manda_adatta(s, 1280, 720);      /* second: NON_ORA to the first */
-	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 3;
-	if (bene) {
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);      /* first */
+	send_fit(s, 1280, 720);      /* second: NOT_NOW to the first */
+	all_ok = canvas_count == 1 && last_canvas.outcome == 2 && last_canvas.motivo == 3;
+	if (all_ok) {
 		/* ⛔ the answer to the FIRST request arrives, late */
-		palco_risponde(s, 1600, 900, orologio);
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 0 && l == 1920 && a == 1080;
+		stage_replies(s, 1600, 900, clock_v);
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 0 && l == 1920 && a == 1080;
 	}
-	if (bene) {
+	if (all_ok) {
 		/* and then the one to the second, which is the only one that counts */
-		palco_risponde(s, 1280, 720, orologio);
-		rcp_tela_in_vigore(s, &l, &a);
-		bene = quanti_tela == 1 && ultima_tela.esito == 1
-		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && l == 1280
-		    && a == 720 && !chiuso;
+		stage_replies(s, 1280, 720, clock_v);
+		rcp_canvas_in_effect(s, &l, &a);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 1
+		    && last_canvas.l == 1280 && last_canvas.a == 720 && l == 1280
+		    && a == 720 && !closed;
 	}
-	esito("14 two chained requests", bene,
+	outcome("14 two chained requests", all_ok,
 	      "the answer to the FIRST does not close the SECOND: the canvas ends at "
 	      "1280x720, the one the user asked for last",
-	      dillo());
-	rcp_libera(s);
+	      report_it());
+	rcp_free(s);
 }
 
-/* 15 — ⭐ the stage says «I didn't make it»: `NON_ORA` AT ONCE, without waiting
+/* 15 — ⭐ the stage says «I didn't make it»: `NOT_NOW` AT ONCE, without waiting
  *      the three seconds of the deadline for news that is already there. */
-static void caso15(void)
+static void case15(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
-	bene = quanti_tela == 0;
-	if (bene) {
-		palco_rinuncia(s, orologio);
-		bene = quanti_tela == 1 && ultima_tela.esito == 2
-		    && ultima_tela.motivo == 3 && ultima_tela.l == 1920
-		    && ultima_tela.a == 1080 && !chiuso;
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
+	all_ok = canvas_count == 0;
+	if (all_ok) {
+		stage_gives_up(s, clock_v);
+		all_ok = canvas_count == 1 && last_canvas.outcome == 2
+		    && last_canvas.motivo == 3 && last_canvas.l == 1920
+		    && last_canvas.a == 1080 && !closed;
 	}
-	esito("15 the stage gives up", bene,
-	      "ONE TELA(RIFIUTATA, NON_ORA) at once, not after the deadline", dillo());
-	rcp_libera(s);
+	outcome("15 the stage gives up", all_ok,
+	      "ONE CANVAS(RIFIUTATA, NOT_NOW) at once, not after the deadline", report_it());
+	rcp_free(s);
 }
 
 /* 16 — ⭐ the stage answers «I already have that size»: the request is closed
- *      with `TELA(ADATTATA)` without waiting for a frame that will not come,
+ *      with `CANVAS(ADAPTED)` without waiting for a frame that will not come,
  *      because whoever is watching already has the frames of that size in front of them. */
-static void caso16(void)
+static void case16(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 900);
 	/* the stage really changes */
-	palco_consegna(s, orologio);
-	bene = quanti_tela == 1 && ultima_tela.l == 1600;
-	if (bene) {
+	stage_delivery(s, clock_v);
+	all_ok = canvas_count == 1 && last_canvas.l == 1600;
+	if (all_ok) {
 		/* now the client asks again for a size the stage ALREADY HAS: the child
 		 * answers at once, without any new frame */
-		manda_adatta(s, 1280, 720);
-		bene = quanti_tela == 0;
+		send_fit(s, 1280, 720);
+		all_ok = canvas_count == 0;
 	}
-	if (bene) {
-		rcp_tela_dal_palco(s, 1280, 720, 1280, 720, orologio);
-		raccogli();
-		bene = quanti_tela == 1 && ultima_tela.esito == 1
-		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && !chiuso;
+	if (all_ok) {
+		rcp_canvas_from_stage(s, 1280, 720, 1280, 720, clock_v);
+		collect();
+		all_ok = canvas_count == 1 && last_canvas.outcome == 1
+		    && last_canvas.l == 1280 && last_canvas.a == 720 && !closed;
 	}
-	esito("16 the stage already had it", bene,
-	      "TELA(ADATTATA 1280x720) at the stage's answer, without deadline",
-	      dillo());
-	rcp_libera(s);
+	outcome("16 the stage already had it", all_ok,
+	      "CANVAS(ADAPTED 1280x720) at the stage's answer, without deadline",
+	      report_it());
+	rcp_free(s);
 }
 
 /* 17 — ⛔ the limits of §4.5 PER SIDE: 1600x230 is out (the height), and must be
- *      refused — or at the re-attach `ATTACCA` would refuse a canvas that this
+ *      refused — or at the re-attach `ATTACH` would refuse a canvas that this
  *      same server had granted. */
-static void caso17(void)
+static void case17(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 230);
-	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 2
-	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
-	    && dopo_la_nascita() == 0 && !chiuso;
-	esito("17 below the minimum of §4.5", bene,
-	      "ONE TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", dillo());
-	rcp_libera(s);
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1920, 1080, NULL, true);
+	send_fit(s, 1600, 230);
+	all_ok = canvas_count == 1 && last_canvas.outcome == 2 && last_canvas.motivo == 2
+	    && last_canvas.l == 1920 && last_canvas.a == 1080
+	    && after_birth() == 0 && !closed;
+	outcome("17 below the minimum of §4.5", all_ok,
+	      "ONE CANVAS(RIFIUTATA, SIZE_OUT_OF_LIMITS): 230 < 240", report_it());
+	rcp_free(s);
 }
 
 /* 18 — ⛔⛔ THE PING-PONG BETWEEN TWO SESSIONS OF THE SAME USER, and it is not a
@@ -897,76 +897,76 @@ static void caso17(void)
  *        canvas ⇒ **the clicks land elsewhere**.
  *
  *      ⇒ EXPECTED: whoever does NOT have the slot asks nothing of the stage, and
- *      an `ADATTA_TELA` of theirs is answered with `NON_ORA` (I2: the stage is
+ *      an `FIT_CANVAS` of theirs is answered with `NOT_NOW` (I2: the stage is
  *      commanded by whoever is attached). */
-static void caso18(void)
+static void case18(void)
 {
-	rcp_sessione *uno, *due;
-	int richieste_prima;
-	bool bene;
+	rcp_session *uno, *due;
+	int requests_before;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
+	rcp_reset_session_log();
+	reset_stage();
 
 	/* The laptop: attaches and takes the canvas. */
-	prossima_provenienza = "10.0.0.9:5000";
-	uno = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(uno, 1600, 900);
-	palco_consegna(uno, orologio);
+	next_provenance = "10.0.0.9:5000";
+	uno = open_session(1920, 1080, NULL, true);
+	send_fit(uno, 1600, 900);
+	stage_delivery(uno, clock_v);
 
 	/* Silent for thirty seconds: §5.3 takes its slot away, the session stays alive. */
-	orologio += 31000;
-	rcp_tempo(uno, orologio);
-	raccogli();
-	bene = strcmp(rcp_stato_nome(uno), "staccata-per-silenzio") == 0;
+	clock_v += 31000;
+	rcp_time(uno, clock_v);
+	collect();
+	all_ok = strcmp(rcp_state_name(uno), "detached-for-silence") == 0;
 
 	/* The phone attaches and TAKES the slot, with a window of another
-	 * size.  ⚠ `apri_sessione` resets the clock: it is put back where it was, or
+	 * size.  ⚠ `open_session` resets the clock: it is put back where it was, or
 	 * the laptop's silence would trigger again. */
-	if (bene) {
-		uint64_t quando = orologio;
-		prossima_provenienza = "10.0.0.24:34583";
-		due = apri_sessione(1920, 1080, NULL, true);
-		orologio = quando;
-		manda_adatta(due, 1280, 720);
-		palco_consegna(due, orologio);
-		richieste_prima = palco.quante_richieste;
+	if (all_ok) {
+		uint64_t when = clock_v;
+		next_provenance = "10.0.0.24:34583";
+		due = open_session(1920, 1080, NULL, true);
+		clock_v = when;
+		send_fit(due, 1280, 720);
+		stage_delivery(due, clock_v);
+		requests_before = stage.how_many_requests;
 
 		/* The stage is now at 1280x720, and its frames also reach the
 		 * LAPTOP, which still has 1600x900 as the canvas in force. */
-		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
-		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
-		raccogli();
-		bene = palco.quante_richieste == richieste_prima && quanti_tela == 0;
+		rcp_canvas_from_stage(uno, 0, 0, 1280, 720, clock_v);
+		rcp_canvas_from_stage(uno, 0, 0, 1280, 720, clock_v);
+		collect();
+		all_ok = stage.how_many_requests == requests_before && canvas_count == 0;
 
 		/* ⭐ And if the laptop speaks again, it is not answered «not now»:
 		 *    it is given FAREWELL with §8.2 `0x0F` — «you already have an active
-		 *    session elsewhere», and this time it is true.  ⚠ `torna_a_parlare()`
-		 *    does it at the top of `rcp_ricevi()`, before the message gets
-		 *    anywhere: that is why a guard on the slot in `T_ADATTA_TELA` would
+		 *    session elsewhere», and this time it is true.  ⚠ `speak_again()`
+		 *    does it at the top of `rcp_receive()`, before the message gets
+		 *    anywhere: that is why a guard on the slot in `T_FIT_CANVAS` would
 		 *    be dead code.  ⛔ What matters is that the stage is not
 		 *    touched. */
-		if (bene) {
-			chiuso = false;
-			manda_adatta(uno, 1024, 768);
-			bene = palco.quante_richieste == richieste_prima && chiuso
-			    && motivo_chiusura == 0x0F;
+		if (all_ok) {
+			closed = false;
+			send_fit(uno, 1024, 768);
+			all_ok = stage.how_many_requests == requests_before && closed
+			    && close_reason == 0x0F;
 		}
 		/* ⭐ And the phone, which does have the slot, commands all right. */
-		if (bene) {
-			chiuso = false;
-			manda_adatta(due, 1152, 648);
-			bene = palco.quante_richieste == richieste_prima + 1
-			    && palco.chiesta_l == 1152 && !chiuso;
+		if (all_ok) {
+			closed = false;
+			send_fit(due, 1152, 648);
+			all_ok = stage.how_many_requests == requests_before + 1
+			    && stage.requested_w == 1152 && !closed;
 		}
-		rcp_libera(due);
+		rcp_free(due);
 	}
-	esito("18 two sessions, one stage only", bene,
+	outcome("18 two sessions, one stage only", all_ok,
 	      "whoever lacks the slot does NOT command (zero requests to the stage, and "
 	      "if it speaks again it is 0x0F); whoever has it does",
-	      dillo());
-	rcp_libera(uno);
-	prossima_provenienza = "10.0.0.9:5000";
+	      report_it());
+	rcp_free(uno);
+	next_provenance = "10.0.0.9:5000";
 }
 
 /* 19 — ⭐⭐ THE CANVAS IS DECLARED AT BIRTH, and this case exists because without
@@ -978,45 +978,45 @@ static void caso18(void)
  *      **seventeen seconds** of tail from the access times — «the change is a
  *      race», and the race was lost against a still scene.
  *
- * ⛔ The other cases now count with `dopo_la_nascita()`, that is they SKIP
+ * ⛔ The other cases now count with `after_birth()`, that is they SKIP
  *    this request.  ⇒ If it disappeared, they would all stay green and the tail
  *    would come back silently.  This case is the only one that would notice.
  *
  *    EXPECTED: the attach leaves **one** request to the stage, and it is at the
- *    size the client asked in `ATTACCA` — not a fallback one, not zero. */
-static void caso19(void)
+ *    size the client asked in `ATTACH` — not a fallback one, not zero. */
+static void case19(void)
 {
-	rcp_sessione *s;
-	bool bene;
+	rcp_session *s;
+	bool all_ok;
 
-	rcp_azzera_registro_sessioni();
-	azzera_palco();
-	s = apri_sessione(1600, 900, NULL, true);
-	bene = nascita_richieste == 1 && palco.chiesta_l == 1600
-	    && palco.chiesta_a == 900 && quanti_tela == 0 && !chiuso;
-	esito("19 the canvas is declared at birth", bene,
-	      "ONE request to the stage already with ATTACCA, at 1600x900 (§4.5: it is "
+	rcp_reset_session_log();
+	reset_stage();
+	s = open_session(1600, 900, NULL, true);
+	all_ok = birth_requests == 1 && stage.requested_w == 1600
+	    && stage.requested_h == 900 && canvas_count == 0 && !closed;
+	outcome("19 the canvas is declared at birth", all_ok,
+	      "ONE request to the stage already with ATTACH, at 1600x900 (§4.5: it is "
 	      "born that way instead of having to change it — those are the 17 s of tail)",
-	      dillo());
-	rcp_libera(s);
+	      report_it());
+	rcp_free(s);
 }
 
 int main(int argc, char **argv)
 {
 	int solo = argc > 1 ? atoi(argv[1]) : 0;
-	void (*casi[])(void) = { caso1,  caso2,  caso3,  caso4,  caso5,  caso6,
-		                     caso7,  caso8,  caso9,  caso10, caso11, caso12,
-		                     caso13, caso14, caso15, caso16, caso17,
-		                     caso18, caso19 };
-	const int quanti = (int)(sizeof casi / sizeof casi[0]);
+	void (*cases[])(void) = { case1,  case2,  case3,  case4,  case5,  case6,
+		                     case7,  case8,  case9,  case10, case11, case12,
+		                     case13, case14, case15, case16, case17,
+		                     case18, case19 };
+	const int how_many = (int)(sizeof cases / sizeof cases[0]);
 
-	parlantina = getenv("PARLANTINA") != NULL;
+	chatter = getenv("PARLANTINA") != NULL;
 	printf("\n== 04-b31: the changing canvas (RCP.md §7.1, §6.2) ==\n\n");
-	for (int i = 0; i < quanti; i++) {
+	for (int i = 0; i < how_many; i++) {
 		if (solo && solo != i + 1)
 			continue;
-		casi[i]();
+		cases[i]();
 	}
-	printf("\n  passed %d, failed %d\n\n", passati, falliti);
-	return falliti ? 1 : 0;
+	printf("\n  passed %d, failed %d\n\n", passed, failed);
+	return failed ? 1 : 0;
 }

@@ -12,7 +12,7 @@
 #   G <group>:<gid>:<members>                                   /etc/group
 #   U <user>:<uid>:<shell>                                      /etc/passwd
 #   S <unit> <state>                                            system units
-#   P <package> <version> <esplicito|dipendenza>                packages
+#   P <package> <version> <explicit|dipendenza>                packages
 #   H <path>                                                    under /home (names only)
 #
 # ⚠ /etc and the configuration folders of systemd, polkit, PAM with content
@@ -41,7 +41,7 @@ export LC_ALL=C
 	getent passwd | awk -F: '{ print "U " $1 ":" $3 ":" $7 }'
 	systemctl list-unit-files --type=service,socket,timer,path --no-legend --no-pager \
 		| awk '{ print "S " $1 " " $2 }'
-	pacman -Qe | awk '{ print "P " $1 " " $2 " esplicito" }'
+	pacman -Qe | awk '{ print "P " $1 " " $2 " explicit" }'
 	pacman -Qd | awk '{ print "P " $1 " " $2 " dipendenza" }'
 	find /home -xdev -printf 'H %p\n' 2>/dev/null
 } | sort

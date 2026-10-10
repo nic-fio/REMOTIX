@@ -11,37 +11,37 @@
 # those files, and takes their dependencies from the repositories the machine already has.
 # REMOTIX does not change the system: what is missing is said, and providing it is up to the administrator.
 set -eu
-VERSIONE=''
+VER=''
 PAYLOAD_SHA256=''
 
-errore() { echo "remotix: $*" >&2; exit 1; }
+failure() { echo "remotix: $*" >&2; exit 1; }
 
-comando=${1:-install}
+command=${1:-install}
 [ $# -gt 0 ] && shift
-case $comando in
-install | tui) [ "$(id -u)" -eq 0 ] || errore "run it as administrator: sudo sh $0 $comando" ;;
+case $command in
+install | tui) [ "$(id -u)" -eq 0 ] || failure "run it as administrator: sudo sh $0 $command" ;;
 check) ;;
-version) echo "REMOTIX $VERSIONE"; exit 0 ;;
-*) errore "usage: sudo sh $0 [install|check|tui] [--port N]" ;;
+version) echo "REMOTIX $VER"; exit 0 ;;
+*) failure "usage: sudo sh $0 [install|check|tui] [--port N]" ;;
 esac
 for p in tar gzip sha256sum awk mktemp; do
-	command -v "$p" >/dev/null 2>&1 || errore "$p is missing"
+	command -v "$p" >/dev/null 2>&1 || failure "$p is missing"
 done
-riga=$(awk '/^__PAYLOAD__$/ { print NR + 1; exit 0 }' "$0")
-[ -n "$riga" ] || errore "$0: the file is damaged (no payload): download it again"
+row=$(awk '/^__PAYLOAD__$/ { print NR + 1; exit 0 }' "$0")
+[ -n "$row" ] || failure "$0: the file is damaged (no payload): download it again"
 dir=$(mktemp -d /var/tmp/remotix-run.XXXXXX)
 trap 'rm -rf "$dir"' EXIT INT TERM
-tail -n +"$riga" "$0" >"$dir/payload.tar.gz"
+tail -n +"$row" "$0" >"$dir/payload.tar.gz"
 if [ -n "$PAYLOAD_SHA256" ]; then
 	echo "$PAYLOAD_SHA256  $dir/payload.tar.gz" | sha256sum -c --status - ||
-		errore "$0: the file is damaged (sha256 does not match): download it again"
+		failure "$0: the file is damaged (sha256 does not match): download it again"
 fi
 tar -xzf "$dir/payload.tar.gz" -C "$dir"
 rm -f "$dir/payload.tar.gz"
-codice=0
-case $comando in
-install | tui) "$dir/remotix-install" "$comando" --bundle "$dir/packages" "$@" || codice=$? ;;
-check) "$dir/remotix-install" check "$@" || codice=$? ;;
+code_v=0
+case $command in
+install | tui) "$dir/remotix-install" "$command" --bundle "$dir/packages" "$@" || code_v=$? ;;
+check) "$dir/remotix-install" check "$@" || code_v=$? ;;
 esac
-exit $codice
+exit $code_v
 __PAYLOAD__

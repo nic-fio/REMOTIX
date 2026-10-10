@@ -22,69 +22,69 @@
 #      (product + engine for each distribution); next to it its .sha256, to be published on the website.
 #
 # Environment:
-#   BERSAGLI   which ones (default: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
-#   USCITA     where the .run goes (default costruzione-uscita/rilasci)
-#   RX_SPORCO=1  for testing only: accepts a tree with uncommitted changes (the packages say so)
+#   TARGETS   which ones (default: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
+#   OUTPUT     where the .run goes (default costruzione-uscita/rilasci)
+#   RX_DIRTY=1  for testing only: accepts a tree with uncommitted changes (the packages say so)
 # ⚠ No /tmp: on the laptop it is nearly full; everything under costruzione-uscita/.
 # THIRD-PARTY-LICENSES (LICENSE.md §8): the licence texts of the third-party components incorporated
 #    in the packages and in the engine. Every package carries it, and the .run next to the engine; step 2
 #    stops if it does not name, at the version that goes in, every Go module linked into the engine,
 #    the Go toolchain, ngtcp2, nghttp3 and libopus.
 set -euo pipefail
-QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ALBERO=$(cd "$QUI/.." && pwd)
-INST=$ALBERO/installatore
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TREE=$(cd "$HERE/.." && pwd)
+INST=$TREE/installatore
 
-VERSIONE=${1:-}
-if ! [[ $VERSIONE =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+VER=${1:-}
+if ! [[ $VER =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
 	sed -n '2,6p' "$0"; exit 2
 fi
 V=${BASH_REMATCH[1]} R=${BASH_REMATCH[2]}
-BERSAGLI=${BERSAGLI:-debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch}
-USCITA=${USCITA:-$ALBERO/costruzione-uscita/rilasci}
-LAV=$ALBERO/costruzione-uscita/rilascio-$VERSIONE
+TARGETS=${TARGETS:-debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch}
+OUTPUT=${OUTPUT:-$TREE/costruzione-uscita/rilasci}
+LAV=$TREE/costruzione-uscita/rilascio-$VER
 # the containers (rpm) leave files owned by another uid of the user namespace: they are removed from inside it
 podman unshare rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR=$LAV/tmp
 REG=$LAV/rilascio.log
-passo() { printf '\n== %s\n' "$*" | tee -a "$REG"; }
-RUN=$USCITA/remotix-$VERSIONE.run
+step() { printf '\n== %s\n' "$*" | tee -a "$REG"; }
+RUN=$OUTPUT/remotix-$VER.run
 
-passo "1. the tree ($VERSIONE, targets: $BERSAGLI)"
-COMMIT=$(git -C "$ALBERO" rev-parse HEAD)
-SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)
-if [ -n "$SPORCO" ]; then
-	[ "${RX_SPORCO:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$SPORCO"; exit 1; }
-	echo "⚠ RX_SPORCO=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
+step "1. the tree ($VER, targets: $TARGETS)"
+COMMIT=$(git -C "$TREE" rev-parse HEAD)
+DIRTY=$(git -C "$TREE" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES LICENSE.md)
+if [ -n "$DIRTY" ]; then
+	[ "${RX_DIRTY:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$DIRTY"; exit 1; }
+	echo "⚠ RX_DIRTY=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
 fi
 echo "commit $COMMIT" | tee -a "$REG"
 # ⛔ the same version is never published twice with different content: a new revision is needed
 [ ! -e "$RUN" ] || { echo "⛔ $RUN already exists: a new revision is needed"; exit 1; }
 
-passo "2. the engine: tests and build ($V)"
+step "2. the engine: tests and build ($V)"
 "$INST/costruisci.sh" prove >"$LAV/prove-motore.log" 2>&1 || { tail -30 "$LAV/prove-motore.log"; echo "⛔ the engine tests"; exit 1; }
 if grep -qE '^(FAIL|gofmt:)' "$LAV/prove-motore.log"; then tail -30 "$LAV/prove-motore.log"; echo "⛔ the engine tests"; exit 1; fi
 grep -E '^ok ' "$LAV/prove-motore.log" | tee -a "$REG"
-RX_VERSIONE=$V "$INST/costruisci.sh" >>"$REG" 2>&1
+RX_VERSION=$V "$INST/costruisci.sh" >>"$REG" 2>&1
 mkdir -p "$LAV/motore-bin"
-cp "$INST/uscita/remotix-install" "$LAV/motore-bin/"
+cp "$INST/out_dir/remotix-install" "$LAV/motore-bin/"
 [ "$("$LAV/motore-bin/remotix-install" version | awk '{print $1}')" = "$V" ] || { echo "⛔ the engine does not report $V"; exit 1; }
 "$LAV/motore-bin/remotix-install" catalog | head -1 | tee -a "$REG"
-TPL=$ALBERO/THIRD-PARTY-LICENSES
+TPL=$TREE/THIRD-PARTY-LICENSES
 {
 	"$INST/costruisci.sh" go list -deps -f '{{with .Module}}{{if not .Main}}{{.Path}} {{.Version}}{{end}}{{end}}' ./cmd/remotix-install
 	"$INST/costruisci.sh" go env GOVERSION | sed 's/^go\(.*\)/Go \1 (standard library and runtime)/'
 	sed -n 's/^NGTCP2_VER=${NGTCP2_VER:-v\(.*\)}$/ngtcp2 \1/p; s/^NGHTTP3_VER=${NGHTTP3_VER:-v\(.*\)}$/nghttp3 \1/p' \
-		"$ALBERO/src/costruzione/quic-statiche.sh"
-	sed -n 's/^OPUS_VER=/libopus /p' "$ALBERO/src/opus-wasm/costruisci.sh"
+		"$TREE/src/costruzione/quic-statiche.sh"
+	sed -n 's/^OPUS_VER=/libopus /p' "$TREE/src/opus-wasm/costruisci.sh"
 } | sort -u | while read -r c; do
 	grep -qxF "== $c" "$TPL" || { echo "⛔ THIRD-PARTY-LICENSES does not name «$c»"; exit 1; }
 done
 
-passo "3. the product packages"
+step "3. the product packages"
 P=$LAV/prodotto
 deb=() rpm=() arch=0
-for b in $BERSAGLI; do
+for b in $TARGETS; do
 	case $b in
 	debian13 | ubuntu2604) deb+=("$b") ;;
 	fedora44 | alma10 | tumbleweed | leap16) rpm+=("$b") ;;
@@ -93,29 +93,29 @@ for b in $BERSAGLI; do
 	esac
 done
 if [ ${#deb[@]} -gt 0 ]; then
-	USCITA=$P CACHE=$LAV/cache RX_VERSIONE=$V RX_REVISIONE=$R "$ALBERO/src/costruzione/costruisci-deb.sh" "${deb[@]}" >>"$REG" 2>&1 ||
+	OUTPUT=$P CACHE=$LAV/cache RX_VERSION=$V RX_REVISION=$R "$TREE/src/costruzione/costruisci-deb.sh" "${deb[@]}" >>"$REG" 2>&1 ||
 		{ tail -30 "$REG"; echo "⛔ .deb"; exit 1; }
 fi
 if [ ${#rpm[@]} -gt 0 ]; then
-	USCITA=$P CACHE=$LAV/cache RX_VERSIONE=$V RX_REVISIONE=$R "$ALBERO/packaging/rpm/costruisci-rpm.sh" "${rpm[@]}" >>"$REG" 2>&1 ||
+	OUTPUT=$P CACHE=$LAV/cache RX_VERSION=$V RX_REVISION=$R "$TREE/packaging/rpm/costruisci-rpm.sh" "${rpm[@]}" >>"$REG" 2>&1 ||
 		{ tail -30 "$REG"; echo "⛔ .rpm"; exit 1; }
-	for b in "${rpm[@]}"; do grep -q ' pacchetto=si ' "$P/rpm/$b/esito.txt" || { cat "$P/rpm/$b/esito.txt"; exit 1; }; done
+	for b in "${rpm[@]}"; do grep -q ' pack=si ' "$P/rpm/$b/esito.txt" || { cat "$P/rpm/$b/esito.txt"; exit 1; }; done
 fi
 if [ $arch = 1 ]; then
-	USCITA=$P/arch RX_VERSIONE=$V RX_REVISIONE=$R "$ALBERO/packaging/arch/costruisci.sh" >>"$REG" 2>&1 ||
+	OUTPUT=$P/arch RX_VERSION=$V RX_REVISION=$R "$TREE/packaging/arch/costruisci.sh" >>"$REG" 2>&1 ||
 		{ tail -30 "$REG"; echo "⛔ Arch"; exit 1; }
 fi
-find "$P" -maxdepth 3 \( -name 'remotix_*.deb' -o -name 'remotix-*.rpm' -o -name 'remotix-*.pkg.tar.zst' \) ! -name '*.src.rpm' ! -name '*-debug*' ! -path '*/.lavoro/*' ! -name 'seconda-*' -printf '   %P\n' | sort | tee -a "$REG"
+find "$P" -maxdepth 3 \( -name 'remotix_*.deb' -o -name 'remotix-*.rpm' -o -name 'remotix-*.pkg.tar.zst' \) ! -name '*.src.rpm' ! -name '*-debug*' ! -path '*/.work/*' ! -name 'second-*' -printf '   %P\n' | sort | tee -a "$REG"
 
-passo "4. the engine packages"
+step "4. the engine packages"
 M=$LAV/motore
-RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
-	"$ALBERO/packaging/motore/pacchetti-motore.sh" "$M" >>"$REG" 2>&1 || { tail -20 "$REG"; exit 1; }
+RX_VERSION=$V RX_REVISION=$R ENGINE=$LAV/motore-bin/remotix-install \
+	"$TREE/packaging/motore/pacchetti-motore.sh" "$M" >>"$REG" 2>&1 || { tail -20 "$REG"; exit 1; }
 
-passo "5. the .run ($RUN)"
-C=$LAV/carico
+step "5. the .run ($RUN)"
+C=$LAV/load
 mkdir -p "$C/packages"
-cp "$LAV/motore-bin/remotix-install" "$ALBERO/LICENSE.md" "$TPL" "$C/"
+cp "$LAV/motore-bin/remotix-install" "$TREE/LICENSE.md" "$TPL" "$C/"
 for b in "${deb[@]}"; do
 	mkdir -p "$C/packages/$b"
 	cp "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$C/packages/$b/"
@@ -129,23 +129,23 @@ if [ $arch = 1 ]; then
 	cp "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst "$C/packages/arch/"
 fi
 (cd "$C" && find . -type f | sort | sed 's|^\./|   |') | tee -a "$REG"
-tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$ALBERO" log -1 --format=%ct)" \
-	-C "$C" -cf - . | gzip -n -9 >"$LAV/carico.tar.gz"
-SHA_CARICO=$(sha256sum "$LAV/carico.tar.gz" | cut -d' ' -f1)
-mkdir -p "$USCITA"
-sed -e "s/^VERSIONE=''\$/VERSIONE='$VERSIONE'/" -e "s/^PAYLOAD_SHA256=''\$/PAYLOAD_SHA256='$SHA_CARICO'/" \
-	"$INST/run.sh" >"$RUN.parziale"
-grep -q "^PAYLOAD_SHA256='$SHA_CARICO'\$" "$RUN.parziale" || { echo "⛔ the header did not take the sha256"; exit 1; }
-cat "$LAV/carico.tar.gz" >>"$RUN.parziale"
-mv "$RUN.parziale" "$RUN"
-(cd "$USCITA" && sha256sum "$(basename "$RUN")" >"$(basename "$RUN").sha256")
+tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$TREE" log -1 --format=%ct)" \
+	-C "$C" -cf - . | gzip -n -9 >"$LAV/load.tar.gz"
+PAYLOAD_SHA=$(sha256sum "$LAV/load.tar.gz" | cut -d' ' -f1)
+mkdir -p "$OUTPUT"
+sed -e "s/^VER=''\$/VER='$VER'/" -e "s/^PAYLOAD_SHA256=''\$/PAYLOAD_SHA256='$PAYLOAD_SHA'/" \
+	"$INST/run.sh" >"$RUN.partial"
+grep -q "^PAYLOAD_SHA256='$PAYLOAD_SHA'\$" "$RUN.partial" || { echo "⛔ the header did not take the sha256"; exit 1; }
+cat "$LAV/load.tar.gz" >>"$RUN.partial"
+mv "$RUN.partial" "$RUN"
+(cd "$OUTPUT" && sha256sum "$(basename "$RUN")" >"$(basename "$RUN").sha256")
 sh "$RUN" version | tee -a "$REG"
 
-passo "6. the summary"
-printf '%s %s commit %s bersagli %s sha256 %s\n' "$VERSIONE" "$(date -u +%FT%TZ)" "$COMMIT" \
-	"$(echo $BERSAGLI | tr ' ' ',')" "$(cut -d' ' -f1 "$RUN.sha256")" >>"$USCITA/RELEASES.txt"
+step "6. the summary"
+printf '%s %s commit %s targets %s sha256 %s\n' "$VER" "$(date -u +%FT%TZ)" "$COMMIT" \
+	"$(echo $TARGETS | tr ' ' ',')" "$(cut -d' ' -f1 "$RUN.sha256")" >>"$OUTPUT/RELEASES.txt"
 cat <<EOF | tee -a "$REG"
-REMOTIX $VERSIONE — ready: $RUN ($(du -h "$RUN" | cut -f1))
+REMOTIX $VER — ready: $RUN ($(du -h "$RUN" | cut -f1))
   sha256 (to be published on the website, over HTTPS, next to the file):
       $(cut -d' ' -f1 "$RUN.sha256")
   install with:  sudo sh $(basename "$RUN")

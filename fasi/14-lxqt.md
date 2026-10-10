@@ -29,7 +29,7 @@ inactivity and settings.
 
 `[R]` Two things phase 13 did not have:
 - **in trixie no package starts LXQt on Wayland** (no `lxqt-wayland-session`, no
-  `startlxqtwayland`): the startup line is written by the product, `labwc -C <cartella nostra> -S
+  `startlxqtwayland`): the startup line is written by the product, `labwc -C <folder our> -S
   lxqt-session`, imitating the upstream script 0.1.1 but without its `autostart` (which turns on
   `swayidle … wlopm --off` at 5 minutes) and without its wizard;
 - **the `rete11-lxqt` box did not contain the desktop**: only `labwc lxqt-session xwayland`. No
@@ -44,15 +44,15 @@ inactivity and settings.
 | | |
 |---|---|
 | **goal** | on a machine with `lxqt-session` + `labwc` the product recognises LXQt, makes headless labwc be born with `lxqt-session`, captures, carries mouse and keyboard, knows how to close |
-| **invariant** | GNOME, KDE, XFCE **identical**: the enum `SESSIONE_DESKTOP_LXQT = 4` goes at the end; every existing branch stays with the same effect |
-| **modules** | `src/sessione.{c,h}` (recognition, environment, start, alive/state, logout, settings), `src/figlio.c` (5 points `== XFCE` → `sessione_su_wlroots()`); the recipe `Contenitore.lxqt`; C20's «Esci» gesture |
-| **LXQt test** | C1(lxqt) green; the bare desktop photographed and passed to the judges **before** opening the `immagine` capability; the probe of the processes and of the environment |
+| **invariant** | GNOME, KDE, XFCE **identical**: the enum `SESSION_DESKTOP_LXQT = 4` goes at the end; every existing branch stays with the same effect |
+| **modules** | `src/session_v.{c,h}` (recognition, environment, start, alive/state, logout, settings), `src/figlio.c` (5 points `== XFCE` → `session_on_wlroots()`); the recipe `Contenitore.lxqt`; C20's «Esci» gesture |
+| **LXQt test** | C1(lxqt) green; the bare desktop photographed and passed to the judges **before** opening the `bitmap` capability; the probe of the processes and of the environment |
 | **client test** | real Firefox and Chrome on 8514 |
 | **regressions to watch** | C1, C7 and everything certified on gnome/kde/xfce |
 | **criterion** | whole net: no new red on gnome/kde/xfce, C1(lxqt) green, faults still caught |
 
 **CP3 — the change** (`1f99d60` product; `cd7a088` `61bdc5a` `58262da` `2330e79` benches):
-- `riconosci_desktop`: marker `lxqt-session`, branch after XFCE; with both, XFCE and
+- `recognize_desktop`: marker `lxqt-session`, branch after XFCE; with both, XFCE and
   «AMBIGUO» declared;
 - environment: `XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots` (the upstream script's form when the
   compositor is configured), `XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share`, `QT_QPA_PLATFORM=wayland`,
@@ -103,7 +103,7 @@ dedicata»*. The four boxes of the net stay intact.
 | | |
 |---|---|
 | **goal** | the LXQt panel has icons and menu; the menu does not offer lock, suspend, hibernate, reboot, shutdown; «Esci» stays |
-| **invariant** | GNOME/KDE/XFCE identical: only `impostazioni_lxqt()` and a new layer **at the end** of the recipe |
+| **invariant** | GNOME/KDE/XFCE identical: only `settings_lxqt()` and a new layer **at the end** of the recipe |
 | **cause** `[R]` | `icon_theme=breeze` in `/usr/share/lxqt/lxqt.conf`, but the theme is brought by `lxqt-system-theme` only as *Recommends*; the menu button wants `qt6-svg-plugins`. ⚠ It is the **box**: a machine with normal `apt` gets them |
 | **change** | R5 `kf6-breeze-icon-theme qt6-svg-plugins` (`afc0cb0`); six `.desktop` `Hidden=true` for the user, **reread** (`a1f771e`, DECISIONI §4.7) |
 | **measure** `[M]` | the snapshot shows menu, notifications, volume, «show desktop»; log «⭐ LXQt: 6/6 voci nascoste, RILETTE; resta "Esci"» |
@@ -142,7 +142,7 @@ icon equal to Chrome (7 px); Chrome unchanged. The price: black bands of at most
 
 ### CP0 — the baseline, closed
 
-`[M]` 24 Sep 2026, 07:36 → 12:00, binary `e681a262` (the one from before the phase), `--famiglia tutto`
+`[M]` 24 Sep 2026, 07:36 → 12:00, binary `e681a262` (the one from before the phase), `--family overall`
 on the four boxes: **a single red, `C1(lxqt)×10`**, the expected one (the old binary does not
 recognise LXQt); **117 grafted faults seen out of 117**; C14 holds; C10 C12 C15 C16 «il terreno non
 regge» from the server, as always. ⇒ no unexpected difference compared with the checkpoint of the night of the 24th.
@@ -156,7 +156,7 @@ black, the last column is background (1,81,129) and not the strip.
 ### ✅ THE WHOLE NET ON THE FOUR BOXES — no red
 
 `[M]` 24 Sep 2026, 12:00 → 17:18, binary **`c0e8f010`** and page **`d77177f1`** in all four,
-`rete11-lxqt` **redone** from the new recipe, `--famiglia tutto`: **«nessun rosso»**.
+`rete11-lxqt` **redone** from the new recipe, `--family overall`: **«nessun rosso»**.
 **34 greens on gnome, 34 on kde, 34 on xfce, 34 on lxqt** — LXQt does exactly the same meshes
 as the other three; **no grafted fault escaped**; C14 (the four together) holds; C10 C12 C15
 C16 «il terreno non regge» from the server, as always. ⇒ GNOME, KDE and XFCE **have lost nothing**,
@@ -174,9 +174,9 @@ window 1400x914 (canvas 1392x828):
 | **xfce** | PASS | PASS | GREEN | GREEN |
 | **lxqt** | PASS | PASS | GREEN | GREEN |
 
-⚠ On gnome the first round gave **BLOCKED** at entry *e* (input): without `--registro-cmd` the bench
+⚠ On gnome the first round gave **BLOCKED** at entry *e* (input): without `--log-cmd` the bench
 looks for the input id in the frames, and Mutter with the «muovi» scene sends only 7-8 of them in 8 s ⇒ **class C**,
-of the bench. Redone with `--registro-cmd`: **PASS** on both, 7-8 input lines in the log.
+of the bench. Redone with `--log-cmd`: **PASS** on both, 7-8 input lines in the log.
 Android: it stays with the user, with the user's phone (the emulator does not start Chrome, 19 Sep).
 
 ### ✅ Sessions with the real browsers on LXQt (at most 10 minutes — the user, 24 Sep) and the guard
@@ -191,7 +191,7 @@ Heartbeat guard with the fault `--schermo-congelato` (SIGSTOP to labwc found by 
 | | |
 |---|---|
 | **binary** | `c0e8f010` (md5), tree `a8bedb6` + benches; page `d77177f1` |
-| **LXQt** | recognised, born, seen, input, clipboard, «Esci», background at the client's size, icons, dangerous entries hidden; **34/34** in the net, capabilities `immagine input appunti` opened |
+| **LXQt** | recognised, born, seen, input, clipboard, «Esci», background at the client's size, icons, dangerous entries hidden; **34/34** in the net, capabilities `bitmap input clipboard_text` opened |
 | **GNOME · KDE · XFCE** | **34/34 each**, unchanged |
 | **client** | Firefox 140 and Chrome 154 PASS and C20 GREEN on the four; LXQt sessions 10 min green; Android: to the user |
 | **net** | «nessun rosso», no fault escaped, C14 holds; heartbeat guard sees the fault on LXQt |
@@ -233,7 +233,7 @@ in the SPS (`frame_cropping_flag`); the page draws with `createImageBitmap(f)` o
 on the right does not.
 - ⇒ **on GNOME, KDE, XFCE and LXQt**, every time the canvas is not a multiple of 16 wide; it was already there on
   23 September ⇒ **it is not a regression of phase 14**, and it is not cured inside phase 14 without a
-  decision: the minimal cure (canvas width truncated to a multiple of 16 in `tela_da_chiedere()`)
+  decision: the minimal cure (canvas width truncated to a multiple of 16 in `canvas_to_request()`)
   changes the canvas **for all** browsers, at the price of up to 15 px of border.
 - ⚠ the counters of `12-client-veri` were green: it was seen only by **looking** at the snapshot.
 

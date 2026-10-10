@@ -22,47 +22,47 @@ import (
 // (DECISIONI §10.14: closed list, ambiente.go), recorded in the profile. Test R1 checks it
 // with the fingerprints of /etc before and after, in one container per family (prove/r1-contenitori.sh).
 
-// OpzioniPreflight: the port to look at and the extra packages the catalogue wants to know about.
-type OpzioniPreflight struct {
-	Porta     int
-	Pacchetti []string // components (labwc, gnome-session, the fonts…) requested by the catalogue
+// PreflightOptions: the port to look at and the extra packages the catalogue wants to know about.
+type PreflightOptions struct {
+	Port    int
+	Packets []string // components (labwc, gnome-session, the fonts…) requested by the catalogue
 }
 
 // Preflight builds the machine's profile.
-func Preflight(a *Ambiente, o OpzioniPreflight) *Profilo {
-	if o.Porta == 0 {
-		o.Porta = 7447
+func Preflight(a *Environment, o PreflightOptions) *Profile {
+	if o.Port == 0 {
+		o.Port = 7447
 	}
-	p := NuovoProfilo(o.Porta)
-	prima := a.Annota
-	a.Annota = func(r string) {
-		p.Comandi = append(p.Comandi, r)
-		if prima != nil {
-			prima(r)
+	p := NewProfile(o.Port)
+	before := a.Annotate
+	a.Annotate = func(r string) {
+		p.Commands = append(p.Commands, r)
+		if before != nil {
+			before(r)
 		}
 	}
-	defer func() { a.Annota = prima }()
-	fam := distribuzione(a, p)
-	sistema(a, p)
-	pk := ArchivioPacchetti(a, fam, append(append(nomiDesktop(fam), pacchettiFissi...), o.Pacchetti...))
-	desktop(a, p, fam, pk, o.Pacchetti)
-	depositi(a, p)
-	schede(a, p)
-	codifica(a, p, fam)
-	sicurezza(a, p)
-	firewall(a, p, o.Porta)
+	defer func() { a.Annotate = before }()
+	fam := distrib(a, p)
+	system_wide(a, p)
+	pk := PackageArchive(a, fam, append(append(desktopNames(fam), packetsPinned...), o.Packets...))
+	desktop(a, p, fam, pk, o.Packets)
+	repositories(a, p)
+	cards(a, p)
+	encoding(a, p, fam)
+	security(a, p)
+	firewall(a, p, o.Port)
 	pam(a, p, fam)
 	openssl(a, p, fam, pk)
 	logind(a, p)
-	gruppi(a, p)
-	caratteri(a, p)
-	p.Ordina()
+	group_list(a, p)
+	characters(a, p)
+	p.Sort()
 	return p
 }
 
-// leggi a file of the machine; "" if it is not there.
-func leggi(a *Ambiente, percorso string) (string, bool) {
-	b, err := os.ReadFile(a.P(percorso))
+// read_it a file of the machine; "" if it is not there.
+func read_it(a *Environment, fpath string) (string, bool) {
+	b, err := os.ReadFile(a.P(fpath))
 	if err != nil {
 		return "", false
 	}
@@ -70,12 +70,12 @@ func leggi(a *Ambiente, percorso string) (string, bool) {
 }
 
 // OsRelease reads /etc/os-release (or /usr/lib/os-release).
-func OsRelease(a *Ambiente) (map[string]string, string) {
+func OsRelease(a *Environment) (map[string]string, string) {
 	for _, f := range []string{"/etc/os-release", "/usr/lib/os-release"} {
-		if t, ok := leggi(a, f); ok {
+		if t, ok := read_it(a, f); ok {
 			m := map[string]string{}
-			for _, riga := range strings.Split(t, "\n") {
-				k, v, ok := strings.Cut(strings.TrimSpace(riga), "=")
+			for _, row := range strings.Split(t, "\n") {
+				k, v, ok := strings.Cut(strings.TrimSpace(row), "=")
 				if !ok || strings.HasPrefix(k, "#") {
 					continue
 				}
@@ -87,10 +87,10 @@ func OsRelease(a *Ambiente) (map[string]string, string) {
 	return nil, ""
 }
 
-// Famiglia: debian, fedora (RHEL and derivatives too), arch, suse, or "".
-func Famiglia(id, idLike string) string {
-	tutti := append([]string{id}, strings.Fields(idLike)...)
-	for _, x := range tutti {
+// Family: debian, fedora (RHEL and derivatives too), arch, suse, or "".
+func Family(id, idLike string) string {
+	all_v := append([]string{id}, strings.Fields(idLike)...)
+	for _, x := range all_v {
 		switch x {
 		case "debian", "ubuntu":
 			return "debian"
@@ -105,39 +105,39 @@ func Famiglia(id, idLike string) string {
 	return ""
 }
 
-func distribuzione(a *Ambiente, p *Profilo) string {
-	m, fonte := OsRelease(a)
+func distrib(a *Environment, p *Profile) string {
+	m, source := OsRelease(a)
 	if m == nil {
-		p.Sconosciuto("distro.id", "neither /etc/os-release nor /usr/lib/os-release")
+		p.Unknown("distro.id", "neither /etc/os-release nor /usr/lib/os-release")
 		p.Con("RX-DISTRO-001", "")
 		return ""
 	}
-	p.Rilevato("distro.id", m["ID"], fonte)
-	p.Rilevato("distro.id_like", m["ID_LIKE"], fonte)
-	p.Rilevato("distro.version", m["VERSION_ID"], fonte)
-	p.Rilevato("distro.name", m["PRETTY_NAME"], fonte)
-	p.Rilevato("distro.variant", m["VARIANT_ID"], fonte)
-	fam := Famiglia(m["ID"], m["ID_LIKE"])
-	p.Rilevato("distro.family", fam, "ID and ID_LIKE")
+	p.Detected("distro.id", m["ID"], source)
+	p.Detected("distro.id_like", m["ID_LIKE"], source)
+	p.Detected("distro.version", m["VERSION_ID"], source)
+	p.Detected("distro.name", m["PRETTY_NAME"], source)
+	p.Detected("distro.variant", m["VARIANT_ID"], source)
+	fam := Family(m["ID"], m["ID_LIKE"])
+	p.Detected("distro.family", fam, "ID and ID_LIKE")
 	// The immutable ones (§3, D9): read-only /usr, installation with a reboot.
-	immutabile := false
-	fonteImm := ""
+	immutable := false
+	imageSource := ""
 	if _, err := os.Stat(a.P("/run/ostree-booted")); err == nil {
-		immutabile, fonteImm = true, "/run/ostree-booted"
+		immutable, imageSource = true, "/run/ostree-booted"
 	}
 	switch m["VARIANT_ID"] {
 	case "silverblue", "kinoite", "sericea", "onyx", "cosmic-atomic":
-		immutabile, fonteImm = true, "VARIANT_ID"
+		immutable, imageSource = true, "VARIANT_ID"
 	}
 	switch m["ID"] {
 	case "ubuntu-core", "steamos", "aeon", "kalpa", "opensuse-microos":
-		immutabile, fonteImm = true, "ID"
+		immutable, imageSource = true, "ID"
 	}
-	p.Rilevato("distro.immutable", siNo(immutabile), fonteImm)
+	p.Detected("distro.immutable", siNo(immutable), imageSource)
 	return fam
 }
 
-func sistema(a *Ambiente, p *Profilo) {
+func system_wide(a *Environment, p *Profile) {
 	arch := runtime.GOARCH
 	switch arch {
 	case "amd64":
@@ -145,38 +145,38 @@ func sistema(a *Ambiente, p *Profilo) {
 	case "arm64":
 		arch = "aarch64"
 	}
-	p.Rilevato("system.arch", arch, "the engine itself")
-	if k, ok := leggi(a, "/proc/sys/kernel/osrelease"); ok {
-		p.Rilevato("system.kernel", strings.TrimSpace(k), "/proc/sys/kernel/osrelease")
+	p.Detected("system.arch", arch, "the engine itself")
+	if k, ok := read_it(a, "/proc/sys/kernel/osrelease"); ok {
+		p.Detected("system.kernel", strings.TrimSpace(k), "/proc/sys/kernel/osrelease")
 	}
 	// Booted with systemd: the folder systemd creates at boot (sd_booted()).
 	if st, err := os.Stat(a.P("/run/systemd/system")); err == nil && st.IsDir() {
-		p.Rilevato("system.systemd", "yes", "/run/systemd/system")
+		p.Detected("system.systemd", "yes", "/run/systemd/system")
 	} else {
-		p.Rilevato("system.systemd", "no", "/run/systemd/system is missing")
+		p.Detected("system.systemd", "no", "/run/systemd/system is missing")
 		p.Con("RX-SYSTEMD-001", "")
 	}
-	if h, ok := leggi(a, "/proc/sys/kernel/hostname"); ok {
-		p.Rilevato("system.name", strings.TrimSpace(h), "/proc/sys/kernel/hostname")
+	if h, ok := read_it(a, "/proc/sys/kernel/hostname"); ok {
+		p.Detected("system.name", strings.TrimSpace(h), "/proc/sys/kernel/hostname")
 	}
 }
 
-// pacchettiFissi: those the PREFLIGHT always looks at, beyond the desktops and the catalogue.
-var pacchettiFissi = []string{"labwc", "firewalld", "ufw", "nftables",
+// packetsPinned: those the PREFLIGHT always looks at, beyond the desktops and the catalogue.
+var packetsPinned = []string{"labwc", "firewalld", "ufw", "nftables",
 	"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl",
 	// the VA driver's family (§4.2, phase 18): full or reduced Intel, Mesa with or without codecs
 	"intel-media-driver", "intel-media-driver-free", "libva-intel-media-driver", "intel-media-va-driver",
 	"intel-media-va-driver-non-free", "mesa-va-drivers", "mesa-va-drivers-freeworld", "mesa-dri-drivers", "Mesa-dri"}
 
-// famigliaDriver: from the installed package, whether the VA driver encodes H.264 (§4.2, phase 18). Fedora:
+// driverFamily: from the installed package, whether the VA driver encodes H.264 (§4.2, phase 18). Fedora:
 // libva-intel-media-driver (formerly intel-media-driver-free) and the official Mesa are built WITHOUT
 // H.264 — `[M]` 30 Sep, from the binaries: 38 class names of AVC encoding against the 114 of the
 // RPM Fusion driver; openSUSE: the official Intel driver is the full one (104-115, like RPM Fusion), the official
 // Mesa is without h264/h265 («re-disable video codecs», Mesa-dri's changelog), Packman's
 // (version «.pm.») with the codecs. Returns, for Intel and AMD, "with", "without" or "" (not recognised), and
 // the description (f) for the fact h264.famiglia_driver. It writes nothing in the profile: the card
-// verdict (strade.go) uses it too, inside Valuta.
-func famigliaDriver(p *Profilo) (intel, amd string, f []string) {
+// verdict (strade.go) uses it too, inside Evaluate.
+func driverFamily(p *Profile) (intel, amd string, f []string) {
 	c := func(n string) bool { v := p.V("package." + n); return v != "" && v != "absent" }
 	fam := p.V("distro.family")
 	switch {
@@ -207,115 +207,115 @@ func famigliaDriver(p *Profilo) (intel, amd string, f []string) {
 	return
 }
 
-func nomiDesktop(fam string) []string {
+func desktopNames(fam string) []string {
 	var r []string
 	for _, d := range DESKTOP {
-		r = append(r, PacchettoDesktop(fam, d))
+		r = append(r, DesktopPackage(fam, d))
 	}
 	return r
 }
 
-// Pacchetti: the package manager's database, read once. dpkg and pacman from their files
+// Packets: the package manager's database, read once. dpkg and pacman from their files
 // (formats stable for decades); rpm with ONE call «rpm -q» for all the names (its database
 // cannot be read without it).
-type Pacchetti struct {
-	fonte    string
-	versioni map[string]string // name → version; absent = not installed
-	letto    bool
+type Packets struct {
+	source string
+	vers   map[string]string // name → version; absent = not installed
+	read   bool
 }
 
-// ArchivioPacchetti reads the family's database for the given names.
-func ArchivioPacchetti(a *Ambiente, fam string, nomi []string) *Pacchetti {
-	pk := &Pacchetti{versioni: map[string]string{}}
+// PackageArchive reads the family's database for the given names.
+func PackageArchive(a *Environment, fam string, names []string) *Packets {
+	pk := &Packets{vers: map[string]string{}}
 	switch fam {
 	case "debian":
-		pk.fonte = "/var/lib/dpkg/status"
-		f, err := os.Open(a.P(pk.fonte))
+		pk.source = "/var/lib/dpkg/status"
+		f, err := os.Open(a.P(pk.source))
 		if err != nil {
 			return pk
 		}
 		defer f.Close()
 		sc := bufio.NewScanner(f)
 		sc.Buffer(make([]byte, 1<<20), 1<<20)
-		nome, stato, ver := "", "", ""
-		chiudi := func() {
-			if nome != "" && strings.HasSuffix(stato, " installed") {
-				pk.versioni[nome] = ver
+		label_name, state, ver := "", "", ""
+		shut := func() {
+			if label_name != "" && strings.HasSuffix(state, " installed") {
+				pk.vers[label_name] = ver
 			}
-			nome, stato, ver = "", "", ""
+			label_name, state, ver = "", "", ""
 		}
 		for sc.Scan() {
 			r := sc.Text()
 			switch {
 			case r == "":
-				chiudi()
+				shut()
 			case strings.HasPrefix(r, "Package: "):
-				nome = strings.TrimPrefix(r, "Package: ")
+				label_name = strings.TrimPrefix(r, "Package: ")
 			case strings.HasPrefix(r, "Status: "):
-				stato = strings.TrimPrefix(r, "Status: ")
+				state = strings.TrimPrefix(r, "Status: ")
 			case strings.HasPrefix(r, "Version: "):
 				ver = strings.TrimPrefix(r, "Version: ")
 			}
 		}
-		chiudi()
-		pk.letto = sc.Err() == nil
+		shut()
+		pk.read = sc.Err() == nil
 	case "arch":
-		pk.fonte = "/var/lib/pacman/local"
-		voci, err := filepath.Glob(a.P(pk.fonte) + "/*/desc")
-		if err != nil || len(voci) == 0 {
+		pk.source = "/var/lib/pacman/local"
+		entries, err := filepath.Glob(a.P(pk.source) + "/*/desc")
+		if err != nil || len(entries) == 0 {
 			return pk
 		}
-		for _, v := range voci {
+		for _, v := range entries {
 			b, err := os.ReadFile(v)
 			if err != nil {
 				continue
 			}
 			r := strings.Split(string(b), "\n")
-			nome, ver := "", ""
+			label_name, ver := "", ""
 			for i := 0; i+1 < len(r); i++ {
 				switch r[i] {
 				case "%NAME%":
-					nome = r[i+1]
+					label_name = r[i+1]
 				case "%VERSION%":
 					ver = r[i+1]
 				}
 			}
-			if nome != "" {
-				pk.versioni[nome] = ver
+			if label_name != "" {
+				pk.vers[label_name] = ver
 			}
 		}
-		pk.letto = true
+		pk.read = true
 	case "fedora", "suse":
-		pk.fonte = "rpm -q"
-		arg := append([]string{"-q", "--qf", "%{NAME} %{VERSION}\\n"}, nomi...)
-		out, _, err := a.Esegui(60*time.Second, "rpm", arg...)
+		pk.source = "rpm -q"
+		arg := append([]string{"-q", "--qf", "%{NAME} %{VERSION}\\n"}, names...)
+		out, _, err := a.Run(60*time.Second, "rpm", arg...)
 		if err != nil {
 			return pk
 		}
 		for _, r := range strings.Split(out, "\n") {
 			c := strings.Fields(r)
 			if len(c) == 2 && !strings.HasPrefix(r, "package ") {
-				pk.versioni[c[0]] = c[1]
+				pk.vers[c[0]] = c[1]
 			}
 		}
-		pk.letto = true
+		pk.read = true
 	}
 	return pk
 }
 
-// Versione: the version, "absent", or SCONOSCIUTO if the database could not be read.
-func (pk *Pacchetti) Versione(nome string) (string, StatoFatto, string) {
-	if !pk.letto {
-		return "", SCONOSCIUTO, pk.fonte
+// Version: the version, "absent", or UNKNOWN if the database could not be read.
+func (pk *Packets) Version(label_name string) (string, StateDone, string) {
+	if !pk.read {
+		return "", UNKNOWN, pk.source
 	}
-	if v, ok := pk.versioni[nome]; ok {
-		return v, RILEVATO, pk.fonte
+	if v, ok := pk.vers[label_name]; ok {
+		return v, DETECTED, pk.source
 	}
-	return "absent", RILEVATO, pk.fonte
+	return "absent", DETECTED, pk.source
 }
 
-// PacchettoDesktop: the package that says whether a desktop is there, and with what version.
-func PacchettoDesktop(fam, d string) string {
+// DesktopPackage: the package that says whether a desktop is there, and with what version.
+func DesktopPackage(fam, d string) string {
 	switch d {
 	case "gnome":
 		return "gnome-shell"
@@ -333,34 +333,34 @@ func PacchettoDesktop(fam, d string) string {
 }
 
 // fallback binaries to know whether a desktop is there when the package manager does not answer.
-var binarioDesktop = map[string]string{"gnome": "/usr/bin/gnome-shell", "kde": "/usr/bin/plasmashell", "xfce": "/usr/bin/xfce4-session", "lxqt": "/usr/bin/lxqt-session"}
+var binaryDesktop = map[string]string{"gnome": "/usr/bin/gnome-shell", "kde": "/usr/bin/plasmashell", "xfce": "/usr/bin/xfce4-session", "lxqt": "/usr/bin/lxqt-session"}
 
-func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string) {
+func desktop(a *Environment, p *Profile, fam string, pk *Packets, extra []string) {
 	for _, d := range DESKTOP {
-		nome := PacchettoDesktop(fam, d)
-		v, st, fonte := pk.Versione(nome)
-		if st == SCONOSCIUTO {
-			if _, err := os.Stat(a.P(binarioDesktop[d])); err == nil {
-				p.Metti(Fatto{Chiave: "desktop." + d, Valore: "present", Stato: RILEVATO, Fonte: binarioDesktop[d], Nota: "unknown version: the package database could not be read"})
+		label_name := DesktopPackage(fam, d)
+		v, st, source := pk.Version(label_name)
+		if st == UNKNOWN {
+			if _, err := os.Stat(a.P(binaryDesktop[d])); err == nil {
+				p.Put(Done{Key: "desktop." + d, Value: "present", State: DETECTED, Source: binaryDesktop[d], Note: "unknown version: the package database could not be read"})
 			} else {
-				p.Sconosciuto("desktop."+d, "the package database could not be read ("+fonte+")")
+				p.Unknown("desktop."+d, "the package database could not be read ("+source+")")
 			}
 			continue
 		}
-		p.Metti(Fatto{Chiave: "desktop." + d, Valore: v, Stato: st, Fonte: fonte + " " + nome})
+		p.Put(Done{Key: "desktop." + d, Value: v, State: st, Source: source + " " + label_name})
 	}
-	visti := map[string]bool{}
-	for _, nome := range append(append([]string{}, pacchettiFissi...), extra...) {
-		if visti[nome] {
+	seen_items := map[string]bool{}
+	for _, label_name := range append(append([]string{}, packetsPinned...), extra...) {
+		if seen_items[label_name] {
 			continue
 		}
-		visti[nome] = true
-		v, st, fonte := pk.Versione(nome)
-		if st == SCONOSCIUTO {
-			p.Sconosciuto("package."+nome, "the package database could not be read ("+fonte+")")
+		seen_items[label_name] = true
+		v, st, source := pk.Version(label_name)
+		if st == UNKNOWN {
+			p.Unknown("package."+label_name, "the package database could not be read ("+source+")")
 			continue
 		}
-		p.Metti(Fatto{Chiave: "package." + nome, Valore: v, Stato: st, Fonte: fonte})
+		p.Put(Done{Key: "package." + label_name, Value: v, State: st, Source: source})
 	}
 }
 
@@ -371,23 +371,23 @@ func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string)
 // and fedora-workstation-repositories brings rpmfusion-nonfree-steam DISABLED ⇒ RPM Fusion «present»,
 // no condition C-DEPOSITO, no consent asked, and REMOTIX without encoding (T9, R22).
 var (
-	intestazioneRepo = regexp.MustCompile(`(?m)^\[([^\]]+)\]\s*$`)
-	repoSpento       = regexp.MustCompile(`(?mi)^enabled\s*=\s*(0|false|no)\s*$`)
+	repoHeader = regexp.MustCompile(`(?m)^\[([^\]]+)\]\s*$`)
+	repoOff    = regexp.MustCompile(`(?mi)^enabled\s*=\s*(0|false|no)\s*$`)
 )
 
-func depositi(a *Ambiente, p *Profilo) {
-	cerca := func(chiave string, cartelle []string, vale func(id string) bool) {
-		acceso, spenti := "", ""
-		for _, c := range cartelle {
-			voci, _ := filepath.Glob(a.P(c) + "/*.repo")
-			for _, v := range voci {
+func repositories(a *Environment, p *Profile) {
+	search := func(key_id string, dirs []string, vale func(id string) bool) {
+		lit, off := "", ""
+		for _, c := range dirs {
+			entries, _ := filepath.Glob(a.P(c) + "/*.repo")
+			for _, v := range entries {
 				b, err := os.ReadFile(v)
 				if err != nil {
 					continue
 				}
 				t := string(b)
 				rel := strings.TrimPrefix(v, strings.TrimSuffix(a.P("/"), "/"))
-				idx := intestazioneRepo.FindAllStringSubmatchIndex(t, -1)
+				idx := repoHeader.FindAllStringSubmatchIndex(t, -1)
 				for i, m := range idx {
 					id := strings.ToLower(t[m[2]:m[3]])
 					if !vale(id) {
@@ -397,50 +397,50 @@ func depositi(a *Ambiente, p *Profilo) {
 					if i+1 < len(idx) {
 						fine = idx[i+1][0]
 					}
-					if repoSpento.MatchString(t[m[1]:fine]) {
-						spenti = rel + " [" + id + "] disabled"
+					if repoOff.MatchString(t[m[1]:fine]) {
+						off = rel + " [" + id + "] disabled"
 					} else {
-						acceso = rel + " [" + id + "]"
+						lit = rel + " [" + id + "]"
 					}
 				}
 			}
 		}
 		switch {
-		case acceso != "":
-			p.Rilevato(chiave, "present", acceso)
-		case spenti != "":
-			p.Rilevato(chiave, "absent", spenti)
+		case lit != "":
+			p.Detected(key_id, "present", lit)
+		case off != "":
+			p.Detected(key_id, "absent", off)
 		default:
-			p.Rilevato(chiave, "absent", strings.Join(cartelle, " "))
+			p.Detected(key_id, "absent", strings.Join(dirs, " "))
 		}
 	}
-	parola := func(x string) func(string) bool {
+	password := func(x string) func(string) bool {
 		return func(id string) bool { return strings.Contains(id, x) }
 	}
 	// RPM Fusion: «free» (mesa-va-drivers-freeworld, AMD) and, separately, the real «nonfree» branch
 	// (intel-media-driver, Intel: phase 18); the «nonfree» ones Fedora Workstation brings disabled (steam,
 	// nvidia-driver) do not matter
-	cerca("repo.rpmfusion", []string{"/etc/yum.repos.d"}, parola("rpmfusion-free"))
-	cerca("repo.rpmfusion-nonfree", []string{"/etc/yum.repos.d"}, func(id string) bool {
+	search("repo.rpmfusion", []string{"/etc/yum.repos.d"}, password("rpmfusion-free"))
+	search("repo.rpmfusion-nonfree", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return id == "rpmfusion-nonfree" || id == "rpmfusion-nonfree-updates"
 	})
 	// EPEL: not Cisco's OpenH264 repository for EPEL, which a machine may still have (phase 18)
-	cerca("repo.epel", []string{"/etc/yum.repos.d"}, func(id string) bool {
+	search("repo.epel", []string{"/etc/yum.repos.d"}, func(id string) bool {
 		return strings.Contains(id, "epel") && !strings.Contains(id, "openh264")
 	})
-	cerca("repo.packman", []string{"/etc/zypp/repos.d"}, parola("packman"))
+	search("repo.packman", []string{"/etc/zypp/repos.d"}, password("packman"))
 }
 
-// Scheda is a rendering node with its driver.
-type Scheda struct {
-	Nodo, Driver, Fornitore, Gruppo, Modo string
+// Card is a rendering node with its driver.
+type Card struct {
+	Node, Driver, Vendor, Grp, Manner string
 }
 
-var fornitori = map[string]string{"0x8086": "Intel", "0x1002": "AMD", "0x10de": "NVIDIA", "0x1af4": "virtio", "0x1234": "QEMU", "0x15ad": "VMware"}
+var vendors = map[string]string{"0x8086": "Intel", "0x1002": "AMD", "0x10de": "NVIDIA", "0x1af4": "virtio", "0x1234": "QEMU", "0x15ad": "VMware"}
 
-func schede(a *Ambiente, p *Profilo) []Scheda {
-	gr, _ := LeggiGruppi(a.P("/etc/group"))
-	gruppoDi := func(gid uint32) string {
+func cards(a *Environment, p *Profile) []Card {
+	gr, _ := ReadGroups(a.P("/etc/group"))
+	groupOf := func(gid uint32) string {
 		for n, v := range gr {
 			if v[0] == strconv.Itoa(int(gid)) {
 				return n
@@ -448,123 +448,123 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 		}
 		return strconv.Itoa(int(gid))
 	}
-	voci, _ := filepath.Glob(a.P("/sys/class/drm/renderD*"))
-	sort.Strings(voci)
-	var r []Scheda
-	for _, v := range voci {
-		s := Scheda{Nodo: "/dev/dri/" + filepath.Base(v)}
+	entries, _ := filepath.Glob(a.P("/sys/class/drm/renderD*"))
+	sort.Strings(entries)
+	var r []Card
+	for _, v := range entries {
+		s := Card{Node: "/dev/dri/" + filepath.Base(v)}
 		if l, err := os.Readlink(filepath.Join(v, "device", "driver")); err == nil {
 			s.Driver = filepath.Base(l)
 		}
 		if f, err := os.ReadFile(filepath.Join(v, "device", "vendor")); err == nil {
 			id := strings.TrimSpace(string(f))
-			s.Fornitore = fornitori[id]
-			if s.Fornitore == "" {
-				s.Fornitore = id
+			s.Vendor = vendors[id]
+			if s.Vendor == "" {
+				s.Vendor = id
 			}
 		}
-		if st, err := os.Stat(a.P(s.Nodo)); err == nil {
+		if st, err := os.Stat(a.P(s.Node)); err == nil {
 			if sys, ok := st.Sys().(*syscall.Stat_t); ok {
-				s.Gruppo = gruppoDi(sys.Gid)
+				s.Grp = groupOf(sys.Gid)
 			}
-			s.Modo = fmt.Sprintf("%04o", st.Mode().Perm())
+			s.Manner = fmt.Sprintf("%04o", st.Mode().Perm())
 		}
 		r = append(r, s)
 		k := "gpu." + filepath.Base(v)
-		p.Rilevato(k+".driver", s.Driver, "/sys/class/drm")
-		p.Rilevato(k+".vendor", s.Fornitore, "/sys/class/drm")
-		p.Rilevato(k+".group", s.Gruppo, s.Nodo)
-		p.Rilevato(k+".mode", s.Modo, s.Nodo)
+		p.Detected(k+".driver", s.Driver, "/sys/class/drm")
+		p.Detected(k+".vendor", s.Vendor, "/sys/class/drm")
+		p.Detected(k+".group", s.Grp, s.Node)
+		p.Detected(k+".mode", s.Manner, s.Node)
 	}
-	var nomi []string
+	var names []string
 	for _, s := range r {
-		nomi = append(nomi, filepath.Base(s.Nodo))
+		names = append(names, filepath.Base(s.Node))
 	}
 	// without nodes the refusal is given by the card verdict (strade.go, RX-GPU-003)
-	if len(nomi) == 0 {
-		p.Rilevato("gpu.nodes", "none", "/sys/class/drm")
+	if len(names) == 0 {
+		p.Detected("gpu.nodes", "none", "/sys/class/drm")
 	} else {
-		p.Rilevato("gpu.nodes", strings.Join(nomi, ","), "/sys/class/drm")
+		p.Detected("gpu.nodes", strings.Join(names, ","), "/sys/class/drm")
 	}
 	// NVIDIA with the proprietary driver: the module «nvidia» or its file in /proc (§4.2).
 	nv := false
-	fonte := ""
+	source := ""
 	if _, err := os.Stat(a.P("/proc/driver/nvidia/version")); err == nil {
-		nv, fonte = true, "/proc/driver/nvidia/version"
+		nv, source = true, "/proc/driver/nvidia/version"
 	}
 	if _, err := os.Stat(a.P("/sys/module/nvidia")); err == nil {
-		nv, fonte = true, "/sys/module/nvidia"
+		nv, source = true, "/sys/module/nvidia"
 	}
 	for _, s := range r {
 		if s.Driver == "nvidia" {
-			nv, fonte = true, "driver of "+s.Nodo
+			nv, source = true, "driver of "+s.Node
 		}
 	}
-	p.Rilevato("gpu.nvidia_proprietary", siNo(nv), fonte)
+	p.Detected("gpu.nvidia_proprietary", siNo(nv), source)
 	if nv {
 		p.Con("RX-GPU-002", "")
 	}
 	return r
 }
 
-// h264: «H.264 really available» is VERIFICATO only if a frame was really
+// h264: «H.264 really available» is CHECKED only if a frame was really
 // encoded (§6.5 point 1, §6.6.7): the real test is done in 7a with REMOTIX's binary. Here we read
 // what can be read without launching anything. ⭐ Phase 18 (without ffmpeg): the card encodes with
 // libva and the distribution's VA driver — we look at the drivers (the dri folders, also
-// RPM Fusion's dri-nonfree and dri-freeworld) and their family (famigliaDriver). Phase 19: it is the
-// Rileva of the «vaapi» route (strade.go), and there is no fallback to look at any more. The card stays
+// RPM Fusion's dri-nonfree and dri-freeworld) and their family (driverFamily). Phase 19: it is the
+// Detect of the «vaapi» route (strade.go), and there is no fallback to look at any more. The card stays
 // SCONOSCIUTA except in the certain cases: no driver, or only drivers built without H.264.
-func h264(a *Ambiente, p *Profilo, fam string) {
+func h264(a *Environment, p *Profile, fam string) {
 	var driver []string
-	visti := map[string]bool{}
+	seen_items := map[string]bool{}
 	for _, g := range []string{"/usr/lib/*/dri/*_drv_video.so", "/usr/lib64/dri/*_drv_video.so", "/usr/lib/dri/*_drv_video.so",
 		"/usr/lib64/dri-nonfree/*_drv_video.so", "/usr/lib64/dri-freeworld/*_drv_video.so"} {
 		v, _ := filepath.Glob(a.P(g))
 		for _, x := range v {
 			n := strings.TrimSuffix(filepath.Base(x), "_drv_video.so")
-			if !visti[n] {
-				visti[n] = true
+			if !seen_items[n] {
+				seen_items[n] = true
 				driver = append(driver, n)
 			}
 		}
 	}
 	sort.Strings(driver)
 	if len(driver) > 0 {
-		p.Rilevato("h264.driver_va", strings.Join(driver, ","), "dri folders")
+		p.Detected("h264.driver_va", strings.Join(driver, ","), "dri folders")
 	} else {
-		p.Rilevato("h264.driver_va", "none", "dri folders")
+		p.Detected("h264.driver_va", "none", "dri folders")
 	}
-	intel, amd, fd := famigliaDriver(p)
+	intel, amd, fd := driverFamily(p)
 	if len(fd) == 0 {
-		p.Sconosciuto("h264.driver_family", "no known VA driver package")
+		p.Unknown("h264.driver_family", "no known VA driver package")
 	} else {
-		p.Rilevato("h264.driver_family", strings.Join(fd, "; "), "installed packages")
+		p.Detected("h264.driver_family", strings.Join(fd, "; "), "installed packages")
 	}
-	nota7a := "the test with a frame is done in 7a, with the REMOTIX binary"
-	forn, noti := fornitoriScheda(p)
+	note7a := "the test with a frame is done in 7a, with the REMOTIX binary"
+	card_vendors, known := cardVendors(p)
 	// the certain case: every Intel/AMD card of the machine has only a driver without H.264
-	senza := (forn["Intel"] || forn["AMD"]) && (!forn["Intel"] || intel == "without") && (!forn["AMD"] || amd == "without")
+	without := (card_vendors["Intel"] || card_vendors["AMD"]) && (!card_vendors["Intel"] || intel == "without") && (!card_vendors["AMD"] || amd == "without")
 	// the driver codes (where to get it) only if there is a card of the route: without Intel or AMD
 	// the reason is another one, and the verdict says it (RX-GPU-*)
-	conScheda := !noti || forn["Intel"] || forn["AMD"]
+	withCard := !known || card_vendors["Intel"] || card_vendors["AMD"]
 	switch {
 	case len(driver) == 0:
-		p.Metti(Fatto{Chiave: "h264.gpu", Valore: "no", Stato: RILEVATO, Fonte: "dri folders", Nota: "no VA-API driver"})
-		if conScheda {
-			p.Con(codiceH264(fam), "no VA-API driver")
+		p.Put(Done{Key: "h264.gpu", Value: "no", State: DETECTED, Source: "dri folders", Note: "no VA-API driver"})
+		if withCard {
+			p.Con(codeH264(fam), "no VA-API driver")
 		}
-	case senza:
-		p.Metti(Fatto{Chiave: "h264.gpu", Valore: "no", Stato: RILEVATO, Fonte: "installed packages", Nota: "VA driver without H.264: " + p.V("h264.driver_family")})
-		p.Con(codiceH264(fam), "VA driver without H.264")
+	case without:
+		p.Put(Done{Key: "h264.gpu", Value: "no", State: DETECTED, Source: "installed packages", Note: "VA driver without H.264: " + p.V("h264.driver_family")})
+		p.Con(codeH264(fam), "VA driver without H.264")
 	default:
-		p.Sconosciuto("h264.gpu", "driver "+strings.Join(driver, ",")+": "+nota7a)
-		if conScheda {
+		p.Unknown("h264.gpu", "driver "+strings.Join(driver, ",")+": "+note7a)
+		if withCard {
 			p.Con("RX-H264-001", "") // its text already says it: the detail would repeat it
 		}
 	}
 }
 
-func codiceH264(fam string) string {
+func codeH264(fam string) string {
 	switch fam {
 	case "fedora":
 		return "RX-H264-003"
@@ -574,37 +574,37 @@ func codiceH264(fam string) string {
 	return "RX-H264-002"
 }
 
-func sicurezza(a *Ambiente, p *Profilo) {
-	if t, ok := leggi(a, "/sys/fs/selinux/enforce"); ok {
+func security(a *Environment, p *Profile) {
+	if t, ok := read_it(a, "/sys/fs/selinux/enforce"); ok {
 		v := "permissive"
 		if strings.TrimSpace(t) == "1" {
 			v = "enforcing"
 			p.Con("RX-SELINUX-001", "")
 		}
-		p.Rilevato("selinux", v, "/sys/fs/selinux/enforce")
+		p.Detected("selinux", v, "/sys/fs/selinux/enforce")
 	} else {
-		p.Rilevato("selinux", "absent", "/sys/fs/selinux")
+		p.Detected("selinux", "absent", "/sys/fs/selinux")
 	}
-	if t, ok := leggi(a, "/sys/module/apparmor/parameters/enabled"); ok && strings.TrimSpace(t) == "Y" {
-		p.Rilevato("apparmor", "enabled", "/sys/module/apparmor/parameters/enabled")
+	if t, ok := read_it(a, "/sys/module/apparmor/parameters/enabled"); ok && strings.TrimSpace(t) == "Y" {
+		p.Detected("apparmor", "enabled", "/sys/module/apparmor/parameters/enabled")
 	} else {
-		p.Rilevato("apparmor", "absent", "/sys/module/apparmor/parameters/enabled")
+		p.Detected("apparmor", "absent", "/sys/module/apparmor/parameters/enabled")
 	}
 }
 
-// portaInAscolto reads /proc/net: is someone already listening on the port?
-func portaInAscolto(a *Ambiente, porta int, proto string) (bool, bool) {
-	esa := fmt.Sprintf(":%04X", porta)
-	letto := false
+// listeningPort reads /proc/net: is someone already listening on the port?
+func listeningPort(a *Environment, port int, proto string) (bool, bool) {
+	hex_s := fmt.Sprintf(":%04X", port)
+	read := false
 	for _, f := range []string{"/proc/net/" + proto, "/proc/net/" + proto + "6"} {
-		t, ok := leggi(a, f)
+		t, ok := read_it(a, f)
 		if !ok {
 			continue
 		}
-		letto = true
+		read = true
 		for _, r := range strings.Split(t, "\n")[1:] {
 			c := strings.Fields(r)
-			if len(c) < 4 || !strings.HasSuffix(c[1], esa) {
+			if len(c) < 4 || !strings.HasSuffix(c[1], hex_s) {
 				continue
 			}
 			if proto == "udp" || c[3] == "0A" { // 0A = LISTEN
@@ -612,74 +612,74 @@ func portaInAscolto(a *Ambiente, porta int, proto string) (bool, bool) {
 			}
 		}
 	}
-	return false, letto
+	return false, read
 }
 
-func firewall(a *Ambiente, p *Profilo, porta int) {
-	ps := strconv.Itoa(porta)
+func firewall(a *Environment, p *Profile, port int) {
+	ps := strconv.Itoa(port)
 	for _, proto := range []string{"tcp", "udp"} {
-		occ, letto := portaInAscolto(a, porta, proto)
+		occ, read := listeningPort(a, port, proto)
 		k := "port." + ps + "." + proto + "_free"
-		if !letto {
-			p.Sconosciuto(k, "/proc/net not readable")
+		if !read {
+			p.Unknown(k, "/proc/net not readable")
 			continue
 		}
-		p.Rilevato(k, siNo(!occ), "/proc/net/"+proto)
+		p.Detected(k, siNo(!occ), "/proc/net/"+proto)
 		if occ {
 			p.Con("RX-FW-003", ps+"/"+proto)
 		}
 	}
-	p.Metti(Fatto{Chiave: "port." + ps + ".reachable", Stato: SCONOSCIUTO, Nota: "another machine is needed to find out"})
+	p.Put(Done{Key: "port." + ps + ".reachable", State: UNKNOWN, Note: "another machine is needed to find out"})
 	p.Con("RX-FW-005", "")
 
 	// firewalld, over the bus
 	fw := &firewalldDBus{a.Bus}
-	if fw.Acceso() {
-		p.Rilevato("firewall.type", "firewalld", "D-Bus "+fwNome)
-		zona, err := fw.ZonaPredefinita()
+	if fw.On() {
+		p.Detected("firewall.type", "firewalld", "D-Bus "+fwName)
+		zone, err := fw.DefaultZone()
 		if err != nil {
-			p.Sconosciuto("firewall.zone", err.Error())
+			p.Unknown("firewall.zone", err.Error())
 			p.Con("RX-FW-002", err.Error())
 			return
 		}
-		p.Rilevato("firewall.zone", zona, "D-Bus getDefaultZone")
-		porte, _ := fw.PorteVive(zona)
+		p.Detected("firewall.zone", zone, "D-Bus getDefaultZone")
+		ports, _ := fw.LivePorts(zone)
 		for _, proto := range []string{"tcp", "udp"} {
 			k := "firewall.port_" + ps + "_" + proto
-			ha, err := fw.HaPorta(zona, ps+"/"+proto, false)
+			ha, err := fw.HasPort(zone, ps+"/"+proto, false)
 			if err != nil {
-				p.Sconosciuto(k, err.Error())
+				p.Unknown(k, err.Error())
 				p.Con("RX-FW-002", err.Error())
 				continue
 			}
-			if !ha && portaInIntervalli(porte, porta, proto) {
+			if !ha && portInRanges(ports, port, proto) {
 				ha = true
 			}
 			v := "closed"
 			if ha {
 				v = "open"
 			} else {
-				p.Con("RX-FW-001", "firewalld, zone "+zona+", "+ps+"/"+proto)
+				p.Con("RX-FW-001", "firewalld, zone "+zone+", "+ps+"/"+proto)
 			}
-			p.Rilevato(k, v, "D-Bus queryPort and getPorts, zone "+zona)
+			p.Detected(k, v, "D-Bus queryPort and getPorts, zone "+zone)
 		}
 		return
 	}
 	// ufw: enabled in its file; the rules in its files (readable by root)
-	if t, ok := leggi(a, "/etc/ufw/ufw.conf"); ok && strings.Contains(t, "ENABLED=yes") {
-		p.Rilevato("firewall.type", "ufw", "/etc/ufw/ufw.conf")
-		regole, ok4 := leggi(a, "/etc/ufw/user.rules")
-		regole6, _ := leggi(a, "/etc/ufw/user6.rules")
+	if t, ok := read_it(a, "/etc/ufw/ufw.conf"); ok && strings.Contains(t, "ENABLED=yes") {
+		p.Detected("firewall.type", "ufw", "/etc/ufw/ufw.conf")
+		rules, ok4 := read_it(a, "/etc/ufw/user.rules")
+		rules6, _ := read_it(a, "/etc/ufw/user6.rules")
 		for _, proto := range []string{"tcp", "udp"} {
 			k := "firewall.port_" + ps + "_" + proto
 			if !ok4 {
-				p.Sconosciuto(k, "/etc/ufw/user.rules not readable (root needed)")
+				p.Unknown(k, "/etc/ufw/user.rules not readable (root needed)")
 				continue
 			}
-			if ufwApre(regole+regole6, ps, proto) {
-				p.Rilevato(k, "open", "/etc/ufw/user.rules")
+			if ufwOpens(rules+rules6, ps, proto) {
+				p.Detected(k, "open", "/etc/ufw/user.rules")
 			} else {
-				p.Rilevato(k, "closed", "/etc/ufw/user.rules")
+				p.Detected(k, "closed", "/etc/ufw/user.rules")
 				p.Con("RX-FW-001", "ufw, "+ps+"/"+proto)
 			}
 		}
@@ -688,25 +688,25 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 		}
 		return
 	}
-	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
-		p.Rilevato("firewall.type", "nftables", "D-Bus systemd: nftables.service active")
+	if s, err := a.Bus.ActiveState("nftables.service"); err == nil && s == "active" {
+		p.Detected("firewall.type", "nftables", "D-Bus systemd: nftables.service active")
 		for _, proto := range []string{"tcp", "udp"} {
-			p.Sconosciuto("firewall.port_"+ps+"_"+proto, "nftables rules are not evaluated yet")
+			p.Unknown("firewall.port_"+ps+"_"+proto, "nftables rules are not evaluated yet")
 		}
 		p.Con("RX-FW-002", "nftables")
 		return
 	} else if err != nil {
-		p.Sconosciuto("firewall.type", "neither firewalld on the bus nor ufw running; systemd does not answer on the bus: "+err.Error())
+		p.Unknown("firewall.type", "neither firewalld on the bus nor ufw running; systemd does not answer on the bus: "+err.Error())
 		p.Con("RX-FW-002", "D-Bus: "+err.Error())
 		return
 	}
-	p.Rilevato("firewall.type", "none", "neither firewalld nor ufw nor nftables running")
+	p.Detected("firewall.type", "none", "neither firewalld nor ufw nor nftables running")
 }
 
-// ufwApre: an ACCEPT rule for the port in ufw's files («### tuple ### allow tcp 7447 …» and the
+// ufwOpens: an ACCEPT rule for the port in ufw's files («### tuple ### allow tcp 7447 …» and the
 // lines -A ufw-user-input … --dport 7447 -j ACCEPT; without a protocol it holds for both).
-func ufwApre(regole, ps, proto string) bool {
-	for _, r := range strings.Split(regole, "\n") {
+func ufwOpens(rules, ps, proto string) bool {
+	for _, r := range strings.Split(rules, "\n") {
 		if !strings.Contains(r, "--dport "+ps+" ") || !strings.Contains(r, "-j ACCEPT") {
 			continue
 		}
@@ -717,10 +717,10 @@ func ufwApre(regole, ps, proto string) bool {
 	return false
 }
 
-// portaInIntervalli: Fedora Workstation opens 1025-65535 with a range (§11.1), and queryPort does not
-// see it. porte: the [port, protocol] pairs of getPorts.
-func portaInIntervalli(porte [][]string, porta int, proto string) bool {
-	for _, v := range porte {
+// portInRanges: Fedora Workstation opens 1025-65535 with a range (§11.1), and queryPort does not
+// see it. ports: the [port, protocol] pairs of getPorts.
+func portInRanges(ports [][]string, port int, proto string) bool {
+	for _, v := range ports {
 		if len(v) != 2 || v[1] != proto {
 			continue
 		}
@@ -735,7 +735,7 @@ func portaInIntervalli(porte [][]string, porta int, proto string) bool {
 				y = y2
 			}
 		}
-		if porta >= x && porta <= y {
+		if port >= x && port <= y {
 			return true
 		}
 	}
@@ -757,31 +757,31 @@ func PamBase(fam string) []string {
 	return nil
 }
 
-func trovaPam(a *Ambiente, nome string) string {
+func findPam(a *Environment, label_name string) string {
 	for _, c := range []string{"/etc/pam.d/", "/usr/lib/pam.d/", "/usr/etc/pam.d/"} {
-		if _, err := os.Stat(a.P(c + nome)); err == nil {
-			return c + nome
+		if _, err := os.Stat(a.P(c + label_name)); err == nil {
+			return c + label_name
 		}
 	}
 	return ""
 }
 
-func pam(a *Ambiente, p *Profilo, fam string) {
+func pam(a *Environment, p *Profile, fam string) {
 	base := PamBase(fam)
 	if base == nil {
-		p.Sconosciuto("pam.base", "unknown family")
+		p.Unknown("pam.base", "unknown family")
 		return
 	}
-	var trovati, mancanti []string
+	var found, missing_n []string
 	faillock := false
 	for _, n := range base {
-		f := trovaPam(a, n)
+		f := findPam(a, n)
 		if f == "" {
-			mancanti = append(mancanti, n)
+			missing_n = append(missing_n, n)
 			continue
 		}
-		trovati = append(trovati, f)
-		if t, ok := leggi(a, f); ok {
+		found = append(found, f)
+		if t, ok := read_it(a, f); ok {
 			for _, r := range strings.Split(t, "\n") {
 				r = strings.TrimSpace(r)
 				if !strings.HasPrefix(r, "#") && strings.Contains(r, "pam_faillock") {
@@ -790,42 +790,42 @@ func pam(a *Ambiente, p *Profilo, fam string) {
 			}
 		}
 	}
-	p.Rilevato("pam.base", strings.Join(trovati, " "), "family "+fam)
-	if len(mancanti) > 0 {
-		p.Rilevato("pam.base_missing", strings.Join(mancanti, " "), "family "+fam)
-		p.Con("RX-PAM-001", strings.Join(mancanti, " "))
+	p.Detected("pam.base", strings.Join(found, " "), "family "+fam)
+	if len(missing_n) > 0 {
+		p.Detected("pam.base_missing", strings.Join(missing_n, " "), "family "+fam)
+		p.Con("RX-PAM-001", strings.Join(missing_n, " "))
 	}
-	p.Rilevato("pam.faillock", siNo(faillock), strings.Join(trovati, " "))
+	p.Detected("pam.faillock", siNo(faillock), strings.Join(found, " "))
 	if faillock {
 		p.Con("RX-PAM-002", "")
 	}
-	if f := trovaPam(a, "remotix"); f != "" {
-		p.Rilevato("pam.remotix", f, f)
+	if f := findPam(a, "remotix"); f != "" {
+		p.Detected("pam.remotix", f, f)
 		p.Con("RX-PAM-003", f)
 	} else {
-		p.Rilevato("pam.remotix", "absent", "/etc/pam.d, /usr/lib/pam.d")
+		p.Detected("pam.remotix", "absent", "/etc/pam.d, /usr/lib/pam.d")
 	}
-	modulo := ""
+	module := ""
 	for _, g := range []string{"/usr/lib/security", "/usr/lib64/security", "/lib/security", "/lib64/security", "/usr/lib/*/security", "/lib/*/security"} {
 		v, _ := filepath.Glob(a.P(g) + "/pam_systemd.so")
 		if len(v) > 0 {
-			modulo = strings.TrimPrefix(v[0], strings.TrimSuffix(a.P("/"), "/"))
+			module = strings.TrimPrefix(v[0], strings.TrimSuffix(a.P("/"), "/"))
 			break
 		}
 	}
-	if modulo != "" {
-		p.Rilevato("pam.pam_systemd", modulo, modulo)
+	if module != "" {
+		p.Detected("pam.pam_systemd", module, module)
 	} else {
-		p.Rilevato("pam.pam_systemd", "absent", "PAM module directories")
+		p.Detected("pam.pam_systemd", "absent", "PAM module directories")
 		p.Con("RX-PAM-004", "")
 	}
 }
 
-func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
-	v, fonte := "", ""
-	for _, nome := range []string{"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl"} {
-		if pv, st, f := pk.Versione(nome); st == RILEVATO && pv != "absent" {
-			v, fonte = pv, f+" "+nome
+func openssl(a *Environment, p *Profile, fam string, pk *Packets) {
+	v, source := "", ""
+	for _, label_name := range []string{"libssl3t64", "libssl3", "openssl-libs", "libopenssl3", "openssl"} {
+		if pv, st, f := pk.Version(label_name); st == DETECTED && pv != "absent" {
+			v, source = pv, f+" "+label_name
 			break
 		}
 	}
@@ -837,7 +837,7 @@ func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
 					if i := bytes.Index(b, []byte("OpenSSL 3.")); i >= 0 {
 						c := strings.Fields(string(b[i : i+24]))
 						if len(c) >= 2 {
-							v, fonte = c[1], x
+							v, source = c[1], x
 						}
 					}
 				}
@@ -845,98 +845,98 @@ func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
 		}
 	}
 	if v == "" {
-		p.Sconosciuto("openssl.version", "neither the package nor the library")
+		p.Unknown("openssl.version", "neither the package nor the library")
 		p.Con("RX-OPENSSL-002", "")
 		return
 	}
-	p.Rilevato("openssl.version", v, fonte)
-	if ConfrontaVersioni(v, "3.5.0") < 0 {
+	p.Detected("openssl.version", v, source)
+	if CompareVersions(v, "3.5.0") < 0 {
 		p.Con("RX-OPENSSL-001", v)
 	}
 }
 
-// logind: KillUserProcesses (§5.2). The live value is asked of logind (VERIFICATO); if it does not
-// answer, the configuration files are read in systemd's order (RILEVATO); if none
-// sets it, the build default holds, which cannot be seen from here (SCONOSCIUTO).
-func logind(a *Ambiente, p *Profilo) {
-	if x, err := a.Bus.Proprieta("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillUserProcesses"); err == nil {
+// logind: KillUserProcesses (§5.2). The live value is asked of logind (CHECKED); if it does not
+// answer, the configuration files are read in systemd's order (DETECTED); if none
+// sets it, the build default holds, which cannot be seen from here (UNKNOWN).
+func logind(a *Environment, p *Profile) {
+	if x, err := a.Bus.Property("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.KillUserProcesses"); err == nil {
 		if b, ok := x.(bool); ok {
 			v := map[bool]string{true: "yes", false: "no"}[b]
-			p.Verificato("logind.kill_user_processes", v, "logind, D-Bus")
+			p.Verified("logind.kill_user_processes", v, "logind, D-Bus")
 			if v == "yes" {
 				p.Con("RX-LOGIND-001", "")
 			}
 			return
 		}
 	}
-	valore, fonte := "", ""
-	leggiConf := func(f string) {
-		t, ok := leggi(a, f)
+	value_v, source := "", ""
+	readConf := func(f string) {
+		t, ok := read_it(a, f)
 		if !ok {
 			return
 		}
 		for _, r := range strings.Split(t, "\n") {
 			r = strings.TrimSpace(r)
 			if k, v, ok := strings.Cut(r, "="); ok && strings.TrimSpace(k) == "KillUserProcesses" {
-				valore, fonte = strings.ToLower(strings.TrimSpace(v)), f
+				value_v, source = strings.ToLower(strings.TrimSpace(v)), f
 			}
 		}
 	}
-	leggiConf("/usr/lib/systemd/logind.conf")
-	leggiConf("/etc/systemd/logind.conf")
+	readConf("/usr/lib/systemd/logind.conf")
+	readConf("/etc/systemd/logind.conf")
 	// the drop-ins: by name, and for equal names /etc wins over /run over /usr/local/lib over /usr/lib
-	scelti := map[string]string{}
+	chosen := map[string]string{}
 	for _, c := range []string{"/usr/lib/systemd/logind.conf.d", "/usr/local/lib/systemd/logind.conf.d", "/run/systemd/logind.conf.d", "/etc/systemd/logind.conf.d"} {
 		v, _ := filepath.Glob(a.P(c) + "/*.conf")
 		for _, f := range v {
-			scelti[filepath.Base(f)] = c + "/" + filepath.Base(f)
+			chosen[filepath.Base(f)] = c + "/" + filepath.Base(f)
 		}
 	}
-	var nomi []string
-	for n := range scelti {
-		nomi = append(nomi, n)
+	var names []string
+	for n := range chosen {
+		names = append(names, n)
 	}
-	sort.Strings(nomi)
-	for _, n := range nomi {
-		leggiConf(scelti[n])
+	sort.Strings(names)
+	for _, n := range names {
+		readConf(chosen[n])
 	}
-	if valore == "" {
-		p.Sconosciuto("logind.kill_user_processes", "no file sets it and logind did not answer: the build default applies")
+	if value_v == "" {
+		p.Unknown("logind.kill_user_processes", "no file sets it and logind did not answer: the build default applies")
 		p.Con("RX-LOGIND-002", "")
 		return
 	}
-	if valore == "true" || valore == "1" {
-		valore = "yes"
+	if value_v == "true" || value_v == "1" {
+		value_v = "yes"
 	}
-	p.Rilevato("logind.kill_user_processes", valore, fonte)
-	if valore == "yes" {
-		p.Con("RX-LOGIND-001", fonte)
+	p.Detected("logind.kill_user_processes", value_v, source)
+	if value_v == "yes" {
+		p.Con("RX-LOGIND-001", source)
 	}
 }
 
-func gruppi(a *Ambiente, p *Profilo) {
-	t, err := LeggiGruppi(a.P("/etc/group"))
+func group_list(a *Environment, p *Profile) {
+	t, err := ReadGroups(a.P("/etc/group"))
 	if err != nil {
-		p.Sconosciuto("group.video", err.Error())
-		p.Sconosciuto("group.render", err.Error())
+		p.Unknown("group.video", err.Error())
+		p.Unknown("group.render", err.Error())
 		return
 	}
 	for _, g := range []string{"video", "render"} {
 		v, ok := t[g]
 		if !ok {
-			p.Rilevato("group."+g, "absent", "/etc/group")
+			p.Detected("group."+g, "absent", "/etc/group")
 			if g == "render" {
 				p.Con("RX-GRUPPI-001", "")
 			}
 			continue
 		}
-		p.Rilevato("group."+g, "gid="+v[0]+" members="+strings.Join(DividiMembri(v[1]), ","), "/etc/group")
+		p.Detected("group."+g, "gid="+v[0]+" members="+strings.Join(SplitMembers(v[1]), ","), "/etc/group")
 	}
 }
 
 // fonts: labwc dies without a scalable font (labwc #2525, §11.1). fc-list is not
 // launched (closed list): the vector font files in the system folders are counted.
-func caratteri(a *Ambiente, p *Profilo) {
+func characters(a *Environment, p *Profile) {
 	n := 0
 	for _, c := range []string{"/usr/share/fonts", "/usr/local/share/fonts"} {
 		filepath.WalkDir(a.P(c), func(_ string, d os.DirEntry, err error) error {
@@ -949,5 +949,5 @@ func caratteri(a *Ambiente, p *Profilo) {
 			return nil
 		})
 	}
-	p.Metti(Fatto{Chiave: "fonts.scalable", Valore: strconv.Itoa(n), Stato: RILEVATO, Fonte: "/usr/share/fonts", Nota: "ttf/otf/ttc/pfb files counted, not asked to fontconfig"})
+	p.Put(Done{Key: "fonts.scalable", Value: strconv.Itoa(n), State: DETECTED, Source: "/usr/share/fonts", Note: "ttf/otf/ttc/pfb files counted, not asked to fontconfig"})
 }

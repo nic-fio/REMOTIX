@@ -17,33 +17,33 @@
 #
 #   (on the server)  sg kvm -c 'bash 17-t4-alma.sh alma10-gnome-iso <remotix-install>'
 set -uo pipefail
-m=${1:?machine}; MOT=${2:?remotix-install}
+m=${1:?machine}; REASON=${2:?remotix-install}
 R=/media/REMOTIX/vm17
 T4=${T4:-$R/t4}
-E=$T4/esiti/$m
+E=$T4/outcomes/$m
 V="bash $R/17-vm.sh"
-FOTO=${FOTO:-iso}
+PHOTO=${PHOTO:-iso}
 vm() { $V ssh "$m" "$@"; }
-fine() { echo "==> powering off and back to \"$FOTO\""; $V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$FOTO" >/dev/null 2>&1; }
+fine() { echo "==> powering off and back to \"$PHOTO\""; $V halt "$m" >/dev/null 2>&1; $V returns "$m" "$PHOTO" >/dev/null 2>&1; }
 mkdir -p "$E"; rm -f "$E"/*
 if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running"; exit 2; fi
 [ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
 trap fine EXIT
-echo "==> $m: \"$FOTO\" snapshot, power on"
-$V torna "$m" "$FOTO" || exit 1
-$V avvia "$m" >"$E/avvia.log" 2>&1 || { tail "$E/avvia.log"; exit 1; }
-$V ssh "$m" "cat > /tmp/remotix-install" <"$MOT"
+echo "==> $m: \"$PHOTO\" snapshot, power on"
+$V returns "$m" "$PHOTO" || exit 1
+$V start "$m" >"$E/avvia.log" 2>&1 || { tail "$E/avvia.log"; exit 1; }
+$V ssh "$m" "cat > /tmp/remotix-install" <"$REASON"
 vm "sudo install -m 755 /tmp/remotix-install /root/remotix-install; rpm -q dnf; firewall-cmd --state"
 
-impronta() {
+fingerprint() {
 	vm "sudo sh -c 'find /etc -xdev -type f -exec sha256sum {} + | sort; rpm -qa | sort; firewall-cmd --list-all; firewall-cmd --permanent --list-all; ls /etc/yum.repos.d'" >"$E/impronta-$1.txt" 2>&1
 	echo "   fingerprint \"$1\": $(wc -l <"$E/impronta-$1.txt") lines"
 }
-impronta prima
+fingerprint before
 
 echo "==> A. EPEL repository + htop + file + unit + firewall, then an impossible group: everything is rolled back"
 vm "cd /tmp && sudo /root/remotix-install check" >"$E/verifica.txt" 2>&1; echo "   check: exit $?"
-grep -E 'firewall|RX-FW|deposito' "$E/verifica.txt" | head -8 | sed 's/^/   /'
+grep -E 'firewall|RX-FW|repository' "$E/verifica.txt" | head -8 | sed 's/^/   /'
 vm "cd /tmp && sudo /root/remotix-install plan --extra-repos epel --packages htop --open-firewall --users nessuno-si-chiama-cosi --output /root/piano-a.json && sudo /root/remotix-install approve /root/piano-a.json" >"$E/piano-a.txt" 2>&1
 echo "   plan: exit $? — $(grep -c '^[0-9]*\. ' "$E/piano-a.txt") steps"
 T0=$(date +%s)
@@ -52,7 +52,7 @@ echo "   apply: exit $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation '
 grep -E ': (DONE|FAILED|ROLLED_BACK|ROLLBACK_FAILED)' "$E/applica-a.txt" | cut -c1-160 | sed 's/^/   /'
 vm "sudo sh -c 'grep -h COMMAND /var/lib/remotix/operations/*/log.jsonl' | sed 's/.*detail\":\"//; s/\"}//' | cut -c1-200" >"$E/comandi-a.txt" 2>&1
 sed 's/^/   /' "$E/comandi-a.txt"
-impronta dopo-a
+fingerprint dopo-a
 diff "$E/impronta-prima.txt" "$E/impronta-dopo-a.txt" >"$E/diff-a.txt"
 echo "   R28: $(grep -c '^[<>]' "$E/diff-a.txt") lines differ between \"before\" and \"after the rollback\":"
 grep '^[<>]' "$E/diff-a.txt" | cut -c1-160 | head -30 | sed 's/^/      /'

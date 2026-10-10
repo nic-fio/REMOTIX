@@ -11,7 +11,7 @@
  *   Cb = 128 + 224/255 · (B − Y') / (2 (1 − Kb))
  *   Cr = 128 + 224/255 · (R − Y') / (2 (1 − Kr))
  *
- * in 15-bit fixed point (`SCALA`: 15 and not 16 because each coefficient
+ * in 15-bit fixed point (`SCALE`: 15 and not 16 because each coefficient
  * must fit in an `int16` — the instruction is `pmaddwd`), rounded to
  * nearest.  ⛔ And two lines are NOT plain rounding, on purpose:
  *   - `VG` is 13072 and not 13073: with pure rounding the three of Cr
@@ -24,7 +24,7 @@
  * ---------------------------------------------------------------------------
  * ⭐ THE SHAPE: one row at a time — luma at once, and the horizontal pair
  *    sums into a ring of four rows from which chroma comes out (the filter is
- *    swscale's: see `croma()`).
+ *    swscale's: see `chroma_v()`).
  *
  * ⭐ THE SPEED: SSE2, which on x86-64 is ALWAYS there (it is in the ABI), so no
  *    run-time choice and no branch that a machine never takes.  Elsewhere
@@ -40,12 +40,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__SSE2__) && !defined(COLORI709_SENZA_SIMD) /* the second: for the bench */
+#if defined(__SSE2__) && !defined(COLORS709_WITHOUT_SIMD) /* the second: for the bench */
 #include <emmintrin.h>
-#define COLORI709_SSE2 1
+#define COLORS709_SSE2 1
 #endif
 
-#define SCALA 15
+#define SCALE 15
 
 /* Y — the sum is 28142: white → 235. */
 #define YR 5983
@@ -65,11 +65,11 @@ typedef struct {
 	int16_t y[4], u[4], v[4];
 } Coeff;
 
-static Coeff coefficienti(Colori709Ordine ordine)
+static Coeff coefficients(Colors709Order order)
 {
 	Coeff c;
-	const int ir = ordine == COLORI709_RGBX ? 0 : 2;
-	const int ib = ordine == COLORI709_RGBX ? 2 : 0;
+	const int ir = order == COLORS709_RGBX ? 0 : 2;
+	const int ib = order == COLORS709_RGBX ? 2 : 0;
 	memset(&c, 0, sizeof c);
 	c.y[ir] = YR; c.y[1] = YG; c.y[ib] = YB;
 	c.u[ir] = UR; c.u[1] = UG; c.u[ib] = UB;
@@ -86,14 +86,14 @@ static Coeff coefficienti(Colori709Ordine ordine)
  *   ⚠ at 10 bits the matrix is computed at 10 bits (219·4 = 876 levels), not 8
  *     bits shifted by two: it is what swscale did towards `yuv420p10le`.
  */
-static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int prof10, int semi,
-                 void *restrict yv, int16_t *restrict somme)
+static void row(const uint8_t *restrict px, uint32_t l, const Coeff *c, int prof10, int semi,
+                 void *restrict yv, int16_t *restrict sums)
 {
 	const int32_t k = prof10 ? 4 : 1;
-	const int32_t off = ((16 * k) << SCALA) + (1 << (SCALA - 1));
+	const int32_t off = ((16 * k) << SCALE) + (1 << (SCALE - 1));
 	const int sp = prof10 && semi ? 6 : 0; /* P010: the ten bits at the TOP */
 	uint32_t x = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i cy = _mm_setr_epi16(c->y[0], c->y[1], c->y[2], c->y[3], c->y[0], c->y[1],
 	                                  c->y[2], c->y[3]);
@@ -107,16 +107,16 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 			__m128i ml = _mm_madd_epi16(lo, cy);     /* [0bg, 0rx, 1bg, 1rx] */
 			__m128i mh = _mm_madd_epi16(hi, cy);
 			__m128 a = _mm_castsi128_ps(ml), b = _mm_castsi128_ps(mh);
-			__m128i pari = _mm_castps_si128(_mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0)));
-			__m128i disp = _mm_castps_si128(_mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 1, 3, 1)));
-			__m128i s = _mm_add_epi32(pari, disp);
+			__m128i even = _mm_castps_si128(_mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0)));
+			__m128i avail = _mm_castps_si128(_mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 1, 3, 1)));
+			__m128i s = _mm_add_epi32(even, avail);
 			if (prof10)
 				s = _mm_slli_epi32(s, 2);
-			y32[j] = _mm_srai_epi32(_mm_add_epi32(s, voff), SCALA);
+			y32[j] = _mm_srai_epi32(_mm_add_epi32(s, voff), SCALE);
 			/* the pair sums: low half + high half of each `lo`/`hi` */
 			__m128i sl = _mm_add_epi16(lo, _mm_srli_si128(lo, 8));
 			__m128i sh = _mm_add_epi16(hi, _mm_srli_si128(hi, 8));
-			_mm_storeu_si128((__m128i *) (somme + 4 * ((x + 4 * j) / 2)),
+			_mm_storeu_si128((__m128i *) (sums + 4 * ((x + 4 * j) / 2)),
 			                 _mm_unpacklo_epi64(sl, sh));
 		}
 		__m128i y16a = _mm_packs_epi32(y32[0], y32[1]);
@@ -134,8 +134,8 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 		const uint8_t *p = px + 4 * x;
 		int32_t y0 = c->y[0] * p[0] + c->y[1] * p[1] + c->y[2] * p[2];
 		int32_t y1 = c->y[0] * p[4] + c->y[1] * p[5] + c->y[2] * p[6];
-		y0 = (k * y0 + off) >> SCALA;
-		y1 = (k * y1 + off) >> SCALA;
+		y0 = (k * y0 + off) >> SCALE;
+		y1 = (k * y1 + off) >> SCALE;
 		if (prof10) {
 			((uint16_t *) yv)[x] = (uint16_t) (y0 << sp);
 			((uint16_t *) yv)[x + 1] = (uint16_t) (y1 << sp);
@@ -144,7 +144,7 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
 			((uint8_t *) yv)[x + 1] = (uint8_t) y1;
 		}
 		for (int j = 0; j < 4; j++)
-			somme[4 * (x / 2) + j] = (int16_t) (p[j] + p[4 + j]);
+			sums[4 * (x / 2) + j] = (int16_t) (p[j] + p[4 + j]);
 	}
 }
 
@@ -162,15 +162,15 @@ static void riga(const uint8_t *restrict px, uint32_t l, const Coeff *c, int pro
  *    matrix was right and the filter was not, and «the colours match» means
  *    both.  With the tent: at most 1 level (roundings), `[M]` in the bench.
  */
-static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int prof10, int semi,
+static void chroma_v(const int16_t *const s[4], uint32_t lc, const Coeff *c, int prof10, int semi,
                   void *restrict uv, void *restrict vv)
 {
 	const int32_t k = prof10 ? 4 : 1;
-	const int sh = SCALA + 4;
+	const int sh = SCALE + 4;
 	const int32_t off = ((128 * k) << sh) + (1 << (sh - 1));
 	const int16_t *a = s[0], *b = s[1], *cc = s[2], *d = s[3];
 	uint32_t i = 0;
-#ifdef COLORI709_SSE2
+#ifdef COLORS709_SSE2
 	const __m128i cu = _mm_setr_epi16(c->u[0], c->u[1], c->u[2], c->u[3], c->u[0], c->u[1],
 	                                  c->u[2], c->u[3]);
 	const __m128i cv = _mm_setr_epi16(c->v[0], c->v[1], c->v[2], c->v[3], c->v[0], c->v[1],
@@ -247,84 +247,84 @@ static void croma(const int16_t *const s[4], uint32_t lc, const Coeff *c, int pr
 	}
 }
 
-static bool converti(const uint8_t *pixel, uint32_t passo, uint32_t l, uint32_t a,
-                     Colori709Ordine ordine, int prof10, int semi,
+static bool convert(const uint8_t *pixel, uint32_t step, uint32_t l, uint32_t a,
+                     Colors709Order order, int prof10, int semi,
                      uint8_t *y, uint32_t py, uint8_t *u, uint32_t pu, uint8_t *v, uint32_t pv)
 {
 	if (!pixel || !y || !u || (!semi && !v) || !l || !a || (l & 1) || (a & 1))
 		return false;
-	if (!passo)
-		passo = l * 4;
-	const Coeff c = coefficienti(ordine);
+	if (!step)
+		step = l * 4;
+	const Coeff c = coefficients(order);
 	const uint32_t lc = l / 2;
 	/* The ring of sums: four rows, four `int16` per chroma sample
 	 * (61 KB at 3840). */
-	int16_t *anello = malloc(sizeof(int16_t) * 16u * lc);
-	if (!anello)
+	int16_t *ring = malloc(sizeof(int16_t) * 16u * lc);
+	if (!ring)
 		return false;
 	const int16_t *s[4];
 
 	for (uint32_t r = 0; r < a; r++) {
-		riga(pixel + (size_t) r * passo, l, &c, prof10, semi, y + (size_t) r * py,
-		     anello + (size_t) (r & 3u) * 4u * lc);
+		row(pixel + (size_t) r * step, l, &c, prof10, semi, y + (size_t) r * py,
+		     ring + (size_t) (r & 3u) * 4u * lc);
 		/* Chroma k wants rows 2k-1 … 2k+2: it is emitted when row 2k+2
 		 * arrives, and the last one at the end of the image (row 2k+2 outside
 		 * ⇒ the last row).  ⚠ With a = 2 chroma 0 is emitted twice, identical:
 		 * harmless. */
-		bool ultima = (r == a - 1);
-		if ((r >= 2 && !(r & 1u)) || ultima) {
-			uint32_t kc = ultima ? a / 2u - 1u : (r - 2u) / 2u;
+		bool latest = (r == a - 1);
+		if ((r >= 2 && !(r & 1u)) || latest) {
+			uint32_t kc = latest ? a / 2u - 1u : (r - 2u) / 2u;
 			for (int j = 0; j < 4; j++) {
 				int64_t rr = (int64_t) 2 * kc - 1 + j;
 				if (rr < 0)
 					rr = 0;
 				if (rr > (int64_t) a - 1)
 					rr = (int64_t) a - 1;
-				s[j] = anello + (size_t) ((uint32_t) rr & 3u) * 4u * lc;
+				s[j] = ring + (size_t) ((uint32_t) rr & 3u) * 4u * lc;
 			}
-			croma(s, lc, &c, prof10, semi, u + (size_t) kc * pu,
+			chroma_v(s, lc, &c, prof10, semi, u + (size_t) kc * pu,
 			      semi ? NULL : v + (size_t) kc * pv);
 		}
 	}
-	free(anello);
+	free(ring);
 	return true;
 }
 
-bool colori709_a_i420(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
-                      uint32_t altezza, Colori709Ordine ordine,
-                      uint8_t *y, uint32_t passo_y,
-                      uint8_t *u, uint32_t passo_u,
-                      uint8_t *v, uint32_t passo_v)
+bool colors709_to_i420(const uint8_t *pixel, uint32_t step, uint32_t width_px,
+                      uint32_t height_px, Colors709Order order,
+                      uint8_t *y, uint32_t stride_y,
+                      uint8_t *u, uint32_t stride_u,
+                      uint8_t *v, uint32_t stride_v)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 0, 0,
-	                y, passo_y, u, passo_u, v, passo_v);
+	return convert(pixel, step, width_px, height_px, order, 0, 0,
+	                y, stride_y, u, stride_u, v, stride_v);
 }
 
-bool colori709_a_i420_10(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
-                         uint32_t altezza, Colori709Ordine ordine,
-                         uint16_t *y, uint32_t passo_y,
-                         uint16_t *u, uint32_t passo_u,
-                         uint16_t *v, uint32_t passo_v)
+bool colors709_to_i420_10(const uint8_t *pixel, uint32_t step, uint32_t width_px,
+                         uint32_t height_px, Colors709Order order,
+                         uint16_t *y, uint32_t stride_y,
+                         uint16_t *u, uint32_t stride_u,
+                         uint16_t *v, uint32_t stride_v)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 1, 0,
-	                (uint8_t *) y, passo_y, (uint8_t *) u, passo_u,
-	                (uint8_t *) v, passo_v);
+	return convert(pixel, step, width_px, height_px, order, 1, 0,
+	                (uint8_t *) y, stride_y, (uint8_t *) u, stride_u,
+	                (uint8_t *) v, stride_v);
 }
 
-bool colori709_a_nv12(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
-                      uint32_t altezza, Colori709Ordine ordine,
-                      uint8_t *y, uint32_t passo_y,
-                      uint8_t *uv, uint32_t passo_uv)
+bool colors709_to_nv12(const uint8_t *pixel, uint32_t step, uint32_t width_px,
+                      uint32_t height_px, Colors709Order order,
+                      uint8_t *y, uint32_t stride_y,
+                      uint8_t *uv, uint32_t stride_uv)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 0, 1,
-	                y, passo_y, uv, passo_uv, NULL, 0);
+	return convert(pixel, step, width_px, height_px, order, 0, 1,
+	                y, stride_y, uv, stride_uv, NULL, 0);
 }
 
-bool colori709_a_p010(const uint8_t *pixel, uint32_t passo, uint32_t larghezza,
-                      uint32_t altezza, Colori709Ordine ordine,
-                      uint16_t *y, uint32_t passo_y,
-                      uint16_t *uv, uint32_t passo_uv)
+bool colors709_to_p010(const uint8_t *pixel, uint32_t step, uint32_t width_px,
+                      uint32_t height_px, Colors709Order order,
+                      uint16_t *y, uint32_t stride_y,
+                      uint16_t *uv, uint32_t stride_uv)
 {
-	return converti(pixel, passo, larghezza, altezza, ordine, 1, 1,
-	                (uint8_t *) y, passo_y, (uint8_t *) uv, passo_uv, NULL, 0);
+	return convert(pixel, step, width_px, height_px, order, 1, 1,
+	                (uint8_t *) y, stride_y, (uint8_t *) uv, stride_uv, NULL, 0);
 }

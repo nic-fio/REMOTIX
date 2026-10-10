@@ -70,7 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #                    ANNOUNCES.  ⛔ It is the exact yardstick of the 25 August fault:
 #                    the session that is born without any `wl_output`.
 #   `weston`         gives the minimal clients (`weston-simple-shm`, `weston-terminal`):
-#                    they serve the test «a window opens», ⛔ which must be
+#                    they needs the test «a window opens», ⛔ which must be
 #                    looked at in the PIXEL, not in the count of processes.
 #   `pipewire`       the capture path.
 #   `python3-aioquic` ⛔ THE TEST CLIENT, which is the SECOND READER of the
@@ -99,7 +99,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   and the fault arrives months later, in a phase that has nothing to do with it.
 # ⇒ They are those of the `Makefile`, line by line.  ⛔ `libngtcp2` and `libnghttp3`
 #   are NOT here: those are built and copied inside with the product
-#   (`11-accendi.sh prodotto`), because they are not in Debian.
+#   (`11-accendi.sh product`), because they are not in Debian.
 # ⭐ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): `libvulkan1` (the loader the
 #   binary links) and `mesa-vulkan-drivers` (Mesa's ICDs: RADV for the
 #   Radeon — the Vulkan Video road, tried BEFORE VA-API; ANV for the Intel,
@@ -155,7 +155,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   that C11 goes looking for.
 # ---------------------------------------------------------------------------
 # ⭐ phase 18 (1 Oct 2026): `firefox-esr` NOT from the repository but from the HOST's .deb
-#   (`pacchetti/`, which `11-accendi.sh costruisci` takes from
+#   (`packets/`, which `11-accendi.sh build` takes from
 #   /media/REMOTIX/cache/apt-host).  `[M]` 30 Sep: the trixie security repository
 #   moved to 153.4.0esr while the host, and the boxes of ALL the
 #   measurements of phases 15-18, have 140.16.0esr — it is rule R2 (§3): the
@@ -163,13 +163,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   `apt-mark hold` so that an upgrade inside the box does not change it
 #   silently.  ⚠ The version is written here on purpose: when the host changes
 #   Firefox, this line changes, and it is known.
-COPY pacchetti/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb /tmp/pacchetti/firefox-esr.deb
+COPY packets/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb /tmp/packets/firefox-esr.deb
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        /tmp/pacchetti/firefox-esr.deb ffmpeg \
+        /tmp/packets/firefox-esr.deb ffmpeg \
         python3-numpy python3-pil \
         fonts-dejavu-core libpci3 \
     && apt-mark hold firefox-esr \
-    && rm -rf /tmp/pacchetti /var/lib/apt/lists/*
+    && rm -rf /tmp/packets /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
 # 5. THE TENANT — the FIRST, and with the `render` group without which the compositor
@@ -330,7 +330,7 @@ COPY adattatore.gnome.sh /usr/local/lib/rete11/adattatore.sh
 # ---------------------------------------------------------------------------
 # ⭐ R3 — 19 September 2026, phase 12 (the clipboard on KDE): A TOOL OF THE
 #   BENCH, not of the product.  `wl-clipboard` (`wl-copy`, `wl-paste`) serves
-#   `banchi/07-b54-appunti-due-versi.py --scatola` to copy and paste
+#   `banchi/07-b54-appunti-due-versi.py --container_box` to copy and paste
 #   INSIDE the session and see what the desktop received.  The product
 #   does not use it.  No daemon: two executables and the Wayland library that is there.
 #   ⚠ Last layer on purpose: the layers above stay as they were.

@@ -14,9 +14,9 @@ rc=$?
 echo "RX-ARCH: archinstall rc=$rc"
 if [ "$rc" != 0 ]; then
 	tail -60 /var/log/archinstall/install.log 2>/dev/null
-	echo "RX-ESITO: FALLITA"
+	echo "RX-ESITO: FAILED"
 else
-	echo "RX-ESITO: FATTA"
+	echo "RX-ESITO: DONE"
 fi
 sync
 sleep 3

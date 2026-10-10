@@ -20,13 +20,13 @@
 
 #define FREQ 48000
 #define N 960
-#define SECONDI 12
+#define SECS 12
 
-static uint32_t seme = 12345;
-static float caso(void)
+static uint32_t seed = 12345;
+static float case_v(void)
 {
-	seme = seme * 1664525u + 1013904223u;
-	return ((float)(seme >> 8) / 16777216.0f) * 2.0f - 1.0f;
+	seed = seed * 1664525u + 1013904223u;
+	return ((float)(seed >> 8) / 16777216.0f) * 2.0f - 1.0f;
 }
 
 int main(int argc, char **argv)
@@ -43,8 +43,8 @@ int main(int argc, char **argv)
 	unsigned char pk[4000];
 	float out[5760 * 2];
 	double t = 0;
-	int blocchi = SECONDI * FREQ / N;
-	for (int b = 0; b < blocchi; b++) {
+	int blocks = SECS * FREQ / N;
+	for (int b = 0; b < blocks; b++) {
 		int seg = b / 100;                   /* one segment every 2 s */
 		int br = (seg % 3 == 0) ? 96000 : (seg % 3 == 1) ? 32000 : 12000;
 		opus_encoder_ctl(enc, OPUS_SET_BITRATE(br));
@@ -55,9 +55,9 @@ int main(int argc, char **argv)
 			case 0: l = 0.5f * sinf(2 * M_PI * 440 * t); r = 0.4f * sinf(2 * M_PI * 660 * t); break;
 			case 1: { float f = 100 + 8000 * fmod(t, 2.0) / 2.0;
 			          l = r = 0.3f * sinf(2 * M_PI * f * t); } break;
-			case 2: l = 0.2f * caso(); r = 0.2f * caso(); break;
+			case 2: l = 0.2f * case_v(); r = 0.2f * case_v(); break;
 			default: l = (b % 50 < 10) ? 0 : 0.6f * sinf(2 * M_PI * 200 * t) * sinf(2 * M_PI * 3 * t);
-			         r = l * 0.5f + 0.05f * caso(); break;
+			         r = l * 0.5f + 0.05f * case_v(); break;
 			}
 			pcm[2 * i] = (opus_int16)lrintf(l * 32767);
 			pcm[2 * i + 1] = (opus_int16)lrintf(r * 32767);
@@ -76,6 +76,6 @@ int main(int argc, char **argv)
 	}
 	fclose(fp);
 	fclose(fa);
-	fprintf(stderr, "%d packets, libopus %s\n", blocchi, opus_get_version_string());
+	fprintf(stderr, "%d packets, libopus %s\n", blocks, opus_get_version_string());
 	return 0;
 }

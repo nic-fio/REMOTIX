@@ -1,7 +1,7 @@
 {
- "quando": "2026-08-12T13:25:22+0000",
- "macchina": "NIC-OS",
- "ignote": [],
+ "when": "2026-08-12T13:25:22+0000",
+ "host": "NIC-OS",
+ "unrecognized": [],
  "shell_pid": [
   224327
  ],
@@ -19,17 +19,17 @@
  "display": {
   "serial": 1,
   "monitor": [],
-  "logici": 0,
-  "proprieta": {
+  "logical": 0,
+  "property": {
    "layout-mode": "1",
    "supports-changing-layout-mode": "True"
   }
  },
- "controllo_positivo": {
+ "positive_check": {
   "layout_mode": "1",
   "idletime_1": 3825,
   "idletime_2": 4177,
-  "esito": true,
-  "perche": ""
+  "outcome": true,
+  "reason_text": ""
  }
 }

@@ -39,8 +39,8 @@
  *   no 0-RTT                  (§2.3) — it is in `tls.c`, where it is turned off
  *   migration not disabled    (§2.3) — `disable_active_migration` is not touched
  */
-#ifndef REMOTIX_TRASPORTO_H
-#define REMOTIX_TRASPORTO_H
+#ifndef REMOTIX_TRANSPORT_H
+#define REMOTIX_TRANSPORT_H
 
 #include "aiutante.h"
 
@@ -49,61 +49,61 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct trasporto trasporto;
+typedef struct transport transport;
 
-/* Opens the UDP socket and prepares the stack.  `porta` is the same as TCP's.
+/* Opens the UDP socket and prepares the stack.  `port` is the same as TCP's.
  *
- * ⭐ `aiuto` is the PAM helper (`DECISIONI.md` §1.10), started by `main.c`
+ * ⭐ `help` is the PAM helper (`DECISIONI.md` §1.10), started by `main.c`
  *    BEFORE this call — so the child process inherits neither the UDP socket
  *    nor the TCP listener.  ⚠ NULL is allowed: the server checks the
  *    credentials synchronously, that is stopping the thread, and it is the
  *    declared fallback of `CODER.md` §4.2. */
-trasporto *trasporto_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
-                          aiutante *aiuto);
+transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
+                          helper *help);
 
 /* ⭐ Delivers a PAM verdict to the connection that was waiting for it (§1.10).
  * ⚠ If nobody waits for it any more it writes it in the log and throws it
  *   away: it is what happens when the connection dies while PAM answers. */
-/* ⭐ D-001: `ripresa` = that user's stage already existed before this verdict;
- * it travels up to `SESSIONE` (§4.5, `2 = RIPRESA`). */
-void trasporto_verdetto(trasporto *t, uint64_t pratica, bool ammesso,
-                        bool ripresa);
-void trasporto_chiudi(trasporto *t);
+/* ⭐ D-001: `resumed` = that user's stage already existed before this verdict;
+ * it travels up to `SESSION` (§4.5, `2 = RESUMED`). */
+void transport_verdict(transport *t, uint64_t practical, bool admitted,
+                        bool resumed);
+void transport_close(transport *t);
 
-int trasporto_fd(const trasporto *t);
+int transport_fd(const transport *t);
 
 /* ⛔ After a rotation of the session certificate the TLS context changes: the
  * connections already open keep theirs, the new ones take this one.  Whoever
  * does not redo it serves for fourteen days a certificate whose fingerprint
  * the page no longer publishes. */
-void trasporto_contesto(trasporto *t, SSL_CTX *ctx);
+void transport_context(transport *t, SSL_CTX *ctx);
 
 /* The socket is readable: everything there is gets read. */
-void trasporto_leggi(trasporto *t);
+void transport_read(transport *t);
 
 /* Whatever there is to write is written on all connections. */
-void trasporto_scrivi(trasporto *t);
+void transport_write(transport *t);
 
 /* Milliseconds from now to the first timer that expires, or -1 if there is none.
  * ⛔ It is not «zero if there is none»: zero means «now», and confusing the two
  *    makes the loop spin idle burning a CPU. */
-int trasporto_attesa_ms(const trasporto *t);
+int transport_wait_ms(const transport *t);
 
 /* Expires the ripe timers (QUIC's and ours) and writes again. */
-void trasporto_scaduti(trasporto *t);
+void transport_expired(transport *t);
 
 /* How many connections are alive.  For the log. */
-size_t trasporto_quante(const trasporto *t);
+size_t transport_count(const transport *t);
 
-/* ⛔ §8.1 — «never with a silence»: sends `CONGEDO` with the reason to all live
+/* ⛔ §8.1 — «never with a silence»: sends `FAREWELL` with the reason to all live
  * sessions and closes each one with the reason's code (§3.1 point 3).  It is
- * called by whoever shuts the server down, with `RCP_SERVER_IN_CHIUSURA` (§8.2,
+ * called by whoever shuts the server down, with `RCP_SERVER_SHUTTING_DOWN` (§8.2,
  * `0x0C`).
  *
  * ⭐ Returns how many connections still have bytes to get out: whoever shuts
  *    down runs the loop until it is zero (or until its patience runs out),
  *    because «handed to ngtcp2» is not «out on the wire». */
-const char *trasporto_perche_restano(const trasporto *t);
-size_t trasporto_congeda_tutte(trasporto *t, uint8_t motivo, const char *perche);
+const char *transport_remain_reason(const transport *t);
+size_t transport_dismiss_all(transport *t, uint8_t motivo, const char *reason_text);
 
 #endif

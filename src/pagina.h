@@ -51,8 +51,8 @@
  * exhausted.  ⛔ Never a silence: whoever is banned by mistake is almost always
  * the owner».
  */
-#ifndef REMOTIX_PAGINA_H
-#define REMOTIX_PAGINA_H
+#ifndef REMOTIX_PAGE_H
+#define REMOTIX_PAGE_H
 
 #include "certificati.h"
 
@@ -61,17 +61,17 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct pagina pagina;
+typedef struct page_v page_v;
 
-pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
-                    const char *file_html, const certificati *cert);
-void pagina_chiudi(pagina *p);
+page_v *page_open(const char *address, const char *port, SSL_CTX *ctx,
+                    const char *file_html, const certificates *cert);
+void page_close(page_v *p);
 
-void pagina_contesto(pagina *p, SSL_CTX *ctx);
+void page_context(page_v *p, SSL_CTX *ctx);
 
 /* The descriptors to watch.  Returns how many it put in. */
-size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap);
+size_t page_descriptors(page_v *p, struct pollfd *dove, size_t cap);
 /* To be called after the `poll`, with the same array. */
-void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti);
+void page_move(page_v *p, struct pollfd *dove, size_t how_many);
 
 #endif

@@ -7,7 +7,7 @@ It produces a self-contained HTML file (no external files), in English:
 
 Each chapter exposes CHAPTER = (title, [(section_title, html), ...]).
 The placeholders «FIG» and «TAB» in the captions become «Figure N.M» and
-«Table N.M», numbered per chapter; rif("Title of a section") becomes the
+«Table N.M», numbered per chapter; ref("Title of a section") becomes the
 link to that section. The style is style.css and the script (search in the
 sidebar, Copy button on command blocks) is manual.js: they are the
 common canon, identical byte for byte in all the manuals, and are not modified
@@ -15,7 +15,7 @@ here; REMOTIX's only additions live in EXTRA_CSS, below.
 The file map and the numbers table are counted from the sources at every generation.
 
     python3 docs/sources/build.py              regenerates the manual
-    python3 docs/sources/build.py --controlla  checks that it is aligned with the code
+    python3 docs/sources/build.py --check  checks that it is aligned with the code
 
 It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
@@ -56,7 +56,7 @@ EXTRA_CSS = """
 .tbl-group td{background:#eef2f7 !important;font-weight:700;color:#003a90}
 """
 
-# ── Testo ───────────────────────────────────────────────────────────────
+# ── Text ───────────────────────────────────────────────────────────────
 def esc(t):
     return html.escape(t, quote=False)
 
@@ -74,8 +74,8 @@ def sysf(t):
 def ui(label):
     """Exact label of a window or a button. Long labels (whole messages) wrap,
     so as not to overflow the tables."""
-    stile = ' style="white-space:normal"' if len(label) > 40 else ""
-    return f'<span class="ui"{stile}>{esc(label)}</span>'
+    style = ' style="white-space:normal"' if len(label) > 40 else ""
+    return f'<span class="ui"{style}>{esc(label)}</span>'
 
 
 def key(*keys):
@@ -118,9 +118,9 @@ def tip(t, title="Tip."):
     return f'<div class="callout c-ok"><div class="callout-i">+</div><div><b>{title}</b> {t}</div></div>'
 
 
-def rif(titolo):
+def ref(heading):
     """Link to a section of the manual, by title; number() resolves it."""
-    return f"«RIF:{titolo}»"
+    return f"«RIF:{heading}»"
 
 
 def table(head, rows, cap, tid=None):
@@ -170,7 +170,7 @@ def term(text, title=""):
             cmd, _, comment = m.group(2).partition("   #")
             lines.append(f'<span class="pr">{esc(m.group(1))}</span><span class="cmd">{esc(cmd)}</span>'
                          + (f'<span class="dim">   #{esc(comment)}</span>' if comment else ""))
-        elif line.startswith("errore") or line.startswith("Error"):
+        elif line.startswith("failure") or line.startswith("Error"):
             lines.append(f'<span class="er">{esc(line)}</span>')
         elif line.startswith("["):
             lines.append(f'<span class="am">{esc(line)}</span>')
@@ -194,13 +194,13 @@ def tree(lines, cap):
 
 
 # ── SVG figures in the style of IR_Service ─────────────────────────────
-COL = {"dark": "#475569", "blue": "#0050C0", "light": "#3b82f6", "navy": "#003a90", "soft": "#eef2f7",
+WITH = {"dark": "#475569", "blue": "#0050C0", "light": "#3b82f6", "navy": "#003a90", "soft": "#eef2f7",
        "green": "#16a34a", "amber": "#d97706", "grey": "#94a3b8", "white": "#ffffff"}
 FONT = 'font-family="Outfit,Segoe UI,Arial,sans-serif"'
 
 
 def box(x, y, w, h, title, sub="", color="blue", size=13):
-    fill = COL[color]
+    fill = WITH[color]
     light = color in ("soft", "white")
     fg = "#334155" if light else "#fff"
     stroke = ' stroke="#cbd5e1"' if light else ""
@@ -218,7 +218,7 @@ def box(x, y, w, h, title, sub="", color="blue", size=13):
 
 def diamond(cx, cy, w, h, text, color="amber"):
     pts = f"{cx},{cy - h / 2} {cx + w / 2},{cy} {cx},{cy + h / 2} {cx - w / 2},{cy}"
-    return (f'<polygon points="{pts}" fill="{COL[color]}"/>'
+    return (f'<polygon points="{pts}" fill="{WITH[color]}"/>'
             f'<text x="{cx}" y="{cy}" text-anchor="middle" dominant-baseline="middle" font-size="12.5" '
             f'font-weight="700" fill="#fff">{esc(text)}</text>')
 
@@ -281,9 +281,9 @@ def flow(nodes, cap, title="", width=900):
     top = 50 if title else 26
     h = 64
     s = []
-    for i, (t, sub, col) in enumerate(nodes):
+    for i, (t, sub, clr) in enumerate(nodes):
         x = 20 + i * (w + gap)
-        s.append(box(x, top, w, h, t, sub, col))
+        s.append(box(x, top, w, h, t, sub, clr))
         if i < n - 1:
             s.append(arrow(x + w + 2, top + h / 2, x + w + gap - 2, top + h / 2))
     return fig("".join(s), width, top + h + 26, cap, title)
@@ -292,7 +292,7 @@ def flow(nodes, cap, title="", width=900):
 def seq(actors, events, cap, title="", width=900):
     """Sequence diagram.
     actors = [(name, subtitle, colour)];
-    events = (from, to, text[, dashed]) for a message, ("nota", i, text) for a note,
+    events = (from, to, text[, dashed]) for a message, ("remark", i, text) for a note,
              ("sep", text) for a separator with text."""
     n = len(actors)
     top = 50 if title else 22
@@ -302,7 +302,7 @@ def seq(actors, events, cap, title="", width=900):
     y = top + bh + 34
     body = []
     for ev in events:
-        if ev[0] == "nota":
+        if ev[0] == "remark":
             _, i, t = ev
             tw = max(len(t) * 6.6 + 24, 90)
             body.append(f'<rect x="{xs[i] - tw / 2}" y="{y - 15}" width="{tw}" height="26" rx="6" fill="#fff7ed" stroke="#fdba74"/>')
@@ -339,61 +339,61 @@ def seq(actors, events, cap, title="", width=900):
 
 
 # ── Sources: file map and numbers ────────────────────────────────────────
-def sorgenti():
+def sources():
     """The product files the manual describes, with their line counts: those tracked by git (no
     installer vendor/, no headers generated from the Wayland protocols). Not the benches:
     they are almost two thousand files, and the manual describes them by folder."""
     import subprocess
-    elenco = subprocess.run(["git", "-C", str(ROOT), "ls-files", "src", "installatore", "packaging", "docs/sources"],
+    listing = subprocess.run(["git", "-C", str(ROOT), "ls-files", "src", "installatore", "packaging", "docs/sources"],
                             capture_output=True, text=True, check=True).stdout.split()
-    tenuti = [f for f in elenco if "/vendor/" not in f and not f.endswith("-protocol.h")
+    kept = [f for f in listing if "/vendor/" not in f and not f.endswith("-protocol.h")
               and not f.endswith((".wasm", ".png", ".svg"))]
     # New manual sources, not yet in git, count all the same.
-    tenuti += [p.relative_to(ROOT).as_posix() for p in HERE.rglob("*") if p.is_file() and p.suffix in (".py", ".css", ".js")
+    kept += [p.relative_to(ROOT).as_posix() for p in HERE.rglob("*") if p.is_file() and p.suffix in (".py", ".css", ".js")
                and "__pycache__" not in p.parts]
-    return {f: (ROOT / f).read_bytes().count(b"\n") for f in dict.fromkeys(tenuti) if (ROOT / f).is_file()}
+    return {f: (ROOT / f).read_bytes().count(b"\n") for f in dict.fromkeys(kept) if (ROOT / f).is_file()}
 
 
-def righe(n):
+def line_list(n):
     return f"{n:,}"
 
 
 def file_map(groups, cap):
     """File map: groups = [(group, [(path, role)])]. Fails if a
     source is missing from the map or if the map cites a file that no longer exists."""
-    tutti = sorgenti()
+    all_v = sources()
     citati = [f for _, rows in groups for f, _ in rows]
-    mancano = sorted(set(tutti) - set(citati))
-    in_piu = sorted(set(citati) - set(tutti))
-    if mancano or in_piu:
+    missing = sorted(set(all_v) - set(citati))
+    in_excess = sorted(set(citati) - set(all_v))
+    if missing or in_excess:
         raise SystemExit("the manual's file map needs updating (technical/ch22_map.py):"
-                         + "".join(f"\n  missing {f}" for f in mancano)
-                         + "".join(f"\n  no longer exists {f}" for f in in_piu))
+                         + "".join(f"\n  missing {f}" for f in missing)
+                         + "".join(f"\n  no longer exists {f}" for f in in_excess))
     out = []
-    for gruppo, rows in groups:
-        out.append(gruppo)
+    for grp, rows in groups:
+        out.append(grp)
         for f, role in rows:
-            out.append([c(f), righe(tutti[f]), role])
+            out.append([c(f), line_list(all_v[f]), role])
     return table(["File", "Lines", "Role"], out, cap, "mappa-file")
 
 
-def numeri(parti, cap):
-    """Table «the project in numbers»: parti = [(name, where, contents, rule)];
+def numbers(parts, cap):
+    """Table «the project in numbers»: parts = [(name, where, contents, rule)];
     each file goes into the first part whose rule accepts it."""
-    conti = [0] * len(parti)
-    for f, n in sorgenti().items():
-        for i, (_, _, _, regola) in enumerate(parti):
-            if regola(f):
-                conti[i] += n
+    counts = [0] * len(parts)
+    for f, n in sources().items():
+        for i, (_, _, _, rule_v) in enumerate(parts):
+            if rule_v(f):
+                counts[i] += n
                 break
-    rows = [[nome, dove, righe(conti[i]), cont] for i, (nome, dove, cont, _) in enumerate(parti)]
-    rows.append(["<b>Total</b>", "", f"<b>{righe(sum(conti))}</b>", ""])
+    rows = [[label_name, dove, line_list(counts[i]), cont] for i, (label_name, dove, cont, _) in enumerate(parts)]
+    rows.append(["<b>Total</b>", "", f"<b>{line_list(sum(counts))}</b>", ""])
     return table(["Part", "Where", "Lines", "Contents"], rows, cap)
 
 
-def conta(estensione):
+def tally(extension):
     """Lines of all the files of one type (for the cover of the first chapter)."""
-    return sum(n for f, n in sorgenti().items() if f.endswith(estensione))
+    return sum(n for f, n in sources().items() if f.endswith(extension))
 
 
 # ── Cover ──────────────────────────────────────────────────────────────
@@ -403,16 +403,16 @@ def logo():
     import base64
     import io
     from PIL import Image, ImageChops
-    im = Image.open(ROOT / "grafica" / "logo" / "remotix-logo.png").convert("RGB")
-    fondo = Image.new("RGB", im.size, im.getpixel((0, 0)))
-    im = im.crop(ImageChops.difference(im, fondo).point(lambda v: 255 if v > 12 else 0).getbbox())
+    im = Image.open(ROOT / "graphical" / "logo" / "remotix-logo.png").convert("RGB")
+    background = Image.new("RGB", im.size, im.getpixel((0, 0)))
+    im = im.crop(ImageChops.difference(im, background).point(lambda v: 255 if v > 12 else 0).getbbox())
     largo = 700
     im = im.resize((largo, round(im.height * largo / im.width)), Image.LANCZOS)
     im = im.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
     buf = io.BytesIO()
     im.save(buf, "PNG", optimize=True)
-    dati = base64.b64encode(buf.getvalue()).decode()
-    return f'<div class="cover-logo"><img src="data:image/png;base64,{dati}" alt="REMOTIX"></div>'
+    data_v = base64.b64encode(buf.getvalue()).decode()
+    return f'<div class="cover-logo"><img src="data:image/png;base64,{data_v}" alt="REMOTIX"></div>'
 
 
 SEARCH = ('<div class="srch" id="srch" hidden><label class="toc-head" for="srch-q">Search</label><input type="search" '
@@ -432,7 +432,7 @@ def load_chapters(kind):
     return chapters
 
 
-def number(doc, sezioni):
+def number(doc, section_list):
     out, counters, cur = [], {}, 0
     for part in re.split(r'(<section class="chapter" id="ch\d+">)', doc):
         m = re.match(r'<section class="chapter" id="ch(\d+)">', part)
@@ -448,34 +448,34 @@ def number(doc, sezioni):
             return f'{"Figure" if k == "FIG" else "Table"} {cur}.{counters[k]}'
         out.append(re.sub(r"«(FIG|TAB)»", num, part) if counters else part)
 
-    def collega(mm):
-        titolo = mm.group(1)
-        if titolo not in sezioni:
-            raise SystemExit(f"rif(«{titolo}»): no section has this title")
-        sid, numero = sezioni[titolo]
-        return f'<a href="#{sid}">{numero} “{esc(titolo)}”</a>'
-    return re.sub(r"«RIF:([^»]+)»", collega, "".join(out))
+    def connect(mm):
+        heading = mm.group(1)
+        if heading not in section_list:
+            raise SystemExit(f"ref(«{heading}»): no section has this title")
+        sid, nr = section_list[heading]
+        return f'<a href="#{sid}">{nr} “{esc(heading)}”</a>'
+    return re.sub(r"«RIF:([^»]+)»", connect, "".join(out))
 
 
 def build(kind, outdir=ROOT / "docs"):
     meta = MANUALS[kind]
     css = (HERE / "style.css").read_text() + EXTRA_CSS
     js = (HERE / "manual.js").read_text()
-    toc, body, sezioni = [], [], {}
+    toc, body, section_list = [], [], {}
     for ci, (ctitle, sections) in enumerate(load_chapters(kind), 1):
         toc.append(f'<li class="toc-ch"><a href="#ch{ci}"><span class="toc-n">{ci}</span><span class="toc-t">{esc(ctitle)}</span></a></li>')
         body.append(f'<section class="chapter" id="ch{ci}"><div class="ch-head"><span class="ch-kick">Chapter {ci}</span>'
                     f'<h2 class="h-ch">{esc(ctitle)}</h2></div>')
-        sezioni[ctitle] = (f"ch{ci}", f"ch. {ci}")
+        section_list[ctitle] = (f"ch{ci}", f"ch. {ci}")
         for si, (stitle, shtml) in enumerate(sections, 1):
             sid = f"ch{ci}s{si}"
-            if stitle in sezioni:
-                raise SystemExit(f"two sections are called «{stitle}»: rif() would not know which one to pick")
-            sezioni[stitle] = (sid, f"{ci}.{si}")
+            if stitle in section_list:
+                raise SystemExit(f"two sections are called «{stitle}»: ref() would not know which one to pick")
+            section_list[stitle] = (sid, f"{ci}.{si}")
             toc.append(f'<li class="toc-se"><a href="#{sid}"><span class="toc-n">{ci}.{si}</span><span class="toc-t">{esc(stitle)}</span></a></li>')
             body.append(f'<section class="sec" id="{sid}"><h3 class="h-sec">{ci}.{si} · {esc(stitle)}</h3>{shtml}</section>')
         body.append("</section>")
-    doc = number("".join(body), sezioni)
+    doc = number("".join(body), section_list)
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>{meta["title"]}</title>
 <style>{css}</style></head>
@@ -506,15 +506,15 @@ def build(kind, outdir=ROOT / "docs"):
 
 
 # ── Checks: the manual aligned with the code ────────────────────────────
-def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".html", ".mjs", ".comp", ".service",
+def code_text(*dirs, estensioni=(".c", ".h", ".go", ".sh", ".py", ".html", ".mjs", ".comp", ".service",
                                              ".conf", ".rules", ".spec")):
     """The text of the git-tracked sources under those folders (no builds, no vendor/)."""
     out = []
     for f in sorted(subprocess_ls()):
-        if not any(f == c or f.startswith(c.rstrip("/") + "/") for c in cartelle) or "/vendor/" in f:
+        if not any(f == c or f.startswith(c.rstrip("/") + "/") for c in dirs) or "/vendor/" in f:
             continue
-        nome = f.rsplit("/", 1)[-1]
-        if (pathlib.Path(f).suffix in estensioni or "." not in nome) and (ROOT / f).is_file():
+        label_name = f.rsplit("/", 1)[-1]
+        if (pathlib.Path(f).suffix in estensioni or "." not in label_name) and (ROOT / f).is_file():
             out.append((ROOT / f).read_text(errors="replace"))
     return "\n".join(out)
 
@@ -524,131 +524,131 @@ def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".h
 # from the sources, which are in Italian). The manuals are entirely in English: no
 # Italian labels in brackets, no Italian quotations, no Italian text
 # in the diagrams (decision of 4 Oct 2026).
-PAROLE_ITALIANE = re.compile(
+ITALIAN_WORDS = re.compile(
     r"\b(il|lo|gli|della|delle|degli|dello|nella|nelle|negli|sono|questo|questa|quando|perché|anche|però|oppure|"
     r"finché|ancora|sempre|niente|nessun|nessuna|dopo|ogni|tutti|tutte|viene|serve|deve|può|hanno|col|coi|dal|dai|"
     r"sul|sui|alla|alle|allo|che|non|una|del|con|si|è)\b", re.I)
 
 
-PAROLE_ITALIANE_GRAFICI = re.compile(
+ITALIAN_CHART_WORDS = re.compile(
     r"\b(il|lo|gli|della|delle|dello|nella|sono|questo|quando|perché|anche|ogni|che|una|è|di|telefono|collegamento|"
     r"collegato|bloccato|chiuso|perso|cassetto|finestra|servizio|comandi|errore|risposta|evento|appunti|ricevi|"
     r"invia|chiudi|apri|notifiche|stato|primo|riserva|margine|posta|lettura|codifica|spedizione|sentinella)\b", re.I)
 
 
-def frasi_italiane(pagina):
+def italian_sentences(page_v):
     """The sentences of a manual's running text that still look Italian."""
     t = re.sub(r'<style.*?</style>|<script.*?</script>|<pre.*?</pre>|<code>.*?</code>|<kbd>.*?</kbd>', " ",
-               pagina, flags=re.S)
-    frasi = [f.strip() for f in re.split(r"(?<=[.;:!?])\s+|\n", html.unescape(re.sub(r"<[^>]+>", "\n", t)))
-             if len({w.lower() for w in PAROLE_ITALIANE.findall(f)}) >= 2]
+               page_v, flags=re.S)
+    sentences = [f.strip() for f in re.split(r"(?<=[.;:!?])\s+|\n", html.unescape(re.sub(r"<[^>]+>", "\n", t)))
+             if len({w.lower() for w in ITALIAN_WORDS.findall(f)}) >= 2]
     # Diagram labels are short: one typically Italian word is enough.
     for svg in re.findall(r"<svg.*?</svg>", t, flags=re.S):
         for x in re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.S):
             x = html.unescape(x)
-            # Options, paths and code names (--prova-codifica, figlio.c, REMOTIX_AREA) are real names, not Italian.
-            parole = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
-            if PAROLE_ITALIANE_GRAFICI.search(parole):
-                frasi.append("diagram: " + x)
-    return frasi
+            # Options, paths and code names (--encoding-test, figlio.c, REMOTIX_AREA) are real names, not Italian.
+            words = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
+            if ITALIAN_CHART_WORDS.search(words):
+                sentences.append("diagram: " + x)
+    return sentences
 
 
-def controlla():
-    errori, pagine = [], []
+def check():
+    errors, pages = [], []
     with tempfile.TemporaryDirectory() as tmp:
         for kind, meta in MANUALS.items():
-            fresco, _ = build(kind, tmp)
-            pagina = fresco.read_text()
-            if "<style>" + (HERE / "style.css").read_text() not in pagina:
-                errori.append(f"{meta['file']}: the style does not start with the common canon (style.css)")
-            if (HERE / "manual.js").read_text() not in pagina:
-                errori.append(f"{meta['file']}: the common script is missing (manual.js)")
-            pagine.append(re.sub(r"<script.*?</script>", "", pagina, flags=re.S))
-            pubblicato = ROOT / "docs" / meta["file"]
-            if not pubblicato.exists() or pubblicato.read_text() != pagina:
-                errori.append(f"«docs/{meta['file']}» does not match the sources: python3 docs/sources/build.py")
-            if VERSION not in pagina:
-                errori.append(f"{meta['file']}: version {VERSION} does not appear")
-            if '<html lang="en">' not in pagina:
-                errori.append(f"{meta['file']}: the page does not declare lang=\"en\"")
-            for frase in frasi_italiane(pagina):
-                errori.append(f"{meta['file']}: text still in Italian: {frase[:120]}")
-            ids = set(re.findall(r'\bid="([^"]+)"', pagina))
-            for a in sorted(set(re.findall(r'href="#([^"]+)"', pagina)) - ids):
-                errori.append(f"{meta['file']}: internal link #{a} without a target")
-    pagina = "\n".join(pagine)
-    codici = [html.unescape(re.sub(r"<[^>]+>", "", x)) for x in re.findall(r"<code>(.*?)</code>", pagina, re.S)]
+            fresh, _ = build(kind, tmp)
+            page_v = fresh.read_text()
+            if "<style>" + (HERE / "style.css").read_text() not in page_v:
+                errors.append(f"{meta['file']}: the style does not start with the common canon (style.css)")
+            if (HERE / "manual.js").read_text() not in page_v:
+                errors.append(f"{meta['file']}: the common script is missing (manual.js)")
+            pages.append(re.sub(r"<script.*?</script>", "", page_v, flags=re.S))
+            published = ROOT / "docs" / meta["file"]
+            if not published.exists() or published.read_text() != page_v:
+                errors.append(f"«docs/{meta['file']}» does not match the sources: python3 docs/sources/build.py")
+            if VERSION not in page_v:
+                errors.append(f"{meta['file']}: version {VERSION} does not appear")
+            if '<html lang="en">' not in page_v:
+                errors.append(f"{meta['file']}: the page does not declare lang=\"en\"")
+            for sentence in italian_sentences(page_v):
+                errors.append(f"{meta['file']}: text still in Italian: {sentence[:120]}")
+            ids = set(re.findall(r'\bid="([^"]+)"', page_v))
+            for a in sorted(set(re.findall(r'href="#([^"]+)"', page_v)) - ids):
+                errors.append(f"{meta['file']}: internal link #{a} without a target")
+    page_v = "\n".join(pages)
+    codes = [html.unescape(re.sub(r"<[^>]+>", "", x)) for x in re.findall(r"<code>(.*?)</code>", page_v, re.S)]
 
     # C functions cited as «name()»: they must exist in the product sources (src/), or in the benches' C.
-    c_testo = testo_del_codice("src", "banchi/rcp")
-    parole_c = set(re.findall(r"\b\w+\b", c_testo))
-    go_testo = testo_del_codice("installatore")
-    parole_go = set(re.findall(r"\b\w+\b", go_testo))
-    js_testo = (ROOT / "src" / "pagina.html").read_text(errors="replace")
-    parole_js = set(re.findall(r"\b\w+\b", js_testo))
-    for x in codici:
-        for nome in re.findall(r"^([A-Za-z_][\w.]*)\(\)$", x.strip()):
-            ultimo = nome.split(".")[-1]
-            if ultimo not in parole_c and ultimo not in parole_go and ultimo not in parole_js \
-                    and nome not in NOMI_NON_FUNZIONI:
-                errori.append(f"cited function that does not exist in the sources: {nome}()")
+    c_text = code_text("src", "banchi/rcp")
+    words_c = set(re.findall(r"\b\w+\b", c_text))
+    go_text = code_text("installatore")
+    words_go = set(re.findall(r"\b\w+\b", go_text))
+    js_text = (ROOT / "src" / "pagina.html").read_text(errors="replace")
+    words_js = set(re.findall(r"\b\w+\b", js_text))
+    for x in codes:
+        for label_name in re.findall(r"^([A-Za-z_][\w.]*)\(\)$", x.strip()):
+            last = label_name.split(".")[-1]
+            if last not in words_c and last not in words_go and last not in words_js \
+                    and label_name not in NON_FUNCTION_NAMES:
+                errors.append(f"cited function that does not exist in the sources: {label_name}()")
 
     # Cited files: they must exist in the repository (the name is compared, and the path if written in full).
-    tenuti = subprocess_ls()
-    nomi = {f.rsplit("/", 1)[-1] for f in tenuti}
-    for x in codici:
+    kept = subprocess_ls()
+    names = {f.rsplit("/", 1)[-1] for f in kept}
+    for x in codes:
         for f in re.findall(r"(?<![\w/.-])((?:[\w.]+[\w.-]*/)*[\w]+[\w-]*\.(?:c|h|go|sh|py|html|mjs|comp|service|conf|spec|md))\b", x):
-            if f in INTESTAZIONI_DI_SISTEMA or f in FILE_DI_SISTEMA:
+            if f in SYSTEM_HEADERS or f in SYSTEM_FILES:
                 continue
             if "/" in f and not f.startswith(("/", "~")):
-                if f not in tenuti and not any(t.endswith("/" + f) for t in tenuti):
-                    errori.append(f"cited file that does not exist: {f}")
-            elif f not in nomi and f not in FILE_DI_SISTEMA:
-                errori.append(f"cited file that does not exist: {f}")
+                if f not in kept and not any(t.endswith("/" + f) for t in kept):
+                    errors.append(f"cited file that does not exist: {f}")
+            elif f not in names and f not in SYSTEM_FILES:
+                errors.append(f"cited file that does not exist: {f}")
 
     # REMOTIX_* environment variables: all those the product reads are in the manual, and no more.
-    letto = testo_del_codice("src", "installatore", "packaging")
-    nel_codice = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
-    nel_codice |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
-    nel_manuale = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
-    for v in sorted(nel_codice - nel_manuale):
-        errori.append(f"undocumented environment variable: {v}")
+    read = code_text("src", "installatore", "packaging")
+    in_code = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", read)}
+    in_code |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", read)}
+    in_manual = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", page_v))
+    for v in sorted(in_code - in_manual):
+        errors.append(f"undocumented environment variable: {v}")
     # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
-    tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + testo_del_codice("banchi")))
-    for v in sorted(nel_manuale - tutte):
-        errori.append(f"documented but non-existent environment variable: {v}")
+    all_of = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", read + code_text("benches")))
+    for v in sorted(in_manual - all_of):
+        errors.append(f"documented but non-existent environment variable: {v}")
 
     # RX-… codes: every cited code must exist in the code, of the installer or of the server (RX-KDE-… is in kwin.c).
-    codici_rx = set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", go_testo + c_testo))
-    for x in sorted(set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", pagina)) - codici_rx):
-        errori.append(f"cited code that does not exist in the code: {x}")
-    return list(dict.fromkeys(errori))
+    rx_codes = set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", go_text + c_text))
+    for x in sorted(set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", page_v)) - rx_codes):
+        errors.append(f"cited code that does not exist in the code: {x}")
+    return list(dict.fromkeys(errors))
 
 
 def subprocess_ls():
     import subprocess
     return set(subprocess.run(["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True,
-                              check=True).stdout.split()) | set(sorgenti())
+                              check=True).stdout.split()) | set(sources())
 
 
 # Files of the machine REMOTIX runs on, not of the repository: they may be cited.
-FILE_DI_SISTEMA = {"remotix.conf", "sessione.log", "porta.conf"}
+SYSTEM_FILES = {"remotix.conf", "sessione.log", "porta.conf"}
 
 # System headers: those the sources include between < >.
-INTESTAZIONI_DI_SISTEMA = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
+SYSTEM_HEADERS = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
     (ROOT / f).read_text(errors="replace") for f in sorted(subprocess_ls())
     if f.startswith("src/") and f.endswith((".c", ".h")) and (ROOT / f).is_file())))
 
 # Spellings with brackets that are not functions: the rpm recipe syntax, Provides: bundled(ngtcp2).
-NOMI_NON_FUNZIONI = {"bundled"}
+NON_FUNCTION_NAMES = {"bundled"}
 
 
 if __name__ == "__main__":
-    if "--controlla" in sys.argv[1:]:
-        errori = controlla()
-        for e in errori:
+    if "--check" in sys.argv[1:]:
+        errors = check()
+        for e in errors:
             print("manual:", e)
-        if errori:
+        if errors:
             sys.exit(1)
         print("manual aligned with the code")
     else:

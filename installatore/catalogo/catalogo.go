@@ -11,4 +11,4 @@ package catalogo
 import _ "embed"
 
 //go:embed catalogo.json
-var Incorporato []byte
+var Embedded []byte

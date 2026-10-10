@@ -1,7 +1,7 @@
 {
- "quando": "2026-08-12T13:25:16+0000",
- "macchina": "NIC-OS",
- "ignote": [],
+ "when": "2026-08-12T13:25:16+0000",
+ "host": "NIC-OS",
+ "unrecognized": [],
  "shell_pid": [
   223820
  ],
@@ -22,30 +22,30 @@
   "serial": 2,
   "monitor": [
    {
-    "connettore": "Meta-0",
-    "fornitore": "MetaVendor",
-    "prodotto": "MetaVirtualMonitor",
-    "seriale": "0x00",
-    "modo_corrente": {
+    "connector": "Meta-0",
+    "vendor": "MetaVendor",
+    "product": "MetaVirtualMonitor",
+    "serial_number": "0x00",
+    "current_mode": {
      "id": "1920x1080@60.000",
-     "larghezza": 1920,
-     "altezza": 1080,
+     "width_px": 1920,
+     "height_px": 1080,
      "refresh": 60.0
     },
-    "modi": 1
+    "modes": 1
    }
   ],
-  "logici": 1,
-  "proprieta": {
+  "logical": 1,
+  "property": {
    "layout-mode": "1",
    "supports-changing-layout-mode": "True"
   }
  },
- "controllo_positivo": {
+ "positive_check": {
   "layout_mode": "1",
   "idletime_1": 3857,
   "idletime_2": 4208,
-  "esito": true,
-  "perche": ""
+  "outcome": true,
+  "reason_text": ""
  }
 }

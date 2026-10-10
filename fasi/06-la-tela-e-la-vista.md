@@ -21,7 +21,7 @@ redone**:
 | | state arriving from phase 4 |
 |---|---|
 | the **canvas agreed at attach** | ✅ `[M]` 1264×800 in a 1265×800 window, scale **1.000** |
-| the **reattach at a different size** | ✅ `[M]` `SESSIONE` grants the canvas the stage already has, **0** frames discarded |
+| the **reattach at a different size** | ✅ `[M]` `SESSION` grants the canvas the stage already has, **0** frames discarded |
 | the **view that rescales** | ✅ it was there since phase 2; the scale is 1 when the two canvases match |
 | ~~the **live resize**~~ | ⛔ **OUT of the product on 17 Aug 2026** (`DECISIONI.md` §5.1-bis). It was `[M]` 6 ms on Mutter and **impossible** on KWin ≤ 6.7.4: the user removed the exception instead of maintaining it |
 
@@ -42,10 +42,10 @@ redone**:
    **that the line is there**, not that «it works anyway». KDE is phase 11 and it is not on this
    machine: it is tested on the fake host, like case 11 of `banchi/04-b31`;
 5. ⏳ **the line missing from `RCP.md` §7.1**: what the server does when **the stage changes size
-   by itself**, without any `ADATTA_TELA` having asked it to. Today the server re-reads the stage and
-   **sends no `TELA`** — it works, but it is a product rule that the arbiter does not name;
+   by itself**, without any `FIT_CANVAS` having asked it to. Today the server re-reads the stage and
+   **sends no `CANVAS`** — it works, but it is a product rule that the arbiter does not name;
 6. ⚠ **the RCP/1 benches do not exercise the new route**: `01-b3-cliente.py` and `01-b4-validatore.py`
-   stay green because the wire has not changed, ⛔ but **neither of them sends an `ADATTA_TELA`**;
+   stay green because the wire has not changed, ⛔ but **neither of them sends an `FIT_CANVAS`**;
 7. `[?]` **the three things nobody has measured on the browser's numbers** (`SPECIFICHE.md` §6.1-bis):
    the **page zoom** (on Chrome `screen.width` does not change with zoom — but since the canvas is
    the **window**, is that calculation still wrong?), the **rounding** that can produce an **odd**
@@ -61,7 +61,7 @@ redone**:
 > spent on a feature that is not being built is process that serves no purpose.
 >
 > ⭐ **What remains of that brief, and remains because it is phase 6 and not multi-monitor**: the
-> **coordinates when the scale is not 1** (canvas and view different, `?adatta=no`, and the instant of
+> **coordinates when the scale is not 1** (canvas and view different, `?fit=no`, and the instant of
 > resizing). ⇒ Moved to sub-phase **6.5**, which already owns `pagina.html` and the
 > proportions of §6.2. ⚠ It is the same defect that made the mouse unusable on the DeX for two
 > days: it comes from a scale taken for granted, and today it does not show because the scale is 1 by
@@ -93,7 +93,7 @@ user**, and every sub-phase that touches a real desktop brings one of its own.*
 
 | | |
 |---|---|
-| ⛔ **a user and a port of one's own** | whoever starts a server starts **their own**: their own `--porta`, `--ban-file`, `--comando-socket`, `--certificati`. Without them, the ban of `RCP.md` §4.4-bis triggered by one bench puts **all** the others out of action, because they come from the same address |
+| ⛔ **a user and a port of one's own** | whoever starts a server starts **their own**: their own `--port`, `--ban-file`, `--command-socket`, `--certificates`. Without them, the ban of `RCP.md` §4.4-bis triggered by one bench puts **all** the others out of action, because they come from the same address |
 | ⛔ **`prova` and 7700 ARE NOT TOUCHED** | they are the **user's** bench, the only place where today the real desktop can be seen. The recipe for making one of your own is `banchi/04-b31-terreno.sh` (own user · GNOME headless **without** `--virtual-monitor` · `render` group) |
 | ⛔ **files are owned, and only those are touched** | the sub-phase table says which. A product file that is not yours **is not edited**: the defect is reported and one moves on |
 | ⛔ **no agent writes `.md` and nobody does `git`** | the documents are written at the end, with the code frozen (remark **R12C**); `git` with many hands tramples the index. ⇒ ⛔ **and no report files are produced**: what a sub-phase measures comes back **into this document**, by the coordinator's hand |
@@ -125,14 +125,14 @@ being declared. A number taken under load and not declared as such is a false nu
 
 ### The traps already paid for, which are not paid again
 
-1. ⛔ **the child without `--parlantina` is silent**: `registro_dettaglio()` of `figlio.c`
+1. ⛔ **the child without `--chatter` is silent**: `log_detail()` of `figlio.c`
    ends in nothing and the branches look «not triggered». *A diagnostic that is silent is not neutral:
    it lies*;
 2. ⛔ **the silence clock steals 30 seconds from the tests**: if 30 s pass between preparing and provoking,
    `SPECIFICHE.md` §5.3 has already released everything and something else is measured;
 3. ⛔ **the page releases by itself** on `blur`, `visibilitychange` and `pagehide`
-   (`cl_rilascia_tutto`): from the browser the server almost never has anything to release, and **one
-   certifies the page believing one is certifying the server**. To test the server, `window.cl_rilascia_tutto`
+   (`cl_release_all`): from the browser the server almost never has anything to release, and **one
+   certifies the page believing one is certifying the server**. To test the server, `window.cl_release_all`
    is replaced with a stub;
 4. ⛔ **the browser pilot cannot HOLD DOWN** a key: `javascript_tool` is used with
    `window.dispatchEvent(new KeyboardEvent("keydown", {code:"Enter"}))`, and only **non-letter** keys
@@ -141,7 +141,7 @@ being declared. A number taken under load and not declared as such is a false nu
    **declaring it**: `[M]` 100 ms per frame instead of 4.8;
 6. ⚠ **the test machine's clock is TWO HOURS behind** the laptop;
 7. ⛔ **the password never passes through the command line** (defect **D12**): a `0600` file
-   written with `printf`, `--parola-file`, and a `trap` that deletes it;
+   written with `printf`, `--password-file`, and a `trap` that deletes it;
 8. ⛔ **never a redirection AROUND `ssh` or `enter.sh`**: the `sudo` prompt goes to
    stderr and a redirection eats it — the command stays hung forever, silently;
 9. ⛔ **the witness of the real desktop**: inside the graphical session, a terminal with
@@ -153,7 +153,7 @@ being declared. A number taken under load and not declared as such is a false nu
 | question | route |
 |---|---|
 | **«compila?»** — twenty seconds | `bash src/costruisci-in-contenitore.sh` on the laptop (`podman` as user) |
-| **«gira?»** — only on the test machine | `tar` of the sources into one's own tree, then `bash /media/REMOTIX/enter.sh --root 'bash /srv/src/<albero>/src/costruisci.sh'` |
+| **«gira?»** — only on the test machine | `tar` of the sources into one's own tree, then `bash /media/REMOTIX/enter.sh --root 'bash /srv/src/<tree>/src/costruisci.sh'` |
 
 ⛔ **The container's binary is NOT copied to the test machine**: it is tied to
 ngtcp2/nghttp3 of `/usr/local` **inside the image**.
@@ -170,11 +170,11 @@ concrete scenario.*
 | # | title | what it closes | product files OWNED | benches |
 |---|---|---|---|---|
 | **6.1** | **The reattach that commands** | points **1** and **3** of §0: detach, reattach **at a different size**, and then **press a key**, **move the pointer** and **click** — with an application **opened before**. Plus the re-measurement of the four rows of phase 4 | `src/input.c` · `src/input.h` | `06-b33-*` |
-| **6.2** | **The keyboard that is reborn** | point **2**: `DISPOSIZIONE` (0x0009) at reattach, the keymap that destroys and recreates the device, and the **right character** reaching the witness | `src/tastiera.c` · `src/tastiera.h` | `06-b34-*` |
-| **6.3** | **The stage that changes size** | the chain `figli_ritela()` → `cattura_ridimensiona()` on the **real compositor**: repeated resizes, the limits of §4.5, and the case **«the stage changes by itself»** (point 5, product side) | `src/figlio.c` · `.h` · `src/cattura.c` · `.h` · `src/mutter.c` · `.h` | `06-b35-*` |
-| **6.4** | **The canvas on the wire** | points **4** and **5** arbiter side, on **bare** `rcp.c` with a fake stage: `COMPOSITORE_INCAPACE` **declared in the log**, the backstop of §7.1, `NON_ORA`, `MISURA_FUORI_LIMITI`, and ⛔ **the coordinates in flight** in the second after `TELA(ADATTATA)` — which nobody had ever tested | `src/rcp.c` · `src/rcp.h` (+ the twin `banchi/rcp/`) | `06-b36-*`, extends `04-b31-tela.c` |
-| **6.5** | **The page and the browser's numbers** | point **7**: page zoom on two engines, roundings and odd sides, the half pixel of `margin: 0 auto`, the scale and `pixelated`, the bands of §6.2, `?adatta=no\|segui`, and the **item switched off** on `COMPOSITORE_INCAPACE` | `src/pagina.html` | `06-b37-*` |
-| **6.6** | **The arbiter exercises the canvas** | point **6**: the test client sends `ADATTA_TELA` and `VISTA`, and the validator **can accuse** a missing or unsolicited `TELA` — certified with faulty recordings, each accused on the byte declared beforehand | *none* — benches only | `01-b3-cliente.py`, `01-b4-validatore.py`, `01-b4-registrazioni.py`, `06-b38-*` |
+| **6.2** | **The keyboard that is reborn** | point **2**: `LAYOUT` (0x0009) at reattach, the keymap that destroys and recreates the device, and the **right character** reaching the witness | `src/tastiera.c` · `src/tastiera.h` | `06-b34-*` |
+| **6.3** | **The stage that changes size** | the chain `children_recanvas()` → `capture_resize()` on the **real compositor**: repeated resizes, the limits of §4.5, and the case **«the stage changes by itself»** (point 5, product side) | `src/figlio.c` · `.h` · `src/cattura.c` · `.h` · `src/mutter.c` · `.h` | `06-b35-*` |
+| **6.4** | **The canvas on the wire** | points **4** and **5** arbiter side, on **bare** `rcp.c` with a fake stage: `COMPOSITOR_UNABLE` **declared in the log**, the backstop of §7.1, `NOT_NOW`, `SIZE_OUT_OF_LIMITS`, and ⛔ **the coordinates in flight** in the second after `CANVAS(ADAPTED)` — which nobody had ever tested | `src/rcp.c` · `src/rcp.h` (+ the twin `banchi/rcp/`) | `06-b36-*`, extends `04-b31-tela.c` |
+| **6.5** | **The page and the browser's numbers** | point **7**: page zoom on two engines, roundings and odd sides, the half pixel of `margin: 0 auto`, the scale and `pixelated`, the bands of §6.2, `?fit=no\|follow`, and the **item switched off** on `COMPOSITOR_UNABLE` | `src/pagina.html` | `06-b37-*` |
+| **6.6** | **The arbiter exercises the canvas** | point **6**: the test client sends `FIT_CANVAS` and `VIEW`, and the validator **can accuse** a missing or unsolicited `CANVAS` — certified with faulty recordings, each accused on the byte declared beforehand | *none* — benches only | `01-b3-cliente.py`, `01-b4-validatore.py`, `01-b4-registrazioni.py`, `06-b38-*` |
 | ~~6.7~~ | ~~the parametric multi-monitor~~ | ⛔ **removed by the user on 16 Aug 2026** — see the box in §0 | — | — |
 
 ⛔ **And a third moment that this phase does NOT have yet**: `PIANO.md` §0.4 wants the reviewer **at three
@@ -202,8 +202,8 @@ nello stesso giro, o il conto non cala mai»*).*
 | bench | what it mounts | cases | the positive control |
 |---|---|---|---|
 | `06-b33-*` (6.1) | ground `provai6`/7781 · **Wayland witness** and `gnome-terminal` **opened before** the detach · client that detaches, reattaches at a different size and **only then** types, points and clicks | 7 | **5 faults** in a copy of `input.c`: G2→C2 · G3→R1,R2 · G4→C6 · G5→C3,C4 · ⭐ **G1 lights up nothing**, and see §5 |
-| `06-b34-*` (6.2) | ground `provat6`/7721 · ⭐ **the expected value is computed by the product** (`tastiera_posizioni_per()` called from outside) · witness that records **the character**, not the count | 6 | **2 faults**: «the keymap is read only once» → red on the declared case · «the keys go away with the device» → ⛔ **green anyway**, and see §5 |
-| `06-b35-*` (6.3) | ground `provap6`/7731 · scene that moves at **50 ms** · client that sends `ADATTA_TELA` and counts the `TELA`s | 5 rounds | ⛔ ~~5 faults out of 5~~ → **3 confirmed stable (G1 G2 G3, 3 rounds out of 3) · 1 non-discriminating (G4) · 1 INTERMITTENT (G5, 2 out of 3)**, `[M]` 22 Aug. ⭐ And the fourth count — «not judged» — exists on purpose: before, G5 would have **vanished from all three columns** without a line saying so. 📖 §5.9 |
+| `06-b34-*` (6.2) | ground `provat6`/7721 · ⭐ **the expected value is computed by the product** (`keyboard_positions_for()` called from outside) · witness that records **the character**, not the count | 6 | **2 faults**: «the keymap is read only once» → red on the declared case · «the keys go away with the device» → ⛔ **green anyway**, and see §5 |
+| `06-b35-*` (6.3) | ground `provap6`/7731 · scene that moves at **50 ms** · client that sends `FIT_CANVAS` and counts the `CANVAS`s | 5 rounds | ⛔ ~~5 faults out of 5~~ → **3 confirmed stable (G1 G2 G3, 3 rounds out of 3) · 1 non-discriminating (G4) · 1 INTERMITTENT (G5, 2 out of 3)**, `[M]` 22 Aug. ⭐ And the fourth count — «not judged» — exists on purpose: before, G5 would have **vanished from all three columns** without a line saying so. 📖 §5.9 |
 | `06-b36-*` (6.4) | **bare** `rcp.c` with a fake stage **plus** the input channel and **the captured log** — the half that `04-b31` does not look at | **23** | **19 faults out of 19**, each red **in the case declared beforehand** |
 | `06-b37-*` (6.5) | HTTP collector with a probe inside the page, **on the two engines** (no CDP, which is Chrome only) · external truth `xwininfo` · verdicts **on the pixels** (`ffmpeg x11grab`) | 7 scenes | the zoom verified on `devicePixelRatio` **and not on the key pressed**; every zero with its denominator (20 points · 2 523 columns · 4 resizes) |
 | `06-b38-*` (6.6) | the test client and **the arbiter** exercising the canvas; mutations of the arbiter itself | **49** recordings | **49 accused on the byte declared beforehand** · 4 outcomes covered · **19 mutations out of 19** seen |
@@ -212,7 +212,7 @@ nello stesso giro, o il conto non cala mai»*).*
 
 | | |
 |---|---|
-| ⛔ `04-b31-certifica.sh` | **G8's anchor had expired**: on 16 Aug `rcp_tela_rimanda()` was born between the two functions the anchor named, and since then **the most serious of the twelve faults was no longer grafted**. The certifier said so (`??`) and nobody ran it. ⇒ Again **12 out of 12** |
+| ⛔ `04-b31-certifica.sh` | **G8's anchor had expired**: on 16 Aug `rcp_canvas_postpone()` was born between the two functions the anchor named, and since then **the most serious of the twelve faults was no longer grafted**. The certifier said so (`??`) and nobody ran it. ⇒ Again **12 out of 12** |
 | ⛔⛔ `01-b3-cliente.py` ↔ `01-b4-validatore.py` | the client wrote `RCPREG 0x00 0x01`, the arbiter demanded `0x02`: **since 12 Aug every B3 trace came out «broken recording»** and the five checks of `01-b3-lancia.sh` failed. ⭐ **Neither of the two files was broken on its own: the defect lay between the two** |
 
 ## 3 · What was developed
@@ -222,10 +222,10 @@ quarters of work already done, and it found nine real defects under that work.
 
 | file | what, and who |
 |---|---|
-| `src/rcp.c` · `.h` (6.4) | ⛔ **`VISTA` (`0x0008`) fell into the `default`**: a conforming client that declares it has resized **lost the session** — literally the symptom that remark R1.17 exists to make impossible. Now there is `case T_VISTA` (~4950), which validates, keeps and writes, **without touching the canvas or the encoder** · an `ADATTA_TELA` of **false length** passed the resize to the stage **before** saying farewell (`misura_campi()`, R9.4 reopened) · the stage recalled to the **old** canvas while a request was **in flight** (`tela_richiama_il_palco()`, ~2847) · the grace second that opened **with date zero** · the view of `ATTACCA` read and thrown away, now kept (`rcp_vista()`) and zero rejected |
-| `src/figlio.c` (6.3) | ⛔ `GIA_COSI` with the format not yet negotiated answered **`TELA(RIFIUTATA, NON_ORA)` on a healthy session** (`:3973-4032`): `cattura_misura_negoziata()` returns `FALSE` **without writing anything**, and for `rispondi_tela()` zero means «I did not make it» · ⭐ **`input_rilascia_tutto()` before `cattura_ridimensiona()`** (`:3964`), the cure asked for by 6.1 |
-| `src/input.c` (6.1) | ⛔ the defect **declared instead of silent**: `segna_orfani()` (`:630-648`) writes **at the instant the damage occurs**; a release that Mutter swallows **no longer counts as sent** (returns −1, `:256-336`); `input_rilascia_tutto()` separates «released» from «**not releasable**», which before ended up in the same number **and absolved it**; `input_orfani()` for the bench. ⛔ And the comment that said *«al ricambio si rilascia sul dispositivo nuovo, che è l'unico posto dove il rilascio arriva»* was **refuted and rewritten** |
-| `src/pagina.html` (6.5) | ⛔⛔ **`Math.round` → `Math.floor`** in `misura_vista()` (`:1450`): at a **non-integer** `devicePixelRatio` the product `clientWidth × dpr` asked for **a pixel that does not exist** ⇒ canvas wider than the window ⇒ scrollbar ⇒ −22 px of height ⇒ **scale 0.9651** ⇒ `auto` ⇒ **interpolated text** · the «fit the desktop» item now **really switches off** after `COMPOSITORE_INCAPACE` (`:2823, 3581, 3587, 3727`), where before one was sent at every resize · repeating the request applies **only to `NON_ORA`** (`:3784`) |
+| `src/rcp.c` · `.h` (6.4) | ⛔ **`VIEW` (`0x0008`) fell into the `default`**: a conforming client that declares it has resized **lost the session** — literally the symptom that remark R1.17 exists to make impossible. Now there is `case T_VIEW` (~4950), which validates, keeps and writes, **without touching the canvas or the encoder** · an `FIT_CANVAS` of **false length** passed the resize to the stage **before** saying farewell (`measure_fields()`, R9.4 reopened) · the stage recalled to the **old** canvas while a request was **in flight** (`canvas_recall_stage()`, ~2847) · the grace second that opened **with date zero** · the view of `ATTACH` read and thrown away, now kept (`rcp_vista()`) and zero rejected |
+| `src/figlio.c` (6.3) | ⛔ `GIA_COSI` with the format not yet negotiated answered **`CANVAS(RIFIUTATA, NOT_NOW)` on a healthy session** (`:3973-4032`): `capture_measure_negotiated()` returns `FALSE` **without writing anything**, and for `reply_canvas()` zero means «I did not make it» · ⭐ **`input_release_all()` before `capture_resize()`** (`:3964`), the cure asked for by 6.1 |
+| `src/input.c` (6.1) | ⛔ the defect **declared instead of silent**: `mark_orphans()` (`:630-648`) writes **at the instant the damage occurs**; a release that Mutter swallows **no longer counts as sent** (returns −1, `:256-336`); `input_release_all()` separates «released» from «**not releasable**», which before ended up in the same number **and absolved it**; `input_orphans()` for the bench. ⛔ And the comment that said *«al ricambio si rilascia sul dispositivo nuovo, che è l'unico posto dove il rilascio arriva»* was **refuted and rewritten** |
+| `src/pagina.html` (6.5) | ⛔⛔ **`Math.round` → `Math.floor`** in `view_size()` (`:1450`): at a **non-integer** `devicePixelRatio` the product `clientWidth × dpr` asked for **a pixel that does not exist** ⇒ canvas wider than the window ⇒ scrollbar ⇒ −22 px of height ⇒ **scale 0.9651** ⇒ `auto` ⇒ **interpolated text** · the «fit the desktop» item now **really switches off** after `COMPOSITOR_UNABLE` (`:2823, 3581, 3587, 3727`), where before one was sent at every resize · repeating the request applies **only to `NOT_NOW`** (`:3784`) |
 | `banchi/rcp/` | the twin kept **identical byte for byte**, verified with `cmp` |
 
 ⏳ **And a user decision being implemented** (sub-phase 6.2, second round):
@@ -271,10 +271,10 @@ Gecko · WebKit) and not the systems: ⏳ the line about Windows must be added a
 
 | | |
 |---|---|
-| the decoder ceiling declared by the client | `video.misura_massima=3840x2160` |
-| the session | `tela=2540x868 vista=2541x869 disposizione=it`, from `[192.168.0.21]` |
+| the decoder ceiling declared by the client | `video.max_size=3840x2160` |
+| the session | `canvas_size=2540x868 vista=2541x869 arrangement=it`, from `[192.168.0.21]` |
 | the invariant **I2** | *««prova» è già servito dal figlio pid 588775: NON ne nasce un secondo»* — the stage is the same because it belongs to the **session** (I4) |
-| the stream | `3829 fotogrammi consegnati (10 chiavi), 0 guasti`, codec 1, 60/s requested; `1197 spediti, 7 abbandonati` |
+| the stream | `3829 frames delivered (10 keys), 0 faults`, codec 1, 60/s requested; `1197 shipped, 7 abandoned` |
 
 ⛔⛔ **And the fact that matters for this phase: his window was ODD on both sides —
 2541×869 — and the granted canvas is 2540×868**, truncated down by one pixel per side. ⇒ The two `[?]` of
@@ -288,7 +288,7 @@ symptom. ⚠ *«He saw nothing» is not a measurement*: the measurement is the j
 *Declared by the user on 16 Aug 2026. Until tonight every measurement of this project — Linux and
 Android/DeX — had been taken with an **integer** factor.*
 
-⇒ The case is completely determined, and `[R]` reading `src/pagina.html` (`cornice()`, ~1889)
+⇒ The case is completely determined, and `[R]` reading `src/pagina.html` (`border()`, ~1889)
 explains **why it holds**:
 
 | | |
@@ -314,12 +314,12 @@ the benches stopped** before becoming the phase's numbers.
 | what | expected *declared beforehand* | `[M]` measured | who |
 |---|---|---|---|
 | canvas agreed at attach | the size requested, even sides | **1264×800**, three rounds out of three | 6.1 |
-| reattach at a different size | `SESSIONE` grants **the stage's one** (I4) | **1264×800** + line `RIPIEGO DICHIARATO (§4.5)` | 6.1 |
+| reattach at a different size | `SESSION` grants **the stage's one** (I4) | **1264×800** + line `FALLBACK DICHIARATO (§4.5)` | 6.1 |
 | frames discarded for size | **0** | **0** in all rounds of all sub-phases | 6.1 · 6.3 |
 | **the canvas passed to the stage** *(⛔ it was labelled «live resize»: see §5.14)* | ~6 ms (`[M]` 15 Aug) | **5 ms** · **4 ms** median over 9 changes (3-13) | 6.1 · 6.3 |
-| `SESSIONE` → first frame, stage **to be mounted** | ~311 ms (`[M]` 15 Aug) | **335 ms** | 6.3 |
+| `SESSION` → first frame, stage **to be mounted** | ~311 ms (`[M]` 15 Aug) | **335 ms** | 6.3 |
 | ⭐ same, stage **already up** (I4) | — | **11 · 13 · 17 · 24 · 28 · 37 · 106 ms** | 6.3 |
-| full round `ADATTA_TELA`→`TELA` server side | — | **40 ms** (31-60); Mutter takes **32** of them | 6.3 |
+| full round `FIT_CANVAS`→`CANVAS` server side | — | **40 ms** (31-60); Mutter takes **32** of them | 6.3 |
 | **monitor** scale (server side) | 1.000 | **1.000** on «Meta-0», and the line is written **even when it is good** | 6.1 |
 | ⛔ **drawing** scale (page side) | 1.000 and `pixelated` | **1.000** on the pixels (986 out of 986) — ⚠ and see §4.3 | 6.5 |
 
@@ -342,8 +342,8 @@ interpolated*.
 |---|---|
 | «it is laid out, not stretched» (§6.2) | proportion gap **0.00-0.07 %**; bands **black and outside the buffer**; at scale 0.70 the price of non-1 shows: **52.5 %** (Chrome) and **29.7 %** (FF) of blurred columns |
 | ⭐ **coordinates at scale ≠ 1** | **20 points on two engines, worst gap 1 px** (Firefox only, bottom-right corner at s=0.707); with resizing **0 px after settling**, ⚠ and a transient of **97 px** while the image changes size under the finger |
-| the three modes of `?adatta=` | `no` **0** · off by itself **0** · `segui` **4 out of 4**, with the 4 `resize`s arrived in all three — ⇒ **I6 respected** |
-| the item switched off on `COMPOSITORE_INCAPACE` | ⛔ before: **it never faked success, but it did not switch off** (5 `ADATTA_TELA` after the refusal) ⇒ after the cure **0 and 0**, guard active 4/4 |
+| the three modes of `?fit=` | `no` **0** · off by itself **0** · `follow` **4 out of 4**, with the 4 `resize`s arrived in all three — ⇒ **I6 respected** |
+| the item switched off on `COMPOSITOR_UNABLE` | ⛔ before: **it never faked success, but it did not switch off** (5 `FIT_CANVAS` after the refusal) ⇒ after the cure **0 and 0**, guard active 4/4 |
 
 ### 4.3-bis · ⛔⭐ 17 AUG 2026 — the same page **without** live resizing
 
@@ -355,10 +355,10 @@ and the other four scenes read it. A regression there would have been seen by no
 
 | | `[M]` 17 Aug 2026, `06-b37`, each scene in an invocation of its own |
 |---|---|
-| ⭐ **the whole battery** | **12 combinations out of 12 green** — six scenes (`numeri` · `pixel` · `sfora` · `coordinate` · `modi` · `voce`) for two engines (Chrome, Firefox), **zero red lines** |
-| ⭐ the modes of `?adatta=`, **with their meaning reversed** | `no` **0** · default **0** · `segui` **0**, with **4 `resize` out of 4** arrived in all three ⇒ the canvas **is not touched in a live session**, not even with the old address |
-| ⭐⭐ **the positive controls**, which were not there yesterday | **spy SEES** in all rounds (a `chiedi_tela` called by hand is counted) and `typeof tela_forse_chiedi` = **`undefined`**. ⛔ Without them those three zeros would have been green **even with the spy broken** |
-| the item switched off, V4 with the new question | after an injected `COMPOSITORE_INCAPACE`: **4 resizes arrived, 0 arrivals at `chiedi_tela`**, `tela_spenta` = `True`, and the declaration to the user comes out: *«Questo desktop non sa cambiare misura: l'immagine viene adattata alla finestra dal browser»* |
+| ⭐ **the whole battery** | **12 combinations out of 12 green** — six scenes (`numbers` · `pixel` · `sfora` · `coordinate` · `modes` · `entry`) for two engines (Chrome, Firefox), **zero red lines** |
+| ⭐ the modes of `?fit=`, **with their meaning reversed** | `no` **0** · default **0** · `follow` **0**, with **4 `resize` out of 4** arrived in all three ⇒ the canvas **is not touched in a live session**, not even with the old address |
+| ⭐⭐ **the positive controls**, which were not there yesterday | **spy SEES** in all rounds (a `ask_canvas` called by hand is counted) and `typeof tela_forse_chiedi` = **`undefined`**. ⛔ Without them those three zeros would have been green **even with the spy broken** |
+| the item switched off, V4 with the new question | after an injected `COMPOSITOR_UNABLE`: **4 resizes arrived, 0 arrivals at `ask_canvas`**, `canvas_off` = `True`, and the declaration to the user comes out: *«Questo desktop non sa cambiare misura: l'immagine viene adattata alla finestra dal browser»* |
 | the stage, judged before the product | **183-184 frames in 3 s · 6 `resize` beaten → 6 arrived** (`LEZIONI.md` §1.15 does not reproduce here) |
 | ⏱ **what it costs to redo it** | **~35 s per scene** · ~3 min 30 s one engine · **~7 minutes** the whole battery on two engines |
 
@@ -377,11 +377,11 @@ and the other four scenes read it. A regression there would have been seen by no
 |---|---|
 | `06-b36` on bare `rcp.c` | first round **15/20 · 5 red** ⇒ after the cures **23/23**, and **19 faults out of 19** |
 | `04-b31`, the phase 4 bench | **19/19** and **12/12** (it was 11/12 because of the expired anchor) |
-| the arbiter against the **product** | **5 rounds out of 5 conforming**, 6 `ADATTA_TELA`/`TELA` pairs closed — `rcp.c` `8ce10fe5…`. ⭐ And the most promising case gave the opposite: `ADATTA_TELA(1281×800)` receives **`TELA(ADATTATA, 1280×800)`** — the server rounds to even **and declares it in the field** |
+| the arbiter against the **product** | **5 rounds out of 5 conforming**, 6 `FIT_CANVAS`/`CANVAS` pairs closed — `rcp.c` `8ce10fe5…`. ⭐ And the most promising case gave the opposite: `FIT_CANVAS(1281×800)` receives **`CANVAS(ADAPTED, 1280×800)`** — the server rounds to even **and declares it in the field** |
 | the certified validator | **49 recordings out of 49** accused on the byte declared beforehand · 4 outcomes covered (conforming 13 · non-conforming 28 · broken 7 · nothing to judge 1) · **19 mutations out of 19** |
 | the limits of §4.5 on the real stage | 320×240 **ADATTATA** · 318×240 **RIFIUTATA** · 1281×801 → **1280×800** · 7682×4320 **RIFIUTATA** · with the client's ceiling 3842×2160 → **3840×2158**, fallback declared |
-| the **coordinates in flight** (§7.1, never tested before) | within the second: **saturated and written** · **1000 ms inside, 1001 ms `ERRORE_PROTOCOLLO`** · the real error is not covered by the grace |
-| the stage that changes **by itself** | **zero unsolicited `TELA`, ever** (wire: 3 changes in a row; product: recalled, **back in 37 ms**, 0 frames of wrong size to the client) |
+| the **coordinates in flight** (§7.1, never tested before) | within the second: **saturated and written** · **1000 ms inside, 1001 ms `PROTOCOL_ERROR`** · the real error is not covered by the grace |
+| the stage that changes **by itself** | **zero unsolicited `CANVAS`, ever** (wire: 3 changes in a row; product: recalled, **back in 37 ms**, 0 frames of wrong size to the client) |
 
 ### 4.5 · The keyboard at reattach
 
@@ -389,22 +389,22 @@ and the other four scenes read it. A regression there would have been seen by no
 |---|---|---|
 | session `it`, reattach declaring `it` | `aèò\@a` twice | ✅ identical (positive control) |
 | session `it`, reattach declaring **`us`** / **`de`** | if §7.3 is true, the characters change | ⛔ **identical to `it`** ⇒ §7.3 **refuted**: see `DECISIONI.md` §5-bis.7 |
-| ⭐ the **session** goes `it`→`de` with a live stage | keymap re-read ⇒ `azy\a` | ✅ **`azy\a`**, `ricambi_tastiera` 0→1, fingerprint `8315b8d9`→`d1c54543` |
+| ⭐ the **session** goes `it`→`de` with a live stage | keymap re-read ⇒ `azy\a` | ✅ **`azy\a`**, `keyboard_replacements` 0→1, fingerprint `8315b8d9`→`d1c54543` |
 | detach with **Shift really pressed**, reattach | released ⇒ lowercase | ✅ `rilascio al distacco: 1`, witness **`az`** |
-| same, but **the device dies with the key down** | release on the **new** device | ✅ `ricambi_tastiera` 4→5, `az` |
-| malformed · unknown · with-variant layouts | `ERRORE_PROTOCOLLO` · `SESSIONE_NON_SERVIBILE` · — | ✅ `0x0b` × 4 · `0x0e` × 3 · ⛔ **`it(nonesiste)` opens the session** |
+| same, but **the device dies with the key down** | release on the **new** device | ✅ `keyboard_replacements` 4→5, `az` |
+| malformed · unknown · with-variant layouts | `PROTOCOL_ERROR` · `SESSION_UNSERVABLE` · — | ✅ `0x0b` × 4 · `0x0e` × 3 · ⛔ **`it(nonesiste)` opens the session** |
 
 ### 4.6 · ⛔⛔ The defect that no log declared — the click that dies
 
 | | `[M]` 16 Aug 2026, bench `06-b33` |
 |---|---|
-| the scene | `BTN_LEFT` **held down** → `ADATTA_TELA` → the devices are recreated → it is released |
+| the scene | `BTN_LEFT` **held down** → `FIT_CANVAS` → the devices are recreated → it is released |
 | what happens | the release of the **key** arrives, that of the **button** does not ⇒ ⛔ **and the next round, identical to one that had been green on everything, no longer delivers ANY click — forever** |
 | how it heals | ⭐ only by restarting the server (which forces `drop_device`) |
 | the chain, all `[R]` **inside Mutter** | `remove_viewport_devices()` (`meta-eis-client.c:197-206`) **does not go through `drop_device()`** · `handle_button()` (`:612-621`) **silently swallows** the release for a button not pressed *on that* device · `update_button_count()` (`meta-seat-impl.c:899-908`) belongs **to the seat**: the press of the dead device keeps it at 1, and it **never goes down to zero** |
 | ⇒ | ⭐ It is *«su Android il mouse non prende più i click»* (the user, 15 Aug) **for a cause different from the one cured then** |
-| the cure | **one line**: `input_rilascia_tutto()` **before** `cattura_ridimensiona()` — applied, `figlio.c` · `codificatore_di()` |
-| ⛔ **and it is not enough** | `[M]` the devices are recreated **even without a size change**: every `cattura_risveglia()` (400 ms, still scene and key due) is followed 8-24 ms later by a swap — **3 wake-ups, 3 swaps**, with **zero `ADATTA_TELA`**. ⇒ That is **exactly while the user holds the mouse down on a still desktop**, and the obvious cure (releasing at every wake-up) **would destroy every drag** |
+| the cure | **one line**: `input_release_all()` **before** `capture_resize()` — applied, `figlio.c` · `encoder_of()` |
+| ⛔ **and it is not enough** | `[M]` the devices are recreated **even without a size change**: every `capture_wake()` (400 ms, still scene and key due) is followed 8-24 ms later by a swap — **3 wake-ups, 3 swaps**, with **zero `FIT_CANVAS`**. ⇒ That is **exactly while the user holds the mouse down on a still desktop**, and the obvious cure (releasing at every wake-up) **would destroy every drag** |
 
 ### 4.7 · ⭐⭐ The user's decision IMPLEMENTED — `Ctrl+Z` from a German keyboard
 
@@ -417,8 +417,8 @@ letters (§5-bis.6) and what moves are the **positions**.*
 | client declares `de`, session `it`, the `Ctrl+Z` of a German keyboard is pressed (evdev **21**) | renegotiated ⇒ **`1a`** (undo) · not renegotiated ⇒ **`19`** (redo) | ⭐ **`1a`** |
 | ⛔ the same scene **with the cure removed** | **`19`** | **`19`** — and the server **predicts the symptom by itself**: *«RIPIEGO DICHIARATO (§5-bis.7): … le SCORCIATOIE no: `Ctrl+Z` finirà sul tasto che quella posizione ha nell'ALTRA disposizione»* |
 | reattach declaring `us` on session `it` | `a\@a` (`è`/`ò` do not exist on `us`) | **`a\@a`** — ⚠ yesterday it was `aèò\@a` |
-| `DISPOSIZIONE` (`0x0009`) with the session open | connection **alive**, keymap changed | **alive**, `KEYMAP CAMBIATA → de [German]` — ⚠ yesterday: farewell `0x0b` |
-| `hu` · `tr` (which the machine **has**) | now **accepted** | session opened — ⚠ yesterday `SESSIONE_NON_SERVIBILE` |
+| `LAYOUT` (`0x0009`) with the session open | connection **alive**, keymap changed | **alive**, `KEYMAP CAMBIATA → de [German]` — ⚠ yesterday: farewell `0x0b` |
+| `hu` · `tr` (which the machine **has**) | now **accepted** | session opened — ⚠ yesterday `SESSION_UNSERVABLE` |
 | `it(qwertz)` · `it(nonesiste)` | now **rejected** | `0x0e` — ⚠ yesterday they **opened** |
 | `de(neo)` | accepted and loaded | `de+neo` → **`[German (Neo 2)]`** |
 
@@ -429,7 +429,7 @@ anchors) instead of being applied on the sly while another agent was working on 
 ⭐ **Applied by the coordinator on 17 Aug 2026, with the benches stopped**: the product compiles **without
 warnings** and `04-b31` stays **19 out of 19**.
 
-⚠ **Two declared limits**: `input_disposizione()` is **GNOME's** (`libei` has no
+⚠ **Two declared limits**: `input_layout()` is **GNOME's** (`libei` has no
 client→server direction for the keymap, and Mutter offers no setter: the lever is `input-sources`) ⇒ **on KWin
 it will not work**, and the right place is `mutter.c` with the twin `kwin.c` — it is phase 11 work. And
 `gsd-keyboard` can overwrite us again: it is not prevented (it is *«il contorno»* of `CODER.md` §4.1-bis), **it is
@@ -455,17 +455,17 @@ and five encoders** on the same iGPU.*
 
 | scene | expected *declared beforehand* | `[M]` measured |
 |---|---|---|
-| ⭐ **A · dragging the border** | **0 broken out of 18** | ⭐ **0 out of 18** — the 1st request `NON_ORA` **immediately**, the 2nd `ADATTATA`, final canvas = that of the **second** in **31.7 ms** median (23.8-45.3) · **0** wrong size · **0** discarded · ⛔ **no wait of 3 s**. And **0 out of 10** even at 5 ms apart, and **0 out of 10** under CPU load **10.9** |
+| ⭐ **A · dragging the border** | **0 broken out of 18** | ⭐ **0 out of 18** — the 1st request `NOT_NOW` **immediately**, the 2nd `ADAPTED`, final canvas = that of the **second** in **31.7 ms** median (23.8-45.3) · **0** wrong size · **0** discarded · ⛔ **no wait of 3 s**. And **0 out of 10** even at 5 ms apart, and **0 out of 10** under CPU load **10.9** |
 | ⭐ **B · the click held down** | the release arrives, and the clicks of the **second round** all arrive | ⭐ log: *«RILASCIATI 2 fra tasti e pulsanti PRIMA di ridimensionare»* · and in the second round, **without restarting the server**, the witness sees **all nine acts, click included** |
-| ⭐ **C · the keyboard that commands** | **`1a`** | ⭐ **`1a`**, with the whole chain in the log: `§5-bis.7 «de» chiesta` → `tastiera TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
-| ⛔ **D · the milliseconds, with the machine idle** — ⚠ **NOT RECOMPUTABLE, see §5.6** | retake the five numbers | the canvas passed to the stage **4 ms** median (3-7, n=10) · Mutter **39.5 ms** · full round server side **44.5 ms**, **10/10 ADATTATA** · `SESSIONE`→1st frame **25 ms** with the stage up and **203-220 ms** to be mounted (it was 335) · **0** discarded, **0** wrong size |
+| ⭐ **C · the keyboard that commands** | **`1a`** | ⭐ **`1a`**, with the whole chain in the log: `§5-bis.7 «de» chiesta` → `keyboard TOLTA (ricambio 1)` → `KEYMAP CAMBIATA → de [German]` |
+| ⛔ **D · the milliseconds, with the machine idle** — ⚠ **NOT RECOMPUTABLE, see §5.6** | retake the five numbers | the canvas passed to the stage **4 ms** median (3-7, n=10) · Mutter **39.5 ms** · full round server side **44.5 ms**, **10/10 ADATTATA** · `SESSION`→1st frame **25 ms** with the stage up and **203-220 ms** to be mounted (it was 335) · **0** discarded, **0** wrong size |
 
-⭐ **And the positive control paid off where it counted**: with the line in `figlio.c` · `codificatore_di()` switched off and recompiled,
+⭐ **And the positive control paid off where it counted**: with the line in `figlio.c` · `encoder_of()` switched off and recompiled,
 the click case goes back to **DIFETTO_VIVO** — in the second round **no button arrives any more**, only the
 keys, that is §4.6 to the letter. Switched back on, everything returns.
 
 ⛔⛔ **But on dragging the positive control did NOT pay off, and it must be said loudly**: removing 6.4's cure
-(`rcp.c` · `tela_richiama_il_palco()`, the recall to the size **in flight**) still gives **0 out of 18**. ⇒ **It is not
+(`rcp.c` · `canvas_recall_stage()`, the recall to the size **in flight**) still gives **0 out of 18**. ⇒ **It is not
 that cure that holds this scene**, and the **4 out of 18** measured by 6.3 **were not
 reproduced** — neither at 10-35 ms, nor at 5 ms, nor under CPU load 10.9. ⚠ The difference that remains between the
 two measurements is **GPU contention**: that day there were five encoders on the same iGPU, and
@@ -487,7 +487,7 @@ hunt killed seven hypotheses one at a time (the list was in the resume box of
 can read**.*
 
 **The symptom, with its measurement**: blocks of **64×192** that move with the content. `[M]` The
-user's real session, **while he was seeing them**, said `dipinti 23 · video 23→23 · salt 0 · buchi
+user's real session, **while he was seeing them**, said `painted 23 · video 23→23 · salt 0 · holes
 0 · ord 0 · mis 0 · err 0`. ⇒ No frame was missing: **the pixels inside the frames that arrived
 were corrupted**, and no counter could see it.
 
@@ -518,7 +518,7 @@ Painting with **`createImageBitmap()` + `transferFromImageBitmap()`** on a
 scene**: *«NIENTE ARTEFATTI!»*
 
 ⚠ **What it entails in the product**, and it is not one line: today the frame passes through **two** 2D canvases
-(`deposito_p.drawImage(f)` and then `componi()` → `pennello.drawImage(deposito)`). ⭐ The **cursor is not
+(`repository_p.drawImage(f)` and then `compose()` → `brush.drawImage(repository)`). ⭐ The **cursor is not
 painted on the canvas** — it is a CSS cursor — so the visible canvas need not compose anything and
 `bitmaprenderer` is enough for it. ⚠ The **centring inside the buffer** is lost, which is redone with CSS, and
 **the cost must be measured**: `createImageBitmap` is asynchronous, and delay is the number for which phase 3
@@ -528,12 +528,12 @@ exists.
 
 | | |
 |---|---|
-| ⭐ **the snapshot on command** (`src/figlio.c`, `SIGUSR1`/`SIGUSR2`) | the child asks for a **key** and puts on disk, from the same instant, `scatto-ingresso.bgrx` (the pixels the encoder has in hand), `scatto-flusso.obu` (the bytes sent) and `scatto-uscita.bgrx`. ⛔ It is not a product switch: it writes only with `--rilievo`. ⚠ The signal arrives at the **parent** and must be **forwarded**, because `systemctl kill --kill-whom=main` delivers only to it — and `--kill-whom=all` would say «die» to `gnome-shell` |
+| ⭐ **the snapshot on command** (`src/figlio.c`, `SIGUSR1`/`SIGUSR2`) | the child asks for a **key** and puts on disk, from the same instant, `scatto-ingresso.bgrx` (the pixels the encoder has in hand), `scatto-flusso.obu` (the bytes sent) and `scatto-uscita.bgrx`. ⛔ It is not a product switch: it writes only with `--survey`. ⚠ The signal arrives at the **parent** and must be **forwarded**, because `systemctl kill --kill-whom=main` delivers only to it — and `--kill-whom=all` would say «die» to `gnome-shell` |
 | ⭐ **`banchi/07-b48-tela-contro-verita.html`** | manufactures a synthetic truth, encodes it with `ffmpeg`, gives it back to the browser's `VideoDecoder` and compares **`copyTo` against the truth** *and* **`getImageData` against the truth**. ⛔ **It does not have a line of REMOTIX inside**, and that is why its green is worth something |
 | ⭐ **`banchi/07-b49-occhi-sulla-tela.py`** | it does not measure: it keeps the scene in view with **one** variable changed (`gfx.webrender.software`) and has **the user look at it**. It is the only tool that sees where `getImageData` is blind |
 
 ⛔ **And the bench certified itself before being believed** (`PIANO.md` §0.3.4): with the faults
-**injected** — `certifica AV1` and `certifica H264` — it says *«è la decodifica: la tela ha ricevuto
+**injected** — `certify AV1` and `certify H264` — it says *«è la decodifica: la tela ha ricevuto
 pixel già rotti e li ha dipinti fedelmente»*, that is it **can see the defect it is looking for**.
 
 #### ⚠ And a measurement that had nothing to do with the hunt, but must be kept
@@ -556,16 +556,16 @@ frame, the cost that phase 4 had measured — and the view's one.
 | what changes | and why it breaks nothing |
 |---|---|
 | **the store is gone** | `transferFromImageBitmap` sizes the canvas by itself, and nobody rewrites `width` ⇒ when the window is resized the frame **stays**. The reason the store existed (§5.1, the black during a gap) falls by itself |
-| **the frame border is redone only at the new size** | it is CSS, and doing it at every frame would be the stylesheet reflow that `adatta_vista()` avoids on purpose |
-| ⛔ **`createImageBitmap` is asynchronous** | ⇒ every frame carries a **sequence number** and an **epoch**: whoever arrives after a newer one is thrown away and **counted** (`tardive`), and whoever arrives from a dead session does not paint over the live one |
-| ⛔ **and the fallback is declared** | without `bitmaprenderer` or `createImageBitmap` it goes back to the 2D canvas **and the line says so**. ⭐ And `?tela=2d` turns on the old route on request: it serves to **compare**, and it is the only way to redo that comparison on the day the symptom came back |
+| **the frame border is redone only at the new size** | it is CSS, and doing it at every frame would be the stylesheet reflow that `fit_view()` avoids on purpose |
+| ⛔ **`createImageBitmap` is asynchronous** | ⇒ every frame carries a **sequence number** and an **epoch**: whoever arrives after a newer one is thrown away and **counted** (`belated`), and whoever arrives from a dead session does not paint over the live one |
+| ⛔ **and the fallback is declared** | without `bitmaprenderer` or `createImageBitmap` it goes back to the 2D canvas **and the line says so**. ⭐ And `?canvas_size=2d` turns on the old route on request: it serves to **compare**, and it is the only way to redo that comparison on the day the symptom came back |
 
 **`[M]` Today's measurement, with the Marionette witness on the real Firefox** (port 7730, canvas
-1588×914, session `prova`): `dipinti == consegnati` (11→11, 12→12) · `salt 0` · `buchi 0` ·
+1588×914, session `prova`): `painted == delivered` (11→11, 12→12) · `salt 0` · `holes 0` ·
 `ord 0` · `mis 0` · ⭐ **`tard 0`** · `err 0` · canvas pulled down as PNG, **sharp at 1:1**.
 ⭐ **And the check of the two routes, a single variable**: on `/` the canvas answers
 `getContext("2d") → null` (that is the 2D store **is not there**) and the log line declares
-`bitmaprenderer`; on `/?tela=2d` it answers `2d`, `ricomposizioni 1`, and paints as before.
+`bitmaprenderer`; on `/?canvas_size=2d` it answers `2d`, `recompositions 1`, and paints as before.
 ⛔ **And a bench was corrected because its reading no longer exists**: `02-giudizio-catena.py`
 read the pixels with `t.getContext("2d")` **on the product's canvas** — now it copies into a canvas
 of its own. ⚠ What it reads back is still the store, not the screen (§1.16).
@@ -591,19 +591,19 @@ within ten minutes two defects came out that seemed to belong to two different f
 |---|---|
 | the specification | `transferFromImageBitmap` brings the canvas to the size of the image |
 | **Firefox** | ⭐ it does: canvas 16×16 → **1588×914** (Marionette witness) |
-| ⛔ **Chrome** | **NO**: `prima=[16,16] dopo=[16,16]` with a 2544×926 image |
+| ⛔ **Chrome** | **NO**: `before=[16,16] after=[16,16]` with a 2544×926 image |
 
 **And the two symptoms, both its own:**
 
 1. the image ended up **shrunk into a 16×16 buffer** and stretched by CSS ⇒ *«non si vede più
    bene, mancano gli elementi della shell»*;
-2. ⛔ **input died**: `cl_geometria()` computes `vx = width on the glass / tela.width`, that is
+2. ⛔ **input died**: `cl_geometry()` computes `vx = width on the glass / canvas_size.width`, that is
    **~124 instead of ~0.8** ⇒ every click ended at a point between 0 and 16, in the top-left
-   corner. The server's log said it literally: `PUNTATORE (5,5) · (4,5) · (3,5)`.
+   corner. The server's log said it literally: `POINTER (5,5) · (4,5) · (3,5)`.
    The user: *«se clicco il quadrato del dash non compare il drawer»*.
 
 ⭐ **The cure**: the size **is written**, before the transfer, and the **real** one is looked at
-(`this.tela.width`) instead of trusting. ⇒ The line corrects itself on any engine, without
+(`this.canvas_size.width`) instead of trusting. ⇒ The line corrects itself on any engine, without
 asking anyone who they are — `CODER.md` §3.9, *one asks by name and verifies that it was given*,
 applied to the **output**.
 
@@ -612,7 +612,7 @@ from today there is `banchi/07-b51-due-browser.py`, which does the two rounds by
 
 #### ⛔⛔⭐ 4.9-quater · THE DESKTOP WITHOUT A SHELL — and it was neither ours nor the page's
 
-*Then the shell disappeared on Firefox too, with **all counters green**: `dipinti == consegnati`,
+*Then the shell disappeared on Firefox too, with **all counters green**: `painted == delivered`,
 zero gaps, zero errors, zero late. The page painted faithfully what reached it — and what
 reached it was **only the background**.*
 
@@ -628,7 +628,7 @@ each with its own virtual monitor. On GNOME **bar and dock are only on the prima
 carries the background and that is all. It is the «two servers of ours on the same session» defect of phase 4,
 come back to bite, ⚠ **and this time disguised as a defect of the cure just put in**.
 
-⭐⭐ **And now the product SAYS it** — `src/mutter.c`, `mutter_monitor_cerca()`: if a monitor
+⭐⭐ **And now the product SAYS it** — `src/mutter.c`, `mutter_find_monitor()`: if a monitor
 was already there, a line comes out that names the symptom *and* the cure (*«l'utente vedrà solo lo sfondo, con
 tutti i contatori verdi… quasi sempre è un altro server nostro sulla stessa sessione»*).
 ⛔ **And the guard was tested, not believed**: the defect was redone on purpose with a second server
@@ -663,7 +663,7 @@ stage busy, accusing the page of a defect of the bench.
 | | firefox | chrome |
 |---|---|---|
 | canvas size | ⭐ buffer = canvas | ⭐ buffer = canvas (1584×856) |
-| counters | ⭐ `dipinti == consegnati`, zero late/errors | ⭐ same |
+| counters | ⭐ `painted == delivered`, zero late/errors | ⭐ same |
 | click at (40,12) | ⭐ arrived at **(40,12)** | ⭐ **(40,12)** |
 | click in the centre | ⭐ arrived at **(794,457)**, gap **0** | ⭐ **(792,428)**, gap **0** |
 | image | ⭐ whole desktop, bar included | ⭐ same |
@@ -689,11 +689,11 @@ of the same instant** are taken.
 | the **capture** | `SIGUSR1` → `scatto-ingresso.bgrx`, the pixels the encoder has in hand | ⭐ **clean**: overview, dock, sharp text |
 | the **sent stream** | `scatto-flusso.obu` given back to `ffmpeg/dav1d` — **22 deltas of the same chain** | ⭐ **clean** |
 | **Chrome**, same bytes | 32 frames, moving scene | ⭐ **clean** |
-| ⛔ **Firefox**, same bytes | 31 frames, `dipinti == consegnati`, zero gaps, zero errors | ⛔ **rectangular blocks** |
+| ⛔ **Firefox**, same bytes | 31 frames, `painted == delivered`, zero gaps, zero errors | ⛔ **rectangular blocks** |
 
 ⇒ ⭐ **A single variable separates the clean from the broken, and it is the decoder.** The bytes are good —
 two independent decoders say so — and Firefox paints them wrong **without declaring
-any error**: `err 0`, `buchi 0`, `ord 0`, `mis 0`.
+any error**: `err 0`, `holes 0`, `ord 0`, `mis 0`.
 
 ⚠ **And before accusing it, our own thing was checked**: `ffprobe` on the stream gives `Main`,
 `yuv420p`, `bt709`, `tv` — that is **8 bit**, exactly what the page had asked for
@@ -728,7 +728,7 @@ five places, and one stays behind»:**
    as a negotiation defect**, with zero frames and no line naming the cause;
 2. ⛔ **the child rejected codec 3** with a hand-written ceiling (*«che §6.2 non definisce»*) —
    and at least this one *said so*;
-3. ⛔⛔ **`wt_video_diffondi()` threw away every H.264 frame SILENTLY**: the child encoded
+3. ⛔⛔ **`wt_video_broadcast()` threw away every H.264 frame SILENTLY**: the child encoded
    (5 940 bytes, KEY, 1.6 ms), the parent received, and there the frame vanished **without a line**.
    ⇒ Now the ceiling comes from `RCP_CODEC_VIDEO_MAX` and the rejection **is declared** (one line per
    number, not per frame).
@@ -745,7 +745,7 @@ the product's defects: it is the **benches that were green without looking**.*
 | the sentence to refute | outcome |
 |---|---|
 | *«the reattach re-hooks the devices and everything works»* (6.1) | ⭐ **holds** on normal input: the application opened before the detach receives **everything**, with exact coordinates. ⛔ It is false **only** for the *held down* state — and that is where the defect lay |
-| *«the chain `figli_ritela()` → `cattura_ridimensiona()` holds»* (6.3) | ⛔ **FALSE**: with two `ADATTA_TELA` 25-35 ms apart — *«whoever drags a border sends exactly two in a row»*, and the code itself calls it «THE case» — **4 rounds out of 18** (then 2/18) leave the desktop **not fitted**, and the client waits for the **3 s** backstop to receive `NON_ORA`. ⚠ On the other hand *«the discarded frames are zero»* **holds**: 0 in all rounds |
+| *«the chain `figli_ritela()` → `cattura_ridimensiona()` holds»* (6.3) | ⛔ **FALSE**: with two `FIT_CANVAS` 25-35 ms apart — *«whoever drags a border sends exactly two in a row»*, and the code itself calls it «THE case» — **4 rounds out of 18** (then 2/18) leave the desktop **not fitted**, and the client waits for the **3 s** backstop to receive `NOT_NOW`. ⚠ On the other hand *«the discarded frames are zero»* **holds**: 0 in all rounds |
 | *«since the canvas is the window, zoom no longer falsifies anything»* (6.5) | ⭐ **true** — ⛔ but in the wrong place: what broke sharpness was the **rounding**, not the zoom |
 | *«the product violates §7.1 in at least one canvas case»* (6.6) | **not confirmed** on the five cases exercised against the product |
 
@@ -758,7 +758,7 @@ the product's defects: it is the **benches that were green without looking**.*
    `0x02`): **every** trace of the client came out «broken recording» and five checks failed.
    ⭐ *Neither of the two files was broken on its own: the defect lay between the two*;
 3. ⛔ **the validator closed healthy sessions**: the grace of §6.2 was written, imported and
-   **unreachable**, because nobody told the frame judge that an `ADATTA_TELA` was in
+   **unreachable**, because nobody told the frame judge that an `FIT_CANVAS` was in
    flight;
 4. ⛔ **`06-b34`, positive control B**: breaking the release, the count becomes `0` **but the
    character arrives anyway** ⇒ `[M]` **Mutter releases by itself the keys on a device it
@@ -781,7 +781,7 @@ the product's defects: it is the **benches that were green without looking**.*
 - ⛔ `umask 077` made the faulty binary `0700 root`: the child exited with **37**, and the bench was about
   to write five *«SMENTITO»* accusing the product **of its own permissions**;
 - ⛔ a `grep` extracted **`1002`** — a uid — believing it was extracting a password: five
-  `RESPINTO` and **the ban of §4.4-bis triggered by a defect of the bench**. ⚠ The colour did not
+  `REJECTED` and **the ban of §4.4-bis triggered by a defect of the bench**. ⚠ The colour did not
   say it: **the new denominator** said it (*«0 pairs closed»*);
 - ⛔ a **pipe around `enter.sh`** ate the `sudo` prompt: ten minutes hung
   silently — it is trap **8** of §0-bis of this document, written and then trampled;
@@ -808,9 +808,9 @@ written them read them — read only, no bench run — and the count is this.*
 
 | bench | verdict | why |
 |---|---|---|
-| `06-b33` reattach | ⛔ **does not hold as certification** | the `tenuto` round — the only one carrying the real defect — **has no healthy reference line**, and its only fault certifies itself |
+| `06-b33` reattach | ⛔ **does not hold as certification** | the `kept` round — the only one carrying the real defect — **has no healthy reference line**, and its only fault certifies itself |
 | `06-b34` keyboard | ⛔⛔ **does not hold** | 3 cases out of 7 cannot fail, 2 compute the verdict and throw it away, and the anchor of the main fault **was born expired** |
-| `06-b35` stage | ⛔ **does not hold as certification** | the log marker is taken **before** `accendi` clears the log ⇒ the two counts coming from the log are **zero by construction** |
+| `06-b35` stage | ⛔ **does not hold as certification** | the log marker is taken **before** `turn_on` clears the log ⇒ the two counts coming from the log are **zero by construction** |
 | `06-b36` canvas on the wire | ⚠ **the bench holds, the certifier does not** | ⭐ it is the best of the six: injected clock, truncated log, external expected values, 1000/1001 ms boundary. But the certifier exits **0** even if it grafts nothing, and 3 cases out of 23 have no fault |
 | `06-b37` page | ⛔⛔ **does not hold** | ⛔ **the only one of the six without ANY grafted fault**, and four independent false greens |
 | `06-b38` arbiter | ⚠ **the 49 and the 19 hold, the five live rounds do not** | ⭐ the offline half is the best built in the repository. `06-b38-tela.sh` is green **against a server that never answers** |
@@ -821,17 +821,17 @@ anchor — **did not repeat**, except once in `06-b34`.
 
 #### ⛔ The four remarks that pull the floor away
 
-1. **`06-b33`: the positive control is dead and declares success.** The certifier sends in `tenuto`
-   mode **only** fault G3; the healthy round and the healed one run only in `comanda` mode. ⇒ R1
+1. **`06-b33`: the positive control is dead and declares success.** The certifier sends in `kept`
+   mode **only** fault G3; the healthy round and the healed one run only in `in_charge` mode. ⇒ R1
    today is red because with the key already released nothing is pressed any more — not because of the fault — and
    the script prints anyway *«⭐ G3 ha acceso il caso dichiarato»*;
 2. **`06-b33`: a completely failed round certifies EVERY fault.** The comparison is a
-   **membership** (`case " $R " in *" $CASO "*`), not a set equality: if the client does not
+   **membership** (`case " $R " in *" $CASE "*`), not a set equality: if the client does not
    survive the handshake, all cases go red, the set contains the declared one, and the
    fault comes out confirmed. ⚠ The judge **can** say *«IL BANCO, NON IL PRODOTTO»*, and that text
    **nobody reads**;
 3. **`06-b35`: the log marker precedes the truncation by ONE LINE.** `registro-da` saves the
-   length of the log, and the line after `accendi` does `: > "$LOG"`. ⇒ The region where the
+   length of the log, and the line after `turn_on` does `: > "$LOG"`. ⇒ The region where the
    canvas lines are **is skipped systematically**: `tela_nuova_dal_palco == 0` is true **for free**
    (and it is the clause that *«distinguishes the stage did not obey from it was not asked»*), and
    `non_spediti > 0` is **unreachable** — that is precisely the wrong attribution the bench
@@ -845,7 +845,7 @@ anchor — **did not repeat**, except once in `06-b34`.
 
 - **no scene has a LOWER limit on the canvas**: a canvas 30 px narrower than the window —
   permanent black band, 30 columns lost — leaves **12 combinations out of 12 green**;
-- **the branch that implements «the item switched off» is never executed**: the spy replaces `chiedi_tela`
+- **the branch that implements «the item switched off» is never executed**: the spy replaces `ask_canvas`
   **before** measuring, and the real guard is **inside** the replaced function ⇒ the bench proves that
   *a boolean changes value*;
 - **the «real question» is an algebraic identity**: the bench reconstructs the input and compares it with
@@ -920,7 +920,7 @@ broke precisely under load** — that is exactly in the scene in which it is que
 
 #### ⛔ An eighth defect of the bench, and this one did worse than break
 
-`accendi` does `: > "$LOG"` and **does not reset the mark** from which the tools count. `[M]` a
+`turn_on` does `: > "$LOG"` and **does not reset the mark** from which the tools count. `[M]` a
 mark of **825 758 bytes** was found on a log of **45 373**. ⚠ It did not give «systematic zero» — it gave **an
 arbitrary window**, which is worse: a plausible and false count. The only surviving outcome declares
 `tela_nuova_dal_palco = 258` for a round that changes canvas **9** times.
@@ -935,15 +935,15 @@ from the logs that remain, **with the machine idle**, with the repaired tools:
 |---|---|
 | **the canvas passed to the stage** | **4.0 ms** (0-18, n=30) |
 | Mutter | **35.0 ms** (29-45, n=20) |
-| full round server side, `ADATTATA` | **43.5 ms** (38-57, n=20) — against the 44.5 written: **a nearby window, not the same one** |
-| `NON_ORA` | **6.0 ms** (5-7, n=10) — ⛔ and before it was under the same label as `ADATTATA`, which is form E2 |
+| full round server side, `ADAPTED` | **43.5 ms** (38-57, n=20) — against the 44.5 written: **a nearby window, not the same one** |
+| `NOT_NOW` | **6.0 ms** (5-7, n=10) — ⛔ and before it was under the same label as `ADAPTED`, which is form E2 |
 
 ⭐ **And one number of the document comes back exact**: §4.2, *«4 ms median over 9 changes (3-13)»*, comes out
 identical from the new tools on the same log. ⇒ Not everything is to be redone: it is **that** box.
 
 #### ⭐⭐ And a NEW clue, in favour of the contention thesis
 
-`[M]` on the log of **16 Aug**, with five benches running: `NON_ORA` has a median of **22 ms** and
+`[M]` on the log of **16 Aug**, with five benches running: `NOT_NOW` has a median of **22 ms** and
 **two cases at 3 000 ms** — the whole deadline of §7.1. On the **17th**, with the machine idle: **6 ms**, and
 none reaches the backstop. ⇒ ⭐ **Contention really moves this scene**, and the *«green holds under
 CPU load, not under GPU contention»* of §7.1 now has a second support even before the contention
@@ -972,9 +972,9 @@ from the command line, with the Wayland witness inside the session of `provai6`.
 | scene | `[M]` | load |
 |---|---|---|
 | **S0** zero control, click without swaps | the witness sees it: down and up | 5.67 |
-| **S1** three `cattura_risveglia()`, hand lifted | ⭐ **3 wake-ups → 3 swaps** (delta `[1,1,1]`) with **0** `cattura_ridimensiona()` ⇒ **§7.1 is true** | 1.86-2.19 |
+| **S1** three `capture_wake()`, hand lifted | ⭐ **3 wake-ups → 3 swaps** (delta `[1,1,1]`) with **0** `capture_resize()` ⇒ **§7.1 is true** | 1.86-2.19 |
 | **S2** `BTN_LEFT` down, **one** wake-up | ⛔ the release **never arrives**, and **neither does the next fresh click** ⇒ desktop dead to clicks. ⭐ The **keyboard** keeps working | 1.58→10.68 |
-| **S3** the same scene with `cattura_ridimensiona()` | **identical outcome**: they are two doors into the same room | 3.76 |
+| **S3** the same scene with `capture_resize()` | **identical outcome**: they are two doors into the same room | 3.76 |
 | **S4** it breaks, then the EIS client is detached | ⭐ **the clicks come back**, with the **same `gnome-shell`** (pid verified before and after) | 1.39 |
 
 #### ⭐ The `[R]` chain of §7.1-bis becomes `[M]` — and it was nearly refuted wrongly
@@ -1004,12 +1004,12 @@ which has already incremented ⇒ **unrecoverable**. The only route remains `dro
 |---|---|---|
 | **A · prevention**: no wake-up with something pressed | guard in `figlio.c` + a window in `input.c/.h` | ⭐ **no broken drag**. ⚠ On a still desktop with a key down the key frame does not start ⇒ **a just-attached client may stay white until release**. It heals by itself, and the scene is rare: a drag *moves* the scene |
 | **B · release before the wake-up** | one line in `figlio.c` | ⛔ **cuts EVERY drag on a still desktop** — it is the «forbidden obvious cure» of §7.1. Cited only for comparison |
-| **C · recovery**: the EIS channel is reattached when the damage is there | `input.c` (already sees `quanti_orfani > 0`) + `mutter_eis_riattacca()` in `mutter.c` | `[M]` it works (S4). ⚠ It cuts the drag in progress — **which however was already dead**. ⭐ It covers **the doors we do not control**: `monitors-changed` (two rounds), the keymap change, and whatever Mutter will add |
+| **C · recovery**: the EIS channel is reattached when the damage is there | `input.c` (already sees `how_many_orphans > 0`) + `mutter_eis_reattach()` in `mutter.c` | `[M]` it works (S4). ⚠ It cuts the drag in progress — **which however was already dead**. ⭐ It covers **the doors we do not control**: `monitors-changed` (two rounds), the keymap change, and whatever Mutter will add |
 | **D · the wake-up is removed**: the key frame is redone from the last frame | `figlio.c` + `codificatore.c` | removes the door at the root, ⛔ but **does not replace** the wake-up: at login there is no frame to redo, and the 4.4 seconds come back. And it costs ~9.8 MB of copy at 2560×962 |
 
 > ### 🔸 **Coordinator's choice: A + C** — derived, not decided by the user
 >
-> **A alone is not enough**, and the reason is in §7.1-bis: the doors are not one. `cattura_risveglia()`
+> **A alone is not enough**, and the reason is in §7.1-bis: the doors are not one. `capture_wake()`
 > is the one we control; `monitors-changed` does **two rounds** of it, the keymap change is another, and
 > the function that opens them all came in with **Mutter 48.5** — that is, it is **new**, and more will come.
 > ⇒ A cure that covers only our own front door **expires at the next GNOME update**.
@@ -1017,7 +1017,7 @@ which has already incremented ⇒ **unrecoverable**. The only route remains `dro
 > ⏳ **The price of A, on the other hand, is visible to the user** — the white window until release — and
 > visible prices are his to judge: the line is here so he sees it, not because it is already decided.
 
-⛔ **And a constraint found by measuring, which changes the estimate for C**: `input_apri()` **reuses the
+⛔ **And a constraint found by measuring, which changes the estimate for C**: `input_open()` **reuses the
 descriptor** that `mutter.c` keeps aside, and as long as that stays open Mutter sees no
 detach and `drop_device()` does not run. ⇒ **The cure does not live inside `input.c`.** `[R]`
 `meta-remote-desktop-session.c:1943-1969`: `session->eis` is reused and every `ConnectToEIS` adds a
@@ -1025,8 +1025,8 @@ client, so session and stage are not touched.
 
 #### ⛔ A new fact that touches the certification of `06-b33`
 
-With the cure in `figlio.c` · `codificatore_di()`, `segna_orfani()` **does not run even in the healthy product** ⇒ **G3 is
-no longer certifiable in `06-b33`**: its scene now lives in `06-b33-risveglio.sh tenuto` (case T1).
+With the cure in `figlio.c` · `encoder_of()`, `mark_orphans()` **does not run even in the healthy product** ⇒ **G3 is
+no longer certifiable in `06-b33`**: its scene now lives in `06-b33-risveglio.sh kept` (case T1).
 ⏳ That bench **does not yet have a certification with a grafted fault**, and it is the biggest hole of
 this delivery — declared by the author first.
 
@@ -1065,7 +1065,7 @@ stopped. `[M]` Source fingerprints in the report; iron: **integrated Intel UHD 7
 | ① passed→requested | 4.0 ms | 5.5 ms |
 | ② **Mutter** | 28.0 (22-48), ⛔ **13 beyond the ceiling** | 32.0 (18-47), ⛔ **17 beyond the ceiling** |
 | ③ stage→sent | 4.0 | 4.0 |
-| ④ `ADATTATA` | 37.0 | 40.0 |
+| ④ `ADAPTED` | 37.0 | 40.0 |
 
 ⇒ **Nothing moved**: every latency is equal or **faster** under contention. The witness (which
 demands a dilation ≥ 15 % of the rate seen by the client) **did not trigger**, and
@@ -1084,7 +1084,7 @@ on the iGPU alone**. It is not promoted to «cured», and it is not promoted to 
 
 ⭐ **And where the signal is there, it points to another suspect**: latency ② has **13 and 17 samples beyond the
 ceiling** out of ~57 in **both** halves — that is a quarter of the requests to the producer **without
-an answer from Mutter within one second**. It is the same signature as 16 Aug (`NON_ORA` median 22 ms and two
+an answer from Mutter within one second**. It is the same signature as 16 Aug (`NOT_NOW` median 22 ms and two
 cases at 3 000). ⇒ ⏳ **The next hypothesis is contention on the COMPOSITOR and on PipeWire — five
 sessions — not on the iGPU.** That scene has not been built.
 
@@ -1094,7 +1094,7 @@ sessions — not on the iGPU.** That scene has not been built.
 start-up:
 
 ```
-SANO   adattate=10 non_ora=0 ms_mediano=47,45 fotogrammi=169 tela_nuova=10 non_spediti=0
+HEALTHY   adapted=10 non_ora=0 ms_mediano=47,45 frames=169 tela_nuova=10 non_spediti=0
 G1 · G2 · G5   ATTESO-CONFERMATO      (regola sul sano = False)
 G3  ⛔ ATTESO-SMENTITO      tela_nuova_dal_palco = 1, e la regola ne pretende 0
 G4  ⛔ NON-DISCRIMINANTE    la regola è vera ANCHE sul sano
@@ -1123,7 +1123,7 @@ the only number that moves a latency.
 
 #### ⛔ And the window's worst defect is the author's, who declared it first
 
-`misura` copied the JSON files **of 16 Aug** as if they were the round just done: six rounds born from
+`gauge` copied the JSON files **of 16 Aug** as if they were the round just done: six rounds born from
 **three files five days old**, with a perfectly plausible rate inside. ⭐ It was seen
 **only** because the two halves were identical **byte for byte**. ⇒ Cured: first delete, then
 collect only what is **newer than a mark taken an instant before**, and **zero rounds collected
@@ -1140,12 +1140,12 @@ it had been there **since the bench's first day**: the expired-mark defect (§5.
 **realised** it.
 
 `[M]` The line «TELA NUOVA DAL PALCO» of G3's round is the **birth reconciliation**, and it **precedes**
-the first `ADATTA_TELA` — reproduced twice, eight hours apart and at different loads: **476 ms before** on
+the first `FIT_CANVAS` — reproduced twice, eight hours apart and at different loads: **476 ms before** on
 21 Aug (load 2.78), **461 ms before** on the 22nd (load ~0.7). The child is born at the fallback
 1920×1080 and the stage is **born** — not resized — at 1280×800.
 
 ⭐ **And «completing the fault» is EXCLUDED with proof, not discarded by taste**: that line does not go through
-`cattura_ridimensiona()`, so switching it off would mean a second fault under a single name (which
+`capture_resize()`, so switching it off would mean a second fault under a single name (which
 the grafter **forbids**), at the point that already belongs to G5, and it would take the scene away from G3. ⇒ **The two routes
 did not lead to different work: one of the two did not exist.**
 
@@ -1175,9 +1175,9 @@ first. Load 0.30-0.48.
 | ① **the canvas passed to the stage** | 4 ms (n=10) | 4.0 (n=30) | **6.0 ms** (0-21, **n=27**) |
 | ② Mutter | 39.5 ms | 35.0 (n=20) | **32.0 ms** (15-49, n=27) |
 | ③ stage → sent | — | — | **4.0 ms** (3-39, n=28) |
-| ④ full round, `ADATTATA` | 44.5 · 10/10 | 43.5 (n=20) | **42.0 ms** (25-59, n=27) · **27/27** |
-| `SESSIONE` → 1st frame | 25 ms · 203-220 to be mounted | — | **14 and 26 ms** · **141 ms** to be mounted |
-| discarded · wrong size | 0 · 0 | — | **0 · 0** (30/30 `ADATTATA`, 9/9 first at the new size = key) |
+| ④ full round, `ADAPTED` | 44.5 · 10/10 | 43.5 (n=20) | **42.0 ms** (25-59, n=27) · **27/27** |
+| `SESSION` → 1st frame | 25 ms · 203-220 to be mounted | — | **14 and 26 ms** · **141 ms** to be mounted |
+| discarded · wrong size | 0 · 0 | — | **0 · 0** (30/30 `ADAPTED`, 9/9 first at the new size = key) |
 
 ⇒ ⭐ **The three latencies of box D are all reconfirmed within a few milliseconds, with n almost
 tripled.** The hole of §4.8 closes: that box is no longer a lost number.
@@ -1224,8 +1224,8 @@ so**: that is the reason the **fourth** column exists, and the reconciliation
 > value is **1** — form **E2**, and ⚠ **nobody had seen it because 1 is a number that looks
 > healthy**.
 >
-> ⛔ **And the product has the real count and does not say it**: `w->video_saltati` is incremented at every
-> frame, and `wt_video_conti()` could read it — ⛔ but **nobody calls that function**
+> ⛔ **And the product has the real count and does not say it**: `w->video_skipped` is incremented at every
+> frame, and `wt_video_counts()` could read it — ⛔ but **nobody calls that function**
 > (verified: zero callers in all of `src/`). ⇒ It is `LEZIONI.md` §1.20 **inside the product**: a
 > counter nobody compares.
 >
@@ -1236,7 +1236,7 @@ so**: that is the reason the **fourth** column exists, and the reconciliation
 >
 > ### ✅ **DONE on 22 Aug — sixteen lines of code, and the factor is 254**
 >
-> `wt_video_conti()` finally has a caller, **next to the audio one**. ⭐ And the discovery that
+> `wt_video_counts()` finally has a caller, **next to the audio one**. ⭐ And the discovery that
 > is worth more than the cure is in the comment that goes with it: the audio line was written on **17
 > Aug** for the **twin** function, **with these very words**. ⇒ The cure had been applied to
 > **one of the two twins**, and nobody had looked at the other. 📖 `LEZIONI.md` §1.25.
@@ -1263,10 +1263,10 @@ so**: that is the reason the **fourth** column exists, and the reconciliation
 
 `pkill -f 'banco-P6-scena'` kills **the terminal**, not the loop that writes the time: the title **is not
 in the command line** of the surviving process. ⇒ Every `scena-via` left a loop alive and every
-`scena` added one — `[M]` **two loops** after a single off/on. ⚠ On a bench that
+`scene` added one — `[M]` **two loops** after a single off/on. ⚠ On a bench that
 measures milliseconds, **a doubled scene is not the declared scene**.
 
-⭐ Cured with the right guard: `scena-via` demands **zero** survivors and `scena` demands
+⭐ Cured with the right guard: `scena-via` demands **zero** survivors and `scene` demands
 **exactly one** — the old guard was `> 0`, **which let two through**. And the D numbers
 were on **one** loop: verified, not hoped.
 
@@ -1276,8 +1276,8 @@ repository, not of a bench.
 #### ⭐ And the D numbers **do not change** after the pairing cure
 
 ① now pairs **by key**; ④ stays by order, ⭐ **and it is a declared choice**: the key does not
-exist (the answer line carries the canvas *in force*, which on a `NON_ORA` is the **old** one, and
-pairing by size would throw away precisely the `NON_ORA`s the faults look for). ⇒ The protection is
+exist (the answer line carries the canvas *in force*, which on a `NOT_NOW` is the **old** one, and
+pairing by size would throw away precisely the `NOT_NOW`s the faults look for). ⇒ The protection is
 upstream. `[M]` Recomputed on the same logs: **identical sample by sample**, and it is known **why**
 — in that round `GIRATA 27 = CHIESTA 27`, zero unpaired, so key and order coincided.
 ⛔ **But it is a property of that scene, not of the old code**: the other two rounds do not have that
@@ -1289,8 +1289,8 @@ guarantee.
   fallback 1920×1080 while the round's session is 1280×800. A scene that opened **exactly** at
   1920×1080 would not have the birth line, and the expected value would not hold. ⇒ Now the expected value **names the
   round and the reason**, instead of carrying a bare number;
-- ⚠ `parlantina-c-e` gives a **false red on the first round after an `accendi`**: it reads the whole log,
-  which `accendi` clears. ⛔ False red, so a safe direction — **declared, not cured**.
+- ⚠ `parlantina-c-e` gives a **false red on the first round after an `turn_on`**: it reads the whole log,
+  which `turn_on` clears. ⛔ False red, so a safe direction — **declared, not cured**.
 
 ### 5.10 · ⛔⛔⭐ 22 Aug — **the grace second against the product, and the arbiter alone does NOT see the leniency**
 
@@ -1300,7 +1300,7 @@ rounds 7/7 green**, loads 1.16 · 1.51 · 1.57 · 2.58.*
 | | round 6 — **beyond** | round 7 — **inside** |
 |---|---|---|
 | recorded `dt` | **1 501 ms** | **251 ms** |
-| the server | `CONGEDO 0x0b ERRORE_PROTOCOLLO` | ⭐ the session **holds** |
+| the server | `FAREWELL 0x0b PROTOCOL_ERROR` | ⭐ the session **holds** |
 | the arbiter | «beyond the second — and the server **said farewell**» | ⭐ «**NOT judgeable** from this recording» |
 | ⭐ **where the pointer ended up** | **nowhere** | **(799,599)**, the last pixel of the new canvas |
 | the wire | — | **`input = 1`** in the frame (§6.2) |
@@ -1317,7 +1317,7 @@ right. ⛔ The table is in the bench **with the prohibition of using it to get c
 
 #### ⛔⛔ «The arbiter says conforming» is not a measurement
 
-With a **server faulty on purpose** (`TELA_GRAZIA` 1 000 → **60 000 ms**): the pointer at 1 501 ms gets
+With a **server faulty on purpose** (`CANVAS_GRACE` 1 000 → **60 000 ms**): the pointer at 1 501 ms gets
 **injected**, and ⛔⛔ **the validator exits 0 and declares CONFORMING** — honestly, because §7.1 lets it
 conclude **only** if the server still speaks on the control channel, and **a lenient server that
 keeps quiet does not give it the chance**. ⭐ The bench instead exits **1 with five red lines**, and the seventh
@@ -1326,7 +1326,7 @@ round against the same faulty server stays **green**, as it should: **specific, 
 ⇒ It is the strongest form of *«conforming is not working»* this phase has produced.
 
 ⛔ **And a defect of the bench of the worst kind**: it compared the pointer with the **last**
-`TELA(ADATTATA)` of the file instead of with **the one preceding it** ⇒ **negative** `dt`, which falls below
+`CANVAS(ADAPTED)` of the file instead of with **the one preceding it** ⇒ **negative** `dt`, which falls below
 the second, that is into the «not judgeable» branch. **A pointer beyond the grace would have been declared
 inside.** The positive control found it.
 
@@ -1340,10 +1340,10 @@ ceiling out of 62**. ⛔ §5.8 had **13 and 17 out of ~57** and read them as *«
 an answer from Mutter within one second, the same signature as 16 Aug»*.
 
 ⭐ **The mechanism, and it closes the case**: ② pairs **by requested size**; the first of two chained
-requests receives `NON_ORA` (§7.1), so **the producer never delivers a canvas at that
+requests receives `NOT_NOW` (§7.1), so **the producer never delivers a canvas at that
 size**, and the request gets paired with that of a **later** round — beyond the second. **One
 per round.** ⭐ Counter-proof over 5 rounds: **15 requests, exactly 5 unpaired and exactly 5
-`NON_ORA`**. ⇒ And it is also why §5.8 found it **identical in the two halves**: it is what the
+`NOT_NOW`**. ⇒ And it is also why §5.8 found it **identical in the two halves**: it is what the
 scene does **by construction**.
 
 #### ⭐⭐ And the same 18 quiet rounds give **0 broken out of 18 — at a HIGHER load than 16 Aug**
@@ -1358,8 +1358,8 @@ median **1.47 → 0.64 ms (0.44×)**, p95 **5.56 → 2.59**. ⇒ The five-sessio
 **would fail**, and the bench would refuse the verdict — as the GPU one already did.
 
 ⇒ 🔸 **Coordinator's choice: the five-session window is NOT spent.** On the adversarial
-recommendation of the author himself: the 4/18 is a difference of **outcome**, and `NON_ORA` is **a race with
-`cattura_ridimensiona()`** — the window in which it flips is measured in **milliseconds, not in
+recommendation of the author himself: the 4/18 is a difference of **outcome**, and `NOT_NOW` is **a race with
+`capture_resize()`** — the window in which it flips is measured in **milliseconds, not in
 load**, and the 18 rounds were **all at 30 ms**. ⏳ The road that remains is **sweeping the interval**
 (10-60 ms, many rounds per point): it costs the CPU of a single session and **disturbs nobody**.
 
@@ -1437,7 +1437,7 @@ not RCP bytes — and it is a right and documented choice, ⛔ but **it is not w
 > It is checked with `pgrep`, not with `pkill`.
 > ⭐ **But waiting is almost never needed**: if the server is yours, **restart it** — the slots live in the
 > process's memory, the graphical session lives outside: `[M]` the first attach after a restart reaches
-> `SESSIONE` in **1.03 s**. ⭐ And if the client is yours, **make it say farewell**: **5-7 ms**.
+> `SESSION` in **1.03 s**. ⭐ And if the client is yours, **make it say farewell**: **5-7 ms**.
 
 #### ⛔ And the routes are TWO, with the same number — it is the mechanism behind the false reds
 
@@ -1458,10 +1458,10 @@ a browser in hand.
 
 | | |
 |---|---|
-| ⛔ `2 = RIPRESA` **never comes out** | the byte is a **constant 1** at the only point that builds the message. `[M]` 12 reattaches to the same child: **state 1, always**. It is form **E1** ⇒ whoever writes benches **cannot** use it to know whether they have a new desktop |
+| ⛔ `2 = RESUMED` **never comes out** | the byte is a **constant 1** at the only point that builds the message. `[M]` 12 reattaches to the same child: **state 1, always**. It is form **E1** ⇒ whoever writes benches **cannot** use it to know whether they have a new desktop |
 | ⛔ the **two routes** with the same number | above: two lines and two states under the same fact, racing |
 | ⛔ the **live client holds the slot** | up to the half hour of inactivity — measured ≥ 745 s |
-| ⏳ `[?]` **the immortal desktop** | `presenza_segna()` is called **from one place only**, the one that receives input ⇒ whoever attaches and **touches nothing** does not enter the present ones and **the abandonment clock does not start**. If true, every bench that attaches without typing leaves a desktop of **477 MB** that never dies — and that is how a machine with eight benches fills up. ⛔ **It is a reading of the code, not a measurement**: the round that was to prove it was skipped |
+| ⏳ `[?]` **the immortal desktop** | `presence_mark()` is called **from one place only**, the one that receives input ⇒ whoever attaches and **touches nothing** does not enter the present ones and **the abandonment clock does not start**. If true, every bench that attaches without typing leaves a desktop of **477 MB** that never dies — and that is how a machine with eight benches fills up. ⛔ **It is a reading of the code, not a measurement**: the round that was to prove it was skipped |
 
 ### 5.14 · ⛔ 22 Aug — **a wrong label made the user believe that a removed feature had come back**
 
@@ -1475,7 +1475,7 @@ rescales**, which is the approved behaviour.
 
 ⛔ **But the NAME came back**, and in the reports in the worst place: the first of the four latencies of §5.6
 and §5.9 was labelled **«live resize»** and measures something else entirely — the time between the
-request **passed to the stage** and the request **arrived at the producer**, on the path of `ADATTA_TELA`,
+request **passed to the stage** and the request **arrived at the producer**, on the path of `FIT_CANVAS`,
 that is the one every client walks **when attaching**. A thing that is there, and must be.
 
 ⇒ Whoever read *«live resize: 6 ms»* concluded that the feature had come back.
@@ -1517,11 +1517,11 @@ a whole round **9 min 52 s** (Chrome) and **12 min 40 s** (Firefox).*
 
 | | the fault, in a copy of `src/pagina.html` | the scene that accuses it | the false green it unmasks |
 |---|---|---|---|
-| **G1** | the requested canvas is **30 px narrower** than the window | `numeri` A5 · `sfora` · `pixel` X1-bis | ⛔ no scene had a **lower limit**: 12 combinations out of 12 stayed green |
-| **G2** | the `if (tela_spenta)` guard is **bypassed** | `voce` **V5** | ⛔ the spy **replaced** `chiedi_tela`, and the guard is **inside** the replaced function |
-| **G3** | `misura_vista()` goes back to the **`Math.round`** of before the cure | `sfora` at dpr 1.5 (**«TAGLIATO 979 px su 980»**) | ⛔ A6 was an **identity**: the «external truth» simplified to `round(cw·dpr)`, that is to the same rounding as the fault ⇒ **the real defect that this phase cured passed under A6 without touching it** |
-| **G4** | the image is painted **50 px out of place** in the buffer, and `dipinta.x` still says 0 | `coordinate` **C0** | ⛔ the origin was **subtracted by construction** |
-| **G5** | the **parity** of `tela_da_chiedere()` is removed | `numeri` A3 (63 canvases out of 63) | ⛔ the odd side was impossible **by construction** and was never provoked |
+| **G1** | the requested canvas is **30 px narrower** than the window | `numbers` A5 · `sfora` · `pixel` X1-bis | ⛔ no scene had a **lower limit**: 12 combinations out of 12 stayed green |
+| **G2** | the `if (canvas_off)` guard is **bypassed** | `entry` **V5** | ⛔ the spy **replaced** `ask_canvas`, and the guard is **inside** the replaced function |
+| **G3** | `view_size()` goes back to the **`Math.round`** of before the cure | `sfora` at dpr 1.5 (**«TAGLIATO 979 px su 980»**) | ⛔ A6 was an **identity**: the «external truth» simplified to `round(cw·dpr)`, that is to the same rounding as the fault ⇒ **the real defect that this phase cured passed under A6 without touching it** |
+| **G4** | the image is painted **50 px out of place** in the buffer, and `painted_rect.x` still says 0 | `coordinate` **C0** | ⛔ the origin was **subtracted by construction** |
+| **G5** | the **parity** of `canvas_to_request()` is removed | `numbers` A3 (63 canvases out of 63) | ⛔ the odd side was impossible **by construction** and was never provoked |
 
 #### ⭐⭐ And G4's counter-proof lives inside the bench, for ever
 
@@ -1539,26 +1539,26 @@ points.** It is no longer a hypothesis of the review: it is measured.
 #### ⛔⛔ And THREE NEW DEFECTS OF THE BENCH, which nobody had named yet
 
 1. ⛔⛔ **The four scenes on the pixels no longer measured ANYTHING.** They put the frame in with
-   `schermo.deposito = c; schermo.componi()`, ⛔ but `componi()` begins with
+   `display_screen.repository = c; display_screen.compose()`, ⛔ but `compose()` begins with
    `if (this.bm) { … return false; }` and `this.bm` is there on both engines since the canvas
    moved to **`bitmaprenderer`** (`DECISIONI.md` §5.4). ⇒ `[M]` 22 Aug: `sfora` on Chrome,
    **12 photographs out of 12 without any marker**. ⭐ The benches behaved well — they said «the
    markers cannot be found» instead of a zero — ⚠ but **the outcomes of 16 Aug in the repository are from
    before that change**, and §4.3-bis still declared them good. ⇒ Cured: the frame goes
-   through **`schermo.mostra()`**, the function that receives the real frames, and every outcome line declares
-   the **`strada`**;
-2. ⛔ **`numeri` was RED FOR EVER with a forced device factor**: A1 compares two
-   zooms, with `FATTORE=` there is only one, and that case did `guasti += 1`. ⇒ That is why nobody had ever
+   through **`display_screen.show_cmd()`**, the function that receives the real frames, and every outcome line declares
+   the **`route`**;
+2. ⛔ **`numbers` was RED FOR EVER with a forced device factor**: A1 compares two
+   zooms, with `FATTORE=` there is only one, and that case did `faults += 1`. ⇒ That is why nobody had ever
    launched the scene at dpr 1.25 or 1.5. A question **not asked** is now declared and does not
    count as a wrong answer;
 3. ⛔⛔ **the bench filled the machine's disk — and the disk belongs to everyone.** `[M]` a whole round
    wrote **1.5 GB** of raw frames (1600×1000×3 = 4.8 MB each, **63 calibrations in the
-   `numeri` scene alone**) into `/tmp`, which here is a **3.8 GB tmpfs shared with eight other agents**.
+   `numbers` scene alone**) into `/tmp`, which here is a **3.8 GB tmpfs shared with eight other agents**.
    It brought it to **100 %**, and the next round died with *«No space left on device»* — ⚠ on someone
    else's bench it would have died **without anyone understanding why**. ⇒ Cured: the pixels are read from a
-   **pipe**, they end up on disk only with `B37_FOTO=tieni`, and the outcome line carries `null` instead
+   **pipe**, they end up on disk only with `B37_FOTO=keep`, and the outcome line carries `null` instead
    of a path that does not exist;
-4. ⚠ **and a fourth thing, which was not a defect but a flaky, and was worth three faults**: `voce` on
+4. ⚠ **and a fourth thing, which was not a defect but a flaky, and was worth three faults**: `entry` on
    Firefox launched right after another scene died because **the first command timed out at 20 s** —
    the page had announced itself, ⛔ but the loop that asks for the commands had not yet started. The
    certifier read it as *«the HEALTHY round is red»* and **refused to certify three
@@ -1581,8 +1581,8 @@ large, the X window shrinks anyway, and what is inside **gets cut by the window'
 border**. `[M]` the calibration strip comes out up to **210 px** shorter than
 `clientWidth × dpr`. ⇒ **12 lines out of 63** are not a scene and are discarded — ⛔ but the comparison that
 discards them is between **two numbers of the browser** (`clientWidth × dpr` and the pixels), not between the bench and the
-product: no defect of the page can hide there, because `misura_vista()` enters
-neither of the two sides. ⇒ On Firefox the denominator of `numeri` is **48 lines out of 63**, and the 12
+product: no defect of the page can hide there, because `view_size()` enters
+neither of the two sides. ⇒ On Firefox the denominator of `numbers` is **48 lines out of 63**, and the 12
 discarded are printed one by one.
 
 #### ⚙ What changed in the bench, file by file
@@ -1590,13 +1590,13 @@ discarded are printed one by one.
 | | |
 |---|---|
 | ⭐ `06-b37-guasti.py` · `.sh` | **new**: the five faults with the verified anchor (7 anchors out of 7 alive, multiplicity 1) and the certifier, which demands **the healthy one green**, **the fault red** and **the sentence declared beforehand** — ⛔ not just any red (it is remark 2 of §5.5 on `06-b33`) |
-| `06-b37-comune.py` | the **calibration on the pixels** (two strips at a fixed position, `ox`/`oy` and the view in device pixels, with **two masks** because at a non-integer dpr the border falls at half a pixel) · `mostra()` for the product's route · the **round's mark** on every outcome line |
+| `06-b37-comune.py` | the **calibration on the pixels** (two strips at a fixed position, `ox`/`oy` and the view in device pixels, with **two masks** because at a non-integer dpr the border falls at half a pixel) · `show_cmd()` for the product's route · the **round's mark** on every outcome line |
 | `06-b37-numeri.py` | A2 and A6 **rewritten** on that external truth, A5 **bidirectional**, A1's tolerance **derived** instead of chosen |
-| `06-b37-sfora.py` · `-pixel.py` · `-windows.py` | the **lower limit** (`W − ceil(dpr) ≤ disegno`), the product's route, the half pixel **counted** |
+| `06-b37-sfora.py` · `-pixel.py` · `-windows.py` | the **lower limit** (`W − ceil(dpr) ≤ drawing_v`), the product's route, the half pixel **counted** |
 | `06-b37-coordinate.py` | **C0 · the origin** and the counter-proof with the old method |
-| `06-b37-voce.py` · `-modi.py` | the **real text** of `chiedi_tela` extracted from the product and installed with a direct `eval` on a fake channel ⇒ the guard is crossed, and the observable is `canale.manda(TIPO.ADATTA_TELA, …)` |
+| `06-b37-voce.py` · `-modi.py` | the **real text** of `ask_canvas` extracted from the product and installed with a direct `eval` on a fake channel ⇒ the guard is crossed, and the observable is `channel.send_it(TYPE.FIT_CANVAS, …)` |
 | `06-b37-lancia.sh` | the **seventh scene** in «tutte» (with its 2600×1000 screen and its 1.25 factor) · the defect declared in §4.3-bis — *«after the first scene the browser does not reopen»* — **cured**: it waits until everything holding the profile is dead |
-| `06-b37-strumenta.py` | extracts and verifies the text of `chiedi_tela` (58 lines), and **fails loudly** if the anchor is not there |
+| `06-b37-strumenta.py` | extracts and verifies the text of `ask_canvas` (58 lines), and **fails loudly** if the anchor is not there |
 
 ### 5.16 · ⭐⭐ 22 Aug — **three proposals to the product: two REJECTED by measurement, one refuted the other way round**
 
@@ -1635,14 +1635,14 @@ later — with the short wait a **noose** is chosen, and nobody notices. ⚠ On 
   Aug never implemented**;
 - ⏳ **`RCP.md` §7.1** — the missing line about the **stage that changes size by itself** now has **two
   drafts proposed and measured** (by 6.4 on the wire, by 6.3 on the real compositor), to be merged:
-  no unsolicited `TELA` · do not adopt · do not send frames of a different size ·
+  no unsolicited `CANVAS` · do not adopt · do not send frames of a different size ·
   request the canvas in force with a growing wait · write it in the log · ⛔ **and never
   recall the stage while a client request is in flight**;
 - ⏳ **`RCP.md`**, six more lines delivered by the agents and not yet written: the boundary of the
   grace second (`<` or `<=`), the two canvases within the same second, the limits of the **view** that
-  §4.5 does not name, what the server answers to `VISTA` (⛔ *nothing*, and why a courtesy `TELA`
-  would kill the session), `COMPOSITORE_INCAPACE` not declared **permanent**, and ⛔ **the
-  contradiction §7.1 against §4.2** on `ADATTA_TELA` followed by the client's FIN;
+  §4.5 does not name, what the server answers to `VIEW` (⛔ *nothing*, and why a courtesy `CANVAS`
+  would kill the session), `COMPOSITOR_UNABLE` not declared **permanent**, and ⛔ **the
+  contradiction §7.1 against §4.2** on `FIT_CANVAS` followed by the client's FIN;
 - ⏳ **`SPECIFICHE.md` §6** — five lines proposed by 6.5, among them the closing of the three `[?]` of
   §6.1-bis and the **guard number** of sharpness;
 - ⏳ **`SPECIFICHE.md` §11.5** — Windows is not declared among the clients (the section names the **engines**,
@@ -1656,7 +1656,7 @@ later — with the short wait a **noose** is chosen, and nobody notices. ⚠ On 
 
 | | |
 |---|---|
-| ⛔⛔ **the device swap that does NOT depend on the canvas** | `[M]` every `cattura_risveglia()` (400 ms, still scene, key due) recreates the `libei` devices: **3 wake-ups, 3 swaps**, with **zero `ADATTA_TELA`**. ⇒ The dying click has a **second door**, open exactly when the user holds the mouse down on a still desktop, and the obvious cure would destroy every drag. ⏳ **The right form must be decided**, and it does not belong to a single sub-phase |
+| ⛔⛔ **the device swap that does NOT depend on the canvas** | `[M]` every `capture_wake()` (400 ms, still scene, key due) recreates the `libei` devices: **3 wake-ups, 3 swaps**, with **zero `FIT_CANVAS`**. ⇒ The dying click has a **second door**, open exactly when the user holds the mouse down on a still desktop, and the obvious cure would destroy every drag. ⏳ **The right form must be decided**, and it does not belong to a single sub-phase |
 | ✅ ~~⛔ **the defect is upstream, in Mutter**~~ · ⛔ **and the answer is worse than the question** | **CLOSED on 21 Aug 2026** `[R]`: the defect is real, **nobody ever opened it**, and **it is not fixed even in today's `main`** — `remove_viewport_devices()` is identical character for character between the 48.7 running here and the main branch of August 2026. ⇒ There is no version to wait for: **the cure is ours, on every Mutter**. The follow-up is in §7.1-bis |
 | ✅ ~~**the chained requests, to be re-measured**~~ · ⛔ **and a worse hole remains** | re-measured on 17 Aug: **0 broken out of 18** (§4.8). ⛔⛔ **But the positive control did not pay off**: removing the suspected cure still gives **0/18** ⇒ *it is not known what holds this scene*, and the **4/18** of 6.3 **cannot be reproduced** with the machine idle. ⚠ The only difference left is **GPU contention** (five encoders on the same iGPU): until it is recreated, ⛔ **the green holds «under CPU load», not «under GPU contention»** |
 | ✅ ~~**the click cure was never verified where it lives**~~ | verified on 17 Aug on a single tree: the release is declared in the log and **all the clicks of the second round arrive**, ⭐ with the positive control reproducing the defect **on command** |
@@ -1670,12 +1670,12 @@ later — with the short wait a **noose** is chosen, and nobody notices. ⚠ On 
 `[M]` the test machine runs **exactly that one**: GNOME Shell 48.7, `libmutter-16-0`
 48.7-0+deb13u1, `libei1`/`libeis1` 1.3.901-1. No version gap to discount.*
 
-#### ⭐ WHY the devices are recreated even without `ADATTA_TELA` — the `[?]` of §4.6 has a cause
+#### ⭐ WHY the devices are recreated even without `FIT_CANVAS` — the `[?]` of §4.6 has a cause
 
 `meta_screen_cast_virtual_stream_src_enable()`
 (`⟨mutter⟩ src/backends/meta-screen-cast-virtual-stream-src.c` · `meta_screen_cast_virtual_stream_src_*`) calls
 `meta_eis_viewport_notify_changed()`. ⇒ **Every re-enabling of the stream recreates the devices**,
-that is **every `cattura_risveglia()`** — and it is the «3 wake-ups, 3 swaps, zero `ADATTA_TELA`» of §7.1,
+that is **every `capture_wake()`** — and it is the «3 wake-ups, 3 swaps, zero `ADATTA_TELA`» of §7.1,
 which was not a mystery but that line. ⚠ It comes from **MR !4622**, which went into **Mutter 48.5**: it is
 recent, and we are inside the window.
 
@@ -1714,8 +1714,8 @@ still bring the count down. ⏳ To be measured, not deduced.
 
 #### ⛔ Our cure of today covers the other path
 
-`input_rilascia_tutto()` before `cattura_ridimensiona()` (`figlio.c` · `codificatore_di()`) covers the **geometry
-change**. ⛔ It does **not** cover `cattura_risveglia()`. ⇒ The «second door» of §7.1 is open precisely
+`input_release_all()` before `capture_resize()` (`figlio.c` · `encoder_of()`) covers the **geometry
+change**. ⛔ It does **not** cover `capture_wake()`. ⇒ The «second door» of §7.1 is open precisely
 where the cure does not reach.
 
 #### ⛔ Upstream: nobody ever opened it, and it is not fixed in today's `main`
@@ -1766,10 +1766,10 @@ the user decides it.
   `TELA(ADATTATA)` without touching the stage would pass all five rounds»*. The pixels are measured by
   another bench, and the distinction must be kept;
 - ✅ ~~**the grace second cured and not measured**~~ — **CLOSED on 22 Aug**, and ⛔ **the reason
-  it seemed impossible was wrong**: the grace starts from the `TELA`, **not from the connection**,
+  it seemed impossible was wrong**: the grace starts from the `CANVAS`, **not from the connection**,
   so the 1500 ms of the handshake have nothing to do with it. 📖 §5.10;
 - ✅ ~~**code never exercised on Mutter**: the branch «granted different from requested» and
-  `MISURA DIVERGENTE`~~ — **REFUTED on 22 Aug**: ⭐ `MISURA DIVERGENTE` (today `cattura.c` · `su_parametri()`)
+  `MEASURE DIVERGENTE`~~ — **REFUTED on 22 Aug**: ⭐ `MEASURE DIVERGENTE` (today `cattura.c` · `on_parameters()`)
   **is reached from outside** — `[M]` **43 hits out of 480 chains**, three sweeps out of three. ⛔ The door
   is not the producer, **it is time**: two chained resizes — *the user dragging the
   border* — and the answer to the first comes back when the request already carries the second. Window: between
@@ -1794,13 +1794,13 @@ the user decides it.
 
 | the document said | `[M]` the product does |
 |---|---|
-| `hu` `tr` `gr` `ua` receive `SESSIONE_NON_SERVIBILE` | ⭐ **they open the session**, all four |
-| `it(nonesiste)` opens the session | ⭐ **`0x0E SESSIONE_NON_SERVIBILE`** |
-| `DISPOSIZIONE` with the session open closes the connection | ⭐ **connection alive**, `KEYMAP CAMBIATA → de [German]`, no message on the wire |
+| `hu` `tr` `gr` `ua` receive `SESSION_UNSERVABLE` | ⭐ **they open the session**, all four |
+| `it(nonesiste)` opens the session | ⭐ **`0x0E SESSION_UNSERVABLE`** |
+| `LAYOUT` with the session open closes the connection | ⭐ **connection alive**, `KEYMAP CAMBIATA → de [German]`, no message on the wire |
 
 ⇒ They had been closed by the seam of **16 Aug**: the question «does it exist?» goes to XKB
-(`webtransport.c` · `gancio_disposizione_esiste()` → `tastiera.c`), the variant enters it because `it(nonesiste)` does not compile, and
-`T_DISPOSIZIONE` has its `case` (`rcp.c` · `drena()`). ⚠ Nobody had re-read this section, and it is the
+(`webtransport.c` · `hook_layout_exists()` → `tastiera.c`), the variant enters it because `it(nonesiste)` does not compile, and
+`T_LAYOUT` has its `case` (`rcp.c` · `drain()`). ⚠ Nobody had re-read this section, and it is the
 same kind of defect as `fasi/07` §8: **a document stuck at four days ago sends people looking for a
 fault where there is none**.
 
@@ -1818,12 +1818,12 @@ second hand-written list remained: the alphabet allowed in the name**, which acc
 layout/variant pairs of `evdev.lst`: **589 compile**, and **nine have an uppercase letter** —
 `de(T3)`, `ie(CloGaelach)`, `ie(UnicodeExpert)`, `in(tamilnet_TAB)`, `in(tamilnet_TSCII)`,
 `jp(OADG109A)`, `lk(tam_TAB)`, `ru(phonetic_YAZHERTY)`, `ua(macOS)`. ⛔ On the wire they received
-**`0x0B ERRORE_PROTOCOLLO`** — which is **worse** than `SESSIONE_NON_SERVIBILE`, because it says *«your
+**`0x0B PROTOCOL_ERROR`** — which is **worse** than `SESSION_UNSERVABLE`, because it says *«your
 client is broken»* and sends people looking for the fault on the other side of the wire. And `it()` (empty variant)
 got `0x0E` on a **malformed** string: the two faults of §4.5 together.
 
-⇒ **Cured** (`rcp.c` · `tratta_credenziali()`, and the twin aligned byte for byte): a single
-`disposizione_carattere_ammesso()` with the alphabet **identical** to that of `tastiera.c`, plus the
+⇒ **Cured** (`rcp.c` · `handle_credentials()`, and the twin aligned byte for byte): a single
+`layout_char_allowed()` with the alphabet **identical** to that of `tastiera.c`, plus the
 rejection of the empty variant. ⚠ Two form checks written twice gave two answers under
 the same label: it is form **E2**. The defence is not loosened — dot, slash, comma and
 `../../etc/passwd` stay out. ⭐ Declared price: `IT` now passes the form and receives `0x0E`
@@ -1876,7 +1876,7 @@ browser: Mozilla/5.0 (Android 16; Mobile; rv:154.0) Firefox/154.0
          · schermo 2560x1080 · dpr 1 · WebCodecs NON c'e'
 sonda video · ⛔ HEVC: NON arriva al pixel — questo browser non ha WebCodecs
 sonda video · ⛔ H264: NON arriva al pixel — questo browser non ha WebCodecs
-congedo motivo=0x09 dettaglio=nessun codec condiviso
+farewell motivo=0x09 detail=nessun codec condiviso
 ```
 
 ⇒ `VideoDecoder` **does not exist** on that browser, and in `pagina.html` the road to the pixels is
@@ -1973,7 +1973,7 @@ log and from the page's diary.*
 phone, and the video → screen direction has no defect to name.
 
 ⭐ **And the surprise is the codec**: the phone negotiated **HEVC in hardware**, that is the first choice
-of `PREFERENZA` — not the fallback. ⚠ The H.264 of §1.13-ter remains necessary (desktop Firefox does not do
+of `PREFERENCE` — not the fallback. ⚠ The H.264 of §1.13-ter remains necessary (desktop Firefox does not do
 HEVC), but on this phone it was not needed.
 
 ### ⛔ And the only number that is not good: **the audio queue, 401 → 421 ms** — ⭐ and the same evening the user's ear CONFIRMED it
@@ -1985,7 +1985,7 @@ audio path.
 ⛔⭐ **And on the evening of 21 Aug the user listened, twice.** The first: *«Chrome su Android
 offre un'esperienza completa: audio e video perfetti»*. The second, an hour later, on Windows:
 *«**il ritardo di 400 ms tra audio e video in generale te lo confermo**»*. ⇒ The number **is not a
-coincidence and is not Android's**: it is `AUDIO_CUSCINO_MS = 250` in `pagina.html`, plus the chain, and it is heard
+coincidence and is not Android's**: it is `AUDIO_CUSHION_MS = 250` in `pagina.html`, plus the chain, and it is heard
 as **wrong synchronisation** — not as dirty audio. 📖 The diagnosis and the named cure are in
 `fasi/07-audio-e-appunti.md` §8 and §9.7-bis.
 
@@ -2005,8 +2005,8 @@ that principle speaks of an engine that **renders worse**; here the engine **doe
 | piece | what it does |
 |---|---|
 | `MuxMP4` | the Annex-B frames become an initialisation segment (`ftyp`+`moov` with the `avcC` built from the SPS/PPS seen) and a `moof`+`mdat` per frame |
-| `sonda_mse_una()` | the probe **paints on this road too** and the pixels are judged — ⭐ `isTypeSupported` is not believed (`LEZIONI.md` §1.9) |
-| `Schermo.mse_*` | the `<video>` takes the place of the canvas, inherits class and style, and frames are counted with `requestVideoFrameCallback` — the only place, there, where one knows a pixel has arrived |
+| `probe_mse_one()` | the probe **paints on this road too** and the pixels are judged — ⭐ `isTypeSupported` is not believed (`LEZIONI.md` §1.9) |
+| `Screen.mse_*` | the `<video>` takes the place of the canvas, inherits class and style, and frames are counted with `requestVideoFrameCallback` — the only place, there, where one knows a pixel has arrived |
 
 ⚠ **The duration of each frame is the REAL one**, measured on arrival: a desktop does not have a
 fixed rate — it stays still for seconds and then moves — and declaring 60/s to a `<video>` that receives three per
@@ -2030,7 +2030,7 @@ engine does not accept it».
 
 | | |
 |---|---|
-| the road turns on and paints (Firefox, `?disegno=mse`) | ⭐ yes — `<video>` 1190×704, 4 painted, **0 gaps**, delay 50 ms, 1 jump |
+| the road turns on and paints (Firefox, `?drawing_v=mse`) | ⭐ yes — `<video>` 1190×704, 4 painted, **0 gaps**, delay 50 ms, 1 jump |
 | the normal road (WebCodecs) | ⭐ intact: `07-b51` 4 checks out of 4 per engine |
 | Firefox for Android | ⏳ **to be tested on the phone** — it is the engine it exists for |
 
@@ -2040,8 +2040,8 @@ engine does not accept it».
 server's log:*
 
 ```
-sonda video · ⛔ H264: NON arriva al pixel — il `<video>` ha caricato ma i pixel
-              non sono quelli della sonda (sinistra 0,0,0, destra 0,0,0)
+sonda video · ⛔ H264: NON arriva al pixel — il `<video>` ha loaded ma i pixel
+              non sono quelli della sonda (left_edge 0,0,0, right_edge 0,0,0)
 ```
 
 ⭐ **Zero-zero-zero on both sides is black, not «a wrong colour».** ⇒ The stream was
@@ -2065,7 +2065,7 @@ tornata nera»* — after **twelve** re-reads in a second and a half. ⇒ It was
 | cause | why |
 |---|---|
 | the probe's `<video>` was **off screen** (`left:-9999px`) | mobile engines do not present what nobody looks at: they save battery. ⇒ Now it is inside the view, **two pixels by two**, almost transparent — visible enough for the engine, not for the user |
-| the probe started **at page load** | presenting means playing, and nobody had touched anything yet. ⇒ On this road the probing is done in `CIAO`, that is **after the user has pressed «Collegati»** |
+| the probe started **at page load** | presenting means playing, and nobody had touched anything yet. ⇒ On this road the probing is done in `HELLO`, that is **after the user has pressed «Collegati»** |
 
 ⚠ And the second cure has a declared side effect: on MSE the probe costs its time **to whoever
 connects** instead of at load. On the WebCodecs road nothing changes.
@@ -2089,12 +2089,12 @@ phone.
 named:**
 
 1. ⛔⛔ **The size scale called `VideoDecoder` and threw `ReferenceError` on every
-   step** — the first included — and `video.misura_massima` came out as **320×240**, the minimum canvas of
+   step** — the first included — and `video.max_size` came out as **320×240**, the minimum canvas of
    §4.5. ⇒ The server granted 320×240 and the desktop would have appeared **in a postage stamp**, without a
    line explaining it. Now on this road the capability is **omitted** (§4.3 allows it): what
    was not measured is not declared.
-2. ⛔ **`document.body.dataset.schermo = "acceso"` was never written**, because on this road
-   `dipingi()` is not passed through: the page would have stayed «waiting for the first frame» with the
+2. ⛔ **`document.body.dataset.display_screen = "lit"` was never written**, because on this road
+   `paint()` is not passed through: the page would have stayed «waiting for the first frame» with the
    desktop already on the screen.
 3. ⛔⛔ **The `<video>`'s wake-up hung on the presented frames.** A desktop stays still for
    seconds; the `<video>` runs out of data, pauses, and `requestVideoFrameCallback` **stops
@@ -2105,7 +2105,7 @@ named:**
 (`DECISIONI.md` §1.13, `LEZIONI.md` §1.9): on this road the probe would have to make a test `<video>`
 *present* a frame, and on mobile engines a test `<video>` **does not present**.
 ⇒ It is declared on the engine's word, and the check moves to where the `<video>` is **real**:
-`Schermo.mse_veglia()` writes in plain words if after four seconds not even one frame has been
+`Screen.mse_watch()` writes in plain words if after four seconds not even one frame has been
 presented. ⚠ The black canvas stays **explained**, which is the only thing the rule was meant to prevent.
 
 #### The measurement, on a browser without WebCodecs — 25 seconds of live desktop
@@ -2133,8 +2133,8 @@ events reached nobody and the rectangle was zero: **the desktop can be seen and 
 commanded**.
 
 ⭐ **The cure**: the canvas stays **where and as it is** — it is the surface that receives the gestures — and becomes
-**transparent**; the `<video>` sits **behind** it, glued to its rectangle (`mse_posiziona()`, which
-follows `cornice()`). ⇒ On this road, for whoever touches the screen, nothing changes: they touch the same
+**transparent**; the `<video>` sits **behind** it, glued to its rectangle (`mse_position()`, which
+follows `border()`). ⇒ On this road, for whoever touches the screen, nothing changes: they touch the same
 thing as always.
 
 ⚠ And the bench had its defect here too: it clicked at a coordinate chosen by eye, which
@@ -2146,7 +2146,7 @@ fell outside the canvas — and it would have said «the click does not arrive»
 | | |
 |---|---|
 | image | ⭐ 351 delivered → **196 painted**, **0 gaps**, canvas 1270×704 |
-| input | ⭐ **4 events to the server**: the letter, the movement, and `PULSANTE evdev 272` pressed and released |
+| input | ⭐ **4 events to the server**: the letter, the movement, and `BUTTON evdev 272` pressed and released |
 | queue | 50 ms |
 
 ⚠ One frame out of two is not presented: it is the `<video>` discarding under a scrolling
@@ -2157,8 +2157,8 @@ another matter — and there the user takes the measurement.
 
 *Right after the input cure: the desktop had disappeared.*
 
-⛔ `cornice()` is what gives the canvas its **size on the glass**, and on the WebCodecs road it is
-called by the drawing (`componi()`). ⇒ On this road the drawing does not pass through there: the canvas stayed
+⛔ `border()` is what gives the canvas its **size on the glass**, and on the WebCodecs road it is
+called by the drawing (`compose()`). ⇒ On this road the drawing does not pass through there: the canvas stayed
 **sixteen pixels** wide — the size the `<canvas>` is born with in the document — and the `<video>`, which
 now is glued behind it, followed it faithfully **in an invisible postage stamp**.
 
@@ -2176,7 +2176,7 @@ distinct cases:
 | the `<video>` occupies a reasonable fraction of the window | the postage stamp |
 | the `<video>` is **glued** to the canvas rectangle (±2 px) | gestures that would end up in the wrong place, because the surface receiving them is not where the image is seen |
 
-`[M]` Now: `tela [1270, 704] · video [1270, 704] · finestra [1270, 705]`, 6 input events to the
+`[M]` Now: `canvas_size [1270, 704] · video [1270, 704] · win [1270, 705]`, 6 input events to the
 server, 499 frames delivered and 123 presented, 0 gaps.
 
 ## ⭐⭐⭐ 21 Aug 2026, evening — **REMOTIX runs on Firefox for Android**
@@ -2197,14 +2197,14 @@ catch what is specific to the mobile engine. These three came out only here:
 
 1. ⛔⛔ **The seek that never ends.** Chasing the live edge wrote `currentTime`,
    that is a **seek** — and a seek wants a random access point, that is a key frame, which there
-   is not there. `[M]` `cerca=true · pronto=1 · tempo=34,41 · buffer=0,00→40,34 · errore=no`, and
+   is not there. `[M]` `search=true · ready=1 · time_limit=34,41 · buffer=0,00→40,34 · failure=no`, and
    **19 frames painted out of 727**. ⇒ No more jumping: it chases with **speed**
    (`playbackRate` 1.25 until the queue comes back). It costs a touch of acceleration instead of a
    stutter, and asks nobody for a key frame.
 2. ⛔ **Pruning the past emptied everything.** `sb.remove()` to avoid keeping in memory what had been
-   seen left `buffer=nessuno` with 817 frames delivered. ⇒ Removed: a few seconds of video
+   seen left `buffer=nobody` with 817 frames delivered. ⇒ Removed: a few seconds of video
    in memory is a price gladly paid, a black page is not.
-3. ⛔⛔ **And `dipinti` is not «how many are seen».** `requestVideoFrameCallback` on mobile engines is
+3. ⛔⛔ **And `painted` is not «how many are seen».** `requestVideoFrameCallback` on mobile engines is
    **throttled**: `[M]` 46 firings in 35 seconds while the desktop was moving. ⇒ Twice that
    number made me believe the image was still. The judge, there, is **the screen** — a
    photograph — not the counter.
@@ -2213,7 +2213,7 @@ catch what is specific to the mobile engine. These three came out only here:
 
 Android 14 emulator with KVM, Firefox **154.0** for Android, and the full round by itself: it accepts the
 certificate, logs in as «prova», lets it run, and reads in the **server's** log the line the
-page tells about itself — `MISURA §7.18 MSE: consegnati … dipinti … fermo= cerca= pronto= buffer=`.
+page tells about itself — `MEASURE §7.18 MSE: delivered … painted … stopped= search= ready= buffer=`.
 
 ⚠ And what it does **not** reproduce is declared: the emulator does not have hardware decoding. ⇒ The delay
 **numbers** do not hold; the **behaviour** holds — does it paint or not, does it stop or not, and
@@ -2229,14 +2229,14 @@ installed it.
 
 | test | outcome |
 |---|---|
-| **Firefox 154 for Android** (emulator, `07-b59`) | ⭐ desktop **alive** — clock `16:52`, terminals scrolling; `fermo=false cerca=false pronto=3`, the video time **advances by 4.43 s in 5** |
-| input from Android | ⭐ the touch arrives: `PULSANTE codice evdev 272 rilasciato` in the server's log |
+| **Firefox 154 for Android** (emulator, `07-b59`) | ⭐ desktop **alive** — clock `16:52`, terminals scrolling; `stopped=false search=false ready=3`, the video time **advances by 4.43 s in 5** |
+| input from Android | ⭐ the touch arrives: `BUTTON code_v evdev 272 rilasciato` in the server's log |
 | delay on Android (emulator) | ⚠ **2.3 s** from the live edge — ⛔ and the number **does not hold**: software decoding, heavy scene, canvas 1080×2040 |
 | **without WebCodecs, desktop** (`07-b58`) | ⭐ **0.21 s** from the live edge, 277 painted out of 444, input and geometry green |
 | **normal road**, WebCodecs (`07-b51`) | ⭐ 4 checks out of 4 per engine, **intact** |
 
 ⛔ **And the bench's judgement was rewritten**, because it was wrong: it gave red on the counter
-`dipinti`, which on mobile is throttled. ⇒ Now it looks at what really describes the state of the
+`painted`, which on mobile is throttled. ⇒ Now it looks at what really describes the state of the
 `<video>` — *is it playing? is it seeking? does it have data? how far behind is it?* — and ⭐ **compares two
 readings**, because an image that advances and a still one look the same in a single photograph.
 
@@ -2254,7 +2254,7 @@ react like a decoder commanded by hand.
 **declares that it cannot**, and names the alternative (Chrome for Android). ⭐ Half an experience is
 worse than an explained refusal.
 
-⇒ **The code stays behind `?disegno=mse`**, because until Mozilla brings WebCodecs to Android it is
+⇒ **The code stays behind `?drawing_v=mse`**, because until Mozilla brings WebCodecs to Android it is
 the only proof that the problem is not ours. At phase 13 it is decided whether to throw it away.
 
 ### ⭐ What good remains, and it is not little

@@ -33,7 +33,7 @@
       }
     ]
   },
-  "hostname": "@NOME@",
+  "hostname": "@LABEL_NAME@",
   "kernels": ["linux"],
   "locale_config": {"kb_layout": "it", "sys_enc": "UTF-8", "sys_lang": "it_IT"},
   "network_config": {"type": "nm"},
@@ -48,7 +48,7 @@
   "swap": {"enabled": true, "algorithm": "zstd"},
   "timezone": "Europe/Rome",
   "custom_commands": [
-    "install -d -m 700 -o @UTENTE@ -g @UTENTE@ /home/@UTENTE@/.ssh && echo '@CHIAVE@' > /home/@UTENTE@/.ssh/authorized_keys && chown @UTENTE@:@UTENTE@ /home/@UTENTE@/.ssh/authorized_keys && chmod 600 /home/@UTENTE@/.ssh/authorized_keys",
-    "echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco && chmod 440 /etc/sudoers.d/90-banco"
+    "install -d -m 700 -o @ACCOUNT@ -g @ACCOUNT@ /home/@ACCOUNT@/.ssh && echo '@KEY@' > /home/@ACCOUNT@/.ssh/authorized_keys && chown @ACCOUNT@:@ACCOUNT@ /home/@ACCOUNT@/.ssh/authorized_keys && chmod 600 /home/@ACCOUNT@/.ssh/authorized_keys",
+    "echo '@ACCOUNT@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco && chmod 440 /etc/sudoers.d/90-banco"
   ]
 }

@@ -3,10 +3,10 @@
 
     python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1] [expected :status]
     python3 01-b2-cliente-aioquic.py https://192.168.0.2:7447/rcp/9 404
-    python3 01-b2-cliente-aioquic.py https://192.168.0.2:7448/rcp/1 200 --senza-eco
+    python3 01-b2-cliente-aioquic.py https://192.168.0.2:7448/rcp/1 200 --no-echo
 
 ---------------------------------------------------------------------------
-⛔⭐ AGAINST THE PRODUCT YOU USE `--senza-eco`, AND IT IS NOT A CONVENIENCE
+⛔⭐ AGAINST THE PRODUCT YOU USE `--no-echo`, AND IT IS NOT A CONVENIENCE
 
 *Added on 11 Aug 2026, and the defect it avoids has already cost a
 morning.*
@@ -14,7 +14,7 @@ morning.*
 This client sends `ciao` on a stream and waits for it to come back identical.
 ⛔ **The echo exists only in the B2 graft**, which was a fifty-line server
 made to send the bytes back.  The **product** speaks RCP: on that first
-stream it expects a `CIAO`, and to a lowercase `ciao` it answers as it should
+stream it expects a `HELLO`, and to a lowercase `ciao` it answers as it should
 — that is, by not sending it back.
 
 ⚠ It is exactly the red of the morning of 10 Aug, the one that had been taken
@@ -24,7 +24,7 @@ stream it expects a `CIAO`, and to a lowercase `ciao` it answers as it should
   this option the same red would show up again against the product, and would
   look like a server defect.
 
-⭐ With `--senza-eco` the program stops where what it can test ends:
+⭐ With `--no-echo` the program stops where what it can test ends:
   **the WebTransport session opened on that path, with that
   `:status`**.  What happens AFTER the CONNECT belongs to RCP, and B3 and
   B5 test it — not this file.
@@ -81,36 +81,36 @@ from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.events import QuicEvent
 
 
-class ClienteWebTransport(QuicConnectionProtocol):
+class ClientWebTransport(QuicConnectionProtocol):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self._http = H3Connection(self._quic, enable_webtransport=True)
-        self.accettata = asyncio.get_event_loop().create_future()
-        self.tornato = asyncio.get_event_loop().create_future()
-        self._sessione = None
+        self.accepted = asyncio.get_event_loop().create_future()
+        self.returned = asyncio.get_event_loop().create_future()
+        self._session = None
         self._stream_wt = None
 
-    def apri_sessione(self, autorita: str, percorso: str) -> int:
+    def open_session(self, authority: str, fpath: str) -> int:
         sid = self._quic.get_next_available_stream_id(is_unidirectional=False)
-        self._sessione = sid
+        self._session = sid
         self._http.send_headers(
             sid,
             [
                 (b":method", b"CONNECT"),
                 (b":protocol", b"webtransport"),
                 (b":scheme", b"https"),
-                (b":authority", autorita.encode()),
-                (b":path", percorso.encode()),
-                (b"origin", f"https://{autorita}".encode()),
+                (b":authority", authority.encode()),
+                (b":path", fpath.encode()),
+                (b"origin", f"https://{authority}".encode()),
             ],
         )
         self.transmit()
         return sid
 
-    def manda_byte(self, dati: bytes) -> None:
-        sid = self._http.create_webtransport_stream(self._sessione, is_unidirectional=False)
+    def send_byte(self, data_v: bytes) -> None:
+        sid = self._http.create_webtransport_stream(self._session, is_unidirectional=False)
         self._stream_wt = sid
-        self._quic.send_stream_data(sid, dati, end_stream=False)
+        self._quic.send_stream_data(sid, data_v, end_stream=False)
         self.transmit()
 
     def quic_event_received(self, event: QuicEvent) -> None:
@@ -138,22 +138,22 @@ class ClienteWebTransport(QuicConnectionProtocol):
             #
             #    ⚠ The return is therefore read at the QUIC level, declaring it —
             #      we do not pretend the H3 level recognised it.
-            if event.stream_id == self._stream_wt and not self.tornato.done():
-                self.tornato.set_result(event.data)
+            if event.stream_id == self._stream_wt and not self.returned.done():
+                self.returned.set_result(event.data)
         for ev in self._http.handle_event(event):
             print(f"   [h3]   {type(ev).__name__}")
             if isinstance(ev, HeadersReceived):
-                stato = dict(ev.headers).get(b":status", b"?").decode()
-                if not self.accettata.done():
-                    self.accettata.set_result(stato)
+                state = dict(ev.headers).get(b":status", b"?").decode()
+                if not self.accepted.done():
+                    self.accepted.set_result(state)
             elif isinstance(ev, WebTransportStreamDataReceived):
-                if not self.tornato.done():
-                    self.tornato.set_result(ev.data)
+                if not self.returned.done():
+                    self.returned.set_result(ev.data)
 
 
-async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
+async def primary(url: str, expected_val: str = "200", echo: bool = True) -> int:
     u = urlparse(url)
-    autorita = f"{u.hostname}:{u.port or 443}"
+    authority = f"{u.hostname}:{u.port or 443}"
 
     conf = QuicConfiguration(
         is_client=True,
@@ -167,17 +167,17 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
     conf.verify_mode = ssl.CERT_NONE
 
     print(f"== test client -> {url}")
-    print(f"   authority: {autorita}   path: {u.path}")
+    print(f"   authority: {authority}   path: {u.path}")
     print("   ⚠ certificate NOT verified (see the file header)\n")
 
     async with connect(u.hostname, u.port or 443, configuration=conf,
-                       create_protocol=ClienteWebTransport) as cliente:
-        await cliente.wait_connected()
+                       create_protocol=ClientWebTransport) as client:
+        await client.wait_connected()
         print("   QUIC/HTTP3 connection established")
 
-        cliente.apri_sessione(autorita, u.path or "/")
-        stato = await asyncio.wait_for(cliente.accettata, timeout=8)
-        print(f"   answer to the extended CONNECT: :status = {stato}")
+        client.open_session(authority, u.path or "/")
+        state = await asyncio.wait_for(client.accepted, timeout=8)
+        print(f"   answer to the extended CONNECT: :status = {state}")
 
         # ⛔ THE REFUSAL IS MEASURED ON THE NUMBER, NOT ON "it went badly" — R8.8.
         #
@@ -190,19 +190,19 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
         #
         # ⭐ The number passed under our eyes and was not captured: now the
         #    caller says which one it expects, and the bench does the comparison.
-        if atteso != "200":
-            if stato == atteso:
-                print(f"\n   ✅ refused with :status {stato}, as expected")
+        if expected_val != "200":
+            if state == expected_val:
+                print(f"\n   ✅ refused with :status {state}, as expected")
                 return 0
-            if stato == "200":
-                print(f"\n   ⛔ ACCEPTED (200) where {atteso} was expected:"
+            if state == "200":
+                print(f"\n   ⛔ ACCEPTED (200) where {expected_val} was expected:"
                       " the server does not check the path")
                 return 1
-            print(f"\n   ⛔ refused, but with {stato} instead of {atteso}:"
+            print(f"\n   ⛔ refused, but with {state} instead of {expected_val}:"
                   " it is a refusal that RCP.md §2.2 does not provide for")
             return 1
-        if stato != "200":
-            print(f"\n   ⛔ the session was NOT accepted (expected 200, got {stato})")
+        if state != "200":
+            print(f"\n   ⛔ the session was NOT accepted (expected 200, got {state})")
             return 1
         print("   ⭐ WebTransport session ACCEPTED")
 
@@ -211,9 +211,9 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
         #    path" — and does NOT stretch to a claim that this
         #    program is not able to support.  The file header
         #    explains why against the product it is the only honest reading.
-        if not eco:
+        if not echo:
             print("\n   ✅ session open on", u.path,
-                  "— the echo was NOT requested (--senza-eco)")
+                  "— the echo was NOT requested (--no-echo)")
             print("   ⚠ what travels after the CONNECT is RCP, and B3 and B5"
                   " test it: not this file")
             return 0
@@ -221,10 +221,10 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
         # ⛔ "Accepted" is not enough: bytes are sent and we wait for them to
         #    come back.  A session that opens and carries nothing is the form of
         #    green this bench exists not to produce.
-        cliente.manda_byte(b"ciao")
-        dati = await asyncio.wait_for(cliente.tornato, timeout=8)
-        print(f"   round trip on stream: {dati!r}")
-        if dati == b"ciao":
+        client.send_byte(b"ciao")
+        data_v = await asyncio.wait_for(client.returned, timeout=8)
+        print(f"   round trip on stream: {data_v!r}")
+        if data_v == b"ciao":
             print("\n   ✅ the bytes come back identical — server and network are fine")
             return 0
         print("\n   ⛔ the bytes come back DIFFERENT")
@@ -232,17 +232,17 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
 
 
 if __name__ == "__main__":
-    # ⚠ `--senza-eco` is removed before reading the positionals, so the usual
+    # ⚠ `--no-echo` is removed before reading the positionals, so the usual
     #   order of the arguments keeps holding.
-    argomenti = [x for x in sys.argv[1:] if x != "--senza-eco"]
-    eco = "--senza-eco" not in sys.argv[1:]
-    url = argomenti[0] if len(argomenti) > 0 else "https://192.168.0.2:7447/rcp/1"
+    call_args = [x for x in sys.argv[1:] if x != "--no-echo"]
+    echo = "--no-echo" not in sys.argv[1:]
+    url = call_args[0] if len(call_args) > 0 else "https://192.168.0.2:7447/rcp/1"
     # ⚠ The second argument is the EXPECTED `:status`: without it, it is 200 and
     #   the usual road holds.  With "404" the program tests the check that says
     #   NO, and an arbitrary failure no longer passes for a refusal (R8.8).
-    atteso = argomenti[1] if len(argomenti) > 1 else "200"
+    expected_val = call_args[1] if len(call_args) > 1 else "200"
     try:
-        sys.exit(asyncio.run(principale(url, atteso, eco)))
+        sys.exit(asyncio.run(primary(url, expected_val, echo)))
     except Exception as e:
         print(f"\n   ⛔ failed: {type(e).__name__}: {e}")
         sys.exit(2)

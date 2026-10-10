@@ -37,7 +37,7 @@ minutes.
     bash banchi/19-nvidia/19-nvidia.sh tutto ADDRESS
 
 (with a user other than root: `UTENTE=ubuntu bash banchi/19-nvidia/19-nvidia.sh tutto ADDRESS`;
-with a particular ssh key: `CHIAVE=~/.ssh/noleggio`.)
+with a particular ssh key: `KEY=~/.ssh/noleggio`.)
 
 The bench, in order: brings Ubuntu to 26.04 if it is older · looks at the card and the driver · installs the driver if missing · installs the light
 desktop (XFCE) and the two browsers · installs REMOTIX **with its installer** · checks that it encodes
@@ -47,7 +47,7 @@ reattach, reattach at a different size) with real Firefox and Chrome · packs th
 to the laptop, in `misure/19-nvidia/`.
 
 You do not need to stay in front of it: if the connection drops the bench goes on, and you find it again with
-`bash banchi/19-nvidia/19-nvidia.sh segui ADDRESS`.
+`bash banchi/19-nvidia/19-nvidia.sh follow ADDRESS`.
 
 **How long it takes, roughly:** half a day. Driver and programs from half an hour to an hour (it depends on the machine's
 network), the encoding comparison up to an hour, the suite a couple of hours. One day of
@@ -57,14 +57,14 @@ rental is enough; the second is margin.
 
 1. The evidence is already on the laptop (`misure/19-nvidia/remotix-nv-….tar.gz`); inside, `passi.txt`
    says in one line per step what is green and what is not.
-2. `bash banchi/19-nvidia/19-nvidia.sh pulisci ADDRESS` — removes REMOTIX, the bench users,
+2. `bash banchi/19-nvidia/19-nvidia.sh clean ADDRESS` — removes REMOTIX, the bench users,
    all the programs the bench installed (driver included, if it installed it) and puts the repositories back
    as they were. It refuses if the evidence has not been taken away yet.
 3. Return the machine.
 
 ## If something goes wrong
 
-- `bash banchi/19-nvidia/19-nvidia.sh stato ADDRESS` says which step was reached.
-- Resume with `tutto` again: steps already done are skipped.
+- `bash banchi/19-nvidia/19-nvidia.sh state ADDRESS` says which step was reached.
+- Resume with `overall` again: steps already done are skipped.
 - Red initial checks stop everything (for example: the card has no encoder, or the system
   is not Debian 13 / Ubuntu 22.04-26.04). The reason is in `controlli.txt`, inside the evidence.

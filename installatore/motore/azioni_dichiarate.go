@@ -7,40 +7,40 @@ import "encoding/json"
 // the machine, with RX-AZIONE-004. Since the second part of T4 the steps of §10.12 are all real
 // (packages, repositories, belts, service, desktop): the list is empty, the mechanism remains.
 
-// nonAncoraFatti: type → what is missing to do it.
-var nonAncoraFatti = map[string]string{}
+// notYetDoneWhy: type → what is missing to do it.
+var notYetDoneWhy = map[string]string{}
 
 func init() {
-	for t := range nonAncoraFatti {
-		registraTipo(t, func(p AzionePiano) (Azione, error) { return nonAncoraFatta{p.Tipo}, nil })
+	for t := range notYetDoneWhy {
+		registerType(t, func(p PlanAction) (Action, error) { return notYetDone{p.Kind}, nil })
 	}
 }
 
-type nonAncoraFatta struct{ tipo string }
+type notYetDone struct{ kind string }
 
-func (n nonAncoraFatta) err() error {
-	return Errore("RX-AZIONE-004", n.tipo+": "+nonAncoraFatti[n.tipo])
+func (n notYetDone) err() error {
+	return Error("RX-AZIONE-004", n.kind+": "+notYetDoneWhy[n.kind])
 }
 
-func (n nonAncoraFatta) Vincoli(*Contesto) ([]string, error) { return nil, nil }
-func (n nonAncoraFatta) Fotografa(*Contesto) (json.RawMessage, Origine, error) {
+func (n notYetDone) Constraints(*Context) ([]string, error) { return nil, nil }
+func (n notYetDone) Snapshot(*Context) (json.RawMessage, Origin, error) {
 	return nil, "", n.err()
 }
-func (n nonAncoraFatta) Fai(*Contesto, json.RawMessage) error { return n.err() }
-func (n nonAncoraFatta) Controlla(*Contesto, json.RawMessage) (Esito, string, error) {
+func (n notYetDone) Do(*Context, json.RawMessage) error { return n.err() }
+func (n notYetDone) Verify(*Context, json.RawMessage) (Outcome, string, error) {
 	return "", "", n.err()
 }
-func (n nonAncoraFatta) Annulla(*Contesto, json.RawMessage) error { return n.err() }
-func (n nonAncoraFatta) Annullata(*Contesto, json.RawMessage) (bool, string, error) {
+func (n notYetDone) Rollback(*Context, json.RawMessage) error { return n.err() }
+func (n notYetDone) Cancelled(*Context, json.RawMessage) (bool, string, error) {
 	return false, "", n.err()
 }
 
-// PassiNonFatti: the plan's steps the engine cannot execute yet.
-func PassiNonFatti(p *Piano) []string {
+// UnimplementedSteps: the plan's steps the engine cannot execute yet.
+func UnimplementedSteps(p *Piano) []string {
 	var r []string
-	for _, a := range p.Azioni {
-		if m, ok := nonAncoraFatti[a.Tipo]; ok {
-			r = append(r, a.ID+" ("+a.Tipo+": "+m+")")
+	for _, a := range p.Actions {
+		if m, ok := notYetDoneWhy[a.Kind]; ok {
+			r = append(r, a.ID+" ("+a.Kind+": "+m+")")
 		}
 	}
 	return r

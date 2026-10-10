@@ -4,13 +4,13 @@
     sbom.py <cartella-dati> <cartella-uscita>
 
 For every package, pubblica.sh has left in <cartella-dati>:
-  <nome>.nv          package name and version
-  <nome>.file        the file in the archive
-  <nome>.incorporate the package's usr/share/remotix/incorporate.json: the versions of ngtcp2 and
+  <label_name>.nv          package name and version
+  <label_name>.file        the file in the archive
+  <label_name>.incorporate the package's usr/share/remotix/incorporate.json: the versions of ngtcp2 and
                      nghttp3 LINKED into the binary (pkg-config in the build container)
-  <nome>.bundled     what the package DECLARES (Static-Built-Using of the .deb, bundled() of the .rpm;
+  <label_name>.bundled     what the package DECLARES (Static-Built-Using of the .deb, bundled() of the .rpm;
                      Arch has no field: empty)
-  <nome>.richieste   the declared dependencies (the distribution libraries, linked dynamically)
+  <label_name>.richieste   the declared dependencies (the distribution libraries, linked dynamically)
 
 ⛔ R24 red if the linked version is missing or differs from the declared one: the SBOM is not written
 and the exit code is 1. ⚠ «The version in the binary»: static ngtcp2 and nghttp3 leave no version
@@ -21,39 +21,39 @@ would need a line in the product (ngtcp2_version() in the startup log: a request
 """
 import hashlib, json, os, re, sys, uuid
 
-dati, uscita = sys.argv[1], sys.argv[2]
-os.makedirs(uscita, exist_ok=True)
-FONTI = {
+data_v, out_dir = sys.argv[1], sys.argv[2]
+os.makedirs(out_dir, exist_ok=True)
+SOURCES = {
     "ngtcp2": "https://github.com/ngtcp2/ngtcp2/releases/download/v{v}/ngtcp2-{v}.tar.xz",
     "nghttp3": "https://github.com/ngtcp2/nghttp3/releases/download/v{v}/nghttp3-{v}.tar.xz",
 }
-rosso = 0
-nomi = sorted({f.rsplit(".", 1)[0] for f in os.listdir(dati) if f.endswith(".nv")})
-for b in nomi:
-    leggi = lambda est: open(os.path.join(dati, b + "." + est)).read() if os.path.exists(os.path.join(dati, b + "." + est)) else ""
-    nv = leggi("nv").split()
+red = 0
+names = sorted({f.rsplit(".", 1)[0] for f in os.listdir(data_v) if f.endswith(".nv")})
+for b in names:
+    read_it = lambda est: open(os.path.join(data_v, b + "." + est)).read() if os.path.exists(os.path.join(data_v, b + "." + est)) else ""
+    nv = read_it("nv").split()
     pk, ver = nv[0], nv[1]
-    f = leggi("file").strip()
-    inc_t = leggi("incorporate").strip()
+    f = read_it("file").strip()
+    inc_t = read_it("incorporate").strip()
     if not inc_t:
         print(f"   SBOM {b}: SKIPPED — the package has no incorporate.json (built before T8)")
         continue
     inc = json.loads(inc_t)
-    dich = {}
-    for m in re.finditer(r"(ngtcp2|nghttp3)\)?\s*\(?\s*=\s*([0-9][0-9.]*)", leggi("bundled")):
-        dich[m.group(1)] = m.group(2)
-    esito = []
+    declared = {}
+    for m in re.finditer(r"(ngtcp2|nghttp3)\)?\s*\(?\s*=\s*([0-9][0-9.]*)", read_it("bundled")):
+        declared[m.group(1)] = m.group(2)
+    outcome = []
     for lib in ("ngtcp2", "nghttp3"):
         v = inc.get(lib)
         if not v:
-            esito.append(f"{lib}: linked version MISSING"); rosso = 1
-        elif lib in dich and dich[lib] != v:
-            esito.append(f"{lib}: linked {v}, declared {dich[lib]}"); rosso = 1
-    if esito:
-        print(f"   ⛔ R24 {b}: " + "; ".join(esito))
+            outcome.append(f"{lib}: linked version MISSING"); red = 1
+        elif lib in declared and declared[lib] != v:
+            outcome.append(f"{lib}: linked {v}, declared {declared[lib]}"); red = 1
+    if outcome:
+        print(f"   ⛔ R24 {b}: " + "; ".join(outcome))
         continue
     sha = hashlib.sha256(open(f, "rb").read()).hexdigest() if f and os.path.exists(f) else ""
-    pacchetti = [{
+    packets = [{
         "SPDXID": "SPDXRef-remotix", "name": pk, "versionInfo": ver, "supplier": "Organization: REMOTIX",
         "downloadLocation": "NOASSERTION", "filesAnalyzed": False,
         "checksums": [{"algorithm": "SHA256", "checksumValue": sha}] if sha else [],
@@ -62,19 +62,19 @@ for b in nomi:
     rel = [{"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-remotix"}]
     for lib in ("ngtcp2", "nghttp3"):
         v = inc[lib]
-        pacchetti.append({
+        packets.append({
             "SPDXID": f"SPDXRef-{lib}", "name": lib, "versionInfo": v, "supplier": "Organization: ngtcp2 project",
-            "downloadLocation": FONTI[lib].format(v=v), "filesAnalyzed": False, "licenseDeclared": "MIT",
+            "downloadLocation": SOURCES[lib].format(v=v), "filesAnalyzed": False, "licenseDeclared": "MIT",
             "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
                               "referenceLocator": f"pkg:github/ngtcp2/{lib}@v{v}"}],
-            "comment": "linked STATICALLY into the binary (" + inc.get("fonte", "") + ")" +
-                       (f"; declared by the package: {dich[lib]}" if lib in dich else ""),
+            "comment": "linked STATICALLY into the binary (" + inc.get("source", "") + ")" +
+                       (f"; declared by the package: {declared[lib]}" if lib in declared else ""),
         })
         rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "STATIC_LINK", "relatedSpdxElement": f"SPDXRef-{lib}"})
-    for i, d in enumerate(x.strip() for x in re.split(r"[,\n]", leggi("richieste")) if x.strip()):
+    for i, d in enumerate(x.strip() for x in re.split(r"[,\n]", read_it("richieste")) if x.strip()):
         if d.startswith("rpmlib(") or d.startswith("/"):
             continue
-        pacchetti.append({"SPDXID": f"SPDXRef-dip-{i}", "name": d, "versionInfo": "NOASSERTION",
+        packets.append({"SPDXID": f"SPDXRef-dip-{i}", "name": d, "versionInfo": "NOASSERTION",
                           "downloadLocation": "NOASSERTION", "filesAnalyzed": False,
                           "comment": "distribution dependency, linked dynamically or used at run time"})
         rel.append({"spdxElementId": "SPDXRef-remotix", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": f"SPDXRef-dip-{i}"})
@@ -83,9 +83,9 @@ for b in nomi:
         "name": f"{pk}-{ver}", "documentNamespace": f"https://remotix.invalid/sbom/{b}-{uuid.uuid5(uuid.NAMESPACE_URL, b + sha)}",
         "creationInfo": {"created": os.environ.get("SBOM_DATA", "") or __import__("datetime").datetime.now(__import__("datetime").timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                          "creators": ["Tool: REMOTIX packaging/archivio/sbom.py"]},
-        "packages": pacchetti, "relationships": rel,
+        "packages": packets, "relationships": rel,
     }
-    with open(os.path.join(uscita, b + ".spdx.json"), "w") as o:
+    with open(os.path.join(out_dir, b + ".spdx.json"), "w") as o:
         json.dump(doc, o, indent=2, ensure_ascii=False)
-    print(f"   SBOM {b}: ngtcp2 {inc['ngtcp2']}, nghttp3 {inc['nghttp3']} (declared: {dich or 'no field'})")
-sys.exit(rosso)
+    print(f"   SBOM {b}: ngtcp2 {inc['ngtcp2']}, nghttp3 {inc['nghttp3']} (declared: {declared or 'no field'})")
+sys.exit(red)

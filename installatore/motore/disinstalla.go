@@ -12,40 +12,40 @@ import (
 // The UNINSTALLATION (§6.0, third kind; §6.5 point 3; R6): an operation like the others, with
 // its plan, its consent, its log and its resume, which walks BACKWARDS through the
 // log of the confirmed installation (installazione.json). Every step of then with origin
-// DIRETTA becomes an «undo» step: doing = its annulla, undoing = its fai (if the
-// uninstallation fails halfway, it goes back to the previous installation). PREESISTENTE is never
+// DIRECT becomes an «undo» step: doing = its rollback, undoing = its make (if the
+// uninstallation fails halfway, it goes back to the previous installation). PREEXISTING is never
 // touched; the INDIRETTE are declared. Right after the service is switched off, the REMOTIX
 // sessions still open are closed (chiudi-sessioni, §6.5-bis). On CONFIRMED uninstallation
 // installazione.json is removed; the operations log stays (it is the machine's history,
 // like dnf's).
 
 func init() {
-	registraTipo("undo", nuovaDisfa)
-	registraTipo("remove-membership", nuovaIscrizione)
+	registerType("undo", newUndo)
+	registerType("remove-membership", newEnrollment)
 }
 
-// FileIscrizioni: where REMOTIX records whom it enrolled in the groups at the first connection (figlio.c,
-// §6.5-bis): origin DIRETTA, the uninstallation removes them like those of the engine.
-const FileIscrizioni = "gruppi-iscritti.jsonl"
+// EnrollmentsFile: where REMOTIX records whom it enrolled in the groups at the first connection (figlio.c,
+// §6.5-bis): origin DIRECT, the uninstallation removes them like those of the engine.
+const EnrollmentsFile = "gruppi-iscritti.jsonl"
 
-// Iscrizioni: the (user, group) pairs of the file, without duplicates.
-func (m *Motore) Iscrizioni() [][2]string {
-	b, err := os.ReadFile(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni))
+// Memberships: the (user, group) pairs of the file, without duplicates.
+func (m *Engine) Memberships() [][2]string {
+	b, err := os.ReadFile(filepath.Join(filepath.Dir(m.Folder), EnrollmentsFile))
 	if err != nil {
 		return nil
 	}
 	var r [][2]string
-	visti := map[[2]string]bool{}
-	for _, riga := range strings.Split(string(b), "\n") {
+	seen_items := map[[2]string]bool{}
+	for _, row := range strings.Split(string(b), "\n") {
 		var x struct {
-			Formato, Utente, Gruppo, Origine string
+			Schema, Username, Grp, Origin string
 		}
-		if json.Unmarshal([]byte(riga), &x) != nil || x.Formato != "remotix-gruppi/1" || x.Utente == "" || x.Gruppo == "" {
+		if json.Unmarshal([]byte(row), &x) != nil || x.Schema != "remotix-gruppi/1" || x.Username == "" || x.Grp == "" {
 			continue
 		}
-		k := [2]string{x.Utente, x.Gruppo}
-		if !visti[k] {
-			visti[k] = true
+		k := [2]string{x.Username, x.Grp}
+		if !seen_items[k] {
+			seen_items[k] = true
 			r = append(r, k)
 		}
 	}
@@ -53,97 +53,97 @@ func (m *Motore) Iscrizioni() [][2]string {
 }
 
 // togli-iscrizione: the inverse of aggiungi-utente-a-gruppo, for the enrolments made by REMOTIX.
-type iscrizione struct{ g *gruppo }
+type enrollment struct{ g *grp }
 
-func nuovaIscrizione(p AzionePiano) (Azione, error) {
-	return &iscrizione{&gruppo{p.Parametri["user"], p.Parametri["group"]}}, nil
+func newEnrollment(p PlanAction) (Action, error) {
+	return &enrollment{&grp{p.Parameters["user"], p.Parameters["group"]}}, nil
 }
 
-type primaIscrizione struct {
-	Origine Origine `json:"origin"`
+type beforeEnrollment struct {
+	Origin Origin `json:"origin"`
 }
 
-func (i *iscrizione) Vincoli(c *Contesto) ([]string, error) { return i.g.Vincoli(c) }
-func (i *iscrizione) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	esp, _, _, err := i.g.membro(c)
+func (i *enrollment) Constraints(c *Context) ([]string, error) { return i.g.Constraints(c) }
+func (i *enrollment) Snapshot(c *Context) (json.RawMessage, Origin, error) {
+	esp, _, _, err := i.g.member(c)
 	if err != nil {
-		if CodiceDi(err) == "RX-GRUPPI-003" || CodiceDi(err) == "RX-GRUPPI-002" {
-			return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil // the user or the group is gone
+		if CodeOf(err) == "RX-GRUPPI-003" || CodeOf(err) == "RX-GRUPPI-002" {
+			return jsonDi(beforeEnrollment{PREEXISTING}), PREEXISTING, nil // the user or the group is gone
 		}
 		return nil, "", err
 	}
 	if !esp {
-		return jsonDi(primaIscrizione{PREESISTENTE}), PREESISTENTE, nil
+		return jsonDi(beforeEnrollment{PREEXISTING}), PREEXISTING, nil
 	}
-	return jsonDi(primaIscrizione{DIRETTA}), DIRETTA, nil
+	return jsonDi(beforeEnrollment{DIRECT}), DIRECT, nil
 }
-func (i *iscrizione) origine(prima json.RawMessage) Origine {
-	var p primaIscrizione
-	json.Unmarshal(prima, &p)
-	return p.Origine
+func (i *enrollment) origin(before json.RawMessage) Origin {
+	var p beforeEnrollment
+	json.Unmarshal(before, &p)
+	return p.Origin
 }
-func (i *iscrizione) Fai(c *Contesto, prima json.RawMessage) error {
-	if i.origine(prima) == PREESISTENTE {
+func (i *enrollment) Do(c *Context, before json.RawMessage) error {
+	if i.origin(before) == PREEXISTING {
 		return nil
 	}
-	if esp, _, _, err := i.g.membro(c); err != nil || !esp {
+	if esp, _, _, err := i.g.member(c); err != nil || !esp {
 		return err
 	}
-	return c.Amb.Gruppi.Togli(i.g.utente, i.g.gruppo)
+	return c.Amb.Groups.Revoke(i.g.username, i.g.grp)
 }
-func (i *iscrizione) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	if i.origine(prima) == PREESISTENTE {
-		return COMPLETO, "nothing to remove", nil
+func (i *enrollment) Verify(c *Context, before json.RawMessage) (Outcome, string, error) {
+	if i.origin(before) == PREEXISTING {
+		return COMPLETE, "nothing to remove", nil
 	}
-	esp, _, _, err := i.g.membro(c)
+	esp, _, _, err := i.g.member(c)
 	if err != nil {
 		return "", "", err
 	}
 	if esp {
-		return ASSENTE, i.g.utente + " is still in " + i.g.gruppo, nil
+		return ABSENT, i.g.username + " is still in " + i.g.grp, nil
 	}
-	return COMPLETO, i.g.utente + " is no longer in " + i.g.gruppo, nil
+	return COMPLETE, i.g.username + " is no longer in " + i.g.grp, nil
 }
-func (i *iscrizione) Annulla(c *Contesto, prima json.RawMessage) error {
-	if i.origine(prima) == PREESISTENTE {
+func (i *enrollment) Rollback(c *Context, before json.RawMessage) error {
+	if i.origin(before) == PREEXISTING {
 		return nil
 	}
-	if esp, _, _, err := i.g.membro(c); err != nil || esp {
+	if esp, _, _, err := i.g.member(c); err != nil || esp {
 		return err
 	}
-	return c.Amb.Gruppi.Aggiungi(i.g.utente, i.g.gruppo)
+	return c.Amb.Groups.Add(i.g.username, i.g.grp)
 }
-func (i *iscrizione) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	if i.origine(prima) == PREESISTENTE {
+func (i *enrollment) Cancelled(c *Context, before json.RawMessage) (bool, string, error) {
+	if i.origin(before) == PREEXISTING {
 		return true, "nothing to put back", nil
 	}
-	esp, _, _, err := i.g.membro(c)
+	esp, _, _, err := i.g.member(c)
 	return esp, "", err
 }
 
-// CartellaPiani: the plans approved by whoever installs, next to the operations folder
+// PlansFolder: the plans approved by whoever installs, next to the operations folder
 // (/var/lib/remotix/plans): the command line and the TUI write them there.
-const CartellaPiani = "plans"
+const PlansFolder = "plans"
 
-// PulisciStoria, on CONFIRMED uninstallation (the coordinator's decision, 30 Sep): without purge the
+// CleanHistory, on CONFIRMED uninstallation (the coordinator's decision, 30 Sep): without purge the
 // engine's history stays (for support) but without the cached packages; with purge it is removed
 // entirely — the operations and the plans —, and /var/lib/remotix too if it remains empty.
-func (m *Motore) PulisciStoria(purge bool) error {
+func (m *Engine) CleanHistory(purge bool) error {
 	if purge {
-		for _, d := range []string{m.Cartella, filepath.Join(filepath.Dir(m.Cartella), CartellaPiani)} {
+		for _, d := range []string{m.Folder, filepath.Join(filepath.Dir(m.Folder), PlansFolder)} {
 			if err := os.RemoveAll(d); err != nil {
 				return err
 			}
 		}
-		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // already undone by the plan
+		os.Remove(filepath.Join(filepath.Dir(m.Folder), EnrollmentsFile)) // already undone by the plan
 		// the recorded versions (aggiornato.go). ⚠ 10 Oct 2026, names in English (DECISIONI §10.35): removed the
 		// cleanups of the files of the engines from before D11/D14 — no real installation ever wrote them
-		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileVersioniAnnotate))
-		os.Remove(filepath.Dir(m.Cartella)) // only if empty
+		os.Remove(filepath.Join(filepath.Dir(m.Folder), AnnotatedVersionsFile))
+		os.Remove(filepath.Dir(m.Folder)) // only if empty
 		return nil
 	}
-	voci, _ := filepath.Glob(filepath.Join(m.Cartella, "*", "cache"))
-	for _, v := range voci {
+	entries, _ := filepath.Glob(filepath.Join(m.Folder, "*", "cache"))
+	for _, v := range entries {
 		if err := os.RemoveAll(v); err != nil {
 			return err
 		}
@@ -151,18 +151,18 @@ func (m *Motore) PulisciStoria(purge bool) error {
 	return nil
 }
 
-// LeggiRegistro reads a log without opening it for writing.
-func LeggiRegistro(percorso string) ([]Evento, error) {
-	f, err := os.Open(percorso)
+// ReadLog reads a log without opening it for writing.
+func ReadLog(fpath string) ([]Event, error) {
+	f, err := os.Open(fpath)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	var r []Evento
+	var r []Event
 	s := bufio.NewScanner(f)
 	s.Buffer(make([]byte, 1<<20), 64<<20)
 	for s.Scan() {
-		var e Evento
+		var e Event
 		if json.Unmarshal(s.Bytes(), &e) == nil {
 			r = append(r, e)
 		}
@@ -170,246 +170,246 @@ func LeggiRegistro(percorso string) ([]Evento, error) {
 	return r, s.Err()
 }
 
-type disfa struct {
-	op, azione string
+type undo struct {
+	op, action string
 	purge      bool
 }
 
-func nuovaDisfa(p AzionePiano) (Azione, error) {
-	return &disfa{op: p.Parametri["operation"], azione: p.Parametri["action"], purge: p.Parametri["purge"] == "yes"}, nil
+func newUndo(p PlanAction) (Action, error) {
+	return &undo{op: p.Parameters["operation"], action: p.Parameters["action"], purge: p.Parameters["purge"] == "yes"}, nil
 }
 
-type primaDisfa struct {
-	Origine   Origine         `json:"origin"`
-	PrimaOrig json.RawMessage `json:"original_before"`
+type beforeUndo struct {
+	Origin     Origin          `json:"origin"`
+	BeforeOrig json.RawMessage `json:"original_before"`
 }
 
-// originale: the action of then, its context (the operation folder of then, with the
+// original: the action of then, its context (the operation folder of then, with the
 // backups and the cache) and the before-state of then.
-func (d *disfa) originale(c *Contesto) (Azione, *Contesto, *Evento, error) {
-	dir := filepath.Join(filepath.Dir(c.Cartella), d.op)
+func (d *undo) original(c *Context) (Action, *Context, *Event, error) {
+	dir := filepath.Join(filepath.Dir(c.Folder), d.op)
 	var pn Piano
-	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
+	if err := ReadJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
 		return nil, nil, nil, err
 	}
-	var ap *AzionePiano
-	for i := range pn.Azioni {
-		if pn.Azioni[i].ID == d.azione {
-			ap = &pn.Azioni[i]
+	var ap *PlanAction
+	for i := range pn.Actions {
+		if pn.Actions[i].ID == d.action {
+			ap = &pn.Actions[i]
 		}
 	}
 	if ap == nil {
-		return nil, nil, nil, fmt.Errorf("disfa: %s is not in the plan of %s", d.azione, d.op)
+		return nil, nil, nil, fmt.Errorf("undo: %s is not in the plan of %s", d.action, d.op)
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
+	ev, err := ReadLog(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	var intz *Evento
+	var intent *Event
 	for i := range ev {
-		if ev[i].Azione == d.azione && ev[i].Tipo == EvIntenzione {
-			intz = &ev[i]
+		if ev[i].Action == d.action && ev[i].Kind == EvIntent {
+			intent = &ev[i]
 			break
 		}
 	}
-	a, err := NuovaAzione(*ap)
+	a, err := NewAction(*ap)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return a, &Contesto{Amb: c.Amb, Cartella: dir, P: *ap, Purge: d.purge}, intz, nil
+	return a, &Context{Amb: c.Amb, Folder: dir, P: *ap, Purge: d.purge}, intent, nil
 }
 
-func (d *disfa) Vincoli(c *Contesto) ([]string, error) {
-	a, cc, _, err := d.originale(c)
+func (d *undo) Constraints(c *Context) ([]string, error) {
+	a, cc, _, err := d.original(c)
 	if err != nil {
 		return nil, err
 	}
-	return a.Vincoli(cc)
+	return a.Constraints(cc)
 }
 
-func (d *disfa) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	_, _, intz, err := d.originale(c)
+func (d *undo) Snapshot(c *Context) (json.RawMessage, Origin, error) {
+	_, _, intent, err := d.original(c)
 	if err != nil {
 		return nil, "", err
 	}
-	if intz == nil || intz.Origine == PREESISTENTE {
-		return jsonDi(primaDisfa{Origine: PREESISTENTE}), PREESISTENTE, nil
+	if intent == nil || intent.Origin == PREEXISTING {
+		return jsonDi(beforeUndo{Origin: PREEXISTING}), PREEXISTING, nil
 	}
-	return jsonDi(primaDisfa{Origine: DIRETTA, PrimaOrig: intz.Prima}), DIRETTA, nil
+	return jsonDi(beforeUndo{Origin: DIRECT, BeforeOrig: intent.Before}), DIRECT, nil
 }
 
-func (d *disfa) leggi(c *Contesto, prima json.RawMessage) (Azione, *Contesto, primaDisfa, error) {
-	var p primaDisfa
-	if err := json.Unmarshal(prima, &p); err != nil {
+func (d *undo) read_it(c *Context, before json.RawMessage) (Action, *Context, beforeUndo, error) {
+	var p beforeUndo
+	if err := json.Unmarshal(before, &p); err != nil {
 		return nil, nil, p, err
 	}
-	a, cc, _, err := d.originale(c)
+	a, cc, _, err := d.original(c)
 	return a, cc, p, err
 }
 
-func (d *disfa) Fai(c *Contesto, prima json.RawMessage) error {
-	a, cc, p, err := d.leggi(c, prima)
-	if err != nil || p.Origine == PREESISTENTE {
+func (d *undo) Do(c *Context, before json.RawMessage) error {
+	a, cc, p, err := d.read_it(c, before)
+	if err != nil || p.Origin == PREEXISTING {
 		return err
 	}
-	return a.Annulla(cc, p.PrimaOrig)
+	return a.Rollback(cc, p.BeforeOrig)
 }
 
-func (d *disfa) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	a, cc, p, err := d.leggi(c, prima)
+func (d *undo) Verify(c *Context, before json.RawMessage) (Outcome, string, error) {
+	a, cc, p, err := d.read_it(c, before)
 	if err != nil {
 		return "", "", err
 	}
-	if p.Origine == PREESISTENTE {
-		return COMPLETO, "nothing to undo", nil
+	if p.Origin == PREEXISTING {
+		return COMPLETE, "nothing to undo", nil
 	}
-	if ok, det, err := a.Annullata(cc, p.PrimaOrig); err != nil {
+	if ok, det, err := a.Cancelled(cc, p.BeforeOrig); err != nil {
 		return "", "", err
 	} else if ok {
-		return COMPLETO, "undone: " + det, nil
+		return COMPLETE, "undone: " + det, nil
 	}
-	e, det, err := a.Controlla(cc, p.PrimaOrig)
+	e, det, err := a.Verify(cc, p.BeforeOrig)
 	if err != nil {
 		return "", "", err
 	}
 	switch e {
-	case COMPLETO:
-		return ASSENTE, "still as the installation left it", nil
-	case ESTRANEO:
-		return ESTRANEO, det, nil
+	case COMPLETE:
+		return ABSENT, "still as the installation left it", nil
+	case FOREIGN:
+		return FOREIGN, det, nil
 	}
 	return A_META, det, nil
 }
 
-func (d *disfa) Ripara(c *Contesto, prima json.RawMessage) error {
-	a, cc, p, err := d.leggi(c, prima)
+func (d *undo) Repair(c *Context, before json.RawMessage) error {
+	a, cc, p, err := d.read_it(c, before)
 	if err != nil {
 		return err
 	}
-	if r, ok := a.(Riparabile); ok {
-		return r.Ripara(cc, p.PrimaOrig)
+	if r, ok := a.(Repairable); ok {
+		return r.Repair(cc, p.BeforeOrig)
 	}
 	return nil
 }
 
-// Annulla (an uninstallation that fails halfway): what was there is redone.
-func (d *disfa) Annulla(c *Contesto, prima json.RawMessage) error {
-	a, cc, p, err := d.leggi(c, prima)
-	if err != nil || p.Origine == PREESISTENTE {
+// Rollback (an uninstallation that fails halfway): what was there is redone.
+func (d *undo) Rollback(c *Context, before json.RawMessage) error {
+	a, cc, p, err := d.read_it(c, before)
+	if err != nil || p.Origin == PREEXISTING {
 		return err
 	}
-	return a.Fai(cc, p.PrimaOrig)
+	return a.Do(cc, p.BeforeOrig)
 }
 
-func (d *disfa) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	a, cc, p, err := d.leggi(c, prima)
+func (d *undo) Cancelled(c *Context, before json.RawMessage) (bool, string, error) {
+	a, cc, p, err := d.read_it(c, before)
 	if err != nil {
 		return false, "", err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origin == PREEXISTING {
 		return true, "nothing to redo", nil
 	}
-	e, det, err := a.Controlla(cc, p.PrimaOrig)
-	return e == COMPLETO, det, err
+	e, det, err := a.Verify(cc, p.BeforeOrig)
+	return e == COMPLETE, det, err
 }
 
-func (d *disfa) Indirette(prima json.RawMessage) []string {
-	var p primaDisfa
-	if json.Unmarshal(prima, &p) != nil || p.Origine == PREESISTENTE {
+func (d *undo) Indirect(before json.RawMessage) []string {
+	var p beforeUndo
+	if json.Unmarshal(before, &p) != nil || p.Origin == PREEXISTING {
 		return nil
 	}
 	return nil // the installation's indirect changes stay declared in its certificate, taken up below
 }
 
-// PianoDisinstallazione builds the plan from the log of the confirmed installation.
-func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error) {
-	in, err := m.ControllaInstallazione()
+// UninstallPlan builds the plan from the log of the confirmed installation.
+func (m *Engine) UninstallPlan(prof *Profile, purge bool) (*Piano, error) {
+	in, err := m.CheckInstallation()
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(m.Cartella, in.Operazione)
+	dir := filepath.Join(m.Folder, in.Operation)
 	var orig Piano
-	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &orig); err != nil {
+	if err := ReadJSON(filepath.Join(dir, "plan.json"), &orig); err != nil {
 		return nil, err
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
+	ev, err := ReadLog(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, err
 	}
-	origine := map[string]Origine{}
+	origin := map[string]Origin{}
 	for _, e := range ev {
-		if e.Tipo == EvIntenzione {
-			if _, ok := origine[e.Azione]; !ok {
-				origine[e.Azione] = e.Origine
+		if e.Kind == EvIntent {
+			if _, ok := origin[e.Action]; !ok {
+				origin[e.Action] = e.Origin
 			}
 		}
 	}
-	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "uninstallation", Purge: purge,
-		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest},
-		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
-	sess, _ := SessioniRemotix(m.Amb)
-	var utenti []string
-	visti := map[string]bool{}
+	pn := &Piano{Schema: Schema, Object: "plan", ID: newID(), Created: now(), Duty: "uninstallation", Purge: purge,
+		Engine: EngineRef{EngineVersion, EngineDigest()}, Catalog: CatalogRef{m.Catalog.Version, m.Catalog.Digest},
+		Platform: orig.Platform, Depends: []string{}, Consents: []string{}, Conditions: []Condition{}, NotDone: []Message{}}
+	sess, _ := RemotixSessions(m.Amb)
+	var users []string
+	seen_items := map[string]bool{}
 	for _, s := range sess {
-		if !visti[s.Utente] {
-			visti[s.Utente] = true
-			utenti = append(utenti, s.Utente)
+		if !seen_items[s.Username] {
+			seen_items[s.Username] = true
+			users = append(users, s.Username)
 		}
 	}
-	chiudi := PianoChiudiSessioni("close-sessions", len(sess), utenti)
-	messa := false
+	shut := PlanCloseSessions("close-sessions", len(sess), users)
+	placed := false
 	purgeS := map[bool]string{true: "yes", false: "no"}[purge]
-	for i := len(orig.Azioni) - 1; i >= 0; i-- {
-		a := orig.Azioni[i]
-		o, fatta := origine[a.ID]
-		if !fatta || o == PREESISTENTE {
+	for i := len(orig.Actions) - 1; i >= 0; i-- {
+		a := orig.Actions[i]
+		o, mark_done := origin[a.ID]
+		if !mark_done || o == PREEXISTING {
 			continue
 		}
-		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "undo-" + a.ID, Tipo: "undo",
-			Parametri:      map[string]string{"operation": in.Operazione, "action": a.ID, "purge": purgeS},
-			Descrizione:    T("az.disfa", a.Descrizione),
-			ComeSiFa:       a.ComeSiAnnulla,
-			ComeSiVerifica: T("az.disfa.verifica"),
-			ComeSiAnnulla:  a.ComeSiFa,
-			Reversibilita:  a.Reversibilita})
-		if a.Tipo == "start-service" && !messa {
-			pn.Azioni = append(pn.Azioni, chiudi)
-			messa = true
+		pn.Actions = append(pn.Actions, PlanAction{ID: "undo-" + a.ID, Kind: "undo",
+			Parameters:    map[string]string{"operation": in.Operation, "action": a.ID, "purge": purgeS},
+			Description:   T("az.undo", a.Description),
+			ComeSiFa:      a.HowToUndo,
+			HowToVerify:   T("az.undo.verify"),
+			HowToUndo:     a.ComeSiFa,
+			Reversibility: a.Reversibility})
+		if a.Kind == "start-service" && !placed {
+			pn.Actions = append(pn.Actions, shut)
+			placed = true
 		}
 	}
-	if !messa {
-		pn.Azioni = append([]AzionePiano{chiudi}, pn.Azioni...)
+	if !placed {
+		pn.Actions = append([]PlanAction{shut}, pn.Actions...)
 	}
 	// the group enrolments made by REMOTIX at the first connection (DIRETTE), except those
 	// the engine itself already has in one of its steps
-	gia := map[[2]string]bool{}
-	for _, a := range orig.Azioni {
-		if a.Tipo == "add-user-to-group" {
-			gia[[2]string{a.Parametri["user"], a.Parametri["group"]}] = true
+	already := map[[2]string]bool{}
+	for _, a := range orig.Actions {
+		if a.Kind == "add-user-to-group" {
+			already[[2]string{a.Parameters["user"], a.Parameters["group"]}] = true
 		}
 	}
-	for _, k := range m.Iscrizioni() {
-		if gia[k] {
+	for _, k := range m.Memberships() {
+		if already[k] {
 			continue
 		}
-		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "membership-" + k[0] + "-" + k[1], Tipo: "remove-membership",
-			Parametri: map[string]string{"user": k[0], "group": k[1]}, Descrizione: T("az.iscrizione", k[0], k[1]),
-			ComeSiFa: T("az.iscrizione.fa"), ComeSiVerifica: T("az.iscrizione.verifica"), ComeSiAnnulla: T("az.iscrizione.annulla"),
-			Reversibilita: ESATTA})
+		pn.Actions = append(pn.Actions, PlanAction{ID: "membership-" + k[0] + "-" + k[1], Kind: "remove-membership",
+			Parameters: map[string]string{"user": k[0], "group": k[1]}, Description: T("az.enrollment", k[0], k[1]),
+			ComeSiFa: T("az.enrollment.fa"), HowToVerify: T("az.enrollment.verify"), HowToUndo: T("az.enrollment.rollback"),
+			Reversibility: EXACT})
 	}
 	// the session logs in the homes (the user's decision, 1 Oct 2026): always, last,
 	// with sessions closed; the current paths are declared
-	registri := RegistriUtente(m.Amb)
-	pn.Azioni = append(pn.Azioni, PianoTogliRegistri("user-logs", registri))
-	elenco := T("az.registri.nessuno")
-	if len(registri) > 0 {
-		elenco = strings.Join(registri, ", ")
+	logs := UserLogs(m.Amb)
+	pn.Actions = append(pn.Actions, PlanRemoveLogs("user-logs", logs))
+	listing := T("az.logs.nobody")
+	if len(logs) > 0 {
+		listing = strings.Join(logs, ", ")
 	}
-	pn.Dichiarate = append(pn.Dichiarate, T("az.registri.dichiarata", elenco))
-	im, err := CalcolaImpronta(prof, m.Catalogo, pn.Azioni, pn.Dipende, &Contesto{Amb: m.Amb, Cartella: filepath.Join(m.Cartella, "plan-in-progress")})
+	pn.Declared = append(pn.Declared, T("az.logs.declared", listing))
+	im, err := ComputeFingerprint(prof, m.Catalog, pn.Actions, pn.Depends, &Context{Amb: m.Amb, Folder: filepath.Join(m.Folder, "plan-in-progress")})
 	if err != nil {
 		return nil, err
 	}
-	pn.Impronta = *im
+	pn.Fingerprint = *im
 	return pn, nil
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """02-codifica-nal.py — the SHAPE of the HEVC stream, read on the bytes.
 
-    python3 02-codifica-nal.py --elenca   <file.hevc>
-    python3 02-codifica-nal.py --verifica <file.hevc> [--idr-attesi N]
-    python3 02-codifica-nal.py --storpia  <file.hevc> <modo> <uscita>
+    python3 02-codifica-nal.py --list_cmd   <file.hevc>
+    python3 02-codifica-nal.py --verify <file.hevc> [--expected-idr N]
+    python3 02-codifica-nal.py --mangle  <file.hevc> <manner> <out_dir>
                                modes: senza-parametri | byte-girato | troncato
 
 ===========================================================================
@@ -49,10 +49,10 @@ arriving** — the same symptom v1's `codificatore.c` had already paid for
 once, and that is why v1 forbids `AV_CODEC_FLAG_GLOBAL_HEADER` with a comment
 at `src/codificatore.c:268-272`.
 
-⇒ `--verifica --idr-attesi N` requires **N VPS+SPS+PPS groups**, not one.
+⇒ `--verify --expected-idr N` requires **N VPS+SPS+PPS groups**, not one.
 
 ===========================================================================
-⛔ AND `--storpia`: A BENCH THAT HAS NEVER SEEN A REFUSAL CANNOT SEE ONE
+⛔ AND `--mangle`: A BENCH THAT HAS NEVER SEEN A REFUSAL CANNOT SEE ONE
 
 `REVIEWER.md` §1 point 5 and `CODER.md` §3.10.  A round in which everything passes does not
 prove that the bench can reject: it only proves that it did not reject.  The
@@ -78,18 +78,18 @@ import os
 import sys
 
 # The NAL types we care about (H.265, ISO/IEC 23008-2 table 7-1).
-NOMI = {
+NAMES = {
     19: "IDR_W_RADL", 20: "IDR_N_LP", 21: "CRA_NUT",
     32: "VPS", 33: "SPS", 34: "PPS", 35: "AUD", 36: "EOS", 37: "EOB",
     38: "FD", 39: "PREFIX_SEI", 40: "SUFFIX_SEI",
     0: "TRAIL_N", 1: "TRAIL_R",
 }
-PARAMETRI = (32, 33, 34)
+PARAMETERS = (32, 33, 34)
 IDR = (19, 20)
-VCL_MASSIMO = 31          # types 0..31 are picture data (VCL)
+VCL_MAX = 31          # types 0..31 are picture data (VCL)
 
 
-def trova_inizi(dati):
+def find_starts(data_v):
     """The offsets of the Annex-B start codes, and their length (3 or 4).
 
     ⛔ `00 00 01` is told from `00 00 00 01`: both are legal, and a
@@ -97,113 +97,113 @@ def trova_inizi(dati):
        complaining** — that is it would say «this stream has no PPS» of a stream
        that has it.  A false red costs as much as a false green.
     """
-    inizi = []
-    i, n = 0, len(dati)
+    starts = []
+    i, n = 0, len(data_v)
     while i + 2 < n:
-        if dati[i] == 0 and dati[i + 1] == 0 and dati[i + 2] == 1:
-            if i >= 1 and dati[i - 1] == 0:
-                inizi.append((i - 1, 4))   # 00 00 00 01
+        if data_v[i] == 0 and data_v[i + 1] == 0 and data_v[i + 2] == 1:
+            if i >= 1 and data_v[i - 1] == 0:
+                starts.append((i - 1, 4))   # 00 00 00 01
             else:
-                inizi.append((i, 3))       # 00 00 01
+                starts.append((i, 3))       # 00 00 01
             i += 3
         else:
             i += 1
-    return inizi
+    return starts
 
 
-def elenca(percorso):
-    dati = open(percorso, "rb").read()
-    if not dati:
-        raise SystemExit(f"⛔ {percorso} is empty: zero bytes is not a stream")
-    inizi = trova_inizi(dati)
+def list_cmd(fpath):
+    data_v = open(fpath, "rb").read()
+    if not data_v:
+        raise SystemExit(f"⛔ {fpath} is empty: zero bytes is not a stream")
+    starts = find_starts(data_v)
     nal = []
-    for k, (off, lungo) in enumerate(inizi):
-        corpo = off + lungo
-        fine = inizi[k + 1][0] if k + 1 < len(inizi) else len(dati)
-        if corpo >= len(dati):
+    for k, (off, long) in enumerate(starts):
+        body_el = off + long
+        fine = starts[k + 1][0] if k + 1 < len(starts) else len(data_v)
+        if body_el >= len(data_v):
             continue
-        tipo = (dati[corpo] >> 1) & 0x3F
-        nal.append({"indice": k, "offset": off, "prefisso": lungo,
-                    "tipo": tipo, "nome": NOMI.get(tipo, f"tipo{tipo}"),
-                    "byte": fine - corpo})
-    return {"file": os.path.basename(percorso), "byte_totali": len(dati),
+        kind = (data_v[body_el] >> 1) & 0x3F
+        nal.append({"idx": k, "offset": off, "prefix": long,
+                    "kind": kind, "label_name": NAMES.get(kind, f"kind{kind}"),
+                    "byte": fine - body_el})
+    return {"file": os.path.basename(fpath), "total_bytes": len(data_v),
             "nal": nal}
 
 
-def verifica(percorso, idr_attesi):
+def verify(fpath, expected_idr):
     """⛔ The required shape, and every requirement says WHY."""
-    e = elenca(percorso)
+    e = list_cmd(fpath)
     nal = e["nal"]
-    tipi = [n["tipo"] for n in nal]
-    guasti = []
+    types = [n["kind"] for n in nal]
+    faults = []
 
     if not nal:
-        guasti.append("⛔ no NAL found: it is not an Annex-B stream")
+        faults.append("⛔ no NAL found: it is not an Annex-B stream")
 
     # 1 — the first NAL that is not a delimiter must be the VPS
-    utili = [t for t in tipi if t not in (35, 38)]      # without AUD and filler
-    if not utili or utili[0] != 32:
-        guasti.append(f"⛔ the stream does not start with the VPS (32): it starts with {utili[:4]}")
+    useful = [t for t in types if t not in (35, 38)]      # without AUD and filler
+    if not useful or useful[0] != 32:
+        faults.append(f"⛔ the stream does not start with the VPS (32): it starts with {useful[:4]}")
 
     # 2 — before the first picture data there must be VPS, SPS, PPS
-    prima = []
-    for t in tipi:
-        if t <= VCL_MASSIMO:
+    before = []
+    for t in types:
+        if t <= VCL_MAX:
             break
-        prima.append(t)
-    for atteso in PARAMETRI:
-        if atteso not in prima:
-            guasti.append(f"⛔ the {NOMI[atteso]} ({atteso}) is missing BEFORE the first "
+        before.append(t)
+    for expected_val in PARAMETERS:
+        if expected_val not in before:
+            faults.append(f"⛔ the {NAMES[expected_val]} ({expected_val}) is missing BEFORE the first "
                           f"picture data: a `key` chunk in Annex-B must carry "
                           f"all the parameter sets (S2-decodifica.md §3.5)")
 
     # 3 — the first picture data must be an IDR
-    vcl = [t for t in tipi if t <= VCL_MASSIMO]
+    vcl = [t for t in types if t <= VCL_MAX]
     if not vcl:
-        guasti.append("⛔ no picture data: the stream carries no pixels")
+        faults.append("⛔ no picture data: the stream carries no pixels")
     elif vcl[0] not in IDR:
-        guasti.append(f"⛔ the FIRST frame is not a keyframe: "
-                      f"the first picture NAL is {NOMI.get(vcl[0], vcl[0])}.  "
+        faults.append(f"⛔ the FIRST frame is not a keyframe: "
+                      f"the first picture NAL is {NAMES.get(vcl[0], vcl[0])}.  "
                       f"`VideoDecoder` after `configure()` requires a `key` chunk "
                       f"or raises DataError (S2-decodifica.md §3.6)")
 
     # 4 — the parameter sets repeated in front of EVERY IDR
-    gruppi = 0
-    visti = set()
-    for t in tipi:
-        if t in PARAMETRI:
-            visti.add(t)
+    group_list = 0
+    seen_items = set()
+    for t in types:
+        if t in PARAMETERS:
+            seen_items.add(t)
         elif t in IDR:
-            if visti >= set(PARAMETRI):
-                gruppi += 1
-            visti = set()
-    if gruppi < idr_attesi:
-        guasti.append(f"⛔ the parameter sets precede {gruppi} IDRs and should have "
-                      f"preceded {idr_attesi}: a client connecting later "
+            if seen_items >= set(PARAMETERS):
+                group_list += 1
+            seen_items = set()
+    if group_list < expected_idr:
+        faults.append(f"⛔ the parameter sets precede {group_list} IDRs and should have "
+                      f"preceded {expected_idr}: a client connecting later "
                       f"would receive a naked IDR (v1 src/codificatore.c:268-272)")
 
     # 5 — no trace of a length prefix instead of the start code
-    if len(dati_len := open(percorso, "rb").read(4)) == 4 and dati_len[:3] not in (
+    if len(data_len := open(fpath, "rb").read(4)) == 4 and data_len[:3] not in (
             b"\x00\x00\x00", b"\x00\x00\x01"):
-        guasti.append("⛔ the first bytes are not a start code: it looks like a "
+        faults.append("⛔ the first bytes are not a start code: it looks like a "
                       "length-prefixed stream (`hevc`/hvcC format), not Annex-B")
 
-    esito = {
-        "file": e["file"], "byte_totali": e["byte_totali"],
+    outcome = {
+        "file": e["file"], "total_bytes": e["total_bytes"],
         "nal_totali": len(nal),
-        "sequenza": [n["nome"] for n in nal[:12]],
-        "gruppi_parametri_prima_di_un_IDR": gruppi,
-        "idr_attesi": idr_attesi,
-        "primo_fotogramma_e_chiave": bool(vcl) and vcl[0] in IDR,
+        "sequence": [n["label_name"] for n in nal[:12]],
+        "parameter_groups_before_IDR": group_list,
+        "expected_idr": expected_idr,
+        "first_frame_is_key": bool(vcl) and vcl[0] in IDR,
         "annexb": True,
-        "va_bene": not guasti,
-        "guasti": guasti,
+        "va_bene": not faults,
+        "faults": faults,
     }
-    print(json.dumps(esito, ensure_ascii=False, indent=2))
-    return 0 if not guasti else 1
+    print(json.dumps(outcome, ensure_ascii=False, indent=2))
+    return 0 if not faults else 1
 
 
-def confessione(percorso):
+def confession(fpath):
     """⭐ WHAT THE ENCODER REALLY DID — asked of IT, not deduced.
 
     `CODER.md` §3.7: *the sender is not deduced, it is asked.*  §3.9: *when a
@@ -233,54 +233,54 @@ def confessione(percorso):
       bytes, this check would disappear **silently**: then only
       `ffprobe` would remain, and it must be known beforehand instead of discovered afterwards.
     """
-    dati = open(percorso, "rb").read()
-    i = dati.find(b"x265 (build")
+    data_v = open(fpath, "rb").read()
+    i = data_v.find(b"x265 (build")
     if i < 0:
-        return {"confessione": False,
-                "perche": "no x265 SEI in the stream: either x265 did not make it, "
+        return {"confession": False,
+                "reason_text": "no x265 SEI in the stream: either x265 did not make it, "
                           "or `info=0`.  ⛔ Only ffprobe is left as a witness"}
-    fine = dati.find(b"\x00", i)
-    testo = dati[i:fine if fine > i else i + 4000].decode("ascii", "replace")
-    voci = testo.split()
-    def dammi(chiave):
-        for v in voci:
-            if v.startswith(chiave + "="):
+    fine = data_v.find(b"\x00", i)
+    body_text = data_v[i:fine if fine > i else i + 4000].decode("ascii", "replace")
+    entries = body_text.split()
+    def give_me(key_id):
+        for v in entries:
+            if v.startswith(key_id + "="):
                 return v.split("=", 1)[1]
         return None
     return {
-        "confessione": True,
-        "versione": testo.split(" - ")[0],
-        "banner_bit": "10bit" if "10bit" in testo.split("options:")[0] else "8bit",
-        "bitdepth": dammi("bitdepth"),
-        "input_csp": dammi("input-csp"),
-        "annexb": " annexb" in testo,
-        "repeat_headers": " repeat-headers" in testo,
-        "bframes": dammi("bframes"),
-        "keyint": dammi("keyint"),
-        "lossless": " lossless" in testo,
+        "confession": True,
+        "version_v": body_text.split(" - ")[0],
+        "banner_bit": "10bit" if "10bit" in body_text.split("options:")[0] else "8bit",
+        "bitdepth": give_me("bitdepth"),
+        "input_csp": give_me("input-csp"),
+        "annexb": " annexb" in body_text,
+        "repeat_headers": " repeat-headers" in body_text,
+        "bframes": give_me("bframes"),
+        "keyint": give_me("keyint"),
+        "lossless": " lossless" in body_text,
         "byte_del_sei": (fine - i) if fine > i else None,
     }
 
 
-def storpia(percorso, modo, uscita):
-    dati = bytearray(open(percorso, "rb").read())
-    e = elenca(percorso)
+def mangle(fpath, manner, out_dir):
+    data_v = bytearray(open(fpath, "rb").read())
+    e = list_cmd(fpath)
     nal = e["nal"]
     if not nal:
         raise SystemExit("⛔ a stream that could not be read is not mangled")
 
-    if modo == "senza-parametri":
-        tenuti = bytearray()
+    if manner == "senza-parametri":
+        kept = bytearray()
         for k, n in enumerate(nal):
-            if n["tipo"] in PARAMETRI:
+            if n["kind"] in PARAMETERS:
                 continue
-            fine = nal[k + 1]["offset"] if k + 1 < len(nal) else len(dati)
-            tenuti += dati[n["offset"]:fine]
-        fuori = tenuti
-        nota = "VPS/SPS/PPS removed, picture data left"
-    elif modo == "byte-girato":
-        primo = next((n for n in nal if n["tipo"] <= VCL_MASSIMO), None)
-        if primo is None:
+            fine = nal[k + 1]["offset"] if k + 1 < len(nal) else len(data_v)
+            kept += data_v[n["offset"]:fine]
+        outside = kept
+        remark = "VPS/SPS/PPS removed, picture data left"
+    elif manner == "byte-girato":
+        first = next((n for n in nal if n["kind"] <= VCL_MAX), None)
+        if first is None:
             raise SystemExit("⛔ no picture data to mangle")
         # ⛔ WHERE the byte is flipped is NOT a detail — measured on 12 Aug 2026.
         #
@@ -299,46 +299,46 @@ def storpia(percorso, modo, uscita):
         #
         #    ⇒ The NAL header (2 bytes) is skipped and it goes into the body for
         #      2 %, with a floor of 64 bytes for small slices.
-        corpo = primo["offset"] + primo["prefisso"] + 2
-        dentro = max(64, primo["byte"] // 50)
-        dove = min(corpo + dentro, primo["offset"] + primo["prefisso"] + primo["byte"] - 1)
-        dati[dove] ^= 0xFF
-        fuori = dati
-        nota = (f"one byte inverted at offset {dove}, at {100 * dentro / max(1, primo['byte']):.1f} % "
-                f"of the body of the first slice ({primo['byte']} bytes long)")
-    elif modo == "troncato":
-        taglio = int(len(dati) * 0.60)
-        fuori = dati[:taglio]
-        nota = f"cut at {taglio} bytes out of {len(dati)} (60 %)"
+        body_el = first["offset"] + first["prefix"] + 2
+        inside = max(64, first["byte"] // 50)
+        dove = min(body_el + inside, first["offset"] + first["prefix"] + first["byte"] - 1)
+        data_v[dove] ^= 0xFF
+        outside = data_v
+        remark = (f"one byte inverted at offset {dove}, at {100 * inside / max(1, first['byte']):.1f} % "
+                f"of the body of the first slice ({first['byte']} bytes long)")
+    elif manner == "troncato":
+        cut = int(len(data_v) * 0.60)
+        outside = data_v[:cut]
+        remark = f"cut at {cut} bytes out of {len(data_v)} (60 %)"
     else:
-        raise SystemExit(f"⛔ unknown mode: {modo}")
+        raise SystemExit(f"⛔ unknown mode: {manner}")
 
-    with open(uscita, "wb") as f:
-        f.write(bytes(fuori))
-    print(json.dumps({"modo": modo, "nota": nota, "uscita": uscita,
-                      "byte": len(fuori)}, ensure_ascii=False))
+    with open(out_dir, "wb") as f:
+        f.write(bytes(outside))
+    print(json.dumps({"manner": manner, "remark": remark, "out_dir": out_dir,
+                      "byte": len(outside)}, ensure_ascii=False))
     return 0
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--elenca")
-    p.add_argument("--verifica")
-    p.add_argument("--confessione")
-    p.add_argument("--idr-attesi", type=int, default=1)
-    p.add_argument("--storpia", nargs=3, metavar=("FILE", "MODO", "USCITA"))
+    p.add_argument("--list_cmd")
+    p.add_argument("--verify")
+    p.add_argument("--confession")
+    p.add_argument("--expected-idr", type=int, default=1)
+    p.add_argument("--mangle", nargs=3, metavar=("FILE", "MODE", "OUTPUT"))
     a = p.parse_args()
-    if a.elenca:
-        print(json.dumps(elenca(a.elenca), ensure_ascii=False, indent=2))
+    if a.list_cmd:
+        print(json.dumps(list_cmd(a.list_cmd), ensure_ascii=False, indent=2))
         return 0
-    if a.confessione:
-        c = confessione(a.confessione)
+    if a.confession:
+        c = confession(a.confession)
         print(json.dumps(c, ensure_ascii=False))
-        return 0 if c.get("confessione") else 1
-    if a.verifica:
-        return verifica(a.verifica, a.idr_attesi)
-    if a.storpia:
-        return storpia(*a.storpia)
+        return 0 if c.get("confession") else 1
+    if a.verify:
+        return verify(a.verify, a.expected_idr)
+    if a.mangle:
+        return mangle(*a.mangle)
     p.print_help()
     return 2
 

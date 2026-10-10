@@ -8,7 +8,7 @@
  *    decision).  ⛔ But **only for encoding**: zero copy — the frame that goes
  *    from capture to the GPU without passing through system memory — stays in
  *    phase 8, and here the upload is paid for and **measured separately**
- *    (`us_caricamento`), so that we can see how much removing it will be worth.
+ *    (`upload_us`), so that we can see how much removing it will be worth.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * ⭐⭐ PHASE 18 (30 Sep 2026, `DECISIONI.md` §10.25) — THE TWO HALVES OF THE FILE
@@ -21,11 +21,11 @@
  *                 memory" route it is done by `colori709.c` on the CPU
  *                 (NV12/P010) and then the planes are uploaded to the card, as
  *                 before phase 18 — the VPP from memory is measured WORSE
- *                 (see `prepara_fotogramma()`).
+ *                 (see `prepare_frame()`).
  *   ⛔ The software FALLBACK (OpenH264, SVT-AV1: `ripiego.c`) LEFT with
  *                 phase 19 (1 Oct 2026, `DECISIONI.md` §10.27), in the
  *                 user's words: *"no CPU without a card"*.  A name that does
- *                 not belong to the card is refused in `codificatore_nuovo()`,
+ *                 not belong to the card is refused in `encoder_new()`,
  *                 with the reason: without a capable card REMOTIX does not encode.
  *
  * What lies OUTSIDE the card route — the 16 MiB ceiling, the degradation
@@ -38,7 +38,7 @@
  *     must happen with standard tools, preferably with Vulkan, which is common
  *     to all 4 architectures"*.
  *
- *   1. VULKAN VIDEO  `vulkanvideo.c`: if `vulkanvideo_capacita()` says the
+ *   1. VULKAN VIDEO  `vulkanvideo.c`: if `vulkanvideo_capabilities()` says the
  *                    node's card encodes THAT codec (today AMD with RADV,
  *                    NVIDIA with the proprietary driver; Intel when Mesa makes
  *                    it stable).  Zero copy from the DMA-BUF and colour
@@ -48,8 +48,8 @@
  *   —  no processor: without a route the encoder is not born, and it says
  *      so.
  *
- *   The choice is made in `apri_dispositivo()`, ONCE per encoder, and is
- *   written to the log and to the confession (`strada`).  ⛔ It can also be
+ *   The choice is made in `open_device()`, ONCE per encoder, and is
+ *   written to the log and to the confession (`route`).  ⛔ It can also be
  *   requested by name (`h264_vulkan`, `h264_vaapi`): then there is NO fallback
  *   to the other — whoever asks by name is measuring (`CODER.md` §3.9).
  *   ⚠ Everything downstream of the bytes (ceiling, ladder, climb, shape,
@@ -86,23 +86,23 @@
 /* ⚠ An area of its own instead of one of the six in `registro.h`: that file is
  *   not part of this sub-phase and is not touched.  The line to centralise it —
  *   `#define REG_VIDEO "video"` — is in the report, together with the Makefile ones. */
-#define REG_CODIFICA "video"
+#define LOG_ENCODING "video"
 
 /* `RCP.md` §6.2: "the server MUST NOT produce a frame longer than 16 MiB.  If
  * encoding produced a bigger one, it MUST re-encode it at lower quality and
  * WRITE IT TO THE LOG — never send it." */
-#define TETTO_FOTOGRAMMA (16u * 1024u * 1024u)
+#define CAP_FRAME (16u * 1024u * 1024u)
 
 /* ⛔ How many ENCODINGS a DELTA is granted in total — not how many descents: the
- *    descents are `RICODIFICHE_MASSIME - 1`, because the first encoding is the
+ *    descents are `MAX_REENCODES - 1`, because the first encoding is the
  *    one at the requested quality and does not come from any descent.  ⇒ With
  *    3: QP 26, 35, 44, and the ladder stops there.
  * ⛔ And the last rung is NOT applied unless it is tried: the count sits **before**
- *    `abbassa_qualita()`, and the why is in the box inside
- *    `comprimi_comune()`.
+ *    `lower_quality()`, and the why is in the box inside
+ *    `compress_common()`.
  * ⚠ It does not apply to a KEY at all: §5.2 forbids abandoning it, and for a key
  *   the ladder is walked all the way down. */
-#define RICODIFICHE_MASSIME 3
+#define MAX_REENCODES 3
 
 /* The first rung when the ceiling bites, and the step of the following ones.
  *
@@ -131,16 +131,16 @@
  *   than it is: `[M]` at the user's canvas (2560x1080) the biggest key
  *   over **404 real keys** is **21 433 bytes**, that is **0.13 %** of the ceiling —
  *   a **782x** margin.  ⇒ A real and proven defect, and **not urgent**. */
-#define CRF_DI_EMERGENZA 24
-#define CRF_PASSO 9
+#define EMERGENCY_CRF 24
+#define CRF_STEP 9
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⭐⭐ AND THE LADDER IS CLIMBED BACK — phase 9, 23 Aug 2026.
  *
- * ⛔ THE DEFECT: until now `qualita_corrente` was monotonic in the worse direction.
- *    Four writes in all (`codificatore_nuovo()` seeds it, and the three
- *    inside `abbassa_qualita()`), **all going down**, and no path that would
- *    bring it back up — not even `codificatore_ridimensiona()`, which closes and
+ * ⛔ THE DEFECT: until now `current_quality` was monotonic in the worse direction.
+ *    Four writes in all (`encoder_new()` seeds it, and the three
+ *    inside `lower_quality()`), **all going down**, and no path that would
+ *    bring it back up — not even `encoder_resize()`, which closes and
  *    reopens the context **keeping it**.
  *
  *    ⇒ A single exceptional frame — `[M]` the software fallback of the time
@@ -152,7 +152,7 @@
  *      through inertia instead of by decision.
  *
  * ⛔ AND IT IS NOT SYMMETRIC TO THE DESCENT, ON PURPOSE: we descend several rungs in
- *    a single frame, we climb back **ONE** every `RISALITA_ATTESA` quiet
+ *    a single frame, we climb back **ONE** every `RISE_WAIT` quiet
  *    frames, and never beyond the quality **requested** by the caller.  ⚠ Because
  *    each reopening costs `[M]` 91-108 ms in hardware and 1.8-3.3 s in software:
  *    a climb that bumps into the ceiling and descends again would be **dearer
@@ -163,23 +163,23 @@
  *
  *        before  a DELTA above the ceiling walked the ladder **all the way down**
  *                (from QP 26: 35, 44, 51 — **three** descents), because the
- *                `RICODIFICHE_MASSIME` count was dead code.  ⚠ Meanwhile the
+ *                `MAX_REENCODES` count was dead code.  ⚠ Meanwhile the
  *                startup line declared that it stopped after three re-encodings.
- *        now     a DELTA makes `RICODIFICHE_MASSIME` encodings, that is **two**
+ *        now     a DELTA makes `MAX_REENCODES` encodings, that is **two**
  *                descents (35, 44), both tried.  A KEY does not change
  *                one bit: §5.2 forbids abandoning it, and it walks the whole
  *                ladder as before.
  *
  *      ⇒ THE CLIMB HAS TWO RUNGS TO REDO INSTEAD OF THREE, and the numbers
  *        below **still hold**, for this reason: from QP 44 we go back to 35
- *        after `RISALITA_ATTESA` (120) quiet frames, and from 35 to 26 after
+ *        after `RISE_WAIT` (120) quiet frames, and from 35 to 26 after
  *        **twice** that (240), because 26 is the rung on which the ceiling bit
- *        (`qualita_fallita`) and we do not set foot there again in a hurry.  Total
+ *        (`failed_quality`) and we do not set foot there again in a hurry.  Total
  *        **360 frames, ~6 s at 60/s**, against the **480 (~8 s)** that were needed
  *        starting from 51.  ⛔ The change shortens the grainy spell by ~2 s and touches
  *        neither the direction nor the shape of the climb: **there is no written reason
- *        to retune `RISALITA_ATTESA`**, and without a written reason it is not touched.
- *        ⚠ `RISALITA_MARGINE` stays one eighth of the ceiling = 2 MiB, and with two
+ *        to retune `RISE_WAIT`**, and without a written reason it is not touched.
+ *        ⚠ `RISE_MARGIN` stays one eighth of the ceiling = 2 MiB, and with two
  *        rungs instead of three the margin is if anything **wider**, not narrower.
  *
  * ⛔⛔ THE CHECK THAT DECIDES — FLAPPING, and it must be written here because it is the
@@ -187,21 +187,21 @@
  *      of the ceiling** (`[M]` grain `alls=60` at 7680x4320 in hardware: **94.9 %**)
  *      could make it descend and climb continuously, paying a
  *      reopening and a KEY on every round — and the price would be paid by the
- *      **rate**, that is precisely invariant I1 that this cure claims to serve.
+ *      **rate**, that is precisely invariant I1 that this cure claims to needs.
  *
  *      ⭐ It is against that that the two numbers are chosen, and the defence is DOUBLE:
  *
- *        1. `RISALITA_MARGINE` is **one eighth** of the ceiling, not the ceiling.  We
+ *        1. `RISE_MARGIN` is **one eighth** of the ceiling, not the ceiling.  We
  *           count the frame **comfortably** below, not the frame
  *           "below": a scene at 94.9 % of the ceiling produces **not even one**
- *           quiet frame ⇒ `sotto_margine` stays at zero ⇒ **it never
+ *           quiet frame ⇒ `below_margin` stays at zero ⇒ **it never
  *           climbs**, and there is nothing to flap.  For
  *           flapping to happen you would need a scene that alternates **8x** in
  *           size while staying calm for two whole seconds: that is not an
  *           edge, it is a real scene change.
- *        2. `risalita_attesa` **DOUBLES on every relapse** and never comes back
+ *        2. `rise_wait` **DOUBLES on every relapse** and never comes back
  *           down.  Even in the worst case the frequency of reopenings
- *           halves on every round, and at `RISALITA_ATTESA_MAX` it stops at one every
+ *           halves on every round, and at `RISE_WAIT_MAX` it stops at one every
  *           ~64 s.  ⚠ The direction in which to err is patience.
  *
  *      ⇒ If the bench of `fasi/09-la-qualita-e-la-degradazione.md` §5 (case 2: more than 3
@@ -211,12 +211,12 @@
  *        must be removed.
  *
  * ⚠ The three numbers are `[?]` **sufficient, not right**, exactly like
- *   `CRF_PASSO` = 9: the working point belongs to this phase, and the one to tune them is the
+ *   `CRF_STEP` = 9: the working point belongs to this phase, and the one to tune them is the
  *   bench, not this line.
  * ═══════════════════════════════════════════════════════════════════════════ */
-#define RISALITA_MARGINE (TETTO_FOTOGRAMMA / 8u) /* 2 MiB: there is room for two rungs */
-#define RISALITA_ATTESA 120u                     /* ~2 s at 60/s */
-#define RISALITA_ATTESA_MAX 3840u                /* ~64 s: the bottom of the doubling */
+#define RISE_MARGIN (CAP_FRAME / 8u) /* 2 MiB: there is room for two rungs */
+#define RISE_WAIT 120u                     /* ~2 s at 60/s */
+#define RISE_WAIT_MAX 3840u                /* ~64 s: the bottom of the doubling */
 
 /*
  * ⛔ THE SWITCH, AND IT IS BORN OFF — invariant I6: *whatever changes what
@@ -226,13 +226,13 @@
  *    turns sharp again instead of staying grainy — so it does not turn itself on.
  *
  * ⚠ Static and not per encoder: it is a decision of the **server**, not of the
- *   client nor of the single stream.  It is the same shape as `wt_ritmo_adattivo()`.
+ *   client nor of the single stream.  It is the same shape as `wt_adaptive_rate()`.
  */
-static bool risalita_accesa;
+static bool rise_enabled;
 
-void codificatore_qualita_risale(bool accesa)
+void encoder_quality_rises(bool switched_on)
 {
-	risalita_accesa = accesa;
+	rise_enabled = switched_on;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -254,8 +254,8 @@ void codificatore_qualita_risale(bool accesa)
  *   no**: under CQP the quantiser is fixed and the bandwidth is whatever comes out.
  * ⇒ ⭐ But the **real** content costs **1 %**.  A ceiling that bit **there**
  *   would be the mistake for which phase 10 of v1 was reset.
- * ⇒ ⛔⛔ And the regulator **cannot look at how many pixels change**: `pieno` and
- *   `barra` move **the same pixels** and cost **1.2 against 21.4**.  The
+ * ⇒ ⛔⛔ And the regulator **cannot look at how many pixels change**: `full` and
+ *   `bar` move **the same pixels** and cost **1.2 against 21.4**.  The
  *   right quantity is **the bits**, and the one watching them is the driver's regulator.
  *
  * ───────────────────────────────────────────────────────────────────────────
@@ -277,7 +277,7 @@ void codificatore_qualita_risale(bool accesa)
  * ⛔⛔ **UNDER VBR THE `qp` IS IGNORED**, and the proof is not a reasoning: it is
  *      that with and without `qp=26` the **very same bytes** come out (8 350 170 and
  *      514 142, twice out of two).  ⇒ With VBR **the whole degradation ladder of
- *      this file** (`abbassa_qualita()`, `CRF_PASSO`) and **the
+ *      this file** (`lower_quality()`, `CRF_STEP`) and **the
  *      climb written this morning** would become **silent no-ops**: a
  *      component that ignores an option without saying so, that is the E2 form that
  *      this file exists so as not to suffer.  **VBR is out.**
@@ -354,7 +354,7 @@ void codificatore_qualita_risale(bool accesa)
  *          ⇒ Only the **third** witness catches it, the bytes.
  *   3      `avcodec_open2` fails with *"Driver does not support QVBR RC
  *          mode"* ⇒ the test machine is not the laptop, and we reread the
- *          mask that `apri_dispositivo()` has just written to the log.
+ *          mask that `open_device()` has just written to the log.
  *   4      frames/s **drop** on the easy scenes ⇒ the regulator costs
  *          time where it is not needed, and the price is paid by I1.
  *
@@ -375,14 +375,14 @@ void codificatore_qualita_risale(bool accesa)
  * ⚠ What is NOT touched here, and it must be said: `max_frame_size`.  `[M]` ffmpeg
  *   refuses it under CQP (*"Max frame size is invalid in CQP rate control mode"*) and
  *   accepts it under QVBR — it would give **in one pass** what today costs up
- *   to `RICODIFICHE_MASSIME` reopenings of `[M]` 91-108 ms.  ⛔ It is not turned on
+ *   to `MAX_REENCODES` reopenings of `[M]` 91-108 ms.  ⛔ It is not turned on
  *   today: it is a **second** lever on the same quantity, and two levers on
  *   together in the first round would give two measurements under the same label.  ⭐ And
  *   the 40 ms buffer already does almost all of its work.
  * ═══════════════════════════════════════════════════════════════════════════ */
-#define TETTO_VBV_MS 40u        /* the TARGET of CODER.md §1-bis, not the 50 ceiling */
-#define TETTO_QUOTA_FILO 80u    /* % of the floor that goes to video: the rest is [M] 2.4 Mbit/s */
-#define TETTO_QUOTA_PUNTO 75u   /* % of the wire: the working point.  ⛔ NEVER 100 — that is R31 */
+#define CAP_VBV_MS 40u        /* the TARGET of CODER.md §1-bis, not the 50 ceiling */
+#define CAP_QUOTA_WIRE 80u    /* % of the floor that goes to video: the rest is [M] 2.4 Mbit/s */
+#define CAP_QUOTA_POINT 75u   /* % of the wire: the working point.  ⛔ NEVER 100 — that is R31 */
 
 /*
  * ⭐ The window of the third witness.  ⚠ Ten seconds and not one: shorter, it
@@ -391,20 +391,20 @@ void codificatore_qualita_risale(bool accesa)
  *   with the ceiling OFF as with the ceiling on: a witness that existed only with the
  *   cure on could not compare anything.
  */
-#define BANDA_FINESTRA_US (10u * 1000u * 1000u)
+#define BANDWIDTH_WINDOW_US (10u * 1000u * 1000u)
 
 /*
  * 0 = OFF, and it is the value at birth.  Non-zero = the declared **floor**
  * in Mbit/s (20, today), from which the three numbers derive.
  *
  * ⚠ Static and not per encoder: it is a decision of the **server**, like the
- *   climb above and like `wt_ritmo_adattivo()`.
+ *   climb above and like `wt_adaptive_rate()`.
  */
-static uint32_t tetto_pavimento_mbit;
+static uint32_t cap_floor_mbit;
 
-void codificatore_tetto_banda(uint32_t pavimento_mbit)
+void encoder_bandwidth_cap(uint32_t floor_mbit)
 {
-	tetto_pavimento_mbit = pavimento_mbit;
+	cap_floor_mbit = floor_mbit;
 }
 
 /*
@@ -412,19 +412,19 @@ void codificatore_tetto_banda(uint32_t pavimento_mbit)
  *    calls these, and does not rewrite the computation: two drafts of the same number are
  *    a place to diverge silently.
  */
-static int64_t tetto_filo(void)
+static int64_t wire_cap(void)
 {
-	return (int64_t) tetto_pavimento_mbit * 1000000 * TETTO_QUOTA_FILO / 100;
+	return (int64_t) cap_floor_mbit * 1000000 * CAP_QUOTA_WIRE / 100;
 }
 
-static int64_t tetto_punto(void)
+static int64_t cap_point(void)
 {
-	return tetto_filo() * TETTO_QUOTA_PUNTO / 100;
+	return wire_cap() * CAP_QUOTA_POINT / 100;
 }
 
-static int tetto_serbatoio_bit(void)
+static int reservoir_cap_bit(void)
 {
-	return (int) (tetto_filo() * TETTO_VBV_MS / 1000);
+	return (int) (wire_cap() * CAP_VBV_MS / 1000);
 }
 
 /*
@@ -440,14 +440,14 @@ static int tetto_serbatoio_bit(void)
 typedef struct {
 	int rc_mode;        /* the number phase 9 called it by (formerly the libavcodec option) */
 	unsigned va_bit;    /* the bit with which the driver DECLARES it */
-	const char *nome;
-} ModoBitrate;
+	const char *label_name;
+} BitrateMode;
 
-static ModoBitrate modo_bitrate_voluto(void)
+static BitrateMode wanted_bitrate_mode(void)
 {
-	if (tetto_pavimento_mbit)
-		return (ModoBitrate){ 5, VA_RC_QVBR, "QVBR" };
-	return (ModoBitrate){ 1, VA_RC_CQP, "CQP" };
+	if (cap_floor_mbit)
+		return (BitrateMode){ 5, VA_RC_QVBR, "QVBR" };
+	return (BitrateMode){ 1, VA_RC_CQP, "CQP" };
 }
 
 /*
@@ -455,12 +455,12 @@ static ModoBitrate modo_bitrate_voluto(void)
  * only the four we care about: a bit we cannot name is printed
  * as a number, and does not disappear.
  */
-static void nomi_modi_bitrate(unsigned maschera, char *fuori, size_t byte)
+static void bitrate_mode_names(unsigned mask, char *outside, size_t byte)
 {
 	static const struct {
 		unsigned bit;
-		const char *nome;
-	} NOTI[] = {
+		const char *label_name;
+	} KNOWN[] = {
 		{ VA_RC_NONE, "NONE" },   { VA_RC_CBR, "CBR" },
 		{ VA_RC_VBR, "VBR" },     { VA_RC_VCM, "VCM" },
 		{ VA_RC_CQP, "CQP" },     { VA_RC_VBR_CONSTRAINED, "VBR_CONSTRAINED" },
@@ -469,25 +469,25 @@ static void nomi_modi_bitrate(unsigned maschera, char *fuori, size_t byte)
 		{ VA_RC_QVBR, "QVBR" },   { VA_RC_AVBR, "AVBR" },
 		{ VA_RC_TCBRC, "TCBRC" },
 	};
-	if (!fuori || !byte)
+	if (!outside || !byte)
 		return;
-	fuori[0] = 0;
-	unsigned restanti = maschera;
-	for (size_t i = 0; i < sizeof(NOTI) / sizeof(NOTI[0]); i++) {
-		if (!(maschera & NOTI[i].bit))
+	outside[0] = 0;
+	unsigned remaining = mask;
+	for (size_t i = 0; i < sizeof(KNOWN) / sizeof(KNOWN[0]); i++) {
+		if (!(mask & KNOWN[i].bit))
 			continue;
-		restanti &= ~NOTI[i].bit;
-		char pezzo[32];
-		snprintf(pezzo, sizeof(pezzo), "%s%s", fuori[0] ? "|" : "", NOTI[i].nome);
-		strncat(fuori, pezzo, byte - strlen(fuori) - 1);
+		remaining &= ~KNOWN[i].bit;
+		char piece[32];
+		snprintf(piece, sizeof(piece), "%s%s", outside[0] ? "|" : "", KNOWN[i].label_name);
+		strncat(outside, piece, byte - strlen(outside) - 1);
 	}
-	if (restanti) {
-		char pezzo[32];
-		snprintf(pezzo, sizeof(pezzo), "%s0x%x(?)", fuori[0] ? "|" : "", restanti);
-		strncat(fuori, pezzo, byte - strlen(fuori) - 1);
+	if (remaining) {
+		char piece[32];
+		snprintf(piece, sizeof(piece), "%s0x%x(?)", outside[0] ? "|" : "", remaining);
+		strncat(outside, piece, byte - strlen(outside) - 1);
 	}
-	if (!fuori[0])
-		strncat(fuori, "none", byte - 1);
+	if (!outside[0])
+		strncat(outside, "none", byte - 1);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -501,43 +501,43 @@ static void nomi_modi_bitrate(unsigned maschera, char *fuori, size_t byte)
  *    and **carries on, exiting 0**.
  * ═══════════════════════════════════════════════════════════════════════════ */
 typedef struct {
-	const uint8_t *dati;
+	const uint8_t *data_v;
 	size_t byte;
 	size_t bit;   /* position, in bits */
-	bool finito;  /* ⛔ three outcomes, not two: "0" and "I could not read" */
-} LettoreBit;
+	bool finished;  /* ⛔ three outcomes, not two: "0" and "I could not read" */
+} BitReader;
 
 /* ⭐ WHERE THE FRAME SITS in the SPS (D-023, phase 18): the position in bits — in
  *    the RBSP without emulation — of the cropping flag (`frame_cropping_flag` in
  *    H.264, `conformance_window_flag` in HEVC), the four offsets if there were any,
- *    and the bit after.  It lets `cornice_al_suo_posto()` rewrite the head
+ *    and the bit after.  It lets `border_in_place()` rewrite the head
  *    of the SPS and copy the tail back as it is. */
 typedef struct {
 	size_t bit_flag;      /* where the flag sits */
-	size_t bit_dopo;      /* the first bit after the flag and its offsets */
-	bool presente;        /* the flag was 1 */
-	uint32_t sx, dx, su, giu; /* the offsets read (0 if the flag was 0) */
-} PosizioneCornice;
+	size_t bit_after;      /* the first bit after the flag and its offsets */
+	bool present_v;        /* the flag was 1 */
+	uint32_t left_side, right, su, down; /* the offsets read (0 if the flag was 0) */
+} FramePosition;
 
-static void lb_apri(LettoreBit *l, const uint8_t *dati, size_t byte)
+static void lb_open(BitReader *l, const uint8_t *data_v, size_t byte)
 {
-	l->dati = dati;
+	l->data_v = data_v;
 	l->byte = byte;
 	l->bit = 0;
-	l->finito = false;
+	l->finished = false;
 }
 
-static uint32_t lb_bit(LettoreBit *l, int quanti)
+static uint32_t lb_bit(BitReader *l, int how_many)
 {
 	uint32_t v = 0;
-	for (int i = 0; i < quanti; i++) {
-		size_t indice = l->bit >> 3;
-		if (indice >= l->byte) {
-			l->finito = true;
+	for (int i = 0; i < how_many; i++) {
+		size_t idx = l->bit >> 3;
+		if (idx >= l->byte) {
+			l->finished = true;
 			return v;
 		}
-		int scarto = 7 - (int) (l->bit & 7);
-		v = (v << 1) | (uint32_t) ((l->dati[indice] >> scarto) & 1);
+		int gap = 7 - (int) (l->bit & 7);
+		v = (v << 1) | (uint32_t) ((l->data_v[idx] >> gap) & 1);
 		l->bit++;
 	}
 	return v;
@@ -546,17 +546,17 @@ static uint32_t lb_bit(LettoreBit *l, int quanti)
 /* ⭐ SIGNED Exp-Golomb — needed by the H.264 SPS (the scaling lists and the
  *    picture order count offsets), and HEVC did not need it here.
  * ⛔ The mapping is the standard's (9.1.1): k → (-1)^(k+1) * ceil(k/2). */
-static int32_t lb_se(LettoreBit *l);
+static int32_t lb_se(BitReader *l);
 
 /* Unsigned Exp-Golomb, the H.265 one. */
-static uint32_t lb_ue(LettoreBit *l)
+static uint32_t lb_ue(BitReader *l)
 {
-	int zeri = 0;
-	while (!l->finito && lb_bit(l, 1) == 0 && zeri < 32)
-		zeri++;
-	if (l->finito || zeri >= 32)
+	int zeros = 0;
+	while (!l->finished && lb_bit(l, 1) == 0 && zeros < 32)
+		zeros++;
+	if (l->finished || zeros >= 32)
 		return 0;
-	return ((1u << zeri) - 1) + (zeri ? lb_bit(l, zeri) : 0);
+	return ((1u << zeros) - 1) + (zeros ? lb_bit(l, zeros) : 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -574,15 +574,15 @@ static uint32_t lb_ue(LettoreBit *l)
 #define NAL_VPS 32
 #define NAL_SPS 33
 #define NAL_PPS 34
-#define NAL_VCL_MASSIMO 31
+#define NAL_VCL_MAX 31
 
 typedef struct {
 	bool ha_vps, ha_sps, ha_pps;
 	bool ha_idr;
-	bool parametri_prima_dell_idr; /* ⛔ the half that gets forgotten */
-	bool primo_vcl_e_chiave;
+	bool parameters_before_idr; /* ⛔ the half that gets forgotten */
+	bool first_vcl_is_key;
 	size_t sps_offset, sps_byte;
-} FormaAnnexB;
+} AnnexBLayout;
 
 /* Finds the next start code: returns the offset of the first byte of the
  * NAL, or `byte` if there are no more.
@@ -590,65 +590,65 @@ typedef struct {
  *    that knew only one would skip half the NALs **without complaining**, and
  *    would say "this stream has no PPS" of a stream that has it.  A false
  *    red costs as much as a false green. */
-static size_t annexb_prossimo(const uint8_t *d, size_t byte, size_t da, size_t *inizio_codice)
+static size_t annexb_next(const uint8_t *d, size_t byte, size_t da, size_t *code_start)
 {
 	for (size_t i = da; i + 2 < byte; i++) {
 		if (d[i] == 0 && d[i + 1] == 0 && d[i + 2] == 1) {
-			if (inizio_codice)
-				*inizio_codice = (i >= 1 && d[i - 1] == 0) ? i - 1 : i;
+			if (code_start)
+				*code_start = (i >= 1 && d[i - 1] == 0) ? i - 1 : i;
 			return i + 3;
 		}
 	}
-	if (inizio_codice)
-		*inizio_codice = byte;
+	if (code_start)
+		*code_start = byte;
 	return byte;
 }
 
-static void annexb_leggi(const uint8_t *d, size_t byte, FormaAnnexB *f)
+static void annexb_read(const uint8_t *d, size_t byte, AnnexBLayout *f)
 {
 	memset(f, 0, sizeof(*f));
-	bool visto_vcl = false;
+	bool seen_vcl = false;
 	bool p_vps = false, p_sps = false, p_pps = false;
-	size_t corpo = annexb_prossimo(d, byte, 0, NULL);
-	while (corpo < byte) {
-		size_t dove_dopo;
-		size_t prossimo = annexb_prossimo(d, byte, corpo, &dove_dopo);
-		size_t fine = (prossimo < byte) ? dove_dopo : byte;
-		int tipo = (d[corpo] >> 1) & 0x3F;
+	size_t body_el = annexb_next(d, byte, 0, NULL);
+	while (body_el < byte) {
+		size_t after_pos;
+		size_t upcoming = annexb_next(d, byte, body_el, &after_pos);
+		size_t fine = (upcoming < byte) ? after_pos : byte;
+		int kind = (d[body_el] >> 1) & 0x3F;
 
-		if (tipo == NAL_VPS) {
+		if (kind == NAL_VPS) {
 			f->ha_vps = true;
 			p_vps = true;
-		} else if (tipo == NAL_SPS) {
+		} else if (kind == NAL_SPS) {
 			f->ha_sps = true;
 			p_sps = true;
 			if (!f->sps_byte) {
-				f->sps_offset = corpo;
-				f->sps_byte = fine - corpo;
+				f->sps_offset = body_el;
+				f->sps_byte = fine - body_el;
 			}
-		} else if (tipo == NAL_PPS) {
+		} else if (kind == NAL_PPS) {
 			f->ha_pps = true;
 			p_pps = true;
-		} else if (tipo <= NAL_VCL_MASSIMO) {
-			bool chiave = (tipo == NAL_IDR_W_RADL || tipo == NAL_IDR_N_LP || tipo == NAL_CRA);
-			if (!visto_vcl) {
-				visto_vcl = true;
-				f->primo_vcl_e_chiave = chiave;
+		} else if (kind <= NAL_VCL_MAX) {
+			bool key_id = (kind == NAL_IDR_W_RADL || kind == NAL_IDR_N_LP || kind == NAL_CRA);
+			if (!seen_vcl) {
+				seen_vcl = true;
+				f->first_vcl_is_key = key_id;
 			}
-			if (chiave) {
+			if (key_id) {
 				f->ha_idr = true;
 				/* ⛔ The group must be COMPLETE and come BEFORE this
 				 *    IDR, not somewhere in the stream. */
 				if (p_vps && p_sps && p_pps)
-					f->parametri_prima_dell_idr = true;
+					f->parameters_before_idr = true;
 			}
 			p_vps = p_sps = p_pps = false;
 		}
-		corpo = prossimo;
+		body_el = upcoming;
 	}
 }
 
-static int32_t lb_se(LettoreBit *l)
+static int32_t lb_se(BitReader *l)
 {
 	uint32_t k = lb_ue(l);
 	return (k & 1) ? (int32_t) ((k + 1) / 2) : -(int32_t) (k / 2);
@@ -659,21 +659,21 @@ static int32_t lb_se(LettoreBit *l)
  *    the number that comes out of it (the bit depth) would be wrong WITHOUT
  *    looking it.  It is the same trap that ISO/IEC 14496-15 puts in the hvcC —
  *    one of the four reasons why D1 chooses Annex-B. */
-static size_t togli_emulazione(const uint8_t *dentro, size_t byte, uint8_t *fuori, size_t massimo)
+static size_t remove_emulation(const uint8_t *inside, size_t byte, uint8_t *outside, size_t maximum)
 {
-	size_t n = 0, zeri = 0;
-	for (size_t i = 0; i < byte && n < massimo; i++) {
-		if (zeri >= 2 && dentro[i] == 3) {
-			zeri = 0;
+	size_t n = 0, zeros = 0;
+	for (size_t i = 0; i < byte && n < maximum; i++) {
+		if (zeros >= 2 && inside[i] == 3) {
+			zeros = 0;
 			continue;
 		}
-		fuori[n++] = dentro[i];
-		zeri = (dentro[i] == 0) ? zeri + 1 : 0;
+		outside[n++] = inside[i];
+		zeros = (inside[i] == 0) ? zeros + 1 : 0;
 	}
 	return n;
 }
 
-static uint32_t rovescia32(uint32_t v)
+static uint32_t reverse32(uint32_t v)
 {
 	uint32_t r = 0;
 	for (int i = 0; i < 32; i++) {
@@ -695,56 +695,56 @@ static uint32_t rovescia32(uint32_t v)
  * ⚠ And H.264 has TWO parameter sets, not three: there is no VPS.  Asking
  *   for it too would refuse every valid key.
  * ═══════════════════════════════════════════════════════════════════════════ */
-#define NAL264_NON_IDR 1
+#define NAL264_NOT_IDR 1
 #define NAL264_IDR 5
 #define NAL264_SPS 7
 #define NAL264_PPS 8
 
 typedef struct {
 	bool ha_sps, ha_pps, ha_idr;
-	bool parametri_prima_dell_idr;
-	bool primo_vcl_e_chiave;
+	bool parameters_before_idr;
+	bool first_vcl_is_key;
 	size_t sps_offset, sps_byte;
-} FormaAnnexB264;
+} AnnexB264Layout;
 
-static void annexb264_leggi(const uint8_t *d, size_t byte, FormaAnnexB264 *f)
+static void annexb264_read(const uint8_t *d, size_t byte, AnnexB264Layout *f)
 {
-	bool visto_vcl = false;
+	bool seen_vcl = false;
 	bool p_sps = false, p_pps = false;
-	size_t corpo;
+	size_t body_el;
 
 	memset(f, 0, sizeof(*f));
-	corpo = annexb_prossimo(d, byte, 0, NULL);
-	while (corpo < byte) {
-		size_t dove_dopo;
-		size_t prossimo = annexb_prossimo(d, byte, corpo, &dove_dopo);
-		size_t fine = (prossimo < byte) ? dove_dopo : byte;
-		int tipo = d[corpo] & 0x1F;
+	body_el = annexb_next(d, byte, 0, NULL);
+	while (body_el < byte) {
+		size_t after_pos;
+		size_t upcoming = annexb_next(d, byte, body_el, &after_pos);
+		size_t fine = (upcoming < byte) ? after_pos : byte;
+		int kind = d[body_el] & 0x1F;
 
-		if (tipo == NAL264_SPS) {
+		if (kind == NAL264_SPS) {
 			f->ha_sps = true;
 			p_sps = true;
 			if (!f->sps_byte) {
-				f->sps_offset = corpo;
-				f->sps_byte = fine - corpo;
+				f->sps_offset = body_el;
+				f->sps_byte = fine - body_el;
 			}
-		} else if (tipo == NAL264_PPS) {
+		} else if (kind == NAL264_PPS) {
 			f->ha_pps = true;
 			p_pps = true;
-		} else if (tipo >= NAL264_NON_IDR && tipo <= NAL264_IDR) {
-			bool chiave = (tipo == NAL264_IDR);
-			if (!visto_vcl) {
-				visto_vcl = true;
-				f->primo_vcl_e_chiave = chiave;
+		} else if (kind >= NAL264_NOT_IDR && kind <= NAL264_IDR) {
+			bool key_id = (kind == NAL264_IDR);
+			if (!seen_vcl) {
+				seen_vcl = true;
+				f->first_vcl_is_key = key_id;
 			}
-			if (chiave) {
+			if (key_id) {
 				f->ha_idr = true;
 				if (p_sps && p_pps)
-					f->parametri_prima_dell_idr = true;
+					f->parameters_before_idr = true;
 			}
 			p_sps = p_pps = false;
 		}
-		corpo = prossimo;
+		body_el = upcoming;
 	}
 }
 
@@ -752,17 +752,17 @@ static void annexb264_leggi(const uint8_t *d, size_t byte, FormaAnnexB264 *f)
  * are skipped by reading them, because they are variable-length and whoever counted them
  * in bytes would throw off everything that comes after (that is the size and the depth).
  */
-static void salta_liste_scala(LettoreBit *l, int quante)
+static void skip_scaling_lists(BitReader *l, int how_many_n)
 {
-	for (int i = 0; i < quante && !l->finito; i++) {
+	for (int i = 0; i < how_many_n && !l->finished; i++) {
 		if (!lb_bit(l, 1))
 			continue;
-		int misura = (i < 6) ? 16 : 64;
-		int ultimo = 8, prossimo = 8;
-		for (int j = 0; j < misura && !l->finito; j++) {
-			if (prossimo)
-				prossimo = (ultimo + lb_se(l) + 256) % 256;
-			ultimo = prossimo ? prossimo : ultimo;
+		int gauge = (i < 6) ? 16 : 64;
+		int last = 8, upcoming = 8;
+		for (int j = 0; j < gauge && !l->finished; j++) {
+			if (upcoming)
+				upcoming = (last + lb_se(l) + 256) % 256;
+			last = upcoming ? upcoming : last;
 		}
 	}
 }
@@ -773,21 +773,21 @@ static void salta_liste_scala(LettoreBit *l, int quante)
  *    in the `avc1.<profile><constraints><level>` string the browser receives.
  *
  * ⛔ And the size is read down to the CROPPING.  Without it, a 1588x914 canvas (not
- *    a multiple of 16) would read as 1600x928 — that is the witness would accuse
+ *    a multiple of 16) would read as 1600x928 — that is the witness would accusations
  *    a correct stream of the wrong size, which is the false red of `LEZIONI.md`
  *    §1.2.  ⚠ And the cropping units depend on the subsampling: 4:2:0
  *    counts two pixels per unit horizontally and two vertically.
  */
-static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
-                           PosizioneCornice *dove)
+static bool read_h264_sps(const uint8_t *nal, size_t byte, EncoderConfession *c,
+                           FramePosition *dove)
 {
 	uint8_t *rbsp;
 	size_t n;
-	LettoreBit l;
-	uint32_t profilo, livello, vincoli, chroma = 1, largh_mb, alt_mapunit;
-	uint32_t sotto_l = 2, sotto_a = 2;
-	uint32_t taglio_sx = 0, taglio_dx = 0, taglio_su = 0, taglio_giu = 0;
-	int solo_fotogrammi;
+	BitReader l;
+	uint32_t profile_v, level, constraints, chroma = 1, width_mb, height_mapunit;
+	uint32_t below_w = 2, below_h = 2;
+	uint32_t crop_left = 0, crop_right = 0, crop_top = 0, crop_bottom = 0;
+	int frames_only;
 	size_t bit_flag;
 
 	if (byte < 5)
@@ -797,95 +797,95 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 		return false;
 	/* ⛔ The NAL header byte is skipped BEFORE removing the emulation:
 	 *    it is not part of the RBSP, and counting it would shift every bit by eight. */
-	n = togli_emulazione(nal + 1, byte - 1, rbsp, byte);
-	lb_apri(&l, rbsp, n);
+	n = remove_emulation(nal + 1, byte - 1, rbsp, byte);
+	lb_open(&l, rbsp, n);
 
-	profilo = lb_bit(&l, 8);
+	profile_v = lb_bit(&l, 8);
 	/* ⛔⭐ THE CONSTRAINTS ARE NO LONGER THROWN AWAY — 23 Aug 2026.  Here there was a
 	 *     `(void)`, and the byte ended up in nothing: it is the **CC** of
 	 *     `avc1.PPCCLL`, that is exactly one third of the string the browser
 	 *     passes to `configure()`.  ⚠ Throwing it away was the reason why that
 	 *     string, under H.264, could not even be composed. */
-	vincoli = lb_bit(&l, 8);     /* constraint_set*_flag + the reserved bits */
-	livello = lb_bit(&l, 8);
+	constraints = lb_bit(&l, 8);     /* constraint_set*_flag + the reserved bits */
+	level = lb_bit(&l, 8);
 	(void) lb_ue(&l);            /* seq_parameter_set_id */
 
 	/* ⚠ Only the "high" profiles carry the chroma format and the depth: on
 	 *   Baseline/Main they are NOT there, and reading them would shift all the rest.  It is
 	 *   the standard's list (7.3.2.1.1), written out in full on purpose. */
-	if (profilo == 100 || profilo == 110 || profilo == 122 || profilo == 244 || profilo == 44
-	    || profilo == 83 || profilo == 86 || profilo == 118 || profilo == 128 || profilo == 138
-	    || profilo == 139 || profilo == 134 || profilo == 135) {
+	if (profile_v == 100 || profile_v == 110 || profile_v == 122 || profile_v == 244 || profile_v == 44
+	    || profile_v == 83 || profile_v == 86 || profile_v == 118 || profile_v == 128 || profile_v == 138
+	    || profile_v == 139 || profile_v == 134 || profile_v == 135) {
 		chroma = lb_ue(&l);
 		if (chroma == 3)
 			(void) lb_bit(&l, 1);          /* separate_colour_plane_flag */
-		c->profondita_flusso = 8 + (int) lb_ue(&l);   /* luma */
+		c->stream_depth = 8 + (int) lb_ue(&l);   /* luma */
 		(void) lb_ue(&l);                  /* chroma: read and not used */
 		(void) lb_bit(&l, 1);              /* qpprime_y_zero_transform_bypass */
 		if (lb_bit(&l, 1))
-			salta_liste_scala(&l, chroma == 3 ? 12 : 8);
+			skip_scaling_lists(&l, chroma == 3 ? 12 : 8);
 	} else {
 		/* ⛔ It is not "8 bits out of habit": on these profiles the standard
 		 *    SAYS 8 and 4:2:0, so it is a fact that was read, not a default
 		 *    value (`CODER.md` §3.10). */
-		c->profondita_flusso = 8;
+		c->stream_depth = 8;
 		chroma = 1;
 	}
-	if (chroma == 0) { sotto_l = 1; sotto_a = 1; }
-	else if (chroma == 2) { sotto_l = 2; sotto_a = 1; }
-	else if (chroma == 3) { sotto_l = 1; sotto_a = 1; }
+	if (chroma == 0) { below_w = 1; below_h = 1; }
+	else if (chroma == 2) { below_w = 2; below_h = 1; }
+	else if (chroma == 3) { below_w = 1; below_h = 1; }
 
 	(void) lb_ue(&l);                      /* log2_max_frame_num_minus4 */
 	{
-		uint32_t tipo_ordine = lb_ue(&l);
-		if (tipo_ordine == 0) {
+		uint32_t order_type = lb_ue(&l);
+		if (order_type == 0) {
 			(void) lb_ue(&l);
-		} else if (tipo_ordine == 1) {
+		} else if (order_type == 1) {
 			(void) lb_bit(&l, 1);
 			(void) lb_se(&l);
 			(void) lb_se(&l);
-			uint32_t quanti = lb_ue(&l);
-			for (uint32_t i = 0; i < quanti && !l.finito && i < 256; i++)
+			uint32_t how_many = lb_ue(&l);
+			for (uint32_t i = 0; i < how_many && !l.finished && i < 256; i++)
 				(void) lb_se(&l);
 		}
 	}
 	(void) lb_ue(&l);                      /* max_num_ref_frames */
 	(void) lb_bit(&l, 1);                  /* gaps_in_frame_num_value_allowed */
-	largh_mb = lb_ue(&l) + 1;
-	alt_mapunit = lb_ue(&l) + 1;
-	solo_fotogrammi = (int) lb_bit(&l, 1);
-	if (!solo_fotogrammi)
+	width_mb = lb_ue(&l) + 1;
+	height_mapunit = lb_ue(&l) + 1;
+	frames_only = (int) lb_bit(&l, 1);
+	if (!frames_only)
 		(void) lb_bit(&l, 1);              /* mb_adaptive_frame_field_flag */
 	(void) lb_bit(&l, 1);                  /* direct_8x8_inference_flag */
 	bit_flag = l.bit;
 	if (lb_bit(&l, 1)) {                   /* frame_cropping_flag */
-		taglio_sx = lb_ue(&l);
-		taglio_dx = lb_ue(&l);
-		taglio_su = lb_ue(&l);
-		taglio_giu = lb_ue(&l);
+		crop_left = lb_ue(&l);
+		crop_right = lb_ue(&l);
+		crop_top = lb_ue(&l);
+		crop_bottom = lb_ue(&l);
 		if (dove)
-			dove->presente = true;
+			dove->present_v = true;
 	} else if (dove) {
-		dove->presente = false;
+		dove->present_v = false;
 	}
 	if (dove) {
 		dove->bit_flag = bit_flag;
-		dove->bit_dopo = l.bit;
-		dove->sx = taglio_sx;
-		dove->dx = taglio_dx;
-		dove->su = taglio_su;
-		dove->giu = taglio_giu;
+		dove->bit_after = l.bit;
+		dove->left_side = crop_left;
+		dove->right = crop_right;
+		dove->su = crop_top;
+		dove->down = crop_bottom;
 	}
 	free(rbsp);
-	if (l.finito)
+	if (l.finished)
 		return false;
 
-	c->profilo_flusso = (int) profilo;
-	c->livello_flusso = (int) livello;
+	c->stream_profile = (int) profile_v;
+	c->stream_level = (int) level;
 	/* ⛔⭐⭐ THE STRING FOR THE DECODER, AND UNTIL 23 AUG 2026 UNDER
 	 *      H.264 THIS FIELD STAYED EMPTY.
 	 *
-	 *      `leggi_sps_hevc()` composed it (`hev1.1.6.L150.B0`), `leggi_sps_
+	 *      `read_hevc_sps()` composed it (`hev1.1.6.L150.B0`), `leggi_sps_
 	 *      av1()` too (`av01.0.04M.10`), this function did NOT — it read profile,
 	 *      constraints and level and never wrote them together.  ⚠ The log
 	 *      said *"string for the decoder «»"* and the line looked like a
@@ -899,26 +899,26 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	 *    pixel" on a browser that decodes it perfectly well.
 	 *
 	 * ⭐ It is the same form that `src/pagina.html` composes on its side
-	 *    (`stringhe_codec()`, `avc1.6400` + the level in hexadecimal): the two
+	 *    (`codec_strings()`, `avc1.6400` + the level in hexadecimal): the two
 	 *    ends line up, and if they diverge it shows here.  `[M]` with
-	 *    `LIVELLO_DICHIARATO = "5.1"` the page asks for `avc1.640033`, and this
+	 *    `DECLARED_LEVEL = "5.1"` the page asks for `avc1.640033`, and this
 	 *    reader must say the same thing. */
 	/* ⚠ LOWERCASE, and it is not taste: `src/pagina.html` composes its own with
 	 *   `toString(16)`, which writes lowercase.  Two strings that must be
 	 *   comparable by eye in the log do not differ by the case of
 	 *   a letter. */
-	snprintf(c->stringa_codec, sizeof(c->stringa_codec), "avc1.%02x%02x%02x",
-	         profilo & 0xFFu, vincoli & 0xFFu, livello & 0xFFu);
+	snprintf(c->codec_string, sizeof(c->codec_string), "avc1.%02x%02x%02x",
+	         profile_v & 0xFFu, constraints & 0xFFu, level & 0xFFu);
 	{
-		uint32_t unita_l = (chroma == 0) ? 1 : sotto_l;
-		uint32_t unita_a = (uint32_t) ((chroma == 0 ? 1 : sotto_a) * (2 - solo_fotogrammi));
-		uint32_t larghezza = largh_mb * 16;
-		uint32_t altezza = alt_mapunit * 16 * (uint32_t) (2 - solo_fotogrammi);
-		uint32_t via_l = (taglio_sx + taglio_dx) * unita_l;
-		uint32_t via_a = (taglio_su + taglio_giu) * unita_a;
+		uint32_t unit_w = (chroma == 0) ? 1 : below_w;
+		uint32_t unit_h = (uint32_t) ((chroma == 0 ? 1 : below_h) * (2 - frames_only));
+		uint32_t width_px = width_mb * 16;
+		uint32_t height_px = height_mapunit * 16 * (uint32_t) (2 - frames_only);
+		uint32_t via_l = (crop_left + crop_right) * unit_w;
+		uint32_t via_a = (crop_top + crop_bottom) * unit_h;
 
-		c->larghezza_flusso = (larghezza > via_l) ? larghezza - via_l : larghezza;
-		c->altezza_flusso = (altezza > via_a) ? altezza - via_a : altezza;
+		c->stream_width = (width_px > via_l) ? width_px - via_l : width_px;
+		c->stream_height = (height_px > via_a) ? height_px - via_a : height_px;
 	}
 	return true;
 }
@@ -932,62 +932,62 @@ static bool leggi_sps_h264(const uint8_t *nal, size_t byte, CodificatoreConfessi
  *    decoder will read.
  *
  * ⭐ And along the way out comes the **level**, which is needed for `RCP.md` §4.3
- *    (`video.livello`: the server MUST emit a stream of a level no
+ *    (`video.level`: the server MUST emit a stream of a level no
  *    higher than the one declared by the client, and **does not guess it**) and for the
  *    `hev1.2.4.L93.B0` string of `VideoDecoder.configure()`.
  */
-static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessione *c,
-                           PosizioneCornice *dove)
+static bool read_hevc_sps(const uint8_t *nal, size_t byte, EncoderConfession *c,
+                           FramePosition *dove)
 {
 	if (byte < 4)
 		return false;
 	uint8_t *rbsp = malloc(byte);
 	if (!rbsp)
 		return false;
-	size_t n = togli_emulazione(nal + 2, byte - 2, rbsp, byte); /* 2 = NAL header */
+	size_t n = remove_emulation(nal + 2, byte - 2, rbsp, byte); /* 2 = NAL header */
 
-	LettoreBit l;
-	lb_apri(&l, rbsp, n);
+	BitReader l;
+	lb_open(&l, rbsp, n);
 	lb_bit(&l, 4);                              /* sps_video_parameter_set_id */
 	uint32_t max_sub = lb_bit(&l, 3);           /* sps_max_sub_layers_minus1 */
 	lb_bit(&l, 1);                              /* sps_temporal_id_nesting_flag */
 
 	/* profile_tier_level(1, max_sub) */
-	uint32_t spazio = lb_bit(&l, 2);
+	uint32_t space = lb_bit(&l, 2);
 	uint32_t tier = lb_bit(&l, 1);
-	uint32_t profilo = lb_bit(&l, 5);
+	uint32_t profile_v = lb_bit(&l, 5);
 	uint32_t compat = lb_bit(&l, 32);
-	uint8_t vincoli[6];
+	uint8_t constraints[6];
 	for (int i = 0; i < 6; i++)
-		vincoli[i] = (uint8_t) lb_bit(&l, 8); /* 48 bits: the source flags and the reserved ones */
-	uint32_t livello = lb_bit(&l, 8);
+		constraints[i] = (uint8_t) lb_bit(&l, 8); /* 48 bits: the source flags and the reserved ones */
+	uint32_t level = lb_bit(&l, 8);
 
-	uint32_t prof_presente[8] = { 0 }, liv_presente[8] = { 0 };
+	uint32_t profile_present[8] = { 0 }, level_present[8] = { 0 };
 	for (uint32_t i = 0; i < max_sub; i++) {
-		prof_presente[i] = lb_bit(&l, 1);
-		liv_presente[i] = lb_bit(&l, 1);
+		profile_present[i] = lb_bit(&l, 1);
+		level_present[i] = lb_bit(&l, 1);
 	}
 	if (max_sub > 0)
 		for (uint32_t i = max_sub; i < 8; i++)
 			lb_bit(&l, 2); /* reserved_zero_2bits */
 	for (uint32_t i = 0; i < max_sub; i++) {
-		if (prof_presente[i]) {
+		if (profile_present[i]) {
 			lb_bit(&l, 2); lb_bit(&l, 1); lb_bit(&l, 5);
 			lb_bit(&l, 32);
 			for (int k = 0; k < 6; k++)
 				lb_bit(&l, 8);
 		}
-		if (liv_presente[i])
+		if (level_present[i])
 			lb_bit(&l, 8);
 	}
 
 	lb_ue(&l);                                  /* sps_seq_parameter_set_id */
-	uint32_t croma = lb_ue(&l);                 /* chroma_format_idc */
-	if (croma == 3)
+	uint32_t chroma_v = lb_ue(&l);                 /* chroma_format_idc */
+	if (chroma_v == 3)
 		lb_bit(&l, 1);                          /* separate_colour_plane_flag */
-	uint32_t larghezza = lb_ue(&l);
-	uint32_t altezza = lb_ue(&l);
-	uint32_t codificata_l = larghezza, codificata_a = altezza;
+	uint32_t width_px = lb_ue(&l);
+	uint32_t height_px = lb_ue(&l);
+	uint32_t coded_width = width_px, coded_height = height_px;
 	/*
 	 * ⛔⭐ THE CONFORMANCE WINDOW IS APPLIED — and until 13 Aug 2026 this
 	 *     read SKIPPED it (four `lb_ue()` thrown away).
@@ -995,7 +995,7 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 	 * ⚠ It had never been seen because `libx265` at 1920×1080 does not put one: 1080
 	 *   is a multiple of 8 and fits without padding.  ⛔ `hevc_vaapi` **on AMD**
 	 *   (radeonsi, navi21) encodes **1920×1088** and crops to 1080 with the
-	 *   window — and the `forma_va_bene()` check refused EVERY frame
+	 *   window — and the `bitstream_ok()` check refused EVERY frame
 	 *   saying *"the stream declares 1920x1088 and the canvas is 1920x1080"*.
 	 *
 	 * ⇒ ⭐ The defect was the READER's, not the encoder's, and it was seen only
@@ -1012,67 +1012,67 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 		dove->bit_flag = bit_flag;
 	}
 	if (lb_bit(&l, 1)) {                        /* conformance_window_flag */
-		uint32_t sinistra = lb_ue(&l), destra = lb_ue(&l);
-		uint32_t sopra = lb_ue(&l), sotto = lb_ue(&l);
-		uint32_t sub_l = (croma == 1 || croma == 2) ? 2 : 1;
-		uint32_t sub_a = (croma == 1) ? 2 : 1;
-		uint32_t taglio_l = sub_l * (sinistra + destra);
-		uint32_t taglio_a = sub_a * (sopra + sotto);
+		uint32_t left_edge = lb_ue(&l), right_edge = lb_ue(&l);
+		uint32_t above = lb_ue(&l), below = lb_ue(&l);
+		uint32_t sub_l = (chroma_v == 1 || chroma_v == 2) ? 2 : 1;
+		uint32_t sub_a = (chroma_v == 1) ? 2 : 1;
+		uint32_t cut_w = sub_l * (left_edge + right_edge);
+		uint32_t cut_h = sub_a * (above + below);
 		if (dove) {
-			dove->presente = true;
-			dove->sx = sinistra;
-			dove->dx = destra;
-			dove->su = sopra;
-			dove->giu = sotto;
+			dove->present_v = true;
+			dove->left_side = left_edge;
+			dove->right = right_edge;
+			dove->su = above;
+			dove->down = below;
 		}
 		/* ⚠ A crop bigger than the picture is not subtracted: it is left alone and
 		 *   the caller will see a size that does not match, which is better than a
 		 *   number that goes below zero and becomes huge. */
-		if (taglio_l < larghezza)
-			larghezza -= taglio_l;
-		if (taglio_a < altezza)
-			altezza -= taglio_a;
+		if (cut_w < width_px)
+			width_px -= cut_w;
+		if (cut_h < height_px)
+			height_px -= cut_h;
 	}
 	if (dove)
-		dove->bit_dopo = l.bit;
+		dove->bit_after = l.bit;
 	uint32_t bit_luma = lb_ue(&l) + 8;
-	uint32_t bit_croma = lb_ue(&l) + 8;
+	uint32_t bit_chroma = lb_ue(&l) + 8;
 	free(rbsp);
 
-	if (l.finito)
+	if (l.finished)
 		return false;
 
-	c->profondita_flusso = (int) (bit_luma < bit_croma ? bit_luma : bit_croma);
-	c->profilo_flusso = (int) profilo;
-	c->livello_flusso = (int) livello;
+	c->stream_depth = (int) (bit_luma < bit_chroma ? bit_luma : bit_chroma);
+	c->stream_profile = (int) profile_v;
+	c->stream_level = (int) level;
 	c->tier_alto = tier != 0;
-	c->larghezza_flusso = larghezza;
-	c->altezza_flusso = altezza;
-	c->larghezza_codificata = codificata_l;
-	c->altezza_codificata = codificata_a;
-	c->croma_flusso = (int) croma;
+	c->stream_width = width_px;
+	c->stream_height = height_px;
+	c->encoded_width = coded_width;
+	c->encoded_height = coded_height;
+	c->stream_chroma = (int) chroma_v;
 
 	/* ⭐ The string for `VideoDecoder.configure()`, built from the real bytes.
 	 *   ⛔ `hev1` and not `hvc1`: the parameter sets travel in band.  ⚠ And `[M]`
 	 *      F2.5 measured that **the prefix does not matter**: Chromium decides from the
 	 *      presence of the `description`, not from the prefix.  `hev1` is written
 	 *      anyway, because it is the one that describes the truth of the stream. */
-	char vincoli_testo[24] = { 0 };
-	int ultimo = -1;
+	char constraints_text[24] = { 0 };
+	int last = -1;
 	for (int i = 0; i < 6; i++)
-		if (vincoli[i])
-			ultimo = i;
-	for (int i = 0; i <= ultimo; i++) {
-		char pezzo[8];
-		snprintf(pezzo, sizeof(pezzo), ".%02X", vincoli[i]);
-		strncat(vincoli_testo, pezzo, sizeof(vincoli_testo) - strlen(vincoli_testo) - 1);
+		if (constraints[i])
+			last = i;
+	for (int i = 0; i <= last; i++) {
+		char piece[8];
+		snprintf(piece, sizeof(piece), ".%02X", constraints[i]);
+		strncat(constraints_text, piece, sizeof(constraints_text) - strlen(constraints_text) - 1);
 	}
-	char spazio_testo[2] = { 0 };
-	if (spazio > 0)
-		spazio_testo[0] = (char) ('A' + spazio - 1);
-	snprintf(c->stringa_codec, sizeof(c->stringa_codec), "hev1.%s%u.%X.%c%u%s",
-	         spazio_testo, profilo, rovescia32(compat), tier ? 'H' : 'L', livello,
-	         vincoli_testo);
+	char space_text[2] = { 0 };
+	if (space > 0)
+		space_text[0] = (char) ('A' + space - 1);
+	snprintf(c->codec_string, sizeof(c->codec_string), "hev1.%s%u.%X.%c%u%s",
+	         space_text, profile_v, reverse32(compat), tier ? 'H' : 'L', level,
+	         constraints_text);
 	return true;
 }
 
@@ -1091,14 +1091,14 @@ static bool leggi_sps_hevc(const uint8_t *nal, size_t byte, CodificatoreConfessi
 #define OBU_FRAME 6
 
 typedef struct {
-	bool ha_sequenza;
-	bool ha_chiave;
-	bool sequenza_prima_della_chiave;
-	bool primo_fotogramma_e_chiave;
+	bool has_sequence;
+	bool has_key;
+	bool sequence_before_key;
+	bool first_frame_is_key;
 	size_t seq_offset, seq_byte;
-} FormaObu;
+} ObuLayout;
 
-static uint64_t leggi_leb128(const uint8_t *d, size_t byte, size_t *dove)
+static uint64_t read_leb128(const uint8_t *d, size_t byte, size_t *dove)
 {
 	uint64_t v = 0;
 	for (int i = 0; i < 8 && *dove < byte; i++) {
@@ -1110,138 +1110,138 @@ static uint64_t leggi_leb128(const uint8_t *d, size_t byte, size_t *dove)
 	return v;
 }
 
-static void obu_leggi(const uint8_t *d, size_t byte, FormaObu *f)
+static void obu_read(const uint8_t *d, size_t byte, ObuLayout *f)
 {
 	memset(f, 0, sizeof(*f));
-	bool visto_fotogramma = false, seq_in_corso = false;
+	bool seen_frame = false, seq_in_progress = false;
 	size_t i = 0;
 	while (i < byte) {
-		size_t inizio = i;
-		uint8_t testa = d[i++];
-		int tipo = (testa >> 3) & 0xF;
-		bool estensione = (testa >> 2) & 1;
-		bool ha_taglia = (testa >> 1) & 1;
-		if (estensione && i < byte)
+		size_t start = i;
+		uint8_t head = d[i++];
+		int kind = (head >> 3) & 0xF;
+		bool extension = (head >> 2) & 1;
+		bool has_size = (head >> 1) & 1;
+		if (extension && i < byte)
 			i++;
-		uint64_t taglia;
-		if (ha_taglia)
-			taglia = leggi_leb128(d, byte, &i);
+		uint64_t trim;
+		if (has_size)
+			trim = read_leb128(d, byte, &i);
 		else
-			taglia = byte - i; /* ⚠ without a size field the OBU runs to the end of the buffer */
-		if (i + taglia > byte)
-			taglia = byte - i;
+			trim = byte - i; /* ⚠ without a size field the OBU runs to the end of the buffer */
+		if (i + trim > byte)
+			trim = byte - i;
 
-		if (tipo == OBU_SEQUENCE_HEADER) {
-			f->ha_sequenza = true;
-			seq_in_corso = true;
+		if (kind == OBU_SEQUENCE_HEADER) {
+			f->has_sequence = true;
+			seq_in_progress = true;
 			if (!f->seq_byte) {
 				f->seq_offset = i;
-				f->seq_byte = (size_t) taglia;
+				f->seq_byte = (size_t) trim;
 			}
-		} else if (tipo == OBU_FRAME || tipo == OBU_FRAME_HEADER) {
-			LettoreBit l;
-			lb_apri(&l, d + i, (size_t) taglia);
-			bool chiave = false;
+		} else if (kind == OBU_FRAME || kind == OBU_FRAME_HEADER) {
+			BitReader l;
+			lb_open(&l, d + i, (size_t) trim);
+			bool key_id = false;
 			if (lb_bit(&l, 1) == 0)                 /* show_existing_frame */
-				chiave = (lb_bit(&l, 2) == 0);      /* frame_type: 0 = KEY_FRAME */
-			if (!visto_fotogramma) {
-				visto_fotogramma = true;
-				f->primo_fotogramma_e_chiave = chiave;
+				key_id = (lb_bit(&l, 2) == 0);      /* frame_type: 0 = KEY_FRAME */
+			if (!seen_frame) {
+				seen_frame = true;
+				f->first_frame_is_key = key_id;
 			}
-			if (chiave) {
-				f->ha_chiave = true;
-				if (seq_in_corso)
-					f->sequenza_prima_della_chiave = true;
+			if (key_id) {
+				f->has_key = true;
+				if (seq_in_progress)
+					f->sequence_before_key = true;
 			}
-			seq_in_corso = false;
+			seq_in_progress = false;
 		}
-		i += (size_t) taglia;
-		if (i <= inizio)
+		i += (size_t) trim;
+		if (i <= start)
 			break; /* ⛔ a zero-size OBU would stop the loop here instead of never */
 	}
 }
 
 /* The sequence header OBU, down to the bit depth.  Follows AV1 §5.5. */
-static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfessione *c)
+static bool read_av1_sequence(const uint8_t *d, size_t byte, EncoderConfession *c)
 {
-	LettoreBit l;
-	lb_apri(&l, d, byte);
-	uint32_t profilo = lb_bit(&l, 3);
+	BitReader l;
+	lb_open(&l, d, byte);
+	uint32_t profile_v = lb_bit(&l, 3);
 	lb_bit(&l, 1); /* still_picture */
-	uint32_t ridotta = lb_bit(&l, 1);
-	uint32_t livello = 0, tier = 0;
-	uint32_t modello_decodifica = 0, ritardo_iniziale = 0;
+	uint32_t reduced = lb_bit(&l, 1);
+	uint32_t level = 0, tier = 0;
+	uint32_t model_decoding = 0, initial_delay = 0;
 
-	if (ridotta) {
-		livello = lb_bit(&l, 5);
+	if (reduced) {
+		level = lb_bit(&l, 5);
 	} else {
 		if (lb_bit(&l, 1)) {              /* timing_info_present_flag */
 			lb_bit(&l, 32); lb_bit(&l, 32);
 			if (lb_bit(&l, 1) == 0) {     /* equal_picture_interval */
 				/* uvlc(): nothing to keep */
-				int zeri = 0;
-				while (!l.finito && lb_bit(&l, 1) == 0 && zeri < 32)
-					zeri++;
-				if (zeri && zeri < 32)
-					lb_bit(&l, zeri);
+				int zeros = 0;
+				while (!l.finished && lb_bit(&l, 1) == 0 && zeros < 32)
+					zeros++;
+				if (zeros && zeros < 32)
+					lb_bit(&l, zeros);
 			}
-			modello_decodifica = lb_bit(&l, 1);
-			if (modello_decodifica) {
+			model_decoding = lb_bit(&l, 1);
+			if (model_decoding) {
 				lb_bit(&l, 5); lb_bit(&l, 32); lb_bit(&l, 5); lb_bit(&l, 5);
 			}
 		}
-		ritardo_iniziale = lb_bit(&l, 1);
-		uint32_t quanti = lb_bit(&l, 5);
-		for (uint32_t k = 0; k <= quanti; k++) {
+		initial_delay = lb_bit(&l, 1);
+		uint32_t how_many = lb_bit(&l, 5);
+		for (uint32_t k = 0; k <= how_many; k++) {
 			lb_bit(&l, 12);               /* operating_point_idc */
 			uint32_t liv = lb_bit(&l, 5);
 			uint32_t ti = 0;
 			if (liv > 7)
 				ti = lb_bit(&l, 1);
 			if (k == 0) {
-				livello = liv;
+				level = liv;
 				tier = ti;
 			}
-			if (modello_decodifica && lb_bit(&l, 1)) {
+			if (model_decoding && lb_bit(&l, 1)) {
 				/* operating_parameters_info: two delays and a flag.  ⚠ The
 				 * length depends on buffer_delay_length, which we do not
 				 * keep here: if this branch lit up, the read
 				 * would become unreliable and the caller sees it from
-				 * `letto_dal_flusso = false`. */
+				 * `read_from_stream = false`. */
 				return false;
 			}
-			if (ritardo_iniziale && lb_bit(&l, 1))
+			if (initial_delay && lb_bit(&l, 1))
 				lb_bit(&l, 4);
 		}
 	}
 	uint32_t bit_l = lb_bit(&l, 4) + 1;
 	uint32_t bit_a = lb_bit(&l, 4) + 1;
-	uint32_t larghezza = lb_bit(&l, (int) bit_l) + 1;
-	uint32_t altezza = lb_bit(&l, (int) bit_a) + 1;
+	uint32_t width_px = lb_bit(&l, (int) bit_l) + 1;
+	uint32_t height_px = lb_bit(&l, (int) bit_a) + 1;
 
-	if (!ridotta && lb_bit(&l, 1)) { /* frame_id_numbers_present_flag */
+	if (!reduced && lb_bit(&l, 1)) { /* frame_id_numbers_present_flag */
 		lb_bit(&l, 4);
 		lb_bit(&l, 3);
 	}
 	lb_bit(&l, 1); /* use_128x128_superblock */
 	lb_bit(&l, 1); /* enable_filter_intra */
 	lb_bit(&l, 1); /* enable_intra_edge_filter */
-	if (!ridotta) {
+	if (!reduced) {
 		lb_bit(&l, 1); /* enable_interintra_compound */
 		lb_bit(&l, 1); /* enable_masked_compound */
 		lb_bit(&l, 1); /* enable_warped_motion */
 		lb_bit(&l, 1); /* enable_dual_filter */
-		uint32_t ordine = lb_bit(&l, 1);
-		if (ordine) {
+		uint32_t order = lb_bit(&l, 1);
+		if (order) {
 			lb_bit(&l, 1); /* enable_jnt_comp */
 			lb_bit(&l, 1); /* enable_ref_frame_mvs */
 		}
-		uint32_t forza = 2;
+		uint32_t force = 2;
 		if (lb_bit(&l, 1) == 0)          /* seq_choose_screen_content_tools */
-			forza = lb_bit(&l, 1);
-		if (forza > 0 && lb_bit(&l, 1) == 0)
+			force = lb_bit(&l, 1);
+		if (force > 0 && lb_bit(&l, 1) == 0)
 			lb_bit(&l, 1);               /* seq_force_integer_mv */
-		if (ordine)
+		if (order)
 			lb_bit(&l, 3);               /* order_hint_bits_minus_1 */
 	}
 	lb_bit(&l, 1); /* enable_superres */
@@ -1250,27 +1250,27 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
 
 	/* color_config() */
 	uint32_t alto = lb_bit(&l, 1);
-	int profondita;
-	if (profilo == 2 && alto)
-		profondita = lb_bit(&l, 1) ? 12 : 10;
+	int bit_depth;
+	if (profile_v == 2 && alto)
+		bit_depth = lb_bit(&l, 1) ? 12 : 10;
 	else
-		profondita = alto ? 10 : 8;
+		bit_depth = alto ? 10 : 8;
 
-	if (l.finito)
+	if (l.finished)
 		return false;
 
-	c->profondita_flusso = profondita;
-	c->profilo_flusso = (int) profilo;
-	c->livello_flusso = (int) livello;
+	c->stream_depth = bit_depth;
+	c->stream_profile = (int) profile_v;
+	c->stream_level = (int) level;
 	c->tier_alto = tier != 0;
-	c->larghezza_flusso = larghezza;
-	c->altezza_flusso = altezza;
-	c->croma_flusso = 1; /* ⚠ the two formats SVT-AV1 accepts are 4:2:0 */
+	c->stream_width = width_px;
+	c->stream_height = height_px;
+	c->stream_chroma = 1; /* ⚠ the two formats SVT-AV1 accepts are 4:2:0 */
 
 	/* ⚠ `seq_level_idx = 4` is NOT "level 4": it is 3.0 — the string takes
 	 *   the INDEX (`DECISIONI.md` §1.13). */
-	snprintf(c->stringa_codec, sizeof(c->stringa_codec), "av01.%u.%02u%c.%02d",
-	         profilo, livello, tier ? 'H' : 'M', profondita);
+	snprintf(c->codec_string, sizeof(c->codec_string), "av01.%u.%02u%c.%02d",
+	         profile_v, level, tier ? 'H' : 'M', bit_depth);
 	return true;
 }
 
@@ -1282,81 +1282,81 @@ static bool leggi_sequenza_av1(const uint8_t *d, size_t byte, CodificatoreConfes
  *    holding back takes two.  Eight covers all cases with margin, and when the
  *    cache is full we start over instead of evicting at random: a
  *    wrong policy on eight entries would cost more lines than it gives back. */
-#define IMPORTATE_MAX 8
+#define IMPORTED_MAX 8
 
 /* ⛔ How many INPUT surfaces the card's store keeps.  With the wait
  *    on every frame one would be enough; four are kept so as not to
  *    rewrite the one the VPP has just filled while the driver is
  *    still reading it, on a driver that kept one round in the pipe. */
-#define SUPERFICI_PRONTE 4
+#define READY_SURFACES 4
 
 
 /* ⛔ The number lives in ONE place only, with the measurement next to it in `codificatore.h`.
  *    ⚠ It is not a multiple chosen out of caution: it is the boundary measured to the pixel
  *    between 1552 (which reads) and 1544 (which does not). */
-#define ALLINEAMENTO_SCHEDA 64u
+#define CARD_ALIGNMENT 64u
 
 
 /* ⭐ PHASE 19 — the card route.  `NESSUNA` in a request means
- *    "by capability" (`h264_scheda`); in an encoder that was born it is always one
+ *    "by capability" (`h264_card`); in an encoder that was born it is always one
  *    of the two. */
-typedef enum { STRADA_NESSUNA = 0, STRADA_VAAPI, STRADA_VULKAN } Strada;
+typedef enum { ROUTE_NONE = 0, ROUTE_VAAPI, ROUTE_VULKAN } Route;
 
-static const char *nome_strada(Strada s)
+static const char *route_name(Route s)
 {
-	return s == STRADA_VULKAN ? "vulkan" : s == STRADA_VAAPI ? "vaapi" : "";
+	return s == ROUTE_VULKAN ? "vulkan" : s == ROUTE_VAAPI ? "vaapi" : "";
 }
 
-struct Codificatore {
-	CodificatoreRichiesta richiesta;
+struct Encoder {
+	EncoderRequest request;
 	/* ⛔ The component name is a REMOTIX LABEL, and it is the one
 	 *    OPENED: `h264_vulkan`/`hevc_vulkan` or `h264_vaapi`/`hevc_vaapi`.  Whoever
-	 *    asked for `h264_scheda` (by capability) reads here which of the two
-	 *    came out.  `figlio.c` and `--prova-codifica` write it to the log and
+	 *    asked for `h264_card` (by capability) reads here which of the two
+	 *    came out.  `figlio.c` and `--encoding-test` write it to the log and
 	 *    to the JSON, and the installer reads the outcome, not the name. */
-	char nome_componente[64];
+	char component_name[64];
 	/* ⭐ The route REQUESTED (NESSUNA = by capability) and the one OPENED. */
-	Strada strada_chiesta;
-	Strada strada;
+	Route requested_route;
+	Route route;
 	/* ⭐ The STAGING buffer of the from-memory route IN HARDWARE: the frame
 	 *    converted on the CPU (NV12 or P010, `colori709.c`) before being uploaded to the
 	 *    card.  Empty on the zero copy (the frame is already on the card). */
-	uint8_t *appoggio;
-	size_t appoggio_byte;
-	CodificatoreConfessione conf;
-	/* ⭐ The entrypoint CHOSEN in `apri_dispositivo()` after reading it from the
+	uint8_t *staging;
+	size_t staging_byte;
+	EncoderConfession conf;
+	/* ⭐ The entrypoint CHOSEN in `open_device()` after reading it from the
 	 *    driver: it is what is asked of vadiretta and what the reread is compared
-	 *    against.  ⛔ Not `richiesta.potenza`: with
+	 *    against.  ⛔ Not `request.power`: with
 	 *    `LA_DICHIARATA` the request alone does not say which of the two. */
-	bool bassa_potenza_scelta;
+	bool low_power_choice;
 	/* ⚠ 400 and not 160: it holds the VA vendor in full — "Intel iHD
 	 *   driver for Intel(R) Gen Graphics - 25.2.3 ()" is already 53 bytes.  A name
 	 *   truncated in the log removes precisely the piece that says WHICH machine made
 	 *   the number. */
-	char nome[400];
+	char label_name[400];
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⭐ THE CARD ROUTE.  ⛔ Since phase 19 `hardware` is always true
-	 *    in an encoder that was born: `codificatore_nuovo()` refuses every name that
-	 *    does not belong to the card.  The field stays because `codificatore_libera()`
+	 *    in an encoder that was born: `encoder_new()` refuses every name that
+	 *    does not belong to the card.  The field stays because `encoder_free()`
 	 *    can run on a half-built encoder (the device not yet
 	 *    open), and because the Vulkan route will be grafted alongside.
 	 */
 	bool hardware;
-	VaDispositivo dispositivo;    /* the open node: display and vendor */
-	VAProfile profilo_va;         /* the pair chosen and VERIFIED in apri_dispositivo() */
+	VaDevice device;    /* the open node: display and vendor */
+	VAProfile profile_va;         /* the pair chosen and VERIFIED in open_device() */
 	VAEntrypoint entrypoint_va;
-	VaDiretta *va;                /* the encoder on the card */
-	VASurfaceID superficie_pronta; /* the input filled by prepara_*, to be encoded */
+	VaDirect *va;                /* the encoder on the card */
+	VASurfaceID surface_ready; /* the input filled by prepara_*, to be encoded */
 	/* ⭐ PHASE 19 — the VULKAN VIDEO route: the device (instance, card chosen
-	 *    from the node, queues) lives as long as the encoder, like `dispositivo` above;
+	 *    from the node, queues) lives as long as the encoder, like `device` above;
 	 *    the encoder (`vk`) is closed and reopened with the context, like
 	 *    `va`.  ⚠ The cache of imported DMA-BUFs sits INSIDE `vk` (one per
 	 *    session): on every reopening it is reimported — it costs one import per
 	 *    buffer, and the producer recycles four. */
-	VulkanVideoDispositivo *vk_dispositivo;
+	VulkanVideoDevice *vk_device;
 	VulkanVideo *vk;
-	VulkanVideoCapacita vk_capacita; /* read in apri_dispositivo(), for the choice */
+	VulkanVideoCapabilities vk_capabilities; /* read in open_device(), for the choice */
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⭐⭐⭐ ZERO COPY — the three things needed, and nothing else
@@ -1364,7 +1364,7 @@ struct Codificatore {
 	 *   1. the VPP CONTEXT: the RGB → NV12 conversion done by the GPU, which
 	 *      takes the place of the CPU conversion **and** of the upload
 	 *      together.  ⛔ It lives on the DEVICE and not on the encoder's
-	 *      context: `abbassa_qualita()` closes and reopens the encoder
+	 *      context: `lower_quality()` closes and reopens the encoder
 	 *      three times in a row for a key above the ceiling, and redoing the VPP on
 	 *      every round would be work done for nothing;
 	 *   2. the CACHE of imports: `vaCreateSurfaces` on a DMA-BUF is not
@@ -1375,99 +1375,99 @@ struct Codificatore {
 	 *      freed buffer: descriptor numbers are recycled, and the symptom
 	 *      would be **an old picture** with no error at all.
 	 */
-	VAConfigID vpp_configurazione;
-	VAContextID vpp_contesto;
-	bool vpp_aperto;
+	VAConfigID vpp_configuration;
+	VAContextID vpp_context;
+	bool vpp_open;
 	uint32_t vpp_l, vpp_a;        /* the size the VPP was opened for */
 	struct {
 		int fd;
-		uint32_t l, a, stride, offset, formato_drm;
-		uint64_t modificatore;
-		VASurfaceID superficie;
-	} importate[IMPORTATE_MAX];
-	unsigned quante_importate;
-	uint64_t generazione_cache;
-	bool cache_nata;
-	bool detto_copia_zero;        /* the first-time line, once only */
+		uint32_t l, a, stride, offset, format_drm;
+		uint64_t modifier;
+		VASurfaceID surface;
+	} imported[IMPORTED_MAX];
+	unsigned how_many_imported;
+	uint64_t cache_generation;
+	bool cache_created;
+	bool logged_zero_copy;        /* the first-time line, once only */
 
-	bool prossimo_chiave;         /* ⛔ the next one is a REAL key */
-	bool prima_codifica_fatta;
-	bool svuotato;                /* ⚠ it was put into drain: it must be reopened */
+	bool next_key;         /* ⛔ the next one is a REAL key */
+	bool first_encode_done;
+	bool emptied;                /* ⚠ it was put into drain: it must be reopened */
 	/* ⭐ THE FRAME (D-023, phase 16): the conformance window rewritten
 	 *    in the SPS when the driver does not write it there.  ⭐ Since phase 18
-	 *    `cornice_al_suo_posto()` rewrites it with the bits.  It is decided on the first SPS of
+	 *    `border_in_place()` rewrites it with the bits.  It is decided on the first SPS of
 	 *    each context. */
-	bool cornice_decisa;
-	bool cornice_attiva;
-	uint32_t cornice_dx, cornice_dy; /* columns and rows to crop on the right and at the bottom */
+	bool decided_border;
+	bool active_border;
+	uint32_t border_dx, border_dy; /* columns and rows to crop on the right and at the bottom */
 	/* ⭐ THE BYTES THAT ARE DELIVERED — ours, for both routes.  The
 	 *    encoder (card or software) produces them in its buffer; here they are
 	 *    copied (`[M]` a 4K key is ~1 MB: tens of µs) so that the
-	 *    frame can rewrite them and so that `fuori->dati` does not depend on the
+	 *    frame can rewrite them and so that `outside->data_v` does not depend on the
 	 *    life of the encoder's buffer — the defect of 23 Aug 2026. */
-	uint8_t *uscita;
-	size_t uscita_capacita, uscita_byte;
-	int qualita_corrente;         /* CRF in force, after any re-encodings */
-	ModoQualita modo_corrente;
-	/* ⭐ THE CLIMB (phase 9).  ⛔ The floor does NOT live here: it is `richiesta.qualita`,
-	 *    which `codificatore_nuovo()` keeps intact.  A second field with the
+	uint8_t *out_dir;
+	size_t output_capabilities, output_byte;
+	int current_quality;         /* CRF in force, after any re-encodings */
+	QualityMode current_mode;
+	/* ⭐ THE CLIMB (phase 9).  ⛔ The floor does NOT live here: it is `request.quality`,
+	 *    which `encoder_new()` keeps intact.  A second field with the
 	 *    same number inside would be the E2 form — two measurements under the same
 	 *    label, and the day they diverge no bench notices. */
-	int qualita_fallita;          /* the rung on which the ceiling BIT; 0 = never */
-	uint32_t sotto_margine;       /* frames in a row comfortably below the ceiling */
-	uint32_t risalita_attesa;     /* how many are needed NOW: doubles on every relapse */
-	bool risalito_da_poco;        /* to recognise the relapse, and only for that */
+	int failed_quality;          /* the rung on which the ceiling BIT; 0 = never */
+	uint32_t below_margin;       /* frames in a row comfortably below the ceiling */
+	uint32_t rise_wait;     /* how many are needed NOW: doubles on every relapse */
+	bool recently_risen;        /* to recognise the relapse, and only for that */
 	/* ⭐⭐⭐ THE THIRD BITRATE WITNESS — THE BYTES, and it is the only one that would have
 	 *      caught R31.  See the bandwidth ceiling box: the first witness
 	 *      says the mode **exists**, the second that the driver
 	 *      **kept** it, and in v1 they would **both have been green** while
 	 *      CBR came out.  ⛔ Only these four fields say it. */
-	uint64_t banda_t0_us;         /* when the current window started */
-	uint64_t banda_byte;          /* how many came out inside the window */
-	uint32_t banda_fotogrammi;
-	uint32_t banda_massimo;       /* the biggest: it is the peak, not the average */
-	int64_t numero;               /* the pts, which here is the frame counter */
-	bool pacchetto_in_mano;       /* `uscita` is in the caller's hands until rilascia() */
+	uint64_t bandwidth_t0_us;         /* when the current window started */
+	uint64_t bandwidth_byte;          /* how many came out inside the window */
+	uint32_t bandwidth_frames;
+	uint32_t bandwidth_max;       /* the biggest: it is the peak, not the average */
+	int64_t nr;               /* the pts, which here is the frame counter */
+	bool packet_in_hand;       /* `out_dir` is in the caller's hands until rilascia() */
 };
 
 /* ⚠ Declared here and defined with the rest of the zero copy, much further down:
- *   `codificatore_libera()` sits in between and must call them.  ⛔ Moving their
+ *   `encoder_free()` sits in between and must call them.  ⛔ Moving their
  *   definition up here would separate the GPU conversion from its
  *   box, which is the place where it is explained. */
-static void butta_le_importate(Codificatore *c, const char *perche);
-static void chiudi_vpp(Codificatore *c);
-/* ⭐ Phase 19: the bytes in `c->uscita` are common to both routes, and the
- *    Vulkan round (`codifica_vulkan`, with the zero copy box) puts them there. */
-static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte);
+static void drop_imported(Encoder *c, const char *reason_text);
+static void close_vpp(Encoder *c);
+/* ⭐ Phase 19: the bytes in `c->out_dir` are common to both routes, and the
+ *    Vulkan round (`encoding_vulkan`, with the zero copy box) puts them there. */
+static bool put_in_output(Encoder *c, const uint8_t *data_v, size_t byte);
 
-static uint64_t adesso_us(void)
+static uint64_t current_us(void)
 {
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	return (uint64_t) t.tv_sec * 1000000u + (uint64_t) t.tv_nsec / 1000u;
 }
 
-static void di(char *dove, size_t quanto, const char *fmt, ...)
+static void di(char *dove, size_t how_much, const char *fmt, ...)
 {
-	if (!dove || !quanto)
+	if (!dove || !how_much)
 		return;
 	va_list ap;
 	va_start(ap, fmt);
-	vsnprintf(dove, quanto, fmt, ap);
+	vsnprintf(dove, how_much, fmt, ap);
 	va_end(ap);
 }
 
 /* ⛔ The name for the log lives in ONE place only: until 20 Aug 2026 it was
  *    a `? :` repeated on six lines, and with the third codec each would have said
  *    "AV1" of an H.264 stream — six lies to fix one by one. */
-static const char *nome_codec(CodecVideo codec)
+static const char *codec_name(CodecVideo codec)
 {
 	switch (codec) {
-	case CODIFICATORE_HEVC:
+	case ENCODER_HEVC:
 		return "HEVC";
-	case CODIFICATORE_H264:
+	case ENCODER_H264:
 		return "H.264";
-	case CODIFICATORE_AV1:
+	case ENCODER_AV1:
 		return "AV1";
 	default:
 		return "unknown codec";
@@ -1475,16 +1475,16 @@ static const char *nome_codec(CodecVideo codec)
 }
 
 /* ⚠ The name of the QUANTITY, not of the value: CRF and QP are not the same thing
- *   (see `ModoQualita`), and a log line that said only the number
+ *   (see `QualityMode`), and a log line that said only the number
  *   would put two different measurements under the same label. */
-static const char *nome_modo(ModoQualita modo)
+static const char *mode_name(QualityMode manner)
 {
-	switch (modo) {
-	case CODIFICATORE_QUALITA_LOSSLESS:
+	switch (manner) {
+	case ENCODER_QUALITY_LOSSLESS:
 		return "lossless";
-	case CODIFICATORE_QUALITA_QP:
+	case ENCODER_QUALITY_QP:
 		return "QP";
-	case CODIFICATORE_QUALITA_CRF:
+	case ENCODER_QUALITY_CRF:
 		return "CRF";
 	default:
 		return "unknown mode";
@@ -1494,7 +1494,7 @@ static const char *nome_modo(ModoQualita modo)
 /*
  * ⛔ "Is it in hardware?" is ASKED OF THE COMPONENT, not read from the name.
  *
- * ⚠ A `strstr(nome, "_vaapi")` would be the same thing written badly: the day
+ * ⚠ A `strstr(label_name, "_vaapi")` would be the same thing written badly: the day
  *   `hevc_qsv` or `hevc_vulkan` were tried the line would say "software" of
  *   a hardware encoder, and the symptom would be swscale converting
  *   to a format the component does not accept — that is an error that names
@@ -1503,51 +1503,51 @@ static const char *nome_modo(ModoQualita modo)
  */
 /*
  * ⭐ PHASE 18: the answer is given by the NAMES that REMOTIX reserves for the card.
- *    ⚠ It is not the `strstr(nome, "_vaapi")` that the note above forbade: that one
+ *    ⚠ It is not the `strstr(label_name, "_vaapi")` that the note above forbade: that one
  *    guessed among the components of another library; these are OUR
  *    labels, and a seventh (`hevc_qsv`) does not exist here and does not open —
  *    it fails saying so.
  * ⭐ PHASE 19: the names are six (`codificatore.h`): `*_scheda` = the route is
  *    chosen by capability, `*_vulkan` and `*_vaapi` = that one and nothing else.
  */
-static bool componente_della_scheda(const char *nome, CodecVideo *codec, Strada *strada)
+static bool component_of_card(const char *label_name, CodecVideo *codec, Route *route)
 {
 	static const struct {
-		const char *nome;
+		const char *label_name;
 		CodecVideo codec;
-		Strada strada;
-	} nomi[] = {
-		{ "h264_scheda", CODIFICATORE_H264, STRADA_NESSUNA },
-		{ "hevc_scheda", CODIFICATORE_HEVC, STRADA_NESSUNA },
-		{ "h264_vulkan", CODIFICATORE_H264, STRADA_VULKAN },
-		{ "hevc_vulkan", CODIFICATORE_HEVC, STRADA_VULKAN },
-		{ "h264_vaapi", CODIFICATORE_H264, STRADA_VAAPI },
-		{ "hevc_vaapi", CODIFICATORE_HEVC, STRADA_VAAPI },
+		Route route;
+	} names[] = {
+		{ "h264_card", ENCODER_H264, ROUTE_NONE },
+		{ "hevc_card", ENCODER_HEVC, ROUTE_NONE },
+		{ "h264_vulkan", ENCODER_H264, ROUTE_VULKAN },
+		{ "hevc_vulkan", ENCODER_HEVC, ROUTE_VULKAN },
+		{ "h264_vaapi", ENCODER_H264, ROUTE_VAAPI },
+		{ "hevc_vaapi", ENCODER_HEVC, ROUTE_VAAPI },
 	};
-	for (size_t i = 0; i < sizeof nomi / sizeof nomi[0]; i++)
-		if (strcmp(nome, nomi[i].nome) == 0) {
+	for (size_t i = 0; i < sizeof names / sizeof names[0]; i++)
+		if (strcmp(label_name, names[i].label_name) == 0) {
 			if (codec)
-				*codec = nomi[i].codec;
-			if (strada)
-				*strada = nomi[i].strada;
+				*codec = names[i].codec;
+			if (route)
+				*route = names[i].route;
 			return true;
 		}
 	return false;
 }
 
 /* The Vulkan bitrate modes, by name (the `VULKANVIDEO_RC_*` mask). */
-static void nomi_modi_vulkan(unsigned maschera, char *fuori, size_t byte)
+static void vulkan_mode_names(unsigned mask, char *outside, size_t byte)
 {
-	snprintf(fuori, byte, "%s%s%s", (maschera & VULKANVIDEO_RC_CQP) ? "CQP " : "",
-	         (maschera & VULKANVIDEO_RC_CBR) ? "CBR " : "",
-	         (maschera & VULKANVIDEO_RC_VBR) ? "VBR " : "");
-	if (!fuori[0])
-		snprintf(fuori, byte, "none");
+	snprintf(outside, byte, "%s%s%s", (mask & VULKANVIDEO_RC_CQP) ? "CQP " : "",
+	         (mask & VULKANVIDEO_RC_CBR) ? "CBR " : "",
+	         (mask & VULKANVIDEO_RC_VBR) ? "VBR " : "");
+	if (!outside[0])
+		snprintf(outside, byte, "none");
 }
 
 /*
  * ⭐⭐ PHASE 19 — IS VULKAN VIDEO SUITABLE FOR THIS REQUEST?  We ask the
- *     node's card (`vulkanvideo_capacita`: it opens and closes everything by itself)
+ *     node's card (`vulkanvideo_capabilities`: it opens and closes everything by itself)
  *     and compare with what the request wants: the codec at that
  *     depth, the canvas within the limits, the bitrate mode the ceiling
  *     asks for, the input format (the shader takes RGB: the bench that comes in
@@ -1555,85 +1555,85 @@ static void nomi_modi_vulkan(unsigned maschera, char *fuori, size_t byte)
  *
  * ⛔ THREE OUTCOMES AND NOT TWO here too: "suitable", "not suitable, and why" (we go to
  *    VA-API if the route is by capability), and "asked for by name and not suitable",
- *    which is a refusal.  ⚠ `perche` is always written: the log line
+ *    which is a refusal.  ⚠ `reason_text` is always written: the log line
  *    must say WHY on this machine the other route was taken.
  */
-static bool vulkan_adatta(Codificatore *c, char *perche, size_t perche_byte)
+static bool vulkan_fit(Encoder *c, char *reason_text, size_t why_byte)
 {
-	const CodificatoreRichiesta *r = &c->richiesta;
-	VulkanVideoCapacita *cap = &c->vk_capacita;
-	const VulkanVideoProfiloCapacita *p;
-	char errore[256] = { 0 };
-	const char *profilo;
+	const EncoderRequest *r = &c->request;
+	VulkanVideoCapabilities *cap = &c->vk_capabilities;
+	const VulkanVideoProfileCapabilities *p;
+	char failure[256] = { 0 };
+	const char *profile_v;
 
-	if (r->formato == CODIFICATORE_PIXEL_YUV420P10LE) {
-		di(perche, perche_byte,
+	if (r->schema == ENCODER_PIXEL_YUV420P10) {
+		di(reason_text, why_byte,
 		   "the input is yuv420p10le (the bench): the Vulkan route takes RGB and converts it "
 		   "with the shader, not planes already converted");
 		return false;
 	}
-	if (r->codec == CODIFICATORE_H264 && r->profondita != 8) {
-		di(perche, perche_byte, "H.264 at %d bits: in Vulkan only High at 8 bits is opened", r->profondita);
+	if (r->codec == ENCODER_H264 && r->bit_depth != 8) {
+		di(reason_text, why_byte, "H.264 at %d bits: in Vulkan only High at 8 bits is opened", r->bit_depth);
 		return false;
 	}
-	if (r->codec != CODIFICATORE_H264 && r->codec != CODIFICATORE_HEVC) {
-		di(perche, perche_byte, "the codec %s is not encoded on the card", nome_codec(r->codec));
+	if (r->codec != ENCODER_H264 && r->codec != ENCODER_HEVC) {
+		di(reason_text, why_byte, "the codec %s is not encoded on the card", codec_name(r->codec));
 		return false;
 	}
-	if (!vulkanvideo_capacita(r->nodo_rendering, cap, errore, sizeof errore)) {
-		di(perche, perche_byte, "no Vulkan device with the encode queue on «%s»: %s",
-		   r->nodo_rendering, cap->perche[0] ? cap->perche : errore);
+	if (!vulkanvideo_capabilities(r->render_node, cap, failure, sizeof failure)) {
+		di(reason_text, why_byte, "no Vulkan device with the encode queue on «%s»: %s",
+		   r->render_node, cap->reason_text[0] ? cap->reason_text : failure);
 		return false;
 	}
-	if (r->codec == CODIFICATORE_H264) {
+	if (r->codec == ENCODER_H264) {
 		p = &cap->h264;
-		profilo = "H.264 High";
-	} else if (r->profondita == 10) {
+		profile_v = "H.264 High";
+	} else if (r->bit_depth == 10) {
 		p = &cap->hevc10;
-		profilo = "HEVC Main 10";
+		profile_v = "HEVC Main 10";
 	} else {
 		p = &cap->hevc;
-		profilo = "HEVC Main";
+		profile_v = "HEVC Main";
 	}
-	if (!p->codifica) {
-		di(perche, perche_byte, "«%s» (%s) in Vulkan does NOT declare %s encoding", cap->nome_scheda,
-		   cap->driver, profilo);
+	if (!p->encoding) {
+		di(reason_text, why_byte, "«%s» (%s) in Vulkan does NOT declare %s encoding", cap->card_name,
+		   cap->driver, profile_v);
 		return false;
 	}
-	if (r->larghezza > p->misura_massima_l || r->altezza > p->misura_massima_a
-	    || r->larghezza < p->misura_minima_l || r->altezza < p->misura_minima_a) {
-		di(perche, perche_byte,
-		   "«%s» in Vulkan encodes %s between %ux%u and %ux%u, and the canvas is %ux%u", cap->nome_scheda,
-		   profilo, p->misura_minima_l, p->misura_minima_a, p->misura_massima_l,
-		   p->misura_massima_a, r->larghezza, r->altezza);
+	if (r->width_px > p->max_size_w || r->height_px > p->max_size_h
+	    || r->width_px < p->min_size_w || r->height_px < p->min_size_h) {
+		di(reason_text, why_byte,
+		   "«%s» in Vulkan encodes %s between %ux%u and %ux%u, and the canvas is %ux%u", cap->card_name,
+		   profile_v, p->min_size_w, p->min_size_h, p->max_size_w,
+		   p->max_size_h, r->width_px, r->height_px);
 		return false;
 	}
 	/* ⛔ R31 from the Vulkan end: the mode is asked for by name and we check that the
 	 *    card DECLARES it — with the ceiling VBR is needed, without it CQP. */
-	if (tetto_pavimento_mbit && !(p->modi_bitrate & VULKANVIDEO_RC_VBR)) {
-		char modi[48];
-		nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
-		di(perche, perche_byte, "the bandwidth ceiling wants VBR and «%s» in Vulkan declares [%s]",
-		   cap->nome_scheda, modi);
+	if (cap_floor_mbit && !(p->bitrate_modes & VULKANVIDEO_RC_VBR)) {
+		char modes[48];
+		vulkan_mode_names(p->bitrate_modes, modes, sizeof modes);
+		di(reason_text, why_byte, "the bandwidth ceiling wants VBR and «%s» in Vulkan declares [%s]",
+		   cap->card_name, modes);
 		return false;
 	}
-	if (!tetto_pavimento_mbit && !(p->modi_bitrate & VULKANVIDEO_RC_CQP)) {
-		char modi[48];
-		nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
-		di(perche, perche_byte, "constant QP wants CQP and «%s» in Vulkan declares [%s]",
-		   cap->nome_scheda, modi);
+	if (!cap_floor_mbit && !(p->bitrate_modes & VULKANVIDEO_RC_CQP)) {
+		char modes[48];
+		vulkan_mode_names(p->bitrate_modes, modes, sizeof modes);
+		di(reason_text, why_byte, "constant QP wants CQP and «%s» in Vulkan declares [%s]",
+		   cap->card_name, modes);
 		return false;
 	}
-	if (p->qp_massimo > 0 && (c->qualita_corrente < p->qp_minimo || c->qualita_corrente > p->qp_massimo)) {
-		di(perche, perche_byte, "QP %d outside what «%s» declares in Vulkan (%d..%d)",
-		   c->qualita_corrente, cap->nome_scheda, p->qp_minimo, p->qp_massimo);
+	if (p->qp_max > 0 && (c->current_quality < p->qp_min || c->current_quality > p->qp_max)) {
+		di(reason_text, why_byte, "QP %d outside what «%s» declares in Vulkan (%d..%d)",
+		   c->current_quality, cap->card_name, p->qp_min, p->qp_max);
 		return false;
 	}
 	/* the API version as Vulkan packs it (variant:3, major:7,
 	 * minor:10, patch:12): unpacked here so as not to include `vulkan.h` */
-	di(perche, perche_byte, "«%s» (%s, API %u.%u) declares %s up to %ux%u, DMA-BUF %s",
-	   cap->nome_scheda, cap->driver, (cap->versione_api >> 22) & 0x7fu,
-	   (cap->versione_api >> 12) & 0x3ffu, profilo, p->misura_massima_l, p->misura_massima_a,
+	di(reason_text, why_byte, "«%s» (%s, API %u.%u) declares %s up to %ux%u, DMA-BUF %s",
+	   cap->card_name, cap->driver, (cap->api_version >> 22) & 0x7fu,
+	   (cap->api_version >> 12) & 0x3ffu, profile_v, p->max_size_w, p->max_size_h,
 	   cap->dmabuf ? "yes" : "NO");
 	return true;
 }
@@ -1656,17 +1656,17 @@ static bool vulkan_adatta(Codificatore *c, char *perche, size_t perche_byte)
  *       `vaQueryConfigEntrypoints` **before** opening.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static VAProfile profilo_va(CodecVideo codec, int profondita)
+static VAProfile profile_va(CodecVideo codec, int bit_depth)
 {
-	if (codec == CODIFICATORE_HEVC)
-		return profondita == 10 ? VAProfileHEVCMain10 : VAProfileHEVCMain;
+	if (codec == ENCODER_HEVC)
+		return bit_depth == 10 ? VAProfileHEVCMain10 : VAProfileHEVCMain;
 	/* ⛔ H.264 HERE IS 8 BIT AND THAT IS ALL, and it is declared instead of tried:
 	 *    `High10` exists in the standard but `[M]` `vainfo` on this machine
 	 *    lists `VAProfileH264High` and not the 10 bit — and whoever asked for 10 bits
 	 *    would get `VAProfileNone`, that is the software fallback, with the
 	 *    same name and a rate ten times worse (the E2 form). */
-	if (codec == CODIFICATORE_H264)
-		return profondita == 10 ? VAProfileNone : VAProfileH264High;
+	if (codec == ENCODER_H264)
+		return bit_depth == 10 ? VAProfileNone : VAProfileH264High;
 	return VAProfileNone;
 }
 
@@ -1674,55 +1674,55 @@ static VAProfile profilo_va(CodecVideo codec, int profondita)
  * ⛔ THREE OUTCOMES, NOT TWO: `it is there`, `it is not there`, `I could not look`.
  * `LEZIONI.md` §1.9 rule 1 — "empty" and "forbidden" look the same.
  */
-typedef enum { EP_C_E, EP_NON_C_E, EP_NON_GUARDATO } EsitoEntrypoint;
+typedef enum { EP_C_E, EP_ABSENT, EP_UNCHECKED } EntrypointOutcome;
 
-static EsitoEntrypoint entrypoint_c_e(VADisplay d, VAProfile p, VAEntrypoint voluto,
-                                      char *visti, size_t visti_byte)
+static EntrypointOutcome entrypoint_c_e(VADisplay d, VAProfile p, VAEntrypoint wanted,
+                                      char *seen_items, size_t seen_byte)
 {
-	int massimo = vaMaxNumEntrypoints(d);
-	if (massimo <= 0)
-		return EP_NON_GUARDATO;
-	VAEntrypoint *elenco = calloc((size_t) massimo, sizeof(*elenco));
-	if (!elenco)
-		return EP_NON_GUARDATO;
-	int quanti = 0;
-	VAStatus st = vaQueryConfigEntrypoints(d, p, elenco, &quanti);
+	int maximum = vaMaxNumEntrypoints(d);
+	if (maximum <= 0)
+		return EP_UNCHECKED;
+	VAEntrypoint *listing = calloc((size_t) maximum, sizeof(*listing));
+	if (!listing)
+		return EP_UNCHECKED;
+	int how_many = 0;
+	VAStatus st = vaQueryConfigEntrypoints(d, p, listing, &how_many);
 	if (st != VA_STATUS_SUCCESS) {
-		free(elenco);
-		return EP_NON_GUARDATO;
+		free(listing);
+		return EP_UNCHECKED;
 	}
-	EsitoEntrypoint esito = EP_NON_C_E;
-	if (visti && visti_byte)
-		visti[0] = 0;
-	for (int i = 0; i < quanti; i++) {
-		if (visti && visti_byte) {
-			char pezzo[24];
-			snprintf(pezzo, sizeof(pezzo), "%s%d", i ? "," : "", (int) elenco[i]);
-			strncat(visti, pezzo, visti_byte - strlen(visti) - 1);
+	EntrypointOutcome outcome = EP_ABSENT;
+	if (seen_items && seen_byte)
+		seen_items[0] = 0;
+	for (int i = 0; i < how_many; i++) {
+		if (seen_items && seen_byte) {
+			char piece[24];
+			snprintf(piece, sizeof(piece), "%s%d", i ? "," : "", (int) listing[i]);
+			strncat(seen_items, piece, seen_byte - strlen(seen_items) - 1);
 		}
-		if (elenco[i] == voluto)
-			esito = EP_C_E;
+		if (listing[i] == wanted)
+			outcome = EP_C_E;
 	}
-	free(elenco);
-	return esito;
+	free(listing);
+	return outcome;
 }
 
 /*
  * Opens the VA-API device on the declared node, reads its VENDOR, and
  * checks that (profile, entrypoint) really exists before opening.
  */
-static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
+static int open_device(Encoder *c, char *failure, size_t error_byte)
 {
-	const CodificatoreRichiesta *r = &c->richiesta;
+	const EncoderRequest *r = &c->request;
 
-	if (!r->nodo_rendering || !r->nodo_rendering[0]) {
-		di(errore, errore_byte,
+	if (!r->render_node || !r->render_node[0]) {
+		di(failure, error_byte,
 		   "«%s» is a HARDWARE encoder and no render node "
 		   "was declared: ⛔ none is guessed — on this machine the two "
-		   "nodes are from two different vendors [M]", c->nome_componente);
+		   "nodes are from two different vendors [M]", c->component_name);
 		return -1;
 	}
-	snprintf(c->conf.nodo, sizeof(c->conf.nodo), "%s", r->nodo_rendering);
+	snprintf(c->conf.node, sizeof(c->conf.node), "%s", r->render_node);
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⭐⭐ PHASE 19 — VULKAN VIDEO FIRST, IF THE CARD OFFERS IT FOR THIS CODEC
@@ -1735,173 +1735,173 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 * ⚠ `[M]` 1 Oct 2026 on the server: the Radeon RX 6800 (RADV, Mesa 25.0.7)
 	 *   offers it for H.264 and HEVC; the Intel UHD 770 (ANV) does not, and stays on VA-API.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	if (c->strada_chiesta != STRADA_VAAPI) {
-		char perche[512] = { 0 };
-		char errore_vk[256] = { 0 };
-		bool adatta = vulkan_adatta(c, perche, sizeof perche);
+	if (c->requested_route != ROUTE_VAAPI) {
+		char reason_text[512] = { 0 };
+		char error_vk[256] = { 0 };
+		bool fit = vulkan_fit(c, reason_text, sizeof reason_text);
 
-		if (adatta) {
-			c->vk_dispositivo = vulkanvideo_apri_dispositivo(r->nodo_rendering, errore_vk,
-			                                                 sizeof errore_vk);
-			if (!c->vk_dispositivo) {
-				adatta = false;
-				di(perche, sizeof perche,
-				   "the capability is there but the Vulkan device did not open: %s", errore_vk);
+		if (fit) {
+			c->vk_device = vulkanvideo_open_device(r->render_node, error_vk,
+			                                                 sizeof error_vk);
+			if (!c->vk_device) {
+				fit = false;
+				di(reason_text, sizeof reason_text,
+				   "the capability is there but the Vulkan device did not open: %s", error_vk);
 			}
 		}
-		if (adatta) {
-			const VulkanVideoProfiloCapacita *p =
-			    r->codec == CODIFICATORE_H264 ? &c->vk_capacita.h264
-			    : r->profondita == 10        ? &c->vk_capacita.hevc10
-			                                 : &c->vk_capacita.hevc;
-			char modi[48];
+		if (fit) {
+			const VulkanVideoProfileCapabilities *p =
+			    r->codec == ENCODER_H264 ? &c->vk_capabilities.h264
+			    : r->bit_depth == 10        ? &c->vk_capabilities.hevc10
+			                                 : &c->vk_capabilities.hevc;
+			char modes[48];
 
-			c->strada = STRADA_VULKAN;
-			snprintf(c->nome_componente, sizeof c->nome_componente, "%s_vulkan",
-			         r->codec == CODIFICATORE_H264 ? "h264" : "hevc");
-			snprintf(c->conf.strada, sizeof c->conf.strada, "vulkan");
-			snprintf(c->conf.fornitore_va, sizeof c->conf.fornitore_va, "%s · %s",
-			         vulkanvideo_nome_scheda(c->vk_dispositivo),
-			         vulkanvideo_nome_driver(c->vk_dispositivo));
-			c->conf.bassa_potenza = false;
-			c->conf.bassa_potenza_verificata = false;
-			c->conf.misura_massima_l = p->misura_massima_l;
-			c->conf.misura_massima_a = p->misura_massima_a;
-			c->conf.misura_massima_letta = true;
-			c->conf.modi_bitrate = p->modi_bitrate;
-			c->conf.modi_bitrate_letti = true;
-			nomi_modi_vulkan(p->modi_bitrate, modi, sizeof modi);
-			registro_dice(REG_CODIFICA,
+			c->route = ROUTE_VULKAN;
+			snprintf(c->component_name, sizeof c->component_name, "%s_vulkan",
+			         r->codec == ENCODER_H264 ? "h264" : "hevc");
+			snprintf(c->conf.route, sizeof c->conf.route, "vulkan");
+			snprintf(c->conf.vendor_va, sizeof c->conf.vendor_va, "%s · %s",
+			         vulkanvideo_card_name(c->vk_device),
+			         vulkanvideo_driver_name(c->vk_device));
+			c->conf.low_power = false;
+			c->conf.low_power_verified = false;
+			c->conf.max_size_w = p->max_size_w;
+			c->conf.max_size_h = p->max_size_h;
+			c->conf.max_size_read = true;
+			c->conf.bitrate_modes = p->bitrate_modes;
+			c->conf.bitrate_modes_read = true;
+			vulkan_mode_names(p->bitrate_modes, modes, sizeof modes);
+			log_says(LOG_ENCODING,
 			              "⭐⭐ PHASE 19: VULKAN VIDEO route on «%s» — %s.  Requested %s.  "
 			              "Declared bitrate modes [%s], QP %d..%d, granularity %ux%u, "
 			              "headers from the driver %s, direct conversion into the planes %s.  "
-			              "⚠ Whether it really encodes is said by the BYTES (forma_va_bene) and the "
+			              "⚠ Whether it really encodes is said by the BYTES (bitstream_ok) and the "
 			              "third witness, not by this line",
-			              r->nodo_rendering, perche,
-			              c->strada_chiesta == STRADA_VULKAN ? "BY NAME"
+			              r->render_node, reason_text,
+			              c->requested_route == ROUTE_VULKAN ? "BY NAME"
 			                                                 : "by CAPABILITY (Vulkan before VA-API)",
-			              modi, p->qp_minimo, p->qp_massimo, p->granularita_l, p->granularita_a,
-			              p->intestazioni_dal_driver ? "yes" : "NO",
-			              p->ingresso_scrivibile_dallo_shader ? "yes" : "no (copy)");
+			              modes, p->qp_min, p->qp_max, p->granularity_w, p->granularity_h,
+			              p->headers_from_driver ? "yes" : "NO",
+			              p->input_writable_by_shader ? "yes" : "no (copy)");
 			return 0;
 		}
-		if (c->strada_chiesta == STRADA_VULKAN) {
-			di(errore, errore_byte,
+		if (c->requested_route == ROUTE_VULKAN) {
+			di(failure, error_byte,
 			   "«%s» on «%s»: Vulkan Video does NOT encode %s here — %s.  ⛔ Requested by name: "
 			   "no fallback to VA-API, it would be two measurements under the same label",
-			   c->nome_componente, r->nodo_rendering, nome_codec(r->codec), perche);
+			   c->component_name, r->render_node, codec_name(r->codec), reason_text);
 			return -1;
 		}
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "⭐ PHASE 19: route by capability on «%s» — Vulkan Video is NOT "
 		              "suitable for %s (%s) ⇒ trying VA-API",
-		              r->nodo_rendering, nome_codec(r->codec), perche);
+		              r->render_node, codec_name(r->codec), reason_text);
 	}
-	c->strada = STRADA_VAAPI;
-	snprintf(c->nome_componente, sizeof c->nome_componente, "%s_vaapi",
-	         r->codec == CODIFICATORE_H264 ? "h264" : "hevc");
-	snprintf(c->conf.strada, sizeof c->conf.strada, "vaapi");
+	c->route = ROUTE_VAAPI;
+	snprintf(c->component_name, sizeof c->component_name, "%s_vaapi",
+	         r->codec == ENCODER_H264 ? "h264" : "hevc");
+	snprintf(c->conf.route, sizeof c->conf.route, "vaapi");
 
-	if (r->potenza == CODIFICATORE_POTENZA_NON_DICHIARATA) {
-		di(errore, errore_byte,
+	if (r->power == ENCODER_POWER_UNDECLARED) {
+		di(failure, error_byte,
 		   "«%s»: the entrypoint was not declared.  ⛔ `EncSliceLP` (low "
 		   "power) and `EncSlice` (full) are NOT equivalent, and a default "
 		   "(full) is not inherited: ask for FULL or LOW",
-		   c->nome_componente);
+		   c->component_name);
 		return -1;
 	}
 
 	/* ⭐ PHASE 18: the node is opened by `vadiretta.c` (vaGetDisplayDRM + vaInitialize),
 	 *    no longer by `av_hwdevice_ctx_create`.  It asks for the vendor itself. */
-	if (!vadiretta_apri_dispositivo(r->nodo_rendering, &c->dispositivo, errore, errore_byte))
+	if (!vadirect_open_device(r->render_node, &c->device, failure, error_byte))
 		return -1;
 
-	VADisplay display = c->dispositivo.display;
-	snprintf(c->conf.fornitore_va, sizeof(c->conf.fornitore_va), "%s",
-	         c->dispositivo.fornitore);
+	VADisplay display = c->device.display;
+	snprintf(c->conf.vendor_va, sizeof(c->conf.vendor_va), "%s",
+	         c->device.vendor);
 
-	VAProfile profilo = profilo_va(r->codec, r->profondita);
-	if (profilo == VAProfileNone) {
-		di(errore, errore_byte,
+	VAProfile profile_v = profile_va(r->codec, r->bit_depth);
+	if (profile_v == VAProfileNone) {
+		di(failure, error_byte,
 		   "in hardware only HEVC can be opened: for AV1, hardware encoding on "
 		   "this machine DOES NOT EXIST [M] — `av1_vaapi` exits 218, «No usable "
 		   "encoding profile found», 3 runs out of 3");
 		return -1;
 	}
-	VAEntrypoint voluto = (r->potenza == CODIFICATORE_POTENZA_PIENA)
+	VAEntrypoint wanted = (r->power == ENCODER_POWER_FULL)
 	                          ? VAEntrypointEncSlice
 	                          : VAEntrypointEncSliceLP;
-	char visti[128] = { 0 };
-	EsitoEntrypoint trovato =
-	    entrypoint_c_e(display, profilo, voluto, visti, sizeof(visti));
+	char seen_items[128] = { 0 };
+	EntrypointOutcome located =
+	    entrypoint_c_e(display, profile_v, wanted, seen_items, sizeof(seen_items));
 
 	/* ⭐ THE `LA_DICHIARATA` RULE, and it is written in both branches: the
 	 *    line says WHICH entrypoint and WHY, with the driver's list alongside.
 	 *    ⛔ We switch to full only on "the driver does NOT declare it" — on "I
 	 *    could not look" we fail as for the other two questions. */
-	if (r->potenza == CODIFICATORE_POTENZA_LA_DICHIARATA) {
-		if (trovato == EP_C_E)
-			registro_dice(REG_CODIFICA,
+	if (r->power == ENCODER_POWER_DECLARED) {
+		if (located == EP_C_E)
+			log_says(LOG_ENCODING,
 			              "⭐ entrypoint EncSliceLP (low power) on «%s» (%s): the "
 			              "driver DECLARES it for profile %d [%s] ⇒ taking "
 			              "that one — rule: LP if declared, otherwise full",
-			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-			              visti);
-		else if (trovato == EP_NON_C_E) {
-			char visti_lp[128];
-			snprintf(visti_lp, sizeof(visti_lp), "%s", visti[0] ? visti : "none");
-			voluto = VAEntrypointEncSlice;
-			trovato = entrypoint_c_e(display, profilo, voluto, visti,
-			                         sizeof(visti));
-			if (trovato == EP_C_E)
-				registro_dice(REG_CODIFICA,
+			              r->render_node, c->conf.vendor_va, (int) profile_v,
+			              seen_items);
+		else if (located == EP_ABSENT) {
+			char seen_lp[128];
+			snprintf(seen_lp, sizeof(seen_lp), "%s", seen_items[0] ? seen_items : "none");
+			wanted = VAEntrypointEncSlice;
+			located = entrypoint_c_e(display, profile_v, wanted, seen_items,
+			                         sizeof(seen_items));
+			if (located == EP_C_E)
+				log_says(LOG_ENCODING,
 				              "⭐⚠ entrypoint EncSlice (FULL) on «%s» (%s): the "
 				              "driver does NOT declare EncSliceLP for profile %d and "
 				              "declares EncSlice [%s] ⇒ taking full — rule: "
 				              "LP if declared, otherwise full.  ⚠ They are two different "
 				              "encodings: the numbers from here do not hold for LP",
-				              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-				              visti_lp);
+				              r->render_node, c->conf.vendor_va, (int) profile_v,
+				              seen_lp);
 		}
 	}
 
-	switch (trovato) {
+	switch (located) {
 	case EP_C_E:
-		c->bassa_potenza_scelta = (voluto == VAEntrypointEncSliceLP);
-		c->conf.bassa_potenza = c->bassa_potenza_scelta;
-		c->conf.bassa_potenza_verificata = true;
-		/* ⭐ The VERIFIED pair is the one `vadiretta_apri()` will use: it does not
+		c->low_power_choice = (wanted == VAEntrypointEncSliceLP);
+		c->conf.low_power = c->low_power_choice;
+		c->conf.low_power_verified = true;
+		/* ⭐ The VERIFIED pair is the one `vadirect_open()` will use: it does not
 		 *    rediscover it, it receives it. */
-		c->profilo_va = profilo;
-		c->entrypoint_va = voluto;
+		c->profile_va = profile_v;
+		c->entrypoint_va = wanted;
 		break;
-	case EP_NON_C_E:
-		if (r->potenza == CODIFICATORE_POTENZA_LA_DICHIARATA) {
-			di(errore, errore_byte,
+	case EP_ABSENT:
+		if (r->power == ENCODER_POWER_DECLARED) {
+			di(failure, error_byte,
 			   "on «%s» (%s) profile %d has NEITHER EncSliceLP NOR EncSlice: the "
 			   "driver declares [%s].  ⛔ No hardware encoding for "
 			   "this profile — and without a card there is no encoding (phase 19: the "
 			   "software fallback has left)",
-			   r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-			   visti[0] ? visti : "none");
+			   r->render_node, c->conf.vendor_va, (int) profile_v,
+			   seen_items[0] ? seen_items : "none");
 			return -1;
 		}
-		di(errore, errore_byte,
+		di(failure, error_byte,
 		   "on «%s» (%s) profile %d does NOT have the entrypoint %s: the driver "
 		   "declares [%s].  ⛔ No fallback to the other — they are two different "
 		   "encodings, and falling back would give two measurements under the same label",
-		   r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-		   voluto == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
+		   r->render_node, c->conf.vendor_va, (int) profile_v,
+		   wanted == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
 		                                    : "EncSlice (full)",
-		   visti[0] ? visti : "none");
+		   seen_items[0] ? seen_items : "none");
 		return -1;
-	case EP_NON_GUARDATO:
+	case EP_UNCHECKED:
 	default:
-		di(errore, errore_byte,
+		di(failure, error_byte,
 		   "on «%s» I could NOT read the entrypoints of profile %d: ⛔ it is not "
 		   "\"there are none\", it is \"I did not look\", and we do not encode on a machine "
 		   "that could not be queried",
-		   r->nodo_rendering, (int) profilo);
+		   r->render_node, (int) profile_v);
 		return -1;
 	}
 
@@ -1924,7 +1924,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 	 * ⇒ Without this question the refusal arrives **at the first frame**, that is
 	 *   after the stage is mounted and someone is already watching: it is the form
 	 *   of `LEZIONI.md` §1.8 — *declare instead of suffer*.  Here instead
-	 *   `codificatore_nuovo()` fails **before**, saying the driver's number,
+	 *   `encoder_new()` fails **before**, saying the driver's number,
 	 *   and `figlio.c` writes the refusal with its line.
 	 *
 	 * ⛔⛔ AND IT IS ASKED OF THE DRIVER AND NOT OF FFMPEG, which is the same lesson taken
@@ -1943,40 +1943,40 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 			                   { .type = VAConfigAttribMaxPictureHeight },
 			                   /* ⭐ the third is from phase 9: see the block at the bottom */
 			                   { .type = VAConfigAttribRateControl } };
-		VAStatus st = vaGetConfigAttributes(display, profilo, voluto, attr, 3);
+		VAStatus st = vaGetConfigAttributes(display, profile_v, wanted, attr, 3);
 
 		if (st != VA_STATUS_SUCCESS) {
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⚠ on «%s» I could NOT ask the driver for the maximum size "
 			              "(vaGetConfigAttributes: %d): ⛔ it is NOT \"there is no limit\", it is "
 			              "\"I did not look\".  If %ux%u were too big it will be "
 			              "found out at the first frame",
-			              r->nodo_rendering, (int) st, r->larghezza, r->altezza);
+			              r->render_node, (int) st, r->width_px, r->height_px);
 		} else if (attr[0].value == VA_ATTRIB_NOT_SUPPORTED ||
 		           attr[1].value == VA_ATTRIB_NOT_SUPPORTED) {
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⚠ «%s» (%s) does not DECLARE a maximum size for profile %d: "
 			              "⛔ we do not conclude that there is none",
-			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo);
+			              r->render_node, c->conf.vendor_va, (int) profile_v);
 		} else {
-			c->conf.misura_massima_l = attr[0].value;
-			c->conf.misura_massima_a = attr[1].value;
-			c->conf.misura_massima_letta = true;
-			if (r->larghezza > attr[0].value || r->altezza > attr[1].value) {
-				di(errore, errore_byte,
+			c->conf.max_size_w = attr[0].value;
+			c->conf.max_size_h = attr[1].value;
+			c->conf.max_size_read = true;
+			if (r->width_px > attr[0].value || r->height_px > attr[1].value) {
+				di(failure, error_byte,
 				   "«%s» on «%s» (%s) encodes at most %ux%u — requested %ux%u.  ⛔ The "
 				   "driver says so BEFORE, and we declare it instead of finding out at the first "
 				   "frame (phase 19: without the card there is no encoding, no "
 				   "software fallback)",
-				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
-				   attr[0].value, attr[1].value, r->larghezza, r->altezza);
+				   c->component_name, r->render_node, c->conf.vendor_va,
+				   attr[0].value, attr[1].value, r->width_px, r->height_px);
 				return -1;
 			}
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⭐ the driver declares at most %ux%u for «%s» on %s, and "
 			              "%ux%u fits — ASKED of the driver, not deduced from the name",
-			              attr[0].value, attr[1].value, c->nome_componente,
-			              c->conf.nodo, r->larghezza, r->altezza);
+			              attr[0].value, attr[1].value, c->component_name,
+			              c->conf.node, r->width_px, r->height_px);
 		}
 
 		/* ═══════════════════════════════════════════════════════════════════
@@ -2020,54 +2020,54 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 		 *   test machine **it is not verified**, and this log line is
 		 *   exactly what will verify it at the first start.
 		 * ═══════════════════════════════════════════════════════════════════ */
-		ModoBitrate modo = modo_bitrate_voluto();
-		char modi[192];
+		BitrateMode manner = wanted_bitrate_mode();
+		char modes[192];
 		if (st != VA_STATUS_SUCCESS) {
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⚠ on «%s» I could NOT ask the driver for the bitrate "
 			              "control modes (vaGetConfigAttributes: %d): ⛔ it is NOT "
 			              "\"there is only CQP\", it is \"I did not look\".  %s is asked for by "
 			              "name anyway, and if it is not there the opening will fail saying so",
-			              r->nodo_rendering, (int) st, modo.nome);
+			              r->render_node, (int) st, manner.label_name);
 		} else if (attr[2].value == VA_ATTRIB_NOT_SUPPORTED) {
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⚠ «%s» (%s), profile %d, %s: the driver DECLARES NO "
 			              "bitrate control mode.  ⛔ And we do not conclude that there "
 			              "is only one (that was libavcodec's deduction, «assuming CQP "
 			              "only», and vadiretta does NOT make it): %s is asked for by name, and if "
 			              "the driver refuses it the opening will fail saying so",
-			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-			              voluto == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
+			              r->render_node, c->conf.vendor_va, (int) profile_v,
+			              wanted == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
 			                                               : "EncSlice (full)",
-			              modo.nome);
+			              manner.label_name);
 		} else {
-			c->conf.modi_bitrate = attr[2].value;
-			c->conf.modi_bitrate_letti = true;
-			nomi_modi_bitrate(attr[2].value, modi, sizeof(modi));
-			if (!(attr[2].value & modo.va_bit)) {
+			c->conf.bitrate_modes = attr[2].value;
+			c->conf.bitrate_modes_read = true;
+			bitrate_mode_names(attr[2].value, modes, sizeof(modes));
+			if (!(attr[2].value & manner.va_bit)) {
 				/* ⛔ NO FALLBACK: it would be R31 from the other end — taking "what
 				 *    is there" is exactly the gesture that in v1 made CBR come out
 				 *    of a choice nobody had made. */
-				di(errore, errore_byte,
+				di(failure, error_byte,
 				   "«%s» on «%s» (%s), profile %d, %s: the bitrate control mode %s (0x%x) "
 				   "was requested and the driver DECLARES [%s] (0x%x) — "
 				   "⛔ it is NOT there.  No fallback to another mode: it would be R31 from the other "
 				   "end, that is a bitrate mode chosen by nobody",
-				   c->nome_componente, r->nodo_rendering, c->conf.fornitore_va,
-				   (int) profilo,
-				   voluto == VAEntrypointEncSliceLP ? "EncSliceLP" : "EncSlice",
-				   modo.nome, modo.va_bit, modi, attr[2].value);
+				   c->component_name, r->render_node, c->conf.vendor_va,
+				   (int) profile_v,
+				   wanted == VAEntrypointEncSliceLP ? "EncSliceLP" : "EncSlice",
+				   manner.label_name, manner.va_bit, modes, attr[2].value);
 				return -1;
 			}
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⭐ bitrate control on «%s» (%s), profile %d, %s: the "
 			              "driver DECLARES [%s] (0x%x) · requested %s (0x%x) · it is there.  "
 			              "⚠ Being there does not mean it is applied: the BYTES say that "
 			              "(third witness), not this line",
-			              r->nodo_rendering, c->conf.fornitore_va, (int) profilo,
-			              voluto == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
+			              r->render_node, c->conf.vendor_va, (int) profile_v,
+			              wanted == VAEntrypointEncSliceLP ? "EncSliceLP (low power)"
 			                                               : "EncSlice (full)",
-			              modi, attr[2].value, modo.nome, modo.va_bit);
+			              modes, attr[2].value, manner.label_name, manner.va_bit);
 		}
 	}
 	return 0;
@@ -2077,7 +2077,7 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
 /* ⛔⭐⭐ THE LEVEL CEILING OF `RCP.md` §4.3 (line 701), TRANSLATED INTO THE ALPHABET
  *      OF EACH CODEC — 23 Aug 2026, and it comes from a measurement.
  *
- *      `[M]` canvas 3840x2160, H.264: the client declares `video.livello=5.1` and
+ *      `[M]` canvas 3840x2160, H.264: the client declares `video.level=5.1` and
  *      this module produced a stream of level **5.2**.  ⛔ §4.3 is a
  *      MUST — *"the server MUST emit a stream of a level no higher, and
  *      does not guess it"* — and the symptom of an exceeded level is NOT a network
@@ -2106,19 +2106,19 @@ static int apri_dispositivo(Codificatore *c, char *errore, size_t errore_byte)
  * ⇒ Returns **0** when there is no ceiling to impose, and the caller does not
  *   ask anything of the component.  ⛔ And the returned value is NOT the proof that
  *   the component obeyed: that is read from the bytes of the SPS
- *   (`livello_flusso`), and it is the second half of R31. */
-static int livello_imposto(const Codificatore *c)
+ *   (`stream_level`), and it is the second half of R31. */
+static int imposed_level(const Encoder *c)
 {
-	int x10 = c->richiesta.livello_x10;
+	int x10 = c->request.level_x10;
 
 	if (x10 <= 0)
 		return 0; /* §4.3 does not oblige the client to declare it: no ceiling */
-	switch (c->richiesta.codec) {
-	case CODIFICATORE_H264:
+	switch (c->request.codec) {
+	case ENCODER_H264:
 		return x10;
-	case CODIFICATORE_HEVC:
+	case ENCODER_HEVC:
 		return x10 * 3;
-	case CODIFICATORE_AV1:
+	case ENCODER_AV1:
 		return (x10 / 10 - 2) * 4 + x10 % 10;
 	default:
 		return 0;
@@ -2131,8 +2131,8 @@ static int livello_imposto(const Codificatore *c)
  *     `profile`, `level`.  Each of those options had a measured reason
  *     and the reason stays: only WHO it is told to changes.
  *
- *   `rc_mode`       → `VaDirettaRichiesta.banda_*`: zeros = CQP, otherwise QVBR
- *                     — asked for BY NAME here too, and `apri_dispositivo()` has
+ *   `rc_mode`       → `VaDirectRequest.banda_*`: zeros = CQP, otherwise QVBR
+ *                     — asked for BY NAME here too, and `open_device()` has
  *                     already read from the driver that the mode exists (R31);
  *   `qp`            → `.qp`: fixed under CQP, quality factor under QVBR
  *                     (`[M]` 23 Aug 2026: under QVBR the QP counts, under
@@ -2143,45 +2143,45 @@ static int livello_imposto(const Codificatore *c)
  *                     asked for it: it is the default that can no longer be
  *                     inherited, because there is no longer anyone to inherit it from;
  *   `low_power`     → `.entrypoint`: the one CHOSEN and VERIFIED in
- *                     `apri_dispositivo()`, with the `LA_DICHIARATA` rule;
+ *                     `open_device()`, with the `LA_DICHIARATA` rule;
  *   `idr_interval=0`→ by construction: every I is an IDR (`vadiretta.c`);
- *   `profile`       → `.profilo` (VAProfileH264High / HEVCMain / HEVCMain10);
- *   `level`         → `.livello_idc` = `livello_imposto()`, 0 = computed
+ *   `profile`       → `.profile_v` (VAProfileH264High / HEVCMain / HEVCMain10);
+ *   `level`         → `.lvl_idc` = `imposed_level()`, 0 = computed
  *                     as ffmpeg computed it.
  *
  * ⛔ THE TWO REFUSALS STAY IDENTICAL: lossless and CRF do not exist on the
- *    card, and they are not faked (`ModoQualita`).
+ *    card, and they are not faked (`QualityMode`).
  */
 /* ⛔ THE TWO REFUSALS (and the third, on the QP) are the same for both card
  *    routes, and live in one place only. */
-static bool qualita_ammessa_sulla_scheda(const Codificatore *c, char *errore, size_t errore_byte)
+static bool allowed_quality_on_card(const Encoder *c, char *failure, size_t error_byte)
 {
-	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
+	if (c->current_mode == ENCODER_QUALITY_LOSSLESS) {
 		/* ⛔ It is not faked, as it is not faked on SVT-AV1: the card has no
 		 *    lossless mode, and `qp=0` is NOT one — on VA-API zero is the
 		 *    value that means "not requested" (the option's default), which is
 		 *    the same implicit sentinel already paid for on `crf=0`. */
-		di(errore, errore_byte,
+		di(failure, error_byte,
 		   "in hardware there is no lossless mode, and it is not faked: "
 		   "the card has constant QP, and `qp=0` means \"not requested\", not "
 		   "\"lossless\".  ⛔ And since phase 18 it is not there in software either "
 		   "(OpenH264 and SVT-AV1 do not have it): ask for a low QP");
 		return false;
 	}
-	if (c->modo_corrente == CODIFICATORE_QUALITA_CRF) {
-		/* ⛔ CRF and QP are not the same quantity: see `ModoQualita`. */
-		di(errore, errore_byte,
+	if (c->current_mode == ENCODER_QUALITY_CRF) {
+		/* ⛔ CRF and QP are not the same quantity: see `QualityMode`. */
+		di(failure, error_byte,
 		   "in hardware there is no CRF: the card has constant QP.  ⛔ "
 		   "Translating CRF %d into QP %d and still calling it CRF would give two "
-		   "measurements under the same label ⇒ ask for CODIFICATORE_QUALITA_QP",
-		   c->qualita_corrente, c->qualita_corrente);
+		   "measurements under the same label ⇒ ask for ENCODER_QUALITY_QP",
+		   c->current_quality, c->current_quality);
 		return false;
 	}
-	if (c->qualita_corrente < 1 || c->qualita_corrente > 51) {
-		di(errore, errore_byte,
+	if (c->current_quality < 1 || c->current_quality > 51) {
+		di(failure, error_byte,
 		   "QP %d out of range: ask between 1 and 51 — ⛔ and ZERO is not \"the "
 		   "best\", it is the default value that means \"not requested\"",
-		   c->qualita_corrente);
+		   c->current_quality);
 		return false;
 	}
 	return true;
@@ -2189,23 +2189,23 @@ static bool qualita_ammessa_sulla_scheda(const Codificatore *c, char *errore, si
 
 /* The three numbers of the ceiling, with the check that is worth R31 — the same for both
  * routes: with working point == wire the driver (or the regulator) deduces CBR. */
-static bool tetto_in_tre_numeri(int64_t *punto, int64_t *filo, int *serbatoio, char *errore,
-                                size_t errore_byte)
+static bool cap_in_three_numbers(int64_t *spot, int64_t *wire, int *reservoir, char *failure,
+                                size_t error_byte)
 {
-	*punto = tetto_punto();
-	*filo = tetto_filo();
-	*serbatoio = tetto_serbatoio_bit();
+	*spot = cap_point();
+	*wire = wire_cap();
+	*reservoir = reservoir_cap_bit();
 	/* ⛔⛔ THE CHECK THAT IS WORTH R31, and it sits BEFORE the opening: if these
 	 *      two numbers were equal the driver would deduce **CBR** — and `[M]`
 	 *      CBR on this hardware spends **83 times** what is needed on a still
 	 *      scene.  It is not a theoretical possibility: it is what v1 did. */
-	if (*punto >= *filo || *serbatoio <= 0) {
-		di(errore, errore_byte,
+	if (*spot >= *wire || *reservoir <= 0) {
+		di(failure, error_byte,
 		   "⛔ the ceiling numbers are broken: working point %" PRId64 ", wire "
 		   "%" PRId64 ", buffer %d bits.  The working point MUST stay below the wire "
 		   "(with wire == working point the driver deduces CBR: that is R31) and the "
 		   "buffer MUST be positive",
-		   *punto, *filo, *serbatoio);
+		   *spot, *wire, *reservoir);
 		return false;
 	}
 	return true;
@@ -2215,242 +2215,242 @@ static bool tetto_in_tre_numeri(int64_t *punto, int64_t *filo, int *serbatoio, c
  *      v1 nobody had ever named: `rc_buffer_size = bit_rate/2`
  *      is **500 ms**, ten times the 50 ceiling of `CODER.md` §1-bis.
  *      The same for both routes. */
-static bool serbatoio_entro_i_50_ms(Codificatore *c, char *errore, size_t errore_byte)
+static bool reservoir_within_50_ms(Encoder *c, char *failure, size_t error_byte)
 {
-	if (tetto_pavimento_mbit && c->conf.banda_serbatoio_ms > 50) {
-		di(c->conf.perche_no, sizeof(c->conf.perche_no),
+	if (cap_floor_mbit && c->conf.bandwidth_reservoir_ms > 50) {
+		di(c->conf.why_no, sizeof(c->conf.why_no),
 		   "the regulator's buffer is %u ms (%d bits at %" PRId64 " bit/s): "
 		   "CODER.md §1-bis gives 50 ms to ALL of our part, and a regulator cannot "
 		   "take them all.  ⚠ In v1 they were 500, and nobody said so",
-		   c->conf.banda_serbatoio_ms, c->conf.banda_serbatoio, c->conf.banda_filo);
-		c->conf.ha_obbedito = false;
-		di(errore, errore_byte, "⛔ E2: %s", c->conf.perche_no);
+		   c->conf.bandwidth_reservoir_ms, c->conf.bandwidth_reservoir, c->conf.bandwidth_wire);
+		c->conf.has_obeyed = false;
+		di(failure, error_byte, "⛔ E2: %s", c->conf.why_no);
 		return false;
 	}
 	return true;
 }
 
-static int apri_scheda_vaapi(Codificatore *c, char *errore, size_t errore_byte)
+static int open_vaapi_card(Encoder *c, char *failure, size_t error_byte)
 {
-	const CodificatoreRichiesta *r = &c->richiesta;
-	VaDirettaRichiesta v;
-	const VaDirettaDichiarazione *d;
-	char errore_va[256] = { 0 };
+	const EncoderRequest *r = &c->request;
+	VaDirectRequest v;
+	const VaDirectDeclaration *d;
+	char error_va[256] = { 0 };
 
-	if (!qualita_ammessa_sulla_scheda(c, errore, errore_byte))
+	if (!allowed_quality_on_card(c, failure, error_byte))
 		return -1;
 
 	memset(&v, 0, sizeof v);
-	v.codec = (r->codec == CODIFICATORE_H264) ? VADIRETTA_H264 : VADIRETTA_HEVC;
-	v.profondita = r->profondita;
-	v.larghezza = r->larghezza;
-	v.altezza = r->altezza;
-	v.fotogrammi_al_secondo = r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30;
-	v.profilo = c->profilo_va;
+	v.codec = (r->codec == ENCODER_H264) ? VADIRECT_H264 : VADIRECT_HEVC;
+	v.bit_depth = r->bit_depth;
+	v.width_px = r->width_px;
+	v.height_px = r->height_px;
+	v.frames_per_second = r->frames_per_second ? r->frames_per_second : 30;
+	v.profile_v = c->profile_va;
 	v.entrypoint = c->entrypoint_va;
-	v.qp = c->qualita_corrente;
-	v.chiavi_ogni = r->chiavi_ogni;
-	v.superfici_ingresso = SUPERFICI_PRONTE;
-	if (tetto_pavimento_mbit
-	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.serbatoio_bit, errore,
-	                            errore_byte))
+	v.qp = c->current_quality;
+	v.keys_every = r->keys_every;
+	v.input_surfaces = READY_SURFACES;
+	if (cap_floor_mbit
+	    && !cap_in_three_numbers(&v.bandwidth_point, &v.bandwidth_wire, &v.reservoir_bit, failure,
+	                            error_byte))
 		return -1;
 	/* ⛔⭐⭐ AND THE §4.3 LEVEL, ASKED FOR BY NAME — 23 Aug 2026.  A
 	 *      failure HERE is a real error and stops the opening: if the card
 	 *      refuses the ceiling, opening it anyway would mean producing again
 	 *      a stream that overshoots — that is the defect of that evening. */
-	v.livello_idc = livello_imposto(c);
-	if (v.livello_idc > 0)
-		registro_dice(REG_CODIFICA,
+	v.lvl_idc = imposed_level(c);
+	if (v.lvl_idc > 0)
+		log_says(LOG_ENCODING,
 		              "⭐ §4.3: level IMPOSED on «%s» — %d.%d, that is %d in "
 		              "%s.  ⚠ Requested does not mean obeyed: the verdict "
 		              "comes from the SPS",
-		              c->nome_componente, r->livello_x10 / 10, r->livello_x10 % 10,
-		              v.livello_idc,
-		              r->codec == CODIFICATORE_H264 ? "level_idc"
+		              c->component_name, r->level_x10 / 10, r->level_x10 % 10,
+		              v.lvl_idc,
+		              r->codec == ENCODER_H264 ? "level_idc"
 		                                            : "general_level_idc (three times)");
 
-	c->va = vadiretta_apri(&c->dispositivo, &v, errore_va, sizeof errore_va);
+	c->va = vadirect_open(&c->device, &v, error_va, sizeof error_va);
 	if (!c->va) {
-		di(errore, errore_byte, "«%s» did not open: %s", c->nome_componente, errore_va);
+		di(failure, error_byte, "«%s» did not open: %s", c->component_name, error_va);
 		return -1;
 	}
-	d = vadiretta_dichiarazione(c->va);
+	d = vadirect_declaration(c->va);
 
 	/* ───────────────────────────────────────────────────────────────────────
 	 * ⛔ FIRST WITNESS: the confession from the context — which is now OURS, and
 	 *    therefore says what we wrote ourselves.  ⚠ It is worth less than yesterday, and it is
 	 *    right to say so: yesterday rereading `async_depth` from libavcodec was a
 	 *    check on someone else; today the fields are so by construction.  The
-	 *    witness that counts has remained the SECOND — the bytes (`forma_va_bene`)
+	 *    witness that counts has remained the SECOND — the bytes (`bitstream_ok`)
 	 *    — and the THIRD, the measured bandwidth.
 	 */
 	c->conf.codec = r->codec;
-	c->conf.componente = c->nome_componente;
-	c->conf.profondita_chiesta = r->profondita;
-	c->conf.fotogrammi_b = 0;
+	c->conf.component = c->component_name;
+	c->conf.requested_depth = r->bit_depth;
+	c->conf.frames_b = 0;
 	c->conf.global_header = false;
 	c->conf.in_hardware = true;
-	c->conf.ha_obbedito = true;
-	c->conf.perche_no[0] = 0;
-	c->conf.profondita_asincrona = 1;
-	c->conf.bassa_potenza = c->bassa_potenza_scelta;
+	c->conf.has_obeyed = true;
+	c->conf.why_no[0] = 0;
+	c->conf.async_depth = 1;
+	c->conf.low_power = c->low_power_choice;
 	/* yesterday's numbers for the mode (1 = CQP, 5 = QVBR) stay, so the log
 	 * lines and the benches that read them do not change */
-	c->conf.modo_bitrate = (d->modo_va == VA_RC_QVBR) ? 5 : 1;
-	c->conf.banda_punto = v.banda_punto;
-	c->conf.banda_filo = v.banda_filo;
-	c->conf.banda_serbatoio = v.serbatoio_bit;
-	c->conf.banda_serbatoio_ms =
-	    (v.banda_filo > 0 && v.serbatoio_bit > 0)
-	        ? (uint32_t) ((int64_t) v.serbatoio_bit * 1000 / v.banda_filo)
+	c->conf.bitrate_mode = (d->va_mode == VA_RC_QVBR) ? 5 : 1;
+	c->conf.bandwidth_point = v.bandwidth_point;
+	c->conf.bandwidth_wire = v.bandwidth_wire;
+	c->conf.bandwidth_reservoir = v.reservoir_bit;
+	c->conf.bandwidth_reservoir_ms =
+	    (v.bandwidth_wire > 0 && v.reservoir_bit > 0)
+	        ? (uint32_t) ((int64_t) v.reservoir_bit * 1000 / v.bandwidth_wire)
 	        : 0;
-	if (!serbatoio_entro_i_50_ms(c, errore, errore_byte)) {
-		vadiretta_chiudi(c->va);
+	if (!reservoir_within_50_ms(c, failure, error_byte)) {
+		vadirect_close(c->va);
 		c->va = NULL;
 		return -1;
 	}
-	c->prossimo_chiave = true; /* ⛔ after every opening the first is a key */
+	c->next_key = true; /* ⛔ after every opening the first is a key */
 	return 0;
 }
 
 /*
  * ⭐⭐ PHASE 19 — THE CARD OPENS IN VULKAN VIDEO.  The same numbers as
- *     `apri_scheda_vaapi()`, told to `vulkanvideo.c`:
+ *     `open_vaapi_card()`, told to `vulkanvideo.c`:
  *
- *   the ceiling   → `banda_*`/`serbatoio_bit`: zeros = CQP, otherwise VBR with
+ *   the ceiling   → `banda_*`/`reservoir_bit`: zeros = CQP, otherwise VBR with
  *                   the requested QP as the regulator's FLOOR (Vulkan does not
  *                   have VA-API's QVBR: `vulkanvideo.h`);
- *   the level     → `livello_idc` = `livello_imposto()`, 0 = computed as
+ *   the level     → `lvl_idc` = `imposed_level()`, 0 = computed as
  *                   ffmpeg computed it;
- *   the keys      → `chiavi_ogni` (0 = on request), and every I is an IDR;
+ *   the keys      → `keys_every` (0 = on request), and every I is an IDR;
  *   the entrypoint → does not exist in Vulkan: nothing to declare.
  *
  * ⛔ The headers (SPS/PPS/VPS) are written by THE DRIVER from our `StdVideo*`
  *    (`vkGetEncodedVideoSessionParametersKHR`); what came out of it is
- *    reread from the bytes in `forma_va_bene()`, exactly as for VA-API.
+ *    reread from the bytes in `bitstream_ok()`, exactly as for VA-API.
  */
-static int apri_scheda_vulkan(Codificatore *c, char *errore, size_t errore_byte)
+static int open_vulkan_card(Encoder *c, char *failure, size_t error_byte)
 {
-	const CodificatoreRichiesta *r = &c->richiesta;
-	VulkanVideoRichiesta v;
-	const VulkanVideoDichiarazione *d;
-	char errore_vk[256] = { 0 };
+	const EncoderRequest *r = &c->request;
+	VulkanVideoRequest v;
+	const VulkanVideoDeclaration *d;
+	char error_vk[256] = { 0 };
 
-	if (!qualita_ammessa_sulla_scheda(c, errore, errore_byte))
+	if (!allowed_quality_on_card(c, failure, error_byte))
 		return -1;
 
 	memset(&v, 0, sizeof v);
-	v.codec = (r->codec == CODIFICATORE_H264) ? VULKANVIDEO_H264 : VULKANVIDEO_HEVC;
-	v.profondita = r->profondita;
-	v.larghezza = r->larghezza;
-	v.altezza = r->altezza;
-	v.fotogrammi_al_secondo = r->fotogrammi_al_secondo ? r->fotogrammi_al_secondo : 30;
-	v.qp = c->qualita_corrente;
-	v.chiavi_ogni = r->chiavi_ogni;
-	if (tetto_pavimento_mbit
-	    && !tetto_in_tre_numeri(&v.banda_punto, &v.banda_filo, &v.serbatoio_bit, errore,
-	                            errore_byte))
+	v.codec = (r->codec == ENCODER_H264) ? VULKANVIDEO_H264 : VULKANVIDEO_HEVC;
+	v.bit_depth = r->bit_depth;
+	v.width_px = r->width_px;
+	v.height_px = r->height_px;
+	v.frames_per_second = r->frames_per_second ? r->frames_per_second : 30;
+	v.qp = c->current_quality;
+	v.keys_every = r->keys_every;
+	if (cap_floor_mbit
+	    && !cap_in_three_numbers(&v.bandwidth_point, &v.bandwidth_wire, &v.reservoir_bit, failure,
+	                            error_byte))
 		return -1;
-	v.livello_idc = livello_imposto(c);
-	if (v.livello_idc > 0)
-		registro_dice(REG_CODIFICA,
+	v.lvl_idc = imposed_level(c);
+	if (v.lvl_idc > 0)
+		log_says(LOG_ENCODING,
 		              "⭐ §4.3: level IMPOSED on «%s» — %d.%d, that is %d in "
 		              "%s.  ⚠ Requested does not mean obeyed: the verdict "
 		              "comes from the SPS",
-		              c->nome_componente, r->livello_x10 / 10, r->livello_x10 % 10,
-		              v.livello_idc,
-		              r->codec == CODIFICATORE_H264 ? "level_idc"
+		              c->component_name, r->level_x10 / 10, r->level_x10 % 10,
+		              v.lvl_idc,
+		              r->codec == ENCODER_H264 ? "level_idc"
 		                                            : "general_level_idc (three times)");
 
-	c->vk = vulkanvideo_apri(c->vk_dispositivo, &v, errore_vk, sizeof errore_vk);
+	c->vk = vulkanvideo_open(c->vk_device, &v, error_vk, sizeof error_vk);
 	if (!c->vk) {
-		di(errore, errore_byte, "«%s» did not open: %s", c->nome_componente, errore_vk);
+		di(failure, error_byte, "«%s» did not open: %s", c->component_name, error_vk);
 		return -1;
 	}
-	d = vulkanvideo_dichiarazione(c->vk);
+	d = vulkanvideo_declaration(c->vk);
 
 	c->conf.codec = r->codec;
-	c->conf.componente = c->nome_componente;
-	c->conf.profondita_chiesta = r->profondita;
-	c->conf.fotogrammi_b = 0;
+	c->conf.component = c->component_name;
+	c->conf.requested_depth = r->bit_depth;
+	c->conf.frames_b = 0;
 	c->conf.global_header = false;
 	c->conf.in_hardware = true;
-	c->conf.ha_obbedito = true;
-	c->conf.perche_no[0] = 0;
-	c->conf.profondita_asincrona = 1;
-	c->conf.bassa_potenza = false;
+	c->conf.has_obeyed = true;
+	c->conf.why_no[0] = 0;
+	c->conf.async_depth = 1;
+	c->conf.low_power = false;
 	/* in yesterday's alphabet: 1 = CQP, 3 = VBR (5 is VA-API's QVBR) */
-	c->conf.modo_bitrate = (d->modo_rc == VULKANVIDEO_RC_VBR) ? 3 : 1;
-	c->conf.banda_punto = v.banda_punto;
-	c->conf.banda_filo = v.banda_filo;
-	c->conf.banda_serbatoio = v.serbatoio_bit;
-	c->conf.banda_serbatoio_ms =
-	    (v.banda_filo > 0 && v.serbatoio_bit > 0)
-	        ? (uint32_t) ((int64_t) v.serbatoio_bit * 1000 / v.banda_filo)
+	c->conf.bitrate_mode = (d->manner_rc == VULKANVIDEO_RC_VBR) ? 3 : 1;
+	c->conf.bandwidth_point = v.bandwidth_point;
+	c->conf.bandwidth_wire = v.bandwidth_wire;
+	c->conf.bandwidth_reservoir = v.reservoir_bit;
+	c->conf.bandwidth_reservoir_ms =
+	    (v.bandwidth_wire > 0 && v.reservoir_bit > 0)
+	        ? (uint32_t) ((int64_t) v.reservoir_bit * 1000 / v.bandwidth_wire)
 	        : 0;
-	if (!serbatoio_entro_i_50_ms(c, errore, errore_byte)) {
-		vulkanvideo_chiudi(c->vk);
+	if (!reservoir_within_50_ms(c, failure, error_byte)) {
+		vulkanvideo_close(c->vk);
 		c->vk = NULL;
 		return -1;
 	}
 	/* ⭐ THE DRIVER'S DECLARATION, written once per opening: it is the
 	 *    first witness, and as for VA-API it is worth less than the bytes. */
-	registro_dice(REG_CODIFICA,
+	log_says(LOG_ENCODING,
 	              "⭐ Vulkan Video «%s»: encodes %ux%u (block %u) for the canvas %ux%u · "
 	              "level %d in the SPS · %s · headers %s%s%s · conversion %s · "
 	              "minimum latency %s · input %s · QP %d..%d · %zu bytes of "
 	              "headers in front of every key",
-	              c->nome_componente, d->larghezza_codificata, d->altezza_codificata, d->blocco,
-	              r->larghezza, r->altezza, d->livello_idc,
-	              d->modo_rc == VULKANVIDEO_RC_VBR ? "VBR (requested QP = floor)" : "CQP",
-	              d->intestazioni_dal_driver ? "from the driver" : "written by us",
-	              d->driver_ha_cambiato_parametri ? " (⚠ the driver CHANGED the parameters)"
+	              c->component_name, d->encoded_width, d->encoded_height, d->block,
+	              r->width_px, r->height_px, d->lvl_idc,
+	              d->manner_rc == VULKANVIDEO_RC_VBR ? "VBR (requested QP = floor)" : "CQP",
+	              d->headers_from_driver ? "from the driver" : "written by us",
+	              d->driver_has_changed_parameters ? " (⚠ the driver CHANGED the parameters)"
 	                                              : "",
-	              d->livello_corretto_nei_byte ? " (⚠ HEVC level corrected in the bytes)" : "",
-	              d->conversione_diretta ? "direct into the planes" : "in two images and copy",
-	              d->ritardo_minimo_chiesto ? "requested" : "not accepted by the driver",
-	              d->formato_ingresso, d->qp_minimo, d->qp_massimo, d->intestazioni_byte);
-	c->prossimo_chiave = true; /* ⛔ after every opening the first is a key */
+	              d->level_fixed_in_bytes ? " (⚠ HEVC level corrected in the bytes)" : "",
+	              d->direct_conversion ? "direct into the planes" : "in two images and copy",
+	              d->low_latency_requested ? "requested" : "not accepted by the driver",
+	              d->input_format, d->qp_min, d->qp_max, d->headers_byte);
+	c->next_key = true; /* ⛔ after every opening the first is a key */
 	return 0;
 }
 
 /*
- * ⭐ The card's context is closed and opened here, and `abbassa_qualita()`,
- *    `risali_qualita()`, `codificatore_ridimensiona()` call these two.
+ * ⭐ The card's context is closed and opened here, and `lower_quality()`,
+ *    `raise_quality()`, `encoder_resize()` call these two.
  *    ⚠ vadiretta's context also carries the input store and the
  *    reconstructed surfaces; vulkanvideo's carries the session, the images and the
  *    DMA-BUF cache.  ⛔ Phase 19: the software fallback branch
  *    (`sw_apri`/`sw_chiudi`, `ripiego.c`) has left — `c->hardware` is true
  *    in every encoder that was born, and the guard stays for the half-born one.
  */
-static void chiudi_contesto(Codificatore *c)
+static void close_context(Encoder *c)
 {
-	if (c->strada == STRADA_VULKAN) {
-		vulkanvideo_chiudi(c->vk);
+	if (c->route == ROUTE_VULKAN) {
+		vulkanvideo_close(c->vk);
 		c->vk = NULL;
 	} else if (c->hardware) {
-		vadiretta_chiudi(c->va);
+		vadirect_close(c->va);
 		c->va = NULL;
-		c->superficie_pronta = VA_INVALID_ID;
+		c->surface_ready = VA_INVALID_ID;
 	}
-	c->cornice_decisa = false;
-	c->cornice_attiva = false;
+	c->decided_border = false;
+	c->active_border = false;
 }
 
-static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
+static int open_context(Encoder *c, char *failure, size_t error_byte)
 {
 	if (!c->hardware) {
-		di(errore, errore_byte, "no card open: without a card there is no encoding (phase 19)");
+		di(failure, error_byte, "no card open: without a card there is no encoding (phase 19)");
 		return -1;
 	}
-	return c->strada == STRADA_VULKAN ? apri_scheda_vulkan(c, errore, errore_byte)
-	                                  : apri_scheda_vaapi(c, errore, errore_byte);
+	return c->route == ROUTE_VULKAN ? open_vulkan_card(c, failure, error_byte)
+	                                  : open_vaapi_card(c, failure, error_byte);
 }
 
 /*
  * ⭐ THE FRAMES AND THE CONVERSION — in one place only, because `codificatore_
- *    nuovo()` and `codificatore_ridimensiona()` did the same thing in two
+ *    fresh()` and `encoder_resize()` did the same thing in two
  *    drafts, and ⛔ the second had already forgotten the declared promotion.
  *    Two drafts of the same thing are a place to diverge silently.
  *
@@ -2459,44 +2459,44 @@ static int apri_contesto(Codificatore *c, char *errore, size_t errore_byte)
  *    of the canvas, which `colori709.c` fills and `vadiretta_carica_*()` uploads.
  *    ⚠ It is redone on every reopening because the size may have changed.
  */
-static int apri_fotogrammi(Codificatore *c, char *errore, size_t errore_byte)
+static int open_frames(Encoder *c, char *failure, size_t error_byte)
 {
-	const CodificatoreRichiesta *r = &c->richiesta;
+	const EncoderRequest *r = &c->request;
 
-	free(c->appoggio);
-	c->appoggio = NULL;
-	c->appoggio_byte = 0;
+	free(c->staging);
+	c->staging = NULL;
+	c->staging_byte = 0;
 	/* ⭐ Phase 19: on the Vulkan route the BGRx are uploaded as they are and
 	 *    the shader converts them: no staging buffer. */
-	if (c->hardware && c->strada == STRADA_VAAPI && FORMATO_PIXEL_IMPACCHETTATO(r->formato)) {
-		size_t campione = r->profondita == 10 ? 2u : 1u;
+	if (c->hardware && c->route == ROUTE_VAAPI && PACKED_PIXEL_FORMAT(r->schema)) {
+		size_t sample = r->bit_depth == 10 ? 2u : 1u;
 		/* Y in full, then interleaved UV at half height: 1.5 samples per pixel. */
-		c->appoggio_byte = (size_t) r->larghezza * r->altezza * campione * 3u / 2u;
-		c->appoggio = malloc(c->appoggio_byte);
-		if (!c->appoggio) {
-			c->appoggio_byte = 0;
-			di(errore, errore_byte, "no memory for the %ux%u staging buffer", r->larghezza,
-			   r->altezza);
+		c->staging_byte = (size_t) r->width_px * r->height_px * sample * 3u / 2u;
+		c->staging = malloc(c->staging_byte);
+		if (!c->staging) {
+			c->staging_byte = 0;
+			di(failure, error_byte, "no memory for the %ux%u staging buffer", r->width_px,
+			   r->height_px);
 			return -1;
 		}
 	}
 	/* ⚠ The source has real 8 bits (`[M]` F2.2): the Main10 that comes out is 8 bits
 	 *   PROMOTED, and the promotion is declared instead of suffered.  It holds for both
-	 *   routes: in hardware the promotion is done by `colori709_a_p010()`. */
-	c->conf.promozione_8_a_10 =
-	    (FORMATO_PIXEL_IMPACCHETTATO(r->formato) && r->profondita == 10);
+	 *   routes: in hardware the promotion is done by `colors709_to_p010()`. */
+	c->conf.promotion_8_to_10 =
+	    (PACKED_PIXEL_FORMAT(r->schema) && r->bit_depth == 10);
 	return 0;
 }
 
-Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
-                                 char *errore, size_t errore_byte)
+Encoder *encoder_new(const EncoderRequest *request,
+                                 char *failure, size_t error_byte)
 {
-	if (!richiesta || richiesta->larghezza == 0 || richiesta->altezza == 0) {
-		di(errore, errore_byte, "zero size");
+	if (!request || request->width_px == 0 || request->height_px == 0) {
+		di(failure, error_byte, "zero size");
 		return NULL;
 	}
-	if (richiesta->profondita != 8 && richiesta->profondita != 10) {
-		di(errore, errore_byte, "depth %d: ask for 8 or 10", richiesta->profondita);
+	if (request->bit_depth != 8 && request->bit_depth != 10) {
+		di(failure, error_byte, "depth %d: ask for 8 or 10", request->bit_depth);
 		return NULL;
 	}
 	/*
@@ -2506,36 +2506,36 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    neither the colour nor the depth.  Whoever wants 8 bits goes through BGRx, which
 	 *    has a declared conversion.
 	 */
-	if (richiesta->formato == CODIFICATORE_PIXEL_YUV420P10LE && richiesta->profondita != 10) {
-		di(errore, errore_byte,
+	if (request->schema == ENCODER_PIXEL_YUV420P10 && request->bit_depth != 10) {
+		di(failure, error_byte,
 		   "the input is yuv420p10le and %d bits are requested: they do not mix — "
-		   "for 8 bits enter through BGRx", richiesta->profondita);
+		   "for 8 bits enter through BGRx", request->bit_depth);
 		return NULL;
 	}
 	/* ⚠ 4:2:0 wants even sizes: an odd width would give a chroma of
 	 *   half a sample, and the encoder would round it **silently**. */
-	if ((richiesta->larghezza & 1) || (richiesta->altezza & 1)) {
-		di(errore, errore_byte, "%ux%u: 4:2:0 wants even sizes",
-		   richiesta->larghezza, richiesta->altezza);
+	if ((request->width_px & 1) || (request->height_px & 1)) {
+		di(failure, error_byte, "%ux%u: 4:2:0 wants even sizes",
+		   request->width_px, request->height_px);
 		return NULL;
 	}
 
-	Codificatore *c = calloc(1, sizeof(*c));
+	Encoder *c = calloc(1, sizeof(*c));
 	if (!c) {
-		di(errore, errore_byte, "out of memory");
+		di(failure, error_byte, "out of memory");
 		return NULL;
 	}
-	c->richiesta = *richiesta;
-	c->modo_corrente = richiesta->modo;
-	c->qualita_corrente = richiesta->qualita;
+	c->request = *request;
+	c->current_mode = request->manner;
+	c->current_quality = request->quality;
 	/* ⭐ Phase 9: the wait starts from its resting value and from there on only
-	 *    doubles (`abbassa_qualita()`), never the opposite. */
-	c->risalita_attesa = RISALITA_ATTESA;
+	 *    doubles (`lower_quality()`), never the opposite. */
+	c->rise_wait = RISE_WAIT;
 
 	/* ⛔ PHASE 19: without a name there is nothing to open — the software
 	 *    fallback (OpenH264, SVT-AV1) has left (`DECISIONI.md` §10.27), and
 	 *    below it is refused saying so. */
-	const char *nome = richiesta->componente ? richiesta->componente
+	const char *label_name = request->component ? request->component
 	                                         : "(no encoder requested)";
 	/*
 	 * ⛔ REQUESTED BY NAME, NO FALLBACK — the v1 line
@@ -2544,9 +2544,9 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    two different measurements with the same label, which is worse than not
 	 *    measuring."
 	 */
-	snprintf(c->nome_componente, sizeof c->nome_componente, "%s", nome);
-	c->superficie_pronta = VA_INVALID_ID;
-	c->dispositivo.fd = -1;
+	snprintf(c->component_name, sizeof c->component_name, "%s", label_name);
+	c->surface_ready = VA_INVALID_ID;
+	c->device.fd = -1;
 
 	/*
 	 * ⛔ "Is it in hardware?" is decided BEFORE opening: on that answer
@@ -2556,11 +2556,11 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    label's codec must be the one requested.
 	 */
 	{
-		CodecVideo codec_scheda;
-		c->hardware = componente_della_scheda(nome, &codec_scheda, &c->strada_chiesta);
-		if (c->hardware && codec_scheda != richiesta->codec) {
-			di(errore, errore_byte, "«%s» is not a %s encoder", nome,
-			   nome_codec(richiesta->codec));
+		CodecVideo card_codec;
+		c->hardware = component_of_card(label_name, &card_codec, &c->requested_route);
+		if (c->hardware && card_codec != request->codec) {
+			di(failure, error_byte, "«%s» is not a %s encoder", label_name,
+			   codec_name(request->codec));
 			free(c);
 			return NULL;
 		}
@@ -2569,26 +2569,26 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		/* ⛔ PHASE 19 — NO PROCESSOR WITHOUT A CARD (`DECISIONI.md` §10.27,
 		 *    the user's words: *"no CPU without a card"*).  The encoders
 		 *    are the card's; any other name is refused, with the reason. */
-		di(errore, errore_byte,
+		di(failure, error_byte,
 		   "the encoder «%s» does not exist: REMOTIX encodes ONLY on the card "
-		   "(«h264_scheda»/«hevc_scheda» by capability, «*_vulkan» or «*_vaapi» by "
+		   "(«h264_card»/«hevc_card» by capability, «*_vulkan» or «*_vaapi» by "
 		   "name) — ⛔ the software fallback left with phase 19, and no other one "
 		   "is taken",
-		   nome);
+		   label_name);
 		free(c);
 		return NULL;
 	}
-	if (apri_dispositivo(c, errore, errore_byte) < 0) {
-		codificatore_libera(c);
+	if (open_device(c, failure, error_byte) < 0) {
+		encoder_free(c);
 		return NULL;
 	}
 
-	if (apri_contesto(c, errore, errore_byte) < 0) {
-		codificatore_libera(c);
+	if (open_context(c, failure, error_byte) < 0) {
+		encoder_free(c);
 		return NULL;
 	}
-	if (apri_fotogrammi(c, errore, errore_byte) < 0) {
-		codificatore_libera(c);
+	if (open_frames(c, failure, error_byte) < 0) {
+		encoder_free(c);
 		return NULL;
 	}
 
@@ -2598,19 +2598,19 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    "which card" and "which entrypoint" next to it is a number that holds for
 	 *    a machine nobody knows (`LEZIONI.md` §1.1).
 	 */
-	if (c->strada == STRADA_VULKAN)
-		snprintf(c->nome, sizeof(c->nome),
+	if (c->route == ROUTE_VULKAN)
+		snprintf(c->label_name, sizeof(c->label_name),
 		         "%s %s via %.40s (in HARDWARE · %.60s · Vulkan Video: %.160s)",
-		         nome_codec(richiesta->codec),
-		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va);
+		         codec_name(request->codec),
+		         request->bit_depth == 10 ? "10 bit" : "8 bit",
+		         c->component_name, c->conf.node, c->conf.vendor_va);
 	else
-		snprintf(c->nome, sizeof(c->nome),
+		snprintf(c->label_name, sizeof(c->label_name),
 		         "%s %s via %.40s (in HARDWARE · %.60s · VA-API: %.120s · %s)",
-		         nome_codec(richiesta->codec),
-		         richiesta->profondita == 10 ? "10 bit" : "8 bit",
-		         c->nome_componente, c->conf.nodo, c->conf.fornitore_va,
-		         c->conf.bassa_potenza ? "⚠ EncSliceLP, low power — it is NOT "
+		         codec_name(request->codec),
+		         request->bit_depth == 10 ? "10 bit" : "8 bit",
+		         c->component_name, c->conf.node, c->conf.vendor_va,
+		         c->conf.low_power ? "⚠ EncSliceLP, low power — it is NOT "
 		                                 "full encoding"
 		                               : "EncSlice, full");
 
@@ -2618,18 +2618,18 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *    Aug 2026 this line said *"constant QP"* and kept quiet about the **26**: whoever
 	 *    reread a bench could not know which rung it had started from, and
 	 *    `QP_HARDWARE` (`figlio.c:4052`) could be tried only by recompiling. */
-	char punto[48];
-	if (richiesta->modo == CODIFICATORE_QUALITA_LOSSLESS)
-		snprintf(punto, sizeof(punto), "lossless");
+	char spot[48];
+	if (request->manner == ENCODER_QUALITY_LOSSLESS)
+		snprintf(spot, sizeof(spot), "lossless");
 	else
-		snprintf(punto, sizeof(punto), "%s %d%s", nome_modo(richiesta->modo),
-		         richiesta->qualita,
-		         richiesta->modo == CODIFICATORE_QUALITA_QP ? " constant" : "");
+		snprintf(spot, sizeof(spot), "%s %d%s", mode_name(request->manner),
+		         request->quality,
+		         request->manner == ENCODER_QUALITY_QP ? " constant" : "");
 
-	registro_dice(REG_CODIFICA, "opened: %s · %ux%u · %s · keys %s%s", c->nome,
-	              richiesta->larghezza, richiesta->altezza, punto,
-	              richiesta->chiavi_ogni ? "periodic" : "on request only",
-	              c->conf.promozione_8_a_10
+	log_says(LOG_ENCODING, "opened: %s · %ux%u · %s · keys %s%s", c->label_name,
+	              request->width_px, request->height_px, spot,
+	              request->keys_every ? "periodic" : "on request only",
+	              c->conf.promotion_8_to_10
 	                  ? " · ⚠ capture's 8 bits PROMOTED to 10: the desired value of "
 	                    "SPECIFICHE.md §3.1 does not come from this source"
 	                  : "");
@@ -2637,78 +2637,78 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	/*
 	 * ⭐⭐ THE DEGRADATION LADDER, WRITTEN WITH THE VALUES IN FORCE.
 	 *
-	 * ⛔ Until now `CRF_PASSO`, `CRF_DI_EMERGENZA` and `RICODIFICHE_MASSIME` did not
+	 * ⛔ Until now `CRF_STEP`, `EMERGENCY_CRF` and `MAX_REENCODES` did not
 	 *    appear **in any log line**: the ladder was known only by
 	 *    reading the source, and tuning it meant recompiling **and** remembering
 	 *    with which value it had been measured the time before.  ⚠ A number that
 	 *    decides what is seen and appears nowhere is a number that
 	 *    sooner or later gets measured wrong.
 	 *
-	 * ⚠ And `abbassa_qualita()` is SIMULATED instead of writing the ladder by hand: two
+	 * ⚠ And `lower_quality()` is SIMULATED instead of writing the ladder by hand: two
 	 *   drafts of the same rule are a place to diverge silently, and
 	 *   here they would diverge precisely on the day someone tunes the step.
 	 */
-	char scala[256];
-	size_t usati = 0;
-	ModoQualita m = richiesta->modo;
-	int q = richiesta->qualita;
+	char scale_v[256];
+	size_t used_len = 0;
+	QualityMode m = request->manner;
+	int q = request->quality;
 	/* ⛔ WHERE A DELTA STOPS, inside the same string — 23 Aug 2026.  The
 	 *    line said *"a DELTA is abandoned after N re-encodings"* and then
 	 *    drew the WHOLE ladder: whoever read it counted the rungs and believed
 	 *    it walked all of them.  ⚠ And until today it did not walk N: it walked
 	 *    **all of them**, because the count was dead code (the box in
-	 *    `comprimi_comune()`).  ⇒ Now a delta makes `RICODIFICHE_MASSIME`
+	 *    `compress_common()`).  ⇒ Now a delta makes `MAX_REENCODES`
 	 *    encodings, and the mark in the ladder says exactly on which rung
 	 *    it stops.  ⭐ A line that declares a ladder the code does not walk
 	 *    is worse than no line. */
-	bool delta_si_ferma = false;
-	scala[0] = 0;
-	for (unsigned i = 0; i <= RICODIFICHE_MASSIME; i++) {
+	bool delta_stops = false;
+	scale_v[0] = 0;
+	for (unsigned i = 0; i <= MAX_REENCODES; i++) {
 		if (i) {
-			if (m == CODIFICATORE_QUALITA_LOSSLESS) {
-				m = CODIFICATORE_QUALITA_CRF;
-				q = CRF_DI_EMERGENZA;
+			if (m == ENCODER_QUALITY_LOSSLESS) {
+				m = ENCODER_QUALITY_CRF;
+				q = EMERGENCY_CRF;
 			} else if (q >= 51) {
 				break; /* the bottom: there is nothing below */
 			} else {
-				q += CRF_PASSO;
+				q += CRF_STEP;
 				if (q > 51)
 					q = 51;
 			}
 		}
-		if (usati + 72 >= sizeof(scala))
+		if (used_len + 72 >= sizeof(scale_v))
 			break;
 		if (i) {
-			/* ⚠ `i == RICODIFICHE_MASSIME` is the first rung a delta does NOT
+			/* ⚠ `i == MAX_REENCODES` is the first rung a delta does NOT
 			 *   try: only a key gets there. */
-			bool solo_chiave = (i == RICODIFICHE_MASSIME);
-			int sep = snprintf(scala + usati, sizeof(scala) - usati, "%s",
-			                   solo_chiave ? " ⟨a DELTA stops here⟩ → " : " → ");
+			bool key_only = (i == MAX_REENCODES);
+			int sep = snprintf(scale_v + used_len, sizeof(scale_v) - used_len, "%s",
+			                   key_only ? " ⟨a DELTA stops here⟩ → " : " → ");
 			if (sep < 0)
 				break;
-			usati += (size_t) sep;
-			if (solo_chiave)
-				delta_si_ferma = true;
+			used_len += (size_t) sep;
+			if (key_only)
+				delta_stops = true;
 		}
-		int n = (m == CODIFICATORE_QUALITA_LOSSLESS)
-		            ? snprintf(scala + usati, sizeof(scala) - usati, "%s", nome_modo(m))
-		            : snprintf(scala + usati, sizeof(scala) - usati, "%s %d", nome_modo(m), q);
+		int n = (m == ENCODER_QUALITY_LOSSLESS)
+		            ? snprintf(scale_v + used_len, sizeof(scale_v) - used_len, "%s", mode_name(m))
+		            : snprintf(scale_v + used_len, sizeof(scale_v) - used_len, "%s %d", mode_name(m), q);
 		if (n < 0)
 			break;
-		usati += (size_t) n;
+		used_len += (size_t) n;
 	}
-	registro_dice(REG_CODIFICA,
+	log_says(LOG_ENCODING,
 	              "the degradation ladder, with the values in force: %s — step %d "
-	              "(CRF_PASSO), bottom 51, exit from lossless at CRF %d "
-	              "(CRF_DI_EMERGENZA).  ⛔ A DELTA makes %d encodings in all "
-	              "(RICODIFICHE_MASSIME), that is %d descents, and each one is TRIED: %s.  "
+	              "(CRF_STEP), bottom 51, exit from lossless at CRF %d "
+	              "(EMERGENCY_CRF).  ⛔ A DELTA makes %d encodings in all "
+	              "(MAX_REENCODES), that is %d descents, and each one is TRIED: %s.  "
 	              "⚠ A KEY is never abandoned (RCP.md §5.2): for a key the ladder is "
 	              "walked all the way down.  ⭐ And every RETRY comes out as a KEY even if the "
 	              "frame was a delta: the descent reopens the context and throws away the "
 	              "references",
-	              scala, CRF_PASSO, CRF_DI_EMERGENZA, RICODIFICHE_MASSIME,
-	              RICODIFICHE_MASSIME - 1,
-	              delta_si_ferma
+	              scale_v, CRF_STEP, EMERGENCY_CRF, MAX_REENCODES,
+	              MAX_REENCODES - 1,
+	              delta_stops
 	                  ? "the ⟨⟩ in the ladder is the rung on which it stops, and those to "
 	                    "its right are seen only by a key"
 	                  : "the ladder is shorter than that, so a delta walks it "
@@ -2721,10 +2721,10 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *     climb that never had the chance to trigger produce the
 	 *     **same** log, that is no line — and whoever rereads a bench would not
 	 *     know which of the two it measured.  It is the reason `*come`
-	 *     exists in `chiave_intervallo_ms()` (`webtransport.c`).
+	 *     exists in `key_interval_ms()` (`webtransport.c`).
 	 */
-	registro_dice(REG_CODIFICA,
-	              risalita_accesa
+	log_says(LOG_ENCODING,
+	              rise_enabled
 	                  ? "⭐ PHASE 9: the quality CLIMB is ON — after %u "
 	                    "frames in a row below %u bytes we go back up by ONE rung of "
 	                    "%d, and **never** beyond the requested working point (%s).  ⚠ Every "
@@ -2733,10 +2733,10 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	                  : "the quality climb is OFF (invariant I6): once it has gone "
 	                    "down, the quality stays down for the whole session — and "
 	                    "this line is the why, not \"it never had to trigger\".  "
-	                    "⚠ It is turned on with `codificatore_qualita_risale(true)`, and while "
+	                    "⚠ It is turned on with `encoder_quality_rises(true)`, and while "
 	                    "off these numbers (%u frames, %u bytes, rung %d, "
 	                    "working point %s, wait ceiling %u) have no effect",
-	              RISALITA_ATTESA, RISALITA_MARGINE, CRF_PASSO, punto, RISALITA_ATTESA_MAX);
+	              RISE_WAIT, RISE_MARGIN, CRF_STEP, spot, RISE_WAIT_MAX);
 
 	/*
 	 * ⛔⭐ AND THE BANDWIDTH CEILING TOO IS WRITTEN IN BOTH CASES, for the
@@ -2745,8 +2745,8 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 	 *     rereads a bench would not know which of the two it measured.
 	 *
 	 */
-	if (tetto_pavimento_mbit)
-		registro_dice(REG_CODIFICA,
+	if (cap_floor_mbit)
+		log_says(LOG_ENCODING,
 		              "⭐ PHASE 9: the BANDWIDTH CEILING is ON over a floor of %u "
 		              "Mbit/s — mode %s (asked for by name, never `auto`), working point "
 		              "%" PRId64 " kbit/s, wire %" PRId64 " kbit/s (⛔ NEVER equal: that is "
@@ -2755,99 +2755,99 @@ Codificatore *codificatore_nuovo(const CodificatoreRichiesta *richiesta,
 		              "said so).  ⚠ QP %d stays and under QVBR it is the quality "
 		              "factor.  ⭐ Whether it obeyed is said by the BYTES, the «video "
 		              "bandwidth» line every %u s",
-		              tetto_pavimento_mbit, modo_bitrate_voluto().nome,
-		              tetto_punto() / 1000, tetto_filo() / 1000, tetto_serbatoio_bit(),
-		              (unsigned) ((uint64_t) tetto_serbatoio_bit() * 1000 / tetto_filo()),
-		              c->qualita_corrente, BANDA_FINESTRA_US / 1000000u);
+		              cap_floor_mbit, wanted_bitrate_mode().label_name,
+		              cap_point() / 1000, wire_cap() / 1000, reservoir_cap_bit(),
+		              (unsigned) ((uint64_t) reservoir_cap_bit() * 1000 / wire_cap()),
+		              c->current_quality, BANDWIDTH_WINDOW_US / 1000000u);
 	else
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "the bandwidth ceiling is OFF (invariant I6): mode %s, QP %d "
 		              "fixed, and ⛔ **nobody says no to the bandwidth** — `[M]` 23 Aug "
 		              "2026 a film with grain at full screen asks for 58.7 Mbit/s, "
 		              "that is 293 %% of the floor of 20.  ⚠ And this line is the "
 		              "why, not \"it never had to bite\".  It is turned on with "
-		              "`codificatore_tetto_banda(20)`, and while off its numbers (wire "
+		              "`encoder_bandwidth_cap(20)`, and while off its numbers (wire "
 		              "at %u %% of the floor, working point at %u %% of the wire, buffer %u "
 		              "ms) have no effect",
-		              modo_bitrate_voluto().nome, c->qualita_corrente,
-		              TETTO_QUOTA_FILO, TETTO_QUOTA_PUNTO, TETTO_VBV_MS);
+		              wanted_bitrate_mode().label_name, c->current_quality,
+		              CAP_QUOTA_WIRE, CAP_QUOTA_POINT, CAP_VBV_MS);
 	return c;
 }
 
-void codificatore_libera(Codificatore *c)
+void encoder_free(Encoder *c)
 {
 	if (!c)
 		return;
-	c->pacchetto_in_mano = false;
-	free(c->appoggio);
-	c->appoggio = NULL;
+	c->packet_in_hand = false;
+	free(c->staging);
+	c->staging = NULL;
 	/* ⛔ Before the device, and in this order: the imported surfaces, the
 	 *    conversion context and the encoder live ON the device,
 	 *    and freeing them afterwards would mean asking a display that is no longer
 	 *    there. */
-	butta_le_importate(c, "the encoder is closing");
-	chiudi_vpp(c);
-	chiudi_contesto(c);
+	drop_imported(c, "the encoder is closing");
+	close_vpp(c);
+	close_context(c);
 	/* ⚠ The device is closed LAST — the one of the open route. */
-	if (c->strada == STRADA_VULKAN)
-		vulkanvideo_chiudi_dispositivo(c->vk_dispositivo);
+	if (c->route == ROUTE_VULKAN)
+		vulkanvideo_close_device(c->vk_device);
 	else if (c->hardware)
-		vadiretta_chiudi_dispositivo(&c->dispositivo);
-	free(c->uscita);
+		vadirect_close_device(&c->device);
+	free(c->out_dir);
 	free(c);
 }
 
-const char *codificatore_nome(const Codificatore *c)
+const char *encoder_name(const Encoder *c)
 {
-	return c ? c->nome : "(none)";
+	return c ? c->label_name : "(none)";
 }
 
-bool codificatore_vulkan_sul_nodo(const char *nodo)
+bool encoder_vulkan_on_node(const char *node)
 {
-	VulkanVideoCapacita cap;
-	char errore[256] = { 0 };
+	VulkanVideoCapabilities cap;
+	char failure[256] = { 0 };
 
 	memset(&cap, 0, sizeof cap);
-	if (!nodo || !vulkanvideo_capacita(nodo, &cap, errore, sizeof errore))
+	if (!node || !vulkanvideo_capabilities(node, &cap, failure, sizeof failure))
 		return false;
-	return cap.h264.codifica || cap.hevc.codifica;
+	return cap.h264.encoding || cap.hevc.encoding;
 }
 
-const char *codificatore_strada(const Codificatore *c)
+const char *encoder_route(const Encoder *c)
 {
-	return c ? nome_strada(c->strada) : "";
+	return c ? route_name(c->route) : "";
 }
 
-const CodificatoreConfessione *codificatore_confessione(const Codificatore *c)
+const EncoderConfession *encoder_confession(const Encoder *c)
 {
 	return c ? &c->conf : NULL;
 }
 
-void codificatore_chiedi_chiave(Codificatore *c)
+void encoder_ask_key(Encoder *c)
 {
 	if (c)
-		c->prossimo_chiave = true;
+		c->next_key = true;
 }
 
-bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t altezza,
-                               char *errore, size_t errore_byte)
+bool encoder_resize(Encoder *c, uint32_t width_px, uint32_t height_px,
+                               char *failure, size_t error_byte)
 {
 	if (!c)
 		return false;
-	if (larghezza == c->richiesta.larghezza && altezza == c->richiesta.altezza)
+	if (width_px == c->request.width_px && height_px == c->request.height_px)
 		return true;
-	if ((larghezza & 1) || (altezza & 1)) {
-		di(errore, errore_byte, "%ux%u: 4:2:0 wants even sizes", larghezza, altezza);
+	if ((width_px & 1) || (height_px & 1)) {
+		di(failure, error_byte, "%ux%u: 4:2:0 wants even sizes", width_px, height_px);
 		return false;
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔ NOT WITH A PACKET IN HAND — it is the ONLY place in the file where
-	 *      `chiudi_contesto()` could get there without a guard.
+	 *      `close_context()` could get there without a guard.
 	 *
-	 * `chiudi_contesto()` frees the encoder, and the bytes it holds.  And
-	 * `comprimi_comune()` delivers `fuori->dati`, a pointer into `c->uscita`,
-	 * valid until `codificatore_rilascia()`
+	 * `close_context()` frees the encoder, and the bytes it holds.  And
+	 * `compress_common()` delivers `outside->data_v`, a pointer into `c->out_dir`,
+	 * valid until `encoder_release()`
 	 * (`codificatore.h:439`).  ⇒ A caller that resized while still holding
 	 * the frame would read freed memory, and it is **the same form** as the
 	 * defect that on 23 Aug 2026 killed the server in the transport: below a
@@ -2855,7 +2855,7 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	 * elsewhere, much later.
 	 *
 	 * ⭐ Today it is not reachable — `figlio.c:7426` resizes in the main
-	 *   loop, and `codifica_e_manda()` releases at `figlio.c:4905` before
+	 *   loop, and `encode_and_send()` releases at `figlio.c:4905` before
 	 *   returning — but "it is not reachable" was true for the other two as well, and
 	 *   here it cost nothing to make it **impossible** instead of lucky.
 	 *
@@ -2864,13 +2864,13 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	 *   the frame stays alive and valid and the caller receives an error that
 	 *   names it.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	if (c->pacchetto_in_mano) {
-		di(errore, errore_byte,
+	if (c->packet_in_hand) {
+		di(failure, error_byte,
 		   "⛔ resize to %ux%u with the previous frame STILL IN HAND: "
 		   "reopening now would free the bytes the caller is reading.  "
-		   "⇒ `codificatore_rilascia()` BEFORE resizing",
-		   larghezza, altezza);
-		registro_dice(REG_CODIFICA, "%s", errore);
+		   "⇒ `encoder_release()` BEFORE resizing",
+		   width_px, height_px);
+		log_says(LOG_ENCODING, "%s", failure);
 		return false;
 	}
 
@@ -2879,38 +2879,38 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
 	 *    in the picture.
 	 * ⚠ In hardware the STORE is reopened too — the surfaces have the size
 	 *   inside, and reusing them would mean uploading 1920 rows into 1280. */
-	chiudi_contesto(c);
-	c->richiesta.larghezza = larghezza;
-	c->richiesta.altezza = altezza;
-	c->prima_codifica_fatta = false;
-	c->conf.letto_dal_flusso = false;
+	close_context(c);
+	c->request.width_px = width_px;
+	c->request.height_px = height_px;
+	c->first_encode_done = false;
+	c->conf.read_from_stream = false;
 	/* ⛔ AND THE COUNT OF CALM STARTS AGAIN FROM ZERO: 120 comfortable frames at
 	 *    1280x720 are no proof at all that there is room at 7680x4320.  ⚠ Without
 	 *    this line the first frame at the new canvas would trigger an
 	 *    **unmeasured** climb, which is precisely what I1 forbids.
-	 *    ⭐ `qualita_fallita` instead is KEPT: forgetting it would widen the
+	 *    ⭐ `failed_quality` instead is KEPT: forgetting it would widen the
 	 *      meshes, and the direction in which to err is caution. */
-	c->sotto_margine = 0;
+	c->below_margin = 0;
 	/* ⛔ And the window of the third witness restarts too: 10 s of bytes at
 	 *    1280x720 and 10 s at 7680x4320 under the same line would be two measurements
 	 *    with the same label. */
-	c->banda_t0_us = 0;
-	c->banda_byte = 0;
-	c->banda_fotogrammi = 0;
-	c->banda_massimo = 0;
+	c->bandwidth_t0_us = 0;
+	c->bandwidth_byte = 0;
+	c->bandwidth_frames = 0;
+	c->bandwidth_max = 0;
 
-	if (apri_contesto(c, errore, errore_byte) < 0)
+	if (open_context(c, failure, error_byte) < 0)
 		return false;
-	if (apri_fotogrammi(c, errore, errore_byte) < 0)
+	if (open_frames(c, failure, error_byte) < 0)
 		return false;
 
 	/* ⛔ `RCP.md` §5.2: the first frame at the new size MUST be a
-	 *    key, and a REAL key.  `apri_contesto` has already demanded it; the line
+	 *    key, and a REAL key.  `open_context` has already demanded it; the line
 	 *    stays because the rule is written here, not elsewhere. */
-	c->prossimo_chiave = true;
-	registro_dice(REG_CODIFICA,
+	c->next_key = true;
+	log_says(LOG_ENCODING,
 	              "new canvas %ux%u: reopened, and the next frame is a key "
-	              "(RCP.md §5.2)", larghezza, altezza);
+	              "(RCP.md §5.2)", width_px, height_px);
 	return true;
 }
 
@@ -2932,10 +2932,10 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
  *      memory it already has under it instead of on eight megabytes pushed twice
  *      across the bus.
  *
- * ⇒ The cost of the GPU conversion ends up in `us_conversione`, under the
+ * ⇒ The cost of the GPU conversion ends up in `convert_us`, under the
  *   same label as before, **on purpose**: it is the same quantity done in another
  *   place, and putting it in a new entry would make the comparison with
- *   "before" impossible.  ⛔ `us_caricamento` instead goes to **0**, and there zero
+ *   "before" impossible.  ⛔ `upload_us` instead goes to **0**, and there zero
  *   means "this stretch is no longer there", not "it is free".
  *
  * ⚠ AND THERE IS AN EXPLICIT SYNCHRONISATION (`vaSyncSurface`) after the
@@ -2950,98 +2950,98 @@ bool codificatore_ridimensiona(Codificatore *c, uint32_t larghezza, uint32_t alt
  *        no error.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static VADisplay display_di(Codificatore *c)
+static VADisplay display_di(Encoder *c)
 {
 	/* ⛔ Only on the VA-API route: Vulkan's zero copy lives inside
 	 *    `vulkanvideo.c` (import, cache, conversion) and does not pass through here. */
-	return (c->hardware && c->strada == STRADA_VAAPI) ? c->dispositivo.display : NULL;
+	return (c->hardware && c->route == ROUTE_VAAPI) ? c->device.display : NULL;
 }
 
 /*
  * ⭐⭐ PHASE 19 — THE ROUND OF ONE FRAME ON VULKAN VIDEO, in a single shot:
  *     `vulkanvideo.c` converts (shader) and encodes within the same call,
- *     and returns the three times separately as `CodificatoreFotogramma` keeps them.
- *     ⚠ On the zero copy `us_caricamento` is 0 and means "not there"; from
+ *     and returns the three times separately as `EncoderFrame` keeps them.
+ *     ⚠ On the zero copy `upload_us` is 0 and means "not there"; from
  *     memory it is the upload of the BGRx to the card (the shader is in
- *     `us_conversione`).  The bytes go into `c->uscita` as for VA-API, and from
+ *     `convert_us`).  The bytes go into `c->out_dir` as for VA-API, and from
  *     there on the common body no longer knows which route produced them.
  */
-static bool codifica_vulkan(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                            const CodificatoreSuperficie *s, CodificatoreFotogramma *fuori)
+static bool encoding_vulkan(Encoder *c, const uint8_t *pixel, uint32_t step,
+                            const EncoderSurface *s, EncoderFrame *outside)
 {
-	const uint8_t *dati = NULL;
+	const uint8_t *data_v = NULL;
 	size_t byte = 0;
-	VulkanVideoTempi t;
-	char errore[256] = { 0 };
+	VulkanVideoTimings t;
+	char failure[256] = { 0 };
 	bool ok;
 
 	memset(&t, 0, sizeof t);
 	if (s) {
-		VulkanVideoSuperficie vs = { .fd = s->fd, .offset = s->offset, .stride = s->stride,
-			                         .larghezza = s->larghezza, .altezza = s->altezza,
-			                         .formato_drm = s->formato_drm, .modificatore = s->modificatore,
-			                         .generazione = s->generazione };
-		ok = vulkanvideo_codifica_dmabuf(c->vk, &vs, c->prossimo_chiave, &dati, &byte, &t, errore,
-		                                 sizeof errore);
-		if (ok && !c->detto_copia_zero) {
-			c->detto_copia_zero = true;
-			registro_dice(REG_CODIFICA,
+		VulkanVideoSurface vs = { .fd = s->fd, .offset = s->offset, .stride = s->stride,
+			                         .width_px = s->width_px, .height_px = s->height_px,
+			                         .format_drm = s->format_drm, .modifier = s->modifier,
+			                         .generation = s->generation };
+		ok = vulkanvideo_encode_dmabuf(c->vk, &vs, c->next_key, &data_v, &byte, &t, failure,
+		                                 sizeof failure);
+		if (ok && !c->logged_zero_copy) {
+			c->logged_zero_copy = true;
+			log_says(LOG_ENCODING,
 			              "⭐⭐ ZERO COPY in force (Vulkan): the compositor's DMA-BUF (fd %d, "
 			              "%ux%u, stride %u, modifier 0x%llx) is imported as a Vulkan "
 			              "image and converted to %s BY THE SHADER on the card — no "
 			              "`memcpy`, no CPU conversion, no upload.  ⚠ The "
 			              "conversion remains and costs %llu us (with the fence wait inside)",
-			              s->fd, s->larghezza, s->altezza, s->stride,
-			              (unsigned long long) s->modificatore,
-			              c->richiesta.profondita == 10 ? "P010" : "NV12",
-			              (unsigned long long) t.us_conversione);
+			              s->fd, s->width_px, s->height_px, s->stride,
+			              (unsigned long long) s->modifier,
+			              c->request.bit_depth == 10 ? "P010" : "NV12",
+			              (unsigned long long) t.convert_us);
 		}
 	} else {
-		if (!FORMATO_PIXEL_IMPACCHETTATO(c->richiesta.formato)) {
-			registro_dice(REG_CODIFICA,
+		if (!PACKED_PIXEL_FORMAT(c->request.schema)) {
+			log_says(LOG_ENCODING,
 			              "⛔ the Vulkan route takes only BGRx/RGBx from memory, and "
-			              "the input is not: `vulkan_adatta()` should have stopped it earlier");
+			              "the input is not: `vulkan_fit()` should have stopped it earlier");
 			return false;
 		}
-		ok = vulkanvideo_codifica_memoria(c->vk, pixel, passo ? passo : c->richiesta.larghezza * 4u,
-		                                  c->richiesta.formato == CODIFICATORE_PIXEL_RGBX
+		ok = vulkanvideo_encode_memory(c->vk, pixel, step ? step : c->request.width_px * 4u,
+		                                  c->request.schema == ENCODER_PIXEL_RGBX
 		                                      ? VULKANVIDEO_RGBX
 		                                      : VULKANVIDEO_BGRX,
-		                                  c->prossimo_chiave, &dati, &byte, &t, errore,
-		                                  sizeof errore);
+		                                  c->next_key, &data_v, &byte, &t, failure,
+		                                  sizeof failure);
 	}
 	if (!ok) {
-		registro_dice(REG_CODIFICA, "⛔ Vulkan Video did not encode: %s", errore);
+		log_says(LOG_ENCODING, "⛔ Vulkan Video did not encode: %s", failure);
 		return false;
 	}
-	if (!metti_in_uscita(c, dati, byte))
+	if (!put_in_output(c, data_v, byte))
 		return false;
-	fuori->us_conversione = t.us_conversione;
-	fuori->us_caricamento = t.us_caricamento;
-	fuori->us_codifica = t.us_codifica;
-	fuori->trattenuto = false;
-	c->pacchetto_in_mano = true;
+	outside->convert_us = t.convert_us;
+	outside->upload_us = t.upload_us;
+	outside->encode_us = t.encode_us;
+	outside->held = false;
+	c->packet_in_hand = true;
 	return true;
 }
 
 /* Throws away all the imported surfaces.  ⛔ It is called when the generation of the
  * producer's buffers changes, and at closing: a surface that outlives
  * the `pw_buffer` it described points to someone else's memory. */
-static void butta_le_importate(Codificatore *c, const char *perche)
+static void drop_imported(Encoder *c, const char *reason_text)
 {
 	VADisplay dpy = display_di(c);
 
-	if (!c->quante_importate)
+	if (!c->how_many_imported)
 		return;
 	if (dpy)
-		for (unsigned i = 0; i < c->quante_importate; i++)
-			vaDestroySurfaces(dpy, &c->importate[i].superficie, 1);
-	registro_dice(REG_CODIFICA,
+		for (unsigned i = 0; i < c->how_many_imported; i++)
+			vaDestroySurfaces(dpy, &c->imported[i].surface, 1);
+	log_says(LOG_ENCODING,
 	              "⭐ throwing away the %u imported surfaces: %s.  ⛔ Keeping them would mean giving "
 	              "VA-API a descriptor that no longer describes anything — and the symptom "
 	              "would be an OLD picture, with no error at all",
-	              c->quante_importate, perche);
-	c->quante_importate = 0;
+	              c->how_many_imported, reason_text);
+	c->how_many_imported = 0;
 }
 
 /*
@@ -3054,13 +3054,13 @@ static void butta_le_importate(Codificatore *c, const char *perche)
  *    match, importing again costs once and getting it wrong costs the whole
  *    session.
  */
-static VASurfaceID importa_dmabuf(Codificatore *c, const CodificatoreSuperficie *s)
+static VASurfaceID import_dmabuf(Encoder *c, const EncoderSurface *s)
 {
 	VADisplay dpy = display_di(c);
 	VADRMPRIMESurfaceDescriptor d;
-	VASurfaceAttrib attributi[2];
-	VASurfaceID superficie = VA_INVALID_ID;
-	VAStatus stato;
+	VASurfaceAttrib attributes[2];
+	VASurfaceID surface = VA_INVALID_ID;
+	VAStatus state;
 	unsigned i;
 
 	if (!dpy)
@@ -3068,18 +3068,18 @@ static VASurfaceID importa_dmabuf(Codificatore *c, const CodificatoreSuperficie 
 
 	/* ⛔ The generation BEFORE everything: if the producer has redone its buffers,
 	 *    what is in the cache no longer describes anything. */
-	if (c->cache_nata && c->generazione_cache != s->generazione)
-		butta_le_importate(c, "the producer has redone its buffers");
-	c->generazione_cache = s->generazione;
-	c->cache_nata = true;
+	if (c->cache_created && c->cache_generation != s->generation)
+		drop_imported(c, "the producer has redone its buffers");
+	c->cache_generation = s->generation;
+	c->cache_created = true;
 
-	for (i = 0; i < c->quante_importate; i++)
-		if (c->importate[i].fd == s->fd && c->importate[i].l == s->larghezza
-		    && c->importate[i].a == s->altezza && c->importate[i].stride == s->stride
-		    && c->importate[i].offset == s->offset
-		    && c->importate[i].formato_drm == s->formato_drm
-		    && c->importate[i].modificatore == s->modificatore)
-			return c->importate[i].superficie;
+	for (i = 0; i < c->how_many_imported; i++)
+		if (c->imported[i].fd == s->fd && c->imported[i].l == s->width_px
+		    && c->imported[i].a == s->height_px && c->imported[i].stride == s->stride
+		    && c->imported[i].offset == s->offset
+		    && c->imported[i].format_drm == s->format_drm
+		    && c->imported[i].modifier == s->modifier)
+			return c->imported[i].surface;
 
 	memset(&d, 0, sizeof d);
 	/*
@@ -3092,124 +3092,124 @@ static VASurfaceID importa_dmabuf(Codificatore *c, const CodificatoreSuperficie 
 	 * ⚠ Here the two this module knows how to receive are declared; for the others we
 	 *   refuse instead of guessing.
 	 */
-	if (s->formato_drm == DRM_FORMAT_XRGB8888)
+	if (s->format_drm == DRM_FORMAT_XRGB8888)
 		d.fourcc = VA_FOURCC_BGRX;
-	else if (s->formato_drm == DRM_FORMAT_ARGB8888)
+	else if (s->format_drm == DRM_FORMAT_ARGB8888)
 		d.fourcc = VA_FOURCC_BGRA;
 	else {
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "⛔ DRM format 0x%08x cannot be imported: this route knows BGRx and "
 		              "BGRA.  ⚠ A fourcc is NOT guessed — a wrong fourcc gives no "
 		              "error, it gives swapped colours",
-		              s->formato_drm);
+		              s->format_drm);
 		return VA_INVALID_ID;
 	}
-	d.width = s->larghezza;
-	d.height = s->altezza;
+	d.width = s->width_px;
+	d.height = s->height_px;
 	d.num_objects = 1;
 	d.objects[0].fd = s->fd;
-	d.objects[0].size = s->offset + s->stride * s->altezza;
-	d.objects[0].drm_format_modifier = s->modificatore;
+	d.objects[0].size = s->offset + s->stride * s->height_px;
+	d.objects[0].drm_format_modifier = s->modifier;
 	d.num_layers = 1;
-	d.layers[0].drm_format = s->formato_drm;
+	d.layers[0].drm_format = s->format_drm;
 	d.layers[0].num_planes = 1;
 	d.layers[0].object_index[0] = 0;
 	d.layers[0].offset[0] = s->offset;
 	d.layers[0].pitch[0] = s->stride;
 
-	attributi[0].type = VASurfaceAttribMemoryType;
-	attributi[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
-	attributi[0].value.type = VAGenericValueTypeInteger;
-	attributi[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2;
-	attributi[1].type = VASurfaceAttribExternalBufferDescriptor;
-	attributi[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
-	attributi[1].value.type = VAGenericValueTypePointer;
-	attributi[1].value.value.p = &d;
+	attributes[0].type = VASurfaceAttribMemoryType;
+	attributes[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
+	attributes[0].value.type = VAGenericValueTypeInteger;
+	attributes[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2;
+	attributes[1].type = VASurfaceAttribExternalBufferDescriptor;
+	attributes[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
+	attributes[1].value.type = VAGenericValueTypePointer;
+	attributes[1].value.value.p = &d;
 
-	stato = vaCreateSurfaces(dpy, VA_RT_FORMAT_RGB32, s->larghezza, s->altezza, &superficie, 1,
-	                         attributi, 2);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA,
+	state = vaCreateSurfaces(dpy, VA_RT_FORMAT_RGB32, s->width_px, s->height_px, &surface, 1,
+	                         attributes, 2);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING,
 		              "⛔ the DMA-BUF was not imported (vaCreateSurfaces: %s) — fd %d, "
 		              "%ux%u, stride %u, offset %u, modifier 0x%llx.  ⚠ There is NO silent "
 		              "fallback to the copy: the caller writes it",
-		              vaErrorStr(stato), s->fd, s->larghezza, s->altezza, s->stride,
-		              s->offset, (unsigned long long) s->modificatore);
+		              vaErrorStr(state), s->fd, s->width_px, s->height_px, s->stride,
+		              s->offset, (unsigned long long) s->modifier);
 		return VA_INVALID_ID;
 	}
 
-	if (c->quante_importate >= IMPORTATE_MAX)
-		butta_le_importate(c, "the cache is full and starts over");
-	i = c->quante_importate++;
-	c->importate[i].fd = s->fd;
-	c->importate[i].l = s->larghezza;
-	c->importate[i].a = s->altezza;
-	c->importate[i].stride = s->stride;
-	c->importate[i].offset = s->offset;
-	c->importate[i].formato_drm = s->formato_drm;
-	c->importate[i].modificatore = s->modificatore;
-	c->importate[i].superficie = superficie;
-	return superficie;
+	if (c->how_many_imported >= IMPORTED_MAX)
+		drop_imported(c, "the cache is full and starts over");
+	i = c->how_many_imported++;
+	c->imported[i].fd = s->fd;
+	c->imported[i].l = s->width_px;
+	c->imported[i].a = s->height_px;
+	c->imported[i].stride = s->stride;
+	c->imported[i].offset = s->offset;
+	c->imported[i].format_drm = s->format_drm;
+	c->imported[i].modifier = s->modifier;
+	c->imported[i].surface = surface;
+	return surface;
 }
 
 /* Opens the GPU conversion context, at the size in force.
  * ⛔ It is reopened when the size changes: a VPP context carries the size inside,
  *    exactly like the surface store. */
-static bool apri_vpp(Codificatore *c, uint32_t larghezza, uint32_t altezza)
+static bool open_vpp(Encoder *c, uint32_t width_px, uint32_t height_px)
 {
 	VADisplay dpy = display_di(c);
-	VAStatus stato;
+	VAStatus state;
 
 	if (!dpy)
 		return false;
-	if (c->vpp_aperto && c->vpp_l == larghezza && c->vpp_a == altezza)
+	if (c->vpp_open && c->vpp_l == width_px && c->vpp_a == height_px)
 		return true;
-	if (c->vpp_aperto) {
-		vaDestroyContext(dpy, c->vpp_contesto);
-		vaDestroyConfig(dpy, c->vpp_configurazione);
-		c->vpp_aperto = false;
+	if (c->vpp_open) {
+		vaDestroyContext(dpy, c->vpp_context);
+		vaDestroyConfig(dpy, c->vpp_configuration);
+		c->vpp_open = false;
 	}
 	/*
 	 * ⛔ AND HERE WE ASK THE DRIVER, not ffmpeg: `VAEntrypointVideoProc` is there or
 	 *    it is not, and if it is not this route **does not exist on this machine**.
-	 *    ⚠ It is the same rule by which `apri_dispositivo()` asks for the encoding
+	 *    ⚠ It is the same rule by which `open_device()` asks for the encoding
 	 *    entrypoints: "I asked it for it" and "it has it" look the same
 	 *    until you look (`LEZIONI.md` §1.11).
 	 */
-	stato = vaCreateConfig(dpy, VAProfileNone, VAEntrypointVideoProc, NULL, 0,
-	                       &c->vpp_configurazione);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA,
+	state = vaCreateConfig(dpy, VAProfileNone, VAEntrypointVideoProc, NULL, 0,
+	                       &c->vpp_configuration);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING,
 		              "⛔ this card has no GPU conversion (VAProfileNone / "
 		              "VAEntrypointVideoProc: %s): zero copy is NOT viable here, "
 		              "and it is declared instead of falling back silently",
-		              vaErrorStr(stato));
+		              vaErrorStr(state));
 		return false;
 	}
-	stato = vaCreateContext(dpy, c->vpp_configurazione, (int) larghezza, (int) altezza,
-	                        VA_PROGRESSIVE, NULL, 0, &c->vpp_contesto);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA,
+	state = vaCreateContext(dpy, c->vpp_configuration, (int) width_px, (int) height_px,
+	                        VA_PROGRESSIVE, NULL, 0, &c->vpp_context);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING,
 		              "⛔ the %ux%u conversion context did not open: %s",
-		              larghezza, altezza, vaErrorStr(stato));
-		vaDestroyConfig(dpy, c->vpp_configurazione);
+		              width_px, height_px, vaErrorStr(state));
+		vaDestroyConfig(dpy, c->vpp_configuration);
 		return false;
 	}
-	c->vpp_aperto = true;
-	c->vpp_l = larghezza;
-	c->vpp_a = altezza;
+	c->vpp_open = true;
+	c->vpp_l = width_px;
+	c->vpp_a = height_px;
 	return true;
 }
 
-static void chiudi_vpp(Codificatore *c)
+static void close_vpp(Encoder *c)
 {
 	VADisplay dpy = display_di(c);
 
-	if (!c->vpp_aperto || !dpy)
+	if (!c->vpp_open || !dpy)
 		return;
-	vaDestroyContext(dpy, c->vpp_contesto);
-	vaDestroyConfig(dpy, c->vpp_configurazione);
-	c->vpp_aperto = false;
+	vaDestroyContext(dpy, c->vpp_context);
+	vaDestroyConfig(dpy, c->vpp_configuration);
+	c->vpp_open = false;
 }
 
 /*
@@ -3224,19 +3224,19 @@ static void chiudi_vpp(Codificatore *c)
  *    destination**.  Getting the direction wrong gives no error: it gives a washed-out or
  *    over-contrasted picture, that is a defect no log line names.
  */
-static bool converti_sulla_gpu(Codificatore *c, VASurfaceID sorgente, VASurfaceID destinazione)
+static bool convert_on_gpu(Encoder *c, VASurfaceID source, VASurfaceID destination)
 {
 	VADisplay dpy = display_di(c);
 	VAProcPipelineParameterBuffer p;
 	VABufferID buffer = VA_INVALID_ID;
-	VAStatus stato, fine;
-	VARectangle regione;
+	VAStatus state, fine;
+	VARectangle region;
 
-	if (!dpy || !c->vpp_aperto)
+	if (!dpy || !c->vpp_open)
 		return false;
 
 	memset(&p, 0, sizeof p);
-	p.surface = sorgente;
+	p.surface = source;
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔⛔ THE TWO REGIONS ARE DECLARED, AND LEAVING THEM `NULL` IS A REAL
 	 *       DEFECT — found by refuting, on 22 Aug 2026, and the milliseconds were
@@ -3259,12 +3259,12 @@ static bool converti_sulla_gpu(Codificatore *c, VASurfaceID sorgente, VASurfaceI
 	 * ⚠ And the symptom for the user would have been **a slightly
 	 *   blurred and slightly stretched desktop**, with no log line at all.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	regione.x = 0;
-	regione.y = 0;
-	regione.width = (unsigned short) c->vpp_l;
-	regione.height = (unsigned short) c->vpp_a;
-	p.surface_region = &regione;
-	p.output_region = &regione;
+	region.x = 0;
+	region.y = 0;
+	region.width = (unsigned short) c->vpp_l;
+	region.height = (unsigned short) c->vpp_a;
+	p.surface_region = &region;
+	p.output_region = &region;
 	p.output_background_color = 0xff000000;
 	p.filter_flags = VA_FRAME_PICTURE;
 	p.filters = NULL;
@@ -3274,34 +3274,34 @@ static bool converti_sulla_gpu(Codificatore *c, VASurfaceID sorgente, VASurfaceI
 	p.input_color_properties.color_range = VA_SOURCE_RANGE_FULL;
 	p.output_color_properties.color_range = VA_SOURCE_RANGE_REDUCED;
 
-	stato = vaBeginPicture(dpy, c->vpp_contesto, destinazione);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA, "⛔ vaBeginPicture: %s", vaErrorStr(stato));
+	state = vaBeginPicture(dpy, c->vpp_context, destination);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING, "⛔ vaBeginPicture: %s", vaErrorStr(state));
 		return false;
 	}
-	stato = vaCreateBuffer(dpy, c->vpp_contesto, VAProcPipelineParameterBufferType, sizeof p, 1,
+	state = vaCreateBuffer(dpy, c->vpp_context, VAProcPipelineParameterBufferType, sizeof p, 1,
 	                       &p, &buffer);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA, "⛔ vaCreateBuffer: %s", vaErrorStr(stato));
-		vaEndPicture(dpy, c->vpp_contesto);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING, "⛔ vaCreateBuffer: %s", vaErrorStr(state));
+		vaEndPicture(dpy, c->vpp_context);
 		return false;
 	}
-	stato = vaRenderPicture(dpy, c->vpp_contesto, &buffer, 1);
-	if (stato != VA_STATUS_SUCCESS)
-		registro_dice(REG_CODIFICA, "⛔ vaRenderPicture: %s", vaErrorStr(stato));
-	fine = vaEndPicture(dpy, c->vpp_contesto);
+	state = vaRenderPicture(dpy, c->vpp_context, &buffer, 1);
+	if (state != VA_STATUS_SUCCESS)
+		log_says(LOG_ENCODING, "⛔ vaRenderPicture: %s", vaErrorStr(state));
+	fine = vaEndPicture(dpy, c->vpp_context);
 	vaDestroyBuffer(dpy, buffer);
-	if (stato != VA_STATUS_SUCCESS || fine != VA_STATUS_SUCCESS) {
+	if (state != VA_STATUS_SUCCESS || fine != VA_STATUS_SUCCESS) {
 		if (fine != VA_STATUS_SUCCESS)
-			registro_dice(REG_CODIFICA, "⛔ vaEndPicture: %s", vaErrorStr(fine));
+			log_says(LOG_ENCODING, "⛔ vaEndPicture: %s", vaErrorStr(fine));
 		return false;
 	}
 	/* ⛔⭐ AND HERE WE REALLY WAIT — see the box at the top: this line IS the
 	 *     release.  When it returns, the GPU has finished reading the
 	 *     compositor's buffer, and whoever captured it can give it back. */
-	stato = vaSyncSurface(dpy, destinazione);
-	if (stato != VA_STATUS_SUCCESS) {
-		registro_dice(REG_CODIFICA, "⛔ vaSyncSurface: %s", vaErrorStr(stato));
+	state = vaSyncSurface(dpy, destination);
+	if (state != VA_STATUS_SUCCESS) {
+		log_says(LOG_ENCODING, "⛔ vaSyncSurface: %s", vaErrorStr(state));
 		return false;
 	}
 	return true;
@@ -3312,52 +3312,52 @@ static bool converti_sulla_gpu(Codificatore *c, VASurfaceID sorgente, VASurfaceI
  * zero copy that sits inside the attempts loop.
  *
  * ⛔ It is redone on every attempt, and it is not waste: if the frame breaks the
- *    16 MiB ceiling, `abbassa_qualita()` **closes and reopens the context and the
+ *    16 MiB ceiling, `lower_quality()` **closes and reopens the context and the
  *    store**, so the destination surface of the previous round no longer
  *    exists.  ⚠ The SOURCE surface instead stays: it is imported on the device,
  *    which nobody closes.
  */
-static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *s, uint64_t *us,
-                                 uint64_t *us_carico)
+static bool prepare_from_card(Encoder *c, const EncoderSurface *s, uint64_t *us,
+                                 uint64_t *load_us)
 {
-	uint64_t t0 = adesso_us();
-	VASurfaceID sorgente, destinazione;
+	uint64_t t0 = current_us();
+	VASurfaceID source, destination;
 
 	/* ⛔ The upload to the GPU IS NOT THERE on this route, and the zero says so.
 	 *    ⚠ Whoever reads the table of stretches must be able to tell "free" from
 	 *    "does not exist", and here the first-time log line writes it. */
-	*us_carico = 0;
+	*load_us = 0;
 
-	if (!apri_vpp(c, c->richiesta.larghezza, c->richiesta.altezza))
+	if (!open_vpp(c, c->request.width_px, c->request.height_px))
 		return false;
-	sorgente = importa_dmabuf(c, s);
-	if (sorgente == VA_INVALID_ID)
+	source = import_dmabuf(c, s);
+	if (source == VA_INVALID_ID)
 		return false;
 
 	/* ⭐ Phase 18: the input surface is given by vadiretta, from its store
 	 *    (a new one on every round, as yesterday with libavutil's store). */
-	destinazione = vadiretta_superficie_ingresso(c->va);
-	if (destinazione == VA_INVALID_ID) {
-		registro_dice(REG_CODIFICA, "⛔ no input surface (%d ready)",
-		              SUPERFICI_PRONTE);
+	destination = vadirect_input_surface(c->va);
+	if (destination == VA_INVALID_ID) {
+		log_says(LOG_ENCODING, "⛔ no input surface (%d ready)",
+		              READY_SURFACES);
 		return false;
 	}
-	if (!converti_sulla_gpu(c, sorgente, destinazione))
+	if (!convert_on_gpu(c, source, destination))
 		return false;
-	c->superficie_pronta = destinazione;
-	*us = adesso_us() - t0;
+	c->surface_ready = destination;
+	*us = current_us() - t0;
 
-	if (!c->detto_copia_zero) {
-		c->detto_copia_zero = true;
-		registro_dice(REG_CODIFICA,
+	if (!c->logged_zero_copy) {
+		c->logged_zero_copy = true;
+		log_says(LOG_ENCODING,
 		              "⭐⭐ ZERO COPY in force: the compositor's DMA-BUF (fd %d, %ux%u, "
 		              "stride %u, modifier 0x%llx) is imported as a VA-API surface and "
 		              "converted to %s BY THE GPU — no `memcpy`, no CPU "
 		              "conversion, no upload.  ⚠ The conversion remains and costs "
 		              "%llu us: what changed is WHO does it, not that it must be done",
-		              s->fd, s->larghezza, s->altezza, s->stride,
-		              (unsigned long long) s->modificatore,
-		              c->richiesta.profondita == 10 ? "P010" : "NV12",
+		              s->fd, s->width_px, s->height_px, s->stride,
+		              (unsigned long long) s->modifier,
+		              c->request.bit_depth == 10 ? "P010" : "NV12",
 		              (unsigned long long) *us);
 	}
 	return true;
@@ -3367,9 +3367,9 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
  * Fills the frame that enters the encoder, from the caller's pixels.
  *
  * ⭐ In hardware there are TWO steps and they are timed SEPARATELY:
- *      `us_conversione`  `colori709.c`, in system memory — the stretch that
+ *      `convert_us`  `colori709.c`, in system memory — the stretch that
  *                        was already there;
- *      `us_caricamento`  system memory → GPU — ⛔ the stretch that the phase 8
+ *      `upload_us`  system memory → GPU — ⛔ the stretch that the phase 8
  *                        zero copy exists to remove.  Adding it to the
  *                        encoding would make invisible how much that work is worth.
  *
@@ -3382,70 +3382,70 @@ static bool prepara_dalla_scheda(Codificatore *c, const CodificatoreSuperficie *
  *     and +255 %; Radeon −1…−6 dB.  ⇒ The VPP stays with the zero copy, where the
  *     frame is already on the card and there is no CPU to call on.
  */
-static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                               uint64_t *us, uint64_t *us_carico)
+static bool prepare_frame(Encoder *c, const uint8_t *pixel, uint32_t step,
+                               uint64_t *us, uint64_t *load_us)
 {
-	uint64_t t0 = adesso_us();
+	uint64_t t0 = current_us();
 
-	*us_carico = 0;
+	*load_us = 0;
 	*us = 0;
 
-	char errore[256] = { 0 };
-	const uint32_t l = c->richiesta.larghezza, a = c->richiesta.altezza;
-	VASurfaceID destinazione = vadiretta_superficie_ingresso(c->va);
-	if (destinazione == VA_INVALID_ID) {
-		registro_dice(REG_CODIFICA, "⛔ no input surface (%d ready)",
-		              SUPERFICI_PRONTE);
+	char failure[256] = { 0 };
+	const uint32_t l = c->request.width_px, a = c->request.height_px;
+	VASurfaceID destination = vadirect_input_surface(c->va);
+	if (destination == VA_INVALID_ID) {
+		log_says(LOG_ENCODING, "⛔ no input surface (%d ready)",
+		              READY_SURFACES);
 		return false;
 	}
-	if (FORMATO_PIXEL_IMPACCHETTATO(c->richiesta.formato)) {
-		if (!c->appoggio) {
-			registro_dice(REG_CODIFICA, "⛔ the NV12/P010 staging buffer was not allocated");
+	if (PACKED_PIXEL_FORMAT(c->request.schema)) {
+		if (!c->staging) {
+			log_says(LOG_ENCODING, "⛔ the NV12/P010 staging buffer was not allocated");
 			return false;
 		}
-		Colori709Ordine ordine = (c->richiesta.formato == CODIFICATORE_PIXEL_RGBX)
-		                             ? COLORI709_RGBX
-		                             : COLORI709_BGRX;
-		uint32_t passo_pixel = passo ? passo : l * 4u;
-		bool ok, caricato;
+		Colors709Order order = (c->request.schema == ENCODER_PIXEL_RGBX)
+		                             ? COLORS709_RGBX
+		                             : COLORS709_BGRX;
+		uint32_t pixel_stride = step ? step : l * 4u;
+		bool ok, loaded;
 		uint64_t t1;
-		if (c->richiesta.profondita == 10) {
-			uint16_t *y = (uint16_t *) c->appoggio;
+		if (c->request.bit_depth == 10) {
+			uint16_t *y = (uint16_t *) c->staging;
 			uint16_t *uv = y + (size_t) l * a;
-			ok = colori709_a_p010(pixel, passo_pixel, l, a, ordine, y, l * 2u, uv, l * 2u);
-			*us = adesso_us() - t0;
-			t1 = adesso_us();
-			caricato = ok && vadiretta_carica_p010(c->va, destinazione, y, l * 2u, uv, l * 2u,
-			                                       errore, sizeof errore);
+			ok = colors709_to_p010(pixel, pixel_stride, l, a, order, y, l * 2u, uv, l * 2u);
+			*us = current_us() - t0;
+			t1 = current_us();
+			loaded = ok && vadirect_load_p010(c->va, destination, y, l * 2u, uv, l * 2u,
+			                                       failure, sizeof failure);
 		} else {
-			uint8_t *y = c->appoggio;
+			uint8_t *y = c->staging;
 			uint8_t *uv = y + (size_t) l * a;
-			ok = colori709_a_nv12(pixel, passo_pixel, l, a, ordine, y, l, uv, l);
-			*us = adesso_us() - t0;
-			t1 = adesso_us();
-			caricato = ok && vadiretta_carica_nv12(c->va, destinazione, y, l, uv, l, errore,
-			                                       sizeof errore);
+			ok = colors709_to_nv12(pixel, pixel_stride, l, a, order, y, l, uv, l);
+			*us = current_us() - t0;
+			t1 = current_us();
+			loaded = ok && vadirect_load_nv12(c->va, destination, y, l, uv, l, failure,
+			                                       sizeof failure);
 		}
 		if (!ok) {
-			registro_dice(REG_CODIFICA, "⛔ the colour conversion refused %ux%u", l, a);
+			log_says(LOG_ENCODING, "⛔ the colour conversion refused %ux%u", l, a);
 			return false;
 		}
-		if (!caricato) {
-			registro_dice(REG_CODIFICA, "⛔ the planes were not uploaded to the card: %s", errore);
+		if (!loaded) {
+			log_says(LOG_ENCODING, "⛔ the planes were not uploaded to the card: %s", failure);
 			return false;
 		}
-		*us_carico = adesso_us() - t1;
+		*load_us = current_us() - t1;
 	} else {
 		/* yuv420p10le (the bench) → P010, directly into the input */
-		if (!vadiretta_carica_yuv420p10(c->va, destinazione, pixel, passo, errore,
-		                                sizeof errore)) {
-			registro_dice(REG_CODIFICA, "⛔ the samples were not uploaded to the card: %s",
-			              errore);
+		if (!vadirect_load_yuv420p10(c->va, destination, pixel, step, failure,
+		                                sizeof failure)) {
+			log_says(LOG_ENCODING, "⛔ the samples were not uploaded to the card: %s",
+			              failure);
 			return false;
 		}
-		*us_carico = adesso_us() - t0;
+		*load_us = current_us() - t0;
 	}
-	c->superficie_pronta = destinazione;
+	c->surface_ready = destination;
 	return true;
 }
 
@@ -3457,7 +3457,7 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
  * (the card's 64 block) and does not write the conformance window.  The
  * same with ffmpeg from the command line, without a line of ours: 3824 → 3840,
  * 1904 → 1920.  H.264 on the same card is right, and so is the Intel.
- * ⛔ The symptom was a session BLACK forever: `forma_va_bene()` rightly refuses
+ * ⛔ The symptom was a session BLACK forever: `bitstream_ok()` rightly refuses
  *    a stream whose size differs from the canvas (RCP.md §6.2), and
  *    Chrome chooses HEVC, and Chrome's canvases are never multiples of 64.
  *
@@ -3469,13 +3469,13 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
  * ⚠ Only on the packets with the SPS (the keys): the size lives there, and a delta
  *   has nothing to rewrite.  And only if the stream is BIGGER than the
  *   canvas by less than one block: any other difference stays an error, and
- *   `forma_va_bene()` refuses it as before.
+ *   `bitstream_ok()` refuses it as before.
  */
 /*
  * ⭐ PHASE 18: WE write the frame, bit by bit, and no longer with libavcodec's
  *    `hevc_metadata`/`h264_metadata` filter.  The method: we reread
  *    the SPS up to the cropping flag (the reader above says WHERE it is,
- *    `PosizioneCornice`), we rewrite the head unchanged, then the flag at 1 with the
+ *    `FramePosition`), we rewrite the head unchanged, then the flag at 1 with the
  *    four offsets (added to those that were there), and we copy the TAIL
  *    of the SPS back as it is, bit by bit, up to the stop bit.  ⛔ It is legitimate
  *    because the SPS syntax is sequential and nothing, after the window,
@@ -3485,150 +3485,150 @@ static bool prepara_fotogramma(Codificatore *c, const uint8_t *pixel, uint32_t p
  *
  * ⚠ The offsets are in chroma units: 4:2:0 ⇒ half the pixels, for both
  *   codecs (H.264 7.4.2.1.1 CropUnitX/Y = 2 with frame_mbs_only;
- *   H.265 7.4.3.2 SubWidthC/SubHeightC = 2).  `dx` and `dy` are even: the
+ *   H.265 7.4.3.2 SubWidthC/SubHeightC = 2).  `right` and `dy` are even: the
  *   one who decides checks it.
  */
-static bool riscrivi_sps_con_cornice(Codificatore *c, size_t sps_offset, size_t sps_byte)
+static bool rewrite_sps_with_crop(Encoder *c, size_t sps_offset, size_t sps_byte)
 {
-	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
-	const size_t testa_byte = hevc ? 2 : 1;
-	const uint8_t *nal = c->uscita + sps_offset;
-	uint8_t *rbsp, *nuovo_rbsp, *nuovo_nal, *fotogramma;
-	size_t n, ultimo_uno, nuovo_byte, inizio_codice, dopo, totale;
-	CodificatoreConfessione letta;
-	PosizioneCornice dove;
-	ScrittoreBit w;
+	const bool hevc = c->request.codec == ENCODER_HEVC;
+	const size_t head_byte = hevc ? 2 : 1;
+	const uint8_t *nal = c->out_dir + sps_offset;
+	uint8_t *rbsp, *new_rbsp, *new_nal, *frame;
+	size_t n, last_one, new_byte, code_start, after, total;
+	EncoderConfession got_read;
+	FramePosition dove;
+	WriterBit w;
 	bool ok;
 
-	memset(&letta, 0, sizeof letta);
+	memset(&got_read, 0, sizeof got_read);
 	memset(&dove, 0, sizeof dove);
-	ok = hevc ? leggi_sps_hevc(nal, sps_byte, &letta, &dove)
-	          : leggi_sps_h264(nal, sps_byte, &letta, &dove);
-	if (!ok || sps_byte <= testa_byte)
+	ok = hevc ? read_hevc_sps(nal, sps_byte, &got_read, &dove)
+	          : read_h264_sps(nal, sps_byte, &got_read, &dove);
+	if (!ok || sps_byte <= head_byte)
 		return false;
 
 	rbsp = malloc(sps_byte);
-	nuovo_rbsp = malloc(sps_byte + 32);
-	nuovo_nal = malloc(sps_byte + 64);
-	if (!rbsp || !nuovo_rbsp || !nuovo_nal) {
+	new_rbsp = malloc(sps_byte + 32);
+	new_nal = malloc(sps_byte + 64);
+	if (!rbsp || !new_rbsp || !new_nal) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	n = togli_emulazione(nal + testa_byte, sps_byte - testa_byte, rbsp, sps_byte);
+	n = remove_emulation(nal + head_byte, sps_byte - head_byte, rbsp, sps_byte);
 	/* the stop bit: the LAST 1 of the RBSP */
-	ultimo_uno = 0;
+	last_one = 0;
 	for (size_t b = n * 8; b > 0; b--) {
 		if ((rbsp[(b - 1) >> 3] >> (7 - ((b - 1) & 7))) & 1u) {
-			ultimo_uno = b - 1;
+			last_one = b - 1;
 			break;
 		}
 	}
-	if (dove.bit_dopo > ultimo_uno || dove.bit_flag >= dove.bit_dopo) {
+	if (dove.bit_after > last_one || dove.bit_flag >= dove.bit_after) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	sb_apri(&w, nuovo_rbsp, sps_byte + 32);
-	sb_copia_bit(&w, rbsp, 0, dove.bit_flag);
+	sb_open(&w, new_rbsp, sps_byte + 32);
+	sb_copy_bit(&w, rbsp, 0, dove.bit_flag);
 	sb_flag(&w, true);
-	sb_ue(&w, dove.sx);
-	sb_ue(&w, dove.dx + c->cornice_dx / 2);
+	sb_ue(&w, dove.left_side);
+	sb_ue(&w, dove.right + c->border_dx / 2);
 	sb_ue(&w, dove.su);
-	sb_ue(&w, dove.giu + c->cornice_dy / 2);
-	sb_copia_bit(&w, rbsp, dove.bit_dopo, ultimo_uno - dove.bit_dopo);
-	sb_chiudi_rbsp(&w);
-	if (w.traboccato) {
+	sb_ue(&w, dove.down + c->border_dy / 2);
+	sb_copy_bit(&w, rbsp, dove.bit_after, last_one - dove.bit_after);
+	sb_close_rbsp(&w);
+	if (w.overflowed) {
 		free(rbsp);
-		free(nuovo_rbsp);
-		free(nuovo_nal);
+		free(new_rbsp);
+		free(new_nal);
 		return false;
 	}
-	nuovo_byte = nal_annexb(nuovo_nal, sps_byte + 64, nal, testa_byte, nuovo_rbsp, sb_byte(&w));
+	new_byte = nal_annexb(new_nal, sps_byte + 64, nal, head_byte, new_rbsp, sb_byte(&w));
 	free(rbsp);
-	free(nuovo_rbsp);
-	if (!nuovo_byte) {
-		free(nuovo_nal);
+	free(new_rbsp);
+	if (!new_byte) {
+		free(new_nal);
 		return false;
 	}
 	/* the start code in front of the old SPS: 3 or 4 bytes */
-	inizio_codice = sps_offset - 3;
-	if (inizio_codice > 0 && c->uscita[inizio_codice - 1] == 0)
-		inizio_codice--;
-	dopo = sps_offset + sps_byte;
-	totale = inizio_codice + nuovo_byte + (c->uscita_byte - dopo);
-	fotogramma = malloc(totale);
-	if (!fotogramma) {
-		free(nuovo_nal);
+	code_start = sps_offset - 3;
+	if (code_start > 0 && c->out_dir[code_start - 1] == 0)
+		code_start--;
+	after = sps_offset + sps_byte;
+	total = code_start + new_byte + (c->output_byte - after);
+	frame = malloc(total);
+	if (!frame) {
+		free(new_nal);
 		return false;
 	}
-	memcpy(fotogramma, c->uscita, inizio_codice);
-	memcpy(fotogramma + inizio_codice, nuovo_nal, nuovo_byte);
-	memcpy(fotogramma + inizio_codice + nuovo_byte, c->uscita + dopo, c->uscita_byte - dopo);
-	free(nuovo_nal);
-	free(c->uscita);
-	c->uscita = fotogramma;
-	c->uscita_capacita = totale;
-	c->uscita_byte = totale;
+	memcpy(frame, c->out_dir, code_start);
+	memcpy(frame + code_start, new_nal, new_byte);
+	memcpy(frame + code_start + new_byte, c->out_dir + after, c->output_byte - after);
+	free(new_nal);
+	free(c->out_dir);
+	c->out_dir = frame;
+	c->output_capabilities = total;
+	c->output_byte = total;
 	return true;
 }
 
-static bool cornice_al_suo_posto(Codificatore *c, bool chiave)
+static bool border_in_place(Encoder *c, bool key_id)
 {
-	const bool hevc = c->richiesta.codec == CODIFICATORE_HEVC;
+	const bool hevc = c->request.codec == ENCODER_HEVC;
 	size_t off = 0, n = 0;
 
-	if (!hevc && c->richiesta.codec != CODIFICATORE_H264)
+	if (!hevc && c->request.codec != ENCODER_H264)
 		return true;
-	if (!chiave)
+	if (!key_id)
 		return true;
 
 	/* where the SPS is in this frame */
 	if (hevc) {
-		FormaAnnexB f;
-		annexb_leggi(c->uscita, c->uscita_byte, &f);
+		AnnexBLayout f;
+		annexb_read(c->out_dir, c->output_byte, &f);
 		off = f.sps_offset;
 		n = f.sps_byte;
 	} else {
-		FormaAnnexB264 f;
-		annexb264_leggi(c->uscita, c->uscita_byte, &f);
+		AnnexB264Layout f;
+		annexb264_read(c->out_dir, c->output_byte, &f);
 		off = f.sps_offset;
 		n = f.sps_byte;
 	}
 	if (!n)
-		return true; /* no SPS: `forma_va_bene()` decides */
+		return true; /* no SPS: `bitstream_ok()` decides */
 
-	if (!c->cornice_decisa) {
-		CodificatoreConfessione letta;
-		memset(&letta, 0, sizeof letta);
-		bool ok = hevc ? leggi_sps_hevc(c->uscita + off, n, &letta, NULL)
-		               : leggi_sps_h264(c->uscita + off, n, &letta, NULL);
+	if (!c->decided_border) {
+		EncoderConfession got_read;
+		memset(&got_read, 0, sizeof got_read);
+		bool ok = hevc ? read_hevc_sps(c->out_dir + off, n, &got_read, NULL)
+		               : read_h264_sps(c->out_dir + off, n, &got_read, NULL);
 		if (!ok)
-			return true; /* no readable SPS: `forma_va_bene()` decides */
-		c->cornice_decisa = true;
-		c->cornice_attiva = false;
-		uint32_t dx = letta.larghezza_flusso - c->richiesta.larghezza;
-		uint32_t dy = letta.altezza_flusso - c->richiesta.altezza;
-		if (letta.larghezza_flusso < c->richiesta.larghezza ||
-		    letta.altezza_flusso < c->richiesta.altezza || (dx == 0 && dy == 0) ||
-		    dx >= 64 || dy >= 64 || (dx | dy) & 1u)
+			return true; /* no readable SPS: `bitstream_ok()` decides */
+		c->decided_border = true;
+		c->active_border = false;
+		uint32_t right = got_read.stream_width - c->request.width_px;
+		uint32_t dy = got_read.stream_height - c->request.height_px;
+		if (got_read.stream_width < c->request.width_px ||
+		    got_read.stream_height < c->request.height_px || (right == 0 && dy == 0) ||
+		    right >= 64 || dy >= 64 || (right | dy) & 1u)
 			return true;
-		c->cornice_attiva = true;
-		c->cornice_dx = dx;
-		c->cornice_dy = dy;
-		registro_dice(REG_CODIFICA,
+		c->active_border = true;
+		c->border_dx = right;
+		c->border_dy = dy;
+		log_says(LOG_ENCODING,
 		              "⭐ D-023: «%s» declares %ux%u for a %ux%u canvas (it encodes the "
 		              "multiple of the block and does not write the frame): I write it in the SPS, "
 		              "bit by bit, %u columns and %u rows cropped on the right and at the bottom",
-		              c->nome_componente, letta.larghezza_flusso, letta.altezza_flusso,
-		              c->richiesta.larghezza, c->richiesta.altezza, dx, dy);
+		              c->component_name, got_read.stream_width, got_read.stream_height,
+		              c->request.width_px, c->request.height_px, right, dy);
 	}
-	if (!c->cornice_attiva)
+	if (!c->active_border)
 		return true;
-	if (!riscrivi_sps_con_cornice(c, off, n)) {
-		registro_dice(REG_CODIFICA,
+	if (!rewrite_sps_with_crop(c, off, n)) {
+		log_says(LOG_ENCODING,
 		              "⛔ D-023: the frame was not written (SPS of %zu bytes not "
 		              "rewritable): this frame does not leave", n);
 		return false;
@@ -3644,86 +3644,86 @@ static bool cornice_al_suo_posto(Codificatore *c, bool chiave)
  *   old size.  The symptom arrives three links further on and does not name the
  *   cause.  Here instead the frame does not leave, and the log says why.
  */
-static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, bool *chiave)
+static bool bitstream_ok(Encoder *c, const uint8_t *data_v, size_t byte, bool *key_id)
 {
-	if (c->richiesta.codec == CODIFICATORE_HEVC) {
-		FormaAnnexB f;
-		annexb_leggi(dati, byte, &f);
-		*chiave = f.primo_vcl_e_chiave;
-		if (byte >= 4 && !(dati[0] == 0 && dati[1] == 0 && (dati[2] == 1 || (dati[2] == 0 && dati[3] == 1)))) {
-			registro_dice(REG_CODIFICA,
+	if (c->request.codec == ENCODER_HEVC) {
+		AnnexBLayout f;
+		annexb_read(data_v, byte, &f);
+		*key_id = f.first_vcl_is_key;
+		if (byte >= 4 && !(data_v[0] == 0 && data_v[1] == 0 && (data_v[2] == 1 || (data_v[2] == 0 && data_v[3] == 1)))) {
+			log_says(LOG_ENCODING,
 			              "⛔ the frame does not start with a start code: it looks "
 			              "length-prefixed (hvcC), and D1 says Annex-B");
 			return false;
 		}
-		if (f.primo_vcl_e_chiave && !f.parametri_prima_dell_idr) {
-			registro_dice(REG_CODIFICA,
+		if (f.first_vcl_is_key && !f.parameters_before_idr) {
+			log_says(LOG_ENCODING,
 			              "⛔ key without VPS+SPS+PPS in front: in Annex-B the «key» chunk "
 			              "must carry them, or the symptom is a black screen with the frames "
 			              "arriving (v1 codificatore.c:268-272)");
 			return false;
 		}
-		if (!c->conf.letto_dal_flusso && f.sps_byte)
-			c->conf.letto_dal_flusso =
-			    leggi_sps_hevc(dati + f.sps_offset, f.sps_byte, &c->conf, NULL);
-	} else if (c->richiesta.codec == CODIFICATORE_H264) {
-		FormaAnnexB264 f;
+		if (!c->conf.read_from_stream && f.sps_byte)
+			c->conf.read_from_stream =
+			    read_hevc_sps(data_v + f.sps_offset, f.sps_byte, &c->conf, NULL);
+	} else if (c->request.codec == ENCODER_H264) {
+		AnnexB264Layout f;
 
-		annexb264_leggi(dati, byte, &f);
-		*chiave = f.primo_vcl_e_chiave;
+		annexb264_read(data_v, byte, &f);
+		*key_id = f.first_vcl_is_key;
 		if (byte >= 4
-		    && !(dati[0] == 0 && dati[1] == 0
-		         && (dati[2] == 1 || (dati[2] == 0 && dati[3] == 1)))) {
-			registro_dice(REG_CODIFICA,
+		    && !(data_v[0] == 0 && data_v[1] == 0
+		         && (data_v[2] == 1 || (data_v[2] == 0 && data_v[3] == 1)))) {
+			log_says(LOG_ENCODING,
 			              "⛔ the H.264 frame does not start with a start code: "
 			              "it looks length-prefixed (avcC), and the browser without "
 			              "`description` wants Annex-B");
 			return false;
 		}
-		if (f.primo_vcl_e_chiave && !f.parametri_prima_dell_idr) {
-			registro_dice(REG_CODIFICA,
+		if (f.first_vcl_is_key && !f.parameters_before_idr) {
+			log_says(LOG_ENCODING,
 			              "⛔ H.264 key without SPS+PPS in front: in Annex-B the "
 			              "«key» chunk must carry them, or whoever connects later stays black");
 			return false;
 		}
-		if (!c->conf.letto_dal_flusso && f.sps_byte)
-			c->conf.letto_dal_flusso =
-			    leggi_sps_h264(dati + f.sps_offset, f.sps_byte, &c->conf, NULL);
+		if (!c->conf.read_from_stream && f.sps_byte)
+			c->conf.read_from_stream =
+			    read_h264_sps(data_v + f.sps_offset, f.sps_byte, &c->conf, NULL);
 	} else {
-		FormaObu f;
-		obu_leggi(dati, byte, &f);
-		*chiave = f.primo_fotogramma_e_chiave;
-		if (f.ha_chiave && !f.sequenza_prima_della_chiave) {
-			registro_dice(REG_CODIFICA,
+		ObuLayout f;
+		obu_read(data_v, byte, &f);
+		*key_id = f.first_frame_is_key;
+		if (f.has_key && !f.sequence_before_key) {
+			log_says(LOG_ENCODING,
 			              "⛔ AV1 key without a sequence header in front: a client that "
 			              "connects later receives a bare key");
 			return false;
 		}
-		if (!c->conf.letto_dal_flusso && f.seq_byte)
-			c->conf.letto_dal_flusso =
-			    leggi_sequenza_av1(dati + f.seq_offset, f.seq_byte, &c->conf);
+		if (!c->conf.read_from_stream && f.seq_byte)
+			c->conf.read_from_stream =
+			    read_av1_sequence(data_v + f.seq_offset, f.seq_byte, &c->conf);
 	}
 
 	/* ⛔ SECOND WITNESS: the depth and the size read IN THE BYTES. */
-	if (c->conf.letto_dal_flusso) {
-		if (c->conf.profondita_flusso != c->richiesta.profondita) {
-			registro_dice(REG_CODIFICA,
+	if (c->conf.read_from_stream) {
+		if (c->conf.stream_depth != c->request.bit_depth) {
+			log_says(LOG_ENCODING,
 			              "⛔ E2: %d bits requested, and the stream declares %d",
-			              c->richiesta.profondita, c->conf.profondita_flusso);
-			c->conf.ha_obbedito = false;
-			di(c->conf.perche_no, sizeof(c->conf.perche_no),
-			   "the stream carries %d bits instead of %d", c->conf.profondita_flusso,
-			   c->richiesta.profondita);
+			              c->request.bit_depth, c->conf.stream_depth);
+			c->conf.has_obeyed = false;
+			di(c->conf.why_no, sizeof(c->conf.why_no),
+			   "the stream carries %d bits instead of %d", c->conf.stream_depth,
+			   c->request.bit_depth);
 			return false;
 		}
-		if (c->conf.larghezza_flusso != c->richiesta.larghezza ||
-		    c->conf.altezza_flusso != c->richiesta.altezza) {
-			registro_dice(REG_CODIFICA,
+		if (c->conf.stream_width != c->request.width_px ||
+		    c->conf.stream_height != c->request.height_px) {
+			log_says(LOG_ENCODING,
 			              "⛔ the stream SHOWS %ux%u (it encodes %ux%u) and the canvas is "
 			              "%ux%u: RCP.md §6.2 wants the size of the canvas in force",
-			              c->conf.larghezza_flusso, c->conf.altezza_flusso,
-			              c->conf.larghezza_codificata, c->conf.altezza_codificata,
-			              c->richiesta.larghezza, c->richiesta.altezza);
+			              c->conf.stream_width, c->conf.stream_height,
+			              c->conf.encoded_width, c->conf.encoded_height,
+			              c->request.width_px, c->request.height_px);
 			return false;
 		}
 	}
@@ -3733,7 +3733,7 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
 /*
  * Reopens at lower quality, for the 16 MiB ceiling.
  *
- * ⭐ `prodotti` are the BYTES that triggered the descent, and they are not an
+ * ⭐ `products` are the BYTES that triggered the descent, and they are not an
  *    ornament of the log line: they are the **proof**.  Invariant I1
  *    demands that every descent come from a measurement and not from a suspicion, and
  *    the only way to verify it **from outside**, without trusting the code, is
@@ -3749,70 +3749,70 @@ static bool forma_va_bene(Codificatore *c, const uint8_t *dati, size_t byte, boo
  *    reopened (and the store).  ⛔ The next frame is a
  *    KEY, and it is written here.
  */
-static bool cambia_qualita(Codificatore *c, char *errore, size_t errore_byte)
+static bool change_quality(Encoder *c, char *failure, size_t error_byte)
 {
-	chiudi_contesto(c);
-	if (apri_contesto(c, errore, errore_byte) < 0)
+	close_context(c);
+	if (open_context(c, failure, error_byte) < 0)
 		return false;
 	/* ⛔ The store was reopened together with the context: the frames must be
 	 *    rebound, or the next round would upload onto surfaces of a closed
 	 *    store. */
-	if (apri_fotogrammi(c, errore, errore_byte) < 0)
+	if (open_frames(c, failure, error_byte) < 0)
 		return false;
-	c->prossimo_chiave = true;
+	c->next_key = true;
 	return true;
 }
 
-static bool abbassa_qualita(Codificatore *c, uint32_t prodotti)
+static bool lower_quality(Encoder *c, uint32_t products)
 {
-	char errore[256] = { 0 };
-	int prima = c->qualita_corrente;
-	ModoQualita modo_prima = c->modo_corrente;
+	char failure[256] = { 0 };
+	int before = c->current_quality;
+	QualityMode prev_mode = c->current_mode;
 
 	/* ⛔ THE RELAPSE IS PAID BEFORE KNOWING WHETHER THE DESCENT SUCCEEDS: if we had
 	 *    just climbed and the ceiling bites again, the wait doubles.  ⚠ Without
 	 *    this, a scene on the edge would make the door slam every two seconds
 	 *    at 91-108 ms a time — and the price would be paid by the RATE, that is
-	 *    precisely the invariant this cure claims to serve. */
-	c->sotto_margine = 0;
-	if (c->risalito_da_poco) {
-		uint32_t era = c->risalita_attesa;
-		c->risalita_attesa = era >= RISALITA_ATTESA_MAX / 2u ? RISALITA_ATTESA_MAX
+	 *    precisely the invariant this cure claims to needs. */
+	c->below_margin = 0;
+	if (c->recently_risen) {
+		uint32_t era = c->rise_wait;
+		c->rise_wait = era >= RISE_WAIT_MAX / 2u ? RISE_WAIT_MAX
 		                                                     : era * 2u;
-		c->risalito_da_poco = false;
-		registro_dice(REG_CODIFICA,
+		c->recently_risen = false;
+		log_says(LOG_ENCODING,
 		              "⚠ RELAPSE: the ceiling bit right after a climb ⇒ the "
 		              "next one waits %u frames instead of %u.  ⛔ It is the defence "
 		              "against FLAPPING: every round costs a reopening and a "
 		              "key, [M] 91-108 ms on the card",
-		              c->risalita_attesa, era);
+		              c->rise_wait, era);
 	}
 
-	if (c->modo_corrente == CODIFICATORE_QUALITA_LOSSLESS) {
+	if (c->current_mode == ENCODER_QUALITY_LOSSLESS) {
 		/* ⚠ Lossless does not exist on the card (and since phase 19 not
 		 *   elsewhere either): historical branch, we exit to CRF as before. */
-		c->modo_corrente = CODIFICATORE_QUALITA_CRF;
-		c->qualita_corrente = CRF_DI_EMERGENZA;
+		c->current_mode = ENCODER_QUALITY_CRF;
+		c->current_quality = EMERGENCY_CRF;
 	} else {
 		/* ⚠ The mode does NOT change: whoever was on QP stays on QP.  Switching to CRF under the
 		 *   ceiling would mean changing quantity mid-session, that is two
 		 *   measurements under the same label. */
-		c->qualita_corrente += CRF_PASSO;
-		if (c->qualita_corrente > 51)
-			c->qualita_corrente = 51;
+		c->current_quality += CRF_STEP;
+		if (c->current_quality > 51)
+			c->current_quality = 51;
 	}
-	if (c->qualita_corrente == prima && c->modo_corrente == modo_prima)
+	if (c->current_quality == before && c->current_mode == prev_mode)
 		return false;
 
-	if (!cambia_qualita(c, errore, sizeof(errore))) {
-		registro_dice(REG_CODIFICA, "⛔ did not reopen at lower quality: %s", errore);
+	if (!change_quality(c, failure, sizeof(failure))) {
+		log_says(LOG_ENCODING, "⛔ did not reopen at lower quality: %s", failure);
 		return false;
 	}
 
 	/*
 	 * ⛔⛔ THE DESCENT IS DECLARED — and until 23 Aug 2026 it was NOT declared.
 	 *
-	 * `abbassa_qualita()` succeeded **silently**: the only line there was
+	 * `lower_quality()` succeeded **silently**: the only line there was
 	 * spoke of KEYS, and for a delta the ladder went down three rungs
 	 * without a single line saying so.  ⚠ Invariant I1 demands that *every
 	 * descent be declared in the log*, and a silent descent makes it
@@ -3826,29 +3826,29 @@ static bool abbassa_qualita(Codificatore *c, uint32_t prodotti)
 	 * ⚠ It is written at the CHANGE OF STATE and not on every frame: a line at 30/s is
 	 *   the defect of the 30.8 GB of log of 14 Aug (`figlio.c`).
 	 */
-	registro_dice(REG_CODIFICA,
+	log_says(LOG_ENCODING,
 	              "⛔ QUALITY DOWN: %s %d → %s %d — the frame made %u bytes "
 	              "against the ceiling's %u (RCP.md §6.2), that is %u %% of the threshold.  "
 	              "⚠ If this percentage were not ABOVE 100 the descent would have "
 	              "been out of caution, and I1 forbids it: the measurement is written here so that "
 	              "it can be verified from outside without trusting the code",
-	              nome_modo(modo_prima), prima, nome_modo(c->modo_corrente),
-	              c->qualita_corrente, prodotti, TETTO_FOTOGRAMMA,
-	              (unsigned) (((uint64_t) prodotti * 100u) / TETTO_FOTOGRAMMA));
+	              mode_name(prev_mode), before, mode_name(c->current_mode),
+	              c->current_quality, products, CAP_FRAME,
+	              (unsigned) (((uint64_t) products * 100u) / CAP_FRAME));
 	return true;
 }
 
 /*
  * ⭐⭐ A SINGLE RUNG TOWARDS THE REQUESTED QUALITY, AND NO FURTHER — phase 9.
  *
- * ⛔ IT DOES NOT GO BACK TO LOSSLESS: `abbassa_qualita()` leaves LOSSLESS once
+ * ⛔ IT DOES NOT GO BACK TO LOSSLESS: `lower_quality()` leaves LOSSLESS once
  *    and for ever, because re-entering it would mean changing **quantity**
  *    mid-session — the same reason why the mode does not change on the way down.
  *
  * ⛔⛔ AND IT IS NOT CALLED WITH A PACKET IN HAND, and that is the constraint that decides
- *      WHERE this function sits: `chiudi_contesto()` **frees** the
+ *      WHERE this function sits: `close_context()` **frees** the
  *      encoder and the bytes it holds, it does not merely unhook them — and after the `break` of
- *      `comprimi_comune()` the caller's `fuori->dati` points in there.
+ *      `compress_common()` the caller's `outside->data_v` points in there.
  *      ⇒ We COUNT at delivery and CLIMB at the entry of the next frame.
  *      ⭐ Good side effect: the cost of the reopening falls **between** two
  *        frames instead of in the middle of delivering one.
@@ -3856,69 +3856,69 @@ static bool abbassa_qualita(Codificatore *c, uint32_t prodotti)
  * Returns `false` only if the context was left broken: climbing is optional,
  * and a cure that kills the session when it fails is worse than the defect.
  */
-static bool risali_qualita(Codificatore *c)
+static bool raise_quality(Encoder *c)
 {
-	char errore[256] = { 0 };
+	char failure[256] = { 0 };
 
-	if (!risalita_accesa)
+	if (!rise_enabled)
 		return true;                        /* ⛔ invariant I6: off by default */
-	if (c->pacchetto_in_mano)
+	if (c->packet_in_hand)
 		return true;                        /* ⛔ the constraint above */
-	if (c->modo_corrente != c->richiesta.modo)
+	if (c->current_mode != c->request.manner)
 		return true;                        /* left LOSSLESS: no going back in */
-	if (c->qualita_corrente <= c->richiesta.qualita)
+	if (c->current_quality <= c->request.quality)
 		return true;                        /* already at the requested working point */
-	if (c->sotto_margine < c->risalita_attesa)
+	if (c->below_margin < c->rise_wait)
 		return true;                        /* not calm enough yet */
 
-	int prima = c->qualita_corrente;
-	int dopo = prima - CRF_PASSO;
+	int before = c->current_quality;
+	int after = before - CRF_STEP;
 	/* ⛔ THE FLOOR IS WHAT WAS REQUESTED, and no field is needed to
-	 *    remember it: `c->richiesta` keeps the request intact. */
-	if (dopo < c->richiesta.qualita)
-		dopo = c->richiesta.qualita;
+	 *    remember it: `c->request` keeps the request intact. */
+	if (after < c->request.quality)
+		after = c->request.quality;
 	/* ⛔ And we do not set foot on the rung where the ceiling already bit
 	 *    until TWICE the wait has passed: that is not a suspicion,
 	 *    it is a number MEASURED on this content. */
-	if (c->qualita_fallita && dopo <= c->qualita_fallita
-	    && c->sotto_margine < c->risalita_attesa * 2u)
+	if (c->failed_quality && after <= c->failed_quality
+	    && c->below_margin < c->rise_wait * 2u)
 		return true;
 
-	uint32_t calmi = c->sotto_margine; /* ⚠ the REAL number, not the threshold */
-	c->qualita_corrente = dopo;
-	c->sotto_margine = 0;
-	if (!cambia_qualita(c, errore, sizeof(errore))) {
+	uint32_t calm = c->below_margin; /* ⚠ the REAL number, not the threshold */
+	c->current_quality = after;
+	c->below_margin = 0;
+	if (!change_quality(c, failure, sizeof(failure))) {
 		/* ⚠ Climbing is OPTIONAL: if the context does not reopen at the new
 		 *   value we go back to the one that worked, and the session carries on
 		 *   grainy instead of dying. */
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "⛔ did not reopen climbing to %s %d (%s): going back to %d",
-		              nome_modo(c->modo_corrente), dopo, errore, prima);
-		c->qualita_corrente = prima;
-		if (!cambia_qualita(c, errore, sizeof(errore))) {
-			registro_dice(REG_CODIFICA,
+		              mode_name(c->current_mode), after, failure, before);
+		c->current_quality = before;
+		if (!change_quality(c, failure, sizeof(failure))) {
+			log_says(LOG_ENCODING,
 			              "⛔⛔ and not even at %s %d: the context is closed and nothing "
 			              "more is sent — %s",
-			              nome_modo(c->modo_corrente), prima, errore);
-			c->conf.ha_obbedito = false;
-			di(c->conf.perche_no, sizeof(c->conf.perche_no),
+			              mode_name(c->current_mode), before, failure);
+			c->conf.has_obeyed = false;
+			di(c->conf.why_no, sizeof(c->conf.why_no),
 			   "the context did not reopen after a climb attempt: %s",
-			   errore);
+			   failure);
 			return false;
 		}
-		c->prossimo_chiave = true;
-		c->risalita_attesa = c->risalita_attesa >= RISALITA_ATTESA_MAX / 2u
-		                         ? RISALITA_ATTESA_MAX
-		                         : c->risalita_attesa * 2u;
+		c->next_key = true;
+		c->rise_wait = c->rise_wait >= RISE_WAIT_MAX / 2u
+		                         ? RISE_WAIT_MAX
+		                         : c->rise_wait * 2u;
 		return true;
 	}
 
-	c->risalito_da_poco = true;
+	c->recently_risen = true;
 	/* ⛔ New context, no past: `RCP.md` §5.2 wants a real key.
-	 *    `apri_contesto()` has already demanded it; the line stays because the rule is
+	 *    `open_context()` has already demanded it; the line stays because the rule is
 	 *    written here, not elsewhere. */
-	c->prossimo_chiave = true;
-	registro_dice(REG_CODIFICA,
+	c->next_key = true;
+	log_says(LOG_ENCODING,
 	              "⭐ QUALITY UP: %s %d → %d after %u frames in a row below %u bytes "
 	              "(one eighth of the ceiling), requested floor %d.  ⚠ It costs a reopening "
 	              "and a KEY — [M] 91-108 ms in hardware, 1.8-3.3 s in software — and "
@@ -3926,27 +3926,27 @@ static bool risali_qualita(Codificatore *c)
 	              "every relapse.  ⭐ It is DECISIONI.md §3.3 «never grainy»: without this "
 	              "line a single exceptional frame left the session grainy "
 	              "for hours",
-	              nome_modo(c->modo_corrente), prima, dopo, calmi, RISALITA_MARGINE,
-	              c->richiesta.qualita);
+	              mode_name(c->current_mode), before, after, calm, RISE_MARGIN,
+	              c->request.quality);
 	return true;
 }
 
-/* The encoded bytes are copied into `c->uscita`, which is ours: see the
+/* The encoded bytes are copied into `c->out_dir`, which is ours: see the
  * structure.  It grows when needed and never shrinks. */
-static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte)
+static bool put_in_output(Encoder *c, const uint8_t *data_v, size_t byte)
 {
-	if (byte > c->uscita_capacita) {
-		size_t nuova = byte + byte / 4 + 4096;
-		uint8_t *p = realloc(c->uscita, nuova);
+	if (byte > c->output_capabilities) {
+		size_t new_one = byte + byte / 4 + 4096;
+		uint8_t *p = realloc(c->out_dir, new_one);
 		if (!p) {
-			registro_dice(REG_CODIFICA, "⛔ no memory for %zu output bytes", byte);
+			log_says(LOG_ENCODING, "⛔ no memory for %zu output bytes", byte);
 			return false;
 		}
-		c->uscita = p;
-		c->uscita_capacita = nuova;
+		c->out_dir = p;
+		c->output_capabilities = new_one;
 	}
-	memcpy(c->uscita, dati, byte);
-	c->uscita_byte = byte;
+	memcpy(c->out_dir, data_v, byte);
+	c->output_byte = byte;
 	return true;
 }
 
@@ -3958,59 +3958,59 @@ static bool metti_in_uscita(Codificatore *c, const uint8_t *dati, size_t byte)
  * ⛔ Having it in two copies would be the worst form of all: the day a
  *    rule changes — and in this file they have all changed, at least once
  *    — one of the two copies stays behind **and no bench sees it**, because
- *    each one is green on its own.  ⇒ ONLY how `c->fotogramma` is filled
+ *    each one is green on its own.  ⇒ ONLY how `c->frame` is filled
  *    changes, and that is the only `if` that tells them apart.
  *
- * ⚠ Exactly one of `pixel` and `superficie` is non-NULL, and it is not an implicit
+ * ⚠ Exactly one of `pixel` and `surface` is non-NULL, and it is not an implicit
  *   convention: the guard demands it and writes it.
  */
-static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                            const CodificatoreSuperficie *superficie,
-                            CodificatoreFotogramma *fuori)
+static bool compress_common(Encoder *c, const uint8_t *pixel, uint32_t step,
+                            const EncoderSurface *surface,
+                            EncoderFrame *outside)
 {
-	if (!c || !fuori)
+	if (!c || !outside)
 		return false;
-	if ((pixel == NULL) == (superficie == NULL)) {
-		registro_dice(REG_CODIFICA,
+	if ((pixel == NULL) == (surface == NULL)) {
+		log_says(LOG_ENCODING,
 		              "⛔ we compress EITHER from the pixels OR from the surface, and here "
 		              "%s arrived: we do not guess which of the two routes the caller "
 		              "wanted",
 		              pixel ? "both" : "neither");
 		return false;
 	}
-	if (!c->conf.ha_obbedito) {
-		registro_dice(REG_CODIFICA, "⛔ it did not obey (%s): nothing is sent",
-		              c->conf.perche_no);
+	if (!c->conf.has_obeyed) {
+		log_says(LOG_ENCODING, "⛔ it did not obey (%s): nothing is sent",
+		              c->conf.why_no);
 		return false;
 	}
-	if (c->pacchetto_in_mano) {
-		registro_dice(REG_CODIFICA, "⛔ the previous frame was not released");
+	if (c->packet_in_hand) {
+		log_says(LOG_ENCODING, "⛔ the previous frame was not released");
 		return false;
 	}
-	if (c->svuotato) {
+	if (c->emptied) {
 		/* ⛔ A context in drain no longer accepts frames: it is reopened, and the
 		 *    reopening makes the next one a key.  Better one extra declared key
 		 *    than a video that stops at the second frame. */
-		char errore[256] = { 0 };
-		chiudi_contesto(c);
-		if (apri_contesto(c, errore, sizeof(errore)) < 0) {
-			registro_dice(REG_CODIFICA, "⛔ did not reopen after the drain: %s", errore);
+		char failure[256] = { 0 };
+		close_context(c);
+		if (open_context(c, failure, sizeof(failure)) < 0) {
+			log_says(LOG_ENCODING, "⛔ did not reopen after the drain: %s", failure);
 			return false;
 		}
-		if (apri_fotogrammi(c, errore, sizeof(errore)) < 0) {
-			registro_dice(REG_CODIFICA, "⛔ the frames did not reopen: %s", errore);
+		if (open_frames(c, failure, sizeof(failure)) < 0) {
+			log_says(LOG_ENCODING, "⛔ the frames did not reopen: %s", failure);
 			return false;
 		}
-		c->svuotato = false;
-		registro_dice(REG_CODIFICA, "reopened after the drain: the next one is a key");
+		c->emptied = false;
+		log_says(LOG_ENCODING, "reopened after the drain: the next one is a key");
 	}
-	memset(fuori, 0, sizeof(*fuori));
+	memset(outside, 0, sizeof(*outside));
 
 	/* ⭐ THE CLIMB SITS HERE, BEFORE ENCODING, and not after delivery: after
-	 *    the `break` the packet is in the caller's hands and `chiudi_contesto()`
+	 *    the `break` the packet is in the caller's hands and `close_context()`
 	 *    FREES it.  ⚠ The count instead is kept at delivery, further down: that is where
 	 *    we know how big it came out. */
-	if (!risali_qualita(c))
+	if (!raise_quality(c))
 		return false;
 
 	/* ═══════════════════════════════════════════════════════════════════════
@@ -4018,15 +4018,15 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *      DESCENT, not inside the loop.
 	 *
 	 * ⛔ THE DEFECT THIS LINE CURES (23 Aug 2026, phase 9).  The count
-	 *    of re-encodings read `c->prossimo_chiave` **inside** the loop, and
-	 *    `abbassa_qualita()` calls `apri_contesto()`, which at `:2275` does
-	 *    `c->prossimo_chiave = true` — *"after every opening the first is a
+	 *    of re-encodings read `c->next_key` **inside** the loop, and
+	 *    `lower_quality()` calls `open_context()`, which at `:2275` does
+	 *    `c->next_key = true` — *"after every opening the first is a
 	 *    key"*, and it is right that it does: a new context has no
 	 *    references, and a delta after a reopening would be undecodable.
-	 *    ⇒ From the FIRST descent on `c->prossimo_chiave` was **always true**,
-	 *      so `!c->prossimo_chiave && tentativo + 1 >= RICODIFICHE_MASSIME`
+	 *    ⇒ From the FIRST descent on `c->next_key` was **always true**,
+	 *      so `!c->next_key && attempt + 1 >= MAX_REENCODES`
 	 *      was **always false**: the branch abandoning the delta was **dead
-	 *      code**, and `RICODIFICHE_MASSIME` never stopped a delta in its
+	 *      code**, and `MAX_REENCODES` never stopped a delta in its
 	 *      life.  A delta above the ceiling walked the ladder **all the way down**,
 	 *      and left only through the `break` (it fits) or through "not even at the bottom of the
 	 *      ladder".  ⚠ Meanwhile the startup line declared *"a DELTA is abandoned
@@ -4035,7 +4035,7 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 * ⭐ And the same contamination made the "KEY above the
 	 *   ceiling" line a liar: it printed it even for a frame born a delta.
 	 *
-	 * ⚠ The value is read AFTER `risali_qualita()` on purpose: if the climb has
+	 * ⚠ The value is read AFTER `raise_quality()` on purpose: if the climb has
 	 *   reopened the context, this frame **really is** a key, and the
 	 *   whole ladder is its due.
 	 *
@@ -4074,11 +4074,11 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *   IF THE CURE WERE WRONG, it would show like this:
 	 *     a) *"delta abandoned after 1 (or 2) encodings"* in the log ⇒ it is
 	 *        abandoned EARLIER, and that is a loss.  ⛔ I do not expect it: the threshold
-	 *        is `tentativo + 1 >= RICODIFICHE_MASSIME` and `chiave_chiesta` is
+	 *        is `attempt + 1 >= MAX_REENCODES` and `key_requested` is
 	 *        false **only** for a frame born a delta.
 	 *     b) *"delta abandoned"* and then the next frame is **not** a
 	 *        key ⇒ the client is left without a past.  ⛔ It cannot happen:
-	 *        every descent goes through `apri_contesto()`, which at `:2275` imposes the
+	 *        every descent goes through `open_context()`, which at `:2275` imposes the
 	 *        key — and if one day it removed that, THIS is the symptom to
 	 *        look for.
 	 *     c) *"delta abandoned"* repeating on every frame for seconds ⇒
@@ -4091,67 +4091,67 @@ static bool comprimi_comune(Codificatore *c, const uint8_t *pixel, uint32_t pass
 	 *     instead of being abandoned" — **will not come**: when the count
 	 *     bites, that frame has already broken the ceiling three times.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	const bool chiave_chiesta = c->prossimo_chiave;
+	const bool key_requested = c->next_key;
 
-	for (uint32_t tentativo = 0;; tentativo++) {
-		uint64_t us_conv = 0, us_carico = 0;
+	for (uint32_t attempt = 0;; attempt++) {
+		uint64_t us_conv = 0, load_us = 0;
 		/* ⭐ PHASE 19: the ONLY `if` between the two card routes — and it sits before
 		 *    the bytes boundary, like the `if` between memory and zero copy. */
-		if (c->strada == STRADA_VULKAN) {
-			if (!codifica_vulkan(c, pixel, passo, superficie, fuori))
+		if (c->route == ROUTE_VULKAN) {
+			if (!encoding_vulkan(c, pixel, step, surface, outside))
 				return false;
-			goto byte_pronti;
+			goto byte_ready;
 		}
-		bool pronto = superficie
-		                  ? prepara_dalla_scheda(c, superficie, &us_conv, &us_carico)
-		                  : prepara_fotogramma(c, pixel, passo, &us_conv, &us_carico);
-		if (!pronto)
+		bool ready = surface
+		                  ? prepare_from_card(c, surface, &us_conv, &load_us)
+		                  : prepare_frame(c, pixel, step, &us_conv, &load_us);
+		if (!ready)
 			return false;
-		fuori->us_conversione = us_conv;
-		fuori->us_caricamento = us_carico;
+		outside->convert_us = us_conv;
+		outside->upload_us = load_us;
 
-		uint64_t t0 = adesso_us();
+		uint64_t t0 = current_us();
 		{
 			/* ⭐ PHASE 18 — the card: one round, one wait, the bytes.  No
 			 *    EAGAIN by construction, no reordering by construction. */
-			const uint8_t *dati = NULL;
+			const uint8_t *data_v = NULL;
 			size_t byte = 0;
-			char errore[256] = { 0 };
-			if (!vadiretta_codifica(c->va, c->superficie_pronta, c->prossimo_chiave, &dati,
-			                        &byte, errore, sizeof errore)) {
-				registro_dice(REG_CODIFICA, "⛔ the card did not encode: %s", errore);
+			char failure[256] = { 0 };
+			if (!vadirect_encode(c->va, c->surface_ready, c->next_key, &data_v,
+			                        &byte, failure, sizeof failure)) {
+				log_says(LOG_ENCODING, "⛔ the card did not encode: %s", failure);
 				return false;
 			}
-			if (!metti_in_uscita(c, dati, byte))
+			if (!put_in_output(c, data_v, byte))
 				return false;
-			fuori->us_codifica = adesso_us() - t0;
-			fuori->trattenuto = false;
-			c->pacchetto_in_mano = true;
+			outside->encode_us = current_us() - t0;
+			outside->held = false;
+			c->packet_in_hand = true;
 		}
-byte_pronti:
-		/* ⛔ BOUNDARY — from here down we work on the BYTES in `c->uscita`. */
+byte_ready:
+		/* ⛔ BOUNDARY — from here down we work on the BYTES in `c->out_dir`. */
 
 		/* ───────────────────────────────────────────────────────────────────
 		 * ⛔ THE 16 MiB CEILING — `RCP.md` §6.2, and it binds WHOEVER SENDS. */
-		if ((uint32_t) c->uscita_byte > TETTO_FOTOGRAMMA) {
+		if ((uint32_t) c->output_byte > CAP_FRAME) {
 			/* ⭐ The size is read BEFORE throwing away the bytes, or the descent
 			 *    line would say zero: it is the proof that the descent is measured (I1). */
-			uint32_t prodotti = (uint32_t) c->uscita_byte;
+			uint32_t products = (uint32_t) c->output_byte;
 			/* ⚠ The ceiling in the message is PRINTED, not written by hand: a
 			 *   log line that said "16 MiB" while the constant says
 			 *   otherwise would send the hunt the wrong way. */
-			registro_dice(REG_CODIFICA,
+			log_says(LOG_ENCODING,
 			              "⛔ frame of %zu bytes, beyond the %u of the RCP.md §6.2 ceiling: "
 			              "RE-ENCODING at lower quality (attempt %u), not sending",
-			              c->uscita_byte, TETTO_FOTOGRAMMA, tentativo + 1);
-			c->pacchetto_in_mano = false;
+			              c->output_byte, CAP_FRAME, attempt + 1);
+			c->packet_in_hand = false;
 
 			/* ⛔ THE RUNG ON WHICH THE CEILING BIT is that of the FIRST
 			 *    attempt: the others are descents that do not yet have a measurement
 			 *    against them.  ⚠ It serves the climb, which on that one
 			 *    alone waits twice as long before setting foot on it again. */
-			if (tentativo == 0)
-				c->qualita_fallita = c->qualita_corrente;
+			if (attempt == 0)
+				c->failed_quality = c->current_quality;
 
 			/* ═══════════════════════════════════════════════════════════════
 			 * ⛔⛔ AND ON A **KEY** WE DO NOT GIVE UP — `RCP.md` §5.2, and
@@ -4162,7 +4162,7 @@ byte_pronti:
 			 * past**: it cannot paint anything, neither now nor later.
 			 *
 			 * ⛔ AND THE DEFECT WAS NOT "one lost frame": it was a SPIRAL.
-			 *    The client stays broken ⇒ sends `RICHIEDI_CHIAVE` ⇒ we redo
+			 *    The client stays broken ⇒ sends `REQUEST_KEY` ⇒ we redo
 			 *    the same three re-encodings ⇒ we fail again ⇒ it asks again.
 			 *    `[M]` (agent D, 22 Aug 2026) each attempt at 8K costs
 			 *    **91-108 ms in hardware** and **1.8-3.3 s in software** ⇒
@@ -4191,23 +4191,23 @@ byte_pronti:
 			 *   rung nobody ever tried, and the climb would have to
 			 *   climb it again at 120 frames per step.
 			 *
-			 * ⇒ A DELTA makes `RICODIFICHE_MASSIME` **encodings** in all, that is
-			 *   `RICODIFICHE_MASSIME - 1` descents, and each one of those is
+			 * ⇒ A DELTA makes `MAX_REENCODES` **encodings** in all, that is
+			 *   `MAX_REENCODES - 1` descents, and each one of those is
 			 *   **tried**.
 			 *
 			 * ⛔ AND ABANDONING HERE DOES NOT BREAK §5.2, and the reason is an invariant
-			 *    that can be checked: with `RICODIFICHE_MASSIME >= 2`
+			 *    that can be checked: with `MAX_REENCODES >= 2`
 			 *    the abandonment comes **after at least one reopening**, and every
-			 *    reopening leaves `c->prossimo_chiave = true` (`:2275`).  ⇒ The
+			 *    reopening leaves `c->next_key = true` (`:2275`).  ⇒ The
 			 *    next frame is a KEY, which is exactly what §5.2
 			 *    demands after an abandoned delta (*"the server MUST send a
-			 *    key as soon as it can"*).  ⚠ And if one day `RICODIFICHE_MASSIME`
+			 *    key as soon as it can"*).  ⚠ And if one day `MAX_REENCODES`
 			 *    dropped to 1, the abandonment would happen **without** a reopening: there
 			 *    the context is intact, the client still has its past, and it is
 			 *    fine all the same.  The two cases are covered, and they are the only two.
 			 * ═══════════════════════════════════════════════════════════════ */
-			if (!chiave_chiesta && tentativo + 1 >= RICODIFICHE_MASSIME) {
-				registro_dice(REG_CODIFICA,
+			if (!key_requested && attempt + 1 >= MAX_REENCODES) {
+				log_says(LOG_ENCODING,
 				              "⚠ delta abandoned after %u encodings (RICODIFICHE_"
 				              "MASSIME) and %u TRIED descents: at %s %d it is still above "
 				              "the %u bytes.  ⭐ It is not a key, so whoever is watching still "
@@ -4215,51 +4215,51 @@ byte_pronti:
 				              "a KEY anyway (§5.2), because the descents have "
 				              "reopened the context.  ⛔ We do not descend another "
 				              "rung: it would be applied and never tried",
-				              tentativo + 1, tentativo,
-				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
-				              c->qualita_corrente, TETTO_FOTOGRAMMA);
+				              attempt + 1, attempt,
+				              c->current_mode == ENCODER_QUALITY_QP ? "QP" : "CRF",
+				              c->current_quality, CAP_FRAME);
 				return false;
 			}
-			if (!abbassa_qualita(c, prodotti)) {
+			if (!lower_quality(c, products)) {
 				/* ⛔ The bottom of the ladder: here it is not "I give up because of a count
 				 *    of attempts", it is "there is nothing left to lower".  It is
 				 *    the only case in which a key does not leave, and the line says
 				 *    WHICH of the two it is. */
-				registro_dice(REG_CODIFICA,
+				log_says(LOG_ENCODING,
 				              "⛔⛔ not even at the bottom of the ladder (%s %d) does the frame fit "
 				              "under the %u bytes: it does NOT leave.  ⚠ And this is NOT \"I "
 				              "gave up after %u attempts\": it is \"there is nothing left to "
 				              "lower\"",
-				              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
-				              c->qualita_corrente, TETTO_FOTOGRAMMA, tentativo + 1);
+				              c->current_mode == ENCODER_QUALITY_QP ? "QP" : "CRF",
+				              c->current_quality, CAP_FRAME, attempt + 1);
 				return false;
 			}
 			/* ⚠ AND THE RETRY IS A KEY EVEN IF THE FRAME WAS A DELTA:
-			 *   `apri_contesto()` has thrown away the references, and a delta without
+			 *   `open_context()` has thrown away the references, and a delta without
 			 *   a past is decoded by nobody.  ⛔ The line says so instead of
 			 *   calling both of them "KEY", which is what it did as long as the
-			 *   count read `c->prossimo_chiave` contaminated by the reopening. */
+			 *   count read `c->next_key` contaminated by the reopening. */
 			/* ⚠ The ceiling of encodings is PRINTED from the constant, not written
 			 *   by hand: it is the same rule as the ladder line at startup. */
-			char quante[72];
-			if (chiave_chiesta)
-				snprintf(quante, sizeof(quante),
+			char how_many_n[72];
+			if (key_requested)
+				snprintf(how_many_n, sizeof(how_many_n),
 				         "as many as the ladder has — a key is not abandoned");
 			else
-				snprintf(quante, sizeof(quante), "%d (RICODIFICHE_MASSIME)",
-				         RICODIFICHE_MASSIME);
-			registro_dice(REG_CODIFICA,
+				snprintf(how_many_n, sizeof(how_many_n), "%d (MAX_REENCODES)",
+				         MAX_REENCODES);
+			log_says(LOG_ENCODING,
 			              "⚠ %s above the ceiling: going down to %s %d and RETRYING (encoding %u of "
 			              "%s).  ⛔ A key is not abandoned (§5.2): the picture "
 			              "will come out uglier, and this line is the declaration.  "
 			              "⭐ `[M]` at the bottom of the ladder (51) an 8K key is worth 1.771 "
 			              "MiB, that is 10.6 %% of the ceiling",
-			              chiave_chiesta ? "KEY"
+			              key_requested ? "KEY"
 			                             : "delta (and the retry will be a KEY: the "
 			                               "context is new and no longer has a past)",
-			              c->modo_corrente == CODIFICATORE_QUALITA_QP ? "QP" : "CRF",
-			              c->qualita_corrente, tentativo + 2, quante);
-			fuori->ricodifiche = tentativo + 1;
+			              c->current_mode == ENCODER_QUALITY_QP ? "QP" : "CRF",
+			              c->current_quality, attempt + 2, how_many_n);
+			outside->reencodes = attempt + 1;
 			continue;
 		}
 		break;
@@ -4278,34 +4278,34 @@ byte_pronti:
 	 *   quantity that decides is "at this quality the frame fits", and it does not
 	 *   depend on what the sender then does with it.
 	 */
-	if ((uint32_t) c->uscita_byte <= RISALITA_MARGINE) {
-		if (c->sotto_margine < UINT32_MAX)
-			c->sotto_margine++;
+	if ((uint32_t) c->output_byte <= RISE_MARGIN) {
+		if (c->below_margin < UINT32_MAX)
+			c->below_margin++;
 		/* The climb held up to the requested working point: the next
 		 * bite is not its fault, and the wait does not double. */
-		if (c->risalito_da_poco && c->qualita_corrente <= c->richiesta.qualita
-		    && c->sotto_margine >= c->risalita_attesa)
-			c->risalito_da_poco = false;
+		if (c->recently_risen && c->current_quality <= c->request.quality
+		    && c->below_margin >= c->rise_wait)
+			c->recently_risen = false;
 	} else {
-		c->sotto_margine = 0;
+		c->below_margin = 0;
 	}
 
-	bool chiave = false;
-	if (!cornice_al_suo_posto(c, chiave_chiesta || c->prossimo_chiave) ||
-	    !forma_va_bene(c, c->uscita, c->uscita_byte, &chiave)) {
-		c->pacchetto_in_mano = false;
+	bool key_id = false;
+	if (!border_in_place(c, key_requested || c->next_key) ||
+	    !bitstream_ok(c, c->out_dir, c->output_byte, &key_id)) {
+		c->packet_in_hand = false;
 		return false;
 	}
 
-	/* ⛔ `RCP.md` §5.2: the first frame after `SESSIONE`, and the first after a
+	/* ⛔ `RCP.md` §5.2: the first frame after `SESSION`, and the first after a
 	 *    canvas change, MUST be a key.  If we had asked for it and it is
 	 *    not, it is not sent: a delta marked key is what Chromium
 	 *    discovers by rereading the bitstream, and our label does not save it. */
-	if (c->prossimo_chiave && !chiave) {
-		registro_dice(REG_CODIFICA,
+	if (c->next_key && !key_id) {
+		log_says(LOG_ENCODING,
 		              "⛔ a KEY had been requested and the encoder produced a "
 		              "delta: not sending (RCP.md §5.2)");
-		c->pacchetto_in_mano = false;
+		c->packet_in_hand = false;
 		return false;
 	}
 
@@ -4332,135 +4332,135 @@ byte_pronti:
 	 *   the encoder produced along the way.
 	 * ═══════════════════════════════════════════════════════════════════════ */
 	{
-		uint64_t adesso = adesso_us();
-		if (!c->banda_t0_us)
-			c->banda_t0_us = adesso;
-		c->banda_byte += (uint64_t) c->uscita_byte;
-		c->banda_fotogrammi++;
-		if ((uint32_t) c->uscita_byte > c->banda_massimo)
-			c->banda_massimo = (uint32_t) c->uscita_byte;
-		uint64_t durata = adesso - c->banda_t0_us;
-		if (durata >= BANDA_FINESTRA_US) {
-			uint64_t kbit = c->banda_byte * 8u * 1000u / durata; /* µs ⇒ kbit/s */
+		uint64_t clock = current_us();
+		if (!c->bandwidth_t0_us)
+			c->bandwidth_t0_us = clock;
+		c->bandwidth_byte += (uint64_t) c->output_byte;
+		c->bandwidth_frames++;
+		if ((uint32_t) c->output_byte > c->bandwidth_max)
+			c->bandwidth_max = (uint32_t) c->output_byte;
+		uint64_t duration = clock - c->bandwidth_t0_us;
+		if (duration >= BANDWIDTH_WINDOW_US) {
+			uint64_t kbit = c->bandwidth_byte * 8u * 1000u / duration; /* µs ⇒ kbit/s */
 			char quota[128];
-			if (tetto_pavimento_mbit)
+			if (cap_floor_mbit)
 				snprintf(quota, sizeof(quota),
 				         " · CEILING ON: wire %" PRId64 " kbit/s, it uses %u %% of it",
-				         tetto_filo() / 1000,
-				         (unsigned) (kbit * 100u / (uint64_t) (tetto_filo() / 1000)));
+				         wire_cap() / 1000,
+				         (unsigned) (kbit * 100u / (uint64_t) (wire_cap() / 1000)));
 			else
 				snprintf(quota, sizeof(quota),
 				         " · ceiling OFF (QP %d fixed): ⛔ nobody tells it no",
-				         c->qualita_corrente);
-			registro_dice(REG_CODIFICA,
+				         c->current_quality);
+			log_says(LOG_ENCODING,
 			              "video bandwidth: %" PRIu64 " kbit/s over %" PRIu64 " ms — %u "
 			              "frames (%" PRIu64 " bytes, the biggest %u), mode %s%s.  "
 			              "⭐ It is the THIRD witness: what the driver REALLY did, "
 			              "not what it said",
-			              kbit, durata / 1000u, c->banda_fotogrammi, c->banda_byte,
-			              c->banda_massimo, modo_bitrate_voluto().nome, quota);
-			c->banda_t0_us = adesso;
-			c->banda_byte = 0;
-			c->banda_fotogrammi = 0;
-			c->banda_massimo = 0;
+			              kbit, duration / 1000u, c->bandwidth_frames, c->bandwidth_byte,
+			              c->bandwidth_max, wanted_bitrate_mode().label_name, quota);
+			c->bandwidth_t0_us = clock;
+			c->bandwidth_byte = 0;
+			c->bandwidth_frames = 0;
+			c->bandwidth_max = 0;
 		}
 	}
 
-	if (!c->prima_codifica_fatta) {
-		c->prima_codifica_fatta = true;
-		registro_dice(REG_CODIFICA,
+	if (!c->first_encode_done) {
+		c->first_encode_done = true;
+		log_says(LOG_ENCODING,
 		              "first frame: %s · %zu bytes · key %s · stream: %s, %d bits, "
 		              "level %d, %ux%u · conversion %" PRIu64 " µs, upload "
 		              "%" PRIu64 " µs, encoding %" PRIu64 " µs · %s",
-		              c->conf.stringa_codec[0] ? c->conf.stringa_codec : "(not read)",
-		              c->uscita_byte, chiave ? "yes" : "no",
-		              c->conf.letto_dal_flusso ? "read" : "⛔ NOT read",
-		              c->conf.profondita_flusso, c->conf.livello_flusso,
-		              c->conf.larghezza_flusso, c->conf.altezza_flusso,
-		              fuori->us_conversione, fuori->us_caricamento, fuori->us_codifica,
-		              c->nome);
-		if (c->conf.promozione_8_a_10)
-			registro_dice(REG_CODIFICA,
+		              c->conf.codec_string[0] ? c->conf.codec_string : "(not read)",
+		              c->output_byte, key_id ? "yes" : "no",
+		              c->conf.read_from_stream ? "read" : "⛔ NOT read",
+		              c->conf.stream_depth, c->conf.stream_level,
+		              c->conf.stream_width, c->conf.stream_height,
+		              outside->convert_us, outside->upload_us, outside->encode_us,
+		              c->label_name);
+		if (c->conf.promotion_8_to_10)
+			log_says(LOG_ENCODING,
 			              "⚠ and the 10 bits are EIGHT PROMOTED: GNOME's capture delivers "
 			              "BGRx [M], and the stream label will say «Main 10» anyway");
 	}
 
 	/* ═══════════════════════════════════════════════════════════════════════
-	 * ⛔⛔ THIS POINTER SITS **INSIDE** THE PACKET, AND `chiudi_contesto()`
-	 *      **FREES** THE ENCODER'S BYTES (`vadiretta_chiudi`).
+	 * ⛔⛔ THIS POINTER SITS **INSIDE** THE PACKET, AND `close_context()`
+	 *      **FREES** THE ENCODER'S BYTES (`vadirect_close`).
 	 *
 	 * ⚠ It is the third time in one day that someone trips over it, so the proof
 	 *   is written here instead of being redone from memory.  From here until
-	 *   `codificatore_rilascia()` the caller holds `fuori->dati`; in the same
-	 *   interval `chiudi_contesto()` **must not** run.  The places it can
+	 *   `encoder_release()` the caller holds `outside->data_v`; in the same
+	 *   interval `close_context()` **must not** run.  The places it can
 	 *   start from are SEVEN, and each has its guard:
 	 *
 	 *     `:2125` `:2140` `:2149` `:2265` `:2272`  the error exits of
-	 *         `apri_contesto()`.  ⛔ Not reachable with a packet in hand
-	 *         by construction: `apri_contesto()` is called only **right after**
-	 *         a `chiudi_contesto()` — or on a newly born encoder — and at
+	 *         `open_context()`.  ⛔ Not reachable with a packet in hand
+	 *         by construction: `open_context()` is called only **right after**
+	 *         a `close_context()` — or on a newly born encoder — and at
 	 *         `:2125`-`:2149` the packet has not even been allocated (it is at
 	 *         `:2270`, at the bottom).
-	 *     `:2681` `codificatore_libera()` — guard at `:2668`: it does the `unref`
-	 *         first.  ⚠ After `libera()` the caller's `fuori` is worth nothing
+	 *     `:2681` `encoder_free()` — guard at `:2668`: it does the `unref`
+	 *         first.  ⚠ After `free_fn()` the caller's `outside` is worth nothing
 	 *         anyway, and that is the contract of `codificatore.h:439`.
-	 *     `:2760` `codificatore_ridimensiona()` — guard at `:2745`, added on
+	 *     `:2760` `encoder_resize()` — guard at `:2745`, added on
 	 *         23 Aug 2026: it was **the only one without**, and it refuses instead of
 	 *         freeing from under the reader's feet.
-	 *     `:3445` `abbassa_qualita()` — called from one place only, the re-encoding
-	 *         loop above, and there `pacchetto_in_mano = false` sits
+	 *     `:3445` `lower_quality()` — called from one place only, the re-encoding
+	 *         loop above, and there `packet_in_hand = false` sits
 	 *         **before** the descent, and
-	 *         `fuori->dati` has not been written yet.
-	 *     `:3536` `:3546` `risali_qualita()` — guard at `:3511`, and it is written
+	 *         `outside->data_v` has not been written yet.
+	 *     `:3536` `:3546` `raise_quality()` — guard at `:3511`, and it is written
 	 *         in its box: it is precisely the reason the climb lives
 	 *         **at the entry** of the next frame and not after delivery.
 	 *     `:3626` the reopening after the drain — guard at `:3617`, which refuses
 	 *         if the previous frame was not released.
 	 *
 	 * ⇒ It is not reachable, and now it is not **by construction** instead of
-	 *   by luck.  ⚠ Whoever adds an eighth `chiudi_contesto()` must also add
+	 *   by luck.  ⚠ Whoever adds an eighth `close_context()` must also add
 	 *   the line above, or they take the proof away from everyone.
 	 * ═══════════════════════════════════════════════════════════════════════ */
-	fuori->dati = c->uscita;
-	fuori->byte = c->uscita_byte;
-	fuori->chiave = chiave;
-	c->prossimo_chiave = false;
-	c->numero++;
+	outside->data_v = c->out_dir;
+	outside->byte = c->output_byte;
+	outside->key_id = key_id;
+	c->next_key = false;
+	c->nr++;
 	return true;
 }
 
-bool codificatore_comprimi(Codificatore *c, const uint8_t *pixel, uint32_t passo,
-                           CodificatoreFotogramma *fuori)
+bool encoder_compress(Encoder *c, const uint8_t *pixel, uint32_t step,
+                           EncoderFrame *outside)
 {
 	if (!pixel) {
-		registro_dice(REG_CODIFICA, "⛔ no pixels to compress");
+		log_says(LOG_ENCODING, "⛔ no pixels to compress");
 		return false;
 	}
-	return comprimi_comune(c, pixel, passo, NULL, fuori);
+	return compress_common(c, pixel, step, NULL, outside);
 }
 
-bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie *superficie,
-                                  CodificatoreFotogramma *fuori)
+bool encoder_compress_card(Encoder *c, const EncoderSurface *surface,
+                                  EncoderFrame *outside)
 {
-	if (!c || !superficie)
+	if (!c || !surface)
 		return false;
 	/* ⛔ Without the card open this route does not exist (phase 19: an
 	 *    encoder that was born is always on the card; the guard stays so as not to let
 	 *    a half-born encoder through silently). */
 	if (!c->hardware) {
-		registro_dice(REG_CODIFICA,
+		log_says(LOG_ENCODING,
 		              "⛔⛔ ZERO COPY requested on «%s», which has no card open: "
 		              "nothing is imported",
-		              c->nome_componente);
+		              c->component_name);
 		return false;
 	}
-	if (superficie->fd < 0 || !superficie->larghezza || !superficie->altezza
-	    || !superficie->stride || !superficie->formato_drm) {
-		registro_dice(REG_CODIFICA,
+	if (surface->fd < 0 || !surface->width_px || !surface->height_px
+	    || !surface->stride || !surface->format_drm) {
+		log_says(LOG_ENCODING,
 		              "⛔ incomplete descriptor (fd %d, %ux%u, stride %u, format 0x%08x): "
 		              "no half imports",
-		              superficie->fd, superficie->larghezza, superficie->altezza,
-		              superficie->stride, superficie->formato_drm);
+		              surface->fd, surface->width_px, surface->height_px,
+		              surface->stride, surface->format_drm);
 		return false;
 	}
 	/* ⛔⛔ AND THE STRIDE MUST BE IMPORTABLE — see the box in
@@ -4468,53 +4468,53 @@ bool codificatore_comprimi_scheda(Codificatore *c, const CodificatoreSuperficie 
 	 *      beforehand: this is the LAST line of defence, and it is needed because the defect
 	 *      it stops **gives no error at all** — it gives a slanted picture that
 	 *      passes every check on the milliseconds and every check on the colour. */
-	if (!codificatore_stride_importabile(superficie->stride)) {
-		registro_dice(REG_CODIFICA,
+	if (!encoder_stride_importable(surface->stride)) {
+		log_says(LOG_ENCODING,
 		              "⛔⛔ stride %u: it is NOT a multiple of %u, and the driver importing the "
 		              "DMA-BUF would read the rows at a stride of its own — `[M]` 22 Aug 2026 "
 		              "the mark can no longer be read on 0 frames out of 869, while the colour "
 		              "averages stay identical within 0.17 levels out of 255.  ⇒ NOT "
 		              "compressing: better the copy than a silently wrong picture",
-		              superficie->stride, ALLINEAMENTO_SCHEDA);
+		              surface->stride, CARD_ALIGNMENT);
 		return false;
 	}
 	/* ⛔ And the descriptor's size must be the one the encoder
-	 *    is open for: `comprimi_comune` does not look at it — it receives a surface and
+	 *    is open for: `compress_common` does not look at it — it receives a surface and
 	 *    trusts it.  ⚠ Feeding an encoder opened at 1920 with a 2560
 	 *    surface does not protest: it crops or pads, and the defect shows only
-	 *    in the picture (it is the same note as in `codificatore_ridimensiona`). */
-	if (superficie->larghezza != c->richiesta.larghezza
-	    || superficie->altezza != c->richiesta.altezza) {
-		registro_dice(REG_CODIFICA,
+	 *    in the picture (it is the same note as in `encoder_resize`). */
+	if (surface->width_px != c->request.width_px
+	    || surface->height_px != c->request.height_px) {
+		log_says(LOG_ENCODING,
 		              "⛔ the surface is %ux%u and the encoder is open at %ux%u: we do "
 		              "not compress a picture that is not its own",
-		              superficie->larghezza, superficie->altezza, c->richiesta.larghezza,
-		              c->richiesta.altezza);
+		              surface->width_px, surface->height_px, c->request.width_px,
+		              c->request.height_px);
 		return false;
 	}
-	return comprimi_comune(c, NULL, 0, superficie, fuori);
+	return compress_common(c, NULL, 0, surface, outside);
 }
 
-bool codificatore_in_hardware(const Codificatore *c)
+bool encoder_in_hardware(const Encoder *c)
 {
 	return c ? c->hardware : false;
 }
 
-uint32_t codificatore_allineamento_scheda(void)
+uint32_t encoder_card_alignment(void)
 {
-	return ALLINEAMENTO_SCHEDA;
+	return CARD_ALIGNMENT;
 }
 
-bool codificatore_stride_importabile(uint32_t stride)
+bool encoder_stride_importable(uint32_t stride)
 {
-	return stride != 0 && (stride % ALLINEAMENTO_SCHEDA) == 0;
+	return stride != 0 && (stride % CARD_ALIGNMENT) == 0;
 }
 
-void codificatore_rilascia(Codificatore *c)
+void encoder_release(Encoder *c)
 {
-	if (!c || !c->pacchetto_in_mano)
+	if (!c || !c->packet_in_hand)
 		return;
-	/* ⭐ Phase 18: the bytes are ours (`c->uscita`) and stay valid; the
+	/* ⭐ Phase 18: the bytes are ours (`c->out_dir`) and stay valid; the
 	 *    release only says that the caller has finished reading them. */
-	c->pacchetto_in_mano = false;
+	c->packet_in_hand = false;
 }

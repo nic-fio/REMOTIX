@@ -8,7 +8,7 @@
 #    and written in ITS log (R40).
 #
 # ⚠ The PRODUCT still enrols by itself whoever arrives at the first connection
-#   (`figlio.c`, iscrivi_ai_gruppi_della_scheda, DECISIONI.md §7.21), and
+#   (`figlio.c`, enroll_in_card_groups, DECISIONI.md §7.21), and
 #   writes it only in the session log: with §10.12 that enrolment must be
 #   moved into the engine's log, or uninstallation does not know about it.
 
@@ -44,7 +44,7 @@ post_remove() {
 	# ⭐ R6: the state the SERVICE created by itself (certificates, ban) goes
 	#    away with the package.  /etc/remotix/utenti-negati and /etc/pam.d/remotix are
 	#    handled by pacman (backup=: with -n they vanish, without they stay as .pacsave).
-	rm -rf /var/lib/remotix/certificati
+	rm -rf /var/lib/remotix/certificates
 	rm -f /var/lib/remotix/ban
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null

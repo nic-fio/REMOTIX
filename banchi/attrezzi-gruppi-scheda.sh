@@ -3,9 +3,9 @@
 # attrezzi-gruppi-scheda.sh — ⭐ THE ONLY PLACE where a bench puts a
 # tenant into the card's groups, and ⭐ THE ONLY ONE where it VERIFIES they are there.
 #
-#   . banchi/attrezzi-gruppi-scheda.sh      # and then: gruppi_scheda_dai_a USER
+#   . banchi/attrezzi-gruppi-scheda.sh      # and then: card_groups_give_to USER
 #   bash banchi/attrezzi-gruppi-scheda.sh USER        # as a program
-#   bash banchi/attrezzi-gruppi-scheda.sh --testo       # ⭐ it PRINTS itself, for whoever
+#   bash banchi/attrezzi-gruppi-scheda.sh --body_text       # ⭐ it PRINTS itself, for whoever
 #                                                       #   runs elsewhere
 #
 # ---------------------------------------------------------------------------
@@ -47,11 +47,11 @@
 #   machine where the node belongs to another group.
 # ---------------------------------------------------------------------------
 
-# ═══ CORPO-INIZIO ═══  ⛔ From here to CORPO-FINE is what `--testo` prints:
+# ═══ CORPO-INIZIO ═══  ⛔ From here to CORPO-FINE is what `--body_text` prints:
 #     nothing in here must depend on this file or on this machine.
 
 # The gids of the card's nodes, one per line, without duplicates.
-gruppi_scheda_gid() {
+card_groups_gid() {
 	_gs_n=; _gs_g=
 	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$_gs_n" ] || continue
@@ -61,10 +61,10 @@ gruppi_scheda_gid() {
 }
 
 # The name of a gid, or empty if /etc/group has none.
-gruppi_scheda_nome() { getent group "$1" 2>/dev/null | cut -d: -f1; }
+card_groups_name() { getent group "$1" 2>/dev/null | cut -d: -f1; }
 
 # Which node has that gid — needed only to write a message that makes sense.
-gruppi_scheda_nodo() {
+card_groups_node() {
 	_gs_n=
 	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$_gs_n" ] || continue
@@ -74,7 +74,7 @@ gruppi_scheda_nodo() {
 }
 
 # Is the tenant in the group of that gid?  ⭐ The NUMBERS are compared.
-gruppi_scheda_ci_sta() {
+card_groups_has() {
 	_gs_x=
 	for _gs_x in $(id -G "$1" 2>/dev/null); do
 		[ "$_gs_x" = "$2" ] && return 0
@@ -83,10 +83,10 @@ gruppi_scheda_ci_sta() {
 }
 
 # The gids of the nodes that the tenant is MISSING, separated by spaces.
-gruppi_scheda_mancanti() {
+card_groups_missing() {
 	_gs_g=; _gs_m=
-	for _gs_g in $(gruppi_scheda_gid); do
-		gruppi_scheda_ci_sta "$1" "$_gs_g" || _gs_m="${_gs_m:+$_gs_m }$_gs_g"
+	for _gs_g in $(card_groups_gid); do
+		card_groups_has "$1" "$_gs_g" || _gs_m="${_gs_m:+$_gs_m }$_gs_g"
 	done
 	printf '%s' "$_gs_m"
 }
@@ -102,10 +102,10 @@ gruppi_scheda_mancanti() {
 # ⛔ It does not shut anything down by itself: `loginctl terminate-user` also takes down the
 #    server's child, and in phase 10/11 tenants are SHARED among benches
 #    that are measuring (I2).  ⇒ it SAYS so, and stops.
-gruppi_scheda_dai_a() {
+card_groups_give_to() {
 	_gs_u=$1
-	_gs_pref=${GRUPPI_SCHEDA_PREFISSO:-    }
-	_gs_gid=$(gruppi_scheda_gid)
+	_gs_pref=${CARD_GROUPS_PREFIX:-    }
+	_gs_gid=$(card_groups_gid)
 
 	if [ -z "$_gs_gid" ]; then
 		printf '%s\033[1;31m⛔\033[0m  no `cardN`/`renderDN` node in /dev/dri: on this\n' "$_gs_pref"
@@ -116,39 +116,39 @@ gruppi_scheda_dai_a() {
 	fi
 
 	# 1. The names. ⛔ A gid without a name is not invented and not created from here.
-	_gs_nomi=
+	_gs_names=
 	for _gs_g in $_gs_gid; do
-		_gs_nome=$(gruppi_scheda_nome "$_gs_g")
-		if [ -z "$_gs_nome" ]; then
+		_gs_name=$(card_groups_name "$_gs_g")
+		if [ -z "$_gs_name" ]; then
 			printf '%s\033[1;31m⛔⛔\033[0m gid %s (of %s) has NO name in /etc/group here:\n' \
-				"$_gs_pref" "$_gs_g" "$(gruppi_scheda_nodo "$_gs_g")"
+				"$_gs_pref" "$_gs_g" "$(card_groups_node "$_gs_g")"
 			printf '%s    the tenant «%s» cannot join it, and their session WILL BE BORN\n' "$_gs_pref" "$_gs_u"
-			printf '%s    BLIND.  ⭐ The cure, as root: `groupadd -g %s scheda%s`\n' "$_gs_pref" "$_gs_g" "$_gs_g"
+			printf '%s    BLIND.  ⭐ The cure, as root: `groupadd -g %s gpu_card%s`\n' "$_gs_pref" "$_gs_g" "$_gs_g"
 			return 5
 		fi
-		case " $_gs_nomi " in *" $_gs_nome "*) continue ;; esac
-		_gs_nomi="${_gs_nomi:+$_gs_nomi }$_gs_nome"
+		case " $_gs_names " in *" $_gs_name "*) continue ;; esac
+		_gs_names="${_gs_names:+$_gs_names }$_gs_name"
 	done
 
 	# 2. What is missing BEFORE — needed to know whether we are changing something.
-	_gs_prima=$(gruppi_scheda_mancanti "$_gs_u")
+	_gs_before=$(card_groups_missing "$_gs_u")
 
-	if [ -n "$_gs_prima" ]; then
+	if [ -n "$_gs_before" ]; then
 		# ⚠ `usermod -aG` wants the names separated by commas.
-		_gs_virgole=$(printf '%s' "$_gs_nomi" | tr ' ' ',')
-		usermod -aG "$_gs_virgole" "$_gs_u" || {
+		_gs_commas=$(printf '%s' "$_gs_names" | tr ' ' ',')
+		usermod -aG "$_gs_commas" "$_gs_u" || {
 			printf '%s\033[1;31m⛔\033[0m  `usermod -aG %s %s` did NOT succeed\n' \
-				"$_gs_pref" "$_gs_virgole" "$_gs_u"
+				"$_gs_pref" "$_gs_commas" "$_gs_u"
 			return 3; }
 	fi
 
 	# 3. ⭐ READ IT BACK — E1: written is not in force.
-	_gs_dopo=$(gruppi_scheda_mancanti "$_gs_u")
-	if [ -n "$_gs_dopo" ]; then
-		for _gs_g in $_gs_dopo; do
+	_gs_after=$(card_groups_missing "$_gs_u")
+	if [ -n "$_gs_after" ]; then
+		for _gs_g in $_gs_after; do
 			printf '%s\033[1;31m⛔⛔\033[0m «%s» IS NOT IN THE CARD GROUP «%s» (gid %s, the group\n' \
-				"$_gs_pref" "$_gs_u" "$(gruppi_scheda_nome "$_gs_g")" "$_gs_g"
-			printf '%s    of %s)\n' "$_gs_pref" "$(gruppi_scheda_nodo "$_gs_g")"
+				"$_gs_pref" "$_gs_u" "$(card_groups_name "$_gs_g")" "$_gs_g"
+			printf '%s    of %s)\n' "$_gs_pref" "$(card_groups_node "$_gs_g")"
 		done
 		printf '%s    ⛔ ITS SESSION WOULD BE BORN AND SEE NOTHING: zero frames,\n' "$_gs_pref"
 		printf '%s    no window opens, and the loop goes round and round between «BLACK: ZERO MONITORS»\n' "$_gs_pref"
@@ -157,15 +157,15 @@ gruppi_scheda_dai_a() {
 		return 3
 	fi
 
-	if [ -z "$_gs_prima" ]; then
+	if [ -z "$_gs_before" ]; then
 		printf '%s\033[1;32mOK\033[0m  ⭐ «%s» was already in the groups of the card nodes (%s): their\n' \
-			"$_gs_pref" "$_gs_u" "$_gs_nomi"
+			"$_gs_pref" "$_gs_u" "$_gs_names"
 		printf '%s    session can see in hardware\n' "$_gs_pref"
 		return 0
 	fi
 
 	printf '%s\033[1;32mOK\033[0m  ⭐ «%s» put into the groups READ FROM THE NODES: %s (gid %s)\n' \
-		"$_gs_pref" "$_gs_u" "$_gs_nomi" "$(printf '%s' "$_gs_gid" | tr '\n' ' ')"
+		"$_gs_pref" "$_gs_u" "$_gs_names" "$(printf '%s' "$_gs_gid" | tr '\n' ' ')"
 
 	# 4. ⛔⛔ WRITTEN YES, IN FORCE NO — and this is the misleading case.
 	#    The groups reach the compositor only when the user manager is
@@ -186,14 +186,14 @@ gruppi_scheda_dai_a() {
 # ═══ CORPO-FINE ═══
 
 # ---------------------------------------------------------------------------
-# ⭐ AS A PROGRAM — and ⭐ `--testo`, which is what keeps the cure in ONE
+# ⭐ AS A PROGRAM — and ⭐ `--body_text`, which is what keeps the cure in ONE
 #    place even for whoever cannot `.` this file:
 #
 #   · `banchi/attrezzi-utenti.sh` sends the commands INSIDE the chroot with
 #     `enter.sh --root "…"`, and in there this file does not exist;
 #   · `banchi/07-b63-terreno.sh` ships a script to the test machine.
 #
-#   ⚠ The text goes into an already expanded string (`"$TESTO"`, `$(cat …)`):
+#   ⚠ The text goes into an already expanded string (`"$TEXT"`, `$(cat …)`):
 #     the shell does NOT re-expand the result of an expansion, so the `$`s that
 #     are in here arrive over there intact.
 # ---------------------------------------------------------------------------
@@ -203,15 +203,15 @@ gruppi_scheda_dai_a() {
 #   called itself with an argument.
 if [ "$(basename "$0")" = "attrezzi-gruppi-scheda.sh" ]; then
 	case "${1:-}" in
-	--testo)
+	--body_text)
 		sed -n '/^# ═══ CORPO-INIZIO/,/^# ═══ CORPO-FINE/p' "$0"
 		exit 0 ;;
 	"")
-		printf 'usage: bash %s USER   |   bash %s --testo\n' "$0" "$0"
+		printf 'usage: bash %s USER   |   bash %s --body_text\n' "$0" "$0"
 		exit 2 ;;
 	*)
 		[ "$(id -u)" -eq 0 ] || { printf '    ⛔ must be run AS ROOT\n'; exit 2; }
-		gruppi_scheda_dai_a "$1"
+		card_groups_give_to "$1"
 		exit $? ;;
 	esac
 fi

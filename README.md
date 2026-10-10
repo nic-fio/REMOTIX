@@ -10,7 +10,7 @@
 > frozen: 329 PASS out of 329 and 328 faults seen out of 328** (binary `b1443a0b`, page `942f2873`).
 >
 > ⇒ Everything in `fasi/15-suite-funzionale.md`; the report in `banchi/15-suite/rapporto-giro2.html`;
-> the suite is rerun with `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`.
+> the suite is rerun with `bash banchi/11-scatole/11-gancio.sh run --family suite`.
 > ⇒ The next is **phase 16** (stress and capacity).
 
 > # ⏸ THE PROJECT IS ON PAUSE — since 27 Aug 2026
@@ -28,7 +28,7 @@
 > ⭐ **49 grafted faults out of 49 caught**.
 >
 > ⛔ **The three reds are the same red**: `C1` on kde, xfce and lxqt — the product **can start only
-> GNOME** (`src/sessione.c` · `scrivi_dropin()`). ⇒ **It is not a defect to repair: it is the mandate of phase 12.**
+> GNOME** (`src/sessione.c` · `write_dropin()`). ⇒ **It is not a defect to repair: it is the mandate of phase 12.**
 > The day `C1(kde)` turns green, KDE is really served.
 >
 > ## ⭐ The first thing to do when coming back
@@ -36,8 +36,8 @@
 > ⚠ The test machine has its root **in RAM**: a restart takes everything away. ⇒ In this order:
 >
 > 1. put back the ssh key and **provision** the machine (`src/provisiona.sh`);
-> 2. switch the four boxes back on: `bash banchi/11-scatole/11-accendi.sh accendi <gnome|kde|xfce|lxqt>`,
->    then `prodotto` and `server` for each;
+> 2. switch the four boxes back on: `bash banchi/11-scatole/11-accendi.sh turn_on <gnome|kde|xfce|lxqt>`,
+>    then `product` and `server` for each;
 > 3. ⭐ **run the net BEFORE touching anything**:
 >    `bash banchi/11-scatole/11-gancio.sh gira --famiglia tutto`.
 >    ⛔ If the result is not «58 green, 3 red, 49 faults out of 49», **something changed underneath**, and
@@ -217,11 +217,11 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | cure | default | turned off with |
 > |---|---|---|
-> | audio silence | **on** | `--niente-audio-silenzio` |
-> | threshold on the video queue | **100 ms** | `--sgombra-soglia-ms 0` |
-> | rate regulator | **on** | `--niente-ritmo-adattivo` |
-> | dead line | **on** (stall 5 s · silence 10 s) | `--niente-linea-morta` |
-> | eviction of the ghost | **15 000 ms** | `--sfratto-ms 0` |
+> | audio silence | **on** | `--no-audio-silence` |
+> | threshold on the video queue | **100 ms** | `--clear-threshold-ms 0` |
+> | rate regulator | **on** | `--no-adaptive-rate` |
+> | dead line | **on** (stall 5 s · silence 10 s) | `--no-dead-line` |
+> | eviction of the ghost | **15 000 ms** | `--eviction-ms 0` |
 >
 > **The test that could have made us withdraw everything is green**: on a healthy line, with the defaults, the same
 > frames as with the cures off, zero keyframes in both. ⭐ It is the wound for which v1
@@ -344,15 +344,15 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | ⛔⭐ **and `quiche` does not reach WebTransport from C** | it declares **4** settings on the wire and **neither of the two WebTransport ones**. `h3::Config::set_additional_settings` **exists in Rust and not in the FFI**, and the trick used on `ngtcp2` is not there: a C application never sees those bytes. ⇒ **§6.4 is closed** |
 > | ⭐ **the arbiter does not fall** | `aioquic` 1.2.0 carries WebTransport ⇒ B9's **test client** is possible. ⚠ But it speaks **draft 02**, and the browsers **07**: the server sends both declarations, or half the tools would say yes for the wrong reason |
 >
-> | ⭐⭐ **RCP speaks, and the arbiter confirms it** | **B3**: `CIAO`→`ECCOMI`→`CREDENZIALI` (PAM)→`AMMESSO`→`ATTACCA`→`SESSIONE`, on **two connections** — and ⛔ **the traces are declared conformant by B4's validator**, a third program written by reading only `RCP.md`. The **fixed second** of §4.4-bis measured on the wire |
+> | ⭐⭐ **RCP speaks, and the arbiter confirms it** | **B3**: `HELLO`→`HERE_I_AM`→`CREDENTIALS` (PAM)→`ADMITTED`→`ATTACH`→`SESSION`, on **two connections** — and ⛔ **the traces are declared conformant by B4's validator**, a third program written by reading only `RCP.md`. The **fixed second** of §4.4-bis measured on the wire |
 > | ⭐ **B4: the validator is certified** | **13 out of 13** `[M]` **10 Aug, evening** — seven broken recordings each accused **on the byte declared in advance**, the conformant one accepted, and ⛔ **the validator's four outcomes all covered**: conformant · non-conformant · broken recording · *nothing to judge*. ⚠ *It said «7 out of 7» with only two outcomes: «I have nothing to judge» and «conformant» had the same exit code, finding **R7.4***. ⭐ And at its first run it found **a contradiction in `RCP.md`**: §4.3 forbade a character that §4.3 itself uses |
 >
-> | ⭐⭐ **B3: five rounds out of five** | 1st · 2nd after closing · **2nd while the 1st is alive ⇒ `GIA_ATTIVA_REMOTA`** for both roads of §3.1, and the first is not ousted · ⭐ **the 2nd after the silence**, 35 s at `max_idle_timeout` 120 — refused at +6 s, **gets in at +35 s**, and the first one's connection is **still alive**: it was the server that freed the slot, not QUIC · ⭐ **the 3rd with the rotated certificate, now FULL** `[M]` **10 Aug, 18:5x**: the page picks up the new fingerprint and opens on both engines, ⭐ **and the server really answers** — `CIAO` → `ECCOMI` read on the wire — ⛔ and with the old one both **refuse**. ⚠ *The first draft of this round sent the word `ciao` expecting the echo of the WebTransport layer: a test born when the server did not yet speak RCP. With RCP grafted in that word is not a message, the server was waiting for the rest of it and the page stayed hanging — and **that** was the morning's «the stream did not work», not the certificate* |
+> | ⭐⭐ **B3: five rounds out of five** | 1st · 2nd after closing · **2nd while the 1st is alive ⇒ `ALREADY_ACTIVE_REMOTELY`** for both roads of §3.1, and the first is not ousted · ⭐ **the 2nd after the silence**, 35 s at `max_idle_timeout` 120 — refused at +6 s, **gets in at +35 s**, and the first one's connection is **still alive**: it was the server that freed the slot, not QUIC · ⭐ **the 3rd with the rotated certificate, now FULL** `[M]` **10 Aug, 18:5x**: the page picks up the new fingerprint and opens on both engines, ⭐ **and the server really answers** — `HELLO` → `HERE_I_AM` read on the wire — ⛔ and with the old one both **refuse**. ⚠ *The first draft of this round sent the word `ciao` expecting the echo of the WebTransport layer: a test born when the server did not yet speak RCP. With RCP grafted in that word is not a message, the server was waiting for the rest of it and the page stayed hanging — and **that** was the morning's «the stream did not work», not the certificate* |
 >
-> | ⭐⭐ **B5: forty-four violations out of forty-four** | unknown type · length too long and too short · **4 GiB announced** · over 1 MiB · wrong state · version · capability names and values · credentials out of range · odd and out-of-limits canvas · malformed layout **against** unknown layout (`SESSIONE_NON_SERVIBILE`) · second bidirectional stream · three channels in the wrong direction on unidirectional streams. ⛔ The right reason every time, **for both roads of `RCP.md` §3.1**, and after **each** a new connection reaches `ECCOMI` |
-> | ⭐ **and the five cases that MUST pass** | `hevc,vp9` → `hevc` is chosen and **the discard is written** · **view 300×801** and **1×1** (`RCP.md` §7.1) · `BANCO_MARCA` with the feature off → `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` **without closing** · `ritardo_ms = 20000` → `RITARDO_FUORI_LIMITI`. ⛔ Without them, «the server closes on everything» would give **36 green out of 36**. ⚠ *The cases that MUST pass are **eight**, not five, and B5's 44 cases are **36 violations + 8 expected greens**: the final line said «44 out of 44», which is true by construction (finding **R7.14**)* |
-> | ⭐⭐ **B5 found a defect no other bench saw** | the **per-address** counter of §4.4-bis was keyed on the origin **with the port**, and with a single attempt per connection the port changes every time: that counter **was always 1**. Code that was there, looked right, and did nothing. Now at the **sixth** attempt `TROPPI_TENTATIVI` triggers — even for the **right** password. ⚠ *The **sixth** was that day's rule: since the evening of 10 Aug the ban triggers at the **fourth** (`DECISIONI.md` §1.9), and the measurement stays written as it was because it carries the date of the rule it measured* |
-> | ⭐ **and a second contradiction in `RCP.md`** | §2.2 says that `CIAO(2)` on `/rcp/1` is `VERSIONE_INCOMPATIBILE`; §9 says to choose *«the highest that does not exceed the `CIAO`'s»*. **Different bytes for the same input.** §2.2 wins; §9 now names it. ⚠ *The cure of 10 Aug pointed to §2.4, which is «The port» and names neither paths nor versions: corrected the same day, finding **R11.2*** |
+> | ⭐⭐ **B5: forty-four violations out of forty-four** | unknown type · length too long and too short · **4 GiB announced** · over 1 MiB · wrong state · version · capability names and values · credentials out of range · odd and out-of-limits canvas · malformed layout **against** unknown layout (`SESSION_UNSERVABLE`) · second bidirectional stream · three channels in the wrong direction on unidirectional streams. ⛔ The right reason every time, **for both roads of `RCP.md` §3.1**, and after **each** a new connection reaches `HERE_I_AM` |
+> | ⭐ **and the five cases that MUST pass** | `hevc,vp9` → `hevc` is chosen and **the discard is written** · **view 300×801** and **1×1** (`RCP.md` §7.1) · `BENCH_MARK` with the feature off → `BENCH_OUTCOME(RIFIUTATA, FUNCTION_OFF)` **without closing** · `delay_ms = 20000` → `DELAY_OUT_OF_LIMITS`. ⛔ Without them, «the server closes on everything» would give **36 green out of 36**. ⚠ *The cases that MUST pass are **eight**, not five, and B5's 44 cases are **36 violations + 8 expected greens**: the final line said «44 out of 44», which is true by construction (finding **R7.14**)* |
+> | ⭐⭐ **B5 found a defect no other bench saw** | the **per-address** counter of §4.4-bis was keyed on the origin **with the port**, and with a single attempt per connection the port changes every time: that counter **was always 1**. Code that was there, looked right, and did nothing. Now at the **sixth** attempt `TOO_MANY_ATTEMPTS` triggers — even for the **right** password. ⚠ *The **sixth** was that day's rule: since the evening of 10 Aug the ban triggers at the **fourth** (`DECISIONI.md` §1.9), and the measurement stays written as it was because it carries the date of the rule it measured* |
+> | ⭐ **and a second contradiction in `RCP.md`** | §2.2 says that `HELLO(2)` on `/rcp/1` is `INCOMPATIBLE_VERSION`; §9 says to choose *«the highest that does not exceed the `CIAO`'s»*. **Different bytes for the same input.** §2.2 wins; §9 now names it. ⚠ *The cure of 10 Aug pointed to §2.4, which is «The port» and names neither paths nor versions: corrected the same day, finding **R11.2*** |
 >
 > ### ⭐⭐ THE CLOSING — the evening of 11 Aug 2026
 >
@@ -378,7 +378,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ```
 >
 > ⛔⛔ **AND THIS COUNT EXPIRED A FEW HOURS AFTER BEING WRITTEN — `[M]` the night between 11 and
-> 12 Aug 2026, `01-b12-guasti.py --registro`:**
+> 12 Aug 2026, `01-b12-guasti.py --logbook`:**
 >
 > ```
 > banchi nel catalogo: 14
@@ -389,7 +389,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >  0  mai provati                  —
 > ```
 >
-> ⭐⭐ **And the seven were RE-RUN the same night — `[M]` 12 Aug 2026, `--registro`:
+> ⭐⭐ **And the seven were RE-RUN the same night — `[M]` 12 Aug 2026, `--logbook`:
 > 13 out of 14, zero expired, zero not re-verifiable.** Certified again: **B7** (`0→1→0`, 1m11s) ·
 > **B9** (`0→3→0`, on CHUWI) · **B3** (`0→2→0`) · **B5** · **B6** · **B8** (`5→1→5`).
 > ⛔ **B13 stays out, and it is the only one of the fourteen.**
@@ -406,7 +406,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⭐⭐⭐ **AND THEN B13 CAME BACK IN TOO: `[M]` 12 Aug 2026, `14 su 14`, zero expired, zero not
 > re-verifiable, zero never tested.** The cure was not touching a number: it was **changing
-> scene**. `01-b13-sera-certifica.sh certifica` redoes the same cycle with the **same fault** but
+> scene**. `01-b13-sera-certifica.sh certify` redoes the same cycle with the **same fault** but
 > against the **PRODUCT** on 7481 — which really serves the page — and there `B13.4` has a defendant:
 > **healthy 3 → fault 1 → healed 3**, with the mark «LE IMPRONTE COMBACIANO» counted **0 · 1 · 0**
 > on the three output files. ⇒ The healthy round comes out **3**, that is exactly the expected value the catalogue
@@ -470,23 +470,23 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > |---|---|---|
 > | **1** | ⭐ **B8 — certified**, `[M]` 13:46 UTC, graft, port 7471: **`5 → 1 → 5`**. The round finally covers the **whole sequence** — two lives of the server (*«ban caricati: 1»* from disk, **I7**), the ban page (200, *«tentativi esauriti»*, 12h 0m), the unblock on **a real ban**. ⛔ **The healthy expected value is 5, not 0, and it is written in the catalogue before the round**: it is the outcome *«il ban passa, ma le mediane si separano»*, and it is granted only because the defendant is **measured** and it is **PAM** | ✅ done |
 > | **2** | ⭐ **B13 — certified**, and the fragment cure **holds**: new round of the probe, **zero logs with the password in them**; then **33 files** thrown away with the trace in `banchi/01-b13-buttati.jsonl`. ⭐ **`B13.4` closed against the product** (200, 31 083 bytes, current fingerprint). ⛔ `B13.3` and `B13.5` remain | ✅ done |
-> | **3** | ⭐ **B10 — the bench exists, and it certified itself in the same round**: `prova2` reaches `SESSIONE` on the **product**. ⭐⭐ And **it closed the `[?]` R3.26 with a measurement**: the PAM stack judges another user **only if the process is privileged** | ✅ done |
-> | **4** | ⭐ **Done where it bit, and stopped on purpose**: `gira()` now **calls** `01-b8-lancia.sh` instead of rewriting its sequence (as it already did with C2). ⛔ Extending it to the others tonight would have **invalidated nine certifications** to redo them in a time that was not there | 🔸 half |
+> | **3** | ⭐ **B10 — the bench exists, and it certified itself in the same round**: `prova2` reaches `SESSION` on the **product**. ⭐⭐ And **it closed the `[?]` R3.26 with a measurement**: the PAM stack judges another user **only if the process is privileged** | ✅ done |
+> | **4** | ⭐ **Done where it bit, and stopped on purpose**: `run()` now **calls** `01-b8-lancia.sh` instead of rewriting its sequence (as it already did with C2). ⛔ Extending it to the others tonight would have **invalidated nine certifications** to redo them in a time that was not there | 🔸 half |
 > | **5** | ⭐ **P1 and P5 are in the catalogue**: 12 entries → **14**. **P1 certified**; ⛔ **P5 not** — and see the row below, which is the thing that counts | 🔸 P5 not |
 >
 > #### ⛔⛔ THE PRODUCT DEFECT FOUND AT THE END OF THE EVENING — and earlier it had been **acquitted by mistake**
 >
-> **The defect**: when the browser tab is closed, the page **sends no `CONGEDO`**, where
+> **The defect**: when the browser tab is closed, the page **sends no `FAREWELL`**, where
 > `RCP.md` §8.1 requires it unconditionally. The slot goes away after **30 seconds of silence**.
-> ⛔ **On both engines.** The cause has a name: `src/pagina.html` · `TASTI_ULTIMO()` resets
-> `congeda_corrente` **one millisecond after `SESSIONE`**, and the `pagehide` handler (line 331) is
+> ⛔ **On both engines.** The cause has a name: `src/pagina.html` · `LAST_KEY()` resets
+> `dismiss_current` **one millisecond after `SESSION`**, and the `pagehide` handler (line 331) is
 > **dead code**. ⭐ **The cure is three lines and it is written** in `FASI.md` §01-filo-nudo, box
 > P5.
 >
 > ⭐⭐ **And at the end of the same evening it was APPLIED and RE-MEASURED**, `[M]` **two rounds per
-> engine**: `pagehide` fires with the guard **PRESENT**, `congeda()` is called, and **both**
+> engine**: `pagehide` fires with the guard **PRESENT**, `dismiss()` is called, and **both**
 > roads of `RCP.md` §3.1 reach the server with reason **`0x01`** — on Firefox **and** on Chrome, where
-> the close with code `0x0` that `RCP.md` §3.1 forbids **no longer appears**. The anchor of `congeda_corrente`
+> the close with code `0x0` that `RCP.md` §3.1 forbids **no longer appears**. The anchor of `dismiss_current`
 > is no longer *«the attempt is over»* but ***«the session is over»***: it is reset by `wt.closed`, and only
 > if the reference is still its own. ✅ **And it is a product change after the closing of
 > phase 1, so it was put on record**: `DECISIONI.md` §1.12 — the cure is **out of phase**, ⛔
@@ -503,17 +503,17 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >    and printed as *«⭐⭐ la pagina fa quel che `RCP.md` §8.1 le impone»*.
 > 3. ⭐ **The third measurement really attributed it**, with an instrumented copy of the page and a
 >    carrier that does not go through WebTransport: `pagehide` **fires**, and there is nothing left to
->    call. **Gecko is cleared by measurement** — the same `congeda()` called from there delivers
+>    call. **Gecko is cleared by measurement** — the same `dismiss()` called from there delivers
 >    both roads of `RCP.md` §3.1.
 >
 > ⇒ ⛔ **The two engines were not opposite: it was the same defect seen through two teardowns**, and on one the
 > bench tripped over its own counter. ⚠ **And the server was saying it**: the line
-> `⛔ VIOLAZIONE `RCP.md` §3.1 … A verbale va ERRORE_PROTOCOLLO` is written by it, and it was in the log.
+> `⛔ VIOLAZIONE `RCP.md` §3.1 … A verbale va PROTOCOL_ERROR` is written by it, and it was in the log.
 >
 > #### ⭐ And an accusation against the product that instead really belonged to the bench
 >
 > **B8** wrote *«la pagina del ban non si carica»* — that is **exactly the silence that `RCP.md` §4.4-bis
-> forbids** — on a server that does serve the page: `leggi_pagina()` spoke **TLS to a graft that
+> forbids** — on a server that does serve the page: `read_page()` spoke **TLS to a graft that
 > answers in clear**, and the cause was **the cure of the day before**, written for the product.
 >
 > ⇒ With B3, that makes **three times in this phase** that the red was pointed at the wrong defendant — and once,
@@ -557,7 +557,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >   **violation of `RCP.md` §3.1** with expected zero. ⚠ *Tested on real logs: Chrome's pre-cure segment
 >   — the one on which the old bench printed «la pagina fa quel che `RCP.md` §8.1 le impone» — is now
 >   **red with two faults**.*
->   ⭐⭐ **And while curing the scene a third defect popped up**: on the `CONGEDO` road the server
+>   ⭐⭐ **And while curing the scene a third defect popped up**: on the `FAREWELL` road the server
 >   freed the slot **without writing it in the log** (the only one of the four points not to do it). The
 >   slot really was freed — ⛔ but the invariant **`RCP.md` §8.2 `0x0F` was no longer observable**, and P5
 >   would have given red to a healthy server. Cured and measured (`DECISIONI.md` §1.12): P5's
@@ -589,7 +589,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >   were **out of the count** — among these, four calls to the wire validator and the judges of
 >   capture, of the session and of P5. ⭐ And the positive control **was not there**: added, and tested
 >   by mutating the real tree in a copy (removing a mandatory one from the shared profile gives **7 reds**).
-> - ⚠ ~~`01-b0-terreno.sh prodotto` does not look at the product's binary~~ — **cured on 12 Aug
+> - ⚠ ~~`01-b0-terreno.sh product` does not look at the product's binary~~ — **cured on 12 Aug
 >   2026**, defect **D5**: the binary is **next to the sources** (`remotix/build/` never
 >   existed, and another bench already declared so). ⛔ **And the case that counts is another**: a **stale**
 >   binary would have stayed green **even with the correct path**, because only
@@ -658,7 +658,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⛔⛔ **TEN DEFECTS FOUND BY REFUTING** the cure just written (four agents, adversarial
 > mandate), and **eight had been born that night together with it**: a read beyond the copied
-> memory, a message that made a healthy session close, two chained `ADATTA_TELA`s that
+> memory, a message that made a healthy session close, two chained `FIT_CANVAS`s that
 > settled the desktop on the wrong size *with the accounts in order*.
 >
 > ⛔⛔ **AND THREE WERE FOUND BY THE USER**, not by the benches — among them the biggest of the night: *«su
@@ -707,7 +707,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > answer **worse than the question**: the throttling of the keyframe debt **holds at 1/s when the
 > client paints** and ⛔ **opens to 5/s when it does NOT paint**, that is exactly when every keyframe is
 > wasted. ⚠ And the feared scenario — *«one legitimate drop generates sixty illegitimate ones»* —
-> **did not show up**: `abbandonati 0`. *The symptom observed was a different one from the one feared.*
+> **did not show up**: `abandoned 0`. *The symptom observed was a different one from the one feared.*
 >
 > ---
 >
@@ -739,7 +739,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > | | | why **first** |
 > |---|---|---|
 > | **1** | ⛔⛔ **THE STAGE**: the browser benches **measure on the user's desktop** believing they are on a fake screen. Chrome ignores `DISPLAY` and goes to Wayland because of `XDG_SESSION_TYPE`. `[M]` `xlsclients` on the Xvfb says **0 clients**, the page says `screen 2560×1080` | until it is done, **every delay number carries inside it the contention with the user's desktop** — and the next «before» would already be born wrong. ⚠ And it has already made **one victim**: the certification of `03-b16` does not re-run, because on a 2560 window the `V3s` case no longer finds the defect |
-> | **2** | ⛔ **THE PAGE**: HEVC **is offered and negotiated** but **does not paint in the real session**, and its failure drags `video.misura_massima` to **320×240** ⇒ canvas 320×240 against capture 1920×1080, and the product (correctly, `RCP.md` §6.2) **does not send**. **Zero frames** | without it, **no bench can exercise the hardware encoder**: not a frame reaches it, and the phase does not close |
+> | **2** | ⛔ **THE PAGE**: HEVC **is offered and negotiated** but **does not paint in the real session**, and its failure drags `video.max_size` to **320×240** ⇒ canvas 320×240 against capture 1920×1080, and the product (correctly, `RCP.md` §6.2) **does not send**. **Zero frames** | without it, **no bench can exercise the hardware encoder**: not a frame reaches it, and the phase does not close |
 > | **3** | ⭐ **THE NUMBER**: the link with hardware encoding, `03-b17-ritardo.py`, **same scene** | it is the number the phase closes on, and the two before are its preconditions |
 >
 > ⚠ **And `/srv/src/03-B-src/` carries the OLD page**: whoever switched on that tree as it is
@@ -765,7 +765,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > product on 7448** (restarted tonight on the right binary) and **P5's target on 7501**.
 > Ports **7447** and **7481** are free. No round in progress, on either machine.
 >
-> ⏳ **The only thing with a deadline**: `bash banchi/01-s1b-eccezione.sh oggi`, **once a
+> ⏳ **The only thing with a deadline**: `bash banchi/01-s1b-eccezione.sh today`, **once a
 > day until 18 Aug**. The 11th had been skipped and recovered at the last moment (day 1.00 of 7);
 > ⛔ `/media/REMOTIX/s1b-certificato/` is not regenerated and `~/.remotix-s1b/` is not deleted.
 >
@@ -773,7 +773,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | | | where it ended up |
 > |---|---|---|
-> | **4** | `01-b12-lancia.sh` has `PORTA=7447` and `bsslserver` hard-coded: it cannot be pointed at the product, and that is why B13 is certified **only** from its «evening» script, while P1 and P5 stay outside the orchestrator | ⏳ **open**, defect **D6** |
+> | **4** | `01-b12-lancia.sh` has `PORT=7447` and `bsslserver` hard-coded: it cannot be pointed at the product, and that is why B13 is certified **only** from its «evening» script, while P1 and P5 stay outside the orchestrator | ⏳ **open**, defect **D6** |
 > | **5** | P5's fault covers **less** than it promises: the page picks up `/impronta` before every attempt, so the false fingerprint does not kill the session. To really cover **R1.14** a fault that hits **the pick-up** is needed | ✅ **closed** on 12 Aug, defect **D11**: the new fault removes **the pick-up**, and the proof that it looks at something else is that with the fault inside **the old check stays green** |
 > | **6** | the **declared** holes: `B13.3` (the certificates are made by a bench, not by the code), `B13.5` (the transport grants all the streams requested), and the `[?]` of **B8** on `pam_faildelay` | ⏳ **open**, and declared as such |
 > | **7** | the two phase fallbacks: **a single thread** with the PAM check blocking it, and the ceiling of **16 sessions at compile time** where the rule wants ten configurable | ✅ **decided by the user** on 11 Aug — `DECISIONI.md` §1.10 and §1.11. ⚠ *This line gave them as undecided, and it had already expired when it was written* |
@@ -816,19 +816,19 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ```
 > # the target: a COPY of the product, port 7501, its own ban and socket
-> bash /media/REMOTIX/enter.sh --root "bash /srv/src/01-p5-accendi.sh accendi"
+> bash /media/REMOTIX/enter.sh --root "bash /srv/src/01-p5-accendi.sh turn_on"
 >
 > # the round, FROM CHUWI (the browsers are on this side)
 > SSH_ROOT="python3 fondamenta/strumenti/sshpw.py" \
->   IND=192.168.0.2 PORTA=7501 SOCK=/srv/src/tmp/sera-p15.sock \
+>   ADDR=192.168.0.2 PORT=7501 SOCK=/srv/src/tmp/sera-p15.sock \
 >   LOG_SERVER=/media/REMOTIX/src/tmp/sera-p15-browser.log \
->   SCHERMO=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
+>   SCREEN=:79 PORTA_LOC=8859 bash banchi/01-p5-lancia.sh
 > ```
 >
 > ⛔ **Between one step and the next TWO things are needed, not one**: `costruisci.sh` on the copy **and** the
 > server switched back on with that binary. P5 does not rebuild by itself — it finds a server on and queries it
 > — so skipping one would make it measure the previous binary **while looking as if it had grafted**.
-> ⚠ If the copy is missing, `01-p5-accendi.sh copia` redoes it and rebuilds it (`GEMELLO=/srv/src/rcp`);
+> ⚠ If the copy is missing, `01-p5-accendi.sh copia` redoes it and rebuilds it (`TWIN=/srv/src/rcp`);
 > ⛔ and **`copia` is not used to remake the binary after a graft**, because it copies again from the product and
 > the fault disappears without saying so.
 >
@@ -840,7 +840,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > a server that exists.***
 >
 > `[M]` **11 Aug 2026** (`wc -l`, code frozen at 00:36): **22 files**, **9,647 lines**, of which
-> **5,248 of code**. ⭐ **The RCP/1 handshake gets as far as `SESSIONE` with a real
+> **5,248 of code**. ⭐ **The RCP/1 handshake gets as far as `SESSION` with a real
 > browser** — with the two certificates of §4.1-bis, the ban of `RCP.md` §4.4-bis on file and its unblock
 > command. ⛔ No video, no audio, no input: those are the phases from 2 on.
 > ⚠ *This line said* «**a real browser opens `https://192.168.0.2:7447`**, the user types name
@@ -854,9 +854,9 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > | | |
 > |---|---|
-> | ⛔ **A SINGLE ENGINE** | the only trace of a round with a real browser against this server is a comment inside `src/pagina.html` — `[M]` 10 Aug night, **Firefox** — and that round found a real defect (the page declared `disposizione = en`, which is not an XKB name). ⛔ **Of Chrome against this server there is no trace**, and B2's criterion wants **two engines out of two** |
-> | ⛔⛔ **and that round is LESS than what this page said** | `[M]` **11 Aug 2026**, read in `/media/REMOTIX/src/remotix-browser.log` (48 lines) and recounted by hand. ⭐ **What holds**: the handshake really gets as far as `SESSIONE` — `sessione aperta utente=prova … tela=1920x1080 vista=1152x836 disposizione=us`, and the odd view says that a real window was asking. ⛔ **What does NOT hold, and it is two things**: *(1)* all **19** connections come from `[192.168.0.2]`, that is **from the server itself** — the round **did not cross the network**, and this page told it as a browser opening an address from outside; *(2)* **`GET /` appears ZERO times** and `GET /impronta` once: ⛔ **the page was not served by the product**. The second job of the phase 1 server — *serving the page*, `PIANO.md` phase 1 — **is not measured anywhere** |
-> | ⚠ **and in that round the client did not say farewell** | the slot went away with `STACCATO per silenzio: 30269 ms … (posti occupati adesso: 0)`. ⛔ What freed it was **the clock**, not a farewell: a bench that waited five seconds would write «the slot was not freed» on a server that was about to free it |
+> | ⛔ **A SINGLE ENGINE** | the only trace of a round with a real browser against this server is a comment inside `src/pagina.html` — `[M]` 10 Aug night, **Firefox** — and that round found a real defect (the page declared `arrangement = en`, which is not an XKB name). ⛔ **Of Chrome against this server there is no trace**, and B2's criterion wants **two engines out of two** |
+> | ⛔⛔ **and that round is LESS than what this page said** | `[M]` **11 Aug 2026**, read in `/media/REMOTIX/src/remotix-browser.log` (48 lines) and recounted by hand. ⭐ **What holds**: the handshake really gets as far as `SESSION` — `session_v is_open username=prova … canvas_size=1920x1080 vista=1152x836 arrangement=us`, and the odd view says that a real window was asking. ⛔ **What does NOT hold, and it is two things**: *(1)* all **19** connections come from `[192.168.0.2]`, that is **from the server itself** — the round **did not cross the network**, and this page told it as a browser opening an address from outside; *(2)* **`GET /` appears ZERO times** and `GET /impronta` once: ⛔ **the page was not served by the product**. The second job of the phase 1 server — *serving the page*, `PIANO.md` phase 1 — **is not measured anywhere** |
+> | ⚠ **and in that round the client did not say farewell** | the slot went away with `STACCATO per silence: 30269 ms … (slots occupati clock: 0)`. ⛔ What freed it was **the clock**, not a farewell: a bench that waited five seconds would write «the slot was not freed» on a server that was about to free it |
 > | ⛔ **and that round cannot be re-verified** | `[M]` 11 Aug: in `src/` there is neither the binary nor a `.o`, no `.jsonl`, and `git status` gives it as **untracked**. ⛔ **None of the 14 launch scripts switches on the product**: `bsslserver` appears in **11** of them, the `remotix` binary in **zero** |
 > | ⛔ **no reviewer ran the whole server** | `ngtcp2`, `nghttp3`, `libssl-dev`, `libpam0g-dev` were missing: `trasporto.c`, `webtransport.c`, `pagina.c`, `certificati.c` are **read, not measured**. ⭐ The only execution is `rcp.c` **compiled in isolation**, `-Wall -Wextra`, **zero warnings**, six inputs byte for byte |
 > | ⛔ **the transport properties have not been re-measured on it** | B2's six are `[M]` **on the graft**. The product today declares **19** unidirectional streams where the measurement read 16 |
@@ -893,7 +893,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > |---|---|
 > | ⭐ **certified** | **B4**, **B9** (11 Aug 00:27, with the fingerprints of the participating files) and **C2** (10 Aug 22:32) — ⚠ on B9 with a written reservation: its fault proves it can see **a changed text**, which is the thing B9 declares it can do |
 > | ⛔ **tested and NOT certified** | **B13** — and the defect belongs to the **fault**, which the orchestrator cannot graft and which would build a defect B13.1 does not look at |
-> | ⚠ **certified and NOT re-verifiable** | **B7** — the mark required was the word `CONGEDO`, which the bench prints in the **healthy** round too: *«a mark that appears in both rounds is not a mark»* |
+> | ⚠ **certified and NOT re-verifiable** | **B7** — the mark required was the word `FAREWELL`, which the bench prints in the **healthy** round too: *«a mark that appears in both rounds is not a mark»* |
 > | ⛔ **never tested** | **B2 · B3 · B5 · B6 · B8 · B10 · B11** — seven |
 >
 > ⇒ The register is `banchi/01-b12-registro.jsonl`, and the full count is in `FASI.md` §01-filo-nudo.
@@ -918,7 +918,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > `FASI.md` §01-filo-nudo B0.3 and B8.
 >
 > ⭐ **It replaces the form I had written** — 5 in 5 minutes, a window doubling up to 15
-> minutes, two counters — and ⛔ **the wire does not gain a byte**: `TROPPI_TENTATIVI` already existed.
+> minutes, two counters — and ⛔ **the wire does not gain a byte**: `TOO_MANY_ATTEMPTS` already existed.
 > ⚠ **The price is declared in `DECISIONI.md` §1.9** and it is not paid by whoever guesses: behind a NAT three mistakes by one
 > person close the door to everyone for twelve hours, and the first to trip over it is whoever types a long
 > password on a phone keyboard.
@@ -1018,9 +1018,9 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >    closes the *session* keeping the connection alive. Now it is freed when the control channel
 >    closes;
 > 2. a message sent **just before** closing the session, **the browser throws it away**: the
->    page did not see `RESPINTO`, it saw silence. ⭐ It is the proof that point 3 of `RCP.md` §3.1 — *the
+>    page did not see `REJECTED`, it saw silence. ⭐ It is the proof that point 3 of `RCP.md` §3.1 — *the
 >    reason inside the close code* — **is not redundancy**. Cured on both sides;
-> 3. ⛔ the page **closed without saying farewell**, and `RCP.md` §8.1 says that whoever closes *MUST* send `CONGEDO`
+> 3. ⛔ the page **closed without saying farewell**, and `RCP.md` §8.1 says that whoever closes *MUST* send `FAREWELL`
 >    with a reason — even when it is a voluntary close. Added: on Chrome the failures
 >    went from 8 to 4;
 > 4. ⛔ **the slot was not freed when it was the SERVER closing the channel.** From then on
@@ -1028,12 +1028,12 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >    send after the end. Seen **only on Chrome** — on Firefox the transport closed the stream in
 >    time and the slot went away all the same. ⭐ **The defect lived in the difference between two
 >    engines**, and it is the one that closes Chrome's three red cases;
-> 5. ⛔ **the server counted as «bytes sent after the end» also the `CONGEDO`** that `RCP.md` §8.1 *imposes*
+> 5. ⛔ **the server counted as «bytes sent after the end» also the `FAREWELL`** that `RCP.md` §8.1 *imposes*
 >    on whoever closes. The red ended up on the page while it was doing what it must. ⭐ Hence the
->    clarification of `RCP.md` §4.4: after `RESPINTO` the ban is on **retrying**, not on
+>    clarification of `RCP.md` §4.4: after `REJECTED` the ban is on **retrying**, not on
 >    saying farewell;
 > 6. ⛔ **the slot stayed occupied for the whole teardown of the transport**, and whoever reconnected
->    at once got the answer `GIA_ATTIVA_REMOTA`. ⚠ On the bench it was a red case now and then;
+>    at once got the answer `ALREADY_ACTIVE_REMOTELY`. ⚠ On the bench it was a red case now and then;
 >    for whoever uses the product it is *«it tells me I am already connected, and it is not true»*. Now the server
 >    **reads the capsule with which the page closes** and leaves the slot at that instant.
 >
@@ -1058,23 +1058,23 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 >
 > ⭐ **And the aged number was re-measured, not rewritten by eye** — `[M]` **10 Aug,
 > 16:30**. The **reading of the close capsule** grew inside the WebTransport layer, and the
-> measurement is taken like this: on a clean tree, `01-b3-rcp-innesta.py --togli`, then
-> `01-b2-ngtcp2-wt-innesta.py --togli`, then **only** B2's graft is reapplied. Result:
+> measurement is taken like this: on a clean tree, `01-b3-rcp-innesta.py --remove`, then
+> `01-b2-ngtcp2-wt-innesta.py --remove`, then **only** B2's graft is reapplied. Result:
 > **553 lines added, 373 of code, 134 of comment, 46 blank**.
 > ⛔ **And the 972 / 618 are another thing**: they are the tree with **both** grafts, B2 plus
 > B3's threads. They are not lined up with the 553 and do not go where that number is — it is the reason
 > why the two grafts are separate (form **E2**).
 >
 > ⚠ *This paragraph said three false things, and it was rewritten on 10 Aug 2026 — finding
-> **R11.7**, with **R11.1**.* It said that `01-b3-rcp-innesta.py --togli` *«removed nothing, it
+> **R11.7**, with **R11.1**.* It said that `01-b3-rcp-innesta.py --remove` *«removed nothing, it
 > said yes and left the graft where it was»*, that *«the measurement of B2 alone now cannot be
-> taken»*, and raised an alarm on `ricostruisci`. ⛔ **The command does a partial removal and
+> taken»*, and raised an alarm on `rebuild`. ⛔ **The command does a partial removal and
 > declares it on screen**: it removes our files, puts back `examples/CMakeLists.txt`, and prints *«i file
 > .cc/.h toccati da B3 vanno rimessi con `01-b2-ngtcp2-wt-innesta.py --togli` e riapplicati»*. ⛔ And
-> `ricostruisci()` in `01-b11-guasto.sh` runs **the two `--togli` in the prescribed order** and then
+> `rebuild()` in `01-b11-guasto.sh` runs **the two `--remove` in the prescribed order** and then
 > reapplies: it does not rely on the first alone.
 >
-> ⚠ **What stays true, and stays open**: `--togli` **exits with 0 on a tree that in that state
+> ⚠ **What stays true, and stays open**: `--remove` **exits with 0 on a tree that in that state
 > does not compile** — whoever stopped there would believe they had a healthy tree. It is a finding about the bench, not
 > about this document, and it is cured there.
 >
@@ -1103,9 +1103,9 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > **B2 — the QUIC library and the trust model** *(from the server, except where said)*:
 >
 > `banchi/01-b2-costruisci.sh` (BoringSSL + lsquic) · `01-b2-costruisci-ngtcp2.sh` ·
-> `01-b2-sni-ngtcp2.sh` (builds `bsslserver`) · `01-b2-sni-quiche.sh` (`leggi`, then
-> `costruisci`) · `01-b2-lancia-sni.sh` (**the SNI test on the three targets**: `costruisci`, then
-> `misura`) · `01-b2-lancia-impostazioni.sh` (**who declares WebTransport on the wire**) ·
+> `01-b2-sni-ngtcp2.sh` (builds `bsslserver`) · `01-b2-sni-quiche.sh` (`read_it`, then
+> `build`) · `01-b2-lancia-sni.sh` (**the SNI test on the three targets**: `build`, then
+> `gauge`) · `01-b2-lancia-impostazioni.sh` (**who declares WebTransport on the wire**) ·
 > ⭐ `01-b2-ngtcp2-wt-innesta.py` (**the WebTransport layer**) + `01-b2-lancia-wt.sh`
 > (the test client, and the refusal of `/rcp/9`) + ⚠ `01-b2-lancia-sonda.sh` — **this last one is
 > launched from HERE, not from the server: the browsers are on this side** · `01-b2-certificati.sh` (⚠ **regenerates the fingerprint**: it must be put back in the
@@ -1113,7 +1113,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > `01-b2-raccogli.py` + `01-b2-sonda.html` (the page, from `localhost`).
 > **The wire — the benches that closed something:**
 >
-> ⭐ `01-b3-rcp-innesta.py` (**RCP on top of B2's WebTransport layer**; `--togli` does a **partial**
+> ⭐ `01-b3-rcp-innesta.py` (**RCP on top of B2's WebTransport layer**; `--remove` does a **partial**
 > removal and declares it on screen) · `01-b3-lancia.sh` (**B3**, from the server: the first three rounds,
 > with `01-b3-terzo-giro.sh` running **inside** the container) · `01-b3-quarto-giro.sh`
 > (the silence clock, 35 s at `max_idle_timeout` 120) · ⚠ `01-b3-quinto-giro.sh` (**the
@@ -1126,7 +1126,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > `01-b8-lancia.sh` + `01-b8-cronometro.py` (**B8**, the fixed second and the ban — ⛔ **it is being rewritten**,
 > see above) · ⚠ `01-b11-lancia.sh` (**B11: from HERE**, with the two browsers) + `01-b11-pagina.html` +
 > `01-b11-guasto.sh` and `01-b11-guasto-innesta.py` (**the server faulty on purpose**, and
-> `ricostruisci()` which puts back the healthy one with the two `--togli` in order).
+> `rebuild()` which puts back the healthy one with the two `--remove` in order).
 >
 > **And those born on the night of 10 Aug 2026:**
 >
@@ -1137,18 +1137,18 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > `01-b13-lancia.sh` + `01-b13-proprieta.py` (**B13**, the six properties) ·
 > `01-c2-lancia.sh` + `01-c2-diagnosi.py` (**C2**, the three diagnoses of the faulty connection) ·
 > ⭐ `01-b8-sblocca.py` (⛔ **it is not a piece of B8**: it is **the tool of rule B0.3**, and it speaks the
-> command socket of `RCP.md` §4.4-bis with `SBLOCCA` and `PING`) · `01-b8-prova-ban.c`.
+> command socket of `RCP.md` §4.4-bis with `UNBLOCK` and `PING`) · `01-b8-prova-ban.c`.
 >
 > **And the browser probe** — ⚠ **these run from HERE or from the server according to the line, and the line
 > says so**:
 >
 > ⏳ `01-s1b-eccezione.sh` + `01-s1b-pagina.html` + `01-s1b-sito.sh` + `01-s1b-servi.py` (**S1b**,
-> the seven-day clock — ⛔ **`bash banchi/01-s1b-eccezione.sh oggi` once a day until
+> the seven-day clock — ⛔ **`bash banchi/01-s1b-eccezione.sh today` once a day until
 > 18 Aug**, and ⛔ **`/media/REMOTIX/s1b-certificato/` is not regenerated and
 > `~/.remotix-s1b/` is not deleted**, or the clock starts again from scratch without anyone noticing for a
 > week) · `01-s5-tela.sh` + `01-s5-pagina.html` + `01-s5-raccogli.py` (**S5**) ·
 > `01-s7-rotella.sh` + `01-s7-rotella.c` + `01-s7-pagina.html` + `01-s7-raccogli.py` (**S7** — ⚠ and it
-> closes with `--pulisci`, or the drop-in stays and **the next round does not know it was ours**) ·
+> closes with `--clean`, or the drop-in stays and **the next round does not know it was ours**) ·
 > `01-s2-pagina.html` · `01-s3a-pagina.html` · `01-s6-pagina.html` · `01-s-telefono.sh` (the three that
 > wait for a device).
 >
@@ -1337,7 +1337,7 @@ the folders contain**. Completed on 11 Aug 2026, finding **R12C.1**.*
 ## The conventions
 
 **Everything is in English** — code, documents, page, commits (`DECISIONI.md` §10.38, 10 Oct 2026). Some names
-in the code are still Italian (`palco`, `cattura`, `sentinella`, `appunti`) until the mechanical rename.
+in the code are still Italian (`stage`, `capture_v`, `sentinel`, `clipboard_text`) until the mechanical rename.
 
 **The marks** say how much a statement is worth, and must always be put:
 

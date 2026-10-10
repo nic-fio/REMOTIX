@@ -38,8 +38,8 @@ capacity) and the installation system.
 
 - **Desktops**: GNOME (8511), KDE (8512), XFCE (8513), LXQt (8514) — the `rete11-*` boxes.
 - **Browsers**: Firefox 140 and Chrome 154, **real**, on the server, in the labwc without a screen at 3840x2160
-  (`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 REMOTIX_SCHERMO_ANNIDATO=1
-  REMOTIX_SUL_SERVER=1 REMOTIX_CHROME_OPZIONI=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1`).
+  (`XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 REMOTIX_NESTED_SCREEN=1
+  REMOTIX_ON_SERVER=1 REMOTIX_CHROME_OPTIONS=--ozone-platform=wayland MOZ_ENABLE_WAYLAND=1`).
 - **Chrome Android**: the **user's** column, with the user's phone (on the emulator Chrome does not start, 19 Sep).
 - ⇒ **8 suites per round** (4 desktops × 2 browsers), plus the Android column by hand.
 - ⚠ The browser matrix stays **separate** from the desktop one (the user's document, §25).
@@ -72,12 +72,12 @@ capacity) and the installation system.
 | F-020 | browser closed abruptly, then new connection | the session is still there, you re-attach to it | `12-client-veri` g (reload) ⇒ new |
 | F-021 | «Esci» from the menu | the session ends, the programs close, the page goes back to the form, no rebirth | `12-c20-veri`, **C24** (ten times) |
 | F-022 | silence clock (30 s) | mute client ⇒ detached, session alive | new, clocks shortened |
-| F-023 | inactivity clock (1800 s) | ⇒ short `--inattivita-s` | new, clocks shortened |
+| F-023 | inactivity clock (1800 s) | ⇒ short `--inactivity-s` | new, clocks shortened |
 | F-024 | abandonment clock (3600 s) | the session closes with the programs | new, clocks shortened |
-| F-025 | same user from two tabs | ghost, eviction after 15 s, `GIA_ATTIVA_REMOTA` | new |
+| F-025 | same user from two tabs | ghost, eviction after 15 s, `ALREADY_ACTIVE_REMOTELY` | new |
 | F-026 | several users together (2-3) | independent sessions, input and image do not mix | C14 (Python) ⇒ new |
 | F-027 | wrong password | clear refusal, no session | new |
-| F-028 | ban | after N errors the port closes for that address; `GIA_ATTIVA_REMOTA` does not count | new |
+| F-028 | ban | after N errors the port closes for that address; `ALREADY_ACTIVE_REMOTELY` does not count | new |
 | F-029 | dangerous entries absent | no lock, suspend, reboot, shutdown in the menu; «Esci» is there | new (snapshot of the menu) |
 | F-030 | the screen does not turn off nor lock by itself | 11 minutes idle, screen on | new (⚠ exceeds 10 min: to be shortened or declared) |
 | F-031 | touch (Android) | tap, tap-and-a-half to drag | **user**, by hand |
@@ -104,7 +104,7 @@ tests that close or re-attach make another one be born.
   separate browsers and debug ports — `banchi-in-parallelo-isolamento`), the two browsers one after the other;
 - every test: a tenant of the net (`c<n>u<n>`, seen by C19 and by the clear-out), known scene in the
   session, judgement from the **snapshot** or from the **value of the field**, **never** from a counter;
-- every test has `--certifica` (pure functions) and its **grafted fault** (outcome reversed: 0 = seen);
+- every test has `--certify` (pure functions) and its **grafted fault** (outcome reversed: 0 = seen);
 - outcomes: **PASS**, **FAIL**, **BLOCKED** (= I could not look, *with the reason*: a BLOCKED is not
   a PASS);
 - ⛔ the suite **redoes the boxes from zero**: before launching it the user is asked whether they are testing by hand
@@ -119,18 +119,18 @@ execution:
 
 | field | example |
 |---|---|
-| `giro` | `1`, `2`, or `bonifica` |
-| `test` / `funzione` | `T-018-kde-firefox` / `F-018` |
-| `desktop` · `browser` · `versione` | `kde` · `firefox` · `140.16.0` |
-| `sistema` | `Debian 13, labwc senza schermo 3840x2160` |
-| `binario` · `pagina` · `commit` | md5 `7dfd6a96` · md5 `87268f13` · `53d07b4` |
-| `inizio` · `durata_s` | ISO 8601 · `41` |
-| `esito` | `PASS` / `FAIL` / `BLOCKED` |
-| `ragione` | one sentence: what was seen (mandatory for FAIL and BLOCKED) |
-| `atteso` · `osservato` | the two sentences, as in the test case |
-| `guasto_visto` | `true`/`false` for the pass with the grafted fault |
-| `evidenze` | paths: snapshots before/after, product log, browser JS errors, RCP/WebTransport lines |
-| `difetto` | `D-007` if the FAIL opened or touched a defect |
+| `lap` | `1`, `2`, or `bonifica` |
+| `test` / `function` | `T-018-kde-firefox` / `F-018` |
+| `desktop` · `browser` · `version_v` | `kde` · `firefox` · `140.16.0` |
+| `system_wide` | `Debian 13, labwc without display_screen 3840x2160` |
+| `binary` · `page_v` · `commit` | md5 `7dfd6a96` · md5 `87268f13` · `53d07b4` |
+| `start` · `duration_s` | ISO 8601 · `41` |
+| `outcome` | `PASS` / `FAIL` / `BLOCKED` |
+| `rationale` | one sentence: what was seen (mandatory for FAIL and BLOCKED) |
+| `expected_val` · `observed` | the two sentences, as in the test case |
+| `fault_seen` | `true`/`false` for the pass with the grafted fault |
+| `evidence` | paths: snapshots before/after, product log, browser JS errors, RCP/WebTransport lines |
+| `defect` | `D-007` if the FAIL opened or touched a defect |
 
 **2. The evidence** — on the server in `/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<test>/`
 (snapshots at scale 1, the box's `registro.log` cut to the interval, browser console, the tenant's `journalctl`
@@ -153,7 +153,7 @@ it can also be published as a private page updated at every round.
   browser on the server `lo` or a veth can be throttled; the real path is from the tablet (`wondershaper`,
   [[wondershaper-sul-tablet]]). **To be decided with the user.**
 - **long clocks** (F-022…F-024, F-030): they are tested with the clocks shortened from the command line
-  (`--inattivita-s`, abandonment) on a dedicated box; declared.
+  (`--inactivity-s`, abandonment) on a dedicated box; declared.
 - **Android**: to the user.
 - the **1 px dot** under the pointer's tip (the price of the shape on KDE and labwc): the user's
   judgement, to be recorded as an entry of the matrix (F-005).
@@ -193,14 +193,14 @@ imported and not copied:
 only in a note of `suite.py`, the Firefox profile). The others are written by the tests themselves.
 
 ⇒ **25 tests** covering F-001…F-030, the paths A-F and the negatives N-1, N-3, N-4. Every test
-declares at its head, as lines of text, what it looks at: `FUNZIONI = (…)`, and if needed
-`PER_BROWSER = False` (once only, with Firefox: F-027/F-028, F-030, the negatives), `LUNGA = True`,
+declares at its head, as lines of text, what it looks at: `FUNCTIONS = (…)`, and if needed
+`PER_BROWSER = False` (once only, with Firefox: F-027/F-028, F-030, the negatives), `LONG = True`,
 `SERVER = "15-g7-server.sh"`.
 
 **The common base** — `banchi/15-suite/suite.py`. A single language for all the tests:
-- command line: `--scatola` and `--browser` (only one), `--guasto` (after the healthy pass, the pass
-  with the grafted fault **in the same session**, outcome reversed), `--certifica` (only the pure
-  functions), `--evidenze`, `--porte-base` (the browsers' debug ports, ⛔ different for every desktop in
+- command line: `--container_box` and `--browser` (only one), `--fault` (after the healthy pass, the pass
+  with the grafted fault **in the same session**, outcome reversed), `--certify` (only the pure
+  functions), `--evidence`, `--base-ports` (the browsers' debug ports, ⛔ different for every desktop in
   parallel), 4K by default;
 - output: one `SUITE {…}` line per function looked at, which the round collects; code 0 all PASS · 1
   at least one FAIL or one fault not seen · 3 at least one BLOCKED;
@@ -217,13 +217,13 @@ benches get there with `15-porta.sh`, a single test is launched with `15-una.sh`
 - it finds the tests `15-f*.py` and `15-n*.py` and reads their declarations;
 - ⭐ **the four desktops in parallel**, one row per desktop; in the row Firefox and then Chrome; different debug
   ports per desktop;
-- every test with `--guasto`, cap **10 minutes** (beyond: BLOCKED «oltre i 10 minuti», and the process is
+- every test with `--fault`, cap **10 minutes** (beyond: BLOCKED «oltre i 10 minuti», and the process is
   killed);
 - ⛔ before starting it looks whether there is a person in the boxes (anyone who is not a
   `c<n>u<n>` tenant): if there is, it stops. The boxes are redone from zero with `15-rifai-scatole.sh`, only with the
   user's go-ahead (permission given on 25 Sep).
 
-⭐ **One labwc without a screen per desktop** — `15-compositori.sh accendi|spegni|stato`, 3840x2160 each.
+⭐ **One labwc without a screen per desktop** — `15-compositori.sh turn_on|turn_off|state`, 3840x2160 each.
 `[M]` groups G2 and G8, 25 Sep: with the four desktops in the **same** labwc Chrome's windows
 cover each other, and **covered Chrome does not repaint**: `Page.captureScreenshot` stays hung (a snapshot
 hung for 17 minutes, three runs ended at 900 s). Firefox can be photographed even when covered, Chrome cannot. ⇒ Every
@@ -232,25 +232,25 @@ desktop has its own compositor, and in each one browser at a time; the round rea
 
 **The log** — `/media/REMOTIX/misure/fase15/registro.jsonl` on the server, copied into
 `banchi/15-suite/registro.jsonl`; additions only, one row per execution with the fields of the table
-above (plus `passata`: `sana` or `guasto`, and `prova`). The evidence in
+above (plus `passed`: `sana` or `fault`, and `prova`). The evidence in
 `/media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<prova>/` (the whole output in `uscita.log`,
 snapshots and console inside). The defects in `banchi/15-suite/difetti.jsonl`.
 
 **The report** — `banchi/15-suite/15-rapporto.py`, **generated from the log, never written by hand**:
 the function × desktop × browser matrix with the last outcome of the healthy pass of the chosen round and the mark
 of the fault, the defects with their state, for every FAIL or BLOCKED cell the reason and the evidence; at the head
-binary, page, commit and the counts. `--testo` for the terminal, `--html` for a page.
+binary, page, commit and the counts. `--body_text` for the terminal, `--html` for a page.
 
     python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl \
         --difetti banchi/15-suite/difetti.jsonl --giro 1 --testo
 
-**The technical layer** — `15-giro.py --strato-tecnico` (or `--solo-strato-tecnico`): for every desktop, in
-parallel, **C7 C9 C18 C19**, each healthy and with its fault (`--lascia-un-processo`, `--togli-nome
-tutto`, `--senza-usermod`, `--lascia-un-inquilino`), launched by `11-accendi.sh`; then **C14** with the
+**The technical layer** — `15-giro.py --technical-layer` (or `--technical-layer-only`): for every desktop, in
+parallel, **C7 C9 C18 C19**, each healthy and with its fault (`--leave-a-process`, `--remove-name
+overall`, `--no-usermod`, `--leave-a-tenant`), launched by `11-accendi.sh`; then **C14** with the
 four together. ⛔ Before every mesh the same **clear-out** as `11-gancio.sh` (see D-013).
 
 **In the net** — the **`suite`** family of `banchi/11-scatole/11-gancio.sh` (`227611d`, 25 Sep 09:35):
-`GIRA_SUITE` launches `15-giro.py --giro ${GIRO_SUITE:-rete} --strato-tecnico` as the browsers' user,
+`RUN_SUITE` launches `15-giro.py --lap ${ROUND_SUITE:-net} --technical-layer` as the browsers' user,
 from the whole tree of the benches; the hook warns «⛔ ~2 ore». It is the new net, as decided on 24 Sep.
 
 ## Round 1 — 25 Sep 2026
@@ -359,9 +359,9 @@ bench corrections born on `fase-10-cure` are brought over with the «bonifica-15
 
 | commit | what it cures |
 |---|---|
-| `9ff4c1f` | **D-001**: `SESSIONE` says `2 = RIPRESA` when that user's graphical session already existed at PAM's verdict, and the real name of the desktop (gnome/kde/xfce/lxqt). **D-004**: the abandonment clock starts at the **birth** of the stage (the re-attach does not renew it, decision of 16 Aug) |
-| `e3c8804` | new test **F-024b** (`15-f024b-sessione-mai-toccata.py`): G7 server with `--abbandono-s 60`, no gesture ⇒ the line «§5.3 — ABBANDONO» within 90 s; fault = the default clock |
-| `c7a67ea` | **D-002**: the closing of the transport without CONGEDO says the sentence decided by the user and goes back to the form. **D-003**: `torna_al_modulo()` closes the screen before removing the dress, the frames in flight are thrown away |
+| `9ff4c1f` | **D-001**: `SESSION` says `2 = RESUMED` when that user's graphical session already existed at PAM's verdict, and the real name of the desktop (gnome/kde/xfce/lxqt). **D-004**: the abandonment clock starts at the **birth** of the stage (the re-attach does not renew it, decision of 16 Aug) |
+| `e3c8804` | new test **F-024b** (`15-f024b-sessione-mai-toccata.py`): G7 server with `--abandon-s 60`, no gesture ⇒ the line «§5.3 — ABBANDONO» within 90 s; fault = the default clock |
+| `c7a67ea` | **D-002**: the closing of the transport without CONGEDO says the sentence decided by the user and goes back to the form. **D-003**: `returns_to_module()` closes the screen before removing the dress, the frames in flight are thrown away |
 | `aa4014d` | **D-005**: KDE is born empty (the session's `ksmserverrc loginMode=emptySession`). **D-008**: the layout reaches KWin (the session's `kxkbrc` with `[$i]` + `org.kde.keyboard reloadConfig`); the false sentence of the fallback corrected |
 | `202b514` → `b40856d` | **D-006**, first cure (the stale context time on Firefox): **removed**. `[M]` with the real browsers it got worse: lxqt audible 68 % (round 1: 75 %), hole 1.2 s, gnome FAIL |
 | `e719d08` | **D-009**: `/impronta` refused by the network ⇒ «il server non risponde: è spento o non raggiungibile», without opening WebTransport; a slow server has no clocks |
@@ -440,10 +440,10 @@ round 2 — is `banchi/15-suite/registro.jsonl` (2455 lines, additions only), th
 `banchi/15-suite/difetti.jsonl`; the evidence on the server in `/media/REMOTIX/misure/fase15/giro2/`.
 
 **How to redo it**: `bash banchi/15-suite/15-porta.sh`, then on the server (with the boxes redone:
-`bash …/15-suite/15-rifai-scatole.sh`) `python3 …/15-suite/15-giro.py --giro <nome> --strato-tecnico`;
-or `bash banchi/11-scatole/11-gancio.sh gira --famiglia suite`. The report:
-`python3 banchi/15-suite/15-rapporto.py --registro banchi/15-suite/registro.jsonl --difetti
-banchi/15-suite/difetti.jsonl --giro <nome> --html <file>`.
+`bash …/15-suite/15-rifai-scatole.sh`) `python3 …/15-suite/15-giro.py --lap <label_name> --technical-layer`;
+or `bash banchi/11-scatole/11-gancio.sh run --family suite`. The report:
+`python3 banchi/15-suite/15-rapporto.py --logbook banchi/15-suite/registro.jsonl --defects
+banchi/15-suite/difetti.jsonl --lap <label_name> --html <file>`.
 
 ### What entered the product with the clean-up
 
@@ -451,7 +451,7 @@ banchi/15-suite/difetti.jsonl --giro <nome> --html <file>`.
 |---|---|---|
 | D-001 | «sessione nuova» and «desktop sconosciuto» even with a resumed session | SESSIONE says RIPRESA (2) and the real desktop |
 | D-002, D-021 | line dropped or browser frozen: page mute over the still desktop | the page says so and goes back to the form, also in the window between SESSIONE and the opening of the input |
-| D-003 | after the detach or «Esci» a frame in flight put the desktop back over the form | `Schermo.chiudi()` at the farewell |
+| D-003 | after the detach or «Esci» a frame in flight put the desktop back over the form | `Screen.shut()` at the farewell |
 | D-004 | a never-touched session never expired | the abandonment clock starts at birth |
 | D-005 | KDE reopened the programs after «Esci» | Plasma session empty by itself (unless the user chooses otherwise) |
 | D-006 | sound holes with Firefox and a video (Firefox's Opus decoder) | **our own Opus decoder in WebAssembly** (libopus 1.5.2), for all browsers |

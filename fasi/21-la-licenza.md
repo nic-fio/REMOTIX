@@ -17,7 +17,7 @@ what order. ⚠ The user's constraint (8 Oct): **the licence comes before the xr
 
 | part | what it does | where it runs | language |
 |---|---|---|---|
-| **1. the product** | takes the `LICENSE_KEY` from the installer, creates the `INSTALL_KEY`, checks every hour, shows the state, stops at the end; the `remotix licenza` command | on the customer's server | C, like the product; the installer in Go |
+| **1. the product** | takes the `LICENSE_KEY` from the installer, creates the `INSTALL_KEY`, checks every hour, shows the state, stops at the end; the `remotix license` command | on the customer's server | C, like the product; the installer in Go |
 | **2. the licence service** | operations A, C, E of §3.3: activations, checks with the ticket, duplications, emails, the clock | on the **VPS**, `remotix.nicfio.it/licenze/v1/` | Go (§3.1) |
 | **3. the site** | the public shop window, the request for keys, the **customer area** and the seller's **panel** (§4, §4-bis) | on the VPS: static pages served by Caddy, the live parts by the service | HTML/CSS from the mockups; Go |
 | **4. the gold function** | creates the golds, outside the panel | on the VPS, a command, only via ssh | Go, in the same binary |
@@ -31,11 +31,11 @@ what order. ⚠ The user's constraint (8 Oct): **the licence comes before the xr
 
 | what | where it is today | what changes |
 |---|---|---|
-| **the login** | `src/autenticazione.c:212` `rcp_autentica()` (PAM), called **only by the grandchild** of the helper (`src/aiutante.c:23-30`); the outcome returns to the thread in `src/rcp.c:~2490-2515` | **after** correct credentials the thread looks at the licence state **in memory**: no network at that point |
-| **the refusals** | the `CONGEDO` reasons in `src/rcp.h:113-133` (`0x01`…`0x10`), the sentences in `src/pagina.html:896-999` | a new reason, first in `RCP.md`: **`0x11 LICENZA`**, with the state (expired, blocked for two copies, suspended, revoked, never activated) choosing the sentence. ⛔ No more `0x12` «un utente»: the trial has unlimited users |
+| **the login** | `src/autenticazione.c:212` `rcp_authenticate()` (PAM), called **only by the grandchild** of the helper (`src/aiutante.c:23-30`); the outcome returns to the thread in `src/rcp.c:~2490-2515` | **after** correct credentials the thread looks at the licence state **in memory**: no network at that point |
+| **the refusals** | the `FAREWELL` reasons in `src/rcp.h:113-133` (`0x01`…`0x10`), the sentences in `src/pagina.html:896-999` | a new reason, first in `RCP.md`: **`0x11 LICENZA`**, with the state (expired, blocked for two copies, suspended, revoked, never activated) choosing the sentence. ⛔ No more `0x12` «un utente»: the trial has unlimited users |
 | **the login page** | the form in `src/pagina.html:600-625`; the marks in `src/pagina.c:420-433` | a mark `__LICENZA__` (state and days, **harmless**: before the credentials only «Trial version — N days left» is seen); the states of `SPECIFICHE.md` §15.10; the **warnings with «ho letto»** of the working days before expiry; the copy's **short name**. ⛔ **No field for the key**: root puts it in (§15.3 point 7) |
-| **the licence memory** | `/var/lib/remotix/` (`src/main.c:1768-1770`) | `/var/lib/remotix/licenza/`: the `INSTALL_KEY` (root only), the attestation, the ticket, the request in flight, the most recent time seen |
-| **the session cap** | `--tetto-sessioni N` (`src/main.c:2084`), default 10 | ⛔ **the licence does not touch it**: no licence counts users |
+| **the licence memory** | `/var/lib/remotix/` (`src/main.c:1768-1770`) | `/var/lib/remotix/license/`: the `INSTALL_KEY` (root only), the attestation, the ticket, the request in flight, the most recent time seen |
+| **the session cap** | `--session-cap N` (`src/main.c:2084`), default 10 | ⛔ **the licence does not touch it**: no licence counts users |
 
 ### 2.2 The messenger: the network outside the thread
 
@@ -43,18 +43,18 @@ what order. ⚠ The user's constraint (8 Oct): **the licence comes before the xr
 **separate process**, child of the parent like the helper, which every **hour** (and at «controlla ora»):
 - writes the request **to disk before sending it** and, with no answer, sends it again **identical** (§15.4);
 - signs the challenge with the `INSTALL_KEY` and presents the ticket; sends the description of the machine (§15.12);
-- goes through the **proxy** (`https_proxy`, or an option in `REMOTIX_OPZIONI`);
+- goes through the **proxy** (`https_proxy`, or an option in `REMOTIX_OPTIONS`);
 - verifies the attestation (VPS key certified by the root, §6) and to the thread sends only the state.
 
 **HTTPS:** ⭐ **libcurl** (proxy `CONNECT`, system certificates, compatible licence); ⚠ new dependency of the
 package.
 
-### 2.3 The `remotix licenza` command and the installer
+### 2.3 The `remotix license` command and the installer
 
 - **The installer** (`installatore/`, Go: CLI, TUI, GUI) asks for the **`LICENSE_KEY`** and shows whoever does not have it
   the site's address; without questions: `--license-key`. It passes it to the product; if the network is missing, the installation
-  finishes and says to launch `remotix licenza attiva` afterwards.
-- **`remotix licenza`**, as root: `stato` · `attiva <chiave>` · `upgrade <chiave>` · `controlla` · `recupera`.
+  finishes and says to launch `remotix license live` afterwards.
+- **`remotix license`**, as root: `state` · `live <key_id>` · `upgrade <key_id>` · `check` · `recupera`.
   It talks to the messenger, not to the VPS directly.
 
 ## 3. Part 2 — the licence service on the VPS
@@ -74,12 +74,12 @@ operations, encrypted copy off the VPS every day (§15.11).
 | table | what it holds |
 |---|---|
 | `licenze` | number `RX-…`, class (trial/full/gold), buyer, start, expiry, state, automatic renewal, payment reference |
-| `chiavi` | the **encrypted fingerprint** of every `LICENSE_KEY` issued, the class, used yes/no, when it expires if never used (30 days the trial) — forever |
+| `keys` | the **encrypted fingerprint** of every `LICENSE_KEY` issued, the class, used yes/no, when it expires if never used (30 days the trial) — forever |
 | `installazioni` | the public part of the `INSTALL_KEY`, the licence, the current ticket, the last answer (to give it back the same), short name, last description of the machine |
 | `trial_impronte` | every `HW_FINGERPRINT` (encrypted) that has already had the trial, with its end date |
 | `sdoppiamenti` | discovery, copies, RDAP, choice or block, warnings sent |
-| `clienti`, `sessioni` | the customer area: email, Google login, throwaway links |
-| `registro` | every operation of the panel, of the payment, of the gold and of the clock: who, when, what |
+| `clients`, `sessions` | the customer area: email, Google login, throwaway links |
+| `logbook` | every operation of the panel, of the payment, of the gold and of the clock: who, when, what |
 
 ### 3.3 The service's operations
 
@@ -162,7 +162,7 @@ of revocations, §15.11). It stays a command on the laptop: if the panel were br
 "pubblicizza" il prodotto, in modo simile ad esempio a phonestra. Bisogna prevedere delle sotto-sezioni riservate»*.
 
 🔸 **How it is put together**, on the same VPS and with the same scheme as the sites already there (`~/Documenti/VPS`: Caddy,
-static files in `/srv/www/<sito>`, HTTPS from Let's Encrypt, the `progetti` user who publishes):
+static files in `/srv/www/<site>`, HTTPS from Let's Encrypt, the `progetti` user who publishes):
 - the **public pages** are **static files**, like phonestra: no CMS, nothing to break into;
 - everything dynamic is **the Go service**, behind Caddy, under paths of its own.
 
@@ -184,7 +184,7 @@ panel.
 
 ## 5. Part 4 — the payment entry
 
-Two generic requests, `rinnova` and `sospendi`, with the licence reference. ⛔ **No processor chosen**
+Two generic requests, `renew` and `sospendi`, with the licence reference. ⛔ **No processor chosen**
 (§10.30: pending): when one is chosen (Polar/Paddle or Stripe), only the **translator** from its
 notifications to these two requests is written. The product does not change.
 
@@ -194,7 +194,7 @@ notifications to these two requests is written. The product does not change.
 
 | key | where it is | what it signs |
 |---|---|---|
-| **root** ed25519 | ⛔ **never on the VPS**: on the laptop, in `.chiavi/` (ignored by git, like the installer's D10, `fasi/17-l-installatore.md` D10) + a backup copy off the computer | only the **certificates** of the VPS keys, with expiry; and the revocations |
+| **root** ed25519 | ⛔ **never on the VPS**: on the laptop, in `.keys/` (ignored by git, like the installer's D10, `fasi/17-l-installatore.md` D10) + a backup copy off the computer | only the **certificates** of the VPS keys, with expiry; and the revocations |
 | **VPS key** ed25519 | on the VPS | the attestations |
 | the root's public key | **inside the product**, written at build time | — |
 
@@ -226,7 +226,7 @@ notifications to these two requests is written. The product does not change.
 
 *Redone on the evening of **9 Oct 2026** (the morning's estimate was ~122 hours). In: the site (shop window, customer area,
 panel, logins with email link, Google and passkey), the gold function, the upgrade, the installer that
-asks for the key, the `remotix licenza` command. Out: the key field in the page, the confirmation link
+asks for the key, the `remotix license` command. Out: the key field in the page, the confirmation link
 of the trial (the key by email confirms the address), the one-user limit.*
 
 | # | step | hours |
@@ -241,7 +241,7 @@ of the trial (the key by email confirms the address), the one-user limit.*
 | 7 | **the panel**: passkey and Google (only your account), D1-D13, the «da decidere» box, the warning at every operation, registration via ssh | 14 |
 | 8 | **the gold function** (command via ssh) and **the payment entry** (renew, suspend, reactivate, new full) | 4 |
 | 9 | **the product, the messenger** (separate process, libcurl, proxy, request on disk, ticket, trusted time, `HW_FINGERPRINT` with the factory strings discarded, description of the machine) | 16 |
-| 10 | **the product, the login and the command** `remotix licenza`: states, end with the desktops alive, copy left behind | 10 |
+| 10 | **the product, the login and the command** `remotix license`: states, end with the desktops alive, copy left behind | 10 |
 | 11 | **the login page**: the states of §15.10, the warnings with «ho letto», the copy's short name | 8 |
 | 12 | **the installer**: the `LICENSE_KEY` in CLI, TUI and GUI, `--license-key`, the case without network | 5 |
 | 13 | **the benches** (§7) and the short suite with the test gold | 16 |

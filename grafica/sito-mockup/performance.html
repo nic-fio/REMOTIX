@@ -8,84 +8,84 @@
 <style>
   .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
   @media (min-width: 720px) { .largo { padding: 0 40px; } }
-  :root { --remotix: #2a78d6; --xrdp: #eb6834; --griglia: #e6e9ef; --asse: #8a93a3; --superficie: #fcfcfb; }
-  .blu { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); }
-  .testata .riga { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
+  :root { --remotix: #2a78d6; --xrdp: #eb6834; --grid: #e6e9ef; --axis: #8a93a3; --surface: #fcfcfb; }
+  .blue { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); }
+  .testata .row { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
   .testata nav { display: none; gap: 2.2rem; margin: 0 auto; font-size: .95rem; }
-  .testata nav a { color: var(--chiaro-fondo); text-decoration: none; }
+  .testata nav a { color: var(--light-background); text-decoration: none; }
   .testata nav a:hover, .testata nav a[aria-current] { color: #fff; }
-  .testata .azioni { margin-left: auto; }
-  @media (min-width: 900px) { .testata nav { display: flex; } .testata .azioni { margin-left: 0; } }
-  .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accento); margin: 0 0 .8em; }
-  .blu .occhiello { color: var(--ciano); }
-  .apertura { padding: 2.5rem 0 3.5rem; }
-  .apertura h1 { margin: 0 0 .4em; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.06; letter-spacing: -.03em; max-width: 15em; }
-  .apertura .sotto { margin: 0; max-width: 46em; font-size: 1.12rem; color: var(--chiaro-fondo); }
-  .cifre { display: grid; gap: 1rem; grid-template-columns: 1fr; margin-top: 2.4rem; }
-  @media (min-width: 900px) { .cifre { grid-template-columns: repeat(3, 1fr); } }
-  .cifra { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); border-radius: 1rem; padding: 1.3rem 1.4rem; }
-  .cifra b { display: block; font-size: clamp(2rem, 3.4vw, 2.8rem); letter-spacing: -.03em; line-height: 1.05; }
-  .cifra span { display: block; margin-top: .4rem; color: var(--chiaro-fondo); font-size: .95rem; }
-  .ferro { margin-top: 1.6rem; font-size: .9rem; color: var(--chiaro-fondo); }
-  .ferro b { color: #fff; font-weight: 600; }
+  .testata .acts { margin-left: auto; }
+  @media (min-width: 900px) { .testata nav { display: flex; } .testata .acts { margin-left: 0; } }
+  .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 .8em; }
+  .blue .occhiello { color: var(--cyan); }
+  .opening { padding: 2.5rem 0 3.5rem; }
+  .opening h1 { margin: 0 0 .4em; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.06; letter-spacing: -.03em; max-width: 15em; }
+  .opening .below { margin: 0; max-width: 46em; font-size: 1.12rem; color: var(--light-background); }
+  .digits { display: grid; gap: 1rem; grid-template-columns: 1fr; margin-top: 2.4rem; }
+  @media (min-width: 900px) { .digits { grid-template-columns: repeat(3, 1fr); } }
+  .digit { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); border-radius: 1rem; padding: 1.3rem 1.4rem; }
+  .digit b { display: block; font-size: clamp(2rem, 3.4vw, 2.8rem); letter-spacing: -.03em; line-height: 1.05; }
+  .digit span { display: block; margin-top: .4rem; color: var(--light-background); font-size: .95rem; }
+  .hardware { margin-top: 1.6rem; font-size: .9rem; color: var(--light-background); }
+  .hardware b { color: #fff; font-weight: 600; }
 
-  .sezione { padding: 4.5rem 0; }
-  .sezione.chiara { background: #fff; }
-  .sezione.grigia { background: #f4f6fa; }
-  .sezione h2 { margin: 0 0 .4em; font-size: clamp(1.7rem, 2.8vw, 2.4rem); line-height: 1.12; letter-spacing: -.025em; }
-  .guida { margin: 0 0 1.8rem; color: var(--tenue); font-size: 1.05rem; max-width: 50em; }
+  .section { padding: 4.5rem 0; }
+  .section.chiara { background: #fff; }
+  .section.gray { background: #f4f6fa; }
+  .section h2 { margin: 0 0 .4em; font-size: clamp(1.7rem, 2.8vw, 2.4rem); line-height: 1.12; letter-spacing: -.025em; }
+  .drive { margin: 0 0 1.8rem; color: var(--faint); font-size: 1.05rem; max-width: 50em; }
 
   /* controls: one row above the charts */
-  .controlli { display: flex; flex-wrap: wrap; gap: .8rem 1.6rem; align-items: center; margin-bottom: 1.4rem; }
+  .checks { display: flex; flex-wrap: wrap; gap: .8rem 1.6rem; align-items: center; margin-bottom: 1.4rem; }
   .segmenti { display: inline-flex; background: #eef1f6; border-radius: .6rem; padding: .2rem; }
-  .segmenti button { font: inherit; font-size: .9rem; font-weight: 600; border: 0; background: transparent; color: var(--tenue); padding: .45em 1em; border-radius: .45rem; cursor: pointer; }
-  .segmenti button[aria-pressed="true"] { background: #fff; color: var(--inchiostro); box-shadow: 0 1px 2px rgba(11,20,48,.12); }
-  .legenda { display: flex; gap: 1.2rem; font-size: .9rem; color: var(--etichetta); }
+  .segmenti button { font: inherit; font-size: .9rem; font-weight: 600; border: 0; background: transparent; color: var(--faint); padding: .45em 1em; border-radius: .45rem; cursor: pointer; }
+  .segmenti button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(11,20,48,.12); }
+  .legenda { display: flex; gap: 1.2rem; font-size: .9rem; color: var(--label); }
   .legenda span { display: inline-flex; align-items: center; gap: .45rem; }
   .legenda i { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
 
-  .multipli { display: grid; gap: 1rem; grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .multipli { grid-template-columns: 1fr 1fr; } }
-  @media (min-width: 1200px) { .multipli { grid-template-columns: repeat(4, 1fr); } }
-  .pannello { background: var(--superficie); border-radius: 1rem; box-shadow: var(--ombra); padding: 1rem 1rem .6rem; min-width: 0; }
-  .pannello h3 { margin: 0 0 .2rem; font-size: 1rem; }
-  .pannello p.sot { margin: 0 0 .4rem; font-size: .8rem; color: var(--tenue); }
-  svg.grafico { display: block; width: 100%; height: auto; overflow: visible; }
-  svg.grafico text { font-family: inherit; fill: var(--tenue); font-size: 11px; }
-  svg.grafico .etich { fill: var(--etichetta); font-weight: 600; }
-  svg.grafico .griglia { stroke: var(--griglia); stroke-width: 1; }
-  svg.grafico .base { stroke: #cfd6e3; stroke-width: 1; }
-  svg.grafico .colpo { cursor: default; }
-  svg.grafico .colpo:hover + .barra, svg.grafico .barra.attiva { filter: brightness(1.12); }
-  .suggerimento { position: fixed; z-index: 30; pointer-events: none; background: #0b1430; color: #fff; font-size: .82rem; line-height: 1.4; padding: .5rem .7rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,.25); opacity: 0; transition: opacity .1s; max-width: 18rem; }
-  .suggerimento b { display: block; }
-  .nota { margin: 1rem 0 0; font-size: .88rem; color: var(--tenue); max-width: 60em; }
-  .avviso-muro { margin-top: 1.2rem; display: flex; gap: .9rem; align-items: flex-start; background: #fff8ef; border: 1px solid #f6d7b8; border-radius: .9rem; padding: 1rem 1.2rem; font-size: .93rem; color: #6b3b10; max-width: 70em; }
-  .avviso-muro b { color: #4a2708; }
-  details.tabella { margin-top: 1.2rem; }
-  details.tabella summary { cursor: pointer; font-weight: 600; color: var(--accento); font-size: .92rem; }
-  .scorre { overflow-x: auto; }
-  table.dati { border-collapse: collapse; font-size: .88rem; margin-top: .8rem; min-width: 40rem; }
-  table.dati th, table.dati td { padding: .5rem .7rem; border-bottom: 1px solid #e9edf3; text-align: right; font-variant-numeric: tabular-nums; }
-  table.dati th:first-child, table.dati td:first-child { text-align: left; }
-  table.dati th { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); }
+  .multiples { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .multiples { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1200px) { .multiples { grid-template-columns: repeat(4, 1fr); } }
+  .panel { background: var(--surface); border-radius: 1rem; box-shadow: var(--ombra); padding: 1rem 1rem .6rem; min-width: 0; }
+  .panel h3 { margin: 0 0 .2rem; font-size: 1rem; }
+  .panel p.sot { margin: 0 0 .4rem; font-size: .8rem; color: var(--faint); }
+  svg.graphical { display: block; width: 100%; height: auto; overflow: visible; }
+  svg.graphical text { font-family: inherit; fill: var(--faint); font-size: 11px; }
+  svg.graphical .tick_label { fill: var(--label); font-weight: 600; }
+  svg.graphical .grid { stroke: var(--grid); stroke-width: 1; }
+  svg.graphical .base { stroke: #cfd6e3; stroke-width: 1; }
+  svg.graphical .shot { cursor: default; }
+  svg.graphical .shot:hover + .bar, svg.graphical .bar.live { filter: brightness(1.12); }
+  .hint { position: fixed; z-index: 30; pointer-events: none; background: #0b1430; color: #fff; font-size: .82rem; line-height: 1.4; padding: .5rem .7rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,.25); opacity: 0; transition: opacity .1s; max-width: 18rem; }
+  .hint b { display: block; }
+  .remark { margin: 1rem 0 0; font-size: .88rem; color: var(--faint); max-width: 60em; }
+  .warning-wall { margin-top: 1.2rem; display: flex; gap: .9rem; align-items: flex-start; background: #fff8ef; border: 1px solid #f6d7b8; border-radius: .9rem; padding: 1rem 1.2rem; font-size: .93rem; color: #6b3b10; max-width: 70em; }
+  .warning-wall b { color: #4a2708; }
+  details.table { margin-top: 1.2rem; }
+  details.table summary { cursor: pointer; font-weight: 600; color: var(--accent); font-size: .92rem; }
+  .scrolls { overflow-x: auto; }
+  table.data_v { border-collapse: collapse; font-size: .88rem; margin-top: .8rem; min-width: 40rem; }
+  table.data_v th, table.data_v td { padding: .5rem .7rem; border-bottom: 1px solid #e9edf3; text-align: right; font-variant-numeric: tabular-nums; }
+  table.data_v th:first-child, table.data_v td:first-child { text-align: left; }
+  table.data_v th { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); }
 
   .due { display: grid; gap: 1rem; grid-template-columns: 1fr; }
   @media (min-width: 1000px) { .due { grid-template-columns: 1fr 1fr; } }
-  ul.corto { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; max-width: 60em; color: var(--tenue); }
-  .metodo { display: grid; gap: 1rem 2.5rem; grid-template-columns: 1fr; }
-  @media (min-width: 900px) { .metodo { grid-template-columns: 1fr 1fr; } }
-  .metodo h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
-  .metodo p, .metodo li { color: var(--tenue); font-size: .95rem; }
-  .metodo ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+  ul.short_v { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; max-width: 60em; color: var(--faint); }
+  .meth { display: grid; gap: 1rem 2.5rem; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .meth { grid-template-columns: 1fr 1fr; } }
+  .meth h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+  .meth p, .meth li { color: var(--faint); font-size: .95rem; }
+  .meth ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
 
-  .piede-chiaro { background: #fff; border-top: 1px solid var(--bordo); padding: 1.6rem 0; }
-  .piede-chiaro .riga { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
-  .piede-chiaro .marchio { color: var(--inchiostro); }
-  .piede-chiaro .marchio svg { height: 1.6rem; }
-  .piede-chiaro nav { display: flex; gap: 1.8rem; flex-wrap: wrap; }
-  .piede-chiaro nav a { color: var(--tenue); text-decoration: none; }
-  .piede-chiaro .destra { margin-left: auto; color: var(--tenue); font-size: .82rem; }
+  .foot-clear { background: #fff; border-top: 1px solid var(--edge); padding: 1.6rem 0; }
+  .foot-clear .row { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
+  .foot-clear .brand { color: var(--ink); }
+  .foot-clear .brand svg { height: 1.6rem; }
+  .foot-clear nav { display: flex; gap: 1.8rem; flex-wrap: wrap; }
+  .foot-clear nav a { color: var(--faint); text-decoration: none; }
+  .foot-clear .right_edge { margin-left: auto; color: var(--faint); font-size: .82rem; }
 </style>
 </head>
 <body>
@@ -101,69 +101,69 @@
   </defs>
 </svg>
 
-<div class="blu">
+<div class="blue">
   <header class="testata">
-    <div class="largo riga">
-      <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+    <div class="largo row">
+      <a class="brand" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
       <nav aria-label="Main"><a href="index.html#features">Features</a><a href="performance.html" aria-current="page">Performance</a><a href="index.html#download">Download</a><a href="#">Docs</a></nav>
-      <div class="azioni"><a class="pulsante primario" href="index.html#download">Get started</a></div>
+      <div class="acts"><a class="button primary" href="index.html#download">Get started</a></div>
     </div>
   </header>
-  <section class="apertura">
+  <section class="opening">
     <div class="largo">
       <p class="occhiello">Performance report · October 2026</p>
       <h1>Anyone is fast with one user. REMOTIX stays fast with many.</h1>
-      <p class="sotto">The same server, the same desktops, the same workload, measured step by step from one user up to sixteen: REMOTIX against xrdp, the remote desktop server most Linux machines use today.</p>
-      <div class="cifre">
-        <div class="cifra"><b>1.8× – 15×</b><span>more users than xrdp on the same machine, wherever xrdp holds at least one</span></div>
-        <div class="cifra"><b>29 – 30 fps</b><span>for a 30 fps film at every level where all users are green; xrdp drops about 1 frame in 5, even alone</span></div>
-        <div class="cifra"><b>1.5× – 4.6×</b><span>fewer server CPU cores than xrdp with four users in Full HD: the graphics card does the encoding</span></div>
+      <p class="below">The same server, the same desktops, the same workload, measured step by step from one user up to sixteen: REMOTIX against xrdp, the remote desktop server most Linux machines use today.</p>
+      <div class="digits">
+        <div class="digit"><b>1.8× – 15×</b><span>more users than xrdp on the same machine, wherever xrdp holds at least one</span></div>
+        <div class="digit"><b>29 – 30 fps</b><span>for a 30 fps film at every level where all users are green; xrdp drops about 1 frame in 5, even alone</span></div>
+        <div class="digit"><b>1.5× – 4.6×</b><span>fewer server CPU cores than xrdp with four users in Full HD: the graphics card does the encoding</span></div>
       </div>
-      <p class="ferro"><b>One machine:</b> Intel Core i5-13500T, 31 GB RAM, Debian 13. Two graphics cards in turn: the <b>integrated Intel UHD 770</b> and an <b>AMD Radeon RX 6800</b>. REMOTIX build 716e35b; xrdp 0.10.1 with xorgxrdp 0.10.2, as packaged by Debian 13.</p>
+      <p class="hardware"><b>One machine:</b> Intel Core i5-13500T, 31 GB RAM, Debian 13. Two graphics cards in turn: the <b>integrated Intel UHD 770</b> and an <b>AMD Radeon RX 6800</b>. REMOTIX build 716e35b; xrdp 0.10.1 with xorgxrdp 0.10.2, as packaged by Debian 13.</p>
     </div>
   </section>
 </div>
 
 <main>
-  <section class="sezione chiara" id="capacity">
+  <section class="section chiara" id="capacity">
     <div class="largo">
       <p class="occhiello">Capacity</p>
       <h2>How many people can work at the same time</h2>
-      <p class="guida">Users who keep working within the limits (latency, video smoothness, input) at each screen size. Every user runs the same mix: typing, scrolling, moving windows, one of them watching a film.</p>
-      <div class="controlli">
+      <p class="drive">Users who keep working within the limits (latency, video smoothness, input) at each screen size. Every user runs the same mix: typing, scrolling, moving windows, one of them watching a film.</p>
+      <div class="checks">
         <div class="segmenti" role="group" aria-label="Graphics card">
-          <button type="button" data-scheda="intel" aria-pressed="true">Intel UHD 770 (integrated)</button>
-          <button type="button" data-scheda="amd" aria-pressed="false">AMD Radeon RX 6800</button>
+          <button type="button" data-gpu_card="intel" aria-pressed="true">Intel UHD 770 (integrated)</button>
+          <button type="button" data-gpu_card="amd" aria-pressed="false">AMD Radeon RX 6800</button>
         </div>
         <div class="legenda" aria-hidden="true"><span><i style="background:var(--remotix)"></i>REMOTIX</span><span><i style="background:var(--xrdp)"></i>xrdp</span></div>
       </div>
-      <div class="multipli" id="capacita"></div>
-      <p class="nota">16 users is the ceiling of the test bench, not of the card: on the Radeon, at 2K and Full HD, all sixteen users were still green. At 4K on the Radeon, GNOME and KDE hold no one with either product: that is the Vulkan driver shipped by Debian 13 (Mesa 25.0); with Mesa 26 GNOME reaches 4.</p>
-      <div class="avviso-muro">
+      <div class="multiples" id="capabilities"></div>
+      <p class="remark">16 users is the ceiling of the test bench, not of the card: on the Radeon, at 2K and Full HD, all sixteen users were still green. At 4K on the Radeon, GNOME and KDE hold no one with either product: that is the Vulkan driver shipped by Debian 13 (Mesa 25.0); with Mesa 26 GNOME reaches 4.</p>
+      <div class="warning-wall">
         <span aria-hidden="true">⚠</span>
         <div><b>Read the xrdp figures on XFCE and LXQt as a lower bound.</b> xrdp needs, for every session, a block of shared memory as large as the screen. The test boxes had the container default of 64 MB of shared memory, and from there the next xrdp session could not start: 0, 1, 3 and 6 users at 4K, 3K, 2K and Full HD, exactly. On a normal installation that memory is half the RAM and the wall is not there. REMOTIX does not keep the screen in shared memory: in the same boxes, with the same limit, it reached 16 users. The video, CPU and memory figures below do not depend on this.</div>
       </div>
-      <details class="tabella"><summary>Show the numbers as a table</summary><div class="scorre" id="tabella-capacita"></div></details>
+      <details class="table"><summary>Show the numbers as a table</summary><div class="scrolls" id="capabilities-table"></div></details>
     </div>
   </section>
 
-  <section class="sezione grigia" id="video">
+  <section class="section gray" id="video">
     <div class="largo">
       <p class="occhiello">Video and resources</p>
       <h2>Smooth video, and a lighter server</h2>
-      <p class="guida">Four users in Full HD, on the integrated Intel card. With a single user the two are even: same latency, and xrdp is even a little lighter on XFCE and LXQt. The difference opens as users are added, because REMOTIX hands the video encoding to the graphics card.</p>
+      <p class="drive">Four users in Full HD, on the integrated Intel card. With a single user the two are even: same latency, and xrdp is even a little lighter on XFCE and LXQt. The difference opens as users are added, because REMOTIX hands the video encoding to the graphics card.</p>
       <div class="due">
-        <div class="pannello"><h3>Film at 30 fps: frames shown per second</h3><p class="sot">Range over all levels where every user is green, both cards</p><div id="grafico-video"></div></div>
-        <div class="pannello"><h3>Server CPU cores used, 4 users, Full HD</h3><p class="sot">Server, compositors and applications of the sessions · Intel UHD 770</p><div id="grafico-cpu"></div></div>
+        <div class="panel"><h3>Film at 30 fps: frames shown per second</h3><p class="sot">Range over all levels where every user is green, both cards</p><div id="chart-video"></div></div>
+        <div class="panel"><h3>Server CPU cores used, 4 users, Full HD</h3><p class="sot">Server, compositors and applications of the sessions · Intel UHD 770</p><div id="chart-cpu"></div></div>
       </div>
     </div>
   </section>
 
-  <section class="sezione chiara" id="method">
+  <section class="section chiara" id="method">
     <div class="largo">
       <p class="occhiello">Method and limits</p>
       <h2>How it was measured, in short</h2>
-      <ul class="corto">
+      <ul class="short_v">
         <li>Users are added one at a time, up to 16, at 4K, 3K, 2K and Full HD, on GNOME, KDE Plasma, XFCE and LXQt; each one types, scrolls and moves windows, and one watches a 4K film. A level counts when every user keeps latency under 50 ms and the video at 80% of its frame rate or more.</li>
         <li>One machine, and a modest one: the Intel card is the integrated one. The clients ran on the server itself, so REMOTIX's figures are a lower bound. xrdp is used as Debian 13 packages it.</li>
         <li>xrdp is the remote desktop server most Linux machines use today; other products were not measured.</li>
@@ -173,24 +173,24 @@
   </section>
 </main>
 
-<footer class="piede-chiaro">
-  <div class="largo riga">
-    <a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+<footer class="foot-clear">
+  <div class="largo row">
+    <a class="brand" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
     <nav><a href="index.html#features">Features</a><a href="performance.html">Performance</a><a href="index.html#download">Download</a><a href="https://github.com/nic-fio/REMOTIX/blob/HEAD/LICENSE.md">License</a></nav>
-    <span class="destra">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
+    <span class="right_edge">© 2026 REMOTIX · <a href="https://github.com/nic-fio/REMOTIX">GitHub</a></span>
   </div>
 </footer>
 
-<div class="suggerimento" id="suggerimento" role="status"></div>
+<div class="hint" id="hint" role="status"></div>
 <div class="nastro">Mockup</div>
 
 <script>
 // Data: fasi/20-le-prestazioni.md §8 (10 Oct 2026). Capacity = users who hold («buono»), allowing one
 // non-significant degraded actor; «verde» = every user green. 0 = not even one user.
 const DESKTOP = ["GNOME", "KDE", "XFCE", "LXQt"];
-const MISURE = [["4k", "4K"], ["3k", "3K (3200×1800)"], ["2k", "2K"], ["fhd", "Full HD"]];
-const CAPACITA = {
-  intel: { // [REMOTIX verde, REMOTIX buono, xrdp verde, xrdp buono] per desktop
+const MEASURES = [["4k", "4K"], ["3k", "3K (3200×1800)"], ["2k", "2K"], ["fhd", "Full HD"]];
+const CAPABILITIES = {
+  intel: { // [REMOTIX green_v, REMOTIX good, xrdp green_v, xrdp good] per desktop
     "4k":  [[1,1,0,0],[3,3,0,0],[4,8,0,0],[7,7,0,0]],
     "3k":  [[4,4,1,1],[1,5,1,1],[8,8,1,1],[8,8,1,1]],
     "2k":  [[4,8,1,1],[4,8,1,1],[10,10,3,3],[10,10,3,3]],
@@ -203,132 +203,132 @@ const CAPACITA = {
     "fhd": [[11,11,4,6],[15,15,1,1],[15,15,6,6],[15,15,6,6]],
   },
 };
-const SCHEDA = { intel: "Intel UHD 770", amd: "AMD Radeon RX 6800" };
+const GPU_CARD = { intel: "Intel UHD 770", amd: "AMD Radeon RX 6800" };
 const CPU = { remotix: [0.93, 1.11, 1.08, 1.05], xrdp: [4.31, 3.22, 1.61, 1.53] };
 const VIDEO = [["REMOTIX", 29.0, 30.3, "remotix"], ["xrdp", 23.1, 24.9, "xrdp"]];
 
 const NS = "http://www.w3.org/2000/svg";
-const colore = s => getComputedStyle(document.documentElement).getPropertyValue("--" + s).trim();
-function el(nome, attr, figlio) {
-  const e = document.createElementNS(NS, nome);
+const color = s => getComputedStyle(document.documentElement).getPropertyValue("--" + s).trim();
+function el(label_name, attr, child) {
+  const e = document.createElementNS(NS, label_name);
   for (const k in attr) e.setAttribute(k, attr[k]);
-  if (figlio != null) e.textContent = figlio;
+  if (child != null) e.textContent = child;
   return e;
 }
 // a column with a 4 px rounded data-end and a square base
-function colonna(x, y, w, h) {
+function column(x, y, w, h) {
   const r = Math.min(4, w / 2, h);
   return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
 }
-const sugg = document.getElementById("suggerimento");
-function mostra(ev, html) { sugg.innerHTML = html; sugg.style.opacity = 1; sposta(ev); }
-function sposta(ev) {
-  const w = sugg.offsetWidth, h = sugg.offsetHeight;
+const hints = document.getElementById("hint");
+function show_cmd(ev, html) { hints.innerHTML = html; hints.style.opacity = 1; move(ev); }
+function move(ev) {
+  const w = hints.offsetWidth, h = hints.offsetHeight;
   let x = ev.clientX + 14, y = ev.clientY - h - 12;
   if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
   if (y < 8) y = ev.clientY + 16;
-  sugg.style.left = x + "px"; sugg.style.top = y + "px";
+  hints.style.left = x + "px"; hints.style.top = y + "px";
 }
-function nascondi() { sugg.style.opacity = 0; }
-function aggancia(nodo, html) {
-  nodo.addEventListener("pointerenter", ev => mostra(ev, html));
-  nodo.addEventListener("pointermove", sposta);
-  nodo.addEventListener("pointerleave", nascondi);
+function hide() { hints.style.opacity = 0; }
+function hook(node, html) {
+  node.addEventListener("pointerenter", ev => show_cmd(ev, html));
+  node.addEventListener("pointermove", move);
+  node.addEventListener("pointerleave", hide);
 }
 
 // grouped columns: groups = desktops, two series; one shared y scale (0-16)
-function colonneRaggruppate(contenitore, valori, opz) {
-  const W = opz.W || 340, H = opz.H || 220, m = { t: 14, r: 6, b: 26, l: 26 };
-  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "grafico", role: "img", "aria-label": opz.titolo });
-  const max = opz.max, iw = W - m.l - m.r, ih = H - m.t - m.b;
+function groupedColumns(container, values, opt) {
+  const W = opt.W || 340, H = opt.H || 220, m = { t: 14, r: 6, b: 26, l: 26 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "graphical", role: "img", "aria-label": opt.heading });
+  const max = opt.max, iw = W - m.l - m.r, ih = H - m.t - m.b;
   const y = v => m.t + ih - (v / max) * ih;
-  for (const t of opz.tacche) {
-    svg.append(el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? "base" : "griglia" }));
-    svg.append(el("text", { x: m.l - 6, y: y(t) + 4, "text-anchor": "end" }, opz.formato(t)));
+  for (const t of opt.ticks) {
+    svg.append(el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? "base" : "grid" }));
+    svg.append(el("text", { x: m.l - 6, y: y(t) + 4, "text-anchor": "end" }, opt.schema(t)));
   }
-  const banda = iw / valori.length, bw = Math.min(22, (banda - 14) / 2);
-  valori.forEach((g, i) => {
-    const cx = m.l + banda * i + banda / 2;
-    svg.append(el("text", { x: cx, y: H - 8, "text-anchor": "middle", class: "etich" }, DESKTOP[i]));
-    const coppia = [["remotix", g[0]], ["xrdp", g[1]]];
-    coppia.forEach(([serie, v], j) => {
+  const bandwidth = iw / values.length, bw = Math.min(22, (bandwidth - 14) / 2);
+  values.forEach((g, i) => {
+    const cx = m.l + bandwidth * i + bandwidth / 2;
+    svg.append(el("text", { x: cx, y: H - 8, "text-anchor": "middle", class: "tick_label" }, DESKTOP[i]));
+    const pair = [["remotix", g[0]], ["xrdp", g[1]]];
+    pair.forEach(([series, v], j) => {
       const x = cx - bw - 1 + j * (bw + 2); // 2 px surface gap between the pair
       const h = Math.max(v === 0 ? 0 : 1, (v / max) * ih);
-      const p = el("path", { d: v === 0 ? `M${x},${y(0) - 2}h${bw}v2h-${bw}Z` : colonna(x, y(0) - h, bw, h), fill: v === 0 ? "#cfd6e3" : colore(serie), class: "barra" });
-      const colpo = el("rect", { x: x - 3, y: m.t, width: bw + 6, height: ih + 4, fill: "transparent", class: "colpo" });
-      svg.append(colpo, p);
-      aggancia(colpo, opz.suggerimento(i, serie, v));
+      const p = el("path", { d: v === 0 ? `M${x},${y(0) - 2}h${bw}v2h-${bw}Z` : column(x, y(0) - h, bw, h), fill: v === 0 ? "#cfd6e3" : color(series), class: "bar" });
+      const shot = el("rect", { x: x - 3, y: m.t, width: bw + 6, height: ih + 4, fill: "transparent", class: "shot" });
+      svg.append(shot, p);
+      hook(shot, opt.hint(i, series, v));
     });
   });
-  contenitore.append(svg);
+  container.append(svg);
 }
 
-function disegnaCapacita(scheda) {
-  const box = document.getElementById("capacita");
+function drawCapabilities(gpu_card) {
+  const box = document.getElementById("capabilities");
   box.textContent = "";
-  for (const [k, nome] of MISURE) {
+  for (const [k, label_name] of MEASURES) {
     const pan = document.createElement("div");
-    pan.className = "pannello";
-    pan.innerHTML = `<h3>${nome}</h3><p class="sot">Users who keep working · ${SCHEDA[scheda]}</p>`;
-    const righe = CAPACITA[scheda][k];
-    colonneRaggruppate(pan, righe.map(r => [r[1], r[3]]), {
-      titolo: `Capacity at ${nome} on ${SCHEDA[scheda]}`, max: 16, tacche: [0, 4, 8, 12, 16], formato: t => t,
-      suggerimento: (i, serie, v) => {
-        const r = righe[i], verde = serie === "remotix" ? r[0] : r[2];
-        const chi = serie === "remotix" ? "REMOTIX" : "xrdp";
-        return `<b>${chi} · ${DESKTOP[i]} · ${nome}</b>${v === 0 ? "not even one user" : v + (v === 1 ? " user" : " users") + (verde !== v ? ` (all green up to ${verde})` : " , all green")}`.replace(" ,", ",");
+    pan.className = "panel";
+    pan.innerHTML = `<h3>${label_name}</h3><p class="sot">Users who keep working · ${GPU_CARD[gpu_card]}</p>`;
+    const line_list = CAPABILITIES[gpu_card][k];
+    groupedColumns(pan, line_list.map(r => [r[1], r[3]]), {
+      heading: `Capacity at ${label_name} on ${GPU_CARD[gpu_card]}`, max: 16, ticks: [0, 4, 8, 12, 16], schema: t => t,
+      hint: (i, series, v) => {
+        const r = line_list[i], green_v = series === "remotix" ? r[0] : r[2];
+        const chi = series === "remotix" ? "REMOTIX" : "xrdp";
+        return `<b>${chi} · ${DESKTOP[i]} · ${label_name}</b>${v === 0 ? "not even one user" : v + (v === 1 ? " user" : " users") + (green_v !== v ? ` (all green up to ${green_v})` : " , all green")}`.replace(" ,", ",");
       },
     });
     box.append(pan);
   }
-  document.getElementById("tabella-capacita").innerHTML =
-    `<table class="dati"><thead><tr><th>${SCHEDA[scheda]}</th>${MISURE.map(([, n]) => `<th>${n}: REMOTIX</th><th>${n}: xrdp</th>`).join("")}</tr></thead><tbody>` +
-    DESKTOP.map((d, i) => `<tr><td>${d}</td>${MISURE.map(([k]) => { const r = CAPACITA[scheda][k][i]; return `<td>${r[1] || "—"}</td><td>${r[3] || "—"}</td>`; }).join("")}</tr>`).join("") +
+  document.getElementById("capabilities-table").innerHTML =
+    `<table class="data_v"><thead><tr><th>${GPU_CARD[gpu_card]}</th>${MEASURES.map(([, n]) => `<th>${n}: REMOTIX</th><th>${n}: xrdp</th>`).join("")}</tr></thead><tbody>` +
+    DESKTOP.map((d, i) => `<tr><td>${d}</td>${MEASURES.map(([k]) => { const r = CAPABILITIES[gpu_card][k][i]; return `<td>${r[1] || "—"}</td><td>${r[3] || "—"}</td>`; }).join("")}</tr>`).join("") +
     `</tbody></table>`;
 }
 
-function disegnaVideo() {
+function drawVideo() {
   const W = 560, H = 150, m = { t: 18, r: 20, b: 30, l: 78 }, iw = W - m.l - m.r;
-  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "grafico", role: "img", "aria-label": "Frames shown per second for a 30 fps film" });
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "graphical", role: "img", "aria-label": "Frames shown per second for a 30 fps film" });
   const x = v => m.l + ((v - 20) / 12) * iw;
   for (const t of [20, 22, 24, 26, 28, 30, 32]) {
-    svg.append(el("line", { x1: x(t), x2: x(t), y1: m.t - 6, y2: H - m.b, class: "griglia" }));
+    svg.append(el("line", { x1: x(t), x2: x(t), y1: m.t - 6, y2: H - m.b, class: "grid" }));
     svg.append(el("text", { x: x(t), y: H - 10, "text-anchor": "middle" }, t));
   }
   svg.append(el("line", { x1: x(30), x2: x(30), y1: m.t - 10, y2: H - m.b, stroke: "#0b1430", "stroke-width": 1.5 }));
-  svg.append(el("text", { x: x(30), y: m.t - 12, "text-anchor": "middle", class: "etich" }, "film: 30"));
+  svg.append(el("text", { x: x(30), y: m.t - 12, "text-anchor": "middle", class: "tick_label" }, "film: 30"));
   svg.append(el("line", { x1: x(24), x2: x(24), y1: m.t - 6, y2: H - m.b, stroke: "#8a93a3", "stroke-width": 1, "stroke-dasharray": "0" }));
-  VIDEO.forEach(([nome, lo, hi, serie], i) => {
+  VIDEO.forEach(([label_name, lo, hi, series], i) => {
     const cy = m.t + 22 + i * 44;
-    svg.append(el("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", class: "etich" }, nome));
-    svg.append(el("line", { x1: x(lo), x2: x(hi), y1: cy, y2: cy, stroke: colore(serie), "stroke-width": 8, "stroke-linecap": "round" }));
-    const colpo = el("rect", { x: x(lo) - 10, y: cy - 14, width: x(hi) - x(lo) + 20, height: 28, fill: "transparent" });
-    svg.append(colpo);
-    aggancia(colpo, `<b>${nome}</b>${lo.toFixed(1)} – ${hi.toFixed(1)} frames per second`);
+    svg.append(el("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", class: "tick_label" }, label_name));
+    svg.append(el("line", { x1: x(lo), x2: x(hi), y1: cy, y2: cy, stroke: color(series), "stroke-width": 8, "stroke-linecap": "round" }));
+    const shot = el("rect", { x: x(lo) - 10, y: cy - 14, width: x(hi) - x(lo) + 20, height: 28, fill: "transparent" });
+    svg.append(shot);
+    hook(shot, `<b>${label_name}</b>${lo.toFixed(1)} – ${hi.toFixed(1)} frames per second`);
   });
   svg.append(el("text", { x: x(24) + 4, y: H - m.b - 4, "font-size": 10 }, "green threshold 24"));
-  document.getElementById("grafico-video").append(svg);
+  document.getElementById("chart-video").append(svg);
 }
 
-function disegnaRisorse(id, dati, max, tacche, unita, titolo) {
+function drawResources(id, data_v, max, ticks, unit, heading) {
   const box = document.getElementById(id);
-  colonneRaggruppate(box, DESKTOP.map((_, i) => [dati.remotix[i], dati.xrdp[i]]), {
-    titolo, max, tacche, formato: t => t, W: 560, H: 170,
-    suggerimento: (i, serie, v) => `<b>${serie === "remotix" ? "REMOTIX" : "xrdp"} · ${DESKTOP[i]}</b>${v.toFixed(2).replace(/0$/, "")} ${unita}` +
-      (serie === "xrdp" ? ` · ${(v / dati.remotix[i]).toFixed(1)}× REMOTIX` : ""),
+  groupedColumns(box, DESKTOP.map((_, i) => [data_v.remotix[i], data_v.xrdp[i]]), {
+    heading, max, ticks, schema: t => t, W: 560, H: 170,
+    hint: (i, series, v) => `<b>${series === "remotix" ? "REMOTIX" : "xrdp"} · ${DESKTOP[i]}</b>${v.toFixed(2).replace(/0$/, "")} ${unit}` +
+      (series === "xrdp" ? ` · ${(v / data_v.remotix[i]).toFixed(1)}× REMOTIX` : ""),
   });
 }
 
 document.querySelectorAll(".segmenti button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll(".segmenti button").forEach(o => o.setAttribute("aria-pressed", o === b));
-  try { localStorage.setItem("rx-scheda", b.dataset.scheda); } catch (e) {}
-  disegnaCapacita(b.dataset.scheda);
+  try { localStorage.setItem("rx-scheda", b.dataset.gpu_card); } catch (e) {}
+  drawCapabilities(b.dataset.gpu_card);
 }));
-let iniziale = "intel";
-try { iniziale = localStorage.getItem("rx-scheda") || "intel"; } catch (e) {}
-document.querySelector(`.segmenti button[data-scheda="${iniziale}"]`)?.click();
-disegnaVideo();
-disegnaRisorse("grafico-cpu", CPU, 5, [0, 1, 2, 3, 4, 5], "cores", "Server CPU cores, 4 users, Full HD");
+let initial = "intel";
+try { initial = localStorage.getItem("rx-scheda") || "intel"; } catch (e) {}
+document.querySelector(`.segmenti button[data-gpu_card="${initial}"]`)?.click();
+drawVideo();
+drawResources("chart-cpu", CPU, 5, [0, 1, 2, 3, 4, 5], "cores", "Server CPU cores, 4 users, Full HD");
 </script>
 </body>
 </html>

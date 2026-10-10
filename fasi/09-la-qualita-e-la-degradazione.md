@@ -57,7 +57,7 @@ reti degradate, senza pretendere di fare miracoli»*
 > (0.00-0.10 % of real loss), the drop the user **sees** falls five times further on
 > (0.53-0.75 %): ⇒ between the two there is half a percentage point in which the product **is already degenerating and
 > the frames per second still say everything is fine**. ⚠ And near the edge it is **bistable**:
-> same input, `0 chiavi · 40,16/s` **or** `24 chiavi · 33,84/s`; with **zero loss** and ±15 ms of jitter **16.6/s and DOUBLE the bytes on the
+> same input, `0 keys · 40,16/s` **or** `24 keys · 33,84/s`; with **zero loss** and ±15 ms of jitter **16.6/s and DOUBLE the bytes on the
 > wire**, which is the direct proof that disorder is mistaken for loss; at **13 %** in
 > bursts ⛔⛔ **the session detaches after 0.3 s**, and *«mai staccare»* is the only obligation that holds
 > everywhere.
@@ -106,13 +106,13 @@ indietro»*, and the phase was **reset to zero**.
 > the cap is needed (§14.2, §14.3) · ⛔ **the HEVC/H.264 ratio is NOT a constant**: 0.36× on the
 > halftone, 0.76× on the grain, ⛔ **1.7× and up** on the real desktop (§14.2) · ⛔ **the threshold alone
 > does not keep the promise at ANY value**, and at 800 ms it pays **1 321 ms** of queue; ⭐ the lever is the
-> **pair** with `--ritmo-adattivo` (§14.4) · ⭐⭐⭐ **P8 is GREEN**, in still/moving pairs in the
+> **pair** with `--adaptive-rate` (§14.4) · ⭐⭐⭐ **P8 is GREEN**, in still/moving pairs in the
 > same round (§14.5) · ⭐ **4K in H.264** and ⛔ **audio** in §14.6 and §14.7.
 
 ## S.1 · ⛔ The most serious fact of the day: **the product died, and the cause is proven**
 
 At **08:28:09** the 7900 server died of `SEGV` on frame **185**, a delta of
-**525 298 bytes**. ⭐ **The cause was found line by line**: `wt_scrivi()` freed the bytes of
+**525 298 bytes**. ⭐ **The cause was found line by line**: `wt_write()` freed the bytes of
 a frame as soon as ngtcp2 had **serialized** them, while the contract of
 `ngtcp2_conn_writev_stream()` requires keeping them **until the ack**. ⇒ **Use after free**, and
 the defect was there **on every retransmitted frame, always**: the 525 KB one was only the
@@ -120,8 +120,8 @@ first **large** enough for `free()` to really return the pages to the kernel
 (`1` `mmap` block out of **45 005** in that round). Below 128 KiB the same error sent the client
 **garbage bytes in silence**. ⇒ §4.
 
-⭐ **The cure is applied** (`src/webtransport.c:745-870` and `:5929`): at `wt_scrivi()` nothing is freed
-any more — it is marked `consegnato`, and freeing is done by the ack (`coda_conferma()`) or by the closing of the stream.
+⭐ **The cure is applied** (`src/webtransport.c:745-870` and `:5929`): at `wt_write()` nothing is freed
+any more — it is marked `delivered`, and freeing is done by the ack (`queue_confirm()`) or by the closing of the stream.
 ⛔ **It is not behind a switch**: it does not change what is seen, it corrects a way of dying.
 
 ## S.2 · What was measured, and what it is worth
@@ -133,10 +133,10 @@ any more — it is marked `consegnato`, and freeing is done by the ack (`coda_co
 | ⇒ and **80 % of those 13 ms is waiting for the compositor**; encoding, which is ours, is worth 2.7 of them | 10.2-10.9 · **2.6-2.7** · 0.0 | §3.6 |
 | ⭐ **the user's REAL desktop, full screen and moving, costs 1 % of the floor** | **0.204 Mbit/s**, found again twice (0.193 · 0.195) | §3.8 · §3.15 |
 | ⛔ **but the hard case asks for THREE TIMES the floor** — a film with grain at full screen | **58.668 Mbit/s = 293 %** of 20 | §3.8 |
-| ⛔ **and «how many pixels change» predicts nothing**: bandwidth depends on CONTENT | `pieno` 1.2 · `barra` halftone **21** · grain **59** Mbit/s, with the same pixels moved | §3.8 |
-| ⛔⭐ **a 3-second hole is enough** to bring the rate from 40 to 13/s and make half of them keyframes | and `abbandoni §5.1` = `chiavi`, **one to one**, at every level | §3.10 |
+| ⛔ **and «how many pixels change» predicts nothing**: bandwidth depends on CONTENT | `full` 1.2 · `bar` halftone **21** · grain **59** Mbit/s, with the same pixels moved | §3.8 |
+| ⛔⭐ **a 3-second hole is enough** to bring the rate from 40 to 13/s and make half of them keyframes | and `abbandoni §5.1` = `keys`, **one to one**, at every level | §3.10 |
 | ⭐ **but the return is immediate and there is no hysteresis**: full regime the second after | 42 fps, **0 keyframes**, no aftermath in 17 s | §3.10 |
-| ⭐ **the three morning cures changed nothing where they should not have** — paired comparison 7900/7910 | wake-up ±0.5 ms · `pieno` **164 bytes out of 3.62 MB = 0.005 %** | §3-bis |
+| ⭐ **the three morning cures changed nothing where they should not have** — paired comparison 7900/7910 | wake-up ±0.5 ms · `full` **164 bytes out of 3.62 MB = 0.005 %** | §3-bis |
 
 ## S.3 · What changed in the code, and behind which switch
 
@@ -146,37 +146,37 @@ and the comments in the code are the seat of the reasoning.
 | # | the cure | where | switch | verified? |
 |---|---|---|---|---|
 | **1** | ⛔⭐ **the crash**: freeing happens at the **ack**, not at serialization | `webtransport.c:745-870`, `:5929` | ⛔ **none** — it is the correction of a defect | ⛔ **no**: the recipe of §4.5 was not run |
-| **2** | **the queue threshold** in `video_sgombra()`: a delta is abandoned only if the queue does not empty within the threshold | `webtransport.c:2705-2800` | `--sgombra-soglia-ms N`, **0 = off** | ⛔ no |
-| **3** | **the quality climb-back**: `qualita_corrente` was a one-way ratchet | `codificatore.c` (`risali_qualita()`), `:141-143` | `--qualita-risale`, **off** | ⛔ no |
-| **4** | **the audio reorder**: discarding happens on *«already consumed»* (§6.3), not on *«already arrived»* | `pagina.html` · `avvia_audio()` (`audio_posto_passato`), `:5992`, `:6507` | ⛔ **none** — it is a pure loosening, it does not add a ms | ⛔ **no, and the bench CANNOT see it** — §3.16 |
-| **5** | **the bandwidth cap**: `QVBR` with wire, working point and reservoir derived from the floor | `codificatore.c:200-340`, `:1786-1800` | `--tetto-banda-mbit N`, **0 = off** | ⛔ no on the test machine (yes on the laptop) |
-| **6** | ⭐⭐ **the rate regulator**: a frame does not leave when **2 deltas** in flight still have bytes in our queue | `webtransport.c` — `ritmo_frena()`, `ritmo_ciclo()`, `wt_ritmo_adattivo()`; the call is in `video_a_una()` **before** `video_sgombra()` | `--ritmo-adattivo`, **off** ⛔ **and it is not enough on its own: see below** | ⛔ no — no measurement, only the prediction written in the code |
+| **2** | **the queue threshold** in `video_clear_out()`: a delta is abandoned only if the queue does not empty within the threshold | `webtransport.c:2705-2800` | `--clear-threshold-ms N`, **0 = off** | ⛔ no |
+| **3** | **the quality climb-back**: `current_quality` was a one-way ratchet | `codificatore.c` (`raise_quality()`), `:141-143` | `--quality-rises`, **off** | ⛔ no |
+| **4** | **the audio reorder**: discarding happens on *«already consumed»* (§6.3), not on *«already arrived»* | `pagina.html` · `start_audio()` (`audio_slot_past`), `:5992`, `:6507` | ⛔ **none** — it is a pure loosening, it does not add a ms | ⛔ **no, and the bench CANNOT see it** — §3.16 |
+| **5** | **the bandwidth cap**: `QVBR` with wire, working point and reservoir derived from the floor | `codificatore.c:200-340`, `:1786-1800` | `--bandwidth-cap-mbit N`, **0 = off** | ⛔ no on the test machine (yes on the laptop) |
+| **6** | ⭐⭐ **the rate regulator**: a frame does not leave when **2 deltas** in flight still have bytes in our queue | `webtransport.c` — `rate_brakes()`, `rate_cycle()`, `wt_adaptive_rate()`; the call is in `video_a_una()` **before** `video_clear_out()` | `--adaptive-rate`, **off** ⛔ **and it is not enough on its own: see below** | ⛔ no — no measurement, only the prediction written in the code |
 
 ⛔⛔ **AND CURES 2 AND 6 ARE TWO SWITCHES THAT DEPEND ON EACH OTHER — it is written here
 because it is the easiest fact to measure wrongly in the whole phase.**
 
-With `--sgombra-soglia-ms 0` (the default) `video_sgombra()` abandons every delta that still has
+With `--clear-threshold-ms 0` (the default) `video_clear_out()` abandons every delta that still has
 bytes in the queue, at every more recent frame. ⇒ When frame N+1 arrives, the only delta that
-can still have our bytes is N: **`arretrato` is 0 or 1, never 2, by construction** — and with
-`WT_RITMO_POSTI = 2` the regulator **never fires**.
+can still have our bytes is N: **`backlog` is 0 or 1, never 2, by construction** — and with
+`WT_RATE_SLOTS = 2` the regulator **never fires**.
 
-⛔ A bench that turned on only `--ritmo-adattivo` would measure **zero descents** and would read *«the
+⛔ A bench that turned on only `--adaptive-rate` would measure **zero descents** and would read *«the
 line carries it»*. They are two facts with the same face. ⇒ The regulator is tested **with both
 on**:
 
 ```
-remotix --sgombra-soglia-ms 100 --ritmo-adattivo
+remotix --clear-threshold-ms 100 --adaptive-rate
 ```
 
-⭐ And the server **says it at startup** instead of leaving it to be deduced: `wt_ritmo_adattivo()` is called
-*after* `wt_sgombra_soglia()` on purpose, so it reads the value **in force**, and with the threshold off
+⭐ And the server **says it at startup** instead of leaving it to be deduced: `wt_adaptive_rate()` is called
+*after* `wt_clear_threshold()` on purpose, so it reads the value **in force**, and with the threshold off
 it writes `⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA … questo regolatore NON SCATTERA' MAI`.
 ⚠ The order of the two calls in `main.c` is part of the cure: inverting them would make it read zero, and
 that line would say the false thing precisely in the round where it is needed.
 
 ⭐ **And a sixth thing, which is not a cure but shows in the log**: the values **in force** are now
-written at startup — `PARAMETRI IN VIGORE`, `la scala della degradazione` (26 → 35 → 44 → 51),
-`risalita della qualita' SPENTA`, `LIVELLO PRODOTTO`, `il client dichiara video.livello`. ⛔ Until
+written at startup — `PARAMETERS IN VIGORE`, `la scala della degradazione` (26 → 35 → 44 → 51),
+`risalita della qualita' SPENTA`, `LIVELLO PRODUCT`, `il client dichiara video.livello`. ⛔ Until
 this morning the comparison of `RCP.md` §4.3 **could not be made from outside**: one of the two numbers was
 not written anywhere. The check is in §3.12, and the 7900 has none of those lines.
 
@@ -200,7 +200,7 @@ not written anywhere. The check is in §3.12, and the 7900 has none of those lin
    switches off what it was supposed to switch on, the `UID_B` that kills the other user's Firefox, the
    `wc -l <` that reads zero. §8;
 5. ⛔ **The quick route for the crash is wrong**: `shutdown_stream_write()` before the `free`,
-   as `video_sgombra()` does, *resets* the stream — and §6.2 wants the **complete** frame.
+   as `video_clear_out()` does, *resets* the stream — and §6.2 wants the **complete** frame.
    It would be trading a rare crash for a broken frame **always**. §4.6.
 
 ## S.5 · ⏳ What remains, in what order, and **why that order**
@@ -210,17 +210,17 @@ not written anywhere. The check is in §3.12, and the 7900 has none of those lin
 | **1.** ⛔ **reproduce the crash with the recipe of §4.5** (`MALLOC_MMAP_THRESHOLD_=32768` + frozen client), and arm the trap of §4.7 | ⛔ The cause is *probable with the line*, **not seen in flight**. And until it reproduces, one cannot even prove that the cure cured it: one would be measuring an absence |
 | **2.** ⭐ **measure the five cures on the real hardware**, one at a time, paired | ⛔ They are **five variables**. The method of §3-bis (two servers, «before» alive beside «after») is already written and has already caught a false alarm for the queue |
 | **3.** ⛔ **write the bench that runs the PAGE** for cure 4 | Without it, the audio cure stays **unverifiable**: today's bench measures itself. The shape of the bench is already written in §3.16 |
-| **4.** ✅ **the rate regulator** — **written** on 23 Aug 2026, cure 6 of S.3, ⏳ **not measured** | ⛔ The mandatory order was respected: cure 2 (`--sgombra-soglia-ms`) is its prerequisite and arrived first. ⚠ **And the trap remains**: switched on alone it never fires, and the server writes so at startup — see S.3 |
-| **5.** ✅ **the descent log**, §7 | It is born together with the regulator, not after: **two lines per episode** (`il ritmo SCENDE` / `il ritmo RISALE`), never one per frame; every descent carries **the measurement beside the threshold** (`arretrato N contro 2 posti`), plus `cwnd`, `cwnd_left`, bytes in flight and the queue inside the network in ms. ⏳ The **tuning of `POSTI`** on the bench remains |
+| **4.** ✅ **the rate regulator** — **written** on 23 Aug 2026, cure 6 of S.3, ⏳ **not measured** | ⛔ The mandatory order was respected: cure 2 (`--clear-threshold-ms`) is its prerequisite and arrived first. ⚠ **And the trap remains**: switched on alone it never fires, and the server writes so at startup — see S.3 |
+| **5.** ✅ **the descent log**, §7 | It is born together with the regulator, not after: **two lines per episode** (`il ritmo SCENDE` / `il ritmo RISALE`), never one per frame; every descent carries **the measurement beside the threshold** (`backlog N contro 2 slots`), plus `cwnd`, `cwnd_left`, bytes in flight and the queue inside the network in ms. ⏳ The **tuning of `POSTI`** on the bench remains |
 | **6.** ⛔ **the user's judgement on the two things that change what is SEEN** | It is the only thing that closes the phase, and it is the lesson paid for with the reset of phase 10 of v1 |
 
 ⛔⛔ **And the THREE things that wait for him, explicitly:**
 
 | | the price, quantified |
 |---|---|
-| **the queue threshold** (`--sgombra-soglia-ms 100`) | dragging a window while the line drops, the window follows the pointer with up to **~150 ms** of delay for a moment (**~205 ms** from gesture to pixel, adding the loop of phase 8) — ⛔ **instead of jumping from one image to the next at keyframe rate**, which is what it does today. ⚠ Which of the two is worse **is not decided by a measurement** |
-| **the bandwidth cap** (`--tetto-banda-mbit 20`) | on the **hard case** the image gets uglier: that is its job. ⭐ On **real content** the prediction is that **nothing happens** (0.204 Mbit/s, 1 % of the floor) — and if the real desktop cost **less** than before, the cap is saving where it must not and **the cure is thrown away** |
-| **the rate regulator** (`--ritmo-adattivo`, with the threshold on) | during a line drop **fewer frames are seen**: movement becomes jerky instead of old. ⭐ The prediction is that **at 20 Mbit/s it does nothing** — it is a **parapet**, and its correct behaviour is to do nothing. ⛔ If one day the delivered scene goes **below 25/s on a 20 Mbit/s line**, the log declares it a **defect** and does not fight it: forcing a frame into a queue that does not empty makes the queue worse |
+| **the queue threshold** (`--clear-threshold-ms 100`) | dragging a window while the line drops, the window follows the pointer with up to **~150 ms** of delay for a moment (**~205 ms** from gesture to pixel, adding the loop of phase 8) — ⛔ **instead of jumping from one image to the next at keyframe rate**, which is what it does today. ⚠ Which of the two is worse **is not decided by a measurement** |
+| **the bandwidth cap** (`--bandwidth-cap-mbit 20`) | on the **hard case** the image gets uglier: that is its job. ⭐ On **real content** the prediction is that **nothing happens** (0.204 Mbit/s, 1 % of the floor) — and if the real desktop cost **less** than before, the cap is saving where it must not and **the cure is thrown away** |
+| **the rate regulator** (`--adaptive-rate`, with the threshold on) | during a line drop **fewer frames are seen**: movement becomes jerky instead of old. ⭐ The prediction is that **at 20 Mbit/s it does nothing** — it is a **parapet**, and its correct behaviour is to do nothing. ⛔ If one day the delivered scene goes **below 25/s on a 20 Mbit/s line**, the log declares it a **defect** and does not fight it: forcing a frame into a queue that does not empty makes the queue worse |
 
 ## S.6 · ⛔⛔ THE TWO CONTRADICTIONS, declared and not smoothed over
 
@@ -293,13 +293,13 @@ adaptive resolution **out**, AVC444 **out**, encoding by regions **out**.
 | | today |
 |---|---|
 | video **bitrate** control | ⛔ **does not exist**: `grep bit_rate\|maxrate\|bufsize codificatore.c` → **zero occurrences** |
-| **QP** | `figlio.c` · `scatto_chiudi()` `QP_HARDWARE 26` **fixed**, `rc_mode = CQP` — and the comment declares it: *«the value is a convenience: the working point between quality and bandwidth is phase 9»* |
+| **QP** | `figlio.c` · `shot_close()` `QP_HARDWARE 26` **fixed**, `rc_mode = CQP` — and the comment declares it: *«the value is a convenience: the working point between quality and bandwidth is phase 9»* |
 | **congestion** algorithm | ⛔ **never chosen**: `grep cc_algo\|NGTCP2_CC` → **zero**. ngtcp2's default is taken |
-| the **only** loop reacting to bandwidth | `webtransport.c` · `wt_video_gancio()` `chiave_intervallo_ms()` — it rules **how often a keyframe can be REQUESTED**, not how much a frame costs |
-| the degradation the product **really has** | `webtransport.c` · `WT_TIENILA_VIVA_NS` `video_sgombra()` |
+| the **only** loop reacting to bandwidth | `webtransport.c` · `wt_video_hook()` `key_interval_ms()` — it rules **how often a keyframe can be REQUESTED**, not how much a frame costs |
+| the degradation the product **really has** | `webtransport.c` · `WT_KEEPALIVE_NS` `video_clear_out()` |
 
-⛔⛔ **And `video_sgombra()` goes the opposite way from what §3.3 asks.** Called at **every**
-frame (`webtransport.c` · `wt_ritmo_adattivo()`): on a narrow line a delta does not get out in 33 ms, so it is
+⛔⛔ **And `video_clear_out()` goes the opposite way from what §3.3 asks.** Called at **every**
+frame (`webtransport.c` · `wt_adaptive_rate()`): on a narrow line a delta does not get out in 33 ms, so it is
 abandoned **always**; every abandon rekindles the debt of `RCP.md` §5.2 (`rcp.c` →
 `:3382`) ⇒ the stream degenerates into **keyframes only**. ⇒ **It degrades in space AND in time together**,
 instead of lowering the rate while keeping the deltas. ⭐ The cure is **named in the code**, allowed by §5.1,
@@ -330,7 +330,7 @@ degraded). What remains is the **qp**, for which no ladder is defined.
 | at **3 Mbit/s with a STILL desktop** — purity **1.000** ⇒ ⛔ **it is not the bandwidth: it is the video** | 21 Aug |
 | with **Opus** (1/32 of the audio bandwidth) **58 %** is lost anyway ⇒ reducing what audio asks for **does not save it** | 21 Aug |
 | on the narrow rounds the delivered frames are **all keyframes** (144/144, 149/149) against **2 out of 1 019** at 15 Mbit/s | 21 Aug |
-| a 60 KB keyframe at 3 Mbit/s occupies the window for **160 ms**, and `WT_CHIAVE_RICHIESTA_MS` grants one every **150** | 21 Aug |
+| a 60 KB keyframe at 3 Mbit/s occupies the window for **160 ms**, and `WT_KEY_REQUEST_MS` grants one every **150** | 21 Aug |
 | ⛔ **four transport variants change nothing** (397 · 278 · 406 · 514 · 371) ⇒ *«the window is not contended: it is already full»* | 21 Aug |
 | the **hardware encoder floor** (v1, R31): asking for 2 000 kbit/s at moving 1440p, out come **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)** (the comparison with `libx264` no longer holds after phase 18) ⇒ **there is a bottom around 4 Mbit/s, and from there down the only lever is fewer pixels or fewer frames** | v1 |
 | ⛔ **the bitrate control mode is not chosen: the driver DEDUCES it** (`rc_max_rate == bit_rate` ⇒ CBR, and nobody had chosen it) | v1, R31 |
@@ -349,7 +349,7 @@ degraded). What remains is the **qp**, for which no ladder is defined.
 - ⭐ **the REAL path is throttled, not `lo`**: `wondershaper` is in `~/.local/bin` on the user's
   tablet. ⚠ It is the declared limit of `banchi/07-b64-rete.py`, whose `netem` half runs on
   `lo`, where the MTU is 65536;
-- ⛔ **the deciding check already exists**: `banchi/07-b65-datagram.py --scena no`. A bench that with a
+- ⛔ **the deciding check already exists**: `banchi/07-b65-datagram.py --scene no`. A bench that with a
   still scene does not give purity 1.000 has measured nothing;
 - ⛔ **the first check of the phase is INVARIANT I1**: that the rate does **not** drop with a still scene;
 - ⛔ **all three quantities are measured** — CPU ms · frames/s · **delay** — **plus the
@@ -373,10 +373,10 @@ no excuse — **does the rate drop when the scene is still?**
 |---|---|
 | **the session** | `banchi/01-b3-cliente.py` **inside the container** (`enter.sh --root`): `aioquic` is there, not outside. It is the job of `07-b65-datagram.py`, not a new route |
 | **the scene** | `04-b30-scena` already built, in three states: **still** (no scene) · **bar** (a scrolling bar) · **full** (bands at full screen). ⛔ It wants the monitor **by name**, and the name is told by the log (`monitor «Meta-0»`) |
-| **the stage** | it is born with the **first** client and survives the detach (I4) ⇒ without a session opened before, `--uscita` finds no monitor |
-| **the frames, keyframe against delta** | from the per-frame line `rcp.c` · `rcp_video_apri()` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
+| **the stage** | it is born with the **first** client and survives the detach (I4) ⇒ without a session opened before, `--out_dir` finds no monitor |
+| **the frames, keyframe against delta** | from the per-frame line `rcp.c` · `rcp_video_open()` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
 | **the rate per second** | from the line `figlio.c`, which the child writes **every second** and which also carries the **empty waits** |
-| **the abandons** | `§5.1` `rcp.c` · the withheld keyframe `§5.2` `webtransport.c` ⚠ *(the cited code is no longer there: to be reread)* · `RICHIEDI_CHIAVE … accolta (§5.2)` `rcp.c` · `appunti_posto_libera()` |
+| **the abandons** | `§5.1` `rcp.c` · the withheld keyframe `§5.2` `webtransport.c` ⚠ *(the cited code is no longer there: to be reread)* · `REQUEST_KEY … accolta (§5.2)` `rcp.c` · `clipboard_slot_free()` |
 | ⭐ **the bytes on the wire** | **they are counted, not deduced**: `/proc/net/dev` on `lo`. `[M]` `lo` **at rest does 0 bytes in 5 s** on this machine (ssh goes through `enp7s0`, the rest is on unix sockets) ⇒ clean counter, and **there is no need to touch `tc`**. ⚠ It is an advantage of the moment, not a law: rest is remeasured at every round |
 
 ⛔ **The wire bytes are NOT the frame bytes**: the `SPEDITO` line counts the **payload**,
@@ -391,8 +391,8 @@ on purpose to make those counters **move**:
 
 | | how | outcome, 23 Aug |
 |---|---|---|
-| **§5.2** `09-b68-ritmo.py controllo` | the client **requests** a keyframe in the middle of the round | ✅ accepted **1**, passed to the stage **1**, deltas thrown away **1** |
-| **§5.1** `09-b68-ritmo.py stretto` | the line narrows to **2 Mbit/s** (`netem` on `lo`, only 7900), only once, then it is restored | ✅ abandons **151**, withheld keyframe **86** |
+| **§5.2** `09-b68-ritmo.py check` | the client **requests** a keyframe in the middle of the round | ✅ accepted **1**, passed to the stage **1**, deltas thrown away **1** |
+| **§5.1** `09-b68-ritmo.py tight` | the line narrows to **2 Mbit/s** (`netem` on `lo`, only 7900), only once, then it is restored | ✅ abandons **151**, withheld keyframe **86** |
 
 ⛔ **The network is touched with the discipline of `07-b64`/`07-b65`**: only `lo`, only port 7900,
 `enp7s0` (ssh + the user's 7730) **never**, a detached guardian that puts the discipline back even if
@@ -420,9 +420,9 @@ A **known** delay of 200 ms is injected by freezing some processes, and the benc
 
 | attempt | where the delay falls | outcome |
 |---|---|---|
-| I freeze the **child** (capture+encoding) at the shot | ⛔ `colpo → pixel` **0.5 → 191.8 ms** | the delay ends **before** the pixel: it proves nothing about the measured stretch |
-| I freeze the **parent** (transport) at the shot | ⛔ `colpo → pixel` **1.1 → 192.0 ms** | **the same**: the stimulus moves together with the instrument |
-| ⭐ I freeze the parent **after the pixel has changed** | ✅ wake-up **12.8 → 204.0 ms**, and `colpo → pixel` stays **1.2 ms** | the delay falls **inside** the measured stretch, and the bench sees all of it |
+| I freeze the **child** (capture+encoding) at the shot | ⛔ `shot → pixel` **0.5 → 191.8 ms** | the delay ends **before** the pixel: it proves nothing about the measured stretch |
+| I freeze the **parent** (transport) at the shot | ⛔ `shot → pixel` **1.1 → 192.0 ms** | **the same**: the stimulus moves together with the instrument |
+| ⭐ I freeze the parent **after the pixel has changed** | ✅ wake-up **12.8 → 204.0 ms**, and `shot → pixel` stays **1.2 ms** | the delay falls **inside** the measured stretch, and the bench sees all of it |
 
 ⭐⭐ **And the two failed attempts measured something I was not looking for, and it is not small**:
 freezing **any** link of our chain — child *or* parent — stops the **drawing of the
@@ -445,9 +445,9 @@ why the 40/s out of 60 requested do not move.
 
 | where | what |
 |---|---|
-| `src/webtransport.c` | ⛔⭐ **the crash cure**: the bytes of a frame are freed at the **ack** (`coda_conferma()`, `:840-870`) or at the closing of the stream, not at serialization. At `:5929` there is the line that killed the server, and the comment names it. ⭐ **the queue threshold** in `video_sgombra()` (`:2705-2800`), with the two counts `sgombra_tenuti` / `sgombra_abbandoni` — so that *«zero abandons»* and *«the cure is off»* do not have the same face |
-| `src/codificatore.c` | ⭐ **the quality climb-back** (`risali_qualita()`, `:3446`): counting at delivery, climbing back **at the entry of the next frame**, one rung at a time, with the wait that **doubles** at every relapse. ⭐ **the bandwidth cap** (`:200-340`, `:1786-1800`): `QVBR`, with wire · working point · reservoir **derived from the floor** in one place only |
-| `src/pagina.html` | ⭐ **the audio reorder**: `audio_posto_passato()` (`:5882`) computes the **consumption frontier** from `a.base` and `ctx.currentTime`; `a.ist_max_us` (`:5669`) separates *«an overtaken block»* from *«the whole playback late»* — ⛔ without it, a 1 ms overtaking would cost a re-arm, that is **250 ms given away** |
+| `src/webtransport.c` | ⛔⭐ **the crash cure**: the bytes of a frame are freed at the **ack** (`queue_confirm()`, `:840-870`) or at the closing of the stream, not at serialization. At `:5929` there is the line that killed the server, and the comment names it. ⭐ **the queue threshold** in `video_clear_out()` (`:2705-2800`), with the two counts `clear_out_kept` / `clear_out_abandonments` — so that *«zero abandons»* and *«the cure is off»* do not have the same face |
+| `src/codificatore.c` | ⭐ **the quality climb-back** (`raise_quality()`, `:3446`): counting at delivery, climbing back **at the entry of the next frame**, one rung at a time, with the wait that **doubles** at every relapse. ⭐ **the bandwidth cap** (`:200-340`, `:1786-1800`): `QVBR`, with wire · working point · reservoir **derived from the floor** in one place only |
+| `src/pagina.html` | ⭐ **the audio reorder**: `audio_slot_past()` (`:5882`) computes the **consumption frontier** from `a.base` and `ctx.currentTime`; `a.ist_max_us` (`:5669`) separates *«an overtaken block»* from *«the whole playback late»* — ⛔ without it, a 1 ms overtaking would cost a re-arm, that is **250 ms given away** |
 | `src/main.c` · `src/figlio.c` | the **three switches** (`:994`, `:999`, `:1005`), passed to the child in the `argv` (`figlio.c:1162-1165`), and ⭐ **the values in force written at startup in both cases** — on and off |
 
 ⭐ And one thing that holds beyond the day: **the parameters line says the VALUES, not the words** —
@@ -464,7 +464,7 @@ why the 40/s out of 60 requested do not move.
 | `banchi/09-b71-sessione.sh` | opens a **long, background** session inside the container. ⛔ Same reason as the scene script: four layers of quotes and a redirect towards a root folder |
 | `banchi/09-b72-banda.py` | the **bandwidth** bench: the three points at 2560x1080 and the **step** |
 | `banchi/09-b72-agente.py` | the **step director**: it changes the `rate` and watches the wire from the machine, because the step lasts 3 s and an `ssh` round costs 0.3 |
-| `banchi/09-b72-video.sh` | a **real video** at full screen inside the session. ⛔ It exists because the bands of `--movimento pieno` are **flat colours**: measuring the cost of a video there would give a low and false number |
+| `banchi/09-b72-video.sh` | a **real video** at full screen inside the session. ⛔ It exists because the bands of `--motion full` are **flat colours**: measuring the cost of a video there would give a low and false number |
 
 ---
 
@@ -481,7 +481,7 @@ why the 40/s out of 60 requested do not move.
 > ⚠⚠ **TO BE READ WITH §3.7 BESIDE IT** (written in the afternoon of the same day): these measurements
 > were taken with the session in GNOME's **overview**, where a «full
 > screen» window is really **a shrunken preview**. ⇒ the shape of the result holds (with a still scene
-> zero frames come out, remeasured at 2560x1080), ⛔ **but the bytes of `barra` and `pieno` below
+> zero frames come out, remeasured at 2560x1080), ⛔ **but the bytes of `bar` and `full` below
 > are those of a fraction of the screen, not of the screen.** The real bytes are in §3.8.
 
 | scene | time | frames/s | KEYFRAME | delta | video payload | bytes on the wire (`lo`) |
@@ -494,12 +494,12 @@ why the 40/s out of 60 requested do not move.
 ⛔⛔ **With a still scene, in 30 seconds, ONE frame only comes out — the opening keyframe — and then
 nothing more.** Repeated twice, **identical**: 1 and 1. It is not a drop: it is a **stop**.
 
-⭐ **And the rate per second says it without averaging it** (`fotogrammi al secondo`, from the child's line):
+⭐ **And the rate per second says it without averaging it** (`frames al second`, from the child's line):
 
 ```
-ferma   1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-barra  40 40 40 40 39 41 40 40 40 40 41 40 40 38 39 38 38 40 40 40 41 39 40 40 40 40 40 40 41
-pieno  40 39 40 40 38 38 37 38 38 39 37 40 37 40 40 39 40 40 39 39 40 40 39 40 40 41 39 41 40
+halt   1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+bar  40 40 40 40 39 41 40 40 40 40 41 40 40 38 39 38 38 40 40 40 41 39 40 40 40 40 40 40 41
+full  40 39 40 40 38 38 37 38 38 39 37 40 37 40 40 39 40 40 39 39 40 40 39 40 40 41 39 41 40
 ```
 
 ⭐⭐ **AND THE CAUSE IS WRITTEN IN THE LOG BY THE PRODUCT ITSELF**, `figlio.c`, every second:
@@ -532,14 +532,14 @@ is, today, **the rate at which the compositor deigns to deliver**.
 
 ### 3.2 The rate with a moving scene: **40/s out of 60 requested**
 
-`[M]` The child asks capture for **60/s** (`60/s chiesti`) and receives **39–41**. The cap is not
+`[M]` The child asks capture for **60/s** (`60/s asked`) and receives **39–41**. The cap is not
 our encoding: the stretch **capture → bytes out** has a median of **8.12 ms** (bar) and **8.87 ms**
 (full) at 1920x1080 — that is ~115/s of capacity. ⇒ ⭐ **The bottleneck is not the encoder: it is the
 delivery.** `[?]` To be understood in this phase whether the 40 are a cap of Mutter or of the scene.
 
 ### 3.3 The bytes, and ⛔ how much silence costs
 
-> ⚠ **The warning of §3.1 applies**: `barra` and `pieno` were previews, not full screen — §3.7.
+> ⚠ **The warning of §3.1 applies**: `bar` and `full` were previews, not full screen — §3.7.
 > The **still** line instead holds, and is confirmed at 2560x1080 in §3.8.
 
 | scene | video payload | total wire | ⇒ overhead + audio |
@@ -559,7 +559,7 @@ video**.
 |---|---|---|---|---|
 | abandons **§5.1** | 0 | 0 | 0 | **151** |
 | withheld keyframe **§5.2** | 0 | 0 | 0 | **86** |
-| `RICHIEDI_CHIAVE` accepted | 0 | 0 | 0 | 0 |
+| `REQUEST_KEY` accepted | 0 | 0 | 0 | 0 |
 | requests **passed to the stage** | 0 | 0 | 0 | **151** |
 | deltas thrown away because §5.2 wants a keyframe | 0 | 0 | 0 | **538** |
 | audio thrown away / refused | 0 / 0 | 0 / 0 | 0 / 0 | **0 / 3 018** |
@@ -568,7 +568,7 @@ video**.
 the right answer, and the two positive controls of §1.1 prove that those counters **can
 move**.
 
-### 3.5 ⛔⭐ AND THE SPIRAL OF §0.3 REPRODUCES AT THE FIRST SQUEEZE — 07:09:38, **2 Mbit/s**, scene `pieno`
+### 3.5 ⛔⭐ AND THE SPIRAL OF §0.3 REPRODUCES AT THE FIRST SQUEEZE — 07:09:38, **2 Mbit/s**, scene `full`
 
 | | |
 |---|---|
@@ -580,7 +580,7 @@ move**.
 | audio | **3 018 datagrams refused by ngtcp2** (on a wide line: 0) |
 
 ⇒ ⛔ **It is exactly the spiral that §0.3 had read in the code, here measured on the product of
-phase 9**: `video_sgombra()` abandons the delta ⇒ §5.2 opens the debt ⇒ a keyframe leaves ⇒ the keyframe
+phase 9**: `video_clear_out()` abandons the delta ⇒ §5.2 opens the debt ⇒ a keyframe leaves ⇒ the keyframe
 fills the window ⇒ the next delta does not get out ⇒ it starts again. ⭐ And the stream **degrades in
 space AND in time together** (23/s **and** keyframes only) instead of lowering the rate while keeping the deltas,
 which is what §8.3 asks.
@@ -594,7 +594,7 @@ measured at 20 Mbit/s and above.
 ### 3.6 ⭐⭐⭐ WAKE-UP **COSTS NOTHING** — *23 Aug, 07:46–08:00 (machine UTC)*
 
 > Port **7900**, user **`prova`**, canvas **1920x1080**, codec HEVC, audio PCM, **wide** line.
-> Scene `04-b30-scena --movimento pieno`, frozen (`SIGSTOP`) and woken (`SIGCONT`).
+> Scene `04-b30-scena --motion full`, frozen (`SIGSTOP`) and woken (`SIGCONT`).
 > **180 wake-ups**, 30 for each quiet duration. Bench `banchi/09-b71-risveglio.py` — §1.2.
 
 ⛔ **The question**: §3.1 measured that with a still scene the rate **stops**. The price for whoever
@@ -674,8 +674,8 @@ and **no cap**, hard content at full screen asks for **three times the declared 
 Mbit/s**, rescaled from v1) was **optimistic by three times**.
 
 ⭐⭐ **And the three points together say what a single number would not say**: bandwidth does not depend
-on the *surface* that moves, it depends on the **content**. `pieno` moves **all** the pixels and costs
-**1.2 Mbit/s**; `barra` moves the same pixels with a **halftone** and costs **21**; the film with
+on the *surface* that moves, it depends on the **content**. `full` moves **all** the pixels and costs
+**1.2 Mbit/s**; `bar` moves the same pixels with a **halftone** and costs **21**; the film with
 grain costs **59**. ⇒ ⛔ **«how many pixels change» predicts nothing**, and a regulator built
 on that quantity would be wrong by two orders of magnitude.
 
@@ -711,7 +711,7 @@ was **41.2 MiB**.
 
 ### 3.10 ⭐⭐⭐ THE STEP — **a 3-second hole is enough, and the return is immediate**
 
-> Scene **`barra`** (the one asking for 21 Mbit/s: below the 10 of the hole there is a **real deficit**),
+> Scene **`bar`** (the one asking for 21 Mbit/s: below the 10 of the hole there is a **real deficit**),
 > canvas 2560x1080. `netem` on `lo`, only port 7900, `delay 15ms` **in all three phases** —
 > only the `rate` changes, so the transient is of bandwidth and not of RTT. `08:32`.
 > ⭐ The change of discipline costs **4.0–4.7 ms**, measured: on a 3 s hole it is 0.15 %.
@@ -732,9 +732,9 @@ was **41.2 MiB**.
 from 40 to 13/s and turn **half the frames into keyframes** (7 out of 13). It is the spiral of
 §0.3, identical to the one seen at constant 2 Mbit/s, triggered by a transient.
 
-⭐⭐ **And the correspondence is exact, at every level**: `abbandoni §5.1` = `chiavi`, one to one —
+⭐⭐ **And the correspondence is exact, at every level**: `abbandoni §5.1` = `keys`, one to one —
 7↔6, 6↔7, 7↔7 in the hole, and also **on the wide line** (3↔3, 1↔1). ⇒ ⛔ It is not «the poor line makes
-keyframes come out»: it is **`video_sgombra()` abandoning a delta, and every abandon buys a keyframe**.
+keyframes come out»: it is **`video_clear_out()` abandoning a delta, and every abandon buys a keyframe**.
 The poor line only increases the abandons.
 
 ⭐⭐⭐ **But the return is immediate, and this is the good news**: the line reopens at +11.1 s, the
@@ -745,7 +745,7 @@ gone down, so it has nothing to bring back up either.
 
 #### ⛔ THE CONTROL, and without it the step proves nothing
 
-Same step, scene **`pieno`** (3.7 Mbit/s on the wire, that is **below** the hole):
+Same step, scene **`full`** (3.7 Mbit/s on the wire, that is **below** the hole):
 
 | s | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|
@@ -804,8 +804,8 @@ this snapshot (`pagina.html` and `rcp.c` do). ⇒ ⛔ **These numbers hold for t
 they were at 08:45, and for nothing else**: whoever wants to judge the afternoon's work must
 rebuild and remeasure.
 
-⚠ **And the benches took port, tree and folder from the environment** (`LAV`, `DENTRO_ALB`,
-`DENTRO_LAV`, `ALB_NOME`, `PORTE_AMMESSE`), with the **defaults unchanged**: every round of this morning
+⚠ **And the benches took port, tree and folder from the environment** (`LAV`, `INSIDE_TREE`,
+`INSIDE_WORK`, `ALB_NOME`, `ALLOWED_PORTS`), with the **defaults unchanged**: every round of this morning
 redoes itself identically without writing anything. ⛔ And `pulizia()` now **declares** the ports it tolerates
 instead of demanding only one: two servers running are not dirt, measuring in two is.
 
@@ -823,10 +823,10 @@ beside them there is the **control** — the same session on 7900 does not have 
 > `la risalita della qualita' e' **SPENTA** (invariante I6): scesa una volta, la qualita' resta giu' per tutta la sessione — e questa riga e' il perche', non «non ha mai dovuto scattare».  ⚠ Si accende con \`codificatore_qualita_risale(true)\`, e da spenta questi numeri (**120 fotogrammi, 2097152 byte, scalino 9, punto di lavoro QP 26 costante, tetto d'attesa 3840**) non hanno nessun effetto`
 
 ⭐ **The parameters line says the VALUES, not the words**: «QP 26», not «constant QP». ⛔ The
-control: the same line on **7900** says `… · 2560x1080 · **QP costante** · chiavi solo su
-richiesta` — the number is not there.
+control: the same line on **7900** says `… · 2560x1080 · **QP costante** · keys solo su
+request` — the number is not there.
 
-**Cure 3 — the declarations** (`08:51:26.861` `rcp`, `08:51:26.961` and `08:51:29.097` `figlio`):
+**Cure 3 — the declarations** (`08:51:26.861` `rcp`, `08:51:26.961` and `08:51:29.097` `child`):
 
 > `il client dichiara video.livello=5.1 (= 5.1, cioe' level_idc 51 in H.264 e L153 in HEVC): §4.3 vieta al server di emettere un flusso PIU' ALTO di questo`
 >
@@ -846,26 +846,26 @@ be made from outside**: one of the two numbers was not written anywhere.
 
 | line | 7910 (after) | 7900 (before) |
 |---|---|---|
-| `PARAMETRI IN VIGORE` | 2 | **0** |
+| `PARAMETERS IN VIGORE` | 2 | **0** |
 | `la scala della degradazione` | 1 | **0** |
 | `risalita della qualita` | 1 | **0** |
-| `LIVELLO PRODOTTO` | 1 | **0** |
+| `LIVELLO PRODUCT` | 1 | **0** |
 | `il client dichiara video.livello` | 1 | **0** |
 
 **Cure 1 — the audio counters** (read **on the served page**, not in the source):
 
 | | 7910 (after) | 7900 (before) |
 |---|---|---|
-| `audio_posto_passato` (the computed frontier) | **2** occurrences | **0** |
-| `" tardivi " + c.scartati_tardivi` on the status line | **1** | **0** |
+| `audio_slot_past` (the computed frontier) | **2** occurrences | **0** |
+| `" late " + c.discarded_late` on the status line | **1** | **0** |
 
 ⇒ ⭐ The cured page **is the one the after server delivers**: `curl https://192.168.0.2:7910/`
-carries it, `…:7900/` does not. ⚠ The page is read **once at startup** (`pagina.c` · `pagina_muovi()`) — this is
+carries it, `…:7900/` does not. ⚠ The page is read **once at startup** (`pagina.c` · `page_move()`) — this is
 the check that that restart was needed.
 
 ### 3.13 ⭐⭐⭐ THE WAKE-UP: **identical** — *7900 at 09:07–09:09, 7910 at 09:18–09:20*
 
-> Same scene (`04-b30-scena --movimento pieno`), same user `prova`, canvas 1920x1080,
+> Same scene (`04-b30-scena --motion full`), same user `prova`, canvas 1920x1080,
 > **30 shots per point**, wide line. ⛔ **One at a time**: between the two rounds the machine was
 > reset to zero (no live stage, no discipline).
 
@@ -898,23 +898,23 @@ a paired comparison is made with two close measurements, not with one from three
 | **full** | 39.97 | 1 + 1 198 | 4 936 055 B · 1 316 kbit/s | 3.920 | 40.17 | 1 + 1 204 | 5 038 472 B · 1 344 kbit/s | 3.947 |
 | **still** *(repeated)* | **0.07** | 1 + 1 | 5 556 B | 2.431 | **0.07** | 1 + 1 | 5 551 B | 2.431 |
 | abandons §5.1 · withheld keyframe §5.2 | **0 · 0** | | | | **0 · 0** | | | |
-| the client's `vecchi` audio | **0** | | | | **0** | | | |
+| the client's `stale` audio | **0** | | | | **0** | | | |
 
-⭐⭐ **The measurement that counts is the cost PER FRAME, not the count of frames**: on `barra`
+⭐⭐ **The measurement that counts is the cost PER FRAME, not the count of frames**: on `bar`
 it is **55 838** bytes (7900) against **55 882** (7910), that is **0.08 % of difference**. ⇒ The
 encoder does the same thing; what wobbles by 6 % is **how many times Mutter delivers**, which is the
 same quantity as §3.1 and is not ours.
 
-⛔ **And audio on the local path confirms the premise of cure 1**: `vecchi` **0** on
+⛔ **And audio on the local path confirms the premise of cure 1**: `stale` **0** on
 both, in all four rounds. There was nothing to cure, and indeed nothing changed.
 
-⚠ `barra` here costs **16–20 Mbit/s** against the 579 kbit/s of §3.1: those were previews of the
+⚠ `bar` here costs **16–20 Mbit/s** against the 579 kbit/s of §3.1: those were previews of the
 overview (§3.7), these are not. ⛔ The comparison that holds is **column against column**, not
 against this morning.
 
 ### 3.15 ⭐⭐⭐ BANDWIDTH AT 2560x1080: **identical to the byte** — *7910 at 09:44 and 09:51, 7900 at 09:47*
 
-> Bench `09-b72-banda.py punti`, user **`prova2`**, canvas **2560x1080**, **25 s** per point,
+> Bench `09-b72-banda.py points`, user **`prova2`**, canvas **2560x1080**, **25 s** per point,
 > wide line. The «video» point is the **user's real desktop**: `scena-utente.webm` at full
 > screen in `firefox-esr`, that is the content the product exists for.
 
@@ -924,14 +924,14 @@ against this morning.
 | **full** | 41.00 | **1.159 Mbit/s** | 5.8 % | 3 532 | 3.683 | 41.28 | **1.159 Mbit/s** | 5.8 % | 3 508 | 3.687 |
 | **video** *(real desktop)* | 21.96 | **0.193 Mbit/s** | **1.0 %** | 1 099 | 2.666 | 21.92 | **0.195 Mbit/s** | **1.0 %** | 1 112 | 2.667 |
 
-⭐⭐⭐ **`pieno`: 3 620 466 bytes against 3 620 630, over 25 seconds and ~1 030 frames.** That is
+⭐⭐⭐ **`full`: 3 620 466 bytes against 3 620 630, over 25 seconds and ~1 030 frames.** That is
 **164 bytes of difference out of 3.62 MB — 0.005 %.** ⛔ Not «similar»: the same encoder that
 does the same thing.
 
 ⭐ **And the real desktop costs 1.0 % of the floor on both** — 0.193 against 0.195 Mbit/s,
 that is the number of §3.8 (0.204) found again twice four minutes apart.
 
-⚠ The `pieno` point on 7910 was **redone at 09:51**: at the first round the scene had not
+⚠ The `full` point on 7910 was **redone at 09:51**: at the first round the scene had not
 started — `⛔ shm_open(//09-b68): Permission denied`, the shared memory segment had remained
 `prova`'s (uid 1001) from the I1 bench and `prova2` (1002) could not open it. ⛔ **A bench
 defect**, not a product one: `09-b68-scena.sh` does not clean `/dev/shm/09-b68` between two different
@@ -939,7 +939,7 @@ users, and the symptom is «the scene does not start», which is mute about the 
 
 ### 3.16 ⛔⛔ AUDIO UNDER `netem` — **and here I stop: the prescribed bench CANNOT see cure 1**
 
-> `banchi/07-b64-rete.py netem --solo 2-jitter --secondi 25` — `netem delay 20ms 2ms` on `lo`,
+> `banchi/07-b64-rete.py netem --solo 2-jitter --seconds 25` — `netem delay 20ms 2ms` on `lo`,
 > **only the measured port**, `enp7s0` never touched, guardian armed. One at a time:
 > 7900 at **09:41**, 7910 at **09:45**.
 
@@ -947,7 +947,7 @@ users, and the symptom is «the scene does not start», which is mute about the 
 |---|---|---|
 | sent by the server | 5 005 | 5 005 |
 | received | 3 966 | 4 006 |
-| **`vecchi` (discarded §6.3)** | **1 024** | **980** |
+| **`stale` (discarded §6.3)** | **1 024** | **980** |
 | **purity** | **0.1149** | **0.1235** |
 | sample yield | 0.79495 | 0.80281 |
 | instant holes · crackles/s | 938 · 42.31 | 917 · 41.24 |
@@ -960,14 +960,14 @@ datagrams in this round **is not `pagina.html`**: it is the test client, `banchi
 line **743**, which has **its own** copy of the rule of §6.3 —
 
 ```python
-if self.a_ultimo_istante is not None and istante <= self.a_ultimo_istante:
-    self.a_vecchi += 1
+if self.a_ultimo_istante is not None and instant <= self.a_ultimo_istante:
+    self.a_old += 1
     return
-self.a_ultimo_istante = istante
+self.a_ultimo_istante = instant
 ```
 
 — that is **exactly the old line**, the one that compares with the **last arrived**. The cure was
-written in `src/pagina.html`, which in this bench **never runs**. ⇒ `vecchi` and `purezza`
+written in `src/pagina.html`, which in this bench **never runs**. ⇒ `stale` and `purity`
 here **must** be equal on the two servers, and they are.
 
 ⭐⭐ **And the proof that it is so, not the argument**: `md5sum` of `01-b3-cliente.py` in the two trees —
@@ -983,14 +983,14 @@ in the **real client**, that is in the page. The two halves do not touch.
 | | |
 |---|---|
 | ✅ the cured page is **delivered** by 7910 and not by 7900 | §3.12, read with `curl` on the port |
-| ✅ the four new counters (`tardivi`, `fuori`, `rec`, `dop`) are **on the status line** and **come out of `audio_conti()`** towards `/diario` | read in the served page |
-| ✅ on the **local path** the `vecchi` are **0**, as predicted ⇒ there was nothing to loosen | §3.14 |
+| ✅ the four new counters (`late`, `outside`, `rec`, `dup`) are **on the status line** and **come out of `audio_counts()`** towards `/diary` | read in the served page |
+| ✅ on the **local path** the `stale` are **0**, as predicted ⇒ there was nothing to loosen | §3.14 |
 | ⛔ **NOT verified**: that under real reordering purity rises to ≥ 0.95 | a bench is needed that runs **the page**, not the test client |
 
 ⭐ **What shape that bench would have**, so that next time we do not start from scratch: a
-**real browser** that opens `https://192.168.0.2:PORTA`, logs in as `prova`, and whose counters are
+**real browser** that opens `https://192.168.0.2:PORT`, logs in as `prova`, and whose counters are
 read **without asking the user anything** — the page already sends them on its own to the server every 5 s
-(`pagina.html` · `avvia_audio()`, `fetch("/diario?" + riga)`), and the line carries all four new numbers.
+(`pagina.html` · `start_audio()`, `fetch("/diary?" + row)`), and the line carries all four new numbers.
 ⇒ The server's log becomes the record. ⛔ **The missing piece is where to run the
 browser**: on the machine Firefox 140 ESR is there, but it lives **only inside a REMOTIX session**
 (there is no `Xvfb`), and pointing it at the server that is capturing it is a mirror; and the `netem` must
@@ -1016,7 +1016,7 @@ denounced it was printed by the bench itself and I had not weighed it: *«frames
 quiets: **1 · 1 · 7**»* against *«0 · 0 · 0 (the desktop was really still)»* of the clean round.
 
 **2. «The after sends almost nothing» — *09:29, and it was not true*.**
-The first I1 round on 7910 gave `barra` at **0.17 fps** and **13 kB** on the wire in 30 s. In the
+The first I1 round on 7910 gave `bar` at **0.17 fps** and **13 kB** on the wire in 30 s. In the
 log the cause, verbatim:
 
 > `09:29:05.841 rcp     posto NEGATO a prova da [192.168.0.2]:55729: lo occupa un altro client di questo stesso utente (occupati: 1)`
@@ -1049,7 +1049,7 @@ as soon as ngtcp2 had *serialized* them. The contract of `ngtcp2_conn_writev_str
 > endpoint or the stream is closed.»*
 
 ⇒ **Use after free.** `ndatalen` says how many bytes ended up **in a packet**, not
-how many are **acknowledged**. The ack callback **existed** (`trasporto.c` · `accetta()`) but it only forwarded to
+how many are **acknowledged**. The ack callback **existed** (`trasporto.c` · `admit()`) but it only forwarded to
 nghttp3: nobody consulted it before the `free`.
 
 ⭐⭐ **And the defect was there on EVERY retransmitted frame, always.** The 525 298-byte one was
@@ -1076,7 +1076,7 @@ pointer into a region **no longer mapped**. ⭐ **It is the exact signature of a
 free of an `mmap` block.**
 
 ⭐ The log confirms the sequence: the frame **had been copied successfully**
-(`coda_metti()` copies the bytes before `SPEDITO` comes out), between `.895` and the death (`.9237`) pass
+(`queue_put()` copies the bytes before `SPEDITO` comes out), between `.895` and the death (`.9237`) pass
 **~28 ms** and **nothing happens other than writing to QUIC** — no frame 186, no
 re-encoding, no scene change. And the jump is **146 → 525 298 bytes**, ×3 600 in one frame.
 
@@ -1085,9 +1085,9 @@ re-encoding, no scene change. And the jump is **146 → 525 298 bytes**, ×3 600
 | suspect | the line that decides |
 |---|---|
 | **16 MiB** cap / **re-encoding** loop | 525 298 bytes is **3.1 %** of 16 MiB, and *«si RICODIFICA»* appears **0 times** in the dead round |
-| `abbassa_qualita()` / `chiudi_contesto()` with a packet in hand | it is called **only** from the cap branch, **never taken**. ⚠ `fuori->dati = c->pacchetto->data` remains a **real defect in waiting** — but it is not the one of 23 Aug |
-| **output queue** `WT_CODA_MAX` (17 MiB) | 525 KB fit with room to spare; *«NON entrano in coda»* and *«la coda ha toccato il tetto»*: **0 times** |
-| `video_sgombra()` / `WT_INVOLO_MAX` | ⭐ **and it is excluded for the good reason**: it does `shutdown_stream_write()` **before** throwing away the bytes, and it is **correct**. ⛔ Its comment — *«FIRST the stream is reset, THEN the bytes are thrown away»* — proves that **the rule was known**, and makes it sharper that the other spot did not have that protection. Moreover it was not even called: no frame arrived after 185 |
+| `lower_quality()` / `close_context()` with a packet in hand | it is called **only** from the cap branch, **never taken**. ⚠ `outside->data_v = c->pack->data` remains a **real defect in waiting** — but it is not the one of 23 Aug |
+| **output queue** `WT_QUEUE_MAX` (17 MiB) | 525 KB fit with room to spare; *«NON entrano in coda»* and *«la coda ha toccato il tetto»*: **0 times** |
+| `video_clear_out()` / `WT_INFLIGHT_MAX` | ⭐ **and it is excluded for the good reason**: it does `shutdown_stream_write()` **before** throwing away the bytes, and it is **correct**. ⛔ Its comment — *«FIRST the stream is reset, THEN the bytes are thrown away»* — proves that **the rule was known**, and makes it sharper that the other spot did not have that protection. Moreover it was not even called: no frame arrived after 185 |
 | **zero copy** (phase 8), stride a multiple of 64 | 2560 px → stride 10 240 = 64 × 160 ✔; and anyway it is the **input** route, already finished well at `.894` |
 | the frames' **pool** | it is the one of the **VAAPI surfaces**, of fixed size and opened once with the context |
 
@@ -1125,17 +1125,17 @@ ngtcp2 still holds it for retransmission.*
 |---|---|---|
 | ⭐ **A** — deterministic, without network and without root | `Environment=MALLOC_MMAP_THRESHOLD_=32768` in the unit (⭐ from the environment it **switches off the dynamic adaptation**: every frame above 32 KiB becomes `mmap`/`munmap`, and the defect stops being silent **forever**), then a large frame and `kill -STOP` to the browser for ~1 s ⇒ no ack ⇒ PTO ⇒ retransmission | `SEGV`, `error 4`, `ip` in libc, always in `__memmove_avx_unaligned_erms`. ⛔ **If it does not die, this diagnosis is wrong** |
 | **B** — real loss | as A at point 1, then `netem loss 5%` and the film playing | it dies within a few seconds |
-| ⭐ **C** — the proof that names the line | rebuild with `-fsanitize=address -g -fno-omit-frame-pointer` and redo A or B | `heap-use-after-free READ` with **two** stacks: the one that reads (`ngtcp2_pkt_encode_stream_frame`) and the one that freed (`coda_uccidi` ← `wt_scrivi`). ⭐ **It closes the case without margin** |
+| ⭐ **C** — the proof that names the line | rebuild with `-fsanitize=address -g -fno-omit-frame-pointer` and redo A or B | `heap-use-after-free READ` with **two** stacks: the one that reads (`ngtcp2_pkt_encode_stream_frame`) and the one that freed (`queue_kill` ← `wt_write`). ⭐ **It closes the case without margin** |
 
 ### 4.6 ⛔ The cure: why (a) and not (b)
 
 - ⭐ **(a) the sober one — the one applied**: nothing is freed at serialization; it is marked
-  `consegnato`, it is removed from the choice of `coda_scegli()`, and the `free` is done by the ack when the
-  acknowledged offset covers `dati.n`, or by the closing/reset of the stream. ⚠ **Cost**: the memory of a
-  frame stays committed for one more network round trip, and `WT_CODA_MAX` must be reread with that count
+  `delivered`, it is removed from the choice of `queue_choose()`, and the `free` is done by the ack when the
+  acknowledged offset covers `data_v.n`, or by the closing/reset of the stream. ⚠ **Cost**: the memory of a
+  frame stays committed for one more network round trip, and `WT_QUEUE_MAX` must be reread with that count
   in hand — 16 sessions × one more frame in flight;
 - ⛔ **(b) the quick one — refused**: `ngtcp2_conn_shutdown_stream_write()` before the `free`, as
-  `video_sgombra()` does. **It is not right here**: that one *resets* the stream, and §6.2 wants the frame
+  `video_clear_out()` does. **It is not right here**: that one *resets* the stream, and §6.2 wants the frame
   **complete**. It would be **trading a rare crash for a frame broken always**.
 
 ### 4.7 ⏳ The trap to arm anyway — ⛔ not armed
@@ -1146,7 +1146,7 @@ Even with the cause in hand, **the machine was not equipped to have a death told
    `core_pattern = /media/REMOTIX/tmp/09/core.%e.%p.%t` (**absolute**). `LimitCORE=infinity` is already there;
 2. ⛔ **the log is shared and gets buried**: the tail of 08:28 sits in the middle of a 22 MB file
    and the following rounds write over it ⇒ an `ExecStopPost=` that, if the exit code is not 0,
-   copies the last ~2 000 lines into `morte-%t.log` **together with `dmesg -T | tail -50`**;
+   copies the last ~2 000 lines into `death-%t.log` **together with `dmesg -T | tail -50`**;
 3. ⭐ **`dmesg` must be collected ALWAYS at shutdown**, not only when someone remembers it: it is
    what saved the day;
 4. ⭐⭐ **`MALLOC_MMAP_THRESHOLD_=32768` + `MALLOC_PERTURB_=165` on the bench.** The first turns
@@ -1178,7 +1178,7 @@ in `ngtcp2.h:5246-5250`, the `cpymem` at `ngtcp2_pkt.c:1619`, and the count **1 
 See §4 in full. ⛔ **No switch**: it does not change what is seen, it corrects a way of
 dying. ⚠ **Not verified**: the recipe of §4.5 was not run.
 
-### 5.2 Cure 2 — the queue threshold in `video_sgombra()` · `webtransport.c:2705-2800`
+### 5.2 Cure 2 — the queue threshold in `video_clear_out()` · `webtransport.c:2705-2800`
 
 **The defect**: there was no condition between *«a more recent frame exists»* and
 *«abandon»*. On a narrow line a delta does not get out in 33 ms ⇒ the condition is **always true** ⇒
@@ -1194,7 +1194,7 @@ bench sweeps it at 50 · 100 · 200 and whoever chooses is the user, because it 
 
 1. **more than one frame period**, or it is today's rule with a new name: `[M]` phase 8, the
    real content goes at **20.9 fps = 47.8 ms**;
-2. **less than the backstop with which a keyframe is already requested** — `WT_CHIAVE_RICHIESTA_MS` = 150;
+2. **less than the backstop with which a keyframe is already requested** — `WT_KEY_REQUEST_MS` = 150;
 3. it must **let a KEYFRAME plus a few deltas through** where the defect bites: `[M]` a keyframe
    on the user's canvas measures **20 817 bytes**; at 3 Mbit/s it gets out in **56 ms**, and in the 44 that
    remain **three deltas** fit;
@@ -1206,7 +1206,7 @@ floor** is assumed, 20 Mbit/s = 2 500 bytes/ms — and **the log line says which
 of passing an invented number off as measured.
 
 ⚠ **And what the cure does NOT change**: `RCP.md:1165-1203` gives the abandon **three forms** — **A**
-(stream reset, if a byte had already left) · **B** (hole in the `numero`, if no byte had left)
+(stream reset, if a byte had already left) · **B** (hole in the `nr`, if no byte had left)
 · ⛔ **C** (the missed credit: **no stream, no hole, no signal**, defect B-18).
 ⛔ **Which of A and B the client sees is decided by neither side**: it depends on whether a
 byte had left. ⇒ The cure **does not touch this**: it changes **how many times** it happens, and **form C
@@ -1219,14 +1219,14 @@ it does not touch at all**.
 | **a KEYFRAME in the queue** | it is **never** abandoned (`RCP.md:1256`). ⚠ But its bytes **count in the sum**: with a keyframe in the queue the threshold is exceeded earlier and the deltas **behind** it go first — **which is right**, they would arrive after it anyway |
 | **no estimate** | fallback at 20 Mbit/s: if the real line is narrower the fallback **underestimates** the wait and one delta too many is kept, for one network round trip |
 | **full list** (32 slots) | a frame outside the list is not abandonable **and its bytes do not enter the sum** ⇒ queue underestimated. ⚠ Today it cannot happen: §2.3 grants 16 uni streams, the credit runs out first |
-| ⛔ **the moment of crossing** | a delta is abandoned **and** the one just arrived is in turn a delta ⇒ `rcp_video_apri()` refuses it and **two are lost**. ⏳ `[?]` The remedy — requesting the keyframe **first** and abandoning when it arrives — is not in this cure and must be measured before writing it |
-| **the scene stops** | `video_sgombra()` runs only at the arrival of a frame ⇒ with a still desktop it does not run, ⭐ **and it is not needed**: without new frames there is nothing to abandon |
+| ⛔ **the moment of crossing** | a delta is abandoned **and** the one just arrived is in turn a delta ⇒ `rcp_video_open()` refuses it and **two are lost**. ⏳ `[?]` The remedy — requesting the keyframe **first** and abandoning when it arrives — is not in this cure and must be measured before writing it |
+| **the scene stops** | `video_clear_out()` runs only at the arrival of a frame ⇒ with a still desktop it does not run, ⭐ **and it is not needed**: without new frames there is nothing to abandon |
 
 #### ⛔⛔ And the partial refusal, which is the most important part
 
 **«Dropping frames while keeping the deltas» — `RCP.md:1284` and `SPECIFICHE.md` §8.3 — CANNOT be done in
 `webtransport.c`, and this cure does not do it.** The encoder runs with an **infinite GOP**
-(`chiavi_ogni = 0`, `figlio.c` — ⚠ `[R]` `rcp.c` still cites it as `figlio.c`, which
+(`keys_every = 0`, `figlio.c` — ⚠ `[R]` `rcp.c` still cites it as `figlio.c`, which
 today is another function: **expired reference**): every delta predicts from the frame **encoded**
 before, not from the one **sent**. ⇒ Any frame the transport skips — abandoning it (forms
 A/B) or not accepting it (form C) — **breaks the chain and costs a keyframe all the same**.
@@ -1242,13 +1242,13 @@ what it did.
 
 ### 5.3 Cure 3 — the quality climb-back · `codificatore.c`, `:141-143`
 
-**The defect** `[R]`: `qualita_corrente` was **monotonic in the worse direction**. Four writes in
-all (`:1880` the seeding, and the three inside `abbassa_qualita()`), **all going down**. The climb-back was searched for
-and not found in six places — `codificatore_ridimensiona()` reopens the context and **keeps**
-the value; `chiudi_contesto()`/`apri_contesto()` **read** it; no `alza_qualita()` in the whole of
+**The defect** `[R]`: `current_quality` was **monotonic in the worse direction**. Four writes in
+all (`:1880` the seeding, and the three inside `lower_quality()`), **all going down**. The climb-back was searched for
+and not found in six places — `encoder_resize()` reopens the context and **keeps**
+the value; `close_context()`/`open_context()` **read** it; no `alza_qualita()` in the whole of
 `src/`; the `struct` is private to the file. ⇒ **The degradation lasted as long as the session.**
 
-⛔ **And for a DELTA it is not one rung: it is three in one go.** `abbassa_qualita()` is called
+⛔ **And for a DELTA it is not one rung: it is three in one go.** `lower_quality()` is called
 **before** the check of the attempts ⇒ the delta that is abandoned in the end has nevertheless already
 taken the ladder down **26 → 35 → 44 → 51**. ⇒ A single grainy delta brought the encoder to
 QP 51 **and left it there forever**, and the abandon of the delta was declared in the log while the
@@ -1275,16 +1275,16 @@ one second; from there on the desktop — text, windows, still scene — came ou
 **for hours**, and no line said why. ⇒ It is the *«never blur»* of `DECISIONI.md` §3.3 lost
 **by inertia** instead of by decision.
 
-**The constraint that decides WHERE the code goes**: `chiudi_contesto()` does `av_packet_free()` ⇒ the climb-back
-**cannot** sit after `break`, where `fuori->dati` points inside the packet: it would be the same
+**The constraint that decides WHERE the code goes**: `close_context()` does `av_packet_free()` ⇒ the climb-back
+**cannot** sit after `break`, where `outside->data_v` points inside the packet: it would be the same
 defect as §4. ⇒ **counting at delivery, climbing back at the entry of the next frame**, and as a
 side effect the cost of the reopening (`[M]` **91-108 ms** in hardware; the software one, measured with `libx264`, no longer holds after
 phase 18) falls **between** two frames.
 
 ⛔ **And it is not symmetric to the descent, on purpose**: one goes down three rungs in one frame, one
-climbs back **ONE** every `RISALITA_ATTESA`, with the wait that **doubles** at every relapse
-(`RISALITA_ATTESA_MAX` ≈ 64 s). ⚠ The three numbers are `[?]` **sufficient, not right**, like
-`CRF_PASSO` = 9.
+climbs back **ONE** every `RISE_WAIT`, with the wait that **doubles** at every relapse
+(`RISE_WAIT_MAX` ≈ 64 s). ⚠ The three numbers are `[?]` **sufficient, not right**, like
+`CRF_STEP` = 9.
 
 ⭐ **Why it does not violate I1**: I1 speaks of the **rate**, this cure of **quality** — and the two levers
 were already separated by the user (§3.3: *«si calano i fotogrammi. Mai sgranare»*). ⇒ The cure does not touch the
@@ -1297,7 +1297,7 @@ reopening every 2 seconds, **and that would indeed be I1**.
 border**. In software a few rounds would be enough (the reopening costs much more than in hardware) for **the cure to cost more than the
 defect**, and the one paying would be the **rate**. ⇒ The bench that decides is in §7.3.
 
-### 5.4 Cure 4 — the audio reorder · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
+### 5.4 Cure 4 — the audio reorder · `pagina.html` · `start_audio()`, `:5992`, `:6507`
 
 **The defect**: `pagina.html` discarded by comparing with the **last datagram ARRIVED**, while
 `RCP.md` §6.3 says *«already **consumed**»*. ⇒ **material was thrown away that would fit fifty times
@@ -1310,14 +1310,14 @@ purity **1.000**; **jitter ±2 ms** ⇒ purity **0.175**, with **1 004 datagrams
 (20 %). ⇒ ⭐ **It was not the delay: it was the reordering**, and the cure is **free**.
 
 ⭐ **The frontier already existed and did not need adding: it needed CALCULATING.** `a.base` carries a server
-`istante` into the clock of the `AudioContext`, `ctx.currentTime` is the playhead ⇒
+`instant` into the clock of the `AudioContext`, `ctx.currentTime` is the playhead ⇒
 `frontiera_us = (ctx.currentTime − a.base) × 1e6`, and a block is *already consumed* **if and only if**
-`istante < frontiera_us`. ⛔ **It costs zero memory and zero delay**: it is a subtraction on numbers that
+`instant < frontiera_us`. ⛔ **It costs zero memory and zero delay**: it is a subtraction on numbers that
 existed before.
 
-⚠ **And `a.ult_ist_us` could not act as the border** even though it was the natural candidate: it is written in
+⚠ **And `a.last_instant_us` could not act as the border** even though it was the natural candidate: it is written in
 `onended`, on the main thread — the one that stops to decode frames — it is not monotonic
-as soon as out-of-order ones are accepted, and `ult_quando_perf`/`aoff` hang on it, that is **the yardstick
+as soon as out-of-order ones are accepted, and `last_when_perf`/`aoff` hang on it, that is **the yardstick
 of the audio-video distance**. ⇒ Making it the border would mean making the yardstick depend on the reordering.
 
 ⛔ **The second piece is necessary, and without it the cure would be worse than the defect**: the page
@@ -1327,14 +1327,14 @@ late, very wrong when **a single block** arrives behind a newer one: one would
 pay **250 ms for a 5 ms block**, at every overtaking. ⇒ `a.ist_max_us` separates the two cases.
 
 ⭐⭐ **And along the way a defect was found that was not in the mandate**: the sentinel
-of the *«fake anchor»* compared with `a.ult_ist_us` — the last **FINISHED** block, old by a whole
-cushion. At regime `salto ≈ 250 000 µs` and `passo_us = 5 000` ⇒ `salti_suono` gained **~49
-points at every healthy block** ⇒ the condition `salti_suono === 0` **could never be true**, and the
+of the *«fake anchor»* compared with `a.last_instant_us` — the last **FINISHED** block, old by a whole
+cushion. At regime `jump ≈ 250 000 µs` and `step_us = 5 000` ⇒ `sound_jumps` gained **~49
+points at every healthy block** ⇒ the condition `sound_jumps === 0` **could never be true**, and the
 line that watches the hypothesis on which the whole anchor cure rests **was dead**. Repaired with the
 same variable the cure introduces.
 
 ⛔ **And the price is ZERO, with the sign opposite to what `SPECIFICHE.md:128` fears**: no
-intermediate buffer, no reorder queue, `AUDIO_CUSCINO_MS` **is not touched**, 4 integers per
+intermediate buffer, no reorder queue, `AUDIO_CUSHION_MS` **is not touched**, 4 integers per
 session. ⭐ Every cured overtaking is a re-arm **saved**, and a re-arm costs `+250 ms` ⇒ under
 reordering the cure **lowers** the average delay.
 
@@ -1382,13 +1382,13 @@ Opus, and on Opus the `[M]` number **is not there**.
 
 | discarded cure | why |
 |---|---|
-| **lowering `AUDIO_CUSCINO_MS`** | the code expressly forbids it **here and now**: first one measures **the arrival jitter**, which nobody has measured. ⭐ And this cure **produces that measurement** (`fuori_ordine` + the discards) ⇒ it is the step that goes **first**, not instead |
+| **lowering `AUDIO_CUSHION_MS`** | the code expressly forbids it **here and now**: first one measures **the arrival jitter**, which nobody has measured. ⭐ And this cure **produces that measurement** (`out_of_order` + the discards) ⇒ it is the step that goes **first**, not instead |
 | **a reorder queue with fixed delay** | 250 ms paid twice, and it sells response |
 | **removing the discard altogether** | §6.3 imposes it, and without a border a really old block **would overlap what is playing** — finding 3 of 17 Aug all over again |
 | **the `AudioWorklet`** | it is another thing, and it is already declared: the numbers of 21 Aug say that **this** is not the problem |
 
 ⚠ **And a falsification that holds for the whole bench**: if after the cure purity rises but
-`usciti` does **not** rise with it, ⛔ **the sound is not there** — and it has already happened in this file: a
+`exited` does **not** rise with it, ⛔ **the sound is not there** — and it has already happened in this file: a
 session **mute with all counters green**.
 
 ### 5.5 Cure 5 — the bandwidth cap · `codificatore.c:200-340`, `:1786-1800`
@@ -1462,10 +1462,10 @@ together at the first round would give **two measurements under the same label**
 
 #### ⛔ And the defect found along the way, which was not the target of the study
 
-`[R]` **The server never reads `video.livello`.** `rcp.c` · `livello_legge()` lists it among the known names, and the loop
-captures `c_codec`, `c_prof`, `c_audio`, `c_misura` — **not the level**. `RCP.md:701` says that the
+`[R]` **The server never reads `video.level`.** `rcp.c` · `parse_level()` lists it among the known names, and the loop
+captures `c_codec`, `c_prof`, `c_audio`, `c_measure` — **not the level**. `RCP.md:701` says that the
 server **MUST** emit a stream of a level not higher: **that MUST was not implemented**. The
-rest of the chain was already there (the **real** level read from the bytes at `codificatore.c` · `tetto_serbatoio_bit()`, printed at the
+rest of the chain was already there (the **real** level read from the bytes at `codificatore.c` · `reservoir_cap_bit()`, printed at the
 first frame) ⇒ ⭐ **ONE comparison was missing between two numbers the product already has in hand.**
 Since 23 Aug **the two lines are written** (§3.12) — ⛔ but **the comparison is still made by whoever reads, not
 by the program**.
@@ -1488,7 +1488,7 @@ does not start, without a red anywhere**. Same family as R31.
   minimum — it is the reason, never written, why bench `07-b48` verified precisely `avc1.640032`.
   ⛔ And **at 3840×2160 5.0 does not fit at all**: 5.1 is needed, which grants `[?]` **30.3 fps**
   ⇒ **the «60 fps» of the wish list is not reachable at 4K even with infinite bandwidth**;
-- ⚠ `[R]` **the product declares 5.1, not 5.0** (`pagina.html` · `LIVELLO_DICHIARATO()`) ⇒ `avc1.640033`. 5.0 lives in
+- ⚠ `[R]` **the product declares 5.1, not 5.0** (`pagina.html` · `DECLARED_LEVEL()`) ⇒ `avc1.640033`. 5.0 lives in
   **two comments**, and one of the two (`codificatore.c:1559-1560`) is **stale**.
 
 ---
@@ -1501,37 +1501,37 @@ does not start, without a red anywhere**. Same family as R31.
 
 | | |
 |---|---|
-| **the quantity** | ⭐ **`arretrato`** — how many **delta** frames in flight still have bytes **in our output queue**, read at the arrival of a new frame, **before** `video_sgombra()` |
-| **the rule** | `arretrato == 0` ⇒ send · `arretrato >= POSTI` ⇒ **this frame does not leave**. No other lever |
+| **the quantity** | ⭐ **`backlog`** — how many **delta** frames in flight still have bytes **in our output queue**, read at the arrival of a new frame, **before** `video_clear_out()` |
+| **the rule** | `backlog == 0` ⇒ send · `backlog >= POSTI` ⇒ **this frame does not leave**. No other lever |
 | **the descent** | it is not a number being lowered: it is **a frame that does not leave**. The rate drops by itself, as much as the queue does not empty |
-| ⭐ **the climb-back** | **does not exist, and this is the merit**: `arretrato` is reread at every frame, it is not remembered. ⛔ No ratchet — that is no `qualita_corrente`, which is the measured defect of §5.3 |
+| ⭐ **the climb-back** | **does not exist, and this is the merit**: `backlog` is reread at every frame, it is not remembered. ⛔ No ratchet — that is no `current_quality`, which is the measured defect of §5.3 |
 | **the bottom** | 480p·25 **is not a brake, it is a verdict**: if the delivered rate goes below 25/s on 20 Mbit/s, the log declares it a **defect**. Forcing a frame into a queue that does not empty makes the queue worse |
-| **the log** | one line at the **start** and one at the **end** of every episode, never one per frame; plus a counter of its own, `video_ritmo_scesi` |
-| **the switch** | `--ritmo-adattivo`, **off by default** (I6), and the value in force **written at startup in both cases** |
-| **where** | `webtransport.c`, inside `video_a_una()`, three lines above `video_sgombra()` |
-| ⛔ **the mandatory order** | **first the cure of `video_sgombra()`, then the regulator** — §6.5 |
+| **the log** | one line at the **start** and one at the **end** of every episode, never one per frame; plus a counter of its own, `video_rate_lowered` |
+| **the switch** | `--adaptive-rate`, **off by default** (I6), and the value in force **written at startup in both cases** |
+| **where** | `webtransport.c`, inside `video_a_una()`, three lines above `video_clear_out()` |
+| ⛔ **the mandatory order** | **first the cure of `video_clear_out()`, then the regulator** — §6.5 |
 
 `POSTI = 2`, and ⛔ **it is not a disguised clock**: it is the depth of the pipe. With `POSTI = 1` one would
 skip every time the previous frame has not left **entirely** by the arrival of the
 next — at 60/s that is 16 ms, and a 10 KB delta on a healthy line takes longer: it would be a
 **prudent heuristic**, that is **I1 broken**. ⚠ `[?]` The value is tuned on the bench.
 
-### 6.2 ⛔ Why `arretrato` does not fall back into P13 and P20
+### 6.2 ⛔ Why `backlog` does not fall back into P13 and P20
 
 - **P13**: the tolerance said *«for one second»*, and it was corrected two hours later — *«the second was the
   wrong quantity: what must empty is a **queue**, and how long a frame already
-  in flight takes depends on the **bandwidth**, not on the clock»*. ⇒ `arretrato` **is the queue**, counted in
+  in flight takes depends on the **bandwidth**, not on the clock»*. ⇒ `backlog` **is the queue**, counted in
   frames: one does not ask *«has too much time passed?»*, one asks *«are the earlier bytes still
   here?»*;
 - **P20**: the cure was **what the client itself sent — local, monotonic, independent of
-  delivery**. ⇒ `arretrato` has exactly that shape on **our** side: bytes produced by us and
+  delivery**. ⇒ `backlog` has exactly that shape on **our** side: bytes produced by us and
   still in our house. **No lost packet, no reordering and no silence of the client can
   falsify it**, because nothing that comes from outside is looked at.
 
 ⭐ And the sentence is **already in the code**, written for the same reason: *«an estimate can be wrong, a byte
 in the queue cannot»*.
 
-⚠ **And the three things `arretrato` is NOT**: it is not a **target rate** (if it existed it would have to
+⚠ **And the three things `backlog` is NOT**: it is not a **target rate** (if it existed it would have to
 climb back, and someone one day would forget to make it climb back — **it has already happened**, §5.3); it is not
 the **bandwidth** (`cwnd/rtt` is an estimate, and as the input of a loop that decides whether a frame leaves
 it would be a calculated number in place of a fact); ⛔ **it is not a client ack** — §6.6.
@@ -1563,7 +1563,7 @@ the line: it is the browser's window**, and the cure is another one.
 ### 6.4 ⚠ The declared price: cutting happens **downstream** of the encoder
 
 The skipped frame **has already cost the child's GPU**. The real lever — not capturing it at all —
-lies in the child, and the pipe to get there **already exists** (`figli_video()` already carries codec, depth and
+lies in the child, and the pipe to get there **already exists** (`children_video()` already carries codec, depth and
 keyframe across the process boundary).
 
 ⛔ **But it is not done in phase 9, and the reason is architectural**: the stage is **one per user**, the
@@ -1575,14 +1575,14 @@ after.** On GPU consumption theirs is better.
 
 ### 6.5 ⛔⛔ THE CHECK THAT INVALIDATES THE WHOLE BENCH, and it comes before the others
 
-**`video_sgombra()` empties the delta queue at EVERY frame.** As long as this is so, `arretrato` **is zero
+**`video_clear_out()` empties the delta queue at EVERY frame.** As long as this is so, `backlog` **is zero
 by construction**: when frame N+1 arrives, the bytes of N have already been thrown away by the
 previous round.
 
 ⇒ ⛔ **A regulator installed today would never fire, and the bench would read it as «the line
 carries it».** They are two facts with the same face.
 
-⭐ And the two changes are **one single change looked at from two sides**: `video_sgombra()` stops
+⭐ And the two changes are **one single change looked at from two sides**: `video_clear_out()` stops
 throwing away the previous delta just because a more recent one has arrived (cure 2, §5.2), and the regulator
 stops producing new ones at the same instant. ⛔ **Mandatory order: first the cure, then the
 regulator.**
@@ -1596,7 +1596,7 @@ independent reasons:
 1. **`ack_rate` does not exist for us.** The message table of `RCP.md` contains no
    frame acknowledgement. Copying it would mean a new type, a new obligation for the client, and
    **a network round trip inside the control loop** — that is buying the reaction with delay.
-   `arretrato` costs **zero ms**: it is already in our memory;
+   `backlog` costs **zero ms**: it is already in our memory;
 2. ⛔ **`ack_rate` depends on delivery and on the peer's cooperation**, that is it is *precisely* the
    P8→P20 family. The client can suspend acknowledgements with `queueDepth == 0xFFFFFFFF` and **a
    regulator that does not handle it stops forever**. ⚠ And the trap **is not defused with an
@@ -1627,7 +1627,7 @@ would have proved **half** of the work.
 
 ⇒ ⭐ **Consequence on the bench, and it is not a detail**: **throttling at a constant 20 Mbit/s does not prove
 this design.** A **step** is needed — and it is the reason why §3.10 was measured that way. ⭐ And the
-control of §3.10 (`pieno`, which asks for less than the hole: **nothing moves**) proves that the bench does not
+control of §3.10 (`full`, which asks for less than the hole: **nothing moves**) proves that the bench does not
 fire blanks.
 
 ### 6.8 What the design does **not** touch, declared
@@ -1648,12 +1648,12 @@ way in which `SPECIFICHE.md:128-131` is honoured without having to justify it in
 ### 7.1 ⏳ The shape of the line — ⛔ designed, **not applied**
 
 `[R]` No rate regulator exists, so the line must be **designed first**, or it will be born as
-prose. ⛔ **Not prose**: one single line, fields in fixed order, `chiave=valore`, so that a bench
+prose. ⛔ **Not prose**: one single line, fields in fixed order, `key_id=value_v`, so that a bench
 reads it with `split()` and not with a regex on Italian prose.
 
 ```
-🔻 RITMO  chi=nic/198.51.100.7  da=60  a=40  unita=fps
-          causa=coda_video  misura=1843210  soglia=1500000  unita_misura=byte
+🔻 RITMO  chi=nic/198.51.100.7  da=60  a=40  unit=fps
+          reason_why=queue_video  gauge=1843210  threshold=1500000  unita_misura=byte
           per=I1/§8.2  attivo_da_ms=0
 ```
 
@@ -1661,14 +1661,14 @@ reads it with `split()` and not with a regex on Italian prose.
 |---|---|
 | `🔻`/`🔺` | ⭐ the **climb-back** is half of the invariant: a regulator that goes down and does not climb back **has dropped out of prudence with an hour's delay**. The ratchet of §5.3 was already this defect, measured |
 | `da=` / `a=` | without the **before**, «40 fps» is not a descent: it is a number |
-| ⛔ `misura=` **and** `soglia=` | **it is the field that makes I1 verifiable without trusting the code**: if `misura < soglia`, that descent is **out of prudence**, and the line itself proves it |
-| `causa=` **closed label**, not a sentence | a bench counts the descents by cause; an Italian sentence cannot be counted |
+| ⛔ `gauge=` **and** `threshold=` | **it is the field that makes I1 verifiable without trusting the code**: if `gauge < threshold`, that descent is **out of prudence**, and the line itself proves it |
+| `reason_why=` **closed label**, not a sentence | a bench counts the descents by cause; an Italian sentence cannot be counted |
 | `unita_misura=` | *«the right number and the wrong word beside it»*: bytes and kbit/s already live together in this file |
 | `attivo_da_ms=` | ⭐ without it, a descent and climb-back alternating 20 times a second (**oscillation**) have the same log as a stable descent |
 | `chi=` | four sessions on the same log file |
 
-⭐ **The same shape holds for quality** — `🔻 QUALITA modo=QP da=26 a=35 causa=tetto_16MiB …` — and
-it is the line that `abbassa_qualita()` **does not write**: it writes only the two *failures*. ⇒ For a **delta**
+⭐ **The same shape holds for quality** — `🔻 QUALITA manner=QP da=26 a=35 reason_why=tetto_16MiB …` — and
+it is the line that `lower_quality()` **does not write**: it writes only the two *failures*. ⇒ For a **delta**
 the ladder goes down **26 → 35 → 44 in silence**.
 
 ⛔ **And the line is written only when the value CHANGES**, not at every frame: so the log *is*
@@ -1684,19 +1684,19 @@ so it is a cap): **0.63 µs** and **98 bytes**.
 | | |
 |---|---|
 | ⭐⭐ **one part of the mandate is REFUSED**: the **third form** of the abandon (the missed credit, defect B-18) **is written in the log**, always on, with the debt cure beside it | ⇒ The hole is not there. **Two reservations of form** remain: the line **has no bottom** (under famine it writes 60 lines/s per session, ⚠ and it is the shape of the **30.8 GB**), and the count comes out **only at the end of the session** |
-| ⛔ **the keyframe debt: seven reasons in nine points, not five.** The comment declares *«FIVE points»* and already bears the scar of the previous time (*«it said three and the points were four»*) | ⭐ The notable thing is not the number: it is that `serve_chiave_perche` **exists and carries the reason up to the line** ⇒ **the quantity the bench needs is already there, and already has the right shape** |
-| ⛔ **four descents ALREADY exist in the product, and three are silent** | `abbassa_qualita()` on a delta (26→35→44, **without the number**) · the **ratchet** (no accessor to read it from outside) · the oldest audio block thrown away because the queue is full (⚠ **the twin three lines above has the line**, and the comment says why) · ⭐ the **rate at zero** when the encoder does not open, which **is** declared with the number |
-| ⛔ **`*come` of `chiave_intervallo_ms()` ends up in verbose mode** | The comment above the function declares that *«it is the only thing that distinguishes "the cure is working" from "the cure is not switched on yet"»* — **and then writes it in verbose mode** ⇒ in every normal installation the two have exactly the same face. **It is principle 2 violated inside the function that cites it** |
+| ⛔ **the keyframe debt: seven reasons in nine points, not five.** The comment declares *«FIVE points»* and already bears the scar of the previous time (*«it said three and the points were four»*) | ⭐ The notable thing is not the number: it is that `needs_key_reason` **exists and carries the reason up to the line** ⇒ **the quantity the bench needs is already there, and already has the right shape** |
+| ⛔ **four descents ALREADY exist in the product, and three are silent** | `lower_quality()` on a delta (26→35→44, **without the number**) · the **ratchet** (no accessor to read it from outside) · the oldest audio block thrown away because the queue is full (⚠ **the twin three lines above has the line**, and the comment says why) · ⭐ the **rate at zero** when the encoder does not open, which **is** declared with the number |
+| ⛔ **`*come` of `key_interval_ms()` ends up in verbose mode** | The comment above the function declares that *«it is the only thing that distinguishes "the cure is working" from "the cure is not switched on yet"»* — **and then writes it in verbose mode** ⇒ in every normal installation the two have exactly the same face. **It is principle 2 violated inside the function that cites it** |
 | ✅ **the values in force at startup** | ⭐ **applied on 23 Aug**: §3.12. ⛔ But the **floor** (480p·25 and 20 Mbit/s) **does not exist in the code yet**, and it must be written **even if the regulator is not there**: it is the number below which the phase has no permission to go |
 
 ### 7.2-bis ⚠ THE PRICE — and ⛔ **an intermediate level is not needed: a BOTTOM is needed**
 
 `[M]` 0.63 µs and 98 bytes per line. `[R]` At regime, **one** session at 60 fps, the lines **per
-frame** are two (`stream uni aperto` and `codec N: … byte`):
+frame** are two (`stream uni is_opened` and `codec N: … byte`):
 
 | | lines/s | bytes/s | in an hour | CPU |
 |---|---|---|---|---|
-| **one session, with `--parlantina`** | **120** | **11.8 kB/s** | **42 MB** | **0.0076 % of a core** |
+| **one session, with `--chatter`** | **120** | **11.8 kB/s** | **42 MB** | **0.0076 % of a core** |
 | four sessions | 480 | 47 kB/s | 170 MB | 0.03 % |
 
 ⇒ ⭐ **CPU is not the price: it is three hundredths of a thousandth of a core.** The price is the **disk** and
@@ -1705,28 +1705,28 @@ ratio of **120 : 1**.
 
 ⛔⛔ **And under congestion the price is paid even by the log when it is OFF.** `[M]` 21 Aug: at 3 Mbit/s
 the line *«FOTOGRAMMA NON SPEDITO»* comes out **28 times a second**, and every abandon generates another one
-⇒ ~**60 lines/s = 21 MB/hour without `--parlantina`**, and **neither of the two has a backstop**.
+⇒ ~**60 lines/s = 21 MB/hour without `--chatter`**, and **neither of the two has a backstop**.
 ⇒ ⛔ **The log is noisier when the line is worse, that is when it needs reading.**
 
 ⛔ **A third level (`--parlantina-ritmo`) is the wrong road**: it would put the I1 lines
 behind a switch off by default, and ⛔ **a descent declared only when someone has switched on
-a switch is NOT declared**. ⇒ Principle 2 and I1 impose `registro_dice()` for every
+a switch is NOT declared**. ⇒ Principle 2 and I1 impose `log_says()` for every
 `🔻`/`🔺` line. ⭐ **What is needed is the backstop**, and the product already has **four working forms** of it,
-all with the motivation written beside them: *only once* (`bool detto`) · *every N*
+all with the motivation written beside them: *only once* (`bool said`) · *every N*
 (`== 1 || % 100 == 0`) · ⭐ *when it changes by ≥ threshold* (**the shape of the `🔻`/`🔺` lines**) ·
 ⭐ *once a second, with the ZEROS inside* (**the shape of the periodic rate line**).
 
 ⇒ **The proposal, in four points and without a new level:**
 
-1. the `🔻`/`🔺` lines at `registro_dice()`, **only when the value changes** ⇒ on a healthy session:
+1. the `🔻`/`🔺` lines at `log_says()`, **only when the value changes** ⇒ on a healthy session:
    **zero lines**;
-2. a `ritmo:` line **once a second, always, with the zeros inside** — frames delivered ·
+2. a `rate:` line **once a second, always, with the zeros inside** — frames delivered ·
    skipped for credit · abandoned · bytes in the queue · value in force. **98 bytes/s per session =
    0.35 MB/hour**: **120 times less** than verbose mode;
 3. ⛔ **a backstop on the three lines that under congestion come out at 28-60/s.** ⚠ And it cannot be put
    **before** the periodic line of point 2, because today the count comes out only at the end of the session: they are
    **one single cure in two pieces**;
-4. ⚠ and, **outside the mandate of this phase**, the **filter by area** (`--parlantina wt,rcp`): today
+4. ⚠ and, **outside the mandate of this phase**, the **filter by area** (`--chatter wt,rcp`): today
    verbose mode is a single switch over **eleven** areas, and whoever investigates the rate carries along
    the clipboard, the keyboard and the cursor.
 
@@ -1737,12 +1737,12 @@ all with the motivation written beside them: *only once* (`bool detto`) · *ever
 | the thing | the fault that brings it down |
 |---|---|
 | `🔻 RITMO` exists | ⛔ **the rate drops with a still scene**: **one single** `🔻` line in 60 s of still scene ⇒ red |
-| `🔺 RITMO` exists | ⛔ **the ratchet**: throttle 10 s, remove the throttling, wait 10 s — no `🔺` ⇒ red. ⚠ **Today quality would fail this bench** *(as long as `--qualita-risale` is off)* |
-| `misura=` / `soglia=` | ⛔ `misura < soglia` in any `🔻` line ⇒ **red, and nothing else is needed** |
+| `🔺 RITMO` exists | ⛔ **the ratchet**: throttle 10 s, remove the throttling, wait 10 s — no `🔺` ⇒ red. ⚠ **Today quality would fail this bench** *(as long as `--quality-rises` is off)* |
+| `gauge=` / `threshold=` | ⛔ `gauge < threshold` in any `🔻` line ⇒ **red, and nothing else is needed** |
 | `attivo_da_ms=` | ⛔ **oscillation**: > 4 changes/s ⇒ red |
 | startup line with the values | ⛔ **form E1**: start with `--qp 40`, read the line — if it says 26, the switch does not reach the encoder |
 | **the climb-back** (cure 3) | ⛔⛔ **THRASHING**: grain `alls=60` at 7680×4320 for 60 s continuously — more than **3 reopenings per minute** after the first minute ⇒ red. ⭐ **It is the check that decides**: if the doubling wait does not switch it off, the three numbers are wrong. ⚠ And the case to believe in is **I1 paired**: frames/s **with** the cure lower than those **without** ⇒ red |
-| the **floor** of the climb-back | ⛔ 10 000 empty frames: if quality goes **below** `richiesta.qualita` even by one rung ⇒ red |
+| the **floor** of the climb-back | ⛔ 10 000 empty frames: if quality goes **below** `request.quality` even by one rung ⇒ red |
 | the **lossless** | ⛔ re-entering LOSSLESS ⇒ red: it would be the change of quantity mid-session |
 | ⛔ the **memory** | 10 000 descents and climb-backs in a row: `valgrind` finds a GPU surface not returned ⇒ it is the defect *«that only shows after half an hour»* |
 
@@ -1762,13 +1762,13 @@ reads it cannot tell whether it is right. ⇒ ⭐ **It must not be written.** Wh
 | # | the prediction | ⛔ what would refute it | where in full |
 |---|---|---|---|
 | **P1** | ⛔ **the crash reproduces** with `MALLOC_MMAP_THRESHOLD_=32768` + frozen client: `SEGV`, `error 4`, always in `__memmove_avx_unaligned_erms` | **if it does not die, the diagnosis of §4 is wrong** | §4.5 |
-| **P2** | **the queue threshold is INERT at 20 Mbit/s**: `abbandonati per soglia` = 0, loop delay = 55.20 ms | ⛔ **many abandons per second with the switch off at 20 Mbit/s** ⇒ the defect bites **above** the floor, the cure is not a robustness measure, and **it changes the priority of the phase** — §10.2 | `webtransport.c:2738-2790` |
-| **P3** | **on the step** (3 s at 10 Mbit/s, `barra`): fps in seconds 8-10 from 13-14 to **≥ 25**, keyframes/s from 6-7 to **≤ 2**, abandons/s **≤ 2**, seconds 7 and 12 **identical** | ⛔ **4 reds**: (1) keyframes stuck while the abandons go down ⇒ the debt is kindled by **another** of the seven causes, almost certainly the **missed credit** (form C, invisible to the receiver); (2) fps do not rise ⇒ threshold too high, go down to 50; (3) ⭐ **the loop exceeds 55 + threshold** ⇒ the estimate **underestimates**, and it is the most important red because it would be **a number that looks measured**; (4) the return stops being under a second ⇒ the cure pays for the transient with the return, and must be **switched off** instead of tuned | `webtransport.c:2738-2790` |
-| **P4** | **the bandwidth cap**: `ferma` 0 · **real desktop 0.20-0.45** · flat colour 1.1-1.6 · halftone **11-16** · grain **11-16**, and **NEVER above 16** | ⛔ **2 change the conclusion**: (1) ⭐⭐ **the real desktop costs LESS than 0.204** ⇒ the cap **saves where it must not**, it is v1 repeating itself, **and this cure is thrown away** (the prediction is *«it does not go down»*, and it is flat: `[M]` on the laptop QVBR spends **13 % more** than CQP with a still scene); (2) ⭐⭐ **the halftone stays above 20** ⇒ the driver **did not obey**, R31 holds **even against the explicit request**, and **only the third witness, the bytes,** catches it | `codificatore.c:252-300` |
+| **P2** | **the queue threshold is INERT at 20 Mbit/s**: `abandoned per threshold` = 0, loop delay = 55.20 ms | ⛔ **many abandons per second with the switch off at 20 Mbit/s** ⇒ the defect bites **above** the floor, the cure is not a robustness measure, and **it changes the priority of the phase** — §10.2 | `webtransport.c:2738-2790` |
+| **P3** | **on the step** (3 s at 10 Mbit/s, `bar`): fps in seconds 8-10 from 13-14 to **≥ 25**, keyframes/s from 6-7 to **≤ 2**, abandons/s **≤ 2**, seconds 7 and 12 **identical** | ⛔ **4 reds**: (1) keyframes stuck while the abandons go down ⇒ the debt is kindled by **another** of the seven causes, almost certainly the **missed credit** (form C, invisible to the receiver); (2) fps do not rise ⇒ threshold too high, go down to 50; (3) ⭐ **the loop exceeds 55 + threshold** ⇒ the estimate **underestimates**, and it is the most important red because it would be **a number that looks measured**; (4) the return stops being under a second ⇒ the cure pays for the transient with the return, and must be **switched off** instead of tuned | `webtransport.c:2738-2790` |
+| **P4** | **the bandwidth cap**: `halt` 0 · **real desktop 0.20-0.45** · flat colour 1.1-1.6 · halftone **11-16** · grain **11-16**, and **NEVER above 16** | ⛔ **2 change the conclusion**: (1) ⭐⭐ **the real desktop costs LESS than 0.204** ⇒ the cap **saves where it must not**, it is v1 repeating itself, **and this cure is thrown away** (the prediction is *«it does not go down»*, and it is flat: `[M]` on the laptop QVBR spends **13 % more** than CQP with a still scene); (2) ⭐⭐ **the halftone stays above 20** ⇒ the driver **did not obey**, R31 holds **even against the explicit request**, and **only the third witness, the bytes,** catches it | `codificatore.c:252-300` |
 | **P5** | **the quality climb-back**: after a grainy burst and 600 still frames, the confession goes back **exactly** to 26 (or 20) and there is the `RISALITA` line | ⛔ **thrashing**: > 3 reopenings/minute on the scene at **94.9 %** of the cap ⇒ the three numbers are wrong; and ⛔ **fps with the cure lower than those without** (paired, same scene) ⇒ the price is paid by I1 | §7.3 · `codificatore.c:100-145` |
-| **P6** | **the audio reorder**, on the `netem` profiles: ±2 ms **0.175 → ≥ 0.95** · ±5 ms ≥ 0.95 · ±10 ms ≥ 0.90; `vecchi` from **1 004 to ~0**, and `fuori` must **take that number** ⭐ *(the strongest prediction: if the sum is not conserved, it is wrong)* | ⛔ **overlapping blocks** ⇒ purity **gets worse** and the judge hears **distortion, not holes** (⚠ it is the worst way of failing, and **it has already happened** in this file: finding 3 of 17 Aug) · **border too permissive** ⇒ `tardivi ≈ vecchi di prima`, the cure cured nothing · **border too strict** ⇒ high `vecchi` **with `fuori` at zero**, the anchor is drifting (distinctive symptom: `pieni` rises together) · `[?]` **Opus does not tolerate non-monotonic timestamps** ⇒ `errori` rises on the Opus path and stays **zero on PCM**: **not verified**, and the bench must be done on both codecs | §5.4 |
-| **P7** | **the regulator, MOVING scene at 20 Mbit/s**: 20-37 fps (those the scene produces), `arretrato` **0, now and then 1, never 2**, `video_ritmo_scesi` ⭐ **0** | ⛔ **descents with a normal desktop** ⇒ `POSTI = 2` is too narrow or a frame costs more than measured (**the log line says by itself which of the two**) · **descents with a HIGH `cwnd_left`** ⇒ it is not the line, it is **the browser's window** · `video_saltati` growing with `arretrato` at 0 ⇒ the bottleneck is **the stream credit** · ⛔ **zero descents AND zero reads of `arretrato`** ⇒ it is not a confirmed prediction, **it is a loop never travelled** — §6.5 | §6 |
-| **P8** | **the regulator, STILL scene**: `video_ritmo_scesi` **unchanged**. ⭐ The demonstration is **structural before experimental**: with a still desktop Mutter does not deliver, `video_a_una()` is not called, **the branch is not reachable** | ⛔ **and the check cannot be «the counter is zero»**: empty and forbidden have the same face. ⇒ **it is done in pairs in the same round** — half still and half moving alternated, `arretrato` **read** in both halves. A round that does not satisfy this **has measured nothing, and must be thrown away instead of interpreted** | §6 |
+| **P6** | **the audio reorder**, on the `netem` profiles: ±2 ms **0.175 → ≥ 0.95** · ±5 ms ≥ 0.95 · ±10 ms ≥ 0.90; `stale` from **1 004 to ~0**, and `outside` must **take that number** ⭐ *(the strongest prediction: if the sum is not conserved, it is wrong)* | ⛔ **overlapping blocks** ⇒ purity **gets worse** and the judge hears **distortion, not holes** (⚠ it is the worst way of failing, and **it has already happened** in this file: finding 3 of 17 Aug) · **border too permissive** ⇒ `tardivi ≈ vecchi di prima`, the cure cured nothing · **border too strict** ⇒ high `stale` **with `outside` at zero**, the anchor is drifting (distinctive symptom: `filled` rises together) · `[?]` **Opus does not tolerate non-monotonic timestamps** ⇒ `errors` rises on the Opus path and stays **zero on PCM**: **not verified**, and the bench must be done on both codecs | §5.4 |
+| **P7** | **the regulator, MOVING scene at 20 Mbit/s**: 20-37 fps (those the scene produces), `backlog` **0, now and then 1, never 2**, `video_rate_lowered` ⭐ **0** | ⛔ **descents with a normal desktop** ⇒ `POSTI = 2` is too narrow or a frame costs more than measured (**the log line says by itself which of the two**) · **descents with a HIGH `cwnd_left`** ⇒ it is not the line, it is **the browser's window** · `video_skipped` growing with `backlog` at 0 ⇒ the bottleneck is **the stream credit** · ⛔ **zero descents AND zero reads of `backlog`** ⇒ it is not a confirmed prediction, **it is a loop never travelled** — §6.5 | §6 |
+| **P8** | **the regulator, STILL scene**: `video_rate_lowered` **unchanged**. ⭐ The demonstration is **structural before experimental**: with a still desktop Mutter does not deliver, `video_a_una()` is not called, **the branch is not reachable** | ⛔ **and the check cannot be «the counter is zero»**: empty and forbidden have the same face. ⇒ **it is done in pairs in the same round** — half still and half moving alternated, `backlog` **read** in both halves. A round that does not satisfy this **has measured nothing, and must be thrown away instead of interpreted** | §6 |
 | **P9** | ⭐ **the comparison of `RCP.md` §4.3 will be made by the program**, not by whoever reads: today the two lines are there but the comparison is manual | ⛔ a level too low **does not give a network error**: **it makes the configuration be refused**, that is a screen that does not start without a red | §5.5 |
 
 ---
@@ -1778,7 +1778,7 @@ reads it cannot tell whether it is right. ⇒ ⭐ **It must not be written.** Wh
 **23 Aug 2026 — three stumbles, and all three of the BENCH, none of the product.**
 
 1. ⛔ **`wc -l < registro.log`: the `<` is opened by `nicfio`'s shell, not by `sudo`.** The log belongs to
-   root ⇒ **empty** output ⇒ `riga0 = 0` ⇒ the tally also took in **the earlier sessions**.
+   root ⇒ **empty** output ⇒ `line0 = 0` ⇒ the tally also took in **the earlier sessions**.
    `[M]` The first round counted **413** frames where the server declared **398**. ⚠ It is the
    bad form: not a red, **a plausible number**. ⇒ Cure: the file is opened by `wc`, which runs
    as root.
@@ -1790,13 +1790,13 @@ reads it cannot tell whether it is right. ⇒ ⭐ **It must not be written.** Wh
 3. ⛔⛔ **The positive control itself needed to be controlled.** The first control
    round printed *«the `RICHIEDI_CHIAVE` counter does not move: the bench is blind»* —
    and it accused the bench, while what had not happened was the **stimulus**: in the client
-   `--chiave-dopo` lives **inside the branch of `--puntatore-vecchia`**
+   `--key-after` lives **inside the branch of `--old-pointer`**
    (`01-b3-cliente.py`), and without the pointer the request never leaves. ⇒ Cure: the canvas must
-   first be **shrunk** (`--adatta 1280x720@3 --puntatore-vecchia 0.3 --chiave-dopo 2`).
+   first be **shrunk** (`--fit 1280x720@3 --old-pointer 0.3 --key-after 2`).
    ⭐ **The lesson**: a positive control that gives red has *two* defendants, and the first to look at
    is whether the shot was struck.
 
-⚠ **And one thing that is NOT a defect but must be declared**: the `scena ferma` is a **headless GNOME
+⚠ **And one thing that is NOT a defect but must be declared**: the `scene halt` is a **headless GNOME
 without open windows**. A real desktop with a clock in the bar would give a few frames a
 minute instead of zero — the shape of the result does not change, the order of magnitude does.
 ⇒ ⛔ **The final judgement remains with whoever watches, with real work inside.**
@@ -1816,7 +1816,7 @@ minute instead of zero — the shape of the result does not change, the order of
    in its log (*video channel ON* with no detach afterwards); (b) an arm with **zero
    frames** comes out as a **fault**, not as an empty median among the others.
 6. ⛔ **`kill -9` after one second is a fault, not a prudence.** The client killed by force does not
-   send the `CONGEDO`: the server keeps the session until the QUIC idle timeout expires and the next
+   send the `FAREWELL`: the server keeps the session until the QUIC idle timeout expires and the next
    round gets `CONGEDO invece di SESSIONE: 0x0f GIA_ATTIVA_REMOTA`. ⇒ Cure: `TERM`, and **one
    waits**.
 7. ⛔⛔ **The `ESC` that opens the door is the same one that closes it.** `ESC` exits GNOME's
@@ -1824,7 +1824,7 @@ minute instead of zero — the shape of the result does not change, the order of
    Sent *after* switching the video on, it switched off the video it was supposed to switch on: `[M]` 08:13, the
    «video» point gave **0.202 Mbit/s**, that is the same as «still». ⇒ Cure: the ESC **first**, and the
    page requests full screen **every second** instead of only once.
-8. ⛔⛔ **`UID_B` must be passed also to switch off.** `09-b72-video.sh -- spegni` without `UID_B` takes
+8. ⛔⛔ **`UID_B` must be passed also to switch off.** `09-b72-video.sh -- turn_off` without `UID_B` takes
    the default **1001** and kills «prova»'s Firefox, not «prova2»'s. ⇒ in the four points
    of the 08:11 round **the video stayed on underneath all the others**, and «still» gave
    **25.9 frames/s and 0.235 Mbit/s**: a still desktop that was not still. ⇒ Cure: one switches off
@@ -1867,8 +1867,8 @@ has looked at it.
 |---|---|
 | ⛔ **the bandwidth cap must be written** — §0.3 called it «does not exist» | §3.8: a video with grain at full screen asks for **58.7 Mbit/s = 293 %** of the floor, and nobody tells it no |
 | ⭐ **but NOT for the real content** | §3.8: the user's desktop at full screen costs **0.204 Mbit/s = 1 %**. ⇒ the cap is for the **hard case**, and a regulator that switched on for normal content would repeat **the error of v1** (*«happy to save»*, §0.2) |
-| ⛔ **the regulator CANNOT look at how many pixels change** | §3.8: `pieno` moves **all** the pixels and costs 1.2 Mbit/s; `barra` moves the same pixels with a halftone and costs **21**. Two orders of magnitude for the same surface |
-| ⛔ **the cure of `video_sgombra()` is the right lever** | §3.10: `abbandoni §5.1` = `chiavi`, **one to one**, at every bandwidth level. Removing an abandon removes a keyframe |
+| ⛔ **the regulator CANNOT look at how many pixels change** | §3.8: `full` moves **all** the pixels and costs 1.2 Mbit/s; `bar` moves the same pixels with a halftone and costs **21**. Two orders of magnitude for the same surface |
+| ⛔ **the cure of `video_clear_out()` is the right lever** | §3.10: `abbandoni §5.1` = `keys`, **one to one**, at every bandwidth level. Removing an abandon removes a keyframe |
 | ⭐ **and neither hysteresis nor memory of the descent is needed** | §3.10: after the reopening the regime goes back to full in **less than a second**, without aftermath |
 | ✅ **the stop with a still scene is NOT a defect** | §3.6: 180 wake-ups, **13 ms** from 0.2 s to 15 s of quiet, tail 2 ms wide. ⇒ §3.1 remains a **literal** violation of I1 that **costs nothing to whoever watches** |
 | ⛔ **and there is nothing to optimize in our stretch** | §3.6: of the 13 ms, **10 are waiting for the compositor** and **2.7** are encoding |
@@ -1885,7 +1885,7 @@ has looked at it.
 
 | | the position | what it rests on |
 |---|---|---|
-| **the morning** | *«On the measured content, at 20 Mbit/s, CQP 26 is just fine, and no bitrate control is needed.»* | `[M]` phase 8: on the user's **real** content, **every frame a keyframe** — the worst regime there is — the median is **24 956 bytes** ⇒ at 20.9 fps that is **4.17 Mbit/s = 21 %** of the floor. **Four times below**, even in the state into which the defect of `video_sgombra()` makes it fall |
+| **the morning** | *«On the measured content, at 20 Mbit/s, CQP 26 is just fine, and no bitrate control is needed.»* | `[M]` phase 8: on the user's **real** content, **every frame a keyframe** — the worst regime there is — the median is **24 956 bytes** ⇒ at 20.9 fps that is **4.17 Mbit/s = 21 %** of the floor. **Four times below**, even in the state into which the defect of `video_clear_out()` makes it fall |
 | **the afternoon** | ⛔ *«A bitrate control is needed»* | `[M]` §3.8: a film with grain at full screen, 2560×1080, QP 26, **58.668 Mbit/s = 293 %** of the floor |
 
 ⭐⭐ **And the two measurements do not contradict each other on the number: they measure two different contents** — and
@@ -1913,9 +1913,9 @@ Mbit/s.
 | | the position | what it rests on |
 |---|---|---|
 | **A** — *«the defect lives BELOW the floor; above, the cure is inert»* | the threshold is **a robustness on transients**, not the cure of the phase | `[M]` **at 15 Mbit/s: 2 keyframes out of 1 019** ⇒ the delta chain was **intact**, and 15 is **below** the floor of 20. And `DECISIONI.md` §3.1-bis says verbatim that below 20 the product *«promises nothing and measures nothing as a requirement»* |
-| **B** — *«it bites also above the floor»* | the spiral fires also on a wide line | `[M]` §3.10, the step at 2560×1080 with `barra`: **abandons and keyframes also in the «wide» seconds** — 3↔3 at second 5 (22.1 Mbit/s on the wire) and 1↔1 at second 6 (26.3). ⇒ `video_sgombra()` abandons **even when the line carries it** |
+| **B** — *«it bites also above the floor»* | the spiral fires also on a wide line | `[M]` §3.10, the step at 2560×1080 with `bar`: **abandons and keyframes also in the «wide» seconds** — 3↔3 at second 5 (22.1 Mbit/s on the wire) and 1↔1 at second 6 (26.3). ⇒ `video_clear_out()` abandons **even when the line carries it** |
 
-⛔ **It is not chosen here, and the reason is that the two measurements are not comparable**: `barra` is a
+⛔ **It is not chosen here, and the reason is that the two measurements are not comparable**: `bar` is a
 synthetic **halftone** gradient that asks for **21 Mbit/s** by itself, that is **a hundred times** the real
 desktop (0.204). Content that consumes the whole floor produces a queue even on a wide line;
 the content the product exists for does not.
@@ -1923,7 +1923,7 @@ the content the product exists for does not.
 ⭐⭐ **WHAT WOULD DECIDE THE QUESTION — one single measurement, and it can be done tomorrow:**
 
 > **`abbandoni §5.1` per second, with the switch OFF, at 20 Mbit/s throttled on the real
-> path, on the user's REAL DESKTOP** — not on `barra`, not on `pieno`, not at 2 Mbit/s.
+> path, on the user's REAL DESKTOP** — not on `bar`, not on `full`, not at 2 Mbit/s.
 
 | outcome | ⇒ who is right |
 |---|---|
@@ -1942,20 +1942,20 @@ to answer A/B, and **with the step** to measure the cure: they are **two rounds,
 |---|---|
 | ✅ **the SEGV on the 525 KB frame — CLOSED on the afternoon of 23 Aug**: the cause is proven line by line and ⭐ **the cure is applied**. ⛔ What remains `[?]` is **one thing only: the reproduction**, which was not run ⇒ until the recipe runs, it is a **probable cause with the line**, not a seen cause — and the cure has no proof of having cured | §4 · §4.5 · §4.8 |
 | ⏳ ⛔ **the trap is not armed**: no core dump, the log is shared and gets buried, `dmesg` is not collected at shutdown | §4.7 |
-| ✅ **the bandwidth cap: which one, and on what quantity — DECIDED on 23 Aug**: `QVBR`, with wire · working point · reservoir derived from the floor, `--tetto-banda-mbit`, **off**. ⛔ What remains `[?]` is the measurement on the test machine (P4) | §5.5 · `codificatore.c:200-340` |
+| ✅ **the bandwidth cap: which one, and on what quantity — DECIDED on 23 Aug**: `QVBR`, with wire · working point · reservoir derived from the floor, `--bandwidth-cap-mbit`, **off**. ⛔ What remains `[?]` is the measurement on the test machine (P4) | §5.5 · `codificatore.c:200-340` |
 | ⏳ `[?]` **the film with grain cannot be measured beyond 25 s on this machine**: software VP8 decoding at 2560x1080 starves the **client**, which sits on the same machine, and QUIC drops by *idle timeout*. ⇒ the number of §3.8 is good, but a long round wants a client on another machine | §3.8 |
-| ✅ the cure of **`video_sgombra()`** — ⭐ **written on 23 Aug**, behind `--sgombra-soglia-ms`, **off**. ⛔ What remains `[?]` is the measurement (P3) and ⛔⛔ **the price, which the user judges**: ~150 ms of slightly old image under congestion | §5.2 · `webtransport.c:2705-2800` |
-| ✅ the **audio reorder window** — ⭐ **written on 23 Aug**, without a switch (pure loosening). ⛔ What remains `[?]` is **the verification, and the prescribed bench CANNOT do it**: it measures itself — a bench that runs **the page** is needed | §5.4 · §3.16 · `pagina.html` · `avvia_audio()` |
+| ✅ the cure of **`video_clear_out()`** — ⭐ **written on 23 Aug**, behind `--clear-threshold-ms`, **off**. ⛔ What remains `[?]` is the measurement (P3) and ⛔⛔ **the price, which the user judges**: ~150 ms of slightly old image under congestion | §5.2 · `webtransport.c:2705-2800` |
+| ✅ the **audio reorder window** — ⭐ **written on 23 Aug**, without a switch (pure loosening). ⛔ What remains `[?]` is **the verification, and the prescribed bench CANNOT do it**: it measures itself — a bench that runs **the page** is needed | §5.4 · §3.16 · `pagina.html` · `start_audio()` |
 | ⏳ `[?]` **reordering on Opus**: the measurement is in **5 ms PCM**, with Opus the overtaking threshold is **4 times higher** and the defect bites 4 times less ⇒ the real path is Opus, and on Opus the number is not there. ⚠ And `[?]` whether the Opus decoder tolerates non-monotonic timestamps: **not verified** | §5.4 · P6 |
 | ⏳ `[?]` the quality of **`EncSliceLP`** against the full entrypoint at equal bandwidth — **never measured**, and ⚠ **on the home hardware it cannot be done**: the AMD is needed | `PIANO.md:1197` |
 | ⏳ `[?]` the **temporal sub-layers** on `EncSliceLP` — `[M]` the driver does not declare `EncRateControlExt` on 7 profiles out of 7 ⇒ *«every abandon costs a keyframe» remains in force* | `RCP.md:1261` |
-| ✅ `[R]` **`qualita_corrente` was a one-way ratchet** — ⭐ **cured on 23 Aug** (`risali_qualita()`), behind `--qualita-risale`, **off**. ⛔ What remains `[?]` is the measurement, and the check that decides is **THRASHING** (P5) | §5.3 · `codificatore.c` |
-| ⏳ ⛔ **the rate regulator — designed, NOT written**: it is the work that remains, and ⛔ **the order is mandatory** (first the queue threshold, or `arretrato` is zero by construction) | §6 |
+| ✅ `[R]` **`current_quality` was a one-way ratchet** — ⭐ **cured on 23 Aug** (`raise_quality()`), behind `--quality-rises`, **off**. ⛔ What remains `[?]` is the measurement, and the check that decides is **THRASHING** (P5) | §5.3 · `codificatore.c` |
+| ⏳ ⛔ **the rate regulator — designed, NOT written**: it is the work that remains, and ⛔ **the order is mandatory** (first the queue threshold, or `backlog` is zero by construction) | §6 |
 | ⏳ ⛔ **the descent log** (`🔻`/`🔺 RITMO`) — designed, not applied. And ⛔ **the floor (480p·25 and 20 Mbit/s) does not exist in the code yet** | §7.1 · §7.2 |
 | ⏳ `[?]` **the congestion algorithm was never chosen**: ngtcp2's CUBIC is taken. ⚠ On WiFi CUBIC reads a **radio** loss as congestion; BBR works on bottleneck bandwidth and `min_rtt`. ⛔ **A separate experiment, behind its own switch** — not two variables in the same bench | §6.3 |
-| ⏳ `[R]` the **comparison `livello_flusso` ≤ `video.livello`**: the two lines are now there, ⛔ **but the comparison is made by whoever reads, not by the program** | §5.5 · P9 |
-| ⏳ `[?]` the value of **`CRF_PASSO`** (9 is *sufficient, not right*); the effective ladder is **26 → 35 → 44 → 51** | `codificatore.c` · `RICODIFICHE_MASSIME` |
-| ⏳ **`AUDIO_CUSCINO_MS = 250`** not lowered: it must cover **the arrival jitter, which nobody has measured**. ⚠ And **it has nothing to do with bandwidth**: it is a thread problem | `pagina.html` · `AUDIO_CUSCINO_MS()` |
+| ⏳ `[R]` the **comparison `stream_level` ≤ `video.level`**: the two lines are now there, ⛔ **but the comparison is made by whoever reads, not by the program** | §5.5 · P9 |
+| ⏳ `[?]` the value of **`CRF_STEP`** (9 is *sufficient, not right*); the effective ladder is **26 → 35 → 44 → 51** | `codificatore.c` · `MAX_REENCODES` |
+| ⏳ **`AUDIO_CUSHION_MS = 250`** not lowered: it must cover **the arrival jitter, which nobody has measured**. ⚠ And **it has nothing to do with bandwidth**: it is a thread problem | `pagina.html` · `AUDIO_CUSHION_MS()` |
 | ⏳ **QUIC migration** from WiFi to mobile network — *«the best reason why QUIC was chosen»* | `PIANO.md:1437` |
 | ⏳ the **audio datagram on a non-local network**, never measured (probe `banchi/07-b40`) | `RCP.md:1329` |
 | ✅ *closed on 23 Aug* — **§2.1, the minimum stays 480p · 25 fps**: *«480p/25fps è il pavimento»*. ⛔ The reason changes: it is **the bottom of the degradation ladder**, no longer the level a poor line forces ⇒ **a rate below 25 on a 20 Mbit/s line is a DEFECT** | `DECISIONI.md` §2.1 |
@@ -1969,7 +1969,7 @@ to answer A/B, and **with the step** to measure the cure: they are **two rounds,
 ⏳ *The phase has not reached the judgement.*
 
 ⛔ **And there are two precise things that wait for him**, listed in **S.5** with the price beside them: the
-**queue threshold** (`--sgombra-soglia-ms`) and the **bandwidth cap** (`--tetto-banda-mbit`). ⚠ Both
+**queue threshold** (`--clear-threshold-ms`) and the **bandwidth cap** (`--bandwidth-cap-mbit`). ⚠ Both
 change what is SEEN, both are born off, and ⛔ **which is the lesser evil is not decided
 by a measurement**: it is exactly the lesson of the reset of phase 10 of v1.
 
@@ -1985,9 +1985,9 @@ by a measurement**: it is exactly the lesson of the reset of phase 10 of v1.
 
 ⛔ **The first fact of the evening is that the 7920 tree was OLD.** `/media/REMOTIX/src/09c-src`
 carried a `webtransport.c` of 23 Aug **09:23** (`md5 958170e2…`) — that is **without the rate
-regulator** (cure 6): missing were `video_ritmo_scesi`, `ritmo_frena()`, `ritmo_ciclo()`,
-`wt_ritmo_adattivo()`, **506 lines of diff**. ⇒ Every measurement taken on that binary with
-`--ritmo-adattivo` would have given *«zero descents»* **because the option did not exist**, not because the
+regulator** (cure 6): missing were `video_rate_lowered`, `rate_brakes()`, `rate_cycle()`,
+`wt_adaptive_rate()`, **506 lines of diff**. ⇒ Every measurement taken on that binary with
+`--adaptive-rate` would have given *«zero descents»* **because the option did not exist**, not because the
 regulator did not fire. ⚠ It is exactly defect D5 of this phase, with another face.
 
 ⭐ **Both trees redone from the committed code `f90eb21`**, at **15:05-15:20 local**:
@@ -1995,13 +1995,13 @@ regulator did not fire. ⚠ It is exactly defect D5 of this phase, with another 
 | tree | `webtransport.c` | what it is |
 |---|---|---|
 | `/media/REMOTIX/src/09c-src` | `md5 4785abf10e50bf4d86ce638a21bd685b` | ⭐ **the CURED** — identical byte for byte to `src/webtransport.c` of `f90eb21` |
-| `/media/REMOTIX/src/09c-mal-src` | `md5 69e2d57fac73f48ce9e0ef6c0e628add` | ⛔ **the SICK** — the only difference is `coda_uccidi()` in place of `coda_consegna()` (`:6421`), that is the defect of 08:28:09 put back on purpose: **it is the positive control** |
+| `/media/REMOTIX/src/09c-mal-src` | `md5 69e2d57fac73f48ce9e0ef6c0e628add` | ⛔ **the SICK** — the only difference is `queue_kill()` in place of `queue_delivery()` (`:6421`), that is the defect of 08:28:09 put back on purpose: **it is the positive control** |
 
 The other sources are identical in the two trees and to the commit:
 `codificatore.c md5 5a29b80787042b0c6511c74d159c1bd0` · `main.c md5 2aa34655c19e20b5f0acf35c9c0af484` ·
 `pagina.html md5 e010d615f10643d5c6e2a2c01ae5ff25`.
 
-⚠ **And `--pagina` now points to ITS OWN tree**: the server started in the middle of the afternoon served
+⚠ **And `--page_v` now points to ITS OWN tree**: the server started in the middle of the afternoon served
 `/media/REMOTIX/src/09-src/src/pagina.html`, that is the page **before** cure 4.
 
 ## 13.0-bis ⛔ TWO STUMBLES OF THE REBUILD — *15:05-15:20*, and the first is **the trap of this phase**
@@ -2019,7 +2019,7 @@ The other sources are identical in the two trees and to the commit:
    itself, line 17**: `printf '%s\n' "$PASSWORD" | bash /media/REMOTIX/enter.sh "…"` — the password must be
    given **to `enter.sh`**, not to an earlier `sudo`.
    ⇒ Redone this way, **the two trees built in 7 seconds each**, `make -j` and all
-   (`13:18:16 → 13:18:30` UTC), with `OK make e' uscito 0` and the twelve marks inside the binary.
+   (`13:18:16 → 13:18:30` UTC), with `OK make e' has_exited 0` and the twelve marks inside the binary.
 2. ⚠ **The `tar` of the code is not enough to run a bench.** `src` + `banchi/rcp` builds, but
    the test session is opened by `banchi/01-b3-cliente.py`, which was not there ⇒
    `SESSIONE MORTA prima di aprirsi — python3: can't open file …`. ⭐ An **immediate and
@@ -2031,7 +2031,7 @@ The other sources are identical in the two trees and to the commit:
 
 ⛔ **The shape of the proof**, and it is not negotiable: *«the cured one did not die»* is not a result — it has
 the same face as a stimulus that does not stimulate. ⇒ **same port, same working folder,
-same scene, same loss**, and the only variable is the line `webtransport.c` · `wt_scrivi()`.
+same scene, same loss**, and the only variable is the line `webtransport.c` · `wt_write()`.
 
 ⭐ **The glibc trap is verified in the LIVE process**, not in the script:
 `MALLOC_MMAP_THRESHOLD_=32768 MALLOC_PERTURB_=165` read from `/proc/PID/environ`.
@@ -2104,7 +2104,7 @@ loss**. ⇒ *«the cured one did not die»* here does **not** have the face of a
 
 ### 13.1.3 ⭐ THE QUANTITY THAT TELLS WHETHER THE CURE LEAKS MEMORY — and it does not leak
 
-The closing line, `13:25:35.869` (`webtransport.c` · `wt_libera()`):
+The closing line, `13:25:35.869` (`webtransport.c` · `wt_free()`):
 
 ```
 ⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di ngtcp2_conn_writev_stream):
@@ -2113,7 +2113,7 @@ The closing line, `13:25:35.869` (`webtransport.c` · `wt_libera()`):
 
 | quantity | expected | `[M]` |
 |---|---|---|
-| `byte_in_volo_max` (the peak) | ⭐ **oscillates**, does not grow | **537 063** bytes = **exactly one frame**, the largest of the session. ⛔ In 1 463 frames **~443 MB** passed: if it held without freeing, the peak would be that. ⇒ **the cure frees** |
+| `byte_in_flight_max` (the peak) | ⭐ **oscillates**, does not grow | **537 063** bytes = **exactly one frame**, the largest of the session. ⛔ In 1 463 frames **~443 MB** passed: if it held without freeing, the peak would be that. ⇒ **the cure frees** |
 | residue at closing | **zero** | ⚠ **31 bytes** — not zero, but **31**: the tail of a stream not yet acknowledged at the instant of a brutal tear (the client killed, with 5 % loss on it). ⛔ **I declare it instead of rounding it**: it is green, not full green |
 | bytes still in the queue | — | 1 185 696 — what had not left yet when the client disappeared |
 
@@ -2174,7 +2174,7 @@ time, identical**.
 
 ## 13.2 ⭐⭐ P2/P3 — THE QUEUE THRESHOLD, on the step, paired
 
-**The round**: 8 s wide → **3 s at 10 Mbit/s** → 17 s wide, scene `barra`, **1920×1080**, `prova2`
+**The round**: 8 s wide → **3 s at 10 Mbit/s** → 17 s wide, scene `bar`, **1920×1080**, `prova2`
 session, `netem` only on 7920 on `lo` with the guardian armed. ⛔ glibc trap **off**
 (`MALLOC=no`) in both arms: `MALLOC_MMAP_THRESHOLD_` is slow, and leaving it on
 would have measured **it** instead of the threshold.
@@ -2192,7 +2192,7 @@ would have measured **it** instead of the threshold.
 | 11 | 28 | 4 | 3 | 16.87 | (return) |
 | 12-27 | 39-42 | **0** | **0** | 20.4-23.0 | wide |
 
-⭐ **`abbandoni` = `chiavi`, one to one, at every second** (6↔6, 6↔6, 7↔6): §3.10 reproduces
+⭐ **`abbandoni` = `keys`, one to one, at every second** (6↔6, 6↔6, 7↔6): §3.10 reproduces
 **identically**, and it is the mechanism of the spiral seen live.
 ⭐ **And the return is immediate**: from second 12 it is already at 40/s with **zero** keyframes — no
 hysteresis, no aftermath in 16 s.
@@ -2201,7 +2201,7 @@ seconds 8-10; here they are **21-25**. ⛔ I declare it instead of smoothing it 
 of now are not the same round, and **the comparison that holds is the paired one below**, taken
 half an hour apart on the same port, same scene, same canvas, same binary.
 
-### 13.2.2 ⛔⭐ THE ARM WITH `--sgombra-soglia-ms 100` — *13:28:26 → 13:29:1x*: **the mechanism runs, the promised effect does NOT arrive**
+### 13.2.2 ⛔⭐ THE ARM WITH `--clear-threshold-ms 100` — *13:28:26 → 13:29:1x*: **the mechanism runs, the promised effect does NOT arrive**
 
 `⭐ FASE 9, soglia della coda video (§5.1): **100 ms** … Impostata da: main.c, dalla riga di comando`
 — read from the server's log, not deduced from the command.
@@ -2222,7 +2222,7 @@ half an hour apart on the same port, same scene, same canvas, same binary.
 | abandons/s **≤ 2** | **6 · 9 · 5** | ⛔ **NO** — and at second 9 they **rose** |
 | seconds 7 and 12 **identical** to the switch off | 40/39 and 40/39, **0 keyframes** in all four | ⭐ **YES — the cure is INERT on the wide line** |
 | return **≥ 32/s** within one second | sec 11 **34/s**, sec 12 **39/s** | ⭐ **YES**, and better than the arm off (28) |
-| ⭐ **`arretrato` must rise to 2-3** (today zero by construction) | **2 (14 times) · 3 (19) · 4 (6)** | ⭐⭐ **YES, and it reaches 4** |
+| ⭐ **`backlog` must rise to 2-3** (today zero by construction) | **2 (14 times) · 3 (19) · 4 (6)** | ⭐⭐ **YES, and it reaches 4** |
 
 ⭐⭐ **And the mechanism can be seen working, line by line**: **17 crossings ABOVE** the threshold and
 **17 returns BELOW** in the 3 seconds of squeeze, with the lines saying by themselves what they did:
@@ -2249,12 +2249,12 @@ rise ⇒ threshold too high, **go down to 50**»*. ⭐ **The bytes say go up.** 
 cross. ⇒ The cure spends half the time **keeping** and half **abandoning**, and the total
 of abandons stays **23 against 24** — that is **no difference**.
 ⛔ **With the threshold at 50 ms the crossing would always be in progress and the cure would go back to
-pure `sgombra`**, that is worse. ⇒ **the right direction is to RAISE it**, and the prediction to falsify
+pure `clear_out`**, that is worse. ⇒ **the right direction is to RAISE it**, and the prediction to falsify
 now is: *at 200 ms the crossings collapse, keyframes and abandons with them*.
 
 ### 13.2.4 ⭐⭐⭐ THE PROOF THAT DECIDES — *at 200 ms the crossings do NOT collapse: they move*
 
-`[M]` 13:30. Same round, `--sgombra-soglia-ms 200`. The **14** values at which the queue crossed:
+`[M]` 13:30. Same round, `--clear-threshold-ms 200`. The **14** values at which the queue crossed:
 
 ```
 204 · 206 · 209 · 211 · 211 · 212 · 219 · 221 · 222 · 222 · 224 · 225 · 227 · 236 ms
@@ -2263,7 +2263,7 @@ now is: *at 200 ms the crossings collapse, keyframes and abandons with them*.
 ⛔⛔ **Again all just ABOVE the threshold, as at 100 they were all between 101 and 138.**
 
 ⭐⭐⭐ **And this is the discovery of the evening, and it changes the way of reading cure 2**: the threshold
-**is not a filter, it is the WORKING POINT of the queue.** `video_sgombra()` abandons as soon as the
+**is not a filter, it is the WORKING POINT of the queue.** `video_clear_out()` abandons as soon as the
 queue exceeds the threshold ⇒ **the queue can never go much above it**, whatever number is chosen: it
 settles just beyond. ⇒ The number of abandons **is not decided by the threshold**: it is decided by the gap
 between how much goes in and how much comes out. The threshold decides **how deep it accumulates before
@@ -2275,7 +2275,7 @@ abandoning**, that is **how much delay is paid**.
 | ⛔ **keyframes** in the 3 s | **18** | 14 | **11** |
 | abandons §5.1, whole round | 24 | 23 | **18** |
 | kbytes delivered in the 3 s | 3 896 | 4 300 | **4 476** (+15 %) |
-| ⚠ **`arretrato`** (the price) | 0-1 by construction | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
+| ⚠ **`backlog`** (the price) | 0-1 by construction | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
 | ⚠ **the delay paid** | — | 101-138 ms | ⛔ **204-236 ms** |
 
 ⭐ **There is an improvement, and it is monotonic**: the higher the threshold, the more frames and the fewer keyframes.
@@ -2290,14 +2290,14 @@ S.5 was **right for 100 ms and wrong for any more generous tuning**, and the mor
 generous tuning is precisely the one that gives the best image. ⛔ **It is the compromise he decides, and now
 he has the two numbers.**
 
-⭐ **And one thing the threshold did well, and it is its prerequisite**: it brought `arretrato` from
-**0-1 by construction** to **2-6**. ⇒ `WT_RITMO_POSTI = 2` is **exceeded continuously**, and the
+⭐ **And one thing the threshold did well, and it is its prerequisite**: it brought `backlog` from
+**0-1 by construction** to **2-6**. ⇒ `WT_RATE_SLOTS = 2` is **exceeded continuously**, and the
 rate regulator — which without the threshold would never fire — now **can** fire.
 
 ## 13.3 ⭐⭐⭐ P7 — THE RATE REGULATOR: **the spiral switches off, and the two counters go to ZERO**
 
-**The round**: identical to the three above — 8 s wide → 3 s at 10 Mbit/s → 17 s wide, `barra`,
-1920×1080 — with `--sgombra-soglia-ms 100 --ritmo-adattivo`. The two startup lines, **verbatim**:
+**The round**: identical to the three above — 8 s wide → 3 s at 10 Mbit/s → 17 s wide, `bar`,
+1920×1080 — with `--clear-threshold-ms 100 --adaptive-rate`. The two startup lines, **verbatim**:
 
 ```
 ⭐ FASE 9, soglia della coda video (§5.1): 100 ms … Impostata da: main.c, dalla riga di comando
@@ -2318,16 +2318,16 @@ rate regulator — which without the threshold would never fire — now **can** 
 
 ⛔⛔ **The spiral was not attenuated: it was SWITCHED OFF.** Zero keyframes and zero abandons in the whole
 round — and not because the threshold worked better, ⭐ **but because it did not have to work at all**:
-`passa SOPRA la soglia` **0 times**, `torna SOTTO` **0 times**. The regulator keeps `arretrato`
-nailed at **2**, and the queue never reaches the 100 ms that would wake `video_sgombra()`.
+`passa SOPRA la soglia` **0 times**, `returns SOTTO` **0 times**. The regulator keeps `backlog`
+nailed at **2**, and the queue never reaches the 100 ms that would wake `video_clear_out()`.
 ⇒ **The two cures do not add up: 6 makes 2 useless on the step.**
 
 ### 13.3.2 ⭐⭐ THE CHECK OF §6.5, the one *«that invalidates the whole bench»* — **passed**
 
 `LEZIONI.md` §1.9: a counter at zero on a branch never travelled proves nothing. The line of
-`ritmo_ciclo()` answers, **one per second**:
+`rate_cycle()` answers, **one per second**:
 
-| time | `arretrato` READ | maximum | descents in the second | in total |
+| time | `backlog` READ | maximum | descents in the second | in total |
 |---|---|---|---|---|
 | 13:32:19-27 (wide) | ⭐ **36-42 times/s** | **0** | **0** | 0 |
 | **13:32:28** | 40 | **2** | ⛔ **13** | 13 |
@@ -2337,7 +2337,7 @@ nailed at **2**, and the queue never reaches the 100 ms that would wake `video_s
 | 13:32:32-48 (wide) | ⭐ **38-42 times/s** | **0** | **0** | ⭐ **57, and it stays 57** |
 
 ⭐⭐ **The reads are there — 36-42 per second — and they are worth ZERO.** ⇒ It is not *«a loop never
-travelled»* (red **d** of `ritmo_frena()`): it is **travelled 40 times a second, and the answer is
+travelled»* (red **d** of `rate_brakes()`): it is **travelled 40 times a second, and the answer is
 «there is nothing to do»**. It is exactly the behaviour S.5 called *parapet*.
 
 ### 13.3.3 ⭐ TWO LINES PER EPISODE, not one per frame — and the RISALE arrives
@@ -2358,7 +2358,7 @@ travelled»* (red **d** of `ritmo_frena()`): it is **travelled 40 times a second
 at `13:32:31.1`, so **355 ms later**. ⚠ *«lasted 1 385 ms»* does **not** refute *«RISALE within 1 s»*:
 the right stopwatch starts from the return of the line, not from the start of the episode.
 
-⭐ **And red (b) of `ritmo_frena()` — the most important — did NOT fall**: `cwnd_left` is **0** in
+⭐ **And red (b) of `rate_brakes()` — the most important — did NOT fall**: `cwnd_left` is **0** in
 two descents out of five and small in a third ⇒ **it is the line that brakes, not the browser's
 window**. ⚠ The only descent with a wide `cwnd_left` (264 318) is the **fifth**, the 68 ms one,
 fired when the line had already reopened and `cwnd` was growing back: consistent.
@@ -2382,12 +2382,12 @@ floor**. ⇒ It must be looked at again on the day one measures at 20.
 
 ### 13.4.1 `[M]` THE TEN NUMBERS, paired — *cap off 13:38, cap 20 at 13:41*
 
-| scene | ⛔ **cap OFF** | ⭐ **`--tetto-banda-mbit 20`** | |
+| scene | ⛔ **cap OFF** | ⭐ **`--bandwidth-cap-mbit 20`** | |
 |---|---|---|---|
 | **still** (no scene) | 0 fps · **0.000** Mbit/s · wire **2.427** | 0 fps · **0.000** · wire **2.427** | ⭐ identical to the third decimal |
-| **flat colour** (`pieno`) | 41.10 fps · **1.151** Mbit/s | 41.23 fps · **1.219** | ⚠ **+5.9 %** |
+| **flat colour** (`full`) | 41.10 fps · **1.151** Mbit/s | 41.23 fps · **1.219** | ⚠ **+5.9 %** |
 | ⛔⛔ **REAL desktop** (`video`) | 23.13 fps · **0.208** = **1.0 %** | 23.13 fps · ⭐⭐ **0.249** = **1.2 %** | ⭐⭐⭐ **RISES by 19.7 %, does NOT go down** |
-| ⛔⛔ **halftone gradient** (`barra`) | 34.67 fps · **21.183** = **105.9 %** | ⭐⭐ **40.70** fps · ⭐⭐⭐ **8.287** = **41.4 %** | ⭐ **the driver DID obey** |
+| ⛔⛔ **halftone gradient** (`bar`) | 34.67 fps · **21.183** = **105.9 %** | ⭐⭐ **40.70** fps · ⭐⭐⭐ **8.287** = **41.4 %** | ⭐ **the driver DID obey** |
 | **film with grain** | 23.17 fps · **54.302** = 271.5 % · wire **58.414 = 292.1 %** | 23.30 fps · ⭐ **4.794** = **24.0 %** · wire **7.419 = 37.1 %** | ⭐ from **293 %** to **37 %** |
 
 ⭐ **And the yardstick is good**: the five numbers with the cap off reproduce §3.8 within 1-2 %
@@ -2415,7 +2415,7 @@ against 34.67** — because smaller frames get out faster.
 | # | the line, verbatim |
 |---|---|
 | **1** · the driver | `controllo del bitrate su «/dev/dri/renderD128» (Intel iHD driver … 25.2.3), profilo 17, EncSliceLP: il driver DICHIARA [CBR\|VBR\|VCM\|CQP\|MB\|QVBR\|TCBRC] (0x149e) · chiesto QVBR (0x400) · c'e'` |
-| **2** · the context | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `codificatore 1 APERTO e TENUTO VIVO … 2560x1080 a 60/s` |
+| **2** · the context | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `encoder 1 APERTO e TENUTO ALIVE … 2560x1080 a 60/s` |
 | **3** ⭐⭐ · **the BYTES** | `banda del video: 5581 kbit/s su 10001 ms — 283 fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, **ne usa il 34 %**` — one line every 10 s |
 
 ⭐ **The third is the one that decides, and it says the cap is engaged**: in the ten intervals read the
@@ -2423,12 +2423,12 @@ consumption goes from **1 %** (still desktop) to **62 %** of the wire, and **nev
 
 ### 13.4.4 ⛔ THE BENCH DEFECT I FOUND AND CORRECTED — *and it would have given «a plausible number»*
 
-`09-b72-banda.py` `scena()`: when the next point is **not** a video, **it does not switch off the Firefox of the
-previous point**. ⇒ With my first order (`ferma,video,pieno,barra,video-grana`) the `pieno` point was
+`09-b72-banda.py` `scene()`: when the next point is **not** a video, **it does not switch off the Firefox of the
+previous point**. ⇒ With my first order (`halt,video,full,bar,video-grana`) the `full` point was
 measured **with the film still alive underneath**. ⛔ It is the family of defects of §8, fourth time today.
-⭐ **Everything redone with the video scenes AT THE END** (`ferma,pieno,barra,video,video-grana`): between two
+⭐ **Everything redone with the video scenes AT THE END** (`halt,full,bar,video,video-grana`): between two
 videos `09-b72-video.sh` takes care of it, doing `pkill`.
-⚠ **And the outcome of the check must be told**: the contaminated `pieno` had given **1.162** Mbit/s, the
+⚠ **And the outcome of the check must be told**: the contaminated `full` had given **1.162** Mbit/s, the
 clean one **1.151** — that is **the same number**. ⇒ In *this* case the contamination did not bite
 (the scene's window covers the film and Mutter does not deliver what is hidden). ⛔ **But the good
 measurement is the one with the right order**, and the bench must be corrected: a defect that does not bite today bites
@@ -2452,7 +2452,7 @@ Firefox Android non ha né HEVC né AV1; `avc1.640032` è già verificato»*.
 
 ### 13.5.1 `[M]` HOW MUCH IT CHANGES — *same scene, same canvas, same QP 26, 13:47*
 
-| `barra`, 2560×1080, cap off | HEVC | ⭐ **H.264** |
+| `bar`, 2560×1080, cap off | HEVC | ⭐ **H.264** |
 |---|---|---|
 | frames/s | 34.67 | ⭐ **41.80** |
 | video payload | **21.183** Mbit/s = **105.9 %** | ⭐⭐ **7.920** Mbit/s = **39.6 %** |
@@ -2473,18 +2473,18 @@ case (film with grain) under H.264 was NOT measured**: it is the first number to
 
 ```
 HEVC   → primo fotogramma: hev1.1.6.L150.B0 …   stringa per il decodificatore «hev1.1.6.L150.B0»
-H.264  → primo fotogramma: (non letto)      …   stringa per il decodificatore «»
+H.264  → first frame: (non read)      …   stringa per il decodificatore «»
 ```
 
-⛔ Under H.264 the server **does not compose** the string `avc1.<profilo><vincoli><livello>` (the comment
-that describes it is in `codificatore.c` · `salta_liste_scala()`), and writes `(non letto)`. ⚠ **It reads the level
-anyway** (`livello 51`, then `52`): what is missing is the **string**. `[?]` If it is the one that goes to the browser, it is the
+⛔ Under H.264 the server **does not compose** the string `avc1.<profile_v><constraints><level>` (the comment
+that describes it is in `codificatore.c` · `skip_scaling_lists()`), and writes `(non read)`. ⚠ **It reads the level
+anyway** (`level 51`, then `52`): what is missing is the **string**. `[?]` If it is the one that goes to the browser, it is the
 R31 family — *«it does not give a network error, it makes the configuration be refused»*.
 
 ## 13.6 ⛔⛔⛔ 4K — *13:50-13:52*: **41 frames/s, not 60 — and the produced level EXCEEDS the client's**
 
 **The round**: canvas **3840×2160** verified **in the product's log** (`TELA NUOVA DAL PALCO:
-1920x1080 → 3840x2160`), scene `barra`, 20 s, cap off, `tc` never touched.
+1920x1080 → 3840x2160`), scene `bar`, 20 s, cap off, `tc` never touched.
 
 | at 3840×2160 | ⭐ **H.264** (what the browser receives) | HEVC |
 |---|---|---|
@@ -2509,19 +2509,19 @@ removed.)*
 
 ```
 rcp    il client dichiara video.livello=5.1 … §4.3 vieta al server di emettere un flusso PIU' ALTO
-figlio §4.3 — LIVELLO PRODOTTO: 5.2 (nell'SPS e' 52) … il confronto fra le due righe lo fa CHI
+child §4.3 — LIVELLO PRODUCT: 5.2 (nell'SPS e' 52) … il confronto fra le due righe lo fa CHI
        LEGGE — il programma NON lo fa
 ```
 
 ⛔⛔ **The server emitted 5.2 where the client admitted 5.1, and nobody said anything.** It is
-exactly the defect §5.5 had found by reading the code (`rcp.c` · `livello_legge()` does not capture the
+exactly the defect §5.5 had found by reading the code (`rcp.c` · `parse_level()` does not capture the
 level) and that **P9** predicted: *«a level too low does not give a network error: it makes the
 configuration be refused, that is a screen that does not start without a red»*. ⭐ Now it is no longer a reading of the
 code: **it happened, at 13:50:48, and the two lines are in the log.**
 
 ⚠ **And the estimate of §5.5 was wrong in yet another way**: it said *«at 4K 5.1 is needed, which
 grants `[?]` 30.3 fps»*. `[M]` `h264_vaapi` did not choose 5.1: **it chose 5.2**. ⇒ the number
-to put in `pagina.html` · `LIVELLO_DICHIARATO()` is not `avc1.640033` (5.1) but `avc1.640034` (5.2) **if one really wants
+to put in `pagina.html` · `DECLARED_LEVEL()` is not `avc1.640033` (5.1) but `avc1.640034` (5.2) **if one really wants
 4K** — ⛔ and it must be verified that Firefox Android accepts 5.2, because otherwise the choice
 is **between 4K and that browser**.
 
@@ -2529,8 +2529,8 @@ is **between 4K and that browser**.
 
 ⭐ The bench `banchi/09-b74-audio-firefox.py` (written today) is **the right shape** and solves the
 defect of §3.16: the *before* and the *after* are **two `pagina.html` files**, served by the **same
-binary**, and the record is the `/diario` line that **the page sends by itself** to the server every 5 s.
-⭐ And the service started well: `pagina: /media/REMOTIX/src/09-src/src/pagina.html ·
+binary**, and the record is the `/diary` line that **the page sends by itself** to the server every 5 s.
+⭐ And the service started well: `page_v: /media/REMOTIX/src/09-src/src/pagina.html ·
 md5 d387c166…` for the *before* — that is **the OLD page, and it shows from the `md5`**, not from the name.
 
 ⛔ **But Firefox never opens Marionette's port 2829.** Two attempts (13:53 and 13:55), plus a
@@ -2547,7 +2547,7 @@ spot of the same file.
 itself»* of §3.16 remains, because `01-b3-cliente.py` still has its copy of the old rule
 (`md5 13e68d19ed44298b7926cded53affdda`, unchanged). ⭐ **But the road is short**: the page sends the
 record by itself, so **it is enough for Nic to open the page with his browser** and the server's
-log carries the three counters (`vecchi` · `tardivi` · `fuori`). Marionette is not needed for the judgement:
+log carries the three counters (`stale` · `late` · `outside`). Marionette is not needed for the judgement:
 it is needed for automation.
 
 ## 13.8 ⭐⭐⭐ §10.2 DECIDED — **the border of the spiral lies between 10 and 5 Mbit/s**, and above it does not bite
@@ -2556,8 +2556,8 @@ it is needed for automation.
 the field — §5.2 (*«the defect lives below the floor, above the cure is inert»*) against §3.10
 (*«abandons and keyframes also on the wide line, 3↔3 at 22-26 Mbit/s»*).
 
-**The round that decides it**: ⛔ **on the REAL DESKTOP**, not on `barra` — ⭐ and with the **codec the browser
-really receives, H.264** (`negoziato video.codec=h264`, read from the log). A **single** session at
+**The round that decides it**: ⛔ **on the REAL DESKTOP**, not on `bar` — ⭐ and with the **codec the browser
+really receives, H.264** (`negotiated video.codec=h264`, read from the log). A **single** session at
 2560×1080 for all the steps, so the only variable is the squeeze. Threshold and regulator **off**,
 that is the product as it is today. Step: 8 s wide → **3 s narrow** → 6 s wide.
 
@@ -2575,7 +2575,7 @@ that is the product as it is today. Step: 8 s wide → **3 s narrow** → 6 s wi
 ⛔⛔ **On real content the spiral does NOT exist down to 10 Mbit/s inclusive**, that is down to **half the
 floor**. The first sign arrives at **5 Mbit/s**, and it is **3 keyframes out of 424 frames = 0.7 %**.
 ⇒ **§5.2 was right and §3.10 was measuring something else**: its abandons at 22-26 Mbit/s were on
-**`barra`**, the halftone gradient — a **synthetic** scene that at 2560×1080 costs **21 Mbit/s by
+**`bar`**, the halftone gradient — a **synthetic** scene that at 2560×1080 costs **21 Mbit/s by
 itself** (105.9 % of the floor). ⛔ **It is nobody's desktop**: it is a test case that lives
 *above* the floor even at rest, and under that load any squeeze produces a queue.
 
@@ -2585,9 +2585,9 @@ P2 and P7 predicted. ⚠ They are needed when the line drops **below half**, or 
 content is a hard case (full-screen video), and there they work well: §13.3.
 
 ⚠ **The defect of my script, declared**: the per-second table I had printed gave
-`fot [0,0,0]` in all six rounds — an error of mine in grouping by second, **not a measurement**.
+`frame [0,0,0]` in all six rounds — an error of mine in grouping by second, **not a measurement**.
 ⛔ The numbers above **do not come from that table**: they come from the **direct count on the saved
-logs** (`grep -c SPEDITO`, `grep -c 'SPEDITO: CHIAVE'`, `grep -c ABBANDONATO`), which is the
+logs** (`grep -c SPEDITO`, `grep -c 'SPEDITO: KEY'`, `grep -c ABBANDONATO`), which is the
 quantity the product writes. ⚠ Had I reported the table, I would have said *«zero frames»*
 where there were **424**.
 
@@ -2601,8 +2601,8 @@ where there were **424**.
 | **P4** | the cap: real desktop **does not go down**, halftone **below the floor** | ⭐⭐⭐ **CONFIRMED — the two reds that would throw the cure away did NOT fall**: 0.208 → **0.249** (+19.7 %), halftone 21.18 → **8.29**. ⚠ It squeezes **more** than predicted (out of the range at the bottom) | 13.4 |
 | **P5** | the quality climb-back | ⛔ **NOT TESTED** — see 13.10 | 13.10 |
 | **P6** | the audio reorder | ⛔ **NOT TESTED**: Marionette does not open the port | 13.7 |
-| **P7** | the regulator: **zero descents** with a normal desktop; descents on the step, RISALE within 1 s | ⭐⭐⭐ **FULLY CONFIRMED**: `arretrato` **READ 36-42 times/s** on the wide line with **maximum 0** and **zero descents**; **57** descents concentrated in the 3 s; RISALE **355 ms** after the return. ⛔ And the red *«it is the browser's window»* **did not fall**: `cwnd_left` = 0 | 13.3 |
-| **P8** | with a still scene the rate does not drop | ⚠ **NOT measured in pairs** (half still / half moving). ⭐ But half of the check is there: the lines `arretrato LETTO N volte` exist and distinguish *empty* from *forbidden* | 13.3.2 |
+| **P7** | the regulator: **zero descents** with a normal desktop; descents on the step, RISALE within 1 s | ⭐⭐⭐ **FULLY CONFIRMED**: `backlog` **READ 36-42 times/s** on the wide line with **maximum 0** and **zero descents**; **57** descents concentrated in the 3 s; RISALE **355 ms** after the return. ⛔ And the red *«it is the browser's window»* **did not fall**: `cwnd_left` = 0 | 13.3 |
+| **P8** | with a still scene the rate does not drop | ⚠ **NOT measured in pairs** (half still / half moving). ⭐ But half of the check is there: the lines `backlog LETTO N times` exist and distinguish *empty* from *forbidden* | 13.3.2 |
 | **P9** | the produced level against the client's, and nobody compares them | ⛔⛔ **FALLEN, with the trigger**: at 4K H.264 the server emits **5.2** while the client declares **5.1**, and **the program does not notice** | 13.6.2 |
 
 ### ⭐⭐ AND THE THREE NEW THINGS, which no prediction had foreseen
@@ -2613,17 +2613,17 @@ where there were **424**.
 2. ⭐⭐⭐ **The threshold is not a filter: it is the working point of the queue.** At 100 ms the queue settles
    at 101-138; at 200 ms at 204-236. ⇒ raising it **buys image and pays delay**, and does not change the
    number of abandons — 13.2.3;
-3. ⭐⭐⭐ **The regulator makes the threshold useless on the step**: it keeps `arretrato` at 2, the queue never
-   reaches the 100 ms, and `video_sgombra()` **does not fire even once** — 13.3.1.
+3. ⭐⭐⭐ **The regulator makes the threshold useless on the step**: it keeps `backlog` at 2, the queue never
+   reaches the 100 ms, and `video_clear_out()` **does not fire even once** — 13.3.1.
 
-## 13.10 ⛔ `--qualita-risale` — **I did not make it fire, and I declare why**
+## 13.10 ⛔ `--quality-rises` — **I did not make it fire, and I declare why**
 
 ⭐ **It is not a failed attempt: it is an outcome, and it is read in the code before on the hardware.** The line
 the product writes by itself at every opening of the encoder:
 
 ```
-la risalita della qualita' e' SPENTA (invariante I6) … da spenta questi numeri
-(120 fotogrammi, 2097152 byte, scalino 9, punto di lavoro QP 26 costante, tetto d'attesa 3840)
+la risalita della qualita' e' SPENTA (invariante I6) … da spenta questi numbers
+(120 frames, 2097152 byte, scalino 9, punto di lavoro QP 26 costante, ceiling d'wait 3840)
 non hanno nessun effetto
 ```
 
@@ -2648,7 +2648,7 @@ that when off **it touches nothing**: the numbers of the paired comparison of §
 | `tc` on **`enp7s0`** | ⭐ `qdisc mq 0: root` — **never touched**, as per the rule |
 | the `tc` **guardian** | ⭐ none: `.b68-guardiano.pid` is not there |
 | **scenes, clients, browsers** | ⭐ **none** — neither `04-b30-scena`, nor `01-b3-cliente`, nor `firefox` |
-| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — ⚠ **it was already so before I started** (`core_pattern.prima` says the same), and it is what §4.7 point 1 asked: **absolute**. ⛔ It is not the factory value (`core`): **I leave it**, because it is the armed trap, ⚠ and I declare it because it is a state of the machine, not of the project |
+| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — ⚠ **it was already so before I started** (`core_pattern.before` says the same), and it is what §4.7 point 1 asked: **absolute**. ⛔ It is not the factory value (`core`): **I leave it**, because it is the armed trap, ⚠ and I declare it because it is a state of the machine, not of the project |
 
 **The three ports that stay on, and why:**
 
@@ -2685,13 +2685,13 @@ kept declaring `hevc,av1` — ⇒ the server chose **HEVC** in every round, for 
 
 ⭐ `pagina.html` does **not** ask the APIs for the codec, and it declares so at the top of the file: `[M]` 12 Aug,
 on all seven HEVC strings `mediaCapabilities.decodingInfo()` and `canPlayType()` say
-**yes** and the pixel does not arrive. ⇒ The page **paints a real probe and rereads the pixels**, and into the `CIAO`
+**yes** and the pixel does not arrive. ⇒ The page **paints a real probe and rereads the pixels**, and into the `HELLO`
 goes only what it painted:
 
 ```
-pagina.html:818   const PREFERENZA = ["hevc", "h264"];        ⛔ AV1 is no longer there
-pagina.html:4672  const codec_buoni = PREFERENZA.filter((n) => …sondaggio…arriva);
-pagina.html:4725  ["video.codec", codec_buoni.join(",")]
+pagina.html:818   const PREFERENCE = ["hevc", "h264"];        ⛔ AV1 is no longer there
+pagina.html:4672  const good_codecs = PREFERENCE.filter((n) => …poll…arrives);
+pagina.html:4725  ["video.codec", good_codecs.join(",")]
 ```
 
 ⇒ **On Firefox HEVC does not paint ⇒ the page sends `video.codec=h264` and that's all.** The client's new
@@ -2715,22 +2715,22 @@ to be zero copy.)* *→ conversion (on the CPU) and encoding of the first 4K fra
 `[R]` of §13.5.2 verified line by line on the frozen tree `09c-src`:
 
 ```
-codificatore.c:953   snprintf(c->stringa_codec, …, "hev1.%s%u.%X.%c%u%s", …)   ← HEVC
-codificatore.c:1152  snprintf(c->stringa_codec, …, "av01.%u.%02u%c.%02d", …)   ← AV1 (dead code)
+codificatore.c:953   snprintf(c->codec_string, …, "hev1.%s%u.%X.%c%u%s", …)   ← HEVC
+codificatore.c:1152  snprintf(c->codec_string, …, "av01.%u.%02u%c.%02d", …)   ← AV1 (dead code)
                      ⛔ and for H.264 THERE IS NO LINE: `avc1.` is not composed anywhere
-codificatore.c:4065  c->conf.stringa_codec[0] ? … : "(non letto)"
+codificatore.c:4065  c->conf.codec_string[0] ? … : "(non read)"
 ```
 
-⇒ ⛔ **Defect of the product**: `stringa_codec` is never composed under H.264, and the log
-writes `(non letto)` and `«»`.
+⇒ ⛔ **Defect of the product**: `codec_string` is never composed under H.264, and the log
+writes `(non read)` and `«»`.
 
 ⭐⭐ **But it is NOT the R31 family, and this changes its seriousness.** The only use of
-`stringa_codec` outside the encoder is `figlio.c` ⚠ *(the cited code is no longer there: to be reread)* and `:4780`, and they are **two log
+`codec_string` outside the encoder is `figlio.c` ⚠ *(the cited code is no longer there: to be reread)* and `:4780`, and they are **two log
 lines**: the string **never leaves towards the browser**. The one the browser really uses is
 composed by the page itself, from the level that **it** declares:
 
 ```
-pagina.html:1182   return ["avc1.6400" + esa(idc), "avc1.64001f"];   /* idc da LIVELLO_DICHIARATO */
+pagina.html:1182   return ["avc1.6400" + hex_s(idc), "avc1.64001f"];   /* idc da DECLARED_LEVEL */
 ```
 
 ⇒ ⭐ **The defect is a BLINDNESS OF THE DIAGNOSIS, not a black screen**: under H.264 the log cannot
@@ -2750,8 +2750,8 @@ points — so the only variable is the scene. Cap **off**, `tc` **never touched*
 |---|---|---|---|---|---|---|---|---|
 | **still** (no scene) | 14:23:08 | 0.00 | **0.000** Mbit/s | 0 % | 2.427 | — | 0 | 0 |
 | ⭐ **REAL desktop** (`scena-utente.webm` at full screen) | 14:23:52 | 23.10 | **0.356** Mbit/s | **1.8 %** | 2.842 | 1 924 | 0 | 0 |
-| **flat colour** (`pieno`) | 14:24:31 | 41.03 | **1.190** Mbit/s | 5.9 % | 3.717 | 3 624 | 0 | 0 |
-| **halftone gradient** (`barra`) | 14:25:10 | 40.77 | **7.728** Mbit/s | 38.6 % | 10.45 | 23 695 | 0 | 0 |
+| **flat colour** (`full`) | 14:24:31 | 41.03 | **1.190** Mbit/s | 5.9 % | 3.717 | 3 624 | 0 | 0 |
+| **halftone gradient** (`bar`) | 14:25:10 | 40.77 | **7.728** Mbit/s | 38.6 % | 10.45 | 23 695 | 0 | 0 |
 | ⛔ **film with GRAIN** (the hard case) | 14:25:55 | 23.30 | ⛔ **44.574** Mbit/s | ⛔ **222.9 %** | 48.42 | 239 129 | 0 | 0 |
 
 ### ⛔⭐ THE ANSWER TO THE QUESTION THAT DECIDES
@@ -2779,10 +2779,10 @@ H.264 **does not exist**: the old numbers are not converted, they are **redone**
 ### ⭐ The positive control, and it is inside the table
 
 The five points cover **three orders of magnitude** (0 → 0.356 → 1.19 → 7.73 → 44.57): if the bench
-were blind they would give the same number. ⭐ And `barra` found again at **7.728** against the **7.920** of
+were blind they would give the same number. ⭐ And `bar` found again at **7.728** against the **7.920** of
 §13.5.1, taken thirty-five minutes earlier with another session: **2.4 % gap**, that is the measurement
 repeats.
-⚠ **The `ferma` line says another thing worth reading**: **zero** video and **2.427
+⚠ **The `halt` line says another thing worth reading**: **zero** video and **2.427
 Mbit/s on the wire**. ⇒ With a still desktop **100 %** of what passes is QUIC + **the PCM audio**, which by
 itself asks for 1.536 Mbit/s. `[?]` **On a narrow line it is audio that eats video, not the opposite** —
 see 14.4.1, where at 3 Mbit/s video goes down to 5 fps and the wire stays at 2.4.
@@ -2817,7 +2817,7 @@ the measurement said *«293 % of the floor»* on the hard case. ⛔ They were bo
 
 ### 14.4.1 ⛔⛔ THE REQUESTED BENCH HAS NO POSITIVE CONTROL, and I say it before the numbers
 
-The mandate asked for the sweep **on the real desktop**, and it is right: `barra` is synthetic.
+The mandate asked for the sweep **on the real desktop**, and it is right: `bar` is synthetic.
 ⛔ **But on the real desktop there is nothing to tune, and I measured it instead of deducing it.**
 
 `[M]` **14:27:48**, step on the real desktop in H.264, threshold **off**, squeeze at **3 Mbit/s** —
@@ -2836,9 +2836,9 @@ found 3; here, even lower, there are **zero**.
 nothing. The bench has no stimulus, and a bench without stimulus gives *«the cure works»* for every
 value. **I did not do it there.**
 
-⭐ **And there is a second reason, and it comes from the new yardstick**: the objection of §13.8 against `barra`
+⭐ **And there is a second reason, and it comes from the new yardstick**: the objection of §13.8 against `bar`
 (*«at 2560×1080 it costs 21 Mbit/s by itself, it is nobody's desktop»*) was an **HEVC** objection.
-In H.264 `barra` costs **7.73 Mbit/s** (14.2), that is 39 % of the floor. ⚠ But the case that
+In H.264 `bar` costs **7.73 Mbit/s** (14.2), that is 39 % of the floor. ⚠ But the case that
 **asks for** the cure is another one, and it is the real one: the **film with grain**, 44.6 Mbit/s.
 
 ### 14.4.2 `[M]` THE SWEEP, on the HARD CASE — film with grain, 2560×1080, H.264
@@ -2849,14 +2849,14 @@ Server restarted at every arm, `md5 162d2d10…`, glibc trap off. The rows below
 **the 3 seconds of squeeze**, and the milliseconds are those the product writes by itself in the line
 *«la coda del video passa SOPRA la soglia (… byte = N ms …)»*.
 
-| arm | time | fps in the 3 s | ⛔ keyframes | ⛔ abandons | kbytes | cross. | ⚠ **ms of queue paid** | max `arretrato` |
+| arm | time | fps in the 3 s | ⛔ keyframes | ⛔ abandons | kbytes | cross. | ⚠ **ms of queue paid** | max `backlog` |
 |---|---|---|---|---|---|---|---|---|
 | **off** | 14:29 | 6.0 | **8** | **8** | 6 111 | — | — | 0-1 by construction |
 | **100 ms** | 14:30 | 6.7 | 8 | 10 | 6 507 | 8 | **136 – 397** | 3 |
 | **200 ms** | 14:31 | 7.7 | 8 | 14 | 7 216 | 8 | **222 – 942** | 6 |
 | **400 ms** | 14:32 | 5.7 | 6 | 8 | 5 930 | 7 | **414 – 643** | 8 |
 | **800 ms** | 14:33 | 7.3 | **5** | 14 | 6 738 | 6 | ⛔ **856 – 1 321** | 7 |
-| ⭐ **200 + `--ritmo-adattivo`** | 14:34 | 5.3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
+| ⭐ **200 + `--adaptive-rate`** | 14:34 | 5.3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
 
 ### ⭐ THE PAIR THE USER MUST JUDGE, and the flat answer
 
@@ -2866,7 +2866,7 @@ Server restarted at every arm, `md5 162d2d10…`, glibc trap off. The rows below
 > **800** (1.7/s), ⛔ **abandons do not get there at any value** (2.7 – 4.7/s), and ⛔
 > **frames do not even come close** (5.3 – 7.7/s against 25).
 > ⭐⭐ **The only arm that brings abandons inside the promise is the PAIR**
-> `--sgombra-soglia-ms 200 --ritmo-adattivo`: **6 abandons in 3 s = 2.0/s**, and it pays for them with
+> `--clear-threshold-ms 200 --adaptive-rate`: **6 abandons in 3 s = 2.0/s**, and it pays for them with
 > **209-323 ms** of queue, that is **~264-378 ms from gesture to pixel** adding the 55 ms of the loop of
 > phase 8.
 
@@ -2883,8 +2883,8 @@ Server restarted at every arm, `md5 162d2d10…`, glibc trap off. The rows below
    ⛔ but the consequence is that **raising the threshold buys 3 keyframes and sells a second and three tenths of
    delay.** ⇒ **The «raise it» direction of §13.2.3 is right only up to ~200-400 ms**: above that, the
    trade is the one `SPECIFICHE.md` §3.2 forbids in one line;
-3. ⭐⭐⭐ **AND THE REGULATOR IS THE LEVER, NOT THE THRESHOLD.** Max `arretrato`: **3 · 6 · 8 · 7** with the
-   threshold alone, ⭐ **2** with the pair — that is `WT_RITMO_POSTI = 2` **holds**, and the queue stops
+3. ⭐⭐⭐ **AND THE REGULATOR IS THE LEVER, NOT THE THRESHOLD.** Max `backlog`: **3 · 6 · 8 · 7** with the
+   threshold alone, ⭐ **2** with the pair — that is `WT_RATE_SLOTS = 2` **holds**, and the queue stops
    getting deeper. ⇒ At the same threshold of 200 ms, switching on the regulator **halves the abandons
    (14 → 6)** and **cuts the maximum delay from 942 to 323 ms**. ⛔ **The threshold alone is not the
    right lever; the pair is**, and it is what the mandate suspected.
@@ -2897,12 +2897,12 @@ validity**, and it is one more reason not to go up there.
 ## 14.5 ⭐⭐⭐ P8 — THE RATE WITH A STILL SCENE, IN PAIRS: **GREEN** — *14:40:00 → 14:41:00 UTC*
 
 **The round**: `banchi/09-b75-p8.py` (new), port 7920 with **both switches**
-(`--sgombra-soglia-ms 100 --ritmo-adattivo`, read from the product's startup line, not deduced from the
+(`--clear-threshold-ms 100 --adaptive-rate`, read from the product's startup line, not deduced from the
 command), canvas 2560×1080, H.264, **wide** line, **three pairs** still/moving of 8 s **alternated
-in the same round**. The record is the line that `ritmo_ciclo()` writes **on the beat and not on the
+in the same round**. The record is the line that `rate_cycle()` writes **on the beat and not on the
 frames**, one per second.
 
-| | seconds | ⭐ **`arretrato` READ** | seconds with **ZERO** reads | maximum | ⛔ **descents** |
+| | seconds | ⭐ **`backlog` READ** | seconds with **ZERO** reads | maximum | ⛔ **descents** |
 |---|---|---|---|---|---|
 | ⛔ **STILL half** | 16 | **0 in all** | ⭐ **16 out of 16** | 0 | ⭐ **0** |
 | ⭐ **MOVING half** | 27 | **1 072** = **39.7 per second** | ⭐ **0 out of 27** | 0 | ⭐ **0** |
@@ -2914,7 +2914,7 @@ travelled **1 072 times** and the rate **did not go down all the same**.
 descents, and the `LETTO` lines say that **one earned it and the other did not**. Empty and forbidden
 are distinct, which is the whole point of P8.
 
-⭐ **And `massimo 0` in the moving half is the second fact**: on a wide line `arretrato` does not even reach
+⭐ **And `maximum 0` in the moving half is the second fact**: on a wide line `backlog` does not even reach
 1. ⇒ The regulator is **a parapet that touches nothing**, as predicted (P7, S.5).
 
 ### ⛔ TWO BENCH DEFECTS FOUND ALONG THE WAY — and both gave «a plausible number»
@@ -2939,15 +2939,15 @@ one single session.
 | at **3840×2160**, H.264, cap off | fps | ⭐ **video payload** | % of 20 | wire | bytes/frame | keyframes | ab. |
 |---|---|---|---|---|---|---|---|
 | ⭐ **REAL desktop** | 23.10 | **0.852** Mbit/s | ⭐ **4.3 %** | 3.351 | 4 607 | 0 | 0 |
-| **flat colour** (`pieno`) | ⚠ **33.37** | 2.716 | 13.6 % | 5.259 | 10 174 | 0 | 0 |
-| **halftone gradient** (`barra`) | **40.40** | 23.564 | **117.8 %** | 26.641 | 72 908 | 0 | 0 |
+| **flat colour** (`full`) | ⚠ **33.37** | 2.716 | 13.6 % | 5.259 | 10 174 | 0 | 0 |
+| **halftone gradient** (`bar`) | **40.40** | 23.564 | **117.8 %** | 26.641 | 72 908 | 0 | 0 |
 | ⛔ **film with GRAIN** | 23.27 | ⛔ **74.699** | ⛔ **373.5 %** | 79.279 | 401 320 | ⛔ **2** | ⛔ **2** |
 
 ### ⭐ 1. THE 41 FPS CAP **MOVES WITH THE SCENE** — and §13.6 could not see it
 
-§13.6 had measured **41.25 fps** on `barra` and had concluded *«at 3840×2160 the product holds
-~41/s»*. ⭐ With four scenes instead of one one sees that **it is not a cap, it is a point**: `barra`
-**40.40**, ⚠ `pieno` **33.37** — that is **7 frames fewer on a scene that costs NINE TIMES
+§13.6 had measured **41.25 fps** on `bar` and had concluded *«at 3840×2160 the product holds
+~41/s»*. ⭐ With four scenes instead of one one sees that **it is not a cap, it is a point**: `bar`
+**40.40**, ⚠ `full` **33.37** — that is **7 frames fewer on a scene that costs NINE TIMES
 LESS bandwidth** (2.7 against 23.6 Mbit/s).
 ⇒ ⛔ **It is not bandwidth that decides the rate at 4K**, and it is not even the cost of encoding: it is what
 **the compositor delivers**, and it is the same lesson as §3.1. ⚠ The two `video` points (23.1 and
@@ -2989,7 +2989,7 @@ throttling**. ⚠ It is the point where «wide line» stops being wide.
 
 ⛔ **The server emits 5.2 where the client admits 5.1, and the program does not notice** — §13.6.2
 was not a chance of that round: it repeats **every time** the canvas is 4K.
-⚠ The «conversion + encoding» cap of the first frame was above the 40.40 of `barra`. *(The times were
+⚠ The «conversion + encoding» cap of the first frame was above the 40.40 of `bar`. *(The times were
 removed after phase 18: the conversion is not proven to be zero copy.)* *→ in software: `fasi/18-senza-ffmpeg.md` §5.4.*
 
 ## 14.7 ⛔ AUDIO — **still NOT verified**, but the cause of two evenings is found and cured
@@ -2999,8 +2999,8 @@ removed after phase 18: the conversion is not proven to be zero copy.)* *→ in 
 
 ```
 ⛔ Marionette non ha aperto la 2829 in 40 s.
-   firefox vivo? ⛔ NESSUN PROCESSO
-   il suo registro (/tmp/b74-ff.log): ⛔ VUOTO
+   firefox alive? ⛔ NESSUN PROCESSO
+   il suo registro (/tmp/b74-ff.log): ⛔ EMPTY
 ```
 
 ⇒ ⛔⛔ **It was not Marionette not opening the port: it was Firefox not starting at all.**
@@ -3028,7 +3028,7 @@ removed after phase 18: the conversion is not proven to be zero copy.)* *→ in 
 ### ⛔⛔ 14.7.2 AND THERE IS A SECOND WALL BEHIND THE FIRST, which the product's log proves
 
 In the 7920 log **there is no request for the page from the browser**: after
-`ascolto TCP su 0.0.0.0:7920` the only handshake is the test client's.
+`listen TCP su 0.0.0.0:7920` the only handshake is the test client's.
 ⇒ ⛔ **Firefox never asked for the page.** The certificate is **self-signed**, and without
 `acceptInsecureCerts` — which is a function **of Marionette** — the browser stops
 at the warning and does not issue the request.
@@ -3048,7 +3048,7 @@ read in the log (`d387c166…` for the old, `e010d615…` for the new). The reco
 
 1. ⭐⭐ **Nic opens the page with his browser** (`https://192.168.0.2:7920/`, user `prova2`),
    accepts the certificate as he always does, and the server's log carries the three counters
-   `vecchi` · `tardivi` · `fuori` by itself. ⛔ **No new tool is needed**;
+   `stale` · `late` · `outside` by itself. ⛔ **No new tool is needed**;
 2. ⚠ Or the certificate is taken out of the way before the browser: `cert_override.txt` in the profile,
    or a certificate the profile already knows. `[?]` **Not tried.**
 
@@ -3110,9 +3110,9 @@ limit too; a real film compresses better.
 
 | | |
 |---|---|
-| frames | **7 125 delivered → 7 125 painted** · `salt 0` · `buchi 0` · `ord 0` |
+| frames | **7 125 delivered → 7 125 painted** · `salt 0` · `holes 0` · `ord 0` |
 | keyframes | ⭐ **1** in the whole round |
-| audio | **35 169 received → 35 169 played** · `vecchi 0 · tardivi 0 · fuori 0 · rec 0 · dop 0` |
+| audio | **35 169 received → 35 169 played** · `stale 0 · late 0 · outside 0 · rec 0 · dup 0` |
 | audio queue | 238 ms |
 
 ⇒ ⛔ **No spiral, no abandon, no degradation** — with **all switches off**,
@@ -3121,7 +3121,7 @@ receive in the direction of decision §3.1-bis: **at 20 Mbit/s the product does 
 
 ### 16.3 ⭐ The audio reorder cure (cure 4): **inert on the user's path, as predicted**
 
-`[M]` `vecchi 0 · tardivi 0 · fuori 0` both at rest (4 936/4 936) and under the hard case
+`[M]` `stale 0 · late 0 · outside 0` both at rest (4 936/4 936) and under the hard case
 (35 169/35 169). ⇒ ⭐ **The half that counts for the product is proven**: the cure **changed
 nothing for the user**. ⚠ **The half that bites — purity under reordering ≥ 0.95 — remains `[?]`**: it
 can only be done by dirtying `enp7s0`, which is the interface of ssh and of the user's session, and it
@@ -3245,9 +3245,9 @@ profiles, with **two legs that agree**: the qdisc's `dropped` and an independent
 
 ### 17.1-ter ⭐⭐ THE MECHANISM — read in the server's log, not deduced
 
-`[M]` on the same rounds: `abbandonato_in_coda` = `abbandonati` = `chiave_aspetta` **at every red
+`[M]` on the same rounds: `abbandonato_in_coda` = `abandoned` = `chiave_aspetta` **at every red
 profile** (129 · 102 · 116 · 125 · 83), with `delta_non_spedito` at 550-800. And the **holes in the
-succession of `numero`s** — the second leg, counted from the receiving side and independent of the
+succession of `nr`s** — the second leg, counted from the receiving side and independent of the
 server's log — agree: 116, 86, 102, 109, 72.
 
 ⇒ **The chain is the spiral of §5.1→§5.2**, and it is the same face as the defect of 21 Aug:
@@ -3257,8 +3257,8 @@ server's log — agree: 116, 86, 102, 109, 72.
 
 ⛔ At `perdita-3` it does **87 keyframes out of 87 frames**: identical to the 144/144 of 21 Aug.
 
-⭐⭐ **And the cure of this chain was already written, tested and OFF** — `--sgombra-soglia-ms` and
-`--ritmo-adattivo`, behind a switch for invariant I6. ⇒ The grid above ran **with
+⭐⭐ **And the cure of this chain was already written, tested and OFF** — `--clear-threshold-ms` and
+`--adaptive-rate`, behind a switch for invariant I6. ⇒ The grid above ran **with
 the switches off**, and it is the reason why the paired test of the cures (§17.6) is the
 mandatory sequel of this page and not an extra.
 
@@ -3270,8 +3270,8 @@ cause where it is not — here, a farewell that does not exist.
 
 `[M]` 23 Aug, **four witnesses** (`banchi/09-b79-cure.py`): the client prints *«still
 attached after 25.0 s: nothing dropped»* and closes **itself** at the end of the window · audio arrives for the whole
-round (**696 datagrams, purity 1.0000**) · the server's log has **no** `CONGEDO`,
-no `posto NEGATO`, no ban · the session had opened normally (`AMMESSO dopo 1 837 ms`),
+round (**696 datagrams, purity 1.0000**) · the server's log has **no** `FAREWELL`,
+no `slot NEGATO`, no ban · the session had opened normally (`ADMITTED after 1 837 ms`),
 which also rules out *«the handshake does not complete»* — consistent with §17.4. `IDLE_MS` is
 30 000 ms and indeed has nothing to do with it.
 
@@ -3281,7 +3281,7 @@ SENT**, with `cwnd` nailed at **~10 KB** and the pacer refusing.
 ⛔ **The fact remains serious, and must not be downgraded**: a **live and mute** session is a still screen, and
 for whoever watches it is indistinguishable from a dropped wire. ⚠ But it has **another name and another cause** — it does not
 violate *«mai staccare»*, it violates the floor of the ladder (`DECISIONI.md` §2.1: 25 frames/s).
-⇒ The predicate `p_niente_stacco` of `09-b76` measured **how long delivery lasted**, not **whether the
+⇒ The predicate `p_nothing_detach` of `09-b76` measured **how long delivery lasted**, not **whether the
 connection dropped**: the number was right, the word was not. ⏳ Being cured: the predicate is split in
 two, because they are two facts with two causes.
 
@@ -3295,15 +3295,15 @@ missing condition of that verification**.
 
 ⛔ **And first it was necessary to bring the cure into the benches' client**: it had been written **only
 in `src/pagina.html`**, while `banchi/01-b3-cliente.py` still had the old rule. ⇒ Until
-tonight **no bench could measure it**. Now there is `--audio-regola vecchia|nuova`, ⛔ with the
-default **`vecchia`** and the verification that with it the counters and the **list** of blocks
+tonight **no bench could measure it**. Now there is `--audio-rule old|new_one`, ⛔ with the
+default **`old`** and the verification that with it the counters and the **list** of blocks
 delivered are identical to a literal transcription of the code of 22 Aug over five
 successions: a client that changes the numbers already written is not an instrument, it is a variable.
 
 `banchi/09-b77-audio-riordino.py` · `[M]` 23 Aug 2026 · port 7931 · 25 s per round · **two rounds
 identical in everything except the rule**:
 
-| profile | rule | **PURITY** | tone | coverage | on the wire | deliv. | vecchi | fuori | rec | dop | srv `dgram_falsi` |
+| profile | rule | **PURITY** | tone | coverage | on the wire | deliv. | vecchi | fuori | rec | dop | srv `dgram_false` |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `liscio` | old | 1.0000 | 1.000 | 1.0000 | 4993 | 4993 | 0 | 0 | 0 | 0 | 0 |
 | `liscio` | **new** | 1.0000 | 1.000 | 1.0000 | 4992 | 4992 | 0 | 0 | 0 | 0 | 0 |
@@ -3318,26 +3318,26 @@ identical in everything except the rule**:
 | `casa-cattiva` | old | 0.4013 | 0.261 | 0.2585 | 3192 | 1281 | 1911 | 0 | 0 | 0 | 1190 |
 | `casa-cattiva` | **new** | **1.0000** | 0.648 | 0.6264 | 3120 | 3120 | 0 | 1837 | 1836 | 0 | 1190 |
 
-**Six profiles out of six green, zero red, zero not judged.** `doppioni` **0** everywhere (a
-duplicate here would mean the server sent it); `scartati_tardivi` **0** everywhere (the
-safety net after the decoder never had to fire); `recuperati` repays the
-`mancati` **one to one** (1028/1028, 1620/1620, 2392/2392) — that is the cure **does not accuse itself**
+**Six profiles out of six green, zero red, zero not judged.** `duplicates` **0** everywhere (a
+duplicate here would mean the server sent it); `discarded_late` **0** everywhere (the
+safety net after the decoder never had to fire); `recovered` repays the
+`missed` **one to one** (1028/1028, 1620/1620, 2392/2392) — that is the cure **does not accuse itself**
 of losses it has instead recovered.
 
-⭐ **And the cure stays honest**: `--certifica` carries two cases that would give it **red** if it were not —
-purity 0.999 **with** `fuori_ordine` at zero (it would mean the profile does not bite and the green is
+⭐ **And the cure stays honest**: `--certify` carries two cases that would give it **red** if it were not —
+purity 0.999 **with** `out_of_order` at zero (it would mean the profile does not bite and the green is
 chance), and the counter-proof that the new rule **still throws away** the block that really arrived too
 late. A cure that kept everything would not be a cure: it would be the removal of a check.
 
 ### 17.2-bis ⛔⛔ THE `[M]` OF «0.175» — the count holds, **its purity does not**
 
-`src/pagina.html` · `avvia_audio()` carried: *«jitter ±2 ms ⇒ purity 0.175, 1 004 discarded out of 4 989»*.
+`src/pagina.html` · `start_audio()` carried: *«jitter ±2 ms ⇒ purity 0.175, 1 004 discarded out of 4 989»*.
 `[M]` tonight, same profile: **1 002 thrown away out of 4 989 on the wire**. ⇒ The **same denominator**,
 two blocks of difference: the **count** of that `[M]` is solid.
 
 ⛔ **But its «purity 0.175» is comparable with nothing**, and it was stopped before it
-became a triumph. The fraction the page benches use is `suonati/ricevuti`
-(`09-b74:300`), and `a.ricevuti++` sits **after** the discard branches (`pagina.html` · `avvia_audio()`): the denominator
+became a triumph. The fraction the page benches use is `played/received_n`
+(`09-b74:300`), and `a.received_n++` sits **after** the discard branches (`pagina.html` · `start_audio()`): the denominator
 counts **only the survivors**, so that ratio is ~1.000 **with both rules**, on
 even a destroyed succession. ⚠ It is true in the code **before** and **after** the cure, verified on
 `f90eb216^`: where that 0.175 came from **is not known**, and it is a number whose
@@ -3345,14 +3345,14 @@ definition is unknown.
 
 ⭐ ⇒ The bench's quantity is **`purezza = consegnati / sul filo`**, with the denominator counted
 **before** the screening, and the expected value is a **declared border** (0.90 / 0.80 / 0.60), not that point.
-`purezza_pagina` is printed beside it **only for comparison**, with a note saying it is blind.
+`page_purity` is printed beside it **only for comparison**, with a note saying it is blind.
 
 ### 17.2-ter ⛔⭐ THE RED THAT BELONGED TO THE BENCH — and the cure of the predicate
 
-`casa-cattiva` gave red: the client counted **2 183 `mancati` out of 4 996, 43.7 %**, with `netem`
+`casa-cattiva` gave red: the client counted **2 183 `missed` out of 4 996, 43.7 %**, with `netem`
 at **2 %**. ⛔ It was not the network: the server's log said **1 823 blocks REFUSED by ngtcp2** —
-never put on the wire, congestion window closed at 40 ms of delay. `mancati` is built on the
-jumps of `istante`, and **a block never sent leaves the same jump as a lost one**.
+never put on the wire, congestion window closed at 40 ms of delay. `missed` is built on the
+jumps of `instant`, and **a block never sent leaves the same jump as a lost one**.
 
 ⇒ The predicate was rewritten **on both ends**: `spediti dal server − sul filo del cliente` =
 **67 lost on the network, 2.10 %**, against the 2 % asked of `netem`. ⭐ It is R13 in pure form — a
@@ -3373,28 +3373,28 @@ congestion window that in video produces the spiral.
 could be a packet lost and resent, the window closed, us having held it or us
 having abandoned it: the last two were counted, **the first two were not**.
 
-**1 · the `rete-quic` line** (`src/webtransport.c`, `rete_ciclo()`) — at most one per second, and
+**1 · the `network-quic` line** (`src/webtransport.c`, `network_cycle()`) — at most one per second, and
 **silent if the counters are still and the judgement has not changed**:
 
 ```
-rete-quic 192.168.1.9:52344 da_ms=1002 persi=7 persi_d=3 byte_persi=9856 ... cwnd=48000
-cwnd_left=0 ssthresh=32000 involo=47180 srtt_us=41230 latest_us=52980 rttvar_us=11400
-min_rtt_us=22100 coda_rete_us=19130 pto_us=132000 dgram_persi=… giudizio=⛔ la linea perde
+network-quic 192.168.1.9:52344 da_ms=1002 lost=7 lost_d=3 byte_lost=9856 ... cwnd=48000
+cwnd_left=0 ssthresh=32000 inflight=47180 srtt_us=41230 latest_us=52980 rttvar_us=11400
+min_rtt_us=22100 network_queue_us=19130 pto_us=132000 dgram_lost=… judgment=⛔ la linea perde
 ```
 
-⚠ Three choices a bench must know: `giudizio=` is **the last field** and its value runs to the
+⚠ Three choices a bench must know: `judgment=` is **the last field** and its value runs to the
 end of the line; the rtt is in **microseconds** (on a local network `rttvar` rounded to ms would be 0, and
 would hide precisely the jitter that is the target); `da_ms` is the **real** interval, and the `_d` fields
 hold over it — calling them `_1s` would have been a number that looks measured and is not.
 
-The **judgement** has three values and the rule is written: `persi_d > 0` ⇒ `⛔ la linea perde` (first,
+The **judgement** has three values and the rule is written: `lost_d > 0` ⇒ `⛔ la linea perde` (first,
 because the closed window is almost always the **consequence** of loss, and inverting the cause would
 hide it behind its effect); otherwise `cwnd_left == 0 && cwnd > 0` ⇒ `⚠ la finestra e'
-chiusa`; otherwise `-- niente da segnalare`. ⛔ The judgement **speaks neither of jitter nor of reordering**,
+chiusa`; otherwise `-- nothing da segnalare`. ⛔ The judgement **speaks neither of jitter nor of reordering**,
 on purpose: ngtcp2 does not give those numbers, and deducing them from `rttvar` would have required a **threshold**, that is a
 decision.
 
-**2 · ⭐⭐⭐ `dgram_falsi` — reordering, measured from the server side.**
+**2 · ⭐⭐⭐ `dgram_false` — reordering, measured from the server side.**
 `[S]` `ngtcp2.h:3442`, on the `lost_datagram` callback: *«Note that the loss might be spurious, and
 DATAGRAM frame might be acknowledged later»*. ⇒ Same `dgram_id` seen first as **lost** and then
 as **acknowledged** = packet **arrived out of sequence**, declared lost by the three-packet
@@ -3423,12 +3423,12 @@ without a direct witness.
   `netem` block prints only `Sent/dropped/overlimits/requeues/backlog`, and with `reorder 25% 50%`
   on only `requeues` moves. ⇒ Reordering was measured with **three concordant witnesses** —
   a numbered UDP probe through the same `netem`, the overtakings counted on the client's JSONL, and
-  `dgram_falsi` from the server — not deduced.
+  `dgram_false` from the server — not deduced.
 
 ## 17.4 ⭐⭐ THE HANDSHAKE UNDER LOSS — **the `[M]` of 10 % was a bench defect**
 
 `banchi/09-b78-apertura.py` · `[M]` 23 Aug 2026 · 10 rounds per step · loss **read** from
-`tc -s qdisc` · up to `AMMESSO` (QUIC + extended CONNECT + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`):
+`tc -s qdisc` · up to `ADMITTED` (QUIC + extended CONNECT + `HELLO/HERE_I_AM` + `CREDENTIALS/ADMITTED`):
 
 | loss requested | real loss | opened | QUIC median | total median | total max |
 |---|---|---|---|---|---|
@@ -3444,8 +3444,8 @@ The handshake maxima sit at 212 and 613 ms — **one and two PTOs**.
 
 The five hypotheses, all refuted one by one: the client does not give up (**0 rounds out of 70**
 exceeded its cap of 8 s); the ban has nothing to do with it (`src/rcp.c` · the count of PAM verdicts counts only PAM verdicts on
-`CREDENZIALI`, and a handshake does not get there); ngtcp2 retries (`handshake_timeout` stays
-`UINT64_MAX`, `trasporto.c` · `accetta()`); the `netem` is not applied twice (the two filters take the two
+`CREDENTIALS`, and a handshake does not get there); ngtcp2 retries (`handshake_timeout` stays
+`UINT64_MAX`, `trasporto.c` · `admit()`); the `netem` is not applied twice (the two filters take the two
 **directions**, so a **round trip** pays `1-(1-p)²` and a **datagram**, which goes one direction only, pays `p` —
 `[M]` 3 235/3 607 = 89.7 %).
 
@@ -3453,16 +3453,16 @@ exceeded its cap of 8 s); the ban has nothing to do with it (`src/rcp.c` · the 
 
 ```python
 def a_non_si_apre(n):
-    return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
+    return _p(n["received_n"] == 0, "nessun datagram: la sessione non si apre")
 ```
 
-⛔ `01-b3-cliente.py` · `_capsula_chiusura()` prints `[audio] ricevuti 0` **also from the `except` branch**, before
-re-raising. ⇒ **Every** way of failing — a `CONGEDO`, an expired cap, a `NameError` of the bench —
+⛔ `01-b3-cliente.py` · `_closing_capsule()` prints `[audio] ricevuti 0` **also from the `except` branch**, before
+re-raising. ⇒ **Every** way of failing — a `FAREWELL`, an expired cap, a `NameError` of the bench —
 made that step pass **green**. The bench was not measuring *«it does not open»*: it measured *«I have not
 received»*, and the two things have the same face.
 
-⛔ **And a second defect in the same file**: `guasta([])` calls `rimetti(False)`, which calls
-`guardiano_disarma()`. The profile `0-liscio` is **the first**, so it disarmed the guardian armed
+⛔ **And a second defect in the same file**: `broken([])` calls `restore(False)`, which calls
+`guardian_disarm()`. The profile `0-liscio` is **the first**, so it disarmed the guardian armed
 two lines earlier, and the **eight following profiles ran without a safety net**.
 
 ⏳ **The two cures are written and NOT applied**: `07-b64-rete.py` is imported by the benches that are
@@ -3473,13 +3473,13 @@ section describes.
 
 ⭐ It is the product fact found behind §17.4, and on the target of the phase.
 
-The only way an opening really fails under loss is `ATTACCA` → `CONGEDO(0x0F)
-GIA_ATTIVA_REMOTA` (`[M]` 5/10 at 10 % loss). The log says: *«place DENIED … it is occupied by
+The only way an opening really fails under loss is `ATTACH` → `FAREWELL(0x0F)
+ALREADY_ACTIVE_REMOTELY` (`[M]` 5/10 at 10 % loss). The log says: *«place DENIED … it is occupied by
 another client of this same user»*.
 
 ⛔ **The account closes without `netem`**, because a **lost** goodbye and a goodbye **never said** are the
 same fact: with the client killed with `-9`, `[M]` **11 refusals in a row, and the slot becomes free again at
-+30.5 s** — that is `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
++30.5 s** — that is `SILENCE` (`src/rcp.c` · `SILENCE`, 30 000 ms).
 
 ⚠ **The sentence the client builds is false for whoever reads it**: that session is **his own**, and it
 died a moment before. And the box of `src/rcp.c:229-233` declares that that clock *«makes
@@ -3487,12 +3487,12 @@ the case "the phone died in a tunnel" disappear»* — ⛔ it does not make it d
 seconds**, and packet loss is precisely what makes it **normal** instead of rare.
 
 **The proposed cure, NOT written — it is a change of policy of §8.2 and the user decides it:** in
-`src/rcp.c`, branch `POSTO_OCCUPATO` of `rcp_attacca()` (lines 2605-2616), before dismissing with
-`0x0F` look at the occupant's `ultima_vita`: if it has been silent for more than a short threshold (~3 s) **while
+`src/rcp.c`, branch `SLOT_OCCUPIED` of `rcp_attacca()` (lines 2605-2616), before dismissing with
+`0x0F` look at the occupant's `last_life`: if it has been silent for more than a short threshold (~3 s) **while
 another client of the same user is asking for the slot**, evict it. §8.2 says *«no client
 attached and **alive** is ever ousted»* — the occupant here is attached but **not alive**, and today
-the only clock that distinguishes it is the 30 s one. `torna_a_parlare()` (`rcp.c` · `drena()`) already handles
-the evicted one coming back. ⛔ It would not touch `SILENZIO`, which stays 30 s for everything else.
+the only clock that distinguishes it is the 30 s one. `speak_again()` (`rcp.c` · `drain()`) already handles
+the evicted one coming back. ⛔ It would not touch `SILENCE`, which stays 30 s for everything else.
 
 ## 17.6 ⭐⭐⭐ THE TWO CURES, PAIRED — **the spiral switches off, and only with both**
 
@@ -3504,8 +3504,8 @@ cell.
 
 - **A** = the defaults, that is **cures off**. ⛔ Remeasured, not taken over from §17.1: those numbers
   come from another binary and another time.
-- **B** = `--sgombra-soglia-ms 100` — the queue threshold alone.
-- **C** = `--sgombra-soglia-ms 100 --ritmo-adattivo` — threshold **plus** rate regulator.
+- **B** = `--clear-threshold-ms 100` — the queue threshold alone.
+- **C** = `--clear-threshold-ms 100 --adaptive-rate` — threshold **plus** rate regulator.
 
 | profile | arm | fps | worst s | **keyframes %** | final drift | **max drift** | Mbit/s wire |
 |---|---|---|---|---|---|---|---|
@@ -3568,17 +3568,17 @@ document gives the two numbers and **does not choose**: the choice between image
 | where | what | outcome |
 |---|---|---|
 | `07-b64-rete.py` | `a_non_si_apre` green on any way of failing | ⭐ **cured** and run again (§17.4-bis, §17.9-bis) |
-| `07-b64-rete.py` | `0-liscio` disarms the guardian for the eight profiles after it | ⭐ **cured**, `[M]` guardian still alive after `guasta([])` |
+| `07-b64-rete.py` | `0-liscio` disarms the guardian for the eight profiles after it | ⭐ **cured**, `[M]` guardian still alive after `broken([])` |
 | `07-b64-rete.py` | `spediti_dal_server` at `None`: `None == 0` is false ⇒ green on a round in which the server's end had not been read | ⭐ **cured**: now it is mute (§17.9-bis) |
-| ⛔ `07-b64-rete.py` | the «final count» line arrives **29 s late** when the pacer has a queue ⇒ the next round reads **the count of the previous round** — and the slot still occupied makes it die of `GIA_ATTIVA_REMOTA` | ⭐ **cured** with `registro_posato()` (§17.9-bis) |
-| `09-b70-ritmo.py` | `sudo -S` covers only the **first** command of the chain ⇒ the §11.1 reader was not written | ⭐ **cured** with `catena_root()` (§17.9-ter) |
-| `09-b70-ritmo.py` | a trailing `< file` **steals stdin from `sudo -S`** ⇒ `righe_registro()` returns 0 in silence, and `attese_a_vuoto` becomes cumulative since startup — that is the column on which I1 decides whether to refuse to judge | ⭐ **cured**, `[M]` 1 604 for the round against 4 041 cumulative |
+| ⛔ `07-b64-rete.py` | the «final count» line arrives **29 s late** when the pacer has a queue ⇒ the next round reads **the count of the previous round** — and the slot still occupied makes it die of `ALREADY_ACTIVE_REMOTELY` | ⭐ **cured** with `log_settled()` (§17.9-bis) |
+| `09-b70-ritmo.py` | `sudo -S` covers only the **first** command of the chain ⇒ the §11.1 reader was not written | ⭐ **cured** with `chain_root()` (§17.9-ter) |
+| `09-b70-ritmo.py` | a trailing `< file` **steals stdin from `sudo -S`** ⇒ `log_line_list()` returns 0 in silence, and `attese_a_vuoto` becomes cumulative since startup — that is the column on which I1 decides whether to refuse to judge | ⭐ **cured**, `[M]` 1 604 for the round against 4 041 cumulative |
 | `09-b70-ritmo.py` | `01-b4-validatore.py` is not shipped by the ground ⇒ empty journal ⇒ **red on «does not detach» on a session alive for 797 frames** | ⭐ **cured**: the ground verifies it, the bench refuses |
-| `09-b76` | ⛔ `p_niente_stacco` measured **the duration of delivery** and called it **detach** | ⭐ **split in two** (§17.9-quater) |
+| `09-b76` | ⛔ `p_nothing_detach` measured **the duration of delivery** and called it **detach** | ⭐ **split in two** (§17.9-quater) |
 | `09-b79-cure.py` | the wrapping of `root()` skipped the cure of the underlying one | ⭐ **cured**, and `[M]` **no number was dirtied** (§17.9-sexies) |
 | `09-b76` (while working) | ⛔ **`tc qdisc change` is sticky**: a `reorder` set for one profile stayed on in the four after | cured: the bench **rereads** the installed rule and gives red if it carries a verb not asked for |
-| `09-b77` (while working) | the regexes looked for the **internal** names of the counters while the client prints other names ⇒ `None` on everything, no error | cured, and `--certifica` now tests the regexes on the client's **real output** |
-| `09-b77` (while working) | `mancati` counts as lost also blocks **never sent** | cured: the predicate works **on both ends** (§17.2-ter) |
+| `09-b77` (while working) | the regexes looked for the **internal** names of the counters while the client prints other names ⇒ `None` on everything, no error | cured, and `--certify` now tests the regexes on the client's **real output** |
+| `09-b77` (while working) | `missed` counts as lost also blocks **never sent** | cured: the predicate works **on both ends** (§17.2-ter) |
 
 ## 17.9 ⭐⭐ THE ROUND OF CURES TO THE BENCHES — *23 Aug, night*, and four more came out
 
@@ -3589,15 +3589,15 @@ bench**, not by reading it.
 
 ### 17.9-bis ⛔⛔ THE THIRD AND FOURTH OF `07-b64-rete.py` — and the fourth is the biggest
 
-**Third.** `spediti_dal_server` at `None`: `conti_del_server` returns `{"esito": "NIENTE DA LEGGERE"}`,
+**Third.** `spediti_dal_server` at `None`: `server_counts` returns `{"outcome": "NIENTE DA LEGGERE"}`,
 and `None == 0` is **false** ⇒ the step went straight to the predicate. The predicates that do not look at the
-server (`a_pulito`, `a_sorpassi`) gave **green on a round in which the server's end had not been
+server (`a_clean`, `a_overtakes`) gave **green on a round in which the server's end had not been
 read at all**. ⇒ Now it is **mute**.
 
 **Fourth — ⛔ and this dirties the numbers, not only the verdicts.**
 `[M]` **the closing of a session is slow when the pacer has a queue**: the profile at 10 % loss
 took **29 seconds more** than the others to write its «final count» line. ⇒ The
-**next** round took its `riga0` **before** that line existed, and `conti_del_server()`
+**next** round took its `line0` **before** that line existed, and `server_counts()`
 read **the count of the previous round**.
 
 ⭐ **The signature is unmistakable**: `[M]` three profiles in a row reported the **very same
@@ -3606,34 +3606,34 @@ The real count of the second was **4 632**. ⇒ The new predicate gave **red on 
 denominator** (4 152/4 999 = 0.831), while with the right denominator it was 4 152/4 632 = **0.896**, green.
 
 ⚠ **And the same delay produces a second, worse effect**: the next step died with
-`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — the previous one's slot was **still occupied**, and it is the
+`FAREWELL 0x0F ALREADY_ACTIVE_REMOTELY` — the previous one's slot was **still occupied**, and it is the
 30 s lock of **§17.5**. ⇒ **A round can fail because of the round before**, and the `[audio]
 ricevuti 0` that came out of it is **exactly the number the old `a_non_si_apre` would have called
 green**. ⭐ The two defects of §17.4-bis and the ghost of §17.5 fed each other.
 
-**The cure**: `registro_posato()` — one waits for the count of «final count» lines to stay **still
-for 3 s** before starting a step — and `conti_del_server(riga0, n0)` **demands a line of its own**,
+**The cure**: `log_settled()` — one waits for the count of «final count» lines to stay **still
+for 3 s** before starting a step — and `server_counts(line0, n0)` **demands a line of its own**,
 otherwise it stays mute.
 
 **The new round of `07-b64`** `[M]` 23 Aug, port 7801, 25 s per profile: **9 steps · 0 red ·
-0 mute**, and the positive control (`--controllo-rosso`) gives red with exit 1 — the verdict can
+0 mute**, and the positive control (`--check-red`) gives red with exit 1 — the verdict can
 still fail. ⭐ The step at 10 % confirms the count of the two directions: **4 077/4 504 = 0.905** against
 `1-p` = 0.901. **It is `1-p`, not `1-(1-p)²`**: a datagram goes **one direction only**.
 
 ### 17.9-ter ⭐ THE THREE CURES OF `09-b70-ritmo.py`, and the number that proves the second
 
-`sudo -S` covering only the first link ⇒ new `catena_root()`, a single `sudo -S bash -c` with the
+`sudo -S` covering only the first link ⇒ new `chain_root()`, a single `sudo -S bash -c` with the
 chain inside. `[M]` the §11.1 reader now **really gets written** (4 130 bytes) and reduces
 **794 frames** per round; the old form on the same command gave `Permission denied`.
 
-The `< file` that steals stdin ⇒ `righe_registro()` returns **`None`**, not 0, and the guard sits where the
+The `< file` that steals stdin ⇒ `log_line_list()` returns **`None`**, not 0, and the guard sits where the
 number **is consumed**. ⭐ **The number that proves the cure:**
 
-| | starting line | `ciclo:` lines | `attese_a_vuoto` |
+| | starting line | `cycle:` lines | `attese_a_vuoto` |
 |---|---|---|---|
 | moving round | 327 | 21 | **1 607** |
 | still round | 3 711 | 21 | **1 604** |
-| ⛔ old form (`riga0` = 0) | 1 | 49 | **4 041** |
+| ⛔ old form (`line0` = 0) | 1 | 49 | **4 041** |
 
 ⇒ With the defect, the still round would have declared **4 041 instead of 1 604** — **2.5 times**, and
 rising at every round. ⛔ And it is precisely the column with which `p_I1` decides **whether to refuse to
@@ -3644,18 +3644,18 @@ loss read from the installed `qdisc`**, not assumed to be zero. With loss > 0 th
 instead of accusing the product (it was the false red of `casa-cattiva`).
 
 **Fourth cure, found by the real round**: the §11.1 reader did not start because `01-b4-validatore.py`
-is not among the files that `07-b64-terreno.sh porta` ships ⇒ empty journal ⇒ the bench gave **red on
+is not among the files that `07-b64-terreno.sh port` ships ⇒ empty journal ⇒ the bench gave **red on
 «does not detach» on a session alive for 797 frames**.
 
 ### 17.9-quater ⭐⭐ `09-b76` — THE RIGHT NAME, and the grid redone
 
-`p_niente_stacco` is **split in two**, because they are two facts with two causes:
+`p_nothing_detach` is **split in two**, because they are two facts with two causes:
 
-- **`p_connessione_viva()`** — holds on **all** profiles (§3.3/§8.3, even below the floor) and
+- **`p_connection_alive()`** — holds on **all** profiles (§3.3/§8.3, even below the floor) and
   questions the **witnesses of the connection**, not the frames: the client (*«still attached after
-  N s»*) and the log (`congedo motivo=`, `posto NEGATO`, ban), **with the reason printed**. ⚠ The third
+  N s»*) and the log (`farewell motivo=`, `slot NEGATO`, ban), **with the reason printed**. ⚠ The third
   possibility — *«it never opened»* — is **mute** by construction, not red.
-- **`p_consegna_non_si_ferma()`** — coverage ≥ 0.90 of the seconds that saw at least one
+- **`p_delivery_never_stops()`** — coverage ≥ 0.90 of the seconds that saw at least one
   frame, and ⛔ **no hole ≥ 1.0 s**, **tail included**. ⚠ The 0.90 threshold **is not new**: it is the
   same the old predicate used. **The number does not change: the word changes, and that is the whole
   cure.** The 1 s hole has its reason: §2.1 puts the floor at 25 frames/s, so a
@@ -3664,7 +3664,7 @@ is not among the files that `07-b64-terreno.sh porta` ships ⇒ empty journal �
   against **14.26 s** at `raffica-forte` — more than an order of magnitude of margin, **zero false
   reds**, diagnoses included.
 
-⭐ And `--certifica` now carries the case that had fooled the bench: **the same round gives red on
+⭐ And `--certify` now carries the case that had fooled the bench: **the same round gives red on
 delivery and green on the connection**. 49 cases out of 49.
 
 **`raffica-forte`, with the right name and the numbers** `[M]` (probe: **11.10 %** loss in 197 bursts,
@@ -3672,7 +3672,7 @@ average 4.51, max 27): **nobody detached** — client attached for all 25 s, zer
 stops is **delivery alone**: **7 seconds out of 25** saw a frame, **14.26 s of still screen
 in a row**, 952 `FOTOGRAMMA NON SPEDITO` lines, `cwnd` median **8 948 B** against **105 616 B**
 of the reference (**12 times less**), `cwnd_left` median **0**. ⭐⭐ **And the server says it by itself**:
-`⚠ la finestra e' chiusa` on **10 `rete-quic` lines out of 18** — it is the witness of §17.3 giving the
+`⚠ la finestra e' chiusa` on **10 `network-quic` lines out of 18** — it is the witness of §17.3 giving the
 answer without anyone having to deduce it.
 
 ### 17.9-quinquies ⛔⛔ AND TWO GRIDS OF THE SAME BENCH DO NOT MATCH — declared, not smoothed over
@@ -3687,7 +3687,7 @@ The `09-b76` round redone tonight **does not reproduce** that of §17.1 on two p
 | `raffica-1` | 23.94 | 29.47 |
 
 ⛔ **I do not smooth it over, and I do not choose which is good.** The known differences between the two rounds are at least
-three — different binary (HEAD carries the `rete-quic` lines, that is **one more `registro_dice` per
+three — different binary (HEAD carries the `network-quic` lines, that is **one more `log_says` per
 second**), machine **rebooted** in between, and the ground rebuilt. ⇒ `[?]` **I do not know which of the
 three.**
 
@@ -3699,23 +3699,23 @@ a packet**. ⛔ What could **no longer** be said was **where** the step was.
 
 ### 17.9-sexies ⭐ THE RE-VERIFICATION OF `09-b79` — **no number was dirtied**, and they are three proofs read
 
-`09-b79-cure.py` wrapped `RETE.root` instead of the cured chain. ⚠ And **writing
+`09-b79-cure.py` wrapped `NETWORK.root` instead of the cured chain. ⚠ And **writing
 `B70.root` was not enough**: when b79 arrives, `B70.root` has **already** been replaced by `09-b76:416` with a
-wrapping that in turn calls `RETE.root`. ⇒ The chain is rebuilt from the pieces
-(`RETE.rem(B70.catena_root(c))`), and if `catena_root` is not there **the bench stops instead of
+wrapping that in turn calls `NETWORK.root`. ⇒ The chain is rebuilt from the pieces
+(`NETWORK.rem(B70.chain_root(c))`), and if `chain_root` is not there **the bench stops instead of
 measuring**.
 
 ⛔ But the numbers of §17.6 **hold**, and not on trust:
 
 1. `[R]` **the defect had not yet been cashed in**: at 19:00 `09-b70.root()` still did
-   `return RETE.root(...)`; the cure is from **19:41**, after. Wrapping `RETE.root` was then
+   `return NETWORK.root(...)`; the cure is from **19:41**, after. Wrapping `NETWORK.root` was then
    *identical*. The defect was **prospective**;
-2. `[R]` **the `riga0` was there**: `09-b76` already replaced `righe_registro` with its own, with the redirect
+2. `[R]` **the `line0` was there**: `09-b76` already replaced `log_line_list` with its own, with the redirect
    **inside** `bash -c`. `[M]` And the signature in the data confirms it: on all **36** cells
    `attese_a_vuoto` lies between 1 973 and 2 156 — **constant, not rising** (on `ritardo-30` A/B/C:
    2 015 / 2 006 / 2 016). b70's cumulative was 4 041 against 1 604, **rising**: here it is not there;
 3. `[R]` **the count of another round is structurally impossible**: `07-b64-terreno.sh` does
-   `: > registro.log` at every `accendi`, and this bench **restarts the server at every arm**.
+   `: > registro.log` at every `turn_on`, and this bench **restarts the server at every arm**.
    `[M]` Counter-proof: no pair of cells carries identical numbers from the log, and three cells
    said «NIENTE DA LEGGERE» instead of the neighbour's number — ⭐ proof that **in the window there was
    nothing to steal**.
@@ -3763,7 +3763,7 @@ and **not with load**. `[M]` CPU was **3.7-4.7 %** in *each* of the 42 rounds, l
 on 20 cores. ⇒ The «loaded machine» hypothesis is **ruled out**, and what remains belongs to the product:
 
 > ⛔⛔ **near the edge the spiral is BISTABLE.** `[M]` at **0.20 %** loss, same binary,
-> same ground, twenty minutes apart: **`0 chiavi · 40,16/s`** and **`24 chiavi · 33,84/s`**.
+> same ground, twenty minutes apart: **`0 keys · 40,16/s`** and **`24 keys · 33,84/s`**.
 
 ⇒ It is not a threshold: it is a **bifurcation point**. The same input gives two outputs, and which of the
 two depends on how the first handful of seconds went.
@@ -3817,7 +3817,7 @@ mistaken for the rule.
 **The binary** — `HEAD` (`2954bf0`) md5 `dae98670…` against `51b5994` md5 `760c6fd7…`, and between the two
 `src/` changes in **a single commit** (+412 lines, 0 removed):
 - ⛔ **on the clean line it does not count**: 39.95 against 39.25 = **1.8 %**, within the yardstick.
-  ⇒ `[M]` **the suspicion «the `rete-quic` line costs» is REFUTED**: one more `registro_dice` per
+  ⇒ `[M]` **the suspicion «the `rete-quic` line costs» is REFUTED**: one more `log_says` per
   second cannot be measured;
 - it counts **only where there is loss**, and ⭐ **they cross**: HEAD yields more below 0.5 % (37.0 against
   29.1 at 0.2 %), less above 0.75 %. ⚠ **But the reds above 0.75 % rest on cells whose
@@ -3845,9 +3845,9 @@ mistaken for the rule.
    section came out of it: **the step is double** — the mechanism starts at the **first lost packet**, the symptom
    is seen **five times further on**;
 5-ter. ⏳ **and the bistability has no explanation**: `[?]` why the same input gives
-   `0 chiavi · 40,16/s` or `24 chiavi · 33,84/s` has not been investigated. It is the first thing to
+   `0 keys · 40,16/s` or `24 keys · 33,84/s` has not been investigated. It is the first thing to
    look at if one wants to cure the defect **where it begins** instead of where it is seen;
-6. ⚠ **reordering on streams remains without a direct witness** (§17.3): `dgram_falsi` holds
+6. ⚠ **reordering on streams remains without a direct witness** (§17.3): `dgram_false` holds
    for audio only.
 
 ---
@@ -3917,12 +3917,12 @@ clock) plus an instant:
 
 | | how it is computed |
 |---|---|
-| **«it went out»** | the **video bytes delivered to ngtcp2** in `coda_consegna()` — the only point where the bytes are really inside a packet |
-| **«I had something to send»** | video queue not empty **or** `lm_offerti` risen (in `video_a_una()`, **before** brake, clearing and refusal) |
+| **«it went out»** | the **video bytes delivered to ngtcp2** in `queue_delivery()` — the only point where the bytes are really inside a packet |
+| **«I had something to send»** | video queue not empty **or** `lm_offered` risen (in `video_a_una()`, **before** brake, clearing and refusal) |
 
 ⛔⭐ **The second term is not an extra, and it is the line that makes the cure honest**: without
-`lm_offerti`, **the rate regulator would hide the stall** — it stops producing,
-`video_sgombra()` abandons the deltas, the queue empties, and *«I have nothing to send»* becomes true
+`lm_offered`, **the rate regulator would hide the stall** — it stops producing,
+`video_clear_out()` abandons the deltas, the queue empties, and *«I have nothing to send»* becomes true
 **while the screen is still**. The cure would acquit itself precisely in the case it must catch.
 
 ⛔ **And if there is nothing to send the count does not even start**: `[M]` in this phase the still scene
@@ -3952,14 +3952,14 @@ margin written on the lucky number is not a margin.
 more seconds of still screen. Erring low = **throwing out someone who was working**, and
 it cannot be remedied.
 ⚠ **Even the sampling errs on the good side**: the count restarts from the instant of the round
-(≤ 1/s), not from when the bytes really left ⇒ the measured `stallo_ms` can be up to ~1 s
+(≤ 1/s), not from when the bytes really left ⇒ the measured `stall_ms` can be up to ~1 s
 **shorter** than the true one. It fires later, never earlier.
 
 ### 18.2-ter ⭐⭐ THE PROOF — *24 Aug 2026*, and the margin is **measured**, not «it did not fire»
 
 ⛔ The line comes out **only when it fires**. ⇒ A «it did not fire» does not say **how close it came**: the
 bench replays the same profile **with ever lower thresholds** until one fires, and then the
-product prints its `stallo_ms`.
+product prints its `stall_ms`.
 
 | profile | maximum stall | margin on the 5 000 ms threshold | hole at the client |
 |---|---|---|---|
@@ -3981,18 +3981,18 @@ minutes: **only the quantity on which one decides** changes. And on the other si
 that does *not* hold — declares `permille=133`, that is **less**.
 
 **The real firing** `[M]`: `raffica-forte` (13.19 % injected) fires at **18.95 s**, with
-`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **both halves
+`reason_why=stall stall_ms=5008 · offered=198 · exited_bytes=0 · queue_video=31146` — ⭐ **both halves
 true**: we had something to send, and nothing went out. And the wire drops.
 
-**The silence** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10.24 s** after the shot, and
-in the same line `stallo_ms=8 offerti=0` — ⭐ **the two causes stay separate**. With the cure off,
+**The silence** `[M]`: `kill -9` ⇒ `silence_ms=10006`, `prove=12`, **10.24 s** after the shot, and
+in the same line `stall_ms=8 offered=0` — ⭐ **the two causes stay separate**. With the cure off,
 zero firings.
 
 **The still scene** `[M]`: 90 s of a desktop that does not change, zero firings at the threshold in force **and at
 1 000 ms**, that is five times narrower. ⭐ And the scene was **really** still, **verified and not
 hoped**: the server's count says 1 and 3 frames in 90 s, all sent.
 
-**The defaults (I6)** `[M]`: without `--linea-morta`, zero firings and zero evictions, and the two profiles
+**The defaults (I6)** `[M]`: without `--dead-line`, zero firings and zero evictions, and the two profiles
 sit in the grid of §17.
 
 ⚠ **One thing to say, and it goes in the prudent direction**: the **stall** (server: bytes out) and the **hole**
@@ -4007,46 +4007,46 @@ goes on the good side, but the number of the derivation is **prudent, not exact*
 an option that does not exist, because whoever types it believes they have tuned something. ⇒ Now it gets help and
 exit 2.
 ⭐ But `permille=` **stays in the line as a witness**: it is the best measure of **reordering** the
-server has **on the streams**, where `dgram_falsi` (§17.3) does not reach. ⚠ And the bench verifies
+server has **on the streams**, where `dgram_false` (§17.3) does not reach. ⚠ And the bench verifies
 the **absence** of the option **by typing it**, not with a `grep`: `[M]` the string in the binary is there
 all right — it sits in the help text — and the first round of that check **gave red on a
 right binary**.
 
-## 18.3 ⭐⭐ THE EVICTION OF THE GHOST — and lowering `SILENZIO` was discarded **on a measurement**
+## 18.3 ⭐⭐ THE EVICTION OF THE GHOST — and lowering `SILENCE` was discarded **on a measurement**
 
-⛔ The obvious road — bringing `SILENZIO` from 30 s to 10 — **breaks**, `[M]` 16 Aug: between two
+⛔ The obvious road — bringing `SILENCE` from 30 s to 10 — **breaks**, `[M]` 16 Aug: between two
 authenticated packets of a **still but ALIVE browser** pass **15 004 / 15 005 / 15 002 ms**. It is the
 browser's keep-alive, not ours. ⇒ At 10 s **every client that watches and does not touch loses its slot at
 every keep-alive round** — it is the regression already paid for on 16 Aug (*«una seconda scheda è entrata
 e ha preso il desktop del primo»*).
 
-⚠ **And `SILENZIO` governs four more**: the warning at `SILENZIO/2` (it would go from «never on a
+⚠ **And `SILENCE` governs four more**: the warning at `SILENCE/2` (it would go from «never on a
 healthy session» to «on all of them»), the release of pressed keys (⛔ a `Ctrl` held down during a
 network pause of 12 s would be released **under the fingers**), the order silence→inactivity, and **three
 documents** that declare the number to the user.
 
-⇒ **The road chosen is narrower and more targeted**: `--sfratto-ms N` (**0 = off**, default;
+⇒ **The road chosen is narrower and more targeted**: `--eviction-ms N` (**0 = off**, default;
 recommended **15 000**). It fires **only when someone asks for that slot**, never by itself, and **only between
 clients of the same user**.
 
 ⛔ **§8.2 is not violated, it is applied**: *«no client attached and **alive** is ever ousted»* —
 the occupant here is attached but **not alive**, and until now the only clock that distinguished them was the
-30 s one. ⭐ `torna_a_parlare()` restarts **only from `S_STACCATA`**: that is why the eviction changes the
-**state** and does not merely remove the slot, or the ghost would stay `S_ATTIVA` without a slot.
+30 s one. ⭐ `speak_again()` restarts **only from `S_DETACHED`**: that is why the eviction changes the
+**state** and does not merely remove the slot, or the ghost would stay `S_ACTIVE` without a slot.
 
 `[M]` **The ghost drops by 48 %**: from **32.13 s and 14 refusals** to **16.83 s and 7 refusals**. ⭐ And with
 the dead line on it drops to **~10 s with zero refusals** — the slot becomes free at the first attempt.
 
 **Two different users** `[M]`: zero evictions, the second user enters on **their own** slot with zero
 refusals. ⚠ The line `⛔ SFRATTO NEGATO` **does not come out**, and it was predicted `[R]` before running: the
-register of slots is indexed by name, so `POSTO_OCCUPATO` already implies «same user» and that
+register of slots is indexed by name, so `SLOT_OCCUPIED` already implies «same user» and that
 branch is not reachable. **The protection is done by the structure; the explicit check stays as a
 net** — the day `MAX_ATTACCATE` becomes the table of a multi-tenant server it would be
 the only thing to hold.
 
 ## 18.4 ⛔ AND THE SENTENCE THAT LIED
 
-*«That user is already connected from another device»* (`src/pagina.html`, `MOTIVO[0x0F]`) is a
+*«That user is already connected from another device»* (`src/pagina.html`, `REASON_TEXT[0x0F]`) is a
 **diagnosis the server is not able to make**: it does not know whether the other client is another device or
 is the same user who has just dropped. ⇒ Now it says **what it knows** and gives the gesture:
 
@@ -4061,7 +4061,7 @@ user meets when re-entering**.
 PINGs go at half the threshold when the cure is on, and the cost had been declared at
 **0.21 kbit/s** per session. ⛔ The bench **could not isolate it, and refused to give an empty
 green**: `[M]` a «still» session costs anyway **2 463 kbit/s** of PCM audio (§4.3, which does not
-switch off — a `CIAO` without a common audio codec gets `0x09 NIENTE_IN_COMUNE`), that is **11 727 times**
+switch off — a `HELLO` without a common audio codec gets `0x09 NOTHING_IN_COMMON`), that is **11 727 times**
 that number; the difference on−off is **+0.539 kbit/s**, within the noise.
 
 ⭐ **And the real fact**: `[M]` on a live session the counter **never stops for 0.6 s** ⇒ the
@@ -4070,7 +4070,7 @@ product does not enter**. A price declared for a case that does not exist **is w
 
 ## 18.6 What remains, after §18
 
-1. ⭐ **the two cures are tested and stay OFF** (I6): `--linea-morta` and `--sfratto-ms`.
+1. ⭐ **the two cures are tested and stay OFF** (I6): `--dead-line` and `--eviction-ms`.
    ❓ **The decision to switch them on is the user's**, and now he has the numbers;
 2. ⏳ **the cures against the spiral** (§17.6) stay off and wait for **his eyes**, which is the only
    thing that cannot be delegated to a measurement;
@@ -4155,7 +4155,7 @@ product as it is used**.
 | `cwnd_left = 2 888` · **in flight = 0** | ⛔⭐ **it is not that the wire is full: there is NOTHING in flight.** The server *could* send, and does not |
 | **27 `NON SPEDITO` frames** | and the delivered counter **stuck at 3 117** over three readings in a row |
 | keyframes | risen from 4 to **16** |
-| `persi=664` · `dgram_persi=493` | `giudizio=⛔ la linea perde` |
+| `lost=664` · `dgram_lost=493` | `giudizio=⛔ la linea perde` |
 
 ⇒ ⭐ **It is exactly the chain of §17.1-ter, seen on the real path**: the window closes → the
 frames do not leave → keyframes are requested → the screen stops. The bench's mechanism **is
@@ -4369,7 +4369,7 @@ It launches a command inside a user's session with `systemd-run --user` (that is
 where it would end up when chosen from the menu), then **counts the frames before and after and gives the verdict on that
 number** — ⛔ never on *«the process is alive»*. Four guards: a single compositor · a single monitor and
 ours · the environment **read** from `systemctl --user show-environment` instead of invented · and
-⭐⭐ **G4: is someone watching?** — zero `rete-quic` beats ⇒ **no verdict**.
+⭐⭐ **G4: is someone watching?** — zero `network-quic` beats ⇒ **no verdict**.
 
 ⭐ **G4 was born from a red on right code**, and it is the guard that would have avoided the three blocked
 tests of this morning. Tested in the three directions: `mpv` 240 against 0 (green) · `gnome-terminal` 40
@@ -4383,7 +4383,7 @@ monitor, scale 1.0, complete environment. The cure was **in the way of judging**
 ### 20.2-bis ⛔ «36 % of audio does not reach the wire» was a property **of the bench**
 
 `[M]` The 7920 log, **four attaches out of four** of the user's real session:
-`negoziato … audio.codec=opus` → `canale audio ACCESO — codec 1 (Opus)`.
+`negotiated … audio.codec=opus` → `channel audio ACCESO — codec 1 (Opus)`.
 
 ⇒ ⛔ **The user was never on PCM.** `[R]` PCM is imposed by **the benches**: `09-b68:191`,
 `09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` all pass `--audio-codec pcm`.
@@ -4400,7 +4400,7 @@ a **bench configuration**, not of the product in use.
 audio — and every packet is **full**, 1 441 bytes out of 1 452, because of the `PADDING`.
 
 **The cure** (`src/audio.c`, ⛔ born **off**, I6): a block in which **all** samples are
-exactly zero **does not become a datagram**. ⭐ The reason why it is legitimate: §6.3 puts the `istante`
+exactly zero **does not become a datagram**. ⭐ The reason why it is legitimate: §6.3 puts the `instant`
 in every block and the receiver puts it back in its absolute place ⇒ **a block not sent is a hole, and a
 hole is silence** — which is exactly what that block contained. ⛔ No threshold: **only digital
 zero**, the only case in which «sent» and «not sent» sound identical.
@@ -4415,15 +4415,15 @@ to carry 1.2 kbit/s of silence: 99.8 % is padding.**
 
 **The check that protects the user** (440 Hz tone in the sink, judge of `07-b42`): coverage
 **1.0000 → 0.9996**, tone purity **1.000 → 1.000**, blocks silenced **1 out of 5 001** — and that one
-precedes the first samples. ⚠ Declared price: the client's `mancati` go from 0 to 2 (a wanted hole
-leaves the same jump of `istante` as a lost one).
+precedes the first samples. ⚠ Declared price: the client's `missed` go from 0 to 2 (a wanted hole
+leaves the same jump of `instant` as a lost one).
 
 ⚠ ~~The switch today is **a build-time one** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ the command
 line is **described and not written**.~~
 > ✅ **WRITTEN, on 24 Aug 2026** *(realigned to the code on the 28th)*. The `-D` **was removed**, and
-> the only road is **`--niente-audio-silenzio`** on the server's command line, which `figlio.c`
-> copies at the end of the child's `argv` as it already does with `--parlantina`. ⛔ And it holds for **two
-> processes**: the real encoder sits in the child, but the `--audio-prova` tone opens an `audio_cod`
+> the only road is **`--no-audio-silence`** on the server's command line, which `figlio.c`
+> copies at the end of the child's `argv` as it already does with `--chatter`. ⛔ And it holds for **two
+> processes**: the real encoder sits in the child, but the `--audio-test` tone opens an `audio_cod`
 > in the server — if only one were switched on, the two benches would measure two different products.
 > ⚠ The reason why there are not two of them: *«two roads for the same cure are two numbers that
 > diverge»* (`src/audio.h`).
@@ -4442,7 +4442,7 @@ line is **described and not written**.~~
    of nothing**.
 2. ⛔ **«Audio must not be starved by video» IS NOT WRITTEN ANYWHERE.** `[R]` Searched
    in `SPECIFICHE.md` (§10 and the invariants), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **nothing**.
-   The only place where the question is decided is the code — `wt_scrivi():7286`, *«DATAGRAMS BEFORE
+   The only place where the question is decided is the code — `wt_write():7286`, *«DATAGRAMS BEFORE
    STREAMS»*. ⇒ ⚠ **A decision taken in the code and never put on record**, and it is precisely
    the kind of thing this phase exists to discover.
    `[M]` And today **audio** wins: with a still desktop the wire is all its own; on the real session with the
@@ -4464,7 +4464,7 @@ written in the bench, instead of retuning the threshold after seeing the number.
 
 ### 20.2-sexies ⏳ The half cure described and not written — the `PADDING`
 
-`dgram_scrivi_uno()`, lines **1613** and **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` must be
+`dgram_write_one()`, lines **1613** and **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` must be
 **conditioned** on there really being a batch to compose (more than one datagram in the queue, or video bytes
 to slip in). With **one** datagram only and the video queue empty the GSO batch is one packet
 and the padding **buys nothing** — it costs 1 425 bytes out of 1 441. ⛔ **It is not removed, it is
@@ -4493,7 +4493,7 @@ sign, over the whole chain.
 ### 20.3-bis ⭐⭐ THE PRODUCT IS CLEAN — **no +331, no +690, in any case**
 
 `[M]` 24 Aug (sign: **positive = the sound comes out AFTER the image**, the convention of
-`pagina.html` · `avvia_audio()`):
+`pagina.html` · `start_audio()`):
 
 | case | fps | video Mbit/s | **offset at the source** | **offset on the network** | network p90 |
 |---|---|---|---|---|---|
@@ -4512,7 +4512,7 @@ datagrams do not) ⇒ **−94.9 ms**, that is **audio running ahead**, not audio
 
 ### 20.3-ter ⭐⭐⭐ THE +331 IS NOT AN ARTEFACT: **it is the audio cushion, and it is written in the product**
 
-`[R]` `src/pagina.html` · `AUDIO_CUSCINO_MS()` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
+`[R]` `src/pagina.html` · `AUDIO_CUSHION_MS()` `AUDIO_CUSHION_MS = 250` · `:5564` `AUDIO_CUSHION_MAX_MS = 600` ·
 `:5761` `aoff = (perf − ist/1000) + CUSCINO + u`.
 
 > ⇒ `AV ≈ cuscino + latenza d'uscita − ritardo di pittura`
@@ -4524,7 +4524,7 @@ At rest 250 → **~331**; under load the queue exceeds 600 and `a.base` **re-anc
 says *«positive = the sound comes out AFTER»*. ⇒ **Audio is LATE, not early** — and the two things
 have **very different** perceptual thresholds.
 
-⚠ **And `AV` cannot see the half measured here**: it cancels the server's `istante` from both
+⚠ **And `AV` cannot see the half measured here**: it cancels the server's `instant` from both
 terms. ⇒ A product with a green `AV` can be desynchronized, and vice versa. The two measurements **do not
 overlap**, and together they say that the offset lives **entirely inside the page** — which is the place where
 it costs least to cure it.
@@ -4669,12 +4669,12 @@ long session on that line should be watched before concluding**.
 both families) · CUBIC's slow start ⇒ **not verified** (`ssthresh` leaves infinity at
 ~2 s in both) · the scene ⇒ **ruled out** (first keyframe 58.44-58.88 kB in both) · the three-packet
 threshold ⇒ **not verified** · loaded machine ⇒ **ruled out** (CPU 5.1-6.5 % in all 20).
-`[R]` The algorithm is **CUBIC** (ngtcp2 1.25, `trasporto.c` · `accetta()` does not touch `cc_algo`) — ⚠ and the test by
+`[R]` The algorithm is **CUBIC** (ngtcp2 1.25, `trasporto.c` · `admit()` does not touch `cc_algo`) — ⚠ and the test by
 contrast **was not done**: it is not exposed by any option.
 
 ⚠ **What could not have been seen**, written beforehand: a separation smaller than the
 internal dispersion; a rare third mode (36 % probability of not meeting it); and ⛔ **nothing
-between one second and the next** — `webtransport.c` · `linea_morta_giudica()` throttles `rete_ciclo()` to one line per second, so
+between one second and the next** — `webtransport.c` · `dead_line_judge()` throttles `network_cycle()` to one line per second, so
 of the slow start one sees the arrival point, **not the run**.
 
 ## 21.3 ⭐⭐⭐ THE CURES ARE SWITCHED ON — and on the healthy line **nothing gets worse**
@@ -4686,16 +4686,16 @@ il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli
 
 | cure | default | **only** road to switch it off |
 |---|---|---|
-| video queue threshold | **100 ms** | `--sgombra-soglia-ms 0` |
-| rate regulator | **on** | `--niente-ritmo-adattivo` |
-| dead line | **on** (stall 5 000 ms · silence 10 s) | `--niente-linea-morta` |
-| eviction of the ghost | **15 000 ms** | `--sfratto-ms 0` |
-| audio silence | **on** | `--niente-audio-silenzio` |
+| video queue threshold | **100 ms** | `--clear-threshold-ms 0` |
+| rate regulator | **on** | `--no-adaptive-rate` |
+| dead line | **on** (stall 5 000 ms · silence 10 s) | `--no-dead-line` |
+| eviction of the ghost | **15 000 ms** | `--eviction-ms 0` |
+| audio silence | **on** | `--no-audio-silence` |
 
-⛔ `--ritmo-adattivo` and `--linea-morta` **no longer exist**: whoever types them receives a message that
+⛔ `--adaptive-rate` and `--dead-line` **no longer exist**: whoever types them receives a message that
 explains the change and **exit 2**, not a generic help. ⛔ And the `-D AUDIO_SILENZIO_PREDEFINITO` is
 **removed**: two roads to switch on the same cure are two numbers that diverge.
-⭐ The audio option travels **negated** at the end of the child's `argv` — the road of `--parlantina`
+⭐ The audio option travels **negated** at the end of the child's `argv` — the road of `--chatter`
 — because the child is an `execve` with the environment composed **from zero**.
 
 ⛔⛔ **The startup lines are the record, and none says «SPENTO (I6)» any more.** Each one declares **state ·
@@ -4704,7 +4704,7 @@ number in force · that it is the default since 24 Aug by the user's decision ·
 
 ### 21.3-bis ⭐⭐ THE TEST THAT COUNTS — the wound of v1, looked for on purpose
 
-`banchi/09-b86-predefiniti.py` · port 7980 · binary `14561dce…` · **29 cases of `--certifica`**.
+`banchi/09-b86-predefiniti.py` · port 7980 · binary `14561dce…` · **29 cases of `--certify`**.
 
 - **(a) on by itself** ✅ — server launched **without any option**, and the five cures turn out
   active ⛔ **read from the product's startup lines**, not from the command line;
@@ -4723,7 +4723,7 @@ noise of 5 %**. Zero keyframes, zero holes, **zero dead-line firings, zero evict
 improve and the experience gets worse» — and it is green.
 
 ⚠ **And two benches break by construction**, which is intended and must be said: `09-b79-cure.py` typed
-`--ritmo-adattivo`, `09-b84-audio-silenzio.py` paired **two binaries** compiled differently. ⭐ Now
+`--adaptive-rate`, `09-b84-audio-silenzio.py` paired **two binaries** compiled differently. ⭐ Now
 the off arm is done **from the command line on the very same binary**: one defendant fewer.
 ⏳ Being cured.
 
@@ -4733,18 +4733,18 @@ the off arm is done **from the command line on the very same binary**: one defen
 
 `09-b79-cure.py`: arms **reversed** — **A** = cures off **by hand**, **C** = *no option*.
 ⭐ The gain is written in the comment: **the arm that represents the product is now the one that is
-asked nothing**, and therefore it cannot promise anything. `[M]` `--certifica` 21/21; real round on
+asked nothing**, and therefore it cannot promise anything. `[M]` `--certify` 21/21; real round on
 `ritardo-30`: fps **38.15 / 39.61 / 39.78**, keyframes 0.2 / 0.0 / 0.0 %, **S′ green**.
 
 `09-b84-audio-silenzio.py`: from **two binaries** to **one**. ⭐ Two binaries were **two defendants** — if the
 arms gave equal numbers the explanations were two (*«the cure is not needed»* or *«the binaries were not
 the ones I believed»*); a single one leaves one.
 ⛔⭐ **And while simplifying it a real defect popped out**: the line of the **off** arm now
-contains *«since 24 Aug it is born ON»*, and the bench looked for `"ACCESA" in dett` ⇒ **it would have read
+contains *«since 24 Aug it is born ON»*, and the bench looked for `"ACCESA" in details` ⇒ **it would have read
 «on» on an off arm**, giving green to two wrong arms **precisely now that that predicate
 is the only belt**. Cured by anchoring it to the two state sentences.
-`[M]` `--certifica` 31/31; `muto` round (Opus, still): **557.5 → 5.7 kbit/s = 97.3×**, 1 248 blocks
-silenced; `tono` round (PCM): coverage **1.0000 → 1.0000**, purity **1.000 → 1.000**, silenced **1 out of
+`[M]` `--certify` 31/31; `mute` round (Opus, still): **557.5 → 5.7 kbit/s = 97.3×**, 1 248 blocks
+silenced; `tone` round (PCM): coverage **1.0000 → 1.0000**, purity **1.000 → 1.000**, silenced **1 out of
 5 002**.
 
 ### 21.4-ter ⛔⭐ `WT_DGRAM_RIMANDI_MAX` — **the quantity is kept, the unit is changed**
@@ -4760,8 +4760,8 @@ blocks = 40 ms of PCM and **the head is almost never older than 40 ms**. Price o
 nothing»: **+30 % of bytes on the wire** (1 415 → 1 840 kbit/s, **stolen from the video's window**) for
 **+11 % of useful blocks** — the rest arrives already old and **the client throws it away**.
 
-⇒ The field becomes **`dgram_zitto_da`** («how long the connection has not put a datagram into a
-packet») and the cap **`WT_DGRAM_ZITTO_MAX_MS`**, in milliseconds. ⛔ And `4096` **is not converted with
+⇒ The field becomes **`dgram_quiet_since`** («how long the connection has not put a datagram into a
+packet») and the cap **`WT_DGRAM_QUIET_MAX_MS`**, in milliseconds. ⛔ And `4096` **is not converted with
 a division**: it is self-referential — how many passes are made depends on how much is thrown away. `[M]` With the
 product 2.1 M postponements, with the cap at 50 ms **20 M**. ⇒ The value was **tuned on the measurement**, and the
 green is *«indistinguishable from the product»*:
@@ -4775,7 +4775,7 @@ green is *«indistinguishable from the product»*:
 
 **10 ms** (= two PCM blocks) lies **inside the product's dispersion on every column**.
 ⇒ ⭐ **The cure changes what the number means, not what the product does.** The real age of the
-block stays recorded (`dgram[].nato`) but ⛔ **does not decide**: it ends up in the log line beside
+block stays recorded (`dgram[].born`) but ⛔ **does not decide**: it ends up in the log line beside
 the silence, **on purpose to be refuted**.
 ⏳ To be carried over into `rcp.c`: the «final count» still says *«refused by ngtcp2»*, and now they are
 *«thrown away because the wire had been mute for N ms»*.
@@ -4794,7 +4794,7 @@ that line):
 | PCM | conditioned | 1 988.0 | 1 292 |
 
 ⛔⛔ **On Opus the gain is ZERO, not «small»**: with padding **never requested** the packet stays
-at **1 441 bytes**. `[R]` **What fills it is `wt_scrivi()`**, which asks for padding at *every* stream
+at **1 441 bytes**. `[R]` **What fills it is `wt_write()`**, which asks for padding at *every* stream
 write and closes the packet the datagram had left open with `WRITE_MORE`. ⇒ **The
 padding of a still session belongs to the STREAM, not to the datagram**, and whoever wanted to remove it must
 go there.
@@ -4808,7 +4808,7 @@ maintain**, and it must be refused with the numbers beside it instead of forgott
 ### 21.4-quinquies ✅ And the decision never put on record is now in `SPECIFICHE.md` §10.1
 
 ⛔ *«When the window narrows, audio goes ahead of video»* was a product policy
-taken **in the code** (`wt_scrivi()`) and **written in no document**. ⇒ Now it is `SPECIFICHE.md`
+taken **in the code** (`wt_write()`) and **written in no document**. ⇒ Now it is `SPECIFICHE.md`
 **§10.1**, with the reason (the two loads do not degrade in the same way), the price (bandwidth taken
 from video precisely when there is little of it) and the limit **by construction** (the datagram queue is
 eight long ⇒ at most eight packets go ahead).

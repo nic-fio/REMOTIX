@@ -8,13 +8,13 @@
  * had anyone doing them:
  *
  *   · the user has a LOCAL graphical session and opens a remote one
- *       ⇒ the remote one is REFUSED, reason `0x05 GIA_ATTIVA_LOCALE`;
+ *       ⇒ the remote one is REFUSED, reason `0x05 ALREADY_ACTIVE_LOCAL`;
  *   · the user has a live remote one and opens a LOCAL one
- *       ⇒ ⛔ the LOCAL one WINS: the remote one is closed, `0x04 SESSIONE_LOCALE_PREVALSA`.
+ *       ⇒ ⛔ the LOCAL one WINS: the remote one is closed, `0x04 LOCAL_SESSION_PREVAILED`.
  *
  * ⛔ The two codes have been in `rcp.h` since 9 August 2026 and **no line of
  *    any `.c` sent them**: it is the same fault shape as finding B-7
- *    (`RCP_SERVER_IN_CHIUSURA` defined and with no sender), where whoever was
+ *    (`RCP_SERVER_SHUTTING_DOWN` defined and with no sender), where whoever was
  *    connected waited the thirty seconds of silence and read «network
  *    error».  This file is the missing sender.
  *
@@ -60,27 +60,27 @@
  *   same one that delivers the frames, and `LEZIONI.md` §6.2-bis says that
  *   *a wait that protects one link is a delay for all the others*.
  */
-#ifndef REMOTIX_SENTINELLA_H
-#define REMOTIX_SENTINELLA_H
+#ifndef REMOTIX_SENTINEL_H
+#define REMOTIX_SENTINEL_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct sentinella sentinella;
+typedef struct sentinel sentinel;
 
 /* Opens the connection to the SYSTEM bus (logind is not on the session
  * one).  ⛔ Returns NULL if the bus is missing: then the rule of §5.1
  * is NOT in force, and the caller writes it in the log instead of carrying on
  * as if nothing happened. */
-sentinella *sentinella_apri(void);
+sentinel *sentinel_open(void);
 
-void sentinella_chiudi(sentinella *s);
+void sentinel_close(sentinel *s);
 
 /*
  * «Does this user have a LOCAL graphical session, right now?»
  *
- * `descrizione` — if not NULL — receives which session it is, for the
+ * `description` — if not NULL — receives which session it is, for the
  * server log: id, type and seat.  ⛔ It never ends up in the body of a
  * farewell (§8.2).
  *
@@ -88,8 +88,8 @@ void sentinella_chiudi(sentinella *s);
  *   isn't one» are two different facts, and locking everyone out because logind does not
  *   answer would punish those who did nothing wrong (invariant I1).
  */
-bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
-                       size_t quanto);
+bool sentinel_local_one(sentinel *s, const char *username, char *description,
+                       size_t how_much);
 
 /*
  * ⭐⭐⭐ «WHICH OF THESE USERS HAVE A LOCAL GRAPHICAL SESSION?» — ONE
@@ -98,14 +98,14 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
  * ⛔⛔ THE DEFECT THIS FUNCTION EXISTS TO REMOVE — finding P4 of
  *      `fasi/10-multi-tenant-e-il-budget.md` §8.2, measured in §6.13.
  *
- *      The re-check of §5.1 (`wt_sorveglia_locali()`) called `sentinella_locale()`
+ *      The re-check of §5.1 (`wt_watch_locals()`) called `sentinel_local_one()`
  *      **once per attached tenant**, and each call is a SYNCHRONOUS
  *      round trip on D-Bus inside the same `poll` that delivers the frames.
  *      `[M]` 25 August 2026: the calls per re-check are **1 · 3 · 5 · 7** at
  *      N = 1/3/5/7 — linear in the tenants — and what governs the damage is the
  *      PRODUCT `P = N × D`, where D is how long logind takes.
  *      ⛔ The frontier shrinks as **1/N** and crosses the **300 ms** that
- *         `ATTESA_MS` below already allows itself at ~4 tenants: at **N=7 with
+ *         `WAIT_MS` below already allows itself at ~4 tenants: at **N=7 with
  *         D=286 ms** every desktop collapses to **1.3 frames/s with a p95 of two
  *         seconds**, ⛔⛔ *and not a line is written*, because nobody
  *         disconnects.  The SILENT degradation, which for `CODER.md` §1-bis weighs more
@@ -130,20 +130,20 @@ bool sentinella_locale(sentinella *s, const char *utente, char *descrizione,
  *   zero, and they are independent of the number of our tenants anyway.  ⇒ The
  *   term that grew with N is gone; this one was never there.
  *
- * `utenti`   — the names to look for, `quanti` in all.  ⚠ They may repeat: the
+ * `users`   — the names to look for, `how_many` in all.  ⚠ They may repeat: the
  *              answer is by POSITION, so the caller does not have to deduplicate.
- * `locale`   — a vector of `quanti` booleans, filled by this function.
- * `quali`    — if not NULL, `quanti` slices of `larghezza` bytes each, each
+ * `locale`   — a vector of `how_many` booleans, filled by this function.
+ * `which_ones`    — if not NULL, `how_many` slices of `width_px` bytes each, each
  *              with the description of the session found (for the LOG:
  *              §8.2 forbids telling the client facts about other people's sessions).
  *
  * ⛔ Returns how many it found with a local one.  ⚠ If logind does not answer,
  *    it returns 0 and sets everything to `false` — «I don't know» is treated as «there isn't one»,
  *    which is the only choice that does not punish those who did nothing wrong
- *    (invariant I1), and it is the same one `sentinella_locale()` makes.
+ *    (invariant I1), and it is the same one `sentinel_local_one()` makes.
  */
-size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti,
-                         bool *locale, char *quali, size_t larghezza);
+size_t sentinel_local(sentinel *s, const char *const *users, size_t how_many,
+                         bool *locale, char *which_ones, size_t width_px);
 
 /*
  * ⭐ «IS POWER-OFF REALLY FORBIDDEN?» — `DECISIONI.md` §4.7, the check that
@@ -157,7 +157,7 @@ size_t sentinella_locali(sentinella *s, const char *const *utenti, size_t quanti
  * ⛔⛔ THE CHILD CALLS IT, NEVER THE SERVER: `[M]` root is answered «yes»
  *     because logind looks at `CAP_SYS_BOOT` before polkit.
  */
-bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quanto);
+bool sentinel_shutdown_forbidden(sentinel *s, char *detail, size_t how_much);
 
 /*
  * ⭐ «IS MY SESSION SEATLESS?» — `DECISIONI.md` §4.3-bis, measurement M2.
@@ -169,9 +169,9 @@ bool sentinella_spegnimento_vietato(sentinella *s, char *dettaglio, size_t quant
  * verifies it AFTER startup.
  *
  * `false` also when there is no session at all: it is a WORSE case, not
- * a better one, and `quale` says so.
+ * a better one, and `which` says so.
  */
-bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
+bool sentinel_without_seat(sentinel *s, char *which, size_t how_much);
 
 /* How many calls were made, and the slowest in milliseconds — the number
  * that says whether the «synchronous» choice holds.  ⛔ It is here and not in a comment:
@@ -190,9 +190,9 @@ bool sentinella_senza_seat(sentinella *s, char *quale, size_t quanto);
  * ⛔ AND ON 25 AUGUST 2026 THIS SENTENCE WAS STILL HALF FALSE (finding R7 of
  *    §5.5): the line was there, ⛔ **but the number of tenants was not** — that is,
  *    exactly the denominator that makes the cure refutable was missing.  ⭐ Now
- *    the line carries `inquilini=` (from `wt_inquilini_serviti()`), and the three numbers
- *    are read together: `chiamate=` must follow the RE-CHECKS, not `inquilini=`. */
-void sentinella_conti(const sentinella *s, uint64_t *chiamate,
-                      uint64_t *peggior_ms);
+ *    the line carries `tenants=` (from `wt_tenants_served()`), and the three numbers
+ *    are read together: `calls=` must follow the RE-CHECKS, not `tenants=`. */
+void sentinel_counts(const sentinel *s, uint64_t *calls,
+                      uint64_t *worst_ms);
 
 #endif

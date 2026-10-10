@@ -12,33 +12,33 @@
 #include <time.h>
 #include <unistd.h>
 
-static bool parlantina;
+static bool chatter;
 
 /* ⭐ The journal (box in `registro.h`): -1 = off.  ⚠ It is opened ONCE, at
- *    switch-on and not at the first line: `riga()` runs in several threads,
+ *    switch-on and not at the first line: `row()` runs in several threads,
  *    and two threads opening together would leave an orphan descriptor. */
 static int journal_fd = -1;
 
 /* ⭐ The identity of this process — the box is in `registro.h`.  ⚠ A COPY and
  *    not a pointer: whoever sets it often passes an `argv`, and a pointer to
  *    someone else's memory is a log that lies the day that memory changes. */
-static char identita[REG_IDENTITA_MAX + 1];
+static char identity[LOG_IDENTITY_MAX + 1];
 
-void registro_parlantina(bool acceso) { parlantina = acceso; }
-bool registro_parla_molto(void) { return parlantina; }
+void log_chatter(bool lit) { chatter = lit; }
+bool log_verbose(void) { return chatter; }
 
-void registro_identita(const char *chi)
+void log_identity(const char *chi)
 {
 	if (!chi || !*chi) {
-		identita[0] = '\0';
+		identity[0] = '\0';
 		return;
 	}
-	snprintf(identita, sizeof identita, "%s", chi);
+	snprintf(identity, sizeof identity, "%s", chi);
 }
 
-bool registro_journal(bool acceso)
+bool log_journal(bool lit)
 {
-	if (!acceso) {
+	if (!lit) {
 		if (journal_fd >= 0)
 			close(journal_fd);
 		journal_fd = -1;
@@ -53,9 +53,9 @@ bool registro_journal(bool acceso)
 	return journal_fd >= 0;
 }
 
-bool registro_nel_journal(void) { return journal_fd >= 0; }
+bool log_to_journal(void) { return journal_fd >= 0; }
 
-bool registro_tasto_dicibile(unsigned c)
+bool log_key_safe(unsigned c)
 {
 	/* `linux/input-event-codes.h`: LEFTCTRL 29, LEFTSHIFT 42, RIGHTSHIFT 54,
 	 * LEFTALT 56, CAPSLOCK 58, RIGHTCTRL 97, RIGHTALT 100, LEFTMETA 125,
@@ -83,28 +83,28 @@ bool registro_tasto_dicibile(unsigned c)
  *    connected socket stays dead forever if journald restarts, one without a
  *    connection finds the new one at the next datagram.
  */
-static void al_journal(const char *file, int linea, const char *area,
-                       const char *chi, int priorita, const char *msg,
+static void al_journal(const char *file, int text_line, const char *area,
+                       const char *chi, int priority, const char *msg,
                        size_t msg_n)
 {
 	static const struct sockaddr_un dove = {
 		.sun_family = AF_UNIX,
 		.sun_path = "/run/systemd/journal/socket",
 	};
-	char campi[384];
+	char fields[384];
 	uint8_t lung[8];
-	int n = snprintf(campi, sizeof campi,
+	int n = snprintf(fields, sizeof fields,
 	                 "PRIORITY=%d\nSYSLOG_IDENTIFIER=remotix\n"
 	                 "REMOTIX_AREA=%s\n%s%s%sCODE_FILE=%s\nCODE_LINE=%d\n"
 	                 "MESSAGE\n",
-	                 priorita, area, chi ? "REMOTIX_INQUILINO=" : "",
-	                 chi ? chi : "", chi ? "\n" : "", file ? file : "?", linea);
-	if (n < 0 || (size_t)n >= sizeof campi)
+	                 priority, area, chi ? "REMOTIX_TENANT=" : "",
+	                 chi ? chi : "", chi ? "\n" : "", file ? file : "?", text_line);
+	if (n < 0 || (size_t)n >= sizeof fields)
 		return;
 	for (int i = 0; i < 8; i++)
 		lung[i] = (uint8_t)((uint64_t)msg_n >> (8 * i));
 	struct iovec iov[4] = {
-		{campi, (size_t)n},
+		{fields, (size_t)n},
 		{lung, sizeof lung},
 		{(void *)msg, msg_n},
 		{(void *)"\n", 1},
@@ -119,26 +119,26 @@ static void al_journal(const char *file, int linea, const char *area,
 	(void)r; /* ⚠ silent: the channel that remains is `stderr`, and the line is there */
 }
 
-uint64_t registro_ora_ms(void)
+uint64_t log_now_ms(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return (uint64_t)ts.tv_sec * 1000u + (uint64_t)(ts.tv_nsec / 1000000);
 }
 
-static void riga(const char *file, int linea, bool dettaglio, const char *area,
+static void row(const char *file, int text_line, bool detail, const char *area,
                  const char *chi, const char *fmt, va_list ap)
 {
 	struct timespec ts;
 	struct tm tm;
-	char quando[32];
+	char when[32];
 	/* ⛔ 4096 is `PIPE_BUF`, the boundary below which an append `write` does
 	 *    not interleave with those of other processes. */
 	char buf[4096];
 
 	clock_gettime(CLOCK_REALTIME, &ts);
 	localtime_r(&ts.tv_sec, &tm);
-	strftime(quando, sizeof quando, "%H:%M:%S", &tm);
+	strftime(when, sizeof when, "%H:%M:%S", &tm);
 
 	/* ⛔⛔ ONE SINGLE `write()` PER LINE, AND IT IS NOT ELEGANCE — 21 Aug 2026.
 	 *
@@ -181,12 +181,12 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	 *    detaches it.
 	 * ⚠ And the extra bytes are paid ONLY by the lines that have something to
 	 *   say: whoever does not know stays silent, and does not pay. */
-	const char *id = (chi && *chi) ? chi : identita;
-	char idsano[REG_IDENTITA_MAX + 1];
+	const char *id = (chi && *chi) ? chi : identity;
+	char safe_id[LOG_IDENTITY_MAX + 1];
 	int n;
 	/* ⭐ For the journal: where the line without the time begins (the MESSAGE)
 	 *    and where the body begins (from which the severity is read). */
-	int senza_ora, corpo;
+	int without_time, body_el;
 	bool con_id = false;
 	if (id && *id) {
 		con_id = true;
@@ -196,27 +196,27 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 		 *    21 Aug (one single `write` per line) has just finished
 		 *    removing.  ⚠ Only what fits in a user name is kept. */
 		size_t k = 0;
-		for (const char *p = id; *p && k < REG_IDENTITA_MAX; p++, k++) {
+		for (const char *p = id; *p && k < LOG_IDENTITY_MAX; p++, k++) {
 			unsigned char c = (unsigned char)*p;
-			bool buono = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
+			bool good = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')
 			             || (c >= 'a' && c <= 'z') || c == '.' || c == '_'
 			             || c == '-' || c == '@' || c == ':';
-			idsano[k] = buono ? (char)c : '_';
+			safe_id[k] = good ? (char)c : '_';
 		}
-		idsano[k] = '\0';
-		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s [%s] ", quando,
-		             ts.tv_nsec / 1000000, area, idsano);
+		safe_id[k] = '\0';
+		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s [%s] ", when,
+		             ts.tv_nsec / 1000000, area, safe_id);
 	} else
-		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s ", quando,
+		n = snprintf(buf, sizeof buf, "%s.%03ld %-7s ", when,
 		             ts.tv_nsec / 1000000, area);
 	if (n < 0)
 		return;
 	if ((size_t)n > sizeof buf - 2)
 		n = (int)(sizeof buf - 2);
-	senza_ora = (int)strlen(quando) + 5; /* «HH:MM:SS» + «.mmm » */
-	if (senza_ora > n)
-		senza_ora = n;
-	corpo = n;
+	without_time = (int)strlen(when) + 5; /* «HH:MM:SS» + «.mmm » */
+	if (without_time > n)
+		without_time = n;
+	body_el = n;
 	int m = vsnprintf(buf + n, sizeof buf - (size_t)n - 1, fmt, ap);
 	if (m < 0)
 		m = 0;
@@ -234,8 +234,8 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	 *    buffered to a file has already made the right code be accused.
 	 *    ⭐ With `write(2)` the problem does not arise: there is no buffer to
 	 *    flush, and the earlier `fflush` is no longer needed. */
-	ssize_t scritti = write(STDERR_FILENO, buf, (size_t)n);
-	(void)scritti; /* ⚠ there is nowhere to report that the log cannot be
+	ssize_t written = write(STDERR_FILENO, buf, (size_t)n);
+	(void)written; /* ⚠ there is nowhere to report that the log cannot be
 	                *    written: the only channel would be the broken one. */
 
 	/* ⭐ And the journal, AFTER `stderr` and only if on: without `--journal`
@@ -249,53 +249,53 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	 *    would throttle them with its rate limit — losing precisely the
 	 *    events — and its work would end up inside the load measurements.
 	 *    The journal keeps the EVENTS (§12); the detail stays in the file. */
-	if (journal_fd >= 0 && !dettaglio) {
-		const char *c = buf + corpo;
+	if (journal_fd >= 0 && !detail) {
+		const char *c = buf + body_el;
 		while (*c == ' ')
 			c++;
 		int prio = strncmp(c, "⛔", strlen("⛔")) == 0 ? 3
 		         : strncmp(c, "⚠", strlen("⚠")) == 0 ? 4 : 6;
-		al_journal(file, linea, area, con_id ? idsano : NULL, prio,
-		           buf + senza_ora, (size_t)(n - 1 - senza_ora));
+		al_journal(file, text_line, area, con_id ? safe_id : NULL, prio,
+		           buf + without_time, (size_t)(n - 1 - without_time));
 	}
 }
 
-void registro_dice_in(const char *file, int linea, const char *area,
+void log_says_in(const char *file, int text_line, const char *area,
                       const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	riga(file, linea, false, area, NULL, fmt, ap);
+	row(file, text_line, false, area, NULL, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dettaglio_in(const char *file, int linea, const char *area,
+void log_detail_in(const char *file, int text_line, const char *area,
                            const char *fmt, ...)
 {
 	va_list ap;
-	if (!parlantina)
+	if (!chatter)
 		return;
 	va_start(ap, fmt);
-	riga(file, linea, true, area, NULL, fmt, ap);
+	row(file, text_line, true, area, NULL, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dice_di_in(const char *file, int linea, const char *area,
+void log_says_of_in(const char *file, int text_line, const char *area,
                          const char *chi, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	riga(file, linea, false, area, chi, fmt, ap);
+	row(file, text_line, false, area, chi, fmt, ap);
 	va_end(ap);
 }
 
-void registro_dettaglio_di_in(const char *file, int linea, const char *area,
+void log_detail_of_in(const char *file, int text_line, const char *area,
                               const char *chi, const char *fmt, ...)
 {
 	va_list ap;
-	if (!parlantina)
+	if (!chatter)
 		return;
 	va_start(ap, fmt);
-	riga(file, linea, true, area, chi, fmt, ap);
+	row(file, text_line, true, area, chi, fmt, ap);
 	va_end(ap);
 }

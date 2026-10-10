@@ -7,7 +7,7 @@
 #   bash 02-sessione-guardia.sh                          just answers
 #   bash 02-sessione-guardia.sh -- <command...>          answers, and ONLY if the
 #                                                        session is healthy runs the command
-#   bash 02-sessione-guardia.sh --etichetta cattura-30s -- python3 misura.py
+#   bash 02-sessione-guardia.sh --label cattura-30s -- python3 misura.py
 #
 # ⛔ IT RUNS ON THE NIC-OS HOST, where the graphical session lives.  From CHUWI there
 #    is no session bus to query, and the guard says so instead of
@@ -91,27 +91,27 @@
 # ⚠ There is no option for «measure anyway».  A guard that can be skipped
 #   gets skipped, and the day it is skipped is the day it was needed.  Whoever must
 #   really measure on a faulty session — F2.1 when it injects M9 — does not pass
-#   through here: they use `02-sessione-lancia.sh guasto`, which DECLARES the faulty scene.
+#   through here: they use `02-sessione-lancia.sh fault`, which DECLARES the faulty scene.
 set -uo pipefail
 
-QUI=$(cd "$(dirname "$0")" && pwd)
-STRUMENTO=${STRUMENTO:-$QUI/02-sessione-stato.py}
-ESITI=${ESITI:-$QUI/02-sessione-esiti.jsonl}
-ATTESA=${MISURA:-1920x1080}
-ETICHETTA=""
+HERE=$(cd "$(dirname "$0")" && pwd)
+TOOL=${TOOL:-$HERE/02-sessione-stato.py}
+OUTCOMES=${OUTCOMES:-$HERE/02-sessione-esiti.jsonl}
+WAIT=${MEASURE:-1920x1080}
+LABEL=""
 
 U=$(id -u)
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$U}
-SCENA_PRIMA=$RUNTIME/f21-guardia-prima.json
-SCENA_DOPO=$RUNTIME/f21-guardia-dopo.json
+SCENE_BEFORE=$RUNTIME/f21-guardia-prima.json
+SCENE_AFTER=$RUNTIME/f21-guardia-dopo.json
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
-att() { printf '    \033[1;33m⚠\033[0m   %s\n' "$*"; }
+expect() { printf '    \033[1;33m⚠\033[0m   %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-uso()
+use()
 {
 	sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
 	exit "${1:-2}"
@@ -120,17 +120,17 @@ uso()
 # ---------------------------------------------------------------------------
 while [ $# -gt 0 ]; do
 	case "$1" in
-	--attesa)    ATTESA=${2:?a size WIDTHxHEIGHT is needed}; shift 2 ;;
-	--etichetta) ETICHETTA=${2:?a scene name is needed}; shift 2 ;;
-	--esiti)     ESITI=${2:?a file is needed}; shift 2 ;;
-	-h|--aiuto)  uso 0 ;;
+	--wait)    WAIT=${2:?a size WIDTHxHEIGHT is needed}; shift 2 ;;
+	--label) LABEL=${2:?a scene name is needed}; shift 2 ;;
+	--outcomes)     OUTCOMES=${2:?a file is needed}; shift 2 ;;
+	-h|--help)  use 0 ;;
 	--)          shift; break ;;
-	-*)          echo "⛔ unknown option: $1" >&2; uso 2 ;;
+	-*)          echo "⛔ unknown option: $1" >&2; use 2 ;;
 	*)           break ;;
 	esac
 done
-COMANDO=("$@")
-[ -n "$ETICHETTA" ] || ETICHETTA=${COMANDO[0]:-solo-guardia}
+CMD=("$@")
+[ -n "$LABEL" ] || LABEL=${CMD[0]:-solo-guardia}
 
 # ---------------------------------------------------------------------------
 # ⛔ THE TWO QUESTIONS, READ FROM THE SCENE RECORDED BY `02-sessione-stato.py`.
@@ -139,76 +139,76 @@ COMANDO=("$@")
 # query: two readings at two different moments can tell about two different
 # sessions, and then the guard would say one thing and the verdict another.
 # ---------------------------------------------------------------------------
-due_domande() # $1 = scene file
+two_questions() # $1 = scene file
 {
 	python3 - "$1" <<'PY'
 import json, sys
 
-VERDE, ROSSO, GIALLO, FINE = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
+GREEN, RED, YELLOW, FINE = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 try:
     with open(sys.argv[1]) as f:
         s = json.load(f)
 except OSError as err:
-    print(f"    {ROSSO}NO{FINE}  ⛔ cannot re-read the scene: {err}")
+    print(f"    {RED}NO{FINE}  ⛔ cannot re-read the scene: {err}")
     sys.exit(1)
 
 pid = s.get("shell_pid")
-gira = s.get("sessione_gira")
-viva = bool(pid) and gira is True
+run = s.get("sessione_gira")
+viva = bool(pid) and run is True
 d = s.get("display")
 monitor = d["monitor"] if d else None
 
-def riga(n, domanda, risposta, buona):
-    colore = VERDE if buona else ROSSO
-    print(f"    {n}. {domanda:<44} {colore}{risposta}{FINE}")
+def row(n, question, response, good_one):
+    color = GREEN if good_one else RED
+    print(f"    {n}. {question:<44} {color}{response}{FINE}")
 
-riga(1, "is the session ALIVE?",
+row(1, "is the session ALIVE?",
      ("yes, gnome-shell " + " ".join(str(p) for p in pid) +
       " and IsSessionRunning=true") if viva
-     else f"NO (pid={pid}, IsSessionRunning={gira})", viva)
+     else f"NO (pid={pid}, IsSessionRunning={run})", viva)
 
 if monitor is None:
-    riga(2, "does the session have a MONITOR?",
+    row(2, "does the session have a MONITOR?",
          "I COULD NOT ASK (GetCurrentState did not answer)", False)
 elif not monitor:
-    riga(2, "does the session have a MONITOR?", "NO — ZERO monitors", False)
+    row(2, "does the session have a MONITOR?", "NO — ZERO monitors", False)
 else:
-    nomi = ", ".join(f"{m['connettore']}/{m['prodotto']}" for m in monitor)
-    riga(2, "does the session have a MONITOR?", f"{len(monitor)}: {nomi}", len(monitor) == 1)
+    names = ", ".join(f"{m['connector']}/{m['product']}" for m in monitor)
+    row(2, "does the session have a MONITOR?", f"{len(monitor)}: {names}", len(monitor) == 1)
 
 # ⛔ The exact form of the 10-12 Aug defect: the first yes, the second no.
 if viva and monitor is not None and not monitor:
-    print(f"\n    {ROSSO}⛔⛔ ALIVE AND BLACK — it is the exact form of the defect lived for two"
+    print(f"\n    {RED}⛔⛔ ALIVE AND BLACK — it is the exact form of the defect lived for two"
           f" days{FINE}")
     print("        on this machine.  A bench that had asked only the first")
     print("        question would have written «session fine» and then blamed")
     print("        zero frames on PipeWire, on the encoding, or on its own code.")
-    print(f"    {GIALLO}⚠{FINE}   And do not call a screenshot to check: on zero")
+    print(f"    {YELLOW}⚠{FINE}   And do not call a screenshot to check: on zero")
     print("        monitors `Shell.Screenshot` brings down the WHOLE session [M].")
 PY
 }
 
 # ---------------------------------------------------------------------------
-misura() # $1 = label ; $2 = scene file
+gauge() # $1 = label ; $2 = scene file
 {
-	python3 "$STRUMENTO" --attesa "$ATTESA" --dal-bus \
-	    --etichetta "$1" --esiti "$ESITI" --registra "$2"
+	python3 "$TOOL" --wait "$WAIT" --from-bus \
+	    --label "$1" --outcomes "$OUTCOMES" --record "$2"
 	return $?
 }
 
-registra_giro() # $1 before  $2 after  $3 command exit  $4 guard exit
+log_round() # $1 before  $2 after  $3 command exit  $4 guard exit
 {
-	python3 - "$ESITI" "$1" "$2" "$3" "$4" "$ETICHETTA" "${COMANDO[*]:-}" <<'PY'
+	python3 - "$OUTCOMES" "$1" "$2" "$3" "$4" "$LABEL" "${CMD[*]:-}" <<'PY'
 import json, sys, time
-esiti, prima, dopo, ecom, eguardia, etichetta, comando = sys.argv[1:8]
-with open(esiti, "a") as f:
+outcomes, before, after, ecom, eguardia, label, command = sys.argv[1:8]
+with open(outcomes, "a") as f:
     f.write(json.dumps({
-        "quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "banco": "F2.1-guardia",
-        "scena": etichetta,
-        "comando_sorvegliato": comando or None,
-        "verdetto_prima": int(prima),
-        "verdetto_dopo": None if dopo == "-" else int(dopo),
+        "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "bench": "F2.1-guardia",
+        "scene": label,
+        "comando_sorvegliato": command or None,
+        "verdetto_prima": int(before),
+        "verdetto_dopo": None if after == "-" else int(after),
         "uscita_comando": None if ecom == "-" else int(ecom),
         "uscita_guardia": int(eguardia),
     }, ensure_ascii=False) + "\n")
@@ -217,68 +217,68 @@ PY
 
 # ---------------------------------------------------------------------------
 log "The session guard — TWO questions, not one"
-inf "requested size: $ATTESA · scene: «$ETICHETTA»"
-[ ${#COMANDO[@]} -gt 0 ] && inf "watched command: ${COMANDO[*]}" \
+inf "requested size: $WAIT · scene: «$LABEL»"
+[ ${#CMD[@]} -gt 0 ] && inf "watched command: ${CMD[*]}" \
                          || inf "no command: I just answer"
 
 log "Before the measurement"
-misura "guardia-prima:$ETICHETTA" "$SCENA_PRIMA"
-PRIMA=$?
+gauge "guardia-prima:$LABEL" "$SCENE_BEFORE"
+BEFORE=$?
 
 log "⛔ The two questions, kept apart"
-due_domande "$SCENA_PRIMA"
+two_questions "$SCENE_BEFORE"
 
 # ---------------------------------------------------------------------------
-if [ ${#COMANDO[@]} -eq 0 ]; then
-	registra_giro "$PRIMA" - - "$PRIMA"
+if [ ${#CMD[@]} -eq 0 ]; then
+	log_round "$BEFORE" - - "$BEFORE"
 	log "The verdict"
-	if [ "$PRIMA" -eq 0 ]; then
+	if [ "$BEFORE" -eq 0 ]; then
 		ok "session HEALTHY: whoever measures now measures their own link"
 	else
-		ko "⛔ session NOT healthy (verdict $PRIMA): it is not the moment to measure"
+		ko "⛔ session NOT healthy (verdict $BEFORE): it is not the moment to measure"
 	fi
-	exit "$PRIMA"
+	exit "$BEFORE"
 fi
 
-if [ "$PRIMA" -ne 0 ]; then
+if [ "$BEFORE" -ne 0 ]; then
 	log "⛔ I DO NOT MEASURE"
-	ko "⛔⛔ the guard REFUSES: the verdict on the session is $PRIMA."
-	ko "   The command «${COMANDO[*]}» was NOT run, and there is"
+	ko "⛔⛔ the guard REFUSES: the verdict on the session is $BEFORE."
+	ko "   The command «${CMD[*]}» was NOT run, and there is"
 	ko "   no number to attribute to anybody: any zero that came out now"
 	ko "   would be a zero of the SESSION, not of your link."
 	inf "this is how to set it right, and it takes a minute:"
-	inf "    bash $QUI/02-sessione-lancia.sh sano"
+	inf "    bash $HERE/02-sessione-lancia.sh healthy"
 	inf "and so that it does not turn black again at the next server reboot:"
 	inf "    bash /media/REMOTIX/provision-server.sh monitor"
-	registra_giro "$PRIMA" - - $((70 + PRIMA))
-	exit $((70 + PRIMA))
+	log_round "$BEFORE" - - $((70 + BEFORE))
+	exit $((70 + BEFORE))
 fi
 
-ok "session HEALTHY: running «${COMANDO[*]}»"
+ok "session HEALTHY: running «${CMD[*]}»"
 log "The watched measurement"
-"${COMANDO[@]}"
-E_COMANDO=$?
-inf "the command exited with $E_COMANDO"
+"${CMD[@]}"
+E_COMMAND=$?
+inf "the command exited with $E_COMMAND"
 
 # ⛔ AND IT LOOKS AGAIN AFTER.  It is not fussiness: a headless session without a monitor
 #    falls by itself at the first screenshot, and whoever saw it fall in the middle of a
 #    measurement would go looking for the defect in their own code `[M]` 12 Aug 2026.
 #    A number taken on a scene that fell midway is not a number.
 log "After the measurement — is the scene still the one I declared?"
-misura "guardia-dopo:$ETICHETTA" "$SCENA_DOPO"
-DOPO=$?
-due_domande "$SCENA_DOPO"
+gauge "guardia-dopo:$LABEL" "$SCENE_AFTER"
+AFTER=$?
+two_questions "$SCENE_AFTER"
 
 log "The verdict"
-if [ "$DOPO" -ne 0 ]; then
-	ko "⛔⛔ THE SESSION WAS HEALTHY BEFORE (0) AND NOW IT IS $DOPO."
+if [ "$AFTER" -ne 0 ]; then
+	ko "⛔⛔ THE SESSION WAS HEALTHY BEFORE (0) AND NOW IT IS $AFTER."
 	ko "   The scene changed UNDER the measurement: the command's number"
-	ko "   ($E_COMANDO) was taken on a scene that is not the declared"
+	ko "   ($E_COMMAND) was taken on a scene that is not the declared"
 	ko "   one, and it does not count — not even if it is green."
-	registra_giro "$PRIMA" "$DOPO" "$E_COMANDO" 79
+	log_round "$BEFORE" "$AFTER" "$E_COMMAND" 79
 	exit 79
 fi
-ok "session healthy before ($PRIMA) and after ($DOPO): the scene held for the whole measurement"
-inf "the exit is the command's, as it is: $E_COMANDO"
-registra_giro "$PRIMA" "$DOPO" "$E_COMANDO" "$E_COMANDO"
-exit "$E_COMANDO"
+ok "session healthy before ($BEFORE) and after ($AFTER): the scene held for the whole measurement"
+inf "the exit is the command's, as it is: $E_COMMAND"
+log_round "$BEFORE" "$AFTER" "$E_COMMAND" "$E_COMMAND"
+exit "$E_COMMAND"

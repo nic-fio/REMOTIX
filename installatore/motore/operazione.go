@@ -13,64 +13,64 @@ import (
 	"time"
 )
 
-// Motore: an instance of the engine on the machine (or on a fake machine, in the tests).
-type Motore struct {
-	Amb      *Ambiente
-	Cartella string        // /var/lib/remotix/operazioni (in tests, any root)
-	Catalogo *Catalogo     // the one chosen and verified by phase 0 TRUST (Fonti)
-	Fonti    *FontiFiducia // where the catalogue comes from, and what it is verified with (fiducia.go)
-	Porta    int
-	Esamina  func() *Profilo // PREFLIGHT; nil ⇒ Preflight(Amb, …)
-	Ev       *Eventi
-	Adesso   func() time.Time
-	// Fermata: whoever installs has asked to stop (the «Cancel and put back as it was» button of TUI and
+// Engine: an instance of the engine on the machine (or on a fake machine, in the tests).
+type Engine struct {
+	Amb     *Environment
+	Folder  string        // /var/lib/remotix/operations (in tests, any root)
+	Catalog *Catalog      // the one chosen and verified by phase 0 TRUST (Sources)
+	Sources *TrustSources // where the catalogue comes from, and what it is verified with (fiducia.go)
+	Port    int
+	Examine func() *Profile // PREFLIGHT; nil ⇒ Preflight(Amb, …)
+	Ev      *Events
+	Clock   func() time.Time
+	// Stopped: whoever installs has asked to stop (the «Cancel and put back as it was» button of TUI and
 	// GUI). It is checked between one step and the next, never in the middle of a step: the step begun finishes,
-	// then the operation goes to IN_ANNULLAMENTO (RX-AZIONE-006) and everything is undone from the log.
-	Fermata   func() bool
-	serratura *os.File
+	// then the operation goes to ROLLING_BACK (RX-AZIONE-006) and everything is undone from the log.
+	Stopped func() bool
+	lock    *os.File
 }
 
-// Operazione: a folder in Cartella/<id>/ with the state, the log and the objects.
-type Operazione struct {
-	ID       string
-	Cartella string
-	Stato    Stato
-	Reg      *Registro
-	Piano    *Piano
-	m        *Motore
+// Operation: a folder in Folder/<id>/ with the state, the log and the objects.
+type Operation struct {
+	ID     string
+	Folder string
+	State  State
+	Reg    *Log
+	Piano  *Piano
+	m      *Engine
 }
 
 // internal errors of the actions' loop
 var (
-	errFallita     = errors.New("an action failed")
-	errConcorrente = errors.New("the machine changed during the operation")
-	errFermata     = errors.New("stopped by whoever is installing")
+	errFailed     = errors.New("an action failed")
+	errConcurrent = errors.New("the machine changed during the operation")
+	errStopped    = errors.New("stopped by whoever is installing")
 )
 
-func (m *Motore) adesso() time.Time {
-	if m.Adesso != nil {
-		return m.Adesso()
+func (m *Engine) clock() time.Time {
+	if m.Clock != nil {
+		return m.Clock()
 	}
 	return time.Now()
 }
 
-// Profilo examines the machine (phase 1).
-func (m *Motore) Profilo() *Profilo {
-	if m.Esamina != nil {
-		return m.Esamina()
+// Profile examines the machine (phase 1).
+func (m *Engine) Profile() *Profile {
+	if m.Examine != nil {
+		return m.Examine()
 	}
-	return Preflight(m.Amb, OpzioniPreflight{Porta: m.Porta, Pacchetti: m.Catalogo.Componenti()})
+	return Preflight(m.Amb, PreflightOptions{Port: m.Port, Packets: m.Catalog.Components()})
 }
 
-// Componenti: the extra packages the catalogue wants to know whether they are there.
-func (c *Catalogo) Componenti() []string {
-	visti := map[string]bool{}
+// Components: the extra packages the catalogue wants to know whether they are there.
+func (c *Catalog) Components() []string {
+	seen_items := map[string]bool{}
 	var r []string
-	for _, p := range c.Piattaforme {
+	for _, p := range c.Platforms {
 		for _, d := range p.Desktop {
-			for _, x := range d.Componenti {
-				if !visti[x] {
-					visti[x] = true
+			for _, x := range d.Components {
+				if !seen_items[x] {
+					seen_items[x] = true
 					r = append(r, x)
 				}
 			}
@@ -80,47 +80,47 @@ func (c *Catalogo) Componenti() []string {
 	return r
 }
 
-// Blocca takes the engine's lock: only one at a time. The kernel releases it by itself if the
+// Block takes the engine's lock: only one at a time. The kernel releases it by itself if the
 // process dies (flock), so resume never finds an orphan lock.
-func (m *Motore) Blocca() error {
-	if err := os.MkdirAll(m.Cartella, 0o700); err != nil {
+func (m *Engine) Block() error {
+	if err := os.MkdirAll(m.Folder, 0o700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(filepath.Join(m.Cartella, ".serratura"), os.O_RDWR|os.O_CREATE, 0o600)
+	f, err := os.OpenFile(filepath.Join(m.Folder, ".lock"), os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		f.Close()
-		return Errore("RX-STATO-003", "")
+		return Error("RX-STATO-003", "")
 	}
-	m.serratura = f
+	m.lock = f
 	return nil
 }
 
 // Sblocca releases the lock.
-func (m *Motore) Sblocca() {
-	if m.serratura != nil {
-		m.serratura.Close()
-		m.serratura = nil
+func (m *Engine) Sblocca() {
+	if m.lock != nil {
+		m.lock.Close()
+		m.lock = nil
 	}
 }
 
-// Elenco: the operations that exist, from the oldest.
-func (m *Motore) Elenco() ([]*Operazione, error) {
-	voci, err := os.ReadDir(m.Cartella)
+// List: the operations that exist, from the oldest.
+func (m *Engine) List() ([]*Operation, error) {
+	entries, err := os.ReadDir(m.Folder)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	var r []*Operazione
-	for _, v := range voci {
+	var r []*Operation
+	for _, v := range entries {
 		if !v.IsDir() {
 			continue
 		}
-		op, err := m.apri(v.Name())
+		op, err := m.open_it(v.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -129,609 +129,609 @@ func (m *Motore) Elenco() ([]*Operazione, error) {
 	return r, nil
 }
 
-func (m *Motore) apri(id string) (*Operazione, error) {
-	op := &Operazione{ID: id, Cartella: filepath.Join(m.Cartella, id), m: m}
-	b, err := os.ReadFile(filepath.Join(op.Cartella, "state"))
+func (m *Engine) open_it(id string) (*Operation, error) {
+	op := &Operation{ID: id, Folder: filepath.Join(m.Folder, id), m: m}
+	b, err := os.ReadFile(filepath.Join(op.Folder, "state"))
 	if err != nil {
 		return nil, err
 	}
-	op.Stato = Stato(strings.TrimSpace(string(b)))
+	op.State = State(strings.TrimSpace(string(b)))
 	var p Piano
-	if err := LeggiJSON(filepath.Join(op.Cartella, "plan.json"), &p); err == nil {
+	if err := ReadJSON(filepath.Join(op.Folder, "plan.json"), &p); err == nil {
 		op.Piano = &p
 	}
 	return op, nil
 }
 
-// Finita: in a state one never leaves.
-func (op *Operazione) Finita() (bool, error) { return Finale(op.Stato), nil }
+// Ended: in a state one never leaves.
+func (op *Operation) Ended() (bool, error) { return Finale(op.State), nil }
 
-func (op *Operazione) apriRegistro() error {
+func (op *Operation) openLog() error {
 	if op.Reg != nil {
 		return nil
 	}
-	r, avvisi, err := ApriRegistro(filepath.Join(op.Cartella, "log.jsonl"))
+	r, warnings, err := OpenLog(filepath.Join(op.Folder, "log.jsonl"))
 	if err != nil {
 		return err
 	}
 	op.Reg = r
 	// every program launched by the engine while the operation is open goes into the log (R41)
 	if op.m.Amb != nil {
-		op.m.Amb.Annota = func(riga string) { r.Scrivi(Evento{Tipo: EvComando, Dettaglio: riga}) }
+		op.m.Amb.Annotate = func(row string) { r.Record(Event{Kind: EvCommand, Detail: row}) }
 		// and what the engine says while it waits for the package manager (occupato.go)
-		op.m.Amb.Avvisa = func(m Messaggio) {
-			op.m.Ev.Messaggio(op.ID, m)
-			r.Scrivi(Evento{Tipo: EvNota, Codice: m.Codice, Dettaglio: m.Dettaglio})
+		op.m.Amb.Avvisa = func(m Message) {
+			op.m.Ev.Message(op.ID, m)
+			r.Record(Event{Kind: EvNote, Code: m.Code, Detail: m.Detail})
 		}
 	}
-	for _, a := range avvisi {
-		op.m.Ev.Messaggio(op.ID, a)
-		if err := r.Scrivi(Evento{Tipo: EvNota, Codice: a.Codice, Dettaglio: a.Dettaglio}); err != nil {
+	for _, a := range warnings {
+		op.m.Ev.Message(op.ID, a)
+		if err := r.Record(Event{Kind: EvNote, Code: a.Code, Detail: a.Detail}); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// Aperta: the unfinished operation (at most one, by the rule of §6.6.2).
-func (m *Motore) Aperta() (*Operazione, error) {
-	ops, err := m.Elenco()
+// Open: the unfinished operation (at most one, by the rule of §6.6.2).
+func (m *Engine) Open() (*Operation, error) {
+	ops, err := m.List()
 	if err != nil {
 		return nil, err
 	}
-	var aperta *Operazione
+	var is_open *Operation
 	for _, op := range ops {
-		fin, err := op.Finita()
+		fin, err := op.Ended()
 		if err != nil {
 			return nil, err
 		}
 		if !fin {
-			aperta = op
+			is_open = op
 		}
 	}
-	return aperta, nil
+	return is_open, nil
 }
 
-// vai: a transition, only if it is in the design. First the state file (atomic), then the log
+// go_to: a transition, only if it is in the design. First the state file (atomic), then the log
 // line, then the event.
-func (op *Operazione) vai(a Stato, codice, dettaglio string) error {
-	da := op.Stato
-	if !Valida(da, a) {
-		return Errore("RX-STATO-002", string(da)+" → "+string(a))
+func (op *Operation) go_to(a State, code_v, detail string) error {
+	da := op.State
+	if !Valid(da, a) {
+		return Error("RX-STATO-002", string(da)+" → "+string(a))
 	}
-	if err := ScriviAtomico(filepath.Join(op.Cartella, "state"), []byte(string(a)+"\n"), 0o600); err != nil {
+	if err := WriteAtomic(filepath.Join(op.Folder, "state"), []byte(string(a)+"\n"), 0o600); err != nil {
 		return err
 	}
-	op.Stato = a
-	if err := op.Reg.Scrivi(Evento{Tipo: EvStato, Da: da, A: a, Codice: codice, Dettaglio: dettaglio}); err != nil {
+	op.State = a
+	if err := op.Reg.Record(Event{Kind: EvState, Da: da, A: a, Code: code_v, Detail: detail}); err != nil {
 		return err
 	}
-	det := dettaglio
-	if codice != "" {
-		det = strings.TrimSpace(codice + " " + dettaglio)
+	det := detail
+	if code_v != "" {
+		det = strings.TrimSpace(code_v + " " + detail)
 	}
-	op.m.Ev.Stato(op.ID, da, a, det)
-	punto("stato:"+string(a), "")
+	op.m.Ev.State(op.ID, da, a, det)
+	spot("state:"+string(a), "")
 	return nil
 }
 
-// blocca brings the operation to BLOCCATA with the error's code.
-func (op *Operazione) blocca(err error) error {
-	codice := CodiceDi(err)
+// block brings the operation to BLOCKED with the error's code.
+func (op *Operation) block(err error) error {
+	code_v := CodeOf(err)
 	det := err.Error()
-	var e *ErroreRX
+	var e *ErrorRX
 	if errors.As(err, &e) {
-		op.m.Ev.Messaggio(op.ID, e.M)
-		det = e.M.Dettaglio
+		op.m.Ev.Message(op.ID, e.M)
+		det = e.M.Detail
 	}
-	if e2 := op.vai(BLOCCATA, codice, det); e2 != nil {
+	if e2 := op.go_to(BLOCKED, code_v, det); e2 != nil {
 		return e2
 	}
 	return err
 }
 
-func (op *Operazione) scriviOggetto(nome string, v any) error {
-	p := filepath.Join(op.Cartella, nome)
-	if err := ScriviJSON(p, v); err != nil {
+func (op *Operation) writeObject(label_name string, v any) error {
+	p := filepath.Join(op.Folder, label_name)
+	if err := WriteJSON(p, v); err != nil {
 		return err
 	}
-	op.m.Ev.Oggetto(op.ID, strings.TrimSuffix(nome, ".json"), p)
+	op.m.Ev.Object(op.ID, strings.TrimSuffix(label_name, ".json"), p)
 	return nil
 }
 
-// Applica: phases 0-8 of the plan (§6.0), on the plan's actions only. approvaAMano = the consent
-// given now by whoever launches the command (--approva), which is recorded as such.
-func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*Operazione, error) {
-	if err := m.Blocca(); err != nil {
+// Apply: phases 0-8 of the plan (§6.0), on the plan's actions only. approveManually = the consent
+// given now by whoever launches the command (--approves), which is recorded as such.
+func (m *Engine) Apply(planPath string, approveManually bool, chi string) (*Operation, error) {
+	if err := m.Block(); err != nil {
 		return nil, err
 	}
 	defer m.Sblocca()
-	if ap, err := m.Aperta(); err != nil {
+	if ap, err := m.Open(); err != nil {
 		return nil, err
 	} else if ap != nil {
-		return nil, Errore("RX-STATO-001", ap.ID+" is "+string(ap.Stato))
+		return nil, Error("RX-STATO-001", ap.ID+" is "+string(ap.State))
 	}
 	var piano Piano
-	if err := LeggiJSON(percorsoPiano, &piano); err != nil || piano.Oggetto != "plan" {
+	if err := ReadJSON(planPath, &piano); err != nil || piano.Object != "plan" {
 		if err == nil {
-			err = fmt.Errorf("not a plan: object %q", piano.Oggetto)
+			err = fmt.Errorf("not a plan: object %q", piano.Object)
 		}
-		return nil, Errore("RX-PIANO-002", err.Error())
+		return nil, Error("RX-PIANO-002", err.Error())
 	}
 
 	// NEW
-	op := &Operazione{ID: nuovoID(), m: m, Piano: &piano}
-	op.Cartella = filepath.Join(m.Cartella, op.ID)
-	if err := os.Mkdir(op.Cartella, 0o700); err != nil {
+	op := &Operation{ID: newID(), m: m, Piano: &piano}
+	op.Folder = filepath.Join(m.Folder, op.ID)
+	if err := os.Mkdir(op.Folder, 0o700); err != nil {
 		return nil, err
 	}
-	if err := SincronizzaCartella(m.Cartella); err != nil {
+	if err := SyncFolder(m.Folder); err != nil {
 		return nil, err
 	}
-	if err := ScriviAtomico(filepath.Join(op.Cartella, "state"), []byte(string(NUOVA)+"\n"), 0o600); err != nil {
+	if err := WriteAtomic(filepath.Join(op.Folder, "state"), []byte(string(NEW)+"\n"), 0o600); err != nil {
 		return nil, err
 	}
-	op.Stato = NUOVA
-	if err := op.apriRegistro(); err != nil {
+	op.State = NEW
+	if err := op.openLog(); err != nil {
 		return nil, err
 	}
-	if err := op.Reg.Scrivi(Evento{Tipo: EvStato, A: NUOVA, Dettaglio: "plan " + piano.ID}); err != nil {
+	if err := op.Reg.Record(Event{Kind: EvState, A: NEW, Detail: "plan " + piano.ID}); err != nil {
 		return nil, err
 	}
-	m.Ev.Stato(op.ID, "", NUOVA, T("ev.operazione", op.ID))
-	if err := op.scriviOggetto("plan.json", &piano); err != nil {
+	m.Ev.State(op.ID, "", NEW, T("ev.operazione", op.ID))
+	if err := op.writeObject("plan.json", &piano); err != nil {
 		return nil, err
 	}
 
 	// 0 TRUST
-	if m.Fonti == nil {
-		return op, op.blocca(Errore("RX-TRUST-004", "no catalogue source"))
+	if m.Sources == nil {
+		return op, op.block(Error("RX-TRUST-004", "no catalogue source"))
 	}
-	cat, fid, err := m.Fonti.Fidati(m.adesso())
-	if e := op.scriviOggetto("trust.json", fid); e != nil {
+	cat, fid, err := m.Sources.Trusted(m.clock())
+	if e := op.writeObject("trust.json", fid); e != nil {
 		return op, e
 	}
-	for _, x := range fid.Messaggi {
-		m.Ev.Messaggio(op.ID, x)
+	for _, x := range fid.Messages {
+		m.Ev.Message(op.ID, x)
 	}
 	if err != nil {
-		return op, op.blocca(err)
+		return op, op.block(err)
 	}
-	m.Catalogo = cat
-	if err := op.vai(FIDATA, "", fmt.Sprintf("catalog %s (sequence %d): %s", cat.Versione, cat.Sequenza, fid.Fonte)); err != nil {
+	m.Catalog = cat
+	if err := op.go_to(TRUSTED, "", fmt.Sprintf("catalog %s (sequence %d): %s", cat.Version, cat.Sequence, fid.Source)); err != nil {
 		return op, err
 	}
 
 	// 1 PREFLIGHT
-	prof := m.Profilo()
-	if err := op.scriviOggetto("profile.json", prof); err != nil {
+	prof := m.Profile()
+	if err := op.writeObject("profile.json", prof); err != nil {
 		return op, err
 	}
-	if err := op.vai(ESAMINATA, "", ""); err != nil {
+	if err := op.go_to(EXAMINED, "", ""); err != nil {
 		return op, err
 	}
 
 	// 2 COMPATIBILITY
-	rap := Valuta(m.Catalogo, prof)
-	if err := op.scriviOggetto("compatibility.json", rap); err != nil {
+	rap := Evaluate(m.Catalog, prof)
+	if err := op.writeObject("compatibility.json", rap); err != nil {
 		return op, err
 	}
-	if err := op.vai(VALUTATA, "", ""); err != nil {
+	if err := op.go_to(EVALUATED, "", ""); err != nil {
 		return op, err
 	}
 
 	// 3 PLANNING: does the plan hold on this machine? (fingerprint, R31)
-	for _, ap := range piano.Azioni {
-		if _, err := NuovaAzione(ap); err != nil {
-			return op, op.blocca(err)
+	for _, ap := range piano.Actions {
+		if _, err := NewAction(ap); err != nil {
+			return op, op.block(err)
 		}
 	}
-	im, err := CalcolaImpronta(prof, m.Catalogo, piano.Azioni, piano.Dipende, &Contesto{Amb: m.Amb, Cartella: op.Cartella})
+	im, err := ComputeFingerprint(prof, m.Catalog, piano.Actions, piano.Depends, &Context{Amb: m.Amb, Folder: op.Folder})
 	if err != nil {
-		return op, op.blocca(err)
+		return op, op.block(err)
 	}
-	if im.Digest != piano.Impronta.Digest {
-		tolti, aggiunti := DifferenzeImpronta(piano.Impronta.Elementi, im.Elementi)
-		det := "in the plan: " + strings.Join(tolti, "; ") + " — now: " + strings.Join(aggiunti, "; ")
-		if err := op.scriviOggetto("fingerprint-now.json", im); err != nil {
+	if im.Digest != piano.Fingerprint.Digest {
+		removed, added := FingerprintDifferences(piano.Fingerprint.Elements, im.Elements)
+		det := "in the plan: " + strings.Join(removed, "; ") + " — now: " + strings.Join(added, "; ")
+		if err := op.writeObject("fingerprint-now.json", im); err != nil {
 			return op, err
 		}
-		return op, op.blocca(Errore("RX-PIANO-001", det))
+		return op, op.block(Error("RX-PIANO-001", det))
 	}
-	if err := op.vai(PIANIFICATA, "", "fingerprint "+im.Digest[:16]); err != nil {
+	if err := op.go_to(PLANNED, "", "fingerprint "+im.Digest[:16]); err != nil {
 		return op, err
 	}
 
 	// 4 CONSENT & SAFETY
 	// what is missing (DECISIONI §10.36): the plan says it BLOCKING, and we stop before touching
-	for _, x := range piano.NonFatto {
-		if x.Gravita == BLOCCANTE {
-			m.Ev.Messaggio(op.ID, x)
-			return op, op.vai(BLOCCATA, x.Codice, x.Dettaglio)
+	for _, x := range piano.NotDone {
+		if x.Severity == BLOCKING {
+			m.Ev.Message(op.ID, x)
+			return op, op.go_to(BLOCKED, x.Code, x.Detail)
 		}
 	}
-	appr := piano.Approvazione
+	appr := piano.Approval
 	switch {
 	case appr != nil && appr.DigestPiano != piano.Digest():
-		m.Ev.Messaggio(op.ID, Msg("RX-PIANO-005", ""))
-		return op, op.vai(RIFIUTATA, "RX-PIANO-005", "")
-	case appr == nil && !approvaAMano:
-		m.Ev.Messaggio(op.ID, Msg("RX-PIANO-003", ""))
-		return op, op.vai(RIFIUTATA, "RX-PIANO-003", "")
+		m.Ev.Message(op.ID, Msg("RX-PIANO-005", ""))
+		return op, op.go_to(RIFIUTATA, "RX-PIANO-005", "")
+	case appr == nil && !approveManually:
+		m.Ev.Message(op.ID, Msg("RX-PIANO-003", ""))
+		return op, op.go_to(RIFIUTATA, "RX-PIANO-003", "")
 	case appr == nil:
-		appr = &Approvazione{Da: chi, Ora: ora(), Modo: "by hand, --approve", DigestPiano: piano.Digest()}
+		appr = &Approval{Da: chi, TimeNow: now(), Manner: "by hand, --approve", DigestPiano: piano.Digest()}
 	}
-	if err := op.scriviOggetto("approval.json", appr); err != nil {
+	if err := op.writeObject("approval.json", appr); err != nil {
 		return op, err
 	}
-	if err := op.vai(APPROVATA, "", appr.Modo+", by "+appr.Da); err != nil {
+	if err := op.go_to(APPROVED, "", appr.Manner+", by "+appr.Da); err != nil {
 		return op, err
 	}
 
 	// the steps the engine knows but cannot execute yet: we stop BEFORE touching
-	if nf := PassiNonFatti(&piano); len(nf) > 0 {
-		return op, op.blocca(Errore("RX-AZIONE-004", strings.Join(nf, "; ")))
+	if nf := UnimplementedSteps(&piano); len(nf) > 0 {
+		return op, op.block(Error("RX-AZIONE-004", strings.Join(nf, "; ")))
 	}
 
 	// 5 ACQUISITION: the trial actions ask for no packages; the resolved set is empty but there.
-	if err := op.scriviOggetto("resolved-set.json", map[string]any{"format": Formato, "object": "resolved-set", "artifacts": []any{}}); err != nil {
+	if err := op.writeObject("resolved-set.json", map[string]any{"format": Schema, "object": "resolved-set", "artifacts": []any{}}); err != nil {
 		return op, err
 	}
-	if err := op.vai(ACQUISITA, "", ""); err != nil {
+	if err := op.go_to(ACQUIRED, "", ""); err != nil {
 		return op, err
 	}
 
 	// 6 INSTALLATION
-	if err := op.vai(IN_ESECUZIONE, "", ""); err != nil {
+	if err := op.go_to(RUNNING, "", ""); err != nil {
 		return op, err
 	}
-	return op, op.continua()
+	return op, op.go_on()
 }
 
-// Riprendi: an interrupted operation is completed (§6.0 point 6, table of §6.6.3).
-func (m *Motore) Riprendi() (*Operazione, error) {
-	if err := m.Blocca(); err != nil {
+// Resume: an interrupted operation is completed (§6.0 point 6, table of §6.6.3).
+func (m *Engine) Resume() (*Operation, error) {
+	if err := m.Block(); err != nil {
 		return nil, err
 	}
 	defer m.Sblocca()
-	op, err := m.Aperta()
+	op, err := m.Open()
 	if err != nil {
 		return nil, err
 	}
 	if op == nil {
-		return nil, Errore("RX-STATO-004", "")
+		return nil, Error("RX-STATO-004", "")
 	}
-	if err := op.apriRegistro(); err != nil {
+	if err := op.openLog(); err != nil {
 		return op, err
 	}
-	m.Ev.Stato(op.ID, op.Stato, op.Stato, T("ev.si_riprende"))
-	switch op.Stato {
-	case NUOVA, FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA:
-		m.Ev.Messaggio(op.ID, Msg("RX-RIPRESA-002", string(op.Stato)))
-		return op, op.vai(BLOCCATA, "RX-RIPRESA-002", "was "+string(op.Stato))
-	case IN_ESECUZIONE:
-		if err := op.vai(INTERROTTA, "", ""); err != nil {
+	m.Ev.State(op.ID, op.State, op.State, T("ev.si_riprende"))
+	switch op.State {
+	case NEW, TRUSTED, EXAMINED, EVALUATED, PLANNED, APPROVED, ACQUIRED:
+		m.Ev.Message(op.ID, Msg("RX-RIPRESA-002", string(op.State)))
+		return op, op.go_to(BLOCKED, "RX-RIPRESA-002", "was "+string(op.State))
+	case RUNNING:
+		if err := op.go_to(INTERRUPTED, "", ""); err != nil {
 			return op, err
 		}
 		fallthrough
-	case INTERROTTA:
-		if err := op.vai(IN_ESECUZIONE, "", "resume"); err != nil {
+	case INTERRUPTED:
+		if err := op.go_to(RUNNING, "", "resume"); err != nil {
 			return op, err
 		}
 	}
-	return op, op.continua()
+	return op, op.go_on()
 }
 
-// Annulla: the open operation is undone by walking the log backwards.
-func (m *Motore) Annulla() (*Operazione, error) {
-	if err := m.Blocca(); err != nil {
+// Rollback: the open operation is undone by walking the log backwards.
+func (m *Engine) Rollback() (*Operation, error) {
+	if err := m.Block(); err != nil {
 		return nil, err
 	}
 	defer m.Sblocca()
-	op, err := m.Aperta()
+	op, err := m.Open()
 	if err != nil {
 		return nil, err
 	}
 	if op == nil {
-		return nil, Errore("RX-STATO-004", "")
+		return nil, Error("RX-STATO-004", "")
 	}
-	if err := op.apriRegistro(); err != nil {
+	if err := op.openLog(); err != nil {
 		return op, err
 	}
-	switch op.Stato {
-	case NUOVA, FIDATA, ESAMINATA, VALUTATA, PIANIFICATA, APPROVATA, ACQUISITA:
-		m.Ev.Messaggio(op.ID, Msg("RX-RIPRESA-002", string(op.Stato)))
-		return op, op.vai(BLOCCATA, "RX-RIPRESA-002", string(op.Stato))
-	case IN_ESECUZIONE:
-		if err := op.vai(INTERROTTA, "", ""); err != nil {
+	switch op.State {
+	case NEW, TRUSTED, EXAMINED, EVALUATED, PLANNED, APPROVED, ACQUIRED:
+		m.Ev.Message(op.ID, Msg("RX-RIPRESA-002", string(op.State)))
+		return op, op.go_to(BLOCKED, "RX-RIPRESA-002", string(op.State))
+	case RUNNING:
+		if err := op.go_to(INTERRUPTED, "", ""); err != nil {
 			return op, err
 		}
 		fallthrough
-	case INTERROTTA, APPLICATA, IN_VERIFICA, VERIFICATA:
-		if err := op.vai(IN_ANNULLAMENTO, "", T("op.chiesto")); err != nil {
+	case INTERRUPTED, APPLIED, VERIFYING, VERIFIED:
+		if err := op.go_to(ROLLING_BACK, "", T("op.requested")); err != nil {
 			return op, err
 		}
 	}
-	return op, op.continua()
+	return op, op.go_on()
 }
 
-// continua brings the operation from its current state to a final state (or INTERROTTA).
-func (op *Operazione) continua() error {
+// go_on brings the operation from its current state to a final state (or INTERRUPTED).
+func (op *Operation) go_on() error {
 	for {
-		switch op.Stato {
-		case IN_ESECUZIONE:
-			err := op.eseguiTutte()
+		switch op.State {
+		case RUNNING:
+			err := op.runAll()
 			switch {
-			case errors.Is(err, errConcorrente):
-				return op.vai(INTERROTTA, "RX-RIPRESA-001", op.ultimoDettaglio())
-			case errors.Is(err, errFermata):
-				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-006", ""))
-				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-006", ""); err != nil {
+			case errors.Is(err, errConcurrent):
+				return op.go_to(INTERRUPTED, "RX-RIPRESA-001", op.lastDetail())
+			case errors.Is(err, errStopped):
+				op.m.Ev.Message(op.ID, Msg("RX-AZIONE-006", ""))
+				if err := op.go_to(ROLLING_BACK, "RX-AZIONE-006", ""); err != nil {
 					return err
 				}
-			case errors.Is(err, errFallita):
-				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-001", op.ultimoDettaglio()))
-				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-001", op.ultimoDettaglio()); err != nil {
+			case errors.Is(err, errFailed):
+				op.m.Ev.Message(op.ID, Msg("RX-AZIONE-001", op.lastDetail()))
+				if err := op.go_to(ROLLING_BACK, "RX-AZIONE-001", op.lastDetail()); err != nil {
 					return err
 				}
 			case err != nil:
 				return err
 			default:
-				if err := op.vai(APPLICATA, "", ""); err != nil {
+				if err := op.go_to(APPLIED, "", ""); err != nil {
 					return err
 				}
 			}
-		case APPLICATA:
-			if err := op.vai(IN_VERIFICA, "", ""); err != nil {
+		case APPLIED:
+			if err := op.go_to(VERIFYING, "", ""); err != nil {
 				return err
 			}
-		case IN_VERIFICA:
-			ok, err := op.verifica()
+		case VERIFYING:
+			ok, err := op.verify()
 			if err != nil {
 				return err
 			}
 			if ok {
-				if err := op.vai(VERIFICATA, "", ""); err != nil {
+				if err := op.go_to(VERIFIED, "", ""); err != nil {
 					return err
 				}
 			} else {
-				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-003", ""))
-				if err := op.vai(IN_ANNULLAMENTO, "RX-AZIONE-003", ""); err != nil {
+				op.m.Ev.Message(op.ID, Msg("RX-AZIONE-003", ""))
+				if err := op.go_to(ROLLING_BACK, "RX-AZIONE-003", ""); err != nil {
 					return err
 				}
 			}
-		case VERIFICATA:
-			cond := op.condizioni()
-			fin := CONFERMATA
+		case VERIFIED:
+			cond := op.conditions()
+			fin := CONFIRMED
 			if len(cond) > 0 {
-				fin = CONFERMATA_A_CONDIZIONI
+				fin = CONFIRMED_WITH_CONDITIONS
 			}
 			// the certificate BEFORE the final state: if the process dies in between, resume
-			// finds VERIFICATA and rewrites it; the other way round there would be a final state without a certificate
-			if err := op.certificato(fin, nil); err != nil {
+			// finds VERIFIED and rewrites it; the other way round there would be a final state without a certificate
+			if err := op.certificate(fin, nil); err != nil {
 				return err
 			}
-			if err := op.scriviInstallazione(fin); err != nil {
+			if err := op.writeInstallation(fin); err != nil {
 				return err
 			}
-			if op.Piano.Mestiere == "uninstallation" {
-				if err := os.Remove(op.m.PercorsoInstallazione()); err != nil && !os.IsNotExist(err) {
+			if op.Piano.Duty == "uninstallation" {
+				if err := os.Remove(op.m.InstallPath()); err != nil && !os.IsNotExist(err) {
 					return err
 				}
 			}
-			if err := op.vai(fin, "", ""); err != nil {
+			if err := op.go_to(fin, "", ""); err != nil {
 				return err
 			}
-			if op.Piano.Mestiere == "uninstallation" {
-				return op.m.PulisciStoria(op.Piano.Purge)
+			if op.Piano.Duty == "uninstallation" {
+				return op.m.CleanHistory(op.Piano.Purge)
 			}
 			return nil
-		case IN_ANNULLAMENTO:
-			resti, err := op.annullaTutte()
+		case ROLLING_BACK:
+			remainders, err := op.rollbackAll()
 			if err != nil {
 				return err
 			}
-			fin := ANNULLATA
-			if len(resti) > 0 {
-				fin = ANNULLATA_IN_PARTE
-				op.m.Ev.Messaggio(op.ID, Msg("RX-AZIONE-002", strings.Join(resti, "; ")))
+			fin := ROLLED_BACK
+			if len(remainders) > 0 {
+				fin = PARTIALLY_ROLLED_BACK
+				op.m.Ev.Message(op.ID, Msg("RX-AZIONE-002", strings.Join(remainders, "; ")))
 			}
-			if err := op.certificato(fin, resti); err != nil {
+			if err := op.certificate(fin, remainders); err != nil {
 				return err
 			}
-			return op.vai(fin, "", "")
+			return op.go_to(fin, "", "")
 		default:
 			return nil
 		}
 	}
 }
 
-func (op *Operazione) ultimoDettaglio() string {
-	for i := len(op.Reg.Eventi) - 1; i >= 0; i-- {
-		e := op.Reg.Eventi[i]
-		if e.Tipo == EvFallita || (e.Tipo == EvNota && e.Codice == "RX-RIPRESA-001") {
-			return strings.TrimSpace(e.Azione + ": " + e.Dettaglio)
+func (op *Operation) lastDetail() string {
+	for i := len(op.Reg.Events) - 1; i >= 0; i-- {
+		e := op.Reg.Events[i]
+		if e.Kind == EvFailed || (e.Kind == EvNote && e.Code == "RX-RIPRESA-001") {
+			return strings.TrimSpace(e.Action + ": " + e.Detail)
 		}
 	}
 	return ""
 }
 
-// contesto: rolling back an installation is always purge — the
+// context: rolling back an installation is always purge — the
 // machine as it was; the uninstallation carries its «purge» in the parameters of the undo steps.
-func (op *Operazione) contesto(ap AzionePiano) *Contesto {
-	return &Contesto{Amb: op.m.Amb, Cartella: op.Cartella, P: ap, Purge: true}
+func (op *Operation) context(ap PlanAction) *Context {
+	return &Context{Amb: op.m.Amb, Folder: op.Folder, P: ap, Purge: true}
 }
 
-func (op *Operazione) fallita(ap AzionePiano, err error) error {
-	codice := CodiceDi(err)
-	if codice == "" {
-		codice = "RX-AZIONE-001"
+func (op *Operation) failed(ap PlanAction, err error) error {
+	code_v := CodeOf(err)
+	if code_v == "" {
+		code_v = "RX-AZIONE-001"
 	}
-	if e := op.Reg.Scrivi(Evento{Tipo: EvFallita, Azione: ap.ID, Codice: codice, Dettaglio: err.Error()}); e != nil {
+	if e := op.Reg.Record(Event{Kind: EvFailed, Action: ap.ID, Code: code_v, Detail: err.Error()}); e != nil {
 		return e
 	}
-	op.m.Ev.Azione(op.ID, ap.ID, "FAILED", err.Error())
-	return errFallita
+	op.m.Ev.Action(op.ID, ap.ID, "FAILED", err.Error())
+	return errFailed
 }
 
-func (op *Operazione) concorrente(ap AzionePiano, det string) error {
-	if e := op.Reg.Scrivi(Evento{Tipo: EvNota, Azione: ap.ID, Codice: "RX-RIPRESA-001", Dettaglio: det}); e != nil {
+func (op *Operation) concurrent(ap PlanAction, det string) error {
+	if e := op.Reg.Record(Event{Kind: EvNote, Action: ap.ID, Code: "RX-RIPRESA-001", Detail: det}); e != nil {
 		return e
 	}
-	op.m.Ev.Messaggio(op.ID, Msg("RX-RIPRESA-001", ap.ID+": "+det))
-	return errConcorrente
+	op.m.Ev.Message(op.ID, Msg("RX-RIPRESA-001", ap.ID+": "+det))
+	return errConcurrent
 }
 
-// fatta: checks and records FATTA.
-func (op *Operazione) fatta(az Azione, ap AzionePiano, prima json.RawMessage, nota string) error {
-	esito, det, err := az.Controlla(op.contesto(ap), prima)
+// mark_done: checks and records DONE.
+func (op *Operation) mark_done(az Action, ap PlanAction, before json.RawMessage, remark string) error {
+	outcome, det, err := az.Verify(op.context(ap), before)
 	if err != nil {
-		return op.fallita(ap, err)
+		return op.failed(ap, err)
 	}
-	if esito != COMPLETO {
-		return op.fallita(ap, Errore("RX-AZIONE-003", string(esito)+": "+det))
+	if outcome != COMPLETE {
+		return op.failed(ap, Error("RX-AZIONE-003", string(outcome)+": "+det))
 	}
-	if err := op.Reg.Scrivi(Evento{Tipo: EvFatta, Azione: ap.ID, Dopo: jsonDi(map[string]string{"result": string(esito), "detail": det}), Dettaglio: nota}); err != nil {
+	if err := op.Reg.Record(Event{Kind: EvDone, Action: ap.ID, After: jsonDi(map[string]string{"result": string(outcome), "detail": det}), Detail: remark}); err != nil {
 		return err
 	}
-	op.m.Ev.Azione(op.ID, ap.ID, "DONE", strings.TrimSpace(nota+" "+det))
-	punto("dopo-fatta", ap.ID)
+	op.m.Ev.Action(op.ID, ap.ID, "DONE", strings.TrimSpace(remark+" "+det))
+	spot("dopo-fatta", ap.ID)
 	return nil
 }
 
-// eseguiTutte: phase 6 with the write-ahead log, and the resume of the table of
+// runAll: phase 6 with the write-ahead log, and the resume of the table of
 // §6.6.3 (the same road: a new operation is a resume with an empty log).
-func (op *Operazione) eseguiTutte() error {
-	for _, ap := range op.Piano.Azioni {
-		az, err := NuovaAzione(ap)
+func (op *Operation) runAll() error {
+	for _, ap := range op.Piano.Actions {
+		az, err := NewAction(ap)
 		if err != nil {
-			return op.fallita(ap, err)
+			return op.failed(ap, err)
 		}
-		c := op.contesto(ap)
-		ult := op.Reg.Ultimo(ap.ID, EvIntenzione, EvFatta, EvFallita)
-		if ult == nil && op.m.Fermata != nil && op.m.Fermata() {
-			return errFermata
+		c := op.context(ap)
+		prev := op.Reg.Last(ap.ID, EvIntent, EvDone, EvFailed)
+		if prev == nil && op.m.Stopped != nil && op.m.Stopped() {
+			return errStopped
 		}
 		switch {
-		case ult == nil: // nothing in the log: not begun ⇒ do it
-			punto("prima-intenzione", ap.ID)
-			prima, orig, err := az.Fotografa(c)
+		case prev == nil: // nothing in the log: not begun ⇒ do it
+			spot("prima-intenzione", ap.ID)
+			before, orig, err := az.Snapshot(c)
 			if err != nil {
-				return op.fallita(ap, err)
+				return op.failed(ap, err)
 			}
-			if err := op.Reg.Scrivi(Evento{Tipo: EvIntenzione, Azione: ap.ID, Prima: prima, Origine: orig}); err != nil {
+			if err := op.Reg.Record(Event{Kind: EvIntent, Action: ap.ID, Before: before, Origin: orig}); err != nil {
 				return err
 			}
-			op.m.Ev.Azione(op.ID, ap.ID, "INTENT", string(orig))
-			punto("dopo-intenzione", ap.ID)
-			if err := az.Fai(c, prima); err != nil {
-				return op.fallita(ap, err)
+			op.m.Ev.Action(op.ID, ap.ID, "INTENT", string(orig))
+			spot("dopo-intenzione", ap.ID)
+			if err := az.Do(c, before); err != nil {
+				return op.failed(ap, err)
 			}
-			punto("dopo-effetto", ap.ID)
-			if err := op.fatta(az, ap, prima, ""); err != nil {
+			spot("dopo-effetto", ap.ID)
+			if err := op.mark_done(az, ap, before, ""); err != nil {
 				return err
 			}
 
-		case ult.Tipo == EvIntenzione: // begun: maybe finished, maybe not, maybe half-done
-			prima := op.Reg.Intenzione(ap.ID).Prima
-			esito, det, err := az.Controlla(c, prima)
+		case prev.Kind == EvIntent: // begun: maybe finished, maybe not, maybe half-done
+			before := op.Reg.Intent(ap.ID).Before
+			outcome, det, err := az.Verify(c, before)
 			if err != nil {
-				return op.fallita(ap, err)
+				return op.failed(ap, err)
 			}
-			op.m.Ev.Azione(op.ID, ap.ID, "RESUMED", string(esito)+": "+det)
-			switch esito {
-			case COMPLETO:
-				if err := op.fatta(az, ap, prima, "resumed: the effect was already there"); err != nil {
+			op.m.Ev.Action(op.ID, ap.ID, "RESUMED", string(outcome)+": "+det)
+			switch outcome {
+			case COMPLETE:
+				if err := op.mark_done(az, ap, before, "resumed: the effect was already there"); err != nil {
 					return err
 				}
 				continue
 			case A_META:
 				// the package manager's transaction: first ITS remedy (§6.6.3), then redo;
 				// the other actions: undo what is there and redo
-				if r, ok := az.(Riparabile); ok {
-					if err := r.Ripara(c, prima); err != nil {
-						return op.fallita(ap, err)
+				if r, ok := az.(Repairable); ok {
+					if err := r.Repair(c, before); err != nil {
+						return op.failed(ap, err)
 					}
-				} else if err := az.Annulla(c, prima); err != nil {
-					return op.fallita(ap, err)
+				} else if err := az.Rollback(c, before); err != nil {
+					return op.failed(ap, err)
 				}
-			case ESTRANEO:
-				return op.concorrente(ap, det)
+			case FOREIGN:
+				return op.concurrent(ap, det)
 			}
-			if err := az.Fai(c, prima); err != nil {
-				return op.fallita(ap, err)
+			if err := az.Do(c, before); err != nil {
+				return op.failed(ap, err)
 			}
-			if err := op.fatta(az, ap, prima, "resumed: done again"); err != nil {
+			if err := op.mark_done(az, ap, before, "resumed: done again"); err != nil {
 				return err
 			}
 
-		case ult.Tipo == EvFatta: // finished and recorded: move on, but the effect must still be there
-			prima := op.Reg.Intenzione(ap.ID).Prima
-			esito, det, err := az.Controlla(c, prima)
+		case prev.Kind == EvDone: // finished and recorded: move on, but the effect must still be there
+			before := op.Reg.Intent(ap.ID).Before
+			outcome, det, err := az.Verify(c, before)
 			if err != nil {
-				return op.fallita(ap, err)
+				return op.failed(ap, err)
 			}
-			if esito != COMPLETO {
-				return op.concorrente(ap, "was FATTA, now "+string(esito)+": "+det)
+			if outcome != COMPLETE {
+				return op.concurrent(ap, "was DONE, now "+string(outcome)+": "+det)
 			}
 
-		case ult.Tipo == EvFallita:
-			return errFallita
+		case prev.Kind == EvFailed:
+			return errFailed
 		}
 	}
 	return nil
 }
 
-// annullaTutte walks the actions backwards. Returns what could not be undone.
-func (op *Operazione) annullaTutte() ([]string, error) {
-	var resti []string
-	az := op.Piano.Azioni
+// rollbackAll walks the actions backwards. Returns what could not be undone.
+func (op *Operation) rollbackAll() ([]string, error) {
+	var remainders []string
+	az := op.Piano.Actions
 	for i := len(az) - 1; i >= 0; i-- {
 		ap := az[i]
-		intz := op.Reg.Intenzione(ap.ID)
-		if intz == nil {
+		intent := op.Reg.Intent(ap.ID)
+		if intent == nil {
 			continue // never begun: nothing to undo
 		}
-		if u := op.Reg.Ultimo(ap.ID, EvIntenzioneAnnulla, EvAnnullata, EvAnnullamentoFallito); u != nil && u.Tipo == EvAnnullata {
+		if u := op.Reg.Last(ap.ID, EvIntentRollback, EvCancelled, EvRollbackFailed); u != nil && u.Kind == EvCancelled {
 			continue
 		}
-		a, err := NuovaAzione(ap)
+		a, err := NewAction(ap)
 		if err != nil {
 			return nil, err
 		}
-		c := op.contesto(ap)
-		scrivi := func(t TipoEvento, codice, det string) error {
-			op.m.Ev.Azione(op.ID, ap.ID, string(t), det)
-			return op.Reg.Scrivi(Evento{Tipo: t, Azione: ap.ID, Codice: codice, Dettaglio: det})
+		c := op.context(ap)
+		put_out := func(t EventType, code_v, det string) error {
+			op.m.Ev.Action(op.ID, ap.ID, string(t), det)
+			return op.Reg.Record(Event{Kind: t, Action: ap.ID, Code: code_v, Detail: det})
 		}
-		if intz.Origine == PREESISTENTE {
-			if err := scrivi(EvAnnullata, "", "PREEXISTING: left untouched"); err != nil {
+		if intent.Origin == PREEXISTING {
+			if err := put_out(EvCancelled, "", "PREEXISTING: left untouched"); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		if ok, det, err := a.Annullata(c, intz.Prima); err == nil && ok {
-			if err := scrivi(EvAnnullata, "", "nothing to undo: "+det); err != nil {
+		if ok, det, err := a.Cancelled(c, intent.Before); err == nil && ok {
+			if err := put_out(EvCancelled, "", "nothing to undo: "+det); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		if esito, det, err := a.Controlla(c, intz.Prima); err == nil && esito == ESTRANEO {
-			resti = append(resti, ap.ID+": changed by someone else, left untouched ("+det+")")
-			if err := scrivi(EvAnnullamentoFallito, "RX-RIPRESA-001", "CONCURRENT: "+det); err != nil {
+		if outcome, det, err := a.Verify(c, intent.Before); err == nil && outcome == FOREIGN {
+			remainders = append(remainders, ap.ID+": changed by someone else, left untouched ("+det+")")
+			if err := put_out(EvRollbackFailed, "RX-RIPRESA-001", "CONCURRENT: "+det); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		if err := scrivi(EvIntenzioneAnnulla, "", ""); err != nil {
+		if err := put_out(EvIntentRollback, "", ""); err != nil {
 			return nil, err
 		}
-		punto("annulla-dopo-intenzione", ap.ID)
-		errA := a.Annulla(c, intz.Prima)
-		punto("annulla-dopo-effetto", ap.ID)
-		ok, det, errB := a.Annullata(c, intz.Prima)
+		spot("annulla-dopo-intenzione", ap.ID)
+		errA := a.Rollback(c, intent.Before)
+		spot("annulla-dopo-effetto", ap.ID)
+		ok, det, errB := a.Cancelled(c, intent.Before)
 		if errA == nil && errB == nil && ok {
-			if err := scrivi(EvAnnullata, "", det); err != nil {
+			if err := put_out(EvCancelled, "", det); err != nil {
 				return nil, err
 			}
 			continue
@@ -742,280 +742,280 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 		} else if errB != nil {
 			motivo = errB.Error()
 		}
-		resti = append(resti, ap.ID+": "+motivo)
-		if err := scrivi(EvAnnullamentoFallito, "RX-AZIONE-002", motivo); err != nil {
+		remainders = append(remainders, ap.ID+": "+motivo)
+		if err := put_out(EvRollbackFailed, "RX-AZIONE-002", motivo); err != nil {
 			return nil, err
 		}
 	}
-	return resti, nil
+	return remainders, nil
 }
 
-// Controllo: a line of the verification report (§6.6.7).
-type Controllo struct {
+// Check: a line of the verification report (§6.6.7).
+type Check struct {
 	ID        string `json:"id"`
-	Cosa      string `json:"what"`
-	Esito     string `json:"result"` // PASS · FAIL · UNKNOWN · N.A.
-	Richiesto bool   `json:"required"`
-	Dettaglio string `json:"detail,omitempty"`
+	What      string `json:"what"`
+	Outcome   string `json:"result"` // PASS · FAIL · UNKNOWN · N.A.
+	Requested bool   `json:"required"`
+	Detail    string `json:"detail,omitempty"`
 }
 
-// RapportoVerifica: the sixth object.
-type RapportoVerifica struct {
-	Formato    string       `json:"format"`
-	Oggetto    string       `json:"object"`
-	Creato     string       `json:"created"`
-	Controlli  []Controllo  `json:"checks"`
-	Condizioni []Condizione `json:"conditions,omitempty"` // those born from verification (a declared UNKNOWN)
+// VerifyReport: the sixth object.
+type VerifyReport struct {
+	Schema     string      `json:"format"`
+	Object     string      `json:"object"`
+	Created    string      `json:"created"`
+	Checks     []Check     `json:"checks"`
+	Conditions []Condition `json:"conditions,omitempty"` // those born from verification (a declared UNKNOWN)
 }
 
-// verifica (phase 7, here reduced to the trial actions): every action rechecked. ⛔ UNKNOWN is not
+// verify (phase 7, here reduced to the trial actions): every action rechecked. ⛔ UNKNOWN is not
 // PASS: a required check that cannot answer leads to cancellation (the trial actions
 // have no declared fallback).
-func (op *Operazione) verifica() (bool, error) {
-	rv := RapportoVerifica{Formato: Formato, Oggetto: "check", Creato: ora()}
-	tutto := true
-	for _, ap := range op.Piano.Azioni {
-		a, err := NuovaAzione(ap)
+func (op *Operation) verify() (bool, error) {
+	rv := VerifyReport{Schema: Schema, Object: "check", Created: now()}
+	overall := true
+	for _, ap := range op.Piano.Actions {
+		a, err := NewAction(ap)
 		if err != nil {
 			return false, err
 		}
-		k := Controllo{ID: ap.ID, Cosa: ap.ComeSiVerifica, Richiesto: true}
-		intz := op.Reg.Intenzione(ap.ID)
-		if intz == nil {
-			k.Esito, k.Dettaglio = "UNKNOWN", "no intention in the log"
-		} else if esito, det, err := a.Controlla(op.contesto(ap), intz.Prima); err != nil {
-			k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-		} else if esito == COMPLETO {
-			k.Esito, k.Dettaglio = "PASS", det
+		k := Check{ID: ap.ID, What: ap.HowToVerify, Requested: true}
+		intent := op.Reg.Intent(ap.ID)
+		if intent == nil {
+			k.Outcome, k.Detail = "UNKNOWN", "no intention in the log"
+		} else if outcome, det, err := a.Verify(op.context(ap), intent.Before); err != nil {
+			k.Outcome, k.Detail = "UNKNOWN", err.Error()
+		} else if outcome == COMPLETE {
+			k.Outcome, k.Detail = "PASS", det
 		} else {
-			k.Esito, k.Dettaglio = "FAIL", string(esito)+": "+det
+			k.Outcome, k.Detail = "FAIL", string(outcome)+": "+det
 		}
-		if k.Esito != "PASS" {
-			tutto = false
+		if k.Outcome != "PASS" {
+			overall = false
 		}
-		rv.Controlli = append(rv.Controlli, k)
+		rv.Checks = append(rv.Checks, k)
 	}
 	// 7a: H.264 encoding is tested by REMOTIX itself (§6.5-bis). Required: FAIL (no card that
-	// encodes: phase 19, no fallback) ⇒ cancellation; UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, never PASS
+	// encodes: phase 19, no fallback) ⇒ cancellation; UNKNOWN ⇒ CONFIRMED_WITH_CONDITIONS, never PASS
 	// (§6.6.7).
 	// and the PAM stack that resolves, and the port the firewall lets through (certifica.go, R29)
-	if op.Piano.Mestiere == "installation" {
-		porta := op.m.Porta
-		for _, ap := range op.Piano.Azioni {
-			if ap.Tipo == "start-service" {
-				if n, err := strconv.Atoi(ap.Parametri["port"]); err == nil && n > 0 {
-					porta = n
+	if op.Piano.Duty == "installation" {
+		port := op.m.Port
+		for _, ap := range op.Piano.Actions {
+			if ap.Kind == "start-service" {
+				if n, err := strconv.Atoi(ap.Parameters["port"]); err == nil && n > 0 {
+					port = n
 				}
 			}
 		}
-		if porta == 0 {
-			porta = 7447
+		if port == 0 {
+			port = 7447
 		}
-		k, cond, fallito := ControlliPiattaforma(op.m.Amb, porta)
-		rv.Controlli = append(rv.Controlli, k...)
-		rv.Condizioni = append(rv.Condizioni, cond...)
-		if fallito {
-			tutto = false
+		k, cond, has_failed := PlatformChecks(op.m.Amb, port)
+		rv.Checks = append(rv.Checks, k...)
+		rv.Conditions = append(rv.Conditions, cond...)
+		if has_failed {
+			overall = false
 		}
 	}
-	return tutto, op.scriviOggetto("check.json", rv)
+	return overall, op.writeObject("check.json", rv)
 }
 
-// provaCodifica: `remotix --prova-codifica` (§6.5-bis; phase 19, no fallback to the processor): one
-// JSON line {"esito":"hardware"|"nessuno","codificatore":…,"strada":"vulkan"|"vaapi"|"","nodo":…,
-// "motivo":…,"codec":…,"offerti":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; exit 0 if the card encoded the frame, 3 if NO
+// encodingTest: `remotix --encoding-test` (§6.5-bis; phase 19, no fallback to the processor): one
+// JSON line {"outcome":"hardware"|"nobody","encoder":…,"route":"vulkan"|"vaapi"|"","node":…,
+// "motivo":…,"codec":…,"offered":…,"hevc":…,"h264":…,"hevc_strada":…,"h264_strada":…}; exit 0 if the card encoded the frame, 3 if NO
 // card can encode (the encoder does not open: no node, no driver, driver without
 // encoding — the declared refusal), 1 if the card opens but the frame does not come out, 2 usage
 // error. The engine launches it as root (closed list). hardware ⇒ PASS; 3 or 1 ⇒ FAIL; a binary that
 // does not know it or an unreadable answer ⇒ UNKNOWN (§6.6.7).
-func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
-	k := Controllo{ID: "h264-encoding", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
-	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
+func encodingTest(a *Environment) (Check, *Condition) {
+	k := Check{ID: "h264-encoding", What: "remotix --encoding-test (7a)", Requested: true}
+	out, c, err := a.Run(2*time.Minute, "remotix", "--encoding-test")
 	var r struct {
-		Esito, Codificatore, Strada, Nodo, Motivo, Codec string
+		Outcome, Encoder, Route, Node, Motivo, Codec string
 	}
-	letto := false
-	for _, riga := range strings.Split(out, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(riga), "{") && json.Unmarshal([]byte(riga), &r) == nil && r.Esito != "" {
-			letto = true
+	read := false
+	for _, row := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(row), "{") && json.Unmarshal([]byte(row), &r) == nil && r.Outcome != "" {
+			read = true
 		}
 	}
-	// ⭐ phase 19: `strada` says WHICH route of the card did the encoding (vulkan/vaapi); a binary
+	// ⭐ phase 19: `route` says WHICH route of the card did the encoding (vulkan/vaapi); a binary
 	// that does not write it (phase 18) passes all the same: the outcome is what counts
-	det := strings.Join(strings.Fields(r.Esito+" "+r.Codec+" "+r.Codificatore+" "+r.Strada+" "+r.Nodo+" "+r.Motivo), " ")
+	det := strings.Join(strings.Fields(r.Outcome+" "+r.Codec+" "+r.Encoder+" "+r.Route+" "+r.Node+" "+r.Motivo), " ")
 	switch {
 	case err != nil:
-		k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
-	case !letto || c == 2:
-		k.Esito, k.Dettaglio = "UNKNOWN", T("ver.codifica_assente")+": "+ultimeRighe(out, 2)
-	case c == 0 && r.Esito == "hardware":
-		k.Esito, k.Dettaglio = "PASS", det
+		k.Outcome, k.Detail = "UNKNOWN", err.Error()
+	case !read || c == 2:
+		k.Outcome, k.Detail = "UNKNOWN", T("ver.codifica_assente")+": "+lastLines(out, 2)
+	case c == 0 && r.Outcome == "hardware":
+		k.Outcome, k.Detail = "PASS", det
 	case c == 3:
-		k.Esito, k.Dettaglio = "FAIL", T("ver.nessuna_scheda", nonVuoto(r.Motivo, det))
+		k.Outcome, k.Detail = "FAIL", T("ver.nessuna_scheda", notEmpty(r.Motivo, det))
 	default:
-		k.Esito, k.Dettaglio = "FAIL", det
+		k.Outcome, k.Detail = "FAIL", det
 	}
-	if k.Esito == "UNKNOWN" {
-		return k, &Condizione{Codice: "C-LIMITE", Testo: T("cond.codifica_ignota", k.Dettaglio)}
+	if k.Outcome == "UNKNOWN" {
+		return k, &Condition{Code: "C-LIMITE", Text: T("cond.codifica_ignota", k.Detail)}
 	}
 	return k, nil
 }
 
-func (op *Operazione) condizioni() []Condizione {
-	if op.Piano.Mestiere == "uninstallation" {
+func (op *Operation) conditions() []Condition {
+	if op.Piano.Duty == "uninstallation" {
 		return nil
 	}
-	var c []Condizione
-	var rv RapportoVerifica
-	if LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv) == nil {
-		c = append(c, rv.Condizioni...)
+	var c []Condition
+	var rv VerifyReport
+	if ReadJSON(filepath.Join(op.Folder, "check.json"), &rv) == nil {
+		c = append(c, rv.Conditions...)
 	}
-	var r Rapporto
-	if err := LeggiJSON(filepath.Join(op.Cartella, "compatibility.json"), &r); err != nil {
+	var r Report
+	if err := ReadJSON(filepath.Join(op.Folder, "compatibility.json"), &r); err != nil {
 		return c
 	}
 	for _, e := range r.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
-			c = append(c, e.Condizioni...)
+		if e.Level != NOT_SUPPORTED && e.Installed != "" && e.Installed != "absent" && e.Installed != "unknown" {
+			c = append(c, e.Conditions...)
 		}
 	}
 	return c
 }
 
-// Certificato: the seventh object (§6.6.11).
-type Certificato struct {
-	Formato       string       `json:"format"`
-	Oggetto       string       `json:"object"`
-	Creato        string       `json:"created"`
-	Operazione    string       `json:"operation"`
-	Stato         Stato        `json:"state"`
-	Mestiere      string       `json:"kind"`
-	Prodotto      string       `json:"product"`
-	Motore        RifMotore    `json:"engine"`
-	Catalogo      RifCatalogo  `json:"catalog"`
-	Fiducia       string       `json:"trust"`
-	DigestPiano   string       `json:"digest_plan"`
-	DigestInsieme string       `json:"digest_resolved_set"`
-	Impronta      string       `json:"fingerprint"`
-	Controlli     []Controllo  `json:"checks"`
-	Condizioni    []Condizione `json:"conditions"`
-	Resti         []string     `json:"leftovers,omitempty"` // ANNULLATA_IN_PARTE: what remains, and why
-	Indirette     []string     `json:"indirect"`            // INDIRECT changes declared (none, without packages)
+// Certificate: the seventh object (§6.6.11).
+type Certificate struct {
+	Schema         string      `json:"format"`
+	Object         string      `json:"object"`
+	Created        string      `json:"created"`
+	Operation      string      `json:"operation"`
+	State          State       `json:"state"`
+	Duty           string      `json:"kind"`
+	Product        string      `json:"product"`
+	Engine         EngineRef   `json:"engine"`
+	Catalog        CatalogRef  `json:"catalog"`
+	Attestation    string      `json:"trust"`
+	DigestPiano    string      `json:"digest_plan"`
+	DigestTogether string      `json:"digest_resolved_set"`
+	Fingerprint    string      `json:"fingerprint"`
+	Checks         []Check     `json:"checks"`
+	Conditions     []Condition `json:"conditions"`
+	Remainders     []string    `json:"leftovers,omitempty"` // PARTIALLY_ROLLED_BACK: what remains, and why
+	Indirect       []string    `json:"indirect"`            // INDIRECT changes declared (none, without packages)
 }
 
-func (op *Operazione) certificato(fin Stato, resti []string) error {
-	var fid Fiducia
-	LeggiJSON(filepath.Join(op.Cartella, "trust.json"), &fid)
-	var rv RapportoVerifica
-	LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv)
-	ins, _ := Sha256File(filepath.Join(op.Cartella, "resolved-set.json"))
-	fiducia := T("cert.fiducia_no")
-	if fid.Catalogo.Digest != "" && len(fid.Messaggi) == 0 {
-		fiducia = fmt.Sprintf("%s (sequence %d)", fid.Fonte, fid.Sequenza)
+func (op *Operation) certificate(fin State, remainders []string) error {
+	var fid Attestation
+	ReadJSON(filepath.Join(op.Folder, "trust.json"), &fid)
+	var rv VerifyReport
+	ReadJSON(filepath.Join(op.Folder, "check.json"), &rv)
+	ins, _ := Sha256File(filepath.Join(op.Folder, "resolved-set.json"))
+	attestation := T("cert.fiducia_no")
+	if fid.Catalog.Digest != "" && len(fid.Messages) == 0 {
+		attestation = fmt.Sprintf("%s (sequence %d)", fid.Source, fid.Sequence)
 	}
-	c := Certificato{Formato: Formato, Oggetto: "certificate", Creato: ora(), Operazione: op.ID, Stato: fin,
-		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
-		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: fid.Catalogo, Fiducia: fiducia,
-		DigestPiano: op.Piano.Digest(), DigestInsieme: ins, Impronta: op.Piano.Impronta.Digest,
-		Controlli: rv.Controlli, Condizioni: op.condizioni(), Resti: resti, Indirette: op.indirette()}
-	if c.Condizioni == nil {
-		c.Condizioni = []Condizione{}
+	c := Certificate{Schema: Schema, Object: "certificate", Created: now(), Operation: op.ID, State: fin,
+		Duty: op.Piano.Duty, Product: T("cert.prodotto_prova"),
+		Engine: EngineRef{EngineVersion, EngineDigest()}, Catalog: fid.Catalog, Attestation: attestation,
+		DigestPiano: op.Piano.Digest(), DigestTogether: ins, Fingerprint: op.Piano.Fingerprint.Digest,
+		Checks: rv.Checks, Conditions: op.conditions(), Remainders: remainders, Indirect: op.indirect()}
+	if c.Conditions == nil {
+		c.Conditions = []Condition{}
 	}
-	if err := op.scriviOggetto("certificate.json", c); err != nil {
+	if err := op.writeObject("certificate.json", c); err != nil {
 		return err
 	}
 	var t strings.Builder
 	fmt.Fprintf(&t, "%s\n\n%s: %s\n%s: %s\n%s: %s (%s)\n%s: %s (%s)\n%s: %s\n%s: %s\n%s: %s\n",
-		T("cert.titolo", op.ID), T("cert.stato"), c.Stato, T("cert.mestiere"), c.Mestiere, T("cert.motore"), c.Motore.Versione, c.Motore.Digest,
-		T("cert.catalogo"), c.Catalogo.Versione, c.Catalogo.Digest, T("cert.fiducia"), c.Fiducia, T("cert.piano"), c.DigestPiano, T("cert.impronta"), c.Impronta)
-	fmt.Fprintf(&t, "\n%s:\n", T("cert.controlli"))
-	for _, k := range c.Controlli {
-		fmt.Fprintf(&t, "  %-8s %s — %s\n", k.Esito, k.ID, k.Dettaglio)
+		T("cert.heading", op.ID), T("cert.state"), c.State, T("cert.duty"), c.Duty, T("cert.motore"), c.Engine.Version, c.Engine.Digest,
+		T("cert.catalogo"), c.Catalog.Version, c.Catalog.Digest, T("cert.attestation"), c.Attestation, T("cert.piano"), c.DigestPiano, T("cert.fingerprint"), c.Fingerprint)
+	fmt.Fprintf(&t, "\n%s:\n", T("cert.checks"))
+	for _, k := range c.Checks {
+		fmt.Fprintf(&t, "  %-8s %s — %s\n", k.Outcome, k.ID, k.Detail)
 	}
-	fmt.Fprintf(&t, "\n%s:\n", T("cert.condizioni"))
-	if len(c.Condizioni) == 0 {
+	fmt.Fprintf(&t, "\n%s:\n", T("cert.conditions"))
+	if len(c.Conditions) == 0 {
 		fmt.Fprintf(&t, "  %s\n", T("cert.nessuna"))
 	}
-	for _, k := range c.Condizioni {
-		fmt.Fprintf(&t, "  %s %s\n", k.Codice, k.Testo)
+	for _, k := range c.Conditions {
+		fmt.Fprintf(&t, "  %s %s\n", k.Code, k.Text)
 	}
-	if len(resti) > 0 {
+	if len(remainders) > 0 {
 		fmt.Fprintf(&t, "\n%s:\n", T("cert.non_annullato"))
-		for _, r := range resti {
+		for _, r := range remainders {
 			fmt.Fprintf(&t, "  %s\n", r)
 		}
 	}
-	return ScriviAtomico(filepath.Join(op.Cartella, "certificate.txt"), []byte(t.String()), 0o600)
+	return WriteAtomic(filepath.Join(op.Folder, "certificate.txt"), []byte(t.String()), 0o600)
 }
 
-// Installazione: the state REMOTIX checks at start-up (DECISIONI §10.12: the installer is the
-// only way; the service does not start without a CONFERMATA operation, RX-INST-001). It sits next to
+// Installation: the state REMOTIX checks at start-up (DECISIONI §10.12: the installer is the
+// only way; the service does not start without a CONFIRMED operation, RX-INST-001). It sits next to
 // the operations folder: /var/lib/remotix/installazione.json.
-type Installazione struct {
-	Formato     string `json:"format"`
-	Oggetto     string `json:"object"` // "installation"
-	Operazione  string `json:"operation"`
-	Stato       Stato  `json:"state"`
-	Mestiere    string `json:"kind"`
-	Certificato string `json:"certificate"`
-	Scritto     string `json:"written"`
+type Installation struct {
+	Schema      string `json:"format"`
+	Object      string `json:"object"` // "installation"
+	Operation   string `json:"operation"`
+	State       State  `json:"state"`
+	Duty        string `json:"kind"`
+	Certificate string `json:"certificate"`
+	Written     string `json:"written"`
 }
 
-// PercorsoInstallazione: next to the operations folder.
-func (m *Motore) PercorsoInstallazione() string {
-	return filepath.Join(filepath.Dir(m.Cartella), "installation.json")
+// InstallPath: next to the operations folder.
+func (m *Engine) InstallPath() string {
+	return filepath.Join(filepath.Dir(m.Folder), "installation.json")
 }
 
-// scriviInstallazione: only for the kinds that really install the product. The trial plan
+// writeInstallation: only for the kinds that really install the product. The trial plan
 // of T4 does not write it: it did not install REMOTIX.
-func (op *Operazione) scriviInstallazione(fin Stato) error {
-	if op.Piano.Mestiere != "installation" {
+func (op *Operation) writeInstallation(fin State) error {
+	if op.Piano.Duty != "installation" {
 		return nil
 	}
-	return ScriviJSON(op.m.PercorsoInstallazione(), Installazione{Formato: Formato, Oggetto: "installation",
-		Operazione: op.ID, Stato: fin, Mestiere: op.Piano.Mestiere,
-		Certificato: filepath.Join(op.Cartella, "certificate.json"), Scritto: ora()})
+	return WriteJSON(op.m.InstallPath(), Installation{Schema: Schema, Object: "installation",
+		Operation: op.ID, State: fin, Duty: op.Piano.Duty,
+		Certificate: filepath.Join(op.Folder, "certificate.json"), Written: now()})
 }
 
-// ControllaInstallazione: what REMOTIX (and remotix-install aggiornato) asks at start-up.
-// It holds only if the file is there, the operation it names exists and is CONFERMATA (even conditionally).
-func (m *Motore) ControllaInstallazione() (*Installazione, error) {
-	var in Installazione
-	if err := LeggiJSON(m.PercorsoInstallazione(), &in); err != nil {
-		return nil, Errore("RX-INST-001", err.Error())
+// CheckInstallation: what REMOTIX (and remotix-install updated) asks at start-up.
+// It holds only if the file is there, the operation it names exists and is CONFIRMED (even conditionally).
+func (m *Engine) CheckInstallation() (*Installation, error) {
+	var in Installation
+	if err := ReadJSON(m.InstallPath(), &in); err != nil {
+		return nil, Error("RX-INST-001", err.Error())
 	}
-	op, err := m.apri(in.Operazione)
+	op, err := m.open_it(in.Operation)
 	if err != nil {
-		return nil, Errore("RX-INST-001", "operation "+in.Operazione+" does not exist")
+		return nil, Error("RX-INST-001", "operation "+in.Operation+" does not exist")
 	}
-	if op.Stato != CONFERMATA && op.Stato != CONFERMATA_A_CONDIZIONI {
-		return nil, Errore("RX-INST-001", "operation "+in.Operazione+" is "+string(op.Stato))
+	if op.State != CONFIRMED && op.State != CONFIRMED_WITH_CONDITIONS {
+		return nil, Error("RX-INST-001", "operation "+in.Operation+" is "+string(op.State))
 	}
 	return &in, nil
 }
 
-// indirette: what happened indirectly and remains (§6.6.4): the actions declare it; and the
-// packages held back by an undo step (RX-PACCHETTI-006), which says so in its FATTA.
-func (op *Operazione) indirette() []string {
+// indirect: what happened indirectly and remains (§6.6.4): the actions declare it; and the
+// packages held back by an undo step (RX-PACCHETTI-006), which says so in its DONE.
+func (op *Operation) indirect() []string {
 	r := []string{}
-	for _, e := range op.Reg.Eventi {
+	for _, e := range op.Reg.Events {
 		var d map[string]string
-		if e.Tipo == EvFatta && json.Unmarshal(e.Dopo, &d) == nil && strings.Contains(d["detail"], "[RX-PACCHETTI-006]") {
+		if e.Kind == EvDone && json.Unmarshal(e.After, &d) == nil && strings.Contains(d["detail"], "[RX-PACCHETTI-006]") {
 			_, x, _ := strings.Cut(d["detail"], "[RX-PACCHETTI-006] ")
-			r = append(r, "RX-PACCHETTI-006 "+e.Azione+": "+x)
+			r = append(r, "RX-PACCHETTI-006 "+e.Action+": "+x)
 		}
 	}
-	for _, ap := range op.Piano.Azioni {
-		intz := op.Reg.Intenzione(ap.ID)
-		if intz == nil {
+	for _, ap := range op.Piano.Actions {
+		intent := op.Reg.Intent(ap.ID)
+		if intent == nil {
 			continue
 		}
-		a, err := NuovaAzione(ap)
+		a, err := NewAction(ap)
 		if err != nil {
 			continue
 		}
-		if d, ok := a.(Dichiarante); ok {
-			r = append(r, d.Indirette(intz.Prima)...)
+		if d, ok := a.(Declarer); ok {
+			r = append(r, d.Indirect(intent.Before)...)
 		}
 	}
 	return r

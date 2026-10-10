@@ -5,23 +5,23 @@
 #    password of ANYONE, and the server drops each child to the uid of its
 #    user (`figlio.c`).  No `User=`, no `ProtectSystem`: it opens
 #    logind sessions, writes in the users' homes, touches /dev/dri.
-# ⭐ Certificate: if missing in /var/lib/remotix/certificati it is generated at start
+# ⭐ Certificate: if missing in /var/lib/remotix/certificates it is generated at start
 #    (`certificati.c:302`); one from the administrator (without the «.nostro» mark)
 #    is used as is.
 # ⭐ The name in the certificate is the machine name (%H).  Whoever connects with an
 #    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
-#        REMOTIX_OPZIONI=--nome 192.168.1.10
-#    (the last --nome wins).  ⚠ PROVISIONAL format, environment variables: the
+#        REMOTIX_OPTIONS=--label_name 192.168.1.10
+#    (the last --label_name wins).  ⚠ PROVISIONAL format, environment variables: the
 #    real configuration belongs to the engine (T4).
 # ⭐ `KillMode=mixed`, `LimitRTPRIO`, `LimitNICE`: the same as the benches
 #    (`src/riavvia-7700.sh`).  `[M]` T2 (§5.2): with `mixed`, stopping the service
 #    kills parent, PAM helper and child, NOT the desktops (the stage is born with
 #    `setsid --fork` outside the unit).
 # ⭐ `--journal`: the lines go to the journal with their fields too (priority,
-#    `REMOTIX_AREA`, `REMOTIX_INQUILINO`) and from the child, which sits in the
+#    `REMOTIX_AREA`, `REMOTIX_TENANT`) and from the child, which sits in the
 #    session scope (`registro.h`: ⇒ `journalctl -t remotix`).
-# ⛔ No bench options (`--rilievo`, `--comando-socket`, `--audio-prova`,
-#    `--parlantina`, `--sblocca`): R13.
+# ⛔ No bench options (`--survey`, `--command-socket`, `--audio-test`,
+#    `--chatter`, `--unblock`): R13.
 # ⛔ `DECISIONI.md` §10.12: the package does NOT enable and does NOT start this unit
 #    (the engine does), and no guard prevents it from starting.
 [Unit]
@@ -37,9 +37,9 @@ WorkingDirectory=/
 # ⭐ T6 (SELinux): the program is launched DIRECTLY, without `/bin/sh -c`.  systemd
 #    transitions to `remotix_t` only if it executes `remotix_exec_t` itself (init_t → remotix_t); a
 #    shell in between would run in `unconfined_service_t` and its `exec` would stay there.
-#    `${REMOTIX_PORTA}` is a single word; `$REMOTIX_OPZIONI` without braces is split
+#    `${REMOTIX_PORT}` is a single word; `$REMOTIX_OPTIONS` without braces is split
 #    into words, and when empty yields none (systemd.service, «Command lines»).
-ExecStart=/usr/libexec/remotix/remotix --indirizzo 0.0.0.0 --nome %H --porta ${REMOTIX_PORTA} --certificati /var/lib/remotix/certificati --pagina /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPZIONI
+ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --label_name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page_v /usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPTIONS
 KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11

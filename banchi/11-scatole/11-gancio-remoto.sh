@@ -3,9 +3,9 @@
 # 11-gancio-remoto.sh — ⭐ THE PIECE THAT RUNS **ON THE TEST MACHINE**
 # ===========================================================================
 #
-#   bash 11-gancio-remoto.sh <file-esito> gira --famiglia rete …
+#   bash 11-gancio-remoto.sh <file-esito> run --family net …
 #
-# ⛔ A person does not launch it: `11-gancio.sh remoto` launches it from the laptop,
+# ⛔ A person does not launch it: `11-gancio.sh remote` launches it from the laptop,
 #    inside a `systemd-run` unit, because the fast family costs `[M]` 173 s
 #    and a long command over direct ssh does not make it home.
 #
@@ -28,25 +28,25 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-QUI=$(cd "$(dirname "$0")" && pwd)
+HERE=$(cd "$(dirname "$0")" && pwd)
 
 if [ $# -lt 1 ]; then
-	printf 'usage: bash %s <file-esito> gira --famiglia <nome> …\n' "$0" >&2
+	printf 'usage: bash %s <file-esito> run --family <label_name> …\n' "$0" >&2
 	exit 2
 fi
 
-ESITO_FILE=$1
+OUTCOME_FILE=$1
 shift
 
 # ⛔ It is deleted HERE, not only by whoever launches: an old outcome file read as
 #    if it belonged to this run is a run reporting the outcome of another.
-rm -f "$ESITO_FILE"
+rm -f "$OUTCOME_FILE"
 
-bash "$QUI/11-gancio.sh" "$@"
+bash "$HERE/11-gancio.sh" "$@"
 E=$?
 
 # ⚠ And it is written **after**, never before: the file appearing means «finished».
-printf '%s\n' "$E" > "$ESITO_FILE"
-chmod 644 "$ESITO_FILE" 2>/dev/null
+printf '%s\n' "$E" > "$OUTCOME_FILE"
+chmod 644 "$OUTCOME_FILE" 2>/dev/null
 
 exit "$E"

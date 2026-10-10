@@ -10,8 +10,8 @@ for r in gnome-ferma kde-ferma xfce-ferma lxqt-ferma gnome-uccidi-padre kde-ucci
   mu=$(grep " MORTO " $r/vita.txt | grep "uid=4013" | grep -vE " sleep | $f |systemd-stdio|sd-pam|gnome-control-c|kioworker" | awk -v a="$A" '$1>=a' | wc -l)
   # «### process» matches both headers: «processes of the user» (t2box.py
   # today) and «processi dell'utente» (captures taken before 10 Oct 2026)
-  comp_prima=$(sed -n '/### process/,$p' $r/prima.txt | grep -E " (gnome-shell|kwin_wayland|labwc) " | awk '{print $5":"$1}' | tr '\n' ' ')
+  comp_before=$(sed -n '/### process/,$p' $r/prima.txt | grep -E " (gnome-shell|kwin_wayland|labwc) " | awk '{print $5":"$1}' | tr '\n' ' ')
   comp_ri=$(sed -n '/### process/,$p' $r/riattacco.txt | grep -E " (gnome-shell|kwin_wayland|labwc) " | awk '{print $5":"$1}' | tr '\n' ' ')
-  ult=$(tail -n1 $r/ore.txt 2>/dev/null | cut -c1-12)
-  echo "$r | action $A | parent $p dead $mp | child $f dead $mf | other user deaths after the action: $mu | compositor before $comp_prima| at reattach $comp_ri| last terminal beat $(grep -A3 terminale $r/ore.txt | tail -1 | cut -c1-12)"
+  prev=$(tail -n1 $r/ore.txt 2>/dev/null | cut -c1-12)
+  echo "$r | action $A | parent $p dead $mp | child $f dead $mf | other user deaths after the action: $mu | compositor before $comp_before| at reattach $comp_ri| last terminal beat $(grep -A3 terminal $r/ore.txt | tail -1 | cut -c1-12)"
 done

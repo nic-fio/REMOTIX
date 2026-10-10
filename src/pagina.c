@@ -18,8 +18,8 @@
 
 #include <openssl/err.h>
 
-#define MAX_CLIENTI 32
-#define MAX_RICHIESTA 8192
+#define MAX_CLIENTS 32
+#define MAX_REQUEST 8192
 
 /* ⛔ THE TWO CROSS-ORIGIN ISOLATION HEADERS, PLUS THE THIRD THEY IMPLY.
  *
@@ -29,46 +29,46 @@
  *
  * ⚠ And they go on EVERY response, not only on the page: this is what «changes
  *   how the server serves every resource» means in bytes. */
-#define ISOLAMENTO                                                             \
+#define ISOLATION                                                             \
 	"Cross-Origin-Opener-Policy: same-origin\r\n"                              \
 	"Cross-Origin-Embedder-Policy: require-corp\r\n"                           \
 	"Cross-Origin-Resource-Policy: same-origin\r\n"
 
-enum fase { F_STRETTA, F_LEGGE, F_SCRIVE, F_FINITA };
+enum phase { F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
 typedef struct {
 	int fd;
 	SSL *ssl;
-	enum fase fase;
-	char richiesta[MAX_RICHIESTA];
-	size_t nrichiesta;
-	char *risposta;
-	size_t nrisposta, orisposta;
-	char provenienza[80];
+	enum phase phase;
+	char request[MAX_REQUEST];
+	size_t nrequest;
+	char *response;
+	size_t nresponse, oresponse;
+	char provenance[80];
 	/* ⚠ Which event OpenSSL is waiting for: without this the wrong event is
 	 *   watched and the connection stays stuck until something else
 	 *   expires. */
-	bool vuole_scrivere;
-} cliente;
+	bool wants_to_write;
+} client;
 
-struct pagina {
+struct page_v {
 	int fd;
 	SSL_CTX *ctx;
-	const certificati *cert;
+	const certificates *cert;
 	char *html;
 	size_t nhtml;
-	cliente clienti[MAX_CLIENTI];
+	client clients[MAX_CLIENTS];
 };
 
 /* ------------------------------------------------------------------------ */
 
-static char *leggi_file(const char *percorso, size_t *quanto)
+static char *read_file(const char *fpath, size_t *how_much)
 {
-	FILE *f = fopen(percorso, "rb");
+	FILE *f = fopen(fpath, "rb");
 	char *d;
 	long n;
 	if (!f) {
-		registro_dice(REG_PAGINA, "⛔ cannot open %s: %s", percorso,
+		log_says(LOG_PAGE, "⛔ cannot open %s: %s", fpath,
 		              strerror(errno));
 		return NULL;
 	}
@@ -77,7 +77,7 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	fseek(f, 0, SEEK_SET);
 	if (n <= 0) {
 		fclose(f);
-		registro_dice(REG_PAGINA, "⛔ %s is empty", percorso);
+		log_says(LOG_PAGE, "⛔ %s is empty", fpath);
 		return NULL;
 	}
 	d = malloc((size_t)n + 1);
@@ -88,39 +88,39 @@ static char *leggi_file(const char *percorso, size_t *quanto)
 	if (fread(d, 1, (size_t)n, f) != (size_t)n) {
 		free(d);
 		fclose(f);
-		registro_dice(REG_PAGINA, "⛔ %s cannot be read in full", percorso);
+		log_says(LOG_PAGE, "⛔ %s cannot be read in full", fpath);
 		return NULL;
 	}
 	d[n] = 0;
 	fclose(f);
-	*quanto = (size_t)n;
+	*how_much = (size_t)n;
 	return d;
 }
 
-/* Replaces every occurrence of `segno` with `valore`.  Returns a new string,
+/* Replaces every occurrence of `sign` with `value_v`.  Returns a new string,
  * to be freed. */
-static char *sostituisci(const char *testo, const char *segno, const char *valore)
+static char *replace(const char *body_text, const char *sign, const char *value_v)
 {
-	size_t ls = strlen(segno), lv = strlen(valore), cap, o = 0;
-	const char *p = testo;
-	char *fuori;
+	size_t ls = strlen(sign), lv = strlen(value_v), cap, o = 0;
+	const char *p = body_text;
+	char *outside;
 
-	cap = strlen(testo) + 1;
-	for (const char *q = strstr(testo, segno); q; q = strstr(q + ls, segno))
+	cap = strlen(body_text) + 1;
+	for (const char *q = strstr(body_text, sign); q; q = strstr(q + ls, sign))
 		cap += lv;
-	fuori = malloc(cap);
-	if (!fuori)
+	outside = malloc(cap);
+	if (!outside)
 		return NULL;
 	for (;;) {
-		const char *q = strstr(p, segno);
+		const char *q = strstr(p, sign);
 		if (!q) {
 			size_t r = strlen(p);
-			memcpy(fuori + o, p, r + 1);
-			return fuori;
+			memcpy(outside + o, p, r + 1);
+			return outside;
 		}
-		memcpy(fuori + o, p, (size_t)(q - p));
+		memcpy(outside + o, p, (size_t)(q - p));
 		o += (size_t)(q - p);
-		memcpy(fuori + o, valore, lv);
+		memcpy(outside + o, value_v, lv);
 		o += lv;
 		p = q + ls;
 	}
@@ -128,7 +128,7 @@ static char *sostituisci(const char *testo, const char *segno, const char *valor
 
 /* ------------------------------------------------------------------------ */
 
-static void cliente_chiudi(cliente *c)
+static void client_close(client *c)
 {
 	if (c->ssl) {
 		SSL_free(c->ssl);
@@ -138,121 +138,121 @@ static void cliente_chiudi(cliente *c)
 		close(c->fd);
 		c->fd = -1;
 	}
-	free(c->risposta);
-	c->risposta = NULL;
-	c->nrisposta = c->orisposta = c->nrichiesta = 0;
-	c->fase = F_FINITA;
+	free(c->response);
+	c->response = NULL;
+	c->nresponse = c->oresponse = c->nrequest = 0;
+	c->phase = F_DONE;
 }
 
-static void componi(cliente *c, const char *stato, const char *tipo,
-                    const char *corpo, size_t ncorpo, const char *extra)
+static void compose(client *c, const char *state, const char *kind,
+                    const char *body_el, size_t nbody, const char *extra)
 {
-	char testa[768];
+	char head[768];
 	int n;
 
-	n = snprintf(testa, sizeof testa,
+	n = snprintf(head, sizeof head,
 	             "HTTP/1.1 %s\r\n"
 	             "Content-Type: %s\r\n"
 	             "Content-Length: %zu\r\n"
-	             ISOLAMENTO
+	             ISOLATION
 	             "Cache-Control: no-store\r\n"
 	             "X-Content-Type-Options: nosniff\r\n"
 	             "Connection: close\r\n"
 	             "%s"
 	             "\r\n",
-	             stato, tipo, ncorpo, extra ? extra : "");
+	             state, kind, nbody, extra ? extra : "");
 	if (n < 0)
 		return;
-	c->risposta = malloc((size_t)n + ncorpo);
-	if (!c->risposta)
+	c->response = malloc((size_t)n + nbody);
+	if (!c->response)
 		return;
-	memcpy(c->risposta, testa, (size_t)n);
-	memcpy(c->risposta + n, corpo, ncorpo);
-	c->nrisposta = (size_t)n + ncorpo;
-	c->orisposta = 0;
-	c->fase = F_SCRIVE;
+	memcpy(c->response, head, (size_t)n);
+	memcpy(c->response + n, body_el, nbody);
+	c->nresponse = (size_t)n + nbody;
+	c->oresponse = 0;
+	c->phase = F_WRITE;
 }
 
-static void servi(pagina *p, cliente *c)
+static void serve(page_v *p, client *c)
 {
 	/* ⛔⭐ ONE THOUSAND AND NOT TWO HUNDRED FIFTY-SIX — 17 Aug 2026, and the reason
-	 *     is a measurement that LIED.  The page's diary (`/diario?…`) travels
+	 *     is a measurement that LIED.  The page's diary (`/diary?…`) travels
 	 *     in the query string, percent-encoded: 250 bytes of target are fewer
 	 *     than 150 real characters, and as soon as the line also carried the
 	 *     video counts it reached the log CUT IN HALF — «… buchi%» — without
 	 *     anything saying so.  ⚠ The missing number looks the same as the
 	 *     number that is zero.
-	 * ⛔ And BOTH GROW, or nothing grows: the target is a COPY of `percorso`
+	 * ⛔ And BOTH GROW, or nothing grows: the target is a COPY of `fpath`
 	 *    taken before the cut at `?` (line below), so the real ceiling is set
-	 *    by `percorso`.  ⚠ Widening `bersaglio` alone would have been a cure
+	 *    by `fpath`.  ⚠ Widening `target` alone would have been a cure
 	 *    that does not cure, with the air of having done it. */
-	char metodo[16] = {0}, percorso[1024] = {0}, bersaglio[1024] = {0};
+	char meth[16] = {0}, fpath[1024] = {0}, target[1024] = {0};
 	const char *sp1, *sp2;
-	char indirizzo[64];
-	uint64_t restano = 0;
-	bool bannato;
+	char address[64];
+	uint64_t remain = 0;
+	bool banned;
 
-	sp1 = memchr(c->richiesta, ' ', c->nrichiesta);
+	sp1 = memchr(c->request, ' ', c->nrequest);
 	if (!sp1) {
-		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
+		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
 		return;
 	}
 	{
-		size_t n = (size_t)(sp1 - c->richiesta);
-		if (n >= sizeof metodo)
-			n = sizeof metodo - 1;
-		memcpy(metodo, c->richiesta, n);
+		size_t n = (size_t)(sp1 - c->request);
+		if (n >= sizeof meth)
+			n = sizeof meth - 1;
+		memcpy(meth, c->request, n);
 	}
-	sp2 = memchr(sp1 + 1, ' ', c->nrichiesta - (size_t)(sp1 + 1 - c->richiesta));
+	sp2 = memchr(sp1 + 1, ' ', c->nrequest - (size_t)(sp1 + 1 - c->request));
 	if (!sp2) {
-		componi(c, "400 Bad Request", "text/plain; charset=utf-8",
+		compose(c, "400 Bad Request", "text/plain; charset=utf-8",
 		        "request is unreadable\n", 22, NULL);
 		return;
 	}
 	{
 		size_t n = (size_t)(sp2 - sp1 - 1);
-		if (n >= sizeof percorso)
-			n = sizeof percorso - 1;
-		memcpy(percorso, sp1 + 1, n);
+		if (n >= sizeof fpath)
+			n = sizeof fpath - 1;
+		memcpy(fpath, sp1 + 1, n);
 	}
 
 	/* ⛔⭐ THE REQUEST TARGET IS NOT THE PATH — defect B-20,
 	 *     measured on 13 Aug 2026.
 	 *
 	 * `[M]` Before this line the comparison below was
-	 * `strcmp(percorso, "/")` on the WHOLE target, query string included:
+	 * `strcmp(fpath, "/")` on the WHOLE target, query string included:
 	 * `GET /` gave **200 on 166107 bytes** and `GET /?video=worker` gave
 	 * **404 on 9 bytes**.  RFC 9110 §4.1 says the opposite — the query string
 	 * is a component of the URI in its own right, not a piece of the path, and
-	 * whoever decides what to serve looks at the path.
+	 * whoever decides what to needs looks at the path.
 	 *
 	 * ⛔ AND THE REAL CONSEQUENCE IS NOT THE WORKER, it is that `pagina.html`
 	 *    has always documented TWO switches turned on from the query string —
-	 *    `?tela=desincronizzata` (§6.1 of `STUDI.md` §web) and
+	 *    `?canvas_size=desynchronized` (§6.1 of `STUDI.md` §web) and
 	 *    `?video=worker` — and **neither of them was ever reachable through
 	 *    the product**: the comment pointed to a road the server closed with
-	 *    a 404.  ⚠ Nobody had noticed because the benches serve the page from
+	 *    a 404.  ⚠ Nobody had noticed because the benches needs the page from
 	 *    a Python `http.server`, which ignores the `?` — that is, the defect
 	 *    lived EXACTLY in the gap between the bench and the product.
 	 *
 	 * ⭐ The cure cuts, and cuts ONLY at the `?` (and the `#`, should it ever
 	 *    arrive: a browser does not send the fragment, but any client can send
 	 *    it, and then the path stays the path).  ⛔ The check is NOT loosened:
-	 *    `/inesistente?x=1` keeps giving 404 like `/inesistente`, because what
+	 *    `/nonexistent?x=1` keeps giving 404 like `/nonexistent`, because what
 	 *    changes is which string is compared, not the comparison.  ⚠ And if
-	 *    the target were so long that it did not fit in `percorso`, the
+	 *    the target were so long that it did not fit in `fpath`, the
 	 *    truncation above takes the `?` away too: the result is a path that
 	 *    matches nothing, that is 404 — the prudent outcome, not a hole.
 	 *
 	 * ⚠ AND THE WHOLE TARGET GOES INTO THE LOG, not the cut path: after this
 	 *   cure the switches really turn on, and a log that wrote `/` for
-	 *   `/?tela=desincronizzata` would make invisible precisely the only thing
+	 *   `/?canvas_size=desynchronized` would make invisible precisely the only thing
 	 *   this line has just made possible. */
 	/* ⚠ The size is dictated by the SOURCE: this way the line holds even on
 	 *   the day the two arrays were no longer the same length. */
-	memcpy(bersaglio, percorso, sizeof percorso - 1);
-	percorso[strcspn(percorso, "?#")] = 0;
+	memcpy(target, fpath, sizeof fpath - 1);
+	fpath[strcspn(fpath, "?#")] = 0;
 
 	/* ⛔ The ban key is made by `rcp.c`, not by this file: `rcp.h` says so with
 	 *    a ⛔, and the reason is that the key format is known by one module
@@ -260,11 +260,11 @@ static void servi(pagina *p, cliente *c)
 	 *    where `[192.168.0.2]` is written, and the page would say «you are not
 	 *    banned» to someone who is — that is, precisely to whom §4.2 wants to
 	 *    see the sentence. */
-	rcp_chiave_indirizzo(c->provenienza, indirizzo, sizeof indirizzo);
-	bannato = rcp_bannato(indirizzo, registro_ora_ms(), &restano);
+	rcp_key_address(c->provenance, address, sizeof address);
+	banned = rcp_banned(address, log_now_ms(), &remain);
 
-	registro_dice(REG_PAGINA, "%s %s from %s%s", metodo, bersaglio, c->provenienza,
-	              bannato ? " (address BANNED)" : "");
+	log_says(LOG_PAGE, "%s %s from %s%s", meth, target, c->provenance,
+	              banned ? " (address BANNED)" : "");
 
 	/* ⛔ THE ENDPOINT FROM WHICH THE PAGE FETCHES THE UPDATED FINGERPRINT (§4.1-bis).
 	 *
@@ -277,14 +277,14 @@ static void servi(pagina *p, cliente *c)
 	 * ⛔ And it does not go through RCP: the session is not open yet, so
 	 *    there is no channel on which to ask.  It is fetched from the server
 	 *    that served it, with an ordinary request. */
-	if (strcmp(percorso, "/impronta") == 0) {
-		char corpo[512];
-		int n = snprintf(corpo, sizeof corpo,
-		                 "{\"algoritmo\":\"sha-256\",\"impronta\":\"%s\","
-		                 "\"esadecimale\":\"%s\",\"rotazioni\":%u}\n",
-		                 p->cert->impronta, p->cert->impronta_esa,
-		                 p->cert->rotazioni);
-		componi(c, "200 OK", "application/json; charset=utf-8", corpo,
+	if (strcmp(fpath, "/impronta") == 0) {
+		char body_el[512];
+		int n = snprintf(body_el, sizeof body_el,
+		                 "{\"algorithm\":\"sha-256\",\"fingerprint\":\"%s\","
+		                 "\"hex\":\"%s\",\"rotations\":%u}\n",
+		                 p->cert->fingerprint, p->cert->fingerprint_hex,
+		                 p->cert->rotations);
+		compose(c, "200 OK", "application/json; charset=utf-8", body_el,
 		        (size_t)n, NULL);
 		return;
 	}
@@ -307,38 +307,38 @@ static void servi(pagina *p, cliente *c)
 	 *   session, does not touch state, and what it writes ends up in the log
 	 *   like any other line.  ⛔ The body is truncated and cleaned before
 	 *   writing it: it comes from outside, so it is an input, not a datum. */
-	if (strcmp(percorso, "/diario") == 0) {
-		/* ⚠ SHORTER than `bersaglio` on purpose: this way the ceiling hit
+	if (strcmp(fpath, "/diary") == 0) {
+		/* ⚠ SHORTER than `target` on purpose: this way the ceiling hit
 		 *   first is this one, which can say so — and not the one over there,
 		 *   which truncates silently. */
-		char pulito[900];
+		char clean[900];
 		size_t j = 0;
 		/* ⚠ The text arrives in the QUERY STRING, not in a body: this server
 		 *   does not read requests beyond the first line, and a `GET` with
 		 *   the query is what the page can send without anyone adding a body
-		 *   reader.  ⛔ `bersaglio` is the whole line as it arrived: the `?`
+		 *   reader.  ⛔ `target` is the whole line as it arrived: the `?`
 		 *   is skipped by hand. */
-		const char *b = strchr(bersaglio, '?');
+		const char *b = strchr(target, '?');
 		b = b ? b + 1 : "";
-		for (size_t i = 0; b[i] && j + 1 < sizeof pulito; i++) {
+		for (size_t i = 0; b[i] && j + 1 < sizeof clean; i++) {
 			unsigned char x = (unsigned char)b[i];
 			/* Printable ASCII only: a log line must not be able to carry a
 			 * newline (it would split the log in two) nor control bytes. */
-			pulito[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
+			clean[j++] = (x >= 0x20 && x < 0x7F) ? (char)x : ' ';
 		}
-		pulito[j] = '\0';
+		clean[j] = '\0';
 		/* ⛔ AND A CUT IS DECLARED.  A line cut silently looks like a short
 		 *    line, and whoever reads it counts the numbers that are there
 		 *    instead of noticing the ones that are missing. */
-		registro_dice(REG_PAGINA, "📄 the page of %s says: %s%s",
-		              c->provenienza, pulito,
-		              j + 1 >= sizeof pulito ? "  ⛔CUT HERE" : "");
-		componi(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
+		log_says(LOG_PAGE, "📄 the page of %s says: %s%s",
+		              c->provenance, clean,
+		              j + 1 >= sizeof clean ? "  ⛔CUT HERE" : "");
+		compose(c, "204 No Content", "text/plain; charset=utf-8", "", 0, NULL);
 		return;
 	}
 
-	if (strcmp(percorso, "/") != 0 && strcmp(percorso, "/index.html") != 0) {
-		componi(c, "404 Not Found", "text/plain; charset=utf-8",
+	if (strcmp(fpath, "/") != 0 && strcmp(fpath, "/index.html") != 0) {
+		compose(c, "404 Not Found", "text/plain; charset=utf-8",
 		        "not here\n", 9, NULL);
 		return;
 	}
@@ -385,18 +385,18 @@ static void servi(pagina *p, cliente *c)
 		 *   region of size between 131 and 144», and what the banned user
 		 *   would have read would have ended mid-sentence.  A truncated notice
 		 *   is worse than no notice: §4.4-bis wants it to be UNDERSTOOD. */
-		char avviso[640] = "";
-		char restano_txt[32];
-		unsigned long long minuti = (restano + 59999u) / 60000u;
+		char warning[640] = "";
+		char remain_txt[32];
+		unsigned long long minutes = (remain + 59999u) / 60000u;
 
-		if (bannato) {
+		if (banned) {
 			/* ⛔ §4.4-bis: «the page loads anyway and shows the refusal —
 			 *    attempts exhausted.  Not a network error, not a silence:
 			 *    whoever is banned by mistake is almost always the owner,
 			 *    and must be able to understand what happened to them.» */
-			snprintf(avviso, sizeof avviso,
+			snprintf(warning, sizeof warning,
 			         /* ⚠ No `id` on this `<b>`: the page already has an
-			          * `id="esito"` and two elements with the same `id`
+			          * `id="outcome"` and two elements with the same `id`
 			          * would make `getElementById` take the wrong one —
 			          * that is, the connection outcome would appear
 			          * inside the ban notice. */
@@ -404,65 +404,65 @@ static void servi(pagina *p, cliente *c)
 			         "attempts came from this address, and for this "
 			         "reason it stays out. There are still "
 			         "<b id=\"ore\">%llu</b> hours and "
-			         "<b id=\"minuti\">%llu</b> minutes to go. There are two "
+			         "<b id=\"minutes\">%llu</b> minutes to go. There are two "
 			         "ways back in: waiting for the expiry, or with the "
 			         "unblock command on the serving machine — which requires "
 			         "access to that machine, and is the way for whoever "
 			         "banned themselves from their own phone.",
-			         minuti / 60, minuti % 60);
+			         minutes / 60, minutes % 60);
 		}
-		snprintf(restano_txt, sizeof restano_txt, "%llu",
-		         (unsigned long long)restano);
+		snprintf(remain_txt, sizeof remain_txt, "%llu",
+		         (unsigned long long)remain);
 
-		a = sostituisci(p->html, "__IMPRONTA__", p->cert->impronta);
+		a = replace(p->html, "__FINGERPRINT__", p->cert->fingerprint);
 		if (!a) {
-			componi(c, "500 Internal Server Error",
+			compose(c, "500 Internal Server Error",
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		b = sostituisci(a, "__AVVISO__", avviso);
+		b = replace(a, "__WARNING__", warning);
 		free(a);
 		if (!b) {
-			componi(c, "500 Internal Server Error",
+			compose(c, "500 Internal Server Error",
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		cc = sostituisci(b, "__BANNATO__", bannato ? "si" : "no");
+		cc = replace(b, "_BANNED_", banned ? "si" : "no");
 		free(b);
 		if (!cc) {
-			componi(c, "500 Internal Server Error",
+			compose(c, "500 Internal Server Error",
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		d = sostituisci(cc, "__RESTANO_MS__", restano_txt);
+		d = replace(cc, "_REMAIN_MS_", remain_txt);
 		free(cc);
 		if (!d) {
-			componi(c, "500 Internal Server Error",
+			compose(c, "500 Internal Server Error",
 			        "text/plain; charset=utf-8", "no mem.\n", 8, NULL);
 			return;
 		}
-		componi(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), NULL);
+		compose(c, "200 OK", "text/html; charset=utf-8", d, strlen(d), NULL);
 		free(d);
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-static void muovi_cliente(pagina *p, cliente *c, short eventi)
+static void move_client(page_v *p, client *c, short events)
 {
 	int rv;
 
-	(void)eventi;
-	c->vuole_scrivere = false;
+	(void)events;
+	c->wants_to_write = false;
 
-	if (c->fase == F_STRETTA) {
+	if (c->phase == F_HANDSHAKE) {
 		rv = SSL_accept(c->ssl);
 		if (rv == 1) {
-			c->fase = F_LEGGE;
+			c->phase = F_READ;
 		} else {
 			int e = SSL_get_error(c->ssl, rv);
 			if (e == SSL_ERROR_WANT_WRITE) {
-				c->vuole_scrivere = true;
+				c->wants_to_write = true;
 				return;
 			}
 			if (e == SSL_ERROR_WANT_READ)
@@ -472,42 +472,42 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 			 *   granted the exception on the long-lived certificate
 			 *   (`RCP.md` §4.1).  It is said in a low voice, or the log
 			 *   becomes unreadable at every load. */
-			registro_dettaglio(REG_PAGINA,
+			log_detail(LOG_PAGE,
 			                   "TLS handshake failed with %s (error %d) "
 			                   "— usually it is the warning about the certificate "
 			                   "not yet accepted",
-			                   c->provenienza, e);
+			                   c->provenance, e);
 			ERR_clear_error();
-			cliente_chiudi(c);
+			client_close(c);
 			return;
 		}
 	}
 
-	if (c->fase == F_LEGGE) {
+	if (c->phase == F_READ) {
 		for (;;) {
-			size_t letti = 0;
-			rv = SSL_read_ex(c->ssl, c->richiesta + c->nrichiesta,
-			                 sizeof c->richiesta - c->nrichiesta - 1, &letti);
+			size_t readings = 0;
+			rv = SSL_read_ex(c->ssl, c->request + c->nrequest,
+			                 sizeof c->request - c->nrequest - 1, &readings);
 			if (rv != 1) {
 				int e = SSL_get_error(c->ssl, rv);
 				if (e == SSL_ERROR_WANT_WRITE)
-					c->vuole_scrivere = true;
+					c->wants_to_write = true;
 				if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
 					return;
-				cliente_chiudi(c);
+				client_close(c);
 				return;
 			}
-			c->nrichiesta += letti;
-			c->richiesta[c->nrichiesta] = 0;
-			if (strstr(c->richiesta, "\r\n\r\n") ||
-			    strstr(c->richiesta, "\n\n")) {
-				servi(p, c);
+			c->nrequest += readings;
+			c->request[c->nrequest] = 0;
+			if (strstr(c->request, "\r\n\r\n") ||
+			    strstr(c->request, "\n\n")) {
+				serve(p, c);
 				break;
 			}
-			if (c->nrichiesta + 1 >= sizeof c->richiesta) {
+			if (c->nrequest + 1 >= sizeof c->request) {
 				/* ⛔ The length is checked before allocating, and it is
 				 *    the same rule of `RCP.md` §6.1 applied to HTTP. */
-				componi(c, "431 Request Header Fields Too Large",
+				compose(c, "431 Request Header Fields Too Large",
 				        "text/plain; charset=utf-8", "request headers too "
 				                                     "long.\n",
 				        26, NULL);
@@ -516,32 +516,32 @@ static void muovi_cliente(pagina *p, cliente *c, short eventi)
 		}
 	}
 
-	if (c->fase == F_SCRIVE) {
-		while (c->orisposta < c->nrisposta) {
-			size_t scritti = 0;
-			rv = SSL_write_ex(c->ssl, c->risposta + c->orisposta,
-			                  c->nrisposta - c->orisposta, &scritti);
+	if (c->phase == F_WRITE) {
+		while (c->oresponse < c->nresponse) {
+			size_t written = 0;
+			rv = SSL_write_ex(c->ssl, c->response + c->oresponse,
+			                  c->nresponse - c->oresponse, &written);
 			if (rv != 1) {
 				int e = SSL_get_error(c->ssl, rv);
 				if (e == SSL_ERROR_WANT_WRITE) {
-					c->vuole_scrivere = true;
+					c->wants_to_write = true;
 					return;
 				}
 				if (e == SSL_ERROR_WANT_READ)
 					return;
-				cliente_chiudi(c);
+				client_close(c);
 				return;
 			}
-			c->orisposta += scritti;
+			c->oresponse += written;
 		}
 		SSL_shutdown(c->ssl);
-		cliente_chiudi(c);
+		client_close(c);
 	}
 }
 
 /* ------------------------------------------------------------------------ */
 
-size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap)
+size_t page_descriptors(page_v *p, struct pollfd *dove, size_t cap)
 {
 	size_t n = 0;
 	if (cap == 0)
@@ -550,44 +550,44 @@ size_t pagina_descrittori(pagina *p, struct pollfd *dove, size_t cap)
 	dove[n].events = POLLIN;
 	dove[n].revents = 0;
 	n++;
-	for (size_t i = 0; i < MAX_CLIENTI && n < cap; i++) {
-		if (p->clienti[i].fase == F_FINITA || p->clienti[i].fd < 0)
+	for (size_t i = 0; i < MAX_CLIENTS && n < cap; i++) {
+		if (p->clients[i].phase == F_DONE || p->clients[i].fd < 0)
 			continue;
-		dove[n].fd = p->clienti[i].fd;
-		dove[n].events = p->clienti[i].vuole_scrivere ? POLLOUT : POLLIN;
+		dove[n].fd = p->clients[i].fd;
+		dove[n].events = p->clients[i].wants_to_write ? POLLOUT : POLLIN;
 		dove[n].revents = 0;
 		n++;
 	}
 	return n;
 }
 
-static void accetta(pagina *p)
+static void admit(page_v *p)
 {
 	for (;;) {
 		struct sockaddr_storage da;
 		socklen_t dalen = sizeof da;
 		int fd;
-		cliente *c = NULL;
+		client *c = NULL;
 		char host[NI_MAXHOST], serv[NI_MAXSERV];
 
 		fd = accept4(p->fd, (struct sockaddr *)&da, &dalen, SOCK_NONBLOCK);
 		if (fd < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
-				registro_dice(REG_PAGINA, "accept: %s", strerror(errno));
+				log_says(LOG_PAGE, "accept: %s", strerror(errno));
 			return;
 		}
-		for (size_t i = 0; i < MAX_CLIENTI; i++)
-			if (p->clienti[i].fase == F_FINITA && p->clienti[i].fd < 0) {
-				c = &p->clienti[i];
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (p->clients[i].phase == F_DONE && p->clients[i].fd < 0) {
+				c = &p->clients[i];
 				break;
 			}
 		if (!c) {
 			/* ⛔ It is said.  A silent refusal would be indistinguishable
 			 *    from a dead server — and whoever is outside sees the same
 			 *    face in both cases (`LEZIONI.md` §1.9). */
-			registro_dice(REG_PAGINA,
+			log_says(LOG_PAGE,
 			              "⛔ already %d TCP connections: the new one is refused",
-			              MAX_CLIENTI);
+			              MAX_CLIENTS);
 			close(fd);
 			return;
 		}
@@ -595,65 +595,65 @@ static void accetta(pagina *p)
 		c->fd = fd;
 		if (getnameinfo((struct sockaddr *)&da, dalen, host, sizeof host, serv,
 		                sizeof serv, NI_NUMERICHOST | NI_NUMERICSERV) == 0)
-			snprintf(c->provenienza, sizeof c->provenienza,
+			snprintf(c->provenance, sizeof c->provenance,
 			         da.ss_family == AF_INET6 ? "[%s]:%s" : "%s:%s", host,
 			         serv);
 		else
-			snprintf(c->provenienza, sizeof c->provenienza, "?");
+			snprintf(c->provenance, sizeof c->provenance, "?");
 
 		c->ssl = SSL_new(p->ctx);
 		if (!c->ssl) {
 			close(fd);
 			c->fd = -1;
-			c->fase = F_FINITA;
+			c->phase = F_DONE;
 			return;
 		}
 		SSL_set_fd(c->ssl, fd);
 		SSL_set_accept_state(c->ssl);
-		c->fase = F_STRETTA;
-		muovi_cliente(p, c, 0);
+		c->phase = F_HANDSHAKE;
+		move_client(p, c, 0);
 	}
 }
 
-void pagina_muovi(pagina *p, struct pollfd *dove, size_t quanti)
+void page_move(page_v *p, struct pollfd *dove, size_t how_many)
 {
-	for (size_t k = 0; k < quanti; k++) {
+	for (size_t k = 0; k < how_many; k++) {
 		if (dove[k].revents == 0)
 			continue;
 		if (dove[k].fd == p->fd) {
-			accetta(p);
+			admit(p);
 			continue;
 		}
-		for (size_t i = 0; i < MAX_CLIENTI; i++)
-			if (p->clienti[i].fd == dove[k].fd &&
-			    p->clienti[i].fase != F_FINITA) {
-				muovi_cliente(p, &p->clienti[i], dove[k].revents);
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (p->clients[i].fd == dove[k].fd &&
+			    p->clients[i].phase != F_DONE) {
+				move_client(p, &p->clients[i], dove[k].revents);
 				break;
 			}
 	}
 }
 
-void pagina_contesto(pagina *p, SSL_CTX *ctx) { p->ctx = ctx; }
+void page_context(page_v *p, SSL_CTX *ctx) { p->ctx = ctx; }
 
 /* ------------------------------------------------------------------------ */
 
-pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
-                    const char *file_html, const certificati *cert)
+page_v *page_open(const char *address, const char *port, SSL_CTX *ctx,
+                    const char *file_html, const certificates *cert)
 {
-	struct addrinfo sugg, *ris = NULL, *r;
-	pagina *p;
+	struct addrinfo hints, *result = NULL, *r;
+	page_v *p;
 	int fd = -1, uno = 1;
 
-	memset(&sugg, 0, sizeof sugg);
-	sugg.ai_family = AF_UNSPEC;
-	sugg.ai_socktype = SOCK_STREAM;
-	sugg.ai_flags = AI_PASSIVE;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
 
-	if (getaddrinfo(indirizzo, porta, &sugg, &ris) != 0) {
-		registro_dice(REG_PAGINA, "⛔ %s:%s does not resolve", indirizzo, porta);
+	if (getaddrinfo(address, port, &hints, &result) != 0) {
+		log_says(LOG_PAGE, "⛔ %s:%s does not resolve", address, port);
 		return NULL;
 	}
-	for (r = ris; r; r = r->ai_next) {
+	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
 		if (fd < 0)
 			continue;
@@ -663,10 +663,10 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 		close(fd);
 		fd = -1;
 	}
-	freeaddrinfo(ris);
+	freeaddrinfo(result);
 	if (fd < 0) {
-		registro_dice(REG_PAGINA, "⛔ cannot bind to %s:%s over TCP: %s", indirizzo,
-		              porta, strerror(errno));
+		log_says(LOG_PAGE, "⛔ cannot bind to %s:%s over TCP: %s", address,
+		              port, strerror(errno));
 		return NULL;
 	}
 
@@ -678,42 +678,42 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	p->fd = fd;
 	p->ctx = ctx;
 	p->cert = cert;
-	for (size_t i = 0; i < MAX_CLIENTI; i++) {
-		p->clienti[i].fd = -1;
-		p->clienti[i].fase = F_FINITA;
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		p->clients[i].fd = -1;
+		p->clients[i].phase = F_DONE;
 	}
 
-	p->html = leggi_file(file_html, &p->nhtml);
+	p->html = read_file(file_html, &p->nhtml);
 	if (!p->html) {
-		pagina_chiudi(p);
+		page_close(p);
 		return NULL;
 	}
 	/* ⛔ The positive check of the marker: if the page does NOT contain
-	 *    `__IMPRONTA__`, the substitution would succeed «doing nothing» and
-	 *    the server would serve forever a page without a fingerprint — with
+	 *    `__FINGERPRINT__`, the substitution would succeed «doing nothing» and
+	 *    the server would needs forever a page without a fingerprint — with
 	 *    the symptom «WebTransport does not connect» and no error naming the
 	 *    fingerprint (`LEZIONI.md` §1.9: a tool that finds nothing is not
 	 *    clean, it is uncertified). */
 	/* ⛔ AND THE MARKERS ARE FOUR, not one — night of 10 Aug 2026, finding
-	 *    R12.2.  `__BANNATO__` and `__RESTANO_MS__` are what the meter of
+	 *    R12.2.  `_BANNED_` and `_REMAIN_MS_` are what the meter of
 	 *    §4.4-bis reads to say whether the ban is there and for how long: a
 	 *    page without those markers would be served perfectly well, and the
 	 *    bench would say «the ban did not trigger» on a server that does ban.
 	 *    ⚠ A substitution that «succeeds doing nothing» is the seventh guise
 	 *    of `LEZIONI.md` §1.9, and it holds for all four. */
 	{
-		static const char *const SEGNI[] = {"__IMPRONTA__", "__AVVISO__",
-		                                    "__BANNATO__", "__RESTANO_MS__",
+		static const char *const PLACEHOLDERS[] = {"__FINGERPRINT__", "__WARNING__",
+		                                    "_BANNED_", "_REMAIN_MS_",
 		                                    NULL};
-		for (int i = 0; SEGNI[i]; i++)
-			if (!strstr(p->html, SEGNI[i])) {
-				registro_dice(REG_PAGINA,
+		for (int i = 0; PLACEHOLDERS[i]; i++)
+			if (!strstr(p->html, PLACEHOLDERS[i])) {
+				log_says(LOG_PAGE,
 				              "⛔ %s does not contain the marker %s: the page "
-				              "would serve an answer that is not there — and a "
+				              "would needs an answer that is not there — and a "
 				              "substitution that succeeds doing nothing would "
 				              "not tell anyone.  Not starting.",
-				              file_html, SEGNI[i]);
-				pagina_chiudi(p);
+				              file_html, PLACEHOLDERS[i]);
+				page_close(p);
 				return NULL;
 			}
 	}
@@ -721,9 +721,9 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	/* ⛔⭐ AND EACH OF THE TWO ATTRIBUTES MUST APPEAR ONLY ONCE.
 	 *
 	 *     `[M]` night of 10 Aug 2026, and I did it myself while curing R12.2:
-	 *     the style sheet said `#avviso { display:none }` under an attribute
-	 *     selector on `data-bannato`, and that selector puts the string
-	 *     `data-bannato=«si»` INSIDE the `<style>`, that is BEFORE the `<body>`.
+	 *     the style sheet said `#warning { display:none }` under an attribute
+	 *     selector on `data-banned`, and that selector puts the string
+	 *     `data-banned=«si»` INSIDE the `<style>`, that is BEFORE the `<body>`.
 	 *     ⛔ Whoever reads the document with a search — and that is what the
 	 *     meter of §4.4-bis does — takes the FIRST occurrence: it read
 	 *     «banned» on a free address.  ⚠ The page was right, the measurement
@@ -734,41 +734,41 @@ pagina *pagina_apri(const char *indirizzo, const char *porta, SSL_CTX *ctx,
 	 *    start — not even inside a comment, which is bytes served to the
 	 *    browser as much as the rest. */
 	{
-		static const char *const UNICI[] = {"data-bannato=\"",
-		                                    "data-restano-ms=\"", NULL};
-		for (int i = 0; UNICI[i]; i++) {
-			int quante = 0;
-			for (const char *q = strstr(p->html, UNICI[i]); q;
-			     q = strstr(q + strlen(UNICI[i]), UNICI[i]))
-				quante++;
-			if (quante != 1) {
-				registro_dice(REG_PAGINA,
+		static const char *const UNIQUE[] = {"data-banned=\"",
+		                                    "data-remaining-ms=\"", NULL};
+		for (int i = 0; UNIQUE[i]; i++) {
+			int how_many_n = 0;
+			for (const char *q = strstr(p->html, UNIQUE[i]); q;
+			     q = strstr(q + strlen(UNIQUE[i]), UNIQUE[i]))
+				how_many_n++;
+			if (how_many_n != 1) {
+				log_says(LOG_PAGE,
 				              "⛔ %s contains «%s» %d times instead of only "
 				              "once: whoever reads the document searching for that "
 				              "string would take the wrong occurrence and "
 				              "would measure nobody's ban (§4.4-bis).  "
 				              "Not starting.",
-				              file_html, UNICI[i], quante);
-				pagina_chiudi(p);
+				              file_html, UNIQUE[i], how_many_n);
+				page_close(p);
 				return NULL;
 			}
 		}
 	}
 
-	registro_dice(REG_PAGINA,
+	log_says(LOG_PAGE,
 	              "listening over TCP on %s:%s — page %s (%zu bytes), cross-origin "
 	              "isolated (COOP+COEP+CORP, SPECIFICHE.md §11.5)",
-	              indirizzo, porta, file_html, p->nhtml);
+	              address, port, file_html, p->nhtml);
 	return p;
 }
 
-void pagina_chiudi(pagina *p)
+void page_close(page_v *p)
 {
 	if (!p)
 		return;
-	for (size_t i = 0; i < MAX_CLIENTI; i++)
-		if (p->clienti[i].fd >= 0)
-			cliente_chiudi(&p->clienti[i]);
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		if (p->clients[i].fd >= 0)
+			client_close(&p->clients[i]);
 	free(p->html);
 	if (p->fd >= 0)
 		close(p->fd);

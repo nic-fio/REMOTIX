@@ -7,12 +7,12 @@
 # For each target (fasi/17-l-installatore.md §6.2):
 #   1. the image `localhost/remotix-costruzione-<target>` from Contenitore.<target>
 #      (the first time a few minutes: nghttp3 and ngtcp2 are built static in it);
-#   2. a COPY of the tree (src/ and banchi/rcp/) in $CACHE/albero-<target>:
+#   2. a COPY of the tree (src/ and banchi/rcp/) in $CACHE/tree-<target>:
 #      `make` writes .o files and the binary next to the sources, and eight targets on the
 #      same src/ would tread on each other's toes — and would dirty the src/remotix
 #      of whoever is working;
 #   3. `make pulisci tutto` inside the container;
-#   4. in the output folder $USCITA/<target>/:
+#   4. in the output folder $OUTPUT/<target>/:
 #        remotix          the binary (if it compiles)
 #        immagine.log     the log of the image build
 #        compilazione.log the make log
@@ -21,32 +21,32 @@
 #        esito.txt        one line: compiles yes/no, ldd clean yes/no
 #
 # ⚠ No /tmp: on the laptop it is almost full.  podman's TMPDIR and copies
-#   of the tree live in $CACHE (default $USCITA/.lavoro, on disk):
+#   of the tree live in $CACHE (default $OUTPUT/.work, on disk):
 #   on this laptop ~/.cache is a link to /tmp.
 set -uo pipefail
 
-QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ALBERO=$(cd "$QUI/../.." && pwd)
-USCITA=${USCITA:-$ALBERO/costruzione-uscita}
-CACHE=${CACHE:-$USCITA/.lavoro}
-TUTTI=(debian13 ubuntu2604 ubuntu2404 fedora44 alma10 arch tumbleweed leap16)
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TREE=$(cd "$HERE/../.." && pwd)
+OUTPUT=${OUTPUT:-$TREE/costruzione-uscita}
+CACHE=${CACHE:-$OUTPUT/.work}
+ALL=(debian13 ubuntu2604 ubuntu2404 fedora44 alma10 arch tumbleweed leap16)
 
 command -v podman >/dev/null 2>&1 || { echo "⛔ podman is not there"; exit 2; }
-mkdir -p "$CACHE/tmp" "$USCITA"
+mkdir -p "$CACHE/tmp" "$OUTPUT"
 export TMPDIR="$CACHE/tmp"
 
-if [ $# -eq 0 ] || [ "$1" = tutti ]; then set -- "${TUTTI[@]}"; fi
+if [ $# -eq 0 ] || [ "$1" = all_v ]; then set -- "${ALL[@]}"; fi
 
-costruisci_uno()
+build_one()
 {
-	local b=$1 imm="localhost/remotix-costruzione-$1" u="$USCITA/$1" copia="$CACHE/albero-$1"
-	local compila=no ldd_ok=- nota=""
+	local b=$1 imm="localhost/remotix-costruzione-$1" u="$OUTPUT/$1" copia="$CACHE/tree-$1"
+	local compile=no ldd_ok=- remark=""
 
-	[ -f "$QUI/Contenitore.$b" ] || { echo "⛔ $b: Contenitore.$b is missing"; return 2; }
+	[ -f "$HERE/Contenitore.$b" ] || { echo "⛔ $b: Contenitore.$b is missing"; return 2; }
 	rm -rf "$u"; mkdir -p "$u"
 	printf '== %s: image\n' "$b"
-	if ! podman build -t "$imm" -f "$QUI/Contenitore.$b" "$QUI" >"$u/immagine.log" 2>&1; then
-		echo "$b compila=no immagine=NO (see immagine.log)" | tee "$u/esito.txt"
+	if ! podman build -t "$imm" -f "$HERE/Contenitore.$b" "$HERE" >"$u/immagine.log" 2>&1; then
+		echo "$b compile=no bitmap=NO (see immagine.log)" | tee "$u/esito.txt"
 		return 1
 	fi
 
@@ -61,31 +61,31 @@ costruisci_uno()
 
 	printf '== %s: build\n' "$b"
 	rm -rf "$copia"; mkdir -p "$copia/banchi"
-	cp -a "$ALBERO/src" "$copia/src"
-	cp -a "$ALBERO/banchi/rcp" "$copia/banchi/rcp"
+	cp -a "$TREE/src" "$copia/src"
+	cp -a "$TREE/banchi/rcp" "$copia/banchi/rcp"
 	rm -f "$copia/src/remotix" "$copia/src"/*.o
-	podman run --rm --userns=keep-id -v "$copia:/albero" -w /albero/src "$imm" \
+	podman run --rm --userns=keep-id -v "$copia:/tree" -w /tree/src "$imm" \
 		sh -c 'make pulisci >/dev/null && make tutto' >"$u/compilazione.log" 2>&1
 	if [ -x "$copia/src/remotix" ]; then
-		compila=si
+		compile=si
 		cp "$copia/src/remotix" "$u/remotix"
 		podman run --rm -v "$u:/u:ro" "$imm" ldd /u/remotix >"$u/ldd.txt" 2>&1
 		ldd_ok=si
-		grep -q 'not found' "$u/ldd.txt" && { ldd_ok=no; nota="$nota librerie-mancanti"; }
-		grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ngtcp2/nghttp3-dinamiche"; }
+		grep -q 'not found' "$u/ldd.txt" && { ldd_ok=no; remark="$remark librerie-mancanti"; }
+		grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && { ldd_ok=no; remark="$remark ngtcp2/nghttp3-dinamiche"; }
 		# ⛔ phase 18: ffmpeg must NOT appear — neither linked nor in a symbol
-		grep -qE 'libav|libswscale|libx26[45]' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ffmpeg-collegato"; }
+		grep -qE 'libav|libswscale|libx26[45]' "$u/ldd.txt" && { ldd_ok=no; remark="$remark ffmpeg-collegato"; }
 		# ⛔ phase 19: nor the software fallback
-		grep -qiE 'openh264|SvtAv1' "$u/ldd.txt" && { ldd_ok=no; nota="$nota ripiego-software-collegato"; }
+		grep -qiE 'openh264|SvtAv1' "$u/ldd.txt" && { ldd_ok=no; remark="$remark ripiego-software-collegato"; }
 	else
-		nota=" errors: $(grep -cE 'error:|Error [0-9]' "$u/compilazione.log") lines (see compilazione.log)"
+		remark=" errors: $(grep -cE 'error:|Error [0-9]' "$u/compilazione.log") lines (see compilazione.log)"
 	fi
-	echo "$b compila=$compila ldd-pulito=$ldd_ok$nota" | tee "$u/esito.txt"
-	[ $compila = si ] && [ $ldd_ok = si ]
+	echo "$b compile=$compile ldd-clean=$ldd_ok$remark" | tee "$u/esito.txt"
+	[ $compile = si ] && [ $ldd_ok = si ]
 }
 
-stato=0
-for b in "$@"; do costruisci_uno "$b" || stato=1; done
-printf '\n== summary (%s)\n' "$USCITA"
-for b in "$@"; do cat "$USCITA/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
-exit $stato
+state=0
+for b in "$@"; do build_one "$b" || state=1; done
+printf '\n== summary (%s)\n' "$OUTPUT"
+for b in "$@"; do cat "$OUTPUT/$b/esito.txt" 2>/dev/null || echo "$b (no outcome)"; done
+exit $state

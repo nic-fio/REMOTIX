@@ -1,5 +1,5 @@
 /*
- * suono — the session's sound: the virtual sink and the capture of its monitor.
+ * sound — the session's sound: the virtual sink and the capture of its monitor.
  *
  * ---------------------------------------------------------------------------
  * ⛔ IN THE SESSION THERE IS NOTHING TO CAPTURE, and it must be created
@@ -31,21 +31,21 @@
  * someone listens: it belongs to the connection, and is switched on and off
  * as many times as needed.
  *
- * ⇒ `suono_apri()` mounts the sink and KEEPS it for the whole session;
- *   `suono_ascolto_avvia()` / `suono_ascolto_ferma()` belong to the connection.
+ * ⇒ `sound_open()` mounts the sink and KEEPS it for the whole session;
+ *   `sound_listen_start()` / `sound_listen_stop()` belong to the connection.
  *
  * ---------------------------------------------------------------------------
  * ⛔ THE FORMAT IS FIXED, AND IT IS NOT AN OPINION OF THIS FILE
  *
  * `RCP.md` §5.3: 48 000 Hz, 2 interleaved channels, `s16`.  The two numbers live
- * in `audio.h` (`AUDIO_FREQUENZA`, `AUDIO_CANALI`) and are taken from there:
+ * in `audio.h` (`AUDIO_FREQUENCY`, `AUDIO_CHANNELS`) and are taken from there:
  * whoever rewrote them here would create a second truth about the format, and
  * the day the two diverged the symptom would not be an error — it would be
  * **full-scale noise**, the defect of v1 (`LEZIONI.md` §2.2).
  *
  * ⚠ In v1 the rate came from the format negotiated with the RDP client and
  *   this module received it as a parameter.  In V2 nothing is negotiated:
- *   `suono_ascolto_avvia()` no longer has either rate or channels.
+ *   `sound_listen_start()` no longer has either rate or channels.
  *
  * ---------------------------------------------------------------------------
  * ⛔⛔ AND BLOCKS ARE NOT ACCUMULATED HERE — the choice, with the reason
@@ -74,9 +74,9 @@
  *   3. ⚠ And the remainder: at shutdown an accumulator would find itself holding
  *      up to 959 frames nobody claims, and would drop them silently.
  *
- * ⇒ ⛔ **So the contract is: `fotogrammi` VARIES at every callback, and the
+ * ⇒ ⛔ **So the contract is: `frames` VARIES at every callback, and the
  *   listener must take nothing for granted about its value.**  The block
- *   size is asked of `audio_cod_blocco()`, which is the single place it lives.
+ *   size is asked of `audio_enc_block()`, which is the single place it lives.
  *
  * ---------------------------------------------------------------------------
  * ⛔ THE VOLUME: invariant I5, and a measured trap
@@ -87,17 +87,17 @@
  * governs nothing: `STUDI.md` §kde §10.5, `[M]` 8 August 2026.  The long
  * reason, with the table of numbers, is next to the line in `suono.c`.
  */
-#ifndef REMOTIX_SUONO_H
-#define REMOTIX_SUONO_H
+#ifndef REMOTIX_SOUND_H
+#define REMOTIX_SOUND_H
 
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct suono suono;
+typedef struct sound sound;
 
 /*
  * The captured samples: interleaved, `s16` in machine order, and
- * `fotogrammi` samples PER CHANNEL (so `fotogrammi * AUDIO_CANALI` integers).
+ * `frames` samples PER CHANNEL (so `frames * AUDIO_CHANNELS` integers).
  *
  * ⛔⛔ RUNS ON PIPEWIRE'S REALTIME THREAD: here one COPIES and RETURNS.
  *
@@ -114,10 +114,10 @@ typedef struct suono suono;
  *     would be "the video stutters", and nobody would trace it back
  *     here.
  *
- * ⚠ `campioni` is valid only for the duration of the callback: on the next
+ * ⚠ `samples` is valid only for the duration of the callback: on the next
  *   round PipeWire writes into it again.
  */
-typedef void (*suono_campioni)(const int16_t *campioni, uint32_t fotogrammi, void *chi);
+typedef void (*sound_samples)(const int16_t *samples, uint32_t frames, void *chi);
 
 /*
  * Mounts the virtual sink in the session, and brings it to maximum.
@@ -127,8 +127,8 @@ typedef void (*suono_campioni)(const int16_t *campioni, uint32_t fotogrammi, voi
  *    because it belongs to the served session and not to the machine: leaving it
  *    behind would mean that a restarted REMOTIX finds two.
  */
-suono *suono_apri(void);
-void suono_chiudi(suono *s);
+sound *sound_open(void);
+void sound_close(sound *s);
 
 /*
  * Switches on the capture of the sink's monitor.
@@ -141,21 +141,21 @@ void suono_chiudi(suono *s);
  *
  * ⚠ One capture at a time: the second returns `false` and says so.
  */
-bool suono_ascolto_avvia(suono *s, suono_campioni su_campioni, void *chi);
+bool sound_listen_start(sound *s, sound_samples on_samples, void *chi);
 
 /*
  * Switches off the capture, and WAITS for the realtime thread to finish.
  *
- * ⛔ It must wait: `su_campioni` carries the connection's pointer, and whoever
+ * ⛔ It must wait: `on_samples` carries the connection's pointer, and whoever
  *    returns from here is entitled to free it.  A frame left half
  *    way would be a segfault inside a thread that does not bear our name.
  *    How it really waits — and why the loop lock is NOT enough — is
  *    written next to the function in `suono.c`.
  */
-void suono_ascolto_ferma(suono *s);
+void sound_listen_stop(sound *s);
 
 /* The sink's node, for the log and for diagnosis.  0 = not there (any more). */
-uint32_t suono_nodo(const suono *s);
+uint32_t sound_node(const sound *s);
 
 /*
  * The sink's volume at maximum, and not muted — invariant I5.
@@ -169,13 +169,13 @@ uint32_t suono_nodo(const suono *s);
  *
  * ⚠ It can be called from any thread: it takes the loop lock.
  */
-void suono_volume_massimo(suono *s);
+void sound_max_volume(sound *s);
 
 /*
  * ⭐ THE TWO FUNCTIONS MORE THAN v1, and the reason is a single one.
  *
  * ⛔ v1 printed from the realtime thread — "first sound block from the
- *    session: %u frames" was inside `su_processo`.  A log line
+ *    session: %u frames" was inside `on_process`.  A log line
  *    is a `vsnprintf` plus a `write`: it is exactly the waiting call
  *    mentioned above.  ⇒ Here the realtime thread **writes nothing**
  *    and just counts; what v1 printed, here is ASKED from outside.
@@ -186,7 +186,7 @@ void suono_volume_massimo(suono *s);
  *   format was refused, the volume is at zero.  With these two, the first
  *   three are told apart in one line.
  */
-bool suono_ascolto_vivo(const suono *s);
-void suono_conti(const suono *s, uint64_t *blocchi, uint64_t *fotogrammi, uint64_t *scartati);
+bool sound_listen_alive(const sound *s);
+void sound_counts(const sound *s, uint64_t *blocks, uint64_t *frames, uint64_t *discarded);
 
 #endif

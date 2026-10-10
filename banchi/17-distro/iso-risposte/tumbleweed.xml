@@ -7,7 +7,7 @@
   firewalld on as default; the user's automatic login and the same password
   for root are the installer's ALREADY ticked boxes. Partitioning is not
   written: the proposal is taken (btrfs with snapper). The bench's additions: [banco].
-  Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+  Placeholders filled in by 17-vm.sh: @ACCOUNT@ @HASH@ @KEY@ @LABEL_NAME@
 -->
 <profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
   <general>
@@ -57,17 +57,17 @@
     <start_firewall config:type="boolean">true</start_firewall>
   </firewall>
   <login_settings>
-    <autologin_user>@UTENTE@</autologin_user>
+    <autologin_user>@ACCOUNT@</autologin_user>
   </login_settings>
   <users config:type="list">
     <user>
-      <username>@UTENTE@</username>
-      <fullname>@UTENTE@</fullname>
+      <username>@ACCOUNT@</username>
+      <fullname>@ACCOUNT@</fullname>
       <encrypted config:type="boolean">true</encrypted>
       <user_password>@HASH@</user_password>
       <!-- [banco] the bench key -->
       <authorized_keys config:type="list">
-        <listentry>@CHIAVE@</listentry>
+        <listentry>@KEY@</listentry>
       </authorized_keys>
     </user>
     <user>
@@ -92,11 +92,11 @@
         <filename>rx-banco.sh</filename>
         <interpreter>shell</interpreter>
         <source><![CDATA[
-# [banco] passwordless sudo, and ssh opened in the firewall (closed by default)
-echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
+# [bench] passwordless sudo, and ssh opened in the firewall (closed by default)
+echo '@ACCOUNT@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
 chmod 440 /etc/sudoers.d/90-banco
 firewall-offline-cmd --zone=public --add-service=ssh
-echo @NOME@ > /etc/hostname
+echo @LABEL_NAME@ > /etc/hostname
 ]]></source>
       </script>
     </chroot-scripts>

@@ -4,7 +4,7 @@
 const q = new URLSearchParams(location.search);
 const FILE = q.get("f"), CODEC = q.get("codec") || "hev1.1.6.L153.B0";
 const HW = q.get("hw") || "no-preference", L = +(q.get("l")||3840), A = +(q.get("a")||2160);
-const out = { file: FILE, codec: CODEC, hw: HW, frames: [], errori: [] };
+const out = { file: FILE, codec: CODEC, hw: HW, frames: [], errors: [] };
 function nals(b) {
   const p = []; let i = 0;
   while (i + 3 < b.length) {
@@ -19,8 +19,8 @@ function aus(b) {
   for (const x of n) {
     const t = (b[x.h] >> 1) & 63; const isv = t < 32;
     const first = isv ? (b[x.h+2] & 0x80) : 0;
-    const apre = (!isv && (t==32||t==33||t==34||t==35||t==39)) || (isv && first);
-    if (!cur || (apre && vcl)) {
+    const opens = (!isv && (t==32||t==33||t==34||t==35||t==39)) || (isv && first);
+    if (!cur || (opens && vcl)) {
       if (cur) r.push(cur); cur = { s: x.s, e: x.e, key: false }; vcl = false;
     }
     cur.e = x.e; if (isv) { vcl = true; if (t >= 16 && t <= 21) cur.key = true; }
@@ -29,9 +29,9 @@ function aus(b) {
 }
 async function va() {
   const b = new Uint8Array(await (await fetch(FILE)).arrayBuffer());
-  const u = aus(b); out.aus = u.length; out.chiavi = u.filter(x=>x.key).length;
+  const u = aus(b); out.aus = u.length; out.keys = u.filter(x=>x.key).length;
   const cv = document.getElementById("c"), g = cv.getContext("2d", { willReadFrequently: true });
-  let fatti = 0;
+  let done_ones = 0;
   const dec = new VideoDecoder({
     output: (f) => {
       const info = { fmt: f.format, cw: f.codedWidth, ch: f.codedHeight, dw: f.displayWidth, dh: f.displayHeight,
@@ -40,22 +40,22 @@ async function va() {
       const d = g.getImageData(0, 0, cv.width, cv.height).data, m = new Map();
       for (let i = 0; i < d.length; i += 4*7) { const k = d[i]+","+d[i+1]+","+d[i+2]; m.set(k, (m.get(k)||0)+1); }
       let best = null, bn = 0, tot = 0; for (const [k, v] of m) { tot += v; if (v > bn) { bn = v; best = k; } }
-      info.dom = best; info.quota = +(100*bn/tot).toFixed(1); out.frames.push(info); fatti++;
+      info.dom = best; info.quota = +(100*bn/tot).toFixed(1); out.frames.push(info); done_ones++;
     },
-    error: (e) => out.errori.push(String(e)),
+    error: (e) => out.errors.push(String(e)),
   });
   const cfg = { codec: CODEC, codedWidth: L, codedHeight: A, optimizeForLatency: true };
   if (HW != "no-preference") cfg.hardwareAcceleration = HW;
-  try { out.supporto = (await VideoDecoder.isConfigSupported(cfg)).supported; } catch (e) { out.supporto = String(e); }
-  try { dec.configure(cfg); } catch (e) { out.errori.push("configure " + e); }
+  try { out.support = (await VideoDecoder.isConfigSupported(cfg)).supported; } catch (e) { out.support = String(e); }
+  try { dec.configure(cfg); } catch (e) { out.errors.push("configure " + e); }
   for (let k = 0; k < u.length && dec.state != "closed"; k++) {
     dec.decode(new EncodedVideoChunk({ type: u[k].key ? "key" : "delta", timestamp: k*16666, data: b.subarray(u[k].s, u[k].e) }));
     await new Promise(r => setTimeout(r, 16));
   }
-  try { await dec.flush(); } catch (e) { out.errori.push("flush " + e); }
-  out.decodificati = fatti;
-  await fetch("/esito", { method: "POST", body: JSON.stringify(out) });
-  document.getElementById("o").textContent = "FATTO";
+  try { await dec.flush(); } catch (e) { out.errors.push("flush " + e); }
+  out.decoded = done_ones;
+  await fetch("/outcome", { method: "POST", body: JSON.stringify(out) });
+  document.getElementById("o").textContent = "DONE";
 }
-va().catch(e => fetch("/esito", { method: "POST", body: JSON.stringify({ file: FILE, eccezione: String(e) }) }));
+va().catch(e => fetch("/outcome", { method: "POST", body: JSON.stringify({ file: FILE, exception: String(e) }) }));
 </script>

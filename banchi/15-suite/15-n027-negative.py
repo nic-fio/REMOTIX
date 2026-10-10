@@ -3,7 +3,7 @@
 """
 15-n027 — THE NEGATIVE TESTS (fasi/15 §«Negative tests», adapted)
 
-    python3 15-n027-negative.py --scatola lxqt --browser firefox --porte-base 4930 [--guasto]
+    python3 15-n027-negative.py --container_box lxqt --browser firefox --base-ports 4930 [--fault]
 
 N-1  nonexistent user .............. lives in 15-f027 (on the G8 server: it counts as an error)
 N-2  wrong password ................ is F-027 (15-f027)
@@ -35,228 +35,228 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
-G = S._carica("g8", os.path.join(S.QUI, "15-g8-comune.py"))
-FUNZIONI = ("N-3", "N-4")
+G = S._load("g8", os.path.join(S.HERE, "15-g8-comune.py"))
+FUNCTIONS = ("N-3", "N-4")
 PER_BROWSER = False
 SERVER = "15-g8-server.sh"
-GIALLO = (220, 200, 30)
-COLORI = {"giallo": GIALLO}
-NASCITA = "I AM MAKING IT BE BORN"
-FINITA = [p for p, _d in S.C20V.C20.RIGHE_FINITA]
+YELLOW = (220, 200, 30)
+COLORS = {"yellow": YELLOW}
+BIRTH = "I AM MAKING IT BE BORN"
+FINISHED = [p for p, _d in S.C20V.C20.FINISHED_LINES]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica_rientro(finita, pagina_modulo, processi_dopo, righe_rientro, entrato, fr):
+def judge_reentry(ended, page_module, processes_after, reentry_lines, entered, fr):
     """N-3: (outcome, reason)."""
-    if not finita:
+    if not ended:
         return S.BLOCKED, "the product did not declare the session ended: «Exit» not observable"
-    if not entrato:
+    if not entered:
         return S.FAIL, "after «Exit» you do not get back in"
     if fr is None:
         return S.BLOCKED, "back in, but the canvas cannot be photographed"
-    guai = []
-    if not any(NASCITA in r for r in righe_rientro):
-        guai.append("at the re-entry the server does NOT make a session be born")
-    if fr.get("giallo", 0) > 0.01:
-        guai.append("the closed session's scene is still there (yellow %.1f%%)" % (100 * fr["giallo"]))
-    if processi_dopo:
-        guai.append("after «Exit» %d processes of the scene remain" % processi_dopo)
-    if guai:
-        return S.FAIL, "; ".join(guai)
+    troubles = []
+    if not any(BIRTH in r for r in reentry_lines):
+        troubles.append("at the re-entry the server does NOT make a session be born")
+    if fr.get("yellow", 0) > 0.01:
+        troubles.append("the closed session's scene is still there (yellow %.1f%%)" % (100 * fr["yellow"]))
+    if processes_after:
+        troubles.append("after «Exit» %d processes of the scene remain" % processes_after)
+    if troubles:
+        return S.FAIL, "; ".join(troubles)
     return S.PASS, ("ended, form %s, no program left, at the re-entry session BORN and canvas "
-                    "clean (yellow %.2f%%)" % ("visible" if pagina_modulo else "after reload",
-                                                100 * fr.get("giallo", 0)))
+                    "clean (yellow %.2f%%)" % ("visible" if page_module else "after reload",
+                                                100 * fr.get("yellow", 0)))
 
 
-def giudica_senza_rete(ammesso, stato, attesa_s):
+def judge_without_network(admitted, state, wait_s):
     """N-4: (outcome, reason)."""
-    esito = (stato or {}).get("esito") or ""
-    if ammesso is True:
-        return S.FAIL, "server off and the page says «%s»" % esito
-    if (stato or {}).get("esito_classe") == "male" and esito.strip():
-        return S.PASS, "in %.0f s the page says «%s»" % (attesa_s, esito[:120])
+    outcome = (state or {}).get("outcome") or ""
+    if admitted is True:
+        return S.FAIL, "server off and the page says «%s»" % outcome
+    if (state or {}).get("esito_classe") == "male" and outcome.strip():
+        return S.PASS, "in %.0f s the page says «%s»" % (wait_s, outcome[:120])
     return S.FAIL, ("server off: after %.0f s the page stays hung without saying anything clear "
-                    "(outcome «%s»)" % (attesa_s, esito[:120]))
+                    "(outcome «%s»)" % (wait_s, outcome[:120]))
 
 
-def certifica():
+def certify():
     ok = True
 
-    def prova(cosa, vero):
+    def prova(what, real):
         nonlocal ok
-        ok &= bool(vero)
-        print("%s %s" % ("⭐" if vero else "⛔", cosa))
-    nata = ["[c] ⭐ no graphical session for «c»: I AM MAKING IT BE BORN (canvas 1x1)"]
-    prova("clean re-entry ⇒ PASS", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.0})[0] == S.PASS)
-    prova("scene still there ⇒ FAIL", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.8})[0] == S.FAIL)
-    prova("no birth ⇒ FAIL", giudica_rientro(True, True, 0, [], True, {"giallo": 0.0})[0] == S.FAIL)
-    prova("programs left ⇒ FAIL", giudica_rientro(True, True, 2, nata, True, {"giallo": 0.0})[0] == S.FAIL)
-    prova("not ended ⇒ BLOCKED", giudica_rientro(False, True, 0, nata, True, {"giallo": 0.0})[0] == S.BLOCKED)
-    prova("without network, sentence ⇒ PASS", giudica_senza_rete(
-        False, {"esito_classe": "male", "esito": "the server does not answer"}, 5)[0] == S.PASS)
-    prova("without network, admitted ⇒ FAIL", giudica_senza_rete(True, {"esito": "Admitted"}, 5)[0] == S.FAIL)
-    prova("without network, hung ⇒ FAIL", giudica_senza_rete(
-        None, {"esito_classe": "", "esito": "Connecting…"}, 40)[0] == S.FAIL)
+        ok &= bool(real)
+        print("%s %s" % ("⭐" if real else "⛔", what))
+    born = ["[c] ⭐ no graphical session for «c»: I AM MAKING IT BE BORN (canvas 1x1)"]
+    prova("clean re-entry ⇒ PASS", judge_reentry(True, True, 0, born, True, {"yellow": 0.0})[0] == S.PASS)
+    prova("scene still there ⇒ FAIL", judge_reentry(True, True, 0, born, True, {"yellow": 0.8})[0] == S.FAIL)
+    prova("no birth ⇒ FAIL", judge_reentry(True, True, 0, [], True, {"yellow": 0.0})[0] == S.FAIL)
+    prova("programs left ⇒ FAIL", judge_reentry(True, True, 2, born, True, {"yellow": 0.0})[0] == S.FAIL)
+    prova("not ended ⇒ BLOCKED", judge_reentry(False, True, 0, born, True, {"yellow": 0.0})[0] == S.BLOCKED)
+    prova("without network, sentence ⇒ PASS", judge_without_network(
+        False, {"esito_classe": "male", "outcome": "the server does not answer"}, 5)[0] == S.PASS)
+    prova("without network, admitted ⇒ FAIL", judge_without_network(True, {"outcome": "Admitted"}, 5)[0] == S.FAIL)
+    prova("without network, hung ⇒ FAIL", judge_without_network(
+        None, {"esito_classe": "", "outcome": "Connecting…"}, 40)[0] == S.FAIL)
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def processi_scena(sc, chi):
+def scene_processes(sc, chi):
     # ⚠ only the session's APPLICATION: the scene's server was
     #   launched by the bench outside the session (runuser), and «Exit» does not see it
-    c, t = G.dentro(sc, "pgrep -u %s -x firefox-esr 2>/dev/null | wc -l; true" % chi, 30)
+    c, t = G.inside(sc, "pgrep -u %s -x firefox-esr 2>/dev/null | wc -l; true" % chi, 30)
     try:
         return int(t.split()[-1])
     except (ValueError, IndexError):
         return None
 
 
-def scena_gialla(o, s):
-    S.C21.sveglia(s.g, s.geometria())
-    ok, t = G.accendi_scena(s.sc, s.chi, o.porte_base + G.SPOSTA_SCENA, GIALLO)
+def yellow_scene(o, s):
+    S.C21.wake(s.g, s.geometry())
+    ok, t = G.turn_on_scene(s.sc, s.chi, o.base_ports + G.MOVE_SCENE, YELLOW)
     if not ok:
         return None, "the yellow scene does not start: %s" % " | ".join(t.splitlines()[-5:])[-300:]
-    fr, dove, perche = G.aspetta_colore(s, "scena-gialla", COLORI, "giallo", 0.5, 40)
-    if not fr or fr["giallo"] < 0.5:
-        return None, "the yellow scene does not cover the canvas: %s %s" % (G.fr_testo(fr), perche)
+    fr, dove, reason_text = G.wait_color(s, "scena-gialla", COLORS, "yellow", 0.5, 40)
+    if not fr or fr["yellow"] < 0.5:
+        return None, "the yellow scene does not cover the canvas: %s %s" % (G.fr_text(fr), reason_text)
     return fr, dove
 
 
-def rientra_e_guarda(s, segno, pausa=8):
-    """Comes back in (from the form if it is there, otherwise by reloading) and photographs after `pausa` s.
+def reenter_and_look(s, sign, pause_v=8):
+    """Comes back in (from the form if it is there, otherwise by reloading) and photographs after `pause_v` s.
     Returns (got in, fractions, server lines from the mark, photo)."""
-    p = G.leggi_pagina(s.g)
-    if p.get("modulo"):
-        e, m, st = s.pr.entra(s.parola)
-        ok = e == S.VERDE
+    p = G.read_page(s.g)
+    if p.get("module"):
+        e, m, st = s.pr.enter(s.password)
+        ok = e == S.GREEN
         if ok:
-            e, m, st = s.pr.primo_fotogramma()
-            e, m = S.C20V.desktop_scuro_ma_vivo(e, m, st)
-            ok = e == S.VERDE
+            e, m, st = s.pr.first_frame()
+            e, m = S.C20V.desktop_dark_but_alive(e, m, st)
+            ok = e == S.GREEN
     else:
-        ok, m = s.entra()
+        ok, m = s.enter()
     if not ok:
-        return False, None, s.registro_da(segno), m
-    time.sleep(pausa)
-    png, dove = s.foto("rientro")
-    fr = G.frazioni(png, COLORI) if png else None
-    return True, fr, s.registro_da(segno), dove
+        return False, None, s.log_from(sign), m
+    time.sleep(pause_v)
+    png, dove = s.picture("reentry")
+    fr = G.fractions(png, COLORS) if png else None
+    return True, fr, s.log_from(sign), dove
 
 
 def n3(o, E):
-    with S.Sessione(o, "027", E) as s:
-        ok, m = s.entra()
+    with S.Session(o, "027", E) as s:
+        ok, m = s.enter()
         if not ok:
-            raise S.Bloccata("the tenant does not get in: " + m)
-        fr, dove = scena_gialla(o, s)
+            raise S.Blocked("the tenant does not get in: " + m)
+        fr, dove = yellow_scene(o, s)
         if fr is None:
-            raise S.Bloccata(dove)
+            raise S.Blocked(dove)
         ev = [dove]
-        desk, gesto = s.sc.gesto_esci()
-        if not gesto:
-            raise S.Bloccata("I do not know how to say «Exit» in this box")
-        segno = s.segno_registro()
-        c, t = s.come_utente(gesto)
-        forma, _r = S.C20V.aspetta_riga(s.sc, segno, s.chi, FINITA, 60)
-        modulo = False
+        desk, gesture = s.sc.exit_gesture()
+        if not gesture:
+            raise S.Blocked("I do not know how to say «Exit» in this box")
+        sign = s.log_mark()
+        c, t = s.as_user(gesture)
+        shape, _r = S.C20V.wait_line(s.sc, sign, s.chi, FINISHED, 60)
+        module = False
         fine = time.time() + 30
         while time.time() < fine:
-            if G.leggi_pagina(s.g).get("modulo"):
-                modulo = True
+            if G.read_page(s.g).get("module"):
+                module = True
                 break
             time.sleep(1)
-        pag = G.leggi_pagina(s.g)
+        page_map = G.read_page(s.g)
         proc = None
         fine = time.time() + 20
         while time.time() < fine:
-            proc = processi_scena(s.sc, s.chi)
+            proc = scene_processes(s.sc, s.chi)
             if proc == 0:
                 break
             time.sleep(2)
-        segno2 = s.segno_registro()
-        entrato, fr2, righe, dove2 = rientra_e_guarda(s, segno2)
-        ev.append(dove2 if entrato else "")
-        e, r = giudica_rientro(bool(forma), modulo, proc, righe, entrato, fr2)
-        ev.append(s.salva_testo("n3-server.txt", s.registro_da(segno)))
-        E.metti("N-3", e, r, atteso="«Exit» (%s) ⇒ session ended, form, no program; at the "
+        sign2 = s.log_mark()
+        entered, fr2, line_list, dove2 = reenter_and_look(s, sign2)
+        ev.append(dove2 if entered else "")
+        e, r = judge_reentry(bool(shape), module, proc, line_list, entered, fr2)
+        ev.append(s.save_text("n3-server.txt", s.log_from(sign)))
+        E.put("N-3", e, r, expected_val="«Exit» (%s) ⇒ session ended, form, no program; at the "
                 "re-entry a NEW and clean session" % desk,
-                osservato="%s · the product: «%s» · the page after «Exit»: «%s»" % (
-                    r, forma, (pag.get("esito") or "")[:80]), evidenze=[x for x in ev if x])
+                observed="%s · the product: «%s» · the page after «Exit»: «%s»" % (
+                    r, shape, (page_map.get("outcome") or "")[:80]), evidence=[x for x in ev if x])
 
-        if o.guasto:
-            fr, dove = scena_gialla(o, s)
+        if o.fault:
+            fr, dove = yellow_scene(o, s)
             if fr is None:
-                E.guasto("N-3", None, "the yellow scene does not start again: " + dove)
+                E.fault("N-3", None, "the yellow scene does not start again: " + dove)
                 return
-            s.g.vai("about:blank")                     # ⛔ the fault: detach, not «Exit»
+            s.g.go_to("about:blank")                     # ⛔ the fault: detach, not «Exit»
             time.sleep(4)
-            segno3 = s.segno_registro()
-            entrato, fr3, righe, _d = rientra_e_guarda(s, segno3)
-            eg, rg = giudica_rientro(True, True, 0, righe, entrato, fr3)
-            E.guasto("N-3", eg == S.FAIL if eg != S.BLOCKED else None,
+            sign3 = s.log_mark()
+            entered, fr3, line_list, _d = reenter_and_look(s, sign3)
+            eg, rg = judge_reentry(True, True, 0, line_list, entered, fr3)
+            E.fault("N-3", eg == S.FAIL if eg != S.BLOCKED else None,
                      "detach instead of «Exit» ⇒ the judge says %s: %s" % (eg, rg))
 
 
 def n4(o, E):
-    srv = G.MioServer(o.scatola)
-    if not srv.acceso():
-        ok, t = srv.accendi()
+    srv = G.MyServer(o.container_box)
+    if not srv.lit():
+        ok, t = srv.turn_on()
         if not ok:
-            E.metti("N-4", S.BLOCKED, "the G8 server does not start: " + t)
+            E.put("N-4", S.BLOCKED, "the G8 server does not start: " + t)
             return
     o4 = G.o_per(o, 1)
-    o4.porta = srv.porta
-    o4.url = "https://%s:%d/" % (o.host, srv.porta)
-    srv.sblocca()
+    o4.port = srv.port
+    o4.url = "https://%s:%d/" % (o.host, srv.port)
+    srv.unblock()
     try:
-        with S.Sessione(o4, "027", E) as s:
-            ok, m = s.pr.apri()
+        with S.Session(o4, "027", E) as s:
+            ok, m = s.pr.open_it()
             if not ok:
-                E.metti("N-4", S.BLOCKED, "the G8 server's page does not open: " + m)
+                E.put("N-4", S.BLOCKED, "the G8 server's page does not open: " + m)
                 return
-            spento, t = srv.spegni()
+            off, t = srv.turn_off()
             time.sleep(1)
             t0 = time.time()
-            amm, st = G.tenta_senza_ricarica(s, s.chi, s.parola, 40)
-            attesa = time.time() - t0
-            e, r = giudica_senza_rete(amm, st, attesa)
-            ricaricata = G.carica(s.g, o4.url, 30)
-            browser_dice = " ".join((ricaricata.get("testo") or ricaricata.get("errore")
-                                     or ricaricata.get("non_aperta") or "").split())[:160]
-            ev = [s.salva_testo("n4-pagina.txt", [str(st.get("registro") or "")[-3000:],
-                                                  "---", str(ricaricata)])]
-            E.metti("N-4", e, r, atteso="server off ⇒ within 40 s a clear sentence, no "
+            accepted, st = G.try_without_reload(s, s.chi, s.password, 40)
+            wait = time.time() - t0
+            e, r = judge_without_network(accepted, st, wait)
+            reloaded = G.load(s.g, o4.url, 30)
+            browser_says = " ".join((reloaded.get("body_text") or reloaded.get("failure")
+                                     or reloaded.get("non_aperta") or "").split())[:160]
+            ev = [s.save_text("n4-pagina.txt", [str(st.get("logbook") or "")[-3000:],
+                                                  "---", str(reloaded)])]
+            E.put("N-4", e, r, expected_val="server off ⇒ within 40 s a clear sentence, no "
                     "«Admitted», the page does not stay hung",
-                    osservato="%s · reloaded with the server off the browser says: «%s» (%s)" % (
-                        r, browser_dice, t.splitlines()[-1] if t else "?"), evidenze=ev)
-            ok, t = srv.accendi()
-            if o.guasto:
+                    observed="%s · reloaded with the server off the browser says: «%s» (%s)" % (
+                        r, browser_says, t.splitlines()[-1] if t else "?"), evidence=ev)
+            ok, t = srv.turn_on()
+            if o.fault:
                 if not ok:
-                    E.guasto("N-4", None, "the G8 server does not start again: " + t)
+                    E.fault("N-4", None, "the G8 server does not start again: " + t)
                 else:
                     t0 = time.time()
-                    amm, st = G.tenta(s, s.chi, s.parola, 40)
-                    eg, rg = giudica_senza_rete(amm, st, time.time() - t0)
-                    E.guasto("N-4", eg == S.FAIL if amm is not None else None,
+                    accepted, st = G.attempt(s, s.chi, s.password, 40)
+                    eg, rg = judge_without_network(accepted, st, time.time() - t0)
+                    E.fault("N-4", eg == S.FAIL if accepted is not None else None,
                              "server on instead of off ⇒ the judge says %s: %s" % (eg, rg))
     finally:
-        if not srv.acceso():
-            print("   G8 server restarted: %s" % (srv.accendi(),), flush=True)
+        if not srv.lit():
+            print("   G8 server restarted: %s" % (srv.turn_on(),), flush=True)
 
 
-def corpo(o, E):
+def body_el(o, E):
     try:
         n3(o, E)
-    except S.Bloccata as b:
-        E.bloccate(["N-3"], str(b))
-        if o.guasto:
-            E.bloccate(["N-3"], str(b), passata="guasto")
+    except S.Blocked as b:
+        E.blocked(["N-3"], str(b))
+        if o.fault:
+            E.blocked(["N-3"], str(b), passed="fault")
     n4(o, E)
 
 
 if __name__ == "__main__":
-    sys.exit(S.esegui(__doc__, FUNZIONI, corpo, certifica))
+    sys.exit(S.execute(__doc__, FUNCTIONS, body_el, certify))

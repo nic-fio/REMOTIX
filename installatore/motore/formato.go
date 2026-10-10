@@ -15,17 +15,17 @@ import (
 	"time"
 )
 
-// Formato is the format version of all the engine's objects (§6.6.1). It changes only if an
+// Schema is the format version of all the engine's objects (§6.6.1). It changes only if an
 // object changes so that an old reader would misread it.
-const Formato = "remotix-install/3"
+const Schema = "remotix-install/3"
 
-// VersioneMotore is the version of this engine; the catalogue declares the minimum that understands it.
+// EngineVersion is the version of this engine; the catalogue declares the minimum that understands it.
 // The release command (packaging/rilascio.sh) sets it equal to the release's
 // (-ldflags -X), the same as the remotix and remotix-install packages.
-var VersioneMotore = "0.1.0"
+var EngineVersion = "0.1.0"
 
-// ora returns the instant in UTC, with seconds: it is what goes into the logs.
-func ora() string { return time.Now().UTC().Format(time.RFC3339Nano) }
+// now returns the instant in UTC, with seconds: it is what goes into the logs.
+func now() string { return time.Now().UTC().Format(time.RFC3339Nano) }
 
 // Sha256 is the hexadecimal fingerprint of a text.
 func Sha256(b []byte) string {
@@ -34,8 +34,8 @@ func Sha256(b []byte) string {
 }
 
 // Sha256File is the fingerprint of a file; "" if the file is not there.
-func Sha256File(percorso string) (string, error) {
-	b, err := os.ReadFile(percorso)
+func Sha256File(fpath string) (string, error) {
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", nil
@@ -45,10 +45,10 @@ func Sha256File(percorso string) (string, error) {
 	return Sha256(b), nil
 }
 
-// SincronizzaCartella fsyncs the folder: without it, a rename or a creation can vanish
+// SyncFolder fsyncs the folder: without it, a rename or a creation can vanish
 // on a power cut even if the file was synced (§6.6.3).
-func SincronizzaCartella(cartella string) error {
-	d, err := os.Open(cartella)
+func SyncFolder(folder string) error {
+	d, err := os.Open(folder)
 	if err != nil {
 		return err
 	}
@@ -56,68 +56,68 @@ func SincronizzaCartella(cartella string) error {
 	return d.Sync()
 }
 
-// ScriviAtomico writes a file without ever leaving it half-written: temporary name in the same folder,
+// WriteAtomic writes a file without ever leaving it half-written: temporary name in the same folder,
 // fsync, rename, fsync of the folder. A reader sees either the old or the new, never a piece.
-func ScriviAtomico(percorso string, dati []byte, modo os.FileMode) error {
-	cartella := filepath.Dir(percorso)
-	tmp, err := os.CreateTemp(cartella, "."+filepath.Base(percorso)+".tmp-*")
+func WriteAtomic(fpath string, data_v []byte, manner os.FileMode) error {
+	folder := filepath.Dir(fpath)
+	tmp, err := os.CreateTemp(folder, "."+filepath.Base(fpath)+".tmp-*")
 	if err != nil {
 		return err
 	}
-	nomeTmp := tmp.Name()
-	pulisci := func() { tmp.Close(); os.Remove(nomeTmp) }
-	if _, err := tmp.Write(dati); err != nil {
-		pulisci()
+	tmpName := tmp.Name()
+	clean := func() { tmp.Close(); os.Remove(tmpName) }
+	if _, err := tmp.Write(data_v); err != nil {
+		clean()
 		return err
 	}
-	if err := tmp.Chmod(modo); err != nil {
-		pulisci()
+	if err := tmp.Chmod(manner); err != nil {
+		clean()
 		return err
 	}
 	if err := tmp.Sync(); err != nil {
-		pulisci()
+		clean()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(nomeTmp)
+		os.Remove(tmpName)
 		return err
 	}
-	if err := os.Rename(nomeTmp, percorso); err != nil {
-		os.Remove(nomeTmp)
+	if err := os.Rename(tmpName, fpath); err != nil {
+		os.Remove(tmpName)
 		return err
 	}
-	return SincronizzaCartella(cartella)
+	return SyncFolder(folder)
 }
 
-// ScriviJSON writes an engine object, atomically and readably.
-func ScriviJSON(percorso string, v any) error {
+// WriteJSON writes an engine object, atomically and readably.
+func WriteJSON(fpath string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
-	return ScriviAtomico(percorso, append(b, '\n'), 0o600)
+	return WriteAtomic(fpath, append(b, '\n'), 0o600)
 }
 
-// LeggiJSON reads an engine object and checks the format version, if the object has one.
-func LeggiJSON(percorso string, v any) error {
-	b, err := os.ReadFile(percorso)
+// ReadJSON reads an engine object and checks the format version, if the object has one.
+func ReadJSON(fpath string, v any) error {
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return err
 	}
-	var intestazione struct {
-		Formato string `json:"format"`
+	var header struct {
+		Schema string `json:"format"`
 	}
-	if err := json.Unmarshal(b, &intestazione); err != nil {
-		return fmt.Errorf("%s: not valid JSON: %w", percorso, err)
+	if err := json.Unmarshal(b, &header); err != nil {
+		return fmt.Errorf("%s: not valid JSON: %w", fpath, err)
 	}
-	if intestazione.Formato != "" && intestazione.Formato != Formato {
-		return fmt.Errorf("%s: format %q, this engine understands %q", percorso, intestazione.Formato, Formato)
+	if header.Schema != "" && header.Schema != Schema {
+		return fmt.Errorf("%s: format %q, this engine understands %q", fpath, header.Schema, Schema)
 	}
 	return json.Unmarshal(b, v)
 }
 
-// JSONCanonico serialises stably (Go's maps already come out sorted by key).
-func JSONCanonico(v any) []byte {
+// CanonicalJSON serialises stably (Go's maps already come out sorted by key).
+func CanonicalJSON(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
 		panic(err) // only our types: an error here is a defect of the engine

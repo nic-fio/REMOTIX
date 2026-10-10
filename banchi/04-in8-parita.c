@@ -12,15 +12,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
+static void prova(const char *label_name, int l, int a, enum AVPixelFormat pf)
 {
-	const AVCodec *c = avcodec_find_encoder_by_name(nome);
+	const AVCodec *c = avcodec_find_encoder_by_name(label_name);
 	AVCodecContext *ctx;
 	AVFrame *f;
 	AVPacket *p;
 	int e;
 
-	if (!c) { printf("  %-12s  NOT THERE\n", nome); return; }
+	if (!c) { printf("  %-12s  NOT THERE\n", label_name); return; }
 	ctx = avcodec_alloc_context3(c);
 	ctx->width = l;
 	ctx->height = a;
@@ -31,7 +31,7 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	if (e < 0) {
 		char b[256];
 		av_strerror(e, b, sizeof b);
-		printf("  %-12s  %dx%d %-12s  ⛔ OPEN REFUSED: %s\n", nome, l, a,
+		printf("  %-12s  %dx%d %-12s  ⛔ OPEN REFUSED: %s\n", label_name, l, a,
 		       av_get_pix_fmt_name(pf), b);
 		avcodec_free_context(&ctx);
 		return;
@@ -43,7 +43,7 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	f->width = l;
 	f->height = a;
 	if (av_frame_get_buffer(f, 0) < 0) {
-		printf("  %-12s  %dx%d  ⛔ the frame cannot be allocated\n", nome, l, a);
+		printf("  %-12s  %dx%d  ⛔ the frame cannot be allocated\n", label_name, l, a);
 		goto fine;
 	}
 	memset(f->data[0], 32, (size_t) f->linesize[0] * a);
@@ -52,7 +52,7 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	if (e < 0) {
 		char b[256];
 		av_strerror(e, b, sizeof b);
-		printf("  %-12s  %dx%d %-12s  ⚠ opened, but the FRAME is refused: %s\n", nome,
+		printf("  %-12s  %dx%d %-12s  ⚠ opened, but the FRAME is refused: %s\n", label_name,
 		       l, a, av_get_pix_fmt_name(pf), b);
 		goto fine;
 	}
@@ -60,7 +60,7 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	p = av_packet_alloc();
 	e = avcodec_receive_packet(ctx, p);
 	printf("  %-12s  %dx%d %-12s  ⭐ OPENED (coded %dx%d), first packet: %s (%d bytes)\n",
-	       nome, l, a, av_get_pix_fmt_name(pf), ctx->width, ctx->height,
+	       label_name, l, a, av_get_pix_fmt_name(pf), ctx->width, ctx->height,
 	       e >= 0 ? "YES" : (e == AVERROR(EAGAIN) ? "pending" : "NO"), e >= 0 ? p->size : 0);
 	av_packet_free(&p);
 fine:

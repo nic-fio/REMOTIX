@@ -5,96 +5,96 @@ import (
 	"strings"
 )
 
-// StatoFatto: detected is not verified (§6.6.7).
-type StatoFatto string
+// StateDone: detected is not verified (§6.6.7).
+type StateDone string
 
 const (
-	RILEVATO    StatoFatto = "DETECTED"
-	VERIFICATO  StatoFatto = "VERIFIED"
-	SCONOSCIUTO StatoFatto = "UNKNOWN"
+	DETECTED StateDone = "DETECTED"
+	CHECKED  StateDone = "VERIFIED"
+	UNKNOWN  StateDone = "UNKNOWN"
 )
 
-// Fatto is a thing the PREFLIGHT knows (or knows it does not know) about the machine.
-type Fatto struct {
-	Chiave string     `json:"key"`
-	Valore string     `json:"value"`
-	Stato  StatoFatto `json:"state"`
-	Fonte  string     `json:"source,omitempty"` // where it comes from: a file, a command
-	Nota   string     `json:"note,omitempty"`
+// Done is a thing the PREFLIGHT knows (or knows it does not know) about the machine.
+type Done struct {
+	Key    string    `json:"key"`
+	Value  string    `json:"value"`
+	State  StateDone `json:"state"`
+	Source string    `json:"source,omitempty"` // where it comes from: a file, a command
+	Note   string    `json:"note,omitempty"`
 }
 
-// Profilo of the machine: the first of the seven objects (§6.6.1).
-type Profilo struct {
-	Formato  string      `json:"format"`
-	Oggetto  string      `json:"object"` // "profile"
-	Motore   string      `json:"engine"`
-	Creato   string      `json:"created"`
-	Porta    int         `json:"port"`
-	Fatti    []Fatto     `json:"facts"`
-	Messaggi []Messaggio `json:"messages"`
-	Comandi  []string    `json:"commands"` // the programs launched to find out (R41): closed list
+// Profile of the machine: the first of the seven objects (§6.6.1).
+type Profile struct {
+	Schema   string    `json:"format"`
+	Object   string    `json:"object"` // "profile"
+	Engine   string    `json:"engine"`
+	Created  string    `json:"created"`
+	Port     int       `json:"port"`
+	Facts    []Done    `json:"facts"`
+	Messages []Message `json:"messages"`
+	Commands []string  `json:"commands"` // the programs launched to find out (R41): closed list
 }
 
-// NuovoProfilo is an empty profile with its header.
-func NuovoProfilo(porta int) *Profilo {
-	return &Profilo{Formato: Formato, Oggetto: "profile", Motore: VersioneMotore, Creato: ora(), Porta: porta, Comandi: []string{}}
+// NewProfile is an empty profile with its header.
+func NewProfile(port int) *Profile {
+	return &Profile{Schema: Schema, Object: "profile", Engine: EngineVersion, Created: now(), Port: port, Commands: []string{}}
 }
 
-// Metti adds or replaces a fact.
-func (p *Profilo) Metti(f Fatto) {
-	for i := range p.Fatti {
-		if p.Fatti[i].Chiave == f.Chiave {
-			p.Fatti[i] = f
+// Put adds or replaces a fact.
+func (p *Profile) Put(f Done) {
+	for i := range p.Facts {
+		if p.Facts[i].Key == f.Key {
+			p.Facts[i] = f
 			return
 		}
 	}
-	p.Fatti = append(p.Fatti, f)
+	p.Facts = append(p.Facts, f)
 }
 
-// Rilevato, Verificato, Sconosciuto: shortcuts for Metti.
-func (p *Profilo) Rilevato(chiave, valore, fonte string) {
-	p.Metti(Fatto{Chiave: chiave, Valore: valore, Stato: RILEVATO, Fonte: fonte})
+// Detected, Verified, Unknown: shortcuts for Put.
+func (p *Profile) Detected(key_id, value_v, source string) {
+	p.Put(Done{Key: key_id, Value: value_v, State: DETECTED, Source: source})
 }
-func (p *Profilo) Verificato(chiave, valore, fonte string) {
-	p.Metti(Fatto{Chiave: chiave, Valore: valore, Stato: VERIFICATO, Fonte: fonte})
+func (p *Profile) Verified(key_id, value_v, source string) {
+	p.Put(Done{Key: key_id, Value: value_v, State: CHECKED, Source: source})
 }
-func (p *Profilo) Sconosciuto(chiave, nota string) {
-	p.Metti(Fatto{Chiave: chiave, Valore: "", Stato: SCONOSCIUTO, Nota: nota})
+func (p *Profile) Unknown(key_id, remark string) {
+	p.Put(Done{Key: key_id, Value: "", State: UNKNOWN, Note: remark})
 }
 
 // F returns a fact.
-func (p *Profilo) F(chiave string) (Fatto, bool) {
-	for _, f := range p.Fatti {
-		if f.Chiave == chiave {
+func (p *Profile) F(key_id string) (Done, bool) {
+	for _, f := range p.Facts {
+		if f.Key == key_id {
 			return f, true
 		}
 	}
-	return Fatto{}, false
+	return Done{}, false
 }
 
-// V is the value of a known fact (RILEVATO or VERIFICATO); "" if missing or SCONOSCIUTO.
-func (p *Profilo) V(chiave string) string {
-	f, ok := p.F(chiave)
-	if !ok || f.Stato == SCONOSCIUTO {
+// V is the value of a known fact (DETECTED or CHECKED); "" if missing or UNKNOWN.
+func (p *Profile) V(key_id string) string {
+	f, ok := p.F(key_id)
+	if !ok || f.State == UNKNOWN {
 		return ""
 	}
-	return f.Valore
+	return f.Value
 }
 
 // Con adds a message to the profile.
-func (p *Profilo) Con(codice, dettaglio string) {
-	p.Messaggi = append(p.Messaggi, Msg(codice, dettaglio))
+func (p *Profile) Con(code_v, detail string) {
+	p.Messages = append(p.Messages, Msg(code_v, detail))
 }
 
-// Ordina puts facts in key order: the same profile always gives the same text.
-func (p *Profilo) Ordina() {
-	sort.Slice(p.Fatti, func(i, j int) bool { return p.Fatti[i].Chiave < p.Fatti[j].Chiave })
+// Sort puts facts in key order: the same profile always gives the same text.
+func (p *Profile) Sort() {
+	sort.Slice(p.Facts, func(i, j int) bool { return p.Facts[i].Key < p.Facts[j].Key })
 }
 
-// ConfrontaVersioni compares two «dotted» versions (1.25.0, 6.3.6, 3.5.1): -1, 0, 1. It strips
+// CompareVersions compares two «dotted» versions (1.25.0, 6.3.6, 3.5.1): -1, 0, 1. It strips
 // the epoch (1:) and the package revision (-1, +dfsg, ~bpo). What is not a number counts as 0.
-func ConfrontaVersioni(a, b string) int {
-	pa, pb := numeriVersione(a), numeriVersione(b)
+func CompareVersions(a, b string) int {
+	pa, pb := versionNumbers(a), versionNumbers(b)
 	for i := 0; i < len(pa) || i < len(pb); i++ {
 		var x, y int
 		if i < len(pa) {
@@ -113,7 +113,7 @@ func ConfrontaVersioni(a, b string) int {
 	return 0
 }
 
-func numeriVersione(v string) []int {
+func versionNumbers(v string) []int {
 	if i := strings.Index(v, ":"); i >= 0 {
 		v = v[i+1:]
 	}
@@ -123,9 +123,9 @@ func numeriVersione(v string) []int {
 		}
 	}
 	var r []int
-	for _, pezzo := range strings.Split(v, ".") {
+	for _, piece := range strings.Split(v, ".") {
 		n := 0
-		for _, c := range pezzo {
+		for _, c := range piece {
 			if c < '0' || c > '9' {
 				break
 			}
@@ -139,8 +139,8 @@ func numeriVersione(v string) []int {
 // DESKTOP are REMOTIX's four desktops, in the order they are written everywhere.
 var DESKTOP = []string{"gnome", "kde", "xfce", "lxqt"}
 
-// NomeDesktop is the name to display.
-func NomeDesktop(d string) string {
+// DesktopName is the name to display.
+func DesktopName(d string) string {
 	switch d {
 	case "gnome":
 		return "GNOME"

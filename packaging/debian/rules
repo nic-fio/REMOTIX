@@ -30,11 +30,11 @@ B := debian/remotix
 	dh $@
 
 override_dh_auto_clean:
-	$(MAKE) -C src pulisci
+	$(MAKE) -C src clean
 
 override_dh_auto_configure:
-	# nothing to configure: `make dipendenze` checks the minimum versions
-	$(MAKE) -C src dipendenze
+	# nothing to configure: `make dependencies` checks the minimum versions
+	$(MAKE) -C src dependencies
 
 override_dh_auto_build:
 	# ⛔ R24: the linked static libraries are the version declared in
@@ -43,9 +43,9 @@ override_dh_auto_build:
 	test "$$(pkg-config --modversion libngtcp2)" = 1.25.0
 	test "$$(pkg-config --modversion libnghttp3)" = 1.18.0
 	# ⛔ R13: the package's binary does NOT have the bench feature switched on.
-	grep -qx '#define BANCO_ACCESO 0' src/rcp.c || \
-	  { echo "⛔ src/rcp.c: BANCO_ACCESO is not 0 — not packaging (R13)"; exit 1; }
-	$(MAKE) -C src tutto CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	grep -qx '#define BENCH_ON 0' src/rcp.c || \
+	  { echo "⛔ src/rcp.c: BENCH_ON is not 0 — not packaging (R13)"; exit 1; }
+	$(MAKE) -C src overall CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 override_dh_auto_test:
 
@@ -57,7 +57,7 @@ override_dh_auto_install:
 	install -D -m 0644 THIRD-PARTY-LICENSES     $(B)/usr/share/doc/remotix/THIRD-PARTY-LICENSES
 	# R24 (T8): the versions of the LINKED static libraries, read by pkg-config in the
 	#    container that built the binary: the archive's SBOM reads them.
-	printf '{"formato":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","fonte":"pkg-config of the linked .a files"}\n' \
+	printf '{"schema":"remotix-incorporate/1","ngtcp2":"%s","nghttp3":"%s","source":"pkg-config of the linked .a files"}\n' \
 	  "$$(pkg-config --modversion libngtcp2)" "$$(pkg-config --modversion libnghttp3)" \
 	  >$(B)/usr/share/remotix/incorporate.json
 	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
@@ -72,7 +72,7 @@ override_dh_auto_install:
 	# KWin's capture permission.  ⛔ BYTE FOR BYTE the .rpm one (Arch's differs only
 	# in Exec=), with Exec= on the binary in /usr/libexec/remotix:
 	# the package ships it and the program only checks it at start-up
-	# (kwin_verifica_permesso(), kwin.c; RX-KDE-001..003), it never writes it.
+	# (kwin_check_permission(), kwin.c; RX-KDE-001..003), it never writes it.
 	install -D -m 0644 debian/org.kde.remotix.desktop \
 	  $(B)/usr/share/applications/org.kde.remotix.desktop
 	# ⛔ DECISIONI §10.12 — the package carries only INERT PIECES: the three belts

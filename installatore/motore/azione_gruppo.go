@@ -9,149 +9,149 @@ import (
 // EXACT reversibility; ⛔ whoever was already there (even as primary group) is PRE-EXISTING and
 // rolling back never removes them (R33).
 //
-// parameters: utente, gruppo.
+// parameters: username, grp.
 
-func init() { registraTipo("add-user-to-group", nuovaGruppo) }
+func init() { registerType("add-user-to-group", newGroup) }
 
-// PianoGruppo prepares the plan's step.
-func PianoGruppo(id, utente, gruppo string) AzionePiano {
-	return AzionePiano{
-		ID: id, Tipo: "add-user-to-group",
-		Parametri:      map[string]string{"user": utente, "group": gruppo},
-		Descrizione:    T("az.gruppo", utente, gruppo),
-		ComeSiFa:       T("az.gruppo.fa", utente, gruppo),
-		ComeSiVerifica: T("az.gruppo.verifica", utente, gruppo),
-		ComeSiAnnulla:  T("az.gruppo.annulla", utente, gruppo),
-		Reversibilita:  ESATTA,
+// PlanGroup prepares the plan's step.
+func PlanGroup(id, username, grp string) PlanAction {
+	return PlanAction{
+		ID: id, Kind: "add-user-to-group",
+		Parameters:    map[string]string{"user": username, "group": grp},
+		Description:   T("az.grp", username, grp),
+		ComeSiFa:      T("az.grp.fa", username, grp),
+		HowToVerify:   T("az.grp.verify", username, grp),
+		HowToUndo:     T("az.grp.rollback", username, grp),
+		Reversibility: EXACT,
 	}
 }
 
-type gruppo struct{ utente, gruppo string }
+type grp struct{ username, grp string }
 
-type primaGruppo struct {
-	Origine    Origine  `json:"origin"`
-	Membro     bool     `json:"member"`
-	Principale bool     `json:"primary,omitempty"` // the group is their primary group
-	Membri     []string `json:"members"`
+type beforeGroup struct {
+	Origin  Origin   `json:"origin"`
+	Member  bool     `json:"member"`
+	Main    bool     `json:"primary,omitempty"` // the group is their primary group
+	Members []string `json:"members"`
 }
 
-func nuovaGruppo(p AzionePiano) (Azione, error) {
-	return &gruppo{p.Parametri["user"], p.Parametri["group"]}, nil
+func newGroup(p PlanAction) (Action, error) {
+	return &grp{p.Parameters["user"], p.Parameters["group"]}, nil
 }
 
-// membro: is the user in the group (explicitly or as primary)?
-func (g *gruppo) membro(c *Contesto) (esplicito, principale bool, membri []string, err error) {
-	membri, gid, esiste, err := c.Amb.Gruppi.Membri(g.gruppo)
+// member: is the user in the group (explicitly or as primary)?
+func (g *grp) member(c *Context) (explicit, primary bool, members []string, err error) {
+	members, gid, path_exists, err := c.Amb.Groups.Members(g.grp)
 	if err != nil {
 		return
 	}
-	if !esiste {
-		err = Errore("RX-GRUPPI-002", g.gruppo)
+	if !path_exists {
+		err = Error("RX-GRUPPI-002", g.grp)
 		return
 	}
-	gidUtente, ok, err2 := c.Amb.Gruppi.GruppoPrimario(g.utente)
+	userGid, ok, err2 := c.Amb.Groups.PrimaryGroup(g.username)
 	if err2 != nil {
 		err = err2
 		return
 	}
 	if !ok {
-		err = Errore("RX-GRUPPI-003", g.utente)
+		err = Error("RX-GRUPPI-003", g.username)
 		return
 	}
-	for _, m := range membri {
-		if m == g.utente {
-			esplicito = true
+	for _, m := range members {
+		if m == g.username {
+			explicit = true
 		}
 	}
-	principale = gidUtente == gid
+	primary = userGid == gid
 	return
 }
 
-func (g *gruppo) Vincoli(c *Contesto) ([]string, error) {
-	membri, _, esiste, err := c.Amb.Gruppi.Membri(g.gruppo)
+func (g *grp) Constraints(c *Context) ([]string, error) {
+	members, _, path_exists, err := c.Amb.Groups.Members(g.grp)
 	if err != nil {
 		return nil, err
 	}
-	if !esiste {
-		return []string{"group:" + g.gruppo + "=absent"}, nil
+	if !path_exists {
+		return []string{"group:" + g.grp + "=absent"}, nil
 	}
-	return []string{"group:" + g.gruppo + "=" + strings.Join(membri, ",")}, nil
+	return []string{"group:" + g.grp + "=" + strings.Join(members, ",")}, nil
 }
 
-func (g *gruppo) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
-	esp, princ, membri, err := g.membro(c)
+func (g *grp) Snapshot(c *Context) (json.RawMessage, Origin, error) {
+	esp, is_primary, members, err := g.member(c)
 	if err != nil {
 		return nil, "", err
 	}
-	p := primaGruppo{Origine: DIRETTA, Membro: esp || princ, Principale: princ, Membri: membri}
-	if p.Membro {
-		p.Origine = PREESISTENTE
+	p := beforeGroup{Origin: DIRECT, Member: esp || is_primary, Main: is_primary, Members: members}
+	if p.Member {
+		p.Origin = PREEXISTING
 	}
-	return jsonDi(p), p.Origine, nil
+	return jsonDi(p), p.Origin, nil
 }
 
-func (g *gruppo) Fai(c *Contesto, prima json.RawMessage) error {
-	var p primaGruppo
-	if err := json.Unmarshal(prima, &p); err != nil {
+func (g *grp) Do(c *Context, before json.RawMessage) error {
+	var p beforeGroup
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origin == PREEXISTING {
 		return nil
 	}
-	esp, _, _, err := g.membro(c)
+	esp, _, _, err := g.member(c)
 	if err != nil || esp {
 		return err
 	}
-	return c.Amb.Gruppi.Aggiungi(g.utente, g.gruppo)
+	return c.Amb.Groups.Add(g.username, g.grp)
 }
 
-func (g *gruppo) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
-	var p primaGruppo
-	if err := json.Unmarshal(prima, &p); err != nil {
+func (g *grp) Verify(c *Context, before json.RawMessage) (Outcome, string, error) {
+	var p beforeGroup
+	if err := json.Unmarshal(before, &p); err != nil {
 		return "", "", err
 	}
-	esp, princ, _, err := g.membro(c)
+	esp, is_primary, _, err := g.member(c)
 	if err != nil {
 		return "", "", err
 	}
-	if esp || princ {
-		return COMPLETO, g.utente + " is in " + g.gruppo, nil
+	if esp || is_primary {
+		return COMPLETE, g.username + " is in " + g.grp, nil
 	}
-	if p.Origine == PREESISTENTE {
-		return ESTRANEO, g.utente + " was there and someone removed it", nil
+	if p.Origin == PREEXISTING {
+		return FOREIGN, g.username + " was there and someone removed it", nil
 	}
-	return ASSENTE, g.utente + " is not in " + g.gruppo, nil
+	return ABSENT, g.username + " is not in " + g.grp, nil
 }
 
-func (g *gruppo) Annulla(c *Contesto, prima json.RawMessage) error {
-	var p primaGruppo
-	if err := json.Unmarshal(prima, &p); err != nil {
+func (g *grp) Rollback(c *Context, before json.RawMessage) error {
+	var p beforeGroup
+	if err := json.Unmarshal(before, &p); err != nil {
 		return err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origin == PREEXISTING {
 		return nil // ⛔ never (R33)
 	}
-	esp, _, _, err := g.membro(c)
+	esp, _, _, err := g.member(c)
 	if err != nil || !esp {
 		return err
 	}
-	return c.Amb.Gruppi.Togli(g.utente, g.gruppo)
+	return c.Amb.Groups.Revoke(g.username, g.grp)
 }
 
-func (g *gruppo) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
-	var p primaGruppo
-	if err := json.Unmarshal(prima, &p); err != nil {
+func (g *grp) Cancelled(c *Context, before json.RawMessage) (bool, string, error) {
+	var p beforeGroup
+	if err := json.Unmarshal(before, &p); err != nil {
 		return false, "", err
 	}
-	if p.Origine == PREESISTENTE {
+	if p.Origin == PREEXISTING {
 		return true, "already there: left untouched", nil
 	}
-	esp, _, _, err := g.membro(c)
+	esp, _, _, err := g.member(c)
 	if err != nil {
 		return false, "", err
 	}
 	if esp {
-		return false, g.utente + " is still in " + g.gruppo, nil
+		return false, g.username + " is still in " + g.grp, nil
 	}
-	return true, g.utente + " is no longer in " + g.gruppo, nil
+	return true, g.username + " is no longer in " + g.grp, nil
 }

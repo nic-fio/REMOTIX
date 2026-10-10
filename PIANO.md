@@ -201,7 +201,7 @@ four, and three of them change what gets written.*
 > | | |
 > |---|---|
 > | **S1** | the positive control is *«the connection with the published fingerprint **must succeed**»* |
-> | ⛔ **S4** | it wants a server that **sends encoded frames** and a decoder that accepts them: it is not «without product», it is **phase 3** — and it even demands **a line of protocol** (`RCP.md` **§7.5** — `BANCO_MARCA` `0x000F` and `BANCO_ESITO` `0x0010`). ⚠ *This line pointed to `RCP.md` §12, where the entry is **struck through**: it was closed on the night of 9 Aug and made normative in §7.5, and whoever followed the reference found a deleted entry. Corrected on 12 Aug 2026, found by **F2.4**.* |
+> | ⛔ **S4** | it wants a server that **sends encoded frames** and a decoder that accepts them: it is not «without product», it is **phase 3** — and it even demands **a line of protocol** (`RCP.md` **§7.5** — `BENCH_MARK` `0x000F` and `BENCH_OUTCOME` `0x0010`). ⚠ *This line pointed to `RCP.md` §12, where the entry is **struck through**: it was closed on the night of 9 Aug and made normative in §7.5, and whoever followed the reference found a deleted entry. Corrected on 12 Aug 2026, found by **F2.4**.* |
 > | the **datagram** measurement | it wants a receiver |
 >
 > ⭐ **The honest order**: first the measurements that do not touch the wire — the duration of the exception, the
@@ -241,7 +241,7 @@ WebTransport, and that piece is not inherited. Boundary and reason in `DECISIONI
 > |---|---|
 > | ⭐⭐ **the cursor is dressed by the browser** (`css("cursor", "url(…) x y, auto")`), and pointer capture is **a button**, not an automatism | ✅ **adopted the same day** — and it dismantled `SPECIFICHE.md` §7.1, which contradicted §7.5 (`SPECIFICHE.md`) |
 > | ⭐⭐ **the first frame is ASKED FOR** (`buffer_refresh` with `refresh-now`), not waited for | ⏳ **it is the work on the time for the desktop to appear**: `[M]` most of that time was spent waiting |
-> | ⭐ **the client says its size and the server resizes** (`configure_display`) | ✅ **done, but only at one end**: the size is said and taken **at attach and at reattach** (`RCP.md` §4.5, `ADATTA_TELA`). ⛔ *During* the session no — removed on 17 Aug 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra here does a thing we **decided not to do**, not one we lack |
+> | ⭐ **the client says its size and the server resizes** (`configure_display`) | ✅ **done, but only at one end**: the size is said and taken **at attach and at reattach** (`RCP.md` §4.5, `FIT_CANVAS`). ⛔ *During* the session no — removed on 17 Aug 2026, `DECISIONI.md` §5.1-bis. ⚠ Xpra here does a thing we **decided not to do**, not one we lack |
 >
 > ⇒ ⚠ **The cost of having skipped point 0 was not the time of the study**: it is the code written
 > in the meantime, and the defect found by the user in thirty seconds of use instead of by us.
@@ -432,7 +432,7 @@ in `STUDI.md` §gnome §3 and they all hold at the first start, not later: `SHEL
 `gnome-session` re-executes itself inside a login shell and pulls in `~/.profile` `[R]`;
 ~~`--virtual-monitor WxH` **is not optional**, because in headless mode the session otherwise starts
 **alive, complete and black**~~; the drop-in for the Shell unit is written in
-`src/sessione.c` · `scrivi_dropin()`.
+`src/sessione.c` · `write_dropin()`.
 > ⛔⛔ **REVERSED on 14 Aug 2026, phase 4 · A1** *(realigned to the code on the 28th)*. Today the
 > product **does NOT ask for** `--virtual-monitor`, and indeed **refuses** an `ExecStart` that still asks
 > for it: if it finds one, it writes to the log *«there is a drop-in that wins over mine»* and returns `FALSE`.
@@ -486,13 +486,13 @@ someone else's.
 > ## ⭐ THE WORK TO COME, in this order
 >
 > **1. ⭐⭐ The cure inside `src/pagina.html`** — ⭐ **DONE on 20 Aug 2026**, and it is in service
-> on **7730**: `dipinti == consegnati`, `tard 0`, `err 0`, sharp canvas at 1:1 with the Marionette
+> on **7730**: `painted == delivered`, `tard 0`, `err 0`, sharp canvas at 1:1 with the Marionette
 > witness (`fasi/06-la-tela-e-la-vista.md` §4.9). ⏳ **It waits for the user's judgement**, which is the only thing that
 > can close it: no bench sees this defect. ⚠ And it remains `[?]` **how much
 > `createImageBitmap` costs** — the account to beat is that of the `drawImage` it replaces.
 >
 > *What was done, for whoever rereads:* it is what the user **sees**, and it had to come before everything.
-> The **two** 2D canvases disappear (`deposito_p.drawImage(f)` and `pennello.drawImage(deposito)`); the
+> The **two** 2D canvases disappear (`repository_p.drawImage(f)` and `brush.drawImage(repository)`); the
 > visible canvas becomes `bitmaprenderer`; the store **is no longer needed** because
 > `transferFromImageBitmap` sizes the canvas by itself and the content survives
 > resizing; centring is done **with CSS**. ⚠ And **the cost is measured**:
@@ -513,8 +513,8 @@ someone else's.
 > |---|---|
 > | **where one works** | the `git` repository is on the **CHUWI** (`192.168.0.3`), which is also the machine from which the user **looks** |
 > | **where it runs** | `NIC-OS`, **192.168.0.2**: `remotix-7700.service` and `remotix-7730.service` **both alive**, and the machine **has not rebooted** |
-> | ⛔ **the repository has uncommitted work** | `figlio.c` (the **on-command snapshot**, `SIGUSR1`), `pagina.html` (the `MARCA` line that says **who is speaking**), and the benches `07-b48`/`b49`/`b50` |
-> | it is switched back on with | `ALBERO=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --porta 7730 --hz 0` |
+> | ⛔ **the repository has uncommitted work** | `figlio.c` (the **on-command snapshot**, `SIGUSR1`), `pagina.html` (the `MARK` line that says **who is speaking**), and the benches `07-b48`/`b49`/`b50` |
+> | it is switched back on with | `TREE=/media/REMOTIX/src/07-appunti-src LAV=/media/REMOTIX/tmp/07-appunti bash banchi/07-b41-accendi.sh --port 7730 --hz 0` |
 > | ⛔ the ports in use | 7448 · 7700 · 7710 · 7720 · **7730** |
 > | ⚠ the browser caches | **`Ctrl+Shift+R`** is needed after every change of the page |
 >
@@ -654,7 +654,7 @@ someone else's.
 > |---|---|
 > | ⭐ **the decoupled cadence SUCCEEDS** | `[M]` monitor **120** + brake **90** ⇒ Mutter delivers the full cadence — cell **D**, clean. ⚠ **But M3 of `STUDI.md` §gnome §13 is NOT closed: it is half closed**, because the cause is not measured |
 > | ⛔ **but the written cause was wrong, and the new one is `[R]`** | not a **beat** between two clocks but a **quantisation** — `min_interval_us = 10⁶/maxFramerate` truncated to an integer (16666 for 60) against a tick of 16666.67 µs — ⛔ **read in the code, not measured**. And the discrepancy written before **does not reproduce** on the low cell |
-> | ⛔⛔ **and the product does not get there** | `MOVIMENTO_FPS 60` is a compile-time constant (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` has no cadence options, **`RecordVirtual` does not take the frequency** (`src/mutter.h` · the note on `RecordVirtual`): the four virtual monitors are all **@60**. It is `[M]` **on the bench** and **zero in production** |
+> | ⛔⛔ **and the product does not get there** | `MOTION_FPS 60` is a compile-time constant (`src/figlio.c` · `MOTION_FPS`), `main.c` has no cadence options, **`RecordVirtual` does not take the frequency** (`src/mutter.h` · the note on `RecordVirtual`): the four virtual monitors are all **@60**. It is `[M]` **on the bench** and **zero in production** |
 >
 > ⛔ **And the delay, which is the number the phase existed for, EXCEEDS** the 50 ms ceiling `[M]`
 > (capture → glass, blind piece **excluded**; the values in `FASI.md` §03-movimento). ⛔⛔ **But the wall
@@ -717,7 +717,7 @@ someone else's.
 > > ✅ **CURED on 14 Aug 2026 (A1)** *(box added on 28 Aug, realigning to the code)*.
 > > ⛔ The table below describes **how it was before the cure**, and it is in the present tense because it was
 > > written as a mandate. Today the product does not ask for `--virtual-monitor` and **refuses** an
-> > `ExecStart` that asks for it: `src/sessione.c`, the check on `vigore`.
+> > `ExecStart` that asks for it: `src/sessione.c`, the check on `effect`.
 >
 > | | |
 > |---|---|
@@ -730,7 +730,7 @@ someone else's.
 > *«alive, complete and black»* of `STUDI.md` §gnome §3.1); with the client connected, `RecordVirtual` mounts
 > **the only** monitor and ⭐ **the shell goes on it: bar, background, dock**. The proof is in
 > `fasi/rapporti/F5-desktop-vero.md` and in the image
-> `F3-verbali/desktop-vero-14ago.png` ⚠ *(removed from the disk like the reports; it is recovered with `git show dea834d --stat` and `git checkout dea834d -- <percorso>`)*.
+> `F3-verbali/desktop-vero-14ago.png` ⚠ *(removed from the disk like the reports; it is recovered with `git show dea834d --stat` and `git checkout dea834d -- <fpath>`)*.
 >
 > ⚠ **Two things to MEASURE before believing them, and they are not details:**
 > 1. ⛔ **who decides the monitor's size** now that the session no longer gives it: it is given by
@@ -765,7 +765,7 @@ two engines: what is lost on Chrome is not what is lost on Safari.
   producible, not come out different;
 - `Ctrl+C` that copies instead of typing a c.
 
-⛔ **And here one discovers that the cursor does not arrive at all**, which makes `CURSORE_FORMA` (`RCP.md`
+⛔ **And here one discovers that the cursor does not arrive at all**, which makes `CURSOR_SHAPE` (`RCP.md`
 §7.2) a channel without a source: on Mutter we ask for `cursor-mode=2` — that is «give me the cursor
 as metadata» — **but we do not ask for `SPA_META_Cursor`**, so shape, position and hotspot
 are not delivered `[R]` (`STUDI.md` §gnome §1.1 point 6 and §5.2). To be requested here, where the channel
@@ -813,7 +813,7 @@ session per user.
 >
 > **Here: one remote user at a time.** No budget, no counting, `MAX_ATTACCATE` stays the
 > `#define` at 16 declared as a fallback. Multi-tenant as a **function** — several sessions together,
-> `BUDGET_PIENO`, the configurable ceiling — belongs to **phase 10**, because it needs a real number
+> `BUDGET_FULL`, the configurable ceiling — belongs to **phase 10**, because it needs a real number
 > and the number is given by the hardware encoder of **phase 8**.
 >
 > ⛔ **With a piece that is not postponed**: the logind guard of `0x04`/`0x05` must discriminate
@@ -836,9 +836,9 @@ session per user.
   connection. It is the defect that makes the session unusable after the first detach;
 - the three clocks, each with its own test;
 - opening a local session while the remote one is alive → the remote one **must** drop with
-  `SESSIONE_LOCALE_PREVALSA`, and the reason is verified **from the side that receives it**;
+  `LOCAL_SESSION_PREVAILED`, and the reason is verified **from the side that receives it**;
 - ⭐ **and the missing twin**: a local session **already active** and a remote one arriving →
-  `GIA_ATTIVA_LOCALE` `0x05` (`SPECIFICHE.md` §5.1). *Added on 9 Aug 2026, finding **R4.16**:
+  `ALREADY_ACTIVE_LOCAL` `0x05` (`SPECIFICHE.md` §5.1). *Added on 9 Aug 2026, finding **R4.16**:
   it belonged to `RCP.md` §8.2 and to no phase, and it would have fallen between the phases;*
 - ⛔ **releasing the keys on detach**, which `RCP.md` §11 calls *«the rule with the highest
   damage/cost ratio in the document»*: one detaches with a key pressed **and reattaches** to
@@ -890,10 +890,10 @@ logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 > | what this phase asks | state |
 > |---|---|
 > | the **canvas agreed at attach** | ✅ `[M]` the canvas takes the size of the window, scale **1.000** |
-> | **reattach at a different size** | ✅ `[M]` `SESSIONE` grants the canvas the stage already has, zero frames discarded |
+> | **reattach at a different size** | ✅ `[M]` `SESSION` grants the canvas the stage already has, zero frames discarded |
 > | the **view that rescales** | ✅ it was there since phase 2, and now the scale is 1 when the two canvases match |
 > | ⛔ *(in addition)* ~~**live resizing**~~ | **REMOVED from the product on 17 Aug 2026** — `DECISIONI.md` §5.1-bis, the user's decision: *«non voglio mettere delle eccezioni nel progetto»*. ⚠ It was possible on Mutter, and **impossible** on KWin ≤ 6.7.4 |
-> | ⛔ the **fallback on KWin declared in the log** | **OPEN**: not verifiable as long as KDE is phase 11. The code path is there (`COMPOSITORE_INCAPACE`) and it is tested by case 11 of `banchi/04-b31`, **on a fake host** |
+> | ⛔ the **fallback on KWin declared in the log** | **OPEN**: not verifiable as long as KDE is phase 11. The code path is there (`COMPOSITOR_UNABLE`) and it is tested by case 11 of `banchi/04-b31`, **on a fake host** |
 > | ⛔ the **reattach bench that PRESSES A KEY afterwards** | **OPEN**: the fact was seen in the log (`libei` recreates the devices, `input.c` reattaches them) and the user typed in a terminal after a reattach — ⛔ but there is no bench that tests it |
 > | ⛔ **multi-monitor** | **OPEN**, and out of scope as a function (§6.5) |
 >
@@ -1003,7 +1003,7 @@ clipboard manager holds **only one MIME type**.
 > | | |
 > |---|---|
 > | ⭐⭐ **what he sees** | he drags a window fast and **the window follows the arrow**. In the morning it lagged behind by **half a title bar** |
-> | ⭐ **the phase's number** | `input → vetro` **shortened**, **paired**: two rounds that share everything except the binary, `macchina carica: false` written by the bench in both — the values in `fasi/08-l-anello.md` |
+> | ⭐ **the phase's number** | `input → glass` **shortened**, **paired**: two rounds that share everything except the binary, `host load: false` written by the bench in both — the values in `fasi/08-l-anello.md` |
 > | ⭐ **in the user's unit** | the arrow↔window gap **approaches local** — and ⭐ **local** is now measured |
 > | ⭐⭐ **and it is not a stopwatch victory** | `[M]` the **painted** frames rise. `LEZIONI.md` §6.2 respected, after it had been grazed **twice** in this same phase |
 > | ⛔ **the 50 ms ceiling** | **is not verified**, and not because it is a little short: **the phase's number sits on a different boundary** from that of the 50 (`SPECIFICHE.md` §3.2 measures up to the *frame that leaves*). ⇒ The two numbers **cannot be compared** — it is `LEZIONI.md` §1.28 applied to ourselves |
@@ -1033,7 +1033,7 @@ clipboard manager holds **only one MIME type**.
 >   reproduce the damage**. Prudence, not measured necessity;
 > - `[?]` **the gap model predicted badly twice, in opposite directions** — first less than the
 >   truth, then more. ⛔ **It is a fact about the model, not about the user**, and it is our work;
-> - 🔸 **the canvas multiple of 16** (`rcp_misura_ammessa()`): it would make zero copy valid on **every**
+> - 🔸 **the canvas multiple of 16** (`rcp_size_allowed()`): it would make zero copy valid on **every**
 >   screen, ⛔ but it is a **protocol change** — `RCP.md` §4.5 today only demands that the sides be
 >   even. **The user decides.**
 
@@ -1077,7 +1077,7 @@ clipboard manager holds **only one MIME type**.
 > | ⛔ **zero copy** | **intact — and not brought forward on purpose** (`README.md`: *«zero copy is NOT brought forward: it stays at phase 8»*). It is everything that follows |
 >
 > ⭐⭐ **And phase 4's account says that what remains weighs more than what was removed.** The
-> most expensive segment of the loop is still `cattura → primo byte` `[M]`, and inside it there is:
+> most expensive segment of the loop is still `capture_v → first byte` `[M]`, and inside it there is:
 >
 > | | does zero copy remove it? |
 > |---|---|
@@ -1110,7 +1110,7 @@ clipboard manager holds **only one MIME type**.
 > frames paying for them in delay ⇒ **it would widen the rubber band**. `SPECIFICHE.md` §3.2 already forbade it: *«a choice
 > that raises the rhythm worsening the delay is not made»*.
 >
-> ⏳ **The bench's first number** is no longer a segment: it is **`input → vetro` re-measured on the real
+> ⏳ **The bench's first number** is no longer a segment: it is **`input → glass` re-measured on the real
 > scene** — window 720×433, median speed **3 400 px/s**, peaks **12 400** (`[M]` from the user's
 > video, 22 Aug). Phase 4's number is eight days old with two phases of cures in between.
 
@@ -1297,9 +1297,9 @@ looked at it (I6).
 > **costs nothing to whoever is watching**, and **it is not a defect of the phase**.
 >
 > **3. ⭐ The two «already measured» things of the box below WERE WRITTEN on 23 Aug**, with
-> three more: the cure of `video_sgombra()` (`--sgombra-soglia-ms`, off), the audio reordering
-> (without a switch), the quality rising back (`--qualita-risale`, off), the bandwidth ceiling
-> (`--tetto-banda-mbit`, off) and ⛔ **the cure of a crash**: the server died of `SEGV` at
+> three more: the cure of `video_clear_out()` (`--clear-threshold-ms`, off), the audio reordering
+> (without a switch), the quality rising back (`--quality-rises`, off), the bandwidth ceiling
+> (`--bandwidth-cap-mbit`, off) and ⛔ **the cure of a crash**: the server died of `SEGV` at
 > 08:28:09 from a **use after free** in `webtransport.c`. ⚠ **None of the five was
 > measured on the test machine.**
 >
@@ -1309,7 +1309,7 @@ looked at it (I6).
 > **hard case**, and the phase has **two** targets, not one.
 >
 > **5. ⛔ And the rhythm regulator has a mandatory order**: it comes **after** the threshold on the queue.
-> As long as `video_sgombra()` empties the queue at every frame, the quantity the regulator
+> As long as `video_clear_out()` empties the queue at every frame, the quantity the regulator
 > hooks onto is **zero by construction** — and a mute regulator and a healthy line look the same.
 
 ⭐ **And this phase now has a second client, which it did not have before**: the degradation ladder is
@@ -1327,7 +1327,7 @@ this phase.
 > «i problemi di rete non rientrano in questa fase, qui stiamo chiudendo i buchi delle fasi 6 e 7».
 > ⚠ The coordinator had brought the decision into the wrong room.*
 >
-> **1 · ⛔ The engine of the spiral: `video_sgombra()` abandons the deltas at EVERY frame.**
+> **1 · ⛔ The engine of the spiral: `video_clear_out()` abandons the deltas at EVERY frame.**
 > `[M]` On a wide line it almost never abandons; on a narrow line a delta does not leave within the interval
 > of one frame, so it is abandoned **always**, and every abandonment reignites the debt of
 > `RCP.md` §5.2 — the log says so **almost at every frame**. ⇒ The video degenerates into **a flow of keyframes only**, which is the worst
@@ -1395,12 +1395,12 @@ this phase.
 that **says why**.
 
 **The bench**: the encoder is saturated on purpose and one verifies that the eleventh receives
-`BUDGET_PIENO` — and that **the ten who were working do not get worse** (`DECISIONI.md` §4.6-bis).
+`BUDGET_FULL` — and that **the ten who were working do not get worse** (`DECISIONI.md` §4.6-bis).
 
 ⚠ ~~**And the debt with the written deadline belongs to this phase**: `MAX_ATTACCATE` is a `#define` at
 **16** — and `MAX_FIGLI` at 16, which follows it — where `SPECIFICHE.md` §5.5 promises **ten,
 configurable**.~~ ✅ **DUE AND PAID on 25 Aug 2026** *(realigned to the code on the 28th)*: the
-number is a single one, `RCP_TETTO_SESSIONI` in `src/rcp.h`, and it is changed with **`--tetto-sessioni N``**.
+number is a single one, `RCP_SESSION_CAP` in `src/rcp.h`, and it is changed with **`--tetto-sessioni N``**.
 
 > ## ✅ OPENED ON 24 AUG 2026, **CLOSED ON THE 25TH** on the user's judgement
 >
@@ -1907,14 +1907,14 @@ judged).
 
 ```
 # the product with phase 8 inside
-ALBERO=/media/REMOTIX/src/08-prova-src LAV=/media/REMOTIX/tmp/08-prova \
-  bash banchi/07-b41-accendi.sh --porta 7790 --hz 0
+TREE=/media/REMOTIX/src/08-prova-src LAV=/media/REMOTIX/tmp/08-prova \
+  bash banchi/07-b41-accendi.sh --port 7790 --hz 0
 
 # the user's yardstick: the arrow↔window gap, in title bars
-python3 banchi/08-b67-elastico.py --certifica      # 13 injected faults out of 13
+python3 banchi/08-b67-elastico.py --certify      # 13 injected faults out of 13
 
 # the whole loop, and ⛔ it GOES RED if the machine is not idle
-python3 banchi/04-b30-anello-input.py --certifica  # 57 out of 57, 18 faults out of 18
+python3 banchi/04-b30-anello-input.py --certify  # 57 out of 57, 18 faults out of 18
 ```
 
 ⚠ **Two traps that bit today**: the session's slot is **one** and the previous one stays

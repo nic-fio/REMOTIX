@@ -7,18 +7,18 @@ import (
 
 // Comparing PACKAGE versions (after D14: an installation package moved further
 // ahead by a system upgrade is still «complete», azione_pacchetti.go). Two algorithms, those of the managers themselves: dpkg (Debian, Ubuntu) and rpmvercmp
-// (rpm, and pacman which uses the same one). ⚠ ConfrontaVersioni (profilo.go) stays the simple one for
+// (rpm, and pacman which uses the same one). ⚠ CompareVersions (profilo.go) stays the simple one for
 // «human» versions (GNOME 48, OpenSSL 3.5.1): here there are epochs, revisions, tildes.
 
-// ConfrontaPacchetti compares two package versions of the family: -1, 0, 1.
-func ConfrontaPacchetti(famiglia, a, b string) int {
-	if famiglia == "debian" {
-		return confrontaDeb(a, b)
+// ComparePackages compares two package versions of the family: -1, 0, 1.
+func ComparePackages(family, a, b string) int {
+	if family == "debian" {
+		return compareDeb(a, b)
 	}
-	return confrontaRpm(a, b)
+	return compareRpm(a, b)
 }
 
-func segno(x int) int {
+func sign(x int) int {
 	switch {
 	case x < 0:
 		return -1
@@ -28,11 +28,11 @@ func segno(x int) int {
 	return 0
 }
 
-func cifra(c byte) bool   { return c >= '0' && c <= '9' }
-func lettera(c byte) bool { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') }
+func digit(c byte) bool  { return c >= '0' && c <= '9' }
+func letter(c byte) bool { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') }
 
-// epoca: "2:1.0-1" → 2, "1.0-1".
-func epoca(v string) (int, string) {
+// epoch: "2:1.0-1" → 2, "1.0-1".
+func epoch(v string) (int, string) {
 	if i := strings.Index(v, ":"); i >= 0 {
 		n, _ := strconv.Atoi(v[:i])
 		return n, v[i+1:]
@@ -40,37 +40,37 @@ func epoca(v string) (int, string) {
 	return 0, v
 }
 
-// ultimoTrattino: "1.0-2+deb13" → "1.0", "2+deb13".
-func ultimoTrattino(v string) (string, string) {
+// lastDash: "1.0-2+deb13" → "1.0", "2+deb13".
+func lastDash(v string) (string, string) {
 	if i := strings.LastIndex(v, "-"); i >= 0 {
 		return v[:i], v[i+1:]
 	}
 	return v, ""
 }
 
-func confrontaDeb(a, b string) int {
-	ea, va := epoca(a)
-	eb, vb := epoca(b)
+func compareDeb(a, b string) int {
+	ea, va := epoch(a)
+	eb, vb := epoch(b)
 	if ea != eb {
-		return segno(ea - eb)
+		return sign(ea - eb)
 	}
-	ua, ra := ultimoTrattino(va)
-	ub, rb := ultimoTrattino(vb)
+	ua, ra := lastDash(va)
+	ub, rb := lastDash(vb)
 	if c := verrevcmp(ua, ub); c != 0 {
 		return c
 	}
 	return verrevcmp(ra, rb)
 }
 
-func ordineDeb(s string, i int) int {
+func debOrder(s string, i int) int {
 	if i >= len(s) {
 		return 0
 	}
 	c := s[i]
 	switch {
-	case cifra(c):
+	case digit(c):
 		return 0
-	case lettera(c):
+	case letter(c):
 		return int(c)
 	case c == '~':
 		return -1
@@ -83,10 +83,10 @@ func verrevcmp(a, b string) int {
 	i, j := 0, 0
 	for i < len(a) || j < len(b) {
 		diff := 0
-		for (i < len(a) && !cifra(a[i])) || (j < len(b) && !cifra(b[j])) {
-			ac, bc := ordineDeb(a, i), ordineDeb(b, j)
+		for (i < len(a) && !digit(a[i])) || (j < len(b) && !digit(b[j])) {
+			ac, bc := debOrder(a, i), debOrder(b, j)
 			if ac != bc {
-				return segno(ac - bc)
+				return sign(ac - bc)
 			}
 			i++
 			j++
@@ -97,34 +97,34 @@ func verrevcmp(a, b string) int {
 		for j < len(b) && b[j] == '0' {
 			j++
 		}
-		for i < len(a) && cifra(a[i]) && j < len(b) && cifra(b[j]) {
+		for i < len(a) && digit(a[i]) && j < len(b) && digit(b[j]) {
 			if diff == 0 {
 				diff = int(a[i]) - int(b[j])
 			}
 			i++
 			j++
 		}
-		if i < len(a) && cifra(a[i]) {
+		if i < len(a) && digit(a[i]) {
 			return 1
 		}
-		if j < len(b) && cifra(b[j]) {
+		if j < len(b) && digit(b[j]) {
 			return -1
 		}
 		if diff != 0 {
-			return segno(diff)
+			return sign(diff)
 		}
 	}
 	return 0
 }
 
-func confrontaRpm(a, b string) int {
-	ea, va := epoca(a)
-	eb, vb := epoca(b)
+func compareRpm(a, b string) int {
+	ea, va := epoch(a)
+	eb, vb := epoch(b)
 	if ea != eb {
-		return segno(ea - eb)
+		return sign(ea - eb)
 	}
-	ua, ra := ultimoTrattino(va)
-	ub, rb := ultimoTrattino(vb)
+	ua, ra := lastDash(va)
+	ub, rb := lastDash(vb)
 	if c := rpmvercmp(ua, ub); c != 0 {
 		return c
 	}
@@ -137,7 +137,7 @@ func rpmvercmp(a, b string) int {
 		return 0
 	}
 	i, j := 0, 0
-	sep := func(c byte) bool { return !cifra(c) && !lettera(c) && c != '~' && c != '^' }
+	sep := func(c byte) bool { return !digit(c) && !letter(c) && c != '~' && c != '^' }
 	for i < len(a) || j < len(b) {
 		for i < len(a) && sep(a[i]) {
 			i++
@@ -179,19 +179,19 @@ func rpmvercmp(a, b string) int {
 			break
 		}
 		si, sj := i, j
-		num := cifra(a[i])
+		num := digit(a[i])
 		if num {
-			for i < len(a) && cifra(a[i]) {
+			for i < len(a) && digit(a[i]) {
 				i++
 			}
-			for j < len(b) && cifra(b[j]) {
+			for j < len(b) && digit(b[j]) {
 				j++
 			}
 		} else {
-			for i < len(a) && lettera(a[i]) {
+			for i < len(a) && letter(a[i]) {
 				i++
 			}
-			for j < len(b) && lettera(b[j]) {
+			for j < len(b) && letter(b[j]) {
 				j++
 			}
 		}
@@ -205,7 +205,7 @@ func rpmvercmp(a, b string) int {
 		if num {
 			pa, pb = strings.TrimLeft(pa, "0"), strings.TrimLeft(pb, "0")
 			if len(pa) != len(pb) {
-				return segno(len(pa) - len(pb))
+				return sign(len(pa) - len(pb))
 			}
 		}
 		if c := strings.Compare(pa, pb); c != 0 {

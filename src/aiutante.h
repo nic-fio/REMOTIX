@@ -55,16 +55,16 @@
  * The seven roads by which something can go wrong, and where each one comes
  * out:
  *
- *   1. the helper did not start            `aiutante_chiedi` -> false -> NO
- *   2. the socket is full / EAGAIN         `aiutante_chiedi` -> false -> NO
- *   3. too many requests in flight (> 16)  `aiutante_chiedi` -> false -> NO
+ *   1. the helper did not start            `helper_ask` -> false -> NO
+ *   2. the socket is full / EAGAIN         `helper_ask` -> false -> NO
+ *   3. too many requests in flight (> 16)  `helper_ask` -> false -> NO
  *   4. the dispatcher is dead (EOF)        all requests in flight -> NO
  *   5. the grandchild died without answering the request expires   -> NO
  *   6. the answer is short or mangled      it is discarded         -> then (5)
  *   7. the answer carries a byte that is not exactly 1 -> NO
  *
  * ⛔ **There is no road leading to `true` without a `PAM_SUCCESS` on both
- *    steps of `rcp_autentica()`**: the `true` is born at a single point of the
+ *    steps of `rcp_authenticate()`**: the `true` is born at a single point of the
  *    program, and it is the byte `1` written by the grandchild after receiving
  *    that `PAM_SUCCESS`.  Every other combination of bytes, every different
  *    length and every silence is a «no».
@@ -88,35 +88,35 @@
  * filesystem, cannot be connected to from outside, and dies with the two
  * processes.
  */
-#ifndef REMOTIX_AIUTANTE_H
-#define REMOTIX_AIUTANTE_H
+#ifndef REMOTIX_HELPER_H
+#define REMOTIX_HELPER_H
 
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct aiutante aiutante;
+typedef struct helper helper;
 
 /* ⛔ It is started EARLY, and the reason is that the child inherits the
- *    descriptors: started after `trasporto_apri()` it would carry along the
+ *    descriptors: started after `transport_open()` it would carry along the
  *    UDP socket and the TCP listener, and the port would stay held by it even
  *    after the server's death.  ⚠ Returns NULL if it could not be started, and
  *    the caller MUST be able to tell «started» from «not started»: without a
  *    helper every authentication is a NO. */
-aiutante *aiutante_accendi(void);
+helper *helper_turn_on(void);
 
 /* Closes the socket and sends `SIGTERM` to the dispatcher. */
-void aiutante_spegni(aiutante *a);
+void helper_turn_off(helper *a);
 
 /* The descriptor to put in the `poll`, or -1 if the helper is off/dead. */
-int aiutante_descrittore(const aiutante *a);
+int helper_descriptor(const helper *a);
 
 /* ⛔ Asks for the check and RETURNS AT ONCE.  `true` = the question has left
  * and an answer will arrive (or expire); `false` = **it has not left**, and the
  * caller must treat it as an immediate «no».
- * `pratica` comes out with the number by which the answer will be recognised. */
-bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
-                     const char *provenienza, uint64_t ora_ms,
-                     uint64_t *pratica);
+ * `practical` comes out with the number by which the answer will be recognised. */
+bool helper_ask(helper *a, const char *username, const char *password,
+                     const char *provenance, uint64_t now_ms,
+                     uint64_t *practical);
 
 /* ⛔⭐ AND THE DELIVERY ALSO CARRIES THE USER'S NAME — 12 Aug 2026,
  *     `DECISIONI.md` §1.10-bis.
@@ -126,29 +126,29 @@ bool aiutante_chiedi(aiutante *a, const char *utente, const char *parola,
  *     it is needed: when the answer is «yes», the parent must spawn **that
  *     user's child** (`figlio.h`), and the only place of the program that has
  *     both the request number and the name is this one — the name arrived in
- *     `aiutante_chiedi()`.
+ *     `helper_ask()`.
  *
  * ⚠ The name lives in the table of requests in flight next to the expiry:
  *   ⛔ **the password does not**, and it is not a detail — §4.4 wants it
  *   zeroed as soon as PAM has answered, and here not even one copy remains. */
 /* ⭐ PHASE 17 T6: and the client's ADDRESS (bare, like sshd's `PAM_RHOST`;
  *    "" if unknown), which on «yes» goes to the child's PAM session. */
-typedef void (*AiutanteVerdetto)(void *ctx, uint64_t pratica, bool ammesso,
-                                 const char *utente, const char *rhost);
+typedef void (*HelperVerdict)(void *ctx, uint64_t practical, bool admitted,
+                                 const char *username, const char *rhost);
 
 /* Reads the ready answers and delivers them one by one.  To be called when the
  * descriptor is readable.
  * ⛔ If the dispatcher is dead, it delivers a «no» for every request in flight:
  *    a request without an answer is a wait nobody closes. */
-void aiutante_muovi(aiutante *a, AiutanteVerdetto consegna, void *ctx);
+void helper_move(helper *a, HelperVerdict delivery, void *ctx);
 
 /* ⛔ Expires the requests that are too old, delivering a «no».  It is the
  * safety net of case 5: a grandchild killed halfway writes nothing, and
- * without this call the session would stay in `attesa-verdetto` forever. */
-void aiutante_scaduti(aiutante *a, uint64_t ora_ms, AiutanteVerdetto consegna,
+ * without this call the session would stay in `waiting-verdict` forever. */
+void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
                       void *ctx);
 
 /* How many requests are in flight.  For the log. */
-int aiutante_in_volo(const aiutante *a);
+int helper_in_flight(const helper *a);
 
 #endif

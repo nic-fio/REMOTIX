@@ -60,8 +60,8 @@ export LC_ALL=C
 		[ -e "$p" ] && command -v ls >/dev/null && ls -dZ "$p" 2>/dev/null | awk '{ print "Z " $2 " " $1 }'
 	done
 	if command -v firewall-cmd >/dev/null && systemctl -q is-active firewalld; then
-		firewall-cmd --permanent --list-services | tr ' ' '\n' | awk 'NF { print "W servizio " $1 }'
-		firewall-cmd --permanent --list-ports | tr ' ' '\n' | awk 'NF { print "W porta " $1 }'
+		firewall-cmd --permanent --list-services | tr ' ' '\n' | awk 'NF { print "W service " $1 }'
+		firewall-cmd --permanent --list-ports | tr ' ' '\n' | awk 'NF { print "W port " $1 }'
 	fi
 	find /home -xdev -printf 'H %p\n' 2>/dev/null
 } | sort

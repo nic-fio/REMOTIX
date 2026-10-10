@@ -1,5 +1,5 @@
 #!/bin/bash
-# rifai.sh [prodotto] — restarts the server in the 4 boxes; with «prodotto» it first puts the product back in.
+# rifai.sh [product] — restarts the server in the 4 boxes; with «prodotto» it first puts the product back in.
 cd /media/REMOTIX/rete11 || exit 2
 P=$(sed -n "s/^pass: *//p" ~/SERVER.ssh)
 for d in gnome kde xfce lxqt; do

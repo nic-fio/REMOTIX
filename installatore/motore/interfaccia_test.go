@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-// pacchettoUnico: the packages/ folder of a fake .run, with the REMOTIX package for the Debian 13
+// singlePackage: the packages/ folder of a fake .run, with the REMOTIX package for the Debian 13
 // of the fake machine (the fake manager reads the JSON: it depends on libnuova and libcomune).
-func pacchettoUnico(t *testing.T, radice string) string {
-	d := filepath.Join(radice, "run/packages/debian13")
+func singlePackage(t *testing.T, root string) string {
+	d := filepath.Join(root, "run/packages/debian13")
 	os.MkdirAll(d, 0o755)
 	if err := os.WriteFile(filepath.Join(d, "remotix_0.17.0-1_amd64.deb"),
-		[]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`), 0o644); err != nil {
+		[]byte(`{"label_name":"remotix","version_v":"0.17.0-1","depends":["libnuova","libcomune"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return "/run/packages"
@@ -22,44 +22,44 @@ func pacchettoUnico(t *testing.T, radice string) string {
 // DECISIONI §10.36: the plan does not modify the system — no repositories, firewalls, belts or desktops;
 // the exact packages from the manager's simulation, before the question; the card's groups
 // declared; the running firewall is stated, not opened.
-func TestPianoNonModificaIlSistema(t *testing.T) {
-	radice := t.TempDir()
-	preparaMacchina(t, radice)
-	amb := ambienteFinto(radice)
-	prof := profiloFinto()
-	cat := catalogoProva(t)
-	rap := Valuta(cat, prof)
-	p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetti: pacchettoUnico(t, radice), Porta: 7447})
+func TestPlanDoesNotModifySystem(t *testing.T) {
+	root := t.TempDir()
+	prepareMachine(t, root)
+	amb := fakeEnvironment(root)
+	prof := fakeProfile()
+	cat := catalogTest(t)
+	rap := Evaluate(cat, prof)
+	p, err := PlanInstallation(prof, rap, cat, amb, InstallOptions{Packets: singlePackage(t, root), Port: 7447})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if Bloccato(p) {
-		t.Fatalf("plan blocked: %+v", p.NonFatto)
+	if Blocked(p) {
+		t.Fatalf("plan blocked: %+v", p.NotDone)
 	}
-	for _, a := range p.Azioni {
-		switch a.Tipo {
+	for _, a := range p.Actions {
+		switch a.Kind {
 		case "install-packages", "add-user-to-group", "write-file", "start-service":
 		default:
-			t.Errorf("the plan modifies the system with %s (%s)", a.ID, a.Tipo)
+			t.Errorf("the plan modifies the system with %s (%s)", a.ID, a.Kind)
 		}
 	}
-	esiti := map[string]string{}
-	for _, x := range p.Pacchetti {
-		esiti[x.Nome] = x.Esito
+	outcomes := map[string]string{}
+	for _, x := range p.Packets {
+		outcomes[x.Name] = x.Outcome
 	}
-	if esiti["remotix"] != "new" || esiti["libnuova"] != "new" || esiti["libcomune"] != "upgraded" {
-		t.Errorf("the manager's simulation: %+v", p.Pacchetti)
+	if outcomes["remotix"] != "new" || outcomes["libnuova"] != "new" || outcomes["libcomune"] != "upgraded" {
+		t.Errorf("the manager's simulation: %+v", p.Packets)
 	}
 	fw := false
-	for _, m := range p.NonFatto {
-		fw = fw || (m.Gravita == AVVISO && strings.Contains(m.Testo, "firewalld"))
+	for _, m := range p.NotDone {
+		fw = fw || (m.Severity == WARNING && strings.Contains(m.Text, "firewalld"))
 	}
 	if !fw {
-		t.Errorf("the running firewall must be stated: %+v", p.NonFatto)
+		t.Errorf("the running firewall must be stated: %+v", p.NotDone)
 	}
 	// without the .run: the package is missing, and the plan stops
-	q, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Porta: 7447})
-	if err != nil || !Bloccato(q) || !haCodice(q.NonFatto, "RX-MANCA-004") {
+	q, err := PlanInstallation(prof, rap, cat, amb, InstallOptions{Port: 7447})
+	if err != nil || !Blocked(q) || !hasCode(q.NotDone, "RX-MANCA-004") {
 		t.Errorf("without packages: %v %+v", err, q)
 	}
 }
@@ -67,79 +67,79 @@ func TestPianoNonModificaIlSistema(t *testing.T) {
 // What is missing is stated and stops everything (DECISIONI §10.36): without a desktop RX-MANCA-001, on Alma without
 // EPEL RX-MANCA-002 — without packages or commands suggested. labwc, wlr-randr and the font on the other hand
 // are not missing: they are REMOTIX dependencies, in the plan (the user, 10 Oct). And a BLOCKING plan
-// applied leads to BLOCCATA without touching anything.
-func TestMancaFermaTutto(t *testing.T) {
-	cat := catalogoProva(t)
-	casi := []struct {
+// applied leads to BLOCKED without touching anything.
+func TestMissingStopsAll(t *testing.T) {
+	cat := catalogTest(t)
+	cases := []struct {
 		id, ver string
 		extra   map[string]string
-		codice  string
+		code_v  string
 	}{
 		{"debian", "13", map[string]string{"desktop.gnome": "absent"}, "RX-MANCA-001"},
 		{"almalinux", "10.1", map[string]string{"repo.epel": "absent"}, "RX-MANCA-002"},
 	}
-	for _, c := range casi {
-		rap := Valuta(cat, profiloDi(c.id, c.ver, c.extra))
-		if !haCodice(rap.Mancano, c.codice) {
-			t.Errorf("%s %v: missing %s, the report says %+v", c.id, c.extra, c.codice, rap.Mancano)
+	for _, c := range cases {
+		rap := Evaluate(cat, profileOf(c.id, c.ver, c.extra))
+		if !hasCode(rap.Missing, c.code_v) {
+			t.Errorf("%s %v: missing %s, the report says %+v", c.id, c.extra, c.code_v, rap.Missing)
 		}
-		for _, m := range rap.Mancano {
+		for _, m := range rap.Missing {
 			for _, x := range []string{"sudo", "dnf ", "apt ", "zypper", "pacman"} {
-				if strings.Contains(m.Testo+m.Dettaglio+m.Rimedio, x) {
-					t.Errorf("%s: the message suggests a command (%q): %+v", c.codice, x, m)
+				if strings.Contains(m.Text+m.Detail+m.Remediation, x) {
+					t.Errorf("%s: the message suggests a command (%q): %+v", c.code_v, x, m)
 				}
 			}
 		}
 	}
 
 	// XFCE without labwc, wlr-randr and fonts: no «missing», three dependencies with the desktop requiring them
-	rap := Valuta(cat, profiloDi("debian", "13", map[string]string{"desktop.gnome": "absent", "desktop.xfce": "4.20.1",
+	rap := Evaluate(cat, profileOf("debian", "13", map[string]string{"desktop.gnome": "absent", "desktop.xfce": "4.20.1",
 		"package.labwc": "absent", "package.wlr-randr": "absent", "fonts.scalable": "0", "distro.family": "debian"}))
-	if len(rap.Mancano) > 0 {
-		t.Errorf("XFCE without labwc: missing %+v", rap.Mancano)
+	if len(rap.Missing) > 0 {
+		t.Errorf("XFCE without labwc: missing %+v", rap.Missing)
 	}
-	if got := strings.Join(rap.NomiDipendenze(), ","); got != "labwc,wlr-randr,fonts-dejavu-core" || rap.Dipendenze[0].Perche != "XFCE" {
-		t.Errorf("XFCE without labwc: dependencies %+v", rap.Dipendenze)
+	if got := strings.Join(rap.DependencyNames(), ","); got != "labwc,wlr-randr,fonts-dejavu-core" || rap.Dependencies[0].Why != "XFCE" {
+		t.Errorf("XFCE without labwc: dependencies %+v", rap.Dependencies)
 	}
 
-	b := nuovoBanco(t)
+	b := newBench(t)
 	m := b.motore(t)
 	var p Piano
-	LeggiJSON(b.piano, &p)
-	p.NonFatto = append(p.NonFatto, Msg("RX-MANCA-003", "XFCE: labwc"))
-	p.Approvazione = &Approvazione{Da: "prova", Modo: "a mano", DigestPiano: p.Digest()}
-	ScriviJSON(b.piano, &p)
-	op, err := m.Applica(b.piano, false, "prova")
-	if op == nil || op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-MANCA-003") {
+	ReadJSON(b.piano, &p)
+	p.NotDone = append(p.NotDone, Msg("RX-MANCA-003", "XFCE: labwc"))
+	p.Approval = &Approval{Da: "prova", Manner: "a mano", DigestPiano: p.Digest()}
+	WriteJSON(b.piano, &p)
+	op, err := m.Apply(b.piano, false, "prova")
+	if op == nil || op.State != BLOCKED || !strings.Contains(lastState(op), "RX-MANCA-003") {
 		t.Errorf("missing: %v %v", op, err)
 	}
-	if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
+	if d := differences(b.before, picture(t, b.root)); len(d) > 0 {
 		t.Errorf("missing: the machine was touched: %v", d)
 	}
 }
 
 // Stopping halfway (the «Cancel and put back as it was» button): between one step and the next, then everything is
 // undone from the log (RX-AZIONE-006) and the machine goes back to how it was.
-func TestFermataDaChiInstalla(t *testing.T) {
-	b := nuovoBanco(t)
+func TestStoppedByInstaller(t *testing.T) {
+	b := newBench(t)
 	m := b.motore(t)
 	n := 0
-	m.Fermata = func() bool { n++; return n > 2 } // after two steps
-	op, err := m.Applica(b.piano, true, "prova")
-	if op == nil || op.Stato != ANNULLATA {
+	m.Stopped = func() bool { n++; return n > 2 } // after two steps
+	op, err := m.Apply(b.piano, true, "prova")
+	if op == nil || op.State != ROLLED_BACK {
 		t.Fatalf("fermata: %v %v", op, err)
 	}
-	if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
+	if d := differencesAfterUndo(t, b.before, picture(t, b.root)); len(d) > 0 {
 		t.Errorf("stopped: the machine did not go back to how it was: %v", d)
 	}
-	if err := op.apriRegistro(); err != nil {
+	if err := op.openLog(); err != nil {
 		t.Fatal(err)
 	}
-	visto := false
-	for _, e := range op.Reg.Eventi {
-		visto = visto || (e.Tipo == EvStato && e.A == IN_ANNULLAMENTO && e.Codice == "RX-AZIONE-006")
+	seen_v := false
+	for _, e := range op.Reg.Events {
+		seen_v = seen_v || (e.Kind == EvState && e.A == ROLLING_BACK && e.Code == "RX-AZIONE-006")
 	}
-	if !visto {
+	if !seen_v {
 		t.Errorf("stopped: ROLLING_BACK with RX-AZIONE-006 is not in the log")
 	}
 }
@@ -147,38 +147,38 @@ func TestFermataDaChiInstalla(t *testing.T) {
 // The chosen port ends up in the plan: a file in /etc/remotix/remotix.conf.d (remotix.service
 // reads it), BEFORE the switch-on; with the stock one no file (`[M]` 30 Sep, leap16-kde in a
 // box: the service started on 7447 and the engine verified it on 8532).
-func TestPianoPortaScelta(t *testing.T) {
-	radice := t.TempDir()
-	preparaMacchina(t, radice)
-	bundle := pacchettoUnico(t, radice)
-	amb := ambienteFinto(radice)
-	prof := profiloFinto()
-	cat := catalogoProva(t)
-	rap := Valuta(cat, prof)
-	for _, porta := range []int{7447, 8531} {
-		p, err := PianoInstallazione(prof, rap, cat, amb, OpzioniInstallazione{Pacchetti: bundle, Porta: porta})
+func TestPlanChosenPort(t *testing.T) {
+	root := t.TempDir()
+	prepareMachine(t, root)
+	bundle := singlePackage(t, root)
+	amb := fakeEnvironment(root)
+	prof := fakeProfile()
+	cat := catalogTest(t)
+	rap := Evaluate(cat, prof)
+	for _, port := range []int{7447, 8531} {
+		p, err := PlanInstallation(prof, rap, cat, amb, InstallOptions{Packets: bundle, Port: port})
 		if err != nil {
 			t.Fatal(err)
 		}
-		file, servizio := -1, -1
-		for i, a := range p.Azioni {
+		file, service := -1, -1
+		for i, a := range p.Actions {
 			switch {
-			case a.ID == "port" && a.Tipo == "write-file":
+			case a.ID == "port" && a.Kind == "write-file":
 				file = i
-				if a.Parametri["path"] != "/etc/remotix/remotix.conf.d/porta.conf" || a.Parametri["content"] != "REMOTIX_PORTA=8531\n" {
-					t.Errorf("port %d: the file is %v", porta, a.Parametri)
+				if a.Parameters["path"] != "/etc/remotix/remotix.conf.d/porta.conf" || a.Parameters["content"] != "REMOTIX_PORT=8531\n" {
+					t.Errorf("port %d: the file is %v", port, a.Parameters)
 				}
-			case a.Tipo == "start-service":
-				servizio = i
+			case a.Kind == "start-service":
+				service = i
 			}
 		}
 		switch {
-		case porta == 7447 && file != -1:
+		case port == 7447 && file != -1:
 			t.Errorf("stock port: no file in /etc, but there is one")
-		case porta != 7447 && file == -1:
-			t.Errorf("port %d: the file in /etc/remotix/remotix.conf.d is missing", porta)
-		case file != -1 && file > servizio:
-			t.Errorf("port %d: the file must be written BEFORE the switch-on (%d > %d)", porta, file, servizio)
+		case port != 7447 && file == -1:
+			t.Errorf("port %d: the file in /etc/remotix/remotix.conf.d is missing", port)
+		case file != -1 && file > service:
+			t.Errorf("port %d: the file must be written BEFORE the switch-on (%d > %d)", port, file, service)
 		}
 	}
 }

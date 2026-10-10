@@ -1,4 +1,4 @@
-from build import c, code, note, p, rif, steps, table, term, tip, ul, warn
+from build import c, code, note, p, ref, steps, table, term, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
 S1 = p("REMOTIX is written in Italian and speaks English. The project's own language — documents, "
@@ -11,8 +11,8 @@ S1 = p("REMOTIX is written in Italian and speaks English. The project's own lang
          "phase documents, studies",
          "the browser page: login, warnings, errors, and the texts the server sends to the page ("
          + c("DECISIONI.md") + " §10.32, 5 Oct 2026)"],
-        ["comments and identifiers: " + c("palco") + " (stage), " + c("cattura") + " (capture), " + c("sentinella")
-         + " (sentry), " + c("appunti") + " (clipboard), " + c("figlio") + " (child), " + c("riconosci_desktop")
+        ["comments and identifiers: " + c("stage") + " (stage), " + c("capture_v") + " (capture), " + c("sentinel")
+         + " (sentry), " + c("clipboard_text") + " (clipboard), " + c("child") + " (child), " + c("recognize_desktop")
          + " (recognise the desktop)…",
          "the installer: TUI, messages, " + c("RX-") + " code texts, catalogue texts, lines written into system files "
          "(§10.35, 10 Oct 2026)"],
@@ -31,9 +31,9 @@ S1 = p("REMOTIX is written in Italian and speaks English. The project's own lang
     note("REMOTIX does not translate or touch the desktops. Users see their programs and their desktop in the "
          "machine's language; only REMOTIX's own text is English (§10.35).", "The desktops keep their language.") + \
     p("A detail of style in C and shell sources: accented letters are written with an apostrophe in comments "
-      "and messages (" + c("e'") + ", " + c("puo'") + ", " + c("perche'") + "). Inside " + c("${…:?…}")
+      "and messages (" + c("e'") + ", " + c("puo'") + ", " + c("reason_text'") + "). Inside " + c("${…:?…}")
       + " and inside double-quoted shell strings an apostrophe is not style but a hazard — see "
-      + rif("Rules for code and scripts") + ".")
+      + ref("Rules for code and scripts") + ".")
 
 # ── 20.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("Every statement of fact in the project carries a mark that says how much it is worth. The marks are "
@@ -111,7 +111,7 @@ S4 = p("The project keeps few, large documents, read in a fixed order. Agents' r
     p("A phase document is <b>opened at the start and filled as the work goes</b>; written at the end it would "
       "be an account, in which measurements are remembered rather than recorded. Its skeleton is fixed by "
       + c("PIANO.md") + " §0.2:") + \
-    code("""# Fase N — <titolo>                 Phase N — <title>
+    code("""# Phase N — <heading>                 Phase N — <title>
 Aperta il <data> · Chiusa il <data>   Opened on <date> · Closed on <date>
 ## Che cosa deve produrre        What it must produce: one line, and what the user sees and judges
 ## Il banco                      The bench: written BEFORE developing, with its positive control
@@ -120,7 +120,7 @@ Aperta il <data> · Chiusa il <data>   Opened on <date> · Closed on <date>
 ## ⛔ Che cosa NON ha funzionato  What did NOT work: dead ends, with the reason, embarrassing ones included
 ## Le decisioni prodotte         The decisions produced: links to DECISIONI.md, never copies
 ## Che cosa resta [?]            What remains [?]: what the phase leaves open, declared
-## Il giudizio dell'utente       The user's verdict: the real sentence, with the date""", "text",
+## Il giudizio dell'username       The user's verdict: the real sentence, with the date""", "text",
          "The skeleton of a phase document: the headings as written in Italian, with their meaning on the right") + \
     p("Four rules of the plan go with it: decisions once, in " + c("DECISIONI.md") + "; «what did not work» is "
       "filled even when it looks bad — the seven dead ends of v1 in " + c("LEZIONI.md") + " §8 exist only because "
@@ -215,11 +215,11 @@ S6 = p("The numbers are set by the user and the technique serves them (" + c("CO
     p("Comments carry the <b>why</b> next to the how, and the source of the why: a section of " + c("RCP.md")
       + " or " + c("DECISIONI.md") + ", a lesson, a measurement with its date. The sources are long because of "
       "this, and deliberately so: the record of what was tried and failed sits next to the line it protects.") + \
-    code("""U=${1:?serve l'utente}            # ⛔ the apostrophe OPENS a quotation…
-PROFILO=${2:?serve il profilo}    # …and this line ends up INSIDE the string""",
+    code("""U=${1:?needs l'username}            # ⛔ the apostrophe OPENS a quotation…
+PROFILE=${2:?serve il profilo}    # …and this line ends up INSIDE the string""",
          "bash", "The script trap of 25 Aug 2026 (CODER.md §4-bis)") + \
-    p("(" + c("serve l'utente") + " means “the user is needed”, " + c("serve il profilo") + " “the profile is "
-      "needed”.) The apostrophe swallowed four lines up to the next " + c("'") + ", which sat in a comment; " + c("PROFILO=")
+    p("(" + c("needs l'username") + " means “the user is needed”, " + c("serve il profilo") + " “the profile is "
+      "needed”.) The apostrophe swallowed four lines up to the next " + c("'") + ", which sat in a comment; " + c("PROFILE=")
       + " never ran, and the script died much later on an unrelated line — and " + c("bash -n") + " passed, "
       "because the syntax was valid. Hence two rules for scripts: no apostrophes inside " + c("${…:?…}")
       + " or double-quoted strings, and <b>a syntax check is not a test</b>: a new script is run at least once and "
@@ -231,15 +231,15 @@ PROFILO=${2:?serve il profilo}    # …and this line ends up INSIDE the string""
 S7 = p("Every commit leaves the project built, checked and documented. The list is short because most of "
        "it runs by itself; what does not run by itself is the part that is forgotten.", lead=True) + steps([
     "<b>The product builds</b>: " + c("make") + " in " + c("src/") + " (inside the build container — see "
-    + rif("Build and release") + "). The build first compares the twin RCP files with " + c("banchi/rcp/")
-    + " and stops if they differ; " + c("GEMELLO=nessuno") + " (twin = none) builds without the comparison only when declared.",
+    + ref("Build and release") + "). The build first compares the twin RCP files with " + c("banchi/rcp/")
+    + " and stops if they differ; " + c("TWIN=nobody") + " (twin = none) builds without the comparison only when declared.",
     "<b>The installer's tests</b>, if " + c("installatore/") + " (the installer) changed: "
     + c("installatore/costruisci.sh prove") + " (gofmt, go vet and go test: state machine, register, resume, "
     "codes, English texts).",
     "<b>The documents are updated in the same commit</b> as the change they describe: the phase document "
     "(a measurement with its date and scene), " + c("DECISIONI.md") + " if something was decided, the chapter of "
     "this manual that describes the behaviour.",
-    "<b>The manual</b>, if " + c("docs/sources/") + " changed: " + c("python3 docs/sources/build.py --controlla")
+    "<b>The manual</b>, if " + c("docs/sources/") + " changed: " + c("python3 docs/sources/build.py --check")
     + ", then " + c("python3 docs/sources/build.py") + " to regenerate the published page in " + c("docs/") + ". "
     "The check fails on cited files, functions, " + c("REMOTIX_*") + " variables or " + c("RX-") + " codes that do "
     "not exist, on undocumented " + c("REMOTIX_*") + " variables read by the product, on broken internal links, "
@@ -250,7 +250,7 @@ S7 = p("Every commit leaves the project built, checked and documented. The list 
     "change; " + c("src/") + " runs the fast family under its 180 s ceiling; a new box recipe runs everything on "
     "the new desktop — and appends its line to the hook's register (" + c("11-gancio-registro.jsonl")
     + "), which is committed like any file.",
-    "<b>Before closing a phase</b>, by name: " + c("--famiglia tutto") + " (the “all” family) or the functional suite, which no path "
+    "<b>Before closing a phase</b>, by name: " + c("--family overall") + " (the “all” family) or the functional suite, which no path "
     "can infer.",
 ]) + \
     table(["Prefix", "Used for"], [

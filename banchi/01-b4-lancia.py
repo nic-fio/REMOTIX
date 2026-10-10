@@ -52,21 +52,21 @@ import re
 import subprocess
 import sys
 
-QUI = os.path.dirname(os.path.abspath(__file__))
-VALIDATORE = os.path.join(QUI, "01-b4-validatore.py")
-COSTRUTTORE = os.path.join(QUI, "01-b4-registrazioni.py")
+HERE = os.path.dirname(os.path.abspath(__file__))
+VALIDATOR = os.path.join(HERE, "01-b4-validatore.py")
+BUILDER = os.path.join(HERE, "01-b4-registrazioni.py")
 
-ESITI = {0: "compliant", 1: "non-compliant", 2: "broken-recording",
+OUTCOMES = {0: "compliant", 1: "non-compliant", 2: "broken-recording",
          3: "nothing-to-judge"}
 
 
-def rigenera(dove):
+def regenerate(dove):
     """⛔ The manifest and the `.rcpreg` files are produced NOW by whoever knows how."""
     print(f"== 1. the recordings are regenerated in {dove}/\n")
-    p = subprocess.run([sys.executable, COSTRUTTORE, dove],
+    p = subprocess.run([sys.executable, BUILDER, dove],
                        capture_output=True, text=True)
-    for riga in (p.stdout + p.stderr).strip().splitlines():
-        print(f"   | {riga}")
+    for row in (p.stdout + p.stderr).strip().splitlines():
+        print(f"   | {row}")
     print()
     if p.returncode != 0:
         print(f"   ⛔ 01-b4-registrazioni.py exited {p.returncode}: without the")
@@ -77,8 +77,8 @@ def rigenera(dove):
 
 
 def main():
-    dove = sys.argv[1] if len(sys.argv) > 1 else os.path.join(QUI, "b4-registrazioni")
-    if not rigenera(dove):
+    dove = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "b4-registrazioni")
+    if not regenerate(dove):
         return 2
     try:
         with open(os.path.join(dove, "manifesto.json")) as f:
@@ -89,27 +89,27 @@ def main():
         return 2
 
     print(f"== 2. the wire validator against {len(manifesto)} recordings\n")
-    buoni = 0
+    good_n = 0
     # ⛔ The coverage per outcome, computed: how many DEMAND each one, and
     #    how many actually got the right one.
-    copertura = {u: [0, 0] for u in ESITI}
-    for voce in manifesto:
-        percorso = os.path.join(dove, voce["file"])
-        p = subprocess.run([sys.executable, VALIDATORE, percorso],
+    coverage = {u: [0, 0] for u in OUTCOMES}
+    for entry in manifesto:
+        fpath = os.path.join(dove, entry["file"])
+        p = subprocess.run([sys.executable, VALIDATOR, fpath],
                            capture_output=True, text=True)
-        uscita, testo = p.returncode, p.stdout + p.stderr
+        out_dir, body_text = p.returncode, p.stdout + p.stderr
 
-        atteso_uscita = voce["uscita"]
-        copertura[atteso_uscita][1] += 1
+        expected_output = entry["out_dir"]
+        coverage[expected_output][1] += 1
         ok = True
         note = []
 
-        if uscita != atteso_uscita:
+        if out_dir != expected_output:
             ok = False
-            note.append(f"expected exit {atteso_uscita} "
-                        f"({ESITI[atteso_uscita]}), got {uscita} "
-                        f"({ESITI.get(uscita, '?')})")
-        elif atteso_uscita == 1:
+            note.append(f"expected exit {expected_output} "
+                        f"({OUTCOMES[expected_output]}), got {out_dir} "
+                        f"({OUTCOMES.get(out_dir, '?')})")
+        elif expected_output == 1:
             # ⛔ The byte and the rule are compared ONLY when the exit code is
             #    the right one.  Before, «byte N in the file» was searched even
             #    on an exit 1 that came for an entirely different reason — for
@@ -117,28 +117,28 @@ def main():
             #    «expected byte 508, accused None», that is a red on the BYTE
             #    instead of on the FILE, which is exactly the distinction it
             #    exists for (R7.5).
-            m = re.search(r"byte (\d+) in the file", testo)
-            visto = int(m.group(1)) if m else None
-            if visto != voce["byte"]:
+            m = re.search(r"byte (\d+) in the file", body_text)
+            seen_v = int(m.group(1)) if m else None
+            if seen_v != entry["byte"]:
                 ok = False
-                note.append(f"expected byte {voce['byte']}, accused {visto}")
-            if voce["regola"] not in testo:
+                note.append(f"expected byte {entry['byte']}, accused {seen_v}")
+            if entry["rule_v"] not in body_text:
                 ok = False
-                note.append(f"expected rule {voce['regola']}")
+                note.append(f"expected rule {entry['rule_v']}")
 
-        segno = "OK " if ok else "NO "
-        print(f"   {segno} {voce['file']:<28s} {voce['che']}")
+        sign = "OK " if ok else "NO "
+        print(f"   {sign} {entry['file']:<28s} {entry['desc']}")
         if not ok:
             for n in note:
                 print(f"       ⛔ {n}")
-            for riga in testo.strip().splitlines()[-6:]:
-                print(f"       | {riga}")
+            for row in body_text.strip().splitlines()[-6:]:
+                print(f"       | {row}")
         else:
-            buoni += 1
-            copertura[atteso_uscita][0] += 1
+            good_n += 1
+            coverage[expected_output][0] += 1
 
     print(f"\n== 3. Outcome")
-    print(f"   {buoni} out of {len(manifesto)}")
+    print(f"   {good_n} out of {len(manifesto)}")
     # ⛔ The denominator of the verdict: if the recordings were zero, «all
     #    pass» would be true and empty (LEZIONI.md §1.9, point 6).
     if not manifesto:
@@ -149,21 +149,21 @@ def main():
     #    is a branch that nobody has ever run, and the validator declares it
     #    as the reason the outcomes are not two.
     print("\n   the coverage of the validator's four outcomes:")
-    scoperti = 0
-    for u in sorted(ESITI):
-        buoni_u, tot_u = copertura[u]
+    uncovered = 0
+    for u in sorted(OUTCOMES):
+        good_u, tot_u = coverage[u]
         if tot_u == 0:
-            scoperti += 1
-            print(f"     exit {u} = {ESITI[u]:<20s} ⛔ NO recording "
+            uncovered += 1
+            print(f"     exit {u} = {OUTCOMES[u]:<20s} ⛔ NO recording "
                   f"exercises it")
         else:
-            print(f"     exit {u} = {ESITI[u]:<20s} {buoni_u} out of {tot_u}")
-    if scoperti:
-        print(f"   ⛔ {scoperti} outcomes out of {len(ESITI)} without a positive control:")
+            print(f"     exit {u} = {OUTCOMES[u]:<20s} {good_u} out of {tot_u}")
+    if uncovered:
+        print(f"   ⛔ {uncovered} outcomes out of {len(OUTCOMES)} without a positive control:")
         print("      on those branches «I found nothing» means nothing")
         return 1
 
-    if buoni == len(manifesto):
+    if good_n == len(manifesto):
         print(f"\n   ⭐ the validator accuses each fault on the right byte,")
         print(f"      accepts the compliant one, and tells the four outcomes apart.")
         print(f"      It is certified — on {len(manifesto)} recordings "

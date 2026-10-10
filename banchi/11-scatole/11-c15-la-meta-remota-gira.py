@@ -6,8 +6,8 @@
 ===========================================================================
 
     python3 11-c15-la-meta-remota-gira.py
-    python3 11-c15-la-meta-remota-gira.py --certifica
-    python3 11-c15-la-meta-remota-gira.py --ultimi 40 --giorni 3
+    python3 11-c15-la-meta-remota-gira.py --certify
+    python3 11-c15-la-meta-remota-gira.py --last_n 40 --days 3
 
 ⛔ Like C11-C14, this mesh **does not test the product**.  It does not even test the
    net: it tests that the half of the net **that counts** is still running.
@@ -27,7 +27,7 @@ test machine (where the boxes and the graphics card are).
 Here is how, step by step, and it is not a hypothesis — they are lines that are in
 today's log:
 
-  · the `pre-push` calls `remoto`; the remote half does not answer and counts as **3**
+  · the `pre-push` calls `remote`; the remote half does not answer and counts as **3**
     («I could not look»), and ⭐ **by declared choice it does not block the push**;
   · the laptop half runs anyway: C10, C12, C13 and ⭐ C10's injected
     fault, `[M]` one second in all;
@@ -83,17 +83,17 @@ test machine.  ⛔ **Discarded**, and for two reasons that are the same:
 ⛔ AND «THE REMOTE HALF IS GREEN» DOES NOT COUNT — the nearest trap
 ---------------------------------------------------------------------------
 
-`11-gancio.sh` writes in every `remoto` run an annotation called **«la
+`11-gancio.sh` writes in every `remote` run an annotation called **«la
 meta remota»**, with outcome 0 when the delegation worked.  ⚠ It looks made
 on purpose for this mesh, ⛔ **and it is not**:
 
-`[M]` log line of 27 August 2026, 07:30 — `"secco": true`, and inside
-`{"nome":"la meta remota","esito":0,…,"nota":"la meta' remota e' verde"}`.
+`[M]` log line of 27 August 2026, 07:30 — `"dry": true`, and inside
+`{"label_name":"la meta remota","outcome":0,…,"remark":"la meta' remota e' green_v"}`.
 ⇒ ⛔ **A DRY run in which the delegation went well and nothing was
   measured.**  That annotation says that ssh and systemd
   worked, not that a box started.
 
-⇒ ⭐ C15 **ignores it completely**, and that case is inside `--certifica`.
+⇒ ⭐ C15 **ignores it completely**, and that case is inside `--certify`.
 
 ---------------------------------------------------------------------------
 ⭐ THE THREE QUESTIONS — and only two judge
@@ -124,8 +124,8 @@ on purpose for this mesh, ⛔ **and it is not**:
 ⚠⚠ THE YARDSTICK, and **where it comes from** — ⛔ neither of the two numbers is mine
 ---------------------------------------------------------------------------
 
-    window     `[R]` **last 20 real runs** — taken from C13 (`ULTIMI_PREDEFINITI`)
-    threshold  `[R]` **7 days**            — taken from C12 (`GIORNI_PREDEFINITI`)
+    window     `[R]` **last 20 real runs** — taken from C13 (`DEFAULT_LAST_N`)
+    threshold  `[R]` **7 days**            — taken from C12 (`DEFAULT_DAYS`)
 
 ⭐ **I did not choose them different on purpose, and the two reasons are different.**
 
@@ -187,7 +187,7 @@ C15 reads **the merged memory**, and the merged memory lives **on the laptop**
     executed on the boxes as much as a green one — indeed, it is the best proof
     that the box was there.  ⭐ The colour of the meshes is their business.
   · ⛔ **It does not say the TRANSPORT works.**  If the test machine runs and
-    `unisci_registri` does not bring the lines back, for C15 it is identical to a machine
+    `merge_logs` does not bring the lines back, for C15 it is identical to a machine
     switched off.  ⚠ It is not a defect: it is the definition — *a run the common memory
     knows nothing about is not a run, for anyone reading that memory.*
     ⭐ The hook already shouts that case by itself (*«the run over there really
@@ -224,8 +224,8 @@ import subprocess
 import sys
 import time
 
-QUI = os.path.dirname(os.path.abspath(__file__))
-REGISTRO = os.path.join(QUI, "11-gancio-registro.jsonl")
+HERE = os.path.dirname(os.path.abspath(__file__))
+LOG = os.path.join(HERE, "11-gancio-registro.jsonl")
 
 # ── the runs written before the English rename (DECISIONI §10.38) keep the Italian words, and
 #    11-gancio-registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple
@@ -236,7 +236,7 @@ _OLD_WORDS = (
     "istante", "secco", "maglie", "esito", "nome", "passo0",
 )  # end of the old words
 _WORDS_NOW = (
-    "istante", "secco", "maglie", "esito", "nome", "passo0",
+    "instant", "dry", "meshes", "outcome", "label_name", "step0",
 )
 OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
 
@@ -251,14 +251,14 @@ def current_spelling(x):
 
 
 def spellings(word):
-    """The word and its old spellings, for prefixes of mesh names («passo0(kde)»)."""
+    """The word and its old spellings, for prefixes of mesh names («step0(kde)»)."""
     return (word,) + tuple(a for a, b in OLD_SPELLING.items() if b == word)
 
 
 # ⛔ The two numbers are NOT mine: they come from C12 and from C13, and above it is written
 #    why they are the same and not two new ones.  ⚠ At the origin they are `[?]`.
-ULTIMI_PREDEFINITI = 20   # `[R]` C13, `ULTIMI_PREDEFINITI`
-GIORNI_PREDEFINITI = 7    # `[R]` C12, `GIORNI_PREDEFINITI`
+DEFAULT_LAST_N = 20   # `[R]` C13, `DEFAULT_LAST_N`
+DEFAULT_DAYS = 7    # `[R]` C12, `DEFAULT_DAYS`
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ THE TWO LISTS, and the difference between them is the whole second question.
@@ -272,8 +272,8 @@ GIORNI_PREDEFINITI = 7    # `[R]` C12, `GIORNI_PREDEFINITI`
 
 # ⭐ «Without a running box it cannot reach a judgement.»
 #    ⇒ A 0 or 1 of theirs in the log **is the proof that the boxes were there.**
-VOGLIONO_LA_SCATOLA = {
-    "passo0",  # `[R]` validates the ENVIRONMENT inside the box (11-accendi.sh passo0)
+WANT_BOX = {
+    "step0",  # `[R]` validates the ENVIRONMENT inside the box (11-accendi.sh step0)
     "c1",      # `[R]` the session is born and shows
     "c5",      # `[R]` the sound is not silence
     "c7",      # `[R]` it closes and nothing remains
@@ -287,36 +287,36 @@ VOGLIONO_LA_SCATOLA = {
 # ⭐ «It starts the product, or a browser, INSIDE the box.»
 #    ⇒ They are the only ones that touch the graphics card and the session, that is the
 #      reason the test machine exists (D1).
-# ⛔ `passo0` and `c11` stay out on purpose: the first looks at the environment, the
+# ⛔ `step0` and `c11` stay out on purpose: the first looks at the environment, the
 #    second queries the package manager.  ⚠ They are real judgements and count
 #    for question 1, ⛔ but a net that does only those has stopped measuring
 #    the product without stopping saying green.
-ACCENDONO_UNA_SESSIONE = {"c1", "c5", "c7", "c8", "c9", "c14"}
+STARTS_SESSION = {"c1", "c5", "c7", "c8", "c9", "c14"}
 
 # ⛔ And this is NOT a mesh: it is the delegation's annotation.  It is 0 even in
 #    a dry run — `[M]` log of 27 Aug 2026, 07:30.  ⇒ It does not count.
-NON_E_UNA_MAGLIA = {"la meta remota"}
+NOT_A_MESH = {"la meta remota"}
 
 
-def numero_di(nome):
-    """From «C1(gnome)x2» to «c1», from «passo0(kde)» to «passo0».
+def number_of(label_name):
+    """From «C1(gnome)x2» to «c1», from «step0(kde)» to «step0».
 
     ⛔ Returns `None` when it does not recognise a mesh — and `None` is not «no»: it is
        «it is not one of the meshes I know», which for the two lists counts the same.
     """
-    if not isinstance(nome, str):
+    if not isinstance(label_name, str):
         return None
-    s = nome.strip().lower()
-    if s in NON_E_UNA_MAGLIA:
+    s = label_name.strip().lower()
+    if s in NOT_A_MESH:
         return None
-    if s.startswith(spellings("passo0")):
-        return "passo0"
+    if s.startswith(spellings("step0")):
+        return "step0"
     # ⚠ `\d+` is greedy on purpose: «c10» must be «c10» and not «c1».
     m = re.match(r"^(c\d+)", s)
     return m.group(1) if m else None
 
 
-def scatola_di(nome):
+def box_of(label_name):
     """The box name written in brackets, or `None`.
 
     ⛔ And it is NOT filtered on a list of known desktops: the day a
@@ -325,159 +325,159 @@ def scatola_di(nome):
        bracket put there for another reason would end up in the count; ⭐ and since the count **does not
        judge**, the price is a line printed crooked, not a false red.
     """
-    if not isinstance(nome, str):
+    if not isinstance(label_name, str):
         return None
-    m = re.search(r"\(([^)]+)\)", nome)
+    m = re.search(r"\(([^)]+)\)", label_name)
     return m.group(1).strip().lower() if m else None
 
 
-def leggi_il_registro(percorso):
-    """Returns (giri, guaio) — ⛔ and the cases are three, as in C12 and C13.
+def read_log(fpath):
+    """Returns (rounds, trouble) — ⛔ and the cases are three, as in C12 and C13.
 
        (None, "assente")     the file is not there
        (None, "illeggibile") it is there and does not open, or it is all malformed
        ([...], None)         the runs, in order of writing
     """
-    if not os.path.exists(percorso):
+    if not os.path.exists(fpath):
         return None, "assente"
     try:
-        with open(percorso, "r", errors="replace") as f:
-            righe = f.read().splitlines()
+        with open(fpath, "r", errors="replace") as f:
+            line_list = f.read().splitlines()
     except OSError:
         return None, "illeggibile"
-    giri, storte = [], 0
-    for r in righe:
+    rounds, skewed = [], 0
+    for r in line_list:
         r = r.strip()
         if not r:
             continue
         try:
             o = current_spelling(json.loads(r))
         except ValueError:
-            storte += 1
+            skewed += 1
             continue
         if not isinstance(o, dict):
-            storte += 1
+            skewed += 1
             continue
-        giri.append(o)
-    if not giri and storte:
+        rounds.append(o)
+    if not rounds and skewed:
         return None, "illeggibile"
-    return giri, None
+    return rounds, None
 
 
-def eta_in_giorni(istante, adesso):
+def age_in_days(instant, clock):
     """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
-    if not istante or adesso is None:
+    if not instant or clock is None:
         return None
     try:
         import datetime
-        t = datetime.datetime.fromisoformat(istante)
+        t = datetime.datetime.fromisoformat(instant)
         if t.tzinfo is None:
             t = t.astimezone()
-        return (adesso - t.timestamp()) / 86400.0
+        return (clock - t.timestamp()) / 86400.0
     except (ValueError, TypeError, OverflowError):
         return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def giudica(giri, ultimi, giorni, adesso):
+def judge(rounds, last_n, days, clock):
     """⭐ The judgement, separated from the files — so it can be certified.
 
     ⛔ Returns `None` for «I could not look» (unreadable log, or
        no real run to examine), otherwise a dictionary containing
-       `guai`: a LIST, possibly empty.
+       `troubles`: a LIST, possibly empty.
 
     ⚠ `None` is not the empty list.  «I did not look» and «I looked and it holds»
       are two different things, and this project has already paid for confusing
       them.
     """
-    if giri is None:
+    if rounds is None:
         return None
     # ⛔ Dry runs are thrown away BEFORE taking the last N — the same
-    #    rule as C13, and for the same reason: twenty `--secco` in a row
+    #    rule as C13, and for the same reason: twenty `--dry` in a row
     #    would push out of the window the last real run on the boxes, and
     #    the mesh would turn red for nothing.
-    veri = [g for g in giri if not g.get("secco")]
-    if not veri:
+    genuine = [g for g in rounds if not g.get("dry")]
+    if not genuine:
         return None
-    fetta = veri[-ultimi:]
+    slice = genuine[-last_n:]
 
-    sulle_scatole = []      # the runs in which a box mesh HAS JUDGED
-    col_carico = []         # ... and among those, the ones that started something
-    scatole_viste = set()   # ⚠ information, not judgement (question 3)
-    macchine = set()
+    on_boxes = []      # the runs in which a box mesh HAS JUDGED
+    with_load = []         # ... and among those, the ones that started something
+    seen_boxes = set()   # ⚠ information, not judgement (question 3)
+    machines = set()
 
-    for g in fetta:
+    for g in slice:
         d = g.get("dove")
         if d:
-            macchine.add(d)
-        giudicanti, accese = [], []
-        for m in g.get("maglie") or []:
+            machines.add(d)
+        judging, ongoing = [], []
+        for m in g.get("meshes") or []:
             # ⛔⛔ AND HERE IS THE HEART: **a 3 is not a judgement.**
             #    A mesh that wanted the box and did not find it writes 3,
             #    and that is exactly the symptom of the switched-off test machine.
             #    ⚠ The -1 of dry runs also falls here, and it is not a duplicate:
             #      it is a second net under the first.
-            if m.get("esito") not in (0, 1):
+            if m.get("outcome") not in (0, 1):
                 continue
-            n = numero_di(m.get("nome"))
-            if n is None or n not in VOGLIONO_LA_SCATOLA:
+            n = number_of(m.get("label_name"))
+            if n is None or n not in WANT_BOX:
                 continue
-            giudicanti.append(m.get("nome"))
-            s = scatola_di(m.get("nome"))
+            judging.append(m.get("label_name"))
+            s = box_of(m.get("label_name"))
             if s:
-                scatole_viste.add(s)
-            if n in ACCENDONO_UNA_SESSIONE:
-                accese.append(m.get("nome"))
-        if giudicanti:
-            sulle_scatole.append((g, giudicanti))
-        if accese:
-            col_carico.append((g, accese))
+                seen_boxes.add(s)
+            if n in STARTS_SESSION:
+                ongoing.append(m.get("label_name"))
+        if judging:
+            on_boxes.append((g, judging))
+        if ongoing:
+            with_load.append((g, ongoing))
 
     r = {
-        "esaminati": len(fetta),
-        "totali": len(veri),
-        "a_vuoto": len(giri) - len(veri),
-        "sulle_scatole": len(sulle_scatole),
-        "col_carico": len(col_carico),
-        "scatole": sorted(scatole_viste),
-        "macchine": sorted(macchine),
-        "ultimo": sulle_scatole[-1][0] if sulle_scatole else None,
-        "ultimo_maglie": sulle_scatole[-1][1] if sulle_scatole else [],
-        "ultimo_carico": col_carico[-1][0] if col_carico else None,
+        "esaminati": len(slice),
+        "totals": len(genuine),
+        "a_vuoto": len(rounds) - len(genuine),
+        "on_boxes": len(on_boxes),
+        "with_load": len(with_load),
+        "boxes": sorted(seen_boxes),
+        "machines": sorted(machines),
+        "last": on_boxes[-1][0] if on_boxes else None,
+        "ultimo_maglie": on_boxes[-1][1] if on_boxes else [],
+        "ultimo_carico": with_load[-1][0] if with_load else None,
         "eta": None,
-        "guai": [],
+        "troubles": [],
     }
 
     # ── QUESTION 1 ─────────────────────────────────────────────────────────
-    if not sulle_scatole:
+    if not on_boxes:
         # ⛔ And we return AT ONCE.  Without a run on the boxes, «it started
         #    nothing» is a consequence, not a second fault: a list that
         #    counts the same fact twice makes what is simple look serious
         #    (the same rule as C12).
-        r["guai"].append(
+        r["troubles"].append(
             "in the last %d real runs ⛔ NONE was executed on the "
             "boxes: no mesh that needs a box reached "
-            "a judgement" % len(fetta))
+            "a judgement" % len(slice))
         return r
 
     # ── and the age of the last one ────────────────────────────────────────
-    eta = eta_in_giorni(r["ultimo"].get("istante"), adesso)
+    eta = age_in_days(r["last"].get("instant"), clock)
     r["eta"] = eta
     if eta is None:
         # ⚠ An instant that cannot be read is not «old»: it is «I do not
         #   know».  ⛔ And it is said as a fault of the LOG, not as a machine
         #   switched off — it is not the same thing, and they are cured in different places.
-        r["guai"].append(
+        r["troubles"].append(
             "the last run on the boxes does not carry a readable instant (%r): "
-            "the log is malformed" % (r["ultimo"].get("istante"),))
-    elif eta > giorni:
-        r["guai"].append(
+            "the log is malformed" % (r["last"].get("instant"),))
+    elif eta > days:
+        r["troubles"].append(
             "the last run on the boxes is from %.1f days ago, and the declared "
-            "threshold is %d" % (eta, giorni))
+            "threshold is %d" % (eta, days))
 
     # ── QUESTION 2 ─────────────────────────────────────────────────────────
-    if not col_carico:
-        r["guai"].append(
+    if not with_load:
+        r["troubles"].append(
             "in the window the boxes answered, ⛔ but NOBODY started "
             "the product inside them: only the zero-cost meshes "
             "(the environment, the packages). Nobody touched the "
@@ -486,107 +486,107 @@ def giudica(giri, ultimi, giorni, adesso):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def certifica():
+def certify():
     """⛔ We prove that the judge CAN give green, CAN give red, and CAN say
        «I do not know» — and that each of the two questions fires **in both
        directions** (`LEZIONI.md` §1.49: the fault is removed and green is demanded).
     """
     import datetime
-    adesso = time.time()
+    clock = time.time()
 
-    def istante(giorni_fa):
-        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=giorni_fa)
+    def instant(days_ago):
+        t = datetime.datetime.now().astimezone() - datetime.timedelta(days=days_ago)
         return t.isoformat()
 
-    def giro(maglie, secco=False, giorni_fa=0.5, dove="NIC-OS"):
-        return {"istante": istante(giorni_fa), "secco": secco,
-                "dove": dove, "maglie": maglie}
+    def lap(meshes, dry=False, days_ago=0.5, dove="NIC-OS"):
+        return {"instant": instant(days_ago), "dry": dry,
+                "dove": dove, "meshes": meshes}
 
-    def m(nome, esito=0):
-        return {"nome": nome, "esito": esito, "secondi": 1,
-                "guasto_innestato": False}
+    def m(label_name, outcome=0):
+        return {"label_name": label_name, "outcome": outcome, "seconds": 1,
+                "grafted_fault": False}
 
     # ⭐ the «laptop only» run: it is the exact line the log writes
     #   today when the test machine does not answer.
-    def portatile(giorni_fa=0.5):
-        return giro([m("C10"), m("C11", esito=3), m("C12"), m("C13"),
-                     m("C14", esito=3),
-                     {"nome": "C10 guasto innestato", "esito": 0, "secondi": 0,
-                      "guasto_innestato": True, "ha_visto_il_guasto": True}],
-                    giorni_fa=giorni_fa, dove="CHUWI")
+    def portable(days_ago=0.5):
+        return lap([m("C10"), m("C11", outcome=3), m("C12"), m("C13"),
+                     m("C14", outcome=3),
+                     {"label_name": "C10 fault grafted", "outcome": 0, "seconds": 0,
+                      "grafted_fault": True, "ha_visto_il_guasto": True}],
+                    days_ago=days_ago, dove="CHUWI")
 
-    casi = [
+    cases = [
         # ── the green, and where it comes from ──────────────────────────────
         ("⭐ a run with C1(gnome) judged and recent",
-         [giro([m("C10", esito=3), m("C11"), m("C1(gnome)x2", esito=1)])],
-         "verde"),
+         [lap([m("C10", outcome=3), m("C11"), m("C1(gnome)x2", outcome=1)])],
+         "green_v"),
 
         ("⭐ a RED C1 is a run on the boxes as much as a green one",
-         [giro([m("C1(kde)x10", esito=1)])], "verde"),
+         [lap([m("C1(kde)x10", outcome=1)])], "green_v"),
 
         # ── ⭐⭐ THE HOLE THIS MESH EXISTS FOR ──────────────────────────────
         ("⛔⛔ twenty runs of the LAPTOP ONLY — C12 and C13 would be green",
-         [portatile() for _ in range(20)], "ROSSO"),
+         [portable() for _ in range(20)], "RED"),
 
         ("⛔⛔ «the remote half is green» in a NON-dry run does not count",
-         [giro([{"nome": "la meta remota", "esito": 0, "secondi": 1,
-                 "guasto_innestato": False, "nota": "la meta' remota e' verde"},
-                m("C10")])], "ROSSO"),
+         [lap([{"label_name": "la meta remota", "outcome": 0, "seconds": 1,
+                 "grafted_fault": False, "remark": "la meta' remota e' green_v"},
+                m("C10")])], "RED"),
 
         ("⛔ the box meshes are there, but they are ALL outcome 3",
-         [giro([m("passo0(gnome)", esito=3), m("C1(gnome)x2", esito=3),
-                m("C11", esito=3), m("C14", esito=3)])], "ROSSO"),
+         [lap([m("step0(gnome)", outcome=3), m("C1(gnome)x2", outcome=3),
+                m("C11", outcome=3), m("C14", outcome=3)])], "RED"),
 
         ("⛔ the meshes are there with outcome -1 (dry inside a real run)",
-         [giro([m("C1(gnome)x2", esito=-1), m("C11", esito=-1)])], "ROSSO"),
+         [lap([m("C1(gnome)x2", outcome=-1), m("C11", outcome=-1)])], "RED"),
 
         # ── QUESTION 2, in both directions ──────────────────────────────────
         ("⛔ the boxes answer (C11) but nobody starts anything inside them",
-         [giro([m("C11"), m("C12"), m("C13")])], "ROSSO"),
+         [lap([m("C11"), m("C12"), m("C13")])], "RED"),
 
         ("⛔ not even step 0 is enough: it looks at the environment, it does not start",
-         [giro([m("passo0(kde)"), m("C11")])], "ROSSO"),
+         [lap([m("step0(kde)"), m("C11")])], "RED"),
 
         # ⭐⭐ AND THIS IS THE CASE THAT PREVENTS C15 FROM CERTIFYING ITSELF.
         #    ⛔ A mesh that counted itself among the proofs that «the boxes have
         #       run» would be green every time it runs, that is always:
         #       `LEZIONI.md` §1.44 inside the mesh written to prevent it.
         ("⛔⛔ twenty runs of green C15 only: ⭐ it does not certify itself",
-         [giro([m("C15"), m("C12"), m("C13")]) for _ in range(20)], "ROSSO"),
+         [lap([m("C15"), m("C12"), m("C13")]) for _ in range(20)], "RED"),
 
         ("⭐ C14 instead STARTS the four boxes ⇒ green",
-         [giro([m("C11"), m("C14")])], "verde"),
+         [lap([m("C11"), m("C14")])], "green_v"),
 
-        ("⭐ passo0 + C5 ⇒ green: one that starts is enough",
-         [giro([m("passo0(xfce)"), m("C5(xfce)")])], "verde"),
+        ("⭐ step0 + C5 ⇒ green: one that starts is enough",
+         [lap([m("step0(xfce)"), m("C5(xfce)")])], "green_v"),
 
         # ── THE THRESHOLD IN DAYS, in both directions ───────────────────────
         ("⛔ the last run on the boxes is from twenty days ago (threshold 7)",
-         [giro([m("C1(gnome)x2")], giorni_fa=20)], "ROSSO"),
+         [lap([m("C1(gnome)x2")], days_ago=20)], "RED"),
 
         ("⭐ … and at 6,5 days it is still GREEN (the direction one forgets)",
-         [giro([m("C1(gnome)x2")], giorni_fa=6.5)], "verde"),
+         [lap([m("C1(gnome)x2")], days_ago=6.5)], "green_v"),
 
         ("⚠ the instant cannot be read ⇒ it is the log that is malformed",
-         [{"istante": "yesterday morning", "secco": False,
-           "maglie": [m("C1(gnome)x2")]}], "ROSSO"),
+         [{"instant": "yesterday morning", "dry": False,
+           "meshes": [m("C1(gnome)x2")]}], "RED"),
 
         # ── THE WINDOW BY COUNTS, in both directions ────────────────────────
         ("⭐ nineteen laptop runs AFTER one on the boxes ⇒ green",
-         [giro([m("C1(gnome)x2")])] + [portatile() for _ in range(19)],
-         "verde"),
+         [lap([m("C1(gnome)x2")])] + [portable() for _ in range(19)],
+         "green_v"),
 
         ("⛔⛔ twenty-one, and the run on the boxes SLIDES OUT of the window",
-         [giro([m("C1(gnome)x2")])] + [portatile() for _ in range(21)],
-         "ROSSO"),
+         [lap([m("C1(gnome)x2")])] + [portable() for _ in range(21)],
+         "RED"),
 
         ("⭐ twenty DRY runs do not push out the run on the boxes",
-         [giro([m("C1(gnome)x2")])]
-         + [giro([m("C1(gnome)x2")], secco=True) for _ in range(20)], "verde"),
+         [lap([m("C1(gnome)x2")])]
+         + [lap([m("C1(gnome)x2")], dry=True) for _ in range(20)], "green_v"),
 
         # ── «I DO NOT KNOW», which is not a red ─────────────────────────────
         ("⛔ no real run ⇒ «I do not know» — that the hook does not run is said by C12",
-         [giro([m("C1(gnome)x2")], secco=True)], "non lo so"),
+         [lap([m("C1(gnome)x2")], dry=True)], "non lo so"),
 
         ("⛔ no run at all ⇒ «I do not know»", [], "non lo so"),
 
@@ -595,26 +595,26 @@ def certifica():
 
     print("== certification of the C15 judge ==")
     print("   yardstick in force: last %d REAL runs `[R]` from C13  ·  last run"
-          % ULTIMI_PREDEFINITI)
+          % DEFAULT_LAST_N)
     print("   on the boxes within %d days `[R]` from C12  ·  ⛔ at the origin `[?]`"
-          % GIORNI_PREDEFINITI)
+          % DEFAULT_DAYS)
     print("   ⛔ and a run «on the boxes» is a run in which a mesh that wants")
     print("      a box reached a JUDGEMENT (0 or 1), not a 3\n")
 
-    guai = 0
-    for nome, giri, atteso in casi:
-        r = giudica(giri, ULTIMI_PREDEFINITI, GIORNI_PREDEFINITI, adesso)
+    troubles = 0
+    for label_name, rounds, expected_val in cases:
+        r = judge(rounds, DEFAULT_LAST_N, DEFAULT_DAYS, clock)
         if r is None:
-            ottenuto = "non lo so"
-        elif r["guai"]:
-            ottenuto = "ROSSO"
+            obtained = "non lo so"
+        elif r["troubles"]:
+            obtained = "RED"
         else:
-            ottenuto = "verde"
-        ok = ottenuto == atteso
+            obtained = "green_v"
+        ok = obtained == expected_val
         print("  %s  %-63s ⇒ %-9s (expected %s)"
-              % ("OK " if ok else "NO ", nome, ottenuto, atteso))
+              % ("OK " if ok else "NO ", label_name, obtained, expected_val))
         if not ok:
-            guai += 1
+            troubles += 1
             print("        (the judge said: %r)" % (r,))
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -628,25 +628,25 @@ def certifica():
     #   judgement, this line would turn red and tell them.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    una = giudica([giro([m("C1(gnome)x2")])],
-                  ULTIMI_PREDEFINITI, GIORNI_PREDEFINITI, adesso)
-    quattro = giudica([giro([m("C1(gnome)x2"), m("C1(kde)x2"),
+    una = judge([lap([m("C1(gnome)x2")])],
+                  DEFAULT_LAST_N, DEFAULT_DAYS, clock)
+    four = judge([lap([m("C1(gnome)x2"), m("C1(kde)x2"),
                              m("C1(xfce)x2"), m("C1(lxqt)x2")])],
-                      ULTIMI_PREDEFINITI, GIORNI_PREDEFINITI, adesso)
-    ok = (una is not None and not una["guai"] and una["scatole"] == ["gnome"]
-          and quattro is not None and not quattro["guai"]
-          and quattro["scatole"] == ["gnome", "kde", "lxqt", "xfce"])
+                      DEFAULT_LAST_N, DEFAULT_DAYS, clock)
+    ok = (una is not None and not una["troubles"] and una["boxes"] == ["gnome"]
+          and four is not None and not four["troubles"]
+          and four["boxes"] == ["gnome", "kde", "lxqt", "xfce"])
     print("  %s  %-63s ⇒ %s"
           % ("OK " if ok else "NO ",
              "⭐⭐ ONE single box stays GREEN, and the count is printed anyway",
-             "%r against %r" % (una["scatole"] if una else None,
-                                quattro["scatole"] if quattro else None)))
+             "%r against %r" % (una["boxes"] if una else None,
+                                four["boxes"] if four else None)))
     if not ok:
-        guai += 1
+        troubles += 1
 
     print()
-    if guai:
-        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
+    if troubles:
+        print("⛔ the judge is NOT reliable: %d wrong cases" % troubles)
         return 1
     print("⭐ the judge sees the test machine switched off while the log")
     print("   fills up with green runs, ⭐⭐ and ⛔ it is NOT fooled either by a")
@@ -660,7 +660,7 @@ def certifica():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-def qui_c_e_il_deposito():
+def repo_is_here():
     """⭐ The same question as C12, and for the same reason.
 
     ⛔ It is not pedantry: on the test machine the log contains only the
@@ -668,7 +668,7 @@ def qui_c_e_il_deposito():
        whatever happens (`LEZIONI.md` §1.44).
     """
     try:
-        p = subprocess.run(["git", "-C", QUI, "rev-parse", "--show-toplevel"],
+        p = subprocess.run(["git", "-C", HERE, "rev-parse", "--show-toplevel"],
                            capture_output=True, text=True, timeout=30)
     except OSError:
         return False
@@ -677,26 +677,26 @@ def qui_c_e_il_deposito():
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--registro", default=REGISTRO)
-    p.add_argument("--ultimi", type=int, default=ULTIMI_PREDEFINITI,
+    p.add_argument("--logbook", default=LOG)
+    p.add_argument("--last_n", type=int, default=DEFAULT_LAST_N,
                    help="how many real runs to look back. `[R]` C13's "
                         "window, `[?]` at its origin")
-    p.add_argument("--giorni", type=int, default=GIORNI_PREDEFINITI,
+    p.add_argument("--days", type=int, default=DEFAULT_DAYS,
                    help="for how many days at most the boxes may not "
                         "have run. `[R]` C12's threshold, `[?]` at its "
                         "origin")
-    p.add_argument("--ovunque", action="store_true",
+    p.add_argument("--everywhere", action="store_true",
                    help="⛔ do NOT use it to silence a 2: here the log is not "
                         "the merged memory and green would mean "
                         "nothing. It serves to diagnose a log passed with "
-                        "--registro")
-    p.add_argument("--certifica", action="store_true")
+                        "--logbook")
+    p.add_argument("--certify", action="store_true")
     a = p.parse_args()
 
-    if a.certifica:
-        sys.exit(certifica())
+    if a.certify:
+        sys.exit(certify())
 
-    if not a.ovunque and not qui_c_e_il_deposito():
+    if not a.everywhere and not repo_is_here():
         print("⛔ I am not inside a git repository.")
         print("   ⇒ if this is the test machine, here the log contains")
         print("     ONLY this machine's runs — that is all runs on the")
@@ -706,67 +706,67 @@ def main():
         print("   ⇒ the terrain does not hold")
         sys.exit(2)
 
-    giri, guaio = leggi_il_registro(a.registro)
+    rounds, trouble = read_log(a.logbook)
 
     print("== C15 — does the remote half really run? ==")
     print("   ⛔ the fault it looks for: the test machine switched off silently —")
     print("      ⛔⛔ with C12 and C13 staying GREEN, because the laptop")
     print("      half runs anyway and leaves a trace")
     print("   yardstick: last %d REAL runs `[R]` from C13  ·  last run on the"
-          % a.ultimi)
+          % a.last_n)
     print("          boxes within %d days `[R]` from C12  ·  ⛔ at the origin `[?]`"
-          % a.giorni)
+          % a.days)
     print("   ⛔ what counts is the JUDGEMENT of a mesh that wants a box (0 or 1),")
     print("      not a 3 and not «the remote half is green»")
     print()
 
-    if guaio == "assente":
-        print("⛔ the log is not there: %s" % a.registro)
+    if trouble == "assente":
+        print("⛔ the log is not there: %s" % a.logbook)
         print("   ⇒ I could not look — ⛔ and it is NOT a red.")
         print("     That the hook has never run is said by C12, and it is right")
         print("     that ONE mesh only says it.")
         return 3
-    if guaio == "illeggibile":
-        print("⛔ the log is there and cannot be read: %s" % a.registro)
+    if trouble == "illeggibile":
+        print("⛔ the log is there and cannot be read: %s" % a.logbook)
         print("   ⇒ I could not look")
         return 3
 
-    r = giudica(giri, a.ultimi, a.giorni, time.time())
+    r = judge(rounds, a.last_n, a.days, time.time())
     if r is None:
         print("⛔ no REAL run to look at (%d lines, all dry or none)"
-              % len(giri or []))
+              % len(rounds or []))
         print("   ⇒ I could not look — ⛔ and it is NOT a red")
         return 3
 
-    print("   runs in the log      : %d real, %d dry" % (r["totali"], r["a_vuoto"]))
+    print("   runs in the log      : %d real, %d dry" % (r["totals"], r["a_vuoto"]))
     print("   looked at            : the last %d" % r["esaminati"])
     # ⚠ The RATIO is printed and ⛔ NOT judged: a threshold like «at least a
     #   third of the runs on the boxes» would be an invented round number, that is
     #   a `[?]` disguised as a yardstick.  ⭐ But whoever reads must see it, because it is
     #   the shape in which the fault announces itself BEFORE turning red.
-    print("   ⭐ on the boxes       : %d of %d" % (r["sulle_scatole"], r["esaminati"]))
+    print("   ⭐ on the boxes       : %d of %d" % (r["on_boxes"], r["esaminati"]))
     print("   ⭐ with the real load : %d of %d  (a session started inside a box)"
-          % (r["col_carico"], r["esaminati"]))
-    if r["ultimo"] is not None:
+          % (r["with_load"], r["esaminati"]))
+    if r["last"] is not None:
         print("   last on the boxes    : %s  (%s)"
-              % (r["ultimo"].get("istante"),
+              % (r["last"].get("instant"),
                  "age unknown" if r["eta"] is None else "%.1f days ago" % r["eta"]))
         print("     ⇒ reached by       : %s" % ", ".join(r["ultimo_maglie"]))
     if r["ultimo_carico"] is not None:
-        print("   last with the load   : %s" % r["ultimo_carico"].get("istante"))
+        print("   last with the load   : %s" % r["ultimo_carico"].get("instant"))
     # ⚠ INFORMATION, not judgement — and the line says so, or someone will
     #   turn it into a perpetual red (see question 3 at the top).
     print("   ⚠ boxes seen         : %d  (%s)"
-          % (len(r["scatole"]), ", ".join(r["scatole"]) if r["scatole"] else "none with the name written"))
+          % (len(r["boxes"]), ", ".join(r["boxes"]) if r["boxes"] else "none with the name written"))
     print("     ⛔ it is information, NOT a judgement: the fast family looks at")
     print("        GNOME only by declared choice")
     print("   ⚠ machines in the log: %s"
-          % (", ".join(r["macchine"]) if r["macchine"] else "none says"))
+          % (", ".join(r["machines"]) if r["machines"] else "none says"))
     print()
 
-    if r["guai"]:
+    if r["troubles"]:
         print("⛔⛔ RED — the half that counts is not running:")
-        for g in r["guai"]:
+        for g in r["troubles"]:
             print("   · %s" % g)
         print()
         print("   ⇒ ⛔ and the damage is not that a measurement is missing: it is that **C12 and")
@@ -778,13 +778,13 @@ def main():
         print("     red:")
         print("       bash 11-gancio.sh remoto --famiglia tutto")
         print("     or, on the test machine:")
-        print("       bash 11-gancio.sh gira --famiglia funziona")
+        print("       bash 11-gancio.sh run --family works")
         print("   ⚠ If it does not turn green, the fault is in the delegation or in the")
         print("     transport of the log, not in this mesh.")
         return 1
 
     print("⭐ in the last %d real runs the boxes ran %d times, and %d"
-          % (r["esaminati"], r["sulle_scatole"], r["col_carico"]))
+          % (r["esaminati"], r["on_boxes"], r["with_load"]))
     print("   times with the real load — a session started inside a box")
     # ⚠⚠ AND HERE THERE IS A NUMBER, and it must be said that it is there instead of pretending not
     #    (`LEZIONI.md` §1.50: a comment that describes a quantity different from
@@ -794,9 +794,9 @@ def main():
     #    ⛔ It does not govern the outcome: below half C15 is green exactly as
     #       above.  ⇒ It is a warning, not a judgement threshold, ⭐ and it does not
     #       need a measurement under it because it decides nothing.
-    if r["sulle_scatole"] * 2 <= r["esaminati"]:
+    if r["on_boxes"] * 2 <= r["esaminati"]:
         print("⚠ ⛔ and they are **the minority**: %d runs out of %d were executed"
-              % (r["esaminati"] - r["sulle_scatole"], r["esaminati"]))
+              % (r["esaminati"] - r["on_boxes"], r["esaminati"]))
         print("  without touching a box.  ⚠ This is NOT a red — the outcome")
         print("  stays green — ⭐ but it is the shape in which the fault arrives: the")
         print("  laptop half that keeps writing green lines while")

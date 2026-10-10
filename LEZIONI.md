@@ -402,7 +402,7 @@ result enters the document as a measured fact.
 > be there?*
 >
 > ⚠ **And a smoke test found it**, not the bench: eight connections that asked for eight
-> faults and printed the bytes of the `ECCOMI`. They were **all identical**, including the one that asked for
+> faults and printed the bytes of the `HERE_I_AM`. They were **all identical**, including the one that asked for
 > «no fault». *A bench that compares every case with a control case identical to itself
 > tells «the fault is not there» from «the page does not see it» before accusing anyone.*
 
@@ -501,7 +501,7 @@ result enters the document as a measured fact.
 > *The rule with the highest damage/cost ratio of `RCP.md` — «at detach every pressed key is
 > released» — had a single witness in the log, and that witness said **always zero**.*
 >
-> The hook `input_rilascia_tutto` promised, in its contract: *«returns how many it released,
+> The hook `input_release_all` promised, in its contract: *«returns how many it released,
 > so that the bench can count them»*. ⛔ **In the real product that count cannot exist
 > there**: whoever holds the map of the pressed keys is **another process**, and the answer does not come
 > back. Whoever stitched it answered `0` meaning *«the request has left»*; whoever printed wrote
@@ -611,7 +611,7 @@ permission still works must be redone** — it is not implicit.
 *Written on 12 Aug 2026, after **the same line of `RCP.md` was corrected four times in
 one evening** — P8 → P11 → P13 → P14 — and every cure moved the defect instead of removing it.*
 *⛔ **Reopened on 13 Aug 2026**: the times are **seven** — P8 → P11 → P13 → P14 → P19 → P20 → P21
-— and ⛔ **P14 did not «hold»**. The quantity held (the `numero` field); what had remained a substitute
+— and ⛔ **P14 did not «hold»**. The quantity held (the `nr` field); what had remained a substitute
 was everything around it. The sequel is at the end of this section, and whoever cites this
 lesson **refers here instead of copying the succession** (finding **R13.6**).*
 
@@ -625,11 +625,11 @@ just outside**:
 | **P8** | *«the size is that of the previous canvas»* | ⛔ whoever drags a window sends **two** canvas changes, and the third size is neither one nor the other |
 | **P11** | *«a canvas in force within the second just passed»* | ⛔ a **clock** where what must drain is a **queue**: on a slow line the frame arrives later, and invariant I1 falls — *never detach* — precisely in the condition I1 exists to protect |
 | **P13** | *«ends at the first keyframe at the new size»* | ⛔ that keyframe **overtakes** the frames in flight, and not by chance: the old one is the biggest and §5.2 forbids abandoning it |
-| ⭐ **P14** | **`numero`** — the field the protocol already carries | *(holds)* |
+| ⭐ **P14** | **`nr`** — the field the protocol already carries | *(holds)* |
 
 ⭐ **What should have been looked at the first time: the field the protocol already carries.** The question
 *«was this frame captured before the canvas change?»* had **an exact answer inside
-the 28 bytes of the header for three days**: the counter `numero`. And a frame in flight has
+the 28 bytes of the header for three days**: the counter `nr`. And a frame in flight has
 **always** a lower number than the first one captured after the change — not «almost always»: **always**,
 because the counter grows at capture.
 
@@ -651,7 +651,7 @@ a way of reading it that rereading it is not.*
 
 | # | The quantity chosen | Where it broke |
 |---|---|---|
-| **P19-P20** | §2.5: *«whoever receives a frame **before `SESSIONE`** closes with `ERRORE_PROTOCOLLO`»* | ⛔ **«whoever receives one before» is a substitute quantity**: the two QUIC streams are independent and nothing orders their delivery. It was enough to **lose the packet carrying `SESSIONE`** for a compliant client to kill a healthy session — I1 broken *because the line loses packets*, that is the condition I1 exists to protect. ⭐ The true quantity is **`ATTACCA`**, that is what the client sent **itself** |
+| **P19-P20** | §2.5: *«whoever receives a frame **before `SESSIONE`** closes with `ERRORE_PROTOCOLLO`»* | ⛔ **«whoever receives one before» is a substitute quantity**: the two QUIC streams are independent and nothing orders their delivery. It was enough to **lose the packet carrying `SESSION`** for a compliant client to kill a healthy session — I1 broken *because the line loses packets*, that is the condition I1 exists to protect. ⭐ The true quantity is **`ATTACH`**, that is what the client sent **itself** |
 | **P21** | *«the size the client named»* | ⛔ **§4.5 allows the server to grant a canvas DIFFERENT from the one asked for** — on KWin < 6.8 it is the normal path. Whoever asks for 1366×768 and receives the 1280×720 that is about to be granted **would close a healthy session**. ⭐ The true quantity is **«an `ADATTA_TELA` without an answer»**, not the numbers it carried |
 | ⛔⛔ **P22 — and it is not a quantity: it is the BOUNDARY** | §3 declared *«the exceptions are six, and outside this list none are invented»* | ⛔ while §2.5 and §6.2 **mandated two that were not there**. ⇒ A client written by reading §3 **closed precisely the healthy sessions the other two lines saved**. Now they are **eight** |
 
@@ -661,7 +661,7 @@ a way of reading it that rereading it is not.*
 > as P12, that is a defect **of whoever writes the specification**, not of whoever implements it.
 
 ⭐ **And the common form of the three cures is the same as P14**: *what the client sent itself* —
-**local, monotonic, independent of delivery**. The `numero` field was the first case; `ATTACCA` and
+**local, monotonic, independent of delivery**. The `nr` field was the first case; `ATTACH` and
 «a request in flight» are the same principle applied to two different phenomena.
 
 ⚠ **And one agent rejected its own first proposal, and one turned down that of whoever sent it**:
@@ -874,11 +874,11 @@ The faces it took, all `[R]` on the source:
 | the face | the example |
 |---|---|
 | the **exit status** captured and printed | `local e=$?` … `echo "$e"`, and never an `if` |
-| the **expected value declared beforehand** and printed | `giro()` receives the expected value, writes it on screen, never uses it again |
+| the **expected value declared beforehand** and printed | `lap()` receives the expected value, writes it on screen, never uses it again |
 | the **denominator** the referee prints | *«0 coppie chiuse»* is in the output, and whoever reads it does not look at it |
 | the **counter** printed with `inf` instead of with `ko` | the number is there, the verdict is not |
-| **membership** in place of equality | `case " $R " in *" $CASO "*` — an all-red round «confirms» any fault |
-| the **block that dies** and the loop that does not enter | `while … done < elenco.tsv` on a file never written: zero rounds, `stato` 0, *«tutti i guasti diventano rossi»* |
+| **membership** in place of equality | `case " $R " in *" $CASE "*` — an all-red round «confirms» any fault |
+| the **block that dies** and the loop that does not enter | `while … done < elenco.tsv` on a file never written: zero rounds, `state` 0, *«tutti i guasti diventano rossi»* |
 | the **normalisation that erases the phenomenon** | the offset is subtracted *before* measuring the offset |
 
 ⚠ **And why it is more insidious than the expired anchor**: a dead anchor leaves a trace — the
@@ -927,7 +927,7 @@ it discarded**. A reader that silently skips the lines it does not understand is
 
 ### 1.22 ⛔⛔⭐ **A systemd drop-in wins by NAME, and ours loses** — `zz-r` comes before `zz-s`
 
-*22 Aug 2026, found by running `04-b20` in full. `fasi/04`, and it concerns `src/sessione.c` · `scrivi_dropin()`.*
+*22 Aug 2026, found by running `04-b20` in full. `fasi/04`, and it concerns `src/sessione.c` · `write_dropin()`.*
 
 `[M]` The product writes its drop-in into `zz-remotix-monitor.conf`. In the same folder five
 benches of **other links** (`04-b31`, `04-b32`, `06-b33`, `06-b34`, `06-b35`) leave
@@ -942,7 +942,7 @@ believing it was *with* one, and **the red round would have come out green**.
 in the product**, not only in the benches: the name `sessione.c` chooses loses against a name
 that comes later alphabetically, and anyone who writes `zz-z…` tomorrow falls into it again.
 
-⛔ **The rule**: a drop-in that must **win** is not called `zz-<nome>` hoping; either the
+⛔ **The rule**: a drop-in that must **win** is not called `zz-<label_name>` hoping; either the
 name is chosen for the order (`zzz-`), or one **verifies afterwards** that the `ExecStart` in force is one's own. ⭐ And
 verifying is the only way that does not expire: next time the neighbour will be called `zzzz-`.
 
@@ -951,7 +951,7 @@ verifying is the only way that does not expire: next time the neighbour will be 
 *22 Aug 2026, found **twice in the same night** by two agents who were not talking to each other —
 `06-b35` and `06-b42`. It is not one agent's slip: it is a way of going wrong of the repository.*
 
-> `pkill -f <titolo>` does not touch the process that **moves** the scene: in its `argv` the title **is not
+> `pkill -f <heading>` does not touch the process that **moves** the scene: in its `argv` the title **is not
 > there** (it is in the terminal that opened it). ⇒ It survives, the next start puts **a
 > second one beside it**, and the bench measures a scene nobody declared: **plausible, invisible,
 > and twice as fast**.
@@ -973,7 +973,7 @@ count, it is a boolean in disguise — and a boolean cannot tell **one** from **
 *22 Aug 2026, and the fault is the coordinator's: the same port assigned to two agents.*
 
 The name of the system unit is derived from **the port alone**, and the template everyone copies did
-`systemctl stop remotix-<porta>` **without looking at whose it was**. `[M]` One bench stopped another's
+`systemctl stop remotix-<port>` **without looking at whose it was**. `[M]` One bench stopped another's
 unit and put its own there, **truncating a thirty-minute measurement at 745 seconds**.
 
 ⛔⛔ **And the real damage came afterwards**: the robbed bench's probe went on knocking at the
@@ -999,7 +999,7 @@ of the ban is the address, and the unit of work is the port**.
 
 On **17 Aug** a closing line was written that brings out the real counters of the **audio**, and its
 reason was already `LEZIONI.md` §1.20: *a number nobody reads is not a number*. ⛔ **Five
-days later it was discovered that the twin function of the video — `wt_video_conti()` — was defined,
+days later it was discovered that the twin function of the video — `wt_video_counts()` — was defined,
 declared, and nobody called it.** Zero callers in the whole source.
 
 ⇒ The cure had been applied to **one of the two twins**, and nobody had looked at the other.
@@ -1025,7 +1025,7 @@ the same here.
 its port, its ban file and its socket — that is applying §1.24 to the letter. ⛔ **And §1.24 was not
 enough**, because it speaks of what kills itself. This one speaks of what does **not** kill itself.*
 
-⛔ **The case, and the number hurts.** An agent measures the `input → vetro` loop and breaks down the
+⛔ **The case, and the number hurts.** An agent measures the `input → glass` loop and breaks down the
 client's stretch. One of the sub-stretches comes out `[M]` **17.48 ms** — **19 %** of the loop — with an
 honest denominator, the boundaries moved in the uncomfortable direction and a bench certified 53 out of 53. The
 number is promoted to **target of the phase**, with a dedicated agent.
@@ -1058,7 +1058,7 @@ first. A third agent, who knew nothing of the first two, gets there on its own: 
 ⛔⛔ **The cause, measured directly** — four rounds, same bench, same stage, same scene,
 same binary, **only who else is working on the machine changes**:
 
-| | `input → vetro` |
+| | `input → glass` |
 |---|---|
 | ⭐ **alone** | **74.08** and **75.81 ms** |
 | ⛔ **with another agent's bench on top** | **84.22** and **90.87 ms** |
@@ -1235,7 +1235,7 @@ with the firmness of a repeated measurement. Every now and then a **yes** came o
 | Chrome on the same Xvfb | webgl | HEVC |
 |---|---|---|
 | **without** the flag | `ANGLE (Intel, Mesa Intel(R) Graphics (ADL-N))` | ⭐ **true** |
-| **with** the flag | `niente webgl` | no |
+| **with** the flag | `nothing webgl` | no |
 
 On that «no» a conclusion had been written — *«it is not a codec problem, it is a
 STAGE problem»* — and on the conclusion **a lane of work**, declared *«the one the
@@ -1405,7 +1405,7 @@ when the scene has changed, and the same when it has not.
 
 ### 2.3 A test that fails the right code costs as much as one that passes the wrong one
 
-The scroll-wheel bench looked for `asse dy=-10` while the log wrote `asse dx=0 dy=-10`: red,
+The scroll-wheel bench looked for `axis dy=-10` while the log wrote `axis right=0 dy=-10`: red,
 with correct code. Another time an unexpanded `$1` made `grep` find anything, and
 the checks turned green or red at random.
 
@@ -1568,7 +1568,7 @@ bench measured the **content** (frequency, amplitude, purity) and the defect was
 **And the thing that cost the most**: the fourth link — the side that **listens** — had no
 place to speak. The page has a diagnostics box, ⛔ but with the desktop on it is full
 screen and **not reachable**: asking the user to read it is asking them for something that cannot
-be done. ⭐ The cure cost **thirty lines** — an endpoint (`/diario`) on which the client
+be done. ⭐ The cure cost **thirty lines** — an endpoint (`/diary`) on which the client
 writes its numbers, which end up in the **server's log** beside the other three.
 
 ⇒ ⭐ With the four links on the same line the diagnosis took **one pass**: *50 produced →
@@ -1600,7 +1600,7 @@ to each other.
 
 | # | the defect | why it was not seen |
 |---|---|---|
-| 1 | ⛔ the **declared depth was 8 and 10 went on the wire** — `figlio.c` had `r.profondita = 10` written by hand, and the negotiated number **did not cross the process boundary** | ⚠ **it was there on both browsers**: HEVC carries its parameters in the stream (VPS/SPS) and Chrome's decoder reconfigured itself. AV1 does not — the page configures `av01.…08` and dav1d trusts it |
+| 1 | ⛔ the **declared depth was 8 and 10 went on the wire** — `figlio.c` had `r.bit_depth = 10` written by hand, and the negotiated number **did not cross the process boundary** | ⚠ **it was there on both browsers**: HEVC carries its parameters in the stream (VPS/SPS) and Chrome's decoder reconfigured itself. AV1 does not — the page configures `av01.…08` and dav1d trusts it |
 | 2 | ⛔ `Ctrl+Alt+Fine` **never reached the page**: on the Linux laptop that combination is taken by the local desktop | chosen and tested on Windows, where nobody grabs it |
 | 3 | ⛔ the `preventDefault()` on `Ctrl+V` **prevented the `paste` event from being born**, that is it switched off the only path Firefox leaves to the clipboard | on Chrome the text arrives from **watching** (`clipboardchange`), which does not go through the keys |
 | 4 | ⚠ **AV1 runs in software** on this iron, and it shows: the desktop is slow | nobody had ever negotiated AV1 — Chrome chooses HEVC, which here is in hardware |
@@ -1620,7 +1620,7 @@ to each other.
 path. ⚠ The clean capture uses the Python client, which paints nothing — and on Chrome that
 path has never had an independent witness.
 
-⭐ **The new datum to start again from**: the page declares `formato BGRX`. A frame decoded
+⭐ **The new datum to start again from**: the page declares `schema BGRX`. A frame decoded
 from AV1 comes out in `I420`; Firefox delivers it **already converted to RGB**. ⏳ And the second drawing
 path — `?video=worker` — **does not paint at all** on Firefox: the page loads and the probe
 runs, then nothing. `VideoDecoder` inside a `Worker` on Firefox 140 ESR is the suspect, and it has not
@@ -1631,7 +1631,7 @@ been verified.
 The four hypotheses above left only one standing — «the page's DRAWING path remains» — and **that one
 died too**, measured: a witness that drives the **real Firefox** with the
 Marionette protocol (`banchi/07-b46-testimone-disegno.py`) pulled down **the canvas as PNG** on
-three geometries, 2 800 frames, `dipinti == consegnati`, `saltati_coda 0`, `buchi 0`, and
+three geometries, 2 800 frames, `painted == delivered`, `skipped_queue 0`, `holes 0`, and
 the image is **sharp at 1:1**, terminal text included.
 
 ⛔ **And in doing so a link nobody had counted popped out**: the laptop's graphical session
@@ -1647,7 +1647,7 @@ is not measuring them, it is **knowing how many there are**. ⇒ Before attribut
 the whole chain — including how the user is *looking*.
 
 ⭐ **And the counter that moved the hunt**: since the page also reports
-`consegnati→dipinti · salt · buchi · ord · mis · err`, the user's real session **while
+`delivered→painted · salt · holes · ord · mis · err`, the user's real session **while
 seeing the artefact** said `23→23` and five zeros. ⇒ No frame is missing: **the pixels inside
 the ones that arrive are corrupted**. A defect no counter can see is
 looked for in one way only — **by looking at the wrong image**, not at the numbers.
@@ -1736,7 +1736,7 @@ afternoon, before writing a line. Where we already know the answer, it is in the
 > which is what a grid produces, and a beat does not.
 >
 > ⭐ **The cure succeeds**: monitor 120, brake 90, and GNOME delivers **61.4**. ⛔ **But the product today
-> cannot ask for it** — `MOVIMENTO_FPS 60` is a compile-time constant, `RecordVirtual` does not take
+> cannot ask for it** — `MOTION_FPS 60` is a compile-time constant, `RecordVirtual` does not take
 > the frequency, and the virtual monitors are all @60. It is `[M]` **on the bench** and **zero in production**.
 >
 > > ### ⭐⭐ And the lesson, which is worth more than the number
@@ -1809,7 +1809,7 @@ binaries already compiled, outside the product:
 | | |
 |---|---|
 | `misura-cattura` | a PipeWire consumer that counts the frames and reports buffer type, damage, recycled buffers, whether drawing was finished, and the distribution of the intervals. It can set up Mutter's virtual screen by itself, or hook onto any node |
-| `nodo-kwin` | a client of KWin's protocol; with `--elenca` it prints all the protocols a compositor announces |
+| `nodo-kwin` | a client of KWin's protocol; with `--list_cmd` it prints all the protocols a compositor announces |
 | `misura-wlroots` | a `wlr-screencopy` client that makes the same measurement on the pull model |
 | `banco.sh`, `banco-altri.sh`, `banco-catena.sh` | capture alone, the other compositors, and the whole chain up to the client |
 
@@ -1951,7 +1951,7 @@ comes in from here, and how long do I make it wait?»*.
 
 The cause of the 136 ms was printed **once a second**, in a line nobody connected:
 
-> `ciclo: 4 fotogrammi consegnati, 3 attese a vuoto …`
+> `cycle: 4 frames delivered, 3 waits a blank …`
 
 Three-four empty waits per second means four loops per second, that is 250 ms per loop. ⛔ The
 line had been written to answer **another question** — «is the scene still, or is the loop
@@ -2268,7 +2268,7 @@ would ever have drawn attention by itself.*
 
 | where | what |
 |---|---|
-| `07-b64` | `a_non_si_apre` looked at `ricevuti == 0` — but the client prints *«ricevuti 0»* **also from the `except` branch** ⇒ **every** way of failing gave **green** |
+| `07-b64` | `a_non_si_apre` looked at `received_n == 0` — but the client prints *«ricevuti 0»* **also from the `except` branch** ⇒ **every** way of failing gave **green** |
 | `07-b64` | the first profile of the grid **disarmed the guardian** ⇒ the eight after it ran without a safety net |
 | `07-b64` | `spediti_dal_server` at `None`: `None == 0` is **false** ⇒ green on a round in which the server's end had not been read |
 | ⛔ `07-b64` | the «final count» line arrives **up to 29 s late** when the pacer has a queue ⇒ the next round reads **the count of the round before**. `[M]` Three profiles in a row reported **exactly the same numbers**, and a predicate gave **red on someone else's denominator** |
@@ -2281,7 +2281,7 @@ would ever have drawn attention by itself.*
 ⭐⭐ **The rule that comes out of it, and it is not «write better benches»:**
 
 > ⛔ **A bench is not finished until it has been seen giving RED.** Every predicate must have, in
-> `--certifica`, the case that makes it fail — and that case must be **run**, not imagined.
+> `--certify`, the case that makes it fail — and that case must be **run**, not imagined.
 
 And three corollaries, each one paid for:
 
@@ -2290,7 +2290,7 @@ And three corollaries, each one paid for:
    must **refuse to judge**, never carry straight on with a zero;
 2. ⛔ **The guard goes where the number IS CONSUMED**, not where it is produced: if another bench replaces
    your function with its own, the guard put inside yours **no longer runs**;
-3. ⭐ **Searching for a word inside a text is fragile**: `"ACCESA" in dettaglio` is true even when the
+3. ⭐ **Searching for a word inside a text is fragile**: `"ACCESA" in detail` is true even when the
    detail explains that it is *born* on **and is off**. Anchor to the **state sentences**, not to the
    words.
 
@@ -2333,7 +2333,7 @@ notices; **the mechanism says when it began**, and between the two here there is
 ### 1.32 ⭐⭐⭐ **«Sometimes it happens» often means «it always happens, it is just waiting for the moment»**
 
 *24 Aug 2026, phase 9.* A phenomenon appeared **bistable**: same input, same binary, same
-terrain, and twenty minutes apart **`0 chiavi · 40,16/s`** or **`24 chiavi · 33,84/s`**.
+terrain, and twenty minutes apart **`0 keys · 40,16/s`** or **`24 keys · 33,84/s`**.
 
 ⛔ **Looking for its cause in the first ten seconds gave 43 negative tests out of 43** — and the reason was
 that **5 triggers out of 13 fell after the tenth second**: in that window there was nothing to
@@ -2433,9 +2433,9 @@ because the eviction at least leaves a trace.
 *24-25 Aug 2026, phase 10. `[M]` **Six defects**, all in the layer that runs the benches, not
 in the benches.*
 
-⭐ The project certifies the benches with `--certifica`: a known fault is injected and it is verified that the
+⭐ The project certifies the benches with `--certify`: a known fault is injected and it is verified that the
 bench sees it. ⛔ **But the GPU lock, the terrain, the scripts that start the server and the
-module they share do NOT have a `--certifica`** — and they are **the floor on which every
+module they share do NOT have a `--certify`** — and they are **the floor on which every
 measurement rests**.
 
 `[M]` **What it cost, concretely:**
@@ -2589,12 +2589,12 @@ the **safety net** — before the new desktops.
 *25 Aug 2026, and it costs something to declare it because it happened while building the bench.*
 
 ```bash
-U=${1:?serve l'utente}      # ⛔ the apostrophe OPENS a quote…
-PROFILO=${2:?serve il profilo}   # …and this line ends up INSIDE the string
+U=${1:?needs l'username}      # ⛔ the apostrophe OPENS a quote…
+PROFILE=${2:?serve il profilo}   # …and this line ends up INSIDE the string
 ```
 
 `[M]` The apostrophe of *«l'utente»* swallowed **four lines**, up to the next `'` — which was
-in a comment (`E'`). ⇒ `PROFILO=` **was never executed**, and the script died much further
+in a comment (`E'`). ⇒ `PROFILE=` **was never executed**, and the script died much further
 on with *«PROFILO: unbound variable»* on a line that had nothing to do with it.
 
 ⛔⛔ **And `bash -n` passed.** The syntax **was** valid: it just did not mean what it seemed.
@@ -2608,7 +2608,7 @@ on with *«PROFILO: unbound variable»* on a line that had nothing to do with it
 > ### ⛔ AND ON 26 AUG 2026 IT HAPPENED AGAIN — *twenty-four hours later, in the same project*
 >
 > `[M]` An apostrophe inside a **comment** in a `sh -c '…'` block closed the string halfway, and
-> the shell ran the remaining pieces as commands: `MANCA: unbound variable`, `grep: dentro: No
+> the shell ran the remaining pieces as commands: `MISSING: unbound variable`, `grep: inside: No
 > such file or directory`, `sed: invalid option -- '8'`. ⛔ **`bash -n` passed this time too.**
 >
 > ⇒ ⭐⭐ **The cure is not remembering it**: comments are written **outside** the quoted block. Inside a
@@ -2734,7 +2734,7 @@ takes with mode `0700`. And it was already written, with its measurement, inside
 >
 > ⇒ ⭐ **The counter-test that would have caught it in ten seconds**: run the predicate **with the fault
 > grafted** and demand that it gives red. It is the same thing this phase asks of every mesh
-> (`--certifica`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
+> (`--certify`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
 
 ---
 
@@ -2749,7 +2749,7 @@ well exceeds the 25 s). ⛔ The first draft used **the same ceiling** for both.
 `[M]` Outcome: **red for both tenants, with the cure and without.**
 
 ⇒ ⛔⛔ **And the real damage is not the false red: it is that the ACCEPTANCE TEST stops being valid.** The meaning of
-`--senza-cura` is *«with the fault injected it must turn red»*; ⚠ if it is red **even without**, that
+`--no-fix` is *«with the fault injected it must turn red»*; ⚠ if it is red **even without**, that
 comparison no longer proves anything, and a mesh that cannot tell the fault from its own ceiling
 ⛔ **is indistinguishable from a broken mesh**.
 
@@ -2815,7 +2815,7 @@ forever. ⛔ Three checks out of thirteen were looking at nothing, and the green
 
 *26 Aug 2026, phase 11, the hook.*
 
-`11-gancio.sh installa pre-commit` ⛔ **installed `pre-push`**, and calmly printed that it had
+`11-gancio.sh install pre-commit` ⛔ **installed `pre-push`**, and calmly printed that it had
 gone well. The loop that reads the options consumed the argument and passed it to nobody; the
 confirmation message repeated **what had been asked**, not what had been done.
 
@@ -2848,7 +2848,7 @@ whoever is working»*.
 > ### ⭐ How it is caught, and it costs ten seconds
 >
 > ⛔ **Try to make the mesh turn GREEN.** A check must be switched on in both directions: you
-> graft the fault and demand red (which the project already does, `--certifica`), ⚠ **and you remove
+> graft the fault and demand red (which the project already does, `--certify`), ⚠ **and you remove
 > the fault and demand green**. The second half is forgotten, and it is the one that catches this.
 
 ---
@@ -2883,7 +2883,7 @@ false reds of §1.44–1.47 had noticed this, because they all looked at C8 **fr
 
 ### 1.51 ⛔⛔ **«Text file busy» — the red that comes from the ORDER of the commands, not from the product**
 
-`[M]` 26 Aug 2026, stitching the four new meshes into the net. The action `11-accendi.sh prodotto`
+`[M]` 26 Aug 2026, stitching the four new meshes into the net. The action `11-accendi.sh product`
 copies the binary into the box. With the **server running**, `cp` answers:
 
 ```
@@ -2938,7 +2938,7 @@ done nothing**: a predicate that cannot fail, that is §1.44 again, and this tim
 certification of the whole net.
 
 ⇒ **Two** things are demanded together: the verdict is red, **and** the nameless lines are more than
-those the real defect had left. `[M]` without a fault: 4 · with the `tutto` fault: 5 490.
+those the real defect had left. `[M]` without a fault: 4 · with the `overall` fault: 5 490.
 
 > ⛔ **The rule**: when a mesh carries with it a **real and already known** defect, its grafted
 > fault is not measured on the colour of the verdict — it is measured on the **difference** the injection
@@ -2952,15 +2952,15 @@ those the real defect had left. `[M]` without a fault: 4 · with the `tutto` fau
 ten**. On that verdict rested: five tests of the net declared «blocked» (C2, C3, C4, C6,
 C8b), the postponement of phase 12, a defect open in phase 10, and a work list.
 
-⛔ **C1 read the wrong line.** `sessione [chi] ⛔ ZERO MONITOR` is written by the product **in the
+⛔ **C1 read the wrong line.** `session_v [chi] ⛔ ZERO MONITOR` is written by the product **in the
 mandatory passage of a SUCCESSFUL birth** (`src/sessione.c:345-348`): since 14 Aug *«zero
 monitors of its own»* is **the intended state** — the monitor is mounted by **capture**, afterwards.
-⛔ And the green branch was **unreachable**: `sessione_stato()` is no longer called after the
-stage is taken, so `monitor N/N: connettore` **never** appears in a healthy birth.
+⛔ And the green branch was **unreachable**: `session_state()` is no longer called after the
+stage is taken, so `monitor N/N: connector` **never** appears in a healthy birth.
 
 > ⇒ ⭐⭐ **C1 could only say «BLIND» or «I don't know». It never said green, and it could not.**
-> `[M]` The counter-test, on the cured box: `formato negoziato` appears **8** times, the stage says
-> `monitor «Meta-0» (0 prima, **1** dopo) 1920x1080`, `monitor …: connettore` appears **0** times —
+> `[M]` The counter-test, on the cured box: `schema negotiated` appears **8** times, the stage says
+> `monitor «Meta-0» (0 prima, **1** dopo) 1920x1080`, `monitor …: connector` appears **0** times —
 > **and C1 still said BLIND**.
 
 ⛔⛔ **And the certification did not catch it because it imposed the defect as a requirement**: two of its
@@ -3010,9 +3010,9 @@ seconds to **one**.
 ### 1.55 ⛔⛔ **The number read for months was uninitialised memory**
 
 `[M]` 27 Aug 2026. Phase 10 §7.4 described a *«third state»* of the stage — the line
-`(0 prima, **2** dopo)` — and treated it as a fact: two monitors appeared.
+`(0 before, **2** after)` — and treated it as a fact: two monitors appeared.
 
-⛔ **It was garbage.** `src/figlio.c` · `codifica_e_manda()` sent the structure to the parent **before** the `memset` at
+⛔ **It was garbage.** `src/figlio.c` · `encode_and_send()` sent the structure to the parent **before** the `memset` at
 `:5311`. `[M]` Proven in two ways: that line appears even on boxes where **no monitor can
 have been born** (there the product cannot even start the desktop), always and only on the branch *«waiting for the
 client's canvas»*, with obvious garbage beside it (`stride 958311266`, `stride 306537694`); and in the
@@ -3035,7 +3035,7 @@ presented them as the proof that *«the same tests run on different desktops wit
 
 ⛔ Then C1 was run **ten times per box** on the other three, and the count was:
 **0 healthy · 0 blind · 30 «I could not look»**. The reason is stated by the product's log:
-*«Mutter non espone RemoteDesktop»* — ⛔ **the product can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`,
+*«Mutter non espone RemoteDesktop»* — ⛔ **the product can start only GNOME** (`src/sessione.c` · `write_dropin()`,
 all of `src/mutter.c`), and in the other three boxes `gnome-shell` is not even there.
 
 ⭐ **What the other three really test is real but smaller**: the environment (step 0), the
@@ -3052,7 +3052,7 @@ prove that the **product** holds on those desktops, because there the product do
 ### 1.57 ⚠ **The rebuilt binary wanted a library the bench did not carry — and the bench said so**
 
 `[M]` 27 Aug 2026. Having put back into the four boxes the product rebuilt with the day's
-cures, `11-accendi.sh prodotto` answered on all four:
+cures, `11-accendi.sh product` answered on all four:
 
 ```
   NO  1 librerie non si risolvono: il server morira e non si sapra perche

@@ -1,36 +1,36 @@
 import re
 
-from build import ROOT, c, file_map, p, rif, sorgenti, table
+from build import ROOT, c, file_map, p, ref, sources, table
 
 S = "src/"
 M = "installatore/motore/"
 
 
-def t(parole):
+def t(words):
     """The English translation of an Italian name, at the head of the role."""
-    return f"(<i>{parole}</i>) "
+    return f"(<i>{words}</i>) "
 
 
-def manuale():
+def manual():
     """The manual's sources: the generator, the style, the script and one file per chapter, with its title."""
-    righe = [
+    line_list = [
         ("docs/sources/build.py", "Generates the manual: text, table and SVG figure helpers, numbering, the "
-         "file map and project figures, and the " + c("--controlla") + " checks (Italian left, cited files, "
+         "file map and project figures, and the " + c("--check") + " checks (Italian left, cited files, "
          "functions, variables and codes)"),
         ("docs/sources/manual.js", "The script embedded in the page: sidebar, search, figure zoom"),
         ("docs/sources/style.css", "The common style sheet every manual page starts with"),
     ]
-    capitoli = sorted(f for f in sorgenti() if f.startswith("docs/sources/") and f.endswith(".py")
+    capitoli = sorted(f for f in sources() if f.startswith("docs/sources/") and f.endswith(".py")
                       and f != "docs/sources/build.py")
     for f in capitoli:
         m = re.search(r'^CHAPTER = \("([^"]+)"', (ROOT / f).read_text(), re.M)
         n = re.match(r"ch(\d\d)_", f.rsplit("/", 1)[-1])
-        titolo = m.group(1) if m else "chapter source"
-        righe.append((f, (f"Chapter {int(n.group(1))}: " if n else "") + titolo))
-    return righe
+        heading = m.group(1) if m else "chapter source"
+        line_list.append((f, (f"Chapter {int(n.group(1))}: " if n else "") + heading))
+    return line_list
 
 
-GRUPPI = [
+GROUPS = [
     ("Server core: processes, sessions, authentication", [
         (S + "main.c", "The server: options, the single " + c("poll") + " loop, the two listeners, the bridge "
          "between transport and children, the presence table and abandonment clock, found-again desktops"),
@@ -139,7 +139,7 @@ GRUPPI = [
         (S + "opus-wasm/costruisci.sh", t("build") + "Builds the Opus WebAssembly decoder and embeds it in the page"),
         (S + "opus-wasm/decodifica.c", t("decode") + "The decoder compiled to WebAssembly: libopus, decode only, static buffers"),
         (S + "opus-wasm/opus.wasm.sha256", "Fingerprint of the embedded decoder"),
-        (S + "opus-wasm/prova/confronta.mjs", t("prova = test; confronta = compare") + "Decodes test packets with the wasm extracted from the page"),
+        (S + "opus-wasm/prova/confronta.mjs", t("prova = test; compare = compare") + "Decodes test packets with the wasm extracted from the page"),
         (S + "opus-wasm/prova/prova.sh", "Compares the embedded decoder with native libopus"),
         (S + "opus-wasm/prova/riferimento.c", t("reference") + "Native reference: encodes test signals in the three Opus modes"),
     ]),
@@ -237,7 +237,7 @@ GRUPPI = [
          "packages, rules"),
     ]),
     ("Installer interface", [
-        ("installatore/interfaccia/sessione.go", t("interfaccia = interface; sessione = session") + "The engine side of the interface: examine, plan, apply, as root"),
+        ("installatore/interfaccia/sessione.go", t("interfaccia = interface; session_v = session") + "The engine side of the interface: examine, plan, apply, as root"),
         ("installatore/interfaccia/vista.go", t("view") + "The engine's objects in plain words, for the screens"),
         ("installatore/interfaccia/testi.go", "The screens' texts, in English, from the approved mockup"),
         ("installatore/interfaccia/testi_test.go", "Every key used by the screens exists; plain words in the check"),
@@ -308,27 +308,27 @@ GRUPPI = [
     ]),
     ("Packaging: engine package and release", [
         ("packaging/rilascio.sh", t("release") + "The release command: builds everything and produces the single " + c(".run")),
-        ("packaging/motore/pacchetti-motore.sh", t("motore = engine; pacchetti = packages") + "Packages the static engine for the three families"),
+        ("packaging/motore/pacchetti-motore.sh", t("motore = engine; packets = packages") + "Packages the static engine for the three families"),
         ("packaging/motore/remotix-install.spec", "The engine package, RPM family"),
         ("packaging/motore/PKGBUILD", "The engine package, Arch"),
         ("packaging/motore/remotix-install.install", "Arch engine package scripts: post-upgrade check"),
         ("packaging/motore/README", "What the engine package is, for the administrator"),
-        ("packaging/archivio/licenze.py", t("archivio = archive; licenze = licences") + "Collects the licence texts of everything REMOTIX ships"),
+        ("packaging/archivio/licenze.py", t("archive = archive; licenze = licences") + "Collects the licence texts of everything REMOTIX ships"),
         ("packaging/archivio/sbom.py", "The SBOM of each product package"),
     ]),
-    ("Manual sources", manuale()),
+    ("Manual sources", manual()),
 ]
 
 S1 = p("Every product file with its line count, recounted each time the manual is generated: the server, the "
        "page, the installer and its interface, the packaging of each family and the sources of this manual. "
        "The files kept out are the installer's vendored modules, the protocol headers generated at build time "
        "and binary images. If a file is missing from the map, or the map lists a file that no longer exists, "
-       "generation stops — and so does " + c("build.py --controlla") + ". The role of each file is taken from "
+       "generation stops — and so does " + c("build.py --check") + ". The role of each file is taken from "
        "its own header comment; for C modules the " + c(".h") + " carries the why and the " + c(".c")
        + " the how.",
-       lead=True) + file_map(GRUPPI, "«TAB» — The project's files")
+       lead=True) + file_map(GROUPS, "«TAB» — The project's files")
 
-BANCHI = table(["Folder or prefix", "What it tests"], [
+BENCHES = table(["Folder or prefix", "What it tests"], [
     "Root of " + c("banchi/") + ": one file per bench, results next to it",
     [c("00-*"), "The environment of phase 0: anchors, the first KWin and wlroots probes, atomic log, the GNOME "
      "session"],
@@ -344,10 +344,10 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("08-*") + ", " + c("09-*") + ", " + c("10-*"), "Zero copy and VA surfaces; quality on bad networks and "
      "the " + c("netem") + " lock; multi-tenant capacity, the budget and the GPU lock"],
     [c("12-*") + ", " + c("13-*") + ", " + c("14-*"), "The KDE, XFCE and LXQt increments; the real-browser "
-     "drivers " + c("12-client-veri.py") + " and " + c("12-c20-veri.py") + " (" + c("veri") + " = real)"],
-    [c("attrezzi-*.sh") + " (tools)", "Shared helpers: tenants, card groups, re-grafting the product into a bench"],
-    [c("b*-esiti*.jsonl") + ", " + c("flusso-*.json") + ", " + c("pagina-*.rgb24"), "Results (" + c("esiti") + "), "
-     "streams (" + c("flusso") + ") and decoded page pixels (" + c("pagina") + ") kept from phases 1–2"],
+     "drivers " + c("12-client-veri.py") + " and " + c("12-c20-veri.py") + " (" + c("genuine") + " = real)"],
+    [c("tools-*.sh") + " (tools)", "Shared helpers: tenants, card groups, re-grafting the product into a bench"],
+    [c("b*-outcomes*.jsonl") + ", " + c("flow-*.json") + ", " + c("page_v-*.rgb24"), "Results (" + c("outcomes") + "), "
+     "streams (" + c("flow") + ") and decoded page pixels (" + c("page_v") + ") kept from phases 1–2"],
     "Folders of evidence (results only)",
     [c("01-p5-copie*/") + " (" + c("copie") + " = copies)", "Browser screenshots of the phase 1 login runs: healthy, faulty, repaired"],
     [c("02-filo-prove/") + " (wire tests)", "RCP recordings, good and broken, for the wire validator"],
@@ -369,7 +369,7 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
     [c("17-t2/") + ", " + c("17-t6/") + ", " + c("17-t7/") + ", " + c("17-t8/") + ", " + c("17-t9/"),
      "Installer stage benches: desktops surviving a stop (T2), PAM and SELinux (T6), upgrading without closing the desktops, which the new parent finds again (T7), "
      "faults and third-party repositories (T8), the interface (T9). T8 and T9 are history"],
-    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("scheda") + " = card): Opus "
+    [c("18-a1/") + ", " + c("18-scheda/") + ", " + c("18-software/"), "Old vs new when ffmpeg left (" + c("gpu_card") + " = card): Opus "
      "without ffmpeg, libva direct vs ffmpeg on the card, the software path"],
     [c("19-vulkan/"), "Vulkan Video vs VA-API, the shader build, Chrome decoding of the result"],
     [c("19-nvidia/"), "The rented NVIDIA machine: container test and suite"],
@@ -378,13 +378,13 @@ BANCHI = table(["Folder or prefix", "What it tests"], [
      + ", byte-identical to " + c("src/") + " (checked by " + c("make") + ")"],
     [c("prodotto/") + " (product), " + c("sonda/") + " (probe)", "Smoke test of the server in the build container; a browser probe "
      "against it"],
-    [c("ritrovati/") + " (found again)", "Bench files found outside the repository and saved, with a README"],
+    [c("found_again/") + " (found again)", "Bench files found outside the repository and saved, with a README"],
 ], "«TAB» — The bench folder, by folder")
 
 S2 = p(c("banchi/") + " holds about 1,800 files and is described by folder, not file by file. The prefix of a "
        "file at the root is the number of the phase that wrote it; the folders with a name are either evidence "
        "kept next to a result or machinery that is still run. How to run them is in "
-       + rif("Running the benches") + ".", lead=True) + BANCHI
+       + ref("Running the benches") + ".", lead=True) + BENCHES
 
 CHAPTER = ("Appendix B — File map", [
     ("The project's files", S1),

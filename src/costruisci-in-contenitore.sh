@@ -3,8 +3,8 @@
 # costruisci-in-contenitore.sh — ⭐ THE ANSWER TO THE QUESTION "HOW IS IT BUILT"
 #
 #   bash src/costruisci-in-contenitore.sh              builds `src/remotix`
-#   bash src/costruisci-in-contenitore.sh dipendenze   only says what is there
-#   bash src/costruisci-in-contenitore.sh pulisci      throws away the objects
+#   bash src/costruisci-in-contenitore.sh dependencies   only says what is there
+#   bash src/costruisci-in-contenitore.sh clean      throws away the objects
 #   bash src/costruisci-in-contenitore.sh <other>      passes it to `make`
 #
 # ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@
 #
 # ---------------------------------------------------------------------------
 # ⚠ THE MOUNT IS THE WHOLE TREE, not `src/`, and the reason is the `Makefile`:
-#   the `impronte` target compares `src/rcp.c` with `../banchi/rcp/rcp.c` and
+#   the `fingerprints` target compares `src/rcp.c` with `../banchi/rcp/rcp.c` and
 #   REFUSES to compile if it does not find it (finding R12.3).  ⛔ Mounting only
 #   `src/` the twin copy would vanish, and the `Makefile` would say — rightly —
 #   "I could not look".
@@ -35,9 +35,9 @@
 #   would rewrite the labels of the user's source tree.
 set -uo pipefail
 
-ALBERO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-IMMAGINE=${IMMAGINE:-localhost/remotix-costruzione}
-AZIONE=${1:-tutto}
+TREE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+IMAGE=${IMAGE:-localhost/remotix-costruzione}
+ACTION=${1:-overall}
 
 if ! command -v podman >/dev/null 2>&1; then
 	printf '⛔ podman is not there%s: and the container is the only way that builds.\n' ""
@@ -46,10 +46,10 @@ fi
 
 # ⛔ The image is CHECKED, and its absence is not a fault to be guessed:
 #    it is a line that says the command to type.
-if ! podman image exists "$IMMAGINE"; then
-	printf '⛔ image «%s» is not there yet.  It is built once only:\n\n' "$IMMAGINE"
+if ! podman image exists "$IMAGE"; then
+	printf '⛔ image «%s» is not there yet.  It is built once only:\n\n' "$IMAGE"
 	printf '    podman build -t remotix-costruzione -f %s/src/Contenitore %s/src\n\n' \
-	       "$ALBERO" "$ALBERO"
+	       "$TREE" "$TREE"
 	printf '   (~4 minutes: nghttp3 and ngtcp2 are built from source inside it,\n'
 	printf '    because%s Debian packages are 1.8 and 1.11 and the\n' ""
 	printf '    ngtcp2_crypto_ossl bridge is NOT in the packages at all.)\n'
@@ -60,19 +60,19 @@ fi
 #    remapped uid's.  Without it, `src/remotix` is born owned by a user that
 #    does not exist on the host, and the next `git status` shows a tree that
 #    cannot be touched any more without `sudo` — that is tonight's block, moved.
-printf '== build inside «%s» — tree %s\n' "$IMMAGINE" "$ALBERO"
+printf '== build inside «%s» — tree %s\n' "$IMAGE" "$TREE"
 podman run --rm \
 	--userns=keep-id \
-	-v "$ALBERO:/albero" \
-	-w /albero/src \
-	"$IMMAGINE" \
-	make "$AZIONE"
-uscita=$?
+	-v "$TREE:/tree" \
+	-w /tree/src \
+	"$IMAGE" \
+	make "$ACTION"
+out_dir=$?
 
-if [ $uscita -eq 0 ] && [ "$AZIONE" = tutto ]; then
-	if [ -x "$ALBERO/src/remotix" ]; then
-		printf '\n⭐ built: %s\n' "$ALBERO/src/remotix"
-		ls -l "$ALBERO/src/remotix"
+if [ $out_dir -eq 0 ] && [ "$ACTION" = overall ]; then
+	if [ -x "$TREE/src/remotix" ]; then
+		printf '\n⭐ built: %s\n' "$TREE/src/remotix"
+		ls -l "$TREE/src/remotix"
 	fi
 
 	# ⛔⛔⭐ AND THE `rcp.c` BENCH RUNS HERE, at every build — 16 August 2026.
@@ -92,15 +92,15 @@ if [ $uscita -eq 0 ] && [ "$AZIONE" = tutto ]; then
 	#   binary is there and may be useful — but the red shows, and it is the only thing
 	#   that was needed.
 	if command -v gcc >/dev/null 2>&1 \
-	   && [ -f "$ALBERO/banchi/04-b31-tela.c" ] && [ -f "$ALBERO/src/rcp.c" ]; then
+	   && [ -f "$TREE/banchi/04-b31-tela.c" ] && [ -f "$TREE/src/rcp.c" ]; then
 		B=$(mktemp -u /tmp/04-b31.XXXXXX)
 		if gcc -O1 -std=gnu11 -w -D_GNU_SOURCE -o "$B" \
-		       "$ALBERO/banchi/04-b31-tela.c" "$ALBERO/src/rcp.c" 2>/dev/null; then
-			if RIGA=$("$B" 2>&1 | grep -a passati); then
-				case "$RIGA" in
-				*"falliti 0"*) printf '⭐ 04-b31 (the canvas, %s):%s\n' \
-				                      "$(echo "$RIGA" | tr -s ' ')" '' ;;
-				*)             printf '\n⛔ 04-b31 IS RED:%s\n' "$RIGA"
+		       "$TREE/banchi/04-b31-tela.c" "$TREE/src/rcp.c" 2>/dev/null; then
+			if LINE=$("$B" 2>&1 | grep -a passed); then
+				case "$LINE" in
+				*"failed 0"*) printf '⭐ 04-b31 (the canvas, %s):%s\n' \
+				                      "$(echo "$LINE" | tr -s ' ')" '' ;;
+				*)             printf '\n⛔ 04-b31 IS RED:%s\n' "$LINE"
 				               printf '   rerun it with:  gcc -O1 -std=gnu11 -w -D_GNU_SOURCE \\\n'
 				               printf '        -o /tmp/b31 banchi/04-b31-tela.c src/rcp.c && /tmp/b31\n' ;;
 				esac
@@ -109,4 +109,4 @@ if [ $uscita -eq 0 ] && [ "$AZIONE" = tutto ]; then
 		fi
 	fi
 fi
-exit $uscita
+exit $out_dir

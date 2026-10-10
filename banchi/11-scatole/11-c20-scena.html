@@ -8,11 +8,11 @@
 
   C20 asks: *«after «Log out» and a new login, the screen does not flicker»*, and
   judges it on the MEAN LUMINANCE of the frames: on a healthy screen it is one only,
-  with the ghost it alternates between distant values.  ⇒ C3's scene cannot serve:
+  with the ghost it alternates between distant values.  ⇒ C3's scene cannot needs:
   it changes the background between blue and yellow ON PURPOSE, that is it flickers — ⛔ it is
   C20's INJECTED FAULT, not its healthy run.
 
-  ⚠ And the still desktop cannot serve either.  `[M]` 23 September 2026,
+  ⚠ And the still desktop cannot needs either.  `[M]` 23 September 2026,
   second login, same mesh, same binary:
 
     | box | compositor | frames delivered |
@@ -73,14 +73,14 @@
 <style>
   html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
   body { background:#C0C0C0; }
-  .banda { position:absolute; top:0; bottom:0; width:20%; background:#101010; }
-  #targa { position:absolute; left:0; right:0; top:45%;
+  .bandwidth { position:absolute; top:0; bottom:0; width:20%; background:#101010; }
+  #banner { position:absolute; left:0; right:0; top:45%;
            text-align:center; font-family:monospace; font-size:4vw;
            color:#606060; }
 </style>
-<div class="banda" id="a"></div>
-<div class="banda" id="b"></div>
-<div id="targa">REMOTIX C20</div>
+<div class="bandwidth" id="a"></div>
+<div class="bandwidth" id="b"></div>
+<div id="banner">REMOTIX C20</div>
 <script>
   // ⛔ TWO bands, and the second chases the first at 100 points distance: what
   //    leaves on the right comes back in on the left at the same instant.  ⇒ In view
@@ -88,11 +88,11 @@
   var a = document.getElementById('a');
   var b = document.getElementById('b');
   var x = 0;
-  function giro() {
+  function lap() {
     x = (x + 3) % 100;
     a.style.left = x + '%';
     b.style.left = (x - 100) + '%';
-    requestAnimationFrame(giro);
+    requestAnimationFrame(lap);
   }
-  requestAnimationFrame(giro);
+  requestAnimationFrame(lap);
 </script>

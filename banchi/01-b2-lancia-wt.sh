@@ -20,12 +20,12 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-ENTRA=/media/REMOTIX/enter.sh
-FUORI=/media/REMOTIX/src
-DENTRO=/srv/src
+ENTER=/media/REMOTIX/enter.sh
+OUT=/media/REMOTIX/src
+INSIDE=/srv/src
 CERT=/media/REMOTIX/b2-certificati
-SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
-LIBS="$DENTRO/b2/ngtcp2/build/lib"
+SERVER="$INSIDE/b2/ngtcp2/build/examples/bsslserver"
+LIBS="$INSIDE/b2/ngtcp2/build/lib"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -34,23 +34,23 @@ inf()  { printf '    --  %s\n' "$*"; }
 
 # ⚠ Three actions, and they are needed because the BROWSER measurement needs the
 #   server to stay up while another script, on the other machine, conducts it.
-#   "misura" turns on, tests with the test client and turns off.
-AZIONE=${1:-misura}
-IND=${2:-192.168.0.2}
-PORTA=${3:-7447}
+#   "gauge" turns on, tests with the test client and turns off.
+ACTION=${1:-gauge}
+ADDR=${2:-192.168.0.2}
+PORT=${3:-7447}
 # ⚠ The server's extra options: B3 needs them, raising `max_idle_timeout` to
 #   120 s to tell "the server knows a session is detached" from "QUIC closed
 #   by itself" (finding R3.19).
 # ⛔ `shift 3` with FEWER than three arguments shifts nothing and does not fail
-#    in a useful way: `$*` stayed "accendi", the server received the name of
+#    in a useful way: `$*` stayed "turn_on", the server received the name of
 #    the action as an option and died with "port: invalid port number".
 #    Seen on 10 Aug 2026 — and the symptom was a client that "does not
 #    connect", that is, the red once again on the wrong suspect.
 if [ $# -gt 3 ]; then
 	shift 3
-	OPZIONI="$*"
+	OPTIONS="$*"
 else
-	OPZIONI=""
+	OPTIONS=""
 fi
 
 # ---------------------------------------------------------------------------
@@ -68,9 +68,9 @@ fi
 #    same on both sides, so it can be read from here without sudo.
 # ⚠ And after the `kill` we CHECK that it is dead, before throwing away the file:
 #    deleting it first is losing the only handle we had.
-ferma_per_pid() # $1 = PID file, $2 = expected program name
+stop_by_pid() # $1 = PID file, $2 = expected program name
 {
-	local file=$1 atteso=$2 p="" comm=""
+	local file=$1 expected_val=$2 p="" comm=""
 	[ -f "$file" ] && p=$(cat "$file" 2>/dev/null)
 	if [ -z "$p" ]; then
 		printf '    --  no server to stop\n'
@@ -82,17 +82,17 @@ ferma_per_pid() # $1 = PID file, $2 = expected program name
 		return 0
 	fi
 	comm=$(cat "/proc/$p/comm" 2>/dev/null)
-	if [ "$comm" != "$atteso" ]; then
-		ko "⛔ PID $p is now «$comm», not «$atteso»: NOT killing it."
+	if [ "$comm" != "$expected_val" ]; then
+		ko "⛔ PID $p is now «$comm», not «$expected_val»: NOT killing it."
 		ko "   The file $file is from a previous run, and PIDs get"
 		ko "   reused.  Just throwing it away — check yourself what that process is."
 		rm -f "$file"
 		return 1
 	fi
-	bash "$ENTRA" --root "kill $p"
-	local esito=$?
-	if [ "$esito" -ne 0 ]; then
-		ko "the kill of PID $p ($comm) failed (exit $esito)"
+	bash "$ENTER" --root "kill $p"
+	local outcome=$?
+	if [ "$outcome" -ne 0 ]; then
+		ko "the kill of PID $p ($comm) failed (exit $outcome)"
 		return 1
 	fi
 	# ⚠ A successful `kill` is a delivered signal, not a dead process.
@@ -110,17 +110,17 @@ ferma_per_pid() # $1 = PID file, $2 = expected program name
 	return 0
 }
 
-if [ "$AZIONE" = spegni ]; then
-	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
+if [ "$ACTION" = turn_off ]; then
+	stop_by_pid "$OUT/b2-wt.pid" "$(basename "$SERVER")"
 	exit $?
 fi
-if [ "$AZIONE" != misura ] && [ "$AZIONE" != accendi ]; then
-	ko "unknown action: $AZIONE  (misura | accendi | spegni)"
+if [ "$ACTION" != gauge ] && [ "$ACTION" != turn_on ]; then
+	ko "unknown action: $ACTION  (gauge | turn_on | turn_off)"
 	exit 2
 fi
 
 log "Credentials for the container"
-bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+bash "$ENTER" --root "true" || { ko "cannot enter the container"; exit 2; }
 ok "sudo validated"
 
 # ---------------------------------------------------------------------------
@@ -140,58 +140,58 @@ ok "sudo validated"
 #    looked at: the status of `enter.sh`, the status of `ss`, and the content.
 #
 # Exits 0 = taken · 1 = free · 2 = could not look.
-guarda_porta() # $1 = port
+look_port() # $1 = port
 {
 	local p=$1
-	rm -f "$FUORI/b2-porte.txt" "$FUORI/b2-porte.stato"
-	bash "$ENTRA" --root \
-		"ss -ulnp > $DENTRO/b2-porte.txt 2>&1; echo \$? > $DENTRO/b2-porte.stato"
-	local entrata=$?
-	if [ "$entrata" -ne 0 ]; then
-		ko "could not look at the ports: enter.sh exited $entrata"
+	rm -f "$OUT/b2-porte.txt" "$OUT/b2-porte.state"
+	bash "$ENTER" --root \
+		"ss -ulnp > $INSIDE/b2-porte.txt 2>&1; echo \$? > $INSIDE/b2-porte.state"
+	local entry=$?
+	if [ "$entry" -ne 0 ]; then
+		ko "could not look at the ports: enter.sh exited $entry"
 		return 2
 	fi
-	if [ ! -f "$FUORI/b2-porte.stato" ] || [ ! -f "$FUORI/b2-porte.txt" ]; then
+	if [ ! -f "$OUT/b2-porte.state" ] || [ ! -f "$OUT/b2-porte.txt" ]; then
 		ko "could not look at the ports: the list was not written"
 		return 2
 	fi
-	local stato_ss
-	stato_ss=$(cat "$FUORI/b2-porte.stato")
-	if [ "$stato_ss" != 0 ]; then
-		ko "«ss» inside the container exited $stato_ss:"
-		sed 's/^/        /' "$FUORI/b2-porte.txt"
+	local state_ss
+	state_ss=$(cat "$OUT/b2-porte.state")
+	if [ "$state_ss" != 0 ]; then
+		ko "«ss» inside the container exited $state_ss:"
+		sed 's/^/        /' "$OUT/b2-porte.txt"
 		return 2
 	fi
-	grep ":$p " "$FUORI/b2-porte.txt" | sed 's/^/        /' && return 0
+	grep ":$p " "$OUT/b2-porte.txt" | sed 's/^/        /' && return 0
 	return 1
 }
 
 log "The port"
-guarda_porta "$PORTA"
-LIBERA=$?
-if [ "$LIBERA" -eq 2 ]; then
+look_port "$PORT"
+FREE=$?
+if [ "$FREE" -eq 2 ]; then
 	exit 3
 fi
-if [ "$LIBERA" -eq 0 ]; then
-	ko "port $PORTA is already taken (the list is above)"
+if [ "$FREE" -eq 0 ]; then
+	ko "port $PORT is already taken (the list is above)"
 	ko "stop it by PID (never with pkill -f) and relaunch"
 	exit 3
 fi
-ok "port $PORTA free"
+ok "port $PORT free"
 
 # ---------------------------------------------------------------------------
 log "The minimal server (the ngtcp2 example with the WebTransport layer grafted on)"
-rm -f "$FUORI/b2-wt.log" "$FUORI/b2-wt.pid"
-bash "$ENTRA" --root \
-	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER $OPZIONI $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b2-wt.log 2>&1 & echo \$! > $DENTRO/b2-wt.pid"
+rm -f "$OUT/b2-wt.log" "$OUT/b2-wt.pid"
+bash "$ENTER" --root \
+	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER $OPTIONS $ADDR $PORT $CERT/session_v.key $CERT/session_v.pem < /dev/null > $INSIDE/b2-wt.log 2>&1 & echo \$! > $INSIDE/b2-wt.pid"
 sleep 2
-PID=$(cat "$FUORI/b2-wt.pid" 2>/dev/null)
+PID=$(cat "$OUT/b2-wt.pid" 2>/dev/null)
 # ⛔ `/proc`, not `kill -0`: the server belongs to root and this script does not
 #    — and as a normal user `kill -0` answers "operation not permitted", that is
 #    an error, not "does not exist" (10 Aug 2026).
 if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
 	ko "the server did not start.  The log says:"
-	sed 's/^/        /' "$FUORI/b2-wt.log"
+	sed 's/^/        /' "$OUT/b2-wt.log"
 	exit 4
 fi
 # ⛔ "LISTENING" MEANS "ON THIS PORT" — finding R8.14.
@@ -201,31 +201,31 @@ fi
 #    port passed the check, and the bench printed "listening" on a false fact.
 #    It is the necessary taken for sufficient (E1), right in the file that
 #    tells of the defect of the crooked arguments.
-guarda_porta "$PORTA"
-TIENE=$?
-if [ "$TIENE" -eq 2 ]; then
+look_port "$PORT"
+HOLDS=$?
+if [ "$HOLDS" -eq 2 ]; then
 	exit 4
 fi
-if [ "$TIENE" -ne 0 ] || ! grep ":$PORTA " "$FUORI/b2-porte.txt" | grep -q "pid=$PID,"; then
-	ko "the server is alive but does NOT hold port $PORTA (the list is above)"
-	sed 's/^/        /' "$FUORI/b2-wt.log"
+if [ "$HOLDS" -ne 0 ] || ! grep ":$PORT " "$OUT/b2-porte.txt" | grep -q "pid=$PID,"; then
+	ko "the server is alive but does NOT hold port $PORT (the list is above)"
+	sed 's/^/        /' "$OUT/b2-wt.log"
 	exit 4
 fi
-ok "listening on port $PORTA, PID $PID"
+ok "listening on port $PORT, PID $PID"
 inf "what it said at startup:"
-grep "REMOTIX B2" "$FUORI/b2-wt.log" | head -4 | sed 's/^/        /'
+grep "REMOTIX B2" "$OUT/b2-wt.log" | head -4 | sed 's/^/        /'
 
-fermare() {
+stop() {
 	# ⚠ Same road as the shutdown: we look at which PID it is, and check
 	#   that it is dead before throwing away the file (R8.13).
-	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
+	stop_by_pid "$OUT/b2-wt.pid" "$(basename "$SERVER")"
 }
 
-if [ "$AZIONE" = accendi ]; then
-	ok "the server stays on: stop it with «01-b2-lancia-wt.sh spegni»"
+if [ "$ACTION" = turn_on ]; then
+	ok "the server stays on: stop it with «01-b2-lancia-wt.sh turn_off»"
 	inf "the fingerprint of the session certificate, for the page:"
-	bash "$ENTRA" --root \
-		"openssl x509 -in $CERT/sessione.pem -outform der | openssl dgst -sha256 -binary | base64 -w0" \
+	bash "$ENTER" --root \
+		"openssl x509 -in $CERT/session_v.pem -outform der | openssl dgst -sha256 -binary | base64 -w0" \
 		| tail -1 | sed 's/^/        /'
 	exit 0
 fi
@@ -233,10 +233,10 @@ fi
 # ---------------------------------------------------------------------------
 log "1. The RIGHT path — /rcp/1"
 inf "expected: :status 200, and the bytes come back identical"
-bash "$ENTRA" --root \
-	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/1"
-ESITO_SI=$?
-inf "test client: exit $ESITO_SI"
+bash "$ENTER" --root \
+	"python3 $INSIDE/01-b2-cliente-aioquic.py https://$ADDR:$PORT/rcp/1"
+OUTCOME_YES=$?
+inf "test client: exit $OUTCOME_YES"
 
 # ---------------------------------------------------------------------------
 log "2. ⛔ The WRONG path — /rcp/9, the check that says NO"
@@ -247,33 +247,33 @@ inf "          finding R1.24 chose 404 among the three statuses that were legiti
 #    filtered UDP or an already dead server gave the same green: the check that
 #    says NO did not tell refusal from failure.  Now the expected is **404**,
 #    that is what the document asks for, and any other outcome is red.
-bash "$ENTRA" --root \
-	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/9 404"
-ESITO_NO=$?
-inf "test client: exit $ESITO_NO (expected: 0, that is «refused with 404»)"
+bash "$ENTER" --root \
+	"python3 $INSIDE/01-b2-cliente-aioquic.py https://$ADDR:$PORT/rcp/9 404"
+OUTCOME_NO=$?
+inf "test client: exit $OUTCOME_NO (expected: 0, that is «refused with 404»)"
 
 # ---------------------------------------------------------------------------
 log "What the server saw"
-grep "REMOTIX B2" "$FUORI/b2-wt.log" | sed 's/^/        /'
+grep "REMOTIX B2" "$OUT/b2-wt.log" | sed 's/^/        /'
 
-fermare
+stop
 
 log "Outcome"
-BENE=0
-if [ "$ESITO_SI" -eq 0 ]; then
+ALL_GOOD=0
+if [ "$OUTCOME_YES" -eq 0 ]; then
 	ok "/rcp/1: session opened and bytes came back"
 else
-	ko "/rcp/1: did NOT work (exit $ESITO_SI)"
-	BENE=1
+	ko "/rcp/1: did NOT work (exit $OUTCOME_YES)"
+	ALL_GOOD=1
 fi
-if [ "$ESITO_NO" -eq 0 ]; then
+if [ "$OUTCOME_NO" -eq 0 ]; then
 	ok "/rcp/9: REFUSED with 404, as §2.2 requires"
 else
-	ko "⛔ /rcp/9 was NOT refused with 404 (exit $ESITO_NO):"
+	ko "⛔ /rcp/9 was NOT refused with 404 (exit $OUTCOME_NO):"
 	ko "   either the server accepts it — and then it is a violation of RCP.md"
 	ko "   §2.2 — or the refusal came with another status, or the test"
 	ko "   did not even start.  The log above says which."
-	BENE=1
+	ALL_GOOD=1
 fi
-inf "the complete log stays in $FUORI/b2-wt.log"
-exit "$BENE"
+inf "the complete log stays in $OUT/b2-wt.log"
+exit "$ALL_GOOD"
