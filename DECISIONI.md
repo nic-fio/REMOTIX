@@ -6607,6 +6607,9 @@ REMOTIX) e le parti di §10.12, §10.21 e §10.23 che contraddicono quel che seg
   e RHEL compatibili), Leap; Fedora, Arch, Tumbleweed provate a ogni campagna ma senza garanzia sugli
   aggiornamenti del sistema. Da fare: le librerie fragili dentro il binario (come ngtcp2/nghttp3), e il servizio che
   all'avvio prova la codifica e lo dice chiaro in `remotix status` se un aggiornamento l'ha rotta.
+- ✅ **Fatto il 10 ott 2026** (commit `2e16f8f` motore, `8bcb881` il .run, `623ea90` banchi):
+  `fasi/17-l-installatore.md` §6.6.16. Restano da provare sul ferro (la campagna sulle distribuzioni) e due
+  punti aperti: solo `render` nei gruppi della scheda, e le licenze dei componenti di terzi nel .run.
 
 ---
 

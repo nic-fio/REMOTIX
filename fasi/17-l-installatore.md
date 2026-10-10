@@ -1008,6 +1008,59 @@ installazioni vere. Quel che segue nei paragrafi di prima resta come storia, coi
 l'uscita di `remotix --prova-codifica`, che il motore legge così come il prodotto li scrive; i file del prodotto
 (`/usr/share/remotix/cinture/…`, `remotix.conf.d/porta.conf` con `REMOTIX_PORTA`).
 
+#### 6.6.16 10 ott 2026: l'installatore di §10.36 (`DECISIONI.md` §10.36)
+
+> Quel che sopra in §6 parla di archivio firmato, install.sh, archivi di terzi, desktop installato dal motore,
+> firewall e cinture del motore, file di risposte, fuori linea, piano/approva/applica e ripresa è **storia**:
+> vale questo paragrafo. Commit `2e16f8f` (motore), `8bcb881` (il .run), `623ea90` (banchi).
+
+**Il principio** — REMOTIX non modifica il sistema: `check` dice che cosa manca (RX-MANCA-001 desktop,
+-002 archivio che le dipendenze chiedono, -003 pezzi di un desktop installato, -004 nessun pacchetto per questa
+distribuzione nel .run; RX-GPU-003…006 la scheda e il suo driver), **senza** suggerire pacchetti o comandi, e
+`install` si ferma prima di toccare. L'eccezione voluta dall'utente: l'iscrizione ai gruppi della scheda resta
+automatica (all'installazione e alla prima connessione).
+
+**I comandi** — `check`, `install`, `uninstall`, `status` (stato + i controlli di `certifica` rifatti), `tui`;
+nascosti `catalog` (per la tabella del manuale) e `post-upgrade` (per gli script dei pacchetti).
+
+| prima | adesso |
+|---|---|
+| `plan` → `approve` → `apply` | `install`: controllo → simulazione del gestore → piano coi pacchetti esatti → *«Proceed? [y/N]»* dallo stdin → esecuzione → verifica → servizio acceso |
+| `resume`, `rollback` | un'operazione non finita la trova `install` (la annulla: prima il rimedio del gestore, poi da capo, nessun ritentare automatico) o `uninstall` (la porta a termine) |
+| `--answers FILE`, `prepare-offline`, install.sh, archivio firmato, `--archive`, `--channel`, `--extra-repos`, `--open-firewall` | il **.run**: `sudo sh remotix-X.Y.Z-R.run [install\|check\|tui]`; aggiornare = rilanciare il .run nuovo |
+| cache dei pacchetti, sha256 nostri, `--download-only` | il gestore installa i file del .run e risolve le dipendenze dagli archivi della macchina; il motore simula soltanto (apt-get -s, dnf --assumeno, zypper --dry-run, pacman --print) |
+| azioni `add-repo`, `install-desktop`, `firewall-rule`, `enable-guard`, i componenti e il driver Vulkan | via: li mette l'amministratore (il banco lo fa con `banchi/17-distro/17-amministratore.sh`) |
+
+**Il .run** — `installatore/run.sh` è l'intestazione: estrae in `/var/tmp`, controlla lo sha256 del carico
+(scritto dentro dal rilascio), passa `--bundle <cartella>/packages` al motore. Sotto, il tar.gz col motore statico e
+`packages/<bersaglio>/` (prodotto + pacchetto `remotix-install`) per debian13, ubuntu2604, fedora44, alma10,
+tumbleweed, leap16, arch. `packaging/rilascio.sh` lo costruisce e scrive accanto il .sha256 da pubblicare.
+
+**La disinstallazione** — i pacchetti NUOVI dell'installazione, solo quelli e solo se niente altro li chiede
+(la simulazione del gestore, come prima). ⚠ Non l'autoremove dei gestori: apt toglierebbe anche gli orfani di
+prima, che non sono nostri.
+
+**Numeri** — il motore (senza prove) da **12 594 a 8 959 righe**; catalogo `2026.10.10.13` (senza i campi che
+servivano solo a suggerire: `comandi`, `installa`, `carattere_scalabile`, `pacchetti_desktop`,
+`pacchetti_scheda`, `vulkan_nvidia`; `vulkan_scheda` diventa `vulkan_codifica`, e `senza_h264_di_serie` dice al
+manuale dove il driver della distribuzione non ha H.264); formato degli oggetti `remotix-install/3`.
+`go test`: verdi (interfaccia e motore); il .run provato sul portatile solo nell'intestazione (estrazione,
+sha256, rifiuto di un file guasto, `check`).
+
+**Che cosa la campagna sulle distribuzioni deve riprovare** (nulla di questo è provato sul ferro):
+1. la simulazione e l'installazione dei quattro gestori coi file del .run — apt e dnf erano provati sulle VM,
+   **zypper e pacman mai** su una macchina vera; dnf 4 (Alma) e dnf 5 (Fedora) con lo stesso lettore della tabella;
+2. `install` fino in fondo sulle 26 combinazioni in SCATOLA con la scheda vera (in VM il controllo la rifiuta),
+   dopo `17-amministratore.sh`; l'aggiornamento col .run N+1 con un browser collegato (R7, R10);
+3. che `check` dica esattamente quel che manca su ognuna PRIMA della preparazione (RX-MANCA-*, RX-GPU-006 su
+   Fedora/Alma/openSUSE col driver senza H.264), e niente dopo;
+4. l'annullamento di un'installazione interrotta (`install` rilanciato) e il completamento di una disinstallazione
+   interrotta, dal vero;
+5. ⏳ **punto aperto**: i gruppi della scheda — solo `render` invece di `render` e `video` (§10.36: `video` dà
+   anche `/dev/fb*` e le webcam), da misurare sui quattro desktop; per ora la logica è com'era;
+6. ⏳ **punto aperto**: le licenze dei componenti di terzi (THIRD-PARTY-LICENSES) le scriveva l'archivio
+   (`packaging/archivio/sbom.py`, `licenze.py`): vanno rimesse nel .run.
+
 ---
 
 ## 7. Il banco: le macchine virtuali delle distribuzioni
