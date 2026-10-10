@@ -3737,122 +3737,122 @@ read **only** from the client's §11.1 trace; from the log come only four number
 of arm A come back **identical** (`chiave_aspetta` 1, `delta_non_spedito` 5,
 `abbandonato_in_coda` 1): **a cumulative number does not reproduce, these do.**
 
-## 17.11 ⭐⭐⭐ DOV'È IL DIRUPO — *23 agosto, notte fonda*: **il gradino è DOPPIO**, e il prodotto è **bistabile**
+## 17.11 ⭐⭐⭐ WHERE THE CLIFF IS — *23 Aug, dead of night*: **the step is DOUBLE**, and the product is **bistable**
 
-`banchi/09-b80-dirupo.py` · **42 giri** · perdita **letta** da una sonda a **20 000 pacchetti** a
-ogni casella (⛔ a 0,1 % otto pacchetti non misurano un decimo di punto) · denominatore girato in
-**apertura e chiusura** (39,95 → 39,93, **0,1 %**: la macchina non è derivata) · macchina messa
-ferma per nome prima di cominciare · cure spente per tutti e 42 i giri.
+`banchi/09-b80-dirupo.py` · **42 rounds** · loss **read** by a probe of **20 000 packets** at
+every cell (⛔ at 0.1 % eight packets do not measure a tenth of a point) · denominator run at
+**opening and closing** (39.95 → 39.93, **0.1 %**: the machine has not drifted) · machine stilled
+by name before starting · cures off for all 42 rounds.
 
-### 17.11-bis ⛔ Prima il metro, poi la misura — e il metro è grosso
+### 17.11-bis ⛔ First the yardstick, then the measurement — and the yardstick is coarse
 
-⛔ **Non ha senso confrontare due giri se non si sa quanto vale il rumore fra due giri identici.**
+⛔ **It makes no sense to compare two rounds if one does not know how much the noise between two identical rounds is worth.**
 
-| profilo | giri | escursione | semi-escursione |
+| profile | rounds | spread | half-spread |
 |---|---|---|---|
-| perdita **0,00 %** | 3 | 39,89-40,17 | **0,4 %** |
-| perdita **0,50 %** | 3 | 28,16-36,70 | **14,8 %** |
-| perdita **0,50 %** | 5 | 20,79-36,70 | **27,6 %** |
-| perdita **0,75 %** | — | — | **46,6 %** |
+| loss **0.00 %** | 3 | 39.89-40.17 | **0.4 %** |
+| loss **0.50 %** | 3 | 28.16-36.70 | **14.8 %** |
+| loss **0.50 %** | 5 | 20.79-36.70 | **27.6 %** |
+| loss **0.75 %** | — | — | **46.6 %** |
 
-⇒ La contraddizione di §17.9-quinquies vale il **35,0 %**: il rumore **non la spiega tutta, ma ne
-copre i quattro quinti**.
+⇒ The contradiction of §17.9-quinquies is worth **35.0 %**: the noise **does not explain all of it, but
+covers four fifths of it**.
 
-⭐⭐ **E il fatto vero è qui**: la dispersione **cresce con la perdita** (0,2 → 8,5 → 23,8 → 46,6 %)
-e **non col carico**. `[M]` la CPU è stata **3,7-4,7 %** in *ognuno* dei 42 giri, il carico 0,3-0,8
-su 20 core. ⇒ L'ipotesi «macchina carica» è **esclusa**, e quel che resta è del prodotto:
+⭐⭐ **And the real fact is here**: the dispersion **grows with loss** (0.2 → 8.5 → 23.8 → 46.6 %)
+and **not with load**. `[M]` CPU was **3.7-4.7 %** in *each* of the 42 rounds, load 0.3-0.8
+on 20 cores. ⇒ The «loaded machine» hypothesis is **ruled out**, and what remains belongs to the product:
 
-> ⛔⛔ **vicino al bordo la spirale è BISTABILE.** `[M]` a **0,20 %** di perdita, stesso binario,
-> stesso terreno, a venti minuti di distanza: **`0 chiavi · 40,16/s`** e **`24 chiavi · 33,84/s`**.
+> ⛔⛔ **near the edge the spiral is BISTABLE.** `[M]` at **0.20 %** loss, same binary,
+> same ground, twenty minutes apart: **`0 chiavi · 40,16/s`** and **`24 chiavi · 33,84/s`**.
 
-⇒ Non è una soglia: è un **punto di biforcazione**. Lo stesso ingresso dà due uscite, e quale delle
-due dipende da come è andata la prima manciata di secondi.
+⇒ It is not a threshold: it is a **bifurcation point**. The same input gives two outputs, and which of the
+two depends on how the first handful of seconds went.
 
-> ⛔⭐⭐ **«BISTABILE» È LA PAROLA SBAGLIATA, e la correzione è in §21.2** — *24 agosto*. Non sono due
-> rami fra cui il prodotto sceglie: è **un innesco a senso unico**, con una probabilità **costante**
-> ogni secondo. I giri da 25 s non erano una moneta lanciata sul prodotto: erano **una moneta
-> lanciata su quanto a lungo avevamo guardato**.
+> ⛔⭐⭐ **«BISTABLE» IS THE WRONG WORD, and the correction is in §21.2** — *24 Aug*. They are not two
+> branches between which the product chooses: it is **a one-way trigger**, with a **constant** probability
+> every second. The 25 s rounds were not a coin tossed on the product: they were **a coin
+> tossed on how long we had watched**.
 
-### 17.11-ter ⭐⭐⭐ IL GRADINO È DOPPIO, e le due metà stanno lontanissime
+### 17.11-ter ⭐⭐⭐ THE STEP IS DOUBLE, and the two halves are very far apart
 
-| | dove casca | che cos'è |
+| | where it falls | what it is |
 |---|---|---|
-| **il MECCANISMO** — la spirale di chiavi (§3.3) | ⛔ fra **0,00 % e 0,10 %** di perdita vera, **su tutt'e due i binari** | cioè **al primo pacchetto perso** |
-| **il SINTOMO** — sotto il pavimento di 25/s (§2.1) | fra **0,53 % e 0,75 %** (HEAD) · fra **0,27 % e 0,47 %** (`51b5994`) | cioè **cinque volte più in là** |
+| **the MECHANISM** — the keyframe spiral (§3.3) | ⛔ between **0.00 % and 0.10 %** of real loss, **on both binaries** | that is **at the first lost packet** |
+| **the SYMPTOM** — below the floor of 25/s (§2.1) | between **0.53 % and 0.75 %** (HEAD) · between **0.27 % and 0.47 %** (`51b5994`) | that is **five times further on** |
 
-⛔⛔ **Questa è la scoperta, e cambia il modo di leggere tutta §17.1**: il difetto **non comincia
-dove si vede**. Fra il primo pacchetto perso e il momento in cui l'utente se ne accorge c'è mezzo
-punto percentuale di perdita in cui **il prodotto sta già degenerando in chiavi** — e la degradazione
-è già *nello spazio e nel tempo insieme*, che §3.3 vieta — **mentre i fotogrammi al secondo dicono
-ancora che va tutto bene**.
+⛔⛔ **This is the discovery, and it changes the way of reading the whole of §17.1**: the defect **does not begin
+where it is seen**. Between the first lost packet and the moment the user notices there is half a
+percentage point of loss in which **the product is already degenerating into keyframes** — and the degradation
+is already *in space and in time together*, which §3.3 forbids — **while the frames per second still
+say everything is fine**.
 
-⇒ ⭐ **Un banco che avesse guardato solo i fotogrammi/s avrebbe dato verde fino allo 0,5 %.** La
-colonna che dà l'allarme cinque volte prima è **la quota di chiavi**, ed è la ragione per cui §17.1
-la porta accanto ai fotogrammi/s invece che al posto loro.
+⇒ ⭐ **A bench that had looked only at frames/s would have given green up to 0.5 %.** The
+column that sounds the alarm five times earlier is **the keyframe share**, and it is the reason why §17.1
+carries it beside frames/s instead of in their place.
 
-**La griglia fine (HEAD)** `[M]`:
+**The fine grid (HEAD)** `[M]`:
 
-| perdita vera | fps | chiavi | peggior secondo |
+| real loss | fps | keyframes | worst second |
 |---|---|---|---|
-| 0,000 % | 39,95 | **0** | 37,5 |
-| 0,100 % | 39,44 | 2,5 | 23,5 |
-| 0,195 % | 37,00 | 12 | 21 |
-| 0,253 % | 34,83 | 20,5 | 5 |
-| 0,532 % | 27,29 | 48 | 4 |
-| **0,748 %** | ⛔ **13,50** | 101,5 | 4 |
-| 0,998 % | 7,23 | 119,5 | 3,5 |
-| 1,475 % | 5,52 | 112,5 | 3 |
+| 0.000 % | 39.95 | **0** | 37.5 |
+| 0.100 % | 39.44 | 2.5 | 23.5 |
+| 0.195 % | 37.00 | 12 | 21 |
+| 0.253 % | 34.83 | 20.5 | 5 |
+| 0.532 % | 27.29 | 48 | 4 |
+| **0.748 %** | ⛔ **13.50** | 101.5 | 4 |
+| 0.998 % | 7.23 | 119.5 | 3.5 |
+| 1.475 % | 5.52 | 112.5 | 3 |
 
-⭐ **E niente si è mai staccato, e la consegna non si è mai fermata** — copertura 1,00 e buco massimo
-≤ 0,37 s **ovunque**, nemmeno a 1,5 %. ⇒ Il divieto di §3.3 regge; a cedere è la scala, non il filo.
+⭐ **And nothing ever detached, and delivery never stopped** — coverage 1.00 and maximum hole
+≤ 0.37 s **everywhere**, not even at 1.5 %. ⇒ The prohibition of §3.3 holds; what gives way is the ladder, not the wire.
 
-### 17.11-quater ⛔ La forbice del primo giro è ritirata, e il binario non c'entra
+### 17.11-quater ⛔ The range of the first round is withdrawn, and the binary has nothing to do with it
 
-**La forbice «0,36-0,94 %» di §17.1-bis è sbagliata** e §17.11 la ritira. Nasceva da un
-`perdita-0,5` che aveva dato *40,06 fotogrammi/s con **zero** chiavi*. `[M]` **In 7 giri a ~0,5 % di
-perdita vera, su tutt'e due i binari, le chiavi sono state 11, 47, 44, 72, 24, 112, 129 — mai zero.**
-⇒ Quel numero **non si riproduce**: era il ramo fortunato della bistabilità, preso una volta e
-scambiato per la regola.
+**The «0.36-0.94 %» range of §17.1-bis is wrong** and §17.11 withdraws it. It came from a
+`perdita-0,5` that had given *40.06 frames/s with **zero** keyframes*. `[M]` **In 7 rounds at ~0.5 % of
+real loss, on both binaries, the keyframes were 11, 47, 44, 72, 24, 112, 129 — never zero.**
+⇒ That number **does not reproduce**: it was the lucky branch of the bistability, taken once and
+mistaken for the rule.
 
-**Il binario** — `HEAD` (`2954bf0`) md5 `dae98670…` contro `51b5994` md5 `760c6fd7…`, e fra i due
-`src/` cambia in **un commit solo** (+412 righe, 0 tolte):
-- ⛔ **sulla linea pulita non conta**: 39,95 contro 39,25 = **1,8 %**, dentro il metro.
-  ⇒ `[M]` **il sospetto «la riga `rete-quic` costa» è REFUTATO**: una `registro_dice` in più al
-  secondo non si misura;
-- conta **solo dove c'è perdita**, e ⭐ **si incrocia**: HEAD rende di più sotto lo 0,5 % (37,0 contro
-  29,1 a 0,2 %), meno sopra lo 0,75 %. ⚠ **Ma i rossi sopra lo 0,75 % poggiano su caselle la cui
-  dispersione interna (46,6 %) supera il metro**: sono **indizi, non numeri**. Quelli a 0,2/0,3/0,5 %
-  sono solidi e dicono tutti la stessa cosa;
-- ⭐ e `51b5994` è **già dentro la spirale a ogni casella** (55-142 chiavi): per questo è *stabile* —
-  **non ha un bordo su cui oscillare**.
+**The binary** — `HEAD` (`2954bf0`) md5 `dae98670…` against `51b5994` md5 `760c6fd7…`, and between the two
+`src/` changes in **a single commit** (+412 lines, 0 removed):
+- ⛔ **on the clean line it does not count**: 39.95 against 39.25 = **1.8 %**, within the yardstick.
+  ⇒ `[M]` **the suspicion «the `rete-quic` line costs» is REFUTED**: one more `registro_dice` per
+  second cannot be measured;
+- it counts **only where there is loss**, and ⭐ **they cross**: HEAD yields more below 0.5 % (37.0 against
+  29.1 at 0.2 %), less above 0.75 %. ⚠ **But the reds above 0.75 % rest on cells whose
+  internal dispersion (46.6 %) exceeds the yardstick**: they are **clues, not numbers**. Those at 0.2/0.3/0.5 %
+  are solid and all say the same thing;
+- ⭐ and `51b5994` is **already inside the spiral at every cell** (55-142 keyframes): that is why it is *stable* —
+  **it has no edge to oscillate on**.
 
-## 17.10 Che cosa resta aperto dopo questa sezione
+## 17.10 What remains open after this section
 
-1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
-   l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha i due
-   numeri che le servono — il ritmo guadagnato (1,7-2,8 volte) e il ritardo pagato (−38/+161 ms sui
-   profili ordinari, 4,5 s su `raffica-forte`);
-2. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
-   congestione che nel video produce la spirale, e non è un difetto della cura del riordino;
-3. ⭐ **`raffica-forte` è spiegato** (§17.1-quater): non si stacca nessuno, si ferma la consegna —
-   `cwnd` a ~10 KB e 860 fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le cure lo
-   curano**, ma il nome era sbagliato e il predicato è in cura;
-4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
-5. ⭐ **le cure ai banchi sono applicate e i banchi rifatti girare** (§17.9): nove difetti in tutto,
-   ⛔ **tutti della forma «silenzio invece di rosso»**;
-5-bis. ⭐ **la contraddizione fra le due griglie è sciolta** (§17.11): non erano due binari, era il
-   prodotto che **vicino al bordo è bistabile**. ⛔ E ne è uscito il fatto più importante della
-   sezione: **il gradino è doppio** — il meccanismo parte al **primo pacchetto perso**, il sintomo
-   si vede **cinque volte più in là**;
-5-ter. ⏳ **e la bistabilità non ha una spiegazione**: `[?]` perché lo stesso ingresso dia
-   `0 chiavi · 40,16/s` oppure `24 chiavi · 33,84/s` non è stato indagato. È la prima cosa da
-   guardare se si vuole curare il difetto **dove comincia** invece che dove si vede;
-6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
-   sull'audio soltanto.
+1. ⭐ **the cures against the spiral are MEASURED** (§17.6) and stay **off**: I6 keeps them behind
+   the switch until the user has looked at them. ⇒ ❓ **the user's decision**, and he has the two
+   numbers he needs — the rate gained (1.7-2.8 times) and the delay paid (−38/+161 ms on the
+   ordinary profiles, 4.5 s on `raffica-forte`);
+2. ⛔ **the 36 % of audio refused by ngtcp2** on `casa-cattiva` (§17.2-quater): the same congestion
+   window that in video produces the spiral, and it is not a defect of the reorder cure;
+3. ⭐ **`raffica-forte` is explained** (§17.1-quater): nobody detaches, delivery stops —
+   `cwnd` at ~10 KB and 860 frames never sent. ⛔ It remains serious (still screen) and **the cures
+   cure it**, but the name was wrong and the predicate is being cured;
+4. ❓ **the ghost of §17.5**: the user's decision, not a measurement's;
+5. ⭐ **the cures to the benches are applied and the benches run again** (§17.9): nine defects in all,
+   ⛔ **all of the form «silence instead of red»**;
+5-bis. ⭐ **the contradiction between the two grids is untangled** (§17.11): it was not two binaries, it was the
+   product that **near the edge is bistable**. ⛔ And the most important fact of the
+   section came out of it: **the step is double** — the mechanism starts at the **first lost packet**, the symptom
+   is seen **five times further on**;
+5-ter. ⏳ **and the bistability has no explanation**: `[?]` why the same input gives
+   `0 chiavi · 40,16/s` or `24 chiavi · 33,84/s` has not been investigated. It is the first thing to
+   look at if one wants to cure the defect **where it begins** instead of where it is seen;
+6. ⚠ **reordering on streams remains without a direct witness** (§17.3): `dgram_falsi` holds
+   for audio only.
 
 ---
 
-# §18 · ⭐⭐⭐ LE DUE CURE DECISE DAL REGISTA — *23-24 agosto 2026, notte*
+# §18 · ⭐⭐⭐ THE TWO CURES DECIDED BY THE DIRECTOR — *23-24 Aug 2026, night*
 
 > *«Ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps. Se in 10 secondi non
 > arrivano più pacchetti è chiaro che la connessione è morta. […] se all'interno di un intervallo di
@@ -3860,244 +3860,244 @@ scambiato per la regola.
 > la connessione è caduta.»*
 > — ⇒ `DECISIONI.md` **§3.1-quater**, **§3.1-quinquies**, **§3.1-sexies**.
 
-⛔ **Da dove nasce**: la scelta fra **due mali misurati** (§17.1, §17.6). Con perdita a raffiche
-pesanti, **senza** le cure lo schermo si congela **14,26 s**; **con** le cure si muove ma con
-**4,5 s di ritardo**. ⇒ L'utente ha deciso che **nessuno dei due va servito**: una linea così non è
-lenta, è **rotta**. E alla domanda su che cosa veda, ha scelto fra tre: ✅ **il filo cade e si
-rientra a mano** — non un riattacco automatico, non un ripristino invisibile.
+⛔ **Where it comes from**: the choice between **two measured evils** (§17.1, §17.6). With heavy burst
+loss, **without** the cures the screen freezes for **14.26 s**; **with** the cures it moves but with
+**4.5 s of delay**. ⇒ The user decided that **neither of the two should be served**: such a line is not
+slow, it is **broken**. And to the question of what he sees, he chose among three: ✅ **the wire drops and one
+re-enters by hand** — not an automatic reattach, not an invisible restore.
 
-⚠ **L'obiezione è stata fatta e superata**: *«su rete cattiva la diagnosi "è caduta la linea" è
-frequente, e farla pagare con un accesso a mano rende il prodotto inusabile proprio dove serve»*.
-⇒ Da lì nasce il prerequisito: **§18.3, il fantasma**.
+⚠ **The objection was raised and overcome**: *«on a bad network the diagnosis "the line dropped" is
+frequent, and making it cost a manual login makes the product unusable precisely where it is needed»*.
+⇒ From there comes the prerequisite: **§18.3, the ghost**.
 
-## 18.1 ⛔⛔⛔ LA PRIMA GRANDEZZA ERA SBAGLIATA — e il banco l'ha refutata prima che uscisse
+## 18.1 ⛔⛔⛔ THE FIRST QUANTITY WAS WRONG — and the bench refuted it before it shipped
 
-La cura fu scritta su `pkt_lost / pkt_sent` di ngtcp2 dentro una finestra: una frazione di perdita,
-soglia **50‰ (5,0 %)**, tarata con due margini apparentemente comodi — 2,9× sopra il peggiore che
-regge (`casa-cattiva`, 1,71 %) e 2,2× sotto quello che non serve nessuno (`raffica-forte`, 11,10 %).
+The cure was written on ngtcp2's `pkt_lost / pkt_sent` within a window: a loss fraction,
+threshold **50‰ (5.0 %)**, tuned with two apparently comfortable margins — 2.9× above the worst that
+holds (`casa-cattiva`, 1.71 %) and 2.2× below the one that serves nobody (`raffica-forte`, 11.10 %).
 
-⛔ **`banchi/09-b81-linea-morta.py` l'ha uccisa in dieci minuti** `[M]`:
+⛔ **`banchi/09-b81-linea-morta.py` killed it in ten minutes** `[M]`:
 
-| profilo | perdita **iniettata** (sonda) | perdita **DICHIARATA** da ngtcp2 | la linea |
+| profile | loss **injected** (probe) | loss **DECLARED** by ngtcp2 | the line |
 |---|---|---|---|
-| `casa-cattiva` | 1,86-2,15 % | ⛔ **512‰** (51,2 %) | **REGGE 10 minuti** — 9,60 fotogrammi/s, copertura 1,00, buco max 0,50 s, cliente attaccato a 599,99 s |
-| `raffica-forte` | 12,28-14,00 % | **123‰** (12,3 %) | **non regge** — copertura 0,20, buco 30,06 s |
+| `casa-cattiva` | 1.86-2.15 % | ⛔ **512‰** (51.2 %) | **HOLDS for 10 minutes** — 9.60 frames/s, coverage 1.00, max hole 0.50 s, client attached at 599.99 s |
+| `raffica-forte` | 12.28-14.00 % | **123‰** (12.3 %) | **does not hold** — coverage 0.20, hole 30.06 s |
 
-⛔⛔ **La grandezza ordina i due casi AL CONTRARIO**: la linea che **funziona** dichiara **quattro
-volte più perdita** di quella che non funziona. ⇒ **Nessuna soglia le separa** — qualunque valore
-lasci passare `casa-cattiva` (≥ 512‰) lascia passare anche `raffica-forte`; qualunque valore fermi
-`raffica-forte` (≤ 123‰) ferma **prima** `casa-cattiva`. **Non era una taratura da rifare: era la
-grandezza sbagliata.**
+⛔⛔ **The quantity orders the two cases BACKWARDS**: the line that **works** declares **four
+times more loss** than the one that does not work. ⇒ **No threshold separates them** — any value that
+lets `casa-cattiva` through (≥ 512‰) also lets `raffica-forte` through; any value that stops
+`raffica-forte` (≤ 123‰) stops `casa-cattiva` **first**. **It was not a tuning to redo: it was the
+wrong quantity.**
 
-⭐⭐ **E la causa è il fatto centrale di questa fase, tornato addosso a noi.** `casa-cattiva` porta
-`delay 40ms 20ms distribution normal`, e la sonda ci misura il **93,5 % di pacchetti fuori ordine**
-con l'1,9 % di perdita vera. **ngtcp2 conta un pacchetto sorpassato come perso.** ⇒ `pkt_lost` su
-una linea che riordina **misura il riordino**, non la perdita — ed è §3.1-ter che ci presenta il
-conto: *avevamo scritto che il disordine viene scambiato per perdita, e poi ci abbiamo costruito
-sopra una decisione*.
+⭐⭐ **And the cause is the central fact of this phase, come back to bite us.** `casa-cattiva` carries
+`delay 40ms 20ms distribution normal`, and the probe measures there **93.5 % of packets out of order**
+with 1.9 % of real loss. **ngtcp2 counts an overtaken packet as lost.** ⇒ `pkt_lost` on
+a line that reorders **measures the reordering**, not the loss — and it is §3.1-ter presenting us with the
+bill: *we had written that disorder is mistaken for loss, and then we built
+a decision on top of it*.
 
-⚠ E non era l'avvio della connessione: tolte le prime dieci finestre, **399 su 399** restano sopra
-soglia, mediana **524‰**, ininterrotto per dieci minuti.
+⚠ And it was not the start of the connection: with the first ten windows removed, **399 out of 399** stay above
+threshold, median **524‰**, uninterrupted for ten minutes.
 
-⭐ **Il falsificatore era stato dichiarato `[?]` da chi ha scritto la cura**, prima che il banco
-girasse: *«la soglia è sulla frazione **dichiarata**, mentre i due estremi sono la perdita
-**iniettata** — con jitter e riordino la dichiarata può essere più alta»*. ⇒ È servito: il banco
-sapeva **che cosa andare a rompere**, e l'ha rotto al primo giro.
+⭐ **The falsifier had been declared `[?]` by whoever wrote the cure**, before the bench
+ran: *«the threshold is on the **declared** fraction, while the two extremes are the **injected**
+loss — with jitter and reordering the declared one can be higher»*. ⇒ It served: the bench
+knew **what to go and break**, and broke it at the first round.
 
-## 18.2 ⭐⭐⭐ LA GRANDEZZA GIUSTA — **lo stallo dell'uscita**
+## 18.2 ⭐⭐⭐ THE RIGHT QUANTITY — **the output stall**
 
-⭐ **I dati la indicavano da soli**: `casa-cattiva` buco massimo **0,50 s**, `raffica-forte`
-**30,06 s** — **sessanta volte**. ⇒ Quel che separa i due casi non è **quanto si perde**: è **se i
-fotogrammi escono**.
+⭐ **The data pointed to it by themselves**: `casa-cattiva` maximum hole **0.50 s**, `raffica-forte`
+**30.06 s** — **sixty times**. ⇒ What separates the two cases is not **how much is lost**: it is **whether the
+frames get out**.
 
-> **la grandezza è: da quanto tempo non esce un fotogramma pur avendone da mandare**
+> **the quantity is: how long a frame has not gone out despite there being some to send**
 
-Due contatori **locali e monotoni** (forma P8→P20 di `RCP.md`: un fatto osservabile, mai un
-orologio) più un istante:
+Two **local and monotonic** counters (form P8→P20 of `RCP.md`: an observable fact, never a
+clock) plus an instant:
 
-| | come si calcola |
+| | how it is computed |
 |---|---|
-| **«è uscito»** | i **byte di video consegnati a ngtcp2** in `coda_consegna()` — l'unico punto in cui i byte sono davvero dentro un pacchetto |
-| **«avevo da mandare»** | coda video non vuota **oppure** `lm_offerti` salito (in `video_a_una()`, **prima** di freno, sgombero e rifiuto) |
+| **«it went out»** | the **video bytes delivered to ngtcp2** in `coda_consegna()` — the only point where the bytes are really inside a packet |
+| **«I had something to send»** | video queue not empty **or** `lm_offerti` risen (in `video_a_una()`, **before** brake, clearing and refusal) |
 
-⛔⭐ **Il secondo termine non è un di più, ed è la riga che rende la cura onesta**: senza
-`lm_offerti`, **il regolatore del ritmo nasconderebbe lo stallo** — smette di produrre,
-`video_sgombra()` abbandona i delta, la coda si svuota, e *«non ho niente da mandare»* diventa vero
-**mentre lo schermo è fermo**. La cura si assolverebbe da sola proprio nel caso che deve prendere.
+⛔⭐ **The second term is not an extra, and it is the line that makes the cure honest**: without
+`lm_offerti`, **the rate regulator would hide the stall** — it stops producing,
+`video_sgombra()` abandons the deltas, the queue empties, and *«I have nothing to send»* becomes true
+**while the screen is still**. The cure would acquit itself precisely in the case it must catch.
 
-⛔ **E se non c'è niente da mandare il conto non parte nemmeno**: `[M]` in questa fase la scena ferma
-consegna **1 fotogramma in 30 s e poi zero** — e non è un difetto, è `RecordVirtual` di Mutter che
-consegna solo sul cambiamento (§13, il risveglio costa 13 ms). ⇒ Una cura che partisse lì
-**butterebbe fuori chi guarda un desktop fermo**, che è il modo peggiore in cui potrebbe fallire.
+⛔ **And if there is nothing to send the count does not even start**: `[M]` in this phase the still scene
+delivers **1 frame in 30 s and then zero** — and it is not a defect, it is Mutter's `RecordVirtual` that
+delivers only on change (§13, the wake-up costs 13 ms). ⇒ A cure that started there
+**would throw out whoever watches a still desktop**, which is the worst way it could fail.
 
-⚠ **Si contano i byte, non i fotogrammi interi**, e la ragione è dichiarata: una chiave da ~60 000
-byte su linea stretta può metterci secondi a uscire tutta, e a fotogrammi quei secondi sarebbero uno
-«stallo» **mentre il filo lavora**. Un byte che parte è un filo che porta.
+⚠ **Bytes are counted, not whole frames**, and the reason is declared: a keyframe of ~60 000
+bytes on a narrow line can take seconds to get out completely, and in frames those seconds would be a
+«stall» **while the wire is working**. A byte that leaves is a wire that carries.
 
-### 18.2-bis La soglia — **5 000 ms**, e i due margini col caso intermedio
+### 18.2-bis The threshold — **5 000 ms**, and the two margins with the intermediate case
 
-| | stallo/buco più lungo | |
+| | longest stall/hole | |
 |---|---|---|
-| tredici profili sani | 0,04-0,35 s | reggono |
-| `casa-cattiva` | **0,50 s** | ⛔ **REGGE — non va dichiarata morta** |
-| ⚠ `raffica-1` | **un secondo intero a zero** | ma consegna **23,94 fotogrammi/s**: regge benissimo |
-| `raffica-forte` | **14,26 s** (30,06 nell'altro giro) | non regge |
+| thirteen healthy profiles | 0.04-0.35 s | they hold |
+| `casa-cattiva` | **0.50 s** | ⛔ **HOLDS — it must not be declared dead** |
+| ⚠ `raffica-1` | **a whole second at zero** | but it delivers **23.94 frames/s**: it holds very well |
+| `raffica-forte` | **14.26 s** (30.06 in the other round) | does not hold |
 
-⇒ intervallo **1,00-14,26 s**, centro geometrico **3,78 s**, scelta **5,0 s** — ⭐ **sopra** il
-centro, apposta. Margine **5,0×** sopra il peggiore che regge, **2,9×** sotto quello che non serve.
+⇒ interval **1.00-14.26 s**, geometric centre **3.78 s**, choice **5.0 s** — ⭐ **above** the
+centre, on purpose. Margin **5.0×** above the worst that holds, **2.9×** below the one that serves no purpose.
 
-⛔ **Il lato stretto usa il PIÙ CORTO dei due stalli di `raffica-forte`**, non il più lungo: un
-margine scritto sul numero fortunato non è un margine.
-⛔ **E l'asimmetria è voluta**: i due errori **non costano uguale**. Sbagliare in alto = qualche
-secondo di schermo fermo in più. Sbagliare in basso = **buttare fuori uno che stava lavorando**, e
-non si rimedia.
-⚠ **Anche il campionamento sbaglia dalla parte buona**: il conto riparte dall'istante del giro
-(≤ 1/s), non da quando i byte sono usciti davvero ⇒ lo `stallo_ms` misurato può essere fino a ~1 s
-**più corto** del vero. Si scatta più tardi, mai più presto.
+⛔ **The narrow side uses the SHORTER of the two stalls of `raffica-forte`**, not the longer: a
+margin written on the lucky number is not a margin.
+⛔ **And the asymmetry is deliberate**: the two errors **do not cost the same**. Erring high = a few
+more seconds of still screen. Erring low = **throwing out someone who was working**, and
+it cannot be remedied.
+⚠ **Even the sampling errs on the good side**: the count restarts from the instant of the round
+(≤ 1/s), not from when the bytes really left ⇒ the measured `stallo_ms` can be up to ~1 s
+**shorter** than the true one. It fires later, never earlier.
 
-### 18.2-ter ⭐⭐ LA PROVA — *24 agosto 2026*, e il margine è **misurato**, non «non è scattato»
+### 18.2-ter ⭐⭐ THE PROOF — *24 Aug 2026*, and the margin is **measured**, not «it did not fire»
 
-⛔ La riga esce **solo allo scatto**. ⇒ Un «non è scattato» non dice **quanto ci è mancato**: il
-banco ribatte lo stesso profilo **con soglie sempre più basse** finché una scatta, e allora il
-prodotto stampa il suo `stallo_ms`.
+⛔ The line comes out **only when it fires**. ⇒ A «it did not fire» does not say **how close it came**: the
+bench replays the same profile **with ever lower thresholds** until one fires, and then the
+product prints its `stallo_ms`.
 
-| profilo | stallo massimo | margine sulla soglia di 5 000 ms | buco al client |
+| profile | maximum stall | margin on the 5 000 ms threshold | hole at the client |
 |---|---|---|---|
-| `ritardo-30` (sano) | < 500 ms | **> 10×** | 0,157-0,175 s |
-| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0,359-0,479 s |
-| ⚠ `raffica-1` | **1 001 ms** | **5,0×** | 0,52-3,73 s |
-| ⛔ scena **ferma** | *il conto non parte* | — | 1 e 3 fotogrammi in 90 s |
+| `ritardo-30` (healthy) | < 500 ms | **> 10×** | 0.157-0.175 s |
+| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0.359-0.479 s |
+| ⚠ `raffica-1` | **1 001 ms** | **5.0×** | 0.52-3.73 s |
+| ⛔ **still** scene | *the count does not start* | — | 1 and 3 frames in 90 s |
 
-⭐ **`raffica-1` conferma la derivazione con un numero indipendente**: il lato stretto vale
-**1,00 s**, esattamente quello del riquadro, e il margine sono i **5,0×** dichiarati.
+⭐ **`raffica-1` confirms the derivation with an independent number**: the narrow side is worth
+**1.00 s**, exactly the one of the box, and the margin is the declared **5.0×**.
 
-**`casa-cattiva`, dieci minuti, cura accesa: ZERO SCATTI** — 9,71 fotogrammi/s, copertura **1,00**
-(600 s su 600), buco massimo **0,479 s**, cliente attaccato a 599,88 s, nessun congedo.
+**`casa-cattiva`, ten minutes, cure on: ZERO FIRINGS** — 9.71 frames/s, coverage **1.00**
+(600 s out of 600), maximum hole **0.479 s**, client attached at 599.88 s, no farewell.
 
-⭐⭐ **E il confronto che chiude la refuta**, nello **stesso** giro: il **testimone** dice `permille`
-mediana **529‰**, con **392 finestre su 392** sopra i vecchi 50‰. ⇒ **La cura vecchia avrebbe ucciso
-questa identica sessione; la nuova non la tocca.** Stesso profilo, stesso banco, stessi dieci
-minuti: cambia **solo la grandezza su cui si decide**. E dall'altro lato `raffica-forte` — quella
-che *non* regge — dichiara `permille=133`, cioè **meno**.
+⭐⭐ **And the comparison that closes the refutation**, in the **same** round: the **witness** says `permille`
+median **529‰**, with **392 windows out of 392** above the old 50‰. ⇒ **The old cure would have killed
+this very session; the new one does not touch it.** Same profile, same bench, same ten
+minutes: **only the quantity on which one decides** changes. And on the other side `raffica-forte` — the one
+that does *not* hold — declares `permille=133`, that is **less**.
 
-**Lo scatto vero** `[M]`: `raffica-forte` (13,19 % iniettato) scatta a **18,95 s**, con
-`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **le due metà
-tutt'e due vere**: avevamo da mandare, e non è uscito niente. E il filo cade.
+**The real firing** `[M]`: `raffica-forte` (13.19 % injected) fires at **18.95 s**, with
+`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **both halves
+true**: we had something to send, and nothing went out. And the wire drops.
 
-**Il silenzio** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10,24 s** dopo il colpo, e
-nella stessa riga `stallo_ms=8 offerti=0` — ⭐ **le due cause restano separate**. A cura spenta,
-zero scatti.
+**The silence** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10.24 s** after the shot, and
+in the same line `stallo_ms=8 offerti=0` — ⭐ **the two causes stay separate**. With the cure off,
+zero firings.
 
-**La scena ferma** `[M]`: 90 s di desktop che non cambia, zero scatti alla soglia in vigore **e a
-1 000 ms**, cioè cinque volte più stretta. ⭐ E la scena era ferma **davvero, verificato e non
-sperato**: il conto del server dice 1 e 3 fotogrammi in 90 s, tutti spediti.
+**The still scene** `[M]`: 90 s of a desktop that does not change, zero firings at the threshold in force **and at
+1 000 ms**, that is five times narrower. ⭐ And the scene was **really** still, **verified and not
+hoped**: the server's count says 1 and 3 frames in 90 s, all sent.
 
-**I predefiniti (I6)** `[M]`: senza `--linea-morta`, zero scatti e zero sfratti, e i due profili
-stanno nella griglia di §17.
+**The defaults (I6)** `[M]`: without `--linea-morta`, zero firings and zero evictions, and the two profiles
+sit in the grid of §17.
 
-⚠ **Una cosa da dire, e va nel verso prudente**: lo **stallo** (server: byte usciti) e il **buco**
-(client: fotogrammi arrivati) **non sono la stessa grandezza**, e la soglia è derivata dal secondo
-mentre la cura misura il primo. `[M]` su `raffica-1` un giro ha dato buco **3,73 s** con lo stallo
-che non scattava nemmeno a 1 000 ms: **i byte partono, a mancare è la ritrasmissione**. ⇒ L'errore
-va dalla parte buona, ma il numero della derivazione è **prudente, non esatto**.
+⚠ **One thing to say, and it goes in the prudent direction**: the **stall** (server: bytes out) and the **hole**
+(client: frames arrived) **are not the same quantity**, and the threshold is derived from the second
+while the cure measures the first. `[M]` on `raffica-1` one round gave a hole of **3.73 s** with the stall
+not firing even at 1 000 ms: **the bytes leave, what is missing is the retransmission**. ⇒ The error
+goes on the good side, but the number of the derivation is **prudent, not exact**.
 
-### 18.2-quater ⛔ Che fine ha fatto il `permille` — da **giudice** a **testimone**
+### 18.2-quater ⛔ What became of the `permille` — from **judge** to **witness**
 
-`--linea-morta-permille` è **tolta**: un'opzione che accetta un numero **senza usarlo** è peggio di
-un'opzione che non c'è, perché chi la batte crede di aver tarato qualcosa. ⇒ Adesso si becca aiuto e
-uscita 2.
-⭐ Ma `permille=` **resta nella riga come testimone**: è la miglior misura di **riordino** che il
-server abbia **sugli stream**, dove `dgram_falsi` (§17.3) non arriva. ⚠ E il banco verifica
-l'**assenza** dell'opzione **battendola**, non con un `grep`: `[M]` la stringa nel binario c'è
-eccome — sta nel testo d'aiuto — e il primo giro di quel controllo **ha dato rosso su un binario
-giusto**.
+`--linea-morta-permille` is **removed**: an option that accepts a number **without using it** is worse than
+an option that does not exist, because whoever types it believes they have tuned something. ⇒ Now it gets help and
+exit 2.
+⭐ But `permille=` **stays in the line as a witness**: it is the best measure of **reordering** the
+server has **on the streams**, where `dgram_falsi` (§17.3) does not reach. ⚠ And the bench verifies
+the **absence** of the option **by typing it**, not with a `grep`: `[M]` the string in the binary is there
+all right — it sits in the help text — and the first round of that check **gave red on a
+right binary**.
 
-## 18.3 ⭐⭐ LO SFRATTO DEL FANTASMA — e abbassare `SILENZIO` è stato scartato **su una misura**
+## 18.3 ⭐⭐ THE EVICTION OF THE GHOST — and lowering `SILENZIO` was discarded **on a measurement**
 
-⛔ La strada ovvia — portare `SILENZIO` da 30 s a 10 — **si rompe**, `[M]` 16 agosto: fra due
-pacchetti autenticati di un **browser fermo ma VIVO** passano **15 004 / 15 005 / 15 002 ms**. È il
-keep-alive del browser, non nostro. ⇒ A 10 s **ogni client che guarda e non tocca perde il posto a
-ogni giro di keep-alive** — è la regressione già pagata il 16 agosto (*«una seconda scheda è entrata
+⛔ The obvious road — bringing `SILENZIO` from 30 s to 10 — **breaks**, `[M]` 16 Aug: between two
+authenticated packets of a **still but ALIVE browser** pass **15 004 / 15 005 / 15 002 ms**. It is the
+browser's keep-alive, not ours. ⇒ At 10 s **every client that watches and does not touch loses its place at
+every keep-alive round** — it is the regression already paid for on 16 Aug (*«una seconda scheda è entrata
 e ha preso il desktop del primo»*).
 
-⚠ **E `SILENZIO` ne governa altri quattro**: l'avviso a `SILENZIO/2` (passerebbe da «mai su una
-sessione sana» a «su tutte»), il rilascio dei tasti premuti (⛔ un `Ctrl` tenuto giù durante una
-pausa di rete di 12 s verrebbe rilasciato **sotto le dita**), l'ordine silenzio→inattività, e **tre
-documenti** che dichiarano il numero all'utente.
+⚠ **And `SILENZIO` governs four more**: the warning at `SILENZIO/2` (it would go from «never on a
+healthy session» to «on all of them»), the release of pressed keys (⛔ a `Ctrl` held down during a
+network pause of 12 s would be released **under the fingers**), the order silence→inactivity, and **three
+documents** that declare the number to the user.
 
-⇒ **La strada scelta è più stretta e più mirata**: `--sfratto-ms N` (**0 = spento**, predefinito;
-consigliato **15 000**). Scatta **solo quando qualcuno chiede quel posto**, mai da solo, e **solo fra
-client dello stesso utente**.
+⇒ **The road chosen is narrower and more targeted**: `--sfratto-ms N` (**0 = off**, default;
+recommended **15 000**). It fires **only when someone asks for that place**, never by itself, and **only between
+clients of the same user**.
 
-⛔ **§8.2 non è violata, è applicata**: *«nessun client attaccato e **vivo** viene mai spodestato»* —
-l'occupante qui è attaccato ma **non vivo**, e finora l'unico orologio che li distinguesse era quello
-da 30 s. ⭐ `torna_a_parlare()` riparte **solo da `S_STACCATA`**: per questo lo sfratto cambia lo
-**stato** e non si limita a togliere il posto, o il fantasma resterebbe `S_ATTIVA` senza posto.
+⛔ **§8.2 is not violated, it is applied**: *«no client attached and **alive** is ever ousted»* —
+the occupant here is attached but **not alive**, and until now the only clock that distinguished them was the
+30 s one. ⭐ `torna_a_parlare()` restarts **only from `S_STACCATA`**: that is why the eviction changes the
+**state** and does not merely remove the place, or the ghost would stay `S_ATTIVA` without a place.
 
-`[M]` **Il fantasma scende del 48 %**: da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**. ⭐ E con
-la linea morta accesa scende a **~10 s con zero rifiuti** — il posto torna libero al primo tentativo.
+`[M]` **The ghost drops by 48 %**: from **32.13 s and 14 refusals** to **16.83 s and 7 refusals**. ⭐ And with
+the dead line on it drops to **~10 s with zero refusals** — the place becomes free at the first attempt.
 
-**Due utenti diversi** `[M]`: zero sfratti, il secondo utente entra sul **proprio** posto con zero
-rifiuti. ⚠ La riga `⛔ SFRATTO NEGATO` **non esce**, ed era previsto `[R]` prima di girare: il
-registro dei posti è indicizzato per nome, quindi `POSTO_OCCUPATO` implica già «stesso utente» e quel
-ramo non è raggiungibile. **La protezione la fa la struttura; il controllo esplicito resta come
-rete** — il giorno in cui `MAX_ATTACCATE` diventa la tabella di un server multi-tenant sarebbe
-l'unica cosa a reggere.
+**Two different users** `[M]`: zero evictions, the second user enters on **their own** place with zero
+refusals. ⚠ The line `⛔ SFRATTO NEGATO` **does not come out**, and it was predicted `[R]` before running: the
+register of places is indexed by name, so `POSTO_OCCUPATO` already implies «same user» and that
+branch is not reachable. **The protection is done by the structure; the explicit check stays as a
+net** — the day `MAX_ATTACCATE` becomes the table of a multi-tenant server it would be
+the only thing to hold.
 
-## 18.4 ⛔ E LA FRASE CHE MENTIVA
+## 18.4 ⛔ AND THE SENTENCE THAT LIED
 
-*«Quell'utente è già collegato da un altro dispositivo»* (`src/pagina.html`, `MOTIVO[0x0F]`) è una
-**diagnosi che il server non è in grado di fare**: non sa se l'altro client è un altro apparecchio o
-è lo stesso utente appena caduto. ⇒ Adesso dice **quel che sa** e dà il gesto:
+*«That user is already connected from another device»* (`src/pagina.html`, `MOTIVO[0x0F]`) is a
+**diagnosis the server is not able to make**: it does not know whether the other client is another device or
+is the same user who has just dropped. ⇒ Now it says **what it knows** and gives the gesture:
 
-> *«il posto di questa sessione risulta occupato da un altro client — se eri tu e sei appena caduto,
-> riprova fra qualche secondo»*
+> *«this session's place appears to be occupied by another client — if it was you and you have just dropped,
+> try again in a few seconds»*
 
-⚠ **E conta più di prima**: dopo §3.1-quater **si rientra a mano**, quindi è la **prima frase che
-l'utente incontra rientrando**.
+⚠ **And it counts more than before**: after §3.1-quater **one re-enters by hand**, so it is the **first sentence the
+user meets when re-entering**.
 
-## 18.5 ⚠ E un prezzo dichiarato per un caso che non esiste — corretto
+## 18.5 ⚠ And a price declared for a case that does not exist — corrected
 
-I PING passano a metà della soglia quando la cura è accesa, e il costo era stato dichiarato in
-**0,21 kbit/s** per sessione. ⛔ Il banco **non ha potuto isolarlo, e si è rifiutato di dare un verde
-vuoto**: `[M]` una sessione «ferma» costa comunque **2 463 kbit/s** di audio PCM (§4.3, che non si
-spegne — un `CIAO` senza codec audio comune si becca `0x09 NIENTE_IN_COMUNE`), cioè **11 727 volte**
-quel numero; la differenza acceso−spento è **+0,539 kbit/s**, dentro il rumore.
+PINGs go at half the threshold when the cure is on, and the cost had been declared at
+**0.21 kbit/s** per session. ⛔ The bench **could not isolate it, and refused to give an empty
+green**: `[M]` a «still» session costs anyway **2 463 kbit/s** of PCM audio (§4.3, which does not
+switch off — a `CIAO` without a common audio codec gets `0x09 NIENTE_IN_COMUNE`), that is **11 727 times**
+that number; the difference on−off is **+0.539 kbit/s**, within the noise.
 
-⭐ **E il fatto vero**: `[M]` su una sessione viva il contatore **non si ferma mai per 0,6 s** ⇒ il
-keep-alive **non ha mai occasione di scattare**, e quei 0,21 kbit/s descrivevano **un caso in cui il
-prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggio di nessun prezzo**.
+⭐ **And the real fact**: `[M]` on a live session the counter **never stops for 0.6 s** ⇒ the
+keep-alive **never has a chance to fire**, and those 0.21 kbit/s described **a case the
+product does not enter**. A price declared for a case that does not exist **is worse than no price**.
 
-## 18.6 Che cosa resta, dopo §18
+## 18.6 What remains, after §18
 
-1. ⭐ **le due cure sono provate e restano SPENTE** (I6): `--linea-morta` e `--sfratto-ms`.
-   ❓ **La decisione di accenderle è dell'utente**, e ora ha i numeri;
-2. ⏳ **le cure contro la spirale** (§17.6) restano spente e aspettano **i suoi occhi**, che è l'unica
-   cosa che non si può delegare a una misura;
-3. ⏳ **la bistabilità** di §17.11 non ha ancora una spiegazione;
-4. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
-5. ⚠ **lo stallo e il buco non sono la stessa grandezza** (§18.2-ter): la derivazione è prudente, non
-   esatta, e un giro che le misuri **insieme** la renderebbe esatta.
+1. ⭐ **the two cures are tested and stay OFF** (I6): `--linea-morta` and `--sfratto-ms`.
+   ❓ **The decision to switch them on is the user's**, and now he has the numbers;
+2. ⏳ **the cures against the spiral** (§17.6) stay off and wait for **his eyes**, which is the only
+   thing that cannot be delegated to a measurement;
+3. ⏳ **the bistability** of §17.11 has no explanation yet;
+4. ⛔ **the 36 % of audio refused by ngtcp2** on `casa-cattiva` (§17.2-quater) has no cure yet;
+5. ⚠ **the stall and the hole are not the same quantity** (§18.2-ter): the derivation is prudent, not
+   exact, and a round that measured them **together** would make it exact.
 
 ---
 
-# §19 · ⭐⭐⭐ IL GIUDIZIO DELL'UTENTE SUL PERCORSO VERO — *24 agosto 2026, mattina*
+# §19 · ⭐⭐⭐ THE USER'S JUDGEMENT ON THE REAL PATH — *24 Aug 2026, morning*
 
-⛔ **È la sezione che conta più di tutte le altre**, e per la ragione scritta in testa al documento: in
-v1 la fase omologa fu validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio
-dell'utente sul desktop vero fu *«siamo tornati indietro»*. **La fase fu azzerata.**
+⛔ **It is the section that counts more than all the others**, and for the reason written at the top of the document: in
+v1 the homologous phase was validated with PSNR, SSIM and the developer's eye, and the
+user's judgement on the real desktop was *«siamo tornati indietro»*. **The phase was reset to zero.**
 
-**Il banco**: sessione vera dell'utente, browser sul **portatile** (192.168.0.3, WiFi `wlo1`), server
-sulla macchina di prova, porta **7920**, binario `2792271f…` dall'albero di lavoro, tela
-**2544×926**, ⛔ **tutte le cure spente**, trappola di glibc **spenta** (il server gira alla velocità
-vera).
+**The bench**: the user's real session, browser on the **laptop** (192.168.0.3, WiFi `wlo1`), server
+on the test machine, port **7920**, binary `2792271f…` from the working tree, canvas
+**2544×926**, ⛔ **all cures off**, glibc trap **off** (the server runs at real
+speed).
 
-⭐ **E la rete si è sporcata dal lato del CLIENTE**, non del server: il video arriva in **ingresso**
-su `wlo1`, quindi il guasto sta su un `ifb0` con `netem`, alimentato da un filtro `u32` sulla **sola
-porta UDP 7920 in arrivo**. ⛔ Sulla macchina di prova lo stesso traffico passerebbe da `enp7s0`,
-dove passa l'ssh, e quella non si tocca. L'ssh è TCP sulla 22 e non è filtrato.
-⚠ E il guasto **si disarma da sé** dopo N secondi, con un guardiano staccato: la stessa disciplina
-già usata su `lo`.
+⭐ **And the network was dirtied on the CLIENT side**, not the server's: video arrives **incoming**
+on `wlo1`, so the fault sits on an `ifb0` with `netem`, fed by a `u32` filter on **only
+incoming UDP port 7920**. ⛔ On the test machine the same traffic would pass through `enp7s0`,
+where ssh passes, and that one is not touched. ssh is TCP on 22 and is not filtered.
+⚠ And the fault **disarms itself** after N seconds, with a detached guardian: the same discipline
+already used on `lo`.
 
 ## 19.1 ⭐⭐⭐ LA SCALA, E VIENE DAI SUOI OCCHI
 
