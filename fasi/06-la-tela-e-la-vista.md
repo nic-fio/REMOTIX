@@ -1491,385 +1491,385 @@ see it: no bench compares the **name** of a measurement with what the measuremen
 ⇒ **Corrected everywhere**: in the bench (`06-b35-tempi.py`, with the story beside it) and in the three tables of
 this document. The measurement is now called **«the canvas passed to the stage»**.
 
-#### ⭐ E il vocabolario, dato dall'utente
+#### ⭐ And the vocabulary, given by the user
 
 > *«Si chiama **re-scaling**.»*
 
-⇒ **Sono due cose diverse e vanno chiamate con due nomi diversi**, sempre:
+⇒ **They are two different things and must be called by two different names**, always:
 
 | | |
 |---|---|
-| ⛔ **ridimensionamento dinamico** | il desktop remoto **cambia misura** mentre l'utente trascina il bordo. **Fuori dal progetto dal 17 agosto**, e non si riapre |
-| ⭐ **re-scaling** | l'immagine si **riscala** dentro la finestra, e **le finestre del desktop non si muovono**. È quel che il prodotto fa, ed è approvato |
+| ⛔ **dynamic resizing** | the remote desktop **changes size** while the user drags the border. **Out of the project since 17 Aug**, and it is not reopened |
+| ⭐ **re-scaling** | the image **rescales** inside the window, and **the desktop's windows do not move**. It is what the product does, and it is approved |
 
-⚠ Chiunque scriva «ridimensionamento» senza specificare quale dei due **sta per rifare questo
-errore**.
+⚠ Anyone who writes «resizing» without specifying which of the two **is about to repeat this
+mistake**.
 
-### 5.15 · ⛔⛔⭐ 22 agosto 2026 — **`06-b37` rifatto: i quattro falsi verdi curati, e cinque guasti che li accendono**
+### 5.15 · ⛔⛔⭐ 22 Aug 2026 — **`06-b37` redone: the four false greens cured, and five faults that light them up**
 
-*Il banco della sottofase 6.5 era l'unico dei sei **senza nessun guasto innestato** (§5.5). ⇒ Adesso
-ce l'ha: `banchi/06-b37-guasti.py` + `banchi/06-b37-guasti.sh`, **7 casi su 7 su Chrome 151 e 7 su 7
-su Firefox 140esr — 14 su 14** — ogni guasto rosso **nel caso dichiarato prima**, e la stessa scena
-verde sul prodotto. Carico della macchina durante le certificazioni: `load average` **0,34 → 2,10**,
-un giro intero **9 min 52 s** (Chrome) e **12 min 40 s** (Firefox).*
+*The bench of sub-phase 6.5 was the only one of the six **without any grafted fault** (§5.5). ⇒ Now
+it has one: `banchi/06-b37-guasti.py` + `banchi/06-b37-guasti.sh`, **7 cases out of 7 on Chrome 151 and 7 out of 7
+on Firefox 140esr — 14 out of 14** — each fault red **in the case declared beforehand**, and the same scene
+green on the product. Machine load during the certifications: `load average` **0.34 → 2.10**,
+a whole round **9 min 52 s** (Chrome) and **12 min 40 s** (Firefox).*
 
-#### ⭐ I cinque guasti, e che cosa accendono
+#### ⭐ The five faults, and what they light up
 
-| | il guasto, in una copia di `src/pagina.html` | la scena che lo accusa | il falso verde che smaschera |
+| | the fault, in a copy of `src/pagina.html` | the scene that accuses it | the false green it unmasks |
 |---|---|---|---|
-| **G1** | la tela chiesta è **30 px più stretta** della finestra | `numeri` A5 · `sfora` · `pixel` X1-bis | ⛔ nessuna scena aveva un **limite inferiore**: 12 combinazioni su 12 restavano verdi |
-| **G2** | la guardia `if (tela_spenta)` è **aggirata** | `voce` **V5** | ⛔ la spia **sostituiva** `chiedi_tela`, e la guardia sta **dentro** la funzione sostituita |
-| **G3** | `misura_vista()` torna al **`Math.round`** di prima della cura | `sfora` a dpr 1,5 (**«TAGLIATO 979 px su 980»**) | ⛔ A6 era un'**identità**: la «verità esterna» si semplificava in `round(cw·dpr)`, cioè nello stesso arrotondamento del guasto ⇒ **il difetto vero che questa fase ha curato passava sotto A6 senza toccarlo** |
-| **G4** | l'immagine è dipinta **50 px fuori posto** nel buffer, e `dipinta.x` dice ancora 0 | `coordinate` **C0** | ⛔ l'origine era **sottratta per costruzione** |
-| **G5** | la **parità** di `tela_da_chiedere()` è tolta | `numeri` A3 (63 tele su 63) | ⛔ il lato dispari era impossibile **per costruzione** e non veniva mai provocato |
+| **G1** | the requested canvas is **30 px narrower** than the window | `numeri` A5 · `sfora` · `pixel` X1-bis | ⛔ no scene had a **lower limit**: 12 combinations out of 12 stayed green |
+| **G2** | the `if (tela_spenta)` guard is **bypassed** | `voce` **V5** | ⛔ the spy **replaced** `chiedi_tela`, and the guard is **inside** the replaced function |
+| **G3** | `misura_vista()` goes back to the **`Math.round`** of before the cure | `sfora` at dpr 1.5 (**«TAGLIATO 979 px su 980»**) | ⛔ A6 was an **identity**: the «external truth» simplified to `round(cw·dpr)`, that is to the same rounding as the fault ⇒ **the real fault that this phase cured passed under A6 without touching it** |
+| **G4** | the image is painted **50 px out of place** in the buffer, and `dipinta.x` still says 0 | `coordinate` **C0** | ⛔ the origin was **subtracted by construction** |
+| **G5** | the **parity** of `tela_da_chiedere()` is removed | `numeri` A3 (63 canvases out of 63) | ⛔ the odd side was impossible **by construction** and was never provoked |
 
-#### ⭐⭐ E la controprova di G4 sta dentro il banco, per sempre
+#### ⭐⭐ And G4's counter-proof lives inside the bench, for ever
 
-`06-b37-coordinate.py` misura **ogni punto due volte** — con l'origine vera e con la formula
-vecchia — e stampa i due scarti accanto. `[M]` con G4 innestato, Chrome, 9 punti su 3 scene:
+`06-b37-coordinate.py` measures **every point twice** — with the real origin and with the old
+formula — and prints the two gaps side by side. `[M]` with G4 grafted, Chrome, 9 points over 3 scenes:
 
-| | alto-sinistro | centro | basso-destro |
+| | top-left | centre | bottom-right |
 |---|---|---|---|
-| **metodo nuovo** | **+51** · **+50** · **+51** | **+50** · **+50** · **+51** | +0 · +0 · +0 *(satura al bordo)* |
-| ⛔ **metodo vecchio** (che sottraeva l'origine) | **+0** · +0 · +0 | **−1** · +0 · +0 | −1 · −1 · +0 |
+| **new method** | **+51** · **+50** · **+51** | **+50** · **+50** · **+51** | +0 · +0 · +0 *(saturates at the border)* |
+| ⛔ **old method** (which subtracted the origin) | **+0** · +0 · +0 | **−1** · +0 · +0 | −1 · −1 · +0 |
 
-⇒ ⛔ **Il metodo vecchio, con l'immagine spostata di 50 pixel, sarebbe stato VERDE su tutti e nove i
-punti.** Non è più un'ipotesi della revisione: è misurato.
+⇒ ⛔ **The old method, with the image shifted by 50 pixels, would have been GREEN on all nine
+points.** It is no longer a hypothesis of the review: it is measured.
 
-#### ⛔⛔ E TRE DIFETTI NUOVI DEL BANCO, che nessuno aveva ancora nominato
+#### ⛔⛔ And THREE NEW FAULTS OF THE BENCH, which nobody had named yet
 
-1. ⛔⛔ **Le quattro scene sui pixel non misuravano più NIENTE.** Mettevano il fotogramma con
-   `schermo.deposito = c; schermo.componi()`, ⛔ ma `componi()` comincia con
-   `if (this.bm) { … return false; }` e `this.bm` c'è su tutt'e due i motori da quando la tela è
-   passata a **`bitmaprenderer`** (`DECISIONI.md` §5.4). ⇒ `[M]` 22 agosto: `sfora` su Chrome,
-   **12 fotografie su 12 senza nessun marcatore**. ⭐ I banchi si sono comportati bene — dicevano «i
-   marcatori non si trovano» invece di uno zero — ⚠ ma **gli esiti del 16 agosto nel deposito sono di
-   prima di quel cambiamento**, e §4.3-bis li dichiarava ancora buoni. ⇒ Curato: il fotogramma passa
-   da **`schermo.mostra()`**, la funzione che riceve i fotogrammi veri, e ogni riga di esito dichiara
-   la **`strada`**;
-2. ⛔ **`numeri` era ROSSO PER SEMPRE con un fattore del dispositivo forzato**: A1 confronta due
-   zoom, con `FATTORE=` ce n'è uno solo, e quel caso faceva `guasti += 1`. ⇒ Per questo la scena non
-   l'aveva mai lanciata nessuno a dpr 1,25 o 1,5. Una domanda **non posta** adesso si dichiara e non
-   conta come risposta sbagliata;
-3. ⛔⛔ **il banco riempiva il disco della macchina — e il disco è di tutti.** `[M]` un giro intero
-   scriveva **1,5 GB** di fotogrammi grezzi (1600×1000×3 = 4,8 MB l'uno, **63 calibrazioni nella sola
-   scena `numeri`**) in `/tmp`, che qui è un **tmpfs da 3,8 GB condiviso con altri otto agenti**.
-   L'ha portato al **100 %**, e il giro dopo è morto con *«No space left on device»* — ⚠ su un banco
-   altrui sarebbe morto **senza che nessuno capisse perché**. ⇒ Curato: i pixel si leggono da una
-   **pipe**, su disco ci finiscono solo con `B37_FOTO=tieni`, e la riga di esito porta `null` invece
-   di un percorso che non esiste;
-4. ⚠ **e una quarta cosa, che non era un difetto ma una flaky, e valeva tre guasti**: `voce` su
-   Firefox lanciata subito dopo un'altra scena moriva perché **il primo comando scadeva a 20 s** —
-   la pagina si era annunciata, ⛔ ma il ciclo che chiede i comandi non era ancora partito. Il
-   certificatore l'ha letta come *«il giro SANO è rosso»* e ha **rifiutato di certificare tre
-   guasti**: `[M]` primo giro su Firefox **4 confermati su 7**, secondo giro **7 su 7**.
-   ⇒ Curato: `aspetta_canale()` — la pagina che si annuncia e il ciclo che risponde sono **due cose
-   diverse**, e adesso si aspetta la seconda. ⭐ E il certificatore si è comportato bene: ha detto
-   «non certifico» invece di contare quei tre come confermati.
+1. ⛔⛔ **The four scenes on the pixels no longer measured ANYTHING.** They put the frame in with
+   `schermo.deposito = c; schermo.componi()`, ⛔ but `componi()` begins with
+   `if (this.bm) { … return false; }` and `this.bm` is there on both engines since the canvas
+   moved to **`bitmaprenderer`** (`DECISIONI.md` §5.4). ⇒ `[M]` 22 Aug: `sfora` on Chrome,
+   **12 photographs out of 12 without any marker**. ⭐ The benches behaved well — they said «the
+   markers cannot be found» instead of a zero — ⚠ but **the outcomes of 16 Aug in the repository are from
+   before that change**, and §4.3-bis still declared them good. ⇒ Cured: the frame goes
+   through **`schermo.mostra()`**, the function that receives the real frames, and every outcome line declares
+   the **`strada`**;
+2. ⛔ **`numeri` was RED FOR EVER with a forced device factor**: A1 compares two
+   zooms, with `FATTORE=` there is only one, and that case did `guasti += 1`. ⇒ That is why nobody had ever
+   launched the scene at dpr 1.25 or 1.5. A question **not asked** is now declared and does not
+   count as a wrong answer;
+3. ⛔⛔ **the bench filled the machine's disk — and the disk belongs to everyone.** `[M]` a whole round
+   wrote **1.5 GB** of raw frames (1600×1000×3 = 4.8 MB each, **63 calibrations in the
+   `numeri` scene alone**) into `/tmp`, which here is a **3.8 GB tmpfs shared with eight other agents**.
+   It brought it to **100 %**, and the next round died with *«No space left on device»* — ⚠ on someone
+   else's bench it would have died **without anyone understanding why**. ⇒ Cured: the pixels are read from a
+   **pipe**, they end up on disk only with `B37_FOTO=tieni`, and the outcome line carries `null` instead
+   of a path that does not exist;
+4. ⚠ **and a fourth thing, which was not a fault but a flaky, and was worth three faults**: `voce` on
+   Firefox launched right after another scene died because **the first command timed out at 20 s** —
+   the page had announced itself, ⛔ but the loop that asks for the commands had not yet started. The
+   certifier read it as *«the HEALTHY round is red»* and **refused to certify three
+   faults**: `[M]` first round on Firefox **4 confirmed out of 7**, second round **7 out of 7**.
+   ⇒ Cured: `aspetta_canale()` — the page announcing itself and the loop that answers are **two different
+   things**, and now one waits for the second. ⭐ And the certifier behaved well: it said
+   «I do not certify» instead of counting those three as confirmed.
 
-#### ⭐⭐ E adesso `bash banchi/06-b37-lancia.sh tutti tutte` gira davvero
+#### ⭐⭐ And now `bash banchi/06-b37-lancia.sh tutti tutte` really runs
 
-`[M]` 22 agosto 2026, 09:48, carico `0,57 → 0,64`: **14 giri di scena in una sola invocazione**
-(sette scene × due motori), **80 verdetti verdi e zero rossi**, `windows` compresa — che si porta
-dietro il suo schermo 2600×1000 e il suo fattore 1,25 senza toccare le altre sei.
-⇒ ⛔ Cade la riga *«finché non è curato, si lancia una scena per volta»*.
+`[M]` 22 Aug 2026, 09:48, load `0.57 → 0.64`: **14 scene rounds in a single invocation**
+(seven scenes × two engines), **80 green verdicts and zero red**, `windows` included — which brings
+along its 2600×1000 screen and its 1.25 factor without touching the other six.
+⇒ ⛔ The line *«until it is cured, one scene at a time is run»* falls.
 
-#### ⚠ E su Gecko c'è una riga in più da scartare, dichiarata invece che scartata in silenzio
+#### ⚠ And on Gecko there is one more line to discard, declared instead of discarded silently
 
-Sotto il suo minimo **Firefox non stringe il riquadro di impaginazione**: `clientWidth` resta
-grande, la finestra X si stringe lo stesso, e quel che c'è dentro **lo taglia il bordo della
-finestra**. `[M]` la striscia di calibrazione esce fino a **210 px** più corta di
-`clientWidth × dpr`. ⇒ **12 righe su 63** non sono una scena e si scartano — ⛔ ma il confronto che
-le scarta è fra **due numeri del browser** (`clientWidth × dpr` e i pixel), non fra il banco e il
-prodotto: nessun difetto della pagina può nascondersi lì, perché `misura_vista()` non entra in
-nessuno dei due membri. ⇒ Su Firefox il denominatore di `numeri` è **48 righe su 63**, e le 12
-scartate si stampano una per una.
+Below its minimum **Firefox does not shrink the layout box**: `clientWidth` stays
+large, the X window shrinks anyway, and what is inside **gets cut by the window's
+border**. `[M]` the calibration strip comes out up to **210 px** shorter than
+`clientWidth × dpr`. ⇒ **12 lines out of 63** are not a scene and are discarded — ⛔ but the comparison that
+discards them is between **two numbers of the browser** (`clientWidth × dpr` and the pixels), not between the bench and the
+product: no fault of the page can hide there, because `misura_vista()` enters
+neither of the two sides. ⇒ On Firefox the denominator of `numeri` is **48 lines out of 63**, and the 12
+discarded are printed one by one.
 
-#### ⚙ Che cosa è cambiato nel banco, file per file
+#### ⚙ What changed in the bench, file by file
 
 | | |
 |---|---|
-| ⭐ `06-b37-guasti.py` · `.sh` | **nuovi**: i cinque guasti con l'ancora verificata (7 ancore su 7 vive, molteplicità 1) e il certificatore, che pretende **il sano verde**, **il guasto rosso** e **la frase dichiarata prima** — ⛔ non un rosso qualunque (è il rilievo 2 di §5.5 su `06-b33`) |
-| `06-b37-comune.py` | la **calibrazione sui pixel** (due strisce a posizione fissa, `ox`/`oy` e la vista in pixel del dispositivo, con **due maschere** perché a dpr non intero il bordo cade a mezzo pixel) · `mostra()` per la strada del prodotto · la **marca del giro** su ogni riga di esito |
-| `06-b37-numeri.py` | A2 e A6 **riscritte** su quella verità esterna, A5 **bidirezionale**, la tolleranza di A1 **derivata** invece che scelta |
-| `06-b37-sfora.py` · `-pixel.py` · `-windows.py` | il **limite inferiore** (`W − ceil(dpr) ≤ disegno`), la strada del prodotto, il mezzo pixel **contato** |
-| `06-b37-coordinate.py` | **C0 · l'origine** e la controprova col metodo vecchio |
-| `06-b37-voce.py` · `-modi.py` | il **testo vero** di `chiedi_tela` estratto dal prodotto e installato con una `eval` diretta su un canale finto ⇒ la guardia si attraversa, e l'osservabile è `canale.manda(TIPO.ADATTA_TELA, …)` |
-| `06-b37-lancia.sh` | la **settima scena** in «tutte» (con il suo schermo 2600×1000 e il suo fattore 1,25) · il difetto dichiarato in §4.3-bis — *«dopo la prima scena il browser non si riapre»* — **curato**: si aspetta che tutto quel che tiene il profilo sia morto |
-| `06-b37-strumenta.py` | estrae e verifica il testo di `chiedi_tela` (58 righe), e **fallisce rumorosamente** se l'ancora non c'è |
+| ⭐ `06-b37-guasti.py` · `.sh` | **new**: the five faults with the verified anchor (7 anchors out of 7 alive, multiplicity 1) and the certifier, which demands **the healthy one green**, **the fault red** and **the sentence declared beforehand** — ⛔ not just any red (it is remark 2 of §5.5 on `06-b33`) |
+| `06-b37-comune.py` | the **calibration on the pixels** (two strips at a fixed position, `ox`/`oy` and the view in device pixels, with **two masks** because at a non-integer dpr the border falls at half a pixel) · `mostra()` for the product's route · the **round's mark** on every outcome line |
+| `06-b37-numeri.py` | A2 and A6 **rewritten** on that external truth, A5 **bidirectional**, A1's tolerance **derived** instead of chosen |
+| `06-b37-sfora.py` · `-pixel.py` · `-windows.py` | the **lower limit** (`W − ceil(dpr) ≤ disegno`), the product's route, the half pixel **counted** |
+| `06-b37-coordinate.py` | **C0 · the origin** and the counter-proof with the old method |
+| `06-b37-voce.py` · `-modi.py` | the **real text** of `chiedi_tela` extracted from the product and installed with a direct `eval` on a fake channel ⇒ the guard is crossed, and the observable is `canale.manda(TIPO.ADATTA_TELA, …)` |
+| `06-b37-lancia.sh` | the **seventh scene** in «tutte» (with its 2600×1000 screen and its 1.25 factor) · the fault declared in §4.3-bis — *«after the first scene the browser does not reopen»* — **cured**: it waits until everything holding the profile is dead |
+| `06-b37-strumenta.py` | extracts and verifies the text of `chiedi_tela` (58 lines), and **fails loudly** if the anchor is not there |
 
-### 5.16 · ⭐⭐ 22 agosto — **tre proposte al prodotto: due RIFIUTATE con la misura, una smentita al contrario**
+### 5.16 · ⭐⭐ 22 Aug — **three proposals to the product: two REJECTED by measurement, one refuted the other way round**
 
-*Le proposte venivano da chi aveva esercitato `cattura.c` col palco finto. ⭐ Tutte e tre sono state
-messe alla prova invece che attuate, e il risultato è più utile di tre cure.*
+*The proposals came from whoever had exercised `cattura.c` with the fake stage. ⭐ All three were
+put to the test instead of implemented, and the result is more useful than three cures.*
 
-| la proposta | l'esito |
+| the proposal | the outcome |
 |---|---|
-| *«`cattura_ridimensiona()` dichiara successo su un flusso che muore, e `figlio.c` non ha modo di saperlo»* | ⛔ **RIFIUTATA**: la premessa è falsa. `[M]` col ciclo vero del figlio, il guasto arriva a **8,1 ms** con **stato e causa dal produttore** — non è un timeout. ⭐ E un esito «morto» restituito dalla funzione sarebbe **verde per costruzione**: la morte arriva 2 ms dopo il ritorno |
-| *«serve un accessore per la divergenza»* | ⛔ **RIFIUTATA**, e con tre misure: la sola scena che accende il campo dà un **falso allarme** (i «concessi» erano la richiesta di prima, non una concessione); i due accessori che esistono **bastano** e in più sanno dire «non ancora negoziato»; e la via del contatore **non regge** — due richieste incatenate producono **una sola** risposta, quindi i conti divergono per sempre |
-| *«il ramo "concesso diverso da chiesto" non si raggiunge»* | ⭐⭐ **SMENTITA AL CONTRARIO**: si raggiunge, **43 colpi su 480 catene** |
+| *«`cattura_ridimensiona()` declares success on a stream that dies, and `figlio.c` has no way of knowing»* | ⛔ **REJECTED**: the premise is false. `[M]` with the child's real loop, the fault arrives at **8.1 ms** with **state and cause from the producer** — it is not a timeout. ⭐ And a «dead» outcome returned by the function would be **green by construction**: the death arrives 2 ms after the return |
+| *«an accessor for the divergence is needed»* | ⛔ **REJECTED**, and with three measurements: the only scene that lights up the field gives a **false alarm** (the «granted» were the previous request, not a grant); the two accessors that exist **are enough** and can also say «not yet negotiated»; and the counter route **does not hold** — two chained requests produce **a single** answer, so the counts diverge for ever |
+| *«the branch "granted different from requested" is not reached»* | ⭐⭐ **REFUTED THE OTHER WAY ROUND**: it is reached, **43 hits out of 480 chains** |
 
-⭐⭐ **E la smentita ha trovato un difetto di prodotto**: la riga di registro diceva *«la conversione
-delle coordinate nasce sbagliata e il puntatore andrà altrove»* — ⛔ e nella **sola** scena che la
-accende è **falso**. ⇒ *Un registro che attribuisce la causa sbagliata costa più di un registro
-muto.* Riscritta: dice il fatto, nomina i **due** moventi possibili, e manda dove il verdetto si dà
-davvero.
+⭐⭐ **And the refutation found a product fault**: the log line said *«the coordinate
+conversion is born wrong and the pointer will go elsewhere»* — ⛔ and in the **only** scene that
+lights it up it is **false**. ⇒ *A log that attributes the wrong cause costs more than a silent
+log.* Rewritten: it says the fact, names the **two** possible motives, and points to where the verdict is really
+given.
 
-⚠ **E la guardia della divergenza resta un commento con un `gboolean` attaccato — ma adesso il codice
-lo dice**, invece di lasciar credere che qualcuno la legga.
+⚠ **And the divergence guard remains a comment with a `gboolean` attached — but now the code
+says so**, instead of letting people believe someone reads it.
 
-⛔ **E un difetto del banco che l'autore ha dichiarato per primo**: il suo caso 6 *«stampava un numero
-che non aveva letto»* — due zeri scritti a mano nella riga al posto della misura. ⭐ *«È esattamente
+⛔ **And a fault of the bench that the author declared first**: his case 6 *«printed a number
+it had not read»* — two zeros written by hand in the line in place of the measurement. ⭐ *«È esattamente
 il difetto che avrei segnalato a un altro.»*
 
-⏳ **E un guasto vero lasciato aperto, non suo da curare**: `[M]` il rimontaggio chiede al palco **la
-misura che l'ha appena ucciso**, e la chiamata **riesce 3 volte su 3** mentre il palco muore 300 ms
-dopo — con l'attesa corta si sceglie un **cappio**, e nessuno se ne accorge. ⚠ Sul prodotto vero è
-`[?]`, perché Mutter concede tutto sotto il tetto. È **dichiarato nel codice** accanto al ramo.
+⏳ **And a real fault left open, not his to cure**: `[M]` the remount asks the stage for **the
+size that has just killed it**, and the call **succeeds 3 times out of 3** while the stage dies 300 ms
+later — with the short wait a **noose** is chosen, and nobody notices. ⚠ On the real product it is
+`[?]`, because Mutter grants everything under the ceiling. It is **declared in the code** next to the branch.
 
-## 6 · Le decisioni prodotte
+## 6 · The decisions produced
 
-- ✅ **`DECISIONI.md` §5-bis.7** — *la disposizione di tastiera la comanda il client, e il server la
-  applica*: **confermata dall'utente il 16 agosto 2026**, messo davanti alle tre strade. ⛔ E il
-  riquadro nuovo di quella voce porta la misura che l'ha resa necessaria: era una decisione **✅ dell'8
-  agosto mai attuata**;
-- ⏳ **`RCP.md` §7.1** — la riga mancante sul **palco che cambia misura da sé** ha adesso **due
-  stesure proposte e misurate** (dalla 6.4 sul filo, dalla 6.3 sul compositore vero), da fondere:
-  nessun `TELA` non sollecitato · non adottare · non spedire fotogrammi di misura diversa ·
-  richiedere la tela in vigore con un'attesa che cresce · scriverlo nel registro · ⛔ **e non
-  richiamare mai il palco mentre una richiesta del client è in volo**;
-- ⏳ **`RCP.md`**, altre sei righe consegnate dagli agenti e non ancora scritte: il confine del
-  secondo di grazia (`<` o `<=`), le due tele dentro lo stesso secondo, i limiti della **vista** che
-  §4.5 non nomina, che cosa risponde il server a `VISTA` (⛔ *niente*, e perché un `TELA` di cortesia
-  ucciderebbe la sessione), `COMPOSITORE_INCAPACE` non dichiarato **permanente**, e ⛔ **la
-  contraddizione §7.1 contro §4.2** su `ADATTA_TELA` seguito dal FIN del client;
-- ⏳ **`SPECIFICHE.md` §6** — cinque righe proposte dalla 6.5, fra cui la chiusura delle tre `[?]` di
-  §6.1-bis e il **numero di guardia** della nitidezza;
-- ⏳ **`SPECIFICHE.md` §11.5** — Windows non è dichiarato fra i client (la sezione nomina i **motori**,
-  non i sistemi).
+- ✅ **`DECISIONI.md` §5-bis.7** — *the keyboard layout is commanded by the client, and the server
+  applies it*: **confirmed by the user on 16 Aug 2026**, when put in front of the three routes. ⛔ And the
+  new box of that entry carries the measurement that made it necessary: it was a **✅ decision of 8
+  Aug never implemented**;
+- ⏳ **`RCP.md` §7.1** — the missing line about the **stage that changes size by itself** now has **two
+  drafts proposed and measured** (by 6.4 on the wire, by 6.3 on the real compositor), to be merged:
+  no unsolicited `TELA` · do not adopt · do not send frames of a different size ·
+  request the canvas in force with a growing wait · write it in the log · ⛔ **and never
+  recall the stage while a client request is in flight**;
+- ⏳ **`RCP.md`**, six more lines delivered by the agents and not yet written: the boundary of the
+  grace second (`<` or `<=`), the two canvases within the same second, the limits of the **view** that
+  §4.5 does not name, what the server answers to `VISTA` (⛔ *nothing*, and why a courtesy `TELA`
+  would kill the session), `COMPOSITORE_INCAPACE` not declared **permanent**, and ⛔ **the
+  contradiction §7.1 against §4.2** on `ADATTA_TELA` followed by the client's FIN;
+- ⏳ **`SPECIFICHE.md` §6** — five lines proposed by 6.5, among them the closing of the three `[?]` of
+  §6.1-bis and the **guard number** of sharpness;
+- ⏳ **`SPECIFICHE.md` §11.5** — Windows is not declared among the clients (the section names the **engines**,
+  not the systems).
 
 ---
 
-## 7 · Che cosa resta `[?]`
+## 7 · What remains `[?]`
 
-### 7.1 · ⛔ Aperto e con una misura in mano — il lavoro che viene
+### 7.1 · ⛔ Open and with a measurement in hand — the work to come
 
 | | |
 |---|---|
-| ⛔⛔ **il ricambio dei dispositivi che NON dipende dalla tela** | `[M]` ogni `cattura_risveglia()` (400 ms, scena ferma, chiave dovuta) ricrea i dispositivi di `libei`: **3 risvegli, 3 ricambi**, con **zero `ADATTA_TELA`**. ⇒ Il clic che muore ha una **seconda porta**, aperta proprio quando l'utente tiene premuto il mouse su un desktop fermo, e la cura ovvia distruggerebbe ogni trascinamento. ⏳ **La forma giusta va decisa**, e non è di una sottofase sola |
-| ✅ ~~⛔ **il difetto è a monte, in Mutter**~~ · ⛔ **e la risposta è peggio della domanda** | **CHIUSA il 21 agosto 2026** `[R]`: il difetto è vero, **nessuno l'ha mai aperto**, e **non è corretto nemmeno nel `main` di oggi** — `remove_viewport_devices()` è identica carattere per carattere fra la 48.7 che gira qui e il ramo principale di agosto 2026. ⇒ Non c'è versione da aspettare: **la cura è nostra, su ogni Mutter**. Il seguito sta in §7.1-bis |
-| ✅ ~~**le richieste incatenate, da rimisurare**~~ · ⛔ **e resta un buco peggiore** | rimisurate il 17 agosto: **0 rotti su 18** (§4.8). ⛔⛔ **Ma il controllo positivo non ha reso**: togliendo la cura sospetta escono **ancora 0/18** ⇒ *non si sa che cosa tenga questa scena*, e i **4/18** della 6.3 **non sono riproducibili** a macchina ferma. ⚠ L'unica differenza rimasta è la **contesa sulla GPU** (cinque codificatori sullo stesso iGPU): finché non si ricrea, ⛔ **il verde vale «sotto carico CPU», non «sotto contesa GPU»** |
-| ✅ ~~**la cura del clic non è mai stata verificata dove vive**~~ | verificata il 17 agosto su un albero solo: il rilascio è dichiarato nel registro e **tutti i clic del secondo giro arrivano**, ⭐ col controllo positivo che riproduce il difetto **a comando** |
-| ✅ ~~**tutti i millisecondi sono sotto carico**~~ | ripresi a macchina ferma (load 0,07-0,13): §4.8 |
-| ⛔ **tre attesi di `06-b33` sono scritti per il mondo COL DIFETTO VIVO** | T3, R1 e R2 restano **rossi con la cura** e erano **verdi senza**: con il tasto già rilasciato prima del ricambio, le righe di dichiarazione non si scrivono perché non c'è più niente di premuto. ⇒ **Va corretto l'atteso del banco, non il prodotto** — ed è un banco nato ieri, quindi il difetto è di ieri |
-| ✅ ~~⚠ **due attrezzi del banco 6.3 si rompono**~~ | **CURATI il 21 agosto** e certificati contro un calcolo a mano in `awk` (235 campioni, tutti coincidenti). ⭐ La causa non era negli attrezzi: era il **registro che si intrecciava** fra padre e figlio. 📖 §5.6 |
+| ⛔⛔ **the device swap that does NOT depend on the canvas** | `[M]` every `cattura_risveglia()` (400 ms, still scene, key due) recreates the `libei` devices: **3 wake-ups, 3 swaps**, with **zero `ADATTA_TELA`**. ⇒ The dying click has a **second door**, open exactly when the user holds the mouse down on a still desktop, and the obvious cure would destroy every drag. ⏳ **The right form must be decided**, and it does not belong to a single sub-phase |
+| ✅ ~~⛔ **the fault is upstream, in Mutter**~~ · ⛔ **and the answer is worse than the question** | **CLOSED on 21 Aug 2026** `[R]`: the fault is real, **nobody ever opened it**, and **it is not fixed even in today's `main`** — `remove_viewport_devices()` is identical character for character between the 48.7 running here and the main branch of August 2026. ⇒ There is no version to wait for: **the cure is ours, on every Mutter**. The follow-up is in §7.1-bis |
+| ✅ ~~**the chained requests, to be re-measured**~~ · ⛔ **and a worse hole remains** | re-measured on 17 Aug: **0 broken out of 18** (§4.8). ⛔⛔ **But the positive control did not pay off**: removing the suspected cure still gives **0/18** ⇒ *it is not known what holds this scene*, and the **4/18** of 6.3 **cannot be reproduced** with the machine idle. ⚠ The only difference left is **GPU contention** (five encoders on the same iGPU): until it is recreated, ⛔ **the green holds «under CPU load», not «under GPU contention»** |
+| ✅ ~~**the click cure was never verified where it lives**~~ | verified on 17 Aug on a single tree: the release is declared in the log and **all the clicks of the second round arrive**, ⭐ with the positive control reproducing the fault **on command** |
+| ✅ ~~**all the milliseconds are under load**~~ | retaken with the machine idle (load 0.07-0.13): §4.8 |
+| ⛔ **three expected values of `06-b33` are written for the world WITH THE FAULT ALIVE** | T3, R1 and R2 stay **red with the cure** and were **green without**: with the key already released before the swap, the declaration lines are not written because nothing is pressed any more. ⇒ **The bench's expected value must be corrected, not the product** — and it is a bench born yesterday, so the fault is from yesterday |
+| ✅ ~~⚠ **two tools of bench 6.3 break**~~ | **CURED on 21 Aug** and certified against a hand calculation in `awk` (235 samples, all matching). ⭐ The cause was not in the tools: it was the **log interleaving** between parent and child. 📖 §5.6 |
 
-### 7.1-bis · ⭐⭐ 21 agosto 2026 — **la catena completa del clic che muore**, letta nel sorgente di Mutter
+### 7.1-bis · ⭐⭐ 21 Aug 2026 — **the complete chain of the dying click**, read in Mutter's source
 
-*Tutto `[R]`, dal sorgente di `reference-gnome/mutter` (tag **48.7**, commit `f4abb824`) — ⭐ e
-`[M]` la macchina di prova monta **esattamente quella**: GNOME Shell 48.7, `libmutter-16-0`
-48.7-0+deb13u1, `libei1`/`libeis1` 1.3.901-1. Nessuno scarto di versione da scontare.*
+*All `[R]`, from the source of `reference-gnome/mutter` (tag **48.7**, commit `f4abb824`) — ⭐ and
+`[M]` the test machine runs **exactly that one**: GNOME Shell 48.7, `libmutter-16-0`
+48.7-0+deb13u1, `libei1`/`libeis1` 1.3.901-1. No version gap to discount.*
 
-#### ⭐ PERCHÉ i dispositivi si ricreano anche senza `ADATTA_TELA` — il `[?]` del §4.6 ha una causa
+#### ⭐ WHY the devices are recreated even without `ADATTA_TELA` — the `[?]` of §4.6 has a cause
 
 `meta_screen_cast_virtual_stream_src_enable()`
-(`⟨mutter⟩ src/backends/meta-screen-cast-virtual-stream-src.c` · `meta_screen_cast_virtual_stream_src_*`) chiama
-`meta_eis_viewport_notify_changed()`. ⇒ **Ogni riabilitazione dello stream ricrea i dispositivi**,
-cioè **ogni `cattura_risveglia()`** — ed è il «3 risvegli, 3 ricambi, zero `ADATTA_TELA`» di §7.1,
-che non era un mistero ma quella riga. ⚠ Viene dalla **MR !4622**, entrata in **Mutter 48.5**: è
-recente, e noi siamo dentro la finestra.
+(`⟨mutter⟩ src/backends/meta-screen-cast-virtual-stream-src.c` · `meta_screen_cast_virtual_stream_src_*`) calls
+`meta_eis_viewport_notify_changed()`. ⇒ **Every re-enabling of the stream recreates the devices**,
+that is **every `cattura_risveglia()`** — and it is the «3 wake-ups, 3 swaps, zero `ADATTA_TELA`» of §7.1,
+which was not a mystery but that line. ⚠ It comes from **MR !4622**, which went into **Mutter 48.5**: it is
+recent, and we are inside the window.
 
-⚠ **E c'è un secondo moltiplicatore**: `add_logical_monitor_viewports()`
-(`meta-remote-desktop-session.c:388`) fa `remove_all_viewports` **poi** `take_viewports`, e
-**tutt'e due** emettono `viewports-changed` ⇒ **due giri di ricambio per ogni cambio di monitor**.
+⚠ **And there is a second multiplier**: `add_logical_monitor_viewports()`
+(`meta-remote-desktop-session.c:388`) does `remove_all_viewports` **then** `take_viewports`, and
+**both** emit `viewports-changed` ⇒ **two swap rounds for every monitor change**.
 
-#### ⛔ Il difetto è PERMANENTE, non una corsa — e Mutter ha una rete che qui NON si può raggiungere
+#### ⛔ The fault is PERMANENT, not a race — and Mutter has a safety net that CANNOT be reached here
 
-⚠ **Questa è la parte che rende la riga di §7.1 refutabile, e per cui prima non reggeva.** Chi legge
-solo *«`remove_viewport_devices()` non passa da `drop_device()`»* può rispondere: *«ma Mutter
-rilascia lo stesso in `dispose`»* — e ha l'aria di avere ragione, perché
-`meta_virtual_input_device_native_dispose()` chiama `release_device_in_impl()`, che rilascia **tutti**
-i bottoni e i tasti tenuti giù, con tanto di riga di diagnostica.
+⚠ **This is the part that makes the line of §7.1 refutable, and why before it did not hold.** Whoever reads
+only *«`remove_viewport_devices()` does not go through `drop_device()`»* can answer: *«but Mutter
+releases anyway in `dispose`»* — and seems to be right, because
+`meta_virtual_input_device_native_dispose()` calls `release_device_in_impl()`, which releases **all**
+the buttons and keys held down, complete with a diagnostic line.
 
-⛔ **Su questo cammino quella rete è irraggiungibile**, e la catena è di tre anelli:
+⛔ **On this path that net is unreachable**, and the chain has three links:
 
-1. il `ClutterVirtualInputDevice` muore **solo** con `meta_eis_device_free()`, distruttore della
-   tabella `client->eis_devices`;
-2. fuori dal disconnect, l'unico che toglie una voce da quella tabella è il ramo
-   **`EIS_EVENT_DEVICE_CLOSED`** (`meta-eis-client.c:987`);
-3. ⭐ `[R]` **su libei 1.3.901-1, che è la versione installata**: quell'evento lo genera **soltanto**
-   una `release` mandata **dal client** (`eis_device_closed_by_client()` ← `client_msg_release()`).
-   `eis_device_remove()` non lo genera **mai**: mette lo stato a `DEAD` e manda `destroyed`. E il
-   client non deve nemmeno chiamare `ei_device_close()` su un dispositivo rimosso dal server — lo
-   dice l'intestazione pubblica di libei, e il client di prova di Mutter infatti non la chiama.
+1. the `ClutterVirtualInputDevice` dies **only** with `meta_eis_device_free()`, destructor of the
+   table `client->eis_devices`;
+2. outside the disconnect, the only one that removes an entry from that table is the
+   **`EIS_EVENT_DEVICE_CLOSED`** branch (`meta-eis-client.c:987`);
+3. ⭐ `[R]` **on libei 1.3.901-1, which is the installed version**: that event is generated **only**
+   by a `release` sent **by the client** (`eis_device_closed_by_client()` ← `client_msg_release()`).
+   `eis_device_remove()` **never** generates it: it sets the state to `DEAD` and sends `destroyed`. And the
+   client must not even call `ei_device_close()` on a device removed by the server — libei's
+   public header says so, and indeed Mutter's test client does not call it.
 
-⇒ ⛔⛔ **La voce resta nella tabella per sempre**, `release_device_in_impl()` non gira mai, e
-`seat_impl->button_count[BTN_LEFT]` resta **1 per sempre**. Si sana **solo al disconnect**, che è
-l'unico posto da cui passa `drop_device()` — ⭐ ed è esattamente il *«si guarisce solo riaccendendo
-il server»* che §4.6 aveva misurato senza sapere perché.
+⇒ ⛔⛔ **The entry stays in the table for ever**, `release_device_in_impl()` never runs, and
+`seat_impl->button_count[BTN_LEFT]` stays **1 for ever**. It heals **only at disconnect**, which is
+the only place `drop_device()` goes through — ⭐ and it is exactly the *«it heals only by restarting
+the server»* that §4.6 had measured without knowing why.
 
-⚠ **E `button_count[]` è del POSTO, non del dispositivo**: è la ragione per cui la cura potrebbe
-essere molto più piccola di quanto sembri — un rilascio mandato da un dispositivo **nuovo** può
-ancora far scendere il conto. ⏳ Da misurare, non da dedurre.
+⚠ **And `button_count[]` belongs to the SEAT, not to the device**: it is the reason why the cure could
+be much smaller than it seems — a release sent from a **new** device can
+still bring the count down. ⏳ To be measured, not deduced.
 
-#### ⛔ La nostra cura di oggi copre l'altro cammino
+#### ⛔ Our cure of today covers the other path
 
-`input_rilascia_tutto()` prima di `cattura_ridimensiona()` (`figlio.c` · `codificatore_di()`) copre il **cambio di
-geometria**. ⛔ **Non** copre `cattura_risveglia()`. ⇒ La «seconda porta» di §7.1 è aperta proprio
-dove la cura non arriva.
+`input_rilascia_tutto()` before `cattura_ridimensiona()` (`figlio.c` · `codificatore_di()`) covers the **geometry
+change**. ⛔ It does **not** cover `cattura_risveglia()`. ⇒ The «second door» of §7.1 is open precisely
+where the cure does not reach.
 
-#### ⛔ A monte: nessuno l'ha mai aperto, e non è corretto nel `main` di oggi
+#### ⛔ Upstream: nobody ever opened it, and it is not fixed in today's `main`
 
-`[R]` cercato il 21 agosto 2026 sull'API di `gitlab.gnome.org/GNOME/mutter`: le issue con `eis` e
-`libei`, le **15** merge request con `eis` nel titolo dal 2023 a oggi, e una ricerca su
-`remove_viewport_devices` ⇒ **niente**. Idem `gnome-remote-desktop`.
+`[R]` searched on 21 Aug 2026 on the API of `gitlab.gnome.org/GNOME/mutter`: the issues with `eis` and
+`libei`, the **15** merge requests with `eis` in the title from 2023 to today, and a search for
+`remove_viewport_devices` ⇒ **nothing**. Same for `gnome-remote-desktop`.
 
-⭐ **L'unico precedente è la prova migliore che l'asimmetria non è voluta**: la MR **!3809**,
-*«backends/eis-client: Release buttons on device remove»*, fusa il 14 giugno 2024, corregge una riga
-sola **dentro `drop_device` e solo lì**. ⇒ L'intento a monte è dichiarato nel titolo, e il cammino
-del viewport lo viola.
+⭐ **The only precedent is the best proof that the asymmetry is not intended**: MR **!3809**,
+*«backends/eis-client: Release buttons on device remove»*, merged on 14 Jun 2024, fixes a single
+line **inside `drop_device` and only there**. ⇒ The upstream intent is declared in the title, and the viewport
+path violates it.
 
-⛔ **E non è corretto oggi**: scaricato `meta-eis-client.c` dal ramo **`main`** (agosto 2026, serie
-50/51), `remove_viewport_devices()`, `drop_device()`, `update_viewports()` e `remove_device()` sono
-**identici carattere per carattere** alla 48.7. ⇒ Non c'è una versione da aspettare né una
-distribuzione già a posto: **la nostra cura serve su tutte**.
+⛔ **And it is not fixed today**: downloading `meta-eis-client.c` from the **`main`** branch (August 2026, series
+50/51), `remove_viewport_devices()`, `drop_device()`, `update_viewports()` and `remove_device()` are
+**identical character for character** to 48.7. ⇒ There is no version to wait for nor a
+distribution already fixed: **our cure is needed on all of them**.
 
-⭐ *(In più, a carico di Mutter e non nostro: è anche una **perdita di memoria** — la tabella tiene
-un `eis_device_unref` come distruttore, quindi `struct eis_device` e `MetaEisDevice` restano vivi a
-ogni ricambio, per tutta la sessione. Lo stesso vizio ce l'hanno `remove_abs_devices()` e
-`remove_touch_devices()`.)*
+⭐ *(In addition, Mutter's burden and not ours: it is also a **memory leak** — the table holds
+an `eis_device_unref` as destructor, so `struct eis_device` and `MetaEisDevice` stay alive at
+every swap, for the whole session. `remove_abs_devices()` and
+`remove_touch_devices()` have the same vice.)*
 
-#### ⏳ Che cosa resta, e costa poco
+#### ⏳ What remains, and costs little
 
-⛔ **Tutta questa catena è `[R]`, non `[M]`**: è codice letto, non misurato. La conferma decisiva è
-una riga di diagnostica: con `MUTTER_DEBUG=eis,input`, dopo un ricambio di viewport **a bottone
-premuto**, ci si aspetta `Dropping repeated press of button 0x110, count 2` **e l'assenza** di
-`Releasing pressed buttons while destroying virtual input device`. ⚠ **Se comparisse la seconda
-riga, tutta la lettura cade** — ed è per questo che sta scritta qui: una catena che non sa come
-essere smentita non è una diagnosi.
+⛔ **This whole chain is `[R]`, not `[M]`**: it is code read, not measured. The decisive confirmation is
+a diagnostic line: with `MUTTER_DEBUG=eis,input`, after a viewport swap **with the button
+pressed**, one expects `Dropping repeated press of button 0x110, count 2` **and the absence** of
+`Releasing pressed buttons while destroying virtual input device`. ⚠ **If the second
+line appeared, the whole reading falls** — and that is why it is written here: a chain that does not know how
+to be refuted is not a diagnosis.
 
-`[?]` Se i manutentori lo considerino un difetto di Mutter o «cosa che deve gestire il client»: non
-è deducibile dal codice. ⛔ **E non è stato aperto niente a monte**: è un'azione verso l'esterno, e
-la decide l'utente.
+`[?]` Whether the maintainers consider it a Mutter fault or «something the client must handle»: it
+cannot be deduced from the code. ⛔ **And nothing has been opened upstream**: it is an outward action, and
+the user decides it.
 
-### 7.2 · Le `[?]` di misura, dichiarate invece che estrapolate
+### 7.2 · The measurement `[?]`, declared instead of extrapolated
 
-- **il DeX e la GPU vera**: il mezzo pixel non arriva ai pixel su Xvfb ⇒ `[?]` **su GPU vera e su
-  Samsung DeX**. ⛔ Il telefono ce l'ha l'utente: si chiede a lui, non si aggira;
-- ⛔⛔ **E una delle tre `[?]` di `SPECIFICHE.md` §6.1-bis era stata SOSTITUITA in silenzio.** Le tre
-  vere sono lo **zoom** (✅ chiusa il 22 agosto, con la tolleranza *derivata* invece che scelta), il
-  **lato dispari** (✅ chiusa, con un guasto innestato come controllo positivo) e ⛔⛔ **«su DeX
-  `screen` risponde con lo schermo esterno o col telefono?»** — che **non l'ha mai toccata nessuno**,
-  perché il telefono è dell'utente. ⚠ Al suo posto il documento aveva messo **«il mezzo pixel»**, che
-  è un'altra domanda: ⇒ una `[?]` sparita e una comparsa, senza che nessuno se ne accorgesse. 📖 §5.15;
-- ⛔ **«conforme» non è «funziona»**: l'arbitro certifica i byte — *«un server che rispondesse
-  `TELA(ADATTATA)` senza toccare il palco passerebbe tutti e cinque i giri»*. I pixel li misura
-  un altro banco, e la distinzione va tenuta;
-- ✅ ~~**il secondo di grazia curato e non misurato**~~ — **CHIUSO il 22 agosto**, e ⛔ **la ragione
-  per cui sembrava impossibile era sbagliata**: la grazia parte dal `TELA`, **non dalla connessione**,
-  quindi i 1500 ms della stretta di mano non c'entrano. 📖 §5.10;
-- ✅ ~~**codice mai esercitato su Mutter**: il ramo «concesso diverso da chiesto» e
-  `MISURA DIVERGENTE`~~ — **SMENTITO il 22 agosto**: ⭐ `MISURA DIVERGENTE` (oggi `cattura.c` · `su_parametri()`)
-  **si raggiunge dall'esterno** — `[M]` **43 colpi su 480 catene**, tre spazzolate su tre. ⛔ La porta
-  non è il produttore, **è il tempo**: due ridimensionamenti incatenati — *l'utente che trascina il
-  bordo* — e la risposta del primo torna quando la richiesta porta già la seconda. Finestra: fra
-  **200 e 800 µs**. ⇒ È una corsa, ⭐ **ma una corsa che un banco programma**: si spazzola la distanza
-  fra le due chiamate. ⚠ Resta non esercitato quello di `figlio.c` (oggi `:6764`): servirebbe un
-  fotogramma vero, e il palco finto non ne accoda. 📖 §5.16;
-- ✅ ~~**il posto si lascia dopo ~75 s** di silenzio, non i 30 di §5.3~~ — **MISURATO il 22 agosto:
-  sono 30, e il «~75» non si riproduce.** 📖 §5.13;
-- ✅ ~~**le coordinate in volo sono inarbitrabili da una registrazione**~~: dal 21 agosto `RCP.md`
-  §11.1 registra il **tempo**, e la regola è collaudabile — ⛔ **in un verso solo**, e §5.10 racconta
-  perché quel verso non basta;
-- **`?video=worker` non esercitato**; **`aioquic` non è installato sul portatile** (il cliente si
-  prova in locale solo con surrogati, e il banco lo dichiara);
-- ⛔ **il ripiego su KWin resta non verificabile sul vero**: KDE è la fase 11. Il percorso di codice
-  è provato **sull'ospite finto**, e la **riga di registro** che lo dichiara adesso è pretesa da un
-  banco (`06-b36` casi 1-2) — che è quel che `SPECIFICHE.md` §6.3 chiedeva.
+- **the DeX and the real GPU**: the half pixel does not reach the pixels on Xvfb ⇒ `[?]` **on a real GPU and on
+  Samsung DeX**. ⛔ The phone is the user's: one asks him, one does not work around it;
+- ⛔⛔ **And one of the three `[?]` of `SPECIFICHE.md` §6.1-bis had been REPLACED silently.** The three
+  real ones are the **zoom** (✅ closed on 22 Aug, with the tolerance *derived* instead of chosen), the
+  **odd side** (✅ closed, with a grafted fault as positive control) and ⛔⛔ **«on DeX does
+  `screen` answer with the external screen or with the phone?»** — which **nobody ever touched**,
+  because the phone is the user's. ⚠ In its place the document had put **«the half pixel»**, which
+  is another question: ⇒ one `[?]` vanished and one appeared, without anyone noticing. 📖 §5.15;
+- ⛔ **«conforming» is not «works»**: the arbiter certifies the bytes — *«a server that answered
+  `TELA(ADATTATA)` without touching the stage would pass all five rounds»*. The pixels are measured by
+  another bench, and the distinction must be kept;
+- ✅ ~~**the grace second cured and not measured**~~ — **CLOSED on 22 Aug**, and ⛔ **the reason
+  it seemed impossible was wrong**: the grace starts from the `TELA`, **not from the connection**,
+  so the 1500 ms of the handshake have nothing to do with it. 📖 §5.10;
+- ✅ ~~**code never exercised on Mutter**: the branch «granted different from requested» and
+  `MISURA DIVERGENTE`~~ — **REFUTED on 22 Aug**: ⭐ `MISURA DIVERGENTE` (today `cattura.c` · `su_parametri()`)
+  **is reached from outside** — `[M]` **43 hits out of 480 chains**, three sweeps out of three. ⛔ The door
+  is not the producer, **it is time**: two chained resizes — *the user dragging the
+  border* — and the answer to the first comes back when the request already carries the second. Window: between
+  **200 and 800 µs**. ⇒ It is a race, ⭐ **but a race a bench can program**: one sweeps the distance
+  between the two calls. ⚠ The one in `figlio.c` (today `:6764`) remains unexercised: it would need a real
+  frame, and the fake stage does not queue any. 📖 §5.16;
+- ✅ ~~**the seat is released after ~75 s** of silence, not the 30 of §5.3~~ — **MEASURED on 22 Aug:
+  it is 30, and the «~75» does not reproduce.** 📖 §5.13;
+- ✅ ~~**the coordinates in flight cannot be arbitrated from a recording**~~: since 21 Aug `RCP.md`
+  §11.1 records the **time**, and the rule is testable — ⛔ **in one direction only**, and §5.10 tells
+  why that direction is not enough;
+- **`?video=worker` not exercised**; **`aioquic` is not installed on the laptop** (the client is
+  tested locally only with surrogates, and the bench declares it);
+- ⛔ **the fallback on KWin remains unverifiable for real**: KDE is phase 11. The code path
+  is tested **on the fake host**, and the **log line** that declares it is now demanded by a
+  bench (`06-b36` cases 1-2) — which is what `SPECIFICHE.md` §6.3 asked for.
 
-### 7.3 · ✅ ~~E i tre difetti che la decisione dell'utente rende urgenti~~ — **erano già chiusi, e il documento mentiva da cinque giorni**
+### 7.3 · ✅ ~~And the three faults that the user's decision makes urgent~~ — **they were already closed, and the document had been lying for five days**
 
-> ⛔ **Questa sezione elencava tre difetti che il prodotto non ha.** Misurati sul vivo il 21 agosto
-> 2026 (porta 7721, utente `provat6`, sessione GNOME vera con testimone dentro, carico 0,20-0,60):
+> ⛔ **This section listed three faults the product does not have.** Measured live on 21 Aug
+> 2026 (port 7721, user `provat6`, real GNOME session with a witness inside, load 0.20-0.60):
 
-| il documento diceva | `[M]` il prodotto fa |
+| the document said | `[M]` the product does |
 |---|---|
-| `hu` `tr` `gr` `ua` ricevono `SESSIONE_NON_SERVIBILE` | ⭐ **aprono la sessione**, tutte e quattro |
-| `it(nonesiste)` apre la sessione | ⭐ **`0x0E SESSIONE_NON_SERVIBILE`** |
-| `DISPOSIZIONE` a sessione aperta chiude la connessione | ⭐ **connessione viva**, `KEYMAP CAMBIATA → de [German]`, nessun messaggio sul filo |
+| `hu` `tr` `gr` `ua` receive `SESSIONE_NON_SERVIBILE` | ⭐ **they open the session**, all four |
+| `it(nonesiste)` opens the session | ⭐ **`0x0E SESSIONE_NON_SERVIBILE`** |
+| `DISPOSIZIONE` with the session open closes the connection | ⭐ **connection alive**, `KEYMAP CAMBIATA → de [German]`, no message on the wire |
 
-⇒ Li aveva chiusi la cucitura del **16 agosto**: la domanda «esiste?» va a XKB
-(`webtransport.c` · `gancio_disposizione_esiste()` → `tastiera.c`), la variante ci entra perché `it(nonesiste)` non compila, e
-`T_DISPOSIZIONE` ha il suo `case` (`rcp.c` · `drena()`). ⚠ Nessuno aveva riletto questa sezione, ed è la
-stessa specie di difetto di `fasi/07` §8: **un documento fermo a quattro giorni fa manda a cercare un
-guasto dove non c'è**.
+⇒ They had been closed by the stitching of **16 Aug**: the question «does it exist?» goes to XKB
+(`webtransport.c` · `gancio_disposizione_esiste()` → `tastiera.c`), the variant enters it because `it(nonesiste)` does not compile, and
+`T_DISPOSIZIONE` has its `case` (`rcp.c` · `drena()`). ⚠ Nobody had re-read this section, and it is the
+same kind of fault as `fasi/07` §8: **a document stuck at four days ago sends people looking for a
+fault where there is none**.
 
-⭐ **E non ci si è fermati a «la sessione si apre»**, che è il metro che questa fase vieta: il
-testimone dentro la sessione ha registrato **il carattere**, con l'atteso calcolato da `tastiera.c`
-chiamato da fuori — `hu`→`ű`,`ő` · `tr`→`ğ` · `gr`→`α` · `ua`→`ї` · `de(T3)`→`‑`, **tutti arrivati**,
-più il negativo (`it` non produce `ű`, e la riga che lo dichiara c'è).
+⭐ **And it did not stop at «the session opens»**, which is the yardstick this phase forbids: the
+witness inside the session recorded **the character**, with the expected value computed by `tastiera.c`
+called from outside — `hu`→`ű`,`ő` · `tr`→`ğ` · `gr`→`α` · `ua`→`ї` · `de(T3)`→`‑`, **all arrived**,
+plus the negative (`it` does not produce `ű`, and the line declaring it is there).
 
-#### ⛔⭐ Ma al loro posto ce n'era uno VERO: **la forma D1 sopravvissuta alla propria cura**
+#### ⛔⭐ But in their place there was a REAL one: **form D1 survived its own cure**
 
-La cura del 16 agosto ha tolto l'elenco fisso di venti nomi, ⛔ **e davanti al gancio è rimasto un
-secondo elenco scritto a mano: l'alfabeto ammesso nel nome**, che accettava solo `[a-z0-9]`.
+The cure of 16 Aug removed the fixed list of twenty names, ⛔ **and in front of the hook a
+second hand-written list remained: the alphabet allowed in the name**, which accepted only `[a-z0-9]`.
 
-`[M]` Chiedendolo al sistema **attraverso il prodotto**, su tutte le **590** coppie
-disposizione/variante di `evdev.lst`: **589 si compilano**, e **nove hanno una maiuscola** —
+`[M]` Asking the system **through the product**, on all **590**
+layout/variant pairs of `evdev.lst`: **589 compile**, and **nine have an uppercase letter** —
 `de(T3)`, `ie(CloGaelach)`, `ie(UnicodeExpert)`, `in(tamilnet_TAB)`, `in(tamilnet_TSCII)`,
-`jp(OADG109A)`, `lk(tam_TAB)`, `ru(phonetic_YAZHERTY)`, `ua(macOS)`. ⛔ Sul filo ricevevano
-**`0x0B ERRORE_PROTOCOLLO`** — che è **peggio** di `SESSIONE_NON_SERVIBILE`, perché dice *«il tuo
-client è rotto»* e manda a cercare il guasto dall'altra parte del filo. E `it()` (variante vuota)
-prendeva `0x0E` su una stringa **fuori forma**: i due guasti di §4.5 uniti.
+`jp(OADG109A)`, `lk(tam_TAB)`, `ru(phonetic_YAZHERTY)`, `ua(macOS)`. ⛔ On the wire they received
+**`0x0B ERRORE_PROTOCOLLO`** — which is **worse** than `SESSIONE_NON_SERVIBILE`, because it says *«your
+client is broken»* and sends people looking for the fault on the other side of the wire. And `it()` (empty variant)
+got `0x0E` on a **malformed** string: the two faults of §4.5 together.
 
-⇒ **Curato** (`rcp.c` · `tratta_credenziali()`, e il gemello allineato byte per byte): un solo
-`disposizione_carattere_ammesso()` con l'alfabeto **identico** a quello di `tastiera.c`, più il
-rifiuto della variante vuota. ⚠ Due controlli di forma scritti due volte davano due risposte sotto
-la stessa etichetta: è la forma **E2**. La difesa non si allenta — punto, barra, virgola e
-`../../etc/passwd` restano fuori. ⭐ Prezzo dichiarato: `IT` adesso passa la forma e riceve `0x0E`
-invece di `0x0B`, ed è la risposta giusta (XKB distingue le maiuscole).
+⇒ **Cured** (`rcp.c` · `tratta_credenziali()`, and the twin aligned byte for byte): a single
+`disposizione_carattere_ammesso()` with the alphabet **identical** to that of `tastiera.c`, plus the
+rejection of the empty variant. ⚠ Two form checks written twice gave two answers under
+the same label: it is form **E2**. The defence is not loosened — dot, slash, comma and
+`../../etc/passwd` stay out. ⭐ Declared price: `IT` now passes the form and receives `0x0E`
+instead of `0x0B`, and it is the right answer (XKB distinguishes uppercase).
 
-⭐ **Rosso→verde certificato** sulla stessa macchina: caso 8, **7 righe rosse su 17** col binario di
-prima → **17 su 17** col curato; e quattro guasti innestati che accendono il caso dichiarato.
+⭐ **Red→green certified** on the same machine: case 8, **7 red lines out of 17** with the binary of
+before → **17 out of 17** with the cured one; and four grafted faults that light up the declared case.
 
 
 
 ---
 
-## 8 · Il giudizio dell'utente
+## 8 · The user's judgement
 
-*La fase si chiude su una misura giudicata dall'utente, non su un documento completo.
-⛔ Non si scrive un verdetto che l'utente non ha dato.*
+*The phase closes on a measurement judged by the user, not on a complete document.
+⛔ A verdict the user did not give is not written.*
 
-✅ **Uno c'è già, ed è del 16 agosto 2026**: **«il test su Windows lo dichiaro superato al 100 %»**
-— dato sul prodotto vivo, da un terzo sistema client mai provato prima, con `dpr 1,25` e la finestra
-dispari su tutt'e due i lati (§4.1 e §4.1-bis).
+✅ **One is already there, and it is from 16 Aug 2026**: **«il test su Windows lo dichiaro superato al 100 %»**
+— given on the live product, from a third client system never tested before, with `dpr 1.25` and the window
+odd on both sides (§4.1 and §4.1-bis).
 
-✅ **E il 22 agosto 2026 sono arrivati anche gli altri due**, cioè le due scene che questa fase
-aveva aperto:
+✅ **And on 22 Aug 2026 the other two arrived too**, that is the two scenes this phase
+had opened:
 
-| la scena | il giudizio |
+| the scene | the judgement |
 |---|---|
-| ⭐ **il clic tenuto giù** | *«Sto tenendo il clic premuto ed è tutto ok.»* ⇒ **La seconda porta del clic che muore non si sente più.** Era il difetto che questa fase ha inseguito per tre giorni: da §4.6 (*«il clic che muore»*) a §7.1-bis (la catena letta nel sorgente di Mutter) a §5.7 (le cure A+C) |
-| ⭐ **il trascinamento del bordo** | *«Riscala con la comparsa di bande nere, ma immagino sia normale per mantenere le proporzioni.»* ⇒ **Il re-scaling è accettato**, bande comprese: è il prezzo dichiarato quando il ridimensionamento dinamico è uscito (`DECISIONI.md` §5.1-bis) |
+| ⭐ **the click held down** | *«Sto tenendo il clic premuto ed è tutto ok.»* ⇒ **The second door of the dying click can no longer be felt.** It was the fault this phase chased for three days: from §4.6 (*«the click that dies»*) to §7.1-bis (the chain read in Mutter's source) to §5.7 (cures A+C) |
+| ⭐ **dragging the border** | *«Riscala con la comparsa di bande nere, ma immagino sia normale per mantenere le proporzioni.»* ⇒ **Re-scaling is accepted**, bands included: it is the price declared when dynamic resizing left (`DECISIONI.md` §5.1-bis) |
 
-⚠ **E una precisazione dell'utente che è entrata nel vocabolario**: *«lo scaling è opera del browser,
-non di REMOTIX»* — ⭐ ed è esatto: noi scriviamo **due misure in CSS**, il riscalamento lo fa il
-browser con la sua accelerazione. L'unica cosa che gli imponiamo è **come** riscalare
-(`image-rendering: pixelated`), perché il testo resti netto invece di essere impastato. 📖 §5.14.
+⚠ **And a clarification by the user that has entered the vocabulary**: *«lo scaling è opera del browser,
+non di REMOTIX»* — ⭐ and it is exact: we write **two sizes in CSS**, the rescaling is done by the
+browser with its acceleration. The only thing we impose on it is **how** to rescale
+(`image-rendering: pixelated`), so that the text stays crisp instead of being smeared. 📖 §5.14.
 
-⛔ **E quel che il giudizio NON copre, scritto perché non lo si deduca**: la **guardia della cura A**
-(la riga «TENUTI GIU'») **non è ancora scattata in nessuna misura**. ⇒ L'utente dice che il difetto
-non si sente più — e questo chiude il **difetto**. ⚠ Ma *«non si sente»* non è *«la guardia ha
-funzionato»*: potrebbe essere la cura **C** a coprire tutto, e la **A** a non essere mai stata
-esercitata. Resta una `[?]` di diagnosi, non di prodotto.
+⛔ **And what the judgement does NOT cover, written so that it is not deduced**: the **guard of cure A**
+(the line «TENUTI GIU'») **has not yet triggered in any measurement**. ⇒ The user says the fault
+can no longer be felt — and that closes the **fault**. ⚠ But *«it cannot be felt»* is not *«the guard
+worked»*: it could be cure **C** covering everything, and **A** never having been
+exercised. A diagnostic `[?]` remains, not a product one.
 
-## ⛔⛔ 21 agosto 2026 — **Firefox per Android non ha WebCodecs**, e il messaggio nostro mentiva
+## ⛔⛔ 21 Aug 2026 — **Firefox for Android does not have WebCodecs**, and our message lied
 
-*Prima prova su un telefono vero (Samsung DeX, Android 16). L'utente: «credo che abbiamo introdotto
+*First test on a real phone (Samsung DeX, Android 16). The user: «credo che abbiamo introdotto
 una regressione per quanto riguarda Firefox su Android».*
 
-⛔ **Non era una regressione.** `[M]` Dal registro del server, parole della pagina:
+⛔ **It was not a regression.** `[M]` From the server's log, the page's words:
 
 ```
 browser: Mozilla/5.0 (Android 16; Mobile; rv:154.0) Firefox/154.0
@@ -1879,395 +1879,395 @@ sonda video · ⛔ H264: NON arriva al pixel — questo browser non ha WebCodecs
 congedo motivo=0x09 dettaglio=nessun codec condiviso
 ```
 
-⇒ `VideoDecoder` **non esiste** su quel browser, e in `pagina.html` la strada verso i pixel è
-**una sola**: zero occorrenze di `MediaSource` in tutto il file. ⚠ Con AV1 sarebbe finita identica —
-il passaggio a H.264 (§1.13-ter) non c'entra, e la riga di `DECISIONI.md` che diceva «così Firefox
-Android funziona» era una **premessa sbagliata**, corretta qui.
+⇒ `VideoDecoder` **does not exist** on that browser, and in `pagina.html` the road to the pixels is
+**a single one**: zero occurrences of `MediaSource` in the whole file. ⚠ With AV1 it would have ended identically —
+the switch to H.264 (§1.13-ter) has nothing to do with it, and the line of `DECISIONI.md` that said «that way Firefox
+Android works» was a **wrong premise**, corrected here.
 
-### ⛔ E la cosa nostra c'era: la scritta mandava a cercare nel posto sbagliato
+### ⛔ And our own thing was there: the message sent people looking in the wrong place
 
-Il riquadro diceva *«questo browser non porta nessuno dei due codec video fino ai pixel: né HEVC né
-H.264 … su Linux il decodificatore HEVC di Chrome è quello della scheda grafica»* — una spiegazione
-su codec e schede grafiche, mentre la causa vera stava una riga più su ed era di un'altra specie.
+The box said *«questo browser non porta nessuno dei due codec video fino ai pixel: né HEVC né
+H.264 … su Linux il decodificatore HEVC di Chrome è quello della scheda grafica»* — an explanation
+about codecs and graphics cards, while the real cause was one line above and of another kind.
 
-⇒ Adesso la casella **«WebCodecs non c'è»** viene **prima** e si nomina: *«questo browser non ha
+⇒ Now the **«WebCodecs non c'è»** box comes **first** and names itself: *«questo browser non ha
 WebCodecs, cioè l'unico modo che REMOTIX ha di disegnare il desktop: non è una questione di codec»*.
-⭐ Una scritta che manda nel posto sbagliato è peggio di nessuna scritta.
+⭐ A message that sends people to the wrong place is worse than no message.
 
-### ⏳ Che cosa resta aperto
+### ⏳ What remains open
 
-⚠ Se Firefox per Android deve essere un motore supportato, serve un **secondo percorso di disegno**
-(MSE con un `<video>`): è lavoro vero, cambia le proprietà di ritardo, e va deciso — non è un
-interruttore. ⭐ Chrome per Android ha WebCodecs, e lì la strada c'è.
+⚠ If Firefox for Android must be a supported engine, a **second drawing path** is needed
+(MSE with a `<video>`): it is real work, it changes the delay properties, and it must be decided — it is not a
+switch. ⭐ Chrome for Android has WebCodecs, and there the road exists.
 
-## ⏳ 21 agosto 2026 — **quanto costerebbe MSE**, misurato prima di scrivere il percorso
+## ⏳ 21 Aug 2026 — **what MSE would cost**, measured before writing the path
 
-*Il vincolo dell'utente: «supportare pienamente Chrome e Firefox in Linux, Windows e Android».
-⛔ Firefox per Android non ha WebCodecs, quindi coprirlo vuol dire un **secondo percorso di
-disegno**: `MediaSource` con un `<video>`, a MP4 frammentato invece che ad Annex-B. ⇒ Il prezzo si
-misura prima, non dopo — banco `banchi/07-b57-quanto-costa-mse.py`.*
+*The user's constraint: «supportare pienamente Chrome e Firefox in Linux, Windows e Android».
+⛔ Firefox for Android does not have WebCodecs, so covering it means a **second drawing
+path**: `MediaSource` with a `<video>`, with fragmented MP4 instead of Annex-B. ⇒ The price is
+measured before, not after — bench `banchi/07-b57-quanto-costa-mse.py`.*
 
-### La misura — stesso ferro, stesso flusso (i nostri 150 fotogrammi, 2560×962, H.264 High 5.0)
+### The measurement — same iron, same stream (our 150 frames, 2560×962, H.264 High 5.0)
 
 | | Firefox | Chrome |
 |---|---|---|
-| WebCodecs, 60/s | **60,5 ms** | **50,9 ms** |
-| MSE, 60/s | 285,4 ms — ⛔ **+225 ms** | 465,6 ms — ⛔ **+415 ms** |
+| WebCodecs, 60/s | **60.5 ms** | **50.9 ms** |
+| MSE, 60/s | 285.4 ms — ⛔ **+225 ms** | 465.6 ms — ⛔ **+415 ms** |
 | MSE, 10/s | 246 ms — ⚠ **+17 ms** | 570 ms — **+348 ms** |
-| coda di riproduzione | 310–650 ms | 520–715 ms |
+| playback queue | 310–650 ms | 520–715 ms |
 
-⛔ **Il tetto dichiarato è 50 ms** (`SPECIFICHE.md` §3.2). ⇒ A ritmo utile MSE lo sfonda di un
-ordine di grandezza, e non per lentezza del decodificatore: il `<video>` **tiene una coda apposta**,
-perché il suo mestiere è la riproduzione fluida, non il ritardo basso.
+⛔ **The declared ceiling is 50 ms** (`SPECIFICHE.md` §3.2). ⇒ At a useful rate MSE breaks it by an
+order of magnitude, and not because of decoder slowness: the `<video>` **keeps a queue on purpose**,
+because its job is smooth playback, not low delay.
 
-⚠ **Il limite della misura, dichiarato**: lo schermo del banco è un `Xvfb` **senza GPU**, quindi tutte
-e due le strade decodificano in software. ⭐ Ma la coda di presentazione non è una proprietà della
-scheda video, e il confronto è fra due strade **nello stesso identico posto**.
+⚠ **The limit of the measurement, declared**: the bench's screen is an `Xvfb` **without a GPU**, so both
+roads decode in software. ⭐ But the presentation queue is not a property of the
+video card, and the comparison is between two roads **in the very same place**.
 
-⚠ **E l'inseguimento non salva**: saltare al bordo vivo porta la mediana di Firefox a 265 ms con
-**40 salti** su 150 fotogrammi — cioè un'immagine che scatta. Si scambia ritardo con scatti.
+⚠ **And chasing does not save it**: jumping to the live edge brings Firefox's median to 265 ms with
+**40 jumps** over 150 frames — that is an image that stutters. Delay is traded for stutter.
 
-### ⛔ Cinque difetti del banco, e ognuno avrebbe prodotto un numero falso
+### ⛔ Five faults of the bench, and each would have produced a false number
 
-Questo banco ha mentito **cinque volte** prima di misurare, e vale la pena elencarle perché sono
-tutte della stessa famiglia — *lo strumento misurava se stesso*:
+This bench lied **five times** before measuring, and it is worth listing them because they are
+all of the same family — *the tool was measuring itself*:
 
-1. `"null"` letto come un esito: Chrome dava tre righe rosse **e funzionava**;
-2. alimentare a 10/s un MP4 che si dichiara a 60 fps: il `<video>` corre a 60, resta a secco, e
-   `requestVideoFrameCallback` vede **due** fotogrammi su cento;
-3. misurare **l'avvio** invece del regime: mediana 2,7 s con una coda di 160 ms;
-4. ⛔ **nessun gesto dell'utente**: senza un tocco il `<video>` non parte affatto — coda 3,5 s,
-   *zero* fotogrammi buttati, e sembrava «MSE bufferizza» mentre era «non è mai partito»;
-5. ⛔ **`ffmpeg -framerate` non vale per il demuxer H.264**: il file usciva a **25 fps** mentre lo
-   alimentavo a 60, e la coda che chiamavo «di MSE» era la mia differenza di ritmo. Si vede da
-   `currentTime = 5,98 s` con 150 fotogrammi: 150/25 = 6 s. ⇒ Si usa `-r`, e **si verifica con
-   `ffprobe`** invece di credere alla riga di comando.
+1. `"null"` read as an outcome: Chrome gave three red lines **and worked**;
+2. feeding at 10/s an MP4 that declares itself at 60 fps: the `<video>` runs at 60, runs dry, and
+   `requestVideoFrameCallback` sees **two** frames out of a hundred;
+3. measuring **start-up** instead of steady state: median 2.7 s with a queue of 160 ms;
+4. ⛔ **no user gesture**: without a tap the `<video>` does not start at all — queue 3.5 s,
+   *zero* frames dropped, and it looked like «MSE buffers» while it was «it never started»;
+5. ⛔ **`ffmpeg -framerate` does not apply to the H.264 demuxer**: the file came out at **25 fps** while I
+   fed it at 60, and the queue I called «MSE's» was my rate difference. It shows from
+   `currentTime = 5.98 s` with 150 frames: 150/25 = 6 s. ⇒ `-r` is used, and **it is verified with
+   `ffprobe`** instead of believing the command line.
 
-⭐ Il difetto 4 è stato trovato **da un numero incoerente**, non da un errore: «coda 3,5 s **e zero
-fotogrammi buttati**» non può descrivere un decodificatore in affanno. Un banco che avesse
-riportato solo la mediana non l'avrebbe mai fatto vedere.
+⭐ Fault 4 was found **from an inconsistent number**, not from an error: «queue 3.5 s **and zero
+frames dropped**» cannot describe a struggling decoder. A bench that had
+reported only the median would never have shown it.
 
-### ⏳ Che cosa resta da decidere — e non si decide qui
+### ⏳ What remains to be decided — and is not decided here
 
-⛔ Con questi numeri, «Firefox per Android pienamente supportato» e «ritardo sotto i 50 ms» **non
-stanno insieme**. ⇒ La scelta è dell'utente, e le opzioni sono nominate: accettare su quel motore un
-ritardo di un'altra classe, oppure dichiararlo non supportato finché Mozilla non porta WebCodecs su
-Android. ⚠ La misura definitiva è sul telefono, che l'hardware ce l'ha; il banco si serve alla rete
-di casa con `banchi/07-b57-servi-al-telefono.py`.
+⛔ With these numbers, «Firefox for Android fully supported» and «delay under 50 ms» **do not
+go together**. ⇒ The choice is the user's, and the options are named: accept on that engine a
+delay of another class, or declare it unsupported until Mozilla brings WebCodecs to
+Android. ⚠ The definitive measurement is on the phone, which has the hardware; the bench is served on the home
+network with `banchi/07-b57-servi-al-telefono.py`.
 
-## ⭐⭐ 21 agosto 2026 — **la prima sessione Android**, e l'utente: «Chrome è un missile»
+## ⭐⭐ 21 Aug 2026 — **the first Android session**, and the user: «Chrome è un missile»
 
-*Chrome per Android, Samsung DeX, 2560×1080. Tre minuti e mezzo di sessione vera, `[M]` dal registro
-del server e dal diario della pagina.*
-
-| | |
-|---|---|
-| codec negoziato | ⭐ **HEVC** (codec 1) — **non** il ripiego H.264 |
-| tela | 2558×926 |
-| fotogrammi | **3 178 arrivati, 3 178 dipinti** |
-| saltati · buchi · fuori ordine · tardivi · errori del decodificatore | ⭐ **0 · 0 · 0 · 0 · 0** |
-| input | 45 tasti, tutti arrivati |
-| audio | 8 935 blocchi ricevuti, 8 933 suonati, **2 buchi** in 3 min 30 |
-
-⭐ **Zero perdite su ogni riga che il diario conta.** È la prima volta che questo codice tocca un
-telefono, e il verso video → schermo non ha un difetto da nominare.
-
-⭐ **E la sorpresa è il codec**: il telefono ha negoziato **HEVC in hardware**, cioè la prima scelta
-di `PREFERENZA` — non il ripiego. ⚠ L'H.264 di §1.13-ter resta necessario (Firefox desktop non fa
-HEVC), ma su questo telefono non è servito.
-
-### ⛔ E l'unico numero che non è buono: **la coda dell'audio, 401 → 421 ms** — ⭐ e la sera stessa l'orecchio dell'utente lo ha CONFERMATO
-
-Il diario la riporta a ogni giro e **cresce**: 401 ms a 10:37:39, 421 ms a 10:37:49, e lì resta.
-Il video, nella stessa sessione, non ha un fotogramma tardivo ⇒ non è la rete: è la coda del
-percorso audio.
-
-⛔⭐ **E la sera del 21 agosto l'utente ha ascoltato, due volte.** La prima: *«Chrome su Android
-offre un'esperienza completa: audio e video perfetti»*. La seconda, un'ora dopo, su Windows:
-*«**il ritardo di 400 ms tra audio e video in generale te lo confermo**»*. ⇒ Il numero **non è un
-caso e non è di Android**: è `AUDIO_CUSCINO_MS = 250` in `pagina.html`, più la catena, e si sente
-come **sincronia sbagliata** — non come audio sporco. 📖 La diagnosi e la cura nominata stanno in
-`fasi/07-audio-e-appunti.md` §8 e §9.7-bis.
-
-## ⭐⭐ 21 agosto 2026 — **il secondo percorso di disegno**: MP4 frammentato su MSE
-
-*`DECISIONI.md` §7.18, dall'utente: «si costruisce». ⛔ E la ragione per cui §0.1-bis non lo vieta:
-quel principio parla di un motore che **rende peggio**; qui il motore **non apre affatto**.*
-
-⭐ **Il protocollo non si tocca**: sul filo passano gli stessi fotogrammi Annex-B di §6.2. Cambia
-solo **come il client li disegna**, e il server non se ne accorge.
-
-⭐ **E l'audio non è stato scritto**: la pagina ripiegava già su `pcm` quando manca `AudioDecoder`
-(§4.3 lo impone a entrambi ed è la base sempre disponibile). ⇒ Il lavoro era **solo il video**.
-
-### I tre pezzi
-
-| pezzo | che cosa fa |
-|---|---|
-| `MuxMP4` | i fotogrammi Annex-B diventano un segmento d'inizio (`ftyp`+`moov` con l'`avcC` costruito dall'SPS/PPS visti) e un `moof`+`mdat` per fotogramma |
-| `sonda_mse_una()` | la sonda **dipinge anche su questa strada** e si giudicano i pixel — ⭐ non si crede a `isTypeSupported` (`LEZIONI.md` §1.9) |
-| `Schermo.mse_*` | il `<video>` prende il posto della tela, eredita classe e stile, e i fotogrammi si contano con `requestVideoFrameCallback` — l'unico posto, lì, in cui si sappia che un pixel è arrivato |
-
-⚠ **La durata di ogni fotogramma è quella VERA**, misurata all'arrivo: un desktop non ha un ritmo
-fisso — sta fermo per secondi e poi si muove — e dichiarare 60/s a un `<video>` che ne riceve tre al
-secondo lo manderebbe a secco a ogni pausa. `[M]` È esattamente l'errore che il banco `07-b57` ha
-fatto per primo, con `ffmpeg -framerate` che per il demuxer H.264 non vale.
-
-### ⛔ Due errori di byte, trovati rileggendo prima di provare
-
-1. **`trun`: versione (1 byte) e poi bandiere (3)**, non il contrario. Scritte al rovescio il
-   `<video>` legge `flags = 0x030500`, cioè campi che non ci sono: ⚠ **non dà errore e non
-   dipinge**.
-2. **`tkhd`: mancavano quattro byte** (volume + riservato) prima della matrice, e tutto quel che
-   segue scivolava.
-
-⭐ E il muxer è stato **verificato da fuori prima di collegarlo**: i nostri 150 fotogrammi passati
-dal muxer e dati a `ffprobe` → `h264, High, 2560×962, level 50, 2,372 s`, e `ffmpeg` li decodifica.
-⚠ Un muxer provato solo dentro il browser avrebbe confuso «il mio MP4 è sbagliato» con «questo
-motore non lo accetta».
-
-### Lo stato misurato
+*Chrome for Android, Samsung DeX, 2560×1080. Three and a half minutes of real session, `[M]` from the server's
+log and from the page's diary.*
 
 | | |
 |---|---|
-| la strada si accende e dipinge (Firefox, `?disegno=mse`) | ⭐ sì — `<video>` 1190×704, 4 dipinti, **0 buchi**, ritardo 50 ms, 1 salto |
-| la strada normale (WebCodecs) | ⭐ intatta: `07-b51` 4 controlli su 4 per motore |
-| Firefox per Android | ⏳ **da provare sul telefono** — è il motore per cui esiste |
+| negotiated codec | ⭐ **HEVC** (codec 1) — **not** the H.264 fallback |
+| canvas | 2558×926 |
+| frames | **3 178 arrived, 3 178 painted** |
+| skipped · gaps · out of order · late · decoder errors | ⭐ **0 · 0 · 0 · 0 · 0** |
+| input | 45 keys, all arrived |
+| audio | 8 935 blocks received, 8 933 played, **2 gaps** in 3 min 30 |
 
-### ⛔ E il primo giro su Firefox Android è fallito — **«caricato» non vuol dire «dipinto»**
+⭐ **Zero losses on every row the diary counts.** It is the first time this code touches a
+phone, and the video → screen direction has no fault to name.
 
-*L'utente, 21 agosto 2026: «non funziona». `[M]` E la pagina aveva già scritto il perché nel
-registro del server:*
+⭐ **And the surprise is the codec**: the phone negotiated **HEVC in hardware**, that is the first choice
+of `PREFERENZA` — not the fallback. ⚠ The H.264 of §1.13-ter remains necessary (desktop Firefox does not do
+HEVC), but on this phone it was not needed.
+
+### ⛔ And the only number that is not good: **the audio queue, 401 → 421 ms** — ⭐ and the same evening the user's ear CONFIRMED it
+
+The diary reports it at every round and **it grows**: 401 ms at 10:37:39, 421 ms at 10:37:49, and there it stays.
+The video, in the same session, has not one late frame ⇒ it is not the network: it is the queue of the
+audio path.
+
+⛔⭐ **And on the evening of 21 Aug the user listened, twice.** The first: *«Chrome su Android
+offre un'esperienza completa: audio e video perfetti»*. The second, an hour later, on Windows:
+*«**il ritardo di 400 ms tra audio e video in generale te lo confermo**»*. ⇒ The number **is not a
+coincidence and is not Android's**: it is `AUDIO_CUSCINO_MS = 250` in `pagina.html`, plus the chain, and it is heard
+as **wrong synchronisation** — not as dirty audio. 📖 The diagnosis and the named cure are in
+`fasi/07-audio-e-appunti.md` §8 and §9.7-bis.
+
+## ⭐⭐ 21 Aug 2026 — **the second drawing path**: fragmented MP4 on MSE
+
+*`DECISIONI.md` §7.18, from the user: «si costruisce». ⛔ And the reason §0.1-bis does not forbid it:
+that principle speaks of an engine that **renders worse**; here the engine **does not open at all**.*
+
+⭐ **The protocol is not touched**: the same Annex-B frames of §6.2 pass on the wire. Only
+**how the client draws them** changes, and the server does not notice.
+
+⭐ **And the audio was not written**: the page already fell back to `pcm` when `AudioDecoder` is missing
+(§4.3 imposes it on both and it is the always-available base). ⇒ The work was **only the video**.
+
+### The three pieces
+
+| piece | what it does |
+|---|---|
+| `MuxMP4` | the Annex-B frames become an initialisation segment (`ftyp`+`moov` with the `avcC` built from the SPS/PPS seen) and a `moof`+`mdat` per frame |
+| `sonda_mse_una()` | the probe **paints on this road too** and the pixels are judged — ⭐ `isTypeSupported` is not believed (`LEZIONI.md` §1.9) |
+| `Schermo.mse_*` | the `<video>` takes the place of the canvas, inherits class and style, and frames are counted with `requestVideoFrameCallback` — the only place, there, where one knows a pixel has arrived |
+
+⚠ **The duration of each frame is the REAL one**, measured on arrival: a desktop does not have a
+fixed rate — it stays still for seconds and then moves — and declaring 60/s to a `<video>` that receives three per
+second would run it dry at every pause. `[M]` It is exactly the mistake that bench `07-b57`
+made first, with `ffmpeg -framerate` which does not apply to the H.264 demuxer.
+
+### ⛔ Two byte errors, found by re-reading before testing
+
+1. **`trun`: version (1 byte) and then flags (3)**, not the other way round. Written reversed, the
+   `<video>` reads `flags = 0x030500`, that is fields that are not there: ⚠ **it gives no error and does not
+   paint**.
+2. **`tkhd`: four bytes were missing** (volume + reserved) before the matrix, and everything that
+   follows slipped.
+
+⭐ And the muxer was **verified from outside before being connected**: our 150 frames passed
+through the muxer and given to `ffprobe` → `h264, High, 2560×962, level 50, 2.372 s`, and `ffmpeg` decodes them.
+⚠ A muxer tested only inside the browser would have confused «my MP4 is wrong» with «this
+engine does not accept it».
+
+### The measured state
+
+| | |
+|---|---|
+| the road turns on and paints (Firefox, `?disegno=mse`) | ⭐ yes — `<video>` 1190×704, 4 painted, **0 gaps**, delay 50 ms, 1 jump |
+| the normal road (WebCodecs) | ⭐ intact: `07-b51` 4 checks out of 4 per engine |
+| Firefox for Android | ⏳ **to be tested on the phone** — it is the engine it exists for |
+
+### ⛔ And the first round on Firefox Android failed — **«loaded» does not mean «painted»**
+
+*The user, 21 Aug 2026: «non funziona». `[M]` And the page had already written why in the
+server's log:*
 
 ```
 sonda video · ⛔ H264: NON arriva al pixel — il `<video>` ha caricato ma i pixel
               non sono quelli della sonda (sinistra 0,0,0, destra 0,0,0)
 ```
 
-⭐ **Zero-zero-zero su tutti e due i lati è nero, non «un colore sbagliato».** ⇒ Il flusso era
-giusto — il `<video>` lo aveva **caricato**, quindi il muxer funziona anche sul telefono — e a
-sbagliare era **il momento della lettura**: `loadeddata` dice che il fotogramma è stato
-*decodificato*, non che sia stato **presentato**, e `drawImage` da un `<video>` che non ha ancora
-presentato niente copia nero.
+⭐ **Zero-zero-zero on both sides is black, not «a wrong colour».** ⇒ The stream was
+right — the `<video>` had **loaded** it, so the muxer works on the phone too — and what was
+wrong was **the moment of the reading**: `loadeddata` says the frame was
+*decoded*, not that it was **presented**, and `drawImage` from a `<video>` that has not yet
+presented anything copies black.
 
-⛔ La sonda accusava il flusso di un difetto del proprio cronometro. ⇒ Adesso fa presentare il
-fotogramma (`play()` muto + `requestVideoFrameCallback` dove c'è) e **rilegge fino a dodici volte**,
-e ⭐ **riconosce il nero** invece di trasformarlo in un verdetto.
+⛔ The probe accused the stream of a fault of its own stopwatch. ⇒ Now it has the frame presented
+(muted `play()` + `requestVideoFrameCallback` where available) and **re-reads up to twelve times**,
+and ⭐ **recognises black** instead of turning it into a verdict.
 
-⚠ È la stessa famiglia dei cinque difetti del banco `07-b57`: *lo strumento misurava se stesso*.
+⚠ It is the same family as the five faults of bench `07-b57`: *the tool was measuring itself*.
 
-#### ⛔ E la seconda volta la tela era ancora nera — **due cause, tutte e due dei motori mobili**
+#### ⛔ And the second time the canvas was still black — **two causes, both from mobile engines**
 
-`[M]` La riga nuova della sonda: *«il `<video>` non aveva ancora presentato niente: la tela è
-tornata nera»* — dopo **dodici** riletture in un secondo e mezzo. ⇒ Non era lentezza: quel
-`<video>` non presentava **mai**.
+`[M]` The probe's new line: *«il `<video>` non aveva ancora presentato niente: la tela è
+tornata nera»* — after **twelve** re-reads in a second and a half. ⇒ It was not slowness: that
+`<video>` **never** presented.
 
-| causa | perché |
+| cause | why |
 |---|---|
-| il `<video>` della sonda stava **fuori dallo schermo** (`left:-9999px`) | i motori mobili non presentano quel che nessuno guarda: risparmiano batteria. ⇒ Adesso sta dentro la vista, **due pixel per due**, quasi trasparente — visibile quanto basta al motore, non all'utente |
-| la sonda partiva **al caricamento della pagina** | presentare vuol dire suonare, e nessuno aveva ancora toccato niente. ⇒ Su questa strada il sondaggio si fa nel `CIAO`, cioè **dopo che l'utente ha premuto «Collegati»** |
+| the probe's `<video>` was **off screen** (`left:-9999px`) | mobile engines do not present what nobody looks at: they save battery. ⇒ Now it is inside the view, **two pixels by two**, almost transparent — visible enough for the engine, not for the user |
+| the probe started **at page load** | presenting means playing, and nobody had touched anything yet. ⇒ On this road the probing is done in `CIAO`, that is **after the user has pressed «Collegati»** |
 
-⚠ E la seconda cura ha un effetto laterale dichiarato: su MSE la sonda costa il suo tempo **a chi si
-collega** invece che al caricamento. Sulla strada di WebCodecs non cambia niente.
+⚠ And the second cure has a declared side effect: on MSE the probe costs its time **to whoever
+connects** instead of at load. On the WebCodecs road nothing changes.
 
-#### ⛔⛔ E al terzo «non è cambiato nulla» il difetto era **altrove** — banco `07-b58`
+#### ⛔⛔ And at the third «nothing has changed» the fault was **elsewhere** — bench `07-b58`
 
-*L'utente, 21 agosto 2026: «Non è cambiato assolutamente nulla, e mi stai facendo perdere tempo con
-test inutili». ⭐ Aveva ragione su tutta la riga: gli ho fatto provare tre volte **la mia sonda**,
-non il prodotto — e per tre volte quel che si rompeva non era quel che gli chiedevo di guardare.*
+*The user, 21 Aug 2026: «Non è cambiato assolutamente nulla, e mi stai facendo perdere tempo con
+test inutili». ⭐ He was right on the whole line: I had him test **my probe** three times,
+not the product — and three times what broke was not what I was asking him to look at.*
 
-⭐ **La cura del metodo, prima di quella del codice**: `dom.media.webcodecs.enabled = false` toglie
-`VideoDecoder` **e** `AudioDecoder` a un Firefox da tavolo. `[M]` `typeof VideoDecoder ===
-"undefined"` — esattamente quel che dichiara Firefox per Android. ⇒ La strada si prova **qui**, e
-sul telefono ci si va una volta sola, alla fine. È il banco `07-b58`.
+⭐ **The cure of the method, before that of the code**: `dom.media.webcodecs.enabled = false` removes
+`VideoDecoder` **and** `AudioDecoder` from a desktop Firefox. `[M]` `typeof VideoDecoder ===
+"undefined"` — exactly what Firefox for Android declares. ⇒ The road is tested **here**, and
+one goes to the phone only once, at the end. It is bench `07-b58`.
 
-⚠ E quel che quel banco NON riproduce si dichiara: le regole di risparmio dei motori mobili — un
-`<video>` piccolo o fuori dalla vista che non viene presentato. Per quelle l'ultima parola resta del
-telefono.
+⚠ And what that bench does NOT reproduce is declared: the power-saving rules of mobile engines — a
+small or off-view `<video>` that is not presented. For those the last word remains with the
+phone.
 
-**Alla prima esecuzione ha trovato in un colpo tre difetti che nessun giro sul telefono aveva
-nominato:**
+**At its first run it found in one go three faults that no round on the phone had
+named:**
 
-1. ⛔⛔ **La scala delle misure chiamava `VideoDecoder` e lanciava `ReferenceError` su ogni
-   gradino** — il primo compreso — e `video.misura_massima` usciva **320×240**, la tela minima di
-   §4.5. ⇒ Il server concedeva 320×240 e il desktop sarebbe apparso **in un francobollo**, senza una
-   riga che lo spiegasse. Adesso su questa strada la capacità si **omette** (§4.3 lo permette): non
-   si dichiara quel che non si è misurato.
-2. ⛔ **`document.body.dataset.schermo = "acceso"` non veniva mai scritto**, perché su questa strada
-   non si passa da `dipingi()`: la pagina sarebbe rimasta «in attesa del primo fotogramma» con il
-   desktop già sullo schermo.
-3. ⛔⛔ **Il risveglio del `<video>` era appeso ai fotogrammi presentati.** Un desktop sta fermo per
-   secondi; il `<video>` finisce i dati, si mette in pausa, e `requestVideoFrameCallback` **smette
-   di scattare** — perché scatta sui fotogrammi presentati. ⇒ La prima pausa del desktop avrebbe
-   fermato l'immagine **per sempre**. Adesso si insegue anche quando arrivano dati nuovi.
+1. ⛔⛔ **The size scale called `VideoDecoder` and threw `ReferenceError` on every
+   step** — the first included — and `video.misura_massima` came out as **320×240**, the minimum canvas of
+   §4.5. ⇒ The server granted 320×240 and the desktop would have appeared **in a postage stamp**, without a
+   line explaining it. Now on this road the capability is **omitted** (§4.3 allows it): what
+   was not measured is not declared.
+2. ⛔ **`document.body.dataset.schermo = "acceso"` was never written**, because on this road
+   `dipingi()` is not passed through: the page would have stayed «waiting for the first frame» with the
+   desktop already on the screen.
+3. ⛔⛔ **The `<video>`'s wake-up hung on the presented frames.** A desktop stays still for
+   seconds; the `<video>` runs out of data, pauses, and `requestVideoFrameCallback` **stops
+   firing** — because it fires on presented frames. ⇒ The desktop's first pause would have
+   frozen the image **for ever**. Now it also chases when new data arrives.
 
-⭐ **E la regola «si dichiara solo quel che dipinge» ha qui la sua prima eccezione dichiarata**
-(`DECISIONI.md` §1.13, `LEZIONI.md` §1.9): su questa strada la sonda dovrebbe far *presentare* un
-fotogramma a un `<video>` di prova, e sui motori mobili un `<video>` di prova **non presenta**.
-⇒ Si dichiara sulla parola del motore, e il controllo si sposta dove il `<video>` è **vero**:
-`Schermo.mse_veglia()` scrive in chiaro se dopo quattro secondi non è stato presentato nemmeno un
-fotogramma. ⚠ La tela nera resta **spiegata**, che è l'unica cosa che la regola serviva a impedire.
+⭐ **And the rule «only what paints is declared» has here its first declared exception**
+(`DECISIONI.md` §1.13, `LEZIONI.md` §1.9): on this road the probe would have to make a test `<video>`
+*present* a frame, and on mobile engines a test `<video>` **does not present**.
+⇒ It is declared on the engine's word, and the check moves to where the `<video>` is **real**:
+`Schermo.mse_veglia()` writes in plain words if after four seconds not even one frame has been
+presented. ⚠ The black canvas stays **explained**, which is the only thing the rule was meant to prevent.
 
-#### La misura, su un browser senza WebCodecs — 25 secondi di desktop vivo
+#### The measurement, on a browser without WebCodecs — 25 seconds of live desktop
 
 | | |
 |---|---|
-| fotogrammi consegnati → **dipinti** | 291 → ⭐ **250** |
-| buchi | ⭐ **0** |
-| coda del `<video>` | ⚠ 212 ms — coerente con il prezzo misurato in `07-b57` |
-| tela | ⭐ 1270×704, **non** i 320×240 di prima |
+| frames delivered → **painted** | 291 → ⭐ **250** |
+| gaps | ⭐ **0** |
+| `<video>` queue | ⚠ 212 ms — consistent with the price measured in `07-b57` |
+| canvas | ⭐ 1270×704, **not** the 320×240 of before |
 
-⚠ E il banco ha avuto anche il suo difetto, dichiarato: muovere il puntatore **non fa fotogrammi**
-— il cursore viaggia su un canale suo e i pixel del desktop non cambiano. `[M]` Un giro intero con
-**un** fotogramma, e stava per dichiarare «non dipinge» di una strada che dipingeva quel che c'era.
-⇒ Adesso apre un terminale che scorre.
+⚠ And the bench too had its fault, declared: moving the pointer **does not make frames**
+— the cursor travels on a channel of its own and the desktop's pixels do not change. `[M]` A whole round with
+**one** frame, and it was about to declare «does not paint» of a road that painted what there was.
+⇒ Now it opens a scrolling terminal.
 
-#### ⛔ «Vedo il desktop ma non funziona l'input» — la tela non si nasconde
+#### ⛔ «Vedo il desktop ma non funziona l'input» — the canvas is not hidden
 
-*L'utente, 21 agosto 2026, ed è la prima volta che su Firefox per Android il desktop **si vede**.*
+*The user, 21 Aug 2026, and it is the first time the desktop **can be seen** on Firefox for Android.*
 
-⛔ **Tutto** l'input di questa pagina è agganciato alla `<canvas>` — `pointermove`, `mousedown`,
-`wheel`, `contextmenu` e i quattro eventi del tocco — e le coordinate escono dal suo
-`getBoundingClientRect()`. ⇒ Nascondendola con `display:none` per far posto al `<video>`, gli
-eventi non arrivavano a nessuno e il rettangolo valeva zero: **il desktop si vede e non si
-comanda**.
+⛔ **All** the input of this page is hooked to the `<canvas>` — `pointermove`, `mousedown`,
+`wheel`, `contextmenu` and the four touch events — and the coordinates come out of its
+`getBoundingClientRect()`. ⇒ Hiding it with `display:none` to make room for the `<video>`, the
+events reached nobody and the rectangle was zero: **the desktop can be seen and cannot be
+commanded**.
 
-⭐ **La cura**: la tela resta **dov'è e com'è** — è la superficie che riceve i gesti — e diventa
-**trasparente**; il `<video>` le sta **dietro**, incollato al suo rettangolo (`mse_posiziona()`, che
-segue `cornice()`). ⇒ Su questa strada, per chi tocca lo schermo, non cambia niente: tocca la stessa
-cosa di sempre.
+⭐ **The cure**: the canvas stays **where and as it is** — it is the surface that receives the gestures — and becomes
+**transparent**; the `<video>` sits **behind** it, glued to its rectangle (`mse_posiziona()`, which
+follows `cornice()`). ⇒ On this road, for whoever touches the screen, nothing changes: they touch the same
+thing as always.
 
-⚠ E il banco ha avuto il suo difetto anche qui: cliccava a una coordinata scelta a occhio, che
-cadeva fuori dalla tela — e avrebbe detto «il clic non arriva» di un clic mai dato. ⇒ Adesso il
-centro della tela lo **chiede alla pagina**.
+⚠ And the bench had its fault here too: it clicked at a coordinate chosen by eye, which
+fell outside the canvas — and it would have said «the click does not arrive» of a click never given. ⇒ Now it
+**asks the page** for the centre of the canvas.
 
-#### La misura finale, browser senza WebCodecs, desktop vivo
+#### The final measurement, browser without WebCodecs, live desktop
 
 | | |
 |---|---|
-| immagine | ⭐ 351 consegnati → **196 dipinti**, **0 buchi**, tela 1270×704 |
-| input | ⭐ **4 eventi al server**: la lettera, il movimento, e `PULSANTE evdev 272` premuto e rilasciato |
-| coda | 50 ms |
+| image | ⭐ 351 delivered → **196 painted**, **0 gaps**, canvas 1270×704 |
+| input | ⭐ **4 events to the server**: the letter, the movement, and `PULSANTE evdev 272` pressed and released |
+| queue | 50 ms |
 
-⚠ Un fotogramma su due non viene presentato: è il `<video>` che scarta sotto un terminale che
-scorre, **in software e senza GPU**. Sul telefono, che decodifica H.264 in hardware, il rapporto è
-un'altra cosa — e lì la misura la fa l'utente.
+⚠ One frame out of two is not presented: it is the `<video>` discarding under a scrolling
+terminal, **in software and without a GPU**. On the phone, which decodes H.264 in hardware, the ratio is
+another matter — and there the user takes the measurement.
 
-#### ⛔ «Non si vede il desktop» — la cornice non veniva mai chiamata
+#### ⛔ «Non si vede il desktop» — the frame border was never called
 
-*Subito dopo la cura dell'input: il desktop era sparito.*
+*Right after the input cure: the desktop had disappeared.*
 
-⛔ `cornice()` è quel che dà alla tela la sua **misura sul vetro**, e sulla strada di WebCodecs la
-chiama il disegno (`componi()`). ⇒ Su questa strada il disegno non passa di lì: la tela restava
-larga **sedici pixel** — la misura con cui la `<canvas>` nasce nel documento — e il `<video>`, che
-adesso le sta incollato dietro, la seguiva fedelmente **in un francobollo invisibile**.
+⛔ `cornice()` is what gives the canvas its **size on the glass**, and on the WebCodecs road it is
+called by the drawing (`componi()`). ⇒ On this road the drawing does not pass through there: the canvas stayed
+**sixteen pixels** wide — the size the `<canvas>` is born with in the document — and the `<video>`, which
+now is glued behind it, followed it faithfully **in an invisible postage stamp**.
 
-⭐ La misura del fotogramma su questa strada si sa (è la tela concessa): si scrive in `f_l`/`f_a`,
-dove le due strade la tengono, e si incornicia.
+⭐ The frame size on this road is known (it is the granted canvas): it is written into `f_l`/`f_a`,
+where both roads keep it, and the border is framed.
 
-#### ⚠ E il banco era **verde** mentre l'utente non vedeva niente
+#### ⚠ And the bench was **green** while the user saw nothing
 
-`07-b58` contava i fotogrammi e leggeva i contatori: tutti buoni. ⛔ Non guardava **dove finisce
-l'immagine sul vetro**, che è l'unica cosa che l'utente vede. ⇒ Adesso lo misura, e boccia due casi
-distinti:
+`07-b58` counted the frames and read the counters: all good. ⛔ It did not look at **where the
+image ends up on the glass**, which is the only thing the user sees. ⇒ Now it measures it, and fails two
+distinct cases:
 
-| controllo | che difetto prende |
+| check | which fault it catches |
 |---|---|
-| il `<video>` occupa una frazione ragionevole della finestra | il francobollo |
-| il `<video>` è **incollato** al rettangolo della tela (±2 px) | i gesti che finirebbero nel posto sbagliato, perché la superficie che li riceve non sta dove si vede l'immagine |
+| the `<video>` occupies a reasonable fraction of the window | the postage stamp |
+| the `<video>` is **glued** to the canvas rectangle (±2 px) | gestures that would end up in the wrong place, because the surface receiving them is not where the image is seen |
 
-`[M]` Adesso: `tela [1270, 704] · video [1270, 704] · finestra [1270, 705]`, 6 eventi di input al
-server, 499 fotogrammi consegnati e 123 presentati, 0 buchi.
+`[M]` Now: `tela [1270, 704] · video [1270, 704] · finestra [1270, 705]`, 6 input events to the
+server, 499 frames delivered and 123 presented, 0 gaps.
 
-## ⭐⭐⭐ 21 agosto 2026, sera — **REMOTIX gira su Firefox per Android**
+## ⭐⭐⭐ 21 Aug 2026, evening — **REMOTIX runs on Firefox for Android**
 
-*L'utente, dopo sei giri di prove sul suo telefono: «non sei in grado di far funzionare Firefox per
-android con remotix». Poi: **«Installa la suite android sdk, usa quella»**. ⭐ Aveva ragione due
-volte — sul risultato e sul metodo.*
+*The user, after six rounds of tests on his phone: «non sei in grado di far funzionare Firefox per
+android con remotix». Then: **«Installa la suite android sdk, usa quella»**. ⭐ He was right twice
+— on the result and on the method.*
 
-⭐ **La fotografia dell'emulatore**: dentro Firefox 154 per Android — la stessa versione del suo
-telefono — c'è lo sfondo di GNOME, la barra in alto con l'ora `Aug 21 16:01`, e i due terminali
-`REMOTIX-SCENA` che scorrono timestamp **vivi**. Desktop remoto, in movimento, su un browser senza
+⭐ **The emulator's photograph**: inside Firefox 154 for Android — the same version as his
+phone — there is the GNOME background, the top bar with the time `Aug 21 16:01`, and the two
+`REMOTIX-SCENA` terminals scrolling **live** timestamps. Remote desktop, moving, on a browser without
 WebCodecs.
 
-### ⛔ I tre difetti che solo Android poteva mostrare
+### ⛔ The three faults only Android could show
 
-`07-b58` (Firefox da tavolo con `dom.media.webcodecs.enabled=false`) prende quasi tutto, ma **non**
-prende quel che è proprio del motore mobile. Questi tre sono usciti solo qui:
+`07-b58` (desktop Firefox with `dom.media.webcodecs.enabled=false`) catches almost everything, but it does **not**
+catch what is specific to the mobile engine. These three came out only here:
 
-1. ⛔⛔ **La ricerca che non finisce mai.** L'inseguimento del bordo vivo scriveva `currentTime`,
-   cioè una **ricerca** — e una ricerca vuole un punto di accesso casuale, cioè una chiave, che lì
-   non c'è. `[M]` `cerca=true · pronto=1 · tempo=34,41 · buffer=0,00→40,34 · errore=no`, e
-   **19 fotogrammi dipinti su 727**. ⇒ Non si salta più: si insegue con la **velocità**
-   (`playbackRate` 1,25 finché la coda rientra). Costa un filo di accelerazione invece di uno
-   scatto, e non chiede una chiave a nessuno.
-2. ⛔ **La potatura del passato svuotava tutto.** `sb.remove()` per non tenere in memoria il già
-   visto lasciava `buffer=nessuno` con 817 fotogrammi consegnati. ⇒ Tolta: qualche secondo di video
-   in memoria è un prezzo che si paga volentieri, una pagina nera no.
-3. ⛔⛔ **E `dipinti` non è «quanti se ne vedono».** `requestVideoFrameCallback` sui motori mobili è
-   **strozzato**: `[M]` 46 scatti in 35 secondi mentre il desktop si muoveva. ⇒ Per due volte quel
-   numero mi ha fatto credere che l'immagine fosse ferma. Il giudice, lì, è **lo schermo** — una
-   fotografia — non il contatore.
+1. ⛔⛔ **The seek that never ends.** Chasing the live edge wrote `currentTime`,
+   that is a **seek** — and a seek wants a random access point, that is a key frame, which there
+   is not there. `[M]` `cerca=true · pronto=1 · tempo=34,41 · buffer=0,00→40,34 · errore=no`, and
+   **19 frames painted out of 727**. ⇒ No more jumping: it chases with **speed**
+   (`playbackRate` 1.25 until the queue comes back). It costs a touch of acceleration instead of a
+   stutter, and asks nobody for a key frame.
+2. ⛔ **Pruning the past emptied everything.** `sb.remove()` to avoid keeping in memory what had been
+   seen left `buffer=nessuno` with 817 frames delivered. ⇒ Removed: a few seconds of video
+   in memory is a price gladly paid, a black page is not.
+3. ⛔⛔ **And `dipinti` is not «how many are seen».** `requestVideoFrameCallback` on mobile engines is
+   **throttled**: `[M]` 46 firings in 35 seconds while the desktop was moving. ⇒ Twice that
+   number made me believe the image was still. The judge, there, is **the screen** — a
+   photograph — not the counter.
 
-### ⭐ E lo strumento resta: `banchi/07-b59-firefox-android.py`
+### ⭐ And the tool stays: `banchi/07-b59-firefox-android.py`
 
-Emulatore Android 14 con KVM, Firefox **154.0** per Android, e il giro completo da solo: accetta il
-certificato, entra come «prova», lascia girare, e legge nel registro del **server** la riga che la
-pagina racconta di sé — `MISURA §7.18 MSE: consegnati … dipinti … fermo= cerca= pronto= buffer=`.
+Android 14 emulator with KVM, Firefox **154.0** for Android, and the full round by itself: it accepts the
+certificate, logs in as «prova», lets it run, and reads in the **server's** log the line the
+page tells about itself — `MISURA §7.18 MSE: consegnati … dipinti … fermo= cerca= pronto= buffer=`.
 
-⚠ E quel che **non** riproduce si dichiara: l'emulatore non ha la decodifica in hardware. ⇒ I
-**numeri** del ritardo non valgono; vale il **comportamento** — dipinge o no, si ferma o no, e
-perché.
+⚠ And what it does **not** reproduce is declared: the emulator does not have hardware decoding. ⇒ The delay
+**numbers** do not hold; the **behaviour** holds — does it paint or not, does it stop or not, and
+why.
 
-⛔ **La lezione di metodo, e l'ha insegnata l'utente**: quando una prova richiede sei giri di una
-persona, lo strumento sbagliato non è il prodotto — è il banco. Sei ore prima avrei potuto
-installarlo.
+⛔ **The method lesson, and the user taught it**: when a test requires six rounds from a
+person, the wrong tool is not the product — it is the bench. Six hours earlier I could have
+installed it.
 
-### ⭐ Il giro completo, fatto da me — 21 agosto 2026, sera
+### ⭐ The full round, done by me — 21 Aug 2026, evening
 
-*L'utente: «prova tu».*
+*The user: «prova tu».*
 
-| prova | esito |
+| test | outcome |
 |---|---|
-| **Firefox 154 per Android** (emulatore, `07-b59`) | ⭐ desktop **vivo** — orologio `16:52`, terminali che scorrono; `fermo=false cerca=false pronto=3`, il tempo del video **avanza di 4,43 s in 5** |
-| input da Android | ⭐ il tocco arriva: `PULSANTE codice evdev 272 rilasciato` nel registro del server |
-| ritardo su Android (emulatore) | ⚠ **2,3 s** dal bordo vivo — ⛔ e il numero **non vale**: decodifica in software, scena pesante, tela 1080×2040 |
-| **senza WebCodecs, da tavolo** (`07-b58`) | ⭐ **0,21 s** dal bordo vivo, 277 dipinti su 444, input e geometria verdi |
-| **strada normale**, WebCodecs (`07-b51`) | ⭐ 4 controlli su 4 per motore, **intatta** |
+| **Firefox 154 for Android** (emulator, `07-b59`) | ⭐ desktop **alive** — clock `16:52`, terminals scrolling; `fermo=false cerca=false pronto=3`, the video time **advances by 4.43 s in 5** |
+| input from Android | ⭐ the touch arrives: `PULSANTE codice evdev 272 rilasciato` in the server's log |
+| delay on Android (emulator) | ⚠ **2.3 s** from the live edge — ⛔ and the number **does not hold**: software decoding, heavy scene, canvas 1080×2040 |
+| **without WebCodecs, desktop** (`07-b58`) | ⭐ **0.21 s** from the live edge, 277 painted out of 444, input and geometry green |
+| **normal road**, WebCodecs (`07-b51`) | ⭐ 4 checks out of 4 per engine, **intact** |
 
-⛔ **E il giudizio del banco è stato riscritto**, perché sbagliava: dava rosso sul contatore
-`dipinti`, che su mobile è strozzato. ⇒ Adesso guarda quel che descrive davvero lo stato del
-`<video>` — *sta suonando? sta cercando? ha dati? quanto è indietro?* — e ⭐ **confronta due
-letture**, perché un'immagine che avanza e una ferma hanno lo stesso aspetto in una fotografia sola.
+⛔ **And the bench's judgement was rewritten**, because it was wrong: it gave red on the counter
+`dipinti`, which on mobile is throttled. ⇒ Now it looks at what really describes the state of the
+`<video>` — *is it playing? is it seeking? does it have data? how far behind is it?* — and ⭐ **compares two
+readings**, because an image that advances and a still one look the same in a single photograph.
 
-## ⛔ 21 agosto 2026, sera — **il giudizio dell'utente: Firefox per Android è incompatibile**
+## ⛔ 21 Aug 2026, evening — **the user's judgement: Firefox for Android is incompatible**
 
 > *«Niente da fare, troppi problemi: disegno del desktop irregolare, input imprevedibile, dichiaro
 > Firefox per Android incompatibile con REMOTIX.»*
 
-⚠ **E la strada funziona**: il desktop si vede vivo e i tocchi arrivano — misurato poche ore prima
-sullo stesso emulatore. ⛔ Ma *«funziona»* non era il traguardo: il traguardo è §0.1-bis, cioè
-un'esperienza vicina a una sessione locale. A un `<video>` che **riproduce** non si può chiedere di
-reagire come un decodificatore comandato a mano.
+⚠ **And the road works**: the desktop is seen alive and the touches arrive — measured a few hours earlier
+on the same emulator. ⛔ But *«it works»* was not the goal: the goal is §0.1-bis, that is
+an experience close to a local session. A `<video>` that **plays back** cannot be asked to
+react like a decoder commanded by hand.
 
-⇒ **Nel prodotto**: `VIA_MSE` non si accende più da sola. Su un browser senza WebCodecs la pagina
-**dichiara che non si può**, e nomina l'alternativa (Chrome per Android). ⭐ Mezza esperienza è
-peggio di un rifiuto spiegato.
+⇒ **In the product**: `VIA_MSE` no longer turns on by itself. On a browser without WebCodecs the page
+**declares that it cannot**, and names the alternative (Chrome for Android). ⭐ Half an experience is
+worse than an explained refusal.
 
-⇒ **Il codice resta dietro `?disegno=mse`**, perché finché Mozilla non porta WebCodecs su Android è
-l'unica prova che il problema non è nostro. Alla fase 13 si decide se buttarlo.
+⇒ **The code stays behind `?disegno=mse`**, because until Mozilla brings WebCodecs to Android it is
+the only proof that the problem is not ours. At phase 13 it is decided whether to throw it away.
 
-### ⭐ Che cosa resta di buono, e non è poco
+### ⭐ What good remains, and it is not little
 
 | | |
 |---|---|
-| `07-b58` | REMOTIX su un browser **senza WebCodecs**, riprodotto da tavolo con una preferenza |
-| `07-b59` | **Firefox per Android vero**, in un emulatore: certificato, accesso, misura e fotografia — da solo |
-| `LEZIONI.md` §1.19 | chi apre chiude: i banchi lavorano sul desktop di una persona |
-| la sonda che riconosce il nero, la cornice, l'input agganciato alla tela | difetti veri, curati, che valgono anche fuori da questa strada |
+| `07-b58` | REMOTIX on a browser **without WebCodecs**, reproduced on the desktop with one preference |
+| `07-b59` | **real Firefox for Android**, in an emulator: certificate, login, measurement and photograph — by itself |
+| `LEZIONI.md` §1.19 | whoever opens closes: the benches work on a person's desktop |
+| the probe that recognises black, the frame border, the input hooked to the canvas | real faults, cured, that hold outside this road too |
 
-⛔ **E il costo si scrive**: sei giri di prove sul telefono dell'utente e una giornata, per una
-strada che non entra nel prodotto. ⚠ La lezione non è «non andava fatto»: è che **la domanda "quanto
-renderà?" andava misurata prima di costruire** — e il numero c'era già, dal banco `07-b57`:
-centinaia di millisecondi contro un tetto di 50.
+⛔ **And the cost is written**: six rounds of tests on the user's phone and a day, for a
+road that does not enter the product. ⚠ The lesson is not «it should not have been done»: it is that **the question "how
+well will it perform?" should have been measured before building** — and the number was already there, from bench `07-b57`:
+hundreds of milliseconds against a ceiling of 50.
 
