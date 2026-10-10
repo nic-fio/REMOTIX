@@ -2679,397 +2679,397 @@ is declared; what arrives by chance, by chance goes away.**
 
 ---
 
-### 1.43 ⛔⛔ **Un ambiente che RIPIEGA IN SILENZIO produce numeri peggiori e nessun rosso**
+### 1.43 ⛔⛔ **An environment that FALLS BACK SILENTLY produces worse numbers and no red**
 
-*26 agosto 2026, fase 11, primo avvio della scatola.*
+*26 Aug 2026, phase 11, first start of the box.*
 
-`[M]` Il nodo della scheda grafica è entrato nel contenitore con il **numero** di gruppo dell'ospite,
-⛔ ma dentro quel numero apparteneva a un **altro gruppo**. L'inquilino è rimasto fuori, e il
-compositore ha scritto due righe che nessuno stava leggendo:
+`[M]` The graphics card node entered the container with the host's group **number**,
+⛔ but inside, that number belonged to **another group**. The tenant was left out, and the
+compositor wrote two lines nobody was reading:
 
 ```
 libEGL warning: failed to open /dev/dri/renderD128: Permission denied
 libmutter-Message: Created surfaceless renderer without GPU
 ```
 
-⇒ ⛔⛔ **Un banco che misura la codifica in SOFTWARE credendo di misurare l'hardware.** Nessun errore,
-nessun rosso: **solo numeri peggiori**, che qualcuno avrebbe attribuito al desktop o al codice nuovo.
+⇒ ⛔⛔ **A bench that measures SOFTWARE encoding believing it is measuring the hardware.** No error,
+no red: **only worse numbers**, which someone would have attributed to the desktop or to the new code.
 
-> ⭐ **La regola** — è `CODER.md` §3.9 applicata all'**ambiente** invece che a un componente:
-> *chiedi il pezzo per nome, e verifica che l'abbia obbedito.* ⇒ Qui: dopo aver acceso la scatola si
-> **rilegge dal nodo** che l'inquilino sia davvero nel gruppo della scheda, e se non lo è **si dice**.
+> ⭐ **The rule** — it is `CODER.md` §3.9 applied to the **environment** instead of to a component:
+> *ask for the piece by name, and verify that it obeyed.* ⇒ Here: after starting the box,
+> **reread from the node** that the tenant really is in the card's group, and if it is not, **say so**.
 >
-> ⚠ E la cura non inchioda il numero: lo **legge** dal nodo e vi si allinea, dichiarandolo. ⛔ Un
-> numero inchiodato avrebbe fatto una cosa che funziona su questa macchina e **tace** su un'altra.
+> ⚠ And the cure does not nail the number down: it **reads** it from the node and aligns to it, declaring it. ⛔ A
+> nailed-down number would have made something that works on this machine and **keeps quiet** on another.
 
 
 ---
 
-### 1.44 ⛔⛔⛔ **Il predicato che non poteva dare rosso, e aveva l'aspetto di uno che passa**
+### 1.44 ⛔⛔⛔ **The predicate that could not give red, and looked like one that passes**
 
-*26 agosto 2026, fase 11, prima stesura di C8.*
+*26 Aug 2026, phase 11, first draft of C8.*
 
-Il difetto da prendere: dieci inquilini con `~/.cache` che punta tutta allo stesso posto, e il
-browser che dal **secondo** in poi non fa più il suo profilo. Il predicato scritto per verificarlo —
-e scritto **bene**, secondo la regola E1 *«non si guarda il collegamento, si prova a SCRIVERE»* —
-era:
+The defect to catch: ten tenants with `~/.cache` all pointing to the same place, and the
+browser that from the **second** onwards no longer makes its profile. The predicate written to verify it —
+and written **well**, according to rule E1 *«don't look at the link, try to WRITE»* —
+was:
 
 ```
 mkdir -p ~/.cache/.prova && rmdir ~/.cache/.prova
 ```
 
-⛔ **Non poteva fallire mai.** Con il collegamento, `~/.cache` **è `/tmp`**, e `/tmp` è scrivibile da
-chiunque (modo `1777`). ⇒ Il predicato diceva **«sa scrivere: sì»** anche all'inquilino che il
-browser non riusciva ad aprirlo.
+⛔ **It could never fail.** With the link, `~/.cache` **is `/tmp`**, and `/tmp` is writable by
+anyone (mode `1777`). ⇒ The predicate said **«can write: yes»** even for the tenant whose
+browser could not open it.
 
-⭐ **Il posto che morde era un livello più sotto**: `~/.cache/**mozilla**`, che il **primo** inquilino
-si prende a modo `0700`. Ed era già scritto, con la sua misura, dentro `src/provisiona.sh`: *«da
+⭐ **The place that bites was one level further down**: `~/.cache/**mozilla**`, which the **first** tenant
+takes with mode `0700`. And it was already written, with its measurement, inside `src/provisiona.sh`: *«from
 `provanic3`, `mkdir -p ~/.cache/mozilla` → Permission denied»*.
 
-> ### ⛔ La regola, e vale oltre questo caso
+> ### ⛔ The rule, and it holds beyond this case
 >
-> **Applicare E1 non basta: bisogna applicarlo NEL POSTO CHE MORDE.** Un predicato che prova la cosa
-> giusta un livello troppo in alto ⛔ **ha esattamente lo stesso aspetto di un predicato che passa** —
-> ed è peggio di non averlo, perché rassicura.
+> **Applying E1 is not enough: it must be applied IN THE PLACE THAT BITES.** A predicate that tests the right
+> thing one level too high ⛔ **looks exactly like a predicate that passes** —
+> and it is worse than not having it, because it reassures.
 >
-> ⇒ ⭐ **La contro-prova che lo avrebbe preso in dieci secondi**: far girare il predicato **col guasto
-> innestato** e pretendere che dia rosso. È la stessa cosa che questa fase chiede a ogni maglia
-> (`--certifica`), ⛔ e vale anche per il singolo predicato dentro una maglia, non solo per la maglia.
+> ⇒ ⭐ **The counter-test that would have caught it in ten seconds**: run the predicate **with the fault
+> injected** and demand that it gives red. It is the same thing this phase asks of every mesh
+> (`--certifica`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
 
 ---
 
-### 1.45 ⛔⛔ **Il tetto di una prova prestato a un'altra — e il rosso che non distingue più niente**
+### 1.45 ⛔⛔ **The ceiling of one test lent to another — and the red that no longer distinguishes anything**
 
-*26 agosto 2026, fase 11, primo giro vero di C8.*
+*26 Aug 2026, phase 11, first real round of C8.*
 
-C8 fa due cose con tempi diversissimi: **aspettare che una pagina compaia su un desktop già acceso**
-(~25 s) e **far partire Firefox per la prima volta in una scatola fredda** (che crea il profilo, e
-passa abbondantemente i 25 s). ⛔ La prima stesura usava **lo stesso tetto** per tutt'e due.
+C8 does two things with very different times: **waiting for a page to appear on an already running desktop**
+(~25 s) and **starting Firefox for the first time in a cold box** (which creates the profile, and
+well exceeds the 25 s). ⛔ The first draft used **the same ceiling** for both.
 
-`[M]` Esito: **rosso a tutt'e due gli inquilini, con la cura e senza.**
+`[M]` Outcome: **red for both tenants, with the cure and without.**
 
-⇒ ⛔⛔ **E il danno vero non è il rosso falso: è che il COLLAUDO smette di valere.** Il senso di
-`--senza-cura` è *«col guasto innestato deve diventare rosso»*; ⚠ se è rosso **anche senza**, quel
-confronto non dimostra più niente, e una maglia che non sa distinguere il guasto dal proprio tetto
-⛔ **è indistinguibile da una maglia rotta**.
+⇒ ⛔⛔ **And the real damage is not the false red: it is that the ACCEPTANCE TEST stops being valid.** The meaning of
+`--senza-cura` is *«with the fault injected it must turn red»*; ⚠ if it is red **even without**, that
+comparison no longer proves anything, and a mesh that cannot tell the fault from its own ceiling
+⛔ **is indistinguishable from a broken mesh**.
 
-> ⭐ **La regola**: ogni attesa ha un **nome suo** e un **valore suo**, e il valore si giustifica con
-> quel che si sta aspettando. ⛔ Riusare un tetto perché «è lì e più o meno va bene» è la stessa
-> forma d'errore di riusare un numero misurato in un'altra condizione.
+> ⭐ **The rule**: every wait has **its own name** and **its own value**, and the value is justified by
+> what is being waited for. ⛔ Reusing a ceiling because «it is there and more or less fine» is the same
+> form of error as reusing a number measured in another condition.
 >
-> ⚠ E il segnale che avrebbe dovuto insospettire subito: **tutti rossi**. Un guasto che colpisce
-> *«dal secondo in poi»* e che invece colpisce **anche il primo** non è quel guasto — ⇒ e adesso è
-> C8 stessa a dirlo, invece di lasciarlo dedurre.
+> ⚠ And the signal that should have raised suspicion at once: **all red**. A fault that hits
+> *«from the second onwards»* and instead hits **the first too** is not that fault — ⇒ and now it is
+> C8 itself that says so, instead of leaving it to be deduced.
 
 ---
 
-### 1.46 ⛔⛔⛔ **Il banco che non ha girato affatto — e ha detto «riuscito»**
+### 1.46 ⛔⛔⛔ **The bench that did not run at all — and said «succeeded»**
 
-*26 agosto 2026, fase 11.*
+*26 Aug 2026, phase 11.*
 
-Un comando annidato **tre volte** — `ssh` → `systemd-run … /bin/bash -c "…"` → `podman exec … sh -c
-"cd … && python3 …"` — ha perso le virgolette per strada. ⛔ **Non ha eseguito niente**, non ha
-stampato niente, e ha restituito **`0`**.
+A command nested **three times** — `ssh` → `systemd-run … /bin/bash -c "…"` → `podman exec … sh -c
+"cd … && python3 …"` — lost its quotes along the way. ⛔ **It ran nothing**, it
+printed nothing, and it returned **`0`**.
 
-⇒ ⛔⛔ **Un verde che non ha nessuna misura sotto**, e che dal lato di chi legge il registro ha
-**esattamente lo stesso aspetto** di un giro riuscito. ⚠ È il rovescio peggiore di §1.41: là il banco
-gridava rosso senza avere guardato; qui **tace e dice sì**.
+⇒ ⛔⛔ **A green with no measurement underneath**, and which from the side of whoever reads the log has
+**exactly the same look** as a successful round. ⚠ It is the worse reverse of §1.41: there the bench
+shouted red without having looked; here it **keeps quiet and says yes**.
 
-> ### ⭐ Le due regole, e la seconda vale più della prima
+> ### ⭐ The two rules, and the second is worth more than the first
 >
-> 1. ⛔ **Niente gusci in mezzo**: il programma si chiama **per percorso assoluto**, senza `sh -c`
->    dentro `podman exec` dentro `systemd-run` dentro `ssh`. Ogni livello di virgolette è un posto
->    dove il comando può sparire.
-> 2. ⭐⭐ **Un banco che non ha prodotto NESSUNA riga non è «riuscito»**: chi lo lancia deve
->    pretendere di vedere l'intestazione e il conto finale, ⛔ e trattare il silenzio come *«non ho
->    guardato»* (esito 3) — mai come verde. `LEZIONI.md` §1.30 lo dice per la sollecitazione; qui
->    vale per il banco stesso.
+> 1. ⛔ **No shells in between**: the program is called **by absolute path**, without `sh -c`
+>    inside `podman exec` inside `systemd-run` inside `ssh`. Every level of quotes is a place
+>    where the command can vanish.
+> 2. ⭐⭐ **A bench that produced NO line is not «succeeded»**: whoever launches it must
+>    demand to see the header and the final count, ⛔ and treat silence as *«I did not
+>    look»* (outcome 3) — never as green. `LEZIONI.md` §1.30 says it for the stress; here
+>    it holds for the bench itself.
 
-### 1.47 ⛔⛔ **Un confronto fra valori che nessuno sa dare è VERDE, e non ha guardato niente**
+### 1.47 ⛔⛔ **A comparison between values nobody can give is GREEN, and has looked at nothing**
 
-*26 agosto 2026, fase 11, prima stesura di C11.*
+*26 Aug 2026, phase 11, first draft of C11.*
 
-C11 confronta tredici cose fra le quattro scatole e dice *«sono allineate»* se ogni voce ha lo
-**stesso valore** dappertutto. ⛔ Tre voci chiedevano pacchetti con il nome sbagliato —
-`libssl3` e `libpipewire-0.3-0`, che in Debian 13 si chiamano `libssl3t64` e
-`libpipewire-0.3-0t64`. ⇒ Tutte e quattro le scatole rispondevano **`?`**.
+C11 compares thirteen things across the four boxes and says *«they are aligned»* if every item has the
+**same value** everywhere. ⛔ Three items asked for packages with the wrong name —
+`libssl3` and `libpipewire-0.3-0`, which in Debian 13 are called `libssl3t64` and
+`libpipewire-0.3-0t64`. ⇒ All four boxes answered **`?`**.
 
-⭐⭐ **E `?` uguale a `?` è uguale.** Le tre voci **passavano il confronto**, e passavano ogni volta,
-per sempre. ⛔ Tre controlli su tredici non stavano guardando niente, e il verde diceva
-*«allineate»* con la stessa faccia di quando le guardava davvero.
+⭐⭐ **And `?` equal to `?` is equal.** The three items **passed the comparison**, and passed every time,
+forever. ⛔ Three checks out of thirteen were looking at nothing, and the green said
+*«aligned»* with the same face as when it really looked.
 
-> ### ⭐ La regola
+> ### ⭐ The rule
 >
-> ⛔ **Un confronto ha bisogno che almeno uno sappia rispondere.** Una voce a cui **nessuno** risponde
-> non è «uguale per tutti»: è **muta**, e va detta a parte.
+> ⛔ **A comparison needs at least one party able to answer.** An item **nobody** answers
+> is not «equal for all»: it is **mute**, and it must be stated separately.
 >
-> ⇒ C11 adesso le conta e le **stampa**: *«N voci a cui nessuna scatola sa rispondere — e una voce
-> muta passa il confronto senza aver guardato niente»*.
+> ⇒ C11 now counts them and **prints** them: *«N items no box can answer — and a mute
+> item passes the comparison without having looked at anything»*.
 >
-> ⚠ **È la stessa forma d'errore di §1.44** (il predicato che non poteva fallire) vista da un'altra
-> parte: là il predicato diceva sempre sì, qui il confronto dice sempre uguale. ⭐ In tutt'e due i
-> casi il segnale è lo stesso — **un controllo che non ha mai dato rosso in vita sua va guardato in
-> faccia**, non festeggiato.
+> ⚠ **It is the same form of error as §1.44** (the predicate that could not fail) seen from another
+> side: there the predicate always said yes, here the comparison always says equal. ⭐ In both
+> cases the signal is the same — **a check that has never given red in its life must be looked in the
+> face**, not celebrated.
 
-### 1.48 ⛔⛔ **Il ciclo delle opzioni si è mangiato l'argomento — e il messaggio ha detto «riuscito»**
+### 1.48 ⛔⛔ **The options loop swallowed the argument — and the message said «succeeded»**
 
-*26 agosto 2026, fase 11, il gancio.*
+*26 Aug 2026, phase 11, the hook.*
 
-`11-gancio.sh installa pre-commit` ⛔ **installava `pre-push`**, e stampava tranquillamente che era
-andata bene. Il ciclo che legge le opzioni consumava l'argomento e non lo passava a nessuno; il
-messaggio di conferma ripeteva **quel che era stato chiesto**, non quel che era stato fatto.
+`11-gancio.sh installa pre-commit` ⛔ **installed `pre-push`**, and calmly printed that it had
+gone well. The loop that reads the options consumed the argument and passed it to nobody; the
+confirmation message repeated **what had been asked**, not what had been done.
 
-⇒ ⭐⭐ **E questa è la regola, ed è più larga del bug**: un messaggio di riuscita che ripete
-l'intenzione **non è una verifica, è un'eco**. `CODER.md` §3.9 dice *chiedi il pezzo per nome, e
-verifica che l'abbia obbedito*: qui il pezzo eri tu stesso.
+⇒ ⭐⭐ **And this is the rule, and it is wider than the bug**: a success message that repeats
+the intention **is not a verification, it is an echo**. `CODER.md` §3.9 says *ask for the piece by name, and
+verify that it obeyed*: here the piece was yourself.
 
-> ⛔ **Il messaggio di conferma si costruisce RILEGGENDO il risultato**, non ricopiando la richiesta.
-> «Installato in `<percorso letto adesso dal disco>`», non «installato `<quello che mi hai chiesto>`».
+> ⛔ **The confirmation message is built by REREADING the result**, not by copying the request.
+> «Installed in `<percorso letto adesso dal disco>`», not «installed `<quello che mi hai chiesto>`».
 >
-> ⚠ È la stessa famiglia di §1.46 — là il comando non era stato eseguito affatto e il codice d'uscita
-> diceva `0`; qui è stato eseguito **su un bersaglio diverso** e il messaggio diceva sì. ⇒ In tutt'e
-> due i casi il difetto sta nel **punto in cui si riferisce**, non nel punto in cui si fa.
+> ⚠ It is the same family as §1.46 — there the command had not been run at all and the exit code
+> said `0`; here it was run **on a different target** and the message said yes. ⇒ In both
+> cases the defect lies in the **point where it is reported**, not in the point where it is done.
 
 ---
 
-### 1.49 ⛔ **Un rosso che non si può far diventare verde è peggio di nessuna maglia**
+### 1.49 ⛔ **A red that cannot be made green is worse than no mesh at all**
 
-*26 agosto 2026, fase 11, C12.*
+*26 Aug 2026, phase 11, C12.*
 
-C12 controlla che il gancio sia installato, e per trovarlo usava `git --git-path`. ⛔ Quel comando
-torna un percorso **relativo alla cartella data a `-C`**, non alla radice del deposito. ⇒ La maglia
-cercava il gancio in un posto che non esiste, e avrebbe detto **«non installato» per sempre**, anche
-subito dopo averlo installato.
+C12 checks that the hook is installed, and to find it used `git --git-path`. ⛔ That command
+returns a path **relative to the folder given to `-C`**, not to the root of the repository. ⇒ The mesh
+looked for the hook in a place that does not exist, and would have said **«not installed» forever**, even
+right after installing it.
 
-⭐ **Un rosso perpetuo non è prudenza: è rumore.** E il rumore, in una rete di sicurezza, finisce
-sempre allo stesso modo — §1.3 del documento di fase: *«una rete che dà rosso a vuoto viene spenta da
-chi lavora»*.
+⭐ **A perpetual red is not caution: it is noise.** And noise, in a safety net, always ends
+the same way — §1.3 of the phase document: *«a net that gives empty reds gets switched off by
+whoever is working»*.
 
-> ### ⭐ Come si prende, e costa dieci secondi
+> ### ⭐ How it is caught, and it costs ten seconds
 >
-> ⛔ **Prova a far diventare VERDE la maglia.** Un controllo va acceso in tutt'e due i versi: si
-> innesta il guasto e si pretende il rosso (che il progetto già fa, `--certifica`), ⚠ **e si toglie
-> il guasto e si pretende il verde**. La seconda metà si dimentica, ed è quella che prende questo.
+> ⛔ **Try to make the mesh turn GREEN.** A check must be switched on in both directions: you
+> inject the fault and demand red (which the project already does, `--certifica`), ⚠ **and you remove
+> the fault and demand green**. The second half is forgotten, and it is the one that catches this.
 
 ---
 
-### 1.50 ⛔⛔ **Il tetto governava l'USCITA, non il lavoro — e il commento descriveva un'altra cosa**
+### 1.50 ⛔⛔ **The ceiling governed the EXIT, not the work — and the comment described something else**
 
-*26 agosto 2026, fase 11 — trovata dal banco di C14, non da quello a cui apparteneva il difetto.*
+*26 Aug 2026, phase 11 — found by the bench of C14, not by the one the defect belonged to.*
 
-C8 fa scattare una fotografia al browser con un tetto di tempo, e il commento accanto diceva che
-serviva perché *«il primo avvio in una scatola fredda non ci sta dentro»*.
+C8 has the browser take a photograph with a time ceiling, and the comment beside it said it
+was needed because *«the first start in a cold box does not fit inside it»*.
 
-`[M]` Messo il tetto a **un secondo**: Firefox viene ucciso, esce con **124**, ⛔ **e il PNG c'è lo
-stesso, 30 135 byte.** ⇒ Scrive l'immagine e **poi** indugia a chiudersi: quel tetto non limitava lo
-scatto, limitava **l'accomiatarsi del browser**.
+`[M]` With the ceiling set to **one second**: Firefox is killed, exits with **124**, ⛔ **and the PNG is there all the
+same, 30 135 bytes.** ⇒ It writes the image and **then** lingers on closing: that ceiling did not limit the
+snapshot, it limited **the browser's leave-taking**.
 
-⭐⭐ **E il giudizio è sopravvissuto per la ragione giusta, che vale la pena isolare:**
+⭐⭐ **And the judgement survived for the right reason, which is worth isolating:**
 
-> ### ⛔ Si giudica il RISULTATO, non il codice d'uscita.
+> ### ⛔ Judge the RESULT, not the exit code.
 >
-> C8 guarda **il file**, non come è morto il programma — *un browser che ha disegnato ha disegnato,
-> anche se poi è stato ucciso mentre si accomiatava*. ⚠ Una maglia che avesse creduto al `124`
-> avrebbe dato rosso su un lavoro **compiuto**.
+> C8 looks at **the file**, not at how the program died — *a browser that has drawn has drawn,
+> even if it was then killed while taking its leave*. ⚠ A mesh that had believed the `124`
+> would have given red on a **completed** job.
 
-⚠ **E la cosa da correggere non era il codice: era il commento.** Un commento che descrive una
-grandezza diversa da quella che il codice governa ⛔ è una trappola per chi verrà dopo a tarare quel
-numero — e taratura al buio è esattamente come si perde una giornata.
+⚠ **And the thing to correct was not the code: it was the comment.** A comment that describes a
+quantity different from the one the code governs ⛔ is a trap for whoever comes later to calibrate that
+number — and calibrating in the dark is exactly how a day is lost.
 
-⭐ **E che l'abbia trovata un ALTRO banco è il fatto più importante di tutti**: nessuno dei quattro
-rossi falsi di §1.44–1.47 si era accorto di questo, perché tutti guardavano C8 **da dentro**.
+⭐ **And that ANOTHER bench found it is the most important fact of all**: none of the four
+false reds of §1.44–1.47 had noticed this, because they all looked at C8 **from inside**.
 
 ---
 
-### 1.51 ⛔⛔ **«Text file busy» — il rosso che viene dall'ORDINE dei comandi, non dal prodotto**
+### 1.51 ⛔⛔ **«Text file busy» — the red that comes from the ORDER of the commands, not from the product**
 
-`[M]` 26 agosto 2026, cucendo le quattro maglie nuove nella rete. L'azione `11-accendi.sh prodotto`
-copia il binario dentro la scatola. Con il **server acceso**, `cp` risponde:
+`[M]` 26 Aug 2026, stitching the four new meshes into the net. The action `11-accendi.sh prodotto`
+copies the binary into the box. With the **server running**, `cp` answers:
 
 ```
 cp: cannot create regular file '/opt/remotix/remotix': Text file busy
   NO  non sono riuscito a mettere il prodotto dentro
 ```
 
-⇒ L'azione falliva **tutt'intera** su tutte e quattro le scatole, e il messaggio che restava era
-*«non sono riuscito a mettere il prodotto dentro»* — che ha esattamente l'aria di un guasto del
-prodotto o della scatola, mentre è ⛔ **un guasto dell'ordine in cui si danno i comandi**.
+⇒ The action failed **entirely** on all four boxes, and the message that remained was
+*«non sono riuscito a mettere il prodotto dentro»* — which looks exactly like a fault of the
+product or of the box, while it is ⛔ **a fault of the order in which the commands are given**.
 
-> ⭐ **La forma d'errore**: un banco che fallisce per una ragione sua e lascia un messaggio che
-> accusa quel che sta provando. È la stessa famiglia di §1.46 e §1.48 — solo che qui l'esito è un
-> rosso invece di un verde, e per questo è **meno** velenoso: almeno si vede.
+> ⭐ **The form of error**: a bench that fails for a reason of its own and leaves a message that
+> accuses what it is testing. It is the same family as §1.46 and §1.48 — only here the outcome is a
+> red instead of a green, and for that reason it is **less** poisonous: at least it shows.
 
-⛔ **E la prima cura era peggio del male.** L'idea ovvia — spegnere il server prima di copiare — è
-stata provata e **misurata**: `systemctl stop rete11-server` dentro la scatola **non torna** (oltre
-due minuti, poi il comando è stato ucciso da fuori). ⇒ L'azione non falliva più: **si piantava**, che
-è la forma peggiore, perché un banco appeso non dice niente a nessuno.
+⛔ **And the first cure was worse than the disease.** The obvious idea — stopping the server before copying — was
+tried and **measured**: `systemctl stop rete11-server` inside the box **does not return** (over
+two minutes, then the command was killed from outside). ⇒ The action no longer failed: **it hung**, which
+is the worse form, because a hung bench says nothing to anyone.
 
-⭐ **La cura giusta era di un'altra natura, e la dice il sistema operativo**: *sovrascrivere* un
-eseguibile in uso è vietato, **togliere** un eseguibile in uso è permesso. ⇒ `rm -f` e poi `cp`. Il
-server vecchio continua a girare col suo inode fino al prossimo `11-accendi.sh server`, ed è
-dichiarato nel file invece che scoperto da qualcuno fra sei mesi.
+⭐ **The right cure was of another nature, and the operating system states it**: *overwriting* an
+executable in use is forbidden, **removing** an executable in use is allowed. ⇒ `rm -f` and then `cp`. The
+old server keeps running with its inode until the next `11-accendi.sh server`, and it is
+declared in the file instead of discovered by someone six months from now.
 
-> ⚠ **La lezione generale**: quando un banco fallisce, la prima domanda non è *«che cos'ha il
-> prodotto»* ma ⭐ *«questo comando poteva riuscire, nello stato in cui ho lasciato la macchina?»*.
-
----
-
-### 1.52 ⛔⛔⛔ **La maglia col guasto innestato usciva col verdetto grezzo — e proprio nel giro del rosso avrebbe scritto «il guasto NON è stato visto»**
-
-`[M]` 26 agosto 2026, primo giro del cablaggio delle quattro maglie nuove. `11-gancio.sh` legge una
-maglia innestata **al contrario**: esce `0` quando il guasto **è stato visto**, e quello che finisce
-nel registro non è l'esito grezzo ma il fatto — `ha_visto_il_guasto`. È da lì che C13 sa dire se la
-rete è ancora capace di dare rosso.
-
-⛔ **C9 usciva col verdetto grezzo** (`1`, cioè rosso). ⇒ Nel giro col guasto innestato il gancio
-avrebbe scritto `ha_visto_il_guasto: false` **proprio quando il guasto era stato visto benissimo**, e
-C13 avrebbe cominciato a dire *«la rete non sa più dare rosso»* mentre lo sapeva fare.
-
-> ⭐ **E non l'ha preso nessuna certificazione, di nessuna delle due maglie.** La certificazione di
-> C9 provava **il giudice** (16 casi su 16, tutti giusti); quella di C13 provava **la lettura del
-> registro**. ⛔ Il difetto stava nel **giunto** fra le due: nel codice d'uscita, che non è di
-> nessuno dei due mestieri. ⇒ Si è visto solo **facendo girare il cablaggio vero**, ed è la stessa
-> famiglia di §1.46 e §1.40: `bash -n` passa, la certificazione passa, e la cosa non funziona.
-
-⭐⭐ **E la cura non era invertire l'esito — quella sarebbe stata la seconda trappola.** C9 oggi è
-rossa **anche senza guasto** (le due righe di `src/tastiera.c`, ⇒ `DECISIONI.md` §4.6-duoetvicies). Un
-semplice *«rosso ⇒ visto»* avrebbe detto «il guasto è stato visto» **anche se l'iniezione non avesse
-fatto niente**: un predicato che non può fallire, cioè §1.44 di nuovo, e stavolta a reggere la
-certificazione di tutta la rete.
-
-⇒ Si pretendono **due** cose insieme: il verdetto è rosso, **e** le righe senza nome sono di più di
-quante ne aveva lasciate il difetto vero. `[M]` senza guasto: 4 · col guasto `tutto`: 5 490.
-
-> ⛔ **La regola**: quando una maglia porta con sé un difetto **vero e già noto**, il suo guasto
-> innestato non si misura sul colore del verdetto — si misura sulla **differenza** che l'iniezione
-> ha prodotto. Altrimenti la rete si certifica su un guasto del prodotto invece che sul proprio.
+> ⚠ **The general lesson**: when a bench fails, the first question is not *«what is wrong with the
+> product»* but ⭐ *«could this command succeed, in the state in which I left the machine?»*.
 
 ---
 
-### 1.53 ⛔⛔⛔ **Un rosso che non poteva diventare verde ha bloccato cinque prove e rinviato una fase**
+### 1.52 ⛔⛔⛔ **The mesh with the injected fault exited with the raw verdict — and precisely in the red round it would have written «the fault was NOT seen»**
 
-`[M]` 27 agosto 2026. La maglia C1 — *«la sessione nasce e si vede»* — diceva **dieci sessioni cieche su
-dieci**. Su quel verdetto poggiavano: cinque prove della rete dichiarate «bloccate» (C2, C3, C4, C6,
-C8b), il rinvio della fase 12, un difetto aperto nella fase 10, e una lista di lavoro.
+`[M]` 26 Aug 2026, first round of the wiring of the four new meshes. `11-gancio.sh` reads an
+injected mesh **the other way round**: it exits `0` when the fault **was seen**, and what ends up
+in the log is not the raw outcome but the fact — `ha_visto_il_guasto`. It is from there that C13 can tell whether the
+net is still capable of giving red.
 
-⛔ **C1 leggeva la riga sbagliata.** `sessione [chi] ⛔ ZERO MONITOR` il prodotto la scrive **nel
-passaggio obbligatorio di una nascita RIUSCITA** (`src/sessione.c:345-348`): dal 14 agosto *«zero
-monitor propri»* è **lo stato voluto** — il monitor lo monta la **cattura**, dopo.
-⛔ E il ramo verde era **irraggiungibile**: `sessione_stato()` non viene più chiamata dopo che il
-palco è preso, quindi `monitor N/N: connettore` non compare **mai** in una nascita sana.
+⛔ **C9 exited with the raw verdict** (`1`, that is red). ⇒ In the round with the injected fault the hook
+would have written `ha_visto_il_guasto: false` **precisely when the fault had been seen perfectly well**, and
+C13 would have started saying *«the net can no longer give red»* while it could.
 
-> ⇒ ⭐⭐ **C1 poteva dire soltanto «CIECA» o «non lo so». Non ha mai detto verde, e non poteva.**
-> `[M]` La controprova, sulla scatola curata: `formato negoziato` compare **8** volte, il palco dice
-> `monitor «Meta-0» (0 prima, **1** dopo) 1920x1080`, `monitor …: connettore` compare **0** volte —
-> **e C1 diceva ancora CIECA**.
+> ⭐ **And no certification caught it, of either of the two meshes.** The certification of
+> C9 tested **the judge** (16 cases out of 16, all right); that of C13 tested **the reading of the
+> log**. ⛔ The defect lay in the **joint** between the two: in the exit code, which belongs to
+> neither of the two jobs. ⇒ It was seen only **by running the real wiring**, and it is the same
+> family as §1.46 and §1.40: `bash -n` passes, the certification passes, and the thing does not work.
 
-⛔⛔ **E la certificazione non l'ha preso perché imponeva il difetto come requisito**: due dei suoi
-casi (`11-c1…py:148-151`) avevano per registro **proprio quello di una nascita sana**, e pretendevano
-che il verdetto fosse rosso. ⇒ La certificazione non provava il giudice: ne **congelava l'errore**.
+⭐⭐ **And the cure was not inverting the outcome — that would have been the second trap.** C9 today is
+red **even without a fault** (the two lines of `src/tastiera.c`, ⇒ `DECISIONI.md` §4.6-duoetvicies). A
+simple *«red ⇒ seen»* would have said «the fault was seen» **even if the injection had
+done nothing**: a predicate that cannot fail, that is §1.44 again, and this time holding up the
+certification of the whole net.
 
-> ⭐ **La regola che ne esce, e vale per ogni maglia**: ⛔ **una certificazione senza un caso che
-> finisce VERDE partendo da dati sani non è una certificazione.** È §1.44 applicata un livello sopra:
-> il predicato che non può fallire, stavolta protetto da un banco che gli dà ragione.
+⇒ **Two** things are demanded together: the verdict is red, **and** the nameless lines are more than
+those the real defect had left. `[M]` without a fault: 4 · with the `tutto` fault: 5 490.
+
+> ⛔ **The rule**: when a mesh carries with it a **real and already known** defect, its injected
+> fault is not measured on the colour of the verdict — it is measured on the **difference** the injection
+> produced. Otherwise the net certifies itself on a fault of the product instead of on its own.
+
+---
+
+### 1.53 ⛔⛔⛔ **A red that could not turn green blocked five tests and postponed a phase**
+
+`[M]` 27 Aug 2026. Mesh C1 — *«the session is born and can be seen»* — said **ten blind sessions out of
+ten**. On that verdict rested: five tests of the net declared «blocked» (C2, C3, C4, C6,
+C8b), the postponement of phase 12, a defect open in phase 10, and a work list.
+
+⛔ **C1 read the wrong line.** `sessione [chi] ⛔ ZERO MONITOR` is written by the product **in the
+mandatory passage of a SUCCESSFUL birth** (`src/sessione.c:345-348`): since 14 Aug *«zero
+monitors of its own»* is **the intended state** — the monitor is mounted by **capture**, afterwards.
+⛔ And the green branch was **unreachable**: `sessione_stato()` is no longer called after the
+stage is taken, so `monitor N/N: connettore` **never** appears in a healthy birth.
+
+> ⇒ ⭐⭐ **C1 could only say «BLIND» or «I don't know». It never said green, and it could not.**
+> `[M]` The counter-test, on the cured box: `formato negoziato` appears **8** times, the stage says
+> `monitor «Meta-0» (0 prima, **1** dopo) 1920x1080`, `monitor …: connettore` appears **0** times —
+> **and C1 still said BLIND**.
+
+⛔⛔ **And the certification did not catch it because it imposed the defect as a requirement**: two of its
+cases (`11-c1…py:148-151`) had as their log **precisely that of a healthy birth**, and demanded
+that the verdict be red. ⇒ The certification did not test the judge: it **froze its error**.
+
+> ⭐ **The rule that comes out of it, and it holds for every mesh**: ⛔ **a certification without a case that
+> ends GREEN starting from healthy data is not a certification.** It is §1.44 applied one level up:
+> the predicate that cannot fail, this time protected by a bench that proves it right.
 >
-> ⚠ E la seconda: quando un verdetto **rosso** regge da giorni e nessuno riesce a farlo tornare
-> verde, ⛔ la prima domanda non è *«perché il prodotto è rotto»* ma **«questa maglia sa dire
-> verde?»**. Costa dieci minuti e qui ne è costati parecchi di più.
+> ⚠ And the second: when a **red** verdict has held for days and nobody manages to make it turn
+> green, ⛔ the first question is not *«why is the product broken»* but **«can this mesh say
+> green?»**. It costs ten minutes and here it cost quite a lot more.
 
 ---
 
-### 1.54 ⛔⛔ **La riparazione di una cosa apriva il guasto di un'altra — e il guasto sembrava del prodotto**
+### 1.54 ⛔⛔ **The repair of one thing opened the fault of another — and the fault looked like the product's**
 
-`[M]` 27 agosto 2026. Dentro le scatole, una sessione impiegava **~97 secondi** a diventare utile.
-Sembrava il difetto della nascita: Mutter che non risponde, nessuna finestra, zero fotogrammi.
+`[M]` 27 Aug 2026. Inside the boxes, a session took **~97 seconds** to become useful.
+It looked like the birth defect: Mutter not answering, no window, zero frames.
 
-La catena vera, e ha tre anelli:
-1. la scatola deve dare all'inquilino il **gruppo della scheda grafica**, altrimenti il compositore
-   ripiega sul software e i numeri sono falsi. ⇒ La ricetta **sposta** il gruppo `polkitd` da 991 a
-   1991 per liberare quel numero;
-2. ⛔ **`groupmod -g` non si porta dietro i file.** `/etc/polkit-1/rules.d` restava `root:991` ⇒
-   `polkitd` non poteva più leggerla, e moriva;
-3. `gnome-shell` chiama `polkit` e `upower` in modo **sincrono** all'avvio ⇒ incassava **quattro
-   scadenze da 25 000 ms in fila**.
+The real chain, and it has three links:
+1. the box must give the tenant the **graphics card's group**, otherwise the compositor
+   falls back to software and the numbers are false. ⇒ The recipe **moves** the `polkitd` group from 991 to
+   1991 to free that number;
+2. ⛔ **`groupmod -g` does not carry the files along.** `/etc/polkit-1/rules.d` stayed `root:991` ⇒
+   `polkitd` could no longer read it, and died;
+3. `gnome-shell` calls `polkit` and `upower` **synchronously** at startup ⇒ it took **four
+   25 000 ms timeouts in a row**.
 
-> ⇒ ⭐⭐ **La riparazione della scheda grafica apriva il guasto di polkit, e il guasto di polkit
-> aveva l'aspetto di un difetto del prodotto.**
+> ⇒ ⭐⭐ **The repair of the graphics card opened the polkit fault, and the polkit fault
+> looked like a defect of the product.**
 
-⭐ La cura sta tutta nella **ricetta**, e non ha chiesto nessun permesso nuovo: chi sposta il numero
-fa seguire i file (`find -gid … -exec chgrp`), e l'unità dei gruppi prende `Before=polkit.service`.
-⚠ `[M]` Col solo `chgrp` polkit moriva ancora, **battuto di 97 millesimi di secondo**.
-`[M]` Dopo: tre sessioni nuove negoziano il formato in **1,105 s · 0,998 s · 0,957 s** — da 97
-secondi a **uno**.
+⭐ The cure lies entirely in the **recipe**, and it required no new permission: whoever moves the number
+makes the files follow (`find -gid … -exec chgrp`), and the groups unit takes `Before=polkit.service`.
+⚠ `[M]` With `chgrp` alone polkit still died, **beaten by 97 thousandths of a second**.
+`[M]` Afterwards: three new sessions negotiate the format in **1.105 s · 0.998 s · 0.957 s** — from 97
+seconds to **one**.
 
-> ⚠ **La lezione**: quando si cambia un identificatore di sistema per far posto a un altro, ⛔ la
-> domanda non è *«il numero è cambiato?»* ma **«che cosa apparteneva a quel numero?»**. E quando un
-> ambiente costruito da noi si comporta male, ⭐ **il primo sospettato è l'ambiente**, non il
-> prodotto — perché il prodotto non lo abbiamo scritto stanotte, la ricetta sì.
+> ⚠ **The lesson**: when a system identifier is changed to make room for another, ⛔ the
+> question is not *«has the number changed?»* but **«what belonged to that number?»**. And when an
+> environment built by us behaves badly, ⭐ **the first suspect is the environment**, not the
+> product — because we did not write the product last night, the recipe we did.
 
 ---
 
-### 1.55 ⛔⛔ **Il numero letto per mesi era memoria non inizializzata**
+### 1.55 ⛔⛔ **The number read for months was uninitialised memory**
 
-`[M]` 27 agosto 2026. La fase 10 §7.4 descriveva un *«terzo stato»* del palco — la riga
-`(0 prima, **2** dopo)` — e lo trattava come un fatto: due monitor comparsi.
+`[M]` 27 Aug 2026. Phase 10 §7.4 described a *«third state»* of the stage — the line
+`(0 prima, **2** dopo)` — and treated it as a fact: two monitors appeared.
 
-⛔ **Era spazzatura.** `src/figlio.c` · `codifica_e_manda()` spediva la struttura al padre **prima** del `memset` di
-`:5311`. `[M]` Provato in due modi: quella riga compare anche su scatole dove **nessun monitor può
-essere nato** (lì il prodotto non sa nemmeno avviare il desktop), sempre e solo sul ramo *«aspetto la
-tela del cliente»*, con spazzatura evidente accanto (`stride 958311266`, `stride 306537694`); e nel
-codice macchina il vecchio ramo spediva **328 byte** avendone scritti **32**.
+⛔ **It was garbage.** `src/figlio.c` · `codifica_e_manda()` sent the structure to the parent **before** the `memset` at
+`:5311`. `[M]` Proven in two ways: that line appears even on boxes where **no monitor can
+have been born** (there the product cannot even start the desktop), always and only on the branch *«waiting for the
+client's canvas»*, with obvious garbage beside it (`stride 958311266`, `stride 306537694`); and in the
+machine code the old branch sent **328 bytes** having written **32**.
 
-> ⭐ **E il danno non è il difetto: è la diagnosi.** Quel `2` ha alimentato per mesi un'ipotesi —
-> *«a volte due monitor compaiono»* — che ha orientato la caccia. ⛔ Un numero mai scritto è peggio
-> di un numero mancante, perché **ha l'aria di essere un dato**.
+> ⭐ **And the damage is not the defect: it is the diagnosis.** That `2` fed for months a hypothesis —
+> *«sometimes two monitors appear»* — that steered the hunt. ⛔ A number never written is worse
+> than a missing number, because **it looks like a datum**.
 >
-> ⚠ La regola: una struttura che attraversa un confine (processo, socket, rete) si azzera **in cima
-> alla funzione**, prima di qualunque uscita anticipata — non «prima dell'uso», che è un posto che
-> si sposta a ogni modifica.
+> ⚠ The rule: a structure that crosses a boundary (process, socket, network) is zeroed **at the top
+> of the function**, before any early exit — not «before use», which is a place that
+> moves with every change.
 
 ---
 
-### 1.56 ⛔⛔ **Il banco provava quattro desktop, e il prodotto ne guidava uno**
+### 1.56 ⛔⛔ **The bench tested four desktops, and the product drove one**
 
-`[M]` 27 agosto 2026. La rete ha quattro scatole — GNOME, KDE, XFCE, LXQt — e la fase le ha
-presentate come la prova che *«le stesse prove girano su desktop diversi senza una riga cambiata»*.
+`[M]` 27 Aug 2026. The net has four boxes — GNOME, KDE, XFCE, LXQt — and the phase
+presented them as the proof that *«the same tests run on different desktops without a line changed»*.
 
-⛔ Poi C1 è stata fatta girare **dieci volte per scatola** sulle altre tre, e il conto è stato:
-**0 sane · 0 cieche · 30 «non ho potuto guardare»**. Il motivo lo dice il registro del prodotto:
-*«Mutter non espone RemoteDesktop»* — ⛔ **il prodotto sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`,
-tutto `src/mutter.c`), e nelle altre tre scatole `gnome-shell` non c'è nemmeno.
+⛔ Then C1 was run **ten times per box** on the other three, and the count was:
+**0 healthy · 0 blind · 30 «I could not look»**. The reason is stated by the product's log:
+*«Mutter non espone RemoteDesktop»* — ⛔ **the product can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`,
+all of `src/mutter.c`), and in the other three boxes `gnome-shell` is not even there.
 
-⭐ **Quel che le altre tre provano davvero è reale ma più piccolo**: l'ambiente (il passo 0), il
-suono (C5, che non passa dal desktop), i residui (C7), il registro (C9), l'allineamento (C11). ⛔ Non
-provano che il **prodotto** regga su quei desktop, perché lì il prodotto non ci gira.
+⭐ **What the other three really test is real but smaller**: the environment (step 0), the
+sound (C5, which does not go through the desktop), the leftovers (C7), the log (C9), the alignment (C11). ⛔ They do not
+prove that the **product** holds on those desktops, because there the product does not run.
 
-> ⚠ **La lezione**: ⛔ *«la prova gira su quattro ambienti»* e *«la prova dice qualcosa su quattro
-> ambienti»* sono due frasi diverse, e la seconda va **misurata**, non dedotta dalla prima. Il segno
-> che le distingue è l'esito **3**: una maglia che su tre ambienti su quattro non arriva mai a un
-> giudizio non li sta provando — li sta **visitando**.
+> ⚠ **The lesson**: ⛔ *«the test runs on four environments»* and *«the test says something about four
+> environments»* are two different sentences, and the second must be **measured**, not deduced from the first. The sign
+> that tells them apart is outcome **3**: a mesh that on three environments out of four never reaches a
+> judgement is not testing them — it is **visiting** them.
 
 ---
 
-### 1.57 ⚠ **Il binario ricostruito voleva una libreria che il banco non portava — e il banco l'ha detto**
+### 1.57 ⚠ **The rebuilt binary wanted a library the bench did not carry — and the bench said so**
 
-`[M]` 27 agosto 2026. Rimesso nelle quattro scatole il prodotto ricostruito con le cure della
-giornata, `11-accendi.sh prodotto` ha risposto su tutte e quattro:
+`[M]` 27 Aug 2026. Having put back into the four boxes the product rebuilt with the day's
+cures, `11-accendi.sh prodotto` answered on all four:
 
 ```
   NO  1 librerie non si risolvono: il server morira e non si sapra perche
   NO  il server non ha detto di essere pronto in 20 s
 ```
 
-⇒ `ldd` dentro la scatola: **`libngtcp2_crypto_ossl.so.0 => not found`**. Il contenitore di
-costruzione sul portatile si era mosso — il binario nuovo si lega a una libreria che quello vecchio
-non usava — e il banco portava dentro solo la provvista vecchia.
+⇒ `ldd` inside the box: **`libngtcp2_crypto_ossl.so.0 => not found`**. The build container
+on the laptop had moved — the new binary links to a library the old one
+did not use — and the bench carried inside only the old supply.
 
-> ⭐ **E questa è una buona notizia, non un guasto**: è esattamente il controllo che `11-accendi.sh`
-> fa **apposta** dopo ogni consegna (`ldd | grep -c "not found"`), scritto quando si è imparato che
-> ⛔ *«il binario era giusto e le librerie no, e il sintomo era dalla parte sbagliata»* (fase 11
-> §7-bis.4). ⇒ Il difetto è stato **nominato in due secondi** invece di presentarsi tre ore dopo
-> come «il server muore e non si sa perché».
+> ⭐ **And this is good news, not a fault**: it is exactly the check `11-accendi.sh`
+> does **on purpose** after every delivery (`ldd | grep -c "not found"`), written when it was learnt that
+> ⛔ *«the binary was right and the libraries were not, and the symptom was on the wrong side»* (phase 11
+> §7-bis.4). ⇒ The defect was **named in two seconds** instead of showing up three hours later
+> as «the server dies and nobody knows why».
 >
-> ⚠ **La lezione che resta**: è la regola R2 — *«le versioni si dichiarano, mai «l'ultima
-> disponibile»»* — che ha ceduto dal lato del **contenitore di costruzione**, non da quello delle
-> scatole. ⛔ Un ambiente di costruzione non dichiarato è una dipendenza che cambia da sola, e la
-> rete se ne accorge **a valle**, quando il danno è già dentro l'immagine.
+> ⚠ **The lesson that remains**: it is rule R2 — *«versions are declared, never «the latest
+> available»»* — that gave way on the side of the **build container**, not on that of the
+> boxes. ⛔ An undeclared build environment is a dependency that changes by itself, and the
+> net notices it **downstream**, when the damage is already inside the image.
