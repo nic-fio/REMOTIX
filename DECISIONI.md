@@ -6619,6 +6619,23 @@ REMOTIX) e le parti di §10.12, §10.21 e §10.23 che contraddicono quel che seg
   pacchetto, la simulazione fallisce e lì si ferma (RX-PACCHETTI-005). Il carattere per famiglia torna nel catalogo
   (`carattere_scalabile`, 2026.10.10.14). Fatto il 10 ott, commit `facc27a` (con la TUI rifatta: fasi/17 §6.6.16).
 
+
+### 10.37 ✅ Il manuale tecnico: in inglese, sul modello di Phonestra (10 ott 2026)
+
+Scelte dell'utente (10 ott 2026):
+- **in inglese**, come l'interfaccia (§10.32, §10.35): messaggi e codici `RX-…` combaciano parola per parola;
+- **stile, struttura e tipo di contenuti presi dal manuale tecnico di Phonestra** (*«solo che questo manuale sarà
+  almeno 10 volte più lungo e complesso»*): parla a **chi mantiene REMOTIX** (interni, protocollo, catture, codifica,
+  prove, costruzione, estensioni, mappa dei file), non a chi lo installa;
+- **per ora si scrive solo quello tecnico**; la guida per il sysadmin (installazione, comandi, codici) resta da
+  decidere.
+
+🔸 Derivato da me, correggibile: come in Phonestra il manuale è **generato** — `docs/sources/technical/chNN_*.py`, un
+file per capitolo, ⇒ `docs/Technical Manual.html` con `python3 docs/sources/build.py`; `style.css` e `manual.js` sono
+il **canone comune** copiato byte per byte da Phonestra (che non si modifica in un progetto solo); `--controlla`
+verifica che file, funzioni, variabili `REMOTIX_*` e codici `RX-` citati esistano nel codice, e che non resti
+italiano. Prestazioni e capacità aspettano la campagna xrdp.
+
 ---
 
 ## Come si tiene questo documento
