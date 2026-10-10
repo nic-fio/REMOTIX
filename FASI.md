@@ -5265,70 +5265,70 @@ lavoro**: il primo tocca la configurazione del desktop, il secondo apre una deci
 
 ---
 
-### 1 · ⭐ I QUATTRO PUNTI AGGIUNTI DALL'UTENTE
+### 1 · ⭐ THE FOUR POINTS ADDED BY THE USER
 
-#### 1.1 ⛔ Togliere «Spegni, Riavvia, Sospendi, Iberna» dal menu di sistema del desktop
+#### 1.1 ⛔ Remove «Spegni, Riavvia, Sospendi, Iberna» from the desktop's system menu
 
-*Motivo dichiarato dall'utente: un utente collegato da remoto non deve poter «sfilare da sotto il
-naso» la macchina agli altri, in remoto o in locale.*
+*Reason declared by the user: a user connected remotely must not be able to «sfilare da sotto il
+naso» the machine from the others, remotely or locally.*
 
-`SPECIFICHE.md` §11.3 lo prometteva già in una riga — *«spegnimento, riavvio, sospensione: **tolti**
-alla sessione remota»* — e **nessuna riga di codice la mantiene**.
+`SPECIFICHE.md` §11.3 already promised it in one line — *«spegnimento, riavvio, sospensione: **tolti**
+alla sessione remota»* — and **no line of code keeps that promise**.
 
-⭐ **La leva ovvia è quella sbagliata, ed è misurabile nelle fonti che abbiamo in casa:**
+⭐ **The obvious lever is the wrong one, and it is measurable in the sources we have in house:**
 
-| strada | che cosa fa davvero |
+| path | what it really does |
 |---|---|
-| ❌ `org.gnome.desktop.lockdown disable-log-out` | fa sparire Spegni **e** Riavvia — ⛔ **ma fa sparire anche «Esci…»**, e fa rifiutare `org.gnome.SessionManager.Logout` con `GSM_MANAGER_ERROR_LOCKED_DOWN`. Cioè ci porta via **il punto 1.2 dell'utente** *e* il congedo che `sessione.c` · `scrivi_dropin()` usa oggi per fermare la sessione |
-| ✅ **regola polkit `no`** su `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` (e le varianti `*-multiple-sessions`, `*-ignore-inhibit`) | `[R]` `gsm-manager.c`: `CanShutdown = !lockdown && (can_stop ‖ can_restart ‖ can_suspend ‖ can_hibernate)`, e ciascuno dei quattro è vero solo se logind risponde `yes` o `challenge` (`gsm-systemd.c:698-803`). Con tutt'e quattro a `no` ⇒ `CanShutdown` falso ⇒ gnome-shell nasconde **Spegni** e **Riavvia** (`systemActions.js:340-359`), e **Sospendi** cade per conto suo (`loginManager` `CanSuspend`). ⭐ **«Esci…» resta**, perché dipende solo da `disable-log-out` |
+| ❌ `org.gnome.desktop.lockdown disable-log-out` | makes Power Off **and** Restart disappear — ⛔ **but it also makes «Esci…» disappear**, and makes `org.gnome.SessionManager.Logout` be refused with `GSM_MANAGER_ERROR_LOCKED_DOWN`. That is, it takes away **the user's point 1.2** *and* the farewell that `sessione.c` · `scrivi_dropin()` uses today to stop the session |
+| ✅ **polkit rule `no`** on `org.freedesktop.login1.power-off`, `reboot`, `suspend`, `hibernate` (and the variants `*-multiple-sessions`, `*-ignore-inhibit`) | `[R]` `gsm-manager.c`: `CanShutdown = !lockdown && (can_stop ‖ can_restart ‖ can_suspend ‖ can_hibernate)`, and each of the four is true only if logind answers `yes` or `challenge` (`gsm-systemd.c:698-803`). With all four at `no` ⇒ `CanShutdown` false ⇒ gnome-shell hides **Power Off** and **Restart** (`systemActions.js:340-359`), and **Suspend** falls on its own (`loginManager` `CanSuspend`). ⭐ **«Esci…» stays**, because it depends only on `disable-log-out` |
 
-⛔ **`no`, mai `auth_admin`**: `"challenge"` **mostra** la voce — vale su GNOME e su KDE
-(`STUDI.md` §gnome §5.1, `STUDI.md` §kde §1579). ⚠ E la voce **sparisce**, non si ingrigisce: `system.js:218-226`
-lega `can-*` a `visible`.
+⛔ **`no`, never `auth_admin`**: `"challenge"` **shows** the item — it holds on GNOME and on KDE
+(`STUDI.md` §gnome §5.1, `STUDI.md` §kde §1579). ⚠ And the item **disappears**, it is not greyed out: `system.js:218-226`
+binds `can-*` to `visible`.
 
-> #### ✅ E LA PORTATA È DECISA — dall'utente, il 15 agosto 2026
+> #### ✅ AND THE SCOPE IS DECIDED — by the user, on 15 Aug 2026
 >
 > > *«No, nessuno può spegnere, riavviare, mettere in standby o sospensione il server, altrimenti si
 > > rischia di "buttare fuori" anche altri eventuali utenti collegati alla macchina.»*
 > > *«L'utente collegato a REMOTIX può solo fare espressamente il logout o, ovviamente, operare sul
 > > PC che sta utilizzando.»*
 >
-> ⇒ `DECISIONI.md` §4.7, e `SPECIFICHE.md` §11.3 è stata allargata: **non «alla sessione remota»,
-> a tutti**. ⛔ La regola polkit si scrive **piatta**, senza `subject.local`: la discriminante che
-> avevo proposto non serve più, e con lei sparisce la misura che sarebbe costata.
+> ⇒ `DECISIONI.md` §4.7, and `SPECIFICHE.md` §11.3 was widened: **not «to the remote session»,
+> to everyone**. ⛔ The polkit rule is written **flat**, without `subject.local`: the discriminant I
+> had proposed is no longer needed, and with it goes the measurement it would have cost.
 >
-> ⭐ **Il metro del banco, ed è più forte di «le voci sono sparite»:** *nel menu di sistema del
-> desktop remoto resta «Esci…» **e nient'altro** di quella famiglia.*
+> ⭐ **The bench's yardstick, and it is stronger than «the items are gone»:** *in the system menu of the
+> remote desktop «Esci…» remains **and nothing else** of that family.*
 
-**Il lavoro, allora — tre cinture, perché le strade sono tre** (`DECISIONI.md` §4.7):
+**The work, then — three belts, because there are three paths** (`DECISIONI.md` §4.7):
 
-1. **la regola polkit**, piatta, sulle quattro azioni e le loro varianti `*-multiple-sessions` /
-   `*-ignore-inhibit`. ⭐ Copre **due strade con una riga sola**, perché guarda l'azione e non
-   l'interfaccia: il menu **e** `systemctl poweroff` da un terminale dentro la sessione;
+1. **the polkit rule**, flat, on the four actions and their variants `*-multiple-sessions` /
+   `*-ignore-inhibit`. ⭐ It covers **two paths with a single line**, because it looks at the action and not
+   the interface: the menu **and** `systemctl poweroff` from a terminal inside the session;
 2. **`logind.conf`**: `HandlePowerKey`, `HandleSuspendKey`, `HandleHibernateKey`, `HandleLidSwitch`
-   = `ignore` — ⛔ il tasto fisico **non passa da polkit**, e la prima cintura non lo vede;
-3. **la sospensione automatica**, che è §2.2 di questo documento: l'`Inhibit` **e**
-   `sleep-inactive-ac-type=nothing`. ⚠ Due cinture per **due sintomi**: polkit impedisce il fatto,
-   dconf toglie dallo schermo la notifica *«Automatic Suspend»* che l'utente vedrebbe lo stesso.
+   = `ignore` — ⛔ the physical button **does not go through polkit**, and the first belt does not see it;
+3. **automatic suspend**, which is §2.2 of this document: the `Inhibit` **and**
+   `sleep-inactive-ac-type=nothing`. ⚠ Two belts for **two symptoms**: polkit prevents the fact,
+   dconf removes from the screen the *«Automatic Suspend»* notification the user would see anyway.
 
-**E quel che resta da fare bene:**
+**And what remains to be done well:**
 
-- ⚠ **sono tutte righe di configurazione, cioè quel che I7 vieta**: vanno **installate da noi** e
-  **verificate dopo l'avvio**, come l'headless di `DECISIONI.md` §4.3-bis. ⭐ Qui la verifica non ha
-  incognite: si chiede a logind `CanPowerOff` / `CanReboot` / `CanSuspend` / `CanHibernate`
-  **dalla sessione dell'utente** e si pretende **`no`**; se risponde `yes` o `challenge`, si dichiara
-  il fallimento;
-- ⚠ **root resta, e deve restare**: `systemctl --force poweroff` parla con PID 1 e salta logind.
-  ⭐ È la strada dell'amministratore, e i client attaccati lo vengono a sapere con
-  `SERVER_IN_CHIUSURA 0x0C` — ⭐ già emesso da `main.c` · `main()`, cura del rilievo B-7. ⇒ **questo
-  percorso va provato in questa fase**: adesso è l'unico spegnimento legittimo che esista;
-- gli altri desktop arrivano con le loro fasi (KDE è la 10): la regola polkit è **la stessa per
-  tutti e quattro** — `STUDI.md` §xfce §618 dice che su XFCE non esiste nessuna chiave e restano solo
-  polkit e logind — ⛔ ma **si verifica desktop per desktop**, quando la fase arriva.
+- ⚠ **they are all configuration lines, i.e. what I7 forbids**: they must be **installed by us** and
+  **verified after startup**, like the headless of `DECISIONI.md` §4.3-bis. ⭐ Here the check has no
+  unknowns: one asks logind `CanPowerOff` / `CanReboot` / `CanSuspend` / `CanHibernate`
+  **from the user's session** and demands **`no`**; if it answers `yes` or `challenge`, failure is
+  declared;
+- ⚠ **root remains, and must remain**: `systemctl --force poweroff` talks to PID 1 and skips logind.
+  ⭐ It is the administrator's path, and the attached clients learn of it with
+  `SERVER_IN_CHIUSURA 0x0C` — ⭐ already emitted by `main.c` · `main()`, cure of finding B-7. ⇒ **this
+  path must be tested in this phase**: right now it is the only legitimate shutdown that exists;
+- the other desktops come with their phases (KDE is 10): the polkit rule is **the same for
+  all four** — `STUDI.md` §xfce §618 says that on XFCE there is no key at all and only
+  polkit and logind remain — ⛔ but **it is verified desktop by desktop**, when the phase comes.
 
-#### 1.2 ⛔⛔ Chiusura della scheda **contro** «Esci» dal menu: due esiti, e oggi uno solo esiste
+#### 1.2 ⛔⛔ Closing the tab **versus** «Esci» from the menu: two outcomes, and today only one exists
 
-> ### ⭐⭐ LA DISTINZIONE, DETTATA DALL'UTENTE IL 15 AGOSTO 2026
+> ### ⭐⭐ THE DISTINCTION, DICTATED BY THE USER ON 15 AUG 2026
 >
 > > *«Distinguiamo il comportamento del PC usato dall'utente rispetto a quello che fa REMOTIX. Se
 > > l'utente chiude, spegne o riavvia il **proprio** PC, questo lo trattiamo come browser chiuso /
@@ -5336,71 +5336,71 @@ lega `can-*` a `visible`.
 > > **terminare la sessione**, il che comporta la chiusura di tutti i programmi che aveva in
 > > esecuzione.»*
 >
-> ⭐ **Il PC dell'utente non è mai un caso speciale**, e questo toglie lavoro invece di aggiungerne:
-> scheda chiusa, browser chiuso, PC spento, PC riavviato, campo perso in galleria — **un caso solo**,
-> quello già misurato. Non c'è niente da rilevare dal lato client e niente da distinguere sul filo.
+> ⭐ **The user's PC is never a special case**, and this removes work instead of adding it:
+> tab closed, browser closed, PC powered off, PC restarted, signal lost in a tunnel — **a single case**,
+> the one already measured. There is nothing to detect on the client side and nothing to distinguish on the wire.
 >
-> ⭐ **«Esci/logout» è l'unico gesto che significa «ho finito»**, e la sua conseguenza è dichiarata:
-> **i programmi dell'utente si chiudono**. Non è un distacco più forte: è l'altro verso.
+> ⭐ **«Esci/logout» is the only gesture that means «I am done»**, and its consequence is declared:
+> **the user's programs close**. It is not a stronger detach: it is the other direction.
 >
-> ⛔ **E tre cose smettono di essere domande:**
+> ⛔ **And three things stop being questions:**
 >
-> 1. ⛔ **`disable-log-out` è VIETATA.** Toglieva la voce «Esci…» e faceva rifiutare
->    `SessionManager.Logout`: adesso che il logout è una funzione **promessa**, quella chiave
->    toglierebbe la funzione. ⇒ per §1.1 resta **solo** la regola polkit — la strada si è chiusa da
->    sé, senza doverla scegliere. *(Era la domanda 2 di §4, e decade.)*
-> 2. **`org.gnome.shell always-show-log-out` va acceso.** `[R]` Senza, su una macchina con un utente
->    e una sessione sola gnome-shell **non mostra** la voce. ⚠ E rovescia
->    `reference-gnome/rapporti/02-shell-blocco-voci.md:214` — *«va lasciata `false`»* — che era
->    scritto quando l'obiettivo era togliere voci, non darne una. *(Era la domanda 3 di §4, e
->    decade.)*
-> 3. **Fra il clic e la fine non tocchiamo niente**: se un programma ha lavoro non salvato, GNOME
->    mostra il **suo** dialogo dentro il desktop remoto, come se l'utente fosse al monitor. È I8, e
->    vale anche qui.
+> 1. ⛔ **`disable-log-out` is FORBIDDEN.** It removed the «Esci…» item and made
+>    `SessionManager.Logout` be refused: now that logout is a **promised** function, that key
+>    would remove the function. ⇒ for §1.1 **only** the polkit rule remains — the path closed by
+>    itself, without having to choose it. *(It was question 2 of §4, and it lapses.)*
+> 2. **`org.gnome.shell always-show-log-out` must be on.** `[R]` Without it, on a machine with one user
+>    and a single session gnome-shell **does not show** the item. ⚠ And it reverses
+>    `reference-gnome/rapporti/02-shell-blocco-voci.md:214` — *«va lasciata `false`»* — which was
+>    written when the goal was removing items, not giving one. *(It was question 3 of §4, and it
+>    lapses.)*
+> 3. **Between the click and the end we touch nothing**: if a program has unsaved work, GNOME
+>    shows **its own** dialog inside the remote desktop, as if the user were at the monitor. It is I8, and
+>    it holds here too.
 
-| caso | oggi | che cosa manca |
+| case | today | what is missing |
 |---|---|---|
-| **1 · il filo cade** — scheda chiusa, browser chiuso, ⭐ **il PC dell'utente spento o riavviato** | ⭐ **vivo e misurato**: `pagina.html` · `MP4_DURATA_MAX()` aggancia `pagehide` (⛔ non `beforeunload`) e spedisce `CONGEDO 0x01` prima di morire — `[M]` il server l'ha visto arrivare. Il posto si libera, **la sessione sopravvive** (I4, `SPECIFICHE.md` §5.2). ⚠ E quando il PC muore di colpo il `CONGEDO` non parte affatto: allora è l'orologio del **silenzio** a liberare il posto, 30 s (§5.3) — ⭐ **stesso esito, altra strada** | il **banco** che lo provi, e lo provi **due volte di fila** (`LEZIONI.md` §2.3-ter) |
-| **2 · l'utente sceglie «Esci…» nel menu del desktop** | ⛔ **non è definito da nessuna parte e non è gestito**: `gnome-session` esce, Mutter muore, il palco cade — e sul filo **non parte nessun motivo**. Il client vede una connessione che si spegne, cioè esattamente la forma di guasto del rilievo **B-7** | tutto quel che segue |
+| **1 · the wire drops** — tab closed, browser closed, ⭐ **the user's PC powered off or restarted** | ⭐ **live and measured**: `pagina.html` · `MP4_DURATA_MAX()` hooks `pagehide` (⛔ not `beforeunload`) and sends `CONGEDO 0x01` before dying — `[M]` the server saw it arrive. The seat is freed, **the session survives** (I4, `SPECIFICHE.md` §5.2). ⚠ And when the PC dies suddenly the `CONGEDO` does not leave at all: then it is the **silence** clock that frees the seat, 30 s (§5.3) — ⭐ **same outcome, another path** | the **bench** that tests it, and tests it **twice in a row** (`LEZIONI.md` §2.3-ter) |
+| **2 · the user chooses «Esci…» in the desktop menu** | ⛔ **it is not defined anywhere and not handled**: `gnome-session` exits, Mutter dies, the stage falls — and **no reason goes out** on the wire. The client sees a connection going out, i.e. exactly the fault shape of finding **B-7** | everything that follows |
 
-**Quel che il caso 2 richiede, in ordine:**
+**What case 2 requires, in order:**
 
-- **chi se ne accorge**: il figlio sorveglia già l'unità `gnome-session-manager@gnome.service`
-  (`sessione.c`, `unita_inattiva()`); qui serve accorgersene **mentre accade**, non chiederlo;
-- ⛔ **il motivo deve partire PRIMA che il filo muoia**, ed è la parte che oggi non esiste: quando
-  Mutter cade, il palco cade con lui e il canale non serve più a niente. ⚠ È l'ordine, non il
-  contenuto, a essere il difetto — la stessa forma del rilievo **B-7**;
-- ✅ **il motivo sul filo è `0x10 SESSIONE_TERMINATA`**, aggiunto a `RCP.md` §8.2 il 15 agosto: non
-  il riuso di `0x01`, che porta la promessa opposta *«riattacca e ritrovi tutto»*. ⇒ da definire in
-  `rcp.h`, da **emettere** in `rcp.c`, e da leggere in `pagina.html` — ⛔ e i tre pezzi vanno insieme,
-  o è il rilievo B-7 daccapo;
-- ✅ **che cosa legge l'utente**: *«la sessione è terminata»* sopra il **modulo di accesso**
-  (deciso dall'utente il 15 agosto, `DECISIONI.md` §4.1-quater). ⛔ Non una schermata di chiusura;
-- **la pulizia**: posto liberato, palco smontato, e il prossimo attacco è una **sessione nuova** —
-  non un riattacco a un palco morto;
-- ⭐ **la seconda strada per lo stesso logout** (`DECISIONI.md` §4.1-quinquies, 15 agosto): la
-  scorciatoia **`Ctrl+Alt+Fine`** gestita **dalla pagina** — con `preventDefault()`, la conferma
-  *«terminare la sessione?»*, e ⛔ da **aggiungere alla sonda S3** (`banchi/04-b29-scorciatoie.py`,
-  42 combinazioni: questa non c'è) e misurare su due motori prima di prometterla. ⛔ **Nessun
-  bottone a schermo**: la voce del menu si raggiunge col dito e basta a sé stessa. ⚠ E le due strade
-  finiscono **nella stessa** `sessione_termina()`: un solo percorso di uscita, o due che divergono;
-- ⚠ **e la nostra `sessione_termina()` resta valida**: chiude con `SessionManager.Logout`, che
-  `disable-log-out` avrebbe ucciso (`STUDI.md` §gnome §5.1). ⭐ Vietando quella chiave, il congedo del
-  server e il logout dell'utente **passano dalla stessa porta**, e la porta resta aperta.
+- **who notices it**: the child already watches the unit `gnome-session-manager@gnome.service`
+  (`sessione.c`, `unita_inattiva()`); here it must be noticed **while it happens**, not asked;
+- ⛔ **the reason must go out BEFORE the wire dies**, and it is the part that does not exist today: when
+  Mutter falls, the stage falls with it and the channel is no longer of any use. ⚠ It is the order, not the
+  content, that is the defect — the same shape as finding **B-7**;
+- ✅ **the reason on the wire is `0x10 SESSIONE_TERMINATA`**, added to `RCP.md` §8.2 on 15 Aug: not
+  the reuse of `0x01`, which carries the opposite promise *«riattacca e ritrovi tutto»*. ⇒ to be defined in
+  `rcp.h`, to be **emitted** in `rcp.c`, and to be read in `pagina.html` — ⛔ and the three pieces go together,
+  or it is finding B-7 all over again;
+- ✅ **what the user reads**: *«la sessione è terminata»* above the **login form**
+  (decided by the user on 15 Aug, `DECISIONI.md` §4.1-quater). ⛔ Not a closing screen;
+- **the cleanup**: seat freed, stage torn down, and the next attach is a **new session** —
+  not a reattach to a dead stage;
+- ⭐ **the second path to the same logout** (`DECISIONI.md` §4.1-quinquies, 15 Aug): the
+  shortcut **`Ctrl+Alt+Fine`** handled **by the page** — with `preventDefault()`, the confirmation
+  *«terminare la sessione?»*, and ⛔ to be **added to probe S3** (`banchi/04-b29-scorciatoie.py`,
+  42 combinations: this one is not there) and measured on two engines before promising it. ⛔ **No
+  on-screen button**: the menu item is reached with a finger and suffices by itself. ⚠ And the two paths
+  end **in the same** `sessione_termina()`: a single exit path, or two that diverge;
+- ⚠ **and our `sessione_termina()` stays valid**: it closes with `SessionManager.Logout`, which
+  `disable-log-out` would have killed (`STUDI.md` §gnome §5.1). ⭐ By forbidding that key, the server's
+  farewell and the user's logout **go through the same door**, and the door stays open.
 
-#### 1.3 Il riattacco da uno schermo di misura diversa — e i compositori
+#### 1.3 Reattaching from a screen of a different size — and the compositors
 
-⭐ **Tre quarti sono già fatti e misurati**, ma nella **coda della fase 4** (§04-si-comanda,
-`rapporti/F4-IN-13-la-tela-che-cambia.md`): la tela è la finestra, `SESSIONE` concede la tela che il
-palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a caldo costa **6 ms**.
+⭐ **Three quarters are already done and measured**, but in the **tail of phase 4** (§04-si-comanda,
+`rapporti/F4-IN-13-la-tela-che-cambia.md`): the canvas is the window, `SESSIONE` grants the canvas the
+stage already has with **zero frames discarded** `[M]`, and the hot resize costs **6 ms**.
 
-> #### ✅ ⭐⭐ E IL RIATTACCO A MISURA DIVERSA È STATO MISURATO — 16 agosto 2026, **e l'ha fatto l'utente**
+> #### ✅ ⭐⭐ AND THE REATTACH AT A DIFFERENT SIZE WAS MEASURED — 16 Aug 2026, **and the user did it**
 >
-> *`banchi/05-b4` dichiara per iscritto di non poterlo provare: «`01-b3-cliente.py` non conosce
+> *`banchi/05-b4` declares in writing that it cannot test it: «`01-b3-cliente.py` non conosce
 > `ADATTA_TELA` (zero occorrenze; la pagina ne ha 45) ⇒ si misura col browser».*
 >
-> `[M]` Sessione aperta col browser **massimizzato** (`2544x926`), scheda chiusa, riattacco con la
-> finestra **ridotta**. La catena intera in **61 millisecondi**:
+> `[M]` Session opened with the browser **maximised** (`2544x926`), tab closed, reattach with the
+> window **reduced**. The whole chain in **61 milliseconds**:
 >
 > ```
 > 17:11:00.875  ⚠ RIPIEGO DICHIARATO (§4.5): chiesta 1240x622, il palco ha 2544x926
@@ -5411,361 +5411,361 @@ palco ha già con **zero fotogrammi scartati** `[M]`, e il ridimensionamento a c
 >
 > | | |
 > |---|---|
-> | fotogrammi dopo il cambio | **62**, tutti a `1240x622` — **zero** alla misura vecchia |
-> | CHIAVE alla misura nuova (§5.2) | ✅ `fotogramma 2` |
-> | `NON lo spedisco` (il congelamento) · «il palco non è alla tela» (il *ballo*) | **0** e **0** |
-> | ⭐ **e quel che ha visto l'utente** | *«il desktop copre per intero lo schermo (che adesso è di dimensioni ridotte)»* · *«funziona»* |
+> | frames after the change | **62**, all at `1240x622` — **zero** at the old size |
+> | KEY at the new size (§5.2) | ✅ `fotogramma 2` |
+> | `NON lo spedisco` (the freeze) · «il palco non è alla tela» (the *dance*) | **0** and **0** |
+> | ⭐ **and what the user saw** | *«il desktop copre per intero lo schermo (che adesso è di dimensioni ridotte)»* · *«funziona»* |
 >
-> ⚠ **E una trappola del registro, pagata sul posto**: il primo conteggio diceva «1 fotogramma alla
-> misura vecchia dopo il cambio». ⛔ Era falso: una riga del registro aveva **perso il timestamp** —
-> due processi che scrivono sullo stesso file si erano accavallati — e senza data `$1 >= "17:11:00.935"`
-> la prendeva per buona, perché una parola ordina dopo una cifra. ⇒ *Un confronto su un campo che può
-> mancare non è un filtro, è una scommessa.*
+> ⚠ **And a log trap, paid on the spot**: the first count said «1 frame at the old
+> size after the change». ⛔ It was false: a log line had **lost its timestamp** —
+> two processes writing to the same file had overlapped — and without a date `$1 >= "17:11:00.935"`
+> took it as good, because a word sorts after a digit. ⇒ *A comparison on a field that may be
+> missing is not a filter, it is a bet.*
 
-**Quel che resta a questa fase:**
+**What remains for this phase:**
 
-- ✅ **il tasto e il puntatore DOPO il riattacco a misura diversa** — ⭐ **chiuso il 16 agosto 2026, e
-  l'ha chiuso l'utente senza saperlo.** Il timore era misurato: al cambio di geometria **`libei`
-  distrugge e ricrea i dispositivi assoluti** (`[M]` 15 ago, *«il puntatore è stato TOLTO dal
-  compositore, ricambio n. 640»*), e il puntatore al dispositivo vecchio smette di funzionare **senza
-  errore** (`STUDI.md` §gnome §9) ⇒ la prova sarebbe stata **verde per costruzione**.
+- ✅ **the key and the pointer AFTER the reattach at a different size** — ⭐ **closed on 16 Aug 2026, and
+  the user closed it without knowing.** The fear was measured: on a geometry change **`libei`
+  destroys and recreates the absolute devices** (`[M]` 15 Aug, *«il puntatore è stato TOLTO dal
+  compositore, ricambio n. 640»*), and the pointer to the old device stops working **without
+  an error** (`STUDI.md` §gnome §9) ⇒ the test would have been **green by construction**.
 
-  `[M]` **E il ricambio è avvenuto davvero**, al ridimensionamento verso `1240x622`:
+  `[M]` **And the replacement really happened**, on the resize towards `1240x622`:
 
   ```
   17:11:00.918  il puntatore e' stato TOLTO dal compositore (ricambio n. 1)
   17:11:00.918  il puntatore e' stato TOLTO dal compositore (ricambio n. 2)
   ```
 
-  ⭐ **Un minuto dopo, alla misura nuova, l'utente ha aperto il menu di sistema col mouse e premuto
-  «Log Out»** (`17:12:05.742 §7.6: prova ha chiesto di USCIRE`, e la sua schermata mostra il menu
-  aperto): un bersaglio piccolo, nell'angolo. ⇒ **I clic finiscono dove punta, dopo il ricambio dei
-  dispositivi.** E lo stesso nell'altro verso, verso `2544x926`: `[M]` alle `17:13:09` trenta
-  `PUNTATORE` con coordinate fino a `2509`, coerenti con la tela nuova.
+  ⭐ **A minute later, at the new size, the user opened the system menu with the mouse and pressed
+  «Log Out»** (`17:12:05.742 §7.6: prova ha chiesto di USCIRE`, and their screenshot shows the menu
+  open): a small target, in the corner. ⇒ **Clicks land where it points, after the devices are
+  replaced.** And the same the other way, towards `2544x926`: `[M]` at `17:13:09` thirty
+  `PUNTATORE` with coordinates up to `2509`, consistent with the new canvas.
 
-  ⚠ **Quel che questa prova NON è**: un banco. È una misura su gesti veri, e vale per Mutter su
-  questa macchina. ⇒ Il banco resta desiderabile, ma non è più l'unica cosa che sta fra noi e il
-  sapere;
-- ✅ **che fine fanno le finestre aperte** quando la tela rimpicciolisce — ⭐ **chiuso dall'utente il
-  16 agosto 2026**, e con l'argomento giusto: *«il punto 1 si è chiuso nel momento in cui ho
+  ⚠ **What this test is NOT**: a bench. It is a measurement on real gestures, and it holds for Mutter on
+  this machine. ⇒ The bench remains desirable, but it is no longer the only thing standing between us and
+  knowing;
+- ✅ **what happens to the open windows** when the canvas shrinks — ⭐ **closed by the user on
+  16 Aug 2026**, and with the right argument: *«il punto 1 si è chiuso nel momento in cui ho
   riattaccato la sessione con il browser a finestra: se fosse accaduto qualcosa il terminale lasciato
   aperto si sarebbe chiuso»*.
 
-  ⇒ `[M]` La tela è passata da `2544x926` a `1240x622` con un terminale aperto e un `cat /dev/urandom`
-  dentro: **la finestra è sopravvissuta, il processo pure** (PID 523560, 2 min 31 s), e il desktop è
-  rimasto usabile alla misura nuova — l'utente ci ha aperto il menu di sistema col mouse.
+  ⇒ `[M]` The canvas went from `2544x926` to `1240x622` with a terminal open and a `cat /dev/urandom`
+  inside: **the window survived, and so did the process** (PID 523560, 2 min 31 s), and the desktop
+  stayed usable at the new size — the user opened the system menu in it with the mouse.
 
-  ⚠ **Quel che resta NON osservato**, e si scrive per non spacciarlo per provato: se una finestra
-  **più grande dello schermo nuovo** venga riportata dentro da Mutter o resti tagliata. ⛔ Il
-  terminale della prova era piccolo, quindi il caso non si è presentato. È cosmetica, è di GNOME, e
-  non blocca niente;
-- **la tabella dei compositori**, che è la parte «studia bene i compositori» del punto:
+  ⚠ **What remains NOT observed**, and it is written down so as not to pass it off as tested: whether a window
+  **larger than the new screen** is brought back inside by Mutter or stays cut. ⛔ The
+  test's terminal was small, so the case did not arise. It is cosmetic, it is GNOME's, and
+  it blocks nothing;
+- **the compositors table**, which is the «study the compositors well» part of the point:
 
-| | ridimensiona a caldo? |
+| | resizes hot? |
 |---|---|
-| **Mutter** (GNOME) | ✅ `[M]` — è la strada su cui la coda della fase 4 è stata misurata |
-| ⛔ **KWin** | **no fino a `v6.7.4` compreso** — `[R]` verificato su invent.kde.org il 14 ago: il ridimensionamento c'è **solo su `master`**, `Plasma/6.8` **non esiste** e non ha data. Riavviare KWin ucciderebbe la sessione, cioè proprio il distacco che il modello offre ⇒ **ripiego dichiarato** (`DECISIONI.md` §5.0-bis): si tiene la tela vecchia e riscala il client. ⛔ La riga nel registro (`COMPOSITORE_INCAPACE`) esiste nel codice ed è provata **su un ospite finto** — verificabile davvero solo alla **fase 11** (KDE) |
-| **labwc** (XFCE, LXQt) | ⚠ e il rischio non è la misura: su **XFCE** `xfsettingsd` è il primo client della sessione e **spegne ogni output nuovo** (`enabled = FALSE`); su **LXQt** non c'è niente di simile (`SPECIFICHE.md` §11.2) |
-| **muffin** (Cinnamon) | la riga peggiore, e prima del ridimensionamento mancano `RecordVirtual`, libei e gli appunti |
+| **Mutter** (GNOME) | ✅ `[M]` — it is the path on which the tail of phase 4 was measured |
+| ⛔ **KWin** | **no up to and including `v6.7.4`** — `[R]` checked on invent.kde.org on 14 Aug: resizing exists **only on `master`**, `Plasma/6.8` **does not exist** and has no date. Restarting KWin would kill the session, i.e. exactly the detach the model offers ⇒ **declared fallback** (`DECISIONI.md` §5.0-bis): the old canvas is kept and the client rescales. ⛔ The log line (`COMPOSITORE_INCAPACE`) exists in the code and is tested **on a fake guest** — truly verifiable only at **phase 11** (KDE) |
+| **labwc** (XFCE, LXQt) | ⚠ and the risk is not the size: on **XFCE** `xfsettingsd` is the first client of the session and **switches off every new output** (`enabled = FALSE`); on **LXQt** there is nothing similar (`SPECIFICHE.md` §11.2) |
+| **muffin** (Cinnamon) | the worst row, and before resizing `RecordVirtual`, libei and the clipboard are missing |
 
-⭐ **La memoria dell'utente era giusta**: KWin è il caso problematico, e la sua degradazione è
-**l'unico punto del modello che non può essere servito**.
+⭐ **The user's memory was right**: KWin is the problematic case, and its degradation is
+**the only point of the model that cannot be served**.
 
-#### 1.4 L'utente che ha **già** una sessione grafica attiva
+#### 1.4 The user who **already** has an active graphical session
 
-`SPECIFICHE.md` §5.1 li elenca tutti e quattro. Lo stato, oggi:
+`SPECIFICHE.md` §5.1 lists all four. The state, today:
 
-| situazione | motivo | stato |
+| situation | reason | state |
 |---|---|---|
-| remota viva + un **secondo dispositivo** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **vivo e provato** `[M]`: il registro dei posti in `rcp.c`, e il caso 18 del banco `04-b31` |
-| remota **muta da 30 s** + un altro dispositivo | *(entra)* | vivo: `torna_a_parlare()` |
-| ⛔ **locale già attiva**, arriva la remota | `0x05 GIA_ATTIVA_LOCALE` | **definito in `rcp.h` · `rcp_tetto_imposta()` e MAI EMESSO da nessun `.c`** |
-| ⛔ remota viva, **si apre la locale** | `0x04 SESSIONE_LOCALE_PREVALSA` | **definito in `rcp.h` · `rcp_tetto_imposta()` e MAI EMESSO** |
+| remote alive + a **second device** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **live and tested** `[M]`: the seat registry in `rcp.c`, and case 18 of bench `04-b31` |
+| remote **silent for 30 s** + another device | *(gets in)* | live: `torna_a_parlare()` |
+| ⛔ **local already active**, the remote arrives | `0x05 GIA_ATTIVA_LOCALE` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED by any `.c`** |
+| ⛔ remote alive, **the local one opens** | `0x04 SESSIONE_LOCALE_PREVALSA` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED** |
 
-⛔ È la stessa forma di guasto di `RCP_SERVER_IN_CHIUSURA` (rilievo **B-7**): un motivo che esiste
-nell'intestazione e che nessuno spedisce. ⭐ E la pagina **è già pronta a leggerli**
-(`pagina.html:440-441`): manca solo chi li manda.
+⛔ It is the same fault shape as `RCP_SERVER_IN_CHIUSURA` (finding **B-7**): a reason that exists
+in the header and that nobody sends. ⭐ And the page **is already ready to read them**
+(`pagina.html:440-441`): only the sender is missing.
 
-**Quel che serve:**
+**What is needed:**
 
-- **chi guarda le sessioni locali — logind.** Oggi l'unico file che lo nomina è `sessione.c`, di
-  sfuggita. Il pezzo da riportare è `fondamenta/remotix-c/src/sentinella.c` (307 righe): `ListSessions` +
-  i segnali `SessionNew` / `SessionRemoved`, e le proprietà `Type`, `Remote`, `Active`;
-- ⛔⛔ **la definizione di «sessione grafica locale», scritta prima del codice — e la prima stesura
-  ovvia è SBAGLIATA.** Il criterio che viene in mente è `Type ∈ {wayland, x11}` **e**
-  `Remote = false`; ⛔ ma `[R]` **noi non chiamiamo `pam_set_item(PAM_RHOST, …)` da nessuna parte**
-  — `autenticazione.c` · `rcp_autentica()` fa `pam_start` e basta — quindi `pam_systemd` crea le **nostre** sessioni
-  senza host remoto e logind le segna con ogni probabilità `Remote=no`. ⇒ ⭐ **con quel criterio la
-  nostra sessione remota conterebbe come locale, e ci rifiuteremmo da soli con `0x05`.**
+- **who watches the local sessions — logind.** Today the only file that names it is `sessione.c`, in
+  passing. The piece to bring over is `fondamenta/remotix-c/src/sentinella.c` (307 lines): `ListSessions` +
+  the signals `SessionNew` / `SessionRemoved`, and the properties `Type`, `Remote`, `Active`;
+- ⛔⛔ **the definition of «local graphical session», written before the code — and the obvious first
+  draft is WRONG.** The criterion that comes to mind is `Type ∈ {wayland, x11}` **and**
+  `Remote = false`; ⛔ but `[R]` **we do not call `pam_set_item(PAM_RHOST, …)` anywhere**
+  — `autenticazione.c` · `rcp_autentica()` does `pam_start` and that is all — so `pam_systemd` creates **our** sessions
+  without a remote host and logind in all likelihood marks them `Remote=no`. ⇒ ⭐ **with that criterion our
+  remote session would count as local, and we would reject ourselves with `0x05`.**
 
-  **Due cure, e conviene farle tutt'e due:**
-  1. **il discrimine è il SEAT, non `Remote`**: locale = **ha un seat** (`seat0`); la nostra
-     headless non ne ha (è la stessa proprietà su cui Mutter decide `is_headless()`, §2.3);
-  2. ⭐ **e `PAM_RHOST` va impostato lo stesso**, con l'indirizzo del client: costa una riga e
-     ripaga due volte — logind segna la sessione `Remote=yes`, **e** l'accesso finisce nei registri
-     di sistema (`last`, audit) con la provenienza, che oggi non c'è.
+  **Two cures, and it is worth doing both:**
+  1. **the discriminant is the SEAT, not `Remote`**: local = **has a seat** (`seat0`); our
+     headless one has none (it is the same property on which Mutter decides `is_headless()`, §2.3);
+  2. ⭐ **and `PAM_RHOST` must be set anyway**, with the client's address: it costs one line and
+     pays back twice — logind marks the session `Remote=yes`, **and** the login ends up in the system
+     logs (`last`, audit) with its origin, which is not there today.
 
-  ⏳ `[?]` **Da misurare sulla macchina**, e non è dedotto: `loginctl show-session` sulla sessione
-  di `prova` e su quella locale di `nicfio`, guardando `Type`, `Class`, `Remote`, `Seat`, `Active`.
-  ⚠ Tentato il 15 agosto sera: la macchina non rispondeva a ssh;
-- le sessioni **testuali** (ssh, tty) devono continuare a convivere: sono innumerevoli, §5.1;
-- ⚠ il caso `0x04` è l'unico in cui **il server butta fuori un client sano**: `DECISIONI.md` §4.1-bis
-  lo ammette solo con un motivo dicibile, ed è per questo che il motivo esiste. Il banco lo verifica
-  **dal lato che lo riceve**.
+  ⏳ `[?]` **To be measured on the machine**, and it is not deduced: `loginctl show-session` on the session
+  of `prova` and on the local one of `nicfio`, looking at `Type`, `Class`, `Remote`, `Seat`, `Active`.
+  ⚠ Attempted on the evening of 15 Aug: the machine did not answer ssh;
+- **text** sessions (ssh, tty) must keep coexisting: they are countless, §5.1;
+- ⚠ case `0x04` is the only one in which **the server throws out a healthy client**: `DECISIONI.md` §4.1-bis
+  admits it only with a sayable reason, and that is why the reason exists. The bench verifies it
+  **from the receiving side**.
 
-#### 1.5 ⭐ Il multi-tenant: la domanda dell'utente, e la riga dove passa il confine
+#### 1.5 ⭐ Multi-tenant: the user's question, and the line where the border runs
 
-*Chiesto dall'utente il 15 agosto: «poiché qui trattiamo le sessioni, mi chiedo se il multi-tenant
+*Asked by the user on 15 Aug: «poiché qui trattiamo le sessioni, mi chiedo se il multi-tenant
 non ricada in questa fase».*
 
-✅ **Deciso dall'utente lo stesso giorno: «potremmo anche lasciare in questa fase 1 solo utente, e
-nella fase 12 il multi-tenant».** ⇒ `DECISIONI.md` §4.6-quater, dove il confine vive per intero.
-⚠ La domanda era buona perché i documenti dicevano cose diverse: `SPECIFICHE.md` §5.5 dice *«il
-multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` intitolava la fase 12 «Multi-tenant e il budget».
+✅ **Decided by the user the same day: «potremmo anche lasciare in questa fase 1 solo utente, e
+nella fase 12 il multi-tenant».** ⇒ `DECISIONI.md` §4.6-quater, where the border lives in full.
+⚠ The question was good because the documents said different things: `SPECIFICHE.md` §5.5 says *«il
+multi-tenant è delle fasi da 5 in poi»*, `PIANO.md` titled phase 12 «Multi-tenant e il budget».
 
-> ⚠ **E quella fase adesso è la 10, non la 12** — spostata dall'utente il **16 agosto 2026**
+> ⚠ **And that phase is now 10, not 12** — moved by the user on **16 Aug 2026**
 > (`DECISIONI.md` §4.6-sexies): *«PRIMA si chiude lo sviluppo anche con il multi-tenant, e solo
-> dopo si pensa agli altri DE»*. ⭐ **Il confine deciso qui non è cambiato**, è cambiato il posto in
-> fila. ⛔ E la frase virgolettata qui sopra **resta com'era detta**: era il numero di quel giorno.
+> dopo si pensa agli altri DE»*. ⭐ **The border decided here has not changed**, its place in the
+> queue has. ⛔ And the quoted sentence above **stays as it was said**: it was that day's number.
 
-| | dove | in breve |
+| | where | in short |
 |---|---|---|
-| **un utente remoto per volta** | ⭐ **questa fase** | nessuna prova di due sessioni remote insieme, nessun budget, nessun conteggio |
-| **più sessioni insieme, il budget, `BUDGET_PIENO`, `MAX_ATTACCATE` configurabile** | **fase 10** | hanno bisogno di un numero vero, e lo dà il codificatore hardware della **fase 8** |
-| ⛔ **il codice chiavato sull'utente**, e il guardiano di logind che **discrimina per utente** | ⭐ **questa fase, e non è rinviabile** | ⛔ non perché sia importante: perché **non si può scrivere «per un utente solo»** |
+| **one remote user at a time** | ⭐ **this phase** | no test of two remote sessions together, no budget, no counting |
+| **several sessions together, the budget, `BUDGET_PIENO`, configurable `MAX_ATTACCATE`** | **phase 10** | they need a real number, and the hardware encoder of **phase 8** gives it |
+| ⛔ **the code keyed on the user**, and the logind guard that **discriminates per user** | ⭐ **this phase, and it cannot be postponed** | ⛔ not because it is important: because **it cannot be written «for a single user»** |
 
-⛔ **E la ragione per cui l'ultima riga non si rinvia è che la macchina la smaschera da sola.** Il
-guardiano di §1.4 risponde a una domanda che suona in due modi diversissimi — *«c'è una sessione
-grafica locale?»* contro *«c'è una sessione grafica locale **di questo utente**?»* — che sono una
-riga di differenza e due prodotti diversi. ⭐ E la macchina di prova è **già** nella configurazione
-che smaschera l'errore: `nicfio` ha la sua sessione grafica **locale**, `prova` si collega da
-**remoto**. Scritto male, `prova` viene rifiutato con `0x05` **il primo giorno**.
+⛔ **And the reason the last row cannot be postponed is that the machine unmasks it by itself.** The
+guard of §1.4 answers a question that sounds two very different ways — *«is there a local graphical
+session?»* versus *«is there a local graphical session **of this user**?»* — which are one
+line of difference and two different products. ⭐ And the test machine is **already** in the configuration
+that unmasks the error: `nicfio` has their **local** graphical session, `prova` connects
+**remotely**. Written wrong, `prova` is rejected with `0x05` **on the first day**.
 
-⇒ ⭐ **Il banco di `0x04`/`0x05` si scrive su quella coppia** — locale `nicfio` e remota `prova`, che
-**devono convivere senza toccarsi** — e costa quanto costerebbe comunque.
+⇒ ⭐ **The `0x04`/`0x05` bench is written on that pair** — local `nicfio` and remote `prova`, which
+**must coexist without touching each other** — and it costs what it would cost anyway.
 
-⚠ ~~**E il ripiego resta dichiarato**: `MAX_ATTACCATE` è un `#define` a **16** dove §5.5 promette
-**dieci configurabile**. Oggi non morde, e la sua scadenza è la fase 10.~~ ✅ **PAGATO il 25 agosto
-2026** (fase 10): `RCP_TETTO_SESSIONI` in `src/rcp.h`, e **`--tetto-sessioni N`** lo cambia.
+⚠ ~~**And the fallback stays declared**: `MAX_ATTACCATE` is a `#define` at **16** where §5.5 promises
+**ten, configurable**. Today it does not bite, and its deadline is phase 10.~~ ✅ **PAID on 25 Aug
+2026** (phase 10): `RCP_TETTO_SESSIONI` in `src/rcp.h`, and **`--tetto-sessioni N`** changes it.
 
 ---
 
-### 2 · Quel che il piano chiedeva già, e resta
+### 2 · What the plan already asked for, and remains
 
-*Dal mandato §3 e §4 — nessuno di questi ha un banco, ed è esattamente il lavoro della fase.*
+*From the mandate §3 and §4 — none of these has a bench, and that is exactly the work of the phase.*
 
-1. ✅ **Il rilascio dei tasti al distacco, CON UN TASTO PREMUTO DAVVERO** — `[M]` **16 agosto,
-   provato col browser su due delle quattro strade, e il testimone è il desktop vero.**
-   `RCP.md` §11 la chiama *«la regola col rapporto danno/costo più alto del documento»*.
-   ⇒ **Regge**, e i tempi sono quelli di §6-bis qui sotto. ⛔ Ma la prova ha trovato **due difetti**,
-   uno chiuso e uno aperto: la riga che diceva sempre `0` (chiusa) e **l'orologio del silenzio**
-   (punto 4, e adesso ha una misura).
-2. ✅ **L'inibizione della sospensione** — `[M]` 16 agosto, **20 giri su 20**: *«sospensione e
-   inattività INIBITE al gestore di sessione (flag 12 = SUSPEND\|IDLE — mai LOGOUT)»*. ~~Quel che
-   segue resta come cronaca di com'era:~~ `[M]` 15 agosto: la notifica **«Automatic Suspend —
-   Suspending soon because of inactivity»** compare in due schermate del desktop remoto.
-   `sleep-inactive-ac-type` vale `suspend` a **900 s**. La cura è una chiamata:
-   `SessionManager.Inhibit(…, 12)` = `SUSPEND|IDLE` **insieme**, ⛔ **mai** il bit `LOGOUT`.
-   ⚠ `energia.c` **non esiste in `src/`**: va portato da `fondamenta/remotix-c/src/energia.c`.
-   ⚠ E senza questa, il banco delle **sei ore** non misura niente.
-3. ✅ **L'headless si dichiara e si verifica dopo l'avvio** — `[M]` 16 agosto, **20 giri su 20**: il
-   figlio scrive *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ Non è più «per
-   accidente»: è un fatto letto dal nucleo a ogni sessione.
-4. **I tre orologi**: ✅ **30 s di silenzio** — era **rotto**, trovato il 16 agosto col browser
-   mentre si provava il punto 1 (contava i secondi in cui *l'utente non tocca niente* invece di
-   quelli in cui *il client tace*: un secondo dispositivo entrava e si prendeva il desktop di chi
-   stava guardando). **Riparato e provato in tre punti**, §6-bis. ✅ **30 min di inattività**: fatto il 16 agosto,
-   motivo `0x02` di §8.2 che era dichiarato e mai spedito — §6-quinquies. ✅ **il terzo**: niente 6 ore — **60 minuti
-   senza input e la sessione si chiude** (`DECISIONI.md` §4.8), provato a 20 s in §6-septies.
-5. ✅ **Distacco e riaggancio due volte di fila** — *«un banco che passa solo da macchina pulita non è
-   un banco, è una dimostrazione»*. ⇒ `[M]` 16 agosto: **cinque giri**, tre col distacco pulito e
-   **due col filo tagliato**. Indistinguibili fra loro, e ⭐ **niente si accumula** — §6-sexies.
-6. ✅ **La sessione senza nessuno che guarda** — `[M]` 16 agosto, col browser. In v1 il monitor
-   virtuale spariva al distacco e `libmutter` andava in asserzione fallita: ⭐ **qui non succede**, e
-   il costo di un desktop che nessuno guarda è **praticamente zero**. Misure in §6-quater.
-7. ✅ **PAM per intero**: asincrono (`aiutante.c`) **e** la sessione PAM aperta dal figlio (passo
-   2-bis). `[M]` provato venti volte col browser: *«PAM ha risposto: ammesso — e il filo non si è mai
+1. ✅ **Releasing keys on detach, WITH A KEY REALLY PRESSED** — `[M]` **16 Aug,
+   tested with the browser on two of the four paths, and the witness is the real desktop.**
+   `RCP.md` §11 calls it *«la regola col rapporto danno/costo più alto del documento»*.
+   ⇒ **It holds**, and the times are those of §6-bis below. ⛔ But the test found **two defects**,
+   one closed and one open: the line that always said `0` (closed) and **the silence clock**
+   (point 4, and now it has a measurement).
+2. ✅ **Inhibiting suspend** — `[M]` 16 Aug, **20 rounds out of 20**: *«sospensione e
+   inattività INIBITE al gestore di sessione (flag 12 = SUSPEND\|IDLE — mai LOGOUT)»*. ~~What
+   follows stays as a chronicle of how it was:~~ `[M]` 15 Aug: the notification **«Automatic Suspend —
+   Suspending soon because of inactivity»** appears in two screenshots of the remote desktop.
+   `sleep-inactive-ac-type` is `suspend` at **900 s**. The cure is one call:
+   `SessionManager.Inhibit(…, 12)` = `SUSPEND|IDLE` **together**, ⛔ **never** the `LOGOUT` bit.
+   ⚠ `energia.c` **does not exist in `src/`**: it must be brought over from `fondamenta/remotix-c/src/energia.c`.
+   ⚠ And without it, the **six hours** bench measures nothing.
+3. ✅ **Headless is declared and verified after startup** — `[M]` 16 Aug, **20 rounds out of 20**: the
+   child writes *«VERIFICATO: la mia sessione non ha seat ⇒ Mutter è headless»*. ⛔ It is no longer «by
+   accident»: it is a fact read from the kernel at every session.
+4. **The three clocks**: ✅ **30 s of silence** — it was **broken**, found on 16 Aug with the browser
+   while testing point 1 (it counted the seconds in which *the user touches nothing* instead of
+   those in which *the client is silent*: a second device got in and took the desktop of whoever
+   was watching). **Repaired and tested at three points**, §6-bis. ✅ **30 min of inactivity**: done on 16 Aug,
+   reason `0x02` of §8.2 which was declared and never sent — §6-quinquies. ✅ **the third**: no 6 hours — **60 minutes
+   without input and the session closes** (`DECISIONI.md` §4.8), tested at 20 s in §6-septies.
+5. ✅ **Detach and reattach twice in a row** — *«un banco che passa solo da macchina pulita non è
+   un banco, è una dimostrazione»*. ⇒ `[M]` 16 Aug: **five rounds**, three with a clean detach and
+   **two with the wire cut**. Indistinguishable from each other, and ⭐ **nothing accumulates** — §6-sexies.
+6. ✅ **The session with nobody watching** — `[M]` 16 Aug, with the browser. In v1 the virtual
+   monitor disappeared on detach and `libmutter` hit a failed assertion: ⭐ **here it does not happen**, and
+   the cost of a desktop nobody watches is **practically zero**. Measurements in §6-quater.
+7. ✅ **PAM in full**: asynchronous (`aiutante.c`) **and** the PAM session opened by the child (step
+   2-bis). `[M]` tested twenty times with the browser: *«PAM ha risposto: ammesso — e il filo non si è mai
    fermato»*.
 
-⇒ ⭐ **I sette punti di §2 sono chiusi.**
+⇒ ⭐ **The seven points of §2 are closed.**
 
 ---
 
-### 3 · Quel che la coda della fase 4 lascia aperto e che passa di qui
+### 3 · What the tail of phase 4 leaves open and passes through here
 
 | | |
 |---|---|
-| ⏳ la riga che manca a `RCP.md` §7.1 | che cosa fa il server quando il palco cambia misura **da sé** |
-| ⚠ i 4 ms di ritardo medio aggiunto | `MOVIMENTO_ATTESA_S` a 8 ms è un ripiego dichiarato |
-| ⚠ i banchi RCP/1 non esercitano `ADATTA_TELA` | `01-b3` e `01-b4` restano verdi perché il filo non è cambiato |
+| ⏳ the line missing from `RCP.md` §7.1 | what the server does when the stage changes size **by itself** |
+| ⚠ the 4 ms of mean added delay | `MOVIMENTO_ATTESA_S` at 8 ms is a declared fallback |
+| ⚠ the RCP/1 benches do not exercise `ADATTA_TELA` | `01-b3` and `01-b4` stay green because the wire has not changed |
 
 ---
 
-### 4 · ⛔ LE DECISIONI CHE ASPETTANO L'UTENTE
+### 4 · ⛔ THE DECISIONS WAITING FOR THE USER
 
-*⭐ Le domande si affrontano **una alla volta**, per volontà dell'utente.*
+*⭐ The questions are tackled **one at a time**, at the user's wish.*
 
-**Chiuse:**
+**Closed:**
 
 | | |
 |---|---|
-| ✅ **le due uscite** — il filo che cade contro il logout | `DECISIONI.md` §4.1-ter, 15 agosto |
-| ✅ **dopo il logout la pagina torna al modulo di accesso**, e il motivo è `0x10` | `DECISIONI.md` §4.1-quater, `RCP.md` §8.2, 15 agosto |
-| ✅ ~~`disable-log-out`?~~ **vietata** · ✅ ~~`always-show-log-out`?~~ **acceso** | cadute per conseguenza, non per scelta |
-| ✅ **nessuno spegne il server**, chi è davanti alla macchina compreso — e l'utente remoto ha **il solo logout** | `DECISIONI.md` §4.7, `SPECIFICHE.md` §11.3, 15 agosto |
-| ✅ **il logout si raggiunge in due modi**: la voce del menu e `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` e ❌ `Win+F12` scartate **con una misura ciascuna**, ❌ **nessun bottone a schermo** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 agosto |
-| ✅ **il multi-tenant è della fase 10** — qui **un utente remoto per volta**, ⛔ ma il guardiano di logind discrimina **per utente** | `DECISIONI.md` §4.6-quater, 15 agosto |
+| ✅ **the two exits** — the wire dropping versus logout | `DECISIONI.md` §4.1-ter, 15 Aug |
+| ✅ **after logout the page goes back to the login form**, and the reason is `0x10` | `DECISIONI.md` §4.1-quater, `RCP.md` §8.2, 15 Aug |
+| ✅ ~~`disable-log-out`?~~ **forbidden** · ✅ ~~`always-show-log-out`?~~ **on** | fell as a consequence, not by choice |
+| ✅ **nobody powers off the server**, including whoever is in front of the machine — and the remote user has **logout only** | `DECISIONI.md` §4.7, `SPECIFICHE.md` §11.3, 15 Aug |
+| ✅ **logout is reached in two ways**: the menu item and `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` and ❌ `Win+F12` discarded **with one measurement each**, ❌ **no on-screen button** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 Aug |
+| ✅ **multi-tenant belongs to phase 10** — here **one remote user at a time**, ⛔ but the logind guard discriminates **per user** | `DECISIONI.md` §4.6-quater, 15 Aug |
 
-| ✅ **due secondi all'accesso vanno bene; diciotto no** — 16 agosto. ⇒ Il guadagno da 2,1 s a ~1,2 s (dichiarare la misura della finestra nel saluto invece che dopo l'ammissione) **non si fa adesso**: costa mezza giornata **nella stretta di mano**, che è l'unico pezzo dove uno sbaglio è un buco e non un difetto estetico. ⭐ Si riprende quando il protocollo si aprirà comunque — la fase 12 tocca quella zona | qui sotto, e la misura è già fatta |
+| ✅ **two seconds at login are fine; eighteen are not** — 16 Aug. ⇒ The gain from 2,1 s to ~1,2 s (declaring the window size in the greeting instead of after admission) **is not done now**: it costs half a day **in the handshake**, which is the only piece where a mistake is a hole and not a cosmetic defect. ⭐ It is picked up again when the protocol is opened anyway — phase 12 touches that area | below, and the measurement is already done |
 
-**Aperte:** ⭐ nessuna. ⚠ Il 16 agosto ne è passata una che **non era una decisione**: l'orologio del
-silenzio contava i secondi sbagliati (§6-bis). `SPECIFICHE.md` §5.3 e `RCP.md` §8.2 avevano già
-deciso, e il prodotto non li rispettava — ⇒ **riparato senza chiedere**, perché non c'era niente da
-scegliere.
+**Open:** ⭐ none. ⚠ On 16 Aug one went by that **was not a decision**: the silence
+clock counted the wrong seconds (§6-bis). `SPECIFICHE.md` §5.3 and `RCP.md` §8.2 had already
+decided, and the product did not respect them — ⇒ **repaired without asking**, because there was nothing to
+choose.
 
-#### ⏳ Il secondo che si potrebbe recuperare, con la misura già fatta
+#### ⏳ The second that could be recovered, with the measurement already done
 
-`[M]` L'accesso costa **2087 ms** di mediana, e **968** sono il figlio che aspetta: il browser
-dichiara la misura della sua finestra **solo dopo essere stato ammesso**, e prima di allora la
-sessione non può nascere perché non si sa a che misura.
+`[M]` Login costs **2087 ms** median, and **968** are the child waiting: the browser
+declares the size of its window **only after being admitted**, and before then the
+session cannot be born because the size is not known.
 
-⇒ Se la misura arrivasse **col saluto** — come già fa il tetto del decodificatore — la sessione
-nascerebbe **durante** il secondo fisso invece che dopo: accesso a **~1,2 s**. ⛔ E il secondo fisso
-resterebbe intatto: cambia *quando si dichiara la misura*, non *quando si risponde*, quindi il
-canale del cronometro resta chiuso.
+⇒ If the size arrived **with the greeting** — as the decoder cap already does — the session
+would be born **during** the fixed second instead of after: login at **~1,2 s**. ⛔ And the fixed second
+would remain intact: what changes is *when the size is declared*, not *when the answer is given*, so the
+stopwatch channel stays closed.
 
-⚠ **Il costo**: `RCP.md`, `pagina.html`, `rcp.c` **e il suo gemello identico byte per byte** in
-`banchi/rcp/`, `figlio.c`, il client di banco, più una prova per il caso «client vecchio che non lo
-manda». **Mezza giornata**, e nel pezzo più delicato del programma.
+⚠ **The cost**: `RCP.md`, `pagina.html`, `rcp.c` **and its twin identical byte for byte** in
+`banchi/rcp/`, `figlio.c`, the bench client, plus a test for the case «old client that does not
+send it». **Half a day**, and in the most delicate piece of the program.
 
 ---
 
-### 5 · Che cosa non ha funzionato
+### 5 · What did not work
 
-#### 15 agosto 2026, sera — quattro cose, e tre le ha trovate il banco
+#### 15 Aug 2026, evening — four things, and the bench found three of them
 
-1. ⛔⛔ **La pila PAM del prodotto non chiamava `pam_systemd`.** `src/remotix.pam` chiudeva con
-   `common-session-noninteractive`, che su Debian **non** contiene `pam_systemd` — quindi nessuna
-   sessione logind, quindi niente `is_headless()` e niente soggetto per §5.1. ⭐ **E funzionava
-   lo stesso, per un accidente rovesciato**: il file non era installato, PAM ripiegava su `other`,
-   e `other` include `common-session`, che `pam_systemd` ce l'ha. ⇒ Installare il nostro file
-   «come si deve» avrebbe **rotto** quel che l'assenza del file faceva funzionare.
+1. ⛔⛔ **The product's PAM stack did not call `pam_systemd`.** `src/remotix.pam` ended with
+   `common-session-noninteractive`, which on Debian does **not** contain `pam_systemd` — so no
+   logind session, so no `is_headless()` and no subject for §5.1. ⭐ **And it worked
+   all the same, by a reversed accident**: the file was not installed, PAM fell back on `other`,
+   and `other` includes `common-session`, which has `pam_systemd`. ⇒ Installing our file
+   «properly» would have **broken** what the file's absence made work.
    *(`DECISIONI.md` §1.10-ter.)*
-2. ⛔ **La regola polkit di v1 copriva 3 azioni su 12**, e la mancante era
-   `power-off-multiple-sessions` — cioè **il caso multi-utente**, l'unico per cui la regola era
-   stata scritta. Con un utente solo funzionava.
-3. ⛔ **Il mio ragionamento su root era sbagliato**, e me l'ha detto la misura: avevo scritto in
-   `DECISIONI.md` che serviva un'eccezione per root, altrimenti `sudo systemctl poweroff` sarebbe
-   fallito. `[M]` Non serve: logind guarda `CAP_SYS_BOOT` **prima** di polkit. ⇒ La voce è stata
-   corretta, e con lei la conseguenza vera — **la verifica non si può fare dal server, che è root**.
-4. ⛔⛔ **Il banco è stato verde due volte per il motivo sbagliato**, ed è la forma che questo
-   progetto paga più spesso:
-   - la prima perché **gli utenti di prova non esistevano** (il rootfs vive in RAM e il riavvio li
-     aveva cancellati come la chiave ssh): PAM apriva sessioni per un conto inesistente, e i casi
-     «falso» erano falsi perché **non c'era niente**;
-   - la seconda perché **logind rifiutava in silenzio** la seconda sessione sulla stessa console
-     virtuale: `pam_systemd` è `optional`, PAM tornava `SUCCESS`, e il caso 6 era verde **perché
-     vuoto**.
-   ⇒ In tutt'e due i casi a smascherarlo è stato **il dump di `loginctl` dentro il banco**: un banco
-   che dice solo il colore fa ricominciare la caccia da capo.
+2. ⛔ **v1's polkit rule covered 3 actions out of 12**, and the missing one was
+   `power-off-multiple-sessions` — i.e. **the multi-user case**, the only one the rule had
+   been written for. With a single user it worked.
+3. ⛔ **My reasoning about root was wrong**, and the measurement told me: I had written in
+   `DECISIONI.md` that an exception for root was needed, otherwise `sudo systemctl poweroff` would have
+   failed. `[M]` It is not needed: logind looks at `CAP_SYS_BOOT` **before** polkit. ⇒ The entry was
+   corrected, and with it the real consequence — **the check cannot be done from the server, which is root**.
+4. ⛔⛔ **The bench was green twice for the wrong reason**, and it is the shape this
+   project pays most often:
+   - the first because **the test users did not exist** (the rootfs lives in RAM and the reboot had
+     deleted them like the ssh key): PAM opened sessions for a non-existent account, and the
+     «false» cases were false because **there was nothing**;
+   - the second because **logind silently refused** the second session on the same virtual
+     console: `pam_systemd` is `optional`, PAM returned `SUCCESS`, and case 6 was green **because
+     empty**.
+   ⇒ In both cases what unmasked it was **the `loginctl` dump inside the bench**: a bench
+   that only says the colour makes the hunt start over from scratch.
 
-#### 15 agosto 2026, 19:02 UTC — lo schermo nero, e la domanda dell'utente
+#### 15 Aug 2026, 19:02 UTC — the black screen, and the user's question
 
-**Il sintomo**: l'utente si collega, entra, e **non vede il desktop**. La domanda che ha fatto —
-*«sicuri che non hai introdotto regressioni?»* — era quella giusta da fare.
+**The symptom**: the user connects, gets in, and **does not see the desktop**. The question they asked —
+*«sicuri che non hai introdotto regressioni?»* — was the right one to ask.
 
-**Non era una regressione**, e il registro lo diceva per intero: l'attacco è passato (nessun `0x05`,
-nessun rifiuto), e il figlio ha scritto tre volte
+**It was not a regression**, and the log said so in full: the attach went through (no `0x05`,
+no rejection), and the child wrote three times
 
 > ⛔ *runtime «/run/user/1001» NON c'è, socket del bus non c'è — senza bus non c'è niente da catturare*
 
-⇒ Il riavvio aveva cancellato l'utente `prova` insieme alla chiave ssh (rootfs in RAM); ricreandolo
-**non avevo acceso il linger**, e `/run/user/<uid>` lo crea quello. Curato con
-`loginctl enable-linger prova prova2`, e scritto come **requisito** in `DECISIONI.md` §1.10-ter.
+⇒ The reboot had deleted the user `prova` together with the ssh key (rootfs in RAM); recreating it
+**I had not turned on linger**, and that is what creates `/run/user/<uid>`. Cured with
+`loginctl enable-linger prova prova2`, and written as a **requirement** in `DECISIONI.md` §1.10-ter.
 
-> #### ⭐⭐ E l'utente ha visto sotto il sintomo un tema — 15 agosto 2026
+> #### ⭐⭐ And the user saw a theme under the symptom — 15 Aug 2026
 >
 > > *«Bisogna fare attenzione al corretto setting delle variabili d'ambiente (XDG…). Dovrebbe essere
 > > compito del session manager, ma per qualche motivo in REMOTIX sembra che non vengano
 > > impostate.»*
 >
-> ⭐ **Ha ragione, e la ragione è strutturale**: quelle variabili le imposta `pam_systemd` al login,
-> e ⛔ **noi il login non lo facciamo** — `figlio.c` · `scatto_chiudi()` dichiara fuori mandato far nascere la
-> sessione. ⇒ Nessuno le imposta, e noi le **componiamo a mano**.
+> ⭐ **They are right, and the reason is structural**: those variables are set by `pam_systemd` at login,
+> and ⛔ **we do not do the login** — `figlio.c` · `scatto_chiudi()` declares giving birth to the
+> session out of mandate. ⇒ Nobody sets them, and we **compose them by hand**.
 >
-> **Quel che c'è oggi**, letto nel codice:
+> **What there is today**, read in the code:
 >
-> | dove | che cosa compone |
+> | where | what it composes |
 > |---|---|
-> | `figlio.c:723-737` | `HOME`, `USER`, `LOGNAME`, `PATH`, `SHELL=` (vuota), `XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS` — **sette, e nient'altro esiste dall'altra parte** (`execve`) |
-> | `sessione.c:492-511` | le due di sopra più `XDG_CURRENT_DESKTOP`, `XDG_SESSION_DESKTOP`, `XDG_SESSION_TYPE`, `LANG` |
+> | `figlio.c:723-737` | `HOME`, `USER`, `LOGNAME`, `PATH`, `SHELL=` (empty), `XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS` — **seven, and nothing else exists on the other side** (`execve`) |
+> | `sessione.c:492-511` | the two above plus `XDG_CURRENT_DESKTOP`, `XDG_SESSION_DESKTOP`, `XDG_SESSION_TYPE`, `LANG` |
 >
-> ⛔ **E `XDG_RUNTIME_DIR` è ASSERITA, non ottenuta**: si scrive `/run/user/<uid>` per convenzione.
-> La convenzione è giusta su systemd — ⚠ ma è esattamente la forma del guasto di stasera: un valore
-> **dichiarato** al posto di un valore **avuto**.
+> ⛔ **And `XDG_RUNTIME_DIR` is ASSERTED, not obtained**: `/run/user/<uid>` is written by convention.
+> The convention is right on systemd — ⚠ but it is exactly the shape of tonight's fault: a value
+> **declared** in place of a value **obtained**.
 >
-> ⚠ **Quel che nessuno imposta, e che ricade sui predefiniti in silenzio**: `XDG_DATA_DIRS`,
+> ⚠ **What nobody sets, and silently falls back on the defaults**: `XDG_DATA_DIRS`,
 > `XDG_CONFIG_DIRS`, `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_CACHE_HOME`,
-> `XDG_SESSION_CLASS`. ⛔ E `XDG_SESSION_ID` **di proposito** (`sessione.c` · `locale_utf8()`).
+> `XDG_SESSION_CLASS`. ⛔ And `XDG_SESSION_ID` **on purpose** (`sessione.c` · `locale_utf8()`).
 >
-> ⇒ **Il lavoro che ne nasce, per questa fase:**
-> 1. un posto solo che compone l'ambiente **e lo verifica**, scrivendo per ogni variabile **da dove
->    viene** — asserita, ereditata, dedotta. Oggi `sessione.c` già lo fa per il bus (*«assente: uso
->    …»*), ed è la forma da estendere;
-> 2. ⛔ `XDG_RUNTIME_DIR` si **verifica prima di `execve`**: esiste, ed è di quell'uid. Se non c'è, il
->    messaggio deve **nominare la causa probabile** — *«quell'utente ha il linger acceso?»* — invece
->    del solo sintomo, che stasera è costato un giro;
-> 3. decidere se le sei `XDG_*_DIRS`/`_HOME` vadano dichiarate invece di lasciate al predefinito.
+> ⇒ **The work that comes out of it, for this phase:**
+> 1. a single place that composes the environment **and verifies it**, writing for each variable **where it
+>    comes from** — asserted, inherited, deduced. Today `sessione.c` already does it for the bus (*«assente: uso
+>    …»*), and it is the shape to extend;
+> 2. ⛔ `XDG_RUNTIME_DIR` is **verified before `execve`**: it exists, and it belongs to that uid. If it is not there, the
+>    message must **name the probable cause** — *«quell'utente ha il linger acceso?»* — instead
+>    of only the symptom, which tonight cost a round;
+> 3. decide whether the six `XDG_*_DIRS`/`_HOME` should be declared instead of left to the default.
 
-#### 15 agosto 2026, 20:00 UTC — ⛔⛔ il lag, e il prezzo nascosto dell'headless
+#### 15 Aug 2026, 20:00 UTC — ⛔⛔ the lag, and the hidden price of headless
 
-**Il sintomo**, riferito dall'utente: *«qualche piccolo lag in generale»*, e poi il numero che conta —
+**The symptom**, reported by the user: *«qualche piccolo lag in generale»*, and then the number that counts —
 *«impartisco un comando nel terminale e risponde con 1-2 secondi di ritardo»*.
 
-**Le due cose escluse per prime, con una misura ciascuna** — ⛔ e la prima è quella che avevo
-aggiunto io, quindi andava esclusa per prima:
+**The two things excluded first, with one measurement each** — ⛔ and the first is the one I had
+added myself, so it had to be excluded first:
 
-| sospetto | misura |
+| suspect | measurement |
 |---|---|
-| il **ripasso di logind** ogni 2 s, sincrono nel ciclo dei fotogrammi | ⭐ `[M]` 200 chiamate: **mediana 0,125 ms**, p95 0,226, **max 0,351 ms**. ⇒ Non è quello, e il ripiego «sincrono» di `sentinella.c` regge |
-| il **danno degenerato** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 avvisi in tutto, non continui. ⚠ E la lettura del sorgente di Mutter (`meta-screen-cast-stream-src.c:891`) dice che **non** sono i buffer PipeWire: sono i **posti-regione** nel metadato `VideoDamage`, che chiediamo `×4` con tetto `×16` (`cattura.c` · `parametri_di_consumo()`). Quando le regioni sono di più, Mutter dichiara **tutto il fotogramma danneggiato**. ⏳ Difetto vero, piccolo, da curare — ma non è questo il lag |
+| the **logind recheck** every 2 s, synchronous in the frame loop | ⭐ `[M]` 200 calls: **median 0,125 ms**, p95 0,226, **max 0,351 ms**. ⇒ It is not that, and the «synchronous» fallback of `sentinella.c` holds |
+| the **degenerate damage** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 warnings in all, not continuous. ⚠ And reading Mutter's source (`meta-screen-cast-stream-src.c:891`) says they are **not** the PipeWire buffers: they are the **region slots** in the `VideoDamage` metadata, which we request `×4` with a cap of `×16` (`cattura.c` · `parametri_di_consumo()`). When there are more regions, Mutter declares **the whole frame damaged**. ⏳ A real defect, small, to be cured — but it is not this lag |
 
-⛔ **La causa era il compositore che disegnava IN SOFTWARE**, e l'ho introdotta io: `[M]`
-`gnome-shell` non aveva **nessun** nodo `/dev/dri/*` aperto. Ricreando l'utente `prova` dopo il
-riavvio l'ho fatto con `useradd` nudo — `groups=prova` e basta — mentre `nicfio` è in **`video`
-(44)** e **`render` (991)**, e i nodi sono `root:render` in modo `0660`. Senza accesso alla GPU,
-Mesa ripiega su llvmpipe e il compositore compone **a mano** un desktop di 2544×926.
+⛔ **The cause was the compositor drawing IN SOFTWARE**, and I introduced it: `[M]`
+`gnome-shell` had **no** `/dev/dri/*` node open. Recreating the user `prova` after the
+reboot I did it with bare `useradd` — `groups=prova` and nothing else — while `nicfio` is in **`video`
+(44)** and **`render` (991)**, and the nodes are `root:render` with mode `0660`. Without access to the GPU,
+Mesa falls back on llvmpipe and the compositor composes **by hand** a 2544×926 desktop.
 
-**La cura, in due passi e il secondo non è ovvio**: `usermod -aG video,render prova` — ⛔ **e far
-rinascere `user@1001.service`**, perché il compositore lo avvia il **gestore d'utente**, che le
-credenziali le fissa alla propria partenza: `[M]` dopo il solo `usermod` il processo aveva ancora
-`Groups: 1001`. Dopo il riavvio del gestore: `Groups: 44 991 1001` e **10 descrittori** su
+**The cure, in two steps and the second is not obvious**: `usermod -aG video,render prova` — ⛔ **and
+make `user@1001.service` be reborn**, because the compositor is started by the **user manager**, which fixes the
+credentials at its own start: `[M]` after the `usermod` alone the process still had
+`Groups: 1001`. After restarting the manager: `Groups: 44 991 1001` and **10 descriptors** on
 `/dev/dri/renderD129`.
 
-> #### ⭐⭐ E LA DOMANDA DELL'UTENTE HA SCOPERTO UN PREZZO CHE NON ERA SCRITTO DA NESSUNA PARTE
+> #### ⭐⭐ AND THE USER'S QUESTION UNCOVERED A PRICE THAT WAS NOT WRITTEN ANYWHERE
 >
 > > *«Nei DE normali l'utente NON appartiene ai gruppi `video` e `render`, eppure usano
 > > l'accelerazione hardware. Come mai?»*
 >
-> ⭐ **Perché su un desktop normale non servono i gruppi: serve il SEAT.** `[M]` verificato sulla
-> macchina: `/dev/dri/renderD129` porta i tag udev **`uaccess`** e **`seat`**, e logind concede
-> l'accesso con un'**ACL per utente** — è il `+` nei permessi — all'utente della sessione **attiva
-> su quel seat**. Nessun gruppo, nessuna configurazione: la dà il fatto di essere seduti lì.
+> ⭐ **Because on a normal desktop the groups are not needed: the SEAT is.** `[M]` verified on the
+> machine: `/dev/dri/renderD129` carries the udev tags **`uaccess`** and **`seat`**, and logind grants
+> access with a **per-user ACL** — it is the `+` in the permissions — to the user of the session **active
+> on that seat**. No group, no configuration: it comes from the fact of sitting there.
 >
-> ⛔ **E noi quel seat non ce l'abbiamo, di proposito**: è la condizione di `is_headless()`
-> (`DECISIONI.md` §4.3-bis), cioè quel che ci salva dalla revoca del blocca-schermo di GNOME.
-> `[M]` `getfacl` sul nodo, adesso: **nessuna voce per utente** — perché nessuna sessione sta su un
+> ⛔ **And we do not have that seat, on purpose**: it is the condition of `is_headless()`
+> (`DECISIONI.md` §4.3-bis), i.e. what saves us from the revocation by GNOME's screen lock.
+> `[M]` `getfacl` on the node, now: **no per-user entry** — because no session is on a
 > seat.
 >
-> ⇒ ⛔⛔ **Il prezzo dell'headless è la perdita delle ACL di `uaccess`**, e nessun documento lo
-> diceva. Per una sessione REMOTIX i gruppi `video` e `render` **non sono una comodità
-> dell'ambiente di prova: sono un requisito del prodotto**, esattamente come il linger — e come
-> quello vanno dichiarati e verificati, o si ripaga una serata.
+> ⇒ ⛔⛔ **The price of headless is the loss of the `uaccess` ACLs**, and no document
+> said so. For a REMOTIX session the `video` and `render` groups **are not a convenience
+> of the test environment: they are a product requirement**, exactly like linger — and like
+> that they must be declared and verified, or one pays for another evening.
 >
-> ⚠ **E c'è una coda da non perdere**: senza la regola udev di `DECISIONI.md` §4.6-ter — `[M]` non
-> installata: `/etc/udev/rules.d` è vuota — i gruppi danno accesso a **tutt'e due** le schede, e
-> `[M]` il compositore ha scelto **`renderD129`, l'AMD**. Che sia quella giusta è una decisione
-> della fase 8, non un caso da lasciare all'ordine di enumerazione.
+> ⚠ **And there is a tail not to lose**: without the udev rule of `DECISIONI.md` §4.6-ter — `[M]` not
+> installed: `/etc/udev/rules.d` is empty — the groups give access to **both** cards, and
+> `[M]` the compositor chose **`renderD129`, the AMD**. Whether it is the right one is a decision
+> of phase 8, not a matter to leave to the enumeration order.
 
 #### 15 Aug 2026, 22:09 — ⭐⭐ the cross-check, and the user brings it
 
