@@ -747,7 +747,7 @@ exactly the condition in which view and canvas coincide and nothing is scaled.
 | a 4K screen | the canvas is born 4K, and that is **four times the pixels** of 1080p to encode for each session: it weighs on the budget of §5.5, not on capture (`LEZIONI.md` §6.4) |
 | ⭐ **the canvas at most 4096×2304** (since 1 Oct 2026, decision of the user: *«4096 max di larghezza va benissimo, non ho mai preteso di più»*) — a 5K, 8K or ultrawide screen | the canvas **is not refused**: the side that exceeds is brought to the maximum and the other stays (5120×2880 → **4096×2304**, 5120×1440 → **4096×1440**), and the page lays it out at scale 1 with bands around (§6.2), like any canvas smaller than the window. ⚠ Why: H.264 on the Intel card stops at **4096 px per side**, and Firefox on Linux receives only H.264 — a wider canvas would have had video only on Chrome. 2304 is 16:9 at 4096 (DCI 4096×2160 fits). The limit is the protocol's, `RCP.md` §4.5; the minimum stays **320×240** |
 
-`[?]` **Three things nobody has measured, which go into the browser probe**, because all three
+`[?]` **Three things nobody has measured, which must go into the browser probe**, because all three
 change the number the client declares:
 
 1. ⛔ **page zoom skews the count — MEASURED, and the formula above does not hold.**

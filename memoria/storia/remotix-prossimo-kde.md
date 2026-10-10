@@ -223,7 +223,7 @@ puts back the last element when the clipboard empties.
 
 `prove/fase11-appunti.sh`, **zero faults**, and the user's judgment on the three clients: *«clipboard OK
 su Linux, mstsc e Android»*. Having it mattered more than usual: the clipboard has three cohabitants
-(klipper, the Xwayland bank, the client) and the bench drives two of them.
+(klipper, the Xwayland side, the client) and the bench drives two of them.
 
 ⭐ **WITH THIS PHASE 11 IS CLOSED FOR KDE**: five items out of five, all with the judgment.
 

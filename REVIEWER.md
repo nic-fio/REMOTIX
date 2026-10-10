@@ -12,7 +12,7 @@ read this document and the sections of **`SPECIFICHE.md`** that the area touches
 > came from v1 **without renumbering**, and cites the old names: `SPECIFICA.md` and `REFERENCE.md`
 > are under `fondamenta/documenti/`. In V2 you read **`SPECIFICHE.md`** in their place, and whoever reviews
 > the wire has an arbiter v1 did not have: **`RCP.md`**. The full table is in `CODER.md` §0 —
-> the two are read as a pair, like everything else in these two documents.
+> the two must be read as a pair, like everything else in these two documents.
 
 ---
 
