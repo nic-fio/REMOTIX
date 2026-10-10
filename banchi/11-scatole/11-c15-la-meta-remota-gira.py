@@ -227,6 +227,34 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 REGISTRO = os.path.join(QUI, "11-gancio-registro.jsonl")
 
+# ── the runs written before the English rename (DECISIONI §10.38) keep the Italian words, and
+#    11-gancio-registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple
+#    is protected (english-migration/protetti.tsv), the second is renamed with the code: after
+#    the rename OLD_SPELLING maps every old word to the code's own, before it is empty.  Same
+#    order in both, one word per position.  Only the words this file reads from a run.
+_OLD_WORDS = (
+    "istante", "secco", "maglie", "esito", "nome", "passo0",
+)  # end of the old words
+_WORDS_NOW = (
+    "istante", "secco", "maglie", "esito", "nome", "passo0",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
+def spellings(word):
+    """The word and its old spellings, for prefixes of mesh names («passo0(kde)»)."""
+    return (word,) + tuple(a for a, b in OLD_SPELLING.items() if b == word)
+
+
 # ⛔ The two numbers are NOT mine: they come from C12 and from C13, and above it is written
 #    why they are the same and not two new ones.  ⚠ At the origin they are `[?]`.
 ULTIMI_PREDEFINITI = 20   # `[R]` C13, `ULTIMI_PREDEFINITI`
@@ -281,7 +309,7 @@ def numero_di(nome):
     s = nome.strip().lower()
     if s in NON_E_UNA_MAGLIA:
         return None
-    if s.startswith("passo0"):
+    if s.startswith(spellings("passo0")):
         return "passo0"
     # ⚠ `\d+` is greedy on purpose: «c10» must be «c10» and not «c1».
     m = re.match(r"^(c\d+)", s)
@@ -323,7 +351,7 @@ def leggi_il_registro(percorso):
         if not r:
             continue
         try:
-            o = json.loads(r)
+            o = current_spelling(json.loads(r))
         except ValueError:
             storte += 1
             continue

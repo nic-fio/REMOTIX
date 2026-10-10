@@ -38,6 +38,32 @@ SERIE = (("cpu", "machine CPU"), ("disegno", "card: drawing"),
          ("video", "card: video"), ("mem", "memory used"))
 BREVI = {"cpu": "CPU", "disegno": "drawing", "video": "video", "mem": "memory"}
 
+# ── the rows of the register written before the English rename (DECISIONI §10.38) keep the Italian
+#    words: the register (*.jsonl, misure/) is never rewritten.  The first tuple is protected
+#    (english-migration/protetti.tsv), the second is renamed with the code: after the rename
+#    OLD_SPELLING maps every old word to the code's own, before it is empty.  Same order in both,
+#    one word per position: the keys and the values of the rows of 16-classifica.py that are read here.
+_OLD_WORDS = (
+    "campagna", "livello", "tipo", "sessione", "scheda", "misura", "binario", "pagina", "nucleo",
+    "classe", "significativo", "risorse", "disegno", "sessioni", "ragione", "evidenze", "inizio",
+    "utente", "profilo", "inquilino", "misure", "saltati_pct", "buchi",
+)  # end of the old words
+_WORDS_NOW = (
+    "campagna", "livello", "tipo", "sessione", "scheda", "misura", "binario", "pagina", "nucleo",
+    "classe", "significativo", "risorse", "disegno", "sessioni", "ragione", "evidenze", "inizio",
+    "utente", "profilo", "inquilino", "misure", "saltati_pct", "buchi",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A row of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
 
 def leggi(p):
     out = []
@@ -46,7 +72,7 @@ def leggi(p):
             x = x.strip()
             if x:
                 try:
-                    out.append(json.loads(x))
+                    out.append(current_spelling(json.loads(x)))
                 except ValueError:
                     pass
     return out
@@ -506,6 +532,23 @@ def certifica():
                and "last GREEN <b>10</b> · break <b>11</b>" in p and "last GREEN <b>16</b>" in p,
                "%d byte" % len(p))
         guarda("⛔ FAULT: an empty register does not invent cells", "last GREEN" not in pagina([]))
+        # ⭐ the same register as a campaign before the English rename wrote it (Italian keys and
+        #   values; before the rename the two are the same) ⇒ the same report
+        antica = {b: a for a, b in OLD_SPELLING.items()}
+
+        def all_antica(x):
+            if isinstance(x, dict):
+                return {antica.get(k, k): all_antica(v) for k, v in x.items()}
+            if isinstance(x, list):
+                return [all_antica(v) for v in x]
+            return antica.get(x, x) if isinstance(x, str) else x
+        reg_v = os.path.join(tmp, "registro-vecchio.jsonl")
+        with open(reg_v, "w", encoding="utf-8") as f:
+            for x in open(reg, encoding="utf-8"):
+                f.write(json.dumps(all_antica(json.loads(x)), ensure_ascii=False) + "\n")
+        rv = leggi(reg_v)
+        guarda("an OLD register (Italian keys and values) ⇒ the same report", rv == righe
+               and pagina(rv) == p and testo(rv) == testo(righe))
         print(testo(righe))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

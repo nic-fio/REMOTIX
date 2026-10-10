@@ -40,6 +40,34 @@ import tempfile
 QUI = os.path.dirname(os.path.abspath(__file__))
 CLASSI = ("GREEN", "DEGRADED", "FAIL")
 
+# ── the registers of the campaigns before the English rename (DECISIONI §10.38) keep the Italian
+#    words: misure/ is never rewritten.  The first tuple is protected (english-migration/protetti.tsv),
+#    the second is renamed with the code: after the rename OLD_SPELLING maps every old word to the
+#    code's own, before it is empty.  Same order in both, one word per position.
+_OLD_WORDS = (
+    "nome", "livello", "classe", "ragione_classe", "interrotto", "campagna", "controllo_min",
+    "giro", "visti", "campioni", "profilo", "lavoro", "utente-", "classifica",
+)  # end of the old words
+_WORDS_NOW = (
+    "nome", "livello", "classe", "ragione_classe", "interrotto", "campagna", "controllo_min",
+    "giro", "visti", "campioni", "profilo", "lavoro", "utente-", "classifica",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
+def spellings(word):
+    """The word and its old spellings, for names on disk (folder prefixes)."""
+    return (word,) + tuple(a for a, b in OLD_SPELLING.items() if b == word)
+
 
 def _modulo(nome, file):
     s = _iu.spec_from_file_location(nome, os.path.join(QUI, file))
@@ -92,24 +120,26 @@ def copia_corretta(dirliv, dest):
     toccate = 0
     for voce in os.listdir(dirliv):
         src = os.path.join(dirliv, voce)
-        if voce.startswith("utente-") and os.path.isdir(src):
-            os.makedirs(os.path.join(dest, voce))
+        if voce.startswith(spellings("utente-")) and os.path.isdir(src):
+            # the copy is in the code's spelling: an old utente-NN folder takes the current prefix
+            voce_ora = "utente-" + voce.split("-", 1)[1]
+            os.makedirs(os.path.join(dest, voce_ora))
             for f in os.listdir(src):
                 if f == "stato.jsonl":
                     righe = []
                     for riga in open(os.path.join(src, f), encoding="utf-8", errors="replace"):
                         try:
-                            righe.append(json.loads(riga))
+                            righe.append(current_spelling(json.loads(riga)))
                         except ValueError:
                             continue
                     nuove, n = correggi_righe(righe)
                     toccate += n
-                    with open(os.path.join(dest, voce, f), "w", encoding="utf-8") as o:
+                    with open(os.path.join(dest, voce_ora, f), "w", encoding="utf-8") as o:
                         for r in nuove:
                             o.write(json.dumps(r, ensure_ascii=False) + "\n")
                 else:
-                    os.symlink(os.path.join(src, f), os.path.join(dest, voce, f))
-        elif not voce.startswith("classifica"):
+                    os.symlink(os.path.join(src, f), os.path.join(dest, voce_ora, f))
+        elif not voce.startswith(spellings("classifica")):
             os.symlink(src, os.path.join(dest, voce))
     return toccate
 
@@ -149,7 +179,7 @@ def riclassifica(salita, fps_video=None, prog=None):
     righe = []
     for l in open(os.path.join(salita, "salita.jsonl"), encoding="utf-8", errors="replace"):
         try:
-            righe.append(json.loads(l))
+            righe.append(current_spelling(json.loads(l)))
         except ValueError:
             continue
     nuove, livelli = [], []
@@ -215,9 +245,10 @@ def certifica():
     sr = [{"livello": 1, "classe": "GREEN"}, {"livello": 4, "classe": "DEGRADED"},
           {"livello": 8, "classe": "GREEN", "interrotto": True}]
     prova("last true GREEN as in 16-coda.sh", ultimo_green(sr) == 1)
+    # ⚠ the two rows below are an OLD salita.jsonl, word for word (protected from the rename)
     prova("imposed class: entry failed, host, interrupted, «?»",
-          classe_imposta({"classe": "FAIL", "ragione_classe": "ENTRATA FALLITA (1 entrati su 4)"})
-          and classe_imposta({"classe": "FAIL", "ragione_classe": "⛔ RISORSE DELL'OSPITE (§7.7): x"})
+          classe_imposta(current_spelling({"classe": "FAIL", "ragione_classe": "ENTRATA FALLITA (1 entrati su 4)"}))
+          and classe_imposta(current_spelling({"classe": "FAIL", "ragione_classe": "⛔ RISORSE DELL'OSPITE (§7.7): x"}))
           and classe_imposta({"classe": "GREEN", "interrotto": True}) and classe_imposta({"classe": "?"})
           and not classe_imposta({"classe": "DEGRADED", "ragione_classe": "blocco"}))
 

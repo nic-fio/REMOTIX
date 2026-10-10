@@ -82,6 +82,14 @@ bench reads it.  What changes is the reading of **old** registers and old logs: 
 past campaign (`16-riclassifica.py`, `16-classifica.py` on `misure/fase16`, `15-rapporto.py` on old
 rounds, C12/C13/C15 on `11-gancio-registro.jsonl`) needs both spellings, by hand (§6).
 
+⭐ Done on en-42 (11 Oct 2026): every such reader carries an explicit old-spelling map — a tuple
+`_OLD_WORDS` (protected in `protetti.tsv`) zipped with `_WORDS_NOW` (the same words, renamed with the
+code) into `OLD_SPELLING`, applied by `current_spelling()` where a row is loaded, and `spellings()`
+for folder prefixes on disk (`utente-NN/`).  Before the rename the map is empty.  Readers:
+`16-classifica.py`, `16-riclassifica.py`, `16-rapporto.py`, `15-rapporto.py`, C12, C13, C15,
+`11-registro-unisci.py`, `04-b28-gesti.py --verdetto`, `01-b8-cronometro.py --verdetto --giro`.
+Free-text forms (reasons, log rows, page diary lines) stay dual-form regexes on protected lines.
+
 A freeze of the registers' words (1,095 keys and values kept Italian in the benches' literals) was
 built and **proved harmful on the copy**: `16-risorse.py` builds one record from keyword arguments
 (renamed: code) and from string keys (frozen), and its self-certification broke.  It stays in the
@@ -247,7 +255,7 @@ What broke on the way and is now handled by the tool (each was a real fault on t
   match.  A mechanical rename cannot write a reader of both spellings: it must be adapted by hand
   (dual forms for the keys `classe`, `ragione_classe`, the `utente-` folder prefix and the reasons), or
   declared a frozen tool of the past and excluded.  ⚠ The same holds, without a red light, for every
-  bench that re-reads old data (§2.2).
+  bench that re-reads old data (§2.2).  ⭐ Solved on en-42 (§2.2).
 - **136 names are not renamed** (generated list below): mostly a second choice that collides too, and
   untagged JSON fields whose English is two words (`Stato`/`stato`, `Porta`/`porta`, `Motivo`/`motivo`,
   `Nodo`/`nodo`).  Safe (they stay Italian everywhere), but they need a decision in `interi.tsv`.

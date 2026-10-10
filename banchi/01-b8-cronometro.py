@@ -183,6 +183,36 @@ from aioquic.quic.configuration import QuicConfiguration
 QUI = os.path.dirname(os.path.abspath(__file__))
 
 
+# ── The facts recorded before the English rename (DECISIONI §10.38: banchi/prodotto/b8-*.jsonl,
+#    re-read by --verdetto --giro) keep the Italian words.  The first
+#    tuple is protected (english-migration/protetti.tsv), the second is renamed with the code: after
+#    the rename OLD_SPELLING maps every old word to the code's own, before it is empty.
+_OLD_WORDS = (
+    "giro", "tipo", "etichetta", "indirizzo", "esito", "dettaglio", "bannato", "restano_ms",
+    "minuti", "frase", "errore", "atteso_bannato", "nome", "messaggio", "blocco", "ordine",
+    "caso", "classe", "atteso_motivo", "stato-iniziale", "NON-BANNATO", "pagina", "AMMESSO",
+    "misurato", "controllo", "atteso", "RESPINTO", "campione", "inesistente", "sbagliata",
+    "limitatore", "TOLTO",
+)  # end of the old words
+_WORDS_NOW = (
+    "giro", "tipo", "etichetta", "indirizzo", "esito", "dettaglio", "bannato", "restano_ms",
+    "minuti", "frase", "errore", "atteso_bannato", "nome", "messaggio", "blocco", "ordine",
+    "caso", "classe", "atteso_motivo", "stato-iniziale", "NON-BANNATO", "pagina", "AMMESSO",
+    "misurato", "controllo", "atteso", "RESPINTO", "campione", "inesistente", "sbagliata",
+    "limitatore", "TOLTO",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
 def _importa(nome, file):
     spec = importlib.util.spec_from_file_location(nome, os.path.join(QUI, file))
     mod = importlib.util.module_from_spec(spec)
@@ -1272,7 +1302,7 @@ def verdetto(a):
         for riga in f:
             riga = riga.strip()
             if riga:
-                dati.append(json.loads(riga))
+                dati.append(current_spelling(json.loads(riga)))
     # ⛔ A file from ANOTHER run is not an empty file, and it is not this run.
     estranei = [r for r in dati if r.get("giro") != a.giro]
     if estranei:
@@ -2126,7 +2156,7 @@ def certifica(a):
               f"a real run**, or it breaks a file nobody produced")
         return 2
     with open(a.uscita) as f:
-        sani = [json.loads(r) for r in f if r.strip()]
+        sani = [current_spelling(json.loads(r)) for r in f if r.strip()]
     reg_sano = []
     if a.registro and os.path.exists(a.registro):
         with open(a.registro, errors="replace") as f:

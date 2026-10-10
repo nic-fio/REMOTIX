@@ -168,6 +168,56 @@ FPS_VIDEO_SCELTO = 30          # the video of profile D (from the coordinator, 2
 REGISTRO = os.path.join(QUI, "registro.jsonl")
 ORDINE = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
 
+# ── the levels of the campaigns before the English rename (DECISIONI §10.38) keep the Italian
+#    words: misure/ is never rewritten (16-riclassifica.py re-judges them with this classifier).
+#    The first tuple is protected (english-migration/protetti.tsv), the second is renamed with
+#    the code: after the rename OLD_SPELLING maps every old word to the code's own, before it
+#    is empty.  Same order in both, one word per position.  They are the keys and the values
+#    read from livello.json, utente-NN/stato.jsonl, nascita.json, controllo-corto.json,
+#    risorse.jsonl, journal-err.jsonl and the `rete-quic` rows of server.log.
+_OLD_WORDS = (
+    "utenti", "utente", "nuovo", "controllo_min", "livello", "campagna", "scheda", "misura", "binario",
+    "pagina", "nucleo", "tetto_sessioni", "inizio", "durata_s", "profilo", "versione", "inquilino",
+    "conti", "consegnati", "dipinti", "buchi", "ricevuti", "suonati", "BUCHI", "mancati", "diario",
+    "giro", "visti", "campioni", "azione", "video_avanza", "lavoro", "caduta", "errori",
+    "accesso_ms", "esito", "rifiuto", "nascita", "ragione", "esiti", "funzione",
+    "tipo", "campione", "macchina", "carico", "sessioni", "altro_scatola", "labwc_cliente", "processi",
+    "per_inquilino", "avvisi", "disegno", "REMOTIX_INQUILINO",
+    "persi", "byte_persi", "spediti", "byte_spediti", "scartati", "dgram_persi", "dgram_falsi",
+    "utente-",
+)  # end of the old words
+_WORDS_NOW = (
+    "utenti", "utente", "nuovo", "controllo_min", "livello", "campagna", "scheda", "misura", "binario",
+    "pagina", "nucleo", "tetto_sessioni", "inizio", "durata_s", "profilo", "versione", "inquilino",
+    "conti", "consegnati", "dipinti", "buchi", "ricevuti", "suonati", "BUCHI", "mancati", "diario",
+    "giro", "visti", "campioni", "azione", "video_avanza", "lavoro", "caduta", "errori",
+    "accesso_ms", "esito", "rifiuto", "nascita", "ragione", "esiti", "funzione",
+    "tipo", "campione", "macchina", "carico", "sessioni", "altro_scatola", "labwc_cliente", "processi",
+    "per_inquilino", "avvisi", "disegno", "REMOTIX_INQUILINO",
+    "persi", "byte_persi", "spediti", "byte_spediti", "scartati", "dgram_persi", "dgram_falsi",
+    "utente-",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old level in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
+def spellings(word):
+    """The word and its old spellings, for names on disk (folder prefixes)."""
+    return (word,) + tuple(a for a, b in OLD_SPELLING.items() if b == word)
+
+
+def cartelle_utenti(cart):
+    """The utente-NN folders of a level, in the code's spelling and in the old one."""
+    return sorted(p for w in spellings("utente-") for p in glob.glob(os.path.join(cart, w + "*")))
+
 # ⛔ §9, FROZEN.  (direction, green, degraded, half, unit).
 #   direction "su": the good value is low (GREEN if <= green; DEGRADED if <= degraded)
 #   direction "giu": the good value is high (GREEN if >= green; DEGRADED if >= degraded)
@@ -209,7 +259,7 @@ CADUTE = [
      "protocol error"),
     (re.compile(r"\[(c[0-9a-z]+)\].*(?:SFRATTO per silenzio|EVICTION for silence)"), "eviction for silence (§5.3)"),
 ]
-RIAVVIO = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+avvio\s+REMOTIX\b")
+RIAVVIO = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+(?:avvio|startup)\s+REMOTIX\b")  # old and new area name
 # ⚠ not just «rifiut»: `[M]` 25 Sep the child writes «FIFO NON OTTENUTO … rifiut…» at
 #   every birth, and it is not a refusal of access.  They are the three doors of rcp.c/webtransport.c
 #   (old Italian form and new English form).
@@ -218,7 +268,7 @@ RIFIUTO = re.compile(r"(?:\[(c[0-9a-z]+)\]|«(c[0-9a-z]+)»).*(?:posto NEGATO|at
 NOSTRO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:NOSTRO nel secondo|OURS in the second) \([^)]*\): p95 ([\d.]+) ms · "
                     r"max ([\d.]+) · (?:mediana|median) ([\d.]+) · (\d+) (?:fotogrammi|frames)")
 PRODUTTORE = re.compile(r"(?:produttore|producer) ([\d.]+) \(max ([\d.]+)\)")
-RETE = re.compile(r"\[(c[0-9a-z]+)\] rete-quic (\S+) (.*)$")
+RETE = re.compile(r"\[(c[0-9a-z]+)\] (?:rete-quic|network-quic) (\S+) (.*)$")   # old and new binary
 TRATTO = re.compile(r"\[(c[0-9a-z]+)\] ⭐ (?:TRATTO cattura → byte fuori|STRETCH capture → byte out): "
                     r"(?:mediana|median) ([\d.]+) ms \(max ([\d.]+)\)")
 
@@ -282,7 +332,7 @@ def jsonl(p):
         x = x.strip()
         if x:
             try:
-                out.append(json.loads(x))
+                out.append(current_spelling(json.loads(x)))
             except ValueError:
                 pass
     return out
@@ -291,16 +341,18 @@ def jsonl(p):
 def jfile(p):
     try:
         with open(p, encoding="utf-8") as f:
-            return json.load(f)
+            return current_spelling(json.load(f))
     except (OSError, ValueError):
         return None
 
 
-DIARIO = {
-    "ricevuti": r"audio: ricevuti (\d+)", "suonati": r"\bsuonati (\d+)",
-    "BUCHI": r"\bBUCHI (\d+)", "mancati": r"\bmancati (\d+)", "dipinti": r"\bdipinti (\d+)",
-    "salt": r"\bsalt (\d+)", "buchi": r"\bbuchi (\d+)", "tard": r"\btard (\d+)",
-}
+# the page's diary line: ⚠ BOTH forms, the old (Italian) page of the recorded campaigns and the new one
+_DIARIO_RX = (
+    r"audio: (?:ricevuti|got_n) (\d+)", r"\b(?:suonati|played) (\d+)", r"\b(?:BUCHI|HOLES) (\d+)",
+    r"\b(?:mancati|missed) (\d+)", r"\b(?:dipinti|painted) (\d+)", r"\bsalt (\d+)",
+    r"\b(?:buchi|holes) (\d+)", r"\btard (\d+)",
+)  # end of the diary forms
+DIARIO = dict(zip(("ricevuti", "suonati", "BUCHI", "mancati", "dipinti", "salt", "buchi", "tard"), _DIARIO_RX))
 
 
 def conti_di(riga):
@@ -611,7 +663,7 @@ def sessione(dir_u, w0, w1, f_video, meta_u, nuovo, corto, log_eventi, tratto, r
         ms = na.get("nascita_ms")
         if ms is None and na.get("accesso_ms") is not None and na.get("primo_fotogramma_ms") is not None:
             ms = na["primo_fotogramma_ms"] - na["accesso_ms"]
-        if "rifiut" in es:
+        if "rifiut" in es or "refus" in es:     # the old outcome «rifiuto», and the new one
             voci["nascita_s"] = fallita(None, "REFUSAL at access")
         elif ms is None:
             voci["nascita_s"] = fallita(None, "no first frame (outcome %s)" % es) if es != "ok" \
@@ -834,7 +886,7 @@ def rete_log(p, w0, w1, fuso=0.0):
         return {}
     conn = {}                                  # (inq, address) → [first, last, srtt[], pto[]]
     for riga in open(p, encoding="utf-8", errors="replace"):
-        if "rete-quic" not in riga:
+        if "rete-quic" not in riga and "network-quic" not in riga:      # old and new binary
             continue
         m = RETE.search(riga.rstrip("\n"))
         if not m:
@@ -844,6 +896,8 @@ def rete_log(p, w0, w1, fuso=0.0):
             continue
         kv = {}
         for k, v in re.findall(r"(\w+)=(-?\d+)", m.group(3)):
+            # the old binary's counters in the code's spelling (`persi_d`: the stem, then `_d`)
+            k = current_spelling(k[:-2]) + "_d" if k.endswith("_d") else current_spelling(k)
             kv[k] = int(v)
         c = conn.setdefault((m.group(1), m.group(2)), [kv, kv, [], [], te, te])
         c[1] = kv
@@ -904,7 +958,7 @@ def journal_err(cart, t0, t1, scatola=None):
         if not x:
             continue
         try:
-            j = json.loads(x)
+            j = current_spelling(json.loads(x))
             msg, inq, pr = j.get("MESSAGE"), j.get("REMOTIX_INQUILINO"), j.get("PRIORITY")
             if pr is not None and int(pr) > 3:
                 continue
@@ -1058,7 +1112,7 @@ def classifica(cart, fps_video=None, finestra_s=120.0, campagna=None, livello=No
     # f: --fps-video, then livello.json, then the video chosen in the plan (30 frames/s)
     fps_video = fps_video or meta.get("fps_video") or FPS_VIDEO_SCELTO
     utenti_meta = {int(u["utente"]): u for u in meta.get("utenti") or [] if "utente" in u}
-    dirs = sorted(glob.glob(os.path.join(cart, "utente-*")))
+    dirs = cartelle_utenti(cart)
     # the end of the level: the last row of any series
     ts = []
     for d in dirs:
@@ -1505,6 +1559,74 @@ def certifica():
         guarda("journal: 1 row at priority <= 3 (the 4 does not), per tenant, does not classify",
                g["journal"]["righe"] == 1 and g["sessioni"][0][2].get("journal_err") == 1
                and g["classe"] == "GREEN", json.dumps(g["journal"], ensure_ascii=False)[:160])
+        # ⭐ a level of a campaign BEFORE the English rename (misure/ is never rewritten): Italian keys
+        #   and values, utente-NN folders, the old page's diary, the old binary's rete-quic rows ⇒ the
+        #   same judgement as the same level written today (before the rename the two are the same)
+        RETE_VECCHIA = ("%s wt      [c16u01] rete-quic [192.168.0.2]:4000 da_ms=1000 persi=%d persi_d=1 "
+                        "byte_persi=%d byte_persi_d=1200 spediti=%d spediti_d=100 byte_spediti=%d "
+                        "ricevuti=%d ricevuti_d=50 srtt_us=%d pto_us=20000 giudizio=--\n")
+        DIARIO_VECCHIO = ("audio: ricevuti %(ricevuti)d suonati %(suonati)d BUCHI 0 vecchi 0 "
+                          "mancati %(mancati)d volte 0 | tasti 3 dipinti %(dipinti)d video "
+                          "%(consegnati)d→%(dipinti)d fuori 1 dentro 0 coda_dec 0 bmp 0 salt "
+                          "%(salt)d buchi %(buchi)d ord 0")  # end of the old fixture rows
+        antica = {b: a for a, b in OLD_SPELLING.items()}
+
+        def all_antica(x):
+            if isinstance(x, dict):
+                return {antica.get(k, k): all_antica(v) for k, v in x.items()}
+            if isinstance(x, list):
+                return [all_antica(v) for v in x]
+            return antica.get(x, x) if isinstance(x, str) else x
+
+        def vecchio(c):
+            """The level `c` as a campaign before the rename wrote it."""
+            for radice, _, file in os.walk(c):
+                for nome in file:
+                    p = os.path.join(radice, nome)
+                    if nome.endswith(".jsonl"):
+                        righe = [json.loads(x) for x in open(p) if x.strip()]
+                        with open(p, "w") as h:
+                            for r in righe:
+                                if "conti" in r and r.get("utente") == 2:       # user 2: the old page's diary
+                                    r["diario"] = DIARIO_VECCHIO % all_antica(r.pop("conti"))
+                                h.write(json.dumps(all_antica(r), ensure_ascii=False) + "\n")
+                    elif nome.endswith(".json"):
+                        d = all_antica(json.load(open(p)))
+                        json.dump(d, open(p, "w"), ensure_ascii=False)
+            for d in os.listdir(c):
+                if d.startswith("utente-"):
+                    os.rename(os.path.join(c, d), os.path.join(c, spellings("utente-")[-1] + d.split("-", 1)[1]))
+            return c
+
+        def gemello(nome, log):
+            u = [dict(sano("A", "c16u01"), nascita={"accesso_ms": nsa, "primo_fotogramma_ms": nsa + 4800},
+                      nuovo=True),
+                 sano("B", "c16u02"), dict(sano("C", "c16u03"), nascita={"esito": "rifiuto"}, nuovo=True),
+                 sano("D", "c16u04")]
+            c = livello(nome, u, log=log, corto={"utente": 4, "esiti": [{"funzione": "F-003", "esito": "PASS"},
+                                                                         {"funzione": "F-014", "esito": "PASS"}]})
+            with open(os.path.join(c, "journal-err.jsonl"), "w") as f:
+                f.write(json.dumps({"MESSAGE": "⛔ something", "PRIORITY": "3", "REMOTIX_INQUILINO": "c16u01"}) + "\n")
+            return c
+
+        def sunto(g):
+            return ([(classe_di(s[3]), s[2].get("consegnati"), s[2].get("dipinti"), s[2].get("nascita_s"),
+                      (s[2].get("rete") or {}).get("persi"), s[2].get("journal_err"),
+                      (s[3].get("controllo_corto") or {}).get("classe")) for s in g["sessioni"]],
+                    sorted((k, v["classe"]) for k, v in g["voci_livello"].items()), g["classe"])
+        rq_vecchia = ""
+        for k in range(0, 31):
+            o = _dt.datetime.fromtimestamp(T0 + 540 + k, _dt.timezone.utc).strftime("%H:%M:%S.000")
+            rq_vecchia += RETE_VECCHIA % (o, 10 + k, 12000 + 1200 * k, 1000 + 100 * k, 125000 * (10 + k),
+                                          500 + 50 * k, 1000 + 100 * k)
+        g_oggi = classifica(gemello("oggi", rq))
+        g_ieri = classifica(vecchio(gemello("ieri", rq_vecchia)))
+        so, si = sunto(g_oggi), sunto(g_ieri)
+        guarda("an OLD level (Italian keys, utente-NN, old diary and rete-quic rows) ⇒ the same judgement as today's",
+               si == so and [x[0] for x in si[0]] == ["GREEN", "GREEN", "FAIL", "GREEN"]
+               and si[0][0][3] == 4.8 and si[0][0][4] == 31 and si[0][0][5] == 1 and si[0][1][1]
+               and si[0][3][6] == "GREEN" and len(si[0]) == 4,
+               "old %s · today %s" % (json.dumps(si)[:300], json.dumps(so)[:300]) if si != so else "")
         g = classifica(livello("riavvio-log", quattro, log="%s avvio   REMOTIX — fase 1\n" % hh))
         guarda("restart in the log ⇒ all FAIL", all(classe_di(s[3]) == "FAIL" for s in g["sessioni"]))
         g = classifica(livello("rifiuto-log", quattro, log="%s rcp     [c16u04] ⛔ posto NEGATO a c16u04 da "

@@ -80,6 +80,23 @@ NOMI_BTN = {SINISTRO: "sinistro", DESTRO: "destro", CENTRALE: "centrale"}
 
 TELA = (1920, 1080)
 
+# ── the registers recorded before the English rename (DECISIONI §10.38: 04-b28-registro.jsonl of
+#    phase 4) keep the Italian keys, and --verdetto re-reads them.  The first tuple is protected
+#    (english-migration/protetti.tsv), the second is renamed with the code: after the rename
+#    OLD_SPELLING maps every old key to the code's own, before it is empty.
+_OLD_WORDS = (
+    "fase", "marca",
+)  # end of the old words
+_WORDS_NOW = (
+    "fase", "marca",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(r):
+    """A row of an old register in the code's spelling (its keys)."""
+    return {OLD_SPELLING.get(k, k): v for k, v in r.items()} if isinstance(r, dict) else r
+
 
 class Violazione(Exception):
     pass
@@ -1532,7 +1549,7 @@ def main():
     if o.certifica:
         return certifica()
     if o.verdetto:
-        righe = [json.loads(r) for r in open(o.verdetto, encoding="utf-8") if r.strip()]
+        righe = [current_spelling(json.loads(r)) for r in open(o.verdetto, encoding="utf-8") if r.strip()]
         return stampa(giudica(righe))
     if o.gira:
         codice, scena, esiti = gira(o.porta, o.diagnosi, o.esiti, o.registro)

@@ -52,6 +52,34 @@ NOMI = {
 }
 
 
+# ── the registers written before the English rename (DECISIONI §10.38) keep the Italian words,
+#    and registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple is
+#    protected (english-migration/protetti.tsv), the second is renamed with the code: after the
+#    rename OLD_SPELLING maps every old word to the code's own, before it is empty.  Same order
+#    in both, one word per position.  Keys of registro.jsonl and difetti.jsonl, and the values
+#    compared here (the fault pass, the phone browser, the verified state).
+_OLD_WORDS = (
+    "giro", "funzione", "passata", "esito", "ragione", "binario", "pagina", "atteso", "osservato",
+    "evidenze", "inizio", "durata_s", "versione", "guasto", "telefono", "classe", "titolo",
+    "verificato",
+)  # end of the old words
+_WORDS_NOW = (
+    "giro", "funzione", "passata", "esito", "ragione", "binario", "pagina", "atteso", "osservato",
+    "evidenze", "inizio", "durata_s", "versione", "guasto", "telefono", "classe", "titolo",
+    "verificato",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
 def ordine(f):
     m = re.match(r"([A-Z])-?(\d+)?", f)
     pref = {"F": 0, "P": 1, "N": 2, "C": 3}.get(f[0], 4)
@@ -66,7 +94,7 @@ def leggi(p):
             x = x.strip()
             if x:
                 try:
-                    righe.append(json.loads(x))
+                    righe.append(current_spelling(json.loads(x)))
                 except ValueError:
                     pass
     return righe

@@ -86,6 +86,28 @@ import json
 import os
 import sys
 
+# ── the runs written before the English rename (DECISIONI §10.38) keep the Italian words, and
+#    11-gancio-registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple
+#    is protected (english-migration/protetti.tsv), the second is renamed with the code: after
+#    the rename OLD_SPELLING maps every old word to the code's own, before it is empty.  Same
+#    order in both, one word per position.  Only the words this file reads from a run.
+_OLD_WORDS = (
+    "istante",
+)  # end of the old words
+_WORDS_NOW = (
+    "istante",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
 
 def istante_di(riga_json):
     """Returns the instant as seconds, or `None` if it cannot tell.
@@ -124,7 +146,9 @@ def leggi(percorso):
         if not isinstance(o, dict):
             storte += 1
             continue
-        coppie.append((istante_di(o), r, o))
+        # ⚠ the instant is read in the code's spelling, ⛔ but the line is appended AS IT IS:
+        #   the register is never rewritten, not even to translate it.
+        coppie.append((istante_di(current_spelling(o)), r, o))
     return coppie, storte
 
 

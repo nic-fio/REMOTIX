@@ -93,6 +93,29 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 REGISTRO = os.path.join(QUI, "11-gancio-registro.jsonl")
 
+# ── the runs written before the English rename (DECISIONI §10.38) keep the Italian words, and
+#    11-gancio-registro.jsonl is append-only: old Italian rows, then new ones.  The first tuple
+#    is protected (english-migration/protetti.tsv), the second is renamed with the code: after
+#    the rename OLD_SPELLING maps every old word to the code's own, before it is empty.  Same
+#    order in both, one word per position.  Only the words this file reads from a run.
+_OLD_WORDS = (
+    "istante", "secco", "maglie", "guasto_innestato", "nome",
+)  # end of the old words
+_WORDS_NOW = (
+    "istante", "secco", "maglie", "guasto_innestato", "nome",
+)
+OLD_SPELLING = {a: b for a, b in zip(_OLD_WORDS, _WORDS_NOW) if a != b}
+
+
+def current_spelling(x):
+    """A record of an old register in the code's spelling: keys, and string values equal to a word."""
+    if isinstance(x, dict):
+        return {OLD_SPELLING.get(k, k): current_spelling(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [current_spelling(v) for v in x]
+    return OLD_SPELLING.get(x, x) if isinstance(x, str) else x
+
+
 ULTIMI_PREDEFINITI = 20
 
 
@@ -116,7 +139,7 @@ def leggi_il_registro(percorso):
         if not r:
             continue
         try:
-            giri.append(json.loads(r))
+            giri.append(current_spelling(json.loads(r)))
         except ValueError:
             storte += 1
     if not giri and storte:
