@@ -6508,6 +6508,21 @@ prossimo step sarà l'installer»*.
 - Resta il vincolo di §11.4 delle SPECIFICHE, nessuna dipendenza GPL: la GPL chiederebbe di distribuire tutto
   sotto GPL.
 
+### 10.34 ✅ Il driver della scheda è del cliente: REMOTIX dichiara e verifica, non installa (10 ott 2026)
+
+Parole dell'utente: *«se è un problema di software della macchina non è un problema di remotix. Noi dichiariamo le
+esigenze e le specifiche, e chi vuole usare il prodotto installa quello che serve»*.
+
+- **Che cosa vuol dire**: il driver della scheda (NVIDIA proprietario compreso) e la sua versione sono un
+  **requisito**, scritto nel manuale (`fasi/17-l-installatore.md` §3.1). Non si noleggia una NVIDIA per ogni
+  distribuzione: NVIDIA è **certificata su Ubuntu 26.04** (fase 19) e, altrove, vale il requisito.
+- **Che cosa resta nostro**: dire **chiaro e prima** che cosa manca. Lo fa già il motore: il controllo
+  preliminare ferma la macchina senza un driver che codifica (RX-GPU-003…006, con il pacchetto da installare
+  nel rimedio), e alla fine `remotix --prova-codifica` codifica davvero sulla scheda. Un driver troppo vecchio
+  per Vulkan Video si ferma lì, con un messaggio, e non con un REMOTIX installato che non va.
+- Coerente con §10.27 (niente codifica sul processore) e con [*niente eccezioni per compositore*]: quel che il
+  sistema non dà, REMOTIX non lo rattoppa.
+
 ---
 
 ## Come si tiene questo documento
