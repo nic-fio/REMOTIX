@@ -8,7 +8,7 @@ metadata:
   modified: 2026-08-17T18:01:46.539Z
 ---
 
-⭐⭐⭐ **17 Aug 2026, evening — the hunt is closed, and the fault was NOT ours.**
+⭐⭐⭐ **17 Aug 2026, evening — the hunt is closed, and the blame was NOT ours.**
 The user saw rectangular blocks of **64×192** that moved with the
 content. They were cleared, one by one and with the measurement alongside:
 
