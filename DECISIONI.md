@@ -6550,6 +6550,14 @@ dei sysadmin, non agli utenti normali»*.
   accompagnano i codici (fra parentesi dopo il messaggio, e nel registro). Il messaggio e il rimedio di ogni codice
   sono in inglese, e una prova (`TestTesti`) ferma ogni lettera accentata o parola italiana che ci rientri.
 - ✅ **Fatto il 10 ott 2026**, commit `a1c31ae`: costruzione statica, `go vet` pulito, `go test` 208 PASS (sottoprove comprese), 0 FAIL.
+- ✅ **Completato lo stesso giorno**, commit `d580561`: in inglese anche i dettagli diagnostici, gli esiti delle
+  verifiche, le note dei fatti, le righe che il motore scrive nei file di sistema e la tabella del manuale
+  (`catalogo --tabella`); il catalogo passa a `2026.10.10.12` (seq. 12) coi motivi, le note e i limiti in inglese.
+  `motore/inglese_test.go` cerca l'italiano in ogni stringa del codice e del catalogo: 211 PASS, 0 FAIL.
+  ⚠ **Restano italiani, perché sono nomi dell'interfaccia e cambiarli è un lavoro a sé**: i comandi e le opzioni
+  (`verifica`, `installa`, `approva`, `--archivio`, `--risposte`…), le voci e i valori del file di risposte
+  (`consenso.*`, `porta`, `utenti = tutti`, `si`/`no`, `canale = stabile|candidato`), i valori dei fatti
+  (`presente`, `assente`…) e i nomi degli stati (`RILEVATO`, `CONFERMATA`…). Da decidere.
 
 ---
 
