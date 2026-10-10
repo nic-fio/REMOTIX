@@ -355,6 +355,14 @@ Letta dai file, senza toccare il server. Due cose cambiano quel che si può dire
    (ms, REMOTIX / xrdp). ⚠ Il giro della pagina comprende decodifica e disegno nel browser, XDamage su Xvfb no
    (§7.3): parte del distacco è il metro. ⇒ Il vantaggio di REMOTIX misurato è la **tenuta sotto carico**, non
    la risposta del singolo utente.
+3. **Il video e il peso: qui REMOTIX è avanti, e combacia con l'impressione dell'utente** (10 ott: *«remotix mi
+   sembra più reattivo, più leggero. Riprodurre un video ad alta risoluzione su xrdp è un'esperienza peggiore»*).
+   A 4 utenti, l'utente del video (film 4K a 30 fps): REMOTIX **29,9-30,0 dipinti/s**, 0 saltati; xrdp
+   **24,7-24,9** (2K e Full HD; classe GREEN per entrambi, soglia 0,8 di f) ⇒ xrdp perde ~1 fotogramma su 6.
+   Processore della macchina, livello 4: REMOTIX **10,7-12,5 %**, xrdp **12,4-30,0 %** (Full HD GNOME 11 contro
+   30, KDE 12 contro 26, XFCE 11 contro 18), e il numero di REMOTIX comprende browser veri come clienti, quello di
+   xrdp clienti FreeRDP più leggeri: il distacco vero è più largo. REMOTIX sposta il lavoro sulla scheda (a 4
+   utenti: disegno 19-62 %, video 11-24 %).
 
 ### 7.1 Come nasce oggi una sessione, e che cosa cambia
 
