@@ -263,10 +263,21 @@
    *    `margin: auto`) and the reason none of the six projects studied has
    *    more than one stage.
    * ⚠ `background: #000` is already on `#schermo` (line above) and is still
-   *   needed, for the first instant before a frame arrives. */
+   *   needed, for the first instant before a frame arrives.
+   * ⛔⭐ `margin: auto` and the column AS TALL AS THE WINDOW — 10 Oct 2026, the
+   *   user's report from Windows and a friend's from Linux: «on KDE the
+   *   desktop sits at half height».  `[M]` A KDE session born 2544×912 and
+   *   re-attached from a 1888×864 window keeps its canvas (`SPECIFICHE.md`
+   *   §6.3), the frame is 1873×671 — and with `margin: 0 auto` it stuck to
+   *   the TOP, and below it the column ended: the page's own white, not a
+   *   band.  ⇒ The column now fills the window and the canvas is centred in
+   *   both directions, so the leftover is black above and below, as §6.2
+   *   promises.  `dvh` after `vh`: on a phone `vh` counts the hidden address
+   *   bar, and the page would scroll by its height. */
   body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
-                                         margin: 0 auto; }
-  body[data-schermo="acceso"] main { background: #000; }
+                                         margin: auto; }
+  body[data-schermo="acceso"] main { background: #000;
+                                     min-height: 100vh; min-height: 100dvh; }
 
   /* ⛔⛔⭐ AND THE LOGIN FORM DISAPPEARS — 16 Aug 2026, and the user found it
    *      with a screenshot, after reporting it three times:
