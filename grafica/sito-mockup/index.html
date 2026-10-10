@@ -218,6 +218,28 @@
   /* sullo schermo verticale del telefono il desktop sta in orizzontale, come lo mostra REMOTIX */
   .telefono .schermo { background: #000; }
   .telefono .desk-alloggio { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); aspect-ratio: 16 / 10; container-type: size; }
+
+  /* browser provati e Android */
+  .browser-griglia { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
+  @media (min-width: 1000px) { .browser-griglia { grid-template-columns: 7fr 5fr; } }
+  .scheda-b { background: #f6f8fc; border-radius: 1.2rem; padding: 2rem 2.2rem; box-shadow: inset 0 0 0 1px var(--bordo); }
+  .scheda-b h3 { margin: 0 0 1.2rem; font-size: 1.45rem; letter-spacing: -.02em; }
+  .matrice { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  .matrice th { text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--tenue); padding: .6rem .8rem; border-bottom: 1px solid var(--bordo); }
+  .matrice td { padding: .9rem .8rem; border-bottom: 1px solid #e9edf4; }
+  .matrice tr:last-child td { border-bottom: 0; }
+  .matrice td:first-child { font-weight: 700; display: flex; align-items: center; gap: .7rem; }
+  .matrice .ok { color: var(--vivo); font-weight: 650; }
+  .matrice .nd { color: var(--tenue); }
+  .matrice .no { color: #b42318; }
+  .logo-b { width: 1.6rem; height: 1.6rem; flex: none; background: var(--c); -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+  .logo-b.grande { display: block; width: 2.8rem; height: 2.8rem; margin-bottom: 1rem; }
+  .nota-b { margin: 1.2rem 0 0; font-size: .88rem; color: var(--tenue); }
+  .android p { margin: 0 0 1.2rem; color: var(--tenue); }
+  .android h3 { margin-bottom: .5rem; }
+  .android ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; font-size: .95rem; }
+  .android li { display: flex; gap: .6rem; align-items: center; }
+  .android li svg { width: 1.15rem; height: 1.15rem; color: #fff; background: #3DDC84; border-radius: 50%; padding: .15rem; flex: none; }
 </style>
 </head>
 <body>
@@ -241,7 +263,7 @@
   <header class="testata">
     <div class="largo riga">
       <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-      <nav aria-label="Main"><a href="#features">Features</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a></nav>
+      <nav aria-label="Main"><a href="#features">Features</a><a href="#browsers">Browsers</a><a href="#download">Download</a><a href="#">Docs</a><a href="#">FAQ</a></nav>
       <div class="azioni"><a class="pulsante primario" href="#download">Get started</a></div>
     </div>
   </header>
@@ -309,6 +331,35 @@
         <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate/kde.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div>
         <div class="tablet"><div class="schermo"><img src="schermate/xfce.png" alt="" onerror="this.remove()"></div></div>
         <div class="telefono"><div class="schermo"><img src="schermate/telefono.png" alt="" onerror="this.remove()"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione chiara browser-sez" id="browsers" style="padding-top:0">
+    <div class="largo">
+      <div class="browser-griglia">
+        <div class="scheda-b">
+          <p class="occhiello">Tested browsers</p>
+          <h3>Open it in the browser you already use.</h3>
+          <table class="matrice">
+            <thead><tr><th></th><th>Windows</th><th>Linux</th><th>Android</th></tr></thead>
+            <tbody>
+              <tr><td><i class="logo-b" style="--c:#4285F4;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/googlechrome.svg)"></i>Chrome</td><td class="ok">✓ Tested</td><td class="ok">✓ Tested</td><td class="ok">✓ Tested</td></tr>
+              <tr><td><i class="logo-b" style="--c:#FF7139;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/firefoxbrowser.svg)"></i>Firefox</td><td class="nd">Not tested yet</td><td class="ok">✓ Tested</td><td class="no">Not supported</td></tr>
+            </tbody>
+          </table>
+          <p class="nota-b">REMOTIX needs WebTransport and WebCodecs, both in current Chrome and Firefox. Safari, macOS and iOS have not been tested yet.</p>
+        </div>
+        <div class="scheda-b android">
+          <i class="logo-b grande" style="--c:#3DDC84;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/android.svg)"></i>
+          <h3>Android, with Chrome</h3>
+          <p>Your Linux desktop on a phone or a tablet, in Chrome. Nothing to install from the Play Store.</p>
+          <ul>
+            <li><svg><use href="#spunta"/></svg>Touch gestures: tap to click, two fingers to scroll, pinch to zoom</li>
+            <li><svg><use href="#spunta"/></svg>The on-screen keyboard opens only when you ask</li>
+            <li><svg><use href="#spunta"/></svg>Mouse and keyboard too, Samsung DeX included</li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
