@@ -1012,10 +1012,10 @@ const MOTIVO = {
    *      of taken for granted: `RCP.md` §7.1 declares it "for the log, not for
    *      the user" in the very format of the `CONGEDO`, and §8.2 repeats it
    *      with a **MUST NOT**.  ⚠ And the five real strings prove the rule
-   *      right: *"video.misura_massima=1920x1080 e' sotto la tela minima
-   *      legale di 320x240 (§4.5)"* and *"memoria esaurita nell'accumulo del
-   *      canale di controllo"* are diagnoses, not sentences to read; a third
-   *      refers to *"la riga di registro precedente"*, which the user does
+   *      right: *"video.misura_massima=1920x1080 is below the minimum legal
+   *      canvas of 320x240 (§4.5)"* and *"out of memory in the control
+   *      channel's accumulation"* are diagnoses, not sentences to read; a third
+   *      refers to *"the previous log line"*, which the user does
    *      not have.  ⇒ The page does **not** read the detail, and in exchange
    *      says **where it ended up** — which is the most precise thing that
    *      can be said without lying in four cases out of five. */
@@ -1391,12 +1391,12 @@ const SONDE = {
      in which they diverge.  `[M]` 13 Aug 2026, server log on 7561, sessions
      of user `nicfio` at 05:48 and 05:55:
 
-       il client dichiara video.misura_massima=2560x1010 — e' il tetto che la
-         tela concessa DEVE rispettare (§4.5)
-       ⚠ RIPIEGO DICHIARATO (§4.5): tela chiesta 1920x1080, tetto 2560x1010
-         — CONCESSA 1794x1010
-       ⛔ tela in vigore 1794x1010 ma il fotogramma catturato e' 1920x1080 —
-         NON lo spedisco
+       the client declares video.misura_massima=2560x1010 — it is the ceiling
+         the granted canvas MUST respect (§4.5)
+       ⚠ DECLARED FALLBACK (§4.5): canvas requested 1920x1080, ceiling
+         2560x1010 — GRANTED 1794x1010
+       ⛔ canvas in force 1794x1010 but the captured frame is 1920x1080 —
+         I am NOT sending it
 
      The user's screen is **1010** pixels tall; his browser decodes 1080p
      effortlessly.  ⛔ On that screen the image would **never** have appeared,
@@ -2120,7 +2120,7 @@ function dichiara(sondaggio, scelto) {
      *   message.
      * ⛔ And it is not a missing fallback: in this page the route to the
      *   pixels is ONE — WebCodecs — and there is no other to try.  `[M]`
-     *   Firefox 154 on Android 16: "WebCodecs NON c'e'". */
+     *   Firefox 154 on Android 16: "WebCodecs is NOT there". */
     DICHIARAZIONI.codec = "This browser has no WebCodecs, which is the only way "
       + "REMOTIX has to draw the desktop: it is not a codec question — "
       + "neither HEVC nor H.264 has anything to do with it. Today it happens on **Firefox for Android**, "
@@ -2164,8 +2164,8 @@ function dichiara(sondaggio, scelto) {
  *
  * That day the user opened the product on his own screen and **saw
  * nothing**.  ⛔ And the product KNEW: the server had written in its own log
- * *"tela in vigore 1794x1010 ma il fotogramma catturato e' 1920x1080 — NON lo
- * spedisco"*.  The server knew it, the user did not, and the page showed an
+ * *"canvas in force 1794x1010 but the captured frame is 1920x1080 — I am NOT
+ * sending it"*.  The server knew it, the user did not, and the page showed an
  * empty box under a form that had said "Admitted".
  *
  * ⇒ §4.2: *"the fallback IS DECLARED"*.  A page that opens a session and
@@ -5570,9 +5570,9 @@ async function collega(utente, parola) {
    *    arrive), the lost network, the browser frozen and woken up — in all
    *    these cases the `CONGEDO` does not arrive, and this close wrote only in
    *    `nota()`, that is in the hidden log.  `[M]` integration round, F-019:
-   *    "sessione chiusa con errore: WebTransportError: Connection lost." in
+   *    "session closed with error: WebTransportError: Connection lost." in
    *    the log, and in front of the user the frozen desktop, outfit "acceso",
-   *    outcome "Ammesso" HIDDEN by the outfit.  ⇒ A mute wait, which §8.2
+   *    outcome "Admitted" HIDDEN by the outfit.  ⇒ A mute wait, which §8.2
    *    calls a fault.
    *
    * ⭐ The rule is that of `ascolta_controllo()` — "a `CONGEDO` ends the
@@ -5759,7 +5759,7 @@ async function collega(utente, parola) {
        *    code `0x01` is between 3 and 6 ms.
        *
        * ⚠ What is lost: waiting for the `FIN` to be CONFIRMED.  The bytes
-       *   leave anyway — the server keeps writing "FIN del CLIENT" — and
+       *   leave anyway — the server keeps writing "CLIENT FIN" — and
        *   neither §3.1 nor §8.1 ask for that confirmation: they ask for the
        *   `CONGEDO` (point 2, conditional) and the code in the close (point
        *   3, unconditional).  ⛔ A point 3 sacrificed to point 2 is exactly
@@ -6528,8 +6528,8 @@ async function ascolta_controllo(canale, congeda, congedo_letto) {
         /* ⛔ AND ONLY ON REASON 3 — 16 Aug 2026, bench `06-b37-voce.py`.
            ⚠ Here the condition was on the counter alone, that is the request
            was repeated **for any reason**: `[M]` with an injected
-           `COMPOSITORE_INCAPACE` it left anyway, and carried the text "il
-           NON_ORA poteva essere un non ancora" — a reason the server had not
+           `COMPOSITORE_INCAPACE` it left anyway, and carried the text "the
+           NON_ORA could be a not-yet" — a reason the server had not
            given.
            ⇒ A log line naming the wrong reason sends people looking for the
            defect on the wrong side, and this one did.
@@ -8874,8 +8874,8 @@ function avvia_appunti(negoziato) {
    *   an announcement, that is exactly "I have text available: zero bytes".
    *
    * ⛔⛔ AND IT DOES NOT LEAVE FROM HERE — `[M]` 21 Aug 2026, server log:
-   *     *"congedo motivo=0x0b — byte sullo stream di appunti (14) prima che
-   *     `SESSIONE` sia partita (stato: attesa-verdetto)"*.  ⚠ This function
+   *     *"congedo motivo=0x0b — bytes on the clipboard stream (14) before
+   *     `SESSIONE` started (stato: attesa-verdetto)"*.  ⚠ This function
    *     runs at ECCOMI, that is BEFORE the credentials: an announcement sent
    *     here violates §4.2 and the session closes.  ⇒ The opening
    *     announcement leaves after `SESSIONE`, and it is written there
@@ -13056,7 +13056,7 @@ function sc_perdute() {
  *    instead of letting people believe they arrived (`SPECIFICHE.md`
  *    §7.3-bis). */
 const SC_BOTTONI = [
-  { nome: "Ctrl+Alt+Canc", tasti: ["ControlLeft", "AltLeft", "Delete"],
+  { nome: "Ctrl+Alt+Del", tasti: ["ControlLeft", "AltLeft", "Delete"],
     attivo: true,
     perche: "no browser lets it through, and none ever will: "
           + "the CLIENT's operating system takes it before the browser" },
