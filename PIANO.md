@@ -532,647 +532,647 @@ someone else's.
 >
 > ---
 
-## Fase 3 — Il movimento ✅ **CHIUSA il 14 agosto 2026**
+## Phase 3 — Movement ✅ **CLOSED on 14 Aug 2026**
 
-> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«abbastanza fluido, non il massimo ma pur sempre fluido»*
+> ### ⭐⭐⭐ CLOSED ON THE USER'S JUDGEMENT — *«abbastanza fluido, non il massimo ma pur sempre fluido»*
 >
 > | | |
 > |---|---|
-> | **il numero** | l'anello del ritardo misurato con la codifica **in hardware** e con AV1 in software, che è la configurazione **giudicata** — i valori stanno in `FASI.md` §03-movimento |
-> | ⭐ **l'architettura** | **ASSOLTA**: togliendo la codifica in hardware cede il tratto della codifica e **gli altri quattro tratti non si muovono** |
-> | ⭐ **la codifica in hardware** | **nel prodotto**, non su una copia: la chiave si accorcia di molto, il ritmo **raddoppia** |
-> | ⛔ **il tetto** | **SFORA** i 50 ms, e **sforerebbe anche a codifica gratis** |
-> | ⛔⛔ **il collo di bottiglia nuovo** | ⚠ ~~**il DISEGNO**~~ ⇒ ⛔ **CORRETTO il 14 agosto 2026** (deciso dall'utente, su due misure indipendenti della fase 4): **il disegno costa poco `[M]`**; quel che si attribuiva al disegno era **l'ATTESA del fotogramma dalla GPU** più il disegno — un fotogramma HEVC in hardware esce opaco e la rilettura della marca del banco ne provoca il trasferimento. `fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md` |
+> | **the number** | the delay loop measured with encoding **in hardware** and with AV1 in software, which is the configuration **judged** — the values are in `FASI.md` §03-movimento |
+> | ⭐ **the architecture** | **ACQUITTED**: removing hardware encoding the encoding segment gives way and **the other four segments do not move** |
+> | ⭐ **hardware encoding** | **in the product**, not on a copy: the keyframe gets much shorter, the rhythm **doubles** |
+> | ⛔ **the ceiling** | it **EXCEEDS** the 50 ms, and **would exceed it even with free encoding** |
+> | ⛔⛔ **the new bottleneck** | ⚠ ~~**the DRAWING**~~ ⇒ ⛔ **CORRECTED on 14 Aug 2026** (decided by the user, on two independent measurements of phase 4): **drawing costs little `[M]`**; what was attributed to drawing was **the WAIT for the frame from the GPU** plus the drawing — an HEVC frame in hardware comes out opaque and the bench's reading of the mark causes its transfer. `fasi/rapporti/F4-A2-pagina-dipinge.md`, `F4-A10-anello-input.md` |
 >
-> ⛔ **E i tre limiti del giudizio sono scritti in `FASI.md` §03-movimento, non taciuti**: è su AV1
-> in software; HEVC in hardware **non è giudicabile** perché il browser dell'utente non lo dipinge;
-> e l'utente **non ha visto un desktop** ma un monitor aggiunto con dentro la scena dei banchi.
+> ⛔ **And the three limits of the judgement are written in `FASI.md` §03-movimento, not kept quiet**: it is on AV1
+> in software; HEVC in hardware **cannot be judged** because the user's browser does not paint it;
+> and the user **did not see a desktop** but an added monitor with the benches' scene inside.
 >
-> ⭐⭐ **E il giudizio ha prodotto due difetti che nessun banco aveva trovato** — HEVC che non
-> dipinge nella sessione vera, e il prodotto che **aggiunge** un monitor invece di mostrare il
-> desktop. ⇒ *È esattamente il valore che il piano attribuiva al giudizio, e si è realizzato in
-> trenta secondi.*
+> ⭐⭐ **And the judgement produced two defects that no bench had found** — HEVC that does not
+> paint in the real session, and the product that **adds** a monitor instead of showing the
+> desktop. ⇒ *It is exactly the value the plan attributed to the judgement, and it came true in
+> thirty seconds.*
 
-> ### ⭐⭐⭐ LA CODIFICA IN HARDWARE È ANTICIPATA QUI — deciso dall'utente il 13 agosto 2026, sera
+> ### ⭐⭐⭐ HARDWARE ENCODING IS BROUGHT FORWARD HERE — decided by the user on 13 Aug 2026, evening
 >
-> *E la fase 3 **non si chiude** finché non è fatta.*
+> *And phase 3 **does not close** until it is done.*
 >
-> ⛔ **La ragione, e non è un'opinione: è una misura.** La scomposizione dell'anello del ritardo
-> misurato il 13 agosto dice che **più di metà** sta nel tratto **cattura → primo byte**, cioè nella
-> codifica **in software**; Mutter, il disegno, la decodifica e il filo non cambiano con
-> l'accelerazione. I valori stanno in `FASI.md` §03-movimento.
+> ⛔ **The reason, and it is not an opinion: it is a measurement.** The breakdown of the delay loop
+> measured on 13 Aug says that **more than half** lies in the **capture → first byte** segment, that is in
+> encoding **in software**; Mutter, drawing, decoding and the wire do not change with
+> acceleration. The values are in `FASI.md` §03-movimento.
 >
-> ⇒ **Finché la codifica è in software, ogni numero di ritardo che le fasi 3-7 producono è dominato
-> da un pezzo che sta per essere sostituito** — e andrebbe rifatto dopo. È l'obiezione dell'utente,
-> ed è giusta: *«senza accelerazione hw stiamo ragionando e sviluppando su numeri non molto
+> ⇒ **As long as encoding is in software, every delay number that phases 3-7 produce is dominated
+> by a piece about to be replaced** — and it would have to be redone afterwards. It is the user's objection,
+> and it is right: *«senza accelerazione hw stiamo ragionando e sviluppando su numeri non molto
 > affidabili»*.
 >
-> ⭐⭐ **E si può fare, `[M]` verificato il 13 agosto 2026 sul server:**
+> ⭐⭐ **And it can be done, `[M]` verified on 13 Aug 2026 on the server:**
 >
 > ```
-> Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 e renderD129
+> Intel iHD driver 25.2.3   ·   /dev/dri/renderD128 and renderD129
 > VAProfileHEVCMain10     : VAEntrypointEncSliceLP    ← 10 bit, IN HARDWARE
-> VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← e perfino 4:4:4 a 10 bit
+> VAProfileHEVCMain444_10 : VAEntrypointEncSliceLP    ← and even 4:4:4 at 10 bit
 > ```
 >
-> ⚠ *Un agente aveva riferito «su questo server non c'è un codificatore hardware per nessuno dei due
-> codec». **È vero per AV1** — e stava già nei documenti — **ed è FALSO per HEVC**, che è proprio
-> quel che la fase 8 promette. Nessuno l'aveva verificato: la riga è stata ripetuta, non misurata.*
+> ⚠ *An agent had reported «on this server there is no hardware encoder for either of the two
+> codecs». **It is true for AV1** — and it was already in the documents — **and it is FALSE for HEVC**, which is precisely
+> what phase 8 promises. Nobody had verified it: the line was repeated, not measured.*
 >
-> ⭐ **E costa poco farlo adesso**, per una ragione precisa: la catena che si muove **esiste da
-> oggi**, il banco dell'anello è scritto, la scena e la marca sono certificate. ⇒ Il *prima* e il
-> *dopo* si misurano con **lo stesso strumento e la stessa scena**, quindi i due numeri **si
-> sottraggono davvero** — cosa che non sarebbe più vera fra tre fasi.
+> ⭐ **And it costs little to do it now**, for a precise reason: the chain that moves **exists as of
+> today**, the loop bench is written, the scene and the mark are certified. ⇒ The *before* and the
+> *after* are measured with **the same tool and the same scene**, so the two numbers **really
+> subtract** — which would no longer be true three phases from now.
 >
-> ⛔ **Che cosa si anticipa, e che cosa NO**: si prende **la sola codifica in hardware**. La **copia
-> zero** resta alla fase 8, è lavoro suo e non tocca questo numero.
+> ⛔ **What is brought forward, and what is NOT**: **only hardware encoding** is taken. **Zero
+> copy** stays at phase 8, it is its work and it does not touch this number.
 >
-> ⚠ **E la fase 8 non sparisce**: resta con la copia zero, e con la sua lezione che vale anche qui —
-> *«si misurano i fotogrammi consegnati, non i millisecondi di CPU»*. In v1 il costo per fotogramma
-> scese di molto **mentre i fotogrammi consegnati scendevano** (`LEZIONI.md` §6.2).
+> ⚠ **And phase 8 does not disappear**: it stays with zero copy, and with its lesson that holds here too —
+> *«one measures the frames delivered, not the milliseconds of CPU»*. In v1 the cost per frame
+> dropped a lot **while the frames delivered were dropping** (`LEZIONI.md` §6.2).
 >
-> ⏳ **Il lavoro comincia in una sessione nuova** (deciso dall'utente). Il punto di ripresa sta nel
+> ⏳ **The work starts in a new session** (decided by the user). The resume point is in the
 > `README.md`.
 >
 > ---
 >
-> ### ⭐⭐⭐ 13 agosto, sera — **IL BERSAGLIO È CONFERMATO AI DUE CAPI, e uno scoglio non c'era**
+> ### ⭐⭐⭐ 13 Aug, evening — **THE TARGET IS CONFIRMED AT BOTH ENDS, and one obstacle was not there**
 >
-> *Il piano della sessione nuova è stato riletto **prima che partisse un agente**, e controllato
-> misurando invece che ricordando. Ne sono uscite tre righe che cambiano il lavoro.*
+> *The plan for the new session was reread **before an agent started**, and checked
+> by measuring instead of remembering. Three lines came out of it that change the work.*
 >
-> **1. ⛔⛔ La codifica AV1 in hardware NON ESISTE su questa macchina** — `[M]`, 3 giri su 3: la
-> prova di codifica esce con *«No usable encoding profile found»*, e `vainfo` dà AV1 in **sola
-> decodifica** su tutt'e due i nodi. ⚠ Il codificatore **compariva** nell'elenco della libreria:
-> *un elenco dice che il codice c'è, non che la macchina lo sa fare*.
-> ⇒ ⭐ **Restare su AV1 vuol dire restare in software per sempre.** HEVC (e poi H.264) non è una
-> preferenza: sul lato server è **la strada verso l'hardware**.
+> **1. ⛔⛔ Hardware AV1 encoding DOES NOT EXIST on this machine** — `[M]`, 3 rounds out of 3: the
+> encoding test comes out with *«No usable encoding profile found»*, and `vainfo` gives AV1 as **decode
+> only** on both nodes. ⚠ The encoder **appeared** in the library's list:
+> *a list says that the code is there, not that the machine can do it*.
+> ⇒ ⭐ **Staying on AV1 means staying in software forever.** HEVC (and then H.264) is not a
+> preference: on the server side it is **the road to hardware**.
 >
-> **2. ⛔⛔ Lo scoglio «nessun client accetta HEVC» era una BANDIERA del banco**, non un palco.
-> `[M]` A/B con una sola variabile: senza `--disable-gpu` il Chrome del banco vede la GPU e dice sì
-> a HEVC; con la bandiera dice no. ⭐ E **dipinge davvero** un flusso HEVC codificato sulla scheda: 5 giri su 5,
-> 1920×1080, 119 fotogrammi su 120, `powerEfficient: true`.
-> ⇒ **La corsia che doveva aprire la sessione è cancellata**, e la strada critica diventa
-> *codifica → anello rimisurato*, senza rami che possano bloccarla.
+> **2. ⛔⛔ The obstacle «no client accepts HEVC» was a FLAG of the bench**, not a stage.
+> `[M]` A/B with a single variable: without `--disable-gpu` the bench's Chrome sees the GPU and says yes
+> to HEVC; with the flag it says no. ⭐ And it **really paints** an HEVC flow encoded on the card: 5 rounds out of 5,
+> 1920×1080, 119 frames out of 120, `powerEfficient: true`.
+> ⇒ **The lane that was supposed to open the session is cancelled**, and the critical path becomes
+> *encoding → loop re-measured*, with no branches that could block it.
 >
-> **3. ⭐ I codificatori si confrontano a parità di bitrate e coi fotogrammi in uscita CONTATI** —
-> il confronto misurato sta in `FASI.md` §03-movimento. ⚠ Il primo giro di quella sonda **non era un
-> confronto e il banco l'ha detto da sé**: a bitrate libero VP9 consegnava **molti meno byte**.
-> *«Più veloce» a una frazione del lavoro non è più veloce.*
+> **3. ⭐ Encoders are compared at equal bitrate and with the output frames COUNTED** —
+> the measured comparison is in `FASI.md` §03-movimento. ⚠ The first round of that probe **was not a
+> comparison and the bench said so by itself**: at free bitrate VP9 delivered **far fewer bytes**.
+> *«Faster» at a fraction of the work is not faster.*
 
-**Produce**: uno stream per fotogramma, l'abbandono con `RESET_STREAM`, la cadenza.
+**It produces**: one stream per frame, abandonment with `RESET_STREAM`, the cadence.
 
-**L'utente vede**: il desktop **che si muove**, e dice se è fluido.
+**The user sees**: the desktop **moving**, and says whether it is fluid.
 
-**Il banco**, ed è il cuore:
-- ⛔ **la scena si dichiara e si muove sempre** — un client a schermo intero che ridisegna a ogni
-  richiamo del compositore. Tutte le misure di ritmo delle fasi 3-9 di v1 sono state buttate per
-  questo (`LEZIONI.md` §1.1);
-- **i fotogrammi consegnati all'utente**, non quelli elaborati. Il numero che in v1 nessuno aveva
-  mai contato, e che era 18 mentre si ottimizzava altro;
-- ⭐ **l'anello del ritardo**: il client manda un input che cambia colore allo schermo e guarda i
-  fotogrammi decodificati finché non lo vede. Misurato **dal lato che riceve**
-  (`DECISIONI.md` §2.6). ⛔ **E qui arriva anche S4**, la misura del ritardo del *disegno* nel
-  browser, che §1.2 metteva nella sonda: senza codifica, trasporto e decodifica non è eseguibile
-  *(9 agosto 2026, rilievo **R3.4**)*. I suoi sette controlli e il **pezzo cieco** — il tratto fra
-  il disegno e il pixel acceso, che nessuna API vede e che **si dichiara accanto a ogni numero** —
-  stanno in `STUDI.md` §web §6.3.
+**The bench**, and it is the heart:
+- ⛔ **the scene is declared and always moves** — a full-screen client that redraws at every
+  compositor callback. All the rhythm measurements of phases 3-9 of v1 were thrown away for
+  this (`LEZIONI.md` §1.1);
+- **the frames delivered to the user**, not the ones processed. The number that in v1 nobody had
+  ever counted, and which was 18 while something else was being optimised;
+- ⭐ **the delay loop**: the client sends an input that changes the screen's colour and watches the
+  decoded frames until it sees it. Measured **from the receiving side**
+  (`DECISIONI.md` §2.6). ⛔ **And here S4 arrives too**, the measurement of the delay of *drawing* in the
+  browser, which §1.2 put in the probe: without encoding, transport and decoding it cannot be executed
+  *(9 Aug 2026, finding **R3.4**)*. Its seven checks and the **blind piece** — the segment between
+  drawing and the lit pixel, which no API sees and which **is declared next to every number** —
+  are in `STUDI.md` §web §6.3.
 
-**I numeri da raggiungere**: ritardo ≤ 50 ms, traguardo 40 (`SPECIFICHE.md` §3.2).
+**The numbers to reach**: delay ≤ 50 ms, target 40 (`SPECIFICHE.md` §3.2).
 
-> ## ⛔⛔ 13 agosto 2026 — l'esperimento è FATTO, e l'esito non era fra i due previsti
+> ## ⛔⛔ 13 Aug 2026 — the experiment is DONE, and the outcome was not one of the two foreseen
 >
-> *Qui stava scritto: «su GNOME il traguardo dei 40 ms probabilmente non si raggiunge, per il muro
-> della cadenza di Mutter; se la misura lo confermasse non è un difetto nostro — ed è una
-> ragione in più per la fase di KDE». E accanto: «prima di dichiararlo si prova la cadenza
-> disaccoppiata… se riesce, GNOME entra nel traguardo; se non riesce, il muro diventa `[M]`».*
+> *Here it was written: «on GNOME the 40 ms target is probably not reached, because of the wall
+> of Mutter's cadence; if the measurement confirmed it it is not a defect of ours — and it is one more
+> reason for the KDE phase». And next to it: «before declaring it, the decoupled cadence is tried…
+> if it succeeds, GNOME enters the target; if it does not, the wall becomes `[M]`».*
 >
-> ⛔ **L'esito non è «riesce» né «non riesce». È: «riesce con un numero diverso, e il prodotto non
-> ci arriva» — e intanto il ritardo è stato misurato altrove, e la colpa è nostra.** Le tre metà:
+> ⛔ **The outcome is neither «it succeeds» nor «it does not». It is: «it succeeds with a different number, and the product does not
+> get there» — and meanwhile the delay was measured elsewhere, and the fault is ours.** The three halves:
 >
 > | | |
 > |---|---|
-> | ⭐ **la cadenza disaccoppiata RIESCE** | `[M]` monitor **120** + freno **90** ⇒ Mutter consegna la cadenza piena — cella **D**, pulita. ⚠ **Ma M3 di `STUDI.md` §gnome §13 NON è chiusa: è mezza**, perché la causa non è misurata |
-> | ⛔ **ma la causa scritta era sbagliata, e quella nuova è `[R]`** | non un **battimento** fra due orologi ma una **quantizzazione** — `min_interval_us = 10⁶/maxFramerate` troncato a intero (16666 per 60) contro un tick da 16666,67 µs — ⛔ **letta nel codice, non misurata**. E lo scarto scritto prima **non si riproduce** sulla cella bassa |
-> | ⛔⛔ **e il prodotto non ci arriva** | `MOVIMENTO_FPS 60` è una costante di compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha opzioni di cadenza, **`RecordVirtual` non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`): i quattro monitor virtuali sono tutti **@60**. È `[M]` **sul banco** e **zero in produzione** |
+> | ⭐ **the decoupled cadence SUCCEEDS** | `[M]` monitor **120** + brake **90** ⇒ Mutter delivers the full cadence — cell **D**, clean. ⚠ **But M3 of `STUDI.md` §gnome §13 is NOT closed: it is half closed**, because the cause is not measured |
+> | ⛔ **but the written cause was wrong, and the new one is `[R]`** | not a **beat** between two clocks but a **quantisation** — `min_interval_us = 10⁶/maxFramerate` truncated to an integer (16666 for 60) against a tick of 16666.67 µs — ⛔ **read in the code, not measured**. And the discrepancy written before **does not reproduce** on the low cell |
+> | ⛔⛔ **and the product does not get there** | `MOVIMENTO_FPS 60` is a compile-time constant (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` has no cadence options, **`RecordVirtual` does not take the frequency** (`src/mutter.h` · the note on `RecordVirtual`): the four virtual monitors are all **@60**. It is `[M]` **on the bench** and **zero in production** |
 >
-> ⛔ **E il ritardo, che è il numero per cui la fase esisteva, SFORA** il tetto dei 50 ms `[M]`
-> (cattura → vetro, pezzo cieco **escluso**; i valori in `FASI.md` §03-movimento). ⛔⛔ **Ma il muro
-> non è di Mutter**: la sua parte è piccola, **il grosso è nostro**, e sta nel tratto cattura →
-> primo byte, dominato dal **codificatore in software**. ⇒ La cura è la **fase 8**, non la 10
+> ⛔ **And the delay, which is the number the phase existed for, EXCEEDS** the 50 ms ceiling `[M]`
+> (capture → glass, blind piece **excluded**; the values in `FASI.md` §03-movimento). ⛔⛔ **But the wall
+> is not Mutter's**: its part is small, **the bulk is ours**, and it lies in the capture →
+> first byte segment, dominated by the **software encoder**. ⇒ The cure is **phase 8**, not 10
 > (`SPECIFICHE.md` §3.2, `DECISIONI.md` §2.5).
 >
-> ⚠ **E il 60 non è il 40 ms**: la cadenza non è il ritardo (`LEZIONI.md` §6.2). I 60 fotogrammi
-> tolgono un ostacolo; il numero lo fa il ritardo.
+> ⚠ **And 60 is not 40 ms**: cadence is not delay (`LEZIONI.md` §6.2). The 60 frames
+> remove an obstacle; the number is made by the delay.
 >
-> > ⛔⛔ ⚠ *La seconda riga della tavola diceva: «Legge su **13 punti**, 8 confermano, 0
-> > smentiscono», e la prima dava **M3 per chiusa**. **Tutt'e due false**, e corrette la sera del
-> > 13 agosto 2026 (rilievo del coordinatore della fase 3, verificato sui file di esiti): il file
-> > `banchi/03-b14-esiti-griglia.jsonl` porta **due sole celle**, tutt'e due con
-> > `scena_sul_mio_monitor: **false**` ⇒ rifiutate dal banco stesso, che stampa «⛔ la legge NON
-> > regge su **0 punti su 0**». ⇒ **La cadenza piena rinegoziata resta un fatto `[M]`; il perché torna `[R]`; M3 resta
-> > mezza.** ⭐ E la ragione del rifiuto è la trappola n. 1 di `LEZIONI.md` §1.1 — la scena non era
-> > sul monitor che si catturava — **tornata a mordere il risultato che la citava**: §1.1-bis.*
+> > ⛔⛔ ⚠ *The second row of the table said: «Law on **13 points**, 8 confirm, 0
+> > disprove», and the first gave **M3 as closed**. **Both false**, and corrected on the evening of
+> > 13 Aug 2026 (finding of the phase 3 coordinator, verified on the outcome files): the file
+> > `banchi/03-b14-esiti-griglia.jsonl` carries **only two cells**, both with
+> > `scena_sul_mio_monitor: **false**` ⇒ rejected by the bench itself, which prints «⛔ la legge NON
+> > regge su **0 punti su 0**». ⇒ **The renegotiated full cadence remains an `[M]` fact; the why goes back to `[R]`; M3 remains
+> > half closed.** ⭐ And the reason for the rejection is trap no. 1 of `LEZIONI.md` §1.1 — the scene was not
+> > on the monitor being captured — **come back to bite the result that cited it**: §1.1-bis.*
 
 ---
 
-## Fase 4 — Si comanda ✅ **CHIUSA il 14 agosto 2026**
+## Phase 4 — In command ✅ **CLOSED on 14 Aug 2026**
 
-> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«mi sembra ok»*
+> ### ⭐⭐⭐ CLOSED ON THE USER'S JUDGEMENT — *«mi sembra ok»*
 >
-> *e, sulle due ottimizzazioni che aveva chiesto: «la situazione mi sembra migliorata, la comparsa
+> *and, on the two optimisations he had asked for: «la situazione mi sembra migliorata, la comparsa
 > del desktop è più immediata».*
 >
 > | | |
 > |---|---|
-> | ⭐⭐ **che cosa vede** | **usa il desktop**: clicca, scrive, scorre, sposta le finestre. REMOTIX ha smesso di essere una dimostrazione |
-> | ⭐ **il numero della fase** | l'anello **input → vetro** `[M]`, due giri indipendenti che concordano — i valori in `FASI.md` §04-si-comanda |
-> | ⛔ **il tetto** | **SFORA** i 50 ms, anche prima di contare i due pezzi ciechi |
-> | ⛔⛔ **e nessun tratto domina** | sei tratti di peso simile ⇒ **nessuna cura singola porta l'anello sotto il tetto**: è lavoro della **fase 8** |
-> | ⭐ **il login → desktop** | scende di molto, e quel che resta è quasi tutto **il fisso di `RCP.md` §4.4-bis** |
-> | ⭐⭐ **e il ritardo non cresce più** | prima si accumulava secondo dopo secondo (⛔ **con tutti i contatori verdi**); adesso resta fermo |
+> | ⭐⭐ **what he sees** | **he uses the desktop**: clicks, types, scrolls, moves windows. REMOTIX has stopped being a demonstration |
+> | ⭐ **the phase's number** | the **input → glass** loop `[M]`, two independent rounds that agree — the values in `FASI.md` §04-si-comanda |
+> | ⛔ **the ceiling** | it **EXCEEDS** the 50 ms, even before counting the two blind pieces |
+> | ⛔⛔ **and no segment dominates** | six segments of similar weight ⇒ **no single cure brings the loop under the ceiling**: it is work for **phase 8** |
+> | ⭐ **login → desktop** | drops a lot, and what remains is almost all **the fixed part of `RCP.md` §4.4-bis** |
+> | ⭐⭐ **and the delay no longer grows** | before, it accumulated second after second (⛔ **with all counters green**); now it stays still |
 >
-> ⭐⭐ **E il giudizio dell'utente ha trovato SETTE difetti che nessuno dei dieci banchi vedeva** —
-> il monitor aggiunto, due server nostri sulla stessa sessione, la barra sul dock di GNOME, la
-> cattura del puntatore, il palco fallito tenuto per sempre, ⛔ e **una riga del coordinatore** che
-> rallentava il login. **Sette su sette stavano FRA i pezzi, nessuno dentro uno.**
+> ⭐⭐ **And the user's judgement found SEVEN defects that none of the ten benches saw** —
+> the added monitor, two servers of ours on the same session, the bar on GNOME's dock, the
+> pointer capture, the failed stage kept forever, ⛔ and **a line of the coordinator's** that
+> slowed the login. **Seven out of seven lay BETWEEN the pieces, none inside one.**
 >
-> ⛔ **E si chiude con cinque cose dichiarate aperte**, messe davanti all'utente **prima** che
-> giudicasse: il ritardo che sfora · la tela che non è la sua (**36 % di banda nera** sul suo 21:9)
-> · il monitor chiesto sempre invece di guardare se c'è · un pezzo cieco dentro uno dei tratti
-> · e **un browser solo**. Stanno in [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda).
+> ⛔ **And it closes with five things declared open**, put before the user **before** he
+> judged: the delay that exceeds · the canvas that is not his (**36 % black band** on his 21:9)
+> · the monitor always requested instead of checking whether there is one · a blind piece inside one of the segments
+> · and **a single browser**. They are in [`FASI.md` §04-si-comanda](FASI.md#04-si-comanda).
 
 
-> ### ⭐⭐⭐ IL PRIMO LAVORO DELLA FASE 4 È IL **DESKTOP VERO** — deciso dall'utente il 14 agosto 2026
+> ### ⭐⭐⭐ THE FIRST WORK OF PHASE 4 IS THE **REAL DESKTOP** — decided by the user on 14 Aug 2026
 >
-> *E non è una premessa alla fase: **è dentro la fase**, in testa.*
+> *And it is not a premise to the phase: **it is inside the phase**, at the top.*
 >
-> ⛔ **La ragione, in una riga**: la fase 4 esiste perché *«l'utente **usa** il desktop»* — ma
-> **finché il desktop non si vede, non c'è niente da comandare**. I banchi del cursore, delle
-> lettere accentate e delle scorciatoie non avrebbero **dove guardare**: si misurerebbero su uno
-> schermo vuoto.
+> ⛔ **The reason, in one line**: phase 4 exists because *«the user **uses** the desktop»* — but
+> **as long as the desktop is not visible, there is nothing to command**. The benches of the cursor, of the
+> accented letters and of the shortcuts would have **nowhere to look**: they would be measured on an
+> empty screen.
 >
-> **Il difetto, e la cura è in DUE posti non uno:**
+> **The defect, and the cure is in TWO places, not one:**
 >
-> > ✅ **CURATO il 14 agosto 2026 (A1)** *(riquadro aggiunto il 28 agosto, riallineando al codice)*.
-> > ⛔ La tabella qui sotto descrive **com'era prima della cura**, ed è al presente perché è stata
-> > scritta come mandato. Oggi il prodotto non chiede `--virtual-monitor` e **rifiuta** un
-> > `ExecStart` che lo chieda: `src/sessione.c`, il controllo su `vigore`.
+> > ✅ **CURED on 14 Aug 2026 (A1)** *(box added on 28 Aug, realigning to the code)*.
+> > ⛔ The table below describes **how it was before the cure**, and it is in the present tense because it was
+> > written as a mandate. Today the product does not ask for `--virtual-monitor` and **refuses** an
+> > `ExecStart` that asks for it: `src/sessione.c`, the check on `vigore`.
 >
 > | | |
 > |---|---|
-> | `src/sessione.c` · l'`ExecStart` della Shell | crea la sessione con `--headless --no-x11 **--virtual-monitor %ux%u**` ⇒ GNOME mette la shell **su quel monitor** |
-> | `src/mutter.c` · `RecordVirtual` | cattura con **`RecordVirtual`**, che **ne monta un altro** e registra quello ⇒ **l'utente guarda il secondo, vuoto** |
-> | ⛔ **e la seconda metà della cura** | `src/sessione.c` · il controllo sull'`ExecStart` in vigore **rilegge l'`ExecStart` in vigore e PRETENDE `--virtual-monitor %ux%u`** ⇒ tolta la bandiera, il controllo **fallirebbe**. *Il controllo è giusto, l'atteso no* |
+> | `src/sessione.c` · the Shell's `ExecStart` | creates the session with `--headless --no-x11 **--virtual-monitor %ux%u**` ⇒ GNOME puts the shell **on that monitor** |
+> | `src/mutter.c` · `RecordVirtual` | captures with **`RecordVirtual`**, which **mounts another one** and records that ⇒ **the user looks at the second, empty** |
+> | ⛔ **and the second half of the cure** | `src/sessione.c` · the check on the `ExecStart` in force **rereads the `ExecStart` in force and DEMANDS `--virtual-monitor %ux%u`** ⇒ with the flag removed, the check **would fail**. *The check is right, the expectation is not* |
 >
-> ⭐ **La tesi è già PROVATA, il 14 agosto, senza toccare il prodotto**: sessione dell'utente
-> `prova` avviata **senza** `--virtual-monitor` (`GetCurrentState` → **0 monitor**, la sessione
-> *«viva, completa e nera»* di `STUDI.md` §gnome §3.1); collegato il client, `RecordVirtual` monta
-> **l'unico** monitor e ⭐ **la shell ci va sopra: barra, sfondo, dock**. La prova sta in
-> `fasi/rapporti/F5-desktop-vero.md` e nell'immagine
-> `F3-verbali/desktop-vero-14ago.png` ⚠ *(tolta dal disco come i rapporti; si riprende con `git show dea834d --stat` e `git checkout dea834d -- <percorso>`)*.
+> ⭐ **The thesis is already PROVEN, on 14 Aug, without touching the product**: session of user
+> `prova` started **without** `--virtual-monitor` (`GetCurrentState` → **0 monitors**, the session
+> *«alive, complete and black»* of `STUDI.md` §gnome §3.1); with the client connected, `RecordVirtual` mounts
+> **the only** monitor and ⭐ **the shell goes on it: bar, background, dock**. The proof is in
+> `fasi/rapporti/F5-desktop-vero.md` and in the image
+> `F3-verbali/desktop-vero-14ago.png` ⚠ *(removed from the disk like the reports; it is recovered with `git show dea834d --stat` and `git checkout dea834d -- <percorso>`)*.
 >
-> ⚠ **Due cose da MISURARE prima di crederle, e non sono dettagli:**
-> 1. ⛔ **chi decide la misura del monitor** adesso che non la dà più la sessione: la dà
->    `RecordVirtual`, e **che cosa succede se il client ne chiede un'altra?** È `RCP.md` §4.5, la
->    tela concessa, e da qui in poi tocca questo pezzo;
-> 2. ⚠ **`PIANO.md` (questo file, più su) e `STUDI.md` §gnome §108 dicono che `--virtual-monitor` non è
->    opzionale**. ⇒ **Vanno riscritte**: sono vere solo per una sessione che deve vivere **senza
->    nessuno che la catturi**.
+> ⚠ **Two things to MEASURE before believing them, and they are not details:**
+> 1. ⛔ **who decides the monitor's size** now that the session no longer gives it: it is given by
+>    `RecordVirtual`, and **what happens if the client asks for another one?** It is `RCP.md` §4.5, the
+>    granted canvas, and from here on it concerns this piece;
+> 2. ⚠ **`PIANO.md` (this file, further up) and `STUDI.md` §gnome §108 say that `--virtual-monitor` is not
+>    optional**. ⇒ **They must be rewritten**: they are true only for a session that must live **without
+>    anybody capturing it**.
 >
-> ⚠ **E l'utente `prova` si conserva** (deciso il 14 agosto): è l'unico posto dove oggi il desktop
-> vero si vede, perché `nicfio` ha già una sessione con un monitor suo e `SPECIFICHE.md` §5.1 ne ammette **una sola
-> per utente**.
+> ⚠ **And the user `prova` is kept** (decided on 14 Aug): it is the only place where today the real
+> desktop is visible, because `nicfio` already has a session with a monitor of its own and `SPECIFICHE.md` §5.1 admits **only one
+> per user**.
 
-**Produce**: ⭐ **il desktop vero** (qui sopra) · il canale di input, il puntatore disegnato dalla pagina, le lettere e le posizioni —
-⭐ **e le due disposizioni della pagina**, che è il lavoro ereditato dalle fasi A3 e A4 sciolte: il
-modo classico con `Pointer Lock`, e il tocco con i sette gesti, **con il passaggio automatico sul
-contesto** e non un'impostazione da cercare (`DECISIONI.md` §5-bis.0-bis).
+**It produces**: ⭐ **the real desktop** (above) · the input channel, the pointer drawn by the page, the letters and the positions —
+⭐ **and the page's two layouts**, which is the work inherited from the dissolved phases A3 and A4: the
+classic mode with `Pointer Lock`, and touch with the seven gestures, **with automatic switching on
+context** and not a setting to go looking for (`DECISIONI.md` §5-bis.0-bis).
 
-**L'utente vede**: ⭐ **usa il desktop**. È il momento in cui smette di essere una dimostrazione.
+**The user sees**: ⭐ **he uses the desktop**. It is the moment it stops being a demonstration.
 
-⛔ **E qui si scopre che cosa il browser si tiene**: `Ctrl+W`, `Ctrl+T`, `F11`. La pagina **DEVE
-dichiarare** quali scorciatoie non può consegnare su quel motore, invece di lasciar credere che
-siano arrivate (`SPECIFICHE.md` §7.3-bis). ⚠ La misura è **S3** della sonda, e va fatta su almeno
-due motori: quel che si perde su Chrome non è quel che si perde su Safari.
+⛔ **And here one discovers what the browser keeps for itself**: `Ctrl+W`, `Ctrl+T`, `F11`. The page **MUST
+declare** which shortcuts it cannot deliver on that engine, instead of letting one believe they
+arrived (`SPECIFICHE.md` §7.3-bis). ⚠ The measurement is the probe's **S3**, and it must be done on at least
+two engines: what is lost on Chrome is not what is lost on Safari.
 
-**Il banco**:
-- ⛔ **il cursore del desktop non deve comparire nell'immagine**: si guarda un fotogramma. E su
-  wlroots si verifica che il tema trasparente sia stato **caricato**, non solo scritto — un tema
-  che carica zero cursori fa ripiegare su uno visibile (`SPECIFICHE.md` §7.1);
-- una lettera accentata scritta in una sessione con la disposizione giusta, e una in una
-  sessione con la disposizione sbagliata: la seconda **deve** finire nel registro come non
-  producibile, non uscire diversa;
-- `Ctrl+C` che copia invece di scrivere una c.
+**The bench**:
+- ⛔ **the desktop cursor must not appear in the image**: one looks at a frame. And on
+  wlroots one verifies that the transparent theme was **loaded**, not just written — a theme
+  that loads zero cursors makes it fall back to a visible one (`SPECIFICHE.md` §7.1);
+- an accented letter typed in a session with the right layout, and one in a
+  session with the wrong layout: the second **must** end up in the log as not
+  producible, not come out different;
+- `Ctrl+C` that copies instead of typing a c.
 
-⛔ **E qui si scopre che il cursore non arriva affatto**, il che rende `CURSORE_FORMA` (`RCP.md`
-§7.2) un canale senza sorgente: su Mutter chiediamo `cursor-mode=2` — cioè «dammi il cursore
-come metadato» — **ma non chiediamo `SPA_META_Cursor`**, quindi forma, posizione e punto attivo
-non vengono consegnati `[R]` (`STUDI.md` §gnome §1.1 punto 6 e §5.2). Da chiedere qui, dove il canale
-nasce. ⭐ **Il verso è quello giusto per noi**: pixel puliti nell'immagine *e* la forma in banda
-laterale, che è esattamente ciò che serve al puntatore disegnato dal client.
+⛔ **And here one discovers that the cursor does not arrive at all**, which makes `CURSORE_FORMA` (`RCP.md`
+§7.2) a channel without a source: on Mutter we ask for `cursor-mode=2` — that is «give me the cursor
+as metadata» — **but we do not ask for `SPA_META_Cursor`**, so shape, position and hotspot
+are not delivered `[R]` (`STUDI.md` §gnome §1.1 point 6 and §5.2). To be requested here, where the channel
+is born. ⭐ **The direction is the right one for us**: clean pixels in the image *and* the shape in a side
+band, which is exactly what the pointer drawn by the client needs.
 
-⚠ **Due ricambi silenziosi di libei**, che mordono qui e alla fase 6: un cambio di **keymap**
-distrugge e ricrea il dispositivo tastiera, un cambio di **geometria** tutti i dispositivi
-assoluti — e il puntatore al dispositivo vecchio smette di funzionare **senza errore** `[R]`
-(`STUDI.md` §gnome §9). Keymap e regioni si rileggono a **ogni** `DEVICE_ADDED`, non una volta all'avvio.
+⚠ **Two silent replacements by libei**, which bite here and at phase 6: a **keymap** change
+destroys and recreates the keyboard device, a **geometry** change all the absolute
+devices — and the pointer to the old device stops working **without error** `[R]`
+(`STUDI.md` §gnome §9). Keymap and regions are reread at **every** `DEVICE_ADDED`, not once at startup.
 
-**Si riusa**: `input.c` (906 righe, libei), `tastiera.c` (372, xkbcommon).
+**Reused**: `input.c` (906 lines, libei), `tastiera.c` (372, xkbcommon).
 
 ---
 
-## Fase 5 — La sessione ✅ **CHIUSA il 16 agosto 2026**
+## Phase 5 — The session ✅ **CLOSED on 16 Aug 2026**
 
-> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«funziona»* · *«il task nel terminale era ancora in esecuzione»*
+> ### ⭐⭐⭐ CLOSED ON THE USER'S JUDGEMENT — *«funziona»* · *«il task nel terminale era ancora in esecuzione»*
 >
-> *E la prova che vale l'ha fatta lui, con un lavoro VERO dentro: si logga massimizzato, lancia un
-> ciclo infinito nel terminale, chiude il browser, rimpicciolisce la finestra, rientra — e il ciclo
-> girava ancora. ⛔ Tutte le prove nostre avevano un desktop **vuoto**, che è il testimone peggiore
-> possibile: appena rinato è identico a com'era.*
+> *And the test that counts he did himself, with REAL work inside: he logs in maximised, launches an
+> infinite loop in the terminal, closes the browser, shrinks the window, comes back in — and the loop
+> was still running. ⛔ All our tests had an **empty** desktop, which is the worst witness
+> possible: just reborn it is identical to how it was.*
 >
 > | | |
 > |---|---|
-> | ⭐ **l'accesso** | `[M]` su venti giri dal browser, **senza più la coda lunga** che la mattina ogni tanto lo faceva durare molte volte tanto — i valori in `FASI.md` §05-la-sessione |
-> | ⭐ **la coda lunga dell'accesso** | trovata: il palco nasceva alla tela di ripiego e il ridimensionamento **non si compie su una scena ferma**. ⇒ il figlio aspetta la tela del cliente |
-> | ⭐ **`RCP.md` §7.3, il rilascio al distacco** | provato sul **desktop vero** con un testimone che conta le battute: un tasto rimasto giù si ripete, e il rilascio lo ferma |
-> | ⭐ **i tre orologi** | il silenzio contava **l'utente invece del client** (un secondo dispositivo entrava sul desktop di chi stava leggendo: **I2 rotta**) ⇒ riparato sui pacchetti · l'inattività (`0x02`) **non esisteva** ⇒ fatta · le 6 ore diventano **60 minuti**, per decisione dell'utente su una misura di memoria |
-> | ⭐ **`0x0F`** | il secondo dispositivo è respinto, provato **da un telefono vero** — mai uscito prima su una connessione vera |
-> | ⭐ **la sessione senza nessuno che guarda** | resta viva, costa pochissimo e la memoria non cresce. In v1 `libmutter` andava in asserzione fallita |
-> | ⛔ **e tre righe di registro mentivano** | `RILASCIO AL DISTACCO: 0` che non poteva dire altro · il testo `0x02` della pagina che nominava l'orologio sbagliato · *«l'utente ha chiesto di uscire»* detto da un orologio. ⇒ `LEZIONI.md` §1.9 ha la sua **quinta regola** |
-> | ⛔ **e il modulo d'accesso stava sotto il desktop** | da sempre: il «vestito da desktop» non nascondeva niente. Trovato dall'utente, in tre segnalazioni |
+> | ⭐ **access** | `[M]` over twenty rounds from the browser, **no longer with the long tail** that in the morning sometimes made it last many times as long — the values in `FASI.md` §05-la-sessione |
+> | ⭐ **the long tail of access** | found: the stage was born at the fallback canvas and resizing **does not complete on a still scene**. ⇒ the child waits for the client's canvas |
+> | ⭐ **`RCP.md` §7.3, release on detach** | tested on the **real desktop** with a witness that counts the keystrokes: a key left down repeats, and the release stops it |
+> | ⭐ **the three clocks** | silence counted **the user instead of the client** (a second device entered the desktop of whoever was reading: **I2 broken**) ⇒ fixed on packets · inactivity (`0x02`) **did not exist** ⇒ done · the 6 hours become **60 minutes**, by the user's decision on a memory measurement |
+> | ⭐ **`0x0F`** | the second device is rejected, tested **from a real phone** — it had never come out before on a real connection |
+> | ⭐ **the session with nobody watching** | stays alive, costs very little and the memory does not grow. In v1 `libmutter` hit a failed assertion |
+> | ⛔ **and three log lines were lying** | `RILASCIO AL DISTACCO: 0` which could not say anything else · the page's `0x02` text that named the wrong clock · *«l'utente ha chiesto di uscire»* said by a clock. ⇒ `LEZIONI.md` §1.9 has its **fifth rule** |
+> | ⛔ **and the login form was under the desktop** | from the beginning: the «desktop costume» was hiding nothing. Found by the user, in three reports |
 >
-> ⇒ ⭐ **Restano due cose sole**, e l'elenco è stato **tagliato** col criterio dell'utente — *«se i
-> punti non toccano il prodotto è solo rumore burocratico»*: `0x05` (l'utente con una sessione
-> grafica **locale**, che vuole una persona alla consolle) e il banco del puntatore dopo il ricambio
-> dei dispositivi. Dettagli in `FASI.md` §05-la-sessione §7.
+> ⇒ ⭐ **Only two things remain**, and the list was **cut** with the user's criterion — *«se i
+> punti non toccano il prodotto è solo rumore burocratico»*: `0x05` (the user with a **local** graphical
+> session, which wants a person at the console) and the pointer bench after the replacement
+> of the devices. Details in `FASI.md` §05-la-sessione §7.
 
-**Produce**: PAM per intero, il palco che sopravvive al distacco, i tre orologi, una sola sessione
-grafica per utente.
+**It produces**: PAM in full, the stage that survives detach, the three clocks, a single graphical
+session per user.
 
-> ### ⭐ E il confine col multi-tenant è stato deciso il 15 agosto 2026 — `DECISIONI.md` §4.6-quater
+> ### ⭐ And the boundary with multi-tenant was decided on 15 Aug 2026 — `DECISIONI.md` §4.6-quater
 >
-> **Qui: un utente remoto per volta.** Niente budget, niente conteggio, `MAX_ATTACCATE` resta il
-> `#define` a 16 dichiarato come ripiego. Il multi-tenant come **funzione** — più sessioni insieme,
-> `BUDGET_PIENO`, il tetto configurabile — è della **fase 10**, perché ha bisogno di un numero vero
-> e il numero lo dà il codificatore hardware della **fase 8**.
+> **Here: one remote user at a time.** No budget, no counting, `MAX_ATTACCATE` stays the
+> `#define` at 16 declared as a fallback. Multi-tenant as a **function** — several sessions together,
+> `BUDGET_PIENO`, the configurable ceiling — belongs to **phase 10**, because it needs a real number
+> and the number is given by the hardware encoder of **phase 8**.
 >
-> ⛔ **Con un pezzo che non si rinvia**: il guardiano di logind di `0x04`/`0x05` deve discriminare
-> **per utente**, e non è una scelta — è la macchina di prova che lo impone. `nicfio` ha la sessione
-> grafica **locale** e `prova` arriva da **remoto**: un guardiano che chieda *«c'è una sessione
-> locale?»* invece di *«di questo utente?»* rifiuta `prova` **il primo giorno**.
+> ⛔ **With a piece that is not postponed**: the logind guard of `0x04`/`0x05` must discriminate
+> **per user**, and it is not a choice — it is the test machine that imposes it. `nicfio` has the **local**
+> graphical session and `prova` comes from **remote**: a guard that asks *«is there a local
+> session?»* instead of *«of this user?»* rejects `prova` **on the first day**.
 >
-> ⭐ **E le quattro decisioni della sera del 15 agosto stanno tutte in `FASI.md` §05-la-sessione**: le
-> due uscite (§4.1-ter), il ritorno al modulo di accesso col motivo nuovo `0x10` (§4.1-quater), la
-> scorciatoia `Ctrl+Alt+Fine`, senza bottone a schermo (§4.1-quinquies), e ⛔ **nessuno spegne il
+> ⭐ **And the four decisions of the evening of 15 Aug are all in `FASI.md` §05-la-sessione**: the
+> two exits (§4.1-ter), the return to the login form with the new reason `0x10` (§4.1-quater), the
+> shortcut `Ctrl+Alt+Fine`, with no on-screen button (§4.1-quinquies), and ⛔ **nobody switches off the
 > server** (§4.7).
 
-**L'utente vede**: chiude il client, va a pranzo, riapre — **e ritrova tutto com'era**.
+**The user sees**: he closes the client, goes to lunch, reopens — **and finds everything as it was**.
 
-**Il banco**:
-- distacco e riaggancio, **due volte di fila**: un banco che passa solo da macchina pulita non è un
-  banco, è una dimostrazione (`LEZIONI.md` §2.3-ter);
-- ⛔ **la sessione senza nessuno che guarda**: in v1 il monitor virtuale spariva al distacco e
-  `libmutter` andava in asserzione fallita, con le applicazioni che perdevano la connessione
-  Wayland. È il difetto che rende la sessione inutilizzabile dopo il primo stacco;
-- i tre orologi, ciascuno con la sua prova;
-- l'apertura di una sessione locale mentre la remota è viva → la remota **deve** cadere con
-  `SESSIONE_LOCALE_PREVALSA`, e il motivo si verifica **dal lato che lo riceve**;
-- ⭐ **e il gemello che mancava**: una sessione locale **già attiva** e una remota che arriva →
-  `GIA_ATTIVA_LOCALE` `0x05` (`SPECIFICHE.md` §5.1). *Aggiunto il 9 agosto 2026, rilievo **R4.16**:
-  era di `RCP.md` §8.2 e di nessuna fase, e sarebbe caduto fra le fasi;*
-- ⛔ **il rilascio dei tasti al distacco**, che `RCP.md` §11 chiama *«la regola col rapporto
-  danno/costo più alto del documento»*: si stacca con un tasto premuto **e si riattacca** a
-  verificare che non sia rimasto giù. *Portato qui dalla fase 4 il 9 agosto 2026, rilievo **R4.7**:
-  alla fase 4 non esiste una sessione a cui riattaccarsi — la sessione muore con la connessione —
-  quindi quel banco lì o non si scrive o **si scrive verde per costruzione**.*
+**The bench**:
+- detach and reattach, **twice in a row**: a bench that passes only from a clean machine is not a
+  bench, it is a demonstration (`LEZIONI.md` §2.3-ter);
+- ⛔ **the session with nobody watching**: in v1 the virtual monitor disappeared at detach and
+  `libmutter` hit a failed assertion, with the applications losing their Wayland
+  connection. It is the defect that makes the session unusable after the first detach;
+- the three clocks, each with its own test;
+- opening a local session while the remote one is alive → the remote one **must** drop with
+  `SESSIONE_LOCALE_PREVALSA`, and the reason is verified **from the side that receives it**;
+- ⭐ **and the missing twin**: a local session **already active** and a remote one arriving →
+  `GIA_ATTIVA_LOCALE` `0x05` (`SPECIFICHE.md` §5.1). *Added on 9 Aug 2026, finding **R4.16**:
+  it belonged to `RCP.md` §8.2 and to no phase, and it would have fallen between the phases;*
+- ⛔ **releasing the keys on detach**, which `RCP.md` §11 calls *«the rule with the highest
+  damage/cost ratio in the document»*: one detaches with a key pressed **and reattaches** to
+  verify that it has not stayed down. *Brought here from phase 4 on 9 Aug 2026, finding **R4.7**:
+  at phase 4 there is no session to reattach to — the session dies with the connection —
+  so that bench either is not written there or **is written green by construction**.*
 
-⛔ **E due difetti che l'utente incontrerebbe lasciando la sessione ferma venti minuti**, tutt'e
-due su GNOME e tutt'e due mai affrontati in v1 (`STUDI.md` §gnome §4 e §7):
+⛔ **And two defects the user would meet leaving the session idle for twenty minutes**, both
+on GNOME and both never tackled in v1 (`STUDI.md` §gnome §4 and §7):
 
 | | |
 |---|---|
-| **la revoca** | il blocca-schermo di GNOME non mostra un blocco: **ci stacca**. Ci salva `is_headless()`, che però **non abbiamo mai chiesto** — Mutter ci si mette da solo quando la sessione logind non ha un seat. Qui l'headless si **dichiara** e si **verifica dopo l'avvio**, e se non c'è si fallisce dichiarandolo (`DECISIONI.md` §4.3-bis, misura M2) |
-| **la macchina si addormenta** | `sleep-inactive-ac-type` vale `suspend` a 900 s, upstream **e** Debian `[R]`. Oggi non morde solo per accidente. La cura è una chiamata sola — `SessionManager.Inhibit(…, 12)`, cioè `SUSPEND\|IDLE` **insieme** — e `energia_inibisci()` su Mutter oggi **ritorna NULL** (`src/energia.c:112-113`). ⛔ Mai il bit `LOGOUT` |
+| **the revocation** | GNOME's screen locker does not show a lock: **it detaches us**. We are saved by `is_headless()`, which however **we never asked for** — Mutter puts itself there when the logind session has no seat. Here headless is **declared** and **verified after startup**, and if it is not there one fails declaring it (`DECISIONI.md` §4.3-bis, measurement M2) |
+| **the machine falls asleep** | `sleep-inactive-ac-type` is `suspend` at 900 s, upstream **and** Debian `[R]`. Today it does not bite only by accident. The cure is a single call — `SessionManager.Inhibit(…, 12)`, that is `SUSPEND\|IDLE` **together** — and `energia_inibisci()` on Mutter today **returns NULL** (`src/energia.c:112-113`). ⛔ Never the `LOGOUT` bit |
 
-⚠ **Il banco dei tre orologi li incrocia**: sei ore di abbandono su una macchina che si sospende
-a quindici minuti non si misurano affatto — e il banco resterebbe verde, perché la sessione al
-risveglio c'è ancora.
+⚠ **The bench of the three clocks crosses them**: six hours of abandonment on a machine that suspends
+at fifteen minutes are not measured at all — and the bench would stay green, because the session on
+waking is still there.
 
-**Si riusa**: `palco.c` (1545 righe — la più preziosa), `sessione.c` (797), `sentinella.c` (307,
+**Reused**: `palco.c` (1545 lines — the most precious), `sessione.c` (797), `sentinella.c` (307,
 logind), `uscita.c` (384), `energia.c` (149), `compositore.c` (229).
 
 ---
 
-> ## ⏳⛔ PRIMA DELLA FASE 6: IL PIANO VA RIVISTO — rilievo dell'utente, 16 agosto 2026
+> ## ⏳⛔ BEFORE PHASE 6: THE PLAN MUST BE REVIEWED — the user's remark, 16 Aug 2026
 >
-> Alla chiusura della fase 5, l'utente: *«prima dobbiamo rivedere il piano che ha alcuni punti
+> At the closing of phase 5, the user: *«prima dobbiamo rivedere il piano che ha alcuni punti
 > secondo me fuori sequenza»*.
 >
-> ⇒ ⛔ **La fase 6 non si apre finché quella revisione non è fatta.** ⚠ E il sospetto ha già un
-> precedente in questo stesso documento: la fase 6 dichiara che **tre quarti del suo lavoro sono già
-> fatti** — nella coda della **fase 4** — perché *«il numero della fase lo dà il perché si è fatto il
-> lavoro, non l'elenco delle cose prodotte»*. Un piano in cui una fase nasce già fatta per tre quarti
-> è esattamente il posto dove guardare.
+> ⇒ ⛔ **Phase 6 does not open until that review is done.** ⚠ And the suspicion already has a
+> precedent in this same document: phase 6 declares that **three quarters of its work are already
+> done** — in the tail of **phase 4** — because *«the phase's number is given by why the work was done,
+> not by the list of things produced»*. A plan in which a phase is born already three-quarters done
+> is exactly the place to look.
 
-## Fase 6 — La tela e la vista
+## Phase 6 — The canvas and the view
 
-**Produce**: la tela concordata all'attacco, la vista che riscala, il riattacco a misura diversa.
+**It produces**: the canvas agreed at attach, the view that rescales, reattach at a different size.
 
-> ## ⭐⭐ TRE QUARTI SONO GIÀ FATTI E MISURATI — nella **coda della fase 4**, il 15 agosto 2026
+> ## ⭐⭐ THREE QUARTERS ARE ALREADY DONE AND MEASURED — in the **tail of phase 4**, on 15 Aug 2026
 >
-> ⛔ **E non è un errore di numerazione**: il numero della fase lo dà il **perché** si è fatto il
-> lavoro, non l'elenco delle cose prodotte. `DECISIONI.md` §5.0-sexies aveva reso la tela **la cura
-> di quattro sintomi del mouse e del video** — bande nere, testo interpolato, ri-attacco, e i 4
-> secondi fra login e desktop — cioè il pezzo che mancava alla **fase 4**. Tutti i rapporti di quella
-> notte si chiamano `F4-IN-*`. ⇒ Il documento sta in `FASI.md` §04-si-comanda, §«la coda della fase
-> 4»; il rapporto tecnico è `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
+> ⛔ **And it is not a numbering error**: the phase's number is given by **why** the
+> work was done, not by the list of things produced. `DECISIONI.md` §5.0-sexies had made the canvas **the cure
+> for four symptoms of the mouse and the video** — black bands, interpolated text, reattach, and the 4
+> seconds between login and desktop — that is the piece phase 4 was missing. All the reports of that
+> night are called `F4-IN-*`. ⇒ The document is in `FASI.md` §04-si-comanda, §«the tail of phase
+> 4»; the technical report is `fasi/rapporti/F4-IN-13-la-tela-che-cambia.md`.
 >
-> | quel che questa fase chiede | stato |
+> | what this phase asks | state |
 > |---|---|
-> | la **tela concordata all'attacco** | ✅ `[M]` la tela prende la misura della finestra, scala **1,000** |
-> | il **riattacco a misura diversa** | ✅ `[M]` `SESSIONE` concede la tela che il palco ha già, zero fotogrammi scartati |
-> | la **vista che riscala** | ✅ c'era dalla fase 2, e adesso la scala vale 1 quando le due tele combaciano |
-> | ⛔ *(in più)* ~~il **ridimensionamento a caldo**~~ | **USCITO dal prodotto il 17 agosto 2026** — `DECISIONI.md` §5.1-bis, decisione dell'utente: *«non voglio mettere delle eccezioni nel progetto»*. ⚠ Era possibile su Mutter, e **impossibile** su KWin ≤ 6.7.4 |
-> | ⛔ il **ripiego su KWin dichiarato nel registro** | **APERTO**: non verificabile finché KDE è la fase 11. Il percorso di codice c'è (`COMPOSITORE_INCAPACE`) ed è provato dal caso 11 di `banchi/04-b31`, **su un ospite finto** |
-> | ⛔ il **banco del riattacco che BATTE UN TASTO dopo** | **APERTO**: il fatto si è visto nel registro (`libei` ricrea i dispositivi, `input.c` li riaggancia) e l'utente ha scritto in un terminale dopo un riattacco — ⛔ ma un banco che lo provi non c'è |
-> | ⛔ il **multi-monitor** | **APERTO**, e fuori scopo come funzione (§6.5) |
+> | the **canvas agreed at attach** | ✅ `[M]` the canvas takes the size of the window, scale **1.000** |
+> | **reattach at a different size** | ✅ `[M]` `SESSIONE` grants the canvas the stage already has, zero frames discarded |
+> | the **view that rescales** | ✅ it was there since phase 2, and now the scale is 1 when the two canvases match |
+> | ⛔ *(in addition)* ~~**live resizing**~~ | **REMOVED from the product on 17 Aug 2026** — `DECISIONI.md` §5.1-bis, the user's decision: *«non voglio mettere delle eccezioni nel progetto»*. ⚠ It was possible on Mutter, and **impossible** on KWin ≤ 6.7.4 |
+> | ⛔ the **fallback on KWin declared in the log** | **OPEN**: not verifiable as long as KDE is phase 11. The code path is there (`COMPOSITORE_INCAPACE`) and it is tested by case 11 of `banchi/04-b31`, **on a fake host** |
+> | ⛔ the **reattach bench that PRESSES A KEY afterwards** | **OPEN**: the fact was seen in the log (`libei` recreates the devices, `input.c` reattaches them) and the user typed in a terminal after a reattach — ⛔ but there is no bench that tests it |
+> | ⛔ **multi-monitor** | **OPEN**, and out of scope as a function (§6.5) |
 >
-> ⇒ ⭐ **Quando questa fase si aprirà davvero, il suo lavoro è quel che resta in fondo a questa
-> tabella** — e le prime quattro righe si rimisurano invece di rifarle.
+> ⇒ ⭐ **When this phase really opens, its work is what remains at the bottom of this
+> table** — and the first four rows are re-measured instead of redone.
 >
-> ⛔ **E quel che di questa fase resta APERTO, per intero:**
-> - il **ripiego su KWin ≤ 6.7.4 dichiarato nel registro**, che è il banco nominato qui sotto;
-> - ⛔ **il banco del riattacco che batte un tasto e muove il puntatore DOPO** — la riga qui sotto
->   che parla dei dispositivi ricreati. `[M]` il 15 agosto si è visto nel registro che al cambio di
->   geometria `libei` **ricrea davvero** i dispositivi assoluti («regione del puntatore per chiave»,
->   quattro volte di fila), e che `input.c` li riaggancia — ⚠ ma a battere un tasto dopo il
->   riattacco **non ci ha ancora provato nessuno**;
-> - il **multi-monitor** e tutto il resto di `SPECIFICHE.md` §6.5.
+> ⛔ **And what of this phase remains OPEN, in full:**
+> - the **fallback on KWin ≤ 6.7.4 declared in the log**, which is the bench named below;
+> - ⛔ **the reattach bench that presses a key and moves the pointer AFTERWARDS** — the line below
+>   that talks about the recreated devices. `[M]` on 15 Aug it was seen in the log that on a geometry
+>   change `libei` **really recreates** the absolute devices («regione del puntatore per chiave»,
+>   four times in a row), and that `input.c` reattaches them — ⚠ but pressing a key after the
+>   reattach **nobody has tried yet**;
+> - **multi-monitor** and all the rest of `SPECIFICHE.md` §6.5.
 
-**L'utente vede**: ridimensiona la finestra e l'immagine si adatta **senza che le finestre dentro
-si muovano**. Poi si riattacca da una macchina con un altro schermo e ritrova la sessione adattata.
+**The user sees**: he resizes the window and the image adapts **without the windows inside
+moving**. Then he reattaches from a machine with another screen and finds the session adapted.
 
-> ⭐ **E dal 17 agosto 2026 questa frase è vera sempre, non «salvo un interruttore»** — l'immagine
-> si adatta e **il desktop non si tocca mai**, su ogni compositore (`DECISIONI.md` §5.1-bis).
-> ⚠ Il prezzo dichiarato: se la finestra cambia **forma**, o il tablet si **ruota**, le proporzioni
-> non combaciano più e si vedono le bande. Per riavere la misura giusta ci si **riattacca**.
+> ⭐ **And since 17 Aug 2026 this sentence is always true, not «except for a switch»** — the image
+> adapts and **the desktop is never touched**, on every compositor (`DECISIONI.md` §5.1-bis).
+> ⚠ The declared price: if the window changes **shape**, or the tablet **rotates**, the proportions
+> no longer match and the bands show. To get the right size back one **reattaches**.
 
-**Il banco**: il ripiego su KWin < 6.8 **dichiarato nel registro** — si verifica che la riga ci
-sia, non che «funzioni lo stesso» (`SPECIFICHE.md` §6.3).
+**The bench**: the fallback on KWin < 6.8 **declared in the log** — one verifies that the line is
+there, not that «it works anyway» (`SPECIFICHE.md` §6.3).
 
-⛔ **E il riattacco rinegozia anche la disposizione di tastiera** (`SPECIFICHE.md` §7.3), che su
-Mutter **distrugge e ricrea il dispositivo tastiera**; un cambio di geometria ricrea tutti i
-dispositivi assoluti. Il puntatore al dispositivo vecchio smette di funzionare **senza errore**
-`[R]` (`STUDI.md` §gnome §9). Il banco del riattacco **deve battere un tasto e muovere il puntatore
-dopo**, non solo verificare che la sessione ci sia: è la forma «una prova verde col difetto vivo»
-esattamente dove si presenta.
+⛔ **And reattach also renegotiates the keyboard layout** (`SPECIFICHE.md` §7.3), which on
+Mutter **destroys and recreates the keyboard device**; a geometry change recreates all the
+absolute devices. The pointer to the old device stops working **without error**
+`[R]` (`STUDI.md` §gnome §9). The reattach bench **must press a key and move the pointer
+afterwards**, not just verify that the session is there: it is the form «a green test with the defect alive»
+exactly where it shows up.
 
-⛔ **E con lo stesso peso, l'ordine fra la nascita del puntatore virtuale e l'avvio delle
-applicazioni** — riquadro nella fase 2, `[M]` 10 agosto 2026: un cliente Wayland partito **prima**
-che i dispositivi di input esistano **non riceve niente**, e il compositore l'iniezione la prende lo
-stesso. Al riattacco i dispositivi si **distruggono e si ricreano**: è esattamente il caso in cui
-questa trappola torna, su applicazioni già aperte che nessuno riavvierà.
+⛔ **And with the same weight, the order between the birth of the virtual pointer and the start of the
+applications** — box in phase 2, `[M]` 10 Aug 2026: a Wayland client started **before**
+the input devices exist **receives nothing**, and the compositor takes the injection all the
+same. At reattach the devices are **destroyed and recreated**: it is exactly the case in which
+this trap comes back, on applications already open that nobody will restart.
 
 ---
 
-## Fase 7 — Audio e appunti
+## Phase 7 — Audio and clipboard
 
-> ## ⭐⭐ L'AUDIO È FATTO — 17 agosto 2026, sul giudizio dell'utente: **«problema audio risolto»**
+> ## ⭐⭐ AUDIO IS DONE — 17 Aug 2026, on the user's judgement: **«problema audio risolto»**
 >
-> *Dato su un **video di YouTube** riprodotto nella sessione remota.* `[M]` nessun blocco perso,
-> salvo l'avvio — i valori in `fasi/07-audio-e-appunti.md`.
-> ⭐ E il volume **governa**: pieno 0,3536 · 25 % 0,0078 · muto 0,0.
+> *Given on a **YouTube video** played in the remote session.* `[M]` no block lost,
+> except at startup — the values in `fasi/07-audio-e-appunti.md`.
+> ⭐ And the volume **governs**: full 0.3536 · 25 % 0.0078 · mute 0.0.
 >
-> ## ⭐⭐ E GLI APPUNTI FUNZIONANO — **«clipboard funziona in entrambi i versi»**
+> ## ⭐⭐ AND THE CLIPBOARD WORKS — **«clipboard funziona in entrambi i versi»**
 >
-> *Giudizio dell'utente col browser, 17 agosto 2026 sera, porta 7730.* Solo testo, nei due versi:
-> `appunti.c` nuovo, i tre messaggi di `RCP.md` §7.4 nel filo, la cucitura nei due processi e il lato
-> browser. ⇒ 📖 `fasi/07-audio-e-appunti.md` §4.5, §6.9, §9.2-bis.
+> *The user's judgement with the browser, 17 Aug 2026 evening, port 7730.* Text only, in both directions:
+> new `appunti.c`, the three messages of `RCP.md` §7.4 on the wire, the seam in the two processes and the
+> browser side. ⇒ 📖 `fasi/07-audio-e-appunti.md` §4.5, §6.9, §9.2-bis.
 >
-> ⛔ **E l'arbitro esterno del banco NON ESISTE**: `gnome-shell` gira con `--no-x11`, quindi `xclip`
-> non ha nessuna sponda a cui parlare, e un client Wayland senza fuoco non possiede la selezione.
-> ⇒ Quel giudizio è **l'unica prova** che questa metà della fase abbia — e la riga di `fasi/07-audio-e-appunti.md` §2.4 che
-> prometteva un arbitro gratis è stata riscritta.
+> ⛔ **And the bench's external referee DOES NOT EXIST**: `gnome-shell` runs with `--no-x11`, so `xclip`
+> has no counterpart to talk to, and a Wayland client without focus does not own the selection.
+> ⇒ That judgement is **the only proof** this half of the phase has — and the line of `fasi/07-audio-e-appunti.md` §2.4 that
+> promised a free referee was rewritten.
 >
-> ⭐ *E la richiesta d'apertura diceva «testo formattato»: chiesto all'utente, che ha confermato
+> ⭐ *And the opening request said «testo formattato»: asked of the user, who confirmed
 > «solo testo semplice» — `DECISIONI.md` §5-ter.4.*
 >
-> ⛔ **E la lezione della fase non è sull'audio**: cinque giri di banco verdi e l'utente sentiva
-> «jitter pazzesco». `LEZIONI.md` §2.7 — *non c'è miglior strumento di diagnosi che monitorare una
-> sessione vera, byte per byte*. Le decisioni prodotte stanno in `DECISIONI.md` **§5-quater**, che
-> prima di oggi non esisteva.
+> ⛔ **And the phase's lesson is not about audio**: five green bench rounds and the user heard
+> «jitter pazzesco». `LEZIONI.md` §2.7 — *there is no better diagnostic tool than monitoring a
+> real session, byte by byte*. The decisions produced are in `DECISIONI.md` **§5-quater**, which
+> did not exist before today.
 
-**Produce**: Opus e PCM in uscita; appunti testuali nei due versi.
+**It produces**: Opus and PCM out; text clipboard in both directions.
 
-**L'utente sente e vede**: la musica, e il copia-incolla che funziona in tutt'e due i versi.
+**The user hears and sees**: the music, and copy-paste that works in both directions.
 
-**Il banco**:
-- ⛔ **si ascolta**, non si contano i blocchi: in v1 il banco contava i campioni mentre l'audio era
-  **rumore a fondo scala**, e restava verde;
-- ⛔ **i due lati si sincronizzano con marcatori, non con `sleep`**: al banco degli appunti di KDE i
-  due lati erano sfasati di **tredici secondi** e il controllo dava rosso su codice che funzionava
+**The bench**:
+- ⛔ **one listens**, one does not count blocks: in v1 the bench counted samples while the audio was
+  **full-scale noise**, and it stayed green;
+- ⛔ **the two sides synchronise with markers, not with `sleep`**: in KDE's clipboard bench the
+  two sides were **thirteen seconds** out of step and the check gave red on code that worked
   (`LEZIONI.md` §2.3-quinquies);
-- ⚠ e la clipboard si **svuota all'inizio** di ogni giro: quel che resta dal giro prima viene
-  annunciato alla connessione e sembra un risultato.
+- ⚠ and the clipboard is **emptied at the start** of every round: what is left from the previous round is
+  announced at connection and looks like a result.
 
-⭐ **Il lato indipendente del banco degli appunti c'è già, ed è gratis**: su GNOME la sponda X11
-di Mutter è incondizionata nei due versi, quindi **`xclip` funziona senza una nostra sessione**
-`[R]` (`STUDI.md` §gnome §10). Copiare con `xclip` e leggere col client — invece di far parlare fra loro
-due pezzi nostri — è l'arbitro esterno che a questa fase serviva e che non credevamo di avere.
+⭐ **The independent side of the clipboard bench is already there, and it is free**: on GNOME Mutter's X11
+counterpart is unconditional in both directions, so **`xclip` works without a session of ours**
+`[R]` (`STUDI.md` §gnome §10). Copying with `xclip` and reading with the client — instead of making
+two pieces of ours talk to each other — is the external referee this phase needed and that we did not think we had.
 
-⛔ **Tre trappole di Mutter, che il banco non vede e il prodotto sì**: `DisableClipboard` è **a
-senso unico** (dopo, gli annunci non tornano più — non si chiama mai: per lasciare la clipboard
-si usa `SetSelection` senza tipi); la firma di `mime-types` è **asimmetrica** fra ingresso `as` e
-uscita `(as)`, e chi legge col tipo sbagliato ottiene `NULL` **senza errore**; il gestore interno
-degli appunti tiene **un solo tipo MIME**.
+⛔ **Three Mutter traps, which the bench does not see and the product does**: `DisableClipboard` is
+**one-way** (afterwards, the announcements never come back — it is never called: to let go of the clipboard
+one uses `SetSelection` without types); the signature of `mime-types` is **asymmetric** between input `as` and
+output `(as)`, and whoever reads with the wrong type gets `NULL` **without error**; the internal
+clipboard manager holds **only one MIME type**.
 
-**Si riusa**: `altoparlante.c` (892), `suono.c` (582), `appunti_mutter.c` (450), `appunti.c` (115).
+**Reused**: `altoparlante.c` (892), `suono.c` (582), `appunti_mutter.c` (450), `appunti.c` (115).
 
-⚠ Invariante I5: il volume appartiene alla sessione, e chi si collega lo trova **al massimo**.
+⚠ Invariant I5: the volume belongs to the session, and whoever connects finds it **at maximum**.
 
 ---
 
-## Fase 8 — La copia zero ✅ **CHIUSA il 22 agosto 2026**
+## Phase 8 — Zero copy ✅ **CLOSED on 22 Aug 2026**
 
-> ### ⭐⭐⭐ CHIUSA SUL GIUDIZIO DELL'UTENTE — *«il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»*, e *«per me è ok»*
+> ### ⭐⭐⭐ CLOSED ON THE USER'S JUDGEMENT — *«il puntatore resta fisso nella stessa posizione, la finestra lo segue fedelmente»*, and *«per me è ok»*
 >
-> *Il titolo del piano dice ancora «la copia zero»; il documento di fase si chiama
-> [`fasi/08-l-anello.md`](fasi/08-l-anello.md) perché il mandato vero — dettato dall'utente il
-> 22 agosto — era **l'anello**, di cui la copia zero è un tratto.*
+> *The plan's title still says «zero copy»; the phase document is called
+> [`fasi/08-l-anello.md`](fasi/08-l-anello.md) because the real mandate — dictated by the user on
+> 22 Aug — was **the loop**, of which zero copy is one segment.*
 >
 > | | |
 > |---|---|
-> | ⭐⭐ **che cosa vede** | trascina una finestra veloce e **la finestra segue la freccia**. Al mattino restava indietro di **mezza barra del titolo** |
-> | ⭐ **il numero della fase** | `input → vetro` **accorciato**, **appaiato**: due giri che condividono tutto tranne il binario, `macchina carica: false` scritto dal banco in tutt'e due — i valori in `fasi/08-l-anello.md` |
-> | ⭐ **nell'unità dell'utente** | il distacco freccia↔finestra si **avvicina al locale** — e ⭐ il **locale** adesso è misurato |
-> | ⭐⭐ **e non è una vittoria di cronometro** | `[M]` i fotogrammi **dipinti** salgono. `LEZIONI.md` §6.2 rispettata, dopo che in questa stessa fase era stata sfiorata **due volte** |
-> | ⛔ **il tetto dei 50 ms** | **non è verificato**, e non perché manchi poco: **il numero della fase sta su un confine diverso** da quello dei 50 (`SPECIFICHE.md` §3.2 misura fino al *fotogramma che parte*). ⇒ I due numeri **non si confrontano** — è `LEZIONI.md` §1.28 applicata a noi stessi |
+> | ⭐⭐ **what he sees** | he drags a window fast and **the window follows the arrow**. In the morning it lagged behind by **half a title bar** |
+> | ⭐ **the phase's number** | `input → vetro` **shortened**, **paired**: two rounds that share everything except the binary, `macchina carica: false` written by the bench in both — the values in `fasi/08-l-anello.md` |
+> | ⭐ **in the user's unit** | the arrow↔window gap **approaches local** — and ⭐ **local** is now measured |
+> | ⭐⭐ **and it is not a stopwatch victory** | `[M]` the **painted** frames rise. `LEZIONI.md` §6.2 respected, after it had been grazed **twice** in this same phase |
+> | ⛔ **the 50 ms ceiling** | **is not verified**, and not because it is a little short: **the phase's number sits on a different boundary** from that of the 50 (`SPECIFICHE.md` §3.2 measures up to the *frame that leaves*). ⇒ The two numbers **cannot be compared** — it is `LEZIONI.md` §1.28 applied to ourselves |
 >
-> **⭐ Le tre eredità, tutte e tre risposte**: `EncSliceLP` **non** sa fare i sotto-livelli temporali
-> (7 profili su 7, due controlli positivi) · la chiave alla tela dell'utente sta **largamente dentro
-> il tetto** · la scheda del codificatore adesso si **dichiara** invece di ripiegare in
-> silenzio. E `RCP.md` §5.2 e §6.2 passano da `[?]` a ✅.
+> **⭐ The three inheritances, all three answered**: `EncSliceLP` can **not** do temporal sub-layers
+> (7 profiles out of 7, two positive controls) · the keyframe at the user's canvas stays **well inside
+> the ceiling** · the encoder's card now **declares itself** instead of falling back
+> silently. And `RCP.md` §5.2 and §6.2 go from `[?]` to ✅.
 >
-> **⭐⭐ E i difetti trovati per strada, nessuno dei quali era il bersaglio**: la **chiave abbandonata**
-> (§5.2 la vieta, ed era la spirale) · la **scala delle ricodifiche corta di uno scalino** · il
-> **passo non multiplo di 64** che dava un desktop **inclinato senza errori** · e il **cronometro del
-> prodotto che misurava il banco**.
+> **⭐⭐ And the defects found along the way, none of which was the target**: the **abandoned keyframe**
+> (§5.2 forbids it, and it was the spiral) · the **re-encode ladder one rung short** · the
+> **stride not a multiple of 64** that gave a desktop **skewed without errors** · and the **product's
+> stopwatch that measured the bench**.
 >
-> **⛔⛔ E le due lezioni che sopravvivono alla fase**, `LEZIONI.md` **§1.26**, **§1.27** e **§1.28**:
-> due banchi sulla stessa **macchina** si falsano in silenzio (e danno **un numero plausibile**, non
-> un rosso) · il **colore medio è cieco** a un'immagine sbagliata a ogni riga · e **due banchi che
-> non concordano possono avere ragione tutti e due**: misurano due grandezze diverse.
+> **⛔⛔ And the two lessons that survive the phase**, `LEZIONI.md` **§1.26**, **§1.27** and **§1.28**:
+> two benches on the same **machine** falsify each other silently (and give **a plausible number**, not
+> a red) · the **average colour is blind** to an image wrong on every row · and **two benches that
+> disagree can both be right**: they measure two different quantities.
 >
-> ⏳ **Che cosa NON è stato fatto, e si porta avanti:**
-> - ⛔ **il muro di Mutter**: `[M]` un quadro a 60 Hz — non si è mosso in tutta la giornata, e
->   **non l'ha toccato nessuno**;
-> - ⛔ **metà del guadagno non è spiegato**: sta in un tratto che la copia zero **non
->   attraversa**. `[?]` L'ipotesi — il produttore fuori dal thread di tempo reale — è
->   **dichiarata, non misurata**;
-> - ⚠ **la ritenuta del `pw_buffer` è in vigore senza prova**: il controllo positivo **non ha
->   riprodotto il danno**. Prudenza, non necessità misurata;
-> - `[?]` **il modello del distacco ha predetto male due volte, in versi opposti** — prima meno del
->   vero, poi più. ⛔ **È un fatto sul modello, non sull'utente**, ed è lavoro nostro;
-> - 🔸 **la tela multipla di 16** (`rcp_misura_ammessa()`): renderebbe la copia zero valida su **ogni**
->   schermo, ⛔ ma è una **modifica al protocollo** — `RCP.md` §4.5 oggi pretende solo che i lati siano
->   pari. **Decide l'utente.**
+> ⏳ **What was NOT done, and is carried forward:**
+> - ⛔ **Mutter's wall**: `[M]` one frame at 60 Hz — it did not move all day, and
+>   **nobody touched it**;
+> - ⛔ **half of the gain is not explained**: it lies in a segment that zero copy **does not
+>   cross**. `[?]` The hypothesis — the producer out of the real-time thread — is
+>   **declared, not measured**;
+> - ⚠ **the retention of the `pw_buffer` is in force without proof**: the positive control **did not
+>   reproduce the damage**. Prudence, not measured necessity;
+> - `[?]` **the gap model predicted badly twice, in opposite directions** — first less than the
+>   truth, then more. ⛔ **It is a fact about the model, not about the user**, and it is our work;
+> - 🔸 **the canvas multiple of 16** (`rcp_misura_ammessa()`): it would make zero copy valid on **every**
+>   screen, ⛔ but it is a **protocol change** — `RCP.md` §4.5 today only demands that the sides be
+>   even. **The user decides.**
 
-## ~~Fase 8 — La copia zero~~
+## ~~Phase 8 — Zero copy~~
 
-> ## ⭐ E IL 22 AGOSTO 2026 L'UTENTE LE HA INDIRIZZATO **L'UNICO APPUNTO CHE GLI RESTAVA**
+> ## ⭐ AND ON 22 AUG 2026 THE USER ADDRESSED TO IT **THE ONLY REMARK HE HAD LEFT**
 >
-> *Dopo aver dichiarato OK l'audio su tutti e quattro i motori supportati:* **«l'unico piccolo
+> *After declaring audio OK on all four supported engines:* **«l'unico piccolo
 > appunto è un'ottimizzazione sulle performance grafiche, che credo sia lo scopo della fase 8»**.
 >
-> ⭐ **Non sbaglia**, ed è la seconda volta che indirizza una cosa a questa fase leggendo il piano.
-> ⚠ **E vale come mandato**: quando questa fase si apre, il suo metro non è «la copia zero è
-> scritta», è **quel che lui vede muoversi meglio**.
+> ⭐ **He is not wrong**, and it is the second time he addresses something to this phase by reading the plan.
+> ⚠ **And it counts as a mandate**: when this phase opens, its yardstick is not «zero copy is
+> written», it is **what he sees move better**.
 >
-> ⏳ **E ci arriva con due misure già in mano**, prese la notte del 21-22 agosto:
-> - `[M]` **`createImageBitmap` costa poco per fotogramma**, una piccola parte del tetto di 50 ms.
->   ⭐ E il percorso attuale costa **molto meno** del disegno 2D che c'era prima;
-> - `[M]` **il percorso `?video=worker` funziona e NON rende**: il ritmo massimo scende. ⇒ La
->   strada «spostare il disegno su un altro thread» è **già stata provata e non paga**: chi apre
->   questa fase non la rifaccia.
+> ⏳ **And it gets there with two measurements already in hand**, taken on the night of 21-22 Aug:
+> - `[M]` **`createImageBitmap` costs little per frame**, a small part of the 50 ms ceiling.
+>   ⭐ And the current path costs **much less** than the 2D drawing that was there before;
+> - `[M]` **the `?video=worker` path works and does NOT pay off**: the maximum rhythm drops. ⇒ The
+>   road «move the drawing to another thread» **has already been tried and does not pay**: whoever opens
+>   this phase should not redo it.
 
-> ## ⭐⭐ IL TITOLO È CAMBIATO, E DUE TERZI DELLA FASE SONO GIÀ FATTI — *16 agosto 2026*
+> ## ⭐⭐ THE TITLE HAS CHANGED, AND TWO THIRDS OF THE PHASE ARE ALREADY DONE — *16 Aug 2026*
 >
-> *Rilievo dell'utente all'apertura della fase 6: «gli ultimi test sono stati eseguiti con l'ausilio
-> della Intel integrata, e quindi usando l'accelerazione HW, o sbaglio?». **Non sbaglia**, ed è
-> scritto qui perché chi arriva a questa fase non cerchi lavoro già consegnato.*
+> *The user's remark at the opening of phase 6: «gli ultimi test sono stati eseguiti con l'ausilio
+> della Intel integrata, e quindi usando l'accelerazione HW, o sbaglio?». **He is not wrong**, and it is
+> written here so that whoever arrives at this phase does not look for work already delivered.*
 >
-> *Qui il titolo era **«L'accelerazione»** e la riga diceva: «**Produce**: HEVC in hardware su
-> Intel, 10 bit, e la copia zero».*
+> *Here the title was **«The acceleration»** and the line said: «**It produces**: HEVC in hardware on
+> Intel, 10 bit, and zero copy».*
 >
-> **La codifica in hardware è entrata nel prodotto il 13 agosto 2026**, di proposito e con la
-> ragione scritta sopra alla fase 3: la catena si muoveva **da quel giorno**, quindi il *prima* e
-> il *dopo* si potevano misurare **con lo stesso banco e la stessa scena** — cosa che fra tre fasi
-> non sarebbe più stata vera. `src/codificatore.c` · la nota «la fase 8 entrata di soppiatto» la chiama *«la fase 8 entrata di soppiatto
-> nella fase 2»*.
+> **Hardware encoding entered the product on 13 Aug 2026**, on purpose and with the
+> reason written above at phase 3: the chain had been moving **since that day**, so the *before* and
+> the *after* could be measured **with the same bench and the same scene** — which three phases later
+> would no longer have been true. `src/codificatore.c` · the note «phase 8 slipped in» calls it *«phase 8 slipped in
+> through the back door of phase 2»*.
 >
-> | la promessa di questa fase | dov'è finita |
+> | the promise of this phase | where it ended up |
 > |---|---|
-> | ⭐ **HEVC in hardware su Intel** | ✅ **fatto e misurato.** La codifica sulla scheda passa da **VA-API** su **`/dev/dri/renderD128`** — l'iGPU Intel, entrypoint `EncSliceLP` — e dalla fase 18 con **libva diretta**, per H.264 e HEVC. Il ripiego software è **OpenH264** (H.264) o **SVT-AV1** (AV1), ⛔ **HEVC in software non c'è**, e il ripiego **scrive di essere un ripiego**. `[M]` il tratto della codifica si dimezza e i fotogrammi raddoppiano (`F3-E`, stesso palco, notte del 14 agosto); la chiamata al codificatore è ormai una piccola parte di quel tratto (fase 4, `hev1.2.4.L120.B0`) |
-> | ⚠ **10 bit** | ⛔ **nominali, e il muro è a monte, non qui.** `DECISIONI.md` §2.3-ter `[M]`: dalla cattura di Mutter dieci bit veri **non escono per nessuna strada** — MemFd dà BGRx, il DMA-BUF pure, e chiedendo i formati a 10 bit da soli si prende `no more input formats` su tutt'e due. `Main10` da qui vuol dire **otto bit promossi a dieci**. ⇒ La domanda non è più *«il nostro codice sa fare 10 bit?»* ma *«esiste una sorgente che ce li dia?»*, ed è **una domanda per la cattura**, non per la codifica |
-> | ⛔ **la copia zero** | **intatta — e non anticipata di proposito** (`README.md`: *«la copia zero NON si anticipa: resta alla fase 8»*). È tutto quel che segue |
+> | ⭐ **HEVC in hardware on Intel** | ✅ **done and measured.** Encoding on the card goes through **VA-API** on **`/dev/dri/renderD128`** — the Intel iGPU, entrypoint `EncSliceLP` — and since phase 18 with **libva directly**, for H.264 and HEVC. The software fallback is **OpenH264** (H.264) or **SVT-AV1** (AV1), ⛔ **HEVC in software is not there**, and the fallback **writes that it is a fallback**. `[M]` the encoding segment halves and the frames double (`F3-E`, same stage, night of 14 Aug); the call to the encoder is by now a small part of that segment (phase 4, `hev1.2.4.L120.B0`) |
+> | ⚠ **10 bits** | ⛔ **nominal, and the wall is upstream, not here.** `DECISIONI.md` §2.3-ter `[M]`: from Mutter's capture real ten bits **do not come out by any road** — MemFd gives BGRx, the DMA-BUF too, and asking for the 10-bit formats alone one gets `no more input formats` on both. `Main10` from here means **eight bits promoted to ten**. ⇒ The question is no longer *«can our code do 10 bits?»* but *«is there a source that gives them to us?»*, and it is **a question for capture**, not for encoding |
+> | ⛔ **zero copy** | **intact — and not brought forward on purpose** (`README.md`: *«zero copy is NOT brought forward: it stays at phase 8»*). It is everything that follows |
 >
-> ⭐⭐ **E il conto della fase 4 dice che quel che resta pesa più di quel che è stato tolto.** Il
-> tratto più caro dell'anello è ancora `cattura → primo byte` `[M]`, e dentro ci sta:
+> ⭐⭐ **And phase 4's account says that what remains weighs more than what was removed.** The
+> most expensive segment of the loop is still `cattura → primo byte` `[M]`, and inside it there is:
 >
-> | | lo toglie la copia zero? |
+> | | does zero copy remove it? |
 > |---|---|
-> | la conversione dei colori, allora in CPU | ⭐ **sì** |
-> | il caricamento sulla GPU | ⭐ **sì** |
-> | la codifica, **in hardware** | no — è già curata |
-> | ⛔ **e una parte che nessuno dei tre spiega** | ⏳ `[?]` **da scoprire, e sta in questo tratto** |
+> | the colour conversion, then on the CPU | ⭐ **yes** |
+> | the upload to the GPU | ⭐ **yes** |
+> | encoding, **in hardware** | no — it is already cured |
+> | ⛔ **and a part that none of the three explains** | ⏳ `[?]` **to be discovered, and it lies in this segment** |
 >
-> ⇒ ⭐ **La conversione e il caricamento sono esattamente il lavoro che la copia zero cancella** —
-> convertire e ricaricare sulla GPU un fotogramma che **sulla GPU ci stava già** — e pesano più di
-> quel che la codifica costa oggi. ⛔ E la parte non spiegata è **nello stesso tratto**: è qui che si
-> cerca, e questa fase è l'unica che ha il motivo di guardarci dentro. I valori in `FASI.md`
+> ⇒ ⭐ **Conversion and upload are exactly the work zero copy deletes** —
+> converting and re-uploading to the GPU a frame that **was already on the GPU** — and they weigh more than
+> what encoding costs today. ⛔ And the unexplained part is **in the same segment**: this is where one
+> looks, and this phase is the only one that has the reason to look inside it. The values in `FASI.md`
 > §04-si-comanda.
 
-> ## ⭐⭐⭐ E IL 22 AGOSTO L'UTENTE HA DETTATO LA SPECIFICA — `SPECIFICHE.md` §3.2-bis
+> ## ⭐⭐⭐ AND ON 22 AUG THE USER DICTATED THE SPECIFICATION — `SPECIFICHE.md` §3.2-bis
 >
 > *«La mia specifica è avere un'esperienza utente **il più vicina possibile a una situazione
 > locale**, ma non identica: quello è impossibile.»*
 >
-> ⭐ **E ha precisato il sintomo con l'occhio, che è una misura**: trascinando veloce una finestra,
-> la distanza fra la freccia e la finestra che la insegue è **«metà della barra del titolo»**.
+> ⭐ **And he specified the symptom with his eye, which is a measurement**: dragging a window fast,
+> the distance between the arrow and the window chasing it is **«metà della barra del titolo»**.
 >
-> ⛔⛔ **Da cui il vero mandato di questa fase, e NON è la copia zero**: quel distacco è
-> `velocità della mano × ritardo dell'anello`, la freccia è locale e la finestra no ⇒ **è un
-> ELASTICO** che si apre quando la mano accelera. La copia zero toglie **una piccola parte**
-> dell'anello. ⇒ Serve **l'anello intero**, ed è quel che la fase 4 aveva già scritto chiudendo:
-> *nessuna cura singola porta l'anello sotto il tetto: è lavoro della fase 8*.
+> ⛔⛔ **Hence the real mandate of this phase, and it is NOT zero copy**: that gap is
+> `velocità della mano × ritardo dell'anello`, the arrow is local and the window is not ⇒ **it is a
+> RUBBER BAND** that opens when the hand accelerates. Zero copy removes **a small part**
+> of the loop. ⇒ **The whole loop** is needed, and it is what phase 4 had already written when closing:
+> *no single cure brings the loop under the ceiling: it is phase 8's work*.
 >
-> ⛔ **E una strada è chiusa prima di aprirsi**: mettere l'anello in parallelo comprerebbe
-> fotogrammi pagandoli in ritardo ⇒ **allargherebbe l'elastico**. `SPECIFICHE.md` §3.2 lo vietava già: *«una scelta
-> che alza il ritmo peggiorando il ritardo non si fa»*.
+> ⛔ **And one road is closed before opening**: putting the loop in parallel would buy
+> frames paying for them in delay ⇒ **it would widen the rubber band**. `SPECIFICHE.md` §3.2 already forbade it: *«a choice
+> that raises the rhythm worsening the delay is not made»*.
 >
-> ⏳ **Il primo numero del banco** non è più un tratto: è **`input → vetro` rimisurato sulla scena
-> vera** — finestra 720×433, velocità mediana **3 400 px/s**, picchi **12 400** (`[M]` dal video
-> dell'utente, 22 agosto). Il numero della fase 4 ha otto giorni e due fasi di cure in mezzo.
+> ⏳ **The bench's first number** is no longer a segment: it is **`input → vetro` re-measured on the real
+> scene** — window 720×433, median speed **3 400 px/s**, peaks **12 400** (`[M]` from the user's
+> video, 22 Aug). Phase 4's number is eight days old with two phases of cures in between.
 
-**Produce**: ⭐ **l'anello più corto**, di cui la copia zero è **un tratto su sei** — il fotogramma
-va dalla cattura al codificatore **senza uscire dalla GPU**.
+**It produces**: ⭐ **the shortest loop**, of which zero copy is **one segment out of six** — the frame
+goes from capture to the encoder **without leaving the GPU**.
 
-**L'utente vede**: ⭐ **la finestra che insegue la freccia più da vicino**, e giudica quanto ci si è
-avvicinati al locale. ⚠ *(Era: «la stessa immagine di prima, e giudica che non sia peggiorata» — il
-metro di quando questa fase era solo la copia zero.)*
+**The user sees**: ⭐ **the window chasing the arrow more closely**, and judges how close we have
+come to local. ⚠ *(It was: «the same image as before, and he judges that it has not got worse» — the
+yardstick of when this phase was only zero copy.)*
 
-**Il banco**, ed è la lezione che è costata di più:
-- ⛔ **si misurano i fotogrammi consegnati, non i millisecondi di CPU.** La fase 9 di v1 ha portato
-  giù di molto il costo per fotogramma mentre i fotogrammi consegnati **scendevano**.
-  Un guadagno che si paga in fluidità non è un guadagno (`LEZIONI.md` §6.2). ⛔⛔ **E qui morde
-  due volte**, perché la fase 4 ha trovato la coda che cresce: il server consegnava più
-  fotogrammi di quanti la pagina ne dipingesse. Un guadagno di millisecondi che si trasformasse
-  in fotogrammi che nessuno dipinge **peggiorerebbe il ritardo** invece di curarlo;
-- ⛔ **chiedere il codificatore e verificare che abbia obbedito**: un codificatore che
-  ripiega in CPU credendosi in GPU produce due misure sotto la stessa etichetta. Se non obbedisce,
-  si dichiara il fallimento (`LEZIONI.md` §1.8). ⭐ La domanda giusta è **che cosa riceve** il
-  codificatore — una superficie della scheda, o dei pixel — non come si chiama;
-- ⚠ e la prova «ha aperto un render node ⇒ rende in GPU» **non prova niente** (§1.11);
-- ⛔ **e il numero si rifà con lo STESSO banco e la STESSA scena della fase 4** (`03-b17-ritardo.py`),
-  o il prima e il dopo non si sottraggono. ⚠ Non basta il totale: si affiancano **i tratti**, perché
-  la domanda di questa fase è *«tolta la copia, gli altri restano dove sono?»*.
+**The bench**, and it is the lesson that cost the most:
+- ⛔ **one measures the frames delivered, not the milliseconds of CPU.** Phase 9 of v1 brought
+  the cost per frame down a lot while the frames delivered **were falling**.
+  A gain paid for in fluidity is not a gain (`LEZIONI.md` §6.2). ⛔⛔ **And here it bites
+  twice**, because phase 4 found the growing queue: the server delivered more
+  frames than the page painted. A gain in milliseconds that turned
+  into frames nobody paints **would worsen the delay** instead of curing it;
+- ⛔ **ask for the encoder and verify that it obeyed**: an encoder that
+  falls back to CPU believing itself on GPU produces two measurements under the same label. If it does not obey,
+  the failure is declared (`LEZIONI.md` §1.8). ⭐ The right question is **what the encoder
+  receives** — a card surface, or pixels — not what it is called;
+- ⚠ and the proof «it opened a render node ⇒ it renders on GPU» **proves nothing** (§1.11);
+- ⛔ **and the number is redone with the SAME bench and the SAME scene as phase 4** (`03-b17-ritardo.py`),
+  or the before and the after cannot be subtracted. ⚠ The total is not enough: **the segments** are put side by side, because
+  this phase's question is *«with the copy removed, do the others stay where they are?»*.
 
-⛔ **E la copia zero si riapre dal lato giusto**: le due schermate che si alternavano non erano un
-problema di *acquire* ma di **release** — `can_reuse_pw_buffer` si arrende se manca
-`SPA_META_SyncTimeline` e Mutter riusa il buffer **mentre VA-API lo sta ancora leggendo** `[R]`
-(`LEZIONI.md` §8, il riquadro della caccia sbagliata). Due cure candidate, entrambe piccole:
-chiedere la timeline — che Mutter offre — oppure **trattenere** il `pw_buffer` fino a lettura
-finita. ⚠ E **il DMA-BUF di Mutter non è un diff**: chi riprendesse la superficie di accumulo
-rifarebbe la cura che peggiorava le cose.
+⛔ **And zero copy is reopened from the right side**: the two screens that alternated were not a
+problem of *acquire* but of **release** — `can_reuse_pw_buffer` gives up if
+`SPA_META_SyncTimeline` is missing and Mutter reuses the buffer **while VA-API is still reading it** `[R]`
+(`LEZIONI.md` §8, the box of the wrong hunt). Two candidate cures, both small:
+requesting the timeline — which Mutter offers — or **retaining** the `pw_buffer` until reading is
+finished. ⚠ And **Mutter's DMA-BUF is not a diff**: whoever took up the accumulation surface again
+would redo the cure that made things worse.
 
-⭐ **E la strada è aperta `[M]`**: Mutter il DMA-BUF **lo consegna davvero** — 388 fotogrammi, 4
-buffer, modificatore **LINEAR**, stride 7680 letto dal chunk (`DECISIONI.md` §2.3-ter). ⚠ Il
-formato resta **BGRx a 8 bit**: la copia zero si fa su quello, e i dieci bit non tornano da questa
-porta.
+⭐ **And the road is open `[M]`**: Mutter **really delivers** the DMA-BUF — 388 frames, 4
+buffers, modifier **LINEAR**, stride 7680 read from the chunk (`DECISIONI.md` §2.3-ter). ⚠ The
+format stays **BGRx at 8 bits**: zero copy is done on that, and the ten bits do not come back through this
+door.
 
-> ### ✅ ⭐ La trappola della GPU è CHIUSA, e va detto perché nessuno la ricerchi — *15 agosto 2026*
+> ### ✅ ⭐ The GPU trap is CLOSED, and it must be said so that nobody hunts for it again — *15 Aug 2026*
 >
-> *Qui stava scritto: «con due schede, il compositore che disegna su quella sbagliata dà
-> composizione in software **senza un errore**. La regola udev di `fondamenta/banco/gpu-udev.sh` va
-> applicata e verificata».*
+> *Here it was written: «with two cards, the compositor drawing on the wrong one gives
+> software composition **without an error**. The udev rule of `fondamenta/banco/gpu-udev.sh` must be
+> applied and verified».*
 >
-> ⛔ **Ed era peggio di un rischio: era già successo.** `[M]` `/etc/udev/rules.d` era **vuota**, i
-> gruppi `video`/`render` davano accesso a tutt'e due le schede, e il compositore aveva preso la
-> **Radeon** — una misura buttata perché fatta sulla scheda sbagliata.
+> ⛔ **And it was worse than a risk: it had already happened.** `[M]` `/etc/udev/rules.d` was **empty**, the
+> `video`/`render` groups gave access to both cards, and the compositor had taken the
+> **Radeon** — a measurement thrown away because it was made on the wrong card.
 >
-> ⭐ **La regola è stata applicata e verificata** (`DECISIONI.md` §4.6-ter): `gnome-shell` apre
-> **6 descrittori su `renderD128`**, l'integrata, e solo quella. ⇒ **Compositore e codificatore
-> stanno sulla stessa scheda** — che è precisamente la condizione senza la quale la copia zero non
-> avrebbe senso: un fotogramma non si passa senza copia fra due schede diverse.
+> ⭐ **The rule was applied and verified** (`DECISIONI.md` §4.6-ter): `gnome-shell` opens
+> **6 descriptors on `renderD128`**, the integrated one, and only that. ⇒ **Compositor and encoder
+> are on the same card** — which is precisely the condition without which zero copy would not
+> make sense: a frame cannot be passed without a copy between two different cards.
 >
-> ⚠ **Il prezzo resta dichiarato**: negare il nodo lo nega a **tutta la sessione dell'utente**, non
-> al solo compositore.
+> ⚠ **The price stays declared**: denying the node denies it to **the user's whole session**, not
+> just to the compositor.
 
-⏳ **Che cosa questa fase NON deve più portarsi dietro**, e dove sono andati:
-- i **10 bit veri** → una domanda per la **cattura**, e vive nelle fasi in cui la cattura si tocca;
-- ⚠ la **qualità di `EncSliceLP` contro l'entrypoint pieno** → `[?]` **mai misurata**: la codifica a
-  bassa potenza è veloce e **non è equivalente** alla piena. È il punto di lavoro fra qualità e
-  banda, cioè la **fase 9** — e se un giorno si scoprisse peggiore, si cura lì, non qui.
+⏳ **What this phase must no longer carry around**, and where they went:
+- **real 10 bits** → a question for **capture**, and it lives in the phases in which capture is touched;
+- ⚠ the **quality of `EncSliceLP` against the full entrypoint** → `[?]` **never measured**: low-power
+  encoding is fast and **is not equivalent** to full. It is the working point between quality and
+  bandwidth, that is **phase 9** — and if one day it turned out worse, it is cured there, not here.
 
 ---
 
