@@ -241,7 +241,7 @@ arbitrate, no preference to configure, no `--compositore` option to put back (v1
 picks one and **declares it in the log** (`src/sessione.c:287-291`). ⛔ It is not a cure and must not
 become one: it is a **line that tells the truth** about a machine that is out of scope.
 
-⛔⛔ **But what this decision does NOT cover is the fault that opens phase 13**, and it must not be confused
+⛔⛔ **But what this decision does NOT cover is the defect that opens phase 13**, and it must not be confused
 with it: a machine that has **only XFCE** today is not an ambiguous case — it is an **empty** case. It falls
 into the last branch of `riconosci_desktop()` (`src/sessione.c:295-299`), the product **silently falls back
 to GNOME** and then launches `gnome-session`, which does not exist on that machine. ⇒ One desktop
@@ -397,7 +397,7 @@ its denominator is what `LEZIONI.md` §1.9 point 4 forbids.
 | 23 | **`TELA` is the mandatory answer to `ADATTA_TELA`** | §7.1 imposed a «reasoned refusal» and there was no message to say it: the client would have kept waiting forever | §7.1 |
 | 24 | after a canvas change, **one second of grace** on the old coordinates | it is the only moment when the two sides legitimately have two different truths. Declared as an exception to §3, not left to improvisation | §7.1 |
 | 25 | the reason for the farewell travels **also in the application error code of the WebTransport session close** | if the farewell does not arrive — broken stream, unreadable message — the reason gets through anyway. It is the wound of `LEZIONI.md` §1.7 cured with two routes instead of one. ⚠ *It said «QUIC close», and it is the reading that finding **R1.4** declared impossible for the page: the API exposes the close **of the session**, not that of the HTTP/3 connection underneath. Aligned on 10 Aug 2026, finding **R11.8*** | §3.1 |
-| 26 | ⭐ **the bench function enters the protocol**: two new types, `BANCO_MARCA` (`0x000F`) and `BANCO_ESITO` (`0x0010`) — the 16×16 rectangle, the colour, and the **injectable delay `N`** | the latency link of §2.6 measures from the receiving side, and for that number to be valid the bench must be able to **inject a known delay** and check that the median rises by exactly that — *«a bench that does not do it does not know it is measuring»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). That command **crosses the wire**: improvising it in the test code would be the silent defect against which `RCP.md` §0 exists. ⛔ **The function is off by default** (invariant I6) and when off it answers `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, never a silence. ⛔⛔ **13 Aug 2026: the function does NOT give the known delay, and at phase 3 it did not give it** — `BANCO_ACCESO 0` and the `ACCETTATA` branch is **a stub** `[R]`. The known delay was injected **outside the product**, and P1 is `[M]` green (N=25 → +25.08; N=60 → +58.58). ⭐ And outside the product is **better**: the clock anchor does not pass through the injected path, so P1 **can still fail**. ⇒ ⏳ it remains to decide whether to complete the branch or remove the two types (`RCP.md` §7.5) | §7.5 |
+| 26 | ⭐ **the bench function enters the protocol**: two new types, `BANCO_MARCA` (`0x000F`) and `BANCO_ESITO` (`0x0010`) — the 16×16 rectangle, the colour, and the **injectable delay `N`** | the delay loop of §2.6 measures from the receiving side, and for that number to be valid the bench must be able to **inject a known delay** and check that the median rises by exactly that — *«a bench that does not do it does not know it is measuring»* (`web/rapporti/S4-ritardo-disegno.md` §4.2). That command **crosses the wire**: improvising it in the test code would be the silent defect against which `RCP.md` §0 exists. ⛔ **The function is off by default** (invariant I6) and when off it answers `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, never a silence. ⛔⛔ **13 Aug 2026: the function does NOT give the known delay, and at phase 3 it did not give it** — `BANCO_ACCESO 0` and the `ACCETTATA` branch is **a stub** `[R]`. The known delay was injected **outside the product**, and P1 is `[M]` green (N=25 → +25.08; N=60 → +58.58). ⭐ And outside the product is **better**: the clock anchor does not pass through the injected path, so P1 **can still fail**. ⇒ ⏳ it remains to decide whether to complete the branch or remove the two types (`RCP.md` §7.5) | §7.5 |
 
 > ⭐ *Row 26 is **from the night of 9 Aug 2026** and was only in `RCP.md` §7.5; it is recorded
 > here on 10 Aug, findings **R11.13** and **R11.15**.* ⛔ **It is 🔸, not ✅**: the origin declared
@@ -2940,7 +2940,7 @@ half B of C8 cannot measure anything**: there is no pixel to look at.
 
 *`[M]` **26 Aug 2026**.* The same test run **one box at a time** and then **all
 four together** gives **the very same outcome**, in both modes (with the cure `2 sì · 0 no`;
-with the fault injected `1 sì · 1 no`).
+with the fault grafted `1 sì · 1 no`).
 
 ⇒ ⭐ **The line that `11-accendi.sh` carried open is closed**: `--network=host` makes the
 four boxes share the machine's ports, and the separation **by port** is a **real** separation —
@@ -2948,7 +2948,7 @@ each one recognises as its own only its own.
 
 ⚠ **Time is information, not verdict**: `[M]` 6.6 s alone → 7.0 s in parallel (×1.06), and the
 total drops from 26.2 s to 7.0 s. ⛔ And one time was **thrown away by the bench itself**: with the fault
-injected the four times were equal to a tenth of a second, because almost everything was **fixed waiting
+grafted the four times were equal to a tenth of a second, because almost everything was **fixed waiting
 of ours** and not work. ⇒ Calling it «contention» would have been measuring our own cap.
 
 ⛔ **And what is NOT measured**: the real contention on the **graphics card**. It would need four sessions
@@ -3025,17 +3025,17 @@ now and not the others.
 
 ⚠ **None enters the fast family**, and the cut is declared instead of suffered: `[M]` the cap
 is at **153 s out of 180**, and §5.1 says that an extra mesh is **swapped**, not added. ⇒ C5, C7 and C9
-sit in `tutto` and in `desktop-nuovo`, with their injected fault next to them. ⛔ **Only exception:
+sit in `tutto` and in `desktop-nuovo`, with their grafted fault next to them. ⛔ **Only exception:
 C10**, which costs less than the stopwatch's resolution.
 
-### 4.6-unetvicies ✅ ⭐⭐ **C10 sits in TWO families, and C10's injected fault keeps C13 alive on the laptop**
+### 4.6-unetvicies ✅ ⭐⭐ **C10 sits in TWO families, and C10's grafted fault keeps C13 alive on the laptop**
 
 Two things that were seen only while wiring, and neither of them was foreseen:
 
 1. ⛔ **The twin lives half in `src/` and half in `banchi/rcp/`.** A change to the bench's copy
    triggers the `rete` family — and it is **exactly** the change that breaks the twin. ⇒ If
    C10 sat only in the fast family, the case that bites hardest would not make it run.
-2. ⭐⭐ **The half of the hook that lives on the laptop injected no fault** (§4.6-novemdecies:
+2. ⭐⭐ **The half of the hook that lives on the laptop grafted no fault** (§4.6-novemdecies:
    the two halves sit on two machines). ⇒ C13, there, could **never** have turned green:
    it would have said forever *«nessun guasto è mai stato iniettato»*, which from outside looks the same
    as a broken net. ⇒ C10 now has a `--guasto-innestato` that copies the **real** files into
@@ -3642,9 +3642,9 @@ study anything new — they must **call** `cattura_ridimensiona()` and reread th
 >
 > | | value | why |
 > |---|---|---|
-> | `RCP_TELA_ATTESA_MS` | **3000 ms** | the floor beyond which `NON_ORA` is answered anyway: §7.1 wants one `TELA` for every `ADATTA_TELA`, and §6.2 makes the client **hold back frames** while it waits |
+> | `RCP_TELA_ATTESA_MS` | **3000 ms** | the backstop beyond which `NON_ORA` is answered anyway: §7.1 wants one `TELA` for every `ADATTA_TELA`, and §6.2 makes the client **hold back frames** while it waits |
 > | `RCP_TELA_RICHIAMO_MS` | 500 ms, doubling up to 8 s | how often the stage is **asked** to go back to the canvas in force, when it has one of its own |
-> | ~~`TELA_FONDO_MS` (client)~~ ⛔ **REMOVED on 17 Aug 2026** *(realigned on the 28th)* | ~~250 ms~~ | whoever drags an edge produces dozens of `resize` per second — ⭐ but the floor went out **with the function it served** (`tela_forse_chiedi()`): `src/pagina.html` keeps its tombstone, because the cure would have to be put back only if someone put back the chasing |
+> | ~~`TELA_FONDO_MS` (client)~~ ⛔ **REMOVED on 17 Aug 2026** *(realigned on the 28th)* | ~~250 ms~~ | whoever drags an edge produces dozens of `resize` per second — ⭐ but the backstop went out **with the function it served** (`tela_forse_chiedi()`): `src/pagina.html` keeps its tombstone, because the cure would have to be put back only if someone put back the chasing |
 > | `RISVEGLIO_MS` (child) | 400 ms | how often the stream is restarted when **a keyframe is due and the scene is still** — it is the cure for the 4.4 seconds |
 >
 > ⛔ **And one thing the server does NOT do, because of a line missing from `RCP.md`**: when the stage changes
@@ -3766,7 +3766,7 @@ new size is taken only by reconnecting. The three lines below stay as a chronicl
 esce dalle funzionalità di Remotix.»*
 
 **What goes out:** changing the size of the canvas **while the session is alive**. The switch
-`?adatta=segui`, the floor `TELA_FONDO_MS`, `tela_forse_chiedi()` and the `resize` branch are removed
+`?adatta=segui`, the backstop `TELA_FONDO_MS`, `tela_forse_chiedi()` and the `resize` branch are removed
 from `src/pagina.html`.
 
 **What stays, and it is the logic from before:** ⭐ *the canvas is born with the size of the client's
@@ -3808,7 +3808,7 @@ proposed it again they would find it unchanged:
 > The window edge **is not in the document**: the window manager drags it. The
 > page receives neither `mousedown`, nor `mouseup`, nor `pointerup`, and an event «the resize
 > is finished» **does not exist in any engine**. ⇒ «It has released» can only be **deduced** — «N ms
-> have passed without another `resize`» — and that was exactly what the 250 ms floor did.
+> have passed without another `resize`» — and that was exactly what the 250 ms backstop did.
 
 **Consequences:**
 - ⛔ **black bands remain possible, and they are the declared behaviour**: if after attach the
@@ -4384,14 +4384,14 @@ question to the client leaves when the announcement arrives. It costs zero, and 
 
 ⏳ Reasoned, **not measured**: the scene that proves it is the user's.
 
-### 5-ter.6 🔸 Two timeouts, and they are two because the debts are two
+### 5-ter.6 🔸 Two time backstops, and they are two because the debts are two
 
 | where | how much | which debt it pays |
 |---|---|---|
 | ⛔ **in the child** | **4 s** | the debt towards **Mutter**: a `SelectionTransfer` without an answer leaves the pasting application hanging indefinitely, and the user sees **a frozen desktop** |
 | ⚠ **in the parent** | **8 s** | that the **channel** does not stay blocked: without it, a client that fails to answer once queues up all the following pastes |
 
-⭐ **And the timeout towards Mutter lives in the CHILD, not in the parent**: the parent may have no client
+⭐ **And the backstop towards Mutter lives in the CHILD, not in the parent**: the parent may have no client
 (the session survives the client — I4), the client may disappear, the parent itself may die. The
 debt towards the compositor stays with whoever holds the session.
 
@@ -5711,7 +5711,7 @@ kde. `[M]` 22 Sep 2026, tenants without groups, **real browsers** with a real wi
 (`garantisci_i_gruppi`): when the client arrives, the product has nothing left to enrol ⇒ the
 safety net could be all green with this piece broken. ⇒ Mesh **C18**
 (`banchi/11-scatole/11-c18-i-gruppi-li-mette-il-prodotto.py`), the only one that arrives **without** groups;
-injected fault `--senza-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
+grafted fault `--senza-usermod`. `[M]` 22 Sep 2026: GREEN and fault SEEN on gnome and xfce.
 
 ---
 

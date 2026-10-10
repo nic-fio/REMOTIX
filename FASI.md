@@ -648,7 +648,7 @@ and the rules (`PIANO.md` §0.4, practice 1).
 | 1 | ⛔ **the row mixed two populations**: damage, fence, skips and buffers counted from the first instant, frames and rhythm after the discard — and `arrivati` was not printed, so it could not be seen | the counters are updated **inside** the sample, and `arrivati` is a column: the difference **is** the warm-up |
 | 2 | ⛔ **death mid-measurement**: the stream *had been* active, so the guard did not fire. Killing the compositor at the twelfth second produced ~59 fps over 5 seconds under the label of a 20-second cell | the stream state is checked **at the end**, not only at the start |
 | 3 | ⛔ **`--dmabuf` could deliver memory**: the type mask always also contained MemFd, and the column stated the **requested** path. At 1080p that is 59.2 versus 43.3 | requested and obtained are compared, and it fails by declaring it (`LEZIONI.md` §1.8, corollary) |
-| 4 | ⛔ **a scene with the wrong name** (`tetti` instead of `tetto`) left `pid_scena` empty — the same sentinel the `fermo` scene uses on purpose — and the guard disabled itself | a fault branch that says `GUASTO` |
+| 4 | ⛔ **a scene with the wrong name** (`tetti` instead of `tetto`) left `pid_scena` empty — the same sentinel the `fermo` scene uses on purpose — and the guard disabled itself | a defect branch that says `GUASTO` |
 | 5 | ⛔ **the scene was checked only once**, one second after start | it is watched for the whole measurement |
 | 6 | ⛔ **`00-c1-kwin.sh` did not check it at all**, and `misura-wlroots` **returns 0 on every path**: the two certifications could come out green on a dead compositor | the scene watched there too; and for wlroots the verdict is built by the script, ⚠ **declaring that it is a fallback** and not a cure in the source |
 | 7 | ⛔ **the versioned binary was from 8 Aug**, without the cures of the 9th: whoever cloned the project would pick up defects that this document declares closed | `banco.sh` **refuses to measure** if the source is newer than the binary — I7: the protection lives in the program |
@@ -3106,7 +3106,7 @@ was respected six times out of six.
 | **F2.2** | `sano 0 → quattro guasti 1 → risanato 0`, with the **required** mark *and* the **forbidden** one: grey must give *«scena non riconosciuta»* and ⛔ **never** *«fotogramma nero»*, or the judge gets the worst diagnosis wrong exactly where it is needed |
 | **F2.3** | **30 out of 30** green on CHUWI **and** inside the NIC-OS container · healthy → fault → healed on **two** organs, five runs, mark verified **absent** in the healthy round |
 | **F2.4** | **6 pieces out of 6** · the judge **27 out of 27** as expected · `sano 0 → guasto 4/1/2/3 → risanato 0`, mark seen in the fault and never in the healthy run |
-| **F2.5** | healthy → **five** faults → healed, exit 0. ⚠ Two of the five were **born while certifying**: they had been injected and did not turn anything |
+| **F2.5** | healthy → **five** faults → healed, exit 0. ⚠ Two of the five were **born while certifying**: they had been grafted and did not turn anything |
 | **F2.6** | `sano 0 → dodici guasti su dodici con la marca giusta → risanato 0` |
 
 #### ⭐⭐ And the thing that says whether the round was worth it: **nine defects found inside the benches, before the product exists**
@@ -3119,7 +3119,7 @@ was respected six times out of six.
   lines remain in the log** with the note next to them saying why they do not count.
 - **F2.6** — four: a check that correlated the channels over the whole image (R, G, B are correlated
   at 0.978 ⇒ **red on a healthy chain**); one that subtracted 8 bits from 16 (−3.18 dB on a perfect chain);
-  one that injected the fault on the culprit and **by re-swapping the planes put them back in place**; and one
+  one that grafted the fault on the culprit and **by re-swapping the planes put them back in place**; and one
   that aggregated `None` with `is not False` and **promoted** a round without a reference.
 - **F2.4** — two: the comparison of the cited rule gave **red on four exact judgements**, and the
   marks of two faults were names that appear **also in the healthy round**.
@@ -3151,7 +3151,7 @@ there is not recopied here**.
 **without** `--virtual-monitor`. `GetCurrentState` → **zero monitors**, with `IsSessionRunning` true,
 fifty names on the bus, Nautilus and Terminal running.
 
-⇒ **Fault M9 of `STUDI.md` §gnome §13 was not injected: it was already on the machine.** A
+⇒ **Fault M9 of `STUDI.md` §gnome §13 was not grafted: it was already on the machine.** A
 capture pointed there would have measured **zero frames** looking for them inside PipeWire, and the culprit
 would have been the capture.
 
@@ -3744,7 +3744,7 @@ The cut follows the dependencies, not arbitrary slices.
 ⛔ **Every step has its own port, ban file and socket**: in phase 3 the benches really run in parallel,
 and two benches sharing a ban-file stop each other.
 ⚠ **The three ports that are not touched**: **7448** (home product), **7501** (P5 target) and
-above all **7561**, which is **the one the user opens** and is also the meter's target — it is
+above all **7561**, which is **the one the user opens** and is also the yardstick's target — it is
 read, not touched.
 
 ⭐⭐ **And the agents' mandate is to REFUTE, not to verify.** It is the lesson that on 13 Aug
@@ -3762,7 +3762,7 @@ must be able to refuse it with a case.
 | ⭐ **M6 can be closed** | «il fotogramma è del giro prima» is the only check that sees that fault, and **it has never been measured on the real chain** because the capture of the previous round was missing. In phase 3 the previous rounds **are there** |
 | ⭐ **the `giro` of M8 can be reopened** | today it is declared **NOT APPLICABLE** because the product does not know the name of the bench's round. With a `numero` that grows at every frame the question can be asked again ⇒ `rapporti/F2-6-giudizio.md` |
 | ⛔ **P15** | `RCP.md` §7.1, the grace second on the coordinates: **the last place where a clock decides**. Phase 3 is all time — this is where we find out whether it holds |
-| ⛔ **the blind spot upstream of the capture** | the meter does not look before the capture, and with many frames the blind spot **widens** |
+| ⛔ **the blind spot upstream of the capture** | the yardstick does not look before the capture, and with many frames the blind spot **widens** |
 | ⛔ **«due utenti, ciascuno vede la propria sessione»** | no bench covers it (positive half uncovered). With movement it becomes **more expensive** to get it wrong, not less |
 | ⚠ **`02-figlio-accendi.sh`** | counts the children **of everyone** instead of its own: it fires only when two benches run in parallel, **and in phase 3 they do** |
 
@@ -4023,9 +4023,9 @@ reads the draws without looking at `fidato`. **Closed: 43 green lines, 0 red.**
 > positive check; C is at **5.4 %** and the negative at **7 %**. ⇒ ⛔ **Cell D — the 61.4 — has
 > ONLY ONE scene.** Corrected on 13 Aug 2026, finding by the phase 3 coordinator.*
 
-#### ⛔ 6. The meter was giving itself 11 ms, and P5 declared itself green without being so
+#### ⛔ 6. The yardstick was giving itself 11 ms, and P5 declared itself green without being so
 
-1. ⛔ **the first draft of the meter closed at the decoder callback**, giving itself **~11 ms**
+1. ⛔ **the first draft of the yardstick closed at the decoder callback**, giving itself **~11 ms**
    that are ours and measurable on a cap of 50. ⭐ **The boundary was moved in the uncomfortable direction**:
    the number went up by **~11 ms** and it was let go up *(the two totals, from the encoding without a card, are removed with phase 18)*;
 2. ⛔ **P5 declared itself green**, and after three injectors `scavalcati = 0` is not *«the loop holds»*: it is
@@ -4207,11 +4207,11 @@ each passed on to the stage, and **the key is the most expensive frame there is*
 | **2** | how many deltas each time | ⚠ **none**: `abbandonati 0` in the whole AV1 session ⇒ **the feared scenario — «one legitimate drop generates up to sixty illegitimate ones» — did NOT show up** |
 | **3** | how long until the key | longer in the healthy case than in the broken one *(the times, from the session with encoding without the card, are removed with phase 18)* |
 
-⇒ ⭐ **The fear was misplaced and the fault is another one**: it is not the drop that generates requests, it is
+⇒ ⭐ **The fear was misplaced and the defect is another one**: it is not the drop that generates requests, it is
 **the client that does not decode**. And the brake that was meant to contain it **comes off exactly there**.
 ⚠ *The point had been left open so as not to decide on a feared symptom instead of an observed one
 (`LEZIONI.md` §2.6). Once observed, the symptom was a different one.* ⛔ **It is not cured here**: it is cured where it originates,
-that is in phase 5 together with the HEVC fault.
+that is in phase 5 together with the HEVC defect.
 
 #### ⭐ How it was to be closed, and it cost ZERO extra work
 
@@ -4421,9 +4421,9 @@ believing it** (`CODER.md` §3.3). The list lives here and fills up along the wa
 | **A10** | the phase benches | `04-b30-anello-input` | ⭐ the **input → glass** loop, which in phase 3 was not measurable | 7691-95 | ⭐ **16 out of 16**, and ⏳ `n=0` |
 | ⭐ **O2** | **the loop number** | `04-b30-*` (extended) · `04-b32-terreno` · `04-b32-coda` · `04-b32-ritmo` | ⭐ **the input → glass delay, with `n` and the breakdown**, and the growing queue | **7721-25** | ⭐⭐ **~140 ms, n = 326 and 322**, 10 checks out of 11 |
 
-⭐ **And the seams are held by the coordinator, not by the loops** — `src/input.h`, `src/tastiera.h`,
+⭐ **And the seams are held by the coordinator, not by the links** — `src/input.h`, `src/tastiera.h`,
 `src/cursore.h`, plus `figlio.c`, `main.c` and the `Makefile`. ⛔ It is the lesson of
-`fasi/rapporti/F5-desktop-vero.md`: *the fault of phase 3 was not **inside** a piece, it was **between**
+`fasi/rapporti/F5-desktop-vero.md`: *the defect of phase 3 was not **inside** a piece, it was **between**
 two pieces each correct on its own — and the seams, having no owner, were not
 watched by any bench.* Here they have an owner.
 
@@ -4445,7 +4445,7 @@ codes to press and in what order. Report in
 
 The phase 4 tree **builds**: `make` exits 0 in the container of the test machine, with
 `-lei -lxkbcommon` really linked and `input.o · tastiera.o · cursore.o` inside the binary.
-⛔ It is the check that counts **before** all the others: ten loops interrupted halfway by a server
+⛔ It is the check that counts **before** all the others: ten links interrupted halfway by a server
 fault could have left the tree broken, and they did not. ⭐ And the **twins are equal**
 (`src/rcp.c` ≡ `banchi/rcp/rcp.c`).
 
@@ -4453,7 +4453,7 @@ fault could have left the tree broken, and they did not. ⭐ And the **twins are
 
 *And the seam belongs to the coordinator, for the reason written at the top of this document.*
 
-⛔ **The fact that no loop had in hand, and that changes the shape of the work: the stage lives in
+⛔ **The fact that no link had in hand, and that changes the shape of the work: the stage lives in
 ANOTHER PROCESS.** `libei` talks to the user's graphical session, and that is held by the **child**;
 QUIC, RCP and the client's bytes are in the **parent**. ⇒ Between the key pressed in the browser and the key
 pressed on the desktop there is **a process boundary**, and neither side could cross it on
@@ -4490,7 +4490,7 @@ inside, twins equal, and the mark in the binary verified.
 | **with** `--virtual-monitor` | 1 → 2 | ⛔ **0** (`0 guasti`: a true zero) | ⛔ **EMPTY** |
 | **without** (cured) | 0 → 1 | ⭐ **205 conforming** | ⭐ **SHELL** (luminance jump 51.3 · text edges 548) |
 
-⭐ **And the bench does not trust «the wallpaper is there»** — it is the mistake that hid the fault for two phases.
+⭐ **And the bench does not trust «the wallpaper is there»** — it is the mistake that hid the defect for two phases.
 It distinguishes with **two indicators of different nature**, calibrated on real images *before* fixing the
 thresholds: the **luminance jump** at the bottom edge of the bar (11.8 shell / 0.07 wallpaper) and the **edges**
 of the clock text (565 / 0). ⛔ The third indicator (the dock) **did not distinguish, and it is written
@@ -4504,13 +4504,13 @@ that it was discarded**.
 | ⛔ **the cure is in FOUR places, not two** | with only the two, `sessione_assicura()` would have **killed the right session at every call** (0 monitors = `SESSIONE_NERA` = «respawn it»). The state machine was turned upside down, and declared |
 | ⛔ **the granted canvas is a promise nobody keeps** | client at 1280×720: the server grants it, the stage captures at 1920×1080 (compile-time constant), `rcp` rejects every frame — `[M]` **145 produced, 0 sent, black client without errors**. ⚠ And the size is decided by **our** PipeWire format `[R]`, not by `RecordVirtual`: `[?]` no. 1 of this document is **resolved, and the answer was a different one** |
 
-##### ⭐⭐ And persistence HOLDS — the fault thesis is **false**
+##### ⭐⭐ And persistence HOLDS — the defect thesis is **false**
 
 *Born from an objection by the user, on 14 Aug: «deve lavorare anche quando nessuno guarda lo
 schermo — altrimenti che senso ha la persistenza della sessione?».*
 
 ⛔ **The thesis to refute was**: *«a client that detaches takes away the only monitor: the session is left
-with nowhere to draw, and the applications notice»* — that is the fault that in v1 sent
+with nowhere to draw, and the applications notice»* — that is the defect that in v1 sent
 `libmutter` into a failed assertion. `[M]` eight readings in 11 minutes, session spawned by the
 cured product, declared scene (a window that writes the time 5 times per second, **on the screen
 and to a file**):
@@ -4522,11 +4522,11 @@ and to a file**):
 | ⭐ `libmutter` | **no new assertion**: the 2 assertions and 7 criticals are **constant** from the first to the last reading, and carry the pid of a `gnome-shell` that the product was **sending off** |
 | ⭐ on reattach | `riattacco-1` **120 conforming frames → SHELL**; `riattacco-2` → **SHELL**. ⭐ And it is **the same window**: **unchanged pid** (465823 at the start and at the end, from 154 to 3 497 lines) — a new window would have a new pid |
 
-⇒ ⭐ **The outcome is «the monitor is there and nobody captures it», which is not a fault: it is invariant I4
+⇒ ⭐ **The outcome is «the monitor is there and nobody captures it», which is not a defect: it is invariant I4
 maintained.** And the credit goes to the **child**, which survives the detach by construction.
 ⚠ **But one thing remains for phase 5, and it was not expected**: **the stage dies with the CHILD, not with the
 session** ⇒ whoever gives the farewell to a child running idle **would take the monitor away from a live session**
-— the v1 fault taken from the other end.
+— the v1 defect taken from the other end.
 
 ⛔ **And three numbers of the bench were lying**, found by whoever had written them: the monitor count was
 **double** (`GetCurrentState` lists every screen twice) and erred **in the reassuring
@@ -4556,7 +4556,7 @@ way round.*
 29 violations + 25 expected greens + **10 on §7.2** (the cursor). 64/64 with a new connection that
 reaches `ECCOMI` after each one, and the same numbers on two machines.
 
-⭐ **And certification found TWO product faults that no green round would have seen:**
+⭐ **And certification found TWO product defects that no green round would have seen:**
 
 | | |
 |---|---|
@@ -4616,8 +4616,8 @@ declared.
 ⛔ **What did NOT work**: **Firefox never requests the page** in this session (5 rounds,
 149 s, **zero HTTP requests**, cause not found) ⇒ the instrument was replaced with the native Wayland
 witness — ⭐ closer to the truth, ⛔ **but the bridge with `deltaY` drops from `[M]` to `[S]`**.
-And **three faults were the bench's**: the blind replacements counter (it accused «not reproduced» on a
-fault that had happened), the release test that ran after the replacements and **accused the wrong thing**,
+And **three defects were the bench's**: the blind replacements counter (it accused «not reproduced» on a
+defect that had happened), the release test that ran after the replacements and **accused the wrong thing**,
 and — after the cure — the bench that **read yesterday's `PRONTA`** and printed a false `NO` against the
 product.
 
@@ -4677,7 +4677,7 @@ table of the seven gestures describes what to do, not what *gets confused with w
 | | |
 |---|---|
 | ⛔ **tap-and-a-half and double click are the same gesture** | ⭐ and the cure **is not a threshold**: *it presses on contact and releases on lift*, and the two paths diverge by themselves **without delay**. ⚠ The «prudent» draft — waiting to decide — **breaks the double click**. Tested with the twin cases |
-| ⛔ **«2-finger tap» against «repeated 1-finger tap»** | a **right click that comes out as a left double click**. ⛔ No threshold in ms separates them, and separating them would cost **300 ms on every click** — forbidden by `CODER.md` §1-bis. ⇒ The threshold is **an overlap: ≥ 1 sample**, and below that the fault is **DECLARED**, not hidden |
+| ⛔ **«2-finger tap» against «repeated 1-finger tap»** | a **right click that comes out as a left double click**. ⛔ No threshold in ms separates them, and separating them would cost **300 ms on every click** — forbidden by `CODER.md` §1-bis. ⇒ The threshold is **an overlap: ≥ 1 sample**, and below that the defect is **DECLARED**, not hidden |
 | ⛔ **wheel against pinch** | which the table does not name at all: Δdistance is compared against Δcentre, and it is decided **only once** |
 
 **The thresholds, in ms and CSS px**: `T_TAP` **180 ms PER CONTACT** · `D_TAP` 9 px · `T_SEQUENZA` 300 ms ·
@@ -4685,7 +4685,7 @@ table of the seven gestures describes what to do, not what *gets confused with w
 motivates the drawn pointer** separates the tap-and-a-half from the two-finger tap · `D_PIZZICO` 24 px `[?]` ·
 `PX_PER_SCATTO` 40 px `[?]`.
 
-⭐ **Two faults found by the bench and not by reading**: the duration must be measured **per contact** (or the
+⭐ **Two defects found by the bench and not by reading**: the duration must be measured **per contact** (or the
 three-finger tap **never comes out**), and **a finger lifting moves the centre by 40 px without
 anyone moving** — it was read as wheel.
 
@@ -4724,12 +4724,12 @@ desktop** (`--app`: **0 reserved already in a window**); the Android half remain
 
 ---
 
-#### ⛔⭐ And the fifth broken seam of the phase, found by the ring that suffered it
+#### ⛔⭐ And the fifth broken seam of the phase, found by the link that suffered it
 
 `REMOTIX_PUNTATORE.muovi()` did not turn on `cl_noto` ⇒ on a page that is born in **touch
 layout** and never enters classic mode, the finger moved **a pointer that never appeared** —
 ⛔ and without any error, anywhere. A **one-line** cure, closed by the coordinator.
-⭐ **And the touch ring had meanwhile done the right thing**: it verified the seam,
+⭐ **And the touch link had meanwhile done the right thing**: it verified the seam,
 **declared the fallback in the log** and drew a pointer of its own — instead of keeping quiet or
 breaking. The fallback disappears by itself now that the line is there.
 
@@ -4738,11 +4738,11 @@ breaking. The fallback disappears by itself now that the line is there.
 
 ---
 
-#### ⭐⭐ A10 — the yardstick of the **input → glass** ring
+#### ⭐⭐ A10 — the yardstick of the **input → glass** loop
 
 | | |
 |---|---|
-| ⭐ **the certification** | **16 injected faults caught out of 16** · **53 checks out of 53** (exit 0) · of which the bridge **19 out of 19** |
+| ⭐ **the certification** | **16 grafted faults caught out of 16** · **53 checks out of 53** (exit 0) · of which the bridge **19 out of 19** |
 | ⭐ **three NEW faults**, which at phase 3 were not even expressible | and the most important is *«the median rises by N but **in the wrong segment**»*: ⛔ **a yardstick like that never turns red — it tells lies about the diagnosis**, which is exactly what happened to the drawing label |
 | ⭐ **the chain in ELEVEN segments** (four new) | tested on the fake that sums them to the total with a gap of **0.00 ms** |
 | ⛔ **and the number is NOT there: `n = 0`, exit 3** | *«non ho niente da giudicare»* — ⭐ **and saying so is the right thing**: the client does not yet send §7.3. It is the defect the phase 1 validator had (conforming and «nothing to judge» with the same exit code), here avoided by construction |
@@ -4814,7 +4814,7 @@ verified in the pixels; and the scene receives **744** keyboard events in one ro
 
 ⭐⭐ **And Q6 — the check of the OUTBOUND branch, which at phase 3 could not exist — PASSES on the hardware**:
 injecting 30 ms the total rises by **30.84** and the surplus appears **entirely in segment 2** (+33.49) and
-**in no other**. ⇒ Half of the ring that had no calibration now has one.
+**in no other**. ⇒ Half of the loop that had no calibration now has one.
 ⛔ Q5 (return branch) stays red **by 0.2 ms**: the surplus is in the right segment (+24.70 against
 N = 25) but the total rises by 20.78. ⚠ **The tolerance was not widened.**
 
@@ -4823,7 +4823,7 @@ N = 25) but the total rises by 20.78. ⚠ **The tolerance was not widened.**
 | | |
 |---|---|
 | ⛔⛔ **the GNOME Overview** | a freshly born headless session opens in the Overview: the «full-screen» scene was **a thumbnail at 0.79** and the Overview held the focus. ⇒ `eventi_puntatore = 0` (suggested diagnosis: «`libei` does not deliver») **and** 0 marks read out of 966 (suggested diagnosis: «the echo cannot be read»). ⭐ **What found it was looking at the image**, not reading a number |
-| ⛔ **`04-b30-scena.c`: `oy` added twice** | the cells of the **second** mark ended up outside their quiet zone, on the desktop background. On mark 1 (`oy = 0`) it did not show. ⭐ And the certification was green 53 out of 53: **the sixteen faults are injected into the record, and none paints a pixel** |
+| ⛔ **`04-b30-scena.c`: `oy` added twice** | the cells of the **second** mark ended up outside their quiet zone, on the desktop background. On mark 1 (`oy = 0`) it did not show. ⭐ And the certification was green 53 out of 53: **the sixteen faults are grafted into the record, and none paints a pixel** |
 | ⛔ **A10's precondition check, false RED** | it looked for the hooks in `figlio.c`; they are in `webtransport.c` (the channel belongs to the **parent**). ⚠ This morning the same check had given a false **green**: now it looks at both sides of the border |
 
 ---
@@ -4851,7 +4851,7 @@ Identical locally and in the container (`xkbcommon` 1.7.0 on both). It is rechec
 
 #### ⛔⛔ And the keyboard contract was WRONG — the refusal was accepted
 
-*`src/tastiera.h` said: «the layout is the string negotiated at attach». The ring
+*`src/tastiera.h` said: «the layout is the string negotiated at attach». The link
 implemented it, saw that it worked, **and refused it all the same** — with the right reason.*
 
 ⛔ **We do not choose the session's layout: GNOME chooses it, and `libei` DELIVERS it to us**
@@ -4973,7 +4973,7 @@ close this way.*
 
 ### ⭐⭐ The number of the phase — `[M]` 14 Aug 2026
 
-*The **input → glass** ring, which at phase 3 was not measurable: the `input` field was 0 in 953
+*The **input → glass** loop, which at phase 3 was not measurable: the `input` field was 0 in 953
 frames out of 953, because the channel did not exist.*
 
 | | |
@@ -5100,11 +5100,11 @@ bench first. What held in its place was the **adversarial** mandate to four agen
 | | |
 |---|---|
 | `banchi/04-b31-tela.c` | mounts **bare** `rcp.c`, with a fake stage that can be made to answer late, grant another size, or not answer at all. **19 cases**, each with the expectation declared beforehand (⭐ the 19th added on 16 Aug 2026, see §05-la-sessione §6-ter) |
-| `banchi/04-b31-certifica.sh` | ⭐ **the positive control**: injects **12 faults** into a copy of `rcp.c` and demands that **the expected cases** turn red — not «that something turns red» |
+| `banchi/04-b31-certifica.sh` | ⭐ **the positive control**: grafts **12 faults** into a copy of `rcp.c` and demands that **the expected cases** turn red — not «that something turns red» |
 
 ⛔ **And the bench was corrected twice by the measurement, not the other way round**: G1's expectation said
 ten cases and it lit six; G9 stayed green because a **second** check masked the fault
-injected into the first. Both written next to the fault, with the reason.
+grafted into the first. Both written next to the fault, with the reason.
 
 ⚠ **What this bench does NOT prove, declared**: it does not prove that the compositor resizes
 (that is `[M]` of `banchi/04-in8-misura.c`), it does not prove the pixels are right (there is no
@@ -5177,13 +5177,13 @@ done damage:
 *15 Aug, morning, with these words: «su Android il mouse dà problemi: non prende più i click».*
 
 It was **two of their sessions fighting over the stage**: the laptop, detached for silence, had
-lost the seat **but kept demanding its size**, the phone demanded its own, and the
+lost the slot **but kept demanding its size**, the phone demanded its own, and the
 stage bounced between 2544×926 and 2560×926 **seventeen times a second**. Every round restarted the
 stream, and Mutter recreated `libei`'s devices: `[M]` **640 «replacements»** of the pointer, and the
 input region never agreeing with the canvas. ⇒ The clicks went out, arrived, were injected — and
 ended up elsewhere.
 
-⭐ The cure is the invariant that was already there: **I2 — whoever does not have the seat watches, does not command**. One line.
+⭐ The cure is the invariant that was already there: **I2 — whoever does not have the slot watches, does not command**. One line.
 ⛔ And my defence of the growing wait **was not enough**, for a reason worth more than the cure:
 it reset every time the stage reached where *that* session wanted it, i.e. at every round of the
 ping-pong. **A time backstop cures an insistent master, not two masters.**
@@ -5199,9 +5199,9 @@ second** in a line written for another question: *«3 attese a vuoto»* = four r
 #### The three things I got wrong in method, and that the bench corrected
 
 - **G1's expectation** declared ten red cases and it lit six;
-- **G9 stayed green** because a second check masked the fault injected into the first;
+- **G9 stayed green** because a second check masked the fault grafted into the first;
 - **case 18** did not reproduce the real scene until it had **two** sessions: with just one, the
-  seat was taken back by itself and the defect did not appear.
+  slot was taken back by itself and the defect did not appear.
 
 ---
 
@@ -5217,7 +5217,7 @@ second** in a line written for another question: *«3 attese a vuoto»* = four r
 - `SPECIFICHE.md` **§6.4** and `RCP.md` **§7.1** — corrected: *«mai come automatismo»* is no longer true
   at attach, and the why is written with the date;
 - `LEZIONI.md` **§7.5** (a deduction in place of a message), **§6.2-bis** (a wait that
-  protects one ring is a delay for the others), **§6.2-ter** (the number is already in the log).
+  protects one link is a delay for the others), **§6.2-ter** (the number is already in the log).
 
 ---
 
@@ -5360,7 +5360,7 @@ binds `can-*` to `visible`.
 
 | case | today | what is missing |
 |---|---|---|
-| **1 · the wire drops** — tab closed, browser closed, ⭐ **the user's PC powered off or restarted** | ⭐ **live and measured**: `pagina.html` · `MP4_DURATA_MAX()` hooks `pagehide` (⛔ not `beforeunload`) and sends `CONGEDO 0x01` before dying — `[M]` the server saw it arrive. The seat is freed, **the session survives** (I4, `SPECIFICHE.md` §5.2). ⚠ And when the PC dies suddenly the `CONGEDO` does not leave at all: then it is the **silence** clock that frees the seat, 30 s (§5.3) — ⭐ **same outcome, another path** | the **bench** that tests it, and tests it **twice in a row** (`LEZIONI.md` §2.3-ter) |
+| **1 · the wire drops** — tab closed, browser closed, ⭐ **the user's PC powered off or restarted** | ⭐ **live and measured**: `pagina.html` · `MP4_DURATA_MAX()` hooks `pagehide` (⛔ not `beforeunload`) and sends `CONGEDO 0x01` before dying — `[M]` the server saw it arrive. The slot is freed, **the session survives** (I4, `SPECIFICHE.md` §5.2). ⚠ And when the PC dies suddenly the `CONGEDO` does not leave at all: then it is the **silence** clock that frees the slot, 30 s (§5.3) — ⭐ **same outcome, another path** | the **bench** that tests it, and tests it **twice in a row** (`LEZIONI.md` §2.3-ter) |
 | **2 · the user chooses «Esci…» in the desktop menu** | ⛔ **it is not defined anywhere and not handled**: `gnome-session` exits, Mutter dies, the stage falls — and **no reason goes out** on the wire. The client sees a connection going out, i.e. exactly the fault shape of finding **B-7** | everything that follows |
 
 **What case 2 requires, in order:**
@@ -5376,7 +5376,7 @@ binds `can-*` to `visible`.
   or it is finding B-7 all over again;
 - ✅ **what the user reads**: *«la sessione è terminata»* above the **login form**
   (decided by the user on 15 Aug, `DECISIONI.md` §4.1-quater). ⛔ Not a closing screen;
-- **the cleanup**: seat freed, stage torn down, and the next attach is a **new session** —
+- **the cleanup**: slot freed, stage torn down, and the next attach is a **new session** —
   not a reattach to a dead stage;
 - ⭐ **the second path to the same logout** (`DECISIONI.md` §4.1-quinquies, 15 Aug): the
   shortcut **`Ctrl+Alt+Fine`** handled **by the page** — with `preventDefault()`, the confirmation
@@ -5477,7 +5477,7 @@ stage already has with **zero frames discarded** `[M]`, and the hot resize costs
 
 | situation | reason | state |
 |---|---|---|
-| remote alive + a **second device** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **live and tested** `[M]`: the seat registry in `rcp.c`, and case 18 of bench `04-b31` |
+| remote alive + a **second device** | `0x0F GIA_ATTIVA_REMOTA` | ⭐ **live and tested** `[M]`: the slot registry in `rcp.c`, and case 18 of bench `04-b31` |
 | remote **silent for 30 s** + another device | *(gets in)* | live: `torna_a_parlare()` |
 | ⛔ **local already active**, the remote arrives | `0x05 GIA_ATTIVA_LOCALE` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED by any `.c`** |
 | ⛔ remote alive, **the local one opens** | `0x04 SESSIONE_LOCALE_PREVALSA` | **defined in `rcp.h` · `rcp_tetto_imposta()` and NEVER EMITTED** |
@@ -5950,7 +5950,7 @@ reinstalled and `provision-server.sh` run again.*
 | ⭐ **it is live on the server** | `[M]` in the log: *«guardiano delle sessioni locali pronto (bus di sistema); il discrimine è il SEAT, non «Remote»»* |
 | ⭐⭐ **the measurement that justifies the discriminant** | `[M]` a session made **like ours** — `pam_open_session` without `XDG_SEAT` — shows to logind: `Seat=` **empty**, `Remote=no`, `Type=wayland`. ⛔ That is, **indistinguishable from a local one** if the criterion were `Remote`: the first connected user would have been rejected with `0x05` by their own session |
 | ✅ **the bench** | `banchi/05-b1-sentinella.c`, **6 cases, 0 red**: no session · one like ours · a local one (`seat0`, wayland) · the local one closed · the local one **belongs to another user** · the user is at the console **in a text session** |
-| ⭐⭐ **certified** | `banchi/05-b1-certifica.sh`, **3 injected faults, all three fall where they must**: seat removed → red 2 4 5 6; user removed → 5 6; graphical type removed → 6 |
+| ⭐⭐ **certified** | `banchi/05-b1-certifica.sh`, **3 grafted faults, all three fall where they must**: seat removed → red 2 4 5 6; user removed → 5 6; graphical type removed → 6 |
 | ⛔ **and the certification wrote the bench, not just checked it** | the fault «the graphical type is no longer looked at» made **nothing** fall ⇒ no case exercised that check. ⭐ From there **case 6** was born — the user at the console in a text session, which `SPECIFICHE.md` §5.1 explicitly admits («testuali e grafiche convivono») and which nobody had tested |
 | ⏳ **what the bench does NOT test**, declared | it does not test the wire (`0x05` has never gone out on a real connection), it does not test `0x04` end-to-end, and ⛔ **it does not test the scene with a REAL local session**: there is nobody at the machine's console, and the bench's sessions are created by PAM |
 
@@ -6052,7 +6052,7 @@ without touching the keyboard count as «the client has disappeared».
 | | |
 |---|---|
 | `13:46:27.968` | `sessione aperta utente=prova via=[192.168.0.3]:53805` |
-| ⛔ `13:46:57.980` | `STACCATO per silenzio: 30013 ms senza un byte` — **seats occupied now: 0** |
+| ⛔ `13:46:57.980` | `STACCATO per silenzio: 30013 ms senza un byte` — **slots occupied now: 0** |
 | ⭐ **and the connection was alive** | for **111 seconds** QUIC said nothing: no `trenta secondi di silenzio (§2.2)`, no closure |
 | ⭐ `13:48:19.750` | a single key: `posto RIPRESO … dopo il silenzio`, **same connection `:53805`**, no new `sessione aperta` |
 
@@ -6062,7 +6062,7 @@ of the wire, QUIC declared the silence at `13:33:43` — **exactly 30 s after th
 
 #### ⛔ And the price gets paid, measured
 
-`[M]` First tab in and still (no input); after 30 s the seat shows as free. **Second
+`[M]` First tab in and still (no input); after 30 s the slot shows as free. **Second
 tab, same user:**
 
 ```
@@ -6094,19 +6094,19 @@ RCP byte.
 |---|---|
 | **what is touched** | `s->ultima_vita` in `rcp.c` next to `ultimo_byte` (**two fields, two clocks**) · `rcp_segno_di_vita()` · the bridge `wt_segno_di_vita()` · the call in `trasporto.c` after `ngtcp2_conn_read_pkt()` |
 | ⭐ **what is NOT touched** | **the protocol**: no new message, no heartbeat to add to the page, `RCP.md` unchanged. ⚠ And `rcp.c` has a twin identical byte for byte in `banchi/rcp/` |
-| ⛔ **and ONLY if `rv == 0`** | the packet must be **decrypted and authenticated**: any UDP datagram is not enough, or anyone could keep someone else's seat occupied by sending packets with their address |
-| ⚠ **the case not to break** | the tab **frozen** by the browser after ~5 minutes in the background (§5.3 names it): a frozen tab also stops answering QUIC ⇒ the two clocks stay in agreement, the seat is freed all the same |
+| ⛔ **and ONLY if `rv == 0`** | the packet must be **decrypted and authenticated**: any UDP datagram is not enough, or anyone could keep someone else's slot occupied by sending packets with their address |
+| ⚠ **the case not to break** | the tab **frozen** by the browser after ~5 minutes in the background (§5.3 names it): a frozen tab also stops answering QUIC ⇒ the two clocks stay in agreement, the slot is freed all the same |
 
 #### ✅ DONE, and the cross-check has three points — 16 Aug 2026
 
-⛔ **Two out of three were not enough**: had I tested only that the seat is not lost, I could have
+⛔ **Two out of three were not enough**: had I tested only that the slot is not lost, I could have
 **switched off** the clock instead of repairing it. The third point is the positive control.
 
 | | the expectation, declared beforehand | `[M]` |
 |---|---|---|
 | 1 | I log in and **touch nothing for 90 s** ⇒ no detach | ✅ `occupati: 1` at +15/30/45/60/75/90 s, zero detaches (before, it detached at 30 s) |
 | 2 | **second tab** while the first is alive and still ⇒ **rejected** | ✅ `posto NEGATO a prova … lo occupa un altro client di questo stesso utente` · `congedo motivo=0x0f` |
-| 3 | ⛔ **I cut the wire** ⇒ the seat is **really** freed, and at a clean 30 s | ✅ `STACCATO per silenzio: 30015 ms senza un PACCHETTO … e l'ultimo byte di RCP è di 66695 ms fa` |
+| 3 | ⛔ **I cut the wire** ⇒ the slot is **really** freed, and at a clean 30 s | ✅ `STACCATO per silenzio: 30015 ms senza un PACCHETTO … e l'ultimo byte di RCP è di 66695 ms fa` |
 
 ⭐ **The new line carries both numbers**, and it is the difference in a single line: 30 s without
 packets *versus* 66 s without the user touching anything. Before, it would have been the second number
@@ -6129,7 +6129,7 @@ the gap between two packets exceeds **half** the cap.
 
 #### ⛔⭐ AND THE SURVEILLANCE SPOKE ON THE FIRST RUN
 
-`[M]` Session still for **260 seconds**, nobody touching anything. ✅ The seat held for all
+`[M]` Session still for **260 seconds**, nobody touching anything. ✅ The slot held for all
 260. ⛔ **But the margin line appeared 8 times**, and the number is striking for how
 regular it is:
 
@@ -6143,7 +6143,7 @@ regular it is:
 ours** — our PINGs in that window are off. It is the browser.
 
 ⚠ **So the margin is 2×, and it depends on Chrome's courtesy.** A different browser, or Chrome
-changing that number, and the seats start dropping again under the nose of whoever is reading.
+changing that number, and the slots start dropping again under the nose of whoever is reading.
 
 > #### ⛔ THE DECISION THAT COMES OUT OF IT, and I do not take it alone
 >
@@ -6156,7 +6156,7 @@ changing that number, and the seats start dropping again under the nose of whoev
 > | the objection written in `webtransport.c` | does it hold? |
 > |---|---|
 > | *«Tenere viva la connessione SEMPRE cambierebbe il significato dei 30 secondi di §2.2»* | ⭐ **No, for the DEAD client**: RFC 9000 §10.1 restarts the timer when one **receives**, not when one sends. A dead client does not answer our PINGs and dies all the same — and the comment itself says so, two lines further down |
-> | ⛔ **but it holds for the FROZEN tab** | `SPECIFICHE.md` §5.3 promises that a tab put in the background and frozen by the browser after ~5 minutes **goes silent, so it detaches**. If the browser's network service keeps answering our PINGs while the page is frozen, that promise falls: the seat would stay occupied by a zombie |
+> | ⛔ **but it holds for the FROZEN tab** | `SPECIFICHE.md` §5.3 promises that a tab put in the background and frozen by the browser after ~5 minutes **goes silent, so it detaches**. If the browser's network service keeps answering our PINGs while the page is frozen, that promise falls: the slot would stay occupied by a zombie |
 >
 > ⇒ ⏳ **And the question can be measured instead of argued**: *does a background tab, frozen,
 > still answer QUIC?* Six minutes of testing with the browser. ⛔ If it answers, then the promise of
@@ -6169,7 +6169,7 @@ changing that number, and the seats start dropping again under the nose of whoev
 
 | | |
 |---|---|
-| ✅ detaches for silence | **zero**, the seat held for all 8 minutes |
+| ✅ detaches for silence | **zero**, the slot held for all 8 minutes |
 | ✅ the packets | punctual: `15003 · 15018 · 15006 · 15001 · 15002 ms` to the last |
 | ⛔ **was the tab frozen?** | **NO** |
 
@@ -6231,7 +6231,7 @@ on until the session is `finita`.
 |---|---|
 | *«cambierebbe il significato dei 30 secondi di §2.2»* | ⛔ **it had already changed, and not because of these PINGs**: since §6-bis the clock counts **packets**. «The client is there» already means «it answers on the wire» — the PINGs do not add that semantics, they make it **reliable** |
 | *«la scheda congelata deve staccarsi»* | ⛔ measured: **it does not detach**, eleven minutes |
-| ⚠ **the price, declared** | a client with the **page** dead and the **network** alive keeps the seat. ⭐ But it kept it already, and whoever comes back to that tab finds their session again (I4). What stays uncovered is only the client that stops answering **on the wire too** — and that one detaches at thirty seconds as always |
+| ⚠ **the price, declared** | a client with the **page** dead and the **network** alive keeps the slot. ⭐ But it kept it already, and whoever comes back to that tab finds their session again (I4). What stays uncovered is only the client that stops answering **on the wire too** — and that one detaches at thirty seconds as always |
 
 ⭐ **And the acceptance yardstick is the margin line**: with PINGs at 10 s the gap between two packets
 cannot exceed 15, so *«il margine si sta assottigliando»* **must never appear**.
@@ -6240,8 +6240,8 @@ cannot exceed 15, so *«il margine si sta assottigliando»* **must never appear*
 
 | | expected | seen |
 |---|---|---|
-| three minutes still | zero margin lines, seat held | ✅ **0 margin lines** (before: one every 30 s), zero detaches |
-| ⛔ **wire cut** | the seat is freed all the same: PINGs do not keep a dead one alive | ✅ cut `16:13:26`, detached `16:13:50` |
+| three minutes still | zero margin lines, slot held | ✅ **0 margin lines** (before: one every 30 s), zero detaches |
+| ⛔ **wire cut** | the slot is freed all the same: PINGs do not keep a dead one alive | ✅ cut `16:13:26`, detached `16:13:50` |
 
 ⭐ **And the detach line carries the whole repair in one sentence:**
 
@@ -6478,7 +6478,7 @@ accumulate* — that is the way this stuff breaks the second time.
 
 #### ⛔ And the defect that turned up was MINE, the seventh time in two days
 
-Cut B, the first time, **did not detach**: the seat stayed occupied and it looked like a big
+Cut B, the first time, **did not detach**: the slot stayed occupied and it looked like a big
 defect — *«il server non fa scattare i suoi orologi quando l'uscita è bloccata»*.
 
 ⭐ **Arithmetic refuted it, before I wrote the conclusion.** Around cut A I had put

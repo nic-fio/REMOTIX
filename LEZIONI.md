@@ -187,7 +187,7 @@ Two reproductions of the zero-copy defect — client in a container on loopback,
 another machine on the LAN — stayed green while the defect was alive in real use. The fix
 written on that basis was shipped to the user and **made things worse**.
 
-What found it was a bench of a different form: **the ring**, that is one frame in ten recorded
+What found it was a bench of a different form: **the loop**, that is one frame in ten recorded
 continuously with the time, which asks nobody to be present at the right instant.
 
 *Price: half a day of the user's, and a fix to withdraw. Detail: `REFERENCE.md` R29.*
@@ -440,12 +440,12 @@ result enters the document as a measured fact.
 
 > ### ⛔⛔ 10. **«It did not show up» is not «it holds»** — and the tenth guise is the most elegant
 >
-> *13 Aug 2026, phase 3 step 5, check **P5** of the delay ring.*
+> *13 Aug 2026, phase 3 step 5, check **P5** of the delay loop.*
 >
-> The bench had to prove that the ring holds **out-of-order** frames. After **three** different
+> The bench had to prove that the loop holds **out-of-order** frames. After **three** different
 > injectors the count of the overtaken ones was **0**, and the bench printed **green**.
 >
-> ⛔ **Zero overtakings does not say «the ring holds them»: it says «the phenomenon did not show up».**
+> ⛔ **Zero overtakings does not say «the loop holds them»: it says «the phenomenon did not show up».**
 > They are two different sentences, and the first is a **property of the product** while the second is a
 > **property of the afternoon**. The bench had proved nothing: it had described its own
 > failure to provoke the case, and had written it in green.
@@ -462,7 +462,7 @@ result enters the document as a measured fact.
 >
 > 10. ⛔ **A check that did not see the phenomenon MUST declare itself not run**, never green. And the
 >     question that unmasks it is that of §1.11 rule 1: *«what would the opposite case look like?»* —
->     if a broken ring would give **the same zero**, that zero proves nothing.
+>     if a broken loop would give **the same zero**, that zero proves nothing.
 
 > ### ⛔⛔ 11. A bench can accuse the product of not holding a condition that **it created itself, and illegally**
 >
@@ -676,7 +676,7 @@ family; and *«the size the client named»* would have been the eighth.
 *13 Aug 2026, phase 3 step 5. It is not a protocol tolerance: it is a **measurement** tolerance,
 and it moves the same way.*
 
-**P1 is the decisive check of the delay ring**: the server delays by **N known milliseconds**
+**P1 is the decisive check of the delay loop**: the server delays by **N known milliseconds**
 and the median **must rise by exactly N**. A bench that does not pass it does not know it is measuring
 (`STUDI.md` §web §6.3).
 
@@ -719,7 +719,7 @@ the evening's rewrite, and the bytes said it had been there for two days.
 > **«each one when its turn comes»**, and the bench must say **which** one it saw, not how many.
 
 ⚠ And the corollary that costs most: **a check like that never fails for the defect it should
-catch**, so it is not discovered even by certifying it — the injected faults find it green
+catch**, so it is not discovered even by certifying it — the grafted faults find it green
 before and green after.
 
 *Detail: commit `d722460` carries the attribution in full — the bytes, the 33 ms against the 3-6 of the
@@ -864,7 +864,7 @@ file*.
 six benches, and **twenty-one have the same form**. 📖 `fasi/06-la-tela-e-la-vista.md` §5.5.*
 
 ⛔ **We were looking for the wrong thing.** From `04-b31` onwards the hunt was for the **expired anchor**: the
-fault that no longer injects because the source underneath has changed. It is a real form — and in six
+fault that no longer grafts because the source underneath has changed. It is a real form — and in six
 benches it showed up **only once**. The other twenty-one were all this:
 
 > **the measurement is right, the number is there, and nobody compares it with anything.**
@@ -1005,7 +1005,7 @@ declared, and nobody called it.** Zero callers in the whole source.
 ⇒ The cure had been applied to **one of the two twins**, and nobody had looked at the other.
 
 ⛔ **And the price of those five days can be measured**: the only number the benches could read was that
-of the **announcements** — and it was called «not sent». `[M]` with an injected fault: **1 017 frames
+of the **announcements** — and it was called «not sent». `[M]` with a grafted fault: **1 017 frames
 not sent against 4 announcements**, that is **a factor of 254**. A bench that believed it counted frames
 counted log lines.
 
@@ -1025,8 +1025,8 @@ the same here.
 its port, its ban file and its socket — that is applying §1.24 to the letter. ⛔ **And §1.24 was not
 enough**, because it speaks of what kills itself. This one speaks of what does **not** kill itself.*
 
-⛔ **The case, and the number hurts.** An agent measures the `input → vetro` ring and breaks down the
-client's stretch. One of the sub-stretches comes out `[M]` **17.48 ms** — **19 %** of the ring — with an
+⛔ **The case, and the number hurts.** An agent measures the `input → vetro` loop and breaks down the
+client's stretch. One of the sub-stretches comes out `[M]` **17.48 ms** — **19 %** of the loop — with an
 honest denominator, the boundaries moved in the uncomfortable direction and a bench certified 53 out of 53. The
 number is promoted to **target of the phase**, with a dedicated agent.
 
@@ -1063,7 +1063,7 @@ same binary, **only who else is working on the machine changes**:
 | ⭐ **alone** | **74.08** and **75.81 ms** |
 | ⛔ **with another agent's bench on top** | **84.22** and **90.87 ms** |
 
-⇒ `[M]` **From 8 to 17 ms on the same ring**, for a bench that has nothing to do with it. And the threshold is
+⇒ `[M]` **From 8 to 17 ms on the same loop**, for a bench that has nothing to do with it. And the threshold is
 lower than it seems: `[M]` **a single round already holds ~3.7 cores out of 4 and ~29 Chrome processes**;
 the one that produced the 17.48 had **56, plus five Xvfb**.
 
@@ -1198,7 +1198,7 @@ eye, they must have been mistaken»*.
 
 ⭐ **The user reported 0.50: the low edge of the interval.**
 
-⇒ ⛔⛔ **The bench was not wrong: it looked at a piece shorter than the real ring**, and the missing piece
+⇒ ⛔⛔ **The bench was not wrong: it looked at a piece shorter than the real loop**, and the missing piece
 was invisible **precisely because the bench's hand is fake**. A synthetic hand does not queue in the
 browser's event queue; a real hand does, `[M]` **for 11.6 ms**.
 
@@ -2733,7 +2733,7 @@ takes with mode `0700`. And it was already written, with its measurement, inside
 > and it is worse than not having it, because it reassures.
 >
 > ⇒ ⭐ **The counter-test that would have caught it in ten seconds**: run the predicate **with the fault
-> injected** and demand that it gives red. It is the same thing this phase asks of every mesh
+> grafted** and demand that it gives red. It is the same thing this phase asks of every mesh
 > (`--certifica`), ⛔ and it holds for the single predicate inside a mesh too, not only for the mesh.
 
 ---
@@ -2848,7 +2848,7 @@ whoever is working»*.
 > ### ⭐ How it is caught, and it costs ten seconds
 >
 > ⛔ **Try to make the mesh turn GREEN.** A check must be switched on in both directions: you
-> inject the fault and demand red (which the project already does, `--certifica`), ⚠ **and you remove
+> graft the fault and demand red (which the project already does, `--certifica`), ⚠ **and you remove
 > the fault and demand green**. The second half is forgotten, and it is the one that catches this.
 
 ---
@@ -2914,14 +2914,14 @@ declared in the file instead of discovered by someone six months from now.
 
 ---
 
-### 1.52 ⛔⛔⛔ **The mesh with the injected fault exited with the raw verdict — and precisely in the red round it would have written «the fault was NOT seen»**
+### 1.52 ⛔⛔⛔ **The mesh with the grafted fault exited with the raw verdict — and precisely in the red round it would have written «the fault was NOT seen»**
 
 `[M]` 26 Aug 2026, first round of the wiring of the four new meshes. `11-gancio.sh` reads an
-injected mesh **the other way round**: it exits `0` when the fault **was seen**, and what ends up
+grafted mesh **the other way round**: it exits `0` when the fault **was seen**, and what ends up
 in the log is not the raw outcome but the fact — `ha_visto_il_guasto`. It is from there that C13 can tell whether the
 net is still capable of giving red.
 
-⛔ **C9 exited with the raw verdict** (`1`, that is red). ⇒ In the round with the injected fault the hook
+⛔ **C9 exited with the raw verdict** (`1`, that is red). ⇒ In the round with the grafted fault the hook
 would have written `ha_visto_il_guasto: false` **precisely when the fault had been seen perfectly well**, and
 C13 would have started saying *«the net can no longer give red»* while it could.
 
@@ -2940,7 +2940,7 @@ certification of the whole net.
 ⇒ **Two** things are demanded together: the verdict is red, **and** the nameless lines are more than
 those the real defect had left. `[M]` without a fault: 4 · with the `tutto` fault: 5 490.
 
-> ⛔ **The rule**: when a mesh carries with it a **real and already known** defect, its injected
+> ⛔ **The rule**: when a mesh carries with it a **real and already known** defect, its grafted
 > fault is not measured on the colour of the verdict — it is measured on the **difference** the injection
 > produced. Otherwise the net certifies itself on a fault of the product instead of on its own.
 

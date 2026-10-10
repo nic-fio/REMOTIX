@@ -1024,11 +1024,11 @@ log the cause, verbatim:
 > `09:29:12.006 rcp     STACCATO per silenzio: 30002 ms senza un PACCHETTO da [192.168.0.2]:33357 — e l'ultimo byte di RCP e' di 657637 ms fa`
 
 ⇒ The previous bench's client had been **killed** instead of dismissed, and the server kept
-its place until the **30 seconds of silence** of §5.3 — that is for the whole first round. It is the same
+its slot until the **30 seconds of silence** of §5.3 — that is for the whole first round. It is the same
 defect already written in `banchi/09-b71-sessione.sh` (`[M]` 23 Aug 08:06), which there is cured by sending
 `TERM` and waiting; ⛔ **but between one bench and the next the wait is not there**, and nobody does it.
 
-⚠ **Operating rule that comes out of it**: between two benches on the same user one **verifies that the place
+⚠ **Operating rule that comes out of it**: between two benches on the same user one **verifies that the slot
 is free** (no `01-b3-cliente.py` alive **and** no stage), one does not count the time.
 
 ---
@@ -1194,7 +1194,7 @@ bench sweeps it at 50 · 100 · 200 and whoever chooses is the user, because it 
 
 1. **more than one frame period**, or it is today's rule with a new name: `[M]` phase 8, the
    real content goes at **20.9 fps = 47.8 ms**;
-2. **less than the bottom with which a keyframe is already requested** — `WT_CHIAVE_RICHIESTA_MS` = 150;
+2. **less than the backstop with which a keyframe is already requested** — `WT_CHIAVE_RICHIESTA_MS` = 150;
 3. it must **let a KEYFRAME plus a few deltas through** where the defect bites: `[M]` a keyframe
    on the user's canvas measures **20 817 bytes**; at 3 Mbit/s it gets out in **56 ms**, and in the 44 that
    remain **three deltas** fit;
@@ -1673,7 +1673,7 @@ the ladder goes down **26 → 35 → 44 in silence**.
 
 ⛔ **And the line is written only when the value CHANGES**, not at every frame: so the log *is*
 the rate curve, and the cost is the number of descents, not the number of frames. ⚠ With an **oscillation
-bottom**: if it changes more than *N* times a second, the line becomes *«🔻🔺 RITMO PENDOLA»*, which
+backstop**: if it changes more than *N* times a second, the line becomes *«🔻🔺 RITMO PENDOLA»*, which
 is **a defect of the regulator** and must be stated as such.
 
 ### 7.2 ⛔ The holes the inventory found — and one was already closed
@@ -1705,13 +1705,13 @@ ratio of **120 : 1**.
 
 ⛔⛔ **And under congestion the price is paid even by the log when it is OFF.** `[M]` 21 Aug: at 3 Mbit/s
 the line *«FOTOGRAMMA NON SPEDITO»* comes out **28 times a second**, and every abandon generates another one
-⇒ ~**60 lines/s = 21 MB/hour without `--parlantina`**, and **neither of the two has a bottom**.
+⇒ ~**60 lines/s = 21 MB/hour without `--parlantina`**, and **neither of the two has a backstop**.
 ⇒ ⛔ **The log is noisier when the line is worse, that is when it needs reading.**
 
 ⛔ **A third level (`--parlantina-ritmo`) is the wrong road**: it would put the I1 lines
 behind a switch off by default, and ⛔ **a descent declared only when someone has switched on
 a switch is NOT declared**. ⇒ Principle 2 and I1 impose `registro_dice()` for every
-`🔻`/`🔺` line. ⭐ **What is needed is the bottom**, and the product already has **four working forms** of it,
+`🔻`/`🔺` line. ⭐ **What is needed is the backstop**, and the product already has **four working forms** of it,
 all with the motivation written beside them: *only once* (`bool detto`) · *every N*
 (`== 1 || % 100 == 0`) · ⭐ *when it changes by ≥ threshold* (**the shape of the `🔻`/`🔺` lines**) ·
 ⭐ *once a second, with the ZEROS inside* (**the shape of the periodic rate line**).
@@ -1723,7 +1723,7 @@ all with the motivation written beside them: *only once* (`bool detto`) · *ever
 2. a `ritmo:` line **once a second, always, with the zeros inside** — frames delivered ·
    skipped for credit · abandoned · bytes in the queue · value in force. **98 bytes/s per session =
    0.35 MB/hour**: **120 times less** than verbose mode;
-3. ⛔ **a bottom on the three lines that under congestion come out at 28-60/s.** ⚠ And it cannot be put
+3. ⛔ **a backstop on the three lines that under congestion come out at 28-60/s.** ⚠ And it cannot be put
    **before** the periodic line of point 2, because today the count comes out only at the end of the session: they are
    **one single cure in two pieces**;
 4. ⚠ and, **outside the mandate of this phase**, the **filter by area** (`--parlantina wt,rcp`): today
@@ -3137,7 +3137,7 @@ was not touched.
 > *«non posso sapere se c'è disallineamento se il video è incomprensibile»* — on pure grain, which
 > offers **no reference** between what is seen and what is heard.
 >
-> *«ancora difficile giudicare il sync»* — on the same scene with an **injected reference**: the whole
+> *«ancora difficile giudicare il sync»* — on the same scene with a **grafted reference**: the whole
 > screen flashes white for 0.12 s **once a second**, and at the same instant there is a
 > **beep** (`sine=frequency=440:beep_factor=4`).
 
@@ -3151,7 +3151,7 @@ was not touched.
 ⇒ ⏳ **It remains `[?]`, and the road is an OBJECTIVE measurement, not another round by eye**: a reference
 that can be **read** instead of judged — a flash on a **calm** background (not grain), captured
 together with the sound, and the two instants compared on the wire. ⛔ And before measuring it the
-**instrument must be certified**: `AV` must be compared with a **known and injected** delay, or it is a number nobody has
+**instrument must be certified**: `AV` must be compared with a **known and grafted** delay, or it is a number nobody has
 ever verified. ⚠ It is the same shape as `DECISIONI.md` §7.19, where the ~400 ms desync has been open
 **since August** and has never been closed.
 
@@ -3478,7 +3478,7 @@ GIA_ATTIVA_REMOTA` (`[M]` 5/10 at 10 % loss). The log says: *«place DENIED … 
 another client of this same user»*.
 
 ⛔ **The account closes without `netem`**, because a **lost** goodbye and a goodbye **never said** are the
-same fact: with the client killed with `-9`, `[M]` **11 refusals in a row, and the place becomes free again at
+same fact: with the client killed with `-9`, `[M]` **11 refusals in a row, and the slot becomes free again at
 +30.5 s** — that is `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
 
 ⚠ **The sentence the client builds is false for whoever reads it**: that session is **his own**, and it
@@ -3489,7 +3489,7 @@ seconds**, and packet loss is precisely what makes it **normal** instead of rare
 **The proposed cure, NOT written — it is a change of policy of §8.2 and the user decides it:** in
 `src/rcp.c`, branch `POSTO_OCCUPATO` of `rcp_attacca()` (lines 2605-2616), before dismissing with
 `0x0F` look at the occupant's `ultima_vita`: if it has been silent for more than a short threshold (~3 s) **while
-another client of the same user is asking for the place**, evict it. §8.2 says *«no client
+another client of the same user is asking for the slot**, evict it. §8.2 says *«no client
 attached and **alive** is ever ousted»* — the occupant here is attached but **not alive**, and today
 the only clock that distinguishes it is the 30 s one. `torna_a_parlare()` (`rcp.c` · `drena()`) already handles
 the evicted one coming back. ⛔ It would not touch `SILENZIO`, which stays 30 s for everything else.
@@ -3570,7 +3570,7 @@ document gives the two numbers and **does not choose**: the choice between image
 | `07-b64-rete.py` | `a_non_si_apre` green on any way of failing | ⭐ **cured** and run again (§17.4-bis, §17.9-bis) |
 | `07-b64-rete.py` | `0-liscio` disarms the guardian for the eight profiles after it | ⭐ **cured**, `[M]` guardian still alive after `guasta([])` |
 | `07-b64-rete.py` | `spediti_dal_server` at `None`: `None == 0` is false ⇒ green on a round in which the server's end had not been read | ⭐ **cured**: now it is mute (§17.9-bis) |
-| ⛔ `07-b64-rete.py` | the «final count» line arrives **29 s late** when the pacer has a queue ⇒ the next round reads **the count of the previous round** — and the place still occupied makes it die of `GIA_ATTIVA_REMOTA` | ⭐ **cured** with `registro_posato()` (§17.9-bis) |
+| ⛔ `07-b64-rete.py` | the «final count» line arrives **29 s late** when the pacer has a queue ⇒ the next round reads **the count of the previous round** — and the slot still occupied makes it die of `GIA_ATTIVA_REMOTA` | ⭐ **cured** with `registro_posato()` (§17.9-bis) |
 | `09-b70-ritmo.py` | `sudo -S` covers only the **first** command of the chain ⇒ the §11.1 reader was not written | ⭐ **cured** with `catena_root()` (§17.9-ter) |
 | `09-b70-ritmo.py` | a trailing `< file` **steals stdin from `sudo -S`** ⇒ `righe_registro()` returns 0 in silence, and `attese_a_vuoto` becomes cumulative since startup — that is the column on which I1 decides whether to refuse to judge | ⭐ **cured**, `[M]` 1 604 for the round against 4 041 cumulative |
 | `09-b70-ritmo.py` | `01-b4-validatore.py` is not shipped by the ground ⇒ empty journal ⇒ **red on «does not detach» on a session alive for 797 frames** | ⭐ **cured**: the ground verifies it, the bench refuses |
@@ -3606,7 +3606,7 @@ The real count of the second was **4 632**. ⇒ The new predicate gave **red on 
 denominator** (4 152/4 999 = 0.831), while with the right denominator it was 4 152/4 632 = **0.896**, green.
 
 ⚠ **And the same delay produces a second, worse effect**: the next step died with
-`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — the previous one's place was **still occupied**, and it is the
+`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — the previous one's slot was **still occupied**, and it is the
 30 s lock of **§17.5**. ⇒ **A round can fail because of the round before**, and the `[audio]
 ricevuti 0` that came out of it is **exactly the number the old `a_non_si_apre` would have called
 green**. ⭐ The two defects of §17.4-bis and the ghost of §17.5 fed each other.
@@ -4016,7 +4016,7 @@ right binary**.
 
 ⛔ The obvious road — bringing `SILENZIO` from 30 s to 10 — **breaks**, `[M]` 16 Aug: between two
 authenticated packets of a **still but ALIVE browser** pass **15 004 / 15 005 / 15 002 ms**. It is the
-browser's keep-alive, not ours. ⇒ At 10 s **every client that watches and does not touch loses its place at
+browser's keep-alive, not ours. ⇒ At 10 s **every client that watches and does not touch loses its slot at
 every keep-alive round** — it is the regression already paid for on 16 Aug (*«una seconda scheda è entrata
 e ha preso il desktop del primo»*).
 
@@ -4026,20 +4026,20 @@ network pause of 12 s would be released **under the fingers**), the order silenc
 documents** that declare the number to the user.
 
 ⇒ **The road chosen is narrower and more targeted**: `--sfratto-ms N` (**0 = off**, default;
-recommended **15 000**). It fires **only when someone asks for that place**, never by itself, and **only between
+recommended **15 000**). It fires **only when someone asks for that slot**, never by itself, and **only between
 clients of the same user**.
 
 ⛔ **§8.2 is not violated, it is applied**: *«no client attached and **alive** is ever ousted»* —
 the occupant here is attached but **not alive**, and until now the only clock that distinguished them was the
 30 s one. ⭐ `torna_a_parlare()` restarts **only from `S_STACCATA`**: that is why the eviction changes the
-**state** and does not merely remove the place, or the ghost would stay `S_ATTIVA` without a place.
+**state** and does not merely remove the slot, or the ghost would stay `S_ATTIVA` without a slot.
 
 `[M]` **The ghost drops by 48 %**: from **32.13 s and 14 refusals** to **16.83 s and 7 refusals**. ⭐ And with
-the dead line on it drops to **~10 s with zero refusals** — the place becomes free at the first attempt.
+the dead line on it drops to **~10 s with zero refusals** — the slot becomes free at the first attempt.
 
-**Two different users** `[M]`: zero evictions, the second user enters on **their own** place with zero
+**Two different users** `[M]`: zero evictions, the second user enters on **their own** slot with zero
 refusals. ⚠ The line `⛔ SFRATTO NEGATO` **does not come out**, and it was predicted `[R]` before running: the
-register of places is indexed by name, so `POSTO_OCCUPATO` already implies «same user» and that
+register of slots is indexed by name, so `POSTO_OCCUPATO` already implies «same user» and that
 branch is not reachable. **The protection is done by the structure; the explicit check stays as a
 net** — the day `MAX_ATTACCATE` becomes the table of a multi-tenant server it would be
 the only thing to hold.
