@@ -28,7 +28,7 @@ fase 7»*); ⛔ what remains of 6 **stays open and does not close by itself**.
 > |---|---|
 > | **the measurement** | 49.95 blocks/s received against 50 produced — **zero loss**, **2 gaps** (at start-up) and queue stable at 311-341 ms |
 > | **the scene** | a **YouTube** video played in the remote session, judged by ear |
-> | ⛔ **and before that there were seven «fa schifo»** | §6.8, and it is the chapter that teaches: six cures out of eight were **real** faults that were not what the user was hearing |
+> | ⛔ **and before that there were seven «fa schifo»** | §6.8, and it is the chapter that teaches: six cures out of eight were **real** defects that were not what the user was hearing |
 >
 > ## ⭐⭐ AND THE CLIPBOARD IS DONE — **«clipboard funziona in entrambi i versi»**, 17 Aug 2026 evening
 >
@@ -130,13 +130,13 @@ on a dead device.
 ## 2 · The bench — ⛔ written BEFORE the product
 
 `PIANO.md` §0.3.4: *«il banco si certifica prima di essere creduto»*. And `PIANO.md` §«Fase 7» sets
-three rules that come from three real faults of v1, not from prudence.
+three rules that come from three real defects of v1, not from prudence.
 
 ### 2.1 · ⛔ One LISTENS, one does not count blocks
 
 `LEZIONI.md` §2.2, first line: *«il banco contava fotogrammi spediti e blocchi riscontrati; il
 difetto cambiava **i campioni** — l'audio era rumore a fondo scala»*. A bench that counts stays
-green for the whole time the fault is alive.
+green for the whole time the defect is alive.
 
 ⇒ **The judge measures the signal, not the traffic.**
 
@@ -158,7 +158,7 @@ green for the whole time the fault is alive.
 ⚠ **The fourth is the most important and the easiest to write badly**: without it *«I did not
 hear anything»* and *«I did not look»* look the same.
 
-> ### ⛔⛔ AND THE JUDGE HAD A FAULT THAT WOULD HAVE FAILED RIGHT CODE
+> ### ⛔⛔ AND THE JUDGE HAD A DEFECT THAT WOULD HAVE FAILED RIGHT CODE
 >
 > *Found on 17 Aug 2026 by the real audio bench (`07-b43`), while it was being written.*
 >
@@ -169,13 +169,13 @@ hear anything»* and *«I did not look»* look the same.
 > | purity | **0.2501** | **0.5001** | **1.000** | **1.000** |
 >
 > ⛔ The judge's threshold is **0.80**. ⇒ Half a second of analysis would have written *«it is not a
-> tone, it is noise — v1's fault»* **on a perfect tone**. It is `LEZIONI.md` §2.3: *«una prova
+> tone, it is noise — v1's defect»* **on a perfect tone**. It is `LEZIONI.md` §2.3: *«una prova
 > che boccia il codice giusto costa quanto una che promuove quello sbagliato»*.
 >
 > ⭐ The cure is not raising the threshold: it is that the judge **rejects** a window that is not a
 > whole number of seconds, instead of judging on a window it does not know how to evaluate.
 >
-> ⚠ And the reason is arithmetic, not a fault of Goertzel: 440 Hz in half a second is not a
+> ⚠ And the reason is arithmetic, not a defect of Goertzel: 440 Hz in half a second is not a
 > whole number of periods, and the energy spreads over the neighbouring lines. The judge measured
 > well a thing that made no sense to measure that way.
 
@@ -183,7 +183,7 @@ hear anything»* and *«I did not look»* look the same.
 >
 > `banchi/07-b40-sonda-audio.html`, function `giudica()`: dominant frequency (Goertzel, step
 > 1 Hz, 100-2000 Hz), RMS amplitude, and ⭐ **purity** — how much of the energy is in the
-> dominant line, which is what tells **a tone from full-scale noise**, that is the v1 fault
+> dominant line, which is what tells **a tone from full-scale noise**, that is the v1 defect
 > no block-counter saw (`LEZIONI.md` §2.2).
 >
 > | # | the case | `hz` | `rms` | purity | verdict |
@@ -204,7 +204,7 @@ hear anything»* and *«I did not look»* look the same.
 > ⭐ **Case 2 is the one that counts**: big-endian is **not** recognised from the frequency — the
 > judge reads 1000 Hz, a perfectly respectable number — ⛔ **it is recognised from the
 > purity, 0.142 against 1.000**. A judge looking only at the dominant frequency would have
-> given **green to full-scale noise**, which is literally v1's fault.
+> given **green to full-scale noise**, which is literally v1's defect.
 
 ### 2.2 · ⛔ The two sides synchronise with MARKERS, not with `sleep`
 
@@ -369,7 +369,7 @@ certified before being believed. The product is §4.2.
 | ⭐ `banchi/07-b43-audio-vero.sh` · `07-b43-giudizio.py` | the **real** audio bench: the session plays, the client collects, the judge listens. Port **7720**, own tree and socket |
 | ⭐ `banchi/07-b44-ritardo-opus.c` | the minimal program that asks `libopus` **one thing only**: does it accumulate blocks? (`CODER.md` §3.6) |
 
-### 4.3 · The stitching between parent and child — **17 Aug 2026**
+### 4.3 · The seam between parent and child — **17 Aug 2026**
 
 ⛔ **Audio crosses a process boundary, and it is the third time this happens for the same
 reason** — after `MSG_VIDEO` (phase 3) and `MSG_INPUT` (phase 4). By now it is a law
@@ -418,14 +418,14 @@ atomic. ⚠ And in the callback **nothing is written to the log**: the overflow 
 ⚠ The reference (`gnome-remote-desktop`) opens the capture on the sinks it **finds** and never
 creates a sink: with its code, here, not one sample would arrive — and without an error anywhere.
 
-> #### ⛔⛔ AND THE PORT FOUND A FAULT IN v1: **the wait that did not wait**
+> #### ⛔⛔ AND THE PORT FOUND A DEFECT IN v1: **the wait that did not wait**
 >
 > v1's `suono_ascolto_ferma()` declared *«il lucchetto del ciclo **è** l'attesa»*, and on that
 > line rested the permission to free the connection's context.
 >
 > ⛔ **It is false with `PW_STREAM_FLAG_RT_PROCESS`**: the callback comes from the **data thread**, which
 > that lock does not stop `[R]` (`pipewire/stream.h:150` and `:466`). ⇒ Whoever returned from there could
-> free the memory **while the real-time thread was still writing into it** — a fault
+> free the memory **while the real-time thread was still writing into it** — a defect
 > that shows up once in a while, at close, that is where nobody looks.
 >
 > ⭐ **Now the wait is in two steps**: an atomic delivery flag is switched off and one waits until the
@@ -475,7 +475,7 @@ judgement; this section is what was written afterwards.*
 | `src/figlio.c` | four new messages on the parent↔child socket (`APPUNTI_OFFERTA`, `APPUNTI_DAL_CLIENT`, `APPUNTI_DALLA_SESSIONE`, `APPUNTI_VUOLE`), the **third assembly table** and the **time backstop** of whoever pastes |
 | `src/rcp.c` + `.h` | the three messages of §7.4, the table of incoming streams, the five new hooks, and the **cure of the race with `Ctrl+V`** |
 | `src/webtransport.c` + `.h` | the incoming channel `0x02` (`G_UNI_APPUNTI`) and the three hooks that open a stream towards the client |
-| `src/main.c` | the **fourth stitching** of the same family: video, input, audio, clipboard |
+| `src/main.c` | the **fourth seam** of the same family: video, input, audio, clipboard |
 | `src/pagina.html` | the browser side: `clipboardchange` where it exists, the `paste` event where it does not, and writing to the local clipboard with the declared fallback |
 
 ⭐ **And `mutter.h` has a single new line**: `mutter_bus()`. The clipboard lives on the **same**
@@ -509,7 +509,7 @@ This is the part no bench would have asked for and the product did.
 
 | where | how much | which debt it pays |
 |---|---|---|
-| ⛔ **in the child** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a fault nobody connects to the clipboard |
+| ⛔ **in the child** (`figlio.c`, `APPUNTI_ATTESA_MS`) | **4000 ms** | the debt towards **Mutter**. A `SelectionTransfer` without an answer leaves the application that is pasting hanging **indefinitely**, and what the user sees is **a frozen desktop** — a defect nobody connects to the clipboard |
 | ⚠ **in the parent** (`rcp.c`, `APPUNTI_FONDO`) | **8000 ms** | that the **channel** does not stay blocked. Without it, a client that fails to answer once queues **all subsequent pastes**: «the clipboard worked once and then never again» |
 
 ⭐ **And the backstop towards Mutter is in the CHILD, not in the parent**, for a reason that is not convenience:
@@ -570,9 +570,9 @@ value one declares to have understood and does not have anywhere.
 | ⭐⭐ **the REAL chain is alive** (sink → monitor → Opus → socket → datagram) | 50 blocks/s | **397 blocks in 8 s = 49.6/s**, zero lost, zero discarded. The sink appears in `wpctl status` as **default**, `monitor.channel-volumes: true`. Scene: `prova2`'s GNOME session on the server, test tone **off** | `[M]` 17 Aug 2026, port 7710 |
 | ⭐⭐⭐ **and the session's sound ARRIVES** | 440 Hz | ⛔ *The first measurement said «silence», and it was the SCENE that was broken — see §6.5.* With the certified scene: `suono.c` delivers **PEAK 16383 out of 32767** (= half full scale, the exact amplitude of the tone) and the contiguous stretches give **440 Hz, rms 0.3535** — identical to what `pw-record` reads on the same monitor | `[M]` 17 Aug 2026, `07-b43` |
 | ⭐⭐ **and the volume GOVERNS** | I5 and §kde §10.5 | full volume **0.3536** · at 25 % **0.0078** (expected 0.005525) · mute **0.0**. ⇒ The trap of the monitor upstream of the volume **is not there**: `monitor.channel-volumes` is requested and works | `[M]` 17 Aug 2026, `07-b43`, against the product |
-| ⭐⭐⭐ **the real audio bench: 5 rounds out of 5** | the expected value written **beforehand** | **1-healthy** 440 Hz rms 0.3535 (expected 0.3536) · **2-silence** 0 Hz rms 0.0 · **3-frequency** 660 Hz · **4-volume-25** rms **0.0055** (expected 0.0055) · **5-mute** 0.0. ⛔ And rounds 2 and 3 are faults **grafted on purpose**: the bench sees them, so it is not blind | `[M]` 17 Aug 2026, `07-b43`, against the product |
+| ⭐⭐⭐ **the real audio bench: 5 rounds out of 5** | the expected value written **beforehand** | **1-healthy** 440 Hz rms 0.3535 (expected 0.3536) · **2-silence** 0 Hz rms 0.0 · **3-frequency** 660 Hz · **4-volume-25** rms **0.0055** (expected 0.0055) · **5-mute** 0.0. ⛔ And rounds 2 and 3 are defects **grafted on purpose**: the bench sees them, so it is not blind | `[M]` 17 Aug 2026, `07-b43`, against the product |
 | ⭐⭐ **and REDONE after the eight cures to the transport** | 5 out of 5 | **5 out of 5**, and ⭐ **better than before**: purity is **1.000** on all rounds with signal (it was **0.29** when blocks were being lost), and the judge could look at **96 000 samples** instead of 48 000 — because now there is enough **contiguous** sound to judge. ⛔ Redoing it was not a formality: the other green was from **before** the datagram queue, the postponement cap, coalescing and padding were touched — that is an old green on new code | `[M]` 17 Aug 2026, evening |
-| ⭐ **the datagram that did not leave** | 0 % loss | from **38.5 %** to **0.3 %**: 2994 sent, 8 refused, 1 thrown away for full queue out of ~3003. ⚠ On **Opus** the loss was already **zero** (0 out of 747): the fault bit the **PCM**, which costs 13 times the bandwidth | `[M]` 17 Aug 2026 |
+| ⭐ **the datagram that did not leave** | 0 % loss | from **38.5 %** to **0.3 %**: 2994 sent, 8 refused, 1 thrown away for full queue out of ~3003. ⚠ On **Opus** the loss was already **zero** (0 out of 747): the defect bit the **PCM**, which costs 13 times the bandwidth | `[M]` 17 Aug 2026 |
 | ⭐ **libopus does not accumulate** | `[?]` | **1000 blocks in, 1000 out, zero EAGAIN** ⇒ the `istante` of §6.3 belongs to the block that leaves | `[M]` 17 Aug 2026, `07-b44` |
 | ⚠ **Opus's pre-skip** | declared by nobody | `initial_padding` = **312 samples = 6.50 ms**, **constant** over a thousand packets. The decoder removes it by itself, so end to end it cancels out | `[M]` 17 Aug 2026, `07-b44` |
 | ⭐⭐ **the clipboard opens on a REAL GNOME session** | `EnableClipboard` granted | ⭐ `appunti della sessione accesi (solo testo, nei due versi) su /org/gnome/Mutter/RemoteDesktop/Session/u1`. ⛔ It is the first and for now **only** proof that `appunti.c` works against Mutter | `[M]` 17 Aug 2026, port 7730, user `prova` |
@@ -586,13 +586,13 @@ value one declares to have understood and does not have anywhere.
 
 *`PIANO.md` §0.3.2: it is filled in even when it looks bad.*
 
-### 6.1 · Two faults of the bench in the early afternoon, and both lied about the REASON
+### 6.1 · Two defects of the bench in the early afternoon, and both lied about the REASON
 
 ⭐ **Neither of the two gave a wrong result: they gave the right result with the wrong
 reason written beside it** — which is the form that costs half a day when it shows up on a
 number that counts.
 
-| # | the fault | how it showed | the cure |
+| # | the defect | how it showed | the cure |
 |---|---|---|---|
 | **1** | the server compared `self.path` **with the query inside**: `/?wt=…` is not `/`, so **404** | *«no carrier in 45 s»* — that is *«the page did not reach the end»*, while the page **had never been served** | the query is cut before the comparison |
 | **2** | `wt.ready` **may never return**, neither resolved nor rejected, and the probe had no ceiling | here too *«no carrier»*: the **launcher's** deadline written in place of the **connection's** deadline | a ceiling of 10 s, with the outcome **`SCADUTA`** distinct from the others |
@@ -606,7 +606,7 @@ case existed from before. Without that comparison, the suspect would have been t
 
 ### 6.2 · ⛔⛔ A wrong diagnosis that «improved» — and it almost bought me a change
 
-*It is the most instructive fault of the day, and it is not in the product: it is in my reasoning.*
+*It is the most instructive defect of the day, and it is not in the product: it is in my reasoning.*
 
 The first round of the tone gave **402 blocks out of 600** in 3 s — yield **67 %** — ⭐ with **zero blocks
 lost**: the step between the `istante`s was **always exactly 5000 µs**. I concluded *«the datagram
@@ -627,7 +627,7 @@ second at the head of every take**, and the queue had nothing to do with it.
 
 ⇒ ⭐ **The lesson is about method, and it holds beyond audio**: *a number that improves is not a confirmation*.
 Two points lie on a straight line by chance; the third cost thirty seconds. ⚠ And the symptom — a
-**percentage** — pointed towards the *rate*, while the fault was a **start-up delay**: two
+**percentage** — pointed towards the *rate*, while the defect was a **start-up delay**: two
 completely different places in the code. The form is that of `LEZIONI.md` §1.9, *the red pinned
 on the wrong suspect*, in a new variant: **the partial green that rises**.
 
@@ -640,7 +640,7 @@ on the wrong suspect*, in a new variant: **the partial green that rises**.
    worked»*;
 2. ⛔ **I shipped the laptop's `.o` files to the test machine too**, and `make` compiled
    nothing. ⭐ **The `ldd` check rejected it** — that is its job — but without that check
-   I would have measured the laptop's code believing it the server's: fault **D5**;
+   I would have measured the laptop's code believing it the server's: defect **D5**;
 3. ⛔ **I took `prova2`'s password from the wrong file**: `credenziali-banchi` belongs to the
    `prova2` **of the container**, not to the host's one that PAM verifies. ⚠ **It was already written**,
    in `banchi/06-b38-tela.sh`, with the words *«sono due utenti diversi con lo stesso nome, e le due
@@ -649,7 +649,7 @@ on the wrong suspect*, in a new variant: **the partial green that rises**.
 
 ---
 
-### 6.3-bis · And three faults of the real audio bench, found by running it
+### 6.3-bis · And three defects of the real audio bench, found by running it
 
 ⭐ None of the three could be seen by reading the code, and the third is worth it on its own:
 
@@ -664,13 +664,13 @@ on the wrong suspect*, in a new variant: **the partial green that rises**.
 
 ### 6.5 · ⛔⛔ «The audio is silence» was a broken measurement of MINE, and it took a refutation
 
-*17 Aug 2026. It is the costliest fault of the day, and it was not in the product.*
+*17 Aug 2026. It is the costliest defect of the day, and it was not in the product.*
 
 I had measured, and written, that the capture delivered silence: the sink was there, the `monitor_*` ports
 were there, `pw-play` reached the sink — ⛔ but «no link consumed the monitor» and «the capture
 node did not appear in the graph», while it declared 48 000 frames per second.
 
-⭐ **Three scene faults, all mine**, found by an agent sent to refute:
+⭐ **Three scene defects, all mine**, found by an agent sent to refute:
 
 1. ⛔ **the tone was not playing at all.** `pw-play` said so by name — *«no target node
    available»* — because **the sink is born with the first listener**, and in my rounds it started before.
@@ -719,7 +719,7 @@ And «not now» becomes «never» only if we throw it away.
 
 ⭐ **And the third step was asked for by the judge, not by me**: at 7.9 % loss it still read
 **465 Hz**, ⛔ and that number *is* the loss — concatenating the surviving blocks compresses time,
-and 440 / (1 − 0.054) ≈ 465. ⇒ The frequency read was a **loss meter**, not a fault
+and 440 / (1 − 0.054) ≈ 465. ⇒ The frequency read was a **loss meter**, not a defect
 of the sound.
 
 ⚠ **And the low cap protected from nothing**: the delay is already governed by the **queue** (eight
@@ -750,13 +750,13 @@ all'inizio»* — and it holds for every shared scene: sound is a shared scene.
 to the sink are **zero** before going on. *«I killed»* and *«nobody is playing any more»*
 are two different facts, and the next round needs the second.
 
-⇒ ⭐ **5 rounds out of 5**, and both grafted faults seen.
+⇒ ⭐ **5 rounds out of 5**, and both grafted defects seen.
 
-### 6.8 · ⛔⛔⛔ THE REAL FAULT, AND WHY IT TOOK SEVEN CURES TO GET THERE
+### 6.8 · ⛔⛔⛔ THE REAL DEFECT, AND WHY IT TOOK SEVEN CURES TO GET THERE
 
-*17 Aug 2026. It is the costliest chapter of the phase, and the fault was in one line.*
+*17 Aug 2026. It is the costliest chapter of the phase, and the defect was in one line.*
 
-**The fault**: **a single datagram per write pass** was sent, and the passes are ~25 per
+**The defect**: **a single datagram per write pass** was sent, and the passes are ~25 per
 second. The child produces **50**. ⇒ One went through, one stayed in the queue, and half of the audio
 died. ⛔ It was not the network, it was not the pacer, it was not the video: **it was the loop, which offered them one
 at a time**. And there was space to spare — a packet is **1452 bytes**, an Opus block **230**:
@@ -772,13 +772,13 @@ exactly half; arithmetic is.
 | 1 | postponing instead of discarding | 38.5 % → 7.9 % | real cure, but downstream |
 | 2 | postponing tied to **time** and not to calls | 7.9 % → 0.3 % *locally* | real cure |
 | 3 | coalescing with the video packet (`MORE`) | no change for the user | ⛔ wrong diagnosis: *«the video eats the window»* — and its frames were **70-1300 bytes** |
-| 4 | real-time priority (**R26**) | no change | ⭐ a **real and necessary** fault, but not this one |
-| 5 | GSO padding (`PADDING`) | no change | ⭐ real fault, not this one |
-| 6 | the packet I threw away with the acknowledgements inside | no change | ⭐ real and big fault, not this one |
+| 4 | real-time priority (**R26**) | no change | ⭐ a **real and necessary** defect, but not this one |
+| 5 | GSO padding (`PADDING`) | no change | ⭐ real defect, not this one |
+| 6 | the packet I threw away with the acknowledgements inside | no change | ⭐ real and big defect, not this one |
 | ⭐ **7** | **several datagrams in the same packet** | 50 % → 18 % | **the cause** |
-| ⭐ **8** | and the postponement cap removed: **the queue decides** | 18 % → **0 %** | the tail of the fault |
+| ⭐ **8** | and the postponement cap removed: **the queue decides** | 18 % → **0 %** | the tail of the defect |
 
-⇒ ⛔ **Six cures out of eight were real faults that were not what the user was hearing.** Each one
+⇒ ⛔ **Six cures out of eight were real defects that were not what the user was hearing.** Each one
 seemed confirmed by reasoning and none by measurement, because **the measurement that was needed did not
 exist**.
 
@@ -789,7 +789,7 @@ how many it sends and how many it refuses, the session how many samples it deliv
 that is of the side that LISTENS — nothing was known**: how many arrive, how many are played,
 how many gaps playback makes.
 
-⇒ For six cures I cured **the side that speaks**, measuring it, while the fault could be seen only by
+⇒ For six cures I cured **the side that speaks**, measuring it, while the defect could be seen only by
 putting the two sides on the same line. On the day those counters existed, the diagnosis
 took **one step**:
 
@@ -801,7 +801,7 @@ cushion, the main thread) pointing to the only culprit left.
 
 ⚠ It is `CODER.md` §3.8 — *«si verifica dal lato che deve ricevere»* — and I had applied it to the
 **content** (the judge listens to the samples) and **not to the rate**. A bench that listens to *what*
-arrives and not *when* it arrives is blind to half the possible faults.
+arrives and not *when* it arrives is blind to half the possible defects.
 
 ⛔ **And the endpoint that was needed cost thirty lines** (`/diario` in `pagina.c`): the page's
 diagnostic box was not enough, because with the desktop on the page is full screen and that
@@ -827,7 +827,7 @@ gnome-shell --headless --no-x11
 ⚠ **And the trap inside the trap**: `/tmp/.X11-unix` contained `X0` and `X1`, owned by
 `prova`. A bench that had believed those sockets would have pointed at a session **dead since 15
 Aug** and would have given red to the product. ⛔ Step 0 of `07-b45` looked for them exactly like that: the
-first draft of the bench contained the fault the bench existed to avoid.
+first draft of the bench contained the defect the bench existed to avoid.
 
 #### And the fallback did not hold either
 
@@ -856,7 +856,7 @@ found in a **real application with a focused window**, driven by REMOTIX's input
 the user's scene. ⚠ Or one accepts that that direction is judged by **him**, which is invariant I8
 and not a fallback.
 
-### 6.10 · ⛔ AND TWO FAULTS OF THE TEST CLIENT, both mine, both disguised
+### 6.10 · ⛔ AND TWO DEFECTS OF THE TEST CLIENT, both mine, both disguised
 
 Writing the clipboard channel into the second reader of `RCP.md`.
 
@@ -877,7 +877,7 @@ bytes of a frame ended up inside the HTTP/3 layer. ⚠ The symptom was
 `Only one QPACK decoder stream is allowed` — **an HTTP/3 error on a connection where HTTP/3
 had nothing to do with it**, and the connection dropped halfway through the round.
 
-⭐ Both are the same form: **a fault of the bench disguised as a fault of the product**, and it is
+⭐ Both are the same form: **a defect of the bench disguised as a defect of the product**, and it is
 the reason `PIANO.md` §0.3.4 wants the bench certified before being believed.
 
 ---
@@ -887,7 +887,7 @@ the reason `PIANO.md` §0.3.4 wants the bench certified before being believed.
 *17 Aug 2026, on `audio.c`, `webtransport.c`, `pagina.html`, `rcp.c`, `main.c`. The reviewer
 received **the code and the specification, not the reasoning of whoever wrote it** (`PIANO.md` §0.4).*
 
-| # | the fault | why it was serious |
+| # | the defect | why it was serious |
 |---|---|---|
 | ⛔⛔ **4** | `wt_battito_ns()` and `tono_passo()` had **two different guards for the same fact** | in every case covered by one and not by the other, the beat came back an instant **in the past** and nobody moved it: `poll()` with timeout 0, **loop at 100 % CPU**. ⚠ And the case is normal — *a browser closes the session and keeps the connection alive*, written in our own file |
 | ⛔⛔ **1** | the page declared `opus` **without asking itself whether it could decode it** | §4.3 obliges the server to follow the client's order of preference ⇒ on an engine without `AudioDecoder` the server **had to** choose Opus: 50 datagrams/s into a `continue`, and the PCM — which exists to be the positive control — never came into play. ⭐ The video, in the same file, already filtered with `isConfigSupported` |
@@ -931,11 +931,11 @@ on audio — the encoder road, the queue depth, how sound is played in the page 
 > ⛔ **This section was lying.** It was stuck at 17 Aug *«after the probe and before the product»* and
 > listed as open things closed that same evening by the user's judgement — *«problema audio
 > risolto»*, *«clipboard funziona in entrambi i versi»*. ⚠ A phase document that tells a
-> state of four days ago is the kind of fault `PIANO.md` §0.1 exists against: whoever reads it
+> state of four days ago is the kind of defect `PIANO.md` §0.1 exists against: whoever reads it
 > redoes work already done, or looks for a fault where there is none. ⇒ Here is the **real** state, and the old
 > list was removed instead of being left beside it.
 
-### ✅ Real faults, open: **NONE** — closed on 22 Aug 2026 by the user's judgement
+### ✅ Real defects, open: **NONE** — closed on 22 Aug 2026 by the user's judgement
 
 > ⭐⭐ *«Le 4 prove che ho eseguito prima davano un audio OK»* (four engines: Linux Chrome, Linux
 > Firefox, Windows Chrome, Android Chrome), and to the direct question about the delay: *«**ho già scritto
@@ -948,7 +948,7 @@ on audio — the encoder road, the queue depth, how sound is played in the page 
 
 > ⛔ **An hour ago it said here «real faults open: none».** It was the judgement *«audio e video
 > perfetti»* taken literally, ⚠ and the user clarified it right after, on the Windows PC:
-> *«**il ritardo di 400 ms fra audio e video in generale te lo confermo**»*. ⇒ The fault is there, it is
+> *«**il ritardo di 400 ms fra audio e video in generale te lo confermo**»*. ⇒ The defect is there, it is
 > **general** (not of one platform), and it is **audible**: what is seen and what is heard do not
 > go together.
 
@@ -1014,7 +1014,7 @@ next block goes to its place in time, not to the back of the line. ⛔ `AUDIO_CU
 lowered**: with the anchor it must cover only the arrival jitter, which nobody has measured yet.
 
 ⚠ **And the cure is NOT proven where it counts**: on the home network, in 100 s, `mancati 0` — the scene did not
-get a chance to show the fault. What is proven is that **it breaks nothing** (60 s: queue
+get a chance to show the defect. What is proven is that **it breaks nothing** (60 s: queue
 251-259 flat, GAPS 0, full 0, `usciti 2806 su 2823`) and that the algorithm has the declared properties
 (`07-b61-ancora.js`: **22 cases out of 22**, which cuts `suona()` out of `pagina.html` and **runs** it).
 
@@ -1053,7 +1053,7 @@ without real time — stays open but **is not this one**.
 | «the clipboard has never run against anything» | the user's judgement of the evening of 17 Aug, and then benches `07-b53`, `07-b54`, `07-b56` |
 | ⛔ ~~«the audio queue at 400–420 ms»~~ | **it is NOT closed, and the wrong line lasted an hour**: the user clarified *«il ritardo di 400 ms fra audio e video te lo confermo»* ⇒ it went back to §8, with the cause |
 | «nobody has yet listened to the audio from a phone» | ⭐ now someone has listened to it, and it is the user — §9.7 |
-| «the Opus bitrate: 🔸 derived, never judged» | ⭐ judged **on the result**: 96 kbit/s produced a listening the user calls clean. ⛔ **The cushion is not**: that is 250, not 60, and it is the fault of §8 |
+| «the Opus bitrate: 🔸 derived, never judged» | ⭐ judged **on the result**: 96 kbit/s produced a listening the user calls clean. ⛔ **The cushion is not**: that is 250, not 60, and it is the defect of §8 |
 | «the bench's external arbiter does not exist» | ⭐ true, and **it is not worked around**: §6.9. The benches drive real browsers with Marionette and CDP, and the session with `wl-copy`/`wl-paste` |
 | `DISPLAY` of the «prova» session · `xclip` on the test machine | ⛔ no longer needed: the X11 bridge is not there (`gnome-shell --no-x11`), and the benches do not use it |
 | pasting with the **mouse** (right button → «Incolla») | §9.5 — four links, and `07-b56`: 3 out of 3 per engine |
@@ -1066,7 +1066,7 @@ without real time — stays open but **is not this one**.
 
 ### ⭐⭐ `AV = aoff − voff`: the distance is measured continuously, on any content
 
-⛔ **The fault the user confirmed had no yardstick**, and that is why four
+⛔ **The defect the user confirmed had no yardstick**, and that is why four
 green links coexisted with a wrong experience: **no counter looks at two streams
 together**. Now there is one, and it did not cost a new bench — it cost **two numbers**:
 
@@ -1111,13 +1111,13 @@ a delay that accumulates.
 > −750 to 50, a jump of exactly 800**. The yardstick sees.
 >
 > ⚠ **But it has a dead zone one cushion wide, and it goes on the label**: an increase **smaller than the
-> residual cushion** does not move `aoff` — ⭐ and it is not a fault of the yardstick: it is that **the sound really comes out
+> residual cushion** does not move `aoff` — ⭐ and it is not a defect of the yardstick: it is that **the sound really comes out
 > at the same time**.
 >
 > ⇒ And *«queue 253, cushion 250»*: ⛔ **it is not a confirmation** — it is the cushion read twice. The term
 > that makes `AV` informative is **`voff`**, which observes at the glass.
 >
-> ⭐ **And the remark had hit three real faults, all cured**: `aoff` updated on blocks
+> ⭐ **And the remark had hit three real defects, all cured**: `aoff` updated on blocks
 > **scheduled** even if later cut (⇒ now only on `onended`, that is on what **was heard**);
 > **it did not expire** — audio stopped, last value for ever, `AV` healthy on a mute session (⇒ it expires
 > after the queue ceiling and answers `null`, **without new constants**); and *«it is the exact twin of
@@ -1138,7 +1138,7 @@ a delay that accumulates.
 ⇒ ⭐ **What the user had judged on 17 Aug holds** against all of the night's changes: the
 clipboard in both directions, the canvas, the click.
 
-### ⛔ And a fault of the bench that gave RED TO THE PRODUCT — the coordinator's fault
+### ⛔ And a defect of the bench that gave RED TO THE PRODUCT — the coordinator's fault
 
 Making the user of the clipboard benches parametric (⛔ they logged in as **`prova`**, which is
 the user's: with his session alive it is the single-slot trap) I parametrised **only one
@@ -1274,20 +1274,20 @@ stream of key frames only. ⛔ **It was not written**: one cure at a time, and t
 **product decision**. The reasoning and the numbers sit next to `video_sgombra()` so they are not
 lost.
 
-### ⛔ And a bench fault that had moved the diagnosis upstream
+### ⛔ And a bench defect that had moved the diagnosis upstream
 
 `[M]` The line *«vuole una CHIAVE»* appears in **two different messages**: the **request** leaving from
 `video_regola()` and the **refusal** that `rcp.c` writes. The «806 key frame requests» of the first report
 were mostly **refusals**: counted separately, in the same round, they are **105 requests against 346
 refusals**. ⇒ **Two lines that look alike must be counted separately, or the diagnosis points where the
-fault is not.**
+defect is not.**
 
 ⏳ `[?]` **And one thing remains unmeasured**: the spiral is proven with the **test client**, not against
 a real browser. That test is done by the coordinator on the merged product.
 
 ## 8-quater · ⛔⛔ 22 Aug 2026 — **the delay came back by itself**, and «the sound starts at the first click» was an empty promise
 
-### ⛔⛔ The new fault: the queue swells mid-session, and stays swollen
+### ⛔⛔ The new defect: the queue swells mid-session, and stays swollen
 
 `[M]` A **five-minute round on the iron**, load 2.25: the queue jumped from **266 to 519 ms in a
 single window** (`BUCHI 1`, `mancati 4`) and **stayed there** for the rest of the session.
@@ -1300,7 +1300,7 @@ on ⇒ **the heap ends up in the future and the cushion swells by as much as the
 pull window was already closed.
 
 ⭐ **The cure is one line**: the pull window reopens at every **re-anchoring** — ⛔ not at every
-block, which was the silent fault of 21 Aug (`tirate 4506 su 4508`, silence with all counters
+block, which was the silent defect of 21 Aug (`tirate 4506 su 4508`, silence with all counters
 green). In healthy sessions it reopens **zero times**.
 
 | same 5 minutes, load 2.25 | before | after |
@@ -1309,14 +1309,14 @@ green). In healthy sessions it reopens **zero times**.
 | GAPS | 1 | ⭐ **0** |
 | losses | `mancati 4` → jump and swelling | `mancati 7` → ⭐ **nothing**, neither jump nor swelling |
 
-### ⛔⛔ And the bench had given **46 out of 46** to the code that still carried the fault
+### ⛔⛔ And the bench had given **46 out of 46** to the code that still carried the defect
 
 The stall scene was written with a heap of **20 blocks**: `250 + 400 = 650 ms`, that is
 **beyond the 600 ceiling**, and the **overflow put things right by itself**. ⇒ The bench acquitted. With
 **13 blocks** (510 ms, **below** the ceiling) the fault shows.
 
-⭐⭐ **And it is the reason the fault was invisible: the safety net existed and passed over it.**
-⚠ A scene chosen *beyond* the guard limit tests the guard limit, not the fault —
+⭐⭐ **And it is the reason the defect was invisible: the safety net existed and passed over it.**
+⚠ A scene chosen *beyond* the guard limit tests the guard limit, not the defect —
 and it is a new form, a cousin of `LEZIONI.md` §1.20.
 
 ### ⭐ «The sound starts at the first click on the page» — it was an empty promise
@@ -1339,7 +1339,7 @@ a `resume()` retried every 5 s of thrown-away blocks.
 
 ### ⭐ And the drift between the clocks: **the number was mine and it was wrong**
 
-⛔ The **0.7-1.4 ms/s** declared in §8 were **largely the fault above read as drift**.
+⛔ The **0.7-1.4 ms/s** declared in §8 were **largely the defect above read as drift**.
 With that removed, over five clean minutes: **~0.07 ms/s** (±0.05). ⇒ From the cushion to the 600 ceiling
 it would take **~80 minutes**, not four.
 
@@ -1394,7 +1394,7 @@ scenes — not changed today, because it would make yesterday's numbers incompar
 
 #### ⛔ And the watcher printed «on» without having turned anything on
 
-*(The fault was the coordinator's, who had written that file; the cure is the agent's.)* `& echo
+*(The defect was the coordinator's, who had written that file; the cure is the agent's.)* `& echo
 acceso` **always** succeeds, the start-up log **was read by nobody**, and the watch file
 was a **fixed** path. ⇒ The watcher does not start, the user does the session, and one reads **yesterday's
 watch**.
@@ -1424,7 +1424,7 @@ one.
 ritardo audio/video è ok»*. ⇒ The *«audio OK»* of the four tests included **synchronisation**, not
 only the cleanliness of the stream.
 
-⛔ **It was the last real fault of phase 7**, and it is the one the user had confirmed on the evening of the 21st
+⛔ **It was the last real defect of phase 7**, and it is the one the user had confirmed on the evening of the 21st
 with *«il ritardo di 400 ms tra audio e video in generale te lo confermo»*. ⇒ Between the two sentences there
 are: the **anchor to the server's `istante`** (the queue is no longer a one-way tank), the
 **reopening of the pull at every re-anchoring** (the queue no longer swells mid-session), the cure
@@ -1432,7 +1432,7 @@ of the **key-frame spiral** (the audio no longer dies when the line narrows) and
 that now really turns the sound on.
 
 ⚠ **And the `AV` measurement still remains to be retaken** (§8-bis, with the cured `aoff`): it is no longer needed to
-decide whether the fault is there — the ear decided that — ⭐ it serves to **notice if one day it
+decide whether the defect is there — the ear decided that — ⭐ it serves to **notice if one day it
 comes back**, which is a different and equally useful job.
 
 ⇒ ⭐ **And the only remark left belongs to another phase**: graphics performance, which is
@@ -1505,7 +1505,7 @@ greens do not replace it.
 
 ### 9.3 · ⛔⛔⭐ «SI È BLOCCATO FIREFOX CON LA CLIPBOARD» — and it was not Firefox
 
-*20 Aug 2026, fault reported by the user while testing the two browsers. ⚠ It was not the
+*20 Aug 2026, defect reported by the user while testing the two browsers. ⚠ It was not the
 browser freezing: it was **our page** sending `ERRORE_PROTOCOLLO` and closing the session — and from
 outside it looks like an image that stops.*
 
@@ -1538,7 +1538,7 @@ superseded one the text served is the *current* one.
 
 *It is the value of `banchi/07-b53-appunti-corsa.py`, and it is the reason it exists.*
 
-| | the fault | how it showed |
+| | the defect | how it showed |
 |---|---|---|
 | 1 | **I deleted the record at first use** | a second answer for the same transfer — legitimate — found the record empty and closed the session. ⇒ The right question is *«did I EVER ask for it?»*, not *«do I have one in flight?»* |
 | 2 | ⛔ **I marked the request AFTER the `await`** | and the answer can arrive before the wait resolves: ⭐ **green on Firefox, red on Chrome**, by a tenth of a millisecond. ⇒ The fact is marked **before** delivering, and the identifier put in the message is marked — not the one read back afterwards |
@@ -1556,15 +1556,15 @@ the answer. ⛔ It is white-box, it touches `REMOTIX.appunti`, **and it declares
 what it verifies is the **rule**, not the timing.
 
 ⭐ **And it certifies itself**: with the old line put back, `[M]` the bench sees the session close with
-`motivo=0x0b` — the same face as the user's fault. With the cure put back, **4 rounds out of 4 green,
+`motivo=0x0b` — the same face as the user's defect. With the cure put back, **4 rounds out of 4 green,
 Firefox and Chrome**.
 
-⛔ **And a fault I made while curing**, because it is the part that teaches: to expose the state
+⛔ **And a defect I made while curing**, because it is the part that teaches: to expose the state
 to the bench I had hooked `APPUNTI` to the `window.REMOTIX` box, which runs **long before** its
 declaration — reading a `const` in its dead zone stops **the whole rest of the script**.
 ⚠ The symptom named none of this: the login form lost its handler and the
 page ended up at `GET /?utente=…&parola=…`, that is **the password in the address bar**.
-A declaration-order fault turned, for two minutes, into a privacy fault.
+A declaration-order defect turned, for two minutes, into a privacy defect.
 
 ---
 
@@ -1576,7 +1576,7 @@ browser's path.*
 
 #### The reproduction, and it is the part that decides
 
-⛔ **In headless the fault does NOT show**: the `paste` event arrives anyway. Not on X11 (Xvfb) either.
+⛔ **In headless the defect does NOT show**: the `paste` event arrives anyway. Not on X11 (Xvfb) either.
 ⭐ It shows in **a nested Wayland compositor** (`cage`), with the text copied from **another
 application** — that is the user's environment. `[M]` The page's diary, three lines:
 
@@ -1623,7 +1623,7 @@ still alive after the paste?*** — because a cure that fixes the clipboard and 
 a terrible deal.
 
 ⛔ **And it uses no special permission**: Firefox's test preferences
-(`dom.events.testing.asyncClipboard`) would switch off precisely the fault being looked for. The clipboard is
+(`dom.events.testing.asyncClipboard`) would switch off precisely the defect being looked for. The clipboard is
 filled with a **real** `Ctrl+C` and read with a **real** `Ctrl+V`. ⚠ And the gesture that unlocks
 writing must be a **click from the driver**: an event fabricated in JavaScript is not
 a «user activation», and the browser refuses anyway.
@@ -1689,7 +1689,7 @@ in those 114 ms the child wrote *«gli appunti della sessione non ci sono: l'off
 clipboard opens. It is the same shape as `rcp.c`'s backlogged question: instead of delaying
 something for everyone, one stitches it back.
 
-**4 · ⛔⛔ And the new announcement KILLED the paste that had provoked it.** The fault was told by
+**4 · ⛔⛔ And the new announcement KILLED the paste that had provoked it.** The defect was told by
 Mutter in its own words: `[M]` *«SelectionWrite per la richiesta 2 è stata rifiutata — Transfer serial
 2 doesn't match any transfer request»*.
 ⚠ Offering the selection to the compositor (`SetSelection`) **cancels the transfers in flight**: it is the
@@ -1724,7 +1724,7 @@ Firefox every re-read costs the little «Incolla» button.
 clicking**, not in a corner nobody looks at. And `Ctrl+V` stays free on both
 engines.
 
-#### ⛔ Three faults of the bench, and two would have declared a healthy product broken
+#### ⛔ Three defects of the bench, and two would have declared a healthy product broken
 
 1. **Chrome did not go onto the bench's screen.** Without `--ozone-platform=x11` it takes Ozone/Wayland
    and attaches to the **real** graphical session: it read **another** clipboard, and `readText()`
@@ -1741,7 +1741,7 @@ engines.
 is **not** turned on, since it would switch off precisely the thing to be measured. The bench pays the
 price in front of everyone and **reports how many times**.
 
-### 9.6 · ⛔⛔⭐ «COME UNA SESSIONE LOCALE» — the directive, and the fault it brought out
+### 9.6 · ⛔⛔⭐ «COME UNA SESSIONE LOCALE» — the directive, and the defect it brought out
 
 > *«L'esperienza dell'utente con REMOTIX dev'essere quanto più vicina possibile all'esperienza con
 > una sessione grafica locale. […] niente trucchi, pulsanti strani o soluzioni tecniche che si
@@ -1786,7 +1786,7 @@ does not**. ⇒ Whoever connects loses nothing, and the mouse-paste road stays o
 ⇒ ⭐ The lesson, and it is the same as always: **the cure goes where the information is**. Neither the page
 nor the protocol knows what the desktop's clipboard contains; the child does.
 
-#### ⛔ And three more faults of the bench, all declaring a healthy product broken
+#### ⛔ And three more defects of the bench, all declaring a healthy product broken
 
 1. **`wl-copy` killed by the bench's `timeout`**: it forks to *serve* the selection, and the
    `timeout 12` wrapping the script took it away along with the group. ⇒ `setsid`, and the copy
@@ -1805,7 +1805,7 @@ nor the protocol knows what the desktop's clipboard contains; the child does.
 | | Firefox | Chrome |
 |---|---|---|
 | mouse paste (`07-b56`) | ⭐ 3 out of 3 | ⭐ 3 out of 3 |
-| the desktop clipboard survives the connection | ⭐ yes | ⚠ not measurable on its own *(see fault 3; the cure is in the child, not in the engine)* |
+| the desktop clipboard survives the connection | ⭐ yes | ⚠ not measurable on its own *(see defect 3; the cure is in the child, not in the engine)* |
 | `Ctrl+V` in both directions (`07-b54`) | ⭐ | ⭐ |
 | the race of §7.4 (`07-b53`) · the canvas and the click (`07-b51`) | ⭐ · ⭐ 4/4 | ⭐ · ⭐ 4/4 |
 | Firefox's little «Incolla» button | ⚠ **every time** | never |
@@ -1820,11 +1820,11 @@ nor the protocol knows what the desktop's clipboard contains; the child does.
 morning — **8 935 blocks received, 8 933 played, 2 gaps in 3 min 30** — but a green counter has
 never closed anything in here.
 
-⛔ **And it closes the fault that in the morning was the only real one open**: the audio queue settling
+⛔ **And it closes the defect that in the morning was the only real one open**: the audio queue settling
 at **401 → 421 ms**. ⚠ The measurement was not wrong, and it was not «explained»: it was **judged**.
 Four tenths of a second of queue can be heard in a scene — a metronome, a video with lips in
 frame — and in this one they were not heard. ⇒ The number stays written where it is, as a number; it stops
-being a fault.
+being a defect.
 
 ⭐ **With this, phase 7's audio has three user judgements, on three different media**: the
 YouTube video from the desktop (§9.1), the clipboard in both directions (§9.2-bis), and now **a phone**.
@@ -1838,7 +1838,7 @@ conditions*** (`DECISIONI.md` §0.1-bis):
 | ⛔ it does **not** hold for | **Firefox for Android** — declared incompatible by the user the same day (`DECISIONI.md` §7.18) |
 | remains unmeasured | the **datagram on a non-local network**, and the **real-time priority** inside the child |
 
-#### ⛔ 9.7-bis · And an hour later, the clarification that REOPENS the fault — **«400 ms fra audio e video, te lo confermo»**
+#### ⛔ 9.7-bis · And an hour later, the clarification that REOPENS the defect — **«400 ms fra audio e video, te lo confermo»**
 
 > *«Su Windows ci siamo quasi, però a un certo punto l'audio è a scatti.»* → monitored session
 > with `07-b60` → *«**Audio a scatti non accaduto, era un problema del mio PC Windows. Il ritardo di
@@ -1853,8 +1853,8 @@ conditions*** (`DECISIONI.md` §0.1-bis):
 
 ⚠ **And the first judgement was not wrong: it was less precise.** *«Audio e video perfetti»* meant
 *each stream is clean* — and it is true, `[M]`: zero losses on every line of every link. ⛔ What is not
-clean is the **distance between the two**, and a synchronisation fault does not show in any counter that
-looks at one stream at a time. ⇒ **It must be written here**, because it is the form of fault this phase knows how to
+clean is the **distance between the two**, and a synchronisation defect does not show in any counter that
+looks at one stream at a time. ⇒ **It must be written here**, because it is the form of defect this phase knows how to
 manufacture best: four links all green, and the wrong experience.
 
 ⇒ The cause, the measurement on the Windows session and the named cure are in **§8**.

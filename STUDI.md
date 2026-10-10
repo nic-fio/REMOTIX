@@ -186,7 +186,7 @@ dopo cinque minuti»*.
 
 ⚠ **And it touches a promise**: `SPECIFICHE.md` §5.3 says that a client silent for 30 seconds **is
 detached**. A frozen tab is silent — so the phone in the pocket detaches by itself. It is not a
-fault (the session survives, `DECISIONI.md` §4.1), **but it is a behaviour to be declared**, and
+defect (the session survives, `DECISIONI.md` §4.1), **but it is a behaviour to be declared**, and
 today it is not written anywhere.
 
 **And a thesis of mine, which must be attributed instead of passed off as a conclusion of the reports** *(R17)*:
@@ -388,7 +388,7 @@ It said: *«la Keyboard Lock esiste solo su Chrome ed Edge, e solo a schermo int
 
 #### 5.4 ⭐ Three gifts from reading other people's code
 
-1. ⛔ **The cure for the modifier left down**, which for us is the most serious fault because **the
+1. ⛔ **The cure for the modifier left down**, which for us is the most serious defect because **the
    session survives the connection**: Guacamole resynchronises the modifier state
    **from mouse events** `[R]`. There is no other way, and nobody would have invented it;
 2. Chromium's `KeyboardEvent.code` → **evdev** table, canonical and **without gaps from 1 to 94**
@@ -489,8 +489,8 @@ conversion in GPU `[R]`. It is also the only one that works on all three engines
 > ⇒ ⭐ **The code stays in the tree behind `#video=worker`, OFF**, precisely so that on the day of the
 > real GPU the number is redone without rewriting anything (`DECISIONI.md` §2.8).
 > ⚠ **And the switch reads the FRAGMENT, not the query string**, and it is a consequence of a
-> fault: `?video=worker` gets **404** (`src/pagina.c` · `servi()`). The syntax with `?` will become valid again
-> when that fault is cured.
+> defect: `?video=worker` gets **404** (`src/pagina.c` · `servi()`). The syntax with `?` will become valid again
+> when that defect is cured.
 
 ⚠ *The line «e impone la forma della pagina: il video vive nel worker, l'input nel thread
 principale» **falls with the worker**: today video and input are both on the main thread, and
@@ -520,7 +520,7 @@ of the two declares a delay figure**.
 
 #### 6.3 The bench, and its blind piece
 
-The link of `DECISIONI.md` §2.6 is built like this: `t0` before sending, `t1` as the **first line**
+The loop of `DECISIONI.md` §2.6 is built like this: `t0` before sending, `t1` as the **first line**
 of the decoder callback, then you draw, and **only afterwards** you read the mark with a
 read of 16×16 pixels. ⛔ **That order is binding**: reading first would be a readback from the
 GPU, and would distort the measurement it is taking.
@@ -529,7 +529,7 @@ GPU, and would distort the measurement it is taking.
 |---|---|
 | ⛔ **P1, the decisive control** | the server delays by **N known milliseconds**, and the median **must rise by exactly N**. A bench that does not do this does not know it is measuring |
 | ⛔ **P2 and P3, and P3 had fallen** | **P2**: the detector finds the colour **that is there**. ⛔ **P3**: it does **not** find the one that **is not there**. *S4 §4.2: «se dice sempre sì, si sta misurando zero e si è felici a torto» — and a detector that always says «I saw the mark» **passes P1 too**, because the N ms add up identically. Restored by finding **R3.1***, 9 Aug |
-| ⛔ **P5, out of order** | frames arrive on independent streams: a link that does not cope with it measures the queue instead of the delay. ⛔ **13 August: P5 WAS NOT RUN, and now it says so.** After three injectors `scavalcati = 0` — and *«zero fuori ordine»* is not «the link holds», it is **«the phenomenon did not show up»** (`LEZIONI.md` §1.9). Before, the bench declared it **green** |
+| ⛔ **P5, out of order** | frames arrive on independent streams: a loop that does not cope with it measures the queue instead of the delay. ⛔ **13 August: P5 WAS NOT RUN, and now it says so.** After three injectors `scavalcati = 0` — and *«zero fuori ordine»* is not «the loop holds», it is **«the phenomenon did not show up»** (`LEZIONI.md` §1.9). Before, the bench declared it **green** |
 | ⭐ **P5 — and the cause of out-of-order is measured** | ⛔ **it does not arise (only) from the network: it arises from the SIZE of the frame.** `stream_video` fires on **completion** of the stream ⇒ the arrival order is **the order of sizes**, not that of departure, and **a big keyframe is overtaken by the deltas** that leave after it. ⚠ And the protocol pays the bill: an overtaking **costs a keyframe** (`RCP.md` §5.2, §6.2 — «la regola dell'ordine si applica prima di quella della misura»). ⇒ An injector that delays packets does not reproduce the phenomenon: **whoever changes the sizes reproduces it** |
 | ⛔ **P6, the clock grain** | without the two cross-origin isolation headers, on Firefox and Safari the timers fall on a **1 ms** grid — on a cap of **50**. ⚠ And `SPECIFICHE.md` §11.5 makes it a **product constraint**, not a bench tuning (O11) |
 | ⛔ **P7, the rate as a path control** | the delivered rate says whether you are measuring the road you think |
@@ -551,7 +551,7 @@ In order, and each with its positive control. **None requires a line of product 
 | **S2** | HEVC Main10 in hardware **on the real phone** — saturation, canary, decay | it decides what the page declares, not whether the project exists (`DECISIONI.md` §2.7) |
 | **S3a** | the Keyboard Lock on **DeX** | it is the primary use, and it is a `[?]` |
 | **S3b** | the PWA on Chrome for Android | it is worth the whole keyboard (§1.2 B) |
-| **S4** | the delay link, with the known delay as control | it gives the number, and **the measurement of the blind piece** |
+| **S4** | the delay loop, with the known delay as control | it gives the number, and **the measurement of the blind piece** |
 
 > ⛔ **And three probe labels were NOT born here**, contrary to what `FASI.md` §01-filo-nudo
 > declared: **S5** (the canvas the client declares), **S6** (the payload of a datagram) and
@@ -1759,7 +1759,7 @@ age** before redrawing it (`drm_virtual_egl_layer.cpp:76-88`,
 | Recycled buffers | 4 | 2–4, default 3 |
 | Declared damage | yes | yes, up to 16 rectangles, then the *bounding rect* |
 
-> ✅ **Direct consequence for the fault that keeps zero-copy off on GNOME.** R29's accumulation
+> ✅ **Direct consequence for the defect that keeps zero-copy off on GNOME.** R29's accumulation
 > surface **is not needed on KWin**: the damage serves to avoid re-encoding what has not changed,
 > not to rebuild the frame. Whoever brings capture to KDE does not inherit that debt.
 
@@ -1800,7 +1800,7 @@ llvmpipe»*.
 > ⛔ **`LEZIONI.md` §8 records as a dead end «aspettare la *fence* implicita del DMA-BUF: non
 > cambia niente, è quella sbagliata».** KWin's code says why in general: **there is no
 > implicit fence to wait for if whoever draws did not set one.** The right question to ask
-> Mutter is not «la fence è pronta?» but «Mutter fa il flush?». It is a new hypothesis on a fault we
+> Mutter is not «la fence è pronta?» but «Mutter fa il flush?». It is a new hypothesis on a defect we
 > had left open, and checking it costs nothing.
 
 **The contract of `SPA_META_SyncTimeline`, which was not written down anywhere** [R]
@@ -1834,7 +1834,7 @@ a later optimisation.
 > broken). On AMD and on Intel, therefore, **the fence is there and it is the consumer that must wait for it.**
 >
 > ✅ **The good news stays intact, and it is a different one**: the frames are **whole** (§4.6), so
-> R29's fault — the «diff» on recycled buffers, which made us switch off zero-copy on GNOME —
+> R29's defect — the «diff» on recycled buffers, which made us switch off zero-copy on GNOME —
 > **does not recur**. On KDE zero-copy requires *one* thing: waiting for the fence before
 > encoding, which is the correct behaviour of any consumer.
 >
@@ -1969,7 +1969,7 @@ The only causes of a `findRenderDevice() == nullptr`, from the code: no `/dev/dr
 > ⚠ **And reading that `/proc` takes `sudo`, for a precise reason**: `/usr/bin/kwin_wayland`
 > carries the extended attribute **`security.capability`** (verified: `cap_sys_nice`), and a binary with
 > file capabilities is **not dumpable** — the kernel denies `/proc/<pid>/fd` and `/proc/<pid>/maps` even
-> to the user who started it. It is not a fault of the bench. (Copying the binary to lose the xattr
+> to the user who started it. It is not a defect of the bench. (Copying the binary to lose the xattr
 > is **not** a viable shortcut: the copy does not load the QPA plugin `wayland-org.kde.kwin.qpa`
 > and dies with `Aborted`.)
 >
@@ -2754,7 +2754,7 @@ an attribution.
 - **the Xwayland side**: X11 → Wayland is unconditional; **Wayland → X11 only when an Xwayland
   window is active** (`xwayland/clipboard.cpp:88-100`, with the comment *«shield against snooping X
   windows»*), and it catches up at the first `windowActivated`. ⛔ **A test with `xclip` fails without
-  an error**: it is the green-bench-on-a-live-fault form that `LEZIONI.md` §2.2 lists.
+  an error**: it is the green-bench-on-a-live-defect form that `LEZIONI.md` §2.2 lists.
 
 #### 9.1 ✅ WRITTEN AND TESTED — 8 August 2026, `prove/fase11-appunti.sh`
 
@@ -2957,7 +2957,7 @@ rectangles in red (`pipewiresourceitem.cpp:295-310`). Of synchronisation **there
 **And it is not an oversight**: it is the consumer side of what §4.6 and §4.8 say about the producer — KWin
 redraws the whole frame and synchronises by itself. Damage, on KDE, **is a hint**.
 
-> ✅ **Conclusion that holds for the whole project**: the alternating-screens fault (R29) **is
+> ✅ **Conclusion that holds for the whole project**: the alternating-screens defect (R29) **is
 > Mutter's, not the PipeWire model's**. And the cure we wrote — the accumulation surface — is not
 > needed on KWin.
 
@@ -3225,7 +3225,7 @@ permission to ask.
    resized. The price that phase 6 had paid off comes back, in a different form — and on KDE **it does not
    drag input along**.
 5. ✅ **Two of GNOME's debts do not show up**: the session-bus connection that does not
-   survive logout (§6.6), and the fault of alternating screens with zero-copy (§4.6).
+   survive logout (§6.6), and the defect of alternating screens with zero-copy (§4.6).
 6. ⚠ **`banco/misura-cattura.c` must be corrected before re-measuring on KWin**: `--fissa` cannot
    negotiate (§4.5), and the cursor's `SPA_CHUNK_FLAG_CORRUPTED` buffers are counted as
    frames (§4.7).
@@ -3242,7 +3242,7 @@ permission to ask.
 2. **`ei_device_scroll_discrete(±120)`** instead of our `/120 → ×10` (§7.2): simpler than
    what we do, and it produces a real wheel.
 3. **Only `DRM_FORMAT_MOD_LINEAR` for GPU encoding** and **the VAAPI context created by the
-   filter graph** (§11.2): two silent faults already paid for by others.
+   filter graph** (§11.2): two silent defects already paid for by others.
 4. **Renegotiating the modifiers instead of switching DMA-BUF off** (§11.2).
 5. **powerdevil's `AddInhibition(types=4)`** so the screen is not switched off under our feet
    (§10.2).
@@ -3323,7 +3323,7 @@ bench day of phase 11.
 | ~~**6**~~ | ✅ **CLOSED: yes.** `libeis-dev` is in the `Build-Depends` of `kwin 4:6.3.6-1`, and — proof that does not lie — **`eis.so` is inside the `kwin-common` package** (`/usr/lib/<triplet>/qt6/plugins/kwin/plugins/eis.so`), libei 1.3.901. ⚠ `kwin-wayland` does **not** depend on `libeis1`: looking there would have given the wrong answer | the premise for input is there (§7.1) |
 | ~~**7**~~ | ✅ **PARTLY CLOSED.** Setting up a stream costs **65–67 ms** (three rounds), and it is the fixed component of the gap. The time to *recreate the output* cannot be measured on `--virtual`, where `stream_virtual_output` is refused (`Could not find output`, verified). §8.1 | decides choice no. 2 of §13.4 (§8.3) |
 | ~~**8**~~ | ✅ **CLOSED: capture is independent of the VT.** The `--virtual` compositor **opens no tty/console** (verified on `/proc/<pid>/fd`), its session has `VTNr=0` and an empty `Seat=`; switching VT (tty1 → tty2 → tty1 with `VT_ACTIVATE`, because `chvt` is not installed) **compositor, stream and protocol all stay alive**. §4.9 | it is the condition for an unattended service (§4.9) |
-| ~~**9**~~ | ✅ **CLOSED: yes.** After `org.kde.Shutdown.logout()` all Plasma processes vanish and the Wayland socket with them, **but the user bus still answers on the same connection** and `systemd --user` is alive. GNOME's fault does not recur. §6.6 | if yes, a GNOME fault does not recur (§6.6) |
+| ~~**9**~~ | ✅ **CLOSED: yes.** After `org.kde.Shutdown.logout()` all Plasma processes vanish and the Wayland socket with them, **but the user bus still answers on the same connection** and `systemd --user` is alive. GNOME's defect does not recur. §6.6 | if yes, a GNOME defect does not recur (§6.6) |
 | ~~**10**~~ | ✅ **CLOSED by reading, and the reading is conclusive**: `eiscontext.cpp:272-285` **does not invert** and uses **the same formula for both axes** (`delta = v120 × 15/120`, raw `v120` downstream). No KWin asymmetry to compensate: the adaptation is all ours. The by-eye check in the phase remains. §7.2 | §7.2 |
 | ~~**11**~~ | 🟡 **CLOSED as far as possible**: `0x0`, `-1x-1`, `1x1`, `16384²`, `99999²` **all refused** and **KWin survives all of them**. But the refusal is due to the absence of a virtual output, not to validation: **validation remains unmeasurable with `--virtual`**. §8.1 | no validation in the code (§4.3) |
 | ~~**12**~~ | 🟡 **CORRECTED**: the dialog is **not** the first risk. At the first OpenGL failure plasmashell writes **`SceneGraphBackend=software` persistently** and restarts; the `QMessageBox` comes only on the second round. The real risk is **the permanent configuration left in the user's home**. With the GPU: none of this (verified). §10.4 | ten seconds, and it blocks a session (§10.4) |
@@ -3358,7 +3358,7 @@ code shows two points where the fallback is silent by construction.
 > | | |
 > |---|---|
 > | ✅ **the gate opens for us too** (§3) | `.desktop` with `Exec=` on the canonical binary and `NoDisplay=true`, plus `XDG_MENU_PREFIX=plasma-` in KWin's environment: the global appears, no dialog. With `--installa-desktop` REMOTIX writes the file itself, from `/proc/self/exe` |
-> | ✅ **the fence is waited on, and that is all** (§4.8) | **2 400 buffers out of 2 400** with drawing in progress — the 8 August measurement confirmed on a sample eight times larger — and **zero expired waits** with a 50 ms cap. R29's fault does not recur: the frames are whole |
+> | ✅ **the fence is waited on, and that is all** (§4.8) | **2 400 buffers out of 2 400** with drawing in progress — the 8 August measurement confirmed on a sample eight times larger — and **zero expired waits** with a 50 ms cap. R29's defect does not recur: the frames are whole |
 > | ✅ **the modifier obtained is `0x0`, linear** (§11.2) | it is the one the encoder wants, and to get it it was enough to put it **first** in the proposal's enum. `INVALID` stays as second choice |
 > | ✅ **the pace holds, on the real chain** (§5.7) | **58.1 fps at 1080p and 58.4 at 4K** on the Intel, against the 59.2 and 59.0 measured with `misura-cattura` alone. The difference is the conversion on the card, which the bench did not do |
 >
@@ -3376,22 +3376,22 @@ code shows two points where the fallback is silent by construction.
 *8 August 2026, with phase 11 concluded for KDE.*
 
 The twelve measurements are closed (§14), and their yield is high: **eleven questions out of eleven had an
-answer before a line was written**. But four faults appeared only when the code was put
+answer before a line was written**. But four defects appeared only when the code was put
 in front of a user, and they are worth listing because **they are the kind of thing re-reading the code
 does not find** — and so it will recur on XFCE:
 
 | Found by | What | Where it is now |
 |---|---|---|
 | **the user, at first glance** | two mouse pointers | box at the top: the cursor is inside the image, and the cure is a transparent theme |
-| **the user** | the volume slider governed nothing | §10.5 — and the fault was **on GNOME too**, all along |
+| **the user** | the volume slider governed nothing | §10.5 — and the defect was **on GNOME too**, all along |
 | **the user** | «Blocca» and «Cambia utente» inert in the menu | §10.6 — KIOSK, three actions and not two |
 | **the bench, but only after strengthening it** | «una via audio nuova parte al massimo» does not work | `REFERENCE.md` §7.5, **open** |
 
-⭐ **Three out of four were in the shared path**, that is they were GNOME faults that nobody had
+⭐ **Three out of four were in the shared path**, that is they were GNOME defects that nobody had
 seen in ten phases. Opening a second compositor did not just add a desktop: it acted as a
 bench for the first.
 
-⛔ **And the method lesson, which is the most costly**: the volume fault stayed invisible because
+⛔ **And the method lesson, which is the most costly**: the volume defect stayed invisible because
 the test had been done on **an equivalent sink created with `pactl`** instead of on ours — and
 `pipewire-pulse` sets by itself the property we were missing. A bench that tests *something similar*
 acquits the code (`LEZIONI.md` §1.11 and §5).
@@ -3597,7 +3597,7 @@ be redone from `wl_display_connect`.
 
 *Detail: `reference-xfce/rapporti/01-cattura-screencopy.md`.*
 
-#### 4.1 ✅ Whole frames, always — and the GNOME fault does not come back
+#### 4.1 ✅ Whole frames, always — and the GNOME defect does not come back
 
 `frame_shm_copy`/`frame_dma_copy` use `frame->box`, i.e. **the whole output**, and never consult
 the damage (`wlr_screencopy_v1.c:214-219`, `:255-268`). The source buffer is in turn complete thanks
@@ -3627,7 +3627,7 @@ compositor). When a frame is ready with damage D, D is added to the `buffer_dama
 buffers in the pool (`wayvnc/src/buffer.c:693-704`).
 
 ⛔ **Without it, frames are sent with old pieces, and no frames-per-second measurement
-reveals it** — it is the R29 fault in general form, and the reason it must be written now and not later.
+reveals it** — it is the R29 defect in general form, and the reason it must be written now and not later.
 
 ⚠ And wlroots' damage is **a single rectangle** (the extents, with an explicit `// TODO` at
 `:168-178`), in the output's pixel coordinates, **not** translated for `capture_output_region`. It must be
@@ -3994,7 +3994,7 @@ same mistake that on KDE would have slowed logout by fifteen seconds.
 different session, and **a wrong saved session rises again with the priorities and geometries of another
 screen**. `SaveOnExit` is already `false` by default, but the cache must be **deleted at every start**.
 
-It is the same shape as the KDE fault, where plasmashell wrote `SceneGraphBackend=software`
+It is the same shape as the KDE defect, where plasmashell wrote `SceneGraphBackend=software`
 persistently: **a session started badly leaves a mark in the user's home**.
 
 #### 9.7 The session bus — a decision to take
@@ -4037,7 +4037,7 @@ timer never re-armed ⇒ **`failed` on the capture**.
 
 | Way | How |
 |---|---|
-| **D-Bus** | `org.freedesktop.PowerManagement.Inhibit` on `/org/freedesktop/PowerManagement/Inhibit`, signature `(ss)→u` (`xfpm-inhibit.c:349-353`). Covers DPMS + idle + screensaver in one go. ⚠ **Precondition**: xfce4-power-manager **has no D-Bus activation** [✗] — if it is not running, the call fails (it is the shape of the powerdevil fault on KDE, where the error was `ServiceUnknown`) |
+| **D-Bus** | `org.freedesktop.PowerManagement.Inhibit` on `/org/freedesktop/PowerManagement/Inhibit`, signature `(ss)→u` (`xfpm-inhibit.c:349-353`). Covers DPMS + idle + screensaver in one go. ⚠ **Precondition**: xfce4-power-manager **has no D-Bus activation** [✗] — if it is not running, the call fails (it is the shape of the powerdevil defect on KDE, where the error was `ServiceUnknown`) |
 | **xfconf** | `dpms-enabled=false`, `inactivity-on-{ac,battery}=0`, `presentation-mode=true` |
 | ⭐ **the wayvnc cure** | `set_mode(MODE_ON)` **before** capturing, plus a retry at 100 ms (`wayvnc/src/main.c:1022-1045`, `:1055-1063`) — that is, do not trust the inhibition, **turn it back on** |
 
@@ -4112,7 +4112,7 @@ is an ephemeral `XDG_CONFIG_HOME`**, which is a project decision, not a detail.
 #### 10.7 ✅ The menu: garcon does not have the KDE trap
 
 **[✗] garcon builds no index on disk** (grep for `g_file_set_contents|fopen|g_mkdir…` →
-zero, with a positive control): the cache is **in memory only**. That is, the fault that on KDE
+zero, with a positive control): the cache is **in memory only**. That is, the defect that on KDE
 denied us a permission — *an index built empty that stays empty* — **cannot happen here on
 disk**.
 
@@ -4167,7 +4167,7 @@ different from those expected.
 cannot resize itself **gets disconnected**, and with our 4K/60 requirement that does not hold; and the creation
 of the output **delegated to `swaymsg`**, which does not exist on labwc.
 
-⚠ And two of its faults, useful as a warning: the bandwidth regulator **is voluntary** (if the client
+⚠ And two of its defects, useful as a warning: the bandwidth regulator **is voluntary** (if the client
 does not announce `FENCE` the brake is never armed — ours must stay mandatory), and the cursor
 comes **only** from the new protocol: with `wlr-screencopy` alone wayvnc **sends no cursor at all**.
 
@@ -4185,7 +4185,7 @@ reference project.**
 |---|---|
 | ⭐ **the RDP→Wayland wheel** | line by line (§7.2) |
 | ⭐ **the thread → event loop bridge** | `eventfd(EFD_SEMAPHORE)` + list with mutex + `assert_compositor_thread()` at the top of every callback (`rdputil.c:79-226`). Needed right away: our `cliprdr` also runs on a FreeRDP thread |
-| ⭐ **the certificate per peer, never shared** | the backend keeps only the **paths**; each peer does `freerdp_certificate_new_from_file()` and hands ownership to FreeRDP (`rdp.c:1755-1764`). **It is the direct antidote to the fault that on KDE killed the server on the second connection** |
+| ⭐ **the certificate per peer, never shared** | the backend keeps only the **paths**; each peer does `freerdp_certificate_new_from_file()` and hands ownership to FreeRDP (`rdp.c:1755-1764`). **It is the direct antidote to the defect that on KDE killed the server on the second connection** |
 
 And two gifts for input conversion: the chain
 `GetVirtualKeyCodeFromVirtualScanCode → KBDEXT → GetKeycodeFromVirtualKeyCode(XKB) → scan_code - 8`
@@ -4709,8 +4709,8 @@ window. Windows are repositioned by **labwc**, which remembers the previous geom
 desktop. You resize; you do not destroy.
 
 ⚠ A single reservation, **[?] to be measured**: that labwc really generates an `output_layout.change` on
-`set_custom_mode`, which is what starts the whole chain. And a fault declared upstream
-(`lxqt-panel#2432`) says that **the panel does not follow the resize**: it is the first fault the user
+`set_custom_mode`, which is what starts the whole chain. And a defect declared upstream
+(`lxqt-panel#2432`) says that **the panel does not follow the resize**: it is the first defect the user
 would see.
 
 ✅ **Scale and DPI: no trap.** LXQt **[✗]** does not handle DPI; at `scale=1` text is 1:1 and
@@ -6197,7 +6197,7 @@ half of what is in here changed the product **this very day**.*
 > track: *«ti spiego perché mi è venuto in mente il discorso WEB: in passato ho avuto modo di usare
 > XPRA, e devo dire di essere rimasto molto sorpreso»* (`DECISIONI.md` §1.6).
 >
-> The second **on 14 August**, in front of the product that could finally be used, and with a fault in
+> The second **on 14 August**, in front of the product that could finally be used, and with a defect in
 > hand: *«un piccolo difetto è la cattura del puntatore del mouse… per questa funzionalità puoi
 > studiare la soluzione che ha adottato il progetto XPRA»*.
 >
@@ -6233,7 +6233,7 @@ request_refresh(wid) {
 
 ⛔⛔ **Xpra's client does not WAIT for the screen to change: it tells the server «repaint now».**
 
-⇒ And this is **exactly** the fault the user felt today as *«il tempo fra il login e
+⇒ And this is **exactly** the defect the user felt today as *«il tempo fra il login e
 la comparsa del desktop è troppo lungo»*: `[M]` 14 August 2026, from the log of his real
 session, between the video channel switched on and the first pixel **4.10 seconds out of 5.21** pass, and the log
 says why — *«still scene: Mutter delivers only when something changes»*.
@@ -6403,7 +6403,7 @@ can dispute**, and it is more useful than ten in our outcome files.
 >
 > The study was planned **before** writing the page, and was done **after**. ⛔ In between
 > we wrote a specification that contradicted itself (§7.1 against §7.5), we implemented it, and the
-> fault was found by **the user in thirty seconds of use** — also telling us where to look.
+> defect was found by **the user in thirty seconds of use** — also telling us where to look.
 >
 > ⇒ ⚠ *The cost of skipping point 0 of `LEZIONI.md` §9 is not the time of the study: it is the code
 > written in the meantime, and the trust spent defending it.*

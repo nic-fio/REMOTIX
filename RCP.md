@@ -311,7 +311,7 @@ demanded**.
 > falls is the **reassurance**: no code is written that *waits* for the room counting on the renewal,
 > because the renewal is not ours and may not arrive.
 >
-> ⛔⛔ **And it is NOT written that the product falls over under low credit: it is not measured.** *A run of 13
+> ⛔⛔ **And it is NOT written that the product falls over under low credit: it is not measured.** *A round of 13
 > Aug produced a `STREAM_LIMIT_ERROR`, and for a few hours it looked like a defect of the product.
 > It was not: the **bench** announced the credit **after** the handshake — something RFC 9000 §4.6
 > forbids — so the `6` **was never announced on the wire**. The server had **128 slots
@@ -415,7 +415,7 @@ anywhere.*
 > ⇒ ⚠ **The lesson P21 adds to the six before**: *«local and monotonic»* **is not enough**. A
 > quantity must be tested **on the two known extremes**, and must **order them in the right direction** — if it does
 > not, it is not a calibration to redo: it is the wrong quantity (`LEZIONI.md` §1.33). ⛔ And it was not found
-> by a rereading: it was found by the **test client** on its first run against a server that
+> by a rereading: it was found by the **test client** on its first round against a server that
 > really sends.
 | **input** — unidirectional | the client | **only one**, opened ⛔ **after having received `SESSIONE`** and kept open |
 | **clipboard** — unidirectional | both | one **per transfer** |
@@ -425,8 +425,8 @@ streams.** Whoever receives one closes with `ERRORE_PROTOCOLLO`.
 
 > ### ⛔⛔ Before reading: **the «first two bytes» are not the first bytes of the stream** — finding P18
 >
-> *12 Aug 2026. Found by the **test client**, on its first live run, and not by a
-> rereading: `[M]` the run ended red with «canale di controllo mai aperto», and the cause was that
+> *12 Aug 2026. Found by the **test client**, on its first live round, and not by a
+> rereading: `[M]` the round ended red with «canale di controllo mai aperto», and the cause was that
 > the client applied this line **to the letter**.*
 >
 > ⛔ On WebTransport every stream carries a **preamble**: the stream type (`0x54` for
@@ -963,7 +963,7 @@ the sender cannot be forged. The ban hits only whoever has really knocked.
 
 ⚠ **And a consequence on acceptance testing, which bites at once**: the benches all start **from the same
 address**, and the one that tests this rule fails on purpose. With twelve hours, «one waits for the expiry» is not a cure — the bench uses the unlock command, and the limiter bench **does not
-call it within its own run**, or it no longer tests anything. The detail is in
+call it within its own round**, or it no longer tests anything. The detail is in
 `FASI.md` §01-filo-nudo, rule **B0.3** and bench **B8**.
 
 ### 4.5 `ATTACCA`
@@ -1055,7 +1055,7 @@ its own size **MUST** send an `ADATTA_TELA` after `SESSIONE` — and it is what
 `DECISIONI.md` §5.0-sexies already makes it do at every attach.
 
 `[M]` 21 Aug 2026, real product: three attaches in a row with `ATTACCA(1920×1080)` received
-`SESSIONE` with **1920×1080**, **1264×800** and **1600×900** — that is, each time, **what the run
+`SESSIONE` with **1920×1080**, **1264×800** and **1600×900** — that is, each time, **what the round
 before had left**.
 
 ⛔ **And this line loosens nothing**: the granted canvas stays subject to the limits, to evenness and to
@@ -1206,7 +1206,7 @@ side.
 > - the server **MUST** write **both** in the log, and distinguish them: they are the same
 >   decision, but on the receiving side they have **different appearances**, and a log that names only one
 >   does not explain what the client saw;
-> - ⚠ and a bench that injects abandonment **must be able to produce both**, or it certifies half of the
+> - ⚠ and a bench that grafts abandonment **must be able to produce both**, or it certifies half of the
 >   rule believing it certifies all of it.
 >
 > ### ⛔⛔ And there is a third case, which is **not observable at all** — and it is the most dangerous
@@ -1253,7 +1253,7 @@ asked for. The two things, and the first costs **zero bytes**:
   client has no way to notice it: there is no hole in the `numero` values, and — `[M]` 12 Aug 2026,
   Chrome 151 on Linux with VA-API, bench `banchi/02-pagina-tela-*` — **the HEVC decoder raises
   no error**: it keeps emitting frames at the **old** size and paints
-  a wrecked picture, different at each run. The symptom would be *«the desktop tears when I resize the window»*, and it would name neither the protocol nor the canvas. ⛔ And the same test on
+  a wrecked picture, different at each round. The symptom would be *«the desktop tears when I resize the window»*, and it would name neither the protocol nor the canvas. ⛔ And the same test on
   **AV1** gives `EncodingError` on Chrome and on Firefox `[M]`: ⇒ **the rule is needed because on the
   main codec the symptom is silent**, and a rule is not written on the codec that behaves well;
 - ⛔ **and the client reconfigures the decoder on the first KEYFRAME at the new size, not on the
@@ -1554,7 +1554,7 @@ client has sent itself*: local, monotonic, independent of delivery.
 
 > ⚠ *This paragraph said «holds back **until it can decide**», and beside it carried a box
 > `[?]` that declared open the question «until when». The product closed it with **eight
-> frames** — an observable bound instead of a clock, which was already the lesson of P13, ⛔ but still
+> frames** — an observable backstop instead of a clock, which was already the lesson of P13, ⛔ but still
 > **a substitute quantity**. Closed on 13 Aug 2026, finding **P21**. ⭐ And the first cure
 > proposed — «the size the client named» — was **failed by a case**: §4.5 allows
 > the server to grant a canvas different from the one asked for, so it would have been the eighth draft.*
@@ -1895,7 +1895,7 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 > |---|---|
 > | **what was seen** | `ei_device_scroll_discrete(0, **+120**)` → the page's `wheel` event carries **`deltaY = +114`** (`deltaMode = 0`, pixels) and the page **goes down** by 114 px, that is it goes **towards the end of the document**. With **−120**, `deltaY = −114` and the page **goes up** |
 > | **the scene, in full** | test machine **192.168.0.2**; GNOME session without monitor from `banchi/00-sessione-gnome.sh` — `gnome-shell --headless --no-x11 --virtual-monitor 1920x1080`, **libmutter 48.7-0+deb13u1**, **libei 1.3.901**; the page in **Firefox 140.13.0esr** in `--kiosk` full screen on the virtual monitor, `dpr` 1 |
-> | **where to check again** | `banchi/01-s7-esiti.jsonl` (two runs, `7sd0u7jv` and `oq7jqrdv`), and the report `web/rapporti/S-esiti-sonda.md` §1 |
+> | **where to check again** | `banchi/01-s7-esiti.jsonl` (two rounds, `7sd0u7jv` and `oq7jqrdv`), and the report `web/rapporti/S-esiti-sonda.md` §1 |
 >
 > ⛔ **The consequence, and it is the server's**: positive `deltaY` means that the content goes **towards the
 > end** of the document, that is that the user turned the wheel **down**; this section fixes
@@ -1916,7 +1916,7 @@ POSIZIONE_TASTO    + u16 codice · u8 premuto
 > |---|---|---|
 > | ⛔ **the opposite sign** — `−120` is injected too | ✅ `+120 → +114`, `−120 → −114`: **the sign** is measured, not «that something moves» | `[M]`, in the log |
 > | ⛔ **the two instruments agree** — the `wheel` event and the real movement of `scrollY` | ✅ they agree on all tests | `[M]`, in the log |
-> | ⛔ **`natural-scroll` in its two states**, with the device rebuilt from scratch | ✅ **the sign does NOT change**: `+120 → +114` in both runs | ⚠ **half**: `[M]` that two independent runs give the same sign; `[?]` **that they were the two states** — the label was only in the launcher's on-screen output |
+> | ⛔ **`natural-scroll` in its two states**, with the device rebuilt from scratch | ✅ **the sign does NOT change**: `+120 → +114` in both rounds | ⚠ **half**: `[M]` that two independent rounds give the same sign; `[?]` **that they were the two states** — the label was only in the launcher's on-screen output |
 > | **silence** — ten seconds without injecting | ✅ no notch | ⚠ it is an **absence** of lines: consistent with the timestamps, not proved by them |
 > | *in addition* — does `ei_device_scroll_delta` have the same direction? | ✅ yes | ⛔ **not traceable**: no log line carries it. It stays a thing seen, not a delivered measurement |
 >
@@ -2064,7 +2064,7 @@ on 11 Aug 2026**: no, it was not, and it stays removable without going back to h
 > The injection of the known delay was made **outside the product**, and it came out `[M]` green
 > (N = 25 → **+25.08 ms**; N = 60 → **+58.58 ms**).
 >
-> ⭐ **And the injection outside the product is not a fallback: it is better.** The clock anchor of the meter
+> ⭐ **And the injection outside the product is not a fallback: it is better.** The clock anchor of the yardstick
 > **does not pass** through the injected path — if it did, **P1 would pass even with the bench broken**,
 > because the N milliseconds would add up identically on both sides. A decisive control
 > that can no longer fail has stopped being a control (`LEZIONI.md` §1.2).
@@ -2515,7 +2515,7 @@ time is needed, not a count — ⭐ and the difference is **proved, not asserted
 *«counts instead of timing»* survived as long as the case that was to kill it had a window
 too short.
 
-⭐ `[M]` 21 Aug, on the **real product** (port 7721, five runs out of five): after
+⭐ `[M]` 21 Aug, on the **real product** (port 7721, five rounds out of five): after
 `TELA(ADATTATA, 1264x800)` the frame **declares 1264x800**. The stage was touched, and now a
 referee says so instead of a line of reasoning.
 
