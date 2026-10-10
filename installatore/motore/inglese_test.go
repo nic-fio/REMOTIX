@@ -29,7 +29,8 @@ var vocabolario = map[string]bool{
 	"present": true, "absent": true, "none": true, "with": true, "without": true, "unknown": true,
 	"yes": true, "sì": true, "no": true, "all": true, "stable": true, "candidate": true, "open": true,
 	"closed": true, "vuota": true,
-	// not ours: zypper's output in Italian, which gestore.go recognises (like the English one)
+	// not ours: the package manager's output in Italian (dnf's «Problem» lines), which gestore.go
+	// recognises like the English one (problemiDnf): a marker searched for, not a text of ours
 	"il pacchetto installato ": true,
 }
 

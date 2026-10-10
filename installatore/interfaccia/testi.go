@@ -87,6 +87,7 @@ var testi = map[string]string{
 	"t.video.ok":        "tested on the card at the end of the installation",
 	"t.accesso.ok":      "name and password of this machine",
 	"t.accesso.male":    "the distribution's sign-in system cannot be found",
+	"t.persone.una":     "one person can log in (root excluded)",
 	"t.persone":         "%d people can log in (root excluded)",
 	"t.prot.selinux":    "SELinux on, compatible with REMOTIX",
 	"t.prot.apparmor":   "AppArmor on, compatible with REMOTIX",

@@ -144,7 +144,7 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(filepath.Dir(s.C.Operazioni), "plans")
+	dir := filepath.Join(filepath.Dir(s.C.Operazioni), motore.CartellaPiani)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}

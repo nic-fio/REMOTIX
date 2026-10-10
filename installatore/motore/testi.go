@@ -68,6 +68,7 @@ var testi = map[string]string{
 	"az.pacchetti.verifica":   "every package of the resolved set installed at its version, manager not half-way",
 	"az.pacchetti.annulla":    "the manager removes the NEW packages, and only those (simulating first); upgraded ones stay and are declared",
 	"az.sessioni":             "close the REMOTIX sessions still open (%d: %s)",
+	"az.sessioni.nessuna":     "close the REMOTIX sessions still open (none now)",
 	"az.sessioni.fa":          "logind TerminateSession on the sessions with PAM service «remotix» only: the same people's local or ssh sessions stay",
 	"az.sessioni.verifica":    "none of those sessions is still open",
 	"az.sessioni.annulla":     "IRREVERSIBLE: unsaved work is lost, sessions do not reopen",

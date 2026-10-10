@@ -559,7 +559,7 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	default:
 		p.Sconosciuto("h264.gpu", "driver "+strings.Join(driver, ",")+": "+nota7a)
 		if conScheda {
-			p.Con("RX-H264-001", nota7a)
+			p.Con("RX-H264-001", "") // its text already says it: the detail would repeat it
 		}
 	}
 }

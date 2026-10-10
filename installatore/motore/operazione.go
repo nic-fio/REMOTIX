@@ -158,6 +158,11 @@ func (op *Operazione) apriRegistro() error {
 	// every program launched by the engine while the operation is open goes into the log (R41)
 	if op.m.Amb != nil {
 		op.m.Amb.Annota = func(riga string) { r.Scrivi(Evento{Tipo: EvComando, Dettaglio: riga}) }
+		// and what the engine says while it waits for the package manager (occupato.go)
+		op.m.Amb.Avvisa = func(m Messaggio) {
+			op.m.Ev.Messaggio(op.ID, m)
+			r.Scrivi(Evento{Tipo: EvNota, Codice: m.Codice, Dettaglio: m.Dettaglio})
+		}
 	}
 	for _, a := range avvisi {
 		op.m.Ev.Messaggio(op.ID, a)

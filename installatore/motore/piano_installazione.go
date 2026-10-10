@@ -114,7 +114,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		}
 		ins, err := amb.Pacchetti.Simula(veri, rap.NomiDipendenze())
 		if err != nil {
-			pn.NonFatto = append(pn.NonFatto, Msg("RX-PACCHETTI-005", err.Error()))
+			pn.NonFatto = append(pn.NonFatto, messaggioSimula(err))
 		}
 		pn.Pacchetti = ins
 	}

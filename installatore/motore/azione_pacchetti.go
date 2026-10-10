@@ -2,6 +2,7 @@ package motore
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -126,7 +127,7 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	}
 	ins, err := g.Simula(veri(c, a.file), a.nomi)
 	if err != nil {
-		return nil, "", Errore("RX-PACCHETTI-005", err.Error())
+		return nil, "", &ErroreRX{messaggioSimula(err)}
 	}
 	p := primaPacchetti{Origine: PREESISTENTE, Gestore: g.Nome(), File: a.file, Nomi: a.nomi, Insieme: ins}
 	for _, x := range ins {
@@ -139,6 +140,16 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		return nil, "", err
 	}
 	return jsonDi(p), p.Origine, nil
+}
+
+// messaggioSimula: the manager's simulation did not succeed — RX-PACCHETTI-005 with what it says, unless
+// the engine already has the reason (the manager stayed busy: RX-PACCHETTI-008).
+func messaggioSimula(err error) Messaggio {
+	var e *ErroreRX
+	if errors.As(err, &e) {
+		return e.M
+	}
+	return Msg("RX-PACCHETTI-005", err.Error())
 }
 
 func leggiPrimaPacchetti(prima json.RawMessage) (primaPacchetti, error) {

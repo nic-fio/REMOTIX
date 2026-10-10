@@ -304,7 +304,10 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	} else {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.ok"), OK})
 	}
-	if n := len(dom.Persone); n > 0 {
+	switch n := len(dom.Persone); {
+	case n == 1:
+		righe = append(righe, Riga{T("r.persone"), T("t.persone.una"), OK})
+	case n > 1:
 		righe = append(righe, Riga{T("r.persone"), T("t.persone", n), OK})
 	}
 	// protection
