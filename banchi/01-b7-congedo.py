@@ -441,8 +441,15 @@ class Registro:
 #    identical example.  That is why the criteria are four, and the second is
 #    the one that unmasks the `switch`.
 # ===========================================================================
-ANCORA_TABELLA = "const MOTIVO = new Map(["
-VOCE = re.compile(r'\[\s*0x([0-9A-Fa-f]{1,2})\s*,\s*\[\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\]')
+ANCORA_TABELLA = "const MOTIVO = {"
+# ⚠ Since the page's table became an object literal — `0x07: "phrase",`, with
+#   long phrases split as `"…" + "…"` and comments between the entries — it
+#   carries the PHRASE only, not the name: the name is the one §8.2 gives to
+#   the code (`MOTIVI`), and criterion 3 still checks that the phrase is not it.
+VOCE = re.compile(r'(?<![0-9A-Za-z_])0x([0-9A-Fa-f]{1,2})\s*:\s*'
+                  r'((?:"(?:[^"\\\n]|\\.)*"\s*\+?\s*)+)')
+PEZZO = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
+COMMENTO = re.compile(r'/\*.*?\*/|^\s*//[^\n]*', re.S | re.M)
 
 
 def leggi_tabella(testo):
@@ -455,12 +462,17 @@ def leggi_tabella(testo):
     i = testo.find(ANCORA_TABELLA)
     if i < 0:
         return None, f"the anchor «{ANCORA_TABELLA}» is not in this file"
-    j = testo.find("]);", i)
+    j = testo.find("\n};", i)
     if j < 0:
-        return None, "the table starts and does not end: «]);» is missing"
+        return None, "the table starts and does not end: «};» is missing"
+    # ⛔ The comments go first: they quote old phrases in quotes ("silence
+    #    too long") and would be read as entries.
+    corpo = COMMENTO.sub("", testo[i + len(ANCORA_TABELLA):j])
     voci = {}
-    for m in VOCE.finditer(testo[i:j]):
-        voci[int(m.group(1), 16)] = (m.group(2), m.group(3))
+    for m in VOCE.finditer(corpo):
+        c = int(m.group(1), 16)
+        frase = "".join(PEZZO.findall(m.group(2)))
+        voci[c] = (MOTIVI.get(c, f"0x{c:02X}"), frase)
     if not voci:
         return None, "the anchor is there but no entry matches the expected shape"
     return voci, ""

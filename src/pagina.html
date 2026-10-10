@@ -8875,7 +8875,7 @@ function avvia_appunti(negoziato) {
    *
    * ⛔⛔ AND IT DOES NOT LEAVE FROM HERE — `[M]` 21 Aug 2026, server log:
    *     *"congedo motivo=0x0b — bytes on the clipboard stream (14) before
-   *     `SESSIONE` started (stato: attesa-verdetto)"*.  ⚠ This function
+   *     `SESSIONE` has gone out (state: attesa-verdetto)"*.  ⚠ This function
    *     runs at ECCOMI, that is BEFORE the credentials: an announcement sent
    *     here violates §4.2 and the session closes.  ⇒ The opening
    *     announcement leaves after `SESSIONE`, and it is written there

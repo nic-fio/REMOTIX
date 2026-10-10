@@ -189,11 +189,11 @@ class Cliente(b3.Cliente):
         #     while the server did everything right.  The log, at lines
         #     32355-32359 of `b5-server.log`:
         #
-        #       REMOTIX B5: ⛔ due stream bidirezionali dal client dentro la
-        #                     sessione: il controllo e' il 4, e il 8 e' di troppo
+        #       REMOTIX B5: ⛔ two bidirectional streams from the client inside
+        #                     the session: control is 4, and 8 is one too many
         #       REMOTIX B3: congedo motivo=0x0b …
-        #       REMOTIX B3: chiusura della sessione RIMANDATA, codice 0x0b
-        #                   (in coda: 1; keep-alive a 100 ms …)
+        #       REMOTIX B3: session closure DEFERRED, code 0x0b
+        #                   (queued: 1; keep-alive at 100 ms …)
         #       frm tx … STREAM id=0x4 len=71   ← the CONGEDO
         #       frm tx … STREAM id=0x8 len=30   ← B2's echo on the extra stream
         #       frm rx … CONNECTION_CLOSE error_code=0x105
