@@ -1,0 +1,29 @@
+# Contenitore.debian13 — fase 17: la scatola «cliente» di Debian 13 col desktop DESKTOP (gnome, kde,
+# xfce, lxqt), per il giro di §7.3 SULLA SCHEDA VERA del server (fasi/17 §7.5). Generalizza
+# Contenitore.debian13-kde (1 ott 2026): una ricetta per distribuzione, il desktop come argomento.
+#
+# Come la VM «cliente» (17-vm.sh vesti): il desktop col gruppo di pacchetti ufficiale della
+# distribuzione (task-<desktop>-desktop), e NIENTE di REMOTIX: quello è mestiere dell'installatore
+# e dell'amministratore (banchi/17-distro/17-amministratore.sh). In più, perché è una scatola:
+#   · systemd come primo processo, sshd su una porta SUA (--network=host: le porte sono dell'ospite);
+#   · avvio in multi-user: il gestore d'accesso resta spento, la scatola non ha un monitor;
+#   · il gruppo della scheda allineato a quello del nodo dell'ospite (t10-gruppi; sulla macchina vera
+#     lo fa udev).
+FROM docker.io/library/debian:13
+ARG DESKTOP
+ARG PORTA_SSH=8600
+ENV DEBIAN_FRONTEND=noninteractive
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus dbus-user-session libpam-systemd \
+        sudo procps iproute2 ca-certificates curl openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+# il desktop come lo installa un utente normale (coi «raccomandati», come vuole il task)
+RUN apt-get update && apt-get install -y -q "task-$DESKTOP-desktop" \
+    && rm -rf /var/lib/apt/lists/*
+COPY comune.sh /usr/local/sbin/t17-comune
+RUN sh /usr/local/sbin/t17-comune "$PORTA_SSH" ssh.service
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

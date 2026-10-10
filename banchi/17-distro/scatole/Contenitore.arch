@@ -1,0 +1,18 @@
+# Contenitore.arch — fase 17: la scatola «cliente» di Arch col desktop DESKTOP (gnome, plasma, xfce4 +
+# xfce4-goodies, lxqt + breeze-icons: gli stessi di 17-vm.sh vesti, SENZA abilitare il gestore
+# d'accesso: la scatola parte in multi-user). Il resto come Contenitore.debian13.
+FROM docker.io/archlinux/archlinux:latest
+ARG DESKTOP
+ARG PORTA_SSH=8600
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+# l'immagine ufficiale toglie le pagine di manuale e simili (NoExtract): si lascia com'è
+RUN pacman -Syu --noconfirm systemd dbus sudo procps-ng iproute2 ca-certificates curl openssh \
+    && pacman -Scc --noconfirm
+RUN case "$DESKTOP" in gnome) P="gnome" ;; kde) P="plasma" ;; xfce) P="xfce4 xfce4-goodies" ;; lxqt) P="lxqt breeze-icons" ;; esac \
+    && pacman -S --noconfirm --needed $P && pacman -Scc --noconfirm
+COPY comune.sh /usr/local/sbin/t17-comune
+RUN sh /usr/local/sbin/t17-comune "$PORTA_SSH" sshd.service
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+STOPSIGNAL SIGRTMIN+3
+CMD ["/usr/lib/systemd/systemd"]

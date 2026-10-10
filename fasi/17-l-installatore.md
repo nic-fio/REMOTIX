@@ -1149,6 +1149,14 @@ Su ogni macchina, automatico:
    **VERDE** (H.264 in hardware via `h264_vaapi`, iHD); su Leap resta `C-RIPIEGO` perché l'immagine
    per contenitori ha `solver.onlyRequires = true` come la Minimal-VM (§11.1) e il raccomandato
    `intel-media-driver` (repo-oss) non entra — messo a mano, `vainfo` dà H.264 EncSlice `[M]`.
+   ⭐ **10 ott 2026 — le 26 in scatola** (§10.36: dalla fase 19 una macchina senza scheda non passa il
+   controllo, e le VM non ne hanno): una ricetta per distribuzione col desktop come argomento
+   (`Contenitore.{debian13,ubuntu2604,fedora44,alma10,arch,suse}` + `comune.sh`; le due del 1 ott sono
+   assorbite), `17-scatola.sh` per le 26 con `REMOTIX_SCHEDA=intel|amd`, nome `t17-<m>-<scheda>`, porte
+   proprie (ssh 8600+10n+k, REMOTIX 8800+10n+k, +100 sulla Radeon), fino a 4 accese insieme, e
+   `costruisci-tutte`. ⚠ Ubuntu: `firefox`/`thunderbird` (pacchetti che installano uno snap) tenuti fuori
+   con una preferenza di apt, perché snapd in una scatola non gira. Le immagini si costruiscono SUL
+   SERVER (non sul portatile), a campagna xrdp finita. `[?]` nessuna ricetta è ancora stata costruita.
 2. **La scheda data alla VM** (passthrough): oggi impossibile, il server parte con l'IOMMU spento; per
    accenderlo si cambia l'avvio del server, che fa l'utente. Non serve per questa fase.
 

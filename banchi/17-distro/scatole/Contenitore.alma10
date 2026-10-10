@@ -1,0 +1,19 @@
+# Contenitore.alma10 — fase 17: la scatola «cliente» di AlmaLinux 10 col desktop DESKTOP (solo gnome =
+# «Server with GUI», kde = «KDE Plasma Workspaces» da EPEL con CRB: gli stessi di 17-vm.sh vesti; XFCE e
+# LXQt non esistono per Alma 10, fasi/17 §3). EPEL qui serve AL DESKTOP KDE, come al cliente: l'H.264
+# della scheda (RPM Fusion) resta dell'amministratore. Il resto come Contenitore.debian13.
+FROM quay.io/almalinuxorg/almalinux:10
+ARG DESKTOP
+ARG PORTA_SSH=8600
+RUN case "$DESKTOP" in gnome|kde) ;; *) echo "DESKTOP=«$DESKTOP»: su Alma 10 solo gnome|kde" >&2; exit 2 ;; esac
+RUN dnf -y install systemd dbus sudo procps-ng iproute ca-certificates curl openssh-server shadow-utils dnf-plugins-core \
+    && dnf clean all
+RUN if [ "$DESKTOP" = gnome ]; then dnf -y group install "Server with GUI"; \
+    else dnf -y install epel-release && dnf config-manager --set-enabled crb && dnf -y group install "KDE Plasma Workspaces"; fi \
+    && dnf clean all
+COPY comune.sh /usr/local/sbin/t17-comune
+RUN sh /usr/local/sbin/t17-comune "$PORTA_SSH" sshd.service
+COPY chiave-banco.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+STOPSIGNAL SIGRTMIN+3
+CMD ["/usr/sbin/init"]
