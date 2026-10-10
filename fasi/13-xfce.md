@@ -1,1127 +1,1127 @@
-# Fase 13 — XFCE
+# Phase 13 — XFCE
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without a card and colour conversion with swscale; those of encoding on the card and of audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-*Aperta il **20 settembre 2026**. Chiusa il —*
+*Opened on **20 Sep 2026**. Closed on —*
 
-## Che cosa deve produrre
+## What it must produce
 
-Il terzo desktop: **la stessa cosa su XFCE** (`PIANO.md` fase 13). L'utente apre il browser e vede
-il suo desktop XFCE, come oggi vede GNOME e Plasma.
+The third desktop: **the same thing on XFCE** (`PIANO.md` phase 13). The user opens the browser and sees
+their XFCE desktop, as today they see GNOME and Plasma.
 
-⛔ **La regola della fase, dell'utente, 20 settembre 2026**: *«aggiungere XFCE a REMOTIX senza
-perdere nessuna capacità già certificata di GNOME e KDE»*. ⇒ **Da oggi il baseline protetto sono
-due**: una regressione di KDE vale quanto una di GNOME. KDE esce dal cantiere ed entra nel
-guardiano.
+⛔ **The rule of the phase, the user's, 20 Sep 2026**: *«aggiungere XFCE a REMOTIX senza
+perdere nessuna capacità già certificata di GNOME e KDE»*. ⇒ **From today the protected baselines are
+two**: a KDE regression counts as much as a GNOME one. KDE leaves the building site and enters the
+guardian.
 
-Si procede per **incrementi**, e ogni incremento attraversa gli stessi cancelli della fase 12:
+We proceed by **increments**, and every increment goes through the same gates as phase 12:
 
 | | |
 |---|---|
-| **CP0** | la baseline: rete completa sulle **quattro** scatole, stesso binario ovunque |
-| **CP1** | l'incremento è definito: obiettivo, invariante, moduli, prova XFCE, prova client, regressioni GNOME **e KDE** da guardare, criterio |
-| **CP2** | GNOME, KDE e XFCE **osservati** sul punto dell'incremento, e la differenza scritta — niente dedotto |
-| **CP3** | la modifica minima progettata: file, perché, che cosa di GNOME e di KDE resta com'è |
-| **CP4** | la prova XFCE fatta davvero, sulla scena dichiarata |
-| **client** | Chrome e Firefox su Linux, Chrome sull'emulatore Android — quando l'incremento tocca il percorso |
-| **rete** | la rete completa, GNOME **e KDE** invariati, i guasti innestati ancora presi |
-| **checkpoint** | un commit che si può riprendere |
+| **CP0** | the baseline: complete net on the **four** boxes, the same binary everywhere |
+| **CP1** | the increment is defined: goal, invariant, modules, XFCE test, client test, GNOME **and KDE** regressions to watch, criterion |
+| **CP2** | GNOME, KDE and XFCE **observed** at the point of the increment, and the difference written — nothing deduced |
+| **CP3** | the minimal change designed: files, why, what of GNOME and of KDE stays as it is |
+| **CP4** | the XFCE test done for real, on the declared scene |
+| **client** | Chrome and Firefox on Linux, Chrome on the Android emulator — when the increment touches the path |
+| **net** | the complete net, GNOME **and KDE** unchanged, the injected faults still caught |
+| **checkpoint** | a commit that can be resumed |
 
-⇒ Un rosso su GNOME o su KDE è **una regressione finché non è dimostrato il contrario**, e si
-classifica: A regressione vera · B assunzione di un desktop nel codice comune · C difetto del banco
-· D invariante sbagliato (⛔ mai come scorciatoia).
+⇒ A red on GNOME or on KDE is **a regression until proved otherwise**, and it is
+classified: A real regression · B assumption of one desktop in the common code · C bench defect
+· D wrong invariant (⛔ never as a shortcut).
 
 ---
 
-## ⭐ La differenza che cambia la forma della fase
+## ⭐ The difference that changes the shape of the phase
 
-GNOME ha Mutter, KDE ha KWin. ⛔ **XFCE non ha un compositore proprio**: su Wayland si appoggia a
-**labwc**, che è **wlroots** — la terza e ultima famiglia. ⇒ La fase 13 non è «un terzo ramo come il
-secondo»: due pezzi del prodotto **non si riusano affatto**.
+GNOME has Mutter, KDE has KWin. ⛔ **XFCE has no compositor of its own**: on Wayland it relies on
+**labwc**, which is **wlroots** — the third and last family. ⇒ Phase 13 is not "a third branch like the
+second": two pieces of the product **are not reused at all**.
 
-| pezzo | GNOME e KDE, oggi | XFCE (wlroots) | costo |
+| piece | GNOME and KDE, today | XFCE (wlroots) | cost |
 |---|---|---|---|
-| **appunti** | `src/appunti_kde.c`, `zwlr_data_control` | ⭐ **quasi gratis**: quel file si chiama «kde» ma parla **già** il protocollo di wlroots (`src/appunti_kde.h:6-10`) | piccolo |
-| **riconoscimento** | `riconosci_desktop()`, `src/sessione.c:275-303` | terzo valore dell'enum, in **coda** (viaggia come `uint32_t` fra figlio e padre) | piccolo |
-| **sessione** | due rami in `sessione.c` | ~14 punti; ⛔ e `scrivi_dropin()` **non ha oggetto**: su XFCE il compositore non è un'unità systemd | medio |
-| **cattura** | PipeWire che **spinge** i fotogrammi | ⛔ `zwlr_screencopy_manager_v1`, modello **a tiro**: un fotogramma per richiesta, niente PipeWire, niente D-Bus | grosso |
-| **input** | **libei** (`ConnectToEIS`) | ⛔ libei **non esiste** su wlroots (`STUDI.md` §xfce §7, verifica per assenza con controllo positivo). `zwp_virtual_keyboard` + `zwlr_virtual_pointer`, e i **modificatori** vanno scritti da zero | il più grosso |
+| **clipboard** | `src/appunti_kde.c`, `zwlr_data_control` | ⭐ **almost free**: that file is called "kde" but **already** speaks the wlroots protocol (`src/appunti_kde.h:6-10`) | small |
+| **recognition** | `riconosci_desktop()`, `src/sessione.c:275-303` | third value of the enum, at the **end** (it travels as `uint32_t` between child and parent) | small |
+| **session** | two branches in `sessione.c` | ~14 points; ⛔ and `scrivi_dropin()` **has no object**: on XFCE the compositor is not a systemd unit | medium |
+| **capture** | PipeWire that **pushes** the frames | ⛔ `zwlr_screencopy_manager_v1`, a **pull** model: one frame per request, no PipeWire, no D-Bus | big |
+| **input** | **libei** (`ConnectToEIS`) | ⛔ libei **does not exist** on wlroots (`STUDI.md` §xfce §7, verified by absence with a positive check). `zwp_virtual_keyboard` + `zwlr_virtual_pointer`, and the **modifiers** must be written from scratch | the biggest |
 
-⭐ **E lo studio è già fatto**: `STUDI.md`, sezione «XFCE, labwc e wlroots» (857 righe, §1-§15), con
-le quattordici domande di `LEZIONI.md` §3 già riempite, undici misure d'apertura (M1-M11) e cinque
-scelte da mettere davanti all'utente. ⛔ Si legge **prima** di riaprirne una.
+⭐ **And the study is already done**: `STUDI.md`, section "XFCE, labwc e wlroots" (857 lines, §1-§15), with
+the fourteen questions of `LEZIONI.md` §3 already filled in, eleven opening measurements (M1-M11) and five
+choices to put before the user. ⛔ It is read **before** reopening one.
 
 ---
 
-## Le decisioni prodotte
+## The decisions produced
 
-- **20 settembre 2026, dell'utente**: *«allo stato attuale remotix e' destinato a sistemi con un
+- **20 Sep 2026, the user's**: *«allo stato attuale remotix e' destinato a sistemi con un
   solo DE installato. I sistemi con DE multipli installato sono per il momento fuori scope»* ⇒
-  `DECISIONI.md` **§0.6**, che allarga §4.6-duodetricies. ⭐ Il riconoscimento resta semplice: si
-  cerca il desktop che c'è, non si arbitra fra desktop che convivono, e ⛔ l'opzione `--compositore`
-  di v1 **non si rimette**.
-- **20 settembre 2026, dell'utente**: la fase si lavora *«in silenzio»*, con un aggiornamento
-  indicativamente ogni mezz'ora, e si interrompe solo per checkpoint, regressione, blocco,
-  decisione o milestone.
-- ⇒ **Cade la decisione del 19 settembre** *«togli XFCE e LXQt»* (`fasi/12-kde.md:45-48`): le quattro
-  scatole rientrano nei giri. ⭐ Non c'è niente da cambiare nel gancio per ottenerlo — il predefinito
-  è **già** `DESKTOP_NOTI="gnome kde xfce lxqt"` (`11-gancio.sh:240`) e il `pre-push` non passa
-  `--scatola`: bastava smettere di passarlo a mano.
-- **LXQt resta fuori dal cantiere**, e può restare rossa per le capacità non implementate. ⚠ Ma è
-  della **stessa famiglia** di XFCE (labwc/wlroots, `adattatore.lxqt.sh` è identico a quello xfce)
-  ⇒ quasi tutto quel che si scrive qui la serve, e la fase 14 sarà corta.
+  `DECISIONI.md` **§0.6**, which widens §4.6-duodetricies. ⭐ Recognition stays simple: we
+  look for the desktop that is there, we do not arbitrate between desktops that coexist, and ⛔ v1's
+  `--compositore` option **is not put back**.
+- **20 Sep 2026, the user's**: the phase is worked *«in silenzio»*, with an update
+  roughly every half hour, and it is interrupted only for a checkpoint, regression, block,
+  decision or milestone.
+- ⇒ **The decision of 19 September falls** *«togli XFCE e LXQt»* (`fasi/12-kde.md:45-48`): the four
+  boxes come back into the rounds. ⭐ Nothing needs changing in the hook to get this — the default
+  is **already** `DESKTOP_NOTI="gnome kde xfce lxqt"` (`11-gancio.sh:240`) and the `pre-push` does not pass
+  `--scatola`: it was enough to stop passing it by hand.
+- **LXQt stays out of the building site**, and may stay red for the unimplemented capabilities. ⚠ But it is
+  of the **same family** as XFCE (labwc/wlroots, `adattatore.lxqt.sh` is identical to the xfce one)
+  ⇒ almost everything written here serves it too, and phase 14 will be short.
 
 ---
 
-## Il banco — che cosa va toccato, e si dichiara prima di toccarlo
+## The bench — what must be touched, declared before touching it
 
-Il banco è **la rete della fase 11** (`banchi/11-scatole/`), puntata sulla scatola `xfce`. Il segno
-che XFCE è servito è quello già scritto: **`C1(xfce)` diventa verde**, e dopo di lei C2, C3, C4, C6,
-C7, C8b, C9, C17 sulla stessa scatola.
+The bench is **the net of phase 11** (`banchi/11-scatole/`), pointed at the `xfce` box. The sign
+that XFCE is served is the one already written: **`C1(xfce)` turns green**, and after it C2, C3, C4, C6,
+C7, C8b, C9, C17 on the same box.
 
-Letture del 20 settembre 2026, `[R]`:
+Readings of 20 Sep 2026, `[R]`:
 
-1. ⛔ **Il cancello a due nomi**, `11-gancio.sh:809-813` (`le_cinque_nuove`): *«il prodotto sa
-   avviare solo GNOME e KDE»*. ⚠ Salta **15 esecuzioni**, non cinque — C2×3, C3×4, C4×3, C6×2,
-   C8b×2 **e C17×2**, perché le due chiamate di C17 (`:863-864`) stanno **dopo** il `return`. ⇒ E
-   C17 viene saltata **senza essere nominata** nel registro: la riga si chiama ancora
-   `"C2($d) C3 C4 C6 C8b"`. Il commento di `:856-862` — *«Nessun cancello per desktop QUI»* — è
-   falso per quel punto di chiamata.
-2. ⛔ **Il gemello disallineato**, `11-accendi.sh:557-560`: stessa whitelist, ma copre **solo C8b**.
-   ⇒ Due posti da aprire; aprendone uno solo, C8b(xfce) resta muta a 3.
-3. ⛔ **La scatola `xfce` non contiene XFCE**: `Contenitore.xfce` installa `labwc xfce4-session
-   xwayland`, ⛔ ma **né `xfce4-panel` né `xfdesktop`** — una sessione che nasce lì dentro non ha
-   pannello né scrivania. ⇒ La scatola cresce, come `Contenitore.kde` è cresciuta (R5).
-4. ⛔ **E l'adattatore non avvia una sessione XFCE**: `adattatore.xfce.sh:32-43` lancia `labwc`
-   **nudo** — niente `--session xfce4-session`, niente `XFCE4_SESSION_COMPOSITOR`. ⇒ Oggi quel banco
-   misura **un compositore**, non un desktop, e in particolare non può far scattare la trappola del
-   logout (§9.2 dello studio).
-5. ⛔ **Gli attrezzi degli appunti mancano** nella scatola xfce (e lxqt): niente `wl-clipboard`,
-   niente `python3-gi gir1.2-gtk-4.0` — che kde e gnome hanno. ⚠ E ⛔ **il banco non lo dice**:
-   `11-c17:150` prende `stdout` senza guardare il codice d'uscita, quindi `wl-paste: command not
-   found` diventa `""`, la guardia di `:242` (che controlla `None`) non scatta, e la maglia stampa
-   **ROSSO** invece di «non ho potuto guardare». ⛔ Un attrezzo che manca deve dare 3.
-6. ~~⚠ **C1 dice la causa sbagliata**: su xfce esce *«nata CIECA»* mentre il fatto è *«mai nata,
-   perché il prodotto cercava `gnome-session`»*.~~ ✅ **CHIUSA dall'incremento 1, e senza toccare
-   il banco.** ⭐ La diagnosi era falsa perché lo era il prodotto: adesso la sessione **nasce
-   davvero** e l'immagine non c'è, quindi *«nata cieca»* è esatta alla lettera. ⇒ Era un difetto
-   del prodotto travestito da difetto del banco — e il modo di scoprirlo è stato curare il
-   prodotto, non ritarare la maglia.
-7. ⚠ **C7(xfce) oggi è verde in parte a vuoto**, e il banco lo stampa (`11-c7:1184-1204`): la voce
-   `/dev/dri` è vuota in tutt'e tre le impronte *«perché senza compositore nessuno apre la scheda»*.
-   ⇒ Il giorno che XFCE si accende, C7 diventa **più severa** — e può diventare rossa per ragioni
-   vere.
-8. ⚠ **C11 non vedrebbe** l'aggiunta di `wl-clipboard`/`python3-gi` alla sola xfce: non sono nella
-   sua lista di pacchetti. ⇒ O si mettono in **tutte e quattro**, o si aggiungono alla lista.
-9. ⚠ **La famiglia `desktop-nuovo` non scatterà mai da sola** per xfce: `decidi_famiglia`
-   (`11-gancio.sh:345-357`) riconosce un desktop nuovo solo da un `Contenitore.*` **non presente**
-   in `DESKTOP_NOTI`, e xfce c'è già. ⇒ Va chiesta per nome.
-10. ⚠ **Dieci commenti scaduti** dicono ancora *«solo gnome»* o *«il prodotto ne sa accendere UNO»*
+1. ⛔ **The two-name gate**, `11-gancio.sh:809-813` (`le_cinque_nuove`): *«il prodotto sa
+   avviare solo GNOME e KDE»*. ⚠ It skips **15 runs**, not five — C2×3, C3×4, C4×3, C6×2,
+   C8b×2 **and C17×2**, because the two calls of C17 (`:863-864`) are **after** the `return`. ⇒ And
+   C17 is skipped **without being named** in the log: the line is still called
+   `"C2($d) C3 C4 C6 C8b"`. The comment at `:856-862` — *«Nessun cancello per desktop QUI»* — is
+   false for that call site.
+2. ⛔ **The misaligned twin**, `11-accendi.sh:557-560`: same whitelist, but it covers **only C8b**.
+   ⇒ Two places to open; opening only one, C8b(xfce) stays mute at 3.
+3. ⛔ **The `xfce` box does not contain XFCE**: `Contenitore.xfce` installs `labwc xfce4-session
+   xwayland`, ⛔ but **neither `xfce4-panel` nor `xfdesktop`** — a session born in there has no
+   panel nor desktop. ⇒ The box grows, as `Contenitore.kde` grew (R5).
+4. ⛔ **And the adapter does not start an XFCE session**: `adattatore.xfce.sh:32-43` launches `labwc`
+   **bare** — no `--session xfce4-session`, no `XFCE4_SESSION_COMPOSITOR`. ⇒ Today that bench
+   measures **a compositor**, not a desktop, and in particular it cannot spring the logout
+   trap (§9.2 of the study).
+5. ⛔ **The clipboard tools are missing** in the xfce box (and lxqt): no `wl-clipboard`,
+   no `python3-gi gir1.2-gtk-4.0` — which kde and gnome have. ⚠ And ⛔ **the bench does not say so**:
+   `11-c17:150` takes `stdout` without looking at the exit code, so `wl-paste: command not
+   found` becomes `""`, the guard at `:242` (which checks `None`) does not fire, and the mesh prints
+   **ROSSO** instead of "I could not look". ⛔ A missing tool must give 3.
+6. ~~⚠ **C1 states the wrong cause**: on xfce it outputs *«nata CIECA»* while the fact is *«mai nata,
+   perché il prodotto cercava `gnome-session`»*.~~ ✅ **CLOSED by increment 1, and without touching
+   the bench.** ⭐ The diagnosis was false because the product was: now the session **is really
+   born** and the image is not there, so *«nata cieca»* is literally exact. ⇒ It was a product defect
+   disguised as a bench defect — and the way to find it out was to cure the
+   product, not to retune the mesh.
+7. ⚠ **C7(xfce) today is green partly on empty**, and the bench prints it (`11-c7:1184-1204`): the
+   `/dev/dri` entry is empty in all three fingerprints *«perché senza compositore nessuno apre la scheda»*.
+   ⇒ The day XFCE turns on, C7 becomes **stricter** — and may turn red for real
+   reasons.
+8. ⚠ **C11 would not see** the addition of `wl-clipboard`/`python3-gi` to xfce alone: they are not in
+   its package list. ⇒ Either they go into **all four**, or they are added to the list.
+9. ⚠ **The `desktop-nuovo` family will never fire by itself** for xfce: `decidi_famiglia`
+   (`11-gancio.sh:345-357`) recognises a new desktop only from a `Contenitore.*` **not present**
+   in `DESKTOP_NOTI`, and xfce is already there. ⇒ It must be asked for by name.
+10. ⚠ **Ten stale comments** still say *«solo gnome»* or *«il prodotto ne sa accendere UNO»*
     (`11-gancio.sh:203-205`, `:1300-1307`, `:774` · `11-accendi.sh:23-24`, `:498`, `:511`, `:522`,
-    `:533` · `11-c8b:56-59` · `11-c15:114-116`). ⛔ Sono quelli che uno legge **prima** di provare
-    su xfce.
-11. ⭐ **Un guasto di XFCE, inventato e fatto girare** (`fasi/11-…` §3.6): oggi non esiste, come non
-    esisteva quello di KDE.
+    `:533` · `11-c8b:56-59` · `11-c15:114-116`). ⛔ They are the ones one reads **before** testing
+    on xfce.
+11. ⭐ **An XFCE fault, invented and run** (`fasi/11-…` §3.6): today it does not exist, as KDE's
+    did not.
 
-⛔ **Aprire i cancelli non ammorbidisce nessun giudizio**: è la condizione perché le maglie guardino
-XFCE. Si aprono nell'incremento in cui la maglia corrispondente **può** diventare verde, non prima.
+⛔ **Opening the gates softens no verdict**: it is the condition for the meshes to look at
+XFCE. They are opened in the increment in which the corresponding mesh **can** turn green, not before.
 
 ---
 
-## Gli incrementi
+## The increments
 
-| # | obiettivo | maglia che lo prova | stato |
+| # | goal | mesh that tests it | status |
 |---|---|---|---|
-| **0** | la baseline sulle **quattro** scatole | la rete intera | ✅ **PASS** 20 set — 32 guasti su 32 |
-| **1** | la sessione XFCE **nasce** per un utente nuovo | nessuna ancora verde: C1(xfce) resta rossa (manca la cattura) — si prova con la misura di I1 | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · rete intera |
-| **2** | l'immagine di XFCE arriva al browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ✅ C1(xfce) VERDE, 530 fotogrammi · ⛔ **colori scambiati** trovati dal revisore e curati · ⏳ prova dei colori (C2) e rete |
-| **3** | mouse e tastiera arrivano a XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, e C3 · C6 su xfce | 🔧 scritto (agente, 21 set), `[M]` **provato sul portatile** contro labwc 0.8.3 — ⏳ sulla macchina |
-| **4** | il banco guarda XFCE come GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | 🔧 cancelli aperti per capacità (`11-capacita-del-prodotto.sh`), C17 dà 3 e non rosso — ⏳ sulla macchina |
-| **5** | gli appunti su XFCE | ⭐ **C17(xfce)** | 🔧 scritto e costruito, **non provato** (21 set) |
-| **6** | ⭐ lo schermo cambia misura a sessione viva (`set_custom_mode`) — ⛔ **si può**, qui: è il ripiego che KDE ci aveva imposto | da definire | 🔧 `zwlr_output_manager` v4 scritto dentro l'incremento 2 — ⏳ sulla macchina |
-| — | energia, blocco, voci pericolose (decisione dell'utente del 21 set) | la prova degli 11 minuti | 🔧 scritto (agente) — ⏳ sulla macchina |
-| — | la strada della SCHEDA per la cattura (copia zero, `gbm`) | tratto e CPU di labwc | 🔧 scritto (agente), `[M]` sul portatile: CPU di labwc **dimezzata** — ⚠ **da portare a mano** sopra il `wlroots.c` riscritto |
+| **0** | the baseline on the **four** boxes | the whole net | ✅ **PASS** 20 Sep — 32 faults out of 32 |
+| **1** | the XFCE session **is born** for a new user | none green yet: C1(xfce) stays red (capture missing) — tested with the I1 measurement | ✅ **PASS** — CP1 · CP2 · CP3 · CP4 · whole net |
+| **2** | XFCE's image reaches the browser (`zwlr_screencopy`) | ⭐ **C1(xfce)** | ✅ C1(xfce) GREEN, 530 frames · ⛔ **swapped colours** found by the reviewer and cured · ⏳ colour test (C2) and net |
+| **3** | mouse and keyboard reach XFCE (`virtual-keyboard`, `virtual-pointer`) | ⭐ **C4(xfce)**, and C3 · C6 on xfce | 🔧 written (agent, 21 Sep), `[M]` **tested on the laptop** against labwc 0.8.3 — ⏳ on the machine |
+| **4** | the bench looks at XFCE like GNOME | ⭐ **C2(xfce)**, **C8b(xfce)** | 🔧 gates opened per capability (`11-capacita-del-prodotto.sh`), C17 gives 3 and not red — ⏳ on the machine |
+| **5** | the clipboard on XFCE | ⭐ **C17(xfce)** | 🔧 written and built, **not tested** (21 Sep) |
+| **6** | ⭐ the screen changes size with the session alive (`set_custom_mode`) — ⛔ **it can be done**, here: it is the fallback KDE had forced on us | to be defined | 🔧 `zwlr_output_manager` v4 written inside increment 2 — ⏳ on the machine |
+| — | power, lock, dangerous entries (the user's decision of 21 Sep) | the 11-minute test | 🔧 written (agent) — ⏳ on the machine |
+| — | the CARD route for capture (zero-copy, `gbm`) | stroke and CPU of labwc | 🔧 written (agent), `[M]` on the laptop: labwc's CPU **halved** — ⚠ **to be carried over by hand** on top of the rewritten `wlroots.c` |
 
-⚠ **L'ordine 2-3 può invertirsi**, e la ragione va scritta il giorno che si decide: su KDE la
-cattura è venuta prima dell'input perché era la più piccola; qui sono **tutte e due grosse**, e la
-cattura è quella che rende verde una maglia.
+⚠ **The order 2-3 may be reversed**, and the reason must be written the day it is decided: on KDE
+capture came before input because it was the smallest; here they are **both big**, and
+capture is the one that turns a mesh green.
 
-### Incremento 1 — la sessione XFCE nasce *(CP1 abbozzato il 20 set; CP2 non ancora fatto)*
+### Increment 1 — the XFCE session is born *(CP1 sketched on 20 Sep; CP2 not yet done)*
 
 | | |
 |---|---|
-| **OBIETTIVO** | un utente che si collega per la prima volta, su una macchina che ha **solo** XFCE, ottiene dal prodotto una sessione XFCE **sua**, senza schermo fisico, e il prodotto la **riconosce viva**. ⛔ Niente cattura, niente input, niente appunti. ⛔⛔ E **niente misura**: su wlroots l'output non nasce della misura chiesta — il ridimensionamento è l'incremento 6, e questo si scrive nell'obiettivo invece di scoprirlo |
-| **INVARIANTE** | su GNOME e su KDE **nulla cambia**: stesso desktop riconosciuto, stesso drop-in, stesso comando, stessi tempi. Su XFCE nessuna seconda sessione, nessun residuo dopo la chiusura (C7). ⚠ Le macchine con più desktop sono fuori scopo (`DECISIONI.md` §0.6) e restano come oggi |
-| **MODULI** | `src/sessione.c` + `src/sessione.h` · `banchi/11-scatole/Contenitore.xfce` · `banchi/11-scatole/adattatore.xfce.sh` |
+| **GOAL** | a user who connects for the first time, on a machine that has **only** XFCE, gets from the product an XFCE session **of their own**, without a physical screen, and the product **recognises it alive**. ⛔ No capture, no input, no clipboard. ⛔⛔ And **no size**: on wlroots the output is not born at the requested size — resizing is increment 6, and this is written in the goal instead of being discovered |
+| **INVARIANT** | on GNOME and on KDE **nothing changes**: same desktop recognised, same drop-in, same command, same times. On XFCE no second session, no leftovers after closing (C7). ⚠ Machines with several desktops are out of scope (`DECISIONI.md` §0.6) and stay as today |
+| **MODULES** | `src/sessione.c` + `src/sessione.h` · `banchi/11-scatole/Contenitore.xfce` · `banchi/11-scatole/adattatore.xfce.sh` |
 
-#### ⭐⭐ La cura non è «aggiungere XFCE all'elenco»: è **togliere il ripiego**
+#### ⭐⭐ The cure is not "add XFCE to the list": it is **remove the fallback**
 
-⛔ Oggi `riconosci_desktop()` ha un quarto caso (`src/sessione.c:295-299`): nessun desktop
-conosciuto ⇒ **GNOME per ripiego, in silenzio**. È lì che cade una macchina solo-XFCE.
+⛔ Today `riconosci_desktop()` has a fourth case (`src/sessione.c:295-299`): no known
+desktop ⇒ **GNOME as a fallback, silently**. That is where an XFCE-only machine falls.
 
-⚠ E il guasto **non arriva dove si crede**: `scrivi_dropin()` (`src/sessione.c:1175-1189`) rilegge
-l'`ExecStart` di `org.gnome.Shell@wayland.service`, unità che non esiste, ottiene una risposta
-vuota e scrive *«un altro drop-in vince sul mio»*. ⛔ **Il sintomo accusa un drop-in altrui; la
-causa è che GNOME non c'è.** `[?]` da confermare in CP2.
+⚠ And the fault **does not show up where one thinks**: `scrivi_dropin()` (`src/sessione.c:1175-1189`) rereads
+the `ExecStart` of `org.gnome.Shell@wayland.service`, a unit that does not exist, gets an empty
+answer and writes *«un altro drop-in vince sul mio»*. ⛔ **The symptom blames someone else's drop-in; the
+cause is that GNOME is not there.** `[?]` to be confirmed in CP2.
 
-⇒ Con «un desktop per macchina» (§0.6) quel ramo è **l'unico posto in cui il prodotto può
-sbagliare desktop, e sbaglia in silenzio**. Se l'incremento 1 aggiungesse XFCE lasciandolo lì, il
-giorno di LXQt si ripeterebbe identico. ⇒ Dopo la cura il quarto caso dice **«non riconosco nessun
-desktop»** e non fa nascere niente. ⚠ È un cambiamento di comportamento su una macchina senza
-desktop, ed è dichiarato.
+⇒ With "one desktop per machine" (§0.6) that branch is **the only place where the product can
+get the desktop wrong, and it gets it wrong silently**. If increment 1 added XFCE leaving it there, the
+day of LXQt would repeat identically. ⇒ After the cure the fourth case says **"I recognise no
+desktop"** and starts nothing. ⚠ It is a change of behaviour on a machine without a
+desktop, and it is declared.
 
-#### ⛔ I tre pericoli che il sopralluogo ha trovato, e che non sono rami da aggiungere
+#### ⛔ The three dangers the survey found, which are not branches to add
 
-1. ⛔⛔ **Una guardia che evapora, senza una riga di registro.** `unita_inattiva()`
-   (in `src/sessione.c`) protegge dalla seconda sessione chiedendo a systemd se l'unità del
-   compositore è ferma; `unita_ferma()` (`:1290-1300`) accetta `unknown` ⇒ **risponde vero per
-   un'unità che non esiste**. Su XFCE, dove unità non ce n'è, la protezione pagata il 16 agosto 2026
-   **non fallirebbe: sparirebbe**. Serve un fatto vero (nome assente dal bus **e** nessun `labwc`
-   dell'utente).
-2. ⛔ **`scrivi_dropin()` non ha oggetto su XFCE**: esiste perché il compositore è un'unità systemd
-   d'utente — vero per GNOME e KDE, **falso qui**. Non è un ramo da aggiungere: è una funzione che
-   su questo desktop non ha di che parlare, e il ramo deve **dichiararlo nel registro**, non far
-   finta di aver scritto.
-3. ⛔ **Tredici negazioni implicite.** Non esiste nessun `!e_kde()` letterale in `src/`: la
-   negazione è sempre un `else` o una caduta in fondo — `:345`, `:550`, `:908`, `:1084`, `:1406`,
-   `:1537`, `:1751`. ⚠ Aggiungere un terzo valore all'enum le trasforma **tutte insieme** da
-   «GNOME» in «GNOME **o** XFCE», ⛔ **senza un avviso del compilatore**. Dimenticarne una sola non
-   dà un errore: dà una sessione XFCE che nasce con l'ambiente di GNOME.
+1. ⛔⛔ **A guard that evaporates, without a log line.** `unita_inattiva()`
+   (in `src/sessione.c`) protects from the second session by asking systemd whether the compositor's
+   unit is stopped; `unita_ferma()` (`:1290-1300`) accepts `unknown` ⇒ **it answers true for
+   a unit that does not exist**. On XFCE, where there is no unit, the protection paid for on 16 Aug 2026
+   **would not fail: it would vanish**. A real fact is needed (name absent from the bus **and** no `labwc`
+   of the user).
+2. ⛔ **`scrivi_dropin()` has no object on XFCE**: it exists because the compositor is a systemd user
+   unit — true for GNOME and KDE, **false here**. It is not a branch to add: it is a function that
+   on this desktop has nothing to talk about, and the branch must **declare it in the log**, not pretend
+   to have written.
+3. ⛔ **Thirteen implicit negations.** There is no literal `!e_kde()` in `src/`: the
+   negation is always an `else` or a fall-through at the end — `:345`, `:550`, `:908`, `:1084`, `:1406`,
+   `:1537`, `:1751`. ⚠ Adding a third value to the enum turns them **all together** from
+   "GNOME" into "GNOME **or** XFCE", ⛔ **without a compiler warning**. Forgetting a single one does not
+   give an error: it gives an XFCE session that is born with GNOME's environment.
 
-⚠ E un quarto, che non si cura qui ma si dichiara: `sessione_assicura()` (`:1891-2086`) è **codice
-morto** (nessun chiamante), ⛔ ma il suo `case SESSIONE_SANA` (`:1902-1931`) butterebbe giù una
-sessione XFCE sana. Non si tocca, si scrive.
+⚠ And a fourth, not cured here but declared: `sessione_assicura()` (`:1891-2086`) is **dead
+code** (no caller), ⛔ but its `case SESSIONE_SANA` (`:1902-1931`) would bring down a
+healthy XFCE session. It is not touched, it is written down.
 
-#### CP2 — osservato, non dedotto (`[M]` 20 set 2026, dentro `rete11-xfce`)
+#### CP2 — observed, not deduced (`[M]` 20 Sep 2026, inside `rete11-xfce`)
 
-**(1) Che cosa fa oggi il prodotto su una macchina solo-XFCE.** ⭐ La riga d'avvio **dice la verità**:
+**(1) What the product does today on an XFCE-only machine.** ⭐ The start-up line **tells the truth**:
 
 > `il desktop di questa macchina: GNOME per ripiego — ⛔ non trovo NE' gnome-session NE'
 > startplasma-wayland: nessuna sessione grafica potra' nascere`
 
-⛔ **Ma poi il guasto accusa due innocenti**, e l'ipotesi del sopralluogo è confermata alla lettera:
+⛔ **But then the fault blames two innocents**, and the survey's hypothesis is confirmed to the letter:
 
-| `[M]` la riga | che cosa fa credere |
+| `[M]` the line | what it makes one believe |
 |---|---|
-| `⚠ «gnome-shell» non e' nel PATH: ripiego dichiarato su /usr/bin/gnome-shell` | onesta |
-| ⛔ `ho scritto «--headless --no-x11» e il gestore dice un'altra cosa: un altro drop-in vince sul mio. ExecStart in vigore:` *(vuoto)* | ⛔ **accusa un drop-in altrui**; la causa è che GNOME non c'è |
-| ⛔ `senza il drop-in in vigore non la faccio nascere` | conseguenza della precedente |
-| ⛔ `nessun monitor virtuale da catturare: ScreenCast: Mutter non espone RemoteDesktop (la sessione grafica e' avviata?)` | ⛔ **accusa Mutter**, che su quella macchina non esiste |
+| `⚠ «gnome-shell» non e' nel PATH: ripiego dichiarato su /usr/bin/gnome-shell` | honest |
+| ⛔ `ho scritto «--headless --no-x11» e il gestore dice un'altra cosa: un altro drop-in vince sul mio. ExecStart in vigore:` *(empty)* | ⛔ **blames someone else's drop-in**; the cause is that GNOME is not there |
+| ⛔ `senza il drop-in in vigore non la faccio nascere` | consequence of the previous one |
+| ⛔ `nessun monitor virtuale da catturare: ScreenCast: Mutter non espone RemoteDesktop (la sessione grafica e' avviata?)` | ⛔ **blames Mutter**, which does not exist on that machine |
 
-⇒ E C1 legge **solo la fetta dell'inquilino**, dove la riga vera non c'è: perciò dice *«nata
-CIECA»* invece di *«il prodotto cercava gnome-session»*. Due diagnosi, una faccia sola.
+⇒ And C1 reads **only the tenant's slice**, where the true line is not: that is why it says *«nata
+CIECA»* instead of *«il prodotto cercava gnome-session»*. Two diagnoses, one face.
 
-**(2) ⛔ Il pericolo della guardia che evapora è CONFERMATO.** `[M]` Dentro la scatola, a un'unità
-che **non esiste**: `systemctl --user is-active org.gnome.Shell@wayland.service` → **`inactive`**,
-codice 4. ⇒ `unita_ferma()` (`src/sessione.c:1290-1300`) accetta `inactive` e risponde **vero**: su
-XFCE la guardia contro la seconda sessione non fallirebbe, **sparirebbe**.
+**(2) ⛔ The danger of the evaporating guard is CONFIRMED.** `[M]` Inside the box, for a unit
+that **does not exist**: `systemctl --user is-active org.gnome.Shell@wayland.service` → **`inactive`**,
+code 4. ⇒ `unita_ferma()` (`src/sessione.c:1290-1300`) accepts `inactive` and answers **true**: on
+XFCE the guard against the second session would not fail, **it would vanish**.
 
-**(3) ⭐⭐ La sessione XFCE headless nasce, e nasce intera.** `[M]` Ricetta a mano dentro la scatola
-— `labwc --session xfce4-session` con l'ambiente di `STUDI.md` §xfce §9.3 — vivi insieme:
+**(3) ⭐⭐ The headless XFCE session is born, and it is born whole.** `[M]` Recipe by hand inside the box
+— `labwc --session xfce4-session` with the environment of `STUDI.md` §xfce §9.3 — alive together:
 `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar`.
-⭐ E `org.xfce.SessionManager` compare sul **bus D'UTENTE**, non su uno privato: ⇒ eseguendo
-`labwc` direttamente (senza passare da `startxfce4 --wayland`, che porta `dbus-run-session`) la
-**decisione 4 si scioglie da sé** — il prodotto vede la vitalità della sessione con il codice che ha
-già.
+⭐ And `org.xfce.SessionManager` appears on the **USER bus**, not on a private one: ⇒ running
+`labwc` directly (without going through `startxfce4 --wayland`, which brings `dbus-run-session`)
+**decision 4 resolves itself** — the product sees the session's liveness with the code it already
+has.
 
-**(4) ⛔ L'output nasce 1280×720, e non lo decide il cliente.** `[M]` `HEADLESS-1, 1280×720,
-refresh 0.000 Hz`. ⇒ Su wlroots la misura **non entra nella nascita**: si dà dopo, col protocollo.
-⚠ E questo pesa sull'ordine degli incrementi — un'immagine consegnata a 1280×720 mentre il cliente
-ne chiede 1920×1080 non è utile, quindi l'incremento 6 potrebbe dover salire accanto al 2.
+**(4) ⛔ The output is born 1280×720, and the client does not decide it.** `[M]` `HEADLESS-1, 1280×720,
+refresh 0.000 Hz`. ⇒ On wlroots the size **does not enter the birth**: it is given afterwards, with the protocol.
+⚠ And this weighs on the order of the increments — an image delivered at 1280×720 while the client
+asks for 1920×1080 is not useful, so increment 6 may have to move up next to 2.
 
-**(5) ⭐⭐ I protocolli ci sono TUTTI — 47 global annunciati, e questi sono quelli che contano:**
+**(5) ⭐⭐ The protocols are ALL there — 47 globals announced, and these are the ones that count:**
 
-| serve a | protocollo | `[M]` |
+| serves | protocol | `[M]` |
 |---|---|---|
-| **cattura** | `zwlr_screencopy_manager_v1` | **v3** |
-| cattura, l'altra strada | `zwlr_export_dmabuf_manager_v1` | v1 — ⭐ esportazione DMA-BUF diretta, che `STUDI.md` non aveva pesato |
-| **tastiera** | `zwp_virtual_keyboard_manager_v1` | v1 |
+| **capture** | `zwlr_screencopy_manager_v1` | **v3** |
+| capture, the other route | `zwlr_export_dmabuf_manager_v1` | v1 — ⭐ direct DMA-BUF export, which `STUDI.md` had not weighed |
+| **keyboard** | `zwp_virtual_keyboard_manager_v1` | v1 |
 | **mouse** | `zwlr_virtual_pointer_manager_v1` | v2 |
-| **appunti** | `zwlr_data_control_manager_v1` | **v2** — ⭐ è esattamente quello che `src/appunti_kde.c` già parla |
-| **misura dell'output** | `zwlr_output_manager_v1` | **v4** — ⇒ il ridimensionamento a caldo **si può** |
-| energia (chi spegne l'output) | `zwlr_output_power_manager_v1` | v1 |
-| il pannello e la scrivania | `zwlr_layer_shell_v1` | v4 |
-| buffer | `zwp_linux_dmabuf_v1` v4 · `wp_presentation` v1 | |
+| **clipboard** | `zwlr_data_control_manager_v1` | **v2** — ⭐ it is exactly the one `src/appunti_kde.c` already speaks |
+| **output size** | `zwlr_output_manager_v1` | **v4** — ⇒ hot resizing **can be done** |
+| power (who turns the output off) | `zwlr_output_power_manager_v1` | v1 |
+| the panel and the desktop | `zwlr_layer_shell_v1` | v4 |
+| buffers | `zwp_linux_dmabuf_v1` v4 · `wp_presentation` v1 | |
 
-⛔ **Assenti, e va saputo prima di scrivere**: `ext_image_copy_capture_manager_v1` (il successore di
-screencopy: ⇒ si scrive contro `zwlr_screencopy`, non contro di lui) e
-`wp_linux_drm_syncobj_manager_v1` (le fence esplicite: ⇒ la sincronizzazione va risolta
-diversamente). ⚠ E `ext_data_control_manager_v1` non c'è — come su KWin, e come `STUDI.md` prevedeva:
-la strada resta `zwlr_data_control`.
+⛔ **Absent, and it must be known before writing**: `ext_image_copy_capture_manager_v1` (screencopy's
+successor: ⇒ we write against `zwlr_screencopy`, not against it) and
+`wp_linux_drm_syncobj_manager_v1` (explicit fences: ⇒ synchronisation must be solved
+differently). ⚠ And `ext_data_control_manager_v1` is not there — as on KWin, and as `STUDI.md` predicted:
+the route stays `zwlr_data_control`.
 
-**(6) La scatola è cresciuta**, e la ricetta lo dichiara (R6): `xfce4-panel`, `xfdesktop4`,
-`xfce4-terminal`, `thunar`, `nano`. ⛔ Non è estetica: senza `xfdesktop` e `xfce4-panel` due dei modi
-in cui la nascita fallisce — `exit(1)` senza layer-shell, e l'uscita muta con `n_monitors == 0` —
-**non si possono nemmeno vedere**.
+**(6) The box has grown**, and the recipe declares it (R6): `xfce4-panel`, `xfdesktop4`,
+`xfce4-terminal`, `thunar`, `nano`. ⛔ It is not cosmetic: without `xfdesktop` and `xfce4-panel` two of the ways
+in which the birth fails — `exit(1)` without layer-shell, and the silent exit with `n_monitors == 0` —
+**cannot even be seen**.
 
-#### ⭐ La prova, e il controllo negativo che vale più della prova
+#### ⭐ The test, and the negative check that is worth more than the test
 
-- **controllo negativo del ripiego**: stessa scatola, **binario di oggi** ⇒ la riga d'avvio dice
-  *«GNOME per ripiego»* e la sessione non nasce; **binario curato** ⇒ dice *«XFCE»* e nasce. È la
-  prova che la cura ha colpito il ramo giusto e non un altro.
-- ⭐ **la prova della trappola del logout** (non ha analogo su KDE): se la riga del compositore non
-  contiene **sia** `labwc` **sia** `--session`, al logout `xfce4-session` esegue `loginctl
-  terminate-session ''` — cioè **ammazza la sessione logind di REMOTIX**, non solo il desktop.
-  ⛔ `STUDI.md` §xfce §9.2 dice di provarla **sul banco e mai sull'utente**.
-- ⚠ **il tetto dell'attesa va giustificato**, non copiato da KDE: su Wayland nessun client di XFCE
-  si registra e ogni gruppo di priorità si sblocca a scadenza — `STARTUP_TIMEOUT_WAYLAND` = **8 s
-  per gruppo**, strutturali e non accorciabili.
-- ⚠ **le cinture xfconf si rileggono**: `xfconf-query` esce con zero anche quando il demone ha
-  rifiutato e ripristinato il valore. Una scrittura riuscita non è una configurazione applicata.
+- **negative check of the fallback**: same box, **today's binary** ⇒ the start-up line says
+  *«GNOME per ripiego»* and the session is not born; **cured binary** ⇒ it says *«XFCE»* and it is born. It is the
+  proof that the cure hit the right branch and not another.
+- ⭐ **the test of the logout trap** (no analogue on KDE): if the compositor's line does not
+  contain **both** `labwc` **and** `--session`, at logout `xfce4-session` runs `loginctl
+  terminate-session ''` — that is, it **kills REMOTIX's logind session**, not only the desktop.
+  ⛔ `STUDI.md` §xfce §9.2 says to test it **on the bench and never on the user**.
+- ⚠ **the waiting cap must be justified**, not copied from KDE: on Wayland no XFCE client
+  registers and every priority group unblocks at timeout — `STARTUP_TIMEOUT_WAYLAND` = **8 s
+  per group**, structural and not shortenable.
+- ⚠ **the xfconf belts are reread**: `xfconf-query` exits with zero even when the daemon has
+  refused and restored the value. A successful write is not an applied configuration.
 
-#### CP3 — la modifica minima (`src/sessione.c`, `src/sessione.h`)
+#### CP3 — the minimal change (`src/sessione.c`, `src/sessione.h`)
 
-⭐ **Due file, e nessun ramo di GNOME o di KDE toccato**: ogni blocco nuovo sta **prima** di quello
-di GNOME e torna con `goto la_coda` o `return`, così i rami vecchi restano testualmente quelli.
+⭐ **Two files, and no GNOME or KDE branch touched**: every new block sits **before** GNOME's
+and returns with `goto la_coda` or `return`, so the old branches stay textually the same.
 
-| # | dove | che cosa |
+| # | where | what |
 |---|---|---|
-| 1 | `sessione.h` | `SESSIONE_RIGA_XFCE` / `SESSIONE_COMANDO_XFCE` — ⭐ **la riga si scrive una volta e si usa due** (comando, e `XFCE4_SESSION_COMPOSITOR`): scriverla due volte vorrebbe dire poterle far divergere, e divergendo scatterebbe la trappola del logout senza una riga che lo dica |
-| 2 | `sessione.h` | enum: `SESSIONE_DESKTOP_XFCE = 2`, `SESSIONE_DESKTOP_NESSUNO = 3` — ⚠ **in coda**, perché il numero viaggia come `uint32_t` fra padre e figlio |
-| 3 | `riconosci_desktop()` | il ramo `xfce4-session`, **dopo** GNOME e KDE; ⛔ e il ripiego **tolto**: chi non riconosce nessuno adesso lo dice |
-| 4 | `e_xfce()` · `e_nessuno()` | ⛔ e mai un `!e_kde()`: le tredici negazioni implicite sono il pericolo, e il modo di non caderci è scritto sopra le due funzioni |
-| 5 | `nodo_della_scheda()` | il nodo si **apre**, non si inchioda: `renderD128` e `renderD129` si scambiano fra due avvii, e se l'apertura fallisce wlroots ripiega su pixman **in silenzio** |
-| 6 | `sessione_viva()` · `sessione_stato()` | il nome `org.xfce.SessionManager` sul bus d'utente, con dichiarato che «viva» **non** vuol dire «della misura giusta» |
-| 7 | `componi_ambiente()` | dieci variabili, ciascuna con la sua ragione — ⭐ e la colonna «da togliere» era già gratis: la funzione costruisce da zero |
-| 8 | `scrivi_dropin()` | ⛔ su XFCE **non ha oggetto**, e lo dice invece di tornare `TRUE` in silenzio |
-| 9 | `avvia()` | il comando a tre vie, non un ternario annidato |
-| 10 | `unita_inattiva()` | ⛔ la guardia che sarebbe **sparita**: si guardano due fatti (`/proc` e il nome sul bus) invece di chiedere a systemd di un'unità che non c'è |
-| 11 | `sessione_termina()` | `Logout`, poi **SIGTERM a labwc** — qui la forza non è systemd. ⚠ `SIGTERM` e non `SIGKILL`: labwc chiude i suoi client, e un `SIGKILL` lascerebbe dietro proprio quel che C7 cerca |
-| 12 | `sessione_impostazioni()` | la cintura `WaylandLogoutCommand=/bin/true`, ⭐ **riletta**; la cache delle sessioni salvate cancellata; il resto dichiarato rimandato |
-| 13 | `sessione_inibisci()` | ⛔ **no-op dichiarato**: `xfce4-session` non consulta l'inibitore, quindi chiedere darebbe un ⛔ falso e zero protezione |
-| 14 | `sessione_fai_nascere()` | il rifiuto onesto quando non c'è nessun desktop — ⭐ **nella fetta dell'inquilino**, dove il banco la legge |
-| 15 | `nome_desktop()` | ⚠ `LEZIONI.md` §1.9: il tema del cursore, scritto per KWin e riusato da labwc, annunciava «⭐ **Plasma**» dentro una sessione XFCE. La riga non si duplica: si fa dire il nome giusto |
+| 1 | `sessione.h` | `SESSIONE_RIGA_XFCE` / `SESSIONE_COMANDO_XFCE` — ⭐ **the line is written once and used twice** (command, and `XFCE4_SESSION_COMPOSITOR`): writing it twice would mean they could diverge, and diverging would spring the logout trap without a line saying so |
+| 2 | `sessione.h` | enum: `SESSIONE_DESKTOP_XFCE = 2`, `SESSIONE_DESKTOP_NESSUNO = 3` — ⚠ **at the end**, because the number travels as `uint32_t` between parent and child |
+| 3 | `riconosci_desktop()` | the `xfce4-session` branch, **after** GNOME and KDE; ⛔ and the fallback **removed**: whoever recognises nothing now says so |
+| 4 | `e_xfce()` · `e_nessuno()` | ⛔ and never a `!e_kde()`: the thirteen implicit negations are the danger, and the way not to fall into it is written above the two functions |
+| 5 | `nodo_della_scheda()` | the node is **opened**, not hard-wired: `renderD128` and `renderD129` swap between two boots, and if the opening fails wlroots falls back to pixman **silently** |
+| 6 | `sessione_viva()` · `sessione_stato()` | the name `org.xfce.SessionManager` on the user bus, with it declared that "alive" does **not** mean "of the right size" |
+| 7 | `componi_ambiente()` | ten variables, each with its reason — ⭐ and the "to remove" column was already free: the function builds from scratch |
+| 8 | `scrivi_dropin()` | ⛔ on XFCE it **has no object**, and it says so instead of returning `TRUE` silently |
+| 9 | `avvia()` | the three-way command, not a nested ternary |
+| 10 | `unita_inattiva()` | ⛔ the guard that would have **vanished**: two facts are looked at (`/proc` and the name on the bus) instead of asking systemd about a unit that is not there |
+| 11 | `sessione_termina()` | `Logout`, then **SIGTERM to labwc** — here the force is not systemd. ⚠ `SIGTERM` and not `SIGKILL`: labwc closes its clients, and a `SIGKILL` would leave behind precisely what C7 looks for |
+| 12 | `sessione_impostazioni()` | the belt `WaylandLogoutCommand=/bin/true`, ⭐ **reread**; the cache of saved sessions deleted; the rest declared postponed |
+| 13 | `sessione_inibisci()` | ⛔ **declared no-op**: `xfce4-session` does not consult the inhibitor, so asking would give a ⛔ false one and zero protection |
+| 14 | `sessione_fai_nascere()` | the honest refusal when there is no desktop — ⭐ **in the tenant's slice**, where the bench reads it |
+| 15 | `nome_desktop()` | ⚠ `LEZIONI.md` §1.9: the cursor theme, written for KWin and reused by labwc, announced "⭐ **Plasma**" inside an XFCE session. The line is not duplicated: it is made to say the right name |
 
-#### CP4 — la prova (`[M]` 20 set 2026, binario `48c87296`)
+#### CP4 — the test (`[M]` 20 Sep 2026, binary `48c87296`)
 
-| che cosa | atteso | misurato |
+| what | expected | measured |
 |---|---|---|
-| il desktop riconosciuto, nelle quattro scatole | quattro risposte diverse e giuste | ⭐ gnome → *GNOME* · kde → *KDE Plasma* · xfce → ⭐ *XFCE (c'è xfce4-session, e labwc per farlo girare)* · lxqt → ⛔ *NESSUN DESKTOP RICONOSCIUTO* |
-| **la sessione XFCE nasce** per un inquilino nuovo | labwc + xfce4-session vivi | ⭐ **e nasce intera**: `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar` · `wrapper-2.0` |
-| il prodotto la **riconosce viva** | il nome sul bus d'utente | ⭐ *«il gestore di sessione XFCE c'è sul bus: la sessione è viva»* |
-| quanto ci mette | ≥ 8 s (gruppi di priorità) | `[M]` **17,0 s** dal «la faccio nascere» al nome sul bus (giro pulito delle 21:40). ⚠ Un secondo giro ha dato 0,4 s e **non lo conto**: il registro non era stato ritroncato, e due misure che non si possono separare non si mediano — `[?]` da rifare pulita prima di tarare il tetto del banco |
-| la cintura del logout | scritta **e riletta** | ⭐ *«WaylandLogoutCommand = /bin/true, RILETTA»* |
-| la scheda data a wlroots | aperta, non dedotta | ⭐ *«la scheda che do a wlroots è /dev/dri/renderD128 (aperta, non dedotta)»* |
-| il drop-in | dichiarato assente, non finto | ⭐ *«nessun drop-in da scrivere … E la tela chiesta (1920x1080) NON entra nella nascita»* |
-| **C7(xfce)** — si chiude e non resta niente | verde | ⭐ **VERDE**, 1,15 s. ⚠ E il banco dichiara da sé che una voce (`/dev/dri`) passa ancora **a vuoto**: la sessione non apre la scheda finché non c'è la cattura |
-| **C1(xfce)** | ⛔ **rosso, e per un motivo NUOVO** | ⛔ rosso: *«nate CIECHE»*. ⭐ E adesso è vero alla lettera — la sessione c'è, l'immagine no: è l'incremento 2 |
-| **C1(gnome)** · **C1(kde)** | verdi, invariati | ⭐ **verdi tutt'e due**, 2 sessioni su 2 ciascuna |
+| the desktop recognised, in the four boxes | four different and right answers | ⭐ gnome → *GNOME* · kde → *KDE Plasma* · xfce → ⭐ *XFCE (c'è xfce4-session, e labwc per farlo girare)* · lxqt → ⛔ *NESSUN DESKTOP RICONOSCIUTO* |
+| **the XFCE session is born** for a new tenant | labwc + xfce4-session alive | ⭐ **and it is born whole**: `labwc` · `xfce4-session` · `xfce4-panel` · `xfdesktop` · `xfsettingsd` · `xfconfd` · `Thunar` · `wrapper-2.0` |
+| the product **recognises it alive** | the name on the user bus | ⭐ *«il gestore di sessione XFCE c'è sul bus: la sessione è viva»* |
+| how long it takes | ≥ 8 s (priority groups) | `[M]` **17.0 s** from «la faccio nascere» to the name on the bus (clean round at 21:40). ⚠ A second round gave 0.4 s and **I do not count it**: the log had not been truncated again, and two measurements that cannot be separated are not averaged — `[?]` to be redone clean before tuning the bench's cap |
+| the logout belt | written **and reread** | ⭐ *«WaylandLogoutCommand = /bin/true, RILETTA»* |
+| the card given to wlroots | opened, not deduced | ⭐ *«la scheda che do a wlroots è /dev/dri/renderD128 (aperta, non dedotta)»* |
+| the drop-in | declared absent, not faked | ⭐ *«nessun drop-in da scrivere … E la tela chiesta (1920x1080) NON entra nella nascita»* |
+| **C7(xfce)** — it closes and nothing remains | green | ⭐ **GREEN**, 1.15 s. ⚠ And the bench declares by itself that one entry (`/dev/dri`) still passes **on empty**: the session does not open the card until there is capture |
+| **C1(xfce)** | ⛔ **red, and for a NEW reason** | ⛔ red: *«nate CIECHE»*. ⭐ And now it is literally true — the session is there, the image is not: that is increment 2 |
+| **C1(gnome)** · **C1(kde)** | green, unchanged | ⭐ **both green**, 2 sessions out of 2 each |
 
-⚠ **Quel che resta storto e si dichiara**, perché è l'incremento dopo a curarlo: su XFCE la cattura
-cade ancora nel ramo di Mutter e scrive *«Mutter non espone RemoteDesktop»* — ⛔ una riga che accusa
-un innocente. È lo stesso punto in cui si fermò l'incremento 1 di KDE, ed è il primo che
-l'incremento 2 toglie di mezzo.
+⚠ **What remains crooked and is declared**, because the next increment cures it: on XFCE capture
+still falls into Mutter's branch and writes *«Mutter non espone RemoteDesktop»* — ⛔ a line that blames
+an innocent. It is the same point where KDE's increment 1 stopped, and it is the first thing that
+increment 2 removes.
 
-#### La rete intera (`[M]` 20→21 set 2026, 23:48→03:00, binario `48c87296`, 11 460 s)
+#### The whole net (`[M]` 20→21 Sep 2026, 23:48→03:00, binary `48c87296`, 11 460 s)
 
 | | |
 |---|---|
-| **GNOME** | ⭐ **tutto verde**, C17 compresa — identico al CP0 |
-| **KDE** | ⭐ **tutto verde**, e ⭐⭐ **C2(kde) è tornata a giudicare**: 0 · 0 · 0 dove al CP0 dava 3 · 3 · 3. La cura del «prima» (240→900) regge, e i suoi **due guasti innestati sono visti** |
-| **xfce** | passo0, C5, C7, C8, C9 verdi coi guasti · ⛔ **C1 rosso** — ed è l'incremento 2, dichiarato |
-| **lxqt** | uguale a xfce — ⚠ e il suo C1 rosso adesso ha una causa **nuova e giusta**: il prodotto le dice in faccia che **non riconosce nessun desktop** |
-| la rete | C11 verde (stesso binario nelle quattro) · C13 verde · C14 verde, 786 s |
-| ⭐ **guasti innestati** | **34 su 34 visti** — due in piu' del CP0, e sono proprio i due di C2(kde) che il CP0 non aveva potuto certificare |
-| rossi | **2**, e sono i due dichiarati |
+| **GNOME** | ⭐ **all green**, C17 included — identical to CP0 |
+| **KDE** | ⭐ **all green**, and ⭐⭐ **C2(kde) is judging again**: 0 · 0 · 0 where at CP0 it gave 3 · 3 · 3. The cure of the "before" (240→900) holds, and its **two injected faults are seen** |
+| **xfce** | passo0, C5, C7, C8, C9 green with the faults · ⛔ **C1 red** — and that is increment 2, declared |
+| **lxqt** | the same as xfce — ⚠ and its red C1 now has a **new and right** cause: the product tells it to its face that it **recognises no desktop** |
+| the net | C11 green (same binary in the four) · C13 green · C14 green, 786 s |
+| ⭐ **injected faults** | **34 out of 34 seen** — two more than CP0, and they are precisely the two of C2(kde) that CP0 had not been able to certify |
+| reds | **2**, and they are the two declared |
 
-⇒ ⭐ **L'incremento 1 passa il cancello**: XFCE ha guadagnato la nascita della sessione, GNOME e KDE
-non hanno perso niente, e la rete sa ancora dare rosso.
+⇒ ⭐ **Increment 1 passes the gate**: XFCE gained the birth of the session, GNOME and KDE
+lost nothing, and the net can still give red.
 
 ---
 
-### Incremento 2 — l'immagine di XFCE arriva al browser *(CP1, 21 set 2026 — non ancora cominciato)*
+### Increment 2 — XFCE's image reaches the browser *(CP1, 21 Sep 2026 — not yet started)*
 
 | | |
 |---|---|
-| **OBIETTIVO** | un cliente attaccato alla sessione XFCE **vede il desktop**: fotogrammi veri, che cambiano. La maglia che lo prova è **C1(xfce)**, la stessa che lo provò per Plasma |
-| **INVARIANTE** | su GNOME e su KDE **nulla cambia**: stessa strada (PipeWire), stessi numeri, stesso libro del danno. ⛔ E il consumatore del DMA-BUF delle fasi 8-9 **si riusa, non si riscrive** |
-| **LA DECISIONE CHE LO GOVERNA** | ✅ cattura **diretta** (`zwlr_screencopy_manager_v1` v3), dell'utente, 20 set 2026 |
+| **GOAL** | a client attached to the XFCE session **sees the desktop**: real frames, that change. The mesh that tests it is **C1(xfce)**, the same that tested it for Plasma |
+| **INVARIANT** | on GNOME and on KDE **nothing changes**: same route (PipeWire), same numbers, same damage book. ⛔ And the DMA-BUF consumer of phases 8-9 **is reused, not rewritten** |
+| **THE DECISION THAT GOVERNS IT** | ✅ **direct** capture (`zwlr_screencopy_manager_v1` v3), the user's, 20 Sep 2026 |
 
-#### ⛔ La differenza che fa il lavoro, e non è il protocollo: è il verso
+#### ⛔ The difference that does the work, and it is not the protocol: it is the direction
 
-Su GNOME e su KDE il compositore **spinge**: monta un flusso PipeWire e i fotogrammi arrivano da
-soli. Tutto `src/cattura.c` (2 348 righe) è costruito su quel verso, e `figlio.c` lo usa in **35
-punti** attraverso dieci funzioni (`cattura_avvia` ×7, `cattura_prendi` ×5, `cattura_fermo_libera`
+On GNOME and on KDE the compositor **pushes**: it mounts a PipeWire stream and the frames arrive by
+themselves. All of `src/cattura.c` (2 348 lines) is built on that direction, and `figlio.c` uses it at **35
+points** through ten functions (`cattura_avvia` ×7, `cattura_prendi` ×5, `cattura_fermo_libera`
 ×7, `cattura_ridimensiona` ×3, `cattura_risveglia` ×3, …).
 
-⛔ Su wlroots si **tira**: `capture_output → frame → copy → ready`, **una richiesta per
-fotogramma**, e nessun nodo PipeWire da nessuna parte. ⇒ Il ritmo non è una proprietà del
-compositore: **è il nostro ciclo** — che è precisamente quel che la decisione dell'utente ha
-comprato.
+⛔ On wlroots one **pulls**: `capture_output → frame → copy → ready`, **one request per
+frame**, and no PipeWire node anywhere. ⇒ The rate is not a property of the
+compositor: **it is our loop** — which is precisely what the user's decision
+bought.
 
-⚠ **E la domanda di progetto da sciogliere in CP3** è una sola, e va posta bene: la seconda sorgente
-entra **accanto** a `Cattura` (una sorgente che si sceglie, e i trentacinque punti di `figlio.c`
-restano dove sono) oppure **sotto** di lei? ⛔ La risposta non si sceglie per gusto: la si sceglie
-misurando quante delle dieci funzioni hanno senso sul verso a tiro. `cattura_ridimensiona`, per
-esempio, su wlroots **non è la stessa cosa**: lì la misura si cambia sull'output, non sul flusso.
+⚠ **And the design question to be resolved in CP3** is only one, and it must be posed well: does the second source
+go **next to** `Cattura` (a source that is chosen, and the thirty-five points of `figlio.c`
+stay where they are) or **under** it? ⛔ The answer is not chosen by taste: it is chosen by
+measuring how many of the ten functions make sense in the pull direction. `cattura_ridimensiona`, for
+example, on wlroots **is not the same thing**: there the size is changed on the output, not on the stream.
 
-#### Quel che è già stato misurato, e non va rimisurato
+#### What has already been measured, and must not be measured again
 
-| | `[M]` 20 set 2026, dentro `rete11-xfce` |
+| | `[M]` 20 Sep 2026, inside `rete11-xfce` |
 |---|---|
-| il protocollo | `zwlr_screencopy_manager_v1` **v3** — e c'è anche `zwlr_export_dmabuf_manager_v1` v1, una seconda strada che `STUDI.md` non aveva pesato |
-| il permesso | ✅ **non esiste**: nessun `.desktop`, nessun portale, nessun dialogo |
-| il buffer della scheda | `zwp_linux_dmabuf_v1` **v4** |
-| ⛔ le fence esplicite | **assenti** (`wp_linux_drm_syncobj_manager_v1` non c'è) ⇒ la sincronizzazione va risolta per un'altra strada, e va misurata |
-| ⛔ il successore | `ext_image_copy_capture_manager_v1` **assente** su Trixie ⇒ si scrive contro screencopy, sapendolo |
-| ⛔ la misura dell'uscita | nasce **1280×720** cablata, e il cliente ne chiede 1920×1080 |
+| the protocol | `zwlr_screencopy_manager_v1` **v3** — and there is also `zwlr_export_dmabuf_manager_v1` v1, a second route that `STUDI.md` had not weighed |
+| the permission | ✅ **does not exist**: no `.desktop`, no portal, no dialog |
+| the card's buffer | `zwp_linux_dmabuf_v1` **v4** |
+| ⛔ explicit fences | **absent** (`wp_linux_drm_syncobj_manager_v1` is not there) ⇒ synchronisation must be solved another way, and measured |
+| ⛔ the successor | `ext_image_copy_capture_manager_v1` **absent** on Trixie ⇒ we write against screencopy, knowing it |
+| ⛔ the output size | it is born **1280×720** hard-wired, and the client asks for 1920×1080 |
 
-#### CP2/CP4 del primo passo — `[M]` 21 set 2026: **i pixel arrivano**
+#### CP2/CP4 of the first step — `[M]` 21 Sep 2026: **the pixels arrive**
 
-⭐⭐ Il modulo `src/wlroots.c` + `src/wlroots.h` esiste, e il banco
-`banchi/13-w1-un-fotogramma.c` lo prova dentro una sessione XFCE viva.
+⭐⭐ The module `src/wlroots.c` + `src/wlroots.h` exists, and the bench
+`banchi/13-w1-un-fotogramma.c` tests it inside a live XFCE session.
 
-| che cosa | misurato |
+| what | measured |
 |---|---|
-| fotogrammi tirati | ⭐ **10 su 10**, poi 3 su 3 — nessun fallito, nessuno scaduto |
-| l'uscita | `HEADLESS-1`, **1280×720**, stride 5120 |
-| il formato | **XB24** (`XBGR8888`) — ⚠ **non** quello che si sarebbe dato per scontato |
-| il contenuto | **199-201 colori distinti**, 6,1 % dei campioni non nero ⇒ è un desktop vero, non uno schermo spento |
-| il tempo per fotogramma | `[M]` **8,8-14,9 ms** in media, 16,5 ms il peggiore — ⚠ ed è il giro INTERO col copiamento in memoria, su Intel UHD 730 |
-| il puntatore | **dentro l'immagine** (`overlay_cursor = 1`), come previsto: su questa famiglia non c'è un canale per la sua forma |
+| frames pulled | ⭐ **10 out of 10**, then 3 out of 3 — none failed, none timed out |
+| the output | `HEADLESS-1`, **1280×720**, stride 5120 |
+| the format | **XB24** (`XBGR8888`) — ⚠ **not** the one that would have been taken for granted |
+| the content | **199-201 distinct colours**, 6.1 % of the samples non-black ⇒ it is a real desktop, not a switched-off screen |
+| the time per frame | `[M]` **8.8-14.9 ms** on average, 16.5 ms the worst — ⚠ and it is the WHOLE round with the copy to memory, on Intel UHD 730 |
+| the pointer | **inside the image** (`overlay_cursor = 1`), as expected: on this family there is no channel for its shape |
 
-#### ⛔⛔ E una trappola pagata subito, che vale piu' del fotogramma
+#### ⛔⛔ And a trap paid for at once, which is worth more than the frame
 
-`[M]` La prima stesura del banco scriveva i canali nell'ordine di `XRGB8888`.
-L'immagine è uscita **con le cartelle arancioni** — e sembrava giusta: un desktop
-Xfce con le icone color zucca è perfettamente plausibile. ⛔ Ma labwc dichiara
-**XBGR8888**, che in memoria è `R G B X`: erano **R e B scambiati**, e le cartelle
-vere di Adwaita sono **blu**.
+`[M]` The first draft of the bench wrote the channels in the order of `XRGB8888`.
+The image came out **with orange folders** — and it looked right: an Xfce
+desktop with pumpkin-coloured icons is perfectly plausible. ⛔ But labwc declares
+**XBGR8888**, which in memory is `R G B X`: **R and B were swapped**, and the real
+Adwaita folders are **blue**.
 
-⇒ ⭐ È `LEZIONI.md` §1.9 nella sua forma peggiore: **un controllo che dà un
-risultato plausibile non è un controllo**. Il fatto si chiede al formato — che lo
-dice — invece di dedurlo da come appare. ⚠ E se fosse arrivato fino al
-codificatore, l'utente avrebbe visto un desktop blu senza che una riga lo
-spiegasse.
+⇒ ⭐ It is `LEZIONI.md` §1.9 in its worst form: **a check that gives a
+plausible result is not a check**. The fact is asked of the format — which
+says it — instead of being deduced from how it looks. ⚠ And had it reached the
+encoder, the user would have seen a blue desktop without a line
+explaining it.
 
-#### CP3/CP4 — `[M]` 21 set 2026: **C1(xfce) è VERDE**
+#### CP3/CP4 — `[M]` 21 Sep 2026: **C1(xfce) is GREEN**
 
-⭐⭐ **La seconda sorgente entra SOTTO la porta della cattura, non accanto.** Come gli appunti, che
-in casa hanno già due costruttori dietro una porta sola. ⇒ `figlio.c` usa quell'interfaccia in **35
-punti e non ne cambia nessuno**: GNOME e KDE restano testualmente quelli di prima.
+⭐⭐ **The second source goes UNDER the capture's door, not next to it.** Like the clipboard, which
+already has two constructors behind a single door at home. ⇒ `figlio.c` uses that interface at **35
+points and changes none of them**: GNOME and KDE stay textually as they were.
 
-| file | che cosa |
+| file | what |
 |---|---|
-| `src/wlroots.c` · `.h` | il client Wayland: `zwlr_screencopy` v3 (i fotogrammi) e `zwlr_output_manager` v4 (la misura) |
-| `src/cattura.h` | `cattura_avvia_wlr()`: il costruttore dell'altro verso |
-| `src/cattura.c` | il campo `wlr` in cima a `struct Cattura`, e una guardia in cima a ogni funzione pubblica |
-| `src/figlio.c` | il terzo ramo del palco: su XFCE **non c'è niente da aprire**, la sorgente è la cattura |
-| `banchi/13-w1-un-fotogramma.c` | il banco, che lega **gli stessi oggetti del prodotto** (R12.3) |
+| `src/wlroots.c` · `.h` | the Wayland client: `zwlr_screencopy` v3 (the frames) and `zwlr_output_manager` v4 (the size) |
+| `src/cattura.h` | `cattura_avvia_wlr()`: the constructor of the other direction |
+| `src/cattura.c` | the `wlr` field at the top of `struct Cattura`, and a guard at the top of every public function |
+| `src/figlio.c` | the third branch of the stage: on XFCE **there is nothing to open**, the source is the capture |
+| `banchi/13-w1-un-fotogramma.c` | the bench, which links **the same objects as the product** (R12.3) |
 
-| la prova | misurato |
+| the test | measured |
 |---|---|
-| **C1(xfce)** | ⭐⭐ **VERDE**, 3 sessioni su 3 |
-| C1(gnome) · C1(kde) | ⭐ verdi, 3 su 3 ciascuna |
-| i fotogrammi **veri** | ⭐ **530 consegnati, 19 chiavi, 0 guasti** |
+| **C1(xfce)** | ⭐⭐ **GREEN**, 3 sessions out of 3 |
+| C1(gnome) · C1(kde) | ⭐ green, 3 out of 3 each |
+| the **real** frames | ⭐ **530 delivered, 19 keyframes, 0 faults** |
 
-⛔ **E quell'ultima riga è quella che conta**: C1 legge una riga di registro, e una riga si può
-scrivere. I fotogrammi no. ⇒ Si contano apposta, perché il verde di una maglia che guarda il
-registro non vale finché non si è visto passare il traffico.
+⛔ **And that last row is the one that counts**: C1 reads a log line, and a line can be
+written. Frames cannot. ⇒ They are counted on purpose, because the green of a mesh that looks at the
+log is not worth anything until the traffic has been seen to pass.
 
-#### ⛔⛔ Tre difetti trovati PROVANDO, e due RILEGGENDO
+#### ⛔⛔ Three defects found by TESTING, and two by REREADING
 
-Provando:
-1. `mutter_monitor_cerca(NULL)` — un'asserzione fallita nel registro. Rumore che somiglia a un
-   guasto: su wlroots il monitor è l'uscita del compositore, e non c'è nessuna sessione di Mutter.
-2. Il testimone *«formato negoziato: LxA»* lo scriveva la richiamata di PipeWire, che qui non
-   esiste. ⇒ Senza, la maglia avrebbe detto *«nata cieca»* di una sessione che si vede benissimo.
-3. La divergenza fra tela **chiesta** (1920×1080) e uscita **vera** (1280×720): adesso si dichiara
-   alla prima riga.
+By testing:
+1. `mutter_monitor_cerca(NULL)` — a failed assertion in the log. Noise that looks like a
+   fault: on wlroots the monitor is the compositor's output, and there is no Mutter session.
+2. The witness *«formato negoziato: LxA»* was written by PipeWire's callback, which does not
+   exist here. ⇒ Without it, the mesh would have said *«nata cieca»* of a session that is perfectly visible.
+3. The divergence between the **requested** canvas (1920×1080) and the **real** output (1280×720): now it is declared
+   on the first line.
 
-⭐ Rileggendo il proprio codice, **prima che si vedessero**:
+⭐ By rereading one's own code, **before they were seen**:
 
-4. **Il buffer riusato dopo una copia abbandonata.** Mollato un fotogramma dopo aver mandato `copy`,
-   il compositore può scriverci dentro **più tardi**: riusarlo dà un fotogramma vecchio in mezzo ai
-   nuovi — ⛔ non un errore, uno **sfarfallio**. È `LEZIONI.md` §8 (non era *acquire*, era
-   *release*). ⇒ Chi abbandona dopo `copy` marca il buffer.
-5. ⛔⛔ **Il canale scambiato, arrivato fino al codificatore.** `figlio.c` dichiara
-   `CODIFICATORE_PIXEL_BGRX` — `B G R x` in memoria, inchiodato dalla fase 2 — e labwc offre per
-   primo **XBGR8888**, che è `R G B x`. ⇒ **L'utente avrebbe visto il desktop con il rosso e il blu
-   scambiati**, senza una riga che lo spiegasse.
-   ⭐ E la cura non è insegnare un formato nuovo al codificatore, che GNOME e KDE usano: è
-   **chiedere quello che si sa già leggere**. Su screencopy v3 il compositore ne offre più d'uno
-   apposta, e `buffer_done` esiste per questo. ⚠ E l'elenco offerto finisce nel registro, perché il
-   giorno che i canali escono storti la prima domanda è *«che cosa offriva il compositore?»*.
+4. **The buffer reused after an abandoned copy.** Once a frame is dropped after sending `copy`,
+   the compositor may write into it **later**: reusing it gives an old frame among the
+   new ones — ⛔ not an error, a **flicker**. It is `LEZIONI.md` §8 (it was not *acquire*, it was
+   *release*). ⇒ Whoever abandons after `copy` marks the buffer.
+5. ⛔⛔ **The swapped channel, all the way to the encoder.** `figlio.c` declares
+   `CODIFICATORE_PIXEL_BGRX` — `B G R x` in memory, fixed since phase 2 — and labwc offers
+   **XBGR8888** first, which is `R G B x`. ⇒ **The user would have seen the desktop with red and blue
+   swapped**, without a line explaining it.
+   ⭐ And the cure is not teaching a new format to the encoder, which GNOME and KDE use: it is
+   **asking for the one we already know how to read**. On screencopy v3 the compositor offers more than one
+   on purpose, and `buffer_done` exists for this. ⚠ And the offered list ends up in the log, because the
+   day the channels come out crooked the first question is *«che cosa offriva il compositore?»*.
 
-⭐ **La stessa trappola, due volte in un giorno, e la seconda non è arrivata all'utente.** La prima
-l'aveva pagata il banco (cartelle **arancioni** che sembravano giuste, e invece erano blu). ⇒ È
-`LEZIONI.md` §1.9 nella forma peggiore: **un risultato plausibile non è una conferma**.
+⭐ **The same trap, twice in one day, and the second did not reach the user.** The first
+had been paid for by the bench (**orange** folders that looked right, and were blue instead). ⇒ It is
+`LEZIONI.md` §1.9 in the worst form: **a plausible result is not a confirmation**.
 
-#### ⚠ E l'ordine con l'incremento 6 va deciso qui, non subito
+#### ⚠ And the order with increment 6 must be decided here, not at once
 
-Un'immagine consegnata a **1280×720** mentre il cliente ne ha chiesta una a **1920×1080** non è
-«l'immagine che arriva»: è un'immagine sbagliata. ⇒ O l'incremento 2 si prende anche
-`zwlr_output_manager_v1` (che c'è, v4), o C1(xfce) resterà rossa per una ragione che non è la
-cattura. **Si decide col primo fotogramma in mano**, non prima.
+An image delivered at **1280×720** while the client asked for one at **1920×1080** is not
+"the image that arrives": it is a wrong image. ⇒ Either increment 2 also takes
+`zwlr_output_manager_v1` (which is there, v4), or C1(xfce) will stay red for a reason that is not the
+capture. **It is decided with the first frame in hand**, not before.
 
 ---
 
-### Incremento 5 — gli appunti su XFCE *(scritto e costruito il 21 set 2026; C17(xfce) non ancora girata)*
+### Increment 5 — the clipboard on XFCE *(written and built on 21 Sep 2026; C17(xfce) not yet run)*
 
-⭐ **Il modulo c'era già**: `src/appunti_kde.c` parla `zwlr_data_control_manager_v1`, che è di
-wlroots. La modifica è di cinque file e non tocca il protocollo:
+⭐ **The module was already there**: `src/appunti_kde.c` speaks `zwlr_data_control_manager_v1`, which is
+wlroots'. The change is five files and does not touch the protocol:
 
-- `appunti_kde.c`: l'apertura diventa `apri_su(compositore)`, con due porte —
-  `appunti_kde_apri()` («KWin») e `appunti_kde_apri_wlroots()` («labwc»). Il nome serve **solo** alle
-  tre righe di registro; su KDE escono uguali lettera per lettera;
-- `src/appunti.c` e `src/appunti.h`: `appunti_apri_wlroots()`, lo stesso involucro di `appunti_apri_kde()`;
-- `figlio.c`: se `sessione_desktop() == SESSIONE_DESKTOP_XFCE` si apre quella, **prima**; il ramo
-  KWin/Mutter di sotto è quello di prima.
+- `appunti_kde.c`: the opening becomes `apri_su(compositore)`, with two doors —
+  `appunti_kde_apri()` («KWin») and `appunti_kde_apri_wlroots()` («labwc»). The name serves **only** the
+  three log lines; on KDE they come out identical letter for letter;
+- `src/appunti.c` and `src/appunti.h`: `appunti_apri_wlroots()`, the same wrapper as `appunti_apri_kde()`;
+- `figlio.c`: if `sessione_desktop() == SESSIONE_DESKTOP_XFCE` that one is opened, **first**; the
+  KWin/Mutter branch below is the one from before.
 
-⚠ **`kwin_display_apri()` resta**, dichiarato: prende `WAYLAND_DISPLAY` o il primo `wayland-0..9` che
-risponde, senza guardare chi c'è dietro `[R]` (`kwin.c`). Spostarlo in un file neutro vorrebbe dire
-toccare `kwin.c`, che porta il video di KDE, per guadagnare solo un nome. ⇒ La riserva 1 di
-`STUDI.md` §xfce §8 è **chiusa**.
+⚠ **`kwin_display_apri()` stays**, declared: it takes `WAYLAND_DISPLAY` or the first `wayland-0..9` that
+answers, without looking at who is behind it `[R]` (`kwin.c`). Moving it into a neutral file would mean
+touching `kwin.c`, which carries KDE's video, to gain only a name. ⇒ Reservation 1 of
+`STUDI.md` §xfce §8 is **closed**.
 
-**Le altre riserve, rilette sul sorgente di wlroots 0.18.2** (`sources.debian.org`, 21 set 2026):
+**The other reservations, reread on the wlroots 0.18.2 source** (`sources.debian.org`, 21 Sep 2026):
 
-| riserva | esito |
+| reservation | outcome |
 |---|---|
-| l'eco | ⭐ **certa, e la guardia regge** `[R]`: ogni device è iscritto a `set_selection` senza filtro (`wlr_data_control_v1.c:459-468`); `wlr_seat_set_selection` distrugge la sorgente vecchia (⇒ `cancelled`, `:145`) **prima** di emettere il segnale, e le due notizie viaggiano sulla stessa connessione |
-| MIME duplicati ⇒ ciclo | ⭐ **non può scattare** `[R]`: wlroots scarta solo i duplicati `strcmp`-uguali (`:38-45`), e noi offriamo sempre e solo i tre tipi di `TIPI_TESTO`, tutti diversi. Era un rischio di v1, che rigirava l'elenco del client. ⚠ E se la guardia saltasse non ci sarebbe comunque un ciclo: la lettura della nostra sorgente dalla pompa che la serve scade in 5 s senza consegnare niente |
-| `onlyReplaceEmpty` | ⭐ **nessun danno** `[R]`: non lo offriamo e non lo leggiamo mai |
-| la selezione che muore con chi ha copiato | ⚠ **vera, e non è nostra**: in XFCE su Wayland non c'è gestore. Arriva `selection(NULL)` ⇒ al client non si manda niente, e il client tiene l'ultimo testo. La **nostra** sorgente (il testo del client) vive quanto il figlio |
+| the echo | ⭐ **certain, and the guard holds** `[R]`: every device is subscribed to `set_selection` without a filter (`wlr_data_control_v1.c:459-468`); `wlr_seat_set_selection` destroys the old source (⇒ `cancelled`, `:145`) **before** emitting the signal, and the two notices travel on the same connection |
+| duplicate MIME ⇒ loop | ⭐ **cannot fire** `[R]`: wlroots discards only `strcmp`-equal duplicates (`:38-45`), and we always offer only the three types of `TIPI_TESTO`, all different. It was a risk of v1, which passed on the client's list. ⚠ And if the guard broke there would still be no loop: reading our own source from the pump that serves it times out in 5 s without delivering anything |
+| `onlyReplaceEmpty` | ⭐ **no harm** `[R]`: we never offer it and never read it |
+| the selection that dies with whoever copied | ⚠ **true, and not ours**: in XFCE on Wayland there is no manager. `selection(NULL)` arrives ⇒ nothing is sent to the client, and the client keeps the last text. **Our** source (the client's text) lives as long as the child |
 
-⛔ **Per provarlo** (C17 su xfce) la scatola deve avere gli attrezzi degli appunti — vedi il punto 5
-del banco qui sopra: senza `wl-clipboard` la maglia legge `""` e non lo dice.
+⛔ **To test it** (C17 on xfce) the box must have the clipboard tools — see point 5
+of the bench above: without `wl-clipboard` the mesh reads `""` and does not say so.
 
-## 🔸 Le scelte che aspettano l'utente
+## 🔸 The choices waiting for the user
 
-Le cinque di `STUDI.md` §xfce §13, più le tre uscite dal sopralluogo del 20 settembre. ⛔ Si pongono
-**quando la misura che le riguarda è stata fatta**, non prima.
+The five of `STUDI.md` §xfce §13, plus the three that came out of the survey of 20 September. ⛔ They are put
+**when the measurement that concerns them has been done**, not before.
 
-| # | la scelta | quando si pone |
+| # | the choice | when it is put |
 |---|---|---|
-| ~~**1**~~ | ✅ **DECISA il 20 set 2026, dall'utente: cattura DIRETTA.** *«Li chiediamo noi»* — il ritmo, il cursore e la misura restano nostri, e si riusa intero il consumatore DMA-BUF delle fasi 8-9. ⛔ Il ponte PipeWire è escluso: quattro processi dentro un budget di 16,6 ms, e nessuna delle tre cose sopra | ⭐ fatta |
-| **2** | il ridimensionamento a caldo si accende subito o dopo? | incremento 6 |
-| **3** | il cursore dentro l'immagine o sul canale del puntatore? | incremento 3 |
-| **4** | il bus di sessione: `dbus-run-session` (privato) o bus d'utente? ⛔ Col privato la vitalità della sessione è **cieca** per il prodotto com'è scritto oggi | incremento 1, dopo CP2 |
-| ~~**5**~~ | ✅ **DECISA il 21 set 2026, dall'utente**: *«anche in XFCE vanno disabilitate le voci di standby, lockscreen, reset e spegnimento»* — le stesse di GNOME e KDE (`DECISIONI.md` §4.7). ⛔ **«Esci» resta** (§4.1-ter): è l'unico gesto che termina la sessione. ⚠ «Cambia utente» non è stato nominato: resta aperto | in corso |
-| **6** | «viva» = il nome sul bus, oppure `StateChanged(0→1)`? Il primo è un ramo di due righe; il secondo è un **sorvegliante di segnali**, che in `sessione.c` non esiste | incremento 1, dopo CP2 |
-| **7** | quanto cresce `Contenitore.xfce`: pannello e scrivania già nell'incremento 1? | incremento 1 |
+| ~~**1**~~ | ✅ **DECIDED on 20 Sep 2026, by the user: DIRECT capture.** *«Li chiediamo noi»* — rate, cursor and size stay ours, and the DMA-BUF consumer of phases 8-9 is reused whole. ⛔ The PipeWire bridge is excluded: four processes inside a 16.6 ms budget, and none of the three things above | ⭐ done |
+| **2** | is hot resizing turned on at once or later? | increment 6 |
+| **3** | the cursor inside the image or on the pointer channel? | increment 3 |
+| **4** | the session bus: `dbus-run-session` (private) or user bus? ⛔ With the private one the session's liveness is **blind** for the product as it is written today | increment 1, after CP2 |
+| ~~**5**~~ | ✅ **DECIDED on 21 Sep 2026, by the user**: *«anche in XFCE vanno disabilitate le voci di standby, lockscreen, reset e spegnimento»* — the same as GNOME and KDE (`DECISIONI.md` §4.7). ⛔ **"Log Out" stays** (§4.1-ter): it is the only gesture that ends the session. ⚠ "Switch User" was not named: it stays open | in progress |
+| **6** | "alive" = the name on the bus, or `StateChanged(0→1)`? The first is a two-line branch; the second is a **signal watcher**, which does not exist in `sessione.c` | increment 1, after CP2 |
+| **7** | how much does `Contenitore.xfce` grow: panel and desktop already in increment 1? | increment 1 |
 
-⚠ **E una cosa che la decisione 1 si porta dietro, saputa dal primo giorno.** L'XML di
-`wlr-screencopy-unstable-v1` — messo in deposito in `src/protocolli/` il 20 set 2026, e verificato
-rigenerandoci sopra il codice: le tabelle escono **identiche** a quelle che v1 aveva generato — porta
-in testa una riga nuova rispetto ad allora:
+⚠ **And one thing decision 1 carries along, known from the first day.** The XML of
+`wlr-screencopy-unstable-v1` — put in the repository in `src/protocolli/` on 20 Sep 2026, and verified
+by regenerating the code on it: the tables come out **identical** to those v1 had generated — carries
+at the top a new line compared to then:
 
 > *«This protocol is deprecated and not intended for production use. The ext-image-copy-capture-v1
 > protocol should be used instead.»*
 
-⛔ Ma `[M]` 20 set 2026 labwc su Trixie **non espone** `ext_image_copy_capture_manager_v1`: non c'è
-niente da usare al suo posto. ⇒ Si scrive contro screencopy **sapendolo**, e `STUDI.md` §xfce §4.6
-dice già come: il codice si scrive perché il secondo attuatore possa entrare accanto al primo, non
-al suo posto.
+⛔ But `[M]` 20 Sep 2026 labwc on Trixie **does not expose** `ext_image_copy_capture_manager_v1`: there is
+nothing to use in its place. ⇒ We write against screencopy **knowing it**, and `STUDI.md` §xfce §4.6
+already says how: the code is written so that the second actuator can come in next to the first, not
+in its place.
 
 ---
 
-## Le misure
+## The measurements
 
-| che cosa | atteso | misurato | data |
+| what | expected | measured | date |
 |---|---|---|---|
-| **CP0** — giro `tutto` sulle **quattro** scatole, lanciato sul server | GNOME verde; KDE verde per tutto il certificato; su xfce/lxqt solo C1 rosso; guasti tutti presi; un binario solo | ⚠ **come atteso tranne una casella**, spiegata e curata — vedi sotto | `[M]` 20 set 2026, 16:19→19:31 |
+| **CP0** — `tutto` round on the **four** boxes, launched on the server | GNOME green; KDE green for all of the certificate; on xfce/lxqt only C1 red; faults all caught; a single binary | ⚠ **as expected except one cell**, explained and cured — see below | `[M]` 20 Sep 2026, 16:19→19:31 |
 
-### CP0 in dettaglio — binario `9e3154a6`, 11 521 s, 86 maglie
+### CP0 in detail — binary `9e3154a6`, 11 521 s, 86 meshes
 
 | | |
 |---|---|
-| **GNOME** | ⭐ **tutto verde**: passo0, C1×10, C2 (+2 guasti), C3 (+scena ferma +2 guasti), C4 (+2), C5, C6, C7, C8, C8b, C9, **C17 (+guasto)** |
-| **KDE** | verde ovunque **tranne C2 ×3, uscita 3** — ⚠ l'unica differenza inattesa del giro, classificata **C (difetto del banco)**: vedi sotto |
-| **xfce · lxqt** | passo0, C5, C7, C8, C9 verdi coi loro guasti · ⛔ **C1×10 ROSSO** su tutt'e due (il mandato della fase) · C2 C3 C4 C6 C8b **e C17** saltate dal cancello «solo GNOME e KDE» |
-| **la rete** | C11 verde (stesso binario nelle quattro) · C13 verde · **C14 verde, 786 s, quattro scatole** · C10 C12 C15 C16 a 2/3 perché sul server il deposito git non c'è — dichiarato, non è un rosso |
-| ⭐ **guasti innestati** | **32 su 32 visti** |
-| rossi | **2**, e sono i due dichiarati: `C1(xfce)` e `C1(lxqt)` |
+| **GNOME** | ⭐ **all green**: passo0, C1×10, C2 (+2 faults), C3 (+still scene +2 faults), C4 (+2), C5, C6, C7, C8, C8b, C9, **C17 (+fault)** |
+| **KDE** | green everywhere **except C2 ×3, exit 3** — ⚠ the only unexpected difference of the round, classified **C (bench defect)**: see below |
+| **xfce · lxqt** | passo0, C5, C7, C8, C9 green with their faults · ⛔ **C1×10 RED** on both (the phase's mandate) · C2 C3 C4 C6 C8b **and C17** skipped by the "only GNOME and KDE" gate |
+| **the net** | C11 green (same binary in the four) · C13 green · **C14 green, 786 s, four boxes** · C10 C12 C15 C16 at 2/3 because the git repository is not on the server — declared, it is not a red |
+| ⭐ **injected faults** | **32 out of 32 seen** |
+| reds | **2**, and they are the two declared: `C1(xfce)` and `C1(lxqt)` |
 
-⇒ ⭐ **C17 su GNOME è verde dentro un giro completo**: l'incremento 13 della fase 12 chiude qui, e
-quella casella smette di essere «provata a mano».
+⇒ ⭐ **C17 on GNOME is green inside a complete round**: increment 13 of phase 12 closes here, and
+that cell stops being "tested by hand".
 
-#### ⛔ L'unica differenza inattesa — C2(kde), e non era il prodotto
+#### ⛔ The only unexpected difference — C2(kde), and it was not the product
 
-`[M]` Nel giro, C2(kde) è uscita **3** tutt'e tre le volte (sana + due guasti): *«i primi 240
+`[M]` In the round, C2(kde) came out **3** all three times (healthy + two faults): *«i primi 240
 fotogrammi sono tutti neri o quasi: il desktop non aveva niente da mostrare PRIMA
-dell'applicazione»*. ⛔ Ma **la finestra si era aperta**: l'immagine «dopo» del giro è il colore
-dichiarato che copre lo schermo. ⇒ Il banco non aveva il **termine di paragone**, e si è astenuto —
-che è il suo dovere, non un difetto di giudizio.
+dell'applicazione»*. ⛔ But **the window had opened**: the round's "after" image is the declared
+colour covering the screen. ⇒ The bench did not have the **term of comparison**, and abstained —
+which is its duty, not a defect of judgement.
 
-`[M]` Rimisurata subito, sulla stessa scatola, **tre volte**: **186** · **186** (scatola rifatta da
-zero) · **189** (⭐ e con la cache dell'ospite svuotata, per togliere di mezzo il disco freddo).
-⇒ Il numero vero è **~187 e stabile**: il margine su 240 era **54 fotogrammi, il 29 %**.
+`[M]` Measured again at once, on the same box, **three times**: **186** · **186** (box rebuilt from
+scratch) · **189** (⭐ and with the host's cache emptied, to get the cold disk out of the way).
+⇒ The real number is **~187 and stable**: the margin on 240 was **54 frames, 29 %**.
 
-`[?]` Perché dentro il giro completo ne servano di più (379 fotogrammi in tutto contro 249) non è
-misurato. Il sospetto è scritto: fra due banchi sullo stesso posto **il posto di prima resta
-attaccato una ventina di secondi**, e C2(kde) nel giro viene subito dopo C9(kde), che di sessioni ne
-ha fatte due.
+`[?]` Why more are needed inside the complete round (379 frames in all against 249) is not
+measured. The suspicion is written: between two benches on the same seat **the previous seat stays
+attached for about twenty seconds**, and C2(kde) in the round comes right after C9(kde), which made
+two sessions.
 
-⭐ **La cura è un tetto che non morda**, non un tetto ritarato al pelo: `--fotogrammi-prima` da 240 a
-**900**, cioè più di quanti il flusso ne abbia mai avuti. ⛔ E **il giudizio non cambia di una
-virgola** — il metro resta il colore che cresce di 20 punti e copre il 25 %: cambia solo quanto a
-lungo il banco cerca il proprio termine di paragone, e la ricerca **si ferma al primo fotogramma
-disegnato**, quindi alzare il tetto non costa niente quando il desktop dipinge presto.
+⭐ **The cure is a cap that does not bite**, not a cap retuned to the hair: `--fotogrammi-prima` from 240 to
+**900**, that is more than the stream has ever had. ⛔ And **the verdict does not change one
+iota** — the yardstick stays the colour that grows by 20 points and covers 25 %: only how
+long the bench looks for its own term of comparison changes, and the search **stops at the first frame
+drawn**, so raising the cap costs nothing when the desktop paints early.
 
-#### ⚠ E due disallineamenti chiusi nello stesso giro
+#### ⚠ And two misalignments closed in the same round
 
-1. **Immagini indietro rispetto alle ricette**: `Contenitore.gnome` e `Contenitore.kde` erano state
-   toccate dall'incremento 13 (`nano`, `python3-gi`, `gir1.2-gtk-4.0`) ma le immagini no. ⚠ Nessuna
-   maglia ne dipendeva (`[M]` gnome aveva `gi` per dipendenza; su kde C17 usa `wl-clipboard`), ma
-   alla prossima prova a mano `nano` non ci sarebbe stato. ⇒ **Ricostruite**, e le quattro scatole
-   portano lo stesso binario `9e3154a6`.
-2. **Il tetto d'attesa della delega remota** era 2 400 s contro giri da 11 521: la metà che aspetta
-   mollava dopo 40 minuti dicendo «non ho potuto guardare» **mentre di là si stava ancora
-   misurando**. ⇒ `ATTESA_REMOTA` a 14 400, e scritto che la protezione vera non è il tetto ma la
-   domanda sull'unità remota.
+1. **Images behind the recipes**: `Contenitore.gnome` and `Contenitore.kde` had been
+   touched by increment 13 (`nano`, `python3-gi`, `gir1.2-gtk-4.0`) but the images had not. ⚠ No
+   mesh depended on it (`[M]` gnome had `gi` as a dependency; on kde C17 uses `wl-clipboard`), but
+   at the next test by hand `nano` would not have been there. ⇒ **Rebuilt**, and the four boxes
+   carry the same binary `9e3154a6`.
+2. **The waiting cap of the remote delegation** was 2 400 s against rounds of 11 521: the waiting half
+   gave up after 40 minutes saying "I could not look" **while on the other side it was still
+   measuring**. ⇒ `ATTESA_REMOTA` to 14 400, and written that the real protection is not the cap but the
+   question about the remote unit.
 
-### ⭐ La certificazione — binario di `4cd86a0`, 21 set 2026, 14 697 s
+### ⭐ The certification — binary of `4cd86a0`, 21 Sep 2026, 14 697 s
 
-Giro `tutto` sulle quattro scatole **rifatte da zero**, innesco `fase13-danno-scheda`, lanciato sul
-server alle 13:26 UTC e chiuso alle 17:31 UTC.
+`tutto` round on the four boxes **rebuilt from scratch**, trigger `fase13-danno-scheda`, launched on the
+server at 13:26 UTC and closed at 17:31 UTC.
 
 | | |
 |---|---|
-| ⭐ **XFCE** | **27 maglie su 27 verdi**: passo0, C1×10, C2 (+2 guasti), C3 (+scena ferma +2 guasti, **compreso «codificatore fermo»**), C4 (+2), C5, C6, C7, C8, C8b, C9, **C17 (+guasto)** |
-| **GNOME · KDE** | nessuna regressione: verdi come a CP0 |
-| **lxqt** | come a CP0: il prodotto non lo riconosce, e le maglie del prodotto saltano dicendolo |
-| **la rete** | C11 C13 C14 verdi sul server · ⭐ **C10 C12 C15 C16 fatte girare sul portatile, dove il deposito c'è: tutte verdi** |
-| ⭐ **guasti innestati** | **43 su 43 visti** |
+| ⭐ **XFCE** | **27 meshes out of 27 green**: passo0, C1×10, C2 (+2 faults), C3 (+still scene +2 faults, **including "encoder stopped"**), C4 (+2), C5, C6, C7, C8, C8b, C9, **C17 (+fault)** |
+| **GNOME · KDE** | no regression: green as at CP0 |
+| **lxqt** | as at CP0: the product does not recognise it, and the product's meshes skip saying so |
+| **the net** | C11 C13 C14 green on the server · ⭐ **C10 C12 C15 C16 run on the laptop, where the repository is: all green** |
+| ⭐ **injected faults** | **43 out of 43 seen** |
 
-⇒ **XFCE è nel perimetro protetto**, accanto a GNOME e KDE.
+⇒ **XFCE is in the protected perimeter**, next to GNOME and KDE.
 
-#### Le due cure che la rete ha chiesto prima di dare verde
+#### The two cures the net asked for before giving green
 
-1. ⛔ **C3(xfce) non vedeva il guasto «codificatore fermo»** (rete delle 10:27): labwc consegnava
-   **60 fotogrammi identici al secondo** su un desktop fermo, e un flusso che non cambia non
-   distingue un codificatore fermo da uno sano. ⇒ **`copy_with_damage`** (screencopy v2+): il
-   compositore risponde solo quando lo schermo cambia. ⚠ Che ha rotto subito C4(xfce): una copia
-   «col danno» pendente bloccava il fotogramma intero forzato ⇒ se il palco deve dare un fotogramma
-   intero e c'è una copia col danno in sospeso, **la si abbandona**. `[M]` Poi: 62 fps sulla strada
-   della scheda, C3 e C4 verdi coi loro guasti.
-2. ⛔ **C17 rossa su tutti e tre i desktop** — classificata **C (difetto del banco)**: il file
-   dell'arbitro in `/tmp` aveva un nome fisso, apparteneva a un altro utente, e le mie prove a mano
-   l'avevano sporcato. Provato per bisezione (il binario di ieri era rosso anche lui nella scatola
-   sporca; il nuovo verde in una scatola pulita). ⇒ Nome per utente, tolto alla fine.
+1. ⛔ **C3(xfce) did not see the "encoder stopped" fault** (net of 10:27): labwc delivered
+   **60 identical frames per second** on a still desktop, and a stream that does not change cannot
+   tell a stopped encoder from a healthy one. ⇒ **`copy_with_damage`** (screencopy v2+): the
+   compositor answers only when the screen changes. ⚠ Which broke C4(xfce) at once: a pending
+   "with damage" copy blocked the forced full frame ⇒ if the stage must give a full
+   frame and there is a damage copy pending, **it is abandoned**. `[M]` Then: 62 fps on the
+   card route, C3 and C4 green with their faults.
+2. ⛔ **C17 red on all three desktops** — classified **C (bench defect)**: the referee's
+   file in `/tmp` had a fixed name, belonged to another user, and my tests by hand
+   had dirtied it. Proved by bisection (yesterday's binary was red too in the dirty
+   box; the new one green in a clean box). ⇒ Name per user, removed at the end.
 
-### ⭐ I client veri — 21 set 2026, sera, porta 8513
+### ⭐ The real clients — 21 Sep 2026, evening, port 8513
 
-`banchi/12-client-veri.py`, **certificato prima** (porta vuota e parola sbagliata visti su tutt'e
-due i browser):
+`banchi/12-client-veri.py`, **certified first** (empty port and wrong password seen on both
+browsers):
 
-| browser | verdetto | che cosa |
+| browser | verdict | what |
 |---|---|---|
-| **Firefox 140** Linux | ⭐ **PASS** | modulo · ammesso · primo fotogramma in 1,0 s · 84 fotogrammi in 8 s · tasto e mouse nel registro del server · 0 errori · riconnessione |
-| **Chrome 153** Linux | ⭐ **PASS** | idem: 85 fotogrammi in 8 s, primo fotogramma subito, riconnessione |
-| **Chrome Android** | ⏳ **all'utente** | l'emulatore non lo lancia già dalla fase 12: la validazione resta sua, come per KDE |
+| **Firefox 140** Linux | ⭐ **PASS** | form · admitted · first frame in 1.0 s · 84 frames in 8 s · key and mouse in the server log · 0 errors · reconnection |
+| **Chrome 153** Linux | ⭐ **PASS** | same: 85 frames in 8 s, first frame at once, reconnection |
+| **Chrome Android** | ⏳ **to the user** | the emulator has not launched it since phase 12: the validation stays his, as for KDE |
 
-`[M]` La fotografia del desktop: pannello in alto, icone Home e File System, il dock in basso, le
-cartelle **blu** (i canali sono giusti). ⚠ Lo sfondo è **nero**: alla scatola manca il pacchetto
-degli sfondi — è la scatola, non il prodotto.
-⚠ La pagina dice «desktop sconosciuto» su XFCE — ⛔ **e lo dice anche su GNOME e KDE**: il server
-manda la stringa fissa della fase 1 (`src/rcp.c`, messaggio `SESSIONE`). Non è di questa fase, e
-toccarlo toccherebbe GNOME e KDE: resta com'è.
+`[M]` The photo of the desktop: panel at the top, Home and File System icons, the dock at the bottom, the
+folders **blue** (the channels are right). ⚠ The wallpaper is **black**: the box lacks the
+wallpapers package — it is the box, not the product.
+⚠ The page says "unknown desktop" on XFCE — ⛔ **and it says it on GNOME and KDE too**: the server
+sends the fixed string of phase 1 (`src/rcp.c`, message `SESSIONE`). It does not belong to this phase, and
+touching it would touch GNOME and KDE: it stays as it is.
 
-### ⭐ Le voci che spengono — decisione 5
+### ⭐ The entries that switch off — decision 5
 
-`[M]` Nella scatola, a sessione accesa:
+`[M]` In the box, with the session on:
 
 | | |
 |---|---|
-| menu utente del pannello | `-lock-screen`, `-suspend`, `-hibernate`, `-hybrid-sleep`, `-shutdown`, `-restart` · ⭐ **`+logout` c'è** · `+switch-user` c'è |
+| the panel's user menu | `-lock-screen`, `-suspend`, `-hibernate`, `-hybrid-sleep`, `-shutdown`, `-restart` · ⭐ **`+logout` is there** · `+switch-user` is there |
 | xfce4-session | `LockCommand=/bin/false` · `ShowSuspend/Hibernate/HybridSleep=false` · `WaylandLogoutCommand=/bin/true` |
-| xfce4-power-manager | `dpms-enabled=false` · inattività 0 |
-| la finestra «Log Out» del menu Applications | riavvia e spegni **grigi**: la regola polkit `50-remotix-niente-spegnimento.rules` c'è, logind nega `CanPowerOff`/`CanReboot` e dice `CanSuspend=no` (`sleep.conf`) — la cintura 1 di `DECISIONI.md` §4.7, la stessa di tutti i desktop |
-| ⭐ **11 minuti di sessione ferma** | lo schermo è **ancora il desktop**: niente blocco, niente nero, nessun salvaschermo in giro |
+| xfce4-power-manager | `dpms-enabled=false` · inactivity 0 |
+| the "Log Out" window of the Applications menu | restart and shut down **greyed out**: the polkit rule `50-remotix-niente-spegnimento.rules` is there, logind denies `CanPowerOff`/`CanReboot` and says `CanSuspend=no` (`sleep.conf`) — belt 1 of `DECISIONI.md` §4.7, the same for all desktops |
+| ⭐ **11 minutes of still session** | the screen is **still the desktop**: no lock, no black, no screensaver around |
 
-### ⭐ La trappola del logout — `banchi/13-w2`
+### ⭐ The logout trap — `banchi/13-w2`
 
-| modo | esito |
+| mode | outcome |
 |---|---|
-| `--certifica` (il giudice a secco) | ⭐ 0 |
-| sano | ⭐ **VERDE**: il desktop sparisce in 0,3 s, la sessione logind resta viva per tutti i 20 s |
-| `--senza-xfconf` | ⭐ guasto **visto** |
-| `--senza-variabile` | ⭐ guasto **visto** |
-| `--senza-cinture` | ⚠ **3**, dichiarato: la sessione non cade |
+| `--certifica` (the dry judge) | ⭐ 0 |
+| healthy | ⭐ **GREEN**: the desktop disappears in 0.3 s, the logind session stays alive for all 20 s |
+| `--senza-xfconf` | ⭐ fault **seen** |
+| `--senza-variabile` | ⭐ fault **seen** |
+| `--senza-cinture` | ⚠ **3**, declared: the session does not fall |
 
-⭐⭐ **Perché la trappola non morde** `[M]`: nel binario `xfce4-session` 4.20.2 di Trixie il comando
-è scritto **`loginctl terminanate-session`** — un errore di battitura a monte. Il comando fallisce, e
-la sessione si salva da sola. ⇒ **Oggi la trappola dorme**; le due cinture restano, per il giorno in
-cui a monte correggeranno la parola. ⛔ E il 3 di `--senza-cinture` resta un 3: il banco non può
-dimostrare una difesa contro un colpo che non parte.
+⭐⭐ **Why the trap does not bite** `[M]`: in Trixie's `xfce4-session` 4.20.2 binary the command
+is written **`loginctl terminanate-session`** — an upstream typo. The command fails, and
+the session saves itself. ⇒ **Today the trap sleeps**; the two belts stay, for the day
+upstream corrects the word. ⛔ And the 3 of `--senza-cinture` stays a 3: the bench cannot
+prove a defence against a blow that is not struck.
 
-⚠ **E una correzione al banco, misurata prima di farla.** La prima stesura pretendeva che la
-sessione del prodotto fosse `active` prima del logout, e usava `State=closing` come «caduta». `[M]`
-Ma **su GNOME (baseline) e su XFCE** la sessione del prodotto è `Service=remotix State=closing` **dal
-primo istante**, col figlio vivo: è lo stato di sempre, non un segnale. ⇒ «Viva» adesso vuol dire
-logind la descrive **e** il suo Leader (il figlio) è vivo; «caduta» vuol dire logind l'ha
-dimenticata **o** il figlio è morto. Il giudice a secco resta certificato.
+⚠ **And a correction to the bench, measured before making it.** The first draft required the
+product's session to be `active` before the logout, and used `State=closing` as "fallen". `[M]`
+But **on GNOME (baseline) and on XFCE** the product's session is `Service=remotix State=closing` **from
+the first instant**, with the child alive: it is the state it always has, not a signal. ⇒ "Alive" now means
+logind describes it **and** its Leader (the child) is alive; "fallen" means logind has
+forgotten it **or** the child is dead. The dry judge stays certified.
 
-## ⛔ Che cosa NON ha funzionato
+## ⛔ What did NOT work
 
-## Che cosa resta [?]
+## What remains [?]
 
-### ⭐ Lo stato al 23 settembre 2026, sera — i quattro punti prima di LXQt
+### ⭐ The state on 23 Sep 2026, evening — the four points before LXQt
 
-L'utente, 23 set: *«prima si chiudono i punti aperti»*. Com'erano alle 19 e come sono adesso:
+The user, 23 Sep: *«prima si chiudono i punti aperti»*. How they were at 19 h and how they are now:
 
-| # | punto | stato |
+| # | point | status |
 |---|---|---|
-| 1 | **C20 non guarda** («non ho potuto guardare» dopo «Esci») | ✅ **CHIUSO** — era il **secondo fisso** di 999 ms; curato, e nella rete finale C20 è verde e vede il guasto su tutti e tre |
-| 2 | **sessioni lunghe** coi browser veri solo su kde/Firefox | ✅ **VERDI**: gnome e xfce, Firefox e Chrome, 20 min in 4K col mouse in moto, blocco più lungo **0 s** in tutti e quattro |
-| 3 | **la guardia del battito** non è permanente | ✅ **FATTA E PROVATA SUL FERRO**: mouse in tutti gli scenari, soglia 10 s tarata, guasto innestato VISTO su gnome, kde e xfce |
-| 4 | Chrome Android su XFCE | ⏳ dell'utente |
+| 1 | **C20 does not look** ("I could not look" after "Log Out") | ✅ **CLOSED** — it was the 999 ms **fixed second**; cured, and in the final net C20 is green and sees the fault on all three |
+| 2 | **long sessions** with real browsers only on kde/Firefox | ✅ **GREEN**: gnome and xfce, Firefox and Chrome, 20 min in 4K with the mouse moving, longest freeze **0 s** in all four |
+| 3 | **the heartbeat guard** is not permanent | ✅ **DONE AND TESTED ON THE HARDWARE**: mouse in all the scenarios, 10 s threshold tuned, injected fault SEEN on gnome, kde and xfce |
+| 4 | Chrome Android on XFCE | ⏳ the user's |
 
-- ✅ **LA RETE DEL 23 SET SERA — nessun rosso** — binario `3fa352a2`, `--famiglia tutto`, gnome + kde +
-  xfce, **14 571 s** (4 h 03). Ogni scatola **18 su 18** nei controlli di base, tutti i guasti innestati
-  VISTI, C14 (le tre scatole sole e insieme) regge, «nessun rosso, né qui né là».
-  ⚠ L'unico buco: **C20 «non ho potuto guardare» su tutte e tre**, nei due giri. È la voce qui sotto.
+- ✅ **THE NET OF 23 SEP EVENING — no red** — binary `3fa352a2`, `--famiglia tutto`, gnome + kde +
+  xfce, **14 571 s** (4 h 03). Every box **18 out of 18** in the basic checks, all injected faults
+  SEEN, C14 (the three boxes alone and together) holds, "no red, neither here nor there".
+  ⚠ The only gap: **C20 "I could not look" on all three**, in both rounds. It is the item below.
 
-- ✅ **IL SECONDO FISSO ERA DI 999 MS** — trovato e curato il 23 set 2026, sera (`612b0ed`), binario
-  **`e681a262`**. `ora - cred_arrivo < RITARDO_FISSO` confrontava millisecondi **troncati**: una
-  differenza di 1000 può essere 999,x ms veri, e `AMMESSO` partiva **prima** del secondo.
-  `[M]` Dai registri delle scatole: **gnome 15 ammessi su 50 a 999 ms, kde 16 su 50**.
-  ⇒ Il cliente di prova, che §4.4-bis la guarda, se ne andava dicendo «meno di un secondo», e C20 al
-  secondo accesso restava senza cliente: su gnome la maglia, arrendendosi, faceva `terminate-user` —
-  **il segnale 15 che nel giornale sembrava logind** —, su kde e xfce nessuno si riattaccava e il
-  prodotto, giustamente, non rifaceva il desktop. ⭐ La cura è `<=`: si paga al massimo 1 ms.
-  ⚠ **Per l'utente vero l'effetto era nullo**: i browser non fanno quel controllo. Era la rete a non
-  poter guardare — cioè una guardia cieca su uno dei difetti che l'utente aveva trovato a mano.
+- ✅ **THE FIXED SECOND WAS 999 MS** — found and cured on 23 Sep 2026, evening (`612b0ed`), binary
+  **`e681a262`**. `ora - cred_arrivo < RITARDO_FISSO` compared **truncated** milliseconds: a
+  difference of 1000 can be 999.x real ms, and `AMMESSO` left **before** the second.
+  `[M]` From the boxes' logs: **gnome 15 admitted out of 50 at 999 ms, kde 16 out of 50**.
+  ⇒ The test client, which checks §4.4-bis, left saying "less than a second", and C20 at the
+  second login was left without a client: on gnome the mesh, giving up, did `terminate-user` —
+  **the signal 15 that in the journal looked like logind** —, on kde and xfce nobody reattached and the
+  product, rightly, did not remake the desktop. ⭐ The cure is `<=`: one pays at most 1 ms.
+  ⚠ **For the real user the effect was nil**: browsers do not make that check. It was the net that could
+  not look — that is, a blind guard on one of the defects the user had found by hand.
 
-- ✅ **C20 COI BROWSER VERI, IN 4K: VERDE OVUNQUE** — 23 set 2026, sera (`b3b8f5b`), binario
-  `e681a262`. Nuovo banco `banchi/12-c20-veri.py`: accesso, «Esci» dal menu, **nuovo accesso dalla
-  stessa pagina**, la scena di C20, e la tela fotografata e giudicata col giudice di C20. Finestre vere
-  dentro un **labwc annidato senza schermo a 3840x2160** (le specifiche sono 4K — l'utente, 23 set).
+- ✅ **C20 WITH THE REAL BROWSERS, IN 4K: GREEN EVERYWHERE** — 23 Sep 2026, evening (`b3b8f5b`), binary
+  `e681a262`. New bench `banchi/12-c20-veri.py`: login, "Log Out" from the menu, **new login from the
+  same page**, C20's scene, and the canvas photographed and judged with C20's judge. Real windows
+  inside a **nested headless labwc at 3840x2160** (the specifications are 4K — the user, 23 Sep).
 
   | | Firefox 140 | Chrome 154 |
   |---|---|---|
-  | **gnome** | ⭐ VERDE, 0 salti | ⭐ VERDE, 0 salti |
-  | **kde** | ⭐ VERDE, 0 salti | ⭐ VERDE, 0 salti |
-  | **xfce** | ⭐ VERDE ×3, 0 salti | ⭐ VERDE, 0 salti |
+  | **gnome** | ⭐ GREEN, 0 skips | ⭐ GREEN, 0 skips |
+  | **kde** | ⭐ GREEN, 0 skips | ⭐ GREEN, 0 skips |
+  | **xfce** | ⭐ GREEN ×3, 0 skips | ⭐ GREEN, 0 skips |
 
-  In tutti: dopo «Esci» la pagina torna al modulo con *«la sessione e' terminata: i programmi sono
-  stati chiusi»*, e il nuovo accesso ha l'immagine in 0,3–1,6 s. ⚠ Tre difetti **del banco**, trovati
-  facendolo girare, sono nel messaggio di `b3b8f5b` (Chrome dentro labwc vuole «massimizzata»; xfce
-  in 4K ha lo sfondo nero e il giudice di `12-client-veri` lo chiamava degenere; il gesto «Esci» di
-  xfce lanciato senza raccogliere lo stderr).
-  ✅ E la **maglia** C20 della rete, col secondo fisso curato, **guarda di nuovo**: rete finale del
-  24 set notte, **C20 VERDE su gnome, kde e xfce, e il guasto innestato VISTO su tutte e tre**.
+  In all of them: after "Log Out" the page goes back to the form with *«la sessione e' terminata: i programmi sono
+  stati chiusi»*, and the new login has the image in 0.3–1.6 s. ⚠ Three defects **of the bench**, found
+  by running it, are in the message of `b3b8f5b` (Chrome inside labwc wants "maximised"; xfce
+  in 4K has a black wallpaper and the judge of `12-client-veri` called it degenerate; xfce's "Log Out" gesture
+  launched without collecting stderr).
+  ✅ And the net's C20 **mesh**, with the fixed second cured, **looks again**: final net of
+  24 Sep night, **C20 GREEN on gnome, kde and xfce, and the injected fault SEEN on all three**.
 
-- ✅ **LA RETE FINALE DEL 24 SET NOTTE — nessun rosso** — binario `e681a262`, `--famiglia tutto`,
-  gnome + kde + xfce, **14 498 s**. Ogni scatola **18 su 18**, C20 verde e guasto visto ovunque,
-  «nessun rosso, né qui né là». C10 C12 C15 C16 «non possono guardare» dal server, com'è previsto
-  (girano sul portatile).
-  ⭐ **I QUATTRO PUNTI PRIMA DI LXQt SONO CHIUSI** tranne Chrome Android su XFCE, che è dell'utente.
+- ✅ **THE FINAL NET OF 24 SEP NIGHT — no red** — binary `e681a262`, `--famiglia tutto`,
+  gnome + kde + xfce, **14 498 s**. Every box **18 out of 18**, C20 green and fault seen everywhere,
+  "no red, neither here nor there". C10 C12 C15 C16 "cannot look" from the server, as expected
+  (they run on the laptop).
+  ⭐ **THE FOUR POINTS BEFORE LXQt ARE CLOSED** except Chrome Android on XFCE, which is the user's.
 
-- 🔸 **LA GUARDIA DEL BATTITO È SCRITTA** — 23 set 2026 (`32511f9`). Il mouse che si muove è entrato
-  in **tutti** gli scenari di `banchi/14-stress` che guardano lo schermo, come comportamento normale del
-  cliente (`scenari/_comune.py`, il `Topo`; `REMOTIX_TOPO=no` lo spegne per la controprova). Il giudice
-  `giudica_il_blocco`: soglia **`[?]` 10 s** sul blocco più lungo senza fotogrammi nuovi, ad almeno 30 s
-  guardati e mouse in moto in metà dei secondi. Il guasto innestato **senza ricompilare**:
-  `--schermo-congelato` ferma il compositore dell'inquilino (SIGSTOP, trovato dal suo socket Wayland,
-  non per nome) per ~25 s e lo rilascia sempre. Certificazioni pure: banco 14 **53 prove 0 guai**,
-  scenari **45 OK**, nucleo 91, occhio 37.
-  ✅ **E SUL FERRO REGGE** — 23 set 2026, notte, binario `e681a262`:
+- 🔸 **THE HEARTBEAT GUARD IS WRITTEN** — 23 Sep 2026 (`32511f9`). The moving mouse entered
+  **all** the scenarios of `banchi/14-stress` that look at the screen, as normal client
+  behaviour (`scenari/_comune.py`, the `Topo`; `REMOTIX_TOPO=no` turns it off for the counter-test). The judge
+  `giudica_il_blocco`: threshold **`[?]` 10 s** on the longest freeze without new frames, with at least 30 s
+  watched and the mouse moving in half of the seconds. The injected fault **without recompiling**:
+  `--schermo-congelato` stops the tenant's compositor (SIGSTOP, found through its Wayland socket,
+  not by name) for ~25 s and always releases it. Pure certifications: bench 14 **53 tests 0 troubles**,
+  scenarios **45 OK**, core 91, eye 37.
+  ✅ **AND ON THE HARDWARE IT HOLDS** — 23 Sep 2026, night, binary `e681a262`:
 
-  | | giro sano (blocco più lungo) | col compositore congelato 25 s |
+  | | healthy round (longest freeze) | with the compositor frozen 25 s |
   |---|---|---|
-  | **gnome** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ ROSSO, 24,4 s — guasto VISTO |
-  | **kde** | *(il 23 pomeriggio, curato: 0 s su 340)* | ⭐ ROSSO, 24,6 s — e nello scenario `pesante` 25,5 s |
-  | **xfce** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ ROSSO, 24,8 s — guasto VISTO |
+  | **gnome** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ RED, 24.4 s — fault SEEN |
+  | **kde** | *(on the 23rd afternoon, cured: 0 s out of 340)* | ⭐ RED, 24.6 s — and in the `pesante` scenario 25.5 s |
+  | **xfce** | Firefox 20 min **0 s** · Chrome 20 min **0 s** | ⭐ RED, 24.8 s — fault SEEN |
 
-  ⇒ La soglia di **10 s** diventa `[M]`: i sani stanno a 0, i guasti a 24-25, il difetto vero a 46-370.
-  ⚠ Quattro difetti **del banco** trovati facendolo girare, tutti curati: (1) gnome-shell e kwin
-  hanno una capacità di file ⇒ la loro cartella in `/proc` è di root, e anche root **dentro la
-  scatola** non legge i loro `fd` ⇒ il compositore non si trovava mai: ora l'utente si legge da
-  `status`, e se il socket non si può leggere si ripiega **per nome** sui tre compositori che il
-  prodotto conosce, dichiarandolo; (2) un giro col guasto chiesto e **non** innestato usciva **0**
-  da `_lancia.py`: ora è 3; (3) Firefox visibile rifiutava di partire quando in primo piano c'è un
-  altro utente, anche dentro il compositore annidato: `REMOTIX_SCHERMO_ANNIDATO=1` lo dichiara;
-  (4) ⛔ **due banchi lanciati insieme sullo stesso inquilino `c43u1`** si sono rubati la sessione
-  e hanno dato due «blocchi» da 51 e 58 s che **non erano del prodotto** — rifatto da solo: 0 s.
-  È la lezione di sempre sui banchi in parallelo.
+  ⇒ The **10 s** threshold becomes `[M]`: the healthy ones are at 0, the faults at 24-25, the real defect at 46-370.
+  ⚠ Four defects **of the bench** found by running it, all cured: (1) gnome-shell and kwin
+  have a file capability ⇒ their folder in `/proc` belongs to root, and even root **inside the
+  box** cannot read their `fd` ⇒ the compositor was never found: now the user is read from
+  `status`, and if the socket cannot be read it falls back **by name** to the three compositors the
+  product knows, declaring it; (2) a round with the fault requested and **not** injected exited **0**
+  from `_lancia.py`: now it is 3; (3) visible Firefox refused to start when another user is in the
+  foreground, even inside the nested compositor: `REMOTIX_SCHERMO_ANNIDATO=1` declares it;
+  (4) ⛔ **two benches launched together on the same tenant `c43u1`** stole the session from each other
+  and gave two "freezes" of 51 and 58 s that **did not belong to the product** — redone alone: 0 s.
+  It is the usual lesson about benches in parallel.
 
-- ✅ **I FOTOGRAMMI PERSI IN 4K ERANO DEL TABLET, NON DI REMOTIX** — 24 set 2026, mattina.
-  Sul tablet, notte del 23: Chrome **34 buchi** in 20 min su gnome e **88** su xfce; Firefox riceveva
-  tutto ma ne dipingeva il **93 %**. ⭐ Dai registri del server: i buchi di Chrome li faceva il
-  **regolatore del ritmo** (3 597 fotogrammi scartati su ~26 000 perché due aspettavano già), con la
-  scena testimone a **~190 Mbit/s**, il ritardo della rete da **2 a 76-95 ms** (coda: linea satura) e
-  il tablet sul **Wi-Fi a 5 GHz con segnale -74 dBm** (540 Mbit/s nominali).
-  ⭐⭐ LA PROVA DI CONTROLLO `[M]`: stesse sessioni, 4K, mouse in moto, **browser sul server**
-  (`REMOTIX_SUL_SERVER=1`, labwc senza schermo a 3840x2160 — ⚠ e sulla **stessa Intel che codifica**,
-  la Radeon è esclusa apposta: la prova è più severa del caso vero), 3 min per giro:
+- ✅ **THE FRAMES LOST IN 4K WERE THE TABLET'S, NOT REMOTIX'S** — 24 Sep 2026, morning.
+  On the tablet, night of the 23rd: Chrome **34 gaps** in 20 min on gnome and **88** on xfce; Firefox received
+  everything but painted **93 %** of it. ⭐ From the server's logs: Chrome's gaps were made by the
+  **rate regulator** (3 597 frames dropped out of ~26 000 because two were already waiting), with the
+  witness scene at **~190 Mbit/s**, the network delay from **2 to 76-95 ms** (queue: saturated line) and
+  the tablet on **5 GHz Wi-Fi with a -74 dBm signal** (540 Mbit/s nominal).
+  ⭐⭐ THE CONTROL TEST `[M]`: same sessions, 4K, mouse moving, **browser on the server**
+  (`REMOTIX_SUL_SERVER=1`, headless labwc at 3840x2160 — ⚠ and on the **same Intel that encodes**,
+  the Radeon excluded on purpose: the test is stricter than the real case), 3 min per round:
 
-  | | sul tablet | sul server |
+  | | on the tablet | on the server |
   |---|---|---|
-  | gnome · Chrome | 21 fot/s, 34 buchi in 20 min | **40 fot/s, 0 buchi** |
-  | xfce · Chrome | 88 buchi in 20 min | **35 fot/s, 0 buchi** |
-  | gnome · Firefox | dipinti 93 % | **dipinti 100 %** (3 981 su 3 982) |
+  | gnome · Chrome | 21 fr/s, 34 gaps in 20 min | **40 fr/s, 0 gaps** |
+  | xfce · Chrome | 88 gaps in 20 min | **35 fr/s, 0 gaps** |
+  | gnome · Firefox | painted 93 % | **painted 100 %** (3 981 out of 3 982) |
 
-  ⇒ **Il limite è il tablet** (Wi-Fi debole e decodifica del 4K), non il prodotto. ⚠ Resta del
-  prodotto una cosa da tenere per la prova sotto stress: su una linea più stretta del flusso il server
-  **scarta e poi manda una chiave intera**, che pesa di più — è la scelta di oggi (risalita della qualità
-  e tetto di banda spenti, I6), e un utente vero su un Wi-Fi debole la vedrebbe.
+  ⇒ **The limit is the tablet** (weak Wi-Fi and 4K decoding), not the product. ⚠ One thing of the
+  product remains to be kept for the stress test: on a line narrower than the stream the server
+  **drops and then sends a whole keyframe**, which weighs more — it is today's choice (quality ramp-up
+  and bandwidth cap off, I6), and a real user on a weak Wi-Fi would see it.
 
-- ✅ **KDE RIPARTE DOPO UN RIAVVIO DEL SERVER ANCHE SE LA FINESTRA HA CAMBIATO MISURA** — 22 set 2026,
-  binario `1c592928`. Trovato dall'utente: la sessione Plasma sopravvive al server (I4), ⛔ ma la tabella
-  delle tele dei palchi vive nel PROCESSO e col riavvio si azzera ⇒ il ripiego di §4.5 («si concede quel
-  che il palco **ha**») non aveva niente da concedere e passava la misura del client; KWin `--virtual`
-  non ridimensiona, §6.2 vieta di spedire un fotogramma di misura diversa, e lo schermo restava **nero
-  per sempre** mentre il registro ripeteva «gli richiedo» con un'attesa che raddoppia.
-  ⭐ Cura in `src/rcp.c` (`rcp_tela_dal_palco()`, ramo 4): finché **non è uscito nessun fotogramma** il
-  server **adotta** la misura del palco e la annuncia con un `TELA(ADATTATA)`; dopo il primo fotogramma
-  resta vietato. `RCP.md` §7.1 chiude così la `⏳` del 15 agosto («che cosa fa il server quando il palco
-  cambia misura senza che nessun `ADATTA_TELA` gliel'abbia chiesto»).
-  `[M]` browser VERI sulla 8512, sessione nata a 1548x862 e rientro da una finestra di altra misura:
+- ✅ **KDE RESTARTS AFTER A SERVER RESTART EVEN IF THE WINDOW HAS CHANGED SIZE** — 22 Sep 2026,
+  binary `1c592928`. Found by the user: the Plasma session survives the server (I4), ⛔ but the table
+  of the stages' canvases lives in the PROCESS and is reset by the restart ⇒ the fallback of §4.5 ("one grants what
+  the stage **has**") had nothing to grant and passed on the client's size; KWin `--virtual`
+  does not resize, §6.2 forbids sending a frame of a different size, and the screen stayed **black
+  forever** while the log repeated "I ask it again" with a doubling wait.
+  ⭐ Cure in `src/rcp.c` (`rcp_tela_dal_palco()`, branch 4): as long as **no frame has gone out** the
+  server **adopts** the stage's size and announces it with a `TELA(ADATTATA)`; after the first frame
+  it stays forbidden. `RCP.md` §7.1 thus closes the `⏳` of 15 August ("what does the server do when the stage
+  changes size without any `ADATTA_TELA` having asked it").
+  `[M]` REAL browsers on 8512, session born at 1548x862 and return from a window of another size:
 
-  | browser | prima (`f1807378`) | dopo (`1c592928`) |
+  | browser | before (`f1807378`) | after (`1c592928`) |
   |---|---|---|
-  | **Firefox 140** | ⛔ schermo mai acceso, **0** fotogrammi in 60 s | ⭐ acceso in **2,0 s**, **+3324** fotogrammi, 0 buchi |
-  | **Chrome 153** | ⛔ schermo mai acceso, **0** fotogrammi in 40 s | ⭐ acceso, **+2273** fotogrammi, 0 buchi |
+  | **Firefox 140** | ⛔ screen never lit, **0** frames in 60 s | ⭐ lit in **2.0 s**, **+3324** frames, 0 gaps |
+  | **Chrome 153** | ⛔ screen never lit, **0** frames in 40 s | ⭐ lit, **+2273** frames, 0 gaps |
 
-  ⚠ In tutti e quattro i giri la tela adottata è quella del palco (1548x862), non quella chiesta dalla
-  finestra (1228x722 · 1240x692): è il `TELA` che lo dice, e i fotogrammi partono da lì.
-- ✅ **IL VIDEO PESANTE: CURATO IN DUE COLPI** — 22 set 2026, binario `f1807378` + pagina `e2b8c43`.
-  (1) `a50b389` la **spirale della chiave** (RCP.md §5.2): la pagina non si inchioda più — prima si fermava
-  a 41 consegnati su 8810 stream. (2) `e2b8c43` **l'ordine di consegna**: gli stream si leggono incatenati,
-  nell'ordine in cui il server li apre. Non era Firefox: 173 buchi su 173 erano fotogrammi arrivati dopo il
-  loro successore, con 0 abbandoni lato server.
-  `[M]` KDE, scena ~236 Mbit/s, 190 s, browser veri e visibili: Firefox buchi **173 → 3**, fuori ordine
-  207 → 3, consegnati/s 37,9 → 48,1, tela **pulita** (dispersione dei blocchi 8×8 sul rumore 37,8 → 23,3,
-  Chrome 16,7); Chrome buchi 14 → 2. Nessuna linea morta. La catena non costa ritardo: tratto
-  cattura→byte fuori 16,4–16,9 ms, come prima.
-  ⏳ **Aperti, e nessuno dei due è di oggi**: (a) Firefox riceve 48/s e ne dipinge 37/s — 1858 fotogrammi
-  spariscono dentro il suo decodificatore, senza errori e senza che **nessuno li conti** (serve un contatore
-  `decode()` contro fotogrammi in uscita) → ⭐ **il (a) è stato riletto il 23 set, e non è quel che
-  sembrava: vedi la voce qui sotto**; (b) restano 3 buchi in 190 s: la catena rispetta l'ordine in cui
-  il browser presenta gli stream, non i `numero` — si chiuderebbero solo con un riordino e una breve attesa.
-  ⚠ In KDE gli inquilini lasciati dalla rete sono stati tolti a mano (restano `nictest` e `provanic`): C7 non
-  li toglie, e in GNOME e XFCE ci sono ancora.
+  ⚠ In all four rounds the adopted canvas is the stage's (1548x862), not the one requested by the
+  window (1228x722 · 1240x692): it is the `TELA` that says so, and the frames start from there.
+- ✅ **THE HEAVY VIDEO: CURED IN TWO BLOWS** — 22 Sep 2026, binary `f1807378` + page `e2b8c43`.
+  (1) `a50b389` the **keyframe spiral** (RCP.md §5.2): the page no longer freezes — before, it stopped
+  at 41 delivered out of 8810 streams. (2) `e2b8c43` **the delivery order**: the streams are read chained,
+  in the order in which the server opens them. It was not Firefox: 173 gaps out of 173 were frames that arrived after
+  their successor, with 0 abandons on the server side.
+  `[M]` KDE, scene ~236 Mbit/s, 190 s, real and visible browsers: Firefox gaps **173 → 3**, out of order
+  207 → 3, delivered/s 37.9 → 48.1, canvas **clean** (dispersion of the 8×8 blocks over the noise 37.8 → 23.3,
+  Chrome 16.7); Chrome gaps 14 → 2. No dead line. The chain costs no delay: stroke
+  capture→byte out 16.4–16.9 ms, as before.
+  ⏳ **Open, and neither of the two is from today**: (a) Firefox receives 48/s and paints 37/s — 1858 frames
+  vanish inside its decoder, without errors and without **anybody counting them** (a counter is needed,
+  `decode()` against frames coming out) → ⭐ **(a) was reread on 23 Sep, and it is not what it
+  seemed: see the item below**; (b) 3 gaps remain in 190 s: the chain respects the order in which
+  the browser presents the streams, not the `numero` — they would close only with a reordering and a brief wait.
+  ⚠ In KDE the tenants left by the net were removed by hand (`nictest` and `provanic` remain): C7 does not
+  remove them, and in GNOME and XFCE they are still there.
 
-- ✅ **I FOTOGRAMMI DI FIREFOX: CHIUSO, E FIREFOX È SCAGIONATO** — misurato il 23 set 2026,
-  pomeriggio, con Firefox 140 **vero e visibile** su `rete11-kde`, 20 minuti, contatori nuovi letti
-  al secondo: `consegnati 25 880 = fuori 25 880 + dentro 1`. ⇒ Il decodificatore di Firefox **non**
-  si mangia niente in silenzio (`dentro` al massimo **5**, mediana 0), e non siamo noi a trattenerli
-  (`bmp` al massimo **1**: `createImageBitmap` si risolve sempre). ⛔ **Le due previsioni scritte
-  prima erano smentite tutte e due**; regge la terza strada, quella marcata `⚠`: il residuo del 22
-  era un artefatto dei binari di quel giorno, curato da `a50b389`/`e2b8c43`.
-  ⭐ E su 110 intervalli da 5 s, **zero** intervalli che perdono ≥16 %: le raffiche non ci sono più.
-  ⇒ Il conto chiude senza ignoti: 25 880 − 24 998 = 882 = `saltati_coda` + `tardive` + 1 in volo.
+- ✅ **FIREFOX'S FRAMES: CLOSED, AND FIREFOX IS CLEARED** — measured on 23 Sep 2026,
+  afternoon, with a **real and visible** Firefox 140 on `rete11-kde`, 20 minutes, new counters read
+  every second: `consegnati 25 880 = fuori 25 880 + dentro 1`. ⇒ Firefox's decoder does **not**
+  swallow anything silently (`dentro` at most **5**, median 0), and it is not us holding them back
+  (`bmp` at most **1**: `createImageBitmap` always resolves). ⛔ **The two predictions written
+  beforehand were both refuted**; the third route holds, the one marked `⚠`: the residue of the 22nd
+  was an artefact of that day's binaries, cured by `a50b389`/`e2b8c43`.
+  ⭐ And over 110 intervals of 5 s, **zero** intervals that lose ≥16 %: the bursts are no longer there.
+  ⇒ The count closes with no unknowns: 25 880 − 24 998 = 882 = `saltati_coda` + `tardive` + 1 in flight.
 
-- ⏳ **I fotogrammi che «spariscono» in Firefox NON sono in coda: sono buttati, e a RAFFICHE** —
-  23 set 2026, riletti i diari del 22 (nessuna misura nuova: solo aritmetica su registri già in mano),
-  pagina `src/pagina.html`.
+- ⏳ **The frames that "vanish" in Firefox are NOT queued: they are thrown away, and in BURSTS** —
+  23 Sep 2026, the diaries of the 22nd reread (no new measurement: only arithmetic on logs already in hand),
+  page `src/pagina.html`.
 
-  ⛔ **La sottrazione vecchia era ambigua, e andava disfatta prima di tutto.** Fra `consegnati` («l'ho
-  dato a `decode()`») e `dipinti` («è sul vetro») ci sono **quattro** passaggi e se ne contava **uno**
-  (`saltati_coda`). ⇒ `consegnati − dipinti` non era «persi dal decodificatore»: era un numero senza
-  padrone. `[M]` La **maggioranza** dei casi si spiega già oggi da sola: su 477 righe di diario con
-  `consegnati − dipinti − salt − tard` fra 0 e 2, il resto è solo il fotogramma **in volo** all'istante
-  della lettura (i due contatori si leggono in momenti diversi — la domanda era giusta). E l'episodio
-  `dipinti 1097 video 3882→1097 salt 2785` chiude **esattamente**: 3882 − 1097 = 2785 = `salt`, zero
-  ignoti. ⇒ Il buco vero è solo quello che resta **dopo** aver tolto `salt` e `tard`: lo chiamo **residuo**.
+  ⛔ **The old subtraction was ambiguous, and had to be undone first of all.** Between `consegnati` ("I
+  gave it to `decode()`") and `dipinti` ("it is on the glass") there are **four** passages and **one**
+  was counted (`saltati_coda`). ⇒ `consegnati − dipinti` was not "lost by the decoder": it was a number without
+  an owner. `[M]` The **majority** of cases already explain themselves today: of 477 diary lines with
+  `consegnati − dipinti − salt − tard` between 0 and 2, the rest is only the frame **in flight** at the moment
+  of reading (the two counters are read at different moments — the question was right). And the episode
+  `dipinti 1097 video 3882→1097 salt 2785` closes **exactly**: 3882 − 1097 = 2785 = `salt`, zero
+  unknowns. ⇒ The real gap is only what remains **after** removing `salt` and `tard`: I call it **residue**.
 
-  ⭐⭐ **E IL RESIDUO NON È UN RITARDO — la prova è `voff`, che era già sulla stessa riga.**
-  `voff` = (ora del client al vetro) − (`istante` del server di quel fotogramma): se il residuo fosse
-  una coda, `voff` dovrebbe crescere **con lei**, di `residuo / ritmo`.
+  ⭐⭐ **AND THE RESIDUE IS NOT A DELAY — the proof is `voff`, which was already on the same line.**
+  `voff` = (client time at the glass) − (the server's `istante` of that frame): if the residue were
+  a queue, `voff` should grow **with it**, by `residuo / ritmo`.
 
-  | `[M]` 22 set, 190-200 s per giro | residuo finale | crescita di `voff` attesa **se fosse una coda** | crescita di `voff` **misurata** |
+  | `[M]` 22 Sep, 190-200 s per round | final residue | growth of `voff` expected **if it were a queue** | growth of `voff` **measured** |
   |---|---|---|---|
   | Firefox 140, KDE (`n-ff-kde`) | **2007** | **+45 600 ms** | **+47 ms** |
   | Firefox 140, KDE (`h-ff-kde-base`) | **1757** | **+39 900 ms** | **+3 ms** |
-  | Firefox 140, XFCE (`v-fi-xfce`) | **937** (piatto per 60 s) | **+21 300 ms** | **+155 ms** |
+  | Firefox 140, XFCE (`v-fi-xfce`) | **937** (flat for 60 s) | **+21 300 ms** | **+155 ms** |
   | Firefox 140, GNOME (`v-fi-gnome`) | **1** | +23 ms | +32 ms |
-  | Chrome 153, KDE (`n-cr-kde`) | **0** su 10 066 | 0 | +106 ms |
+  | Chrome 153, KDE (`n-cr-kde`) | **0** out of 10 066 | 0 | +106 ms |
 
-  ⇒ **Mille fotogrammi di residuo e zero millisecondi di ritardo.** La pagina dipinge sempre
-  l'immagine **corrente**: quei fotogrammi non stanno aspettando da nessuna parte, **non esistono più**.
+  ⇒ **A thousand frames of residue and zero milliseconds of delay.** The page always paints
+  the **current** image: those frames are not waiting anywhere, **they no longer exist**.
 
-  ⭐ **E la forma è una raffica, non un tasso.** `[M]` Su 39 intervalli da 5 s di `n-ff-kde`, **17 perdono
-  esattamente 0** e altri 6 perdono 1-2 fotogrammi (il volo); i **16** che restano perdono dal 16 %
-  all'**88 %**: `t18` = 261 entrati, **31 dipinti**. ⇒ La media
-  «48 riceve / 37 dipinge» **nasconde il difetto invece di dirlo**: quel che l'utente vede non è un ritmo
-  più basso, sono **congelamenti di 1-4 secondi** più volte al minuto, con il desktop che poi riparte
-  dall'immagine giusta. ⚠ È lo stesso difetto che la fase 9 chiamava `F4-CODA-DEL-DECODIFICATORE`, e
-  **la guardia è cieca**: `saltati_coda` scatta su `dec.decodeQueueSize > 2`, e Firefox teneva
-  `decodeQueueSize` **sotto 3 con 1800 fotogrammi mancanti all'appello**. Un interruttore che non si
-  accende mai è peggio di uno che non c'è.
+  ⭐ **And the shape is a burst, not a rate.** `[M]` Of 39 intervals of 5 s of `n-ff-kde`, **17 lose
+  exactly 0** and another 6 lose 1-2 frames (in flight); the **16** that remain lose from 16 %
+  to **88 %**: `t18` = 261 in, **31 painted**. ⇒ The average
+  "receives 48 / paints 37" **hides the defect instead of stating it**: what the user sees is not a lower
+  rate, it is **freezes of 1-4 seconds** several times a minute, with the desktop then restarting
+  from the right image. ⚠ It is the same defect that phase 9 called `F4-CODA-DEL-DECODIFICATORE`, and
+  **the guard is blind**: `saltati_coda` fires on `dec.decodeQueueSize > 2`, and Firefox kept
+  `decodeQueueSize` **below 3 with 1800 frames missing from the roll call**. A switch that never
+  turns on is worse than one that is not there.
 
-  ⭐ **IL CONTATORE, scritto oggi** (`src/pagina.html`, `conti.usciti` + `conti.in_bmp`), sulla riga del
-  diario accanto agli altri: `video C→D **fuori U dentro N coda_dec Q bmp B** salt … tard … err …`.
-  `fuori` si segna nella **prima riga di `dipingi()`**, che è il richiamo del decodificatore; `dentro` =
-  `C − U`; `coda_dec` è quel che dichiara **lui**; `bmp` sono le `createImageBitmap` in volo. Costo: **tre
-  somme di interi per fotogramma**, nessuna allocazione, nessun orologio. Il conto adesso **chiude**:
-  `consegnati = fuori + dentro` e `fuori = salt + dipinti + tard + bmp + bmp_falliti`. Gli stessi nomi
-  escono da `REMOTIX.tratti()`. ⚠ Curata nello stesso punto una riga che **falsificava il tratto 8**:
-  `t_dec` si svuotava **tutta** oltre le 240 voci — cioè proprio quando il decodificatore non consegna —
-  e adesso butta solo la più vecchia.
+  ⭐ **THE COUNTER, written today** (`src/pagina.html`, `conti.usciti` + `conti.in_bmp`), on the diary
+  line next to the others: `video C→D **fuori U dentro N coda_dec Q bmp B** salt … tard … err …`.
+  `fuori` is recorded in the **first line of `dipingi()`**, which is the decoder's callback; `dentro` =
+  `C − U`; `coda_dec` is what **it** declares; `bmp` are the `createImageBitmap` in flight. Cost: **three
+  integer sums per frame**, no allocation, no clock. The count now **closes**:
+  `consegnati = fuori + dentro` and `fuori = salt + dipinti + tard + bmp + bmp_falliti`. The same names
+  come out of `REMOTIX.tratti()`. ⚠ Cured at the same point a line that **falsified stroke 8**:
+  `t_dec` was emptied **entirely** beyond 240 entries — that is, precisely when the decoder does not deliver —
+  and now it drops only the oldest.
 
-  ⭐⭐ **LA PREVISIONE, scritta PRIMA della misura sul ferro** (Intel UHD 730 integrata, non una scheda
-  potente), e con dichiarato che cosa mi smentirebbe. Le due ipotesi sono separabili perché il contatore
-  le separa:
-  - **Prevedo `dentro` ≈ residuo e `bmp` ≈ 0-2**, con `coda_dec` ≤ 3 per tutto il giro. Vorrebbe dire che
-    il decodificatore di Firefox **prende `decode()` e non produce nulla**, in silenzio: il difetto è suo,
-    la nostra catena è pulita, e la cura è di rinunciare a quei fotogrammi **sapendolo** (cioè: `dentro`
-    che cresce diventa un verdetto rosso, non un silenzio).
-  - ⛔ **MI SMENTISCE: `bmp` che sale a centinaia e resta su.** Vorrebbe dire il contrario — che il
-    decodificatore consegna e siamo **noi** a non finire di disegnare, con le `createImageBitmap` che non
-    si risolvono mai e trattengono il `VideoFrame`. In quel caso il difetto è **nostro**, sta in
-    `mostra()`, ed è la stessa famiglia della «perdita che nessun registro nomina».
-  - ⚠ Mi smentisce anche `dentro ≈ 0` con `fuori ≈ dipinti` e il residuo sparito: vorrebbe dire che il
-    residuo del 22 era un artefatto dei binari di quel giorno, curato da `a50b389`/`e2b8c43`.
+  ⭐⭐ **THE PREDICTION, written BEFORE the measurement on the hardware** (integrated Intel UHD 730, not a powerful
+  card), and with it declared what would refute me. The two hypotheses are separable because the counter
+  separates them:
+  - **I predict `dentro` ≈ residue and `bmp` ≈ 0-2**, with `coda_dec` ≤ 3 throughout the round. It would mean that
+    Firefox's decoder **takes `decode()` and produces nothing**, silently: the defect is its own,
+    our chain is clean, and the cure is to give up those frames **knowing it** (that is: `dentro`
+    growing becomes a red verdict, not a silence).
+  - ⛔ **WHAT REFUTES ME: `bmp` climbing to hundreds and staying up.** It would mean the opposite — that the
+    decoder delivers and it is **we** who do not finish drawing, with the `createImageBitmap` that never
+    resolve and hold the `VideoFrame`. In that case the defect is **ours**, it lies in
+    `mostra()`, and it is the same family as "the leak that no log names".
+  - ⚠ I am also refuted by `dentro ≈ 0` with `fuori ≈ dipinti` and the residue gone: it would mean that the
+    residue of the 22nd was an artefact of that day's binaries, cured by `a50b389`/`e2b8c43`.
 
-  ⇒ **La misura vera la fa l'utente quando la rete libera il campo**: Firefox visibile su KDE, ~190 s di
-  scena in movimento, e si leggono `dentro` e `bmp` sulla riga del diario. Fino ad allora questo punto
-  resta ⏳.
-- ✅ **Tre «linee morte» in 13 minuti su KDE: CHI TACEVA È IL BROWSER, ed era già stato CHIUSO** —
-  23 set 2026, dai registri del 22 (`registri-22set/kde-1045.log`, che va da 10:27 a 10:45 **UTC** =
-  12:27-12:45 locali) messi accanto al **giornale del tablet** (`journalctl`, ora locale). ⭐ La prova
-  che chiude il punto sono gli **scope di systemd**: il processo del browser muore PRIMA del silenzio,
-  non dopo.
+  ⇒ **The real measurement is done by the user when the net frees the field**: Firefox visible on KDE, ~190 s of
+  moving scene, and `dentro` and `bmp` are read on the diary line. Until then this point
+  stays ⏳.
+- ✅ **Three "dead lines" in 13 minutes on KDE: THE ONE THAT WENT SILENT IS THE BROWSER, and it had already been CLOSED** —
+  23 Sep 2026, from the logs of the 22nd (`registri-22set/kde-1045.log`, which goes from 10:27 to 10:45 **UTC** =
+  12:27-12:45 local) put next to the **tablet's journal** (`journalctl`, local time). ⭐ The proof
+  that closes the point is **systemd's scopes**: the browser process dies BEFORE the silence,
+  not after.
 
-  | | ultima parola del client (registro, UTC) | il processo del browser esce (giornale del tablet, locale) | linea morta |
+  | | the client's last word (log, UTC) | the browser process exits (tablet's journal, local) | dead line |
   |---|---|---|---|
-  | **12:30** Chrome 153 | 10:30:11.698 «il client si congeda, motivo=0x01 **la scheda è stata chiusa**» | `app-…Chrome-4339.scope` **12:30:11** (1,8 G di picco) | 10:30:22.330 |
-  | **12:41** Firefox 140 | 10:41:26.73 ultimo pacchetto · 10:41:27.834 ultimo diario | `app-…firefox-esr-5792.scope` **12:41:28** (7min 9s CPU, 1,7 G) | 10:41:36.874 |
-  | **12:42** Firefox 140 | 10:42:33.47 ultimo pacchetto | `app-…firefox-esr-6666.scope` **12:42:33** (830 M) | 10:42:44.297 |
+  | **12:30** Chrome 153 | 10:30:11.698 «il client si congeda, motivo=0x01 **la scheda è stata chiusa**» | `app-…Chrome-4339.scope` **12:30:11** (1.8 G peak) | 10:30:22.330 |
+  | **12:41** Firefox 140 | 10:41:26.73 last packet · 10:41:27.834 last diary | `app-…firefox-esr-5792.scope` **12:41:28** (7min 9s CPU, 1.7 G) | 10:41:36.874 |
+  | **12:42** Firefox 140 | 10:42:33.47 last packet | `app-…firefox-esr-6666.scope` **12:42:33** (830 M) | 10:42:44.297 |
 
-  ⇒ In tutti e tre il client parlava fino **all'istante in cui il processo è uscito**: nessun
-  congelamento di 10 s del browser, nessun OOM, nessun messaggio del kernel, nessun evento WiFi nella
-  finestra. Le tre righe `causa=silenzio` portano tutte `offerti=0 usciti_byte=0 coda_video=0
-  persi=0`: non aspettavamo niente di nostro, **non c'era più nessuno dall'altra parte**. ⇒ (a) rete,
-  (c) tablet e (d) server sono **esclusi con la misura**; il ping continuo non serviva.
+  ⇒ In all three the client was talking up to **the instant the process exited**: no
+  10 s freeze of the browser, no OOM, no kernel message, no WiFi event in the
+  window. The three lines `causa=silenzio` all carry `offerti=0 usciti_byte=0 coda_video=0
+  persi=0`: we were waiting for nothing of ours, **there was no longer anybody on the other side**. ⇒ (a) network,
+  (c) tablet and (d) server are **excluded by measurement**; the continuous ping was not needed.
 
-  ⭐ **E il difetto vero stava PRIMA, ed è quello che l'utente ha poi curato lo stesso pomeriggio.**
-  Il diario della pagina (ogni 5 s, sempre puntuale al millisecondo ⇒ il filo principale della pagina
-  NON era bloccato) tiene i contatori **fermi**, mentre il server continua a spedire ~58 fotogrammi/s
-  e 1,5 MB/s:
-  - sessione Firefox delle 12:39-12:41: `dipinti 1097 video 3882→1097 salt 2785` **identico per 50 s**
-    (10:40:37.788 → 10:41:27.834). Si ferma esattamente sul **video pesante**: il fotogramma 3882 è
-    l'ultimo contato, e subito dopo arrivano il 3886 da **131 238 byte** e la CHIAVE 3888 da **152 074
-    byte**, chiesta dalla pagina a 10:40:34.583 (§5.2) perché i `buchi` erano appena passati da 1 a 3.
-  - sessione Firefox delle 12:41-12:42: `dipinti 146 video 190→146` **fermo per 40 s**, e il
-    fotogramma 190 pesa **144 305 byte**, il 193 è la CHIAVE da **152 901 byte** chiesta a 10:41:49.283.
-  ⇒ È **la spirale della chiave**, parola per parola come la racconta `a50b389` («la pagina restava
-  ferma sull'ultima immagine buona, con Firefox e con Chrome, **finché la linea moriva**»): curata il
-  22 set alle **17:08** (`a50b389`) e alle **18:55** (`e2b8c43`), cioè **4 ore e mezza dopo** questi
-  tre episodi. La riga di «che cosa resta» era rimasta indietro. Il `[M]` post-cura (190 s, browser
-  veri, ~236 Mbit/s, «nessuna linea morta») è già qui sopra.
-  ⛔ **Due correzioni alla vecchia riga**: i 1097 su 3882 erano di **Firefox 140**, non di Chrome —
-  Chrome, nella stessa mezz'ora, dipingeva `817 video 817→817 salt 0 buchi 0`; e la linea morta non è
-  un sintomo del blocco, è la **coda** del browser che l'utente chiudeva perché lo schermo era fermo.
+  ⭐ **And the real defect lay BEFORE, and it is the one the user then cured the same afternoon.**
+  The page's diary (every 5 s, always punctual to the millisecond ⇒ the page's main thread
+  was NOT blocked) holds the counters **still**, while the server keeps sending ~58 frames/s
+  and 1.5 MB/s:
+  - Firefox session of 12:39-12:41: `dipinti 1097 video 3882→1097 salt 2785` **identical for 50 s**
+    (10:40:37.788 → 10:41:27.834). It stops exactly on the **heavy video**: frame 3882 is
+    the last counted, and right after come 3886 of **131 238 bytes** and the KEYFRAME 3888 of **152 074
+    bytes**, requested by the page at 10:40:34.583 (§5.2) because the `buchi` had just gone from 1 to 3.
+  - Firefox session of 12:41-12:42: `dipinti 146 video 190→146` **still for 40 s**, and
+    frame 190 weighs **144 305 bytes**, 193 is the KEYFRAME of **152 901 bytes** requested at 10:41:49.283.
+  ⇒ It is **the keyframe spiral**, word for word as `a50b389` tells it («la pagina restava
+  ferma sull'ultima immagine buona, con Firefox e con Chrome, **finché la linea moriva**»): cured on
+  22 Sep at **17:08** (`a50b389`) and at **18:55** (`e2b8c43`), that is **4 and a half hours after** these
+  three episodes. The "what remains" line had fallen behind. The post-cure `[M]` (190 s, real
+  browsers, ~236 Mbit/s, "no dead line") is already above.
+  ⛔ **Two corrections to the old line**: the 1097 out of 3882 were **Firefox 140**'s, not Chrome's —
+  Chrome, in the same half hour, painted `817 video 817→817 salt 0 buchi 0`; and the dead line is not
+  a symptom of the freeze, it is the **tail** of the browser the user was closing because the screen was still.
 
-- ✅ **Una linea morta ⛔ non si scrive più su un client che ci ha appena salutato** — 23 set 2026,
-  binario `5f0be589`, ed era l'ultimo residuo nostro dei tre episodi.
-  Episodio delle 12:30: 10:30:11.698 la pagina si congeda (`motivo=0x01`, scheda chiusa) → 10:30:11.798
-  **noi stessi** scriviamo «PING del trasporto spenti: la sessione è finita, **non c'è più niente da
-  tenere vivo**» → 10:30:12.199 spediamo la capsula di chiusura → e poi teniamo aperta la connessione
-  QUIC, spedendo 2 pacchetti ogni secondo o due a un browser che non c'è più, finché a 10:30:22.330
-  esce un ⛔ **LINEA MORTA** che si legge come un guasto del prodotto.
-  ⚠ Quando invece è il client a mandare il `CONNECTION_CLOSE` la connessione se ne va in **9 ms**
-  (10:39:11.675 congedo → 10:39:11.684 «connessione chiusa»): il comportamento dipende dal client, e
-  Chrome che esce non saluta a livello QUIC.
-  ⇒ Il guardiano è `linea_morta_giudica()` (`src/webtransport.c`): si fermava su `!w->rcp ||
-  w->chiusura >= 0`, **ma non guardava lo stato `"finita"`** — lo stesso stato su cui
-  `regola_tienila_viva()` (`src/webtransport.c`) spegne i PING. ⛔ `w->rcp` non si azzera al
-  congedo: lo azzera solo `wt_stream_chiuso()`, cioè il CLIENT che chiude lo stream — e un browser
-  che esce non lo chiude mai. ⇒ **Cura: una riga, `if (rcp_e_finita(w->rcp)) return;`**.
+- ✅ **A ⛔ dead line is no longer written on a client that has just said goodbye to us** — 23 Sep 2026,
+  binary `5f0be589`, and it was our last residue of the three episodes.
+  Episode of 12:30: 10:30:11.698 the page takes its leave (`motivo=0x01`, tab closed) → 10:30:11.798
+  **we ourselves** write «PING del trasporto spenti: la sessione è finita, **non c'è più niente da
+  tenere vivo**» → 10:30:12.199 we send the closing capsule → and then we keep the QUIC
+  connection open, sending 2 packets every second or two to a browser that is no longer there, until at 10:30:22.330
+  a ⛔ **LINEA MORTA** comes out that reads like a product fault.
+  ⚠ When instead it is the client that sends the `CONNECTION_CLOSE` the connection goes away in **9 ms**
+  (10:39:11.675 farewell → 10:39:11.684 «connessione chiusa»): the behaviour depends on the client, and
+  Chrome exiting does not say goodbye at the QUIC level.
+  ⇒ The guardian is `linea_morta_giudica()` (`src/webtransport.c`): it stopped on `!w->rcp ||
+  w->chiusura >= 0`, **but did not look at the `"finita"` state** — the same state on which
+  `regola_tienila_viva()` (`src/webtransport.c`) turns off the PINGs. ⛔ `w->rcp` is not reset at
+  farewell: only `wt_stream_chiuso()` resets it, that is the CLIENT closing the stream — and a browser
+  that exits never closes it. ⇒ **Cure: one line, `if (rcp_e_finita(w->rcp)) return;`**.
 
-  ⭐ **Delle due strade possibili è stata scelta la prima, e la seconda è stata rifiutata con le
-  ragioni in chiaro.** Chiudere la connessione QUIC quando se ne va l'ultima sessione sarebbe parso
-  più onesto, ma «sessione finita, connessione ancora viva» è uno stato **previsto due volte in
-  questo stesso file**, e tutt'e due le volte la scelta fu liberare il POSTO e lasciare il trasporto
-  in piedi: `fin_dal_client()` («la pagina che chiude la parte scrivente del canale e tiene viva la
-  connessione») e `chiusa_dal_client()` («il posto si lascia adesso … aspettare lo smontaggio del
-  trasporto vuol dire tenerlo occupato addosso a chi si ricollega subito»). E `wt_stream_chiuso()`
-  rimette `w->sessione` a `-1` apposta perché una sessione nuova possa aprirsi lì sopra. ⇒ La
-  seconda strada disferebbe una decisione presa due volte; la prima non è un cerotto, è **il
-  commento che c'era già che diventa vero**. E lo spreco non c'è: i PING sono già spenti, e il
-  trasporto se ne va da solo col `max_idle_timeout` di 30 s (`src/trasporto.c`).
+  ⭐ **Of the two possible routes the first was chosen, and the second was refused with the
+  reasons in the clear.** Closing the QUIC connection when the last session goes away would have seemed
+  more honest, but "session finished, connection still alive" is a state **foreseen twice in
+  this same file**, and both times the choice was to free the SEAT and leave the transport
+  standing: `fin_dal_client()` («la pagina che chiude la parte scrivente del canale e tiene viva la
+  connessione») and `chiusa_dal_client()` («il posto si lascia adesso … aspettare lo smontaggio del
+  trasporto vuol dire tenerlo occupato addosso a chi si ricollega subito»). And `wt_stream_chiuso()`
+  puts `w->sessione` back to `-1` on purpose so that a new session can open on top of it. ⇒ The
+  second route would undo a decision taken twice; the first is not a sticking plaster, it is **the
+  comment that was already there coming true**. And there is no waste: the PINGs are already off, and the
+  transport goes away by itself with the `max_idle_timeout` of 30 s (`src/trasporto.c`).
 
-  `[M]` **23 set 2026, scatola `gnome` (8511), binario `5f0be589`, Chrome 153 VERO headless** — due
-  giri identici con **una sola differenza**: se il client saluta prima di sparire.
-  ⭐ `5f0be589` è il binario che in questo momento gira su **tutte e tre** le scatole (`md5sum
-  /proc/<pid>/exe` su gnome, kde e xfce), e contiene **tutte e tre** le cure di stamattina: `7e0c0e2`
-  (il fotogramma già codificato paga la chiave), `f5527c2` (la chiave si chiede quando nasce il
-  debito) e questa. Il server della scatola gnome è nato alle 05:06:34 UTC, cioè **prima** dei due
-  giri qui sotto, e in tutto il suo registro c'è **esattamente una** riga `linea-morta`: quella del
-  giro B.
+  `[M]` **23 Sep 2026, `gnome` box (8511), binary `5f0be589`, REAL headless Chrome 153** — two
+  identical rounds with **a single difference**: whether the client says goodbye before disappearing.
+  ⭐ `5f0be589` is the binary running at this moment on **all three** boxes (`md5sum
+  /proc/<pid>/exe` on gnome, kde and xfce), and it contains **all three** of this morning's cures: `7e0c0e2`
+  (the frame already encoded pays for the keyframe), `f5527c2` (the keyframe is requested when the
+  debt is born) and this one. The gnome box's server was born at 05:06:34 UTC, that is **before** the two
+  rounds below, and in its whole log there is **exactly one** `linea-morta` line: the one of
+  round B.
 
-  | giro | che cosa fa il client | linea morta | come finisce la connessione |
+  | round | what the client does | dead line | how the connection ends |
   |---|---|---|---|
-  | **A** | `about:blank` (⇒ congedo `0x01` «la scheda è stata chiusa») e **300 ms dopo `SIGKILL`** — niente `CONNECTION_CLOSE`, come Chrome il 22 set | ⭐ **NESSUNA**, in 30 s di silenzio | 05:08:12.276 «**trenta secondi di silenzio, staccato (§2.2)**» — un motivo VERO al posto di un allarme falso |
-  | **B** | **`SIGKILL` e basta**, con la sessione ATTIVA | ⛔ **SCATTA**, `causa=silenzio silenzio_ms=10017 prove=13` | 05:08:42.064, la connessione si chiude come deve |
+  | **A** | `about:blank` (⇒ farewell `0x01` «la scheda è stata chiusa») and **300 ms later `SIGKILL`** — no `CONNECTION_CLOSE`, like Chrome on 22 Sep | ⭐ **NONE**, in 30 s of silence | 05:08:12.276 «**trenta secondi di silenzio, staccato (§2.2)**» — a REAL reason in place of a false alarm |
+  | **B** | **`SIGKILL` and nothing else**, with the session ACTIVE | ⛔ **FIRES**, `causa=silenzio silenzio_ms=10017 prove=13` | 05:08:42.064, the connection closes as it should |
 
-  ⇒ La cura toglie **solo** il falso positivo: chi muore non saluta, e il guardiano lo prende ancora.
-  In A il registro percorre tutta la sequenza del 22 settembre — congedo 05:07:41.775, PING spenti
-  05:07:41.875, capsula 05:07:42.276, `ricevuti` fermo a 40 per 30 s — e **non scrive nessun ⛔**.
-  ⚠⚠ **E IL PREZZO DELLA CURA, DICHIARATO invece che scoperto dopo.** La linea morta, sbagliando,
-  faceva anche una cosa utile: chiudendo la connessione a +10 s fermava **il palco**. Il registro lo
-  dice in tutt'e due i casi — 22 set, congedo 10:30:11.698 → «il palco smette di catturare»
-  10:30:22.330 (**+10,6 s**); 23 set col binario curato, congedo 05:07:41.775 → «il palco smette di
-  catturare» 05:08:12.276 (**+30,5 s**, cioè al `max_idle_timeout`). ⇒ La finestra in cui **si
-  cattura e si codifica per nessuno** passa da ~10 s a ~30 s.
-  ⭐ Sul desktop fermo della prova costa niente (11 fotogrammi in tutto), ma su una scena viva a 58
-  fotogrammi/s sono **venti secondi di codifica in più per ogni client che se ne va**, su una
-  macchina che ha altri inquilini. La misura sotto carico è nella sessione lunga.
+  ⇒ The cure removes **only** the false positive: whoever dies does not say goodbye, and the guardian still catches it.
+  In A the log goes through the whole sequence of 22 September — farewell 05:07:41.775, PINGs off
+  05:07:41.875, capsule 05:07:42.276, `ricevuti` stuck at 40 for 30 s — and **writes no ⛔**.
+  ⚠⚠ **AND THE PRICE OF THE CURE, DECLARED instead of discovered later.** The dead line, while wrong,
+  also did something useful: by closing the connection at +10 s it stopped **the stage**. The log
+  says so in both cases — 22 Sep, farewell 10:30:11.698 → «il palco smette di catturare»
+  10:30:22.330 (**+10.6 s**); 23 Sep with the cured binary, farewell 05:07:41.775 → «il palco smette di
+  catturare» 05:08:12.276 (**+30.5 s**, that is at the `max_idle_timeout`). ⇒ The window in which **one
+  captures and encodes for nobody** goes from ~10 s to ~30 s.
+  ⭐ On the still desktop of the test it costs nothing (11 frames in all), but on a live scene at 58
+  frames/s it is **twenty more seconds of encoding for every client that leaves**, on a
+  machine that has other tenants. The measurement under load is in the long session.
 
-- ✅ **IL PALCO SMETTE DI CATTURARE AL CONGEDO — CURATO E MISURATO** — 23 set 2026, `103280f`,
-  binario `cd8a3aec`. La cura si aggancia allo **stato** della sessione (`"finita"`), non alle tre
-  porte da cui ci si arriva — le strade sono **sette** e tre sole ne lasciavano quattro scoperte.
-  ⛔ E curava anche un caso peggiore trovato scrivendo: il client che chiudeva **per bene** lo
-  stream della CONNECT non fermava il palco **mai**, nemmeno alla morte della connessione.
-  `[M]` Tutte e cinque le previsioni scritte prima reggono: **zero** righe `⛔ NIENTE VIDEO`, il
-  palco si ferma **+100 ms** dopo il congedo (prima: +30 s), figli 2→2→2 e RSS fermo (I4 regge),
-  al rientro `canale video ACCESO` e 404 fotogrammi subito dopo, zero coppie acceso/spento.
-  ⚠ P5 (l'audio) regge per metà: lo spegnimento è esatto, ma in quella sessione non suonava
-  niente, quindi «audio muto al rientro» non è stato né confermato né smentito.
+- ✅ **THE STAGE STOPS CAPTURING AT FAREWELL — CURED AND MEASURED** — 23 Sep 2026, `103280f`,
+  binary `cd8a3aec`. The cure hooks onto the session's **state** (`"finita"`), not onto the three
+  doors through which one gets there — the routes are **seven** and three alone left four uncovered.
+  ⛔ And it also cured a worse case found while writing: the client that closed the CONNECT stream
+  **properly** never stopped the stage, **ever**, not even at the death of the connection.
+  `[M]` All five predictions written beforehand hold: **zero** `⛔ NIENTE VIDEO` lines, the
+  stage stops **+100 ms** after the farewell (before: +30 s), children 2→2→2 and RSS still (I4 holds),
+  on return `canale video ACCESO` and 404 frames right after, zero on/off pairs.
+  ⚠ P5 (the audio) holds by half: the switch-off is exact, but in that session nothing was
+  playing, so "audio muted on return" was neither confirmed nor refuted.
 
-- ⏳ **Il palco smette di catturare quando muore il TRASPORTO, non quando il client si CONGEDA** —
-  23 set 2026, trovato curando la linea morta. Al congedo liberiamo il posto (`posto LASCIATO …
-  occupati adesso: 0`) ma **non** spegniamo la cattura: quella si ferma solo quando se ne va la
-  connessione QUIC. Nel mezzo ogni fotogramma viene catturato, codificato, offerto, **rifiutato** da
-  `rcp_video_apri()` (`src/rcp.c`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) e messo a verbale come
+- ⏳ **The stage stops capturing when the TRANSPORT dies, not when the client TAKES ITS LEAVE** —
+  23 Sep 2026, found while curing the dead line. At farewell we free the seat (`posto LASCIATO …
+  occupati adesso: 0`) but we do **not** turn off the capture: it stops only when the QUIC
+  connection goes away. In between every frame is captured, encoded, offered, **refused** by
+  `rcp_video_apri()` (`src/rcp.c`, `RCP_VIDEO_PRIMA_DI_SESSIONE`) and put on record as
   `⛔ NIENTE VIDEO: «SESSIONE» non è stata spedita (stato finita)`.
-  ⇒ È lavoro fatto per nessuno **e** una riga ⛔ che somiglia a un guasto. 🔸 La cura sensata è
-  spegnere il ciclo dei fotogrammi sullo stesso evento che libera il posto — ⚠ ma va guardata contro
-  I4 («il palco resta in piedi»), che è un'altra cosa: fermare la *cattura* non è smontare il palco.
+  ⇒ It is work done for nobody **and** a ⛔ line that looks like a fault. 🔸 The sensible cure is
+  to turn off the frame loop on the same event that frees the seat — ⚠ but it must be checked against
+  I4 ("the stage stays standing"), which is another thing: stopping the *capture* is not dismantling the stage.
 
-- ✅ **LA RETE DOPO LA CURA DEI FANTASMI È GIRATA** — 22 set 2026, `--famiglia tutto --scatola "gnome kde
-  xfce"`, binario `defc5ad5`: **nessun rosso**, 13 506 s, C14 compreso (sole e insieme, stessa impronta).
-  ⚠ La rete usa il cliente Python, non un browser: il blocco del video in **Firefox** qui sotto NON lo
-  vede. ✅ E `13-w4` **è diventato una maglia fissa della rete** — 23 set 2026, vedi `C20` qui sotto.
-- ✅ **LA RETE SPORCA LE SCATOLE: adesso è un VERDETTO** — chiuso il 23 set 2026. La sgomberata era
-  già fatta (22 set, `08172a6`, `d0406fd`): il **gancio** sgombera dopo ogni maglia, sullo spazio di
-  nomi della rete (utenti, home, unità `user@` fallite, orfani di `/tmp`); la scena si lancia con
-  `setsid`; C3 ferma solo il processo del prodotto e non più il browser.
-  ⭐ Mancava il giudizio, ed è **C19** (`banchi/11-scatole/11-c19-la-scatola-resta-pulita.py`,
-  `la_scatola_resta_pulita` nel gancio, **ultima maglia di ogni scatola** in `tutto` e in
-  `desktop-nuovo`): *«a fine giro non sopravvive nessun inquilino della rete»*. Prima la sporcizia era
-  una riga `inf` annotata `riuscita=true`, cioè ⛔ la rete poteva lasciare venti inquilini dentro una
-  scatola e dirsi verde lo stesso.
-  ⭐⭐ **L'insidia di `nictest` è risolta contando per NOME, non per uid.** `bilancio` conta
-  `uid>=1000` escluso il solo `provanic` ⇒ per lui `nictest` è un inquilino; C19 conta sullo **spazio
-  di nomi della rete** (`^c[0-9]+b?u[0-9]+$`, lo stesso di `sgombera_inquilini`) ⇒ `nictest`,
-  `provanic` e gli utenti di sistema non ci cascano dentro **per forma**, non per una lista di
-  eccezioni. I due restano diversi apposta: `bilancio` è una misura per chi diagnostica, C19 è il
-  giudizio.
-  ⚠ Giudica **U** (utenti), **C** (case rimaste, cioè il `userdel` senza `-r`) e **P** (processi);
-  unità `user@` fallite orfane e orfani di `/tmp` restano **rilievo**, non verdetto — sono la
-  spazzatura degli inquilini, non gli inquilini, e un rosso perpetuo per un file in `/tmp` sarebbe un
-  interruttore che qualcuno spegne (§1.49). Chi vuole misurarli lo chiede: `--anche-lo-sporco`.
-  `[M]` 23 set 2026, binario `9b5df38b`, scatole **kde** e **xfce**: giro sano **VERDE** su tutt'e due
-  (0 inquilini, 0 case, 0 processi; rilievo kde 8 unità fallite · 0 orfani, xfce 10 · 49), e i **due**
-  guasti innestati **VISTI** su tutt'e due — `--lascia-un-inquilino` (U·C·P rossi) e
-  `--lascia-una-casa` (solo C rosso: ⭐ il residuo che nessun `pgrep` e nessun `getent` vedrebbero).
-  ⚠ E un rilievo che la maglia stampa e nessuno guardava: in kde c'era `occhio2`, in xfce `corrx1` e
-  `corrx2` — inquilini di altri banchi **fuori** dallo spazio di nomi, quindi né sgomberati dal gancio
-  né contati da C19. 🔸 I banchi nuovi diano ai loro inquilini un nome `c<n>u<n>`, come fa C20.
-- ✅ **`13-w4` È DIVENTATO C20, MAGLIA FISSA DELLA RETE** — 23 set 2026.
-  `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, dentro `le_cinque_nuove` (cioè in
-  `tutto` e in `desktop-nuovo`), col cancello delle capacità: vuole l'**immagine**.
-  Sorveglia il difetto che l'utente ha trovato il 22 set su KDE con Chrome — dopo «Esci» e un nuovo
-  accesso lo schermo alternava desktop, schermata d'uscita e nero — e che `src/codificatore.c`
-  descrive come *«un'immagine VECCHIA, senza nessun errore»*: ⛔ proprio perché non c'è errore, se ne
-  accorge solo chi **guarda**.
-  ⭐ Entrando nella rete ha preso tre cose che da banco di una sera non aveva:
-  (1) **il guasto innestato** `--scena-che-lampeggia` (senza, il giorno che il giudice smettesse di
-  guardare direbbe verde per sempre); (2) **non sa più che cosa sia Plasma** — nascita e fine della
-  sessione le legge dal registro del prodotto (`formato negoziato`, `la sessione grafica … E' FINITA`)
-  e il gesto «Esci» se lo cerca con la stessa domanda di `src/sessione.c` (`org.kde.Shutdown` ·
-  `org.gnome.SessionManager` · `xfce4-session-logout`); (3) l'inquilino si chiama **`c20u<n>`**,
-  dentro lo spazio di nomi della rete, così il gancio lo sgombera e C19 lo vede.
-  ⛔⛔ **E ha dovuto mettere lei una scena, come C3** — è la misura che ha riscritto la maglia. A
-  desktop fermo, nel secondo accesso: **kde 1 800 fotogrammi in 45 s** (KWin consegna sempre),
-  **xfce 7 in 60 s** (labwc, come ogni wlroots, consegna solo sul danno) ⇒ su xfce e lxqt la maglia
-  sarebbe stata **3 per sempre**. La cura è `banchi/11-scatole/11-c20-scena.html`: una banda scura che
-  scorre su fondo chiaro, **due** bande a 100 punti di distanza così che in vista ci sia sempre
-  esattamente il 20 % di scuro ⇒ ⭐ ogni fotogramma è diverso (c'è danno, quindi consegna) **e la
-  luminanza media non si muove**. `[M]` misurata: **156**, e un **solo valore distinto** su 2 166
-  fotogrammi.
-  `[M]` 23 set 2026, binario `9b5df38b`, con la scena dichiarata:
+- ✅ **THE NET AFTER THE CURE OF THE GHOSTS HAS RUN** — 22 Sep 2026, `--famiglia tutto --scatola "gnome kde
+  xfce"`, binary `defc5ad5`: **no red**, 13 506 s, C14 included (alone and together, same fingerprint).
+  ⚠ The net uses the Python client, not a browser: it does NOT see the video freeze in **Firefox**
+  below. ✅ And `13-w4` **has become a fixed mesh of the net** — 23 Sep 2026, see `C20` below.
+- ✅ **THE NET DIRTIES THE BOXES: now it is a VERDICT** — closed on 23 Sep 2026. The clear-out was
+  already done (22 Sep, `08172a6`, `d0406fd`): the **hook** clears out after every mesh, on the net's
+  namespace (users, homes, failed `user@` units, orphans in `/tmp`); the scene is launched with
+  `setsid`; C3 stops only the product's process and no longer the browser.
+  ⭐ The verdict was missing, and it is **C19** (`banchi/11-scatole/11-c19-la-scatola-resta-pulita.py`,
+  `la_scatola_resta_pulita` in the hook, **last mesh of every box** in `tutto` and in
+  `desktop-nuovo`): *«a fine giro non sopravvive nessun inquilino della rete»*. Before, the dirt was
+  an `inf` line noted `riuscita=true`, that is ⛔ the net could leave twenty tenants inside a
+  box and call itself green all the same.
+  ⭐⭐ **The `nictest` pitfall is solved by counting by NAME, not by uid.** `bilancio` counts
+  `uid>=1000` excluding only `provanic` ⇒ for it `nictest` is a tenant; C19 counts on the **net's
+  namespace** (`^c[0-9]+b?u[0-9]+$`, the same as `sgombera_inquilini`) ⇒ `nictest`,
+  `provanic` and the system users do not fall into it **by shape**, not by a list of
+  exceptions. The two stay different on purpose: `bilancio` is a measurement for whoever diagnoses, C19 is the
+  verdict.
+  ⚠ It judges **U** (users), **C** (homes left, that is `userdel` without `-r`) and **P** (processes);
+  failed orphan `user@` units and orphans in `/tmp` stay a **finding**, not a verdict — they are the
+  tenants' rubbish, not the tenants, and a perpetual red for a file in `/tmp` would be a
+  switch that somebody turns off (§1.49). Whoever wants to measure them asks for it: `--anche-lo-sporco`.
+  `[M]` 23 Sep 2026, binary `9b5df38b`, boxes **kde** and **xfce**: healthy round **GREEN** on both
+  (0 tenants, 0 homes, 0 processes; finding kde 8 failed units · 0 orphans, xfce 10 · 49), and the **two**
+  injected faults **SEEN** on both — `--lascia-un-inquilino` (U·C·P red) and
+  `--lascia-una-casa` (only C red: ⭐ the residue that no `pgrep` and no `getent` would see).
+  ⚠ And a finding the mesh prints and nobody looked at: in kde there was `occhio2`, in xfce `corrx1` and
+  `corrx2` — tenants of other benches **outside** the namespace, hence neither cleared out by the hook
+  nor counted by C19. 🔸 New benches should give their tenants a `c<n>u<n>` name, as C20 does.
+- ✅ **`13-w4` HAS BECOME C20, A FIXED MESH OF THE NET** — 23 Sep 2026.
+  `banchi/11-scatole/11-c20-la-rinascita-non-porta-fantasmi.py`, inside `le_cinque_nuove` (that is in
+  `tutto` and in `desktop-nuovo`), with the capability gate: it wants the **image**.
+  It watches the defect the user found on 22 Sep on KDE with Chrome — after "Log Out" and a new
+  login the screen alternated desktop, logout screen and black — and that `src/codificatore.c`
+  describes as *«un'immagine VECCHIA, senza nessun errore»*: ⛔ precisely because there is no error, only
+  whoever **looks** notices it.
+  ⭐ On entering the net it took three things that as a one-evening bench it did not have:
+  (1) **the injected fault** `--scena-che-lampeggia` (without it, the day the judge stopped
+  looking it would say green forever); (2) **it no longer knows what Plasma is** — birth and end of the
+  session it reads from the product's log (`formato negoziato`, `la sessione grafica … E' FINITA`)
+  and the "Log Out" gesture it looks for with the same question as `src/sessione.c` (`org.kde.Shutdown` ·
+  `org.gnome.SessionManager` · `xfce4-session-logout`); (3) the tenant is called **`c20u<n>`**,
+  inside the net's namespace, so the hook clears it out and C19 sees it.
+  ⛔⛔ **And it had to put a scene there itself, like C3** — it is the measurement that rewrote the mesh. With the
+  desktop still, at the second login: **kde 1 800 frames in 45 s** (KWin always delivers),
+  **xfce 7 in 60 s** (labwc, like every wlroots, delivers only on damage) ⇒ on xfce and lxqt the mesh
+  would have been **3 forever**. The cure is `banchi/11-scatole/11-c20-scena.html`: a dark band that
+  scrolls on a light background, **two** bands 100 points apart so that in view there is always
+  exactly 20 % dark ⇒ ⭐ every frame is different (there is damage, hence delivery) **and the
+  mean luminance does not move**. `[M]` measured: **156**, and a **single distinct value** over 2 166
+  frames.
+  `[M]` 23 Sep 2026, binary `9b5df38b`, with the declared scene:
 
-  | | giro sano | guasto innestato (`--scena-che-lampeggia`) |
+  | | healthy round | injected fault (`--scena-che-lampeggia`) |
   |---|---|---|
-  | **kde** | ⭐ VERDE (esito 0) — 4 332 fotogrammi, coda 2 166, **0 salti**, luminanza **156**, 1 valore distinto; cache: 4 superfici buttate | ⭐ VISTO (esito 0) — **762 salti** su una coda di 2 167, 26 valori distinti (14…234) |
-  | **xfce** | ⭐ VERDE (esito 0) — 4 454 fotogrammi, coda 2 227, **0 salti**, luminanza **156**, 1 valore distinto; cache: 5 superfici | ⭐ VISTO (esito 0) — **766 salti** su una coda di 2 229, 25 valori distinti |
+  | **kde** | ⭐ GREEN (outcome 0) — 4 332 frames, tail 2 166, **0 skips**, luminance **156**, 1 distinct value; cache: 4 surfaces thrown away | ⭐ SEEN (outcome 0) — **762 skips** over a tail of 2 167, 26 distinct values (14…234) |
+  | **xfce** | ⭐ GREEN (outcome 0) — 4 454 frames, tail 2 227, **0 skips**, luminance **156**, 1 distinct value; cache: 5 surfaces | ⭐ SEEN (outcome 0) — **766 skips** over a tail of 2 229, 25 distinct values |
 
-  ⚠ Due insidie trovate mentre si certificava, e tutt'e due erano del BANCO:
-  (a) il browser non dipingeva perché `/tmp/mozilla` era di un altro inquilino — è la cura della
-  provvista che C3 paga dal 27 agosto, e adesso C20 la chiama (⛔ non se ne fa una copia);
-  (b) il controllo «lo schermo è nero» stava **prima** di quello sul lampeggio ⇒ la scena di C3, che
-  è scura (mediana 17), faceva uscire **3** invece che rosso. ⭐ Uno schermo che alterna non è mai
-  ambiguo, per quanto scuro: è il nero **fermo** che non si distingue da un'immagine congelata.
-- 🔸 **La rete non guarda i browser veri sotto carico — MEZZO CHIUSO** — 23 set 2026. ⭐ Adesso
-  l'attrezzo c'è: `banchi/14-stress/stress_occhio.py`, il giudice che **guarda l'immagine** invece
-  di contare i fotogrammi, agganciato a quattro scenari (`ac59daf`, `99a4a74`). `[M]` Col guasto
-  innestato i contatori sono PERFETTI (320 consegnati, 320 dipinti, 0 buchi) e l'occhio dà **ROSSO**
-  su tutti e quattro, dove con l'occhio spento davano **VERDE** — cioè quel che la suite vedeva la
-  notte fra il 22 e il 23 mentre l'utente guardava un mosaico.
-  ⏳ Resta aperto: la suite non ha mai girato per intero (decisione dell'utente il 23 set: la prova
-  sotto stress la disegna lui, dopo LXQt), e la **rete** continua a usare il cliente Python.
-  ⛔⛔ E il 23 set si è scoperto quanto conta: il difetto più grave della giornata (58 % di schermo
-  fermo) era invisibile perché **nessun banco muoveva il mouse**. Vedi la voce del battito.
-- ⏳ **La rete non guarda i browser veri sotto carico** — 22 set 2026, e per questo la spirale della
-  chiave è passata: la rete usa il cliente Python, e `12-client-veri.py` prova Firefox e Chrome veri
-  per **8 s a desktop fermo**. 🔸 Serve un giro con un video a schermo intero per minuti, coi contatori
-  della pagina (`video consegnati→dipinti`, `buchi`) come giudizio.
-- ⏳ **Chrome Android** su XFCE: la validazione è dell'utente.
-- ✅ **I gruppi `video`/`render` su TUTTI i desktop** — chiuso il 22 set 2026, e la cura non serviva:
-  il codice che iscrive (`src/figlio.c`, `iscrivi_ai_gruppi_della_scheda`) sta nel **padre**, gira da
-  root dopo PAM e **prima del `fork`** ⇒ non sa nemmeno quale compositore nascerà, e vale su ogni
-  desktop. Era **misurato** solo su kde, non fatto solo per kde.
-  `[M]` 22 set 2026, inquilini creati SENZA gruppi, browser **veri** e finestra vera: gnome Firefox 140
-  **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In tutti e quattro il
-  registro dice «PRIMA CONNESSIONE … ce lo METTO io» e poi «è nei gruppi della scheda … può vedere in
-  hardware», `id -nG` passa da «solo se stesso» a «video render», e il primo fotogramma arriva in
-  0,6–1,6 s. (kde era già `[M]` il 20 set, `DECISIONI.md` §7.21.)
-  ⭐ **E adesso la rete lo guarda**: maglia **C18** «i gruppi della scheda li mette il prodotto»,
-  l'unica che NON chiama `garantisci_i_gruppi` — tutte le altre glieli mettono da sé e così
-  **nascondevano** quel pezzo di prodotto. Guasto innestato `--senza-usermod` (si nasconde `usermod`
-  per la durata del giro, e si rimette sempre): `[M]` VERDE e guasto VISTO su gnome e xfce.
-- ⏳ ⛔ **PRIMA DI LXQt, le prove a mano dell'utente** — chiesto il 21 set 2026: nelle tre scatole
-  gnome, kde e xfce ci sono Firefox, un terminale e un gestore di file (già negli strati), e
-  l'inquilino **`nictest`** (parola `nictest`, nel gruppo `sudo`), nuovo ultimo strato delle tre
-  ricette. ⭐ `[M]` 21 set 2026, sera: immagini rifatte, `nictest` in `sudo video render` nelle tre
-  scatole, `sudo` risponde, e Firefox entra come `nictest` su **8511 · 8512 · 8513**: PASS su tutti e
-  tre. ⏳ Restano le prove dell'utente.
-- ✅ **«Cambia utente»** — ⭐ DECISO dall'utente il 21 set 2026, sera: esce **su tutti i desktop**,
-  resta solo «Esci». `[M]` binario `eb327ffd`: XFCE `-switch-user` nel pannello e
-  `ShowSwitchUser=false`; GNOME `disable-user-switching=true` con `always-show-log-out=true`; KDE
-  già dalla fase 12. ⭐ `[M]` rete **gnome+xfce** (ridotta per decisione dell'utente: KDE non passa dal codice toccato), innesco `fase13-cambia-utente`, 9 275 s: **GNOME 27/27 · XFCE 27/27 · guasti 26/26 visti**, C10 C12 C15 C16 verdi sul portatile.
-- `[?]` **La sessione del prodotto è `closing` dalla nascita**, su ogni desktop («logged out.
-  Waiting for processes to exit» nel giornale subito dopo «New session»). Non è di questa fase né
-  una regressione (GNOME è uguale), ma con `KillUserProcesses=yes` logind potrebbe trattarla da
-  sessione finita. ⇒ Da guardare in una fase sua.
-- `[?]` Le scelte 2, 3, 4, 6, 7 della tabella sopra sono state **affrontate nel codice** dagli
-  incrementi (ridimensionamento acceso, bus d'utente, vitalità dai fatti di `/proc` e del bus) e
-  vanno rilette con l'utente, non date per decise.
+  ⚠ Two pitfalls found while certifying, and both were the BENCH's:
+  (a) the browser did not paint because `/tmp/mozilla` belonged to another tenant — it is the cure of the
+  provisioning that C3 has paid for since 27 August, and now C20 calls it (⛔ no copy is made of it);
+  (b) the "the screen is black" check was **before** the one on flashing ⇒ C3's scene, which
+  is dark (median 17), made it output **3** instead of red. ⭐ A screen that alternates is never
+  ambiguous, however dark: it is the **still** black that cannot be told from a frozen image.
+- 🔸 **The net does not look at real browsers under load — HALF CLOSED** — 23 Sep 2026. ⭐ Now
+  the tool is there: `banchi/14-stress/stress_occhio.py`, the judge that **looks at the image** instead
+  of counting frames, hooked to four scenarios (`ac59daf`, `99a4a74`). `[M]` With the injected fault
+  the counters are PERFECT (320 delivered, 320 painted, 0 gaps) and the eye gives **RED**
+  on all four, where with the eye off they gave **GREEN** — that is what the suite saw on the
+  night between the 22nd and the 23rd while the user was looking at a mosaic.
+  ⏳ Still open: the suite has never run in full (the user's decision on 23 Sep: the stress
+  test is designed by him, after LXQt), and the **net** keeps using the Python client.
+  ⛔⛔ And on 23 Sep it was discovered how much it matters: the most serious defect of the day (58 % of the screen
+  still) was invisible because **no bench moved the mouse**. See the heartbeat item.
+- ⏳ **The net does not look at real browsers under load** — 22 Sep 2026, and that is why the keyframe
+  spiral got through: the net uses the Python client, and `12-client-veri.py` tests real Firefox and Chrome
+  for **8 s with the desktop still**. 🔸 A round with a full-screen video for minutes is needed, with the page's
+  counters (`video consegnati→dipinti`, `buchi`) as the verdict.
+- ⏳ **Chrome Android** on XFCE: the validation is the user's.
+- ✅ **The `video`/`render` groups on ALL desktops** — closed on 22 Sep 2026, and the cure was not needed:
+  the code that enrols (`src/figlio.c`, `iscrivi_ai_gruppi_della_scheda`) is in the **parent**, runs as
+  root after PAM and **before the `fork`** ⇒ it does not even know which compositor will be born, and holds on every
+  desktop. It was **measured** only on kde, not done only for kde.
+  `[M]` 22 Sep 2026, tenants created WITHOUT groups, **real** browsers and a real window: gnome Firefox 140
+  **PASS** · Chrome 153 **PASS**; xfce Firefox **PASS** · Chrome **PASS**. In all four the
+  log says «PRIMA CONNESSIONE … ce lo METTO io» and then «è nei gruppi della scheda … può vedere in
+  hardware», `id -nG` goes from "only itself" to "video render", and the first frame arrives in
+  0.6–1.6 s. (kde was already `[M]` on 20 Sep, `DECISIONI.md` §7.21.)
+  ⭐ **And now the net looks at it**: mesh **C18** "the card's groups are put by the product",
+  the only one that does NOT call `garantisci_i_gruppi` — all the others put them in by themselves and thus
+  **hid** that piece of the product. Injected fault `--senza-usermod` (`usermod` is hidden
+  for the duration of the round, and always put back): `[M]` GREEN and fault SEEN on gnome and xfce.
+- ⏳ ⛔ **BEFORE LXQt, the user's tests by hand** — asked on 21 Sep 2026: in the three boxes
+  gnome, kde and xfce there are Firefox, a terminal and a file manager (already in the layers), and
+  the tenant **`nictest`** (password `nictest`, in the `sudo` group), a new last layer of the three
+  recipes. ⭐ `[M]` 21 Sep 2026, evening: images rebuilt, `nictest` in `sudo video render` in the three
+  boxes, `sudo` answers, and Firefox gets in as `nictest` on **8511 · 8512 · 8513**: PASS on all
+  three. ⏳ The user's tests remain.
+- ✅ **"Switch User"** — ⭐ DECIDED by the user on 21 Sep 2026, evening: it goes **on all desktops**,
+  only "Log Out" stays. `[M]` binary `eb327ffd`: XFCE `-switch-user` in the panel and
+  `ShowSwitchUser=false`; GNOME `disable-user-switching=true` with `always-show-log-out=true`; KDE
+  already since phase 12. ⭐ `[M]` net **gnome+xfce** (reduced by the user's decision: KDE does not go through the touched code), trigger `fase13-cambia-utente`, 9 275 s: **GNOME 27/27 · XFCE 27/27 · faults 26/26 seen**, C10 C12 C15 C16 green on the laptop.
+- `[?]` **The product's session is `closing` from birth**, on every desktop («logged out.
+  Waiting for processes to exit» in the journal right after «New session»). It does not belong to this phase nor
+  is it a regression (GNOME is the same), but with `KillUserProcesses=yes` logind could treat it as a
+  finished session. ⇒ To be looked at in a phase of its own.
+- `[?]` Choices 2, 3, 4, 6, 7 of the table above were **dealt with in the code** by the
+  increments (resizing on, user bus, liveness from the facts of `/proc` and of the bus) and
+  must be reread with the user, not taken as decided.
 
-## Il giudizio dell'utente
+## The user's verdict
 
-- ⛔⛔ **IL BATTITO SI POTEVA RIMANDARE ALL'INFINITO — il difetto più grave del progetto, e stava lì da
-  sempre** — trovato e curato il 23 set 2026 (`2be9527`, `2737d56`), binario `3fa352a2`.
-  `batti_fra()` spostava **in avanti** la scadenza del battito a ogni chiamata, e `regola_battito()`
-  gira in fondo a `rcp_passa_input()`, cioè **a ogni messaggio di input del client**. Un browser vero
-  che segue il mouse ne manda ~40 al secondo ⇒ il battito **non maturava mai**. E col battito fermo
-  non gira `video_regola()`, l'unico posto da cui si chiede la CHIAVE al palco — né `rcp_tempo()`,
-  cioè l'orologio del silenzio (§5.3) e i tetti di §4.6: ⛔ **per sei minuti nessuna protezione
-  poteva scattare**.
-  `[M]` Firefox vero e visibile, `rete11-kde`, 20 minuti, scena in movimento: **698 s su 1199 (58 %)**
-  senza un solo fotogramma nuovo, sette blocchi (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
-  fotogrammi codificati e buttati (~13 GB per nessuno su una UHD 730). ⭐ E **l'immagine non si rompe
-  mai** (1146 fotografie, 0 celle guaste): non era corruzione, era un **blocco**. Il blocco finiva
-  quando si smetteva di muovere il mouse per un secondo — è nel registro.
-  ⭐ Cura a due cinture: `batti_fra()` fissa un **tetto** e non un appuntamento (una scadenza più
-  vicina resta dov'è); e se il debito di §5.2 è acceso da oltre 1000 ms la chiave si richiede dal
-  rifiuto del fotogramma, per una strada che non passa dal battito.
-  `[M]` Dopo: **0 secondi fermi su 340**, blocco più lungo **0 s**, battiti da 22 in 3 min a 508 in
-  8 min, `da_ms` più lungo da **46 192 ms** a **1 102 ms**, richieste di chiave 0,76/s (non 6-7/s:
-  sarebbe la spirale di `07-b65`).
-  ⛔⛔ **PERCHÉ ERA INVISIBILE, ed è la lezione che vale più della cura**: la rete usa il cliente
-  Python, che non manda input, e i banchi coi browser veri aprivano la pagina e **guardavano**. Tutti
-  i nostri clienti erano *educati*. ⇒ La rete intera era passata **verde** su quello stesso binario
-  poche ore prima. Il banco che l'ha trovato fa una cosa sola: muove il mouse
+- ⛔⛔ **THE HEARTBEAT COULD BE POSTPONED FOREVER — the most serious defect of the project, and it had been there
+  forever** — found and cured on 23 Sep 2026 (`2be9527`, `2737d56`), binary `3fa352a2`.
+  `batti_fra()` moved the heartbeat's deadline **forward** at every call, and `regola_battito()`
+  runs at the end of `rcp_passa_input()`, that is **at every input message from the client**. A real browser
+  following the mouse sends ~40 per second ⇒ the heartbeat **never matured**. And with the heartbeat stopped
+  `video_regola()` does not run, the only place from which the KEYFRAME is asked of the stage — nor `rcp_tempo()`,
+  that is the silence clock (§5.3) and the caps of §4.6: ⛔ **for six minutes no protection
+  could fire**.
+  `[M]` Real and visible Firefox, `rete11-kde`, 20 minutes, moving scene: **698 s out of 1199 (58 %)**
+  without a single new frame, seven freezes (74 · 56 · 62 · 25 · **370** · 53 · 56 s), 45 278
+  frames encoded and thrown away (~13 GB for nobody on a UHD 730). ⭐ And **the image never
+  breaks** (1146 photos, 0 broken cells): it was not corruption, it was a **freeze**. The freeze ended
+  when one stopped moving the mouse for a second — it is in the log.
+  ⭐ A two-belt cure: `batti_fra()` sets a **cap** and not an appointment (a nearer deadline
+  stays where it is); and if the debt of §5.2 has been on for over 1000 ms the keyframe is requested again from the
+  refusal of the frame, by a route that does not go through the heartbeat.
+  `[M]` After: **0 seconds still out of 340**, longest freeze **0 s**, heartbeats from 22 in 3 min to 508 in
+  8 min, longest `da_ms` from **46 192 ms** to **1 102 ms**, keyframe requests 0.76/s (not 6-7/s:
+  that would be the spiral of `07-b65`).
+  ⛔⛔ **WHY IT WAS INVISIBLE, and it is the lesson worth more than the cure**: the net uses the Python
+  client, which sends no input, and the benches with real browsers opened the page and **watched**. All
+  our clients were *polite*. ⇒ The whole net had passed **green** on that same binary
+  a few hours earlier. The bench that found it does one thing only: it moves the mouse
   (`banchi/14-stress/14-il-cliente-che-non-sta-fermo.py`).
-  ⚠ E un difetto che ha bisogno di **due** condizioni insieme (input fitto **e** debito acceso) non si
-  esclude con nessun verde: il giro di controllo sul binario rotto, senza la seconda, non ha bloccato
-  niente.
-  🔸 Resta da fare: portare il movimento del mouse **dentro gli scenari che già esistono**, tarare la
-  soglia sul blocco più lungo (fra 46 s col difetto e 1,1 s curato c'è un fattore quaranta, quindi non
-  è delicata), e solo alla fine il guasto innestato. ⛔ Finché mancano i primi due, metterlo in rete
-  vorrebbe dire aggiungere una guardia che non sa diventare rossa.
+  ⚠ And a defect that needs **two** conditions together (dense input **and** debt on) cannot be
+  ruled out by any green: the control round on the broken binary, without the second one, froze
+  nothing.
+  🔸 Still to do: bring the mouse movement **into the scenarios that already exist**, tune the
+  threshold on the longest freeze (between 46 s with the defect and 1.1 s cured there is a factor of forty, so it
+  is not delicate), and only at the end the injected fault. ⛔ As long as the first two are missing, putting it in the net
+  would mean adding a guard that cannot turn red.
