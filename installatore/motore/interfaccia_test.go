@@ -64,9 +64,10 @@ func TestPianoNonModificaIlSistema(t *testing.T) {
 	}
 }
 
-// Quel che manca si dice e ferma tutto (DECISIONI §10.36): senza desktop RX-MANCA-001, a XFCE senza
-// labwc RX-MANCA-003, su Alma senza EPEL RX-MANCA-002 — senza pacchetti né comandi suggeriti. E un
-// piano BLOCCANTE applicato porta a BLOCCATA senza toccare niente.
+// Quel che manca si dice e ferma tutto (DECISIONI §10.36): senza desktop RX-MANCA-001, su Alma senza
+// EPEL RX-MANCA-002 — senza pacchetti né comandi suggeriti. labwc, wlr-randr e il carattere invece
+// non mancano: sono dipendenze di REMOTIX, nel piano (utente, 10 ott). E un piano BLOCCANTE
+// applicato porta a BLOCCATA senza toccare niente.
 func TestMancaFermaTutto(t *testing.T) {
 	cat := catalogoProva(t)
 	casi := []struct {
@@ -75,7 +76,6 @@ func TestMancaFermaTutto(t *testing.T) {
 		codice  string
 	}{
 		{"debian", "13", map[string]string{"desktop.gnome": "absent"}, "RX-MANCA-001"},
-		{"debian", "13", map[string]string{"desktop.gnome": "absent", "desktop.xfce": "4.20.1", "package.labwc": "absent"}, "RX-MANCA-003"},
 		{"almalinux", "10.1", map[string]string{"repo.epel": "absent"}, "RX-MANCA-002"},
 	}
 	for _, c := range casi {
@@ -90,6 +90,16 @@ func TestMancaFermaTutto(t *testing.T) {
 				}
 			}
 		}
+	}
+
+	// XFCE senza labwc, wlr-randr e caratteri: niente «manca», tre dipendenze col desktop che le chiede
+	rap := Valuta(cat, profiloDi("debian", "13", map[string]string{"desktop.gnome": "absent", "desktop.xfce": "4.20.1",
+		"package.labwc": "absent", "package.wlr-randr": "absent", "fonts.scalable": "0", "distro.family": "debian"}))
+	if len(rap.Mancano) > 0 {
+		t.Errorf("XFCE senza labwc: manca %+v", rap.Mancano)
+	}
+	if got := strings.Join(rap.NomiDipendenze(), ","); got != "labwc,wlr-randr,fonts-dejavu-core" || rap.Dipendenze[0].Perche != "XFCE" {
+		t.Errorf("XFCE senza labwc: dipendenze %+v", rap.Dipendenze)
 	}
 
 	b := nuovoBanco(t)

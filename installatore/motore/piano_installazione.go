@@ -66,7 +66,9 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	if err != nil {
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-MANCA-004", err.Error()))
 	} else {
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), ""))
+		// le dipendenze che il desktop chiede (labwc, wlr-randr, un carattere): col gestore, insieme
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), strings.Join(rap.NomiDipendenze(), ",")))
+		pn.Dipendenze = rap.Dipendenze
 	}
 	if !o.Aggiornamento {
 		utenti := o.Utenti
@@ -110,7 +112,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		for _, f := range file {
 			veri = append(veri, amb.P(f))
 		}
-		ins, err := amb.Pacchetti.Simula(veri, nil)
+		ins, err := amb.Pacchetti.Simula(veri, rap.NomiDipendenze())
 		if err != nil {
 			pn.NonFatto = append(pn.NonFatto, Msg("RX-PACCHETTI-005", err.Error()))
 		}

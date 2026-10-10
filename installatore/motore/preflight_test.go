@@ -41,6 +41,10 @@ func condizioniDi(r *Rapporto, d string) string {
 			if len(e.Mancano) > 0 {
 				c = append(c, "RX-MANCA-003")
 			}
+			// i pezzi che il desktop chiede: dipendenze di REMOTIX, li installa il gestore
+			if len(e.Dipende) > 0 {
+				c = append(c, "DEP("+strings.Join(e.Dipende, ",")+")")
+			}
 			for _, m := range r.Mancano {
 				if m.Codice != "RX-MANCA-003" && e.Livello != NON_SUPPORTATA {
 					c = append(c, m.Codice)
@@ -223,8 +227,8 @@ func TestCatalogo(t *testing.T) {
 		{"debian", "13", "gnome", map[string]string{"gpu.renderD128.vendor": "NVIDIA", "gpu.nvidia_proprietary": "yes"}, "UNSUPPORTED RX-GPU-004"},
 		{"debian", "13", "gnome", map[string]string{"gpu.nodes": "none"}, "UNSUPPORTED RX-GPU-003"},
 		{"gentoo", "2.17", "gnome", nil, "UNSUPPORTED RX-COMPAT-002"},
-		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "package.breeze6-wallpapers": "absent"}, "COMPATIBLE RX-MANCA-003"},
-		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "package.labwc": "0.8.1", "package.wlr-randr": "0.4", "fonts.scalable": "0"}, "COMPATIBLE C-LIMITE,RX-MANCA-003"},
+		{"opensuse-tumbleweed", "20260930", "kde", map[string]string{"desktop.kde": "6.7", "package.breeze6-wallpapers": "absent"}, "COMPATIBLE DEP(breeze6-wallpapers)"},
+		{"opensuse-leap", "16.0", "lxqt", map[string]string{"desktop.lxqt": "2.1", "package.labwc": "0.8.1", "package.wlr-randr": "0.4", "fonts.scalable": "0"}, "COMPATIBLE C-LIMITE,DEP(google-droid-fonts)"},
 		// fase 19: il deposito Cisco di OpenH264 non si chiede più
 		{"opensuse-tumbleweed", "20260930", "gnome", nil, "COMPATIBLE "},
 		// Leap 16 + Plasma (KWin 6.4) chiede il 3D (T6 seguiti, KDE 487217): condizione; senza scheda, no

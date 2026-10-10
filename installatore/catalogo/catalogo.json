@@ -1,7 +1,7 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.10.10.13",
-  "sequenza": 13,
+  "versione": "2026.10.10.14",
+  "sequenza": 14,
   "emesso": "2026-10-10",
   "motore_minimo": "0.1.0",
   "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, libopus; pacchetti e depositi [M] 30 set nelle immagini podman), DECISIONI §10.27 e fasi/19-nvidia.md (niente codifica sul processore: via OpenH264, SVT-AV1 e il deposito di Cisco; senza una scheda capace REMOTIX non si installa; il driver Vulkan della scheda, vulkan_scheda e vulkan_nvidia, [M] 1 ott nelle immagini podman): quel che i documenti sanno il 1 ott 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
@@ -511,6 +511,12 @@
       "motivo": "SLES 16: GNOME only, no Packman — to be reconsidered if a customer asks for it"
     }
   ],
+  "carattere_scalabile": {
+    "debian": "fonts-dejavu-core",
+    "fedora": "dejavu-sans-fonts",
+    "arch": "ttf-dejavu",
+    "suse": "google-droid-fonts"
+  },
   "componenti_minimi": [
     {
       "componente": "Linux kernel",

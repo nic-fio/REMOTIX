@@ -126,7 +126,10 @@ type Piano struct {
 	Dichiarate []string `json:"declared,omitempty"`
 	// Pacchetti: che cosa farebbe il gestore (la sua simulazione, fatta al momento del piano): il piano
 	// li mostra prima della domanda. Al momento di fare il gestore simula di nuovo (Fotografa)
-	Pacchetti    []Artefatto   `json:"packages,omitempty"`
+	Pacchetti []Artefatto `json:"packages,omitempty"`
+	// Dipendenze: i pacchetti della distribuzione che REMOTIX chiede per il desktop della macchina
+	// (labwc, wlr-randr, un carattere), e per quale desktop: il piano li mostra come tali
+	Dipendenze   []Dipendenza  `json:"dependencies,omitempty"`
 	Approvazione *Approvazione `json:"approval,omitempty"`
 	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
 	Purge bool `json:"purge,omitempty"`

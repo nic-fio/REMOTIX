@@ -21,8 +21,16 @@ func tuiCmd(arg []string) (int, error) {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
+	// --preview: le schermate con dati d'esempio, per confrontarle col mockup (grafica/tui-mockup/);
+	// non tocca niente e non chiede root
+	anteprima := fs.Int("preview", 0, "")
+	colori := fs.Bool("preview-color", false, "")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
+	}
+	if *anteprima > 0 {
+		fmt.Print(tui.Testo(tui.Anteprime(*anteprima, 0, *colori)))
+		return 0, nil
 	}
 	if os.Geteuid() != 0 {
 		return 1, motore.Errore("RX-UI-006", "uid "+fmt.Sprint(os.Geteuid()))

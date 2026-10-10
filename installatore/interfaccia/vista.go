@@ -22,11 +22,14 @@ const (
 	DOPO
 	MALE
 	IGNOTO
+	AVVISO // non ferma: lo si dice (il firewall acceso, la porta occupata)
+	MANCA  // ferma: REMOTIX non lo mette, lo dice (§10.36)
 )
 
-// Cartellino: il testo del cartellino di uno stato.
+// Cartellino: il testo del cartellino di uno stato, nella colonna di destra del controllo.
 func (s Stato) Cartellino() string {
-	return [...]string{T("s.ok"), T("s.consenso"), T("s.sistemo"), T("s.dopo"), T("s.male"), T("s.nonsi")}[s]
+	return [...]string{T("s.ok"), T("s.consenso"), T("s.sistemo"), T("s.dopo"), T("s.male"), T("s.nonsi"),
+		T("s.avviso"), T("s.manca")}[s]
 }
 
 // Riga: una riga del controllo o delle prove.
@@ -44,12 +47,14 @@ const (
 	BLOCCATA
 )
 
-// VistaControllo: la schermata 1.
+// VistaControllo: la schermata 1. Con Esito == BLOCCATA e Righe piene è «manca qualcosa»: le righe
+// col cartellino MANCA, e i codici; con Righe vuote è una fine (Bloccata: distribuzione fuori…).
 type VistaControllo struct {
 	Intestazione  string // «Fedora Linux 44 · Workstation · GNOME 50»
 	Esito         EsitoControllo
 	Banner, Sotto string
 	Righe         []Riga
+	Codici        []string // i codici RX di quel che manca
 	Dettagli      string
 	Bloccata      *VistaBloccata // se Esito == BLOCCATA
 }
@@ -73,6 +78,7 @@ type VistaScelte struct {
 
 // Passo: una riga del piano, con le azioni del motore che raccoglie.
 type Passo struct {
+	Tipo                string // "packages" · "groups" · "service" · "other"
 	Titolo, Nota, Sotto string
 	Fatto               string // come lo dice il benvenuto
 	Rev                 Stato  // OK = si annulla del tutto · CONSENSO = in parte · MALE = non si annulla
@@ -97,6 +103,12 @@ type VistaPiano struct {
 	Dettagli string
 	// Pacchetti: che cosa farà il gestore (la sua simulazione), da mostrare prima del «sì»
 	Pacchetti []motore.Artefatto
+	// Utenti e Gruppi: chi il motore iscrive ai gruppi della scheda, e a quali
+	Utenti, Gruppi []string
+	// Porta: quella del servizio, come la dice il piano
+	Porta string
+	// Dipendenze: per i pacchetti che il desktop chiede a REMOTIX, per quale desktop
+	Dipendenze map[string]string
 }
 
 // ---- 1 · il controllo ------------------------------------------------------------------------
@@ -243,16 +255,17 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 			possibili++
 		}
 	}
+	// quel che manca (DECISIONI §10.36): REMOTIX non lo installa, lo dice; provvede l'amministratore.
+	// La scheda che non codifica (RX-GPU-*) lascia senza desktop possibili, ma è anche lei «manca».
+	mancano := append([]motore.Messaggio{}, rap.Mancano...)
 	if possibili == 0 {
-		v.Esito = BLOCCATA
-		v.Bloccata = vistaNonSupportata(prof, rap)
-		return v
-	}
-	// quel che manca (DECISIONI §10.36): REMOTIX non lo installa, lo dice; provvede l'amministratore
-	if len(rap.Mancano) > 0 {
-		v.Esito = BLOCCATA
-		v.Bloccata = VistaMancano(rap.Mancano)
-		return v
+		g := motivoScheda(rap)
+		if g == nil || rap.Minima != "" {
+			v.Esito = BLOCCATA
+			v.Bloccata = vistaNonSupportata(prof, rap)
+			return v
+		}
+		mancano = append(mancano, *g)
 	}
 
 	var righe []Riga
@@ -266,12 +279,14 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	// desktop
 	var ds []string
 	for _, e := range rap.Desktop {
-		if installato(e) && e.Livello != motore.NON_SUPPORTATA {
+		if installato(e) && (e.Livello != motore.NON_SUPPORTATA || possibili == 0) {
 			ds = append(ds, NomeDesktop(e.Desktop))
 		}
 	}
 	condizioni := []string{}
-	righe = append(righe, Riga{T("r.desktop"), T("t.desktop.ok", strings.Join(ds, ", ")), OK})
+	if len(ds) > 0 {
+		righe = append(righe, Riga{T("r.desktop"), T("t.desktop.ok", strings.Join(ds, ", ")), OK})
+	}
 	// scheda
 	switch {
 	case prof.V("gpu.nvidia_proprietary") == "yes":
@@ -289,6 +304,9 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	} else {
 		righe = append(righe, Riga{T("r.accesso"), T("t.accesso.ok"), OK})
 	}
+	if n := len(dom.Persone); n > 0 {
+		righe = append(righe, Riga{T("r.persone"), T("t.persone", n), OK})
+	}
 	// protezione
 	switch {
 	case prof.V("selinux") == "enforcing" || prof.V("selinux") == "permissive":
@@ -302,13 +320,14 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	if dom.Firewall == "none" {
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.nessuno"), OK})
 	} else {
-		righe = append(righe, Riga{T("r.firewall"), T("t.fw.admin", dom.Firewall, dom.Porta), DOPO})
+		righe = append(righe, Riga{T("r.firewall"), T("t.fw.admin", dom.Firewall, dom.Porta), AVVISO})
 		condizioni = append(condizioni, T("c.cond.firewall", dom.Porta))
 	}
 	// porta
 	p := dom.Porta
 	if prof.V(fmt.Sprintf("port.%d.tcp_free", p)) == "no" || prof.V(fmt.Sprintf("port.%d.udp_free", p)) == "no" {
-		righe = append(righe, Riga{T("r.porta"), T("t.porta.occupata", p), CONSENSO})
+		righe = append(righe, Riga{T("r.porta"), T("t.porta.occupata", p), AVVISO})
+		condizioni = append(condizioni, T("c.cond.porta", p))
 	} else {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.libera", p), OK})
 	}
@@ -323,17 +342,89 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	}
 	righe = append(righe, Riga{T("r.audio"), T("t.audio"), DOPO})
 	v.Righe = righe
+	v.Dettagli = dettagliControllo(prof, rap, c.Fiducia)
+
+	if len(mancano) > 0 {
+		for _, m := range mancano {
+			v.Righe = conMancanza(v.Righe, m)
+			v.Codici = append(v.Codici, m.Codice)
+		}
+		v.Esito = BLOCCATA
+		v.Banner, v.Sotto = T("c.manca.titolo"), T("c.manca.testo")
+		v.Bloccata = VistaMancano(mancano)
+		return v
+	}
 
 	switch len(condizioni) {
 	case 0:
-		v.Esito, v.Banner, v.Sotto = PRONTA, T("c.ok.titolo"), T("c.ok.testo")
+		v.Esito, v.Banner, v.Sotto = PRONTA, T("c.ok.titolo"), ""
 	case 1:
 		v.Esito, v.Banner, v.Sotto = CONDIZIONI, T("c.cond1.titolo"), condizioni[0]
 	default:
 		v.Esito, v.Banner, v.Sotto = CONDIZIONI, T("c.condN.titolo", len(condizioni)), strings.Join(condizioni, " ")
 	}
-	v.Dettagli = dettagliControllo(prof, rap, c.Fiducia)
 	return v
+}
+
+// motivoScheda: il motivo RX-GPU-* che lascia senza desktop possibili (la distribuzione va, manca la
+// scheda o il driver che codifica).
+func motivoScheda(rap *motore.Rapporto) *motore.Messaggio {
+	for _, e := range rap.Desktop {
+		for i := range e.Motivi {
+			if strings.HasPrefix(e.Motivi[i].Codice, "RX-GPU-") {
+				return &e.Motivi[i]
+			}
+		}
+	}
+	for i := range rap.Messaggi {
+		if strings.HasPrefix(rap.Messaggi[i].Codice, "RX-GPU-") && rap.Messaggi[i].Gravita == motore.BLOCCANTE {
+			return &rap.Messaggi[i]
+		}
+	}
+	return nil
+}
+
+// etichettaMancanza: in quale riga del controllo va quel che manca.
+func etichettaMancanza(codice string) string {
+	switch {
+	case strings.HasPrefix(codice, "RX-GPU-"):
+		return T("r.scheda")
+	case codice == "RX-MANCA-001":
+		return T("r.desktop")
+	case codice == "RX-MANCA-002":
+		return T("r.archivio")
+	case codice == "RX-MANCA-003":
+		return T("r.pezzi")
+	}
+	return T("r.pacchetto")
+}
+
+// conMancanza: la riga di quel che manca prende il posto della riga con la stessa etichetta (la
+// scheda «OK» diventa «manca»), o si aggiunge dopo il desktop.
+func conMancanza(righe []Riga, m motore.Messaggio) []Riga {
+	et := etichettaMancanza(m.Codice)
+	t := T("m." + m.Codice)
+	if strings.HasPrefix(t, "⟨") {
+		t = strings.TrimPrefix(m.Testo, "Missing: ")
+	}
+	if m.Dettaglio != "" {
+		t += ": " + m.Dettaglio
+	}
+	r := Riga{et, t, MANCA}
+	for i := range righe {
+		if righe[i].Etichetta == et {
+			if righe[i].Stato == MANCA { // due mancanze nella stessa riga: una dopo l'altra
+				return append(righe[:i+1], append([]Riga{{"", t, MANCA}}, righe[i+1:]...)...)
+			}
+			righe[i] = r
+			return righe
+		}
+	}
+	pos := 1
+	if pos > len(righe) {
+		pos = len(righe)
+	}
+	return append(righe[:pos], append([]Riga{r}, righe[pos:]...)...)
 }
 
 func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.Fiducia) string {
@@ -524,18 +615,22 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 		switch {
 		case a.Tipo == "install-packages":
 			metti("packages", func() Passo {
-				return Passo{Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.f")}
+				return Passo{Tipo: "packages", Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.b")}
 			}, a)
 		case a.Tipo == "add-user-to-group":
 			if u := a.Parametri["user"]; !visti[u] {
 				visti[u] = true
 				utentiGruppi = append(utentiGruppi, u)
 			}
-			metti("gruppi", func() Passo { return Passo{} }, a)
+			if g := a.Parametri["group"]; !visti["group:"+g] {
+				visti["group:"+g] = true
+				v.Gruppi = append(v.Gruppi, g)
+			}
+			metti("gruppi", func() Passo { return Passo{Tipo: "groups"} }, a)
 		case a.Tipo == "start-service":
 			porta = a.Parametri["port"]
 			metti(a.ID, func() Passo {
-				return Passo{Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.f", porta)}
+				return Passo{Tipo: "service", Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.b")}
 			}, a)
 		default:
 			metti(a.ID, func() Passo {
@@ -543,7 +638,7 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 				if d != "" {
 					d = strings.ToUpper(d[:1]) + d[1:]
 				}
-				return Passo{Titolo: d, Fatto: d, Breve: d}
+				return Passo{Tipo: "other", Titolo: d, Fatto: d, Breve: d}
 			}, a)
 		}
 	}
@@ -553,8 +648,10 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 		if len(utentiGruppi) > 1 {
 			f = T("a.gruppi.fn", chi)
 		}
-		v.Passi[i].Titolo, v.Passi[i].Sotto, v.Passi[i].Fatto, v.Passi[i].Breve = T("a.gruppi", chi), T("a.gruppi.t"), f, f
+		v.Passi[i].Titolo, v.Passi[i].Sotto, v.Passi[i].Fatto = T("a.gruppi", chi), T("a.gruppi.t"), f
+		v.Passi[i].Breve = T("a.gruppi.b", chi, strings.Join(v.Gruppi, ", "))
 	}
+	v.Utenti, v.Porta = utentiGruppi, porta
 	// i dettagli: ogni azione del motore col suo tipo, il suo annullamento e l'impronta
 	var d []string
 	for _, a := range p.Azioni {
@@ -566,6 +663,10 @@ func VistaDelPiano(p *motore.Piano) *VistaPiano {
 	}
 	v.Dettagli = strings.Join(d, " · ")
 	v.Pacchetti = p.Pacchetti
+	v.Dipendenze = map[string]string{}
+	for _, d := range p.Dipendenze {
+		v.Dipendenze[d.Nome] = d.Perche
+	}
 	return v
 }
 
@@ -611,7 +712,7 @@ func NuovoAvanzamento(vp *VistaPiano) *Avanzamento {
 	a := &Avanzamento{passi: vp.Passi, azione: map[string]int{}, fatte: map[string]bool{}}
 	a.Righe = append(a.Righe, RigaAv{Testo: T("av.fiducia")}, RigaAv{Testo: T("av.piano")})
 	for i, p := range vp.Passi {
-		a.Righe = append(a.Righe, RigaAv{Testo: fmt.Sprintf("%d · %s", i+1, p.Breve)})
+		a.Righe = append(a.Righe, RigaAv{Testo: p.Breve})
 		for _, id := range p.Azioni {
 			a.azione[id] = i
 		}
@@ -755,6 +856,8 @@ type VistaPronto struct {
 	Prove      []Riga
 	Dettagli   string
 	Condizioni []string
+	// DaFare: quel che resta all'amministratore (la porta che il firewall chiude, o che non si sa)
+	DaFare []string
 }
 
 // VistaDelPronto: dal certificato, dal piano (i passi fatti) e dall'esito.
@@ -803,6 +906,17 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 				v.Prove = append(v.Prove, Riga{T("pr.k.pam"), t, s})
 			case k.ID == "firewall-port":
 				altre = append(altre, Riga{T("pr.k.porta"), t, s})
+				dove := k.Dettaglio
+				if i := strings.Index(dove, ":"); i > 0 {
+					dove = dove[:i]
+				}
+				switch k.Esito {
+				case "FAIL":
+					v.DaFare = append(v.DaFare, T("pr.todo.chiusa", porta, dove))
+				case "PASS":
+				default:
+					v.DaFare = append(v.DaFare, T("pr.todo.ignota", porta, dove))
+				}
 			case idPassi[k.ID]:
 				passi++
 				if k.Esito == "PASS" {
@@ -820,6 +934,9 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int) *VistaPronto {
 			v.Prove = append(v.Prove, Riga{T("pr.k.passi", passiOK, passi), t, s})
 		}
 		for _, k := range c.Condizioni {
+			if k.Codice == "C-AMMINISTRATORE" { // la porta: sta in DaFare, detta per intero
+				continue
+			}
 			v.Condizioni = append(v.Condizioni, CondizioneComune(k.Codice))
 		}
 		v.Dettagli = strings.Join([]string{es.Cartella + "/certificate.json", "catalog " + c.Catalogo.Versione,

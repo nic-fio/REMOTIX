@@ -1,6 +1,9 @@
 // Package tui: le schermate dell'installatore nel terminale (Bubble Tea), per chi lavora via ssh o
 // dalla console (fasi/17 §6.6.1), dalle viste di interfaccia (Vista…), sulla sessione del motore;
-// gira da root nel terminale. Una domanda sola, la porta, e il «sì» al piano (DECISIONI §10.36).
+// gira da root nel terminale. Il disegno è il mockup approvato dall'utente il 10 ott 2026
+// (grafica/tui-mockup/index.html): una cornice fissa larga quanto il terminale (almeno 80 colonne),
+// quattro passi Check › Plan › Install › Ready, il contenuto che scorre dentro la cornice, i tasti
+// in fondo. Una domanda sola, la porta, e il «sì» al piano (DECISIONI §10.36).
 package tui
 
 import (
@@ -13,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"remotix/installatore/interfaccia"
 	"remotix/installatore/motore"
@@ -21,25 +25,46 @@ import (
 const (
 	sAttesa = iota
 	sControllo
-	sScelte
 	sPiano
 	sAvanzamento
 	sPronto
 	sFine
 )
 
-var (
-	stBlu      = lipgloss.NewStyle().Foreground(lipgloss.Color("#0A5FE0")).Bold(true)
-	stTitolo   = lipgloss.NewStyle().Bold(true)
-	stGrigio   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8C97AD"))
-	stVerde    = lipgloss.NewStyle().Foreground(lipgloss.Color("#1E9E5A")).Bold(true)
-	stAmbra    = lipgloss.NewStyle().Foreground(lipgloss.Color("#C98A00")).Bold(true)
-	stRosso    = lipgloss.NewStyle().Foreground(lipgloss.Color("#D0342C")).Bold(true)
-	stSistemo  = lipgloss.NewStyle().Foreground(lipgloss.Color("#3B82F6")).Bold(true)
-	stScelto   = lipgloss.NewStyle().Foreground(lipgloss.Color("#0A5FE0")).Bold(true)
-	stCursore  = lipgloss.NewStyle().Reverse(true)
-	stRiquadro = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#8C97AD")).Padding(0, 1)
+// I passi della riga in alto.
+const (
+	pCheck = iota
+	pPlan
+	pInstall
+	pReady
 )
+
+const (
+	larghezzaMinima = 80
+	altezzaMinima   = 12
+	colEtichetta    = 18 // la colonna delle etichette del controllo
+	colStato        = 12 // la colonna dei cartellini
+)
+
+// tema: i colori del mockup. lipgloss li porta da sé a 256 o 16 colori secondo il terminale, e a
+// niente con NO_COLOR (termenv.EnvColorProfile).
+type tema struct {
+	blu, verde, ambra, rosso, grigio, cornice, forte, campo lipgloss.Style
+}
+
+func nuovoTema(r *lipgloss.Renderer) tema {
+	c := func(hex string) lipgloss.Style { return r.NewStyle().Foreground(lipgloss.Color(hex)) }
+	return tema{
+		blu:     c("#5A9BFF").Bold(true),
+		verde:   c("#3EC27E").Bold(true),
+		ambra:   c("#E3A82F").Bold(true),
+		rosso:   c("#F0625A").Bold(true),
+		grigio:  c("#7D889C"),
+		cornice: c("#3A4457"),
+		forte:   r.NewStyle().Bold(true),
+		campo:   r.NewStyle().Reverse(true),
+	}
+}
 
 type (
 	msgControllo struct {
@@ -60,11 +85,13 @@ type (
 type modello struct {
 	mot      interfaccia.Motore
 	prog     *tea.Program
+	t        tema
 	schermo  int
+	passo    int  // il passo della riga in alto
+	fallito  bool // il passo si è fermato (✗ rosso)
 	attesa   string
 	ctrl     *interfaccia.Controllo
 	vc       *interfaccia.VistaControllo
-	vs       *interfaccia.VistaScelte
 	vp       *interfaccia.VistaPiano
 	piano    *motore.Piano
 	av       *interfaccia.Avanzamento
@@ -72,18 +99,22 @@ type modello struct {
 	pronto   *interfaccia.VistaPronto
 	fine     *interfaccia.VistaBloccata
 	porta    string
+	modPorta bool   // si sta scrivendo la porta
+	vecchia  string // la porta di prima, per esc
 	dett     bool
 	reg      bool
 	fermando bool
 	nota     string
 	larg     int
+	alt      int
+	scorri   int
 	esito    *interfaccia.Esito
 }
 
 // Avvia: la TUI sulla sessione del motore. Il codice d'uscita segue quello della CLI (0 se
 // l'installazione è CONFERMATA).
 func Avvia(mot interfaccia.Motore) (int, error) {
-	m := &modello{mot: mot, schermo: sAttesa, attesa: interfaccia.T("attendi.controllo"), larg: 100}
+	m := nuovoModello(mot, lipgloss.DefaultRenderer())
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	m.prog = p
 	if _, err := p.Run(); err != nil {
@@ -96,6 +127,11 @@ func Avvia(mot interfaccia.Motore) (int, error) {
 		}
 	}
 	return 1, nil
+}
+
+func nuovoModello(mot interfaccia.Motore, r *lipgloss.Renderer) *modello {
+	return &modello{mot: mot, t: nuovoTema(r), schermo: sAttesa, passo: pCheck,
+		attesa: interfaccia.T("attendi.controllo"), porta: "7447", larg: larghezzaMinima, alt: 24}
 }
 
 func (m *modello) Init() tea.Cmd {
@@ -113,25 +149,41 @@ func messaggio(err error) *motore.Messaggio {
 	return &x
 }
 
+func (m *modello) vai(schermo int) {
+	m.schermo, m.scorri = schermo, 0
+}
+
 func (m *modello) finisci(es *interfaccia.Esito) {
 	m.esito = es
 	if es.Stato == motore.CONFERMATA || es.Stato == motore.CONFERMATA_A_CONDIZIONI {
 		porta, _ := strconv.Atoi(m.porta)
 		m.pronto = interfaccia.VistaDelPronto(es, m.vp, porta)
-		m.schermo = sPronto
+		m.passo = pReady
+		m.vai(sPronto)
 		return
 	}
 	if es.Errore == nil {
 		es.Errore = interfaccia.UltimoMessaggio(m.eventi)
 	}
-	m.fine = interfaccia.VistaDellaFine(es, nil)
-	m.schermo = sFine
+	m.fine, m.fallito = interfaccia.VistaDellaFine(es, nil), true
+	m.vai(sFine)
+}
+
+// chiediPiano: il piano per la porta scritta (il motore riesamina la macchina se cambia).
+func (m *modello) chiediPiano() tea.Cmd {
+	voci := map[string]string{"port": m.porta}
+	m.passo, m.attesa = pPlan, interfaccia.T("attendi.piano")
+	m.vai(sAttesa)
+	return func() tea.Msg {
+		p, err := m.mot.Piano(voci)
+		return msgPiano{p, err}
+	}
 }
 
 func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch x := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.larg = x.Width
+		m.larg, m.alt = x.Width, x.Height
 	case msgControllo:
 		if x.err != nil {
 			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
@@ -139,13 +191,16 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.ctrl = x.c
 		m.vc = interfaccia.VistaDelControllo(x.c)
-		if m.vc.Esito == interfaccia.BLOCCATA {
-			m.fine, m.schermo = m.vc.Bloccata, sFine
+		if x.c.Domande != nil {
+			m.porta = strconv.Itoa(x.c.Domande.Porta)
+		}
+		if m.vc.Esito == interfaccia.BLOCCATA && len(m.vc.Righe) == 0 {
+			m.fine, m.fallito = m.vc.Bloccata, true
+			m.vai(sFine)
 			return m, nil
 		}
-		m.vs = interfaccia.VistaDelleScelte(x.c)
-		m.porta = strconv.Itoa(x.c.Domande.Porta)
-		m.schermo = sControllo
+		m.fallito = m.vc.Esito == interfaccia.BLOCCATA
+		m.vai(sControllo)
 	case msgPiano:
 		if x.err != nil {
 			m.finisci(&interfaccia.Esito{Errore: messaggio(x.err)})
@@ -157,7 +212,7 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.piano = x.p
 		m.vp = interfaccia.VistaDelPiano(x.p)
-		m.schermo = sPiano
+		m.vai(sPiano)
 	case msgEvento:
 		m.eventi = append(m.eventi, x.ev)
 		m.av.Evento(x.ev)
@@ -175,13 +230,34 @@ func (m *modello) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	s := k.String()
-	if s == "ctrl+c" || (s == "q" && m.schermo != sAvanzamento && m.schermo != sScelte) {
+	if s == "ctrl+c" {
 		if m.schermo == sAvanzamento {
-			return m, nil // mentre lavora non si esce: si ferma con «a»
+			return m, nil // mentre lavora non si esce: si ferma con «a», che rimette com'era
 		}
 		return m, tea.Quit
 	}
+	if m.modPorta {
+		return m.tastoPorta(s)
+	}
 	switch s {
+	case "up", "k":
+		m.scorri--
+		return m, nil
+	case "down", "j":
+		m.scorri++
+		return m, nil
+	case "pgup":
+		m.scorri -= m.altCorpo() - 1
+		return m, nil
+	case "pgdown", " ":
+		m.scorri += m.altCorpo() - 1
+		return m, nil
+	case "home":
+		m.scorri = 0
+		return m, nil
+	case "end":
+		m.scorri = 1 << 20
+		return m, nil
 	case "d":
 		m.dett = !m.dett
 		return m, nil
@@ -192,49 +268,34 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	switch m.schermo {
-	case sControllo:
-		if s == "enter" {
-			m.schermo = sScelte
+	case sAttesa:
+		if s == "q" {
+			return m, tea.Quit
 		}
-	case sScelte:
+	case sControllo:
 		switch s {
-		case "backspace":
-			if len(m.porta) > 0 {
-				m.porta = m.porta[:len(m.porta)-1]
-			}
-		case "esc":
-			m.schermo = sControllo
 		case "q":
 			return m, tea.Quit
 		case "enter":
-			p, ok := interfaccia.PortaValida(m.porta)
-			if !ok {
-				return m, nil
-			}
-			m.porta = strconv.Itoa(p)
-			voci := map[string]string{"port": m.porta}
-			m.schermo, m.attesa = sAttesa, interfaccia.T("attendi.piano")
-			return m, func() tea.Msg {
-				p, err := m.mot.Piano(voci)
-				return msgPiano{p, err}
-			}
-		default:
-			if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
-				m.porta += s
+			if m.vc.Esito != interfaccia.BLOCCATA {
+				return m, m.chiediPiano()
 			}
 		}
 	case sPiano:
 		switch s {
-		case "esc":
-			m.schermo = sScelte
-		case "enter":
+		case "y", "Y":
 			m.av = interfaccia.NuovoAvanzamento(m.vp)
-			m.schermo = sAvanzamento
+			m.passo = pInstall
+			m.vai(sAvanzamento)
 			digest := m.piano.Digest()
 			return m, func() tea.Msg {
 				es, err := m.mot.Applica(digest, func(ev motore.EventoPubblico) { m.prog.Send(msgEvento{ev}) })
 				return msgEsito{es, err}
 			}
+		case "n", "N", "q":
+			return m, tea.Quit // niente è stato toccato
+		case "tab":
+			m.modPorta, m.vecchia = true, m.porta
 		}
 	case sAvanzamento:
 		if s == "a" && !m.fermando {
@@ -242,11 +303,39 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			go m.mot.Ferma()
 		}
 	case sPronto, sFine:
-		if s == "enter" {
+		switch s {
+		case "enter", "q":
 			return m, tea.Quit
+		case "s":
+			if m.schermo == sFine {
+				m.salva("remotix-report.json", map[string]any{"end": m.fine, "check": m.ctrl, "events": m.eventi})
+			}
 		}
-		if s == "s" && m.schermo == sFine {
-			m.salva("remotix-report.json", map[string]any{"end": m.fine, "check": m.ctrl, "events": m.eventi})
+	}
+	return m, nil
+}
+
+// tastoPorta: la casella della porta, nel piano.
+func (m *modello) tastoPorta(s string) (tea.Model, tea.Cmd) {
+	switch s {
+	case "esc":
+		m.modPorta, m.porta = false, m.vecchia
+	case "backspace":
+		if len(m.porta) > 0 {
+			m.porta = m.porta[:len(m.porta)-1]
+		}
+	case "enter", "tab":
+		p, ok := interfaccia.PortaValida(m.porta)
+		if !ok {
+			return m, nil
+		}
+		m.modPorta, m.porta = false, strconv.Itoa(p)
+		if m.porta != m.vecchia {
+			return m, m.chiediPiano()
+		}
+	default:
+		if len(s) == 1 && s[0] >= '0' && s[0] <= '9' && len(m.porta) < 5 {
+			m.porta += s
 		}
 	}
 	return m, nil
@@ -266,250 +355,437 @@ func (m *modello) salva(nome string, v any) {
 	m.nota = interfaccia.T("salvato", p)
 }
 
-// ---- il disegno ------------------------------------------------------------------------------
+// ---- la cornice ------------------------------------------------------------------------------
 
-func cartellino(s interfaccia.Stato) string {
-	t := "[" + s.Cartellino() + "]"
-	switch s {
-	case interfaccia.OK:
-		return stVerde.Render(t)
-	case interfaccia.CONSENSO:
-		return stAmbra.Render(t)
-	case interfaccia.SISTEMO:
-		return stSistemo.Render(t)
-	case interfaccia.MALE:
-		return stRosso.Render(t)
-	}
-	return stGrigio.Render(t)
-}
+func (m *modello) interna() int { return m.larg - 4 } // «│ » e « │»
 
-func (m *modello) a(s string) string {
-	w := m.larg - 4
-	if w < 40 {
-		w = 40
+func (m *modello) altCorpo() int { return m.alt - 6 } // testa, passi, due separatori, tasti, fondo
+
+// riempi: una riga lunga esattamente n colonne (tagliata con «…» se più lunga).
+func riempi(s string, n int) string {
+	w := ansi.StringWidth(s)
+	if w > n {
+		s = ansi.Truncate(s, n, "…")
+		w = ansi.StringWidth(s)
 	}
-	return lipgloss.NewStyle().Width(w).Render(s)
+	return s + strings.Repeat(" ", n-w)
 }
 
 func (m *modello) View() string {
-	T := interfaccia.T
-	var b strings.Builder
-	testa := stBlu.Render("REMOTIX") + " · " + stTitolo.Render(T("intestazione"))
-	if m.vc != nil && m.vc.Intestazione != "" {
-		testa += stGrigio.Render("  —  " + m.vc.Intestazione)
+	if m.larg < larghezzaMinima {
+		return riempi(interfaccia.T("tui.stretto", larghezzaMinima), m.larg)
 	}
-	b.WriteString(testa + "\n")
-	cur := map[int]int{sControllo: 1, sScelte: 2, sPiano: 3, sAvanzamento: 4, sPronto: 5}[m.schermo]
-	if cur > 0 {
-		var ps []string
-		for i := 1; i <= 5; i++ {
-			n := fmt.Sprintf("%d %s", i, T(fmt.Sprintf("passo.%d", i)))
-			switch {
-			case i < cur:
-				ps = append(ps, stVerde.Render("✓ "+n))
-			case i == cur:
-				ps = append(ps, stBlu.Render("● "+n))
-			default:
-				ps = append(ps, stGrigio.Render("○ "+n))
-			}
-		}
-		b.WriteString(strings.Join(ps, stGrigio.Render("  ›  ")) + "\n")
+	if m.alt < altezzaMinima {
+		return riempi(interfaccia.T("tui.basso", altezzaMinima), m.larg)
 	}
-	b.WriteString("\n")
-	switch m.schermo {
-	case sAttesa:
-		b.WriteString(m.attesa + "\n")
-	case sControllo:
-		m.viewControllo(&b)
-	case sScelte:
-		m.viewScelte(&b)
-	case sPiano:
-		m.viewPiano(&b)
-	case sAvanzamento:
-		m.viewAvanzamento(&b)
-	case sPronto:
-		m.viewPronto(&b)
-	case sFine:
-		m.viewFine(&b)
-	}
-	if m.nota != "" {
-		b.WriteString("\n" + stGrigio.Render(m.nota) + "\n")
-	}
-	return b.String()
+	corpo, tasti := m.contenuto()
+	return m.cornice(corpo, tasti)
 }
 
-func (m *modello) tasti(ts ...string) string {
-	return "\n" + stGrigio.Render(strings.Join(ts, " · ")) + "\n"
-}
-
-func (m *modello) viewControllo(b *strings.Builder) {
-	T := interfaccia.T
-	v := m.vc
-	b.WriteString(stTitolo.Render(T("c.titolo")) + "\n" + stGrigio.Render(T("c.sotto")) + "\n\n")
-	st := stVerde
-	if v.Esito == interfaccia.CONDIZIONI {
-		st = stAmbra
+func (m *modello) cornice(corpo []string, tasti string) string {
+	t, w, in := m.t, m.larg, m.interna()
+	bordo := t.cornice.Render
+	var r []string
+	// la testa: «╭─ REMOTIX 1.0 · Installation ───── Debian 13 · GNOME 48 ─╮»
+	sx := t.blu.Render("REMOTIX") + t.forte.Render(" "+motore.VersioneMotore+" · "+interfaccia.T("intestazione"))
+	dx := ""
+	if m.vc != nil {
+		dx = m.vc.Intestazione
 	}
-	b.WriteString(stRiquadro.Render(st.Render(v.Banner)+"\n"+m.a(v.Sotto)) + "\n\n")
-	for _, r := range v.Righe {
-		b.WriteString(fmt.Sprintf("  %-24s %-62s %s\n", r.Etichetta, r.Testo, cartellino(r.Stato)))
+	resto := w - 6 - ansi.StringWidth(sx) // «╭─ » sx « » … «─╮»
+	if dx != "" {
+		dx = ansi.Truncate(dx, resto-4, "…")
+		resto -= ansi.StringWidth(dx) + 2
+		r = append(r, bordo("╭─ ")+sx+bordo(" "+strings.Repeat("─", resto)+" ")+t.grigio.Render(dx)+bordo(" ─╮"))
+	} else {
+		r = append(r, bordo("╭─ ")+sx+bordo(" "+strings.Repeat("─", resto+1)+"╮"))
 	}
-	if m.dett {
-		b.WriteString("\n" + stGrigio.Render(m.a(v.Dettagli)) + "\n")
+	riga := func(s string) string { return bordo("│") + " " + riempi(s, in) + " " + bordo("│") }
+	sep := bordo("├" + strings.Repeat("─", w-2) + "┤")
+	r = append(r, riga(m.passi()), sep)
+	// il corpo, che scorre
+	h := m.altCorpo()
+	massimo := len(corpo) - h
+	if massimo < 0 {
+		massimo = 0
 	}
-	b.WriteString(m.tasti(T("btn.avanti")+": invio", T("tui.dettagli"), "q "+strings.ToLower(T("btn.annulla"))))
-}
-
-func (m *modello) viewScelte(b *strings.Builder) {
-	T := interfaccia.T
-	v := m.vs
-	b.WriteString(stTitolo.Render(v.Titolo) + "\n" + stGrigio.Render(m.a(v.Sotto)) + "\n\n")
-	b.WriteString(stTitolo.Render(T("sc.porta")) + "\n  " + T("tui.porta") + stCursore.Render(m.porta+"▏") + "   " + stGrigio.Render(T("sc.porta.nota")) + "\n")
-	if _, ok := interfaccia.PortaValida(m.porta); !ok {
-		b.WriteString("  " + stRosso.Render(T("sc.porta.errata")) + "\n")
+	if m.scorri > massimo {
+		m.scorri = massimo
 	}
-	if v.PortaRiga != "" {
-		st := stGrigio
-		if v.PortaVerde {
-			st = stVerde
+	if m.scorri < 0 {
+		m.scorri = 0
+	}
+	for i := 0; i < h; i++ {
+		s := ""
+		if j := m.scorri + i; j < len(corpo) {
+			s = corpo[j]
 		}
-		b.WriteString("  " + st.Render(m.a(v.PortaRiga)) + "\n")
+		r = append(r, riga(s))
 	}
-	b.WriteString(m.tasti(T("tui.tasti")))
-}
-
-func (m *modello) viewPiano(b *strings.Builder) {
-	T := interfaccia.T
-	b.WriteString(stTitolo.Render(T("p.titolo")) + "\n" + stGrigio.Render(m.a(T("p.sotto"))) + "\n\n")
-	for i, p := range m.vp.Passi {
-		st := stVerde
-		switch p.Rev {
-		case interfaccia.CONSENSO:
-			st = stAmbra
-		case interfaccia.MALE:
-			st = stRosso
-		}
-		t := p.Titolo
-		if p.Nota != "" {
-			t += " " + stGrigio.Render(p.Nota)
-		}
-		b.WriteString(fmt.Sprintf("  %d  %s  %s\n", i+1, t, st.Render("["+p.Cartellino()+"]")))
-		if p.Sotto != "" {
-			b.WriteString("     " + stGrigio.Render(p.Sotto) + "\n")
-		}
+	// i tasti, e a destra dove si è se il corpo è più lungo dello schermo
+	if massimo > 0 {
+		pos := t.grigio.Render(fmt.Sprintf("↑↓ %d–%d / %d", m.scorri+1, m.scorri+h, len(corpo)))
+		spazio := in - ansi.StringWidth(pos) - 1
+		tasti = riempi(tasti, spazio) + " " + pos
 	}
-	if len(m.vp.Pacchetti) > 0 {
-		b.WriteString("\n" + stTitolo.Render(T("p.pacchetti")) + "\n")
-		for _, a := range m.vp.Pacchetti {
-			esito := a.Esito
-			if a.Prima != "" {
-				esito += " (" + a.Prima + ")"
-			}
-			b.WriteString(fmt.Sprintf("  %-32s %-24s %s\n", a.Nome, a.Versione, stGrigio.Render(esito+" · "+a.Origine)))
-		}
-	}
-	b.WriteString("\n" + stGrigio.Render(m.a(T("p.nota"))) + "\n")
-	if m.dett {
-		b.WriteString("\n" + stGrigio.Render(m.a(m.vp.Dettagli)) + "\n")
-	}
-	b.WriteString(m.tasti(T("tui.conferma"), T("tui.dettagli"), "esc "+strings.ToLower(T("btn.indietro"))))
-}
-
-func (m *modello) viewAvanzamento(b *strings.Builder) {
-	T := interfaccia.T
-	b.WriteString(stTitolo.Render(T("av.titolo")) + "\n" + stGrigio.Render(m.a(T("av.sotto"))) + "\n\n")
-	punto, pc := m.av.Punto()
-	w := 50
-	pieni := w * pc / 100
-	b.WriteString(stTitolo.Render(punto) + fmt.Sprintf("  %d %%\n", pc))
-	b.WriteString(stBlu.Render(strings.Repeat("█", pieni)) + stGrigio.Render(strings.Repeat("░", w-pieni)) + "\n\n")
-	for _, r := range m.av.Righe {
-		switch r.Stato {
-		case interfaccia.FATTA:
-			b.WriteString("  " + stVerde.Render("✓") + " " + r.Testo + "\n")
-		case interfaccia.INCORSO:
-			b.WriteString("  " + stBlu.Render("◐ "+r.Testo) + "\n")
-		case interfaccia.FALLITA:
-			b.WriteString("  " + stRosso.Render("✗ "+r.Testo) + "\n")
-		case interfaccia.ANNULLATA:
-			b.WriteString("  " + stGrigio.Render("↺ "+r.Testo) + "\n")
-		default:
-			b.WriteString("  " + stGrigio.Render("○ "+r.Testo) + "\n")
-		}
-	}
-	if m.reg {
-		b.WriteString("\n" + stGrigio.Render(ultime(m.av.Registro, 12)) + "\n")
-	}
-	f := T("tui.ferma")
-	if m.fermando {
-		f = T("btn.fermando")
-	}
-	b.WriteString(m.tasti(f, T("tui.registro")))
-}
-
-func ultime(r []string, n int) string {
-	if len(r) > n {
-		r = r[len(r)-n:]
-	}
+	r = append(r, sep, riga(tasti), bordo("╰"+strings.Repeat("─", w-2)+"╯"))
 	return strings.Join(r, "\n")
 }
 
-func (m *modello) viewPronto(b *strings.Builder) {
-	T := interfaccia.T
-	v := m.pronto
-	b.WriteString(stVerde.Render("✓ "+T("pr.titolo")) + "\n" + stGrigio.Render(m.a(v.Sotto)) + "\n\n")
-	b.WriteString(stTitolo.Render(strings.ToUpper(T("pr.apri"))) + "\n  " + stBlu.Render(v.Indirizzo) + "\n  " + stGrigio.Render(T("pr.apri.t")) + "\n  " + stGrigio.Render(v.Router) + "\n")
-	if v.Impronta != "" {
-		b.WriteString("  " + stGrigio.Render(T("pr.impronta")+" SHA-256 "+v.Impronta) + "\n")
-	}
-	b.WriteString("\n" + stTitolo.Render(strings.ToUpper(T("pr.chi"))) + "\n  " + T("pr.chi.t") + " " + stTitolo.Render(T("pr.chi.root")) + "\n  " + stGrigio.Render(T("pr.chi.t2")) + "\n")
-	b.WriteString("\n" + stTitolo.Render(strings.ToUpper(T("pr.cambiato"))) + "\n")
-	for _, c := range v.Cambiato {
-		b.WriteString("  • " + c + "\n")
-	}
-	b.WriteString("\n" + stTitolo.Render(strings.ToUpper(T("pr.prove"))) + "\n")
-	for _, p := range v.Prove {
-		st := stVerde
-		switch p.Stato {
-		case interfaccia.MALE:
-			st = stRosso
-		case interfaccia.DOPO, interfaccia.IGNOTO:
-			st = stGrigio
+func (m *modello) passi() string {
+	t := m.t
+	nomi := []string{interfaccia.T("passo.1"), interfaccia.T("passo.2"), interfaccia.T("passo.3"), interfaccia.T("passo.4")}
+	var ps []string
+	for i, n := range nomi {
+		switch {
+		case i < m.passo:
+			ps = append(ps, t.verde.Render("✓ "+n))
+		case i == m.passo && m.fallito:
+			ps = append(ps, t.rosso.Render("✗ "+n))
+		case i == m.passo && m.schermo == sPronto:
+			ps = append(ps, t.verde.Render("✓ "+n))
+		case i == m.passo:
+			ps = append(ps, t.blu.Render("● "+n))
+		default:
+			ps = append(ps, t.grigio.Render("○ "+n))
 		}
-		b.WriteString(fmt.Sprintf("  %-52s %s\n", p.Etichetta, st.Render(p.Testo)))
 	}
-	if m.dett {
-		b.WriteString("\n" + stGrigio.Render(m.a(v.Dettagli)) + "\n")
-	}
-	if m.reg {
-		b.WriteString("\n" + stGrigio.Render(ultime(m.av.Registro, 20)) + "\n")
-	}
-	b.WriteString(m.tasti(T("tui.chiudi"), T("tui.registro"), T("tui.dettagli")))
+	return strings.Join(ps, t.grigio.Render("  ›  "))
 }
 
-func (m *modello) viewFine(b *strings.Builder) {
-	T := interfaccia.T
-	v := m.fine
-	st := stRosso
-	if v.Toccata {
-		st = stAmbra
+// tasti: «enter continue · d details · q quit», il tasto in grassetto e il resto grigio.
+func (m *modello) tasti(coppie ...string) string {
+	var r []string
+	for i := 0; i+1 < len(coppie); i += 2 {
+		r = append(r, m.t.forte.Render(coppie[i])+m.t.grigio.Render(" "+coppie[i+1]))
 	}
-	b.WriteString(st.Render("✗ "+v.Titolo) + "\n" + stGrigio.Render(m.a(v.Sotto)) + "\n\n")
-	if v.Perche != "" {
-		b.WriteString(stTitolo.Render(T("b.perche")) + "\n" + m.a(v.Perche) + "\n")
-		if v.Serve != "" || v.Codice != "" {
-			b.WriteString(stGrigio.Render(strings.TrimSpace(v.Serve+"  "+v.Codice)) + "\n")
+	return strings.Join(r, m.t.grigio.Render(" · "))
+}
+
+// ---- le righe del corpo ----------------------------------------------------------------------
+
+// par: un testo a capo dentro la cornice, rientrato, tutto in uno stile.
+func (m *modello) par(testo string, st lipgloss.Style, rientro int) []string {
+	if testo == "" {
+		return nil
+	}
+	w := m.interna() - rientro
+	var r []string
+	for _, l := range strings.Split(ansi.Wrap(testo, w, ""), "\n") {
+		r = append(r, strings.Repeat(" ", rientro)+st.Render(l))
+	}
+	return r
+}
+
+// colonne: etichetta, testo (a capo nella sua colonna) e cartellino a destra.
+func (m *modello) colonne(et, testo, cart string, st lipgloss.Style) []string {
+	tw := m.interna() - colEtichetta - colStato - 1
+	ls := strings.Split(ansi.Wrap(testo, tw, ""), "\n")
+	var r []string
+	for i, l := range ls {
+		e, c := "", ""
+		if i == 0 {
+			e, c = et, st.Render(cart)
 		}
-		b.WriteString("\n")
+		r = append(r, riempi(e, colEtichetta)+riempi(l, tw)+" "+c)
 	}
-	if v.CheFare != "" {
-		b.WriteString(stTitolo.Render(T("b.chefare")) + "\n" + m.a(v.CheFare) + "\n")
+	return r
+}
+
+func (m *modello) stileStato(s interfaccia.Stato) lipgloss.Style {
+	switch s {
+	case interfaccia.OK:
+		return m.t.verde
+	case interfaccia.AVVISO, interfaccia.CONSENSO:
+		return m.t.ambra
+	case interfaccia.SISTEMO:
+		return m.t.blu
+	case interfaccia.MALE, interfaccia.MANCA:
+		return m.t.rosso
 	}
-	if m.dett && v.Dettagli != "" {
-		b.WriteString("\n" + stGrigio.Render(m.a(v.Dettagli)) + "\n")
+	return m.t.grigio
+}
+
+// contenuto: il corpo della schermata in corso e la riga dei tasti.
+func (m *modello) contenuto() ([]string, string) {
+	T := interfaccia.T
+	c := []string{""}
+	var tasti string
+	switch m.schermo {
+	case sAttesa:
+		c = append(c, m.par(m.attesa, m.t.forte, 0)...)
+		tasti = m.tasti("q", T("k.esci"))
+	case sControllo:
+		c = append(c, m.corpoControllo()...)
+		if m.vc.Esito == interfaccia.BLOCCATA {
+			tasti = m.tasti("q", T("k.esci"), "d", T("k.dettagli"))
+		} else {
+			tasti = m.tasti("enter", T("k.avanti"), "d", T("k.dettagli"), "q", T("k.esci"))
+		}
+	case sPiano:
+		c = append(c, m.corpoPiano()...)
+		if m.modPorta {
+			tasti = m.tasti("enter", T("k.porta.ok"), "esc", T("k.porta.no"))
+		} else {
+			tasti = m.t.forte.Render(T("k.procedi")) + " " + m.t.verde.Render("y") + m.t.grigio.Render(" "+T("k.si")+" · ") +
+				m.t.rosso.Render("n") + m.t.grigio.Render(" "+T("k.no")+" · ") + m.tasti("tab", T("k.porta"), "d", T("k.dettagli"))
+		}
+	case sAvanzamento:
+		c = append(c, m.corpoAvanzamento()...)
+		if m.fermando {
+			tasti = m.t.ambra.Render(T("btn.fermando"))
+		} else {
+			tasti = m.tasti("a", T("k.ferma"), "r", T("k.registro"))
+		}
+	case sPronto:
+		c = append(c, m.corpoPronto()...)
+		tasti = m.tasti("enter", T("k.chiudi"), "r", T("k.registro"), "d", T("k.dettagli"))
+	case sFine:
+		c = append(c, m.corpoFine()...)
+		tasti = m.tasti("enter", T("k.chiudi"), "s", T("k.salva"), "d", T("k.dettagli"))
+	}
+	if m.nota != "" {
+		c = append(c, "")
+		c = append(c, m.par(m.nota, m.t.grigio, 0)...)
+	}
+	return append(c, ""), tasti
+}
+
+func (m *modello) corpoControllo() []string {
+	T := interfaccia.T
+	v := m.vc
+	var c []string
+	for _, r := range v.Righe {
+		c = append(c, m.colonne(r.Etichetta, r.Testo, r.Stato.Cartellino(), m.stileStato(r.Stato))...)
+	}
+	c = append(c, "")
+	if v.Esito == interfaccia.BLOCCATA {
+		c = append(c, m.par(v.Banner, m.t.rosso, 0)...)
+		c = append(c, m.par(v.Sotto, lipgloss.NewStyle(), 0)...)
+		c = append(c, m.par(strings.Join(v.Codici, " "), m.t.grigio, 0)...)
+	} else {
+		c = append(c, m.par(v.Banner, m.t.forte, 0)...)
+		c = append(c, m.par(v.Sotto, m.t.grigio, 0)...)
+	}
+	if m.dett {
+		c = append(c, "", m.t.forte.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, m.t.grigio, 2)...)
+	}
+	return c
+}
+
+func (m *modello) corpoPiano() []string {
+	T := interfaccia.T
+	t, v := m.t, m.vp
+	var c []string
+	// la porta, l'unica scelta
+	campo := "[ " + m.porta + " ]"
+	if m.modPorta {
+		campo = "[ " + m.porta + "▏]"
+	}
+	c = append(c, t.forte.Render(riempi(T("p.porta"), 10))+t.campo.Render(campo)+t.grigio.Render("   "+T("p.porta.t")))
+	if _, ok := interfaccia.PortaValida(m.porta); !ok {
+		c = append(c, t.rosso.Render(T("sc.porta.errata")))
+	}
+	// i pacchetti esatti, dalla simulazione del gestore: REMOTIX (dal .run), poi le sue dipendenze
+	// (dagli archivi della distribuzione; labwc, wlr-randr e il carattere col desktop che li chiede)
+	nuovi, aggiornati, presenti := 0, 0, 0
+	var nostri, dip []string
+	for _, a := range v.Pacchetti {
+		nota := a.Origine
+		if a.Origine == "file" {
+			nota = ""
+		}
+		if why, ok := v.Dipendenze[a.Nome]; ok {
+			nota = T("p.per", why)
+		}
+		var r string
+		switch a.Esito {
+		case "new":
+			nuovi++
+			r = "  " + t.verde.Render("+") + " " + riempi(a.Nome, 22) + riempi(a.Versione, 18) + t.grigio.Render(nota)
+		case "upgraded":
+			aggiornati++
+			r = "  " + t.blu.Render("↑") + " " + riempi(a.Nome, 22) + riempi(a.Versione, 18) + t.grigio.Render(T("p.da.prima", a.Prima))
+		default:
+			presenti++
+			continue
+		}
+		if a.Origine == "file" {
+			nostri = append(nostri, r)
+		} else {
+			dip = append(dip, r)
+		}
+	}
+	if len(nostri) > 0 {
+		c = append(c, "", t.forte.Render("REMOTIX")+t.grigio.Render("   "+T("p.da.run")))
+		c = append(c, nostri...)
+	}
+	if len(dip) > 0 {
+		c = append(c, "", t.forte.Render(T("p.dipendenze"))+t.grigio.Render("   "+T("p.dipendenze.t")))
+		c = append(c, dip...)
+	}
+	if len(v.Pacchetti) > 0 {
+		c = append(c, t.grigio.Render("    "+T("p.totale", nuovi, aggiornati, presenti)))
+	}
+	// le persone ai gruppi della scheda, il servizio, gli altri passi
+	var altri []string
+	irreversibili := []string{}
+	for _, p := range v.Passi {
+		if p.Rev == interfaccia.MALE {
+			irreversibili = append(irreversibili, p.Titolo)
+		}
+		switch p.Tipo {
+		case "groups":
+			g := T("p.gruppi", strings.Join(v.Gruppi, ", "))
+			if len(v.Gruppi) > 1 {
+				g = T("p.gruppi.n", strings.Join(v.Gruppi, ", "))
+			}
+			c = append(c, "", t.forte.Render(g)+"   "+strings.Join(v.Utenti, ", "))
+		case "service":
+			c = append(c, "", t.forte.Render(T("p.servizio"))+"   "+T("p.servizio.t"))
+		case "other":
+			altri = append(altri, p.Titolo)
+		}
+	}
+	if len(altri) > 0 {
+		c = append(c, "", t.forte.Render(T("p.altro")))
+		for _, a := range altri {
+			c = append(c, m.par("· "+a, lipgloss.NewStyle(), 2)...)
+		}
+	}
+	c = append(c, "")
+	if len(irreversibili) == 0 {
+		c = append(c, t.grigio.Render(T("p.annulla"))+t.blu.Render("remotix-install uninstall")+t.grigio.Render("."))
+	} else {
+		c = append(c, m.par(T("p.annulla.non", strings.Join(irreversibili, "; ")), t.ambra, 0)...)
+	}
+	if m.dett {
+		c = append(c, "", t.forte.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
+	}
+	return c
+}
+
+func (m *modello) corpoAvanzamento() []string {
+	T := interfaccia.T
+	t := m.t
+	punto, pc := m.av.Punto()
+	in := m.interna()
+	perc := fmt.Sprintf("%d %%", pc)
+	c := []string{riempi(t.forte.Render(punto), in-ansi.StringWidth(perc)) + perc}
+	pieni := in * pc / 100
+	c = append(c, t.blu.Render(strings.Repeat("█", pieni))+t.grigio.Render(strings.Repeat("░", in-pieni)), "")
+	for _, r := range m.av.Righe {
+		switch r.Stato {
+		case interfaccia.FATTA:
+			c = append(c, "  "+t.verde.Render("✓")+" "+r.Testo)
+		case interfaccia.INCORSO:
+			c = append(c, "  "+t.blu.Render("◐ "+r.Testo))
+		case interfaccia.FALLITA:
+			c = append(c, "  "+t.rosso.Render("✗ "+r.Testo))
+		case interfaccia.ANNULLATA:
+			c = append(c, "  "+t.grigio.Render("↺ "+r.Testo))
+		default:
+			c = append(c, "  "+t.grigio.Render("○ "+r.Testo))
+		}
+	}
+	if m.reg {
+		c = append(c, "", t.forte.Render(T("h.registro")))
+		for _, l := range ultime(m.av.Registro, 200) {
+			c = append(c, m.par(l, t.grigio, 2)...)
+		}
+	}
+	return c
+}
+
+func ultime(r []string, n int) []string {
+	if len(r) > n {
+		r = r[len(r)-n:]
+	}
+	return r
+}
+
+func (m *modello) corpoPronto() []string {
+	T := interfaccia.T
+	t, v := m.t, m.pronto
+	c := []string{t.verde.Render("✓ " + T("pr.titolo")), ""}
+	c = append(c, t.forte.Render(T("h.apri")), "  "+t.blu.Render(v.Indirizzo))
+	if v.Impronta != "" {
+		c = append(c, m.par(T("pr.impronta", v.Impronta), t.grigio, 2)...)
+	}
+	c = append(c, m.par(T("pr.apri.t"), t.grigio, 2)...)
+	c = append(c, "", t.forte.Render(T("h.dafare")))
+	for _, d := range v.DaFare {
+		c = append(c, m.puntoAvviso(d)...)
+	}
+	for _, d := range v.Condizioni {
+		c = append(c, m.puntoAvviso(d)...)
+	}
+	c = append(c, m.par(v.Router, t.grigio, 4)...)
+	c = append(c, "", t.forte.Render(T("h.chi")))
+	c = append(c, m.par(T("pr.chi.t"), lipgloss.NewStyle(), 2)...)
+	c = append(c, "", t.forte.Render(T("h.prove")))
+	for _, p := range v.Prove {
+		c = append(c, "  "+riempi(p.Etichetta, 36)+m.stileStato(p.Stato).Render(p.Testo))
+	}
+	if m.dett {
+		c = append(c, "", t.forte.Render(T("h.cambiato")))
+		for _, x := range v.Cambiato {
+			c = append(c, m.par("· "+x, lipgloss.NewStyle(), 2)...)
+		}
+		c = append(c, "", t.forte.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
 	}
 	if m.reg && m.av != nil {
-		b.WriteString("\n" + stGrigio.Render(ultime(m.av.Registro, 20)) + "\n")
+		c = append(c, "", t.forte.Render(T("h.registro")))
+		for _, l := range ultime(m.av.Registro, 200) {
+			c = append(c, m.par(l, t.grigio, 2)...)
+		}
 	}
-	b.WriteString(m.tasti(T("tui.chiudi"), "s: "+strings.ToLower(T("btn.salva_rapp")), T("tui.dettagli")))
+	return c
+}
+
+// puntoAvviso: «  ! testo» in ambra, a capo sotto il testo.
+func (m *modello) puntoAvviso(s string) []string {
+	r := m.par(s, lipgloss.NewStyle(), 4)
+	if len(r) > 0 {
+		r[0] = "  " + m.t.ambra.Render("!") + " " + strings.TrimPrefix(r[0], "    ")
+	}
+	return r
+}
+
+func (m *modello) corpoFine() []string {
+	T := interfaccia.T
+	t, v := m.t, m.fine
+	st := t.rosso
+	if v.Toccata {
+		st = t.ambra
+	}
+	c := m.par("✗ "+v.Titolo, st, 0)
+	c = append(c, m.par(v.Sotto, t.grigio, 0)...)
+	if v.Perche != "" {
+		c = append(c, "", t.forte.Render(T("h.perche")))
+		for _, l := range strings.Split(v.Perche, "\n") {
+			c = append(c, m.par(l, lipgloss.NewStyle(), 2)...)
+		}
+		if x := strings.TrimSpace(v.Serve + "  " + v.Codice); x != "" {
+			c = append(c, m.par(x, t.grigio, 2)...)
+		}
+	}
+	if v.CheFare != "" {
+		c = append(c, "", t.forte.Render(T("h.chefare")))
+		c = append(c, m.par(v.CheFare, lipgloss.NewStyle(), 2)...)
+	}
+	if m.dett && v.Dettagli != "" {
+		c = append(c, "", t.forte.Render(T("h.dettagli")))
+		c = append(c, m.par(v.Dettagli, t.grigio, 2)...)
+	}
+	if m.reg && m.av != nil {
+		c = append(c, "", t.forte.Render(T("h.registro")))
+		for _, l := range ultime(m.av.Registro, 200) {
+			c = append(c, m.par(l, t.grigio, 2)...)
+		}
+	}
+	return c
 }

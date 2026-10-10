@@ -14,8 +14,8 @@
 #     Intel intel-media-driver, AMD mesa-va-drivers-freeworld; Alma: EPEL con CRB, e RPM Fusion per
 #     Intel; openSUSE con AMD: la Mesa di Packman);
 #   - il driver Vulkan delle AMD dove la RADV ufficiale codifica (Debian, Ubuntu, Arch);
-#   - i pezzi che il desktop di serie non porta (labwc e wlr-randr per XFCE e LXQt,
-#     breeze6-wallpapers per KDE su Tumbleweed, un carattere scalabile);
+#   (labwc, wlr-randr, breeze6-wallpapers e il carattere scalabile NON li mette lui: sono dipendenze di
+#   REMOTIX, li installa il gestore insieme a REMOTIX — utente, 10 ott 2026, DECISIONI §10.36);
 #   - la porta di REMOTIX nel firewall, TCP e UDP (firewalld o ufw, se acceso).
 # Ogni comando si scrive prima di farlo: il giornale è la prova di che cosa l'amministratore ha fatto.
 set -uo pipefail
@@ -29,20 +29,18 @@ done
 echo "== $m · schede:${forn:- nessuna} · porta $porta"
 ha() { case " $forn " in *" $1 "*) return 0 ;; esac; return 1; }
 comp=""
-case $desktop in xfce | lxqt) comp="labwc wlr-randr" ;; esac
 case $distro in
 debian13 | ubuntu2604)
 	export DEBIAN_FRONTEND=noninteractive
 	fai apt-get update -q
 	ha AMD && comp="$comp mesa-vulkan-drivers"
-	[ -n "$comp" ] && fai apt-get install -y -q $comp fonts-dejavu-core
+	[ -n "$comp" ] && fai apt-get install -y -q $comp
 	;;
 fedora44)
 	fai dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
 		"https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
 	ha Intel && fai dnf install -y intel-media-driver
 	ha AMD && fai dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld
-	[ -n "$comp" ] && fai dnf install -y $comp dejavu-sans-fonts
 	;;
 alma10)
 	fai dnf install -y epel-release
@@ -60,13 +58,10 @@ tumbleweed | leap16)
 		fai zypper --non-interactive --gpg-auto-import-keys refresh packman
 		fai zypper --non-interactive install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon
 	fi
-	[ "$desktop" = kde ] && [ "$distro" = tumbleweed ] && comp="$comp breeze6-wallpapers"
-	[ "$desktop" = lxqt ] && comp="$comp google-droid-fonts"
-	[ -n "$comp" ] && fai zypper --non-interactive install $comp
 	;;
 arch)
 	ha AMD && comp="$comp vulkan-radeon"
-	[ -n "$comp" ] && fai pacman -S --needed --noconfirm $comp ttf-dejavu
+	[ -n "$comp" ] && fai pacman -S --needed --noconfirm $comp
 	;;
 *) echo "⛔ macchina sconosciuta: $m"; exit 2 ;;
 esac

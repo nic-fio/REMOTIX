@@ -23,6 +23,9 @@ type Catalogo struct {
 	Escluse          []Esclusa                   `json:"escluse"`
 	FuoriSempre      []string                    `json:"fuori_sempre"`
 	ComponentiMinimi []ComponenteMinimo          `json:"componenti_minimi"`
+	// CarattereScalabile: il pacchetto del carattere per famiglia, quando il desktop gira sotto labwc
+	// e la macchina non ne ha nessuno (una dipendenza di REMOTIX, §10.36)
+	CarattereScalabile map[string]string `json:"carattere_scalabile"`
 
 	Digest      string `json:"-"` // sha256 dei byte letti
 	Provenienza string `json:"-"` // da dove viene (fase 0 TRUST): il pacchetto, il motore scaricato, dato a mano
@@ -223,6 +226,8 @@ type EsitoDesktop struct {
 	// Mancano: quel che manca su questa macchina perché REMOTIX giri su questo desktop installato
 	// (DECISIONI §10.36: lo si dice, provvede l'amministratore; l'installazione si ferma)
 	Mancano []string `json:"missing,omitempty"`
+	// Dipende: i pacchetti della distribuzione che questo desktop chiede a REMOTIX (dipendenze)
+	Dipende []string `json:"depends,omitempty"`
 	Note    []string `json:"notes,omitempty"`
 }
 
@@ -240,13 +245,45 @@ type Rapporto struct {
 	SenzaDesktop bool           `json:"no_desktop"` // nessun desktop supportato installato
 	// Mancano: tutto quel che manca a questa macchina, BLOCCANTE (DECISIONI §10.36): REMOTIX non
 	// installa niente del sistema, lo dice. Vuoto = si può installare
-	Mancano   []Messaggio `json:"missing"`
-	Incognite []string    `json:"unknowns,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
-	Messaggi  []Messaggio `json:"messages"`
-	Note      []string    `json:"notes,omitempty"`
+	Mancano []Messaggio `json:"missing"`
+	// Dipendenze: i pezzi che il desktop della macchina chiede a REMOTIX (labwc, wlr-randr, un carattere
+	// scalabile): dipendenze normali, il motore li aggiunge ai pacchetti da installare e il gestore li
+	// prende dagli archivi della distribuzione (utente, 10 ott 2026, §10.36)
+	Dipendenze []Dipendenza `json:"dependencies"`
+	Incognite  []string     `json:"unknowns,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
+	Messaggi   []Messaggio  `json:"messages"`
+	Note       []string     `json:"notes,omitempty"`
 	// Minima: per una versione esclusa, la prima versione della stessa distribuzione che il
 	// catalogo sostiene («serve almeno Debian 13»: la schermata «bloccata», T9)
 	Minima string `json:"minimum,omitempty"`
+}
+
+// Dipendenza: un pacchetto della distribuzione che REMOTIX chiede per un desktop.
+type Dipendenza struct {
+	Nome   string `json:"name"`
+	Perche string `json:"why"` // «XFCE»: per quale desktop
+}
+
+// metti: una dipendenza in più (una volta sola; i desktop che la chiedono si sommano).
+func (r *Rapporto) metti(nome, perche string) {
+	for i := range r.Dipendenze {
+		if r.Dipendenze[i].Nome == nome {
+			if !strings.Contains(r.Dipendenze[i].Perche, perche) {
+				r.Dipendenze[i].Perche += ", " + perche
+			}
+			return
+		}
+	}
+	r.Dipendenze = append(r.Dipendenze, Dipendenza{nome, perche})
+}
+
+// NomiDipendenze: i nomi dei pacchetti da far installare al gestore insieme a REMOTIX.
+func (r *Rapporto) NomiDipendenze() []string {
+	var n []string
+	for _, d := range r.Dipendenze {
+		n = append(n, d.Nome)
+	}
+	return n
 }
 
 // primaVersione: la versione più vecchia di una distribuzione che il catalogo sostiene.
@@ -384,14 +421,20 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			default:
 				e.Condizioni = append(e.Condizioni, condH264...)
 				// i pezzi che il desktop di serie non porta (labwc, wlr-randr, un carattere
-				// scalabile…): mancano, e l'amministratore li mette (§10.36)
+				// scalabile): dipendenze normali di REMOTIX, li installa il gestore insieme a lui
+				// (utente, 10 ott: «trattiamo i 3 componenti come normali dipendenze di remotix»).
+				// Se la distribuzione non li ha, lo dice la simulazione del gestore, e lì si ferma
 				for _, comp := range dc.Componenti {
 					if p.V("package."+comp) == "absent" || p.V("package."+comp) == "" {
-						e.Mancano = append(e.Mancano, comp)
+						e.Dipende = append(e.Dipende, comp)
 					}
 				}
 				if dc.ServeCarattere && p.V("fonts.scalable") == "0" {
-					e.Mancano = append(e.Mancano, T("manca.carattere"))
+					if car := c.CarattereScalabile[p.V("distro.family")]; car != "" {
+						e.Dipende = append(e.Dipende, car)
+					} else {
+						e.Mancano = append(e.Mancano, T("manca.carattere"))
+					}
 				}
 				for _, l := range dc.Limiti {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-LIMITE", Testo: l})
@@ -414,7 +457,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		case len(e.Motivi) > 0:
 			e.Livello = NON_SUPPORTATA
 			e.Condizioni = []Condizione{}
-			e.Mancano = nil
+			e.Mancano, e.Dipende = nil, nil
 		case pl != nil && pl.Matrice && derivata == nil && pl.GiroIntero != "":
 			e.Livello = CERTIFICATA
 		default:
@@ -428,6 +471,9 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			nessuno = false
 			if len(e.Mancano) > 0 {
 				r.Mancano = append(r.Mancano, Msg("RX-MANCA-003", NomeDesktop(d)+": "+strings.Join(e.Mancano, ", ")))
+			}
+			for _, n := range e.Dipende {
+				r.metti(n, NomeDesktop(d))
 			}
 		}
 		r.Desktop = append(r.Desktop, e)
