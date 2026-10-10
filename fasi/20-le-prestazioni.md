@@ -328,6 +328,34 @@ sia finita e questo piano sia letto.*
 di oggi parla con la **pagina** (Marionette/CDP, la sonda dei dipinti, il diario), e per FreeRDP quella
 parte va rifatta. Stima onesta in §7.6: **~2 giorni di lavoro + ~3 ore di macchina**.
 
+### 7.9 ⚠ Prima lettura della campagna xrdp, Intel (10 ott 2026, mattina, a campagna in corso) `[M]`
+
+Letta dai file, senza toccare il server. Due cose cambiano quel che si può dire.
+
+1. **La maggior parte delle rotture di xrdp è l'ACCESSO del controllo, non l'esperienza di chi lavora.** A 4K,
+   su tutti e quattro i desktop, il livello 1 è FAIL **solo** perché la sessione di controllo (utente 99, una
+   seconda connessione FreeRDP) esce durante l'accesso con `ERRINFO_LOGOFF_BY_USER`; l'utente che lavora è
+   **GREEN**. Lo stesso motivo chiude quasi tutti i livelli 2 e 4 a 3K e 2K, e 7-8 in Full HD XFCE/GNOME.
+   ⛔ ⇒ «A 4K xrdp non regge nemmeno una persona» **non si può scrivere**: una persona lavora bene, è la
+   **seconda che non riesce a entrare**. ❓ Se è un limite vero di xrdp (un secondo accesso che fallisce, che per
+   un cliente è un difetto vero) o un difetto del banco (l'utente di controllo, sesman, la risoluzione) è **da
+   riprodurre a mano** a campagna finita: una sessione xrdp a 4K aperta, poi un secondo accesso.
+   Rotture d'altra natura, che sembrano vere: KDE perde l'input (2-3 azioni su 2-3 senza effetto, 2K e Full HD) e
+   GNOME Full HD a 4 utenti (blocco 6,4 s, ritardo p95 3,98 s).
+2. **Con un utente solo il ritardo è pari, xrdp un poco avanti.** Ritardo tasto → immagine, p95, dal lato di chi
+   guarda (REMOTIX: il giro della pagina, ultimi 200 campioni della sessione; xrdp: XDamage, §7.3):
+
+   | Intel, 1 utente | GNOME | KDE | XFCE | LXQt |
+   |---|---|---|---|---|
+   | 4K | 54 / 48 | 55 / 53 | 53 / 34 | 67 / 31 |
+   | 3K | 48 / 39 | 48 / 44 | 45 / 34 | 60 / 40 |
+   | 2K | 43 / 37 | 43 / 41 | 40 / 32 | 40 / 41 |
+   | Full HD | 39 / 35 | 39 / 39 | 37 / 33 | 36 / 44 |
+
+   (ms, REMOTIX / xrdp). ⚠ Il giro della pagina comprende decodifica e disegno nel browser, XDamage su Xvfb no
+   (§7.3): parte del distacco è il metro. ⇒ Il vantaggio di REMOTIX misurato è la **tenuta sotto carico**, non
+   la risposta del singolo utente.
+
 ### 7.1 Come nasce oggi una sessione, e che cosa cambia
 
 | oggi (REMOTIX) | xrdp | chi lo fa |
