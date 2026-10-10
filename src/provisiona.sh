@@ -61,7 +61,7 @@ SOLO_VERIFICA=${1:-}
 #    precisely so that NOBODY is in it.  `[M]` Reading all nodes without
 #    distinction, at the second round this script would have put `prova` and `prova2`
 #    in `remotix-nogpu`, that is reopened the Radeon to the test users — and the
-#    check demanded it: «prova NON e' nei gruppi della scheda:
+#    check demanded it: «prova is NOT in the card's groups:
 #    remotix-nogpu».  ⇒ One would measure on the wrong card without knowing it.
 # ---------------------------------------------------------------------------
 GRUPPO_ESCLUSO=remotix-nogpu
@@ -358,11 +358,11 @@ CONF
 	#          real machine BY DOING the thing, not by inspecting it.
 	#
 	#   1. ⛔ THE SERVER MUST RUN AS **ROOT**, or multi-tenancy does not exist.
-	#      `[M]` With `User=nicfio` the product itself writes «questo processo
-	#      e' uid 1000: NON e' root — PAM potra' verificare solo il suo
-	#      utente», and every other tenant gets `0x07
-	#      CREDENZIALI_ERRATE`.  As root: «uid 0: puo' verificare con PAM la
-	#      parola di chiunque».
+	#      `[M]` With `User=nicfio` the product itself writes «this process
+	#      is uid 1000: it is NOT root — PAM will be able to check only its own
+	#      user», and every other tenant gets `0x07
+	#      CREDENZIALI_ERRATE`.  As root: «uid 0: it can check anyone's
+	#      password with PAM».
 	#   2. ⛔ THE BINARY MUST BE WHERE THE TENANT CAN EXECUTE IT.  `[M]`
 	#      `/home/nicfio` is `0700`: the child, which runs with the
 	#      tenant's uid, **does not traverse** that folder and exits with 37 —

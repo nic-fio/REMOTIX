@@ -276,7 +276,7 @@ static void aiuto(const char *nome)
 	        "                    together (`[M]` the eleventh gets in and the first\n"
 	        "                    session goes from 39.60 to 0.96 fps, −97.6 %%).\n"
 	        "                    ⛔ It is NOT the ENCODER's number: `[M]` on\n"
-	        "                    a UHD 730 the bare encoder holds 1.86\n"
+	        "                    a UHD 770 the bare encoder holds 1.86\n"
 	        "                    Gpixel/s and composition 0.97 — what saturates is\n"
 	        "                    the compositor, not us.  Giving the former here\n"
 	        "                    would admit ~22 sessions where six fit.\n"
@@ -760,8 +760,8 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 		 *   the slot free and the stage not.
 		 *
 		 * ⛔⛔ THE SYMPTOM THAT WAS THERE BEFORE.  `figli_assicura()` returned
-		 *      `false`, a log line was written — *«e' AMMESSO ma non ha un
-		 *      figlio: entra e non vede un pixel»* — and **NOTHING went out on
+		 *      `false`, a log line was written — *«is ADMITTED but has no
+		 *      child: gets in and does not see a pixel»* — and **NOTHING went out on
 		 *      the wire**: neither `0x0E`, nor `0x06`.  The user received
 		 *      `AMMESSO`, received `SESSIONE`, and looked at a **black page
 		 *      without explanation and without any time after which it would
@@ -1695,7 +1695,7 @@ static void congeda_figlio(void *ctx, const char *utente, uid_t uid)
 	/* ⭐ D-004 — and its slot in the presence table: without a stage there is
 	 *    nothing to expire, and a slot left behind would make the child be
 	 *    asked, an hour later, to close a session that no longer exists (the
-	 *    line «⛔ §5.3 … NON e' partita» for a fault that does not exist).  The
+	 *    line «⛔ §5.3 … did NOT leave towards the child» for a fault that does not exist).  The
 	 *    next stage will reopen it at birth. */
 	presenza_dimentica(utente);
 
@@ -2223,7 +2223,7 @@ int main(int argc, char **argv)
 	 *    (`DECISIONI.md` §4.6-duodetricies). */
 	registro_dice(REG_AVVIO, "the desktop of this machine: %s", sessione_desktop_spiega());
 	/* ⭐ D-001 — and the same fact, with the name of §4.5, goes into every
-	 *    client's `SESSIONE`: before it said «sconosciuto» to everyone, since
+	 *    client's `SESSIONE`: before it said «unknown» (then `sconosciuto`) to everyone, since
 	 *    phase 1. */
 	switch (sessione_desktop()) {
 	case SESSIONE_DESKTOP_GNOME:
@@ -2240,7 +2240,7 @@ int main(int argc, char **argv)
 		break;
 	case SESSIONE_DESKTOP_NESSUNO:
 	default:
-		wt_desktop("sconosciuto");
+		wt_desktop("unknown");
 		break;
 	}
 	/* ⭐ PHASE 12, INCREMENT 2 — on KDE the capture permission is checked HERE,
@@ -2910,7 +2910,7 @@ int main(int argc, char **argv)
 		 *
 		 * ⛔ What the client saw, measured: the `CONGEDO 0x0c` arrived on the
 		 *    channel, and the session closed **without a code** — QUIC
-		 *    terminated with `codice 0 · nessun motivo`.  That is, the SECOND
+		 *    terminated with `code 0 · no reason`.  That is, the SECOND
 		 *    road of §3.1 was missing.
 		 *
 		 * ⚠ And the second road is the one that matters: `DECISIONI.md` §7.14

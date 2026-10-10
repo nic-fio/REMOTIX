@@ -1406,8 +1406,8 @@ static void diventa_ed_esegui(const struct figli *f, const struct figlio *g,
  * ⛔ THE DEFECT, `[M]` measured on the real machine on 27 Aug 2026: a tenant
  *    who is NOT in the group of the card's node (`video` and `render` on this
  *    machine) gives birth to a session that **looks alive and sees nothing**.
- *    Zero `formato negoziato`, zero frames, and the loop going round and round
- *    between "ZERO MONITOR" and "virtual monitor mounted" for eighty-two
+ *    Zero `negotiated format`, zero frames, and the loop going round and round
+ *    between "BLACK: ZERO MONITORS" and "virtual monitor mounted" for eighty-two
  *    seconds.  ⭐ The measure: **0 out of 4** without the groups, **17 out of
  *    17** with the groups, and the **counter-proof** on the same user (given
  *    the two groups and the user manager restarted ⇒ it sees in 2.04 s).
@@ -1580,11 +1580,11 @@ static bool gruppi_della_scheda(const char *utente, gid_t primario,
 		                 "⛔⛔ «%s» IS NOT IN THE CARD'S GROUP «%s» (gid "
 		                 "%ld, the group of %s): ⛔ THIS SESSION WILL BE BORN AND "
 		                 "WILL SEE NOTHING — zero frames, no window will "
-		                 "open, and the loop will go round and round between «ZERO "
-		                 "MONITOR» and «virtual monitor mounted».  ⭐ THE CURE, in "
-		                 "two commands as root: `usermod -aG %s %s` and then "
-		                 "`loginctl terminate-user %s` — ⚠ the second is NOT "
-		                 "optional: the groups reach the compositor only "
+		                 "open, and the loop will go round and round between «BLACK: "
+		                 "ZERO MONITORS» and «virtual monitor mounted».  ⭐ THE CURE, "
+		                 "in two commands as root: `usermod -aG %s %s` and "
+		                 "then `loginctl terminate-user %s` — ⚠ the second is "
+		                 "NOT optional: the groups reach the compositor only "
 		                 "when the user manager is BORN AGAIN.  (phase 10 §7.4, "
 		                 "measured 27 Aug 2026: 0 sessions out of 4 without the "
 		                 "group, 17 out of 17 with it)",

@@ -141,7 +141,7 @@ const char *tastiera_disposizione(Tastiera *);
  *   someone else** — the user from GNOME's settings, or `gsd-keyboard`.
  *   ⇒ The bench caught it red-handed: session brought back to `it` from outside,
  *     client reattaching declaring `de`, and the log said
- *     *«disposizione «de»: gia' chiesta, non la richiedo»* — with the session
+ *     *«layout «de»: already requested, I do not request it again»* — with the session
  *     Italian.  `Ctrl+Z` arrived as `Ctrl+Y`.
  *
  * ⛔ It is form **E1** — *written is not in force* — inside the cure written

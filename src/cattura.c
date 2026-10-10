@@ -57,18 +57,18 @@ static uint64_t adesso_us(void)
  * ⛔ THE FACT, `[M]` 22 August 2026, test machine (i5-13500T), 2 450
  *    frames at 1920x1080 with hardware HEVC:
  *
- *      the whole segment                      **21,61 ms**
- *      of which `misura_i_pixel()`            **5,34 ms — 25 %**
+ *      the whole segment                      **21.61 ms**
+ *      of which `misura_i_pixel()`            **5.34 ms — 25 %**
  *
  *    and `[M]` on pure CPU (bench `08-c-scansione.c`) the same scan costs
- *    **5,36 ms** at 1920x1080 and **8,89** at 2560x1440: it grows with pixels, so
+ *    **5.36 ms** at 1920x1080 and **8.89** at 2560x1440: it grows with pixels, so
  *    on a large canvas it would be **worse**.
  *
  * ⛔⛔ AND WHAT IT WAS FOR, counted line by line: in the product those three values
  *      (`nero`, `uniforme`, the range) end up in **ONE** log line,
  *      written **ONCE**, when the stage is mounted (`figlio.c`, «frame
  *      captured AS …, ⛔ BLACK / not black»), plus the two lines below.
- *      ⇒ Thirty to sixty scans per second at 5,34 ms **for a single line**.
+ *      ⇒ Thirty to sixty scans per second at 5.34 ms **for a single line**.
  *
  * ⚠ AND THE DIAGNOSIS IS NOT LOST, which was the only reason it was worth
  *   paying for: the FIRST frame is always looked at — and it is the one of the line —
@@ -76,8 +76,8 @@ static uint64_t adesso_us(void)
  *   turns black mid-session is still seen, at most half a second later.
  *
  * ⛔ AND WHAT WAS **NOT** DONE, and was measured before discarding it:
- *    looking at **one pixel in eight** would cost `[M]` **0,10 ms** instead of
- *    5,36 — even better.  ⇒ Discarded anyway, and the reason is that it
+ *    looking at **one pixel in eight** would cost `[M]` **0.10 ms** instead of
+ *    5.36 — even better.  ⇒ Discarded anyway, and the reason is that it
  *    would change the MEANING: a frame that is black except for a skipped region
  *    would be declared **BLACK**, and a log line that accuses black
  *    when there is no black sends the hunt the wrong way — which costs
@@ -1746,9 +1746,9 @@ Cattura *cattura_avvia(uint32_t nodo, uint32_t larghezza, uint32_t altezza,
 	 *
 	 * `[M]` The slow runs of the bench gave **12854** and **12866 ms**: twelve
 	 * milliseconds of difference between two different runs.  ⇒ ⚠ A CONSTANT number
-	 * is not a variation, it is a **ceiling** — and 12,86 s is exactly 2,86 s
+	 * is not a variation, it is a **ceiling** — and 12.86 s is exactly 2.86 s
 	 * (`gnome-session` getting up) **plus ten round seconds**, that is this
-	 * wait expiring.  The 24,8 s runs are the same ceiling **twice**.
+	 * wait expiring.  The 24.8 s runs are the same ceiling **twice**.
 	 *
 	 * ⭐ And the comparison that decides: when the compositor is ready, this
 	 *    attach costs `[M]` **sixteen milliseconds**.  ⇒ Waiting ten thousand
@@ -2164,7 +2164,7 @@ static void misura_i_pixel(CatturaFermo *fermo)
  * ⛔ THE FACT THAT MADE IT NECESSARY — `[M]` phase 16, Radeon RX 6800,
  *    XFCE/labwc box (wlroots-dmabuf route, LINEAR gbm slabs): the full
  *    pass of `misura_i_pixel` over the mapping of the 4K slab took
- *    **63 673 ms** (GPU wait 0,59 ms), and for all that time the loop
+ *    **63 673 ms** (GPU wait 0.59 ms), and for all that time the loop
  *    delivered nothing and the birth of the session failed.  On a
  *    DISCRETE card the slab lives in VRAM and the CPU reads it through the
  *    UNCACHED PCIe BAR: every read is a bus transaction, and the full
@@ -2307,7 +2307,7 @@ static guint misura_i_pixel_a_campione(CatturaFermo *fermo, gboolean *tetto)
  *
  * ⛔⛔ AND IT IS NOT READ IN FULL: it is read by sampling (`misura_i_pixel_a_campione`,
  *     the box above), because on a discrete card the full pass
- *     took 63,7 s.  It returns how many pixels it looked at; `*tetto` says whether the
+ *     took 63.7 s.  It returns how many pixels it looked at; `*tetto` says whether the
  *     time expired before the end of the grid.
  */
 static guint guarda_i_pixel_del_dmabuf(Cattura *cattura, CatturaFermo *fermo, gboolean *tetto)
@@ -2555,7 +2555,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *   the right place is the encoder, which can do it without copying.
 		 *   `[M]` 21 Sep 2026 on headless labwc the flag never turned on. */
 		/* ⚠ ONCE only: inside the branch of every take it would be sixty
-		 *   lines per second, the form that already produced the 30,8 GB of
+		 *   lines per second, the form that already produced the 30.8 GB of
 		 *   log (the reviewer, 21 Sep 2026). */
 		if (w.y_invertita && !cattura->wlr_detto_y && (cattura->wlr_detto_y = TRUE))
 			registro_dice(AREA,
@@ -2677,7 +2677,7 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 		 *     nobody looked at.  ⛔ It is not work: it is the time the
 		 *     frame sat still waiting for the loop to come back and
 		 *     ask for it, and it ages the frame without anybody
-		 *     noticing.  `[M]` phase 4: the empty waits are **0,00/s**, that is
+		 *     noticing.  `[M]` phase 4: the empty waits are **0.00/s**, that is
 		 *     **there was always something ready already** — which said the other way round
 		 *     means that the frame was waiting for US. */
 		fuori->us_nel_posto = adesso_us() - fuori->us_arrivo;
@@ -2816,8 +2816,8 @@ CatturaPresa cattura_prendi(Cattura *cattura, double attesa_s, CatturaFermo *fuo
 			if (cattura->misura_saltate == 1)
 				registro_dice(AREA,
 				              "⭐ from here on the pass over the pixels is done at most every %d ms and no "
-				              "longer on every frame: `[M]` it cost 5,34 ms on a segment "
-				              "of 21,6 (25 %%) to fill ONE log line.  ⚠ On the "
+				              "longer on every frame: `[M]` it cost 5.34 ms on a segment "
+				              "of 21.6 (25 %%) to fill ONE log line.  ⚠ On the "
 				              "skipped frames `pixel_misurati` is FALSE, and «not black» "
 				              "is NOT deduced from `nero == FALSE`",
 				              MISURA_PIXEL_OGNI_MS);

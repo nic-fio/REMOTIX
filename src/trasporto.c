@@ -1151,7 +1151,7 @@ void trasporto_scaduti(trasporto *t)
  *     Finding B-7, night of 10 Aug 2026.
  *
  *     Before tonight `systemctl stop` (or Ctrl-C) with an active session did
- *     this: the loop exited, «chiusura richiesta: 1 connessioni QUIC vive» was
+ *     this: the loop exited, «shutdown requested: 1 live QUIC connections» was
  *     written, and `trasporto_chiudi()` freed everything.  ⛔ No
  *     `CONGEDO(0x0C)`, no closing capsule with `0x0C`, and not even a QUIC
  *     `CONNECTION_CLOSE`: the client was left waiting the 30 seconds of

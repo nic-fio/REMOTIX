@@ -10,7 +10,9 @@
  * SWS_CS_ITU709)`, full-range source, limited output.  Removing ffmpeg also
  * removes libswscale, and the conversion has to be redone **identically**:
  * two different matrices at the two ends would measure the matrix, not the
- * image (`codificatore.c`, the box «COLOUR IS DECLARED»).
+ * image (the colour numbers are declared, not inherited: `COLORE_PRIMARI`… in
+ * `vadiretta.c`, `vui264`/`vui265` in `vulkanvideo.c`, and the matrix IMPOSED
+ * on the GPU conversion, `converti_sulla_gpu()` in `codificatore.c`).
  *
  * ⛔⛔ AND IT IS NOT libyuv, and the reason is one line of its
  *      `convert_from_argb.h`

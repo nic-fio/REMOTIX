@@ -1735,7 +1735,7 @@ int input_disposizione(Input *in, const char *nome)
 	 *    hand of **someone else** — the user from the settings, `gsd-keyboard`,
 	 *    or a bench.  `[M]` 16 August 2026: session brought back to `it` from outside,
 	 *    client reattaching declaring `de`, and the log said
-	 *    *«disposizione «de»: gia' chiesta, non la richiedo»* — with the session
+	 *    *«layout «de»: already requested, I do not request it again»* — with the session
 	 *    Italian.  ⇒ **`Ctrl+Z` arrived as `Ctrl+Y`**, that is exactly
 	 *    the fault this function exists to cure.
 	 *
@@ -1775,7 +1775,7 @@ int input_disposizione(Input *in, const char *nome)
 		if (kwin_disposizione(nome, &sbaglio_kwin) != 0)
 		{
 			registro_dice(AREA,
-			              "⚠ FALLBACK DECLARED: layout «%s» was NOT requested "
+			              "⚠ DECLARED FALLBACK: layout «%s» was NOT requested "
 			              "from KWin (%s) — the session keeps «%s».  ⛔ The letters that "
 			              "layout does not have do NOT come out, and the SHORTCUTS go on the keys "
 			              "of that one (RCP.md §7.3)",
@@ -1826,7 +1826,7 @@ int input_disposizione(Input *in, const char *nome)
 	if (!schema)
 	{
 		registro_dice(AREA,
-		              "⚠ FALLBACK DECLARED: the schema «org.gnome.desktop.input-sources» is not "
+		              "⚠ DECLARED FALLBACK: the schema «org.gnome.desktop.input-sources» is not "
 		              "on this machine — layout «%s» is NOT applied, and the "
 		              "session keeps its own. ⛔ The letters that one does not have do NOT come out "
 		              "(D-008: the earlier sentence, «they will come out right anyway», was false), "
@@ -1851,7 +1851,7 @@ int input_disposizione(Input *in, const char *nome)
 	if (!sessione_dconf_di_sessione())
 	{
 		registro_dice(AREA,
-		              "⚠ FALLBACK DECLARED: the session's dconf is not in force — "
+		              "⚠ DECLARED FALLBACK: the session's dconf is not in force — "
 		              "layout «%s» is NOT written (it would end up in the USER's "
 		              "settings, D-015), and the session keeps «%s».  ⛔ The letters that "
 		              "one does not have do NOT come out, and the SHORTCUTS go on its keys "
@@ -2429,7 +2429,7 @@ static int disposizione_wlr(Input *in, const char *nome)
 	if (wlr_input_keymap_da_nome(in->wlr, nome, &sbaglio) != 0)
 	{
 		registro_dice(AREA,
-		              "⚠ FALLBACK DECLARED: layout «%s» was NOT sent to the "
+		              "⚠ DECLARED FALLBACK: layout «%s» was NOT sent to the "
 		              "virtual keyboard (%s) — «%s» stays.  ⛔ The letters that one does not have "
 		              "do NOT come out, and the SHORTCUTS go on its keys (RCP.md §7.3)",
 		              nome, sbaglio ? sbaglio->message : "no reason",

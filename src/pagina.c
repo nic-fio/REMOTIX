@@ -353,7 +353,8 @@ static void servi(pagina *p, cliente *c)
 	 *    apostrophe; in the `<div>` it did not, because HTML does not know
 	 *    `\uXXXX` escapes.  The banned owner — the one for whom §4.4-bis
 	 *    wrote three normative points — read on the screen, literally,
-	 *    «sblocca l'indirizzo dal server».
+	 *    «sblocca l'indirizzo dal server» (the Italian page of the time:
+	 *    «unblock the address from the server»).
 	 *    ⚠ And there was no text right for both: the cure was to separate the
 	 *      two markers, not to fix the sentence.  ⛔ And there was the worse
 	 *      harm: the text ended up **inside a JS string** without any

@@ -174,8 +174,8 @@ void suono_volume_massimo(suono *s);
 /*
  * ⭐ THE TWO FUNCTIONS MORE THAN v1, and the reason is a single one.
  *
- * ⛔ v1 printed from the realtime thread — "primo blocco di suono dalla
- *    sessione: %u fotogrammi" was inside `su_processo`.  A log line
+ * ⛔ v1 printed from the realtime thread — "first sound block from the
+ *    session: %u frames" was inside `su_processo`.  A log line
  *    is a `vsnprintf` plus a `write`: it is exactly the waiting call
  *    mentioned above.  ⇒ Here the realtime thread **writes nothing**
  *    and just counts; what v1 printed, here is ASKED from outside.

@@ -731,7 +731,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 			              negoziata, suo && *suo ? suo : "unnamed");
 		else if (!fanno_la_stessa_cosa(t->keymap, t->gruppo, chiesta->keymap, chiesta->gruppo))
 			registro_dice(REG_TASTIERA,
-			              "⛔ FALLBACK DECLARED: the client negotiated «%s», the session has "
+			              "⛔ DECLARED FALLBACK: the client negotiated «%s», the session has "
 			              "ANOTHER layout (%s) and THAT one is used — with the other, wrong "
 			              "letters would come out. Some characters will stay unreachable "
 			              "(DECISIONI.md §5-bis.7)",

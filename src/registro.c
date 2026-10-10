@@ -149,8 +149,8 @@ static void riga(const char *file, int linea, bool dettaglio, const char *area,
 	 *      WITHOUT A TIMESTAMP is born.
 	 *
 	 * `[M]` measured on a real log of 3.0 MB (28 035 lines): **23 orphan
-	 *      lines**, and among them **3 out of 80** of the «tela CHIESTA al
-	 *      produttore» — that is 3.8 % of a family of lines a tool counted on.
+	 *      lines**, and among them **3 out of 80** of the «canvas REQUESTED from
+	 *      the producer» — that is 3.8 % of a family of lines a tool counted on.
 	 *      ⇒ The symptom was not «the log is ugly»: it was a tool dying with
 	 *      `ValueError`, and getting there took one bench round.
 	 *
