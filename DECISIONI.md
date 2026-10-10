@@ -6696,14 +6696,20 @@ avuto stuttering. A 1440p però i problemi sono spariti e sembrava davvero di es
 
 | | |
 |---|---|
-| client | Samsung DeX, Chrome for Android, home network |
+| server | the CHUWI tablet: Intel N100, 4 threads, 7.5 GB, GNOME |
+| client | Samsung DeX, Chrome for Android, home network; then Chrome on Windows |
 | 2160p | video smooth and in sync; ⚠ **audio stutters only while dragging the YouTube seek bar** |
 | 1440p | no problems: *«like sitting at the PC»* |
 | register | **tuning, not a defect** — the user called it excellent |
 
-⚠ Where the stutter comes from is `[?]`: seeking in 4K makes the server's browser refetch and redecode, which can
-cost on its own, without REMOTIX in between. ⏳ The user repeats the same scene from **Chrome on Windows**: if the
-stutter comes back, it is born on the server; if it goes away, it belongs to Android. It follows §7.19.
+⭐ **The server was the CHUWI tablet itself** (Intel N100, 4 threads, 7.5 GB, GNOME, REMOTIX installed as a
+package), not the test machine — which makes the result weigh more, not less.
+
+✅ **Same scene from Chrome on Windows (same evening): same result** — user's words: *«stesso risultato di
+android»*: the stutter on seek at 4K, the rest perfect. ⇒ The stutter is **not of the client**: it is born on the
+server side (the N100 refetching and redecoding 4K on seek, or REMOTIX's audio under that load) — `[?]` which of
+the two, because the tablet's REMOTIX log needs administrator rights and the CPU sampler started after the video. It
+follows §7.19.
 
 ## Come si tiene questo documento
 
