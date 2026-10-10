@@ -422,252 +422,252 @@ powerdevil turns off after 10 minutes of inactivity (on GNOME the same thing is 
 | net, on the laptop | C10 · C12 · C13 · C15 · C16 green, C10 with the fault seen |
 
 
-### Incremento 8 — gli appunti entrano nella rete (C17), e un difetto di tutti i desktop
+### Increment 8 — the clipboard enters the net (C17), and a defect of all desktops
 
 | | |
 |---|---|
-| **OBIETTIVO** | gli appunti di KDE controllati a ogni rete, non più solo a mano (`07-b54`) |
-| **LA MAGLIA** | `banchi/11-scatole/11-c17-gli-appunti-vanno-nei-due-versi.py`: tre fatti col loro nome — **A** dispositivo → sessione (`wl-paste` legge quel che il cliente ha annunciato) · **B** sessione → dispositivo (`wl-copy`, e il server lo annuncia al cliente attaccato) · **R** chi si riattacca lo riceve. Guasto innestato `--senza-copia` ⇒ tre rossi |
-| **L'ARBITRO** | `wl-clipboard` vuole `zwlr_data_control_manager_v1` (o `ext_…`): KWin ce l'ha, Mutter no. ⛔ `[M]` su GNOME `wl-paste` e `wl-copy` restano appesi (uscita 124) mentre il server scrive «22 byte consegnati alla sessione» ⇒ la maglia lo chiede a `wayland-info` e, se manca, esce **3** dicendolo. Nessun cancello per desktop nel gancio |
+| **GOAL** | KDE's clipboard checked at every net, no longer only by hand (`07-b54`) |
+| **THE MESH** | `banchi/11-scatole/11-c17-gli-appunti-vanno-nei-due-versi.py`: three facts with their names — **A** device → session (`wl-paste` reads what the client announced) · **B** session → device (`wl-copy`, and the server announces it to the attached client) · **R** whoever reattaches receives it. Injected fault `--senza-copia` ⇒ three reds |
+| **THE REFEREE** | `wl-clipboard` wants `zwlr_data_control_manager_v1` (or `ext_…`): KWin has it, Mutter does not. ⛔ `[M]` on GNOME `wl-paste` and `wl-copy` stay hung (exit 124) while the server writes «22 byte consegnati alla sessione» ⇒ the mesh asks `wayland-info` and, if it is missing, exits **3** saying so. No per-desktop gate in the hook |
 
-⛔⛔ **Il difetto trovato, ed è di TUTTI i desktop** (`src/rcp.c`, copia gemella in `banchi/rcp/`):
-un cliente che si riattacca a un figlio vivo fa rileggere la clipboard del desktop, ma la lettura
-arriva quando la sessione RCP è ancora in `attesa-verdetto`. Il testo si teneva «per chi si
-attaccherà» e **nessuno lo annunciava mai**: chi rientrava non sapeva che cosa c'era negli
-appunti. ⇒ `annuncia_il_tenuto()`, chiamata appena la sessione passa ad `S_ATTIVA` (§2.5: dopo
+⛔⛔ **The defect found, and it belongs to ALL desktops** (`src/rcp.c`, twin copy in `banchi/rcp/`):
+a client that reattaches to a live child makes the desktop's clipboard be reread, but the reading
+arrives while the RCP session is still in `attesa-verdetto`. The text was kept "for whoever will
+attach" and **nobody ever announced it**: whoever came back did not know what was in the
+clipboard. ⇒ `annuncia_il_tenuto()`, called as soon as the session moves to `S_ATTIVA` (§2.5: after
 `SESSIONE`).
 
-| `[M]` 19 set 2026, scatola `kde` | A | B | R |
+| `[M]` 19 Sep 2026, `kde` box | A | B | R |
 |---|---|---|---|
-| ⛔ controprova: binario `c7b228c5` (senza la cura) | ⭐ | ⭐ | ⛔ «None» |
-| ⭐ binario `2563cb22` (la cura) | ⭐ | ⭐ | ⭐ |
-| `2563cb22`, `--senza-copia` | ⛔ | ⛔ | ⛔ — il guasto si vede |
-| prova a mano, 5 giri | 5/5 | — | 5/5 |
-| scatola `gnome` | esito **3**: l'arbitro non c'è su Mutter | | |
+| ⛔ counter-test: binary `c7b228c5` (without the cure) | ⭐ | ⭐ | ⛔ «None» |
+| ⭐ binary `2563cb22` (the cure) | ⭐ | ⭐ | ⭐ |
+| `2563cb22`, `--senza-copia` | ⛔ | ⛔ | ⛔ — the fault is seen |
+| test by hand, 5 rounds | 5/5 | — | 5/5 |
+| `gnome` box | outcome **3**: the referee is not there on Mutter | | |
 
-#### La rete (`[M]` 19 set 2026, 19:56→22:28, binario `2563cb22`, `--scatola "gnome kde"`, 9 116 s)
+#### The net (`[M]` 19 Sep 2026, 19:56→22:28, binary `2563cb22`, `--scatola "gnome kde"`, 9 116 s)
 
 | | |
 |---|---|
-| GNOME | ⭐ **tutto verde** (la cura di `rcp.c` vale anche qui) · C17(gnome) **3** e 3 col guasto: l'arbitro non c'è, detto |
-| ⭐ **kde** | **tutto verde**, C17 compresa · ⛔ **C17 guasto innestato «NON REGGE», classe C**: il guasto era VISTO (A, B, R rossi) ma la maglia usciva 1, e nella rete col guasto l'esito si legge al contrario (0 = visto). Corretta, e rifatta da sola: kde verde · guasto visto con esito 0 · gnome 3 e 3 |
-| ⚠ e in più | la maglia aspetta che il compositore risponda (`wl_compositor`) prima di dire «l'arbitro non c'è»: un 3 su una sessione sana non deve poter capitare |
-| rete, sul server | C11 · C13 · C14 verdi |
-| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
+| GNOME | ⭐ **all green** (the `rcp.c` cure holds here too) · C17(gnome) **3** and 3 with the fault: the referee is not there, stated |
+| ⭐ **kde** | **all green**, C17 included · ⛔ **C17 injected fault "DOES NOT HOLD", class C**: the fault was SEEN (A, B, R red) but the mesh exited 1, and in the net with the fault the outcome is read the other way round (0 = seen). Corrected, and redone alone: kde green · fault seen with outcome 0 · gnome 3 and 3 |
+| ⚠ and in addition | the mesh waits for the compositor to answer (`wl_compositor`) before saying "the referee is not there": a 3 on a healthy session must not be able to happen |
+| net, on the server | C11 · C13 · C14 green |
+| net, on the laptop | C10 · C12 · C13 · C15 · C16 green, C10 with the fault seen |
 
-⚠ **Resta aperto, dichiarato**: su GNOME gli appunti non hanno ancora un arbitro nella rete. Serve
-un client Wayland con `wl_data_device` e il fuoco (GTK), come diceva `07-b45`: è lavoro di GNOME,
-non di questa fase.
+⚠ **Still open, declared**: on GNOME the clipboard does not yet have a referee in the net. It needs
+a Wayland client with `wl_data_device` and the focus (GTK), as `07-b45` said: it is GNOME work,
+not this phase's.
 
-### Incremento 9 — quel che ha trovato la prova dell'utente (19-20 set 2026)
+### Increment 9 — what the user's test found (19-20 Sep 2026)
 
-L'utente prova KDE da Chrome sul suo portatile, e in un'ora tira fuori **quattro cose**. ⭐ Tre
-erano decisioni già prese e **perdute nel passaggio da v1 a v2**: è il prezzo del riporto selettivo,
-e la cura è che adesso ciascuna ha un banco (`banchi/12-i9-logout.sh`, `banchi/12-i10-menu-e-puntatore.sh`).
+The user tests KDE from Chrome on his laptop, and in an hour pulls out **four things**. ⭐ Three
+were decisions already taken and **lost in the passage from v1 to v2**: it is the price of the selective carry-over,
+and the cure is that now each one has a bench (`banchi/12-i9-logout.sh`, `banchi/12-i10-menu-e-puntatore.sh`).
 
-| | che cosa vedeva l'utente | la causa | la cura |
+| | what the user saw | the cause | the cure |
 |---|---|---|---|
-| **1. si poteva spegnere** | dal menu di Plasma «Spegni» e «Riavvia» | ⛔ **la scatola**, non il prodotto: le tre cinture di §4.7 le mette `src/provisiona.sh` sulla macchina vera, e nelle scatole non c'erano mai state — `CanPowerOff` diceva «challenge» invece di «no» | le stesse righe, negli stessi file, nella preparazione della scatola (`11-accendi.sh`) |
-| **2. «Blocca» e «Cambia utente»** | voci che non fanno niente | le regole KIOSK di v1 (`scrivi_regole_menu`) non riportate | `scrivi_regole_menu_kde()`: `lock_screen`, `start_new_session`, `switch_user` a `false` in `$XDG_RUNTIME_DIR/remotix/xdg/kdeglobals`, davanti a `/etc/xdg`. ⛔ `logout` non si tocca |
-| **3. il logout non chiudeva** | dopo «Esci» la pagina restava sull'ultima immagine | ⛔ **del prodotto**: su Plasma la sessione muore in SILENZIO — KWin non chiude il flusso, il nodo PipeWire sparisce e la presa torna «zero» per sempre. E `vista_viva` era una `static` accesa solo dalla lettura dello stato, che su KDE non si fa mai ⇒ il figlio credeva la sessione «non ancora nata» e la faceva RINASCERE | `kwin.c`: la caduta della connessione Wayland segna `chiuso`. `figlio.c`: se `kwin_chiuso()` si smonta il palco, e `vista_viva` si accende anche col palco di KWin ⇒ §7.6 fa il resto (congedo `0x10`, la pagina torna al modulo d'accesso) |
-| **4. la coda del puntatore** | due puntatori, il secondo che insegue | ⛔ con `--virtual` KWin disegna il cursore DENTRO l'immagine (`STUDI.md` §kde, misurato l'8 ago 2026). La cura di v1 — tema del cursore trasparente — non riportata | `scrivi_tema_cursore_kde()`: 68 forme 1×1 ad alfa zero in `$XDG_RUNTIME_DIR/remotix/icons`, più `XCURSOR_THEME`+`SIZE`+`PATH` (KWin guarda il tema **solo** se c'è anche `SIZE`) |
+| **1. one could shut down** | from Plasma's menu "Shut Down" and "Restart" | ⛔ **the box**, not the product: the three belts of §4.7 are put in place by `src/provisiona.sh` on the real machine, and in the boxes they had never been there — `CanPowerOff` said «challenge» instead of «no» | the same lines, in the same files, in the preparation of the box (`11-accendi.sh`) |
+| **2. "Lock" and "Switch User"** | entries that do nothing | v1's KIOSK rules (`scrivi_regole_menu`) not carried over | `scrivi_regole_menu_kde()`: `lock_screen`, `start_new_session`, `switch_user` to `false` in `$XDG_RUNTIME_DIR/remotix/xdg/kdeglobals`, in front of `/etc/xdg`. ⛔ `logout` is not touched |
+| **3. logout did not close** | after "Log Out" the page stayed on the last image | ⛔ **the product's**: on Plasma the session dies SILENTLY — KWin does not close the stream, the PipeWire node disappears and the capture goes back to "zero" forever. And `vista_viva` was a `static` turned on only by reading the state, which on KDE is never done ⇒ the child believed the session "not yet born" and made it be REBORN | `kwin.c`: the drop of the Wayland connection marks `chiuso`. `figlio.c`: if `kwin_chiuso()` the stage is unmounted, and `vista_viva` turns on with KWin's stage too ⇒ §7.6 does the rest (farewell `0x10`, the page goes back to the login form) |
+| **4. the pointer's tail** | two pointers, the second chasing | ⛔ with `--virtual` KWin draws the cursor INSIDE the image (`STUDI.md` §kde, measured on 8 Aug 2026). v1's cure — a transparent cursor theme — not carried over | `scrivi_tema_cursore_kde()`: 68 1×1 shapes with zero alpha in `$XDG_RUNTIME_DIR/remotix/icons`, plus `XCURSOR_THEME`+`SIZE`+`PATH` (KWin looks at the theme **only** if `SIZE` is there too) |
 
-| `[M]` 19-20 set 2026, scatola `kde` | vecchio `2563cb22` | nuovo `d7a5db20` |
+| `[M]` 19-20 Sep 2026, `kde` box | old `2563cb22` | new `d7a5db20` |
 |---|---|---|
-| `12-i9`: la pagina dopo «Esci» | ⛔ attaccata, nessun `0x10`, dopo 30 s ancora lì | ⭐ chiusa dopo **2 s** col codice `0x10`, e KWin **non rinasce** |
-| `12-i10` 1. cursore invisibile | ⛔ NO (XCURSOR_* 0/3, 0 forme) | ⭐ SI (3/3, **68 forme**, 0 ripieghi) |
-| `12-i10` 2. menu senza blocco | ⛔ NO (0/1, regole assenti) | ⭐ SI (regole 3/3) |
-| `12-i10` 3. nessuno spegne | ⭐ SI (4/4 «no») — è della scatola, e infatti non cambia col binario | ⭐ SI |
+| `12-i9`: the page after "Log Out" | ⛔ attached, no `0x10`, still there after 30 s | ⭐ closed after **2 s** with code `0x10`, and KWin **is not reborn** |
+| `12-i10` 1. invisible cursor | ⛔ NO (XCURSOR_* 0/3, 0 shapes) | ⭐ YES (3/3, **68 shapes**, 0 fallbacks) |
+| `12-i10` 2. menu without lock | ⛔ NO (0/1, rules absent) | ⭐ YES (rules 3/3) |
+| `12-i10` 3. nobody shuts down | ⭐ YES (4/4 «no») — it belongs to the box, and indeed it does not change with the binary | ⭐ YES |
 
-#### La rete (`[M]` 20 set 2026, 02:21→04:52, binario `d7a5db20`, `--scatola "gnome kde"`, 9 119 s)
+#### The net (`[M]` 20 Sep 2026, 02:21→04:52, binary `d7a5db20`, `--scatola "gnome kde"`, 9 119 s)
 
 | | |
 |---|---|
-| GNOME | ⭐ **tutto verde** — le tre cure toccano `sessione.c`, `kwin.c` e `figlio.c`, e GNOME non se n'è accorto |
-| ⭐ **kde** | **tutto verde**, C17 compresa: il cursore invisibile non disturba le maglie che guardano i pixel, e il menu ridotto non disturba niente |
-| rete, sul server | C11 · C13 · C14 verdi |
-| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
-| rossi | **nessuno** |
+| GNOME | ⭐ **all green** — the three cures touch `sessione.c`, `kwin.c` and `figlio.c`, and GNOME did not notice |
+| ⭐ **kde** | **all green**, C17 included: the invisible cursor does not disturb the meshes that look at the pixels, and the reduced menu disturbs nothing |
+| net, on the server | C11 · C13 · C14 green |
+| net, on the laptop | C10 · C12 · C13 · C15 · C16 green, C10 with the fault seen |
+| reds | **none** |
 
-### Incremento 10 — la seconda tornata della prova dell'utente (20 set 2026)
+### Increment 10 — the second round of the user's test (20 Sep 2026)
 
-L'utente riprova e trova **tre cose**, due sue e una che chiude un buco vecchio.
+The user tests again and finds **three things**, two of his and one that closes an old hole.
 
-| che cosa vedeva | la causa | la cura |
+| what he saw | the cause | the cure |
 |---|---|---|
-| **nessun puntatore** (dopo il tema invisibile) | il tema invisibile arriva anche nel METADATO: il client si vestiva di una forma invisibile. ⛔ Peggio di due puntatori | `cursore.c`: una bitmap tutta trasparente è «nascosto» (§5.5) · e su Plasma il nascondimento NON si consegna (`cursore_mai_nascondere`, acceso dal figlio quando il palco è KWin) ⇒ chi guarda tiene il puntatore del suo sistema |
-| **le finestre non si ridimensionano** | Plasma nasce con `BorderSizeAuto`: bordi di pochi pixel. Al monitor si prendono perché il cursore cambia forma, ⛔ in remoto il cursore del desktop è invisibile apposta | `sessione.c`: `kwinrc` nella stessa cartella delle regole, `BorderSize=Normal` — ⚠ **senza** `[$i]`: è un punto di partenza, e da Impostazioni di sistema l'utente lo cambia |
-| **su Firefox la clipboard non va dal client al server** | ⭐ **non è un difetto**: Firefox concede la lettura degli appunti **solo** nell'istante del `Ctrl+V` sulla pagina. Con «Incolla» dal menu del desktop remoto la pagina serve 0 byte — `[M]` il registro: «rilettura negata … servo quel che ho» | `pagina.html`: un cartello di 7 s sulla tela — «premi Ctrl+V su questa pagina» — quando la lettura è negata e non c'è testo da servire (deciso dall'utente) |
+| **no pointer** (after the invisible theme) | the invisible theme also arrives in the METADATA: the client dressed itself in an invisible shape. ⛔ Worse than two pointers | `cursore.c`: an all-transparent bitmap is "hidden" (§5.5) · and on Plasma hiding is NOT delivered (`cursore_mai_nascondere`, turned on by the child when the stage is KWin) ⇒ whoever watches keeps their own system's pointer |
+| **windows cannot be resized** | Plasma is born with `BorderSizeAuto`: borders of a few pixels. At the monitor they are grabbed because the cursor changes shape, ⛔ remotely the desktop's cursor is invisible on purpose | `sessione.c`: `kwinrc` in the same folder as the rules, `BorderSize=Normal` — ⚠ **without** `[$i]`: it is a starting point, and the user can change it from System Settings |
+| **on Firefox the clipboard does not go from the client to the server** | ⭐ **it is not a defect**: Firefox grants reading the clipboard **only** at the instant of `Ctrl+V` on the page. With "Paste" from the remote desktop's menu the page serves 0 bytes — `[M]` the log: «rilettura negata … servo quel che ho» | `pagina.html`: a 7 s sign on the canvas — "press Ctrl+V on this page" — when the reading is denied and there is no text to serve (decided by the user) |
 
-⭐ **E nelle scatole entrano gli strumenti per lavorare** (chiesti dall'utente): `konsole`, `dolphin`
-e `nano` su kde; `gnome-terminal`, `nautilus` e `nano` su gnome. Sono del banco, non del prodotto.
+⭐ **And the tools for working enter the boxes** (asked for by the user): `konsole`, `dolphin`
+and `nano` on kde; `gnome-terminal`, `nautilus` and `nano` on gnome. They belong to the bench, not to the product.
 
-#### La rete (`[M]` 20 set 2026, 07:20→09:52, binario `836a88b6` + pagina `4eb65ca2`, 9 087 s)
-
-| | |
-|---|---|
-| GNOME · **kde** | ⭐ **tutto verde**, nessun rosso in nessuna maglia |
-| rete, sul server e sul portatile | C10 · C11 · C12 · C13 · C14 · C15 · C16 verdi |
-
-⭐ **E LA PROVA DELL'UTENTE È COMPLETA**: Chrome e Firefox su Linux, **Chrome su Android** —
-audio, video e appunti. ⚠ Un giro su tre di `07-b54` (Firefox su Wayland) ha dato rosso sulla
-**tastiera dopo l'incolla**: intermittente, da tenere d'occhio.
-
-### Incremento 11 — i gruppi della scheda, messi da REMOTIX (decisione dell'utente, 20 set 2026)
-
-Domanda dell'utente: *«REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
-Normalmente le distro non ce li mettono: potrebbe essere un problema?»* ⇒ Sì, e il sintomo è il
-peggiore: **si collega e non vede niente**, senza un errore. La decisione e la misura stanno in
-`DECISIONI.md` §7.21; qui restano i moduli e l'esito.
+#### The net (`[M]` 20 Sep 2026, 07:20→09:52, binary `836a88b6` + page `4eb65ca2`, 9 087 s)
 
 | | |
 |---|---|
-| **all'installazione** | `src/provisiona.sh`: tutte le persone della macchina (`UID_MIN..UID_MAX` letti da `/etc/login.defs`, solo chi ha una shell vera) |
-| **in esercizio** | `src/figlio.c`: `iscrivi_ai_gruppi_della_scheda()` — dopo il sì di PAM, prima del `fork`, con `usermod` e il gestore d'utente fatto rinascere. ⚠ `raccogli_gruppi_scheda()` estratta: i nodi si leggono in **un posto solo** |
-| ⛔ **e cambia I7** | il prodotto adesso tocca i gruppi, non solo la sessione. Le due garanzie: solo dopo PAM, e ogni iscrizione nel registro |
+| GNOME · **kde** | ⭐ **all green**, no red in any mesh |
+| net, on the server and on the laptop | C10 · C11 · C12 · C13 · C14 · C15 · C16 green |
 
-| `[M]` 20 set 2026, scatola `kde`, utente `senzagr` creato senza gruppi | esito |
-|---|---|
-| ⛔ binario `836a88b6` (senza la cura) | `id -nG` = «senzagr» · **zero fotogrammi** |
-| ⭐ binario `9e3154a6` (la cura) | «PRIMA CONNESSIONE: ce lo metto io» · `id -nG` = «senzagr video render» · **105 fotogrammi consegnati** |
-| ⭐ sul server vero, `provisiona.sh` | **3 persone** iscritte · `nicfio` da «nicfio sudo» a «nicfio sudo video render» |
+⭐ **AND THE USER'S TEST IS COMPLETE**: Chrome and Firefox on Linux, **Chrome on Android** —
+audio, video and clipboard. ⚠ One round out of three of `07-b54` (Firefox on Wayland) gave red on the
+**keyboard after the paste**: intermittent, to be kept an eye on.
 
-⭐ **E due riparazioni del banco**, trovate dal `pre-push` dell'utente:
-1. `11-gancio.sh remoto` passava `--scatola gnome kde` **senza apici**: la metà remota riceveva
-   «kde» come comando suo e il giro non partiva;
-2. ⛔ e quando non riusciva a lanciare, **aveva già cancellato il log** del giro in corso — che ha
-   continuato a scrivere in un file inesistente. ⇒ Adesso guarda PRIMA se l'unità è attiva, e in
-   quel caso non tocca niente ed esce 3 dicendolo.
-3. `fondamenta/strumenti/sshpw.py` imponeva la password (`PubkeyAuthentication=no`), scritta quando
-   un riavvio aveva cancellato la chiave: ⇒ prova la chiave e tiene la password come ripiego.
+### Increment 11 — the card's groups, put by REMOTIX (the user's decision, 20 Sep 2026)
 
-#### La rete (`[M]` 20 set 2026, 10:02→12:45, binario `9e3154a6`, `--scatola "gnome kde"`)
+The user's question: *«REMOTIX chiede che gli utenti appartengano ai gruppi video e render.
+Normalmente le distro non ce li mettono: potrebbe essere un problema?»* ⇒ Yes, and the symptom is the
+worst one: **one connects and sees nothing**, without an error. The decision and the measurement are in
+`DECISIONI.md` §7.21; here the modules and the outcome remain.
 
 | | |
 |---|---|
-| GNOME · **kde** | ⭐ **tutto verde**, nessun rosso · esito remoto **0** |
-| rete, sul portatile | C10 · C12 · C13 · C15 · C16 verdi, C10 col guasto visto |
-| ⚠ la delega | il tetto d'attesa di `remoto` è **2 400 s** e la famiglia `tutto` ne vuole ~9 000: la metà locale dichiara «non ha finito entro 2 400 s» mentre di là il giro prosegue e finisce bene. Da allargare quando servirà |
+| **at installation** | `src/provisiona.sh`: all the people of the machine (`UID_MIN..UID_MAX` read from `/etc/login.defs`, only those with a real shell) |
+| **in operation** | `src/figlio.c`: `iscrivi_ai_gruppi_della_scheda()` — after PAM's yes, before the `fork`, with `usermod` and the user manager made to be reborn. ⚠ `raccogli_gruppi_scheda()` extracted: the nodes are read in **one place only** |
+| ⛔ **and I7 changes** | the product now touches the groups, not only the session. The two guarantees: only after PAM, and every enrolment in the log |
 
-### Incremento 12 — il rosso intermittente, e il muro degli appunti su GNOME
-
-**1. Il rosso intermittente di `07-b54` era del BANCO** (`[M]` 20 set 2026: un giro su tre diceva
-«la tastiera è morta dopo il Ctrl+V», i due dopo erano verdi). ⛔ Guardava il registro **una volta
-sola**, 2 s dopo la lettera: se la riga arrivava un attimo più tardi, il banco misurava il proprio
-ritardo e lo chiamava guasto del prodotto. ⇒ Adesso aspetta fino a 8 s, e si ferma appena la riga
-c'è. **Cinque giri di fila verdi.** ⚠ Un rosso intermittente fa spegnere la maglia: è il motivo per
-cui non si archivia.
-
-**2. L'arbitro degli appunti per GNOME: `banchi/11-scatole/appunti-gtk.py`** — GTK (`python3-gi`),
-cioè `wl_data_device`, la stessa strada delle applicazioni vere, con una finestra presentata perché
-su Wayland la clipboard si concede a chi ha il fuoco.
-
-⛔⛔ **E il muro, misurato** (scatola `gnome`, sessione viva, client attaccato):
-
-| chi prova | esito |
+| `[M]` 20 Sep 2026, `kde` box, user `senzagr` created without groups | outcome |
 |---|---|
-| `wl-copy` (senza ucciderlo: resta vivo apposta) | ⛔ il prodotto non vede nessuna copia |
-| `wl-paste`, 20 s, anche con `gnome-terminal` aperto | ⛔ resta appeso (uscita 124) |
-| `appunti-gtk.py copia` | ⭐ copia **dentro di sé** … ⛔ e nessun altro la vede |
-| `appunti-gtk.py incolla` | ⛔ legge vuoto |
-| ⭐ il PRODOTTO | consegna i byte e **chiude il tubo** (verificato in `appunti.c`: `close(fd)` prima di `SelectionWriteDone`) |
+| ⛔ binary `836a88b6` (without the cure) | `id -nG` = «senzagr» · **zero frames** |
+| ⭐ binary `9e3154a6` (the cure) | «PRIMA CONNESSIONE: ce lo metto io» · `id -nG` = «senzagr video render» · **105 frames delivered** |
+| ⭐ on the real server, `provisiona.sh` | **3 people** enrolled · `nicfio` from «nicfio sudo» to «nicfio sudo video render» |
 
-⇒ Il blocco è **come Mutter concede gli appunti alle applicazioni in una sessione senza seat**:
-senza fuoco non li concede, e lì il fuoco non c'è mai davvero. ⚠ Non è un difetto del prodotto e
-non è del banco: è la scena. ⇒ C17 su GNOME resta **esito 3, dichiarato**, e gli appunti di GNOME
-restano provati a mano (`07-b54`). Si riapre quando si aprirà il lavoro su GNOME.
+⭐ **And two repairs of the bench**, found by the user's `pre-push`:
+1. `11-gancio.sh remoto` passed `--scatola gnome kde` **without quotes**: the remote half received
+   "kde" as its own command and the round did not start;
+2. ⛔ and when it failed to launch, **it had already deleted the log** of the round in progress — which
+   went on writing into a nonexistent file. ⇒ Now it looks FIRST whether the unit is active, and in
+   that case touches nothing and exits 3 saying so.
+3. `fondamenta/strumenti/sshpw.py` forced the password (`PubkeyAuthentication=no`), written when
+   a reboot had deleted the key: ⇒ it tries the key and keeps the password as a fallback.
 
-### Incremento 13 — gli appunti nella rete ANCHE su GNOME: il clic che dà il fuoco
+#### The net (`[M]` 20 Sep 2026, 10:02→12:45, binary `9e3154a6`, `--scatola "gnome kde"`)
 
-⛔ **Il muro di ieri**: su Mutter nessuna applicazione della sessione riusciva a toccare gli
-appunti, quindi C17 su GNOME usciva 3. ⭐ **La quarta strada, indicata dall'utente**: si fa come
-fa una persona — **si clicca**. E il clic si manda **attraverso il prodotto** (`RCP.md` §7.3), come
-fa C4 col tasto: se non arrivasse, il rosso sarebbe del prodotto che non consegna l'input.
-
-| pezzo | che cosa |
+| | |
 |---|---|
-| `banchi/01-b3-cliente.py` | `manda_pulsante()` + `--clic X,Y`, `--clic-dopo`, `--clic-ogni`: il clic che dà il FUOCO a una finestra del desktop remoto |
-| `banchi/11-scatole/appunti-gtk.py` | l'arbitro esterno: GTK (`wl_data_device`), finestra presentata, e ⭐ **aspetta il fuoco** prima di copiare o leggere |
-| `11-c17` | ⭐ **chiede al desktop quale arbitro può usare**: `wl-clipboard` dove c'è `zwlr_data_control` (KWin), GTK+clic dove non c'è (Mutter). ⚠ La differenza è del banco; il prodotto fa la stessa cosa sui due desktop |
-| le scatole | `python3-gi` + `gir1.2-gtk-4.0` nelle due ricette, e `appunti-gtk.py` copiato dal passo `prodotto` |
+| GNOME · **kde** | ⭐ **all green**, no red · remote outcome **0** |
+| net, on the laptop | C10 · C12 · C13 · C15 · C16 green, C10 with the fault seen |
+| ⚠ the delegation | `remoto`'s waiting cap is **2 400 s** and the `tutto` family wants ~9 000: the local half declares "it did not finish within 2 400 s" while on the other side the round goes on and ends well. To be widened when needed |
 
-| `[M]` 20 set 2026 | kde | gnome |
+### Increment 12 — the intermittent red, and the clipboard wall on GNOME
+
+**1. The intermittent red of `07-b54` was the BENCH's** (`[M]` 20 Sep 2026: one round out of three said
+"the keyboard is dead after Ctrl+V", the next two were green). ⛔ It looked at the log **only
+once**, 2 s after the letter: if the line arrived a moment later, the bench measured its own
+delay and called it a product fault. ⇒ Now it waits up to 8 s, and stops as soon as the line
+is there. **Five rounds in a row green.** ⚠ An intermittent red gets the mesh turned off: that is why
+it is not filed away.
+
+**2. The clipboard referee for GNOME: `banchi/11-scatole/appunti-gtk.py`** — GTK (`python3-gi`),
+that is `wl_data_device`, the same route as real applications, with a window presented because
+on Wayland the clipboard is granted to whoever has the focus.
+
+⛔⛔ **And the wall, measured** (`gnome` box, live session, client attached):
+
+| who tries | outcome |
+|---|---|
+| `wl-copy` (without killing it: it stays alive on purpose) | ⛔ the product sees no copy |
+| `wl-paste`, 20 s, even with `gnome-terminal` open | ⛔ stays hung (exit 124) |
+| `appunti-gtk.py copia` | ⭐ copies **inside itself** … ⛔ and nobody else sees it |
+| `appunti-gtk.py incolla` | ⛔ reads empty |
+| ⭐ the PRODUCT | delivers the bytes and **closes the pipe** (verified in `appunti.c`: `close(fd)` before `SelectionWriteDone`) |
+
+⇒ The block is **how Mutter grants the clipboard to applications in a session without a seat**:
+without focus it does not grant it, and there the focus is never really there. ⚠ It is not a product defect and
+not the bench's: it is the scene. ⇒ C17 on GNOME stays **outcome 3, declared**, and GNOME's clipboard
+stays tested by hand (`07-b54`). It is reopened when the work on GNOME is opened.
+
+### Increment 13 — the clipboard in the net ON GNOME TOO: the click that gives the focus
+
+⛔ **Yesterday's wall**: on Mutter no application of the session managed to touch the
+clipboard, so C17 on GNOME exited 3. ⭐ **The fourth route, pointed out by the user**: do as
+a person does — **click**. And the click is sent **through the product** (`RCP.md` §7.3), as
+C4 does with the key: if it did not arrive, the red would be the product's for not delivering the input.
+
+| piece | what |
+|---|---|
+| `banchi/01-b3-cliente.py` | `manda_pulsante()` + `--clic X,Y`, `--clic-dopo`, `--clic-ogni`: the click that gives the FOCUS to a window of the remote desktop |
+| `banchi/11-scatole/appunti-gtk.py` | the external referee: GTK (`wl_data_device`), window presented, and ⭐ **it waits for the focus** before copying or reading |
+| `11-c17` | ⭐ **asks the desktop which referee it can use**: `wl-clipboard` where there is `zwlr_data_control` (KWin), GTK+click where there is not (Mutter). ⚠ The difference is the bench's; the product does the same thing on the two desktops |
+| the boxes | `python3-gi` + `gir1.2-gtk-4.0` in the two recipes, and `appunti-gtk.py` copied by the `prodotto` step |
+
+| `[M]` 20 Sep 2026 | kde | gnome |
 |---|---|---|
-| C17 normale | ⭐ VERDE (A · B · R) | ⭐ VERDE (A · B · R) |
-| C17 `--senza-copia` | ⭐ il guasto è VISTO | ⭐ il guasto è VISTO |
+| normal C17 | ⭐ GREEN (A · B · R) | ⭐ GREEN (A · B · R) |
+| C17 `--senza-copia` | ⭐ the fault is SEEN | ⭐ the fault is SEEN |
 
-⛔ **E un rosso intermittente, preso dentro la rete e curato**: C17(gnome) rossa su B e R con
-un'attesa a orologio (12 s) perché la finestra della copia prendesse il fuoco. ⇒ Adesso il banco
-**aspetta che la copia sia avvenuta** (l'arbitro lo dichiara nel suo registro): `[M]` avvenuta dopo
-**1 s**. ⚠ Nessuna regressione del prodotto: le maglie di GNOME erano tutte verdi, e il binario è
-quello già passato alle 12:45.
+⛔ **And an intermittent red, caught inside the net and cured**: C17(gnome) red on B and R with
+a clock wait (12 s) for the copy window to take the focus. ⇒ Now the bench
+**waits for the copy to have happened** (the referee declares it in its log): `[M]` happened after
+**1 s**. ⚠ No product regression: the GNOME meshes were all green, and the binary is
+the one already passed at 12:45.
 
-⛔ **Una cura provata e RITIRATA, e va detta**: su KDE l'anti-eco di `appunti_kde.c` può scambiare
-per eco una copia vera fatta da un'applicazione con i nostri stessi tipi. Ho provato a leggere il
-testo e confrontarlo — ⛔ ma leggere dentro la richiamata blocca la pompa degli eventi (la nostra
-sorgente viene servita dalla stessa pompa) e il giro è peggiorato. ⇒ Ritirata subito, codice
-tornato a quello provato. ⚠ `[M]` fuori da quella scena il prodotto **vede** le copie GTK su KDE.
-Resta come punto aperto, con la misura.
+⛔ **A cure tried and WITHDRAWN, and it must be said**: on KDE the anti-echo of `appunti_kde.c` can mistake
+for an echo a real copy made by an application with our same types. I tried to read the
+text and compare it — ⛔ but reading inside the callback blocks the event pump (our
+source is served by the same pump) and the round got worse. ⇒ Withdrawn at once, code
+back to the tested one. ⚠ `[M]` outside that scene the product **sees** GTK copies on KDE.
+It stays as an open point, with the measurement.
 
-## Le misure
+## The measurements
 
-| che cosa | atteso | misurato | data |
+| what | expected | measured | date |
 |---|---|---|---|
-| **CP0** — giro `tutto` sulle quattro scatole, lanciato **sul server** | GNOME verde; su kde/xfce/lxqt solo C1 rosso; guasti tutti presi; un binario solo | ⭐ **come atteso** — vedi sotto | `[M]` 18 set 2026, 17:25→19:38 |
+| **CP0** — `tutto` round on the four boxes, launched **on the server** | GNOME green; on kde/xfce/lxqt only C1 red; faults all caught; a single binary | ⭐ **as expected** — see below | `[M]` 18 Sep 2026, 17:25→19:38 |
 
-#### CP0 in dettaglio — binario `bfc5936a2b0f` (sorgenti `src/` di `c82c910`), 7 967 s
+#### CP0 in detail — binary `bfc5936a2b0f` (sources `src/` of `c82c910`), 7 967 s
 
 | | |
 |---|---|
-| GNOME | ⭐ **tutto verde**: passo 0, C1×10, C2, C3 (+ scena ferma), C4, C5, C6, C7, C8, C8b, C9 |
-| kde · xfce · lxqt | passo 0, C5, C7, C8, C9 verdi · ⛔ **C1×10 ROSSO** su tutte e tre (il mandato) · C2 C3 C4 C6 C8b **saltate** dal cancello «solo gnome» (esito 3) |
-| rete, sul server | C11 verde (14 voci allineate, **stesso md5 nelle quattro**) · C13 verde · C14 verde (786 s) |
-| rete, sul portatile | C10, C12, C15, C16 verdi, C10 col guasto visto — ⚠ **queste quattro vogliono il deposito git**: lanciate sul server danno 2/3 «il terreno non regge», e non è un rosso. Si fanno girare **qui**, nello stesso giro di certificazione |
-| ⭐ **guasti innestati** | **25 su 25 visti** (24 sulle scatole, 1 sul portatile) |
-| rossi del banco | nessuno |
+| GNOME | ⭐ **all green**: step 0, C1×10, C2, C3 (+ still scene), C4, C5, C6, C7, C8, C8b, C9 |
+| kde · xfce · lxqt | step 0, C5, C7, C8, C9 green · ⛔ **C1×10 RED** on all three (the mandate) · C2 C3 C4 C6 C8b **skipped** by the "gnome only" gate (outcome 3) |
+| net, on the server | C11 green (14 entries aligned, **same md5 in the four**) · C13 green · C14 green (786 s) |
+| net, on the laptop | C10, C12, C15, C16 green, C10 with the fault seen — ⚠ **these four want the git repository**: launched on the server they give 2/3 "the ground does not hold", and it is not a red. They are run **here**, in the same certification round |
+| ⭐ **injected faults** | **25 out of 25 seen** (24 on the boxes, 1 on the laptop) |
+| bench reds | none |
 
-⚠ **I conti non si confrontano con quelli del 27 agosto**, e va detto perché sembrano diversi: il
-`README.md` dice *«58 verdi, 3 rossi, 49 guasti su 49»*, `fasi/11-…` §7-bis.19 dice *«57 · 23 su 25
-· 6 esiti 3 · 3 rossi»* — due conteggi diversi dello **stesso** giro. ⇒ Il confronto che vale è
-**la forma**: gli unici rossi sono i tre `C1` fuori da GNOME, **com'era allora**. Oggi: 58 esiti 0
-sulle scatole (34 verdetti + 24 guasti visti), 3 rossi, e i guasti presi sono 25 su 25.
+⚠ **The counts are not compared with those of 27 August**, and it must be said why they look different: the
+`README.md` says *«58 verdi, 3 rossi, 49 guasti su 49»*, `fasi/11-…` §7-bis.19 says *«57 · 23 su 25
+· 6 esiti 3 · 3 rossi»* — two different counts of the **same** round. ⇒ The comparison that counts is
+**the shape**: the only reds are the three `C1` outside GNOME, **as it was then**. Today: 58 outcomes 0
+on the boxes (34 verdicts + 24 faults seen), 3 reds, and the faults caught are 25 out of 25.
 
-## ⛔ Che cosa NON ha funzionato
+## ⛔ What did NOT work
 
-## Che cosa resta [?]
+## What remains [?]
 
-### Lo schermo che cambia misura a sessione viva — la strada per il futuro (`[R]` 19 set 2026)
+### The screen that changes size with the session alive — the road for the future (`[R]` 19 Sep 2026)
 
-Chiesto dall'utente: *«credo che nelle ultime versioni di KWin questo problema sia stato superato»*.
-⭐ **In parte sì**: KWin **6.8** (uscita prevista il 14 ottobre 2026) rende **ridimensionabili i
-monitor virtuali della cattura** — commit `452707eb` «screencast: Resizable Virtual Monitors» di
-David Edmundson, bug KDE 512620, *fixed in 6.8.0*. Il meccanismo è quello di GNOME: la misura si
-**rinegozia nel formato PipeWire** fra chi cattura e KWin (con i cambi gemelli in KPipeWire e KRDP).
-Prima la misura era fissa a 1920×1080, e rinegoziarla congelava il flusso.
+Asked by the user: *«credo che nelle ultime versioni di KWin questo problema sia stato superato»*.
+⭐ **Partly yes**: KWin **6.8** (release expected on 14 Oct 2026) makes **the capture's virtual
+monitors resizable** — commit `452707eb` «screencast: Resizable Virtual Monitors» by
+David Edmundson, KDE bug 512620, *fixed in 6.8.0*. The mechanism is GNOME's: the size is
+**renegotiated in the PipeWire format** between whoever captures and KWin (with the twin changes in KPipeWire and KRDP).
+Before, the size was fixed at 1920×1080, and renegotiating it froze the stream.
 
-⛔ **Ma per noi non basta da solo, e va detto perché** — due condizioni da verificare quando arriva:
-1. **il backend.** Il fix vale per `stream_virtual_output`, cioè per un monitor virtuale CREATO dalla
-   cattura. Noi siamo sul backend `--virtual` (una macchina senza seat), e lì `stream_virtual_output`
-   **non esiste**: `VirtualBackend` non ridefinisce `createVirtualOutput()` ⇒ «Could not find output»
-   (`STUDI.md` §kde, riga di `stream_virtual_output`, verificato). Serve che 6.8 lo aggiunga al
-   backend virtuale, oppure che l'uscita `Virtual-0` accetti un modo nuovo (i «modi personalizzati
-   per gli schermi virtuali», Plasma 6.6, sono da leggere per questo);
-2. **la distribuzione.** Il server ha la KWin di Debian Trixie, **6.3.6**: 6.8 arriva solo con
-   una distribuzione nuova o con i backport.
+⛔ **But for us it is not enough by itself, and it must be said why** — two conditions to verify when it arrives:
+1. **the backend.** The fix holds for `stream_virtual_output`, that is for a virtual monitor CREATED by the
+   capture. We are on the `--virtual` backend (a machine without a seat), and there `stream_virtual_output`
+   **does not exist**: `VirtualBackend` does not redefine `createVirtualOutput()` ⇒ «Could not find output»
+   (`STUDI.md` §kde, the `stream_virtual_output` line, verified). 6.8 would need to add it to the
+   virtual backend, or the `Virtual-0` output would need to accept a new mode (the "custom modes
+   for virtual screens", Plasma 6.6, are to be read for this);
+2. **the distribution.** The server has Debian Trixie's KWin, **6.3.6**: 6.8 arrives only with
+   a new distribution or with backports.
 
-⭐ **E LA PRIMA DELLE DUE CONDIZIONI E' GIA' CADUTA** — `[R]` 20 set 2026, letto nel codice di KWin
-(`master`): `VirtualBackend` **dichiara** `createVirtualOutput(const QString &name, const QString
-&description, const QSize &size, qreal scale)`, con la stessa firma della base
-(`OutputBackend::createVirtualOutput`, virtuale con implementazione predefinita). ⇒ Il «Could not
-find output» del backend `--virtual` — che nella 6.3.6 veniva dalla base che tornava `nullptr` —
-**su KWin nuovo non c'è più**: anche senza seat si può chiedere uno schermo virtuale alla cattura,
-e dalla 6.8 quello schermo si ridimensiona. ⇒ Resta solo la seconda condizione: la **versione**
-(Trixie ha la 6.3.6).
+⭐ **AND THE FIRST OF THE TWO CONDITIONS HAS ALREADY FALLEN** — `[R]` 20 Sep 2026, read in KWin's code
+(`master`): `VirtualBackend` **declares** `createVirtualOutput(const QString &name, const QString
+&description, const QSize &size, qreal scale)`, with the same signature as the base
+(`OutputBackend::createVirtualOutput`, virtual with a default implementation). ⇒ The «Could not
+find output» of the `--virtual` backend — which in 6.3.6 came from the base returning `nullptr` —
+**is no longer there on new KWin**: even without a seat one can ask the capture for a virtual screen,
+and from 6.8 that screen resizes. ⇒ Only the second condition remains: the **version**
+(Trixie has 6.3.6).
 
-⭐ **Dalla nostra parte il lavoro sarebbe piccolo**: `misura_del_palco()` chiede già a KWin la misura
-vera e la cattura rinegozia già la misura su GNOME ⇒ si tratterebbe di chiedere la misura nuova
-invece di riscalare nella pagina. Fonti: blog KDE «This Week in Plasma: Emoji Resizing» (1 ago
-2026), bug KDE 512620.
+⭐ **On our side the work would be small**: `misura_del_palco()` already asks KWin for the real
+size and the capture already renegotiates the size on GNOME ⇒ it would be a matter of asking for the new size
+instead of rescaling in the page. Sources: KDE blog «This Week in Plasma: Emoji Resizing» (1 Aug
+2026), KDE bug 512620.
 
 
-## Il giudizio dell'utente
+## The user's verdict
