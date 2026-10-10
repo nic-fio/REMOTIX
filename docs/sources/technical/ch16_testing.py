@@ -50,8 +50,7 @@ S1 = p("REMOTIX has no unit-test suite in the usual sense: the C server talks to
       "check that has never been seen red is not a check</b>: every predicate carries, in " + c("--certifica")
       + ", the case that makes it fail, and that case is run, not imagined (" + c("CODER.md") + " §3.3-bis).") + \
     note("nothing in this chapter is a performance number. Capacity and speed results are tied to the "
-         "hardware and date they were measured on and belong to the performance chapter, still to be written "
-         "after the xrdp comparison campaign.", "Scope.")
+         "hardware and date they were measured on and belong to " + rif("Performance and capacity") + ".", "Scope.")
 
 # ── 16.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("The bench folder is a record, not a toolbox: most files were written for one phase, measured once and "
@@ -588,7 +587,7 @@ S10 = p("Phase 16 asks how much load REMOTIX carries while still working. Client
       + c("16-compositori-rdp.sh") + "), with XTEST for input and XDamage for paint times, against the "
       + c("-xrdp") + " boxes, so that " + c("16-classifica.py") + " reads both with the same thresholds. "
       + c("14-stress/") + " is the earlier, tablet-driven night harness of phase 14; its client that never stays "
-      "still (" + c("14-il-cliente-che-non-sta-fermo.py") + ") found that a server heartbeat was postponed by every "
+      "still (removed on 10 Oct 2026 with the other benches of closed phases) found that a server heartbeat was postponed by every "
       "input message, freezing the screen for minutes under a moving mouse.")
 
 # ── 16.11 ────────────────────────────────────────────────────────────────────

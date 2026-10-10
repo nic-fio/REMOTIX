@@ -174,6 +174,8 @@ xrdp finita**, sul server, per ogni salita `intel-f20-*` e `amd-f20-*`:
 `cd /media/REMOTIX/src/controllo/banchi/16-stress && for s in /media/REMOTIX/misure/fase16/{intel,amd}-f20-*/; do python3 16-riclassifica.py --salita "$s"; done`
 (scrive accanto `riclassificata.json` e `livello-NN/classifica-riclassificata.log`; esce 2 se un livello senza righe
 toccate cambia classe, cioè se il giudizio rifatto non è quello della salita).
+✅ **Fatta il 10 ott sera su copie d'ombra** (le misure restano in sola lettura): 32 salite, tutte uscite 0, cambiano
+solo le tre caselle previste qui sopra. Il risultato è in §8.1.
 
 ## 4. Il limite dei 16, dichiarato
 
@@ -193,6 +195,8 @@ all'avvio» (DECISIONI §10.30), e su una macchina più grande della nostra: ogg
   |---|---|---|---|---|
   | i5-13500T, 31 GB | Intel UHD 770 · VA-API | 4K | … | … |
   | i5-13500T, 31 GB | AMD RX 6800 · Vulkan | 4K | … | … |
+
+  ✅ **Compilata in §8.5** (10 ott), con 31 GB.
 
   ⚠ **La RAM è 31 GB, non 64** (letto con `free` sul server, 7 ott durante la campagna): la tabella va
   corretta prima di pubblicarla.
@@ -330,6 +334,9 @@ e' migliore»*. ⇒ **Campagna partita il 9 ott alle 17:47** (unità `r20-xrdp`,
 guarda il film, poi la 5ª. Le misure valgono in ogni caso; il controllo decide come si racconta il crash. Se
 compare anche fuori dalla scatola, «xrdp non fa entrare il quinto» si scrive. Se non compare, si dichiara come
 limite della prova in contenitore e si torna dall'utente.
+✅ **Chiuso dai file (§8.3)**: il crash è un `Bus error` in `rdpCapture` quando il `/dev/shm` della scatola (64 MiB,
+predefinito di podman) è pieno. Fuori dalla scatola `/dev/shm` è metà della RAM: si dichiara come limite della prova in
+contenitore, accanto a ogni numero di capacità di xrdp.
 
 *Scritto l'**8 ottobre 2026** sera, sul portatile, leggendo il banco `banchi/16-stress/`; il server non
 è stato toccato (gira `r20-ripresa`). Serve al punto 4b di §3. ⛔ Niente codice prima che la campagna
@@ -351,6 +358,9 @@ Letta dai file, senza toccare il server. Due cose cambiano quel che si può dire
    **seconda che non riesce a entrare**. ❓ Se è un limite vero di xrdp (un secondo accesso che fallisce, che per
    un cliente è un difetto vero) o un difetto del banco (l'utente di controllo, sesman, la risoluzione) è **da
    riprodurre a mano** a campagna finita: una sessione xrdp a 4K aperta, poi un secondo accesso.
+   ✅ **Spiegato dai file il 10 ott sera (§8.3)**: è il `/dev/shm` di 64 MiB della scatola, che xorgxrdp riempie
+   con L×A×4 byte per sessione; la sessione in più muore con `Bus error`. Non si riproduce a mano (decisione
+   dell'utente: non si rifanno salite).
    Rotture d'altra natura, che sembrano vere: KDE perde l'input (2-3 azioni su 2-3 senza effetto, 2K e Full HD) e
    GNOME Full HD a 4 utenti (blocco 6,4 s, ritardo p95 3,98 s).
 2. **Con un utente solo il ritardo è pari, xrdp un poco avanti.** Ritardo tasto → immagine, p95, dal lato di chi
@@ -493,3 +503,182 @@ si rifà da zero con l'immagine `-xrdp`, senza `prodotto` e senza tetto. Al post
 ⚠ **Che cosa NON dirà il confronto:** saltati, buchi e audio. Il ritardo lo dirà **dal lato di chi guarda per
 tutti e due**, non con il numero della tabella REMOTIX. ⭐ **Che cosa dirà bene:** dove si rompe ciascuno
 (stesse soglie per le voci misurate), quanta CPU, RAM e scheda costa ogni utente, e se l'input arriva.
+
+## 8. ⭐ Il risultato: REMOTIX e xrdp a confronto (10 ott 2026, campagne chiuse) `[M]`
+
+*Scritto il **10 ottobre 2026** sera, dai file, senza toccare il server: le code `coda-intel-f20.log`,
+`coda-amd-f20.log` (REMOTIX, 7-9 ott) e `coda-intel-x20.log`, `coda-amd-x20.log` (xrdp, 9 ott 17:47 → 10 ott
+16:09 UTC), i registri `registro.jsonl` e `registro-xrdp.jsonl`, `16-rapporto.py --testo` sulle quattro campagne.
+⛔ Decisioni dell'utente già prese, non rimesse in discussione: **non si rifanno salite**; il verdetto su video e
+processore è solido; per la capacità di xrdp si scrive accanto la nota del «muro» di §8.3.*
+
+**Il ferro, sempre:** una macchina sola, i5-13500T (14 nuclei, 20 fili), **31 GB**, Debian 13, nucleo 7.0.
+- **Intel UHD 770 integrata** (la scheda del processore, non una scheda dedicata) · REMOTIX con **VA-API**;
+- **AMD Radeon RX 6800** · REMOTIX con **Vulkan**, RADV **25.0.7** di Debian 13 (non Mesa 26: §3-bis.1).
+
+**I due prodotti:** REMOTIX commit **`716e35b`** (binario `e2b1afae`, pagina `ae66b9b4`), budget **spento**
+(`--budget-mpixel-s 0`) e tetto a 17 per far entrare il controllo del 16° gradino; clienti Firefox 153.4 ESR e
+Chrome 154. xrdp **0.10.1-3.1+deb13u2** con xorgxrdp 1:0.10.2-1, configurazione del pacchetto (`dpkg --verify`
+pulito, §7.5); clienti FreeRDP 3.15.0 in un Xvfb ciascuno. Stessa scena (A/B/C/D, il film 4K a 30 fps), stessi
+gradini, stesse soglie (§9 della 16), stessa scatola per desktop.
+
+### 8.1 La capacità: quante sessioni reggono
+
+Due numeri per casella. **Verde vero** = l'ultimo livello con **tutte** le sessioni GREEN (la riga «ultimo GREEN
+vero» della coda). **Buono** = l'ultimo livello che la salita ha passato, ammettendo un DEGRADED non
+significativo (al massimo un attore su quattro, dentro la metà della fascia). «—» = nemmeno un utente.
+
+⭐ **REMOTIX riclassificato (§3-bis.2), fatto il 10 ott sera.** `16-riclassifica.py` girato sulle 32 salite
+`*-f20-*` su **copie d'ombra** (collegamenti ai file veri in `/tmp/prestazioni-ombra` sul server: le misure sono in
+sola lettura), con `--fps-video 30`. Tutte uscite **0**: nessun livello senza righe toccate ha cambiato classe,
+quindi il giudizio rifatto è quello della salita. Cambiano **esattamente le tre caselle** previste in §3-bis:
+Intel GNOME 3K **1 → 4**, Intel XFCE 3K **4 → 8**, Intel XFCE Full HD **1 → 12**. Tutte le altre 29 restano
+uguali. Per renderla permanente accanto ai dati basta il comando di §3-bis.2 (scrive solo file nuovi).
+
+**Intel UHD 770 integrata** — REMOTIX (VA-API) / xrdp, verde vero · buono:
+
+| desktop | 4K | 3K (3200×1800) | 2K | Full HD |
+|---|---|---|---|---|
+| GNOME | **1 · 1** / — · — | **4 · 4** / 1 · 1 | **4 · 8** / 1 · 1 | **11 · 11** / 5 · 5 |
+| KDE | **3 · 3** / — · — | **1 · 5** / 1 · 1 | **4 · 8** / 1 · 1 | **10 · 10** / 1 · 1 |
+| XFCE | **4 · 8** / — · — | **8 · 8** / 1 · 1 | **10 · 10** / 3 · 3 | **12 · 12** / 6 · 6 |
+| LXQt | **7 · 7** / — · — | **8 · 8** / 1 · 1 | **10 · 10** / 3 · 3 | **11 · 11** / 6 · 6 |
+
+**AMD Radeon RX 6800** — REMOTIX (Vulkan) / xrdp, verde vero · buono:
+
+| desktop | 4K | 3K | 2K | Full HD |
+|---|---|---|---|---|
+| GNOME | **— · —** / — · — | **4 · 10** / 1 · 1 | **11 · 11** / 1 · 1 | **11 · 11** / 4 · 6 |
+| KDE | **— · —** / — · — | **4 · 9** / 1 · 1 | **15 · 15** / 1 · 1 | **15 · 15** / 1 · 1 |
+| XFCE | **2 · 2** / — · — | **12 · 13** / 1 · 1 | **15 · 15** / 3 · 3 | **15 · 15** / 6 · 6 |
+| LXQt | **3 · 3** / — · — | **15 · 15** / 1 · 1 | **15 · 15** / 3 · 3 | **15 · 15** / 6 · 6 |
+
+Come si leggono:
+- **REMOTIX regge da 1,8 a 15 volte gli utenti di xrdp** («buono») in ogni casella dove xrdp ne regge almeno uno
+  (il minimo: Radeon GNOME Full HD, 11 contro 6; il massimo: Radeon KDE 2K e Full HD, 15 contro 1); a 4K xrdp non
+  ne regge nessuno, REMOTIX da 1 a 8 sull'Intel e 2-3 sulla Radeon (XFCE, LXQt). In «verde vero» ci sono
+  **tre caselle pari**: Intel KDE 3K (1 e 1) e Radeon 4K GNOME e KDE (nessuno dei due); nelle altre 29 REMOTIX è
+  avanti.
+- **15 è il soffitto del banco, non della Radeon**: sulle 7 caselle a 15 il livello 16 cade **solo** perché la
+  17ª sessione, quella del controllo corto, non dipinge entro 90 s (es. `amd-f20-fhd-xfce/livello-16-ripetizione`:
+  16 GREEN, 1 FAIL = il controllo). I 16 utenti che lavorano sono tutti verdi.
+- **Radeon 4K GNOME e KDE «—»**: è il driver RADV 25.0.7 (§3-bis.1, ritardo 51-56 ms con un utente, soglia 50).
+  Con Mesa 26 GNOME arriva a 4; il prodotto resta sul driver di Debian 13.
+- **Dove REMOTIX cede sull'Intel** (`16-rapporto.py`, «collo» al primo livello non verde): o il motore di
+  **disegno** della scheda al 98-99 %, occupato per il 58-69 % dai **compositori** delle sessioni e per il 25-31 %
+  dai browser del banco (KDE 4K e 2K, XFCE 4K); o la **RAM** della macchina al 98-99 % (GNOME, XFCE e LXQt a 2K e
+  Full HD), di cui ~5 GB sono i browser-cliente che il banco fa girare sullo stesso server. **Sulla Radeon** cede
+  il motore **video** (la codifica, ~100 %) o, su GNOME, la RAM. ⇒ È la fisica di DECISIONI §4.6-nonies: il collo
+  è a monte di noi (composizione) o nella memoria del banco, non nel processore.
+
+### 8.2 Video, processore, memoria, ritardo
+
+**Il video** (l'utente D col film 4K a 30 fps, dipinti al secondo dal lato di chi guarda), Intel e Radeon:
+- REMOTIX **29,0-30,3** dipinti/s su tutti i 106 livelli GREEN (KDE escluso), **0 fotogrammi saltati**; scende
+  (20-29) solo ai livelli di rottura. Su KDE il contatore della pagina sale a 53-58: conta i ridisegni del
+  compositore, non i fotogrammi del film `[?]`;
+- xrdp **23,1-24,9** dipinti/s su **ogni** livello, da 1 utente in su e con qualunque carico: **perde ~1 fotogramma
+  su 5-6**, sempre. Soglia GREEN 0,8·f = 24: xrdp ci sta a filo, e su GNOME 2K a 4 utenti scende sotto (23,1-23,7,
+  DEGRADED). È il tetto di RemoteFX sul processore (`rfx_frame_interval` e la compressione), non il carico.
+
+**Il processore e la memoria**, livello **4 utenti** (l'ultimo che xrdp vive almeno in Full HD; a 2K il livello
+4 di xrdp è FAIL per il muro di §8.3 ma i quattro lavorano e si misurano). Processore **della macchina** (20 fili),
+poi i nuclei del lato server (recinti `remotix` + `sessioni`, cioè server, compositori e applicazioni) e la
+memoria PSS dello stesso lato:
+
+| 4 utenti | REMOTIX Intel | REMOTIX Radeon | xrdp Intel | xrdp Radeon |
+|---|---|---|---|---|
+| macchina, Full HD | 10,9-12,5 % | 10,4-12,5 % | 18,1-31,8 % | 18,2-31,0 % |
+| macchina, 2K | 11,2-13,3 % | 10,7-13,0 % | 23,0-38,6 % | 23,0-40,3 % |
+| nuclei lato server, Full HD (GNOME · KDE · XFCE · LXQt) | 0,93 · 1,11 · 1,08 · 1,05 | 0,95 · 1,10 · 1,10 · 1,07 | 4,31 · 3,22 · 1,61 · 1,53 | 4,16 · 3,18 · 1,63 · 1,54 |
+| memoria lato server, Full HD (GNOME · KDE · XFCE · LXQt) | 2,4 · 3,1 · 1,8 · 1,9 GB | 2,7 · 3,5 · 2,0 · 2,0 GB | 4,1 · 4,8 · 2,9 · 2,8 GB | 4,1 · 4,8 · 2,9 · 2,8 GB |
+
+⇒ A parità di lavoro, **xrdp consuma da ~1,5 a ~4,6 volte i nuclei di REMOTIX dal lato server** (il massimo su
+GNOME: Mutter su X11 più la cattura di xorgxrdp e RemoteFX sul processore) e **~1,3-1,7 volte la memoria**.
+REMOTIX sposta il lavoro sulla scheda (codifica in hardware). Con **un utente solo** invece xrdp su XFCE e LXQt
+usa **meno** processore della macchina (1,9-2,6 % contro 4,3-4,9 %): il cliente FreeRDP pesa meno di un browser.
+Il distacco si apre col carico, ed è quello che conta.
+
+**Il ritardo con un utente** (tasto → immagine, p95, dal lato di chi guarda, nella finestra di classifica;
+REMOTIX: il giro della pagina; xrdp: XDamage) — ms, REMOTIX / xrdp:
+
+| | GNOME | KDE | XFCE | LXQt |
+|---|---|---|---|---|
+| Intel 4K | 54 / 45 | 58 / 55 | 53 / 33 | 67 / 36 |
+| Intel 2K | 43 / 37 | 43 / 41 | 40 / 32 | 41 / 41 |
+| Intel Full HD | 38 / 35 | 39 / 39 | 37 / 33 | 36 / 44 |
+| Radeon 2K | 42 / 39 | 45 / 40 | 36 / 38 | 35 / 34 |
+| Radeon Full HD | 41 / 38 | 37 / 45 | 33 / 32 | 33 / 34 |
+
+(I numeri di §7.9 differiscono di pochi ms: là gli ultimi 200 campioni della sessione, qui la finestra di
+classifica.) ⇒ **Pari**, xrdp un poco avanti sull'Intel ad alta risoluzione; e il metro avvantaggia xrdp (il giro
+della pagina comprende decodifica e disegno nel browser, XDamage su Xvfb no, §7.3). Il vantaggio di REMOTIX è la
+**tenuta sotto carico**, non la risposta del singolo utente.
+
+### 8.3 ⚠ La capacità di xrdp e il «muro» dei 64 MB
+
+`[M]` **La maggior parte delle rotture di xrdp non è dell'utente che lavora: è la sessione che non riesce a
+nascere**, e la causa è nei file. xorgxrdp chiede, per **ogni** sessione, un'area di memoria condivisa grande
+quanto lo schermo, **L×A×4 byte** (righe `rdpClientConAllocateSharedMemory … bytes N` in `journal-scatola.log`),
+e quando non c'è più posto l'Xorg della sessione nuova muore con **`Caught signal 7 (Bus error)`** in
+`rdpCapture` (`controllo-corto/diagnosi-sessione.txt`: è il «crash» di §7.8). Le scatole nascono con il
+`/dev/shm` predefinito di podman, **64 MiB** (`shm_size = "65536k"`, nessun `--shm-size` in `11-accendi.sh`).
+Il conto torna al gradino:
+
+| misura | byte per sessione (letti) | ne entrano in 64 MiB | utenti + controllo | xrdp misurato (XFCE, LXQt) |
+|---|---|---|---|---|
+| 4K | 33 423 360 | 1 (la 2ª sta a filo e cede) | 0 + 1 | — |
+| 3K | 23 756 800 | 2 | 1 + 1 | 1 |
+| 2K | 15 073 280 | 4 | 3 + 1 | 3 |
+| Full HD | 8 355 840 | 7 (l'8ª sta a filo e cede) | 6 + 1 | 6 |
+
+⇒ Su XFCE e LXQt **il muro è il limite di xrdp, gradino per gradino**; su GNOME e KDE xrdp cede **prima** per
+ragioni sue (GNOME: ritardo p95 67 ms con 2 utenti a 2K, ~51 ms e processore della macchina al 40-42 % con 6 in
+Full HD; KDE: **input perso**, 3 azioni su 3 senza effetto con 2 utenti, a 3K, 2K e Full HD, su tutte e due le schede).
+
+**Come si legge, e come l'ha letta l'utente.** È una **differenza d'architettura**: xorgxrdp cattura in memoria
+condivisa, L×A×4 byte per sessione; REMOTIX no — i fotogrammi passano per DMA-BUF dalla scheda al codificatore,
+e i pochi buffer in memoria che usa (la via di riserva di `src/wlroots.c`, la mappa dei tasti) nascono con
+`memfd_create`, che non sta in `/dev/shm` — e infatti nella **stessa scatola, con lo stesso limite**, REMOTIX ne ha
+fatte entrare 16. L'utente (10 ott): *«il 4K è un limite per tutti … i numeri parlano chiaro: remotix è più
+efficiente e performante di xrdp grazie alla sua architettura più nuova»*.
+⚠ **Da dichiarare accanto a ogni numero di capacità di xrdp:** su un'installazione normale `/dev/shm` è metà
+della RAM (16 GB su questa macchina) e quel muro non c'è; le caselle di xrdp su XFCE e LXQt sono quindi un
+**limite inferiore** dovuto alla scatola. Il verdetto su video, processore e memoria (§8.2) non dipende dal muro:
+è misurato con gli utenti che erano dentro.
+
+### 8.4 I limiti delle misure
+
+- **Una macchina sola**, e modesta: la scheda Intel è l'**integrata** UHD 770. La Radeon RX 6800 è una scheda
+  da gioco di fascia alta del 2020. I numeri non si trasportano su altro ferro (DECISIONI §10.26: restano obiettivi,
+  non promesse nelle SPECIFICHE).
+- **I clienti girano sul server**: per REMOTIX fino a 16 browser veri (~5 GB di RAM a 11-12 utenti: è la RAM che
+  finisce sull'Intel a 2K e Full HD), per xrdp i FreeRDP (1,8-2,4 nuclei a 4 utenti, la decodifica RemoteFX).
+  ⇒ i numeri di REMOTIX sono un **limite inferiore**; la rete non è misurata (tutto passa da `lo`).
+- **Il tetto del banco**: 16 utenti + 1 controllo. Sette caselle Radeon stanno a 15 per la 17ª sessione.
+- **La guardia della memoria** di §7.7 (sotto 3 GiB liberi il livello si chiude) c'era solo per xrdp, che non ci
+  è mai arrivato (memoria usata ≤ 40 %); REMOTIX sull'Intel l'avrebbe fatta scattare ai livelli di rottura
+  (RAM al 98 %), cioè negli stessi punti in cui il livello è già FAIL.
+- **Saltati, buchi, audio** non esistono dal lato xrdp (§7.3); il ritardo si confronta solo dal lato di chi guarda.
+  La scheda non è misurata per xrdp (le letture dei motori sono vuote).
+- **Il muro dei 64 MB** (§8.3) taglia le caselle di xrdp su XFCE e LXQt.
+- **Firefox e Marionette**: il falso «blocco» di §3-bis.2 è curato e le salite già fatte sono riclassificate
+  (§8.1); con Chrome non c'era.
+
+### 8.5 La tabella pubblica (§5)
+
+Va nella documentazione tecnica, capitolo «Performance and capacity» del manuale
+(`docs/sources/technical/ch18_performance.py`), non nella home del sito. «Ottimale fino a» = verde vero;
+«regge fino a» = buono. Una riga per scheda e misura; il campo va dal desktop peggiore al migliore (il dettaglio
+per desktop è in §8.1):
+
+| macchina | scheda e strada | misura | ottimale fino a | regge fino a |
+|---|---|---|---|---|
+| i5-13500T, 31 GB | Intel UHD 770 (integrata) · VA-API | 4K | 1-7 | 1-8 |
+| | | 3K | 1-8 | 4-8 |
+| | | 2K | 4-10 | 8-10 |
+| | | Full HD | 10-12 | 10-12 |
+| i5-13500T, 31 GB | AMD RX 6800 · Vulkan | 4K | 0-3 | 0-3 |
+| | | 3K | 4-15 | 9-15 |
+| | | 2K | 11-15 | 11-15 |
+| | | Full HD | 11-15 | 11-15 |
