@@ -1,28 +1,28 @@
 ---
 name: taratura-non-caccia-al-difetto
-description: "Quando Nic riferisce una cosa piccola, dice anche quanto e' piccola — e si aspetta che il registro della risposta la segua: messa a punto, non caccia al difetto"
+description: "When Nic reports a small thing, he also says how small it is — and expects the register of the answer to follow it: tuning, not a defect hunt"
 metadata:
   type: feedback
 ---
 
-Il 22 agosto 2026 Nic ha descritto l'unico appunto che gli restava — una finestra trascinata veloce
-e' *«leggermente meno fluido»* del locale. Io ho risposto con un tetto aritmetico, i ~16 ms non
-spiegati promossi a *«meta' del tuo problema»* e una lista da caccia al guasto. Lui ha corretto il
-registro, non i fatti: **«bada bene: e' questione di micro-secondi, non di secondi, ecco perche'
+On 22 Aug 2026 Nic described the only remark he had left — a window dragged fast
+is *«leggermente meno fluido»* than local. I answered with an arithmetic ceiling, the ~16 ms
+unexplained promoted to *«meta' del tuo problema»* and a fault-hunting list. He corrected the
+register, not the facts: **«bada bene: e' questione di micro-secondi, non di secondi, ecco perche'
 parlavo di ottimizzazione e non di debug»**.
 
-**Why:** non stava contestando le misure — stava dicendo che il prodotto **non e' rotto**, e che
-un difetto grosso trovato dentro un sintomo che lui chiama piccolo e' quasi sempre segno che ho
-scambiato un tetto di progetto per un guasto. Trattare una messa a punto come un'emergenza gli fa
-perdere fiducia nel resto delle mie misure, e gonfia il lavoro di una fase che lui aveva
-dimensionato bene.
+**Why:** he was not disputing the measurements — he was saying that the product **is not broken**, and that
+a big defect found inside a symptom he calls small is almost always a sign that I have
+mistaken a design ceiling for a fault. Treating tuning as an emergency makes him
+lose trust in the rest of my measurements, and inflates the work of a phase he had
+sized well.
 
 **How to apply:**
-- quando dice **«ottimizzazione»**, il lavoro e' spostare un numero che gia' funziona; quando dice
-  **«non funziona»**, e' un difetto. Sono due registri, e la parola la sceglie lui apposta;
-- la grandezza che riferisce e' un **dato**: se le mie misure dicono molto piu' grande, e' un
-  disaccordo da dichiarare in una riga — con il numero — non da risolvere alzando il tono;
-- e resta la regola di [[la-prova-la-fa-lutente]]: la misura del caso che descrive **lui** (la
-  finestra trascinata) viene prima di qualunque conto derivato da scene d'altro tipo.
+- when he says **«ottimizzazione»**, the work is moving a number that already works; when he says
+  **«non funziona»**, it is a defect. They are two registers, and he chooses the word on purpose;
+- the size he reports is a **datum**: if my measurements say much bigger, it is a
+  disagreement to declare in one line — with the number — not to resolve by raising the tone;
+- and the rule of [[la-prova-la-fa-lutente]] stays: the measurement of the case **he** describes (the
+  dragged window) comes before any figure derived from scenes of another kind.
 
-Vedi [[processo-proporzionato-non-cerimonia]] e [[parlare-come-al-regista]].
+See [[processo-proporzionato-non-cerimonia]] and [[parlare-come-al-regista]].

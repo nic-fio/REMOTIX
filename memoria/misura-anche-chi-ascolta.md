@@ -1,6 +1,6 @@
 ---
 name: misura-anche-chi-ascolta
-description: "Non c'è miglior diagnosi che monitorare una sessione vera byte per byte — con TUTTI gli anelli sulla stessa riga, quello che ascolta compreso"
+description: "There is no better diagnosis than monitoring a real session byte by byte — with ALL the links on the same line, the listening one included"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,45 +8,45 @@ metadata:
   modified: 2026-08-17T09:59:49.711Z
 ---
 
-⭐⭐ **La lezione è di Nic, con le sue parole:** *«non c'è miglior strumento di
-diagnosi del monitorare una sessione byte per byte»*. È quel gesto — *«riproduci
-un video da YouTube, tu monitora la sessione su ogni singolo byte»* — che ha
-rotto uno stallo di un pomeriggio.
+⭐⭐ **The lesson is Nic's, in his words:** *«non c'è miglior strumento di
+diagnosi del monitorare una sessione byte per byte»*. It is that gesture — *«riproduci
+un video da YouTube, tu monitora la sessione su ogni singolo byte»* — that
+broke an afternoon-long stalemate.
 
-⛔ **17 agosto 2026, l'audio della fase 7.** Il banco era **verde su cinque giri
-su cinque** — 440 Hz esatti, ampiezza esatta — e Nic sentiva *«jitter
-pazzesco»*. Ho fatto **sei cure di fila**, tutte su difetti **veri**, e nessuna
-era quella che lui sentiva.
+⛔ **17 Aug 2026, the audio of phase 7.** The bench was **green on five rounds
+out of five** — exactly 440 Hz, exact amplitude — and Nic heard *«jitter
+pazzesco»*. I made **six cures in a row**, all on **real** defects, and none
+was the one he heard.
 
-Avevo i numeri di **tre anelli su quattro**: il figlio (quanti blocchi produce),
-il server (quanti ne spedisce e rifiuta), la sessione (quanti campioni
-consegna). ⛔ Della **pagina** — il lato che ascolta — non si sapeva niente.
+I had the numbers of **three links out of four**: the child (how many blocks it produces),
+the server (how many it sends and rejects), the session (how many samples it
+delivers). ⛔ Of the **page** — the side that listens — nothing was known.
 
-⭐ Il giorno in cui quei contatori sono esistiti, la diagnosi è durata **un
-passaggio**: 50 prodotti → 40 consegnati → deficit 20 % → cuscino 250 ms →
-un buco ogni 1,25 s. Misurati: 23 in 30 s. Il conto ha chiuso al decimale e ha
-assolto tre imputati in un colpo.
+⭐ The day those counters came to exist, the diagnosis took **one
+step**: 50 produced → 40 delivered → deficit 20 % → cushion 250 ms →
+a gap every 1.25 s. Measured: 23 in 30 s. The count closed to the decimal and
+acquitted three suspects in one go.
 
-**Why:** è `CODER.md` §3.8 — «si verifica dal lato che deve ricevere» — che
-avevo applicato al **contenuto** (il giudice ascolta i campioni) e **non al
-ritmo**. Un banco che ascolta *che cosa* arriva e non *quando* è cieco su metà
-dei difetti possibili. E senza il lato che riceve, ogni cura sembra confermata
-dal ragionamento e nessuna dalla misura.
+**Why:** it is `CODER.md` §3.8 — «verify from the side that must receive» — which
+I had applied to the **content** (the judge listens to the samples) and **not to the
+rhythm**. A bench that listens to *what* arrives and not *when* is blind to half
+of the possible defects. And without the receiving side, every cure seems confirmed
+by reasoning and none by measurement.
 
 **How to apply:**
-- quando l'utente dice «fa schifo» e il banco dice verde, ⛔ **non curare al
-  buio: guarda una sessione VERA mentre succede**. Il banco contiene i difetti
-  che sapevi immaginare; una sessione vera quelli che non sapevi, e tutti
-  insieme;
-- ⛔ **accendi la registrazione PRIMA di dirgli «vai»**: un difetto che dura
-  trenta secondi non si riprende;
-- prima di curare, **conta anche dal lato che consuma**, e mettilo nello stesso
-  registro degli altri: costa trenta righe (l'endpoint `/diario` in
+- when the user says «fa schifo» and the bench says green, ⛔ **do not cure in
+  the dark: watch a REAL session while it happens**. The bench contains the defects
+  you were able to imagine; a real session the ones you were not, and all
+  together;
+- ⛔ **turn on the recording BEFORE telling him «go»**: a defect that lasts
+  thirty seconds cannot be captured again;
+- before curing, **count also from the consuming side**, and put it in the same
+  log as the others: it costs thirty lines (the `/diario` endpoint in
   `pagina.c`);
-- ⛔ il riquadro di diagnostica della pagina **non basta**: col desktop acceso
-  la pagina è a tutto schermo e non è raggiungibile. Chiedere a Nic di leggerlo
-  è chiedergli una cosa che non si può fare;
-- ⭐ e guarda la **forma** del numero: la perdita era *esattamente* la metà, e
-  una perdita di rete non è mai esattamente la metà — un'aritmetica sì.
+- ⛔ the page's diagnostics panel **is not enough**: with the desktop on
+  the page is full screen and it cannot be reached. Asking Nic to read it
+  is asking him something that cannot be done;
+- ⭐ and look at the **shape** of the number: the loss was *exactly* half, and
+  a network loss is never exactly half — an arithmetic one is.
 
-Vedi [[la-prova-la-fa-lutente]], [[documentazione-v1-misurata]].
+See [[la-prova-la-fa-lutente]], [[documentazione-v1-misurata]].

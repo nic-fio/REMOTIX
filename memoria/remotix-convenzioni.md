@@ -1,6 +1,6 @@
 ---
 name: remotix-convenzioni
-description: "In REMOTIX si scrive in italiano, ogni affermazione porta una marca, e le decisioni stanno in DECISIONI.md una sola volta"
+description: "In REMOTIX one writes in Italian, every statement carries a mark, and decisions live in DECISIONI.md only once"
 metadata: 
   node_type: memory
   type: project
@@ -8,23 +8,23 @@ metadata:
   modified: 2026-08-09T06:15:49.110Z
 ---
 
-Documenti, commenti e nomi nel codice sono **in italiano** (`palco`, `cattura`, `sentinella`,
-`appunti`). Ogni affermazione porta una marca: `[M]` misurato con la data, `[R]` letto nel codice,
-`[S]` letto in una specifica, `[?]` ipotizzato. Le decisioni stanno in `DECISIONI.md` **una sola
-volta**, marcate ✅ (decisa dall'utente), 🔸 (derivata da me, correggibile senza discussione) o ❓
-(aperta); gli altri documenti rimandano invece di copiare.
+Documents, comments and names in the code are **in Italian** (`palco`, `cattura`, `sentinella`,
+`appunti`). Every statement carries a mark: `[M]` measured with the date, `[R]` read in the code,
+`[S]` read in a specification, `[?]` hypothesised. Decisions live in `DECISIONI.md` **only
+once**, marked ✅ (decided by the user), 🔸 (derived by me, correctable without discussion) or ❓
+(open); the other documents refer to them instead of copying.
 
-**Why:** il progetto è morto una volta su misure che non misuravano quel che si credeva, e il
-codice di v1 è andato perso mentre i documenti sono sopravvissuti — sono loro ad aver reso
-possibile ripartire. Distinguere «l'utente ha detto sì» da «l'ho dedotto io» è la differenza che
-`LEZIONI.md` §2.3-quater dice di non perdere.
+**Why:** the project died once on measurements that did not measure what was believed, and the
+code of v1 was lost while the documents survived — they are what made it
+possible to start again. Distinguishing «the user said yes» from «I deduced it» is the difference that
+`LEZIONI.md` §2.3-quater says not to lose.
 
 **How to apply:**
-- prima di affermare un'assenza, **certifica lo strumento** su un caso dove la cosa c'è di sicuro:
-  il 9 agosto una ricerca cercava in `src/` e non trovava `RecordVirtual` **nemmeno in Mutter**,
-  dove c'è, perché gli XML stanno in `data/dbus-interfaces/`;
-- quando una misura contraddice un documento, aggiornalo **nello stesso momento**, con data e
-  fonte;
-- il punto di ingresso è `README.md`, che dice in quale ordine leggere.
+- before asserting an absence, **certify the tool** on a case where the thing is surely there:
+  on 9 Aug a search looked in `src/` and did not find `RecordVirtual` **not even in Mutter**,
+  where it is, because the XML files are in `data/dbus-interfaces/`;
+- when a measurement contradicts a document, update it **at the same moment**, with date and
+  source;
+- the entry point is `README.md`, which says in what order to read.
 
-Vedi [[nic-regista-non-programmatore]].
+See [[nic-regista-non-programmatore]].

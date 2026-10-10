@@ -1,6 +1,6 @@
 ---
 name: testimone-sul-desktop-vero
-description: "Come si misura col browser quel che arriva davvero al desktop remoto — il file testimone, e le due reti da togliere alla pagina"
+description: "How to measure with the browser what actually reaches the remote desktop — the witness file, and the two nets to remove from the page"
 metadata: 
   node_type: memory
   type: project
@@ -8,38 +8,38 @@ metadata:
   modified: 2026-08-16T13:59:02.925Z
 ---
 
-⭐ **Il metro delle prove col browser** (16 agosto 2026, fase 5). Dentro la
-sessione grafica di `prova` si lancia da ssh un terminale con:
+⭐ **The meter of the browser tests** (16 Aug 2026, phase 5). Inside the
+graphical session of `prova` a terminal is launched from ssh with:
 
 ```sh
 while IFS= read -r _; do date +%s%N >> /tmp/testimone.txt; done
 ```
 
-⇒ Ogni `Invio` che **arriva al desktop** scrive una riga con l'istante in
-nanosecondi. Un tasto rimasto giù si ripete da solo — `[M]` **~33 battute al
-secondo**, è il desktop remoto a farlo — e si confronta l'ultima battuta con
-l'ora della riga nel registro. Precisione ottenuta: **millisecondi**.
+⇒ Every `Invio` (Enter) that **reaches the desktop** writes a line with the instant in
+nanoseconds. A key left down repeats by itself — `[M]` **~33 strokes per
+second**, it is the remote desktop that does it — and the last stroke is compared with
+the time of the line in the log. Precision obtained: **milliseconds**.
 
-**Due trappole, tutt'e due pagate:**
+**Two traps, both paid for:**
 
-1. ⛔ **Il pilota del browser non sa TENERE PREMUTO** un tasto: `computer` manda
-   sempre giù-e-su. Si usa `javascript_tool` con
-   `window.dispatchEvent(new KeyboardEvent("keydown", {code:"Enter"}))` — le
-   funzioni della pagina sono globali vere, raggiungibili per nome.
-   ⚠ Solo i tasti **non-lettera** si possono tenere giù: una lettera parte come
-   `LETTERA`, che è premi-e-rilascia.
-2. ⛔⛔ **La pagina rilascia da sola** su `blur`, `visibilitychange` e
-   `pagehide` (`cl_rilascia_tutto`). ⇒ Dal browser il server non ha quasi mai
-   niente da rilasciare, e **si certifica la pagina credendo di certificare il
-   server**. Per provare il server si sostituisce `window.cl_rilascia_tutto`
-   con uno stub.
+1. ⛔ **The browser driver cannot HOLD DOWN** a key: `computer` always sends
+   down-and-up. Use `javascript_tool` with
+   `window.dispatchEvent(new KeyboardEvent("keydown", {code:"Enter"}))` — the
+   page's functions are true globals, reachable by name.
+   ⚠ Only **non-letter** keys can be held down: a letter goes out as
+   `LETTERA`, which is press-and-release.
+2. ⛔⛔ **The page releases by itself** on `blur`, `visibilitychange` and
+   `pagehide` (`cl_rilascia_tutto`). ⇒ From the browser the server almost never has
+   anything to release, and **you certify the page believing you are certifying the
+   server**. To test the server, replace `window.cl_rilascia_tutto`
+   with a stub.
 
-⚠ **E l'orologio del silenzio ruba trenta secondi alle prove**: se fra il
-preparare e il provocare passano 30 s, `§5.3` ha già rilasciato tutto e la
-misura è di un'altra cosa. È successo due volte.
+⚠ **And the silence clock steals thirty seconds from the tests**: if between
+preparing and provoking 30 s go by, `§5.3` has already released everything and the
+measurement is of something else. It happened twice.
 
-Il taglio del filo si fa dal server con una tabella `nft` propria
-(`nft delete table inet provataglio` per toglierla), mai con `iptables` — sulla
-macchina di prova non c'è.
+The wire cut is done from the server with an `nft` table of its own
+(`nft delete table inet provataglio` to remove it), never with `iptables` — on the
+test machine it is not there.
 
-Vedi [[costruire-serve-il-contenitore]] e [[utente-prova-si-conserva]].
+See [[costruire-serve-il-contenitore]] and [[utente-prova-si-conserva]].

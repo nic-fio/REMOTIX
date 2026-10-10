@@ -1,34 +1,34 @@
 ---
 name: emulatore-android-per-provare
-description: "Android non si prova sul telefono di Nic: c'è un emulatore con Firefox 154 sul portatile, e il banco 07-b59 fa il giro da solo"
+description: "Android is not tested on Nic's phone: there is an emulator with Firefox 154 on the laptop, and bench 07-b59 does the round by itself"
 metadata:
   type: project
 ---
 
-⛔ **21 agosto 2026, e l'ha imposto Nic**: *«non sei in grado di far funzionare
-Firefox per android con remotix»* dopo **sei giri di prove sul suo telefono**,
-poi *«Installa la suite android sdk, usa quella»*.
+⛔ **21 Aug 2026, and Nic imposed it**: *«non sei in grado di far funzionare
+Firefox per android con remotix»* after **six rounds of tests on his phone**,
+then *«Installa la suite android sdk, usa quella»*.
 
-⇒ **Android non si prova chiedendo a lui.** Sul portatile c'è:
+⇒ **Android is not tested by asking him.** On the laptop there is:
 
 | | |
 |---|---|
 | SDK | `~/Android/Sdk` (cmdline-tools, platform-tools, emulator, `system-images;android-34;google_apis;x86_64`) |
-| macchina | AVD **`remotix`** (pixel_6), si accende headless con KVM |
-| browser | **Firefox 154.0 per Android** installato — la stessa versione del telefono di Nic |
-| banco | `banchi/07-b59-firefox-android.py` — accende, accetta il certificato, entra come «prova», misura, fotografa, **e spegne tutto** |
+| machine | AVD **`remotix`** (pixel_6), starts headless with KVM |
+| browser | **Firefox 154.0 for Android** installed — the same version as Nic's phone |
+| bench | `banchi/07-b59-firefox-android.py` — starts, accepts the certificate, logs in as «prova», measures, takes pictures, **and shuts everything down** |
 
-⚠ **Quel che l'emulatore NON riproduce, e va dichiarato**: la decodifica in
-hardware. ⇒ I **numeri** del ritardo non valgono; vale il **comportamento** —
-dipinge o no, si ferma o no, e perché.
+⚠ **What the emulator does NOT reproduce, and it must be declared**: hardware
+decoding. ⇒ The delay **numbers** do not count; the **behaviour** does —
+whether it paints or not, whether it stops or not, and why.
 
-⭐ E il fratello da tavolo: `banchi/07-b58-senza-webcodecs.py` toglie WebCodecs a
-un Firefox normale con `dom.media.webcodecs.enabled=false`. Prende quasi tutto,
-⛔ ma non le regole di presentazione dei motori mobili — quelle solo `07-b59`.
+⭐ And the desktop sibling: `banchi/07-b58-senza-webcodecs.py` removes WebCodecs from
+a normal Firefox with `dom.media.webcodecs.enabled=false`. It catches almost everything,
+⛔ but not the presentation rules of the mobile engines — those only `07-b59`.
 
-⛔ **La lezione, che è di metodo**: quando una prova richiede più di un giro di
-una persona, lo strumento sbagliato non è il prodotto — è il banco. Vedi
-[[la-prova-la-fa-lutente]], che resta vera per il **giudizio**, non per la
-diagnosi.
+⛔ **The lesson, which is about method**: when a test requires more than one round from
+a person, the wrong tool is not the product — it is the bench. See
+[[la-prova-la-fa-lutente]], which stays true for the **judgment**, not for the
+diagnosis.
 
-Vedi [[le-prove-le-eseguo-io]], [[banchi-in-parallelo-isolamento]].
+See [[le-prove-le-eseguo-io]], [[banchi-in-parallelo-isolamento]].

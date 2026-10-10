@@ -1,6 +1,6 @@
 ---
 name: remotix-lezioni
-description: "REMOTIX — LEZIONI.md, scritto il 7 agosto 2026: le lezioni del supporto a GNOME nella forma che serve a chi apre il prossimo desktop. Da leggere prima della fase 11"
+description: "REMOTIX — LEZIONI.md, written on 7 Aug 2026: the lessons of the GNOME support in the form needed by whoever opens the next desktop. To be read before phase 11"
 metadata: 
   node_type: memory
   type: project
@@ -8,40 +8,40 @@ metadata:
   modified: 2026-08-07T21:12:00.405Z
 ---
 
-Dal 7 agosto 2026 il progetto ha un quinto documento: **`LEZIONI.md`**, chiesto dall'utente
-chiudendo GNOME — *«mettere in un documento tutte le lezioni apprese… potrebbe tornarci utile per i
+Since 7 Aug 2026 the project has a fifth document: **`LEZIONI.md`**, asked for by the user
+when closing GNOME — *«mettere in un documento tutte le lezioni apprese… potrebbe tornarci utile per i
 prossimi DE»*.
 
-**La divisione con `REFERENCE.md` è netta e va tenuta**: lì **che cosa fare con Mutter** (e metà di
-quelle regole cadrà cambiando compositore), qui **quel che resta vero quando il compositore cambia**,
-con accanto **quanto è costato impararlo**.
+**The division with `REFERENCE.md` is sharp and must be kept**: there **what to do with Mutter** (and half of
+those rules will fall when the compositor changes), here **what stays true when the compositor changes**,
+with alongside **how much it cost to learn it**.
 
-Le tre sezioni che si usano per prime aprendo un desktop nuovo:
+The three sections used first when opening a new desktop:
 
 | | |
 |---|---|
-| **§3** | le **undici domande** da fare a un compositore nuovo, con le risposte già note per Mutter, KWin e wlroots — e gli strumenti del banco che le rispondono |
-| **§9** | la **ricetta** in otto passi per aprire il supporto a un desktop |
-| **§8** | i **vicoli ciechi già percorsi**, da non rifare |
+| **§3** | the **eleven questions** to ask a new compositor, with the answers already known for Mutter, KWin and wlroots — and the bench tools that answer them |
+| **§9** | the eight-step **recipe** to open support for a desktop |
+| **§8** | the **dead ends already walked**, not to be repeated |
 
-`PIANO.md` fase 11 lo dichiara **vincolante** come §7.0 di `SPECIFICA.md`: si legge prima di
-scrivere una riga.
+`PIANO.md` phase 11 declares it **binding** like §7.0 of `SPECIFICA.md`: it is read before
+writing a line.
 
-**La lezione che il documento mette per ultima, e che le riassume tutte**: il progetto non si è mai
-fermato su un problema difficile — si è fermato ogni volta su **una misura che non misurava quello
-che credevamo**.
+**The lesson the document puts last, and that sums them all up**: the project never
+stopped on a difficult problem — it stopped every time on **a measurement that did not measure what
+we believed**.
 
-⭐ **E la sera del 7 agosto il primo banco di KDE ne ha aggiunte due, §1.9 e §1.10**, che sono la
-prova della lezione di sopra:
+⭐ **And on the evening of 7 Aug the first KDE bench added two, §1.9 and §1.10**, which are the
+proof of the lesson above:
 
-- **una lettura negata non è una lettura che dice zero.** `ls /proc/<pid>/fd | grep dri` non stampava
-  niente e l'abbiamo letto come «zero nodi DRM»: il kernel negava la directory. Da cui: una misura che
-  può dire «zero» deve distinguere lo zero dal fallimento; **ogni strumento vuole un controllo
-  positivo**; e quando codice letto e misura si contraddicono, **il sospetto va prima sulla misura** —
-  il codice non ha un ambiente.
-- **un permesso può dipendere da una variabile d'ambiente che nessuno documenta**, e prima di provare
-  varianti del proprio file si accende il registro del componente che nega.
+- **a denied read is not a read that says zero.** `ls /proc/<pid>/fd | grep dri` printed
+  nothing and we read it as «zero DRM nodes»: the kernel was denying the directory. Hence: a measurement that
+  can say «zero» must distinguish zero from failure; **every tool wants a positive
+  control**; and when read code and measurement contradict each other, **suspicion goes first to the measurement** —
+  the code has no environment.
+- **a permission can depend on an environment variable that nobody documents**, and before trying
+  variants of your own file you turn on the log of the component that denies.
 
-Vedi [[remotix-prossimo-kde]] per il caso concreto.
+See [[remotix-prossimo-kde]] for the concrete case.
 
-Vedi [[remotix-metodo-documentazione]] e [[remotix-requisito-prestazione]].
+See [[remotix-metodo-documentazione]] and [[remotix-requisito-prestazione]].

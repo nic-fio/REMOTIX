@@ -1,6 +1,6 @@
 ---
 name: processo-proporzionato-non-cerimonia
-description: "Nic taglia il processo che non serve e approva quello che serve, ma ristretto — la revisione va giustificata su questa fase, non citando la regola"
+description: "Nic cuts the process that is not needed and approves the one that is, but narrowed — the review must be justified on this phase, not by quoting the rule"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,25 +8,25 @@ metadata:
   modified: 2026-08-09T11:37:55.684Z
 ---
 
-Il metodo di `PIANO.md` §0.4 prescrive **tre momenti di revisione per fase**. Nic non lo applica
-per inerzia: il 9 agosto 2026, a fase 0 chiusa, ha detto *«è stata una fase in cui si sono misurate
-le performance, non sono sicuro che sia necessaria una review avversariale»* — e aveva ragione a
-metà. Ha poi approvato una revisione **ristretta ai quattro file del banco**, non alla fase.
+The method of `PIANO.md` §0.4 prescribes **three review moments per phase**. Nic does not apply it
+out of inertia: on 9 Aug 2026, with phase 0 closed, he said *«è stata una fase in cui si sono misurate
+le performance, non sono sicuro che sia necessaria una review avversariale»* — and he was half
+right. He then approved a review **narrowed to the four files of the bench**, not to the phase.
 
-**Why:** citare la regola non lo convince, e non deve. L'argomento che regge non è «il piano lo
-prescrive» ma **che cosa sopravvive alla fase**: le misure si rifaranno cento volte, il banco che
-le produce resta per tredici fasi, e un difetto nel banco non lo trova niente *perché dà fiducia*
-(`REVIEWER.md` §1). Su quella base ha detto sì in una riga. La revisione ristretta ha poi trovato
-**22 contraddizioni `[R]`** su un banco appena certificato con quattro controlli — quindi il
-processo serviva, ma serviva **quello mirato**.
+**Why:** quoting the rule does not convince him, and it must not. The argument that holds is not «the plan
+prescribes it» but **what survives the phase**: the measurements will be redone a hundred times, the bench that
+produces them stays for thirteen phases, and a defect in the bench is found by nothing *because it inspires trust*
+(`REVIEWER.md` §1). On that basis he said yes in one line. The narrowed review then found
+**22 `[R]` contradictions** on a bench just certified with four checks — so the
+process was needed, but **the targeted one** was needed.
 
 **How to apply:**
-- proponi la revisione **con lo scopo e il costo**, non con la citazione: *«mezz'ora, su questi
+- propose the review **with the scope and the cost**, not with the quotation: *«mezz'ora, su questi
   file, con questo mandato»*;
-- quando pone una condizione (*«se le misure sono complete puoi procedere»*) e **non è
-  soddisfatta**, dillo e completa il pezzo mancante invece di procedere — è andata bene così il
-  9 agosto, con wlroots mai misurato;
-- al revisore si dà il codice e le regole, **mai il proprio ragionamento** (`PIANO.md` §0.4,
-  pratica 1): àncora, e trasforma la caccia alle contraddizioni in verifica di coerenza.
+- when he sets a condition (*«se le misure sono complete puoi procedere»*) and **it is not
+  met**, say so and complete the missing piece instead of proceeding — that is how it went well on
+  9 Aug, with wlroots never measured;
+- the reviewer is given the code and the rules, **never your own reasoning** (`PIANO.md` §0.4,
+  practice 1): it anchors, and turns the hunt for contradictions into a consistency check.
 
-Vedi [[nic-regista-non-programmatore]] e [[remotix-convenzioni]].
+See [[nic-regista-non-programmatore]] and [[remotix-convenzioni]].

@@ -1,6 +1,6 @@
 ---
 name: prestazioni-sul-ferro-modesto
-description: "Le prestazioni di REMOTIX si dichiarano SEMPRE insieme al ferro: sono ottenute su una Intel UHD 730 integrata, non su una scheda potente"
+description: "REMOTIX's performance is ALWAYS declared together with the hardware: it is obtained on an integrated Intel UHD 730, not on a powerful card"
 metadata: 
   node_type: memory
   type: feedback
@@ -8,42 +8,42 @@ metadata:
   modified: 2026-08-16T20:50:45.841Z
 ---
 
-Il 16 agosto 2026, dopo il giudizio *«il test su Windows lo dichiaro superato al 100 %»*, Nic ha
-aggiunto: **«ricordiamoci sempre che otteniamo performance eccellenti su una Intel integrata»**.
+On 16 Aug 2026, after the judgment *«il test su Windows lo dichiaro superato al 100 %»*, Nic
+added: **«ricordiamoci sempre che otteniamo performance eccellenti su una Intel integrata»**.
 
-⇒ **Un numero di prestazione di questo progetto non si riferisce mai da solo**: si riferisce con il
-ferro su cui è stato preso — `[M]` **Intel UHD 730** (`i915`, `0000:00:02.0`, `renderD128`), che è
-un'integrata modesta. La Radeon RX 6800 della stessa macchina è **esclusa apposta** con una regola
-udev (`DECISIONI.md` §4.6-ter e §4.6-quinquies).
+⇒ **A performance number of this project is never reported alone**: it is reported with the
+hardware it was taken on — `[M]` **Intel UHD 730** (`i915`, `0000:00:02.0`, `renderD128`), which is
+a modest integrated GPU. The Radeon RX 6800 of the same machine is **excluded on purpose** with a udev
+rule (`DECISIONI.md` §4.6-ter and §4.6-quinquies).
 
-**Why:** sono due cose in una, e tutt'e due sue.
-1. **È il metodo che ha posto lui** il 15 agosto 2026: *«i test vanno fatti sulla GPU integrata,
+**Why:** they are two things in one, and both are his.
+1. **It is the method he set** on 15 Aug 2026: *«i test vanno fatti sulla GPU integrata,
    altrimenti "trucchiamo" il gioco. La solidità del sistema la si vede su GPU poco potenti, non
-   mostri come la RX 6800»* — e quella regola nacque perché una misura dell'Aquarium a 60 fps era
-   stata presa **sulla scheda sbagliata**, per accidente.
-2. **È il risultato**, e senza il ferro accanto non si capisce quanto vale: *«funziona tutto e con
-   performance eccellenti»* su un'integrata da ufficio dice del prodotto quel che lo stesso numero
-   su una scheda da gioco non direbbe affatto.
+   mostri come la RX 6800»* — and that rule was born because a measurement of Aquarium at 60 fps had
+   been taken **on the wrong card**, by accident.
+2. **It is the result**, and without the hardware alongside you cannot tell how much it is worth: *«funziona tutto e con
+   performance eccellenti»* on an office integrated GPU says about the product what the same number
+   on a gaming card would not say at all.
 
 **How to apply:**
-- quando si riporta un numero — fps, ms, ritardo, fotogrammi — si nomina **la scheda**, non solo la
-  macchina: «su Intel UHD 730 integrata», mai «sulla macchina di prova» e basta;
-- ⛔ se una misura viene da un ferro diverso (la Radeon, un portatile, un telefono), **si dichiara
-  in quella riga**: una misura sul ferro migliore non dice se il prodotto regge, dice quanto è
-  veloce quel ferro;
-- vale anche verso l'esterno: è la frase che qualifica il prodotto, e va tenuta in testa a qualunque
-  riassunto di prestazioni.
+- when reporting a number — fps, ms, delay, frames — name **the card**, not only the
+  machine: «on integrated Intel UHD 730», never just «on the test machine»;
+- ⛔ if a measurement comes from different hardware (the Radeon, a laptop, a phone), **declare it
+  on that line**: a measurement on better hardware does not say whether the product holds up, it says how
+  fast that hardware is;
+- it also holds towards the outside: it is the sentence that qualifies the product, and it must be kept at the top of any
+  performance summary.
 
-⏳ E resta la domanda che la fase 8 eredita: la codifica hardware sceglie la sua scheda da sé
-(VA-API). Se il compositore disegna sull'integrata e il codificatore cercasse la discreta — chiusa —
-il ripiego è in CPU, e va **dichiarato** invece che subito.
+⏳ And the question that phase 8 inherits remains: hardware encoding chooses its card by itself
+(VA-API). If the compositor draws on the integrated GPU and the encoder looked for the discrete one — closed —
+the fallback is on the CPU, and it must be **declared** instead of suffered.
 
-Vedi [[remotix-convenzioni]], [[la-prova-la-fa-lutente]] e [[utente-prova-si-conserva]].
+See [[remotix-convenzioni]], [[la-prova-la-fa-lutente]] and [[utente-prova-si-conserva]].
 
-⛔⛔ **18 settembre 2026, ribadito dall'utente: «niente RADEON. Si rimane inchiodati sulla Intel
-Integrata».** Detto quando è venuto fuori che l'esclusione valeva solo sull'ospite: nelle scatole
-della rete entrava `--device /dev/dri` intero, e gli inquilini finivano anche nel gruppo della
-Radeon. ⇒ Adesso nelle scatole entrano **solo** `card0` e `renderD128` della Intel (trovati per
-indirizzo PCI), `gpu-udev.sh` chiude anche il nodo `card` della Radeon, e `provisiona.sh` non
-mette più nessuno nel gruppo `remotix-nogpu`. ⚠ Qualunque strada nuova verso la scheda va
-controllata contro questa regola **dentro** l'ambiente dove gira, non solo sull'ospite.
+⛔⛔ **18 Sep 2026, restated by the user: «niente RADEON. Si rimane inchiodati sulla Intel
+Integrata».** Said when it came out that the exclusion held only on the host: into the boxes
+of the net went the whole `--device /dev/dri`, and the tenants also ended up in the
+Radeon's group. ⇒ Now **only** the Intel's `card0` and `renderD128` go into the boxes (found by
+PCI address), `gpu-udev.sh` also closes the Radeon's `card` node, and `provisiona.sh` no longer
+puts anyone in the `remotix-nogpu` group. ⚠ Any new road to the card must be
+checked against this rule **inside** the environment where it runs, not only on the host.

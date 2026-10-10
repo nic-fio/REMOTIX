@@ -1,6 +1,6 @@
 ---
 name: utente-prova-si-conserva
-description: "Sul server c'è l'utente «prova» con una sessione GNOME senza monitor propri — si conserva, serve alle prove future"
+description: "On the server there is the user «prova» with a GNOME session without monitors of its own — it is kept, it serves future tests"
 metadata: 
   node_type: memory
   type: project
@@ -8,45 +8,45 @@ metadata:
   modified: 2026-08-15T06:03:22.479Z
 ---
 
-Sulla macchina di prova (192.168.0.2) esiste l'utente **`prova`** (uid 1001, parola
-`prova2026`, `enable-linger` acceso). ⭐ **Nic ha chiesto di conservarlo**: *«ci servirà
-in seguito»* (14 agosto 2026).
+On the test machine (192.168.0.2) there is the user **`prova`** (uid 1001, password
+`prova2026`, `enable-linger` on). ⭐ **Nic asked to keep it**: *«ci servirà
+in seguito»* (14 Aug 2026).
 
-La sua sessione grafica è avviata con un drop-in
-`~/.config/systemd/user/org.gnome.Shell@wayland.service.d/zz-senza-monitor.conf` che
-lancia `gnome-shell --headless --no-x11` ⛔ **senza `--virtual-monitor`**.
+Its graphical session is started with a drop-in
+`~/.config/systemd/user/org.gnome.Shell@wayland.service.d/zz-senza-monitor.conf` that
+launches `gnome-shell --headless --no-x11` ⛔ **without `--virtual-monitor`**.
 
-**Why:** è l'unico modo, oggi, per vedere il **desktop vero** dentro REMOTIX. Il prodotto
-crea la sessione con un monitor suo (`sessione.c:650`) e poi ne cattura un altro montato da
-`RecordVirtual` (`mutter.c:450`): la shell resta sul primo e l'utente guarda il secondo,
-vuoto. Senza monitor propri, quello di `RecordVirtual` è l'unico e la shell ci va sopra.
+**Why:** it is the only way, today, to see the **real desktop** inside REMOTIX. The product
+creates the session with a monitor of its own (`sessione.c:650`) and then captures another one mounted by
+`RecordVirtual` (`mutter.c:450`): the shell stays on the first and the user looks at the second,
+empty. Without monitors of its own, the one from `RecordVirtual` is the only one and the shell goes onto it.
 
-⛔⛔ **E OGNI UTENTE DI PROVA VA MESSO NEL GRUPPO `render`** — `usermod -aG render,video <utente>`.
-`[M]` 14 agosto 2026: `prova` non c'era, quindi il **figlio** (che gira come lui) non poteva aprire
-`/dev/dri/renderD128` e il codificatore ripiegava in software **dichiarandolo** — ⛔ **100 ms per
-fotogramma invece di 4,8**, venti volte. Il sintomo per l'utente è «è lento», e la riga che lo
-spiega sta nel registro dove nessuno la legge. ⚠ La cura vale per **qualunque** utente di prova
-nuovo: `nicfio` è in `render` e `video` di suo, gli utenti creati a mano no.
+⛔⛔ **AND EVERY TEST USER MUST BE PUT IN THE `render` GROUP** — `usermod -aG render,video <utente>`.
+`[M]` 14 Aug 2026: `prova` was not in it, so the **child** (which runs as that user) could not open
+`/dev/dri/renderD128` and the encoder fell back to software **declaring it** — ⛔ **100 ms per
+frame instead of 4.8**, twenty times. The symptom for the user is «it's slow», and the line that
+explains it is in the log where nobody reads it. ⚠ The cure holds for **any** new test
+user: `nicfio` is in `render` and `video` by itself, users created by hand are not.
 
-**How to apply:** non ricreare l'utente né la sessione a ogni prova — verificare che ci sia
-già. E ⛔ **non usare `nicfio` per queste prove**: ha una sessione grafica sua, e
-`SPECIFICHE.md` §5.1 ne ammette una sola per utente.
+**How to apply:** do not recreate the user or the session at every test — verify that it is
+already there. And ⛔ **do not use `nicfio` for these tests**: it has a graphical session of its own, and
+`SPECIFICHE.md` §5.1 allows only one per user.
 
-⚠ **E l'orologio di quella macchina è indietro di DUE ORE** rispetto al portatile
-(`[M]` 15 agosto 2026): le ore del registro non sono le tue, e confrontarle senza
-saperlo fa cercare eventi nel posto sbagliato.
+⚠ **And that machine's clock is TWO HOURS behind** the laptop
+(`[M]` 15 Aug 2026): the log's times are not yours, and comparing them without
+knowing it makes you look for events in the wrong place.
 
-⚠ **La macchina si sospende da sola**: `[M]` 15 agosto la notifica di GNOME
-«Automatic Suspend — Suspending soon because of inactivity» è comparsa **dentro
-il desktop remoto**, in due schermate. `sleep-inactive-ac-type` vale `suspend` a
-900 s, e l'inibizione (`SessionManager.Inhibit`, `SUSPEND|IDLE`) **non è ancora
-scritta** — è lavoro della fase 5. Una prova lunga lasciata sola può finire in
-sospensione senza che nessuno lo colleghi al risultato.
+⚠ **The machine suspends by itself**: `[M]` on 15 Aug the GNOME notification
+«Automatic Suspend — Suspending soon because of inactivity» appeared **inside
+the remote desktop**, in two screenshots. `sleep-inactive-ac-type` is `suspend` at
+900 s, and the inhibition (`SessionManager.Inhibit`, `SUSPEND|IDLE`) **is not yet
+written** — it is work for phase 5. A long test left alone can end up in
+suspension without anyone connecting it to the result.
 
-⚠ **E se la sessione grafica muore** (è successo il 14 agosto), si rimette in piedi da root con
+⚠ **And if the graphical session dies** (it happened on 14 Aug), it is brought back up from root with
 `setpriv --reuid=1001 --regid=1001 --init-groups env -i … setsid --fork sh -c 'exec gnome-session
---session=gnome'` e l'ambiente composto da zero (`XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`,
-`XDG_SESSION_TYPE=wayland`). ⛔ **E poi si uccide il figlio del prodotto rimasto senza palco**, o
-l'invariante I2 continuerà a consegnare quello rotto a ogni login.
+--session=gnome'` and the environment built from scratch (`XDG_RUNTIME_DIR`, `DBUS_SESSION_BUS_ADDRESS`,
+`XDG_SESSION_TYPE=wayland`). ⛔ **And then kill the product's child left without a stage**, or
+invariant I2 will keep delivering the broken one at every login.
 
-Il dettaglio sta in `fasi/rapporti/F5-desktop-vero.md`; vedi anche [[remotix-convenzioni]].
+The detail is in `fasi/rapporti/F5-desktop-vero.md`; see also [[remotix-convenzioni]].

@@ -1,26 +1,26 @@
-# La memoria di Claude — copia di deposito
+# Claude's memory — repository copy
 
-Qui dentro ci sono le note che Claude Code tiene su **come si lavora a questo
-progetto**: non che cosa fa il codice (quello si rilegge), ma le cose che si
-imparano una volta sola e si pagano care due — che Nic e' il regista e non il
-programmatore, che le prestazioni si dichiarano sul ferro modesto, che un banco
-si GUARDA prima di chiamarlo, che il riavvio del server perde la chiave ssh.
+In here are the notes that Claude Code keeps on **how to work on this
+project**: not what the code does (that can be reread), but the things one
+learns only once and pays dearly for twice — that Nic is the director and not the
+programmer, that performance is declared on the modest hardware, that a bench
+is LOOKED AT before calling him, that rebooting the server loses the ssh key.
 
-⛔ **Perche' e' finita qui dentro**: viveva in `~/.claude/projects/…/memory/`,
-cioe' fuori dal deposito — in un posto che una pulizia del tablet si porta via
-senza accorgersene. Decisione di Nic, 28 agosto 2026.
+⛔ **Why it ended up in here**: it lived in `~/.claude/projects/…/memory/`,
+that is outside the repository — in a place that a cleanup of the tablet takes away
+without noticing. Nic's decision, 28 Aug 2026.
 
-## Come si rimette al suo posto su una macchina nuova
+## How to put it back in its place on a new machine
 
     cp memoria/*.md ~/.claude/projects/-home-nicfio-REMOTIX/memory/
 
-⚠ Il nome di quella cartella e' ricavato dal **percorso** del progetto. Se un
-giorno il deposito non stara' piu' in `/home/nicfio/REMOTIX`, il
-nome cambia: si guarda quale cartella esiste sotto `~/.claude/projects/` e si
-copia li'.
+⚠ The name of that folder is derived from the project's **path**. If one
+day the repository is no longer in `/home/nicfio/REMOTIX`, the
+name changes: look at which folder exists under `~/.claude/projects/` and
+copy there.
 
-⚠ Questa e' una **copia**, non l'originale vivo: quando Claude scrive una nota
-nuova la scrive in `~/.claude/`, non qui. Ogni tanto va ricopiata.
+⚠ This is a **copy**, not the live original: when Claude writes a new note
+it writes it in `~/.claude/`, not here. Every now and then it must be copied again.
 
-`MEMORY.md` e' l'indice — una riga per nota — ed e' quello che Claude si rilegge
-a ogni sessione.
+`MEMORY.md` is the index — one line per note — and it is what Claude rereads
+at every session.
