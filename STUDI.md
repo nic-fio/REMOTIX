@@ -1,1666 +1,1666 @@
-# STUDI — il codice degli altri, letto prima di scrivere il nostro
+# STUDI — other people's code, read before writing ours
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision. The measurements redone after the change (1 Oct 2026) are in `fasi/18-senza-ffmpeg.md` §5.*
 
-*Cuciti in un documento solo il **16 agosto 2026**, per decisione dell'utente: erano otto file
-sparsi nella radice del progetto. ⛔ **Non è un riassunto**: il testo è quello che era, riga per
-riga, con i titoli abbassati di un livello per farli stare sotto ai capitoli. Nella cucitura nessuna
-misura, nessuna marca e nessuna data sono state toccate; dopo, con la fase 18, sono state tolte solo le misure
-che il cambio ha invalidato (vedi la riga ⚠ qui sopra).*
+*Sewn into a single document on **16 August 2026**, by the user's decision: they were eight files
+scattered in the project root. ⛔ **It is not a summary**: the text is what it was, line by
+line, with the headings lowered by one level to fit under the chapters. In the sewing no
+measurement, no mark and no date was touched; later, with phase 18, only the measurements
+the change invalidated were removed (see the ⚠ line above).*
 
-> ⚠ **COME SI LEGGONO I PERCORSI QUI DENTRO** *(convenzione aggiunta il 28 agosto 2026)*
+> ⚠ **HOW TO READ THE PATHS IN HERE** *(convention added on 28 August 2026)*
 >
-> Questo documento cita file **di altri**, e per anni li ha scritti con la stessa notazione dei
-> nostri — `grd-session.c`, `include/lsquic.h`, perfino `src/backends/...` col **nostro** prefisso
-> `src/`. ⛔ Chi legge non poteva distinguere un file che puo' aprire da uno che non c'e'.
+> This document cites **other people's** files, and for years wrote them with the same notation as
+> ours — `grd-session.c`, `include/lsquic.h`, even `src/backends/...` with **our** prefix
+> `src/`. ⛔ The reader could not tell a file they can open from one that isn't there.
 >
-> ⇒ Da qui in avanti: un percorso **marcato ⟨nome⟩** (`⟨mutter⟩`, `⟨gnome⟩`, `⟨lsquic⟩`) sta
-> nell'albero di **quel progetto**, che si riclona con `git clone` e **non e' nel deposito**
-> (`reference-gnome/`, `reference-kde/`… sono in `.gitignore`: pesano 682 MB e sono versionate a
-> monte). Un percorso **senza marca** e' nostro e si apre qui.
+> ⇒ From here on: a path **marked ⟨name⟩** (`⟨mutter⟩`, `⟨gnome⟩`, `⟨lsquic⟩`) lives
+> in the tree of **that project**, which is re-cloned with `git clone` and **is not in the repository**
+> (`reference-gnome/`, `reference-kde/`… are in `.gitignore`: they weigh 682 MB and are versioned
+> upstream). A path **without a mark** is ours and opens here.
 
-> ## ⛔ Che cos'è questo documento, e che cosa NON è
+> ## ⛔ What this document is, and what it is NOT
 >
-> **Non è documentazione di REMOTIX.** È lo studio del codice **di altri** — compositori, browser,
-> prodotti che fanno il nostro stesso mestiere — fatto **prima** di scrivere il nostro, per non
-> ripagare quello che qualcuno aveva già pagato.
+> **It is not REMOTIX documentation.** It is the study of **other people's** code — compositors, browsers,
+> products that do our same job — done **before** writing ours, so as not to
+> pay again for what someone had already paid for.
 >
-> ⇒ Quel che REMOTIX **è** sta in `SPECIFICHE.md`; quel che **fa** in `PIANO.md`; quel che è stato
-> **deciso** in `DECISIONI.md`; quel che è stato **pagato** in `LEZIONI.md`. Qui c'è solo materiale
-> letto.
+> ⇒ What REMOTIX **is** lives in `SPECIFICHE.md`; what it **does** in `PIANO.md`; what has been
+> **decided** in `DECISIONI.md`; what has been **paid for** in `LEZIONI.md`. Here there is only material
+> that was read.
 >
-> ⚠ **E le date contano più che altrove.** Sei di questi otto studi sono del **7-9 agosto 2026**,
-> cioè **prima che il piano di V2 esistesse** — sono stati scritti per **v1**. ⛔ Dove dicono *«per
-> la fase 11»* o *«per la fase 10»* intendono **le fasi di v1**, non quelle di `PIANO.md`. Il
-> riferimento è rimasto com'era scritto, ed è questa riga a dire come si legge.
+> ⚠ **And dates matter more than elsewhere.** Six of these eight studies are from **7-9 August 2026**,
+> that is **before the V2 plan existed** — they were written for **v1**. ⛔ Where they say *«per
+> la fase 11»* or *«per la fase 10»* they mean **the phases of v1**, not those of `PIANO.md`. The
+> reference stayed as it was written, and it is this line that says how to read it.
 
-## Come si trova una cosa qui dentro
+## How to find something in here
 
-Ogni capitolo tiene **la numerazione delle sezioni che aveva da file separato**. ⇒ Un rimando che
-prima diceva §kde §3.3-bis adesso dice **`STUDI.md` §kde 3.3-bis**, e la sezione ha lo stesso
-numero di prima: **le chiavi dei capitoli sono i nomi che avevano i file**.
+Each chapter keeps **the section numbering it had as a separate file**. ⇒ A cross-reference that
+used to say §kde §3.3-bis now says **`STUDI.md` §kde 3.3-bis**, and the section has the same
+number as before: **the chapter keys are the names the files had**.
 
-| capitolo | che cosa studia | scritto il | righe |
+| chapter | what it studies | written on | lines |
 |---|---|---|---|
-| **§web** | il browser come client — W3C/WHATWG, Chromium, Gecko, WebKit, Guacamole, noVNC | 9 ago 2026 | 566 |
-| **§gnome** | GNOME e Mutter — il primo desktop | 9 ago 2026 | 587 |
-| **§kde** | KDE Plasma e KWin 6.3.6 — il secondo desktop | 7 ago 2026 | 2 213 |
-| **§xfce** | XFCE, labwc e wlroots — il terzo | 8 ago 2026 | 857 |
-| **§lxqt** | LXQt su Wayland — il quarto | 8 ago 2026 | 511 |
-| **§cinnamon** | Cinnamon e Muffin 6.7.4 — il quinto | 9 ago 2026 | 321 |
-| **§gnome-remote-desktop** | il prodotto di GNOME che fa il nostro mestiere | — | 1 018 |
-| **§xpra** | XPRA — lo studio arrivato tardi, e lo dice da solo | 14 ago 2026 | 222 |
+| **§web** | the browser as client — W3C/WHATWG, Chromium, Gecko, WebKit, Guacamole, noVNC | 9 Aug 2026 | 566 |
+| **§gnome** | GNOME and Mutter — the first desktop | 9 Aug 2026 | 587 |
+| **§kde** | KDE Plasma and KWin 6.3.6 — the second desktop | 7 Aug 2026 | 2 213 |
+| **§xfce** | XFCE, labwc and wlroots — the third | 8 Aug 2026 | 857 |
+| **§lxqt** | LXQt on Wayland — the fourth | 8 Aug 2026 | 511 |
+| **§cinnamon** | Cinnamon and Muffin 6.7.4 — the fifth | 9 Aug 2026 | 321 |
+| **§gnome-remote-desktop** | GNOME's product that does our job | — | 1 018 |
+| **§xpra** | XPRA — the study that arrived late, and says so itself | 14 Aug 2026 | 222 |
 
-⚠ **Ogni capitolo porta la propria legenda delle marche** — `[R]` letto nel codice, `[M]` misurato,
-`[?]` non verificato — perché ce l'aveva da file separato. **Sono otto copie quasi identiche e
-concordano**: non ne è stata tolta nessuna, per la stessa ragione per cui non è stato tolto nient'altro.
+⚠ **Each chapter carries its own legend of marks** — `[R]` read in the code, `[M]` measured,
+`[?]` not verified — because it had one as a separate file. **They are eight almost identical copies and
+they agree**: none was removed, for the same reason nothing else was removed.
 
-⛔ **E una cosa che questo documento NON risolve**: gli studi sono **fotografie di una versione**.
-§kde ha letto KWin **v6.3.6**, §cinnamon muffin **6.7.4**. Quel che dicono era vero di quel
-tag — e il giorno dell'aggiornamento va riletto, non ricordato.
+⛔ **And one thing this document does NOT solve**: the studies are **snapshots of a version**.
+§kde read KWin **v6.3.6**, §cinnamon muffin **6.7.4**. What they say was true of that
+tag — and on the day of the update it must be re-read, not remembered.
 
 
 ---
 
-# Parte I — Il client
+# Part I — The client
 
 
 <a id="web"></a>
 
-## Il browser come client — studio, per la fase 1
+## The browser as client — study, for phase 1
 
-*Scritto il 9 agosto 2026, con quattro indagini parallele sulle specifiche W3C/WHATWG e sul codice
-sorgente di Chromium, Gecko, WebKit, Guacamole, noVNC e Xpra. È il **sesto studio** del progetto, e
-il primo che non parla di un compositore.*
+*Written on 9 August 2026, with four parallel investigations into the W3C/WHATWG specifications and the
+source code of Chromium, Gecko, WebKit, Guacamole, noVNC and Xpra. It is the project's **sixth study**, and
+the first that does not talk about a compositor.*
 
-> ### ⚠ Perché questo studio esiste
+> ### ⚠ Why this study exists
 >
-> Il 9 agosto 2026 l'utente ha deciso che **REMOTIX non avrà client dedicati**: il client è una
-> pagina web (`DECISIONI.md` §1.6). Gli altri cinque studi rispondevano alla domanda *«questo
-> desktop ci lascia lavorare?»*; questo risponde a *«il browser ci lascia lavorare?»*, ed è la
-> stessa domanda rivolta a un componente che **non possiamo modificare, non possiamo scegliere e
-> non possiamo interrogare**.
+> On 9 August 2026 the user decided that **REMOTIX will have no dedicated clients**: the client is a
+> web page (`DECISIONI.md` §1.6). The other five studies answered the question *«questo
+> desktop ci lascia lavorare?»*; this one answers *«il browser ci lascia lavorare?»*, and it is the
+> same question put to a component that **we cannot modify, cannot choose and
+> cannot query**.
 >
-> ⭐ **Ed è il primo studio fatto prima di scrivere il codice invece che dopo** — che è
-> precisamente il punto 1 della ricetta di `LEZIONI.md` §9.
+> ⭐ **And it is the first study done before writing the code instead of after** — which is
+> precisely point 1 of the recipe in `LEZIONI.md` §9.
 
-> **Le marche:** **[R]** letto nel codice sorgente, con file e riga — non è una misura · **[S]**
-> letto in una specifica o in una documentazione ufficiale, con l'URL · **[?]** dedotto o non
-> verificato · **[M]** misurato da noi — ⛔ **in questo documento non compare mai**, e non è una
-> dimenticanza: nessuno ha ancora acceso un browser.
+> **The marks:** **[R]** read in the source code, with file and line — it is not a measurement · **[S]**
+> read in a specification or in official documentation, with the URL · **[?]** deduced or not
+> verified · **[M]** measured by us — ⛔ **in this document it never appears**, and it is not an
+> oversight: nobody has switched on a browser yet.
 >
-> Il dettaglio sta nei quattro rapporti in `web/rapporti/`: **S1** certificato (920 righe), **S2**
-> decodifica (730), **S3** tastiera e appunti (1.391), **S4** ritardo del disegno.
+> The detail is in the four reports in `web/rapporti/`: **S1** certificate (920 lines), **S2**
+> decoding (730), **S3** keyboard and clipboard (1.391), **S4** drawing delay.
 >
-> ⭐ **E dalla notte del 10 agosto 2026 in quella cartella c'è un quinto file che non è uno studio**:
-> `web/rapporti/S-esiti-sonda.md`, **gli esiti misurati** della sonda del browser — S7, S1b, S5 — con
-> la scena accanto a ogni numero, i registri `.jsonl` a cui risalire, e ⛔ **la ricontata dell'11
-> agosto che dichiara quali numeri hanno una provenienza su disco e quali no**. ⚠ È lì che il `[M]`
-> di questo studio comincia a esistere; qui dentro continua a non comparire.
+> ⭐ **And since the night of 10 August 2026 there is a fifth file in that folder that is not a study**:
+> `web/rapporti/S-esiti-sonda.md`, **the measured outcomes** of the browser probe — S7, S1b, S5 — with
+> the scene next to every number, the `.jsonl` logs to trace back to, and ⛔ **the recount of 11
+> August that declares which numbers have a provenance on disk and which do not**. ⚠ It is there that the `[M]`
+> of this study begins to exist; in here it still does not appear.
 
 ---
 
-### 1. In due minuti
+### 1. In two minutes
 
-#### 1.1 ⭐ Le cinque cose che questo studio ha cambiato
+#### 1.1 ⭐ The five things this study changed
 
 | # | | |
 |---|---|---|
-| 1 | ⛔ **L'eccezione del certificato NON copre WebTransport** | né su Chrome né su Firefox `[R]`. Il predefinito «un clic e vai» che era stato proposto **non funziona**, e la strada diventa `serverCertificateHashes` — §3 |
-| 2 | ⛔ **`prefer-hardware` non prova niente su Android** | Chromium sceglie **di proposito** un decodificatore HEVC software quando non ne trova uno hardware `[R]`. È la forma d'errore **E1**, cioè il muro di v1, **ricomparso un livello più in alto** — §4 |
-| 3 | ⭐ **Si perde molto meno tastiera del temuto** | a schermo intero la lista riservata di Chrome scende da dodici comandi a **due** `[R]` — §5. ⚠ Ma quel che il **sistema operativo** si tiene non lo recupera nessun browser |
-| 4 | ⭐ **La clipboard si può sorvegliare, da gennaio 2026** | `clipboardchange` è in Chrome 144, ed è stato motivato **esplicitamente dai client di desktop remoto** `[S]` — §5 |
-| 5 | ⛔ **Il compositore del browser costa 25-42 ms a 60 Hz** | `[?]` 1,5-2,5 intervalli di quadro fra il disegno e il pixel acceso — **più di tutto il nostro tetto**. E nessuna API JavaScript lo vede — §6 |
+| 1 | ⛔ **The certificate exception does NOT cover WebTransport** | neither on Chrome nor on Firefox `[R]`. The «one click and go» default that had been proposed **does not work**, and the road becomes `serverCertificateHashes` — §3 |
+| 2 | ⛔ **`prefer-hardware` proves nothing on Android** | Chromium **deliberately** picks a software HEVC decoder when it does not find a hardware one `[R]`. It is error shape **E1**, that is v1's wall, **reappearing one level higher** — §4 |
+| 3 | ⭐ **Much less keyboard is lost than feared** | in full screen Chrome's reserved list drops from twelve commands to **two** `[R]` — §5. ⚠ But what the **operating system** keeps for itself no browser recovers |
+| 4 | ⭐ **The clipboard can be watched, since January 2026** | `clipboardchange` is in Chrome 144, and was motivated **explicitly by remote desktop clients** `[S]` — §5 |
+| 5 | ⛔ **The browser's compositor costs 25-42 ms at 60 Hz** | `[?]` 1.5-2.5 frame intervals between the draw and the lit pixel — **more than our whole cap**. And no JavaScript API sees it — §6 |
 
-#### 1.2 ⛔ E le quattro convergenze fra rapporti, che nessuno dei quattro poteva vedere da solo
+#### 1.2 ⛔ And the four convergences between reports, which none of the four could see on its own
 
-Sono la ragione per cui questo documento esiste oltre ai quattro rapporti.
+They are the reason this document exists beyond the four reports.
 
-> ⚠ **E sono la parte più fragile, per costruzione**: nessuno dei due autori le ha validate.
-> *Riviste il 9 agosto 2026 dalla revisione **R2** (`web/rapporti/R2-revisione-web.md`), che ne ha
-> indebolita una, ridimensionata un'altra, aggiunte due che mancavano, e stabilito che una terza
-> **non era dei rapporti**: era una mia tesi presentata come derivata.*
+> ⚠ **And they are the most fragile part, by construction**: neither of the two authors validated them.
+> *Reviewed on 9 August 2026 by review **R2** (`web/rapporti/R2-revisione-web.md`), which
+> weakened one, scaled down another, added two that were missing, and established that a third
+> **was not from the reports**: it was a thesis of mine presented as derived.*
 
-**A. I 10 bit hanno tre indizi contrari, e nessuno è una misura.**
+**A. 10 bits has three contrary clues, and none is a measurement.**
 
-| Da dove | Che cosa dice |
+| Where from | What it says |
 |---|---|
-| `DECISIONI.md` §2.3-bis | sul percorso `mediacodec` di Android il supporto a 10 bit è limitato e **l'uscita torna a 8** `[S]` |
-| **S2** | ⚠ `[S]` **non `[R]`, e non verificato**: che sui fotogrammi decodificati in hardware `VideoFrame.format` sia **null** viene da una discussione W3C di **gennaio 2023**, e S2 §3.7 dichiara di **non aver potuto stabilire lo stato di Chromium ad agosto 2026**. *Marca corretta da R2: era stata promossa a `[R]`* |
-| **S4** | la condizione di zero-copy di WebGPU è letteralmente `format == PIXEL_FORMAT_NV12` `[R]`: **P010 non passa**. E il canvas 2D ha un aiutante che si chiama `DownShiftHighbitVideoFrame` `[R]` |
+| `DECISIONI.md` §2.3-bis | on Android's `mediacodec` path 10-bit support is limited and **the output goes back to 8** `[S]` |
+| **S2** | ⚠ `[S]` **not `[R]`, and not verified**: that on hardware-decoded frames `VideoFrame.format` is **null** comes from a W3C discussion of **January 2023**, and S2 §3.7 declares it **could not establish the state of Chromium in August 2026**. *Mark corrected by R2: it had been promoted to `[R]`* |
+| **S4** | WebGPU's zero-copy condition is literally `format == PIXEL_FORMAT_NV12` `[R]`: **P010 does not pass**. And the 2D canvas has a helper called `DownShiftHighbitVideoFrame` `[R]` |
 
-⚠ **Sono tre catene diverse** — il codec, l'API, il disegno — e R2 ha provato a farle collassare in
-una sola senza riuscirci. ⛔ **Ma reggono su due gambe e mezza, non su tre**: l'indizio di mezzo è
-una fonte di tre anni fa.
+⚠ **They are three different chains** — the codec, the API, the drawing — and R2 tried to collapse them into
+one without succeeding. ⛔ **But they stand on two and a half legs, not on three**: the middle clue is
+a source from three years ago.
 
-**Da cui, e la forma conta**: `DECISIONI.md` §2.2 — il desiderato a 10 bit, deciso dall'utente
-l'8 agosto — **si segnala come da verificare**, e la verifica è la prima cosa che il banco della
-fase 2 accerta. ⛔ Non si riscrive provvisoria su questa base: R2 ha ragione a dire che *«una
+**Hence, and the form matters**: `DECISIONI.md` §2.2 — the 10-bit wish, decided by the user
+on 8 August — **is flagged as to be verified**, and the verification is the first thing the bench of
+phase 2 establishes. ⛔ It is not rewritten as provisional on this basis: R2 is right to say that *«una
 decisione dell'utente si sposta con tre indizi, non con due indizi e una fonte di tre anni fa
-promossa di marca»* — ed è la stessa `LEZIONI.md` §2.3-quater che avevo citato a sostegno.
+promossa di marca»* — and it is the very `LEZIONI.md` §2.3-quater I had cited in support.
 
-⚠ E la difficoltà si chiude su sé stessa: **dal browser i 10 bit non sono leggibili**, quindi la
-prova finale è **guardare una sfumatura**, cioè `LEZIONI.md` §2.4 — il metro è quel che si vede.
+⚠ And the difficulty closes on itself: **from the browser 10 bits are not readable**, so the
+final proof is **looking at a gradient**, that is `LEZIONI.md` §2.4 — the yardstick is what you see.
 
-**B. La PWA lega S1 e S3 — e vale meno di quanto avevo scritto.**
+**B. The PWA ties S1 and S3 — and it is worth less than I had written.**
 
 | | |
 |---|---|
-| **S1** | dietro un'eccezione di certificato, su Chrome **il Service Worker non si installa** `[R]` ⇒ niente PWA |
-| **S3** | in una **PWA installata** la lista dei tasti riservati di Chrome è **vuota** `[R]` |
+| **S1** | behind a certificate exception, on Chrome **the Service Worker does not install** `[R]` ⇒ no PWA |
+| **S3** | in an **installed PWA** Chrome's list of reserved keys is **empty** `[R]` |
 
-> ⛔ **Avevo concluso «compra la tastiera intera». È troppo forte, su quattro punti** *(R2)*:
+> ⛔ **I had concluded «compra la tastiera intera». It is too strong, on four points** *(R2)*:
 >
-> 1. la lista vuota è quella **del browser**, non del sistema: su macOS `⌘Spazio` e `⌘Tab`, su
->    Android e DeX **ogni combinazione con Meta**, restano perse su qualunque configurazione `[R]`;
-> 2. il guadagno marginale è **piccolo**: a schermo intero le riservate di Chrome sono già solo due,
->    e una delle due — l'uscita — la **specifica obbliga** a riservarla. Fra «schermo intero + lock»
->    e «PWA» ballano `F11` e poco altro;
-> 3. vale **solo su Chrome**: su Firefox restano le sei riservate, su Safari la PWA non c'entra;
-> 4. ⛔ **e sull'uso primario è una `[?]`**: se valga anche per Chrome per Android non lo sa nessuno
->    — lo dichiara §5.5 di questo stesso documento, e in §1.2 l'avevo dato per acquisito.
+> 1. the empty list is **the browser's**, not the system's: on macOS `⌘Spazio` and `⌘Tab`, on
+>    Android and DeX **every combination with Meta**, remain lost on any configuration `[R]`;
+> 2. the marginal gain is **small**: in full screen Chrome's reserved ones are already only two,
+>    and one of the two — exiting — the **specification requires** to reserve. Between «full screen + lock»
+>    and «PWA» what changes is `F11` and little else;
+> 3. it holds **only on Chrome**: on Firefox the six reserved ones remain, on Safari the PWA does not come into it;
+> 4. ⛔ **and on the primary use it is a `[?]`**: whether it also holds for Chrome for Android nobody knows
+>    — §5.5 of this very document declares it, and in §1.2 I had taken it as given.
 >
-> **Quel che resta vero**: il certificato vero toglie l'avviso **e** apre la strada della PWA, che
-> su Chrome desktop recupera qualche scorciatoia in più. È un vantaggio, non una categoria diversa.
+> **What remains true**: the real certificate removes the warning **and** opens the road to the PWA, which
+> on desktop Chrome recovers a few more shortcuts. It is an advantage, not a different category.
 
-**C. ⛔ La forma della pagina è decisa da due vincoli che si scontrano** *(aggiunta da R2)*.
+**C. ⛔ The shape of the page is decided by two constraints that collide** *(added by R2)*.
 
-| Da dove | Il vincolo |
+| Where from | The constraint |
 |---|---|
-| **S3** | le lettere devono uscire da `beforeinput`, e questo obbliga la pagina ad avere **un elemento modificabile con il fuoco** — anche su desktop, non solo su Android. Senza, **accenti e tasti morti non si producono** `[R]` |
-| **S4** | ⛔ **niente elementi sopra la tela**, o cadono il percorso overlay e il canvas desincronizzato `[S]` `[R]` |
+| **S3** | the letters must come out of `beforeinput`, and this forces the page to have **an editable element with focus** — on desktop too, not only on Android. Without it, **accents and dead keys are not produced** `[R]` |
+| **S4** | ⛔ **no elements over the canvas**, or the overlay path and the desynchronized canvas fall `[S]` `[R]` |
 
-**Il caso concreto**: si scrive la pagina con la sola tela, si arriva alla fase 4, si scopre che
-`^`+`e` non produce `ê` su nessun motore, si aggiunge il campo nascosto sopra la tela — e **si
-perde la strada di disegno su cui tutto §6 è costruito**. ⭐ È precisamente la riscrittura che §6.1
-dice di voler evitare, e **la sintesi era l'unico posto dove si poteva vedere**.
+**The concrete case**: the page is written with the canvas alone, you reach phase 4, you discover that
+`^`+`e` does not produce `ê` on any engine, you add the hidden field over the canvas — and **you
+lose the drawing road on which all of §6 is built**. ⭐ It is precisely the rewrite that §6.1
+says it wants to avoid, and **the synthesis was the only place where it could be seen**.
 
-**D. ⛔ La scheda in secondo piano si congela dopo cinque minuti** *(aggiunta da R2; era in S2 §3.8
-e non l'avevo riportata)*.
-
-Un gruppo di pagine viene **congelato** se resta nascosto e silenzioso per oltre **cinque minuti**,
-e l'esenzione documentata richiede un canale WebRTC aperto o una traccia multimediale viva `[S]`.
-⛔ **L'architettura di §6.1 — WebTransport e basta — non rientra nell'esenzione.** S2 la marca come
+**D. ⛔ The background tab freezes after five minutes** *(added by R2; it was in S2 §3.8
+and I had not reported it)*.
+A group of pages is **frozen** if it stays hidden and silent for more than **five minutes**,
+and the documented exemption requires an open WebRTC channel or a live media track `[S]`.
+⛔ **The architecture of §6.1 — WebTransport and nothing else — does not fall within the exemption.** S2 marks it as
 *«decisione di architettura da prendere adesso, non quando ci accorgeremo che la sessione muore
 dopo cinque minuti»*.
 
-⚠ **E tocca una promessa**: `SPECIFICHE.md` §5.3 dice che un client che tace 30 secondi **è
-staccato**. Una scheda congelata tace — quindi il telefono in tasca si stacca da sé. Non è un
-difetto (la sessione sopravvive, `DECISIONI.md` §4.1), **ma è un comportamento da dichiarare**, e
-oggi non è scritto da nessuna parte.
+⚠ **And it touches a promise**: `SPECIFICHE.md` §5.3 says that a client silent for 30 seconds **is
+detached**. A frozen tab is silent — so the phone in the pocket detaches by itself. It is not a
+fault (the session survives, `DECISIONI.md` §4.1), **but it is a behaviour to be declared**, and
+today it is not written anywhere.
 
-**E una tesi mia, che va attribuita invece che spacciata per conclusione dei rapporti** *(R17)*:
-`DECISIONI.md` §2.7 obbliga a dichiarare un ripiego, e S2 dimostra che da JavaScript la verità sul
-decodificatore non è leggibile `[R]` — **da cui propongo** che la diagnosi viva **nel prodotto**,
-perché il dispositivo dell'utente è l'unico posto dove la domanda ha risposta. ⚠ In S2
-l'autodiagnosi compare **dentro un solo esito su cinque**, non come conclusione generale: la tesi è
-difendibile, ma è mia, ed è la forma d'errore **E5** applicata al ragionamento invece che al dato.
+**And a thesis of mine, which must be attributed instead of passed off as a conclusion of the reports** *(R17)*:
+`DECISIONI.md` §2.7 requires declaring a fallback, and S2 shows that from JavaScript the truth about the
+decoder is not readable `[R]` — **from which I propose** that the diagnosis live **in the product**,
+because the user's device is the only place where the question has an answer. ⚠ In S2
+self-diagnosis appears **inside just one outcome out of five**, not as a general conclusion: the thesis is
+defensible, but it is mine, and it is error shape **E5** applied to reasoning instead of to data.
 
 ---
 
-### 2. La mappa
+### 2. The map
 
-| Che cosa | Versione su cui è stato letto |
+| What | Version it was read on |
 |---|---|
 | **Chromium / Blink** | 151 |
 | **Gecko / Firefox** | 151-153 |
 | **WebKit / Safari** | 26.4 |
-| WebTransport | Safari 26.4, **24 marzo 2026** — con essa ci sono tutti e tre i motori. ⚠ *La parola «Baseline» che questa riga portava non viene da nessuno dei quattro rapporti: era della ricerca del 9 agosto, ed è stata tolta perché è un termine tecnico con un significato preciso (R2)* |
-| WebCodecs `VideoDecoder` | Chrome **94+** su tutte le piattaforme, **Android compreso** · Firefox 130+ · Safari 26+. ⚠ *La cifra «Chrome per Android 147» era una contaminazione fra due rapporti: 147 è la versione di un'altra cosa (R2)* |
-| ⛔ **Firefox su Android** | `VideoDecoder` **assente in release** (solo Nightly), HEVC assente `[S]` ⇒ **non può essere un client**. Manca in tutto il resto di questo documento, che altrove tratta Firefox come uno dei tre motori serviti |
-| Fullscreen Standard, `keyboardLock` | entrato nello standard WHATWG l'**8 maggio 2026** |
-| `clipboardchange` | **Chrome 144**, 13 gennaio 2026 |
-| I riferimenti letti | Guacamole, noVNC, Xpra html5, Selkies, moonlight-web |
+| WebTransport | Safari 26.4, **24 March 2026** — with it all three engines are there. ⚠ *The word «Baseline» this row carried does not come from any of the four reports: it was from the search of 9 August, and was removed because it is a technical term with a precise meaning (R2)* |
+| WebCodecs `VideoDecoder` | Chrome **94+** on all platforms, **Android included** · Firefox 130+ · Safari 26+. ⚠ *The figure «Chrome per Android 147» was a contamination between two reports: 147 is the version of something else (R2)* |
+| ⛔ **Firefox on Android** | `VideoDecoder` **absent in release** (Nightly only), HEVC absent `[S]` ⇒ **it cannot be a client**. It is missing from all the rest of this document, which elsewhere treats Firefox as one of the three engines served |
+| Fullscreen Standard, `keyboardLock` | entered the WHATWG standard on **8 May 2026** |
+| `clipboardchange` | **Chrome 144**, 13 January 2026 |
+| The references read | Guacamole, noVNC, Xpra html5, Selkies, moonlight-web |
 
-⚠ **Questo capitolo invecchia più in fretta di tutti gli altri cinque.** I compositori si muovono a
-cicli di sei mesi e Debian li congela; i browser si aggiornano da soli, sul dispositivo
-dell'utente, e **due delle cinque cose più importanti di questo studio sono del 2026**. Chi rilegge
-questo file fra sei mesi **rifaccia le ricerche prima di fidarsi**.
+⚠ **This chapter ages faster than all the other five.** Compositors move in
+six-month cycles and Debian freezes them; browsers update themselves, on the user's
+device, and **two of the five most important things in this study are from 2026**. Whoever re-reads
+this file in six months **should redo the searches before trusting it**.
 
 ---
 
-### 3. S1 — Il certificato: l'eccezione non copre la sessione
+### 3. S1 — The certificate: the exception does not cover the session
 
-*Dettaglio: `web/rapporti/S1-certificato.md`.*
+*Detail: `web/rapporti/S1-certificato.md`.*
 
-#### 3.1 La risposta, motore per motore
-
-| | |
-|---|---|
-| **Chrome/Edge** | ⛔ **no**, e per due ragioni indipendenti. L'eccezione dell'utente vive nel processo browser e la consulta **un solo punto**, alimentato dagli errori delle richieste normali: il client WebTransport **non la interroga mai** `[R]` — assenza verificata **con controllo positivo** su un punto dove quel meccanismo invece c'è. E il QUIC di Chrome pretende una radice **incorporata nel browser**: `ERR_QUIC_CERT_ROOT_NOT_KNOWN` |
-| **Firefox** | ⛔ **no**, per una ragione diversa: l'eccezione **viene** consultata anche su HTTP/3, e subito dopo la sessione si chiude se la radice non è incorporata `[R]`. L'unica deroga scritta nel codice è, testualmente, `serverCertificateHashes` |
-| **Safari** | `[?]` **il caso aperto**: la sua eccezione non aggira niente, mette il certificato **nel portachiavi**, e WebTransport passa di lì. Potrebbe essere l'unico dove la risposta è sì. **Nessuno l'ha documentato** |
-
-> ### ⛔ E Safari **ha** `serverCertificateHashes` — la correzione che avevo perso per strada
->
-> *Rilievo R2, ed è il più caro dei diciassette perché era già passato in un documento di
-> decisione.* WebKit l'ha implementato il **2 ottobre 2025** (bug 300057, `RESOLVED FIXED`),
-> l'implementazione sta in `NetworkTransportSessionCocoa.mm` `[R]`, ed è spedita in **Safari 26.4**.
->
-> ⛔ Il rapporto S1 dedicava un riquadro apposta a correggere l'affermazione contraria — *«vera nel
-> 2024, ripetuta nel 2026»* — e io **non l'ho riportata**, scrivendo invece in `DECISIONI.md` §1.7
-> che *«WebKit non implementa `serverCertificateHashes`»*. Corretto lì lo stesso giorno.
->
-> **Le due conseguenze:**
->
-> 1. ⭐ **iPhone e iPad hanno già una strada senza dominio**, ed è **la stessa** degli altri due
->    motori. Non è una piattaforma da salvare: è una piattaforma servita;
-> 2. la misura **S1a** perde il primo posto. Non decide più *«se iPhone ha una strada»* — decide
->    **una comodità**: se su Safari l'eccezione basti da sola, cioè se lì si possa fare a meno di
->    pubblicare l'impronta. S1 §5.8 lo scrive: l'impronta si usa **sempre**, e un'eventuale
->    tolleranza di Safari sarebbe **un ripiego in più, non un percorso diverso**.
-
-⛔ **E questo chiude, con una ragione tecnica dura, la proposta di far installare un'autorità
-nostra** (`DECISIONI.md` §1.7): su Chrome **non basta nemmeno il magazzino di sistema**, perché
-quella radice non è *incorporata nel browser*.
-
-#### 3.2 Che cosa se ne è ricavato
+#### 3.1 The answer, engine by engine
 
 | | |
 |---|---|
-| **la strada** | `serverCertificateHashes`, promosso da rete di sicurezza a **strada normale** (`RCP.md` §4.1-bis) — ⭐ **e vale su tutti e tre i motori**, Safari 26.4 compreso |
-| ⛔ **due certificati, non uno** | uno **longevo** per la pagina — è quello su cui vive l'eccezione dell'utente — e uno **breve, ≤14 giorni**, per la sessione, che ruota da sé. ⚠ Confonderli fa ricomparire l'avviso ogni due settimane |
-| ⛔ **e l'avviso torna comunque ogni sette giorni** | `[R]` `kCertErrorBypassExpirationInSeconds = 604800`, con il commento *«Certificate error bypasses are remembered for one week»*. ⚠ *Questa riga mancava, e con essa la conseguenza: **anche tenendo il certificato della pagina fermo, su Chrome il clic si rifà ogni settimana**. Cambia la frase che si dice all'utente (R2)* |
-| ⭐ **una cosa che cade e semplifica** | `Alt-Svc` **non c'entra**: WebTransport apre la sua connessione da sé `[S]`. Il ripiego silenzioso su TCP che era stato dichiarato come pericolo **non può accadere** |
-| ⛔ **il prezzo dell'eccezione** | dietro di essa, su Chrome, **il Service Worker non si installa** `[R]` — e vedi §1.2 B |
-| ⏳ **due cose che S1 lascia da decidere, e che avevo taciuto** | **(1)** Safari è l'unico motore con WebTransport anche su **HTTP/2 e TCP**: il nostro server non lo parla, quindi il suo ripiego finirebbe in errore — *va deciso* se implementarlo o dichiarare Safari fuori dal ripiego. **(2)** una pagina già aperta ha in mano **un'impronta che invecchia**: alla riconnessione dopo la rotazione va ricaricata o va richiesta l'impronta corrente — *va deciso dove sta questo aggiornamento in `RCP.md`* |
+| **Chrome/Edge** | ⛔ **no**, and for two independent reasons. The user's exception lives in the browser process and is consulted by **a single point**, fed by the errors of normal requests: the WebTransport client **never queries it** `[R]` — absence verified **with a positive control** on a point where that mechanism is instead present. And Chrome's QUIC demands a root **built into the browser**: `ERR_QUIC_CERT_ROOT_NOT_KNOWN` |
+| **Firefox** | ⛔ **no**, for a different reason: the exception **is** consulted on HTTP/3 too, and right afterwards the session closes if the root is not built in `[R]`. The only waiver written in the code is, literally, `serverCertificateHashes` |
+| **Safari** | `[?]` **the open case**: its exception bypasses nothing, it puts the certificate **in the keychain**, and WebTransport goes through there. It could be the only one where the answer is yes. **Nobody has documented it** |
 
-#### 3.3 Il banco
-
-⛔ **Il controllo positivo che avevo scritto era cieco, ed è il rilievo più grave della revisione**
-(R2, rilievo R1). Diceva: *«la stessa prova su Chrome deve fallire»*. Con **la porta UDP 7447
-chiusa nel firewall**, la prova fallisce su Safari *e* fallisce su Chrome — cioè **il controllo è
-verde** — e il banco conclude «l'eccezione di Safari non copre», che è la conclusione sbagliata su
-un dato mancante. È «vuoto» e «proibito» con lo stesso aspetto (`LEZIONI.md` §1.9), messo al primo
-posto del progetto.
-
-**Il controllo giusto, che S1 aveva scritto e che avevo sostituito**: sullo **stesso browser**,
-sulla **stessa pagina**, nello **stesso giro** — si prova l'eccezione da sola *e* si prova la
-connessione con l'impronta pubblicata. La seconda **deve riuscire**: se fallisce anche quella, non
-si sta misurando l'eccezione, **si sta misurando un server che non risponde**.
-
-> #### ⛔ E i controlli sono tre, non uno — la cura era rimasta a metà
+> ### ⛔ And Safari **has** `serverCertificateHashes` — the correction I had lost along the way
 >
-> *Aggiunti la notte del 9 agosto 2026, rilievo **R3.1** della revisione del banco della fase 1.
-> La cura del rilievo R1 aveva rimesso il controllo che dice **sì** (P2) e non quelli che dicono
-> **no** — ed è la stessa forma, un livello più in basso.*
+> *Finding R2, and it is the costliest of the seventeen because it had already gone into a
+> decision document.* WebKit implemented it on **2 October 2025** (bug 300057, `RESOLVED FIXED`),
+> the implementation is in `NetworkTransportSessionCocoa.mm` `[R]`, and it ships in **Safari 26.4**.
+>
+> ⛔ Report S1 devoted a box specifically to correcting the contrary claim — *«vera nel
+> 2024, ripetuta nel 2026»* — and I **did not report it**, writing instead in `DECISIONI.md` §1.7
+> that *«WebKit non implementa `serverCertificateHashes`»*. Corrected there the same day.
+>
+> **The two consequences:**
+>
+> 1. ⭐ **iPhone and iPad already have a road without a domain**, and it is **the same** as the other two
+>    engines. It is not a platform to be rescued: it is a platform served;
+> 2. measurement **S1a** loses first place. It no longer decides *«se iPhone ha una strada»* — it decides
+>    **a convenience**: whether on Safari the exception is enough by itself, that is whether there one can do without
+>    publishing the fingerprint. S1 §5.8 writes it: the fingerprint is used **always**, and a possible
+>    tolerance from Safari would be **one more fallback, not a different path**.
+
+⛔ **And this closes, with a hard technical reason, the proposal of having an authority of ours
+installed** (`DECISIONI.md` §1.7): on Chrome **not even the system store is enough**, because
+that root is not *built into the browser*.
+
+#### 3.2 What was derived from it
+
+| | |
+|---|---|
+| **the road** | `serverCertificateHashes`, promoted from safety net to **normal road** (`RCP.md` §4.1-bis) — ⭐ **and it holds on all three engines**, Safari 26.4 included |
+| ⛔ **two certificates, not one** | a **long-lived** one for the page — it is the one the user's exception lives on — and a **short one, ≤14 days**, for the session, which rotates by itself. ⚠ Confusing them makes the warning reappear every two weeks |
+| ⛔ **and the warning comes back anyway every seven days** | `[R]` `kCertErrorBypassExpirationInSeconds = 604800`, with the comment *«Certificate error bypasses are remembered for one week»*. ⚠ *This row was missing, and with it the consequence: **even keeping the page certificate fixed, on Chrome the click is redone every week**. It changes the sentence said to the user (R2)* |
+| ⭐ **one thing that falls away and simplifies** | `Alt-Svc` **has nothing to do with it**: WebTransport opens its connection by itself `[S]`. The silent fallback to TCP that had been declared as a danger **cannot happen** |
+| ⛔ **the price of the exception** | behind it, on Chrome, **the Service Worker does not install** `[R]` — and see §1.2 B |
+| ⏳ **two things S1 leaves to be decided, and that I had kept quiet about** | **(1)** Safari is the only engine with WebTransport also over **HTTP/2 and TCP**: our server does not speak it, so its fallback would end in an error — *it must be decided* whether to implement it or declare Safari out of the fallback. **(2)** an already open page holds **a fingerprint that ages**: on reconnection after rotation it must be reloaded or the current fingerprint must be requested — *it must be decided where this update lives in `RCP.md`* |
+
+#### 3.3 The bench
+
+⛔ **The positive control I had written was blind, and it is the most serious finding of the review**
+(R2, finding R1). It said: *«la stessa prova su Chrome deve fallire»*. With **UDP port 7447
+closed in the firewall**, the test fails on Safari *and* fails on Chrome — that is **the control is
+green** — and the bench concludes «Safari's exception does not cover», which is the wrong conclusion on
+missing data. It is «empty» and «forbidden» looking the same (`LEZIONI.md` §1.9), put in first
+place in the project.
+
+**The right control, which S1 had written and which I had replaced**: on the **same browser**,
+on the **same page**, in the **same round** — the exception is tested alone *and* the
+connection with the published fingerprint is tested. The second **must succeed**: if that one fails too, you
+are not measuring the exception, **you are measuring a server that does not answer**.
+
+> #### ⛔ And the controls are three, not one — the cure had stayed half done
+>
+> *Added on the night of 9 August 2026, finding **R3.1** of the review of the phase 1 bench.
+> The cure for finding R1 had put back the control that says **yes** (P2) and not those that say
+> **no** — and it is the same shape, one level lower.*
 >
 > | | |
 > |---|---|
-> | **P2** | la connessione con **l'impronta pubblicata** deve **riuscire** |
-> | ⛔ **P3** | la connessione con l'impronta **sbagliata di un byte** deve **fallire** |
-> | ⛔ **P4** | un certificato rigenerato a **30 giorni**, con la sua impronta giusta, deve fallire **per durata** |
+> | **P2** | the connection with **the published fingerprint** must **succeed** |
+> | ⛔ **P3** | the connection with the fingerprint **wrong by one byte** must **fail** |
+> | ⛔ **P4** | a certificate regenerated at **30 days**, with its right fingerprint, must fail **because of its duration** |
 >
-> S1 §4.4, testualmente: *«**solo con P2 verde e P3 rosso** il risultato di P1 significa
-> qualcosa»*, e su P3: *«**se riesce, il banco non distingue nulla**»*.
+> S1 §4.4, literally: *«**solo con P2 verde e P3 rosso** il risultato di P1 significa
+> qualcosa»*, and on P3: *«**se riesce, il banco non distingue nulla**»*.
 >
-> ⛔ **Il caso concreto che chiude solo P3**: una pagina che considera «riuscita» la costruzione
-> dell'oggetto `WebTransport` invece di attendere `ready` — o che guarda la promessa sbagliata —
-> fa riuscire **anche** la prova con l'impronta storpiata. Il banco scrive `[M]` *«su Safari
-> l'eccezione copre WebTransport»*, che è un `[M]` **falso** contro due `[R]` letti nel codice di
-> Chromium e di Gecko. P2 da solo non lo vede: è verde in tutti e due i mondi.
+> ⛔ **The concrete case only P3 closes**: a page that considers «successful» the construction
+> of the `WebTransport` object instead of waiting for `ready` — or that watches the wrong promise —
+> makes **even** the test with the mangled fingerprint succeed. The bench writes `[M]` *«su Safari
+> l'eccezione copre WebTransport»*, which is a **false** `[M]` against two `[R]` read in the code of
+> Chromium and Gecko. P2 alone does not see it: it is green in both worlds.
 
-⚠ **E la misura ha perso il primo posto**: con Safari che ha `serverCertificateHashes` (§3.1), S1a
-non decide più se una piattaforma è servibile — decide se lì l'impronta si possa risparmiare.
+⚠ **And the measurement has lost first place**: with Safari having `serverCertificateHashes` (§3.1), S1a
+no longer decides whether a platform can be served — it decides whether there the fingerprint can be spared.
 
 ---
 
-### 4. S2 — La decodifica: la trappola di v1 travestita da API
+### 4. S2 — Decoding: v1's trap disguised as an API
 
-*Dettaglio: `web/rapporti/S2-decodifica.md`.*
+*Detail: `web/rapporti/S2-decodifica.md`.*
 
-#### 4.1 ⛔ Il fatto che conta più di tutti
-
-| | |
-|---|---|
-| **su desktop** | `hardwareAcceleration: "prefer-hardware"` è una prova vera: il broker **butta via del tutto** la fabbrica dei decodificatori software `[R]` |
-| ⛔ **su Android no** | quando non trova un decodificatore HEVC hardware, Chromium ne sceglie **di proposito** uno software di MediaCodec `[R]`, perché non ne impacchetta uno suo |
-
-**Da cui**: `prefer-hardware` riuscito, `powerEfficient: true` e fotogrammi corretti sono **tutti
-compatibili con la CPU**. È la forma d'errore **E1** — necessario preso per sufficiente — cioè
-esattamente ciò che ha ucciso v1.
-
-⭐ **E l'indagine non si è fermata al «non l'ho trovato»**: il dato **esiste** dentro Chromium
-(`IsPlatformDecoder()`) e **non compare in nessuna interfaccia JavaScript** `[R]`. Non è una
-ricerca finita male: è un fatto.
-
-#### 4.2 Il supporto, e il formato del flusso
+#### 4.1 ⛔ The fact that matters most
 
 | | |
 |---|---|
-| **HEVC Main10 in WebCodecs** | Chrome per Android da **108.0.5343.0** · Chrome su Linux solo via VA-API da **108.0.5354.0** · Safari da 16.4 (solo video) e pieno da **26.0** `[S]` |
-| copertura di campo 2026 | ≈ **85 %** in decodifica Main10 — ⚠ e l'autore del dato dichiara che **non distingue hardware da software** |
-| ⭐ **il formato del flusso** | **Annex-B senza `description`**: è legale, è **quel che `hevc_vaapi` già produce**, e in Chromium **risparmia un'allocazione e una copia per fotogramma** `[R]`. Tre progetti su tre fanno così; moonlight-web prova Annex-B **per primo** proprio su HEVC |
-| ⚠ la trappola dell'hvcC | Chromium riparsa l'SPS e **rifiuta la configurazione** se i byte di prevenzione dell'emulazione cadono nel campo sbagliato `[R]` — un motivo in più per non prendere quella strada |
+| **on desktop** | `hardwareAcceleration: "prefer-hardware"` is a real proof: the broker **throws away entirely** the factory of software decoders `[R]` |
+| ⛔ **on Android it is not** | when it does not find a hardware HEVC decoder, Chromium **deliberately** picks a software one from MediaCodec `[R]`, because it does not package one of its own |
 
-⭐ **La strada pigra è anche quella giusta**, ed è raro: non si scrive un impacchettatore, non si
-converte niente, e si risparmia una copia.
+**Hence**: a successful `prefer-hardware`, `powerEfficient: true` and correct frames are **all
+compatible with the CPU**. It is error shape **E1** — necessary taken for sufficient — that is
+exactly what killed v1.
 
-#### 4.3 Il banco
+⭐ **And the investigation did not stop at «I didn't find it»**: the datum **exists** inside Chromium
+(`IsPlatformDecoder()`) and **appears in no JavaScript interface** `[R]`. It is not a
+search that went badly: it is a fact.
 
-Un decodificatore software **supera le prime cinque prove** e cade solo su tre:
+#### 4.2 Support, and the stream format
 
 | | |
 |---|---|
-| **portata a saturazione** | 4K60 Main10, e si guarda dove si ferma |
-| **una canarina di CPU** | un lavoro noto dentro un worker, che rallenta se la CPU sta decodificando |
-| **il decadimento su dieci minuti** | il silicio tiene, la CPU scalda e cala |
-| ⛔ **controllo A** | VP9 forzato **in software** — software per costruzione. Se il banco non lo dichiara tale, il suo verdetto su HEVC va buttato |
-| ⛔ **controllo B** | ⭐ VP9 in **`prefer-hardware`** — **deve essere dichiarato hardware**. *Mancava, ed è quello che dice **no**: senza, una soglia tarata larga fa passare per hardware l'HEVC **software di MediaCodec**, cioè proprio quel che Chromium sceglie di proposito su Android (§4.1). S2 §4.4: «il banco è valido se, sullo stesso telefono, dichiara **software** il controllo A **e hardware** il controllo B. Finché non lo fa, **non pubblica verdetti**». Ripristinato dal rilievo **R3.1***, 9 ago |
-| ⭐ **controllo C** | **`is_software_codec` letto via `chrome://inspect`**, in parallelo alle prove indirette. ⛔ Il dato **esiste** in `media_codec_video_decoder.cc`, col nome che arriva da `MediaCodec.getName()`: *«il browser sa e non risponde»* è vero **da JavaScript**, e il banco non è JavaScript. Rinunciarci sull'uso primario era una scelta non dichiarata (**R3.13**) |
-| ⛔ **e gli esiti sono TRE** | ≥ 90 fps ⇒ hardware · ≤ 30 ⇒ software · **in mezzo: verdetto sospeso**. Un banco a due uscite promuove la banda incerta a certezza |
+| **HEVC Main10 in WebCodecs** | Chrome for Android since **108.0.5343.0** · Chrome on Linux only via VA-API since **108.0.5354.0** · Safari since 16.4 (video only) and fully since **26.0** `[S]` |
+| field coverage 2026 | ≈ **85 %** in Main10 decoding — ⚠ and the author of the figure declares that it **does not distinguish hardware from software** |
+| ⭐ **the stream format** | **Annex-B without `description`**: it is legal, it is **what `hevc_vaapi` already produces**, and in Chromium it **saves an allocation and a copy per frame** `[R]`. Three projects out of three do so; moonlight-web tries Annex-B **first** precisely on HEVC |
+| ⚠ the hvcC trap | Chromium re-parses the SPS and **rejects the configuration** if the emulation prevention bytes fall in the wrong field `[R]` — one more reason not to take that road |
 
-⚠ **E questo banco non resta in laboratorio** (§1.2 C): la stessa misura, ridotta, vive **nel
-prodotto**, perché il dispositivo dell'utente è l'unico posto dove la domanda ha risposta.
+⭐ **The lazy road is also the right one**, and that is rare: no packager is written, nothing is
+converted, and a copy is saved.
+
+#### 4.3 The bench
+
+A software decoder **passes the first five tests** and fails only on three:
+
+| | |
+|---|---|
+| **throughput at saturation** | 4K60 Main10, and you watch where it stops |
+| **a CPU canary** | a known job inside a worker, which slows down if the CPU is decoding |
+| **the decay over ten minutes** | silicon holds, the CPU heats up and drops |
+| ⛔ **control A** | VP9 forced **in software** — software by construction. If the bench does not declare it as such, its verdict on HEVC must be thrown away |
+| ⛔ **control B** | ⭐ VP9 in **`prefer-hardware`** — **must be declared hardware**. *It was missing, and it is the one that says **no**: without it, a loosely tuned threshold lets MediaCodec's **software** HEVC pass as hardware, that is precisely what Chromium deliberately picks on Android (§4.1). S2 §4.4: «il banco è valido se, sullo stesso telefono, dichiara **software** il controllo A **e hardware** il controllo B. Finché non lo fa, **non pubblica verdetti**». Restored by finding **R3.1***, 9 Aug |
+| ⭐ **control C** | **`is_software_codec` read via `chrome://inspect`**, in parallel to the indirect tests. ⛔ The datum **exists** in `media_codec_video_decoder.cc`, with the name coming from `MediaCodec.getName()`: *«il browser sa e non risponde»* is true **from JavaScript**, and the bench is not JavaScript. Giving it up on the primary use was an undeclared choice (**R3.13**) |
+| ⛔ **and the outcomes are THREE** | ≥ 90 fps ⇒ hardware · ≤ 30 ⇒ software · **in between: verdict suspended**. A two-outcome bench promotes the uncertain band to certainty |
+
+⚠ **And this bench does not stay in the lab** (§1.2 C): the same measurement, reduced, lives **in the
+product**, because the user's device is the only place where the question has an answer.
 
 ---
 
-### 5. S3 — Tastiera e appunti: il 2026 ha ribaltato le premesse
+### 5. S3 — Keyboard and clipboard: 2026 overturned the premises
 
-*Dettaglio: `web/rapporti/S3-tastiera-appunti.md` — 96 `[R]`, 103 `[S]`, 23 `[?]`, zero `[M]`.*
+*Detail: `web/rapporti/S3-tastiera-appunti.md` — 96 `[R]`, 103 `[S]`, 23 `[?]`, zero `[M]`.*
 
-#### 5.1 ⛔ Una riga di `SPECIFICHE.md` §7.3-bis era sbagliata, e l'ho scritta io
+#### 5.1 ⛔ A line of `SPECIFICHE.md` §7.3-bis was wrong, and I wrote it
 
-Diceva: *«la Keyboard Lock esiste solo su Chrome ed Edge, e solo a schermo intero»*, e che
-`Ctrl+W`, `F11` e `Ctrl+Shift+I` sono perduti. **Falso su tre punti:**
-
-| | |
-|---|---|
-| **non è più solo Chrome** | `requestFullscreen({keyboardLock:"browser"})` è entrato nel Fullscreen Standard WHATWG l'**8 maggio 2026**, e l'hanno spedito **Safari 26.4** e **Firefox 151** `[S]`. Chrome/Edge restano sulla vecchia `navigator.keyboard.lock()`: ⚠ **la pagina deve saperle entrambe** |
-| **si perde molto meno** | la lista riservata di Chrome è di **dodici** comandi; **a schermo intero scende a due** — `F11` e l'uscita — **senza chiamare nessuna API** `[R]`. Firefox ne ha **sei**, Safari **zero** (ma filtra a schermo intero, e ⭐ **questo spiega il vecchio commento di noVNC su Safari**) |
-| ⭐ **in una PWA installata è vuota** | `// In Apps mode, no keys are reserved` `[R]` |
-
-#### 5.2 Quel che si perde davvero
+It said: *«la Keyboard Lock esiste solo su Chrome ed Edge, e solo a schermo intero»*, and that
+`Ctrl+W`, `F11` and `Ctrl+Shift+I` are lost. **False on three points:**
 
 | | |
 |---|---|
-| `Ctrl+Alt+Canc` | ovunque, e non è recuperabile |
-| l'uscita da schermo intero | per costruzione: è la via di fuga dell'utente |
-| ⛔ **su macOS, tutte le scorciatoie di sistema** | non esiste un aggancio — la funzione che dovrebbe fornirlo **restituisce `nullptr`** `[R]`, e il controllo di sistema precede la lock |
-| ⛔ **su Android e DeX, qualunque combinazione con Meta** | per regola AOSP — ⚠ e **DeX è l'uso primario dichiarato** (`DECISIONI.md` §5-bis.0) |
+| **it is no longer only Chrome** | `requestFullscreen({keyboardLock:"browser"})` entered the WHATWG Fullscreen Standard on **8 May 2026**, and **Safari 26.4** and **Firefox 151** shipped it `[S]`. Chrome/Edge stay on the old `navigator.keyboard.lock()`: ⚠ **the page must know both** |
+| **much less is lost** | Chrome's reserved list is **twelve** commands; **in full screen it drops to two** — `F11` and exit — **without calling any API** `[R]`. Firefox has **six**, Safari **zero** (but it filters in full screen, and ⭐ **this explains noVNC's old comment about Safari**) |
+| ⭐ **in an installed PWA it is empty** | `// In Apps mode, no keys are reserved` `[R]` |
 
-#### 5.3 Gli appunti: l'ipotesi «non si può sorvegliare» è superata
+#### 5.2 What is really lost
 
 | | |
 |---|---|
-| ⭐ `clipboardchange` | **Chrome 144, 13 gennaio 2026** — e la motivazione scritta nella proposta sono **i client di desktop remoto** `[S]`. Porta solo i tipi MIME, vuole il fuoco |
-| ⛔ **non esiste su Firefox e Safari** | verificato, non dedotto. Là ogni lettura costa il menu «Incolla» con **un secondo di attesa** |
+| `Ctrl+Alt+Canc` | everywhere, and it is not recoverable |
+| exiting full screen | by construction: it is the user's escape route |
+| ⛔ **on macOS, all system shortcuts** | there is no hook — the function that should provide it **returns `nullptr`** `[R]`, and the system check precedes the lock |
+| ⛔ **on Android and DeX, any combination with Meta** | by AOSP rule — ⚠ and **DeX is the declared primary use** (`DECISIONI.md` §5-bis.0) |
 
-#### 5.4 ⭐ Tre regali dalla lettura del codice altrui
+#### 5.3 The clipboard: the «cannot be watched» hypothesis is outdated
 
-1. ⛔ **La cura del modificatore rimasto giù**, che per noi è il difetto più grave perché **la
-   sessione sopravvive alla connessione**: Guacamole risincronizza lo stato dei modificatori
-   **dagli eventi del mouse** `[R]`. Non c'è altro modo, e nessuno l'avrebbe inventato;
-2. la tabella `KeyboardEvent.code` → **evdev** di Chromium, canonica e **senza buchi da 1 a 94**
-   `[R]` — cioè la conversione che `RCP.md` §7.3 richiede, già scritta e verificabile;
-3. la corsa fra `Ctrl+V` e la lettura degli appunti, che **tutti e tre** i riferimenti disinnescano
-   a mano — Xpra ritarda **ogni battuta di 100 ms** `[R]`. ⚠ Per noi 100 ms sono **due volte il
-   tetto del ritardo**: quella cura non si copia, si sostituisce.
+| | |
+|---|---|
+| ⭐ `clipboardchange` | **Chrome 144, 13 January 2026** — and the motivation written in the proposal is **remote desktop clients** `[S]`. It carries only the MIME types, it wants focus |
+| ⛔ **it does not exist on Firefox and Safari** | verified, not deduced. There every read costs the «Paste» menu with **one second of waiting** |
 
-#### 5.5 Le due `[?]` che contano di più
+#### 5.4 ⭐ Three gifts from reading other people's code
 
-Entrambe su DeX, che è l'uso primario: **se la lock funzioni su DeX** (esiste solo da Android 16
-QPR1) e **se la PWA valga anche su Chrome per Android**.
+1. ⛔ **The cure for the modifier left down**, which for us is the most serious fault because **the
+   session survives the connection**: Guacamole resynchronises the modifier state
+   **from mouse events** `[R]`. There is no other way, and nobody would have invented it;
+2. Chromium's `KeyboardEvent.code` → **evdev** table, canonical and **without gaps from 1 to 94**
+   `[R]` — that is the conversion `RCP.md` §7.3 requires, already written and verifiable;
+3. the race between `Ctrl+V` and the clipboard read, which **all three** references defuse
+   by hand — Xpra delays **every keystroke by 100 ms** `[R]`. ⚠ For us 100 ms is **twice the
+   delay cap**: that cure is not copied, it is replaced.
+
+#### 5.5 The two `[?]` that matter most
+
+Both on DeX, which is the primary use: **whether the lock works on DeX** (it exists only since Android 16
+QPR1) and **whether the PWA also holds on Chrome for Android**.
 
 ---
 
-### 6. S4 — Il ritardo del disegno
+### 6. S4 — The drawing delay
 
-*Dettaglio: `web/rapporti/S4-ritardo-disegno.md`.*
+*Detail: `web/rapporti/S4-ritardo-disegno.md`.*
 
-#### 6.1 La strada — ⛔ **non più una prescrizione: una decisione misurata** *(13 agosto 2026)*
+#### 6.1 The road — ⛔ **no longer a prescription: a measured decision** *(13 August 2026)*
 
-*⛔ Questo paragrafo era scritto prima di qualunque riga di pagina, e prescriveva. Alla fase 3 è
-stato **attuato e misurato**, e la misura ha diviso la prescrizione in due metà con esiti opposti.
-Il testo originale è tenuto qui sotto perché la parte che regge è ancora quella.*
+*⛔ This paragraph was written before any line of the page, and it prescribed. In phase 3 it was
+**implemented and measured**, and the measurement split the prescription into two halves with opposite outcomes.
+The original text is kept below because the part that holds is still that one.*
 
-`drawImage(videoFrame)` **dentro la callback del decodificatore** — ⛔ **non** su
-`requestAnimationFrame`. Zero copie in CPU se il fotogramma è NV12 a 8 bit; una conversione di
-colore in GPU `[R]`. È anche l'unica che funziona su tutti e tre i motori.
+`drawImage(videoFrame)` **inside the decoder callback** — ⛔ **not** on
+`requestAnimationFrame`. Zero copies in CPU if the frame is 8-bit NV12; one colour
+conversion in GPU `[R]`. It is also the only one that works on all three engines.
 
-| la prescrizione diceva | esito `[M]` 13 agosto |
+| the prescription said | outcome `[M]` 13 August |
 |---|---|
-| ⭐ dipingere **dentro la callback del decodificatore**, non su `requestAnimationFrame` | ✅ **regge, ed è la metà che vale** |
-| ⭐ la **decodifica** fuori dal thread principale | ✅ **VALE, ed è misurato**: `[M]` **−3,44 ms** (7,17 → 3,73) |
-| ⛔ la **tela** fuori dal thread principale | ⛔⛔ **AFFONDA IL CONTO**: `[M]` **+17,6 ms** sul disegno, più **+10,2** sulla consegna dello stream |
-| il canvas 2D **desincronizzato** | ⚠ **non è mai stato acceso nel prodotto**: `src/pagina.html` ha `desynchronized` **spento** `[R]`, e la strada per accenderlo (`?tela=desincronizzata`) **non esiste** — non è un interruttore spento, è un interruttore che non c'è. ⇒ Non è una prescrizione respinta: è una prescrizione **mai eseguita**, e il guadagno resta `[?]` |
+| ⭐ paint **inside the decoder callback**, not on `requestAnimationFrame` | ✅ **it holds, and it is the half that counts** |
+| ⭐ **decoding** off the main thread | ✅ **IT COUNTS, and it is measured**: `[M]` **−3.44 ms** (7.17 → 3.73) |
+| ⛔ the **canvas** off the main thread | ⛔⛔ **IT SINKS THE BILL**: `[M]` **+17.6 ms** on drawing, plus **+10.2** on stream delivery |
+| the **desynchronized** 2D canvas | ⚠ **it was never switched on in the product**: `src/pagina.html` has `desynchronized` **off** `[R]`, and the road to switch it on (`?tela=desincronizzata`) **does not exist** — it is not a switch turned off, it is a switch that isn't there. ⇒ It is not a rejected prescription: it is a prescription **never carried out**, and the gain remains `[?]` |
 
-> #### ⛔⛔ Il worker: attuato, misurato — e **sbagliato A METÀ, non per intero**
+> #### ⛔⛔ The worker: implemented, measured — and **wrong BY HALF, not entirely**
 >
-> *`[M]` stessa macchina, stessa sessione, **stessa pagina** (cambia solo l'interruttore), stesso
-> strumento rigirato per il «prima» e per il «dopo». Due giri di «prima», per sapere quanto vale il
-> rumore: **5,9 ms**, e l'effetto lo supera di **cinque volte**. Errore d'orologio ±0,63-0,65 ms.*
+> *`[M]` same machine, same session, **same page** (only the switch changes), same
+> instrument re-run for the «before» and for the «after». Two rounds of «before», to know how much the
+> noise is worth: **5.9 ms**, and the effect exceeds it **five times over**. Clock error ±0.63-0.65 ms.*
 >
-> | ritardo disegno → vetro | n | p05 | **mediana** | p95 | p99 |
+> | delay draw → glass | n | p05 | **median** | p95 | p99 |
 > |---|---|---|---|---|---|
-> | PRIMA-A (thread principale) | 432 | 58,85 | **73,66** | 99,53 | 218,46 |
-> | PRIMA-B (ripetuto) | 492 | 53,93 | **67,79** | 88,51 | 98,16 |
-> | ⛔ **DOPO (worker)** | 483 | 84,48 | ⛔ **101,30** | 126,13 | 157,82 |
+> | BEFORE-A (main thread) | 432 | 58.85 | **73.66** | 99.53 | 218.46 |
+> | BEFORE-B (repeated) | 492 | 53.93 | **67.79** | 88.51 | 98.16 |
+> | ⛔ **AFTER (worker)** | 483 | 84.48 | ⛔ **101.30** | 126.13 | 157.82 |
 >
-> ⇒ **+27,6 / +33,5 ms di mediana.** ⛔ Ma il totale nasconde la cosa che serve, e la scomposizione
-> la mostra:
+> ⇒ **+27.6 / +33.5 ms of median.** ⛔ But the total hides the thing that is needed, and the breakdown
+> shows it:
 >
-> | tratto (mediana, ms) | PRIMA-A | PRIMA-B | DOPO | Δ |
+> | stretch (median, ms) | BEFORE-A | BEFORE-B | AFTER | Δ |
 > |---|---|---|---|---|
-> | stream completo → `decode()` | 0,07 | 0,06 | **10,23** | ⛔ **+10,2** |
-> | ⭐ **la decodifica** | **7,17** | 6,13 | ⭐ **3,73** | ⭐ **−3,44 / −2,40** |
-> | richiamo → disegno finito (`drawImage` ×2) | 9,63 | 9,11 | **27,19** | ⛔ **+17,6** |
-> | **somma dei tre** | 16,87 | 15,30 | **41,15** | **+24,3 / +25,9** |
+> | stream complete → `decode()` | 0.07 | 0.06 | **10.23** | ⛔ **+10.2** |
+> | ⭐ **decoding** | **7.17** | 6.13 | ⭐ **3.73** | ⭐ **−3.44 / −2.40** |
+> | callback → drawing finished (`drawImage` ×2) | 9.63 | 9.11 | **27.19** | ⛔ **+17.6** |
+> | **sum of the three** | 16.87 | 15.30 | **41.15** | **+24.3 / +25.9** |
 >
-> ⭐⭐ **⇒ §6.1 non è sbagliata per intero: è sbagliata a metà. Vale la DECODIFICA, non la TELA.**
-> Il decodificatore **consegna prima quando non contende** — `[M]` **−3,44 ms**, ed è un guadagno
-> vero, non un arrotondamento. È la **tela** che affonda il conto, e da sola vale **+17,6**.
-> ⇒ ⛔ **La riga utilizzabile non è *«il worker è sbagliato»***, che sarebbe solo una porta chiusa:
-> è ***«la decodifica sì, la tela no»***, che dice a chi verrà dove mettere il confine.
+> ⭐⭐ **⇒ §6.1 is not wrong entirely: it is wrong by half. DECODING counts, not the CANVAS.**
+> The decoder **delivers sooner when it does not contend** — `[M]` **−3.44 ms**, and it is a real
+> gain, not a rounding. It is the **canvas** that sinks the bill, and on its own it is worth **+17.6**.
+> ⇒ ⛔ **The usable line is not *«the worker is wrong»***, which would only be a closed door:
+> it is ***«decoding yes, canvas no»***, which tells whoever comes next where to put the boundary.
 >
-> #### E i fotogrammi dipinti, obbligatori accanto (`LEZIONI.md` §6.2)
+> #### And the painted frames, mandatory alongside (`LEZIONI.md` §6.2)
 >
-> | | catena vera (P7) | saturazione 1080p | saturazione 480p |
+> | | real chain (P7) | saturation 1080p | saturation 480p |
 > |---|---|---|---|
-> | thread principale | 22,8-24,2 /s | **127,6** /s | **230,6** /s |
-> | worker | **26,3** /s | **33,9** /s (−73,4 %) | **56,4** /s (−75,5 %) |
+> | main thread | 22.8-24.2 /s | **127.6** /s | **230.6** /s |
+> | worker | **26.3** /s | **33.9** /s (−73.4 %) | **56.4** /s (−75.5 %) |
 >
-> ⚠⚠ **Le due grandezze dicono cose OPPOSTE**: sulla catena vera il worker dipinge **di più** (è la
-> coda), ma a saturazione il tetto **crolla di tre quarti**. Chi ne guardasse una sola leggerebbe
-> metà del fatto — e **quale metà dipende da quale grandezza ha scelto per prima**.
+> ⚠⚠ **The two quantities say OPPOSITE things**: on the real chain the worker paints **more** (it is the
+> queue), but at saturation the cap **collapses by three quarters**. Whoever looked at only one would read
+> half of the fact — and **which half depends on which quantity they chose first**.
 >
-> #### ⭐⭐ Il meccanismo, ed è la scoperta che cambia una REGOLA
+> #### ⭐⭐ The mechanism, and it is the discovery that changes a RULE
 >
-> Costo extra per fotogramma **13,4 ms a 480p** e **21,7 ms a 1080p**; e a 480p il worker si ferma a
-> **56,4 dipinti/s ≈ il quadro dei 60 Hz**, mentre il thread principale ne fa **230,6**.
-> ⇒ ⛔ **`transferControlToOffscreen` impegna la tela al ritmo del quadro: è un
-> `requestAnimationFrame` implicito.** Il worker prescritto da questo paragrafo reintroduce **in
-> silenzio** proprio il salto di quadro che il paragrafo vieta a voce alta.
-> ⛔⛔ **La prescrizione conteneva la propria smentita, e nessuna rilettura del documento poteva
-> accorgersene senza misurarla.**
+> Extra cost per frame **13.4 ms at 480p** and **21.7 ms at 1080p**; and at 480p the worker stops at
+> **56.4 paints/s ≈ the 60 Hz frame**, while the main thread does **230.6**.
+> ⇒ ⛔ **`transferControlToOffscreen` commits the canvas to the frame rhythm: it is an
+> implicit `requestAnimationFrame`.** The worker prescribed by this paragraph reintroduces **in
+> silence** precisely the frame skip that the paragraph forbids out loud.
+> ⛔⛔ **The prescription contained its own refutation, and no re-reading of the document could
+> notice it without measuring it.**
 >
-> ⇒ ⛔ **Il divieto si estende AL MECCANISMO, non alla parola.** Non basta «non chiamare
-> `requestAnimationFrame`»: **qualunque strada che consegni al ritmo del quadro è vietata allo
-> stesso modo**, e chi la prende paga il quadro senza averlo mai nominato.
+> ⇒ ⛔ **The ban extends TO THE MECHANISM, not to the word.** It is not enough to «not call
+> `requestAnimationFrame`»: **any road that delivers at the frame rhythm is forbidden in the
+> same way**, and whoever takes it pays the frame without ever having named it.
 >
-> #### ⏳ `[?]` E questo va letto ACCANTO ai numeri, non in fondo
+> #### ⏳ `[?]` And this must be read NEXT TO the numbers, not at the bottom
 >
-> ⛔⛔ **Tutto è misurato su Xvfb, in software, SENZA GPU**, e la penale è in gran parte
-> **sincronizzazione al quadro**. ⇒ **Su hardware vero il conto va rifatto PRIMA di seppellire
-> §6.1**: questi numeri chiudono la strada per oggi, **non per sempre**.
-> ⏳ `[?]` E un `WebTransport` aperto **dentro** il worker toglierebbe i **+10,2** del tratto della
-> consegna, ⛔ **non** i **+17,6** del disegno — che sono quelli che decidono.
+> ⛔⛔ **Everything is measured on Xvfb, in software, WITHOUT a GPU**, and the penalty is largely
+> **synchronisation to the frame**. ⇒ **On real hardware the bill must be redone BEFORE burying
+> §6.1**: these numbers close the road for today, **not forever**.
+> ⏳ `[?]` And a `WebTransport` opened **inside** the worker would remove the **+10.2** of the delivery
+> stretch, ⛔ **not** the **+17.6** of drawing — which are the ones that decide.
 >
-> ⇒ ⭐ **Il codice resta in albero dietro `#video=worker`, SPENTO**, proprio perché il giorno della
-> GPU vera il numero si rifà senza riscrivere niente (`DECISIONI.md` §2.8).
-> ⚠ **E l'interruttore legge il FRAMMENTO, non la stringa di ricerca**, ed è una conseguenza di un
-> difetto: `?video=worker` prende **404** (`src/pagina.c` · `servi()`). La sintassi col `?` tornerà valida
-> quando quel difetto sarà curato.
+> ⇒ ⭐ **The code stays in the tree behind `#video=worker`, OFF**, precisely so that on the day of the
+> real GPU the number is redone without rewriting anything (`DECISIONI.md` §2.8).
+> ⚠ **And the switch reads the FRAGMENT, not the query string**, and it is a consequence of a
+> fault: `?video=worker` gets **404** (`src/pagina.c` · `servi()`). The syntax with `?` will become valid again
+> when that fault is cured.
 
-⚠ *La riga «e impone la forma della pagina: il video vive nel worker, l'input nel thread
-principale» **cade con il worker**: oggi video e input stanno tutti e due nel thread principale, e
-il confine che questo paragrafo diceva di dover decidere subito non esiste più. ⛔ Se il worker
-tornasse, torna anche quel confine — ma dovrà tornare con una misura nuova, non con questa riga.*
+⚠ *The line «e impone la forma della pagina: il video vive nel worker, l'input nel thread
+principale» **falls with the worker**: today video and input are both on the main thread, and
+the boundary this paragraph said had to be decided at once no longer exists. ⛔ If the worker
+came back, that boundary comes back too — but it will have to come back with a new measurement, not with this line.*
 
-#### 6.2 Il pezzo che non è nostro e si sente lo stesso
+#### 6.2 The piece that is not ours and is felt all the same
 
-`[?]` Fra il disegno e il pixel acceso passano **1,5-2,5 intervalli di quadro: 16-40 ms a 60 Hz**,
-cioè **quanto tutto il nostro tetto**. Il tetto «solo per il pezzo che è nostro» resta legittimo
-(`DECISIONI.md` §2.4), ma **quella riga va scritta accanto al tetto** o si promette una cosa e
-l'utente ne sente un'altra.
+`[?]` Between the draw and the lit pixel pass **1.5-2.5 frame intervals: 16-40 ms at 60 Hz**,
+that is **as much as our whole cap**. The cap «only for the piece that is ours» remains legitimate
+(`DECISIONI.md` §2.4), but **that line must be written next to the cap** or one thing is promised and
+the user feels another.
 
-⭐ **La leva, se servisse**: Selkies e moonlight-web non dipingono su canvas — mandano i fotogrammi
-a un elemento `<video>` per prendere il percorso **overlay**, che salta il compositore `[R]`. Va
-sotto un interruttore spento, non scritta per prima. ⚠ Xpra e noVNC restano sul canvas, e **nessuno
-dei due dichiara un numero di ritardo**.
+⭐ **The lever, if it were needed**: Selkies and moonlight-web do not paint on a canvas — they send the frames
+to a `<video>` element to take the **overlay** path, which skips the compositor `[R]`. It goes
+behind a switch that is off, not written first. ⚠ Xpra and noVNC stay on the canvas, and **neither
+of the two declares a delay figure**.
 
-> ⛔⛔ **E su Xvfb questo pezzo cieco NON ESISTE** — *13 agosto 2026, e vale per ogni banco browser
-> del progetto.* I 16-40 ms sono il tempo fra il disegno e il **pixel acceso su uno schermo**. Su
-> Xvfb non c'è schermo, non c'è scanout, e **`requestAnimationFrame` non gira mai**: `[M]` **0
-> quadri in 3 secondi**, con e senza GPU, con `visibilityState` a «visible».
-> ⇒ ⛔ **La stima 16-40 ms si dichiara accanto ai numeri destinati all'utente, e NON accanto ai
-> numeri del banco.** Sommarla a una misura presa su Xvfb gonfia il totale di un pezzo che lì non
-> c'è; toglierla da un numero che si promette all'utente lo sgonfia dello stesso pezzo. È lo stesso
-> numero, e i due errori hanno segno opposto.
+> ⛔⛔ **And on Xvfb this blind piece DOES NOT EXIST** — *13 August 2026, and it holds for every browser bench
+> of the project.* The 16-40 ms are the time between the draw and the **pixel lit on a screen**. On
+> Xvfb there is no screen, there is no scanout, and **`requestAnimationFrame` never runs**: `[M]` **0
+> frames in 3 seconds**, with and without a GPU, with `visibilityState` at «visible».
+> ⇒ ⛔ **The 16-40 ms estimate is declared next to the numbers meant for the user, and NOT next to the
+> bench numbers.** Adding it to a measurement taken on Xvfb inflates the total by a piece that is not
+> there; removing it from a number promised to the user deflates it by the same piece. It is the same
+> number, and the two errors have opposite signs.
 
-#### 6.3 Il banco, e il suo pezzo cieco
+#### 6.3 The bench, and its blind piece
 
-L'anello di `DECISIONI.md` §2.6 si costruisce così: `t0` prima di spedire, `t1` come **prima riga**
-della callback del decodificatore, poi si disegna, e **solo dopo** si legge la marca con una
-lettura di 16×16 pixel. ⛔ **Quell'ordine è vincolante**: leggere prima sarebbe un ritorno dalla
-GPU, e falserebbe la misura che sta prendendo.
+The link of `DECISIONI.md` §2.6 is built like this: `t0` before sending, `t1` as the **first line**
+of the decoder callback, then you draw, and **only afterwards** you read the mark with a
+read of 16×16 pixels. ⛔ **That order is binding**: reading first would be a readback from the
+GPU, and would distort the measurement it is taking.
 
 | | |
 |---|---|
-| ⛔ **P1, il controllo decisivo** | il server ritarda di **N millisecondi noti**, e la mediana **deve salire di esattamente N**. Un banco che non lo fa non sa di misurare |
-| ⛔ **P2 e P3, e P3 era caduto** | **P2**: il rilevatore trova il colore **che c'è**. ⛔ **P3**: **non** trova quello che **non c'è**. *S4 §4.2: «se dice sempre sì, si sta misurando zero e si è felici a torto» — e un rilevatore che dice sempre «ho visto la marca» **passa anche P1**, perché i N ms si sommano identici. Ripristinato dal rilievo **R3.1***, 9 ago |
-| ⛔ **P5, il fuori ordine** | i fotogrammi arrivano su stream indipendenti: un anello che non lo regge misura la coda invece del ritardo. ⛔ **13 agosto: P5 NON È STATO ESEGUITO, e adesso lo dice.** Dopo tre iniettori `scavalcati = 0` — e *«zero fuori ordine»* non è «l'anello regge», è **«il fenomeno non si è presentato»** (`LEZIONI.md` §1.9). Prima il banco lo dichiarava **verde** |
-| ⭐ **P5 — e la causa del fuori ordine è misurata** | ⛔ **non nasce (solo) dalla rete: nasce dalla DIMENSIONE del fotogramma.** `stream_video` scatta al **completamento** dello stream ⇒ l'ordine d'arrivo è **l'ordine delle dimensioni**, non quello di partenza, e **una chiave grossa viene scavalcata dai delta** che le partono dietro. ⚠ E il conto lo paga il protocollo: uno scavalcamento **costa una chiave** (`RCP.md` §5.2, §6.2 — «la regola dell'ordine si applica prima di quella della misura»). ⇒ Un iniettore che ritarda i pacchetti non riproduce il fenomeno: **lo riproduce chi cambia le dimensioni** |
-| ⛔ **P6, la grana dell'orologio** | senza le due intestazioni di isolamento fra origini, su Firefox e Safari i cronometri cadono su una griglia da **1 ms** — su un tetto di **50**. ⚠ E `SPECIFICHE.md` §11.5 ne fa un **vincolo di prodotto**, non una taratura del banco (O11) |
-| ⛔ **P7, il ritmo come controllo del percorso** | il ritmo consegnato dice se si sta misurando la strada che si crede |
-| ⛔ **dove finisce la misura** | ⛔ **al disegno finito, non al richiamo del decodificatore.** *Corretto il 13 agosto 2026: la prima stesura chiudeva al richiamo, regalandosi **~11 ms** nostri e misurabili su un tetto di 50. Il numero è salito da **63,8 a 74,6** e lo si è lasciato salire.* ⇒ Il confine si sposta **nella direzione scomoda**, o il metro lavora per chi lo tiene |
-| ⛔ **il pezzo cieco** | la misura finisce al disegno; il pixel si accende `[?]` 16-40 ms dopo, e **nessuna API JavaScript lo vede**. Si stima, e **la stima si dichiara accanto a ogni numero** invece di far finta che il numero sia il totale. ⛔⛔ **Ma su Xvfb quel pezzo NON esiste** (§6.2): la stima vale per lo schermo dell'utente, **non per il banco** |
-| ⚠ **e una misura singola non vale nulla** | si lavora **a distribuzioni**, non a campioni |
+| ⛔ **P1, the decisive control** | the server delays by **N known milliseconds**, and the median **must rise by exactly N**. A bench that does not do this does not know it is measuring |
+| ⛔ **P2 and P3, and P3 had fallen** | **P2**: the detector finds the colour **that is there**. ⛔ **P3**: it does **not** find the one that **is not there**. *S4 §4.2: «se dice sempre sì, si sta misurando zero e si è felici a torto» — and a detector that always says «I saw the mark» **passes P1 too**, because the N ms add up identically. Restored by finding **R3.1***, 9 Aug |
+| ⛔ **P5, out of order** | frames arrive on independent streams: a link that does not cope with it measures the queue instead of the delay. ⛔ **13 August: P5 WAS NOT RUN, and now it says so.** After three injectors `scavalcati = 0` — and *«zero fuori ordine»* is not «the link holds», it is **«the phenomenon did not show up»** (`LEZIONI.md` §1.9). Before, the bench declared it **green** |
+| ⭐ **P5 — and the cause of out-of-order is measured** | ⛔ **it does not arise (only) from the network: it arises from the SIZE of the frame.** `stream_video` fires on **completion** of the stream ⇒ the arrival order is **the order of sizes**, not that of departure, and **a big keyframe is overtaken by the deltas** that leave after it. ⚠ And the protocol pays the bill: an overtaking **costs a keyframe** (`RCP.md` §5.2, §6.2 — «la regola dell'ordine si applica prima di quella della misura»). ⇒ An injector that delays packets does not reproduce the phenomenon: **whoever changes the sizes reproduces it** |
+| ⛔ **P6, the clock grain** | without the two cross-origin isolation headers, on Firefox and Safari the timers fall on a **1 ms** grid — on a cap of **50**. ⚠ And `SPECIFICHE.md` §11.5 makes it a **product constraint**, not a bench tuning (O11) |
+| ⛔ **P7, the rate as a path control** | the delivered rate says whether you are measuring the road you think |
+| ⛔ **where the measurement ends** | ⛔ **at the finished drawing, not at the decoder callback.** *Corrected on 13 August 2026: the first draft closed at the callback, giving itself **~11 ms** of ours, measurable, on a cap of 50. The number rose from **63.8 to 74.6** and it was let rise.* ⇒ The boundary moves **in the uncomfortable direction**, or the yardstick works for whoever holds it |
+| ⛔ **the blind piece** | the measurement ends at the drawing; the pixel lights up `[?]` 16-40 ms later, and **no JavaScript API sees it**. It is estimated, and **the estimate is declared next to every number** instead of pretending the number is the total. ⛔⛔ **But on Xvfb that piece does NOT exist** (§6.2): the estimate holds for the user's screen, **not for the bench** |
+| ⚠ **and a single measurement is worth nothing** | one works **with distributions**, not with samples |
 
 ---
 
-### 7. Il piano delle misure
 
-Nell'ordine, e ciascuna col suo controllo positivo. **Nessuna richiede una riga di prodotto.**
+### 7. The measurement plan
 
-| # | La misura | Perché prima o dopo |
+In order, and each with its positive control. **None requires a line of product code.**
+
+| # | The measurement | Why first or later |
 |---|---|---|
-| **S1a** | l'eccezione su **Safari** lascia passare WebTransport? (macOS e iOS separati) | ⛔ **la prima**: decide se iPhone e iPad hanno una strada senza dominio |
-| **S1b** | quanto dura l'eccezione su Chrome | cambia la frase che si dice all'utente: «una volta» o «una volta a settimana» |
-| **S2** | HEVC Main10 in hardware **sul telefono vero** — saturazione, canarina, decadimento | decide che cosa la pagina dichiara, non se il progetto esiste (`DECISIONI.md` §2.7) |
-| **S3a** | la Keyboard Lock su **DeX** | è l'uso primario, ed è una `[?]` |
-| **S3b** | la PWA su Chrome per Android | vale la tastiera intera (§1.2 B) |
-| **S4** | l'anello del ritardo, con il ritardo noto come controllo | dà il numero, e **la misura del pezzo cieco** |
+| **S1a** | does the exception on **Safari** let WebTransport through? (macOS and iOS separately) | ⛔ **the first**: it decides whether iPhone and iPad have a road without a domain |
+| **S1b** | how long the exception lasts on Chrome | it changes the sentence told to the user: «una volta» or «una volta a settimana» |
+| **S2** | HEVC Main10 in hardware **on the real phone** — saturation, canary, decay | it decides what the page declares, not whether the project exists (`DECISIONI.md` §2.7) |
+| **S3a** | the Keyboard Lock on **DeX** | it is the primary use, and it is a `[?]` |
+| **S3b** | the PWA on Chrome for Android | it is worth the whole keyboard (§1.2 B) |
+| **S4** | the delay link, with the known delay as control | it gives the number, and **the measurement of the blind piece** |
 
-> ⛔ **E tre etichette della sonda NON sono nate qui**, contro quel che `FASI.md` §01-filo-nudo
-> dichiarava: **S5** (la tela che il client dichiara), **S6** (il carico utile di un datagram) e
-> **S7** (il segno della rotella) non compaiono in **nessuna riga** di questo documento — `[M]` 11
-> agosto 2026, `grep -cE '\bS5\b|\bS6\b|\bS7\b' web.md` → **0**, con il controllo positivo accanto
-> (le sei etichette della tabella qui sopra compaiono **24** volte). Sono nate nel documento della
-> fase 1, dalle domande di `SPECIFICHE.md` §6.1-bis, `RCP.md` §5.3 e `RCP.md` §7.3, e **rimandano
-> lì**. ⚠ *Scritto qui l'11 agosto 2026, rilievo **R12C.10**: la frase sbagliata era quella che
-> stabilisce la convenzione dei rimandi, e chi cercava la procedura di S5, S6 o S7 in questo §7 non
-> l'avrebbe trovata.*
+> ⛔ **And three probe labels were NOT born here**, contrary to what `FASI.md` §01-filo-nudo
+> declared: **S5** (the canvas the client declares), **S6** (the payload of a datagram) and
+> **S7** (the sign of the wheel) do not appear in **any line** of this document — `[M]` 11
+> August 2026, `grep -cE '\bS5\b|\bS6\b|\bS7\b' web.md` → **0**, with the positive control beside it
+> (the six labels of the table above appear **24** times). They were born in the document of
+> phase 1, from the questions of `SPECIFICHE.md` §6.1-bis, `RCP.md` §5.3 and `RCP.md` §7.3, and **refer back
+> there**. ⚠ *Written here on 11 August 2026, finding **R12C.10**: the wrong sentence was the one that
+> sets the cross-reference convention, and whoever looked for the procedure of S5, S6 or S7 in this §7 would not
+> have found it.*
 >
-> ⭐ **E gli esiti di quel che è stato eseguito stanno in `web/rapporti/S-esiti-sonda.md`** — il
-> quinto file di quella cartella, che non è un rapporto di studio ma **l'unico che porta numeri
-> misurati**: S7 completa, S1b avviata, S5 a metà, e la ricontata che dice quali numeri hanno una
-> provenienza su disco.
+> ⭐ **And the outcomes of what was executed are in `web/rapporti/S-esiti-sonda.md`** — the
+> fifth file of that folder, which is not a study report but **the only one carrying measured
+> numbers**: S7 complete, S1b started, S5 halfway, and the recount that says which numbers have a
+> provenance on disk.
 
-⛔ **E tutte sul dispositivo vero.** «Il Chrome del portatile lo fa» non dice niente del Chrome del
-telefono: è la forma d'errore **E10** con un travestimento nuovo (`DECISIONI.md` §5-bis.0-ter).
+⛔ **And all on the real device.** «Il Chrome del portatile lo fa» says nothing about the Chrome of the
+phone: it is error form **E10** in a new disguise (`DECISIONI.md` §5-bis.0-ter).
 
 ---
 
-### 8. ⏳ Quel che questo studio NON sa
+### 8. ⏳ What this study does NOT know
 
-*Elencato perché non venga riscoperto come chiuso. Ogni rapporto ha la sua lista; queste sono le
-voci che toccano una decisione.*
+*Listed so that it is not rediscovered as closed. Each report has its own list; these are the
+items that touch a decision.*
 
 | | |
 |---|---|
-| `[?]` Safari e WebTransport dietro eccezione | §3.1 — **e Apple non documenta nemmeno se l'eccezione si possa concedere su iOS** |
-| ⏳ ~~`[?]` la durata dell'eccezione su Chrome~~ — **la misura è AVVIATA** | ⛔ **non era `[?]`, e questo documento si contraddiceva**: §3.2 la dà `[R]` da `kCertErrorBypassExpirationInSeconds = 604800`, cioè **sette giorni**. *Corretto la notte del 9 agosto 2026, rilievo **R4.14**: chi leggeva §8 pianificava una misura per **sapere** il numero, chi leggeva §3.2 per **confermarlo**, e a un banco che deve aspettare una settimana la differenza cambia la soglia di pazienza.* Restava da misurare **quanto quel `[R]` regga sul campo** — ⭐ **e la misura è in moto dal 10 agosto 2026, 21:10:01 UTC**, su **Chrome 151.0.7922.108** con un profilo persistente: `banchi/01-s1b-eccezione.sh`, registro `banchi/01-s1b-stato.jsonl`, esiti in `web/rapporti/S-esiti-sonda.md` §2. ⭐ **E l'11 agosto 2026 la misura ha risposto, senza aspettare il verdetto del 17**: `01-s1b-eccezione.sh scavalca`, **6 controlli su 6**. ⚠ L'obiezione scritta qui sopra era giusta — *«la contabilità di Chrome non è il comportamento»* — ed è **proprio quella** che il giro nuovo chiude: su una **copia** del profilo la scadenza è stata riscritta **a ieri**, e la pagina **non si apre più**; riscritta a **+30 giorni** (stessa manomissione, segno opposto) si apre ancora. ⇒ Chrome **onora** l'istante che si segna. E la scadenza riletta **dopo una visita** è identica: **non si rinnova** — la domanda che l'orologio dei sette giorni non poteva porre, perché la pagina la visita tutti i giorni. ⇒ **All'utente si dice «una volta a settimana»**. ⏳ Il 17-18 agosto resta come conferma indipendente: il profilo vero non è stato toccato |
-| `[?]` i 10 bit fino allo schermo | §1.2 A — e **non è verificabile da JavaScript** |
-| `[?]` la Keyboard Lock su DeX, e la PWA su Android | §5.5 |
-| ⛔ ~~`[?]` i 16-40 ms del compositore~~ — **resta aperta, ma NON dove si credeva** | §6.2 — nessuna API li espone, e questo non è cambiato. ⛔ **Quel che è cambiato è dove valgono**: `[M]` 13 agosto, **su Xvfb `requestAnimationFrame` non gira mai** — **0 quadri in 3 secondi**, con e senza GPU, `visibilityState` «visible». Senza schermo non c'è scanout ⇒ **su Xvfb il pezzo cieco non esiste**. La stima si dichiara accanto ai numeri dell'**utente**, non accanto a quelli del banco |
-| ⏳ ~~`[?]` quanti stream al secondo regge ciascun browser~~ — ⭐ **un numero c'è, per un browser solo** | `RCP.md` §2.3 — il video ne consuma uno per fotogramma. `[M]` 13 agosto, **Chrome 151 su Linux**: **60,0** fotogrammi dipinti al secondo offrendone 60 (cioè 60 stream/s, senza perdite), e **127,6/s** come **tetto a saturazione**. ⛔ **Resta `[?]` su Firefox e su Safari**, ed è la stessa `[?]` di `SPECIFICHE.md` §11.5: i mattoni stanno su due motori, i numeri su uno |
+| `[?]` Safari and WebTransport behind an exception | §3.1 — **and Apple does not even document whether the exception can be granted on iOS** |
+| ⏳ ~~`[?]` the duration of the exception on Chrome~~ — **the measurement is STARTED** | ⛔ **it was not `[?]`, and this document contradicted itself**: §3.2 gives it as `[R]` from `kCertErrorBypassExpirationInSeconds = 604800`, that is **seven days**. *Corrected on the night of 9 August 2026, finding **R4.14**: whoever read §8 planned a measurement to **learn** the number, whoever read §3.2 to **confirm** it, and for a bench that must wait a week the difference changes the patience threshold.* What remained to measure was **how well that `[R]` holds in the field** — ⭐ **and the measurement has been running since 10 August 2026, 21:10:01 UTC**, on **Chrome 151.0.7922.108** with a persistent profile: `banchi/01-s1b-eccezione.sh`, log `banchi/01-s1b-stato.jsonl`, outcomes in `web/rapporti/S-esiti-sonda.md` §2. ⭐ **And on 11 August 2026 the measurement answered, without waiting for the verdict of the 17th**: `01-s1b-eccezione.sh scavalca`, **6 checks out of 6**. ⚠ The objection written above was right — *«la contabilità di Chrome non è il comportamento»* — and it is **exactly that** which the new round closes: on a **copy** of the profile the expiry was rewritten **to yesterday**, and the page **no longer opens**; rewritten to **+30 days** (same tampering, opposite sign) it still opens. ⇒ Chrome **honours** the instant it records. And the expiry read back **after a visit** is identical: **it does not renew** — the question the seven-day clock could not ask, because the page visits it every day. ⇒ **The user is told «una volta a settimana»**. ⏳ The 17-18 August remains as independent confirmation: the real profile was not touched |
+| `[?]` the 10 bits all the way to the screen | §1.2 A — and **it is not verifiable from JavaScript** |
+| `[?]` the Keyboard Lock on DeX, and the PWA on Android | §5.5 |
+| ⛔ ~~`[?]` the 16-40 ms of the compositor~~ — **it stays open, but NOT where it was believed** | §6.2 — no API exposes them, and this has not changed. ⛔ **What changed is where they apply**: `[M]` 13 August, **on Xvfb `requestAnimationFrame` never runs** — **0 frames in 3 seconds**, with and without GPU, `visibilityState` «visible». Without a screen there is no scanout ⇒ **on Xvfb the blind piece does not exist**. The estimate is declared beside the **user's** numbers, not beside the bench's |
+| ⏳ ~~`[?]` how many streams per second each browser sustains~~ — ⭐ **there is a number, for one browser only** | `RCP.md` §2.3 — video consumes one per frame. `[M]` 13 August, **Chrome 151 on Linux**: **60.0** frames painted per second when offered 60 (that is 60 streams/s, without losses), and **127.6/s** as **cap at saturation**. ⛔ **It stays `[?]` on Firefox and on Safari**, and it is the same `[?]` as `SPECIFICHE.md` §11.5: the bricks stand on two engines, the numbers on one |
 
 ---
 
-### 8-bis. ⛔ Le dodici cose che i rapporti dicevano e questa sintesi taceva
+### 8-bis. ⛔ The twelve things the reports said and this synthesis kept quiet
 
-*Riportate la sera del 9 agosto 2026, rilievi **O1-O12** della revisione R2. ⭐ È la parte che
-nessun controllo delle citazioni trova, perché non c'è niente da controllare: la riga non c'era.*
+*Brought over on the evening of 9 August 2026, findings **O1-O12** of review R2. ⭐ It is the part that
+no citation check finds, because there is nothing to check: the line was not there.*
 
-| # | Che cosa | Dove va, e che cosa cambia |
+| # | What | Where it goes, and what it changes |
 |---|---|---|
-| **O1** | ⛔ **la scheda in secondo piano si congela dopo 5 minuti**, e l'esenzione vuole un canale WebRTC o una traccia multimediale viva `[S]` — che WebTransport da solo non è | §1.2 D, e `SPECIFICHE.md` §5.3: **un client congelato tace, quindi si stacca**. Va dichiarato, non scoperto |
-| **O2** | ⛔ **AV1 è un vicolo cieco da entrambi i lati** — il nostro ferro non lo codifica `[M]`, e in decodifica non aggiunge niente che HEVC non dia | `SPECIFICHE.md` §11.4: resta nella scala di preferenza **come porta per l'hardware di domani**, non come strada da provare. ⚠ Un vicolo cieco non trascritto è un vicolo cieco che si ripercorre (`LEZIONI.md` §8) |
-| **O3** | ⚠ **l'HDR non si promette**: BT.2020/PQ fa cadere lo zero-copy, e il percorso a una copia converte con un risultato slavato `[S]` | `SPECIFICHE.md` §11.4: ⛔ **si codifica BT.709**, ed è una scelta del server, non del client |
-| **O4** | ⛔ **buttare un delta non dà nessun errore al decodificatore**: la corruzione si propaga in silenzio fino alla chiave successiva, e per abbandonare senza rompere servirebbero i **sotto-livelli temporali** `[?]` — da verificare su `EncSliceLP` dell'Intel | `RCP.md` §5.2, che già impone la chiave dopo un abbandono: la riga nuova è **perché** quell'obbligo non è facoltativo |
-| **O5** | Safari è l'unico motore con WebTransport anche su **HTTP/2 e TCP**, e il nostro server non lo parla: il suo ripiego finirebbe in errore | §3.2 — **va deciso** se implementarlo o dichiarare Safari fuori dal ripiego ✅ *riportata* |
-| **O6** | la pagina già aperta ha in mano **un'impronta che invecchia**: dopo la rotazione va ricaricata, o va chiesta l'impronta corrente | §3.2, e serve una riga in `RCP.md` su **dove sta quell'aggiornamento** ✅ *riportata* |
-| **O7** | ⭐ **i bottoni a schermo sono un requisito, non un ripiego di fortuna**: tre riferimenti maturi su tre danno all'utente un modo di mandare quel che il browser non lascia passare | `SPECIFICHE.md` §7.3-bis: `Ctrl+Alt+Canc` non è «non recuperabile», è **recuperabile in un altro modo** |
-| **O8** | ⛔ **gli stati sono tre, non due**: consegnata · **consegnata *e* riservata** · non consegnata. Il secondo è il peggiore — la sessione riceve la battuta **e** la scheda si chiude | §5.2, e riformula la misura **S3**: la domanda non è «arriva?» ma «arriva **e basta**?» |
-| **O9** | ⛔ **su iPhone lo schermo intero è parziale in tutte le versioni** `[S]`, e senza schermo intero **non c'è keyboard lock** | §5.2: su iPhone si perde **tutta** la partita della tastiera, non qualche scorciatoia |
-| **O10** | ⚠ la lock **non esiste se lo schermo intero è entrato con `F11`**, e **si spegne da sola alla perdita del fuoco** — cioè proprio nell'istante in cui i modificatori restano giù | §5.4: ⭐ e la cura **non richiede protocollo** — il client manda il rilascio di tutto quel che ha premuto quando perde il fuoco, e al riattacco ci pensa `RCP.md` §7.3 |
-| **O11** | l'isolamento fra origini (COOP+COEP) è una **regola di prodotto**, non una taratura del banco: cambia come si servono le risorse | §6.3 lo degradava a «tarare il righello». Va in `SPECIFICHE.md` come vincolo di come il server serve la pagina |
-| **O12** | la stringa di livello corretta per il traguardo è **5.1**, non 5.0 — e oltre 40 Mbit/s serve il tier **High** | è il parametro che **il server deve emettere**: `RCP.md` §4.3, accanto al codec |
+| **O1** | ⛔ **the background tab freezes after 5 minutes**, and the exemption wants a WebRTC channel or a live media track `[S]` — which WebTransport alone is not | §1.2 D, and `SPECIFICHE.md` §5.3: **a frozen client goes silent, so it gets detached**. It must be declared, not discovered |
+| **O2** | ⛔ **AV1 is a dead end from both sides** — our hardware does not encode it `[M]`, and in decoding it adds nothing HEVC does not give | `SPECIFICHE.md` §11.4: it stays in the preference ladder **as a door for tomorrow's hardware**, not as a road to try. ⚠ A dead end not written down is a dead end walked again (`LEZIONI.md` §8) |
+| **O3** | ⚠ **HDR is not promised**: BT.2020/PQ makes zero-copy fall, and the one-copy path converts with a washed-out result `[S]` | `SPECIFICHE.md` §11.4: ⛔ **we encode BT.709**, and it is a choice of the server, not of the client |
+| **O4** | ⛔ **dropping a delta gives no error to the decoder**: the corruption propagates silently until the next keyframe, and abandoning without breaking would need **temporal sub-layers** `[?]` — to be verified on Intel's `EncSliceLP` | `RCP.md` §5.2, which already imposes the keyframe after an abandonment: the new line is **why** that obligation is not optional |
+| **O5** | Safari is the only engine with WebTransport also over **HTTP/2 and TCP**, and our server does not speak it: its fallback would end in an error | §3.2 — **it must be decided** whether to implement it or declare Safari out of the fallback ✅ *brought over* |
+| **O6** | the page already open holds **a fingerprint that ages**: after rotation it must be reloaded, or the current fingerprint must be requested | §3.2, and a line is needed in `RCP.md` on **where that update lives** ✅ *brought over* |
+| **O7** | ⭐ **on-screen buttons are a requirement, not a makeshift fallback**: three mature references out of three give the user a way to send what the browser does not let through | `SPECIFICHE.md` §7.3-bis: `Ctrl+Alt+Canc` is not «non recuperabile», it is **recoverable another way** |
+| **O8** | ⛔ **the states are three, not two**: delivered · **delivered *and* reserved** · not delivered. The second is the worst — the session receives the keystroke **and** the tab closes | §5.2, and it reformulates measurement **S3**: the question is not «arriva?» but «arriva **e basta**?» |
+| **O9** | ⛔ **on iPhone fullscreen is partial in all versions** `[S]`, and without fullscreen **there is no keyboard lock** | §5.2: on iPhone the **whole** keyboard game is lost, not a few shortcuts |
+| **O10** | ⚠ the lock **does not exist if fullscreen was entered with `F11`**, and **switches itself off on loss of focus** — that is exactly at the instant the modifiers stay down | §5.4: ⭐ and the cure **requires no protocol** — the client sends the release of everything it has pressed when it loses focus, and on reattach `RCP.md` §7.3 takes care of it |
+| **O11** | cross-origin isolation (COOP+COEP) is a **product rule**, not a bench calibration: it changes how resources are served | §6.3 demoted it to «tarare il righello». It goes into `SPECIFICHE.md` as a constraint on how the server serves the page |
+| **O12** | the correct level string for the target is **5.1**, not 5.0 — and above 40 Mbit/s the **High** tier is needed | it is the parameter **the server must emit**: `RCP.md` §4.3, beside the codec |
 
-⛔ **E la lezione che le tiene insieme**: una sintesi fedele in novanta punti che tace un vincolo
-produce **un piano che lo scopre a metà lavoro**. Non è un difetto di accuratezza — le dodici righe
-qui sopra non contraddicono niente di quel che era scritto: **non c'erano**.
+⛔ **And the lesson that holds them together**: a faithful synthesis in ninety points that keeps quiet a constraint
+produces **a plan that discovers it halfway through the work**. It is not a defect of accuracy — the twelve lines
+above contradict nothing of what was written: **they were not there**.
 
-### 9. Le lezioni che questo studio aggiunge
+### 9. The lessons this study adds
 
-1. ⭐ **Una lezione vecchia è ricomparsa un livello più in alto.** `LEZIONI.md` §1.11 dice che una
-   condizione **necessaria** non è **sufficiente** — ed era nata su «il processo ha aperto un render
-   node ⇒ rende in GPU». Qui la stessa forma torna vestita da API ufficiale:
-   `hardwareAcceleration: "prefer-hardware"` **riuscito** non dice che il decodificatore sia
-   hardware. ⛔ **Cambiare strato non regala immunità**: una promessa di un'API va trattata come la
-   dichiarazione di un compositore.
-2. ⛔ **Il componente che non possiamo interrogare va fatto diagnosticare al prodotto.** Con i
-   compositori, quando la prova indiretta non bastava, si chiedeva a loro (`LEZIONI.md` §1.11,
-   seconda regola: *«se il componente sa rispondere, gli si chiede»*). **Il browser sa e non
-   risponde** `[R]`. Quando succede, la misura non può stare in laboratorio: **deve vivere nel
-   prodotto**, sul dispositivo dell'utente, che è l'unico posto dove la domanda ha una risposta.
-3. ⚠ **Un capitolo che invecchia in mesi, non in anni.** I compositori li congela Debian; i browser
-   si aggiornano da soli, e **due delle cinque cose più importanti di questo studio sono del
-   2026** — una di maggio, una di gennaio. `LEZIONI.md` §9.8 dice di aggiornare i documenti quando
-   una misura li smentisce; qui va aggiunto che **anche senza misure, questo file scade**.
-4. ⭐ **Chi legge il codice altrui trova cure che nessuno inventerebbe.** La risincronizzazione dei
-   modificatori **dagli eventi del mouse** (§5.4) non è deducibile: si trova solo guardando come
-   l'ha risolta chi ci è passato prima. È il punto 0 della ricetta che continua a pagare — e per la
-   seconda volta in due giorni **l'ha innescato una frase dell'utente**, non una nostra ricerca.
+1. ⭐ **An old lesson reappeared one level higher.** `LEZIONI.md` §1.11 says that a
+   **necessary** condition is not **sufficient** — and it was born on «il processo ha aperto un render
+   node ⇒ rende in GPU». Here the same form returns dressed as an official API:
+   `hardwareAcceleration: "prefer-hardware"` **succeeding** does not say the decoder is
+   hardware. ⛔ **Changing layer grants no immunity**: an API's promise must be treated like the
+   declaration of a compositor.
+2. ⛔ **The component we cannot query must be diagnosed by the product.** With the
+   compositors, when indirect proof was not enough, we asked them (`LEZIONI.md` §1.11,
+   second rule: *«se il componente sa rispondere, gli si chiede»*). **The browser knows and does not
+   answer** `[R]`. When that happens, the measurement cannot stay in the lab: **it must live in the
+   product**, on the user's device, which is the only place where the question has an answer.
+3. ⚠ **A chapter that ages in months, not years.** Compositors are frozen by Debian; browsers
+   update themselves, and **two of the five most important things in this study are from
+   2026** — one from May, one from January. `LEZIONI.md` §9.8 says to update documents when
+   a measurement contradicts them; here it must be added that **even without measurements, this file expires**.
+4. ⭐ **Whoever reads other people's code finds cures nobody would invent.** Resynchronising the
+   modifiers **from mouse events** (§5.4) cannot be deduced: it is found only by looking at how
+   those who came before solved it. It is point 0 of the recipe that keeps paying — and for the
+   second time in two days **it was triggered by a sentence of the user**, not by a search of ours.
 
 
 ---
 
-# Parte II — I cinque desktop
+# Part II — The five desktops
 
 
 <a id="gnome"></a>
 
-## GNOME come desktop — studio del codice, per la fase 11
+## GNOME as a desktop — study of the code, for phase 11
 
-*Scritto l'8 agosto 2026, con dieci ricerche parallele sui sorgenti clonati alle versioni di Debian
-Trixie. È l'ottavo studio del progetto, e chiude il giro dei quattro desktop.*
+*Written on 8 August 2026, with ten parallel searches on the sources cloned at the versions of Debian
+Trixie. It is the eighth study of the project, and it closes the round of the four desktops.*
 
-> ### ⚠ Perché questo studio esiste, e perché arriva per ultimo
+> ### ⚠ Why this study exists, and why it comes last
 >
-> GNOME è il desktop che REMOTIX serve **in produzione da dieci fasi**. Ma il documento che avevamo —
-> §gnome-remote-desktop — studia **il server RDP di GNOME**, cioè un concorrente, **non il
-> desktop**. Sessione, schermo di blocco, energia, voci pericolose, configurazione: su KDE, XFCE e
-> LXQt li abbiamo studiati tutti; su GNOME **mai**, perché nessuno ci aveva costretti.
+> GNOME is the desktop REMOTIX has served **in production for ten phases**. But the document we had —
+> §gnome-remote-desktop — studies **GNOME's RDP server**, that is a competitor, **not the
+> desktop**. Session, lock screen, power, dangerous entries, configuration: on KDE, XFCE and
+> LXQt we studied them all; on GNOME **never**, because nobody had forced us to.
 >
-> ⭐ **Il risultato è che questo studio trova più difetti nostri di quanti ne trovino gli altri tre
-> messi insieme** — e tutti sul desktop che consideravamo finito.
+> ⭐ **The result is that this study finds more defects of ours than the other three
+> put together** — and all on the desktop we considered finished.
 
-> **Le marche:** **[R]** letto nel codice, con `file:riga` — non è una misura · **[R-pkg]** letto nel
-> pacchetto Debian · **[M]** misurato · **[?]** dedotto · **[✗]** verificato assente, con controllo
-> positivo · **`[≠]`** ⚠ **il codice contraddice un nostro documento**.
+> **The marks:** **[R]** read in the code, with `file:riga` — it is not a measurement · **[R-pkg]** read in the
+> Debian package · **[M]** measured · **[?]** deduced · **[✗]** verified absent, with positive
+> control · **`[≠]`** ⚠ **the code contradicts one of our documents**.
 >
-> Dettaglio nei dieci rapporti in `reference-gnome/rapporti/`.
+> Detail in the ten reports in `reference-gnome/rapporti/`.
 
 ---
 
-### 1. In due minuti
+### 1. In two minutes
 
-#### 1.1 ⛔ Le sette cose che su GNOME non abbiamo mai fatto
+#### 1.1 ⛔ The seven things we have never done on GNOME
 
-*Lette nel codice del prodotto sul server, sola lettura.*
+*Read in the product code on the server, read only.*
 
 | # | | |
 |---|---|---|
-| 1 | **il drop-in dell'unità della Shell** | `scrivi_dropin()` è chiamata **solo** `if (tipo == COMPOSITORE_KWIN)` (`src/sessione.c` · `scrivi_dropin()`). Su GNOME la Shell parte con `ExecStart=/usr/bin/gnome-shell` secco, **senza `--headless`** |
-| 2 | **l'inibizione dell'energia** | `energia_inibisci()` **ritorna NULL** su Mutter (`src/energia.c:112-113`) |
-| 3 | **il blocco schermo** | zero chiavi, zero recupero |
-| 4 | **le voci pericolose** | nessun lockdown — su KDE l'utente l'aveva chiesto e l'aveva avuto |
-| 5 | **la configurazione** | **zero occorrenze** di `gsettings`/`dconf`/`org.gnome.desktop` in tutto `src/` |
-| 6 | **`SPA_META_Cursor`** | chiediamo `cursor-mode=2` (metadato) ma non chiediamo il metadato ⇒ **il cursore non arriva affatto** |
-| 7 | **`SPA_META_SyncTimeline`** | e **Mutter lo offre** — è il *release* mancante della copia zero, cioè la caccia della fase 9 nel posto giusto |
+| 1 | **the drop-in of the Shell's unit** | `scrivi_dropin()` is called **only** `if (tipo == COMPOSITORE_KWIN)` (`src/sessione.c` · `scrivi_dropin()`). On GNOME the Shell starts with a bare `ExecStart=/usr/bin/gnome-shell`, **without `--headless`** |
+| 2 | **power inhibition** | `energia_inibisci()` **returns NULL** on Mutter (`src/energia.c:112-113`) |
+| 3 | **the lock screen** | zero keys, zero recovery |
+| 4 | **the dangerous entries** | no lockdown — on KDE the user had asked for it and had got it |
+| 5 | **the configuration** | **zero occurrences** of `gsettings`/`dconf`/`org.gnome.desktop` in the whole of `src/` |
+| 6 | **`SPA_META_Cursor`** | we ask for `cursor-mode=2` (metadata) but we do not ask for the metadata ⇒ **the cursor does not arrive at all** |
+| 7 | **`SPA_META_SyncTimeline`** | and **Mutter offers it** — it is the missing *release* of zero copy, that is the hunt of phase 9 in the right place |
 
-⭐ **Una sola mossa ne paga tre**: un profilo dconf in `$XDG_RUNTIME_DIR` chiude insieme il blocco
-schermo, le voci pericolose e la configurazione (§6).
+⭐ **A single move pays for three**: a dconf profile in `$XDG_RUNTIME_DIR` closes together the lock
+screen, the dangerous entries and the configuration (§6).
 
-#### 1.2 ⛔ E la cosa che ci tiene in piedi oggi è un incidente
+#### 1.2 ⛔ And the thing that keeps us standing today is an accident
 
-**Su GNOME lo schermo di blocco non mostra uno schermo di blocco: ci stacca la sessione RDP.**
-Entrando in `unlock-dialog`, gnome-shell chiama `inhibit_remote_access()` e Mutter — testualmente —
-*«Any active remote access session will be terminated»*: chiude ScreenCast, RemoteDesktop e
-InputCapture, **e rifiuta di ricrearne**.
+**On GNOME the lock screen does not show a lock screen: it detaches the RDP session.**
+Entering `unlock-dialog`, gnome-shell calls `inhibit_remote_access()` and Mutter — verbatim —
+*«Any active remote access session will be terminated»*: it closes ScreenCast, RemoteDesktop and
+InputCapture, **and refuses to recreate them**.
 
-✅ **L'eccezione è `is_headless()`.** E noi siamo headless — **ma non perché l'abbiamo chiesto**: Mutter
-si degrada da sé quando la sessione logind non ha un seat, con un `g_message`
-(`meta-backend-native.c:759-764`). ⛔ **La precondizione che ci salva non è scritta in nessuna nostra
-riga.**
+✅ **The exception is `is_headless()`.** And we are headless — **but not because we asked for it**: Mutter
+degrades by itself when the logind session has no seat, with a `g_message`
+(`meta-backend-native.c:759-764`). ⛔ **The precondition that saves us is not written in any line
+of ours.**
 
-#### 1.3 ⭐ E la scoperta che riapre una caccia chiusa male
+#### 1.3 ⭐ And the discovery that reopens a hunt closed badly
 
-**R29 è sbagliata: il DMA-BUF di Mutter non è un «diff».** Due prove indipendenti nel codice — il blit
-copia **l'intero** framebuffer di vista, e Cogl **svuota deliberatamente lo stack di clip** prima di
-`glBlitFramebuffer`; e per un CRTC virtuale la vista è un **`CoglOffscreen` singolo e persistente**,
-non uno swapchain, quindi il ridisegno parziale vi si **accumula**.
+**R29 is wrong: Mutter's DMA-BUF is not a «diff».** Two independent proofs in the code — the blit
+copies **the whole** view framebuffer, and Cogl **deliberately empties the clip stack** before
+`glBlitFramebuffer`; and for a virtual CRTC the view is a **single, persistent `CoglOffscreen`**,
+not a swapchain, so partial redraw **accumulates** in it.
 
-⭐ **Da cui si spiega perché la cura peggiorava le cose**: la superficie di accumulo copiava i soli
-rettangoli danneggiati da un buffer che conteneva **già il fotogramma intero**.
+⭐ **Which explains why the cure made things worse**: the accumulation surface copied only the
+damaged rectangles from a buffer that **already contained the whole frame**.
 
-⭐ **E il difetto vero è il *release***: `can_reuse_pw_buffer` — l'unico punto in cui Mutter aspetta
-noi — **si arrende alla prima riga** se manca `SPA_META_SyncTimeline`, e riusa il buffer **mentre
-VA-API lo sta ancora leggendo**. Due schermate che si alternano è esattamente il sintomo che ci si
-aspetta da lì. E il riferimento fa il contrario di quel che avevamo concluso: **trattiene** il
-`pw_buffer` fino a lettura finita.
+⭐ **And the real defect is the *release***: `can_reuse_pw_buffer` — the only point where Mutter waits for
+us — **gives up at the first line** if `SPA_META_SyncTimeline` is missing, and reuses the buffer **while
+VA-API is still reading it**. Two screens alternating is exactly the symptom one would
+expect from that. And the reference does the opposite of what we had concluded: it **holds** the
+`pw_buffer` until reading is done.
 
-⚠ **È una lettura di codice, non una misura** — ma è coerente con tutti i sintomi, e le due cure
-candidate sono entrambe piccole.
+⚠ **It is a reading of code, not a measurement** — but it is consistent with all the symptoms, and the two candidate
+cures are both small.
 
 ---
 
-### 2. La mappa
+### 2. The map
 
-| Che cosa | Dove | Versione Trixie |
+| What | Where | Trixie version |
 |---|---|---|
-| il compositore | `reference-gnome/mutter/` | **48.7** |
-| la shell | `gnome-shell/` | **48.7** |
-| la sessione | `gnome-session/` | **48.0** |
-| energia, media keys, xsettings | `gnome-settings-daemon/` | **48.1** |
-| gli schemi | `gsettings-desktop-schemas/` | **48.0** |
-| il gestore d'accesso | `gdm/` | **48.0** |
-| il concorrente | `gnome-remote-desktop/` | **48.1** |
-| il portale, le impostazioni, dconf | `xdg-desktop-portal-gnome/` 48.0, `gnome-control-center/` 48.4, `dconf/` 0.40.0 | |
+| the compositor | `reference-gnome/mutter/` | **48.7** |
+| the shell | `gnome-shell/` | **48.7** |
+| the session | `gnome-session/` | **48.0** |
+| power, media keys, xsettings | `gnome-settings-daemon/` | **48.1** |
+| the schemas | `gsettings-desktop-schemas/` | **48.0** |
+| the display manager | `gdm/` | **48.0** |
+| the competitor | `gnome-remote-desktop/` | **48.1** |
+| the portal, the settings, dconf | `xdg-desktop-portal-gnome/` 48.0, `gnome-control-center/` 48.4, `dconf/` 0.40.0 | |
 
-⚠ **[M] Sul server GNOME non è più installato** (`dpkg-query` → not-installed, nessuna
-`gnome.desktop`): **niente di questo studio è oggi verificabile sulla nostra macchina**, e il
-ripristino va rifatto prima di qualunque misura.
+⚠ **[M] On the server GNOME is no longer installed** (`dpkg-query` → not-installed, no
+`gnome.desktop`): **nothing in this study is verifiable on our machine today**, and the
+restoration must be redone before any measurement.
 
 ---
 
-### 3. La sessione senza monitor
+### 3. The session without a monitor
 
-*Dettaglio: `rapporti/01-sessione-gnome.md`, `08-gdm-remote-login.md`.*
+*Detail: `rapporti/01-sessione-gnome.md`, `08-gdm-remote-login.md`.*
 
-#### 3.1 ⭐ La più semplice delle tre famiglie
+#### 3.1 ⭐ The simplest of the three families
 
 | | |
 |---|---|
-| **Mutter** | ⭐ **nessuna opzione necessaria**: se la sessione logind è di tipo `wayland`, attiva e **senza seat**, si mette in headless **da solo** (`meta-backend-native.c:759-764`) |
-| KWin | `--virtual --width/--height` obbligatori; `--drm` da SSH **esce con stato 1** |
-| labwc | `WLR_BACKENDS=headless` obbligatoria |
+| **Mutter** | ⭐ **no option needed**: if the logind session is of type `wayland`, active and **without a seat**, it goes headless **by itself** (`meta-backend-native.c:759-764`) |
+| KWin | `--virtual --width/--height` mandatory; `--drm` from SSH **exits with status 1** |
+| labwc | `WLR_BACKENDS=headless` mandatory |
 
-⚠ **Ma serve che la sessione logind esista**, e che `XDG_SESSION_ID` sia esportata, o Mutter può
-agganciare la sessione sbagliata. ⛔ **E `--virtual-monitor` non è opzionale**: in headless
-`needs_outputs=false`, quindi senza quell'opzione la sessione parte **viva, completa e nera**.
+⚠ **But the logind session must exist**, and `XDG_SESSION_ID` must be exported, or Mutter may
+hook onto the wrong session. ⛔ **And `--virtual-monitor` is not optional**: in headless
+`needs_outputs=false`, so without that option the session starts **alive, complete and black**.
 
-**La forma**: ambiente da zero + drop-in su `org.gnome.Shell@wayland.service` con
-`gnome-shell --headless --virtual-monitor WxH`, poi `gnome-session --session=gnome`.
+**The form**: environment from scratch + drop-in on `org.gnome.Shell@wayland.service` with
+`gnome-shell --headless --virtual-monitor WxH`, then `gnome-session --session=gnome`.
 
-⛔ **`SHELL` va messa vuota**: `gnome-session.in:3-14` si ri-esegue dentro una shell di **login** se
-`$SHELL` è in `/etc/shells` — cioè si riporta dentro `~/.profile`. È `LEZIONI.md` §5 in agguato.
+⛔ **`SHELL` must be set empty**: `gnome-session.in:3-14` re-executes itself inside a **login** shell if
+`$SHELL` is in `/etc/shells` — that is it brings itself back inside `~/.profile`. It is `LEZIONI.md` §5 lying in wait.
 
-#### 3.2 ⭐ Il logout: una sentinella gratis, e un segnale che non esiste
+#### 3.2 ⭐ Logout: a free sentinel, and a signal that does not exist
 
-`gnome-session` **non esce** dopo aver avviato il target: apre un fifo e dorme, uscendo esattamente a
-sessione smontata (`main.c:447-487`). È la forma di `labwc --session`: **si sorveglia con un
-`SIGCHLD`**, senza `RegisterClient`.
+`gnome-session` **does not exit** after starting the target: it opens a fifo and sleeps, exiting exactly when the
+session is torn down (`main.c:447-487`). It is the form of `labwc --session`: **it is watched with a
+`SIGCHLD`**, without `RegisterClient`.
 
-⛔ **[✗] `SessionOver` è dichiarato nell'XML e non viene MAI emesso** — un solo hit in tutti i
-repository, la riga dell'XML stessa (controllo positivo: `SessionRunning` c'è anche
-nell'implementazione). Chi ci avesse progettato sopra avrebbe aspettato per sempre.
+⛔ **[✗] `SessionOver` is declared in the XML and is NEVER emitted** — a single hit in all the
+repositories, the line of the XML itself (positive control: `SessionRunning` is also there in the
+implementation). Whoever had designed on top of it would have waited forever.
 
-⛔ **`Logout(1)` non basta**: mostra il dialogo se esiste un inibitore. Il congedo va su **`Logout(2)`**.
+⛔ **`Logout(1)` is not enough**: it shows the dialog if an inhibitor exists. The farewell goes on **`Logout(2)`**.
 
-**La prontezza**: `SessionRunning` **più** `IsSessionRunning()`, che esiste apposta per la corsa fra
-sottoscrizione ed evento. ⛔ Il nome `org.gnome.Shell` **non** è un indicatore: è preso prima di
+**Readiness**: `SessionRunning` **plus** `IsSessionRunning()`, which exists precisely for the race between
+subscription and event. ⛔ The name `org.gnome.Shell` is **not** an indicator: it is taken before
 `meta_context_start()`.
 
-✅ **[✗] Nessun equivalente degli 8 s di XFCE**: la catena è a eventi. ✅ **[✗] Nessun
-`loginctl terminate-session`, nessun subreaper.**
+✅ **[✗] No equivalent of XFCE's 8 s**: the chain is event-driven. ✅ **[✗] No
+`loginctl terminate-session`, no subreaper.**
 
-#### 3.3 ⭐ Trovata la riga del difetto storico del bus
+#### 3.3 ⭐ Found the line of the historic bus defect
 
-Il «bus di sessione che non dà errore, dà silenzio» di `LEZIONI.md` §5 ha un colpevole con nome e
-riga: `gnome-session-shutdown.target` tira `gnome-session-restart-dbus.service`, che fa
-`StopUnit("dbus.service")` sul manager d'utente (`tools/gnome-session-ctl.c:130-133`). **Il demone
-muore, il socket resta.**
+The «session bus that gives no error, gives silence» of `LEZIONI.md` §5 has a culprit with a name and a
+line: `gnome-session-shutdown.target` pulls `gnome-session-restart-dbus.service`, which does
+`StopUnit("dbus.service")` on the user manager (`tools/gnome-session-ctl.c:130-133`). **The daemon
+dies, the socket stays.**
 
-⚠ E il ragionamento che salva KDE — «bus d'utente ⇒ sopravvive» — **qui è falso**, pur essendo vera la
-premessa. **[?] Contromisura da provare**: mascherare quel servizio (il legame è `Wants=`, debole).
+⚠ And the reasoning that saves KDE — «user bus ⇒ it survives» — **is false here**, even though the
+premise is true. **[?] Countermeasure to try**: mask that service (the link is `Wants=`, weak).
 
-#### 3.4 ✅ GDM non ci ostacola
+#### 3.4 ✅ GDM does not get in our way
 
-Tutta la sua manovra sul VT è dentro `if (seat_id == "seat0" && seat0_has_vts)`, e l'unico «kill» che
-possiede agisce solo su sessioni create da lui. **Una sessione senza seat non la vede: `gdm3` può
-restare acceso.** Va spento solo se un giorno vorremo un seat vero.
+All its manoeuvring on the VT is inside `if (seat_id == "seat0" && seat0_has_vts)`, and the only «kill» it
+has acts only on sessions created by it. **A session without a seat it does not see: `gdm3` can
+stay on.** It needs to be switched off only if one day we want a real seat.
 
 ---
 
-### 4. ⛔ La revoca: lo stato che GNOME ha e gli altri no
+### 4. ⛔ Revocation: the state GNOME has and the others do not
 
-*È il fatto più importante del capitolo desktop, e non ha analoghi.*
+*It is the most important fact of the desktop chapter, and it has no analogues.*
 
 | | |
 |---|---|
-| **che cosa succede** | entrando in `unlock-dialog`, gnome-shell chiama `inhibit_remote_access()` (`js/ui/main.js:136-145`); Mutter chiude **ScreenCast, RemoteDesktop e InputCapture** e **rifiuta di ricrearne** (`meta-remote-access-controller.c:146-164`, `meta-backend.c:1454-1468`, `meta-dbus-session-manager.c:349-353`) |
-| **l'eccezione** | ✅ `is_headless()` — vero **solo** con backend headless (`meta-backend-native.c:361-369`) |
-| **il recupero** | ⭐ esiste e **non chiede password**: `org.gnome.ScreenSaver.SetActive(false)`, oppure il segnale `Unlock` di logind. ⚠ Va eseguito **dal processo REMOTIX**, non dal client |
+| **what happens** | entering `unlock-dialog`, gnome-shell calls `inhibit_remote_access()` (`js/ui/main.js:136-145`); Mutter closes **ScreenCast, RemoteDesktop and InputCapture** and **refuses to recreate them** (`meta-remote-access-controller.c:146-164`, `meta-backend.c:1454-1468`, `meta-dbus-session-manager.c:349-353`) |
+| **the exception** | ✅ `is_headless()` — true **only** with the headless backend (`meta-backend-native.c:361-369`) |
+| **the recovery** | ⭐ it exists and **asks for no password**: `org.gnome.ScreenSaver.SetActive(false)`, or logind's `Unlock` signal. ⚠ It must be executed **by the REMOTIX process**, not by the client |
 
-**Le tre difese, in ordine di forza:**
+**The three defences, in order of strength:**
 
-1. ⭐⭐ **non far girare `gdm.service`**: lo ScreenShield è creato solo se `canLock()`, che interroga
-   `org.gnome.DisplayManager` — **[✗] nome non attivabile via D-Bus**. Senza GDM il blocco è
-   **impossibile**. ⚠ Ma su Trixie GDM **è attivo**, quindi da solo non basta;
-2. **un session mode nostro**: il modo esclude `unlockDialog` ⇒ gnome-shell rifiuta di bloccare.
-   ⛔ `parentMode:"user"` **lo rimette**: va ricopiato per intero;
-3. **il lockdown** (§5).
+1. ⭐⭐ **do not run `gdm.service`**: the ScreenShield is created only if `canLock()`, which queries
+   `org.gnome.DisplayManager` — **[✗] name not activatable via D-Bus**. Without GDM locking is
+   **impossible**. ⚠ But on Trixie GDM **is active**, so on its own it is not enough;
+2. **a session mode of our own**: the mode excludes `unlockDialog` ⇒ gnome-shell refuses to lock.
+   ⛔ `parentMode:"user"` **puts it back**: it must be copied out in full;
+3. **the lockdown** (§5).
 
-⭐ **Da cui la domanda 16 per `LEZIONI.md`**: *«c'è uno stato in cui il compositore ci REVOCA quel che
-ci ha già concesso, e chi ha il dito su quel pulsante?»* La domanda 3 chiede se c'è un permesso; questa
-chiede se il permesso **può essere ritirato a caldo**, ed è una cosa diversa. Su GNOME esiste un'API
-dedicata a farlo.
+⭐ **Hence question 16 for `LEZIONI.md`**: *«c'è uno stato in cui il compositore ci REVOCA quel che
+ci ha già concesso, e chi ha il dito su quel pulsante?»* Question 3 asks whether there is a permission; this one
+asks whether the permission **can be withdrawn while running**, and it is a different thing. On GNOME there is an API
+dedicated to doing it.
 
 ---
 
-### 5. Il lockdown, le voci, il cursore
+### 5. The lockdown, the entries, the cursor
 
-*Dettaglio: `rapporti/02-shell-blocco-voci.md`.*
+*Detail: `rapporti/02-shell-blocco-voci.md`.*
 
-#### 5.1 ⭐ Il lockdown vale più del KIOSK di KDE
+#### 5.1 ⭐ The lockdown is worth more than KDE's KIOSK
 
-Delle undici chiavi di `org.gnome.desktop.lockdown`, **quattro** sono lette da gnome-shell 48.7 e una
-da gnome-session — e **la voce sparisce**, non si ingrigisce (`system.js:218-226` lega `can-*` a
-`visible`), con l'intero pulsante nascosto se spariscono tutte.
+Of the eleven keys of `org.gnome.desktop.lockdown`, **four** are read by gnome-shell 48.7 and one
+by gnome-session — and **the entry disappears**, it is not greyed out (`system.js:218-226` binds `can-*` to
+`visible`), with the whole button hidden if they all disappear.
 
-| chiave | effetto |
+| key | effect |
 |---|---|
-| `disable-lock-screen` | toglie «Blocca». ⛔ **Non copre `SetActive(true)`** — falla nota |
-| `disable-user-switching` | toglie «Cambia utente». ⛔ Da togliere **sempre**: l'azione **blocca prima di fallire** |
-| `disable-log-out` | ⭐ la più potente: gnome-session risponde `false` a `CanShutdown` ⇒ spariscono **anche Spegni e Riavvia**. ⛔ Ma rifiuta pure `SessionManager.Logout`: **il nostro congedo va rifatto passivo** |
-| `disable-command-line` | toglie il dialogo Esegui |
+| `disable-lock-screen` | removes «Blocca». ⛔ **It does not cover `SetActive(true)`** — known hole |
+| `disable-user-switching` | removes «Cambia utente». ⛔ To be removed **always**: the action **locks before failing** |
+| `disable-log-out` | ⭐ the most powerful: gnome-session answers `false` to `CanShutdown` ⇒ **Power Off and Restart disappear too**. ⛔ But it also refuses `SessionManager.Logout`: **our farewell must be redone passive** |
+| `disable-command-line` | removes the Run dialog |
 
-⛔ **[✗] Due chiavi da non mettere**: `user-administration-disabled` **non è letta da nessuno**, e
-`idle-activation-enabled` è deprecata e ignorata.
+⛔ **[✗] Two keys not to set**: `user-administration-disabled` **is read by nobody**, and
+`idle-activation-enabled` is deprecated and ignored.
 
-⚠ **La scorciatoia del blocco non è `Ctrl+Alt+L`**: è `<Super>l` più `screensaver-static`, e **le due
-liste si concatenano** — vanno azzerate entrambe. ⚠ E come su KDE, la regola polkit per Sospendi va
-scritta **`no`, non `auth_admin`**: `challenge` **mostra** la voce.
+⚠ **The lock shortcut is not `Ctrl+Alt+L`**: it is `<Super>l` plus `screensaver-static`, and **the two
+lists are concatenated** — both must be emptied. ⚠ And as on KDE, the polkit rule for Suspend must be
+written **`no`, not `auth_admin`**: `challenge` **shows** the entry.
 
-#### 5.2 ⭐ Il cursore: la cura di KDE non serve, e c'è di meglio
+#### 5.2 ⭐ The cursor: KDE's cure is not needed, and there is something better
 
-Su Mutter il cursore non è nell'immagine **perché lo chiediamo noi**: dichiariamo `metadata` e Mutter
-risponde con `inhibit_cursor_overlay`. Con `cursor-mode=1` sarebbe dentro, come su KWin e wlroots.
+On Mutter the cursor is not in the image **because we ask for that**: we declare `metadata` and Mutter
+answers with `inhibit_cursor_overlay`. With `cursor-mode=1` it would be inside, as on KWin and wlroots.
 
-⭐ **La scelta giusta è `cursor-mode=2` (METADATA)**: pixel puliti **e** forma, posizione e hotspot in
-banda laterale, da inoltrare come **cursore RDP nativo** — cioè la cosa a cui su KDE avevamo dovuto
-rinunciare. ⛔ **Ma oggi non chiediamo `SPA_META_Cursor`, quindi quei dati non arrivano affatto.**
+⭐ **The right choice is `cursor-mode=2` (METADATA)**: clean pixels **and** shape, position and hotspot in a
+side band, to be forwarded as a **native RDP cursor** — that is the thing we had had to give up on
+KDE. ⛔ **But today we do not ask for `SPA_META_Cursor`, so that data does not arrive at all.**
 
-⛔ E se un giorno servisse il tema trasparente, **il canale non è `XCURSOR_THEME`**: Mutter non la
-legge (l'unico `getenv` rilevante è `XCURSOR_PATH`), legge `org.gnome.desktop.interface cursor-theme`.
-Trappola peggiore di wlroots: un tema vuoto dà un **quadrato grigio**.
+⛔ And if one day the transparent theme were needed, **the channel is not `XCURSOR_THEME`**: Mutter does not
+read it (the only relevant `getenv` is `XCURSOR_PATH`), it reads `org.gnome.desktop.interface cursor-theme`.
+A worse trap than wlroots: an empty theme gives a **grey square**.
 
-#### 5.3 ⚠ I dialoghi che compaiono da soli
+#### 5.3 ⚠ The dialogs that appear by themselves
 
-Otto, e tre ci riguardano davvero: il **fail-whale** di gnome-session (trigger concreto per noi: il
-controllo GL fallito), il **dialogo di benvenuto** (si spegne impostando una chiave, non bloccandola),
-e ⭐ il **dialogo di accessibilità innescabile dal nostro stesso input** (Maiusc premuto cinque volte):
-il cancello è `org.gnome.desktop.a11y.keyboard enable`, che è già `false` di suo ma **va bloccato**.
+Eight, and three really concern us: gnome-session's **fail-whale** (concrete trigger for us: the
+failed GL check), the **welcome dialog** (switched off by setting a key, not by locking it),
+and ⭐ the **accessibility dialog that our own input can trigger** (Shift pressed five times):
+the gate is `org.gnome.desktop.a11y.keyboard enable`, which is already `false` on its own but **must be locked**.
 
-✅ **[✗] E la trappola di KWin senza output non ha gemelli**: nessun segnaposto, il vincolo del
-puntatore è un no-op, la tastiera non è toccata. Lo schermo virtuale su GNOME è precondizione del
-*disegno*, non della sopravvivenza.
+✅ **[✗] And KWin's trap without outputs has no twins**: no placeholder, the pointer
+constraint is a no-op, the keyboard is not touched. The virtual screen on GNOME is a precondition of
+*drawing*, not of survival.
 
 ---
 
-### 6. ⭐ dconf: l'unica configurazione dei quattro desktop che regge
+### 6. ⭐ dconf: the only configuration of the four desktops that holds
 
-*Dettaglio: `rapporti/04-dconf-configurazione.md` — ed è l'unico rapporto con misure `[M]` proprie.*
+*Detail: `rapporti/04-dconf-configurazione.md` — and it is the only report with `[M]` measurements of its own.*
 
 | | |
 |---|---|
-| **i lock reggono** | `gsettings set` su chiave bloccata **esce con 1** e lo dice: il controllo è **sincrono e locale**, prima che parta il messaggio D-Bus. ⭐ Dove xfconf usciva con successo e ripristinava in silenzio |
-| **vincono sul valore dell'utente** | **[M]** utente `true`, lock e db `false` ⇒ `gsettings get` risponde `false`: il valore in casa viene **saltato in lettura** |
-| ⭐ **non serve root** | `$XDG_RUNTIME_DIR/dconf/profile` è la terza priorità di caricamento. **[M]** scritto il file la sessione vede valori e lock; cancellato, torna tutto com'era; **zero byte scritti in `~`** |
+| **the locks hold** | `gsettings set` on a locked key **exits with 1** and says so: the check is **synchronous and local**, before the D-Bus message leaves. ⭐ Where xfconf exited successfully and restored silently |
+| **they win over the user's value** | **[M]** user `true`, lock and db `false` ⇒ `gsettings get` answers `false`: the value at home is **skipped on reading** |
+| ⭐ **no root needed** | `$XDG_RUNTIME_DIR/dconf/profile` is the third loading priority. **[M]** with the file written the session sees values and locks; deleted, everything goes back as it was; **zero bytes written in `~`** |
 
-**Le tre trappole, tutte misurate:**
+**The three traps, all measured:**
 
-1. ⛔ **`.gschema.override` non è un'alternativa**: cambia il *default*, che sta **sotto** al valore
-   dell'utente — e l'utente ha già `lock-enabled=true`, che è sempre il caso reale;
-2. ⛔ **`XDG_CONFIG_HOME` effimero fallisce in silenzio**: `dconf-service` è un processo separato con
-   **il suo** ambiente ⇒ la scrittura riesce e finisce **nella casa vera**;
-3. ⛔ **un lock senza valore non congela: azzera al default del fornitore** (600 → 300). Ogni chiave
-   bloccata va **anche** valorizzata.
+1. ⛔ **`.gschema.override` is not an alternative**: it changes the *default*, which sits **below** the
+   user's value — and the user already has `lock-enabled=true`, which is always the real case;
+2. ⛔ **an ephemeral `XDG_CONFIG_HOME` fails silently**: `dconf-service` is a separate process with
+   **its own** environment ⇒ the write succeeds and ends up **in the real home**;
+3. ⛔ **a lock without a value does not freeze: it resets to the vendor default** (600 → 300). Every
+   locked key must **also** be given a value.
 
-⚠ E due dettagli che costano un pomeriggio: una riga di lock **senza `/` iniziale è scartata in
-silenzio** (l'unica verifica è `gsettings writable` chiave per chiave), e **`file-db:` non rilegge mai**
-a caldo — se serve il caldo serve `system-db:`, e quindi root.
+⚠ And two details that cost an afternoon: a lock line **without a leading `/` is silently
+discarded** (the only check is `gsettings writable` key by key), and **`file-db:` never re-reads**
+while running — if live reloading is needed then `system-db:` is needed, and therefore root.
 
-⭐ **Il precedente da copiare è GDM, non `gnome-remote-desktop`**: GDM fa esattamente questo — profilo
-nell'ambiente di lancio, `file-db:`, **28 chiavi bloccate** **[R-pkg]** — e da lì si rubano due righe
-che non avremmo pensato: azzerare la scorciatoia del blocco **oltre** a disabilitarlo, e neutralizzare
-il terminale predefinito.
+⭐ **The precedent to copy is GDM, not `gnome-remote-desktop`**: GDM does exactly this — profile
+in the launch environment, `file-db:`, **28 locked keys** **[R-pkg]** — and from there we steal two lines
+we would not have thought of: clearing the lock shortcut **as well as** disabling it, and neutralising
+the default terminal.
 
-⛔ **[✗] `gnome-remote-desktop` non configura la sessione affatto**: nessun profilo, nessun lock,
-nessuna inibizione. **Il vuoto è nostro, non stiamo duplicando niente.**
-
----
-
-### 7. ⛔ L'energia: il server si addormenta
-
-*Dettaglio: `rapporti/03-energia-inibizioni.md`.*
-
-**Il default upstream *e* Debian di `sleep-inactive-ac-type` è `suspend`, con timeout 900 s**, e
-`gsd-power` chiama `logind Suspend(false)`.
-
-⚠ **Oggi non ci morde, ma per accidente**: `SessionIsActive` è falso perché non esiste una sessione
-logind grafica, quindi gsd-power si disarma da sé. **Un guadagno che non abbiamo scelto e che una
-misura può ribaltare** — misurato: una sessione logind **senza seat** risulta comunque `Active=yes`.
-
-⭐ **La cura è una chiamata sola**: `org.gnome.SessionManager.Inhibit(app_id, 0, reason, 12)` — cioè
-`SUSPEND(4) | IDLE(8)` **insieme**. Con il solo `IDLE`, se lo screensaver si è acceso prima
-dell'inibizione, l'unica difesa che resta chiede il bit `SUSPEND`: è la forma attenuata del difetto
-pagato su KDE. ⛔ **Mai il bit `LOGOUT(1)`**: ci renderebbe ostaggio dell'uscita dell'utente.
-
-✅ **La precondizione quasi non si pone**: `Inhibit` sta sullo **stesso oggetto** di `RegisterClient`,
-che REMOTIX già chiama (⚠ **il file citato, `src/uscita.c`, non esiste e non e' mai esistito** — riferimento da rifare) — se la registrazione riesce, il nome c'è.
-
-⭐ **Due buone notizie:**
-
-- **l'input che iniettiamo azzera davvero l'inattività** — né via D-Bus né via libei l'evento è marcato
-  `SYNTHETIC` (`core/events.c:126-138`): un utente remoto che lavora tiene sveglia la sessione da sé.
-  Ma un client passivo no;
-- ✅ **se perdessimo la corsa, l'immagine non muore**: `PowerSaveMode` **non ferma** i fotogrammi di un
-  monitor virtuale, perché le view virtuali sono offscreen. Il difetto di labwc non si ripresenta, e
-  **la cura di wayvnc non serve**. Si vedrebbe però la schermata di blocco — cioè §4.
-
-⚠ E tre trappole di configurazione: `idle-delay=0` **non** ferma la sospensione (il timer di sleep ha
-un timeout proprio); `idle-delay=0` con `idle-dim=true` accende un dim a 60 s; `disable-lock-screen`
-ferma `lock()` ma **non** `activate()` — la leva vera è `lock-enabled=false`.
+⛔ **[✗] `gnome-remote-desktop` does not configure the session at all**: no profile, no lock,
+no inhibition. **The void is ours, we are not duplicating anything.**
 
 ---
 
-### 8. La cattura, riletta nel codice
+### 7. ⛔ Power: the server falls asleep
 
-*Dettaglio: `rapporti/05-mutter-cattura.md`. Sette `[≠]`.*
+*Detail: `rapporti/03-energia-inibizioni.md`.*
 
-#### 8.1 Le correzioni a R29
+**The upstream *and* Debian default of `sleep-inactive-ac-type` is `suspend`, with a 900 s timeout**, and
+`gsd-power` calls `logind Suspend(false)`.
 
-| Che cosa dicevamo | Che cosa dice il codice |
+⚠ **Today it does not bite us, but by accident**: `SessionIsActive` is false because no graphical logind
+session exists, so gsd-power disarms itself. **A gain we did not choose and that a
+measurement can overturn** — measured: a logind session **without a seat** still shows `Active=yes`.
+
+⭐ **The cure is a single call**: `org.gnome.SessionManager.Inhibit(app_id, 0, reason, 12)` — that is
+`SUSPEND(4) | IDLE(8)` **together**. With `IDLE` alone, if the screensaver came on before
+the inhibition, the only defence left asks for the `SUSPEND` bit: it is the attenuated form of the defect
+paid for on KDE. ⛔ **Never the `LOGOUT(1)` bit**: it would make us hostage to the user's logout.
+
+✅ **The precondition hardly arises**: `Inhibit` sits on the **same object** as `RegisterClient`,
+which REMOTIX already calls (⚠ **the cited file, `src/uscita.c`, does not exist and never has** — reference to be redone) — if registration succeeds, the name is there.
+
+⭐ **Two pieces of good news:**
+
+- **the input we inject really resets the idle time** — neither via D-Bus nor via libei is the event marked
+  `SYNTHETIC` (`core/events.c:126-138`): a remote user who is working keeps the session awake by himself.
+  But a passive client does not;
+- ✅ **if we lost the race, the image does not die**: `PowerSaveMode` **does not stop** the frames of a
+  virtual monitor, because virtual views are offscreen. labwc's defect does not reappear, and
+  **wayvnc's cure is not needed**. The lock screen would however be seen — that is §4.
+
+⚠ And three configuration traps: `idle-delay=0` does **not** stop suspend (the sleep timer has
+its own timeout); `idle-delay=0` with `idle-dim=true` turns on a dim at 60 s; `disable-lock-screen`
+stops `lock()` but **not** `activate()` — the real lever is `lock-enabled=false`.
+
+---
+
+### 8. Capture, re-read in the code
+
+*Detail: `rapporti/05-mutter-cattura.md`. Seven `[≠]`.*
+
+#### 8.1 The corrections to R29
+
+| What we said | What the code says |
 |---|---|
-| il DMA-BUF è un **diff** su quattro buffer riciclati | ⛔ **falso**: blit dell'intero framebuffer, stack di clip **svuotato deliberatamente**, e la vista virtuale è un `CoglOffscreen` **persistente** |
-| la cura è una **superficie di accumulo** | ⛔ per questo peggiorava: copiavamo i rettangoli danneggiati da un buffer **già intero** |
-| «la fence implicita è quella sbagliata» | ⚠ copre metà del contratto — l'*acquire*. Quel che manca è il **release** |
-| «trattenere il buffer non serve» | ⛔ il riferimento fa **il contrario**, ed è l'unica protezione senza timeline |
-| «la timeline quando c'è» | ⛔ `gnome-remote-desktop` 48.1 **non nomina mai** `SPA_META_SyncTimeline` |
-| «`cattura.c` non chiede un solo `SPA_PARAM_Meta`» | ⚠ superata: oggi chiede Header e VideoDamage |
+| the DMA-BUF is a **diff** over four recycled buffers | ⛔ **false**: blit of the whole framebuffer, clip stack **deliberately emptied**, and the virtual view is a **persistent** `CoglOffscreen` |
+| the cure is an **accumulation surface** | ⛔ that is why it made things worse: we copied the damaged rectangles from a buffer **already whole** |
+| «the implicit fence is the wrong one» | ⚠ it covers half the contract — the *acquire*. What is missing is the **release** |
+| «holding the buffer is not needed» | ⛔ the reference does **the opposite**, and it is the only protection without a timeline |
+| «the timeline when there is one» | ⛔ `gnome-remote-desktop` 48.1 **never names** `SPA_META_SyncTimeline` |
+| «`cattura.c` does not ask for a single `SPA_PARAM_Meta`» | ⚠ superseded: today it asks for Header and VideoDamage |
 
-**Il contratto della timeline, per chi la scriverà**: `blocks=3`, i due `spa_data` `SyncObj` in **coda**
-(stesso fd), primo `SPA_PARAM_Buffers` con `metaType` MANDATORY; e i buffer vanno alzati (Mutter ne
-propone fino a 16; i nostri quattro li chiediamo noi).
+**The timeline contract, for whoever will write it**: `blocks=3`, the two `SyncObj` `spa_data` at the **tail**
+(same fd), first `SPA_PARAM_Buffers` with `metaType` MANDATORY; and the buffers must be raised (Mutter
+proposes up to 16; our four are the ones we ask for).
 
-#### 8.2 ⭐ La cadenza: il fatto è `[M]`, ⚠ **la causa è `[R]`**. *Misurato il 13 agosto 2026, e corretto la sera stessa*
+#### 8.2 ⭐ Cadence: the fact is `[M]`, ⚠ **the cause is `[R]`**. *Measured on 13 August 2026, and corrected the same evening*
 
-`framerate` è un **valore fisso `0/1`** — ecco perché una cadenza fissa non negozia. E il
-`maxFramerate` fa **due cose insieme**: è il freno della cattura **ed è la frequenza del monitor
-virtuale**.
+`framerate` is a **fixed value `0/1`** — that is why a fixed cadence does not negotiate. And
+`maxFramerate` does **two things at once**: it is the brake of capture **and it is the frequency of the virtual
+monitor**.
 
-⛔ *Questo paragrafo diceva: «Stesso numero ⇒ **battimento** ⇒ 0,61». **È sbagliato**, e la misura
-della fase 3 (step 1, M3) lo smentisce in tutt'e due le metà: né il battimento né lo 0,61.*
+⛔ *This paragraph said: «Same number ⇒ **beating** ⇒ 0.61». **It is wrong**, and the measurement
+of phase 3 (step 1, M3) refutes it in both halves: neither the beating nor the 0.61.*
 
-⭐ **IL FATTO, che è `[M]` e non si tocca**: negoziando il monitor a **120 Hz** e rinegoziando la
-**sola** cadenza a **90**, GNOME consegna **61,4 fotogrammi al secondo** (60,04 dalla mediana), con
-intervallo mediano **16,66 ms** e p99 **20,43**. È la cella **D** di `banchi/03-b14-esiti.jsonl`.
+⭐ **THE FACT, which is `[M]` and is not to be touched**: negotiating the monitor at **120 Hz** and renegotiating
+**only** the cadence at **90**, GNOME delivers **61.4 frames per second** (60.04 from the median), with
+median interval **16.66 ms** and p99 **20.43**. It is cell **D** of `banchi/03-b14-esiti.jsonl`.
 
-⚠ **LA CAUSA, che è `[R]` e va detta per quello che è**: letta nel codice di Mutter, `maxFramerate`
-non sembra un tetto continuo ma una **griglia** — il freno calcola
-`min_interval_us = 10⁶/maxFramerate` **troncato a intero** (16666 per 60) e lo mette contro un tick
-da **16666,67 µs**, e chi cade sotto **perde un tick intero**. ⭐ **Resta la spiegazione migliore che
-abbiamo**, ed è **coerente con la cella D**, che è pulita. ⛔ **Ma è una lettura del codice, non una
-legge misurata**, e non va scritta come se lo fosse.
+⚠ **THE CAUSE, which is `[R]` and must be stated for what it is**: read in Mutter's code, `maxFramerate`
+does not seem a continuous cap but a **grid** — the brake computes
+`min_interval_us = 10⁶/maxFramerate` **truncated to integer** (16666 for 60) and sets it against a tick
+of **16666.67 µs**, and whoever falls below **loses a whole tick**. ⭐ **It remains the best explanation we
+have**, and it is **consistent with cell D**, which is clean. ⛔ **But it is a reading of the code, not a
+measured law**, and it must not be written as if it were.
 
-> ⛔⛔ ⚠ *Qui stava scritto, e in altri otto documenti con lei: «`[M]` legge verificata su **13
-> punti**: 8 la confermano, **0 la smentiscono**». **È FALSO.** Il file degli esiti della griglia —
-> `banchi/03-b14-esiti-griglia.jsonl` — porta **tre righe in tutto**: il terreno e **due celle**
-> (`griglia-apertura-120` e `griglia-freno-90`), e **tutt'e due portano `scena_sul_mio_monitor:
-> false`** ⇒ sono **rifiutate dal banco stesso**, che sul proprio verdetto stampa «⛔ la legge NON
-> regge su **0 punti su 0**». I tredici punti non stanno in nessun file di esiti. ⇒ La
-> quantizzazione **torna `[R]`**. **Corretta il 13 agosto 2026**, rilievo del coordinatore della
-> fase 3, verificato riga per riga sui due file di esiti.*
+> ⛔⛔ ⚠ *Here it was written, and in eight other documents along with it: «`[M]` law verified on **13
+> points**: 8 confirm it, **0 refute it**». **IT IS FALSE.** The outcomes file of the grid —
+> `banchi/03-b14-esiti-griglia.jsonl` — carries **three lines in all**: the terrain and **two cells**
+> (`griglia-apertura-120` and `griglia-freno-90`), and **both carry `scena_sul_mio_monitor:
+> false`** ⇒ they are **rejected by the bench itself**, which on its own verdict prints «⛔ la legge NON
+> regge su **0 punti su 0**». The thirteen points are in no outcomes file. ⇒ The
+> quantisation **goes back to `[R]`**. **Corrected on 13 August 2026**, finding of the coordinator of
+> phase 3, verified line by line on the two outcomes files.*
 >
-> ⭐⭐ **E la ragione del rifiuto è la trappola numero uno di `LEZIONI.md` §1.1**: *la scena deve
-> stare sul monitor che si sta catturando*. Il banco **lo aveva scritto nel proprio file**, campo per
-> campo, e nessuno ha guardato quel campo: si è letto il numero e non la riga accanto.
+> ⭐⭐ **And the reason for the rejection is trap number one of `LEZIONI.md` §1.1**: *the scene must
+> be on the monitor being captured*. The bench **had written it in its own file**, field by
+> field, and nobody looked at that field: the number was read and not the line beside it.
 
-**La tabella qui sotto viene TUTTA da `banchi/03-b14-esiti.jsonl`** — sette celle, **tutte** con
-`scena_sul_mio_monitor: true`, con i tre controlli (positivo: crollo a 9,57 chiedendo 10; negativo:
-60→60 resta su 46,07; ritorno: 83,03, cioè torna su B) che chiudono:
+**The table below comes ENTIRELY from `banchi/03-b14-esiti.jsonl`** — seven cells, **all** with
+`scena_sul_mio_monitor: true`, with the three controls (positive: collapse to 9.57 asking for 10; negative:
+60→60 stays at 46.07; return: 83.03, that is it goes back to B) that close:
 
-| monitor | freno | consegnati | mediana | p99 | cella |
+| monitor | brake | delivered | median | p99 | cell |
 |---|---|---|---|---|---|
-| 60 | 60 | 31,5 | 33,31 ms | 35,53 | **A** |
-| 120 | 120 | 82,9 | 12,12 ms | 18,53 | **B** |
-| 120 | 60 | 46,13 | 24,12 ms | 29,23 | **C** |
-| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61,4** (60,04) | ⭐ **16,66 ms** | 20,43 | ⭐ **D** |
+| 60 | 60 | 31.5 | 33.31 ms | 35.53 | **A** |
+| 120 | 120 | 82.9 | 12.12 ms | 18.53 | **B** |
+| 120 | 60 | 46.13 | 24.12 ms | 29.23 | **C** |
+| ⭐⭐ **120** | ⭐⭐ **90** | ⭐⭐ **61.4** (60.04) | ⭐ **16.66 ms** | 20.43 | ⭐ **D** |
 
-⛔ **E i «sei decimi» non si riproducono**: la cella bassa dà **0,50 pulito e deterministico**, che è
-quel che una griglia produce e un battimento no. ⭐ **Questa cella è pulita** — è la **A**, e regge.
+⛔ **And the «six tenths» do not reproduce**: the low cell gives **a clean, deterministic 0.50**, which is
+what a grid produces and a beating does not. ⭐ **This cell is clean** — it is **A**, and it holds.
 
-> ⛔ ⚠ *E cade anche il riscontro incrociato.* Qui stava scritto: «Riscontro incrociato con una
-> seconda scena indipendente: concordano **entro il 4 %**, attese **0** ovunque». ⛔ **Non regge**, e
-> lo dice il file stesso, `banchi/03-b14-esiti-scena2.jsonl`: la sua **cella D** — cioè proprio il
-> risultato da confermare — porta `scena_sul_mio_monitor: false`, `palco_stabile: false` e **1
-> fotogramma in 25 s (0,04/s)**, e non ha nemmeno il conto delle attese, perché il suo step 2 non
-> c'è. E il suo **controllo di RITORNO** dà **52,84** contro gli **80,28** della sua stessa cella B:
-> **non torna**, quindi la catena dei controlli di quella scena **non chiude**. Entro il 4 %
-> concordano solo la cella A (31,28 contro 31,5), la B (3,2 %) e il controllo positivo; la C sta al
-> **5,4 %** e il controllo negativo al **7 %**. ⇒ ⛔ **Il 61,4 oggi ha UNA scena sola.** Corretto il
-> 13 agosto 2026, stesso rilievo.
+> ⛔ ⚠ *And the cross-check falls too.* Here it was written: «Cross-check with a
+> second independent scene: they agree **within 4 %**, waits **0** everywhere». ⛔ **It does not hold**, and
+> the file itself says so, `banchi/03-b14-esiti-scena2.jsonl`: its **cell D** — that is exactly the
+> result to be confirmed — carries `scena_sul_mio_monitor: false`, `palco_stabile: false` and **1
+> frame in 25 s (0.04/s)**, and it does not even have the count of waits, because its step 2 is not
+> there. And its **RETURN control** gives **52.84** against the **80.28** of its own cell B:
+> **it does not return**, so the chain of controls of that scene **does not close**. Within 4 %
+> only cell A agrees (31.28 against 31.5), B (3.2 %) and the positive control; C is at
+> **5.4 %** and the negative control at **7 %**. ⇒ ⛔ **The 61.4 today has ONE scene only.** Corrected on
+> 13 August 2026, same finding.
 
-⭐ **`ensure_virtual_monitor` esce prima se la misura non cambia**, e il disaccoppiamento
-**funziona**: negoziare alto (monitor 120) e rinegoziare la sola cadenza (freno 90) porta GNOME a
-**61,4**, cioè quanto KWin. È costato tre celle e **zero righe di prodotto**, come previsto.
+⭐ **`ensure_virtual_monitor` exits early if the size does not change**, and the decoupling
+**works**: negotiating high (monitor 120) and renegotiating only the cadence (brake 90) brings GNOME to
+**61.4**, that is as much as KWin. It cost three cells and **zero product lines**, as expected.
 
-⛔⛔ **Ma il prodotto oggi non sa chiederlo, e va scritto qui**: `MOVIMENTO_FPS 60` è una costante di
-compilazione (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` non ha nessuna opzione di cadenza, e **`RecordVirtual`
-non prende la frequenza** (`src/mutter.h` · la nota su `RecordVirtual`) — i quattro monitor virtuali sono tutti
-**1920×1080@60**. ⇒ Il risultato è `[M]` **sul banco** e **zero in produzione**.
+⛔⛔ **But the product today cannot ask for it, and it must be written here**: `MOVIMENTO_FPS 60` is a
+compile-time constant (`src/figlio.c` · `MOVIMENTO_FPS`), `main.c` has no cadence option, and **`RecordVirtual`
+does not take the frequency** (`src/mutter.h` · the note on `RecordVirtual`) — the four virtual monitors are all
+**1920×1080@60**. ⇒ The result is `[M]` **on the bench** and **zero in production**.
 
-⛔⛔ **E sulla catena vera il collo NON è `maxFramerate`: è il codificatore in software.** Il ritardo
-cattura → vetro era in gran parte nostro, nel tratto cattura → primo byte in pagina dominato dal
-codificatore in software, e il figlio del prodotto **non aspettava mai Mutter**: alzare la cadenza della
-cattura non sposterebbe il ritardo. *(I numeri di questa misura — fatta col codificatore software di
-allora, libsvtav1 / libx265 via libavcodec — non valgono più dopo la fase 18 e sono stati tolti.)* *→ rifatta: `fasi/18-senza-ffmpeg.md` §5.4.*
+⛔⛔ **And on the real chain the bottleneck is NOT `maxFramerate`: it is the software encoder.** The delay
+capture → glass was largely ours, in the stretch capture → first byte in the page dominated by the
+software encoder, and the product's child **never waited for Mutter**: raising the capture cadence
+would not move the delay. *(The numbers of this measurement — made with the software encoder of the
+time, libsvtav1 / libx265 via libavcodec — no longer hold after phase 18 and have been removed.)* *→ redone: `fasi/18-senza-ffmpeg.md` §5.4.*
 
-#### 8.3 Il resto
+#### 8.3 The rest
 
-**[✗] Un fotogramma intero a richiesta non esiste** (nessuna proprietà, nessun flag, nessun parametro)
-— **e non serve**, visto §8.1. **[✗] Solo `BGRx` e `BGRA`**: R32 confermata riga per riga. ⛔ **I buffer
-di solo cursore stantii esistono anche su Mutter**, l'analogo esatto di §kde §4.7 — già gestito nel
-nostro codice dal 7 agosto.
+**[✗] A whole frame on request does not exist** (no property, no flag, no parameter)
+— **and it is not needed**, given §8.1. **[✗] Only `BGRx` and `BGRA`**: R32 confirmed line by line. ⛔ **Stale
+cursor-only buffers exist on Mutter too**, the exact analogue of §kde §4.7 — already handled in
+our code since 7 August.
 
 ---
 
-### 9. L'input, riletto nel codice
+### 9. Input, reread in the code
 
-*Dettaglio: `rapporti/06-mutter-input.md`. Quattro `[≠]`.*
+*Detail: `rapporti/06-mutter-input.md`. Four `[≠]`.*
 
-⛔ **`EI_EVENT_KEYBOARD_MODIFIERS` non arriva nemmeno su GNOME**: `eis_device_keyboard_send_xkb_modifiers`
-ha **zero occorrenze** in Mutter 48.7 (controllo positivo: 25 altre `eis_device_*` usate). La frase che
-avevamo in **due** documenti — su KWin non arriva, *a differenza di GNOME* — **è falsa: sono pari**.
+⛔ **`EI_EVENT_KEYBOARD_MODIFIERS` does not arrive on GNOME either**: `eis_device_keyboard_send_xkb_modifiers`
+has **zero occurrences** in Mutter 48.7 (positive control: 25 other `eis_device_*` used). The sentence we
+had in **two** documents — on KWin it does not arrive, *unlike GNOME* — **is false: they are even**.
 
-✅ **La fonte vera su GNOME sono due proprietà D-Bus** (`CapsLockState`/`NumLockState`) con
-`SYNC_CREATE`, che danno anche lo **stato iniziale** — cosa che su labwc non abbiamo.
+✅ **The real source on GNOME is two D-Bus properties** (`CapsLockState`/`NumLockState`) with
+`SYNC_CREATE`, which also give the **initial state** — something we do not have on labwc.
 
-| Altro `[≠]` | |
+| Other `[≠]` | |
 |---|---|
-| il `mapping-id` | **non lo dichiariamo noi**: lo genera Mutter come UUID e ce lo pubblica nei `Parameters`. Il verso è **Mutter → noi**, e `compositore_mapping_id` è invertito |
-| il tasto Pausa | il riferimento pretende il flag E1: il nostro «riconoscibile anche senza» è **una scelta**, non un fatto |
-| touch/RDPEI | **[✗] non esiste nella 48.1**: tre sezioni del nostro documento descrivono la **49+** |
+| the `mapping-id` | **we do not declare it**: Mutter generates it as a UUID and publishes it to us in the `Parameters`. The direction is **Mutter → us**, and `compositore_mapping_id` is inverted |
+| the Pause key | the reference demands the E1 flag: our «riconoscibile anche senza» is **a choice**, not a fact |
+| touch/RDPEI | **[✗] does not exist in 48.1**: three sections of our document describe **49+** |
 
-⭐ **La rotella `/120 → ×10` è giusta, ma non per la ragione scritta**: con `scroll_delta` Mutter forza
-`SOURCE_WHEEL` e **salta** l'accumulatore. La soglia reale di uno scatto è **60**, cioè mezzo. ⚠ E
-`ei_device_scroll_discrete` fa una **divisione intera per 120**: i mezzi scatti spariscono.
+⭐ **The wheel `/120 → ×10` is right, but not for the reason written**: with `scroll_delta` Mutter forces
+`SOURCE_WHEEL` and **skips** the accumulator. The real threshold of one notch is **60**, i.e. half. ⚠ And
+`ei_device_scroll_discrete` does an **integer division by 120**: half notches vanish.
 
-⛔ **Due ricambi che toccano la fase 6**: un cambio di **keymap** distrugge e ricrea il dispositivo
-tastiera; un cambio di **geometria** distrugge e ricrea tutti i dispositivi assoluti. Il puntatore al
-device vecchio smette di funzionare **senza errore**: keymap e regioni vanno rilette **a ogni
+⛔ **Two replacements that touch phase 6**: a **keymap** change destroys and recreates the keyboard
+device; a **geometry** change destroys and recreates all absolute devices. The pointer to the
+old device stops working **without an error**: keymap and regions must be reread **at every
 `DEVICE_ADDED`**.
 
-⚠ E un fallimento silenzioso da conoscere: `transform_position` che fallisce **non è un errore** — una
-riga di log e il metodo D-Bus **ritorna con successo**.
+⚠ And a silent failure to know about: `transform_position` failing **is not an error** — one
+log line and the D-Bus method **returns successfully**.
 
 ---
 
-### 10. La clipboard
+### 10. The clipboard
 
-*Dettaglio: `rapporti/07-clipboard-portale.md`. Sei `[≠]`.*
+*Detail: `rapporti/07-clipboard-portale.md`. Six `[≠]`.*
 
-⛔ **La clipboard di GNOME non è della sessione RemoteDesktop.** È `MetaSelection`, cioè **del
-compositore**, come su KDE e wlroots; della sessione è solo la **porta**. La riga della domanda 14 in
-`LEZIONI.md` va riscritta.
+⛔ **GNOME's clipboard does not belong to the RemoteDesktop session.** It is `MetaSelection`, i.e. it belongs **to the
+compositor**, as on KDE and wlroots; only the **door** belongs to the session. The line for question 14 in
+`LEZIONI.md` must be rewritten.
 
-| Che cosa dicevamo | Che cosa dice il codice |
+| What we said | What the code says |
 |---|---|
-| «chi si ricollega non riceve un annuncio, e ci è costato» | ⛔ **falso**: `EnableClipboard` con opzioni **vuote** emette subito `SelectionOwnerChanged`. Era la nostra ricetta a perderlo |
-| «l'eco va distinta con un'euristica» | ✅ è **etichettata** (`session-is-owner`), e `SelectionRead` sulla propria selezione è **rifiutata**: lo stallo di KWin qui è impossibile |
-| «la clipboard non sopravvive alla morte di chi ha copiato» | ⛔ **su GNOME sopravvive**: Mutter ha un **clipboard manager interno**, avviato incondizionatamente — ma **in un solo tipo MIME**, con tetti 4 MiB / 200 MiB |
-| «senza sessione la clipboard non esiste» | ⛔ **la sponda X11 è incondizionata nei due versi** (zero controlli sul fuoco): `xclip` funziona senza sessione, **e il banco su GNOME può usarlo** |
+| «chi si ricollega non riceve un annuncio, e ci è costato» | ⛔ **false**: `EnableClipboard` with **empty** options emits `SelectionOwnerChanged` at once. It was our recipe that lost it |
+| «l'eco va distinta con un'euristica» | ✅ it is **labelled** (`session-is-owner`), and `SelectionRead` on one's own selection is **refused**: the KWin stall is impossible here |
+| «la clipboard non sopravvive alla morte di chi ha copiato» | ⛔ **on GNOME it survives**: Mutter has an **internal clipboard manager**, started unconditionally — but **in a single MIME type**, with caps of 4 MiB / 200 MiB |
+| «senza sessione la clipboard non esiste» | ⛔ **the X11 bridge is unconditional in both directions** (zero checks on focus): `xclip` works without a session, **and the bench on GNOME can use it** |
 
-**Tre trappole operative:**
+**Three operational traps:**
 
-1. ⛔ **`DisableClipboard` è a senso unico**, per un difetto di Mutter: il flag ha **un solo
-   assegnamento in tutto il file**, a `TRUE`. Dopo il Disable, `Enable` risponde «Already enabled» e
-   gli annunci non arrivano più. **Regola: non chiamarla mai** — per lasciare la clipboard si usa
-   `SetSelection` senza `mime-types`;
-2. ⛔ **firma asimmetrica**: `mime-types` è **`as`** in ingresso e **`(as)`** in uscita. Chi legge il
-   segnale con il tipo sbagliato ottiene `NULL` **senza errore** — confermato da tre implementazioni
-   indipendenti;
-3. ⛔ **gnome-shell azzera la clipboard a ogni blocco schermo**: ci strappa la proprietà in silenzio.
+1. ⛔ **`DisableClipboard` is one-way**, because of a Mutter defect: the flag has **a single
+   assignment in the whole file**, to `TRUE`. After the Disable, `Enable` answers «Already enabled» and
+   announcements no longer arrive. **Rule: never call it** — to let go of the clipboard use
+   `SetSelection` without `mime-types`;
+2. ⛔ **asymmetric signature**: `mime-types` is **`as`** on input and **`(as)`** on output. Whoever reads the
+   signal with the wrong type gets `NULL` **without an error** — confirmed by three independent
+   implementations;
+3. ⛔ **gnome-shell clears the clipboard at every screen lock**: it silently snatches ownership from us.
 
-⚠ E `POLLHUP` vale «pronto» anche qui, ma il fd di `SelectionWrite` che riceviamo è **bloccante**,
-mentre quello di `SelectionRead` arriva già non bloccante.
+⚠ And `POLLHUP` counts as «ready» here too, but the `SelectionWrite` fd we receive is **blocking**,
+while the `SelectionRead` one arrives already non-blocking.
 
 ---
 
-### 11. Il concorrente, guardato in faccia
+### 11. The competitor, looked in the face
 
-*Dettaglio: `rapporti/09-chi-lo-fa.md`.*
+*Detail: `rapporti/09-chi-lo-fa.md`.*
 
-> ⭐ **`gnome-remote-desktop` è un ottimo backend RDP e un prodotto incompleto; REMOTIX è un prodotto
-> più completo con un backend meno rifinito.**
+> ⭐ **`gnome-remote-desktop` is an excellent RDP backend and an incomplete product; REMOTIX is a more
+> complete product with a less polished backend.**
 
-**Che cosa facciamo noi che lui non fa** — e gli otto che contano stanno tutti fra «accendi una Debian
-senza monitor» e «vedi un desktop»:
+**What we do that it does not** — and the eight that matter all sit between «turn on a Debian
+without a monitor» and «see a desktop»:
 
 | | |
 |---|---|
-| ⭐ **avviamo la sessione** | il suo README dice che la sessione headless dev'essere *«independently set up»*. **[✗]** nessun codice che avvii un compositore |
-| ⭐ **autenticazione vera** | lui impone NLA con un **file SAM fabbricato**, credenziali scollegate dall'account. **[✗] Kerberos nella 48.1 non esiste** |
-| **TLS puro** | il suo rifiuto del ripiego è la causa di una fila di segnalazioni chiuse come «Not GNOME» |
-| ⭐ **H.264 su GPU di serie** | ⛔ da lui la VA-API è **dietro una variabile di debug**: senza NVIDIA il percorso normale è **RemoteFX Progressive in CPU** |
-| **controllo del bitrate** | lui è QP fisso a 22, nessun target |
-| ⛔ **rifiuto della seconda connessione** | **[✗]** in headless 48.1 **nessuna politica**: sessioni parallele illimitate |
-| **il resto** | certificato generato da noi, distinzione logout/distacco, sink audio creato dal nulla, inibizioni, più compositori, numeri propri |
+| ⭐ **we start the session** | its README says the headless session must be *«independently set up»*. **[✗]** no code that starts a compositor |
+| ⭐ **real authentication** | it imposes NLA with a **fabricated SAM file**, credentials disconnected from the account. **[✗] Kerberos does not exist in 48.1** |
+| **pure TLS** | its refusal of the fallback is the cause of a row of reports closed as «Not GNOME» |
+| ⭐ **H.264 on GPU by default** | ⛔ in it VA-API is **behind a debug variable**: without NVIDIA the normal path is **RemoteFX Progressive on CPU** |
+| **bitrate control** | it is fixed QP 22, no target |
+| ⛔ **refusal of the second connection** | **[✗]** in headless 48.1 **no policy**: unlimited parallel sessions |
+| **the rest** | certificate generated by us, logout/detach distinction, audio sink created from nothing, inhibitions, more compositors, our own numbers |
 
-**Dove è avanti lui** — quasi tutte **ore di lavoro**, non vantaggi strutturali: il **cursore**
-(572 righe, cache LRU — noi non lo mandiamo affatto), i **file negli appunti** via FUSE, il
-**microfono**, **AAC/Opus**, un **regolatore di latenza audio a 300 ms**, la **gestione della
-sospensione degli ack**, il ridimensionamento senza rifare la cattura, il multi-monitor, la
-**strumentazione** (metriche con fotogrammi saltati e un canale di telemetria che legge i tempi del
-client), il **Remote Login**, e il **confezionamento**.
+**Where it is ahead** — almost all **hours of work**, not structural advantages: the **cursor**
+(572 lines, LRU cache — we do not send it at all), **files in the clipboard** via FUSE, the
+**microphone**, **AAC/Opus**, an **audio latency regulator at 300 ms**, **handling of
+ack suspension**, resizing without redoing the capture, multi-monitor, the
+**instrumentation** (metrics with skipped frames and a telemetry channel that reads the
+client's timings), **Remote Login**, and the **packaging**.
 
-> #### ⛔ Una cosa da verificare nel nostro codice **subito**, non a fine studio
+> #### ⛔ One thing to verify in our code **now**, not at the end of the study
 >
-> Il client RDP può **sospendere gli ack** mandando `queueDepth == 0xFFFFFFFF`, e un regolatore che
-> non lo gestisce **si ferma per sempre**. Il nostro concede `MAX(2, rtt·fps/10⁶+2)` posti: se quel
-> valore viene trattato come un numero, la coda si chiude e il desktop si pianta.
+> The RDP client can **suspend acks** by sending `queueDepth == 0xFFFFFFFF`, and a regulator that
+> does not handle it **stops forever**. Ours grants `MAX(2, rtt·fps/10⁶+2)` slots: if that
+> value is treated as a number, the queue closes and the desktop freezes.
 
-⚠ **Il documento §gnome-remote-desktop è scritto sulla 51.alpha**, non sulla 48.1 di Trixie: sei
-sezioni sono da correggere (niente Kerberos, niente touch, niente throttler, `CURSOR_MODE_EMBEDDED`
-mai usato, VA-API dietro debug, due formule di posti invece di una). ⛔ E Debian dichiara **trixie
-48.1-4 vulnerabile a CVE-2025-5024**, un DoS non autenticato.
+⚠ **The §gnome-remote-desktop document is written on 51.alpha**, not on Trixie's 48.1: six
+sections need correcting (no Kerberos, no touch, no throttler, `CURSOR_MODE_EMBEDDED`
+never used, VA-API behind debug, two slot formulas instead of one). ⛔ And Debian declares **trixie
+48.1-4 vulnerable to CVE-2025-5024**, an unauthenticated DoS.
 
-#### 11.1 ⭐ L'handover di GNOME 48, che è portabile
+#### 11.1 ⭐ GNOME 48's handover, which is portable
 
-Il socket TCP **non viene mai chiuso**: viaggia come **file descriptor su D-Bus**, e chi lo instrada
-aveva letto in **`MSG_PEEK`**, quindi il destinatario rifà la negoziazione RDP da zero. Più il **Server
-Redirection PDU** con routing token, che è RDP puro e FreeRDP lo espone.
+The TCP socket **is never closed**: it travels as a **file descriptor over D-Bus**, and whoever routes it
+had read in **`MSG_PEEK`**, so the recipient redoes the RDP negotiation from scratch. Plus the **Server
+Redirection PDU** with routing token, which is pure RDP and FreeRDP exposes it.
 
-**Sei cose da copiare, tutte portabili su KDE, XFCE e LXQt**: il socket per fd; `MSG_PEEK` per
-instradare senza consumare; il Redirection PDU; autorizzare **per sessione logind** invece che per
-polkit; `Inhibit("sleep","block")` finché c'è un client; l'autolicenziamento del greeter.
+**Six things to copy, all portable to KDE, XFCE and LXQt**: the socket by fd; `MSG_PEEK` to
+route without consuming; the Redirection PDU; authorising **per logind session** instead of via
+polkit; `Inhibit("sleep","block")` as long as there is a client; the greeter's self-dismissal.
 
-⛔ **Ma non conviene appoggiarsi al Remote Login**: significherebbe **smettere di essere il server RDP**
-(lui il server, noi al massimo un client), funzionerebbe **solo su GNOME** — quindi la strada «avvio da
-me» resterebbe da scrivere comunque per gli altri tre, e sarebbero **due prodotti**. Con in più un dato
-di campo: l'handover **fallisce a caso in circa due avvii su tre** su Fedora 42, e sono cinque processi
-in tre contesti di sicurezza sincronizzati su un timeout di 30 s.
+⛔ **But it does not pay to lean on Remote Login**: it would mean **ceasing to be the RDP server**
+(it the server, us at most a client), it would work **only on GNOME** — so the «I start it
+myself» road would still have to be written for the other three, and there would be **two products**. Plus a
+field datum: the handover **fails at random in about two starts out of three** on Fedora 42, and it is five processes
+in three security contexts synchronised on a 30 s timeout.
 
 ---
 
-### 12. La matrice, rifatta col denominatore giusto
+### 12. The matrix, redone with the right denominator
 
-*§lxqt §4.1 contava 9 combinazioni. Erano **10**.*
+*§lxqt §4.1 counted 9 combinations. They were **10**.*
 
-**Cinnamon 6.4.10 e muffin 6.4.1 sono in Trixie** con una sessione `cinnamon-wayland.desktop`
-**[R-pkg]**. ⛔ Ma muffin **rinomina il bus in `org.cinnamon.Muffin.*`** ed è un fork della linea 3.38,
-a ~10 cicli da Mutter: **non è gratis né dalla fase wlroots né dal lavoro su GNOME**.
+**Cinnamon 6.4.10 and muffin 6.4.1 are in Trixie** with a `cinnamon-wayland.desktop` session
+**[R-pkg]**. ⛔ But muffin **renames the bus to `org.cinnamon.Muffin.*`** and is a fork of the 3.38 line,
+~10 cycles from Mutter: **it is free neither from the wlroots phase nor from the GNOME work**.
 
 | | |
 |---|---|
-| combinazioni realistiche su Trixie | **10** |
-| coperte oggi | **2** (20 %) |
-| dopo la sola fase wlroots | **8 su 10 — 80 %** |
-| la prossima che costa meno | **LXQt su labwc: zero righe** |
+| realistic combinations on Trixie | **10** |
+| covered today | **2** (20 %) |
+| after the wlroots phase alone | **8 of 10 — 80 %** |
+| the next cheapest | **LXQt on labwc: zero lines** |
 
-⭐ **Ma la cosa che costa davvero meno non è una combinazione nuova: sono le cinque voci del debito di
-§1.1**, sul desktop che serviamo già.
+⭐ **But what really costs least is not a new combination: it is the five debt items of
+§1.1**, on the desktop we already serve.
 
 ---
 
-### 13. Il piano di misure
+### 13. The measurement plan
 
-⚠ **Passo zero: rimettere GNOME sul server**, che oggi non è installato.
+⚠ **Step zero: put GNOME back on the server**, which is not installed today.
 
-| # | La misura | Perché |
+| # | The measurement | Why |
 |---|---|---|
-| **M1** | ⛔ il nostro regolatore regge `queueDepth == 0xFFFFFFFF` | §11: un desktop che si pianta per sempre. Si prova con un client strumentato, non aspettando |
-| **M2** | headless sì/no contro `inhibit_remote_access` | §4: è la precondizione che oggi abbiamo **per accidente** |
-| ⚠ **M3** | la cadenza disaccoppiata — ⭐ **il fatto è ottenuto**, ⛔ **ma la misura è MEZZA e non è chiusa** | §8.2: `[M]` monitor 120 + freno 90 ⇒ **61,4 consegnati** (60,04), mediana **16,66 ms** — cella **D**, pulita, con i tre controlli che chiudono. ⛔ **Ma la causa è `[R]`, non `[M]`**: la «legge della griglia» su 13 punti **non esiste** (vedi il riquadro di §8.2), e ⛔ **il riscontro su una seconda scena non c'è**: la cella D di `03-b14-esiti-scena2.jsonl` è rifiutata dal banco. ⚠ **Non attuabile dal prodotto oggi** (`RecordVirtual` non prende la frequenza), e ⛔ **non è la cura del ritardo**: sulla catena vera il collo è il codificatore in software |
-| **M4** | `SPA_META_SyncTimeline` con acquire/release, **oppure** trattenere il `pw_buffer` | §8.1: è la caccia della fase 9 nel posto giusto |
-| **M5** | `SPA_META_Cursor` + `cursor-mode=2` → cursore RDP nativo | §5.2: oggi il puntatore non arriva da nessuna parte |
-| **M6** | il profilo dconf in `$XDG_RUNTIME_DIR` con i lock, e **ogni chiave riletta** | §6: paga §1.1 punti 3, 4 e 5 insieme |
-| **M7** | `Inhibit(…, 12)` regge 20 minuti, e la macchina non si sospende | §7 |
-| **M8** | la clipboard: annuncio alla riconnessione, e il blocco schermo che la azzera | §10 |
-| **M9** | prova **guasta di proposito**: `SHELL` non vuota, e `--virtual-monitor` assente | ⭐ imparare come si legge il guasto: sessione **viva, completa e nera** |
+| **M1** | ⛔ our regulator withstands `queueDepth == 0xFFFFFFFF` | §11: a desktop that freezes forever. Tested with an instrumented client, not by waiting |
+| **M2** | headless yes/no against `inhibit_remote_access` | §4: it is the precondition we have today **by accident** |
+| ⚠ **M3** | decoupled cadence — ⭐ **the fact is obtained**, ⛔ **but the measurement is HALF and is not closed** | §8.2: `[M]` monitor 120 + brake 90 ⇒ **61.4 delivered** (60.04), median **16.66 ms** — cell **D**, clean, with the three controls that close. ⛔ **But the cause is `[R]`, not `[M]`**: the «grid law» on 13 points **does not exist** (see the box in §8.2), and ⛔ **the confirmation on a second scene is missing**: cell D of `03-b14-esiti-scena2.jsonl` is rejected by the bench. ⚠ **Not actionable by the product today** (`RecordVirtual` does not take the refresh rate), and ⛔ **it is not the cure for the delay**: on the real chain the bottleneck is the software encoder |
+| **M4** | `SPA_META_SyncTimeline` with acquire/release, **or** holding the `pw_buffer` | §8.1: it is phase 9's hunt in the right place |
+| **M5** | `SPA_META_Cursor` + `cursor-mode=2` → native RDP cursor | §5.2: today the pointer arrives nowhere |
+| **M6** | the dconf profile in `$XDG_RUNTIME_DIR` with the locks, and **every key reread** | §6: pays §1.1 items 3, 4 and 5 together |
+| **M7** | `Inhibit(…, 12)` holds for 20 minutes, and the machine does not suspend | §7 |
+| **M8** | the clipboard: announcement on reconnection, and the screen lock that clears it | §10 |
+| **M9** | **deliberately faulty** test: non-empty `SHELL`, and `--virtual-monitor` missing | ⭐ learn how the fault reads: session **alive, complete and black** |
 
-> #### ⚠ M3 — **lo stato vero**, scritto il 13 agosto 2026 dopo il rilievo
+> #### ⚠ M3 — **the true state**, written on 13 August 2026 after the finding
 >
-> *Stamattina questa riga diceva **✅ CHIUSA il 13 agosto 2026**, e lo diceva **sulla base della
-> griglia**. La griglia è caduta — le sue due celle sono rifiutate dal banco stesso, §8.2. ⇒ **M3 non
-> è chiusa e non è aperta: è mezza**, e va tenuta mezza finché non si fanno le due metà che mancano.
-> ⛔ Non la si forza a «chiusa» perché il numero è bello, né ad «aperta» perché una riga era falsa.*
+> *This morning this line said **✅ CLOSED on 13 August 2026**, and it said so **on the basis of the
+> grid**. The grid has fallen — its two cells are rejected by the bench itself, §8.2. ⇒ **M3 is not
+> closed and not open: it is half**, and must be kept half until the two missing halves are done.
+> ⛔ It is not forced to «closed» because the number is nice, nor to «open» because one line was false.*
 >
 > | | |
 > |---|---|
-> | ✅ **quel che M3 HA ottenuto** | `[M]` **61,4** a monitor 120 e freno 90 — cella **D** di `banchi/03-b14-esiti.jsonl`, `scena_sul_mio_monitor: true`, con controllo positivo (crollo a 9,57), negativo (fermo su 46,07) e di ritorno (83,03) che chiudono. **Questo è un fatto, e resta** |
-> | ⛔ **quel che M3 NON ha** | la **causa**. La quantizzazione è `[R]`: letta nel codice di Mutter, coerente con la cella D, **mai misurata su una griglia di punti** |
-> | ⛔ **e nemmeno** | il **riscontro su una seconda scena**: la cella D di `banchi/03-b14-esiti-scena2.jsonl` porta `scena_sul_mio_monitor: false` e **1 fotogramma in 25 s** ⇒ il 61,4 ha **una scena sola** |
-> | ⇒ **che cosa la chiuderebbe** | rifare la **griglia** con la scena sul monitor che si cattura, e rifare la **cella D** sulla seconda scena. È lo stesso banco `banchi/03-b14-cadenza.py`, e ⭐ **il campo per accorgersene ce l'ha già**: è `scena_sul_mio_monitor`, e stamattina nessuno l'ha guardato |
+> | ✅ **what M3 HAS obtained** | `[M]` **61.4** at monitor 120 and brake 90 — cell **D** of `banchi/03-b14-esiti.jsonl`, `scena_sul_mio_monitor: true`, with positive control (collapse to 9.57), negative (steady at 46.07) and return (83.03) that close. **This is a fact, and it stays** |
+> | ⛔ **what M3 does NOT have** | the **cause**. The quantisation is `[R]`: read in Mutter's code, consistent with cell D, **never measured on a grid of points** |
+> | ⛔ **nor** | the **confirmation on a second scene**: cell D of `banchi/03-b14-esiti-scena2.jsonl` carries `scena_sul_mio_monitor: false` and **1 frame in 25 s** ⇒ the 61.4 has **one scene only** |
+> | ⇒ **what would close it** | redo the **grid** with the scene on the monitor being captured, and redo **cell D** on the second scene. It is the same bench `banchi/03-b14-cadenza.py`, and ⭐ **it already has the field to notice it**: it is `scena_sul_mio_monitor`, and this morning nobody looked at it |
 
 ---
 
-### 14. Le lezioni che questo studio aggiunge
+### 14. The lessons this study adds
 
-1. ⭐ **La domanda 16**: *«c'è uno stato in cui il compositore ci REVOCA quel che ci ha già concesso, e
-   chi ha il dito su quel pulsante?»* La domanda 3 chiede se esiste un permesso; questa chiede se può
-   essere **ritirato a caldo**. Su GNOME esiste un'API che *«termina ogni sessione di accesso remoto
-   attiva»*, e nessuna delle quindici domande la copriva.
-2. ⛔ **Il desktop che serviamo meglio è quello che abbiamo studiato peggio.** Dieci fasi su GNOME
-   hanno prodotto una conoscenza profonda della *cattura* e nessuna del *desktop*: sette voci mai
-   affrontate, e due di esse (§4 e §7) sono difetti che l'utente incontrerebbe **lasciando la sessione
-   ferma venti minuti**.
-3. ⭐ **Una condizione che ci salva per accidente va scritta come requisito.** Siamo headless perché
-   Mutter si degrada da sé senza seat, non perché l'abbiamo chiesto — e da quella condizione dipende
-   il fatto che un blocco schermo non ci stacchi. È la forma generale di `LEZIONI.md` §2.5: *la
-   protezione di un difetto noto non si affida a qualcosa che si può perdere.*
-4. ⚠ **Le misure invecchiano peggio delle letture.** R29 è stata scritta da misure corrette e da una
-   **diagnosi sbagliata**, ed è rimasta in piedi due fasi perché nessuno aveva letto il codice che le
-   stava sotto. La lezione §1.9 diceva «quando codice e misura si contraddicono, sospetta la misura»;
-   questo studio aggiunge il caso opposto — **una misura giusta con una spiegazione inventata è più
-   pericolosa di una misura sbagliata**, perché nessuno la rimette in discussione.
+1. ⭐ **Question 16**: *«is there a state in which the compositor REVOKES what it has already granted us, and
+   who has a finger on that button?»* Question 3 asks whether a permission exists; this one asks whether it can be
+   **withdrawn live**. On GNOME there is an API that *«terminates every active remote access
+   session»*, and none of the fifteen questions covered it.
+2. ⛔ **The desktop we serve best is the one we studied worst.** Ten phases on GNOME
+   produced deep knowledge of *capture* and none of the *desktop*: seven items never
+   tackled, and two of them (§4 and §7) are defects the user would hit **by leaving the session
+   idle for twenty minutes**.
+3. ⭐ **A condition that saves us by accident must be written down as a requirement.** We are headless because
+   Mutter degrades by itself without a seat, not because we asked for it — and on that condition depends
+   the fact that a screen lock does not detach us. It is the general form of `LEZIONI.md` §2.5: *the
+   protection against a known defect is not entrusted to something that can be lost.*
+4. ⚠ **Measurements age worse than readings.** R29 was written from correct measurements and from a
+   **wrong diagnosis**, and stayed standing for two phases because nobody had read the code
+   underneath them. Lesson §1.9 said «quando codice e misura si contraddicono, sospetta la misura»;
+   this study adds the opposite case — **a right measurement with an invented explanation is more
+   dangerous than a wrong measurement**, because nobody questions it again.
 
 
 <a id="kde"></a>
 
-## KDE Plasma e KWin — studio del codice, per la fase 11
+## KDE Plasma and KWin — code study, for phase 11
 
-*Analisi condotta sul codice sorgente originale di KDE, clonato da `invent.kde.org` il 7 agosto 2026
-e tenuto in `reference-kde/`, con la stessa convenzione di `reference/xrdp`.*
+*Analysis carried out on KDE's original source code, cloned from `invent.kde.org` on 7 August 2026
+and kept in `reference-kde/`, with the same convention as `reference/xrdp`.*
 
-| Repository | Versione clonata | Perché |
+| Repository | Version cloned | Why |
 |---|---|---|
-| `plasma/kwin` | tag **v6.3.6** | il compositore: è **lui** che possiede schermo e input |
-| `plasma/plasma-workspace` | tag **v6.3.6** | la sessione: avvio, logout, ksmserver, klipper |
-| `plasma/kpipewire` | tag **v6.3.6** | consuma PipeWire e **codifica in H.264**: fa il nostro stesso lavoro |
-| `plasma/xdg-desktop-portal-kde` | tag **v6.3.6** | la via «ufficiale» alla cattura, e il consenso |
-| `plasma/libkscreen` | tag **v6.3.6** | configurazione degli schermi da fuori |
-| `plasma/powerdevil` | tag **v6.3.6** | energia, inibizioni, spegnimento |
-| **`plasma/krdp`** | tag **v6.3.6** *e* master `1dd52ba` (6.7.80) | ⭐ **il server RDP di KDE**: stessa libreria RDP, stesso compositore, stessi client. **È il riferimento principale della fase**, l'equivalente di `gnome-remote-desktop` |
-| `network/krfb` | master `6b2832b` (KDE Gear 26.11.70) | il desktop remoto VNC di KDE |
-| `libraries/plasma-wayland-protocols` | master | gli XML dei protocolli di KDE |
+| `plasma/kwin` | tag **v6.3.6** | the compositor: it is **it** that owns screen and input |
+| `plasma/plasma-workspace` | tag **v6.3.6** | the session: startup, logout, ksmserver, klipper |
+| `plasma/kpipewire` | tag **v6.3.6** | consumes PipeWire and **encodes in H.264**: it does our very same work |
+| `plasma/xdg-desktop-portal-kde` | tag **v6.3.6** | the «official» road to capture, and consent |
+| `plasma/libkscreen` | tag **v6.3.6** | screen configuration from outside |
+| `plasma/powerdevil` | tag **v6.3.6** | power, inhibitions, shutdown |
+| **`plasma/krdp`** | tag **v6.3.6** *and* master `1dd52ba` (6.7.80) | ⭐ **KDE's RDP server**: same RDP library, same compositor, same clients. **It is the main reference of the phase**, the equivalent of `gnome-remote-desktop` |
+| `network/krfb` | master `6b2832b` (KDE Gear 26.11.70) | KDE's VNC remote desktop |
+| `libraries/plasma-wayland-protocols` | master | the XML of KDE's protocols |
 
-**6.3.6 è la versione di Debian Trixie** (§3.8 di `SPECIFICA.md`), cioè quella che gira sulla
-macchina di runtime: le righe citate qui sono quelle che l'utente ha davvero installate.
+**6.3.6 is Debian Trixie's version** (§3.8 of `SPECIFICA.md`), i.e. the one running on the
+runtime machine: the lines quoted here are the ones the user really has installed.
 
-Insieme ai sorgenti di KDE è stato riletto **il nostro codice di banco** — `banco/nodo-kwin.c` (il
-client del protocollo di KWin), `banco/misura-cattura.c` (il consumatore PipeWire),
-`banco/banco-altri.sh`, `banco/zkde-screencast-unstable-v1.xml` — perché metà del valore di questo
-studio sta nel confronto fra quel che KDE fa e quel che noi abbiamo già scritto.
+Together with KDE's sources **our bench code** was reread — `banco/nodo-kwin.c` (the
+KWin protocol client), `banco/misura-cattura.c` (the PipeWire consumer),
+`banco/banco-altri.sh`, `banco/zkde-screencast-unstable-v1.xml` — because half the value of this
+study lies in the comparison between what KDE does and what we have already written.
 
-Ogni affermazione porta una marca, come in `REFERENCE.md`:
+Every statement carries a mark, as in `REFERENCE.md`:
 
-| Marca | Significato |
+| Mark | Meaning |
 |---|---|
-| **[R]** | **letto nel codice**, con `file:riga`. È il grosso di questo documento |
-| **[M]** | misurato da noi, sul campo, con data |
-| **[?]** | **non deciso dal codice**: va misurato sul banco. Le `[?]` sono elencate in §14 |
-| **[✗]** | **cercato e non trovato**: una dichiarazione negativa, che vale quanto una positiva |
+| **[R]** | **read in the code**, with `file:riga`. It is the bulk of this document |
+| **[M]** | measured by us, in the field, with a date |
+| **[?]** | **not decided by the code**: must be measured on the bench. The `[?]` are listed in §14 |
+| **[✗]** | **searched for and not found**: a negative statement, worth as much as a positive one |
 
-> ⚠ **Questo documento è di lettura, non di misura.** `LEZIONI.md` §1 dice che il progetto non si è
-> mai fermato su un problema difficile ma su una misura che non misurava quel che credevamo: qui non
-> c'è nessuna misura nuova, e nemmeno una riga eseguita. Quel che c'è è il codice, che dice **che cosa
-> è possibile** — e in tre punti dice che **una nostra misura del 7 agosto guardava la cosa sbagliata**
-> (§5.1 e §15). Prima di spostare un numero nei documenti si rifà la misura.
+> ⚠ **This document is about reading, not measuring.** `LEZIONI.md` §1 says the project has
+> never stalled on a hard problem but on a measurement that did not measure what we believed: here there
+> is no new measurement, not even one line executed. What there is is the code, which says **what
+> is possible** — and in three places it says that **one of our measurements of 7 August was looking at the wrong thing**
+> (§5.1 and §15). Before moving a number into the documents the measurement is redone.
 
 ---
 
-### 1. In due minuti
+### 1. In two minutes
 
-Le **quattro domande** che `PIANO.md` fase 11 e la memoria di progetto chiedevano di chiudere prima
-di progettare qualunque cosa, con la risposta che il codice dà:
+The **four questions** that `PIANO.md` phase 11 and the project memory asked to close before
+designing anything at all, with the answer the code gives:
 
-| # | La domanda | La risposta |
+| # | The question | The answer |
 |---|---|---|
-| **1** | **Come si ottiene il permesso della cattura, per un servizio non presidiato?** | ✅ **Un file `.desktop` con `X-KDE-Wayland-Interfaces`.** Nessun dialogo, nemmeno la prima volta; sopravvive a riavvio e logout; nessuna patch. È il meccanismo con cui si autorizzano il portale di KDE e `krfb-virtualmonitor` (§3). ✅ **MISURATO il 7 agosto — funziona**, e con un requisito in più che il codice non mostrava: **`XDG_MENU_PREFIX=plasma-`** nell'ambiente, o l'indice dei servizi resta vuoto e il cancello non si apre (§3.3-bis) |
-| **2** | **KWin senza monitor può disegnare sulla GPU?** | ✅ **Sì**, e ora **misurato**, non solo letto: `renderD129` aperto, `libEGL_mesa`+`libgbm` caricate, `zwp_linux_dmabuf_v1` v4 annunciato. **La nostra misura del 7 agosto («zero nodi DRM, nessuna libreria GL») era sbagliata nell'etichetta: R32 va corretta** (§5.1) |
-| **3** | **Come si avvia una sessione Plasma senza monitor?** | ✅ Ambiente da zero con **due** variabili obbligatorie (**più `XDG_MENU_PREFIX`, vedi la domanda 1**), unità del compositore sovrascritta, `startplasma-wayland`. Più semplice di GNOME. Con **due vincoli duri**: `--xwayland` non è opzionale, e `--virtual` non sa creare output a richiesta (§6). ⛔ **E `--virtual` non è più una scelta**: `--drm` da una sessione senza seat non parte [M] (§5.2) |
-| **4** | **Per quale strada passa l'input?** | ✅ **libei**, con una sola chiamata D-Bus a KWin e **senza alcun controllo di permesso**. `SPECIFICA.md` §3.8 («protocollo `kde-fake-input`») è superata dal codice: `fake_input` è la strada vecchia (§7). ✅ **MISURATO**: `connectToEIS(7)` da una shell SSH qualunque → `(handle 0, 1)` |
+| **1** | **How is capture permission obtained, for an unattended service?** | ✅ **A `.desktop` file with `X-KDE-Wayland-Interfaces`.** No dialog, not even the first time; survives reboot and logout; no patch. It is the mechanism by which KDE's portal and `krfb-virtualmonitor` are authorised (§3). ✅ **MEASURED on 7 August — it works**, and with one more requirement the code did not show: **`XDG_MENU_PREFIX=plasma-`** in the environment, or the service index stays empty and the gate does not open (§3.3-bis) |
+| **2** | **Can KWin without a monitor draw on the GPU?** | ✅ **Yes**, and now **measured**, not just read: `renderD129` opened, `libEGL_mesa`+`libgbm` loaded, `zwp_linux_dmabuf_v1` v4 announced. **Our measurement of 7 August («zero nodi DRM, nessuna libreria GL») was wrong in its label: R32 must be corrected** (§5.1) |
+| **3** | **How is a Plasma session started without a monitor?** | ✅ Environment from scratch with **two** mandatory variables (**plus `XDG_MENU_PREFIX`, see question 1**), compositor unit overridden, `startplasma-wayland`. Simpler than GNOME. With **two hard constraints**: `--xwayland` is not optional, and `--virtual` cannot create outputs on demand (§6). ⛔ **And `--virtual` is no longer a choice**: `--drm` from a session without a seat does not start [M] (§5.2) |
+| **4** | **Which road does input take?** | ✅ **libei**, with a single D-Bus call to KWin and **without any permission check**. `SPECIFICA.md` §3.8 («protocollo `kde-fake-input`») is superseded by the code: `fake_input` is the old road (§7). ✅ **MEASURED**: `connectToEIS(7)` from any SSH shell → `(handle 0, 1)` |
 
-E le **undici domande al compositore nuovo** di `LEZIONI.md` §3, con la colonna di KWin riempita
-da questo studio. Le celle marcate `[?]` sono quelle che il codice non decide.
+And the **eleven questions to the new compositor** of `LEZIONI.md` §3, with KWin's column filled in
+by this study. The cells marked `[?]` are the ones the code does not decide.
 
-| # | La domanda | Mutter 48.7 | **KWin 6.3.6** |
+| # | The question | Mutter 48.7 | **KWin 6.3.6** |
 |---|---|---|---|
-| 1 | Come si chiede la cattura senza portale? | D-Bus `org.gnome.Mutter.ScreenCast` | protocollo Wayland `zkde_screencast_unstable_v1` **v5** [R] |
-| 2 | Spinge i fotogrammi o li fa tirare? | spinge (PipeWire) | **spinge** (PipeWire), e frena lui sul `maxFramerate` [R] |
-| 3 | Il protocollo è dietro un permesso? | no | **sì**, e il permesso è **un campo di un file `.desktop`** [R] — **+ `XDG_MENU_PREFIX`** [M, 7 ago] |
-| 4 | Senza monitor, disegna sulla GPU? | sì | **sì** [R] **e misurato** [M, 7 ago]: render node aperto, EGL/gbm, dmabuf v4 |
-| 5 | Si può chiedere uno schermo virtuale della misura voluta? | sì, `RecordVirtual` | **sì**, `stream_virtual_output` — ma **solo col backend `--drm`** [R] |
-| 6 | Quanto consegna, con una scena che cambia a ogni ridisegno? | ~37 su 60 | **59–60** [M, 7 agosto] — misurato però con `--virtual` + `stream_output`, non nella configurazione del prodotto |
-| 7 | La cadenza dichiarata come si comporta? | sei decimi, oltre 60 non sale, **fissa rifiutata** | `framerate` **deve** essere `0/1`; il tetto è `maxFramerate`, **onorato lato server** con aritmetica intera in ms [R] |
-| 8 | Consegna fotogrammi interi o «diff»? | **a copia zero è un diff** | **interi, sempre** [R] — il difetto di R29 non si ripresenta |
-| 9 | Il buffer arriva già disegnato? | **no**: il 100 % col disegno in corso | **sì**: KWin fa `glFlush()`, o `glFinish()` su NVidia e llvmpipe [R] |
-| 10 | Che cosa costa la risoluzione? | niente fino a 4K | niente [M] |
-| 11 | Che cosa costa la profondità di colore? | niente | niente; `BGRx` è negoziabile [R] |
+| 1 | How is capture requested without a portal? | D-Bus `org.gnome.Mutter.ScreenCast` | Wayland protocol `zkde_screencast_unstable_v1` **v5** [R] |
+| 2 | Does it push frames or have them pulled? | pushes (PipeWire) | **pushes** (PipeWire), and brakes by itself on `maxFramerate` [R] |
+| 3 | Is the protocol behind a permission? | no | **yes**, and the permission is **a field of a `.desktop` file** [R] — **+ `XDG_MENU_PREFIX`** [M, 7 Aug] |
+| 4 | Without a monitor, does it draw on the GPU? | yes | **yes** [R] **and measured** [M, 7 Aug]: render node opened, EGL/gbm, dmabuf v4 |
+| 5 | Can one request a virtual screen of the desired size? | yes, `RecordVirtual` | **yes**, `stream_virtual_output` — but **only with the `--drm` backend** [R] |
+| 6 | How much does it deliver, with a scene that changes at every redraw? | ~37 of 60 | **59–60** [M, 7 August] — measured however with `--virtual` + `stream_output`, not in the product configuration |
+| 7 | How does the declared cadence behave? | six tenths, above 60 does not rise, **fixed refused** | `framerate` **must** be `0/1`; the cap is `maxFramerate`, **honoured server-side** with integer arithmetic in ms [R] |
+| 8 | Does it deliver whole frames or «diffs»? | **at zero copy it is a diff** | **whole, always** [R] — R29's defect does not recur |
+| 9 | Does the buffer arrive already drawn? | **no**: 100 % with drawing in progress | **yes**: KWin does `glFlush()`, or `glFinish()` on NVidia and llvmpipe [R] |
+| 10 | What does resolution cost? | nothing up to 4K | nothing [M] |
+| 11 | What does colour depth cost? | nothing | nothing; `BGRx` is negotiable [R] |
 
-> #### ⭐ E su KDE **esiste un `gnome-remote-desktop`**: si chiama `KRdp`
+> #### ⭐ And on KDE **a `gnome-remote-desktop` exists**: it is called `KRdp`
 >
-> *Trovato la sera del 7 agosto, dopo una domanda dell'utente. La prima stesura di questo documento
-> diceva che in KDE non c'era traccia di RDP, e sbagliava (§12.0).*
+> *Found on the evening of 7 August, after a question from the user. The first draft of this document
+> said there was no trace of RDP in KDE, and it was wrong (§12.0).*
 >
-> Server RDP di KDE, **C++ su FreeRDP + kpipewire**, 4 222 righe nella versione di Trixie. Conferma
-> per intero la risposta alla domanda 1 — il suo `.desktop` dichiara
-> `X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input,zkde_screencast_unstable_v1` — e conferma **i due
-> codec**, **il regolatore a fotogrammi in volo dall'RTT**, **i bordi esclusivi delle regioni** e
-> **TLS puro quando si autentica con PAM**. Non risolve invece le due cose che restano nostre:
-> **non avvia la sessione** (vive dentro Plasma) e **non ridimensiona lo schermo virtuale**.
+> KDE's RDP server, **C++ on FreeRDP + kpipewire**, 4 222 lines in the Trixie version. It confirms
+> in full the answer to question 1 — its `.desktop` declares
+> `X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input,zkde_screencast_unstable_v1` — and confirms **the two
+> codecs**, **the in-flight frame regulator from RTT**, **the exclusive region borders** and
+> **pure TLS when authenticating with PAM**. It does not solve, however, the two things that remain ours:
+> **it does not start the session** (it lives inside Plasma) and **it does not resize the virtual screen**.
 >
-> ⛔ **E `xrdp` non c'entra**: non ha alcun percorso Wayland — lancia un `Xorg` o un `Xvnc` e dentro
-> ci fa girare la sessione **X11** di Plasma (§12.3). Non ha risolto il nostro problema: l'ha evitato.
+> ⛔ **And `xrdp` has nothing to do with it**: it has no Wayland path at all — it launches an `Xorg` or an `Xvnc` and inside
+> it runs Plasma's **X11** session (§12.3). It did not solve our problem: it avoided it.
 
-**Il quadro in una riga**: su KDE la cattura è **più semplice e più sana** che su GNOME (fotogrammi
-interi, sincronizzazione fatta dal compositore), l'input è **più corto** (una chiamata D-Bus,
-nessun permesso), la sessione è **più prevedibile** (nessun `ConditionEnvironment`, il bus non muore)
-— e in cambio **la risoluzione dinamica non c'è**: un output virtuale di KWin non si ridimensiona, e
-va chiuso e rifatto (§8).
+**The picture in one line**: on KDE capture is **simpler and healthier** than on GNOME (whole
+frames, synchronisation done by the compositor), input is **shorter** (one D-Bus call,
+no permission), the session is **more predictable** (no `ConditionEnvironment`, the bus does not die)
+— and in exchange **dynamic resolution is missing**: a KWin virtual output cannot be resized, and
+must be closed and remade (§8).
 
-> #### ⛔ «CURSORE FUORI DAL PERCORSO DEL CODIFICATORE» ERA SCRITTO QUI, ED È FALSO CON `--virtual`
+> #### ⛔ «CURSOR OUTSIDE THE ENCODER PATH» WAS WRITTEN HERE, AND IT IS FALSE WITH `--virtual`
 >
-> *[M, 8 agosto 2026, e l'ha visto l'utente al primo uso: «non c'è la scia, ma è quello di KDE che
-> segue quello vero» — cioè **due puntatori**.]*
+> *[M, 8 August 2026, and the user saw it on first use: «non c'è la scia, ma è quello di KDE che
+> segue quello vero» — i.e. **two pointers**.]*
 >
-> Il modo cursore `Metadata` governa se lo screencast **aggiunge** un cursore, non se la scena ne
-> contiene già uno. E con il backend `--virtual` ne contiene sempre uno:
+> The `Metadata` cursor mode governs whether the screencast **adds** a cursor, not whether the scene already
+> contains one. And with the `--virtual` backend it always contains one:
 >
 > | | |
 > |---|---|
-> | `compositor_wayland.cpp:573-608` | se il backend non ha un piano cursore, `hardwareCursor` resta falso e il **cursorLayer software** viene reso visibile |
-> | `backends/virtual/` | ⛔ **non definisce `cursorLayer()`** [✗]: il backend virtuale un piano cursore non ce l'ha |
-> | `virtual_egl_backend.cpp:187-194` | `textureForOutput` restituisce il **framebuffer dell'uscita**, cioè quello in cui il cursorLayer è stato dipinto |
-> | `pointer_input.cpp:99-108` | e KWin lo mostra appena esiste un dispositivo di puntamento sul seat — il nostro, di libei |
+> | `compositor_wayland.cpp:573-608` | if the backend has no cursor plane, `hardwareCursor` stays false and the **software cursorLayer** is made visible |
+> | `backends/virtual/` | ⛔ **does not define `cursorLayer()`** [✗]: the virtual backend has no cursor plane |
+> | `virtual_egl_backend.cpp:187-194` | `textureForOutput` returns the **output's framebuffer**, i.e. the one the cursorLayer was painted into |
+> | `pointer_input.cpp:99-108` | and KWin shows it as soon as a pointing device exists on the seat — ours, from libei |
 >
-> **Non c'è alcuna leva per impedirlo**: `Cursors::hideCursor()` è interna e la chiamano solo
-> `pointer_input` e `hide_cursor_spy`; nessun protocollo, nessun D-Bus. Chiedere il modo `Hidden` non
-> cambierebbe niente. Con il backend `--drm` — che §5.2 ha escluso — ci sarebbe un piano cursore e il
-> problema non esisterebbe.
+> **There is no lever to prevent it**: `Cursors::hideCursor()` is internal and is called only by
+> `pointer_input` and `hide_cursor_spy`; no protocol, no D-Bus. Requesting `Hidden` mode would not
+> change anything. With the `--drm` backend — which §5.2 ruled out — there would be a cursor plane and the
+> problem would not exist.
 >
-> ✅ **L'unica cura è dall'altra parte**: si dice al **client** di nascondere il proprio puntatore,
-> con `SYSPTR_NULL`, che è RDP di base. Il prezzo è che il puntatore si muove alla latenza del
-> **video** invece che a quella della rete — su una LAN è un fotogramma.
+> ✅ **The only cure is on the other side**: the **client** is told to hide its own pointer,
+> with `SYSPTR_NULL`, which is basic RDP. The price is that the pointer moves at the latency of the
+> **video** instead of that of the network — on a LAN it is one frame.
 >
-> ⚠ **E su Mutter NON si fa**: là il cursore è davvero fuori dall'immagine, e nascondere quello del
-> client lascerebbe l'utente senza alcun puntatore. È una differenza fra compositori, non una
-> preferenza.
+> ⚠ **And on Mutter it is NOT done**: there the cursor really is outside the image, and hiding the
+> client's would leave the user with no pointer at all. It is a difference between compositors, not a
+> preference.
 >
-> #### ⛔ E la cura funziona su due client su tre — non su tutti
+> #### ⛔ And the cure works on two clients out of three — not on all
 >
-> *[M, 8 agosto 2026, giudizio dell'utente su xfreerdp e su RDM]*
+> *[M, 8 August 2026, the user's judgement on xfreerdp and on RDM]*
 >
-> | client | esito |
+> | client | outcome |
 > |---|---|
-> | **xfreerdp** | ✅ un puntatore solo, quello di KDE |
-> | **RDM (Android)** | ⛔ **restano due**, pur avendo il server dichiarato e il client **accettato** il PDU (`14:02:28 puntatore del client nascosto`, cioè `PointerSystem()` ha risposto vero) |
+> | **xfreerdp** | ✅ one pointer only, KDE's |
+> | **RDM (Android)** | ⛔ **two remain**, even though the server declared and the client **accepted** the PDU (`14:02:28 puntatore del client nascosto`, i.e. `PointerSystem()` answered true) |
 >
-> La spiegazione è che il secondo puntatore di RDM **non è il puntatore RDP**: è il *touch pointer*
-> che l'applicazione disegna sopra la propria finestra per rendere usabile un desktop col dito.
-> Vive fuori dal protocollo, e **nessun server può toglierlo** — si spegne solo dalle impostazioni
-> del client, passando alla modalità mouse.
+> The explanation is that RDM's second pointer **is not the RDP pointer**: it is the *touch pointer*
+> the application draws over its own window to make a desktop usable with a finger.
+> It lives outside the protocol, and **no server can remove it** — it is switched off only from the client's
+> settings, by moving to mouse mode.
 >
-> ⚠ Da cui la regola generale: `SYSPTR_NULL` toglie il puntatore che il client disegna **per conto
-> del protocollo**, non ogni pixel a forma di freccia. È l'ennesima forma della regola dei tre
-> client (`LEZIONI.md` §2.1): la stessa riga di codice dà tre esiti.
+> ⚠ Hence the general rule: `SYSPTR_NULL` removes the pointer the client draws **on behalf
+> of the protocol**, not every arrow-shaped pixel. It is yet another form of the three-client
+> rule (`LEZIONI.md` §2.1): the same line of code gives three outcomes.
 >
-> #### ⭐ E allora la cura giusta è l'opposta: il cursore di KDE si rende TRASPARENTE
+> #### ⭐ And so the right cure is the opposite: KDE's cursor is made TRANSPARENT
 >
-> *[M, 8 agosto 2026, dopo che l'utente ha chiesto di chiudere il punto sul serio]*
+> *[M, 8 August 2026, after the user asked to close the point for real]*
 >
-> Il ragionamento di sopra è giusto e la conclusione era corta. Vero che con `--virtual` KWin
-> disegna il cursore dentro l'immagine e che non c'è leva per impedirglielo — **ma non serve
-> impedirglielo: basta che quel che disegna non si veda.**
+> The reasoning above is right and the conclusion was short. True, with `--virtual` KWin
+> draws the cursor inside the image and there is no lever to prevent it — **but there is no need to
+> prevent it: it is enough that what it draws cannot be seen.**
 >
-> KWin prende il tema del cursore da **`XCURSOR_THEME`, e lo guarda solo se c'è anche
-> `XCURSOR_SIZE`** (`cursor.cpp:134-145`: `if (!themeName.isEmpty() && ok)`). L'ambiente della
-> sessione lo componiamo noi. Quindi: un tema con un cursore **1×1 ad alfa zero**, scritto in
-> `$XDG_RUNTIME_DIR/remotix/icons/` e indicato con `XCURSOR_PATH`, e il puntatore torna a essere
-> **quello che il client disegna da sé — come su Mutter**, alla latenza della rete invece che del
-> video, e **uno solo su ogni client**, compresi quelli che se lo disegnano per conto proprio.
+> KWin takes the cursor theme from **`XCURSOR_THEME`, and looks at it only if there is also
+> `XCURSOR_SIZE`** (`cursor.cpp:134-145`: `if (!themeName.isEmpty() && ok)`). We compose the
+> session's environment ourselves. Therefore: a theme with a **1×1 zero-alpha** cursor, written in
+> `$XDG_RUNTIME_DIR/remotix/icons/` and pointed to with `XCURSOR_PATH`, and the pointer goes back to being
+> **the one the client draws by itself — as on Mutter**, at network latency instead of
+> video latency, and **only one on every client**, including those that draw one on their own.
 >
-> ✅ **Misurato**: `XCURSOR_THEME=remotix-invisibile`, `XCURSOR_SIZE=24` e `XCURSOR_PATH` presenti
-> nell'ambiente di `kwin_wayland` (letto da `/proc/<pid>/environ` con `sudo`, §del binario non
-> dumpable), **68 forme scritte**, file `Xcur v1.0 1×1 alfa 0` di 68 byte, e **nessuna riga
-> «Failed to load cursor theme»** nel journal dell'unità del compositore.
+> ✅ **Measured**: `XCURSOR_THEME=remotix-invisibile`, `XCURSOR_SIZE=24` and `XCURSOR_PATH` present
+> in `kwin_wayland`'s environment (read from `/proc/<pid>/environ` with `sudo`, §of the non-dumpable
+> binary), **68 shapes written**, file `Xcur v1.0 1×1 alfa 0` of 68 bytes, and **no
+> «Failed to load cursor theme» line** in the compositor unit's journal.
 >
-> ⛔ **Il tema deve caricarsi davvero.** Se `CursorTheme` risulta vuoto KWin **ripiega sul tema
-> predefinito** (`pointer_input.cpp:1183-1196`), cioè sul cursore visibile: un tema con zero forme
-> non nasconde niente, lo *rimette*. Per questo le forme si scrivono tutte, e per questo il controllo
-> che vale è l'assenza del ripiego, non la presenza dei file.
+> ⛔ **The theme must really load.** If `CursorTheme` turns out empty KWin **falls back to the default
+> theme** (`pointer_input.cpp:1183-1196`), i.e. to the visible cursor: a theme with zero shapes
+> hides nothing, it *puts it back*. That is why all shapes are written, and why the check
+> that counts is the absence of the fallback, not the presence of the files.
 >
-> ⚠ **Il prezzo**: si perde il cambio di forma — la I sul testo, le frecce di ridimensionamento —
-> esattamente come su GNOME oggi. Restituirlo significa mandare la forma vera sul **canale puntatore
-> di RDP**, prendendola dai metadati PipeWire che già chiediamo (modo `Metadata`): è un lavoro a sé,
-> e vale per tutti e due i compositori.
+> ⚠ **The price**: the shape change is lost — the I-beam over text, the resize arrows —
+> exactly as on GNOME today. Giving it back means sending the real shape on RDP's **pointer
+> channel**, taking it from the PipeWire metadata we already request (`Metadata` mode): it is a job of its own,
+> and it applies to both compositors.
 >
-> Da cui `compositore_cursore_nell_immagine()` **è tornata falsa anche su KWin**, e `SYSPTR_NULL`
-> non si manda più. La funzione resta scritta: il giorno in cui un compositore disegnasse il cursore
-> nell'immagine **senza** lasciarci cambiare il tema, la risposta è lì e non va ritrovata da capo.
+> Hence `compositore_cursore_nell_immagine()` **has gone back to false on KWin too**, and `SYSPTR_NULL`
+> is no longer sent. The function stays written: the day a compositor draws the cursor
+> into the image **without** letting us change the theme, the answer is there and need not be found again from scratch.
 
 ---
 
-### 2. La mappa: dove sta ciascuna cosa
+### 2. The map: where each thing lives
 
-| Che cosa | Dove, in `reference-kde/` |
+| What | Where, in `reference-kde/` |
 |---|---|
-| Il protocollo di cattura, lato Wayland | `kwin/src/wayland/screencast_v1.{h,cpp}` — solo segnali Qt |
-| Il motore della cattura | `kwin/src/plugins/screencast/` — `screencastmanager.cpp`, `screencaststream.cpp` (1000 righe), `outputscreencastsource.cpp`, `regionscreencastsource.cpp`, `screencastbuffer.cpp` |
-| Il filtro dei permessi | `kwin/src/wayland_server.cpp:127-193`, `kwin/src/utils/serviceutils.h`, `kwin/src/utils/executable_path_proc.cpp` |
-| L'input moderno (libei) | `kwin/src/plugins/eis/` — `eisbackend.cpp`, `eiscontext.cpp`, `eisdevice.cpp` (1829 righe) |
-| L'input vecchio | `kwin/src/backends/fakeinput/fakeinputbackend.cpp` |
-| I backend di uscita | `kwin/src/backends/{drm,virtual,wayland,x11}/` |
-| Gli output e la loro configurazione | `kwin/src/core/output.{h,cpp}`, `kwin/src/wayland/outputmanagement_v2.cpp`, `kwin/src/core/outputconfigurationstore.cpp` |
-| Gli appunti | `kwin/src/wayland/datacontrol*_v1.cpp`, `kwin/src/wayland/seat.cpp`, `kwin/src/xwayland/clipboard.cpp`, `plasma-workspace/klipper/` |
-| L'avvio della sessione | `plasma-workspace/startkde/startplasma{,-wayland}.cpp`, `startkde/systemd/*.target`, `kwin/plasma-kwin_wayland.service.in`, `kwin/src/helpers/wayland_wrapper/kwin_wrapper.cpp` |
-| Il logout | `plasma-workspace/startkde/plasma-shutdown/shutdown.cpp`, `plasma-workspace/ksmserver/{logout,server}.cpp`, `kwin/src/sm.cpp` |
-| Energia e inibizioni | `powerdevil/daemon/powerdevilpolicyagent.cpp`, `powerdevil/daemon/powerdevilsettingsdefaults.cpp` |
-| Il consumatore PipeWire di KDE, con encoder | `kpipewire/src/` — `pipewiresourcestream.cpp`, `pipewireproduce.cpp`, `h264vaapiencoder.cpp`, `vaapiutils.cpp` |
-| Il desktop remoto di KDE | `krfb/framebuffers/pipewire/pw_framebuffer.cpp`, `krfb/events/xdp/xdpevents.cpp` |
+| The capture protocol, Wayland side | `kwin/src/wayland/screencast_v1.{h,cpp}` — Qt signals only |
+| The capture engine | `kwin/src/plugins/screencast/` — `screencastmanager.cpp`, `screencaststream.cpp` (1000 lines), `outputscreencastsource.cpp`, `regionscreencastsource.cpp`, `screencastbuffer.cpp` |
+| The permission filter | `kwin/src/wayland_server.cpp:127-193`, `kwin/src/utils/serviceutils.h`, `kwin/src/utils/executable_path_proc.cpp` |
+| Modern input (libei) | `kwin/src/plugins/eis/` — `eisbackend.cpp`, `eiscontext.cpp`, `eisdevice.cpp` (1829 lines) |
+| Old input | `kwin/src/backends/fakeinput/fakeinputbackend.cpp` |
+| The output backends | `kwin/src/backends/{drm,virtual,wayland,x11}/` |
+| Outputs and their configuration | `kwin/src/core/output.{h,cpp}`, `kwin/src/wayland/outputmanagement_v2.cpp`, `kwin/src/core/outputconfigurationstore.cpp` |
+| The clipboard | `kwin/src/wayland/datacontrol*_v1.cpp`, `kwin/src/wayland/seat.cpp`, `kwin/src/xwayland/clipboard.cpp`, `plasma-workspace/klipper/` |
+| Session startup | `plasma-workspace/startkde/startplasma{,-wayland}.cpp`, `startkde/systemd/*.target`, `kwin/plasma-kwin_wayland.service.in`, `kwin/src/helpers/wayland_wrapper/kwin_wrapper.cpp` |
+| Logout | `plasma-workspace/startkde/plasma-shutdown/shutdown.cpp`, `plasma-workspace/ksmserver/{logout,server}.cpp`, `kwin/src/sm.cpp` |
+| Power and inhibitions | `powerdevil/daemon/powerdevilpolicyagent.cpp`, `powerdevil/daemon/powerdevilsettingsdefaults.cpp` |
+| KDE's PipeWire consumer, with encoder | `kpipewire/src/` — `pipewiresourcestream.cpp`, `pipewireproduce.cpp`, `h264vaapiencoder.cpp`, `vaapiutils.cpp` |
+| KDE's remote desktop | `krfb/framebuffers/pipewire/pw_framebuffer.cpp`, `krfb/events/xdp/xdpevents.cpp` |
 
 ---
 
-### 3. ⛔ Il cancello: come KWin decide chi può catturare
+### 3. ⛔ The gate: how KWin decides who may capture
 
-È la risposta alla **prima** domanda della fase, e conviene metterla prima di tutto il resto perché
-condiziona ogni prova: **finché il cancello è chiuso, il sintomo è «questo compositore non espone il
-protocollo», e non arriva alcun errore.**
+It is the answer to the phase's **first** question, and it is worth putting before everything else because it
+conditions every test: **as long as the gate is closed, the symptom is «this compositor does not expose the
+protocol», and no error arrives.**
 
-#### 3.1 Il meccanismo, per intero
+#### 3.1 The mechanism, in full
 
-**[R]** KWin installa un filtro globale di libwayland — `wl_display_set_global_filter`
-(`kwin/src/wayland/filtered_display.cpp:44`) — e `KWinDisplay::allowInterface()`
-(`kwin/src/wayland_server.cpp:146-192`) nega il bind di **sei** interfacce a chi non le dichiara.
-La lista nera, `wayland_server.cpp:129-136`:
+**[R]** KWin installs a global libwayland filter — `wl_display_set_global_filter`
+(`kwin/src/wayland/filtered_display.cpp:44`) — and `KWinDisplay::allowInterface()`
+(`kwin/src/wayland_server.cpp:146-192`) denies the bind of **six** interfaces to whoever does not declare them.
+The blacklist, `wayland_server.cpp:129-136`:
 
 ```cpp
 const QSet<QByteArray> interfacesBlackList = {
     QByteArrayLiteral("org_kde_plasma_window_management"),
     QByteArrayLiteral("org_kde_kwin_fake_input"),
     QByteArrayLiteral("org_kde_kwin_keystate"),
-    QByteArrayLiteral("zkde_screencast_unstable_v1"),      // ← la cattura
+    QByteArrayLiteral("zkde_screencast_unstable_v1"),      // ← the capture
     QByteArrayLiteral("org_kde_plasma_activation_feedback"),
     QByteArrayLiteral("kde_lockscreen_overlay_v1"),
 };
 ```
 
-Se il filtro nega, **il global non viene nemmeno annunciato nel registry**: il client vede un
-compositore senza quel protocollo. Il diagnostico esiste ma è `qCDebug`, spento per difetto
+If the filter denies, **the global is not even announced in the registry**: the client sees a
+compositor without that protocol. The diagnostic exists but it is `qCDebug`, off by default
 (`wayland_server.cpp:184`).
 
-Il criterio **non** è uid, non è pid, non è polkit, non è un elenco in `kwinrc`. È una catena di
-tre passi, tutti **[R]**:
+The criterion is **not** uid, not pid, not polkit, not a list in `kwinrc`. It is a chain of
+three steps, all **[R]**:
 
-1. `SO_PEERCRED` sul socket del client → pid;
-2. pid → `/proc/<pid>/exe`, risolto canonicamente (`kwin/src/utils/executable_path_proc.cpp:11-14`);
-3. si cercano **tutte** le applicazioni installate e si prende quella il cui **primo token di
-   `Exec=`**, canonicalizzato, coincide con quel percorso (`kwin/src/utils/serviceutils.h:27-49`,
-   via `KApplicationTrader::query`); di quella si legge il campo
-   **`X-KDE-Wayland-Interfaces`** (`serviceutils.h:24`).
+1. `SO_PEERCRED` on the client's socket → pid;
+2. pid → `/proc/<pid>/exe`, resolved canonically (`kwin/src/utils/executable_path_proc.cpp:11-14`);
+3. **all** installed applications are searched and the one is taken whose **first token of
+   `Exec=`**, canonicalised, matches that path (`kwin/src/utils/serviceutils.h:27-49`,
+   via `KApplicationTrader::query`); of that one the field
+   **`X-KDE-Wayland-Interfaces`** is read (`serviceutils.h:24`).
 
-Autorizzato **solo** se quel campo contiene il nome esatto dell'interfaccia.
+Authorised **only** if that field contains the exact name of the interface.
 
-Le due scorciatoie: il client è KWin stesso (`client->processId() == getpid()`,
-`wayland_server.cpp:152`), oppure `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` **nell'ambiente di KWin**
-(`:168`, letta in una `static`), che apre **tutte e sei** le interfacce a **tutti** i client.
+The two shortcuts: the client is KWin itself (`client->processId() == getpid()`,
+`wayland_server.cpp:152`), or `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` **in KWin's environment**
+(`:168`, read into a `static`), which opens **all six** interfaces to **all** clients.
 
-#### 3.2 I precedenti, cioè il modello da copiare
+#### 3.2 The precedents, i.e. the model to copy
 
-**[R]** Tutti nel sistema reale, tutti con lo stesso meccanismo:
+**[R]** All in the real system, all with the same mechanism:
 
-| File `.desktop` | Interfacce dichiarate |
+| `.desktop` file | Declared interfaces |
 |---|---|
 | `xdg-desktop-portal-kde/data/org.freedesktop.impl.portal.desktop.kde.desktop.in:49-51` | `org_kde_kwin_fake_input,org_kde_plasma_window_management,zkde_screencast_unstable_v1` |
-| **`krfb/krfb/org.kde.krfb.virtualmonitor.desktop.cmake:84`** | `zkde_screencast_unstable_v1`, con `NoDisplay=true` — **è il nostro caso identico** |
+| **`krfb/krfb/org.kde.krfb.virtualmonitor.desktop.cmake:84`** | `zkde_screencast_unstable_v1`, with `NoDisplay=true` — **it is exactly our case** |
 | `plasma-workspace/shell/org.kde.plasmashell.desktop.cmake:76` | `…,zkde_screencast_unstable_v1,…` |
 | `kpipewire/tests/org.kde.kpipewireheadlesstest.desktop.cmake:6` | `zkde_screencast_unstable_v1` |
 
-E il messaggio che kpipewire stampa a se stesso quando il global manca dice esattamente dove
-guardare: *«Remember requesting the interface on your desktop file:
+And the message kpipewire prints to itself when the global is missing says exactly where
+to look: *«Remember requesting the interface on your desktop file:
 X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1»*
 (`kpipewire/tests/screencasting.cpp:79`, `plasma-workspace/libtaskmanager/screencasting.cpp:44`).
 
-#### 3.3 I tre punti fragili, tutti di confezionamento
+#### 3.3 The three fragile points, all about packaging
 
-1. ⛔ **REMOTIX non deve girare come root.** `/proc/<pid>/exe` di un processo di **altro uid** non è
-   leggibile, `executablePath()` torna vuoto, e `wayland_server.cpp:170-173` **nega**. Va eseguito
-   come servizio dell'utente — che è comunque quel che §3.4 di `SPECIFICA.md` prescrive.
-2. ⛔ **`Exec=` deve nominare l'eseguibile che apre il socket**, non un lanciatore di shell: il
-   confronto è sul percorso canonico del binario vero.
-3. ✅ **`kbuildsycoca6` non serve, e non serve riavviare KWin.** [R, `kf6-kservice 6.13.0-1`, la
-   versione di Trixie] `ensureCacheValid()` ricostruisce la cache **dentro il processo di KWin**, con
-   un limite di frequenza di **1 500 ms** (`ksycoca_ms_between_checks`). Quindi un `.desktop`
-   installato è visibile entro un secondo e mezzo — e *Sunshine*, che se lo scrive a runtime, aspetta
-   **3 000 ms** per prudenza (§12.4).
-4. ⛔ **Il quarto punto fragile, e rompe tutto in silenzio**: `serviceutils.h:35` prende
-   `servicesFound.first()`, e il bug KDE **446628** (confermato dal 2021) mostra che **un `.desktop`
-   d'utente omonimo ombreggia quello di sistema** — se quello che vince non ha il campo, il permesso
-   è negato senza un errore. E contano gli `XDG_DATA_DIRS` **di KWin**, non i nostri: la §6.1
-   prescrive di comporre l'ambiente da zero, quindi il file va installato dove **il compositore**
-   guarda.
+1. ⛔ **REMOTIX must not run as root.** `/proc/<pid>/exe` of a process of **another uid** is not
+   readable, `executablePath()` returns empty, and `wayland_server.cpp:170-173` **denies**. It must run
+   as a user service — which is anyway what §3.4 of `SPECIFICA.md` prescribes.
+2. ⛔ **`Exec=` must name the executable that opens the socket**, not a shell launcher: the
+   comparison is on the canonical path of the real binary.
+3. ✅ **`kbuildsycoca6` is not needed, and restarting KWin is not needed.** [R, `kf6-kservice 6.13.0-1`, the
+   Trixie version] `ensureCacheValid()` rebuilds the cache **inside the KWin process**, with
+   a rate limit of **1 500 ms** (`ksycoca_ms_between_checks`). So an installed `.desktop`
+   is visible within a second and a half — and *Sunshine*, which writes it at runtime, waits
+   **3 000 ms** to be safe (§12.4).
+4. ⛔ **The fourth fragile point, and it breaks everything silently**: `serviceutils.h:35` takes
+   `servicesFound.first()`, and KDE bug **446628** (confirmed since 2021) shows that **a same-named user
+   `.desktop` shadows the system one** — if the one that wins lacks the field, permission
+   is denied without an error. And what counts are **KWin's** `XDG_DATA_DIRS`, not ours: §6.1
+   prescribes composing the environment from scratch, so the file must be installed where **the compositor**
+   looks.
 
-#### 3.3-bis ⭐ MISURATO — il cancello si apre, ma dipende da `XDG_MENU_PREFIX`
+#### 3.3-bis ⭐ MEASURED — the gate opens, but depends on `XDG_MENU_PREFIX`
 
-> **[M] Misura M1, banco del 7 agosto 2026, KWin 6.3.6-1 e kf6-kservice 6.13.0-1.**
+> **[M] Measurement M1, bench of 7 August 2026, KWin 6.3.6-1 and kf6-kservice 6.13.0-1.**
 >
-> **Il meccanismo di §3.1 funziona**: con un `.desktop` che dichiara
-> `X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1` e `NoDisplay=true` — la forma di KRdp e di
-> krfb — KWin annuncia il global e la cattura parte. Nessun dialogo, nessun portale, come previsto.
+> **The mechanism of §3.1 works**: with a `.desktop` declaring
+> `X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1` and `NoDisplay=true` — the form of KRdp and of
+> krfb — KWin announces the global and capture starts. No dialog, no portal, as expected.
 >
-> **Ma prima di funzionare ha negato per cinque volte, e la causa non è nulla di ciò che §3.3
-> elenca.** Il diniego era questo, e il documento va letto con questa aggiunta:
+> **But before working it denied five times, and the cause is nothing of what §3.3
+> lists.** The denial was this, and the document must be read with this addition:
 >
-> ⛔ **`kbuildsycoca6` non indicizza nulla se `XDG_MENU_PREFIX` non è impostata.** L'indice dei
-> servizi si costruisce a partire da `${XDG_MENU_PREFIX}applications.menu`, e Debian **non installa
-> `/etc/xdg/menus/applications.menu`**: installa `plasma-applications.menu` e
-> `kf5-applications.menu`. Senza il prefisso, `kbuildsycoca6` esce con **stato 0** dicendo soltanto
-> `"applications.menu" not found in QList("/etc/xdg/menus")`, e `KApplicationTrader::query` non
-> trova **nessuna** applicazione — nemmeno le 133 di sistema.
+> ⛔ **`kbuildsycoca6` indexes nothing if `XDG_MENU_PREFIX` is not set.** The service
+> index is built starting from `${XDG_MENU_PREFIX}applications.menu`, and Debian **does not install
+> `/etc/xdg/menus/applications.menu`**: it installs `plasma-applications.menu` and
+> `kf5-applications.menu`. Without the prefix, `kbuildsycoca6` exits with **status 0** saying only
+> `"applications.menu" not found in QList("/etc/xdg/menus")`, and `KApplicationTrader::query` finds
+> **no** application — not even the 133 system ones.
 >
-> La prova, nella dimensione della cache: **226 275 byte** senza il prefisso, **379 292** con
-> `XDG_MENU_PREFIX=plasma-`. E il verdetto di KWin passa da
+> The proof, in the size of the cache: **226 275 bytes** without the prefix, **379 292** with
+> `XDG_MENU_PREFIX=plasma-`. And KWin's verdict goes from
 >
 > ```
 > KWIN_UTILS: Could not find the desktop file for "…/nodo-kwin"
 > kwin_core:  Interface "zkde_screencast_unstable_v1" not in X-KDE-Wayland-Interfaces of "…/nodo-kwin"
 > ```
-> a
+> to
 > ```
 > KWIN_UTILS: Interfaces found for "…/nodo-kwin" "X-KDE-Wayland-Interfaces" : QList("zkde_screencast_unstable_v1")
 > ```
 >
-> ✅ **In una sessione Plasma vera il problema non si vede**, perché `startplasma` imposta la
-> variabile da sé: `qputenv("XDG_MENU_PREFIX", "plasma-")`
-> (`plasma-workspace/startkde/startplasma.cpp:366`). **Riguarda noi** perché §6.1 prescrive di
-> comporre l'ambiente da zero: se la componiamo senza quella variabile, il cancello resta chiuso e
-> il sintomo è quello di §3 — «il compositore non espone il protocollo».
+> ✅ **In a real Plasma session the problem is not seen**, because `startplasma` sets the
+> variable by itself: `qputenv("XDG_MENU_PREFIX", "plasma-")`
+> (`plasma-workspace/startkde/startplasma.cpp:366`). **It concerns us** because §6.1 prescribes
+> composing the environment from scratch: if we compose it without that variable, the gate stays closed and
+> the symptom is that of §3 — «the compositor does not expose the protocol».
 >
-> ⛔ **E c'è una fragilità che va scritta**: il nome del file di cache **non** dipende dal prefisso
-> (`ksycoca6_<locale>_<hash>`, e l'hash è lo stesso nei due casi). Quindi un qualunque processo che
-> ricostruisca l'indice **senza** il prefisso sovrascrive quello buono, e il permesso torna a essere
-> negato **a KWin già avviato** — un guasto intermittente, senza messaggi. Chi confeziona il
-> servizio esporta `XDG_MENU_PREFIX=plasma-` nell'ambiente di **tutto** l'albero della sessione.
+> ⛔ **And there is a fragility that must be written down**: the cache file name does **not** depend on the prefix
+> (`ksycoca6_<locale>_<hash>`, and the hash is the same in both cases). So any process that
+> rebuilds the index **without** the prefix overwrites the good one, and the permission goes back to being
+> denied **with KWin already running** — an intermittent fault, without messages. Whoever packages the
+> service exports `XDG_MENU_PREFIX=plasma-` into the environment of the **whole** session tree.
 >
-> **Come si diagnostica in tre secondi**, che è la cosa da ricordare: la riga che dice la causa sta
-> nella categoria **`KWIN_UTILS`**, non in `kwin_core` (`kwin/src/utils/serviceutils.h:40,46`), e si
-> accende con `QT_LOGGING_RULES='KWIN_UTILS.debug=true'`. Le due righe hanno cure opposte:
-> *«Could not find the desktop file»* = l'indice non associa (questo caso); *«Interfaces found … :
-> ()»* = associa, e manca il campo.
+> **How to diagnose it in three seconds**, which is the thing to remember: the line that states the cause is
+> in the **`KWIN_UTILS`** category, not in `kwin_core` (`kwin/src/utils/serviceutils.h:40,46`), and it is
+> switched on with `QT_LOGGING_RULES='KWIN_UTILS.debug=true'`. The two lines have opposite cures:
+> *«Could not find the desktop file»* = the index does not associate (this case); *«Interfaces found … :
+> ()»* = it associates, and the field is missing.
 >
-> Altri due fatti misurati, che escludono le spiegazioni comode: il diniego era identico per un
-> cliente in **`/usr/bin`** (`wayland-info`) e per il nostro su `/media` — quindi **non** era il
-> montaggio, e **non** era `NoDisplay`, né le virgolette in `Exec`, né un argomento in `Exec`: tutte
-> e cinque le varianti negate, tutte con la stessa riga.
+> Two other measured facts, which rule out the convenient explanations: the denial was identical for a
+> client in **`/usr/bin`** (`wayland-info`) and for ours on `/media` — so it was **not** the
+> mount, and it was **not** `NoDisplay`, nor the quotes in `Exec`, nor an argument in `Exec`: all
+> five variants denied, all with the same line.
 
-> #### ✅✅ E il cancello si apre anche DENTRO una sessione Plasma vera
+> #### ✅✅ And the gate also opens INSIDE a real Plasma session
 >
-> **[M] 8 agosto 2026.** La prova di §3.3-bis era su un `kwin_wayland` nudo. Ripetuta dentro una
-> sessione avviata con `startplasma-wayland` (la ricetta di §6.1), con lo stesso `.desktop`:
+> **[M] 8 August 2026.** The test of §3.3-bis was on a bare `kwin_wayland`. Repeated inside a
+> session started with `startplasma-wayland` (the recipe of §6.1), with the same `.desktop`:
 >
 > ```
 > KWIN_UTILS: Interfaces found for "…/nodo-kwin" "X-KDE-Wayland-Interfaces" : QList("zkde_screencast_unstable_v1")
-> ⇒ zkde_screencast annunciato, e un flusso vero: nodo PipeWire 55
+> ⇒ zkde_screencast announced, and a real stream: PipeWire node 55
 > ```
 >
-> Quindi la catena intera — sessione Plasma, permesso, cattura, flusso PipeWire — **è verificata sul
-> campo**. Nella stessa sessione KWin scrive 13 righe `Interfaces found for …`, fra cui quelle del
-> portale di KDE con le sue tre interfacce: cioè si vede il meccanismo funzionare anche per gli altri.
+> So the whole chain — Plasma session, permission, capture, PipeWire stream — **is verified in the
+> field**. In the same session KWin writes 13 `Interfaces found for …` lines, among them those of
+> KDE's portal with its three interfaces: i.e. one sees the mechanism working for the others too.
 >
-> ⛔ **MA una cosa lo rompe, e va scritta perché la si incontra proprio confezionando il servizio:
-> `InaccessiblePaths=` nell'unità del compositore chiude il cancello.** Serviva a scegliere la GPU
-> (§5.6) e ha questo effetto collaterale: con quella riga il global **non** viene annunciato, e KWin
-> **non arriva nemmeno a interrogare l'indice** — **0 righe `KWIN_UTILS` contro 13** nello stesso
-> ambiente. Non è la visibilità dei file: dentro il namespace, `nsenter` mostra il `.desktop` e la
-> cache `ksycoca6_en_…` presenti e leggibili; e non è `/proc`, che è montato normalmente e mostra gli
-> altri processi. Il meccanismo esatto **non è stato dimostrato** (l'ipotesi residua è la prima
-> condizione di `allowInterface()`: `executablePath()` vuoto ⇒ nega, `wayland_server.cpp:170-173`).
+> ⛔ **BUT one thing breaks it, and it must be written down because one meets it precisely when packaging the service:
+> `InaccessiblePaths=` in the compositor unit closes the gate.** It was there to choose the GPU
+> (§5.6) and has this side effect: with that line the global is **not** announced, and KWin
+> **does not even get to query the index** — **0 `KWIN_UTILS` lines against 13** in the same
+> environment. It is not file visibility: inside the namespace, `nsenter` shows the `.desktop` and the
+> `ksycoca6_en_…` cache present and readable; and it is not `/proc`, which is mounted normally and shows the
+> other processes. The exact mechanism **has not been demonstrated** (the residual hypothesis is the first
+> condition of `allowInterface()`: empty `executablePath()` ⇒ deny, `wayland_server.cpp:170-173`).
 >
-> **La regola che ne segue è comunque netta**: l'unità del compositore **non si irrigidisce con
-> namespace di monti** (`InaccessiblePaths`, e per prudenza tutto ciò che implica `PrivateMounts`).
-> Quel che serve si ottiene altrimenti — per la GPU, coi permessi del nodo (§5.6).
+> **The rule that follows is clear-cut anyway**: the compositor unit **is not hardened with
+> mount namespaces** (`InaccessiblePaths`, and to be safe anything implying `PrivateMounts`).
+> What is needed is obtained otherwise — for the GPU, with the node's permissions (§5.6).
 
-#### 3.4 Chi è protetto e chi non lo è — la tabella che conta
+#### 3.4 Who is protected and who is not — the table that counts
 
-**[R]** Il modello dei permessi di KWin 6.3.6 è **incompleto**, e per noi è una fortuna. Riassunto
-per tutto ciò che ci serve:
+**[R]** KWin 6.3.6's permission model is **incomplete**, and for us that is a stroke of luck. Summary
+for everything we need:
 
-| Ci serve per | Interfaccia / oggetto | Protetto? |
+| We need it for | Interface / object | Protected? |
 |---|---|---|
-| cattura + output virtuale | `zkde_screencast_unstable_v1` | **sì** — `.desktop` con `X-KDE-Wayland-Interfaces` |
-| **input** | `org.kde.KWin.EIS.RemoteDesktop` (D-Bus) | **NO, nessun controllo** (`kwin/src/plugins/eis/eisbackend.cpp:70`, `ExportAllInvokables`) |
-| input, strada vecchia | `org_kde_kwin_fake_input` | **sì**, stessa via `.desktop` — e il suo `authenticate` non autentica nulla (`fakeinputbackend.cpp:107-113`, `// TODO: make secure`) |
-| **appunti** | `zwlr_data_control_manager_v1` | **NO** (`wayland_server.cpp:386`, non in lista nera) |
-| leggere/scrivere il layout schermi | `kde_output_device_v2`, `kde_output_management_v2` | **NO** |
-| stato dei tasti a scatto | `org_kde_kwin_keystate` | **sì**, stessa via `.desktop` |
-| catture singole | `org.kde.KWin.ScreenShot2` | **sì**, via `X-KDE-DBUS-Restricted-Interfaces` (`screenshotdbusinterface2.cpp:331-355`) — **unico oggetto D-Bus protetto in tutto KWin** |
+| capture + virtual output | `zkde_screencast_unstable_v1` | **yes** — `.desktop` with `X-KDE-Wayland-Interfaces` |
+| **input** | `org.kde.KWin.EIS.RemoteDesktop` (D-Bus) | **NO, no check** (`kwin/src/plugins/eis/eisbackend.cpp:70`, `ExportAllInvokables`) |
+| input, old road | `org_kde_kwin_fake_input` | **yes**, same `.desktop` route — and its `authenticate` authenticates nothing (`fakeinputbackend.cpp:107-113`, `// TODO: make secure`) |
+| **clipboard** | `zwlr_data_control_manager_v1` | **NO** (`wayland_server.cpp:386`, not in the blacklist) |
+| reading/writing the screen layout | `kde_output_device_v2`, `kde_output_management_v2` | **NO** |
+| state of the lock keys | `org_kde_kwin_keystate` | **yes**, same `.desktop` route |
+| single screenshots | `org.kde.KWin.ScreenShot2` | **yes**, via `X-KDE-DBUS-Restricted-Interfaces` (`screenshotdbusinterface2.cpp:331-355`) — **the only protected D-Bus object in all of KWin** |
 
-**Da cui la ricetta di confezionamento**: un solo `.desktop`, che dichiara
-`zkde_screencast_unstable_v1` (per la cattura) e — se e quando serviranno — `org_kde_kwin_keystate`
-e `org_kde_kwin_fake_input`. L'input via EIS non ne ha bisogno.
+**Hence the packaging recipe**: a single `.desktop`, declaring
+`zkde_screencast_unstable_v1` (for capture) and — if and when they are needed — `org_kde_kwin_keystate`
+and `org_kde_kwin_fake_input`. Input via EIS does not need it.
 
-> ⚠ **Un buco che non useremo, ma che dice com'è fatto il modello.** [R]
-> `wp_security_context_manager_v1` **non è in lista nera** (`wayland_server.cpp:378`): un client
-> qualunque può dichiarare come `app_id` il nome del `.desktop` di qualcun altro e riconnettersi
-> ottenendo l'autorizzazione (`wayland_server.cpp:121-127` + `display.cpp:282-297`, e
-> `serviceutils.h:51-58` che per i client in sandbox usa `KService::serviceByDesktopName`).
-> Il modello è **dichiarativo**, non impositivo. La variante *legittima* di questa via — dichiarare
-> il **proprio** app-id — è l'unica scappatoia se un giorno il vincolo su `Exec=` ci fosse scomodo.
+> ⚠ **A hole we will not use, but which tells how the model is made.** [R]
+> `wp_security_context_manager_v1` **is not in the blacklist** (`wayland_server.cpp:378`): any
+> client can declare as `app_id` the name of someone else's `.desktop` and reconnect
+> obtaining authorisation (`wayland_server.cpp:121-127` + `display.cpp:282-297`, and
+> `serviceutils.h:51-58` which for sandboxed clients uses `KService::serviceByDesktopName`).
+> The model is **declarative**, not enforcing. The *legitimate* variant of this route — declaring
+> one's **own** app-id — is the only way out if one day the constraint on `Exec=` became awkward for us.
 
-#### 3.5 Le vie che NON prendiamo, e perché va scritto
+#### 3.5 The roads we do NOT take, and why it must be written down
 
-| Via | Esito |
+| Road | Outcome |
 |---|---|
-| **Il portale con `restore_token`** | implementato (`xdg-desktop-portal-kde/src/screencast.cpp:222-279`), ma **il primo consenso è un dialogo modale** (`:272`), il token identifica il monitor per **posizione** (`outputsmodel.cpp:93-94`) e se non risolve **ricompare il dialogo**. Per un servizio non presidiato: **no** |
-| **La «mega-autorizzazione» di KDE** | esiste e è documentata nel commento: *«Particularly useful for headless setups and when the user is not physically at the machine»* (`xdg-desktop-portal-kde/src/remotedesktop.cpp:34-71`, usata a `:227` per **saltare del tutto il dialogo**). ✅ **E si scrive**, contro quel che diceva la prima stesura di questo documento: `flatpak permission-set kde-authorized remote-desktop <app-id> yes` — documentato in `xdg-desktop-portal-kde!326`, unita nel **gennaio 2025, milestone 6.3: c'è già in Trixie** [I]. Per un'applicazione non in sandbox l'`app-id` viene dal **nome dell'unità systemd** (`app-<app-id>.service`), quindi REMOTIX può averne uno. Resta il **piano B** — passa comunque dal portale — ma ora è verificato, non congetturato |
-| `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_v1` | ⛔ **non esistono in KWin 6.3.6**: non sono filtrati, sono **assenti** [✗]. Della famiglia wlroots KWin implementa solo `wlr-layer-shell` e **`wlr-data-control`** |
-| `org.kde.KWin.ScreenShot2` | **uno scatto per chiamata**, immagine cruda su una pipe. Nessuna continuità, nessun output virtuale: non serve |
-| `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` | è la scorciatoia con cui abbiamo misurato (`banco/banco-altri.sh:33`). Da banco, non da prodotto — e apre anche `fake_input` a chiunque |
+| **The portal with `restore_token`** | implemented (`xdg-desktop-portal-kde/src/screencast.cpp:222-279`), but **the first consent is a modal dialog** (`:272`), the token identifies the monitor by **position** (`outputsmodel.cpp:93-94`) and if it does not resolve **the dialog reappears**. For an unattended service: **no** |
+| **KDE's «mega-authorisation»** | it exists and is documented in the comment: *«Particularly useful for headless setups and when the user is not physically at the machine»* (`xdg-desktop-portal-kde/src/remotedesktop.cpp:34-71`, used at `:227` to **skip the dialog entirely**). ✅ **And it can be written**, contrary to what the first draft of this document said: `flatpak permission-set kde-authorized remote-desktop <app-id> yes` — documented in `xdg-desktop-portal-kde!326`, merged in **January 2025, milestone 6.3: it is already in Trixie** [I]. For a non-sandboxed application the `app-id` comes from the **systemd unit name** (`app-<app-id>.service`), so REMOTIX can have one. It remains **plan B** — it goes through the portal anyway — but now it is verified, not conjectured |
+| `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_v1` | ⛔ **do not exist in KWin 6.3.6**: they are not filtered, they are **absent** [✗]. Of the wlroots family KWin implements only `wlr-layer-shell` and **`wlr-data-control`** |
+| `org.kde.KWin.ScreenShot2` | **one shot per call**, raw image on a pipe. No continuity, no virtual output: not useful |
+| `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` | it is the shortcut with which we measured (`banco/banco-altri.sh:33`). For the bench, not for the product — and it also opens `fake_input` to anyone |
 
 ---
 
-### 4. La cattura: `zkde_screencast_unstable_v1`
+### 4. Capture: `zkde_screencast_unstable_v1`
 
-#### 4.1 Le due metà, e la versione
+#### 4.1 The two halves, and the version
 
-**[R]** Il protocollo è un guscio di segnali Qt (`kwin/src/wayland/screencast_v1.cpp`), il motore è
-un **plugin** (`kwin/src/plugins/screencast/`, `EnabledByDefault: true`, caricato solo in modalità
-Wayland, `main.cpp:28-35`).
+**[R]** The protocol is a shell of Qt signals (`kwin/src/wayland/screencast_v1.cpp`), the engine is
+a **plugin** (`kwin/src/plugins/screencast/`, `EnabledByDefault: true`, loaded only in Wayland
+mode, `main.cpp:28-35`).
 
-**KWin 6.3.6 annuncia la versione 5** (`screencast_v1.cpp:18`, `static int s_version = 5`), anche
-se compilato contro un `plasma-wayland-protocols` che dichiara la 6. Il nostro
-`banco/zkde-screencast-unstable-v1.xml` **è la copia giusta**: è la v5, e l'unica differenza dal
-master è l'evento `serial` aggiunto nella 6.
+**KWin 6.3.6 announces version 5** (`screencast_v1.cpp:18`, `static int s_version = 5`), even
+though it is compiled against a `plasma-wayland-protocols` that declares 6. Our
+`banco/zkde-screencast-unstable-v1.xml` **is the right copy**: it is v5, and the only difference from
+master is the `serial` event added in 6.
 
-#### 4.2 Le richieste
+#### 4.2 The requests
 
 **[R]** `screencast_v1.cpp:89-142`:
 
-| Richiesta | `since` | Argomenti | Note |
+| Request | `since` | Arguments | Notes |
 |---|---|---|---|
-| `stream_output` | 1 | `new_id`, `wl_output`, `pointer` | cattura un'uscita esistente |
-| `stream_window` | 1 | `new_id`, `window_uuid`, `pointer` | una finestra |
-| **`stream_virtual_output`** | 2 | `new_id`, `name`, `width`, `height`, `scale`, `pointer` | **fa creare l'uscita** — l'analogo di `RecordVirtual` |
-| `stream_region` | 3 | `new_id`, `x`, `y`, `width`, `height`, `scale`, `pointer` | un rettangolo dello spazio di lavoro |
-| `stream_virtual_output_with_description` | 4 | come sopra + `description` | la descrizione compare in kscreen |
+| `stream_output` | 1 | `new_id`, `wl_output`, `pointer` | captures an existing output |
+| `stream_window` | 1 | `new_id`, `window_uuid`, `pointer` | a window |
+| **`stream_virtual_output`** | 2 | `new_id`, `name`, `width`, `height`, `scale`, `pointer` | **has the output created** — the analogue of `RecordVirtual` |
+| `stream_region` | 3 | `new_id`, `x`, `y`, `width`, `height`, `scale`, `pointer` | a rectangle of the workspace |
+| `stream_virtual_output_with_description` | 4 | as above + `description` | the description shows up in kscreen |
 
-`pointer` è l'enum del cursore, e **non è validato** (cast secco, `screencast_v1.cpp:91`):
+`pointer` is the cursor enum, and it **is not validated** (bare cast, `screencast_v1.cpp:91`):
 
-| Valore | Modo | Effetto |
+| Value | Mode | Effect |
 |---|---|---|
-| 1 | `Hidden` | nessun cursore |
-| 2 | `Embedded` | disegnato nel buffer |
-| **4** | **`Metadata`** | come `SPA_META_Cursor`, fuori dall'immagine |
+| 1 | `Hidden` | no cursor |
+| 2 | `Embedded` | drawn into the buffer |
+| **4** | **`Metadata`** | as `SPA_META_Cursor`, outside the image |
 
-Vanno mandati esattamente 1, 2 o 4: con 0 o 3 nessun `case` corrisponde ma il flag del contenuto
-viene comunque alzato — stato incoerente.
+Send exactly 1, 2 or 4: with 0 or 3 no `case` matches, but the content flag is
+raised anyway — inconsistent state.
 
-#### 4.3 `stream_virtual_output`, in dettaglio
+#### 4.3 `stream_virtual_output`, in detail
 
 **[R]** `screencastmanager.cpp:56-68`:
 
@@ -1672,100 +1672,100 @@ connect(stream, &ScreencastStreamV1Interface::finished, output, [output] {
 });
 ```
 
-Cioè: **l'uscita vive quanto lo stream**. Sul backend DRM diventa una `DrmVirtualOutput`
-(`drm_backend.cpp:340-347`), e da lì discendono cinque fatti che pesano su tutto il resto:
+That is: **the output lives as long as the stream**. On the DRM backend it becomes a `DrmVirtualOutput`
+(`drm_backend.cpp:340-347`), and from there follow five facts that weigh on everything else:
 
 | | **[R]** |
 |---|---|
-| Il nome dell'uscita diventa **`"Virtual-" + name`** | `drm_virtual_output.cpp:32`. È l'**unico** modo per ritrovare il proprio `wl_output`: il protocollo non dice al client quale uscita ha creato. `wl_output` è annunciato a **v4**, che ha `name` (`kwin/src/wayland/output.cpp:24,159`) |
-| **Un solo modo**, della misura chiesta, a **60000 mHz fissi** | `drm_virtual_output.cpp:28`. Da qui l'impossibilità di ridimensionare (§8) |
-| `width`/`height` sono i **pixel** del modo | l'XML li chiama «logical»; `scale` finisce solo nella geometria logica (`core/output.cpp:457-459`). **Si passa `scale = 1` e la misura in pixel**: `DrmVirtualOutput` usa la misura tale e quale, mentre il backend annidato fa `size * scale` (`wayland_backend.cpp:567`) — due interpretazioni diverse nello stesso protocollo |
-| La cadenza è un **`SoftwareVsyncMonitor`**, cioè un `QTimer` a granularità di millisecondo | `drm_virtual_output.cpp:24,51-56`; `softwarevsyncmonitor.cpp:44-56`. **È il tetto strutturale a ~60 fps**, e la sua irregolarità |
-| **Nessuna validazione della misura** | `screencast_v1.cpp:98-112` passa due `int32` grezzi: nessun minimo, nessun massimo, nessun rifiuto dei negativi (`stream_region`, per confronto, almeno controlla `isValid()`). **[?]** che cosa fa con 0×0 o 16384² va misurato |
+| The output's name becomes **`"Virtual-" + name`** | `drm_virtual_output.cpp:32`. It is the **only** way to find your own `wl_output` again: the protocol does not tell the client which output it created. `wl_output` is announced at **v4**, which has `name` (`kwin/src/wayland/output.cpp:24,159`) |
+| **A single mode**, of the requested size, at a **fixed 60000 mHz** | `drm_virtual_output.cpp:28`. Hence the impossibility of resizing (§8) |
+| `width`/`height` are the mode's **pixels** | the XML calls them «logical»; `scale` ends up only in the logical geometry (`core/output.cpp:457-459`). **Pass `scale = 1` and the size in pixels**: `DrmVirtualOutput` uses the size as is, while the nested backend does `size * scale` (`wayland_backend.cpp:567`) — two different interpretations in the same protocol |
+| The pacing is a **`SoftwareVsyncMonitor`**, i.e. a `QTimer` with millisecond granularity | `drm_virtual_output.cpp:24,51-56`; `softwarevsyncmonitor.cpp:44-56`. **It is the structural cap at ~60 fps**, and its irregularity |
+| **No validation of the size** | `screencast_v1.cpp:98-112` passes two raw `int32`: no minimum, no maximum, no rejection of negatives (`stream_region`, by comparison, at least checks `isValid()`). **[?]** what it does with 0×0 or 16384² must be measured |
 
-#### 4.4 Il nodo PipeWire, e perché la trappola di Mutter qui non esiste
+#### 4.4 The PipeWire node, and why Mutter's trap does not exist here
 
-**[R]** La catena: richiesta → `integrateStreams()` collega **prima** i tre segnali e **poi** chiama
+**[R]** The chain: request → `integrateStreams()` connects the three signals **first** and **then** calls
 `init()` (`screencastmanager.cpp:131-145`) → `pw_stream_connect(... PW_DIRECTION_OUTPUT,
-PW_STREAM_FLAG_DRIVER | PW_STREAM_FLAG_ALLOC_BUFFERS ...)` → allo stato `PAUSED` KWin legge l'id del
-nodo e lo annuncia una volta sola (`screencaststream.cpp:126-131`) → evento `created`.
+PW_STREAM_FLAG_DRIVER | PW_STREAM_FLAG_ALLOC_BUFFERS ...)` → at the `PAUSED` state KWin reads the
+node id and announces it once only (`screencaststream.cpp:126-131`) → `created` event.
 
-**La trappola numero 2 di `LEZIONI.md` §4 — «ci si iscrive all'annuncio del nodo prima di avviare
-il flusso» — su KDE non può presentarsi.** Su Mutter l'annuncio è un broadcast D-Bus su un oggetto
-creato dal server, e chi si iscrive tardi perde qualcosa di già passato. Qui l'oggetto
-`zkde_screencast_stream_unstable_v1` ha un **id allocato dal client nella stessa richiesta**: gli
-eventi finiscono nella coda della connessione e arrivano al primo dispatch. Basta registrare il
-listener prima di `wl_display_dispatch` — e `banco/nodo-kwin.c:142-143` lo fa già.
+**Trap number 2 of `LEZIONI.md` §4 — «ci si iscrive all'annuncio del nodo prima di avviare
+il flusso» — cannot arise on KDE.** On Mutter the announcement is a D-Bus broadcast on an object
+created by the server, and whoever subscribes late misses something already gone by. Here the
+`zkde_screencast_stream_unstable_v1` object has an **id allocated by the client in the same request**: the
+events land in the connection's queue and arrive at the first dispatch. It is enough to register the
+listener before `wl_display_dispatch` — and `banco/nodo-kwin.c:142-143` already does.
 
-⚠ **Ma `failed` è sincrono** (`screencastmanager.cpp:82,141-144`): chi non ha il listener attivo lo
-perde e aspetta per sempre. **Serve un timeout comunque.**
+⚠ **But `failed` is synchronous** (`screencastmanager.cpp:82,141-144`): whoever does not have the listener active
+misses it and waits forever. **A timeout is needed anyway.**
 
-**[R]** L'id del nodo **non cambia** per tutta la vita del flusso, comprese le rinegoziazioni di
-formato e i cambi di misura.
+**[R]** The node id **does not change** for the whole life of the stream, including format
+renegotiations and size changes.
 
-#### 4.5 Il formato, riga per riga
+#### 4.5 The format, line by line
 
-**[R]** `screencaststream.cpp:735-783`. KWin propone **fino a tre** `SPA_PARAM_EnumFormat`:
-DMA-BUF con un solo modificatore (dopo la fissazione), DMA-BUF con l'intera lista
-(`MANDATORY | DONT_FIXATE`), e **memoria condivisa** senza la proprietà `modifier`.
+**[R]** `screencaststream.cpp:735-783`. KWin offers **up to three** `SPA_PARAM_EnumFormat`:
+DMA-BUF with a single modifier (after fixation), DMA-BUF with the whole list
+(`MANDATORY | DONT_FIXATE`), and **shared memory** without the `modifier` property.
 
-| Campo | Valore | Nota |
+| Field | Value | Note |
 |---|---|---|
-| formato pixel | 11 corrispondenze DRM↔SPA; per output e regione il formato DMA-BUF è **sempre `DRM_FORMAT_ARGB8888`** | e per BGRA/RGBA KWin annuncia anche la variante senza alfa: **`BGRx` è negoziabile**, ed è quel che serve a RDP (`:775-783`) |
-| `VIDEO_size` | rettangolo singolo della misura corrente | `resize()` lo aggiorna in banda (§8.3) |
-| **`VIDEO_framerate`** | **`SPA_FRACTION(0,1)` fisso** | ⛔ chi propone una cadenza **fissa** diversa non trova intersezione: la stessa forma del vicolo cieco di Mutter, e la nostra opzione `--fissa` del banco **è inutilizzabile su KWin** |
-| `VIDEO_maxFramerate` | `RANGE(default = refreshRate/1000, 1/1, refreshRate)` | **è il freno server-side**: KWin coalizza il danno e blitta a quel ritmo (`:507-516`) |
-| buffer | **`RANGE(3, 2, 4)`** | il consumatore può stringere, non allargare. Il nostro banco chiede `RANGE(4,2,8)`: si intersecano su 2..4 |
-| tipo di dato | `1 << SPA_DATA_DmaBuf` **oppure** `1 << SPA_DATA_MemFd` | mai un'unione; **`MemPtr` non è mai offerto**: il `mmap` lo fa il consumatore |
+| pixel format | 11 DRM↔SPA mappings; for output and region the DMA-BUF format is **always `DRM_FORMAT_ARGB8888`** | and for BGRA/RGBA KWin also announces the variant without alpha: **`BGRx` is negotiable**, and it is what RDP needs (`:775-783`) |
+| `VIDEO_size` | single rectangle of the current size | `resize()` updates it in-band (§8.3) |
+| **`VIDEO_framerate`** | **`SPA_FRACTION(0,1)` fixed** | ⛔ whoever proposes a different **fixed** rate finds no intersection: the same shape as Mutter's dead end, and our bench's `--fissa` option **is unusable on KWin** |
+| `VIDEO_maxFramerate` | `RANGE(default = refreshRate/1000, 1/1, refreshRate)` | **it is the server-side brake**: KWin coalesces the damage and blits at that rate (`:507-516`) |
+| buffers | **`RANGE(3, 2, 4)`** | the consumer can narrow, not widen. Our bench asks for `RANGE(4,2,8)`: they intersect on 2..4 |
+| data type | `1 << SPA_DATA_DmaBuf` **or** `1 << SPA_DATA_MemFd` | never a union; **`MemPtr` is never offered**: the consumer does the `mmap` |
 
-⚠ **L'aritmetica del freno è intera, in millisecondi** (`:507-516`): chiedendo 60 si ottiene un
-intervallo di 16 ms (≈62 fps), chiedendo 30 si ottiene 33 ms (≈30,3). Il danno accumulato non si
-perde.
+⚠ **The brake's arithmetic is integer, in milliseconds** (`:507-516`): asking for 60 you get an
+interval of 16 ms (≈62 fps), asking for 30 you get 33 ms (≈30.3). The accumulated damage is not
+lost.
 
-⛔ **E se un modificatore fallisce, viene rimosso per sempre.** `onStreamParamChanged` prova ad
-allocare davvero un buffer (`testCreateDmaBuf`, `:920-951`); se non riesce, quei modificatori
-escono dalle offerte future (`:260-264`): un client che insiste non otterrà il DMA-BUF una seconda
-volta.
+⛔ **And if a modifier fails, it is removed for good.** `onStreamParamChanged` tries to actually
+allocate a buffer (`testCreateDmaBuf`, `:920-951`); if it fails, those modifiers
+drop out of future offers (`:260-264`): a client that insists will not get DMA-BUF a second
+time.
 
-**I metadati offerti**, sempre (`:196-217`):
+**The metadata offered**, always (`:196-217`):
 
-| Meta | Dimensione |
+| Meta | Size |
 |---|---|
 | `SPA_META_Header` | `sizeof(spa_meta_header)` |
 | `SPA_META_VideoDamage` | `RANGE(16 regioni, 1, 16)` |
-| `SPA_META_Cursor` | bitmap fino a **256×256** |
-| `SPA_META_SyncTimeline` | **solo con DMA-BUF** |
+| `SPA_META_Cursor` | bitmap up to **256×256** |
+| `SPA_META_SyncTimeline` | **only with DMA-BUF** |
 
-#### 4.6 ✅ Fotogrammi interi, non un «diff» — la differenza che conta
+#### 4.6 ✅ Whole frames, not a «diff» — the difference that matters
 
 **[R]** `screencaststream.cpp:618` → `outputscreencastsource.cpp:63-80`:
 
 ```cpp
 GLFramebuffer::pushFramebuffer(target);
-outputTexture->render(textureSize());   // l'INTERA texture, sempre
+outputTexture->render(textureSize());   // the WHOLE texture, always
 GLFramebuffer::popFramebuffer();
 ```
 
-Nessuno scissoring, nessun uso della regione danneggiata. Lo stesso per il ramo in memoria
-(`screencastutils.h:42-77`) e per la regione. E la texture di partenza è essa stessa completa: il
-layer dell'uscita ricicla uno swapchain con *damage journal* e **ripara ogni slot in base alla sua
-età** prima di ridisegnarlo (`drm_virtual_egl_layer.cpp:76-88`,
+No scissoring, no use of the damaged region. The same for the in-memory branch
+(`screencastutils.h:42-77`) and for the region. And the source texture is itself complete: the
+output's layer recycles a swapchain with a *damage journal* and **repairs each slot according to its
+age** before redrawing it (`drm_virtual_egl_layer.cpp:76-88`,
 `drm_egl_layer_surface.cpp:192-199`).
 
-| | Mutter (misurato, R29) | **KWin 6.3.6** [R] |
+| | Mutter (measured, R29) | **KWin 6.3.6** [R] |
 |---|---|---|
-| Contenuto del buffer prestato | **un *diff*** sul buffer riciclato | **fotogramma intero** |
-| Buffer riciclati | 4 | 2–4, default 3 |
-| Danno dichiarato | sì | sì, fino a 16 rettangoli, poi il *bounding rect* |
+| Content of the lent buffer | **a *diff*** on the recycled buffer | **whole frame** |
+| Recycled buffers | 4 | 2–4, default 3 |
+| Declared damage | yes | yes, up to 16 rectangles, then the *bounding rect* |
 
-> ✅ **Ricaduta diretta sul difetto che tiene spenta la copia zero su GNOME.** La superficie di
-> accumulo di R29 **non serve su KWin**: il danno serve a non ricodificare quel che non è cambiato,
-> non a ricostruire il fotogramma. Chi porta la cattura su KDE non eredita quel debito.
+> ✅ **Direct consequence for the fault that keeps zero-copy off on GNOME.** R29's accumulation
+> surface **is not needed on KWin**: the damage serves to avoid re-encoding what has not changed,
+> not to rebuild the frame. Whoever brings capture to KDE does not inherit that debt.
 
-Il danno arriva già **in pixel** (`outputscreencastsource.cpp:92-97`), e la lista è chiusa da una
-regione sentinella `SPA_REGION(0,0,0,0)` (`:703-728`).
+The damage already arrives **in pixels** (`outputscreencastsource.cpp:92-97`), and the list is closed by a
+sentinel region `SPA_REGION(0,0,0,0)` (`:703-728`).
 
-#### 4.7 ⛔ La trappola vera: i buffer «corrotti» del cursore
+#### 4.7 ⛔ The real trap: the cursor's «corrupted» buffers
 
 **[R]** `screencaststream.cpp:659-664`:
 
@@ -1778,243 +1778,243 @@ if (effectiveContents & Content::Video) {
 }
 ```
 
-In modo cursore `Metadata`, **ogni movimento del puntatore** produce un buffer senza
-`m_source->render()` (`:447-451`, `:590-596`): dentro ci sono i pixel **stantii** di due-quattro
-fotogrammi prima, e l'unica indicazione è quel flag.
+In `Metadata` cursor mode, **every pointer movement** produces a buffer without
+`m_source->render()` (`:447-451`, `:590-596`): inside are the **stale** pixels from two to four
+frames earlier, and the only indication is that flag.
 
-> ⛔ **È l'analogo funzionale della trappola di Mutter, in una veste nuova**: un consumatore che
-> ignora `chunk->flags` mostra un fotogramma vecchio **a ogni movimento del mouse**. kpipewire lo
-> gestisce (`kpipewire/src/pipewiresourcestream.cpp:618-621`); **`banco/misura-cattura.c` no**, e li
-> conta come fotogrammi consegnati — cioè la nostra misura di fps su KWin è gonfiabile muovendo il
-> mouse. Su un desktop non presidiato il mouse è fermo e le misure del 7 agosto probabilmente
-> reggono, ma il conteggio va reso onesto prima di rimisurare.
+> ⛔ **It is the functional analogue of Mutter's trap, in a new guise**: a consumer that
+> ignores `chunk->flags` shows an old frame **at every mouse movement**. kpipewire
+> handles it (`kpipewire/src/pipewiresourcestream.cpp:618-621`); **`banco/misura-cattura.c` does not**, and
+> counts them as delivered frames — i.e. our fps measurement on KWin can be inflated by moving the
+> mouse. On an unattended desktop the mouse is still and the 7 August measurements probably
+> hold, but the count must be made honest before measuring again.
 
-#### 4.8 ✅ La sincronizzazione: **la fa KWin**, e spiega un nostro vicolo cieco
+#### 4.8 ✅ Synchronisation: **KWin does it**, and it explains one of our dead ends
 
-**[R]** `screencaststream.cpp:637-655`. Con explicit sync attivo KWin **non aspetta** il
-completamento GPU e mette i punti in `acquire_point`/`release_point`; senza, fa **`glFlush()`** — e
-**`glFinish()` su NVidia e llvmpipe**, con il commento *«Implicit sync is broken on Nvidia and with
+**[R]** `screencaststream.cpp:637-655`. With explicit sync active KWin **does not wait** for
+GPU completion and puts the points in `acquire_point`/`release_point`; without it, it does **`glFlush()`** — and
+**`glFinish()` on NVidia and llvmpipe**, with the comment *«Implicit sync is broken on Nvidia and with
 llvmpipe»*.
 
-> ⛔ **`LEZIONI.md` §8 registra come vicolo cieco «aspettare la *fence* implicita del DMA-BUF: non
-> cambia niente, è quella sbagliata».** Il codice di KWin dice il perché in generale: **non c'è
-> alcuna fence implicita da aspettare se chi disegna non l'ha messa.** La domanda giusta da fare a
-> Mutter non è «la fence è pronta?» ma «Mutter fa il flush?». È un'ipotesi nuova su un difetto che
-> avevamo lasciato aperto, e non costa niente verificarla.
+> ⛔ **`LEZIONI.md` §8 records as a dead end «aspettare la *fence* implicita del DMA-BUF: non
+> cambia niente, è quella sbagliata».** KWin's code says why in general: **there is no
+> implicit fence to wait for if whoever draws did not set one.** The right question to ask
+> Mutter is not «la fence è pronta?» but «Mutter fa il flush?». It is a new hypothesis on a fault we
+> had left open, and checking it costs nothing.
 
-**Il contratto di `SPA_META_SyncTimeline`, che non stava da nessuna parte** [R]
+**The contract of `SPA_META_SyncTimeline`, which was not written down anywhere** [R]
 (`screencastbuffer.cpp:86-107`, `screencaststream.cpp:534-537`, `606-613`, `639-647`):
 
-- due `spa_data` in più, di tipo `SPA_DATA_SyncObj`, agli indici `planeCount` e `planeCount+1`,
-  **con lo stesso fd**; `blocks = planeCount + 2`;
-- `acquire_point` e `release_point` nel metadato;
-- il produttore **non riusa il buffer** finché il `release_point` non è materializzato;
-- KWin propone **due** `SPA_PARAM_Buffers`: il primo con `metaType` `SPA_META_SyncTimeline` marcato
-  `MANDATORY`, il secondo di ripiego «per implicit sync o MemFd». **Chiedere la timeline è una
-  scelta deliberata del consumatore**, non un caso.
+- two extra `spa_data`, of type `SPA_DATA_SyncObj`, at indices `planeCount` and `planeCount+1`,
+  **with the same fd**; `blocks = planeCount + 2`;
+- `acquire_point` and `release_point` in the metadata;
+- the producer **does not reuse the buffer** until the `release_point` has materialised;
+- KWin offers **two** `SPA_PARAM_Buffers`: the first with `metaType` `SPA_META_SyncTimeline` marked
+  `MANDATORY`, the second a fallback «per implicit sync o MemFd». **Asking for the timeline is a
+  deliberate choice of the consumer**, not an accident.
 
-Per REMOTIX: l'implicit sync è la strada corta e basta, perché KWin fa il flush. L'explicit è
-un'ottimizzazione successiva.
+For REMOTIX: implicit sync is the short road and is enough, because KWin does the flush. Explicit is
+a later optimisation.
 
-> #### ⚠ MISURATO — «la fa KWin» va inteso alla lettera: **flush non è finish**
+> #### ⚠ MEASURED — «la fa KWin» must be taken literally: **flush is not finish**
 >
-> **[M] 8 agosto 2026, con una scena in movimento** (`weston-simple-egl` a schermo intero) e il
-> misuratore che interroga la fence implicita con `poll(POLLIN, 0)` sul descrittore del DMA-BUF —
-> **lo stesso metodo con cui misurammo Mutter**, quindi i due numeri sono confrontabili:
+> **[M] 8 August 2026, with a moving scene** (`weston-simple-egl` full screen) and the
+> meter querying the implicit fence with `poll(POLLIN, 0)` on the DMA-BUF descriptor —
+> **the same method with which we measured Mutter**, so the two numbers are comparable:
 >
-> | percorso | fotogrammi | «disegno non finito» |
+> | path | frames | «disegno non finito» |
 > |---|---|---|
-> | **DMA-BUF** | 594 in 10,03 s | **830 su 830** |
-> | in memoria (MemFd) | 435 in 10,03 s | **0** |
+> | **DMA-BUF** | 594 in 10.03 s | **830 of 830** |
+> | in memory (MemFd) | 435 in 10.03 s | **0** |
 >
-> ⛔ Cioè **su questa macchina il 100 % dei buffer DMA-BUF arriva con il disegno in corso.** Non
-> contraddice §4.8: KWin fa `glFlush()`, che **sottomette** il lavoro alla GPU e non aspetta che sia
-> finito (`glFinish()` lo fa **solo** su NVidia e llvmpipe — cioè proprio dove la fence implicita è
-> rotta). Su AMD e su Intel, quindi, **la fence c'è ed è il consumatore che deve aspettarla.**
+> ⛔ That is, **on this machine 100 % of DMA-BUF buffers arrive with drawing still in progress.** It does not
+> contradict §4.8: KWin does `glFlush()`, which **submits** the work to the GPU and does not wait for it to be
+> finished (`glFinish()` does that **only** on NVidia and llvmpipe — i.e. exactly where the implicit fence is
+> broken). On AMD and on Intel, therefore, **the fence is there and it is the consumer that must wait for it.**
 >
-> ✅ **La buona notizia resta intatta, ed è un'altra**: i fotogrammi sono **interi** (§4.6), quindi il
-> difetto di R29 — il «diff» su buffer riciclati, che ci ha fatto spegnere la copia zero su GNOME —
-> **non si ripresenta**. Su KDE la copia zero richiede *una* cosa: aspettare la fence prima di
-> codificare, che è il comportamento corretto di qualunque consumatore.
+> ✅ **The good news stays intact, and it is a different one**: the frames are **whole** (§4.6), so
+> R29's fault — the «diff» on recycled buffers, which made us switch off zero-copy on GNOME —
+> **does not recur**. On KDE zero-copy requires *one* thing: waiting for the fence before
+> encoding, which is the correct behaviour of any consumer.
 >
-> ⚠ E il conteggio dei buffer: 830 buffer contro 594 fotogrammi contati, con «danno parziale 829,
-> pieno 1». I ~236 di differenza sono verosimilmente i buffer di **solo cursore** di §4.7, che il
-> misuratore scarta: un'altra ragione per rendere onesto quel conteggio prima di citarlo.
+> ⚠ And the buffer count: 830 buffers against 594 frames counted, with «danno parziale 829,
+> pieno 1». The ~236 difference are most likely the **cursor-only** buffers of §4.7, which the
+> meter discards: one more reason to make that count honest before quoting it.
 
-#### 4.9 Ciclo di vita — e i due modi di perdere il flusso
+#### 4.9 Lifecycle — and the two ways of losing the stream
 
 **[R]** `screencaststream.cpp`, `screencastmanager.cpp`, `outputscreencastsource.cpp`:
 
-| Evento | Che cosa fa KWin |
+| Event | What KWin does |
 |---|---|
-| il client Wayland si disconnette | `finished()` → `close()`; per un output virtuale, `removeVirtualOutput()` |
-| **il consumatore PipeWire si sgancia** (`UNCONNECTED`) | ⛔ **`close()`**: il flusso non sopravvive, e con lui **muore l'output virtuale** (`:142-144`) |
-| il consumatore mette in pausa | `m_source->pause()`: si scollega dal danno |
-| il consumatore riparte (`STREAMING`) | ✅ `resume()` → **un fotogramma pieno subito** (`outputscreencastsource.cpp:99-109`) |
-| **l'uscita viene disabilitata** (`enabled=false`, per esempio da kscreen) | ⛔ `closed()` → flusso morto (`outputscreencastsource.cpp:27-32`) |
-| PipeWire cade (`-EPIPE`) | `close()` |
+| the Wayland client disconnects | `finished()` → `close()`; for a virtual output, `removeVirtualOutput()` |
+| **the PipeWire consumer detaches** (`UNCONNECTED`) | ⛔ **`close()`**: the stream does not survive, and with it **the virtual output dies** (`:142-144`) |
+| the consumer pauses | `m_source->pause()`: it disconnects from the damage |
+| the consumer restarts (`STREAMING`) | ✅ `resume()` → **a full frame immediately** (`outputscreencastsource.cpp:99-109`) |
+| **the output is disabled** (`enabled=false`, for example by kscreen) | ⛔ `closed()` → stream dead (`outputscreencastsource.cpp:27-32`) |
+| PipeWire goes down (`-EPIPE`) | `close()` |
 
-> ⛔ **Regola per il palco su KDE**: fra due client RDP **non si distrugge il `pw_stream`** — si fa
-> `pw_stream_set_active(false)`. Un `UNCONNECTED` smonta l'output virtuale, e chi si ricollega non
-> trova più niente. È la stessa forma della regola del palco di §7.3 di `REFERENCE.md`, con un
-> meccanismo diverso.
+> ⛔ **Rule for the stage on KDE**: between two RDP clients **the `pw_stream` is not destroyed** — you do
+> `pw_stream_set_active(false)`. An `UNCONNECTED` tears down the virtual output, and whoever reconnects
+> finds nothing left. It is the same shape as the stage rule of §7.3 of `REFERENCE.md`, with a
+> different mechanism.
 
-**Nessuna richiesta «mandami un fotogramma pieno adesso»** esiste nel protocollo [✗]: il fotogramma
-pieno arriva solo alla ripresa da pausa. **R9 vale identica su KDE**: l'ultimo fotogramma va
-conservato e rispedito da noi.
+**No «mandami un fotogramma pieno adesso» request** exists in the protocol [✗]: the full
+frame arrives only on resume from pause. **R9 holds identically on KDE**: the last frame must be
+kept and resent by us.
 
-**Sessione inattiva (cambio VT) — buona notizia da confermare.** `DrmGpu::setActive(false)`
-inibisce i render loop **solo** dei `m_drmOutputs`, e i virtual output vivono in un'altra lista
-(`drm_gpu.cpp:710-723`, `drm_backend.cpp:340-347`); `present()` di un virtual output non fa alcun
-commit KMS. **Sulla carta la cattura continua a sessione in background** — è esattamente ciò che
-serve a un servizio non presidiato. **[?]** da misurare con un `chvt`. Lo stesso per il DPMS:
-`DrmVirtualOutput::setDpmsMode()` scrive solo lo stato, non inibisce il render loop
+**Inactive session (VT switch) — good news to be confirmed.** `DrmGpu::setActive(false)`
+inhibits the render loops **only** of the `m_drmOutputs`, and the virtual outputs live in another list
+(`drm_gpu.cpp:710-723`, `drm_backend.cpp:340-347`); `present()` of a virtual output does no
+KMS commit. **On paper capture continues with the session in the background** — exactly what
+an unattended service needs. **[?]** to be measured with a `chvt`. The same for DPMS:
+`DrmVirtualOutput::setDpmsMode()` only writes the state, it does not inhibit the render loop
 (`drm_virtual_output.cpp:66-71`).
 
-#### 4.10 Il cursore
+#### 4.10 The cursor
 
-**[R]** Il modo si decide **una volta sola**, prima di `init()`, e **non è cambiabile a flusso
-vivo** (`setCursorMode`, `:915-918`).
+**[R]** The mode is decided **once only**, before `init()`, and **cannot be changed on a live
+stream** (`setCursorMode`, `:915-918`).
 
-Con `Metadata` (`addCursorMetadata`, `:801-860`): posizione e hotspot **già scalati** e mappati
-nell'output, a ogni movimento; **la bitmap solo quando la forma cambia** (`bitmap_offset = 0`
-altrimenti — il consumatore deve **ricordare** l'ultima forma); formato RGBA premoltiplicato,
-**troncata** a 256×256, non scalata; `id = 0` quando il cursore non è visibile.
+With `Metadata` (`addCursorMetadata`, `:801-860`): position and hotspot **already scaled** and mapped
+into the output, at every movement; **the bitmap only when the shape changes** (`bitmap_offset = 0`
+otherwise — the consumer must **remember** the last shape); premultiplied RGBA format,
+**truncated** to 256×256, not scaled; `id = 0` when the cursor is not visible.
 
-Tre vincoli **[R]**:
+Three constraints **[R]**:
 
-1. il cursore c'è **solo se sta sopra il nostro output** (`cursor->isOnOutput`,
-   `outputscreencastsource.cpp:124-131`): con un output virtuale bisogna portarci il puntatore, e
-   prevedere il caso «è andato altrove» — il client resta senza cursore, senza errore;
-2. gli aggiornamenti di cursore passano dallo **stesso freno** del video: negoziare un
-   `maxFramerate` basso **strozza anche il cursore** (`:501-517`). Conviene negoziare alto e
-   limitare la codifica da noi;
-3. `Cursors::isCursorHidden()` lo azzera in blocco.
+1. the cursor is there **only if it is over our output** (`cursor->isOnOutput`,
+   `outputscreencastsource.cpp:124-131`): with a virtual output you have to bring the pointer there, and
+   provide for the «è andato altrove» case — the client is left without a cursor, without an error;
+2. cursor updates go through the **same brake** as the video: negotiating a
+   low `maxFramerate` **throttles the cursor too** (`:501-517`). Better to negotiate high and
+   limit the encoding ourselves;
+3. `Cursors::isCursorHidden()` zeroes it wholesale.
 
-> **Per RDP il modo giusto è `Metadata` (4)**: RDP ha un canale puntatore proprio, e così il cursore
-> non costa una ricodifica. Il prezzo è §4.7. Se si volesse partire semplici, `Embedded` (2) è a
-> prova di errore ma paga un fotogramma intero per ogni movimento del mouse.
+> **For RDP the right mode is `Metadata` (4)**: RDP has its own pointer channel, and so the cursor
+> does not cost a re-encode. The price is §4.7. If one wanted to start simple, `Embedded` (2) is
+> foolproof but pays a whole frame for every mouse movement.
 >
-> E una nota che vale di più: **la posizione del cursore la sappiamo già noi**, perché siamo noi a
-> iniettare il movimento. Il metadato serve per la **forma** e per i movimenti che non generiamo.
+> And a note worth more: **we already know the cursor position**, because we are the ones
+> injecting the movement. The metadata is needed for the **shape** and for the movements we do not generate.
 
 ---
 
-### 5. Senza monitor: i backend, e la GPU
+### 5. Without a monitor: the backends, and the GPU
 
-#### 5.1 ⛔ La nostra misura del 7 agosto è contraddetta dal codice
+#### 5.1 ⛔ Our measurement of 7 August is contradicted by the code
 
-`REFERENCE.md` R32 e `LEZIONI.md` §3 dicono: *«KWin senza monitor disegna in software: col backend
-`--virtual` non apre alcun nodo DRM e non carica alcuna libreria GL»*. Il codice dice il contrario.
+`REFERENCE.md` R32 and `LEZIONI.md` §3 say: *«KWin senza monitor disegna in software: col backend
+`--virtual` non apre alcun nodo DRM e non carica alcuna libreria GL»*. The code says the opposite.
 
-**[R]** `kwin/src/backends/virtual/virtual_backend.cpp:23-56`: il costruttore del backend enumera i
-dispositivi DRM con `drmGetDevices2()` e apre un **nodo di rendering** (`DRM_NODE_RENDER`,
-`renderD*`) con un `::open(O_RDWR)` diretto — **senza logind**. E `:73-81`:
-`OpenGLCompositing` è dichiarato **solo se** quel nodo si è aperto; altrimenti resta soltanto
-`QPainterCompositing`. Il renderer OpenGL è **EGL su gbm** (`virtual_egl_backend.cpp:108-115`,
-`EGL_PLATFORM_GBM_KHR`), con swapchain di buffer gbm.
+**[R]** `kwin/src/backends/virtual/virtual_backend.cpp:23-56`: the backend's constructor enumerates the
+DRM devices with `drmGetDevices2()` and opens a **render node** (`DRM_NODE_RENDER`,
+`renderD*`) with a direct `::open(O_RDWR)` — **without logind**. And `:73-81`:
+`OpenGLCompositing` is declared **only if** that node opened; otherwise only
+`QPainterCompositing` remains. The OpenGL renderer is **EGL on gbm** (`virtual_egl_backend.cpp:108-115`,
+`EGL_PLATFORM_GBM_KHR`), with a swapchain of gbm buffers.
 
-E la prova sta **nella nostra stessa tabella**: `banco/tabella-altri.txt` riporta per KWin
-`tipo=DMA-BUF`, `fence=1010`, 59,50 fps. Ma un flusso screencast **può essere DMA-BUF solo se il
-compositore è un `AbstractEglBackend`** (`screencaststream.cpp:920-925`, e `:154-155` per la scelta
-del tipo di buffer). Cioè: **in quella misura KWin stava già componendo sulla GPU.**
+And the proof is **in our own table**: `banco/tabella-altri.txt` reports for KWin
+`tipo=DMA-BUF`, `fence=1010`, 59.50 fps. But a screencast stream **can be DMA-BUF only if the
+compositor is an `AbstractEglBackend`** (`screencaststream.cpp:920-925`, and `:154-155` for the choice
+of buffer type). That is: **in that measurement KWin was already compositing on the GPU.**
 
-Le sole cause di un `findRenderDevice() == nullptr`, dal codice: nessun `/dev/dri` visibile;
-**permessi** sul render node (gruppo `render`) — e allora compare `Failed to open drm node: <path>`
-(`core/drmdevice.cpp:77`, `qCWarning`, **visibile per difetto**); gbm/Mesa mancante.
+The only causes of a `findRenderDevice() == nullptr`, from the code: no `/dev/dri` visible;
+**permissions** on the render node (`render` group) — and then `Failed to open drm node: <path>` appears
+(`core/drmdevice.cpp:77`, `qCWarning`, **visible by default**); gbm/Mesa missing.
 
-> ⛔ **Che cosa va fatto, e in quale ordine.** Non si corregge il documento su una lettura di codice:
-> si rifà la misura, con le due prove che non dipendono da quel che KWin dichiara (§5.3). Poi si
-> corregge R32 con data e fonte. Fino a quel momento, **il numero «KWin: 60 fps a 4K» resta valido
-> come misura e sospetto quanto alla sua etichetta**: quel che è in dubbio non è il 60, è il «in
+> ⛔ **What must be done, and in which order.** The document is not corrected on a code reading:
+> the measurement is redone, with the two proofs that do not depend on what KWin declares (§5.3). Then
+> R32 is corrected with date and source. Until then, **the number «KWin: 60 fps a 4K» stays valid
+> as a measurement and suspect as to its label**: what is in doubt is not the 60, it is the «in
 > software».
 
-> #### ✅ MISURATO — e l'etichetta «in software» era sbagliata
+> #### ✅ MEASURED — and the «in software» label was wrong
 >
-> **[M] Misura M3, banco del 7 agosto 2026, `kwin_wayland --virtual` 6.3.6-1, Mesa 25.0.7.**
-> Le tre prove, tutte concordi:
+> **[M] Measurement M3, bench of 7 August 2026, `kwin_wayland --virtual` 6.3.6-1, Mesa 25.0.7.**
+> The three proofs, all in agreement:
 >
-> | Prova | Esito |
+> | Proof | Outcome |
 > |---|---|
-> | nodi DRM aperti dal compositore | **`/dev/dri/renderD129`** — un render node, aperto |
-> | librerie di rendering caricate | `libEGL.so.1.1.0`, **`libEGL_mesa.so.0.0.0`**, `libgbm.so.1.0.0`, `libgallium-25.0.7` |
-> | global `zwp_linux_dmabuf_v1` | **annunciato, versione 4** — e nasce solo da `AbstractEglBackend::initWayland()` |
+> | DRM nodes opened by the compositor | **`/dev/dri/renderD129`** — a render node, open |
+> | rendering libraries loaded | `libEGL.so.1.1.0`, **`libEGL_mesa.so.0.0.0`**, `libgbm.so.1.0.0`, `libgallium-25.0.7` |
+> | global `zwp_linux_dmabuf_v1` | **announced, version 4** — and it is born only from `AbstractEglBackend::initWayland()` |
 >
-> **Verdetto: KWin senza monitor compone sulla GPU.** La lettura del codice era giusta e la nostra
-> etichetta era sbagliata: **R32 va corretta**, il «60 fps a 4K» resta ma non è «in software».
+> **Verdict: KWin without a monitor composites on the GPU.** The code reading was right and our
+> label was wrong: **R32 must be corrected**, the «60 fps a 4K» stays but it is not «in software».
 >
-> ⚠ **Una trappola nella prova, per chi la rifà.** Su Mesa 25 tutti i driver gallium — llvmpipe
-> compreso — stanno in **un'unica** `libgallium-*.so`: quindi *«non vedo llvmpipe fra le librerie»*
-> **non prova niente**, e la vecchia ricerca di `swrast_dri`/`llvmpipe` per nome non funziona più.
+> ⚠ **A trap in the proof, for whoever redoes it.** On Mesa 25 all gallium drivers — llvmpipe
+> included — live in **a single** `libgallium-*.so`: so *«non vedo llvmpipe fra le librerie»*
+> **proves nothing**, and the old search for `swrast_dri`/`llvmpipe` by name no longer works.
 >
-> ⛔ **E la prova che avevo dato per buona il 7 agosto — «il render node aperto» — NON prova la GPU.**
-> [M, 8 agosto] Con `KWIN_COMPOSE=Q`, cioè KWin **in QPainter**, `/dev/dri/renderD129` risulta
-> **aperto comunque**: il nodo lo apre il *costruttore* di `VirtualBackend`, prima che si scelga il
-> compositore. Quindi quella riga dice «il backend ha trovato un device», non «sta rendendo in GPU».
+> ⛔ **And the proof I had taken as good on 7 August — «il render node aperto» — does NOT prove the GPU.**
+> [M, 8 August] With `KWIN_COMPOSE=Q`, i.e. KWin **in QPainter**, `/dev/dri/renderD129` shows up as
+> **open anyway**: the node is opened by `VirtualBackend`'s *constructor*, before the
+> compositor is chosen. So that line says «il backend ha trovato un device», not «sta rendendo in GPU».
 >
-> ✅ **La prova che regge è una sola, e KWin la regala** (§5.3-bis): la stringa del renderer, via
-> `org.kde.KWin.supportInformation` su D-Bus. Sul banco:
+> ✅ **The proof that holds is only one, and KWin gives it away** (§5.3-bis): the renderer string, via
+> `org.kde.KWin.supportInformation` on D-Bus. On the bench:
 > `OpenGL renderer string: AMD Radeon RX 6800 (radeonsi, navi21, LLVM 19.1.7, DRM 3.64, 7.0)`,
-> `Mesa 25.0.7`. Nessuna interpretazione possibile.
+> `Mesa 25.0.7`. No interpretation possible.
 >
-> La gerarchia delle prove, dopo il banco, dalla più forte alla più debole:
+> The hierarchy of proofs, after the bench, from strongest to weakest:
 >
-> | Prova | Che cosa dimostra davvero |
+> | Proof | What it really demonstrates |
 > |---|---|
-> | **stringa del renderer** (`supportInformation`) | ✅ il driver e il chip esatti: **GPU o llvmpipe** |
-> | `zwp_linux_dmabuf_v1` annunciato | **EGL sì/no** — con `KWIN_COMPOSE=Q` scompare (0), con OpenGL c'è (1). **Non** distingue GPU da llvmpipe |
-> | render node aperto | ⛔ **niente**: aperto anche in QPainter |
+> | **renderer string** (`supportInformation`) | ✅ the exact driver and chip: **GPU or llvmpipe** |
+> | `zwp_linux_dmabuf_v1` announced | **EGL yes/no** — with `KWIN_COMPOSE=Q` it disappears (0), with OpenGL it is there (1). It does **not** distinguish GPU from llvmpipe |
+> | render node open | ⛔ **nothing**: open in QPainter too |
 >
-> ⚠ **E per leggere quel `/proc` serve `sudo`, con una ragione precisa**: `/usr/bin/kwin_wayland`
-> porta l'attributo esteso **`security.capability`** (verificato: `cap_sys_nice`), e un binario con
-> file capabilities è **non dumpable** — il kernel nega `/proc/<pid>/fd` e `/proc/<pid>/maps` anche
-> all'utente che l'ha avviato. Non è un difetto del banco. (Copiare il binario per perdere l'xattr
-> **non** è una scorciatoia praticabile: la copia non carica il plugin QPA `wayland-org.kde.kwin.qpa`
-> e muore con `Aborted`.)
+> ⚠ **And reading that `/proc` takes `sudo`, for a precise reason**: `/usr/bin/kwin_wayland`
+> carries the extended attribute **`security.capability`** (verified: `cap_sys_nice`), and a binary with
+> file capabilities is **not dumpable** — the kernel denies `/proc/<pid>/fd` and `/proc/<pid>/maps` even
+> to the user who started it. It is not a fault of the bench. (Copying the binary to lose the xattr
+> is **not** a viable shortcut: the copy does not load the QPA plugin `wayland-org.kde.kwin.qpa`
+> and dies with `Aborted`.)
 >
-> 🟡 **Quel che invece resta aperto è il tipo di buffer (M3d).** Il flusso negoziato sul banco è
-> `1280x720 BGRx, modificatore 0x0, memoria` — cioè **MemFd**, non DMA-BUF. Ma questo **non**
-> contraddice il verdetto: è il *nostro* cliente che non offre DMA-BUF (la copia zero è rinviata
-> dalla fase 9). Il criterio di §5.3 punto 1 vale solo a parti invertite: se il cliente offre
-> DMA-BUF e KWin lo nega, allora KWin è in QPainter. Da rifare quando il cliente saprà offrirlo.
+> 🟡 **What does remain open is the buffer type (M3d).** The stream negotiated on the bench is
+> `1280x720 BGRx, modificatore 0x0, memoria` — i.e. **MemFd**, not DMA-BUF. But this does **not**
+> contradict the verdict: it is *our* client that does not offer DMA-BUF (zero-copy has been postponed
+> since phase 9). The criterion of §5.3 point 1 holds only the other way round: if the client offers
+> DMA-BUF and KWin denies it, then KWin is in QPainter. To be redone when the client can offer it.
 
-#### 5.2 I backend, e la scelta fra `--virtual` e `--drm`
+#### 5.2 The backends, and the choice between `--virtual` and `--drm`
 
-**[R]** La selezione è in `main_wayland.cpp:428-463`, e l'ordine conta: `--drm` → `--x11-display` →
-`--wayland-display` → `--virtual` → **poi** l'euristica sull'ambiente (`WAYLAND_DISPLAY` → annidato
-Wayland, `DISPLAY` → annidato X11, **altrimenti drm**).
+**[R]** The selection is in `main_wayland.cpp:428-463`, and the order matters: `--drm` → `--x11-display` →
+`--wayland-display` → `--virtual` → **then** the heuristic on the environment (`WAYLAND_DISPLAY` → nested
+Wayland, `DISPLAY` → nested X11, **otherwise drm**).
 
-> ⛔ **Da cui una regola operativa**: il backend si passa **sempre** esplicitamente. Se REMOTIX gira
-> dentro una sessione dove `WAYLAND_DISPLAY` o `DISPLAY` sono impostate, senza opzione KWin sceglie
-> il backend annidato; con l'ambiente pulito sceglie **drm** e senza logind muore.
+> ⛔ **Hence an operating rule**: the backend is **always** passed explicitly. If REMOTIX runs
+> inside a session where `WAYLAND_DISPLAY` or `DISPLAY` are set, without the option KWin picks
+> the nested backend; with a clean environment it picks **drm** and without logind it dies.
 
-| | `--virtual` | `--drm` con zero uscite fisiche |
+| | `--virtual` | `--drm` with zero physical outputs |
 |---|---|---|
-| GPU | **sì**, su un render node, per difetto [R] | sì, sul nodo primario `card*` [R] |
-| Prerequisiti | **solo r/w su `/dev/dri/renderD*`**; niente logind, niente seat, niente DRM master (`Session::Type::Noop`, `main_wayland.cpp:513`) | **sessione logind attivabile su un seat**, con `Activate` + `TakeControl` + `TakeDevice` (`session_logind.cpp:109-131`, `161-188`) |
-| `stream_virtual_output` | ⛔ **NON funziona**: `VirtualBackend` non ridefinisce `createVirtualOutput()`, la base torna `nullptr` (`core/outputbackend.cpp:80-83`) → `sendFailed("Could not find output")` | ✅ funziona (`drm_backend.cpp:340-347`) |
-| Uscite | fisse, decise all'avvio (`--output-count`, `--width`, `--height`, `--scale`) | nessuna all'avvio; si creano a runtime |
-| Scanout diretto | no | sì (`drm_virtual_egl_layer.cpp:140-153`) |
-| Modificatori DRM | no: swapchain forzata a `DRM_FORMAT_MOD_INVALID` | sì |
-| Scelta della GPU | **nessuna**: prende la prima che si apre, nessuna variabile [R] | `KWIN_DRM_DEVICES` |
-| libinput / `/dev/input` | non serve: `createInputBackend()` non è ridefinito, nessun libinput | serve |
-| Se fallisce | compone in software con due `qCWarning` | ⛔ `std::exit(1)`, **rumoroso** |
+| GPU | **yes**, on a render node, by default [R] | yes, on the primary node `card*` [R] |
+| Prerequisites | **only r/w on `/dev/dri/renderD*`**; no logind, no seat, no DRM master (`Session::Type::Noop`, `main_wayland.cpp:513`) | **logind session activatable on a seat**, with `Activate` + `TakeControl` + `TakeDevice` (`session_logind.cpp:109-131`, `161-188`) |
+| `stream_virtual_output` | ⛔ **does NOT work**: `VirtualBackend` does not override `createVirtualOutput()`, the base returns `nullptr` (`core/outputbackend.cpp:80-83`) → `sendFailed("Could not find output")` | ✅ works (`drm_backend.cpp:340-347`) |
+| Outputs | fixed, decided at startup (`--output-count`, `--width`, `--height`, `--scale`) | none at startup; created at runtime |
+| Direct scanout | no | yes (`drm_virtual_egl_layer.cpp:140-153`) |
+| DRM modifiers | no: swapchain forced to `DRM_FORMAT_MOD_INVALID` | yes |
+| GPU choice | **none**: takes the first one that opens, no variable [R] | `KWIN_DRM_DEVICES` |
+| libinput / `/dev/input` | not needed: `createInputBackend()` is not overridden, no libinput | needed |
+| If it fails | composites in software with two `qCWarning` | ⛔ `std::exit(1)`, **noisy** |
 
-**[R]** `--drm` **parte con zero connettori collegati**: `DrmGpu::updateOutputs()` non crea nulla e
-torna `true`, la GPU primaria sopravvive, `EglGbmBackend::init()` non tocca le uscite, e il
-Workspace mette un `PlaceholderOutput` 1920×1080 **non composto e non esposto come `wl_output`**
-(`workspace.cpp:1217-1231`). Alla prima `stream_virtual_output` il segnaposto viene distrutto e
-nasce un `wl_output` vero. E **non accetta mai un render node**: `drmIsKMS()` lo scarta
-(`drm_backend.cpp:216-220`), l'enumerazione udev cerca solo `card[0-9]`.
+**[R]** `--drm` **starts with zero connectors plugged in**: `DrmGpu::updateOutputs()` creates nothing and
+returns `true`, the primary GPU survives, `EglGbmBackend::init()` does not touch the outputs, and the
+Workspace puts in a 1920×1080 `PlaceholderOutput` **not composited and not exposed as `wl_output`**
+(`workspace.cpp:1217-1231`). At the first `stream_virtual_output` the placeholder is destroyed and
+a real `wl_output` is born. And it **never accepts a render node**: `drmIsKMS()` discards it
+(`drm_backend.cpp:216-220`), the udev enumeration looks only for `card[0-9]`.
 
-⛔ **`--drm` con una sessione Noop è impossibile per costruzione**: `NoopSession::openRestricted()`
-torna `-1` sempre (`session_noop.cpp:41-44`), quindi tutte le `addGpu` falliscono e KWin esce.
+⛔ **`--drm` with a Noop session is impossible by construction**: `NoopSession::openRestricted()`
+always returns `-1` (`session_noop.cpp:41-44`), so every `addGpu` fails and KWin exits.
 
-> #### ⛔ MISURATO — `--drm` **non** è praticabile senza seat, e quindi la scelta è già fatta
+> #### ⛔ MEASURED — `--drm` is **not** viable without a seat, and so the choice is already made
 >
-> **[M] Misura M2, banco del 7 agosto 2026.** Era «la domanda che decide», e la risposta è **no**.
-> Da una sessione senza seat (`loginctl show-session`: `Seat=` vuoto, `Remote=yes`, `VTNr=0`, con
-> `seat0` esistente e la console su tty1), `kwin_wayland --drm` **esce con stato 1** dicendo:
+> **[M] Measurement M2, bench of 7 August 2026.** It was «la domanda che decide», and the answer is **no**.
+> From a session without a seat (`loginctl show-session`: `Seat=` empty, `Remote=yes`, `VTNr=0`, with
+> `seat0` existing and the console on tty1), `kwin_wayland --drm` **exits with status 1** saying:
 >
 > ```
 > kwin_core:        Failed to activate /org/freedesktop/login1/session/_351 session.
@@ -2024,245 +2024,245 @@ torna `-1` sempre (`session_noop.cpp:41-44`), quindi tutte le `addGpu` falliscon
 > kwin_wayland_drm: No suitable DRM devices have been found
 > ```
 >
-> ⚠ **E non è un problema di permessi Unix**, che è la spiegazione comoda da escludere: nello stesso
-> ambiente e con gli stessi gruppi, il giro `--virtual` **apre `renderD129` senza difficoltà**. Il
-> punto di rottura è `Activate()`, cioè esattamente la riga di `session_logind.cpp:109-131` che la
-> tabella qui sopra dà come prerequisito.
+> ⚠ **And it is not a Unix permissions problem**, which is the convenient explanation to rule out: in the same
+> environment and with the same groups, the `--virtual` round **opens `renderD129` without difficulty**. The
+> breaking point is `Activate()`, i.e. exactly the line of `session_logind.cpp:109-131` that the
+> table above gives as a prerequisite.
 >
-> **Conseguenza per la fase**: l'unico modo di avere `--drm` sarebbe una sessione **su `seat0`**,
-> cioè imitare un display manager e **occupare la console fisica** — e allora non è più un servizio
-> remoto che convive con l'utente locale. Quindi **la «scelta fra `--virtual` e `--drm`» (§13.4,
-> decisione 1) non è una scelta**: è `--virtual`, e con essa il prezzo di §8.1 (nessun
-> `stream_virtual_output`, nessun ridimensionamento prima di KWin 6.8).
+> **Consequence for the phase**: the only way to have `--drm` would be a session **on `seat0`**,
+> i.e. imitating a display manager and **occupying the physical console** — and then it is no longer a remote
+> service living alongside the local user. So **the «scelta fra `--virtual` e `--drm`» (§13.4,
+> decision 1) is not a choice**: it is `--virtual`, and with it the price of §8.1 (no
+> `stream_virtual_output`, no resizing before KWin 6.8).
 >
-> ⚠ **Nota di banco**: ogni comando SSH apre una sessione logind **nuova** (49, 50, 51…), tutte senza
-> seat. Un identificativo di sessione letto in un comando non vale nel comando successivo — «No
-> session '49' known» — e chi scrive prove su logind deve rileggerlo ogni volta.
+> ⚠ **Bench note**: every SSH command opens a **new** logind session (49, 50, 51…), all without a
+> seat. A session identifier read in one command is not valid in the next one — «No
+> session '49' known» — and whoever writes tests on logind must re-read it every time.
 
-#### 5.3 Come si accerta se KWin è in GPU o in software
+#### 5.3 How to establish whether KWin is on the GPU or in software
 
-**[R]** Le due prove che non dipendono da quel che KWin dichiara:
+**[R]** The two proofs that do not depend on what KWin declares:
 
-1. **Il tipo di buffer che il flusso screencast offre.** DMA-BUF ⇒ EGL/gbm su un nodo DRM reale;
-   solo MemFd ⇒ QPainter, cioè CPU (`screencaststream.cpp:920-925`, `154-155`). Nessun modo di
-   simulare l'uno con l'altro.
-2. **La presenza del global `zwp_linux_dmabuf_v1`**, creato pigramente e **solo** da
+1. **The buffer type the screencast stream offers.** DMA-BUF ⇒ EGL/gbm on a real DRM node;
+   only MemFd ⇒ QPainter, i.e. CPU (`screencaststream.cpp:920-925`, `154-155`). No way to
+   simulate one with the other.
+2. **The presence of the `zwp_linux_dmabuf_v1` global**, created lazily and **only** by
    `AbstractEglBackend::initWayland()` (`abstract_egl_backend.cpp:118-196`,
-   `wayland_server.cpp:516-530`). Se `wayland-info` sul socket di KWin non lo elenca, KWin è in
+   `wayland_server.cpp:516-530`). If `wayland-info` on KWin's socket does not list it, KWin is in
    QPainter.
 
-Più, dal sistema operativo: `ls -l /proc/$(pidof kwin_wayland)/fd | grep dri`.
+Plus, from the operating system: `ls -l /proc/$(pidof kwin_wayland)/fd | grep dri`.
 
-⚠ **Quello che invece non basta**: `compositingType` distingue OpenGL da QPainter, **non GPU da
-software**; e `supportInformation` va letto **insieme** alla riga `OpenGL renderer string`, perché
-llvmpipe e softpipe **non** fanno ripiegare KWin su QPainter (`m_recommendedCompositor` resta
-`OpenGLCompositing`, `glplatform.h:331`, `glplatform.cpp:876-886`). *«Compositing Type: OpenGL»* su
-llvmpipe è possibile, ed è il caso peggiore: rendering software travestito da GPU.
+⚠ **What instead is not enough**: `compositingType` distinguishes OpenGL from QPainter, **not GPU from
+software**; and `supportInformation` must be read **together with** the `OpenGL renderer string` line, because
+llvmpipe and softpipe do **not** make KWin fall back to QPainter (`m_recommendedCompositor` stays
+`OpenGLCompositing`, `glplatform.h:331`, `glplatform.cpp:876-886`). *«Compositing Type: OpenGL»* on
+llvmpipe is possible, and it is the worst case: software rendering disguised as GPU.
 
-#### 5.4 ⛔ `KWIN_COMPOSE` non protegge all'avvio
+#### 5.4 ⛔ `KWIN_COMPOSE` does not protect at startup
 
-**[R]** L'enforcement di `KWIN_COMPOSE` è `qApp->quit()` (`compositor_wayland.cpp:164`), ma
-`createRenderer()` gira dentro `performStartup()`, chiamata **sincronamente** da
-`Application::start()` **prima** di `a.exec()` (`main.cpp:144`, `main_wayland.cpp:620-622`). Senza
-ciclo di eventi, `quit()` è inerte: il ciclo dei candidati prosegue, QPainter riesce, e **KWin parte
-in software nonostante `KWIN_COMPOSE=O2`**, con una sola `qCCritical` a testimoniarlo.
+**[R]** The enforcement of `KWIN_COMPOSE` is `qApp->quit()` (`compositor_wayland.cpp:164`), but
+`createRenderer()` runs inside `performStartup()`, called **synchronously** by
+`Application::start()` **before** `a.exec()` (`main.cpp:144`, `main_wayland.cpp:620-622`). Without an
+event loop, `quit()` is inert: the candidate loop goes on, QPainter succeeds, and **KWin starts
+in software despite `KWIN_COMPOSE=O2`**, with a single `qCCritical` to bear witness.
 
-> È la lezione 1.8 di `LEZIONI.md` in casa d'altri: **quando un componente può decidere da sé,
-> bisogna dirgli cosa fare — e verificare che abbia obbedito.** Tutte le misure prese con
-> `KWIN_COMPOSE=O2` presuppongono che quell'interruttore funzioni.
+> It is lesson 1.8 of `LEZIONI.md` in someone else's house: **when a component can decide by itself,
+> you have to tell it what to do — and check that it obeyed.** All the measurements taken with
+> `KWIN_COMPOSE=O2` assume that switch works.
 
-> #### ⛔ MISURATO — `KWIN_COMPOSE=O2` **non protegge**, e la lettura del codice era giusta
+> #### ⛔ MEASURED — `KWIN_COMPOSE=O2` **does not protect**, and the code reading was right
 >
-> **[M] Misura M4, 8 agosto 2026.** Per rispondere bisognava rendere OpenGL *impossibile*, e non
-> bastava renderlo *lento*: `LIBGL_ALWAYS_SOFTWARE=1`, `GALLIUM_DRIVER`, `MESA_LOADER_DRIVER_OVERRIDE`
-> e `__EGL_VENDOR_LIBRARY_DIRS` **non hanno alcun effetto** su KWin (il renderer resta
-> `AMD Radeon RX 6800 (radeonsi)`: verificato con `supportInformation`). La condizione si ottiene
-> togliendo l'accesso ai render node — sul banco con un namespace di monti privato.
+> **[M] Measurement M4, 8 August 2026.** To answer, OpenGL had to be made *impossible*, and making it
+> *slow* was not enough: `LIBGL_ALWAYS_SOFTWARE=1`, `GALLIUM_DRIVER`, `MESA_LOADER_DRIVER_OVERRIDE`
+> and `__EGL_VENDOR_LIBRARY_DIRS` **have no effect at all** on KWin (the renderer stays
+> `AMD Radeon RX 6800 (radeonsi)`: verified with `supportInformation`). The condition is obtained
+> by removing access to the render nodes — on the bench with a private mount namespace.
 >
-> Allora, con tutti i render node inaccessibili:
+> Then, with all render nodes inaccessible:
 >
-> | | esito |
+> | | outcome |
 > |---|---|
-> | senza `KWIN_COMPOSE` *(controllo)* | `Configured compositor not supported by Platform. Falling back to defaults` → **QPainter**, e KWin parte |
-> | **con `KWIN_COMPOSE=O2`** | `Compositing forced to OpenGL mode by environment variable` → **`Falling back to defaults`** → **`QPainter compositing has been successfully initialized`**, e **KWin parte** |
+> | without `KWIN_COMPOSE` *(control)* | `Configured compositor not supported by Platform. Falling back to defaults` → **QPainter**, and KWin starts |
+> | **with `KWIN_COMPOSE=O2`** | `Compositing forced to OpenGL mode by environment variable` → **`Falling back to defaults`** → **`QPainter compositing has been successfully initialized`**, and **KWin starts** |
 >
-> ⛔ **Quindi l'interruttore è inerte**, esattamente come diceva §5.4: il `qApp->quit()` gira prima del
-> ciclo di eventi. **Conseguenza operativa**: `KWIN_COMPOSE=O2` non va usato come garanzia in nessuna
-> nostra ricetta né in nessun banco; l'unico modo di sapere come sta rendendo KWin è **chiederglielo**
-> (la stringa del renderer, §5.1). E la cattura resta disponibile anche in QPainter: `zkde_screencast`
-> è annunciato e il global `zwp_linux_dmabuf_v1` scompare — l'unico segno visibile del ripiego.
+> ⛔ **So the switch is inert**, exactly as §5.4 said: the `qApp->quit()` runs before the
+> event loop. **Operational consequence**: `KWIN_COMPOSE=O2` must not be used as a guarantee in any
+> recipe of ours nor in any bench; the only way to know how KWin is rendering is to **ask it**
+> (the renderer string, §5.1). And capture stays available in QPainter too: `zkde_screencast`
+> is announced and the `zwp_linux_dmabuf_v1` global disappears — the only visible sign of the fallback.
 
-#### 5.3-bis ✅ La prova diretta: chiedere a KWin che renderer usa
+#### 5.3-bis ✅ The direct proof: asking KWin which renderer it uses
 
-**[M, 8 agosto 2026]** La misura che chiude ogni dubbio su GPU-o-software, e che non richiede né
-`/proc` né `sudo`:
+**[M, 8 August 2026]** The measurement that settles every doubt about GPU-or-software, and that needs neither
+`/proc` nor `sudo`:
 
 ```sh
 gdbus call --session --dest org.kde.KWin --object-path /KWin \
     --method org.kde.KWin.supportInformation | grep -oE 'OpenGL renderer string: [^\\]*'
 ```
 
-Funziona su KWin nudo e dentro una sessione Plasma. In QPainter la riga **non c'è** — che è a sua
-volta una risposta.
+It works on bare KWin and inside a Plasma session. In QPainter the line **is not there** — which is
+itself an answer.
 
-#### 5.6 ⚙ Scegliere QUALE GPU usa il compositore — deciso dall'utente
+#### 5.6 ⚙ Choosing WHICH GPU the compositor uses — decided by the user
 
-> **Decisione dell'utente, 8 agosto 2026: «non usare la Radeon, usa la Intel integrata».**
-> La macchina di prova ha due GPU: Intel AlderLake-S (i915) su `renderD128` e Radeon RX 6800
-> (amdgpu) su `renderD129`.
+> **User's decision, 8 August 2026: «non usare la Radeon, usa la Intel integrata».**
+> The test machine has two GPUs: Intel AlderLake-S (i915) on `renderD128` and Radeon RX 6800
+> (amdgpu) on `renderD129`.
 
-**[R]** Con `--virtual` **non esiste alcuna leva**: `findRenderDevice()`
-(`virtual_backend.cpp:23-56`) itera `drmGetDevices2()` e prende **la prima che si apre**, senza
-guardare nessuna variabile — `KWIN_DRM_DEVICES` vale solo per il backend `drm`. Sul banco l'ordine
-mette la Radeon davanti, e KWin prende quella.
+**[R]** With `--virtual` **there is no lever at all**: `findRenderDevice()`
+(`virtual_backend.cpp:23-56`) iterates `drmGetDevices2()` and takes **the first one that opens**, without
+looking at any variable — `KWIN_DRM_DEVICES` applies only to the `drm` backend. On the bench the order
+puts the Radeon first, and KWin takes that one.
 
-**[M]** Quindi la Intel si ottiene in un modo solo: **rendere l'altra GPU non apribile da quel
-processo**. Due strade provate, e una sola va bene:
+**[M]** So the Intel is obtained in one way only: **making the other GPU not openable by that
+process**. Two roads tried, and only one is good:
 
-| Strada | GPU | Cancello della cattura |
+| Road | GPU | Capture gate |
 |---|---|---|
-| `InaccessiblePaths=/dev/dri/renderD129` nell'unità | ✅ Intel | ⛔ **chiuso** (§3.3-bis, riquadro) |
-| `DeviceAllow=` + `DevicePolicy=closed` | ⛔ nessun effetto: resta la Radeon (in un'unità **d'utente** il controllo dei device non è delegato) | ✅ aperto |
-| ✅ **permessi del nodo** (`renderD129` fuori dal gruppo `render`) | ✅ **Intel** | ✅ **aperto**, e flusso PipeWire ottenuto |
+| `InaccessiblePaths=/dev/dri/renderD129` in the unit | ✅ Intel | ⛔ **closed** (§3.3-bis, box) |
+| `DeviceAllow=` + `DevicePolicy=closed` | ⛔ no effect: the Radeon stays (in a **user** unit device control is not delegated) | ✅ open |
+| ✅ **node permissions** (`renderD129` out of the `render` group) | ✅ **Intel** | ✅ **open**, and PipeWire stream obtained |
 
-✅ **La via buona è la terza**, e per il prodotto si scrive come **regola udev** che assegna il nodo
-della GPU da non usare a un gruppo che l'utente del servizio non ha — identificando la scheda per
-**id PCI** (`/dev/dri/by-path/pci-0000:03:00.0-render`), perché il numero del nodo non è stabile.
+✅ **The good road is the third**, and for the product it is written as a **udev rule** that assigns the node
+of the GPU not to be used to a group the service's user does not have — identifying the card by
+**PCI id** (`/dev/dri/by-path/pci-0000:03:00.0-render`), because the node number is not stable.
 
-⚠ **E il prezzo va detto**: negare il nodo coi permessi lo nega **a tutta la sessione dell'utente**,
-non solo al compositore. Se un giorno servisse la Radeon per un'altra cosa nella stessa sessione, la
-strada giusta diventa un'altra (per esempio far scegliere a *noi* il device e non a KWin, che oggi
-non è possibile senza toccare KWin).
+⚠ **And the price must be stated**: denying the node via permissions denies it **to the user's whole session**,
+not just to the compositor. If one day the Radeon were needed for something else in the same session, the
+right road becomes a different one (for example having *us* choose the device and not KWin, which today
+is not possible without touching KWin).
 
-#### 5.7 📊 Quanto eroga la cattura **sulla Intel integrata** — la tabella che conta per il prodotto
+#### 5.7 📊 How much capture delivers **on the integrated Intel** — the table that matters for the product
 
-**[M] 8 agosto 2026.** Le tabelle di `REFERENCE.md` R32 sono della Radeon; queste sono della GPU che
-il prodotto userà. Misura della **sola cattura**, scena dichiarata e in movimento
-(`weston-simple-egl` a schermo intero, sincronizzato al ridisegno), tetto dichiarato 60 fps, 10
-secondi per cella, `kwin_wayland --virtual` con la Radeon negata:
+**[M] 8 August 2026.** The tables in `REFERENCE.md` R32 are from the Radeon; these are from the GPU the
+product will use. Measurement of **capture alone**, declared and moving scene
+(`weston-simple-egl` full screen, synchronised to redraw), declared cap 60 fps, 10
+seconds per cell, `kwin_wayland --virtual` with the Radeon denied:
 
-| Risoluzione | copia zero (DMA-BUF) | in memoria (MemFd) |
+| Resolution | zero-copy (DMA-BUF) | in memory (MemFd) |
 |---|---|---|
-| 1280×720 | **59,4** *(mediana 16,5 ms)* | 49,6 *(20,2 ms)* |
-| 1920×1080 | **59,2** *(17,2 ms)* | 43,3 *(23,2 ms)* |
-| 2560×1440 | **59,3** *(17,2 ms)* | 37,0 *(27,0 ms)* |
-| **3840×2160** | **59,0** *(17,2 ms)* | **27,0** *(37,4 ms)* |
+| 1280×720 | **59.4** *(median 16.5 ms)* | 49.6 *(20.2 ms)* |
+| 1920×1080 | **59.2** *(17.2 ms)* | 43.3 *(23.2 ms)* |
+| 2560×1440 | **59.3** *(17.2 ms)* | 37.0 *(27.0 ms)* |
+| **3840×2160** | **59.0** *(17.2 ms)* | **27.0** *(37.4 ms)* |
 
-⭐ **Due letture, e sono le più importanti di tutta la fase:**
+⭐ **Two readings, and they are the most important of the whole phase:**
 
-1. ✅ **A copia zero la risoluzione non costa niente**: 59 fotogrammi al secondo **da 720p a 4K**, con
-   la mediana degli intervalli ferma a 17 ms. Il requisito dell'utente — *«30 a 1080p, 60 a 4K»*
-   (`REFERENCE.md` R32, e la memoria del progetto) — **è raggiungibile su una Intel integrata**.
-2. ⛔ **In memoria la risoluzione costa tutto**: da 49,6 a **27,0** salendo a 4K, cioè meno della metà
-   del bisogno. **Il collo di bottiglia è la copia**, non il compositore e non la GPU.
+1. ✅ **At zero-copy resolution costs nothing**: 59 frames per second **from 720p to 4K**, with
+   the median of the intervals holding at 17 ms. The user's requirement — *«30 a 1080p, 60 a 4K»*
+   (`REFERENCE.md` R32, and the project memory) — **is reachable on an integrated Intel**.
+2. ⛔ **In memory resolution costs everything**: from 49.6 to **27.0** going up to 4K, i.e. less than half
+   of what is needed. **The bottleneck is the copy**, not the compositor and not the GPU.
 
-> **Da cui la conseguenza per il piano**: su KDE la copia zero non è un'ottimizzazione, è **la
-> condizione** per i 60 a 4K. E su KDE è anche più facile che su GNOME, perché i fotogrammi sono
-> interi (§4.6) e resta solo da aspettare la fence (§4.8). La fase 9, rinviata su GNOME per il
-> «diff», qui va ripresa con una prospettiva diversa.
+> **Hence the consequence for the plan**: on KDE zero-copy is not an optimisation, it is **the
+> condition** for 60 at 4K. And on KDE it is also easier than on GNOME, because the frames are
+> whole (§4.6) and all that remains is waiting for the fence (§4.8). Phase 9, postponed on GNOME because of the
+> «diff», must be taken up again here with a different perspective.
 
-E il ripiego è silenzioso quasi ovunque: le righe che lo raccontano sono `qCDebug`, spente per
-difetto. L'unica visibile è *«Configured compositor not supported by Platform. Falling back to
-defaults»* (`:139`) — che scatta proprio nel caso «il render node non si è aperto». Sul backend
-`drm` nemmeno quella: `supportedCompositors()` dichiara sempre `{OpenGL, QPainter}`.
+And the fallback is silent almost everywhere: the lines that tell of it are `qCDebug`, off by
+default. The only visible one is *«Configured compositor not supported by Platform. Falling back to
+defaults»* (`:139`) — which fires precisely in the «il render node non si è aperto» case. On the
+`drm` backend not even that: `supportedCompositors()` always declares `{OpenGL, QPainter}`.
 
-#### 5.5 Xwayland — meglio che su GNOME
+#### 5.5 Xwayland — better than on GNOME
 
-**[R]** `--xwayland` è opzionale sulla riga di comando e in compilazione; l'avvio è **pigro** (parte
-solo quando un client tocca il socket X11, `xwaylandlauncher.cpp:95-99`) e **non bloccante**
-(`-displayfd` + `QSocketNotifier`); un fallimento produce un `qCWarning` e **il compositore
-continua**; un crash ha una politica di riavvio con conteggio.
+**[R]** `--xwayland` is optional on the command line and at build time; startup is **lazy** (it starts
+only when a client touches the X11 socket, `xwaylandlauncher.cpp:95-99`) and **non-blocking**
+(`-displayfd` + `QSocketNotifier`); a failure produces a `qCWarning` and **the compositor
+carries on**; a crash has a restart policy with a counter.
 
-> La questione aperta n.8 di `SPECIFICA.md` — «Xwayland non completa l'avvio e a volte si porta
-> dietro il compositore» — **su KWin non ha l'equivalente**: qui un Xwayland assente o bloccato non
-> appende il compositore. Ma vedi §6.4: su Plasma, X11 serve **a ksmserver**, e quindi
-> `--xwayland` diventa obbligatorio per un'altra ragione.
+> Open question no.8 of `SPECIFICA.md` — «Xwayland non completa l'avvio e a volte si porta
+> dietro il compositore» — **has no equivalent on KWin**: here an absent or stuck Xwayland does not
+> hang the compositor. But see §6.4: on Plasma, X11 is needed **by ksmserver**, and therefore
+> `--xwayland` becomes mandatory for another reason.
 
 ---
 
-### 6. La sessione Plasma senza monitor
+### 6. The Plasma session without a monitor
 
-#### 6.1 La ricetta
+#### 6.1 The recipe
 
-**[R]**, e le due variabili obbligatorie sono solo due:
+**[R]**, and the mandatory variables are only two:
 
 ```sh
-# 1. ambiente composto da zero (env_clear), con:
-XDG_RUNTIME_DIR=/run/user/1000                         # obbligatoria: senza, wl_socket_create()
-                                                       # torna NULL e il wrapper fa qFatal
+# 1. environment built from scratch (env_clear), with:
+XDG_RUNTIME_DIR=/run/user/1000                         # mandatory: without it, wl_socket_create()
+                                                       # returns NULL and the wrapper does qFatal
                                                        #   [R] wl-socket.c:132-136
-DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus  # obbligatoria: senza, return 1
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus  # mandatory: without it, return 1
                                                        #   [R] startplasma-wayland.cpp:58-61
 HOME= USER= PATH= SHELL=
-LANG=it_IT.UTF-8                                       # consigliata [R] startplasma.cpp:213-216
+LANG=it_IT.UTF-8                                       # recommended [R] startplasma.cpp:213-216
 
-# ⛔ NON impostare DISPLAY, WAYLAND_DISPLAY, QT_QPA_PLATFORM
+# ⛔ do NOT set DISPLAY, WAYLAND_DISPLAY, QT_QPA_PLATFORM
 #    [R] main_wayland.cpp:452-463, ksmserver/main.cpp:106-117
 
-# 2. sovrascrittura dell'unità del compositore — su Wayland è l'unica leva
+# 2. override of the compositor unit — on Wayland it is the only lever
 #    $XDG_RUNTIME_DIR/systemd/user.control/plasma-kwin_wayland.service.d/remotix.conf
 [Service]
 ExecStart=
 ExecStart=/usr/bin/kwin_wayland_wrapper --xwayland --virtual --width W --height H --no-lockscreen
-#    poi: systemctl --user daemon-reload
+#    then: systemctl --user daemon-reload
 
-# 3. avvio
+# 3. start
 exec /usr/bin/startplasma-wayland
 ```
 
-**Che cosa mette Plasma da sé**, e che quindi non va dichiarato (`startplasma.cpp:353-414`,
+**What Plasma sets by itself**, and which therefore need not be declared (`startplasma.cpp:353-414`,
 `startplasma-wayland.cpp:64`): `XDG_CURRENT_DESKTOP=KDE`, `XDG_SESSION_TYPE=wayland`,
 `KDE_FULL_SESSION`, `KDE_SESSION_VERSION=6`, `KDE_SESSION_UID`, `XDG_MENU_PREFIX`,
-`XDG_CONFIG_DIRS`, le `XKB_DEFAULT_*` da locale1, `LANG`/`LC_*` da `plasma-localerc`. E
-`WAYLAND_DISPLAY`/`DISPLAY`/`XAUTHORITY` le esporta il wrapper del compositore
+`XDG_CONFIG_DIRS`, the `XKB_DEFAULT_*` from locale1, `LANG`/`LC_*` from `plasma-localerc`. And
+`WAYLAND_DISPLAY`/`DISPLAY`/`XAUTHORITY` are exported by the compositor wrapper
 (`kwin_wrapper.cpp:157-163`).
 
-> ⛔ **E fra quelle che «mette Plasma da sé» ce n'è una che non è un dettaglio: `XDG_MENU_PREFIX`.**
-> [M, 7 agosto 2026] Senza di essa **il permesso della cattura non funziona**, per la ragione
-> spiegata in §3.3-bis: l'indice dei servizi resta vuoto e KWin non trova nessun `.desktop`. In
-> questa ricetta è coperta, perché `startplasma` la imposta
-> (`startplasma.cpp:366` — e **non** esegue `kbuildsycoca6`: l'indice si costruisce da sé nel primo
-> processo KDE che lo usa, che dentro la sessione ha già il prefisso giusto).
+> ⛔ **And among those that «mette Plasma da sé» there is one that is not a detail: `XDG_MENU_PREFIX`.**
+> [M, 7 August 2026] Without it **the capture permission does not work**, for the reason
+> explained in §3.3-bis: the service index stays empty and KWin finds no `.desktop`. In
+> this recipe it is covered, because `startplasma` sets it
+> (`startplasma.cpp:366` — and it does **not** run `kbuildsycoca6`: the index builds itself in the first
+> KDE process that uses it, which inside the session already has the right prefix).
 >
-> **Il pericolo è per chi non passa da `startplasma-wayland`**: un banco che avvia `kwin_wayland` a
-> mano, uno script di manutenzione o un `kbuildsycoca6` lanciato da una shell SSH **senza** il
-> prefisso sovrascrivono l'indice buono e chiudono il cancello a compositore già avviato, senza un
-> messaggio. Chi scrive prove esporta `XDG_MENU_PREFIX=plasma-` **sempre**.
+> **The danger is for whoever does not go through `startplasma-wayland`**: a bench that starts `kwin_wayland` by
+> hand, a maintenance script or a `kbuildsycoca6` launched from an SSH shell **without** the
+> prefix overwrite the good index and close the gate with the compositor already running, without a
+> message. Whoever writes tests exports `XDG_MENU_PREFIX=plasma-` **always**.
 
-> #### ✅ MISURATO — la ricetta funziona, con tre precisazioni
+> #### ✅ MEASURED — the recipe works, with three clarifications
 >
-> **[M] 8 agosto 2026.** `startplasma-wayland` avviato da una shell SSH con l'ambiente qui sopra e il
-> drop-in dell'unità: **plasmashell compare in 1 secondo**, il socket è `wayland-0`, KWin risponde su
-> D-Bus, la cattura è autorizzata e un flusso PipeWire si monta (§3.3-bis). Le tre precisazioni:
+> **[M] 8 August 2026.** `startplasma-wayland` started from an SSH shell with the environment above and the
+> unit drop-in: **plasmashell appears in 1 second**, the socket is `wayland-0`, KWin answers on
+> D-Bus, the capture is authorised and a PipeWire stream comes up (§3.3-bis). The three clarifications:
 >
-> 1. ⛔ **niente `InaccessiblePaths=` (né altro che implichi un namespace di monti) nel drop-in**:
->    chiude il cancello della cattura (§3.3-bis, riquadro). Per la GPU si usano i permessi del nodo
+> 1. ⛔ **no `InaccessiblePaths=` (nor anything else implying a mount namespace) in the drop-in**:
+>    it closes the capture gate (§3.3-bis, box). For the GPU the node permissions are used
 >    (§5.6).
-> 2. ⚠ **`ksmserver` e `Xwayland` non sono partiti affatto** (zero processi), e la sessione ha
->    funzionato comunque: plasmashell, kwin_wayland e kded6 in piedi. Su questo §6.4 va riletta — il
->    vincolo «`--xwayland` è obbligatorio per ksmserver» **non si è manifestato** in questa prova, e
->    Xwayland parte pigramente (§5.5). Resta da capire se ksmserver serva per il *logout ordinato* o
->    per il ripristino della sessione: **non si tolga `--xwayland` prima di averlo verificato.**
-> 3. ⚠ La sessione **crea 23 file di configurazione** in `~/.config` al primo avvio (`kdeglobals`,
->    `plasmashellrc`, `plasma-localerc`, `kwinrc`…). È normale, ma va saputo: la prima sessione
->    scrive nella casa dell'utente, e `plasma-localerc` fissa la locale (sul banco: `LANG=C.UTF-8`).
+> 2. ⚠ **`ksmserver` and `Xwayland` did not start at all** (zero processes), and the session
+>    worked anyway: plasmashell, kwin_wayland and kded6 up. On this, §6.4 must be re-read — the
+>    constraint «`--xwayland` è obbligatorio per ksmserver» **did not show up** in this test, and
+>    Xwayland starts lazily (§5.5). It remains to be understood whether ksmserver is needed for the *orderly logout* or
+>    for session restore: **do not remove `--xwayland` before having verified it.**
+> 3. ⚠ The session **creates 23 configuration files** in `~/.config` on first start (`kdeglobals`,
+>    `plasmashellrc`, `plasma-localerc`, `kwinrc`…). It is normal, but worth knowing: the first session
+>    writes into the user's home, and `plasma-localerc` fixes the locale (on the bench: `LANG=C.UTF-8`).
 
-> ✅ **Il difetto silenzioso pagato su GNOME non c'è.** `ConditionEnvironment=` **non esiste in
-> nessuna unità** dei sette repo [R]: su GNOME l'unità della Shell portava
-> `ConditionEnvironment=XDG_SESSION_TYPE=wayland` e senza quella variabile il compositore non
-> partiva affatto, senza che nessuno lo spiegasse (§5.9-bis di `SPECIFICA.md`).
+> ✅ **The silent defect paid for on GNOME is not here.** `ConditionEnvironment=` **does not exist in
+> any unit** of the seven repos [R]: on GNOME the Shell unit carried
+> `ConditionEnvironment=XDG_SESSION_TYPE=wayland` and without that variable the compositor did not
+> start at all, without anyone explaining it (§5.9-bis of `SPECIFICA.md`).
 >
-> ✅ **E Plasma fa da sé la pulizia che noi facciamo a mano.** `dropSessionVarsFromSystemdEnvironment()`
-> (`startplasma.cpp:445-473`) toglie a **ogni avvio** dall'ambiente del manager systemd le variabili
-> di sessione (`DISPLAY`, `XAUTHORITY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`, tutte le `XDG_*`), con
-> il commento: *«Those can be leftovers from previous sessions … e.g. `$DISPLAY` might break
-> kwin_wayland»*. È la nostra lezione «chi sopravvive al logout non riusa niente della sessione
-> morta», applicata dal desktop stesso.
+> ✅ **And Plasma does by itself the cleanup we do by hand.** `dropSessionVarsFromSystemdEnvironment()`
+> (`startplasma.cpp:445-473`) removes at **every start** from the systemd manager's environment the session
+> variables (`DISPLAY`, `XAUTHORITY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`, all the `XDG_*`), with
+> the comment: *«Those can be leftovers from previous sessions … e.g. `$DISPLAY` might break
+> kwin_wayland»*. It is our lesson «chi sopravvive al logout non riusa niente della sessione
+> morta», applied by the desktop itself.
 
-#### 6.2 La catena, e chi lancia il compositore
+#### 6.2 The chain, and who launches the compositor
 
-**[R]** `startplasma-wayland` **non lancia KWin**: fa `StartUnit("plasma-workspace-wayland.target")`
-(`startplasma.cpp:726`), e l'unità è
+**[R]** `startplasma-wayland` **does not launch KWin**: it does `StartUnit("plasma-workspace-wayland.target")`
+(`startplasma.cpp:726`), and the unit is
 
 ```ini
 # kwin/plasma-kwin_wayland.service.in
@@ -2271,347 +2271,347 @@ BusName=org.kde.KWinWrapper
 PartOf=graphical-session.target
 ```
 
-Il wrapper **rigira tutti i propri argomenti** a `kwin_wayland` (`kwin_wrapper.cpp:128-130`): basta
-aggiungerli all'`ExecStart`. La ricetta per farlo senza toccare `$HOME` è di KDE stessa —
-copia in `$XDG_RUNTIME_DIR/systemd/user.control` più `daemon-reload`
+The wrapper **passes all its own arguments on** to `kwin_wayland` (`kwin_wrapper.cpp:128-130`): it is enough to
+add them to the `ExecStart`. The recipe for doing so without touching `$HOME` is KDE's own —
+a copy in `$XDG_RUNTIME_DIR/systemd/user.control` plus `daemon-reload`
 (`login-sessions/startplasma-dev.sh.cmake:8-13`).
 
-L'ordine effettivo che ne risulta: `plasma-kwin_wayland` → `kcminit` → `kded6` →
+The actual order that results: `plasma-kwin_wayland` → `kcminit` → `kded6` →
 **`ksmserver`** → `plasmashell` → `plasma-core.target` → `plasma-workspace.target`
 (powerdevil, kglobalaccel, kwallet-pam, …) → `graphical-session.target` → autostart.
 
-⚠ **Due fragilità da conoscere** [R]: l'unità del compositore dichiara `BusName=` **senza
-`Type=dbus`**, quindi l'ordinamento di ksmserver poggia solo su `After=`, cioè sull'*exec* del
-wrapper e non sull'export di `DISPLAY` — nella strada classica il commento è esplicito: *«This must
+⚠ **Two fragilities to know** [R]: the compositor unit declares `BusName=` **without
+`Type=dbus`**, so the ordering of ksmserver rests only on `After=`, that is on the *exec* of the
+wrapper and not on the export of `DISPLAY` — in the classic path the comment is explicit: *«This must
 block until started as it sets the WAYLAND_DISPLAY/DISPLAY env variables needed for the rest of the
-boot»* (`plasma-session/startup.cpp:162-165`). E `plasma-core.target` /
-`plasma-workspace.target` hanno `RefuseManualStart=yes`: si avvia **solo**
-`plasma-workspace-wayland.target`.
+boot»* (`plasma-session/startup.cpp:162-165`). And `plasma-core.target` /
+`plasma-workspace.target` have `RefuseManualStart=yes`: **only**
+`plasma-workspace-wayland.target` is started.
 
-#### 6.3 ✅ Non serve una sessione logind su un seat — con `--virtual`
+#### 6.3 ✅ No logind session on a seat is needed — with `--virtual`
 
-**[R]** `--virtual` impone `Session::Type::Noop` (`main_wayland.cpp:513`): **niente logind, niente
-seat, niente `/dev/dri` via `TakeDevice`, niente `/dev/input`**. `XDG_SEAT` e `XDG_VTNR` **non sono
-letti da nessuno dei sette repo** [✗]. È l'equivalente esatto del nostro accertamento su
-`gnome-session` (§5.9-bis di `SPECIFICA.md`).
+**[R]** `--virtual` forces `Session::Type::Noop` (`main_wayland.cpp:513`): **no logind, no
+seat, no `/dev/dri` via `TakeDevice`, no `/dev/input`**. `XDG_SEAT` and `XDG_VTNR` **are not
+read by any of the seven repos** [✗]. It is the exact equivalent of our finding on
+`gnome-session` (§5.9-bis of `SPECIFICA.md`).
 
-Con `--drm`, invece, serve una sessione logind **attivabile** su un seat: cioè quel che fa un
-gestore di accesso, e che per definizione non abbiamo. **È il compromesso centrale della fase**
+With `--drm`, instead, an **activatable** logind session on a seat is needed: that is, what a
+login manager does, and which by definition we do not have. **It is the central compromise of the phase**
 (§13).
 
-#### 6.4 ⛔ `--xwayland` non è opzionale, e la ragione è ksmserver
+#### 6.4 ⛔ `--xwayland` is not optional, and the reason is ksmserver
 
-**[R]** `plasma-workspace/ksmserver/main.cpp`: forza `QT_QPA_PLATFORM=xcb` (`:106-107`, *«force xcb
-QPA plugin as ksmserver is very X11 specific»*), costruisce una `QGuiApplication`, e a `:124`
-dereferenzia il display X11 **senza alcun controllo di nullità**. E `ksmserver` è `Requires=` di
-`plasma-core.target`, che è `Requires=` della catena fino al target di sessione: **un suo guasto
-abbatte tutta la sessione.**
+**[R]** `plasma-workspace/ksmserver/main.cpp`: it forces `QT_QPA_PLATFORM=xcb` (`:106-107`, *«force xcb
+QPA plugin as ksmserver is very X11 specific»*), builds a `QGuiApplication`, and at `:124`
+dereferences the X11 display **without any null check**. And `ksmserver` is `Requires=` of
+`plasma-core.target`, which is `Requires=` of the chain up to the session target: **a fault in it
+brings down the whole session.**
 
-> Cioè: KWin non ha bisogno di Xwayland, **Plasma sì**. E la nostra riga di banco
-> (`banco/banco-altri.sh:33`) avvia KWin **senza** `--xwayland`: con quella riga una **sessione
-> Plasma non parte**. I 59–60 fps misurati valgono per **KWin nudo**, non per una sessione Plasma
-> completa — e questa è la seconda etichetta da correggere sulle misure del 7 agosto.
+> That is: KWin does not need Xwayland, **Plasma does**. And our bench line
+> (`banco/banco-altri.sh:33`) starts KWin **without** `--xwayland`: with that line a **Plasma
+> session does not start**. The 59–60 fps measured hold for **bare KWin**, not for a complete Plasma
+> session — and this is the second label to correct on the measurements of 7 August.
 
-#### 6.5 Il logout: non c'è `RegisterClient`, e la strada buona è passiva
+#### 6.5 Logout: there is no `RegisterClient`, and the good path is passive
 
-**[R]** Gli attori sono quattro: `plasma-shutdown` (`org.kde.Shutdown`), `ksmserver-logout-greeter`
+**[R]** There are four actors: `plasma-shutdown` (`org.kde.Shutdown`), `ksmserver-logout-greeter`
 (`org.kde.LogoutPrompt`), `ksmserver` (`org.kde.ksmserver`), KWin (`org.kde.KWin` `/Session`).
 
-| Come accorgersene | Quando | Rischio |
+| How to notice it | When | Risk |
 |---|---|---|
-| ✅ **`NameOwnerChanged` su `org.kde.Shutdown`** (nome attivabile: compare quando il logout comincia, `plasma-shutdown/shutdown.cpp:20-23`) | **all'inizio** | nessuno: siamo spettatori |
-| ✅ **`NameOwnerChanged` su `org.kde.KWinWrapper`** (sparisce a sessione finita) | alla fine | nessuno |
-| ⚠ registrazione **XSMP** presso ksmserver (`$SESSION_MANAGER`, libSM/libICE) | all'inizio, con obbligo di risposta | **la regola dell'ostaggio vale identica**: chi si registra e non risponde frena il logout di **15 s** (`ksmserver/logout.cpp:293-303`), poi viene ignorato |
+| ✅ **`NameOwnerChanged` on `org.kde.Shutdown`** (activatable name: it appears when the logout begins, `plasma-shutdown/shutdown.cpp:20-23`) | **at the start** | none: we are spectators |
+| ✅ **`NameOwnerChanged` on `org.kde.KWinWrapper`** (disappears when the session is over) | at the end | none |
+| ⚠ **XSMP** registration with ksmserver (`$SESSION_MANAGER`, libSM/libICE) | at the start, with an obligation to answer | **the hostage rule applies identically**: whoever registers and does not answer holds up the logout by **15 s** (`ksmserver/logout.cpp:293-303`), then is ignored |
 
-Le prime due sono esattamente quel che fa `startplasma` per decidere di uscire
-(`startplasma.cpp:673-689`). **È la strada da prendere**: costa due sottoscrizioni sul bus e non
-mette in gioco la sessione dell'utente. L'equivalente vero di `RegisterClient` esiste — ma è XSMP su
-ICE, richiede `libSM`/`libICE` e un `DISPLAY`, e `org.kde.KSMServerInterface` **non ha alcun segnale
-«la sessione sta finendo»** [R].
+The first two are exactly what `startplasma` does to decide to exit
+(`startplasma.cpp:673-689`). **It is the path to take**: it costs two subscriptions on the bus and does not
+put the user's session at stake. The true equivalent of `RegisterClient` exists — but it is XSMP over
+ICE, it requires `libSM`/`libICE` and a `DISPLAY`, and `org.kde.KSMServerInterface` **has no
+«la sessione sta finendo» signal** [R].
 
-**Comandare il logout da fuori** [R]:
+**Commanding the logout from outside** [R]:
 
-| Che si vuole | Chiamata |
+| What is wanted | Call |
 |---|---|
-| senza conferma (= `Logout(1)` di GNOME) | `org.kde.Shutdown` `/Shutdown` `logout()` |
-| con conferma | `org.kde.LogoutPrompt` `/LogoutPrompt` `promptLogout()` |
-| **forzato** (`Logout(2)` **non esiste** [✗]) | `StopUnit("plasma-workspace.target", "fail")` — è quel che fa `plasma-shutdown` alla fine (`shutdown.cpp:151-157`) |
-| brutale | `org.kde.KWin` `/Session` `quit()` |
+| without confirmation (= GNOME's `Logout(1)`) | `org.kde.Shutdown` `/Shutdown` `logout()` |
+| with confirmation | `org.kde.LogoutPrompt` `/LogoutPrompt` `promptLogout()` |
+| **forced** (`Logout(2)` **does not exist** [✗]) | `StopUnit("plasma-workspace.target", "fail")` — it is what `plasma-shutdown` does at the end (`shutdown.cpp:151-157`) |
+| brutal | `org.kde.KWin` `/Session` `quit()` |
 
-⛔ **E il percorso ordinato può annullarsi da sé.** `KWin::SessionManager::closeWaylandWindows()`
-(`kwin/src/sm.cpp:422-508`): dopo **10 s** mostra una notifica persistente con *Cancel Logout* /
-*Log Out Anyway*, e se **nessuno risponde** attende fino a **2 minuti** prima di procedere. In una
-sessione non presidiata nessuno risponde mai: la seconda metà del nostro `sgombera` (§5.10 di
-`SPECIFICA.md`, `Logout(1)` e poi `Logout(2)`) **va riprogettata su KDE** — il secondo passo è
+⛔ **And the orderly path can cancel itself.** `KWin::SessionManager::closeWaylandWindows()`
+(`kwin/src/sm.cpp:422-508`): after **10 s** it shows a persistent notification with *Cancel Logout* /
+*Log Out Anyway*, and if **nobody answers** it waits up to **2 minutes** before proceeding. In an
+unattended session nobody ever answers: the second half of our `sgombera` (§5.10 of
+`SPECIFICA.md`, `Logout(1)` and then `Logout(2)`) **must be redesigned on KDE** — the second step is
 `StopUnit`.
 
-E per non far comparire finestre che nessuno vedrà: `ksmserverrc [General] confirmLogout=false`
+And to keep windows nobody will see from appearing: `ksmserverrc [General] confirmLogout=false`
 (`sessionmanagementbackend.cpp:49-52`).
 
-#### 6.6 ✅ Il bus di sessione non muore — se è quello d'utente
+#### 6.6 ✅ The session bus does not die — if it is the user one
 
-**[R]** In tutti e sette i repo **non c'è alcun riferimento a `dbus.service`, `dbus-launch` o
-`dbus --exit-with-session`** fuori dai test: Plasma **non gestisce il ciclo di vita del bus**. Lo
-pretende in piedi, oppure si fa avvolgere da `plasma-dbus-run-session-if-needed`, che mette
-`dbus-run-session` davanti **solo se** `DBUS_SESSION_BUS_ADDRESS` è vuota.
+**[R]** In all seven repos **there is no reference to `dbus.service`, `dbus-launch` or
+`dbus --exit-with-session`** outside the tests: Plasma **does not manage the bus lifecycle**. It
+expects it up, or it gets wrapped by `plasma-dbus-run-session-if-needed`, which puts
+`dbus-run-session` in front **only if** `DBUS_SESSION_BUS_ADDRESS` is empty.
 
-> ✅ **Ricaduta**: se usiamo il bus **d'utente** (`/run/user/UID/bus`) e lo dichiariamo
-> nell'ambiente, **sopravvive al logout** e la connessione resta valida. I due difetti pagati su
-> GNOME — la connessione da buttare e riaprire, e `exit-on-close` che chiama `raise(SIGTERM)` per
-> conto nostro (§7.4 di `REFERENCE.md`) — **non si presentano**, purché non si lasci lavorare
-> `dbus-run-session`. **È una scelta nostra, e va fatta per il bus d'utente.**
+> ✅ **Consequence**: if we use the **user** bus (`/run/user/UID/bus`) and declare it
+> in the environment, **it survives the logout** and the connection stays valid. The two defects paid for on
+> GNOME — the connection to throw away and reopen, and `exit-on-close` calling `raise(SIGTERM)` on
+> our behalf (§7.4 of `REFERENCE.md`) — **do not show up**, as long as `dbus-run-session` is not left
+> to do its work. **It is our choice, and it must be made for the user bus.**
 
-> #### ✅ MISURATO — misura M9: il logout non porta via niente di nostro
+> #### ✅ MEASURED — measurement M9: the logout takes away nothing of ours
 >
-> **[M] 8 agosto 2026.** Sessione Plasma vera, chiusa con `org.kde.Shutdown.logout()` — la sentinella
-> passiva di §6.5, chiamata come la chiamerebbe il prodotto:
+> **[M] 8 August 2026.** Real Plasma session, closed with `org.kde.Shutdown.logout()` — the passive
+> sentinel of §6.5, called as the product would call it:
 >
-> | Dopo il logout | |
+> | After the logout | |
 > |---|---|
-> | `plasmashell`, `kwin_wayland`, `kded6` | **tutti spariti** (0 processi) |
-> | il socket `wayland-0` | **sparito** |
-> | **il bus d'utente** | ✅ **risponde ancora** (`GetId` riesce sulla stessa connessione) |
-> | `systemd --user` | ✅ vivo (`degraded`, per unità di sessione terminate) |
+> | `plasmashell`, `kwin_wayland`, `kded6` | **all gone** (0 processes) |
+> | the `wayland-0` socket | **gone** |
+> | **the user bus** | ✅ **still answers** (`GetId` succeeds on the same connection) |
+> | `systemd --user` | ✅ alive (`degraded`, because of terminated session units) |
 >
-> Quindi la scelta «bus d'utente» è confermata dal campo, e il difetto di GNOME **non si ripresenta**.
-> ⚠ Un dettaglio da non dimenticare: dopo il logout il socket è `wayland-0` *libero di nuovo*, e al
-> riavvio della sessione il numero **può cambiare** — va riletto, come dice il capoverso qui sotto.
+> So the «bus d'utente» choice is confirmed in the field, and the GNOME defect **does not reappear**.
+> ⚠ A detail not to forget: after the logout the socket is `wayland-0` *free again*, and on
+> session restart the number **may change** — it must be re-read, as the paragraph below says.
 
-**Riavviare la sessione dallo stesso processo funziona** [R], e Plasma lo prevede: `ResetFailed` e
-`Reload` a ogni avvio (`startplasma.cpp:648-649`). Cambiano `WAYLAND_DISPLAY` (il socket è il primo
-`wayland-N` libero), `DISPLAY` e `SESSION_MANAGER`: **vanno riletti, non ricordati.**
+**Restarting the session from the same process works** [R], and Plasma provides for it: `ResetFailed` and
+`Reload` at every start (`startplasma.cpp:648-649`). `WAYLAND_DISPLAY` changes (the socket is the first
+free `wayland-N`), as do `DISPLAY` and `SESSION_MANAGER`: **they must be re-read, not remembered.**
 
-#### 6.7 La disposizione di tastiera
+#### 6.7 The keyboard layout
 
-**[R]** Su Wayland la impone **KWin**, che legge `kxkbrc [Layout]` da sé (non esiste più un `kxkb`
-separato). Tre vie per noi:
+**[R]** On Wayland it is imposed by **KWin**, which reads `kxkbrc [Layout]` by itself (a separate `kxkb`
+no longer exists). Three ways for us:
 
-1. **`XKB_DEFAULT_LAYOUT`/`_VARIANT`/`_MODEL`/`_OPTIONS` nell'ambiente di `kwin_wayland`**, che
-   `applyEnvironmentRules()` usa come riempimento (`xkb.cpp:557-575`); con
-   **`KWIN_XKB_DEFAULT_KEYMAP=1`** si **forza** l'uso del solo ambiente, ignorando `kxkbrc` e
-   locale1 (`xkb.cpp:522-545`). **È la leva pulita**: la disposizione arriva dal client e la si mette
-   nell'ambiente prima di avviare il compositore;
+1. **`XKB_DEFAULT_LAYOUT`/`_VARIANT`/`_MODEL`/`_OPTIONS` in the environment of `kwin_wayland`**, which
+   `applyEnvironmentRules()` uses as fill-in (`xkb.cpp:557-575`); with
+   **`KWIN_XKB_DEFAULT_KEYMAP=1`** the use of the environment alone is **forced**, ignoring `kxkbrc` and
+   locale1 (`xkb.cpp:522-545`). **It is the clean lever**: the layout comes from the client and is put
+   in the environment before starting the compositor;
 2. D-Bus `org.kde.keyboard` `/Layouts`: `getLayout`, **`setLayout(index)`**, `getLayoutsList`,
-   `switchToNextLayout` (`keyboard_layout.cpp:186-245`), senza permessi — ma **sceglie solo fra le
-   disposizioni già caricate**;
-3. scrivere `kxkbrc` e far ricaricare KWin (`org.kde.KWin` `/KWin` `reconfigure()`). **[?]** quale
-   dei due basti.
+   `switchToNextLayout` (`keyboard_layout.cpp:186-245`), without permissions — but it **only chooses among the
+   layouts already loaded**;
+3. write `kxkbrc` and make KWin reload (`org.kde.KWin` `/KWin` `reconfigure()`). **[?]** which
+   of the two suffices.
 
-E comunque: **la keymap della sessione la leggiamo da libei** (§7.4), come su GNOME. Questa sezione
-serve per il caso in cui la si voglia *imporre*.
+And in any case: **we read the session keymap from libei** (§7.4), as on GNOME. This section
+is for the case where one wants to *impose* it.
 
-#### 6.8 Le animazioni: nessun gancio per-cattura
+#### 6.8 Animations: no per-capture hook
 
-**[R]** Mutter offre `disable-animations` come opzione della sessione di cattura; il protocollo di
-KWin ha **una sola** opzione per stream — il modo del cursore — e nel plugin di cattura non c'è una
-riga sulle animazioni [✗]. Su KDE si spengono **a sessione**:
+**[R]** Mutter offers `disable-animations` as an option of the capture session; KWin's
+protocol has **a single** option per stream — the cursor mode — and in the capture plugin there is not one
+line about animations [✗]. On KDE they are switched off **per session**:
 
-| Leva | Dove | Note |
+| Lever | Where | Notes |
 |---|---|---|
-| `KWIN_EFFECTS_FORCE_ANIMATIONS=0` | ambiente di `kwin_wayland` | dichiara le animazioni **non supportate** (`effecthandler.cpp:1425-1433`); letta in una `static`, **non cambiabile a caldo** |
-| `AnimationDurationFactor=0` nel gruppo `[KDE]` | `kwinrc` **e** `kdeglobals` | vale **a caldo**, un `KConfigWatcher` la sorveglia (`options.cpp:96-101`); ⚠ `0` non azzera i tempi, li porta a **1 ms** (`effect/effect.cpp:447-457`) |
+| `KWIN_EFFECTS_FORCE_ANIMATIONS=0` | environment of `kwin_wayland` | declares animations **unsupported** (`effecthandler.cpp:1425-1433`); read into a `static`, **not changeable live** |
+| `AnimationDurationFactor=0` in the `[KDE]` group | `kwinrc` **and** `kdeglobals` | applies **live**, a `KConfigWatcher` watches it (`options.cpp:96-101`); ⚠ `0` does not zero the times, it brings them to **1 ms** (`effect/effect.cpp:447-457`) |
 
 ---
 
-### 7. L'input: KWin parla libei
+### 7. Input: KWin speaks libei
 
-#### 7.1 ✅ Un backend EIS vero, e si apre con una chiamata D-Bus
+#### 7.1 ✅ A real EIS backend, and it opens with a D-Bus call
 
-**[R]** `kwin/src/plugins/eis/`, 1829 righe, plugin **attivo per default**, caricato solo in
-modalità Wayland. Il descrittore si ottiene così:
+**[R]** `kwin/src/plugins/eis/`, 1829 lines, plugin **active by default**, loaded only in
+Wayland mode. The descriptor is obtained like this:
 
 ```
-servizio     org.kde.KWin
-oggetto      /org/kde/KWin/EIS/RemoteDesktop
-interfaccia  org.kde.KWin.EIS.RemoteDesktop
-metodo       connectToEIS(i capabilities) → (h fd, i cookie)
+service      org.kde.KWin
+object       /org/kde/KWin/EIS/RemoteDesktop
+interface    org.kde.KWin.EIS.RemoteDesktop
+method       connectToEIS(i capabilities) → (h fd, i cookie)
              disconnect(i cookie)
 ```
 
-(`eisbackend.h:39-40`, `eisbackend.cpp:70-104`; firma confermata dall'altro lato,
-`xdg-desktop-portal-kde/src/remotedesktop.cpp:457-460`). La maschera è quella del portale xdg:
-**tastiera 1, puntatore 2, tocco 4** → per noi **7**. Il `cookie` serve a chiudere.
+(`eisbackend.h:39-40`, `eisbackend.cpp:70-104`; signature confirmed from the other side,
+`xdg-desktop-portal-kde/src/remotedesktop.cpp:457-460`). The mask is the xdg portal's:
+**keyboard 1, pointer 2, touch 4** → for us **7**. The `cookie` is used to close.
 
-> ⛔ **Nessun controllo sul chiamante.** `registerObject` è `ExportAllInvokables` senza filtro, e
-> `message().service()` è usato **solo** per la durata di vita (se il chiamante muore, il contesto
-> cade). Nessun pid, nessun `.desktop`, nessun `X-KDE-DBUS-Restricted-Interfaces`, nessun dialogo:
-> il meccanismo esiste in KWin ma **in tutto 6.3.6 lo usa solo `ScreenShot2`**.
+> ⛔ **No check on the caller.** `registerObject` is `ExportAllInvokables` without a filter, and
+> `message().service()` is used **only** for the lifetime (if the caller dies, the context
+> drops). No pid, no `.desktop`, no `X-KDE-DBUS-Restricted-Interfaces`, no dialog:
+> the mechanism exists in KWin but **in all of 6.3.6 only `ScreenShot2` uses it**.
 >
-> Per un servizio non presidiato è **meglio di GNOME**: nessuna sessione da creare, nessun portale.
-> Va però trattato come **una porta che può chiudersi**: l'errore D-Bus è un caso normale, non un
-> bug, e il ripiego è `fake_input` (che invece il `.desktop` lo richiede).
+> For an unattended service it is **better than GNOME**: no session to create, no portal.
+> It must however be treated as **a door that can close**: the D-Bus error is a normal case, not a
+> bug, and the fallback is `fake_input` (which instead does require the `.desktop`).
 
-⚠ **Trappola di distribuzione** [R]: `libeis-1.0` è **opzionale** in compilazione
-(`kwin/CMakeLists.txt:319-320`, `431`). Se la distribuzione compila KWin senza, il plugin **non
-esiste** e l'oggetto D-Bus non compare: non è un errore a runtime, è un'assenza. **[?]** lo stato di
-Debian Trixie va misurato.
+⚠ **Distribution trap** [R]: `libeis-1.0` is **optional** at build time
+(`kwin/CMakeLists.txt:319-320`, `431`). If the distribution builds KWin without it, the plugin **does not
+exist** and the D-Bus object does not appear: it is not a runtime error, it is an absence. **[?]** the state of
+Debian Trixie must be measured.
 
-**I dispositivi** (`eiscontext.cpp:155-174`, `eisbackend.cpp:116-171`): fino a tre per seat —
-«eis pointer» (relativo), **«eis absolute device»** (assoluto **+ tocco**), «eis keyboard». Il seat
-annuncia solo le capacità concesse dalla maschera. Il nostro contesto deve essere **sender**: un
-receiver viene buttato giù (`eiscontext.cpp:127-131`).
+**The devices** (`eiscontext.cpp:155-174`, `eisbackend.cpp:116-171`): up to three per seat —
+«eis pointer» (relative), **«eis absolute device»** (absolute **+ touch**), «eis keyboard». The seat
+announces only the capabilities granted by the mask. Our context must be a **sender**: a
+receiver gets torn down (`eiscontext.cpp:127-131`).
 
-#### 7.2 Che cosa si riusa del nostro `input.c`, e che cosa cambia
+#### 7.2 What is reused from our `input.c`, and what changes
 
-Il confronto con le quattro cose che libei ci dà su GNOME:
+The comparison with the four things libei gives us on GNOME:
 
-| | via **EIS** su KWin | via `fake_input` |
+| | via **EIS** on KWin | via `fake_input` |
 |---|---|---|
-| **keymap della sessione** | ✅ **sì**, XKB testo v1 su memfd sigillato (`eisbackend.cpp:159-171`) | no |
-| **stato dei modificatori a scatto** | ⛔ **no**: `eis_device_keyboard_send_xkb_modifiers` **non è chiamato da nessuna parte in KWin** [✗] | no |
-| **ping / sincronizzazione** | ✅ sì — ma per una proprietà accidentale: non c'è un `case EIS_EVENT_SYNC`, e il pong parte perché l'`unref` è fuori dallo `switch` (`eiscontext.cpp:333`) | no |
-| **regioni degli schermi** | ✅ sì, una per output — ⚠ **senza `mapping_id`** (`eis_region_set_mapping_id` non è chiamato) [✗] | no |
+| **session keymap** | ✅ **yes**, XKB text v1 on a sealed memfd (`eisbackend.cpp:159-171`) | no |
+| **state of the locking modifiers** | ⛔ **no**: `eis_device_keyboard_send_xkb_modifiers` **is not called anywhere in KWin** [✗] | no |
+| **ping / synchronisation** | ✅ yes — but by an accidental property: there is no `case EIS_EVENT_SYNC`, and the pong goes out because the `unref` is outside the `switch` (`eiscontext.cpp:333`) | no |
+| **screen regions** | ✅ yes, one per output — ⚠ **without `mapping_id`** (`eis_region_set_mapping_id` is not called) [✗] | no |
 
-**Le quattro cose da toccare, tutte circoscritte:**
+**The four things to touch, all contained:**
 
-1. ⛔ **La rotella va cambiata.** Il nostro `/120 → ×10` usa `ei_device_scroll_delta`, che su KWin
-   dà `deltaV120 = 0` (`eiscontext.cpp:246-258`) → un `wl_pointer.axis` liscio **senza
-   `axis_value120` né `axis_discrete`** (`pointer.cpp:281-358`): chi conta gli scatti non ne vede
-   nessuno, e Xwayland deve indovinare i bottoni 4/5. Va usato **`ei_device_scroll_discrete(±120)`**,
-   che KWin converte in `delta = 15` + `deltaV120 = ±120` (`eiscontext.cpp:272-286`), cioè la
-   rotella vera. **Si passa il valore RDP quasi com'è: più semplice di oggi.** Verticale negato
-   (la convenzione `wl_pointer` è positivo = giù).
+1. ⛔ **The wheel must be changed.** Our `/120 → ×10` uses `ei_device_scroll_delta`, which on KWin
+   gives `deltaV120 = 0` (`eiscontext.cpp:246-258`) → a smooth `wl_pointer.axis` **without
+   `axis_value120` or `axis_discrete`** (`pointer.cpp:281-358`): whoever counts the clicks sees
+   none, and Xwayland has to guess buttons 4/5. **`ei_device_scroll_discrete(±120)`** must be used,
+   which KWin converts into `delta = 15` + `deltaV120 = ±120` (`eiscontext.cpp:272-286`), that is the
+   real wheel. **The RDP value is passed almost as it is: simpler than today.** Vertical negated
+   (the `wl_pointer` convention is positive = down).
 
-   > **✅ Misura M10, chiusa l'8 agosto 2026 — per lettura, e la lettura è conclusiva.**
-   > `eiscontext.cpp:272-285`: KWin **non inverte nulla** e tratta i due assi **con la stessa
-   > formula**, senza casi particolari:
+   > **✅ Measurement M10, closed on 8 August 2026 — by reading, and the reading is conclusive.**
+   > `eiscontext.cpp:272-285`: KWin **inverts nothing** and treats the two axes **with the same
+   > formula**, without special cases:
    > ```cpp
    > constexpr auto anglePer120Step = 15 / 120.0;
    > if (x != 0) Q_EMIT device->pointerAxisChanged(PointerAxis::Horizontal, x * anglePer120Step, x, …);
    > if (y != 0) Q_EMIT device->pointerAxisChanged(PointerAxis::Vertical,   y * anglePer120Step, y, …);
    > ```
-   > Il segno passa **tale e quale** sia nel delta angolare sia nel `v120` grezzo. Quindi il verso che
-   > arriva alle applicazioni è quello di libinput, **identico per verticale e orizzontale**, e
-   > l'adattamento da RDP è **tutto nostro** — come già su GNOME. Non c'è nessuna asimmetria di KWin
-   > da compensare, che era il sospetto. ⚠ Resta da guardare **con l'occhio** nella fase, perché il
-   > verso è una di quelle cose che si giudicano vedendole (`LEZIONI.md` §7.3).
-2. ⛔ **I modificatori a scatto non arrivano.** La riconciliazione di BlocMaiusc/BlocNum dopo un
-   ping — quella che su GNOME abbiamo fatto bene — **per questa strada non si fa**. Il ripiego è
-   `org_kde_kwin_keystate` v5 (`kwin/src/wayland/keystate.cpp`), che dà `unlocked/latched/locked/pressed`
-   **con notifica spontanea**, ma è **in lista nera**: richiede di essere anche client Wayland e di
-   dichiararlo nel `.desktop`. **È una scelta da mettere davanti all'utente** (§13.4).
-3. **Le regioni si cercano per geometria**, non per chiave: sono già in coordinate globali logiche,
-   quindi `transform_position` si semplifica — cambia il criterio di ricerca, non la formula. E
-   `libei` scarta una posizione assoluta **fuori da ogni regione**.
-4. **I dispositivi si ricambiano.** A ogni cambio di output o di disposizione KWin fa
+   > The sign passes **unchanged** both in the angular delta and in the raw `v120`. So the direction that
+   > reaches applications is libinput's, **identical for vertical and horizontal**, and
+   > the adaptation from RDP is **entirely ours** — as already on GNOME. There is no KWin asymmetry
+   > to compensate, which was the suspicion. ⚠ It remains to be checked **by eye** in the phase, because the
+   > direction is one of those things judged by seeing them (`LEZIONI.md` §7.3).
+2. ⛔ **The locking modifiers do not arrive.** The reconciliation of CapsLock/NumLock after a
+   ping — the one we did well on GNOME — **is not done along this path**. The fallback is
+   `org_kde_kwin_keystate` v5 (`kwin/src/wayland/keystate.cpp`), which gives `unlocked/latched/locked/pressed`
+   **with spontaneous notification**, but it is **on the blacklist**: it requires also being a Wayland client and
+   declaring it in the `.desktop`. **It is a choice to put before the user** (§13.4).
+3. **Regions are looked up by geometry**, not by key: they are already in logical global coordinates,
+   so `transform_position` simplifies — the search criterion changes, not the formula. And
+   `libei` discards an absolute position **outside every region**.
+4. **Devices get replaced.** At every change of output or layout KWin does
    `eis_device_remove` + `eis_device_add` (`eisdevice.cpp:42-53`, via `updateScreens`/`updateKeymap`):
-   dal nostro lato il dispositivo **scompare e ricompare**. Va retto il ricambio, rileggendo keymap
-   e regioni a ogni `DEVICE_ADDED`.
+   on our side the device **disappears and reappears**. The replacement must be handled, re-reading keymap
+   and regions at every `DEVICE_ADDED`.
 
-**Quel che invece resta identico** [R]:
+**What instead stays identical** [R]:
 
 | | |
 |---|---|
-| tasti | **codice evdev senza il −8**: KWin somma lui l'offset, in un punto solo (`xkb.cpp:45`, `772`). La nostra conversione scancode RDP → `WINPR_KEYCODE_TYPE_EVDEV` vale tale e quale |
-| bottoni | codici evdev intatti (`BTN_LEFT` 0x110 …) |
-| movimento assoluto | coordinate **globali logiche**, formula riusabile |
-| tocco | stesse coordinate, sul dispositivo assoluto |
-| `ei_device_frame()` | **obbligatorio**: senza, i client Wayland non applicano il movimento (`eiscontext.cpp:190-200` → `wl_pointer.frame`) |
-| pressioni ripetute e rilasci non appaiati | **KWin li scarta in silenzio** (`eiscontext.cpp:287-303`): non siamo *costretti* a tenere il conto come su Mutter, ma le nostre tabelle restano utili — servono a noi per sapere che cosa rilasciare |
-| rilascio a fine connessione | ✅ **KWin fa da rete di sicurezza**: nel distruttore del dispositivo rilascia ogni tasto e bottone premuto e annulla i tocchi (`eisdevice.cpp:27-40`), e il contesto cade quando il servizio D-Bus chiamante scompare |
-| Xwayland | ✅ l'input iniettato **la raggiunge** per la via normale del `wl_seat` (`xwayland.cpp:240-330`): nessun XTEST, nessuna strada separata |
+| keys | **evdev code without the −8**: KWin adds the offset itself, in one place only (`xkb.cpp:45`, `772`). Our RDP scancode → `WINPR_KEYCODE_TYPE_EVDEV` conversion holds as it is |
+| buttons | evdev codes intact (`BTN_LEFT` 0x110 …) |
+| absolute motion | **logical global** coordinates, reusable formula |
+| touch | same coordinates, on the absolute device |
+| `ei_device_frame()` | **mandatory**: without it, Wayland clients do not apply the motion (`eiscontext.cpp:190-200` → `wl_pointer.frame`) |
+| repeated presses and unpaired releases | **KWin discards them silently** (`eiscontext.cpp:287-303`): we are not *forced* to keep count as on Mutter, but our tables remain useful — they serve us to know what to release |
+| release at end of connection | ✅ **KWin acts as a safety net**: in the device destructor it releases every pressed key and button and cancels touches (`eisdevice.cpp:27-40`), and the context drops when the calling D-Bus service disappears |
+| Xwayland | ✅ injected input **reaches it** through the normal `wl_seat` path (`xwayland.cpp:240-330`): no XTEST, no separate path |
 
-⚠ **Un difetto di KWin trovato per strada** [R]: quattro `continue` dentro lo `switch` di
-`eiscontext.cpp` (righe 236, 241, 294, 300) saltano l'`eis_event_unref` finale — ogni pressione
-ripetuta e ogni rilascio non appaiato **perde un riferimento**. Non ci cambia niente
-funzionalmente, ma è un motivo per non bombardare KWin di eventi ridondanti.
+⚠ **A KWin defect found along the way** [R]: four `continue` inside the `switch` of
+`eiscontext.cpp` (lines 236, 241, 294, 300) skip the final `eis_event_unref` — every repeated
+press and every unpaired release **leaks a reference**. It changes nothing for us
+functionally, but it is a reason not to bombard KWin with redundant events.
 
-#### 7.3 `fake_input`, la strada vecchia
+#### 7.3 `fake_input`, the old path
 
-**[R]** `org_kde_kwin_fake_input` (non `zkde_fake_input`), implementato in
-`kwin/src/backends/fakeinput/fakeinputbackend.cpp`, **versione 5** mentre l'XML dichiara la 6
-(`keyboard_keysym` **non è implementato**). È a senso unico: **zero eventi**. Il suo `authenticate`
-ignora gli argomenti e non autentica nulla (`:107-113`, `// TODO: make secure`), ma il permesso
-vero è il filtro dei global.
+**[R]** `org_kde_kwin_fake_input` (not `zkde_fake_input`), implemented in
+`kwin/src/backends/fakeinput/fakeinputbackend.cpp`, **version 5** while the XML declares 6
+(`keyboard_keysym` **is not implemented**). It is one-way: **zero events**. Its `authenticate`
+ignores the arguments and authenticates nothing (`:107-113`, `// TODO: make secure`), but the real
+permission is the globals filter.
 
-E il suo limite serio: `axis` forza **`deltaV120 = 0` sempre** (`:179`) — **fake_input non può
-produrre uno scatto discreto**. È la ragione tecnica per cui krfb scorre male su Wayland.
+And its serious limit: `axis` forces **`deltaV120 = 0` always** (`:179`) — **fake_input cannot
+produce a discrete click**. It is the technical reason why krfb scrolls badly on Wayland.
 
 ---
 
-### 8. Output, geometria e risoluzione dinamica
+### 8. Output, geometry and dynamic resolution
 
-#### 8.1 ⛔ Un output virtuale non si ridimensiona
+#### 8.1 ⛔ A virtual output cannot be resized
 
-È il risultato più costoso di questo studio. Quattro barriere, tutte **[R]**:
+It is the costliest result of this study. Four barriers, all **[R]**:
 
-1. **il modo è immutabile**: `OutputMode::m_size` e `m_refreshRate` sono `const`
+1. **the mode is immutable**: `OutputMode::m_size` and `m_refreshRate` are `const`
    (`core/output.h:127-128`);
-2. **l'elenco dei modi non viene mai riscritto** per un output virtuale: `DrmVirtualOutput` lo fissa
-   nel costruttore (`drm_virtual_output.cpp:37-40`), `VirtualOutput` in `init()`. Le sole
-   riscritture a runtime sono nei backend annidati e nei connettori DRM veri;
-3. **`kde_output_management_v2` può solo *scegliere* un modo esistente**: la richiesta prende un
-   `wl_resource` di `kde_output_device_mode_v2`, cioè un oggetto già annunciato
-   (`outputmanagement_v2.cpp:122-142`). Non esiste una richiesta «misura arbitraria» — e libkscreen
-   è lo stesso protocollo con un cappotto, quindi non è una via alternativa;
-4. e se anche ci fosse un secondo modo, **su DRM verrebbe ignorato**: `Output::applyChanges()` non
-   tocca mai `currentMode` (`core/output.cpp:517-543`).
+2. **the mode list is never rewritten** for a virtual output: `DrmVirtualOutput` fixes it
+   in the constructor (`drm_virtual_output.cpp:37-40`), `VirtualOutput` in `init()`. The only
+   runtime rewrites are in the nested backends and in real DRM connectors;
+3. **`kde_output_management_v2` can only *choose* an existing mode**: the request takes a
+   `wl_resource` of `kde_output_device_mode_v2`, that is an object already announced
+   (`outputmanagement_v2.cpp:122-142`). There is no «misura arbitraria» request — and libkscreen
+   is the same protocol with a coat on, so it is not an alternative path;
+4. and even if there were a second mode, **on DRM it would be ignored**: `Output::applyChanges()` never
+   touches `currentMode` (`core/output.cpp:517-543`).
 
-**Non esistono** [✗]: `org.kde.KWin.VirtualOutputs` (c'era in KWin 5), una variabile `KWIN_*` che
-crei output, una richiesta di resize nel protocollo screencast. `VirtualBackend::setVirtualOutputs()`
-esiste ma i suoi **unici chiamanti sono gli autotest**.
+**Do not exist** [✗]: `org.kde.KWin.VirtualOutputs` (it was in KWin 5), a `KWIN_*` variable that
+creates outputs, a resize request in the screencast protocol. `VirtualBackend::setVirtualOutputs()`
+exists but its **only callers are the autotests**.
 
-> #### ✅ MISURATO — misure M7 e M11
+> #### ✅ MEASURED — measurements M7 and M11
 >
-> **[M] 8 agosto 2026.**
+> **[M] 8 August 2026.**
 >
-> **M7a — `stream_virtual_output` con `--virtual` non funziona**, come diceva la lettura del codice:
-> `KWin ha rifiutato: Could not find output`. Verificato, e senza sorprese.
+> **M7a — `stream_virtual_output` with `--virtual` does not work**, as the code reading said:
+> `KWin ha rifiutato: Could not find output`. Verified, and without surprises.
 >
-> **M11 — le misure assurde**: `0x0`, `-1x-1`, `1x1`, `16384x16384`, `99999x99999` → **tutte
-> rifiutate con la stessa riga** (`Could not find output`) e **KWin resta vivo dopo tutte e cinque**.
-> ⚠ Ma il rifiuto arriva perché *manca l'output virtuale*, non perché KWin **validi** le misure:
-> quindi **la validazione resta non misurata**, e non è misurabile con `--virtual` — servirebbe
-> `--drm`, che §5.2 ha escluso. Chi un giorno girasse su KWin ≥ 6.8 la rifaccia.
+> **M11 — the absurd sizes**: `0x0`, `-1x-1`, `1x1`, `16384x16384`, `99999x99999` → **all
+> refused with the same line** (`Could not find output`) and **KWin stays alive after all five**.
+> ⚠ But the refusal comes because *the virtual output is missing*, not because KWin **validates** the sizes:
+> so **validation remains unmeasured**, and it cannot be measured with `--virtual` — it would need
+> `--drm`, which §5.2 excluded. Whoever one day runs on KWin ≥ 6.8 should redo it.
 >
-> **M7b — quanto costa mettere in piedi un flusso**: dal collegamento al socket al nodo PipeWire
-> annunciato, **65, 65 e 67 ms** su tre giri consecutivi. È la componente fissa del «buco» del
-> ripiego «chiudi e rifai» (§8.3); a quella va aggiunto il tempo di ricreare l'output, che su
-> `--virtual` non si può misurare perché l'output non si crea affatto.
+> **M7b — how much it costs to set up a stream**: from connecting to the socket to the PipeWire node
+> announced, **65, 65 and 67 ms** over three consecutive rounds. It is the fixed component of the «buco» of the
+> «chiudi e rifai» fallback (§8.3); to it must be added the time to recreate the output, which on
+> `--virtual` cannot be measured because the output is not created at all.
 
-#### 8.2 Il paradosso: tutto il resto c'è già, ed è identico a Mutter
+#### 8.2 The paradox: everything else is already there, and it is identical to Mutter
 
-**[R]** `ScreenCastStream::resize()` (`screencaststream.cpp:672-682`) fa
-**`pw_stream_update_params`** sullo stesso nodo, ed è chiamata **alla fine di ogni fotogramma**
-confrontando `m_source->textureSize()` (`:669`). Il consumatore vede solo un
-`param_changed(SPA_PARAM_Format)`, poi i buffer nuovi. **Se l'output potesse cambiare modo, lo
-stream lo seguirebbe da solo** — è precisamente la meccanica che la fase 6 ci ha dato su GNOME. E
-funziona già oggi per gli **output reali**: se l'utente cambia risoluzione a un monitor mentre lo
-catturiamo, lo stream si adegua.
+**[R]** `ScreenCastStream::resize()` (`screencaststream.cpp:672-682`) does
+**`pw_stream_update_params`** on the same node, and it is called **at the end of every frame**
+comparing `m_source->textureSize()` (`:669`). The consumer sees only a
+`param_changed(SPA_PARAM_Format)`, then the new buffers. **If the output could change mode, the
+stream would follow it by itself** — it is precisely the mechanism phase 6 gave us on GNOME. And
+it already works today for **real outputs**: if the user changes resolution on a monitor while we
+capture it, the stream adapts.
 
-Manca un pezzo minuscolo: un `DrmVirtualOutput::resize()` modellato su `WaylandOutput::resize()`
-(`wayland_output.cpp:293-303`) più una richiesta nel protocollo. **Una dozzina di righe upstream.**
+A tiny piece is missing: a `DrmVirtualOutput::resize()` modelled on `WaylandOutput::resize()`
+(`wayland_output.cpp:293-303`) plus a request in the protocol. **A dozen lines upstream.**
 
-> ### ✅ E QUELLE RIGHE SONO GIÀ STATE SCRITTE — nove giorni prima di questo studio
+> ### ✅ AND THOSE LINES HAVE ALREADY BEEN WRITTEN — nine days before this study
 >
-> *[I] `kwin!7932` «screencast: Resizable Virtual Monitors», **unita il 29 luglio 2026** (commit
-> `452707eb`, milestone **6.8**), con `kpipewire!205` e `krdp!113`.*
+> *[I] `kwin!7932` «screencast: Resizable Virtual Monitors», **merged on 29 July 2026** (commit
+> `452707eb`, milestone **6.8**), with `kpipewire!205` and `krdp!113`.*
 >
-> **E il modo in cui l'hanno fatto è quello che ci serve.** Non una richiesta nuova nel protocollo —
-> quella è stata **proposta e respinta** (`plasma-wayland-protocols!138` + `kwin!9519`, 1–2 luglio
-> 2026, chiuse in un giorno) con questa motivazione di David Edmundson: *«We have this over pipewire
+> **And the way they did it is the one we need.** Not a new request in the protocol —
+> that one was **proposed and rejected** (`plasma-wayland-protocols!138` + `kwin!9519`, 1–2 July
+> 2026, closed within a day) with this reasoning from David Edmundson: *«We have this over pipewire
 > […] Which is better because: things work the same in gnome; sandboxed clients using the portal can
-> resize it»*. Il meccanismo scelto è **la negoziazione PipeWire**: il consumatore propone un
-> `SPA_POD_CHOICE_RANGE_Rectangle` e **KWin segue la misura dello stream**, con i limiti 200×200 …
+> resize it»*. The chosen mechanism is **PipeWire negotiation**: the consumer proposes a
+> `SPA_POD_CHOICE_RANGE_Rectangle` and **KWin follows the stream size**, with limits 200×200 …
 > 10000×10000.
 >
-> **Cioè: è esattamente il codice della nostra fase 6**, e il lato consumatore sono tre righe.
+> **That is: it is exactly the code of our phase 6**, and the consumer side is three lines.
 >
-> ⚠ **Ma è la 6.8, cioè ottobre 2026**: su Trixie (6.3.6) non c'è, e non c'è nemmeno su sid. Da cui la
-> conseguenza operativa, che vale più del fatto: **il ridimensionamento su KDE non è una funzionalità
-> perduta, è una che arriva** — e il nostro codice va scritto **nella forma della negoziazione**, che
-> è quella che diventa giusta da sé quando l'utente aggiorna. La strategia (A) resta il ripiego per
-> le versioni che non ce l'hanno, non la strada principale.
+> ⚠ **But it is 6.8, that is October 2026**: on Trixie (6.3.6) it is not there, and not even on sid. Hence the
+> operational consequence, which is worth more than the fact: **resizing on KDE is not a lost
+> feature, it is one that is coming** — and our code must be written **in the form of the negotiation**, which
+> is the one that becomes right by itself when the user upgrades. Strategy (A) remains the fallback for
+> the versions that do not have it, not the main path.
 >
-> Da tenere d'occhio, perché è il tavolo su cui chiedere quel che ci manca:
-> `plasma-wayland-protocols!130`, **una versione 2 del protocollo di cattura**, in bozza da marzo 2026.
+> To keep an eye on, because it is the table at which to ask for what we lack:
+> `plasma-wayland-protocols!130`, **a version 2 of the capture protocol**, in draft since March 2026.
 
-#### 8.2-bis ⛔ La guardia obbligatoria: senza, la rinegoziazione si morde la coda
+#### 8.2-bis ⛔ The mandatory guard: without it, the renegotiation chases its own tail
 
-*Dal rapporto 16 §1.5, e non è una nostra deduzione: è un difetto **trovato da altri** durante la
-revisione di `kwin!7932`, cioè proprio il lavoro che porterà il ridimensionamento in 6.8.*
+*From report 16 §1.5, and it is not our deduction: it is a defect **found by others** during the
+review of `kwin!7932`, that is the very work that will bring resizing in 6.8.*
 
-**[I]** Nick Haghiri, 3 luglio 2026, sulla richiesta di merge di KWin:
+**[I]** Nick Haghiri, 3 July 2026, on the KWin merge request:
 
 > *«Resizing re-emits `outputsQueried()`, which triggers a full output reconfiguration, which can
 > cause the stream to renegotiate again and call back into `resize()`. … this results in repeatedly
@@ -2619,303 +2619,303 @@ revisione di `kwin!7932`, cioè proprio il lavoro che porterà il ridimensioname
 > destroyed/recreated many times per session, PipeWire toggles `streaming ↔ paused` repeatedly, and
 > video freezes intermittently.»*
 
-La cura, nel codice unito ([C] `outputscreencastsource.cpp:170-181`), è **una riga**:
+The cure, in the merged code ([C] `outputscreencastsource.cpp:170-181`), is **one line**:
 
 ```cpp
 void OutputScreenCastSource::resize(const QSize &size)
 {
-    if (m_output->pixelSize() == size) {   // ← senza questo, ciclo infinito
+    if (m_output->pixelSize() == size) {   // ← without this, infinite loop
         return;
     }
     m_output->resize(size);
 }
 ```
 
-> #### ✅ E L'INPUT È STATO SCRITTO E PROVATO — 8 agosto 2026, voce 2
+> #### ✅ AND THE INPUT HAS BEEN WRITTEN AND TESTED — 8 August 2026, item 2
 >
-> *Le quattro differenze di §7.2 sono tutte nel codice, e tutte e quattro hanno una riga di banco.*
+> *The four differences of §7.2 are all in the code, and all four have a bench line.*
 >
-> | | Esito |
+> | | Outcome |
 > |---|---|
-> | `connectToEIS(7)` da REMOTIX | ✅ **concesso**, gettone 1, nessun permesso chiesto. ⚠ Il descrittore viaggia in una **lista a parte**: il tipo `h` porta solo un indice, e chi legge il corpo del messaggio prende uno **zero** — cioè lo standard input, un fd validissimo che punta alla cosa sbagliata |
-> | la keymap | ✅ letta da libei: `English (US)`, come su GNOME |
-> | la rotella | ✅ **scatti discreti nei due versi**, misurati. Il valore di RDP si passa quasi com'è |
-> | le regioni | ✅ trovata per **geometria**: `0,0 1920x1080`, con `mapping-id «assente»` — cioè il criterio per chiave non poteva funzionare, ed è esattamente quel che questo documento prevedeva |
-> | `org_kde_kwin_keystate` | ✅ **parla**, e `fetchStates` dà lo stato di partenza. Lo stesso `.desktop` della cattura lo autorizza: è un nome in più, come previsto |
+> | `connectToEIS(7)` from REMOTIX | ✅ **granted**, token 1, no permission asked. ⚠ The descriptor travels in a **separate list**: the `h` type carries only an index, and whoever reads the message body gets a **zero** — that is standard input, a perfectly valid fd pointing to the wrong thing |
+> | the keymap | ✅ read from libei: `English (US)`, as on GNOME |
+> | the wheel | ✅ **discrete clicks in both directions**, measured. The RDP value is passed almost as it is |
+> | the regions | ✅ found by **geometry**: `0,0 1920x1080`, with `mapping-id «assente»` — that is, the by-key criterion could not have worked, and it is exactly what this document predicted |
+> | `org_kde_kwin_keystate` | ✅ **speaks**, and `fetchStates` gives the initial state. The same `.desktop` as the capture authorises it: it is one more name, as predicted |
 >
-> ⛔ **E la conferma che vale di più è negativa**: `EI_EVENT_KEYBOARD_MODIFIERS` non è mai arrivato,
-> in nessuna prova. La riconciliazione dei lucchetti scritta per GNOME, su KDE, **non girerebbe** — e
-> senza `keystate` sarebbe rimasta lì, scritta e morta, senza che nessun banco se ne accorgesse.
+> ⛔ **And the confirmation worth the most is negative**: `EI_EVENT_KEYBOARD_MODIFIERS` never arrived,
+> in any test. The lock reconciliation written for GNOME, on KDE, **would not run** — and
+> without `keystate` it would have stayed there, written and dead, without any bench noticing.
 
-⛔ **E lo specchio vale per noi, che siamo il consumatore.** kpipewire applica la stessa guardia
-([C] `pipewiresourcestream.cpp:467-475`): se la misura richiesta è **uguale** a quella già richiesta,
-**non si segnala nulla**. Senza quella condizione, ogni cambio di formato del flusso richiama la
-nostra richiesta di misura, che richiama un cambio di formato: video che si blocca a intermittenza e
-flusso che sfarfalla fra `streaming` e `paused`.
+⛔ **And the mirror applies to us, who are the consumer.** kpipewire applies the same guard
+([C] `pipewiresourcestream.cpp:467-475`): if the requested size is **equal** to the one already requested,
+**nothing is signalled**. Without that condition, every format change of the stream calls back
+our size request, which calls back a format change: video that freezes intermittently and a
+stream that flickers between `streaming` and `paused`.
 
-> ⚠ **Perché conta adesso**: l'utente ha deciso (8 agosto) che il ridimensionamento si scrive **nella
-> forma della negoziazione**, così da accendersi da sé su KWin 6.8. Quella forma **include questa
-> guardia**: è la prima riga della funzione, non un'ottimizzazione. Chi la dimentica non vede il
-> difetto su Trixie (dove il resize non funziona) e lo scopre **il giorno dell'aggiornamento a 6.8**.
+> ⚠ **Why it matters now**: the user decided (8 August) that resizing is written **in the
+> form of the negotiation**, so as to switch on by itself on KWin 6.8. That form **includes this
+> guard**: it is the first line of the function, not an optimisation. Whoever forgets it does not see the
+> defect on Trixie (where resize does not work) and discovers it **on the day of the upgrade to 6.8**.
 
-#### 8.3 Le strategie residue, e il loro prezzo
+#### 8.3 The remaining strategies, and their price
 
-| | Che cos'è | Prezzo |
+| | What it is | Price |
 |---|---|---|
-| **(A)** chiudere lo stream e rifarlo con la misura nuova | l'unica via completa oggi | ✅ **su KDE non trascina l'input**: EIS e `fake_input` sono indipendenti dallo screencast, quindi **lo stato dei tasti premuti non si perde** — il prezzo che §5.8 di `SPECIFICA.md` accettava a malincuore su GNOME qui non si paga. Restano: un buco video di qualche fotogramma, un **nuovo nodo PipeWire**, e il riposizionamento delle finestre |
-| **(B)** output virtuale grande + `stream_region` ricreata | economica: non tocca gli output | dà un **ritaglio**, non un desktop ridimensionato: le finestre massimizzate restano grandi. E la regione è `const`: va ricreata. Serve al *letterboxing*, non a MS-RDPEDISP |
-| **(C)** `kde_output_management_v2` su una delle 15 misure comuni | solo per monitor fisici | fuori discussione su una sessione viva |
-| **(D)** patch upstream | il pezzo mancante | la strada giusta se la fase 11 diventa un impegno lungo |
+| **(A)** close the stream and redo it with the new size | the only complete path today | ✅ **on KDE it does not drag input along**: EIS and `fake_input` are independent of the screencast, so **the state of pressed keys is not lost** — the price that §5.8 of `SPECIFICA.md` reluctantly accepted on GNOME is not paid here. What remains: a video gap of a few frames, a **new PipeWire node**, and the repositioning of windows |
+| **(B)** large virtual output + recreated `stream_region` | cheap: it does not touch the outputs | gives a **crop**, not a resized desktop: maximised windows stay large. And the region is `const`: it must be recreated. It serves *letterboxing*, not MS-RDPEDISP |
+| **(C)** `kde_output_management_v2` on one of the 15 common sizes | only for physical monitors | out of the question on a live session |
+| **(D)** upstream patch | the missing piece | the right path if phase 11 becomes a long commitment |
 
-⛔ **E c'è un prezzo che nessuna delle quattro evita**: **ridimensionare un output ridispone le
-finestre dell'utente**, per due vie [R] — `desktopResized()` → `rearrange()` →
-`Window::checkWorkspacePosition()` (massimizzate, fullscreen, edge-keeping, correzione off-screen,
-`window.cpp:4052-4253`), e il `PlacementTracker`, la cui chiave **contiene la geometria
-dell'output** (`workspace.cpp:296-297`): ogni misura è una chiave, e **tornando a una misura già
-vista le finestre vengono teleportate indietro**. In più `updateOutputs()` **annulla un
-trascinamento in corso**. KWin stesso, quando subisce ridimensionamenti, li accorpa a un fotogramma
-con il commento *«Output resizing is a resource intensive task»* (`wayland_output.cpp:342-349`).
+⛔ **And there is a price none of the four avoids**: **resizing an output rearranges the user's
+windows**, in two ways [R] — `desktopResized()` → `rearrange()` →
+`Window::checkWorkspacePosition()` (maximised, fullscreen, edge-keeping, off-screen correction,
+`window.cpp:4052-4253`), and the `PlacementTracker`, whose key **contains the output
+geometry** (`workspace.cpp:296-297`): every size is a key, and **returning to an already-seen size
+the windows are teleported back**. Moreover `updateOutputs()` **cancels a
+drag in progress**. KWin itself, when it undergoes resizes, coalesces them into one frame
+with the comment *«Output resizing is a resource intensive task»* (`wayland_output.cpp:342-349`).
 
-> È lo stesso prezzo che su GNOME ha fatto scartare l'adattamento automatico di risoluzione (§3.1 di
-> `SPECIFICA.md`, riquadro della fase 7 in `PIANO.md`). Su KDE quindi **MS-RDPEDISP è una scelta da
-> ripesare**, non un lavoro da rifare: si può servire la misura chiesta **alla connessione** e
-> accorpare i cambi con l'assestamento di R10-bis, che già abbiamo.
+> It is the same price that on GNOME made us discard automatic resolution adaptation (§3.1 of
+> `SPECIFICA.md`, phase 7 box in `PIANO.md`). On KDE therefore **MS-RDPEDISP is a choice to
+> re-weigh**, not work to redo: the size requested can be served **at connection time** and
+> changes coalesced with the R10-bis settling, which we already have.
 
-#### 8.4 I protocolli degli output, e i vincoli sulla geometria
+#### 8.4 The output protocols, and the constraints on geometry
 
-**[R]** Nessuno dei protocolli di output è dietro un permesso:
+**[R]** None of the output protocols is behind a permission:
 
-| Protocollo | Versione | Che cosa dà |
+| Protocol | Version | What it gives |
 |---|---|---|
-| `kde_output_device_v2` | **11** | leggere tutto: geometria, misura fisica, modi, scala, EDID, `enabled`, uuid, VRR, HDR |
-| `kde_output_management_v2` | **12** | scrivere: `enable`, `mode` (solo esistenti), `transform`, `position`, `scale`, `overscan`, … |
-| `wl_output` | **4** | ha `name`/`description`: **è così che si ritrova `"Virtual-remotix"`** |
-| `zxdg_output_manager_v1` | 3 | posizione e misura logiche |
-| `wlr-output-management` | **assente** [✗] | — |
+| `kde_output_device_v2` | **11** | read everything: geometry, physical size, modes, scale, EDID, `enabled`, uuid, VRR, HDR |
+| `kde_output_management_v2` | **12** | write: `enable`, `mode` (existing only), `transform`, `position`, `scale`, `overscan`, … |
+| `wl_output` | **4** | has `name`/`description`: **this is how `"Virtual-remotix"` is found again** |
+| `zxdg_output_manager_v1` | 3 | logical position and size |
+| `wlr-output-management` | **absent** [✗] | — |
 
-Vincoli e trappole [R]:
+Constraints and traps [R]:
 
-- ⛔ **su DRM `width`/`height` sono pixel**, non unità logiche — l'XML dice «logical» e krfb ci
-  casca. **Si passa `scale = 1`**;
-- ⛔ **la scala richiesta viene buttata via**: `generateConfig` la rimpiazza con `chooseScale()`
-  (`outputconfigurationstore.cpp:507`, `607-656`), che su un `physicalSize` pari ai pixel dà sempre
+- ⛔ **on DRM `width`/`height` are pixels**, not logical units — the XML says «logical» and krfb falls
+  for it. **Pass `scale = 1`**;
+- ⛔ **the requested scale is thrown away**: `generateConfig` replaces it with `chooseScale()`
+  (`outputconfigurationstore.cpp:507`, `607-656`), which on a `physicalSize` equal to the pixels always gives
   1.0;
-- larghezza e altezza **pari** non sono richieste da KWin, ma le richiede il codificatore 4:2:0:
-  vincolo nostro;
-- ✅ **il metro dichiarato dal client Android non può arrivare a KWin**: `stream_virtual_output` non
-  ha un argomento di misura fisica, e `DrmVirtualOutput` impone `physicalSize = size`. Anche se
-  arrivasse, `chooseScale()` è difeso (`< 3 mm` → scala 1, con il commento *«these are all caused by
-  the screen mis-reporting its size»*) e la scala è limitata a `[1.0, 3.0]`. Il filtro sul DPI di
-  `misura.c` resta comunque necessario **per il nostro lato** (la superficie EGFX e il codificatore).
+- **even** width and height are not required by KWin, but the 4:2:0 encoder requires them:
+  our constraint;
+- ✅ **the metre declared by the Android client cannot reach KWin**: `stream_virtual_output` has no
+  physical-size argument, and `DrmVirtualOutput` imposes `physicalSize = size`. Even if it
+  arrived, `chooseScale()` is defended (`< 3 mm` → scale 1, with the comment *«these are all caused by
+  the screen mis-reporting its size»*) and the scale is limited to `[1.0, 3.0]`. The DPI filter of
+  `misura.c` remains necessary all the same **for our side** (the EGFX surface and the encoder).
 
 ---
 
-### 9. Gli appunti: più facili che su GNOME
+### 9. The clipboard: easier than on GNOME
 
-**[R]** La via è **`zwlr_data_control_manager_v1` versione 2** (`wayland_server.cpp:386`), e
-**non è in lista nera**: nessun permesso, nessun `.desktop`. `ext_data_control_v1` non esiste in
-6.3.6 [✗], e il portale RemoteDesktop di KDE dichiara `clipboard_enabled: false`
-(`remotedesktop.cpp:264`) — la via GNOME (la clipboard dentro la sessione di controllo) **non ha
-equivalente**, e non serve.
+**[R]** The way is **`zwlr_data_control_manager_v1` version 2** (`wayland_server.cpp:386`), and
+**it is not blacklisted**: no permission, no `.desktop`. `ext_data_control_v1` does not exist in
+6.3.6 [✗], and the KDE RemoteDesktop portal declares `clipboard_enabled: false`
+(`remotedesktop.cpp:264`) — the GNOME way (the clipboard inside the control session) **has no
+equivalent**, and is not needed.
 
-**Leggere**: `get_data_device(seat)` → il server manda **subito** `data_offer` + gli `offer(mime)` +
-`selection`; poi `receive(mime, fd)` e si legge fino a EOF, mentre il proprietario scrive.
-⚠ Un `offer(mime)` può arrivare **dopo** `selection`: l'elenco dei tipi non è completo all'istante
-dell'evento.
+**Reading**: `get_data_device(seat)` → the server sends **immediately** `data_offer` + the `offer(mime)` +
+`selection`; then `receive(mime, fd)` and you read until EOF, while the owner writes.
+⚠ An `offer(mime)` can arrive **after** `selection`: the list of types is not complete at the instant
+of the event.
 
-**Scrivere**: `create_data_source()` → `offer(mime)` → `set_selection(source)`. ⚠ **Un source si usa
-una volta sola** (`error_used_source`), e quando qualcuno legge riceviamo `send(mime, fd)` con KWin
-che **chiude subito la propria copia del fd**: scrivere e chiudere è a nostro carico, e **senza
-bloccare** il loop (una pipe da 64 KB con un consumatore lento ci blocca).
+**Writing**: `create_data_source()` → `offer(mime)` → `set_selection(source)`. ⚠ **A source is used
+only once** (`error_used_source`), and when someone reads we receive `send(mime, fd)` with KWin
+**immediately closing its own copy of the fd**: writing and closing are up to us, and **without
+blocking** the loop (a 64 KB pipe with a slow consumer blocks us).
 
-**Le tre asimmetrie di Mutter, riposte a KWin** [R]:
+**Mutter's three asymmetries, put to KWin** [R]:
 
-| La domanda | Mutter | **KWin** |
+| The question | Mutter | **KWin** |
 |---|---|---|
-| Chi si ricollega riceve un annuncio? | **no**, e ci è costato | ✅ **sì**: `registerDataControlDevice()` manda subito selezione e primary selection (`seat.cpp:228-229`) — ⚠ se non c'è selezione manda un annuncio **vuoto**, non l'assenza di annuncio |
-| L'annuncio torna indietro dopo una nostra scrittura (eco)? | sì | ⛔ **sì**: `setSelection()` cicla su **tutti** i data control device, **compreso l'originatore** (`seat.cpp:1257-1259`), e il filtro «stessa selezione» non aiuta perché ogni source è nuovo |
-| Esiste un interruttore irreversibile (`DisableClipboard`)? | **sì**, e ci ha ucciso gli appunti | ✅ **no** [✗]: la clipboard non appartiene a una sessione |
+| Does whoever reconnects receive an announcement? | **no**, and it cost us | ✅ **yes**: `registerDataControlDevice()` immediately sends selection and primary selection (`seat.cpp:228-229`) — ⚠ if there is no selection it sends an **empty** announcement, not the absence of an announcement |
+| Does the announcement come back after one of our writes (echo)? | yes | ⛔ **yes**: `setSelection()` loops over **all** data control devices, **including the originator** (`seat.cpp:1257-1259`), and the «stessa selezione» filter does not help because every source is new |
+| Is there an irreversible switch (`DisableClipboard`)? | **yes**, and it killed our clipboard | ✅ **no** [✗]: the clipboard does not belong to a session |
 
-⛔ **Due trappole dell'eco**, da evitare per costruzione: leggere l'eco significa farsi chiedere i
-dati **dal proprio source** (stallo, se la lettura è sincrona); girarlo al client RDP significa
-entrare nel ciclo. Il criterio robusto: **ignorare il primo `selection` che arriva dopo un nostro
-`set_selection`**, confrontando anche la lista dei tipi. **[?]** Nel protocollo non c'è un serial né
-un'attribuzione.
+⛔ **Two echo traps**, to be avoided by construction: reading the echo means being asked for the
+data **by our own source** (deadlock, if the read is synchronous); forwarding it to the RDP client means
+entering the loop. The robust criterion: **ignore the first `selection` that arrives after one of our
+`set_selection`**, also comparing the list of types. **[?]** The protocol has neither a serial nor
+an attribution.
 
-**I due coinquilini** [R]:
+**The two roommates** [R]:
 
-- **klipper** *rimette* l'ultimo elemento quando la clipboard si svuota, marcandolo
-  `application/x-kde-onlyReplaceEmpty` (`klipper/systemclipboard.cpp:403-411`): se distruggiamo il
-  nostro source senza sostituirlo, **il contenuto precedente torna**. E si difende dai cicli con
-  **10 cambi al secondo** (`:50`): non superarli. ⚠ E KWin ha un aggiramento dedicato
-  (`seat.cpp:200-226`) che **annulla in silenzio** un `set_selection` che dichiari quel tipo mime:
-  **non usarlo mai**;
-- **la sponda Xwayland**: X11 → Wayland è incondizionato; **Wayland → X11 solo quando una finestra
-  Xwayland è attiva** (`xwayland/clipboard.cpp:88-100`, con il commento *«shield against snooping X
-  windows»*), e si recupera al primo `windowActivated`. ⛔ **Una prova con `xclip` fallisce senza
-  errore**: è la forma di banco verde su difetto vivo che `LEZIONI.md` §2.2 elenca.
+- **klipper** *puts back* the last item when the clipboard becomes empty, marking it
+  `application/x-kde-onlyReplaceEmpty` (`klipper/systemclipboard.cpp:403-411`): if we destroy our
+  source without replacing it, **the previous content comes back**. And it defends itself from loops with
+  **10 changes per second** (`:50`): do not exceed them. ⚠ And KWin has a dedicated workaround
+  (`seat.cpp:200-226`) that **silently cancels** a `set_selection` that declares that mime type:
+  **never use it**;
+- **the Xwayland side**: X11 → Wayland is unconditional; **Wayland → X11 only when an Xwayland
+  window is active** (`xwayland/clipboard.cpp:88-100`, with the comment *«shield against snooping X
+  windows»*), and it catches up at the first `windowActivated`. ⛔ **A test with `xclip` fails without
+  an error**: it is the green-bench-on-a-live-fault form that `LEZIONI.md` §2.2 lists.
 
-#### 9.1 ✅ SCRITTA E PROVATA — 8 agosto 2026, `prove/fase11-appunti.sh`
+#### 9.1 ✅ WRITTEN AND TESTED — 8 August 2026, `prove/fase11-appunti.sh`
 
 ```
-OK  la sessione ha copiato qualcosa: 6 tipi
-OK  il client ha «SESSIONE-VERSO-CLIENT-àèìòù-ok»
-OK  la sessione incolla «CLIENT-VERSO-SESSIONE-àèìòù-ok»
-OK  nessun ciclo (2 annunci veri, 1 eco buttata)
-OK  l'eco e' arrivata ed e' stata riconosciuta
-guasti: 0
+OK  the session copied something: 6 types
+OK  the client has «SESSIONE-VERSO-CLIENT-àèìòù-ok»
+OK  the session pastes «CLIENT-VERSO-SESSIONE-àèìòù-ok»
+OK  no loop (2 real announcements, 1 echo discarded)
+OK  the echo arrived and was recognised
+faults: 0
 ```
 
-Sta in **`fondamenta/remotix-c/src/appunti_wlr.c`**, e il nome dice `wlr` non `kwin` di proposito: il protocollo è di
-wlroots, quindi il file serve già anche i compositori di XFCE e LXQt (§3.8 di `SPECIFICA.md`). La
-porta `appunti.h` è rimasta una, con `appunti.c` ridotto a smistamento e la strada di Mutter spostata
-in `appunti_mutter.c` — la stessa forma di `compositore.c`.
+It lives in **`fondamenta/remotix-c/src/appunti_wlr.c`**, and the name says `wlr` not `kwin` on purpose: the protocol is
+wlroots', so the file already serves the XFCE and LXQt compositors too (§3.8 of `SPECIFICA.md`). The
+port `appunti.h` stayed a single one, with `appunti.c` reduced to dispatching and the Mutter path moved
+into `appunti_mutter.c` — the same shape as `compositore.c`.
 
-> #### ⛔ La guardia contro l'eco: il criterio di §9 era più debole del necessario
+> #### ⛔ The guard against the echo: the criterion of §9 was weaker than necessary
 >
-> «Ignorare il **primo** `selection` dopo un nostro `set_selection`» è una regola a tempo, e le
-> regole a tempo si sbagliano quando due cose capitano insieme. Il criterio scritto è invece **di
-> stato**: si ignora un annuncio se **la sorgente è ancora nostra** *e* i tipi coincidono.
+> «Ignorare il **primo** `selection` dopo un nostro `set_selection`» is a timing rule, and
+> timing rules go wrong when two things happen together. The criterion written is instead a **state**
+> one: an announcement is ignored if **the source is still ours** *and* the types match.
 >
-> Regge perché l'ordine lo garantisce KWin: quando qualcun altro copia, è lo stesso `setSelection` a
-> mandare prima `cancelled` alla vecchia sorgente e poi l'annuncio ai device. A quel punto «la
-> sorgente è nostra» è già falso e l'annuncio passa. Nessun contatore, nessuna finestra temporale.
+> It holds because KWin guarantees the order: when someone else copies, it is the same `setSelection` that
+> sends first `cancelled` to the old source and then the announcement to the devices. At that point «la
+> sorgente è nostra» is already false and the announcement goes through. No counter, no time window.
 
-> #### ⛔ `POLLHUP` vale come «pronto», e trattarlo da guasto costa una diagnosi sbagliata
+> #### ⛔ `POLLHUP` counts as «ready», and treating it as a fault costs a wrong diagnosis
 >
-> *[M, 8 agosto 2026 — il primo giro del banco]*
+> *[M, 8 August 2026 — the first round of the bench]*
 >
-> Chi possiede gli appunti scrive e chiude. Con dati corti la `poll` può tornare con **`POLLHUP` e
-> basta**: i byte sono nel tubo, ma nessuno li ha ancora letti. Il codice guardava solo `POLLIN` e
-> concludeva «non ha risposto» — **subito**, scrivendo a registro una scadenza di cinque secondi
-> *che non era mai passata*. Il registro diceva `entro 5000 ms` a tre secondi dall'annuncio, e quel
-> numero impossibile è stato l'unico indizio.
+> Whoever owns the clipboard writes and closes. With short data the `poll` can return with **`POLLHUP` and
+> nothing else**: the bytes are in the pipe, but nobody has read them yet. The code looked only at `POLLIN` and
+> concluded «non ha risposto» — **immediately**, writing to the log a five-second timeout
+> *that had never elapsed*. The log said `entro 5000 ms` three seconds after the announcement, and that
+> impossible number was the only clue.
 >
-> In lettura `POLLHUP` è un esito (la `read` che segue dirà zero); in scrittura no, lì vuol dire che
-> chi incollava se n'è andato.
+> On reading, `POLLHUP` is an outcome (the following `read` will say zero); on writing it is not, there it means that
+> whoever was pasting has gone away.
 
-⚠ **E l'annuncio non si consegna quando arriva `selection`**: un `offer(mime)` può arrivare dopo, e
-un elenco monco fa incollare la cosa sbagliata senza che nessuno se ne accorga. La pompa fa un giro
-completo — `wl_display_roundtrip` — e *poi* consegna.
+⚠ **And the announcement is not delivered when `selection` arrives**: an `offer(mime)` can arrive later, and
+a truncated list makes the wrong thing get pasted without anyone noticing. The pump does a full
+round trip — `wl_display_roundtrip` — and *then* delivers.
 
 ---
 
-### 10. Il sistema attorno: energia, blocco, credenziali, audio
+### 10. The system around it: power, lock, credentials, audio
 
-#### 10.1 ✅ La cura di §3.4-bis funziona, e Plasma **nasconde**
+#### 10.1 ✅ The cure of §3.4-bis works, and Plasma **hides**
 
-**[R]** `sessionmanagementbackend.cpp:108-121` accende la voce di menu solo se logind risponde
-`"yes"` o `"challenge"`; i valori di difetto sono `false`, e i consumatori usano `visible:` /
-`addIfValid`. Quindi `sleep.conf` + la regola polkit di §3.4-bis di `SPECIFICA.md` **valgono
-identiche su KDE**, e in dote arriva che `canSuspend=false` porta l'auto-sospensione di powerdevil a
-`NoAction` da sé.
+**[R]** `sessionmanagementbackend.cpp:108-121` turns on the menu item only if logind answers
+`"yes"` or `"challenge"`; the default values are `false`, and the consumers use `visible:` /
+`addIfValid`. So `sleep.conf` + the polkit rule of §3.4-bis of `SPECIFICA.md` **apply
+identically on KDE**, and as a bonus `canSuspend=false` brings powerdevil's auto-suspend to
+`NoAction` by itself.
 
-⛔ **Ma la regola polkit va scritta `no`, non *auth_admin***: `"challenge"` **mostra** la voce.
+⛔ **But the polkit rule must be written `no`, not *auth_admin***: `"challenge"` **shows** the item.
 
-#### 10.2 ⛔ Su KDE c'è un secondo comandante dell'inattività, e il blocco si accende da sé
+#### 10.2 ⛔ On KDE there is a second commander of inactivity, and the lock turns itself on
 
-Due difetti di configurazione che una sessione remota incontra dopo pochi minuti, entrambi **[R]**:
+Two configuration defects that a remote session meets after a few minutes, both **[R]**:
 
 | | |
 |---|---|
-| powerdevil ha **«spegni lo schermo dopo 10 minuti» acceso per difetto**, indipendente dalla cura di logind | `powerdevilsettingsdefaults.cpp:61-80` |
-| `kscreenlockerrc [Daemon] Autolock` vale **`true`** con `Timeout=5` minuti | `kscreenlockersettings.kcfg:8-18` |
+| powerdevil has **«spegni lo schermo dopo 10 minuti» on by default**, independent of the logind cure | `powerdevilsettingsdefaults.cpp:61-80` |
+| `kscreenlockerrc [Daemon] Autolock` is **`true`** with `Timeout=5` minutes | `kscreenlockersettings.kcfg:8-18` |
 
-**La via precisa per inibire**: `org.kde.Solid.PowerManagement.PolicyAgent.AddInhibition(types=4, …)`
-— dove `4` è `ChangeScreenSettings` e **implica** `InterruptSession`
-(`powerdevilpolicyagent.cpp:737-745`); nessun controllo di permesso, effetto dopo **5 s**, si
-rilascia da sé alla caduta del nome D-Bus. ⚠ La via freedesktop
-(`org.freedesktop.PowerManagement.Inhibit`) mappa **solo** su `InterruptSession`
-(`powerdevilfdoconnector.cpp:84-93`): **non ferma lo schermo.**
+**The precise way to inhibit**: `org.kde.Solid.PowerManagement.PolicyAgent.AddInhibition(types=4, …)`
+— where `4` is `ChangeScreenSettings` and **implies** `InterruptSession`
+(`powerdevilpolicyagent.cpp:737-745`); no permission check, effect after **5 s**, it
+releases itself when the D-Bus name drops. ⚠ The freedesktop way
+(`org.freedesktop.PowerManagement.Inhibit`) maps **only** to `InterruptSession`
+(`powerdevilfdoconnector.cpp:84-93`): **it does not stop the screen.**
 
-⛔ **E a blocco attivo la nostra inibizione viene ignorata** (`powerdevilpolicyagent.cpp:509`):
-spegnere il locker non è una comodità, è **una dipendenza**. La leva è
-`kwin_wayland --no-lockscreen` (`main_wayland.cpp:550-556`) — che le unità systemd stock **non
-passano**, perché su Wayland il blocco è di KWin (`ksmserver/main.cpp:171-175`).
+⛔ **And with the lock active our inhibition is ignored** (`powerdevilpolicyagent.cpp:509`):
+turning off the locker is not a convenience, it is **a dependency**. The lever is
+`kwin_wayland --no-lockscreen` (`main_wayland.cpp:550-556`) — which the stock systemd units **do not
+pass**, because on Wayland the lock belongs to KWin (`ksmserver/main.cpp:171-175`).
 
-Due note che ridimensionano il problema, entrambe **[R]**: la cattura **non si ferma** al blocco (ma
-la scena rende il lockscreen, quindi si vedrebbe **l'immagine di blocco**), e **l'input iniettato
-raggiunge il greeter** — cioè l'utente remoto può sbloccare digitando. Il blocco è una seccatura,
-non un'esclusione. E l'input iniettato **azzera i timer di inattività** (EIS →
-`simulateUserActivity`), quindi una sessione usata non si blocca.
+Two notes that scale the problem down, both **[R]**: capture **does not stop** at the lock (but
+the scene renders the lockscreen, so you would see **the lock image**), and **injected input
+reaches the greeter** — i.e. the remote user can unlock by typing. The lock is a nuisance,
+not an exclusion. And injected input **resets the inactivity timers** (EIS →
+`simulateUserActivity`), so a session in use does not lock.
 
-#### 10.3 ⛔ Senza nessun output, KWin si autoblocca
+#### 10.3 ⛔ With no output at all, KWin locks itself up
 
-**[R]** `workspace.cpp:1216-1223`: con zero uscite abilitate il Workspace monta un
-`PlaceholderOutput` con render loop inibito **e un filtro che inghiotte tutto l'input**. **Lo schermo
-virtuale è una precondizione, non un risultato**: fra la morte di uno stream e la creazione del
-successivo (strategia (A) di §8.3) si passa da lì.
+**[R]** `workspace.cpp:1216-1223`: with zero enabled outputs the Workspace mounts a
+`PlaceholderOutput` with the render loop inhibited **and a filter that swallows all input**. **The virtual
+screen is a precondition, not a result**: between the death of one stream and the creation of the
+next (strategy (A) of §8.3) you pass through there.
 
-#### 10.4 Le altre voci, in breve
+#### 10.4 The other items, in brief
 
 | | **[R]** |
 |---|---|
-| **kwallet** | nessuno lo avvia in questo albero; il rischio di un dialogo di credenziali in una sessione non presidiata resta da misurare **[?]** |
-| **Il sink audio** | **zero righe di Plasma toccano i dispositivi audio**, e la lista di preferenze di Phonon è stata svuotata (`kdeplatformplugin.cpp:128-149`). La scelta di §7.5 di `REFERENCE.md` — creiamo noi il sink virtuale e ne catturiamo il monitor — **si riusa identica**. Conferma finale: una misura, non un lavoro |
-| **Notifiche che compaiono da sole** | ⛔ il modulo kded `devicenotifications` (autoload `true`) fa comparire *«Display Detected/Removed»* **a ogni schermo virtuale che creiamo o distruggiamo** (`devicenotifications.cpp:290-351`) — cioè, con la strategia (A), **a ogni cambio di risoluzione** |
-| **Permessi D-Bus** | **nessun controllo** su nessuna interfaccia di sistema di KWin/Plasma/powerdevil, salvo `ScreenShot2` e `PlasmaShell.evaluateScript` |
-| ~~**Rischio da chiudere per primo**~~ **misura M12, corretta l'8 agosto** | il `QMessageBox` modale *«Plasma Failed To Start»* c'è (`shell/main.cpp:176-179`), **ma non è il primo rischio, e non scatta al primo fallimento.** Rileggendo `shell/main.cpp:160-181`: al primo errore di contesto OpenGL plasmashell **scrive `SceneGraphBackend=software` in `kdeglobals` — `Global | Persistent` — e si riavvia da sé** (`QProcess::startDetached`); il dialogo compare **solo al secondo giro**, se anche il ripiego software fallisce. ⛔ **Il rischio vero è quindi un'altra cosa: una sessione avviata senza GPU lascia una configurazione permanente** che rende software il rendering anche quando la GPU torna. [M] Nella sessione misurata, **con** la GPU: zero righe `Open GL context could not be created` e **nessun `SceneGraphBackend` scritto**, come deve essere. ⚠ La riproduzione del caso «senza GPU» non è stata fatta: negare la GPU al solo compositore non basta (plasmashell è un'altra unità), servirebbe negarla a tutta la sessione |
-| **Le regole di sessione** (le nove combinazioni di §3.4) | non dipendono dal desktop: logind è lo stesso. **Niente da rifare**, salvo verificare che il *tipo* di sessione si comporti come su GNOME **[?]** |
+| **kwallet** | nobody starts it in this tree; the risk of a credentials dialog in an unattended session remains to be measured **[?]** |
+| **The audio sink** | **zero lines of Plasma touch the audio devices**, and Phonon's preference list has been emptied (`kdeplatformplugin.cpp:128-149`). The choice of §7.5 of `REFERENCE.md` — we create the virtual sink ourselves and capture its monitor — **is reused identically**. Final confirmation: a measurement, not a job |
+| **Notifications that appear by themselves** | ⛔ the kded module `devicenotifications` (autoload `true`) makes *«Display Detected/Removed»* appear **at every virtual screen we create or destroy** (`devicenotifications.cpp:290-351`) — i.e., with strategy (A), **at every resolution change** |
+| **D-Bus permissions** | **no check** on any system interface of KWin/Plasma/powerdevil, except `ScreenShot2` and `PlasmaShell.evaluateScript` |
+| ~~**Risk to close first**~~ **measurement M12, corrected on 8 August** | the modal `QMessageBox` *«Plasma Failed To Start»* is there (`shell/main.cpp:176-179`), **but it is not the first risk, and it does not fire at the first failure.** Rereading `shell/main.cpp:160-181`: at the first OpenGL context error plasmashell **writes `SceneGraphBackend=software` into `kdeglobals` — `Global | Persistent` — and restarts itself** (`QProcess::startDetached`); the dialog appears **only on the second round**, if the software fallback fails too. ⛔ **So the real risk is something else: a session started without a GPU leaves a permanent configuration** that makes rendering software even when the GPU comes back. [M] In the measured session, **with** the GPU: zero `Open GL context could not be created` lines and **no `SceneGraphBackend` written**, as it should be. ⚠ The reproduction of the «senza GPU» case was not done: denying the GPU to the compositor alone is not enough (plasmashell is another unit), it would need to be denied to the whole session |
+| **The session rules** (the nine combinations of §3.4) | do not depend on the desktop: logind is the same. **Nothing to redo**, except verifying that the session *type* behaves as on GNOME **[?]** |
 
-#### 10.5 ⛔ Il cursore del volume non governava niente — e non era colpa di KDE
+#### 10.5 ⛔ The volume slider governed nothing — and it was not KDE's fault
 
-*[M, 8 agosto 2026, aperto dall'utente: «se abbasso il volume l'audio resta sempre alto; in pratica
+*[M, 8 August 2026, opened by the user: «se abbasso il volume l'audio resta sempre alto; in pratica
 audio del server e del client sono scollegati»]*
 
-Il sink virtuale lo creiamo noi (§7.5 di `REFERENCE.md`) e ne catturiamo il monitor. **In PipeWire
-il volume di un nodo si applica a valle della presa del monitor**, e la proprietà che sposta la
-presa — `monitor.channel-volumes` — vale **`false`** se non la si chiede. Chi crea il sink con
-`pactl load-module module-null-sink` non se ne accorge mai, perché `pipewire-pulse` la mette da sé
-per compatibilità con PulseAudio, dove il monitor è sempre stato a valle del volume. Noi il sink lo
-creiamo a mano, con `pw_core_create_object`, e ce la scordavamo.
+We create the virtual sink ourselves (§7.5 of `REFERENCE.md`) and capture its monitor. **In PipeWire
+a node's volume is applied downstream of the monitor tap**, and the property that moves the
+tap — `monitor.channel-volumes` — is **`false`** unless you ask for it. Whoever creates the sink with
+`pactl load-module module-null-sink` never notices, because `pipewire-pulse` sets it by itself
+for compatibility with PulseAudio, where the monitor has always been downstream of the volume. We create the sink
+by hand, with `pw_core_create_object`, and we forgot it.
 
-La misura, tono a 440 Hz di ampiezza nota (25,9 % del fondo scala), letto sul monitor:
+The measurement, a 440 Hz tone of known amplitude (25.9 % of full scale), read on the monitor:
 
-| volume del sink | `monitor.channel-volumes` **non chiesta** (com'era) | chiesta (sink di `pactl`) |
+| sink volume | `monitor.channel-volumes` **not requested** (as it was) | requested (`pactl` sink) |
 |---|---|---|
-| 100 % | 25,39 % | 25,39 % |
-| 25 % | **25,39 %** | 0,40 % |
-| 10 % | — | 0,03 % |
-| 0 % | **25,39 %** | 0,00 % |
+| 100 % | 25.39 % | 25.39 % |
+| 25 % | **25.39 %** | 0.40 % |
+| 10 % | — | 0.03 % |
+| 0 % | **25.39 %** | 0.00 % |
 
-I numeri della colonna di destra non sono «quasi giusti»: sono **esattamente** la curva cubica di
-PulseAudio (0,25³ = 1,56 %, e 25,9 × 0,0156 = 0,40). La colonna di sinistra è piatta: il volume non
-arriva, **mute compreso**. Nella sessione viva il nodo era a `channelVolumes 0.0` e `mute true`
-mentre il client riceveva il segnale intero.
+The numbers in the right column are not «quasi giusti»: they are **exactly** PulseAudio's cubic
+curve (0.25³ = 1.56 %, and 25.9 × 0.0156 = 0.40). The left column is flat: the volume does not
+get through, **mute included**. In the live session the node was at `channelVolumes 0.0` and `mute true`
+while the client received the full signal.
 
-✅ **Cura**: `"monitor.channel-volumes", "true"` fra le proprietà del sink, in `suono.c`.
+✅ **Cure**: `"monitor.channel-volumes", "true"` among the sink's properties, in `suono.c`.
 
-> ⚠ **Il verso conta, ed è il motivo per cui questo cursore è l'unico che può funzionare.** RDP ha
-> un solo PDU di volume, `SNDC_SETVOLUME`, e va **dal server al client** — noi lo mandiamo a fondo
-> scala alla scelta del formato (`altoparlante.c`). **Non esiste il verso opposto**: un client non
-> ha modo di dire al server «abbassa». Quindi l'unico cursore che governa davvero il livello è
-> quello che si vede **dentro** la sessione, e va fatto funzionare.
+> ⚠ **The direction matters, and it is the reason this slider is the only one that can work.** RDP has
+> a single volume PDU, `SNDC_SETVOLUME`, and it goes **from the server to the client** — we send it at full
+> scale when the format is chosen (`altoparlante.c`). **The opposite direction does not exist**: a client has
+> no way to tell the server «abbassa». So the only slider that really governs the level is
+> the one visible **inside** the session, and it has to be made to work.
 
-#### 10.6 Le voci di menu che non possono funzionare, tolte dal menu
+#### 10.6 The menu items that cannot work, removed from the menu
 
-*[chiesto dall'utente, 8 agosto 2026: «sarebbe meglio nascondere le voci di *switch user* e *lock*
+*[asked by the user, 8 August 2026: «sarebbe meglio nascondere le voci di *switch user* e *lock*
 (anche se non funzionano, ed è il comportamento corretto)»]*
 
-In una sessione servita da REMOTIX **«Blocca schermo» e «Cambia utente» non possono funzionare**, ed
-è giusto così: il locker lo spegniamo noi con `--no-lockscreen`, perché a blocco attivo powerdevil
-ignora le inibizioni (§10.2), e cambiare utente vorrebbe dire un display manager che qui non c'è. Ma
-**una voce che non fa niente è peggio di una voce che manca**: chi la preme conclude che il server è
-rotto.
+In a session served by REMOTIX **«Blocca schermo» and «Cambia utente» cannot work**, and
+rightly so: we turn off the locker ourselves with `--no-lockscreen`, because with the lock active powerdevil
+ignores inhibitions (§10.2), and switching user would mean a display manager that is not here. But
+**an item that does nothing is worse than an item that is missing**: whoever presses it concludes that the server is
+broken.
 
-La leva è **KIOSK**, cioè `KAuthorized`. I nomi delle azioni non si indovinano, sono quelli che
-Plasma interroga davvero:
+The lever is **KIOSK**, i.e. `KAuthorized`. The action names are not to be guessed, they are the ones
+Plasma actually queries:
 
-| che cosa governa | azione | dove |
+| what it governs | action | where |
 |---|---|---|
 | `SessionManagement::canLock()` | `lock_screen` | `libkworkspace/sessionmanagement.cpp:126-129` |
 | `SessionManagement::canSwitchUser()` | `start_new_session` | `libkworkspace/sessionmanagement.cpp:121-124` |
 | `SessionsModel::canSwitchUser()` | `switch_user` | `components/sessionsprivate/sessionsmodel.cpp:45` |
 
-⚠ **`switch_user` e `start_new_session` servono tutti e due**: il primo governa l'elenco delle
-sessioni, il secondo il pulsante. Toglierne uno lascia mezza interfaccia.
+⚠ **`switch_user` and `start_new_session` are both needed**: the first governs the list of
+sessions, the second the button. Removing only one leaves half an interface.
 
-Il file si scrive in `$XDG_RUNTIME_DIR/remotix/xdg/kdeglobals` e la cartella si mette **in testa a
-`XDG_CONFIG_DIRS`**, dove KConfig la legge come configurazione di *sistema*:
+The file is written in `$XDG_RUNTIME_DIR/remotix/xdg/kdeglobals` and the folder is put **at the head of
+`XDG_CONFIG_DIRS`**, where KConfig reads it as *system* configuration:
 
 ```ini
 [KDE Action Restrictions][$i]
@@ -2924,97 +2924,97 @@ action/start_new_session=false
 action/switch_user=false
 ```
 
-> ⚠ `[$i]` non è decorativo: senza, il `kdeglobals` dell'utente — che sta più in alto — rimette le
-> voci al loro posto.
+> ⚠ `[$i]` is not decorative: without it, the user's `kdeglobals` — which sits higher — puts the
+> items back in place.
 >
-> ⚠ `/etc/xdg` **si tiene in coda, non si sostituisce**: da lì viene `menus/plasma-applications.menu`,
-> cioè proprio il file che `XDG_MENU_PREFIX` va a cercare. Sostituirlo spegnerebbe la cattura per la
-> strada di §3.3-bis.
+> ⚠ `/etc/xdg` **is kept at the tail, not replaced**: from there comes `menus/plasma-applications.menu`,
+> i.e. precisely the file that `XDG_MENU_PREFIX` goes looking for. Replacing it would switch off capture via the
+> path of §3.3-bis.
 >
-> ⛔ E **`logout` non si tocca**: è la strada con cui si chiude la sessione, e quella su cui poggia
-> la sentinella di uscita.
+> ⛔ And **`logout` is not touched**: it is the way the session is closed, and the one the exit
+> sentinel rests on.
 
-Non si scrive in `~/.config`: quel che imponiamo vale per la sessione servita, e non deve cambiare
-la configurazione che l'utente si è scelto né sopravvivere alla macchina. Conseguenza: **ha effetto
-dal prossimo avvio di sessione**, non su una sessione già viva.
+It is not written in `~/.config`: what we impose applies to the served session, and must not change
+the configuration the user chose nor outlive the machine. Consequence: **it takes effect
+from the next session start**, not on a session already alive.
 
 ---
 
-### 11. `kpipewire`: il codice che fa il nostro stesso lavoro
+### 11. `kpipewire`: the code that does our very job
 
-È il pezzo più direttamente trasferibile di tutto KDE: consuma PipeWire e **codifica in H.264**.
+It is the most directly transferable piece of all of KDE: it consumes PipeWire and **encodes in H.264**.
 
-#### 11.1 Danno e sincronizzazione: **non li fa**, e il perché è la risposta
+#### 11.1 Damage and synchronisation: **it does not do them**, and the why is the answer
 
-**[R]** `SPA_META_VideoDamage` è chiesto **solo** se qualcuno chiama `setDamageEnabled(true)`, e
-**nessuno lo chiama** in tutto l'albero (`pipewiresourcestream.cpp:68`, `369-379`; zero chiamanti in
-`src/` e `tests/`). Quando arriva, l'unico consumatore è un **overlay di debug** che disegna i
-rettangoli in rosso (`pipewiresourceitem.cpp:295-310`). Di sincronizzazione **non c'è niente**: zero
-`SPA_META_SyncTimeline`, zero `poll()` su un fd di buffer, zero ioctl, zero `eglCreateSyncKHR`, zero
+**[R]** `SPA_META_VideoDamage` is requested **only** if someone calls `setDamageEnabled(true)`, and
+**nobody calls it** in the whole tree (`pipewiresourcestream.cpp:68`, `369-379`; zero callers in
+`src/` and `tests/`). When it arrives, the only consumer is a **debug overlay** that draws the
+rectangles in red (`pipewiresourceitem.cpp:295-310`). Of synchronisation **there is nothing**: zero
+`SPA_META_SyncTimeline`, zero `poll()` on a buffer fd, zero ioctl, zero `eglCreateSyncKHR`, zero
 `glFinish` [✗].
 
-**E non è una svista**: è il lato consumatore di quel che §4.6 e §4.8 dicono del produttore — KWin
-ridisegna il fotogramma intero e si sincronizza lui. Il danno, su KDE, **è un suggerimento**.
+**And it is not an oversight**: it is the consumer side of what §4.6 and §4.8 say about the producer — KWin
+redraws the whole frame and synchronises by itself. Damage, on KDE, **is a hint**.
 
-> ✅ **Conclusione che vale per tutto il progetto**: il difetto delle schermate alternate (R29) **è di
-> Mutter, non del modello PipeWire**. E la cura che abbiamo scritto — la superficie di accumulo — su
-> KWin non serve.
+> ✅ **Conclusion that holds for the whole project**: the alternating-screens fault (R29) **is
+> Mutter's, not the PipeWire model's**. And the cure we wrote — the accumulation surface — is not
+> needed on KWin.
 
-#### 11.2 Le tre cose da copiare
+#### 11.2 The three things to copy
 
-1. ⛔ **Per la codifica in GPU si chiede solo `DRM_FORMAT_MOD_LINEAR`** (`vaapiutils.cpp:119-135`):
-   RadeonSI **rifiuta** i buffer con DCC, iHD li **accetta e poi forza LINEAR internamente** — cioè
-   accetta e sbaglia in silenzio, la nostra forma di guasto preferita (R27, R30). Giorni risparmiati.
-2. **Il contesto VAAPI non si crea: lo si fa creare al grafo di filtri.**
+1. ⛔ **For GPU encoding only `DRM_FORMAT_MOD_LINEAR` is requested** (`vaapiutils.cpp:119-135`):
+   RadeonSI **refuses** buffers with DCC, iHD **accepts them and then forces LINEAR internally** — i.e.
+   it accepts and goes wrong silently, our favourite form of fault (R27, R30). Days saved.
+2. **The VAAPI context is not created: you let the filter graph create it.**
    `hwmap=mode=direct:derive_device=vaapi,scale_vaapi=format=nv12:mode=fast`, `hw_device_ctx`
-   assegnato a **ogni** filtro *prima* di `avfilter_graph_config()`, e poi lo si prende dal
-   buffersink con `av_buffersink_get_hw_frames_ctx()` (`h264vaapiencoder.cpp:89-97`, `151`). Cura
-   preventivamente il terzo caso di R30 — l'`h264_vaapi` che si è aperto con un contesto proprio.
-3. **Quando un modificatore fallisce non si spegne il DMA-BUF**: si toglie *quel* modificatore e si
-   rinegozia, rientrando nel thread giusto con `pw_loop_add_event`/`pw_loop_signal_event`
-   (`pipewiresourcestream.cpp:261-273`). È anche il meccanismo per cambiare strada a caldo senza
-   rifare la cattura — cioè la nostra R30, scritta da altri.
+   assigned to **every** filter *before* `avfilter_graph_config()`, and then taken from the
+   buffersink with `av_buffersink_get_hw_frames_ctx()` (`h264vaapiencoder.cpp:89-97`, `151`). It
+   pre-emptively cures the third case of R30 — the `h264_vaapi` that opened with a context of its own.
+3. **When a modifier fails DMA-BUF is not turned off**: *that* modifier is removed and
+   renegotiated, re-entering the right thread with `pw_loop_add_event`/`pw_loop_signal_event`
+   (`pipewiresourcestream.cpp:261-273`). It is also the mechanism to change path on the fly without
+   redoing the capture — i.e. our R30, written by others.
 
-Regalo misurato da altri, due ore per provarlo: `flags +mv4` e `-flags +loop` su **tutti** gli
-encoder, con il commento *«disable motion estimation … speeds up encoding by an order of
+A gift measured by others, two hours to try it: `flags +mv4` and `-flags +loop` on **all**
+encoders, with the comment *«disable motion estimation … speeds up encoding by an order of
 magnitude»*.
 
-#### 11.3 Che cosa kpipewire **non** fa
+#### 11.3 What kpipewire does **not** do
 
 | | |
 |---|---|
-| **controllo del bitrate** | ⛔ **assente** per H.264: mai `bit_rate`, mai `rc_mode`. È **lo stesso vuoto di `gnome-remote-desktop`** (§9.1) e di R31: su quel punto REMOTIX resta solo, e ora la solitudine è confermata da due riferimenti invece di uno |
-| ridimensionamento a caldo | assente |
-| cursore su DMA-BUF | non composto |
-| `max_b_frames` | **0 in ogni encoder** — conferma indipendente di R11 |
+| **bitrate control** | ⛔ **absent** for H.264: never `bit_rate`, never `rc_mode`. It is **the same gap as `gnome-remote-desktop`** (§9.1) and as R31: on that point REMOTIX stays alone, and now the loneliness is confirmed by two references instead of one |
+| live resizing | absent |
+| cursor on DMA-BUF | not composited |
+| `max_b_frames` | **0 in every encoder** — independent confirmation of R11 |
 
-**Quattro difetti da non copiare** [R]: `stride*height*4`, un `ceil` su una divisione intera, la
-cadenza in aritmetica intera con divisione per zero, `mapoffset` ignorato.
+**Four defects not to copy** [R]: `stride*height*4`, a `ceil` on an integer division, the
+cadence in integer arithmetic with division by zero, `mapoffset` ignored.
 
-**Riusabile da un programma in C**, riscrivendo solo i tipi Qt: `queryDmaBufModifiers`,
-`buildFormat`, la costruzione dell'`AVDRMFrameDescriptor`, e tutto `vaapiutils.cpp`. **Da
-riscrivere**: il percorso software (tre copie per fotogramma), il bitrate, il danno, il cursore.
+**Reusable from a C program**, rewriting only the Qt types: `queryDmaBufModifiers`,
+`buildFormat`, the construction of the `AVDRMFrameDescriptor`, and all of `vaapiutils.cpp`. **To
+rewrite**: the software path (three copies per frame), the bitrate, the damage, the cursor.
 
 ---
 
-### 12. I riferimenti di KDE, e quanto valgono
+### 12. KDE's references, and what they are worth
 
-#### 12.0 ⭐ `KRdp` — il riferimento vero, e lo studio l'aveva mancato
+#### 12.0 ⭐ `KRdp` — the real reference, and the study had missed it
 
-> ⛔ **Correzione del 7 agosto 2026, sera.** La prima stesura di questo documento diceva
-> *«altre tracce di RDP in KDE: nessuna»*. **Era falso**, e per un errore di metodo che vale la pena
-> registrare: la ricerca era stata fatta **dentro i repository clonati**, e `krdp` non era fra quelli.
-> Cercare in casa propria non è cercare. Lo ha trovato una domanda dell'utente — *«su KDE qualcuno ha
-> affrontato i problemi prima di noi: xrdp. Come fa con KWin?»* — e la risposta è che xrdp non
-> c'entra (§12.3), ma **qualcun altro sì**.
+> ⛔ **Correction of 7 August 2026, evening.** The first draft of this document said
+> *«altre tracce di RDP in KDE: nessuna»*. **It was false**, and because of a method error worth
+> recording: the search had been done **inside the cloned repositories**, and `krdp` was not among them.
+> Searching in your own house is not searching. It was found by a question from the user — *«su KDE qualcuno ha
+> affrontato i problemi prima di noi: xrdp. Come fa con KWin?»* — and the answer is that xrdp has
+> nothing to do with it (§12.3), but **someone else does**.
 
-**Che cos'è.** `KRdp` è il server RDP di KDE: **C++ su FreeRDP**, con `kpipewire` per i pixel, ed è
-quel che Plasma 6.2+ presenta come *«Condivisione del desktop (RDP)»* nelle Impostazioni di sistema.
-**4 222 righe** nella 6.3.6 di Trixie, 5 877 nel master. Cioè: stessa libreria RDP, stesso
-compositore, stessi client, e un ordine di grandezza in meno di `gnome-remote-desktop` — che lo rende
-leggibile per intero in una sessione.
+**What it is.** `KRdp` is KDE's RDP server: **C++ on FreeRDP**, with `kpipewire` for the pixels, and it is
+what Plasma 6.2+ presents as *«Condivisione del desktop (RDP)»* in System Settings.
+**4 222 lines** in Trixie's 6.3.6, 5 877 in master. That is: same RDP library, same
+compositor, same clients, and an order of magnitude less than `gnome-remote-desktop` — which makes it
+readable in full in one session.
 
-**La conferma che pesa più di tutte** — il suo file `.desktop`, `server/org.kde.krdpserver.desktop.cmake`:
+**The confirmation that weighs most of all** — its `.desktop` file, `server/org.kde.krdpserver.desktop.cmake`:
 
 ```ini
 [Desktop Entry]
@@ -3024,1921 +3024,1921 @@ NoDisplay=true
 X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input,zkde_screencast_unstable_v1
 ```
 
-**La via del permesso di §3 non è una nostra deduzione: è quel che fa il server RDP di KDE**, per la
-cattura *e* per l'input, in tre righe e senza un dialogo.
+**The permission way of §3 is not a deduction of ours: it is what KDE's RDP server does**, for
+capture *and* for input, in three lines and without a dialog.
 
-**Come è fatto** — tutto **[R]**, sul master salvo dove indicato:
+**How it is made** — all **[R]**, on master except where indicated:
 
 | | |
 |---|---|
-| **Dove gira** | `server/app-org.kde.krdpserver.service.in`: `Type=exec`, `After=plasma-core.target`, **`WantedBy=plasma-workspace.target`** — cioè **dentro** una sessione Plasma già in piedi, come servizio d'utente. ⛔ **Non avvia la sessione**: è la differenza strutturale con REMOTIX, e il motivo per cui KRdp non risolve la nostra §6 |
-| **La cattura** | due strade, e ⛔ **quella predefinita è il portale**, non i protocolli di Plasma: la diretta si sceglie con **`--plasma`** (`server/main.cpp:128`), e **l'unità systemd non lo passa**. La diretta è `PlasmaScreencastV1Session.cpp:173-199` (`createVirtualMonitorStream`, `createOutputStream`, `createWorkspaceStream`, tutte con cursore `Metadata`) |
-| **La misura** | `server/main.cpp:49-52`: **`--virtual-monitor 1920x1080@1`**, opzione a riga di comando. La misura la decide **chi avvia il servizio**, non il client. ⛔ **E senza `--plasma` non può funzionare**: KRdp chiede al portale il tipo di sorgente «virtuale» (4), che `xdg-desktop-portal-kde` **non annuncia**, e il cui dialogo non costruisce alcun elenco (`screenchooserdialog.cpp:148-231`) — pagina vuota. Cioè: **lo schermo virtuale esiste solo sulla strada diretta** |
-| **L'input** | ⛔ **`fake_input`, non EIS**: `PlasmaScreencastV1Session.cpp:26-35, 164-165` lega `org_kde_kwin_fake_input` **v4** e chiama `authenticate("krdpserver", "")`. Non usa il backend EIS di KWin |
-| **La keymap** | ✅ **la legge dal `wl_seat`**, essendo client Wayland: `wl_keyboard.keymap` → `xkb_keymap_new_from_string` (`:121-143`). Poi `keycodeFromKeysym()` cerca il tasto che produce il simbolo e **applica i livelli** — livello 1 → `KEY_LEFTSHIFT`, livello 2 → `KEY_RIGHTALT` (`:68-89`, `:265-278`), con `EVDEV_OFFSET = 8`. È **il nostro percorso Unicode**, scritto da loro senza libei |
-| **I due codec** | ✅ **la nostra stessa struttura** (R3): `VideoStream.cpp:635-656` — H.264 se il client dichiara AVC **e** YUV420, altrimenti **RemoteFX Progressive** (`progressive_context_new(TRUE)`). `KRDP_DISABLE_H264` forza il ripiego. ⚠ Il profilo è **`H264Baseline`** (`:273`), non *Constrained High* come R11 |
-| **La codifica** | delegata a `kpipewire`: `PipeWireEncodedStream` con `EncodingPreference::Speed`, `ColorRange::Full`, `quality` 0–100 (`--quality`), `maxFramerate`, `maxPendingFrames`. Nessun bitrate dichiarato — coerente con §11.3 |
-| **Il regolatore** | ✅ **lo stesso della nostra fase 7**: `NetworkDetection::rttChanged` → `updateInFlightWindow()`, `hasInFlightCapacity()`, coda dei fotogrammi e un thread di spedizione (`VideoStream.cpp:376-398`). L'ultimo commit del master è *«smooth the RTT used for the in-flight window»* |
-| **Il danno** | ✅ **lo usa**, al contrario di krfb: `setDamageEnabled(true)` sul percorso Progressive (`:299`), accumulo del danno fra i fotogrammi in coda (`:456-466`) e conversione in `REGION16` di FreeRDP (`:201-238`) — con i bordi **esclusivi**, `right = rect.right() + 1`: la nostra R5, confermata da un terzo |
-| **Il ridimensionamento** | ⚠ `DisplayControl.cpp` **esiste solo nel master**: `MaxNumMonitors = 1`, factor 8192 (identici ai nostri), accetta **solo** `NumMonitors == 1`, e il layout arrivato va a **`VideoStream::setRequestedSize`** (`server/SessionController.cpp:58`) → cioè **all'encoder**, non all'output. ⛔ **Nemmeno KRdp ridimensiona lo schermo virtuale**, e nella 6.3.6 di Trixie **non ha il ridimensionamento affatto** (`kpipewire` 6.3.6 non ha nemmeno `setRequestedSize` [✗]) |
-| **La sicurezza** | `RdpConnection.cpp:426-428`: `NlaSecurity = !usePam`, **`TlsSecurity = usePam`** — cioè **NLA per difetto, e TLS puro quando si autentica con PAM**, che è la nostra scelta (§3.6). E PAM c'è davvero (`pam_appl.h`, `:88-134`) |
-| **Le capacità** | `ColorDepth = 32`, `SupportGraphicsPipeline`, `NetworkAutoDetect = true`, e rifiuti espliciti se mancano pipeline grafica o pointer cache (`:573-584`): le nostre §3.2 e §3.3 |
-| **Una trappola che noi non avevamo** | `VideoStream.cpp:575-588`: *«Windows clients (mstsc) send CapsAdvertise **twice**»* — e KRdp tratta il secondo come **reset del canale**, distruggendo le superfici e rifacendole. La nostra R2 dice che un secondo `CapsAdvertise` è lecito solo da 10.3; questo dice **che cosa farne** |
+| **Where it runs** | `server/app-org.kde.krdpserver.service.in`: `Type=exec`, `After=plasma-core.target`, **`WantedBy=plasma-workspace.target`** — i.e. **inside** a Plasma session already up, as a user service. ⛔ **It does not start the session**: that is the structural difference from REMOTIX, and the reason why KRdp does not solve our §6 |
+| **Capture** | two paths, and ⛔ **the default one is the portal**, not Plasma's protocols: the direct one is chosen with **`--plasma`** (`server/main.cpp:128`), and **the systemd unit does not pass it**. The direct one is `PlasmaScreencastV1Session.cpp:173-199` (`createVirtualMonitorStream`, `createOutputStream`, `createWorkspaceStream`, all with `Metadata` cursor) |
+| **The size** | `server/main.cpp:49-52`: **`--virtual-monitor 1920x1080@1`**, a command-line option. The size is decided by **whoever starts the service**, not the client. ⛔ **And without `--plasma` it cannot work**: KRdp asks the portal for the «virtual» source type (4), which `xdg-desktop-portal-kde` **does not announce**, and whose dialog builds no list at all (`screenchooserdialog.cpp:148-231`) — empty page. That is: **the virtual screen exists only on the direct path** |
+| **Input** | ⛔ **`fake_input`, not EIS**: `PlasmaScreencastV1Session.cpp:26-35, 164-165` binds `org_kde_kwin_fake_input` **v4** and calls `authenticate("krdpserver", "")`. It does not use KWin's EIS backend |
+| **The keymap** | ✅ **it reads it from the `wl_seat`**, being a Wayland client: `wl_keyboard.keymap` → `xkb_keymap_new_from_string` (`:121-143`). Then `keycodeFromKeysym()` looks for the key that produces the symbol and **applies the levels** — level 1 → `KEY_LEFTSHIFT`, level 2 → `KEY_RIGHTALT` (`:68-89`, `:265-278`), with `EVDEV_OFFSET = 8`. It is **our Unicode path**, written by them without libei |
+| **The two codecs** | ✅ **our very structure** (R3): `VideoStream.cpp:635-656` — H.264 if the client declares AVC **and** YUV420, otherwise **RemoteFX Progressive** (`progressive_context_new(TRUE)`). `KRDP_DISABLE_H264` forces the fallback. ⚠ The profile is **`H264Baseline`** (`:273`), not *Constrained High* like R11 |
+| **Encoding** | delegated to `kpipewire`: `PipeWireEncodedStream` with `EncodingPreference::Speed`, `ColorRange::Full`, `quality` 0–100 (`--quality`), `maxFramerate`, `maxPendingFrames`. No declared bitrate — consistent with §11.3 |
+| **The regulator** | ✅ **the same as our phase 7**: `NetworkDetection::rttChanged` → `updateInFlightWindow()`, `hasInFlightCapacity()`, a frame queue and a sending thread (`VideoStream.cpp:376-398`). The last commit on master is *«smooth the RTT used for the in-flight window»* |
+| **Damage** | ✅ **it uses it**, unlike krfb: `setDamageEnabled(true)` on the Progressive path (`:299`), damage accumulation across queued frames (`:456-466`) and conversion to FreeRDP's `REGION16` (`:201-238`) — with **exclusive** edges, `right = rect.right() + 1`: our R5, confirmed by a third party |
+| **Resizing** | ⚠ `DisplayControl.cpp` **exists only in master**: `MaxNumMonitors = 1`, factor 8192 (identical to ours), accepts **only** `NumMonitors == 1`, and the incoming layout goes to **`VideoStream::setRequestedSize`** (`server/SessionController.cpp:58`) → i.e. **to the encoder**, not to the output. ⛔ **Not even KRdp resizes the virtual screen**, and in Trixie's 6.3.6 **it has no resizing at all** (`kpipewire` 6.3.6 does not even have `setRequestedSize` [✗]) |
+| **Security** | `RdpConnection.cpp:426-428`: `NlaSecurity = !usePam`, **`TlsSecurity = usePam`** — i.e. **NLA by default, and pure TLS when authenticating with PAM**, which is our choice (§3.6). And PAM really is there (`pam_appl.h`, `:88-134`) |
+| **Capabilities** | `ColorDepth = 32`, `SupportGraphicsPipeline`, `NetworkAutoDetect = true`, and explicit refusals if the graphics pipeline or pointer cache are missing (`:573-584`): our §3.2 and §3.3 |
+| **A trap we did not have** | `VideoStream.cpp:575-588`: *«Windows clients (mstsc) send CapsAdvertise **twice**»* — and KRdp treats the second as a **channel reset**, destroying the surfaces and recreating them. Our R2 says a second `CapsAdvertise` is legitimate only from 10.3; this says **what to do with it** |
 
-**Che cosa non risolve per noi**, e va detto: **non avvia la sessione** (vive dentro Plasma, quindi la
-nostra §6 resta interamente nostra), **non ridimensiona** (§8 resta aperta), e usa la strada
-dell'input **vecchia** — dove noi abbiamo già scritto quella nuova. Non ho ancora letto in dettaglio
-`Clipboard.cpp`, `Cursor.cpp`, `NetworkDetection.cpp` e `PortalSession.cpp`: sono **la prossima
-lettura**, e sono tutti pezzi che ci servono.
+**What it does not solve for us**, and it must be said: **it does not start the session** (it lives inside Plasma, so
+our §6 remains entirely ours), **it does not resize** (§8 remains open), and it uses the **old** input
+path — where we have already written the new one. I have not yet read in detail
+`Clipboard.cpp`, `Cursor.cpp`, `NetworkDetection.cpp` and `PortalSession.cpp`: they are **the next
+reading**, and they are all pieces we need.
 
-#### 12.0-bis ⛔ I difetti di KRdp da non ripetere — l'elenco che vale più del codice
+#### 12.0-bis ⛔ KRdp's defects not to repeat — the list that is worth more than the code
 
-*Riversato dai rapporti 12 §6.4, 14 §2.2 e 15 §8.1-8.2 l'8 agosto 2026 (passo 0 del piano di lavoro).
-Il ramo di sviluppo di KRdp ne ha corretti diciotto rispetto alla 6.3.6 di Trixie: **ogni riga
-corretta è un difetto che noi non dobbiamo scrivere**. Qui stanno i quattordici che ci riguardano,
-in ordine di quanto morderebbero noi.*
+*Poured in from reports 12 §6.4, 14 §2.2 and 15 §8.1-8.2 on 8 August 2026 (step 0 of the work plan).
+KRdp's development branch fixed eighteen of them compared with Trixie's 6.3.6: **every fixed
+line is a defect we must not write**. Here are the fourteen that concern us,
+in order of how hard they would bite us.*
 
-| ⛔ | Il difetto | Dove, nella 6.3.6 | Che cosa ci insegna |
+| ⛔ | The defect | Where, in 6.3.6 | What it teaches us |
 |---|---|---|---|
-| **1** | **Il client senza AVC420+YUV420 veniva *disconnesso***: `qCWarning("Client does not support H.264…"); return CHANNEL_RC_INITIALIZATION_ERROR` | `VideoStream.cpp:308-313` | ⭐ **conferma la nostra R3 come necessità, non come lusso**: senza RemoteFX Progressive il nostro client Android non si collegherebbe affatto |
-| **2** | **`RDPGFX_SURFACE_COMMAND` riempita a metà**: 10 campi su 13, gli altri **spazzatura di stack** — `contextId` compreso, che per AVC420 deve valere 0 | `:377-392` vs `freerdp/channels/rdpgfx.h:195-210` | **si azzera la struttura** (`= {}`) prima di riempirla. È della stessa famiglia del nostro difetto sul `MONITOR_DEF` (R5) |
-| **3** | **Nessun codice di ritorno controllato**: `ResetGraphics`, `CreateSurface`, `MapSurfaceToOutput`, `StartFrame`, `SurfaceCommand`, `EndFrame` — tutti chiamati e ignorati | `:367`, `:376`, `:385`, `:411-414` | ⭐ *«un errore su `CreateSurface` diventa uno schermo nero senza una riga di log»* — **è il modo in cui abbiamo perso tempo noi** |
-| **4** | **Nessuna `DeleteSurface`, mai**, e `ResetGraphics` chiamata con superfici vive | `:349-385` | le superfici **si accumulano nel client**. È precisamente quel che la nostra **R6** vieta |
-| **5** | **`pendingFrames` (una `QSet`) usata da due thread senza lock** | `:118`, `:333`, `:344`, `:397` | corruzione della tabella hash e `erase` di un iteratore invalido: un crash che arriva a caso |
-| **6** | **Nessuna contropressione**: si spediva tutto quel che c'era in coda | `:174-188` | su rete lenta il buffer TCP si gonfia: **secondi** di latenza che non recuperano più |
-| **7** | **`queueDepth`/`SUSPEND_FRAME_ACKNOWLEDGEMENT` ignorati** con la finestra in volo attiva | `:677-692` (**anche nel master**) | **blocco eterno**: se il client dice «non aspettare i miei riscontri» e noi aspettiamo, non parte più niente. Quando è sospeso, **la finestra si disattiva** |
-| **8** | **Nessun recupero dai riscontri persi** | idem | `totalFramesDecoded` **come pavimento**, e una scadenza per i fotogrammi in attesa |
-| **9** | **`close()` chiudeva il canale *prima* di fermare il thread di spedizione**; il distruttore era **vuoto** | `:194-207`, `:143-145` | l'ordine giusto è: **fermare i flussi → aspettare i thread → svuotare le code → distruggere le superfici → chiudere il canale** |
-| **10** | **Lo stimatore di cadenza con la condizione sempre falsa**: `(estimate.timeStamp - now) > periodo` con `timeStamp <= now`, cioè differenza **negativa** | `:427-433` | perdita di memoria illimitata **e** una media calcolata su tutta la sessione, che quindi non si adatta più a niente. ⭐ Un difetto che **nessuna prova funzionale trova**: il programma funziona, solo non regola più |
-| **11** | **Misura di banda aperta e chiusa attorno a *ogni* fotogramma** | `:353`, `:416` | la misura di banda è un giro di richiesta/risposta: farla 60 volte al secondo **la rende rumore** |
-| **12** | **Numero di sequenza `uint32` in un campo a 16 bit**: l'RTT muore dopo **~76 minuti** e l'hash delle richieste cresce senza limite | `NetworkDetection.cpp:69`, `:75`, `:244-252` | contatore **`uint16_t`** con giro esplicito, e **scadenza** delle richieste senza risposta. ⚠ Ed è una prova che va fatta **a 90 minuti**, non a cinque |
-| **13** | **La cadenza delle sonde appesa ai risvegli del socket**: a desktop fermo la misura **si spegne** | `RdpConnection.cpp:563` | un timer vero, o un'attesa con **timeout** pari alla cadenza |
-| **14** | **La rotella con `angleDelta/120`**, divisione **intera** | `PortalSession.cpp:161` | qualunque scatto sotto una tacca **si perde**. Conferma §7.2: si usa `ei_device_scroll_discrete(±120)` e si passa il valore quasi com'è |
+| **1** | **The client without AVC420+YUV420 was *disconnected***: `qCWarning("Client does not support H.264…"); return CHANNEL_RC_INITIALIZATION_ERROR` | `VideoStream.cpp:308-313` | ⭐ **confirms our R3 as a necessity, not a luxury**: without RemoteFX Progressive our Android client would not connect at all |
+| **2** | **`RDPGFX_SURFACE_COMMAND` half filled**: 10 fields out of 13, the others **stack garbage** — `contextId` included, which for AVC420 must be 0 | `:377-392` vs `freerdp/channels/rdpgfx.h:195-210` | **zero the structure** (`= {}`) before filling it. It is of the same family as our defect on the `MONITOR_DEF` (R5) |
+| **3** | **No return code checked**: `ResetGraphics`, `CreateSurface`, `MapSurfaceToOutput`, `StartFrame`, `SurfaceCommand`, `EndFrame` — all called and ignored | `:367`, `:376`, `:385`, `:411-414` | ⭐ *«un errore su `CreateSurface` diventa uno schermo nero senza una riga di log»* — **it is the way we lost time ourselves** |
+| **4** | **No `DeleteSurface`, ever**, and `ResetGraphics` called with live surfaces | `:349-385` | the surfaces **pile up in the client**. It is precisely what our **R6** forbids |
+| **5** | **`pendingFrames` (a `QSet`) used by two threads without a lock** | `:118`, `:333`, `:344`, `:397` | hash table corruption and `erase` of an invalid iterator: a crash that comes at random |
+| **6** | **No backpressure**: everything in the queue was sent | `:174-188` | on a slow network the TCP buffer swells: **seconds** of latency that never recover |
+| **7** | **`queueDepth`/`SUSPEND_FRAME_ACKNOWLEDGEMENT` ignored** with the in-flight window active | `:677-692` (**also in master**) | **eternal block**: if the client says «non aspettare i miei riscontri» and we wait, nothing leaves any more. When it is suspended, **the window is disabled** |
+| **8** | **No recovery from lost acknowledgements** | same | `totalFramesDecoded` **as a floor**, and a timeout for pending frames |
+| **9** | **`close()` closed the channel *before* stopping the sending thread**; the destructor was **empty** | `:194-207`, `:143-145` | the right order is: **stop the streams → wait for the threads → drain the queues → destroy the surfaces → close the channel** |
+| **10** | **The cadence estimator with an always-false condition**: `(estimate.timeStamp - now) > periodo` with `timeStamp <= now`, i.e. a **negative** difference | `:427-433` | unbounded memory leak **and** an average computed over the whole session, which therefore no longer adapts to anything. ⭐ A defect that **no functional test finds**: the program works, it just no longer regulates |
+| **11** | **Bandwidth measurement opened and closed around *every* frame** | `:353`, `:416` | bandwidth measurement is a request/response round trip: doing it 60 times a second **turns it into noise** |
+| **12** | **`uint32` sequence number in a 16-bit field**: the RTT dies after **~76 minutes** and the request hash grows without limit | `NetworkDetection.cpp:69`, `:75`, `:244-252` | a **`uint16_t`** counter with explicit wraparound, and **expiry** of unanswered requests. ⚠ And it is a test that must be done **at 90 minutes**, not at five |
+| **13** | **Probe cadence hung on socket wake-ups**: with the desktop still the measurement **switches off** | `RdpConnection.cpp:563` | a real timer, or a wait with a **timeout** equal to the cadence |
+| **14** | **The wheel with `angleDelta/120`**, **integer** division | `PortalSession.cpp:161` | any step below a notch **is lost**. Confirms §7.2: use `ei_device_scroll_discrete(±120)` and pass the value almost as it is |
 
-> ⭐ **E il difetto più istruttivo di tutti sta nel rapporto 14 §2.2**: nella 6.3.6 **il verso di
-> pressione e rilascio dei tasti era invertito**. È lo stesso punto che nel nostro `input.c` · `manda_bottone()`
-> abbiamo verificato essere giusto (`gboolean premuto = !(flags & KBD_FLAGS_RELEASE)`). Un server RDP
-> maturo, dentro KDE, ha spedito per una release un difetto che si vede alla prima parola digitata:
-> **la prova sui tre client non è burocrazia.**
+> ⭐ **And the most instructive defect of all is in report 14 §2.2**: in 6.3.6 **the direction of
+> key press and release was inverted**. It is the same point that in our `input.c` · `manda_bottone()`
+> we verified to be right (`gboolean premuto = !(flags & KBD_FLAGS_RELEASE)`). A mature RDP
+> server, inside KDE, shipped for one release a defect that shows at the first word typed:
+> **the test on the three clients is not bureaucracy.**
 
-#### 12.1 `krfb` — per metà, e non per la metà che si spera
+#### 12.1 `krfb` — half useful, and not the half one hopes for
 
-`gnome-remote-desktop` era un riferimento pieno: stesso linguaggio, stessa libreria RDP, stesso
-compositore, 68 730 righe. **krfb è ~5 000 righe di C++ e parla VNC**, e su questo ramo
-⛔ **non apre nemmeno la porta**: `RfbServer::start()` racchiude `rfbInitServer` in
-`if (passwordSet())` e torna `true` comunque, e nel percorso normale nessuno chiama `setPasswordSet`
-(`rfbserver.cpp:114`). Va letto come **archivio**, non come metro.
+`gnome-remote-desktop` was a full reference: same language, same RDP library, same
+compositor, 68 730 lines. **krfb is ~5 000 lines of C++ and speaks VNC**, and on this branch
+⛔ **it does not even open the port**: `RfbServer::start()` wraps `rfbInitServer` in
+`if (passwordSet())` and returns `true` anyway, and in the normal path nobody calls `setPasswordSet`
+(`rfbserver.cpp:114`). It is to be read as an **archive**, not as a yardstick.
 
-**Le tre cose per cui vale** [R]:
+**The three things it is worth** [R]:
 
-1. ✅ **conferma il nostro modello di palco**: un framebuffer per processo, vivo dall'avvio alla
-   chiusura, indifferente al connettersi dei client (`rfbservermanager.cpp:113-133`;
-   `startMonitor`/`stopMonitor` **vuoti**);
-2. **la sequenza dei pixel su KWin in un file solo** (`pw_framebuffer.cpp:125-346`), traducibile in
-   C quasi riga per riga se un giorno passassimo dal portale — e la scelta chiave: aprire una
-   sessione **RemoteDesktop** e innestarvi `ScreenCast.SelectSources`, che su KDE compra **un solo
-   dialogo** per schermo e input e l'accesso alla mega-autorizzazione;
-3. **otto difetti reali che possiamo non pagare**, e due sono della famiglia che ci ha già morso:
-   il **danno mai negoziato** (`setDamageEnabled` non è chiamato in tutto l'albero, quindi krfb
-   accoda **lo schermo intero a ogni fotogramma**), e un `QTimer` a 50 ms che impone **20 fps** —
-   cioè un tetto scritto in casa propria, esattamente il difetto dei nostri 18 (R32). Gli altri:
-   `buttonMask` passato dove il portale vuole uno `state` 0/1 (`xdpevents.cpp:78` → pulsanti
-   incastrati), doppio evento di rotella per scatto, uno scatto che arriva come `delta=±1 px`,
-   `||` invece di `&&` nel cursore, pixel fisici dove servono unità logiche, e nessun ascolto della
-   fine della sessione.
+1. ✅ **it confirms our stage model**: one framebuffer per process, alive from start to
+   close, indifferent to clients connecting (`rfbservermanager.cpp:113-133`;
+   `startMonitor`/`stopMonitor` **empty**);
+2. **the pixel sequence on KWin in a single file** (`pw_framebuffer.cpp:125-346`), translatable into
+   C almost line by line if one day we went through the portal — and the key choice: opening a
+   **RemoteDesktop** session and grafting `ScreenCast.SelectSources` onto it, which on KDE buys **a single
+   dialog** for screen and input and access to the mega-authorisation;
+3. **eight real defects we can avoid paying for**, and two are of the family that has already bitten us:
+   the **damage never negotiated** (`setDamageEnabled` is not called in the whole tree, so krfb
+   queues **the whole screen at every frame**), and a 50 ms `QTimer` that imposes **20 fps** —
+   i.e. a cap written in-house, exactly the defect of our 18 (R32). The others:
+   `buttonMask` passed where the portal wants a 0/1 `state` (`xdpevents.cpp:78` → stuck
+   buttons), a double wheel event per step, a step arriving as `delta=±1 px`,
+   `||` instead of `&&` in the cursor, physical pixels where logical units are needed, and no listening for the
+   end of the session.
 
-*(La prima stesura scriveva qui «altre tracce di RDP in KDE: nessuna». Era falso: vedi §12.0.)*
+*(The first draft wrote here «altre tracce di RDP in KDE: nessuna». It was false: see §12.0.)*
 
-#### 12.4 Gli altri due, trovati cercando fuori casa
+#### 12.4 The other two, found by searching outside the house
 
-*[I]/[C], 7 agosto 2026. Sono la prova che il passo zero di `LEZIONI.md` §9 serve: nessuno dei due
-stava nei repository che avevo scelto.*
+*[I]/[C], 7 August 2026. They are the proof that step zero of `LEZIONI.md` §9 is needed: neither of them
+was in the repositories I had chosen.*
 
 | | |
 |---|---|
-| **Sunshine** | ha da maggio 2026 un `kwingrab.cpp` (772 righe) che parla **il nostro stesso protocollo diretto**, e che **si scrive da sé il file `.desktop`** con `X-KDE-Wayland-Interfaces` a runtime, aspettando 3 000 ms perché KWin lo veda. È la **terza implementazione indipendente** del cancello di §3, dopo KRdp e krfb: la via del permesso non è più un'interpretazione |
-| **Chrome Remote Desktop** | il bug KDE **512620** è stato aperto da un ingegnere Google che sta portando CRD su KDE Wayland. È un quarto riferimento serio, e vale tenerlo d'occhio |
+| **Sunshine** | since May 2026 has a `kwingrab.cpp` (772 lines) that speaks **our very direct protocol**, and that **writes its own `.desktop` file** with `X-KDE-Wayland-Interfaces` at runtime, waiting 3 000 ms for KWin to see it. It is the **third independent implementation** of the gate of §3, after KRdp and krfb: the permission way is no longer an interpretation |
+| **Chrome Remote Desktop** | KDE bug **512620** was opened by a Google engineer who is porting CRD to KDE Wayland. It is a fourth serious reference, and worth keeping an eye on |
 
-**E una cosa che nessuno fa** [✗]: **`kwin_wayland --drm` senza monitor**. Cercata nel codice, nei
-bug, nelle wiki e nei forum: nessun precedente. La misura resta interamente nostra. Due bug
-confermano però che **non stiamo aggirando una via ufficiale, perché non ce n'è una**: il **492285**
-dice che `startplasma` non inoltra la scelta del backend al compositore (nessuna merge request), e il
-**523735**, aperto sei giorni prima di questo studio, **chiede proprio la sessione headless** — e
-nessuno l'ha risolta.
+**And one thing nobody does** [✗]: **`kwin_wayland --drm` without a monitor**. Searched for in the code, in the
+bugs, in the wikis and in the forums: no precedent. The measurement remains entirely ours. Two bugs
+confirm however that **we are not getting around an official way, because there is none**: **492285**
+says that `startplasma` does not forward the backend choice to the compositor (no merge request), and
+**523735**, opened six days before this study, **asks precisely for the headless session** — and
+nobody has solved it.
 
-**Due regali dal fronte dell'input** [I]: `krdp!217` sta portando KRdp **a libei, rendendolo
-obbligatorio** — cioè la strada che abbiamo scelto è la direzione in cui KDE si sta muovendo, e la
-loro conversione a `fake_input` diventerà codice morto. E nella discussione di quella merge request
-c'è la risposta parziale a una nostra misura aperta: **con libei il verso della rotella è quello di
-Wayland**, senza l'inversione che il portale si porta dietro. Più, nel master di KWin,
-`EIS_DEVICE_CAP_TEXT` (richiede libeis ≥ 1.6, non ancora disponibile): il giorno in cui arriva, il
-nostro giro «carattere → keysym → tasto → livelli» diventa superfluo.
+**Two gifts from the input front** [I]: `krdp!217` is moving KRdp **to libei, making it
+mandatory** — i.e. the path we chose is the direction KDE is moving in, and their
+conversion to `fake_input` will become dead code. And in the discussion of that merge request
+there is the partial answer to one of our open measurements: **with libei the wheel direction is Wayland's**,
+without the inversion the portal carries along. Plus, in KWin's master,
+`EIS_DEVICE_CAP_TEXT` (requires libeis ≥ 1.6, not yet available): the day it arrives, our
+«carattere → keysym → tasto → livelli» round becomes superfluous.
 
-⚠ **E una precisazione sulle versioni**: Debian Trixie ha **krdp 6.3.5-1**, non 6.3.6 — il tag che
-abbiamo clonato è una versione che sulla macchina dell'utente non c'è. Per le differenze fra 6.3.5 e
-6.3.6 non ho materiale [?].
+⚠ **And a clarification on versions**: Debian Trixie has **krdp 6.3.5-1**, not 6.3.6 — the tag we
+cloned is a version that is not on the user's machine. For the differences between 6.3.5 and
+6.3.6 I have no material [?].
 
-#### 12.3 `xrdp` — non affronta KWin: lo evita
+#### 12.3 `xrdp` — it does not face KWin: it avoids it
 
-*Verificato sul sorgente il 7 agosto 2026 (clone di `neutrinolabs/xrdp` master).*
+*Verified on the source on 7 August 2026 (clone of `neutrinolabs/xrdp` master).*
 
-La domanda «come fa xrdp con KWin?» ha una risposta secca: **non ci parla**. In tutto il codice C di
-xrdp la parola *wayland* compare **11 volte**, e nessuna riguarda la cattura o l'input: sono nomi di
-display (`"wayland-n"`), un commento, e **una riga che dichiara a `pam_systemd` il tipo di sessione**
-(`sesman/libsesman/verify_user_pam.c:405-413`) quando il display non è X11 — cioè una predisposizione
-di etichetta, non un'implementazione.
+The question «come fa xrdp con KWin?» has a blunt answer: **it does not talk to it**. In all of xrdp's C code
+the word *wayland* appears **11 times**, and none concerns capture or input: they are display
+names (`"wayland-n"`), a comment, and **a line that declares the session type to `pam_systemd`**
+(`sesman/libsesman/verify_user_pam.c:405-413`) when the display is not X11 — i.e. a label
+provision, not an implementation.
 
-Che cosa fa invece: `sesman/sesexec/session.c` lancia **`Xorg`** (con `xorgxrdp`) oppure **`Xvnc`**, e
-dentro quel server X esegue `sesman/startwm.sh`, che a sua volta chiama la sessione del desktop —
-per KDE, `startplasma-x11`. Cioè xrdp fa girare **Plasma in sessione X11**, dove il compositore è
-`kwin_x11` e la cattura è una cattura X11: nessun protocollo Wayland, nessun PipeWire, nessun
-permesso da chiedere.
+What it does instead: `sesman/sesexec/session.c` launches **`Xorg`** (with `xorgxrdp`) or **`Xvnc`**, and
+inside that X server runs `sesman/startwm.sh`, which in turn calls the desktop session —
+for KDE, `startplasma-x11`. That is, xrdp runs **Plasma in an X11 session**, where the compositor is
+`kwin_x11` and capture is an X11 capture: no Wayland protocol, no PipeWire, no
+permission to ask.
 
-**Ne discendono tre cose per noi:**
+**Three things follow for us:**
 
-1. ⛔ **xrdp non è un riferimento per la fase 11.** I problemi che stiamo studiando — il permesso
-   della cattura, l'output virtuale, l'input su Wayland — nel suo modello **non esistono**. Il
-   riferimento è `KRdp` (§12.0);
-2. **quella strada esiste ancora, e funziona oggi**: Plasma 6.3.6 ha ancora la sessione X11
+1. ⛔ **xrdp is not a reference for phase 11.** The problems we are studying — the capture
+   permission, the virtual output, input on Wayland — **do not exist** in its model. The
+   reference is `KRdp` (§12.0);
+2. **that path still exists, and works today**: Plasma 6.3.6 still has the X11 session
    (`plasma-workspace/login-sessions/plasmax11.desktop.cmake`, `startkde/startplasma-x11.cpp`,
-   `kwin/src/main_x11.cpp`) [R]. È **la ragione per cui xrdp su KDE va**, ed è anche la ragione per
-   cui non ci serve: §4.5 di `SPECIFICA.md` ha escluso le sessioni X11 — un secondo percorso completo
-   di cattura e input — e KDE quella sessione la sta chiudendo;
-3. e vale la pena registrarlo come **conferma della scelta di fondo del progetto**: il concorrente più
-   diffuso non ha ancora affrontato Wayland, mentre REMOTIX su Wayland ha già un desktop che
-   funziona.
+   `kwin/src/main_x11.cpp`) [R]. It is **the reason why xrdp on KDE works**, and it is also the reason
+   why we do not need it: §4.5 of `SPECIFICA.md` excluded X11 sessions — a second complete path
+   of capture and input — and KDE is closing that session;
+3. and it is worth recording as a **confirmation of the project's basic choice**: the most
+   widespread competitor has not yet faced Wayland, while REMOTIX on Wayland already has a desktop that
+   works.
 
-#### 12.2 Il portale — da conoscere per scartarlo con cognizione
+#### 12.2 The portal — to be known in order to discard it knowingly
 
-**[R]** Sette fatti che decidono:
+**[R]** Seven facts that decide:
 
 | | |
 |---|---|
-| `ConnectToEIS` **esiste** in 6.3.6 | ed è **un inoltro di sei righe utili** a `org.kde.KWin.EIS.RemoteDesktop`: passare dal portale **non aggiunge nulla** rispetto a chiamare KWin, tranne il dialogo |
-| l'output virtuale **non è annunciato** fra le sorgenti | `AvailableSourceTypes = Monitor\|Window` (`screencast.h:53-56`): solo l'utente può scegliere «schermo virtuale» nel dialogo |
-| e la sua misura è **cablata a 1920×1080** | `screencast.cpp:299` — nessun modo di chiedere 4K, cioè il numero desiderato dall'utente |
-| il nodo PipeWire lo crea e lo possiede **KWin** | `screencastmanager.cpp:84-90`; il portale attende `created` in un event loop bloccante con **timeout di 3 s** (`waylandintegration.cpp:354`) |
-| i `Notify*` passano da `fake_input` | e portano due difetti: `NotifyPointerAxis` **inverte il segno di y** (`:434`) mentre `NotifyPointerAxisDiscrete` no, e `NotifyKeyboardKeysym` **non rilascia mai** il modificatore che premette (`:579-592`) |
-| ⛔ `XDG_CURRENT_DESKTOP` deve valere **esattamente `KDE`** | altrimenti ScreenCast e RemoteDesktop **non vengono nemmeno registrati** (`desktopportal.cpp:43-44`). **Prima riga di qualunque diagnosi** |
-| la mega-autorizzazione | §3.5: la scappatoia documentata per il non presidiato, ma **nessuna interfaccia scrive** quella voce |
+| `ConnectToEIS` **exists** in 6.3.6 | and it is **a forward of six useful lines** to `org.kde.KWin.EIS.RemoteDesktop`: going through the portal **adds nothing** compared with calling KWin, except the dialog |
+| the virtual output **is not announced** among the sources | `AvailableSourceTypes = Monitor\|Window` (`screencast.h:53-56`): only the user can choose «schermo virtuale» in the dialog |
+| and its size is **hard-wired to 1920×1080** | `screencast.cpp:299` — no way to ask for 4K, i.e. the number the user wants |
+| the PipeWire node is created and owned by **KWin** | `screencastmanager.cpp:84-90`; the portal waits for `created` in a blocking event loop with a **3 s timeout** (`waylandintegration.cpp:354`) |
+| the `Notify*` go through `fake_input` | and carry two defects: `NotifyPointerAxis` **inverts the sign of y** (`:434`) while `NotifyPointerAxisDiscrete` does not, and `NotifyKeyboardKeysym` **never releases** the modifier it pressed (`:579-592`) |
+| ⛔ `XDG_CURRENT_DESKTOP` must be **exactly `KDE`** | otherwise ScreenCast and RemoteDesktop **are not even registered** (`desktopportal.cpp:43-44`). **First line of any diagnosis** |
+| the mega-authorisation | §3.5: the documented loophole for the unattended case, but **no interface writes** that entry |
 
 ---
 
-### 13. Il conto per REMOTIX
+### 13. The bill for REMOTIX
 
-#### 13.1 Che cosa conferma
+#### 13.1 What it confirms
 
-| Decisione di REMOTIX | Conferma nel codice di KDE |
+| REMOTIX decision | Confirmation in KDE's code |
 |---|---|
-| **Parlare al compositore, non al portale** | il portale di KDE è **un client** dello stesso protocollo, e aggiunge solo il dialogo (§12.2) |
-| **Il palco appartiene alla sessione, non alla connessione** | krfb lo pratica per costruzione (§12.1); e su KWin è obbligatorio: un `UNCONNECTED` smonta l'output virtuale (§4.9) |
-| **R9** — l'ultimo fotogramma si conserva e si rispedisce | nessuna richiesta «mandami un fotogramma pieno» esiste [✗]; il pieno arriva solo alla ripresa da pausa |
-| **Cadenza dichiarata «quando cambia»** | `framerate` **deve** essere `0/1`; il tetto è `maxFramerate` (§4.5) |
-| **Lo stride si legge dal chunk** | `SPA_ROUND_UP_N(width*bpp, 4)`: non è `width × 4` |
-| **Il codificatore senza fotogrammi B** | `max_b_frames = 0` in ogni encoder di kpipewire (§11.3) |
-| **Il sink audio lo creiamo noi** | zero righe di Plasma toccano i dispositivi audio (§10.4) |
-| **`libavcodec` invece delle API dei costruttori** | kpipewire scrive contro libav, non contro libva a mano — e il controllo del bitrate **non ce l'ha nemmeno lui** (§11.3) |
-| **Le nove combinazioni di §3.4** | logind è lo stesso: niente da rifare |
-| **Il conto dei tasti premuti** | KWin scarta ripetizioni e rilasci non appaiati, e rilascia tutto alla morte del client (§7.2) |
-| ⭐ **Il `.desktop` come via del permesso** | **è quel che fa `KRdp`**, il server RDP di KDE, per la cattura *e* per l'input (§12.0) |
-| ⭐ **I due codec sulla stessa pipeline** (R3) | `KRdp` fa la stessa scelta: H.264 se il client dichiara AVC **e** YUV420, altrimenti RemoteFX Progressive |
-| ⭐ **Il regolatore a fotogrammi in volo con soglia dall'RTT** (fase 7) | `KRdp` ha lo stesso meccanismo, e nel master lo ha appena raffinato smussando l'RTT |
-| ⭐ **I bordi esclusivi delle regioni** (R5) | `KRdp` scrive `right = rect.right() + 1`: terza fonte concorde |
-| ⭐ **TLS puro con PAM** (§3.6) | `KRdp`: `TlsSecurity = usePam`, `NlaSecurity = !usePam` — la nostra scelta è anche la sua, quando autentica come noi |
+| **Talk to the compositor, not to the portal** | KDE's portal is **a client** of the same protocol, and adds only the dialog (§12.2) |
+| **The stage belongs to the session, not to the connection** | krfb practises it by construction (§12.1); and on KWin it is mandatory: an `UNCONNECTED` tears down the virtual output (§4.9) |
+| **R9** — the last frame is kept and resent | no «mandami un fotogramma pieno» request exists [✗]; the full frame arrives only on resuming from pause |
+| **Cadence declared «quando cambia»** | `framerate` **must** be `0/1`; the cap is `maxFramerate` (§4.5) |
+| **The stride is read from the chunk** | `SPA_ROUND_UP_N(width*bpp, 4)`: it is not `width × 4` |
+| **The encoder without B-frames** | `max_b_frames = 0` in every kpipewire encoder (§11.3) |
+| **We create the audio sink ourselves** | zero lines of Plasma touch the audio devices (§10.4) |
+| **`libavcodec` instead of the vendors' APIs** | kpipewire writes against libav, not against libva by hand — and **it does not have** bitrate control **either** (§11.3) |
+| **The nine combinations of §3.4** | logind is the same: nothing to redo |
+| **The count of pressed keys** | KWin discards repeats and unpaired releases, and releases everything when the client dies (§7.2) |
+| ⭐ **The `.desktop` as the path to permission** | **it is what `KRdp` does**, KDE's RDP server, for capture *and* for input (§12.0) |
+| ⭐ **The two codecs on the same pipeline** (R3) | `KRdp` makes the same choice: H.264 if the client declares AVC **and** YUV420, otherwise RemoteFX Progressive |
+| ⭐ **The frames-in-flight regulator with an RTT-derived threshold** (phase 7) | `KRdp` has the same mechanism, and in master has just refined it by smoothing the RTT |
+| ⭐ **The exclusive edges of regions** (R5) | `KRdp` writes `right = rect.right() + 1`: a third agreeing source |
+| ⭐ **Pure TLS with PAM** (§3.6) | `KRdp`: `TlsSecurity = usePam`, `NlaSecurity = !usePam` — our choice is also its own, when it authenticates as we do |
 
-#### 13.2 Che cosa smentisce, o corregge
+#### 13.2 What it refutes, or corrects
 
-1. ⛔ **`SPECIFICA.md` §3.8 va corretta**: dice *«KWin: cattura PipeWire via **portale**, input
-   interfacce KWin, protocollo `kde-fake-input`»*. Il codice dice: cattura **via protocollo Wayland
-   diretto** (il portale è un client come noi), input **via libei/EIS su D-Bus** (`fake_input` è la
-   strada vecchia).
-2. ⛔ **`REFERENCE.md` R32 e `LEZIONI.md` §3 riga 4**: *«KWin senza monitor disegna in software»* è
-   contraddetto dal codice, e la nostra stessa tabella (DMA-BUF con fence) lo conferma. **Da
-   rimisurare prima di correggere** (§5.1, §15).
-3. ⛔ **Le misure dei 59–60 fps hanno due etichette da rivedere**: sono state prese con
-   `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` (cioè scavalcando il cancello) e con `--virtual` +
-   `stream_output` **senza `--xwayland`** — cioè su **KWin nudo**, non su una sessione Plasma, e non
-   nella configurazione del prodotto (`stream_virtual_output`, che con `--virtual` **non funziona**).
-   Il numero resta un fatto; la sua etichetta no.
-4. ⛔ **La risoluzione dinamica non si fa come su GNOME** (§8): un output virtuale non si
-   ridimensiona. Il prezzo che la fase 6 aveva estinto torna, in forma diversa — e su KDE **non
-   trascina l'input**.
-5. ✅ **Due debiti di GNOME non si presentano**: la connessione al bus di sessione che non
-   sopravvive al logout (§6.6), e il difetto delle schermate alternate a copia zero (§4.6).
-6. ⚠ **`banco/misura-cattura.c` va corretto prima di rimisurare su KWin**: `--fissa` non può
-   negoziare (§4.5), e i buffer `SPA_CHUNK_FLAG_CORRUPTED` del cursore vengono contati come
-   fotogrammi (§4.7).
+1. ⛔ **`SPECIFICA.md` §3.8 must be corrected**: it says *«KWin: cattura PipeWire via **portale**, input
+   interfacce KWin, protocollo `kde-fake-input`»*. The code says: capture **via the Wayland protocol
+   directly** (the portal is a client like us), input **via libei/EIS over D-Bus** (`fake_input` is the
+   old path).
+2. ⛔ **`REFERENCE.md` R32 and `LEZIONI.md` §3 row 4**: *«KWin senza monitor disegna in software»* is
+   contradicted by the code, and our own table (DMA-BUF with fence) confirms it. **To be
+   re-measured before correcting** (§5.1, §15).
+3. ⛔ **The 59–60 fps measurements have two labels to review**: they were taken with
+   `KWIN_WAYLAND_NO_PERMISSION_CHECKS=1` (that is, bypassing the gate) and with `--virtual` +
+   `stream_output` **without `--xwayland`** — that is, on **bare KWin**, not on a Plasma session, and not
+   in the product's configuration (`stream_virtual_output`, which with `--virtual` **does not work**).
+   The number remains a fact; its label does not.
+4. ⛔ **Dynamic resolution is not done as on GNOME** (§8): a virtual output cannot be
+   resized. The price that phase 6 had paid off comes back, in a different form — and on KDE **it does not
+   drag input along**.
+5. ✅ **Two of GNOME's debts do not show up**: the session-bus connection that does not
+   survive logout (§6.6), and the fault of alternating screens with zero-copy (§4.6).
+6. ⚠ **`banco/misura-cattura.c` must be corrected before re-measuring on KWin**: `--fissa` cannot
+   negotiate (§4.5), and the cursor's `SPA_CHUNK_FLAG_CORRUPTED` buffers are counted as
+   frames (§4.7).
 
-#### 13.3 Che cosa conviene copiare, in ordine di resa
+#### 13.3 What is worth copying, in order of yield
 
-0. ⭐ **Leggere per intero `KRdp`** — 4 222 righe, cioè una sessione di lettura: è un server RDP
-   sullo stesso compositore, con la stessa libreria, e ogni sua scelta è una risposta a una domanda
-   che abbiamo (§12.0). Restano da leggere `Clipboard.cpp`, `Cursor.cpp`, `NetworkDetection.cpp` e
+0. ⭐ **Read `KRdp` in full** — 4 222 lines, that is one reading session: it is an RDP server
+   on the same compositor, with the same library, and each of its choices is an answer to a question
+   we have (§12.0). Still to read: `Clipboard.cpp`, `Cursor.cpp`, `NetworkDetection.cpp` and
    `PortalSession.cpp`.
-1. **Il `.desktop` con `X-KDE-Wayland-Interfaces`**, sul modello di
-   `org.kde.krdpserver.desktop` (§12.0) o di `org.kde.krfb.virtualmonitor.desktop` (§3.2). È la
-   chiave della fase, e sono tre righe.
-2. **`ei_device_scroll_discrete(±120)`** invece del nostro `/120 → ×10` (§7.2): più semplice di
-   quel che facciamo, e produce una rotella vera.
-3. **Il solo `DRM_FORMAT_MOD_LINEAR` per la codifica in GPU** e **il contesto VAAPI creato dal
-   grafo di filtri** (§11.2): due difetti silenziosi già pagati da altri.
-4. **La rinegoziazione dei modificatori invece dello spegnimento del DMA-BUF** (§11.2).
-5. **`AddInhibition(types=4)` di powerdevil** per non farsi spegnere lo schermo sotto i piedi
+1. **The `.desktop` with `X-KDE-Wayland-Interfaces`**, on the model of
+   `org.kde.krdpserver.desktop` (§12.0) or of `org.kde.krfb.virtualmonitor.desktop` (§3.2). It is the
+   key of the phase, and it is three lines.
+2. **`ei_device_scroll_discrete(±120)`** instead of our `/120 → ×10` (§7.2): simpler than
+   what we do, and it produces a real wheel.
+3. **Only `DRM_FORMAT_MOD_LINEAR` for GPU encoding** and **the VAAPI context created by the
+   filter graph** (§11.2): two silent faults already paid for by others.
+4. **Renegotiating the modifiers instead of switching DMA-BUF off** (§11.2).
+5. **powerdevil's `AddInhibition(types=4)`** so the screen is not switched off under our feet
    (§10.2).
-6. **`org.kde.Shutdown` come sentinella passiva del logout** (§6.5): due sottoscrizioni, zero
-   rischio di tenere in ostaggio la sessione dell'utente.
-7. **`KWIN_XKB_DEFAULT_KEYMAP` + `XKB_DEFAULT_*` nell'ambiente del compositore** (§6.7), se un
-   giorno servisse *imporre* la disposizione invece di leggerla.
+6. **`org.kde.Shutdown` as the passive logout sentinel** (§6.5): two subscriptions, zero
+   risk of holding the user's session hostage.
+7. **`KWIN_XKB_DEFAULT_KEYMAP` + `XKB_DEFAULT_*` in the compositor's environment** (§6.7), if one
+   day we needed to *impose* the layout instead of reading it.
 
-#### 13.4 Le scelte da mettere davanti all'utente, prima di scrivere
+#### 13.4 The choices to put before the user, before writing
 
-Sono decisioni di prodotto, non di tecnica, e `LEZIONI.md` §2.6 dice di metterle davanti **subito**.
+They are product decisions, not technical ones, and `LEZIONI.md` §2.6 says to put them forward **at once**.
 
-> ⚠ **Erano tre; dopo il banco del 7 agosto 2026 ne restano due**, ed è un miglioramento: **la prima
-> l'ha decisa la misura, non l'utente** (M2, §5.2). Vale la regola di
-> `remotix-prove-sul-banco-non-sull-utente`: quel che si può misurare non si chiede.
+> ⚠ **There were three; after the bench of 7 August 2026 two remain**, and that is an improvement: **the first
+> was decided by the measurement, not by the user** (M2, §5.2). The rule of
+> `remotix-prove-sul-banco-non-sull-utente` applies: what can be measured is not asked.
 
-> #### ✅ DECISO DALL'UTENTE l'8 agosto 2026 — tutte e tre, e nella direzione migliore
+> #### ✅ DECIDED BY THE USER on 8 August 2026 — all three, and in the best direction
 >
-> | La domanda | La decisione |
+> | The question | The decision |
 > |---|---|
-> | **La copia zero: adesso o dopo?** *(domanda nuova, nata dalle misure di §5.7)* | ✅ **adesso, dentro il lavoro su KDE.** Quindi **la cattura si scrive a copia zero dal principio**, con l'attesa della fence (§4.8) — non si scrive in memoria per poi tornarci sopra. È la condizione dei 60 fps a 4K |
-| **Il ridimensionamento su Trixie** | ✅ **misura fissa alla connessione**: nessun buco video, nessuna finestra riposizionata, nessuna notifica di sistema. ⛔ **E si scrive nella forma della negoziazione PipeWire** (§8.2), che è il codice della fase 6: così su **KWin 6.8** il ridimensionamento vero si accende da sé, senza che nessuno riscriva niente |
+> | **Zero-copy: now or later?** *(a new question, born from the measurements of §5.7)* | ✅ **now, inside the KDE work.** So **capture is written zero-copy from the start**, with the wait on the fence (§4.8) — it is not written in memory only to go back over it later. It is the condition for 60 fps at 4K |
+| **Resizing on Trixie** | ✅ **size fixed at connection**: no video gap, no repositioned window, no system notification. ⛔ **And it is written in the form of PipeWire negotiation** (§8.2), which is phase 6's code: so on **KWin 6.8** real resizing switches on by itself, without anyone rewriting anything |
 
-> #### ⛔ «L'IMMAGINE SI SCALA NEL CLIENT» ERA FALSO — e l'ha trovato l'utente
+> #### ⛔ «L'IMMAGINE SI SCALA NEL CLIENT» WAS FALSE — and the user found it
 >
-> *[M, 8 agosto 2026: «non riesco a vedere tutto lo schermo, la risoluzione sembra ignorata».]*
+> *[M, 8 August 2026: «non riesco a vedere tutto lo schermo, la risoluzione sembra ignorata».]*
 >
-> La decisione qui sopra è stata scritta con accanto la frase «l'immagine si scala nel client», e
-> quella frase **non era mai stata misurata**. `xfreerdp3` non scala niente: apre una finestra
-> **grande quanto la tela dichiarata**. Con il desktop a 1920×1080 e uno schermo più piccolo, la
-> finestra non ci sta — e chi guarda vede «la risoluzione che ho chiesto viene ignorata», che è
-> esattamente quel che succede.
+> The decision above was written with the sentence «l'immagine si scala nel client» beside it, and
+> that sentence **had never been measured**. `xfreerdp3` scales nothing: it opens a window
+> **as large as the declared canvas**. With the desktop at 1920×1080 and a smaller screen, the
+> window does not fit — and whoever looks sees «la risoluzione che ho chiesto viene ignorata», which is
+> exactly what happens.
 >
-> **La scalatura lato client esiste, e passa da `MAPSURFACETOSCALEDOUTPUT`** — che il **7 agosto**
-> avevamo già misurato essere resa da **un client su tre**: `xfreerdp3` sì, mstsc no, RDM la dichiara
-> spenta (§10.2 di `REFERENCE.md`). Cioè: la smentita era già in casa, su un'altra pagina, e la
-> decisione dell'8 agosto l'ha ignorata.
+> **Client-side scaling exists, and goes through `MAPSURFACETOSCALEDOUTPUT`** — which on **7 August**
+> we had already measured as honoured by **one client in three**: `xfreerdp3` yes, mstsc no, RDM declares it
+> off (§10.2 of `REFERENCE.md`). That is: the refutation was already in the house, on another page, and the
+> decision of 8 August ignored it.
 >
-> ⭐ **Quel che regge davvero della decisione, ed è più forte di quel che si pensava**: la misura del
-> desktop la fissa **la prima connessione**, e su KDE è REMOTIX ad avviare la sessione — quindi il
-> desktop nasce *esattamente* della misura chiesta. Il prezzo non è un'immagine scalata: è che **per
-> cambiare misura bisogna far finire la sessione**. Adesso il registro lo dice, invece di lasciar
-> credere a una scalatura che non avviene.
+> ⭐ **What really holds of the decision, and it is stronger than was thought**: the desktop's
+> size is fixed by **the first connection**, and on KDE it is REMOTIX that starts the session — so the
+> desktop is born *exactly* at the requested size. The price is not a scaled image: it is that **to
+> change size the session has to end**. Now the log says so, instead of letting people
+> believe in a scaling that does not happen.
 >
-> **La lezione, che non riguarda KDE**: una decisione di prodotto presa citando un comportamento non
-> misurato è una decisione presa a metà. `LEZIONI.md` §1.11 lo dice per le prove; vale identico per
-> le premesse.
-| **BlocMaiusc e BlocNum** | ✅ **si legge lo stato vero da KWin**, con `org_kde_kwin_keystate` v5. Costa poco **perché su KDE siamo già client Wayland** per la cattura: basta aggiungere il nome dell'interfaccia allo stesso `.desktop` (`X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1,org_kde_kwin_keystate`) e un ascoltatore. ⚠ Nella valutazione del 7 agosto l'avevo data come «una seconda strada nel codice»: **era sbagliata**, la connessione Wayland c'è comunque |
+> **The lesson, which is not about KDE**: a product decision taken by citing an unmeasured
+> behaviour is a decision taken halfway. `LEZIONI.md` §1.11 says it for tests; it applies identically to
+> premises.
+| **CapsLock and NumLock** | ✅ **the true state is read from KWin**, with `org_kde_kwin_keystate` v5. It costs little **because on KDE we are already a Wayland client** for capture: it is enough to add the interface name to the same `.desktop` (`X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1,org_kde_kwin_keystate`) and a listener. ⚠ In the assessment of 7 August I had given it as «una seconda strada nel codice»: **it was wrong**, the Wayland connection is there anyway |
 
-| | La scelta | Il prezzo di ciascuna via |
+| | The choice | The price of each path |
 |---|---|---|
-| ~~**1**~~ | ~~**`--virtual` o `--drm`?**~~ ⛔ **NON è più una scelta: la misura M2 del 7 agosto 2026 l'ha chiusa.** `--drm` da una sessione senza seat esce con stato 1 (`Failed to activate … session`, poi `No suitable DRM devices have been found`), e l'unico modo di avercelo sarebbe occupare `seat0`, cioè la console fisica. **Si va di `--virtual`**, pagando §8.1: risoluzione fissa all'avvio e nessun `stream_virtual_output` prima di KWin 6.8. Non c'è niente da chiedere all'utente | (riquadro in §5.2) |
-| **2** | ~~**La risoluzione dinamica su KDE**~~ ✅ **la scelta si è ridotta da sé**: il ridimensionamento arriva in **KWin 6.8** per **negoziazione PipeWire**, cioè con il codice che la fase 6 ha già scritto (§8.2). Quindi si scrive **in quella forma** — che diventa giusta da sé quando l'utente aggiorna — e per le versioni che non ce l'hanno (Trixie compresa) resta la domanda **piccola**: ripiego «chiudi e rifai lo stream», o misura fissa alla connessione? | Il ripiego costa un buco video, le finestre ridisposte e una notifica di sistema a ogni giro; la misura fissa non costa nulla e si vede solo come immagine scalata. **Da decidere guardando**, e non blocca niente |
-| **3** | **BlocMaiusc e BlocNum**: aprire **anche** una connessione Wayland (per `org_kde_kwin_keystate`, che richiede il `.desktop`), tenere il conto approssimato, o rinviare? | La prima costa una seconda strada nel codice; la seconda è quel che facevamo su GNOME prima di libei |
+| ~~**1**~~ | ~~**`--virtual` or `--drm`?**~~ ⛔ **It is NO LONGER a choice: measurement M2 of 7 August 2026 closed it.** `--drm` from a session without a seat exits with status 1 (`Failed to activate … session`, then `No suitable DRM devices have been found`), and the only way to have it would be to occupy `seat0`, that is the physical console. **We go with `--virtual`**, paying §8.1: resolution fixed at startup and no `stream_virtual_output` before KWin 6.8. There is nothing to ask the user | (box in §5.2) |
+| **2** | ~~**Dynamic resolution on KDE**~~ ✅ **the choice shrank by itself**: resizing arrives in **KWin 6.8** through **PipeWire negotiation**, that is with the code phase 6 has already written (§8.2). So it is written **in that form** — which becomes right by itself when the user upgrades — and for the versions that do not have it (Trixie included) the **small** question remains: fallback «chiudi e rifai lo stream», or size fixed at connection? | The fallback costs a video gap, rearranged windows and a system notification every round; the fixed size costs nothing and shows only as a scaled image. **To be decided by looking**, and it blocks nothing |
+| **3** | **CapsLock and NumLock**: open **also** a Wayland connection (for `org_kde_kwin_keystate`, which requires the `.desktop`), keep the approximate count, or postpone? | The first costs a second path in the code; the second is what we did on GNOME before libei |
 
 ---
 
-### 14. Le domande che il codice non chiude — il piano di misure
+### 14. The questions the code does not close — the measurement plan
 
-In ordine di quanto pesano. Sono le `[?]` di questo documento, e sono il contenuto della prima
-giornata di banco della fase 11.
+In order of weight. They are the `[?]` of this document, and they are the content of the first
+bench day of phase 11.
 
-> #### Lo stato dopo il banco del 7 agosto 2026
+> #### The state after the bench of 7 August 2026
 >
-> **Cinque chiuse su dodici, e sono le cinque che pesano di più**: le due «decisive» (M1, M2) più
-> M3, M5, M6. Nessuna ha smentito il codice; **una ha smentito noi** (R32, il «in software»), e una
-> ha aggiunto un requisito che nessuna lettura di codice aveva mostrato (`XDG_MENU_PREFIX`, §3.3-bis).
-> Gli script del banco stanno in `reference-kde/banco/` (`misure-kde.sh`, `permesso-kde.sh` …
-> `permesso6-kde.sh`) e sul server in `/media/REMOTIX/tmp/banco-compositori/`.
+> **Five closed out of twelve, and they are the five that weigh most**: the two «decisive» ones (M1, M2) plus
+> M3, M5, M6. None refuted the code; **one refuted us** (R32, the «in software»), and one
+> added a requirement that no code reading had shown (`XDG_MENU_PREFIX`, §3.3-bis).
+> The bench scripts are in `reference-kde/banco/` (`misure-kde.sh`, `permesso-kde.sh` …
+> `permesso6-kde.sh`) and on the server in `/media/REMOTIX/tmp/banco-compositori/`.
 
-| # | Che cosa | Perché pesa |
+| # | What | Why it weighs |
 |---|---|---|
-| ~~**1**~~ | ✅ **CHIUSA: sì, autorizza** — con `NoDisplay=true`, la forma di KRdp. ⛔ **Ma a una condizione che il codice non mostrava: `XDG_MENU_PREFIX=plasma-`**, senza la quale `kbuildsycoca6` non indicizza **niente** e KWin dice `Could not find the desktop file for …`. Cinque varianti del file negate prima di trovarlo. §3.3-bis | è il cancello: se non passa, tutto il resto è teoria (§3) |
-| ~~**2**~~ | ⛔ **CHIUSA: no.** `--drm` senza seat esce con 1 (`Failed to activate … session` → `No suitable DRM devices`), e **non** per permessi Unix: nello stesso ambiente `--virtual` apre `renderD129`. Quindi **`--virtual`**, e la decisione 1 di §13.4 non si chiede più all'utente. §5.2 | decide la scelta n.1 di §13.4 (§5.2, §6.3) |
-| ~~**3**~~ | ✅ **CHIUSA: GPU.** `renderD129` aperto, `libEGL_mesa` + `libgbm` caricate, `zwp_linux_dmabuf_v1` **v4** annunciato. **R32 va corretta.** ⚠ Due trappole trovate: su Mesa 25 llvmpipe sta dentro `libgallium-*.so` (cercarlo per nome non prova nulla), e `kwin_wayland` è **non dumpable** per l'xattr `security.capability` (il `/proc` va letto con `sudo`). 🟡 Resta **M3d**, il tipo di buffer: negoziato `MemFd/BGRx/LINEAR`, ma per limite del **nostro** cliente. §5.1 | corregge R32 (§5.1, §5.3) |
-| ~~**4**~~ | ⛔ **CHIUSA: parte in software.** Con i render node inaccessibili e `KWIN_COMPOSE=O2`: `forced to OpenGL` → `Falling back to defaults` → `QPainter … successfully initialized`, **e KWin parte**. L'interruttore è **inerte**: va cassato dalle ricette e da ogni banco, e l'unico modo di sapere come rende KWin è **chiederglielo** (§5.3-bis). ⚠ Nota: `LIBGL_ALWAYS_SOFTWARE` e le altre variabili di Mesa **non hanno effetto** su KWin. §5.4 | se parte, va cassato dalle nostre ricette, e tutte le misure fatte con quella variabile vanno rilette (§5.4) |
-| ~~**5**~~ | ✅ **CHIUSA: sì, senza nulla.** `gdbus … org.kde.KWin.EIS.RemoteDesktop.connectToEIS 7` da una shell SSH qualunque → **`(handle 0, 1)`**: un descrittore e un cookie, **senza sessione, senza portale, senza dialogo e senza `.desktop`**. L'input via libei su KDE è confermato sul campo | è la quarta domanda della fase, e il codice dice sì (§7.1) |
-| ~~**6**~~ | ✅ **CHIUSA: sì.** `libeis-dev` è nei `Build-Depends` di `kwin 4:6.3.6-1`, e — prova che non mente — **`eis.so` è dentro il pacchetto `kwin-common`** (`/usr/lib/<triplet>/qt6/plugins/kwin/plugins/eis.so`), libei 1.3.901. ⚠ `kwin-wayland` **non** dipende da `libeis1`: guardare lì avrebbe dato la risposta sbagliata | la premessa dell'input c'è (§7.1) |
-| ~~**7**~~ | ✅ **CHIUSA in parte.** Montare un flusso costa **65–67 ms** (tre giri), ed è la componente fissa del buco. Il tempo di *ricreare l'output* non è misurabile su `--virtual`, dove `stream_virtual_output` è rifiutato (`Could not find output`, verificato). §8.1 | decide la scelta n.2 di §13.4 (§8.3) |
-| ~~**8**~~ | ✅ **CHIUSA: la cattura è indipendente dal VT.** Il compositore `--virtual` **non apre nessuna tty/console** (verificato su `/proc/<pid>/fd`), la sua sessione ha `VTNr=0` e `Seat=` vuoto; cambiando VT (tty1 → tty2 → tty1 con `VT_ACTIVATE`, perché `chvt` non è installato) **compositore, flusso e protocollo restano tutti vivi**. §4.9 | è la condizione di un servizio non presidiato (§4.9) |
-| ~~**9**~~ | ✅ **CHIUSA: sì.** Dopo `org.kde.Shutdown.logout()` tutti i processi Plasma spariscono e il socket Wayland con loro, **ma il bus d'utente risponde ancora sulla stessa connessione** e `systemd --user` è vivo. Il difetto di GNOME non si ripresenta. §6.6 | se sì, un difetto di GNOME non si ripresenta (§6.6) |
-| ~~**10**~~ | ✅ **CHIUSA per lettura, e la lettura è conclusiva**: `eiscontext.cpp:272-285` **non inverte** e usa **la stessa formula per i due assi** (`delta = v120 × 15/120`, `v120` grezzo a valle). Nessuna asimmetria di KWin da compensare: l'adattamento è tutto nostro. Resta la verifica a occhio nella fase. §7.2 | §7.2 |
-| ~~**11**~~ | 🟡 **CHIUSA per quel che si può**: `0x0`, `-1x-1`, `1x1`, `16384²`, `99999²` **tutte rifiutate** e **KWin sopravvive a tutte**. Ma il rifiuto è per l'assenza di output virtuale, non per validazione: **la validazione resta non misurabile con `--virtual`**. §8.1 | nessuna validazione nel codice (§4.3) |
-| ~~**12**~~ | 🟡 **CORRETTA**: il dialogo **non** è il primo rischio. Al primo fallimento di OpenGL plasmashell scrive **`SceneGraphBackend=software` in modo persistente** e si riavvia; il `QMessageBox` è solo al secondo giro. Il rischio vero è **la configurazione permanente lasciata nella casa dell'utente**. Con la GPU: nulla di tutto questo (verificato). §10.4 | dieci secondi, e blocca una sessione (§10.4) |
-| **13** *(nuova, dal banco)* | **`InaccessiblePaths=` nell'unità del compositore chiude il cancello della cattura** — 0 righe `KWIN_UTILS` contro 13. Il meccanismo non è dimostrato; la regola operativa sì: **niente namespace di monti nell'unità di KWin**. §3.3-bis | era la via ovvia per scegliere la GPU, ed è una trappola |
+| ~~**1**~~ | ✅ **CLOSED: yes, it authorises** — with `NoDisplay=true`, KRdp's form. ⛔ **But on a condition the code did not show: `XDG_MENU_PREFIX=plasma-`**, without which `kbuildsycoca6` indexes **nothing** and KWin says `Could not find the desktop file for …`. Five variants of the file denied before finding it. §3.3-bis | it is the gate: if it does not pass, everything else is theory (§3) |
+| ~~**2**~~ | ⛔ **CLOSED: no.** `--drm` without a seat exits with 1 (`Failed to activate … session` → `No suitable DRM devices`), and **not** because of Unix permissions: in the same environment `--virtual` opens `renderD129`. So **`--virtual`**, and decision 1 of §13.4 is no longer asked of the user. §5.2 | decides choice no. 1 of §13.4 (§5.2, §6.3) |
+| ~~**3**~~ | ✅ **CLOSED: GPU.** `renderD129` open, `libEGL_mesa` + `libgbm` loaded, `zwp_linux_dmabuf_v1` **v4** announced. **R32 must be corrected.** ⚠ Two traps found: on Mesa 25 llvmpipe lives inside `libgallium-*.so` (searching for it by name proves nothing), and `kwin_wayland` is **non-dumpable** because of the `security.capability` xattr (`/proc` must be read with `sudo`). 🟡 **M3d** remains, the buffer type: `MemFd/BGRx/LINEAR` negotiated, but because of a limit of **our** client. §5.1 | corrects R32 (§5.1, §5.3) |
+| ~~**4**~~ | ⛔ **CLOSED: it starts in software.** With the render nodes inaccessible and `KWIN_COMPOSE=O2`: `forced to OpenGL` → `Falling back to defaults` → `QPainter … successfully initialized`, **and KWin starts**. The switch is **inert**: it must be struck from the recipes and from every bench, and the only way to know how KWin renders is **to ask it** (§5.3-bis). ⚠ Note: `LIBGL_ALWAYS_SOFTWARE` and the other Mesa variables **have no effect** on KWin. §5.4 | if it starts, it must be struck from our recipes, and all measurements taken with that variable must be re-read (§5.4) |
+| ~~**5**~~ | ✅ **CLOSED: yes, with nothing.** `gdbus … org.kde.KWin.EIS.RemoteDesktop.connectToEIS 7` from any SSH shell → **`(handle 0, 1)`**: a descriptor and a cookie, **without a session, without a portal, without a dialog and without a `.desktop`**. Input via libei on KDE is confirmed in the field | it is the fourth question of the phase, and the code says yes (§7.1) |
+| ~~**6**~~ | ✅ **CLOSED: yes.** `libeis-dev` is in the `Build-Depends` of `kwin 4:6.3.6-1`, and — proof that does not lie — **`eis.so` is inside the `kwin-common` package** (`/usr/lib/<triplet>/qt6/plugins/kwin/plugins/eis.so`), libei 1.3.901. ⚠ `kwin-wayland` does **not** depend on `libeis1`: looking there would have given the wrong answer | the premise for input is there (§7.1) |
+| ~~**7**~~ | ✅ **PARTLY CLOSED.** Setting up a stream costs **65–67 ms** (three rounds), and it is the fixed component of the gap. The time to *recreate the output* cannot be measured on `--virtual`, where `stream_virtual_output` is refused (`Could not find output`, verified). §8.1 | decides choice no. 2 of §13.4 (§8.3) |
+| ~~**8**~~ | ✅ **CLOSED: capture is independent of the VT.** The `--virtual` compositor **opens no tty/console** (verified on `/proc/<pid>/fd`), its session has `VTNr=0` and an empty `Seat=`; switching VT (tty1 → tty2 → tty1 with `VT_ACTIVATE`, because `chvt` is not installed) **compositor, stream and protocol all stay alive**. §4.9 | it is the condition for an unattended service (§4.9) |
+| ~~**9**~~ | ✅ **CLOSED: yes.** After `org.kde.Shutdown.logout()` all Plasma processes vanish and the Wayland socket with them, **but the user bus still answers on the same connection** and `systemd --user` is alive. GNOME's fault does not recur. §6.6 | if yes, a GNOME fault does not recur (§6.6) |
+| ~~**10**~~ | ✅ **CLOSED by reading, and the reading is conclusive**: `eiscontext.cpp:272-285` **does not invert** and uses **the same formula for both axes** (`delta = v120 × 15/120`, raw `v120` downstream). No KWin asymmetry to compensate: the adaptation is all ours. The by-eye check in the phase remains. §7.2 | §7.2 |
+| ~~**11**~~ | 🟡 **CLOSED as far as possible**: `0x0`, `-1x-1`, `1x1`, `16384²`, `99999²` **all refused** and **KWin survives all of them**. But the refusal is due to the absence of a virtual output, not to validation: **validation remains unmeasurable with `--virtual`**. §8.1 | no validation in the code (§4.3) |
+| ~~**12**~~ | 🟡 **CORRECTED**: the dialog is **not** the first risk. At the first OpenGL failure plasmashell writes **`SceneGraphBackend=software` persistently** and restarts; the `QMessageBox` comes only on the second round. The real risk is **the permanent configuration left in the user's home**. With the GPU: none of this (verified). §10.4 | ten seconds, and it blocks a session (§10.4) |
+| **13** *(new, from the bench)* | **`InaccessiblePaths=` in the compositor's unit closes the capture gate** — 0 `KWIN_UTILS` lines against 13. The mechanism is not proven; the operating rule is: **no mount namespaces in KWin's unit**. §3.3-bis | it was the obvious way to choose the GPU, and it is a trap |
 
-**Il metodo, che vale più dell'elenco**: le misure 3 e 4 vanno fatte **prima** delle altre e con le
-prove che non dipendono da quel che KWin dichiara. È la lezione 1.8 di `LEZIONI.md`, e su KWin il
-codice mostra due punti in cui il ripiego è silenzioso per costruzione.
+**The method, which is worth more than the list**: measurements 3 and 4 must be done **before** the others and with
+tests that do not depend on what KWin declares. It is lesson 1.8 of `LEZIONI.md`, and on KWin the
+code shows two points where the fallback is silent by construction.
 
-> #### Lo stato dopo il secondo giorno di banco (8 agosto 2026)
+> #### The state after the second bench day (8 August 2026)
 >
-> **Dodici su dodici hanno una risposta**, più una tredicesima trovata strada facendo. Sette sono
-> state chiuse in questa giornata (M3d, M4, M7, M8, M9, M10, M11, M12), e i risultati che cambiano il
-> piano sono tre:
+> **Twelve out of twelve have an answer**, plus a thirteenth found along the way. Seven were
+> closed on this day (M3d, M4, M7, M8, M9, M10, M11, M12), and the results that change the
+> plan are three:
 >
-> 1. ⭐ **la copia zero è la condizione dei 60 fps a 4K** sulla GPU scelta dall'utente (§5.7);
-> 2. ⛔ **`KWIN_COMPOSE=O2` non protegge** (M4), quindi ogni misura va accompagnata dalla stringa del
->    renderer (§5.3-bis);
-> 3. ⛔ **il modo ovvio di scegliere la GPU rompe il permesso della cattura** (§5.6, §3.3-bis).
+> 1. ⭐ **zero-copy is the condition for 60 fps at 4K** on the GPU chosen by the user (§5.7);
+> 2. ⛔ **`KWIN_COMPOSE=O2` does not protect** (M4), so every measurement must be accompanied by the
+>    renderer string (§5.3-bis);
+> 3. ⛔ **the obvious way to choose the GPU breaks the capture permission** (§5.6, §3.3-bis).
 >
-> ⚠ **E due prove strutturali che avevamo per buone non valgono**: «render node aperto» non prova la
-> GPU (aperto anche in QPainter), e «il flusso è MemFd» non prova che il compositore sia in software
-> (dipende da cosa chiede il *cliente*). Le lezioni sono in `LEZIONI.md` §1.9 e §1.11.
+> ⚠ **And two structural proofs we had taken as good do not hold**: «render node aperto» does not prove the
+> GPU (open in QPainter too), and «il flusso è MemFd» does not prove the compositor is in software
+> (it depends on what the *client* asks for). The lessons are in `LEZIONI.md` §1.9 and §1.11.
 
-> #### ✅ E L'8 AGOSTO 2026 LA VOCE 1 HA MESSO ALLA PROVA IL DOCUMENTO INTERO
+> #### ✅ AND ON 8 AUGUST 2026 ITEM 1 PUT THE WHOLE DOCUMENT TO THE TEST
 >
-> *Banco `prove/fase11.sh`, con REMOTIX vero al posto di `nodo-kwin`. Il racconto sta in `PIANO.md`
-> fase 11; qui c'è quel che cambia in questo documento.*
+> *Bench `prove/fase11.sh`, with the real REMOTIX in place of `nodo-kwin`. The account is in `PIANO.md`
+> phase 11; here is what changes in this document.*
 >
-> **Niente di quel che è scritto qui è stato smentito.** Le quattro cose che il campo ha aggiunto:
+> **Nothing written here was refuted.** The four things the field added:
 >
 > | | |
 > |---|---|
-> | ✅ **il cancello si apre anche per noi** (§3) | `.desktop` con `Exec=` sul binario canonico e `NoDisplay=true`, più `XDG_MENU_PREFIX=plasma-` nell'ambiente di KWin: il global compare, nessun dialogo. Con `--installa-desktop` il file lo scrive REMOTIX stesso, da `/proc/self/exe` |
-> | ✅ **la fence si aspetta, e basta** (§4.8) | **2 400 buffer su 2 400** col disegno in corso — la misura dell'8 agosto confermata su un campione otto volte più grande — e **zero attese scadute** con un tetto di 50 ms. Il difetto di R29 non si ripresenta: i fotogrammi sono interi |
-> | ✅ **il modificatore che si ottiene è `0x0`, lineare** (§11.2) | è quello che il codificatore vuole, e per averlo è bastato metterlo **primo** nell'enum della proposta. `INVALID` resta come seconda scelta |
-> | ✅ **il ritmo regge, sulla catena vera** (§5.7) | **58,1 fps a 1080p e 58,4 a 4K** sulla Intel, contro i 59,2 e 59,0 misurati col solo `misura-cattura`. La differenza è la conversione sulla scheda, che il banco non faceva |
+> | ✅ **the gate opens for us too** (§3) | `.desktop` with `Exec=` on the canonical binary and `NoDisplay=true`, plus `XDG_MENU_PREFIX=plasma-` in KWin's environment: the global appears, no dialog. With `--installa-desktop` REMOTIX writes the file itself, from `/proc/self/exe` |
+> | ✅ **the fence is waited on, and that is all** (§4.8) | **2 400 buffers out of 2 400** with drawing in progress — the 8 August measurement confirmed on a sample eight times larger — and **zero expired waits** with a 50 ms cap. R29's fault does not recur: the frames are whole |
+> | ✅ **the modifier obtained is `0x0`, linear** (§11.2) | it is the one the encoder wants, and to get it it was enough to put it **first** in the proposal's enum. `INVALID` stays as second choice |
+> | ✅ **the pace holds, on the real chain** (§5.7) | **58.1 fps at 1080p and 58.4 at 4K** on the Intel, against the 59.2 and 59.0 measured with `misura-cattura` alone. The difference is the conversion on the card, which the bench did not do |
 >
-> ⛔ **E una trappola nuova, che non è di KDE ma dei banchi che rifanno la sessione**: uccidere
-> `kwin_wayland` mette in coda su systemd un lavoro di *stop* per la sua unità, e un
-> `StartUnit("plasma-workspace-wayland.target")` che arrivi prima che quel lavoro sia finito viene
-> **rifiutato in blocco** — *«Transaction … is destructive»* — con `startplasma-wayland` che dice
-> soltanto «Could not start Plasma session». Chi rifà la sessione due volte di fila fallisce la
-> seconda: si ferma il target e si **aspetta** che l'unità sia `inactive`.
+> ⛔ **And a new trap, which is not KDE's but belongs to benches that redo the session**: killing
+> `kwin_wayland` queues on systemd a *stop* job for its unit, and a
+> `StartUnit("plasma-workspace-wayland.target")` that arrives before that job has finished is
+> **rejected wholesale** — *«Transaction … is destructive»* — with `startplasma-wayland` saying
+> only «Could not start Plasma session». Whoever redoes the session twice in a row fails the
+> second time: stop the target and **wait** for the unit to be `inactive`.
 
 ---
 
-### 14-bis. ✅ Lo studio è chiuso — quel che si è imparato SCRIVENDO, non leggendo
+### 14-bis. ✅ The study is closed — what was learned by WRITING, not by reading
 
-*8 agosto 2026, a fase 11 conclusa per KDE.*
+*8 August 2026, with phase 11 concluded for KDE.*
 
-Le dodici misure sono chiuse (§14), e la loro resa è alta: **undici domande su undici avevano una
-risposta prima di scrivere una riga**. Ma quattro difetti sono comparsi solo mettendo il codice
-davanti a un utente, e vale la pena elencarli perché **sono il tipo di cosa che rileggere il codice
-non trova** — e quindi si ripresenterà su XFCE:
+The twelve measurements are closed (§14), and their yield is high: **eleven questions out of eleven had an
+answer before a line was written**. But four faults appeared only when the code was put
+in front of a user, and they are worth listing because **they are the kind of thing re-reading the code
+does not find** — and so it will recur on XFCE:
 
-| Trovato da | Che cosa | Dove sta ora |
+| Found by | What | Where it is now |
 |---|---|---|
-| **l'utente, al primo sguardo** | due puntatori del mouse | riquadro in testa: il cursore è dentro l'immagine, e la cura è un tema trasparente |
-| **l'utente** | il cursore del volume non governava niente | §10.5 — e il difetto era **anche su GNOME**, da sempre |
-| **l'utente** | «Blocca» e «Cambia utente» inerti nel menu | §10.6 — KIOSK, tre azioni e non due |
-| **il banco, ma solo dopo averlo rinforzato** | «una via audio nuova parte al massimo» non funziona | `REFERENCE.md` §7.5, **aperto** |
+| **the user, at first glance** | two mouse pointers | box at the top: the cursor is inside the image, and the cure is a transparent theme |
+| **the user** | the volume slider governed nothing | §10.5 — and the fault was **on GNOME too**, all along |
+| **the user** | «Blocca» and «Cambia utente» inert in the menu | §10.6 — KIOSK, three actions and not two |
+| **the bench, but only after strengthening it** | «una via audio nuova parte al massimo» does not work | `REFERENCE.md` §7.5, **open** |
 
-⭐ **Tre su quattro erano nel percorso condiviso**, cioè erano difetti di GNOME che nessuno aveva
-visto in dieci fasi. Aprire un secondo compositore non ha solo aggiunto un desktop: ha fatto da
-banco al primo.
+⭐ **Three out of four were in the shared path**, that is they were GNOME faults that nobody had
+seen in ten phases. Opening a second compositor did not just add a desktop: it acted as a
+bench for the first.
 
-⛔ **E la lezione di metodo, che è la più cara**: il difetto del volume è rimasto invisibile perché
-la prova era stata fatta su **un sink equivalente creato con `pactl`** invece che sul nostro — e
-`pipewire-pulse` mette da sé la proprietà che a noi mancava. Un banco che prova *qualcosa di simile*
-assolve il codice (`LEZIONI.md` §1.11 e §5).
+⛔ **And the method lesson, which is the most costly**: the volume fault stayed invisible because
+the test had been done on **an equivalent sink created with `pactl`** instead of on ours — and
+`pipewire-pulse` sets by itself the property we were missing. A bench that tests *something similar*
+acquits the code (`LEZIONI.md` §1.11 and §5).
 
 ---
 
-### 15. Le correzioni da fare ai documenti
+### 15. The corrections to make to the documents
 
-Come prescrive §7.0 di `SPECIFICA.md`, quando una misura contraddice un documento lo si aggiorna
-**nello stesso momento**. Le prime tre righe nascevano da una **lettura di codice** e furono annotate
-come tensioni da sciogliere; **il banco del 7 agosto 2026 le ha sciolte**, e ora sono smentite vere:
+As §7.0 of `SPECIFICA.md` prescribes, when a measurement contradicts a document it is updated
+**at the same moment**. The first three rows were born from a **code reading** and were noted
+as tensions to resolve; **the bench of 7 August 2026 resolved them**, and now they are real refutations:
 
-| Documento | Che cosa dice oggi | Che cosa dice il banco |
+| Document | What it says today | What the bench says |
 |---|---|---|
-| `SPECIFICA.md` §3.8 | «KWin: cattura via **portale**, input `kde-fake-input`» | cattura via **protocollo Wayland diretto**, input via **libei/EIS** (§13.2 n.1) — **correzione applicata**, con la data. E ora **misurata**: `connectToEIS(7)` → `(handle 0, 1)`, e il `.desktop` apre il global |
-| `REFERENCE.md` **R32** | «KWin senza monitor disegna in software: zero nodi DRM, nessuna libreria GL» | ⛔ **smentita, con tre prove** [M]: `renderD129` aperto, `libEGL_mesa`+`libgbm` caricate, `zwp_linux_dmabuf_v1` v4 annunciato. **Va corretta**: il «60 fps a 4K» resta, l'etichetta «in software» no (§5.1) |
-| `LEZIONI.md` §3, riga 4 e riga «KWin tiene la cattura dietro un controllo di permessi» | «NO, in software»; «serve il permesso per la via che KDE prevede» | la prima come sopra; la seconda ha ora **una risposta misurata**: il `.desktop` **più `XDG_MENU_PREFIX=plasma-`** (§3.3-bis) |
-| `PIANO.md` fase 11 | le quattro domande d'apertura | **quattro su quattro hanno risposta di banco**, e la decisione «`--virtual` o `--drm`» è stata chiusa da una misura invece che dall'utente (§5.2) |
+| `SPECIFICA.md` §3.8 | «KWin: cattura via **portale**, input `kde-fake-input`» | capture via **direct Wayland protocol**, input via **libei/EIS** (§13.2 no. 1) — **correction applied**, with the date. And now **measured**: `connectToEIS(7)` → `(handle 0, 1)`, and the `.desktop` opens the global |
+| `REFERENCE.md` **R32** | «KWin senza monitor disegna in software: zero nodi DRM, nessuna libreria GL» | ⛔ **refuted, with three proofs** [M]: `renderD129` open, `libEGL_mesa`+`libgbm` loaded, `zwp_linux_dmabuf_v1` v4 announced. **It must be corrected**: the «60 fps a 4K» stays, the «in software» label does not (§5.1) |
+| `LEZIONI.md` §3, row 4 and row «KWin tiene la cattura dietro un controllo di permessi» | «NO, in software»; «serve il permesso per la via che KDE prevede» | the first as above; the second now has **a measured answer**: the `.desktop` **plus `XDG_MENU_PREFIX=plasma-`** (§3.3-bis) |
+| `PIANO.md` phase 11 | the four opening questions | **four out of four have a bench answer**, and the «`--virtual` o `--drm`» decision was closed by a measurement instead of by the user (§5.2) |
 
-> ✅ **Tutte applicate**, e l'ultima l'8 agosto 2026 con la chiusura della fase. Due correzioni si
-> sono aggiunte strada facendo, e vanno lette insieme alle prime perché nascono dallo stesso errore —
-> **aver creduto a una lettura di codice senza misurarla**:
+> ✅ **All applied**, the last on 8 August 2026 with the closing of the phase. Two corrections were
+> added along the way, and they should be read together with the first ones because they are born from the same mistake —
+> **having believed a code reading without measuring it**:
 >
-> | Documento | Che cosa diceva | Che cosa dice il banco |
+> | Document | What it said | What the bench says |
 > |---|---|---|
-> | `LEZIONI.md` §3, domanda 5 | «KWin: sì, `stream_virtual_output`» | ⛔ **no**: col backend `--virtual` risponde `Could not find output`, per ogni misura. **Corretta** |
-> | questo documento, in testa | «il cursore è fuori dal percorso del codificatore» | ⛔ **è dentro l'immagine**, e l'ha visto l'utente prima di noi. **Corretta**, con la cura |
+> | `LEZIONI.md` §3, question 5 | «KWin: sì, `stream_virtual_output`» | ⛔ **no**: with the `--virtual` backend it answers `Could not find output`, for every size. **Corrected** |
+> | this document, at the top | «il cursore è fuori dal percorso del codificatore» | ⛔ **it is inside the image**, and the user saw it before we did. **Corrected**, with the cure |
 
 ---
 
-### 16. Che cosa non c'è, per non cercarlo
+### 16. What is not there, so as not to look for it
 
-Tutte dichiarazioni negative verificate per grep su tutti gli otto repository [✗]:
+All negative statements verified by grep over all eight repositories [✗]:
 
-| Funzionalità | Stato in KDE 6.3.6 |
+| Feature | State in KDE 6.3.6 |
 |---|---|
-| `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_v1` | **assenti** in KWin |
-| Un'interfaccia D-Bus di screencast (l'analogo di `org.gnome.Mutter.ScreenCast`) | **assente**: la cattura passa dal protocollo Wayland, punto |
-| `org.kde.KWin.VirtualOutputs` | **assente** (c'era in KWin 5) |
-| Una richiesta di **resize** nel protocollo screencast | **proposta e respinta** (`plasma-wayland-protocols!138`), perché la strada scelta è la **negoziazione PipeWire**: unita in `kwin!7932`, milestone **6.8** — non c'è in Trixie, ma arriva (§8.2) |
-| `wlr-output-management`, `ext-data-control-v1`, `kde_primary_output_v1` (global) | **assenti** |
-| `eis_device_keyboard_send_xkb_modifiers` in KWin | **assente**: nessun `KEYBOARD_MODIFIERS` |
-| `eis_region_set_mapping_id` in KWin | **assente**: regioni senza chiave |
-| `keyboard_keysym` di `fake_input` v6 | **non implementato** (KWin ferma a v5) |
-| Un controllo di permesso su `org.kde.KWin.EIS.RemoteDesktop` | **assente** |
-| `EnableClipboard`/`DisableClipboard` | **assenti**: la clipboard non appartiene a una sessione |
-| Un `Logout(2)` forzato | **assente**: la forzatura è `StopUnit` |
-| `RegisterClient`/`EndSession` su D-Bus | **assenti**: l'equivalente è XSMP su ICE |
-| `ConditionEnvironment=` nelle unità di KDE | **assente** |
-| Un renderer **Vulkan** in KWin | **assente** |
-| `libseat`/`seatd` | **assenti**: solo logind, ConsoleKit, Noop |
-| Controllo del bitrate H.264 in kpipewire | **assente**, come in `gnome-remote-desktop` |
-| ~~Un backend RDP in KDE~~ | ⛔ **sbagliato**: c'è **`KRdp`** (§12.0), che è il riferimento della fase |
-| Un `disable-animations` per sessione di cattura | **assente**: si spengono a sessione |
+| `zwlr_screencopy_manager_v1`, `ext_image_copy_capture_v1` | **absent** in KWin |
+| A D-Bus screencast interface (the analogue of `org.gnome.Mutter.ScreenCast`) | **absent**: capture goes through the Wayland protocol, full stop |
+| `org.kde.KWin.VirtualOutputs` | **absent** (it was in KWin 5) |
+| A **resize** request in the screencast protocol | **proposed and rejected** (`plasma-wayland-protocols!138`), because the chosen path is **PipeWire negotiation**: merged in `kwin!7932`, milestone **6.8** — not in Trixie, but it is coming (§8.2) |
+| `wlr-output-management`, `ext-data-control-v1`, `kde_primary_output_v1` (global) | **absent** |
+| `eis_device_keyboard_send_xkb_modifiers` in KWin | **absent**: no `KEYBOARD_MODIFIERS` |
+| `eis_region_set_mapping_id` in KWin | **absent**: regions without a key |
+| `keyboard_keysym` of `fake_input` v6 | **not implemented** (KWin stops at v5) |
+| A permission check on `org.kde.KWin.EIS.RemoteDesktop` | **absent** |
+| `EnableClipboard`/`DisableClipboard` | **absent**: the clipboard does not belong to a session |
+| A forced `Logout(2)` | **absent**: forcing is `StopUnit` |
+| `RegisterClient`/`EndSession` on D-Bus | **absent**: the equivalent is XSMP over ICE |
+| `ConditionEnvironment=` in KDE's units | **absent** |
+| A **Vulkan** renderer in KWin | **absent** |
+| `libseat`/`seatd` | **absent**: only logind, ConsoleKit, Noop |
+| H.264 bitrate control in kpipewire | **absent**, as in `gnome-remote-desktop` |
+| ~~An RDP backend in KDE~~ | ⛔ **wrong**: there is **`KRdp`** (§12.0), which is the phase's reference |
+| A `disable-animations` per capture session | **absent**: they are switched off per session |
 
 
 <a id="xfce"></a>
 
-## XFCE, labwc e wlroots — studio del codice, per la fase 11
+## XFCE, labwc and wlroots — code study, for phase 11
 
-*Scritto l'8 agosto 2026, aprendo il terzo desktop, con dieci ricerche parallele sui sorgenti clonati
-alle versioni di Debian Trixie. È il sesto studio del progetto, dopo `protocollo-rdp.md`,
-§gnome-remote-desktop, `client-android.md`, `xrdp-funzionalita.md` e §kde.*
+*Written on 8 August 2026, opening the third desktop, with ten parallel searches over the sources cloned
+at Debian Trixie's versions. It is the project's sixth study, after `protocollo-rdp.md`,
+§gnome-remote-desktop, `client-android.md`, `xrdp-funzionalita.md` and §kde.*
 
-> **Come si legge questo documento.** Ogni affermazione porta una marca, e la marca conta più della
-> frase:
+> **How to read this document.** Every statement carries a mark, and the mark counts more than the
+> sentence:
 >
 > | | |
 > |---|---|
-> | **[R]** | letto nel codice, con `file:riga`. **Non è una misura**: dice che cosa il programma *può* fare, non che cosa *fa* sulla nostra macchina |
-> | **[M]** | misurato. Dove c'è, è detto su quale macchina e quando |
-> | **[?]** | deduzione o ipotesi. Da trattare come una domanda aperta, non come un fatto |
-> | **[✗]** | verificata **assente**, dicendo come è stata cercata e con quale controllo positivo |
+> | **[R]** | read in the code, with `file:riga`. **It is not a measurement**: it says what the program *can* do, not what it *does* on our machine |
+> | **[M]** | measured. Where present, it says on which machine and when |
+> | **[?]** | deduction or hypothesis. To be treated as an open question, not as a fact |
+> | **[✗]** | verified **absent**, saying how it was searched for and with which positive control |
 >
-> Il dettaglio con i `file:riga` sta nei **dieci rapporti** in `reference-xfce/rapporti/`
-> (~9 000 righe). Qui c'è quel che serve per decidere e per scrivere.
+> The detail with the `file:riga` references is in the **ten reports** in `reference-xfce/rapporti/`
+> (~9 000 lines). Here is what is needed to decide and to write.
 
 ---
 
-### 1. In due minuti
+### 1. In two minutes
 
-**XFCE non ha un compositore proprio.** Su Wayland avvia **labwc**, e labwc è **wlroots** — la terza e
-ultima famiglia del panorama. Serviti GNOME (Mutter) e KDE (KWin), questa chiude il giro.
+**XFCE has no compositor of its own.** On Wayland it starts **labwc**, and labwc is **wlroots** — the third and
+last family of the landscape. With GNOME (Mutter) and KDE (KWin) served, this one completes the round.
 
-**La differenza che cambia la forma del codice**, e che era già scritta in `LEZIONI.md` §3: wlroots
-**fa tirare** i fotogrammi invece di spingerli. Non c'è PipeWire in mezzo, non c'è D-Bus: c'è un
-protocollo Wayland, `zwlr_screencopy_manager_v1`, e per ogni fotogramma si fa
-`capture_output → frame → copy → ready`. Il flusso non si «monta»: si chiede, uno per volta.
+**The difference that changes the shape of the code**, and that was already written in `LEZIONI.md` §3: wlroots
+**makes you pull** frames instead of pushing them. There is no PipeWire in between, there is no D-Bus: there is a
+Wayland protocol, `zwlr_screencopy_manager_v1`, and for every frame one does
+`capture_output → frame → copy → ready`. The stream is not «set up»: it is requested, one at a time.
 
-**Le sei risposte che contano, tutte migliori che su KDE:**
-
-| | |
-|---|---|
-| **Il permesso della cattura** | ✅ **non esiste**. [M, portatile, 8 ago] Un client nudo (`env -i`, sole `XDG_RUNTIME_DIR` e `WAYLAND_DISPLAY`) vede 45 global e cattura al primo colpo. Nessun `.desktop`, nessun dialogo, nessun portale. L'unico cancello è l'UID: `/run/user/1000` è `drwx------` |
-| **Il seat** | ✅ **non serve**. Con `WLR_BACKENDS=headless` non si crea mai una `wlr_session` e libseat non viene sfiorato: il muro su cui `kwin_wayland --drm` moriva **qui non esiste** |
-| **La GPU** | ✅ **una variabile**: `WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128`. Niente regola udev, niente permessi di nodo negati a tutta la sessione dell'utente |
-| **Il ridimensionamento a caldo** | ✅ **sì**: `set_custom_mode` su un output headless non ha alcun tetto. Il ripiego «misura fissa alla connessione» che KDE ci ha imposto **non serve** |
-| **La cadenza** | ⭐ **è un parametro nostro**: su headless il refresh dell'output *è* il periodo del timer dei fotogrammi |
-| **Gli appunti** | ✅ **`appunti_wlr.c` funziona così com'è**: è scritto contro un protocollo di wlroots, e qui siamo in casa sua |
-
-**E le cinque che costano:**
+**The six answers that matter, all better than on KDE:**
 
 | | |
 |---|---|
-| ⛔ **Nessun protocollo crea un output** | `wlr-virtual-output` **non esiste** [✗]. Un output headless nasce **1280×720 cablati**, e labwc non ha né IPC né `<output>` in configurazione: la misura si dà **solo** col protocollo, **dopo** l'avvio |
-| ⛔ **Il cursore è sempre dentro l'immagine** | il backend headless non ha `set_cursor`, quindi non esiste cursore hardware; e `overlay_cursor` **non lo toglie** — lo *forza* software. È la stessa forma di `KWIN_COMPOSE=O2`: una leva che sembra esserci e non fa niente |
-| ⛔ **libei non esiste su wlroots** | [✗] cercato in wlroots, labwc, sway, wayfire, weston, xdpw, wayvnc: zero. `input.c` **diventa un client Wayland**: si riusano le tabelle, non il trasporto |
-| ⛔ **`xfce4-power-manager` ci spegne l'output** | parla Wayland nativo e dopo **10 minuti** su rete elettrica manda `zwlr_output_power_v1(OFF)`; output spento ⇒ nessun fotogramma ⇒ `failed` sulla cattura |
-| ⛔ **Al logout XFCE può ammazzare la nostra sessione** | se la riga del compositore non contiene *sia* `labwc` *sia* `--session`, `xfce4-session` esegue `loginctl terminate-session ''` |
+| **The capture permission** | ✅ **does not exist**. [M, laptop, 8 Aug] A bare client (`env -i`, only `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`) sees 45 globals and captures at the first attempt. No `.desktop`, no dialog, no portal. The only gate is the UID: `/run/user/1000` is `drwx------` |
+| **The seat** | ✅ **not needed**. With `WLR_BACKENDS=headless` a `wlr_session` is never created and libseat is not even touched: the wall on which `kwin_wayland --drm` died **does not exist here** |
+| **The GPU** | ✅ **one variable**: `WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128`. No udev rule, no node permissions denied to the user's whole session |
+| **Hot resizing** | ✅ **yes**: `set_custom_mode` on a headless output has no cap at all. The «misura fissa alla connessione» fallback KDE imposed on us **is not needed** |
+| **The cadence** | ⭐ **it is our own parameter**: on headless the output's refresh *is* the period of the frame timer |
+| **The clipboard** | ✅ **`appunti_wlr.c` works as it is**: it is written against a wlroots protocol, and here we are on its home ground |
 
-**E il passo zero — *«chi, al mondo, fa questa cosa su questo desktop?»* — ha una risposta che va
-detta per intera**: **nessuno fa RDP su wlroots senza monitor**. Un solo server RDP al mondo parla
-con wlroots (Rust, licenza BSL) e **dichiara di richiedere un desktop già acceso**; `xrdp` non ha
-Wayland dal 2017; `freerdp-shadow` non ha un backend Wayland e i manutentori hanno scritto che è
-improbabile che arrivi; e chi passa dal portale su wlroots è **video-only**, perché
-`xdg-desktop-portal-wlr` non implementa `RemoteDesktop`.
+**And the five that cost:**
 
-> ⭐ **Ma un precedente c'è, ed è dalla nostra parte.** wlroots un backend RDP **ce l'aveva**, ed è
-> stato rimosso nella 0.10 *«interamente in favore di wayvnc»* dopo cinque issue di crash. La
-> comunità ha già deliberato che il posto giusto per questa cosa è **un client esterno del
-> compositore** — cioè esattamente dove siamo. E labwc **cita wayvnc alla lettera nella propria
-> documentazione**, prevedendo l'output virtuale ridimensionabile dal client remoto.
+| | |
+|---|---|
+| ⛔ **No protocol creates an output** | `wlr-virtual-output` **does not exist** [✗]. A headless output is born **1280×720 hard-wired**, and labwc has neither IPC nor `<output>` in its configuration: the size is given **only** through the protocol, **after** startup |
+| ⛔ **The cursor is always inside the image** | the headless backend has no `set_cursor`, so no hardware cursor exists; and `overlay_cursor` **does not remove it** — it *forces* it to software. It is the same shape as `KWIN_COMPOSE=O2`: a lever that seems to be there and does nothing |
+| ⛔ **libei does not exist on wlroots** | [✗] searched in wlroots, labwc, sway, wayfire, weston, xdpw, wayvnc: zero. `input.c` **becomes a Wayland client**: the tables are reused, not the transport |
+| ⛔ **`xfce4-power-manager` switches our output off** | it speaks native Wayland and after **10 minutes** on mains power sends `zwlr_output_power_v1(OFF)`; output off ⇒ no frames ⇒ `failed` on capture |
+| ⛔ **At logout XFCE can kill our session** | if the compositor's command line does not contain *both* `labwc` *and* `--session`, `xfce4-session` runs `loginctl terminate-session ''` |
+
+**And step zero — *«chi, al mondo, fa questa cosa su questo desktop?»* — has an answer that must be
+stated in full**: **nobody does RDP on wlroots without a monitor**. Only one RDP server in the world talks
+to wlroots (Rust, BSL licence) and **declares that it requires an already-running desktop**; `xrdp` has had no
+Wayland since 2017; `freerdp-shadow` has no Wayland backend and the maintainers wrote that it is
+unlikely to arrive; and whoever goes through the portal on wlroots is **video-only**, because
+`xdg-desktop-portal-wlr` does not implement `RemoteDesktop`.
+
+> ⭐ **But there is a precedent, and it is on our side.** wlroots **did have** an RDP backend, and it was
+> removed in 0.10 *«interamente in favore di wayvnc»* after five crash issues. The
+> community has already ruled that the right place for this thing is **an external client of the
+> compositor** — that is exactly where we are. And labwc **quotes wayvnc verbatim in its own
+> documentation**, anticipating the virtual output resizable by the remote client.
 
 ---
 
-### 2. La mappa: dove sta ciascuna cosa
+### 2. The map: where each thing lives
 
-| Che cosa | Dove | Versione Trixie |
+| What | Where | Trixie version |
 |---|---|---|
-| il compositore | `reference-xfce/labwc/` | **0.8.3** |
-| la libreria del compositore | `reference-xfce/wlroots/` | **0.18.2** |
-| i protocolli di wlroots | `reference-xfce/wlr-protocols/` | (screencopy, data-control, virtual-pointer, output-management…) |
-| i protocolli standard | `reference-xfce/wayland-protocols/` | **1.38** |
-| la sessione | `reference-xfce/xfce4-session/` | **4.20.2** |
-| pannello, scrivania, impostazioni | `xfce4-panel/` 4.20.4, `xfdesktop/` 4.20.1, `xfce4-settings/` 4.20.1 | |
-| l'astrazione X11/Wayland di XFCE | `libxfce4windowing/` | **4.20.2** |
-| le librerie comuni | `libxfce4ui/` 4.20.1, `libxfce4util/` 4.20.1, `xfconf/` 4.20.0, `garcon/` 4.20.0 | |
-| energia e blocco | `xfce4-power-manager/` 4.20.0, `xfce4-screensaver/` 4.18.4 | |
-| **chi lo fa già** | `wayvnc/` 0.9.1 + `neatvnc/` 0.9.1, `weston/` 14.0.2 (backend RDP), `xdg-desktop-portal-wlr/` 0.7.1 | |
-| i termini di paragone | `sway/` 1.10.1, `wayfire/` 0.9.0 | |
+| the compositor | `reference-xfce/labwc/` | **0.8.3** |
+| the compositor's library | `reference-xfce/wlroots/` | **0.18.2** |
+| the wlroots protocols | `reference-xfce/wlr-protocols/` | (screencopy, data-control, virtual-pointer, output-management…) |
+| the standard protocols | `reference-xfce/wayland-protocols/` | **1.38** |
+| the session | `reference-xfce/xfce4-session/` | **4.20.2** |
+| panel, desktop, settings | `xfce4-panel/` 4.20.4, `xfdesktop/` 4.20.1, `xfce4-settings/` 4.20.1 | |
+| XFCE's X11/Wayland abstraction | `libxfce4windowing/` | **4.20.2** |
+| the common libraries | `libxfce4ui/` 4.20.1, `libxfce4util/` 4.20.1, `xfconf/` 4.20.0, `garcon/` 4.20.0 | |
+| power and locking | `xfce4-power-manager/` 4.20.0, `xfce4-screensaver/` 4.18.4 | |
+| **who already does it** | `wayvnc/` 0.9.1 + `neatvnc/` 0.9.1, `weston/` 14.0.2 (RDP backend), `xdg-desktop-portal-wlr/` 0.7.1 | |
+| the points of comparison | `sway/` 1.10.1, `wayfire/` 0.9.0 | |
 
-⚠ **Le versioni installate sul server coincidono esattamente con quelle clonate** [M, 8 ago]: labwc
+⚠ **The versions installed on the server match the cloned ones exactly** [M, 8 Aug]: labwc
 0.8.3-1, xfce4-session 4.20.2-2, xfce4-panel 4.20.4-1, xfdesktop4 4.20.1-1, xfce4-settings 4.20.1-1,
-sway 1.10.1-2, weston 14.0.2-1. Lo studio e il banco parlano della stessa macchina.
+sway 1.10.1-2, weston 14.0.2-1. The study and the bench speak of the same machine.
 
-⚠ **Wayfire non è nella stessa famiglia di codice**: `meson.build:45,49` chiede wlroots
-`>=0.17.0, <0.18.0` e lo vendorizza. Tutto quel che segue vale per **labwc** (il nostro bersaglio) e
-per **sway** (il termine di paragone). Wayfire va riletto sulla 0.17 se e quando servirà.
-
----
-
-### 3. ✅ Il cancello che non c'è
-
-Su KWin questa sezione è la più lunga del documento e ha richiesto cinque prove di banco. Qui si
-chiude in tre righe, ed è **misurata** [M, portatile con labwc 0.8.3, 8 agosto 2026] prima ancora che
-dedotta.
-
-| | |
-|---|---|
-| **Che cosa vede un client nudo** | 45 global, fra cui `zwlr_screencopy_manager_v1` **v3**, `zwlr_virtual_pointer_manager_v1` **v2**, `zwp_virtual_keyboard_manager_v1` **v1**, `zwlr_data_control_manager_v1` **v2**, `zwlr_layer_shell_v1` v4 |
-| **Che cosa serve nell'ambiente** | `XDG_RUNTIME_DIR` e `WAYLAND_DISPLAY`. Nient'altro: la cattura è riuscita al primo colpo (`buffer(1280×720, stride 5120)` → `copy()` → `ready`, checksum non nullo) |
-| **Il codice che lo spiega** | `labwc/src/server.c:344` — `return true` per ogni client **senza** security context; `wlroots/types/wlr_security_context_v1.c:435-437` — chi entra dal socket normale non ha contesto |
-
-**[✗] wlroots 0.18.2 non filtra nulla**: zero chiamate a `wl_display_set_global_filter` in tutto
-l'albero. Il filtro che labwc e sway hanno scatta **solo** sui client entrati da un `listen_fd`
-altrui, cioè Flatpak e bwrap — e noi non ci saremo mai. Wayfire non filtra affatto.
-
-⛔ **E non esiste il verso opposto**: `rc.xml` di labwc **non ha alcun interruttore di protocollo**
-[✗], su nessuno dei tre compositori. Un amministratore che volesse *chiudere* la cattura non ha una
-leva di configurazione — informazione che ci riguarda perché significa che **nessuno può chiuderci la
-porta per errore**.
-
-#### 3.1 ⚠ Dove sta il rischio, invece: la diagnosi
-
-Il permesso non è il pericolo; il pericolo è **non vedere perché una cosa fallisce**.
-
-| | |
-|---|---|
-| ⛔ **labwc non logga** | né la connessione né il `bind`, nemmeno con `-d`. Su richiesta illegale scrive solo `error in client communication (pid N)`, a livello **INFO** (invisibile senza `-V`): il PID, non l'interfaccia né il codice |
-| ⛔ **`WLR_DEBUG` non esiste** [✗] | `wlroots/util/log.c` non ha un solo `getenv`. Il livello lo decide il compositore, con `-d`/`-V` sulla riga di comando |
-| ✅ **La diagnosi si fa dal lato client, ed è ottima** | libwayland stampa da sé su stderr `zwlr_screencopy_frame_v1#3: error 1: invalid buffer dimensions`, e `wl_display_get_protocol_error()` restituisce **interfaccia e codice**. `WAYLAND_DEBUG=1` dà la traccia completa |
-
-⭐ **Da cui una regola per il nostro codice**: dopo *ogni* fallimento, chiamare
-`wl_display_get_protocol_error()` e scriverne l'esito. È l'equivalente della lezione §1.10 — *prima di
-provare varianti, farsi dire la causa* — con la differenza che qui il componente che nega non parla, e
-il nostro cliente sì.
-
-#### 3.2 ⛔ Un errore di protocollo uccide la connessione
-
-Non è un fotogramma perso: è la connessione. [M] `roundtrip = -1`, `EPROTO`, nessuna ripresa — va
-rifatto tutto da `wl_display_connect`.
-
-**Le tre regole che ne discendono, e che valgono per tutto il codice nuovo:**
-
-1. **Formato, dimensioni e stride si copiano *esattamente* dall'evento `buffer`.** Nessun allineamento
-   nostro (`wlroots/types/wlr_screencopy_v1.c:384-432`);
-2. **un solo `copy()` per frame**, poi un `capture_output()` nuovo (`:391`);
-3. **la keymap prima del primo tasto**, o `no_keymap` (`wlroots/types/wlr_virtual_keyboard_v1.c:84,107`).
+⚠ **Wayfire is not in the same code family**: `meson.build:45,49` asks for wlroots
+`>=0.17.0, <0.18.0` and vendors it. Everything that follows holds for **labwc** (our target) and
+for **sway** (the point of comparison). Wayfire must be re-read on 0.17 if and when it is needed.
 
 ---
 
-### 4. La cattura: `zwlr_screencopy_manager_v1`
+### 3. ✅ The gate that isn't there
 
-*Dettaglio: `reference-xfce/rapporti/01-cattura-screencopy.md`.*
-
-#### 4.1 ✅ Fotogrammi interi, sempre — e il difetto di GNOME non si ripresenta
-
-`frame_shm_copy`/`frame_dma_copy` usano `frame->box`, cioè **l'output intero**, e non consultano mai
-il danno (`wlr_screencopy_v1.c:214-219`, `:255-268`). Il buffer sorgente è a sua volta completo grazie
-al *buffer age* del damage ring (`types/scene/wlr_scene.c:1910-1911`).
-
-⭐ **Cioè la trappola che su GNOME tiene spenta la copia zero — il buffer che è un «diff» su quattro
-buffer riciclati, R29 — qui non esiste.** Un pool di buffer riusati va bene senza precauzioni, e la
-superficie di accumulo non serve.
-
-#### 4.2 ⛔ Il modello a tiro, e le sue due trappole
+On KWin this section is the longest in the document and took five bench tests. Here it
+closes in three lines, and it is **measured** [M, laptop with labwc 0.8.3, 8 August 2026] even before
+being deduced.
 
 | | |
 |---|---|
-| **`copy_with_damage` a schermo fermo** | ⛔ **`ready` non arriva mai**, e non c'è alcun timeout: il listener resta agganciato (`:297-303`). Serve **un timer nostro** che, scaduto, distrugga il frame e riapra con `copy` semplice |
-| **`copy` semplice** | ⛔ chiama `wlr_output_update_needs_frame()` (`:448`), cioè **forza il rendering** anche a schermo immobile. Un ciclo ingenuo a 30 fps fa rendere al compositore 30 fotogrammi al secondo di nulla |
+| **What a bare client sees** | 45 globals, among them `zwlr_screencopy_manager_v1` **v3**, `zwlr_virtual_pointer_manager_v1` **v2**, `zwp_virtual_keyboard_manager_v1` **v1**, `zwlr_data_control_manager_v1` **v2**, `zwlr_layer_shell_v1` v4 |
+| **What is needed in the environment** | `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`. Nothing else: the capture succeeded at the first attempt (`buffer(1280×720, stride 5120)` → `copy()` → `ready`, non-zero checksum) |
+| **The code that explains it** | `labwc/src/server.c:344` — `return true` for every client **without** a security context; `wlroots/types/wlr_security_context_v1.c:435-437` — whoever comes in through the normal socket has no context |
 
-⭐ **La forma giusta la mostra wayvnc**, ed è la correzione strutturale al problema dei 18 fps del
-7 agosto: `copy_with_damage` di regola, `copy` intero solo quando serve un fotogramma subito (primo
-client, cambio output, cambio misura, riaccensione) — e **la cadenza sottrae la latenza misurata del
-compositore**: `time_left = 1/rate − dt − delay`, con `delay` misurato a ogni `ready` e filtrato
-passa-basso a 0,5 s (`wayvnc/src/screencopy.c:308`, `:214-215`).
+**[✗] wlroots 0.18.2 filters nothing**: zero calls to `wl_display_set_global_filter` in the whole
+tree. The filter that labwc and sway have fires **only** on clients that came in through someone
+else's `listen_fd`, i.e. Flatpak and bwrap — and we will never be there. Wayfire does not filter at all.
 
-#### 4.3 ⭐ Il libro doppio del danno — obbligatorio, non un'ottimizzazione
+⛔ **And the opposite direction does not exist**: labwc's `rc.xml` **has no protocol switch at all**
+[✗], on none of the three compositors. An administrator who wanted to *close* capture has no
+configuration lever — information that concerns us because it means that **nobody can shut the
+door on us by mistake**.
 
-Ogni buffer porta **due** danni: `frame_damage` (che va al codificatore) e `buffer_damage` (che va al
-compositore). Quando un fotogramma è pronto con danno D, D si somma al `buffer_damage` di **tutti** i
-buffer del pool (`wayvnc/src/buffer.c:693-704`).
+#### 3.1 ⚠ Where the risk lies instead: diagnosis
 
-⛔ **Senza, si mandano fotogrammi con pezzi vecchi, e nessuna misura di fotogrammi al secondo lo
-rivela** — è il difetto di R29 in forma generale, e la ragione per cui va scritto ora e non poi.
+The permission is not the danger; the danger is **not seeing why something fails**.
 
-⚠ E il danno di wlroots è **un solo rettangolo** (gli extents, con un `// TODO` esplicito a
-`:168-178`), in coordinate pixel dell'output, **non** traslato per `capture_output_region`. Va
-**ritagliato** al rettangolo del buffer prima di fidarsene, come fa wayvnc (`main.c:1145-1146`).
+| | |
+|---|---|
+| ⛔ **labwc does not log** | neither the connection nor the `bind`, not even with `-d`. On an illegal request it only writes `error in client communication (pid N)`, at **INFO** level (invisible without `-V`): the PID, not the interface nor the code |
+| ⛔ **`WLR_DEBUG` does not exist** [✗] | `wlroots/util/log.c` has not a single `getenv`. The level is decided by the compositor, with `-d`/`-V` on the command line |
+| ✅ **Diagnosis is done from the client side, and it is excellent** | libwayland prints by itself on stderr `zwlr_screencopy_frame_v1#3: error 1: invalid buffer dimensions`, and `wl_display_get_protocol_error()` returns **interface and code**. `WAYLAND_DEBUG=1` gives the full trace |
 
-#### 4.4 La copia zero: possibile, e in una forma migliore di quella di Mutter
+⭐ **Hence a rule for our code**: after *every* failure, call
+`wl_display_get_protocol_error()` and write out its result. It is the equivalent of lesson §1.10 — *before
+trying variants, get told the cause* — with the difference that here the component that denies does not speak, and
+our client does.
 
-| Strada | Che cosa consegna | Verdetto |
+#### 3.2 ⛔ A protocol error kills the connection
+
+It is not a lost frame: it is the connection. [M] `roundtrip = -1`, `EPROTO`, no recovery — everything must
+be redone from `wl_display_connect`.
+
+**The three rules that follow from it, and that hold for all the new code:**
+
+1. **Format, dimensions and stride are copied *exactly* from the `buffer` event.** No alignment
+   of our own (`wlroots/types/wlr_screencopy_v1.c:384-432`);
+2. **a single `copy()` per frame**, then a new `capture_output()` (`:391`);
+3. **the keymap before the first key**, or `no_keymap` (`wlroots/types/wlr_virtual_keyboard_v1.c:84,107`).
+
+---
+
+### 4. Capture: `zwlr_screencopy_manager_v1`
+
+*Detail: `reference-xfce/rapporti/01-cattura-screencopy.md`.*
+
+#### 4.1 ✅ Whole frames, always — and the GNOME fault does not come back
+
+`frame_shm_copy`/`frame_dma_copy` use `frame->box`, i.e. **the whole output**, and never consult
+the damage (`wlr_screencopy_v1.c:214-219`, `:255-268`). The source buffer is in turn complete thanks
+to the damage ring's *buffer age* (`types/scene/wlr_scene.c:1910-1911`).
+
+⭐ **That is, the trap that keeps zero-copy off on GNOME — the buffer that is a «diff» over four
+recycled buffers, R29 — does not exist here.** A pool of reused buffers is fine without precautions, and the
+accumulation surface is not needed.
+
+#### 4.2 ⛔ The pull model, and its two traps
+
+| | |
+|---|---|
+| **`copy_with_damage` on a still screen** | ⛔ **`ready` never arrives**, and there is no timeout at all: the listener stays attached (`:297-303`). We need **a timer of our own** that, on expiry, destroys the frame and reopens with plain `copy` |
+| **plain `copy`** | ⛔ calls `wlr_output_update_needs_frame()` (`:448`), i.e. **forces rendering** even on a motionless screen. A naive loop at 30 fps makes the compositor render 30 frames per second of nothing |
+
+⭐ **The right form is shown by wayvnc**, and it is the structural correction to the 18 fps problem of
+7 August: `copy_with_damage` as a rule, whole `copy` only when a frame is needed at once (first
+client, output change, size change, wake-up) — and **the cadence subtracts the measured latency of the
+compositor**: `time_left = 1/rate − dt − delay`, with `delay` measured at every `ready` and low-pass
+filtered at 0.5 s (`wayvnc/src/screencopy.c:308`, `:214-215`).
+
+#### 4.3 ⭐ The double ledger of damage — mandatory, not an optimisation
+
+Every buffer carries **two** damages: `frame_damage` (which goes to the encoder) and `buffer_damage` (which goes to the
+compositor). When a frame is ready with damage D, D is added to the `buffer_damage` of **all** the
+buffers in the pool (`wayvnc/src/buffer.c:693-704`).
+
+⛔ **Without it, frames are sent with old pieces, and no frames-per-second measurement
+reveals it** — it is the R29 fault in general form, and the reason it must be written now and not later.
+
+⚠ And wlroots' damage is **a single rectangle** (the extents, with an explicit `// TODO` at
+`:168-178`), in the output's pixel coordinates, **not** translated for `capture_output_region`. It must be
+**clipped** to the buffer rectangle before trusting it, as wayvnc does (`main.c:1145-1146`).
+
+#### 4.4 Zero-copy: possible, and in a better form than Mutter's
+
+| Road | What it delivers | Verdict |
 |---|---|---|
-| **`copy` su buffer DMA-BUF** | un **blit GPU** dentro un buffer **di proprietà del client** (`wlr_renderer_begin_buffer_pass` + `add_texture` + `submit`, `wlr_screencopy_v1.c:249-270`) | ✅ **la nostra strada**: niente lettura CPU, buffer stabile, formato per VA-API |
-| `copy` su buffer shm | `glFinish()` + `glReadPixels` (`render/gles2/texture.c:206,218`) | ⛔ **blocca il ciclo principale del compositore** |
-| `zwlr_export_dmabuf_v1` | il buffer *del compositore*, ma con flag **TRANSIENT** sempre alzato (`wlr_export_dmabuf_v1.c:75`) | ⛔ è la trappola di GNOME in forma pura. Da scartare |
+| **`copy` onto a DMA-BUF buffer** | a **GPU blit** into a buffer **owned by the client** (`wlr_renderer_begin_buffer_pass` + `add_texture` + `submit`, `wlr_screencopy_v1.c:249-270`) | ✅ **our road**: no CPU read, stable buffer, format for VA-API |
+| `copy` onto an shm buffer | `glFinish()` + `glReadPixels` (`render/gles2/texture.c:206,218`) | ⛔ **blocks the compositor's main loop** |
+| `zwlr_export_dmabuf_v1` | the *compositor's* buffer, but with the **TRANSIENT** flag always raised (`wlr_export_dmabuf_v1.c:75`) | ⛔ it is the GNOME trap in pure form. To be discarded |
 
-⚠ **Non è copia zero in senso stretto** — c'è un blit — ma è **una copia sola, sulla scheda**, e il
-buffer è nostro: è precisamente la forma che le fasi 8 e 9 hanno imparato a consumare.
+⚠ **It is not zero-copy in the strict sense** — there is a blit — but it is **a single copy, on the card**, and the
+buffer is ours: it is precisely the form that phases 8 and 9 learned to consume.
 
-⚠ **La sincronizzazione**: con GLES2 il ramo DMA-BUF fa solo `glFlush()` (`render/gles2/pass.c:39`),
-**nessuna fence esplicita**: si dipende dal sync implicito. Il renderer Vulkan invece importa
-correttamente una sync file nel DMA-BUF (`render/vulkan/renderer.c:1025-1029`) — ma in `auto` Vulkan
-**non è mai tentato** in 0.18.2 (`wlr_renderer.c:244`). È lo stesso punto che su Mutter è costato la
-fase 9, e va **misurato** prima di crederci.
+⚠ **Synchronisation**: with GLES2 the DMA-BUF branch only does `glFlush()` (`render/gles2/pass.c:39`),
+**no explicit fence**: it relies on implicit sync. The Vulkan renderer instead correctly imports
+a sync file into the DMA-BUF (`render/vulkan/renderer.c:1025-1029`) — but in `auto` Vulkan
+**is never attempted** in 0.18.2 (`wlr_renderer.c:244`). It is the same point that on Mutter cost
+phase 9, and it must be **measured** before believing it.
 
-⚠ **I modifier non vengono dall'evento `linux_dmabuf`**, che porta solo format/width/height
-(xml:214-223) e non è controllato da wlroots: vanno presi dal feedback di `zwp_linux_dmabuf_v1`, come
-fanno wayvnc e il portale.
+⚠ **The modifiers do not come from the `linux_dmabuf` event**, which carries only format/width/height
+(xml:214-223) and is not checked by wlroots: they must be taken from the `zwp_linux_dmabuf_v1` feedback, as
+wayvnc and the portal do.
 
-#### 4.5 Formati e profondità
+#### 4.5 Formats and depth
 
-Il formato shm lo sceglie il renderer via `GL_IMPLEMENTATION_COLOR_READ_FORMAT` e **non è
-richiedibile**; il campo va trattato come **fourcc**, non come enum (`render/pixel_format.c:215-224`).
-`BGR888` a 24 bit esiste in tabella ma **[?]** non uscirà mai dalla query GL: si riceve 32 bit e si
-converte a valle — come su Mutter, dove R32 aveva già stabilito che un percorso a 24 bit impacchettati
-non esiste.
+The shm format is chosen by the renderer via `GL_IMPLEMENTATION_COLOR_READ_FORMAT` and **cannot be
+requested**; the field must be treated as a **fourcc**, not as an enum (`render/pixel_format.c:215-224`).
+24-bit `BGR888` exists in the table but **[?]** will never come out of the GL query: one receives 32 bits and
+converts downstream — as on Mutter, where R32 had already established that a packed 24-bit path
+does not exist.
 
-#### 4.6 Il successore, e perché il codice va scritto con due implementazioni
+#### 4.6 The successor, and why the code must be written with two implementations
 
-**[✗] `ext-image-copy-capture-v1` non esiste** in wlroots 0.18.2, labwc 0.8.3, wayfire 0.9.0 né sway
-1.10.1 (grep a zero su tutti e quattro, con controllo positivo su `screencopy`). Su Trixie **l'unica
-via è `zwlr_screencopy`**.
+**[✗] `ext-image-copy-capture-v1` does not exist** in wlroots 0.18.2, labwc 0.8.3, wayfire 0.9.0 nor sway
+1.10.1 (grep at zero on all four, with a positive control on `screencopy`). On Trixie **the only
+way is `zwlr_screencopy`**.
 
-Ma **wayvnc 0.9.1 lo parla già**, e sceglie a runtime in dodici righe
-(`wayvnc/src/screencopy-interface.c:29-45`), con le capacità diverse in una maschera di bit e **un
-solo punto** in cui il codice si dirama. ⭐ **È la forma da copiare**, perché il protocollo nuovo
-porta due cose che ci servono: i **modifier**, e una **sessione cursore** con posizione e hotspot —
-cioè la cura definitiva al doppio puntatore.
+But **wayvnc 0.9.1 already speaks it**, and chooses at runtime in twelve lines
+(`wayvnc/src/screencopy-interface.c:29-45`), with the differing capabilities in a bit mask and **a
+single point** where the code branches. ⭐ **It is the form to copy**, because the new protocol
+brings two things we need: the **modifiers**, and a **cursor session** with position and hotspot —
+i.e. the definitive cure for the double pointer.
 
-⚠ E porta anche un cambio di modello da sapere adesso: **il nuovo protocollo è a diff** («at least
-the union of the region passed by the client and the region advertised by `damage`»), con danno pieno
-solo al primo fotogramma. Chi lo scriverà senza sapere questo ripaga R29 una terza volta.
+⚠ And it also brings a change of model to know now: **the new protocol is diff-based** («at least
+the union of the region passed by the client and the region advertised by `damage`»), with full damage
+only on the first frame. Whoever writes it without knowing this pays for R29 a third time.
 
 ---
 
-### 5. Senza monitor: headless, GPU, cadenza
+### 5. Without a monitor: headless, GPU, cadence
 
-*Dettaglio: `reference-xfce/rapporti/03-output-headless-gpu.md`.*
+*Detail: `reference-xfce/rapporti/03-output-headless-gpu.md`.*
 
-#### 5.1 ✅ Nessun seat, nessun libseat
+#### 5.1 ✅ No seat, no libseat
 
-`grep session|libseat|drm backend/headless/` → **vuoto** [✗]. Con `WLR_BACKENDS=headless` non si crea
-mai una `wlr_session` (`backend/backend.c:308-316`). Il muro su cui `kwin_wayland --drm` usciva con
-stato 1 da una shell SSH **qui non esiste**, e non serve alcun `Activate()` di logind.
+`grep session|libseat|drm backend/headless/` → **empty** [✗]. With `WLR_BACKENDS=headless` a
+`wlr_session` is never created (`backend/backend.c:308-316`). The wall against which `kwin_wayland --drm` exited with
+status 1 from an SSH shell **does not exist here**, and no logind `Activate()` is needed.
 
-#### 5.2 ⭐ La GPU si sceglie con una variabile — e il ripiego è la trappola
+#### 5.2 ⭐ The GPU is chosen with a variable — and the fallback is the trap
 
 | | |
 |---|---|
-| **Come si sceglie** | `WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128` (`render/wlr_renderer.c:147-158`, accetta solo `renderD*`) |
-| **Il default** | il **primo** render node di `drmGetDevices2()`, con `break` immediato |
-| ⛔ **Il ripiego** | **non esiste**: se l'`open` fallisce, wlroots **non prova l'altra scheda** — cade in **pixman**, cioè in software, senza errore |
+| **How it is chosen** | `WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128` (`render/wlr_renderer.c:147-158`, accepts only `renderD*`) |
+| **The default** | the **first** render node from `drmGetDevices2()`, with an immediate `break` |
+| ⛔ **The fallback** | **does not exist**: if the `open` fails, wlroots **does not try the other card** — it falls into **pixman**, i.e. software, without an error |
 
-⭐ **Da cui: la regola udev di KDE non serve, e negare un nodo sarebbe controproducente.** Su KWin
-negare il nodo era l'unico modo di scegliere la scheda, e il prezzo era negarlo a tutta la sessione
-dell'utente. Qui basta una variabile d'ambiente.
+⭐ **Hence: KDE's udev rule is not needed, and denying a node would be counterproductive.** On KWin
+denying the node was the only way to choose the card, and the price was denying it to the user's whole
+session. Here an environment variable is enough.
 
-⚠ **E la lezione §1.11 vale identica**: «render node aperto» non prova la GPU nemmeno qui, e
-«DMA-BUF offerto» prova **l'allocatore**, non il disegno. **[✗] Non esiste API né IPC per chiedere il
-renderer** in 0.18.2 (`struct wlr_renderer` non ha `name`): niente di equivalente a
-`supportInformation` di KWin. Restano due strade, entrambe da usare: **`-V` all'avvio del
-compositore** (labwc e sway partono a `WLR_ERROR` e non stampano `GL renderer:` senza), e il
-**controllo positivo obbligatorio** — rifare la misura con `WLR_RENDERER=pixman` e vedere che
-**cambia**.
+⚠ **And lesson §1.11 holds identically**: «render node aperto» does not prove the GPU here either, and
+«DMA-BUF offerto» proves **the allocator**, not the drawing. **[✗] There is no API nor IPC to ask for the
+renderer** in 0.18.2 (`struct wlr_renderer` has no `name`): nothing equivalent to KWin's
+`supportInformation`. Two roads remain, both to be used: **`-V` at compositor
+startup** (labwc and sway start at `WLR_ERROR` and do not print `GL renderer:` without it), and the
+**mandatory positive control** — redo the measurement with `WLR_RENDERER=pixman` and see that it
+**changes**.
 
-Con headless e default: **GLES2 + allocatore GBM** (`allocator.c:101-103`), quindi la copia zero è
-disponibile. Con pixman l'allocatore è shm e screencopy **non offre affatto** il formato DMA-BUF
-(`wlr_screencopy_v1.c:574-577`) — il che, notato di passaggio, è una prova *negativa* utile: se il
-DMA-BUF non viene offerto, siamo in software.
+With headless and the default: **GLES2 + GBM allocator** (`allocator.c:101-103`), so zero-copy is
+available. With pixman the allocator is shm and screencopy **does not offer** the DMA-BUF format at all
+(`wlr_screencopy_v1.c:574-577`) — which, noted in passing, is a useful *negative* proof: if
+DMA-BUF is not offered, we are in software.
 
-#### 5.3 ⭐ La cadenza è un parametro nostro
+#### 5.3 ⭐ The cadence is our parameter
 
-Su un output headless `frame_delay = 1 000 000 / refresh_mHz` ms (`backend/headless/output.c:25-32`):
-**il terzo argomento di `set_custom_mode` diventa il periodo del timer dei fotogrammi.**
+On a headless output `frame_delay = 1 000 000 / refresh_mHz` ms (`backend/headless/output.c:25-32`):
+**the third argument of `set_custom_mode` becomes the period of the frame timer.**
 
-| refresh dichiarato | periodo | tetto |
+| declared refresh | period | cap |
 |---|---|---|
-| 60 Hz | 16 ms | **62,5 fps** |
+| 60 Hz | 16 ms | **62.5 fps** |
 | 30 Hz | 33 ms | 30 fps |
 
-Nessun altro compositore ci ha mai dato questa leva: su Mutter la cadenza si dichiarava a PipeWire e
-se ne ottenevano sei decimi; su KWin il tetto era `maxFramerate` e lo onorava il server. ⚠ wayvnc lo
-lascia a 0 con un TODO, quindi qui **non abbiamo un precedente da copiare**.
+No other compositor ever gave us this lever: on Mutter the cadence was declared to PipeWire and
+we got six tenths of it; on KWin the cap was `maxFramerate` and the server honoured it. ⚠ wayvnc
+leaves it at 0 with a TODO, so here **we have no precedent to copy**.
 
-⛔ **E i fotogrammi si tirano davvero**: niente danno ⇒ niente commit
-(`types/scene/wlr_scene.c:1705-1709`) ⇒ il timer non si riarma (`headless/output.c:76`). A riaccendere
-è la cattura stessa, con `wlr_output_update_needs_frame()` dentro `copy`.
+⛔ **And frames really are pulled**: no damage ⇒ no commit
+(`types/scene/wlr_scene.c:1705-1709`) ⇒ the timer is not re-armed (`headless/output.c:76`). What wakes it
+again is the capture itself, with `wlr_output_update_needs_frame()` inside `copy`.
 
-#### 5.4 ⛔ Due silenzi da conoscere prima di scrivere
+#### 5.4 ⛔ Two silences to know before writing
 
-1. **Mai toccare l'adaptive sync**: `ADAPTIVE_SYNC_ENABLED` è **fuori** dalla maschera headless
-   (`headless/output.c:10-14`) e fa fallire **l'intero** commit con `Unsupported output state fields:
-   0x40` — che sembra un rifiuto della misura. `false` invece è un no-op silenzioso;
-2. **Chiedere la misura che l'output ha già** non produce un modeset: `output_compare_state` toglie il
-   campo `MODE` e il commit riesce **senza fare niente** (labwc lo aggira alzando la larghezza di 1,
+1. **Never touch adaptive sync**: `ADAPTIVE_SYNC_ENABLED` is **outside** the headless mask
+   (`headless/output.c:10-14`) and makes **the entire** commit fail with `Unsupported output state fields:
+   0x40` — which looks like a rejection of the size. `false` instead is a silent no-op;
+2. **Asking for the size the output already has** does not produce a modeset: `output_compare_state` removes the
+   `MODE` field and the commit succeeds **without doing anything** (labwc works around it by raising the width by 1,
    `labwc/src/output.c:1084-1104`).
 
-E una terza, sul protocollo di configurazione: **serial vecchio ⇒ `cancelled`, non `failed`**
-(`wlr_output_management_v1.c:446-455`). Chi ascolta solo `succeeded`/`failed` resta appeso per sempre.
+And a third, on the configuration protocol: **old serial ⇒ `cancelled`, not `failed`**
+(`wlr_output_management_v1.c:446-455`). Whoever listens only for `succeeded`/`failed` stays hanging forever.
 
 ---
 
-### 6. ✅ Il ridimensionamento a caldo: si può — e il ripiego di KDE non serve
+### 6. ✅ Hot resizing: it can be done — and KDE's fallback is not needed
 
-*È la domanda 13 di `LEZIONI.md` §3, quella che su KWin ha deciso metà del piano.*
+*It is question 13 of `LEZIONI.md` §3, the one that on KWin decided half the plan.*
 
-`zwlr_output_configuration_head_v1::set_custom_mode` ridimensiona un output headless a caldo.
-**L'unica validazione in tutto il percorso** è `width<=0 || height<=0 || refresh<0`
-(`wlr_output_management_v1.c:216-241`) più `pending_width==0` (`types/output/output.c:593-596`).
-**[✗] Nessun tetto**, cercato con grep su wlroots e sui tre compositori.
+`zwlr_output_configuration_head_v1::set_custom_mode` resizes a headless output hot.
+**The only validation along the whole path** is `width<=0 || height<=0 || refresh<0`
+(`wlr_output_management_v1.c:216-241`) plus `pending_width==0` (`types/output/output.c:593-596`).
+**[✗] No cap**, searched with grep on wlroots and on the three compositors.
 
-**Il precedente esiste e non è nostro**: wayvnc ridimensiona l'output alla risoluzione del client
-(`wayvnc/src/main.c:802-826` → `output-management.c:230-287`), e da lì si copia anche la disciplina —
-**enumerare tutte le head** con enable/disable, o wayfire rifiuta.
+**The precedent exists and it is not ours**: wayvnc resizes the output to the client's resolution
+(`wayvnc/src/main.c:802-826` → `output-management.c:230-287`), and from there we also copy the discipline —
+**enumerate all the heads** with enable/disable, or wayfire refuses.
 
-#### 6.1 ⛔ Ma l'output NON si crea, e non si distrugge
+#### 6.1 ⛔ But the output is NOT created, and not destroyed
 
 | | |
 |---|---|
-| **[✗] `wlr-virtual-output` non esiste** | dieci protocolli in `wlr-protocols/unstable/`, nessuno crea output. `wlr-output-management` li *configura*: *«Heads cannot be created nor destroyed by the client»* |
-| **[✗] Nessuna variabile dà la misura iniziale** | ⚠ *precisato l'8 agosto, studiando LXQt*: le misure cablate sono **due, diverse secondo la via** — `WLR_HEADLESS_OUTPUTS` crea output **1280×720** (`wlroots/backend/backend.c:237`), mentre gli output virtuali **di labwc** nascono **1920×1080** (`labwc/src/output-virtual.c:52-53`). Nessuna delle due porta la misura: `WLR_HEADLESS_OUTPUTS` porta solo il **numero** |
-| **[✗] labwc non ha IPC** | `grep -rli ipc labwc/src` → nulla, e `rc.xml` non ha alcun `<output>`. `VirtualOutputAdd` accetta il **nome** ma non la misura ed è raggiungibile **solo da keybind**. ⚠ Esiste però **`LABWC_FALLBACK_OUTPUT`** (`output-virtual.c:109-135`): a layout **vuoto** labwc crea da sé un output virtuale col nome dato — ed è il meccanismo che upstream documenta perché un nome `NOOP-…` faccia riconoscere a wayvnc un output ridimensionabile. Scatta **solo** a layout vuoto, quindi vuole `WLR_HEADLESS_OUTPUTS=0` [?, da provare] |
+| **[✗] `wlr-virtual-output` does not exist** | ten protocols in `wlr-protocols/unstable/`, none creates outputs. `wlr-output-management` *configures* them: *«Heads cannot be created nor destroyed by the client»* |
+| **[✗] No variable gives the initial size** | ⚠ *refined on 8 August, studying LXQt*: the hard-wired sizes are **two, different depending on the route** — `WLR_HEADLESS_OUTPUTS` creates **1280×720** outputs (`wlroots/backend/backend.c:237`), while **labwc's** virtual outputs are born **1920×1080** (`labwc/src/output-virtual.c:52-53`). Neither carries the size: `WLR_HEADLESS_OUTPUTS` carries only the **number** |
+| **[✗] labwc has no IPC** | `grep -rli ipc labwc/src` → nothing, and `rc.xml` has no `<output>` at all. `VirtualOutputAdd` accepts the **name** but not the size and is reachable **only from a keybind**. ⚠ There is, however, **`LABWC_FALLBACK_OUTPUT`** (`output-virtual.c:109-135`): with an **empty** layout labwc creates by itself a virtual output with the given name — and it is the mechanism upstream documents so that a `NOOP-…` name makes wayvnc recognise a resizable output. It fires **only** with an empty layout, so it wants `WLR_HEADLESS_OUTPUTS=0` [?, to be tested] |
 
-⭐ **Da cui la forma obbligata**: si avvia il compositore headless, ci si collega, e **si ridimensiona
-l'output esistente**. Non «si crea l'output della misura chiesta», che è quel che facevamo su KWin con
+⭐ **Hence the forced form**: start the compositor headless, connect, and **resize the
+existing output**. Not «si crea l'output della misura chiesta», which is what we did on KWin with
 `--virtual --width/--height`.
 
-⛔ **E distruggere e ricreare è vietato da tre parti diverse**, tutte in XFCE:
+⛔ **And destroying and recreating is forbidden from three different sides**, all in XFCE:
 
 | | |
 |---|---|
-| `xfsettingsd` | se compare un output **nuovo** lo **disabilita** e lancia `xfce4-display-settings` (`displays-wayland.c:524-528`, `:541-546`). ⚠ E attenzione al verso: `action <= SHOW_DIALOG` significa che **anche `/Notify=0` disabilita** — servono 2 o 3 |
-| `xfce4-panel` | esce senza far niente se `n_monitors == 0` (`panel-window.c:2640-2642`, commento «temporary state on Wayland») |
-| `xfdesktop` | perde le impostazioni dello sfondo se cambia il nome del connector: **la chiave xfconf *è* il connector** (`xfdesktop-backdrop-manager.c:169`) |
+| `xfsettingsd` | if a **new** output appears it **disables** it and launches `xfce4-display-settings` (`displays-wayland.c:524-528`, `:541-546`). ⚠ And mind the direction: `action <= SHOW_DIALOG` means that **`/Notify=0` disables too** — 2 or 3 are needed |
+| `xfce4-panel` | exits without doing anything if `n_monitors == 0` (`panel-window.c:2640-2642`, comment «temporary state on Wayland») |
+| `xfdesktop` | loses the wallpaper settings if the connector name changes: **the xfconf key *is* the connector** (`xfdesktop-backdrop-manager.c:169`) |
 
-⚠ E un dettaglio da tenere per il banco: il pannello **non usa** l'API monitor di
-`libxfce4windowing` [✗], ascolta `GdkScreen::monitors-changed`. Quel che dobbiamo far scattare è GDK.
+⚠ And a detail to keep for the bench: the panel **does not use** the monitor API of
+`libxfce4windowing` [✗], it listens to `GdkScreen::monitors-changed`. What we have to trigger is GDK.
 
 ---
 
-### 7. L'input: `input.c` diventa un client Wayland
+### 7. Input: `input.c` becomes a Wayland client
 
-*Dettaglio: `reference-xfce/rapporti/04-input.md`.*
+*Detail: `reference-xfce/rapporti/04-input.md`.*
 
-**[✗] libei non esiste su wlroots** — cercato `libei|EIS|ei_device|ei_seat|ei_new` in wlroots, labwc,
-sway, wayfire, weston, xdg-desktop-portal-wlr e wayvnc: zero, con controllo positivo su
-`virtual_keyboard` che dà 67/15/16/10 righe. E **[✗] `xdg-desktop-portal-wlr` non ha `RemoteDesktop`**
-(`wlr.portal:3`: solo Screenshot e ScreenCast).
+**[✗] libei does not exist on wlroots** — searched `libei|EIS|ei_device|ei_seat|ei_new` in wlroots, labwc,
+sway, wayfire, weston, xdg-desktop-portal-wlr and wayvnc: zero, with a positive control on
+`virtual_keyboard` giving 67/15/16/10 lines. And **[✗] `xdg-desktop-portal-wlr` has no `RemoteDesktop`**
+(`wlr.portal:3`: only Screenshot and ScreenCast).
 
-Quindi: `zwp_virtual_keyboard_manager_v1` **v1** e `zwlr_virtual_pointer_manager_v1` **v2**, senza
-alcun permesso (wlroots non filtra; labwc e sway filtrano solo i client in sandbox).
+So: `zwp_virtual_keyboard_manager_v1` **v1** and `zwlr_virtual_pointer_manager_v1` **v2**, without
+any permission (wlroots does not filter; labwc and sway filter only sandboxed clients).
 
-#### 7.1 Che cosa si riusa, e che cosa si riscrive
+#### 7.1 What is reused, and what is rewritten
 
 | | |
 |---|---|
-| ✅ **si riusa** | le tabelle scancode set 1 → VK → evdev, la mappa dei pulsanti, la macchina a stati del tasto Pausa, la logica di sessione. L'offset evdev↔X11 è **8** in entrambe le direzioni |
-| ⛔ **si riscrive** | il trasporto (D-Bus/EIS → `wl_registry`) e **tutta la gestione dei modificatori**, che con libei non esisteva |
+| ✅ **reused** | the scancode set 1 → VK → evdev tables, the button map, the Pause-key state machine, the session logic. The evdev↔X11 offset is **8** in both directions |
+| ⛔ **rewritten** | the transport (D-Bus/EIS → `wl_registry`) and **all the modifier handling**, which did not exist with libei |
 
-**[?] Circa metà del file.** ⚠ E una decisione da prendere **prima** di scrivere: se anche la cattura
-è un protocollo Wayland, **una sola connessione `wl_display` serve entrambi**.
+**[?] About half the file.** ⚠ And a decision to take **before** writing: if capture too
+is a Wayland protocol, **a single `wl_display` connection serves both**.
 
-#### 7.2 ⛔ Le cinque trappole silenziose
+#### 7.2 ⛔ The five silent traps
 
 | # | | |
 |---|---|---|
-| 1 | **La rotella vuole scatti da ±1**, non ±120 | `axis_discrete(t, axis, value, discrete)` con `discrete` **in scatti interi**; wlroots moltiplica **lui** per 120 (`wlr_virtual_pointer_v1.c:183-184`). La convenzione di KWin qui darebbe **120 scatti** |
-| 2 | **`value` non deve mai essere 0** | con `value == 0` parte un `axis_stop` e lo scatto sparisce (`wlr_seat_pointer.c:369-391`). wayvnc usa **15.0**, «valore magico misurato con `wev`» |
-| 3 | **Senza `frame` non arriva niente** | gli assi restano nel buffer (`wlr_virtual_pointer_v1.c:109-122`), e `frame` serve a **tutti** gli eventi, non solo alla rotella |
-| 4 | **I modificatori li mandiamo noi, sempre** | wlroots costruisce l'evento con `update_state = false` (`:92`) e non aggiorna `xkb_state`: **senza `modifiers`, Shift+A dà `a`**. Serve un `xkb_state` nostro |
-| 5 | **`wlr_pointer_finish()` non rilascia i pulsanti** (`types/wlr_pointer.c:38-42`) | alla disconnessione dobbiamo mandare noi `button(release)` + `frame` prima di `destroy`, o **il desktop resta col tasto sinistro premuto**. La tastiera invece li rilascia da sola. ⚠ `[M]` 21 set 2026, portatile, labwc headless: la tastiera sì (Maiusc rilasciato alla caduta del nostro socket); e con il **nostro come unico puntatore** il seat perde la capacità e un clic fresco dopo il riattacco arriva intero **anche senza** il rilascio — la trappola morde solo se nel seat c'è un altro puntatore `[?]` |
+| 1 | **The wheel wants ±1 clicks**, not ±120 | `axis_discrete(t, axis, value, discrete)` with `discrete` **in whole clicks**; wlroots multiplies by 120 **itself** (`wlr_virtual_pointer_v1.c:183-184`). KWin's convention here would give **120 clicks** |
+| 2 | **`value` must never be 0** | with `value == 0` an `axis_stop` goes out and the click vanishes (`wlr_seat_pointer.c:369-391`). wayvnc uses **15.0**, «valore magico misurato con `wev`» |
+| 3 | **Without `frame` nothing arrives** | the axes stay in the buffer (`wlr_virtual_pointer_v1.c:109-122`), and `frame` is needed for **all** events, not just the wheel |
+| 4 | **We send the modifiers ourselves, always** | wlroots builds the event with `update_state = false` (`:92`) and does not update `xkb_state`: **without `modifiers`, Shift+A gives `a`**. We need an `xkb_state` of our own |
+| 5 | **`wlr_pointer_finish()` does not release the buttons** (`types/wlr_pointer.c:38-42`) | on disconnection we must send `button(release)` + `frame` ourselves before `destroy`, or **the desktop stays with the left button pressed**. The keyboard instead releases them by itself. ⚠ `[M]` 21 Sep 2026, laptop, labwc headless: the keyboard yes (Shift released when our socket dropped); and with **ours as the only pointer** the seat loses the capability and a fresh click after reattaching arrives whole **even without** the release — the trap bites only if there is another pointer in the seat `[?]` |
 
-⚠ **Il verso della rotella**: verticale **invertito** rispetto a Wayland, orizzontale no — e **nessuno
-lo corregge per noi**, perché su un device virtuale labwc salta libinput (`scroll_factor = 1.0`,
-niente natural scrolling né accelerazione). Su sway e wayfire invece `scroll_factor` **si applica
-anche a noi**. Weston conferma la conversione riga per riga, ed è il pezzo più prezioso del suo
-backend RDP: valore negli 8 bit bassi dei flag, negativo = `(0xff - v) * -1`, **due accumulatori per
-asse** (`≥ 12` passo fluido, `/120` scatto discreto, con `%=` che conserva il resto).
+⚠ **The wheel direction**: vertical **inverted** with respect to Wayland, horizontal not — and **nobody
+corrects it for us**, because on a virtual device labwc skips libinput (`scroll_factor = 1.0`,
+no natural scrolling nor acceleration). On sway and wayfire instead `scroll_factor` **applies
+to us too**. Weston confirms the conversion line by line, and it is the most precious piece of its
+RDP backend: value in the low 8 bits of the flags, negative = `(0xff - v) * -1`, **two accumulators per
+axis** (`≥ 12` smooth step, `/120` discrete click, with `%=` keeping the remainder).
 
-#### 7.3 ⭐ I lucchetti si leggono — ma solo perché il compositore è labwc
+#### 7.3 ⭐ The locks can be read — but only because the compositor is labwc
 
-wlroots manda `wl_keyboard.modifiers` **solo al client con il fuoco**
-(`seat/wlr_seat_keyboard.c:191-213`). Noi non abbiamo una surface, quindi non dovremmo vedere niente.
+wlroots sends `wl_keyboard.modifiers` **only to the client with focus**
+(`seat/wlr_seat_keyboard.c:191-213`). We have no surface, so we should see nothing.
 
-**Ma labwc lo trasmette a tutti, senza surface** (`input/keyboard.c:106-133`, chiamato a `:186-193`),
-con un commento che dice che **sway lo faceva e ha smesso**. Quindi `mods_locked` dà BlocMaiusc e
-BlocNum **veri**, e `group` dà il layout.
-
-| | |
-|---|---|
-| ✅ | su KDE questa risposta era costata un protocollo dedicato (`org_kde_kwin_keystate`) |
-| ⚠ | **è comportamento di labwc, non di protocollo**: su sway la stessa lettura è `[✗]` |
-| ⚠ | **lo stato iniziale non arriva mai** — si conosce il primo cambiamento, non la situazione di partenza |
-| ⚠ | attenzione all'**anello di retroazione** coi nostri stessi `modifiers` |
-
-#### 7.4 La keymap: presentarla noi, ma copiata dal filo
-
-Obbligatoria prima di ogni `key` (`no_keymap`, `wlr_virtual_keyboard_v1.c:83-88`). ⭐ **La forma
-giusta**: fare `wl_seat.get_keyboard` — wlroots manda `keymap` subito, senza fuoco
-(`seat/wlr_seat_keyboard.c:412-417`) — e **rigirare quel contenuto**. È meglio di wayvnc, che la
-genera da configurazione, e c'è una ragione forte: su labwc **ogni tasto** fa
-`wlr_seat_set_keyboard`, che **rimanda la keymap a tutti i client**.
-
-⛔ **`[M]` 21 settembre 2026, sul portatile (labwc 0.8.3 headless, fase 13 incremento 3): su una
-sessione SENZA tastiera vera la copia dal filo non si può fare.** Il seat dichiara capacità **0**
-finché non esiste una tastiera, quindi `get_keyboard` non ha niente da consegnare. ⇒ `wlr_input.c`
-la tenta e, se non arriva, presenta quella dell'**ambiente** dichiarandolo; la disposizione giusta
-la porta subito dopo quella **negoziata** col client, che su wlroots diventa la keymap della nostra
-tastiera (labwc la gira alle applicazioni insieme ai nostri tasti — `[M]` il testimone la riceve).
-
-✅ **La ripetizione non la facciamo noi**: nessuno ripete lato compositore, i `key down` ripetuti di
-RDP sono comunque **scartati** da wlroots (`wlr_keyboard.c:68-83`), e la ripetizione la fa
-l'applicazione via `repeat_info`.
-
-#### 7.5 ⚠ Le nostre scorciatoie le mangia labwc
-
-`match_keybinding(..., is_virtual)` salta il confronto per keycode ma **applica comunque le
-scorciatoie** (`input/keyboard.c:225-228`, `:548-560`), e le mousebind di scorrimento ingoiano lo
-scatto usando anche **i nostri** modificatori (`keyboard_get_all_modifiers`, `:57-79` — con un
-commento che nomina wayvnc). Da mettere in conto: parte di quel che mandiamo non arriva alle
-applicazioni.
-
-#### 7.6 Il seat: si inietta in quello esistente
-
-**[✗] labwc non crea `ext_transient_seat_v1`** (sway sì, wlroots ce l'ha). Su XFCE **non c'è scelta**:
-si inietta nel seat dell'utente. ⭐ E dato che REMOTIX gira **senza utente presente**, è anche il caso
-migliore — è precisamente ciò che ci regala la lettura dei lucchetti veri di §7.3.
-
----
-
-### 8. ✅ Gli appunti: `appunti_wlr.c` funziona così com'è
-
-*Dettaglio: `reference-xfce/rapporti/05-appunti.md`.*
-
-`zwlr_data_control_manager_v1` **v2** su tutti e tre i compositori, senza permessi. Il file l'abbiamo
-scritto per KWin ma **contro il protocollo di wlroots**: qui siamo in casa sua.
-
-**Le due lezioni pagate su KWin reggono, e per lo stesso motivo meccanico:**
+**But labwc broadcasts it to everyone, without a surface** (`input/keyboard.c:106-133`, called at `:186-193`),
+with a comment saying that **sway used to do it and stopped**. So `mods_locked` gives **real** CapsLock and
+NumLock, and `group` gives the layout.
 
 | | |
 |---|---|
-| **L'eco è certa, non probabile** | ogni device si iscrive a `seat->events.set_selection` **senza filtro sull'originatore** (`wlr_data_control_v1.c:620-622`) |
-| **`cancelled` precede `selection`** | e più solidamente che su KWin: sta tutto dentro `wlr_seat_set_selection` — riga 196 distrugge la vecchia source, riga 211 emette il segnale. **Due righe della stessa funzione, nessun rientro asincrono in mezzo.** La guardia di stato **non va rivista** |
-| **`POLLHUP` vale come «pronto»** | `client_source_send` fa `close(fd)` subito dopo l'evento (`:131`): con dati corti la `poll` torna con solo `POLLHUP` |
+| ✅ | on KDE this answer had cost a dedicated protocol (`org_kde_kwin_keystate`) |
+| ⚠ | **it is labwc behaviour, not protocol**: on sway the same read is `[✗]` |
+| ⚠ | **the initial state never arrives** — one knows the first change, not the starting situation |
+| ⚠ | beware of the **feedback loop** with our own `modifiers` |
 
-**Le tre riserve, tutte nostre e tutte piccole:**
+#### 7.4 The keymap: we present it, but copied from the wire
 
-1. **[?] `kwin_display_apri`** (`appunti_wlr.c:441`): se filtra il socket per nome, su labwc non si
-   apre nulla. È l'unica cosa che può impedire al file di funzionare;
-2. **wlroots scarta i MIME duplicati in silenzio** (`:47-54`) e la nostra `tipi_uguali` boccia su
-   lunghezza diversa: un duplicato nell'elenco del client ⇒ guardia saltata ⇒ **ciclo infinito**;
-3. lo scavalco `onlyReplaceEmpty` è inutile qui: **[✗]** assente da tutto l'albero.
+Mandatory before every `key` (`no_keymap`, `wlr_virtual_keyboard_v1.c:83-88`). ⭐ **The right
+form**: do `wl_seat.get_keyboard` — wlroots sends `keymap` at once, without focus
+(`seat/wlr_seat_keyboard.c:412-417`) — and **pass that content on**. It is better than wayvnc, which
+generates it from configuration, and there is a strong reason: on labwc **every key** does
+`wlr_seat_set_keyboard`, which **resends the keymap to all clients**.
 
-⭐ **E c'è una guardia migliore della nostra, da valutare**: wayvnc offre un **secondo MIME sintetico**
-`x-wayvnc-client-%08x` e, se lo rivede in un'offerta, sa che è sua e la ignora
-(`wayvnc/src/data-control.c:196-199`). È più solido di un confronto sui tipi, e in RDP il problema è
-identico.
+⛔ **`[M]` 21 September 2026, on the laptop (labwc 0.8.3 headless, phase 13 increment 3): on a
+session WITHOUT a real keyboard the copy from the wire cannot be done.** The seat declares capability **0**
+until a keyboard exists, so `get_keyboard` has nothing to deliver. ⇒ `wlr_input.c`
+attempts it and, if it does not arrive, presents the **environment's** one, declaring so; the right layout
+comes right after with the one **negotiated** with the client, which on wlroots becomes the keymap of our
+keyboard (labwc passes it on to the applications together with our keys — `[M]` the witness receives it).
 
-**Il resto, in breve**: **[✗] `ext-data-control-v1` non esiste** né in wlroots 0.18.2 né in
-wayland-protocols 1.38 — su Trixie `zwlr` è l'unica porta, benché a monte sia già marcato deprecato.
-Il ponte Xwayland funziona **in entrambe le direzioni gratis**, passando dallo stesso stato del seat.
-La clipboard **non sopravvive alla morte di chi ha copiato**, e in XFCE su Wayland **non c'è nessun
-gestore** (`xfsettingsd` lo avvia solo sotto X11): cioè il coinquilino che su KDE era klipper qui non
-c'è.
+✅ **Repetition is not ours to do**: nobody repeats on the compositor side, RDP's repeated `key down`s
+are **discarded** by wlroots anyway (`wlr_keyboard.c:68-83`), and repetition is done by
+the application via `repeat_info`.
+
+#### 7.5 ⚠ labwc eats our shortcuts
+
+`match_keybinding(..., is_virtual)` skips the keycode comparison but **still applies the
+shortcuts** (`input/keyboard.c:225-228`, `:548-560`), and the scroll mousebinds swallow the
+click using **our** modifiers too (`keyboard_get_all_modifiers`, `:57-79` — with a
+comment that names wayvnc). To be taken into account: part of what we send does not reach the
+applications.
+
+#### 7.6 The seat: we inject into the existing one
+
+**[✗] labwc does not create `ext_transient_seat_v1`** (sway does, wlroots has it). On XFCE **there is no choice**:
+we inject into the user's seat. ⭐ And since REMOTIX runs **with no user present**, it is also the best
+case — it is precisely what gives us the reading of the real locks in §7.3.
 
 ---
 
-### 9. La sessione XFCE senza monitor
+### 8. ✅ The clipboard: `appunti_wlr.c` works as it is
 
-*Dettaglio: `reference-xfce/rapporti/06-sessione-xfce.md`.*
+*Detail: `reference-xfce/rapporti/05-appunti.md`.*
 
-#### 9.1 Il compositore è cablato in uno script
+`zwlr_data_control_manager_v1` **v2** on all three compositors, without permissions. We wrote the file
+for KWin but **against the wlroots protocol**: here we are in its home.
 
-`default_compositor="labwc"` in `xfce4-session/scripts/startxfce4.in:121` — **non è una
-configurazione, è una riga di script**. Si sostituisce solo passando la riga di comando a
-`startxfce4 --wayland <cmd>` (`:37-40`, `:164`), oppure con `XFCE4_SESSION_COMPOSITOR`, che viene
-`exec`-ato tal quale (`xinitrc.in:147`).
+**The two lessons paid for on KWin hold, and for the same mechanical reason:**
 
-⭐ **La riga da copiare**: `labwc --config-dir … --config … --session xfce4-session`. Il `--session`
-rende `xfce4-session` il *primary client*: quando esce, **labwc termina**
-(`labwc/src/main.c:43`, `:96-104`; `server.c:167-170`). Il logout viene gratis.
-
-#### 9.2 ⛔ La trappola che può ammazzare la nostra sessione
-
-Se `XFCE4_SESSION_COMPOSITOR` non contiene **sia** `labwc` **sia** `--session`, al logout
-`xfce4-session` esegue **`loginctl terminate-session ''`** (`xfce4-session/main.c:257-273`) — cioè la
-sessione logind di REMOTIX.
-
-**Doppia difesa**, e vanno messe tutte e due: xfconf `xfce4-session` `/general/WaylandLogoutCommand`
-= `/bin/true` (ha la precedenza, `:259`) **più** la variabile d'ambiente scritta come si deve.
-
-⚠ **È la prima cosa da provare sul banco**, e mai sull'utente (`LEZIONI.md` §2.6).
-
-#### 9.3 L'ambiente: che cosa mettere e che cosa togliere
-
-| Mettere | Perché |
+| | |
 |---|---|
-| `XDG_RUNTIME_DIR` | labwc esce senza (`main.c:201-204`) |
-| `XDG_CURRENT_DESKTOP=XFCE` | **prima** di labwc, che altrimenti la mette a `labwc:wlroots` con `overwrite=0` (`config/session.c:249`) |
-| `XDG_MENU_PREFIX=xfce-` | ⚠ **non perché manchi** — garcon ripiega su `xfce-` da sé (`garcon-private.h:37-39`, con un commento che dice espressamente «so garcon doesn't break when xfce is not started with startxfce4»). Il pericolo è **ereditarne una sbagliata** (`plasma-`, `gnome-`) **o vuota**: il test è `prefix != NULL`, non `*prefix`, e allora `garcon_menu_load()` fallisce con `G_FILE_ERROR_NOENT` **senza alcun ripiego**. È la lezione §1.10 in forma rovesciata: non «metti la variabile», ma **«componi l'ambiente da zero, o ti porti dietro quella di un altro desktop»** |
-| `WLR_BACKENDS=headless` | e `WLR_LIBINPUT_NO_DEVICES=1`, che è la ricetta dichiarata da wayvnc (`FAQ.md:3-8`) e **[M]** provata sul portatile |
-| `WLR_RENDER_DRM_DEVICE` | la scheda, §5.2 |
-| `LABWC_UPDATE_ACTIVATION_ENV=1` | ⚠ **obbligatoria**: labwc propaga `WAYLAND_DISPLAY` al bus e a systemd **solo se il backend è DRM** (`config/session.c:186-207`). Su headless non lo fa, **in silenzio** |
+| **The echo is certain, not probable** | every device subscribes to `seat->events.set_selection` **without a filter on the originator** (`wlr_data_control_v1.c:620-622`) |
+| **`cancelled` precedes `selection`** | and more solidly than on KWin: it is all inside `wlr_seat_set_selection` — line 196 destroys the old source, line 211 emits the signal. **Two lines of the same function, no asynchronous re-entry in between.** The state guard **does not need revisiting** |
+| **`POLLHUP` counts as «pronto»** | `client_source_send` does `close(fd)` right after the event (`:131`): with short data the `poll` returns with only `POLLHUP` |
+
+**The three reservations, all ours and all small:**
+
+1. **[?] `kwin_display_apri`** (`appunti_wlr.c:441`): if it filters the socket by name, on labwc nothing
+   opens. It is the only thing that can stop the file from working;
+2. **wlroots silently discards duplicate MIMEs** (`:47-54`) and our `tipi_uguali` fails on
+   differing length: a duplicate in the client's list ⇒ guard skipped ⇒ **infinite loop**;
+3. the `onlyReplaceEmpty` workaround is useless here: **[✗]** absent from the whole tree.
+
+⭐ **And there is a better guard than ours, to be evaluated**: wayvnc offers a **second synthetic MIME**
+`x-wayvnc-client-%08x` and, if it sees it again in an offer, knows it is its own and ignores it
+(`wayvnc/src/data-control.c:196-199`). It is more solid than a comparison of types, and in RDP the problem is
+identical.
+
+**The rest, in brief**: **[✗] `ext-data-control-v1` does not exist** in wlroots 0.18.2 nor in
+wayland-protocols 1.38 — on Trixie `zwlr` is the only door, even though upstream it is already marked deprecated.
+The Xwayland bridge works **in both directions for free**, going through the same seat state.
+The clipboard **does not survive the death of whoever copied**, and in XFCE on Wayland **there is no
+manager** (`xfsettingsd` starts it only under X11): i.e. the housemate that on KDE was klipper is not
+here.
+
+---
+
+### 9. The XFCE session without a monitor
+
+*Detail: `reference-xfce/rapporti/06-sessione-xfce.md`.*
+
+#### 9.1 The compositor is hard-wired in a script
+
+`default_compositor="labwc"` in `xfce4-session/scripts/startxfce4.in:121` — **it is not a
+configuration, it is a script line**. It is replaced only by passing the command line to
+`startxfce4 --wayland <cmd>` (`:37-40`, `:164`), or with `XFCE4_SESSION_COMPOSITOR`, which is
+`exec`-ed as is (`xinitrc.in:147`).
+
+⭐ **The line to copy**: `labwc --config-dir … --config … --session xfce4-session`. The `--session`
+makes `xfce4-session` the *primary client*: when it exits, **labwc terminates**
+(`labwc/src/main.c:43`, `:96-104`; `server.c:167-170`). Logout comes for free.
+
+#### 9.2 ⛔ The trap that can kill our session
+
+If `XFCE4_SESSION_COMPOSITOR` does not contain **both** `labwc` **and** `--session`, at logout
+`xfce4-session` runs **`loginctl terminate-session ''`** (`xfce4-session/main.c:257-273`) — i.e. the
+REMOTIX logind session.
+
+**Double defence**, and both must be put in place: xfconf `xfce4-session` `/general/WaylandLogoutCommand`
+= `/bin/true` (it takes precedence, `:259`) **plus** the environment variable written properly.
+
+⚠ **It is the first thing to test on the bench**, and never on the user (`LEZIONI.md` §2.6).
+
+#### 9.3 The environment: what to put in and what to take out
+
+| Put in | Why |
+|---|---|
+| `XDG_RUNTIME_DIR` | labwc exits without it (`main.c:201-204`) |
+| `XDG_CURRENT_DESKTOP=XFCE` | **before** labwc, which otherwise sets it to `labwc:wlroots` with `overwrite=0` (`config/session.c:249`) |
+| `XDG_MENU_PREFIX=xfce-` | ⚠ **not because it is missing** — garcon falls back on `xfce-` by itself (`garcon-private.h:37-39`, with a comment that says explicitly «so garcon doesn't break when xfce is not started with startxfce4»). The danger is **inheriting a wrong one** (`plasma-`, `gnome-`) **or an empty one**: the test is `prefix != NULL`, not `*prefix`, and then `garcon_menu_load()` fails with `G_FILE_ERROR_NOENT` **with no fallback at all**. It is lesson §1.10 in reversed form: not «metti la variabile», but **«componi l'ambiente da zero, o ti porti dietro quella di un altro desktop»** |
+| `WLR_BACKENDS=headless` | and `WLR_LIBINPUT_NO_DEVICES=1`, which is the recipe declared by wayvnc (`FAQ.md:3-8`) and **[M]** tested on the laptop |
+| `WLR_RENDER_DRM_DEVICE` | the card, §5.2 |
+| `LABWC_UPDATE_ACTIVATION_ENV=1` | ⚠ **mandatory**: labwc propagates `WAYLAND_DISPLAY` to the bus and to systemd **only if the backend is DRM** (`config/session.c:186-207`). On headless it does not, **silently** |
 | `XCURSOR_THEME` (+ `XCURSOR_SIZE`) | §10.1 |
 
-| Togliere | Perché |
+| Take out | Why |
 |---|---|
-| `WAYLAND_DISPLAY`, `WAYLAND_SOCKET` | backend annidato (`wlroots/backend/backend.c:375-402`) |
-| `DISPLAY` | backend X11 — e su GTK fa ripiegare su X11 **in silenzio**, riaccendendo XSETTINGS, grab della tastiera e systray XEmbed: **due comportamenti sotto la stessa etichetta**, cioè la lezione §1.8 |
-| `SESSION_MANAGER` | `xfce4-session` esce (`main.c:97-102`) |
-| `GDK_BACKEND` | va messo a **`wayland` secco**, non `wayland,x11` |
+| `WAYLAND_DISPLAY`, `WAYLAND_SOCKET` | nested backend (`wlroots/backend/backend.c:375-402`) |
+| `DISPLAY` | X11 backend — and on GTK it makes it fall back to X11 **silently**, re-enabling XSETTINGS, keyboard grabs and XEmbed systray: **two behaviours under the same label**, i.e. lesson §1.8 |
+| `SESSION_MANAGER` | `xfce4-session` exits (`main.c:97-102`) |
+| `GDK_BACKEND` | must be set to **plain `wayland`**, not `wayland,x11` |
 
-⚠ **`~/.ICEauthority` deve essere scrivibile**: `xfce4-session` esce anche su Wayland se non riesce ad
-aprirlo (`main.c:114-127`).
+⚠ **`~/.ICEauthority` must be writable**: `xfce4-session` exits even on Wayland if it cannot
+open it (`main.c:114-127`).
 
-#### 9.4 ⚠ Otto secondi per gruppo di priorità, e sono strutturali
+#### 9.4 ⚠ Eight seconds per priority group, and they are structural
 
-Su Wayland **nessun client si registra al gestore di sessione**, quindi ogni gruppo di priorità si
-sblocca **a timeout**: `STARTUP_TIMEOUT_WAYLAND = 8000` (`xfsm-manager.h:43`).
+On Wayland **no client registers with the session manager**, so every priority group is
+unblocked **by timeout**: `STARTUP_TIMEOUT_WAYLAND = 8000` (`xfsm-manager.h:43`).
 
-E la ragione è definitiva, non un caso limite: `xfce-sm-client.c` è compilato **solo dentro
-`if ENABLE_X11`** (`libxfce4ui/Makefile.am:73-82`), `configure` forza `enable_libsm=no` senza X11, la
-connessione è XSMP puro e richiede `$SESSION_MANAGER`, che `xfce4-session` esporta solo nello strato
-X11. **[✗] Nessuno può registrarsi su Wayland, e nessuna chiave xfconf accorcia il timeout** — le
-costanti sono cablate.
+And the reason is definitive, not an edge case: `xfce-sm-client.c` is compiled **only inside
+`if ENABLE_X11`** (`libxfce4ui/Makefile.am:73-82`), `configure` forces `enable_libsm=no` without X11, the
+connection is pure XSMP and requires `$SESSION_MANAGER`, which `xfce4-session` exports only in the
+X11 layer. **[✗] Nobody can register on Wayland, and no xfconf key shortens the timeout** — the
+constants are hard-wired.
 
-⭐ **Da cui: il timeout di REMOTIX per «il desktop è su» va tarato ≥ 8 s**, e una sessione salvata con
-priorità diverse lo moltiplica.
+⭐ **Hence: REMOTIX's timeout for «il desktop è su» must be set ≥ 8 s**, and a saved session with
+different priorities multiplies it.
 
-#### 9.5 Il logout: sorveglianza passiva, come su KDE
+#### 9.5 Logout: passive watch, as on KDE
 
 | | |
 |---|---|
 | **bus** | `org.xfce.SessionManager` |
 | **path** | `/org/xfce/SessionManager` |
-| **interfaccia** | `org.xfce.Session.Manager` ⚠ **nome ≠ interfaccia**, attenzione al punto |
-| **segnale** | `StateChanged(u old, u new)` — 0 Startup, 1 Idle, 2 Checkpoint, 3 Shutdown, 4 Phase2 |
-| **«il desktop è su»** | `StateChanged(old=0, new=1)` (`xfsm-manager.c:861-867`). ⚠ Usare `old==0`: il Checkpoint produce 1→2→1 |
+| **interface** | `org.xfce.Session.Manager` ⚠ **name ≠ interface**, mind the dot |
+| **signal** | `StateChanged(u old, u new)` — 0 Startup, 1 Idle, 2 Checkpoint, 3 Shutdown, 4 Phase2 |
+| **«il desktop è su»** | `StateChanged(old=0, new=1)` (`xfsm-manager.c:861-867`). ⚠ Use `old==0`: Checkpoint produces 1→2→1 |
 
-✅ **Non registrarsi e non inibire**: `Logout` **non consulta l'inibitore**
-(`xfsm-manager.c:2409-2431`), e un `RegisterClient` ci farebbe aspettare fino a `DIE_TIMEOUT` — lo
-stesso errore che su KDE avrebbe frenato il logout di quindici secondi.
+✅ **Do not register and do not inhibit**: `Logout` **does not consult the inhibitor**
+(`xfsm-manager.c:2409-2431`), and a `RegisterClient` would make us wait until `DIE_TIMEOUT` — the
+same mistake that on KDE would have slowed logout by fifteen seconds.
 
-#### 9.6 ⚠ La sessione salvata è legata al nome del socket
+#### 9.6 ⚠ The saved session is tied to the socket name
 
-`~/.cache/sessions/xfce4-session-<display>` con `display` = `wayland-0`… Un socket diverso è una
-sessione diversa, e **una sessione salvata sbagliata risorge con priorità e geometrie di un altro
-schermo**. `SaveOnExit` è già `false` di default, ma la cache va **cancellata a ogni avvio**.
+`~/.cache/sessions/xfce4-session-<display>` with `display` = `wayland-0`… A different socket is a
+different session, and **a wrong saved session rises again with the priorities and geometries of another
+screen**. `SaveOnExit` is already `false` by default, but the cache must be **deleted at every start**.
 
-È la stessa forma del difetto di KDE, dove plasmashell scriveva `SceneGraphBackend=software` in modo
-persistente: **una sessione avviata male lascia un segno nella casa dell'utente**.
+It is the same shape as the KDE fault, where plasmashell wrote `SceneGraphBackend=software`
+persistently: **a session started badly leaves a mark in the user's home**.
 
-#### 9.7 Il bus di sessione — una decisione da prendere
+#### 9.7 The session bus — a decision to take
 
-`startxfce4 --wayland` usa **`dbus-run-session`**: bus privato che nasce col compositore e muore col
-logout. ⚠ Se lo usiamo, **il sorvegliante di REMOTIX non vede `StateChanged`**.
+`startxfce4 --wayland` uses **`dbus-run-session`**: a private bus that is born with the compositor and dies with
+logout. ⚠ If we use it, **the REMOTIX watcher does not see `StateChanged`**.
 
-Su Trixie `dbus-user-session` è installato, quindi **[?] la strada raccomandata è il bus d'utente di
-systemd** (`$XDG_RUNTIME_DIR/bus`) senza `dbus-run-session`. È una scelta di progetto, da provare.
+On Trixie `dbus-user-session` is installed, so **[?] the recommended road is the systemd user
+bus** (`$XDG_RUNTIME_DIR/bus`) without `dbus-run-session`. It is a design choice, to be tested.
 
 ---
 
-### 10. Il sistema attorno: cursore, energia, voci di menu
+### 10. The system around it: cursor, power, menu entries
 
-*Dettaglio: `reference-xfce/rapporti/07-componenti-xfce.md` e `06-sessione-xfce.md` §13.*
+*Detail: `reference-xfce/rapporti/07-componenti-xfce.md` and `06-sessione-xfce.md` §13.*
 
-#### 10.1 ⭐ Il cursore: la cura di KDE si trasporta, con un vincolo in meno
+#### 10.1 ⭐ The cursor: the KDE cure carries over, with one constraint fewer
 
-**Il fatto**: su output headless il cursore è **sempre** dentro l'immagine catturata. Il backend
-headless non implementa `set_cursor` [✗], quindi non esiste cursore hardware, quindi la scena lo
-dipinge nel framebuffer (`types/output/cursor.c:285-289`, `types/scene/wlr_scene.c:1998`). E
-`overlay_cursor` **non toglie niente**: *forza* i cursori software (`wlr_screencopy_v1.c:451-454`).
+**The fact**: on a headless output the cursor is **always** inside the captured image. The headless
+backend does not implement `set_cursor` [✗], so there is no hardware cursor, so the scene
+paints it into the framebuffer (`types/output/cursor.c:285-289`, `types/scene/wlr_scene.c:1998`). And
+`overlay_cursor` **removes nothing**: it *forces* software cursors (`wlr_screencopy_v1.c:451-454`).
 
-⭐ **La cura è la stessa di KDE — rendere il cursore invisibile, non nasconderlo**: un tema
-`XCURSOR_THEME` con un cursore 1×1 ad alfa zero, e il puntatore torna a essere quello del client.
+⭐ **The cure is the same as on KDE — make the cursor invisible, not hidden**: an
+`XCURSOR_THEME` theme with a 1×1 cursor at zero alpha, and the pointer goes back to being the client's.
 
 | | |
 |---|---|
-| ✅ **un vincolo in meno** | su labwc il tema arriva da `XCURSOR_THEME`/`XCURSOR_SIZE` **dell'ambiente** (`labwc/src/input/cursor.c:1405-1414`), e **`XCURSOR_SIZE` non è obbligatoria** (default 24 nella riga stessa) — a differenza di KWin, che il tema lo guardava solo se c'era anche la misura |
-| ⛔ **la stessa trappola** | se il tema carica **zero** cursori, wlroots ripiega su un tema **incorporato e visibile** (`wlr_xcursor.c:219-221`). Serve almeno un cursore valido, `index.theme` **senza `Inherits=`**, e i dieci nomi che labwc chiede (`cursor.c:39-64`) |
-| ⚠ **due leve, non una** | l'ambiente copre il compositore e i client non-GTK; i client **GTK3** usano il proprio tema, che su Wayland arriva da xfconf `xsettings /Gtk/CursorThemeName` via un **modulo GTK annunciato su D-Bus** (`org.gtk.Settings`), non più via XSETTINGS |
-| ✅ **il punto d'inserimento c'è già** | XFCE spedisce `xfce4-session/labwc/labwc-environment:7` con `XCURSOR_THEME=Adwaita`, e `startxfce4.in:141-146` lo copia **solo se manca** |
+| ✅ **one constraint fewer** | on labwc the theme comes from `XCURSOR_THEME`/`XCURSOR_SIZE` **in the environment** (`labwc/src/input/cursor.c:1405-1414`), and **`XCURSOR_SIZE` is not mandatory** (default 24 on the same line) — unlike KWin, which looked at the theme only if the size was there too |
+| ⛔ **the same trap** | if the theme loads **zero** cursors, wlroots falls back to a **built-in, visible** theme (`wlr_xcursor.c:219-221`). It needs at least one valid cursor, `index.theme` **without `Inherits=`**, and the ten names labwc asks for (`cursor.c:39-64`) |
+| ⚠ **two levers, not one** | the environment covers the compositor and non-GTK clients; **GTK3** clients use their own theme, which on Wayland comes from xfconf `xsettings /Gtk/CursorThemeName` via a **GTK module announced on D-Bus** (`org.gtk.Settings`), no longer via XSETTINGS |
+| ✅ **the insertion point already exists** | XFCE ships `xfce4-session/labwc/labwc-environment:7` with `XCURSOR_THEME=Adwaita`, and `startxfce4.in:141-146` copies it **only if it is missing** |
 
-#### 10.2 ⛔ `xfce4-power-manager` spegne l'output, e va inibito
+#### 10.2 ⛔ `xfce4-power-manager` turns the output off, and must be inhibited
 
-Parla Wayland nativo: `zwlr_output_power_v1_set_mode(OFF)` (`xfpm-dpms-wayland.c:233`), con default
-`DPMS_ENABLED TRUE` e **10 minuti su rete elettrica** (`common/xfpm-config.h:50-60`). labwc espone il
-protocollo (`server.c:683-688`) e su `MODE_OFF` **disabilita l'output** (`output.c:1063-1078`) ⇒
-timer mai riarmato ⇒ **`failed` sulla cattura**.
+It speaks native Wayland: `zwlr_output_power_v1_set_mode(OFF)` (`xfpm-dpms-wayland.c:233`), with default
+`DPMS_ENABLED TRUE` and **10 minutes on mains power** (`common/xfpm-config.h:50-60`). labwc exposes the
+protocol (`server.c:683-688`) and on `MODE_OFF` it **disables the output** (`output.c:1063-1078`) ⇒
+timer never re-armed ⇒ **`failed` on the capture**.
 
-| Via | Come |
+| Way | How |
 |---|---|
-| **D-Bus** | `org.freedesktop.PowerManagement.Inhibit` su `/org/freedesktop/PowerManagement/Inhibit`, firma `(ss)→u` (`xfpm-inhibit.c:349-353`). Copre DPMS + idle + screensaver in un colpo. ⚠ **Precondizione**: xfce4-power-manager **non ha attivazione D-Bus** [✗] — se non gira, la chiamata fallisce (è la forma del difetto di powerdevil su KDE, dove l'errore era `ServiceUnknown`) |
+| **D-Bus** | `org.freedesktop.PowerManagement.Inhibit` on `/org/freedesktop/PowerManagement/Inhibit`, signature `(ss)→u` (`xfpm-inhibit.c:349-353`). Covers DPMS + idle + screensaver in one go. ⚠ **Precondition**: xfce4-power-manager **has no D-Bus activation** [✗] — if it is not running, the call fails (it is the shape of the powerdevil fault on KDE, where the error was `ServiceUnknown`) |
 | **xfconf** | `dpms-enabled=false`, `inactivity-on-{ac,battery}=0`, `presentation-mode=true` |
-| ⭐ **la cura di wayvnc** | `set_mode(MODE_ON)` **prima** di catturare, più ritento a 100 ms (`wayvnc/src/main.c:1022-1045`, `:1055-1063`) — cioè non fidarsi dell'inibizione, ma **riaccendere** |
+| ⭐ **the wayvnc cure** | `set_mode(MODE_ON)` **before** capturing, plus a retry at 100 ms (`wayvnc/src/main.c:1022-1045`, `:1055-1063`) — that is, do not trust the inhibition, **turn it back on** |
 
-✅ **`xfce4-screensaver` invece non è un rischio**: è X11 puro e esce con `EXIT_FAILURE` se il display
-GDK non è X11. ⚠ Ma con `GDK_BACKEND=wayland,x11` potrebbe risorgere su Xwayland: **`wayland` secco**.
+✅ **`xfce4-screensaver`, on the other hand, is not a risk**: it is pure X11 and exits with `EXIT_FAILURE` if the GDK
+display is not X11. ⚠ But with `GDK_BACKEND=wayland,x11` it could come back to life on Xwayland: **plain `wayland`**.
 
-#### 10.3 ⭐ Il blocco schermo si spegne con una chiave sola
+#### 10.3 ⭐ The screen lock is switched off with a single key
 
-Su KDE questa parte è stata KIOSK; qui la leva è più semplice e più forte: xfconf canale
-`xfce4-session`, chiave **`/general/LockCommand`**. Se è impostata, `xfce_screensaver_lock()` la
-esegue e **ritorna il suo esito senza provare nient'altro** — niente D-Bus, niente `xdg-screensaver`,
-niente ripieghi (`libxfce4ui/xfce-screensaver.c:570-596`).
+On KDE this part was KIOSK; here the lever is simpler and stronger: xfconf channel
+`xfce4-session`, key **`/general/LockCommand`**. If it is set, `xfce_screensaver_lock()`
+runs it and **returns its result without trying anything else** — no D-Bus, no `xdg-screensaver`,
+no fallbacks (`libxfce4ui/xfce-screensaver.c:570-596`).
 
-Impostandola a `/bin/false` si neutralizzano **in un colpo** `xflock4`, il metodo D-Bus
-`org.xfce.Session.Manager.Lock` e ogni pulsante del pannello.
+Setting it to `/bin/false` neutralises **in one go** `xflock4`, the D-Bus method
+`org.xfce.Session.Manager.Lock` and every panel button.
 
-⚠ **La stringa vuota conta come «non impostata»** (`:299-305`): il default Debian `LockCommand=""` è
-normalizzato a NULL, quindi oggi la catena D-Bus prosegue. Va scritto un valore **vero**.
+⚠ **The empty string counts as «not set»** (`:299-305`): the Debian default `LockCommand=""` is
+normalised to NULL, so today the D-Bus chain carries on. A **real** value must be written.
 
-⚠ E due dettagli che spiegano perché conviene: la catena D-Bus può **attivare** `xfce4-screensaver`
-(che su Wayland esce subito), e i tre ripieghi sono `g_spawn_command_line_sync`, cioè **bloccano il
-ciclo principale di `xfce4-session`**.
+⚠ And two details that explain why it is worth it: the D-Bus chain can **activate** `xfce4-screensaver`
+(which on Wayland exits at once), and the three fallbacks are `g_spawn_command_line_sync`, that is they **block the
+main loop of `xfce4-session`**.
 
-#### 10.4 ⛔ In XFCE non esiste un KIOSK — e le voci vanno tolte, non bloccate
+#### 10.4 ⛔ In XFCE there is no KIOSK — and the entries must be removed, not locked
 
-Confermato in modo definitivo: in tutto l'albero clonato, librerie comprese, `xfce_kiosk_query`
-compare **solo** in `xfsm-shutdown.c:137-138`, con due sole capacità: **`Shutdown`** e
-**`SaveSession`**. [✗] Nessun uso in pannello, scrivania, impostazioni, energia, salvaschermo,
-libxfce4ui. **KIOSK non può togliere il blocco schermo né toccare il pannello.**
-
-| | |
-|---|---|
-| **Il blocco xfconf** | impedisce di **cambiare** una voce, **non la rimuove** |
-| **La leva vera** | plugin `actions` del pannello: `xfce4-panel /plugins/plugin-<N>/items`, **array di stringhe** con prefisso `+`/`-`; il `-` fa `continue`, cioè **la voce non viene creata** (`actions.c:1318`, `:1518`). Una voce `+` non permessa resta invece **visibile e grigia** |
-| ⚠ **due insidie** | i nomi `logout`/`logout-dialog` sono **invertiti** rispetto agli enum; e il default di serie ha già `+lock-screen` e `+switch-user` |
-| ⛔ **togliere `xflock4` non basta** | il plugin ripiega su `loginctl lock-session`, `dm-tool`, `gdmflexiserver`, `shutdown`, `systemctl` (`actions.c:1049-1085`) |
-| **[✗] il dialogo di logout** | nessuna chiave toglie «Log Out/Restart/Shut Down»: restano solo polkit e logind |
-
-⭐ **Il modo di preimpostare il pannello**: `xfce4/panel/default.xml` cercato lungo `XDG_CONFIG_DIRS`
-(`migrate/main.c:36-37`, `:63-101`), applicato **in silenzio** se non è quello di serie. Per gli altri
-canali i default di sistema stanno in `/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/<canale>.xml`.
-
-#### 10.6 xfconf: il lock, e la scrittura che riesce senza riuscire
+Confirmed definitively: in the whole cloned tree, libraries included, `xfce_kiosk_query`
+appears **only** in `xfsm-shutdown.c:137-138`, with only two capabilities: **`Shutdown`** and
+**`SaveSession`**. [✗] No use in panel, desktop, settings, power, screensaver,
+libxfce4ui. **KIOSK cannot remove the screen lock nor touch the panel.**
 
 | | |
 |---|---|
-| **Il lock è un attributo XML**, non un file a parte | `locked="utente"` (o `unlocked=`) su `<channel>` o `<property>` (`xfconf/docs/spec/perchannel-xml.txt:44-53`). Ammesso **solo nei file di sistema**: in un file d'utente è un **errore di parsing** |
-| ⭐ **Col canale bloccato il file dell'utente non viene nemmeno letto** | (`xfconf-backend-perchannel-xml.c:1710`) — è la forma più forte, ed è quella che ci serve |
-| ⛔ **Due trappole del lock** | **`locked="*"` non blocca nessuno** (nessun jolly: solo `strcmp`), e **`@gruppo` guarda solo `gr_mem[]`**, quindi **ignora il gruppo primario** — su Debian `@<nomeutente>` non funziona. Si scrive **il nome utente secco** |
+| **The xfconf lock** | prevents **changing** an entry, **does not remove it** |
+| **The real lever** | the panel's `actions` plugin: `xfce4-panel /plugins/plugin-<N>/items`, **array of strings** with a `+`/`-` prefix; the `-` does `continue`, that is **the entry is not created** (`actions.c:1318`, `:1518`). A `+` entry that is not allowed instead stays **visible and greyed out** |
+| ⚠ **two pitfalls** | the names `logout`/`logout-dialog` are **swapped** with respect to the enums; and the stock default already has `+lock-screen` and `+switch-user` |
+| ⛔ **removing `xflock4` is not enough** | the plugin falls back to `loginctl lock-session`, `dm-tool`, `gdmflexiserver`, `shutdown`, `systemctl` (`actions.c:1049-1085`) |
+| **[✗] the logout dialog** | no key removes «Log Out/Restart/Shut Down»: only polkit and logind remain |
 
-⛔ **E il punto che cambia il modo di scrivere il provisioning**: **una scrittura su proprietà bloccata
-non dà errore a chi scrive.** Il demone rifiuta con `XFCONF_ERROR_PERMISSION_DENIED`, ma
-`xfconf_channel_set_property()` è **asincrona**: aggiorna la cache locale, emette `property-changed`,
-**ritorna TRUE**; alla risposta il valore viene ripristinato e resta un `g_warning` su stderr. ⇒
-**`xfconf-query` esce con `EXIT_SUCCESS`.**
+⭐ **The way to preset the panel**: `xfce4/panel/default.xml` looked up along `XDG_CONFIG_DIRS`
+(`migrate/main.c:36-37`, `:63-101`), applied **silently** if it is not the stock one. For the other
+channels the system defaults live in `/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/<canale>.xml`.
 
-⭐ **Da cui la regola, che è `LEZIONI.md` §1.9 applicata alla configurazione: dopo aver scritto un
-valore, lo si rilegge.** Un banco che si accontenta dello stato d'uscita di `xfconf-query` è verde su
-una configurazione che non è stata applicata.
+#### 10.6 xfconf: the lock, and the write that succeeds without succeeding
 
-⚠ E tre dettagli del demone: `xfconfd` **ha** attivazione D-Bus e i canali si caricano pigramente
-(quindi scrivere i default *prima* che parta funziona); ma **[✗] non ha alcun `GFileMonitor`** — un
-canale già caricato **non rilegge** un file cambiato sotto; e la scrittura su disco è **ritardata di
-5 secondi**, con flush ordinato su `SIGTERM` e **perso** su `SIGKILL`.
+| | |
+|---|---|
+| **The lock is an XML attribute**, not a separate file | `locked="utente"` (or `unlocked=`) on `<channel>` or `<property>` (`xfconf/docs/spec/perchannel-xml.txt:44-53`). Allowed **only in system files**: in a user file it is a **parsing error** |
+| ⭐ **With the channel locked, the user's file is not even read** | (`xfconf-backend-perchannel-xml.c:1710`) — it is the strongest form, and it is the one we need |
+| ⛔ **Two traps of the lock** | **`locked="*"` locks nobody** (no wildcard: only `strcmp`), and **`@gruppo` looks only at `gr_mem[]`**, so it **ignores the primary group** — on Debian `@<nomeutente>` does not work. Write **the bare user name** |
 
-⛔ **Correzione a quel che si poteva sperare**: i default di sistema evitano di *scrivere* nella casa
-dell'utente, **non** che vi resti traccia. `xfconfd` **crea sempre**
-`~/.config/xfce4/xfconf/xfce-perchannel-xml/` all'avvio — e **non parte** se non ci riesce — e alla
-prima scrittura vi riversa **l'intero albero del canale**. **[?] L'unica via per non lasciare traccia
-è un `XDG_CONFIG_HOME` effimero**, che è una decisione di progetto, non un dettaglio.
+⛔ **And the point that changes the way provisioning is written**: **a write to a locked property
+gives no error to the writer.** The daemon refuses with `XFCONF_ERROR_PERMISSION_DENIED`, but
+`xfconf_channel_set_property()` is **asynchronous**: it updates the local cache, emits `property-changed`,
+**returns TRUE**; on the reply the value is restored and a `g_warning` is left on stderr. ⇒
+**`xfconf-query` exits with `EXIT_SUCCESS`.**
 
-#### 10.7 ✅ Il menu: garcon non ha la trappola di KDE
+⭐ **Hence the rule, which is `LEZIONI.md` §1.9 applied to configuration: after writing a
+value, read it back.** A bench that settles for the exit status of `xfconf-query` is green on
+a configuration that was not applied.
 
-**[✗] garcon non costruisce alcun indice su disco** (grep su `g_file_set_contents|fopen|g_mkdir…` →
-zero, con controllo positivo): la cache è **solo in memoria**. Cioè il difetto che su KDE ci ha
-negato un permesso — *un indice costruito vuoto che resta vuoto* — **qui non può succedere sul
-disco**.
+⚠ And three details of the daemon: `xfconfd` **has** D-Bus activation and channels are loaded lazily
+(so writing the defaults *before* it starts works); but **[✗] it has no `GFileMonitor`** — a
+channel already loaded **does not re-read** a file changed underneath it; and the write to disk is **delayed by
+5 seconds**, with an orderly flush on `SIGTERM` and **lost** on `SIGKILL`.
 
-⛔ **Ma la stessa forma esiste in memoria**: `garcon_menu_start_monitoring()` è chiamata **dopo** il
-caricamento riuscito (`garcon-menu.c:817-819`). Se il primo caricamento fallisce, **non esiste alcun
-monitor**, quindi `reload-required` non arriva mai e il menu resta vuoto **per la vita del
-processo** — e il fallimento è **una finestra modale in faccia all'utente remoto**. Su XFCE non si
-cancella un file: **si riavvia il processo**.
+⛔ **Correction to what one might have hoped**: the system defaults avoid *writing* into the user's
+home, **not** leaving a trace there. `xfconfd` **always creates**
+`~/.config/xfce4/xfconf/xfce-perchannel-xml/` at startup — and **does not start** if it cannot — and on the
+first write it dumps **the whole channel tree** there. **[?] The only way to leave no trace
+is an ephemeral `XDG_CONFIG_HOME`**, which is a project decision, not a detail.
 
-⚠ E `XDG_CURRENT_DESKTOP` va **`XFCE` secco, maiuscolo, senza suffissi**: per i sottomenu garcon
-**non spezza sui `:`** (mentre per le voci sì), quindi con `XFCE:qualcosa` le directory
-`OnlyShowIn=XFCE;` **spariscono**. Con la variabile *vuota* il filtro si spegne e si vede **di più**,
-non di meno.
+#### 10.7 ✅ The menu: garcon does not have the KDE trap
 
-✅ Infine, letto nel menu spedito: **«Esci» è una voce del file**, mentre **«Blocca schermo» e «Cambia
-utente» non sono voci di menu** [✗] — vivono solo nel pannello (§10.4).
+**[✗] garcon builds no index on disk** (grep for `g_file_set_contents|fopen|g_mkdir…` →
+zero, with a positive control): the cache is **in memory only**. That is, the fault that on KDE
+denied us a permission — *an index built empty that stays empty* — **cannot happen here on
+disk**.
 
-#### 10.5 I requisiti duri di XFCE sul compositore
+⛔ **But the same shape exists in memory**: `garcon_menu_start_monitoring()` is called **after** a
+successful load (`garcon-menu.c:817-819`). If the first load fails, **no monitor exists
+at all**, so `reload-required` never arrives and the menu stays empty **for the life of the
+process** — and the failure is **a modal window in the remote user's face**. On XFCE you do not
+delete a file: **you restart the process**.
 
-| Protocollo | Chi lo pretende | Che cosa succede senza |
+⚠ And `XDG_CURRENT_DESKTOP` must be **plain `XFCE`, upper case, with no suffixes**: for submenus garcon
+**does not split on `:`** (while for entries it does), so with `XFCE:qualcosa` the
+`OnlyShowIn=XFCE;` directories **disappear**. With the variable *empty* the filter switches off and you see **more**,
+not less.
+
+✅ Finally, read in the shipped menu: **«Esci» is an entry in the file**, while **«Blocca schermo» and «Cambia
+utente» are not menu entries** [✗] — they live only in the panel (§10.4).
+
+#### 10.5 XFCE's hard requirements on the compositor
+
+| Protocol | Who demands it | What happens without it |
 |---|---|---|
-| `zwlr_layer_shell_v1` | xfdesktop, xfce4-panel | ⛔ **xfdesktop esce con `exit(1)`** (`xfdesktop-application.c:1017-1027`); il pannello degrada e non carica plugin esterni |
-| `zxdg_output_manager_v1` | libxfce4windowing | la geometria **logica** viene solo da lì: senza, resta `{0,0,0,0}` e con essa il workarea |
-| `wl_output` **v4** | libxfce4windowing | il `name` è l'identificatore |
-| `ext_workspace_manager_v1` | il pager | ✅ labwc ce l'ha; **[✗]** sway e wayfire no |
+| `zwlr_layer_shell_v1` | xfdesktop, xfce4-panel | ⛔ **xfdesktop exits with `exit(1)`** (`xfdesktop-application.c:1017-1027`); the panel degrades and does not load external plugins |
+| `zxdg_output_manager_v1` | libxfce4windowing | the **logical** geometry comes only from there: without it, it stays `{0,0,0,0}` and so does the workarea |
+| `wl_output` **v4** | libxfce4windowing | the `name` is the identifier |
+| `ext_workspace_manager_v1` | the pager | ✅ labwc has it; **[✗]** sway and wayfire do not |
 
-✅ Tutti presenti in labwc 0.8.3. ⚠ E `xfsettingsd` su Wayland **non registra alcuna scorciatoia**
-(sei moduli dietro `#ifdef ENABLE_X11`): il canale `xfce4-keyboard-shortcuts` è **inerte**, e nessuna
-combinazione può lanciare `xflock4`. Effetto collaterale: XSettings non propagato, quindi temi e font
-diversi da quelli attesi.
+✅ All present in labwc 0.8.3. ⚠ And `xfsettingsd` on Wayland **registers no shortcut at all**
+(six modules behind `#ifdef ENABLE_X11`): the `xfce4-keyboard-shortcuts` channel is **inert**, and no
+key combination can launch `xflock4`. Side effect: XSettings not propagated, hence themes and fonts
+different from those expected.
 
 ---
 
-### 11. Chi lo fa già, e che cosa gli si ruba
+### 11. Who already does it, and what we steal from them
 
-*Dettaglio: `reference-xfce/rapporti/08-wayvnc.md`, `09-weston-rdp.md`, `10-portale-e-chi-lo-fa.md`.*
+*Detail: `reference-xfce/rapporti/08-wayvnc.md`, `09-weston-rdp.md`, `10-portale-e-chi-lo-fa.md`.*
 
-#### 11.1 wayvnc — il riferimento pratico della famiglia
+#### 11.1 wayvnc — the practical reference of the family
 
-**Le cinque cose da copiare:**
+**The five things to copy:**
 
-1. ⭐ **la cadenza che sottrae la latenza del compositore** (§4.2): è la correzione strutturale al
-   problema dei 18 fps;
-2. ⭐ **il libro doppio del danno** (§4.3): obbligatorio, non un'ottimizzazione;
-3. ⭐ **l'interfaccia astratta con due implementazioni di cattura** e le capacità in una maschera di
-   bit, con **un solo punto** di diramazione;
-4. **il MIME-marchio anti-eco** sulla clipboard (§8);
-5. **`--show-performance`**: fotogrammi al secondo **e percentuale media di area danneggiata**, ogni
-   secondo. Il secondo numero è quello che i nostri banchi non hanno mai avuto.
+1. ⭐ **the cadence that subtracts the compositor's latency** (§4.2): it is the structural correction to
+   the 18 fps problem;
+2. ⭐ **the double damage ledger** (§4.3): mandatory, not an optimisation;
+3. ⭐ **the abstract interface with two capture implementations** and the capabilities in a bit
+   mask, with **a single point** of branching;
+4. **the anti-echo MIME mark** on the clipboard (§8);
+5. **`--show-performance`**: frames per second **and average percentage of damaged area**, every
+   second. The second number is the one our benches have never had.
 
-**Le tre da non copiare:** DMA-BUF **spento di default** (`--gpu`); nessuno scaler per client — chi
-non sa ridimensionarsi **viene disconnesso**, e col nostro requisito 4K/60 non regge; e la creazione
-dell'output **delegata a `swaymsg`**, che su labwc non esiste.
+**The three not to copy:** DMA-BUF **off by default** (`--gpu`); no per-client scaler — a client that
+cannot resize itself **gets disconnected**, and with our 4K/60 requirement that does not hold; and the creation
+of the output **delegated to `swaymsg`**, which does not exist on labwc.
 
-⚠ E due suoi difetti utili come avvertimento: il regolatore di banda **è volontario** (se il client
-non annuncia `FENCE` il freno non si arma mai — il nostro deve restare obbligatorio), e il cursore
-viene **solo** dal protocollo nuovo: con il solo `wlr-screencopy` wayvnc **non manda alcun cursore**.
+⚠ And two of its faults, useful as a warning: the bandwidth regulator **is voluntary** (if the client
+does not announce `FENCE` the brake is never armed — ours must stay mandatory), and the cursor
+comes **only** from the new protocol: with `wlr-screencopy` alone wayvnc **sends no cursor at all**.
 
-#### 11.2 Weston — il backend RDP più vecchio del mondo Wayland
+#### 11.2 Weston — the oldest RDP backend in the Wayland world
 
-**Il suo video è arretrato e non c'è niente da copiare lì**: [✗] niente MS-RDPEGFX, niente H.264,
-niente GPU (anche col renderer GL il buffer viene riletto in RAM e compresso dalla CPU), il danno
-diventa un bounding box, e **[✗] il regolatore di flusso non esiste** — annuncia
-`SurfaceFrameMarkerEnabled=TRUE` e poi non ascolta gli ack. **La nostra formula è più avanzata del
-progetto di riferimento.**
+**Its video is behind and there is nothing to copy there**: [✗] no MS-RDPEGFX, no H.264,
+no GPU (even with the GL renderer the buffer is read back into RAM and compressed by the CPU), the damage
+becomes a bounding box, and **[✗] the flow regulator does not exist** — it announces
+`SurfaceFrameMarkerEnabled=TRUE` and then does not listen to the acks. **Our formula is more advanced than the
+reference project.**
 
-**Ma tre cose valgono, e sono tutte accessibili a noi:**
+**But three things are worth it, and all are accessible to us:**
 
 | | |
 |---|---|
-| ⭐ **la rotella RDP→Wayland** | riga per riga (§7.2) |
-| ⭐ **il ponte thread → ciclo eventi** | `eventfd(EFD_SEMAPHORE)` + lista con mutex + `assert_compositor_thread()` in cima a ogni callback (`rdputil.c:79-226`). Serve subito: anche il nostro `cliprdr` gira su un thread di FreeRDP |
-| ⭐ **il certificato per peer, mai condiviso** | il backend tiene solo i **percorsi**; ogni peer fa `freerdp_certificate_new_from_file()` e cede la proprietà a FreeRDP (`rdp.c:1755-1764`). **È l'antidoto diretto al difetto che su KDE uccideva il server alla seconda connessione** |
+| ⭐ **the RDP→Wayland wheel** | line by line (§7.2) |
+| ⭐ **the thread → event loop bridge** | `eventfd(EFD_SEMAPHORE)` + list with mutex + `assert_compositor_thread()` at the top of every callback (`rdputil.c:79-226`). Needed right away: our `cliprdr` also runs on a FreeRDP thread |
+| ⭐ **the certificate per peer, never shared** | the backend keeps only the **paths**; each peer does `freerdp_certificate_new_from_file()` and hands ownership to FreeRDP (`rdp.c:1755-1764`). **It is the direct antidote to the fault that on KDE killed the server on the second connection** |
 
-E due regali per la conversione dell'input: la catena
+And two gifts for input conversion: the chain
 `GetVirtualKeyCodeFromVirtualScanCode → KBDEXT → GetKeycodeFromVirtualKeyCode(XKB) → scan_code - 8`
-(nessuna tabella a mano: si delega a WinPR), e ⚠ **la trappola di FreeRDP 3**: `KBD_FLAGS_DOWN` non è
-mai settato — **l'assenza di `KBD_FLAGS_RELEASE` *è* la pressione**.
+(no hand-made table: it is delegated to WinPR), and ⚠ **the FreeRDP 3 trap**: `KBD_FLAGS_DOWN` is
+never set — **the absence of `KBD_FLAGS_RELEASE` *is* the press**.
 
-⚠ **E una lezione §1.11 in forma pura**: i lucchetti di Weston **non funzionano**, e non lo dichiara
-nessuno. `weston_keyboard_set_locks()` esce con `-1` alla prima riga se `!seat->led_update`, e il
-seat RDP non lo imposta mai. L'idea è giusta, l'attuazione è morta: **va verificato il primo `return`
-di ogni API che chiamiamo**.
+⚠ **And a §1.11 lesson in pure form**: Weston's lock keys **do not work**, and nobody
+says so. `weston_keyboard_set_locks()` exits with `-1` on the first line if `!seat->led_update`, and the
+RDP seat never sets it. The idea is right, the implementation is dead: **the first `return`
+of every API we call must be checked**.
 
-Del ridimensionamento: **[✗] MS-RDPEDISP non c'è**, ma c'è una cosa da rubare — alla nuova misura
-Weston **copia il vecchio contenuto nel nuovo buffer** (`PIXMAN_OP_SRC`) per non mostrare nero al
-primo fotogramma.
+On resizing: **[✗] MS-RDPEDISP is not there**, but there is one thing to steal — at the new size
+Weston **copies the old content into the new buffer** (`PIXMAN_OP_SRC`) so as not to show black on the
+first frame.
 
-#### 11.3 Il ponte PipeWire: gratis sulle copie, caro su tutto il resto
+#### 11.3 The PipeWire bridge: free on copies, expensive on everything else
 
-`xdg-desktop-portal-wlr` alloca i buffer lui e **passa lo stesso `wl_buffer` a screencopy**: DMA-BUF =
-**un blit GPU**, che è la copia intrinseca del protocollo e ci sarebbe identica parlando screencopy
-da soli. **Sulle copie il ponte non costa niente.**
+`xdg-desktop-portal-wlr` allocates the buffers itself and **passes the same `wl_buffer` to screencopy**: DMA-BUF =
+**one GPU blit**, which is the protocol's intrinsic copy and would be identical if we spoke screencopy
+ourselves. **On copies the bridge costs nothing.**
 
-**Il prezzo è altrove, e sono quattro fatti strutturali:**
+**The price is elsewhere, and it is four structural facts:**
 
 | | |
 |---|---|
-| ⛔ **non possiamo chiedere un fotogramma** | nessun `.process`, nessun `PW_STREAM_FLAG_DRIVER`, e **sempre `copy_with_damage`** — a schermo fermo `ready` non arriva |
-| ⛔ **non possiamo negoziare la misura** | [✗] `SPA_POD_CHOICE_RANGE_Rectangle` non esiste: la misura è un `SPA_POD_Rectangle` fisso. Il ridimensionamento passa da un protocollo **separato** |
-| ⛔ **niente cursore separato** | `METADATA` è rifiutato, `SPA_META_Cursor` mai citato. RDP vuole il *Pointer Update* a parte |
-| ⚠ **quattro processi, ≥3 salti IPC** | su un budget di **16,6 ms** per fotogramma |
+| ⛔ **we cannot request a frame** | no `.process`, no `PW_STREAM_FLAG_DRIVER`, and **always `copy_with_damage`** — with a still screen `ready` does not arrive |
+| ⛔ **we cannot negotiate the size** | [✗] `SPA_POD_CHOICE_RANGE_Rectangle` does not exist: the size is a fixed `SPA_POD_Rectangle`. Resizing goes through a **separate** protocol |
+| ⛔ **no separate cursor** | `METADATA` is refused, `SPA_META_Cursor` never mentioned. RDP wants the *Pointer Update* separately |
+| ⚠ **four processes, ≥3 IPC hops** | on a budget of **16.6 ms** per frame |
 
-**Il conto opposto**: parlare screencopy direttamente costa **[R] ≈1 200 righe nuove** — ma il
-DMA-BUF resta un `gbm_bo` allocato da noi, quindi **l'importazione e l'attesa della fence delle fasi
-8 e 9 si riusano intere**: si perde solo lo strato `pw_stream`.
+**The opposite account**: speaking screencopy directly costs **[R] ≈1 200 new lines** — but the
+DMA-BUF stays a `gbm_bo` allocated by us, so **the import and the fence wait of phases
+8 and 9 are reused whole**: only the `pw_stream` layer is lost.
 
 ---
 
-### 12. Le quattordici domande di `LEZIONI.md` §3, con la colonna wlroots riempita
+### 12. The fourteen questions of `LEZIONI.md` §3, with the wlroots column filled in
 
-*Tutte **[R]** salvo dove segnato: è una lettura di codice, non una misura, e §14 dice quali vanno
-misurate per prime.*
+*All **[R]** except where marked: it is a reading of code, not a measurement, and §14 says which ones must be
+measured first.*
 
-| # | La domanda | wlroots 0.18.2 / labwc 0.8.3 |
+| # | The question | wlroots 0.18.2 / labwc 0.8.3 |
 |---|---|---|
-| 1 | **Come si chiede la cattura senza portale?** | `zwlr_screencopy_manager_v1` **v3**, protocollo Wayland diretto |
-| 2 | **Spinge o fa tirare?** | ⛔ **fa tirare**: `capture_output → frame → copy → ready`, uno per fotogramma |
-| 3 | **È dietro un permesso?** | ✅ **no** [M]. Nessun filtro, nessun `.desktop`, nessun dialogo |
-| 4 | **Senza monitor disegna sulla GPU?** | ✅ **sì** con headless + default (GLES2 + GBM). ⚠ ma il ripiego in pixman è **silenzioso**, e non c'è modo di chiedere al compositore che renderer usa [✗] |
-| 5 | **Si può chiedere uno schermo virtuale della misura voluta?** | ⛔ **non all'avvio** (1280×720 cablati), ✅ **sì dopo**, con `set_custom_mode` |
-| 6 | **Quanto consegna?** | **61** a 1080p e 1440p, **40,3** a 4K [M, 7 ago, sway, `wl_shm`] — a 4K il costo è la copia in memoria |
-| 7 | **La cadenza dichiarata come si comporta?** | ⭐ **non esiste una cadenza da dichiarare**: il refresh dell'output headless *è* il periodo del timer, e il ritmo lo detta il nostro ciclo |
-| 8 | **Interi o «diff»?** | ✅ **interi, sempre** — il danno non è mai consultato nella copia |
-| 9 | **Il buffer arriva già disegnato?** | ⚠ **[?]**: GLES2 fa solo `glFlush()`, nessuna fence esplicita. **Da misurare** |
-| 10 | **Che cosa costa la risoluzione?** | a 4K **sì** in memoria (61 → 40); **[?]** in DMA-BUF, da misurare |
-| 11 | **Che cosa costa la profondità di colore?** | niente; nessun percorso a 24 bit impacchettati |
-| 12 | **Si può cambiare misura a cattura viva?** | ✅ **sì** — ma **[?]** che cosa succede alla cattura in corso va misurato |
-| **12-bis** | ⭐ **Il cursore è dentro l'immagine?** | ⛔ **sì, sempre**, su headless. E `overlay_cursor` non lo toglie |
-| **13** | ⭐ **Uno schermo virtuale si ridimensiona a caldo?** | ✅ **sì, senza tetto** — la risposta migliore delle tre famiglie |
-| **14** | ⭐ **La clipboard di chi è?** | **del compositore**, `zwlr_data_control_manager_v1` v2, nessun permesso — e **nessun gestore di appunti** in XFCE su Wayland |
+| 1 | **How is capture requested without a portal?** | `zwlr_screencopy_manager_v1` **v3**, direct Wayland protocol |
+| 2 | **Does it push or make us pull?** | ⛔ **it makes us pull**: `capture_output → frame → copy → ready`, one per frame |
+| 3 | **Is it behind a permission?** | ✅ **no** [M]. No filter, no `.desktop`, no dialog |
+| 4 | **Without a monitor, does it draw on the GPU?** | ✅ **yes** with headless + default (GLES2 + GBM). ⚠ but the fallback to pixman is **silent**, and there is no way to ask the compositor which renderer it uses [✗] |
+| 5 | **Can a virtual screen of the desired size be requested?** | ⛔ **not at startup** (1280×720 hard-wired), ✅ **yes afterwards**, with `set_custom_mode` |
+| 6 | **How much does it deliver?** | **61** at 1080p and 1440p, **40.3** at 4K [M, 7 Aug, sway, `wl_shm`] — at 4K the cost is the copy in memory |
+| 7 | **How does the declared cadence behave?** | ⭐ **there is no cadence to declare**: the refresh of the headless output *is* the timer period, and the pace is set by our loop |
+| 8 | **Whole frames or «diff»?** | ✅ **whole, always** — the damage is never consulted in the copy |
+| 9 | **Does the buffer arrive already drawn?** | ⚠ **[?]**: GLES2 only does `glFlush()`, no explicit fence. **To be measured** |
+| 10 | **What does resolution cost?** | at 4K **yes** in memory (61 → 40); **[?]** in DMA-BUF, to be measured |
+| 11 | **What does colour depth cost?** | nothing; no packed 24-bit path |
+| 12 | **Can the size change while capture is live?** | ✅ **yes** — but **[?]** what happens to the capture in progress must be measured |
+| **12-bis** | ⭐ **Is the cursor inside the image?** | ⛔ **yes, always**, on headless. And `overlay_cursor` does not remove it |
+| **13** | ⭐ **Does a virtual screen resize live?** | ✅ **yes, with no cap** — the best answer of the three families |
+| **14** | ⭐ **Whose is the clipboard?** | **the compositor's**, `zwlr_data_control_manager_v1` v2, no permission — and **no clipboard manager** in XFCE on Wayland |
 
-⭐ **E la quindicesima, che questo desktop aggiunge alla lista per il prossimo**: **«chi possiede il
-ciclo dei fotogrammi?»** Su Mutter e KWin lo possiede il compositore e noi consumiamo; qui lo
-possediamo **noi**, e con esso il ritmo, il costo e la responsabilità di non far rendere il
-compositore a vuoto. È la domanda 2 portata alle sue conseguenze, e va posta **prima** della 6:
-perché su un compositore a tiro, *«quanto eroga»* non è una proprietà del compositore — **è una
-proprietà del nostro ciclo**.
+⭐ **And the fifteenth, which this desktop adds to the list for the next one**: **«chi possiede il
+ciclo dei fotogrammi?»** On Mutter and KWin the compositor owns it and we consume; here
+**we** own it, and with it the pace, the cost and the responsibility of not making the
+compositor render for nothing. It is question 2 carried to its consequences, and it must be asked **before** 6:
+because on a pull compositor, *«quanto eroga»* is not a property of the compositor — **it is a
+property of our loop**.
 
 ---
 
-### 13. Le scelte da mettere davanti all'utente
+### 13. The choices to put before the user
 
-| # | La scelta | I termini |
+| # | The choice | The terms |
 |---|---|---|
-| **1** | **Screencopy diretto o ponte PipeWire?** | diretto: ~1 200 righe nuove, ma controllo del ritmo, del cursore e della misura, e riuso intero del consumatore DMA-BUF delle fasi 8-9. Ponte: meno righe, ma ⛔ nessuna delle tre cose sopra, e quattro processi sul budget di 16,6 ms |
-| **2** | **Il ridimensionamento a caldo si accende subito?** | su KDE si era scelta la misura fissa **perché KWin non sapeva fare altro**. Qui **si può**, e il precedente (wayvnc) esiste. Resta da decidere se farlo nella fase 11 o dopo |
-| **3** | **Il cursore: dentro l'immagine o sul canale RDP?** | oggi il tema trasparente è la cura pronta (§10.1). Il cursore *vero* — forma e hotspot sul canale puntatore di RDP — arriva **solo col protocollo nuovo**, che su Trixie non c'è: sarebbe lavoro che oggi non si può nemmeno provare |
-| **4** | **Il bus di sessione: privato o d'utente?** | `dbus-run-session` è quel che XFCE fa di suo, ma **ci nasconde `StateChanged`**. Il bus d'utente di systemd è la strada raccomandata **[?]**, e va provata |
-| **5** | **Le voci pericolose: quante ne togliamo?** | «Blocca schermo» ha una cura netta (§10.3). «Cambia utente» e lo spegnimento chiedono di riscrivere la disposizione del pannello — che è una modifica alla casa dell'utente, e il suo prezzo lo paga lui |
+| **1** | **Direct screencopy or PipeWire bridge?** | direct: ~1 200 new lines, but control of the pace, of the cursor and of the size, and whole reuse of the DMA-BUF consumer of phases 8-9. Bridge: fewer lines, but ⛔ none of the three things above, and four processes on the 16.6 ms budget |
+| **2** | **Is live resizing switched on right away?** | on KDE the fixed size was chosen **because KWin could do nothing else**. Here **it can be done**, and the precedent (wayvnc) exists. It remains to decide whether to do it in phase 11 or later |
+| **3** | **The cursor: inside the image or on the RDP channel?** | today the transparent theme is the ready cure (§10.1). The *real* cursor — shape and hotspot on the RDP pointer channel — comes **only with the new protocol**, which Trixie does not have: it would be work that today cannot even be tested |
+| **4** | **The session bus: private or the user's?** | `dbus-run-session` is what XFCE does on its own, but **it hides `StateChanged` from us**. The systemd user bus is the recommended road **[?]**, and must be tried |
+| **5** | **The dangerous entries: how many do we remove?** | «Blocca schermo» has a clean cure (§10.3). «Cambia utente» and shutdown require rewriting the panel layout — which is a change to the user's home, and he is the one who pays its price |
 
 ---
 
-### 14. Il piano di misure che apre la fase
+### 14. The measurement plan that opens the phase
 
-*Nell'ordine, e ogni misura ha un controllo positivo, perché «zero» e «proibito» hanno lo stesso
-aspetto (`LEZIONI.md` §1.9).*
+*In order, and every measurement has a positive control, because «zero» and «forbidden» look the
+same (`LEZIONI.md` §1.9).*
 
-| # | La misura | Perché è lì |
+| # | The measurement | Why it is there |
 |---|---|---|
-| **M1** | i due global dell'input compaiono davvero da una **shell SSH**, e i device si creano | è la premessa di tutto il capitolo 7. Il permesso della cattura è già misurato, quello dell'input no |
-| **M2** | ⛔ **`WaylandLogoutCommand` impedisce `loginctl terminate-session ''`** | è l'unica misura che, sbagliata, **ammazza la sessione di chi la esegue**. Sul banco, mai sull'utente |
-| **M3** | screencopy su **DMA-BUF**: il buffer è intero? la fence è pronta o va aspettata? | sono le domande 8 e 9, e decidono se la copia zero nasce accesa come su KDE |
-| **M4** | la **cadenza a 1080p e 4K** con la scena dichiarata, contando anche quanto disegna il client | R32 rifatta per questa famiglia — e qui il numero dipende **dal nostro ciclo**, non dal compositore |
-| **M5** | GPU o pixman: **controllo positivo** con `WLR_RENDERER=pixman` e con la scheda sbagliata | §5.2. Il ripiego è silenzioso per costruzione |
-| **M6** | `set_custom_mode` a cattura viva: la cattura sopravvive? il pannello si ridispone? | §6, e il verso di `xfsettingsd` che disabilita gli output nuovi |
-| **M7** | la sessione XFCE completa parte headless, e in quanti secondi | §9.4: gli otto secondi per gruppo di priorità sono strutturali |
-| **M8** | l'inibizione del DPMS regge dieci minuti | §10.2, e la precondizione che xfce4-power-manager sia vivo |
-| **M9** | il tema del cursore trasparente **non fa ripiegare** wlroots sul tema visibile | §10.1, ed è la trappola già pagata su KDE |
-| **M10** | `appunti_wlr.c` così com'è, contro labwc | §8, e le tre riserve |
-| **M11** | ogni valore xfconf scritto dal provisioning **si rilegge** | §10.6: la scrittura riuscita non prova niente, ed è un verde che costa un pomeriggio |
+| **M1** | the two input globals really appear from an **SSH shell**, and the devices get created | it is the premise of the whole of chapter 7. The capture permission is already measured, the input one is not |
+| **M2** | ⛔ **`WaylandLogoutCommand` prevents `loginctl terminate-session ''`** | it is the only measurement that, done wrong, **kills the session of whoever runs it**. On the bench, never on the user |
+| **M3** | screencopy on **DMA-BUF**: is the buffer whole? is the fence ready or must it be waited for? | these are questions 8 and 9, and they decide whether zero-copy is born switched on as on KDE |
+| **M4** | the **cadence at 1080p and 4K** with the declared scene, also counting how much the client draws | R32 redone for this family — and here the number depends **on our loop**, not on the compositor |
+| **M5** | GPU or pixman: **positive control** with `WLR_RENDERER=pixman` and with the wrong card | §5.2. The fallback is silent by construction |
+| **M6** | `set_custom_mode` with capture live: does the capture survive? does the panel rearrange itself? | §6, and the way `xfsettingsd` disables new outputs |
+| **M7** | the full XFCE session starts headless, and in how many seconds | §9.4: the eight seconds per priority group are structural |
+| **M8** | the DPMS inhibition holds for ten minutes | §10.2, and the precondition that xfce4-power-manager is alive |
+| **M9** | the transparent cursor theme **does not make wlroots fall back** to the visible theme | §10.1, and it is the trap already paid for on KDE |
+| **M10** | `appunti_wlr.c` as it is, against labwc | §8, and the three reservations |
+| **M11** | every xfconf value written by provisioning **is read back** | §10.6: a successful write proves nothing, and it is a green that costs an afternoon |
 
 ---
 
-### 15. Le lezioni che questo studio aggiunge, prima ancora di misurare
+### 15. The lessons this study adds, even before measuring
 
-1. ⭐ **Su un compositore a tiro, «quanto eroga» non è una domanda sul compositore.** Le tabelle di
-   R32 per Mutter e KWin misuravano *loro*; qui misureranno **il nostro ciclo**. Chi citerà il numero
-   deve citare anche la cadenza che gli abbiamo chiesto e il modo in cui gliel'abbiamo chiesta.
-2. ⭐ **La leva che sembra esserci e non fa niente si ripresenta, con un altro nome.** Su KWin era
-   `KWIN_COMPOSE=O2`; qui è `overlay_cursor`, che *forza* i cursori software invece di togliere il
-   cursore. **Per ogni interruttore che troviamo, va scritto che cosa mostrerebbe il caso opposto**
-   (§1.11) — e questa volta lo sappiamo prima di misurare, non dopo.
-3. ⭐ **Il precedente più utile può essere una rimozione.** wlroots ha *tolto* il proprio backend RDP
-   in favore di un client esterno: è la conferma più forte che l'architettura di REMOTIX sia quella
-   giusta, e non l'avremmo trovata leggendo il codice presente — solo cercando **chi lo fa, e chi ha
-   smesso**.
-4. ⚠ **Legarsi ai protocolli, non alla libreria.** XFCE sta scrivendo un compositore proprio in Rust
-   su smithay, non su wlroots. Tutto ciò che scriviamo contro `zwlr_screencopy`,
-   `zwlr_virtual_pointer` e `zwlr_data_control` sopravvive a quel cambio; tutto ciò che assume
-   *wlroots* no.
-5. ⭐ **Una scrittura che riesce non è una configurazione applicata.** `xfconf-query` esce con zero
-   anche quando il demone ha rifiutato e ripristinato il valore, perché l'API è asincrona e la cache
-   locale risponde prima. È `LEZIONI.md` §1.9 spostata dalla misura alla configurazione: **una
-   scrittura che può essere rifiutata dev'essere riletta**, e vale per ogni valore che il
-   provisioning imposta.
-6. ⚠ **Le variabili d'ambiente pericolose non sono quelle che mancano, ma quelle che si ereditano.**
-   Garcon ha un ripiego per `XDG_MENU_PREFIX` assente, e nessuno per una sbagliata; `XDG_CURRENT_DESKTOP`
-   con un suffisso fa sparire i sottomenu; `DISPLAY` fa ripiegare GTK su X11 in silenzio. È la lezione
-   §5 di `LEZIONI.md` — *chi avvia una sessione le regala tutto il proprio ambiente* — e su questo
-   desktop morde in tre punti diversi.
+1. ⭐ **On a pull compositor, «quanto eroga» is not a question about the compositor.** The R32
+   tables for Mutter and KWin measured *them*; here they will measure **our loop**. Whoever quotes the number
+   must also quote the cadence we asked of it and the way we asked it.
+2. ⭐ **The lever that seems to be there and does nothing comes back, under another name.** On KWin it was
+   `KWIN_COMPOSE=O2`; here it is `overlay_cursor`, which *forces* software cursors instead of removing the
+   cursor. **For every switch we find, we must write down what the opposite case would show**
+   (§1.11) — and this time we know it before measuring, not after.
+3. ⭐ **The most useful precedent can be a removal.** wlroots *removed* its own RDP backend
+   in favour of an external client: it is the strongest confirmation that the REMOTIX architecture is the
+   right one, and we would not have found it by reading the present code — only by looking for **who does it, and who has
+   stopped**.
+4. ⚠ **Bind to the protocols, not to the library.** XFCE is writing its own compositor in Rust
+   on smithay, not on wlroots. Everything we write against `zwlr_screencopy`,
+   `zwlr_virtual_pointer` and `zwlr_data_control` survives that change; everything that assumes
+   *wlroots* does not.
+5. ⭐ **A write that succeeds is not an applied configuration.** `xfconf-query` exits with zero
+   even when the daemon has refused and restored the value, because the API is asynchronous and the local
+   cache answers first. It is `LEZIONI.md` §1.9 moved from measurement to configuration: **a
+   write that can be refused must be read back**, and this holds for every value that
+   provisioning sets.
+6. ⚠ **The dangerous environment variables are not the ones that are missing, but the ones that are inherited.**
+   Garcon has a fallback for a missing `XDG_MENU_PREFIX`, and none for a wrong one; `XDG_CURRENT_DESKTOP`
+   with a suffix makes the submenus disappear; `DISPLAY` makes GTK fall back to X11 silently. It is lesson
+   §5 of `LEZIONI.md` — *whoever starts a session gives it their whole environment* — and on this
+   desktop it bites in three different places.
 
 
 <a id="lxqt"></a>
 
-## LXQt su Wayland — studio del codice, per la fase 11
+## LXQt on Wayland — code study, for phase 11
 
-*Scritto l'8 agosto 2026, con dieci ricerche parallele sui sorgenti clonati alle versioni di Debian
-Trixie. È il settimo studio del progetto, e il **quarto desktop** dopo GNOME, KDE e XFCE.*
+*Written on 8 August 2026, with ten parallel searches over the sources cloned at the Debian
+Trixie versions. It is the project's seventh study, and the **fourth desktop** after GNOME, KDE and XFCE.*
 
-> **Le marche, e contano più delle frasi:**
+> **The marks, and they count more than the sentences:**
 >
 > | | |
 > |---|---|
-> | **[R]** | letto nel codice, con `file:riga`. **Non è una misura** |
-> | **[R-pkg]** | letto nel pacchetto Debian (`apt-cache`, `dpkg-deb -c`): dice che cosa la distribuzione *spedisce*, che è cosa diversa da che cosa il progetto *scrive* |
-> | **[M]** | misurato |
-> | **[?]** | deduzione o ipotesi |
-> | **[✗]** | verificata assente, con il modo in cui è stata cercata e un controllo positivo |
+> | **[R]** | read in the code, with `file:riga`. **It is not a measurement** |
+> | **[R-pkg]** | read in the Debian package (`apt-cache`, `dpkg-deb -c`): it says what the distribution *ships*, which is a different thing from what the project *writes* |
+> | **[M]** | measured |
+> | **[?]** | deduction or hypothesis |
+> | **[✗]** | verified absent, with the way it was searched for and a positive control |
 >
-> Il dettaglio sta nei **dieci rapporti** in `reference-lxqt/rapporti/`. Qui c'è quel che serve per
-> decidere.
+> The detail is in the **ten reports** in `reference-lxqt/rapporti/`. Here is what is needed to
+> decide.
 
 ---
 
-### 1. In due minuti, e la riga che conta più di tutte
+### 1. In two minutes, and the line that counts more than any other
 
-> ### ⛔ **Su Debian Trixie, LXQt su Wayland non esiste come sessione installabile.**
+> ### ⛔ **On Debian Trixie, LXQt on Wayland does not exist as an installable session.**
 >
-> **[R-pkg]**, tre prove indipendenti con controllo positivo:
+> **[R-pkg]**, three independent proofs with a positive control:
 >
 > | | |
 > |---|---|
-> | `lxqt-wayland-session` **non è in Trixie** | `apt-cache policy` → nessun candidato; l'indice `Packages` elenca **37** pacchetti `lxqt-*` e non lui (controllo positivo: `lxqt-session` → 2.1.1-1, `labwc` → 0.8.3-1) |
-> | **nessun pacchetto LXQt** installa un file in `/usr/share/wayland-sessions/` | l'intero `wayland-sessions` di trixie/main ha **10 voci** — labwc, phosh, plasma, sway, weston, **xfce-wayland**… **nessuna LXQt**. LXQt compare solo in `xsessions/` |
-> | e lo dice il codice stesso | `lxqt-config-session` crea la pagina «Wayland Settings» **solo se trova l'eseguibile `startlxqtwayland`** (`sessionconfigwindow.cpp:65`), che su Trixie non c'è; e `lxqt-session` avvia il window manager **solo su xcb** (`lxqtmodman.cpp:82-83`) |
+> | `lxqt-wayland-session` **is not in Trixie** | `apt-cache policy` → no candidate; the `Packages` index lists **37** `lxqt-*` packages and not it (positive control: `lxqt-session` → 2.1.1-1, `labwc` → 0.8.3-1) |
+> | **no LXQt package** installs a file in `/usr/share/wayland-sessions/` | the whole `wayland-sessions` of trixie/main has **10 entries** — labwc, phosh, plasma, sway, weston, **xfce-wayland**… **no LXQt**. LXQt appears only in `xsessions/` |
+> | and the code itself says so | `lxqt-config-session` creates the «Wayland Settings» page **only if it finds the `startlxqtwayland` executable** (`sessionconfigwindow.cpp:65`), which is not on Trixie; and `lxqt-session` starts the window manager **only on xcb** (`lxqtmodman.cpp:82-83`) |
 >
-> Non è un rifiuto di Debian: è un **ritardo**. Il pacchetto esiste in forky/sid a **0.3.1-1**,
-> caricato dopo il freeze di Trixie.
+> It is not a refusal by Debian: it is a **delay**. The package exists in forky/sid at **0.3.1-1**,
+> uploaded after the Trixie freeze.
 >
-> ⭐ **Ma il codice Wayland è già spedito e funzionante**: `lxqt-panel` 2.1.4 contiene
-> `libwmbackend_wlroots.so` **e** `libwmbackend_kwin_wayland.so` **[R-pkg]**. **Manca solo il
-> lanciatore** — che è precisamente la cosa che REMOTIX si scrive da sé, perché la sessione la
-> avviamo noi. Il pezzo mancante è **uno script**, non una funzionalità.
+> ⭐ **But the Wayland code is already shipped and working**: `lxqt-panel` 2.1.4 contains
+> `libwmbackend_wlroots.so` **and** `libwmbackend_kwin_wayland.so` **[R-pkg]**. **Only the
+> launcher is missing** — which is precisely the thing REMOTIX writes for itself, because we
+> start the session. The missing piece is **a script**, not a feature.
 
-**Il compositore è `labwc`** — lo stesso di XFCE — e la struttura è **rovesciata rispetto a X11**: è
-il compositore a lanciare la sessione (`labwc -C <dir> -S lxqt-session`), non viceversa
-(`lxqt-wayland-session/startlxqtwayland.in:116` **[R]**). Il logout viene gratis dal `-S`, come su
+**The compositor is `labwc`** — the same as XFCE — and the structure is **reversed with respect to X11**: it is
+the compositor that launches the session (`labwc -C <dir> -S lxqt-session`), not the other way round
+(`lxqt-wayland-session/startlxqtwayland.in:116` **[R]**). Logout comes for free from `-S`, as on
 XFCE.
 
-#### 1.1 Il conto del riuso, che è il motivo per cui questo studio esiste
+#### 1.1 The reuse account, which is the reason this study exists
 
-| | Voci | Che cosa |
+| | Items | What |
 |---|---|---|
-| ✅ **riuso integrale** | **5 su 9** | cattura, input, appunti, ridimensionamento, audio |
-| ⚙ **adattamento** | **3** | uscita/logout (cambia il bersaglio D-Bus), cursore (la cura c'è ma passa da un altro canale), energia e blocco (**nessuna** delle leve pagate su GNOME/KDE/XFCE esiste qui) |
-| ✍ **da scrivere** | **1, e non è tecnica** | l'avvio della sessione — perché il pacchetto non c'è |
+| ✅ **full reuse** | **5 of 9** | capture, input, clipboard, resizing, audio |
+| ⚙ **adaptation** | **3** | exit/logout (the D-Bus target changes), cursor (the cure is there but goes through another channel), power and lock (**none** of the levers paid for on GNOME/KDE/XFCE exists here) |
+| ✍ **to be written** | **1, and it is not technical** | starting the session — because the package is not there |
 
-⭐ **Quel che LXQt aggiunge sul compositore è quasi niente**, e va detto chiaramente perché cambia la
-taglia della fase: nel caso base è **lo stesso labwc di XFCE**, e il capitolo pixel/tasti/appunti è
-§xfce **senza modifiche**. Anzi, **meno tre trappole**:
+⭐ **What LXQt adds on the compositor is almost nothing**, and it must be said clearly because it changes the
+size of the phase: in the base case it is **the same labwc as XFCE**, and the pixels/keys/clipboard chapter is
+§xfce **without changes**. In fact, **minus three traps**:
 
-| Trappola di XFCE | Su LXQt |
+| XFCE trap | On LXQt |
 |---|---|
-| `xfsettingsd` **disabilita** gli output nuovi e apre un dialogo | **[✗]** nessun componente parla `zwlr_output_manager_v1` (2 sole righe in tutto l'albero, e sono stringhe che consigliano `kanshi`) |
-| il pannello **esce** se i monitor sono zero | **[✗]** QtWayland crea sempre uno **schermo segnaposto** (`qwaylanddisplay.cpp:402-412`): `screens().at(0)` non è mai fuori range |
-| la chiave dello sfondo **è il nome del connector** | **[✗]** `[Desktop] Wallpaper` è unica e globale (`pcmanfm-qt/settings.cpp:243`): il nome dell'output è libero |
+| `xfsettingsd` **disables** new outputs and opens a dialog | **[✗]** no component speaks `zwlr_output_manager_v1` (only 2 lines in the whole tree, and they are strings recommending `kanshi`) |
+| the panel **exits** if there are zero monitors | **[✗]** QtWayland always creates a **placeholder screen** (`qwaylanddisplay.cpp:402-412`): `screens().at(0)` is never out of range |
+| the wallpaper key **is the connector name** | **[✗]** `[Desktop] Wallpaper` is single and global (`pcmanfm-qt/settings.cpp:243`): the output name is free |
 
-⭐ **È il desktop più facile dei quattro sul ridimensionamento a caldo** — e sul ridimensionamento
-**siamo l'unico comandante**, cosa che non era vera né su GNOME né su KDE.
+⭐ **It is the easiest desktop of the four for live resizing** — and on resizing
+**we are the only commander**, which was true neither on GNOME nor on KDE.
 
-#### 1.2 E le cinque cose che costano
+#### 1.2 And the five things that cost
 
 | | |
 |---|---|
-| ⛔ **la sessione va composta a mano** | e con essa `XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE`, `XDG_MENU_PREFIX`, `XDG_CONFIG_DIRS`, `QT_QPA_PLATFORM`, l'`rc.xml` di labwc e l'autostart |
-| ⛔ **`XDG_CURRENT_DESKTOP` decide metà del pannello** | il backend WM è scelto **dai token della variabile**, case-sensitive, a punteggio. Sbagliarla dà un desktop **vivo e inerte**, con un solo `qWarning` |
-| ⛔ **l'autostart che LXQt propone spegne l'output** | `swayidle -w timeout 300 "wlopm --off *"` (`configurations/labwc/autostart:31`): il gemello di `xfce4-power-manager`, ma a **5 minuti invece di 10** |
-| ⛔ **le tre cure già pagate non si applicano** | `PowerManagement.Inhibit` **[✗] non esiste**; `LockCommand=/bin/false` qui apre una **finestra modale**; `enableIdlenessWatcher=false` **viene riscritto a `true`** dal demone al primo avvio |
-| ⚠ **c'è un coinquilino della clipboard** | `qlipper`, dipendenza del metapacchetto `lxqt`, che **rimette l'ultimo elemento quando la clipboard si svuota** — come klipper, ma **senza marcatura e senza tetto di frequenza** |
+| ⛔ **the session must be assembled by hand** | and with it `XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE`, `XDG_MENU_PREFIX`, `XDG_CONFIG_DIRS`, `QT_QPA_PLATFORM`, labwc's `rc.xml` and the autostart |
+| ⛔ **`XDG_CURRENT_DESKTOP` decides half of the panel** | the WM backend is chosen **by the variable's tokens**, case-sensitive, by score. Getting it wrong gives a desktop that is **alive and inert**, with a single `qWarning` |
+| ⛔ **the autostart LXQt proposes turns the output off** | `swayidle -w timeout 300 "wlopm --off *"` (`configurations/labwc/autostart:31`): the twin of `xfce4-power-manager`, but at **5 minutes instead of 10** |
+| ⛔ **the three cures already paid for do not apply** | `PowerManagement.Inhibit` **[✗] does not exist**; `LockCommand=/bin/false` here opens a **modal window**; `enableIdlenessWatcher=false` **is rewritten to `true`** by the daemon on first start |
+| ⚠ **there is a clipboard roommate** | `qlipper`, a dependency of the `lxqt` metapackage, which **puts back the last item when the clipboard empties** — like klipper, but **with no marking and no frequency cap** |
 
-#### 1.3 Il passo zero: chi lo fa già
+#### 1.3 Step zero: who already does it
 
-**[✗] Nessuno fa RDP su LXQt-Wayland, su nessun compositore.** Più netto che su XFCE, perché si
-somma il fatto che la sessione non è pacchettizzata. Il concorrente è **`xrdp` su X11**
+**[✗] Nobody does RDP on LXQt-Wayland, on any compositor.** Sharper than on XFCE, because on top of it
+comes the fact that the session is not packaged. The competitor is **`xrdp` on X11**
 (`/etc/xrdp/startwm.sh` → `Xsession` → `startlxqt`; `grep -ri wayland /etc/xrdp/` → **zero**
 **[R-pkg]**).
 
-⭐ **E LXQt appare nelle guide di xrdp più di ogni altro desktop per una ragione che ci riguarda: è
-quello che si consiglia quando la macchina remota è piccola.** Cioè il nostro campo esatto.
+⭐ **And LXQt appears in xrdp guides more than any other desktop for a reason that concerns us: it is
+the one recommended when the remote machine is small.** That is, exactly our field.
 
-⭐ **Un precedente inatteso, e importante**: `lxqt-panel_wayland.desktop.in:14` dichiara
-`X-KDE-Wayland-Interfaces=org_kde_plasma_window_management` sotto il commento *«Make KWin recognize
-us as priviledged client»* **[R]**. È il **quarto precedente indipendente** del meccanismo di permesso
-che abbiamo trovato su KDE — dopo KRdp, krfb e il portale — **e l'unico fuori da Plasma**.
-
----
-
-### 2. La mappa
-
-| Che cosa | Dove | Versione Trixie |
-|---|---|---|
-| la sessione | `reference-lxqt/lxqt-session/` | **2.1.1** |
-| il pannello | `lxqt-panel/` | **2.1.4** |
-| impostazioni, aspetto, monitor | `lxqt-config/` | **2.1.1** |
-| la scrivania | `pcmanfm-qt/` 2.1.0, `libfm-qt/` 2.1.0 | |
-| energia, scorciatoie, notifiche, policykit | `lxqt-powermanagement/` 2.1.0, `lxqt-globalkeys/` 2.1.0, `lxqt-notificationd/` 2.1.1, `lxqt-policykit/` 2.1.0 | |
-| librerie e tema Qt | `liblxqt/` 2.1.0, `libqtxdg/` 4.1.0, `lxqt-qtplugin/` 2.1.0, `lxqt-themes/` 2.1.0 | |
-| il menu | `lxqt-menu-data/` 2.1.0 | |
-| ⚠ **il lanciatore Wayland** | `lxqt-wayland-session/` | **0.4.1 — NON è la versione di Trixie** |
-| il compositore e i protocolli | `../REMOTIX/reference-xfce/` (labwc 0.8.3, wlroots 0.18.2, wlr-protocols, wayland-protocols 1.38) | |
-
-⛔ **Attenzione al clone di `lxqt-wayland-session`**: è **0.4.1** (maggio 2026) e richiede **LXQt ≥
-2.4.0** e una labwc molto più nuova. **Si legge come specifica delle intenzioni, non si copia**: i
-suoi file di configurazione sono per compositori che Trixie non ha. È l'unico repository dello studio
-che non corrisponde alla macchina.
+⭐ **An unexpected, and important, precedent**: `lxqt-panel_wayland.desktop.in:14` declares
+`X-KDE-Wayland-Interfaces=org_kde_plasma_window_management` under the comment *«Make KWin recognize
+us as priviledged client»* **[R]**. It is the **fourth independent precedent** of the permission mechanism
+we found on KDE — after KRdp, krfb and the portal — **and the only one outside Plasma**.
 
 ---
 
-### 3. La sessione: come si compone quel che Debian non spedisce
+### 2. The map
 
-*Dettaglio: `rapporti/01-sessione-lxqt.md`.*
-
-#### 3.1 La forma
-
-```
-labwc -C <dir nostra> -S lxqt-session
-```
-
-Il compositore è il padre; `lxqt-session` è il *primary client*: quando esce, labwc termina. È la
-stessa forma di XFCE (`labwc --session xfce4-session`), quindi **il codice di avvio è lo stesso**.
-
-#### 3.2 L'ambiente — e qui si concentra il rischio
-
-| Variabile | Valore | Perché, e che cosa succede sbagliandola |
+| What | Where | Trixie version |
 |---|---|---|
-| ⭐ `XDG_CURRENT_DESKTOP` | **`LXQt:labwc:wlroots`** | il pannello sceglie il backend WM **dai token, case-sensitive, a punteggio** (`wlroots` 50, `labwc` 30 — `lxqtpanelapplication.cpp:206-270`). Con `LXQt` secco casca sul backend **`dummy`**: taskbar vuota, pager a uno, tutto inerte, **un solo `qWarning`**. ⛔ E i moduli hanno `OnlyShowIn=LXQt;`: senza il token `LXQt` la sessione è **viva con lo schermo nero e zero messaggi** |
-| `XDG_SESSION_TYPE` | `wayland` | non è cosmetica: il pannello sceglie il backend da lì, **non** da `platformName()` (`:206-209`) |
-| ⭐ `QT_QPA_PLATFORM` | **`wayland` secco** | **[✗]** nessun componente LXQt la imposta. Con la lista `wayland;xcb` Qt prende «il primo che carica» con **un solo `qCWarning`**; con un elemento solo, se il plugin manca si arriva a `qFatal`. È `LEZIONI.md` §1.8 chiusa a codice |
-| `XDG_CONFIG_DIRS` | **deve contenere `/usr/share`** | i default LXQt stanno in `/usr/share/lxqt/*.conf`. Col default Debian non si trovano — e spariscono **in silenzio** |
-| `XDG_MENU_PREFIX` | `lxqt-` | **[✗] nessun ripiego cablato** in libqtxdg, a differenza di garcon su XFCE. ✅ Ma il file `/etc/xdg/menus/lxqt-applications.menu` **esiste** in `lxqt-menu-data` **[R-pkg]** |
-| `LABWC_UPDATE_ACTIVATION_ENV` | `1` | come su XFCE: su backend headless labwc **non propaga** `WAYLAND_DISPLAY` al bus |
-| `XCURSOR_THEME` (+ `XCURSOR_SIZE`) | il tema trasparente | §6.1 |
-| ⛔ **da NON passare** | `DISPLAY`, `WAYLAND_DISPLAY`, `QT_QPA_PLATFORM` ereditate, `SESSION_MANAGER` | vedi sotto |
+| the session | `reference-lxqt/lxqt-session/` | **2.1.1** |
+| the panel | `lxqt-panel/` | **2.1.4** |
+| settings, appearance, monitors | `lxqt-config/` | **2.1.1** |
+| the desktop | `pcmanfm-qt/` 2.1.0, `libfm-qt/` 2.1.0 | |
+| power, shortcuts, notifications, policykit | `lxqt-powermanagement/` 2.1.0, `lxqt-globalkeys/` 2.1.0, `lxqt-notificationd/` 2.1.1, `lxqt-policykit/` 2.1.0 | |
+| libraries and Qt theme | `liblxqt/` 2.1.0, `libqtxdg/` 4.1.0, `lxqt-qtplugin/` 2.1.0, `lxqt-themes/` 2.1.0 | |
+| the menu | `lxqt-menu-data/` 2.1.0 | |
+| ⚠ **the Wayland launcher** | `lxqt-wayland-session/` | **0.4.1 — it is NOT the Trixie version** |
+| the compositor and the protocols | `../REMOTIX/reference-xfce/` (labwc 0.8.3, wlroots 0.18.2, wlr-protocols, wayland-protocols 1.38) | |
 
-⛔ **Il ripiego a `xcb` è peggio che su KDE, e non è «un po' peggio»: è un'altra sessione.** Se Qt
-sceglie xcb, `lxqt-session` **avvia un secondo window manager**, può aprire un **dialogo modale** di
-scelta del WM e bloccare il ciclo eventi **30 secondi** (`lxqtmodman.cpp:82-83`, `:209-214`, `:237`);
-smette di filtrare i moduli `X-LXQt-X11-Only`, accende `setxkbmap`, `xrdb`, l'osservatore udev degli
-input **e quello DRM che lancia `lxqt-config-monitor -l` a ogni cambio di display** — cioè **un
-secondo comandante della risoluzione**.
+⛔ **Beware of the `lxqt-wayland-session` clone**: it is **0.4.1** (May 2026) and requires **LXQt ≥
+2.4.0** and a much newer labwc. **It is read as a statement of intentions, not copied**: its
+configuration files are for compositors Trixie does not have. It is the only repository in the study
+that does not match the machine.
 
-#### 3.3 Quel che NON serve, e sono tre debiti che non paghiamo
+---
+
+### 3. The session: how to assemble what Debian does not ship
+
+*Detail: `rapporti/01-sessione-lxqt.md`.*
+
+#### 3.1 The shape
+
+```
+labwc -C <our dir> -S lxqt-session
+```
+
+The compositor is the parent; `lxqt-session` is the *primary client*: when it exits, labwc terminates. It is the
+same shape as XFCE (`labwc --session xfce4-session`), so **the startup code is the same**.
+
+#### 3.2 The environment — and this is where the risk concentrates
+
+| Variable | Value | Why, and what happens if you get it wrong |
+|---|---|---|
+| ⭐ `XDG_CURRENT_DESKTOP` | **`LXQt:labwc:wlroots`** | the panel picks the WM backend **from the tokens, case-sensitive, by score** (`wlroots` 50, `labwc` 30 — `lxqtpanelapplication.cpp:206-270`). With bare `LXQt` it falls onto the **`dummy`** backend: empty taskbar, pager at one, everything inert, **a single `qWarning`**. ⛔ And the modules have `OnlyShowIn=LXQt;`: without the `LXQt` token the session is **alive with a black screen and zero messages** |
+| `XDG_SESSION_TYPE` | `wayland` | it is not cosmetic: the panel picks the backend from there, **not** from `platformName()` (`:206-209`) |
+| ⭐ `QT_QPA_PLATFORM` | **bare `wayland`** | **[✗]** no LXQt component sets it. With the list `wayland;xcb` Qt takes «il primo che carica» with **a single `qCWarning`**; with a single element, if the plugin is missing you get to `qFatal`. It is `LEZIONI.md` §1.8 closed in code |
+| `XDG_CONFIG_DIRS` | **must contain `/usr/share`** | the LXQt defaults live in `/usr/share/lxqt/*.conf`. With the Debian default they are not found — and they vanish **silently** |
+| `XDG_MENU_PREFIX` | `lxqt-` | **[✗] no hard-wired fallback** in libqtxdg, unlike garcon on XFCE. ✅ But the file `/etc/xdg/menus/lxqt-applications.menu` **exists** in `lxqt-menu-data` **[R-pkg]** |
+| `LABWC_UPDATE_ACTIVATION_ENV` | `1` | as on XFCE: on the headless backend labwc **does not propagate** `WAYLAND_DISPLAY` to the bus |
+| `XCURSOR_THEME` (+ `XCURSOR_SIZE`) | the transparent theme | §6.1 |
+| ⛔ **NOT to be passed** | inherited `DISPLAY`, `WAYLAND_DISPLAY`, `QT_QPA_PLATFORM`, `SESSION_MANAGER` | see below |
+
+⛔ **The fallback to `xcb` is worse than on KDE, and not «a bit worse»: it is a different session.** If Qt
+picks xcb, `lxqt-session` **starts a second window manager**, may open a **modal dialog** for
+choosing the WM and block the event loop for **30 seconds** (`lxqtmodman.cpp:82-83`, `:209-214`, `:237`);
+it stops filtering the `X-LXQt-X11-Only` modules, turns on `setxkbmap`, `xrdb`, the udev watcher for
+inputs **and the DRM one that launches `lxqt-config-monitor -l` at every display change** — that is **a
+second commander of the resolution**.
+
+#### 3.3 What is NOT needed, and they are three debts we do not pay
 
 | | |
 |---|---|
-| ✅ **[✗] nessun `loginctl terminate-session`** | grep su `lxqt-session` e `liblxqt`, con controllo positivo che trova quello di XFCE. **La doppia difesa di §xfce §9.2 non serve** |
-| ✅ **[✗] nessuna registrazione client di sessione** | né XSMP né D-Bus: il rischio «ostaggio del logout» pagato su KDE **non esiste**. E il logout non consulta inibitori, non mostra nulla, non si annulla |
-| ✅ **[✗] nessun salvataggio di sessione** | la trappola `~/.cache/sessions/…` di XFCE non ha equivalente: non c'è niente da cancellare |
-| ✅ **[✗] nessun seat richiesto** | `XDG_SEAT`/`XDG_VTNR`/`libsystemd` assenti dai 17 repository |
-| ✅ **[✗] nessun gruppo di priorità** | gli **otto secondi** strutturali di XFCE non hanno equivalente: il tetto «desktop su» può essere corto |
-| ✅ **il bus di sessione** | **[✗] `dbus-run-session` non compare da nessuna parte**: si usa `$XDG_RUNTIME_DIR/bus`. ⭐ **La decisione lasciata aperta in §xfce §9.7 qui si chiude da sé** |
+| ✅ **[✗] no `loginctl terminate-session`** | grep over `lxqt-session` and `liblxqt`, with a positive control that finds the XFCE one. **The double defence of §xfce §9.2 is not needed** |
+| ✅ **[✗] no session client registration** | neither XSMP nor D-Bus: the «hostage of the logout» risk paid on KDE **does not exist**. And the logout consults no inhibitors, shows nothing, cannot be cancelled |
+| ✅ **[✗] no session saving** | the XFCE `~/.cache/sessions/…` trap has no equivalent: there is nothing to delete |
+| ✅ **[✗] no seat required** | `XDG_SEAT`/`XDG_VTNR`/`libsystemd` absent from all 17 repositories |
+| ✅ **[✗] no priority groups** | the structural **eight seconds** of XFCE have no equivalent: the «desktop up» cap can be short |
+| ✅ **the session bus** | **[✗] `dbus-run-session` appears nowhere**: `$XDG_RUNTIME_DIR/bus` is used. ⭐ **The decision left open in §xfce §9.7 closes itself here** |
 
-⛔ **Ma `lxqt-session` è subreaper** (`procreaper.cpp:56`) e al logout manda `SIGTERM` a tutto ciò che
-ha il suo ppid (`:129`, `:191-198`). Noi siamo *sopra* e siamo salvi — **ma nulla di REMOTIX va
-avviato sotto `lxqt-session`**, perché ogni orfano gli viene riassegnato.
+⛔ **But `lxqt-session` is a subreaper** (`procreaper.cpp:56`) and at logout it sends `SIGTERM` to everything that
+has its ppid (`:129`, `:191-198`). We are *above* it and we are safe — **but nothing of REMOTIX must be
+started under `lxqt-session`**, because every orphan is reassigned to it.
 
-#### 3.4 ⭐ La prontezza si legge, meglio che sugli altri tre
+#### 3.4 ⭐ Readiness can be read, better than on the other three
 
-Segnale **`moduleStateChanged(QString, bool)`** su `org.lxqt.session`, oggetto `/LXQtSession`
-(`sessiondbusadaptor.h:53`, `:57`): si aspetta `("lxqt-panel.desktop", true)`.
+Signal **`moduleStateChanged(QString, bool)`** on `org.lxqt.session`, object `/LXQtSession`
+(`sessiondbusadaptor.h:53`, `:57`): wait for `("lxqt-panel.desktop", true)`.
 
-⚠ Il **nome sul bus** compare nel costruttore (`sessionapplication.cpp:48`), quindi «il nome c'è» **non
-significa «desktop su»** — è la stessa distinzione che su KDE ci aveva ingannati.
+⚠ The **name on the bus** appears in the constructor (`sessionapplication.cpp:48`), so «the name is there» **does not
+mean «desktop up»** — it is the same distinction that fooled us on KDE.
 
-**Il logout**: servizio, oggetto e interfaccia sono tutti `org.lxqt.session` / `/LXQtSession`.
-**[✗] Nessun segnale «sto uscendo»** — la sorveglianza passiva è `SIGCHLD` su labwc (la verità) più
-`NameOwnerChanged` (l'anticipo). Per comandarlo: `logout()`, **oppure `SIGTERM` a `lxqt-session`**,
-che è la stessa cosa. ⛔ Mai `lxqt-leave --logout`: apre una conferma modale.
+**The logout**: service, object and interface are all `org.lxqt.session` / `/LXQtSession`.
+**[✗] No «I am leaving» signal** — the passive watch is `SIGCHLD` on labwc (the truth) plus
+`NameOwnerChanged` (the early warning). To command it: `logout()`, **or `SIGTERM` to `lxqt-session`**,
+which is the same thing. ⛔ Never `lxqt-leave --logout`: it opens a modal confirmation.
 
-#### 3.5 ⚠ Tre finestre modali possono fermare una sessione non presidiata
+#### 3.5 ⚠ Three modal windows can stop an unattended session
 
-1. `QMessageBox` se `dbus-update-activation-environment` non parte in 2 s (`sessionapplication.cpp:81-84`);
-2. «Crash Report» dopo 5 crash in 60 s (`lxqtmodman.cpp:330`);
-3. ⛔ **il caso peggiore**: `compositor=` vuoto — **che è il default di serie** — fa avviare
-   `lxqt-config-session` invece del desktop. Socket, global, cattura e input sarebbero **tutti
-   verdi**, e sullo schermo ci sarebbe un wizard di configurazione.
+1. `QMessageBox` if `dbus-update-activation-environment` does not start within 2 s (`sessionapplication.cpp:81-84`);
+2. «Crash Report» after 5 crashes in 60 s (`lxqtmodman.cpp:330`);
+3. ⛔ **the worst case**: an empty `compositor=` — **which is the stock default** — makes it start
+   `lxqt-config-session` instead of the desktop. Socket, globals, capture and input would **all be
+   green**, and on the screen there would be a configuration wizard.
 
-⭐ **Da cui il controllo di prontezza va fatto sul bus, non sui pixel**: `org.lxqt.session` + il
-segnale del pannello. È la lezione §2.2 — *un banco che conta non basta* — in forma preventiva.
+⭐ **Hence the readiness check must be done on the bus, not on the pixels**: `org.lxqt.session` + the
+panel signal. It is lesson §2.2 — *a bench that counts is not enough* — in preventive form.
 
 ---
 
-### 4. Il compositore: la matrice, e perché non c'è codice nuovo
+### 4. The compositor: the matrix, and why there is no new code
 
-*Dettaglio: `rapporti/02-compositori-matrice.md`.*
+*Detail: `rapporti/02-compositori-matrice.md`.*
 
-LXQt dichiara **sette** compositori (`lxqt-wayland-session/README.md:5-14`); **Trixie ne pacchettizza
-quattro**: labwc 0.8.3, kwin-wayland 6.3.6, wayfire 0.9.0, sway 1.10.1. Hyprland, niri e river
-**[✗]** non ci sono.
+LXQt declares **seven** compositors (`lxqt-wayland-session/README.md:5-14`); **Trixie packages
+four**: labwc 0.8.3, kwin-wayland 6.3.6, wayfire 0.9.0, sway 1.10.1. Hyprland, niri and river
+**[✗]** are not there.
 
 | | labwc / sway / wayfire | kwin_wayland 6.3.6 |
 |---|---|---|
-| **Cattura** | `zwlr_screencopy` v3 | `zkde_screencast` v5 |
-| **Permesso** | **nessuno** | `.desktop` + `X-KDE-Wayland-Interfaces` |
-| **Input** | `zwlr_virtual_pointer` v2 + `zwp_virtual_keyboard` v1 | libei (EIS su D-Bus) |
-| **Appunti** | `zwlr_data_control` **v2** | `zwlr_data_control` **v2** ✅ |
-| **Ridimensionamento** | `set_custom_mode`, **senza tetto** | ⛔ misura **fissa** con `--virtual` |
+| **Capture** | `zwlr_screencopy` v3 | `zkde_screencast` v5 |
+| **Permission** | **none** | `.desktop` + `X-KDE-Wayland-Interfaces` |
+| **Input** | `zwlr_virtual_pointer` v2 + `zwp_virtual_keyboard` v1 | libei (EIS over D-Bus) |
+| **Clipboard** | `zwlr_data_control` **v2** | `zwlr_data_control` **v2** ✅ |
+| **Resizing** | `set_custom_mode`, **no cap** | ⛔ **fixed** size with `--virtual` |
 
-**Una riga su otto in comune fra le due famiglie** — ed è la clipboard, cioè il file che avevamo già.
+**One row out of eight in common between the two families** — and it is the clipboard, that is the file we already had.
 
-⭐ **Verdetto: codice nuovo zero, per tutti e quattro.** Sei compositori su sette ricadono sul modulo
-wlroots della fase XFCE; il settimo sul modulo KDE.
+⭐ **Verdict: zero new code, for all four.** Six compositors out of seven fall onto the wlroots module
+of the XFCE phase; the seventh onto the KDE module.
 
-**Sul caso KWin**, che sarebbe «niente da scrivere»: l'affermazione **regge ma non conviene**, per
-quattro riserve — lo script di LXQt pianta `XDG_MENU_PREFIX=lxqt-` e il ramo KWin **non lo corregge**
-(`startlxqtwayland.in:66`, `:125-142`), il che secondo §kde §3.3-bis potrebbe lasciare vuoto
-l'indice dei servizi e **chiudere il cancello del permesso** [?, da misurare — ⚠ e una seconda lettura
-la capovolge: `/etc/xdg/menus/lxqt-applications.menu` **esiste** in `lxqt-menu-data` **[R-pkg]**,
-quindi l'indice **dovrebbe** costruirsi]; si eredita la **misura fissa** che labwc non ha; serve
-comunque il nostro `.desktop`; e KWin senza Plasma non è mai stato misurato.
+**On the KWin case**, which would be «nothing to write»: the claim **holds but does not pay**, for
+four reservations — the LXQt script plants `XDG_MENU_PREFIX=lxqt-` and the KWin branch **does not correct it**
+(`startlxqtwayland.in:66`, `:125-142`), which according to §kde §3.3-bis could leave the service index
+empty and **close the permission gate** [?, to be measured — ⚠ and a second reading
+overturns it: `/etc/xdg/menus/lxqt-applications.menu` **exists** in `lxqt-menu-data` **[R-pkg]**,
+so the index **should** get built]; it inherits the **fixed size** that labwc does not have; our
+`.desktop` is needed anyway; and KWin without Plasma has never been measured.
 
-⭐ **La scelta indicata è labwc**: è il ripiego di LXQt stesso, il primo nel `Depends` upstream,
-ha il ridimensionamento senza tetto e nessun permesso.
+⭐ **The indicated choice is labwc**: it is LXQt's own fallback, the first in the upstream `Depends`,
+it has resizing without a cap and no permission.
 
-#### 4.1 ⭐ La matrice, e il numero che cambia il senso della fase
+#### 4.1 ⭐ The matrix, and the number that changes the meaning of the phase
 
-Se un desktop non implica più un compositore, il prodotto non ha «cinque desktop»: ha una **matrice**.
+If a desktop no longer implies a compositor, the product does not have «five desktops»: it has a **matrix**.
 
 | | |
 |---|---|
-| combinazioni realistiche su Trixie | **9** |
-| coperte oggi | **2** (22 %) |
-| coperte **gratis** dalla sola fase wlroots | **+5** |
-| **totale dopo la fase wlroots** | ⭐ **8 su 9 — l'89 %** |
+| realistic combinations on Trixie | **9** |
+| covered today | **2** (22 %) |
+| covered **for free** by the wlroots phase alone | **+5** |
+| **total after the wlroots phase** | ⭐ **8 out of 9 — 89 %** |
 
-**E LXQt ne porta quattro, tutte gratis.** ⚠ Riserva: wayfire vendorizza wlroots **0.17**, quindi il
-suo «gratis» è **[?]** finché non si legge quella versione.
+**And LXQt brings four of them, all free.** ⚠ Reservation: wayfire vendors wlroots **0.17**, so its
+«free» is **[?]** until that version is read.
 
-#### 4.2 Il rilevamento: non chiedere al desktop, guardare i global
+#### 4.2 Detection: do not ask the desktop, look at the globals
 
-`XDG_CURRENT_DESKTOP` **si scrive e non si legge**: lo script di LXQt la costruisce in **tre forme
-diverse** nello stesso file, dice `wlroots` anche per compositori che non lo sono, e sbaglia già le
-maiuscole in casa propria.
+`XDG_CURRENT_DESKTOP` **is written and not read**: the LXQt script builds it in **three different
+forms** in the same file, says `wlroots` even for compositors that are not, and already gets the
+capitalisation wrong in its own house.
 
-⭐ **Il criterio solido è enumerare i global** con un `wl_display_roundtrip` sul registry: non c'è
-ambiguità, perché `zwlr_screencopy_manager_v1` e `zkde_screencast_unstable_v1` sono **mutuamente
-esclusivi** su tutta Trixie. Costa zero righe nuove — la connessione al registry esiste già in
-`kwin.c:451-495` — e serve anche un compositore fuori elenco.
+⭐ **The solid criterion is to enumerate the globals** with a `wl_display_roundtrip` on the registry: there is no
+ambiguity, because `zwlr_screencopy_manager_v1` and `zkde_screencast_unstable_v1` are **mutually
+exclusive** across all of Trixie. It costs zero new lines — the registry connection already exists in
+`kwin.c:451-495` — and it also serves a compositor not on the list.
 
 ---
 
-### 5. Che cosa si riusa senza toccare niente
+### 5. What is reused without touching anything
 
 | | |
 |---|---|
-| **Cattura** | `zwlr_screencopy` su labwc: §xfce §4 **integrale** |
-| **Input** | `virtual-keyboard` + `virtual-pointer`: §xfce §7 **integrale**, comprese le cinque trappole |
-| **Appunti** | ✅ **`appunti_wlr.c` così com'è**, e la riserva di §xfce §8 **cade**: `kwin_display_apri` **non filtra il socket per nome** (`src/kwin.c:451-484`) — prende `WAYLAND_DISPLAY` e in mancanza prova `wayland-0`…`wayland-9` |
-| **Ridimensionamento** | `set_custom_mode`: **integrale, e più facile che su XFCE** (§7) |
-| **Audio** | il percorso PipeWire non dipende dal desktop |
+| **Capture** | `zwlr_screencopy` on labwc: §xfce §4 **in full** |
+| **Input** | `virtual-keyboard` + `virtual-pointer`: §xfce §7 **in full**, including the five traps |
+| **Clipboard** | ✅ **`appunti_wlr.c` as it is**, and the reservation of §xfce §8 **falls**: `kwin_display_apri` **does not filter the socket by name** (`src/kwin.c:451-484`) — it takes `WAYLAND_DISPLAY` and failing that tries `wayland-0`…`wayland-9` |
+| **Resizing** | `set_custom_mode`: **in full, and easier than on XFCE** (§7) |
+| **Audio** | the PipeWire path does not depend on the desktop |
 
-⭐ **Le scorciatoie non ci disturbano**: `lxqt-globalkeys` **[✗] non gira affatto su Wayland** — non è
-il caso ambiguo del demone che ingoia i tasti senza usarli: `lxqt-session` **lo salta per
-costruzione** (`X-LXQt-X11-Only=true` + `lxqtmodman.cpp:106-112`), ed è Xlib puro, **zero rami
-Wayland in 3 414 righe** (controllo positivo: 60+ righe X11). Tutti i suoi clienti passano da lui via
-D-Bus, quindi sono morti anche loro.
+⭐ **The shortcuts do not bother us**: `lxqt-globalkeys` **[✗] does not run at all on Wayland** — it is not
+the ambiguous case of the daemon that swallows keys without using them: `lxqt-session` **skips it by
+construction** (`X-LXQt-X11-Only=true` + `lxqtmodman.cpp:106-112`), and it is pure Xlib, **zero
+Wayland branches in 3 414 lines** (positive control: 60+ X11 lines). All its clients go through it via
+D-Bus, so they are dead too.
 
-⛔ **Restano le keybind del compositore**, che sono un elenco **completo** in un file che scriviamo
-noi — e `W-l → lxqt-leave --lockscreen` è fra quelle di serie (`rc.xml:295-297`): va tolta, o labwc
-mangia il tasto comunque (§xfce §7.5).
+⛔ **The compositor keybinds remain**, which are a **complete** list in a file we write
+ourselves — and `W-l → lxqt-leave --lockscreen` is among the stock ones (`rc.xml:295-297`): it must be removed, or labwc
+eats the key anyway (§xfce §7.5).
 
-⚠ **Due dettagli dell'input che LXQt aggiunge:**
+⚠ **Two input details that LXQt adds:**
 
-1. **NumLock parte spento** (`enableNumlock()` è dietro il cancello X11, e `<numlock>` è commentato in
-   `rc.xml`): il tastierino esce in modalità frecce. Rimedio nostro, mettendolo in `mods_locked`;
-2. la **disposizione di tastiera**: `lxqt-config-input` **si rifiuta di partire su Wayland**, e nel
-   codice c'è un `// FIXME: how to set keyboard layout in Wayland?`. L'unica via è
-   `XKB_DEFAULT_LAYOUT` letta da labwc, e **[✗] nessuno legge `/etc/vconsole.conf`** su Trixie: **la
-   scriviamo noi, o esce `us`**;
-3. ✅ la **ripetizione** la decide labwc (25 Hz / 600 ms) e la applica **esplicitamente anche alle
-   tastiere virtuali**: il `[Keyboard]` di LXQt **[✗] non raggiunge il compositore**. Nulla da fare;
-4. ⚠ ma `wheelScrollLines=3` in `lxqt.conf [Qt]` è applicato **da Qt dentro ogni applicazione**: un
-   nostro scatto diventa **tre righe**. La manopola è lì, non nel nostro accumulatore.
+1. **NumLock starts off** (`enableNumlock()` is behind the X11 gate, and `<numlock>` is commented out in
+   `rc.xml`): the keypad comes out in arrow mode. Our remedy, by putting it in `mods_locked`;
+2. the **keyboard layout**: `lxqt-config-input` **refuses to start on Wayland**, and in the
+   code there is a `// FIXME: how to set keyboard layout in Wayland?`. The only way is
+   `XKB_DEFAULT_LAYOUT` read by labwc, and **[✗] nobody reads `/etc/vconsole.conf`** on Trixie: **we
+   write it ourselves, or `us` comes out**;
+3. ✅ **repeat** is decided by labwc (25 Hz / 600 ms) and it applies it **explicitly to virtual
+   keyboards too**: LXQt's `[Keyboard]` **[✗] does not reach the compositor**. Nothing to do;
+4. ⚠ but `wheelScrollLines=3` in `lxqt.conf [Qt]` is applied **by Qt inside every application**: one
+   notch of ours becomes **three lines**. The knob is there, not in our accumulator.
 
 ---
 
-### 6. Che cosa si adatta
+### 6. What is adapted
 
-#### 6.1 ⭐ Il cursore: la cura c'è, ma il canale è un altro
+#### 6.1 ⭐ The cursor: the cure exists, but the channel is another one
 
-**La buona notizia**: su labwc il cursore delle applicazioni **Qt** lo disegna **il compositore**.
-labwc espone `wp_cursor_shape_manager_v1` e Qt 6.8 lo usa **prima** di caricare qualunque tema
-(`qwaylandinputdevice.cpp:230-236`), e su `set_shape` labwc usa il proprio `xcursor_manager`, cioè il
-tema di **`XCURSOR_THEME`**. ⇒ **una leva sola copre compositore e client Qt.**
+**The good news**: on labwc the cursor of **Qt** applications is drawn by **the compositor**.
+labwc exposes `wp_cursor_shape_manager_v1` and Qt 6.8 uses it **before** loading any theme
+(`qwaylandinputdevice.cpp:230-236`), and on `set_shape` labwc uses its own `xcursor_manager`, that is the
+theme of **`XCURSOR_THEME`**. ⇒ **a single lever covers compositor and Qt clients.**
 
-⛔ **Le tre trappole, tutte pagate altrove in forma diversa:**
+⛔ **The three traps, all paid elsewhere in a different form:**
 
 | | |
 |---|---|
-| `session.conf [Environment]` **non serve** | su Wayland labwc è il **padre**: le variabili di `lxqt-session` arrivano troppo tardi. E LXQt **rimuove apposta** `XCURSOR_THEME` da lì (`selectwnd.cpp:188-192`) |
-| `~/.icons/default/index.theme` | `lxqt-config-appearance` vi scrive `Inherits=<tema>`, ed è **il ripiego di Xcursor**: se il nostro tema 1×1 non carica, ricompare un cursore visibile da lì |
-| il ripiego di Qt sull'hint del tema | fuori da labwc, Qt legge **solo** `QPlatformTheme::MouseCursorTheme`, che `lxqt-qtplugin` prende da `session.conf [Mouse]` — con un **`cursor_size` 16 cablato** che scavalca `XCURSOR_SIZE`. ⇒ impostare **anche** quella chiave, che costa una riga |
+| `session.conf [Environment]` **is no use** | on Wayland labwc is the **parent**: `lxqt-session`'s variables arrive too late. And LXQt **deliberately removes** `XCURSOR_THEME` from there (`selectwnd.cpp:188-192`) |
+| `~/.icons/default/index.theme` | `lxqt-config-appearance` writes `Inherits=<tema>` into it, and it is **Xcursor's fallback**: if our 1×1 theme does not load, a visible cursor reappears from there |
+| Qt's fallback to the theme hint | outside labwc, Qt reads **only** `QPlatformTheme::MouseCursorTheme`, which `lxqt-qtplugin` takes from `session.conf [Mouse]` — with a **hard-wired `cursor_size` 16** that overrides `XCURSOR_SIZE`. ⇒ set **that key too**, which costs one line |
 
-✅ E una differenza a nostro favore rispetto a wlroots: se il tema fallisce **lato Qt**, Qt **non**
-ripiega su un tema visibile (`qwaylanddisplay.cpp:1054-1064`). Il ripiego visibile resta solo quello
-di wlroots, già noto.
+✅ And a difference in our favour compared with wlroots: if the theme fails **on the Qt side**, Qt does **not**
+fall back to a visible theme (`qwaylanddisplay.cpp:1054-1064`). The only visible fallback left is the
+wlroots one, already known.
 
-#### 6.2 ⛔ Energia e blocco: nessuna delle leve già pagate funziona qui
+#### 6.2 ⛔ Power and locking: none of the levers already paid for works here
 
-| Leva pagata altrove | Su LXQt |
+| Lever paid for elsewhere | On LXQt |
 |---|---|
-| `AddInhibition` di powerdevil (KDE) | **[✗]** non esiste |
-| `PowerManagement.Inhibit` (XFCE) | **[✗]** LXQt non lo espone né lo consuma: **zero occorrenze**. La domanda «il servizio ha attivazione D-Bus?» **non si pone: non c'è servizio** |
-| `LockCommand=/bin/false` (XFCE) | ⛔ **qui apre una `QMessageBox` modale**: un'uscita ≠ 0 chiama `reportLockProcessError()`. Le sole scelte sicure sono **chiave assente/vuota** o **`/bin/true`** |
-| KIOSK (KDE) | **[✗]** non esiste |
+| powerdevil's `AddInhibition` (KDE) | **[✗]** does not exist |
+| `PowerManagement.Inhibit` (XFCE) | **[✗]** LXQt neither exposes nor consumes it: **zero occurrences**. The question «does the service have D-Bus activation?» **does not arise: there is no service** |
+| `LockCommand=/bin/false` (XFCE) | ⛔ **here it opens a modal `QMessageBox`**: an exit ≠ 0 calls `reportLockProcessError()`. The only safe choices are **key absent/empty** or **`/bin/true`** |
+| KIOSK (KDE) | **[✗]** does not exist |
 
-✅ **Ma il pericolo è molto minore, perché LXQt su Wayland è quasi disarmato:**
+✅ **But the danger is much smaller, because LXQt on Wayland is almost disarmed:**
 
-- **[✗] `lxqt-powermanagement` non ha alcuna leva che spenga un output**: l'unica che conosce è DPMS
-  via XCB, chiusa dentro due `if (platformName()=="xcb")` **senza ramo `else`**;
-- **[✗] il server non si addormenta**: le azioni di inattività valgono `-1` (niente) e `doAction(-1)` è
-  un ramo vuoto;
-- **[✗] «Cambia utente» non esiste in LXQt** (grep con controllo positivo): **metà del requisito è già
-  soddisfatta dal desktop**;
-- ✅ il blocco schermo **è già inerte**: `lock_command_wayland` è letta **senza default** e nessun file
-  spedito la imposta.
+- **[✗] `lxqt-powermanagement` has no lever that turns off an output**: the only one it knows is DPMS
+  via XCB, locked inside two `if (platformName()=="xcb")` **with no `else` branch**;
+- **[✗] the server does not go to sleep**: the idle actions are `-1` (nothing) and `doAction(-1)` is
+  an empty branch;
+- **[✗] «Switch user» does not exist in LXQt** (grep with positive control): **half of the requirement is already
+  satisfied by the desktop**;
+- ✅ the screen lock **is already inert**: `lock_command_wayland` is read **with no default** and no shipped
+  file sets it.
 
-⛔ **Restano due pericoli veri, e il primo non è di LXQt:**
+⛔ **Two real dangers remain, and the first is not LXQt's:**
 
-1. **l'autostart che LXQt propone per labwc** lancia `swayidle -w timeout 300 "wlopm --off *"` — e
-   `~/.config/labwc/` viene copiato **una volta sola** (`if [ ! -d … ]`), quindi una configurazione
-   sbagliata è **permanente**;
-2. ⛔ **se un locker è installato, il blocco riesce davvero**, perché labwc implementa
-   `ext-session-lock-v1`. **Requisito nuovo: nessun `swaylock`/`waylock`/`hyprlock` nell'immagine.**
+1. **the autostart that LXQt proposes for labwc** launches `swayidle -w timeout 300 "wlopm --off *"` — and
+   `~/.config/labwc/` is copied **only once** (`if [ ! -d … ]`), so a wrong
+   configuration is **permanent**;
+2. ⛔ **if a locker is installed, the lock really succeeds**, because labwc implements
+   `ext-session-lock-v1`. **New requirement: no `swaylock`/`waylock`/`hyprlock` in the image.**
 
-⭐ **E c'è una leva che non dipende dal desktop, ed è la migliore**: labwc crea
-`zwp_idle_inhibit_manager_v1` **incondizionatamente** (`idle.c:81`), e un inibitore fa
-`wlr_idle_notifier_v1_set_inhibited(true)`, che **disarma ogni timer `ext-idle-notify`**. Cioè
-spegniamo il sorvegliante alla fonte, **qualunque cosa dica la configurazione di LXQt**, senza
-chiedere niente a nessuno. ⛔ Non ferma però un `set_mode(OFF)` diretto: la cura di wayvnc
-(riaccendere prima di catturare) resta.
+⭐ **And there is a lever that does not depend on the desktop, and it is the best one**: labwc creates
+`zwp_idle_inhibit_manager_v1` **unconditionally** (`idle.c:81`), and an inhibitor does
+`wlr_idle_notifier_v1_set_inhibited(true)`, which **disarms every `ext-idle-notify` timer**. That is,
+we turn off the watcher at the source, **whatever LXQt's configuration says**, without
+asking anyone for anything. ⛔ It does not, however, stop a direct `set_mode(OFF)`: wayvnc's cure
+(turn it back on before capturing) stays.
 
-⚠ **E una trappola di configurazione che è pura `LEZIONI.md` §1.9**: scrivere
-`enableIdlenessWatcher=false` **non basta** — il demone lo **riscrive a `true`** al primo avvio
-(`powermanagementd.cpp:112-113`). Serve **anche** `runCheckLevel=1`.
+⚠ **And a configuration trap that is pure `LEZIONI.md` §1.9**: writing
+`enableIdlenessWatcher=false` **is not enough** — the daemon **rewrites it to `true`** at first start
+(`powermanagementd.cpp:112-113`). `runCheckLevel=1` is **also** needed.
 
-#### 6.3 Le voci pericolose
+#### 6.3 The dangerous entries
 
-**[✗] Nessun KIOSK, nessun `locked=`**: le voci vanno **tolte**, non bloccate. Tre leve, tutte senza
-patch:
+**[✗] No KIOSK, no `locked=`**: the entries must be **removed**, not locked. Three levers, all without
+patches:
 
-1. `.desktop` omonimi con `Hidden=true`/`NoDisplay=true` in `$XDG_DATA_HOME/applications/` per i sette
-   file di `lxqt-leave`;
-2. **togliere `fancymenu`** dalla chiave `plugins` di `panel.conf` — è il pulsante «Leave», ed è
-   **incondizionato, senza chiave, cliccabile anche a menu non caricato** — o sostituirlo con
-   `mainmenu`, che in 2.1.4 non ha voci di energia;
-3. polkit `no` su logind, che **grigia** Suspend/Hibernate/Shutdown. ⛔ Eccezione: **«Lock screen» non
-   è mai grigiata** — non esiste una `canLock()`.
+1. same-name `.desktop` files with `Hidden=true`/`NoDisplay=true` in `$XDG_DATA_HOME/applications/` for the seven
+   `lxqt-leave` files;
+2. **remove `fancymenu`** from the `plugins` key of `panel.conf` — it is the «Leave» button, and it is
+   **unconditional, keyless, clickable even when the menu is not loaded** — or replace it with
+   `mainmenu`, which in 2.1.4 has no power entries;
+3. polkit `no` on logind, which **greys out** Suspend/Hibernate/Shutdown. ⛔ Exception: **«Lock screen» is
+   never greyed out** — there is no `canLock()`.
 
-⛔ **E il default Debian ha già una voce pericolosa di serie**: `lxqt-branding-debian` spedisce un
-`/etc/xdg/lxqt/panel.conf` con **`lxqt-leave.desktop` fissato nel quicklaunch** **[R-pkg]**.
+⛔ **And the Debian default already has a dangerous stock entry**: `lxqt-branding-debian` ships a
+`/etc/xdg/lxqt/panel.conf` with **`lxqt-leave.desktop` pinned in the quicklaunch** **[R-pkg]**.
 
-⚠ `lxqt-policykit-agent` **parte anche su Wayland** e fa `show()` + `activateWindow()`: un dialogo di
-autenticazione in una sessione non presidiata. È **[?] una decisione dell'utente**, per coerenza con
-il giudizio dato su KDE («le operazioni privilegiate nel terminale funzionano»).
+⚠ `lxqt-policykit-agent` **starts on Wayland too** and does `show()` + `activateWindow()`: an
+authentication dialog in an unattended session. It is **[?] a decision for the user**, for consistency with
+the judgement given on KDE («le operazioni privilegiate nel terminale funzionano»).
 
-✅ Le **notifiche** non rubano il fuoco (`KeyboardInteractivityNone`) e si zittiscono con
-`doNotDisturb=true`. ⛔ Ma `lxqt-leave` usa `KeyboardInteractivityExclusive`: **mentre è aperto,
-grabba la tastiera in esclusiva**.
+✅ **Notifications** do not steal focus (`KeyboardInteractivityNone`) and are silenced with
+`doNotDisturb=true`. ⛔ But `lxqt-leave` uses `KeyboardInteractivityExclusive`: **while it is open,
+it grabs the keyboard exclusively**.
 
 ---
 
-### 7. ✅ Il ridimensionamento a caldo: qui siamo l'unico comandante
+### 7. ✅ Hot resizing: here we are the only commander
 
-*È la voce in cui LXQt è **migliore** di tutti e tre i desktop precedenti.*
+*It is the item where LXQt is **better** than all three previous desktops.*
 
 | | |
 |---|---|
-| **[✗] nessun componente parla `zwlr_output_manager_v1`** | 2 sole righe in tutto l'albero, e sono stringhe che consigliano `kanshi` |
-| `lxqt-config-monitor` passa da **KScreen** | che su Wayland sceglie il backend KWayland, il quale pretende i protocolli **di KWin** — **[✗] assenti in labwc**. `isReady()` falso ⇒ plugin scartato |
-| l'unico effetto visibile | un `QMessageBox` «Platform Unsupported… use kanshi» + `exit(1)` — **ma solo se l'utente apre a mano lo strumento**. Si nasconde con un `.desktop` omonimo `NoDisplay=true` |
-| il sorvegliante DRM che rilancerebbe lo strumento | è dentro `if (isX11)`: **inerte** |
-| ⛔ **da non fare** | impostare `KSCREEN_BACKEND=QScreen`: il backend è valido ma **di sola lettura**, e `setConfig` **ritorna successo** — cioè un «Applica» che non applica |
+| **[✗] no component speaks `zwlr_output_manager_v1`** | only 2 lines in the whole tree, and they are strings recommending `kanshi` |
+| `lxqt-config-monitor` goes through **KScreen** | which on Wayland picks the KWayland backend, which demands **KWin's** protocols — **[✗] absent in labwc**. `isReady()` false ⇒ plugin discarded |
+| the only visible effect | a `QMessageBox` «Platform Unsupported… use kanshi» + `exit(1)` — **but only if the user opens the tool by hand**. It is hidden with a same-name `.desktop` `NoDisplay=true` |
+| the DRM watcher that would relaunch the tool | is inside `if (isX11)`: **inert** |
+| ⛔ **not to do** | setting `KSCREEN_BACKEND=QScreen`: the backend is valid but **read-only**, and `setConfig` **returns success** — that is an «Apply» that does not apply |
 
-**E la catena Qt regge, verificata riga per riga**: wlroots manda `logical_size` + `done`, Qt emette
-`handleScreenGeometryChange`, e ⭐ **`QWaylandWindow::reset()` ha quattro soli chiamanti, e la
-geometria non è fra questi**: niente ricreazione di superfici, niente sfarfallio, niente finestra
-nera. Le finestre le riposiziona **labwc**, che ricorda la geometria precedente; il pannello ascolta
-`QScreen::geometryChanged` e si rimette a posto.
+**And the Qt chain holds, verified line by line**: wlroots sends `logical_size` + `done`, Qt emits
+`handleScreenGeometryChange`, and ⭐ **`QWaylandWindow::reset()` has only four callers, and
+geometry is not among them**: no surface recreation, no flicker, no black
+window. Windows are repositioned by **labwc**, which remembers the previous geometry; the panel listens to
+`QScreen::geometryChanged` and puts itself back in place.
 
-⛔ **Ma il divieto di §xfce §6.1 si rafforza**: **distruggere** l'output fa montare a Qt un
-`QPlatformPlaceholderScreen` — e vale per **tutte** le applicazioni, non solo per i pezzi del
-desktop. Si ridimensiona; non si distrugge.
+⛔ **But the prohibition of §xfce §6.1 gets stronger**: **destroying** the output makes Qt mount a
+`QPlatformPlaceholderScreen` — and this applies to **all** applications, not only to the pieces of the
+desktop. You resize; you do not destroy.
 
-⚠ Una sola riserva, **[?] da misurare**: che labwc generi davvero un `output_layout.change` sul
-`set_custom_mode`, che è ciò che fa partire tutta la catena. E un difetto dichiarato upstream
-(`lxqt-panel#2432`) dice che **il pannello non segue il resize**: è il primo difetto che l'utente
-vedrebbe.
+⚠ A single reservation, **[?] to be measured**: that labwc really generates an `output_layout.change` on
+`set_custom_mode`, which is what starts the whole chain. And a fault declared upstream
+(`lxqt-panel#2432`) says that **the panel does not follow the resize**: it is the first fault the user
+would see.
 
-✅ **Scala e DPI: nessuna trappola.** LXQt **[✗]** non gestisce il DPI; a `scale=1` il testo è 1:1 e
-il `physical_size` 0×0 del nostro output headless è irrilevante, perché Qt su Wayland restituisce
-**96 dpi fissi**. A 4K il testo è nitido ma **piccolo**: la leva pulita è il **font** in
-`lxqt.conf [Qt]`, non `QT_SCALE_FACTOR` (che non tocca GTK).
+✅ **Scale and DPI: no trap.** LXQt **[✗]** does not handle DPI; at `scale=1` text is 1:1 and
+the 0×0 `physical_size` of our headless output is irrelevant, because Qt on Wayland returns
+**a fixed 96 dpi**. At 4K the text is sharp but **small**: the clean lever is the **font** in
+`lxqt.conf [Qt]`, not `QT_SCALE_FACTOR` (which does not touch GTK).
 
-✅ **Le decorazioni**: una barra sola e nessun lampo — Qt manda `unset_mode`, labwc decide per
-`rc.xml`, e LXQt spedisce `<decoration>server</decoration>`. **Non toccare né quella chiave né
+✅ **Decorations**: a single bar and no flash — Qt sends `unset_mode`, labwc decides per
+`rc.xml`, and LXQt ships `<decoration>server</decoration>`. **Touch neither that key nor
 `QT_WAYLAND_DISABLE_WINDOWDECORATION`.**
 
 ---
 
-### 8. Gli appunti, e il coinquilino
+### 8. The clipboard, and the roommate
 
-*Dettaglio: `rapporti/06-appunti-qt.md`.*
+*Detail: `rapporti/06-appunti-qt.md`.*
 
-✅ **`appunti_wlr.c` funziona così com'è, su labwc e su KWin.** La riserva aperta da §xfce §8 è
-chiusa **in positivo**.
+✅ **`appunti_wlr.c` works as it is, on labwc and on KWin.** The reservation opened by §xfce §8 is
+closed **positively**.
 
-⚠ **Ma LXQt ha un coinquilino che XFCE non aveva: `qlipper`**, che il metapacchetto `lxqt` tira come
-dipendenza (`qlipper | clipit | xfce4-clipman`) e `lxqt-core` raccomanda. Si autoavvia da
-`/etc/xdg/autostart/`, **non** ha `X-LXQt-X11-Only`, e **rimette l'ultimo elemento quando la clipboard
-si svuota** — come klipper, ma **senza marcatura e senza tetto di frequenza** (klipper almeno aveva
+⚠ **But LXQt has a roommate that XFCE did not have: `qlipper`**, which the `lxqt` metapackage pulls in as a
+dependency (`qlipper | clipit | xfce4-clipman`) and `lxqt-core` recommends. It autostarts from
+`/etc/xdg/autostart/`, does **not** have `X-LXQt-X11-Only`, and **puts back the last item when the clipboard
+is emptied** — like klipper, but **without marking and without a rate cap** (klipper at least had
 10/s).
 
-⭐ **Su Wayland è quasi inerte, e il «quasi» dipende da un `Recommends`**: qlipper è Qt5 e usa solo
-`QClipboard`, quindi senza fuoco non vede e non scrive. **Ma** in un'immagine costruita con
-`--no-install-recommends` il plugin `qtwayland5` manca, qlipper ripiega su xcb, e **via Xwayland
-rinasce coinquilino pieno**. ⚠ **Il banco deve dichiarare quale dei due casi sta misurando** — è
-esattamente la forma della lezione §2.3-bis.
+⭐ **On Wayland it is almost inert, and the «almost» depends on a `Recommends`**: qlipper is Qt5 and uses only
+`QClipboard`, so without focus it neither sees nor writes. **But** in an image built with
+`--no-install-recommends` the `qtwayland5` plugin is missing, qlipper falls back to xcb, and **via Xwayland
+it is reborn as a full roommate**. ⚠ **The bench must declare which of the two cases it is measuring** — it is
+exactly the shape of lesson §2.3-bis.
 
-**Tre cose su Qt6 che cambiano il nostro codice della clipboard:**
+**Three things about Qt6 that change our clipboard code:**
 
 | | |
 |---|---|
-| ⛔ **mai `text/markdown` in testa** | Qt6 **incolla markdown** se è il primo formato offerto (`qwidgettextcontrol.cpp:2721-2726`) |
-| `text/plain;charset=utf-8` | è presentato all'applicazione **come `text/plain`**: offriamo solo l'UTF-8 |
-| ⚠ **il tetto di lettura di Qt è 1 secondo** | contro i nostri 5: su rete lenta l'utente vede **un incolla muto** mentre il nostro registro dichiara un trasferimento riuscito. È la lezione §1.7 — *si verifica dal lato che deve ricevere* |
+| ⛔ **never `text/markdown` first** | Qt6 **pastes markdown** if it is the first format offered (`qwidgettextcontrol.cpp:2721-2726`) |
+| `text/plain;charset=utf-8` | is presented to the application **as `text/plain`**: we offer only UTF-8 |
+| ⚠ **Qt's read cap is 1 second** | against our 5: on a slow network the user sees **a silent paste** while our log declares a successful transfer. It is lesson §1.7 — *verify from the side that must receive* |
 
-✅ **La primary selection si può ignorare** (un solo uso in tutto l'albero, e **[✗]** nessuna
-configurazione che la unisca alla clipboard). ✅ Il ponte **Xwayland** è identico a XFCE, gratis nelle
-due direzioni. ✅ E su LXQt+KWin **klipper non c'è**: il suo `.desktop` è `Exec=/usr/bin/false`, è una
-libreria di plasmashell.
+✅ **The primary selection can be ignored** (a single use in the whole tree, and **[✗]** no
+configuration that merges it with the clipboard). ✅ The **Xwayland** bridge is identical to XFCE, free in both
+directions. ✅ And on LXQt+KWin **klipper is not there**: its `.desktop` is `Exec=/usr/bin/false`, it is a
+library of plasmashell.
 
 ---
 
-### 9. La configurazione: dove si scrive, e la tensione da chiudere sul banco
+### 9. The configuration: where it is written, and the tension to close on the bench
 
-⛔ **`LXQt::Settings` scrive nella casa dell'utente alla sola costruzione** (`__userfile__=true` +
-`sync()`, `lxqtsettings.cpp:53-59`), e **[✗] non esiste** né un `SystemScope` né un equivalente del
-`locked=` di xfconf. ✅ In compenso c'è un `QFileSystemWatcher`: a differenza di `xfconfd`, LXQt
-**rilegge a caldo**.
+⛔ **`LXQt::Settings` writes into the user's home merely on construction** (`__userfile__=true` +
+`sync()`, `lxqtsettings.cpp:53-59`), and **[✗] there exists** neither a `SystemScope` nor an equivalent of
+xfconf's `locked=`. ✅ On the other hand there is a `QFileSystemWatcher`: unlike `xfconfd`, LXQt
+**reloads hot**.
 
-> #### ⚠ Una tensione fra i rapporti, lasciata aperta di proposito
+> #### ⚠ A tension between the reports, left open on purpose
 >
-> | Chi | Che cosa dice |
+> | Who | What it says |
 > |---|---|
-> | `rapporti/03` | i default di sistema in **`/etc/xdg/lxqt/*.conf`** funzionano: `QSettings("lxqt", modulo)` fa fallback chiave-per-chiave, **ed è il meccanismo con cui Debian personalizza LXQt** (`lxqt-branding-debian`) |
-> | `rapporti/04` e `rapporti/05` | il percorso di sistema è **uno solo**, quello fissato alla compilazione di Qt, e i file LXQt sono installati in **`/usr/share/lxqt/`** — quindi serve `XDG_CONFIG_DIRS`, e l'unica via sicura è un **`XDG_CONFIG_HOME` effimero** |
+> | `rapporti/03` | system defaults in **`/etc/xdg/lxqt/*.conf`** work: `QSettings("lxqt", modulo)` falls back key by key, **and it is the mechanism by which Debian customises LXQt** (`lxqt-branding-debian`) |
+> | `rapporti/04` and `rapporti/05` | the system path is **only one**, the one fixed when Qt was compiled, and the LXQt files are installed in **`/usr/share/lxqt/`** — so `XDG_CONFIG_DIRS` is needed, and the only safe way is an **ephemeral `XDG_CONFIG_HOME`** |
 >
-> **Le due cose possono coesistere** — `QSettings` legge `XDG_CONFIG_DIRS`, il cui default è
-> `/etc/xdg`, e Debian può installare in tutti e due i posti. ⛔ **Ma quale percorso vinca sulla
-> nostra macchina è una misura, non una lettura**, ed è di quelle che se date per scontate costano un
-> pomeriggio: è precisamente la forma di `LEZIONI.md` §1.9. **Misura M6.**
+> **The two things can coexist** — `QSettings` reads `XDG_CONFIG_DIRS`, whose default is
+> `/etc/xdg`, and Debian can install in both places. ⛔ **But which path wins on our
+> machine is a measurement, not a reading**, and it is one of those that, if taken for granted, cost an
+> afternoon: it is precisely the shape of `LEZIONI.md` §1.9. **Measurement M6.**
 
-⭐ **Il menu ha lo stesso difetto di garcon, aggravato**: se il file `.menu` non esiste,
-`addWatchPath()` non viene **mai** chiamato ⇒ menu morto **per la vita del processo**, il plugin non
-ritenta, e all'utente remoto arriva un **`QMessageBox` modale** durante l'avvio del pannello. ✅ Ma
-**[✗] nessuna cache su disco** (`USE_MENU_CACHE=OFF`) — il difetto di KDE, l'indice costruito vuoto
-che resta vuoto, **qui non può succedere sul disco**; e **[✗]** il difetto dei sottomenu di XFCE non
-c'è, perché le directory non sono mai filtrate sull'ambiente.
+⭐ **The menu has the same defect as garcon, made worse**: if the `.menu` file does not exist,
+`addWatchPath()` is **never** called ⇒ dead menu **for the life of the process**, the plugin does not
+retry, and the remote user gets a **modal `QMessageBox`** during panel startup. ✅ But
+**[✗] no on-disk cache** (`USE_MENU_CACHE=OFF`) — the KDE defect, the index built empty
+that stays empty, **cannot happen on disk here**; and **[✗]** the XFCE submenu defect is not
+there, because directories are never filtered on the environment.
 
-⚠ **Due dipendenze fragili da tenere d'occhio**: `qt6-wayland` è solo un `Recommends` di `libqt6gui6`
-— e **la libreria** `libqt6waylandclient6` è invece dipendenza dura di `lxqt-panel`, quindi **si può
-avere la libreria senza il plugin, con apt contento**; e `lxqt-qtplugin` dipende da
-`qt6-base-private-abi (= 6.8.2)`, **uguaglianza esatta**: un aggiornamento di Qt lo spegne, e la
-sessione parte lo stesso **con un altro aspetto**.
+⚠ **Two fragile dependencies to keep an eye on**: `qt6-wayland` is only a `Recommends` of `libqt6gui6`
+— while **the library** `libqt6waylandclient6` is a hard dependency of `lxqt-panel`, so **you can
+have the library without the plugin, with apt happy**; and `lxqt-qtplugin` depends on
+`qt6-base-private-abi (= 6.8.2)`, **exact equality**: a Qt update turns it off, and the
+session starts anyway **with a different look**.
 
 ---
 
-### 10. Il piano di misure
+### 10. The measurement plan
 
-*Le prime due decidono se la fase esiste; le altre sono nell'ordine in cui mordono.*
+*The first two decide whether the phase exists; the others are in the order in which they bite.*
 
-| # | La misura | Perché è lì |
+| # | The measurement | Why it is there |
 |---|---|---|
-| **M1** | ⭐ una sessione LXQt-Wayland **composta a mano** parte davvero: `labwc -S lxqt-session` + le sei variabili di §3.2 | è la voce «da scrivere», e su Trixie non ha precedenti: nessuno l'ha mai installata da pacchetto |
-| **M2** | il controllo di prontezza è **sul bus** (`org.lxqt.session` + `moduleStateChanged`) e distingue il desktop dal **wizard** di §3.5 | il caso in cui tutto è verde e sullo schermo c'è un'altra cosa |
-| **M3** | ⭐ `set_custom_mode` a cattura viva: pannello, scrivania e applicazioni Qt seguono? | §7, e il difetto `lxqt-panel#2432` dice di no |
-| **M4** | il tema del cursore trasparente copre **compositore e client Qt**, e `~/.icons/default/index.theme` non lo scavalca | §6.1: tre canali, e basta che uno resti aperto |
-| **M5** | l'inibizione `zwp_idle_inhibit` regge, e **nessuno** spegne l'output in 10 minuti | §6.2, autostart compreso |
-| **M6** | ⭐ **quale percorso di configurazione vince**: `/etc/xdg/lxqt/` o `/usr/share/lxqt/` — e ogni valore scritto **si rilegge** | il riquadro di §9, e la lezione §1.9 |
-| **M7** | `appunti_wlr.c` contro labwc, **con e senza** qlipper vivo | §8: due casi, e vanno dichiarati entrambi |
-| **M8** | prova **guasta di proposito**: `XDG_CURRENT_DESKTOP` sbagliata, e poi `DISPLAY` ereditata | ⭐ imparare **come si legge il guasto** prima di incontrarlo sull'utente. Sono i due difetti che danno «sessione viva e inerte» con un solo `qWarning` |
+| **M1** | ⭐ an LXQt-Wayland session **assembled by hand** really starts: `labwc -S lxqt-session` + the six variables of §3.2 | it is the «to be written» item, and on Trixie it has no precedent: nobody has ever installed it from a package |
+| **M2** | the readiness check is **on the bus** (`org.lxqt.session` + `moduleStateChanged`) and tells the desktop from the **wizard** of §3.5 | the case where everything is green and on the screen there is something else |
+| **M3** | ⭐ `set_custom_mode` with live capture: do panel, desktop and Qt applications follow? | §7, and the `lxqt-panel#2432` defect says no |
+| **M4** | the transparent cursor theme covers **compositor and Qt clients**, and `~/.icons/default/index.theme` does not override it | §6.1: three channels, and it takes only one left open |
+| **M5** | the `zwp_idle_inhibit` inhibition holds, and **nobody** turns off the output in 10 minutes | §6.2, autostart included |
+| **M6** | ⭐ **which configuration path wins**: `/etc/xdg/lxqt/` or `/usr/share/lxqt/` — and every value written **reads back** | the box of §9, and lesson §1.9 |
+| **M7** | `appunti_wlr.c` against labwc, **with and without** qlipper alive | §8: two cases, and both must be declared |
+| **M8** | **deliberately broken** test: wrong `XDG_CURRENT_DESKTOP`, and then inherited `DISPLAY` | ⭐ learn **how to read the fault** before meeting it at the user's. They are the two defects that give «session alive and inert» with a single `qWarning` |
 
 ---
 
-### 11. Le lezioni che questo desktop aggiunge
+### 11. The lessons this desktop adds
 
-1. ⭐ **Manca un passo zero-bis alla ricetta**: *«questo desktop, su questa distribuzione, ha una
-   sessione Wayland?»* — due comandi (`apt-cache policy`, e cercare in `/usr/share/wayland-sessions/`).
-   Qui avrebbero cambiato la fase **prima che cominciasse**, e invece l'abbiamo scoperto al secondo
-   rapporto su dieci. Il passo zero esistente chiede *«chi lo fa al mondo?»*; questo chiede **«esiste
-   sulla macchina che abbiamo?»**, ed è più a monte.
-2. ⭐ **E una domanda 0 alle quattordici**: *«questo desktop ha un compositore, o ne ha un elenco?»*
-   Per Mutter, KWin e labwc la risposta era una sola; per LXQt sono **sette**, e cambia la forma della
-   risposta a tutte le altre — perché le domande vanno fatte al compositore, non al desktop.
-3. ⚠ **Un pacchetto assente non è una funzionalità assente.** Il codice Wayland di LXQt è compilato e
-   spedito: manca **il lanciatore**. Se avessimo dedotto «LXQt non fa Wayland» dal `apt-cache policy`
-   avremmo saltato un desktop che invece è **il più facile dei quattro**.
-4. ⚠ **La versione clonata va confrontata con quella installata, sempre.** Il nostro
-   `lxqt-wayland-session` è **0.4.1** e richiede LXQt 2.4: si stava per studiare codice che su Trixie
-   non gira. Per gli altri sedici repository le versioni coincidono, e questo è l'unico che avrebbe
-   mentito.
-5. ⭐ **Il quarto desktop conferma che l'asse giusto è il compositore, non il desktop** — che
-   `SPECIFICA.md` §3.8 diceva già, ma ora ha un numero: **8 combinazioni su 9 coperte dopo la sola
-   fase wlroots**, e quattro di quelle le porta LXQt senza una riga.
+1. ⭐ **The recipe lacks a step zero-bis**: *«does this desktop, on this distribution, have a
+   Wayland session?»* — two commands (`apt-cache policy`, and looking in `/usr/share/wayland-sessions/`).
+   Here they would have changed the phase **before it began**, and instead we discovered it at the second
+   report out of ten. The existing step zero asks *«who does it in the world?»*; this one asks **«does it exist
+   on the machine we have?»**, and it is further upstream.
+2. ⭐ **And a question 0 to the fourteen**: *«does this desktop have a compositor, or a list of them?»*
+   For Mutter, KWin and labwc the answer was a single one; for LXQt there are **seven**, and it changes the shape of the
+   answer to all the others — because the questions must be asked to the compositor, not to the desktop.
+3. ⚠ **An absent package is not an absent feature.** LXQt's Wayland code is compiled and
+   shipped: what is missing is **the launcher**. Had we deduced «LXQt does not do Wayland» from `apt-cache policy`
+   we would have skipped a desktop that is instead **the easiest of the four**.
+4. ⚠ **The cloned version must be compared with the installed one, always.** Our
+   `lxqt-wayland-session` is **0.4.1** and requires LXQt 2.4: we were about to study code that does not run
+   on Trixie. For the other sixteen repositories the versions match, and this is the only one that would have
+   lied.
+5. ⭐ **The fourth desktop confirms that the right axis is the compositor, not the desktop** — which
+   `SPECIFICA.md` §3.8 already said, but now it has a number: **8 combinations out of 9 covered after the wlroots
+   phase alone**, and four of those LXQt brings without a line.
 
 
 <a id="cinnamon"></a>
 
-## Cinnamon e Muffin — studio del codice, per il quinto desktop
+## Cinnamon and Muffin — code study, for the fifth desktop
 
-*Scritto il 9 agosto 2026, su `muffin` e `cinnamon` **6.7.4** (cloni del giorno stesso).*
+*Written on 9 August 2026, on `muffin` and `cinnamon` **6.7.4** (clones from the same day).*
 
-> ### ⛔ Tutto quel che segue è `[R]`. Nulla è misurato.
+> ### ⛔ Everything that follows is `[R]`. Nothing is measured.
 >
-> Questo studio è stato fatto **leggendo il codice**, e vale quel che vale una lettura: dice che
-> cosa il compositore *può* fare, non che cosa *fa* sulla nostra macchina. È la lezione che
-> `LEZIONI.md` §1.11 e il riquadro di §3 hanno già pagato su KDE — dove la lettura diceva GPU e
-> la prima misura diceva software, e ad avere ragione era il codice **ma solo dopo che la misura
-> era stata rifatta**.
+> This study was done **by reading the code**, and it is worth what a reading is worth: it says what
+> the compositor *can* do, not what it *does* on our machine. It is the lesson that
+> `LEZIONI.md` §1.11 and the box of §3 already paid for on KDE — where the reading said GPU and
+> the first measurement said software, and the code was right **but only after the measurement
+> had been redone**.
 >
-> Le ricerche negative di questo documento (*«X non esiste»*) sono state fatte con lo strumento
-> **certificato su Mutter prima dell'uso**: la prima ricerca cercava in `src/`, non trovava
-> `RecordVirtual` nemmeno in Mutter — dove c'è — perché Mutter recente tiene gli XML in
-> `data/dbus-interfaces/`. Con il percorso corretto il controllo positivo passa, e solo allora
-> l'assenza su Muffin significa qualcosa. È `LEZIONI.md` §1.9, presa sul fatto.
+> The negative searches in this document (*«X non esiste»*) were done with the tool
+> **certified on Mutter before use**: the first search looked in `src/`, did not find
+> `RecordVirtual` even in Mutter — where it is — because recent Mutter keeps the XMLs in
+> `data/dbus-interfaces/`. With the correct path the positive control passes, and only then does
+> the absence in Muffin mean something. It is `LEZIONI.md` §1.9, caught in the act.
 
 ---
 
-### 1. In due minuti
+### 1. In two minutes
 
-**Cinnamon sta a Muffin esattamente come gnome-shell sta a Mutter**: il binario `cinnamon` *è* il
-compositore — chiama `meta_get_option_context()`, `meta_plugin_manager_set_plugin_type()`,
-`meta_init()` e `meta_run()` (`cinnamon/src/main.c:327-418`). Non è un'analogia: è la stessa
-architettura, con i nomi cambiati.
+**Cinnamon is to Muffin exactly what gnome-shell is to Mutter**: the `cinnamon` binary *is* the
+compositor — it calls `meta_get_option_context()`, `meta_plugin_manager_set_plugin_type()`,
+`meta_init()` and `meta_run()` (`cinnamon/src/main.c:327-418`). It is not an analogy: it is the same
+architecture, with the names changed.
 
-Da cui la buona notizia e la cattiva, che sono la stessa cosa vista da due lati.
+Hence the good news and the bad, which are the same thing seen from two sides.
 
-⭐ **La buona**: metà di §gnome si trasferisce senza tradurre. `org.cinnamon.Muffin.ScreenCast`
-e `org.cinnamon.Muffin.RemoteDesktop` sono le interfacce di Mutter rinominate, la cattura passa da
-PipeWire come là, e **non c'è nessun cancello sul permesso** — `check_permission()` verifica solo
-che chi chiama sia lo stesso che ha creato la sessione (`meta-screen-cast-session.c:196-201`),
-esattamente come Mutter e al contrario di KWin.
+⭐ **The good**: half of §gnome transfers without translating. `org.cinnamon.Muffin.ScreenCast`
+and `org.cinnamon.Muffin.RemoteDesktop` are Mutter's interfaces renamed, capture goes through
+PipeWire as there, and **there is no permission gate** — `check_permission()` only checks
+that the caller is the same one that created the session (`meta-screen-cast-session.c:196-201`),
+exactly like Mutter and unlike KWin.
 
-⛔ **La cattiva**: il fork si è staccato dal *backend* di Mutter parecchi anni fa, e tre cose che
-REMOTIX dà per acquisite **non ci sono affatto**.
+⛔ **The bad**: the fork split from Mutter's *backend* quite a few years ago, and three things that
+REMOTIX takes for granted **are not there at all**.
 
-| Cerchiamo | In Mutter | In Muffin 6.7.4 |
+| We look for | In Mutter | In Muffin 6.7.4 |
 |---|---|---|
-| `RecordVirtual` — creare uno schermo virtuale | ✅ `data/dbus-interfaces/…ScreenCast.xml` | ⛔ **0 file** su tutto l'albero |
-| `virtual_monitor` — il monitor virtuale nel backend | ✅ 22 occorrenze in `meta-monitor-manager.c` | ⛔ **0 file** |
-| `ConnectToEIS` — l'input via libei | ✅ `…RemoteDesktop.xml`, `…InputCapture.xml` | ⛔ **0 file** |
-| `EnableClipboard` — gli appunti della sessione remota | ✅ `…RemoteDesktop.xml` | ⛔ **0 file** |
-| un backend *headless* | ✅ modo del backend nativo | ⛔ `headless` compare **solo in `src/tests/`** |
+| `RecordVirtual` — creating a virtual screen | ✅ `data/dbus-interfaces/…ScreenCast.xml` | ⛔ **0 files** in the whole tree |
+| `virtual_monitor` — the virtual monitor in the backend | ✅ 22 occurrences in `meta-monitor-manager.c` | ⛔ **0 files** |
+| `ConnectToEIS` — input via libei | ✅ `…RemoteDesktop.xml`, `…InputCapture.xml` | ⛔ **0 files** |
+| `EnableClipboard` — the remote session's clipboard | ✅ `…RemoteDesktop.xml` | ⛔ **0 files** |
+| a *headless* backend | ✅ mode of the native backend | ⛔ `headless` appears **only in `src/tests/`** |
 
-E il paradosso che spiega tutto: **i protocolli Wayland di Muffin sono aggiornatissimi** —
+And the paradox that explains everything: **Muffin's Wayland protocols are thoroughly up to date** —
 `cursor-shape`, `single-pixel-buffer`, `xdg-dialog`, `xdg-toplevel-icon`, `xdg-toplevel-tag`,
-`pointer-warp`, roba del 2024-2025. Mint tiene il passo sul lato *client* di Wayland e **non ha
-mai portato l'evoluzione del backend remoto di Mutter**. Il risultato è un compositore moderno
-con un'API di desktop remoto ferma a circa Mutter 41.
+`pointer-warp`, stuff from 2024-2025. Mint keeps pace on the *client* side of Wayland and **has never
+ported the evolution of Mutter's remote backend**. The result is a modern compositor
+with a remote desktop API frozen at roughly Mutter 41.
 
-**Il verdetto provvisorio**: Cinnamon non è escluso, ma **non è servibile con il codice che
-abbiamo**, e la sua fattibilità dipende da una misura sola, descritta in §3.3. Finché quella non
-è fatta, ogni giudizio è `[?]`.
+**The provisional verdict**: Cinnamon is not excluded, but **it cannot be served with the code we
+have**, and its feasibility depends on a single measurement, described in §3.3. Until that one is
+done, every judgement is `[?]`.
 
 ---
 
-### 2. La mappa
+### 2. The map
 
-| Dove | Che cosa |
+| Where | What |
 |---|---|
-| `muffin/src/backends/` | la parte che ci interessa, gemella di quella di Mutter |
-| `muffin/src/org.cinnamon.Muffin.{ScreenCast,RemoteDesktop,DisplayConfig,IdleMonitor}.xml` | le interfacce D-Bus — ⚠ ancora in `src/`, mentre Mutter le ha spostate in `data/dbus-interfaces/` |
-| `muffin/src/backends/meta-monitor-manager-dummy.c` | ⭐ **il pezzo che decide tutto**, vedi §3 |
-| `muffin/src/backends/native/` | il backend KMS |
-| `muffin/src/backends/x11/nested/` | il backend annidato in X11 |
-| `cinnamon/src/main.c` | il plugin che *è* il desktop |
-| `cinnamon/cinnamon-wayland.session.in` | la sessione |
+| `muffin/src/backends/` | the part we care about, twin of Mutter's |
+| `muffin/src/org.cinnamon.Muffin.{ScreenCast,RemoteDesktop,DisplayConfig,IdleMonitor}.xml` | the D-Bus interfaces — ⚠ still in `src/`, whereas Mutter moved them to `data/dbus-interfaces/` |
+| `muffin/src/backends/meta-monitor-manager-dummy.c` | ⭐ **the piece that decides everything**, see §3 |
+| `muffin/src/backends/native/` | the KMS backend |
+| `muffin/src/backends/x11/nested/` | the backend nested in X11 |
+| `cinnamon/src/main.c` | the plugin that *is* the desktop |
+| `cinnamon/cinnamon-wayland.session.in` | the session |
 
 ---
 
-### 3. ⛔ La domanda che decide: lo schermo virtuale
+### 3. ⛔ The deciding question: the virtual screen
 
-È la domanda 5 di `LEZIONI.md` §3, ed è quella che su KDE è costata più di tutte.
+It is question 5 of `LEZIONI.md` §3, and it is the one that cost the most of all on KDE.
 
-#### 3.1 La via di Mutter non esiste
+#### 3.1 Mutter's way does not exist
 
-`org.cinnamon.Muffin.ScreenCast` espone **due soli metodi di registrazione**:
+`org.cinnamon.Muffin.ScreenCast` exposes **only two recording methods**:
 
 ```
 RecordMonitor (connector, properties) → stream_path
 RecordWindow  (properties)            → stream_path
 ```
 
-Niente `RecordVirtual`, niente `RecordArea`. E non è un XML rimasto indietro rispetto al codice:
-`virtual_monitor` non compare in **nessun file** dell'albero, XML compresi.
+No `RecordVirtual`, no `RecordArea`. And it is not an XML that lagged behind the code:
+`virtual_monitor` appears in **no file** of the tree, XML included.
 
-Quindi la strada di `gnome-remote-desktop` — *creo uno schermo che non esiste e ci catturo sopra*
-— su Cinnamon **non c'è**.
+So the `gnome-remote-desktop` road — *I create a screen that does not exist and capture on it*
+— **is not there** on Cinnamon.
 
-#### 3.2 I tre backend, e perché nessuno è headless
+#### 3.2 The three backends, and why none is headless
 
-`calculate_compositor_configuration()` (`muffin/src/core/main.c:434-496`) ne sceglie uno di tre:
+`calculate_compositor_configuration()` (`muffin/src/core/main.c:434-496`) picks one of three:
 
-| Opzione | Backend | Che cosa serve |
+| Option | Backend | What it needs |
 |---|---|---|
-| `--wayland` / `--display-server` | `META_TYPE_BACKEND_NATIVE` | un dispositivo DRM con un'uscita **vera** |
-| `--nested` | `META_TYPE_BACKEND_X11_NESTED` | un server X in cui annidarsi |
-| (nessuna) | X11 compositing manager | un server X |
+| `--wayland` / `--display-server` | `META_TYPE_BACKEND_NATIVE` | a DRM device with a **real** output |
+| `--nested` | `META_TYPE_BACKEND_X11_NESTED` | an X server to nest in |
+| (none) | X11 compositing manager | an X server |
 
-**Non esiste `--headless` e non esiste `--virtual-monitor`.** Il backend nativo non ha nemmeno
-l'enumerazione dei modi che in Mutter distingue `DEFAULT` da `HEADLESS`.
+**There is no `--headless` and there is no `--virtual-monitor`.** The native backend does not even have
+the mode enumeration that in Mutter distinguishes `DEFAULT` from `HEADLESS`.
 
-#### 3.3 ⭐ Ma c'è un monitor fittizio, e due variabili d'ambiente che lo comandano
+#### 3.3 ⭐ But there is a dummy monitor, and two environment variables that drive it
 
-È il pezzo che salva lo studio, ed è la ragione per cui Cinnamon non va dichiarato fuori scope.
+It is the piece that saves the study, and it is the reason Cinnamon must not be declared out of scope.
 
 `meta_backend_create_monitor_manager()` (`muffin/src/backends/meta-backend.c:804-812`):
 
@@ -4953,73 +4953,73 @@ meta_backend_create_monitor_manager (MetaBackend *backend, GError **error)
 }
 ```
 
-⭐ **Quel controllo sta nella classe base, prima della chiamata virtuale**: `META_DUMMY_MONITORS`
-scavalca la scelta di **qualunque** backend, nativo compreso.
+⭐ **That check sits in the base class, before the virtual call**: `META_DUMMY_MONITORS`
+overrides the choice of **any** backend, native included.
 
-E la misura di quello schermo finto si detta da fuori
+And the size of that fake screen is dictated from outside
 (`meta-monitor-manager-dummy.c:148-175`, `:403-431`):
 
-| Variabile | Effetto |
+| Variable | Effect |
 |---|---|
-| `MUFFIN_DEBUG_DUMMY_MODE_SPECS` | i modi, come `1920x1080@60`, più d'uno separati da `:` |
-| `MUFFIN_DEBUG_NUM_DUMMY_MONITORS` | quanti schermi |
-| `MUFFIN_DEBUG_DUMMY_MONITOR_SCALES` | le scale |
-| `MUFFIN_DEBUG_TILED_DUMMY_MONITORS` | schermi affiancati |
+| `MUFFIN_DEBUG_DUMMY_MODE_SPECS` | the modes, like `1920x1080@60`, several separated by `:` |
+| `MUFFIN_DEBUG_NUM_DUMMY_MONITORS` | how many screens |
+| `MUFFIN_DEBUG_DUMMY_MONITOR_SCALES` | the scales |
+| `MUFFIN_DEBUG_TILED_DUMMY_MONITORS` | tiled screens |
 
-**È l'equivalente funzionale del `--virtual --width W --height H` di KWin**: la misura del desktop
-si decide **all'avvio del compositore** e non si cambia più a sessione viva — che è esattamente il
-vincolo di KDE, e che il modello della tela di `DECISIONI.md` §5.0 già assorbe.
+**It is the functional equivalent of KWin's `--virtual --width W --height H`**: the desktop size
+is decided **at compositor start** and no longer changes in a live session — which is exactly the
+KDE constraint, and which the canvas model of `DECISIONI.md` §5.0 already absorbs.
 
-#### 3.4 ⛔ Le due strade, e quale va misurata per prima
+#### 3.4 ⛔ The two roads, and which one to measure first
 
-**Strada (A) — nativo + monitor fittizio.** `META_DUMMY_MONITORS=1
+**Road (A) — native + dummy monitor.** `META_DUMMY_MONITORS=1
 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland --replace`.
-Se regge, Cinnamon gira **senza X e senza monitor**, e il costo per REMOTIX crolla.
+If it holds, Cinnamon runs **without X and without a monitor**, and the cost for REMOTIX collapses.
 
-⚠ **Ma è precisamente il tipo di deduzione che `LEZIONI.md` §1.11 vieta di dare per buona.** Che
-il gestore dei monitor sia finto non dice che il *renderer* lo sia: il backend nativo disegna via
-KMS e vuole dei CRTC su cui presentare, e con schermi inventati quei CRTC non ci sono. Può
-funzionare, può fallire all'avvio, e **può funzionare consegnando zero fotogrammi** — che è il
-modo peggiore, perché sembra riuscito.
+⚠ **But it is precisely the kind of deduction that `LEZIONI.md` §1.11 forbids taking for granted.** That
+the monitor manager is fake does not say the *renderer* is: the native backend draws via
+KMS and wants CRTCs to present on, and with invented screens those CRTCs are not there. It may
+work, it may fail at startup, and **it may work while delivering zero frames** — which is the
+worst way, because it looks like a success.
 
-**Strada (B) — annidato in Xvfb.** `--nested` usa il monitor fittizio **per costruzione**
-(`meta-backend-x11-nested.c:57-60`): è la sua unica implementazione di `create_monitor_manager`.
-Quindi la (B) funziona quasi certamente, al prezzo di un server X in più nella pila e,
-verosimilmente, di **GL software** (llvmpipe) — cioè il desktop intero disegnato in CPU, che
-`LEZIONI.md` §3 domanda 4 considera discriminante per dire se un desktop è servibile su una
-macchina da server.
+**Road (B) — nested in Xvfb.** `--nested` uses the dummy monitor **by construction**
+(`meta-backend-x11-nested.c:57-60`): it is its only implementation of `create_monitor_manager`.
+So (B) almost certainly works, at the price of one more X server in the stack and,
+probably, of **software GL** (llvmpipe) — that is, the whole desktop drawn on the CPU, which
+`LEZIONI.md` §3 question 4 considers decisive for saying whether a desktop is servable on a
+server machine.
 
-> ### Il piano: si misura (A), e (B) è il ripiego
+> ### The plan: (A) is measured, and (B) is the fallback
 >
-> La (A) è il premio e la (B) è la rete di sicurezza. **La misura si fa nell'ordine
-> (A) → (B)**, e la (A) non si dichiara riuscita perché il processo sta in piedi: si dichiara
-> riuscita quando `misura-cattura` (in `fondamenta/banchi/banco-compositori/`) conta fotogrammi su una
-> scena dichiarata e sempre in movimento. È `LEZIONI.md` §1.1 e §3.2 di `CODER.md`.
+> (A) is the prize and (B) is the safety net. **The measurement is done in the order
+> (A) → (B)**, and (A) is not declared successful because the process stays up: it is declared
+> successful when `misura-cattura` (in `fondamenta/banchi/banco-compositori/`) counts frames on a
+> declared, always-moving scene. It is `LEZIONI.md` §1.1 and §3.2 of `CODER.md`.
 
 ---
 
-### 4. La cattura: la parte che funziona
+### 4. Capture: the part that works
 
-**Pienamente implementata**, e con la stessa struttura di Mutter:
+**Fully implemented**, and with the same structure as Mutter:
 `meta-screen-cast-monitor-stream-src.c`, `meta-screen-cast-window-stream-src.c`,
-`handle_record_monitor()` a `meta-screen-cast-session.c:299`.
+`handle_record_monitor()` at `meta-screen-cast-session.c:299`.
 
-✅ **Nessun cancello.** `check_permission()` confronta il nome D-Bus di chi chiama con quello che
-ha creato la sessione — è un controllo di proprietà, non di autorizzazione. Nessun polkit, nessun
-portale, nessun campo in un file `.desktop`. Su questo Cinnamon sta con GNOME e wlroots, **non**
-con KDE.
+✅ **No gate.** `check_permission()` compares the D-Bus name of the caller with the one that
+created the session — it is an ownership check, not an authorisation check. No polkit, no
+portal, no field in a `.desktop` file. On this Cinnamon sides with GNOME and wlroots, **not**
+with KDE.
 
-`[?]` **Quel che non si può leggere**: quanti fotogrammi consegna, se il buffer arriva già
-disegnato, se il cursore finisce dentro l'immagine, quanto costa la risoluzione. Su Mutter erano
-37 al secondo `[M]`; su Muffin **non c'è ragione di supporre lo stesso numero**, perché il
-percorso di rendering è quello che è cambiato di più fra i due — ed è esattamente la deduzione
-che §1.11 vieta.
+`[?]` **What cannot be read**: how many frames it delivers, whether the buffer arrives already
+drawn, whether the cursor ends up inside the image, what resolution costs. On Mutter it was
+37 per second `[M]`; on Muffin **there is no reason to assume the same number**, because the
+rendering path is what changed the most between the two — and that is exactly the deduction
+that §1.11 forbids.
 
 ---
 
-### 5. L'input: un salto indietro di due anni
+### 5. Input: a step back of two years
 
-`org.cinnamon.Muffin.RemoteDesktop` espone i vecchi metodi di notifica:
+`org.cinnamon.Muffin.RemoteDesktop` exposes the old notify methods:
 
 ```
 NotifyKeyboardKeycode · NotifyKeyboardKeysym
@@ -5028,373 +5028,373 @@ NotifyPointerMotionRelative · NotifyPointerMotionAbsolute
 NotifyTouchDown · NotifyTouchMotion · NotifyTouchUp
 ```
 
-⛔ **Niente `ConnectToEIS`**, quindi **niente libei** — e `fondamenta/remotix-c/src/input.c` (906 righe) è
-scritto per libei, deciso il 4 agosto 2025 chiudendo la fase 3 di v1.
+⛔ **No `ConnectToEIS`**, hence **no libei** — and `fondamenta/remotix-c/src/input.c` (906 lines) is
+written for libei, decided on 4 August 2025 when closing phase 3 of v1.
 
-Le tre conseguenze:
+The three consequences:
 
-1. **serve un secondo percorso di input**, quello D-Bus, che v1 aveva scritto *prima* di passare
-   a libei e che non è sopravvissuto nel codice attuale;
-2. ⭐ **`NotifyKeyboardKeysym` esiste**, e vale la pena notarlo alla luce di `DECISIONI.md`
-   §5-bis.6: qui il *simbolo* si può iniettare direttamente, senza cercare quale tasto lo
-   produca. Non cambia la decisione — la regola resta «le lettere viaggiano come lettere» — ma su
-   Cinnamon il lato server costa meno;
-3. ⚠ **e c'è `zwp_virtual_keyboard_v1`** fra i protocolli Wayland, che sarebbe una terza strada.
-   `[?]` Da valutare solo se la seconda si rivelasse insufficiente: §0.1 di `DECISIONI.md` dice di
-   non collezionare percorsi.
+1. **a second input path is needed**, the D-Bus one, which v1 had written *before* moving
+   to libei and which did not survive in the current code;
+2. ⭐ **`NotifyKeyboardKeysym` exists**, and it is worth noting in light of `DECISIONI.md`
+   §5-bis.6: here the *symbol* can be injected directly, without looking for which key
+   produces it. It does not change the decision — the rule stays «le lettere viaggiano come lettere» — but on
+   Cinnamon the server side costs less;
+3. ⚠ **and there is `zwp_virtual_keyboard_v1`** among the Wayland protocols, which would be a third road.
+   `[?]` To be evaluated only if the second proved insufficient: §0.1 of `DECISIONI.md` says not
+   to collect paths.
 
-`[?]` **Non letto, e va letto prima di scrivere**: se `NotifyPointerMotionAbsolute` accetti un
-riferimento allo *stream* come su Mutter, e come si comporti con il monitor fittizio.
+`[?]` **Not read, and it must be read before writing**: whether `NotifyPointerMotionAbsolute` accepts a
+reference to the *stream* as on Mutter, and how it behaves with the dummy monitor.
 
 ---
 
-### 6. ⛔ Gli appunti: qui la strada non c'è proprio
+### 6. ⛔ The clipboard: here there is no road at all
 
-È il buco peggiore, e non ha un ripiego evidente.
+It is the worst hole, and it has no obvious fallback.
 
-| Via | Su Cinnamon |
+| Way | On Cinnamon |
 |---|---|
-| `EnableClipboard` sull'oggetto RemoteDesktop (la via di GNOME) | ⛔ **0 occorrenze**: l'API è precedente all'aggiunta della clipboard in Mutter |
-| `zwlr_data_control_manager_v1` (la via di KDE, XFCE e LXQt) | ⛔ **assente** dai protocolli di Muffin |
-| `ext_data_control_v1` | ⛔ assente |
+| `EnableClipboard` on the RemoteDesktop object (GNOME's way) | ⛔ **0 occurrences**: the API predates the addition of the clipboard in Mutter |
+| `zwlr_data_control_manager_v1` (the way of KDE, XFCE and LXQt) | ⛔ **absent** from Muffin's protocols |
+| `ext_data_control_v1` | ⛔ absent |
 
-Quindi **nessuno dei due file che abbiamo serve**: né `appunti_mutter.c` (450 righe), né
-`appunti_wlr.c` (796), che insieme coprono tutti e quattro gli altri desktop.
+So **neither of the two files we have is of use**: neither `appunti_mutter.c` (450 lines), nor
+`appunti_wlr.c` (796), which together cover all four other desktops.
 
-`[?]` **Le vie residue, tutte da verificare e nessuna gradevole**: fare il client `wl_data_device`
-ordinario — ma la clipboard di Wayland richiede il fuoco, e una sessione non presidiata non ce
-l'ha; passare da XWayland; o contribuire a monte. **La terza è probabilmente la sola sensata**, ed
-è la stessa conclusione a cui §kde §8.2 era arrivato per il ridimensionamento.
+`[?]` **The remaining ways, all to be verified and none pleasant**: write the ordinary `wl_data_device`
+client — but the Wayland clipboard requires focus, and an unattended session does not
+have it; go through XWayland; or contribute upstream. **The third is probably the only sensible one**, and
+it is the same conclusion that §kde §8.2 had reached for resizing.
 
-⚠ Da mettere in conto nella decisione «Cinnamon dentro o fuori»: `DECISIONI.md` §5-ter mette la
-clipboard bidirezionale fra le funzioni promesse. **Su Cinnamon oggi non è servibile.**
+⚠ To be taken into account in the «Cinnamon dentro o fuori» decision: `DECISIONI.md` §5-ter puts the
+bidirectional clipboard among the promised features. **On Cinnamon today it is not servable.**
 
 ---
 
-### 7. Che cosa si trasferisce da §gnome, e che cosa no
+### 7. What transfers from §gnome, and what does not
 
-| Argomento | Si trasferisce? |
+| Topic | Does it transfer? |
 |---|---|
-| l'architettura ScreenCast/PipeWire | ✅ **sì, quasi alla lettera** |
-| l'assenza di cancello sul permesso | ✅ sì |
-| il ciclo di vita della sessione D-Bus | ✅ probabilmente `[?]` |
-| **la revoca al blocco schermo** (`inhibit_remote_access`) | `[?]` **da verificare**, ed è importante: se c'è, vale la stessa cura di `DECISIONI.md` §4.3 |
-| `RecordVirtual` e il monitor virtuale | ⛔ no, non esistono |
-| libei e `ConnectToEIS` | ⛔ no |
-| la clipboard | ⛔ no |
-| il lockdown via `org.gnome.desktop.lockdown` | `[?]` Cinnamon ha il proprio albero di impostazioni |
+| the ScreenCast/PipeWire architecture | ✅ **yes, almost literally** |
+| the absence of a permission gate | ✅ yes |
+| the D-Bus session life cycle | ✅ probably `[?]` |
+| **revocation on screen lock** (`inhibit_remote_access`) | `[?]` **to be verified**, and it matters: if it is there, the same cure as `DECISIONI.md` §4.3 applies |
+| `RecordVirtual` and the virtual monitor | ⛔ no, they do not exist |
+| libei and `ConnectToEIS` | ⛔ no |
+| the clipboard | ⛔ no |
+| lockdown via `org.gnome.desktop.lockdown` | `[?]` Cinnamon has its own settings tree |
 
 ---
 
-### 8. Le quattordici domande di `LEZIONI.md` §3, colonna Cinnamon
+### 8. The fourteen questions of `LEZIONI.md` §3, Cinnamon column
 
-| # | Domanda | Cinnamon / Muffin 6.7.4 |
+| # | Question | Cinnamon / Muffin 6.7.4 |
 |---|---|---|
-| 1 | Come si chiede la cattura senza portale? | ✅ D-Bus `org.cinnamon.Muffin.ScreenCast` — gemella di Mutter `[R]` |
-| 2 | Spinge i fotogrammi o li fa tirare? | ✅ spinge, PipeWire `[R]` |
-| 3 | È dietro un permesso? | ✅ **no** — solo controllo di proprietà `[R]` |
-| 4 | Senza monitor, disegna sulla GPU? | ⛔ `[?]` **la domanda che decide** — vedi §3.4. Sulla strada (B) quasi certamente **no** |
-| 5 | Si può chiedere uno schermo virtuale della misura voluta? | ⛔ **no** via protocollo; ⭐ **sì** via `META_DUMMY_MONITORS` + `MUFFIN_DEBUG_DUMMY_MODE_SPECS`, all'avvio `[R]` |
-| 6 | Quanti fotogrammi consegna? | `[?]` **non deducibile da Mutter** |
-| 7 | La cadenza dichiarata come si comporta? | `[?]` |
-| 8 | Fotogrammi interi o «diff»? | `[?]` |
-| 9 | Il buffer arriva già disegnato? | `[?]` |
-| 10 | Che cosa costa la risoluzione? | `[?]` |
-| 11 | Che cosa costa la profondità di colore? | `[?]` |
-| 12-bis | Il cursore è dentro l'immagine catturata? | `[?]` — e con `DECISIONI.md` §5-bis.2 è **obbligatorio** saperlo |
-| 13 | Uno schermo virtuale si ridimensiona a caldo? | ⛔ **no** `[R]`: la misura è nell'ambiente all'avvio, come su KDE |
-| 14 | La clipboard di chi è? | ⛔ **di nessuno raggiungibile** — vedi §6 |
+| 1 | How is capture requested without a portal? | ✅ D-Bus `org.cinnamon.Muffin.ScreenCast` — twin of Mutter `[R]` |
+| 2 | Does it push frames or have them pulled? | ✅ pushes, PipeWire `[R]` |
+| 3 | Is it behind a permission? | ✅ **no** — only an ownership check `[R]` |
+| 4 | Without a monitor, does it draw on the GPU? | ⛔ `[?]` **the deciding question** — see §3.4. On road (B) almost certainly **no** |
+| 5 | Can a virtual screen of the wanted size be requested? | ⛔ **no** via protocol; ⭐ **yes** via `META_DUMMY_MONITORS` + `MUFFIN_DEBUG_DUMMY_MODE_SPECS`, at startup `[R]` |
+| 6 | How many frames does it deliver? | `[?]` **not deducible from Mutter** |
+| 7 | How does the declared rate behave? | `[?]` |
+| 8 | Whole frames or «diff»? | `[?]` |
+| 9 | Does the buffer arrive already drawn? | `[?]` |
+| 10 | What does resolution cost? | `[?]` |
+| 11 | What does colour depth cost? | `[?]` |
+| 12-bis | Is the cursor inside the captured image? | `[?]` — and with `DECISIONI.md` §5-bis.2 knowing it is **mandatory** |
+| 13 | Can a virtual screen be resized live? | ⛔ **no** `[R]`: the size is in the environment at startup, as on KDE |
+| 14 | Whose is the clipboard? | ⛔ **nobody reachable's** — see §6 |
 
-**Undici domande su quattordici restano `[?]`**, contro le undici su undici che lo studio di KDE
-aveva chiuso leggendo. Non è pigrizia dello studio: è che su KDE le risposte stavano nel codice,
-e qui le tre che contano stanno in un'esecuzione.
+**Eleven questions out of fourteen remain `[?]`**, against the eleven out of eleven that the KDE study
+had closed by reading. It is not laziness in the study: it is that on KDE the answers were in the code,
+and here the three that matter are in an execution.
 
 ---
 
-### 9. Il piano di misure, in ordine
+### 9. The measurement plan, in order
 
-Il minimo per decidere «dentro o fuori». Serve una macchina con Cinnamon 6.7 e i banchi di
+The minimum to decide «dentro o fuori». It needs a machine with Cinnamon 6.7 and the benches of
 `fondamenta/banchi/banco-compositori/`.
 
-| # | Che cosa | Come si dichiara riuscita |
+| # | What | How it is declared successful |
 |---|---|---|
-| **M1** | strada (A): `META_DUMMY_MONITORS=1 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland` da SSH, senza monitor | il compositore sta in piedi **e** `RecordMonitor` apre uno stream **e** `misura-cattura` conta fotogrammi > 0 su scena in movimento. Tre condizioni, non una |
-| **M2** | se M1 fallisce: strada (B), `--nested` dentro Xvfb | idem |
-| **M3** | i fotogrammi al secondo consegnati, con scena dichiarata | il numero, confrontabile con Mutter 37 / KWin 60 / wlroots 61 |
-| **M4** | rende in GPU o in software? | ⚠ **non** «ha aperto un render node» (§1.11): si guarda il tipo di buffer che lo stream riesce a offrire, **dopo** aver chiesto DMA-BUF |
-| **M5** | il cursore è dentro l'immagine? | si guarda un fotogramma |
-| **M6** | il blocco schermo revoca la cattura, come su GNOME? | si blocca e si guarda se lo stream muore |
+| **M1** | road (A): `META_DUMMY_MONITORS=1 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland` from SSH, without a monitor | the compositor stays up **and** `RecordMonitor` opens a stream **and** `misura-cattura` counts frames > 0 on a moving scene. Three conditions, not one |
+| **M2** | if M1 fails: road (B), `--nested` inside Xvfb | same |
+| **M3** | the frames per second delivered, with a declared scene | the number, comparable with Mutter 37 / KWin 60 / wlroots 61 |
+| **M4** | does it render on the GPU or in software? | ⚠ **not** «it opened a render node» (§1.11): look at the buffer type the stream manages to offer, **after** having asked for DMA-BUF |
+| **M5** | is the cursor inside the image? | look at a frame |
+| **M6** | does screen lock revoke the capture, as on GNOME? | lock and watch whether the stream dies |
 
-⛔ **M1 non si dichiara riuscita perché il processo non è morto.** È la forma d'errore E1: una
-condizione necessaria presa per sufficiente.
+⛔ **M1 is not declared successful because the process did not die.** It is error form E1: a
+necessary condition taken as sufficient.
 
 ---
 
-### 10. Il conto per REMOTIX
+### 10. The bill for REMOTIX
 
-**Quel che si riusa**, se M1 o M2 passano: la struttura della cattura (`cattura.c`), il ciclo di
-sessione D-Bus, e il modello della tela di `DECISIONI.md` §5.0 — che assorbe già il vincolo
-«la misura si decide all'avvio», perché lo assorbiva per KDE.
+**What is reused**, if M1 or M2 pass: the capture structure (`cattura.c`), the D-Bus session
+cycle, and the canvas model of `DECISIONI.md` §5.0 — which already absorbs the constraint
+«la misura si decide all'avvio», because it absorbed it for KDE.
 
-**Quel che va scritto nuovo**, e non è poco:
+**What must be written new**, and it is not little:
 
-| | Costo |
+| | Cost |
 |---|---|
-| un `cinnamon.c` accanto a `mutter.c` e `kwin.c` | medio — è Mutter con altri nomi |
-| **un secondo percorso di input**, D-Bus invece di libei | ⚠ **alto**: è la fase 4 di v1 rifatta |
-| **gli appunti**, che oggi non hanno strada | ⛔ **aperto** — vedi §6 |
+| a `cinnamon.c` next to `mutter.c` and `kwin.c` | medium — it is Mutter with other names |
+| **a second input path**, D-Bus instead of libei | ⚠ **high**: it is phase 4 of v1 redone |
+| **the clipboard**, which today has no road | ⛔ **open** — see §6 |
 
-**Il giudizio, dichiarato come provvisorio:** Cinnamon è il desktop che costa **più di tutti** fra
-i cinque, e le sue due difficoltà — l'input e la clipboard — non sono difficoltà di lettura ma
-funzionalità mancanti a monte. Non va dichiarato fuori scope, perché M1 potrebbe cambiare il
-conto; ma va messo **ultimo**, dopo che gli altri quattro funzionano, e la decisione va presa
-sulle misure di §9 e non su questo documento.
+**The verdict, declared as provisional:** Cinnamon is the desktop that costs **the most of all** among
+the five, and its two difficulties — input and clipboard — are not reading difficulties but
+features missing upstream. It must not be declared out of scope, because M1 could change the
+bill; but it must be put **last**, after the other four work, and the decision must be taken
+on the measurements of §9 and not on this document.
 
-⚠ **E se M1 e M2 fallissero entrambe**, Cinnamon non è servibile affatto — non per una nostra
-mancanza, ma perché un compositore che non sa disegnare senza uno schermo non può servire una
-sessione remota. In quel caso la voce si chiude, con la misura accanto.
+⚠ **And if M1 and M2 both failed**, Cinnamon is not servable at all — not through a shortcoming of ours,
+but because a compositor that cannot draw without a screen cannot serve a
+remote session. In that case the entry is closed, with the measurement next to it.
 
 
 ---
 
-# Parte III — Chi fa il nostro stesso mestiere
+# Part III — Those who do our same job
 
 
 <a id="gnome-remote-desktop"></a>
 
-## gnome-remote-desktop — studio del codice e delle funzionalità
+## gnome-remote-desktop — study of the code and the features
 
-Analisi condotta sul codice sorgente originale, clonato da `gitlab.gnome.org/GNOME/gnome-remote-desktop`:
+Analysis carried out on the original source code, cloned from `gitlab.gnome.org/GNOME/gnome-remote-desktop`:
 
-- **51.alpha** (commit `038caa60`, 9 luglio 2026) — ramo di sviluppo, usato come riferimento principale
-- **48.2** — la versione che accompagna GNOME 48, cioè quella di **Debian Trixie**, la piattaforma di
-  runtime di REMOTIX. Le differenze rispetto alla 51 sono in §17
+- **51.alpha** (commit `038caa60`, 9 July 2026) — development branch, used as the main reference
+- **48.2** — the version that comes with GNOME 48, that is the one of **Debian Trixie**, the runtime
+  platform of REMOTIX. The differences from 51 are in §17
 
-Dimensione: **68 730 righe di C** in ~200 file, più gli XML delle interfacce D-Bus e gli shader.
+Size: **68 730 lines of C** in ~200 files, plus the D-Bus interface XMLs and the shaders.
 
-Perché questo documento esiste: la specifica di REMOTIX cita `gnome-remote-desktop` ogni volta che un
-problema si è risolto (§5.4, §5.8, §5.10, questione aperta n.9), e ogni volta lo ha consultato a pezzi.
-La lezione di metodo scritta in §5.4 — *«studiare il riferimento viene prima di ipotizzare»* — chiede
-che il riferimento sia studiato **una volta sola e per intero**. Il §18 raccoglie il conto: cosa
-conferma delle decisioni di REMOTIX, cosa le smentisce, e cosa conviene copiare.
+Why this document exists: the REMOTIX specification cites `gnome-remote-desktop` every time a
+problem was solved (§5.4, §5.8, §5.10, open question no.9), and every time it consulted it in pieces.
+The method lesson written in §5.4 — *«studiare il riferimento viene prima di ipotizzare»* — asks
+that the reference be studied **once and in full**. §18 gathers the bill: what it
+confirms of REMOTIX's decisions, what it contradicts, and what is worth copying.
 
-> **E dal 3 agosto 2026 conta molto di più.** Con i vincoli posti dall'utente — **linguaggio C** e
-> **FreeRDP 3** (§8-bis di `SPECIFICA.md`) — REMOTIX e `gnome-remote-desktop` condividono linguaggio,
-> libreria RDP, compositore e client. Quello che segue non è più materiale di confronto: è codice
-> leggibile e, dove serve, trasferibile.
-
----
-
-### 1. Che cos'è
-
-Il server desktop remoto del progetto GNOME. Non è un desktop e non è un compositore: **parla al
-compositore**, esattamente come REMOTIX. Due backend di protocollo, **RDP** (predefinito, su FreeRDP 3)
-e **VNC** (opzionale, su LibVNCServer, disattivato di default in build).
-
-I mattoni sono gli stessi che REMOTIX ha scelto: **PipeWire** per i pixel, **libei** per l'input,
-**API RemoteDesktop di Mutter** per la gestione di alto livello.
-
-Licenza GPL v2 o successiva. Autori principali: Jonas Ådahl (architettura, sessione) e Pascal Nowack
-(tutto il grosso del backend RDP).
+> **And since 3 August 2026 it matters much more.** With the constraints set by the user — **C language** and
+> **FreeRDP 3** (§8-bis of `SPECIFICA.md`) — REMOTIX and `gnome-remote-desktop` share language,
+> RDP library, compositor and client. What follows is no longer comparison material: it is code
+> that is readable and, where needed, transferable.
 
 ---
 
-### 2. I quattro modi di funzionamento
+### 1. What it is
 
-Sono la struttura portante di tutto il programma: un solo eseguibile, quattro `GrdRuntimeMode`
-(`grd-daemon.c:1198`), ciascuno con la propria classe di daemon e la propria classe di impostazioni.
+The remote desktop server of the GNOME project. It is not a desktop and it is not a compositor: **it talks to the
+compositor**, exactly like REMOTIX. Two protocol backends, **RDP** (default, on FreeRDP 3)
+and **VNC** (optional, on LibVNCServer, disabled by default in the build).
 
-| Modo | Opzione | Classe | Bus | A cosa serve |
+The building blocks are the same ones REMOTIX chose: **PipeWire** for the pixels, **libei** for input,
+**Mutter's RemoteDesktop API** for high-level management.
+
+Licence GPL v2 or later. Main authors: Jonas Ådahl (architecture, session) and Pascal Nowack
+(all the bulk of the RDP backend).
+
+---
+
+### 2. The four operating modes
+
+They are the load-bearing structure of the whole program: a single executable, four `GrdRuntimeMode`
+(`grd-daemon.c:1198`), each with its own daemon class and its own settings class.
+
+| Mode | Option | Class | Bus | What it is for |
 |---|---|---|---|---|
-| `SCREEN_SHARE` | *(nessuna)* | `GrdDaemonUser` | sessione | Assistenza remota: ci si attacca alla sessione già attiva di chi è seduto davanti |
-| `HEADLESS` | `--headless` | `GrdDaemonUser` | sessione | Utente singolo, sessione grafica senza schermo avviata a parte |
-| `SYSTEM` | `--system` | `GrdDaemonSystem` | **sistema** | Accesso remoto multiutente: fa da portiere davanti a GDM |
-| `HANDOVER` | `--handover` | `GrdDaemonHandover` | sessione | Il processo che riceve la connessione consegnata dal modo `SYSTEM` |
+| `SCREEN_SHARE` | *(none)* | `GrdDaemonUser` | session | Remote assistance: attaches to the already active session of whoever sits in front |
+| `HEADLESS` | `--headless` | `GrdDaemonUser` | session | Single user, screenless graphical session started separately |
+| `SYSTEM` | `--system` | `GrdDaemonSystem` | **system** | Multi-user remote access: acts as doorkeeper in front of GDM |
+| `HANDOVER` | `--handover` | `GrdDaemonHandover` | session | The process that receives the connection handed over by `SYSTEM` mode |
 
-Unità systemd corrispondenti: `gnome-remote-desktop.service` (utente, per screen share),
-`gnome-remote-desktop-headless.service` (utente), `gnome-remote-desktop.service` (sistema).
+Corresponding systemd units: `gnome-remote-desktop.service` (user, for screen share),
+`gnome-remote-desktop-headless.service` (user), `gnome-remote-desktop.service` (system).
 
-**Il modo che assomiglia a REMOTIX è `HEADLESS`**: una sola sessione, un solo utente, il server gira
-dentro la sessione. Gli altri tre risolvono problemi che REMOTIX ha messo fuori scope (§4.2 della
-specifica: multi-tenancy e amministrazione).
+**The mode that resembles REMOTIX is `HEADLESS`**: a single session, a single user, the server runs
+inside the session. The other three solve problems that REMOTIX put out of scope (§4.2 of the
+specification: multi-tenancy and administration).
 
-#### 2.1 Il passaggio di consegne con GDM (`SYSTEM` → `HANDOVER`)
+#### 2.1 The handover with GDM (`SYSTEM` → `HANDOVER`)
 
-È il meccanismo che la specifica di REMOTIX cita in §5.6 come *«quel passaggio esiste perché
-gnome-remote-desktop deve agganciarsi alla schermata di accesso»*. Il codice conferma: sta tutto in
-`grd-daemon-system.c` (1520 righe) e `grd-daemon-handover.c` (911 righe), ed è la parte più
-complicata dell'intero programma.
+It is the mechanism that the REMOTIX specification cites in §5.6 as *«quel passaggio esiste perché
+gnome-remote-desktop deve agganciarsi alla schermata di accesso»*. The code confirms it: it all lives in
+`grd-daemon-system.c` (1520 lines) and `grd-daemon-handover.c` (911 lines), and it is the most
+complicated part of the whole program.
 
-Come funziona, in breve:
+How it works, in short:
 
-1. il daemon di sistema gira come utente dedicato `gnome-remote-desktop`, sul **bus di sistema**, e
-   ascolta sulla 3389;
-2. all'arrivo di una connessione **sbircia i primi byte del socket** (`grd-rdp-routing-token.c`)
-   cercando il prefisso `Cookie: msts=` del Routing Token, senza consumarli — con un tetto di 2
-   secondi;
-3. se il token non c'è, è un client nuovo: si autentica contro una credenziale di sistema, e attraverso
-   `org.gnome.DisplayManager.RemoteDisplayFactory` chiede a GDM di creare una sessione di accesso;
-4. quella sessione avvia un secondo `gnome-remote-desktop --handover`, che espone
-   `org.gnome.RemoteDesktop.Rdp.Handover` sul bus di sessione;
-5. il daemon di sistema manda al client una **Server Redirection PDU** (`grd_session_rdp_send_server_redirection`)
-   con routing token, credenziali e certificato del bersaglio;
-6. il client si ricollega, questa volta col token; il daemon di sistema riconosce il token e **passa
-   il socket** al processo handover, che serve la sessione.
+1. the system daemon runs as the dedicated user `gnome-remote-desktop`, on the **system bus**, and
+   listens on 3389;
+2. when a connection arrives it **peeks at the first bytes of the socket** (`grd-rdp-routing-token.c`)
+   looking for the `Cookie: msts=` prefix of the Routing Token, without consuming them — with a cap of 2
+   seconds;
+3. if the token is not there, it is a new client: it authenticates against a system credential, and through
+   `org.gnome.DisplayManager.RemoteDisplayFactory` asks GDM to create a login session;
+4. that session starts a second `gnome-remote-desktop --handover`, which exposes
+   `org.gnome.RemoteDesktop.Rdp.Handover` on the session bus;
+5. the system daemon sends the client a **Server Redirection PDU** (`grd_session_rdp_send_server_redirection`)
+   with routing token, credentials and certificate of the target;
+6. the client reconnects, this time with the token; the system daemon recognises the token and **hands
+   the socket** to the handover process, which serves the session.
 
-Il livello di sicurezza del secondo collegamento è **RDSTLS** (`FreeRDP_RdstlsSecurity = TRUE`,
-`grd-session-rdp.c:1547`) — cioè proprio quello che xrdp ha in tabella ma non implementa.
+The security level of the second connection is **RDSTLS** (`FreeRDP_RdstlsSecurity = TRUE`,
+`grd-session-rdp.c:1547`) — that is, precisely the one xrdp has in its table but does not implement.
 
-Per REMOTIX questo capitolo è **interamente fuori scope**, ma va letto una volta perché spiega perché
-il resto del programma è fatto come è fatto.
+For REMOTIX this chapter is **entirely out of scope**, but it should be read once because it explains why
+the rest of the program is made the way it is.
 
 ---
 
-### 3. Architettura dei processi
+### 3. Process architecture
 
-Un solo eseguibile principale, `gnome-remote-desktop-daemon` (in `libexecdir`), più tre utilità:
+A single main executable, `gnome-remote-desktop-daemon` (in `libexecdir`), plus three utilities:
 
-| Binario | Ruolo |
+| Binary | Role |
 |---|---|
-| `gnome-remote-desktop-daemon` | Il server vero, in tutti e quattro i modi |
-| `grdctl` | Configurazione da riga di comando (gsettings + credenziali) |
-| `gnome-remote-desktop-configuration-daemon` | Espone la configurazione su D-Bus per il pannello Impostazioni |
-| `gnome-remote-desktop-enable-service` | Abilita l'unità di sistema passando per polkit |
+| `gnome-remote-desktop-daemon` | The real server, in all four modes |
+| `grdctl` | Command-line configuration (gsettings + credentials) |
+| `gnome-remote-desktop-configuration-daemon` | Exposes the configuration on D-Bus for the Settings panel |
+| `gnome-remote-desktop-enable-service` | Enables the system unit going through polkit |
 
-**Nomi sul bus** (`grd-private.h`): `org.gnome.RemoteDesktop.User`, `.Headless`, `.Handover` sul bus
-di sessione; `org.gnome.RemoteDesktop` sul bus di sistema.
+**Names on the bus** (`grd-private.h`): `org.gnome.RemoteDesktop.User`, `.Headless`, `.Handover` on the session
+bus; `org.gnome.RemoteDesktop` on the system bus.
 
-**Thread** — sono quattro famiglie, e la divisione conta perché è la stessa che REMOTIX ha dovuto
-inventarsi (§5.7 regola 7, §5.8 regola 3):
+**Threads** — there are four families, and the split matters because it is the same one REMOTIX had to
+invent (§5.7 rule 7, §5.8 rule 3):
 
-| Thread | Chi lo crea | Cosa fa |
+| Thread | Who creates it | What it does |
 |---|---|---|
-| principale (`GMainContext` di default) | GLib | D-Bus, logind, ciclo di vita delle sessioni, layout manager |
-| **socket** (uno per sessione RDP) | `grd_session_rdp_new` | `WaitForMultipleObjects` sugli handle FreeRDP, legge il protocollo |
-| **grafica** (uno per sessione) | `grd_rdp_renderer_start` | `GMainContext` privato: codifica, invio dei frame EGFX |
-| **EGL** (uno per processo) | `GrdContext` | Tutte le operazioni GL/EGL, che devono stare su un thread solo |
-| PipeWire (uno per stream) | `pw_context` | Cattura |
+| main (default `GMainContext`) | GLib | D-Bus, logind, session life cycle, layout manager |
+| **socket** (one per RDP session) | `grd_session_rdp_new` | `WaitForMultipleObjects` on the FreeRDP handles, reads the protocol |
+| **graphics** (one per session) | `grd_rdp_renderer_start` | private `GMainContext`: encoding, sending EGFX frames |
+| **EGL** (one per process) | `GrdContext` | All GL/EGL operations, which must stay on a single thread |
+| PipeWire (one per stream) | `pw_context` | Capture |
 
-Il thread grafico ha un **`GMainContext` proprio** (`renderer->graphics_context`) e tutte le sorgenti
-grafiche vi si attaccano esplicitamente. È l'equivalente disciplinato di ciò che REMOTIX ottiene con
-i task Tokio.
-
----
-
-### 4. Dipendenze
-
-Obbligatorie sempre: glib ≥ 2.75, gio, **libpipewire ≥ 1.2**, **libei ≥ 1.3.901**, cairo, libdrm,
-epoxy, xkbcommon ≥ 1.0, libnotify, libsecret, **krb5**, **tss2** (TPM 2.0), libsystemd (opzionale ma
-necessaria per `SYSTEM`/`HANDOVER`).
-
-Per il backend RDP: **freerdp3 ≥ 3.22**, winpr3, freerdp-server3, **libva** + libva-drm, **vulkan ≥ 1.2**,
-**ffnvcodec ≥ 11.1.5** (NVENC), **fdk-aac**, **opus**, **fuse3 ≥ 3.9.1**, polkit ≥ 122, e in build
-`glslc` + `spirv-opt` per gli shader SPIR-V.
-
-Da notare per REMOTIX: **niente ffmpeg**, **niente x264**. La codifica è scritta a mano contro libva e
-contro l'API NVENC. Vedi §9.
+The graphics thread has **its own `GMainContext`** (`renderer->graphics_context`) and all graphics
+sources attach to it explicitly. It is the disciplined equivalent of what REMOTIX obtains with
+Tokio tasks.
 
 ---
 
-### 5. Il ciclo di vita di una sessione — la sequenza esatta
+### 4. Dependencies
 
-È la parte di maggior valore immediato per REMOTIX, perché è la stessa danza che §5.8 regola 1 della
-specifica ha ricostruito a tentativi. Qui c'è la versione del riferimento, letta in
+Always mandatory: glib ≥ 2.75, gio, **libpipewire ≥ 1.2**, **libei ≥ 1.3.901**, cairo, libdrm,
+epoxy, xkbcommon ≥ 1.0, libnotify, libsecret, **krb5**, **tss2** (TPM 2.0), libsystemd (optional but
+necessary for `SYSTEM`/`HANDOVER`).
+
+For the RDP backend: **freerdp3 ≥ 3.22**, winpr3, freerdp-server3, **libva** + libva-drm, **vulkan ≥ 1.2**,
+**ffnvcodec ≥ 11.1.5** (NVENC), **fdk-aac**, **opus**, **fuse3 ≥ 3.9.1**, polkit ≥ 122, and at build time
+`glslc` + `spirv-opt` for the SPIR-V shaders.
+
+Worth noting for REMOTIX: **no ffmpeg**, **no x264**. The encoding is written by hand against libva and
+against the NVENC API. See §9.
+
+---
+
+### 5. The life cycle of a session — the exact sequence
+
+It is the part of greatest immediate value for REMOTIX, because it is the same dance that §5.8 rule 1 of the
+specification reconstructed by trial and error. Here is the reference's version, read in
 `grd-session.c`.
 
 ```
 grd_session_start()
  │
- ├─ 1. org.gnome.Mutter.RemoteDesktop.CreateSession()          → percorso sessione
+ ├─ 1. org.gnome.Mutter.RemoteDesktop.CreateSession()          → session path
  │
  ├─ 2. Session.ConnectToEIS(options={})                        → fd
  │      └─ ei_new_sender() + ei_setup_backend_fd(fd)
- │         GSource su ei_get_fd(), ei_configure_name("gnome-remote-desktop")
+ │         GSource on ei_get_fd(), ei_configure_name("gnome-remote-desktop")
  │
- ├─ 3. connessione dei segnali: "closed", "selection-owner-changed",
+ ├─ 3. connecting the signals: "closed", "selection-owner-changed",
  │      "selection-transfer"
  │
  ├─ 4. org.gnome.Mutter.ScreenCast.CreateSession({
- │        "remote-desktop-session-id": <SessionId del passo 1>,
+ │        "remote-desktop-session-id": <SessionId from step 1>,
  │        "disable-animations": true })
  │
- ├─ 5. org.gnome.Mutter.RemoteDesktop.Session.Start()      ← ADESSO, non prima
+ ├─ 5. org.gnome.Mutter.RemoteDesktop.Session.Start()      ← NOW, not before
  │
  └─ 6. ScreenCast.Session.RecordVirtual({cursor-mode, is-platform:true})
-        └─ Stream proxy → Stream.Start()                   ← il flusso, non la sessione
+        └─ Stream proxy → Stream.Start()                   ← the stream, not the session
 ```
 
-**I due paletti sono identici a quelli che REMOTIX ha pagato** (§5.8 regola 1): la sessione di cattura
-si crea dichiarando `remote-desktop-session-id` *prima* di avviare il controllo, e ciò che si avvia
-alla fine è lo **Stream**, non la Session di ScreenCast.
+**The two stakes are identical to the ones REMOTIX paid for** (§5.8 rule 1): the capture session
+is created by declaring `remote-desktop-session-id` *before* starting the control, and what is started
+at the end is the **Stream**, not the ScreenCast Session.
 
-Due dettagli che REMOTIX non ha:
+Two details REMOTIX does not have:
 
-- **`disable-animations: true`** nelle opzioni della sessione di cattura. Le animazioni di GNOME su un
-  collegamento remoto costano banda e non aggiungono nulla. Una riga, da copiare.
-- **`is-platform: true`** in `RecordVirtual`. Dichiara che il monitor virtuale è «di piattaforma»,
-  cioè trattato come uno schermo vero dal punto di vista della configurazione monitor.
+- **`disable-animations: true`** in the capture session options. GNOME's animations over a
+  remote link cost bandwidth and add nothing. One line, to copy.
+- **`is-platform: true`** in `RecordVirtual`. It declares the virtual monitor «di piattaforma»,
+  that is, treated as a real screen from the point of view of the monitor configuration.
 
-**La chiusura** è simmetrica e ha lo stesso vincolo: `grd_session_stop` chiama
-`RemoteDesktop.Session.Stop`, e la cattura muore con lui. La sessione di ScreenCast **non** viene
-fermata direttamente.
+**Shutdown** is symmetrical and has the same constraint: `grd_session_stop` calls
+`RemoteDesktop.Session.Stop`, and the capture dies with it. The ScreenCast session is **not**
+stopped directly.
 
-**Come si accorge che la sessione è finita**: segnale `closed` sulla sessione di Mutter
-(`on_remote_desktop_session_closed`). Non c'è alcuna registrazione presso `gnome-session`: quella è
-un'invenzione di REMOTIX (§5.9 di `SPECIFICA.md`, `uscita.rs`), e — dati i tempi misurati là — è
-un'invenzione *migliore*, perché il segnale `closed` di Mutter arriva a smontaggio già avviato.
+**How it notices the session has ended**: the `closed` signal on Mutter's session
+(`on_remote_desktop_session_closed`). There is no registration with `gnome-session`: that is
+a REMOTIX invention (§5.9 of `SPECIFICA.md`, `uscita.rs`), and — given the timings measured there — it is
+a *better* invention, because Mutter's `closed` signal arrives when teardown has already started.
 
-L'unico punto in cui `gnome-remote-desktop` parla con `gnome-session` è
-`grd_session_manager_call_logout_sync()` (`grd-daemon-utils.c:207`), e lo fa nella direzione opposta:
-chiama `Logout(NO_CONFIRMATION)` per **chiudere** la sessione greeter quando il client se ne va nel
-modo handover.
+The only point where `gnome-remote-desktop` talks to `gnome-session` is
+`grd_session_manager_call_logout_sync()` (`grd-daemon-utils.c:207`), and it does so in the opposite direction:
+it calls `Logout(NO_CONFIRMATION)` to **close** the greeter session when the client leaves in
+handover mode.
 
 ---
 
-### 6. Il percorso RDP
+### 6. The RDP path
 
-#### 6.1 Cosa il server pretende dal client
+#### 6.1 What the server demands from the client
 
-In `rdp_peer_capabilities` e `rdp_peer_post_connect` (`grd-session-rdp.c`). Chi non soddisfa una di
-queste condizioni **viene disconnesso**:
+In `rdp_peer_capabilities` and `rdp_peer_post_connect` (`grd-session-rdp.c`). Whoever does not meet one of
+these conditions **is disconnected**:
 
-| Requisito | Riga | Motivo dichiarato nel codice |
+| Requirement | Line | Reason stated in the code |
 |---|---|---|
 | **Graphics Pipeline (EGFX)** | 1162 | *"Client did not advertise support for the Graphics Pipeline, closing connection"* |
-| **32 bpp** | 1177 | Violazione di protocollo se dichiara codec ma non 32 bit |
+| **32 bpp** | 1177 | Protocol violation if it declares codecs but not 32 bit |
 | **Desktop resize** | 1193 | *"Client doesn't support desktop resizing"* |
-| **Canale DRDYNVC** | 1199 | Senza canali dinamici non c'è EGFX |
+| **DRDYNVC channel** | 1199 | Without dynamic channels there is no EGFX |
 | **Pointer cache > 0** | 1286 | *"Client doesn't have a pointer cache"* |
 | **Fastpath output** | 1291 | *"Client does not support fastpath output"* |
 
-**Questo è il fatto che più conta per REMOTIX**: il riferimento ha preso *esattamente* la decisione di
-§3.7 della specifica — **solo EGFX, nessun ripiego legacy** — e la applica chiudendo la connessione.
-La riserva sui client Android («va verificato provandoli») trova qui una risposta indiretta: GNOME
-serve gli stessi client Android che REMOTIX ha in elenco, e li serve solo via EGFX.
+**This is the fact that matters most for REMOTIX**: the reference took *exactly* the decision of
+§3.7 of the specification — **EGFX only, no legacy fallback** — and enforces it by closing the connection.
+The reservation about Android clients («va verificato provandoli») finds an indirect answer here: GNOME
+serves the same Android clients REMOTIX has on its list, and serves them only via EGFX.
 
-Due degradazioni interessanti, entrambe sull'audio:
+Two interesting degradations, both on audio:
 
-- se il client **non sa fare autodetect di rete**, l'audio in uscita viene **spento**
-  (`grd-session-rdp.c:1316`): senza misura della banda, mandare audio peggiora il video;
-- se il client è **iOS o Android**, l'audio in uscita viene **spento comunque**
-  (`grd-session-rdp.c:1323`), con la motivazione: *«Client cannot handle graphics and audio
-  simultaneously»*. Da tenere presente: REMOTIX ha Android fra i client di riferimento **e** l'audio
-  AAC in §3.2.
+- if the client **cannot do network autodetect**, outgoing audio is **turned off**
+  (`grd-session-rdp.c:1316`): without a bandwidth measurement, sending audio makes the video worse;
+- if the client is **iOS or Android**, outgoing audio is **turned off anyway**
+  (`grd-session-rdp.c:1323`), with the reason: *«Client cannot handle graphics and audio
+  simultaneously»*. To keep in mind: REMOTIX has Android among the reference clients **and** AAC
+  audio in §3.2.
 
-#### 6.2 Come il server configura FreeRDP
+#### 6.2 How the server configures FreeRDP
 
-Estratto significativo di `init_rdp_session` (`grd-session-rdp.c:1539` e seguenti):
+Significant excerpt of `init_rdp_session` (`grd-session-rdp.c:1539` onwards):
 
 ```c
 RdpSecurity   = FALSE;      TlsSecurity = FALSE;      NlaSecurity = TRUE;
 ColorDepth    = 32;
 SupportGraphicsPipeline = TRUE;
-GfxAVC444v2   = FALSE;   GfxAVC444 = FALSE;   GfxH264 = FALSE;   /* accesi dopo, in CapsAdvertise */
+GfxAVC444v2   = FALSE;   GfxAVC444 = FALSE;   GfxH264 = FALSE;   /* turned on later, in CapsAdvertise */
 GfxSmallCache = FALSE;   GfxThinClient = FALSE;
 RemoteFxCodec = TRUE;    RemoteFxImageCodec = TRUE;   NSCodec = TRUE;
 SurfaceFrameMarkerEnabled = TRUE;   FrameMarkerCommandEnabled = TRUE;
 PointerCacheSize = 100;
 FastPathOutput = TRUE;   NetworkAutoDetect = TRUE;   RefreshRect = FALSE;
-SupportMultitransport = FALSE;                       /* niente UDP */
+SupportMultitransport = FALSE;                       /* no UDP */
 VCFlags = VCCAPS_COMPR_SC;   VCChunkSize = 16256;
 HasExtendedMouseEvent = TRUE;  HasHorizontalWheel = TRUE;  HasRelativeMouseEvent = TRUE;
 HasQoeEvent = FALSE;           UnicodeInput = TRUE;
@@ -5402,193 +5402,193 @@ AudioCapture = TRUE;   AudioPlayback = TRUE;   RemoteConsoleAudio = TRUE;
 OsMajorType = UNIX;    OsMinorType = PSEUDO_XSERVER;
 ```
 
-**`NlaSecurity = TRUE` con le altre due a `FALSE` significa che NLA è obbligatorio.** È la divergenza
-più grossa rispetto a REMOTIX, che ha scelto TLS puro (§3.6). Vedi §7.
+**`NlaSecurity = TRUE` with the other two at `FALSE` means NLA is mandatory.** It is the biggest
+divergence from REMOTIX, which chose pure TLS (§3.6). See §7.
 
-#### 6.3 Riconoscimento del client
+#### 6.3 Client recognition
 
-`grd_session_rdp_is_client_mstsc()` (`grd-session-rdp.c:251`) riconosce mstsc guardando
-`OsMajorType == WINDOWS && OsMinorType == WINDOWS_NT`. Il riferimento quindi **ammette apertamente che
-i client vanno distinti**, ed è la conferma della regola dei tre client di §5.7 di `SPECIFICA.md`.
+`grd_session_rdp_is_client_mstsc()` (`grd-session-rdp.c:251`) recognises mstsc by looking at
+`OsMajorType == WINDOWS && OsMinorType == WINDOWS_NT`. So the reference **openly admits that
+clients must be told apart**, and it is the confirmation of the three-client rule of §5.7 of `SPECIFICA.md`.
 
 ---
 
-### 7. Autenticazione
+### 7. Authentication
 
-#### 7.1 NLA obbligatorio, con due meccanismi
+#### 7.1 NLA mandatory, with two mechanisms
 
-`GrdRdpAuthMethods` è un insieme di bandiere (predefinito: `['credentials']`):
+`GrdRdpAuthMethods` is a set of flags (default: `['credentials']`):
 
-- **`credentials`** — NTLM. Il server **fabbrica un file SAM temporaneo** con l'utenza configurata
-  (`grd-rdp-sam.c`) e lo passa a FreeRDP come `NtlmSamFile`. Le credenziali non sono quelle di
-  sistema: sono una coppia utente/password specifica del desktop remoto, tenuta nel portachiavi;
-- **`kerberos`** — richiede un keytab con il principal `TERMSRV`. Dopo l'handshake, `rdp_peer_logon`
-  interroga il contesto NLA (`SECPKG_ATTR_AUTH_IDENTITY`), converte il principal in nome locale con
-  `krb5_aname_to_localname` e **verifica che l'uid corrisponda a quello del processo**
+- **`credentials`** — NTLM. The server **fabricates a temporary SAM file** with the configured account
+  (`grd-rdp-sam.c`) and passes it to FreeRDP as `NtlmSamFile`. The credentials are not the system
+  ones: they are a user/password pair specific to the remote desktop, kept in the keyring;
+- **`kerberos`** — requires a keytab with the `TERMSRV` principal. After the handshake, `rdp_peer_logon`
+  queries the NLA context (`SECPKG_ATTR_AUTH_IDENTITY`), converts the principal to a local name with
+  `krb5_aname_to_localname` and **checks that the uid matches that of the process**
   (`is_auth_identity_current_user`, `grd-session-rdp.c:991`).
 
-Quest'ultimo controllo è **la stessa regola che REMOTIX ha dovuto scoprire il 3 agosto** — «entra un
-solo utente: quello di cui il server serve la sessione», §3.4 di `SPECIFICA.md`. Il riferimento la fa
-sull'uid effettivo, esattamente come la nota di REMOTIX prescrive. Con NTLM invece non applica alcuna
-politica aggiuntiva (`"Authenticated using NTLM, not applying any additional policy"`) — e non ne ha
-bisogno, perché la credenziale NTLM è già specifica di quella sessione.
+This last check is **the same rule REMOTIX had to discover on 3 August** — «entra un
+solo utente: quello di cui il server serve la sessione», §3.4 of `SPECIFICA.md`. The reference applies it
+on the effective uid, exactly as the REMOTIX note prescribes. With NTLM instead it applies no
+additional policy (`"Authenticated using NTLM, not applying any additional policy"`) — and it does not
+need to, because the NTLM credential is already specific to that session.
 
-#### 7.2 Dove stanno le credenziali
+#### 7.2 Where the credentials live
 
-Tre implementazioni intercambiabili di `GrdCredentials`:
+Three interchangeable implementations of `GrdCredentials`:
 
-| Backend | File | Uso |
+| Backend | File | Use |
 |---|---|---|
-| **libsecret** | `grd-credentials-libsecret.c` | Modo utente: portachiavi GNOME |
-| **TPM 2.0** | `grd-credentials-tpm.c` + `grd-tpm.c` (809 righe) | Modo sistema: sigilla il segreto nel TPM |
-| **file** | `grd-credentials-file.c` | Ripiego quando non c'è TPM |
-| **one-time** | `grd-credentials-one-time.c` | Handover: credenziale usa e getta |
+| **libsecret** | `grd-credentials-libsecret.c` | User mode: GNOME keyring |
+| **TPM 2.0** | `grd-credentials-tpm.c` + `grd-tpm.c` (809 lines) | System mode: seals the secret in the TPM |
+| **file** | `grd-credentials-file.c` | Fallback when there is no TPM |
+| **one-time** | `grd-credentials-one-time.c` | Handover: throwaway credential |
 
-La variante TPM è pensata per il servizio di sistema, che gira senza sessione utente e quindi senza
-portachiavi sbloccato.
+The TPM variant is meant for the system service, which runs without a user session and therefore without
+an unlocked keyring.
 
 #### 7.3 TLS
 
-Certificato e chiave si configurano come **percorsi a file PEM** (`tls-cert`, `tls-key`); il server li
-legge e li passa a FreeRDP con `freerdp_certificate_new_from_pem` / `freerdp_key_new_from_pem`.
-Nessuna generazione automatica: il README rimanda a `winpr-makecert`, `certtool` o `openssl`.
-L'impronta del certificato viene esposta su D-Bus (`tls-fingerprint`) perché il pannello Impostazioni
-la mostri.
+Certificate and key are configured as **paths to PEM files** (`tls-cert`, `tls-key`); the server
+reads them and passes them to FreeRDP with `freerdp_certificate_new_from_pem` / `freerdp_key_new_from_pem`.
+No automatic generation: the README refers to `winpr-makecert`, `certtool` or `openssl`.
+The certificate fingerprint is exposed on D-Bus (`tls-fingerprint`) so that the Settings panel
+can show it.
 
 ---
 
-### 8. La pipeline grafica EGFX
+### 8. The EGFX graphics pipeline
 
-`grd-rdp-dvc-graphics-pipeline.c`, 2287 righe. È il file che la specifica di REMOTIX cita in §5.4.
+`grd-rdp-dvc-graphics-pipeline.c`, 2287 lines. It is the file the REMOTIX specification cites in §5.4.
 
-#### 8.1 Negoziazione delle capacità
+#### 8.1 Capability negotiation
 
-L'elenco delle versioni provate, **in ordine decrescente** (`cap_list`, riga 1567):
+The list of versions tried, **in descending order** (`cap_list`, line 1567):
 
 ```
 10.7, 10.6, 10.5, 10.4, 10.3, 10.2, 10.1, 10.0, 8.1, 8.0
 ```
 
-Si sceglie la **prima versione dell'elenco che il client dichiara**, e si conferma quella sola con un
-`CapsConfirm`. La versione decide se AVC è disponibile:
+The **first version in the list that the client declares** is chosen, and only that one is confirmed with a
+`CapsConfirm`. The version decides whether AVC is available:
 
-| Versione | AVC420 | AVC444 |
+| Version | AVC420 | AVC444 |
 |---|---|---|
-| 10.0 … 10.7 | sì, salvo `RDPGFX_CAPS_FLAG_AVC_DISABLED` | idem |
-| 8.1 | solo se `RDPGFX_CAPS_FLAG_AVC420_ENABLED` | no |
+| 10.0 … 10.7 | yes, unless `RDPGFX_CAPS_FLAG_AVC_DISABLED` | same |
+| 8.1 | only if `RDPGFX_CAPS_FLAG_AVC420_ENABLED` | no |
 | 8.0 | **no** | no |
 
-**È esattamente il difetto che REMOTIX ha pagato** (§5.4: *«elenco delle versioni EGFX troppo rado:
-mancava la famiglia 10.x intermedia, e mstsc si ferma alla 10.6»*). Questa tabella è la versione
-autorevole: dieci voci, nessun buco.
+**It is exactly the defect REMOTIX paid for** (§5.4: *«elenco delle versioni EGFX troppo rado:
+mancava la famiglia 10.x intermedia, e mstsc si ferma alla 10.6»*). This table is the
+authoritative version: ten entries, no gaps.
 
-Altre regole di protocollo applicate:
+Other protocol rules applied:
 
-- **timeout di 10 secondi** (`PROTOCOL_TIMEOUT_MS`) dall'apertura del canale: se non arriva un
-  `CapsAdvertise`, la sessione viene chiusa con `ERRINFO_BAD_CAPABILITIES`;
-- un `CapsAdvertise` **ripetuto** è lecito solo se la versione iniziale era ≥ 10.3 (è il *protocol
-  reset* previsto dalla specifica Microsoft); altrimenti è violazione;
-- un `CapsAdvertise` ripetuto che **spegnerebbe AVC** viene rifiutato con chiusura della sessione;
-- `CacheImportOffer` riceve una `CacheImportReply` **vuota** — cioè la cache non viene mai usata, come
+- **10-second timeout** (`PROTOCOL_TIMEOUT_MS`) from the opening of the channel: if no
+  `CapsAdvertise` arrives, the session is closed with `ERRINFO_BAD_CAPABILITIES`;
+- a **repeated** `CapsAdvertise` is legal only if the initial version was ≥ 10.3 (it is the *protocol
+  reset* foreseen by the Microsoft specification); otherwise it is a violation;
+- a repeated `CapsAdvertise` that **would turn off AVC** is refused by closing the session;
+- `CacheImportOffer` receives an **empty** `CacheImportReply` — that is, the cache is never used, as
   in xrdp;
-- `QoeFrameAcknowledge` è accettato e ignorato.
+- `QoeFrameAcknowledge` is accepted and ignored.
 
-#### 8.2 Superfici
+#### 8.2 Surfaces
 
-`grd_rdp_dvc_graphics_pipeline_acquire_gfx_surface` (riga 439) fa, in quest'ordine:
+`grd_rdp_dvc_graphics_pipeline_acquire_gfx_surface` (line 439) does, in this order:
 
-1. `grd_rdp_gfx_surface_new` → **`CreateSurface`** (formato `GFX_PIXEL_FORMAT_XRGB_8888`);
-2. crea il *frame controller*;
-3. **`map_surface`** → **`MapSurfaceToOutput`** con `outputOriginX/Y`.
+1. `grd_rdp_gfx_surface_new` → **`CreateSurface`** (format `GFX_PIXEL_FORMAT_XRGB_8888`);
+2. creates the *frame controller*;
+3. **`map_surface`** → **`MapSurfaceToOutput`** with `outputOriginX/Y`.
 
-**Le due chiamate sono adiacenti e nessuna delle due è opzionale.** È la conferma diretta della causa
-trovata da REMOTIX il 2 agosto (§5.4): creare la superficie e agganciarla all'uscita sono due
-operazioni distinte.
+**The two calls are adjacent and neither of them is optional.** It is the direct confirmation of the cause
+found by REMOTIX on 2 August (§5.4): creating the surface and hooking it to the output are two
+distinct operations.
 
-L'unico tipo di mappatura implementato è `MAP_TO_OUTPUT`. `MapSurfaceToWindow` e le varianti *scaled*
-non esistono, come in xrdp.
+The only mapping type implemented is `MAP_TO_OUTPUT`. `MapSurfaceToWindow` and the *scaled* variants
+do not exist, as in xrdp.
 
-**Superficie di rendering separata**: se l'allineamento richiesto dall'encoder non coincide con
-l'allineamento a 16, viene creata una *seconda* superficie EGFX, si codifica su quella, e si copia
-sulla superficie visibile con `SurfaceToSurface`. È l'unico uso di `SurfaceToSurface` nel programma.
+**Separate rendering surface**: if the alignment required by the encoder does not match
+the 16 alignment, a *second* EGFX surface is created, encoding is done on that one, and it is copied
+to the visible surface with `SurfaceToSurface`. It is the only use of `SurfaceToSurface` in the program.
 
-#### 8.3 Allineamento e geometrie — le due convenzioni
+#### 8.3 Alignment and geometries — the two conventions
 
-Nel percorso NVENC (`refresh_gfx_surface_avc420`, riga 1084):
+In the NVENC path (`refresh_gfx_surface_avc420`, line 1084):
 
 ```c
 aligned_width  = surface_width  + (surface_width  % 16 ? 16 - surface_width  % 16 : 0);
 aligned_height = surface_height + (surface_height % 64 ? 64 - surface_height % 64 : 0);
 ```
 
-**Larghezza multipla di 16, altezza multipla di 64** — identico a quanto REMOTIX ha accertato in §5.4.
+**Width a multiple of 16, height a multiple of 64** — identical to what REMOTIX established in §5.4.
 
-Sulle geometrie il codice usa **due convenzioni diverse, e questo va letto con attenzione** perché la
-specifica di REMOTIX ne registra una sola:
+On geometries the code uses **two different conventions, and this must be read carefully** because the
+REMOTIX specification records only one:
 
-| Struttura | Dove | Convenzione |
+| Structure | Where | Convention |
 |---|---|---|
-| `RECTANGLE_16` della meta AVC420 | `set_region_rects`, riga 559 | `right = x + width`, `bottom = y + height` → **esclusiva** |
-| `RDPGFX_SURFACE_COMMAND` (`cmd.right/bottom`) | riga 686 | `right = extents.x + extents.width` → **esclusiva** |
-| `MONITOR_DEF` di `ResetGraphics` | `maybe_reset_graphics`, riga 438 | `right = left + width - 1` → **inclusiva** |
+| `RECTANGLE_16` of the AVC420 meta | `set_region_rects`, line 559 | `right = x + width`, `bottom = y + height` → **exclusive** |
+| `RDPGFX_SURFACE_COMMAND` (`cmd.right/bottom`) | line 686 | `right = extents.x + extents.width` → **exclusive** |
+| `MONITOR_DEF` of `ResetGraphics` | `maybe_reset_graphics`, line 438 | `right = left + width - 1` → **inclusive** |
 
-> ⚠ **Da riverificare in REMOTIX.** §5.4 di `SPECIFICA.md` annota *«bordi della regione AVC420
-> fuori-di-uno: sono inclusivi»*. Il riferimento fa il contrario sulla regione AVC420 ed è inclusivo
-> solo sui `MONITOR_DEF`. Le due cose possono convivere se l'API di IronRDP applica già una
-> conversione, ma è un punto dove un errore di ±1 produce esattamente il sintomo descritto
-> (rinegoziazione e disconnessione), e va accertato guardando i byte, non il codice Rust.
+> ⚠ **To be re-verified in REMOTIX.** §5.4 of `SPECIFICA.md` notes *«bordi della regione AVC420
+> fuori-di-uno: sono inclusivi»*. The reference does the opposite on the AVC420 region and is inclusive
+> only on the `MONITOR_DEF`s. The two can coexist if IronRDP's API already applies a
+> conversion, but it is a point where a ±1 error produces exactly the described symptom
+> (renegotiation and disconnection), and it must be established by looking at the bytes, not at the Rust code.
 
 #### 8.4 ResetGraphics
 
-`grd_rdp_dvc_graphics_pipeline_reset_graphics` (riga 462) apre con:
+`grd_rdp_dvc_graphics_pipeline_reset_graphics` (line 462) opens with:
 
 ```c
 g_assert (g_hash_table_size (graphics_pipeline->surface_table) == 0);
 ```
 
-**Tutte le superfici devono essere state cancellate prima di ridichiarare la tela.** E l'elenco dei
-monitor non è mai vuoto: `maybe_reset_graphics` costruisce l'array dai monitor correnti, con
-`g_assert (n_monitors > 0)`. Conferma la quarta correzione di §5.4 di `SPECIFICA.md`.
+**All surfaces must have been deleted before redeclaring the canvas.** And the monitor
+list is never empty: `maybe_reset_graphics` builds the array from the current monitors, with
+`g_assert (n_monitors > 0)`. It confirms the fourth fix of §5.4 of `SPECIFICA.md`.
 
-#### 8.5 Invio di un fotogramma
+#### 8.5 Sending a frame
 
 ```
-StartFrame(frameId, timestamp)      ← timestamp = ora<<22 | min<<16 | sec<<10 | ms
+StartFrame(frameId, timestamp)      ← timestamp = hour<<22 | min<<16 | sec<<10 | ms
 SurfaceCommand(surfaceId, codecId, ...)
-[SurfaceToSurface, solo se c'è una superficie di rendering separata]
+[SurfaceToSurface, only if there is a separate rendering surface]
 EndFrame(frameId)
 ```
 
-Per RemoteFX Progressive esiste la scorciatoia `SurfaceFrameCommand`, che manda i tre PDU insieme.
+For RemoteFX Progressive there is the `SurfaceFrameCommand` shortcut, which sends the three PDUs together.
 
-Il `frameId` viene registrato in `frame_serial_table` insieme al *serial* della superficie, in modo che
-un ack in ritardo che si riferisce a una superficie già distrutta non faccia danni: il serial è
-contato a parte con `surface_serial_ref` / `unref`. È una raffinatezza che serve solo con
-ridimensionamenti frequenti.
+The `frameId` is recorded in `frame_serial_table` together with the surface *serial*, so that
+a late ack referring to an already destroyed surface does no harm: the serial is
+counted separately with `surface_serial_ref` / `unref`. It is a refinement needed only with
+frequent resizes.
 
 ---
 
-### 9. Codec ed encoder — la sorpresa
+### 9. Codecs and encoders — the surprise
 
-**`gnome-remote-desktop` non ha un encoder H.264 software.** Non usa ffmpeg, non usa x264, non usa
-OpenH264. La selezione, in `grd-rdp-render-context.c:561`:
+**`gnome-remote-desktop` has no software H.264 encoder.** It does not use ffmpeg, it does not use x264, it does not use
+OpenH264. The selection, in `grd-rdp-render-context.c:561`:
 
 ```
-il client sa fare AVC (420 o 444)  ∧  c'è VAAPI  →  AVC444v2 se il client lo sa, altrimenti AVC420
-altrimenti                                        →  RemoteFX Progressive (software)
+the client can do AVC (420 or 444)  ∧  there is VAAPI  →  AVC444v2 if the client knows it, otherwise AVC420
+otherwise                                              →  RemoteFX Progressive (software)
 ```
 
-Più un percorso separato, più vecchio, per **NVENC** (CUDA), che vive dentro la pipeline grafica e
-scavalca il resto (`refresh_gfx_surface_avc420`).
+Plus a separate, older path for **NVENC** (CUDA), which lives inside the graphics pipeline and
+bypasses the rest (`refresh_gfx_surface_avc420`).
 
-| Percorso | File | Note |
+| Path | File | Notes |
 |---|---|---|
-| **VAAPI** | `grd-encode-session-vaapi.c` (1915 righe) | Scritto **direttamente contro libva**: SPS/PPS/slice generati a mano in `grd-nal-writer.c` (886 righe) |
-| **NVENC** | `grd-hwaccel-nvidia.c` + `.cu` | Include due kernel CUDA (`grd-cuda-avc-utils.cu`, `grd-cuda-damage-utils.cu`) |
-| **Vulkan** | `grd-hwaccel-vulkan.c` (1022 righe) | **Non è un encoder**: serve per importare i DMA-BUF e convertire il colore. La codifica resta VAAPI |
-| **RFX Progressive** | `grd-rdp-sw-encoder-ca.c` | Ripiego software: usa `rfx_encode_message` di FreeRDP e riscrive il messaggio nel formato RDPEGFX |
+| **VAAPI** | `grd-encode-session-vaapi.c` (1915 lines) | Written **directly against libva**: SPS/PPS/slice generated by hand in `grd-nal-writer.c` (886 lines) |
+| **NVENC** | `grd-hwaccel-nvidia.c` + `.cu` | Includes two CUDA kernels (`grd-cuda-avc-utils.cu`, `grd-cuda-damage-utils.cu`) |
+| **Vulkan** | `grd-hwaccel-vulkan.c` (1022 lines) | **It is not an encoder**: it serves to import the DMA-BUFs and convert colour. Encoding stays VAAPI |
+| **RFX Progressive** | `grd-rdp-sw-encoder-ca.c` | Software fallback: uses FreeRDP's `rfx_encode_message` and rewrites the message in the RDPEGFX format |
 
-#### 9.1 Controllo del bitrate: non c'è
+#### 9.1 Bitrate control: there is none
 
 `grd-encode-session-vaapi.c:1696`:
 
@@ -5597,177 +5597,177 @@ config_attributes[1].type  = VAConfigAttribRateControl;
 config_attributes[1].value = VA_RC_CQP;
 ```
 
-**Quantizzazione costante, QP 22** (`picture_param->pic_init_qp = 22`, riga 923), profilo **H.264
-High**, nessuna misura del bitrate, nessun VBV, nessun target. Anche nel percorso NVENC i valori
-dichiarati nella meta sono fissi: `qp = 22`, `qualityVal = 100`.
+**Constant quantisation, QP 22** (`picture_param->pic_init_qp = 22`, line 923), **H.264
+High** profile, no bitrate measurement, no VBV, no target. In the NVENC path too the values
+declared in the meta are fixed: `qp = 22`, `qualityVal = 100`.
 
-> **Questo tocca direttamente §3.1 di `SPECIFICA.md`.** La specifica di REMOTIX motiva la scelta di
-> `libavcodec` così: *«Vulkan Video consegna il codificatore senza il controllo del bitrate, che
-> andrebbe scritto da noi… VA-API e NVENC lo forniscono già messo a punto dal costruttore»*. Il
-> riferimento mostra che **VA-API messa a nudo non regala nulla**: il controllo del bitrate è un
-> attributo di configurazione che va scelto e alimentato, e GNOME ha scelto di **non usarlo affatto**.
+> **This directly touches §3.1 of `SPECIFICA.md`.** The REMOTIX specification motivates the choice of
+> `libavcodec` like this: *«Vulkan Video delivers the encoder without bitrate control, which
+> we would have to write ourselves… VA-API and NVENC provide it already tuned by the manufacturer»*. The
+> reference shows that **bare VA-API gives nothing for free**: bitrate control is a
+> configuration attribute that must be chosen and fed, and GNOME chose **not to use it at all**.
 >
-> La conclusione non ribalta la decisione di REMOTIX — `libavcodec` la comodità la dà davvero, perché
-> incapsula VBV, GOP e preset dietro un'API sola — ma corregge la premessa: il merito è di ffmpeg, non
-> di VA-API. E soprattutto: **sul punto di lavoro dei 10 Mbps il riferimento non ha niente da
-> insegnare**, perché non ci prova nemmeno. Là REMOTIX è da solo.
+> The conclusion does not overturn REMOTIX's decision — `libavcodec` really does give the convenience, because
+> it wraps VBV, GOP and presets behind a single API — but it corrects the premise: the merit is ffmpeg's, not
+> VA-API's. And above all: **at the 10 Mbps working point the reference has nothing to
+> teach**, because it does not even try. There REMOTIX is on its own.
 
-#### 9.2 Come adatta, allora
+#### 9.2 How it adapts, then
 
-Non adattando la qualità, ma **il numero di fotogrammi**. Vedi §10.
+Not by adapting the quality, but **the number of frames**. See §10.
 
 #### 9.3 AVC444
 
-Implementato davvero, a differenza di xrdp. `prepare_avc444_bitstream` (riga 604) gestisce i tre casi
-del campo `LC`: vista doppia (`LC=0`, due flussi), sola luma (`LC=1`), sola croma (`LC=2`). Il
-`render_state` decide fotogramma per fotogramma se mandare la vista ausiliaria, ed esiste una logica di
-*upgrade* ritardato (`FRAME_UPGRADE_DELAY_US = 60 ms`, `TRANSITION_TIME_US = 200 ms`,
-`grd-rdp-surface-renderer.c`): quando il collegamento è tranquillo, il fotogramma «solo luma» già
-mandato viene **completato** con la croma poco dopo.
+Really implemented, unlike xrdp. `prepare_avc444_bitstream` (line 604) handles the three cases
+of the `LC` field: dual view (`LC=0`, two streams), luma only (`LC=1`), chroma only (`LC=2`). The
+`render_state` decides frame by frame whether to send the auxiliary view, and there is a delayed
+*upgrade* logic (`FRAME_UPGRADE_DELAY_US = 60 ms`, `TRANSITION_TIME_US = 200 ms`,
+`grd-rdp-surface-renderer.c`): when the link is quiet, the «luma only» frame already
+sent is **completed** with the chroma shortly after.
 
-È una risposta concreta alla strategia abbozzata in §5.2 di `SPECIFICA.md` (*«AVC420 come base, AVC444
-attivabile su connessioni migliori»*): il riferimento lo fa per fotogramma, non per sessione, e paga
-solo la croma quando c'è margine.
+It is a concrete answer to the strategy sketched in §5.2 of `SPECIFICA.md` (*«AVC420 as the base, AVC444
+enabled on better connections»*): the reference does it per frame, not per session, and pays
+for the chroma only when there is headroom.
 
 ---
 
-### 10. Controllo di flusso e adattamento
+### 10. Flow control and adaptation
 
-#### 10.1 Misura della rete (`grd-rdp-network-autodetection.c`)
+#### 10.1 Measuring the network (`grd-rdp-network-autodetection.c`)
 
-Usa il meccanismo di autodetect di MS-RDPBCGR:
+It uses the MS-RDPBCGR autodetect mechanism:
 
-- **RTT**: `RTTMeasureRequest` con numeri di sequenza tracciati. Due cadenze — **70 ms** quando
-  qualcuno ha bisogno di RTT preciso (cioè quando la pipeline grafica sta lavorando), **700 ms**
-  altrimenti. Media su una finestra di 500 ms;
-- **banda**: `BandwidthMeasureStart/Stop`, agganciata all'invio dei fotogrammi. Si misura **solo su
-  fotogrammi ≥ 10 KB** (`MIN_BW_MEASURE_SIZE`), per non falsare la misura con pacchetti minuscoli;
-- rilevamento di client che non rispondono: se restano più di 16 384 richieste senza risposta, il
-  codice scrive *«Protocol violation: Client leaves requests unanswered»* e azzera.
+- **RTT**: `RTTMeasureRequest` with tracked sequence numbers. Two cadences — **70 ms** when
+  someone needs a precise RTT (that is, when the graphics pipeline is working), **700 ms**
+  otherwise. Averaged over a 500 ms window;
+- **bandwidth**: `BandwidthMeasureStart/Stop`, hooked to the sending of frames. It is measured **only on
+  frames ≥ 10 KB** (`MIN_BW_MEASURE_SIZE`), so as not to skew the measurement with tiny packets;
+- detection of clients that do not answer: if more than 16 384 requests remain unanswered, the
+  code writes *«Protocol violation: Client leaves requests unanswered»* and resets.
 
-C'è anche una autodetect **al momento della connessione** (`grd-rdp-connect-time-autodetection.c`, 643
-righe), attivata dal gancio `OnConnectTimeAutoDetectBegin`.
+There is also an autodetect **at connection time** (`grd-rdp-connect-time-autodetection.c`, 643
+lines), triggered by the `OnConnectTimeAutoDetectBegin` hook.
 
-#### 10.2 Il regolatore (`grd-rdp-gfx-frame-controller.c`)
+#### 10.2 The regulator (`grd-rdp-gfx-frame-controller.c`)
 
-Tre stati: `INACTIVE`, `ACTIVE`, `ACTIVE_LOWERING_LATENCY`. La grandezza regolata è il numero di
-**«posti fotogramma»** (`total_frame_slots`) concessi al renderer: `0` significa fermo,
-`UINT32_MAX` significa nessun limite.
+Three states: `INACTIVE`, `ACTIVE`, `ACTIVE_LOWERING_LATENCY`. The regulated quantity is the number of
+**«frame slots»** (`total_frame_slots`) granted to the renderer: `0` means stopped,
+`UINT32_MAX` means no limit.
 
-La soglia di attivazione si ricava **dall'RTT**:
+The activation threshold is derived **from the RTT**:
 
 ```c
 delayed_frames = rtt_us * refresh_rate / 1e6;
 activate_throttling_th = MAX (2, MIN (delayed_frames + 2, refresh_rate));
 ```
 
-Cioè: quanti fotogrammi stanno «in volo» nel tempo di un round trip, più due. Superata quella soglia
-di fotogrammi non riscontrati, si smette di produrre; scesi a ≤ 1, si riparte senza limiti. In mezzo,
-i posti concessi sono `ack_rate + 1 − enc_rate`, cioè si produce al ritmo con cui il client conferma.
+That is: how many frames are «in flight» within a round trip, plus two. Once that threshold
+of unacknowledged frames is exceeded, production stops; once down to ≤ 1, it restarts with no limits. In between,
+the granted slots are `ack_rate + 1 − enc_rate`, that is, it produces at the rate at which the client acknowledges.
 
-**Non c'è alcun adattamento di risoluzione, né di bitrate, né di frame rate nominale.** Il refresh rate
-di riferimento è fisso: `TARGET_SURFACE_REFRESH_RATE = 60` (`grd-rdp-layout-manager.c:36`).
+**There is no adaptation of resolution, nor of bitrate, nor of nominal frame rate.** The reference
+refresh rate is fixed: `TARGET_SURFACE_REFRESH_RATE = 60` (`grd-rdp-layout-manager.c:36`).
 
-> Per REMOTIX: §3.1 di `SPECIFICA.md` prevede *«adattamento automatico di risoluzione e frame rate alla
-> banda»*, riusando la macchina della risoluzione dinamica. Il riferimento **non fa così**: regola solo
-> la cadenza di produzione, e lo fa contro il backlog di ack invece che contro la banda misurata (che
-> pure misura, e usa solo per informare il client). È una scelta più semplice e più robusta, e vale
-> come punto di partenza: la retroazione sugli ack è a costo quasi zero e va comunque implementata,
-> l'adattamento di risoluzione è la rete di sicurezza sopra.
+> For REMOTIX: §3.1 of `SPECIFICA.md` foresees *«automatic adaptation of resolution and frame rate to
+> bandwidth»*, reusing the dynamic-resolution machinery. The reference **does not do it that way**: it regulates only
+> the production cadence, and does so against the ack backlog rather than against the measured bandwidth (which
+> it does measure, and uses only to inform the client). It is a simpler and more robust choice, and it is worth
+> as a starting point: feedback on acks costs almost nothing and must be implemented anyway,
+> resolution adaptation is the safety net on top.
 
-#### 10.3 Soppressione dell'uscita
+#### 10.3 Output suppression
 
-`SuppressOutput` (MS-RDPBCGR) è gestito: quando il client minimizza la finestra, il renderer smette e
-il consumatore di RTT viene rimosso, così le sonde rallentano da 70 a 700 ms.
+`SuppressOutput` (MS-RDPBCGR) is handled: when the client minimises the window, the renderer stops and
+the RTT consumer is removed, so the probes slow down from 70 to 700 ms.
 
 ---
 
-### 11. Cattura
+### 11. Capture
 
-`grd-rdp-pipewire-stream.c`, 1326 righe.
+`grd-rdp-pipewire-stream.c`, 1326 lines.
 
-#### 11.1 Il formato proposto
+#### 11.1 The proposed format
 
 ```c
 SPA_FORMAT_VIDEO_format      = SPA_VIDEO_FORMAT_BGRx
-SPA_FORMAT_VIDEO_size        = rettangolo FISSO (larghezza, altezza del monitor virtuale)
-SPA_FORMAT_VIDEO_framerate   = 0/1                    ← «solo quando cambia»
-SPA_FORMAT_VIDEO_maxFramerate= intervallo [1/1 … refresh_rate/1]
+SPA_FORMAT_VIDEO_size        = FIXED rectangle (width, height of the virtual monitor)
+SPA_FORMAT_VIDEO_framerate   = 0/1                    ← «only when it changes»
+SPA_FORMAT_VIDEO_maxFramerate= range [1/1 … refresh_rate/1]
 ```
 
-La cadenza dichiarata a zero con un massimo a intervallo è **esattamente** quanto REMOTIX ha accertato
-in §5.6 di `SPECIFICA.md`.
+The cadence declared as zero with a ranged maximum is **exactly** what REMOTIX established
+in §5.6 of `SPECIFICA.md`.
 
-> ✅ **La divergenza è chiusa: ha ragione il riferimento.** [M, 4 agosto 2026] Con la catena in C,
-> contro Mutter 48.7, il **`SPA_POD_Rectangle` singolo funziona** e negozia esattamente la misura
-> chiesta — provato a 1282×802, con `is-platform: true` dichiarato in `RecordVirtual`. Provato anche
-> l'intervallo chiuso (min = pref = max): **funziona pure quello**, con lo stesso esito.
+> ✅ **The divergence is closed: the reference is right.** [M, 4 August 2026] With the C chain,
+> against Mutter 48.7, the **single `SPA_POD_Rectangle` works** and negotiates exactly the size
+> asked for — tried at 1282×802, with `is-platform: true` declared in `RecordVirtual`. The
+> closed range (min = pref = max) was tried too: **that works as well**, with the same outcome.
 >
-> Il `no more input formats` misurato da REMOTIX il 2 agosto era quindi un fatto della *sua* catena
-> di allora — il pacchetto Rust di PipeWire — o dell'assenza di `is-platform`. Fra le tre
-> spiegazioni ipotizzate qui, la versione di Mutter è esclusa (è la stessa); fra le altre due non si
-> è discriminato, e non ne vale la pena: la forma pulita funziona e si usa quella. §5.6 di
-> `SPECIFICA.md` è stato corretto di conseguenza.
+> The `no more input formats` measured by REMOTIX on 2 August was therefore a fact of *its* chain
+> back then — the Rust PipeWire package — or of the absence of `is-platform`. Among the three
+> explanations hypothesised here, the Mutter version is excluded (it is the same); between the other two no
+> discrimination was made, and it is not worth it: the clean form works and that is the one used. §5.6 of
+> `SPECIFICA.md` was corrected accordingly.
 >
-> Resta vero che un intervallo **aperto** lascia scegliere a Mutter, che sceglie 1280×720.
+> It remains true that an **open** range lets Mutter choose, and it chooses 1280×720.
 
 #### 11.2 DMA-BUF
 
-I modificatori si dichiarano solo se c'è un thread EGL **e non c'è NVENC**, con la proprietà marcata
-`MANDATORY | DONT_FIXATE` e chiusa da `DRM_FORMAT_MOD_INVALID`. Quando si dichiarano i modificatori si
-aggiunge sempre **un secondo formato di ripiego senza modificatori**, così se la negoziazione DMA-BUF
-fallisce resta la memoria condivisa.
+Modifiers are declared only if there is an EGL thread **and there is no NVENC**, with the property marked
+`MANDATORY | DONT_FIXATE` and closed by `DRM_FORMAT_MOD_INVALID`. When modifiers are declared,
+**a second fallback format without modifiers** is always added, so if the DMA-BUF negotiation
+fails shared memory remains.
 
-Conferma per contrasto la regola di REMOTIX (§5.6): *«per restare in memoria ordinaria non si dichiara
-il campo `modifier`»*. Il riferimento fa il contrario perché il DMA-BUF lo vuole; la meccanica è la
-stessa.
+It confirms by contrast the REMOTIX rule (§5.6): *«to stay in ordinary memory the `modifier` field
+is not declared»*. The reference does the opposite because it wants DMA-BUF; the mechanics are the
+same.
 
-Tipi di buffer accettati: `MemFd` sempre, `DmaBuf` se c'è EGL. Da 2 a 8 buffer. Con DMA-BUF ed
-**explicit sync** disponibile si chiede anche la meta `SPA_META_SyncTimeline`.
+Accepted buffer types: `MemFd` always, `DmaBuf` if there is EGL. From 2 to 8 buffers. With DMA-BUF and
+**explicit sync** available, the `SPA_META_SyncTimeline` meta is also requested.
 
-Meta richieste sempre: `SPA_META_Header` e **`SPA_META_Cursor`** (fino a 384×384) — il cursore arriva
-come metadato e viene reso a parte, non disegnato nell'immagine, salvo in modalità screen-share dove si
-usa `CURSOR_MODE_EMBEDDED`.
+Metas always requested: `SPA_META_Header` and **`SPA_META_Cursor`** (up to 384×384) — the cursor arrives
+as metadata and is rendered separately, not drawn into the image, except in screen-share mode where
+`CURSOR_MODE_EMBEDDED` is used.
 
-#### 11.3 Il ridimensionamento — la differenza che conta
+#### 11.3 Resizing — the difference that matters
 
-`grd_rdp_pipewire_stream_resize()` (riga 402) fa **una cosa sola**:
+`grd_rdp_pipewire_stream_resize()` (line 402) does **one thing only**:
 
 ```c
 add_format_params (stream, virtual_monitor, ...);   /* con la misura nuova */
 pw_stream_update_params (stream->pipewire_stream, params, n);
 ```
 
-**Nessuna nuova sessione di cattura, nessun nuovo monitor virtuale, nessun nuovo `RecordVirtual`.**
-Mutter riconfigura il monitor virtuale e risponde con `on_stream_param_changed`, dove il server
-ridimensiona rilevatore di danno e pool di buffer, e emette `video-resized`.
+**No new capture session, no new virtual monitor, no new `RecordVirtual`.**
+Mutter reconfigures the virtual monitor and answers with `on_stream_param_changed`, where the server
+resizes the damage detector and the buffer pool, and emits `video-resized`.
 
-> **È la risposta alla domanda aperta di §5.8 di `SPECIFICA.md`.** REMOTIX oggi rifà la cattura a ogni
-> cambio di misura, e siccome una cattura nuova non si registra su un controllo già avviato, **rifà
-> anche il controllo** — pagando il prezzo di perdere lo stato dei tasti premuti. La specifica annota
-> *«sparirà con la fase 6, se il ridimensionamento smetterà di rifare la cattura»*. Il riferimento
-> dimostra che si può, e come: si aggiorna il parametro del flusso PipeWire, e basta.
+> **It is the answer to the open question of §5.8 of `SPECIFICA.md`.** REMOTIX today redoes the capture at every
+> size change, and since a new capture does not register on an already started control, **it redoes
+> the control too** — paying the price of losing the state of pressed keys. The specification notes
+> *«it will disappear with phase 6, if resizing stops redoing the capture»*. The reference
+> shows that it can be done, and how: the PipeWire stream parameter is updated, and that is it.
 
-#### 11.4 Lo stride
+#### 11.4 The stride
 
-Il codice calcola `stride = width * 4` in `on_stream_param_changed`, ma è solo per dimensionare il
-pool; i dati veri si leggono sempre dal chunk (`grd-rdp-pw-buffer.c`). La regola di REMOTIX — *«lo
-stride si legge dal chunk del buffer, mai calcolato»* — resta valida e vale anche qui.
+The code computes `stride = width * 4` in `on_stream_param_changed`, but it is only to size the
+pool; the real data are always read from the chunk (`grd-rdp-pw-buffer.c`). The REMOTIX rule — *«the
+stride is read from the buffer's chunk, never computed»* — stays valid and applies here too.
 
 ---
 
-### 12. Layout e ridimensionamento
+### 12. Layout and resizing
 
-`grd-rdp-layout-manager.c`, 1043 righe. È una macchina a stati esplicita, e merita di essere copiata
-quasi così com'è.
+`grd-rdp-layout-manager.c`, 1043 lines. It is an explicit state machine, and deserves to be copied
+almost as it is.
 
 ```
-AWAIT_CONFIG ──(arriva una configurazione monitor)──► inhibit_rendering()
+AWAIT_CONFIG ──(a monitor configuration arrives)──► inhibit_rendering()
                                                        │
                                               AWAIT_INHIBITION_DONE
-                                                       │ (nessun render context in uso)
+                                                       │ (no render context in use)
                                               PREPARE_SURFACES
-                                                       │ crea/aggiorna gli stream
+                                                       │ create/update the streams
                                     ┌──────────────────┴──────────────────┐
                               AWAIT_STREAMS                        AWAIT_VIDEO_SIZES
                                     └──────────────────┬──────────────────┘
@@ -5776,63 +5776,63 @@ AWAIT_CONFIG ──(arriva una configurazione monitor)──► inhibit_renderin
                                                   AWAIT_CONFIG
 ```
 
-I punti che risolvono problemi noti a REMOTIX:
+The points that solve problems known to REMOTIX:
 
-- **il rendering viene inibito prima di toccare qualunque cosa** e riacceso solo quando *tutti* gli
-  stream hanno confermato la misura nuova. È la forma disciplinata della regola 3-bis di §5.7 di
-  `SPECIFICA.md` («dopo un cambio di misura si aspetta che il desktop si sia ridisegnato»): invece di
-  aspettare un silenzio di 300 ms, si aspetta un **evento**;
-- l'inibizione non è un flag ma un **conteggio di risorse in uso**: `inhibition-done` viene emesso
-  quando `acquired_render_contexts` è vuoto, cioè quando nessun fotogramma è a metà strada;
-- durante `AWAIT_CONFIG` — e solo allora — `grd_rdp_layout_manager_transform_position` accetta le
-  coordinate del puntatore. In ogni altro stato **l'input viene scartato**, perché la geometria non è
-  stabile;
-- una configurazione che arriva mentre se ne sta applicando un'altra **sostituisce** quella in coda
-  (`pending_monitor_config`), non si accoda. È la risposta alle raffiche di ridimensionamento che i
-  client mandano trascinando il bordo della finestra;
-- se uno stream «monitor fisico» si chiude da solo, parte un timer di **50 ms**
-  (`LAYOUT_RECREATION_TIMEOUT_MS`) che tenta di ricostruire l'ultima configurazione buona.
+- **rendering is inhibited before touching anything** and switched back on only when *all* the
+  streams have confirmed the new size. It is the disciplined form of rule 3-bis of §5.7 of
+  `SPECIFICA.md` («after a size change, wait for the desktop to have redrawn itself»): instead of
+  waiting for a 300 ms silence, it waits for an **event**;
+- inhibition is not a flag but a **count of resources in use**: `inhibition-done` is emitted
+  when `acquired_render_contexts` is empty, that is, when no frame is halfway;
+- during `AWAIT_CONFIG` — and only then — `grd_rdp_layout_manager_transform_position` accepts the
+  pointer coordinates. In every other state **input is discarded**, because the geometry is not
+  stable;
+- a configuration that arrives while another is being applied **replaces** the queued one
+  (`pending_monitor_config`), it is not queued. It is the answer to the bursts of resizing that
+  clients send while dragging the window edge;
+- if a «physical monitor» stream closes by itself, a **50 ms** timer starts
+  (`LAYOUT_RECREATION_TIMEOUT_MS`) that tries to rebuild the last good configuration.
 
-#### 12.1 Validazione della configurazione monitor
+#### 12.1 Validation of the monitor configuration
 
-`grd-rdp-monitor-config.c`. Le regole, applicate identiche alle tre sorgenti possibili (Client Core
+`grd-rdp-monitor-config.c`. The rules, applied identically to the three possible sources (Client Core
 Data, Client Monitor Data, MS-RDPEDISP):
 
-| Vincolo | Valore |
+| Constraint | Value |
 |---|---|
-| Larghezza e altezza | **200 … 8192** |
-| Dimensione fisica (mm) | 10 … 10000, altrimenti azzerata |
-| Fattore di scala | 100 … 500, altrimenti azzerato |
-| Monitor primario | deve stare a **(0, 0)**; se nessuno lo dichiara, se ne elegge uno che ci sta |
-| Sovrapposizioni | **vietate** (verifica con `cairo_region`) |
-| `DeviceScaleFactor` | **ignorato** — deprecato, solo Windows 8.1 |
+| Width and height | **200 … 8192** |
+| Physical size (mm) | 10 … 10000, otherwise zeroed |
+| Scale factor | 100 … 500, otherwise zeroed |
+| Primary monitor | must be at **(0, 0)**; if none declares it, one that is there is elected |
+| Overlaps | **forbidden** (checked with `cairo_region`) |
+| `DeviceScaleFactor` | **ignored** — deprecated, Windows 8.1 only |
 
-Il desktop complessivo è l'estensione dell'unione delle regioni; l'offset del layout serve a
-riportare tutto in coordinate non negative.
+The overall desktop is the extent of the union of the regions; the layout offset serves to
+bring everything back to non-negative coordinates.
 
-Su MS-RDPEDISP il server dichiara `MaxMonitorAreaFactorA = MaxMonitorAreaFactorB = 8192` e il numero
-massimo di monitor: **16** nei modi headless/sistema, **1** in screen share.
+On MS-RDPEDISP the server declares `MaxMonitorAreaFactorA = MaxMonitorAreaFactorB = 8192` and the maximum
+number of monitors: **16** in headless/system modes, **1** in screen share.
 
 ---
 
 ### 13. Input
 
-#### 13.1 libei, non i metodi `Notify*`
+#### 13.1 libei, not the `Notify*` methods
 
-`gnome-remote-desktop` usa `ConnectToEIS` e parla libei, come la specifica di REMOTIX già annota in
-§5.8. Vale la pena registrare **cosa se ne ricava**, perché sono cose che i metodi `Notify*` non danno:
+`gnome-remote-desktop` uses `ConnectToEIS` and speaks libei, as the REMOTIX specification already notes in
+§5.8. It is worth recording **what is gained from it**, because they are things the `Notify*` methods do not give:
 
-| Cosa | Come |
+| What | How |
 |---|---|
-| **La disposizione di tastiera della sessione** | `ei_device_keyboard_get_keymap()` → fd → `xkb_keymap_new_from_string` |
-| **Lo stato reale di BlocMaiusc e BlocNum** | evento `EI_EVENT_KEYBOARD_MODIFIERS` |
-| **Le regioni degli schermi** | `ei_device_get_region()` con `mapping_id` |
-| **Un punto di sincronizzazione** | `ei_ping` / `EI_EVENT_PONG` |
+| **The session's keyboard layout** | `ei_device_keyboard_get_keymap()` → fd → `xkb_keymap_new_from_string` |
+| **The real state of Caps Lock and Num Lock** | event `EI_EVENT_KEYBOARD_MODIFIERS` |
+| **The regions of the screens** | `ei_device_get_region()` with `mapping_id` |
+| **A synchronisation point** | `ei_ping` / `EI_EVENT_PONG` |
 
-Il primo punto è la **risposta alla questione aperta n.7 di REMOTIX** (§5.8: la disposizione di
-tastiera non viene concordata). Il riferimento non impone nulla e non chiede nulla al client: **legge
-la keymap dalla sessione**, e per gli eventi Unicode cerca quale tasto fisico produce quel simbolo
-nella disposizione corrente, applicando i modificatori di livello:
+The first point is the **answer to REMOTIX open question no.7** (§5.8: the keyboard
+layout is not agreed). The reference imposes nothing and asks the client nothing: **it reads
+the keymap from the session**, and for Unicode events it looks for which physical key produces that symbol
+in the current layout, applying the level modifiers:
 
 ```c
 pick_keycode_for_keysym_in_current_group()   /* scorre keycode × livelli */
@@ -5841,36 +5841,36 @@ ei_device_keyboard_key (evcode, state)
 evcode = xkb_keycode - 8                     /* XKB → evdev */
 ```
 
-Gli eventi di scancode invece passano diretti: scancode RDP → `GetVirtualKeyCodeFromVirtualScanCode`
-→ `GetKeycodeFromVirtualKeyCode(..., WINPR_KEYCODE_TYPE_EVDEV)`. Cioè: **le posizioni fisiche restano
-posizioni fisiche**, e il simbolo lo decide la sessione — proprio la situazione che REMOTIX descrive.
-La differenza è che il riferimento, avendo la keymap in mano, sa tradurre gli eventi Unicode con
-precisione, mentre REMOTIX oggi deve dichiarare `REMOTIX_TASTIERA`.
+Scancode events instead pass straight through: RDP scancode → `GetVirtualKeyCodeFromVirtualScanCode`
+→ `GetKeycodeFromVirtualKeyCode(..., WINPR_KEYCODE_TYPE_EVDEV)`. That is: **physical positions stay
+physical positions**, and the session decides the symbol — exactly the situation REMOTIX describes.
+The difference is that the reference, having the keymap in hand, can translate Unicode events with
+precision, while REMOTIX today has to declare `REMOTIX_TASTIERA`.
 
-> Nota pratica: con FreeRDP il KLID del client è disponibile (sta in `rdpSettings`), quindi la
-> questione n.7 si può chiudere in due modi — dichiarando la disposizione dal KLID, oppure leggendola
-> dalla sessione con libei come fa il riferimento. Il secondo è più solido, perché non si fida di come
-> il sistema operativo del client descrive la propria tastiera.
+> Practical note: with FreeRDP the client's KLID is available (it is in `rdpSettings`), so
+> question no.7 can be closed in two ways — declaring the layout from the KLID, or reading it
+> from the session with libei as the reference does. The second is more solid, because it does not trust how
+> the client's operating system describes its own keyboard.
 
-#### 13.2 Dispositivi e capacità
+#### 13.2 Devices and capabilities
 
-Alla comparsa del seat: `ei_seat_bind_capabilities(POINTER, KEYBOARD, POINTER_ABSOLUTE, BUTTON,
-SCROLL, TOUCH)`. I dispositivi arrivano poi con `EI_EVENT_DEVICE_ADDED`, e su
-`EI_EVENT_DEVICE_RESUMED` si chiama `ei_device_start_emulating` con un numero di sequenza crescente.
+When the seat appears: `ei_seat_bind_capabilities(POINTER, KEYBOARD, POINTER_ABSOLUTE, BUTTON,
+SCROLL, TOUCH)`. The devices then arrive with `EI_EVENT_DEVICE_ADDED`, and on
+`EI_EVENT_DEVICE_RESUMED` `ei_device_start_emulating` is called with an increasing sequence number.
 
-**Il puntatore assoluto lavora per regioni**: ogni regione ha un `mapping_id`, e il `mapping_id` dello
-stream di cattura fa da chiave. `transform_position` (`grd-session.c:703`) riscala le coordinate del
-client sulla regione:
+**The absolute pointer works by regions**: each region has a `mapping_id`, and the capture
+stream's `mapping_id` acts as the key. `transform_position` (`grd-session.c:703`) rescales the client's
+coordinates onto the region:
 
 ```c
 scale_x = input_rect_width / ei_region_get_width (region);
 x = ei_region_get_x (region) + motion_abs->x / scale_x;
 ```
 
-È la sostituzione elegante del percorso D-Bus dello stream che REMOTIX passa a
+It is the elegant replacement for the D-Bus stream path that REMOTIX passes to
 `NotifyPointerMotionAbsolute`.
 
-#### 13.3 La rotella
+#### 13.3 The wheel
 
 `grd-session-rdp.c:639`:
 
@@ -5879,172 +5879,172 @@ axis_value = flags & WheelRotationMask;        /* complemento a due se negativo 
 axis_step  = -axis_value / 120.0;              /* RDP conta 120 per scatto */
 if (flags & PTR_FLAGS_WHEEL_NEGATIVE) axis_step = -axis_step;
 
-verticale:   axis (0,  axis_step * 10.0)
-orizzontale: axis (-axis_step * 10.0,  0)
+vertical:    axis (0,  axis_step * 10.0)
+horizontal:  axis (-axis_step * 10.0,  0)
 ```
 
-`DISCRETE_SCROLL_STEP = 10.0`. **Il verticale è negato, l'orizzontale è negato in senso opposto** —
-conferma esatta della regola 6 di §5.8 di `SPECIFICA.md`, compreso il fattore 120 → 10.
+`DISCRETE_SCROLL_STEP = 10.0`. **The vertical is negated, the horizontal is negated in the opposite sense** —
+an exact confirmation of rule 6 of §5.8 of `SPECIFICA.md`, including the factor 120 → 10.
 
-C'è anche `grd_session_notify_pointer_axis_discrete`, che rimoltiplica per 120 verso libei.
+There is also `grd_session_notify_pointer_axis_discrete`, which multiplies back by 120 towards libei.
 
-#### 13.4 Il tasto Pausa
+#### 13.4 The Pause key
 
-Implementato con una macchina a quattro stati (`is_pause_key_sequence`, riga 738): riconosce la
-sequenza `Ctrl↓(E1) → NumLock↓ → Ctrl↑(E1) → NumLock↑` e la traduce in `XKB_KEY_Pause` premuto e
-rilasciato.
+Implemented with a four-state machine (`is_pause_key_sequence`, line 738): it recognises the
+sequence `Ctrl↓(E1) → NumLock↓ → Ctrl↑(E1) → NumLock↑` and translates it into `XKB_KEY_Pause` pressed and
+released.
 
-> Per REMOTIX: §5.8 dà il tasto Pausa per perso, perché IronRDP non consegna il flag `KBDFLAGS_EXTENDED1`.
-> Il riferimento mostra che **il flag E1 serve solo a disambiguare**: la sequenza è riconoscibile
-> anche dal solo susseguirsi di Ctrl e NumLock. Se il flag manca, la macchina a stati funziona
-> ugualmente con un rischio di falso positivo trascurabile.
+> For REMOTIX: §5.8 gives up the Pause key as lost, because IronRDP does not deliver the `KBDFLAGS_EXTENDED1` flag.
+> The reference shows that **the E1 flag only serves to disambiguate**: the sequence is recognisable
+> from the succession of Ctrl and NumLock alone. If the flag is missing, the state machine works
+> all the same with a negligible risk of false positive.
 
-#### 13.5 Tasti premuti e tasti a scatto
+#### 13.5 Pressed keys and lock keys
 
-- due tabelle, `pressed_keys` (per keycode) e `pressed_unicode_keys` (per keysym), che **scartano** la
-  pressione ripetuta e il rilascio non appaiato — identico alla regola 4 di REMOTIX;
-- alla chiusura della sessione, entrambe vengono svuotate rilasciando tutto, e la coda viene
-  **svuotata forzatamente** (`grd_rdp_event_queue_flush`);
-- l'evento di sincronizzazione RDP (`rdp_input_synchronize_event`) rilascia tutto e registra lo stato
-  atteso di BlocMaiusc/BlocNum;
-- la riconciliazione avviene **dopo un ping libei**: si aspetta che l'input in volo sia stato
-  digerito (`grd_session_flush_input_async` → `EI_EVENT_PONG`), poi si confronta lo stato atteso con
-  quello reale letto da `EI_EVENT_KEYBOARD_MODIFIERS` e, se diverge, si **preme e rilascia il tasto**.
+- two tables, `pressed_keys` (by keycode) and `pressed_unicode_keys` (by keysym), which **discard** the
+  repeated press and the unpaired release — identical to REMOTIX rule 4;
+- when the session closes, both are emptied by releasing everything, and the queue is
+  **forcibly flushed** (`grd_rdp_event_queue_flush`);
+- the RDP synchronisation event (`rdp_input_synchronize_event`) releases everything and records the expected
+  state of Caps Lock/Num Lock;
+- reconciliation happens **after a libei ping**: it waits for the input in flight to have been
+  digested (`grd_session_flush_input_async` → `EI_EVENT_PONG`), then compares the expected state with
+  the real one read from `EI_EVENT_KEYBOARD_MODIFIERS` and, if it diverges, **presses and releases the key**.
 
-Quest'ultimo punto è la versione fatta bene di ciò che §5.8 di `SPECIFICA.md` descrive come
-approssimazione (*«non esiste un modo di imporlo… il conto parte da tutti spenti»*): con libei lo
-stato reale si legge, e il ping evita di confrontarlo mentre ci sono eventi ancora in coda.
+This last point is the well-done version of what §5.8 of `SPECIFICA.md` describes as an
+approximation (*«there is no way to impose it… the count starts from all off»*): with libei the
+real state is read, and the ping avoids comparing it while events are still queued.
 
-#### 13.6 Coda degli eventi
+#### 13.6 Event queue
 
-`grd-rdp-event-queue.c`: gli eventi arrivano dal thread socket e vengono accodati; una `GSource` sul
-thread principale li svuota. **Nessuna chiamata bloccante dal ciclo del protocollo** — la regola 3 di
-§5.8 di REMOTIX, applicata identica.
+`grd-rdp-event-queue.c`: events arrive from the socket thread and are queued; a `GSource` on the
+main thread drains them. **No blocking call from the protocol loop** — rule 3 of
+§5.8 of REMOTIX, applied identically.
 
-#### 13.7 Touch e penna (MS-RDPEI)
+#### 13.7 Touch and pen (MS-RDPEI)
 
-`grd-rdp-dvc-input.c` (764 righe) implementa il canale `RDPEI`: fino a **256 contatti**, con una
-macchina a stati per contatto, più gli eventi penna. I contatti si mappano su `ei_touch` con le stesse
-regioni del puntatore assoluto.
+`grd-rdp-dvc-input.c` (764 lines) implements the `RDPEI` channel: up to **256 contacts**, with one
+state machine per contact, plus the pen events. Contacts map onto `ei_touch` with the same
+regions as the absolute pointer.
 
-> È la **questione aperta n.1 di REMOTIX** (input touch, rilevante avendo Android fra i client). Il
-> riferimento la risolve nativamente, non emulando il mouse.
+> It is **REMOTIX open question no.1** (touch input, relevant since Android is among the clients). The
+> reference solves it natively, not by emulating the mouse.
 
 ---
 
-### 14. Canali virtuali
+### 14. Virtual channels
 
-| Canale | File | Stato |
+| Channel | File | State |
 |---|---|---|
-| **RDPGFX** (EGFX) | `grd-rdp-dvc-graphics-pipeline.c` | Obbligatorio |
-| **DISP** (MS-RDPEDISP) | `grd-rdp-dvc-display-control.c` | Solo in modalità `extend` |
-| **RDPEI** (touch/penna) | `grd-rdp-dvc-input.c` | Sempre |
-| **CLIPRDR** | `grd-clipboard-rdp.c` (2674 righe!) | Se il client si unisce al canale |
-| **AUDIO_PLAYBACK** | `grd-rdp-dvc-audio-playback.c` | Se `AudioPlayback` e non `RemoteConsoleAudio` |
-| **AUDIO_INPUT** | `grd-rdp-dvc-audio-input.c` | Se `AudioCapture` |
-| **RDPECAM** (camera) | `grd-rdp-dvc-camera-*.c` | Sempre (novità della 49+) |
-| **TELEMETRY** | `grd-rdp-dvc-telemetry.c` | Sempre |
+| **RDPGFX** (EGFX) | `grd-rdp-dvc-graphics-pipeline.c` | Mandatory |
+| **DISP** (MS-RDPEDISP) | `grd-rdp-dvc-display-control.c` | Only in `extend` mode |
+| **RDPEI** (touch/pen) | `grd-rdp-dvc-input.c` | Always |
+| **CLIPRDR** | `grd-clipboard-rdp.c` (2674 lines!) | If the client joins the channel |
+| **AUDIO_PLAYBACK** | `grd-rdp-dvc-audio-playback.c` | If `AudioPlayback` and not `RemoteConsoleAudio` |
+| **AUDIO_INPUT** | `grd-rdp-dvc-audio-input.c` | If `AudioCapture` |
+| **RDPECAM** (camera) | `grd-rdp-dvc-camera-*.c` | Always (new in 49+) |
+| **TELEMETRY** | `grd-rdp-dvc-telemetry.c` | Always |
 
-Tutti derivano da `GrdRdpDvc`, che gestisce apertura, `ChannelIdAssigned`, sottoscrizione allo stato di
-creazione e smontaggio. L'inizializzazione avviene nel thread socket quando `DRDYNVC` passa a
+They all derive from `GrdRdpDvc`, which handles opening, `ChannelIdAssigned`, subscription to the creation
+state and teardown. Initialisation happens in the socket thread when `DRDYNVC` goes to
 `DRDYNVC_STATE_READY`.
 
-#### 14.1 Appunti
+#### 14.1 Clipboard
 
-`grd-clipboard-rdp.c` è il file più grosso del progetto. Copre testo (UTF-8 e UTF-16), HTML,
-immagini (BMP, TIFF, GIF, JPEG, PNG) e **file**, questi ultimi tramite un filesystem FUSE
-(`grd-rdp-fuse-clipboard.c`, 1591 righe) che espone i file del client dentro la sessione. Formati
-dichiarati in `grd-mime-type.c`.
+`grd-clipboard-rdp.c` is the largest file of the project. It covers text (UTF-8 and UTF-16), HTML,
+images (BMP, TIFF, GIF, JPEG, PNG) and **files**, the latter through a FUSE filesystem
+(`grd-rdp-fuse-clipboard.c`, 1591 lines) that exposes the client's files inside the session. Formats
+declared in `grd-mime-type.c`.
 
-REMOTIX ha la clipboard in §3.5 («bidirezionale», una riga). Il conto vero è questo: **il testo è
-poche centinaia di righe, i file sono un progetto a sé**. Vale la pena scriverlo nel piano.
+REMOTIX has the clipboard in §3.5 («bidirectional», one line). The real count is this: **text is
+a few hundred lines, files are a project of their own**. It is worth writing it into the plan.
 
 #### 14.2 Audio
 
-Uscita: si negozia il formato migliore fra quelli offerti dal client, in ordine **AAC → Opus → PCM**.
-Stereo fisso. AAC via fdk-aac, Opus a 48 kHz, PCM 16 bit. `grd-rdp-dsp.c` incapsula i tre encoder e
-implementa anche la decodifica A-law per l'ingresso.
+Output: the best format among those offered by the client is negotiated, in the order **AAC → Opus → PCM**.
+Fixed stereo. AAC via fdk-aac, Opus at 48 kHz, PCM 16 bit. `grd-rdp-dsp.c` wraps the three encoders and
+also implements A-law decoding for input.
 
-Sorgente e destinazione sono **PipeWire** (`grd-rdp-audio-output-stream.c`), non moduli PulseAudio
-compilati a parte come in xrdp. È la stessa scelta di §3.2 di `SPECIFICA.md`.
+Source and sink are **PipeWire** (`grd-rdp-audio-output-stream.c`), not PulseAudio modules
+compiled separately as in xrdp. It is the same choice as §3.2 of `SPECIFICA.md`.
 
-Il volume del client viene applicato lato server moltiplicando i campioni PCM.
+The client's volume is applied server-side by multiplying the PCM samples.
 
 #### 14.3 Camera
 
-`grd-rdp-dvc-camera-device.c` (1783 righe) + `grd-rdp-camera-stream.c`: redirezione della webcam del
-client **dentro** la sessione, esposta come sorgente PipeWire. Supporta H.264 con un decodificatore
-software (`grd-decode-session-sw-avc.c`). È fuori scope per REMOTIX, ma è la funzionalità che xrdp non
-ha e che GNOME ha aggiunto per prima.
+`grd-rdp-dvc-camera-device.c` (1783 lines) + `grd-rdp-camera-stream.c`: redirection of the client's webcam
+**into** the session, exposed as a PipeWire source. It supports H.264 with a software
+decoder (`grd-decode-session-sw-avc.c`). It is out of scope for REMOTIX, but it is the feature xrdp does not
+have and that GNOME added first.
 
 ---
 
-### 15. Configurazione
+### 15. Configuration
 
-Tutto in GSettings, sotto `org.gnome.desktop.remote-desktop`, con schemi separati per
-`rdp`, `rdp.headless`, `vnc`, `vnc.headless`. Le credenziali no: quelle stanno nel portachiavi o nel TPM.
+All in GSettings, under `org.gnome.desktop.remote-desktop`, with separate schemas for
+`rdp`, `rdp.headless`, `vnc`, `vnc.headless`. Not the credentials: those are in the keyring or in the TPM.
 
-| Chiave RDP | Predefinito | Note |
+| RDP key | Default | Notes |
 |---|---|---|
 | `port` | 3389 | |
-| `negotiate-port` | `true` | Prova i 10 porti successivi se occupato |
+| `negotiate-port` | `true` | Tries the next 10 ports if busy |
 | `enable` | `false` | |
-| `screen-share-mode` | `mirror-primary` | oppure `extend` (monitor virtuale) |
-| `tls-cert`, `tls-key` | `''` | Percorsi a file PEM |
-| `view-only` | **`true`** | Predefinito prudente: si guarda e basta |
-| `auth-methods` | `['credentials']` | `credentials` (NTLM) e/o `kerberos` |
+| `screen-share-mode` | `mirror-primary` | or `extend` (virtual monitor) |
+| `tls-cert`, `tls-key` | `''` | Paths to PEM files |
+| `view-only` | **`true`** | Prudent default: you only look |
+| `auth-methods` | `['credentials']` | `credentials` (NTLM) and/or `kerberos` |
 | `kerberos-keytab` | `''` | |
 
-Opzioni da riga di comando del daemon: `--headless`, `--system`, `--handover`, `--rdp-port`,
-`--vnc-port`, `--max-parallel-connections` (predefinito **10**, `0` = illimitate).
+Daemon command-line options: `--headless`, `--system`, `--handover`, `--rdp-port`,
+`--vnc-port`, `--max-parallel-connections` (default **10**, `0` = unlimited).
 
-`grdctl` ha la forma `grdctl [--system|--headless] rdp <comando>`, con `set-credentials`,
+`grdctl` has the form `grdctl [--system|--headless] rdp <comando>`, with `set-credentials`,
 `set-tls-cert`, `set-tls-key`, `enable`/`disable`, `enable-view-only`/`disable-view-only`,
 `set-auth-methods`, `set-kerberos-keytab`, `--show-credentials`.
 
 ---
 
-### 16. Connessioni concorrenti e limiti
+### 16. Concurrent connections and limits
 
-Due meccanismi distinti, e conviene non confonderli.
+Two distinct mechanisms, and it is better not to confuse them.
 
-**Il throttler** (`grd-throttler.c`) agisce *prima* di creare la sessione, contro gli abusi:
+**The throttler** (`grd-throttler.c`) acts *before* creating the session, against abuse:
 
-| Limite | Predefinito |
+| Limit | Default |
 |---|---|
-| Connessioni per peer | 5 |
-| Connessioni in attesa | 5 |
-| Tentativi al secondo (per peer) | 10 |
-| Connessioni totali | `--max-parallel-connections`, 10 |
+| Connections per peer | 5 |
+| Pending connections | 5 |
+| Attempts per second (per peer) | 10 |
+| Total connections | `--max-parallel-connections`, 10 |
 
-Chi supera viene **rifiutato**; chi arriva troppo in fretta viene messo in coda e servito quando il
-rateo lo consente.
+Whoever exceeds is **refused**; whoever arrives too fast is queued and served when the
+rate allows.
 
-**La politica sulla seconda sessione** è invece in `on_session_post_connect` (`grd-rdp-server.c:176`):
+**The policy on the second session** is instead in `on_session_post_connect` (`grd-rdp-server.c:176`):
 
 ```c
 if (runtime_mode == HANDOVER || runtime_mode == HEADLESS)
   g_list_foreach (rdp_server->sessions, maybe_stop_session, nuova_sessione);
 ```
 
-Cioè: nei modi a utente singolo, **la connessione nuova soppianta quella vecchia**, e lo fa dopo il
-`PostConnect`, cioè dopo che il nuovo client si è autenticato.
+That is: in the single-user modes, **the new connection supplants the old one**, and does so after
+`PostConnect`, that is, after the new client has authenticated.
 
-> **È la terza opzione della tabella di §5.9 di `SPECIFICA.md`, quella che l'utente ha scartato** il 2
-> agosto («soppiantare: comodo per riagganciarsi, ma chiunque si autentichi butta fuori chi sta
-> lavorando»). Vale la pena registrare che il riferimento ha scelto diversamente da REMOTIX, e perché
-> può permetterselo: le credenziali RDP di `gnome-remote-desktop` sono una coppia dedicata al desktop
-> remoto, non le credenziali di sistema, quindi «chiunque si autentichi» è di fatto sempre la stessa
-> persona che rientra. In REMOTIX, dove si autentica con PAM contro l'utenza vera, il ragionamento non
-> regge allo stesso modo, e il rifiuto resta la scelta giusta.
+> **It is the third option of the table of §5.9 of `SPECIFICA.md`, the one the user discarded** on 2
+> August («soppiantare: comodo per riagganciarsi, ma chiunque si autentichi butta fuori chi sta
+> lavorando»). It is worth recording that the reference chose differently from REMOTIX, and why
+> it can afford it: the RDP credentials of `gnome-remote-desktop` are a pair dedicated to remote
+> desktop, not the system credentials, so «whoever authenticates» is in practice always the same
+> person coming back. In REMOTIX, where one authenticates with PAM against the real account, the reasoning does not
+> hold in the same way, and refusal remains the right choice.
 
-Da notare anche: **il ciclo di accettazione è un `GSocketService`**, quindi le connessioni si accettano
-in parallelo per costruzione. Il difetto di §5.9 di `SPECIFICA.md` — il ciclo sequenziale di
-`ironrdp-server` — è specifico di IronRDP e qui non esiste.
+Note also: **the accept loop is a `GSocketService`**, so connections are accepted
+in parallel by construction. The defect of §5.9 of `SPECIFICA.md` — the sequential loop of
+`ironrdp-server` — is specific to IronRDP and does not exist here.
 
-#### 16.1 Il congedo
+#### 16.1 The farewell
 
-`grd_session_rdp_stop` (riga 1847) prima di chiudere imposta l'informazione d'errore RDP:
+`grd_session_rdp_stop` (line 1847) sets the RDP error information before closing:
 
 ```c
 if (!has_session_close_queued (session_rdp))
@@ -6053,175 +6053,175 @@ else if (session_rdp->rdp_error_info)
   freerdp_set_error_info (peer->context->rdp, session_rdp->rdp_error_info);
 ```
 
-I codici usati altrove: `ERRINFO_BAD_CAPABILITIES`, `ERRINFO_BAD_MONITOR_DATA`,
+The codes used elsewhere: `ERRINFO_BAD_CAPABILITIES`, `ERRINFO_BAD_MONITOR_DATA`,
 `ERRINFO_CLOSE_STACK_ON_DRIVER_FAILURE`, `ERRINFO_GRAPHICS_SUBSYSTEM_FAILED`,
 `ERRINFO_CB_CONNECTION_CANCELLED`.
 
-> **Era il «congedo dichiarato» che REMOTIX aveva a debito** (§5.9 di `SPECIFICA.md`). Con FreeRDP il
-> debito non esiste: `freerdp_set_error_info` è API pubblica. Il riferimento usa
-> `RPC_INITIATED_DISCONNECT` per la chiusura ordinata, non `LogoffByUser` — e la scelta è sensata,
-> perché descrive chi ha chiuso, non perché.
+> **It was the «declared farewell» REMOTIX owed** (§5.9 of `SPECIFICA.md`). With FreeRDP the
+> debt does not exist: `freerdp_set_error_info` is public API. The reference uses
+> `RPC_INITIATED_DISCONNECT` for the orderly close, not `LogoffByUser` — and the choice is sensible,
+> because it describes who closed, not why.
 
 ---
 
-### 17. Che cosa cambia fra la 48 (Debian Trixie) e la 51
+### 17. What changes between 48 (Debian Trixie) and 51
 
-L'architettura è la stessa: **la 48 usa già libei**, ha già il layout manager, l'encoder VAAPI, il
-frame controller e la pipeline EGFX nella forma descritta qui. Le differenze:
+The architecture is the same: **48 already uses libei**, it already has the layout manager, the VAAPI encoder, the
+frame controller and the EGFX pipeline in the form described here. The differences:
 
-**Aggiunto dopo la 48:**
+**Added after 48:**
 
-- redirezione della **camera** (MS-RDPECAM): `grd-rdp-dvc-camera-*`, `grd-rdp-camera-stream`
-- **decodifica** H.264 software (serve alla camera): `grd-decode-session-sw-avc`
-- il **throttler** delle connessioni: `grd-throttler`
+- **camera** redirection (MS-RDPECAM): `grd-rdp-dvc-camera-*`, `grd-rdp-camera-stream`
+- software H.264 **decoding** (needed by the camera): `grd-decode-session-sw-avc`
+- the connection **throttler**: `grd-throttler`
 - `grd-frame-clock`, `grd-sample-buffer`, `grd-vk-physical-device`, `grd-vk-sync-file` (explicit sync)
-- `grd-settings-headless` come classe a sé
-- rinominati con prefisso `dvc`: `grd-rdp-graphics-pipeline` → `grd-rdp-dvc-graphics-pipeline`, e così
-  per audio, display control e telemetria; introdotto `grd-rdp-dvc-handler`
+- `grd-settings-headless` as a class of its own
+- renamed with the `dvc` prefix: `grd-rdp-graphics-pipeline` → `grd-rdp-dvc-graphics-pipeline`, and likewise
+  for audio, display control and telemetry; `grd-rdp-dvc-handler` introduced
 
-**Requisiti diversi:** FreeRDP ≥ 3.1 (48) contro ≥ 3.22 (51); libei ≥ 1.2 contro ≥ 1.3.901.
+**Different requirements:** FreeRDP ≥ 3.1 (48) against ≥ 3.22 (51); libei ≥ 1.2 against ≥ 1.3.901.
 
-Per REMOTIX significa che **tutto ciò che è utile qui è già nella 48.x che gira su Trixie**, e che le
-misure fatte contro Mutter 48.7 restano confrontabili.
+For REMOTIX it means that **everything useful here is already in the 48.x that runs on Trixie**, and that the
+measurements made against Mutter 48.7 stay comparable.
 
 ---
 
-### 18. Il conto per REMOTIX
+### 18. The account for REMOTIX
 
-#### 18.1 Cosa conferma
+#### 18.1 What it confirms
 
-| Decisione di REMOTIX | Conferma nel riferimento |
+| REMOTIX decision | Confirmation in the reference |
 |---|---|
-| **Solo EGFX**, nessun ripiego legacy | `rdp_peer_capabilities` chiude la connessione se manca (§6.1) |
-| Interfacce dirette di Mutter, non il portale | Idem, e per la stessa ragione |
-| `RecordVirtual` invece di `RecordMonitor` | Idem in modalità `extend` |
-| `CreateSurface` + `MapSurfaceToOutput` | Adiacenti e obbligatorie (§8.2) |
-| Larghezza ×16, altezza ×64 | Identico (§8.3) |
-| `ResetGraphics` con la definizione dei monitor | `g_assert (n_monitors > 0)` (§8.4) |
-| Cadenza PipeWire dichiarata a 0 + massimo a intervallo | Identico (§11.1) |
-| Ultimo fotogramma conservato e rispedito | `invalidate_surface` ripropone `last_buffer` |
-| Conteggio dei tasti premuti, rilascio a fine connessione | Identico (§13.5) |
-| Rotella: /120 → ×10, verticale negato | Identico (§13.3) |
-| Niente D-Bus dentro il ciclo del protocollo | Coda di eventi + `GSource` (§13.6) |
-| PipeWire per l'audio | Identico (§14.2) |
-| Sessione remota solo per l'utente che la possiede | Controllo sull'uid in `rdp_peer_logon` (§7.1) |
-| Il congedo dichiarato serve | `freerdp_set_error_info` prima della chiusura (§16.1) |
+| **EGFX only**, no legacy fallback | `rdp_peer_capabilities` closes the connection if it is missing (§6.1) |
+| Direct Mutter interfaces, not the portal | Same, and for the same reason |
+| `RecordVirtual` instead of `RecordMonitor` | Same in `extend` mode |
+| `CreateSurface` + `MapSurfaceToOutput` | Adjacent and mandatory (§8.2) |
+| Width ×16, height ×64 | Identical (§8.3) |
+| `ResetGraphics` with the monitor definition | `g_assert (n_monitors > 0)` (§8.4) |
+| PipeWire cadence declared at 0 + ranged maximum | Identical (§11.1) |
+| Last frame kept and resent | `invalidate_surface` re-offers `last_buffer` |
+| Count of pressed keys, release at end of connection | Identical (§13.5) |
+| Wheel: /120 → ×10, vertical negated | Identical (§13.3) |
+| No D-Bus inside the protocol loop | Event queue + `GSource` (§13.6) |
+| PipeWire for audio | Identical (§14.2) |
+| Remote session only for the user who owns it | Check on the uid in `rdp_peer_logon` (§7.1) |
+| The declared farewell is needed | `freerdp_set_error_info` before closing (§16.1) |
 
-#### 18.2 Cosa contraddice, o corregge
+#### 18.2 What it contradicts, or corrects
 
-1. **NLA obbligatorio.** Il riferimento non offre TLS puro: `NlaSecurity = TRUE`, gli altri due a
-   `FALSE`. REMOTIX ha scelto TLS + PAM. Non è un errore — è una scelta diversa con conseguenze
-   diverse: con NLA le credenziali si verificano *prima* di allocare la sessione, e mstsc mostra la
-   finestra di credenziali sua; con TLS puro l'autenticazione avviene dentro il protocollo RDP e il
-   difetto trovato il 3 agosto (§3.4: «chi non manda credenziali non viene validato») **non potrebbe
-   esistere**. Da mettere agli atti: la guardia che parte da *negato* è il prezzo del TLS puro.
+1. **NLA mandatory.** The reference does not offer pure TLS: `NlaSecurity = TRUE`, the other two
+   `FALSE`. REMOTIX chose TLS + PAM. It is not a mistake — it is a different choice with different
+   consequences: with NLA the credentials are verified *before* allocating the session, and mstsc shows
+   its own credentials window; with pure TLS authentication happens inside the RDP protocol and the
+   defect found on 3 August (§3.4: «whoever sends no credentials is not validated») **could not
+   exist**. To put on record: the guard that starts from *denied* is the price of pure TLS.
 
-2. **Il controllo del bitrate non lo dà VA-API.** §9.1. La motivazione di §3.1 di `SPECIFICA.md` va
-   corretta nella premessa; la conclusione (usare `libavcodec`) regge lo stesso, anzi si rafforza.
+2. **Bitrate control is not given by VA-API.** §9.1. The motivation of §3.1 of `SPECIFICA.md` must be
+   corrected in its premise; the conclusion (using `libavcodec`) holds all the same, indeed it gets stronger.
 
-3. **Non esiste un encoder H.264 software.** Il ripiego di GNOME è RemoteFX Progressive. REMOTIX
-   prevede `libx264` come base sempre disponibile e punto di partenza dello sviluppo: è una scelta
-   ragionevole e più semplice, ma va saputo che **il riferimento non la valida** — nessuno ha mai
-   provato quella strada con questi client.
+3. **There is no software H.264 encoder.** GNOME's fallback is RemoteFX Progressive. REMOTIX
+   foresees `libx264` as an always-available base and the starting point of development: it is a
+   reasonable and simpler choice, but one should know that **the reference does not validate it** — nobody has ever
+   tried that road with these clients.
 
-4. **La seconda connessione soppianta, non viene rifiutata.** §16. REMOTIX ha deciso diversamente e
-   con ragione, ma la ragione va scritta: dipende dal fatto che REMOTIX autentica contro l'utenza vera.
+4. **The second connection supplants, it is not refused.** §16. REMOTIX decided differently and
+   with reason, but the reason must be written: it depends on the fact that REMOTIX authenticates against the real account.
 
-5. **Il ridimensionamento non rifà la cattura.** §11.3. Questa è la correzione più utile: cancella il
-   prezzo che §5.8 di `SPECIFICA.md` accetta a malincuore.
+5. **Resizing does not redo the capture.** §11.3. This is the most useful correction: it cancels the
+   price that §5.8 of `SPECIFICA.md` accepts reluctantly.
 
-6. ~~**Rettangolo PipeWire singolo invece di intervallo chiuso.**~~ §11.1. **CHIUSA il 4 agosto: ha
-   ragione il riferimento**, il rettangolo singolo funziona ed è la forma che REMOTIX usa. [M]
+6. ~~**Single PipeWire rectangle instead of a closed range.**~~ §11.1. **CLOSED on 4 August: the
+   reference is right**, the single rectangle works and is the form REMOTIX uses. [M]
 
-7. **Convenzione dei bordi della regione AVC420.** §8.3. Da riverificare sui byte.
+7. **Edge convention of the AVC420 region.** §8.3. To be re-verified on the bytes.
 
-#### 18.3 Cosa conviene copiare, in ordine di resa
+#### 18.3 What is worth copying, in order of return
 
-1. **La macchina a stati del layout manager** (§12). Risolve insieme la regola 3-bis, le raffiche di
-   ridimensionamento e lo scarto dell'input durante il cambio di geometria. È la cosa più preziosa del
+1. **The layout manager's state machine** (§12). It solves together rule 3-bis, the resizing
+   bursts and the discarding of input during the geometry change. It is the most precious thing in the
    file.
-2. **Il ridimensionamento via `pw_stream_update_params`** (§11.3). Toglie un rifacimento completo di
-   cattura e controllo a ogni cambio di misura.
-3. **Il regolatore a posti-fotogramma con soglia dall'RTT** (§10.2). Poche decine di righe, e dà
-   l'adattamento di base gratis.
-4. **L'elenco completo delle versioni EGFX** (§8.1), da tenere allineato.
-5. **`disable-animations: true`** nella creazione della sessione di cattura (§5). Una riga.
-6. **La validazione della configurazione monitor** (§12.1): limiti, primario a (0,0), niente
-   sovrapposizioni.
-7. **La riconciliazione dei tasti a scatto dopo un ping** (§13.5), se e quando si passa a libei.
+2. **Resizing via `pw_stream_update_params`** (§11.3). It removes a complete redo of
+   capture and control at every size change.
+3. **The frame-slot regulator with a threshold from the RTT** (§10.2). A few dozen lines, and it gives
+   basic adaptation for free.
+4. **The complete list of EGFX versions** (§8.1), to be kept aligned.
+5. **`disable-animations: true`** when creating the capture session (§5). One line.
+6. **The validation of the monitor configuration** (§12.1): limits, primary at (0,0), no
+   overlaps.
+7. **The reconciliation of lock keys after a ping** (§13.5), if and when we move to libei.
 
-#### 18.4 Le questioni aperte di REMOTIX su cui il riferimento dice qualcosa
+#### 18.4 The REMOTIX open questions on which the reference says something
 
-| Questione | Cosa dice il riferimento |
+| Question | What the reference says |
 |---|---|
-| **n.1** — input touch | Implementato nativamente via MS-RDPEI + `ei_touch`, 256 contatti (§13.7) |
-| **n.6** — bottone centrale e rotella orizzontale | **Caduta**: era un limite di IronRDP. FreeRDP consegna `MouseEvent`, `ExtendedMouseEvent` e `RelMouseEvent` distinti (§6.2, §13.3) |
-| **n.7** — disposizione di tastiera | Non si concorda: **si legge dalla sessione** via `ei_device_keyboard_get_keymap` (§13.1). In alternativa il KLID è in `rdpSettings` |
-| **n.9** — mstsc, sfondo al 75% dopo cambio di misura | Nessuna corrispondenza diretta, ma §12 suggerisce dove guardare: il riferimento **non manda nulla** fra l'inibizione e la conferma di tutti gli stream. Se REMOTIX manda il fotogramma conservato prima che il palco sia coerente, il sintomo è quello |
-| **n.10** — sessione non registrata in logind | Il riferimento usa `sd_session_get_class` e `sd_session_is_remote` (`grd-daemon-utils.c:195`), quindi **assume** che la sessione sia registrata. Nei modi headless è chi avvia la sessione a doverlo garantire, non il server |
+| **no.1** — touch input | Implemented natively via MS-RDPEI + `ei_touch`, 256 contacts (§13.7) |
+| **no.6** — middle button and horizontal wheel | **Dropped**: it was an IronRDP limit. FreeRDP delivers distinct `MouseEvent`, `ExtendedMouseEvent` and `RelMouseEvent` (§6.2, §13.3) |
+| **no.7** — keyboard layout | It is not agreed: **it is read from the session** via `ei_device_keyboard_get_keymap` (§13.1). Alternatively the KLID is in `rdpSettings` |
+| **no.9** — mstsc, background at 75% after a size change | No direct correspondence, but §12 suggests where to look: the reference **sends nothing** between the inhibition and the confirmation of all the streams. If REMOTIX sends the kept frame before the stage is consistent, that is the symptom |
+| **no.10** — session not registered in logind | The reference uses `sd_session_get_class` and `sd_session_is_remote` (`grd-daemon-utils.c:195`), so it **assumes** that the session is registered. In headless modes it is whoever starts the session who must guarantee it, not the server |
 
 ---
 
-### 19. Cosa non c'è
+### 19. What is not there
 
-Per completezza, e per non cercarlo:
+For completeness, and so as not to go looking for it:
 
-| Funzionalità | Stato |
+| Feature | State |
 |---|---|
-| Encoder H.264 software | **Assente** — il ripiego è RemoteFX Progressive |
-| Controllo del bitrate | **Assente** — CQP fisso, QP 22 |
-| Adattamento di risoluzione alla banda | **Assente** — si regola solo la cadenza |
-| Multitransport UDP (MS-RDPEUDP) | `SupportMultitransport = FALSE` |
-| Gateway RDP (MS-TSGU) | Assente |
-| Redirezione dischi del client | Assente (la FUSE serve solo ai file della clipboard) |
-| Redirezione stampanti, seriali, USB | Assente |
-| RemoteApp (RAIL) | Assente |
-| Smartcard | Assente |
-| Cache delle superfici EGFX | Dichiarata e sempre rifiutata (`CacheImportReply` vuota) |
-| Backend X11 | Assente — solo Wayland, come REMOTIX |
-| HEVC, AV1 | Impossibili: non sono in MS-RDPEGFX |
+| Software H.264 encoder | **Absent** — the fallback is RemoteFX Progressive |
+| Bitrate control | **Absent** — fixed CQP, QP 22 |
+| Resolution adaptation to bandwidth | **Absent** — only the cadence is adjusted |
+| UDP multitransport (MS-RDPEUDP) | `SupportMultitransport = FALSE` |
+| RDP gateway (MS-TSGU) | Absent |
+| Client drive redirection | Absent (the FUSE serves only the clipboard files) |
+| Printer, serial, USB redirection | Absent |
+| RemoteApp (RAIL) | Absent |
+| Smartcard | Absent |
+| EGFX surface cache | Declared and always refused (empty `CacheImportReply`) |
+| X11 backend | Absent — Wayland only, like REMOTIX |
+| HEVC, AV1 | Impossible: they are not in MS-RDPEGFX |
 
 
 <a id="xpra"></a>
 
-## XPRA — lo studio, fatto il 14 agosto 2026
+## XPRA — the study, done on 14 August 2026
 
-*Il settimo studio del progetto. ⛔ Era previsto da `PIANO.md` §1.3 **prima di scrivere la pagina**
-e non è mai stato fatto: si scrive adesso, a pagina scritta, ed è tardi — ⭐ ma non troppo, perché
-metà di quel che c'è qui dentro ha cambiato il prodotto **oggi stesso**.*
+*The project's seventh study. ⛔ It was planned by `PIANO.md` §1.3 **before writing the page**
+and was never done: it is written now, with the page already written, and it is late — ⭐ but not too late, because
+half of what is in here changed the product **this very day**.*
 
-> ### ⭐⭐⭐ Perché questo studio esiste, e chi l'ha chiesto
+> ### ⭐⭐⭐ Why this study exists, and who asked for it
 >
-> **L'ha chiesto l'utente, due volte.** La prima il 9 agosto, ed è l'origine di tutto il binario
-> web: *«ti spiego perché mi è venuto in mente il discorso WEB: in passato ho avuto modo di usare
+> **The user asked for it, twice.** The first time on 9 August, and it is the origin of the whole web
+> track: *«ti spiego perché mi è venuto in mente il discorso WEB: in passato ho avuto modo di usare
 > XPRA, e devo dire di essere rimasto molto sorpreso»* (`DECISIONI.md` §1.6).
 >
-> La seconda **il 14 agosto**, davanti al prodotto che finalmente si usava, e con un difetto in
-> mano: *«un piccolo difetto è la cattura del puntatore del mouse… per questa funzionalità puoi
+> The second **on 14 August**, in front of the product that could finally be used, and with a fault in
+> hand: *«un piccolo difetto è la cattura del puntatore del mouse… per questa funzionalità puoi
 > studiare la soluzione che ha adottato il progetto XPRA»*.
 >
-> ⇒ ⛔ **E aveva ragione in mezz'ora**: la soluzione di Xpra al puntatore ha smontato una riga delle
-> nostre specifiche che ne contraddiceva un'altra. È `LEZIONI.md` §9 punto 0 — *«cercare chi l'ha
-> già fatto»* — per la terza volta, e per la terza volta a chiederlo è stato l'utente.
+> ⇒ ⛔ **And he was right within half an hour**: Xpra's solution for the pointer took apart a line of our
+> specifications that contradicted another one. It is `LEZIONI.md` §9 point 0 — *«look for whoever has
+> already done it»* — for the third time, and for the third time it was the user who asked.
 
-### Come è stato fatto, e che cosa vale
+### How it was done, and what it is worth
 
-⛔ **Letto nel codice**, non nella documentazione: `Xpra-org/xpra-html5`, i file `html5/js/Client.js`
-e `html5/js/Window.js`, più `docs/Usage/Encodings.md` del server. ⇒ Quel che segue è `[R]`, salvo
-dove è scritto `[S]`.
+⛔ **Read in the code**, not in the documentation: `Xpra-org/xpra-html5`, the files `html5/js/Client.js`
+and `html5/js/Window.js`, plus the server's `docs/Usage/Encodings.md`. ⇒ What follows is `[R]`, except
+where `[S]` is written.
 
-⚠ **E il confine si dichiara**: Xpra è su **WebSocket** e noi su **WebTransport**; il suo server è
-nato attorno al modello di *damage* di X11 e il nostro parla con un compositore Wayland. ⛔ **Il
-trasporto non si eredita, e nemmeno il modello di aggiornamento.** Quel che si eredita è la **forma
-delle domande** che il client fa al server — ed è lì che siamo indietro.
+⚠ **And the boundary is declared**: Xpra is on **WebSocket** and we are on **WebTransport**; its server was
+born around the X11 *damage* model and ours talks to a Wayland compositor. ⛔ **The
+transport is not inherited, and neither is the update model.** What is inherited is the **shape
+of the questions** the client asks the server — and that is where we are behind.
 
-⚠ **E una cosa che NON ho potuto misurare**: il `README` non elenca i limiti del client HTML5
-(appunti, audio, disposizioni di tastiera, IME, schermo intero). ⇒ `[?]` — non li deduco dal codice
-letto a campione.
+⚠ **And one thing I could NOT measure**: the `README` does not list the limits of the HTML5 client
+(clipboard, audio, keyboard layouts, IME, full screen). ⇒ `[?]` — I do not deduce them from code
+read by sampling.
 
 ---
 
-### ⭐⭐⭐ 1. La cosa che vale di più, e ci serviva OGGI: **il primo fotogramma si CHIEDE**
+### ⭐⭐⭐ 1. The thing worth most, and we needed it TODAY: **the first frame is ASKED FOR**
 
 ```javascript
 request_refresh(wid) {
@@ -6230,22 +6230,22 @@ request_refresh(wid) {
 }
 ```
 
-⛔⛔ **Il client di Xpra non ASPETTA che lo schermo cambi: dice al server «ridipingi adesso».**
+⛔⛔ **Xpra's client does not WAIT for the screen to change: it tells the server «repaint now».**
 
-⇒ E questo è **esattamente** il difetto che l'utente ha sentito oggi come *«il tempo fra il login e
-la comparsa del desktop è troppo lungo»*: `[M]` 14 agosto 2026, dal registro della sua sessione
-vera, fra il canale video acceso e il primo pixel passano **4,10 secondi su 5,21**, e il registro
-dice il perché — *«scena ferma: Mutter consegna solo quando qualcosa cambia»*.
+⇒ And this is **exactly** the fault the user felt today as *«il tempo fra il login e
+la comparsa del desktop è troppo lungo»*: `[M]` 14 August 2026, from the log of his real
+session, between the video channel switched on and the first pixel **4.10 seconds out of 5.21** pass, and the log
+says why — *«still scene: Mutter delivers only when something changes»*.
 
 | | |
 |---|---|
-| ⛔ **quel che ci manca** | in `RCP.md` **non esiste un messaggio che chieda l'immagine**. C'è `RICHIEDI_CHIAVE` (§7.1), ma chiede una **chiave** di quel che è già stato catturato: se non arriva niente dal compositore, non produce niente |
-| ⚠ **e non si copia alla lettera** | il `buffer_refresh` di Xpra costa poco perché il loro server possiede il modello di damage di X11. ⛔ Su Wayland **non si può ordinare a Mutter di ridipingere**: la leva equivalente è **riavviare il flusso**, che consegna un buffer — `[M]` è così che nasce il nostro fotogramma del `+325 ms` |
-| ⇒ ⭐ **quel che si eredita** | **la forma**: il client deve poter dire «dammi lo schermo adesso», e il server deve avere *una* strada per obbedire. Chi la attua è affare nostro |
+| ⛔ **what we are missing** | in `RCP.md` **there is no message that asks for the image**. There is `RICHIEDI_CHIAVE` (§7.1), but it asks for a **keyframe** of what has already been captured: if nothing arrives from the compositor, it produces nothing |
+| ⚠ **and it is not copied literally** | Xpra's `buffer_refresh` is cheap because their server owns the X11 damage model. ⛔ On Wayland **Mutter cannot be ordered to repaint**: the equivalent lever is **restarting the stream**, which delivers a buffer — `[M]` that is how our `+325 ms` frame is born |
+| ⇒ ⭐ **what is inherited** | **the shape**: the client must be able to say «give me the screen now», and the server must have *a* way to obey. Who carries it out is our business |
 
 ---
 
-### ⭐⭐ 2. Il cursore: **lo disegna il browser, non la pagina** — e niente cattura
+### ⭐⭐ 2. The cursor: **the browser draws it, not the page** — and no capture
 
 ```javascript
 function set_cursor_url(url, x, y, w, h) {
@@ -6253,40 +6253,40 @@ function set_cursor_url(url, x, y, w, h) {
 }
 ```
 
-⭐ **Il cursore del browser INDOSSA la forma di quello remoto**, punto attivo compreso, da una
-`data:image/png;base64`. ⛔ **Nessun elemento disegnato sopra la tela, nessun `cursor: none`.** E la
-scala la fa lui quando `devicePixelRatio ≠ 1`, aggiustando anche il punto attivo.
+⭐ **The browser's cursor WEARS the shape of the remote one**, hotspot included, from a
+`data:image/png;base64`. ⛔ **No element drawn over the canvas, no `cursor: none`.** And it
+does the scaling itself when `devicePixelRatio ≠ 1`, adjusting the hotspot too.
 
-**E la cattura del puntatore?** C'è, ⛔ **ma è un'opzione dell'utente**, non un automatismo:
+**And pointer capture?** It is there, ⛔ **but it is a user option**, not an automatism:
 
 ```javascript
 if (window.cursor_lock && win.canvas) { win.canvas.requestPointerLock(); }
 ```
 
-⇒ un bottone (`#cursor-lock-button`) che si preme. Le coordinate sono **assolute per difetto**; con
-la lock accesa passano agli spostamenti (`e.movementX`).
+⇒ a button (`#cursor-lock-button`) that you press. Coordinates are **absolute by default**; with
+the lock on they switch to movements (`e.movementX`).
 
-> #### ⛔⛔ E qui lo studio ha smontato una nostra riga con un'altra nostra riga
+> #### ⛔⛔ And here the study took apart one of our lines with another of our lines
 >
-> | dove | che cosa diceva |
+> | where | what it said |
 > |---|---|
-> | `SPECIFICHE.md` §7.1 | *«il mouse fisico arriva da **Pointer Lock**… senza, se ne vedrebbero due»* |
-> | `SPECIFICHE.md` §7.5 | *«puntatore **assoluto** — è l'**unico** percorso del puntatore»* |
+> | `SPECIFICHE.md` §7.1 | *«the physical mouse comes from **Pointer Lock**… without it, two would be seen»* |
+> | `SPECIFICHE.md` §7.5 | *«**absolute** pointer — it is the **only** pointer path»* |
 >
-> ⇒ La lock serve a dare gli **spostamenti relativi**. Noi mandiamo **posizioni assolute**. ⛔ Non
-> comprava niente, e costava il sequestro del puntatore — che è precisamente quel che l'utente ha
-> visto.
-> ⭐ **E il motivo per cui era stata messa** — *«altrimenti se ne vedono due»* — si risolve meglio
-> nell'altro modo, **con il pezzo che avevamo costruito la mattina stessa e non stavamo usando**:
+> ⇒ The lock serves to give **relative movements**. We send **absolute positions**. ⛔ It
+> bought nothing, and it cost the seizure of the pointer — which is precisely what the user
+> saw.
+> ⭐ **And the reason it had been put there** — *«otherwise two are seen»* — is solved better
+> the other way, **with the piece we had built that same morning and were not using**:
 > `CURSORE_FORMA` (`RCP.md` §7.2).
 >
-> ✅ **Adottato il 14 agosto 2026**: il cursore del browser veste la forma remota, la freccia
-> disegnata si toglie di mezzo nel modo classico, la cattura resta accendibile a mano. Il modo a
-> **tocco** tiene il puntatore disegnato, e deve: ⭐ **il dito non ha un cursore da vestire.**
+> ✅ **Adopted on 14 August 2026**: the browser's cursor wears the remote shape, the drawn
+> arrow gets out of the way in the classic manner, capture stays switchable by hand. The
+> **touch** mode keeps the drawn pointer, and must: ⭐ **the finger has no cursor to dress.**
 
 ---
 
-### ⭐⭐ 3. La misura della finestra: **il client la dice, il server la esegue**
+### ⭐⭐ 3. The window size: **the client states it, the server carries it out**
 
 ```javascript
 _screen_resized(event) {
@@ -6297,69 +6297,69 @@ _screen_resized(event) {
 }
 ```
 
-⭐ **Il client comunica la propria misura e il server RIDIMENSIONA il desktop.** Lo scalamento CSS
-locale (`transform: scale(1/scale)`) resta come ripiego, non come strada principale.
+⭐ **The client communicates its own size and the server RESIZES the desktop.** Local CSS
+scaling (`transform: scale(1/scale)`) stays as a fallback, not as the main road.
 
-⇒ ⛔ **È la nostra `RCP.md` §4.5, «la tela concessa» — e oggi nessuno la mantiene**: `[M]` 14 agosto
-(anello A1), un client che chiede **1280×720** ottiene la concessione, ma il palco cattura
-**1920×1080** (costante di compilazione) e `rcp` rifiuta **ogni** fotogramma: *145 prodotti, 0
-spediti, client nero senza errori*.
+⇒ ⛔ **It is our `RCP.md` §4.5, «the granted canvas» — and today nobody keeps it**: `[M]` 14 August
+(link A1), a client that asks for **1280×720** gets the grant, but the stage captures
+**1920×1080** (a compile-time constant) and `rcp` refuses **every** frame: *145 produced, 0
+sent, black client without errors*.
 
-⚠ **E il prezzo si vede sullo schermo dell'utente**: il suo è **21:9** (2560×1080), il desktop
-remoto **16:9** ⇒ `[M]` dal suo video, **il 36 % dei pixel è banda nera**.
+⚠ **And the price shows on the user's screen**: his is **21:9** (2560×1080), the remote
+desktop **16:9** ⇒ `[M]` from his video, **36 % of the pixels are black band**.
 
 ---
 
-### 4. Come dipinge — e qui **noi siamo avanti**
+### 4. How it paints — and here **we are ahead**
 
-| Xpra HTML5 `[R]` | noi |
+| Xpra HTML5 `[R]` | us |
 |---|---|
-| **canvas 2D** con un *offscreen canvas* e `swap_buffers()` | canvas + **WebCodecs** |
-| codifiche accettate: `rgb32`, `rgb24`, `jpeg`, `png`, `webp`, `scroll`, `void` | **HEVC/AV1 in hardware** |
-| ⛔ `h264` **rifiutato nel percorso principale**: *«h264 decoding is only supported via the decode workers»* | il video è la strada normale, non l'eccezione |
+| **2D canvas** with an *offscreen canvas* and `swap_buffers()` | canvas + **WebCodecs** |
+| accepted encodings: `rgb32`, `rgb24`, `jpeg`, `png`, `webp`, `scroll`, `void` | **HEVC/AV1 in hardware** |
+| ⛔ `h264` **refused on the main path**: *«h264 decoding is only supported via the decode workers»* | video is the normal road, not the exception |
 
-⇒ ⭐ **La loro strada di riferimento è ancora a immagini** (jpeg/png/webp) con il video come caso
-speciale in un worker. La nostra nasce sul video. ⚠ E questo spiega la frase dello studio del web:
-*«Xpra e noVNC restano sul canvas, e **nessuno dei due dichiara un numero di ritardo**»* (§web).
+⇒ ⭐ **Their reference road is still image-based** (jpeg/png/webp) with video as a special
+case in a worker. Ours is born on video. ⚠ And this explains the sentence of the web study:
+*«Xpra and noVNC stay on the canvas, and **neither of the two declares a latency number**»* (§web).
 
-#### ⭐ Una cosa che loro hanno e noi no: la codifica `scroll`
+#### ⭐ One thing they have and we do not: the `scroll` encoding
 
-`[S]` *«tries harder to send screen updates using motion vectors»* — invece dei pixel si manda
-**«questa zona si è spostata di N»**. È il caso di chi scorre una pagina o un terminale, cioè
-**quel che l'utente fa tutto il giorno**.
-⚠ **Non è una cosa da prendere adesso**: con HEVC in hardware i vettori di moto li trova il
-codificatore, ed è il suo mestiere. ⭐ Ma la riga va tenuta per il giorno in cui la banda stringe:
+`[S]` *«tries harder to send screen updates using motion vectors»* — instead of the pixels one sends
+**«this area moved by N»**. It is the case of someone scrolling a page or a terminal, that is
+**what the user does all day**.
+⚠ **It is not something to take now**: with HEVC in hardware the motion vectors are found by the
+encoder, and it is its job. ⭐ But the line must be kept for the day bandwidth gets tight:
 `SPECIFICHE.md` §8.
 
 ---
 
-### 5. La tastiera: **loro mandano posizioni, noi lettere** — e la differenza è voluta
+### 5. The keyboard: **they send positions, we send letters** — and the difference is intended
 
 ```javascript
 [PACKET_TYPES.key_action, wid, keyname, pressed, modifiers, keyval, keystring, keycode, group]
 ```
 
-⛔ Xpra manda **il codice e il nome del tasto**, più `keyval`, `keystring` e il `group`. ⇒ È la
-strada che `SPECIFICHE.md` §7.3 ha scartato **con una ragione scritta**: *«un client con tastiera
-americana attaccato a una sessione italiana produrrebbe le lettere sbagliate»*, e su Android una
-tastiera **non ha posizioni affatto**.
+⛔ Xpra sends **the code and the name of the key**, plus `keyval`, `keystring` and the `group`. ⇒ It is the
+road that `SPECIFICHE.md` §7.3 discarded **with a written reason**: *«a client with an American
+keyboard attached to an Italian session would produce the wrong letters»*, and on Android a
+keyboard **has no positions at all**.
 
-⭐ **E i tasti morti loro li trattano, noi no** — esplicitamente:
+⭐ **And they handle dead keys, we do not** — explicitly:
 
 ```javascript
 const dead = keystring.toLowerCase() === "dead";
 if (dead && ((this.last_keycode_pressed !== keycode && !pressed) || pressed)) { … }
 ```
 
-⇒ ✅ **Ed è coerente con la decisione presa dall'utente oggi** (`DECISIONI.md` §5-bis.6-bis): i
-tasti morti e l'IME restano **fuori, dichiarati**. ⚠ Lo studio conferma che il prezzo esiste — Xpra
-lo paga con codice apposta — e che **la nostra strada è un'altra scelta, non una dimenticanza**.
-`[?]` E l'**IME** non compare nemmeno da loro: chi scrive in cinese dentro un browser, in Xpra,
-`[?]` non l'ho trovato servito.
+⇒ ✅ **And it is consistent with the decision the user took today** (`DECISIONI.md` §5-bis.6-bis): dead
+keys and the IME stay **out, declared**. ⚠ The study confirms that the price exists — Xpra
+pays it with dedicated code — and that **our road is a different choice, not an oversight**.
+`[?]` And the **IME** does not appear at theirs either: someone writing Chinese inside a browser, in Xpra,
+`[?]` I did not find served.
 
 ---
 
-### 6. Il ritardo: **lo misurano, e noi no**
+### 6. Latency: **they measure it, and we do not**
 
 ```javascript
 this.server_ping_latency = 0;
@@ -6367,321 +6367,321 @@ this.client_ping_latency = 0;
 PING_FREQUENCY = 5000;   // ms
 ```
 
-⭐ Un `ping` ogni cinque secondi, e **due** numeri distinti: quanto ci mette il server e quanto il
-client. ⇒ ⛔ Noi il ritardo lo misuriamo **al banco** (`DECISIONI.md` §2.6) e **non lo mostriamo mai
-all'utente**: quando dice *«mi sembra lento»* non ha un numero da darci, e noi non abbiamo il suo.
+⭐ A `ping` every five seconds, and **two** distinct numbers: how long the server takes and how long the
+client takes. ⇒ ⛔ We measure latency **at the bench** (`DECISIONI.md` §2.6) and **never show it
+to the user**: when he says *«mi sembra lento»* he has no number to give us, and we do not have his.
 
-⚠ **Non è la stessa misura del nostro tetto di 50 ms** — il loro è il giro di rete, il nostro è
-input → vetro. ⭐ Ma la lezione è di forma: **un numero che l'utente vede è un numero che l'utente
-può contestare**, ed è più utile di dieci nei nostri file di esiti.
+⚠ **It is not the same measurement as our 50 ms cap** — theirs is the network round trip, ours is
+input → glass. ⭐ But the lesson is one of shape: **a number the user sees is a number the user
+can dispute**, and it is more useful than ten in our outcome files.
 
 ---
 
-### ⛔ Che cosa NON si prende da Xpra
+### ⛔ What is NOT taken from Xpra
 
-| | perché |
+| | why |
 |---|---|
-| il **trasporto** (WebSocket) | `DECISIONI.md` §6.4: noi su WebTransport, e quel pezzo non si eredita |
-| la **strada a immagini** (jpeg/png/webp con il video in un worker) | è il contrario del nostro punto di partenza: `SPECIFICHE.md` §3.1 vuole 4K a 60 con la codifica in hardware |
-| le **posizioni di tasto** come strada principale | §7.3, con la ragione già scritta e già pagata in v1 |
-| il modello di **damage di X11** | il nostro compositore è Wayland: la stessa domanda si fa, la risposta la dà un altro meccanismo |
+| the **transport** (WebSocket) | `DECISIONI.md` §6.4: we are on WebTransport, and that piece is not inherited |
+| the **image road** (jpeg/png/webp with video in a worker) | it is the opposite of our starting point: `SPECIFICHE.md` §3.1 wants 4K at 60 with hardware encoding |
+| **key positions** as the main road | §7.3, with the reason already written and already paid for in v1 |
+| the **X11 damage** model | our compositor is Wayland: the same question is asked, the answer comes from another mechanism |
 
 ---
 
-### ⭐ Che cosa questo studio ha già cambiato, e che cosa apre
+### ⭐ What this study has already changed, and what it opens
 
-| | stato |
+| | state |
 |---|---|
-| ⭐ **il cursore vestito dal browser, e niente cattura** | ✅ **fatto il 14 agosto 2026** |
-| ⛔ **il client deve poter chiedere l'immagine** («ridipingi adesso») | ⏳ **aperto** — ed è il lavoro sul tempo di apparizione del desktop |
-| ⛔ **la tela alla misura del client** | ⏳ **aperto**: `RCP.md` §4.5 esiste e non è mantenuta. Sul 21:9 dell'utente il **36 %** dello schermo è nero |
-| ⚠ **un numero di ritardo mostrato all'utente** | 🔸 da valutare: costa poco e cambia il modo in cui i giudizi tornano indietro |
-| la codifica `scroll` | 📖 tenuta da parte per quando la banda stringe |
+| ⭐ **the cursor dressed by the browser, and no capture** | ✅ **done on 14 August 2026** |
+| ⛔ **the client must be able to ask for the image** («repaint now») | ⏳ **open** — and it is the work on the desktop's time to appear |
+| ⛔ **the canvas at the client's size** | ⏳ **open**: `RCP.md` §4.5 exists and is not kept. On the user's 21:9 **36 %** of the screen is black |
+| ⚠ **a latency number shown to the user** | 🔸 to be weighed: it costs little and changes the way judgements come back |
+| the `scroll` encoding | 📖 kept aside for when bandwidth gets tight |
 
-> #### ⭐⭐ E la riga da portarsi via, che non è tecnica
+> #### ⭐⭐ And the line to take away, which is not technical
 >
-> Lo studio era previsto **prima** di scrivere la pagina, ed è stato fatto **dopo**. ⛔ Nel mezzo
-> abbiamo scritto una specifica che si contraddiceva (§7.1 contro §7.5), l'abbiamo attuata, e il
-> difetto l'ha trovato **l'utente in trenta secondi d'uso** — indicandoci anche dove guardare.
+> The study was planned **before** writing the page, and was done **after**. ⛔ In between
+> we wrote a specification that contradicted itself (§7.1 against §7.5), we implemented it, and the
+> fault was found by **the user in thirty seconds of use** — also telling us where to look.
 >
-> ⇒ ⚠ *Il costo di saltare il punto 0 di `LEZIONI.md` §9 non è il tempo dello studio: è il codice
-> scritto nel frattempo, e la fiducia spesa a difenderlo.*
+> ⇒ ⚠ *The cost of skipping point 0 of `LEZIONI.md` §9 is not the time of the study: it is the code
+> written in the meantime, and the trust spent defending it.*
 
 
 ---
 
-## REMOTIX «autonomo»? Inventario dei componenti di terzi
+## REMOTIX «autonomo»? Inventory of third-party components
 
-*Studio di sola lettura, 10 ottobre 2026. Fonti: il deposito sul ramo `full-english` (commit `e24c303`), il
-binario costruito sul server (`/media/REMOTIX/src/full-english-uscite/server-c/nuovo/src/remotix`, letto con
-`ldd`), i pacchetti in `packaging/`, l'installatore in `installatore/vendor/`.*
+*Read-only study, 10 October 2026. Sources: the repository on the `full-english` branch (commit `e24c303`), the
+binary built on the server (`/media/REMOTIX/src/full-english-uscite/server-c/nuovo/src/remotix`, read with
+`ldd`), the packages in `packaging/`, the installer in `installatore/vendor/`.*
 
 ---
 
-### In mezza pagina: cosa decidere
+### In half a page: what to decide
 
-**Un REMOTIX senza componenti di terzi non può esistere.** REMOTIX mostra nel browser un desktop che non è suo
-(GNOME, KDE, XFCE, LXQt), lo cattura con una scheda video che parla solo attraverso i suoi driver, e lo consegna
-a un browser che non è suo. Questi tre pezzi restano di altri per sempre. Quello che si può scegliere è **quanti
-pezzi di altri portiamo dentro noi**, e **quanti ne chiediamo alla distribuzione**.
+**A REMOTIX without third-party components cannot exist.** REMOTIX shows in the browser a desktop that is not its own
+(GNOME, KDE, XFCE, LXQt), captures it with a graphics card that speaks only through its drivers, and delivers it
+to a browser that is not its own. These three pieces stay someone else's forever. What can be chosen is **how many
+pieces of others we carry inside ourselves**, and **how many we ask the distribution for**.
 
-**Dove siamo oggi** (il quadro è già buono):
-- Dentro quello che distribuiamo ci sono **solo pezzi con licenze permissive** (MIT, BSD, Apache), più **un
-  piccolo pezzo LGPL** (la descrizione di un protocollo di KDE). **Nessuna GPL.** L'unico obbligo è
-  **allegare i testi delle licenze**, e lo script che li raccoglie esiste già.
-- Tutto il resto (una trentina di librerie, i desktop, i driver, systemd, PipeWire, i browser) lo dà la
-  distribuzione o l'utente: **nessun obbligo legale per noi**.
+**Where we are today** (the picture is already good):
+- Inside what we distribute there are **only pieces with permissive licences** (MIT, BSD, Apache), plus **one
+  small LGPL piece** (the description of a KDE protocol). **No GPL.** The only obligation is
+  **to ship the licence texts**, and the script that collects them already exists.
+- Everything else (some thirty libraries, the desktops, the drivers, systemd, PipeWire, the browsers) is given by the
+  distribution or the user: **no legal obligation for us**.
 
-**Raccomandazione:**
-1. ⛔ **Non sostituire nessun componente grande con codice nostro.** I candidati «grossi» (il trasporto QUIC,
-   la crittografia, il login di sistema, PipeWire, i driver) sono proprio quelli dove un errore nostro diventa
-   una falla raggiungibile da Internet, e dove oggi ci proteggono migliaia di occhi altrui. Per la regola
-   *complessità = vulnerabilità*, rifarli in casa **aumenta** il rischio, non lo toglie.
-2. ✅ **Una cosa da fare subito, piccola (ore, non settimane)**: rimettere nel `.run` il file con i testi delle
-   licenze (oggi non c'è: `packaging/rilascio.sh` lo segna come punto aperto) e **completarlo** con tre voci
-   che oggi mancano: la libreria audio dentro la pagina, le descrizioni dei protocolli Wayland, i pezzi di
-   emscripten. La licenza di REMOTIX (§8) **promette già** che quei testi accompagnano il prodotto: oggi la
-   promessa non è mantenuta.
-3. 🔸 **Una sostituzione possibile ma non urgente**: GLib (usata solo per parlare via D-Bus con GNOME, KDE e
-   systemd). Toglierla leverebbe ~9 librerie indirette. Costa 2-4 settimane e una suite completa sui 4 desktop;
-   non porta nulla di legale né di sicurezza. Da tenere nel cassetto, non da fare.
-4. Correggere una frase delle SPECIFICHE (§11.4): dice «tutte le librerie del server sono permissive», ma
-   alcune della distribuzione sono **LGPL** (glibc, GLib, e altre). È **lecito** (collegate dinamicamente,
-   l'LGPL lo permette), ma la frase va resa vera: «nessuna GPL; le LGPL della distribuzione, collegate
+**Recommendation:**
+1. ⛔ **Do not replace any large component with our own code.** The «big» candidates (the QUIC transport,
+   cryptography, the system login, PipeWire, the drivers) are exactly those where a mistake of ours becomes
+   a hole reachable from the Internet, and where today thousands of other people's eyes protect us. By the rule
+   *complexity = vulnerability*, redoing them in house **increases** the risk, it does not remove it.
+2. ✅ **One thing to do at once, small (hours, not weeks)**: put back into the `.run` the file with the licence
+   texts (today it is not there: `packaging/rilascio.sh` marks it as an open point) and **complete it** with three entries
+   that are missing today: the audio library inside the page, the descriptions of the Wayland protocols, the pieces of
+   emscripten. The REMOTIX licence (§8) **already promises** that those texts accompany the product: today the
+   promise is not kept.
+3. 🔸 **A possible but not urgent replacement**: GLib (used only to talk via D-Bus with GNOME, KDE and
+   systemd). Removing it would take away ~9 indirect libraries. It costs 2-4 weeks and a full suite on the 4 desktops;
+   it brings nothing legal nor of security. To keep in the drawer, not to do.
+4. Correct a sentence of the SPECIFICHE (§11.4): it says «tutte le librerie del server sono permissive», but
+   some of the distribution's are **LGPL** (glibc, GLib, and others). It is **lawful** (linked dynamically,
+   the LGPL allows it), but the sentence must be made true: «nessuna GPL; le LGPL della distribuzione, collegate
    dinamicamente, sono ammesse».
 
-**In una riga**: l'autonomia **legale** è a portata di qualche ora di lavoro; quella **tecnica** non si compra
-riscrivendo, si compra scegliendo pochi fornitori solidi (già fatto); quella **di distribuzione** è una scelta
-di prodotto, e il suo prezzo è portarsi dietro gli aggiornamenti di sicurezza.
+**In one line**: **legal** autonomy is within reach of a few hours of work; **technical** autonomy is not bought
+by rewriting, it is bought by choosing a few solid suppliers (already done); **distribution** autonomy is a product
+choice, and its price is carrying the security updates along.
 
 ---
 
-### 1. L'inventario completo
+### 1. The complete inventory
 
-Legenda dell'ultima colonna: **sì** = la licenza ci chiede qualcosa (di solito allegare il testo e il nome
-degli autori); **no** = è un pezzo che installa la distribuzione o l'utente, coi suoi testi.
+Legend of the last column: **yes** = the licence asks something of us (usually shipping the text and the names
+of the authors); **no** = it is a piece installed by the distribution or the user, with its own texts.
 
-### 1a. Incorporati in ciò che distribuiamo
+### 1a. Embedded in what we distribute
 
-Sono i pezzi di altri che finiscono **dentro i nostri file**: nel programma `remotix`, nella pagina web che il
-programma serve, nell'installatore `remotix-install`.
+They are the pieces of others that end up **inside our files**: in the `remotix` program, in the web page the
+program serves, in the `remotix-install` installer.
 
-| componente | a cosa serve in REMOTIX | licenza | chi lo mantiene | obbligo nostro |
+| component | what it is for in REMOTIX | licence | who maintains it | our obligation |
 |---|---|---|---|---|
-| **ngtcp2** 1.25.0 | il **QUIC**: il «tubo» di rete veloce su cui viaggiano immagini, audio e comandi verso il browser | MIT | progetto ngtcp2 (Tatsuhiro Tsujikawa e contributori; lo stesso autore di nghttp2, usato da curl) | **sì** — testo MIT. Già in `debian/copyright` e in `licenze.py` |
-| **nghttp3** 1.18.0 | l'**HTTP/3** sopra QUIC, su cui poggia WebTransport | MIT | stesso progetto | **sì** — come sopra |
-| **libopus** 1.5.2, compilata in WebAssembly **dentro la pagina** (`src/opus-wasm/`) | **decodifica l'audio nel browser**. Scelta misurata (D-006, 25 set): il decodificatore di Firefox, sotto carico video, faceva 3-5 buchi al minuto; questo zero | BSD-3 | Xiph.Org | **sì** — testo BSD. ⚠ **Oggi non è nel file delle licenze** (`licenze.py` non la conosce) |
-| **pezzi della libreria C di emscripten** dentro lo stesso `opus.wasm` (la memoria, le copie: lo strumento li mette per far girare libopus nel browser) | nessuno visibile: servono a libopus | MIT / UIUC (emscripten), MIT (musl) | progetto Emscripten | **sì**, a rigore. ⚠ **Non elencati** |
-| **8 descrizioni di protocolli Wayland** (`src/protocolli/*.xml`): da queste si genera codice che entra nel binario | sono i «moduli» per parlare con i compositori: catturare lo schermo (wlroots, KDE), tastiera e puntatore virtuali, appunti, misura del monitor | 7 MIT o simili (wlroots, Collabora, Purism, Simon Ser); **1 LGPL-2.1+**: `zkde-screencast` (KDE) | freedesktop / wlroots / KDE | **sì**. ⚠ **Non elencati**. Il pezzo LGPL vedi §2 |
-| **Go** (il linguaggio: runtime e libreria standard) | il motore dell'installatore | BSD-3 | Google | **sì** — già in `licenze.py` |
-| **golang.org/x/sys, x/text, x/exp** | chiamate di sistema, testo | BSD-3 | Google (progetto Go) | **sì** — già |
-| **Charm**: bubbletea, lipgloss, x/ansi, x/term, x/cellbuf, colorprofile | la **TUI** dell'installatore (finestre, colori, tasti nel terminale) | MIT | Charmbracelet Inc. (azienda, molto usata) | **sì** — già |
-| **godbus/dbus** | l'installatore interroga systemd e il sistema via D-Bus | BSD-2 | volontari (Georg Reinke e altri) | **sì** — già |
-| muesli/termenv, ansi, cancelreader · mattn/go-isatty, go-runewidth, go-localereader · rivo/uniseg · lucasb-eyer/go-colorful · xo/terminfo · aymanbagabas/go-osc52 · erikgeiser/coninput | pezzi di supporto alla TUI: larghezza dei caratteri, colori, capacità del terminale | tutti MIT | singoli volontari | **sì** — già (go-localereader con l'eccezione scritta in `licenze.py`) |
+| **ngtcp2** 1.25.0 | **QUIC**: the fast network «pipe» on which images, audio and commands travel to the browser | MIT | ngtcp2 project (Tatsuhiro Tsujikawa and contributors; the same author as nghttp2, used by curl) | **yes** — MIT text. Already in `debian/copyright` and in `licenze.py` |
+| **nghttp3** 1.18.0 | **HTTP/3** on top of QUIC, on which WebTransport rests | MIT | same project | **yes** — as above |
+| **libopus** 1.5.2, compiled to WebAssembly **inside the page** (`src/opus-wasm/`) | **decodes the audio in the browser**. A measured choice (D-006, 25 Sep): Firefox's decoder, under video load, made 3-5 holes a minute; this one zero | BSD-3 | Xiph.Org | **yes** — BSD text. ⚠ **Today it is not in the licence file** (`licenze.py` does not know it) |
+| **pieces of the emscripten C library** inside the same `opus.wasm` (memory, copies: the tool puts them in to make libopus run in the browser) | none visible: they serve libopus | MIT / UIUC (emscripten), MIT (musl) | Emscripten project | **yes**, strictly. ⚠ **Not listed** |
+| **8 Wayland protocol descriptions** (`src/protocolli/*.xml`): from these, code is generated that goes into the binary | they are the «modules» to talk to the compositors: capturing the screen (wlroots, KDE), virtual keyboard and pointer, clipboard, monitor size | 7 MIT or similar (wlroots, Collabora, Purism, Simon Ser); **1 LGPL-2.1+**: `zkde-screencast` (KDE) | freedesktop / wlroots / KDE | **yes**. ⚠ **Not listed**. For the LGPL piece see §2 |
+| **Go** (the language: runtime and standard library) | the installer's engine | BSD-3 | Google | **yes** — already in `licenze.py` |
+| **golang.org/x/sys, x/text, x/exp** | system calls, text | BSD-3 | Google (Go project) | **yes** — already |
+| **Charm**: bubbletea, lipgloss, x/ansi, x/term, x/cellbuf, colorprofile | the installer's **TUI** (windows, colours, keys in the terminal) | MIT | Charmbracelet Inc. (a company, widely used) | **yes** — already |
+| **godbus/dbus** | the installer queries systemd and the system via D-Bus | BSD-2 | volunteers (Georg Reinke and others) | **yes** — already |
+| muesli/termenv, ansi, cancelreader · mattn/go-isatty, go-runewidth, go-localereader · rivo/uniseg · lucasb-eyer/go-colorful · xo/terminfo · aymanbagabas/go-osc52 · erikgeiser/coninput | support pieces for the TUI: character width, colours, terminal capabilities | all MIT | individual volunteers | **yes** — already (go-localereader with the exception written in `licenze.py`) |
 
-*Nota: il binario di sviluppo sul server collega ngtcp2 e nghttp3 **dinamicamente** (da `rete11/prodotto/lib`);
-nei pacchetti di rilascio sono **statici**, dentro il binario (DECISIONI §10.6, D2). Per la licenza conta il
-rilascio.*
+*Note: the development binary on the server links ngtcp2 and nghttp3 **dynamically** (from `rete11/prodotto/lib`);
+in the release packages they are **static**, inside the binary (DECISIONI §10.6, D2). For the licence, the
+release is what counts.*
 
-*Nota: il resto della pagina web è tutto nostro: nessuna libreria JavaScript, nessun font incorporato (si usano
-quelli del sistema), le icone sono SVG scritti a mano.*
+*Note: the rest of the web page is all ours: no JavaScript library, no embedded font (the system's are
+used), the icons are hand-written SVG.*
 
-### 1b. Librerie della distribuzione collegate al programma
+### 1b. Distribution libraries linked to the program
 
-Dall'`ldd` del binario costruito (10 ott) e dalle dipendenze dei pacchetti `.deb`, `.rpm`, Arch. Le installa il
-gestore dei pacchetti; i testi delle licenze li porta la distribuzione.
+From the `ldd` of the built binary (10 Oct) and from the dependencies of the `.deb`, `.rpm`, Arch packages. They are installed by the
+package manager; the licence texts are carried by the distribution.
 
-| libreria | a cosa serve in REMOTIX | licenza | chi la mantiene | obbligo |
+| library | what it is for in REMOTIX | licence | who maintains it | obligation |
 |---|---|---|---|---|
-| **OpenSSL 3** (libssl, libcrypto) ≥ 3.5 | la **cifratura**: il TLS dentro QUIC, i certificati, la pagina in HTTPS | Apache-2.0 | OpenSSL Foundation | no |
-| **Linux-PAM** (libpam) | il **login**: controlla nome e parola d'ordine esattamente come la macchina (blocchi, SELinux, LDAP compresi: DECISIONI §10.18) | BSD-3 (o GPL, a scelta: noi usiamo la BSD) | Linux-PAM (volontari, Red Hat) | no |
-| **GLib / GIO / GObject** | parlare via **D-Bus** con GNOME (Mutter), KDE, logind, appunti di KDE | LGPL-2.1+ | GNOME | no (collegata dinamicamente: l'LGPL lo permette) |
-| **libpipewire** | ricevere lo **schermo** da GNOME e KDE, e l'**audio** di tutti i desktop | MIT | PipeWire (Collabora, Red Hat) | no |
-| **libva**, libva-drm | **codifica video sulla scheda** Intel (e AMD dove serve) | MIT | Intel | no |
-| **libvulkan** (il caricatore Khronos) | **codifica video sulla scheda** AMD e NVIDIA (Vulkan Video, fase 19) | Apache-2.0 | Khronos / LunarG | no |
-| **libei** | **tastiera e mouse** su GNOME e KDE | MIT | freedesktop (Red Hat) | no |
-| **libxkbcommon** | le **mappe della tastiera** (italiana, americana…) | MIT | freedesktop | no |
-| **libwayland-client** | parlare con i **compositori** (wlroots, labwc, KWin) | MIT | freedesktop | no |
-| **libgbm** (Mesa), **libdrm** | i **fogli di memoria della scheda** (la «copia zero») | MIT | Mesa / freedesktop | no |
-| **libopus** | **codifica dell'audio** sul server | BSD-3 | Xiph.Org | no |
-| **glibc** (libc, libm) | la base di ogni programma C | LGPL-2.1+ | GNU | no |
-| indirette (le tira dentro GLib, PAM, ecc.): zlib, zstd, pcre2, expat, libffi, libselinux, libcap-ng, libaudit, libmount, libblkid, libgmodule, libatomic | nessuno diretto | zlib, BSD/GPLv2 a scelta, BSD-3, MIT, MIT, pubblico dominio, LGPL-2.1, LGPL-2.1, LGPL-2.1+, LGPL-2.1+, LGPL-2.1+, GPL-3 **con l'eccezione** che la rende libera per qualsiasi programma | vari | no |
+| **OpenSSL 3** (libssl, libcrypto) ≥ 3.5 | **encryption**: the TLS inside QUIC, the certificates, the page over HTTPS | Apache-2.0 | OpenSSL Foundation | no |
+| **Linux-PAM** (libpam) | the **login**: checks name and password exactly like the machine (lockouts, SELinux, LDAP included: DECISIONI §10.18) | BSD-3 (or GPL, at choice: we use the BSD) | Linux-PAM (volunteers, Red Hat) | no |
+| **GLib / GIO / GObject** | talking via **D-Bus** with GNOME (Mutter), KDE, logind, KDE's clipboard | LGPL-2.1+ | GNOME | no (linked dynamically: the LGPL allows it) |
+| **libpipewire** | receiving the **screen** from GNOME and KDE, and the **audio** of all desktops | MIT | PipeWire (Collabora, Red Hat) | no |
+| **libva**, libva-drm | **video encoding on the card**, Intel (and AMD where needed) | MIT | Intel | no |
+| **libvulkan** (the Khronos loader) | **video encoding on the card**, AMD and NVIDIA (Vulkan Video, phase 19) | Apache-2.0 | Khronos / LunarG | no |
+| **libei** | **keyboard and mouse** on GNOME and KDE | MIT | freedesktop (Red Hat) | no |
+| **libxkbcommon** | the **keyboard maps** (Italian, American…) | MIT | freedesktop | no |
+| **libwayland-client** | talking to the **compositors** (wlroots, labwc, KWin) | MIT | freedesktop | no |
+| **libgbm** (Mesa), **libdrm** | the **card's memory sheets** (the «zero copy») | MIT | Mesa / freedesktop | no |
+| **libopus** | **audio encoding** on the server | BSD-3 | Xiph.Org | no |
+| **glibc** (libc, libm) | the base of every C program | LGPL-2.1+ | GNU | no |
+| indirect (pulled in by GLib, PAM, etc.): zlib, zstd, pcre2, expat, libffi, libselinux, libcap-ng, libaudit, libmount, libblkid, libgmodule, libatomic | none directly | zlib, BSD/GPLv2 at choice, BSD-3, MIT, MIT, public domain, LGPL-2.1, LGPL-2.1, LGPL-2.1+, LGPL-2.1+, LGPL-2.1+, GPL-3 **with the exception** that makes it free for any program | various | no |
 
-### 1c. Programmi e servizi usati mentre REMOTIX gira
+### 1c. Programs and services used while REMOTIX runs
 
-Non sono collegati al nostro programma: REMOTIX li **avvia** o ci **parla**. Tra programmi separati la licenza
-dell'uno non tocca l'altro. **Nessun obbligo.**
+They are not linked to our program: REMOTIX **starts** them or **talks** to them. Between separate programs the licence
+of one does not touch the other. **No obligation.**
 
-| programma / servizio | a cosa serve | licenza | chi lo mantiene |
+| program / service | what it is for | licence | who maintains it |
 |---|---|---|---|
-| **kernel Linux** | la scheda video (DRM), la memoria condivisa, la rete | GPL-2 (le chiamate al kernel non contano come «opera derivata») | Linux Foundation e tutti |
-| **systemd** (logind, gestore delle sessioni utente, tmpfiles), `loginctl`, `systemctl` | aprire e chiudere le sessioni degli utenti | LGPL-2.1+ | systemd (Red Hat e altri) |
-| moduli PAM `pam_systemd`, `pam_listfile`, `pam_selinux`; `usermod` | il login completo, la lista degli utenti negati | vari permissivi / GPL | distribuzione |
-| **D-Bus** (bus di sistema e dell'utente) | il canale per parlare con desktop e systemd | AFL/GPL | freedesktop |
-| **GNOME**: gnome-shell, Mutter, gnome-session | il desktop GNOME; Mutter dà schermo e input a REMOTIX | GPL | GNOME |
-| **KDE Plasma**: KWin, startplasma-wayland | il desktop KDE | GPL | KDE |
-| **XFCE** (xfce4-session), **LXQt** | i due desktop «leggeri» | GPL / LGPL | XFCE, LXQt |
-| **labwc** | il compositore sotto cui REMOTIX fa girare XFCE e LXQt | GPL-2 | volontari (Johan Malm e altri) |
-| **wlr-randr**, **Xwayland**, un font scalabile | misura/taglia del monitor su XFCE e LXQt; i programmi X11 (pannello di XFCE) | MIT, MIT, vari | volontari, freedesktop |
-| **PipeWire** (il servizio), **WirePlumber**, pipewire-pulse | il flusso dello schermo (GNOME, KDE) e dell'audio | MIT | PipeWire (Collabora, Red Hat) |
-| **driver della scheda**: Intel `intel-media-driver`, Mesa (radeonsi, RADV), NVIDIA proprietario | fanno davvero la codifica H.264/HEVC | MIT/BSD; NVIDIA chiuso | Intel, Mesa, NVIDIA |
-| **gestori dei pacchetti**: apt, dpkg, dnf, rpm, zypper, pacman | l'installatore li comanda | GPL (programmi separati) | distribuzioni |
-| **ufw / firewalld**, **SELinux** (modulo `remotix-selinux`) | aprire la porta, permettere il passaggio all'utente | GPL | distribuzioni |
-| **attrezzi di costruzione** (non arrivano all'utente): gcc, Go, emscripten, podman, wayland-scanner, glslang | compilare | vari | vari |
+| **Linux kernel** | the graphics card (DRM), shared memory, the network | GPL-2 (calls to the kernel do not count as a «derivative work») | Linux Foundation and everyone |
+| **systemd** (logind, user session manager, tmpfiles), `loginctl`, `systemctl` | opening and closing users' sessions | LGPL-2.1+ | systemd (Red Hat and others) |
+| PAM modules `pam_systemd`, `pam_listfile`, `pam_selinux`; `usermod` | the complete login, the list of denied users | various permissive / GPL | distribution |
+| **D-Bus** (system and user bus) | the channel to talk to desktops and systemd | AFL/GPL | freedesktop |
+| **GNOME**: gnome-shell, Mutter, gnome-session | the GNOME desktop; Mutter gives screen and input to REMOTIX | GPL | GNOME |
+| **KDE Plasma**: KWin, startplasma-wayland | the KDE desktop | GPL | KDE |
+| **XFCE** (xfce4-session), **LXQt** | the two «light» desktops | GPL / LGPL | XFCE, LXQt |
+| **labwc** | the compositor under which REMOTIX runs XFCE and LXQt | GPL-2 | volunteers (Johan Malm and others) |
+| **wlr-randr**, **Xwayland**, a scalable font | monitor size/cut on XFCE and LXQt; X11 programs (XFCE's panel) | MIT, MIT, various | volunteers, freedesktop |
+| **PipeWire** (the service), **WirePlumber**, pipewire-pulse | the screen stream (GNOME, KDE) and the audio | MIT | PipeWire (Collabora, Red Hat) |
+| **card drivers**: Intel `intel-media-driver`, Mesa (radeonsi, RADV), proprietary NVIDIA | they really do the H.264/HEVC encoding | MIT/BSD; NVIDIA closed | Intel, Mesa, NVIDIA |
+| **package managers**: apt, dpkg, dnf, rpm, zypper, pacman | the installer drives them | GPL (separate programs) | distributions |
+| **ufw / firewalld**, **SELinux** (module `remotix-selinux`) | opening the port, allowing the hand-over to the user | GPL | distributions |
+| **build tools** (they do not reach the user): gcc, Go, emscripten, podman, wayland-scanner, glslang | compiling | various | various |
 
-### 1d. I browser
+### 1d. The browsers
 
-| browser | cosa usa REMOTIX | licenza | chi lo mantiene |
+| browser | what REMOTIX uses | licence | who maintains it |
 |---|---|---|---|
-| **Chrome / Chromium** (e Edge) | **WebTransport** (il tubo QUIC lato browser), **WebCodecs** `VideoDecoder` (decodifica H.264/HEVC con la scheda del cliente), WebAssembly (l'audio), la tela `bitmaprenderer` | BSD-3 (Chromium) | Google |
-| **Firefox** | le stesse cose, solo H.264 su Linux | MPL-2.0 | Mozilla |
-| Safari | mai provato | — | Apple |
+| **Chrome / Chromium** (and Edge) | **WebTransport** (the QUIC pipe on the browser side), **WebCodecs** `VideoDecoder` (H.264/HEVC decoding with the client's card), WebAssembly (the audio), the `bitmaprenderer` canvas | BSD-3 (Chromium) | Google |
+| **Firefox** | the same things, only H.264 on Linux | MPL-2.0 | Mozilla |
+| Safari | never tried | — | Apple |
 
-Nessun obbligo: il browser è dell'utente. Ma è la dipendenza **più forte** di tutte: WebTransport è ancora una
-bozza in evoluzione, e quando i browser la cambiano, REMOTIX deve seguirli (lo fa oggi tramite ngtcp2/nghttp3 e
-le nostre 9 000 righe di `webtransport.c`).
+No obligation: the browser is the user's. But it is the **strongest** dependency of all: WebTransport is still an
+evolving draft, and when the browsers change it, REMOTIX must follow them (it does so today through ngtcp2/nghttp3 and
+our 9 000 lines of `webtransport.c`).
 
 ---
 
-### 2. Sostituirli con codice nostro: cosa costerebbe, cosa rischierebbe
+### 2. Replacing them with our own code: what it would cost, what it would risk
 
-Il criterio è la regola del progetto: **ogni pezzo di codice nostro in più deve dimostrare che cosa protegge**.
-Un componente sostituito vale la pena se toglie un **rischio vero** (legale, di sicurezza, di abbandono) più
-grande del rischio che aggiunge il nostro codice nuovo.
+The criterion is the project's rule: **every extra piece of our own code must show what it protects**.
+A replaced component is worth it if it removes a **real risk** (legal, security, abandonment) larger
+than the risk our new code adds.
 
-### Il precedente: ffmpeg, tolto nella fase 18 (30 settembre)
+### The precedent: ffmpeg, removed in phase 18 (30 September)
 
-È l'unico caso già fatto, e insegna molto.
-- **Perché**: ffmpeg (libavcodec) nelle distribuzioni è **GPL**, incompatibile con una licenza non commerciale
-  (DECISIONI §10.22, §10.25). Un rischio **legale vero**, non teorico.
-- **Che cosa è costato**: ~2 250 righe nostre nuove (`vadiretta.c` 1 782: parlare con la scheda e **scrivere a
-  mano le intestazioni H.264/HEVC bit per bit**; `scrittore_bit.c` 132; `colori709.c` 330), una giornata
-  intensa di lavoro in parallelo, la suite completa sulle 4 scatole (673 prove, 135 minuti), e misure di
-  confronto vecchio/nuovo. Una regressione trovata a metà strada (la conversione dei colori «dalla memoria» era
-  peggiorata, fino a −6 dB sulla Radeon) e corretta prima di chiudere.
-- **Che cosa ha reso**: la licenza è libera; meno librerie; la preparazione delle immagini «dalla memoria» è
-  diventata **due volte più veloce**.
-- **E la lezione**: ffmpeg **non è stato sostituito da codice nostro e basta**: è stato sostituito da **libva**,
-  un altro componente di terzi, più sottile e permissivo. Abbiamo scritto noi la parte facile e stabile (le
-  intestazioni del flusso, che sono uno standard fisso), e lasciato ad altri quella difficile (parlare con ogni
-  scheda). Questa è la forma buona di «autonomia». Il prezzo che resta: le 2 250 righe sono ora **nostre da
-  mantenere** — se un browser o una scheda si aspetta un dettaglio diverso nelle intestazioni, il guasto è nostro.
+It is the only case already done, and it teaches a lot.
+- **Why**: ffmpeg (libavcodec) in the distributions is **GPL**, incompatible with a non-commercial licence
+  (DECISIONI §10.22, §10.25). A **real legal** risk, not a theoretical one.
+- **What it cost**: ~2 250 new lines of ours (`vadiretta.c` 1 782: talking to the card and **writing the H.264/HEVC
+  headers by hand bit by bit**; `scrittore_bit.c` 132; `colori709.c` 330), one intense
+  day of work in parallel, the full suite on the 4 boxes (673 tests, 135 minutes), and old/new comparison
+  measurements. A regression found halfway (colour conversion «from memory» had
+  worsened, down to −6 dB on the Radeon) and corrected before closing.
+- **What it returned**: the licence is free; fewer libraries; preparing images «from memory» became
+  **twice as fast**.
+- **And the lesson**: ffmpeg **was not simply replaced by our own code**: it was replaced by **libva**,
+  another third-party component, thinner and permissive. We wrote the easy and stable part ourselves (the
+  stream headers, which are a fixed standard), and left the hard part to others (talking to every
+  card). This is the good form of «autonomia». The price that remains: the 2 250 lines are now **ours to
+  maintain** — if a browser or a card expects a different detail in the headers, the fault is ours.
 
-### Componente per componente
+### Component by component
 
-**Fattibilità**: *impossibile* = non si può fare senza cambiare cosa è REMOTIX; *irragionevole* = si può, ma il
-costo o il rischio sono sproporzionati; *possibile* = si può con uno sforzo misurabile.
+**Feasibility**: *impossible* = it cannot be done without changing what REMOTIX is; *unreasonable* = it can, but the
+cost or the risk are disproportionate; *possible* = it can, with a measurable effort.
 
-| componente | fattibilità | sforzo grossolano | rischio se lo facciamo noi | verdetto |
+| component | feasibility | rough effort | risk if we do it ourselves | verdict |
 |---|---|---|---|---|
-| **ngtcp2 + nghttp3** (QUIC, HTTP/3) | irragionevole | 6-12 mesi di un esperto; poi **per sempre** (i browser cambiano WebTransport) | ⛔ **il più alto di tutti**: è il primo codice che legge i pacchetti di **chiunque** su Internet, **prima** del login. ngtcp2 è controllato di continuo da strumenti automatici di ricerca di difetti (OSS-Fuzz) e usato da curl; il nostro non lo sarebbe. Una falla qui è una porta aperta sul server | ⛔ **mai** |
-| ↳ alternativa: il QUIC che **OpenSSL 3.5** ha già dentro | da verificare | un banco di prova, giorni | toglierebbe ngtcp2 ma non nghttp3; per quanto ne so non gestisce i «datagram» QUIC che REMOTIX usa (81 punti in `webtransport.c`), e la scelta §6.4 l'ha già vagliata contro 4 candidate | non ora; solo se ngtcp2 fosse abbandonato |
-| **OpenSSL** (crittografia) | irragionevole | anni | ⛔ «mai scrivere la propria crittografia» è la regola più vecchia della sicurezza | ⛔ **mai** |
-| **PAM** (login) | impossibile | — | ⛔ leggere da soli le parole d'ordine di sistema significherebbe **perdere** blocchi dei conti, SELinux, LDAP, e aggirare la politica della macchina (§10.18 dice il contrario: REMOTIX **rispecchia** il sistema) | ⛔ **mai** |
-| **GLib/GIO** (solo per D-Bus) | possibile | 2-4 settimane (un piccolo client D-Bus nostro, o `sd-bus` di systemd, che è comunque di terzi) + suite sui 4 desktop | medio: il D-Bus è locale (non arriva da Internet), ma è un formato con trappole; sbagliarlo rompe GNOME o KDE. Guadagno: −1 libreria diretta e ~9 indirette, nessun guadagno legale | 🔸 nel cassetto |
-| **libpipewire** | irragionevole | mesi, e da rifare a ogni versione | il protocollo interno di PipeWire **non è stabile**: un client nostro si romperebbe a ogni aggiornamento della distro. È l'unica porta per lo schermo di GNOME e KDE | ⛔ no |
-| **libva** | impossibile | — | sotto libva c'è il driver di ogni scheda: sostituirla vorrebbe dire scrivere driver | ⛔ no |
-| **caricatore Vulkan** | possibile | giorni | si potrebbe aprire direttamente il driver; si perde la gestione di più schede e degli strati. Guadagno zero | ⛔ no |
-| **libei, libxkbcommon, libwayland-client, libgbm, libdrm** | irragionevole | settimane ciascuna | protocolli e formati che cambiano coi desktop; xkbcommon da sola è un compilatore di mappe di tastiera. Guadagno zero (sono in ogni distro, MIT) | ⛔ no |
-| **libopus** (server) | irragionevole | un codificatore audio di qualità = anni di ricerca | qualità audio peggiore, garantito | ⛔ no |
-| **libopus nella pagina** (WebAssembly) | possibile tornare al decodificatore **del browser** | ore | ⛔ ritornano i buchi audio misurati su Firefox (D-006). Il pezzo c'è **per una misura**, cioè dimostra cosa protegge | ⛔ no: si allega il testo BSD e basta |
-| **descrizioni dei protocolli Wayland** | impossibile | — | sono il «contratto» col compositore: devono essere identiche alle sue | si rispetta la licenza (vedi sotto) |
-| **Go** e moduli **x/** | impossibile / irragionevole | — | è il linguaggio | no |
-| **Charm** (TUI) e i 12 moduli di supporto | possibile | 3-6 settimane per una TUI nostra «curata» (§10.31) | medio-basso: i terminali sono un campo minato (larghezze dei caratteri, colori, tasti, Unicode). Oggi i moduli sono **copiati nel deposito e bloccati alla versione** (`vendor/`): il rischio «un aggiornamento malevolo arriva da solo» è già nullo | ⛔ no: guadagno solo estetico sull'elenco delle licenze |
-| **godbus** | possibile | 1 settimana | basso, ma nessun guadagno | ⛔ no |
-| **desktop, labwc, PipeWire servizio, systemd, D-Bus, kernel, driver** | impossibile | — | sono l'**oggetto** del prodotto. Un compositore nostro al posto di labwc violerebbe anche la regola «niente eccezioni per compositore» | ⛔ no. (Togliere labwc/wlr-randr/Xwayland si può solo **togliendo XFCE e LXQt**: è una decisione di prodotto, non di autonomia) |
-| **browser** | impossibile | — | il browser come cliente è la scelta fondante (§1.6); l'alternativa è un programma nostro da installare sui PC e telefoni, cioè **più** dipendenze, non meno | ⛔ no |
+| **ngtcp2 + nghttp3** (QUIC, HTTP/3) | unreasonable | 6-12 months of an expert; then **forever** (the browsers change WebTransport) | ⛔ **the highest of all**: it is the first code that reads the packets of **anyone** on the Internet, **before** the login. ngtcp2 is continuously checked by automatic defect-finding tools (OSS-Fuzz) and used by curl; ours would not be. A hole here is an open door on the server | ⛔ **never** |
+| ↳ alternative: the QUIC that **OpenSSL 3.5** already has inside | to be verified | a test bench, days | it would remove ngtcp2 but not nghttp3; as far as I know it does not handle the QUIC «datagrams» REMOTIX uses (81 places in `webtransport.c`), and choice §6.4 already weighed it against 4 candidates | not now; only if ngtcp2 were abandoned |
+| **OpenSSL** (cryptography) | unreasonable | years | ⛔ «never write your own cryptography» is the oldest rule of security | ⛔ **never** |
+| **PAM** (login) | impossible | — | ⛔ reading the system passwords by ourselves would mean **losing** account lockouts, SELinux, LDAP, and bypassing the machine's policy (§10.18 says the opposite: REMOTIX **mirrors** the system) | ⛔ **never** |
+| **GLib/GIO** (only for D-Bus) | possible | 2-4 weeks (a small D-Bus client of our own, or systemd's `sd-bus`, which is third-party anyway) + suite on the 4 desktops | medium: D-Bus is local (it does not come from the Internet), but it is a format with traps; getting it wrong breaks GNOME or KDE. Gain: −1 direct library and ~9 indirect, no legal gain | 🔸 in the drawer |
+| **libpipewire** | unreasonable | months, and to redo at every version | PipeWire's internal protocol **is not stable**: a client of ours would break at every distro update. It is the only door to the screen of GNOME and KDE | ⛔ no |
+| **libva** | impossible | — | under libva there is the driver of every card: replacing it would mean writing drivers | ⛔ no |
+| **Vulkan loader** | possible | days | the driver could be opened directly; handling of multiple cards and of layers is lost. Zero gain | ⛔ no |
+| **libei, libxkbcommon, libwayland-client, libgbm, libdrm** | unreasonable | weeks each | protocols and formats that change with the desktops; xkbcommon alone is a keyboard-map compiler. Zero gain (they are in every distro, MIT) | ⛔ no |
+| **libopus** (server) | unreasonable | a quality audio encoder = years of research | worse audio quality, guaranteed | ⛔ no |
+| **libopus in the page** (WebAssembly) | possible to go back to the **browser's** decoder | hours | ⛔ the audio holes measured on Firefox come back (D-006). The piece is there **because of a measurement**, that is, it shows what it protects | ⛔ no: the BSD text is shipped and that is it |
+| **Wayland protocol descriptions** | impossible | — | they are the «contract» with the compositor: they must be identical to its own | the licence is respected (see below) |
+| **Go** and **x/** modules | impossible / unreasonable | — | it is the language | no |
+| **Charm** (TUI) and the 12 support modules | possible | 3-6 weeks for a «polished» TUI of our own (§10.31) | medium-low: terminals are a minefield (character widths, colours, keys, Unicode). Today the modules are **copied into the repository and pinned to the version** (`vendor/`): the risk «a malicious update arrives by itself» is already nil | ⛔ no: only a cosmetic gain on the licence list |
+| **godbus** | possible | 1 week | low, but no gain | ⛔ no |
+| **desktops, labwc, PipeWire service, systemd, D-Bus, kernel, drivers** | impossible | — | they are the **object** of the product. A compositor of our own in place of labwc would also break the rule «niente eccezioni per compositore» | ⛔ no. (Removing labwc/wlr-randr/Xwayland can only be done **by removing XFCE and LXQt**: it is a product decision, not an autonomy one) |
+| **browser** | impossible | — | the browser as client is the founding choice (§1.6); the alternative is a program of our own to install on PCs and phones, that is **more** dependencies, not fewer | ⛔ no |
 
-### Il pezzo LGPL: `zkde-screencast` (KDE)
+### The LGPL piece: `zkde-screencast` (KDE)
 
-È l'unica descrizione di protocollo con licenza LGPL-2.1+ (le altre 7 sono MIT o simili). Dal suo file si genera
-una piccola tabella (i nomi delle funzioni del protocollo) che entra nel nostro binario. L'LGPL in un programma
-non libero chiede due cose: **allegare il testo** e **non impedire** a chi riceve il programma di modificare e
-rimettere insieme quel pezzo. La nostra licenza (§10.39) vieta le modifiche, **ma** il suo §8 dice già che *«nulla
-in questa licenza limita i diritti che le licenze dei componenti di terzi danno»*, e il sorgente è pubblico e
-compilabile. Quindi, a mio giudizio da non avvocato, **basta allegare il testo LGPL con la nota** di quale pezzo
-riguarda. Non serve sostituirlo (e non si potrebbe: è il contratto con KWin). ⚠ È l'unico punto del documento
-che merita un «da verificare» sul piano legale.
+It is the only protocol description licensed LGPL-2.1+ (the other 7 are MIT or similar). From its file a small
+table is generated (the names of the protocol's functions) that goes into our binary. The LGPL in a non-free
+program asks for two things: **ship the text** and **not prevent** whoever receives the program from modifying and
+reassembling that piece. Our licence (§10.39) forbids modifications, **but** its §8 already says that *«nulla
+in questa licenza limita i diritti che le licenze dei componenti di terzi danno»*, and the source is public and
+buildable. So, in my non-lawyer's judgement, **shipping the LGPL text with the note** of which piece it
+concerns **is enough**. There is no need to replace it (and it could not be done: it is the contract with KWin). ⚠ It is the only point of the document
+that deserves a «da verificare» on the legal side.
 
 ---
 
-### 3. Che cosa vuol dire davvero «autonomo»
+### 3. What «autonomo» really means
 
-Sono tre cose diverse, e ognuna ha il suo prezzo.
+They are three different things, and each has its price.
 
-### Autonomia legale — «non dover allegare testi di licenza di altri»
+### Legal autonomy — «non dover allegare testi di licenza di altri»
 
-- **Che cosa la ottiene, al 100%**: non avere **nessun** pezzo di altri dentro i nostri file. Cioè riscrivere
-  QUIC, HTTP/3, il decodificatore Opus della pagina, la TUI dell'installatore, e rinunciare a Go. ⛔ Impossibile
-  a costo ragionevole (vedi §2).
-- **Che cosa la ottiene, nella sostanza (consigliato)**: avere **solo licenze permissive** (già così, salvo il
-  pezzo LGPL che si risolve allegando il testo) e un **file delle licenze completo e automatico** dentro ogni
-  rilascio. Allegare un file di testo **non limita nulla**: nessuna di queste licenze chiede di aprire il nostro
-  codice, né di permettere la redistribuzione, né di cambiare la nostra licenza. MIT, BSD e Apache chiedono solo
+- **What achieves it, 100%**: having **no** piece of anyone else's inside our files. That is, rewriting
+  QUIC, HTTP/3, the page's Opus decoder, the installer's TUI, and giving up Go. ⛔ Impossible
+  at a reasonable cost (see §2).
+- **What achieves it, in substance (recommended)**: having **only permissive licences** (already so, except the
+  LGPL piece, which is solved by shipping the text) and a **complete, automatic licence file** inside every
+  release. Shipping a text file **limits nothing**: none of these licences asks us to open our
+  code, nor to allow redistribution, nor to change our licence. MIT, BSD and Apache only ask
   «cita chi l'ha scritto».
-- **Prezzo**: qualche ora per completare `licenze.py` (libopus-wasm, emscripten, protocolli Wayland, testo LGPL)
-  e rimetterlo nel `.run`. Poi zero: lo genera la macchina a ogni rilascio, e se manca un testo il rilascio si
-  ferma (lo script già esce con errore).
-- ⚠ Il file `licenze.py` ha ancora nell'intestazione «PolyForm Noncommercial (§10.22)»: va aggiornato alla
-  licenza di §10.39.
+- **Price**: a few hours to complete `licenze.py` (libopus-wasm, emscripten, Wayland protocols, LGPL text)
+  and put it back into the `.run`. Then zero: the machine generates it at every release, and if a text is missing the release
+  stops (the script already exits with an error).
+- ⚠ The file `licenze.py` still has «PolyForm Noncommercial (§10.22)» in its header: it must be updated to the
+  licence of §10.39.
 
-### Autonomia tecnica — «non dipendere da progetti che possono cambiare o morire»
+### Technical autonomy — «non dipendere da progetti che possono cambiare o morire»
 
-- **La verità**: le dipendenze che **possono** davvero cambiare sotto i piedi (i desktop, PipeWire, i driver, i
-  browser e WebTransport) sono proprio quelle **impossibili** da sostituire. Quelle sostituibili (TUI, godbus,
-  GLib) sono anche le più stabili e meno rischiose.
-- **Che cosa la ottiene davvero**:
-  1. **pochi fornitori, solidi e permissivi** — già fatto: ffmpeg fuori, OpenH264 e SVT-AV1 fuori, libyuv mai
-     entrata;
-  2. **versioni bloccate** dove portiamo noi il pezzo (ngtcp2/nghttp3 a versione fissa con impronta controllata;
-     moduli Go nel deposito) — già fatto;
-  3. **banchi che si accorgono subito** quando un fornitore cambia (es. il banco che riprova la riscrittura delle
-     impostazioni di nghttp3 a ogni aggiornamento, DECISIONI §6.4) — già fatto in parte;
-  4. **sapere quale alternativa c'è** se un fornitore muore: per QUIC sono documentate quiche, lsquic, OpenSSL.
-- **Prezzo**: basso, è manutenzione. Il prezzo **alto** sarebbe l'opposto: ogni riga che scriviamo al posto di
-  una libreria la dobbiamo seguire **noi**, per sempre, da soli.
+- **The truth**: the dependencies that **can** really change under our feet (the desktops, PipeWire, the drivers, the
+  browsers and WebTransport) are exactly the ones **impossible** to replace. The replaceable ones (TUI, godbus,
+  GLib) are also the most stable and least risky.
+- **What really achieves it**:
+  1. **few suppliers, solid and permissive** — already done: ffmpeg out, OpenH264 and SVT-AV1 out, libyuv never
+     got in;
+  2. **pinned versions** where we carry the piece ourselves (ngtcp2/nghttp3 at a fixed version with a checked fingerprint;
+     Go modules in the repository) — already done;
+  3. **benches that notice at once** when a supplier changes (e.g. the bench that retries the rewrite of the
+     nghttp3 settings at every update, DECISIONI §6.4) — already done in part;
+  4. **knowing which alternative exists** if a supplier dies: for QUIC, quiche, lsquic, OpenSSL are documented.
+- **Price**: low, it is maintenance. The **high** price would be the opposite: every line we write in place of
+  a library is one **we** have to follow, forever, alone.
 
-### Autonomia di distribuzione — «non dipendere da quello che la distro ha o non ha»
+### Distribution autonomy — «non dipendere da quello che la distro ha o non ha»
 
-- **Che cosa la ottiene**: portare dentro il nostro pacchetto (statiche, come ngtcp2) le librerie che servono,
-  invece di chiederle alla distribuzione. È già la regola di DECISIONI §10.6: *se la distro non l'ha, o l'ha
-  troppo vecchia, la porta REMOTIX*.
-- **Prezzo**: ogni libreria portata dentro è una libreria i cui **aggiornamenti di sicurezza diventano nostri**.
-  Se esce una falla in ngtcp2, la distribuzione non ci salva: dobbiamo ricostruire e pubblicare noi. Portare
-  dentro OpenSSL, GLib o PipeWire vorrebbe dire inseguire le loro falle (OpenSSL ne ha diverse all'anno) e
-  rischiare di **non combaciare** con la versione che usa il desktop (PipeWire e libei devono parlare la stessa
-  lingua del servizio installato).
-- **Limite insuperabile**: i desktop, i driver con i codec (brevetti: §10.6 vieta di distribuirli) e il servizio
-  PipeWire **non si possono portare dentro**. Quindi l'autonomia di distribuzione non arriva mai al 100%.
-- **Raccomandazione**: restare dove siamo — dentro solo ciò che manca davvero (oggi ngtcp2 e nghttp3); tutto il
-  resto dalla distribuzione, che lo aggiorna gratis per noi.
+- **What achieves it**: carrying inside our package (static, like ngtcp2) the libraries we need,
+  instead of asking the distribution for them. It is already the rule of DECISIONI §10.6: *if the distro does not have it, or has it
+  too old, REMOTIX carries it*.
+- **Price**: every library carried inside is a library whose **security updates become ours**.
+  If a hole comes out in ngtcp2, the distribution does not save us: we have to rebuild and publish ourselves. Carrying
+  OpenSSL, GLib or PipeWire inside would mean chasing their holes (OpenSSL has several a year) and
+  risking **not matching** the version the desktop uses (PipeWire and libei must speak the same
+  language as the installed service).
+- **Insurmountable limit**: the desktops, the drivers with the codecs (patents: §10.6 forbids distributing them) and the
+  PipeWire service **cannot be carried inside**. So distribution autonomy never reaches 100%.
+- **Recommendation**: stay where we are — inside only what is really missing (today ngtcp2 and nghttp3); all the
+  rest from the distribution, which updates it for free for us.
 
 ---
 
-### 4. Raccomandazione
+### 4. Recommendation
 
-**Da fare (convengono):**
-1. **Il file delle licenze, completo, dentro ogni `.run`** — ore. Aggiungere: libopus 1.5.2 in WebAssembly
-   (BSD-3), i pezzi di emscripten (MIT), le 8 descrizioni dei protocolli Wayland (7 MIT/simili + 1 LGPL-2.1 col
-   suo testo), aggiornare l'intestazione alla licenza §10.39. Mantiene la promessa del §8 della nostra licenza.
-2. **Correggere SPECIFICHE §11.4**: «nessuna GPL; le LGPL della distribuzione collegate dinamicamente sono
-   ammesse». Oggi la frase «tutte permissive» non è vera, e una regola falsa prima o poi fa prendere una
-   decisione sbagliata.
-3. **Tenere viva la sorveglianza** su ngtcp2/nghttp3: sono gli unici due pezzi con aggiornamenti di sicurezza a
-   carico nostro. Serve un modo di accorgersi delle loro uscite di sicurezza (anche solo seguire i loro avvisi su
-   GitHub) e il banco che riprova la riscrittura delle impostazioni.
+**To do (worth it):**
+1. **The licence file, complete, inside every `.run`** — hours. Add: libopus 1.5.2 in WebAssembly
+   (BSD-3), the pieces of emscripten (MIT), the 8 descriptions of the Wayland protocols (7 MIT/similar + 1 LGPL-2.1 with
+   its text), update the header to the §10.39 licence. It keeps the promise of §8 of our licence.
+2. **Correct SPECIFICHE §11.4**: «nessuna GPL; le LGPL della distribuzione collegate dinamicamente sono
+   ammesse». Today the sentence «tutte permissive» is not true, and a false rule sooner or later leads to a
+   wrong decision.
+3. **Keep the watch alive** on ngtcp2/nghttp3: they are the only two pieces whose security updates are
+   our burden. We need a way to notice their security releases (even just following their advisories on
+   GitHub) and the bench that retries the rewrite of the settings.
 
-**Possibile più avanti, non ora:**
-4. GLib → un piccolo client D-Bus (2-4 settimane). Solo se un giorno GLib desse problemi concreti.
+**Possible later, not now:**
+4. GLib → a small D-Bus client (2-4 weeks). Only if one day GLib gave concrete problems.
 
-**Da non fare mai:**
-- riscrivere **QUIC/HTTP/3**, la **crittografia**, il **login (PAM)**: sono le difese del server, e lì il
-  codice nostro sarebbe il punto più debole di tutto il prodotto;
-- riscrivere il client **PipeWire**, i **driver** (via libva/Vulkan), le librerie di **input e tastiera**:
-  sono contratti con altri progetti che cambiano, e rincorrerli è un lavoro senza fine;
-- togliere il **decodificatore Opus della pagina**: c'è per una misura, e dimostra cosa protegge;
-- portare dentro i nostri pacchetti **OpenSSL, GLib, PipeWire**: le loro falle diventerebbero nostre.
+**Never to do:**
+- rewrite **QUIC/HTTP/3**, the **cryptography**, the **login (PAM)**: they are the server's defences, and there our
+  own code would be the weakest point of the whole product;
+- rewrite the **PipeWire** client, the **drivers** (via libva/Vulkan), the **input and keyboard** libraries:
+  they are contracts with other projects that change, and chasing them is endless work;
+- remove the **page's Opus decoder**: it is there because of a measurement, and it shows what it protects;
+- carry **OpenSSL, GLib, PipeWire** inside our packages: their holes would become ours.
 
-**In sintesi**: REMOTIX è già «autonomo» nel senso che conta — nessuna licenza di altri impone nulla al nostro
-codice, e i fornitori sono pochi, solidi e permissivi. Il resto delle dipendenze non è un debito: è il lavoro di
-migliaia di persone che ci difende gratis.
+**In short**: REMOTIX is already «autonomo» in the sense that matters — no licence of anyone else imposes anything on our
+code, and the suppliers are few, solid and permissive. The rest of the dependencies is not a debt: it is the work of
+thousands of people that defends us for free.
