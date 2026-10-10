@@ -4890,55 +4890,55 @@ done, every judgement is `[?]`.
 
 ---
 
-### 2. La mappa
+### 2. The map
 
-| Dove | Che cosa |
+| Where | What |
 |---|---|
-| `muffin/src/backends/` | la parte che ci interessa, gemella di quella di Mutter |
-| `muffin/src/org.cinnamon.Muffin.{ScreenCast,RemoteDesktop,DisplayConfig,IdleMonitor}.xml` | le interfacce D-Bus — ⚠ ancora in `src/`, mentre Mutter le ha spostate in `data/dbus-interfaces/` |
-| `muffin/src/backends/meta-monitor-manager-dummy.c` | ⭐ **il pezzo che decide tutto**, vedi §3 |
-| `muffin/src/backends/native/` | il backend KMS |
-| `muffin/src/backends/x11/nested/` | il backend annidato in X11 |
-| `cinnamon/src/main.c` | il plugin che *è* il desktop |
-| `cinnamon/cinnamon-wayland.session.in` | la sessione |
+| `muffin/src/backends/` | the part we care about, twin of Mutter's |
+| `muffin/src/org.cinnamon.Muffin.{ScreenCast,RemoteDesktop,DisplayConfig,IdleMonitor}.xml` | the D-Bus interfaces — ⚠ still in `src/`, whereas Mutter moved them to `data/dbus-interfaces/` |
+| `muffin/src/backends/meta-monitor-manager-dummy.c` | ⭐ **the piece that decides everything**, see §3 |
+| `muffin/src/backends/native/` | the KMS backend |
+| `muffin/src/backends/x11/nested/` | the backend nested in X11 |
+| `cinnamon/src/main.c` | the plugin that *is* the desktop |
+| `cinnamon/cinnamon-wayland.session.in` | the session |
 
 ---
 
-### 3. ⛔ La domanda che decide: lo schermo virtuale
+### 3. ⛔ The deciding question: the virtual screen
 
-È la domanda 5 di `LEZIONI.md` §3, ed è quella che su KDE è costata più di tutte.
+It is question 5 of `LEZIONI.md` §3, and it is the one that cost the most of all on KDE.
 
-#### 3.1 La via di Mutter non esiste
+#### 3.1 Mutter's way does not exist
 
-`org.cinnamon.Muffin.ScreenCast` espone **due soli metodi di registrazione**:
+`org.cinnamon.Muffin.ScreenCast` exposes **only two recording methods**:
 
 ```
 RecordMonitor (connector, properties) → stream_path
 RecordWindow  (properties)            → stream_path
 ```
 
-Niente `RecordVirtual`, niente `RecordArea`. E non è un XML rimasto indietro rispetto al codice:
-`virtual_monitor` non compare in **nessun file** dell'albero, XML compresi.
+No `RecordVirtual`, no `RecordArea`. And it is not an XML that lagged behind the code:
+`virtual_monitor` appears in **no file** of the tree, XML included.
 
-Quindi la strada di `gnome-remote-desktop` — *creo uno schermo che non esiste e ci catturo sopra*
-— su Cinnamon **non c'è**.
+So the `gnome-remote-desktop` road — *I create a screen that does not exist and capture on it*
+— **is not there** on Cinnamon.
 
-#### 3.2 I tre backend, e perché nessuno è headless
+#### 3.2 The three backends, and why none is headless
 
-`calculate_compositor_configuration()` (`muffin/src/core/main.c:434-496`) ne sceglie uno di tre:
+`calculate_compositor_configuration()` (`muffin/src/core/main.c:434-496`) picks one of three:
 
-| Opzione | Backend | Che cosa serve |
+| Option | Backend | What it needs |
 |---|---|---|
-| `--wayland` / `--display-server` | `META_TYPE_BACKEND_NATIVE` | un dispositivo DRM con un'uscita **vera** |
-| `--nested` | `META_TYPE_BACKEND_X11_NESTED` | un server X in cui annidarsi |
-| (nessuna) | X11 compositing manager | un server X |
+| `--wayland` / `--display-server` | `META_TYPE_BACKEND_NATIVE` | a DRM device with a **real** output |
+| `--nested` | `META_TYPE_BACKEND_X11_NESTED` | an X server to nest in |
+| (none) | X11 compositing manager | an X server |
 
-**Non esiste `--headless` e non esiste `--virtual-monitor`.** Il backend nativo non ha nemmeno
-l'enumerazione dei modi che in Mutter distingue `DEFAULT` da `HEADLESS`.
+**There is no `--headless` and there is no `--virtual-monitor`.** The native backend does not even have
+the mode enumeration that in Mutter distinguishes `DEFAULT` from `HEADLESS`.
 
-#### 3.3 ⭐ Ma c'è un monitor fittizio, e due variabili d'ambiente che lo comandano
+#### 3.3 ⭐ But there is a dummy monitor, and two environment variables that drive it
 
-È il pezzo che salva lo studio, ed è la ragione per cui Cinnamon non va dichiarato fuori scope.
+It is the piece that saves the study, and it is the reason Cinnamon must not be declared out of scope.
 
 `meta_backend_create_monitor_manager()` (`muffin/src/backends/meta-backend.c:804-812`):
 
@@ -4953,73 +4953,73 @@ meta_backend_create_monitor_manager (MetaBackend *backend, GError **error)
 }
 ```
 
-⭐ **Quel controllo sta nella classe base, prima della chiamata virtuale**: `META_DUMMY_MONITORS`
-scavalca la scelta di **qualunque** backend, nativo compreso.
+⭐ **That check sits in the base class, before the virtual call**: `META_DUMMY_MONITORS`
+overrides the choice of **any** backend, native included.
 
-E la misura di quello schermo finto si detta da fuori
+And the size of that fake screen is dictated from outside
 (`meta-monitor-manager-dummy.c:148-175`, `:403-431`):
 
-| Variabile | Effetto |
+| Variable | Effect |
 |---|---|
-| `MUFFIN_DEBUG_DUMMY_MODE_SPECS` | i modi, come `1920x1080@60`, più d'uno separati da `:` |
-| `MUFFIN_DEBUG_NUM_DUMMY_MONITORS` | quanti schermi |
-| `MUFFIN_DEBUG_DUMMY_MONITOR_SCALES` | le scale |
-| `MUFFIN_DEBUG_TILED_DUMMY_MONITORS` | schermi affiancati |
+| `MUFFIN_DEBUG_DUMMY_MODE_SPECS` | the modes, like `1920x1080@60`, several separated by `:` |
+| `MUFFIN_DEBUG_NUM_DUMMY_MONITORS` | how many screens |
+| `MUFFIN_DEBUG_DUMMY_MONITOR_SCALES` | the scales |
+| `MUFFIN_DEBUG_TILED_DUMMY_MONITORS` | tiled screens |
 
-**È l'equivalente funzionale del `--virtual --width W --height H` di KWin**: la misura del desktop
-si decide **all'avvio del compositore** e non si cambia più a sessione viva — che è esattamente il
-vincolo di KDE, e che il modello della tela di `DECISIONI.md` §5.0 già assorbe.
+**It is the functional equivalent of KWin's `--virtual --width W --height H`**: the desktop size
+is decided **at compositor start** and no longer changes in a live session — which is exactly the
+KDE constraint, and which the canvas model of `DECISIONI.md` §5.0 already absorbs.
 
-#### 3.4 ⛔ Le due strade, e quale va misurata per prima
+#### 3.4 ⛔ The two roads, and which one to measure first
 
-**Strada (A) — nativo + monitor fittizio.** `META_DUMMY_MONITORS=1
+**Road (A) — native + dummy monitor.** `META_DUMMY_MONITORS=1
 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland --replace`.
-Se regge, Cinnamon gira **senza X e senza monitor**, e il costo per REMOTIX crolla.
+If it holds, Cinnamon runs **without X and without a monitor**, and the cost for REMOTIX collapses.
 
-⚠ **Ma è precisamente il tipo di deduzione che `LEZIONI.md` §1.11 vieta di dare per buona.** Che
-il gestore dei monitor sia finto non dice che il *renderer* lo sia: il backend nativo disegna via
-KMS e vuole dei CRTC su cui presentare, e con schermi inventati quei CRTC non ci sono. Può
-funzionare, può fallire all'avvio, e **può funzionare consegnando zero fotogrammi** — che è il
-modo peggiore, perché sembra riuscito.
+⚠ **But it is precisely the kind of deduction that `LEZIONI.md` §1.11 forbids taking for granted.** That
+the monitor manager is fake does not say the *renderer* is: the native backend draws via
+KMS and wants CRTCs to present on, and with invented screens those CRTCs are not there. It may
+work, it may fail at startup, and **it may work while delivering zero frames** — which is the
+worst way, because it looks like a success.
 
-**Strada (B) — annidato in Xvfb.** `--nested` usa il monitor fittizio **per costruzione**
-(`meta-backend-x11-nested.c:57-60`): è la sua unica implementazione di `create_monitor_manager`.
-Quindi la (B) funziona quasi certamente, al prezzo di un server X in più nella pila e,
-verosimilmente, di **GL software** (llvmpipe) — cioè il desktop intero disegnato in CPU, che
-`LEZIONI.md` §3 domanda 4 considera discriminante per dire se un desktop è servibile su una
-macchina da server.
+**Road (B) — nested in Xvfb.** `--nested` uses the dummy monitor **by construction**
+(`meta-backend-x11-nested.c:57-60`): it is its only implementation of `create_monitor_manager`.
+So (B) almost certainly works, at the price of one more X server in the stack and,
+probably, of **software GL** (llvmpipe) — that is, the whole desktop drawn on the CPU, which
+`LEZIONI.md` §3 question 4 considers decisive for saying whether a desktop is servable on a
+server machine.
 
-> ### Il piano: si misura (A), e (B) è il ripiego
+> ### The plan: (A) is measured, and (B) is the fallback
 >
-> La (A) è il premio e la (B) è la rete di sicurezza. **La misura si fa nell'ordine
-> (A) → (B)**, e la (A) non si dichiara riuscita perché il processo sta in piedi: si dichiara
-> riuscita quando `misura-cattura` (in `fondamenta/banchi/banco-compositori/`) conta fotogrammi su una
-> scena dichiarata e sempre in movimento. È `LEZIONI.md` §1.1 e §3.2 di `CODER.md`.
+> (A) is the prize and (B) is the safety net. **The measurement is done in the order
+> (A) → (B)**, and (A) is not declared successful because the process stays up: it is declared
+> successful when `misura-cattura` (in `fondamenta/banchi/banco-compositori/`) counts frames on a
+> declared, always-moving scene. It is `LEZIONI.md` §1.1 and §3.2 of `CODER.md`.
 
 ---
 
-### 4. La cattura: la parte che funziona
+### 4. Capture: the part that works
 
-**Pienamente implementata**, e con la stessa struttura di Mutter:
+**Fully implemented**, and with the same structure as Mutter:
 `meta-screen-cast-monitor-stream-src.c`, `meta-screen-cast-window-stream-src.c`,
-`handle_record_monitor()` a `meta-screen-cast-session.c:299`.
+`handle_record_monitor()` at `meta-screen-cast-session.c:299`.
 
-✅ **Nessun cancello.** `check_permission()` confronta il nome D-Bus di chi chiama con quello che
-ha creato la sessione — è un controllo di proprietà, non di autorizzazione. Nessun polkit, nessun
-portale, nessun campo in un file `.desktop`. Su questo Cinnamon sta con GNOME e wlroots, **non**
-con KDE.
+✅ **No gate.** `check_permission()` compares the D-Bus name of the caller with the one that
+created the session — it is an ownership check, not an authorisation check. No polkit, no
+portal, no field in a `.desktop` file. On this Cinnamon sides with GNOME and wlroots, **not**
+with KDE.
 
-`[?]` **Quel che non si può leggere**: quanti fotogrammi consegna, se il buffer arriva già
-disegnato, se il cursore finisce dentro l'immagine, quanto costa la risoluzione. Su Mutter erano
-37 al secondo `[M]`; su Muffin **non c'è ragione di supporre lo stesso numero**, perché il
-percorso di rendering è quello che è cambiato di più fra i due — ed è esattamente la deduzione
-che §1.11 vieta.
+`[?]` **What cannot be read**: how many frames it delivers, whether the buffer arrives already
+drawn, whether the cursor ends up inside the image, what resolution costs. On Mutter it was
+37 per second `[M]`; on Muffin **there is no reason to assume the same number**, because the
+rendering path is what changed the most between the two — and that is exactly the deduction
+that §1.11 forbids.
 
 ---
 
-### 5. L'input: un salto indietro di due anni
+### 5. Input: a step back of two years
 
-`org.cinnamon.Muffin.RemoteDesktop` espone i vecchi metodi di notifica:
+`org.cinnamon.Muffin.RemoteDesktop` exposes the old notify methods:
 
 ```
 NotifyKeyboardKeycode · NotifyKeyboardKeysym
@@ -5028,373 +5028,373 @@ NotifyPointerMotionRelative · NotifyPointerMotionAbsolute
 NotifyTouchDown · NotifyTouchMotion · NotifyTouchUp
 ```
 
-⛔ **Niente `ConnectToEIS`**, quindi **niente libei** — e `fondamenta/remotix-c/src/input.c` (906 righe) è
-scritto per libei, deciso il 4 agosto 2025 chiudendo la fase 3 di v1.
+⛔ **No `ConnectToEIS`**, hence **no libei** — and `fondamenta/remotix-c/src/input.c` (906 lines) is
+written for libei, decided on 4 August 2025 when closing phase 3 of v1.
 
-Le tre conseguenze:
+The three consequences:
 
-1. **serve un secondo percorso di input**, quello D-Bus, che v1 aveva scritto *prima* di passare
-   a libei e che non è sopravvissuto nel codice attuale;
-2. ⭐ **`NotifyKeyboardKeysym` esiste**, e vale la pena notarlo alla luce di `DECISIONI.md`
-   §5-bis.6: qui il *simbolo* si può iniettare direttamente, senza cercare quale tasto lo
-   produca. Non cambia la decisione — la regola resta «le lettere viaggiano come lettere» — ma su
-   Cinnamon il lato server costa meno;
-3. ⚠ **e c'è `zwp_virtual_keyboard_v1`** fra i protocolli Wayland, che sarebbe una terza strada.
-   `[?]` Da valutare solo se la seconda si rivelasse insufficiente: §0.1 di `DECISIONI.md` dice di
-   non collezionare percorsi.
+1. **a second input path is needed**, the D-Bus one, which v1 had written *before* moving
+   to libei and which did not survive in the current code;
+2. ⭐ **`NotifyKeyboardKeysym` exists**, and it is worth noting in light of `DECISIONI.md`
+   §5-bis.6: here the *symbol* can be injected directly, without looking for which key
+   produces it. It does not change the decision — the rule stays «le lettere viaggiano come lettere» — but on
+   Cinnamon the server side costs less;
+3. ⚠ **and there is `zwp_virtual_keyboard_v1`** among the Wayland protocols, which would be a third road.
+   `[?]` To be evaluated only if the second proved insufficient: §0.1 of `DECISIONI.md` says not
+   to collect paths.
 
-`[?]` **Non letto, e va letto prima di scrivere**: se `NotifyPointerMotionAbsolute` accetti un
-riferimento allo *stream* come su Mutter, e come si comporti con il monitor fittizio.
+`[?]` **Not read, and it must be read before writing**: whether `NotifyPointerMotionAbsolute` accepts a
+reference to the *stream* as on Mutter, and how it behaves with the dummy monitor.
 
 ---
 
-### 6. ⛔ Gli appunti: qui la strada non c'è proprio
+### 6. ⛔ The clipboard: here there is no road at all
 
-È il buco peggiore, e non ha un ripiego evidente.
+It is the worst hole, and it has no obvious fallback.
 
-| Via | Su Cinnamon |
+| Way | On Cinnamon |
 |---|---|
-| `EnableClipboard` sull'oggetto RemoteDesktop (la via di GNOME) | ⛔ **0 occorrenze**: l'API è precedente all'aggiunta della clipboard in Mutter |
-| `zwlr_data_control_manager_v1` (la via di KDE, XFCE e LXQt) | ⛔ **assente** dai protocolli di Muffin |
-| `ext_data_control_v1` | ⛔ assente |
+| `EnableClipboard` on the RemoteDesktop object (GNOME's way) | ⛔ **0 occurrences**: the API predates the addition of the clipboard in Mutter |
+| `zwlr_data_control_manager_v1` (the way of KDE, XFCE and LXQt) | ⛔ **absent** from Muffin's protocols |
+| `ext_data_control_v1` | ⛔ absent |
 
-Quindi **nessuno dei due file che abbiamo serve**: né `appunti_mutter.c` (450 righe), né
-`appunti_wlr.c` (796), che insieme coprono tutti e quattro gli altri desktop.
+So **neither of the two files we have is of use**: neither `appunti_mutter.c` (450 lines), nor
+`appunti_wlr.c` (796), which together cover all four other desktops.
 
-`[?]` **Le vie residue, tutte da verificare e nessuna gradevole**: fare il client `wl_data_device`
-ordinario — ma la clipboard di Wayland richiede il fuoco, e una sessione non presidiata non ce
-l'ha; passare da XWayland; o contribuire a monte. **La terza è probabilmente la sola sensata**, ed
-è la stessa conclusione a cui §kde §8.2 era arrivato per il ridimensionamento.
+`[?]` **The remaining ways, all to be verified and none pleasant**: write the ordinary `wl_data_device`
+client — but the Wayland clipboard requires focus, and an unattended session does not
+have it; go through XWayland; or contribute upstream. **The third is probably the only sensible one**, and
+it is the same conclusion that §kde §8.2 had reached for resizing.
 
-⚠ Da mettere in conto nella decisione «Cinnamon dentro o fuori»: `DECISIONI.md` §5-ter mette la
-clipboard bidirezionale fra le funzioni promesse. **Su Cinnamon oggi non è servibile.**
+⚠ To be taken into account in the «Cinnamon dentro o fuori» decision: `DECISIONI.md` §5-ter puts the
+bidirectional clipboard among the promised features. **On Cinnamon today it is not servable.**
 
 ---
 
-### 7. Che cosa si trasferisce da §gnome, e che cosa no
+### 7. What transfers from §gnome, and what does not
 
-| Argomento | Si trasferisce? |
+| Topic | Does it transfer? |
 |---|---|
-| l'architettura ScreenCast/PipeWire | ✅ **sì, quasi alla lettera** |
-| l'assenza di cancello sul permesso | ✅ sì |
-| il ciclo di vita della sessione D-Bus | ✅ probabilmente `[?]` |
-| **la revoca al blocco schermo** (`inhibit_remote_access`) | `[?]` **da verificare**, ed è importante: se c'è, vale la stessa cura di `DECISIONI.md` §4.3 |
-| `RecordVirtual` e il monitor virtuale | ⛔ no, non esistono |
-| libei e `ConnectToEIS` | ⛔ no |
-| la clipboard | ⛔ no |
-| il lockdown via `org.gnome.desktop.lockdown` | `[?]` Cinnamon ha il proprio albero di impostazioni |
+| the ScreenCast/PipeWire architecture | ✅ **yes, almost literally** |
+| the absence of a permission gate | ✅ yes |
+| the D-Bus session life cycle | ✅ probably `[?]` |
+| **revocation on screen lock** (`inhibit_remote_access`) | `[?]` **to be verified**, and it matters: if it is there, the same cure as `DECISIONI.md` §4.3 applies |
+| `RecordVirtual` and the virtual monitor | ⛔ no, they do not exist |
+| libei and `ConnectToEIS` | ⛔ no |
+| the clipboard | ⛔ no |
+| lockdown via `org.gnome.desktop.lockdown` | `[?]` Cinnamon has its own settings tree |
 
 ---
 
-### 8. Le quattordici domande di `LEZIONI.md` §3, colonna Cinnamon
+### 8. The fourteen questions of `LEZIONI.md` §3, Cinnamon column
 
-| # | Domanda | Cinnamon / Muffin 6.7.4 |
+| # | Question | Cinnamon / Muffin 6.7.4 |
 |---|---|---|
-| 1 | Come si chiede la cattura senza portale? | ✅ D-Bus `org.cinnamon.Muffin.ScreenCast` — gemella di Mutter `[R]` |
-| 2 | Spinge i fotogrammi o li fa tirare? | ✅ spinge, PipeWire `[R]` |
-| 3 | È dietro un permesso? | ✅ **no** — solo controllo di proprietà `[R]` |
-| 4 | Senza monitor, disegna sulla GPU? | ⛔ `[?]` **la domanda che decide** — vedi §3.4. Sulla strada (B) quasi certamente **no** |
-| 5 | Si può chiedere uno schermo virtuale della misura voluta? | ⛔ **no** via protocollo; ⭐ **sì** via `META_DUMMY_MONITORS` + `MUFFIN_DEBUG_DUMMY_MODE_SPECS`, all'avvio `[R]` |
-| 6 | Quanti fotogrammi consegna? | `[?]` **non deducibile da Mutter** |
-| 7 | La cadenza dichiarata come si comporta? | `[?]` |
-| 8 | Fotogrammi interi o «diff»? | `[?]` |
-| 9 | Il buffer arriva già disegnato? | `[?]` |
-| 10 | Che cosa costa la risoluzione? | `[?]` |
-| 11 | Che cosa costa la profondità di colore? | `[?]` |
-| 12-bis | Il cursore è dentro l'immagine catturata? | `[?]` — e con `DECISIONI.md` §5-bis.2 è **obbligatorio** saperlo |
-| 13 | Uno schermo virtuale si ridimensiona a caldo? | ⛔ **no** `[R]`: la misura è nell'ambiente all'avvio, come su KDE |
-| 14 | La clipboard di chi è? | ⛔ **di nessuno raggiungibile** — vedi §6 |
+| 1 | How is capture requested without a portal? | ✅ D-Bus `org.cinnamon.Muffin.ScreenCast` — twin of Mutter `[R]` |
+| 2 | Does it push frames or have them pulled? | ✅ pushes, PipeWire `[R]` |
+| 3 | Is it behind a permission? | ✅ **no** — only an ownership check `[R]` |
+| 4 | Without a monitor, does it draw on the GPU? | ⛔ `[?]` **the deciding question** — see §3.4. On road (B) almost certainly **no** |
+| 5 | Can a virtual screen of the wanted size be requested? | ⛔ **no** via protocol; ⭐ **yes** via `META_DUMMY_MONITORS` + `MUFFIN_DEBUG_DUMMY_MODE_SPECS`, at startup `[R]` |
+| 6 | How many frames does it deliver? | `[?]` **not deducible from Mutter** |
+| 7 | How does the declared rate behave? | `[?]` |
+| 8 | Whole frames or «diff»? | `[?]` |
+| 9 | Does the buffer arrive already drawn? | `[?]` |
+| 10 | What does resolution cost? | `[?]` |
+| 11 | What does colour depth cost? | `[?]` |
+| 12-bis | Is the cursor inside the captured image? | `[?]` — and with `DECISIONI.md` §5-bis.2 knowing it is **mandatory** |
+| 13 | Can a virtual screen be resized live? | ⛔ **no** `[R]`: the size is in the environment at startup, as on KDE |
+| 14 | Whose is the clipboard? | ⛔ **nobody reachable's** — see §6 |
 
-**Undici domande su quattordici restano `[?]`**, contro le undici su undici che lo studio di KDE
-aveva chiuso leggendo. Non è pigrizia dello studio: è che su KDE le risposte stavano nel codice,
-e qui le tre che contano stanno in un'esecuzione.
+**Eleven questions out of fourteen remain `[?]`**, against the eleven out of eleven that the KDE study
+had closed by reading. It is not laziness in the study: it is that on KDE the answers were in the code,
+and here the three that matter are in an execution.
 
 ---
 
-### 9. Il piano di misure, in ordine
+### 9. The measurement plan, in order
 
-Il minimo per decidere «dentro o fuori». Serve una macchina con Cinnamon 6.7 e i banchi di
+The minimum to decide «dentro o fuori». It needs a machine with Cinnamon 6.7 and the benches of
 `fondamenta/banchi/banco-compositori/`.
 
-| # | Che cosa | Come si dichiara riuscita |
+| # | What | How it is declared successful |
 |---|---|---|
-| **M1** | strada (A): `META_DUMMY_MONITORS=1 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland` da SSH, senza monitor | il compositore sta in piedi **e** `RecordMonitor` apre uno stream **e** `misura-cattura` conta fotogrammi > 0 su scena in movimento. Tre condizioni, non una |
-| **M2** | se M1 fallisce: strada (B), `--nested` dentro Xvfb | idem |
-| **M3** | i fotogrammi al secondo consegnati, con scena dichiarata | il numero, confrontabile con Mutter 37 / KWin 60 / wlroots 61 |
-| **M4** | rende in GPU o in software? | ⚠ **non** «ha aperto un render node» (§1.11): si guarda il tipo di buffer che lo stream riesce a offrire, **dopo** aver chiesto DMA-BUF |
-| **M5** | il cursore è dentro l'immagine? | si guarda un fotogramma |
-| **M6** | il blocco schermo revoca la cattura, come su GNOME? | si blocca e si guarda se lo stream muore |
+| **M1** | road (A): `META_DUMMY_MONITORS=1 MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60 cinnamon --wayland` from SSH, without a monitor | the compositor stays up **and** `RecordMonitor` opens a stream **and** `misura-cattura` counts frames > 0 on a moving scene. Three conditions, not one |
+| **M2** | if M1 fails: road (B), `--nested` inside Xvfb | same |
+| **M3** | the frames per second delivered, with a declared scene | the number, comparable with Mutter 37 / KWin 60 / wlroots 61 |
+| **M4** | does it render on the GPU or in software? | ⚠ **not** «it opened a render node» (§1.11): look at the buffer type the stream manages to offer, **after** having asked for DMA-BUF |
+| **M5** | is the cursor inside the image? | look at a frame |
+| **M6** | does screen lock revoke the capture, as on GNOME? | lock and watch whether the stream dies |
 
-⛔ **M1 non si dichiara riuscita perché il processo non è morto.** È la forma d'errore E1: una
-condizione necessaria presa per sufficiente.
+⛔ **M1 is not declared successful because the process did not die.** It is error form E1: a
+necessary condition taken as sufficient.
 
 ---
 
-### 10. Il conto per REMOTIX
+### 10. The bill for REMOTIX
 
-**Quel che si riusa**, se M1 o M2 passano: la struttura della cattura (`cattura.c`), il ciclo di
-sessione D-Bus, e il modello della tela di `DECISIONI.md` §5.0 — che assorbe già il vincolo
-«la misura si decide all'avvio», perché lo assorbiva per KDE.
+**What is reused**, if M1 or M2 pass: the capture structure (`cattura.c`), the D-Bus session
+cycle, and the canvas model of `DECISIONI.md` §5.0 — which already absorbs the constraint
+«la misura si decide all'avvio», because it absorbed it for KDE.
 
-**Quel che va scritto nuovo**, e non è poco:
+**What must be written new**, and it is not little:
 
-| | Costo |
+| | Cost |
 |---|---|
-| un `cinnamon.c` accanto a `mutter.c` e `kwin.c` | medio — è Mutter con altri nomi |
-| **un secondo percorso di input**, D-Bus invece di libei | ⚠ **alto**: è la fase 4 di v1 rifatta |
-| **gli appunti**, che oggi non hanno strada | ⛔ **aperto** — vedi §6 |
+| a `cinnamon.c` next to `mutter.c` and `kwin.c` | medium — it is Mutter with other names |
+| **a second input path**, D-Bus instead of libei | ⚠ **high**: it is phase 4 of v1 redone |
+| **the clipboard**, which today has no road | ⛔ **open** — see §6 |
 
-**Il giudizio, dichiarato come provvisorio:** Cinnamon è il desktop che costa **più di tutti** fra
-i cinque, e le sue due difficoltà — l'input e la clipboard — non sono difficoltà di lettura ma
-funzionalità mancanti a monte. Non va dichiarato fuori scope, perché M1 potrebbe cambiare il
-conto; ma va messo **ultimo**, dopo che gli altri quattro funzionano, e la decisione va presa
-sulle misure di §9 e non su questo documento.
+**The verdict, declared as provisional:** Cinnamon is the desktop that costs **the most of all** among
+the five, and its two difficulties — input and clipboard — are not reading difficulties but
+features missing upstream. It must not be declared out of scope, because M1 could change the
+bill; but it must be put **last**, after the other four work, and the decision must be taken
+on the measurements of §9 and not on this document.
 
-⚠ **E se M1 e M2 fallissero entrambe**, Cinnamon non è servibile affatto — non per una nostra
-mancanza, ma perché un compositore che non sa disegnare senza uno schermo non può servire una
-sessione remota. In quel caso la voce si chiude, con la misura accanto.
+⚠ **And if M1 and M2 both failed**, Cinnamon is not servable at all — not through a shortcoming of ours,
+but because a compositor that cannot draw without a screen cannot serve a
+remote session. In that case the entry is closed, with the measurement next to it.
 
 
 ---
 
-# Parte III — Chi fa il nostro stesso mestiere
+# Part III — Those who do our same job
 
 
 <a id="gnome-remote-desktop"></a>
 
-## gnome-remote-desktop — studio del codice e delle funzionalità
+## gnome-remote-desktop — study of the code and the features
 
-Analisi condotta sul codice sorgente originale, clonato da `gitlab.gnome.org/GNOME/gnome-remote-desktop`:
+Analysis carried out on the original source code, cloned from `gitlab.gnome.org/GNOME/gnome-remote-desktop`:
 
-- **51.alpha** (commit `038caa60`, 9 luglio 2026) — ramo di sviluppo, usato come riferimento principale
-- **48.2** — la versione che accompagna GNOME 48, cioè quella di **Debian Trixie**, la piattaforma di
-  runtime di REMOTIX. Le differenze rispetto alla 51 sono in §17
+- **51.alpha** (commit `038caa60`, 9 July 2026) — development branch, used as the main reference
+- **48.2** — the version that comes with GNOME 48, that is the one of **Debian Trixie**, the runtime
+  platform of REMOTIX. The differences from 51 are in §17
 
-Dimensione: **68 730 righe di C** in ~200 file, più gli XML delle interfacce D-Bus e gli shader.
+Size: **68 730 lines of C** in ~200 files, plus the D-Bus interface XMLs and the shaders.
 
-Perché questo documento esiste: la specifica di REMOTIX cita `gnome-remote-desktop` ogni volta che un
-problema si è risolto (§5.4, §5.8, §5.10, questione aperta n.9), e ogni volta lo ha consultato a pezzi.
-La lezione di metodo scritta in §5.4 — *«studiare il riferimento viene prima di ipotizzare»* — chiede
-che il riferimento sia studiato **una volta sola e per intero**. Il §18 raccoglie il conto: cosa
-conferma delle decisioni di REMOTIX, cosa le smentisce, e cosa conviene copiare.
+Why this document exists: the REMOTIX specification cites `gnome-remote-desktop` every time a
+problem was solved (§5.4, §5.8, §5.10, open question no.9), and every time it consulted it in pieces.
+The method lesson written in §5.4 — *«studiare il riferimento viene prima di ipotizzare»* — asks
+that the reference be studied **once and in full**. §18 gathers the bill: what it
+confirms of REMOTIX's decisions, what it contradicts, and what is worth copying.
 
-> **E dal 3 agosto 2026 conta molto di più.** Con i vincoli posti dall'utente — **linguaggio C** e
-> **FreeRDP 3** (§8-bis di `SPECIFICA.md`) — REMOTIX e `gnome-remote-desktop` condividono linguaggio,
-> libreria RDP, compositore e client. Quello che segue non è più materiale di confronto: è codice
-> leggibile e, dove serve, trasferibile.
-
----
-
-### 1. Che cos'è
-
-Il server desktop remoto del progetto GNOME. Non è un desktop e non è un compositore: **parla al
-compositore**, esattamente come REMOTIX. Due backend di protocollo, **RDP** (predefinito, su FreeRDP 3)
-e **VNC** (opzionale, su LibVNCServer, disattivato di default in build).
-
-I mattoni sono gli stessi che REMOTIX ha scelto: **PipeWire** per i pixel, **libei** per l'input,
-**API RemoteDesktop di Mutter** per la gestione di alto livello.
-
-Licenza GPL v2 o successiva. Autori principali: Jonas Ådahl (architettura, sessione) e Pascal Nowack
-(tutto il grosso del backend RDP).
+> **And since 3 August 2026 it matters much more.** With the constraints set by the user — **C language** and
+> **FreeRDP 3** (§8-bis of `SPECIFICA.md`) — REMOTIX and `gnome-remote-desktop` share language,
+> RDP library, compositor and client. What follows is no longer comparison material: it is code
+> that is readable and, where needed, transferable.
 
 ---
 
-### 2. I quattro modi di funzionamento
+### 1. What it is
 
-Sono la struttura portante di tutto il programma: un solo eseguibile, quattro `GrdRuntimeMode`
-(`grd-daemon.c:1198`), ciascuno con la propria classe di daemon e la propria classe di impostazioni.
+The remote desktop server of the GNOME project. It is not a desktop and it is not a compositor: **it talks to the
+compositor**, exactly like REMOTIX. Two protocol backends, **RDP** (default, on FreeRDP 3)
+and **VNC** (optional, on LibVNCServer, disabled by default in the build).
 
-| Modo | Opzione | Classe | Bus | A cosa serve |
+The building blocks are the same ones REMOTIX chose: **PipeWire** for the pixels, **libei** for input,
+**Mutter's RemoteDesktop API** for high-level management.
+
+Licence GPL v2 or later. Main authors: Jonas Ådahl (architecture, session) and Pascal Nowack
+(all the bulk of the RDP backend).
+
+---
+
+### 2. The four operating modes
+
+They are the load-bearing structure of the whole program: a single executable, four `GrdRuntimeMode`
+(`grd-daemon.c:1198`), each with its own daemon class and its own settings class.
+
+| Mode | Option | Class | Bus | What it is for |
 |---|---|---|---|---|
-| `SCREEN_SHARE` | *(nessuna)* | `GrdDaemonUser` | sessione | Assistenza remota: ci si attacca alla sessione già attiva di chi è seduto davanti |
-| `HEADLESS` | `--headless` | `GrdDaemonUser` | sessione | Utente singolo, sessione grafica senza schermo avviata a parte |
-| `SYSTEM` | `--system` | `GrdDaemonSystem` | **sistema** | Accesso remoto multiutente: fa da portiere davanti a GDM |
-| `HANDOVER` | `--handover` | `GrdDaemonHandover` | sessione | Il processo che riceve la connessione consegnata dal modo `SYSTEM` |
+| `SCREEN_SHARE` | *(none)* | `GrdDaemonUser` | session | Remote assistance: attaches to the already active session of whoever sits in front |
+| `HEADLESS` | `--headless` | `GrdDaemonUser` | session | Single user, screenless graphical session started separately |
+| `SYSTEM` | `--system` | `GrdDaemonSystem` | **system** | Multi-user remote access: acts as doorkeeper in front of GDM |
+| `HANDOVER` | `--handover` | `GrdDaemonHandover` | session | The process that receives the connection handed over by `SYSTEM` mode |
 
-Unità systemd corrispondenti: `gnome-remote-desktop.service` (utente, per screen share),
-`gnome-remote-desktop-headless.service` (utente), `gnome-remote-desktop.service` (sistema).
+Corresponding systemd units: `gnome-remote-desktop.service` (user, for screen share),
+`gnome-remote-desktop-headless.service` (user), `gnome-remote-desktop.service` (system).
 
-**Il modo che assomiglia a REMOTIX è `HEADLESS`**: una sola sessione, un solo utente, il server gira
-dentro la sessione. Gli altri tre risolvono problemi che REMOTIX ha messo fuori scope (§4.2 della
-specifica: multi-tenancy e amministrazione).
+**The mode that resembles REMOTIX is `HEADLESS`**: a single session, a single user, the server runs
+inside the session. The other three solve problems that REMOTIX put out of scope (§4.2 of the
+specification: multi-tenancy and administration).
 
-#### 2.1 Il passaggio di consegne con GDM (`SYSTEM` → `HANDOVER`)
+#### 2.1 The handover with GDM (`SYSTEM` → `HANDOVER`)
 
-È il meccanismo che la specifica di REMOTIX cita in §5.6 come *«quel passaggio esiste perché
-gnome-remote-desktop deve agganciarsi alla schermata di accesso»*. Il codice conferma: sta tutto in
-`grd-daemon-system.c` (1520 righe) e `grd-daemon-handover.c` (911 righe), ed è la parte più
-complicata dell'intero programma.
+It is the mechanism that the REMOTIX specification cites in §5.6 as *«quel passaggio esiste perché
+gnome-remote-desktop deve agganciarsi alla schermata di accesso»*. The code confirms it: it all lives in
+`grd-daemon-system.c` (1520 lines) and `grd-daemon-handover.c` (911 lines), and it is the most
+complicated part of the whole program.
 
-Come funziona, in breve:
+How it works, in short:
 
-1. il daemon di sistema gira come utente dedicato `gnome-remote-desktop`, sul **bus di sistema**, e
-   ascolta sulla 3389;
-2. all'arrivo di una connessione **sbircia i primi byte del socket** (`grd-rdp-routing-token.c`)
-   cercando il prefisso `Cookie: msts=` del Routing Token, senza consumarli — con un tetto di 2
-   secondi;
-3. se il token non c'è, è un client nuovo: si autentica contro una credenziale di sistema, e attraverso
-   `org.gnome.DisplayManager.RemoteDisplayFactory` chiede a GDM di creare una sessione di accesso;
-4. quella sessione avvia un secondo `gnome-remote-desktop --handover`, che espone
-   `org.gnome.RemoteDesktop.Rdp.Handover` sul bus di sessione;
-5. il daemon di sistema manda al client una **Server Redirection PDU** (`grd_session_rdp_send_server_redirection`)
-   con routing token, credenziali e certificato del bersaglio;
-6. il client si ricollega, questa volta col token; il daemon di sistema riconosce il token e **passa
-   il socket** al processo handover, che serve la sessione.
+1. the system daemon runs as the dedicated user `gnome-remote-desktop`, on the **system bus**, and
+   listens on 3389;
+2. when a connection arrives it **peeks at the first bytes of the socket** (`grd-rdp-routing-token.c`)
+   looking for the `Cookie: msts=` prefix of the Routing Token, without consuming them — with a cap of 2
+   seconds;
+3. if the token is not there, it is a new client: it authenticates against a system credential, and through
+   `org.gnome.DisplayManager.RemoteDisplayFactory` asks GDM to create a login session;
+4. that session starts a second `gnome-remote-desktop --handover`, which exposes
+   `org.gnome.RemoteDesktop.Rdp.Handover` on the session bus;
+5. the system daemon sends the client a **Server Redirection PDU** (`grd_session_rdp_send_server_redirection`)
+   with routing token, credentials and certificate of the target;
+6. the client reconnects, this time with the token; the system daemon recognises the token and **hands
+   the socket** to the handover process, which serves the session.
 
-Il livello di sicurezza del secondo collegamento è **RDSTLS** (`FreeRDP_RdstlsSecurity = TRUE`,
-`grd-session-rdp.c:1547`) — cioè proprio quello che xrdp ha in tabella ma non implementa.
+The security level of the second connection is **RDSTLS** (`FreeRDP_RdstlsSecurity = TRUE`,
+`grd-session-rdp.c:1547`) — that is, precisely the one xrdp has in its table but does not implement.
 
-Per REMOTIX questo capitolo è **interamente fuori scope**, ma va letto una volta perché spiega perché
-il resto del programma è fatto come è fatto.
+For REMOTIX this chapter is **entirely out of scope**, but it should be read once because it explains why
+the rest of the program is made the way it is.
 
 ---
 
-### 3. Architettura dei processi
+### 3. Process architecture
 
-Un solo eseguibile principale, `gnome-remote-desktop-daemon` (in `libexecdir`), più tre utilità:
+A single main executable, `gnome-remote-desktop-daemon` (in `libexecdir`), plus three utilities:
 
-| Binario | Ruolo |
+| Binary | Role |
 |---|---|
-| `gnome-remote-desktop-daemon` | Il server vero, in tutti e quattro i modi |
-| `grdctl` | Configurazione da riga di comando (gsettings + credenziali) |
-| `gnome-remote-desktop-configuration-daemon` | Espone la configurazione su D-Bus per il pannello Impostazioni |
-| `gnome-remote-desktop-enable-service` | Abilita l'unità di sistema passando per polkit |
+| `gnome-remote-desktop-daemon` | The real server, in all four modes |
+| `grdctl` | Command-line configuration (gsettings + credentials) |
+| `gnome-remote-desktop-configuration-daemon` | Exposes the configuration on D-Bus for the Settings panel |
+| `gnome-remote-desktop-enable-service` | Enables the system unit going through polkit |
 
-**Nomi sul bus** (`grd-private.h`): `org.gnome.RemoteDesktop.User`, `.Headless`, `.Handover` sul bus
-di sessione; `org.gnome.RemoteDesktop` sul bus di sistema.
+**Names on the bus** (`grd-private.h`): `org.gnome.RemoteDesktop.User`, `.Headless`, `.Handover` on the session
+bus; `org.gnome.RemoteDesktop` on the system bus.
 
-**Thread** — sono quattro famiglie, e la divisione conta perché è la stessa che REMOTIX ha dovuto
-inventarsi (§5.7 regola 7, §5.8 regola 3):
+**Threads** — there are four families, and the split matters because it is the same one REMOTIX had to
+invent (§5.7 rule 7, §5.8 rule 3):
 
-| Thread | Chi lo crea | Cosa fa |
+| Thread | Who creates it | What it does |
 |---|---|---|
-| principale (`GMainContext` di default) | GLib | D-Bus, logind, ciclo di vita delle sessioni, layout manager |
-| **socket** (uno per sessione RDP) | `grd_session_rdp_new` | `WaitForMultipleObjects` sugli handle FreeRDP, legge il protocollo |
-| **grafica** (uno per sessione) | `grd_rdp_renderer_start` | `GMainContext` privato: codifica, invio dei frame EGFX |
-| **EGL** (uno per processo) | `GrdContext` | Tutte le operazioni GL/EGL, che devono stare su un thread solo |
-| PipeWire (uno per stream) | `pw_context` | Cattura |
+| main (default `GMainContext`) | GLib | D-Bus, logind, session life cycle, layout manager |
+| **socket** (one per RDP session) | `grd_session_rdp_new` | `WaitForMultipleObjects` on the FreeRDP handles, reads the protocol |
+| **graphics** (one per session) | `grd_rdp_renderer_start` | private `GMainContext`: encoding, sending EGFX frames |
+| **EGL** (one per process) | `GrdContext` | All GL/EGL operations, which must stay on a single thread |
+| PipeWire (one per stream) | `pw_context` | Capture |
 
-Il thread grafico ha un **`GMainContext` proprio** (`renderer->graphics_context`) e tutte le sorgenti
-grafiche vi si attaccano esplicitamente. È l'equivalente disciplinato di ciò che REMOTIX ottiene con
-i task Tokio.
-
----
-
-### 4. Dipendenze
-
-Obbligatorie sempre: glib ≥ 2.75, gio, **libpipewire ≥ 1.2**, **libei ≥ 1.3.901**, cairo, libdrm,
-epoxy, xkbcommon ≥ 1.0, libnotify, libsecret, **krb5**, **tss2** (TPM 2.0), libsystemd (opzionale ma
-necessaria per `SYSTEM`/`HANDOVER`).
-
-Per il backend RDP: **freerdp3 ≥ 3.22**, winpr3, freerdp-server3, **libva** + libva-drm, **vulkan ≥ 1.2**,
-**ffnvcodec ≥ 11.1.5** (NVENC), **fdk-aac**, **opus**, **fuse3 ≥ 3.9.1**, polkit ≥ 122, e in build
-`glslc` + `spirv-opt` per gli shader SPIR-V.
-
-Da notare per REMOTIX: **niente ffmpeg**, **niente x264**. La codifica è scritta a mano contro libva e
-contro l'API NVENC. Vedi §9.
+The graphics thread has **its own `GMainContext`** (`renderer->graphics_context`) and all graphics
+sources attach to it explicitly. It is the disciplined equivalent of what REMOTIX obtains with
+Tokio tasks.
 
 ---
 
-### 5. Il ciclo di vita di una sessione — la sequenza esatta
+### 4. Dependencies
 
-È la parte di maggior valore immediato per REMOTIX, perché è la stessa danza che §5.8 regola 1 della
-specifica ha ricostruito a tentativi. Qui c'è la versione del riferimento, letta in
+Always mandatory: glib ≥ 2.75, gio, **libpipewire ≥ 1.2**, **libei ≥ 1.3.901**, cairo, libdrm,
+epoxy, xkbcommon ≥ 1.0, libnotify, libsecret, **krb5**, **tss2** (TPM 2.0), libsystemd (optional but
+necessary for `SYSTEM`/`HANDOVER`).
+
+For the RDP backend: **freerdp3 ≥ 3.22**, winpr3, freerdp-server3, **libva** + libva-drm, **vulkan ≥ 1.2**,
+**ffnvcodec ≥ 11.1.5** (NVENC), **fdk-aac**, **opus**, **fuse3 ≥ 3.9.1**, polkit ≥ 122, and at build time
+`glslc` + `spirv-opt` for the SPIR-V shaders.
+
+Worth noting for REMOTIX: **no ffmpeg**, **no x264**. The encoding is written by hand against libva and
+against the NVENC API. See §9.
+
+---
+
+### 5. The life cycle of a session — the exact sequence
+
+It is the part of greatest immediate value for REMOTIX, because it is the same dance that §5.8 rule 1 of the
+specification reconstructed by trial and error. Here is the reference's version, read in
 `grd-session.c`.
 
 ```
 grd_session_start()
  │
- ├─ 1. org.gnome.Mutter.RemoteDesktop.CreateSession()          → percorso sessione
+ ├─ 1. org.gnome.Mutter.RemoteDesktop.CreateSession()          → session path
  │
  ├─ 2. Session.ConnectToEIS(options={})                        → fd
  │      └─ ei_new_sender() + ei_setup_backend_fd(fd)
- │         GSource su ei_get_fd(), ei_configure_name("gnome-remote-desktop")
+ │         GSource on ei_get_fd(), ei_configure_name("gnome-remote-desktop")
  │
- ├─ 3. connessione dei segnali: "closed", "selection-owner-changed",
+ ├─ 3. connecting the signals: "closed", "selection-owner-changed",
  │      "selection-transfer"
  │
  ├─ 4. org.gnome.Mutter.ScreenCast.CreateSession({
- │        "remote-desktop-session-id": <SessionId del passo 1>,
+ │        "remote-desktop-session-id": <SessionId from step 1>,
  │        "disable-animations": true })
  │
- ├─ 5. org.gnome.Mutter.RemoteDesktop.Session.Start()      ← ADESSO, non prima
+ ├─ 5. org.gnome.Mutter.RemoteDesktop.Session.Start()      ← NOW, not before
  │
  └─ 6. ScreenCast.Session.RecordVirtual({cursor-mode, is-platform:true})
-        └─ Stream proxy → Stream.Start()                   ← il flusso, non la sessione
+        └─ Stream proxy → Stream.Start()                   ← the stream, not the session
 ```
 
-**I due paletti sono identici a quelli che REMOTIX ha pagato** (§5.8 regola 1): la sessione di cattura
-si crea dichiarando `remote-desktop-session-id` *prima* di avviare il controllo, e ciò che si avvia
-alla fine è lo **Stream**, non la Session di ScreenCast.
+**The two stakes are identical to the ones REMOTIX paid for** (§5.8 rule 1): the capture session
+is created by declaring `remote-desktop-session-id` *before* starting the control, and what is started
+at the end is the **Stream**, not the ScreenCast Session.
 
-Due dettagli che REMOTIX non ha:
+Two details REMOTIX does not have:
 
-- **`disable-animations: true`** nelle opzioni della sessione di cattura. Le animazioni di GNOME su un
-  collegamento remoto costano banda e non aggiungono nulla. Una riga, da copiare.
-- **`is-platform: true`** in `RecordVirtual`. Dichiara che il monitor virtuale è «di piattaforma»,
-  cioè trattato come uno schermo vero dal punto di vista della configurazione monitor.
+- **`disable-animations: true`** in the capture session options. GNOME's animations over a
+  remote link cost bandwidth and add nothing. One line, to copy.
+- **`is-platform: true`** in `RecordVirtual`. It declares the virtual monitor «di piattaforma»,
+  that is, treated as a real screen from the point of view of the monitor configuration.
 
-**La chiusura** è simmetrica e ha lo stesso vincolo: `grd_session_stop` chiama
-`RemoteDesktop.Session.Stop`, e la cattura muore con lui. La sessione di ScreenCast **non** viene
-fermata direttamente.
+**Shutdown** is symmetrical and has the same constraint: `grd_session_stop` calls
+`RemoteDesktop.Session.Stop`, and the capture dies with it. The ScreenCast session is **not**
+stopped directly.
 
-**Come si accorge che la sessione è finita**: segnale `closed` sulla sessione di Mutter
-(`on_remote_desktop_session_closed`). Non c'è alcuna registrazione presso `gnome-session`: quella è
-un'invenzione di REMOTIX (§5.9 di `SPECIFICA.md`, `uscita.rs`), e — dati i tempi misurati là — è
-un'invenzione *migliore*, perché il segnale `closed` di Mutter arriva a smontaggio già avviato.
+**How it notices the session has ended**: the `closed` signal on Mutter's session
+(`on_remote_desktop_session_closed`). There is no registration with `gnome-session`: that is
+a REMOTIX invention (§5.9 of `SPECIFICA.md`, `uscita.rs`), and — given the timings measured there — it is
+a *better* invention, because Mutter's `closed` signal arrives when teardown has already started.
 
-L'unico punto in cui `gnome-remote-desktop` parla con `gnome-session` è
-`grd_session_manager_call_logout_sync()` (`grd-daemon-utils.c:207`), e lo fa nella direzione opposta:
-chiama `Logout(NO_CONFIRMATION)` per **chiudere** la sessione greeter quando il client se ne va nel
-modo handover.
+The only point where `gnome-remote-desktop` talks to `gnome-session` is
+`grd_session_manager_call_logout_sync()` (`grd-daemon-utils.c:207`), and it does so in the opposite direction:
+it calls `Logout(NO_CONFIRMATION)` to **close** the greeter session when the client leaves in
+handover mode.
 
 ---
 
-### 6. Il percorso RDP
+### 6. The RDP path
 
-#### 6.1 Cosa il server pretende dal client
+#### 6.1 What the server demands from the client
 
-In `rdp_peer_capabilities` e `rdp_peer_post_connect` (`grd-session-rdp.c`). Chi non soddisfa una di
-queste condizioni **viene disconnesso**:
+In `rdp_peer_capabilities` and `rdp_peer_post_connect` (`grd-session-rdp.c`). Whoever does not meet one of
+these conditions **is disconnected**:
 
-| Requisito | Riga | Motivo dichiarato nel codice |
+| Requirement | Line | Reason stated in the code |
 |---|---|---|
 | **Graphics Pipeline (EGFX)** | 1162 | *"Client did not advertise support for the Graphics Pipeline, closing connection"* |
-| **32 bpp** | 1177 | Violazione di protocollo se dichiara codec ma non 32 bit |
+| **32 bpp** | 1177 | Protocol violation if it declares codecs but not 32 bit |
 | **Desktop resize** | 1193 | *"Client doesn't support desktop resizing"* |
-| **Canale DRDYNVC** | 1199 | Senza canali dinamici non c'è EGFX |
+| **DRDYNVC channel** | 1199 | Without dynamic channels there is no EGFX |
 | **Pointer cache > 0** | 1286 | *"Client doesn't have a pointer cache"* |
 | **Fastpath output** | 1291 | *"Client does not support fastpath output"* |
 
-**Questo è il fatto che più conta per REMOTIX**: il riferimento ha preso *esattamente* la decisione di
-§3.7 della specifica — **solo EGFX, nessun ripiego legacy** — e la applica chiudendo la connessione.
-La riserva sui client Android («va verificato provandoli») trova qui una risposta indiretta: GNOME
-serve gli stessi client Android che REMOTIX ha in elenco, e li serve solo via EGFX.
+**This is the fact that matters most for REMOTIX**: the reference took *exactly* the decision of
+§3.7 of the specification — **EGFX only, no legacy fallback** — and enforces it by closing the connection.
+The reservation about Android clients («va verificato provandoli») finds an indirect answer here: GNOME
+serves the same Android clients REMOTIX has on its list, and serves them only via EGFX.
 
-Due degradazioni interessanti, entrambe sull'audio:
+Two interesting degradations, both on audio:
 
-- se il client **non sa fare autodetect di rete**, l'audio in uscita viene **spento**
-  (`grd-session-rdp.c:1316`): senza misura della banda, mandare audio peggiora il video;
-- se il client è **iOS o Android**, l'audio in uscita viene **spento comunque**
-  (`grd-session-rdp.c:1323`), con la motivazione: *«Client cannot handle graphics and audio
-  simultaneously»*. Da tenere presente: REMOTIX ha Android fra i client di riferimento **e** l'audio
-  AAC in §3.2.
+- if the client **cannot do network autodetect**, outgoing audio is **turned off**
+  (`grd-session-rdp.c:1316`): without a bandwidth measurement, sending audio makes the video worse;
+- if the client is **iOS or Android**, outgoing audio is **turned off anyway**
+  (`grd-session-rdp.c:1323`), with the reason: *«Client cannot handle graphics and audio
+  simultaneously»*. To keep in mind: REMOTIX has Android among the reference clients **and** AAC
+  audio in §3.2.
 
-#### 6.2 Come il server configura FreeRDP
+#### 6.2 How the server configures FreeRDP
 
-Estratto significativo di `init_rdp_session` (`grd-session-rdp.c:1539` e seguenti):
+Significant excerpt of `init_rdp_session` (`grd-session-rdp.c:1539` onwards):
 
 ```c
 RdpSecurity   = FALSE;      TlsSecurity = FALSE;      NlaSecurity = TRUE;
 ColorDepth    = 32;
 SupportGraphicsPipeline = TRUE;
-GfxAVC444v2   = FALSE;   GfxAVC444 = FALSE;   GfxH264 = FALSE;   /* accesi dopo, in CapsAdvertise */
+GfxAVC444v2   = FALSE;   GfxAVC444 = FALSE;   GfxH264 = FALSE;   /* turned on later, in CapsAdvertise */
 GfxSmallCache = FALSE;   GfxThinClient = FALSE;
 RemoteFxCodec = TRUE;    RemoteFxImageCodec = TRUE;   NSCodec = TRUE;
 SurfaceFrameMarkerEnabled = TRUE;   FrameMarkerCommandEnabled = TRUE;
 PointerCacheSize = 100;
 FastPathOutput = TRUE;   NetworkAutoDetect = TRUE;   RefreshRect = FALSE;
-SupportMultitransport = FALSE;                       /* niente UDP */
+SupportMultitransport = FALSE;                       /* no UDP */
 VCFlags = VCCAPS_COMPR_SC;   VCChunkSize = 16256;
 HasExtendedMouseEvent = TRUE;  HasHorizontalWheel = TRUE;  HasRelativeMouseEvent = TRUE;
 HasQoeEvent = FALSE;           UnicodeInput = TRUE;
@@ -5402,169 +5402,169 @@ AudioCapture = TRUE;   AudioPlayback = TRUE;   RemoteConsoleAudio = TRUE;
 OsMajorType = UNIX;    OsMinorType = PSEUDO_XSERVER;
 ```
 
-**`NlaSecurity = TRUE` con le altre due a `FALSE` significa che NLA è obbligatorio.** È la divergenza
-più grossa rispetto a REMOTIX, che ha scelto TLS puro (§3.6). Vedi §7.
+**`NlaSecurity = TRUE` with the other two at `FALSE` means NLA is mandatory.** It is the biggest
+divergence from REMOTIX, which chose pure TLS (§3.6). See §7.
 
-#### 6.3 Riconoscimento del client
+#### 6.3 Client recognition
 
-`grd_session_rdp_is_client_mstsc()` (`grd-session-rdp.c:251`) riconosce mstsc guardando
-`OsMajorType == WINDOWS && OsMinorType == WINDOWS_NT`. Il riferimento quindi **ammette apertamente che
-i client vanno distinti**, ed è la conferma della regola dei tre client di §5.7 di `SPECIFICA.md`.
+`grd_session_rdp_is_client_mstsc()` (`grd-session-rdp.c:251`) recognises mstsc by looking at
+`OsMajorType == WINDOWS && OsMinorType == WINDOWS_NT`. So the reference **openly admits that
+clients must be told apart**, and it is the confirmation of the three-client rule of §5.7 of `SPECIFICA.md`.
 
 ---
 
-### 7. Autenticazione
+### 7. Authentication
 
-#### 7.1 NLA obbligatorio, con due meccanismi
+#### 7.1 NLA mandatory, with two mechanisms
 
-`GrdRdpAuthMethods` è un insieme di bandiere (predefinito: `['credentials']`):
+`GrdRdpAuthMethods` is a set of flags (default: `['credentials']`):
 
-- **`credentials`** — NTLM. Il server **fabbrica un file SAM temporaneo** con l'utenza configurata
-  (`grd-rdp-sam.c`) e lo passa a FreeRDP come `NtlmSamFile`. Le credenziali non sono quelle di
-  sistema: sono una coppia utente/password specifica del desktop remoto, tenuta nel portachiavi;
-- **`kerberos`** — richiede un keytab con il principal `TERMSRV`. Dopo l'handshake, `rdp_peer_logon`
-  interroga il contesto NLA (`SECPKG_ATTR_AUTH_IDENTITY`), converte il principal in nome locale con
-  `krb5_aname_to_localname` e **verifica che l'uid corrisponda a quello del processo**
+- **`credentials`** — NTLM. The server **fabricates a temporary SAM file** with the configured account
+  (`grd-rdp-sam.c`) and passes it to FreeRDP as `NtlmSamFile`. The credentials are not the system
+  ones: they are a user/password pair specific to the remote desktop, kept in the keyring;
+- **`kerberos`** — requires a keytab with the `TERMSRV` principal. After the handshake, `rdp_peer_logon`
+  queries the NLA context (`SECPKG_ATTR_AUTH_IDENTITY`), converts the principal to a local name with
+  `krb5_aname_to_localname` and **checks that the uid matches that of the process**
   (`is_auth_identity_current_user`, `grd-session-rdp.c:991`).
 
-Quest'ultimo controllo è **la stessa regola che REMOTIX ha dovuto scoprire il 3 agosto** — «entra un
-solo utente: quello di cui il server serve la sessione», §3.4 di `SPECIFICA.md`. Il riferimento la fa
-sull'uid effettivo, esattamente come la nota di REMOTIX prescrive. Con NTLM invece non applica alcuna
-politica aggiuntiva (`"Authenticated using NTLM, not applying any additional policy"`) — e non ne ha
-bisogno, perché la credenziale NTLM è già specifica di quella sessione.
+This last check is **the same rule REMOTIX had to discover on 3 August** — «entra un
+solo utente: quello di cui il server serve la sessione», §3.4 of `SPECIFICA.md`. The reference applies it
+on the effective uid, exactly as the REMOTIX note prescribes. With NTLM instead it applies no
+additional policy (`"Authenticated using NTLM, not applying any additional policy"`) — and it does not
+need to, because the NTLM credential is already specific to that session.
 
-#### 7.2 Dove stanno le credenziali
+#### 7.2 Where the credentials live
 
-Tre implementazioni intercambiabili di `GrdCredentials`:
+Three interchangeable implementations of `GrdCredentials`:
 
-| Backend | File | Uso |
+| Backend | File | Use |
 |---|---|---|
-| **libsecret** | `grd-credentials-libsecret.c` | Modo utente: portachiavi GNOME |
-| **TPM 2.0** | `grd-credentials-tpm.c` + `grd-tpm.c` (809 righe) | Modo sistema: sigilla il segreto nel TPM |
-| **file** | `grd-credentials-file.c` | Ripiego quando non c'è TPM |
-| **one-time** | `grd-credentials-one-time.c` | Handover: credenziale usa e getta |
+| **libsecret** | `grd-credentials-libsecret.c` | User mode: GNOME keyring |
+| **TPM 2.0** | `grd-credentials-tpm.c` + `grd-tpm.c` (809 lines) | System mode: seals the secret in the TPM |
+| **file** | `grd-credentials-file.c` | Fallback when there is no TPM |
+| **one-time** | `grd-credentials-one-time.c` | Handover: throwaway credential |
 
-La variante TPM è pensata per il servizio di sistema, che gira senza sessione utente e quindi senza
-portachiavi sbloccato.
+The TPM variant is meant for the system service, which runs without a user session and therefore without
+an unlocked keyring.
 
 #### 7.3 TLS
 
-Certificato e chiave si configurano come **percorsi a file PEM** (`tls-cert`, `tls-key`); il server li
-legge e li passa a FreeRDP con `freerdp_certificate_new_from_pem` / `freerdp_key_new_from_pem`.
-Nessuna generazione automatica: il README rimanda a `winpr-makecert`, `certtool` o `openssl`.
-L'impronta del certificato viene esposta su D-Bus (`tls-fingerprint`) perché il pannello Impostazioni
-la mostri.
+Certificate and key are configured as **paths to PEM files** (`tls-cert`, `tls-key`); the server
+reads them and passes them to FreeRDP with `freerdp_certificate_new_from_pem` / `freerdp_key_new_from_pem`.
+No automatic generation: the README refers to `winpr-makecert`, `certtool` or `openssl`.
+The certificate fingerprint is exposed on D-Bus (`tls-fingerprint`) so that the Settings panel
+can show it.
 
 ---
 
-### 8. La pipeline grafica EGFX
+### 8. The EGFX graphics pipeline
 
-`grd-rdp-dvc-graphics-pipeline.c`, 2287 righe. È il file che la specifica di REMOTIX cita in §5.4.
+`grd-rdp-dvc-graphics-pipeline.c`, 2287 lines. It is the file the REMOTIX specification cites in §5.4.
 
-#### 8.1 Negoziazione delle capacità
+#### 8.1 Capability negotiation
 
-L'elenco delle versioni provate, **in ordine decrescente** (`cap_list`, riga 1567):
+The list of versions tried, **in descending order** (`cap_list`, line 1567):
 
 ```
 10.7, 10.6, 10.5, 10.4, 10.3, 10.2, 10.1, 10.0, 8.1, 8.0
 ```
 
-Si sceglie la **prima versione dell'elenco che il client dichiara**, e si conferma quella sola con un
-`CapsConfirm`. La versione decide se AVC è disponibile:
+The **first version in the list that the client declares** is chosen, and only that one is confirmed with a
+`CapsConfirm`. The version decides whether AVC is available:
 
-| Versione | AVC420 | AVC444 |
+| Version | AVC420 | AVC444 |
 |---|---|---|
-| 10.0 … 10.7 | sì, salvo `RDPGFX_CAPS_FLAG_AVC_DISABLED` | idem |
-| 8.1 | solo se `RDPGFX_CAPS_FLAG_AVC420_ENABLED` | no |
+| 10.0 … 10.7 | yes, unless `RDPGFX_CAPS_FLAG_AVC_DISABLED` | same |
+| 8.1 | only if `RDPGFX_CAPS_FLAG_AVC420_ENABLED` | no |
 | 8.0 | **no** | no |
 
-**È esattamente il difetto che REMOTIX ha pagato** (§5.4: *«elenco delle versioni EGFX troppo rado:
-mancava la famiglia 10.x intermedia, e mstsc si ferma alla 10.6»*). Questa tabella è la versione
-autorevole: dieci voci, nessun buco.
+**It is exactly the defect REMOTIX paid for** (§5.4: *«elenco delle versioni EGFX troppo rado:
+mancava la famiglia 10.x intermedia, e mstsc si ferma alla 10.6»*). This table is the
+authoritative version: ten entries, no gaps.
 
-Altre regole di protocollo applicate:
+Other protocol rules applied:
 
-- **timeout di 10 secondi** (`PROTOCOL_TIMEOUT_MS`) dall'apertura del canale: se non arriva un
-  `CapsAdvertise`, la sessione viene chiusa con `ERRINFO_BAD_CAPABILITIES`;
-- un `CapsAdvertise` **ripetuto** è lecito solo se la versione iniziale era ≥ 10.3 (è il *protocol
-  reset* previsto dalla specifica Microsoft); altrimenti è violazione;
-- un `CapsAdvertise` ripetuto che **spegnerebbe AVC** viene rifiutato con chiusura della sessione;
-- `CacheImportOffer` riceve una `CacheImportReply` **vuota** — cioè la cache non viene mai usata, come
+- **10-second timeout** (`PROTOCOL_TIMEOUT_MS`) from the opening of the channel: if no
+  `CapsAdvertise` arrives, the session is closed with `ERRINFO_BAD_CAPABILITIES`;
+- a **repeated** `CapsAdvertise` is legal only if the initial version was ≥ 10.3 (it is the *protocol
+  reset* foreseen by the Microsoft specification); otherwise it is a violation;
+- a repeated `CapsAdvertise` that **would turn off AVC** is refused by closing the session;
+- `CacheImportOffer` receives an **empty** `CacheImportReply` — that is, the cache is never used, as
   in xrdp;
-- `QoeFrameAcknowledge` è accettato e ignorato.
+- `QoeFrameAcknowledge` is accepted and ignored.
 
-#### 8.2 Superfici
+#### 8.2 Surfaces
 
-`grd_rdp_dvc_graphics_pipeline_acquire_gfx_surface` (riga 439) fa, in quest'ordine:
+`grd_rdp_dvc_graphics_pipeline_acquire_gfx_surface` (line 439) does, in this order:
 
-1. `grd_rdp_gfx_surface_new` → **`CreateSurface`** (formato `GFX_PIXEL_FORMAT_XRGB_8888`);
-2. crea il *frame controller*;
-3. **`map_surface`** → **`MapSurfaceToOutput`** con `outputOriginX/Y`.
+1. `grd_rdp_gfx_surface_new` → **`CreateSurface`** (format `GFX_PIXEL_FORMAT_XRGB_8888`);
+2. creates the *frame controller*;
+3. **`map_surface`** → **`MapSurfaceToOutput`** with `outputOriginX/Y`.
 
-**Le due chiamate sono adiacenti e nessuna delle due è opzionale.** È la conferma diretta della causa
-trovata da REMOTIX il 2 agosto (§5.4): creare la superficie e agganciarla all'uscita sono due
-operazioni distinte.
+**The two calls are adjacent and neither of them is optional.** It is the direct confirmation of the cause
+found by REMOTIX on 2 August (§5.4): creating the surface and hooking it to the output are two
+distinct operations.
 
-L'unico tipo di mappatura implementato è `MAP_TO_OUTPUT`. `MapSurfaceToWindow` e le varianti *scaled*
-non esistono, come in xrdp.
+The only mapping type implemented is `MAP_TO_OUTPUT`. `MapSurfaceToWindow` and the *scaled* variants
+do not exist, as in xrdp.
 
-**Superficie di rendering separata**: se l'allineamento richiesto dall'encoder non coincide con
-l'allineamento a 16, viene creata una *seconda* superficie EGFX, si codifica su quella, e si copia
-sulla superficie visibile con `SurfaceToSurface`. È l'unico uso di `SurfaceToSurface` nel programma.
+**Separate rendering surface**: if the alignment required by the encoder does not match
+the 16 alignment, a *second* EGFX surface is created, encoding is done on that one, and it is copied
+to the visible surface with `SurfaceToSurface`. It is the only use of `SurfaceToSurface` in the program.
 
-#### 8.3 Allineamento e geometrie — le due convenzioni
+#### 8.3 Alignment and geometries — the two conventions
 
-Nel percorso NVENC (`refresh_gfx_surface_avc420`, riga 1084):
+In the NVENC path (`refresh_gfx_surface_avc420`, line 1084):
 
 ```c
 aligned_width  = surface_width  + (surface_width  % 16 ? 16 - surface_width  % 16 : 0);
 aligned_height = surface_height + (surface_height % 64 ? 64 - surface_height % 64 : 0);
 ```
 
-**Larghezza multipla di 16, altezza multipla di 64** — identico a quanto REMOTIX ha accertato in §5.4.
+**Width a multiple of 16, height a multiple of 64** — identical to what REMOTIX established in §5.4.
 
-Sulle geometrie il codice usa **due convenzioni diverse, e questo va letto con attenzione** perché la
-specifica di REMOTIX ne registra una sola:
+On geometries the code uses **two different conventions, and this must be read carefully** because the
+REMOTIX specification records only one:
 
-| Struttura | Dove | Convenzione |
+| Structure | Where | Convention |
 |---|---|---|
-| `RECTANGLE_16` della meta AVC420 | `set_region_rects`, riga 559 | `right = x + width`, `bottom = y + height` → **esclusiva** |
-| `RDPGFX_SURFACE_COMMAND` (`cmd.right/bottom`) | riga 686 | `right = extents.x + extents.width` → **esclusiva** |
-| `MONITOR_DEF` di `ResetGraphics` | `maybe_reset_graphics`, riga 438 | `right = left + width - 1` → **inclusiva** |
+| `RECTANGLE_16` of the AVC420 meta | `set_region_rects`, line 559 | `right = x + width`, `bottom = y + height` → **exclusive** |
+| `RDPGFX_SURFACE_COMMAND` (`cmd.right/bottom`) | line 686 | `right = extents.x + extents.width` → **exclusive** |
+| `MONITOR_DEF` of `ResetGraphics` | `maybe_reset_graphics`, line 438 | `right = left + width - 1` → **inclusive** |
 
-> ⚠ **Da riverificare in REMOTIX.** §5.4 di `SPECIFICA.md` annota *«bordi della regione AVC420
-> fuori-di-uno: sono inclusivi»*. Il riferimento fa il contrario sulla regione AVC420 ed è inclusivo
-> solo sui `MONITOR_DEF`. Le due cose possono convivere se l'API di IronRDP applica già una
-> conversione, ma è un punto dove un errore di ±1 produce esattamente il sintomo descritto
-> (rinegoziazione e disconnessione), e va accertato guardando i byte, non il codice Rust.
+> ⚠ **To be re-verified in REMOTIX.** §5.4 of `SPECIFICA.md` notes *«bordi della regione AVC420
+> fuori-di-uno: sono inclusivi»*. The reference does the opposite on the AVC420 region and is inclusive
+> only on the `MONITOR_DEF`s. The two can coexist if IronRDP's API already applies a
+> conversion, but it is a point where a ±1 error produces exactly the described symptom
+> (renegotiation and disconnection), and it must be established by looking at the bytes, not at the Rust code.
 
 #### 8.4 ResetGraphics
 
-`grd_rdp_dvc_graphics_pipeline_reset_graphics` (riga 462) apre con:
+`grd_rdp_dvc_graphics_pipeline_reset_graphics` (line 462) opens with:
 
 ```c
 g_assert (g_hash_table_size (graphics_pipeline->surface_table) == 0);
 ```
 
-**Tutte le superfici devono essere state cancellate prima di ridichiarare la tela.** E l'elenco dei
-monitor non è mai vuoto: `maybe_reset_graphics` costruisce l'array dai monitor correnti, con
-`g_assert (n_monitors > 0)`. Conferma la quarta correzione di §5.4 di `SPECIFICA.md`.
+**All surfaces must have been deleted before redeclaring the canvas.** And the monitor
+list is never empty: `maybe_reset_graphics` builds the array from the current monitors, with
+`g_assert (n_monitors > 0)`. It confirms the fourth fix of §5.4 of `SPECIFICA.md`.
 
-#### 8.5 Invio di un fotogramma
+#### 8.5 Sending a frame
 
 ```
-StartFrame(frameId, timestamp)      ← timestamp = ora<<22 | min<<16 | sec<<10 | ms
+StartFrame(frameId, timestamp)      ← timestamp = hour<<22 | min<<16 | sec<<10 | ms
 SurfaceCommand(surfaceId, codecId, ...)
-[SurfaceToSurface, solo se c'è una superficie di rendering separata]
+[SurfaceToSurface, only if there is a separate rendering surface]
 EndFrame(frameId)
 ```
 
-Per RemoteFX Progressive esiste la scorciatoia `SurfaceFrameCommand`, che manda i tre PDU insieme.
+For RemoteFX Progressive there is the `SurfaceFrameCommand` shortcut, which sends the three PDUs together.
 
-Il `frameId` viene registrato in `frame_serial_table` insieme al *serial* della superficie, in modo che
-un ack in ritardo che si riferisce a una superficie già distrutta non faccia danni: il serial è
-contato a parte con `surface_serial_ref` / `unref`. È una raffinatezza che serve solo con
-ridimensionamenti frequenti.
+The `frameId` is recorded in `frame_serial_table` together with the surface *serial*, so that
+a late ack referring to an already destroyed surface does no harm: the serial is
+counted separately with `surface_serial_ref` / `unref`. It is a refinement needed only with
+frequent resizes.
 
 ---
 
