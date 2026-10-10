@@ -1569,371 +1569,371 @@ prende il fuoco») instead of producing a false number — I verified it by read
 
 ---
 
-## F1.5 ⭐⭐⭐ L'ANELLO INTERO CON LA COPIA ZERO — il prima/dopo **appaiato**
+## F1.5 ⭐⭐⭐ THE WHOLE LOOP WITH ZERO COPY — the **paired** before/after
 
-> ### ⭐⭐⭐ `input → vetro` con la copia zero: `[M]` **55,20 ms**
+> ### ⭐⭐⭐ `input → vetro` with zero copy: `[M]` **55.20 ms**
 >
-> *(Il valore di ieri, senza la copia zero — la strada dalla memoria con `sws_scale` — è tolto con la
-> fase 18: la copia zero ha accorciato l'anello, e il valore di prima non vale più.)* Due giri di seguito, nella stessa mezz'ora tranquilla, che condividono **tutto** tranne il binario.
+> *(Yesterday's value, without zero copy — the road from memory with `sws_scale` — is removed with
+> phase 18: zero copy shortened the loop, and the value from before is no longer valid.)* Two rounds in a row, in the same quiet half hour, that share **everything** except the binary.
 
-### ⛔ Prima del numero: era la copia zero, ed era accesa?
+### ⛔ Before the number: was it zero copy, and was it on?
 
-⛔⛔ La trappola peggiore sarebbe misurare il codice nuovo mentre percorre la strada vecchia, e non è
-teorica: `[M]` (F4) il driver iHD **non onora un passo che non sia multiplo di 64 byte**. Il passo è
-`larghezza × 4`, quindi la condizione è **larghezza multipla di 16 px**:
+⛔⛔ The worst trap would be to measure the new code while it travels the old road, and it is not
+theoretical: `[M]` (F4) the iHD driver **does not honour a stride that is not a multiple of 64 bytes**. The stride is
+`larghezza × 4`, so the condition is **width a multiple of 16 px**:
 
-| tela | passo | resto su 64 | |
+| canvas | stride | remainder mod 64 | |
 |---|---|---|---|
-| **1460×888** — ⛔ il palco di **tutti** i giri precedenti | 5840 | **16** | ⛔ copia zero **spenta** |
-| 1544×888 · 1560×888 (le tele storte di F4) | 6176 · 6240 | 32 · 32 | ⛔ spenta |
-| ⭐ **1456×888** — il palco di stasera | **5824** | **0** | ⭐ **accesa** |
-| 1920×1080 | 7680 | 0 | ⭐ accesa |
+| **1460×888** — ⛔ the stage of **all** the previous rounds | 5840 | **16** | ⛔ zero copy **off** |
+| 1544×888 · 1560×888 (F4's crooked canvases) | 6176 · 6240 | 32 · 32 | ⛔ off |
+| ⭐ **1456×888** — tonight's stage | **5824** | **0** | ⭐ **on** |
+| 1920×1080 | 7680 | 0 | ⭐ on |
 
-⇒ ⭐⭐ **1456 e non 1920, e la ragione è il confronto**: è il multiplo di 16 più vicino a 1460, cioè
-**quattro pixel** dal palco di sempre invece dei **+63 % di pixel** che 1920×1080 avrebbe portato
-dentro. ⭐ E il conto riproduce i casi che F4 ha misurato: 1544 e 1560 → resto 32 (storte), 1920 → 0
-(buona). Due strade, stesso risultato.
-⭐ La leva è **la finestra del browser** (`--finestra 1496x1000`, argomento nuovo): la pagina chiede
-al server una tela grande quanto la sua vista.
+⇒ ⭐⭐ **1456 and not 1920, and the reason is the comparison**: it is the multiple of 16 closest to 1460, that is
+**four pixels** from the usual stage instead of the **+63 % of pixels** that 1920×1080 would have brought
+in. ⭐ And the calculation reproduces the cases F4 measured: 1544 and 1560 → remainder 32 (crooked), 1920 → 0
+(good). Two roads, same result.
+⭐ The lever is **the browser window** (`--finestra 1496x1000`, new argument): the page asks
+the server for a canvas as large as its view.
 
-### ⭐ E che i due giri siano confrontabili non si spera: **il banco lo verifica**
+### ⭐ And that the two rounds are comparable is not hoped for: **the bench verifies it**
 
-| | **IERI** (senza) | ⭐ **OGGI** (copia zero) |
+| | **YESTERDAY** (without) | ⭐ **TODAY** (zero copy) |
 |---|---|---|
-| albero | `/media/REMOTIX/src/08-a-src/src/remotix` | `/media/REMOTIX/src/08-f1-src/src/remotix` |
-| **md5 del binario CHE GIRA** (da `/proc/PID/exe`) | **`73ce3a1f19028c8e7436db9d2125ded2`** | **`f45e9f789782e316da6efc7e409e4625`** |
-| sorgenti | il tronco del 22 agosto mattina | HEAD `6f5f418`, `cattura.c` `c17a7838…` verificato |
-| **copia zero**, letta dal registro del PRODOTTO | ⛔ **SPENTA** — «strada **memoria**» | ⭐ **ACCESA** — «strada **scheda**» |
-| tela · passo · resto su 64 | 1456×888 · 5824 · **0** | **identici** |
-| finestra | 1496×1000 | **identica** |
-| carico del portatile, `[M]` **nel verbale** | carico **0,40** · Chrome 13 · Xvfb 1 · **un solo banco** | carico **1,10** · Chrome 13 · Xvfb 1 · **un solo banco** |
+| tree | `/media/REMOTIX/src/08-a-src/src/remotix` | `/media/REMOTIX/src/08-f1-src/src/remotix` |
+| **md5 of the binary THAT RUNS** (from `/proc/PID/exe`) | **`73ce3a1f19028c8e7436db9d2125ded2`** | **`f45e9f789782e316da6efc7e409e4625`** |
+| sources | the trunk of 22 Aug morning | HEAD `6f5f418`, `cattura.c` `c17a7838…` verified |
+| **zero copy**, read from the PRODUCT's log | ⛔ **OFF** — «strada **memoria**» | ⭐ **ON** — «strada **scheda**» |
+| canvas · stride · remainder mod 64 | 1456×888 · 5824 · **0** | **identical** |
+| window | 1496×1000 | **identical** |
+| laptop load, `[M]` **in the report** | load **0.40** · Chrome 13 · Xvfb 1 · **a single bench** | load **1.10** · Chrome 13 · Xvfb 1 · **a single bench** |
 | `macchina carica` | **false** | **false** |
 
-⇒ ⭐⭐ **Il passo è identico e buono in tutt'e due**: la strada si ribalta da `memoria` a `scheda`
-**perché cambia il binario**, non perché cambi la tela. È il controllo più pulito che potessi
-costruire.
-⚠ **L'impronta l'ho letta a mano** (`sudo md5sum /proc/PID/exe`): nel verbale non c'è, perché la
-lettura automatica si è rotta due volte stasera (F1.6). ⇒ `[M]` ma per mano mia, non per mano del
-banco — e la distinzione la scrivo invece di nasconderla.
+⇒ ⭐⭐ **The stride is identical and good in both**: the road flips from `memoria` to `scheda`
+**because the binary changes**, not because the canvas changes. It is the cleanest control I could
+build.
+⚠ **I read the fingerprint by hand** (`sudo md5sum /proc/PID/exe`): it is not in the report, because the
+automatic reading broke twice tonight (F1.6). ⇒ `[M]` but by my hand, not by the
+bench's — and I write the distinction instead of hiding it.
 
-### ⭐⭐ I SEI TRATTI AFFIANCATI — è la sola cosa che dice **quale pezzo ha reso**
+### ⭐⭐ THE SIX SEGMENTS SIDE BY SIDE — it is the only thing that says **which piece paid off**
 
-| | il tratto | ⭐ OGGI (copia zero) |
+| | the segment | ⭐ TODAY (zero copy) |
 |---|---|---|
-| **A** | la pagina — `event.timeStamp` → i byte escono | 5,68 ms |
-| **B** | l'andata — byte usciti → la scena riceve | 6,68 ms |
-| **C** | l'attesa del quadro nella scena | **11,78 ms** |
-| **D** | il quadro di Mutter | 16,01 ms |
-| **E** | ⭐⭐ **codifica e ritorno** | **10,27 ms** |
-| **F** | il cliente | 2,48 ms |
-| | **T — L'ANELLO INTERO** | ⭐ **55,20 ms** |
-| | **p95** | **122,50** |
-| | n (sonde chiuse / tentate) | **721 / 727** |
+| **A** | the page — `event.timeStamp` → the bytes leave | 5.68 ms |
+| **B** | the outward leg — bytes out → the scene receives | 6.68 ms |
+| **C** | the wait for the frame in the scene | **11.78 ms** |
+| **D** | Mutter's frame | 16.01 ms |
+| **E** | ⭐⭐ **encoding and return** | **10.27 ms** |
+| **F** | the client | 2.48 ms |
+| | **T — THE WHOLE LOOP** | ⭐ **55.20 ms** |
+| | **p95** | **122.50** |
+| | n (probes closed / attempted) | **721 / 727** |
 
-| tratto | OGGI |
+| segment | TODAY |
 |---|---|
-| 1a evento → il prodotto lo vede | 5,53 |
-| 1b · 6 · 7 · 8 · 9 · 10 | 0,15 · 0,38 · 0,16 · 1,55 · 0,72 · 0,06 |
-| 2 byte usciti → la scena riceve | 6,68 |
-| 3 la scena riceve → la scena disegna | **11,78** |
-| 4 la scena disegna → cattura | 16,01 |
-| **5 cattura → PRIMO byte in pagina** | ⭐⭐ **9,89** |
+| 1a event → the product sees it | 5.53 |
+| 1b · 6 · 7 · 8 · 9 · 10 | 0.15 · 0.38 · 0.16 · 1.55 · 0.72 · 0.06 |
+| 2 bytes out → the scene receives | 6.68 |
+| 3 the scene receives → the scene draws | **11.78** |
+| 4 the scene draws → capture | 16.01 |
+| **5 capture → FIRST byte in the page** | ⭐⭐ **9.89** |
 
-*(Fase 18: le colonne «IERI», sulla strada dalla memoria con `sws_scale`, e le differenze sono tolte —
-non valgono più. Le quattro conclusioni sotto restano come fatti qualitativi dell'appaiamento.)*
+*(Phase 18: the «YESTERDAY» columns, on the road from memory with `sws_scale`, and the differences are removed —
+they are no longer valid. The four conclusions below remain as qualitative facts of the pairing.)*
 
-### ⭐⭐⭐ Le quattro cose che questa tabella dice
+### ⭐⭐⭐ The four things this table says
 
-1. ⭐⭐ **Il tratto 5 è la firma della copia zero, e il conto torna con quello di F4.**
-   `[M]` Scende a **9,89 ms** (il «prima» è tolto, fase 18). F4, sul suo tratto `cattura → byte fuori` e senza browser,
-   aveva visto la stessa discesa *(il suo «prima», su `sws_scale`, è tolto: fase 18)*. ⇒ **Due banchi diversi, due palchi diversi, la stessa cura,
-   la stessa forma.** È la conferma incrociata che al numero di F4 mancava.
-2. ⭐⭐⭐ **E rende ANCHE nel tratto 3, che non è suo** — `[M]` scende a **11,78 ms**. Il
-   tratto 3 è *«la scena riceve l'input → la scena disegna»*, cioè **l'attesa del quadro sul
-   server**: la copia zero non ci passa nemmeno. ⇒ `[?]` **La spiegazione più economica è la
-   smentita di F4 a §4-C**: togliendo il nostro lavoro dal thread di **tempo reale di PipeWire** il
-   produttore cala a `[M]` 0,64 ms, e il compositore torna a servire la scena in tempo. ⛔ È
-   un'**ipotesi**, non una misura: la prova sarebbe rifarlo con la copia zero accesa e il produttore
-   riportato a mano sul thread di tempo reale. **Non l'ho fatto.**
-   ⚠ E circa metà del guadagno dell'anello sta lì.
-3. ⭐ **Il tratto D non si muove** (16,01 ms oggi): il quadro del compositore resta il muro, e
-   un tratto che non cambia quando tutto il resto cambia è la prova che la scomposizione separa cose
-   diverse davvero.
-4. ⚠ **Il tratto 1a peggiora**, ed è l'unico. `[?]` Il giro di oggi aveva il carico a
-   **1,10** contro **0,40** di ieri — il tratto 1a è la consegna degli eventi sul filo della pagina,
-   ed è il primo a soffrire il carico. ⛔ Non lo attribuisco alla copia zero e non lo nascondo.
+1. ⭐⭐ **Segment 5 is the signature of zero copy, and the account matches F4's.**
+   `[M]` It drops to **9.89 ms** (the «before» is removed, phase 18). F4, on his segment `cattura → byte fuori` and without a browser,
+   had seen the same drop *(his «before», on `sws_scale`, is removed: phase 18)*. ⇒ **Two different benches, two different stages, the same cure,
+   the same shape.** It is the cross-confirmation that F4's number lacked.
+2. ⭐⭐⭐ **And it pays off ALSO in segment 3, which is not its own** — `[M]` it drops to **11.78 ms**. The
+   segment 3 is *«the scene receives the input → the scene draws»*, that is **the wait for the frame on the
+   server**: zero copy does not even pass through it. ⇒ `[?]` **The cheapest explanation is
+   F4's disproof of §4-C**: by removing our work from **PipeWire's real-time** thread the
+   producer drops to `[M]` 0.64 ms, and the compositor goes back to serving the scene on time. ⛔ It is
+   a **hypothesis**, not a measurement: the proof would be to redo it with zero copy on and the producer
+   put back by hand on the real-time thread. **I did not do it.**
+   ⚠ And about half of the loop's gain lies there.
+3. ⭐ **Segment D does not move** (16.01 ms today): the compositor's frame remains the wall, and
+   a segment that does not change when everything else changes is the proof that the breakdown really separates different
+   things.
+4. ⚠ **Segment 1a gets worse**, and it is the only one. `[?]` Today's round had the load at
+   **1.10** against yesterday's **0.40** — segment 1a is the delivery of events on the page's thread,
+   and it is the first to suffer from load. ⛔ I do not attribute it to zero copy and I do not hide it.
 
-### ⛔⛔ COME SI LEGGE QUESTO CONFRONTO, E COME NON SI LEGGE
+### ⛔⛔ HOW THIS COMPARISON IS READ, AND HOW IT IS NOT
 
-⚠ **Il confronto buono è questo, e solo questo.** ⛔ **NON si sottrae il 55,20 dai valori** dei miei
-giri precedenti (tolti con la fase 18), e la tentazione è forte perché i numeri stanno nello stesso documento. Quei giri
-erano su un'**altra tela** (1460×888, dove la copia zero **non si accende nemmeno**), col carico
-`[R]` invece che `[M]`, e due dei quattro sotto la contesa di un altro banco.
-⇒ ⭐ **Il «prima» buono era `08f1-copiazero-IERI-2`, non quei giri** (il suo valore è tolto, fase 18). Quelli restano scritti perché
-dicono un'altra cosa — quanto la contesa sposta un anello — e quella la dicono bene.
+⚠ **The good comparison is this one, and only this one.** ⛔ **Do NOT subtract the 55.20 from the values** of my
+previous rounds (removed with phase 18), and the temptation is strong because the numbers are in the same document. Those rounds
+were on **another canvas** (1460×888, where zero copy **does not even switch on**), with the load
+`[R]` instead of `[M]`, and two of the four under the contention of another bench.
+⇒ ⭐ **The good «before» was `08f1-copiazero-IERI-2`, not those rounds** (its value is removed, phase 18). Those remain written because
+they say another thing — how much contention moves a loop — and they say that well.
 
-⛔⛔ **E c'è un limite del mio stesso confronto che va detto**: `[M]` sullo **stesso** binario di ieri
-la dispersione da giro a giro era di **~15 ms** (i valori sono tolti, fase 18). ⇒ Con
-**un solo giro per parte**, il guadagno era più grande della dispersione ma **non di un fattore
-comodo**. ⭐ **A rendere credibile l'attribuzione non è il totale: sono i tratti.** Il tratto 5 cala
-e concorda con F4 misurato per un'altra strada; gli altri nove non si muovono. ⛔ Chi vuole
-il totale `[M]` con la dispersione dentro deve fare **tre giri per parte, alternati**, ed è mezz'ora.
+⛔⛔ **And there is a limit of my own comparison that must be said**: `[M]` on the **same** binary as yesterday
+the spread from round to round was **~15 ms** (the values are removed, phase 18). ⇒ With
+**a single round per side**, the gain was larger than the spread but **not by a comfortable
+factor**. ⭐ **What makes the attribution credible is not the total: it is the segments.** Segment 5 drops
+and agrees with F4 measured by another road; the other nine do not move. ⛔ Whoever wants
+the total `[M]` with the spread inside must do **three rounds per side, alternating**, and it is half an hour.
 
-⚠ E oltre a questo: `[?]` non ho fatto una prova che la copia zero **spenta sulla stessa tela storta**
-desse il numero di ieri — cioè la controprova del meccanismo dal lato del driver.
+⚠ And beyond this: `[?]` I did not test that zero copy **off on the same crooked canvas**
+gives yesterday's number — that is the counter-proof of the mechanism from the driver's side.
 
 ---
 
-## F1.6 ⛔⛔⭐ QUATTRO FALSI ROSSI IN UNA SERA — e **un falso rosso costa quanto un falso verde**
+## F1.6 ⛔⛔⭐ FOUR FALSE REDS IN ONE EVENING — and **a false red costs as much as a false green**
 
-⭐ Il pezzo di questa serata che vale più del numero, e non è un aneddoto: **quattro volte** ho
-scritto un controllo che accusava uno **stato normale**, e ogni volta la cura è stata la stessa —
-distinguere *«non è successo»* da *«è successo il contrario»*, e *«non ho guardato»* da *«ho
-guardato e va male»*.
+⭐ The piece of this evening that is worth more than the number, and it is not an anecdote: **four times** I
+wrote a check that accused a **normal state**, and every time the cure was the same —
+telling *«it did not happen»* apart from *«the opposite happened»*, and *«I did not look»* from *«I
+looked and it is bad»*.
 
-| | il controllo | perché accusava lo stato NORMALE | la cura |
+| | the check | why it accused the NORMAL state | the cure |
 |---|---|---|---|
-| **1** | Q11: *«il confine vecchio non deve salire»* | il ritardo si innesta **occupando il filo della pagina**, quindi sposta **tutto** il condotto: `[M]` +6,82 ms sul confine vecchio | la grandezza giusta è **appaiata** (distanza fra i due confini sulla **stessa sonda**): lo spostamento comune si elide |
-| **2** | passo/strada: *«copia zero spenta con passo buono = disaccordo»* | il passo multiplo di 64 è **necessario e non sufficiente** — serve anche il codice. ⇒ «passo buono + strada memoria» è lo stato **corretto** del binario di prima della cura, cioè **del giro di controllo** | si accusa **un verso solo**, quello impossibile (strada «scheda» con passo storto); l'altro si **dichiara** con una nota |
-| **3** | Q11: *«la salita sta nel tratto 10 e in nessun altro»* | `[M]` il tratto **1a** sale di **5,60 ms**, perché 1a è la consegna degli eventi **sullo stesso filo** in cui innesto il ritardo | si esclude **un tratto solo, nominato, per la ragione detta** — e la ricaduta si **conta e si consegna**, non sparisce |
-| **4** | il mio script di confronto: *«stesso md5 ⇒ nessun prima/dopo»* | `None == None` è vero: con l'impronta non letta diceva **«stesso binario»** invece di **«non ho potuto guardare»** | «non l'ho letta» diventa un `⚠` distinto dal rosso |
+| **1** | Q11: *«the old boundary must not rise»* | the delay is injected **by occupying the page's thread**, so it shifts **the whole** pipeline: `[M]` +6.82 ms on the old boundary | the right quantity is **paired** (distance between the two boundaries on the **same probe**): the common shift cancels out |
+| **2** | stride/road: *«zero copy off with a good stride = disagreement»* | a stride that is a multiple of 64 is **necessary and not sufficient** — the code is needed too. ⇒ «good stride + memory road» is the **correct** state of the binary from before the cure, that is **of the control round** | only **one direction** is accused, the impossible one («card» road with a crooked stride); the other is **declared** with a note |
+| **3** | Q11: *«the rise lies in segment 10 and in no other»* | `[M]` segment **1a** rises by **5.60 ms**, because 1a is the delivery of events **on the same thread** on which I inject the delay | **a single segment, named, for the stated reason** is excluded — and the spillover is **counted and delivered**, it does not disappear |
+| **4** | my comparison script: *«same md5 ⇒ no before/after»* | `None == None` is true: with the fingerprint not read it said **«same binary»** instead of **«I could not look»** | «I did not read it» becomes a `⚠` distinct from red |
 
-⇒ ⭐⭐ **Il danno non è che sbagliano: è che accusano il caso che deve andare bene.** Il giro di
-controllo — quello che *deve* uscire senza copia zero, perché è il termine di paragone — sarebbe
-uscito rosso ogni volta. ⛔ **E un rosso che compare quando tutto va come deve è il modo più rapido
-di insegnare a chi legge che i rossi di questo banco si ignorano.**
+⇒ ⭐⭐ **The damage is not that they are wrong: it is that they accuse the case that must go well.** The
+control round — the one that *must* come out without zero copy, because it is the term of comparison — would have
+come out red every time. ⛔ **And a red that appears when everything goes as it should is the quickest way
+to teach the reader that this bench's reds are to be ignored.**
 
-⇒ ⛔⛔ **Un falso rosso costa esattamente quanto un falso verde, e per la stessa via**: tutt'e due
-scollegano il colore dal fatto. `LEZIONI.md` §1.20 chiede *«per ogni numero che il banco stampa:
-quale riga lo confronta?»* — ⭐ **e la domanda gemella, che stasera mi è costata quattro volte, è
-«e quando è NORMALE che quel confronto non torni?»**.
+⇒ ⛔⛔ **A false red costs exactly as much as a false green, and by the same route**: both
+disconnect the colour from the fact. `LEZIONI.md` §1.20 asks *«for every number the bench prints:
+which line compares it?»* — ⭐ **and the twin question, which tonight cost me four times, is
+«and when is it NORMAL for that comparison not to add up?»**.
 
-⚠ **E il numero 3 l'ho curato DOPO aver visto il rosso**, che è il momento più pericoloso per
-toccare un criterio. ⇒ Lo dichiaro: la ragione fisica era scritta in questo stesso file **prima**
-che il rosso comparisse (F1.2, sul totale), e ho escluso **un tratto solo e nominato**, non «i
-tratti che davano fastidio». Tutti gli altri restano accusabili: se il surplus finisse nel 2, nel 3
-o nel 5, Q11 diventa rosso.
+⚠ **And I cured number 3 AFTER seeing the red**, which is the most dangerous moment to
+touch a criterion. ⇒ I declare it: the physical reason was written in this same file **before**
+the red appeared (F1.2, on the total), and I excluded **a single, named segment**, not «the
+segments that were bothering me». All the others remain accusable: if the surplus ended up in 2, in 3
+or in 5, Q11 turns red.
 
-### ⛔ E due difetti veri del banco, trovati mentre lo curavo
+### ⛔ And two real defects of the bench, found while I was curing it
 
-1. ⛔⛔ **Ho rotto il banco con una mia stessa cura, e mi è costato un giro intero.** Curando la
-   lettura dell'`md5` ho scritto `p = x.split()` — e in quella funzione **`p` è già il modulo del
-   ponte**. Sette passi più giù `p.orologio_chiedi(...)` trovava una lista, e il giro moriva **ad
-   ancora chiusa, dopo aver misurato tutto**.
-   ⭐ E il difetto era **invisibile** nel giro precedente, perché lì la lettura dell'`md5` falliva e
-   il ciclo non girava mai: **una riga curata ne ha rotta un'altra a distanza**.
-   ⚠ L'unica cosa che ha funzionato come doveva: il banco è **morto** invece di consegnare un numero.
-2. ⛔ **`"".join(c for c in stdout if c.isdigit())`** per prendere il `pid`: nello `stdout` di `sshpw`
-   c'è anche *«nicfio@**192.168.0.2**'s password:»*, e il pid usciva `1921680`+quello vero.
-   ⭐ Anche qui il banco ha detto **«NON HO POTUTO GUARDARE: "non lo so" non è "è quello giusto"»**
-   invece di inventare un'impronta — ed è l'unica ragione per cui il difetto è costato una riga e non
-   un numero falso in un documento.
-   ⚠ ⛔ **È la terza volta in una sera** che un comando muore attraversando `ssh → sudo → pipe`: la
-   regola di casa *«un file non ha livelli di virgolette»* vale anche per le righe brevi.
+1. ⛔⛔ **I broke the bench with a cure of my own, and it cost me a whole round.** Curing the
+   reading of the `md5` I wrote `p = x.split()` — and in that function **`p` is already the
+   bridge module**. Seven steps further down `p.orologio_chiedi(...)` found a list, and the round died **with the
+   anchor still closed, after having measured everything**.
+   ⭐ And the defect was **invisible** in the previous round, because there the reading of the `md5` failed and
+   the loop never ran: **one line cured broke another at a distance**.
+   ⚠ The only thing that worked as it should: the bench **died** instead of delivering a number.
+2. ⛔ **`"".join(c for c in stdout if c.isdigit())`** to get the `pid`: in the `stdout` of `sshpw`
+   there is also *«nicfio@**192.168.0.2**'s password:»*, and the pid came out `1921680`+the real one.
+   ⭐ Here too the bench said **«NON HO POTUTO GUARDARE: "non lo so" non è "è quello giusto"»**
+   instead of inventing a fingerprint — and it is the only reason why the defect cost a line and not
+   a false number in a document.
+   ⚠ ⛔ **It is the third time in one evening** that a command dies going through `ssh → sudo → pipe`: the
+   house rule *«a file has no levels of quoting»* holds for short lines too.
 
 ---
 
-## F1.7 ⛔⛔ CHE COSA NON HA FUNZIONATO (il resto)
+## F1.7 ⛔⛔ WHAT DID NOT WORK (the rest)
 
-### 1. ⛔⛔ La prima stesura di Q11 era SBAGLIATA, e a bocciarla è stata la misura
-⚠ **E il finto non l'avrebbe mai bocciata**: nel finto il ritardo al vetro non occupa nessun filo,
-quindi il condotto non si sposta. ⇒ Un banco consegnato dopo la sola certificazione sarebbe uscito
-**verde sul finto e falso sul mondo**. È la ragione per cui la certificazione non basta.
+### 1. ⛔⛔ The first draft of Q11 was WRONG, and it was the measurement that rejected it
+⚠ **And the fake would never have rejected it**: in the fake the delay at the glass occupies no thread,
+so the pipeline does not shift. ⇒ A bench delivered after certification alone would have come out
+**green on the fake and false on the world**. It is the reason why certification is not enough.
 
-### 2. ⛔ Il banco costa **5,5 volte più di prima**
-`[M]` la lettura dei pixel: **1,59 ms** dal deposito 2D (giro di A) contro **7,61 – 8,79 ms** dal
-vetro. ⇒ Leggere dal vetro è una **lettura dalla GPU**, e si paga.
-⭐ Q9 resta verde e non è una concessione: `[M]` il ritmo **non cala** con la lettura (i valori, sul
-binario dalla memoria, sono tolti con la fase 18) ⇒ il filo non è saturo. ⛔ Ma «non satura» non è «gratis»: resta in
+### 2. ⛔ The bench costs **5.5 times more than before**
+`[M]` reading the pixels: **1.59 ms** from the 2D store (A's round) against **7.61 – 8.79 ms** from the
+glass. ⇒ Reading from the glass is a **read from the GPU**, and it is paid for.
+⭐ Q9 stays green and it is not a concession: `[M]` the rhythm **does not drop** with the reading (the values, on the
+binary from memory, are removed with phase 18) ⇒ the thread is not saturated. ⛔ But «not saturated» is not «free»: it stays in
 F1.8.
-⭐ **E la cura per chi viene dopo è trovata e non applicata, apposta**: le due marche stanno **una
-sopra l'altra**, quindi si leggerebbero con **una sola** `drawImage` sul riquadro che le contiene
-tutt'e due. ⛔ Non l'ho fatto perché i giri erano cominciati: **cambiare il metro a metà della
-misura** è il difetto che questa fase sta curando.
+⭐ **And the cure for whoever comes next is found and not applied, on purpose**: the two marks are **one
+above the other**, so they could be read with **a single** `drawImage` on the box that contains
+both. ⛔ I did not do it because the rounds had started: **changing the yardstick halfway through the
+measurement** is the defect this phase is curing.
 
-### 3. ⛔ La TASTIERA non chiude **niente**
-`[M]` **276 messaggi sul filo, 276 sonde, 0 CHIUSE.** §A.4 punto 3 dava 0/208 · 0/212 · 8/196 ·
-5/202 · 16/198. ⇒ Sulla strada vera è **0 su 276**. ⛔ **Nessun documento deve citare un ritardo di
-tastiera preso da questo banco.** `[?]` Se sia la scena, l'eco o la finestra di 500 ms **non l'ho
-aperto**.
+### 3. ⛔ The KEYBOARD closes **nothing**
+`[M]` **276 messages on the wire, 276 probes, 0 CLOSED.** §A.4 point 3 gave 0/208 · 0/212 · 8/196 ·
+5/202 · 16/198. ⇒ On the real road it is **0 out of 276**. ⛔ **No document must cite a keyboard
+delay taken from this bench.** `[?]` Whether it is the scene, the echo or the 500 ms window **I did not
+open up**.
 
-### 4. ⛔ Q5 resta rosso anche coi ritardi a quadro intero, di **0,22 ms**
-La diagnosi è giusta (il surplus è nel tratto 5, +32,94 su 33,4, e in nessun altro); è la mediana del
-**totale** a salire di 37,62. `[?]` Non ho separato rumore e contesa.
+### 4. ⛔ Q5 stays red even with whole-frame delays, by **0.22 ms**
+The diagnosis is right (the surplus is in segment 5, +32.94 out of 33.4, and in no other); it is the median of the
+**total** that rises by 37.62. `[?]` I did not separate noise and contention.
 
-### 5. ⛔ Il palco NON era isolato, e va detto perché è il cuore di tutto
-⚠ **E c'è una conseguenza che non è solo rumore**: le mie modifiche a `04-b30-anello-input.py` sono
-entrate in vigore **mentre un giro di un altro agente era in volo** — in particolare
-`--ritardo-vetro`, che aggiunge una **quarta condizione** a ogni giro. ⇒ Il suo giro è durato un
-quarto in più di quel che si aspettava, e il suo Q11 può comparire in un verbale che non lo
-prevedeva. **La colpa è mia e la dichiaro**; il file del banco è di tutti e non c'era modo di curarlo
-senza toccarlo.
+### 5. ⛔ The stage was NOT isolated, and it must be said because it is the heart of everything
+⚠ **And there is a consequence that is not just noise**: my changes to `04-b30-anello-input.py`
+came into force **while another agent's round was in flight** — in particular
+`--ritardo-vetro`, which adds a **fourth condition** to every round. ⇒ His round lasted a
+quarter longer than he expected, and his Q11 may appear in a report that did not
+foresee it. **The fault is mine and I declare it**; the bench file belongs to everyone and there was no way to cure it
+without touching it.
 
-### 6. ⛔ Un solo valore di ritardo al vetro, non due
-Ho provato **8 ms**, tre volte in tre giri (scarto 0,005 · 0,015 · 0,005). ⛔ **Non ho fatto la
-linearità** con un secondo valore. ⚠ Sopra ~16 ms il filo si satura e i fotogrammi si **buttano**
-invece di ritardare — cioè si misurerebbe un'altra cosa. `[?]` Fra 4 e 12 ms lo spazio c'era.
+### 6. ⛔ A single value of delay at the glass, not two
+I tried **8 ms**, three times in three rounds (deviation 0.005 · 0.015 · 0.005). ⛔ **I did not do the
+linearity** with a second value. ⚠ Above ~16 ms the thread saturates and the frames are **thrown away**
+instead of delayed — that is one would measure another thing. `[?]` Between 4 and 12 ms there was room.
 
-### 7. ⛔ Il quinto giro **l'ho ammazzato io, a metà**
-Su richiesta del direttore, per liberare il portatile a F4. ⇒ Ho quattro giri e non cinque, e i due a
-macchina scarica sono **due**. ⭐ È la scelta giusta — un giro in più preso sotto contesa avrebbe
-peggiorato la mediana invece di migliorarla — ⛔ ma il denominatore è quello che è.
+### 7. ⛔ The fifth round **I killed myself, halfway**
+At the director's request, to free the laptop for F4. ⇒ I have four rounds and not five, and the ones with the
+machine idle are **two**. ⭐ It is the right choice — one more round taken under contention would have
+worsened the median instead of improving it — ⛔ but the denominator is what it is.
 
 ---
 
-## F1.8 ⛔ Che cosa resta `[?]` dopo di me
+## F1.8 ⛔ What remains `[?]` after me
 
 | | |
 |---|---|
-| ✅ ~~**il numero a macchina scarica, col carico SCRITTO**~~ | **FATTO** (F1.5): i due giri appaiati di stasera hanno `macchina carica: false` **scritto dal banco**, carico 0,40 e 1,10 su 4 nuclei, un solo banco b30. ⚠ **E la voce vecchia resta vera com'era scritta**: i quattro giri di prima sono anteriori alla cura (i loro valori sono tolti, fase 18), e il loro carico era `[R]` |
-| ⏳ ⛔ **quanto del numero è il banco stesso** | `[M]` **7,6-8,8 ms per fotogramma** di lettura. Il ritmo non cala (Q9) ⇒ il filo non è saturo, **ma sull'anello non è trascurabile**. ⚠ E non si separa con la fetta «senza lettura» di Q9: senza pixel **nessuna sonda chiude**. ⇒ Serve un giro con la lettura **dimezzata** (una `drawImage` sola): se `T` non cambia, il costo non entra |
-| ⏳ ⭐⭐ **il conto dell'elastico** | il distacco calcolato contro quello che l'utente vede (valori tolti, fase 18). Si decide **rimisurando il distacco oggi**, col video, sulla strada vera. ⛔ E intanto **l'accordo «entro il 7 %» di §4-A va tolto** |
-| ⏳ **la TASTIERA** | 0 su 276 |
-| ⏳ **Q5 a 0,22 ms dalla tolleranza** · **la linearità del confine** | F1.7 punti 4 e 6 |
-| ⏳ `[?]` **i valori di partenza dei ritardi** | vanno messi a **multipli del quadro**: una riga, passata al direttore |
-| ⏳ ⭐⭐ **il tratto 3, metà del guadagno, non è attribuito** | `[M]` il calo (valore tolto, fase 18) sta su un tratto che sta **sul server** e che la copia zero non attraversa. `[?]` L'ipotesi (il produttore fuori dal thread di tempo reale di PipeWire, F4) è plausibile e **non misurata**. ⇒ Si prova rimettendo il produttore a mano su quel thread con la copia zero accesa |
-| ⏳ ⛔ **un solo giro per parte** | sullo stesso binario di ieri **~15 ms di dispersione** (valori tolti, fase 18). Il guadagno è più grande, ma **non di un fattore comodo**. ⇒ Tre giri per parte, alternati: mezz'ora |
-| ⏳ **la controprova dal lato del driver** | `[?]` non ho provato che il binario NUOVO su una tela **storta** (1460×888) dia il numero di ieri — sarebbe la conferma del meccanismo del passo |
-| ⏳ **l'impronta del binario nel verbale** | l'ho letta **a mano**; la lettura automatica è stata curata **dopo** i due giri, quindi nei loro verbali `md5` è `null` |
-| ⏳ **`EncSliceLP`** | `[M]` il codificatore dichiara ancora **bassa potenza**: confermato oggi sul mio giro |
+| ✅ ~~**the number with the machine idle, with the load WRITTEN**~~ | **DONE** (F1.5): tonight's two paired rounds have `macchina carica: false` **written by the bench**, load 0.40 and 1.10 on 4 cores, a single b30 bench. ⚠ **And the old entry stays true as it was written**: the four earlier rounds predate the cure (their values are removed, phase 18), and their load was `[R]` |
+| ⏳ ⛔ **how much of the number is the bench itself** | `[M]` **7.6-8.8 ms per frame** of reading. The rhythm does not drop (Q9) ⇒ the thread is not saturated, **but on the loop it is not negligible**. ⚠ And it is not separated with Q9's «without reading» slice: without pixels **no probe closes**. ⇒ A round with the reading **halved** (a single `drawImage`) is needed: if `T` does not change, the cost does not enter |
+| ⏳ ⭐⭐ **the rubber-band calculation** | the computed gap against the one the user sees (values removed, phase 18). It is decided **by re-measuring the gap today**, with the video, on the real road. ⛔ And meanwhile **the «within 7 %» agreement of §4-A must be removed** |
+| ⏳ **the KEYBOARD** | 0 out of 276 |
+| ⏳ **Q5 at 0.22 ms from the tolerance** · **the linearity of the boundary** | F1.7 points 4 and 6 |
+| ⏳ `[?]` **the starting values of the delays** | they must be set to **multiples of the frame**: one line, passed to the director |
+| ⏳ ⭐⭐ **segment 3, half of the gain, is not attributed** | `[M]` the drop (value removed, phase 18) is on a segment that is **on the server** and that zero copy does not cross. `[?]` The hypothesis (the producer out of PipeWire's real-time thread, F4) is plausible and **not measured**. ⇒ It is tested by putting the producer back by hand on that thread with zero copy on |
+| ⏳ ⛔ **a single round per side** | on the same binary as yesterday **~15 ms of spread** (values removed, phase 18). The gain is bigger, but **not by a comfortable factor**. ⇒ Three rounds per side, alternating: half an hour |
+| ⏳ **the counter-proof from the driver's side** | `[?]` I did not test that the NEW binary on a **crooked** canvas (1460×888) gives yesterday's number — it would be the confirmation of the stride mechanism |
+| ⏳ **the binary's fingerprint in the report** | I read it **by hand**; the automatic reading was cured **after** the two rounds, so in their reports `md5` is `null` |
+| ⏳ **`EncSliceLP`** | `[M]` the encoder still declares **low power**: confirmed today on my round |
 
 ---
 
-## F1.9 Che cosa ho lasciato sulla macchina
+## F1.9 What I left on the machine
 
-⭐ Porte **7760 · 7761 · 7762**, utente **`provaa8`** (quello di A), directory
-**`/media/REMOTIX/tmp/08-f1`**, shm `/dev/shm/remotix-08-f1`, scena
-`/media/REMOTIX/src/08-f1-scena-lav/08-f1-scena` (copia bit per bit di quella di A), terreno
-`/media/REMOTIX/src/08-f1-terreno.sh`, ponte `/media/REMOTIX/src/08-f1-ponte.py`.
-⛔ **Le porte 7730 e 7731 e le directory dell'utente non sono mai state toccate.**
-⛔ **E non ho toccato nessun file di `src/`.**
-⭐ **Il portatile è libero**: Xvfb e Chrome miei spenti, scena ferma.
+⭐ Ports **7760 · 7761 · 7762**, user **`provaa8`** (A's), directory
+**`/media/REMOTIX/tmp/08-f1`**, shm `/dev/shm/remotix-08-f1`, scene
+`/media/REMOTIX/src/08-f1-scena-lav/08-f1-scena` (bit-for-bit copy of A's), ground
+`/media/REMOTIX/src/08-f1-terreno.sh`, bridge `/media/REMOTIX/src/08-f1-ponte.py`.
+⛔ **Ports 7730 and 7731 and the user's directories were never touched.**
+⛔ **And I did not touch any file of `src/`.**
+⭐ **The laptop is free**: my Xvfb and Chrome switched off, scene stopped.
 
-⭐ **E l'albero del prodotto di oggi resta**: `/media/REMOTIX/src/08-f1-src` (HEAD `6f5f418`,
-binario `f45e9f78…`), accanto a quello di ieri `08-a-src` (`73ce3a1f…`) che **non ho toccato**.
-⇒ Chiunque può rifare il prima/dopo senza ricostruire niente, e i due terreni ci sono già:
-`08-f1-terreno-OGGI.sh` e `08-f1-terreno-IERI.sh`.
+⭐ **And today's product tree remains**: `/media/REMOTIX/src/08-f1-src` (HEAD `6f5f418`,
+binary `f45e9f78…`), next to yesterday's `08-a-src` (`73ce3a1f…`) which **I did not touch**.
+⇒ Anyone can redo the before/after without rebuilding anything, and the two grounds are already there:
+`08-f1-terreno-OGGI.sh` and `08-f1-terreno-IERI.sh`.
 
-I file del banco che ho cambiato, tutti in `banchi/`:
-- `04-b30-anello-input.py` — il prologo §4-bis (`createImageBitmap` + `transferFromImageBitmap`) e
-  §6 (`leggi_marca_vetro`), **Q11** e i suoi due guasti, `--ritardo-vetro`,
-  **`carico_della_macchina()`** ai due capi e due volte, il controllo incrociato col prodotto,
-  `scena-ferma` prima di `scena-avvia`, `coda_url` + `strade` + il carico nella riga depositata,
-  ⭐ **`--finestra`** (la misura della finestra comanda la tela, e la tela comanda se la copia zero
-  si accende), ⭐ **`strada_di_cattura()`** (la copia zero letta dal registro del PRODOTTO, col conto
-  del passo accanto), ⭐ **l'impronta del binario** letta da `/proc/PID/exe`;
+The bench files I changed, all in `banchi/`:
+- `04-b30-anello-input.py` — prologue §4-bis (`createImageBitmap` + `transferFromImageBitmap`) and
+  §6 (`leggi_marca_vetro`), **Q11** and its two faults, `--ritardo-vetro`,
+  **`carico_della_macchina()`** at both ends and twice, the cross-check with the product,
+  `scena-ferma` before `scena-avvia`, `coda_url` + `strade` + the load in the deposited line,
+  ⭐ **`--finestra`** (the window size commands the canvas, and the canvas commands whether zero copy
+  switches on), ⭐ **`strada_di_cattura()`** (zero copy read from the PRODUCT's log, with the stride
+  calculation alongside), ⭐ **the binary's fingerprint** read from `/proc/PID/exe`;
 - `04-b30-lancia.sh` — `scena-costruisci`;
-- **nuovo** `04-b30-scena-costruisci.sh`.
+- **new** `04-b30-scena-costruisci.sh`.
 
 
 ---
 
-## 4-F3 · ⛔⛔⭐ AGENTE F3 — **i diciassette millisecondi non esistono**, e a mentire era la macchina · *22 agosto 2026*
+## 4-F3 · ⛔⛔⭐ AGENT F3 — **the seventeen milliseconds do not exist**, and it was the machine that lied · *22 Aug 2026*
 
-> ### ⛔⛔⛔ E IL COLPEVOLE È IL DIRETTORE, NON IL PRODOTTO
+> ### ⛔⛔⛔ AND THE CULPRIT IS THE DIRECTOR, NOT THE PRODUCT
 >
-> Il tratto 9 dell'agente A — *«richiamo del decodificatore → 1° `drawImage`»* — valeva `[M]`
-> **17,48 ms**, ed era stato promosso a bersaglio della fase con un agente
-> dedicato. ⭐ **Quell'agente è tornato dicendo che non c'era niente da curare.**
+> Agent A's segment 9 — *«decoder callback → 1st `drawImage`»* — was worth `[M]`
+> **17.48 ms**, and it had been promoted to target of the phase with a
+> dedicated agent. ⭐ **That agent came back saying there was nothing to cure.**
 >
-> `[M]` Lo stesso tratto, tre banchi indipendenti:
+> `[M]` The same segment, three independent benches:
 >
-> | come | ms |
+> | how | ms |
 > |---|---|
-> | strada **vera** (`bitmaprenderer`), sessione vera, HEVC in hardware, n=200 ×2 | **1,18** e **0,49** |
-> | ⛔ **la stessa strada `?tela=2d` di A** | **0,39** e **0,97** |
-> | senza server né rete, stream HEVC vero a 60/s | **1,00** (2D) · **2,80** (`bitmaprenderer`) |
+> | **real** road (`bitmaprenderer`), real session, HEVC in hardware, n=200 ×2 | **1.18** and **0.49** |
+> | ⛔ **A's same `?tela=2d` road** | **0.39** and **0.97** |
+> | without server or network, real HEVC stream at 60/s | **1.00** (2D) · **2.80** (`bitmaprenderer`) |
 >
-> ⇒ **Da 15 a 45 volte meno, e su tutt'e due le strade** ⇒ ⛔ **la strada di disegno non era la
-> spiegazione**: quella non c'entrava niente.
+> ⇒ **From 15 to 45 times less, and on both roads** ⇒ ⛔ **the drawing road was not the
+> explanation**: it had nothing to do with it.
 >
-> ⭐⭐ **La causa, misurata**: `[M]` il portatile ha **4 nuclei**, e mentre A misurava ci giravano
-> sopra **56 processi Chrome e 5 Xvfb** — perché **tre o quattro agenti facevano banchi da browser
-> nello stesso momento**. ⇒ **Li avevo lanciati in parallelo io.**
+> ⭐⭐ **The cause, measured**: `[M]` the laptop has **4 cores**, and while A was measuring there were
+> **56 Chrome processes and 5 Xvfb** running on it — because **three or four agents were doing browser benches
+> at the same moment**. ⇒ **I had launched them in parallel myself.**
 >
-> ⛔ **Che cosa cade con quel numero**: il tratto F non vale 18,83 ms ma **~3,5**; l'anello di §4-A
-> **sovrastima di ~15 ms**; e la frase sui quattro tratti su sei va rifatta. ⚠ **E il sospetto si
-> estende a tutta la prima ondata**, B compreso. *(I totali dell'anello, sul binario dalla memoria con
-> `sws_scale`, sono tolti con la fase 18.)*
+> ⛔ **What falls with that number**: segment F is worth not 18.83 ms but **~3.5**; the loop of §4-A
+> **overestimates by ~15 ms**; and the sentence about four segments out of six must be redone. ⚠ **And the suspicion
+> extends to the whole first wave**, B included. *(The loop totals, on the binary from memory with
+> `sws_scale`, are removed with phase 18.)*
 >
-> ⭐ **La lezione, e non è «misurate meglio»**: `LEZIONI.md` §1.24 diceva *due banchi sulla stessa
-> porta si ammazzano in silenzio*. ⛔ **È più larga di così**: due banchi sulla stessa **macchina**
-> si falsano in silenzio — e il secondo caso non dà nessun rosso, dà un **numero plausibile**.
-> ⇒ **Il carico va dichiarato accanto a ogni numero**, come il palco (§2.0).
+> ⭐ **The lesson, and it is not «measure better»**: `LEZIONI.md` §1.24 said *two benches on the same
+> port kill each other silently*. ⛔ **It is broader than that**: two benches on the same **machine**
+> falsify each other silently — and the second case gives no red, it gives a **plausible number**.
+> ⇒ **The load must be declared next to every number**, like the stage (§2.0).
 >
-> ### ⭐ E l'agente ha consegnato uno strumento invece di una cura
+> ### ⭐ And the agent delivered a tool instead of a cure
 >
-> **`REMOTIX.tratti()`, dentro `src/pagina.html`**: il prodotto **dichiara da sé** i quattro tratti
-> del cliente, **con gli stessi nomi su tutte e tre le strade di disegno**, a `[M]` ~4 µs per
-> fotogramma. ⇒ ⛔ **Non serve più riscrivere il prologo di un banco ogni volta che la pagina cambia
-> modo di dipingere** — che è esattamente il difetto che aveva bloccato A (0 sonde su 304).
+> **`REMOTIX.tratti()`, inside `src/pagina.html`**: the product **declares by itself** the client's four
+> segments, **with the same names on all three drawing roads**, at `[M]` ~4 µs per
+> frame. ⇒ ⛔ **There is no longer any need to rewrite a bench's prologue every time the page changes
+> the way it paints** — which is exactly the defect that had blocked A (0 probes out of 304).
 >
-> ⚠ **E due numeri del documento vanno buttati**: `[M]` `createImageBitmap` costa **1,05 / 0,41 ms**,
-> non i **3,8** di §7.1; e il tratto F vale ~3,5 ms, non 18,83.
+> ⚠ **And two numbers of the document must be thrown away**: `[M]` `createImageBitmap` costs **1.05 / 0.41 ms**,
+> not the **3.8** of §7.1; and segment F is worth ~3.5 ms, not 18.83.
 
-> ### ⭐⭐⭐ IL PUNTO STA IN DUE NUMERI PRESI SULLA **STESSA** STRADA CHE HA DATO IL PRIMO
+> ### ⭐⭐⭐ THE POINT LIES IN TWO NUMBERS TAKEN ON THE **SAME** ROAD THAT GAVE THE FIRST
 >
-> L'agente A, sulla strada `?tela=2d`: `[M]` il tratto *«richiamo del decodificatore → 1°
-> `drawImage` finito»* vale **17,48 ms**, contro **0,10** del disegno vero. ⇒ *«il collo di
-> bottiglia è il disegno»* è falso — e su questo non c'è niente da correggere: è giusto.
+> Agent A, on the `?tela=2d` road: `[M]` the segment *«decoder callback → 1st
+> `drawImage` finished»* is worth **17.48 ms**, against **0.10** of the real drawing. ⇒ *«the
+> bottleneck is the drawing»* is false — and on this there is nothing to correct: it is right.
 >
-> ⛔⛔ **Ma il tratto stesso non c'è.** Rimisurato oggi, in una sessione vera, sulla **stessa
-> strada `?tela=2d`**, con lo stesso ferro e lo stesso codec:
+> ⛔⛔ **But the segment itself is not there.** Re-measured today, in a real session, on the **same
+> `?tela=2d` road**, with the same iron and the same codec:
 >
-> | | `richiamo → vetro` (i tratti 9+10 di A) |
+> | | `richiamo → vetro` (A's segments 9+10) |
 > |---|---|
-> | `[M]` **A, 22 agosto, `?tela=2d`** | **17,58 ms** |
-> | `[M]` **F3, `?tela=2d`** — la strada di A · giro 1 · giro 2 | ⭐ **0,39** · **0,97 ms** (n=200 ×2) |
-> | `[M]` **F3, la strada VERA (`bitmaprenderer`)** · giro 1 · giro 2 | ⭐⭐ **1,18** · **0,49 ms** (n=200 ×2) |
+> | `[M]` **A, 22 Aug, `?tela=2d`** | **17.58 ms** |
+> | `[M]` **F3, `?tela=2d`** — A's road · round 1 · round 2 | ⭐ **0.39** · **0.97 ms** (n=200 ×2) |
+> | `[M]` **F3, the REAL road (`bitmaprenderer`)** · round 1 · round 2 | ⭐⭐ **1.18** · **0.49 ms** (n=200 ×2) |
 >
-> *(La colonna dei fotogrammi dipinti, col prodotto sulla strada dalla memoria, è tolta con la fase 18.)*
+> *(The column of painted frames, with the product on the road from memory, is removed with phase 18.)*
 >
-> ⇒ ⭐⭐ **Da quindici a quarantacinque volte meno, sulla strada identica**, e **quattro giri su
-> quattro** in **due sessioni indipendenti** stanno fra **0,39 e 1,18 ms**. E non è solo la
-> sessione: un
-> secondo banco, **senza server e senza rete**, che decodifica in hardware uno stream HEVC vero
-> di 1460×888 a 60/s sullo stesso portatile, trova `[M]` **1,00 ms** sulla strada 2D e **2,80**
-> su `bitmaprenderer`. ⛔ **I 17,48 ms non si riproducono da nessuna delle due parti.**
+> ⇒ ⭐⭐ **From fifteen to forty-five times less, on the identical road**, and **four rounds out of
+> four** in **two independent sessions** lie between **0.39 and 1.18 ms**. And it is not just the
+> session: a
+> second bench, **without server and without network**, which decodes in hardware a real HEVC stream
+> of 1460×888 at 60/s on the same laptop, finds `[M]` **1.00 ms** on the 2D road and **2.80**
+> on `bitmaprenderer`. ⛔ **The 17.48 ms are not reproduced on either side.**
 >
-> ⇒ ⛔⛔ **Non c'è nessuna cura da fare nel disegno del cliente, perché non c'è niente da
-> curare.** Il mandato diceva *«prima capire, poi curare»*: capito, e la risposta è che il
-> bersaglio non esiste. ⭐ **Il risultato di questo giro è una riga cancellata, non una riga
-> aggiunta** — ed è il genere di esito per cui si strumenta prima.
+> ⇒ ⛔⛔ **There is no cure to make in the client's drawing, because there is nothing to
+> cure.** The mandate said *«first understand, then cure»*: understood, and the answer is that the
+> target does not exist. ⭐ **The result of this round is a line deleted, not a line
+> added** — and it is the kind of outcome for which one instruments first.
 >
-> ⚠ **E la conseguenza è più grossa del tratto**: se il tratto 9 vale 0,39 e non 17,48, allora
-> il tratto **F, «il cliente»** non vale **18,83 ms** ma `[M]` **~3,5 ms** — e i **~15 ms** di
-> differenza **erano nell'anello di A per davvero** (la somma dei suoi tratti chiude con il suo totale
-> entro 0,002 ms). ⇒ Sono **dello strumento**, non del prodotto, e l'anello di §4-A **sovrastima
-> quello vero di circa quel tanto**.
+> ⚠ **And the consequence is bigger than the segment**: if segment 9 is worth 0.39 and not 17.48, then
+> segment **F, «the client»** is worth not **18.83 ms** but `[M]` **~3.5 ms** — and the **~15 ms** of
+> difference **really were in A's loop** (the sum of his segments closes with his total
+> within 0.002 ms). ⇒ They belong **to the tool**, not to the product, and the loop of §4-A **overestimates
+> the real one by about that much**.
 
-*Agente F3. Risorse tutte mie: porta **7770** · utente **`provaf3`** (uid 1047) · albero
-`/media/REMOTIX/src/08-f-src` · lavoro `/media/REMOTIX/tmp/08-f` · scena
-`/dev/shm/remotix-08-f3`. ⛔ Le porte **7730 e 7731** dell'utente non sono mai state toccate, e la
-7770 è stata **contata** con `ss -tulnp` prima di prenderla.*
+*Agent F3. Resources all mine: port **7770** · user **`provaf3`** (uid 1047) · tree
+`/media/REMOTIX/src/08-f-src` · work `/media/REMOTIX/tmp/08-f` · scene
+`/dev/shm/remotix-08-f3`. ⛔ The user's ports **7730 and 7731** were never touched, and
+7770 was **counted** with `ss -tulnp` before taking it.*
 
 ---
 
-## F3.1 · Che cosa è stato costruito
+## F3.1 · What was built
 
-| file | che cos'è |
+| file | what it is |
 |---|---|
-| `src/pagina.html` | ⭐⭐ **i quattro tratti del cliente li dichiara il PRODOTTO**: `REMOTIX.tratti()` |
-| `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ il banco **senza server**: la stessa catena `decode() → richiamo → immagine → vetro` su uno stream vero, con i controlli che separano le tre ipotesi |
-| `banchi/08-f3-lancia.py` | il lanciatore del banco: lo stream con `ffmpeg`, i quattordici giri, i confronti |
-| `banchi/08-f3-tratti.py` | ⭐ legge `REMOTIX.tratti()` da una **sessione vera**, su tutt'e due le strade nella stessa seduta |
-| `banchi/08-f3-sessione.sh` | il terreno mio (porta, utente, albero, scena) |
-| `banchi/08-f3-esiti.json` · `08-f3-esiti.jsonl` | i verbali |
+| `src/pagina.html` | ⭐⭐ **the client's four segments are declared by the PRODUCT**: `REMOTIX.tratti()` |
+| `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ the bench **without a server**: the same chain `decode() → richiamo → immagine → vetro` on a real stream, with the checks that separate the three hypotheses |
+| `banchi/08-f3-lancia.py` | the bench's launcher: the stream with `ffmpeg`, the fourteen rounds, the comparisons |
+| `banchi/08-f3-tratti.py` | ⭐ reads `REMOTIX.tratti()` from a **real session**, on both roads in the same sitting |
+| `banchi/08-f3-sessione.sh` | my ground (port, user, tree, scene) |
+| `banchi/08-f3-esiti.json` · `08-f3-esiti.jsonl` | the reports |
 
-⛔ **Non è stata toccata una riga di `src/*.c`, né un banco di un altro agente.**
+⛔ **Not one line of `src/*.c` was touched, nor a bench of another agent.**
 
-### ⭐⭐ E la cosa che vale più del banco: **adesso i tratti li dichiara il prodotto**
+### ⭐⭐ And the thing worth more than the bench: **now the segments are declared by the product**
 
-⛔ **La ragione è il difetto che ha generato questo giro.** Il numero di A è della strada `?tela=2d`
-perché il prologo di `04-b30` **legge i pixel dal deposito**, e dal 20 agosto il deposito non
-esiste (`DECISIONI.md` §5.4). ⇒ Il numero della strada **viva** non era misurabile da nessuno senza
-riscrivere il prologo di un banco — «mezza giornata», dice §A.4.
+⛔ **The reason is the defect that generated this round.** A's number belongs to the `?tela=2d` road
+because the prologue of `04-b30` **reads the pixels from the store**, and since 20 Aug the store does not
+exist (`DECISIONI.md` §5.4). ⇒ The number of the **live** road could not be measured by anyone without
+rewriting a bench's prologue — «half a day», says §A.4.
 
-⇒ ⭐ `src/pagina.html` misura da sé i quattro tratti che gli appartengono e li espone:
+⇒ ⭐ `src/pagina.html` measures by itself the four segments that belong to it and exposes them:
 
 ```
 REMOTIX.tratti()  →  strada · tela · dipinti · saltati_coda · tardive
@@ -1941,239 +1941,239 @@ REMOTIX.tratti()  →  strada · tela · dipinti · saltati_coda · tardive
                      10_vetro · 9_10_richiamo_vetro · 11_vetro_prossimo_quadro
 ```
 
-⭐ **Gli stessi nomi su tutt'e tre le strade** (`bitmaprenderer`, `?tela=2d`, il ripiego): un banco
-li legge con una riga e non deve più sapere come è fatto il disegno di dentro.
-⛔ **E non è un interruttore** (invariante I6): non c'è niente lì dentro che possa cambiare quel che
-la pagina fa.
+⭐ **The same names on all three roads** (`bitmaprenderer`, `?tela=2d`, the fallback): a bench
+reads them with one line and no longer needs to know how the drawing is done inside.
+⛔ **And it is not a switch** (invariant I6): there is nothing in there that can change what
+the page does.
 
-**Il costo, dichiarato**: due `performance.now()` in più per fotogramma (~4 µs a 60/s, `[M]` sotto
-il passo dell'orologio del browser, che è 100 µs) più una voce di mappa che si cancella nel
-richiamo — e la mappa ha un **tetto di 240**, perché un decodificatore che smettesse di consegnare
-farebbe crescere la pagina per sempre.
+**The cost, declared**: two more `performance.now()` per frame (~4 µs at 60/s, `[M]` below
+the step of the browser's clock, which is 100 µs) plus a map entry that is deleted in the
+callback — and the map has a **ceiling of 240**, because a decoder that stopped delivering
+would make the page grow forever.
 
 ---
 
-## F3.2 · ⛔ CHE COSA SONO, QUEI MILLISECONDI — e la risposta è «non ci sono»
+## F3.2 · ⛔ WHAT THOSE MILLISECONDS ARE — and the answer is «they are not there»
 
-**Le tre ipotesi del mandato, e come apparirebbe ciascuna** (`LEZIONI.md` §1.11 regola 1: per ogni
-prova indiretta si scrive prima come apparirebbe il caso opposto):
+**The three hypotheses of the mandate, and how each would appear** (`LEZIONI.md` §1.11 rule 1: for every
+indirect test one first writes how the opposite case would appear):
 
-| | l'ipotesi | come apparirebbe |
+| | the hypothesis | how it would appear |
 |---|---|---|
-| **a** | il **decodificatore hardware** macina | l'attesa sta dentro la conversione del fotogramma **e solo lì**; i gemelli (microtask, macrotask, immagine piccola) restano a ~0 |
-| **b** | si aspetta un **quadro del browser** (16,7 ms a 60 Hz — un numero sospettosamente vicino) | ⛔ **è il muro**: l'attesa è incollata al quadro, e **sparisce dove non c'è scanout** |
-| **c** | la **promessa si risolve tardi** perché il thread è occupato | i gemelli salgono **insieme** all'attesa, e in assoluto |
+| **a** | the **hardware decoder** grinds | the wait lies inside the frame conversion **and only there**; the twins (microtask, macrotask, small image) stay at ~0 |
+| **b** | one waits for a **browser frame** (16.7 ms at 60 Hz — a suspiciously close number) | ⛔ **it is the wall**: the wait is glued to the frame, and **disappears where there is no scanout** |
+| **c** | the **promise resolves late** because the thread is busy | the twins rise **together** with the wait, and in absolute terms |
 
-### ⭐ E il banco ha risposto a una domanda che veniva prima: **si aspetta?**
+### ⭐ And the bench answered a question that came first: **is there any waiting?**
 
-`[M]` **Banco senza server**, portatile, Chrome, GPU `ANGLE (Intel, Mesa Intel(R) Graphics
-(ADL-N))`, HEVC **in hardware** (⚠ `[M]` Chrome **rifiuta** `prefer-software` su HEVC: su questo
-motore HEVC è **solo** hardware), stream vero 1460×888 consegnato a 60/s, 400 fotogrammi per giro:
+`[M]` **Bench without a server**, laptop, Chrome, GPU `ANGLE (Intel, Mesa Intel(R) Graphics
+(ADL-N))`, HEVC **in hardware** (⚠ `[M]` Chrome **refuses** `prefer-software` on HEVC: on this
+engine HEVC is **only** hardware), real 1460×888 stream delivered at 60/s, 400 frames per round:
 
-| giro | tratto 9 | 9+10 | contro i 17,58 di A |
+| round | segment 9 | 9+10 | against A's 17.58 |
 |---|---|---|---|
-| `2d-hw-pulito` — la strada di A, **senza strumento addosso** | **0,80 ms** | **1,00** | **−94 %** |
-| `bitmap-hw-pulito` — la strada vera | **2,70** | **2,80** | **−84 %** |
-| `2d-hw-letto` — **con la lettura dei pixel dentro il richiamo, come fa il banco di A** | **2,40** | 2,60 | −85 % |
-| `2d-h264-hw` (hardware) | 2,80 | 3,00 | −83 % |
-| `2d-h264-sw` (**software**) | 1,50 | 1,60 | −91 % |
+| `2d-hw-pulito` — A's road, **without the tool attached** | **0.80 ms** | **1.00** | **−94 %** |
+| `bitmap-hw-pulito` — the real road | **2.70** | **2.80** | **−84 %** |
+| `2d-hw-letto` — **with the pixel reading inside the callback, as A's bench does** | **2.40** | 2.60 | −85 % |
+| `2d-h264-hw` (hardware) | 2.80 | 3.00 | −83 % |
+| `2d-h264-sw` (**software**) | 1.50 | 1.60 | −91 % |
 
-⇒ ⭐⭐ **Sotto i 5 ms non c'è nessuna attesa da diagnosticare**, e il banco lo dice con un verdetto
-invece di scegliere una delle tre ipotesi sul rumore. ⛔ **Un banco che partisse dalle tre ipotesi
-ne sceglierebbe una anche su mezzo millisecondo.**
+⇒ ⭐⭐ **Below 5 ms there is no wait to diagnose**, and the bench says so with a verdict
+instead of picking one of the three hypotheses on noise. ⛔ **A bench that started from the three hypotheses
+would pick one even on half a millisecond.**
 
-⇒ E le tre ipotesi restano **tutte e tre smentite come spiegazione dei 17 ms**:
-- **(a) il decodificatore**: lo stesso stream in **software** costa **meno** (1,50 contro 2,80). Il
-  decodificatore hardware non sta facendo aspettare nessuno;
-- **(c) la coda**: `[M]` la **netta** — quel che il fotogramma aggiunge sopra a una continuazione
-  qualunque dello stesso richiamo — vale **0,00 ms**. Tutto quel che si misura è il confine del
-  compito, e il confine del compito è ~1 ms;
-- **(b) il quadro**: ⛔ **non provato né escluso su quel palco**, e si dichiara: `[M]` il ritmo di
-  `requestAnimationFrame` su questo Xvfb passa da **1 a 434 quadri** fra un giro e l'altro
-  (`STUDI.md` §web §6.2 lo diceva già: senza scanout rAF non gira). ⇒ Il controllo positivo di (b)
-  **non è eseguibile lì**, e il banco lo scrive invece di contarlo verde.
-  ⭐ Ma in **sessione vera** la domanda è chiusa lo stesso: il tratto vale **1,18 ms**, cioè meno di
-  un decimo di quadro. Nessun quadro ci sta dentro.
+⇒ And the three hypotheses remain **all three disproved as an explanation of the 17 ms**:
+- **(a) the decoder**: the same stream in **software** costs **less** (1.50 against 2.80). The
+  hardware decoder is not making anybody wait;
+- **(c) the queue**: `[M]` the **net** — what the frame adds on top of any continuation
+  of the same callback — is worth **0.00 ms**. Everything that is measured is the task
+  boundary, and the task boundary is ~1 ms;
+- **(b) the frame**: ⛔ **neither proven nor excluded on that stage**, and it is declared: `[M]` the rhythm of
+  `requestAnimationFrame` on this Xvfb goes from **1 to 434 frames** between one round and the next
+  (`STUDI.md` §web §6.2 already said it: without scanout rAF does not run). ⇒ The positive control of (b)
+  **cannot be executed there**, and the bench writes so instead of counting it green.
+  ⭐ But in a **real session** the question is closed all the same: the segment is worth **1.18 ms**, that is less than
+  a tenth of a frame. No frame fits inside it.
 
-### ⭐ E la sessione vera, che è quella che conta
+### ⭐ And the real session, which is the one that counts
 
-`[M]` 22 agosto 2026, server **7770** sul mio albero, utente `provaf3`, GNOME headless, monitor
-virtuale **1520 × 868 @ 60 Hz**, scena `04-b30-scena` a 60 disegni/s, codec **HEVC**
-`hev1.1.6.L153.B0` **in hardware**, `VideoFrame.format` **BGRX**, GPU della pagina `ANGLE (Intel,
-Mesa Intel(R) Graphics (ADL-N))`, rete WiFi vera in mezzo, **nessun errore**:
+`[M]` 22 Aug 2026, server **7770** on my tree, user `provaf3`, headless GNOME, virtual
+monitor **1520 × 868 @ 60 Hz**, scene `04-b30-scena` at 60 drawings/s, codec **HEVC**
+`hev1.1.6.L153.B0` **in hardware**, `VideoFrame.format` **BGRX**, page GPU `ANGLE (Intel,
+Mesa Intel(R) Graphics (ADL-N))`, real WiFi network in between, **no errors**:
 
-| tratto | **strada VERA** g1 · g2 | strada `?tela=2d` g1 · g2 |
+| segment | **REAL road** r1 · r2 | `?tela=2d` road r1 · r2 |
 |---|---|---|
-| 8 · `decode()` → richiamo | **2,20** · **0,79 ms** | 0,74 · 1,82 |
-| 9a · richiamo → chiamata | **0,04** · **0,02** | — |
-| 9b · la conversione (`createImageBitmap`) | **1,05** · **0,41** | — |
-| 10 · il vetro (`transferFromImageBitmap`) | **0,04** · **0,02** | — |
-| ⭐ **9+10 · richiamo → VETRO** | ⭐⭐ **1,18** · **0,49 ms** | ⭐ **0,39** · **0,97 ms** |
-| ⭐ 11 · vetro → prossimo quadro | — · **1,67** [p95 14,53] n=55 | — |
-| saltati in coda · tardive | **0 · 0** | 0 · 0 |
+| 8 · `decode()` → callback | **2.20** · **0.79 ms** | 0.74 · 1.82 |
+| 9a · callback → call | **0.04** · **0.02** | — |
+| 9b · the conversion (`createImageBitmap`) | **1.05** · **0.41** | — |
+| 10 · the glass (`transferFromImageBitmap`) | **0.04** · **0.02** | — |
+| ⭐ **9+10 · callback → GLASS** | ⭐⭐ **1.18** · **0.49 ms** | ⭐ **0.39** · **0.97 ms** |
+| ⭐ 11 · glass → next frame | — · **1.67** [p95 14.53] n=55 | — |
+| skipped in queue · late | **0 · 0** | 0 · 0 |
 
-*(La riga dei fotogrammi dipinti, col prodotto sulla strada dalla memoria, è tolta con la fase 18.)*
+*(The row of painted frames, with the product on the road from memory, is removed with phase 18.)*
 
-⭐ **Il tratto 11 è il primo numero che quel pezzo cieco abbia mai avuto**: `[M]` **1,67 ms**
-mediani fra il vetro cambiato e il quadro successivo del browser (p95 **14,53**, max **18,16**,
-n=55). ⛔ **Non è «il pixel acceso»** — è il **primo istante in cui può accendersi**, cioè il
-limite **inferiore** dei `[?]` 16-40 ms di `STUDI.md` §web §6.2, e il p95 dice che ogni tanto ci
-sta dentro un quadro intero. ⚠ Un giro su quattro l'ha consegnato: sugli altri tre
-`requestAnimationFrame` non è mai scattato (§F3.4 punto 2).
+⭐ **Segment 11 is the first number that blind piece has ever had**: `[M]` **1.67 ms**
+median between the changed glass and the browser's next frame (p95 **14.53**, max **18.16**,
+n=55). ⛔ **It is not «the pixel lit»** — it is the **first instant at which it can light up**, that is the
+**lower** limit of the `[?]` 16-40 ms of `STUDI.md` §web §6.2, and the p95 says that every so often a whole frame
+fits inside it. ⚠ One round out of four delivered it: on the other three
+`requestAnimationFrame` never fired (§F3.4 point 2).
 
-⭐ **`9a` vale 0,04 ms**, ed è un controllo, non un dato di colore: se un giorno non valesse ~zero
-vorrebbe dire che fra il richiamo e la conversione qualcuno ha infilato del lavoro, e oggi nessun
-conto lo vedrebbe.
+⭐ **`9a` is worth 0.04 ms**, and it is a check, not a colour fact: if one day it were not ~zero
+it would mean that between the callback and the conversion somebody slipped in some work, and today no
+calculation would see it.
 
-⚠ **`createImageBitmap` costa 1,05 e 0,41 ms qui**, non i **3,8** di `SPECIFICHE.md`/§7.1. ⇒ Quel
-numero va rimisurato prima di essere citato ancora; non è sbagliato, è di un altro palco.
+⚠ **`createImageBitmap` costs 1.05 and 0.41 ms here**, not the **3.8** of `SPECIFICHE.md`/§7.1. ⇒ That
+number must be re-measured before being cited again; it is not wrong, it belongs to another stage.
 
-### ⭐ E un controllo che ha lavorato subito
+### ⭐ And a check that worked straight away
 
-`[M]` Un giro è stato **rifiutato dal banco stesso**: *«la pagina dipinge 0,0 fotogrammi/s: il
-PALCO è fermo (la scena non è sul monitor di questa sessione). ⇒ NON misuro»*. ⛔ Senza quella
-riga il verbale avrebbe detto **«non misurato»** su tutti i tratti, e chi lo rilegge avrebbe letto
-*«lo strumento ha guardato e non ha visto»* invece di *«lo strumento non ha potuto guardare»* —
-`LEZIONI.md` §1.21. ⚠ E la riga esiste perché il **primo** giro di oggi era esattamente così:
-`[M]` **2 fotogrammi dipinti in 30 secondi**, e il banco allora **non se n'era accorto**.
-
----
-
-## F3.3 · ⛔ Dove sono finiti, allora, quei 17 ms
-
-`[R]` Il prologo di `04-b30-anello-input.py` fa **due cose dentro lo stesso richiamo del
-decodificatore**, e la seconda è quella che pesa:
-
-1. avvolge `CanvasRenderingContext2D.prototype.drawImage` e ne misura la durata (`t_dip_a =
-   t1 + disegni[0]` ⇒ **il tratto 9 È la durata del primo `drawImage`**);
-2. ⛔ subito dopo **rilegge i pixel dal deposito con `getImageData`**, due finestrelle, **a ogni
-   fotogramma**.
-
-⇒ ⭐ **Una tela 2D da cui si rilegge viene retrocessa a tela di CPU**, e da quel momento ogni
-`drawImage` di un `VideoFrame` che sta in GPU non è un disegno: è una **rilettura dalla GPU**.
-
-⚠ **E qui la mia stessa prova mi smentisce a metà, e si scrive**: rifacendo *esattamente* quello nel
-banco isolato, il disegno passa da **0,80 a 2,40 ms** — `[M]` **+1,60**, non +17. Con
-`willReadFrequently` acceso: **2,70**, cioè **nessuna differenza**.
-
-⇒ `[?]` **Il meccanismo è plausibile e la sua taglia non torna.** Quel che è `[M]` e non dipende
-dall'ipotesi:
-
-- sulla **stessa strada**, con **strumento** (A) **17,58 ms**, senza (F3) **0,39 ms**;
-- il banco di A misura **4,12 – 4,86 ms** di sola lettura delle marche, e lo dichiara (Q12);
-- ⛔ e il **palco era condiviso in un modo che nessuno ha scritto**: `[M]` mentre giravano queste
-  misure il portatile — **4 nuclei** — aveva **56 processi di Chrome** e **5 `Xvfb`** vivi
-  contemporaneamente, cioè tre o quattro agenti della fase 8 che facevano banchi da browser sulla
-  stessa macchina. ⇒ ⭐ **È la spiegazione più economica**, e vale anche per A.
+`[M]` One round was **rejected by the bench itself**: *«la pagina dipinge 0,0 fotogrammi/s: il
+PALCO è fermo (la scena non è sul monitor di questa sessione). ⇒ NON misuro»*. ⛔ Without that
+line the report would have said **«not measured»** on all the segments, and whoever rereads it would have read
+*«the tool looked and did not see»* instead of *«the tool could not look»* —
+`LEZIONI.md` §1.21. ⚠ And the line exists because the **first** round of today was exactly like that:
+`[M]` **2 frames painted in 30 seconds**, and the bench at that time **had not noticed**.
 
 ---
 
-## F3.4 · ⛔⛔ CHE COSA NON HA FUNZIONATO
+## F3.3 · ⛔ Where did those 17 ms go, then
 
-### 1. ⛔ `08-b67-elastico.py` sul mio terreno NON dà un numero, e non lo si cita
+`[R]` The prologue of `04-b30-anello-input.py` does **two things inside the same decoder
+callback**, and the second is the one that weighs:
 
-`[M]` giro `f3-dopo-strumentata`: **527,7 ms** di ritardo, **0 px** di distacco, **Q1 rosso**.
-`[R]` La causa sta nel verbale: il banco ha generato **3 125 movimenti** e ne sono **usciti 30**.
-⇒ ⛔ **Non è «l'anello è lungo», è «la mano non è partita»**: `Input.dispatchMouseEvent` via CDP ha
-impiegato `[M]` **~5 secondi per evento** su questo palco, e il banco stesso lo dice — *«3 intervalli
+1. it wraps `CanvasRenderingContext2D.prototype.drawImage` and measures its duration (`t_dip_a =
+   t1 + disegni[0]` ⇒ **segment 9 IS the duration of the first `drawImage`**);
+2. ⛔ right after it **rereads the pixels from the store with `getImageData`**, two small windows, **at every
+   frame**.
+
+⇒ ⭐ **A 2D canvas that is read back is demoted to a CPU canvas**, and from that moment every
+`drawImage` of a `VideoFrame` that lives on the GPU is not a drawing: it is a **readback from the GPU**.
+
+⚠ **And here my own test half-disproves me, and it is written down**: redoing *exactly* that in the
+isolated bench, the drawing goes from **0.80 to 2.40 ms** — `[M]` **+1.60**, not +17. With
+`willReadFrequently` on: **2.70**, that is **no difference**.
+
+⇒ `[?]` **The mechanism is plausible and its size does not add up.** What is `[M]` and does not depend
+on the hypothesis:
+
+- on the **same road**, with the **tool** (A) **17.58 ms**, without (F3) **0.39 ms**;
+- A's bench measures **4.12 – 4.86 ms** of reading the marks alone, and declares it (Q12);
+- ⛔ and the **stage was shared in a way nobody wrote down**: `[M]` while these
+  measurements were running the laptop — **4 cores** — had **56 Chrome processes** and **5 `Xvfb`** alive
+  at the same time, that is three or four phase 8 agents doing browser benches on the
+  same machine. ⇒ ⭐ **It is the cheapest explanation**, and it holds for A too.
+
+---
+
+## F3.4 · ⛔⛔ WHAT DID NOT WORK
+
+### 1. ⛔ `08-b67-elastico.py` on my ground does NOT give a number, and it is not cited
+
+`[M]` round `f3-dopo-strumentata`: **527.7 ms** of delay, **0 px** of gap, **Q1 red**.
+`[R]` The cause is in the report: the bench generated **3 125 movements** and **30 came out**.
+⇒ ⛔ **It is not «the loop is long», it is «the hand did not start»**: `Input.dispatchMouseEvent` via CDP
+took `[M]` **~5 seconds per event** on this stage, and the bench itself says so — *«3 intervalli
 di movimento: troppo pochi per dire che velocità aveva la mano. ⚠ Non è "la mano era lenta"»*.
 
-⚠ **La causa è il palco condiviso di §F3.3**, non il banco di B: con 56 Chrome su 4 nuclei il canale
-di diagnosi si accoda. ⭐ **Il banco di B ha rifiutato correttamente di consegnare un numero**, ed è
-esattamente il comportamento che gli si chiede.
+⚠ **The cause is the shared stage of §F3.3**, not B's bench: with 56 Chrome on 4 cores the
+debugging channel queues up. ⭐ **B's bench correctly refused to deliver a number**, and it is
+exactly the behaviour asked of it.
 
-⇒ ⛔ **Il «dopo» in barre del titolo NON c'è**, e non si prende da un'altra seduta. Il mio prima/dopo
-è quello di §F3.2, **coi fotogrammi accanto ai millisecondi** (i fotogrammi al secondo, sul binario
-dalla memoria, sono tolti con la fase 18), con **0 saltati in coda e 0 tardive** su tutti e quattro i giri.
-⇒ Il prodotto strumentato dipinge come prima, e **non è un'impressione: è il denominatore**.
-⚠ E il confronto regge perché **la cura è misurazione e basta**: non c'è nessuna riga che cambi
-quel che la pagina fa. ⛔ Se ci fosse stata, questo «dopo» non sarebbe bastato.
+⇒ ⛔ **The «after» in title bars is NOT there**, and it is not taken from another sitting. My before/after
+is that of §F3.2, **with the frames next to the milliseconds** (the frames per second, on the binary
+from memory, are removed with phase 18), with **0 skipped in queue and 0 late** on all four rounds.
+⇒ The instrumented product paints as before, and **it is not an impression: it is the denominator**.
+⚠ And the comparison holds because **the cure is measurement and nothing else**: there is no line that changes
+what the page does. ⛔ If there had been, this «after» would not have been enough.
 
-### 2. ⚠ Il tratto 11 esce **un giro su quattro**, e il denominatore va detto
+### 2. ⚠ Segment 11 comes out **one round in four**, and the denominator must be stated
 
-Il prodotto lo campiona uno ogni 16 fotogrammi. `[M]` Su quattro giri ne ha consegnati **55
-campioni in uno solo**; negli altri tre `requestAnimationFrame` **non è mai scattato**. `[R]` È la
-stessa cosa di `STUDI.md` §web §6.2 — dove non c'è scanout rAF non gira — e sul banco senza server
-`[M]` il ritmo dei quadri passa da **1 a 434** fra un giro e l'altro sulla stessa macchina.
-⇒ ⛔ **Il numero c'è ma il denominatore è di un giro solo**: `1,67 ms` mediani va letto come un
-**primo** numero, non come il numero. ⭐ Il codice per prenderlo bene c'è ed è gratis: basta un
-palco con scanout vero.
+The product samples it one every 16 frames. `[M]` Over four rounds it delivered **55
+samples in only one**; in the other three `requestAnimationFrame` **never fired**. `[R]` It is the
+same thing as `STUDI.md` §web §6.2 — where there is no scanout rAF does not run — and on the bench without a server
+`[M]` the frame rhythm goes from **1 to 434** between one round and the next on the same machine.
+⇒ ⛔ **The number is there but the denominator is from a single round**: `1,67 ms` median must be read as a
+**first** number, not as the number. ⭐ The code to take it properly is there and it is free: all it takes is a
+stage with real scanout.
 
-### 3. ⛔⛔ Ho toccato l'utente di un altro agente, e va detto
+### 3. ⛔⛔ I touched another agent's user, and it must be said
 
-`[M]` Il mio terreno chiedeva l'utente **`provaf8`**; `04-b32-terreno.sh` ha risposto *«c'è già —
-non lo rifaccio»* e **poi gli ha riposto la parola d'ordine** e ha scritto il drop-in di systemd in
-`/home/provaf8/.config`. ⛔ **`provaf8` (uid 1044) è di un altro agente della fase**, che l'aveva
-creato pochi minuti prima. ⇒ Ho cambiato subito utente (**`provaf3`**, uid **1047**) e ho lasciato
-`provaf8` in pace da quel momento.
+`[M]` My ground asked for the user **`provaf8`**; `04-b32-terreno.sh` answered *«c'è già —
+non lo rifaccio»* and **then set its password again** and wrote the systemd drop-in in
+`/home/provaf8/.config`. ⛔ **`provaf8` (uid 1044) belongs to another agent of the phase**, who had
+created it a few minutes earlier. ⇒ I changed user at once (**`provaf3`**, uid **1047**) and left
+`provaf8` alone from that moment on.
 
-⚠ **Il danno possibile e il suo limite**: la parola che ho posto è `provaf8-2026`, cioè la
-convenzione del progetto; se quell'agente usa la stessa convenzione **non è cambiato niente**, se ne
-usa un'altra **la sua sessione non entra più**. ⛔ **Non è verificabile da qui.**
-⭐ **E la lezione è del processo, non mia**: `LEZIONI.md` §1.24 dice di contare le **porte** prima di
-prenderle. `[M]` Oggi le porte le ho contate e andava bene; **quel che ha morso è l'UTENTE**, e
-nessuna regola diceva di contarlo. ⇒ La regola va estesa: **utente, uid, porta, ban-file, socket e
-nome dello shm si contano tutti prima**. Lo stesso è successo con lo shm: `/dev/shm/remotix-08-f`
-era già di `provaf8`, e la scena moriva con `Permission denied` — quello **l'ho visto subito**
-perché fallisce rumorosamente, mentre l'utente ha fallito **in silenzio**.
+⚠ **The possible damage and its limit**: the password I set is `provaf8-2026`, that is the
+project's convention; if that agent uses the same convention **nothing changed**, if he
+uses another **his session no longer gets in**. ⛔ **It cannot be verified from here.**
+⭐ **And the lesson belongs to the process, not to me**: `LEZIONI.md` §1.24 says to count the **ports** before
+taking them. `[M]` Today I counted the ports and it was fine; **what bit was the USER**, and
+no rule said to count it. ⇒ The rule must be extended: **user, uid, port, ban-file, socket and
+shm name are all counted beforehand**. The same happened with the shm: `/dev/shm/remotix-08-f`
+already belonged to `provaf8`, and the scene died with `Permission denied` — that **I saw at once**
+because it fails loudly, while the user failed **silently**.
 
-### 4. ⚠ Tre difetti dello strumento, trovati dallo strumento stesso
+### 4. ⚠ Three defects of the tool, found by the tool itself
 
-- ⛔ **il primo `bmp_ms` che ho letto era il costo del banco**: `[M]` `createImageBitmap` **0,90 ms**
-  e il microtask di controllo **0,90** — identici, perché i controlli stanno dentro tutt'e due.
-  ⇒ Curato con la **netta** (si sottrae il gemello) e con i giri **puliti** (i controlli spenti);
-- ⛔ **il verdetto della coda era verde sempre**: il rapporto `controlli/attesa` vale ~1,0 anche su
-  un thread libero. È `LEZIONI.md` §1.20 in persona — *«esiste un caso in cui vale zero e il banco
-  resta verde?»*. ⇒ Curato con una soglia **assoluta** accanto al rapporto;
-- ⛔ **il controllo positivo del fotogramma era cieco**: chiedere a `createImageBitmap` un
-  riscalamento a 3840×2160 lascia la netta a **0,00** — ⭐ e quello è un **fatto**, non un difetto:
-  quella promessa si risolve al confine del compito, non al termine del lavoro. ⇒ Il controllo si è
-  spostato sulla strada 2D, dove il disegno è sincrono, e lì `[M]` otto disegni fanno salire il
-  tratto 9 di **+11,50 ms** e i gemelli di **+11,60**, cioè **di quel tanto e non di più**: il banco
-  attribuisce.
+- ⛔ **the first `bmp_ms` I read was the cost of the bench**: `[M]` `createImageBitmap` **0.90 ms**
+  and the control microtask **0.90** — identical, because the checks are inside both.
+  ⇒ Cured with the **net** (the twin is subtracted) and with the **clean** rounds (checks switched off);
+- ⛔ **the queue verdict was always green**: the ratio `controlli/attesa` is ~1.0 even on
+  a free thread. It is `LEZIONI.md` §1.20 in person — *«is there a case in which it is zero and the bench
+  stays green?»*. ⇒ Cured with an **absolute** threshold next to the ratio;
+- ⛔ **the positive control of the frame was blind**: asking `createImageBitmap` for a
+  rescale to 3840×2160 leaves the net at **0.00** — ⭐ and that is a **fact**, not a defect:
+  that promise resolves at the task boundary, not at the end of the work. ⇒ The control
+  moved to the 2D road, where drawing is synchronous, and there `[M]` eight drawings raise
+  segment 9 by **+11.50 ms** and the twins by **+11.60**, that is **by that much and no more**: the bench
+  attributes.
 
-**La certificazione del banco senza server**: `[M]` taratura verde (20 ms bruciati escono
-**+20,00 ms** nel tratto giusto), controllo positivo (c) verde, controllo positivo (a) verde,
-controllo (b) **dichiarato non eseguibile**. ⇒ **rossi: 0.**
+**The certification of the bench without a server**: `[M]` calibration green (20 ms burnt come out as
+**+20.00 ms** in the right segment), positive control (c) green, positive control (a) green,
+control (b) **declared not executable**. ⇒ **reds: 0.**
 
 ---
 
-## F3.5 · ⛔ Che cosa resta `[?]` dopo di me
+## F3.5 · ⛔ What remains `[?]` after me
 
 | | |
 |---|---|
-| ⏳ **perché A ha visto 17,48 ms** | il meccanismo (la tela retrocessa a CPU dalla rilettura) spiega `[M]` **+1,60 ms** su quattordici. Il resto è `[?]`, e il candidato migliore è il **palco condiviso** — ⛔ ma non l'ho isolato |
-| ⛔ **l'anello di §4-A va rimisurato** | se il tratto 9 vale 0,39 e non 17,48, il numero di A sovrastima. ⚠ Non basta sottrarre 17: il numero va **ripreso**, con lo strumento che oggi sta nel prodotto invece che nel prologo |
-| ⏳ **il tratto 11 e i `[?]` 16-40 ms** | il codice c'è, il palco no: serve un browser con scanout vero |
-| ⏳ **il «dopo» in barre del titolo** | `08-b67-elastico.py` va rigirato **su un portatile scarico** |
-| ⚠ **`createImageBitmap` = 3,8 ms** | `[M]` oggi ne vale **1,05**. Il numero di §7.1 è di un altro palco e non si cita più senza rifarlo |
-| ⚠ **il tratto 8 cambia con la strada** | `[M]` **2,20 ms** su `bitmaprenderer` contro **0,74** su `?tela=2d`, stessa sessione. ⛔ `decode()` → richiamo **non dovrebbe** dipendere da come si dipinge: o è la contesa, o è una coda che si sposta. Non l'ho aperto |
+| ⏳ **why A saw 17.48 ms** | the mechanism (the canvas demoted to CPU by the readback) explains `[M]` **+1.60 ms** out of fourteen. The rest is `[?]`, and the best candidate is the **shared stage** — ⛔ but I did not isolate it |
+| ⛔ **the loop of §4-A must be re-measured** | if segment 9 is worth 0.39 and not 17.48, A's number overestimates. ⚠ Subtracting 17 is not enough: the number must be **taken again**, with the tool that today is in the product instead of in the prologue |
+| ⏳ **segment 11 and the `[?]` 16-40 ms** | the code is there, the stage is not: a browser with real scanout is needed |
+| ⏳ **the «after» in title bars** | `08-b67-elastico.py` must be rerun **on an idle laptop** |
+| ⚠ **`createImageBitmap` = 3.8 ms** | `[M]` today it is worth **1.05**. The number of §7.1 belongs to another stage and is no longer cited without redoing it |
+| ⚠ **segment 8 changes with the road** | `[M]` **2.20 ms** on `bitmaprenderer` against **0.74** on `?tela=2d`, same session. ⛔ `decode()` → callback **should not** depend on how one paints: either it is contention, or it is a queue that moves. I did not open it up |
 
 ---
 
-## F3.6 · Che cosa ho lasciato sulla macchina
+## F3.6 · What I left on the machine
 
-Utente **`provaf3`** (uid 1047) con sessione GNOME, albero `/media/REMOTIX/src/08-f-src`
-(**compilato da me**, non copiato), scena `/media/REMOTIX/src/08-f-scena-lav/04-b30-scena`,
-lavoro `/media/REMOTIX/tmp/08-f`, blocco condiviso `/dev/shm/remotix-08-f3`.
-⭐ **Prodotto, ponte e scena SPENTI**, e il conteggio dei vicini lo dichiara in ogni riga di
-registro. ⛔ **Le porte 7730 e 7731 non sono mai state toccate**, e la 7770 è tornata libera.
-⚠ Sul portatile ho lasciato pulito: nessun `Xvfb` mio, nessun socket X mio.
+User **`provaf3`** (uid 1047) with a GNOME session, tree `/media/REMOTIX/src/08-f-src`
+(**compiled by me**, not copied), scene `/media/REMOTIX/src/08-f-scena-lav/04-b30-scena`,
+work `/media/REMOTIX/tmp/08-f`, shared block `/dev/shm/remotix-08-f3`.
+⭐ **Product, bridge and scene SWITCHED OFF**, and the count of neighbours declares it in every log
+line. ⛔ **Ports 7730 and 7731 were never touched**, and 7770 is free again.
+⚠ On the laptop I left things clean: no `Xvfb` of mine, no X socket of mine.
 
 ---
 
-## F3.7 · ⭐ E la riga che questa fase può portarsi via
+## F3.7 · ⭐ And the line this phase can take away
 
-⛔ **Il tratto F non è un bersaglio.** L'anello dell'utente è lungo perché sono lunghi **C**
-(l'attesa del quadro nella scena), **D** (il quadro di Mutter, un muro a 16,36 ms) ed **E**
-(codifica e ritorno). ⇒ ⭐ **Chi apre la fase 8 dopo di me non spenda un'ora sul cliente**: `[M]`
-il cliente costa **1,18 ms**, una frazione minima dell'anello, e i tre quarti sono il
-decodificatore che consegna (tratto 8), non noi.
+⛔ **Segment F is not a target.** The user's loop is long because **C**
+(the wait for the frame in the scene), **D** (Mutter's frame, a wall at 16.36 ms) and **E**
+(encoding and return) are long. ⇒ ⭐ **Whoever opens phase 8 after me should not spend an hour on the client**: `[M]`
+the client costs **1.18 ms**, a minimal fraction of the loop, and three quarters of it is the
+decoder delivering (segment 8), not us.
 
-⭐⭐ **E il metodo ha retto una seconda volta oggi**: l'agente C credeva di sapere dove stavano i
-suoi 16 ms e lo strumento gli ha risposto **0,08**; io sono andato a curare 17 ms e lo strumento ha
-risposto che **non ci sono**. ⇒ *Strumentare prima e lasciare che lo strumento smentisca* ha
-prodotto, in una giornata, **due bersagli cancellati** — che è lavoro risparmiato, non lavoro perso.
+⭐⭐ **And the method held up a second time today**: agent C believed he knew where his
+16 ms were and the tool answered him **0.08**; I went to cure 17 ms and the tool
+answered that **they are not there**. ⇒ *Instrument first and let the tool disprove* has
+produced, in one day, **two targets cancelled** — which is work saved, not work lost.
 
 
 ---
