@@ -6688,9 +6688,75 @@ estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi
   ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
 - ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
 
+### 10.42 ✅ Chrome on Android with DeX: 4K YouTube judged excellent (user, 10 Oct 2026)
+
+User's words: *«Direi eccellente. Ho fatto una prova cattiva riproducendo un video a 2160P da youtube: il video era
+fluido e in sync, ha avuto problemi solo quando ho spostato la barra di youtube avanti e indietro e lì l'audio ha
+avuto stuttering. A 1440p però i problemi sono spariti e sembrava davvero di essere davanti al PC.»*
+
+| | |
+|---|---|
+| server | the CHUWI tablet: Intel N100, 4 threads, 7.5 GB, GNOME |
+| client | Samsung DeX, Chrome for Android, home network; then Chrome on Windows |
+| 2160p | video smooth and in sync; ⚠ **audio stutters only while dragging the YouTube seek bar** |
+| 1440p | no problems: *«like sitting at the PC»* |
+| register | **tuning, not a defect** — the user called it excellent |
+
+⭐ **The server was the CHUWI tablet itself** (Intel N100, 4 threads, 7.5 GB, GNOME, REMOTIX installed as a
+package), not the test machine — which makes the result weigh more, not less.
+
+✅ **Same scene from Chrome on Windows (same evening): same result** — user's words: *«stesso risultato di
+android»*: the stutter on seek at 4K, the rest perfect. ⇒ The stutter is **not of the client**: it is born on the
+server side (the N100 refetching and redecoding 4K on seek, or REMOTIX's audio under that load) — `[?]` which of
+the two, because the tablet's REMOTIX log needs administrator rights and the CPU sampler started after the video. It
+follows §7.19.
+
+✅ **Closed by the user, same evening, after the heavy 4K seek test**: *«il limite è proprio il 4K e mi ritengo
+soddisfatto, un risultato del genere su questo tablet ha quasi del miracoloso»*. ⇒ 4K seek on an N100 is the
+**declared limit**, not a defect to chase. During that test `[M]` (top every ~1 s, 10 Oct 22:37–22:39): the tablet
+at 55–80 %, peak 83 %, never saturated; Chrome ≈ 95 % of one thread, REMOTIX ≈ 13 %.
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
 si risponde in fondo. Una voce 🔸 che l'utente conferma diventa ✅. Una voce ✅ si riapre solo
 con una misura che la smentisce — e allora si riscrive **nello stesso momento**, con la data e
 la fonte (`CODER.md` §5).
+
+### 10.40 ✅ KDE too resizes the desktop on reattach (10 Oct 2026)
+
+User's words, after the report «on KDE the desktop sits at half height» (Windows + Chrome, and a friend on Zorin OS
+from Trieste, all re-attaching the same session): *«abbiamo già rinunciato al dynamic resize per i limiti di kwin.
+ma riprendere una sessione e non avere il resize al reattach non è accettabile»*.
+
+- The cause, measured: the session was born 2544×912 on an ultrawide screen; every later attach from another size
+  kept that canvas (SPECIFICHE §6.3, KWin 6.3.6 cannot resize a virtual output), and the page put it at the top with
+  white below. The page is fixed (canvas centred, black bands, commit `c10c1e5` merged in `258f752`).
+- ⇒ **The rule of §5.0-sexies now holds on KDE without exception**: the canvas takes the window's size at birth AND
+  at reattach. Resizing during the session stays out (§5.1-bis).
+- 🔸 The way being tried (10 Oct): on reattach to a different size, create a new virtual output of the right size
+  and remove the old one, as when a monitor is swapped. To be confirmed on the hardware (branch
+  `fix-kde-riattacco`).
+- ⚠ Windows being rearranged is **not a KDE price**: every desktop moves and shrinks windows to fit a smaller screen
+  on reattach (user: *«accade la stessa cosa anche sugli altri DE»*). The only KDE detail (August note above: KWin
+  puts windows back where they were the last time it saw that size) is measured alongside GNOME, not treated as a
+  defect.
+- ✅ **No migration to Forky to solve KWin** (user's idea, then agreed, 10 Oct): REMOTIX runs on the customer's
+  distribution, and KWin < 6.8 stays on Debian 13 (≥ 2028) and Ubuntu 26.04 LTS (≥ 2031). ⇒ One path that works on
+  every KWin, no branch per compositor version; Forky joins the test matrix once it carries Plasma 6.8, to check that
+  the same path holds there.
+
+### 10.41 ✅ Printing: later, PDF only, server → client; no file transfer (10 Oct 2026)
+
+User's words: *«trovo la condivisione di files piuttosto pericolosa, mentre si potrebbe ragionare sul discorso
+stampanti»*, then *«solo pdf, server -> client. La annotiamo nel masterplan»*.
+
+- **File transfer stays out** (SPECIFICHE §12): it is a way for data to leave and enter the server.
+- **One technology for every printer** (user: *«niente casi particolari per stampanti locali o stampanti remote:
+  usiamo la stessa tecnologia per entrambi i casi»*): a "later" item, `MASTERPLAN.md` **M6** — a virtual printer
+  turns the job into a PDF, the page opens the browser's print dialog, and the job goes wherever the client's device
+  can print (the home printer, or the office network printers installed on that PC). Only PDF, only server →
+  client. Printers an administrator sets up on the server with CUPS are the system's business, not a REMOTIX feature. ⚠ Printing is
+  taking a document out (the dialog can save it as PDF): off until the administrator turns it on, every print in
+  the log.
+

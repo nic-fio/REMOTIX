@@ -1305,7 +1305,7 @@ deliberatamente**, non dimenticata.
 | **Windows come server** | è la leva di §1.1. ⚠ *Corretta il 9 agosto 2026*: questa riga diceva «come server **e come client**», e la seconda metà è decaduta con §1.6 — non scriviamo un client per Windows, ma **chi ha Windows si collega dal suo browser**, e non ci costa niente |
 | **applicazioni da installare**, su qualunque sistema | §1: il client è la pagina. Un'applicazione nativa sarebbe un secondo prodotto da mantenere per sempre, per guadagnare quel che il browser già dà |
 | **desktop X11** come tipo di sessione | le applicazioni X11 restano, via XWayland |
-| **redirezione di dischi, stampanti, porte seriali, smart card** | non serve al mestiere di questo prodotto |
+| **redirezione di dischi, stampanti, porte seriali, smart card** | non serve al mestiere di questo prodotto. ⚠ *10 ott 2026*: la stampa diventa una voce del «dopo», **una tecnologia sola per ogni stampante** — PDF dal server alla finestra di stampa del browser di chi è collegato, che stampa dove sa stampare il suo dispositivo (`MASTERPLAN.md` M6, `DECISIONI.md` §10.41) |
 | **trasferimento file** | idem — e la clipboard testuale copre il caso frequente |
 | **immagini e file negli appunti** | §9 |
 | **multi-monitor** come funzione | §6.5: predisposizione sì, funzione no |

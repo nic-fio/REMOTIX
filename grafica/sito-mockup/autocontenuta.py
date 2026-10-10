@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import Image
 
 QUI = Path(__file__).resolve().parent
-USCITA = QUI / "pubblica" / "index.html"
+PAGINE = ["index.html", "performance.html"]   # each becomes pubblica/<same name>
 LARGHEZZA_MAX = 1600     # the widest screen on the page is ~1000 CSS px: 1600 covers a 1.6x display
 QUALITA_WEBP = 82
 
@@ -32,8 +32,9 @@ def webp_data(percorso):
     return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def main():
-    pagina = (QUI / "index.html").read_text()
+def costruisci(nome):
+    USCITA = QUI / "pubblica" / nome
+    pagina = (QUI / nome).read_text()
     stile = (QUI / "stile.css").read_text()
     pagina = pagina.replace('<link rel="stylesheet" href="stile.css">', "<style>\n" + stile + "</style>")
 
@@ -48,11 +49,12 @@ def main():
     pagina = re.sub(r"(?<=url\()((?:schermate-vere|icone)/[^)]+)(?=\))", sostituisci, pagina)
 
     pagina = pagina.replace('href="index.html"', 'href="/"')   # the logo goes home, wherever the file is served
+    pagina = pagina.replace('href="index.html#', 'href="/#').replace('href="performance.html"', 'href="/performance.html"')
 
     if "--senza-nastro" in sys.argv:
         pagina = pagina.replace('<div class="nastro">Mockup</div>\n', "")
 
-    rimasti = re.findall(r"(?:src=\"|url\(|href=\")(?!data:|#|%23|/\"|https://github\.com|mailto:|download/)([^\"')]+)", pagina)
+    rimasti = re.findall(r"(?:src=\"|url\(|href=\")(?!data:|#|%23|/\"|/#|/performance\.html|https://github\.com|mailto:|download/)([^\"')]+)", pagina)
     rimasti = [r for r in rimasti if not r.startswith("https://github.com")]
     if rimasti:
         sys.exit("still pointing outside the file: " + ", ".join(sorted(set(rimasti))))
@@ -61,6 +63,11 @@ def main():
     USCITA.write_text(pagina)
     print(f"{USCITA.relative_to(QUI.parent.parent)}: {USCITA.stat().st_size / 1024:.0f} KB, "
           f"{len(cache)} files inlined")
+
+
+def main():
+    for nome in PAGINE:
+        costruisci(nome)
 
 
 if __name__ == "__main__":
