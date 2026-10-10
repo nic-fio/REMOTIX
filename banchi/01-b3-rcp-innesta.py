@@ -955,7 +955,7 @@ void ProtoCodec::wt_chiudi_sessione(uint8_t motivo) {
   //   its own timer and will not put anything on the wire (§2.2).
   ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   std::println(stderr,
-               "REMOTIX B3: closing of the session POSTPONED, code {:#04x} "
+               "REMOTIX B3: session closure DEFERRED, code {:#04x} "
                "(queued: {}; keep-alive at 100 ms so that the five passes "
                "mature)",
                motivo, wt_uscita_.size());

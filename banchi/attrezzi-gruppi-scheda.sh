@@ -151,7 +151,7 @@ gruppi_scheda_dai_a() {
 			printf '%s    of %s)\n' "$_gs_pref" "$(gruppi_scheda_nodo "$_gs_g")"
 		done
 		printf '%s    ⛔ ITS SESSION WOULD BE BORN AND SEE NOTHING: zero frames,\n' "$_gs_pref"
-		printf '%s    no window opens, and the loop goes round and round between «ZERO MONITOR»\n' "$_gs_pref"
+		printf '%s    no window opens, and the loop goes round and round between «BLACK: ZERO MONITORS»\n' "$_gs_pref"
 		printf '%s    and «virtual monitor mounted» (phase 10 §7.4 — [M] 0 out of 4 without, 17 out of 17 with).\n' "$_gs_pref"
 		printf '%s    ⛔ THIS BENCH MUST NOT MEASURE: it would measure a product that does not exist.\n' "$_gs_pref"
 		return 3

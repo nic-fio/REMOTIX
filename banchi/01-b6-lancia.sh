@@ -94,7 +94,7 @@
 # ⛔ AND THE SERVER LOG IS LOOKED AT, BUT IT IS NOT THE ARBITER
 #
 # The reason is verified by **the receiving side** (§8.1): the server log is
-# the same hand that wrote the code.  The lines «scaduto il tetto per …» are
+# the same hand that wrote the code.  The lines «ceiling expired for …» are
 # printed at the end as a **diagnosis**, and it is declared.
 #
 # ---------------------------------------------------------------------------
@@ -555,10 +555,10 @@ fase() # $1 = name (sani|ping), $2 = transport cap in ms
 		#    wrote nothing».
 		grep -cE "$B_IMPRONTA" "$B_LOG_FUORI" \
 			| sed 's/^/        log lines: /'
-		if grep -q "scaduto il tetto per" "$B_LOG_FUORI"; then
-			grep "scaduto il tetto per" "$B_LOG_FUORI" | sed 's/^/        /'
+		if grep -q "ceiling expired for" "$B_LOG_FUORI"; then
+			grep "ceiling expired for" "$B_LOG_FUORI" | sed 's/^/        /'
 		else
-			inf "no «scaduto il tetto per» line: the server does not declare"
+			inf "no «ceiling expired for» line: the server does not declare"
 			inf "it let any cap expire in this phase"
 		fi
 	else

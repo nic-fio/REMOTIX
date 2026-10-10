@@ -95,11 +95,11 @@ log "   the fourth, and the page"
 timeout 30 python3 /srv/src/01-b3-cliente.py --indirizzo "$IND" --porta "$PORTA" \
   --utente prova --parola-file "$PAROLA_FILE" 2>&1 | tail -4
 curl -sk "https://$IND:$PORTA/" -o /srv/src/pagina-ban.html
-if grep -a -F -q "tentativi di accesso da questo indirizzo sono esauriti" /srv/src/pagina-ban.html; then
+if grep -a -F -q "attempts came from this address" /srv/src/pagina-ban.html; then
   ok "⭐ the page LOADS and says the attempts are exhausted"
 else
   ko "the page does not say so"
-  grep -a -o 'AVVISO = "[^"]*"' /srv/src/pagina-ban.html | head -1
+  grep -a -o '<div id="avviso">.*</div>' /srv/src/pagina-ban.html | head -1
 fi
 echo "    -- the ban file:"
 cat /srv/src/ban-prova 2>&1 | sed 's/^/        /'
@@ -114,7 +114,7 @@ cat /srv/src/ban-prova 2>&1 | sed 's/^/        /'
 log "   and the page goes back to normal"
 accendi /srv/src/cert-ban /srv/src/ban-prova /srv/src/ban2.log || { ko "dead"; exit 2; }
 curl -sk "https://$IND:$PORTA/" -o /srv/src/pagina-dopo.html
-grep -a -F -q "tentativi di accesso da questo indirizzo sono esauriti" /srv/src/pagina-dopo.html \
+grep -a -F -q "attempts came from this address" /srv/src/pagina-dopo.html \
   && ko "the notice is still there" || ok "the notice is gone"
 timeout 30 python3 /srv/src/01-b3-cliente.py --indirizzo "$IND" --porta "$PORTA" \
   --utente prova --parola-file "$PAROLA_FILE" 2>&1 | tail -3

@@ -44,8 +44,10 @@ G = S._carica("g6", os.path.join(S.QUI, "15-g6-comune.py"))
 FUNZIONI = ("F-016", "F-017", "P-A", "P-F")
 ATTESA_S = 35          # beyond the 30 s of silence (§5.3): the session must stay
 # ⛔ the log lines that would mean «the session died with the client»
-MORTE = ("a NEW one will be born", "the graphical session is over", "SESSIONE_TERMINATA",
-         "la sessione e' morta")
+# ⚠ (10 Oct 2026) «la sessione e' morta» was removed: the product never wrote it
+#   in a log line (only in a comment of figlio.c); the death of the graphical
+#   session reaches the log as «the graphical session is over» (main.c, §7.6).
+MORTE = ("a NEW one will be born", "the graphical session is over", "SESSIONE_TERMINATA")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -676,8 +676,8 @@ def giro(braccio, scena, codec, secondi):
     riga0 = righe_registro()
     t0 = time.time()
     # ⛔⭐ AND `opus` ALONE CANNOT BE DECLARED — `[M]` 24 August 2026, first
-    #    run: `congedo motivo=0x09 dettaglio=il client non dichiara pcm in
-    #    audio.codec`.  §4.3 mandates `pcm` on BOTH sides and `rcp.c:2229` enforces
+    #    run: `congedo motivo=0x09 dettaglio=the client does not declare pcm
+    #    in audio.codec`.  §4.3 mandates `pcm` on BOTH sides and `rcp.c:2229` enforces
     #    it.  ⇒ To get Opus one declares **`opus,pcm`**, and the server
     #    picks the first in the client's order of preference.
     #    ⚠ Asking for «opus only» does not give a run without PCM: it gives a run without

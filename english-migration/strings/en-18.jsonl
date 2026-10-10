@@ -1,0 +1,5 @@
+{"file": "banchi/01-b3-rcp-innesta.py (C innestato)", "prima": "REMOTIX B3: closing of the session POSTPONED, code {:#04x} ", "dopo": "REMOTIX B3: session closure DEFERRED, code {:#04x} "}
+{"file": "banchi/01-b6-lancia.sh", "prima": "scaduto il tetto per", "dopo": "ceiling expired for"}
+{"file": "banchi/01-b6-lancia.sh", "prima": "no «scaduto il tetto per» line: the server does not declare", "dopo": "no «ceiling expired for» line: the server does not declare"}
+{"file": "banchi/attrezzi-gruppi-scheda.sh", "prima": "%s    no window opens, and the loop goes round and round between «ZERO MONITOR»\\n", "dopo": "%s    no window opens, and the loop goes round and round between «BLACK: ZERO MONITORS»\\n"}
+{"file": "banchi/prodotto/resto.sh", "prima": "tentativi di accesso da questo indirizzo sono esauriti", "dopo": "attempts came from this address"}
