@@ -104,7 +104,7 @@ S2 = p("A desktop is not a module of REMOTIX: it is a set of answers spread acro
         + " and both handing over to " + c("appunti_kde.c") + ".",
         "<b>The name on the wire</b> — " + c("main.c") + " maps the desktop to the name sent in " + c("SESSIONE")
         + " (the session message, " + c("wt_desktop()") + "); a desktop the product does not recognise is reported as "
-        + c("sconosciuto") + " (unknown).",
+        + c("unknown") + ".",
         "<b>Cursor shape</b> — the real pointer shape reaches the browser on all four desktops: Mutter sends it in "
         "the cursor metadata; on KDE and labwc, where the compositor draws the pointer into the image, "
         + c("forma.c") + " (shape) writes an encoded cursor theme whose colours say which shape was asked for, read "
